@@ -55,3 +55,9 @@ PRISM is composed of:
 Source agents emit the logging data as [protocol-buffers](https://code.google.com/p/protobuf/), and the data stays in that format throughout the system.
 
 ![PRISM Diagram](docs/PRISM.png)
+
+### Development
+
+#### Running tests
+
+    bin/test
