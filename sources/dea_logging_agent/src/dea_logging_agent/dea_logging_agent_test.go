@@ -6,9 +6,27 @@ import (
 	"time"
 )
 
-func TestThatFunctionExistsWhenFileCantBeOpened(testState *testing.T) {
+func initializeConfig() Config {
 	config := Config{instancesJsonFilePath: "/tmp/config.json"}
 	os.Remove(config.instancesJsonFilePath)
+	return config
+}
+func createFile(name string, config Config, testState *testing.T) *os.File {
+	file, error := os.Create(name)
+	if error != nil {
+		testState.Error(error)
+	}
+	return file
+}
+func writeToFile(file *os.File, text string, testState *testing.T) {
+	_, error := file.WriteString(text)
+	if error != nil {
+		testState.Error(error)
+	}
+}
+
+func TestThatFunctionExistsWhenFileCantBeOpened(testState *testing.T) {
+	config := initializeConfig()
 
 	instancesChan := WatchInstancesJsonFileForChanges(&config)
 
@@ -18,17 +36,9 @@ func TestThatFunctionExistsWhenFileCantBeOpened(testState *testing.T) {
 }
 
 func TestThatAnExistinginstanceWillBeSeen(testState *testing.T) {
-	config := Config{instancesJsonFilePath: "/tmp/config.json"}
-	os.Remove(config.instancesJsonFilePath)
-
-	file, error := os.Create(config.instancesJsonFilePath)
-	if error != nil {
-		testState.Error(error)
-	}
-	_, error = file.WriteString(`{"Instances": [{"AppId": "123"}]}`)
-	if error != nil {
-		testState.Error(error)
-	}
+	config := initializeConfig()
+	file := createFile(config.instancesJsonFilePath, config, testState)
+	writeToFile(file, `{"Instances": [{"AppId": "123"}]}`, testState)
 
 	instancesChan := WatchInstancesJsonFileForChanges(&config)
 
@@ -38,22 +48,14 @@ func TestThatAnExistinginstanceWillBeSeen(testState *testing.T) {
 }
 
 func TestThatANewinstanceWillBeSeen(testState *testing.T) {
-	config := Config{instancesJsonFilePath: "/tmp/config.json"}
-	os.Remove(config.instancesJsonFilePath)
-
-	file, error := os.Create(config.instancesJsonFilePath)
-	if error != nil {
-		testState.Error(error)
-	}
+	config := initializeConfig()
+	file := createFile(config.instancesJsonFilePath, config, testState)
 
 	instancesChan := WatchInstancesJsonFileForChanges(&config)
 
 	time.Sleep(1*time.Nanosecond) // ensure that the go function starts before we add proper data to the json config
 
-	_, error = file.WriteString(`{"Instances": [{"AppId": "123"}]}`)
-	if error != nil {
-		testState.Error(error)
-	}
+	writeToFile(file, `{"Instances": [{"AppId": "123"}]}`, testState)
 
 	instance, ok := <-instancesChan
 	if !ok {
@@ -65,17 +67,9 @@ func TestThatANewinstanceWillBeSeen(testState *testing.T) {
 }
 
 func TestThatOnlyNewInstancesWillBeSeen(testState *testing.T) {
-	config := Config{instancesJsonFilePath: "/tmp/config.json"}
-	os.Remove(config.instancesJsonFilePath)
-
-	file, error := os.Create(config.instancesJsonFilePath)
-	if error != nil {
-		testState.Error(error)
-	}
-	_, error = file.WriteString(`{"Instances": [{"AppId": "123"}]}`)
-	if error != nil {
-		testState.Error(error)
-	}
+	config := initializeConfig()
+	file := createFile(config.instancesJsonFilePath, config, testState)
+	writeToFile(file, `{"Instances": [{"AppId": "123"}]}`, testState)
 
 	instancesChan := WatchInstancesJsonFileForChanges(&config)
 
@@ -90,10 +84,7 @@ func TestThatOnlyNewInstancesWillBeSeen(testState *testing.T) {
 	time.Sleep(1*time.Nanosecond) // ensure that the go function starts before we add proper data to the json config
 
 	os.Truncate(config.instancesJsonFilePath, 0)
-	_, error = file.WriteString(`{"Instances": [{"AppId": "123"}]}`)
-	if error != nil {
-		testState.Error(error)
-	}
+	writeToFile(file, `{"Instances": [{"AppId": "123"}]}`, testState)
 
 	select {
 	case instance = <-instancesChan:
