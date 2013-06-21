@@ -4,6 +4,7 @@ import (
 	"testing"
 	"os"
 	"time"
+	"reflect"
 )
 
 func initializeConfig() Config {
@@ -25,13 +26,19 @@ func writeToFile(file *os.File, text string, testState *testing.T) {
 	}
 }
 
+func assertEquals(testState *testing.T, expected interface{}, actual interface{}) {
+	if expected != actual {
+		testState.Errorf("%v %v should have been %v", reflect.TypeOf(expected).Name(), actual, expected)
+	}
+}
+
 func TestThatFunctionExistsWhenFileCantBeOpened(testState *testing.T) {
 	config := initializeConfig()
 
-	instancesChan := WatchInstancesJsonFileForChanges(&config)
+	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
 
-	if _, ok := <-instancesChan; ok {
-		testState.Error("Found an instance, but should have died")
+	if _, ok := <-instanceEventsChan; ok {
+		testState.Error("Found an instanceEvent, but should have died")
 	}
 }
 
@@ -40,10 +47,12 @@ func TestThatAnExistinginstanceWillBeSeen(testState *testing.T) {
 	file := createFile(config.instancesJsonFilePath, config, testState)
 	writeToFile(file, `{"Instances": [{"AppId": "123"}]}`, testState)
 
-	instancesChan := WatchInstancesJsonFileForChanges(&config)
+	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
 
-	if instance := <-instancesChan; instance.AppId != "123" {
-		testState.Error("Missing appid")
+	instanceEvent := <-instanceEventsChan;
+	expectedInstanceEvent := InstanceEvent{Instance{"123"}, true}
+	if instanceEvent != expectedInstanceEvent {
+		testState.Errorf("InstanceEvent %v should have been %v", instanceEvent, expectedInstanceEvent)
 	}
 }
 
@@ -51,19 +60,18 @@ func TestThatANewinstanceWillBeSeen(testState *testing.T) {
 	config := initializeConfig()
 	file := createFile(config.instancesJsonFilePath, config, testState)
 
-	instancesChan := WatchInstancesJsonFileForChanges(&config)
+	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
 
 	time.Sleep(1*time.Nanosecond) // ensure that the go function starts before we add proper data to the json config
 
 	writeToFile(file, `{"Instances": [{"AppId": "123"}]}`, testState)
 
-	instance, ok := <-instancesChan
+	instanceEvent, ok := <-instanceEventsChan
 	if !ok {
-		testState.Error("There was no instance!")
+		testState.Error("There was no instanceEvent!")
 	}
-	if instance.AppId != "123" {
-		testState.Error("Missing appid")
-	}
+	expectedInstanceEvent := InstanceEvent{Instance{"123"}, true}
+	assertEquals(testState, expectedInstanceEvent, instanceEvent)
 }
 
 func TestThatOnlyNewInstancesWillBeSeen(testState *testing.T) {
@@ -71,13 +79,13 @@ func TestThatOnlyNewInstancesWillBeSeen(testState *testing.T) {
 	file := createFile(config.instancesJsonFilePath, config, testState)
 	writeToFile(file, `{"Instances": [{"AppId": "123"}]}`, testState)
 
-	instancesChan := WatchInstancesJsonFileForChanges(&config)
+	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
 
-	instance, ok := <-instancesChan
+	instanceEvent, ok := <-instanceEventsChan
 	if !ok {
-		testState.Error("There was no instance!")
+		testState.Error("There was no instanceEvent!")
 	}
-	if instance.AppId != "123" {
+	if instanceEvent.AppId != "123" {
 		testState.Error("Missing appid")
 	}
 
@@ -87,13 +95,28 @@ func TestThatOnlyNewInstancesWillBeSeen(testState *testing.T) {
 	writeToFile(file, `{"Instances": [{"AppId": "123"}]}`, testState)
 
 	select {
-	case instance = <-instancesChan:
-		testState.Error("We just got an old instance, %s", instance)
+	case instanceEvent = <-instanceEventsChan:
+		testState.Error("We just got an old instanceEvent, %s", instanceEvent)
 	default:
 		// OK
 	}
 }
 
 func TestThatARemovedInstanceWillBeRemoved(testState *testing.T) {
-	testState.Skip()
+	config := initializeConfig()
+	file := createFile(config.instancesJsonFilePath, config, testState)
+	writeToFile(file, `{"Instances": [{"AppId": "123"}]}`, testState)
+
+	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
+
+	time.Sleep(1*time.Nanosecond) // ensure that the go function starts before we add proper data to the json config
+
+
+	instanceEvent, ok := <-instanceEventsChan
+	if !ok {
+		testState.Error("There was no instanceEvent!")
+	}
+	if instanceEvent.AppId != "123" {
+		testState.Error("Missing appid")
+	}
 }

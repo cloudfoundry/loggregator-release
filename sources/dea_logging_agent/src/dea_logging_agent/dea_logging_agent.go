@@ -15,13 +15,18 @@ type Instance struct {
 	AppId string
 }
 
+type InstanceEvent struct {
+	Instance
+	addition bool
+}
+
 type Instances struct {
 	Instances []Instance
 }
 
-func WatchInstancesJsonFileForChanges(config *Config) (chan Instance) {
+func WatchInstancesJsonFileForChanges(config *Config) (chan InstanceEvent) {
 	knownInstances := make(map[string]Instance)
-	instancesChan := make(chan Instance)
+	instancesChan := make(chan InstanceEvent)
 
 	go func() {
 		for {
@@ -44,7 +49,7 @@ func WatchInstancesJsonFileForChanges(config *Config) (chan Instance) {
 					continue
 				}
 				knownInstances[instance.AppId] = instance
-				instancesChan <- instance
+				instancesChan <- InstanceEvent{instance, true}
 			}
 		}
 	}()
