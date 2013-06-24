@@ -4,11 +4,12 @@ import (
 	"io/ioutil"
 	"runtime"
 	"time"
-	"fmt"
+	steno "github.com/cloudfoundry/gosteno"
 )
 
 type Config struct {
 	instancesJsonFilePath string
+	logFilePath           string
 }
 
 type InstanceEvent struct {
@@ -20,19 +21,28 @@ func WatchInstancesJsonFileForChanges(config *Config) (chan InstanceEvent) {
 	knownInstances := make(map[string]Instance)
 	instancesChan := make(chan InstanceEvent)
 
+	loggingConfig := &steno.Config{
+		Sinks: []steno.Sink{
+			steno.NewFileSink(config.logFilePath)},
+		Level:     steno.LOG_INFO,
+		Codec:     steno.NewJsonCodec(),
+		EnableLOC: true }
+	steno.Init(loggingConfig)
+	logger := steno.NewLogger("dea_logging_agent")
+
 	go func() {
 		for {
 			json, err := ioutil.ReadFile(config.instancesJsonFilePath)
 			if (err != nil) {
-				fmt.Printf("ERROR: Reading failed. %v\n", err)
+				logger.Warnf("Reading failed. %v\n", err)
 				close(instancesChan)
 				return
 			}
 
-			time.Sleep(1 * time.Millisecond)
+			time.Sleep(1*time.Millisecond)
 			currentInstances, err := ReadInstances(json)
 			if (err != nil) {
-				fmt.Printf("ERROR: Failed parsing json %v: %v Trying again...\n", err, string(json))
+				logger.Warnf("Failed parsing json %v: %v Trying again...\n", err, string(json))
 				runtime.Gosched()
 				continue
 			}

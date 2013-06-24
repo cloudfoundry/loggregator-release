@@ -5,10 +5,14 @@ import (
     "github.com/stretchr/testify/assert"
 	"os"
 	"time"
+	"io/ioutil"
 )
 
-func initializeConfig(filePath string) Config {
-	config := Config{instancesJsonFilePath: filePath}
+func initializeConfig(t *testing.T, filePath string) Config {
+	logFile, error := ioutil.TempFile("", "dea_loggin_agent")
+	defer logFile.Close()
+	assert.NoError(t, error)
+	config := Config{instancesJsonFilePath: filePath, logFilePath: logFile.Name()}
 	os.Remove(config.instancesJsonFilePath)
 	return config
 }
@@ -34,7 +38,7 @@ func writeToFile(t *testing.T, filePath string, text string, truncate bool) {
 }
 
 func TestThatFunctionExistsWhenFileCantBeOpened(t *testing.T) {
-	config := initializeConfig("/tmp/config.json")
+	config := initializeConfig(t, "/tmp/config.json")
 
 	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
 
@@ -44,7 +48,7 @@ func TestThatFunctionExistsWhenFileCantBeOpened(t *testing.T) {
 }
 
 func TestThatAnExistinginstanceWillBeSeen(t *testing.T) {
-	config := initializeConfig("/tmp/config.json")
+	config := initializeConfig(t, "/tmp/config.json")
 	writeToFile(t, config.instancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
 	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
@@ -55,7 +59,7 @@ func TestThatAnExistinginstanceWillBeSeen(t *testing.T) {
 }
 
 func TestThatANewinstanceWillBeSeen(t *testing.T) {
-	config := initializeConfig("/tmp/config.json")
+	config := initializeConfig(t, "/tmp/config.json")
 	file := createFile(t, config.instancesJsonFilePath)
 	defer file.Close()
 
@@ -73,7 +77,7 @@ func TestThatANewinstanceWillBeSeen(t *testing.T) {
 }
 
 func TestThatOnlyOneNewInstanceEventWillBeSeen(t *testing.T) {
-	config := initializeConfig("/tmp/config.json")
+	config := initializeConfig(t, "/tmp/config.json")
 	writeToFile(t, config.instancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
 	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
@@ -93,7 +97,7 @@ func TestThatOnlyOneNewInstanceEventWillBeSeen(t *testing.T) {
 }
 
 func TestThatARemovedInstanceWillBeRemoved(t *testing.T) {
-	config := initializeConfig("/tmp/config.json")
+	config := initializeConfig(t, "/tmp/config.json")
 	writeToFile(t, config.instancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
 	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
