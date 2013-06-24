@@ -52,7 +52,7 @@ func TestThatAnExistinginstanceWillBeSeen(testState *testing.T) {
 	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
 
 	instanceEvent := <-instanceEventsChan;
-	expectedInstanceEvent := InstanceEvent{Instance{"123"}, true}
+	expectedInstanceEvent := InstanceEvent{Instance{ApplicationId: "123"}, true}
 	if instanceEvent != expectedInstanceEvent {
 		testState.Errorf("InstanceEvent %v should have been %v", instanceEvent, expectedInstanceEvent)
 	}
@@ -72,7 +72,7 @@ func TestThatANewinstanceWillBeSeen(testState *testing.T) {
 	if !ok {
 		testState.Error("There was no instanceEvent!")
 	}
-	expectedInstanceEvent := InstanceEvent{Instance{"123"}, true}
+	expectedInstanceEvent := InstanceEvent{Instance{ApplicationId: "123"}, true}
 	assertEquals(testState, expectedInstanceEvent, instanceEvent)
 }
 

@@ -12,6 +12,8 @@ type Config struct {
 
 type Instance struct {
 	ApplicationId string
+	WardenJobId uint64
+	WardenContainerPath string
 }
 
 type InstanceEvent struct {

@@ -20,8 +20,13 @@ func TestReadingInstances(testState *testing.T) {
 	if len(instances) != 1 {
 		testState.Errorf("There should be one instance, but there are %v", len(instances))
 	}
-	if instances[0].ApplicationId != "4aa9506e-277f-41ab-b764-a35c0b96fa1b" {
-		testState.Errorf("Expected appid to be '4aa9506e-277f-41ab-b764-a35c0b96fa1b' but was %v", instances[0].ApplicationId)
+
+	expectedInstance := Instance{
+		ApplicationId: "4aa9506e-277f-41ab-b764-a35c0b96fa1b",
+		WardenJobId: 272,
+		WardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo1"}
+	if instances[0] != expectedInstance {
+		testState.Errorf("Expected appid to be %v but was %v", expectedInstance, instances[0])
 	}
 }
 
