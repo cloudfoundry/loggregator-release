@@ -4,16 +4,11 @@ import (
 	"io/ioutil"
 	"runtime"
 	"time"
+	"fmt"
 )
 
 type Config struct {
 	instancesJsonFilePath string
-}
-
-type Instance struct {
-	ApplicationId string
-	WardenJobId uint64
-	WardenContainerPath string
 }
 
 type InstanceEvent struct {
@@ -27,24 +22,38 @@ func WatchInstancesJsonFileForChanges(config *Config) (chan InstanceEvent) {
 
 	go func() {
 		for {
-			time.Sleep(1 * time.Millisecond)
-			file, err := ioutil.ReadFile(config.instancesJsonFilePath)
+			json, err := ioutil.ReadFile(config.instancesJsonFilePath)
 			if (err != nil) {
+				fmt.Printf("ERROR: Reading failed. %v\n", err)
 				close(instancesChan)
 				return
 			}
-			currentInstances, err := ReadInstances(file)
+
+			time.Sleep(1 * time.Millisecond)
+			currentInstances, err := ReadInstances(json)
 			if (err != nil) {
+				fmt.Printf("ERROR: Failed parsing json %v: %v Trying again...\n", err, string(json))
 				runtime.Gosched()
 				continue
 			}
 
-			for _, instance := range currentInstances {
-				_, present := knownInstances[instance.ApplicationId]
+			for _, instance := range knownInstances {
+				_, present := currentInstances[instance.Identifier()]
 				if present {
 					continue
 				}
-				knownInstances[instance.ApplicationId] = instance
+
+				delete(knownInstances, instance.Identifier())
+				instancesChan <- InstanceEvent{instance, false}
+			}
+
+			for _, instance := range currentInstances {
+				_, present := knownInstances[instance.Identifier()]
+				if present {
+					continue
+				}
+
+				knownInstances[instance.Identifier()] = instance
 				instancesChan <- InstanceEvent{instance, true}
 			}
 		}

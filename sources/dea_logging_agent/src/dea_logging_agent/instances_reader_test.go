@@ -21,8 +21,23 @@ func TestReadingInstances(testState *testing.T) {
 
 	expectedInstance := Instance{
 		ApplicationId: "4aa9506e-277f-41ab-b764-a35c0b96fa1b",
-		WardenJobId: 272,
+		WardenJobId: "272",
 		WardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo1"}
-	assert.Equal(testState, expectedInstance, instances[0])
+	assert.Equal(testState, expectedInstance, instances["/var/vcap/data/warden/depot/16vbs06ibo1/jobs/272"])
 }
 
+func TestErrorHandlingWhenParsingEmptyData(testState *testing.T) {
+	_, err := ReadInstances(make([]byte, 0))
+	assert.Error(testState, err)
+
+	_, err = ReadInstances(make([]byte, 10))
+	assert.Error(testState, err)
+
+	_, err = ReadInstances(nil)
+	assert.Error(testState, err)
+}
+
+func TestErrorHandlingWithBadJson(testState *testing.T) {
+	_, err := ReadInstances([]byte(`{ "instances" : [}`))
+	assert.Error(testState, err)
+}
