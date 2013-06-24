@@ -2,7 +2,6 @@ package dea_logging_agent
 
 import (
 	"io/ioutil"
-	"encoding/json"
 	"runtime"
 	"time"
 )
@@ -12,16 +11,12 @@ type Config struct {
 }
 
 type Instance struct {
-	AppId string
+	ApplicationId string
 }
 
 type InstanceEvent struct {
 	Instance
 	addition bool
-}
-
-type Instances struct {
-	Instances []Instance
 }
 
 func WatchInstancesJsonFileForChanges(config *Config) (chan InstanceEvent) {
@@ -36,19 +31,18 @@ func WatchInstancesJsonFileForChanges(config *Config) (chan InstanceEvent) {
 				close(instancesChan)
 				return
 			}
-			var currentInstances Instances
-			err = json.Unmarshal(file, &currentInstances)
+			currentInstances, err := ReadInstances(file)
 			if (err != nil) {
 				runtime.Gosched()
 				continue
 			}
 
-			for _, instance := range currentInstances.Instances {
-				_, present := knownInstances[instance.AppId]
+			for _, instance := range currentInstances {
+				_, present := knownInstances[instance.ApplicationId]
 				if present {
 					continue
 				}
-				knownInstances[instance.AppId] = instance
+				knownInstances[instance.ApplicationId] = instance
 				instancesChan <- InstanceEvent{instance, true}
 			}
 		}

@@ -7,11 +7,12 @@ import (
 	"reflect"
 )
 
-func initializeConfig() Config {
-	config := Config{instancesJsonFilePath: "/tmp/config.json"}
+func initializeConfig(filePath string) Config {
+	config := Config{instancesJsonFilePath: filePath}
 	os.Remove(config.instancesJsonFilePath)
 	return config
 }
+
 func createFile(name string, config Config, testState *testing.T) *os.File {
 	file, error := os.Create(name)
 	if error != nil {
@@ -19,6 +20,7 @@ func createFile(name string, config Config, testState *testing.T) *os.File {
 	}
 	return file
 }
+
 func writeToFile(file *os.File, text string, testState *testing.T) {
 	_, error := file.WriteString(text)
 	if error != nil {
@@ -33,7 +35,7 @@ func assertEquals(testState *testing.T, expected interface{}, actual interface{}
 }
 
 func TestThatFunctionExistsWhenFileCantBeOpened(testState *testing.T) {
-	config := initializeConfig()
+	config := initializeConfig("/tmp/config.json")
 
 	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
 
@@ -43,9 +45,9 @@ func TestThatFunctionExistsWhenFileCantBeOpened(testState *testing.T) {
 }
 
 func TestThatAnExistinginstanceWillBeSeen(testState *testing.T) {
-	config := initializeConfig()
+	config := initializeConfig("/tmp/config.json")
 	file := createFile(config.instancesJsonFilePath, config, testState)
-	writeToFile(file, `{"Instances": [{"AppId": "123"}]}`, testState)
+	writeToFile(file, `{"instances": [{"application_id": "123"}]}`, testState)
 
 	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
 
@@ -57,14 +59,14 @@ func TestThatAnExistinginstanceWillBeSeen(testState *testing.T) {
 }
 
 func TestThatANewinstanceWillBeSeen(testState *testing.T) {
-	config := initializeConfig()
+	config := initializeConfig("/tmp/config.json")
 	file := createFile(config.instancesJsonFilePath, config, testState)
 
 	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
 
 	time.Sleep(1*time.Nanosecond) // ensure that the go function starts before we add proper data to the json config
 
-	writeToFile(file, `{"Instances": [{"AppId": "123"}]}`, testState)
+	writeToFile(file, `{"instances": [{"application_id": "123"}]}`, testState)
 
 	instanceEvent, ok := <-instanceEventsChan
 	if !ok {
@@ -75,9 +77,9 @@ func TestThatANewinstanceWillBeSeen(testState *testing.T) {
 }
 
 func TestThatOnlyNewInstancesWillBeSeen(testState *testing.T) {
-	config := initializeConfig()
+	config := initializeConfig("/tmp/config.json")
 	file := createFile(config.instancesJsonFilePath, config, testState)
-	writeToFile(file, `{"Instances": [{"AppId": "123"}]}`, testState)
+	writeToFile(file, `{"instances": [{"application_id": "123"}]}`, testState)
 
 	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
 
@@ -85,14 +87,14 @@ func TestThatOnlyNewInstancesWillBeSeen(testState *testing.T) {
 	if !ok {
 		testState.Error("There was no instanceEvent!")
 	}
-	if instanceEvent.AppId != "123" {
+	if instanceEvent.ApplicationId != "123" {
 		testState.Error("Missing appid")
 	}
 
 	time.Sleep(1*time.Nanosecond) // ensure that the go function starts before we add proper data to the json config
 
 	os.Truncate(config.instancesJsonFilePath, 0)
-	writeToFile(file, `{"Instances": [{"AppId": "123"}]}`, testState)
+	writeToFile(file, `{"instances": [{"application_id": "123"}]}`, testState)
 
 	select {
 	case instanceEvent = <-instanceEventsChan:
@@ -103,9 +105,9 @@ func TestThatOnlyNewInstancesWillBeSeen(testState *testing.T) {
 }
 
 func TestThatARemovedInstanceWillBeRemoved(testState *testing.T) {
-	config := initializeConfig()
+	config := initializeConfig("/tmp/config.json")
 	file := createFile(config.instancesJsonFilePath, config, testState)
-	writeToFile(file, `{"Instances": [{"AppId": "123"}]}`, testState)
+	writeToFile(file, `{"instances": [{"application_id": "123"}]}`, testState)
 
 	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
 
@@ -116,7 +118,7 @@ func TestThatARemovedInstanceWillBeRemoved(testState *testing.T) {
 	if !ok {
 		testState.Error("There was no instanceEvent!")
 	}
-	if instanceEvent.AppId != "123" {
+	if instanceEvent.ApplicationId != "123" {
 		testState.Error("Missing appid")
 	}
 }
