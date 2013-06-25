@@ -1,4 +1,4 @@
-# :oggregator
+# Loggregator
 
 ### Logging in the Clouds
 
