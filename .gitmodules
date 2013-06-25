@@ -1,0 +1,6 @@
+[submodule "src/github.com/cloudfoundry/gosteno"]
+	path = src/github.com/cloudfoundry/gosteno
+        url = https://github.com/cloudfoundry/govendor
+[submodule "src/github.com/stretchr/testify"]
+	path = src/github.com/stretchr/testify
+        url = https://github.com/stretchr/testify
