@@ -2,13 +2,11 @@
 
 ### Logging in the Clouds
 
-###### [Tracker](https://www.pivotaltracker.com/s/projects/852691) | [Mailing List](mailto:cf-loggregator@pivotallabs.com)
-
-"loggregator" is the user application logging subsystem for Cloud Foundry.
+Loggregator is the user application logging subsystem for Cloud Foundry.
 
 ### Features
 
-"loggregator" allows users to:
+Loggregator allows users to:
 
 1. Tail their application logs.
 1. Dump a recent set of application logs (where recent is on the order of an hour).
@@ -37,24 +35,24 @@ $
 
 ### Constraints
 
-1. "loggregator" collects STDIN & STDOUT from the customer's application.  This may require configuration on the developer's side.
-1. A "loggregator" outage must not affect the running application.
-1. "loggregator" gathers and stores logs in a best-effort manner.  While undesirable, losing the current buffer of application logs is acceptable.
-1. As much as possible, "loggregator" should be disconnected from the rest of Cloud Foundry.  Ideally, it's deployable outside of Cloud Foundry, entirely.
+1. Loggregator collects STDIN & STDOUT from the customer's application.  This may require configuration on the developer's side.
+1. A Loggregator outage must not affect the running application.
+1. Loggregator gathers and stores logs in a best-effort manner.  While undesirable, losing the current buffer of application logs is acceptable.
+1. As much as possible, Loggregator should be disconnected from the rest of Cloud Foundry.  Ideally, it's deployable outside of Cloud Foundry, entirely.
 1. The 3rd party drain API should mimic Heroku's in order to reduce integration effort for our partners.  The Heroku drain API is simply remote syslog over TCP.
 
 ### Architecture
 
-"loggregator" is composed of:
+Loggregator is composed of:
 
 * **Sources**: Logging agents that run on the Cloud Foundry components.  They forward logs to:
-* **"loggregator" Catcher**: Responsible for gathering logs from the **sources**, and storing in the temporary buffers.
-* **"loggregator" Server**: Accepts connections from the `cf` CLI, allowing users to access their logs.
-* **"loggregator" Drainer**: Implements the Heroku Drain API for 3rd party partners.
+* **Loggregator Catcher**: Responsible for gathering logs from the **sources**, and storing in the temporary buffers.
+* **Loggregator Server**: Accepts connections from the `cf` CLI, allowing users to access their logs.
+* **Loggregator Drainer**: Implements the Heroku Drain API for 3rd party partners.
 
 Source agents emit the logging data as [protocol-buffers](https://code.google.com/p/protobuf/), and the data stays in that format throughout the system.
 
-!["loggregator" Diagram](docs/loggregator.png)
+![Loggregator Diagram](docs/loggregator.png)
 
 ### Development
 
