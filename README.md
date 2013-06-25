@@ -58,6 +58,11 @@ Source agents emit the logging data as [protocol-buffers](https://code.google.co
 
 ### Development
 
+#### Checkout
+    git clone https://github.com/cloudfoundry/loggregator
+    cd loggregator
+    git submodule update --init
+
 #### Running tests
 
     bin/test
