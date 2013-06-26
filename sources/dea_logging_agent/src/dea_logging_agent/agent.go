@@ -9,7 +9,6 @@ import (
 
 type Config struct {
 	InstancesJsonFilePath string
-	Logger           	  *steno.Logger
 	LoggregatorAddress    string
 }
 
@@ -18,25 +17,48 @@ type InstanceEvent struct {
 	Addition bool
 }
 
-func WatchInstancesJsonFileForChanges(config *Config) chan InstanceEvent {
+var logger *steno.Logger
+
+type Agent struct {
+	Config *Config
+}
+
+func (agent *Agent) Start(givenLogger *steno.Logger) {
+	loggregatorClient := &TcpLoggregatorClient{Config: agent.Config}
+	logger = givenLogger;
+
+	instanceEvents := agent.WatchInstancesJsonFileForChanges()
+	for {
+		instanceEvent := <-instanceEvents
+		if instanceEvent.Addition {
+			logger.Warnf("Starting to listen to %v\n", instanceEvent.Identifier())
+			instanceEvent.Instance.StartListening(loggregatorClient)
+		} else {
+			logger.Warnf("Stopping listening to %v\n", instanceEvent.Identifier())
+			instanceEvent.Instance.StopListening()
+		}
+	}
+}
+
+func (agent *Agent) WatchInstancesJsonFileForChanges() chan InstanceEvent {
 	knownInstances := make(map[string]Instance)
 	instancesChan := make(chan InstanceEvent)
 
-	go pollInstancesJson(config.InstancesJsonFilePath, instancesChan, knownInstances, config.Logger)
+	go agent.pollInstancesJson(instancesChan, knownInstances)
 
 	return instancesChan
 }
 
-func pollInstancesJson(InstancesJsonFilePath string, instancesChan chan InstanceEvent, knownInstances map[string]Instance, logger *steno.Logger) {
+func (agent *Agent) pollInstancesJson(instancesChan chan InstanceEvent, knownInstances map[string]Instance) {
 	for {
-		json, err := ioutil.ReadFile(InstancesJsonFilePath)
+		json, err := ioutil.ReadFile(agent.Config.InstancesJsonFilePath)
 		if err != nil {
 			logger.Warnf("Reading failed. %v\n", err)
 			close(instancesChan)
 			return
 		}
 
-		time.Sleep(1 * time.Millisecond)
+		time.Sleep(1*time.Millisecond)
 		currentInstances, err := ReadInstances(json)
 		if err != nil {
 			logger.Warnf("Failed parsing json %v: %v Trying again...\n", err, string(json))

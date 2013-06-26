@@ -30,18 +30,8 @@ func main() {
 
 	config := &dea_logging_agent.Config{
 		InstancesJsonFilePath: *instancesJsonFilePath,
-		Logger: logger,
 		LoggregatorAddress: *loggregatorAddress}
 
-	loggregatorClient := &dea_logging_agent.TcpLoggregatorClient{Config: config}
-
-	instanceEvents := dea_logging_agent.WatchInstancesJsonFileForChanges(config)
-	for {
-		instanceEvent := <-instanceEvents
-		if instanceEvent.Addition {
-			instanceEvent.Instance.StartListening(loggregatorClient)
-		} else {
-			instanceEvent.Instance.StopListening()
-		}
-	}
+	deaLoggingAgent := &dea_logging_agent.Agent{Config:config}
+	deaLoggingAgent.Start(logger)
 }

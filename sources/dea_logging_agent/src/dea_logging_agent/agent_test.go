@@ -8,11 +8,13 @@ import (
 	"time"
 )
 
-func initializeConfig(t *testing.T, filePath string) Config {
-	logger := steno.NewLogger("foobar")
-	config := Config{InstancesJsonFilePath: filePath, Logger: logger}
+func initializeAgent(t *testing.T, filePath string) Agent {
+	config := Config{InstancesJsonFilePath: filePath}
 	os.Remove(config.InstancesJsonFilePath)
-	return config
+	agent := Agent{&config}
+	logger = steno.NewLogger("foobar")
+
+	return agent
 }
 
 func createFile(t *testing.T, name string) *os.File {
@@ -36,9 +38,9 @@ func writeToFile(t *testing.T, filePath string, text string, truncate bool) {
 }
 
 func TestThatFunctionExistsWhenFileCantBeOpened(t *testing.T) {
-	config := initializeConfig(t, "/tmp/config.json")
+	agent := initializeAgent(t, "/tmp/config.json")
 
-	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
+	instanceEventsChan := agent.WatchInstancesJsonFileForChanges()
 
 	if _, ok := <-instanceEventsChan; ok {
 		t.Error("Found an instanceEvent, but should have died")
@@ -46,10 +48,10 @@ func TestThatFunctionExistsWhenFileCantBeOpened(t *testing.T) {
 }
 
 func TestThatAnExistinginstanceWillBeSeen(t *testing.T) {
-	config := initializeConfig(t, "/tmp/config.json")
-	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
+	agent := initializeAgent(t, "/tmp/config.json")
+	writeToFile(t, agent.Config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
-	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
+	instanceEventsChan := agent.WatchInstancesJsonFileForChanges()
 
 	instanceEvent := <-instanceEventsChan
 	expectedInstanceEvent := InstanceEvent{Instance{ApplicationId: "123"}, true}
@@ -57,15 +59,15 @@ func TestThatAnExistinginstanceWillBeSeen(t *testing.T) {
 }
 
 func TestThatANewinstanceWillBeSeen(t *testing.T) {
-	config := initializeConfig(t, "/tmp/config.json")
-	file := createFile(t, config.InstancesJsonFilePath)
+	agent := initializeAgent(t, "/tmp/config.json")
+	file := createFile(t, agent.Config.InstancesJsonFilePath)
 	defer file.Close()
 
-	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
+	instanceEventsChan := agent.WatchInstancesJsonFileForChanges()
 
 	time.Sleep(1 * time.Nanosecond) // ensure that the go function starts before we add proper data to the json config
 
-	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
+	writeToFile(t, agent.Config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
 	instanceEvent, ok := <-instanceEventsChan
 	assert.True(t, ok, "Channel is closed")
@@ -75,10 +77,10 @@ func TestThatANewinstanceWillBeSeen(t *testing.T) {
 }
 
 func TestThatOnlyOneNewInstanceEventWillBeSeen(t *testing.T) {
-	config := initializeConfig(t, "/tmp/config.json")
-	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
+	agent := initializeAgent(t, "/tmp/config.json")
+	writeToFile(t, agent.Config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
-	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
+	instanceEventsChan := agent.WatchInstancesJsonFileForChanges()
 
 	instanceEvent, ok := <-instanceEventsChan
 	assert.True(t, ok, "Channel is closed")
@@ -95,10 +97,10 @@ func TestThatOnlyOneNewInstanceEventWillBeSeen(t *testing.T) {
 }
 
 func TestThatARemovedInstanceWillBeRemoved(t *testing.T) {
-	config := initializeConfig(t, "/tmp/config.json")
-	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
+	agent := initializeAgent(t, "/tmp/config.json")
+	writeToFile(t, agent.Config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
-	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
+	instanceEventsChan := agent.WatchInstancesJsonFileForChanges()
 
 	instanceEvent, ok := <-instanceEventsChan
 	assert.True(t, ok, "Channel is closed")
@@ -106,7 +108,7 @@ func TestThatARemovedInstanceWillBeRemoved(t *testing.T) {
 
 	time.Sleep(2 * time.Millisecond) // ensure that the go function starts before we add proper data to the json config
 
-	writeToFile(t, config.InstancesJsonFilePath, `{"instances": []}`, true)
+	writeToFile(t, agent.Config.InstancesJsonFilePath, `{"instances": []}`, true)
 
 	instanceEvent, ok = <-instanceEventsChan
 	assert.True(t, ok, "Channel is closed")
