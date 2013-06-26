@@ -20,11 +20,11 @@ func TestIdentifier(t *testing.T) {
 }
 
 type MockLoggregatorClient struct {
-	received []byte
+	received chan []byte
 }
 
 func (m *MockLoggregatorClient) Send(data []byte) {
-	m.received = data
+	m.received <- data
 }
 
 func TestThatWeListenToTheUnixSockets(t *testing.T) {
@@ -41,12 +41,14 @@ func TestThatWeListenToTheUnixSockets(t *testing.T) {
 	socketPath := filepath.Join(instance.Identifier(), "stdout.sock")
 	os.Remove(socketPath)
 	expectedOutput := bytes.NewBufferString("Some Output\n").Bytes()
+	moreExpectedOutput := bytes.NewBufferString("toally different\n").Bytes()
 
 	stdoutListener, err := net.Listen("unix", socketPath)
 	assert.NoError(t, err)
 
 	mockLoggregatorClient := new(MockLoggregatorClient)
 
+	mockLoggregatorClient.received = make(chan []byte)
 	instance.StartListening(mockLoggregatorClient)
 
 	connection, err := stdoutListener.Accept()
@@ -56,8 +58,15 @@ func TestThatWeListenToTheUnixSockets(t *testing.T) {
 	_, err = connection.Write(expectedOutput)
 	assert.NoError(t, err)
 
+	data := <- mockLoggregatorClient.received
+	assert.Equal(t, expectedOutput, data)
+
+	_, err = connection.Write(moreExpectedOutput)
+	assert.NoError(t, err)
+
+	data = <- mockLoggregatorClient.received
+	assert.Equal(t, moreExpectedOutput, data)
+
 	instance.StopListening()
 	<-instance.listenerControlChannel
-
-	assert.Equal(t, expectedOutput, mockLoggregatorClient.received)
 }

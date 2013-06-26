@@ -56,6 +56,7 @@ func pollInstancesJson(instancesChan chan InstanceEvent, knownInstances map[stri
 			return
 		}
 
+		runtime.Gosched()
 		time.Sleep(1*time.Millisecond)
 		currentInstances, err := ReadInstances(json)
 		if err != nil {

@@ -29,6 +29,7 @@ func (instance *Instance) StartListening(loggregatorClient LoggregatorClient) {
 
 func (instance *Instance) listen(socket string, loggregatorClient LoggregatorClient) {
 	connection, error := net.Dial("unix", socket)
+	defer connection.Close()
 	if error != nil {
 		logger.Fatalf("Error while dialing into socket %s, %e", socket, error)
 		panic(error)
@@ -41,9 +42,9 @@ func (instance *Instance) listen(socket string, loggregatorClient LoggregatorCli
 			logger.Warnf("Error while reading from socket %s, %e", socket, error)
 			break
 		}
-		logger.Debugf("Read %i bytes from socket", readCount)
+		logger.Debugf("Read %d bytes from socket", readCount)
 		loggregatorClient.Send(buffer[:readCount])
-		logger.Debugf("Sent %i bytes to loggregator", readCount)
+		logger.Debugf("Sent %d bytes to loggregator", readCount)
 		runtime.Gosched()
 		select {
 		case stop := <-instance.listenerControlChannel:
@@ -52,6 +53,8 @@ func (instance *Instance) listen(socket string, loggregatorClient LoggregatorCli
 				close(instance.listenerControlChannel)
 				break
 			}
+		default:
+			// Don't Block... continue
 		}
 	}
 }

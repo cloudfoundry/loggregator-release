@@ -24,7 +24,7 @@ func (loggregatorClient *TcpLoggregatorClient) Send(data []byte) {
 	}
 
 	writeCount, err := openConnection().Write(data)
-	logger.Debugf("Wrote %i bytes to %s", writeCount, config.LoggregatorAddress)
+	logger.Debugf("Wrote %d bytes to %s", writeCount, config.LoggregatorAddress)
 	if err != nil {
 		logger.Fatalf("Writing to loggregator %s failed %e", config.LoggregatorAddress, err)
 		panic(err)
