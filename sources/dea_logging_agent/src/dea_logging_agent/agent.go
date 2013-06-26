@@ -30,10 +30,10 @@ func Start(givenConfig *Config, givenLogger *steno.Logger) {
 		instanceEvent := <-instanceEvents
 		if instanceEvent.Addition {
 			logger.Warnf("Starting to listen to %v\n", instanceEvent.Identifier())
-			instanceEvent.Instance.StartListening(loggregatorClient)
+			instanceEvent.StartListening(loggregatorClient)
 		} else {
 			logger.Warnf("Stopping listening to %v\n", instanceEvent.Identifier())
-			instanceEvent.Instance.StopListening()
+			instanceEvent.StopListening()
 		}
 	}
 }
