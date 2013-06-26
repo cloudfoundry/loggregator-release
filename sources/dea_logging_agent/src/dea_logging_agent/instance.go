@@ -21,13 +21,13 @@ func (instance *Instance) StopListening() {
 	instance.listenerControlChannel <- true
 }
 
-func (instance *Instance) StartListening(sinkServer SinkServer) {
+func (instance *Instance) StartListening(loggregatorClient LoggregatorClient) {
 	instance.listenerControlChannel = make(chan bool)
 	stdoutSocket := filepath.Join(instance.Identifier(), "stdout.sock")
-	go instance.listen(stdoutSocket, sinkServer)
+	go instance.listen(stdoutSocket, loggregatorClient)
 }
 
-func (instance *Instance) listen(socket string, sinkServer SinkServer) {
+func (instance *Instance) listen(socket string, loggregatorClient LoggregatorClient) {
 	connection, error := net.Dial("unix", socket)
 	if (error != nil) {
 		panic(error)
@@ -39,7 +39,7 @@ func (instance *Instance) listen(socket string, sinkServer SinkServer) {
 		if (error != nil) {
 			break
 		}
-		sinkServer.Send(buffer[:readCount])
+		loggregatorClient.Send(buffer[:readCount])
 		runtime.Gosched()
 		select {
 		case stop := <-instance.listenerControlChannel:

@@ -19,11 +19,11 @@ func TestIdentifier(t *testing.T) {
 	assert.Equal(t, "/var/vcap/data/warden/depot/16vbs06ibo1/jobs/272", instance.Identifier())
 }
 
-type MockSinkServer struct{
+type MockLoggregatorClient struct{
 	received []byte
 }
 
-func (m *MockSinkServer) Send(data []byte) {
+func (m *MockLoggregatorClient) Send(data []byte) {
 	m.received = data
 }
 
@@ -54,11 +54,11 @@ func TestThatWeListenToTheUnixSockets(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	mockSinkServer := new(MockSinkServer)
+	mockLoggregatorClient := new(MockLoggregatorClient)
 
-	instance.StartListening(mockSinkServer)
+	instance.StartListening(mockLoggregatorClient)
 	instance.StopListening()
 	<-instance.listenerControlChannel
 
-	assert.Equal(t, expectedOutput, mockSinkServer.received)
+	assert.Equal(t, expectedOutput, mockLoggregatorClient.received)
 }

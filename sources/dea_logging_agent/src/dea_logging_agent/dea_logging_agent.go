@@ -10,6 +10,7 @@ import (
 type Config struct {
 	instancesJsonFilePath string
 	logFilePath           string
+	loggregatorAddress	  string
 }
 
 type InstanceEvent struct {
