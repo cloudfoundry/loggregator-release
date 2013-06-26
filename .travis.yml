@@ -3,5 +3,5 @@ go:
   - 1.1.1
 before_install:
   - git submodule update --init --recursive
+install: go build -v ./...
 script: ./bin/test
-
