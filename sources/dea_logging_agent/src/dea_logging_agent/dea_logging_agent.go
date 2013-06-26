@@ -9,7 +9,7 @@ import (
 
 type Config struct {
 	InstancesJsonFilePath string
-	LogFilePath           string
+	Logger           	  *steno.Logger
 	LoggregatorAddress    string
 }
 
@@ -22,16 +22,7 @@ func WatchInstancesJsonFileForChanges(config *Config) chan InstanceEvent {
 	knownInstances := make(map[string]Instance)
 	instancesChan := make(chan InstanceEvent)
 
-	loggingConfig := &steno.Config{
-		Sinks: []steno.Sink{
-			steno.NewFileSink(config.LogFilePath)},
-		Level:     steno.LOG_INFO,
-		Codec:     steno.NewJsonCodec(),
-		EnableLOC: true}
-	steno.Init(loggingConfig)
-	logger := steno.NewLogger("dea_logging_agent")
-
-	go pollInstancesJson(config.InstancesJsonFilePath, instancesChan, knownInstances, logger)
+	go pollInstancesJson(config.InstancesJsonFilePath, instancesChan, knownInstances, config.Logger)
 
 	return instancesChan
 }
