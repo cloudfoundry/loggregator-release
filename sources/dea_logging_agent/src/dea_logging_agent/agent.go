@@ -21,7 +21,7 @@ var logger *steno.Logger
 var config *Config
 
 func Start(givenConfig *Config, givenLogger *steno.Logger) {
-	loggregatorClient := &TcpLoggregatorClient{Config: config}
+	loggregatorClient := &TcpLoggregatorClient{}
 	logger = givenLogger
 	config = givenConfig
 

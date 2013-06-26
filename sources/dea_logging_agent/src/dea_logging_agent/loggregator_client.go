@@ -7,7 +7,6 @@ type LoggregatorClient interface {
 }
 
 type TcpLoggregatorClient struct {
-	Config *Config
 	conn   net.Conn
 }
 
