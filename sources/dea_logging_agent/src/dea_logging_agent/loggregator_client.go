@@ -14,17 +14,20 @@ type TcpLoggregatorClient struct {
 func (loggregatorClient *TcpLoggregatorClient) Send(data []byte) {
 	openConnection := func() net.Conn {
 		if loggregatorClient.conn == nil {
-			conn, err := net.Dial("tcp", loggregatorClient.Config.LoggregatorAddress)
+			conn, err := net.Dial("tcp", config.LoggregatorAddress)
 			loggregatorClient.conn = conn
 			if err != nil {
+				logger.Fatalf("Dialing to loggregator %s failed %e", config.LoggregatorAddress, err)
 				panic(err)
 			}
 		}
 		return loggregatorClient.conn
 	}
 
-	_, err := openConnection().Write(data)
+	writeCount, err := openConnection().Write(data)
+	logger.Debugf("Wrote %i bytes to %s", writeCount, config.LoggregatorAddress)
 	if err != nil {
+		logger.Fatalf("Writing to loggregator %s failed %e", config.LoggregatorAddress, err)
 		panic(err)
 	}
 }
