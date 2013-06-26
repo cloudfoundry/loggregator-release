@@ -1,17 +1,17 @@
 package dea_logging_agent
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
 	"net"
+	"testing"
 )
 
 func TestSend(t *testing.T) {
 	expectedOutput := []byte("Important Testmessage")
-	config := Config{loggregatorAddress: "localhost:9876"}
-	loggregatorClient := &TcpLoggregatorClient{config: &config}
+	config := Config{LoggregatorAddress: "localhost:9876"}
+	loggregatorClient := &TcpLoggregatorClient{Config: &config}
 
-	tcpListener, err := net.Listen("tcp", config.loggregatorAddress)
+	tcpListener, err := net.Listen("tcp", config.LoggregatorAddress)
 	assert.NoError(t, err)
 
 	loggregatorClient.Send(expectedOutput)

@@ -1,23 +1,23 @@
 package dea_logging_agent
 
 import (
-	"testing"
-    "github.com/stretchr/testify/assert"
-	"os"
-	"time"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
+	"os"
+	"testing"
+	"time"
 )
 
 func initializeConfig(t *testing.T, filePath string) Config {
 	logFile, error := ioutil.TempFile("", "dea_loggin_agent")
 	defer logFile.Close()
 	assert.NoError(t, error)
-	config := Config{instancesJsonFilePath: filePath, logFilePath: logFile.Name()}
-	os.Remove(config.instancesJsonFilePath)
+	config := Config{InstancesJsonFilePath: filePath, LogFilePath: logFile.Name()}
+	os.Remove(config.InstancesJsonFilePath)
 	return config
 }
 
-func createFile(t *testing.T, name string) (*os.File) {
+func createFile(t *testing.T, name string) *os.File {
 	file, error := os.Create(name)
 	assert.NoError(t, error)
 	return file
@@ -29,7 +29,7 @@ func writeToFile(t *testing.T, filePath string, text string, truncate bool) {
 	file := createFile(t, filePath)
 	defer file.Close()
 
-	if (truncate) {
+	if truncate {
 		file.Truncate(0)
 	}
 
@@ -49,25 +49,25 @@ func TestThatFunctionExistsWhenFileCantBeOpened(t *testing.T) {
 
 func TestThatAnExistinginstanceWillBeSeen(t *testing.T) {
 	config := initializeConfig(t, "/tmp/config.json")
-	writeToFile(t, config.instancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
+	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
 	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
 
-	instanceEvent := <-instanceEventsChan;
+	instanceEvent := <-instanceEventsChan
 	expectedInstanceEvent := InstanceEvent{Instance{ApplicationId: "123"}, true}
 	assert.Equal(t, expectedInstanceEvent, instanceEvent)
 }
 
 func TestThatANewinstanceWillBeSeen(t *testing.T) {
 	config := initializeConfig(t, "/tmp/config.json")
-	file := createFile(t, config.instancesJsonFilePath)
+	file := createFile(t, config.InstancesJsonFilePath)
 	defer file.Close()
 
 	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
 
-	time.Sleep(1*time.Nanosecond) // ensure that the go function starts before we add proper data to the json config
+	time.Sleep(1 * time.Nanosecond) // ensure that the go function starts before we add proper data to the json config
 
-	writeToFile(t, config.instancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
+	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
 	instanceEvent, ok := <-instanceEventsChan
 	assert.True(t, ok, "Channel is closed")
@@ -78,7 +78,7 @@ func TestThatANewinstanceWillBeSeen(t *testing.T) {
 
 func TestThatOnlyOneNewInstanceEventWillBeSeen(t *testing.T) {
 	config := initializeConfig(t, "/tmp/config.json")
-	writeToFile(t, config.instancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
+	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
 	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
 
@@ -98,7 +98,7 @@ func TestThatOnlyOneNewInstanceEventWillBeSeen(t *testing.T) {
 
 func TestThatARemovedInstanceWillBeRemoved(t *testing.T) {
 	config := initializeConfig(t, "/tmp/config.json")
-	writeToFile(t, config.instancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
+	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
 	instanceEventsChan := WatchInstancesJsonFileForChanges(&config)
 
@@ -106,9 +106,9 @@ func TestThatARemovedInstanceWillBeRemoved(t *testing.T) {
 	assert.True(t, ok, "Channel is closed")
 	assert.NotNil(t, instanceEvent)
 
-	time.Sleep(2*time.Millisecond) // ensure that the go function starts before we add proper data to the json config
+	time.Sleep(2 * time.Millisecond) // ensure that the go function starts before we add proper data to the json config
 
-	writeToFile(t, config.instancesJsonFilePath, `{"instances": []}`, true)
+	writeToFile(t, config.InstancesJsonFilePath, `{"instances": []}`, true)
 
 	instanceEvent, ok = <-instanceEventsChan
 	assert.True(t, ok, "Channel is closed")

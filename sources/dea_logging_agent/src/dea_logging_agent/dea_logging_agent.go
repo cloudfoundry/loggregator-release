@@ -1,53 +1,53 @@
 package dea_logging_agent
 
 import (
+	steno "github.com/cloudfoundry/gosteno"
 	"io/ioutil"
 	"runtime"
 	"time"
-	steno "github.com/cloudfoundry/gosteno"
 )
 
 type Config struct {
-	instancesJsonFilePath string
-	logFilePath           string
-	loggregatorAddress	  string
+	InstancesJsonFilePath string
+	LogFilePath           string
+	LoggregatorAddress    string
 }
 
 type InstanceEvent struct {
 	Instance
-	addition bool
+	Addition bool
 }
 
-func WatchInstancesJsonFileForChanges(config *Config) (chan InstanceEvent) {
+func WatchInstancesJsonFileForChanges(config *Config) chan InstanceEvent {
 	knownInstances := make(map[string]Instance)
 	instancesChan := make(chan InstanceEvent)
 
 	loggingConfig := &steno.Config{
 		Sinks: []steno.Sink{
-			steno.NewFileSink(config.logFilePath)},
+			steno.NewFileSink(config.LogFilePath)},
 		Level:     steno.LOG_INFO,
 		Codec:     steno.NewJsonCodec(),
-		EnableLOC: true }
+		EnableLOC: true}
 	steno.Init(loggingConfig)
 	logger := steno.NewLogger("dea_logging_agent")
 
-	go pollInstancesJson(config.instancesJsonFilePath, instancesChan, knownInstances, logger)
+	go pollInstancesJson(config.InstancesJsonFilePath, instancesChan, knownInstances, logger)
 
 	return instancesChan
 }
 
-func pollInstancesJson(instancesJsonFilePath string, instancesChan chan InstanceEvent, knownInstances map[string]Instance, logger *steno.Logger) {
+func pollInstancesJson(InstancesJsonFilePath string, instancesChan chan InstanceEvent, knownInstances map[string]Instance, logger *steno.Logger) {
 	for {
-		json, err := ioutil.ReadFile(instancesJsonFilePath)
-		if (err != nil) {
+		json, err := ioutil.ReadFile(InstancesJsonFilePath)
+		if err != nil {
 			logger.Warnf("Reading failed. %v\n", err)
 			close(instancesChan)
 			return
 		}
 
-		time.Sleep(1*time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 		currentInstances, err := ReadInstances(json)
-		if (err != nil) {
+		if err != nil {
 			logger.Warnf("Failed parsing json %v: %v Trying again...\n", err, string(json))
 			runtime.Gosched()
 			continue
@@ -60,6 +60,7 @@ func pollInstancesJson(instancesJsonFilePath string, instancesChan chan Instance
 			}
 
 			delete(knownInstances, instance.Identifier())
+			logger.Infof("Removing stale instance %v", instance.Identifier())
 			instancesChan <- InstanceEvent{instance, false}
 		}
 
@@ -70,6 +71,7 @@ func pollInstancesJson(instancesJsonFilePath string, instancesChan chan Instance
 			}
 
 			knownInstances[instance.Identifier()] = instance
+			logger.Infof("Adding new instance %v", instance.Identifier())
 			instancesChan <- InstanceEvent{instance, true}
 		}
 	}

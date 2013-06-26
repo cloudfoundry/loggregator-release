@@ -1,25 +1,25 @@
 package dea_logging_agent
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
-	"path/filepath"
-	"io/ioutil"
-	"os"
 	"bytes"
+	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"net"
+	"os"
+	"path/filepath"
+	"testing"
 )
 
 func TestIdentifier(t *testing.T) {
 	instance := Instance{
-		ApplicationId: "4aa9506e-277f-41ab-b764-a35c0b96fa1b",
-		WardenJobId: "272",
+		ApplicationId:       "4aa9506e-277f-41ab-b764-a35c0b96fa1b",
+		WardenJobId:         "272",
 		WardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo1"}
 
 	assert.Equal(t, "/var/vcap/data/warden/depot/16vbs06ibo1/jobs/272", instance.Identifier())
 }
 
-type MockLoggregatorClient struct{
+type MockLoggregatorClient struct {
 	received []byte
 }
 
@@ -33,9 +33,9 @@ func TestThatWeListenToTheUnixSockets(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 
 	instance := &Instance{
-		ApplicationId: "1234",
-		WardenJobId: "56",
-		WardenContainerPath: tmpdir }
+		ApplicationId:       "1234",
+		WardenJobId:         "56",
+		WardenContainerPath: tmpdir}
 	os.MkdirAll(instance.Identifier(), 0777)
 
 	socketPath := filepath.Join(instance.Identifier(), "stdout.sock")
@@ -45,18 +45,17 @@ func TestThatWeListenToTheUnixSockets(t *testing.T) {
 	stdoutListener, err := net.Listen("unix", socketPath)
 	assert.NoError(t, err)
 
-	go func() {
-		connection, err := stdoutListener.Accept()
-		defer connection.Close()
-		assert.Nil(t, err)
-
-		_, err = connection.Write(expectedOutput)
-		assert.NoError(t, err)
-	}()
-
 	mockLoggregatorClient := new(MockLoggregatorClient)
 
 	instance.StartListening(mockLoggregatorClient)
+
+	connection, err := stdoutListener.Accept()
+	defer connection.Close()
+	assert.NoError(t, err)
+
+	_, err = connection.Write(expectedOutput)
+	assert.NoError(t, err)
+
 	instance.StopListening()
 	<-instance.listenerControlChannel
 

@@ -1,9 +1,9 @@
 package dea_logging_agent
 
 import (
+	"net"
 	"path/filepath"
 	"runtime"
-	"net"
 )
 
 type Instance struct {
@@ -13,7 +13,7 @@ type Instance struct {
 	listenerControlChannel chan (bool)
 }
 
-func (instance *Instance) Identifier() (string) {
+func (instance *Instance) Identifier() string {
 	return filepath.Join(instance.WardenContainerPath, "jobs", instance.WardenJobId)
 }
 
@@ -29,14 +29,14 @@ func (instance *Instance) StartListening(loggregatorClient LoggregatorClient) {
 
 func (instance *Instance) listen(socket string, loggregatorClient LoggregatorClient) {
 	connection, error := net.Dial("unix", socket)
-	if (error != nil) {
+	if error != nil {
 		panic(error)
 	}
 	buffer := make([]byte, 128)
 
 	for {
 		readCount, error := connection.Read(buffer)
-		if (error != nil) {
+		if error != nil {
 			break
 		}
 		loggregatorClient.Send(buffer[:readCount])
