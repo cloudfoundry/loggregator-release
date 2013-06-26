@@ -32,6 +32,5 @@ func main() {
 		InstancesJsonFilePath: *instancesJsonFilePath,
 		LoggregatorAddress: *loggregatorAddress}
 
-	deaLoggingAgent := &dea_logging_agent.Agent{Config:config}
-	deaLoggingAgent.Start(logger)
+	dea_logging_agent.Start(config, logger)
 }

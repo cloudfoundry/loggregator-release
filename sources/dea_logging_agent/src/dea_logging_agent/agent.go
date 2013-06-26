@@ -18,16 +18,14 @@ type InstanceEvent struct {
 }
 
 var logger *steno.Logger
+var config *Config
 
-type Agent struct {
-	Config *Config
-}
+func Start(givenConfig *Config, givenLogger *steno.Logger) {
+	loggregatorClient := &TcpLoggregatorClient{Config: config}
+	logger = givenLogger
+	config = givenConfig
 
-func (agent *Agent) Start(givenLogger *steno.Logger) {
-	loggregatorClient := &TcpLoggregatorClient{Config: agent.Config}
-	logger = givenLogger;
-
-	instanceEvents := agent.WatchInstancesJsonFileForChanges()
+	instanceEvents := WatchInstancesJsonFileForChanges()
 	for {
 		instanceEvent := <-instanceEvents
 		if instanceEvent.Addition {
@@ -40,18 +38,18 @@ func (agent *Agent) Start(givenLogger *steno.Logger) {
 	}
 }
 
-func (agent *Agent) WatchInstancesJsonFileForChanges() chan InstanceEvent {
+func WatchInstancesJsonFileForChanges() chan InstanceEvent {
 	knownInstances := make(map[string]Instance)
 	instancesChan := make(chan InstanceEvent)
 
-	go agent.pollInstancesJson(instancesChan, knownInstances)
+	go pollInstancesJson(instancesChan, knownInstances)
 
 	return instancesChan
 }
 
-func (agent *Agent) pollInstancesJson(instancesChan chan InstanceEvent, knownInstances map[string]Instance) {
+func pollInstancesJson(instancesChan chan InstanceEvent, knownInstances map[string]Instance) {
 	for {
-		json, err := ioutil.ReadFile(agent.Config.InstancesJsonFilePath)
+		json, err := ioutil.ReadFile(config.InstancesJsonFilePath)
 		if err != nil {
 			logger.Warnf("Reading failed. %v\n", err)
 			close(instancesChan)
