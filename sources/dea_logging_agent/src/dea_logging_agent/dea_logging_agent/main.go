@@ -10,7 +10,7 @@ import (
 
 var instancesJsonFilePath = flag.String("instancesFile", "/var/vcap/data/dea_next/db/instances.json", "The DEA instances JSON file")
 var logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
-var loggregatorAddress = flag.String("server", "localhost:2345", "The loggregator TCP host:port for log forwarding")
+var loggregatorAddress = flag.String("server", "localhost:3456", "The loggregator TCP host:port for log forwarding")
 var logLevel = flag.Bool("v", false, "Verbose logging")
 
 func main() {
