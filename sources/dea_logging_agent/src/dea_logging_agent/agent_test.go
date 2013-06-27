@@ -1,20 +1,11 @@
 package dea_logging_agent
 
 import (
-	steno "github.com/cloudfoundry/gosteno"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 	"time"
 )
-
-func init() {
-	config = &Config{
-		InstancesJsonFilePath: "/tmp/config.json",
-		LoggregatorAddress: "localhost:9876"}
-	os.Remove(config.InstancesJsonFilePath)
-	logger = steno.NewLogger("foobar")
-}
 
 func createFile(t *testing.T, name string) *os.File {
 	file, error := os.Create(name)
