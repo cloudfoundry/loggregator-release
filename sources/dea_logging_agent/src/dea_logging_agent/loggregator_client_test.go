@@ -11,6 +11,7 @@ func TestSend(t *testing.T) {
 	loggregatorClient := &TcpLoggregatorClient{}
 
 	tcpListener, err := net.Listen("tcp", config.LoggregatorAddress)
+	defer tcpListener.Close()
 	assert.NoError(t, err)
 
 	loggregatorClient.Send(expectedOutput)
@@ -19,7 +20,7 @@ func TestSend(t *testing.T) {
 	defer connection.Close()
 	assert.NoError(t, err)
 
-	buffer := make([]byte, 128)
+	buffer := make([]byte, bufferSize)
 	readCount, err := connection.Read(buffer)
 	assert.NoError(t, err)
 

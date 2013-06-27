@@ -1,7 +1,6 @@
 package dea_logging_agent
 
 import (
-	"bytes"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net"
@@ -27,7 +26,7 @@ func (m *MockLoggregatorClient) Send(data []byte) {
 	m.received <- data
 }
 
-func TestThatWeListenToTheUnixSockets(t *testing.T) {
+func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "testing")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
@@ -38,13 +37,18 @@ func TestThatWeListenToTheUnixSockets(t *testing.T) {
 		WardenContainerPath: tmpdir}
 	os.MkdirAll(instance.Identifier(), 0777)
 
-	socketPath := filepath.Join(instance.Identifier(), "stdout.sock")
-	os.Remove(socketPath)
-	expectedOutput := bytes.NewBufferString("Some Output\n").Bytes()
-	moreExpectedOutput := bytes.NewBufferString("toally different\n").Bytes()
-
-	stdoutListener, err := net.Listen("unix", socketPath)
+	stdoutSocketPath := filepath.Join(instance.Identifier(), "stdout.sock")
+	stderrSocketPath := filepath.Join(instance.Identifier(), "stderr.sock")
+	os.Remove(stdoutSocketPath)
+	os.Remove(stderrSocketPath)
+	stdoutListener, err := net.Listen("unix", stdoutSocketPath)
 	assert.NoError(t, err)
+	_, err = net.Listen("unix", stderrSocketPath)
+	assert.NoError(t, err)
+
+
+	logMessage := "Some Output\n"
+	secondLogMessage := "toally different\n"
 
 	mockLoggregatorClient := new(MockLoggregatorClient)
 
@@ -55,17 +59,66 @@ func TestThatWeListenToTheUnixSockets(t *testing.T) {
 	defer connection.Close()
 	assert.NoError(t, err)
 
-	_, err = connection.Write(expectedOutput)
+	_, err = connection.Write([]byte(logMessage))
 	assert.NoError(t, err)
 
 	data := <- mockLoggregatorClient.received
-	assert.Equal(t, expectedOutput, data)
+	assert.Equal(t, "STDOUT " + logMessage, string(data))
 
-	_, err = connection.Write(moreExpectedOutput)
+	_, err = connection.Write([]byte(secondLogMessage))
 	assert.NoError(t, err)
 
 	data = <- mockLoggregatorClient.received
-	assert.Equal(t, moreExpectedOutput, data)
+	assert.Equal(t, "STDOUT " + secondLogMessage, string(data))
+
+	instance.StopListening()
+	<-instance.listenerControlChannel
+}
+
+func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
+	tmpdir, err := ioutil.TempDir("", "testing")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+
+	instance := &Instance{
+		ApplicationId:       "1234",
+		WardenJobId:         "56",
+		WardenContainerPath: tmpdir}
+	os.MkdirAll(instance.Identifier(), 0777)
+
+	stdoutSocketPath := filepath.Join(instance.Identifier(), "stdout.sock")
+	stderrSocketPath := filepath.Join(instance.Identifier(), "stderr.sock")
+	os.Remove(stdoutSocketPath)
+	os.Remove(stderrSocketPath)
+	_, err = net.Listen("unix", stdoutSocketPath)
+	assert.NoError(t, err)
+	stderrListener, err := net.Listen("unix", stderrSocketPath)
+	assert.NoError(t, err)
+
+
+	logMessage := "Some Output\n"
+	secondLogMessage := "toally different\n"
+
+	mockLoggregatorClient := new(MockLoggregatorClient)
+
+	mockLoggregatorClient.received = make(chan []byte)
+	instance.StartListening(mockLoggregatorClient)
+
+	connection, err := stderrListener.Accept()
+	defer connection.Close()
+	assert.NoError(t, err)
+
+	_, err = connection.Write([]byte(logMessage))
+	assert.NoError(t, err)
+
+	data := <- mockLoggregatorClient.received
+	assert.Equal(t, "STDERR " + logMessage, string(data))
+
+	_, err = connection.Write([]byte(secondLogMessage))
+	assert.NoError(t, err)
+
+	data = <- mockLoggregatorClient.received
+	assert.Equal(t, "STDERR " + secondLogMessage, string(data))
 
 	instance.StopListening()
 	<-instance.listenerControlChannel

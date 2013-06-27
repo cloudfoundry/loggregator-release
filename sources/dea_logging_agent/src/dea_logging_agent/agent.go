@@ -17,6 +17,8 @@ type InstanceEvent struct {
 	Addition bool
 }
 
+const bufferSize = 4096
+
 var logger *steno.Logger
 var config *Config
 
