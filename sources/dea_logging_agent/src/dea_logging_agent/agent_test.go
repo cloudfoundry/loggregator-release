@@ -8,8 +8,10 @@ import (
 	"time"
 )
 
-func initialize(t *testing.T, filePath string) {
-	config = &Config{InstancesJsonFilePath: filePath}
+func init() {
+	config = &Config{
+		InstancesJsonFilePath: "/tmp/config.json",
+		LoggregatorAddress: "localhost:9876"}
 	os.Remove(config.InstancesJsonFilePath)
 	logger = steno.NewLogger("foobar")
 }
@@ -35,8 +37,6 @@ func writeToFile(t *testing.T, filePath string, text string, truncate bool) {
 }
 
 func TestThatFunctionExistsWhenFileCantBeOpened(t *testing.T) {
-	initialize(t, "/tmp/config.json")
-
 	instanceEventsChan := WatchInstancesJsonFileForChanges()
 
 	if _, ok := <-instanceEventsChan; ok {
@@ -45,7 +45,6 @@ func TestThatFunctionExistsWhenFileCantBeOpened(t *testing.T) {
 }
 
 func TestThatAnExistinginstanceWillBeSeen(t *testing.T) {
-	initialize(t, "/tmp/config.json")
 	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
 	instanceEventsChan := WatchInstancesJsonFileForChanges()
@@ -56,7 +55,6 @@ func TestThatAnExistinginstanceWillBeSeen(t *testing.T) {
 }
 
 func TestThatANewinstanceWillBeSeen(t *testing.T) {
-	initialize(t, "/tmp/config.json")
 	file := createFile(t, config.InstancesJsonFilePath)
 	defer file.Close()
 
@@ -74,7 +72,6 @@ func TestThatANewinstanceWillBeSeen(t *testing.T) {
 }
 
 func TestThatOnlyOneNewInstanceEventWillBeSeen(t *testing.T) {
-	initialize(t, "/tmp/config.json")
 	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
 	instanceEventsChan := WatchInstancesJsonFileForChanges()
@@ -94,7 +91,6 @@ func TestThatOnlyOneNewInstanceEventWillBeSeen(t *testing.T) {
 }
 
 func TestThatARemovedInstanceWillBeRemoved(t *testing.T) {
-	initialize(t, "/tmp/config.json")
 	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
 	instanceEventsChan := WatchInstancesJsonFileForChanges()

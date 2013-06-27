@@ -8,7 +8,6 @@ import (
 
 func TestSend(t *testing.T) {
 	expectedOutput := []byte("Important Testmessage")
-	config = &Config{LoggregatorAddress: "localhost:9876"}
 	loggregatorClient := &TcpLoggregatorClient{}
 
 	tcpListener, err := net.Listen("tcp", config.LoggregatorAddress)
