@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/cloudfoundry/loggregator.png?branch=master)](https://travis-ci.org/cloudfoundry/loggregator)
+
 # Loggregator
 
 ### Logging in the Clouds
