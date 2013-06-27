@@ -3,27 +3,20 @@ package dea_logging_agent
 import (
 	"net"
 	"path/filepath"
-	"runtime"
+//	"runtime"
 )
 
 type Instance struct {
-	ApplicationId          string
-	WardenJobId            string
-	WardenContainerPath    string
-	listenerControlChannel chan (bool)
+	ApplicationId                  string
+	WardenJobId                    string
+	WardenContainerPath            string
 }
 
 func (instance *Instance) Identifier() string {
 	return filepath.Join(instance.WardenContainerPath, "jobs", instance.WardenJobId)
 }
 
-func (instance *Instance) StopListening() {
-	instance.listenerControlChannel <- true
-}
-
 func (instance *Instance) StartListening(loggregatorClient LoggregatorClient) {
-	instance.listenerControlChannel = make(chan bool)
-
 	stdoutSocket := filepath.Join(instance.Identifier(), "stdout.sock")
 	go instance.listen(stdoutSocket, loggregatorClient, "STDOUT ")
 
@@ -32,13 +25,14 @@ func (instance *Instance) StartListening(loggregatorClient LoggregatorClient) {
 }
 
 func (instance *Instance) listen(socket string, loggregatorClient LoggregatorClient, prefix string) {
-	connection, error := net.Dial("unix", socket)
-	defer connection.Close()
-	if error != nil {
-		logger.Fatalf("Error while dialing into socket %s, %e", socket, error)
-		panic(error)
+	connection, err := net.Dial("unix", socket)
+	if err != nil {
+		logger.Fatalf("Error while dialing into socket %s, %s", socket, err)
+		return
 	}
-
+//	defer connection.Close()
+//		logger.Infof("Stopped reading from socket %s", socket)
+//	}()
 	prefixBytes := []byte(prefix)
 	prefixLength := len(prefixBytes)
 	buffer := make([]byte, prefixLength + bufferSize)
@@ -48,23 +42,14 @@ func (instance *Instance) listen(socket string, loggregatorClient LoggregatorCli
 
 	for {
 		readCount, error := connection.Read(buffer[prefixLength:])
-		if error != nil {
-			logger.Warnf("Error while reading from socket %s, %e", socket, error)
+		if readCount == 0 && error != nil {
+			logger.Infof("Error while reading from socket %s, %s", socket, error)
 			break
 		}
 		logger.Debugf("Read %d bytes from socket", readCount)
 		loggregatorClient.Send(buffer[:readCount + prefixLength])
 		logger.Debugf("Sent %d bytes to loggregator", readCount)
-		runtime.Gosched()
-		select {
-		case stop := <-instance.listenerControlChannel:
-			if stop {
-				logger.Debugf("Stopped listening to instance %v", instance.Identifier())
-				close(instance.listenerControlChannel)
-				break
-			}
-		default:
-			// Don't Block... continue
-		}
+//		runtime.Gosched()
 	}
 }
+

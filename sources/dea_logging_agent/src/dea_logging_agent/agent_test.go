@@ -28,54 +28,54 @@ func writeToFile(t *testing.T, filePath string, text string, truncate bool) {
 }
 
 func TestThatFunctionExistsWhenFileCantBeOpened(t *testing.T) {
-	instanceEventsChan := WatchInstancesJsonFileForChanges()
+	instancesChan := WatchInstancesJsonFileForChanges()
 
-	if _, ok := <-instanceEventsChan; ok {
-		t.Error("Found an instanceEvent, but should have died")
+	if _, ok := <-instancesChan; ok {
+		t.Error("Found an instance, but should have died")
 	}
 }
 
 func TestThatAnExistinginstanceWillBeSeen(t *testing.T) {
 	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
-	instanceEventsChan := WatchInstancesJsonFileForChanges()
+	instancesChan := WatchInstancesJsonFileForChanges()
 
-	instanceEvent := <-instanceEventsChan
-	expectedInstanceEvent := InstanceEvent{Instance{ApplicationId: "123"}, true}
-	assert.Equal(t, expectedInstanceEvent, instanceEvent)
+	instance := <-instancesChan
+	expectedInstance := &Instance{ApplicationId: "123"}
+	assert.Equal(t, expectedInstance, instance)
 }
 
 func TestThatANewinstanceWillBeSeen(t *testing.T) {
 	file := createFile(t, config.InstancesJsonFilePath)
 	defer file.Close()
 
-	instanceEventsChan := WatchInstancesJsonFileForChanges()
+	instancesChan := WatchInstancesJsonFileForChanges()
 
 	time.Sleep(1 * time.Nanosecond) // ensure that the go function starts before we add proper data to the json config
 
 	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
-	instanceEvent, ok := <-instanceEventsChan
+	instance, ok := <-instancesChan
 	assert.True(t, ok, "Channel is closed")
 
-	expectedInstanceEvent := InstanceEvent{Instance{ApplicationId: "123"}, true}
-	assert.Equal(t, expectedInstanceEvent, instanceEvent)
+	expectedInstance :=&Instance{ApplicationId: "123"}
+	assert.Equal(t, expectedInstance, instance)
 }
 
-func TestThatOnlyOneNewInstanceEventWillBeSeen(t *testing.T) {
+func TestThatOnlyOneNewInstancesWillBeSeen(t *testing.T) {
 	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
-	instanceEventsChan := WatchInstancesJsonFileForChanges()
+	instancesChan := WatchInstancesJsonFileForChanges()
 
-	instanceEvent, ok := <-instanceEventsChan
+	instance, ok := <-instancesChan
 	assert.True(t, ok, "Channel is closed")
 
-	expectedInstanceEvent := InstanceEvent{Instance{ApplicationId: "123"}, true}
-	assert.Equal(t, expectedInstanceEvent, instanceEvent)
+	expectedInstance := &Instance{ApplicationId: "123"}
+	assert.Equal(t, expectedInstance, instance)
 
 	select {
-	case instanceEvent = <-instanceEventsChan:
-		assert.Nil(t, instanceEvent, "We just got an old instanceEvent")
+	case instance = <-instancesChan:
+		assert.Nil(t, instance, "We just got an old instance")
 	default:
 		// OK
 	}
@@ -84,19 +84,22 @@ func TestThatOnlyOneNewInstanceEventWillBeSeen(t *testing.T) {
 func TestThatARemovedInstanceWillBeRemoved(t *testing.T) {
 	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
-	instanceEventsChan := WatchInstancesJsonFileForChanges()
+	instancesChan := WatchInstancesJsonFileForChanges()
 
-	instanceEvent, ok := <-instanceEventsChan
+	instance, ok := <-instancesChan
 	assert.True(t, ok, "Channel is closed")
-	assert.NotNil(t, instanceEvent)
+	assert.NotNil(t, instance)
 
-	time.Sleep(2 * time.Millisecond) // ensure that the go function starts before we add proper data to the json config
 
 	writeToFile(t, config.InstancesJsonFilePath, `{"instances": []}`, true)
 
-	instanceEvent, ok = <-instanceEventsChan
+	time.Sleep(2 * time.Millisecond) // ensure that the go function starts before we add proper data to the json config
+
+	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
+
+	instance, ok = <-instancesChan
 	assert.True(t, ok, "Channel is closed")
 
-	expectedInstanceEvent := InstanceEvent{Instance{ApplicationId: "123"}, false}
-	assert.Equal(t, expectedInstanceEvent, instanceEvent)
+	expectedInstance := &Instance{ApplicationId: "123"}
+	assert.Equal(t, expectedInstance, instance)
 }

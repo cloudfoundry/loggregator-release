@@ -19,11 +19,11 @@ func TestIdentifier(t *testing.T) {
 }
 
 type MockLoggregatorClient struct {
-	received chan []byte
+	received chan *[]byte
 }
 
 func (m *MockLoggregatorClient) Send(data []byte) {
-	m.received <- data
+	m.received <- &data
 }
 
 func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
@@ -42,8 +42,10 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	os.Remove(stdoutSocketPath)
 	os.Remove(stderrSocketPath)
 	stdoutListener, err := net.Listen("unix", stdoutSocketPath)
+	defer stdoutListener.Close()
 	assert.NoError(t, err)
-	_, err = net.Listen("unix", stderrSocketPath)
+	stderrListener, err := net.Listen("unix", stderrSocketPath)
+	defer stderrListener.Close()
 	assert.NoError(t, err)
 
 
@@ -52,7 +54,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 
 	mockLoggregatorClient := new(MockLoggregatorClient)
 
-	mockLoggregatorClient.received = make(chan []byte)
+	mockLoggregatorClient.received = make(chan *[]byte)
 	instance.StartListening(mockLoggregatorClient)
 
 	connection, err := stdoutListener.Accept()
@@ -63,16 +65,14 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	assert.NoError(t, err)
 
 	data := <- mockLoggregatorClient.received
-	assert.Equal(t, "STDOUT " + logMessage, string(data))
+
+	assert.Equal(t, "STDOUT " + logMessage, string(*data))
 
 	_, err = connection.Write([]byte(secondLogMessage))
 	assert.NoError(t, err)
 
 	data = <- mockLoggregatorClient.received
-	assert.Equal(t, "STDOUT " + secondLogMessage, string(data))
-
-	instance.StopListening()
-	<-instance.listenerControlChannel
+	assert.Equal(t, "STDOUT " + secondLogMessage, string(*data))
 }
 
 func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
@@ -90,9 +90,11 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	stderrSocketPath := filepath.Join(instance.Identifier(), "stderr.sock")
 	os.Remove(stdoutSocketPath)
 	os.Remove(stderrSocketPath)
-	_, err = net.Listen("unix", stdoutSocketPath)
+	stdoutListener, err := net.Listen("unix", stdoutSocketPath)
+	defer stdoutListener.Close()
 	assert.NoError(t, err)
 	stderrListener, err := net.Listen("unix", stderrSocketPath)
+	defer stderrListener.Close()
 	assert.NoError(t, err)
 
 
@@ -101,7 +103,7 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 
 	mockLoggregatorClient := new(MockLoggregatorClient)
 
-	mockLoggregatorClient.received = make(chan []byte)
+	mockLoggregatorClient.received = make(chan *[]byte)
 	instance.StartListening(mockLoggregatorClient)
 
 	connection, err := stderrListener.Accept()
@@ -112,14 +114,11 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	assert.NoError(t, err)
 
 	data := <- mockLoggregatorClient.received
-	assert.Equal(t, "STDERR " + logMessage, string(data))
+	assert.Equal(t, "STDERR " + logMessage, string(*data))
 
 	_, err = connection.Write([]byte(secondLogMessage))
 	assert.NoError(t, err)
 
 	data = <- mockLoggregatorClient.received
-	assert.Equal(t, "STDERR " + secondLogMessage, string(data))
-
-	instance.StopListening()
-	<-instance.listenerControlChannel
+	assert.Equal(t, "STDERR " + secondLogMessage, string(*data))
 }

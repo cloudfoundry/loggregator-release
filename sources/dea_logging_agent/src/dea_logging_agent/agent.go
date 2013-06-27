@@ -12,11 +12,6 @@ type Config struct {
 	LoggregatorAddress    string
 }
 
-type InstanceEvent struct {
-	Instance
-	Addition bool
-}
-
 const bufferSize = 4096
 
 var logger *steno.Logger
@@ -27,33 +22,28 @@ func Start(givenConfig *Config, givenLogger *steno.Logger) {
 	logger = givenLogger
 	config = givenConfig
 
-	instanceEvents := WatchInstancesJsonFileForChanges()
+	newInstances := WatchInstancesJsonFileForChanges()
 	for {
-		instanceEvent := <-instanceEvents
-		if instanceEvent.Addition {
-			logger.Warnf("Starting to listen to %v\n", instanceEvent.Identifier())
-			instanceEvent.StartListening(loggregatorClient)
-		} else {
-			logger.Warnf("Stopping listening to %v\n", instanceEvent.Identifier())
-			instanceEvent.StopListening()
-		}
+		instance := <-newInstances
+		logger.Warnf("Starting to listen to %v\n", instance.Identifier())
+		instance.StartListening(loggregatorClient)
 	}
 }
 
-func WatchInstancesJsonFileForChanges() chan InstanceEvent {
-	knownInstances := make(map[string]Instance)
-	instancesChan := make(chan InstanceEvent)
+func WatchInstancesJsonFileForChanges() chan *Instance {
+	knownInstances := make(map[string]bool)
+	instancesChan := make(chan *Instance)
 
 	go pollInstancesJson(instancesChan, knownInstances)
 
 	return instancesChan
 }
 
-func pollInstancesJson(instancesChan chan InstanceEvent, knownInstances map[string]Instance) {
+func pollInstancesJson(instancesChan chan *Instance, knownInstances map[string]bool) {
 	for {
 		json, err := ioutil.ReadFile(config.InstancesJsonFilePath)
 		if err != nil {
-			logger.Warnf("Reading failed. %v\n", err)
+			logger.Warnf("Reading failed. %s\n", err)
 			close(instancesChan)
 			return
 		}
@@ -62,20 +52,19 @@ func pollInstancesJson(instancesChan chan InstanceEvent, knownInstances map[stri
 		time.Sleep(1*time.Millisecond)
 		currentInstances, err := ReadInstances(json)
 		if err != nil {
-			logger.Warnf("Failed parsing json %v: %v Trying again...\n", err, string(json))
+			logger.Warnf("Failed parsing json %s: %v Trying again...\n", err, string(json))
 			runtime.Gosched()
 			continue
 		}
 
-		for _, instance := range knownInstances {
-			_, present := currentInstances[instance.Identifier()]
+		for instanceIdentifier, _ := range knownInstances {
+			_, present := currentInstances[instanceIdentifier]
 			if present {
 				continue
 			}
 
-			delete(knownInstances, instance.Identifier())
-			logger.Infof("Removing stale instance %v", instance.Identifier())
-			instancesChan <- InstanceEvent{instance, false}
+			delete(knownInstances, instanceIdentifier)
+			logger.Infof("Removing stale instance %v", instanceIdentifier)
 		}
 
 		for _, instance := range currentInstances {
@@ -84,9 +73,9 @@ func pollInstancesJson(instancesChan chan InstanceEvent, knownInstances map[stri
 				continue
 			}
 
-			knownInstances[instance.Identifier()] = instance
+			knownInstances[instance.Identifier()] = true
 			logger.Infof("Adding new instance %v", instance.Identifier())
-			instancesChan <- InstanceEvent{instance, true}
+			instancesChan <- &instance
 		}
 	}
 }
