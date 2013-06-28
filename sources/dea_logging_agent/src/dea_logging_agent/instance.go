@@ -49,9 +49,9 @@ func (instance *Instance) listen(socket string, loggregatorClient LoggregatorCli
 	copy(buffer[0:prefixLength], prefixBytes)
 
 	for {
-		readCount, error := connection.Read(buffer[prefixLength:])
-		if readCount == 0 && error != nil {
-			logger.Infof("Error while reading from socket %s, %s", socket, error)
+		readCount, err := connection.Read(buffer[prefixLength:])
+		if readCount == 0 && err != nil {
+			logger.Infof("Error while reading from socket %s, %s", socket, err)
 			break
 		}
 		logger.Debugf("Read %d bytes from socket", readCount)

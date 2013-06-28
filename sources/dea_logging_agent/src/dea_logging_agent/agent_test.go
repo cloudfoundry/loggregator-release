@@ -8,8 +8,8 @@ import (
 )
 
 func createFile(t *testing.T, name string) *os.File {
-	file, error := os.Create(name)
-	assert.NoError(t, error)
+	file, err := os.Create(name)
+	assert.NoError(t, err)
 	return file
 }
 

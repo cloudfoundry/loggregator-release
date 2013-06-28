@@ -5,7 +5,7 @@ import (
 	"errors"
 )
 
-func ReadInstances(data []byte) (instances map[string]Instance, error error) {
+func ReadInstances(data []byte) (instances map[string]Instance, err error) {
 	type instanceJson struct {
 		Application_id        string
 		Warden_job_id         uint64
@@ -20,11 +20,11 @@ func ReadInstances(data []byte) (instances map[string]Instance, error error) {
 	var jsonInstances instancesJson
 
 	if len(data) < 1 {
-		error = errors.New("Empty data, can't parse json")
+		err = errors.New("Empty data, can't parse json")
 		return
 	}
 
-	error = json.Unmarshal(data, &jsonInstances)
+	err = json.Unmarshal(data, &jsonInstances)
 
 	instances = make(map[string]Instance, len(jsonInstances.Instances))
 	for _, jsonInstance := range jsonInstances.Instances {
