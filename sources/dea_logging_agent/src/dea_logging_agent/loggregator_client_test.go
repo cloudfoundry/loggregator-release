@@ -8,20 +8,20 @@ import (
 
 func TestSend(t *testing.T) {
 	expectedOutput := []byte("Important Testmessage")
-	loggregatorClient := &TcpLoggregatorClient{}
+	loggregatorClient := &UdpLoggregatorClient{}
 
-	tcpListener, err := net.Listen("tcp", config.LoggregatorAddress)
-	defer tcpListener.Close()
+	udpAddr, err := net.ResolveUDPAddr("udp", config.LoggregatorAddress)
+	assert.NoError(t, err)
+
+	udpListener, err := net.ListenUDP("udp", udpAddr)
+	defer udpListener.Close()
 	assert.NoError(t, err)
 
 	loggregatorClient.Send(expectedOutput)
 
-	connection, err := tcpListener.Accept()
-	defer connection.Close()
-	assert.NoError(t, err)
 
 	buffer := make([]byte, bufferSize)
-	readCount, err := connection.Read(buffer)
+	readCount, _, err := udpListener.ReadFromUDP(buffer)
 	assert.NoError(t, err)
 
 	received := string(buffer[:readCount])

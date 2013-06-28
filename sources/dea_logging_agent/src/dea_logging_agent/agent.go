@@ -18,7 +18,7 @@ var logger *gosteno.Logger
 var config *Config
 
 func Start(givenConfig *Config, givenLogger *gosteno.Logger) {
-	loggregatorClient := &TcpLoggregatorClient{}
+	loggregatorClient := &UdpLoggregatorClient{}
 	logger = givenLogger
 	config = givenConfig
 
