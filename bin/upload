@@ -32,4 +32,4 @@ function package_publish {
 gzip $SCRIPT_HOME/../sources/dea_logging_agent/bin/dea_logging_agent
 
 DEA_LOGGING_AGENT_BIN=$SCRIPT_HOME/../sources/dea_logging_agent/bin/dea_logging_agent.gz
-package_publish($BINTRAY_USER, $BINTRAY_API_KEY, ajackson, loggregator, dea_logging_agent, $TRAVIS_BUILD_NUMBER, $DEA_LOGGING_AGENT_BIN)
+package_publish $BINTRAY_USER, $BINTRAY_API_KEY, ajackson, loggregator, dea_logging_agent, $TRAVIS_BUILD_NUMBER, $DEA_LOGGING_AGENT_BIN

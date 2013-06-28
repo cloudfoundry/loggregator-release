@@ -1,6 +1,6 @@
---- 
+---
 env:
-  global: 
+  global:
   - secure: |-
       jAPpeCpKZrRdVrexHONGy1YUksbb7WYMvYLGKbcatvRXW7pw/l77uGvg+93e
       EAuriBUhEVMCnnapnRumNbLnPY0+QQ3Hrw3cMDjkgYunC5nI/tI3EZ2x31HP
@@ -14,9 +14,9 @@ go:
 - 1.1.1
 before_install:
 - git submodule update --init --recursive
-install: ./bin/build
+install: ./bin/build && ./bin/install
 script: ./bin/test
-after_success: ./bin/install && ./bin/upload
-branches: 
-  only: 
+after_success: ./bin/upload
+branches:
+  only:
   - master
