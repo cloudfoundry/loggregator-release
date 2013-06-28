@@ -2,11 +2,17 @@
 
 set -e
 
-SCRIPT_HOME=$( cd "$( dirname "$0" )" && pwd )
+function populate_build_info() {
 
-export GOPATH=$SCRIPT_HOME/..:$SCRIPT_HOME/../sources/dea_logging_agent
+        local main_file=$1
 
-sed -i -e "s/TRAVIS_BUILD_NUMBER/$TRAVIS_BUILD_NUMBER/g" sources/dea_logging_agent/src/dea_logging_agent/dea_logging_agent/main.go
-sed -i -e "s/TRAVIS_COMMIT/$TRAVIS_COMMIT/g" sources/dea_logging_agent/src/dea_logging_agent/dea_logging_agent/main.go
+	sed -i -e "s/TRAVIS_BUILD_NUMBER/$TRAVIS_BUILD_NUMBER/g" $main_file
+	sed -i -e "s/TRAVIS_COMMIT/$TRAVIS_COMMIT/g" $main_file
+}
 
-go install dea_logging_agent/dea_logging_agent
+populate_build_info sources/dea_logging_agent/src/dea_logging_agent/dea_logging_agent/main.go
+populate_build_info server/src/loggregator/loggregator/main.go
+
+$(dirname $0)/go install dea_logging_agent/dea_logging_agent
+$(dirname $0)/go install loggregator/loggregator
+

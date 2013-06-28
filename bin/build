@@ -2,8 +2,6 @@
 
 set -e
 
-SCRIPT_HOME=$( cd "$( dirname "$0" )" && pwd )
 
-export GOPATH=$SCRIPT_HOME/..:$SCRIPT_HOME/../sources/dea_logging_agent
-
-go build -v dea_logging_agent
+$(dirname $0)/go build -v dea_logging_agent
+$(dirname $0)/go build -v loggregator

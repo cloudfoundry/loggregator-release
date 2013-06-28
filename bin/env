@@ -1,0 +1,10 @@
+#!/bin/bash 
+
+set -e
+
+SCRIPT_HOME=$( cd "$( dirname "$0" )" && pwd )
+
+base=$SCRIPT_HOME/..:$SCRIPT_HOME/../sources/dea_logging_agent:$SCRIPT_HOME/../server
+
+exec env GOPATH=$base $@
+
