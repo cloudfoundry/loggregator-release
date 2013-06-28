@@ -20,7 +20,7 @@ function package_upload {
    http_code=$(curl -u${subject}:${apikey} -H Accept:application/json \
        --write-out %{http_code} --silent --output /dev/null \
        -T ${file} -H X-Bintray-Package:${package} -H X-Bintray-Version:${version} \
-       -X PUT ${API}/content/${org}/${repo}/${package}/${version}/${filename};publish=1)
+       -X PUT ${API}/content/${org}/${repo}/${package}/${version}/${filename}\;publish=1)
 
    case ${http_code} in
        ${CREATED}) echo >&2 "Uploaded."; return 0 ;;
