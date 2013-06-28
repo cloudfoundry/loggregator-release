@@ -10,16 +10,16 @@ type LoggregatorClient interface {
 }
 
 type UdpLoggregatorClient struct {
-	sendChannel          chan *[]byte
+	sendChannel          chan []byte
 	sendChannelMutex     sync.Mutex
 }
 
 func (loggregatorClient *UdpLoggregatorClient) Send(data []byte) {
-	loggregatorClient.dataChannel() <- &data
+	loggregatorClient.dataChannel() <- data
 }
 
 
-func (loggregatorClient *UdpLoggregatorClient) dataChannel() (chan *[]byte) {
+func (loggregatorClient *UdpLoggregatorClient) dataChannel() (chan []byte) {
 	loggregatorClient.sendChannelMutex.Lock()
 	defer loggregatorClient.sendChannelMutex.Unlock()
 
@@ -33,12 +33,12 @@ func (loggregatorClient *UdpLoggregatorClient) dataChannel() (chan *[]byte) {
 		panic(err)
 	}
 
-	loggregatorClient.sendChannel = make(chan *[]byte, bufferSize)
+	loggregatorClient.sendChannel = make(chan []byte, bufferSize)
 
 	go func() {
 		for {
 			dataToSend := <-loggregatorClient.sendChannel
-			writeCount, err := connection.Write(*dataToSend)
+			writeCount, err := connection.Write(dataToSend)
 			logger.Debugf("Wrote %d bytes to %s", writeCount, config.LoggregatorAddress)
 			if err != nil {
 				logger.Errorf("Writing to loggregator %s failed %s", config.LoggregatorAddress, err)
