@@ -1,4 +1,5 @@
 *.iml
 .idea/
 pkg/
-sources/dea_logging_agent/bin/
+*/bin
+*/**/bin

@@ -32,4 +32,9 @@ function package_upload {
 gzip $SCRIPT_HOME/../sources/dea_logging_agent/bin/dea_logging_agent
 
 DEA_LOGGING_AGENT_BIN=$SCRIPT_HOME/../sources/dea_logging_agent/bin/dea_logging_agent.gz
-package_upload $BINTRAY_USER $BINTRAY_API_KEY ajackson loggregator dea_logging_agent $TRAVIS_BUILD_NUMBER $DEA_LOGGING_AGENT_BIN
+package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator dea_logging_agent $TRAVIS_BUILD_NUMBER $DEA_LOGGING_AGENT_BIN
+
+gzip $SCRIPT_HOME/../server/bin/loggregator
+
+LOGGREGATOR_BIN=$SCRIPT_HOME/../server/bin/loggregator.gz
+package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggregator $TRAVIS_BUILD_NUMBER $LOGGREGATOR_BIN
