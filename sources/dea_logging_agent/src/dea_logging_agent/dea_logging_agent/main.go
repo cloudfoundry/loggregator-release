@@ -1,7 +1,7 @@
 package main
 
 import (
-	steno "github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/gosteno"
 	"dea_logging_agent"
 	"flag"
 	"os"
@@ -26,24 +26,24 @@ func main() {
 		return
 	}
 
-	level := steno.LOG_INFO
+	level := gosteno.LOG_INFO
 
 	if *logLevel {
-		level = steno.LOG_DEBUG
+		level = gosteno.LOG_DEBUG
 	}
 
-	loggingConfig := &steno.Config{
-		Sinks: make([]steno.Sink, 1),
+	loggingConfig := &gosteno.Config{
+		Sinks: make([]gosteno.Sink, 1),
 		Level:     level,
-		Codec:     steno.NewJsonCodec(),
+		Codec:     gosteno.NewJsonCodec(),
 		EnableLOC: true}
 	if strings.TrimSpace(*logFilePath) == "" {
-		loggingConfig.Sinks[0] = steno.NewIOSink(os.Stdout)
+		loggingConfig.Sinks[0] = gosteno.NewIOSink(os.Stdout)
 	} else {
-		loggingConfig.Sinks[0] = steno.NewFileSink(*logFilePath)
+		loggingConfig.Sinks[0] = gosteno.NewFileSink(*logFilePath)
 	}
-	steno.Init(loggingConfig)
-	logger := steno.NewLogger("dea_logging_agent")
+	gosteno.Init(loggingConfig)
+	logger := gosteno.NewLogger("dea_logging_agent")
 
 	config := &dea_logging_agent.Config{
 		InstancesJsonFilePath: *instancesJsonFilePath,

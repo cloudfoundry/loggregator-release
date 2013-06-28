@@ -1,7 +1,7 @@
 package dea_logging_agent
 
 import (
-	steno "github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/gosteno"
 	"io/ioutil"
 	"runtime"
 	"time"
@@ -14,10 +14,10 @@ type Config struct {
 
 const bufferSize = 4096
 
-var logger *steno.Logger
+var logger *gosteno.Logger
 var config *Config
 
-func Start(givenConfig *Config, givenLogger *steno.Logger) {
+func Start(givenConfig *Config, givenLogger *gosteno.Logger) {
 	loggregatorClient := &TcpLoggregatorClient{}
 	logger = givenLogger
 	config = givenConfig
