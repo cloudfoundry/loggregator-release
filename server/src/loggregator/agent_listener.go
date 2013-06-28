@@ -26,15 +26,19 @@ func (agentListener *AgentListener) start() (chan []byte) {
 		panic(err)
 	}
 	go func() {
-		for {
-			data := make([]byte, 4096)
+		readBuffer := make([]byte, 65535) //buffer with size = max theoretical UDP size
 
-			readCount, senderAddr, err := connection.ReadFrom(data)
+		for {
+			readCount, senderAddr, err := connection.ReadFrom(readBuffer)
 			if err != nil {
 				logger.Debugf("Error while reading. %s", err)
 			}
 			logger.Debugf("Read %d bytes from address %s", readCount, senderAddr)
-			dataChannel <- data[:readCount]
+
+			readData := make([]byte, readCount) //pass on buffer in size only of read data
+			copy(readData, readBuffer[:readCount])
+
+			dataChannel <- readData
 		}
 	}()
 	return dataChannel
