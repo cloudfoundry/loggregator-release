@@ -3,25 +3,32 @@ package dea_logging_agent
 import (
 	"net"
 	"path/filepath"
-//	"runtime"
+	"runtime"
+	"strconv"
+	"strings"
 )
 
 type Instance struct {
 	ApplicationId                  string
-	WardenJobId                    string
+	WardenJobId                    uint64
 	WardenContainerPath            string
+	Index                          uint64
 }
 
 func (instance *Instance) Identifier() string {
-	return filepath.Join(instance.WardenContainerPath, "jobs", instance.WardenJobId)
+	return filepath.Join(instance.WardenContainerPath, "jobs", strconv.FormatUint(instance.WardenJobId, 10))
 }
 
 func (instance *Instance) StartListening(loggregatorClient LoggregatorClient) {
 	stdoutSocket := filepath.Join(instance.Identifier(), "stdout.sock")
-	go instance.listen(stdoutSocket, loggregatorClient, "STDOUT ")
+	go instance.listen(stdoutSocket, loggregatorClient, instance.logPrefix("STDOUT"))
 
 	stderrSocket := filepath.Join(instance.Identifier(), "stderr.sock")
-	go instance.listen(stderrSocket, loggregatorClient, "STDERR ")
+	go instance.listen(stderrSocket, loggregatorClient, instance.logPrefix("STDERR"))
+}
+
+func (instance *Instance) logPrefix(socketName string) (string) {
+	return strings.Join([]string{instance.ApplicationId, strconv.FormatUint(instance.Index, 10), socketName}, " ")
 }
 
 func (instance *Instance) listen(socket string, loggregatorClient LoggregatorClient, prefix string) {
@@ -30,10 +37,11 @@ func (instance *Instance) listen(socket string, loggregatorClient LoggregatorCli
 		logger.Fatalf("Error while dialing into socket %s, %s", socket, err)
 		return
 	}
-//	defer connection.Close()
-//		logger.Infof("Stopped reading from socket %s", socket)
-//	}()
-	prefixBytes := []byte(prefix)
+	defer func() {
+		connection.Close()
+		logger.Infof("Stopped reading from socket %s", socket)
+	}()
+	prefixBytes := []byte(prefix + " ")
 	prefixLength := len(prefixBytes)
 	buffer := make([]byte, prefixLength + bufferSize)
 
@@ -49,7 +57,6 @@ func (instance *Instance) listen(socket string, loggregatorClient LoggregatorCli
 		logger.Debugf("Read %d bytes from socket", readCount)
 		loggregatorClient.Send(buffer[:readCount + prefixLength])
 		logger.Debugf("Sent %d bytes to loggregator", readCount)
-//		runtime.Gosched()
+		runtime.Gosched()
 	}
 }
-

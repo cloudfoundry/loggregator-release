@@ -3,7 +3,6 @@ package dea_logging_agent
 import (
 	"encoding/json"
 	"errors"
-	"strconv"
 )
 
 func ReadInstances(data []byte) (instances map[string]Instance, error error) {
@@ -11,6 +10,7 @@ func ReadInstances(data []byte) (instances map[string]Instance, error error) {
 		Application_id        string
 		Warden_job_id         uint64
 		Warden_container_path string
+		Instance_index        uint64
 	}
 
 	type instancesJson struct {
@@ -28,14 +28,11 @@ func ReadInstances(data []byte) (instances map[string]Instance, error error) {
 
 	instances = make(map[string]Instance, len(jsonInstances.Instances))
 	for _, jsonInstance := range jsonInstances.Instances {
-		var wardenJobId string
-		if jsonInstance.Warden_job_id > 0 {
-			wardenJobId = strconv.FormatUint(jsonInstance.Warden_job_id, 10)
-		}
 		instance := Instance{
 			ApplicationId:       jsonInstance.Application_id,
 			WardenContainerPath: jsonInstance.Warden_container_path,
-			WardenJobId:         wardenJobId}
+			WardenJobId:         jsonInstance.Warden_job_id,
+			Index:               jsonInstance.Instance_index}
 		instances[instance.Identifier()] = instance
 	}
 

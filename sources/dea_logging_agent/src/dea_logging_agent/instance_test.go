@@ -12,7 +12,7 @@ import (
 func TestIdentifier(t *testing.T) {
 	instance := Instance{
 		ApplicationId:       "4aa9506e-277f-41ab-b764-a35c0b96fa1b",
-		WardenJobId:         "272",
+		WardenJobId:         272,
 		WardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo1"}
 
 	assert.Equal(t, "/var/vcap/data/warden/depot/16vbs06ibo1/jobs/272", instance.Identifier())
@@ -33,8 +33,9 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 
 	instance := &Instance{
 		ApplicationId:       "1234",
-		WardenJobId:         "56",
-		WardenContainerPath: tmpdir}
+		WardenJobId:         56,
+		WardenContainerPath: tmpdir,
+	    Index:               3}
 	os.MkdirAll(instance.Identifier(), 0777)
 
 	stdoutSocketPath := filepath.Join(instance.Identifier(), "stdout.sock")
@@ -66,13 +67,13 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 
 	data := <- mockLoggregatorClient.received
 
-	assert.Equal(t, "STDOUT " + logMessage, string(*data))
+	assert.Equal(t, "1234 3 STDOUT " + logMessage, string(*data))
 
 	_, err = connection.Write([]byte(secondLogMessage))
 	assert.NoError(t, err)
 
 	data = <- mockLoggregatorClient.received
-	assert.Equal(t, "STDOUT " + secondLogMessage, string(*data))
+	assert.Equal(t, "1234 3 STDOUT " + secondLogMessage, string(*data))
 }
 
 func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
@@ -82,8 +83,9 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 
 	instance := &Instance{
 		ApplicationId:       "1234",
-		WardenJobId:         "56",
-		WardenContainerPath: tmpdir}
+		WardenJobId:         56,
+		WardenContainerPath: tmpdir,
+		Index:               4}
 	os.MkdirAll(instance.Identifier(), 0777)
 
 	stdoutSocketPath := filepath.Join(instance.Identifier(), "stdout.sock")
@@ -114,11 +116,11 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	assert.NoError(t, err)
 
 	data := <- mockLoggregatorClient.received
-	assert.Equal(t, "STDERR " + logMessage, string(*data))
+	assert.Equal(t, "1234 4 STDERR " + logMessage, string(*data))
 
 	_, err = connection.Write([]byte(secondLogMessage))
 	assert.NoError(t, err)
 
 	data = <- mockLoggregatorClient.received
-	assert.Equal(t, "STDERR " + secondLogMessage, string(*data))
+	assert.Equal(t, "1234 4 STDERR " + secondLogMessage, string(*data))
 }
