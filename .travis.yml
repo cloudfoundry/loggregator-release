@@ -1,10 +1,22 @@
+--- 
+env:
+  global: 
+  - secure: |-
+      jAPpeCpKZrRdVrexHONGy1YUksbb7WYMvYLGKbcatvRXW7pw/l77uGvg+93e
+      EAuriBUhEVMCnnapnRumNbLnPY0+QQ3Hrw3cMDjkgYunC5nI/tI3EZ2x31HP
+      /fP/9PHF4sW5Kv45aVKr/N8zJ6yrcj+d4imasLPKe6GAc/5493Q=
+  - secure: |-
+      WS9xUNmBou6daEIKu4PRLDlb9rMZlr+QRtkLPjm5M4vQD3FQEBlETv7Em4Z1
+      k9QIM3Yx9qeZRy+9WpFGs+1XG/foo4LUdt/epu2P2pFCA1PzA8Ib9xI7EZSp
+      y0FoJxVHyWVueS/mQzil+Ihk1TJUUibWRPzxo+t/8cNX+ogmse4=
 language: go
-branches:
-  only:
-      - master
 go:
-  - 1.1.1
+- 1.1.1
 before_install:
-  - git submodule update --init --recursive
+- git submodule update --init --recursive
 install: ./bin/build
 script: ./bin/test
+after_success: ./bin/install && ./bin/upload
+branches: 
+  only: 
+  - master

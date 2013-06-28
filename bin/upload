@@ -1,0 +1,35 @@
+#!/bin/bash 
+
+set -e
+
+SCRIPT_HOME=$( cd "$( dirname "$0" )" && pwd )
+API=https://api.bintray.com
+NOT_FOUND=404
+CONFLICT=409
+SUCCESS=200
+CREATED=201
+
+function package_publish {
+    [ $# -ne 7 ] && {
+        echo >&2 'usage: package_publish subject apikey org repo package version file'
+        return 2
+    }
+    local subject=$1 apikey=$2 org=$3 repo=$4 package=$5 version=$6 file=$7
+
+    http_code=$(curl -u${subject}:${apikey} \
+        --write-out %{http_code} --silent --output /dev/null \
+        -H Accept:application/json -H Content-Type:application/json \
+        -d "{ \"discard\": \"false\" }" \
+        -X POST ${API}/content/${org}/${repo}/${package}/${version}/publish)
+
+   case ${http_code} in
+       ${CONFLICT}) echo >&2 "Package already uploaded";  return 0 ;;
+       ${SUCCESS}) echo >&2 "Published file."; return 0 ;;
+       *) echo >&2 "unexpected response code: $http_code" ; return 1 ;;
+   esac        
+}
+
+gzip $SCRIPT_HOME/../sources/dea_logging_agent/bin/dea_logging_agent
+
+DEA_LOGGING_AGENT_BIN=$SCRIPT_HOME/../sources/dea_logging_agent/bin/dea_logging_agent.gz
+package_publish($BINTRAY_USER, $BINTRAY_API_KEY, ajackson, loggregator, dea_logging_agent, $TRAVIS_BUILD_NUMBER, $DEA_LOGGING_AGENT_BIN)

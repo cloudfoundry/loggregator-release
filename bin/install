@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -e
+
+SCRIPT_HOME=$( cd "$( dirname "$0" )" && pwd )
+
+export GOPATH=$SCRIPT_HOME/..:$SCRIPT_HOME/../sources/dea_logging_agent
+
+sed -i orig "s/TRAVIS_BUILD_NUMBER/$TRAVIS_BUILD_NUMBER/g" sources/dea_logging_agent/src/dea_logging_agent/dea_logging_agent/main.go
+sed -i orig "s/TRAVIS_COMMIT/$TRAVIS_COMMIT/g" sources/dea_logging_agent/src/dea_logging_agent/dea_logging_agent/main.go
+
+go install dea_logging_agent/dea_logging_agent

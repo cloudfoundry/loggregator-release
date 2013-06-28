@@ -6,15 +6,25 @@ import (
 	"flag"
 	"os"
 	"strings"
+	"fmt"
 )
 
 var instancesJsonFilePath = flag.String("instancesFile", "/var/vcap/data/dea_next/db/instances.json", "The DEA instances JSON file")
 var logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 var loggregatorAddress = flag.String("server", "localhost:3456", "The loggregator TCP host:port for log forwarding")
 var logLevel = flag.Bool("v", false, "Verbose logging")
+var version = flag.Bool("version", false, "Version info")
+
+var versionNumber = `0.0.1.TRAVIS_BUILD_NUMBER`
+var gitSha = `TRAVIS_COMMIT`
 
 func main() {
 	flag.Parse()
+
+	if *version {
+		fmt.Printf("\n\nversion: %s\ngitSha: %s\n\n", versionNumber, gitSha)
+		return
+	}
 
 	level := steno.LOG_INFO
 
