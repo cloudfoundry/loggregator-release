@@ -64,3 +64,9 @@ Source agents emit the logging data as [protocol-buffers](https://code.google.co
 #### Running tests
 
     bin/test
+    
+#### Development binary builds
+
+Note: This is linux amd64 only
+
+[dea_logging_agent](https://dl.bintray.com/ajackson/loggregator/dea_logging_agent)
