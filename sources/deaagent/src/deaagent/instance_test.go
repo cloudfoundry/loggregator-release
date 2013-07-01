@@ -1,4 +1,4 @@
-package dea_logging_agent
+package deaagent
 
 import (
 	"github.com/stretchr/testify/assert"

@@ -7,8 +7,8 @@ import (
 
 var version = flag.Bool("version", false, "Version info")
 
-var versionNumber = `0.0.1.TRAVIS_BUILD_NUMBER`
-var gitSha = `TRAVIS_COMMIT`
+var versionNumber = `0.0.1.`
+var gitSha = ``
 
 func main() {
 	flag.Parse()

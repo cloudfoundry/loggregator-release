@@ -3,5 +3,5 @@
 set -e
 
 
-$(dirname $0)/go build -v dea_logging_agent
+$(dirname $0)/go build -v deaagent
 $(dirname $0)/go build -v loggregator

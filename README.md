@@ -69,5 +69,5 @@ Source agents emit the logging data as [protocol-buffers](https://code.google.co
 
 Note: This is linux amd64 only
 
-[dea_logging_agent](https://dl.bintray.com/ajackson/loggregator/dea_logging_agent)
+[dea_agent](https://dl.bintray.com/ajackson/loggregator/dea_logging_agent)
 [loggregator](https://dl.bintray.com/ajackson/loggregator/loggregator)

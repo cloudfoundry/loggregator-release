@@ -1,4 +1,4 @@
-package dea_logging_agent
+package deaagent
 
 import (
 	"encoding/json"

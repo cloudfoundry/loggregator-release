@@ -29,9 +29,9 @@ function package_upload {
    esac
 }
 
-gzip $SCRIPT_HOME/../sources/dea_logging_agent/bin/dea_logging_agent
+gzip $SCRIPT_HOME/../sources/deaagent/bin/deaagent
 
-DEA_LOGGING_AGENT_BIN=$SCRIPT_HOME/../sources/dea_logging_agent/bin/dea_logging_agent.gz
+DEA_LOGGING_AGENT_BIN=$SCRIPT_HOME/../sources/dea_logging_agent/bin/deaagent.gz
 package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator dea_logging_agent $TRAVIS_BUILD_NUMBER $DEA_LOGGING_AGENT_BIN
 
 gzip $SCRIPT_HOME/../server/bin/loggregator

@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/cloudfoundry/gosteno"
-	"dea_logging_agent"
+	"deaagent"
 	"flag"
 	"os"
 	"strings"
@@ -15,8 +15,8 @@ var loggregatorAddress = flag.String("server", "localhost:3456", "The loggregato
 var logLevel = flag.Bool("v", false, "Verbose logging")
 var version = flag.Bool("version", false, "Version info")
 
-var versionNumber = `0.0.1.TRAVIS_BUILD_NUMBER`
-var gitSha = `TRAVIS_COMMIT`
+var versionNumber = `0.0.1.`
+var gitSha = ``
 
 func main() {
 	flag.Parse()
@@ -43,11 +43,11 @@ func main() {
 		loggingConfig.Sinks[0] = gosteno.NewFileSink(*logFilePath)
 	}
 	gosteno.Init(loggingConfig)
-	logger := gosteno.NewLogger("dea_logging_agent")
+	logger := gosteno.NewLogger("deaagent")
 
-	config := &dea_logging_agent.Config{
+	config := &deaagent.Config{
 		InstancesJsonFilePath: *instancesJsonFilePath,
 		LoggregatorAddress: *loggregatorAddress}
 
-	dea_logging_agent.Start(config, logger)
+	deaagent.Start(config, logger)
 }
