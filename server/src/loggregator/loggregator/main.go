@@ -11,6 +11,9 @@ import (
 
 var version = flag.Bool("version", false, "Version info")
 var host = flag.String("host", ":3456", "server ip:port to listen")
+var logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
+var logLevel = flag.Bool("v", false, "Verbose logging")
+
 
 const versionNumber = `0.0.1.TRAVIS_BUILD_NUMBER`
 const gitSha = `TRAVIS_COMMIT`
@@ -43,7 +46,7 @@ func main() {
 	gosteno.Init(loggingConfig)
 	logger := gosteno.NewLogger("loggregator")
 
-	listener := loggregator.NewAgentListener(host, logger)
+	listener := loggregator.NewAgentListener(*host, logger)
 	incomingData := listener.Start()
 
 	cfSink := loggregator.NewCfSink(incomingData, logger)
