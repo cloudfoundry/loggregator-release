@@ -7,8 +7,8 @@ import (
 
 var version = flag.Bool("version", false, "Version info")
 
-var versionNumber = `0.0.1.`
-var gitSha = ``
+const versionNumber = `0.0.1.`
+const gitSha = ``
 
 func main() {
 	flag.Parse()
