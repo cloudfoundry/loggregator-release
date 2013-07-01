@@ -1,7 +1,19 @@
 #!/bin/bash
 
+result=0
+
 $(dirname $0)/go test -i --race deaagent
 $(dirname $0)/go test -v --race deaagent
+result+=$?
 
 $(dirname $0)/go test -i --race loggregator
 $(dirname $0)/go test -v --race loggregator
+result+=$?
+
+if [ $result -eq 0 ]; then
+	echo -e "\nSUITE SUCCESS"
+else
+	echo -e "\nSUITE FAILURE"
+fi
+
+exit $result
