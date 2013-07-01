@@ -6,32 +6,33 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"deaagent/loggregatorclient"
 )
 
-type Instance struct {
-	ApplicationId                  string
-	WardenJobId                    uint64
-	WardenContainerPath            string
-	Index                          uint64
+type instance struct {
+	applicationId                  string
+	wardenJobId                    uint64
+	wardenContainerPath            string
+	index                          uint64
 }
 
-func (instance *Instance) Identifier() string {
-	return filepath.Join(instance.WardenContainerPath, "jobs", strconv.FormatUint(instance.WardenJobId, 10))
+func (instance *instance) identifier() string {
+	return filepath.Join(instance.wardenContainerPath, "jobs", strconv.FormatUint(instance.wardenJobId, 10))
 }
 
-func (instance *Instance) StartListening(loggregatorClient LoggregatorClient) {
-	stdoutSocket := filepath.Join(instance.Identifier(), "stdout.sock")
+func (instance *instance) startListening(loggregatorClient loggregatorclient.LoggregatorClient) {
+	stdoutSocket := filepath.Join(instance.identifier(), "stdout.sock")
 	go instance.listen(stdoutSocket, loggregatorClient, instance.logPrefix("STDOUT"))
 
-	stderrSocket := filepath.Join(instance.Identifier(), "stderr.sock")
+	stderrSocket := filepath.Join(instance.identifier(), "stderr.sock")
 	go instance.listen(stderrSocket, loggregatorClient, instance.logPrefix("STDERR"))
 }
 
-func (instance *Instance) logPrefix(socketName string) (string) {
-	return strings.Join([]string{instance.ApplicationId, strconv.FormatUint(instance.Index, 10), socketName}, " ")
+func (instance *instance) logPrefix(socketName string) (string) {
+	return strings.Join([]string{instance.applicationId, strconv.FormatUint(instance.index, 10), socketName}, " ")
 }
 
-func (instance *Instance) listen(socket string, loggregatorClient LoggregatorClient, prefix string) {
+func (instance *instance) listen(socket string, loggregatorClient loggregatorclient.LoggregatorClient, prefix string) {
 	connection, err := net.Dial("unix", socket)
 	if err != nil {
 		logger.Fatalf("Error while dialing into socket %s, %s", socket, err)

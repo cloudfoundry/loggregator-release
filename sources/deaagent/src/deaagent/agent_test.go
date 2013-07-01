@@ -28,7 +28,7 @@ func writeToFile(t *testing.T, filePath string, text string, truncate bool) {
 }
 
 func TestThatFunctionExistsWhenFileCantBeOpened(t *testing.T) {
-	instancesChan := WatchInstancesJsonFileForChanges()
+	instancesChan := watchInstancesJsonFileForChanges()
 
 	if _, ok := <-instancesChan; ok {
 		t.Error("Found an instance, but should have died")
@@ -38,44 +38,44 @@ func TestThatFunctionExistsWhenFileCantBeOpened(t *testing.T) {
 func TestThatAnExistinginstanceWillBeSeen(t *testing.T) {
 	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
-	instancesChan := WatchInstancesJsonFileForChanges()
+	instancesChan := watchInstancesJsonFileForChanges()
 
-	instance := <-instancesChan
-	expectedInstance := &Instance{ApplicationId: "123"}
-	assert.Equal(t, expectedInstance, instance)
+	inst := <-instancesChan
+	expectedInst := &instance{applicationId: "123"}
+	assert.Equal(t, expectedInst, inst)
 }
 
 func TestThatANewinstanceWillBeSeen(t *testing.T) {
 	file := createFile(t, config.InstancesJsonFilePath)
 	defer file.Close()
 
-	instancesChan := WatchInstancesJsonFileForChanges()
+	instancesChan := watchInstancesJsonFileForChanges()
 
 	time.Sleep(1 * time.Nanosecond) // ensure that the go function starts before we add proper data to the json config
 
 	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
-	instance, ok := <-instancesChan
+	inst, ok := <-instancesChan
 	assert.True(t, ok, "Channel is closed")
 
-	expectedInstance :=&Instance{ApplicationId: "123"}
-	assert.Equal(t, expectedInstance, instance)
+	expectedInst :=&instance{applicationId: "123"}
+	assert.Equal(t, expectedInst, inst)
 }
 
 func TestThatOnlyOneNewInstancesWillBeSeen(t *testing.T) {
 	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
-	instancesChan := WatchInstancesJsonFileForChanges()
+	instancesChan := watchInstancesJsonFileForChanges()
 
-	instance, ok := <-instancesChan
+	inst, ok := <-instancesChan
 	assert.True(t, ok, "Channel is closed")
 
-	expectedInstance := &Instance{ApplicationId: "123"}
-	assert.Equal(t, expectedInstance, instance)
+	expectedInst := &instance{applicationId: "123"}
+	assert.Equal(t, expectedInst, inst)
 
 	select {
-	case instance = <-instancesChan:
-		assert.Nil(t, instance, "We just got an old instance")
+	case inst = <-instancesChan:
+		assert.Nil(t, inst, "We just got an old instance")
 	default:
 		// OK
 	}
@@ -84,12 +84,11 @@ func TestThatOnlyOneNewInstancesWillBeSeen(t *testing.T) {
 func TestThatARemovedInstanceWillBeRemoved(t *testing.T) {
 	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
-	instancesChan := WatchInstancesJsonFileForChanges()
+	instancesChan := watchInstancesJsonFileForChanges()
 
-	instance, ok := <-instancesChan
+	inst, ok := <-instancesChan
 	assert.True(t, ok, "Channel is closed")
-	assert.NotNil(t, instance)
-
+	assert.NotNil(t, inst)
 
 	writeToFile(t, config.InstancesJsonFilePath, `{"instances": []}`, true)
 
@@ -97,9 +96,9 @@ func TestThatARemovedInstanceWillBeRemoved(t *testing.T) {
 
 	writeToFile(t, config.InstancesJsonFilePath, `{"instances": [{"application_id": "123"}]}`, true)
 
-	instance, ok = <-instancesChan
+	inst, ok = <-instancesChan
 	assert.True(t, ok, "Channel is closed")
 
-	expectedInstance := &Instance{ApplicationId: "123"}
-	assert.Equal(t, expectedInstance, instance)
+	expectedInst := &instance{applicationId: "123"}
+	assert.Equal(t, expectedInst, inst)
 }

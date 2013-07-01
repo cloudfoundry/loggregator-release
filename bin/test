@@ -2,13 +2,19 @@
 
 result=0
 
-$(dirname $0)/go test -i --race deaagent
-$(dirname $0)/go test -v --race deaagent
-result+=$?
+packages=(
+    deaagent
+    deaagent/loggregatorclient
+    loggregator
+);
 
-$(dirname $0)/go test -i --race loggregator
-$(dirname $0)/go test -v --race loggregator
-result+=$?
+for package in "${packages[@]}"
+do
+    echo -e "\n Testing package $package"
+    $(dirname $0)/go test -i --race $package
+    $(dirname $0)/go test -v --race $package
+    result+=$?
+done
 
 if [ $result -eq 0 ]; then
 	echo -e "\nSUITE SUCCESS"

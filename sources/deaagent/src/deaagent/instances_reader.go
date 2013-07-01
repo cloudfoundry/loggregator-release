@@ -5,7 +5,7 @@ import (
 	"errors"
 )
 
-func ReadInstances(data []byte) (instances map[string]Instance, err error) {
+func readInstances(data []byte) (instances map[string]instance, err error) {
 	type instanceJson struct {
 		Application_id        string
 		Warden_job_id         uint64
@@ -26,14 +26,14 @@ func ReadInstances(data []byte) (instances map[string]Instance, err error) {
 
 	err = json.Unmarshal(data, &jsonInstances)
 
-	instances = make(map[string]Instance, len(jsonInstances.Instances))
+	instances = make(map[string]instance, len(jsonInstances.Instances))
 	for _, jsonInstance := range jsonInstances.Instances {
-		instance := Instance{
-			ApplicationId:       jsonInstance.Application_id,
-			WardenContainerPath: jsonInstance.Warden_container_path,
-			WardenJobId:         jsonInstance.Warden_job_id,
-			Index:               jsonInstance.Instance_index}
-		instances[instance.Identifier()] = instance
+		instance := instance{
+			applicationId:       jsonInstance.Application_id,
+			wardenContainerPath: jsonInstance.Warden_container_path,
+			wardenJobId:         jsonInstance.Warden_job_id,
+			index:               jsonInstance.Instance_index}
+		instances[instance.identifier()] = instance
 	}
 
 	return

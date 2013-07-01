@@ -1,16 +1,18 @@
-package deaagent
+package loggregatorclient
 
 import (
+	"github.com/cloudfoundry/gosteno"
 	"github.com/stretchr/testify/assert"
 	"net"
 	"testing"
 )
 
 func TestSend(t *testing.T) {
+	bufferSize := 4096
 	expectedOutput := []byte("Important Testmessage")
-	loggregatorClient := &UdpLoggregatorClient{}
+	loggregatorClient := NewLoggregatorClient("localhost:9876", gosteno.NewLogger("TestLogger"), bufferSize)
 
-	udpAddr, err := net.ResolveUDPAddr("udp", config.LoggregatorAddress)
+	udpAddr, err := net.ResolveUDPAddr("udp", "localhost:9876")
 	assert.NoError(t, err)
 
 	udpListener, err := net.ListenUDP("udp", udpAddr)

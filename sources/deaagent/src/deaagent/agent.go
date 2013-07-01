@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"runtime"
 	"time"
+	"deaagent/loggregatorclient"
 )
 
 type Config struct {
@@ -18,28 +19,29 @@ var logger *gosteno.Logger
 var config *Config
 
 func Start(givenConfig *Config, givenLogger *gosteno.Logger) {
-	loggregatorClient := &UdpLoggregatorClient{}
 	logger = givenLogger
 	config = givenConfig
 
-	newInstances := WatchInstancesJsonFileForChanges()
+	loggregatorClient := loggregatorclient.NewLoggregatorClient(config.LoggregatorAddress, logger, bufferSize)
+
+	newInstances := watchInstancesJsonFileForChanges()
 	for {
 		instance := <-newInstances
-		logger.Warnf("Starting to listen to %v\n", instance.Identifier())
-		instance.StartListening(loggregatorClient)
+		logger.Warnf("Starting to listen to %v\n", instance.identifier())
+		instance.startListening(loggregatorClient)
 	}
 }
 
-func WatchInstancesJsonFileForChanges() chan *Instance {
+func watchInstancesJsonFileForChanges() chan *instance {
 	knownInstances := make(map[string]bool)
-	instancesChan := make(chan *Instance)
+	instancesChan := make(chan *instance)
 
 	go pollInstancesJson(instancesChan, knownInstances)
 
 	return instancesChan
 }
 
-func pollInstancesJson(instancesChan chan *Instance, knownInstances map[string]bool) {
+func pollInstancesJson(instancesChan chan *instance, knownInstances map[string]bool) {
 	for {
 		json, err := ioutil.ReadFile(config.InstancesJsonFilePath)
 		if err != nil {
@@ -50,7 +52,7 @@ func pollInstancesJson(instancesChan chan *Instance, knownInstances map[string]b
 
 		runtime.Gosched()
 		time.Sleep(1*time.Millisecond)
-		currentInstances, err := ReadInstances(json)
+		currentInstances, err := readInstances(json)
 		if err != nil {
 			logger.Warnf("Failed parsing json %s: %v Trying again...\n", err, string(json))
 			runtime.Gosched()
@@ -68,13 +70,13 @@ func pollInstancesJson(instancesChan chan *Instance, knownInstances map[string]b
 		}
 
 		for _, instance := range currentInstances {
-			_, present := knownInstances[instance.Identifier()]
+			_, present := knownInstances[instance.identifier()]
 			if present {
 				continue
 			}
 
-			knownInstances[instance.Identifier()] = true
-			logger.Infof("Adding new instance %v", instance.Identifier())
+			knownInstances[instance.identifier()] = true
+			logger.Infof("Adding new instance %v", instance.identifier())
 			instancesChan <- &instance
 		}
 	}

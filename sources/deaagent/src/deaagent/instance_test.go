@@ -10,12 +10,12 @@ import (
 )
 
 func TestIdentifier(t *testing.T) {
-	instance := Instance{
-		ApplicationId:       "4aa9506e-277f-41ab-b764-a35c0b96fa1b",
-		WardenJobId:         272,
-		WardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo1"}
+	instance := instance{
+		applicationId:       "4aa9506e-277f-41ab-b764-a35c0b96fa1b",
+		wardenJobId:         272,
+		wardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo1"}
 
-	assert.Equal(t, "/var/vcap/data/warden/depot/16vbs06ibo1/jobs/272", instance.Identifier())
+	assert.Equal(t, "/var/vcap/data/warden/depot/16vbs06ibo1/jobs/272", instance.identifier())
 }
 
 type MockLoggregatorClient struct {
@@ -31,15 +31,15 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
-	instance := &Instance{
-		ApplicationId:       "1234",
-		WardenJobId:         56,
-		WardenContainerPath: tmpdir,
-	    Index:               3}
-	os.MkdirAll(instance.Identifier(), 0777)
+	instance := &instance{
+		applicationId:       "1234",
+		wardenJobId:         56,
+		wardenContainerPath: tmpdir,
+	    index:               3}
+	os.MkdirAll(instance.identifier(), 0777)
 
-	stdoutSocketPath := filepath.Join(instance.Identifier(), "stdout.sock")
-	stderrSocketPath := filepath.Join(instance.Identifier(), "stderr.sock")
+	stdoutSocketPath := filepath.Join(instance.identifier(), "stdout.sock")
+	stderrSocketPath := filepath.Join(instance.identifier(), "stderr.sock")
 	os.Remove(stdoutSocketPath)
 	os.Remove(stderrSocketPath)
 	stdoutListener, err := net.Listen("unix", stdoutSocketPath)
@@ -56,7 +56,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	mockLoggregatorClient := new(MockLoggregatorClient)
 
 	mockLoggregatorClient.received = make(chan *[]byte)
-	instance.StartListening(mockLoggregatorClient)
+	instance.startListening(mockLoggregatorClient)
 
 	connection, err := stdoutListener.Accept()
 	defer connection.Close()
@@ -81,15 +81,15 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
-	instance := &Instance{
-		ApplicationId:       "1234",
-		WardenJobId:         56,
-		WardenContainerPath: tmpdir,
-		Index:               4}
-	os.MkdirAll(instance.Identifier(), 0777)
+	instance := &instance{
+		applicationId:       "1234",
+		wardenJobId:         56,
+		wardenContainerPath: tmpdir,
+		index:               4}
+	os.MkdirAll(instance.identifier(), 0777)
 
-	stdoutSocketPath := filepath.Join(instance.Identifier(), "stdout.sock")
-	stderrSocketPath := filepath.Join(instance.Identifier(), "stderr.sock")
+	stdoutSocketPath := filepath.Join(instance.identifier(), "stdout.sock")
+	stderrSocketPath := filepath.Join(instance.identifier(), "stderr.sock")
 	os.Remove(stdoutSocketPath)
 	os.Remove(stderrSocketPath)
 	stdoutListener, err := net.Listen("unix", stdoutSocketPath)
@@ -106,7 +106,7 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	mockLoggregatorClient := new(MockLoggregatorClient)
 
 	mockLoggregatorClient.received = make(chan *[]byte)
-	instance.StartListening(mockLoggregatorClient)
+	instance.startListening(mockLoggregatorClient)
 
 	connection, err := stderrListener.Accept()
 	defer connection.Close()
