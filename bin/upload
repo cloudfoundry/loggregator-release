@@ -31,10 +31,10 @@ function package_upload {
 
 gzip $SCRIPT_HOME/../sources/deaagent/bin/deaagent
 
-DEA_LOGGING_AGENT_BIN=$SCRIPT_HOME/../sources/dea_logging_agent/bin/deaagent.gz
-package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator dea_logging_agent $TRAVIS_BUILD_NUMBER $DEA_LOGGING_AGENT_BIN
+DEAAGENT_BIN=$SCRIPT_HOME/../sources/deaagent/bin/deaagent.gz
+echo "package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator dea_logging_agent $TRAVIS_BUILD_NUMBER $DEAAGENT_BIN"
 
 gzip $SCRIPT_HOME/../server/bin/loggregator
 
 LOGGREGATOR_BIN=$SCRIPT_HOME/../server/bin/loggregator.gz
-package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggregator $TRAVIS_BUILD_NUMBER $LOGGREGATOR_BIN
+echo "package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggregator $TRAVIS_BUILD_NUMBER $LOGGREGATOR_BIN"
