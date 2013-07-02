@@ -48,21 +48,3 @@ func TestThatItSends(t *testing.T) {
 	receivedAgain := <-receivedChan
 	assert.Equal(t, otherData, string(receivedAgain))
 }
-
-func TestThatSinkRelayStopsWhenClosed(t *testing.T) {
-	t.Skip("Not properly closing we think... will revisit")
-
-	expectedData := "Some Data"
-
-	ws, err := websocket.Dial("ws://localhost:8081/tail", "string", "http://localhost")
-	assert.NoError(t, err)
-
-	err = ws.Close()
-	assert.NoError(t, err)
-
-	dataReadChannel <- []byte(expectedData)
-
-	runtime.Gosched()
-
-	assert.Equal(t, 1, len(dataReadChannel))
-}
