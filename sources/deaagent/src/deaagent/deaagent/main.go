@@ -45,9 +45,5 @@ func main() {
 	gosteno.Init(loggingConfig)
 	logger := gosteno.NewLogger("deaagent")
 
-	config := &deaagent.Config{
-		InstancesJsonFilePath: *instancesJsonFilePath,
-		LoggregatorAddress: *loggregatorAddress}
-
-	deaagent.Start(config, logger)
+	deaagent.NewAgent(*instancesJsonFilePath, *loggregatorAddress, logger).Start()
 }

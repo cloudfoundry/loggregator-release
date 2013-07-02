@@ -13,7 +13,7 @@ func TestReadingInstances(t *testing.T) {
 	filepath := path.Join(path.Dir(filename), "..", "..", "samples", "dea_instances.json")
 	json, _ := ioutil.ReadFile(filepath)
 
-	instances, err := readInstances(json)
+	instances, err := readInstances(json, logger())
 
 	assert.NoError(t, err)
 
@@ -23,23 +23,24 @@ func TestReadingInstances(t *testing.T) {
 		applicationId:       "4aa9506e-277f-41ab-b764-a35c0b96fa1b",
 		wardenJobId:         272,
 		wardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo1",
-		index:               0}
+		index:               0,
+		logger:              logger()}
 
 	assert.Equal(t, expectedInstance, instances["/var/vcap/data/warden/depot/16vbs06ibo1/jobs/272"])
 }
 
 func TestErrorHandlingWhenParsingEmptyData(t *testing.T) {
-	_, err := readInstances(make([]byte, 0))
+	_, err := readInstances(make([]byte, 0), logger())
 	assert.Error(t, err)
 
-	_, err = readInstances(make([]byte, 10))
+	_, err = readInstances(make([]byte, 10), logger())
 	assert.Error(t, err)
 
-	_, err = readInstances(nil)
+	_, err = readInstances(nil, logger())
 	assert.Error(t, err)
 }
 
 func TestErrorHandlingWithBadJson(t *testing.T) {
-	_, err := readInstances([]byte(`{ "instances" : [}`))
+	_, err := readInstances([]byte(`{ "instances" : [}`), logger())
 	assert.Error(t, err)
 }

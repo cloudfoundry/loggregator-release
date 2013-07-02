@@ -3,9 +3,10 @@ package deaagent
 import (
 	"encoding/json"
 	"errors"
+	"github.com/cloudfoundry/gosteno"
 )
 
-func readInstances(data []byte) (instances map[string]instance, err error) {
+func readInstances(data []byte, logger *gosteno.Logger) (instances map[string]instance, err error) {
 	type instanceJson struct {
 		Application_id        string
 		Warden_job_id         uint64
@@ -32,7 +33,8 @@ func readInstances(data []byte) (instances map[string]instance, err error) {
 			applicationId:       jsonInstance.Application_id,
 			wardenContainerPath: jsonInstance.Warden_container_path,
 			wardenJobId:         jsonInstance.Warden_job_id,
-			index:               jsonInstance.Instance_index}
+			index:               jsonInstance.Instance_index,
+			logger:              logger}
 		instances[instance.identifier()] = instance
 	}
 

@@ -35,7 +35,8 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 		applicationId:       "1234",
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
-	    index:               3}
+	    index:               3,
+		logger: logger()}
 	os.MkdirAll(instance.identifier(), 0777)
 
 	stdoutSocketPath := filepath.Join(instance.identifier(), "stdout.sock")
@@ -85,7 +86,8 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 		applicationId:       "1234",
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
-		index:               4}
+		index:               4,
+		logger: logger()}
 	os.MkdirAll(instance.identifier(), 0777)
 
 	stdoutSocketPath := filepath.Join(instance.identifier(), "stdout.sock")

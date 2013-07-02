@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"deaagent/loggregatorclient"
+	"github.com/cloudfoundry/gosteno"
 )
 
 type instance struct {
@@ -14,6 +15,7 @@ type instance struct {
 	wardenJobId                    uint64
 	wardenContainerPath            string
 	index                          uint64
+	logger 	                       *gosteno.Logger
 }
 
 func (instance *instance) identifier() string {
@@ -35,12 +37,12 @@ func (instance *instance) logPrefix(socketName string) (string) {
 func (instance *instance) listen(socket string, loggregatorClient loggregatorclient.LoggregatorClient, prefix string) {
 	connection, err := net.Dial("unix", socket)
 	if err != nil {
-		logger.Fatalf("Error while dialing into socket %s, %s", socket, err)
+		instance.logger.Fatalf("Error while dialing into socket %s, %s", socket, err)
 		return
 	}
 	defer func() {
 		connection.Close()
-		logger.Infof("Stopped reading from socket %s", socket)
+		instance.logger.Infof("Stopped reading from socket %s", socket)
 	}()
 	prefixBytes := []byte(prefix + " ")
 	prefixLength := len(prefixBytes)
@@ -52,12 +54,12 @@ func (instance *instance) listen(socket string, loggregatorClient loggregatorcli
 	for {
 		readCount, err := connection.Read(buffer[prefixLength:])
 		if readCount == 0 && err != nil {
-			logger.Infof("Error while reading from socket %s, %s", socket, err)
+			instance.logger.Infof("Error while reading from socket %s, %s", socket, err)
 			break
 		}
-		logger.Debugf("Read %d bytes from socket", readCount)
+		instance.logger.Debugf("Read %d bytes from socket", readCount)
 		loggregatorClient.Send(buffer[:readCount + prefixLength])
-		logger.Debugf("Sent %d bytes to loggregator", readCount)
+		instance.logger.Debugf("Sent %d bytes to loggregator", readCount)
 		runtime.Gosched()
 	}
 }
