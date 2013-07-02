@@ -15,13 +15,14 @@ func NewCfSink(givenChannel chan []byte, logger *gosteno.Logger) (*cfSink) {
 }
 
 func (cfSink *cfSink) sinkRelayHandler(ws *websocket.Conn) {
+	clientAddress := ws.RemoteAddr()
 	for {
-		logger.Infof("Looking for data")
+		logger.Infof("Tail client %s is waiting for data\n", clientAddress)
 		data := <-cfSink.dataChannel
-		logger.Infof("Got: %s\n", data)
+		logger.Debugf("Tail client %s got %d bytes\n", clientAddress, len(data))
 		err := websocket.Message.Send(ws, data)
 		if (err != nil) {
-			logger.Warnf("Error %s\n", err)
+			logger.Infof("Tail client %s must have gone away %s\n", clientAddress, err)
 			break;
 		}
 	}
