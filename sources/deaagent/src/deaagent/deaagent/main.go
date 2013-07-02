@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/cloudfoundry/gosteno"
 	"deaagent"
+	"deaagent/loggregatorclient"
 	"flag"
 	"os"
 	"strings"
@@ -45,5 +46,8 @@ func main() {
 	gosteno.Init(loggingConfig)
 	logger := gosteno.NewLogger("deaagent")
 
-	deaagent.NewAgent(*instancesJsonFilePath, *loggregatorAddress, logger).Start()
+	loggregatorClient := loggregatorclient.NewLoggregatorClient(*loggregatorAddress, logger, 4096)
+
+	agent := deaagent.NewAgent(*instancesJsonFilePath, logger)
+	agent.Start(loggregatorClient)
 }

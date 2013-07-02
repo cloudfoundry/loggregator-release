@@ -10,19 +10,16 @@ import (
 
 type agent struct {
 	InstancesJsonFilePath string
-	LoggregatorAddress    string
 	logger *gosteno.Logger
 }
 
 const bufferSize = 4096
 
-func NewAgent(instancesJsonFilePath string, loggregatorAddress string, logger *gosteno.Logger) (*agent) {
-	return &agent{instancesJsonFilePath, loggregatorAddress, logger}
+func NewAgent(instancesJsonFilePath string, logger *gosteno.Logger) (*agent) {
+	return &agent{instancesJsonFilePath, logger}
 }
 
-func (agent *agent) Start() {
-	loggregatorClient := loggregatorclient.NewLoggregatorClient(agent.LoggregatorAddress, agent.logger, bufferSize)
-
+func (agent *agent) Start(loggregatorClient loggregatorclient.LoggregatorClient) {
 	newInstances := agent.watchInstancesJsonFileForChanges()
 	for {
 		instance := <-newInstances

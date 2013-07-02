@@ -35,9 +35,19 @@ func loggregatorAddress() (string) {
 	return "localhost:9876"
 }
 
+func TestNewAgent(t *testing.T) {
+	actualAgent := NewAgent("path", logger())
+	expectedAgent := &agent{"path", logger()}
+	assert.Equal(t, expectedAgent, actualAgent)
+}
+
+func TestStartMonitorsChangesInInstances(t *testing.T) {
+	t.Skip("Tough test to write... Worth it?")
+}
+
 func TestThatFunctionExistsWhenFileCantBeOpened(t *testing.T) {
 	os.Remove(filePath())
-	agent := &agent{filePath(), loggregatorAddress(), logger()}
+	agent := &agent{filePath(), logger()}
 
 	instancesChan := agent.watchInstancesJsonFileForChanges()
 
@@ -48,7 +58,7 @@ func TestThatFunctionExistsWhenFileCantBeOpened(t *testing.T) {
 
 func TestThatAnExistinginstanceWillBeSeen(t *testing.T) {
 	writeToFile(t, filePath(), `{"instances": [{"application_id": "123"}]}`, true)
-	agent := &agent{filePath(), loggregatorAddress(), logger()}
+	agent := &agent{filePath(), logger()}
 
 	instancesChan := agent.watchInstancesJsonFileForChanges()
 
@@ -60,7 +70,7 @@ func TestThatAnExistinginstanceWillBeSeen(t *testing.T) {
 func TestThatANewinstanceWillBeSeen(t *testing.T) {
 	file := createFile(t, filePath())
 	defer file.Close()
-	agent := &agent{filePath(), loggregatorAddress(), logger()}
+	agent := &agent{filePath(), logger()}
 
 	instancesChan := agent.watchInstancesJsonFileForChanges()
 
@@ -77,7 +87,7 @@ func TestThatANewinstanceWillBeSeen(t *testing.T) {
 
 func TestThatOnlyOneNewInstancesWillBeSeen(t *testing.T) {
 	writeToFile(t, filePath(), `{"instances": [{"application_id": "123"}]}`, true)
-	agent := &agent{filePath(), loggregatorAddress(), logger()}
+	agent := &agent{filePath(), logger()}
 
 	instancesChan := agent.watchInstancesJsonFileForChanges()
 
@@ -97,7 +107,7 @@ func TestThatOnlyOneNewInstancesWillBeSeen(t *testing.T) {
 
 func TestThatARemovedInstanceWillBeRemoved(t *testing.T) {
 	writeToFile(t, filePath(), `{"instances": [{"application_id": "123"}]}`, true)
-	agent := &agent{filePath(), loggregatorAddress(), logger()}
+	agent := &agent{filePath(), logger()}
 
 	instancesChan := agent.watchInstancesJsonFileForChanges()
 
