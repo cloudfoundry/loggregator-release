@@ -4,7 +4,6 @@ import (
 	"testing"
 	"github.com/stretchr/testify/assert"
 	"code.google.com/p/go.net/websocket"
-	"runtime"
 	"github.com/cloudfoundry/gosteno"
 )
 
