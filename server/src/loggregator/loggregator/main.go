@@ -10,7 +10,8 @@ import (
 )
 
 var version = flag.Bool("version", false, "Version info")
-var host = flag.String("host", ":3456", "server ip:port to listen")
+var sourceHost = flag.String("source", "0.0.0.0:3456", "ip:port to listen for source messages")
+var webHost = flag.String("web", "0.0.0.0:8080", "ip:port to listen for web requests")
 var logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 var logLevel = flag.Bool("v", false, "Verbose logging")
 
@@ -46,9 +47,9 @@ func main() {
 	gosteno.Init(loggingConfig)
 	logger := gosteno.NewLogger("loggregator")
 
-	listener := loggregator.NewAgentListener(*host, logger)
+	listener := loggregator.NewAgentListener(*sourceHost, logger)
 	incomingData := listener.Start()
 
-	cfSink := loggregator.NewCfSink(incomingData, logger)
+	cfSink := loggregator.NewCfSink(incomingData, logger, *webHost)
 	cfSink.Start()
 }

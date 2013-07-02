@@ -4,10 +4,11 @@ import (
 	"testing"
 	"github.com/stretchr/testify/assert"
 	"net"
+	"github.com/cloudfoundry/gosteno"
 )
 
 func TestThatItListens(t *testing.T) {
-	listener := NewAgentListener("localhost:3456", logger)
+	listener := NewAgentListener("localhost:3456", gosteno.NewLogger("TestLogger"))
 	dataChannel := listener.Start()
 
 	expectedData := "Some Data"

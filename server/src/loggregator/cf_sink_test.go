@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"code.google.com/p/go.net/websocket"
 	"runtime"
+	"github.com/cloudfoundry/gosteno"
 )
 
 var sink *cfSink
@@ -13,7 +14,7 @@ var dataReadChannel chan []byte
 func init() {
 	dataReadChannel = make(chan []byte)
 
-	sink = NewCfSink(dataReadChannel, logger)
+	sink = NewCfSink(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8081")
 	go sink.Start()
 }
 
@@ -23,7 +24,7 @@ func TestThatItSends(t *testing.T) {
 	expectedData := "Some Data"
 	otherData := "More stuff"
 
-	ws, err := websocket.Dial("ws://localhost:8080/tail", "string", "http://localhost")
+	ws, err := websocket.Dial("ws://localhost:8081/tail", "string", "http://localhost")
 	assert.NoError(t, err)
 	defer ws.Close()
 
@@ -53,7 +54,7 @@ func TestThatSinkRelayStopsWhenClosed(t *testing.T) {
 
 	expectedData := "Some Data"
 
-	ws, err := websocket.Dial("ws://localhost:8080/tail", "string", "http://localhost")
+	ws, err := websocket.Dial("ws://localhost:8081/tail", "string", "http://localhost")
 	assert.NoError(t, err)
 
 	err = ws.Close()
