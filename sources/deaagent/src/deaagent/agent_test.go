@@ -5,6 +5,9 @@ import (
 	"os"
 	"testing"
 	"time"
+	"io/ioutil"
+	"net"
+	"path/filepath"
 )
 
 func createFile(t *testing.T, name string) *os.File {
@@ -41,8 +44,61 @@ func TestNewAgent(t *testing.T) {
 	assert.Equal(t, expectedAgent, actualAgent)
 }
 
-func TestStartMonitorsChangesInInstances(t *testing.T) {
-	t.Skip("Tough test to write... Worth it?")
+func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
+	tmpdir, err := ioutil.TempDir("", "testing")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+
+	helperInstance := &instance{
+		applicationId:       "1234",
+		wardenJobId:         56,
+		wardenContainerPath: tmpdir,
+		index:               3,
+		logger: logger()}
+	os.MkdirAll(helperInstance.identifier(), 0777)
+
+	stdoutSocketPath := filepath.Join(helperInstance.identifier(), "stdout.sock")
+	stderrSocketPath := filepath.Join(helperInstance.identifier(), "stderr.sock")
+	os.Remove(stdoutSocketPath)
+	os.Remove(stderrSocketPath)
+	stdoutListener, err := net.Listen("unix", stdoutSocketPath)
+	defer stdoutListener.Close()
+	assert.NoError(t, err)
+	stderrListener, err := net.Listen("unix", stderrSocketPath)
+	defer stderrListener.Close()
+	assert.NoError(t, err)
+
+	logMessage := "Some Output\n"
+	secondLogMessage := "toally different\n"
+
+	mockLoggregatorClient := new(MockLoggregatorClient)
+
+	mockLoggregatorClient.received = make(chan *[]byte)
+
+
+
+	writeToFile(t, filePath(), `{"instances": [{"application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3}]}`, true)
+	agent := NewAgent(filePath(), logger())
+	go agent.Start(mockLoggregatorClient)
+
+
+
+	connection, err := stdoutListener.Accept()
+	defer connection.Close()
+	assert.NoError(t, err)
+
+	_, err = connection.Write([]byte(logMessage))
+	assert.NoError(t, err)
+
+	data := <-mockLoggregatorClient.received
+
+	assert.Equal(t, "1234 3 STDOUT " + logMessage, string(*data))
+
+	_, err = connection.Write([]byte(secondLogMessage))
+	assert.NoError(t, err)
+
+	data = <-mockLoggregatorClient.received
+	assert.Equal(t, "1234 3 STDOUT " + secondLogMessage, string(*data))
 }
 
 func TestThatFunctionExistsWhenFileCantBeOpened(t *testing.T) {
