@@ -27,10 +27,14 @@ func NewLoggregatorClient(loggregatorAddress string, logger *gosteno.Logger, buf
 	go func() {
 		for {
 			dataToSend := <-loggregatorClient.sendChannel
-			writeCount, err := connection.Write(dataToSend)
-			logger.Debugf("Wrote %d bytes to %s", writeCount, loggregatorAddress)
-			if err != nil {
-				logger.Errorf("Writing to loggregator %s failed %s", loggregatorAddress, err)
+			if len(dataToSend) > 0 {
+				writeCount, err := connection.Write(dataToSend)
+				logger.Debugf("Wrote %d bytes to %s", writeCount, loggregatorAddress)
+				if err != nil {
+					logger.Errorf("Writing to loggregator %s failed %s", loggregatorAddress, err)
+				}
+			} else {
+				logger.Debugf("Skipped writing of 0 byte message to %s", loggregatorAddress)
 			}
 		}
 	}()
