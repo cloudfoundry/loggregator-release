@@ -29,51 +29,49 @@ func (agent *agent) Start(loggregatorClient loggregatorclient.LoggregatorClient)
 }
 
 func (agent *agent) watchInstancesJsonFileForChanges() chan *instance {
-	knownInstances := make(map[string]bool)
 	instancesChan := make(chan *instance)
 
-	go agent.pollInstancesJson(instancesChan, knownInstances)
+	pollInstancesJson := func() {
+		knownInstances := make(map[string]bool)
 
-	return instancesChan
-}
-
-func (agent *agent) pollInstancesJson(instancesChan chan *instance, knownInstances map[string]bool) {
-	for {
-		json, err := ioutil.ReadFile(agent.InstancesJsonFilePath)
-		if err != nil {
-			agent.Warnf("Reading failed. %s\n", err)
-			close(instancesChan)
-			return
-		}
-
-		runtime.Gosched()
-		time.Sleep(1*time.Millisecond)
-		currentInstances, err := readInstances(json, agent.Logger)
-		if err != nil {
-			agent.Warnf("Failed parsing json %s: %v Trying again...\n", err, string(json))
+		for {
 			runtime.Gosched()
-			continue
-		}
-
-		for instanceIdentifier, _ := range knownInstances {
-			_, present := currentInstances[instanceIdentifier]
-			if present {
+			time.Sleep(1*time.Millisecond)
+			json, err := ioutil.ReadFile(agent.InstancesJsonFilePath)
+			if err != nil {
+				agent.Warnf("Reading failed, retrying. %s\n", err)
 				continue
 			}
 
-			delete(knownInstances, instanceIdentifier)
-			agent.Infof("Removing stale instance %v", instanceIdentifier)
-		}
-
-		for _, instance := range currentInstances {
-			_, present := knownInstances[instance.identifier()]
-			if present {
+			currentInstances, err := readInstances(json, agent.Logger)
+			if err != nil {
+				agent.Warnf("Failed parsing json %s: %v Trying again...\n", err, string(json))
 				continue
 			}
 
-			knownInstances[instance.identifier()] = true
-			agent.Infof("Adding new instance %v", instance.identifier())
-			instancesChan <- &instance
+			for instanceIdentifier, _ := range knownInstances {
+				_, present := currentInstances[instanceIdentifier]
+				if present {
+					continue
+				}
+
+				delete(knownInstances, instanceIdentifier)
+				agent.Infof("Removing stale instance %v", instanceIdentifier)
+			}
+
+			for _, instance := range currentInstances {
+				_, present := knownInstances[instance.identifier()]
+				if present {
+					continue
+				}
+
+				knownInstances[instance.identifier()] = true
+				agent.Infof("Adding new instance %v", instance.identifier())
+				instancesChan <- &instance
+			}
 		}
 	}
+
+	go pollInstancesJson()
+	return instancesChan
 }
