@@ -4,13 +4,16 @@ result=0
 
 packages=(
     deaagent
+    deaagent/deaagent
     deaagent/loggregatorclient
     loggregator
+    loggregator/loggregator
 );
 
 for package in "${packages[@]}"
 do
     echo -e "\n Testing package $package"
+    $(dirname $0)/go fmt $package
     $(dirname $0)/go test -i --race $package
     $(dirname $0)/go test -v --race $package
     result+=$?
