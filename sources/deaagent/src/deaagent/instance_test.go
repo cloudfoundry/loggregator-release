@@ -35,8 +35,8 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 		applicationId:       "1234",
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
-	    index:               3,
-		logger: logger()}
+		index:               3,
+		logger:              logger()}
 	os.MkdirAll(instance.identifier(), 0777)
 
 	stdoutSocketPath := filepath.Join(instance.identifier(), "stdout.sock")
@@ -49,7 +49,6 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	stderrListener, err := net.Listen("unix", stderrSocketPath)
 	defer stderrListener.Close()
 	assert.NoError(t, err)
-
 
 	logMessage := "Some Output\n"
 	secondLogMessage := "toally different\n"
@@ -66,15 +65,15 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	_, err = connection.Write([]byte(logMessage))
 	assert.NoError(t, err)
 
-	data := <- mockLoggregatorClient.received
+	data := <-mockLoggregatorClient.received
 
-	assert.Equal(t, "1234 3 STDOUT " + logMessage, string(*data))
+	assert.Equal(t, "1234 3 STDOUT "+logMessage, string(*data))
 
 	_, err = connection.Write([]byte(secondLogMessage))
 	assert.NoError(t, err)
 
-	data = <- mockLoggregatorClient.received
-	assert.Equal(t, "1234 3 STDOUT " + secondLogMessage, string(*data))
+	data = <-mockLoggregatorClient.received
+	assert.Equal(t, "1234 3 STDOUT "+secondLogMessage, string(*data))
 }
 
 func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
@@ -87,7 +86,7 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
 		index:               4,
-		logger: logger()}
+		logger:              logger()}
 	os.MkdirAll(instance.identifier(), 0777)
 
 	stdoutSocketPath := filepath.Join(instance.identifier(), "stdout.sock")
@@ -100,7 +99,6 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	stderrListener, err := net.Listen("unix", stderrSocketPath)
 	defer stderrListener.Close()
 	assert.NoError(t, err)
-
 
 	logMessage := "Some Output\n"
 	secondLogMessage := "toally different\n"
@@ -117,12 +115,12 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	_, err = connection.Write([]byte(logMessage))
 	assert.NoError(t, err)
 
-	data := <- mockLoggregatorClient.received
-	assert.Equal(t, "1234 4 STDERR " + logMessage, string(*data))
+	data := <-mockLoggregatorClient.received
+	assert.Equal(t, "1234 4 STDERR "+logMessage, string(*data))
 
 	_, err = connection.Write([]byte(secondLogMessage))
 	assert.NoError(t, err)
 
-	data = <- mockLoggregatorClient.received
-	assert.Equal(t, "1234 4 STDERR " + secondLogMessage, string(*data))
+	data = <-mockLoggregatorClient.received
+	assert.Equal(t, "1234 4 STDERR "+secondLogMessage, string(*data))
 }

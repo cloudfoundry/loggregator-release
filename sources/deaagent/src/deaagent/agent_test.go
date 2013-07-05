@@ -2,13 +2,13 @@ package deaagent
 
 import (
 	"github.com/stretchr/testify/assert"
-	"os"
-	"testing"
-	"time"
 	"io/ioutil"
 	"net"
+	"os"
 	"path/filepath"
 	"runtime"
+	"testing"
+	"time"
 )
 
 func createFile(t *testing.T, name string) *os.File {
@@ -31,11 +31,11 @@ func writeToFile(t *testing.T, filePath string, text string, truncate bool) {
 	assert.NoError(t, err)
 }
 
-func filePath() (string) {
+func filePath() string {
 	return "/tmp/config.json"
 }
 
-func loggregatorAddress() (string) {
+func loggregatorAddress() string {
 	return "localhost:9876"
 }
 
@@ -55,7 +55,7 @@ func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
 		index:               3,
-		logger: logger()}
+		logger:              logger()}
 	os.MkdirAll(helperInstance.identifier(), 0777)
 
 	stdoutSocketPath := filepath.Join(helperInstance.identifier(), "stdout.sock")
@@ -76,13 +76,9 @@ func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
 
 	mockLoggregatorClient.received = make(chan *[]byte)
 
-
-
-	writeToFile(t, filePath(), `{"instances": [{"application_id": "1234", "warden_job_id": 56, "warden_container_path":"` + tmpdir + `", "instance_index": 3}]}`, true)
+	writeToFile(t, filePath(), `{"instances": [{"application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3}]}`, true)
 	agent := NewAgent(filePath(), logger())
 	go agent.Start(mockLoggregatorClient)
-
-
 
 	connection, err := stdoutListener.Accept()
 	defer connection.Close()
@@ -93,13 +89,13 @@ func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
 
 	data := <-mockLoggregatorClient.received
 
-	assert.Equal(t, "1234 3 STDOUT " + logMessage, string(*data))
+	assert.Equal(t, "1234 3 STDOUT "+logMessage, string(*data))
 
 	_, err = connection.Write([]byte(secondLogMessage))
 	assert.NoError(t, err)
 
 	data = <-mockLoggregatorClient.received
-	assert.Equal(t, "1234 3 STDOUT " + secondLogMessage, string(*data))
+	assert.Equal(t, "1234 3 STDOUT "+secondLogMessage, string(*data))
 }
 
 func TestThatFunctionContinuesToPollWhenFileCantBeOpened(t *testing.T) {
@@ -121,7 +117,7 @@ func TestThatFunctionContinuesToPollWhenFileCantBeOpened(t *testing.T) {
 	select {
 	case instance := <-instancesChan:
 		assert.NotNil(t, instance)
-	case <-time.After(2*time.Second):
+	case <-time.After(2 * time.Second):
 		t.Error("Should have gotten an instance by now.")
 	}
 }
@@ -144,7 +140,7 @@ func TestThatANewinstanceWillBeSeen(t *testing.T) {
 
 	instancesChan := agent.watchInstancesJsonFileForChanges()
 
-	time.Sleep(1*time.Nanosecond) // ensure that the go function starts before we add proper data to the json config
+	time.Sleep(1 * time.Nanosecond) // ensure that the go function starts before we add proper data to the json config
 
 	writeToFile(t, filePath(), `{"instances": [{"application_id": "123"}]}`, true)
 
@@ -187,7 +183,7 @@ func TestThatARemovedInstanceWillBeRemoved(t *testing.T) {
 
 	writeToFile(t, filePath(), `{"instances": []}`, true)
 
-	time.Sleep(2*time.Millisecond) // ensure that the go function starts before we add proper data to the json config
+	time.Sleep(2 * time.Millisecond) // ensure that the go function starts before we add proper data to the json config
 
 	writeToFile(t, filePath(), `{"instances": [{"application_id": "123"}]}`, true)
 

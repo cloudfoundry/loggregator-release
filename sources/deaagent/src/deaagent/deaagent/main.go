@@ -1,13 +1,13 @@
 package main
 
 import (
-	"github.com/cloudfoundry/gosteno"
 	"deaagent"
 	"deaagent/loggregatorclient"
 	"flag"
+	"fmt"
+	"github.com/cloudfoundry/gosteno"
 	"os"
 	"strings"
-	"fmt"
 )
 
 var instancesJsonFilePath = flag.String("instancesFile", "/var/vcap/data/dea_next/db/instances.json", "The DEA instances JSON file")
@@ -34,7 +34,7 @@ func main() {
 	}
 
 	loggingConfig := &gosteno.Config{
-		Sinks: make([]gosteno.Sink, 1),
+		Sinks:     make([]gosteno.Sink, 1),
 		Level:     level,
 		Codec:     gosteno.NewJsonCodec(),
 		EnableLOC: true}

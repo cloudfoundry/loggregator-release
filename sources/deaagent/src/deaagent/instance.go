@@ -1,21 +1,21 @@
 package deaagent
 
 import (
+	"deaagent/loggregatorclient"
+	"github.com/cloudfoundry/gosteno"
 	"net"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
-	"deaagent/loggregatorclient"
-	"github.com/cloudfoundry/gosteno"
 )
 
 type instance struct {
-	applicationId                  string
-	wardenJobId                    uint64
-	wardenContainerPath            string
-	index                          uint64
-	logger 	                       *gosteno.Logger
+	applicationId       string
+	wardenJobId         uint64
+	wardenContainerPath string
+	index               uint64
+	logger              *gosteno.Logger
 }
 
 func (instance *instance) identifier() string {
@@ -23,7 +23,7 @@ func (instance *instance) identifier() string {
 }
 
 func (inst *instance) startListening(loggregatorClient loggregatorclient.LoggregatorClient) {
-	logPrefix := func(inst *instance, socketName string) (string) {
+	logPrefix := func(inst *instance, socketName string) string {
 		return strings.Join([]string{inst.applicationId, strconv.FormatUint(inst.index, 10), socketName}, " ")
 	}
 
@@ -39,7 +39,7 @@ func (inst *instance) startListening(loggregatorClient loggregatorclient.Loggreg
 		}()
 		prefixBytes := []byte(prefix + " ")
 		prefixLength := len(prefixBytes)
-		buffer := make([]byte, prefixLength + bufferSize)
+		buffer := make([]byte, prefixLength+bufferSize)
 
 		//we're copying (and keeping) the message prefix in the buffer so every loggregatorClient.Send will have the prefix
 		copy(buffer[0:prefixLength], prefixBytes)
@@ -51,7 +51,7 @@ func (inst *instance) startListening(loggregatorClient loggregatorclient.Loggreg
 				break
 			}
 			logger.Debugf("Read %d bytes from instance socket", readCount)
-			loggregatorClient.Send(buffer[:readCount + prefixLength])
+			loggregatorClient.Send(buffer[:readCount+prefixLength])
 			logger.Debugf("Sent %d bytes to loggregator client", readCount)
 			runtime.Gosched()
 		}

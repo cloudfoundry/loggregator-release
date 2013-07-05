@@ -10,10 +10,10 @@ type LoggregatorClient interface {
 }
 
 type udpLoggregatorClient struct {
-	sendChannel          chan []byte
+	sendChannel chan []byte
 }
 
-func NewLoggregatorClient(loggregatorAddress string, logger *gosteno.Logger, bufferSize int) (*udpLoggregatorClient) {
+func NewLoggregatorClient(loggregatorAddress string, logger *gosteno.Logger, bufferSize int) *udpLoggregatorClient {
 	loggregatorClient := &udpLoggregatorClient{}
 
 	connection, err := net.Dial("udp", loggregatorAddress)
@@ -42,6 +42,6 @@ func NewLoggregatorClient(loggregatorAddress string, logger *gosteno.Logger, buf
 	return loggregatorClient
 }
 
-func (loggregatorClient *udpLoggregatorClient) Send(data []byte,) {
+func (loggregatorClient *udpLoggregatorClient) Send(data []byte) {
 	loggregatorClient.sendChannel <- data
 }

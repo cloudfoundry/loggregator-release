@@ -21,7 +21,6 @@ func TestSend(t *testing.T) {
 
 	loggregatorClient.Send(expectedOutput)
 
-
 	buffer := make([]byte, bufferSize)
 	readCount, _, err := udpListener.ReadFromUDP(buffer)
 	assert.NoError(t, err)

@@ -1,11 +1,11 @@
 package deaagent
 
 import (
+	"deaagent/loggregatorclient"
 	"github.com/cloudfoundry/gosteno"
 	"io/ioutil"
 	"runtime"
 	"time"
-	"deaagent/loggregatorclient"
 )
 
 type agent struct {
@@ -15,7 +15,7 @@ type agent struct {
 
 const bufferSize = 4096
 
-func NewAgent(instancesJsonFilePath string, logger *gosteno.Logger) (*agent) {
+func NewAgent(instancesJsonFilePath string, logger *gosteno.Logger) *agent {
 	return &agent{instancesJsonFilePath, logger}
 }
 
@@ -36,7 +36,7 @@ func (agent *agent) watchInstancesJsonFileForChanges() chan *instance {
 
 		for {
 			runtime.Gosched()
-			time.Sleep(1*time.Millisecond)
+			time.Sleep(1 * time.Millisecond)
 			json, err := ioutil.ReadFile(agent.InstancesJsonFilePath)
 			if err != nil {
 				agent.Warnf("Reading failed, retrying. %s\n", err)
