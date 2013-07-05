@@ -10,11 +10,11 @@ type agentListener struct {
 	host string
 }
 
-func NewAgentListener(host string, givenLogger *gosteno.Logger) (*agentListener) {
+func NewAgentListener(host string, givenLogger *gosteno.Logger) *agentListener {
 	return &agentListener{givenLogger, host}
 }
 
-func (agentListener *agentListener) Start() (chan []byte) {
+func (agentListener *agentListener) Start() chan []byte {
 	dataChannel := make(chan []byte)
 	connection, err := net.ListenPacket("udp", agentListener.host)
 	agentListener.Infof("Listening on port %s", agentListener.host)

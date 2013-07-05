@@ -4,9 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
-	"strings"
-	"os"
 	"loggregator"
+	"os"
+	"strings"
 )
 
 var version = flag.Bool("version", false, "Version info")
@@ -14,7 +14,6 @@ var sourceHost = flag.String("source", "0.0.0.0:3456", "ip:port to listen for so
 var webHost = flag.String("web", "0.0.0.0:8080", "ip:port to listen for web requests")
 var logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 var logLevel = flag.Bool("v", false, "Verbose logging")
-
 
 const versionNumber = `0.0.1.TRAVIS_BUILD_NUMBER`
 const gitSha = `TRAVIS_COMMIT`
