@@ -12,6 +12,7 @@ func readInstances(data []byte, logger *gosteno.Logger) (instances map[string]in
 		Warden_job_id         uint64
 		Warden_container_path string
 		Instance_index        uint64
+		State                 string
 	}
 
 	type instancesJson struct {
@@ -29,13 +30,15 @@ func readInstances(data []byte, logger *gosteno.Logger) (instances map[string]in
 
 	instances = make(map[string]instance, len(jsonInstances.Instances))
 	for _, jsonInstance := range jsonInstances.Instances {
-		instance := instance{
-			applicationId:       jsonInstance.Application_id,
-			wardenContainerPath: jsonInstance.Warden_container_path,
-			wardenJobId:         jsonInstance.Warden_job_id,
-			index:               jsonInstance.Instance_index,
-			logger:              logger}
-		instances[instance.identifier()] = instance
+		if jsonInstance.State == "RUNNING" {
+			instance := instance{
+				applicationId:       jsonInstance.Application_id,
+				wardenContainerPath: jsonInstance.Warden_container_path,
+				wardenJobId:         jsonInstance.Warden_job_id,
+				index:               jsonInstance.Instance_index,
+				logger:              logger}
+			instances[instance.identifier()] = instance
+		}
 	}
 
 	return

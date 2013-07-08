@@ -76,7 +76,7 @@ func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
 
 	mockLoggregatorClient.received = make(chan *[]byte)
 
-	writeToFile(t, filePath(), `{"instances": [{"application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3}]}`, true)
+	writeToFile(t, filePath(), `{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3}]}`, true)
 	agent := NewAgent(filePath(), logger())
 	go agent.Start(mockLoggregatorClient)
 
@@ -111,7 +111,7 @@ func TestThatFunctionContinuesToPollWhenFileCantBeOpened(t *testing.T) {
 		// OK
 	}
 
-	writeToFile(t, filePath(), `{"instances": [{"application_id": "1234", "warden_job_id": 56, "warden_container_path": "/tmp", "instance_index": 3}]}`, true)
+	writeToFile(t, filePath(), `{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path": "/tmp", "instance_index": 3}]}`, true)
 	runtime.Gosched()
 
 	select {
@@ -123,7 +123,7 @@ func TestThatFunctionContinuesToPollWhenFileCantBeOpened(t *testing.T) {
 }
 
 func TestThatAnExistinginstanceWillBeSeen(t *testing.T) {
-	writeToFile(t, filePath(), `{"instances": [{"application_id": "123"}]}`, true)
+	writeToFile(t, filePath(), `{"instances": [{"state": "RUNNING", "application_id": "123"}]}`, true)
 	agent := &agent{filePath(), logger()}
 
 	instancesChan := agent.watchInstancesJsonFileForChanges()
@@ -142,7 +142,7 @@ func TestThatANewinstanceWillBeSeen(t *testing.T) {
 
 	time.Sleep(1 * time.Nanosecond) // ensure that the go function starts before we add proper data to the json config
 
-	writeToFile(t, filePath(), `{"instances": [{"application_id": "123"}]}`, true)
+	writeToFile(t, filePath(), `{"instances": [{"state": "RUNNING", "application_id": "123"}]}`, true)
 
 	inst, ok := <-instancesChan
 	assert.True(t, ok, "Channel is closed")
@@ -152,7 +152,7 @@ func TestThatANewinstanceWillBeSeen(t *testing.T) {
 }
 
 func TestThatOnlyOneNewInstancesWillBeSeen(t *testing.T) {
-	writeToFile(t, filePath(), `{"instances": [{"application_id": "123"}]}`, true)
+	writeToFile(t, filePath(), `{"instances": [{"state": "RUNNING", "application_id": "123"}]}`, true)
 	agent := &agent{filePath(), logger()}
 
 	instancesChan := agent.watchInstancesJsonFileForChanges()
@@ -172,7 +172,7 @@ func TestThatOnlyOneNewInstancesWillBeSeen(t *testing.T) {
 }
 
 func TestThatARemovedInstanceWillBeRemoved(t *testing.T) {
-	writeToFile(t, filePath(), `{"instances": [{"application_id": "123"}]}`, true)
+	writeToFile(t, filePath(), `{"instances": [{"state": "RUNNING", "application_id": "123"}]}`, true)
 	agent := &agent{filePath(), logger()}
 
 	instancesChan := agent.watchInstancesJsonFileForChanges()
@@ -185,7 +185,7 @@ func TestThatARemovedInstanceWillBeRemoved(t *testing.T) {
 
 	time.Sleep(2 * time.Millisecond) // ensure that the go function starts before we add proper data to the json config
 
-	writeToFile(t, filePath(), `{"instances": [{"application_id": "123"}]}`, true)
+	writeToFile(t, filePath(), `{"instances": [{"state": "RUNNING", "application_id": "123"}]}`, true)
 
 	inst, ok = <-instancesChan
 	assert.True(t, ok, "Channel is closed")

@@ -44,3 +44,23 @@ func TestErrorHandlingWithBadJson(t *testing.T) {
 	_, err := readInstances([]byte(`{ "instances" : [}`), logger())
 	assert.Error(t, err)
 }
+
+func TestReadingInstancesIgnoresNonRunningInstances(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	filepath := path.Join(path.Dir(filename), "..", "..", "samples", "instances.crashed.json")
+	json, _ := ioutil.ReadFile(filepath)
+
+	instances, err := readInstances(json, logger())
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, 1, len(instances))
+
+	if _, ok := instances["/var/vcap/data/warden/depot/170os7ali6q/jobs/15"]; !ok {
+		t.Errorf("Did not find active applicaiton.")
+	}
+
+	if _, ok := instances["/var/vcap/data/warden/depot/345asndhaena/jobs/12"]; ok {
+		t.Errorf("Found crashed applicaiton.")
+	}
+}
