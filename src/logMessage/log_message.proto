@@ -1,0 +1,23 @@
+package logMessage;
+
+message LogMessage {
+    enum MessageType {
+        OUT = 1;
+        ERR = 2;
+    }
+
+    enum SourceType {
+        CLOUD_CONTROLLER = 1;
+        ROUTER = 2;
+        UAA = 3;
+        DEA = 4;
+        WARDEN_CONTAINER = 5;
+    }
+
+    required bytes message = 1;
+    required MessageType message_type = 2;
+    required sint64 timestamp = 3;
+    required string app_id = 4;
+    required SourceType source_type = 5;
+    optional string source_id = 6;
+}

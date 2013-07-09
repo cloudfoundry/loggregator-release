@@ -4,3 +4,6 @@
 [submodule "src/github.com/stretchr/testify"]
 	path = src/github.com/stretchr/testify
         url = https://github.com/stretchr/testify
+[submodule "src/code.google.com/p/gogoprotobuf"]
+        path=src/code.google.com/p/gogoprotobuf
+        url = https://code.google.com/p/gogoprotobuf/

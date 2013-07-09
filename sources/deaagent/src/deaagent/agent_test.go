@@ -3,6 +3,7 @@ package deaagent
 import (
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
+	"logMessage"
 	"net"
 	"os"
 	"path/filepath"
@@ -69,8 +70,7 @@ func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
 	defer stderrListener.Close()
 	assert.NoError(t, err)
 
-	logMessage := "Some Output\n"
-	secondLogMessage := "toally different\n"
+	expectedMessage := "Some Output\n"
 
 	mockLoggregatorClient := new(MockLoggregatorClient)
 
@@ -84,18 +84,15 @@ func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
 	defer connection.Close()
 	assert.NoError(t, err)
 
-	_, err = connection.Write([]byte(logMessage))
+	_, err = connection.Write([]byte(expectedMessage))
 	assert.NoError(t, err)
 
-	data := <-mockLoggregatorClient.received
+	receivedMessage := getBackendMessage(t, <-mockLoggregatorClient.received)
 
-	assert.Equal(t, "1234 3 STDOUT "+logMessage, string(*data))
-
-	_, err = connection.Write([]byte(secondLogMessage))
-	assert.NoError(t, err)
-
-	data = <-mockLoggregatorClient.received
-	assert.Equal(t, "1234 3 STDOUT "+secondLogMessage, string(*data))
+	assert.Equal(t, "1234", receivedMessage.GetAppId())
+	assert.Equal(t, logMessage.LogMessage_DEA, receivedMessage.GetSourceType())
+	assert.Equal(t, logMessage.LogMessage_OUT, receivedMessage.GetMessageType())
+	assert.Equal(t, expectedMessage, string(receivedMessage.GetMessage()))
 }
 
 func TestThatFunctionContinuesToPollWhenFileCantBeOpened(t *testing.T) {

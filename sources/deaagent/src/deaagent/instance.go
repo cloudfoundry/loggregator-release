@@ -1,13 +1,15 @@
 package deaagent
 
 import (
+	"code.google.com/p/gogoprotobuf/proto"
 	"deaagent/loggregatorclient"
 	"github.com/cloudfoundry/gosteno"
+	"logMessage"
 	"net"
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
+	"time"
 )
 
 type instance struct {
@@ -22,44 +24,63 @@ func (instance *instance) identifier() string {
 	return filepath.Join(instance.wardenContainerPath, "jobs", strconv.FormatUint(instance.wardenJobId, 10))
 }
 
+func (inst *instance) socket(messageType logMessage.LogMessage_MessageType) (net.Conn, error) {
+	var socketName string
+
+	if messageType == logMessage.LogMessage_OUT {
+		socketName = "stdout.sock"
+	} else {
+		socketName = "stderr.sock"
+	}
+	return net.Dial("unix", filepath.Join(inst.identifier(), socketName))
+}
+
 func (inst *instance) startListening(loggregatorClient loggregatorclient.LoggregatorClient) {
-	logPrefix := func(inst *instance, socketName string) string {
-		return strings.Join([]string{inst.applicationId, strconv.FormatUint(inst.index, 10), socketName}, " ")
+	currentTime := time.Now()
+	newLogMessage := func(inst *instance, messageType logMessage.LogMessage_MessageType, message []byte) *logMessage.LogMessage {
+		sourceType := logMessage.LogMessage_DEA
+		return &logMessage.LogMessage{
+			Message:     message,
+			AppId:       proto.String(inst.applicationId),
+			MessageType: &messageType,
+			SourceType:  &sourceType,
+			Timestamp:   proto.Int64(currentTime.UnixNano()),
+		}
 	}
 
-	listen := func(logger *gosteno.Logger, socket string, loggregatorClient loggregatorclient.LoggregatorClient, prefix string) {
-		connection, err := net.Dial("unix", socket)
+	listen := func(inst *instance, loggregatorClient loggregatorclient.LoggregatorClient, messageType logMessage.LogMessage_MessageType) {
+		connection, err := inst.socket(messageType)
 		if err != nil {
-			logger.Fatalf("Error while dialing into socket %s, %s", socket, err)
+			inst.logger.Fatalf("Error while dialing into socket %s, %s", messageType, err)
 			return
 		}
 		defer func() {
 			connection.Close()
-			logger.Infof("Stopped reading from socket %s", socket)
+			inst.logger.Infof("Stopped reading from socket %s", messageType)
 		}()
-		prefixBytes := []byte(prefix + " ")
-		prefixLength := len(prefixBytes)
-		buffer := make([]byte, prefixLength+bufferSize)
 
-		//we're copying (and keeping) the message prefix in the buffer so every loggregatorClient.Send will have the prefix
-		copy(buffer[0:prefixLength], prefixBytes)
+		buffer := make([]byte, bufferSize)
 
 		for {
-			readCount, err := connection.Read(buffer[prefixLength:])
+			readCount, err := connection.Read(buffer)
 			if readCount == 0 && err != nil {
-				logger.Infof("Error while reading from socket %s, %s", socket, err)
+				inst.logger.Infof("Error while reading from socket %s, %s", messageType, err)
 				break
 			}
-			logger.Debugf("Read %d bytes from instance socket", readCount)
-			loggregatorClient.Send(buffer[:readCount+prefixLength])
-			logger.Debugf("Sent %d bytes to loggregator client", readCount)
+			inst.logger.Debugf("Read %d bytes from instance socket", readCount)
+
+			data, err := proto.Marshal(newLogMessage(inst, messageType, buffer[0:readCount]))
+			if err != nil {
+				inst.logger.Errorf("Error marshalling log message: %s", err)
+			}
+
+			loggregatorClient.Send(data)
+			inst.logger.Debugf("Sent %d bytes to loggregator client", readCount)
 			runtime.Gosched()
 		}
 	}
 
-	stdoutSocket := filepath.Join(inst.identifier(), "stdout.sock")
-	go listen(inst.logger, stdoutSocket, loggregatorClient, logPrefix(inst, "STDOUT"))
+	go listen(inst, loggregatorClient, logMessage.LogMessage_OUT)
 
-	stderrSocket := filepath.Join(inst.identifier(), "stderr.sock")
-	go listen(inst.logger, stderrSocket, loggregatorClient, logPrefix(inst, "STDERR"))
+	go listen(inst, loggregatorClient, logMessage.LogMessage_ERR)
 }

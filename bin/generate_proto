@@ -1,0 +1,5 @@
+#!/bin/bash
+
+set -e
+
+exec $(dirname $0)/env protoc --plugin=$(dirname $0)/protoc-gen-gogo --proto_path=$(dirname $0)/../src/log_message/ --gogo_out=src/log_message $(dirname $0)/../src/log_message/log_message.proto
