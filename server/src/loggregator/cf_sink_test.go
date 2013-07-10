@@ -66,7 +66,7 @@ func TestThatItSends(t *testing.T) {
 	otherMessageString := "More stuff"
 	otherMessage := marshalledLogMessage(t, otherMessageString, "myApp")
 
-	ws := addWSSink(t, receivedChan, "8081", "/tail/myApp")
+	ws := addWSSink(t, receivedChan, "8081", "/tail/myApp?authorization=a")
 	defer ws.Close()
 
 	dataReadChannel <- expectedMessage
@@ -89,10 +89,10 @@ func TestThatItSendsAllDataToAllSinks(t *testing.T) {
 	expectedMessageString := "Some Data"
 	expectedMarshalledProtoBuffer := marshalledLogMessage(t, expectedMessageString, "myApp")
 
-	wsClient1 := addWSSink(t, client1ReceivedChan, "8082", "/tail2/myApp")
+	wsClient1 := addWSSink(t, client1ReceivedChan, "8082", "/tail2/myApp?authorization=my%20really%20long%20auth%20token")
 	defer wsClient1.Close()
 
-	wsClient2 := addWSSink(t, client2ReceivedChan, "8082", "/tail2/myApp")
+	wsClient2 := addWSSink(t, client2ReceivedChan, "8082", "/tail2/myApp?authorization=my%20really%20long%20auth%20token")
 	defer wsClient2.Close()
 
 	dataReadChannel <- expectedMarshalledProtoBuffer
@@ -114,7 +114,7 @@ func TestThatItSendsLogsForOneApplication(t *testing.T) {
 	expectedMessageString := "My important message"
 	myAppsMarshalledMessage := marshalledLogMessage(t, expectedMessageString, "myApp")
 
-	ws := addWSSink(t, receivedChan, "8083", "/tail3/myApp")
+	ws := addWSSink(t, receivedChan, "8083", "/tail3/myApp?authorization=a")
 	defer ws.Close()
 
 	dataReadChannel <- otherAppsMarshalledMessage
@@ -123,7 +123,7 @@ func TestThatItSendsLogsForOneApplication(t *testing.T) {
 	assertProtoBufferMessageEquals(t, expectedMessageString, <-receivedChan)
 }
 
-func TestThatItDropsUnmarshallableMessages(t *testing.T) {
+func TestDropUnmarshallableMessage(t *testing.T) {
 	dataReadChannel := make(chan []byte)
 
 	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8084", "/tail4/")
@@ -132,10 +132,58 @@ func TestThatItDropsUnmarshallableMessages(t *testing.T) {
 
 	receivedChan := make(chan []byte)
 
-	ws := addWSSink(t, receivedChan, "8084", "/tail4/myApp")
+	ws := addWSSink(t, receivedChan, "8084", "/tail4/myApp?authorization=a")
 	defer ws.Close()
 
 	dataReadChannel <- make([]byte, 10)
+
+	time.Sleep(1 * time.Millisecond)
+	select {
+	case msg1 := <-receivedChan:
+		t.Error("We should not have received a message, but got: %v", msg1)
+	default:
+		//no communication. That's good!
+	}
+}
+
+func TestDropSinkWithoutApp(t *testing.T) {
+	dataReadChannel := make(chan []byte)
+
+	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8085", "/tail5/")
+	go sink.Start()
+	time.Sleep(1 * time.Millisecond)
+
+	receivedChan := make(chan []byte)
+
+	ws := addWSSink(t, receivedChan, "8085", "/tail5/")
+	defer ws.Close()
+
+	myAppsMarshalledMessage := marshalledLogMessage(t, "I won't make it..", "myApp")
+	dataReadChannel <- myAppsMarshalledMessage
+
+	time.Sleep(1 * time.Millisecond)
+	select {
+	case msg1 := <-receivedChan:
+		t.Error("We should not have received a message, but got: %v", msg1)
+	default:
+		//no communication. That's good!
+	}
+}
+
+func TestDropSinkWithoutAuthorization(t *testing.T) {
+	dataReadChannel := make(chan []byte)
+
+	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8086", "/tail6/")
+	go sink.Start()
+	time.Sleep(1 * time.Millisecond)
+
+	receivedChan := make(chan []byte)
+
+	ws := addWSSink(t, receivedChan, "8086", "/tail6/myApp")
+	defer ws.Close()
+
+	myAppsMarshalledMessage := marshalledLogMessage(t, "I won't make it..", "myApp")
+	dataReadChannel <- myAppsMarshalledMessage
 
 	time.Sleep(1 * time.Millisecond)
 	select {

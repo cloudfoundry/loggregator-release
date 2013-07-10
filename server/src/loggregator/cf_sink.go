@@ -24,18 +24,32 @@ func NewCfSinkServer(givenChannel chan []byte, logger *gosteno.Logger, listenHos
 }
 
 func (cfSinkServer *cfSinkServer) sinkRelayHandler(ws *websocket.Conn) {
-	extractAppIdFromUrl := func(url *url.URL) string {
-		re := regexp.MustCompile("^" + cfSinkServer.listenPath + "(.+)$")
+	extractAppIdAndAuthTokenFromUrl := func(url *url.URL) (string, string) {
+		re := regexp.MustCompile("^" + cfSinkServer.listenPath + `([^?]+)\?authorization=(.+)$`)
 		result := re.FindStringSubmatch(url.String())
-		return result[len(result)-1]
+		if len(result) != 3 {
+			return "", ""
+		}
+		return result[1], result[2]
 	}
 
+	clientAddress := ws.RemoteAddr()
 	listenerChannel := make(chan []byte)
-	appId := extractAppIdFromUrl(ws.Request().URL)
+
+	appId, authToken := extractAppIdAndAuthTokenFromUrl(ws.Request().URL)
+
+	if appId == "" {
+		cfSinkServer.Warnf("Did not accept sink connection without appId: %s", clientAddress)
+		return
+	}
+	if authToken == "" {
+		cfSinkServer.Warnf("Did not accept sink connection without authorization: %s", clientAddress)
+		return
+	}
+
 	cfSinkServer.listenerChannels.add(appId, listenerChannel)
 	defer cfSinkServer.listenerChannels.delete(appId, listenerChannel)
 
-	clientAddress := ws.RemoteAddr()
 	for {
 		cfSinkServer.Infof("Tail client %s is waiting for data\n", clientAddress)
 		data := <-listenerChannel
