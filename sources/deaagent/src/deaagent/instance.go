@@ -24,32 +24,34 @@ func (instance *instance) identifier() string {
 	return filepath.Join(instance.wardenContainerPath, "jobs", strconv.FormatUint(instance.wardenJobId, 10))
 }
 
-func (inst *instance) socket(messageType logMessage.LogMessage_MessageType) (net.Conn, error) {
-	var socketName string
-
-	if messageType == logMessage.LogMessage_OUT {
-		socketName = "stdout.sock"
-	} else {
-		socketName = "stderr.sock"
-	}
-	return net.Dial("unix", filepath.Join(inst.identifier(), socketName))
-}
-
 func (inst *instance) startListening(loggregatorClient loggregatorclient.LoggregatorClient) {
 	currentTime := time.Now()
-	newLogMessage := func(inst *instance, messageType logMessage.LogMessage_MessageType, message []byte) *logMessage.LogMessage {
-		sourceType := logMessage.LogMessage_DEA
-		return &logMessage.LogMessage{
-			Message:     message,
-			AppId:       proto.String(inst.applicationId),
-			MessageType: &messageType,
-			SourceType:  &sourceType,
-			Timestamp:   proto.Int64(currentTime.UnixNano()),
-		}
-	}
 
-	listen := func(socket string, messageType logMessage.LogMessage_MessageType) {
-		connection, err := inst.socket(messageType)
+	listen := func(messageType logMessage.LogMessage_MessageType) {
+
+		newLogMessage := func(message []byte) *logMessage.LogMessage {
+			sourceType := logMessage.LogMessage_DEA
+			return &logMessage.LogMessage{
+				Message:     message,
+				AppId:       proto.String(inst.applicationId),
+				MessageType: &messageType,
+				SourceType:  &sourceType,
+				Timestamp:   proto.Int64(currentTime.UnixNano()),
+			}
+		}
+
+		socket := func(messageType logMessage.LogMessage_MessageType) (net.Conn, error) {
+			var socketName string
+
+			if messageType == logMessage.LogMessage_OUT {
+				socketName = "stdout.sock"
+			} else {
+				socketName = "stderr.sock"
+			}
+			return net.Dial("unix", filepath.Join(inst.identifier(), socketName))
+		}
+
+		connection, err := socket(messageType)
 		if err != nil {
 			inst.logger.Errorf("Error while dialing into socket %s, %s", messageType, err)
 			return
@@ -69,7 +71,7 @@ func (inst *instance) startListening(loggregatorClient loggregatorclient.Loggreg
 			}
 			inst.logger.Debugf("Read %d bytes from instance socket", readCount)
 
-			data, err := proto.Marshal(newLogMessage(inst, messageType, buffer[0:readCount]))
+			data, err := proto.Marshal(newLogMessage(buffer[0:readCount]))
 			if err != nil {
 				inst.logger.Errorf("Error marshalling log message: %s", err)
 			}
@@ -80,8 +82,6 @@ func (inst *instance) startListening(loggregatorClient loggregatorclient.Loggreg
 		}
 	}
 
-	stdoutSocket := filepath.Join(inst.identifier(), "stdout.sock")
-	go listen(stdoutSocket, logMessage.LogMessage_OUT)
-	stderrSocket := filepath.Join(inst.identifier(), "stderr.sock")
-	go listen(stderrSocket, logMessage.LogMessage_ERR)
+	go listen(logMessage.LogMessage_OUT)
+	go listen(logMessage.LogMessage_ERR)
 }
