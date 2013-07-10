@@ -25,11 +25,11 @@ func (instance *instance) identifier() string {
 }
 
 func (inst *instance) startListening(loggregatorClient loggregatorclient.LoggregatorClient) {
-	currentTime := time.Now()
 
 	listen := func(messageType logMessage.LogMessage_MessageType) {
 
 		newLogMessage := func(message []byte) *logMessage.LogMessage {
+			currentTime := time.Now()
 			sourceType := logMessage.LogMessage_DEA
 			return &logMessage.LogMessage{
 				Message:     message,
