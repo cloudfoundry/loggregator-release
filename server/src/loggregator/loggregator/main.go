@@ -49,6 +49,6 @@ func main() {
 	listener := loggregator.NewAgentListener(*sourceHost, logger)
 	incomingData := listener.Start()
 
-	cfSinkServer := loggregator.NewCfSinkServer(incomingData, logger, *webHost, "/tail")
+	cfSinkServer := loggregator.NewCfSinkServer(incomingData, logger, *webHost, "/tail/")
 	cfSinkServer.Start()
 }

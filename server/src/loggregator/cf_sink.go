@@ -2,8 +2,12 @@ package loggregator
 
 import (
 	"code.google.com/p/go.net/websocket"
+	"code.google.com/p/gogoprotobuf/proto"
 	"github.com/cloudfoundry/gosteno"
+	"logMessage"
 	"net/http"
+	"net/url"
+	"regexp"
 )
 
 type cfSinkServer struct {
@@ -11,17 +15,25 @@ type cfSinkServer struct {
 	dataChannel      chan []byte
 	listenHost       string
 	listenPath       string
-	listenerChannels map[chan []byte]bool
+	listenerChannels *groupedChannels
 }
 
 func NewCfSinkServer(givenChannel chan []byte, logger *gosteno.Logger, listenHost string, listenPath string) *cfSinkServer {
-	listeners := make(map[chan []byte]bool)
+	listeners := newGroupedChannels()
 	return &cfSinkServer{logger, givenChannel, listenHost, listenPath, listeners}
 }
 
 func (cfSinkServer *cfSinkServer) sinkRelayHandler(ws *websocket.Conn) {
+	extractAppIdFromUrl := func(url *url.URL) string {
+		re := regexp.MustCompile("^" + cfSinkServer.listenPath + "(.+)$")
+		result := re.FindStringSubmatch(url.String())
+		return result[len(result)-1]
+	}
+
 	listenerChannel := make(chan []byte)
-	cfSinkServer.listenerChannels[listenerChannel] = true
+	appId := extractAppIdFromUrl(ws.Request().URL)
+	cfSinkServer.listenerChannels.add(appId, listenerChannel)
+	defer cfSinkServer.listenerChannels.delete(appId, listenerChannel)
 
 	clientAddress := ws.RemoteAddr()
 	for {
@@ -34,14 +46,23 @@ func (cfSinkServer *cfSinkServer) sinkRelayHandler(ws *websocket.Conn) {
 			break
 		}
 	}
-
-	delete(cfSinkServer.listenerChannels, listenerChannel)
 }
 
 func (cfSinkServer *cfSinkServer) relayMessagesToAllSinks() {
+	extractReceivedAppId := func(data []byte) string {
+		receivedMessage := &logMessage.LogMessage{}
+		err := proto.Unmarshal(data, receivedMessage)
+		if err != nil {
+			cfSinkServer.Debugf("Log message could not be unmarshaled. Dropping it... Error: %v. Data: %v", err, data)
+			return ""
+		}
+		return *receivedMessage.AppId
+	}
+
 	for {
 		data := <-cfSinkServer.dataChannel
-		for listenerChannel, _ := range cfSinkServer.listenerChannels {
+		receivedAppId := extractReceivedAppId(data)
+		for _, listenerChannel := range cfSinkServer.listenerChannels.get(receivedAppId) {
 			listenerChannel <- data
 		}
 	}
