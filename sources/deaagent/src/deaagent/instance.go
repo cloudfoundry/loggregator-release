@@ -48,10 +48,10 @@ func (inst *instance) startListening(loggregatorClient loggregatorclient.Loggreg
 		}
 	}
 
-	listen := func(inst *instance, loggregatorClient loggregatorclient.LoggregatorClient, messageType logMessage.LogMessage_MessageType) {
+	listen := func(socket string, messageType logMessage.LogMessage_MessageType) {
 		connection, err := inst.socket(messageType)
 		if err != nil {
-			inst.logger.Fatalf("Error while dialing into socket %s, %s", messageType, err)
+			inst.logger.Errorf("Error while dialing into socket %s, %s", messageType, err)
 			return
 		}
 		defer func() {
@@ -80,7 +80,8 @@ func (inst *instance) startListening(loggregatorClient loggregatorclient.Loggreg
 		}
 	}
 
-	go listen(inst, loggregatorClient, logMessage.LogMessage_OUT)
-
-	go listen(inst, loggregatorClient, logMessage.LogMessage_ERR)
+	stdoutSocket := filepath.Join(inst.identifier(), "stdout.sock")
+	go listen(stdoutSocket, logMessage.LogMessage_OUT)
+	stderrSocket := filepath.Join(inst.identifier(), "stderr.sock")
+	go listen(stderrSocket, logMessage.LogMessage_ERR)
 }
