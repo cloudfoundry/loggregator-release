@@ -23,7 +23,7 @@ func (agent *agent) Start(loggregatorClient loggregatorclient.LoggregatorClient)
 	newInstances := agent.watchInstancesJsonFileForChanges()
 	for {
 		instance := <-newInstances
-		agent.Warnf("Starting to listen to %v\n", instance.identifier())
+		agent.Infof("Starting to listen to %v\n", instance.identifier())
 		instance.startListening(loggregatorClient)
 	}
 }
