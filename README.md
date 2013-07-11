@@ -14,6 +14,10 @@ Loggregator allows users to:
 
 ### Usage
 
+```
+cf logs [--app=APP_NAME|--space=SPACE_NAME] [--tail]
+```
+
 ``` bash
 $ cf logs --tail
 Started GET "/" for 127.0.0.1 at 2013-04-05 13:14:58 -0700
@@ -21,16 +25,8 @@ Processing by Rails::WelcomeController#index as HTML
   Rendered /Users/tsaleh/.rbenv/versions/2.0.0-p0/lib/ruby/gems/2.0.0/gems/railties-4.0.0.beta1/lib/rails/templates/rails/welcome/index.html.erb (1.9ms)
 Completed 200 OK in 12ms (Views: 11.3ms | ActiveRecord: 0.0ms)
 Started GET "/assets/rails.png" for 127.0.0.1 at 2013-04-05 13:14:58 -0700
+...
 ^C
-
-$ cf logs --recent
-Started GET "/" for 127.0.0.1 at 2013-04-05 13:14:58 -0700
-Processing by Rails::WelcomeController#index as HTML
-  Rendered /Users/tsaleh/.rbenv/versions/2.0.0-p0/lib/ruby/gems/2.0.0/gems/railties-4.0.0.beta1/lib/rails/templates/rails/welcome/index.html.erb (1.9ms)
-Completed 200 OK in 12ms (Views: 11.3ms | ActiveRecord: 0.0ms)
-Started GET "/assets/rails.png" for 127.0.0.1 at 2013-04-05 13:14:58 -0700
-
-$
 ```
 
 ### Constraints
@@ -72,14 +68,19 @@ Follow these steps to make a contribution to any of our open source repositories
 Once your commits are approved by Travis CI and reviewed by the core team, they will be merged.
 
 #### Checkout
-    git clone https://github.com/cloudfoundry/loggregator
-    cd loggregator
-    git submodule update --init
+
+```
+git clone https://github.com/cloudfoundry/loggregator
+cd loggregator
+git submodule update --init
+```
 
 #### Running tests
 
-    bin/test
-    
+```
+bin/test
+```
+
 #### Development binary builds
 
 Note: This is linux amd64 only
