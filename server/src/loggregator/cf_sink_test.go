@@ -26,7 +26,7 @@ func init() {
 }
 
 func waitForWebsocketRegistration() {
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 }
 
 func addWSSink(t *testing.T, receivedChan chan []byte, port string, path string) (ws *websocket.Conn) {
