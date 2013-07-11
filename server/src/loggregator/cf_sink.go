@@ -12,29 +12,54 @@ import (
 
 type cfSinkServer struct {
 	*gosteno.Logger
-	dataChannel      chan []byte
-	listenHost       string
-	listenPath       string
-	listenerChannels *groupedChannels
+	dataChannel         chan []byte
+	listenHost          string
+	listenPath          string
+	cloudControllerHost string
+	listenerChannels    *groupedChannels
 }
 
-func NewCfSinkServer(givenChannel chan []byte, logger *gosteno.Logger, listenHost string, listenPath string) *cfSinkServer {
+func NewCfSinkServer(givenChannel chan []byte, logger *gosteno.Logger, listenHost string, listenPath string, cloudControllerHost string) *cfSinkServer {
 	listeners := newGroupedChannels()
-	return &cfSinkServer{logger, givenChannel, listenHost, listenPath, listeners}
+	return &cfSinkServer{logger, givenChannel, listenHost, listenPath, cloudControllerHost, listeners}
 }
 
 func (cfSinkServer *cfSinkServer) sinkRelayHandler(ws *websocket.Conn) {
-	extractAppIdAndAuthTokenFromUrl := func(url *url.URL) (string, string) {
-		re := regexp.MustCompile("^" + cfSinkServer.listenPath + `([^?]+)\?authorization=(.+)$`)
-		result := re.FindStringSubmatch(url.String())
-		if len(result) != 3 {
-			return "", ""
+	extractAppIdAndAuthTokenFromUrl := func(u *url.URL) (string, string) {
+		authorization := ""
+		queryValues := u.Query()
+		if len(queryValues["authorization"]) == 1 {
+			authorization = queryValues["authorization"][0]
 		}
-		return result[1], result[2]
+
+		appId := ""
+		re := regexp.MustCompile("^" + cfSinkServer.listenPath + "(.+)$")
+		result := re.FindStringSubmatch(u.Path)
+		if len(result) == 2 {
+			appId = result[1]
+		}
+
+		return appId, authorization
+	}
+
+	authorizedToListenToLogs := func(authToken, appId string) bool {
+		client := &http.Client{}
+		req, _ := http.NewRequest("GET", cfSinkServer.cloudControllerHost+"/v2/apps/"+appId, nil)
+		req.Header.Set("Authorization", authToken)
+		res, err := client.Do(req)
+
+		if err != nil {
+			cfSinkServer.Errorf("Did not accept sink connection because of connection issue with CC: %v", err)
+			return false
+		}
+		if res.StatusCode != 200 {
+			return false
+		}
+
+		return true
 	}
 
 	clientAddress := ws.RemoteAddr()
-	listenerChannel := make(chan []byte)
 
 	appId, authToken := extractAppIdAndAuthTokenFromUrl(ws.Request().URL)
 
@@ -46,7 +71,12 @@ func (cfSinkServer *cfSinkServer) sinkRelayHandler(ws *websocket.Conn) {
 		cfSinkServer.Warnf("Did not accept sink connection without authorization: %s", clientAddress)
 		return
 	}
+	if !authorizedToListenToLogs(authToken, appId) {
+		cfSinkServer.Warnf("User not authorized to access app: %s", appId)
+		return
+	}
 
+	listenerChannel := make(chan []byte)
 	cfSinkServer.listenerChannels.add(appId, listenerChannel)
 	defer cfSinkServer.listenerChannels.delete(appId, listenerChannel)
 

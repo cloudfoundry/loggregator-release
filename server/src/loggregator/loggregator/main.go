@@ -11,6 +11,7 @@ import (
 
 var version = flag.Bool("version", false, "Version info")
 var sourceHost = flag.String("source", "0.0.0.0:3456", "ip:port to listen for source messages")
+var cloudControllerHost = flag.String("source", "http://0.0.0.0:9876", "protocol:ip:port to communicate with Cloud Controller")
 var webHost = flag.String("web", "0.0.0.0:8080", "ip:port to listen for web requests")
 var logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 var logLevel = flag.Bool("v", false, "Verbose logging")
@@ -49,6 +50,6 @@ func main() {
 	listener := loggregator.NewAgentListener(*sourceHost, logger)
 	incomingData := listener.Start()
 
-	cfSinkServer := loggregator.NewCfSinkServer(incomingData, logger, *webHost, "/tail/")
+	cfSinkServer := loggregator.NewCfSinkServer(incomingData, logger, *webHost, "/tail/", *cloudControllerHost)
 	cfSinkServer.Start()
 }

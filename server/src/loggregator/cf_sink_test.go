@@ -6,9 +6,28 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/stretchr/testify/assert"
 	"logMessage"
+	"net/http"
 	"testing"
 	"time"
 )
+
+func init() {
+	startFakeCloudController := func() {
+		handleCloudControllerRequest := func(w http.ResponseWriter, r *http.Request) {
+			if r.Header["Authorization"][0] != "bearer correctAuthorizationToken" {
+				w.WriteHeader(401)
+			}
+		}
+		http.HandleFunc("/v2/apps/", handleCloudControllerRequest)
+		http.ListenAndServe(":9876", nil)
+	}
+
+	go startFakeCloudController()
+}
+
+func waitForWebsocketRegistration() {
+	time.Sleep(1 * time.Millisecond)
+}
 
 func addWSSink(t *testing.T, receivedChan chan []byte, port string, path string) (ws *websocket.Conn) {
 	ws, err := websocket.Dial("ws://localhost:"+port+path, "string", "http://localhost")
@@ -55,7 +74,7 @@ func assertProtoBufferMessageEquals(t *testing.T, expectedMessage string, actual
 func TestThatItSends(t *testing.T) {
 	dataReadChannel := make(chan []byte)
 
-	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8081", "/tail/")
+	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8081", "/tail/", "http://localhost:9876")
 	go sink.Start()
 	time.Sleep(1 * time.Millisecond)
 
@@ -66,8 +85,9 @@ func TestThatItSends(t *testing.T) {
 	otherMessageString := "More stuff"
 	otherMessage := marshalledLogMessage(t, otherMessageString, "myApp")
 
-	ws := addWSSink(t, receivedChan, "8081", "/tail/myApp?authorization=a")
+	ws := addWSSink(t, receivedChan, "8081", "/tail/myApp?authorization=bearer%20correctAuthorizationToken")
 	defer ws.Close()
+	waitForWebsocketRegistration()
 
 	dataReadChannel <- expectedMessage
 	dataReadChannel <- otherMessage
@@ -79,7 +99,7 @@ func TestThatItSends(t *testing.T) {
 func TestThatItSendsAllDataToAllSinks(t *testing.T) {
 	dataReadChannel := make(chan []byte)
 
-	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8082", "/tail2/")
+	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8082", "/tail2/", "http://localhost:9876")
 	go sink.Start()
 	time.Sleep(1 * time.Millisecond)
 
@@ -89,11 +109,12 @@ func TestThatItSendsAllDataToAllSinks(t *testing.T) {
 	expectedMessageString := "Some Data"
 	expectedMarshalledProtoBuffer := marshalledLogMessage(t, expectedMessageString, "myApp")
 
-	wsClient1 := addWSSink(t, client1ReceivedChan, "8082", "/tail2/myApp?authorization=my%20really%20long%20auth%20token")
+	wsClient1 := addWSSink(t, client1ReceivedChan, "8082", "/tail2/myApp?authorization=bearer%20correctAuthorizationToken")
 	defer wsClient1.Close()
 
-	wsClient2 := addWSSink(t, client2ReceivedChan, "8082", "/tail2/myApp?authorization=my%20really%20long%20auth%20token")
+	wsClient2 := addWSSink(t, client2ReceivedChan, "8082", "/tail2/myApp?authorization=bearer%20correctAuthorizationToken")
 	defer wsClient2.Close()
+	waitForWebsocketRegistration()
 
 	dataReadChannel <- expectedMarshalledProtoBuffer
 
@@ -104,7 +125,7 @@ func TestThatItSendsAllDataToAllSinks(t *testing.T) {
 func TestThatItSendsLogsForOneApplication(t *testing.T) {
 	dataReadChannel := make(chan []byte)
 
-	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8083", "/tail3/")
+	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8083", "/tail3/", "http://localhost:9876")
 	go sink.Start()
 	time.Sleep(1 * time.Millisecond)
 
@@ -114,8 +135,9 @@ func TestThatItSendsLogsForOneApplication(t *testing.T) {
 	expectedMessageString := "My important message"
 	myAppsMarshalledMessage := marshalledLogMessage(t, expectedMessageString, "myApp")
 
-	ws := addWSSink(t, receivedChan, "8083", "/tail3/myApp?authorization=a")
+	ws := addWSSink(t, receivedChan, "8083", "/tail3/myApp?authorization=bearer%20correctAuthorizationToken")
 	defer ws.Close()
+	waitForWebsocketRegistration()
 
 	dataReadChannel <- otherAppsMarshalledMessage
 	dataReadChannel <- myAppsMarshalledMessage
@@ -126,14 +148,15 @@ func TestThatItSendsLogsForOneApplication(t *testing.T) {
 func TestDropUnmarshallableMessage(t *testing.T) {
 	dataReadChannel := make(chan []byte)
 
-	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8084", "/tail4/")
+	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8084", "/tail4/", "http://localhost:9876")
 	go sink.Start()
 	time.Sleep(1 * time.Millisecond)
 
 	receivedChan := make(chan []byte)
 
-	ws := addWSSink(t, receivedChan, "8084", "/tail4/myApp?authorization=a")
+	ws := addWSSink(t, receivedChan, "8084", "/tail4/myApp?authorization=bearer%20correctAuthorizationToken")
 	defer ws.Close()
+	waitForWebsocketRegistration()
 
 	dataReadChannel <- make([]byte, 10)
 
@@ -149,7 +172,7 @@ func TestDropUnmarshallableMessage(t *testing.T) {
 func TestDropSinkWithoutApp(t *testing.T) {
 	dataReadChannel := make(chan []byte)
 
-	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8085", "/tail5/")
+	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8085", "/tail5/", "http://localhost:9876")
 	go sink.Start()
 	time.Sleep(1 * time.Millisecond)
 
@@ -157,6 +180,7 @@ func TestDropSinkWithoutApp(t *testing.T) {
 
 	ws := addWSSink(t, receivedChan, "8085", "/tail5/")
 	defer ws.Close()
+	waitForWebsocketRegistration()
 
 	myAppsMarshalledMessage := marshalledLogMessage(t, "I won't make it..", "myApp")
 	dataReadChannel <- myAppsMarshalledMessage
@@ -173,7 +197,7 @@ func TestDropSinkWithoutApp(t *testing.T) {
 func TestDropSinkWithoutAuthorization(t *testing.T) {
 	dataReadChannel := make(chan []byte)
 
-	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8086", "/tail6/")
+	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8086", "/tail6/", "http://localhost:9876")
 	go sink.Start()
 	time.Sleep(1 * time.Millisecond)
 
@@ -181,6 +205,33 @@ func TestDropSinkWithoutAuthorization(t *testing.T) {
 
 	ws := addWSSink(t, receivedChan, "8086", "/tail6/myApp")
 	defer ws.Close()
+	waitForWebsocketRegistration()
+
+	myAppsMarshalledMessage := marshalledLogMessage(t, "I won't make it..", "myApp")
+	dataReadChannel <- myAppsMarshalledMessage
+
+	time.Sleep(1 * time.Millisecond)
+	select {
+	case msg1 := <-receivedChan:
+		t.Error("We should not have received a message, but got: %v", msg1)
+	default:
+		//no communication. That's good!
+	}
+}
+
+func TestDropSinkWithIncorrectAuthorization(t *testing.T) {
+	dataReadChannel := make(chan []byte)
+
+	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8087", "/tail7/", "http://localhost:9876")
+	go sink.Start()
+	time.Sleep(1 * time.Millisecond)
+
+	receivedChan := make(chan []byte)
+
+	ws := addWSSink(t, receivedChan, "8087", "/tail7/myApp?authorization=incorrectAuthToken")
+	defer ws.Close()
+	// If you remove this line, the test will pass for the wrong reasons
+	waitForWebsocketRegistration()
 
 	myAppsMarshalledMessage := marshalledLogMessage(t, "I won't make it..", "myApp")
 	dataReadChannel <- myAppsMarshalledMessage
