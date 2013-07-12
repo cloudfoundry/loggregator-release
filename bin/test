@@ -19,6 +19,11 @@ do
     result+=$?
 done
 
+echo -e "\n Running build script to confirm main compiles"
+$(dirname $0)/build
+result+=$?
+rm -f deaagent loggregator
+
 if [ $result -eq 0 ]; then
 	echo -e "\nSUITE SUCCESS"
 else

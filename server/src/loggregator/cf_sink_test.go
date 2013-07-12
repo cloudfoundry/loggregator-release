@@ -6,24 +6,9 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/stretchr/testify/assert"
 	"logMessage"
-	"net/http"
 	"testing"
 	"time"
 )
-
-func init() {
-	startFakeCloudController := func() {
-		handleCloudControllerRequest := func(w http.ResponseWriter, r *http.Request) {
-			if r.Header["Authorization"][0] != "bearer correctAuthorizationToken" {
-				w.WriteHeader(401)
-			}
-		}
-		http.HandleFunc("/v2/apps/", handleCloudControllerRequest)
-		http.ListenAndServe(":9876", nil)
-	}
-
-	go startFakeCloudController()
-}
 
 func waitForWebsocketRegistration() {
 	time.Sleep(50 * time.Millisecond)
@@ -72,10 +57,18 @@ func assertProtoBufferMessageEquals(t *testing.T, expectedMessage string, actual
 	assert.Equal(t, expectedMessage, string(receivedMessage.GetMessage()))
 }
 
+func successfulAuthorizer(a, b, c string, d *gosteno.Logger) bool {
+	return true
+}
+
+func failingAuthorizer(a, b, c string, d *gosteno.Logger) bool {
+	return false
+}
+
 func TestThatItSends(t *testing.T) {
 	dataReadChannel := make(chan []byte)
 
-	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8081", "/tail/", "http://localhost:9876")
+	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8081", "/tail/", "http://localhost:9876", successfulAuthorizer)
 	go sink.Start()
 	time.Sleep(1 * time.Millisecond)
 
@@ -100,7 +93,7 @@ func TestThatItSends(t *testing.T) {
 func TestThatItSendsAllDataToAllSinks(t *testing.T) {
 	dataReadChannel := make(chan []byte)
 
-	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8082", "/tail2/", "http://localhost:9876")
+	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8082", "/tail2/", "http://localhost:9876", successfulAuthorizer)
 	go sink.Start()
 	time.Sleep(1 * time.Millisecond)
 
@@ -126,7 +119,7 @@ func TestThatItSendsAllDataToAllSinks(t *testing.T) {
 func TestThatItSendsLogsForOneApplication(t *testing.T) {
 	dataReadChannel := make(chan []byte)
 
-	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8083", "/tail3/", "http://localhost:9876")
+	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8083", "/tail3/", "http://localhost:9876", successfulAuthorizer)
 	go sink.Start()
 	time.Sleep(1 * time.Millisecond)
 
@@ -149,7 +142,7 @@ func TestThatItSendsLogsForOneApplication(t *testing.T) {
 func TestDropUnmarshallableMessage(t *testing.T) {
 	dataReadChannel := make(chan []byte)
 
-	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8084", "/tail4/", "http://localhost:9876")
+	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8084", "/tail4/", "http://localhost:9876", successfulAuthorizer)
 	go sink.Start()
 	time.Sleep(1 * time.Millisecond)
 
@@ -173,7 +166,7 @@ func TestDropUnmarshallableMessage(t *testing.T) {
 func TestDropSinkWithoutApp(t *testing.T) {
 	dataReadChannel := make(chan []byte)
 
-	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8085", "/tail5/", "http://localhost:9876")
+	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8085", "/tail5/", "http://localhost:9876", successfulAuthorizer)
 	go sink.Start()
 	time.Sleep(1 * time.Millisecond)
 
@@ -198,7 +191,7 @@ func TestDropSinkWithoutApp(t *testing.T) {
 func TestDropSinkWithoutAuthorization(t *testing.T) {
 	dataReadChannel := make(chan []byte)
 
-	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8086", "/tail6/", "http://localhost:9876")
+	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8086", "/tail6/", "http://localhost:9876", successfulAuthorizer)
 	go sink.Start()
 	time.Sleep(1 * time.Millisecond)
 
@@ -220,10 +213,10 @@ func TestDropSinkWithoutAuthorization(t *testing.T) {
 	}
 }
 
-func TestDropSinkWithIncorrectAuthorization(t *testing.T) {
+func TestDropSinkWhenAuthorizationFails(t *testing.T) {
 	dataReadChannel := make(chan []byte)
 
-	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8087", "/tail7/", "http://localhost:9876")
+	sink := NewCfSinkServer(dataReadChannel, gosteno.NewLogger("TestLogger"), "localhost:8087", "/tail7/", "http://localhost:9876", failingAuthorizer)
 	go sink.Start()
 	time.Sleep(1 * time.Millisecond)
 
