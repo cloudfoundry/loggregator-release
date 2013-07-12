@@ -7,6 +7,7 @@ import (
 	"loggregator"
 	"os"
 	"strings"
+	"runtime"
 )
 
 var version = flag.Bool("version", false, "Version info")
@@ -26,6 +27,8 @@ func main() {
 		fmt.Printf("\n\nversion: %s\ngitSha: %s\n\n", versionNumber, gitSha)
 		return
 	}
+
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	level := gosteno.LOG_INFO
 
