@@ -8,13 +8,13 @@ import (
 func TestAddAndGet(t *testing.T) {
 	groupedChannels := newGroupedChannels()
 	channel1 := make(chan []byte)
-	groupedChannels.add("3", channel1)
+	groupedChannels.add(channel1, "3")
 
 	assert.Equal(t, len(groupedChannels.get("3")), 1)
 	assert.Equal(t, groupedChannels.get("3")[0], channel1)
 
 	channel2 := make(chan []byte)
-	groupedChannels.add("3", channel2)
+	groupedChannels.add(channel2, "3")
 
 	assert.Equal(t, len(groupedChannels.get("3")), 2)
 	assert.Equal(t, groupedChannels.get("3")[0], channel1)
@@ -26,10 +26,10 @@ func TestDelete(t *testing.T) {
 	channel1 := make(chan []byte)
 	channel2 := make(chan []byte)
 
-	groupedChannels.add("3", channel1)
-	groupedChannels.add("3", channel2)
+	groupedChannels.add(channel1, "3")
+	groupedChannels.add(channel2, "3")
 
-	groupedChannels.delete("3", channel1)
+	groupedChannels.delete(channel1, "3")
 
 	assert.Equal(t, len(groupedChannels.get("3")), 1)
 	assert.Equal(t, groupedChannels.get("3")[0], channel2)

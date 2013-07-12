@@ -61,8 +61,8 @@ func (cfSinkServer *cfSinkServer) sinkRelayHandler(ws *websocket.Conn) {
 	}
 
 	listenerChannel := make(chan []byte)
-	cfSinkServer.listenerChannels.add(appId, listenerChannel)
-	defer cfSinkServer.listenerChannels.delete(appId, listenerChannel)
+	cfSinkServer.listenerChannels.add(listenerChannel, appId)
+	defer cfSinkServer.listenerChannels.delete(listenerChannel, appId)
 
 	for {
 		cfSinkServer.logger.Infof("Tail client %s is waiting for data\n", clientAddress)

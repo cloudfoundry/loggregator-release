@@ -11,33 +11,33 @@ type groupedChannels struct {
 	mutex    *sync.Mutex
 }
 
-func (gc *groupedChannels) add(key string, channel chan []byte) {
+func (gc *groupedChannels) add(channel chan []byte, keys ...string) {
 	gc.mutex.Lock()
 	defer gc.mutex.Unlock()
 
-	if gc.channels[key] == nil {
-		gc.channels[key] = make(map[chan []byte]bool)
+	if gc.channels[keys[0]] == nil {
+		gc.channels[keys[0]] = make(map[chan []byte]bool)
 	}
-	gc.channels[key][channel] = true
+	gc.channels[keys[0]][channel] = true
 
 }
 
-func (gc *groupedChannels) get(key string) []chan []byte {
+func (gc *groupedChannels) get(keys ...string) []chan []byte {
 	gc.mutex.Lock()
 	defer gc.mutex.Unlock()
 
-	result := make([]chan []byte, 0, len(gc.channels[key]))
+	result := make([]chan []byte, 0, len(gc.channels[keys[0]]))
 
-	for channel, _ := range gc.channels[key] {
+	for channel, _ := range gc.channels[keys[0]] {
 		result = append(result, channel)
 	}
 
 	return result
 }
 
-func (gc *groupedChannels) delete(key string, channel chan []byte) {
+func (gc *groupedChannels) delete(channel chan []byte, keys ...string) {
 	gc.mutex.Lock()
 	defer gc.mutex.Unlock()
 
-	delete(gc.channels[key], channel)
+	delete(gc.channels[keys[0]], channel)
 }
