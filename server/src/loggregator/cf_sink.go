@@ -12,16 +12,16 @@ import (
 
 type cfSinkServer struct {
 	*gosteno.Logger
-	dataChannel         chan []byte
-	listenHost          string
-	listenPath          string
-	cloudControllerHost string
-	listenerChannels    *groupedChannels
+	dataChannel      chan []byte
+	listenHost       string
+	listenPath       string
+	apiHost          string
+	listenerChannels *groupedChannels
 }
 
-func NewCfSinkServer(givenChannel chan []byte, logger *gosteno.Logger, listenHost string, listenPath string, cloudControllerHost string) *cfSinkServer {
+func NewCfSinkServer(givenChannel chan []byte, logger *gosteno.Logger, listenHost string, listenPath string, apiHost string) *cfSinkServer {
 	listeners := newGroupedChannels()
-	return &cfSinkServer{logger, givenChannel, listenHost, listenPath, cloudControllerHost, listeners}
+	return &cfSinkServer{logger, givenChannel, listenHost, listenPath, apiHost, listeners}
 }
 
 func (cfSinkServer *cfSinkServer) sinkRelayHandler(ws *websocket.Conn) {
@@ -44,7 +44,7 @@ func (cfSinkServer *cfSinkServer) sinkRelayHandler(ws *websocket.Conn) {
 
 	authorizedToListenToLogs := func(authToken, appId string) bool {
 		client := &http.Client{}
-		req, _ := http.NewRequest("GET", cfSinkServer.cloudControllerHost+"/v2/apps/"+appId, nil)
+		req, _ := http.NewRequest("GET", cfSinkServer.apiHost+"/v2/apps/"+appId, nil)
 		req.Header.Set("Authorization", authToken)
 		res, err := client.Do(req)
 
