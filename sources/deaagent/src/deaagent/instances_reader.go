@@ -9,6 +9,7 @@ import (
 func readInstances(data []byte, logger *gosteno.Logger) (instances map[string]instance, err error) {
 	type instanceJson struct {
 		Application_id        string
+		Application_space_id  string
 		Warden_job_id         uint64
 		Warden_container_path string
 		Instance_index        uint64
@@ -33,6 +34,7 @@ func readInstances(data []byte, logger *gosteno.Logger) (instances map[string]in
 		if jsonInstance.State == "RUNNING" {
 			instance := instance{
 				applicationId:       jsonInstance.Application_id,
+				spaceId:             jsonInstance.Application_space_id,
 				wardenContainerPath: jsonInstance.Warden_container_path,
 				wardenJobId:         jsonInstance.Warden_job_id,
 				index:               jsonInstance.Instance_index,

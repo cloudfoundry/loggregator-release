@@ -54,6 +54,7 @@ func marshalledLogMessage(t *testing.T, messageString string, appId string) []by
 	protoMessage := &logMessage.LogMessage{
 		Message:     []byte(messageString),
 		AppId:       proto.String(appId),
+		SpaceId:     proto.String(appId + "Space"),
 		MessageType: &messageType,
 		SourceType:  &sourceType,
 		Timestamp:   proto.Int64(currentTime.UnixNano()),

@@ -14,6 +14,7 @@ import (
 
 type instance struct {
 	applicationId       string
+	spaceId             string
 	wardenJobId         uint64
 	wardenContainerPath string
 	index               uint64
@@ -34,6 +35,7 @@ func (inst *instance) startListening(loggregatorClient loggregatorclient.Loggreg
 			return &logMessage.LogMessage{
 				Message:     message,
 				AppId:       proto.String(inst.applicationId),
+				SpaceId:     proto.String(inst.spaceId),
 				MessageType: &messageType,
 				SourceType:  &sourceType,
 				Timestamp:   proto.Int64(currentTime.UnixNano()),

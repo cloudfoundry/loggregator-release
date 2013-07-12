@@ -34,6 +34,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 
 	instance := &instance{
 		applicationId:       "1234",
+		spaceId:             "5678",
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
 		index:               3,
@@ -69,6 +70,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	receivedMessage := getBackendMessage(t, <-mockLoggregatorClient.received)
 
 	assert.Equal(t, "1234", receivedMessage.GetAppId())
+	assert.Equal(t, "5678", receivedMessage.GetSpaceId())
 	assert.Equal(t, logMessage.LogMessage_DEA, receivedMessage.GetSourceType())
 	assert.Equal(t, logMessage.LogMessage_OUT, receivedMessage.GetMessageType())
 	assert.Equal(t, expectedMessage, string(receivedMessage.GetMessage()))
