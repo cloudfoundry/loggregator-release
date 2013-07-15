@@ -7,3 +7,6 @@
 [submodule "src/code.google.com/p/gogoprotobuf"]
         path=src/code.google.com/p/gogoprotobuf
         url = https://code.google.com/p/gogoprotobuf/
+[submodule "src/github.com/bitly/simplejson"]
+	path = src/github.com/bitly/simplejson
+	url = https://github.com/bitly/go-simplejson

@@ -60,7 +60,8 @@ func (cfSinkServer *cfSinkServer) sinkRelayHandler(ws *websocket.Conn) {
 		cfSinkServer.logger.Warnf("Did not accept sink connection without authorization: %s", clientAddress)
 		return
 	}
-	if !cfSinkServer.authorize(cfSinkServer.apiHost, authToken, spaceId, cfSinkServer.logger) {
+
+	if !cfSinkServer.authorize(cfSinkServer.apiHost, authToken, spaceId, appId, cfSinkServer.logger) {
 		cfSinkServer.logger.Warnf("User not authorized to access space: %s", spaceId)
 		return
 	}

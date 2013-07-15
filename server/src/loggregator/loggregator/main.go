@@ -16,6 +16,7 @@ var apiHost = flag.String("apiHost", "http://0.0.0.0:9876", "protocol:ip:port to
 var webHost = flag.String("web", "0.0.0.0:8080", "ip:port to listen for web requests")
 var logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 var logLevel = flag.Bool("v", false, "Verbose logging")
+var uaaVerificationKey = flag.String("uaaVerificationKey", "", "The public key used to verify UAA access tokens.")
 
 const versionNumber = `0.0.1.TRAVIS_BUILD_NUMBER`
 const gitSha = `TRAVIS_COMMIT`
@@ -53,6 +54,11 @@ func main() {
 	listener := loggregator.NewAgentListener(*sourceHost, logger)
 	incomingData := listener.Start()
 
-	cfSinkServer := loggregator.NewCfSinkServer(incomingData, logger, *webHost, "/tail/", *apiHost, loggregator.AuthorizedToListenToLogs)
+	decoder, err := loggregator.NewUaaTokenDecoder([]byte(*uaaVerificationKey))
+	if err != nil {
+		panic(fmt.Sprintf("Can not parse UAA verification key: %s", err))
+	}
+	authorizer := loggregator.NewLogAccessAuthorizer(decoder)
+	cfSinkServer := loggregator.NewCfSinkServer(incomingData, logger, *webHost, "/tail/", *apiHost, authorizer)
 	cfSinkServer.Start()
 }

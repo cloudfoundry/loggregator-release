@@ -58,11 +58,11 @@ func assertProtoBufferMessageEquals(t *testing.T, expectedMessage string, actual
 	assert.Equal(t, expectedMessage, string(receivedMessage.GetMessage()))
 }
 
-func successfulAuthorizer(a, b, c string, d *gosteno.Logger) bool {
+func successfulAuthorizer(a, b, c, d string, l *gosteno.Logger) bool {
 	return true
 }
 
-func failingAuthorizer(a, b, c string, d *gosteno.Logger) bool {
+func failingAuthorizer(a, b, c, d string, l *gosteno.Logger) bool {
 	return false
 }
 
