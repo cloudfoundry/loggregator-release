@@ -56,10 +56,6 @@ func (cfSinkServer *cfSinkServer) sinkRelayHandler(ws *websocket.Conn) {
 		cfSinkServer.logger.Warnf("Did not accept sink connection without spaceId: %s", clientAddress)
 		return
 	}
-	if appId == "" {
-		cfSinkServer.logger.Warnf("Did not accept sink connection without appId: %s", clientAddress)
-		return
-	}
 	if authToken == "" {
 		cfSinkServer.logger.Warnf("Did not accept sink connection without authorization: %s", clientAddress)
 		return
@@ -70,8 +66,15 @@ func (cfSinkServer *cfSinkServer) sinkRelayHandler(ws *websocket.Conn) {
 	}
 
 	listenerChannel := make(chan []byte)
-	cfSinkServer.listenerChannels.add(listenerChannel, appId)
-	defer cfSinkServer.listenerChannels.delete(listenerChannel, appId)
+	if appId != "" {
+		cfSinkServer.logger.Debugf("Adding Tail client %s for app %s\n", clientAddress, appId)
+		cfSinkServer.listenerChannels.add(listenerChannel, spaceId, appId)
+		defer cfSinkServer.listenerChannels.delete(listenerChannel, spaceId, appId)
+	} else {
+		cfSinkServer.logger.Debugf("Adding Tail client %s for space %s\n", clientAddress, spaceId)
+		cfSinkServer.listenerChannels.add(listenerChannel, spaceId)
+		defer cfSinkServer.listenerChannels.delete(listenerChannel, spaceId)
+	}
 
 	for {
 		cfSinkServer.logger.Infof("Tail client %s is waiting for data\n", clientAddress)
@@ -86,23 +89,25 @@ func (cfSinkServer *cfSinkServer) sinkRelayHandler(ws *websocket.Conn) {
 }
 
 func (cfSinkServer *cfSinkServer) relayMessagesToAllSinks() {
-	extractReceivedSpaceAndAppId := func(data []byte) string {
+	extractReceivedSpaceAndAppId := func(data []byte) (string, string) {
 		receivedMessage := &logMessage.LogMessage{}
 		err := proto.Unmarshal(data, receivedMessage)
 		if err != nil {
 			cfSinkServer.logger.Debugf("Log message could not be unmarshaled. Dropping it... Error: %v. Data: %v", err, data)
-			return ""
+			return "", ""
 		}
-		return *receivedMessage.AppId
+		return *receivedMessage.SpaceId, *receivedMessage.AppId
 	}
 
 	for {
 		data := <-cfSinkServer.dataChannel
-		receivedAppId := extractReceivedSpaceAndAppId(data)
-		//		for _, listenerChannel := range cfSinkServer.listenerChannels.get(receivedSpaceId, receivedAppId) {
-		//			listenerChannel <- data
-		//		}
-		for _, listenerChannel := range cfSinkServer.listenerChannels.get(receivedAppId) {
+		receivedSpaceId, receivedAppId := extractReceivedSpaceAndAppId(data)
+		for _, listenerChannel := range cfSinkServer.listenerChannels.get(receivedSpaceId, receivedAppId) {
+			cfSinkServer.logger.Debugf("Sending Message to channel %s for space %s and app %s\n", listenerChannel, receivedSpaceId, receivedAppId)
+			listenerChannel <- data
+		}
+		for _, listenerChannel := range cfSinkServer.listenerChannels.get(receivedSpaceId) {
+			cfSinkServer.logger.Debugf("Sending Message to channel %s for space %s\n", listenerChannel, receivedSpaceId)
 			listenerChannel <- data
 		}
 	}
