@@ -38,3 +38,7 @@ gzip $SCRIPT_HOME/../server/bin/loggregator
 
 LOGGREGATOR_BIN=$SCRIPT_HOME/../server/bin/loggregator.gz
 package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggregator $TRAVIS_BUILD_NUMBER $LOGGREGATOR_BIN
+
+# Deploy to Staging
+
+curl -X POST http://inception.prism.cf-app.com:4567/deploy/${STAGING_API_TOKEN}
