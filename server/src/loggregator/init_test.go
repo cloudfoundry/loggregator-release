@@ -2,21 +2,24 @@ package loggregator
 
 import (
 	"github.com/cloudfoundry/gosteno"
-
-//	"os"
+	"os"
 )
 
 func logger() *gosteno.Logger {
+	if os.Getenv("LOG_TO_STDOUT") == "true" {
+		level := gosteno.LOG_DEBUG
 
-	//	loggingConfig := &gosteno.Config{
-	//		Sinks:     make([]gosteno.Sink, 1),
-	//		Level:     gosteno.LOG_DEBUG,
-	//		Codec:     gosteno.NewJsonCodec(),
-	//		EnableLOC: true}
-	//
-	//	loggingConfig.Sinks[0] = gosteno.NewIOSink(os.Stdout)
-	//	gosteno.Init(loggingConfig)
-	//	return gosteno.NewLogger("TestLoggregator")
+		loggingConfig := &gosteno.Config{
+			Sinks:     make([]gosteno.Sink, 1),
+			Level:     level,
+			Codec:     gosteno.NewJsonCodec(),
+			EnableLOC: true,
+		}
 
-	return gosteno.NewLogger("TestLoggregator")
+		loggingConfig.Sinks[0] = gosteno.NewIOSink(os.Stdout)
+
+		gosteno.Init(loggingConfig)
+	}
+
+	return gosteno.NewLogger("TestLogger")
 }
