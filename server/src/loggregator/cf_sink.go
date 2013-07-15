@@ -26,27 +26,36 @@ func NewCfSinkServer(givenChannel chan []byte, logger *gosteno.Logger, listenHos
 }
 
 func (cfSinkServer *cfSinkServer) sinkRelayHandler(ws *websocket.Conn) {
-	extractAppIdAndAuthTokenFromUrl := func(u *url.URL) (string, string) {
+	extractAppIdAndAuthTokenFromUrl := func(u *url.URL) (string, string, string) {
 		authorization := ""
 		queryValues := u.Query()
 		if len(queryValues["authorization"]) == 1 {
 			authorization = queryValues["authorization"][0]
 		}
-
 		appId := ""
-		re := regexp.MustCompile("^" + cfSinkServer.listenPath + "(.+)$")
+		spaceId := ""
+		re := regexp.MustCompile("^" + cfSinkServer.listenPath + "spaces/([^/]+)(?:/apps/([^/]+))?$")
 		result := re.FindStringSubmatch(u.Path)
-		if len(result) == 2 {
-			appId = result[1]
+
+		switch len(result) {
+		case 2:
+			spaceId = result[1]
+		case 3:
+			spaceId = result[1]
+			appId = result[2]
 		}
 
-		return appId, authorization
+		return spaceId, appId, authorization
 	}
 
 	clientAddress := ws.RemoteAddr()
 
-	appId, authToken := extractAppIdAndAuthTokenFromUrl(ws.Request().URL)
+	spaceId, appId, authToken := extractAppIdAndAuthTokenFromUrl(ws.Request().URL)
 
+	if spaceId == "" {
+		cfSinkServer.logger.Warnf("Did not accept sink connection without spaceId: %s", clientAddress)
+		return
+	}
 	if appId == "" {
 		cfSinkServer.logger.Warnf("Did not accept sink connection without appId: %s", clientAddress)
 		return
@@ -55,8 +64,8 @@ func (cfSinkServer *cfSinkServer) sinkRelayHandler(ws *websocket.Conn) {
 		cfSinkServer.logger.Warnf("Did not accept sink connection without authorization: %s", clientAddress)
 		return
 	}
-	if !cfSinkServer.authorize(cfSinkServer.apiHost, authToken, appId, cfSinkServer.logger) {
-		cfSinkServer.logger.Warnf("User not authorized to access app: %s", appId)
+	if !cfSinkServer.authorize(cfSinkServer.apiHost, authToken, spaceId, cfSinkServer.logger) {
+		cfSinkServer.logger.Warnf("User not authorized to access space: %s", spaceId)
 		return
 	}
 
@@ -77,7 +86,7 @@ func (cfSinkServer *cfSinkServer) sinkRelayHandler(ws *websocket.Conn) {
 }
 
 func (cfSinkServer *cfSinkServer) relayMessagesToAllSinks() {
-	extractReceivedAppId := func(data []byte) string {
+	extractReceivedSpaceAndAppId := func(data []byte) string {
 		receivedMessage := &logMessage.LogMessage{}
 		err := proto.Unmarshal(data, receivedMessage)
 		if err != nil {
@@ -89,7 +98,10 @@ func (cfSinkServer *cfSinkServer) relayMessagesToAllSinks() {
 
 	for {
 		data := <-cfSinkServer.dataChannel
-		receivedAppId := extractReceivedAppId(data)
+		receivedAppId := extractReceivedSpaceAndAppId(data)
+		//		for _, listenerChannel := range cfSinkServer.listenerChannels.get(receivedSpaceId, receivedAppId) {
+		//			listenerChannel <- data
+		//		}
 		for _, listenerChannel := range cfSinkServer.listenerChannels.get(receivedAppId) {
 			listenerChannel <- data
 		}

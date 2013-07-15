@@ -6,8 +6,8 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"loggregator"
 	"os"
-	"strings"
 	"runtime"
+	"strings"
 )
 
 var version = flag.Bool("version", false, "Version info")
