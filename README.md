@@ -42,9 +42,9 @@ Started GET "/assets/rails.png" for 127.0.0.1 at 2013-04-05 13:14:58 -0700
 Loggregator is composed of:
 
 * **Sources**: Logging agents that run on the Cloud Foundry components.  They forward logs to:
-* **Loggregator Catcher**: Responsible for gathering logs from the **sources**, and storing in the temporary buffers.
-* **Loggregator Server**: Accepts connections from the `cf` CLI, allowing users to access their logs.
-* **Loggregator Drainer**: Implements the Heroku Drain API for 3rd party partners.
+* **Loggregator Server**: Responsible for gathering logs from the **sources**, and storing in the temporary buffers.
+* **Loggregator Sink Server**: Accepts connections from the `cf` CLI, allowing users to access their logs.
+* **Loggregator Drain Server**: Implements the Heroku Drain API for 3rd party partners.
 
 Source agents emit the logging data as [protocol-buffers](https://code.google.com/p/protobuf/), and the data stays in that format throughout the system.
 
