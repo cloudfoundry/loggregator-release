@@ -13,6 +13,7 @@ Loggregator allows users to:
 1. Continually drain their application logs to 3rd party log archive and analysis services.
 
 ### Usage
+Proposed syntax:
 
 ```
 cf logs [--app=APP_NAME|--space=SPACE_NAME] [--tail]
