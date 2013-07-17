@@ -12,6 +12,8 @@ env:
 
       y0FoJxVHyWVueS/mQzil+Ihk1TJUUibWRPzxo+t/8cNX+ogmse4='
   - secure: D7ypvdD4ArKKdbrIMM7EUITNVjZlTH6ASwO+9qsL0g+qT66Z4kn4iiqMHi+V7ujglCZqQYNBrRRCqYQDLhCjFOUTRlIEgPJtR3uXdWgXfJ15Wm3I0R8tmeQMNOjgM+nAnXNnA+Feh8jIWqlvrJ1tg7S8q4rJGmJhfxpsnRlHf6o=
+  - secure: ZZLGcFUKd2hc4fkuLvbTiPhwejctQAmSF3ICxZ6UxSrjcppiUtwLSaucAoki0l0+hiRFUNQO/+rFZMo0qDCsspZ9dTm2QtSFPotdP9/zYVNSp91/EXNmQ6VR9vcubTiJa5JPGoe9d4+Z7W4MY8upfs2fMNyv+7uq+GEvWhm3kj4=
+  - secure: GGNK3EdRGczAeow8u6/UuS3qg6tgGfHfoinzM8Vxmo2ik1bKJHZYLR9JpYILtj0+dv/Hz8ZPDvH1Htci8ZaIZTsU2CL8XeTKQCVdNfSGLOKqcC4+eBTmoFVp//GtRrTW7LGQOFhaN9I41bFWdAxYcQsc6wCUGeJvFZStQW0ebmQ=
 language: go
 go:
 - 1.1.1
