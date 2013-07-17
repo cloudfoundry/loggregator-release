@@ -9,8 +9,12 @@ function populate_build_info() {
 	sed -i -e "s/TRAVIS_COMMIT/$TRAVIS_COMMIT/g" $main_file
 }
 
-populate_build_info sources/deaagent/src/deaagent/deaagent/main.go
-populate_build_info server/src/loggregator/loggregator/main.go
+if [ "$TRAVIS_BUILD_NUMBER" != "" ]; then
+
+  populate_build_info sources/deaagent/src/deaagent/deaagent/main.go
+  populate_build_info server/src/loggregator/loggregator/main.go
+
+fi
 
 $(dirname $0)/go install deaagent/deaagent
 $(dirname $0)/go install loggregator/loggregator
