@@ -1,4 +1,4 @@
-package loggregator
+package agentlistener
 
 import (
 	"github.com/cloudfoundry/gosteno"

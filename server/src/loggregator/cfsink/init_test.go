@@ -1,4 +1,4 @@
-package loggregator
+package cfsink
 
 import (
 	"github.com/cloudfoundry/gosteno"

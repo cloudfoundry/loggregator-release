@@ -6,8 +6,9 @@ packages=(
     deaagent
     deaagent/deaagent
     deaagent/loggregatorclient
-    loggregator
     loggregator/loggregator
+    loggregator/cfsink
+    loggregator/agentlistener
 );
 
 for package in "${packages[@]}"

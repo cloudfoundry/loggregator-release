@@ -1,4 +1,4 @@
-package loggregator
+package cfsink
 
 import (
 	"code.google.com/p/go.net/websocket"

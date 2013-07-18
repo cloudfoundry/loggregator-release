@@ -4,7 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
-	"loggregator"
+	"loggregator/agentlistener"
+	"loggregator/cfsink"
 	"os"
 	"runtime"
 	"strings"
@@ -51,14 +52,14 @@ func main() {
 	gosteno.Init(loggingConfig)
 	logger := gosteno.NewLogger("loggregator")
 
-	listener := loggregator.NewAgentListener(*sourceHost, logger)
+	listener := agentlistener.NewAgentListener(*sourceHost, logger)
 	incomingData := listener.Start()
 
-	decoder, err := loggregator.NewUaaTokenDecoder([]byte(*uaaVerificationKey))
+	decoder, err := cfsink.NewUaaTokenDecoder([]byte(*uaaVerificationKey))
 	if err != nil {
 		panic(fmt.Sprintf("Can not parse UAA verification key: %s", err))
 	}
-	authorizer := loggregator.NewLogAccessAuthorizer(decoder)
-	cfSinkServer := loggregator.NewCfSinkServer(incomingData, logger, *webHost, "/tail/", *apiHost, authorizer)
+	authorizer := cfsink.NewLogAccessAuthorizer(decoder)
+	cfSinkServer := cfsink.NewCfSinkServer(incomingData, logger, *webHost, "/tail/", *apiHost, authorizer)
 	cfSinkServer.Start()
 }
