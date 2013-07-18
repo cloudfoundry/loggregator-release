@@ -16,7 +16,7 @@ Loggregator allows users to:
 Proposed syntax:
 
 ```
-cf logs [--app=APP_NAME|--space=SPACE_NAME] [--tail]
+cf logs [--space] [--app=APP_NAME|] [--tail]
 ```
 
 ``` bash
