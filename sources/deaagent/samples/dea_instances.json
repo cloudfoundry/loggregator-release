@@ -2,6 +2,9 @@
     "time": 1371838793.0020926,
     "instances": [
         {
+            "tags": {
+                "space": "4aa9506e-277f-41ab-b764-a35c0b123456"
+            },
             "executableFile": "deprecated",
             "services": [],
             "limits": {
@@ -14,7 +17,6 @@
             "debug": null,
             "instance_index": 0,
             "application_id": "4aa9506e-277f-41ab-b764-a35c0b96fa1b",
-            "application_space_id": "4aa9506e-277f-41ab-b764-a35c0b123456",
             "application_version": "5e4946db-e055-401a-ba52-3f33599f6b06",
             "application_name": "hello",
             "application_uris": [
