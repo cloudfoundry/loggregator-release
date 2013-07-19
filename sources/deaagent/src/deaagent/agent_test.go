@@ -6,6 +6,7 @@ import (
 	"logMessage"
 	"net"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -55,8 +56,7 @@ func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
 		applicationId:       "1234",
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
-		index:               3,
-		logger:              logger()}
+		index:               3}
 	os.MkdirAll(helperInstance.identifier(), 0777)
 
 	stdoutSocketPath := filepath.Join(helperInstance.identifier(), "stdout.sock")
@@ -95,6 +95,27 @@ func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
 	assert.Equal(t, expectedMessage, string(receivedMessage.GetMessage()))
 }
 
+func TestTheAgentReadsAllExistingInstances(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	filepath := path.Join(path.Dir(filename), "..", "..", "samples", "multi_instances.json")
+	testAgent := &agent{InstancesJsonFilePath: filepath, logger: logger()}
+	instancesChan := testAgent.watchInstancesJsonFileForChanges()
+	expectedApplicationIds := [8]string{
+		"e0e12b41-78d4-43ff-a5ae-20422bedf22f",
+		"a59ebe7a-002a-4530-8d69-8bf53bc845d5",
+		"01780118-4680-4779-9eb7-65c7f60cdc76",
+		"67fa7adf-746a-446a-8f1b-d2f291bc8459",
+		"e6eca3c8-7fd1-4876-8545-ce5acf67db66",
+		"b88d0b09-8275-445f-bd83-1941362db7aa",
+		"d2fb0f4b-81a9-47a4-8eb4-292456030fa3",
+		"d3532fe5-1ad8-4418-b6fb-4d72be408b72",
+	}
+	for i := 0; i > 8; i++ {
+		instance := <-instancesChan
+		assert.Equal(t, expectedApplicationIds[i], instance.applicationId)
+	}
+}
+
 func TestThatFunctionContinuesToPollWhenFileCantBeOpened(t *testing.T) {
 	os.Remove(filePath())
 	agent := &agent{filePath(), logger()}
@@ -126,7 +147,7 @@ func TestThatAnExistinginstanceWillBeSeen(t *testing.T) {
 	instancesChan := agent.watchInstancesJsonFileForChanges()
 
 	inst := <-instancesChan
-	expectedInst := &instance{applicationId: "123", logger: logger()}
+	expectedInst := instance{applicationId: "123"}
 	assert.Equal(t, expectedInst, inst)
 }
 
@@ -144,7 +165,7 @@ func TestThatANewinstanceWillBeSeen(t *testing.T) {
 	inst, ok := <-instancesChan
 	assert.True(t, ok, "Channel is closed")
 
-	expectedInst := &instance{applicationId: "123", logger: logger()}
+	expectedInst := instance{applicationId: "123"}
 	assert.Equal(t, expectedInst, inst)
 }
 
@@ -157,7 +178,7 @@ func TestThatOnlyOneNewInstancesWillBeSeen(t *testing.T) {
 	inst, ok := <-instancesChan
 	assert.True(t, ok, "Channel is closed")
 
-	expectedInst := &instance{applicationId: "123", logger: logger()}
+	expectedInst := instance{applicationId: "123"}
 	assert.Equal(t, expectedInst, inst)
 
 	select {
@@ -187,6 +208,6 @@ func TestThatARemovedInstanceWillBeRemoved(t *testing.T) {
 	inst, ok = <-instancesChan
 	assert.True(t, ok, "Channel is closed")
 
-	expectedInst := &instance{applicationId: "123", logger: logger()}
+	expectedInst := instance{applicationId: "123"}
 	assert.Equal(t, expectedInst, inst)
 }

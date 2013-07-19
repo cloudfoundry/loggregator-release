@@ -37,8 +37,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 		spaceId:             "5678",
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
-		index:               3,
-		logger:              logger()}
+		index:               3}
 	os.MkdirAll(instance.identifier(), 0777)
 
 	stdoutSocketPath := filepath.Join(instance.identifier(), "stdout.sock")
@@ -58,7 +57,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	mockLoggregatorClient := new(MockLoggregatorClient)
 
 	mockLoggregatorClient.received = make(chan *[]byte)
-	instance.startListening(mockLoggregatorClient)
+	instance.startListening(mockLoggregatorClient, logger())
 
 	connection, err := stdoutListener.Accept()
 	defer connection.Close()
@@ -95,8 +94,7 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 		applicationId:       "1234",
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
-		index:               4,
-		logger:              logger()}
+		index:               4}
 	os.MkdirAll(instance.identifier(), 0777)
 
 	stdoutSocketPath := filepath.Join(instance.identifier(), "stdout.sock")
@@ -116,7 +114,7 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	mockLoggregatorClient := new(MockLoggregatorClient)
 
 	mockLoggregatorClient.received = make(chan *[]byte)
-	instance.startListening(mockLoggregatorClient)
+	instance.startListening(mockLoggregatorClient, logger())
 
 	connection, err := stderrListener.Accept()
 	defer connection.Close()

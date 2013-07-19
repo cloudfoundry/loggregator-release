@@ -3,10 +3,9 @@ package deaagent
 import (
 	"encoding/json"
 	"errors"
-	"github.com/cloudfoundry/gosteno"
 )
 
-func readInstances(data []byte, logger *gosteno.Logger) (instances map[string]instance, err error) {
+func readInstances(data []byte) (map[string]instance, error) {
 	type tagsJson struct {
 		Space string
 	}
@@ -26,13 +25,14 @@ func readInstances(data []byte, logger *gosteno.Logger) (instances map[string]in
 	var jsonInstances instancesJson
 
 	if len(data) < 1 {
-		err = errors.New("Empty data, can't parse json")
-		return
+		return nil, errors.New("Empty data, can't parse json")
 	}
 
-	err = json.Unmarshal(data, &jsonInstances)
-
-	instances = make(map[string]instance, len(jsonInstances.Instances))
+	err := json.Unmarshal(data, &jsonInstances)
+	if err != nil {
+		return nil, err
+	}
+	instances := make(map[string]instance, len(jsonInstances.Instances))
 	for _, jsonInstance := range jsonInstances.Instances {
 		if jsonInstance.State == "RUNNING" {
 			instance := instance{
@@ -40,11 +40,10 @@ func readInstances(data []byte, logger *gosteno.Logger) (instances map[string]in
 				spaceId:             jsonInstance.Tags.Space,
 				wardenContainerPath: jsonInstance.Warden_container_path,
 				wardenJobId:         jsonInstance.Warden_job_id,
-				index:               jsonInstance.Instance_index,
-				logger:              logger}
+				index:               jsonInstance.Instance_index}
 			instances[instance.identifier()] = instance
 		}
 	}
 
-	return
+	return instances, nil
 }

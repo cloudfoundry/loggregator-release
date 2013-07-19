@@ -10,7 +10,7 @@ import (
 
 type agent struct {
 	InstancesJsonFilePath string
-	*gosteno.Logger
+	logger                *gosteno.Logger
 }
 
 const bufferSize = 4096
@@ -23,13 +23,13 @@ func (agent *agent) Start(loggregatorClient loggregatorclient.LoggregatorClient)
 	newInstances := agent.watchInstancesJsonFileForChanges()
 	for {
 		instance := <-newInstances
-		agent.Infof("Starting to listen to %v\n", instance.identifier())
-		instance.startListening(loggregatorClient)
+		agent.logger.Infof("Starting to listen to %v\n", instance.identifier())
+		instance.startListening(loggregatorClient, agent.logger)
 	}
 }
 
-func (agent *agent) watchInstancesJsonFileForChanges() chan *instance {
-	instancesChan := make(chan *instance)
+func (agent *agent) watchInstancesJsonFileForChanges() chan instance {
+	instancesChan := make(chan instance)
 
 	pollInstancesJson := func() {
 		knownInstances := make(map[string]bool)
@@ -39,13 +39,13 @@ func (agent *agent) watchInstancesJsonFileForChanges() chan *instance {
 			time.Sleep(1 * time.Millisecond)
 			json, err := ioutil.ReadFile(agent.InstancesJsonFilePath)
 			if err != nil {
-				agent.Warnf("Reading failed, retrying. %s\n", err)
+				agent.logger.Warnf("Reading failed, retrying. %s\n", err)
 				continue
 			}
 
-			currentInstances, err := readInstances(json, agent.Logger)
+			currentInstances, err := readInstances(json)
 			if err != nil {
-				agent.Warnf("Failed parsing json %s: %v Trying again...\n", err, string(json))
+				agent.logger.Warnf("Failed parsing json %s: %v Trying again...\n", err, string(json))
 				continue
 			}
 
@@ -56,7 +56,7 @@ func (agent *agent) watchInstancesJsonFileForChanges() chan *instance {
 				}
 
 				delete(knownInstances, instanceIdentifier)
-				agent.Infof("Removing stale instance %v", instanceIdentifier)
+				agent.logger.Infof("Removing stale instance %v", instanceIdentifier)
 			}
 
 			for _, instance := range currentInstances {
@@ -66,8 +66,8 @@ func (agent *agent) watchInstancesJsonFileForChanges() chan *instance {
 				}
 
 				knownInstances[instance.identifier()] = true
-				agent.Infof("Adding new instance %v", instance.identifier())
-				instancesChan <- &instance
+				agent.logger.Infof("Adding new instance %s", instance.identifier())
+				instancesChan <- instance
 			}
 		}
 	}

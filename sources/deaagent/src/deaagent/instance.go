@@ -18,14 +18,13 @@ type instance struct {
 	wardenJobId         uint64
 	wardenContainerPath string
 	index               uint64
-	logger              *gosteno.Logger
 }
 
 func (instance *instance) identifier() string {
 	return filepath.Join(instance.wardenContainerPath, "jobs", strconv.FormatUint(instance.wardenJobId, 10))
 }
 
-func (inst *instance) startListening(loggregatorClient loggregatorclient.LoggregatorClient) {
+func (inst *instance) startListening(loggregatorClient loggregatorclient.LoggregatorClient, logger *gosteno.Logger) {
 
 	listen := func(messageType logMessage.LogMessage_MessageType) {
 
@@ -55,12 +54,12 @@ func (inst *instance) startListening(loggregatorClient loggregatorclient.Loggreg
 
 		connection, err := socket(messageType)
 		if err != nil {
-			inst.logger.Errorf("Error while dialing into socket %s, %s", messageType, err)
+			logger.Errorf("Error while dialing into socket %s, %s", messageType, err)
 			return
 		}
 		defer func() {
 			connection.Close()
-			inst.logger.Infof("Stopped reading from socket %s", messageType)
+			logger.Infof("Stopped reading from socket %s", messageType)
 		}()
 
 		buffer := make([]byte, bufferSize)
@@ -68,18 +67,18 @@ func (inst *instance) startListening(loggregatorClient loggregatorclient.Loggreg
 		for {
 			readCount, err := connection.Read(buffer)
 			if readCount == 0 && err != nil {
-				inst.logger.Infof("Error while reading from socket %s, %s", messageType, err)
+				logger.Infof("Error while reading from socket %s, %s", messageType, err)
 				break
 			}
-			inst.logger.Debugf("Read %d bytes from instance socket", readCount)
+			logger.Debugf("Read %d bytes from instance socket", readCount)
 
 			data, err := proto.Marshal(newLogMessage(buffer[0:readCount]))
 			if err != nil {
-				inst.logger.Errorf("Error marshalling log message: %s", err)
+				logger.Errorf("Error marshalling log message: %s", err)
 			}
 
 			loggregatorClient.Send(data)
-			inst.logger.Debugf("Sent %d bytes to loggregator client", readCount)
+			logger.Debugf("Sent %d bytes to loggregator client", readCount)
 			runtime.Gosched()
 		}
 	}
