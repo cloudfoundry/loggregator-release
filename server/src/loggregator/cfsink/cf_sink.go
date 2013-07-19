@@ -53,37 +53,37 @@ func (cfSinkServer *cfSinkServer) sinkRelayHandler(ws *websocket.Conn) {
 	spaceId, appId, authToken := extractAppIdAndAuthTokenFromUrl(ws.Request().URL)
 
 	if spaceId == "" {
-		cfSinkServer.logger.Warnf("Did not accept sink connection without spaceId: %s", clientAddress)
+		cfSinkServer.logger.Warnf("Did not accept sink connection from %s without spaceId.", clientAddress)
 		return
 	}
 	if authToken == "" {
-		cfSinkServer.logger.Warnf("Did not accept sink connection without authorization: %s", clientAddress)
+		cfSinkServer.logger.Warnf("Did not accept sink connection from %s without authorization.", clientAddress)
 		return
 	}
 
 	if !cfSinkServer.authorize(cfSinkServer.apiHost, authToken, spaceId, appId, cfSinkServer.logger) {
-		cfSinkServer.logger.Warnf("User not authorized to access space: %s", spaceId)
+		cfSinkServer.logger.Warnf("User not authorized to access space [%s].", spaceId)
 		return
 	}
 
 	listenerChannel := make(chan []byte)
 	if appId != "" {
-		cfSinkServer.logger.Debugf("Adding Tail client %s for app %s\n", clientAddress, appId)
+		cfSinkServer.logger.Debugf("Adding Tail client %s for space [%s] and app [%s].", clientAddress, spaceId, appId)
 		cfSinkServer.listenerChannels.add(listenerChannel, spaceId, appId)
 		defer cfSinkServer.listenerChannels.delete(listenerChannel, spaceId, appId)
 	} else {
-		cfSinkServer.logger.Debugf("Adding Tail client %s for space %s\n", clientAddress, spaceId)
+		cfSinkServer.logger.Debugf("Adding Tail client %s for space [%s].", clientAddress, spaceId)
 		cfSinkServer.listenerChannels.add(listenerChannel, spaceId)
 		defer cfSinkServer.listenerChannels.delete(listenerChannel, spaceId)
 	}
 
 	for {
-		cfSinkServer.logger.Infof("Tail client %s is waiting for data\n", clientAddress)
+		cfSinkServer.logger.Infof("Tail client %s is waiting for data", clientAddress)
 		data := <-listenerChannel
-		cfSinkServer.logger.Debugf("Tail client %s got %d bytes\n", clientAddress, len(data))
+		cfSinkServer.logger.Debugf("Tail client %s got %d bytes", clientAddress, len(data))
 		err := websocket.Message.Send(ws, data)
 		if err != nil {
-			cfSinkServer.logger.Infof("Tail client %s must have gone away %s\n", clientAddress, err)
+			cfSinkServer.logger.Infof("Tail client %s must have gone away %s", clientAddress, err)
 			break
 		}
 	}
@@ -102,15 +102,19 @@ func (cfSinkServer *cfSinkServer) relayMessagesToAllSinks() {
 
 	for {
 		data := <-cfSinkServer.dataChannel
+		cfSinkServer.logger.Debugf("Received %d bytes of data from agent listener.", len(data))
 		receivedSpaceId, receivedAppId := extractReceivedSpaceAndAppId(data)
+		cfSinkServer.logger.Debugf("Searching for channels with spaceId [%s] and appId [%s].", receivedSpaceId, receivedAppId)
 		for _, listenerChannel := range cfSinkServer.listenerChannels.get(receivedSpaceId, receivedAppId) {
-			cfSinkServer.logger.Debugf("Sending Message to channel %s for space %s and app %s\n", listenerChannel, receivedSpaceId, receivedAppId)
+			cfSinkServer.logger.Debugf("Sending Message to channel %s for space [%s] and app [%s].", listenerChannel, receivedSpaceId, receivedAppId)
 			listenerChannel <- data
 		}
+		cfSinkServer.logger.Debugf("Searching for channels with spaceId [%s].", receivedSpaceId)
 		for _, listenerChannel := range cfSinkServer.listenerChannels.get(receivedSpaceId) {
-			cfSinkServer.logger.Debugf("Sending Message to channel %s for space %s\n", listenerChannel, receivedSpaceId)
+			cfSinkServer.logger.Debugf("Sending Message to channel %s for space [%s].", listenerChannel, receivedSpaceId)
 			listenerChannel <- data
 		}
+		cfSinkServer.logger.Debugf("Done sending message to tail clients.")
 	}
 }
 
