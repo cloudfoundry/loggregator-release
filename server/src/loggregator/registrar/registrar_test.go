@@ -24,8 +24,10 @@ func TestRegisterWithRouter(t *testing.T) {
 	err := registrar.RegisterWithRouter()
 	assert.NoError(t, err)
 
-	time.Sleep(30 * time.Millisecond)
+	time.Sleep(60 * time.Millisecond)
 
+	registrar.RLock()
+	defer registrar.RUnlock()
 	assert.Equal(t, registrar.RegisterInterval, 42*time.Second)
 }
 
@@ -40,7 +42,6 @@ func TestKeepRegistering(t *testing.T) {
 
 	registrar := NewRegistrar(mbusClient, "vcap.me", "8083", gosteno.NewLogger("TestLogger"))
 	registrar.RegisterInterval = 50 * time.Millisecond
-
 	registrar.KeepRegistering()
 
 	for i := 0; i < 3; i++ {
@@ -68,7 +69,7 @@ func TestSubscribeToRouterStart(t *testing.T) {
 	err = mbusClient.Publish("router.start", []byte(messageFromRouter))
 	assert.NoError(t, err)
 
-	time.Sleep(30 * time.Millisecond)
+	time.Sleep(60 * time.Millisecond)
 
 	registrar.RLock()
 	defer registrar.RUnlock()
