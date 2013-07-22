@@ -10,3 +10,9 @@
 [submodule "src/github.com/bitly/simplejson"]
 	path = src/github.com/bitly/simplejson
 	url = https://github.com/bitly/go-simplejson
+[submodule "src/github.com/cloudfoundry/go_cfmessagebus"]
+	path = src/github.com/cloudfoundry/go_cfmessagebus
+	url = https://github.com/cloudfoundry/go_cfmessagebus
+[submodule "src/github.com/cloudfoundry/yagnats"]
+	path = src/github.com/cloudfoundry/yagnats
+	url = https://github.com/cloudfoundry/yagnats
