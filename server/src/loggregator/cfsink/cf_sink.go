@@ -1,7 +1,6 @@
 package cfsink
 
 import (
-	"code.google.com/p/go.net/websocket"
 	"code.google.com/p/gogoprotobuf/proto"
 	"github.com/cloudfoundry/gosteno"
 	"logMessage"
@@ -25,7 +24,7 @@ func NewCfSinkServer(givenChannel chan []byte, logger *gosteno.Logger, listenHos
 	return &cfSinkServer{logger, givenChannel, listenHost, listenPath, apiHost, listeners, authorize}
 }
 
-func (cfSinkServer *cfSinkServer) sinkRelayHandler(ws *websocket.Conn) {
+func (cfSinkServer *cfSinkServer) sinkRelayHandler(rw http.ResponseWriter, r *http.Request) {
 	extractAppIdAndAuthTokenFromUrl := func(u *url.URL) (string, string, string) {
 		authorization := ""
 		queryValues := u.Query()
@@ -48,9 +47,16 @@ func (cfSinkServer *cfSinkServer) sinkRelayHandler(ws *websocket.Conn) {
 		return spaceId, appId, authorization
 	}
 
-	clientAddress := ws.RemoteAddr()
+	f, ok := rw.(http.Flusher)
+	if !ok {
+		cfSinkServer.logger.Fatalf("Response writer is not a flusher.")
+	}
 
-	spaceId, appId, authToken := extractAppIdAndAuthTokenFromUrl(ws.Request().URL)
+	f.Flush()
+
+	clientAddress := r.RemoteAddr
+
+	spaceId, appId, authToken := extractAppIdAndAuthTokenFromUrl(r.URL)
 
 	if spaceId == "" {
 		cfSinkServer.logger.Warnf("Did not accept sink connection from %s without spaceId.", clientAddress)
@@ -81,11 +87,12 @@ func (cfSinkServer *cfSinkServer) sinkRelayHandler(ws *websocket.Conn) {
 		cfSinkServer.logger.Infof("Tail client %s is waiting for data", clientAddress)
 		data := <-listenerChannel
 		cfSinkServer.logger.Debugf("Tail client %s got %d bytes", clientAddress, len(data))
-		err := websocket.Message.Send(ws, data)
+		_, err := rw.Write(data)
 		if err != nil {
 			cfSinkServer.logger.Infof("Tail client %s must have gone away %s", clientAddress, err)
 			break
 		}
+		f.Flush()
 	}
 }
 
@@ -120,8 +127,8 @@ func (cfSinkServer *cfSinkServer) relayMessagesToAllSinks() {
 
 func (cfSinkServer *cfSinkServer) Start() {
 	go cfSinkServer.relayMessagesToAllSinks()
-	http.Handle(cfSinkServer.listenPath, websocket.Handler(cfSinkServer.sinkRelayHandler))
 	cfSinkServer.logger.Infof("Listening on port %s", cfSinkServer.listenHost)
+	http.HandleFunc(cfSinkServer.listenPath, cfSinkServer.sinkRelayHandler)
 	err := http.ListenAndServe(cfSinkServer.listenHost, nil)
 	if err != nil {
 		panic(err)
