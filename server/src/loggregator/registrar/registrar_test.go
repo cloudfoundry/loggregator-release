@@ -12,9 +12,10 @@ import (
 )
 
 func TestRegisterWithRouter(t *testing.T) {
+	port := 34783
 	routerReceivedChannel := make(chan []byte)
 
-	natsServerCmd, mbusClient := setupNatsServer()
+	natsServerCmd, mbusClient := setupNatsServer(port)
 	defer mbus.StopNats(natsServerCmd)
 
 	fakeRouter(mbusClient, routerReceivedChannel)
@@ -29,9 +30,10 @@ func TestRegisterWithRouter(t *testing.T) {
 }
 
 func TestKeepRegistering(t *testing.T) {
+	port := 34784
 	routerReceivedChannel := make(chan []byte)
 
-	natsServerCmd, mbusClient := setupNatsServer()
+	natsServerCmd, mbusClient := setupNatsServer(port)
 	defer mbus.StopNats(natsServerCmd)
 
 	fakeRouter(mbusClient, routerReceivedChannel)
@@ -55,7 +57,8 @@ func TestKeepRegistering(t *testing.T) {
 }
 
 func TestSubscribeToRouterStart(t *testing.T) {
-	natsServerCmd, mbusClient := setupNatsServer()
+	port := 34785
+	natsServerCmd, mbusClient := setupNatsServer(port)
 	defer mbus.StopNats(natsServerCmd)
 
 	registrar := NewRegistrar(mbusClient, "vcap.me", "8083", gosteno.NewLogger("TestLogger"))
@@ -73,9 +76,10 @@ func TestSubscribeToRouterStart(t *testing.T) {
 }
 
 func TestUnregister(t *testing.T) {
+	port := 34786
 	routerReceivedChannel := make(chan []byte)
 
-	natsServerCmd, mbusClient := setupNatsServer()
+	natsServerCmd, mbusClient := setupNatsServer(port)
 	defer mbus.StopNats(natsServerCmd)
 
 	fakeRouter(mbusClient, routerReceivedChannel)
@@ -116,9 +120,9 @@ func fakeRouter(mBusClient mbus.CFMessageBus, returnChannel chan []byte) {
 	})
 }
 
-func setupNatsServer() (*exec.Cmd, mbus.CFMessageBus) {
-	natsServerCmd := mbus.StartNats(34783)
-	mbusClient := newMBusClient()
+func setupNatsServer(port int) (*exec.Cmd, mbus.CFMessageBus) {
+	natsServerCmd := mbus.StartNats(port)
+	mbusClient := newMBusClient(port)
 	<-waitUntilNatsIsUp(mbusClient)
 	return natsServerCmd, mbusClient
 }
@@ -137,12 +141,12 @@ func waitUntilNatsIsUp(mBusClient mbus.CFMessageBus) chan bool {
 	return natsConnected
 }
 
-func newMBusClient() mbus.CFMessageBus {
+func newMBusClient(port int) mbus.CFMessageBus {
 	mBusClient, err := mbus.NewCFMessageBus("NATS")
 	if err != nil {
 		panic("Could not connect to NATS")
 	}
-	mBusClient.Configure("127.0.0.1", 34783, "nats", "nats")
+	mBusClient.Configure("127.0.0.1", port, "nats", "nats")
 	log := gosteno.NewLogger("TestLogger")
 	mBusClient.SetLogger(log)
 	for {
