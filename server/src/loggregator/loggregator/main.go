@@ -71,7 +71,7 @@ var logLevel = flag.Bool("v", false, "Verbose logging")
 var configFile = flag.String("config", "config/loggregator.json", "Location of the loggregator config json file")
 var uaaVerificationKeyFile = flag.String("tokenFile", "config/uaa_token.pub", "Location of the loggregator's uaa public token file")
 
-const versionNumber = `0.0.1.TRAVIS_BUILD_NUMBER`
+const versionNumber = `0.0.TRAVIS_BUILD_NUMBER`
 const gitSha = `TRAVIS_COMMIT`
 
 func main() {

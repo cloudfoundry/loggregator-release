@@ -16,7 +16,7 @@ var loggregatorAddress = flag.String("server", "localhost:3456", "The loggregato
 var logLevel = flag.Bool("v", false, "Verbose logging")
 var version = flag.Bool("version", false, "Version info")
 
-const versionNumber = `0.0.1.TRAVIS_BUILD_NUMBER`
+const versionNumber = `0.0.TRAVIS_BUILD_NUMBER`
 const gitSha = `TRAVIS_COMMIT`
 
 func main() {
