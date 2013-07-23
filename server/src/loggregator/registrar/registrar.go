@@ -3,7 +3,6 @@ package registrar
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	mbus "github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/gosteno"
 	"net"
@@ -39,8 +38,12 @@ func (r *registrar) RegisterWithRouter() (err error) {
 		r.Lock()
 		defer r.Unlock()
 		err = json.Unmarshal(msg, r)
-		r.Infof("Greeted the router. Setting register interval to %v seconds", r.RegisterInterval)
-		r.RegisterInterval = r.RegisterInterval * time.Second
+		if err != nil {
+			r.Errorf("Error unmarshalling the greet response: %v\n", err)
+		} else {
+			r.Infof("Greeted the router. Setting register interval to %v seconds\n", r.RegisterInterval)
+			r.RegisterInterval = r.RegisterInterval * time.Second
+		}
 	case <-time.After(2 * time.Second):
 		err = errors.New("Did not get a response to router.greet!")
 	}
@@ -53,8 +56,12 @@ func (r *registrar) SubscribeToRouterStart() (err error) {
 		r.Lock()
 		defer r.Unlock()
 		err = json.Unmarshal(payload, r)
-		r.Infof("Received router.start. Setting register interval to %v seconds", r.RegisterInterval)
-		r.RegisterInterval = r.RegisterInterval * time.Second
+		if err != nil {
+			r.Errorf("Error unmarshalling the router start message: %v\n", err)
+		} else {
+			r.Infof("Received router.start. Setting register interval to %v seconds\n", r.RegisterInterval)
+			r.RegisterInterval = r.RegisterInterval * time.Second
+		}
 	})
 	r.Info("Subscribed to router.start")
 
@@ -80,12 +87,12 @@ func (r *registrar) publishRouterMessage(subject string) error {
 	host, err := localIP()
 	full_hostname := loggregatorHostname + "." + r.systemDomain
 	if err != nil {
-		fmt.Printf("Publishing %s failed, could not look up local IP: %v", subject, err)
+		r.Warnf("Publishing %s failed, could not look up local IP: %v", subject, err)
 	} else {
 		message := strings.Join([]string{`{"host":"`, host, `","port":`, r.webPort, `,"uris":["`, full_hostname, `"]}`}, "")
 		err := r.mBusClient.Publish(subject, []byte(message))
 		if err != nil {
-			fmt.Printf("Publishing %s failed: %v", subject, err)
+			r.Warnf("Publishing %s failed: %v", subject, err)
 		}
 	}
 	return err

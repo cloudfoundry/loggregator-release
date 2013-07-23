@@ -9,52 +9,45 @@ import (
 	"os/exec"
 	"testing"
 	"time"
-	"sync"
 )
 
-type testSerializer struct {
-	sync.RWMutex
-}
-
-var ts testSerializer
+var mbusClient mbus.CFMessageBus
 
 func init() {
-	ts = testSerializer{}
+	_, mbusClient = setupNatsServer(34783)
 }
 
 func TestRegisterWithRouter(t *testing.T) {
-	ts.Lock()
-	defer ts.Unlock()
-
-	port := 34783
 	routerReceivedChannel := make(chan []byte)
-
-	natsServerCmd, mbusClient := setupNatsServer(port)
-	defer mbus.StopNats(natsServerCmd)
-
 	fakeRouter(mbusClient, routerReceivedChannel)
 
 	registrar := NewRegistrar(mbusClient, "vcap.me", "8083", gosteno.NewLogger("TestLogger"))
 	err := registrar.RegisterWithRouter()
 	assert.NoError(t, err)
 
-	time.Sleep(60 * time.Millisecond)
+	resultChan := make(chan bool)
+	go func() {
+		for {
+			registrar.RLock()
+			if registrar.RegisterInterval == 42*time.Second {
+				resultChan <- true
+				break
+			}
+			registrar.RUnlock()
+			time.Sleep(5 * time.Millisecond)
+		}
+		registrar.RUnlock()
+	}()
 
-	registrar.RLock()
-	defer registrar.RUnlock()
-	assert.Equal(t, registrar.RegisterInterval, 42*time.Second)
+	select {
+	case <-resultChan:
+	case <-time.After(2 * time.Second):
+		t.Error("Router did not receive a router.start in time!")
+	}
 }
 
 func TestKeepRegistering(t *testing.T) {
-	ts.Lock()
-	defer ts.Unlock()
-
-	port := 34784
 	routerReceivedChannel := make(chan []byte)
-
-	natsServerCmd, mbusClient := setupNatsServer(port)
-	defer mbus.StopNats(natsServerCmd)
-
 	fakeRouter(mbusClient, routerReceivedChannel)
 
 	registrar := NewRegistrar(mbusClient, "vcap.me", "8083", gosteno.NewLogger("TestLogger"))
@@ -75,13 +68,6 @@ func TestKeepRegistering(t *testing.T) {
 }
 
 func TestSubscribeToRouterStart(t *testing.T) {
-	ts.Lock()
-	defer ts.Unlock()
-
-	port := 34785
-	natsServerCmd, mbusClient := setupNatsServer(port)
-	defer mbus.StopNats(natsServerCmd)
-
 	registrar := NewRegistrar(mbusClient, "vcap.me", "8083", gosteno.NewLogger("TestLogger"))
 	err := registrar.SubscribeToRouterStart()
 	assert.NoError(t, err)
@@ -89,23 +75,29 @@ func TestSubscribeToRouterStart(t *testing.T) {
 	err = mbusClient.Publish("router.start", []byte(messageFromRouter))
 	assert.NoError(t, err)
 
-	time.Sleep(60 * time.Millisecond)
+	resultChan := make(chan bool)
+	go func() {
+		for {
+			registrar.RLock()
+			if registrar.RegisterInterval == 42*time.Second {
+				resultChan <- true
+				break
+			}
+			registrar.RUnlock()
+			time.Sleep(5 * time.Millisecond)
+		}
+		registrar.RUnlock()
+	}()
 
-	registrar.RLock()
-	defer registrar.RUnlock()
-	assert.Equal(t, registrar.RegisterInterval, 42*time.Second)
+	select {
+	case <-resultChan:
+	case <-time.After(2 * time.Second):
+		t.Error("Router did not receive a router.start in time!")
+	}
 }
 
 func TestUnregister(t *testing.T) {
-	ts.Lock()
-	defer ts.Unlock()
-
-	port := 34786
 	routerReceivedChannel := make(chan []byte)
-
-	natsServerCmd, mbusClient := setupNatsServer(port)
-	defer mbus.StopNats(natsServerCmd)
-
 	fakeRouter(mbusClient, routerReceivedChannel)
 
 	registrar := NewRegistrar(mbusClient, "vcap.me", "8083", gosteno.NewLogger("TestLogger"))
@@ -116,7 +108,7 @@ func TestUnregister(t *testing.T) {
 		host, err := localIP()
 		assert.NoError(t, err)
 		assert.Equal(t, `unregistering:{"host":"`+host+`","port":8083,"uris":["loggregator.vcap.me"]}`, string(msg))
-	case <-time.After(50 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Error("Router did not receive a router.unregister in time!")
 	}
 }
@@ -147,11 +139,11 @@ func fakeRouter(mBusClient mbus.CFMessageBus, returnChannel chan []byte) {
 func setupNatsServer(port int) (*exec.Cmd, mbus.CFMessageBus) {
 	natsServerCmd := mbus.StartNats(port)
 	mbusClient := newMBusClient(port)
-	<-waitUntilNatsIsUp(mbusClient)
+	waitUntilNatsIsUp(mbusClient)
 	return natsServerCmd, mbusClient
 }
 
-func waitUntilNatsIsUp(mBusClient mbus.CFMessageBus) chan bool {
+func waitUntilNatsIsUp(mBusClient mbus.CFMessageBus) {
 	natsConnected := make(chan bool, 1)
 	go func() {
 		for {
@@ -162,7 +154,8 @@ func waitUntilNatsIsUp(mBusClient mbus.CFMessageBus) chan bool {
 		}
 		natsConnected <- true
 	}()
-	return natsConnected
+	<-natsConnected
+	return
 }
 
 func newMBusClient(port int) mbus.CFMessageBus {
