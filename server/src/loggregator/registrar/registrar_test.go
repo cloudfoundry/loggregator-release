@@ -9,9 +9,23 @@ import (
 	"os/exec"
 	"testing"
 	"time"
+	"sync"
 )
 
+type testSerializer struct {
+	sync.RWMutex
+}
+
+var ts testSerializer
+
+func init() {
+	ts = testSerializer{}
+}
+
 func TestRegisterWithRouter(t *testing.T) {
+	ts.Lock()
+	defer ts.Unlock()
+
 	port := 34783
 	routerReceivedChannel := make(chan []byte)
 
@@ -32,6 +46,9 @@ func TestRegisterWithRouter(t *testing.T) {
 }
 
 func TestKeepRegistering(t *testing.T) {
+	ts.Lock()
+	defer ts.Unlock()
+
 	port := 34784
 	routerReceivedChannel := make(chan []byte)
 
@@ -58,6 +75,9 @@ func TestKeepRegistering(t *testing.T) {
 }
 
 func TestSubscribeToRouterStart(t *testing.T) {
+	ts.Lock()
+	defer ts.Unlock()
+
 	port := 34785
 	natsServerCmd, mbusClient := setupNatsServer(port)
 	defer mbus.StopNats(natsServerCmd)
@@ -77,6 +97,9 @@ func TestSubscribeToRouterStart(t *testing.T) {
 }
 
 func TestUnregister(t *testing.T) {
+	ts.Lock()
+	defer ts.Unlock()
+
 	port := 34786
 	routerReceivedChannel := make(chan []byte)
 
