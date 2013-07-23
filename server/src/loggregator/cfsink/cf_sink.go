@@ -2,6 +2,7 @@ package cfsink
 
 import (
 	"code.google.com/p/gogoprotobuf/proto"
+	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"logMessage"
 	"net/http"
@@ -52,25 +53,34 @@ func (cfSinkServer *cfSinkServer) sinkRelayHandler(rw http.ResponseWriter, r *ht
 		cfSinkServer.logger.Fatalf("Response writer is not a flusher.")
 	}
 
-	f.Flush()
-
 	clientAddress := r.RemoteAddr
 
 	spaceId, appId, authToken := extractAppIdAndAuthTokenFromUrl(r.URL)
 
 	if spaceId == "" {
-		cfSinkServer.logger.Warnf("Did not accept sink connection from %s without spaceId.", clientAddress)
+		message := fmt.Sprintf("Did not accept sink connection from %s without spaceId.", clientAddress)
+		cfSinkServer.logger.Warn(message)
+		rw.WriteHeader(400)
+		rw.Write([]byte(message))
 		return
 	}
 	if authToken == "" {
-		cfSinkServer.logger.Warnf("Did not accept sink connection from %s without authorization.", clientAddress)
+		message := fmt.Sprintf("Did not accept sink connection from %s without authorization.", clientAddress)
+		cfSinkServer.logger.Warnf(message)
+		rw.WriteHeader(400)
+		rw.Write([]byte(message))
 		return
 	}
 
 	if !cfSinkServer.authorize(cfSinkServer.apiHost, authToken, spaceId, appId, cfSinkServer.logger) {
-		cfSinkServer.logger.Warnf("User not authorized to access space [%s].", spaceId)
+		message := fmt.Sprintf("User not authorized to access space [%s].", spaceId)
+		cfSinkServer.logger.Warn(message)
+		rw.WriteHeader(401)
+		rw.Write([]byte(message))
 		return
 	}
+
+	f.Flush()
 
 	listenerChannel := make(chan []byte)
 	if appId != "" {

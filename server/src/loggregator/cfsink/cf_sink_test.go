@@ -3,12 +3,13 @@ package cfsink
 import (
 	"bufio"
 	"code.google.com/p/gogoprotobuf/proto"
-	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/stretchr/testify/assert"
 	"io"
+	"io/ioutil"
 	"logMessage"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 )
@@ -43,6 +44,23 @@ func AddSink(t *testing.T, receivedChan chan []byte, port string, path string) {
 	return
 }
 
+func AddFailingSink(t *testing.T, port string, path string, status int) string {
+	url := "http://localhost:" + port + path
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		t.Errorf("Could not create request: %s", err)
+	}
+	rs, err := http.DefaultClient.Do(request)
+
+	if err != nil {
+		t.Errorf("Could not create request: %s", err)
+	}
+	assert.Equal(t, status, rs.StatusCode)
+	body, err := ioutil.ReadAll(rs.Body)
+	assert.NoError(t, err)
+	return string(body)
+}
+
 func MarshalledLogMessage(t *testing.T, messageString string, spaceId string, appId string) []byte {
 	currentTime := time.Now()
 
@@ -70,10 +88,12 @@ func AssertProtoBufferMessageEquals(t *testing.T, expectedMessage string, actual
 }
 
 func SuccessfulAuthorizer(a, b, c, d string, l *gosteno.Logger) bool {
-	return true
-}
-
-func FailingAuthorizer(a, b, c, d string, l *gosteno.Logger) bool {
+	if b != "" {
+		authString := strings.Split(b, " ")
+		if len(authString) > 1 {
+			return authString[1] == "correctAuthorizationToken"
+		}
+	}
 	return false
 }
 
@@ -167,22 +187,14 @@ func TestThatItSendsLogsForOneSpace(t *testing.T) {
 	expectedMessageString := "My important message"
 	myAppsMarshalledMessage := MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp")
 
-	fmt.Println("Adding sink")
-
 	AddSink(t, receivedChan, "8081", "/tail/spaces/mySpace?authorization=bearer%20correctAuthorizationToken")
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- otherAppsMarshalledMessage
 
-	fmt.Println("One down one to go")
-
 	dataReadChannel <- myAppsMarshalledMessage
 
-	fmt.Println("Sent messages")
-
 	AssertProtoBufferMessageEquals(t, "Some other message", <-receivedChan)
-
-	fmt.Println("Recieved one message")
 
 	AssertProtoBufferMessageEquals(t, expectedMessageString, <-receivedChan)
 }
@@ -205,61 +217,16 @@ func TestDropUnmarshallableMessage(t *testing.T) {
 }
 
 func TestDropSinkWithoutApp(t *testing.T) {
-	receivedChan := make(chan []byte)
-
-	AddSink(t, receivedChan, "8081", "/tail/")
-	WaitForWebsocketRegistration()
-
-	myAppsMarshalledMessage := MarshalledLogMessage(t, "I won't make it..", "mySpace", "myApp")
-	dataReadChannel <- myAppsMarshalledMessage
-
-	time.Sleep(1 * time.Millisecond)
-	select {
-	case msg1 := <-receivedChan:
-		t.Error("We should not have received a message, but got: %v", msg1)
-	default:
-		//no communication. That's good!
-	}
+	message := AddFailingSink(t, "8081", "/tail/", 400)
+	assert.Contains(t, message, "Did not accept sink connection")
 }
 
 func TestDropSinkWithoutAuthorization(t *testing.T) {
-	receivedChan := make(chan []byte)
-
-	AddSink(t, receivedChan, "8081", "/tail/spaces/mySpace/apps/myApp")
-	WaitForWebsocketRegistration()
-
-	myAppsMarshalledMessage := MarshalledLogMessage(t, "I won't make it..", "mySpace", "myApp")
-	dataReadChannel <- myAppsMarshalledMessage
-
-	time.Sleep(1 * time.Millisecond)
-	select {
-	case msg1 := <-receivedChan:
-		if msg1 != nil {
-			t.Error("We should not have received a message, but got: %v", msg1)
-		}
-	default:
-		//no communication. That's good!
-	}
+	message := AddFailingSink(t, "8081", "/tail/spaces/mySpace/apps/myApp", 400)
+	assert.Contains(t, message, "Did not accept sink connection")
 }
 
 func TestDropSinkWhenAuthorizationFails(t *testing.T) {
-	t.Skipf("Skipp for now")
-	receivedChan := make(chan []byte)
-
-	AddSink(t, receivedChan, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=incorrectAuthToken")
-	// If you remove this line, the test will pass for the wrong reasons
-	WaitForWebsocketRegistration()
-
-	myAppsMarshalledMessage := MarshalledLogMessage(t, "I won't make it..", "mySpace", "myApp")
-	dataReadChannel <- myAppsMarshalledMessage
-
-	time.Sleep(1 * time.Millisecond)
-	select {
-	case msg1 := <-receivedChan:
-		if msg1 != nil {
-			t.Error("We should not have received a message, but got: %v", msg1)
-		}
-	default:
-		//no communication. That's good!
-	}
+	message := AddFailingSink(t, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=incorrectAuthToken", 401)
+	assert.Contains(t, message, "User not authorized to access space")
 }
