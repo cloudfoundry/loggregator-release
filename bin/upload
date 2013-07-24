@@ -45,4 +45,4 @@ curl -X POST http://inception.prism.cf-app.com:4567/deploy/$STAGING_API_KEY
 
 # Mark trakcer stories as delivered
 
-$SCRIPT_HOME/gotelltracker --githubToken $GITHUB_TOKEN --trackerToken $TRACKER_TOKEN --githubRepoLocation "cloudfoundry/loggregator" $TRAVIS_COMMIT
+#$SCRIPT_HOME/gotelltracker --githubToken $GITHUB_TOKEN --trackerToken $TRACKER_TOKEN --githubRepoLocation "cloudfoundry/loggregator" $TRAVIS_COMMIT
