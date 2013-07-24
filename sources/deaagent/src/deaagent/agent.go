@@ -3,6 +3,7 @@ package deaagent
 import (
 	"deaagent/loggregatorclient"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/howeyc/fsnotify"
 	"io/ioutil"
 	"runtime"
 	"time"
@@ -30,45 +31,70 @@ func (agent *agent) Start(loggregatorClient loggregatorclient.LoggregatorClient)
 
 func (agent *agent) watchInstancesJsonFileForChanges() chan instance {
 	instancesChan := make(chan instance)
+	knownInstances := make(map[string]bool)
+
+	readInstancesJson := func() {
+		json, err := ioutil.ReadFile(agent.InstancesJsonFilePath)
+		if err != nil {
+			agent.logger.Warnf("Reading failed, retrying. %s\n", err)
+			return
+		}
+
+		currentInstances, err := readInstances(json)
+		if err != nil {
+			agent.logger.Warnf("Failed parsing json %s: %v Trying again...\n", err, string(json))
+			return
+		}
+
+		for instanceIdentifier, _ := range knownInstances {
+			_, present := currentInstances[instanceIdentifier]
+			if present {
+				continue
+			}
+
+			delete(knownInstances, instanceIdentifier)
+			agent.logger.Infof("Removing stale instance %v", instanceIdentifier)
+		}
+
+		for _, instance := range currentInstances {
+			_, present := knownInstances[instance.identifier()]
+			if present {
+				continue
+			}
+
+			knownInstances[instance.identifier()] = true
+			agent.logger.Infof("Adding new instance %s", instance.identifier())
+			instancesChan <- instance
+		}
+	}
 
 	pollInstancesJson := func() {
-		knownInstances := make(map[string]bool)
+		watcher, err := fsnotify.NewWatcher()
+		if err != nil {
+			panic(err)
+		}
 
 		for {
 			runtime.Gosched()
-			time.Sleep(1 * time.Millisecond)
-			json, err := ioutil.ReadFile(agent.InstancesJsonFilePath)
+			time.Sleep(100 * time.Millisecond)
+			err := watcher.WatchFlags(agent.InstancesJsonFilePath, fsnotify.FSN_MODIFY)
 			if err != nil {
 				agent.logger.Warnf("Reading failed, retrying. %s\n", err)
 				continue
 			}
+			break
+		}
 
-			currentInstances, err := readInstances(json)
-			if err != nil {
-				agent.logger.Warnf("Failed parsing json %s: %v Trying again...\n", err, string(json))
-				continue
+		readInstancesJson()
+
+		for {
+			select {
+			case <-watcher.Event:
+				readInstancesJson()
+			case err := <-watcher.Error:
+				agent.logger.Warnf("Reading failed, retrying. %s\n", err)
 			}
 
-			for instanceIdentifier, _ := range knownInstances {
-				_, present := currentInstances[instanceIdentifier]
-				if present {
-					continue
-				}
-
-				delete(knownInstances, instanceIdentifier)
-				agent.logger.Infof("Removing stale instance %v", instanceIdentifier)
-			}
-
-			for _, instance := range currentInstances {
-				_, present := knownInstances[instance.identifier()]
-				if present {
-					continue
-				}
-
-				knownInstances[instance.identifier()] = true
-				agent.logger.Infof("Adding new instance %s", instance.identifier())
-				instancesChan <- instance
-			}
 		}
 	}
 

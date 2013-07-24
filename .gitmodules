@@ -16,3 +16,6 @@
 [submodule "src/github.com/cloudfoundry/yagnats"]
 	path = src/github.com/cloudfoundry/yagnats
 	url = https://github.com/cloudfoundry/yagnats
+[submodule "src/github.com/howeyc/fsnotify"]
+	path = src/github.com/howeyc/fsnotify
+	url = https://github.com/howeyc/fsnotify

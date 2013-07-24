@@ -203,11 +203,11 @@ func TestThatARemovedInstanceWillBeRemoved(t *testing.T) {
 
 	time.Sleep(2 * time.Millisecond) // ensure that the go function starts before we add proper data to the json config
 
-	writeToFile(t, filePath(), `{"instances": [{"state": "RUNNING", "application_id": "123"}]}`, true)
+	writeToFile(t, filePath(), `{"instances": [{"state": "RUNNING", "application_id": "1234"}]}`, true)
 
 	inst, ok = <-instancesChan
 	assert.True(t, ok, "Channel is closed")
 
-	expectedInst := instance{applicationId: "123"}
+	expectedInst := instance{applicationId: "1234"}
 	assert.Equal(t, expectedInst, inst)
 }
