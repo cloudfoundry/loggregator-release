@@ -13,16 +13,26 @@ import (
 	"time"
 )
 
-func createFile(t *testing.T, name string) *os.File {
-	file, err := os.Create(name)
+var tmpdir string
+
+func init() {
+	var err error
+	tmpdir, err = ioutil.TempDir("", "testing")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func createFile(t *testing.T) *os.File {
+	file, err := os.Create(filePath())
 	assert.NoError(t, err)
 	return file
 }
 
-func writeToFile(t *testing.T, filePath string, text string, truncate bool) {
+func writeToFile(t *testing.T, text string, truncate bool) {
 	var err error
 
-	file := createFile(t, filePath)
+	file := createFile(t)
 	defer file.Close()
 
 	if truncate {
@@ -34,7 +44,7 @@ func writeToFile(t *testing.T, filePath string, text string, truncate bool) {
 }
 
 func filePath() string {
-	return "/tmp/config.json"
+	return tmpdir + "/config.json"
 }
 
 func loggregatorAddress() string {
@@ -48,9 +58,7 @@ func TestNewAgent(t *testing.T) {
 }
 
 func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "testing")
-	assert.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	//	defer os.RemoveAll(tmpdir)
 
 	helperInstance := &instance{
 		applicationId:       "1234",
@@ -76,7 +84,7 @@ func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
 
 	mockLoggregatorClient.received = make(chan *[]byte)
 
-	writeToFile(t, filePath(), `{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3}]}`, true)
+	writeToFile(t, `{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3}]}`, true)
 	agent := NewAgent(filePath(), logger())
 	go agent.Start(mockLoggregatorClient)
 
@@ -125,12 +133,11 @@ func TestThatFunctionContinuesToPollWhenFileCantBeOpened(t *testing.T) {
 	select {
 	case <-instancesChan:
 		t.Error("Should not have any instances, the file doesn't exist")
-	default:
+	case <-time.After(2 * time.Second):
 		// OK
 	}
 
-	writeToFile(t, filePath(), `{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path": "/tmp", "instance_index": 3}]}`, true)
-	runtime.Gosched()
+	writeToFile(t, `{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path": "/tmp", "instance_index": 3}]}`, false)
 
 	select {
 	case instance := <-instancesChan:
@@ -141,18 +148,18 @@ func TestThatFunctionContinuesToPollWhenFileCantBeOpened(t *testing.T) {
 }
 
 func TestThatAnExistinginstanceWillBeSeen(t *testing.T) {
-	writeToFile(t, filePath(), `{"instances": [{"state": "RUNNING", "application_id": "123"}]}`, true)
+	writeToFile(t, `{"instances": [{"state": "RUNNING", "instance_index": 123}]}`, true)
 	agent := &agent{filePath(), logger()}
 
 	instancesChan := agent.watchInstancesJsonFileForChanges()
 
 	inst := <-instancesChan
-	expectedInst := instance{applicationId: "123"}
+	expectedInst := instance{index: 123}
 	assert.Equal(t, expectedInst, inst)
 }
 
 func TestThatANewinstanceWillBeSeen(t *testing.T) {
-	file := createFile(t, filePath())
+	file := createFile(t)
 	defer file.Close()
 	agent := &agent{filePath(), logger()}
 
@@ -160,17 +167,17 @@ func TestThatANewinstanceWillBeSeen(t *testing.T) {
 
 	time.Sleep(1 * time.Nanosecond) // ensure that the go function starts before we add proper data to the json config
 
-	writeToFile(t, filePath(), `{"instances": [{"state": "RUNNING", "application_id": "123"}]}`, true)
+	writeToFile(t, `{"instances": [{"state": "RUNNING", "instance_index": 123}]}`, true)
 
 	inst, ok := <-instancesChan
 	assert.True(t, ok, "Channel is closed")
 
-	expectedInst := instance{applicationId: "123"}
+	expectedInst := instance{index: 123}
 	assert.Equal(t, expectedInst, inst)
 }
 
 func TestThatOnlyOneNewInstancesWillBeSeen(t *testing.T) {
-	writeToFile(t, filePath(), `{"instances": [{"state": "RUNNING", "application_id": "123"}]}`, true)
+	writeToFile(t, `{"instances": [{"state": "RUNNING", "instance_index": 123}]}`, true)
 	agent := &agent{filePath(), logger()}
 
 	instancesChan := agent.watchInstancesJsonFileForChanges()
@@ -178,7 +185,7 @@ func TestThatOnlyOneNewInstancesWillBeSeen(t *testing.T) {
 	inst, ok := <-instancesChan
 	assert.True(t, ok, "Channel is closed")
 
-	expectedInst := instance{applicationId: "123"}
+	expectedInst := instance{index: 123}
 	assert.Equal(t, expectedInst, inst)
 
 	select {
@@ -190,7 +197,7 @@ func TestThatOnlyOneNewInstancesWillBeSeen(t *testing.T) {
 }
 
 func TestThatARemovedInstanceWillBeRemoved(t *testing.T) {
-	writeToFile(t, filePath(), `{"instances": [{"state": "RUNNING", "application_id": "123"}]}`, true)
+	writeToFile(t, `{"instances": [{"state": "RUNNING", "instance_index": 123}]}`, true)
 	agent := &agent{filePath(), logger()}
 
 	instancesChan := agent.watchInstancesJsonFileForChanges()
@@ -199,15 +206,20 @@ func TestThatARemovedInstanceWillBeRemoved(t *testing.T) {
 	assert.True(t, ok, "Channel is closed")
 	assert.NotNil(t, inst)
 
-	writeToFile(t, filePath(), `{"instances": []}`, true)
+	os.Remove(filePath())
 
-	time.Sleep(2 * time.Millisecond) // ensure that the go function starts before we add proper data to the json config
+	select {
+	case inst = <-instancesChan:
+		t.Errorf("We just got an old instance: %v", inst)
+	case <-time.After(2 * time.Millisecond):
+		// OK
+	}
 
-	writeToFile(t, filePath(), `{"instances": [{"state": "RUNNING", "application_id": "1234"}]}`, true)
+	writeToFile(t, `{"instances": [{"state": "RUNNING", "instance_index": 1234}]}`, true)
 
 	inst, ok = <-instancesChan
 	assert.True(t, ok, "Channel is closed")
 
-	expectedInst := instance{applicationId: "1234"}
+	expectedInst := instance{index: 1234}
 	assert.Equal(t, expectedInst, inst)
 }

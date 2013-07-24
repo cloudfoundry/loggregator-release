@@ -4,23 +4,23 @@ import (
 	"code.google.com/p/gogoprotobuf/proto"
 	"github.com/cloudfoundry/gosteno"
 	"logMessage"
-	//	"os"
+	//		"os"
 	"testing"
 )
 
 func logger() *gosteno.Logger {
-	//	level := gosteno.LOG_DEBUG
+	//		level := gosteno.LOG_DEBUG
 	//
-	//	loggingConfig := &gosteno.Config{
-	//		Sinks:     make([]gosteno.Sink, 1),
-	//		Level:     level,
-	//		Codec:     gosteno.NewJsonCodec(),
-	//		EnableLOC: true,
-	//	}
+	//		loggingConfig := &gosteno.Config{
+	//			Sinks:     make([]gosteno.Sink, 1),
+	//			Level:     level,
+	//			Codec:     gosteno.NewJsonCodec(),
+	//			EnableLOC: true,
+	//		}
 	//
-	//	loggingConfig.Sinks[0] = gosteno.NewIOSink(os.Stdout)
+	//		loggingConfig.Sinks[0] = gosteno.NewIOSink(os.Stdout)
 	//
-	//	gosteno.Init(loggingConfig)
+	//		gosteno.Init(loggingConfig)
 	return gosteno.NewLogger("TestLogger")
 }
 

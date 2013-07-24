@@ -5,6 +5,7 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/howeyc/fsnotify"
 	"io/ioutil"
+	"path"
 	"runtime"
 	"time"
 )
@@ -46,6 +47,9 @@ func (agent *agent) watchInstancesJsonFileForChanges() chan instance {
 			return
 		}
 
+		agent.logger.Debug("Reading instances data after event on instances.json")
+		agent.logger.Debugf("Current known instances are %v", knownInstances)
+
 		for instanceIdentifier, _ := range knownInstances {
 			_, present := currentInstances[instanceIdentifier]
 			if present {
@@ -77,7 +81,7 @@ func (agent *agent) watchInstancesJsonFileForChanges() chan instance {
 		for {
 			runtime.Gosched()
 			time.Sleep(100 * time.Millisecond)
-			err := watcher.WatchFlags(agent.InstancesJsonFilePath, fsnotify.FSN_MODIFY)
+			err := watcher.Watch(path.Dir(agent.InstancesJsonFilePath))
 			if err != nil {
 				agent.logger.Warnf("Reading failed, retrying. %s\n", err)
 				continue
@@ -86,13 +90,19 @@ func (agent *agent) watchInstancesJsonFileForChanges() chan instance {
 		}
 
 		readInstancesJson()
+		agent.logger.Info("Read initial instances data")
 
 		for {
 			select {
-			case <-watcher.Event:
-				readInstancesJson()
+			case ev := <-watcher.Event:
+				agent.logger.Debugf("Got Event: %v\n", ev)
+				if ev.IsDelete() {
+					knownInstances = make(map[string]bool)
+				} else {
+					readInstancesJson()
+				}
 			case err := <-watcher.Error:
-				agent.logger.Warnf("Reading failed, retrying. %s\n", err)
+				agent.logger.Warnf("Received error from file system notification: %s\n", err)
 			}
 
 		}
