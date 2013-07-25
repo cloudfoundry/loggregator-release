@@ -10,6 +10,7 @@ packages=(
     loggregator/cfsink
     loggregator/agentlistener
     loggregator/registrar
+    instrumentor
 );
 
 for package in "${packages[@]}"
