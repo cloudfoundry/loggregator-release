@@ -1,9 +1,13 @@
 package cfsink
 
 import (
+	"github.com/cloudfoundry/gosteno"
+	"instrumentor"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync/atomic"
+	"time"
 )
 
 type cfSink struct {
@@ -14,7 +18,11 @@ type cfSink struct {
 func newCfSink(spaceId string, appId string, cfSinkServer *cfSinkServer, rw *http.ResponseWriter, f *http.Flusher, clientAddress string) *cfSink {
 	clientIdentifier := strings.Join([]string{spaceId, appId}, ":")
 
-	sinker := &cfSink{clientIdentifier, new(uint64)}
+	sink := &cfSink{clientIdentifier, new(uint64)}
+
+	sinkInstrumentor := instrumentor.NewInstrumentor(5*time.Second, gosteno.LOG_DEBUG, cfSinkServer.logger)
+	stopChan := sinkInstrumentor.Instrument(sink)
+	defer sinkInstrumentor.StopInstrumentation(stopChan)
 
 	listenerChannel := make(chan []byte)
 	if appId != "" {
@@ -37,7 +45,14 @@ func newCfSink(spaceId string, appId string, cfSinkServer *cfSinkServer, rw *htt
 			break
 		}
 		(*f).Flush()
-		atomic.AddUint64(sinker.messageSentCount, 1)
+		atomic.AddUint64(sink.messageSentCount, 1)
 	}
-	return sinker
+	return sink
+}
+
+func (sinker *cfSink) DumpData() []instrumentor.PropVal {
+	return []instrumentor.PropVal{
+		instrumentor.PropVal{
+			"SentMessageCount for " + sinker.clientIdentifier,
+			strconv.FormatUint(atomic.LoadUint64(sinker.messageSentCount), 10)}}
 }

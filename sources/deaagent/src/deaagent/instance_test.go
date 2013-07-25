@@ -27,6 +27,16 @@ func (m *MockLoggregatorClient) Send(data []byte) {
 	m.received <- &data
 }
 
+func (m *MockLoggregatorClient) CurrentBufferCount() int {
+	return 0
+}
+func (m *MockLoggregatorClient) ReceivedMessageCount() uint64 {
+	return 0
+}
+func (m *MockLoggregatorClient) SentMessageCount() uint64 {
+	return 0
+}
+
 func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "testing")
 	assert.NoError(t, err)
