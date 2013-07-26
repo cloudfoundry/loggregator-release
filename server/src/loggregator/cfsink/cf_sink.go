@@ -1,9 +1,10 @@
 package cfsink
 
 import (
+	"code.google.com/p/go.net/websocket"
 	"github.com/cloudfoundry/gosteno"
 	"instrumentor"
-	"net/http"
+	"net"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -15,7 +16,7 @@ type cfSink struct {
 	messageSentCount *uint64
 }
 
-func newCfSink(spaceId string, appId string, cfSinkServer *cfSinkServer, rw *http.ResponseWriter, f *http.Flusher, clientAddress string) *cfSink {
+func newCfSink(spaceId string, appId string, cfSinkServer *cfSinkServer, ws *websocket.Conn, clientAddress net.Addr) *cfSink {
 	clientIdentifier := strings.Join([]string{spaceId, appId}, ":")
 
 	sink := &cfSink{clientIdentifier, new(uint64)}
@@ -39,12 +40,11 @@ func newCfSink(spaceId string, appId string, cfSinkServer *cfSinkServer, rw *htt
 		cfSinkServer.logger.Infof("Tail client %s is waiting for data", clientAddress)
 		data := <-listenerChannel
 		cfSinkServer.logger.Debugf("Tail client %s got %d bytes", clientAddress, len(data))
-		_, err := (*rw).Write(data)
+		err := websocket.Message.Send(ws, data)
 		if err != nil {
 			cfSinkServer.logger.Infof("Tail client %s must have gone away %s", clientAddress, err)
 			break
 		}
-		(*f).Flush()
 		atomic.AddUint64(sink.messageSentCount, 1)
 	}
 	return sink

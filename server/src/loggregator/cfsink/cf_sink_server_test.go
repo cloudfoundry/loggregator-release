@@ -1,64 +1,49 @@
 package cfsink
 
 import (
-	"bufio"
+	"code.google.com/p/go.net/websocket"
 	"code.google.com/p/gogoprotobuf/proto"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/stretchr/testify/assert"
-	"io"
-	"io/ioutil"
+	//	"io/ioutil"
 	"logMessage"
-	"net/http"
+	//	"net/http"
 	"strings"
 	"testing"
 	"time"
+	//	"fmt"
 )
 
 func WaitForWebsocketRegistration() {
 	time.Sleep(50 * time.Millisecond)
 }
 
-func AddSink(t *testing.T, receivedChan chan []byte, port string, path string) {
-	url := "http://localhost:" + port + path
-	request, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		t.Errorf("Could not create request: %s", err)
-	}
-	rs, err := http.DefaultClient.Do(request)
-
-	if err != nil {
-		t.Errorf("Could not create request: %s", err)
-	}
+func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string) (ws *websocket.Conn) {
+	ws, err := websocket.Dial("ws://localhost:"+port+path, "string", "http://localhost")
+	assert.NoError(t, err)
 	go func() {
-
-		reader := bufio.NewReader(rs.Body)
 		for {
-			data := make([]byte, 4096)
-			n, err := reader.Read(data)
-			if err == io.EOF {
+			var data []byte
+			err := websocket.Message.Receive(ws, &data)
+			if err != nil {
 				break
 			}
-			receivedChan <- data[:n]
+			receivedChan <- data
 		}
+
 	}()
-	return
+	return ws
 }
 
-func AddFailingSink(t *testing.T, port string, path string, status int) string {
-	url := "http://localhost:" + port + path
-	request, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		t.Errorf("Could not create request: %s", err)
-	}
-	rs, err := http.DefaultClient.Do(request)
-
-	if err != nil {
-		t.Errorf("Could not create request: %s", err)
-	}
-	assert.Equal(t, status, rs.StatusCode)
-	body, err := ioutil.ReadAll(rs.Body)
+func AssertConnecitonFails(t *testing.T, port string, path string) {
+	ws, err := websocket.Dial("ws://localhost:"+port+path, "string", "http://localhost")
 	assert.NoError(t, err)
-	return string(body)
+
+	var data []byte
+	err = websocket.Message.Receive(ws, &data)
+	if err == nil {
+		t.Errorf("Connection did not get closed.")
+	}
 }
 
 func MarshalledLogMessage(t *testing.T, messageString string, spaceId string, appId string) []byte {
@@ -115,7 +100,7 @@ func TestThatItSends(t *testing.T) {
 	otherMessageString := "Some more stuff"
 	otherMessage := MarshalledLogMessage(t, otherMessageString, "mySpace", "myApp")
 
-	AddSink(t, receivedChan, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=bearer%20correctAuthorizationToken")
+	AddWSSink(t, receivedChan, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=bearer%20correctAuthorizationToken")
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- expectedMessage
@@ -145,15 +130,15 @@ func TestThatItSendsAllDataToAllSinks(t *testing.T) {
 	expectedMessageString := "Some Data"
 	expectedMarshalledProtoBuffer := MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp")
 
-	AddSink(t, client1ReceivedChan, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=bearer%20correctAuthorizationToken")
+	AddWSSink(t, client1ReceivedChan, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=bearer%20correctAuthorizationToken")
 
-	AddSink(t, client2ReceivedChan, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=bearer%20correctAuthorizationToken")
+	AddWSSink(t, client2ReceivedChan, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=bearer%20correctAuthorizationToken")
 	WaitForWebsocketRegistration()
 
-	AddSink(t, space1ReceivedChan, "8081", "/tail/spaces/mySpace?authorization=bearer%20correctAuthorizationToken")
+	AddWSSink(t, space1ReceivedChan, "8081", "/tail/spaces/mySpace?authorization=bearer%20correctAuthorizationToken")
 	WaitForWebsocketRegistration()
 
-	AddSink(t, space2ReceivedChan, "8081", "/tail/spaces/mySpace?authorization=bearer%20correctAuthorizationToken")
+	AddWSSink(t, space2ReceivedChan, "8081", "/tail/spaces/mySpace?authorization=bearer%20correctAuthorizationToken")
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- expectedMarshalledProtoBuffer
@@ -171,7 +156,7 @@ func TestThatItSendsLogsForOneApplication(t *testing.T) {
 	expectedMessageString := "My important message"
 	myAppsMarshalledMessage := MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp")
 
-	AddSink(t, receivedChan, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=bearer%20correctAuthorizationToken")
+	AddWSSink(t, receivedChan, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=bearer%20correctAuthorizationToken")
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- otherAppsMarshalledMessage
@@ -187,7 +172,7 @@ func TestThatItSendsLogsForOneSpace(t *testing.T) {
 	expectedMessageString := "My important message"
 	myAppsMarshalledMessage := MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp")
 
-	AddSink(t, receivedChan, "8081", "/tail/spaces/mySpace?authorization=bearer%20correctAuthorizationToken")
+	AddWSSink(t, receivedChan, "8081", "/tail/spaces/mySpace?authorization=bearer%20correctAuthorizationToken")
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- otherAppsMarshalledMessage
@@ -202,7 +187,7 @@ func TestThatItSendsLogsForOneSpace(t *testing.T) {
 func TestDropUnmarshallableMessage(t *testing.T) {
 	receivedChan := make(chan []byte)
 
-	AddSink(t, receivedChan, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=bearer%20correctAuthorizationToken")
+	AddWSSink(t, receivedChan, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=bearer%20correctAuthorizationToken")
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- make([]byte, 10)
@@ -217,16 +202,13 @@ func TestDropUnmarshallableMessage(t *testing.T) {
 }
 
 func TestDropSinkWithoutApp(t *testing.T) {
-	message := AddFailingSink(t, "8081", "/tail/", 400)
-	assert.Contains(t, message, "Did not accept sink connection")
+	AssertConnecitonFails(t, "8081", "/tail/")
 }
 
 func TestDropSinkWithoutAuthorization(t *testing.T) {
-	message := AddFailingSink(t, "8081", "/tail/spaces/mySpace/apps/myApp", 400)
-	assert.Contains(t, message, "Did not accept sink connection")
+	AssertConnecitonFails(t, "8081", "/tail/spaces/mySpace/apps/myApp")
 }
 
 func TestDropSinkWhenAuthorizationFails(t *testing.T) {
-	message := AddFailingSink(t, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=incorrectAuthToken", 401)
-	assert.Contains(t, message, "User not authorized to access space")
+	AssertConnecitonFails(t, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=incorrectAuthToken")
 }
