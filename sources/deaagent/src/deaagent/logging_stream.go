@@ -20,10 +20,11 @@ type loggingStream struct {
 	logger            *gosteno.Logger
 	messageType       logMessage.LogMessage_MessageType
 	messagesReceived  *uint64
+	bytesReceived     *uint64
 }
 
 func newLoggingStream(inst *instance, loggregatorClient loggregatorclient.LoggregatorClient, logger *gosteno.Logger, messageType logMessage.LogMessage_MessageType) (ls *loggingStream) {
-	return &loggingStream{inst, loggregatorClient, logger, messageType, new(uint64)}
+	return &loggingStream{inst, loggregatorClient, logger, messageType, new(uint64), new(uint64)}
 }
 
 func (ls *loggingStream) listen() {
@@ -77,6 +78,7 @@ func (ls *loggingStream) listen() {
 
 			ls.loggregatorClient.Send(data)
 			atomic.AddUint64(ls.messagesReceived, 1)
+			atomic.AddUint64(ls.bytesReceived, uint64(readCount))
 			ls.logger.Debugf("Sent %d bytes to loggregator client", readCount)
 			runtime.Gosched()
 		}
@@ -84,9 +86,13 @@ func (ls *loggingStream) listen() {
 }
 
 func (ls *loggingStream) DumpData() []instrumentor.PropVal {
-	property := "ReceivedCount from " + ls.inst.wardenContainerPath + " type " + socketName(ls.messageType)
+	messagesProperty := "ReceivedMessageCount from " + ls.inst.wardenContainerPath + " type " + socketName(ls.messageType)
+	bytesProperty := "ReceivedByteCount from " + ls.inst.wardenContainerPath + " type " + socketName(ls.messageType)
 
-	return []instrumentor.PropVal{instrumentor.PropVal{property, strconv.FormatUint(atomic.LoadUint64(ls.messagesReceived), 10)}}
+	return []instrumentor.PropVal{
+		instrumentor.PropVal{messagesProperty, strconv.FormatUint(atomic.LoadUint64(ls.messagesReceived), 10)},
+		instrumentor.PropVal{bytesProperty, strconv.FormatUint(atomic.LoadUint64(ls.bytesReceived), 10)},
+	}
 }
 
 func socketName(messageType logMessage.LogMessage_MessageType) string {

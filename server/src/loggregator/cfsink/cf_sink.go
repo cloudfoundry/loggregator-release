@@ -13,13 +13,14 @@ import (
 
 type cfSink struct {
 	clientIdentifier string
-	messageSentCount *uint64
+	sentMessageCount *uint64
+	sentByteCount    *uint64
 }
 
 func newCfSink(spaceId string, appId string, cfSinkServer *cfSinkServer, ws *websocket.Conn, clientAddress net.Addr) *cfSink {
 	clientIdentifier := strings.Join([]string{spaceId, appId}, ":")
 
-	sink := &cfSink{clientIdentifier, new(uint64)}
+	sink := &cfSink{clientIdentifier, new(uint64), new(uint64)}
 
 	sinkInstrumentor := instrumentor.NewInstrumentor(5*time.Second, gosteno.LOG_DEBUG, cfSinkServer.logger)
 	stopChan := sinkInstrumentor.Instrument(sink)
@@ -45,7 +46,8 @@ func newCfSink(spaceId string, appId string, cfSinkServer *cfSinkServer, ws *web
 			cfSinkServer.logger.Infof("Tail client %s must have gone away %s", clientAddress, err)
 			break
 		}
-		atomic.AddUint64(sink.messageSentCount, 1)
+		atomic.AddUint64(sink.sentMessageCount, 1)
+		atomic.AddUint64(sink.sentByteCount, uint64(len(data)))
 	}
 	return sink
 }
@@ -54,5 +56,9 @@ func (sinker *cfSink) DumpData() []instrumentor.PropVal {
 	return []instrumentor.PropVal{
 		instrumentor.PropVal{
 			"SentMessageCount for " + sinker.clientIdentifier,
-			strconv.FormatUint(atomic.LoadUint64(sinker.messageSentCount), 10)}}
+			strconv.FormatUint(atomic.LoadUint64(sinker.sentMessageCount), 10)},
+		instrumentor.PropVal{
+			"SentByteCount for " + sinker.clientIdentifier,
+			strconv.FormatUint(atomic.LoadUint64(sinker.sentByteCount), 10)},
+	}
 }

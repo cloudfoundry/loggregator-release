@@ -13,11 +13,12 @@ type agentListener struct {
 	*gosteno.Logger
 	host                 string
 	receivedMessageCount *uint64
+	receivedByteCount    *uint64
 	dataChannel          chan []byte
 }
 
 func NewAgentListener(host string, givenLogger *gosteno.Logger) *agentListener {
-	return &agentListener{givenLogger, host, new(uint64), make(chan []byte, 1024)}
+	return &agentListener{givenLogger, host, new(uint64), new(uint64), make(chan []byte, 1024)}
 }
 
 func (agentListener *agentListener) Start() chan []byte {
@@ -45,6 +46,7 @@ func (agentListener *agentListener) Start() chan []byte {
 			copy(readData, readBuffer[:readCount])
 
 			atomic.AddUint64(agentListener.receivedMessageCount, 1)
+			atomic.AddUint64(agentListener.receivedByteCount, uint64(readCount))
 			agentListener.dataChannel <- readData
 		}
 
@@ -57,5 +59,6 @@ func (agentListener *agentListener) DumpData() []instrumentor.PropVal {
 	return []instrumentor.PropVal{
 		instrumentor.PropVal{"CurrentBufferCount", strconv.Itoa(len(agentListener.dataChannel))},
 		instrumentor.PropVal{"ReceivedMessageCount", strconv.FormatUint(atomic.LoadUint64(agentListener.receivedMessageCount), 10)},
+		instrumentor.PropVal{"ReceivedByteCount", strconv.FormatUint(atomic.LoadUint64(agentListener.receivedByteCount), 10)},
 	}
 }
