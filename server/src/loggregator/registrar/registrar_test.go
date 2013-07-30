@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var mbusClient mbus.CFMessageBus
+var mbusClient mbus.MessageBus
 
 func init() {
 	_, mbusClient = setupNatsServer(34783)
@@ -119,7 +119,7 @@ const messageFromRouter = `{
   							"minimumRegisterIntervalInSeconds": 42
 							}`
 
-func fakeRouter(mBusClient mbus.CFMessageBus, returnChannel chan []byte) {
+func fakeRouter(mBusClient mbus.MessageBus, returnChannel chan []byte) {
 	mBusClient.RespondToChannel("router.greet", func(_ []byte) []byte {
 		response := []byte(messageFromRouter)
 		return response
@@ -136,14 +136,14 @@ func fakeRouter(mBusClient mbus.CFMessageBus, returnChannel chan []byte) {
 	})
 }
 
-func setupNatsServer(port int) (*exec.Cmd, mbus.CFMessageBus) {
+func setupNatsServer(port int) (*exec.Cmd, mbus.MessageBus) {
 	natsServerCmd := mbus.StartNats(port)
 	mbusClient := newMBusClient(port)
 	waitUntilNatsIsUp(mbusClient)
 	return natsServerCmd, mbusClient
 }
 
-func waitUntilNatsIsUp(mBusClient mbus.CFMessageBus) {
+func waitUntilNatsIsUp(mBusClient mbus.MessageBus) {
 	natsConnected := make(chan bool, 1)
 	go func() {
 		for {
@@ -158,8 +158,8 @@ func waitUntilNatsIsUp(mBusClient mbus.CFMessageBus) {
 	return
 }
 
-func newMBusClient(port int) mbus.CFMessageBus {
-	mBusClient, err := mbus.NewCFMessageBus("NATS")
+func newMBusClient(port int) mbus.MessageBus {
+	mBusClient, err := mbus.NewMessageBus("NATS")
 	if err != nil {
 		panic("Could not connect to NATS")
 	}

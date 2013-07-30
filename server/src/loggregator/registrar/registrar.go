@@ -16,13 +16,13 @@ const loggregatorHostname = "loggregator"
 type registrar struct {
 	sync.RWMutex
 	*gosteno.Logger
-	mBusClient       mbus.CFMessageBus
+	mBusClient       mbus.MessageBus
 	systemDomain     string
 	webPort          string
 	RegisterInterval time.Duration `json:"minimumRegisterIntervalInSeconds"`
 }
 
-func NewRegistrar(mBusClient mbus.CFMessageBus, systemDomain, webPort string, logger *gosteno.Logger) *registrar {
+func NewRegistrar(mBusClient mbus.MessageBus, systemDomain, webPort string, logger *gosteno.Logger) *registrar {
 	return &registrar{mBusClient: mBusClient, systemDomain: systemDomain, webPort: webPort, Logger: logger}
 }
 

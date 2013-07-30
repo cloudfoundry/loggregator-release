@@ -36,7 +36,7 @@ type Config struct {
 	WebHost                string
 	LogFilePath            string
 	decoder                sink.TokenDecoder
-	mbusClient             go_cfmessagebus.CFMessageBus
+	mbusClient             cfmessagebus.MessageBus
 	port                   string
 }
 
@@ -56,7 +56,7 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 		return errors.New(fmt.Sprintf("Can not parse UAA verification key: %s", err))
 	}
 
-	c.mbusClient, err = go_cfmessagebus.NewCFMessageBus("NATS")
+	c.mbusClient, err = cfmessagebus.NewMessageBus("NATS")
 	if err != nil {
 		return errors.New(fmt.Sprintf("Can not create message bus to NATS: %s", err))
 	}
