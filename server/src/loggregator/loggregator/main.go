@@ -6,8 +6,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/cloudfoundry/go_cfmessagebus"
-	vcap "github.com/cloudfoundry/gorouter/common"
 	"github.com/cloudfoundry/gosteno"
+	vcap "govarz"
 	"instrumentor"
 	"io/ioutil"
 	"loggregator/agentlistener"
@@ -157,7 +157,6 @@ func main() {
 		Host:        fmt.Sprintf("0.0.0.0:%d", config.VarzPort),
 		Credentials: []string{config.VarzUser, config.VarzPass},
 		Config:      nil,
-		Logger:      logger,
 		Varz:        varz,
 		Healthz:     &vcap.Healthz{},
 		InfoRoutes:  nil,

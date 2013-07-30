@@ -19,6 +19,3 @@
 [submodule "src/github.com/howeyc/fsnotify"]
 	path = src/github.com/howeyc/fsnotify
 	url = https://github.com/howeyc/fsnotify
-[submodule "src/github.com/cloudfoundry/gorouter"]
-	path = src/github.com/cloudfoundry/gorouter
-	url = https://github.com/cloudfoundry/gorouter.git
