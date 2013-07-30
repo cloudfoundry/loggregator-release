@@ -3,3 +3,5 @@
 pkg/
 */bin
 */**/bin
+loggregator.json
+uaa_token.pub

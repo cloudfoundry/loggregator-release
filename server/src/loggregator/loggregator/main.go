@@ -6,11 +6,14 @@ import (
 	"flag"
 	"fmt"
 	"github.com/cloudfoundry/go_cfmessagebus"
+	vcap "github.com/cloudfoundry/gorouter/common"
 	"github.com/cloudfoundry/gosteno"
+	"instrumentor"
 	"io/ioutil"
 	"loggregator/agentlistener"
 	"loggregator/cfsink"
 	"loggregator/registrar"
+	"loggregator/stats"
 	"net"
 	"os"
 	"os/signal"
@@ -137,6 +140,23 @@ func main() {
 
 	systemChan := make(chan os.Signal)
 	signal.Notify(systemChan, os.Kill)
+
+	varz := &vcap.Varz{
+		UniqueVarz: stats.NewLoggregatorStats([]instrumentor.Instrumentable{listener}),
+	}
+
+	component := &vcap.VcapComponent{
+		Type:        "Loggregator Server",
+		Index:       0,
+		Host:        "0.0.0.0:6384",
+		Credentials: []string{"user", "pass"},
+		Config:      nil,
+		Logger:      logger,
+		Varz:        varz,
+		Healthz:     &vcap.Healthz{},
+		InfoRoutes:  nil,
+	}
+	vcap.StartComponent(component)
 
 	go cfSinkServer.Start()
 
