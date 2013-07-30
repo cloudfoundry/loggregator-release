@@ -71,7 +71,16 @@ func (cfSinkServer *cfSinkServer) sinkRelayHandler(ws *websocket.Conn) {
 		return
 	}
 
-	newCfSink(spaceId, appId, cfSinkServer, ws, clientAddress)
+	sink := newCfSink(spaceId, appId, cfSinkServer.logger, ws, clientAddress)
+
+	listenerChannel, sinkIsDeadChannel := sink.Start()
+	defer close(listenerChannel)
+
+	cfSinkServer.listenerChannels.add(listenerChannel, spaceId, appId)
+	defer cfSinkServer.listenerChannels.delete(listenerChannel, spaceId, appId)
+
+	<-sinkIsDeadChannel
+	cfSinkServer.logger.Infof("Tail client %s must have gone away. Closed it.", sink.clientAddress)
 }
 
 func (cfSinkServer *cfSinkServer) relayMessagesToAllSinks() {

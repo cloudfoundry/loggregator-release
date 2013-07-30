@@ -5,14 +5,24 @@ import (
 	"code.google.com/p/gogoprotobuf/proto"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/stretchr/testify/assert"
-	//	"io/ioutil"
 	"logMessage"
-	//	"net/http"
 	"strings"
 	"testing"
 	"time"
-	//	"fmt"
 )
+
+var sinkServer *cfSinkServer
+var dataReadChannel chan []byte
+
+func init() {
+	// This needs be unbuffered as the channel we get from the
+	// agent listener is unbuffered?
+	//	dataReadChannel = make(chan []byte, 10)
+	dataReadChannel = make(chan []byte, 10)
+	sinkServer = NewCfSinkServer(dataReadChannel, logger(), "localhost:8081", "/tail/", "http://localhost:9876", SuccessfulAuthorizer)
+	go sinkServer.Start()
+	time.Sleep(1 * time.Millisecond)
+}
 
 func WaitForWebsocketRegistration() {
 	time.Sleep(50 * time.Millisecond)
@@ -82,16 +92,6 @@ func SuccessfulAuthorizer(a, b, c, d string, l *gosteno.Logger) bool {
 	return false
 }
 
-var sinkServer *cfSinkServer
-var dataReadChannel chan []byte
-
-func init() {
-	dataReadChannel = make(chan []byte, 10)
-	sinkServer = NewCfSinkServer(dataReadChannel, logger(), "localhost:8081", "/tail/", "http://localhost:9876", SuccessfulAuthorizer)
-	go sinkServer.Start()
-	time.Sleep(1 * time.Millisecond)
-}
-
 func TestThatItSends(t *testing.T) {
 	receivedChan := make(chan []byte, 2)
 
@@ -127,19 +127,14 @@ func TestThatItSendsAllDataToAllSinks(t *testing.T) {
 	space1ReceivedChan := make(chan []byte)
 	space2ReceivedChan := make(chan []byte)
 
-	expectedMessageString := "Some Data"
-	expectedMarshalledProtoBuffer := MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp")
-
 	AddWSSink(t, client1ReceivedChan, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=bearer%20correctAuthorizationToken")
-
 	AddWSSink(t, client2ReceivedChan, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=bearer%20correctAuthorizationToken")
-	WaitForWebsocketRegistration()
-
 	AddWSSink(t, space1ReceivedChan, "8081", "/tail/spaces/mySpace?authorization=bearer%20correctAuthorizationToken")
-	WaitForWebsocketRegistration()
-
 	AddWSSink(t, space2ReceivedChan, "8081", "/tail/spaces/mySpace?authorization=bearer%20correctAuthorizationToken")
 	WaitForWebsocketRegistration()
+
+	expectedMessageString := "Some Data"
+	expectedMarshalledProtoBuffer := MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp")
 
 	dataReadChannel <- expectedMarshalledProtoBuffer
 
@@ -149,10 +144,11 @@ func TestThatItSendsAllDataToAllSinks(t *testing.T) {
 	AssertProtoBufferMessageEquals(t, expectedMessageString, <-space2ReceivedChan)
 }
 
-func TestThatItSendsLogsForOneApplication(t *testing.T) {
-	receivedChan := make(chan []byte, 2)
+func TestThatItSendsLogsToProperAppSink(t *testing.T) {
+	receivedChan := make(chan []byte)
 
 	otherAppsMarshalledMessage := MarshalledLogMessage(t, "Some other message", "mySpace", "otherApp")
+
 	expectedMessageString := "My important message"
 	myAppsMarshalledMessage := MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp")
 
@@ -165,21 +161,19 @@ func TestThatItSendsLogsForOneApplication(t *testing.T) {
 	AssertProtoBufferMessageEquals(t, expectedMessageString, <-receivedChan)
 }
 
-func TestThatItSendsLogsForOneSpace(t *testing.T) {
-	receivedChan := make(chan []byte, 2)
+func TestThatItSendsLogsToProperSpaceSink(t *testing.T) {
+	receivedChan := make(chan []byte)
 
-	otherAppsMarshalledMessage := MarshalledLogMessage(t, "Some other message", "mySpace", "otherApp")
+	otherSpaceMarshalledMessage := MarshalledLogMessage(t, "Some other message", "otherSpace", "otherApp")
+
 	expectedMessageString := "My important message"
-	myAppsMarshalledMessage := MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp")
+	mySpaceMarshalledMessage := MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp")
 
 	AddWSSink(t, receivedChan, "8081", "/tail/spaces/mySpace?authorization=bearer%20correctAuthorizationToken")
 	WaitForWebsocketRegistration()
 
-	dataReadChannel <- otherAppsMarshalledMessage
-
-	dataReadChannel <- myAppsMarshalledMessage
-
-	AssertProtoBufferMessageEquals(t, "Some other message", <-receivedChan)
+	dataReadChannel <- otherSpaceMarshalledMessage
+	dataReadChannel <- mySpaceMarshalledMessage
 
 	AssertProtoBufferMessageEquals(t, expectedMessageString, <-receivedChan)
 }
@@ -187,7 +181,7 @@ func TestThatItSendsLogsForOneSpace(t *testing.T) {
 func TestDropUnmarshallableMessage(t *testing.T) {
 	receivedChan := make(chan []byte)
 
-	AddWSSink(t, receivedChan, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=bearer%20correctAuthorizationToken")
+	sink := AddWSSink(t, receivedChan, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=bearer%20correctAuthorizationToken")
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- make([]byte, 10)
@@ -199,6 +193,11 @@ func TestDropUnmarshallableMessage(t *testing.T) {
 	default:
 		//no communication. That's good!
 	}
+
+	sink.Close()
+	expectedMessageString := "My important message"
+	mySpaceMarshalledMessage := MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp")
+	dataReadChannel <- mySpaceMarshalledMessage
 }
 
 func TestDropSinkWithoutApp(t *testing.T) {

@@ -15,7 +15,13 @@ type groupedChannels struct {
 }
 
 func keyify(keys []string) string {
-	return strings.Join(keys, ":")
+	nonEmptyKeys := []string{}
+	for i := range keys {
+		if keys[i] != "" {
+			nonEmptyKeys = append(nonEmptyKeys, keys[i])
+		}
+	}
+	return strings.Join(nonEmptyKeys, ":")
 }
 
 func (gc *groupedChannels) add(channel chan []byte, keys ...string) {
