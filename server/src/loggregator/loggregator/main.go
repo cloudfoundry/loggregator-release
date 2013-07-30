@@ -30,7 +30,8 @@ type Config struct {
 	NatsUser               string
 	NatsPass               string
 	VarzUser               string
-	VarzPassword           string
+	VarzPass               string
+	VarzPort               int
 	SourceHost             string
 	WebHost                string
 	LogFilePath            string
@@ -40,8 +41,8 @@ type Config struct {
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
-	if c.VarzPassword == "" || c.VarzUser == "" {
-		return errors.New("Need VARZ username/password.")
+	if c.VarzPass == "" || c.VarzUser == "" || c.VarzPort == 0 {
+		return errors.New("Need VARZ username/password/port.")
 	}
 	if c.SystemDomain == "" {
 		return errors.New("Need system domain to register with NATS")
@@ -153,8 +154,8 @@ func main() {
 	component := &vcap.VcapComponent{
 		Type:        "Loggregator Server",
 		Index:       0,
-		Host:        "0.0.0.0:6384",
-		Credentials: []string{config.VarzUser, config.VarzPassword},
+		Host:        fmt.Sprintf("0.0.0.0:%d", config.VarzPort),
+		Credentials: []string{config.VarzUser, config.VarzPass},
 		Config:      nil,
 		Logger:      logger,
 		Varz:        varz,
