@@ -21,4 +21,4 @@
 	url = https://github.com/howeyc/fsnotify
 [submodule "src/github.com/cloudfoundry/gorouter"]
 	path = src/github.com/cloudfoundry/gorouter
-	url = git@github.com:cloudfoundry/gorouter.git
+	url = https://github.com/cloudfoundry/gorouter.git
