@@ -29,6 +29,8 @@ type Config struct {
 	NatsPort               int
 	NatsUser               string
 	NatsPass               string
+	VarzUser               string
+	VarzPassword           string
 	SourceHost             string
 	WebHost                string
 	LogFilePath            string
@@ -38,6 +40,9 @@ type Config struct {
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
+	if c.VarzPassword == "" || c.VarzUser == "" {
+		return errors.New("Need VARZ username/password.")
+	}
 	if c.SystemDomain == "" {
 		return errors.New("Need system domain to register with NATS")
 	}
@@ -149,7 +154,7 @@ func main() {
 		Type:        "Loggregator Server",
 		Index:       0,
 		Host:        "0.0.0.0:6384",
-		Credentials: []string{"user", "pass"},
+		Credentials: []string{config.VarzUser, config.VarzPassword},
 		Config:      nil,
 		Logger:      logger,
 		Varz:        varz,
