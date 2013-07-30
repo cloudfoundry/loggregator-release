@@ -54,3 +54,10 @@ func (gc *groupedChannels) delete(channel chan []byte, keys ...string) {
 
 	delete(gc.channels[keyify(keys)], channel)
 }
+
+func (gc *groupedChannels) NumberOfChannels() (numberOfChannels int) {
+	for _, channels := range gc.channels {
+		numberOfChannels += len(channels)
+	}
+	return numberOfChannels
+}

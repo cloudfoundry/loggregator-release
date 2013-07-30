@@ -46,7 +46,6 @@ func (sink *sink) Start() (listenerChannel chan []byte, closeChannel chan bool) 
 	go func() {
 		for {
 			sink.logger.Debugf("Tail client %s is waiting for data", sink.clientAddress)
-			sink.logger.Debugf("My channel is %v", listenerChannel)
 			data := <-listenerChannel
 			sink.logger.Debugf("Tail client %s got %d bytes", sink.clientAddress, len(data))
 			sink.logger.Debugf("Server client conn before send: %v - %v", sink.ws.IsClientConn(), sink.ws.IsServerConn())
@@ -57,6 +56,7 @@ func (sink *sink) Start() (listenerChannel chan []byte, closeChannel chan bool) 
 				closeChannel <- true
 				return
 			}
+
 			atomic.AddUint64(sink.sentMessageCount, 1)
 			atomic.AddUint64(sink.sentByteCount, uint64(len(data)))
 		}
