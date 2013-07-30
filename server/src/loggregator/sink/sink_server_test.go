@@ -1,4 +1,4 @@
-package cfsink
+package sink
 
 import (
 	"code.google.com/p/go.net/websocket"
@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var sinkServer *cfSinkServer
+var TestSinkServer *sinkServer
 var dataReadChannel chan []byte
 
 func init() {
@@ -19,8 +19,8 @@ func init() {
 	// agent listener is unbuffered?
 	//	dataReadChannel = make(chan []byte, 10)
 	dataReadChannel = make(chan []byte, 10)
-	sinkServer = NewCfSinkServer(dataReadChannel, logger(), "localhost:8081", "/tail/", "http://localhost:9876", SuccessfulAuthorizer)
-	go sinkServer.Start()
+	TestSinkServer = NewSinkServer(dataReadChannel, logger(), "localhost:8081", "/tail/", "http://localhost:9876", SuccessfulAuthorizer)
+	go TestSinkServer.Start()
 	time.Sleep(1 * time.Millisecond)
 }
 

@@ -7,7 +7,7 @@ packages=(
     deaagent/deaagent
     deaagent/loggregatorclient
     loggregator/loggregator
-    loggregator/cfsink
+    loggregator/sink
     loggregator/agentlistener
     loggregator/registrar
     instrumentor

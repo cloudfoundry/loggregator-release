@@ -1,4 +1,4 @@
-package cfsink
+package sink
 
 import (
 	"code.google.com/p/go.net/websocket"
@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-type cfSink struct {
+type sink struct {
 	logger           *gosteno.Logger
 	spaceId          string
 	appId            string
@@ -21,15 +21,15 @@ type cfSink struct {
 	sentByteCount    *uint64
 }
 
-func newCfSink(spaceId string, appId string, givenLogger *gosteno.Logger, ws *websocket.Conn, clientAddress net.Addr) *cfSink {
-	return &cfSink{givenLogger, spaceId, appId, ws, clientAddress, new(uint64), new(uint64)}
+func newCfSink(spaceId string, appId string, givenLogger *gosteno.Logger, ws *websocket.Conn, clientAddress net.Addr) *sink {
+	return &sink{givenLogger, spaceId, appId, ws, clientAddress, new(uint64), new(uint64)}
 }
 
-func (sink *cfSink) clientIdentifier() string {
+func (sink *sink) clientIdentifier() string {
 	return strings.Join([]string{sink.spaceId, sink.appId}, ":")
 }
 
-func (sink *cfSink) Start() (listenerChannel chan []byte, closeChannel chan bool) {
+func (sink *sink) Start() (listenerChannel chan []byte, closeChannel chan bool) {
 	sinkInstrumentor := instrumentor.NewInstrumentor(5*time.Second, gosteno.LOG_DEBUG, sink.logger)
 	stopChan := sinkInstrumentor.Instrument(sink)
 	defer sinkInstrumentor.StopInstrumentation(stopChan)
@@ -64,7 +64,7 @@ func (sink *cfSink) Start() (listenerChannel chan []byte, closeChannel chan bool
 	return listenerChannel, closeChannel
 }
 
-func (sink *cfSink) DumpData() []instrumentor.PropVal {
+func (sink *sink) DumpData() []instrumentor.PropVal {
 	return []instrumentor.PropVal{
 		instrumentor.PropVal{
 			"SentMessageCount for " + sink.clientIdentifier(),

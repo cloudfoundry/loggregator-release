@@ -1,4 +1,4 @@
-package cfsink
+package sink
 
 import (
 	"github.com/stretchr/testify/assert"

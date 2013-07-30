@@ -11,8 +11,8 @@ import (
 	"instrumentor"
 	"io/ioutil"
 	"loggregator/agentlistener"
-	"loggregator/cfsink"
 	"loggregator/registrar"
+	"loggregator/sink"
 	"loggregator/stats"
 	"net"
 	"os"
@@ -34,7 +34,7 @@ type Config struct {
 	SourceHost             string
 	WebHost                string
 	LogFilePath            string
-	decoder                cfsink.TokenDecoder
+	decoder                sink.TokenDecoder
 	mbusClient             go_cfmessagebus.CFMessageBus
 	port                   string
 }
@@ -50,7 +50,7 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 	if err != nil {
 		return errors.New(fmt.Sprintf("Can not read UAA verification key from file %s: %s", c.UaaVerificationKeyFile, err))
 	}
-	c.decoder, err = cfsink.NewUaaTokenDecoder(uaaVerificationKey)
+	c.decoder, err = sink.NewUaaTokenDecoder(uaaVerificationKey)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Can not parse UAA verification key: %s", err))
 	}
@@ -135,8 +135,8 @@ func main() {
 	listener := agentlistener.NewAgentListener(config.SourceHost, logger)
 	incomingData := listener.Start()
 
-	authorizer := cfsink.NewLogAccessAuthorizer(config.decoder)
-	cfSinkServer := cfsink.NewCfSinkServer(incomingData, logger, config.WebHost, "/tail/", config.ApiHost, authorizer)
+	authorizer := sink.NewLogAccessAuthorizer(config.decoder)
+	sinkServer := sink.NewSinkServer(incomingData, logger, config.WebHost, "/tail/", config.ApiHost, authorizer)
 
 	r := registrar.NewRegistrar(config.mbusClient, config.SystemDomain, config.port, logger)
 	r.SubscribeToRouterStart()
@@ -163,7 +163,7 @@ func main() {
 	}
 	vcap.StartComponent(component)
 
-	go cfSinkServer.Start()
+	go sinkServer.Start()
 
 	select {
 	case <-systemChan:
