@@ -21,22 +21,23 @@ func TestRegisterWithRouter(t *testing.T) {
 	routerReceivedChannel := make(chan []byte)
 	fakeRouter(mbusClient, routerReceivedChannel)
 
-	registrar := NewRegistrar(mbusClient, "vcap.me", "8083", gosteno.NewLogger("TestLogger"))
-	err := registrar.RegisterWithRouter()
+	cfc := &CfComponent{SystemDomain: "vcap.me", WebPort: "8083"}
+	registrar := NewRegistrar(mbusClient, gosteno.NewLogger("TestLogger"))
+	err := registrar.RegisterWithRouter(cfc)
 	assert.NoError(t, err)
 
 	resultChan := make(chan bool)
 	go func() {
 		for {
-			registrar.RLock()
-			if registrar.RegisterInterval == 42*time.Second {
+			cfc.RLock()
+			if cfc.RegisterInterval == 42*time.Second {
 				resultChan <- true
 				break
 			}
-			registrar.RUnlock()
+			cfc.RUnlock()
 			time.Sleep(5 * time.Millisecond)
 		}
-		registrar.RUnlock()
+		cfc.RUnlock()
 	}()
 
 	select {
@@ -46,13 +47,14 @@ func TestRegisterWithRouter(t *testing.T) {
 	}
 }
 
-func TestKeepRegistering(t *testing.T) {
+func TestKeepRegisteringWithRouter(t *testing.T) {
 	routerReceivedChannel := make(chan []byte)
 	fakeRouter(mbusClient, routerReceivedChannel)
 
-	registrar := NewRegistrar(mbusClient, "vcap.me", "8083", gosteno.NewLogger("TestLogger"))
-	registrar.RegisterInterval = 50 * time.Millisecond
-	registrar.KeepRegistering()
+	cfc := &CfComponent{SystemDomain: "vcap.me", WebPort: "8083"}
+	registrar := NewRegistrar(mbusClient, gosteno.NewLogger("TestLogger"))
+	cfc.RegisterInterval = 50 * time.Millisecond
+	registrar.KeepRegisteringWithRouter(cfc)
 
 	for i := 0; i < 3; i++ {
 		time.Sleep(55 * time.Millisecond)
@@ -68,8 +70,9 @@ func TestKeepRegistering(t *testing.T) {
 }
 
 func TestSubscribeToRouterStart(t *testing.T) {
-	registrar := NewRegistrar(mbusClient, "vcap.me", "8083", gosteno.NewLogger("TestLogger"))
-	err := registrar.SubscribeToRouterStart()
+	cfc := &CfComponent{SystemDomain: "vcap.me", WebPort: "8083"}
+	registrar := NewRegistrar(mbusClient, gosteno.NewLogger("TestLogger"))
+	err := registrar.SubscribeToRouterStart(cfc)
 	assert.NoError(t, err)
 
 	err = mbusClient.Publish("router.start", []byte(messageFromRouter))
@@ -78,15 +81,15 @@ func TestSubscribeToRouterStart(t *testing.T) {
 	resultChan := make(chan bool)
 	go func() {
 		for {
-			registrar.RLock()
-			if registrar.RegisterInterval == 42*time.Second {
+			cfc.RLock()
+			if cfc.RegisterInterval == 42*time.Second {
 				resultChan <- true
 				break
 			}
-			registrar.RUnlock()
+			cfc.RUnlock()
 			time.Sleep(5 * time.Millisecond)
 		}
-		registrar.RUnlock()
+		cfc.RUnlock()
 	}()
 
 	select {
@@ -100,8 +103,9 @@ func TestUnregister(t *testing.T) {
 	routerReceivedChannel := make(chan []byte)
 	fakeRouter(mbusClient, routerReceivedChannel)
 
-	registrar := NewRegistrar(mbusClient, "vcap.me", "8083", gosteno.NewLogger("TestLogger"))
-	registrar.Unregister()
+	cfc := &CfComponent{SystemDomain: "vcap.me", WebPort: "8083"}
+	registrar := NewRegistrar(mbusClient, gosteno.NewLogger("TestLogger"))
+	registrar.Unregister(cfc)
 
 	select {
 	case msg := <-routerReceivedChannel:

@@ -11,22 +11,25 @@ import (
 	"time"
 )
 
-const loggregatorHostname = "loggregator"
-
-type registrar struct {
+type CfComponent struct {
 	sync.RWMutex
-	*gosteno.Logger
-	mBusClient       mbus.MessageBus
-	systemDomain     string
-	webPort          string
+	SystemDomain     string
+	WebPort          string
 	RegisterInterval time.Duration `json:"minimumRegisterIntervalInSeconds"`
 }
 
-func NewRegistrar(mBusClient mbus.MessageBus, systemDomain, webPort string, logger *gosteno.Logger) *registrar {
-	return &registrar{mBusClient: mBusClient, systemDomain: systemDomain, webPort: webPort, Logger: logger}
+const loggregatorHostname = "loggregator"
+
+type registrar struct {
+	*gosteno.Logger
+	mBusClient mbus.MessageBus
 }
 
-func (r *registrar) RegisterWithRouter() (err error) {
+func NewRegistrar(mBusClient mbus.MessageBus, logger *gosteno.Logger) *registrar {
+	return &registrar{mBusClient: mBusClient, Logger: logger}
+}
+
+func (r *registrar) RegisterWithRouter(cfc *CfComponent) (err error) {
 	response := make(chan []byte)
 
 	r.mBusClient.Request("router.greet", []byte{}, func(payload []byte) {
@@ -35,14 +38,14 @@ func (r *registrar) RegisterWithRouter() (err error) {
 
 	select {
 	case msg := <-response:
-		r.Lock()
-		defer r.Unlock()
-		err = json.Unmarshal(msg, r)
+		cfc.Lock()
+		defer cfc.Unlock()
+		err = json.Unmarshal(msg, cfc)
 		if err != nil {
 			r.Errorf("Error unmarshalling the greet response: %v\n", err)
 		} else {
-			r.Infof("Greeted the router. Setting register interval to %v seconds\n", r.RegisterInterval)
-			r.RegisterInterval = r.RegisterInterval * time.Second
+			r.Infof("Greeted the router. Setting register interval to %v seconds\n", cfc.RegisterInterval)
+			cfc.RegisterInterval = cfc.RegisterInterval * time.Second
 		}
 	case <-time.After(2 * time.Second):
 		err = errors.New("Did not get a response to router.greet!")
@@ -51,16 +54,16 @@ func (r *registrar) RegisterWithRouter() (err error) {
 	return err
 }
 
-func (r *registrar) SubscribeToRouterStart() (err error) {
+func (r *registrar) SubscribeToRouterStart(cfc *CfComponent) (err error) {
 	r.mBusClient.Subscribe("router.start", func(payload []byte) {
-		r.Lock()
-		defer r.Unlock()
-		err = json.Unmarshal(payload, r)
+		cfc.Lock()
+		defer cfc.Unlock()
+		err = json.Unmarshal(payload, cfc)
 		if err != nil {
 			r.Errorf("Error unmarshalling the router start message: %v\n", err)
 		} else {
-			r.Infof("Received router.start. Setting register interval to %v seconds\n", r.RegisterInterval)
-			r.RegisterInterval = r.RegisterInterval * time.Second
+			r.Infof("Received router.start. Setting register interval to %v seconds\n", cfc.RegisterInterval)
+			cfc.RegisterInterval = cfc.RegisterInterval * time.Second
 		}
 	})
 	r.Info("Subscribed to router.start")
@@ -68,28 +71,28 @@ func (r *registrar) SubscribeToRouterStart() (err error) {
 	return err
 }
 
-func (r *registrar) KeepRegistering() {
+func (r *registrar) KeepRegisteringWithRouter(cfc *CfComponent) {
 	go func() {
 		for {
-			r.publishRouterMessage("router.register")
+			r.publishRouterMessage(cfc, "router.register")
 			r.Debug("Reregistered with router")
-			<-time.After(r.RegisterInterval)
+			<-time.After(cfc.RegisterInterval)
 		}
 	}()
 }
 
-func (r *registrar) Unregister() {
-	r.publishRouterMessage("router.unregister")
+func (r *registrar) Unregister(cfc *CfComponent) {
+	r.publishRouterMessage(cfc, "router.unregister")
 	r.Info("Unregistered from router")
 }
 
-func (r *registrar) publishRouterMessage(subject string) error {
+func (r *registrar) publishRouterMessage(cfc *CfComponent, subject string) error {
 	host, err := localIP()
-	full_hostname := loggregatorHostname + "." + r.systemDomain
+	full_hostname := loggregatorHostname + "." + cfc.SystemDomain
 	if err != nil {
 		r.Warnf("Publishing %s failed, could not look up local IP: %v", subject, err)
 	} else {
-		message := strings.Join([]string{`{"host":"`, host, `","port":`, r.webPort, `,"uris":["`, full_hostname, `"]}`}, "")
+		message := strings.Join([]string{`{"host":"`, host, `","port":`, cfc.WebPort, `,"uris":["`, full_hostname, `"]}`}, "")
 		err := r.mBusClient.Publish(subject, []byte(message))
 		if err != nil {
 			r.Warnf("Publishing %s failed: %v", subject, err)

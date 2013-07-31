@@ -134,10 +134,11 @@ func main() {
 	authorizer := sink.NewLogAccessAuthorizer(config.decoder)
 	sinkServer := sink.NewSinkServer(incomingData, logger, config.WebHost, "/tail/", config.ApiHost, authorizer, 30*time.Second)
 
-	r := registrar.NewRegistrar(config.mbusClient, config.SystemDomain, config.port, logger)
-	r.SubscribeToRouterStart()
-	r.RegisterWithRouter()
-	r.KeepRegistering()
+	cfc := &registrar.CfComponent{SystemDomain: config.SystemDomain, WebPort: config.port}
+	r := registrar.NewRegistrar(config.mbusClient, logger)
+	r.SubscribeToRouterStart(cfc)
+	r.RegisterWithRouter(cfc)
+	r.KeepRegisteringWithRouter(cfc)
 
 	systemChan := make(chan os.Signal)
 	signal.Notify(systemChan, os.Kill)
@@ -162,7 +163,7 @@ func main() {
 
 	select {
 	case <-systemChan:
-		r.Unregister()
+		r.Unregister(cfc)
 		os.Exit(0)
 	}
 }
