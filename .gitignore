@@ -4,4 +4,5 @@ pkg/
 */bin
 */**/bin
 loggregator.json
+deaagent.json
 uaa_token.pub

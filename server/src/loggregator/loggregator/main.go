@@ -13,7 +13,6 @@ import (
 	"loggregator/agentlistener"
 	"loggregator/registrar"
 	"loggregator/sink"
-	"loggregator/stats"
 	"net"
 	"os"
 	"os/signal"
@@ -91,15 +90,10 @@ func main() {
 		return
 	}
 
-	if *configFile == "" {
-		panic(fmt.Sprintf("Can not find config file: %s", *configFile))
-		return
-	}
-
 	config := &Config{SourceHost: "0.0.0.0:3456", WebHost: "0.0.0.0:8080", UaaVerificationKeyFile: *uaaVerificationKeyFile}
 	configBytes, err := ioutil.ReadFile(*configFile)
 	if err != nil {
-		panic(fmt.Sprintf("Can not read config file %s: %s", *configFile, err))
+		panic(fmt.Sprintf("Can not read config file [%s]: %s", *configFile, err))
 	}
 	err = json.Unmarshal(configBytes, config)
 	if err != nil {
@@ -148,7 +142,7 @@ func main() {
 	signal.Notify(systemChan, os.Kill)
 
 	varz := &vcap.Varz{
-		UniqueVarz: stats.NewLoggregatorStats([]instrumentor.Instrumentable{listener}),
+		UniqueVarz: instrumentor.NewVarzStats([]instrumentor.Instrumentable{listener}),
 	}
 
 	component := &vcap.VcapComponent{

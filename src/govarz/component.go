@@ -90,7 +90,7 @@ func StartComponent(c *VcapComponent) {
 	go c.ListenAndServe()
 }
 
-func Register(c *VcapComponent, mbusClient mbus.CFMessageBus) {
+func Register(c *VcapComponent, mbusClient mbus.MessageBus) {
 	mbusClient.RespondToChannel("vcap.component.discover", func(payload []byte) []byte {
 		Component.Uptime = time.Now().Sub(Component.Start)
 		b, e := json.Marshal(Component)

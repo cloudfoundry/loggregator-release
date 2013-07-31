@@ -1,40 +1,39 @@
-package stats
+package instrumentor
 
 import (
+	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"instrumentor"
-	"encoding/json"
 )
 
 type FakeInstrumentable struct {
-	data []instrumentor.PropVal
+	data []PropVal
 }
 
-func (i FakeInstrumentable) DumpData() []instrumentor.PropVal {
+func (i FakeInstrumentable) DumpData() []PropVal {
 	return i.data
 }
 
 func TestSerializesDataFromEachInstrumentable(t *testing.T) {
 	expected, err := json.Marshal(map[string]string{
 		"Clients Connected": "876",
-		"Messages Sent": "1000",
+		"Messages Sent":     "1000",
 	})
 
 	assert.NoError(t, err)
 
-	data := []instrumentor.PropVal{
-		instrumentor.PropVal{"Clients Connected", "876"},
+	data := []PropVal{
+		PropVal{"Clients Connected", "876"},
 	}
 	i1 := &FakeInstrumentable{data}
 
-	data = []instrumentor.PropVal{
-		instrumentor.PropVal{"Messages Sent", "1000"},
+	data = []PropVal{
+		PropVal{"Messages Sent", "1000"},
 	}
 	i2 := &FakeInstrumentable{data}
 
-	instrumentables := []instrumentor.Instrumentable{i1, i2}
-	stats := &LoggregatorStats{instrumentables}
+	instrumentables := []Instrumentable{i1, i2}
+	stats := &VarzStats{instrumentables}
 
 	actual, err := stats.MarshalJSON()
 

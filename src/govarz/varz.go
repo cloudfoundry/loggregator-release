@@ -21,7 +21,7 @@ type GenericVarz struct {
 type Varz struct {
 	sync.Mutex
 	GenericVarz
-	UniqueVarz interface{} // Every component's unique metrics
+	UniqueVarz json.Marshaler // Every component's unique metrics
 }
 
 func transform(x interface{}, y *map[string]interface{}) error {
