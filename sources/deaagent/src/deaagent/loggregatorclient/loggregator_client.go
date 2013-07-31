@@ -31,7 +31,6 @@ func NewLoggregatorClient(loggregatorAddress string, logger *gosteno.Logger, buf
 	connection, err := net.Dial("udp", loggregatorAddress)
 	if err != nil {
 		logger.Fatalf("Error resolving loggregator address %s, %s", loggregatorAddress, err)
-		panic(err)
 	}
 
 	loggregatorClient.sendChannel = make(chan []byte, bufferSize)
