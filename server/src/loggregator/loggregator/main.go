@@ -133,8 +133,6 @@ func main() {
 	r.RegisterWithRouter(cfc)
 	r.KeepRegisteringWithRouter(cfc)
 
-	systemChan := make(chan os.Signal)
-	signal.Notify(systemChan, os.Kill)
 
 	varz := &vcap.Varz{
 		UniqueVarz: instrumentor.NewVarzStats([]instrumentor.Instrumentable{listener}),
@@ -153,6 +151,9 @@ func main() {
 	vcap.StartComponent(component)
 
 	go sinkServer.Start()
+
+	systemChan := make(chan os.Signal)
+	signal.Notify(systemChan, os.Kill)
 
 	select {
 	case <-systemChan:
