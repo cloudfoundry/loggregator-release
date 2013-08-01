@@ -3,19 +3,24 @@ package registrar
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	mbus "github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/gosteno"
-	"net"
-	"strings"
 	"sync"
 	"time"
 )
 
 type CfComponent struct {
 	sync.RWMutex
-	SystemDomain     string
-	WebPort          string
-	RegisterInterval time.Duration `json:"minimumRegisterIntervalInSeconds"`
+	IpAddress         string
+	SystemDomain      string
+	WebPort           uint32
+	RegisterInterval  time.Duration `json:"minimumRegisterIntervalInSeconds"`
+	Type              string        //Used by the collector to find data processing class
+	Index             uint
+	UUID              string
+	StatusPort        uint32
+	StatusCredentials []string
 }
 
 const loggregatorHostname = "loggregator"
@@ -29,10 +34,32 @@ func NewRegistrar(mBusClient mbus.MessageBus, logger *gosteno.Logger) *registrar
 	return &registrar{mBusClient: mBusClient, Logger: logger}
 }
 
+func (r *registrar) AnnounceComponent(cfc *CfComponent) error {
+	json, err := json.Marshal(NewAnnounceComponentMessage(cfc))
+	if err != nil {
+		return err
+	}
+
+	r.mBusClient.Publish(AnnounceComponentMessageSubject, json)
+	return nil
+}
+
+func (r *registrar) SubscribeToComponentDiscover(cfc *CfComponent) error {
+	r.mBusClient.RespondToChannel(DiscoverComponentMessageSubject, func(msg []byte) []byte {
+		json, err := json.Marshal(NewAnnounceComponentMessage(cfc))
+		if err != nil {
+			r.Warnf("Failed to marshal response to message [%s]: %s", DiscoverComponentMessageSubject, err.Error())
+			return nil
+		}
+		return json
+	})
+	return nil
+}
+
 func (r *registrar) RegisterWithRouter(cfc *CfComponent) (err error) {
 	response := make(chan []byte)
 
-	r.mBusClient.Request("router.greet", []byte{}, func(payload []byte) {
+	r.mBusClient.Request(RouterGreetMessageSubject, []byte{}, func(payload []byte) {
 		response <- payload
 	})
 
@@ -55,7 +82,7 @@ func (r *registrar) RegisterWithRouter(cfc *CfComponent) (err error) {
 }
 
 func (r *registrar) SubscribeToRouterStart(cfc *CfComponent) (err error) {
-	r.mBusClient.Subscribe("router.start", func(payload []byte) {
+	r.mBusClient.Subscribe(RouterStartMessageSubject, func(payload []byte) {
 		cfc.Lock()
 		defer cfc.Unlock()
 		err = json.Unmarshal(payload, cfc)
@@ -74,50 +101,40 @@ func (r *registrar) SubscribeToRouterStart(cfc *CfComponent) (err error) {
 func (r *registrar) KeepRegisteringWithRouter(cfc *CfComponent) {
 	go func() {
 		for {
-			r.publishRouterMessage(cfc, "router.register")
+			err := r.publishRouterMessage(cfc, RouterRegisterMessageSubject)
+			if err != nil {
+				r.Error(err.Error())
+			}
 			r.Debug("Reregistered with router")
 			<-time.After(cfc.RegisterInterval)
 		}
 	}()
 }
 
-func (r *registrar) Unregister(cfc *CfComponent) {
-	r.publishRouterMessage(cfc, "router.unregister")
+func (r *registrar) UnregisterFromRouter(cfc *CfComponent) {
+	err := r.publishRouterMessage(cfc, RouterUnregisterMessageSubject)
+	if err != nil {
+		r.Error(err.Error())
+	}
 	r.Info("Unregistered from router")
 }
 
 func (r *registrar) publishRouterMessage(cfc *CfComponent, subject string) error {
-	host, err := localIP()
 	full_hostname := loggregatorHostname + "." + cfc.SystemDomain
-	if err != nil {
-		r.Warnf("Publishing %s failed, could not look up local IP: %v", subject, err)
-	} else {
-		message := strings.Join([]string{`{"host":"`, host, `","port":`, cfc.WebPort, `,"uris":["`, full_hostname, `"]}`}, "")
-		err := r.mBusClient.Publish(subject, []byte(message))
-		if err != nil {
-			r.Warnf("Publishing %s failed: %v", subject, err)
-		}
-	}
-	return err
-}
-
-func localIP() (string, error) {
-	addr, err := net.ResolveUDPAddr("udp", "1.2.3.4:1")
-	if err != nil {
-		return "", err
+	message := &RouterMessage{
+		Host: cfc.IpAddress,
+		Port: cfc.WebPort,
+		Uris: []string{full_hostname},
 	}
 
-	conn, err := net.DialUDP("udp", nil, addr)
+	json, err := json.Marshal(message)
 	if err != nil {
-		return "", err
+		return errors.New(fmt.Sprintf("Error marshalling the router message: %v\n", err))
 	}
 
-	defer conn.Close()
-
-	host, _, err := net.SplitHostPort(conn.LocalAddr().String())
+	err = r.mBusClient.Publish(subject, json)
 	if err != nil {
-		return "", err
+		return errors.New(fmt.Sprintf("Publishing %s failed: %v", subject, err))
 	}
-
-	return host, nil
+	return nil
 }

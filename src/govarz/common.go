@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-func localIP() (string, error) {
+func LocalIP() (string, error) {
 	addr, err := net.ResolveUDPAddr("udp", "1.2.3.4:1")
 	if err != nil {
 		return "", err

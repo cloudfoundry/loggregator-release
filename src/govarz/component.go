@@ -28,8 +28,8 @@ type VcapComponent struct {
 
 	// These fields are automatically generated
 	UUID   string   `json:"uuid"`
-	Start  time.Time     `json:"start"`
-	Uptime time.Duration `json:"uptime"`
+	Start  Time     `json:"start"`
+	Uptime Duration `json:"uptime"`
 }
 
 func UpdateHealthz() *Healthz {
@@ -45,7 +45,7 @@ func UpdateVarz() *Varz {
 
 	varz.MemStat = procStat.MemRss
 	varz.Cpu = procStat.CpuUsage
-	varz.Uptime = time.Now().Sub(Component.Start)
+	varz.Uptime = Component.Start.Elapsed()
 
 	return varz
 }
@@ -56,11 +56,11 @@ func StartComponent(c *VcapComponent) {
 		panic("type is required")
 	}
 
-	Component.Start = time.Now()
+	Component.Start = Time(time.Now())
 	Component.UUID = fmt.Sprintf("%d-%s", Component.Index, generateUUID())
 
 	if Component.Host == "" {
-		host, err := localIP()
+		host, err := LocalIP()
 		if err != nil {
 			panic(err)
 		}
@@ -92,7 +92,7 @@ func StartComponent(c *VcapComponent) {
 
 func Register(c *VcapComponent, mbusClient mbus.MessageBus) {
 	mbusClient.RespondToChannel("vcap.component.discover", func(payload []byte) []byte {
-		Component.Uptime = time.Now().Sub(Component.Start)
+		Component.Uptime = Component.Start.Elapsed()
 		b, e := json.Marshal(Component)
 		if e != nil {
 			return nil
@@ -110,12 +110,12 @@ func Register(c *VcapComponent, mbusClient mbus.MessageBus) {
 func (c *VcapComponent) ListenAndServe() {
 	hs := http.NewServeMux()
 
-	hs.HandleFunc("/healthz", func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusOK)
-
-		fmt.Fprintf(w, UpdateHealthz().Value())
-	})
+//	hs.HandleFunc("/healthz", func(w http.ResponseWriter, req *http.Request) {
+//		w.Header().Set("Content-Type", "text/plain")
+//		w.WriteHeader(http.StatusOK)
+//
+//		fmt.Fprintf(w, UpdateHealthz().Value())
+//	})
 
 	hs.HandleFunc("/varz", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

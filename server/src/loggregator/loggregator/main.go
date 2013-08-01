@@ -32,7 +32,7 @@ type Config struct {
 	VarzPass               string
 	VarzPort               uint32
 	SourcePort             uint32
-	WebPort                string
+	WebPort                uint32
 	LogFilePath            string
 	decoder                sink.TokenDecoder
 	mbusClient             cfmessagebus.MessageBus
@@ -84,7 +84,7 @@ func main() {
 		return
 	}
 
-	config := &Config{SourcePort: 3456, WebPort: "8080", UaaVerificationKeyFile: *uaaVerificationKeyFile}
+	config := &Config{SourcePort: 3456, WebPort: 8080, UaaVerificationKeyFile: *uaaVerificationKeyFile}
 	configBytes, err := ioutil.ReadFile(*configFile)
 	if err != nil {
 		panic(fmt.Sprintf("Can not read config file [%s]: %s", *configFile, err))
@@ -125,21 +125,37 @@ func main() {
 	incomingData := listener.Start()
 
 	authorizer := sink.NewLogAccessAuthorizer(config.decoder)
-	sinkServer := sink.NewSinkServer(incomingData, logger, fmt.Sprintf("0.0.0.0:%s", config.WebPort), "/tail/", config.ApiHost, authorizer)
+	sinkServer := sink.NewSinkServer(incomingData, logger, fmt.Sprintf("0.0.0.0:%d", config.WebPort), "/tail/", config.ApiHost, authorizer)
 
-	cfc := &registrar.CfComponent{SystemDomain: config.SystemDomain, WebPort: config.WebPort}
+	ip, err := vcap.LocalIP()
+	if err != nil {
+		panic("Could not determine local ip address.")
+	}
+
+	cfc := &registrar.CfComponent{
+		IpAddress:         ip,
+		SystemDomain:      config.SystemDomain,
+		WebPort:           config.WebPort,
+		Type:              "LoggregatorServer",
+		Index:             0,
+		StatusPort:        config.VarzPort,
+		StatusCredentials: []string{config.VarzUser, config.VarzPass},
+	}
+
 	r := registrar.NewRegistrar(config.mbusClient, logger)
 	r.SubscribeToRouterStart(cfc)
 	r.RegisterWithRouter(cfc)
 	r.KeepRegisteringWithRouter(cfc)
 
+	r.SubscribeToComponentDiscover(cfc)
+	r.AnnounceComponent(cfc)
 
 	varz := &vcap.Varz{
 		UniqueVarz: instrumentor.NewVarzStats([]instrumentor.Instrumentable{listener}),
 	}
 
 	component := &vcap.VcapComponent{
-		Type:        "Loggregator Server",
+		Type:        "LoggregatorServer",
 		Index:       0,
 		Host:        fmt.Sprintf("0.0.0.0:%d", config.VarzPort),
 		Credentials: []string{config.VarzUser, config.VarzPass},
@@ -157,7 +173,7 @@ func main() {
 
 	select {
 	case <-systemChan:
-		r.Unregister(cfc)
+		r.UnregisterFromRouter(cfc)
 		os.Exit(0)
 	}
 }

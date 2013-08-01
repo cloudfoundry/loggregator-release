@@ -3,7 +3,9 @@
 package registrar
 
 import (
+	"encoding/json"
 	mbus "github.com/cloudfoundry/go_cfmessagebus"
+	"github.com/cloudfoundry/go_cfmessagebus/mock_cfmessagebus"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/stretchr/testify/assert"
 	"os/exec"
@@ -21,7 +23,7 @@ func TestRegisterWithRouter(t *testing.T) {
 	routerReceivedChannel := make(chan []byte)
 	fakeRouter(mbusClient, routerReceivedChannel)
 
-	cfc := &CfComponent{SystemDomain: "vcap.me", WebPort: "8083"}
+	cfc := &CfComponent{SystemDomain: "vcap.me", WebPort: 8083}
 	registrar := NewRegistrar(mbusClient, gosteno.NewLogger("TestLogger"))
 	err := registrar.RegisterWithRouter(cfc)
 	assert.NoError(t, err)
@@ -47,11 +49,83 @@ func TestRegisterWithRouter(t *testing.T) {
 	}
 }
 
+func TestAnnounceComponent(t *testing.T) {
+	cfc := &CfComponent{
+		IpAddress:         "1.2.3.4",
+		Type:              "Loggregator Server",
+		Index:             0,
+		StatusPort:        5678,
+		StatusCredentials: []string{"user", "pass"},
+		UUID:              "abc123",
+	}
+	mbus := mock_cfmessagebus.NewMockMessageBus()
+
+	called := make(chan []byte)
+	callback := func(response []byte) {
+		called <- response
+	}
+	mbus.Subscribe(AnnounceComponentMessageSubject, callback)
+
+	registrar := NewRegistrar(mbus, gosteno.NewLogger("TestLogger"))
+
+	registrar.AnnounceComponent(cfc)
+
+	actual := <-called
+
+	expected := &AnnounceComponentMessage{
+		Type:        "Loggregator Server",
+		Index:       0,
+		Host:        "1.2.3.4:5678",
+		UUID:        "0-abc123",
+		Credentials: []string{"user", "pass"},
+	}
+
+	expectedJson, err := json.Marshal(expected)
+	assert.NoError(t, err)
+	assert.Equal(t, string(expectedJson), string(actual))
+}
+
+func TestSubscribeToComponentDiscover(t *testing.T) {
+	cfc := &CfComponent{
+		IpAddress:         "1.2.3.4",
+		Type:              "Loggregator Server",
+		Index:             0,
+		StatusPort:        5678,
+		StatusCredentials: []string{"user", "pass"},
+		UUID:              "abc123",
+	}
+
+	mbus := mock_cfmessagebus.NewMockMessageBus()
+	registrar := NewRegistrar(mbus, gosteno.NewLogger("TestLogger"))
+
+	registrar.SubscribeToComponentDiscover(cfc)
+
+	called := make(chan []byte)
+	callback := func(response []byte) {
+		called <- response
+	}
+
+	message := []byte("")
+	mbus.Request(DiscoverComponentMessageSubject, message, callback)
+
+	expected := &AnnounceComponentMessage{
+		Type:        "Loggregator Server",
+		Index:       0,
+		Host:        "1.2.3.4:5678",
+		UUID:        "0-abc123",
+		Credentials: []string{"user", "pass"},
+	}
+
+	expectedJson, err := json.Marshal(expected)
+	assert.NoError(t, err)
+	assert.Equal(t, string(expectedJson), string(<-called))
+}
+
 func TestKeepRegisteringWithRouter(t *testing.T) {
 	routerReceivedChannel := make(chan []byte)
 	fakeRouter(mbusClient, routerReceivedChannel)
 
-	cfc := &CfComponent{SystemDomain: "vcap.me", WebPort: "8083"}
+	cfc := &CfComponent{SystemDomain: "vcap.me", WebPort: 8083, IpAddress: "13.12.14.15"}
 	registrar := NewRegistrar(mbusClient, gosteno.NewLogger("TestLogger"))
 	cfc.RegisterInterval = 50 * time.Millisecond
 	registrar.KeepRegisteringWithRouter(cfc)
@@ -60,8 +134,7 @@ func TestKeepRegisteringWithRouter(t *testing.T) {
 		time.Sleep(55 * time.Millisecond)
 		select {
 		case msg := <-routerReceivedChannel:
-			host, err := localIP()
-			assert.NoError(t, err)
+			host := "13.12.14.15"
 			assert.Equal(t, `registering:{"host":"`+host+`","port":8083,"uris":["loggregator.vcap.me"]}`, string(msg))
 		default:
 			t.Error("Router did not receive a router.register in time!")
@@ -70,7 +143,7 @@ func TestKeepRegisteringWithRouter(t *testing.T) {
 }
 
 func TestSubscribeToRouterStart(t *testing.T) {
-	cfc := &CfComponent{SystemDomain: "vcap.me", WebPort: "8083"}
+	cfc := &CfComponent{SystemDomain: "vcap.me", WebPort: 8083}
 	registrar := NewRegistrar(mbusClient, gosteno.NewLogger("TestLogger"))
 	err := registrar.SubscribeToRouterStart(cfc)
 	assert.NoError(t, err)
@@ -103,14 +176,13 @@ func TestUnregister(t *testing.T) {
 	routerReceivedChannel := make(chan []byte)
 	fakeRouter(mbusClient, routerReceivedChannel)
 
-	cfc := &CfComponent{SystemDomain: "vcap.me", WebPort: "8083"}
+	cfc := &CfComponent{SystemDomain: "vcap.me", WebPort: 8083, IpAddress: "13.12.14.15"}
 	registrar := NewRegistrar(mbusClient, gosteno.NewLogger("TestLogger"))
-	registrar.Unregister(cfc)
+	registrar.UnregisterFromRouter(cfc)
 
 	select {
 	case msg := <-routerReceivedChannel:
-		host, err := localIP()
-		assert.NoError(t, err)
+		host := "13.12.14.15"
 		assert.Equal(t, `unregistering:{"host":"`+host+`","port":8083,"uris":["loggregator.vcap.me"]}`, string(msg))
 	case <-time.After(2 * time.Second):
 		t.Error("Router did not receive a router.unregister in time!")

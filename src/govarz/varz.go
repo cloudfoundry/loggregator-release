@@ -3,7 +3,6 @@ package varz
 import (
 	"encoding/json"
 	"sync"
-	"time"
 )
 
 type GenericVarz struct {
@@ -14,8 +13,8 @@ type GenericVarz struct {
 	MemStat int64   `json:"mem"`
 	Cpu     float64 `json:"cpu"`
 
-	Uptime    time.Duration    `json:"uptime"`
-	LogCounts *LogCounter `json:"log_counts"`
+	Uptime    Duration    `json:"uptime"`
+	LogCounts *LogCounter `json:"log_counts,omitempty"`
 }
 
 type Varz struct {
