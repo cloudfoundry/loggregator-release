@@ -19,7 +19,7 @@ func init() {
 	// agent listener is unbuffered?
 	//	dataReadChannel = make(chan []byte, 10)
 	dataReadChannel = make(chan []byte, 10)
-	TestSinkServer = NewSinkServer(dataReadChannel, logger(), "localhost:8081", "/tail/", "http://localhost:9876", SuccessfulAuthorizer)
+	TestSinkServer = NewSinkServer(dataReadChannel, logger(), "localhost:8081", "/tail/", "http://localhost:9876", SuccessfulAuthorizer, 50*time.Millisecond)
 	go TestSinkServer.Start()
 	time.Sleep(1 * time.Millisecond)
 }
@@ -28,25 +28,43 @@ func WaitForWebsocketRegistration() {
 	time.Sleep(50 * time.Millisecond)
 }
 
-func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string) (ws *websocket.Conn) {
-	ws, err := websocket.Dial("ws://localhost:"+port+path, "string", "http://localhost")
+func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string) (*websocket.Conn, chan bool) {
+	dontKeepAliveChan := make(chan bool)
+	ws, err := websocket.Dial("ws://localhost:"+port+path, "", "http://localhost")
 	assert.NoError(t, err)
 	go func() {
 		for {
 			var data []byte
 			err := websocket.Message.Receive(ws, &data)
 			if err != nil {
+				t.Logf("Error while ws sink is receiving data: %v\n", err)
 				break
 			}
+
 			receivedChan <- data
 		}
 
 	}()
-	return ws
+	go func() {
+		for {
+			err := websocket.Message.Send(ws, []byte{42})
+			if err != nil {
+				t.Logf("Error while ws sink is receiving data: %v\n", err)
+				break
+			}
+			select {
+			case <-dontKeepAliveChan:
+				return
+			case <-time.After(44 * time.Millisecond):
+				// keep-alive
+			}
+		}
+	}()
+	return ws, dontKeepAliveChan
 }
 
 func AssertConnecitonFails(t *testing.T, port string, path string) {
-	ws, err := websocket.Dial("ws://localhost:"+port+path, "string", "http://localhost")
+	ws, err := websocket.Dial("ws://localhost:"+port+path, "", "http://localhost")
 	assert.NoError(t, err)
 
 	var data []byte
@@ -181,7 +199,7 @@ func TestThatItSendsLogsToProperSpaceSink(t *testing.T) {
 func TestDropUnmarshallableMessage(t *testing.T) {
 	receivedChan := make(chan []byte)
 
-	sink := AddWSSink(t, receivedChan, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=bearer%20correctAuthorizationToken")
+	sink, _ := AddWSSink(t, receivedChan, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=bearer%20correctAuthorizationToken")
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- make([]byte, 10)
@@ -210,4 +228,28 @@ func TestDropSinkWithoutAuthorization(t *testing.T) {
 
 func TestDropSinkWhenAuthorizationFails(t *testing.T) {
 	AssertConnecitonFails(t, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=incorrectAuthToken")
+}
+
+func TestKeepAlive(t *testing.T) {
+	receivedChan := make(chan []byte)
+
+	_, killKeepAliveChan := AddWSSink(t, receivedChan, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=bearer%20correctAuthorizationToken")
+	WaitForWebsocketRegistration()
+
+	killKeepAliveChan <- true
+
+	time.Sleep(60 * time.Millisecond) //wait a little bit to make sure the keep-alive has successfully been stopped
+
+	expectedMessageString := "My important message"
+	myAppsMarshalledMessage := MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp")
+	dataReadChannel <- myAppsMarshalledMessage
+
+	time.Sleep(10 * time.Millisecond) //wait a little bit to give a potential message time to arrive
+
+	select {
+	case msg1 := <-receivedChan:
+		t.Error("We should not have received a message, but got: %v", msg1)
+	default:
+		//no communication. That's good!
+	}
 }

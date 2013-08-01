@@ -48,11 +48,13 @@ func (gc *groupedChannels) get(keys ...string) []chan []byte {
 	return result
 }
 
-func (gc *groupedChannels) delete(channel chan []byte, keys ...string) {
+func (gc *groupedChannels) delete(channel chan []byte) {
 	gc.mutex.Lock()
 	defer gc.mutex.Unlock()
 
-	delete(gc.channels[keyify(keys)], channel)
+	for _, channels := range gc.channels {
+		delete(channels, channel)
+	}
 }
 
 func (gc *groupedChannels) NumberOfChannels() (numberOfChannels int) {

@@ -63,7 +63,7 @@ func TestDelete(t *testing.T) {
 	groupedChannels.add(channel1, "3")
 	groupedChannels.add(channel2, "3")
 
-	groupedChannels.delete(channel1, "3")
+	groupedChannels.delete(channel1)
 
 	assert.Equal(t, len(groupedChannels.get("3")), 1)
 	assert.Equal(t, groupedChannels.get("3")[0], channel2)
@@ -77,7 +77,7 @@ func TestNestedDelete(t *testing.T) {
 	groupedChannels.add(channel1, "3", "a")
 	groupedChannels.add(channel2, "3")
 
-	groupedChannels.delete(channel1, "3", "a")
+	groupedChannels.delete(channel1)
 
 	assert.Equal(t, len(groupedChannels.get("3", "a")), 0)
 	assert.Equal(t, groupedChannels.get("3")[0], channel2)
@@ -95,6 +95,6 @@ func TestTotalNumberOfChannels(t *testing.T) {
 	groupedChannels.add(channel2, "3")
 	assert.Equal(t, groupedChannels.NumberOfChannels(), 3)
 
-	groupedChannels.delete(channel1, "3", "a")
+	groupedChannels.delete(channel1)
 	assert.Equal(t, groupedChannels.NumberOfChannels(), 2)
 }

@@ -18,6 +18,7 @@ import (
 	"os/signal"
 	"runtime"
 	"strings"
+	"time"
 )
 
 type Config struct {
@@ -131,7 +132,7 @@ func main() {
 	incomingData := listener.Start()
 
 	authorizer := sink.NewLogAccessAuthorizer(config.decoder)
-	sinkServer := sink.NewSinkServer(incomingData, logger, config.WebHost, "/tail/", config.ApiHost, authorizer)
+	sinkServer := sink.NewSinkServer(incomingData, logger, config.WebHost, "/tail/", config.ApiHost, authorizer, 30*time.Second)
 
 	r := registrar.NewRegistrar(config.mbusClient, config.SystemDomain, config.port, logger)
 	r.SubscribeToRouterStart()

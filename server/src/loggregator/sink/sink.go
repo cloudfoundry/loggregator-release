@@ -12,24 +12,25 @@ import (
 )
 
 type sink struct {
-	logger           *gosteno.Logger
-	spaceId          string
-	appId            string
-	ws               *websocket.Conn
-	clientAddress    net.Addr
-	sentMessageCount *uint64
-	sentByteCount    *uint64
+	logger            *gosteno.Logger
+	spaceId           string
+	appId             string
+	ws                *websocket.Conn
+	clientAddress     net.Addr
+	sentMessageCount  *uint64
+	sentByteCount     *uint64
+	keepAliveInterval time.Duration
 }
 
-func newCfSink(spaceId string, appId string, givenLogger *gosteno.Logger, ws *websocket.Conn, clientAddress net.Addr) *sink {
-	return &sink{givenLogger, spaceId, appId, ws, clientAddress, new(uint64), new(uint64)}
+func newCfSink(spaceId string, appId string, givenLogger *gosteno.Logger, ws *websocket.Conn, clientAddress net.Addr, keepAliveInterval time.Duration) *sink {
+	return &sink{givenLogger, spaceId, appId, ws, clientAddress, new(uint64), new(uint64), keepAliveInterval}
 }
 
 func (sink *sink) clientIdentifier() string {
 	return strings.Join([]string{sink.spaceId, sink.appId}, ":")
 }
 
-func (sink *sink) Start() (listenerChannel chan []byte, closeChannel chan bool) {
+func (sink *sink) Run(listenerChannel chan []byte, sinkCloseChan chan chan []byte) {
 	sinkInstrumentor := instrumentor.NewInstrumentor(5*time.Second, gosteno.LOG_DEBUG, sink.logger)
 	stopChan := sinkInstrumentor.Instrument(sink)
 	defer sinkInstrumentor.StopInstrumentation(stopChan)
@@ -40,28 +41,56 @@ func (sink *sink) Start() (listenerChannel chan []byte, closeChannel chan bool) 
 		sink.logger.Debugf("Adding Tail client %s for space [%s].", sink.clientAddress, sink.spaceId)
 	}
 
-	listenerChannel = make(chan []byte)
-	closeChannel = make(chan bool)
+	alreadyAskedForClose := false
+
+	keepAliveChan := make(chan []byte)
+	go func() {
+		for {
+			var keepAlive []byte
+			err := websocket.Message.Receive(sink.ws, &keepAlive)
+			if err != nil {
+				sink.logger.Debugf("Error receiving keep-alive. %v for %v", err, sink.clientAddress)
+				break
+			}
+			sink.logger.Debugf("Received a keep-alive for %v", sink.clientAddress)
+			keepAliveChan <- keepAlive
+		}
+	}()
 
 	go func() {
 		for {
-			sink.logger.Debugf("Tail client %s is waiting for data", sink.clientAddress)
-			data := <-listenerChannel
-			sink.logger.Debugf("Tail client %s got %d bytes", sink.clientAddress, len(data))
-			sink.logger.Debugf("Server client conn before send: %v - %v", sink.ws.IsClientConn(), sink.ws.IsServerConn())
-			err := websocket.Message.Send(sink.ws, data)
-			sink.logger.Debugf("Server client conn after send: %v - %v", sink.ws.IsClientConn(), sink.ws.IsServerConn())
-			if err != nil {
-				sink.logger.Debugf("Error when sending data to sink %s. Err: ", sink.clientAddress, err)
-				closeChannel <- true
+			sink.logger.Debugf("Waiting for keep-alive for %v", sink.clientAddress)
+			select {
+			case <-keepAliveChan:
+				sink.logger.Debugf("Keep-alive processed for %v", sink.clientAddress)
+			case <-time.After(sink.keepAliveInterval):
+				sinkCloseChan <- listenerChannel
+				alreadyAskedForClose = true
 				return
 			}
-
-			atomic.AddUint64(sink.sentMessageCount, 1)
-			atomic.AddUint64(sink.sentByteCount, uint64(len(data)))
 		}
 	}()
-	return listenerChannel, closeChannel
+
+	for {
+		sink.logger.Debugf("Tail client %s is waiting for data", sink.clientAddress)
+		data, ok := <-listenerChannel
+		if !ok {
+			sink.ws.Close()
+			sink.logger.Debug("Sink client channel closed.")
+			return
+		}
+		sink.logger.Debugf("Tail client %s got %d bytes", sink.clientAddress, len(data))
+		err := websocket.Message.Send(sink.ws, data)
+		if err != nil {
+			sink.logger.Debugf("Error when sending data to sink %s. Err: %v", sink.clientAddress, err)
+			if !alreadyAskedForClose {
+				sinkCloseChan <- listenerChannel
+				alreadyAskedForClose = true
+			}
+		}
+		atomic.AddUint64(sink.sentMessageCount, 1)
+		atomic.AddUint64(sink.sentByteCount, uint64(len(data)))
+	}
 }
 
 func (sink *sink) DumpData() []instrumentor.PropVal {
