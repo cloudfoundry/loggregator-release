@@ -13,7 +13,6 @@ import (
 	"loggregator/agentlistener"
 	"loggregator/registrar"
 	"loggregator/sink"
-	"net"
 	"os"
 	"os/signal"
 	"runtime"
@@ -31,13 +30,12 @@ type Config struct {
 	NatsPass               string
 	VarzUser               string
 	VarzPass               string
-	VarzPort               int
-	SourceHost             string
-	WebHost                string
+	VarzPort               uint32
+	SourcePort             uint32
+	WebPort                string
 	LogFilePath            string
 	decoder                sink.TokenDecoder
 	mbusClient             cfmessagebus.MessageBus
-	port                   string
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
@@ -66,11 +64,6 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 	if err != nil {
 		return errors.New(fmt.Sprintf("Could not connect to NATS: ", err.Error()))
 	}
-
-	_, c.port, err = net.SplitHostPort(c.WebHost)
-	if err != nil {
-		return errors.New(fmt.Sprintf("Can not determine port: %s", err))
-	}
 	return nil
 }
 
@@ -91,7 +84,7 @@ func main() {
 		return
 	}
 
-	config := &Config{SourceHost: "0.0.0.0:3456", WebHost: "0.0.0.0:8080", UaaVerificationKeyFile: *uaaVerificationKeyFile}
+	config := &Config{SourcePort: 3456, WebPort: "8080", UaaVerificationKeyFile: *uaaVerificationKeyFile}
 	configBytes, err := ioutil.ReadFile(*configFile)
 	if err != nil {
 		panic(fmt.Sprintf("Can not read config file [%s]: %s", *configFile, err))
@@ -128,13 +121,13 @@ func main() {
 		panic(err)
 	}
 
-	listener := agentlistener.NewAgentListener(config.SourceHost, logger)
+	listener := agentlistener.NewAgentListener(fmt.Sprintf("0.0.0.0:%d", config.SourcePort), logger)
 	incomingData := listener.Start()
 
 	authorizer := sink.NewLogAccessAuthorizer(config.decoder)
-	sinkServer := sink.NewSinkServer(incomingData, logger, config.WebHost, "/tail/", config.ApiHost, authorizer, 30*time.Second)
+	sinkServer := sink.NewSinkServer(incomingData, logger, fmt.Sprintf("0.0.0.0:%s", config.WebPort), "/tail/", config.ApiHost, authorizer)
 
-	cfc := &registrar.CfComponent{SystemDomain: config.SystemDomain, WebPort: config.port}
+	cfc := &registrar.CfComponent{SystemDomain: config.SystemDomain, WebPort: config.WebPort}
 	r := registrar.NewRegistrar(config.mbusClient, logger)
 	r.SubscribeToRouterStart(cfc)
 	r.RegisterWithRouter(cfc)
