@@ -10,8 +10,6 @@ packages=(
     loggregator/sink
     loggregator/agentlistener
     loggregator/registrar
-    instrumentor
-    govarz
     cfcomponent
 );
 

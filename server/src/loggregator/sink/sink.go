@@ -1,11 +1,10 @@
 package sink
 
 import (
+	"cfcomponent/instrumentation"
 	"code.google.com/p/go.net/websocket"
 	"github.com/cloudfoundry/gosteno"
-	"instrumentor"
 	"net"
-	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -31,10 +30,6 @@ func (sink *sink) clientIdentifier() string {
 }
 
 func (sink *sink) Run(listenerChannel chan []byte, sinkCloseChan chan chan []byte) {
-	sinkInstrumentor := instrumentor.NewInstrumentor(5*time.Second, gosteno.LOG_DEBUG, sink.logger)
-	stopChan := sinkInstrumentor.Instrument(sink)
-	defer sinkInstrumentor.StopInstrumentation(stopChan)
-
 	if sink.appId != "" {
 		sink.logger.Debugf("Adding Tail client %s for space [%s] and app [%s].", sink.clientAddress, sink.spaceId, sink.appId)
 	} else {
@@ -93,13 +88,11 @@ func (sink *sink) Run(listenerChannel chan []byte, sinkCloseChan chan chan []byt
 	}
 }
 
-func (sink *sink) DumpData() []instrumentor.PropVal {
-	return []instrumentor.PropVal{
-		instrumentor.PropVal{
-			"SentMessageCount for " + sink.clientIdentifier(),
-			strconv.FormatUint(atomic.LoadUint64(sink.sentMessageCount), 10)},
-		instrumentor.PropVal{
-			"SentByteCount for " + sink.clientIdentifier(),
-			strconv.FormatUint(atomic.LoadUint64(sink.sentByteCount), 10)},
+func (sink *sink) Emit() instrumentation.Context {
+	return instrumentation.Context{"cfSink",
+		[]instrumentation.Metric{
+			instrumentation.Metric{"SentMessageCount:" + sink.clientIdentifier(), atomic.LoadUint64(sink.sentMessageCount)},
+			instrumentation.Metric{"SentByteCount:" + sink.clientIdentifier(), atomic.LoadUint64(sink.sentByteCount)},
+		},
 	}
 }

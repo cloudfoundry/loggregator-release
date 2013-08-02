@@ -1,16 +1,15 @@
 package sink
 
 import (
+	"cfcomponent/instrumentation"
 	"code.google.com/p/go.net/websocket"
 	"code.google.com/p/gogoprotobuf/proto"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
-	"instrumentor"
 	"logMessage"
 	"net/http"
 	"net/url"
 	"regexp"
-	"strconv"
 	"time"
 )
 
@@ -119,10 +118,6 @@ func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 }
 
 func (sinkServer *sinkServer) Start() {
-	sinkServerInstrumentor := instrumentor.NewInstrumentor(5*time.Second, gosteno.LOG_DEBUG, sinkServer.logger)
-	stopChan := sinkServerInstrumentor.Instrument(sinkServer)
-	defer sinkServerInstrumentor.StopInstrumentation(stopChan)
-
 	go sinkServer.relayMessagesToAllSinks()
 
 	sinkServer.logger.Infof("Listening on port %s", sinkServer.listenHost)
@@ -133,8 +128,11 @@ func (sinkServer *sinkServer) Start() {
 	}
 }
 
-func (sinkServer *sinkServer) DumpData() []instrumentor.PropVal {
-	return []instrumentor.PropVal{
-		instrumentor.PropVal{"NumberOfSinks", strconv.Itoa(sinkServer.listenerChannels.NumberOfChannels())},
+func (sinkServer *sinkServer) Emit() instrumentation.Context {
+	return instrumentation.Context{
+		Name: "sinkServer",
+		Metrics: []instrumentation.Metric{
+			instrumentation.Metric{"NumberOfSinks", sinkServer.listenerChannels.NumberOfChannels()},
+		},
 	}
 }

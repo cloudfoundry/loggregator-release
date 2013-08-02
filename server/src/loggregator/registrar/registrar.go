@@ -21,7 +21,7 @@ func NewRegistrar(mBusClient mbus.MessageBus, logger *gosteno.Logger) *registrar
 	return &registrar{mBusClient: mBusClient, Logger: logger}
 }
 
-func (r *registrar) AnnounceComponent(cfc *cfcomponent.Component) error {
+func (r *registrar) AnnounceComponent(cfc cfcomponent.Component) error {
 	json, err := json.Marshal(NewAnnounceComponentMessage(cfc))
 	if err != nil {
 		return err
@@ -31,7 +31,7 @@ func (r *registrar) AnnounceComponent(cfc *cfcomponent.Component) error {
 	return nil
 }
 
-func (r *registrar) SubscribeToComponentDiscover(cfc *cfcomponent.Component) error {
+func (r *registrar) SubscribeToComponentDiscover(cfc cfcomponent.Component) error {
 	r.mBusClient.RespondToChannel(DiscoverComponentMessageSubject, func(msg []byte) []byte {
 		json, err := json.Marshal(NewAnnounceComponentMessage(cfc))
 		if err != nil {
@@ -85,7 +85,7 @@ func (r *registrar) SubscribeToRouterStart(cfc *cfcomponent.Component) (err erro
 	return err
 }
 
-func (r *registrar) KeepRegisteringWithRouter(cfc *cfcomponent.Component) {
+func (r *registrar) KeepRegisteringWithRouter(cfc cfcomponent.Component) {
 	go func() {
 		for {
 			err := r.publishRouterMessage(cfc, RouterRegisterMessageSubject)
@@ -98,7 +98,7 @@ func (r *registrar) KeepRegisteringWithRouter(cfc *cfcomponent.Component) {
 	}()
 }
 
-func (r *registrar) UnregisterFromRouter(cfc *cfcomponent.Component) {
+func (r *registrar) UnregisterFromRouter(cfc cfcomponent.Component) {
 	err := r.publishRouterMessage(cfc, RouterUnregisterMessageSubject)
 	if err != nil {
 		r.Error(err.Error())
@@ -106,7 +106,7 @@ func (r *registrar) UnregisterFromRouter(cfc *cfcomponent.Component) {
 	r.Info("Unregistered from router")
 }
 
-func (r *registrar) publishRouterMessage(cfc *cfcomponent.Component, subject string) error {
+func (r *registrar) publishRouterMessage(cfc cfcomponent.Component, subject string) error {
 	full_hostname := loggregatorHostname + "." + cfc.SystemDomain
 	message := &RouterMessage{
 		Host: cfc.IpAddress,

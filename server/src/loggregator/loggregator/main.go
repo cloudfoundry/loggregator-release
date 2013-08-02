@@ -2,14 +2,13 @@ package main
 
 import (
 	"cfcomponent"
+	"cfcomponent/instrumentation"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/gosteno"
-	vcap "govarz"
-	"instrumentor"
 	"io/ioutil"
 	"loggregator/agentlistener"
 	"loggregator/registrar"
@@ -133,48 +132,32 @@ func main() {
 	incomingData := listener.Start()
 
 	authorizer := sink.NewLogAccessAuthorizer(config.decoder)
-	sinkServer := sink.NewSinkServer(incomingData, logger, fmt.Sprintf("0.0.0.0:%d", config.WebPort), "/tail/", config.ApiHost, authorizer)
+	sinkServer := sink.NewSinkServer(incomingData, logger, fmt.Sprintf("0.0.0.0:%d", config.WebPort), "/tail/", config.ApiHost, authorizer, 30*time.Second)
 
-	ip, err := vcap.LocalIP()
+	cfc, err := cfcomponent.NewComponent(
+		config.SystemDomain,
+		config.WebPort,
+		"LoggregatorServer",
+		0,
+		&LoggregatorServerHealthMonitor{},
+		config.VarzPort,
+		[]string{config.VarzUser, config.VarzPass},
+		[]instrumentation.Instrumentable{listener},
+	)
+
 	if err != nil {
-		panic("Could not determine local ip address.")
-	}
-
-	cfc := &cfcomponent.Component{
-		IpAddress:         ip,
-		SystemDomain:      config.SystemDomain,
-		WebPort:           config.WebPort,
-		Type:              "LoggregatorServer",
-		Index:             0,
-		HealthMonitor:     &LoggregatorServerHealthMonitor{},
-		StatusPort:        config.VarzPort,
-		StatusCredentials: []string{config.VarzUser, config.VarzPass},
+		panic(err)
 	}
 
 	r := registrar.NewRegistrar(config.mbusClient, logger)
-	r.SubscribeToRouterStart(cfc)
-	r.RegisterWithRouter(cfc)
+	r.SubscribeToRouterStart(&cfc)
+	r.RegisterWithRouter(&cfc)
 	r.KeepRegisteringWithRouter(cfc)
 
 	r.SubscribeToComponentDiscover(cfc)
 	r.AnnounceComponent(cfc)
 
-	cfc.StartHealthz()
-
-	varz := &vcap.Varz{
-		UniqueVarz: instrumentor.NewVarzStats([]instrumentor.Instrumentable{listener}),
-	}
-
-	component := &vcap.VcapComponent{
-		Type:        "LoggregatorServer",
-		Index:       0,
-		Host:        fmt.Sprintf("0.0.0.0:%d", config.VarzPort),
-		Credentials: []string{config.VarzUser, config.VarzPass},
-		Config:      nil,
-		Varz:        varz,
-		InfoRoutes:  nil,
-	}
-	vcap.StartComponent(component)
+	cfc.StartMonitoringEndpoints()
 
 	go sinkServer.Start()
 

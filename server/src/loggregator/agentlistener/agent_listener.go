@@ -1,12 +1,10 @@
 package agentlistener
 
 import (
+	"cfcomponent/instrumentation"
 	"github.com/cloudfoundry/gosteno"
-	"instrumentor"
 	"net"
-	"strconv"
 	"sync/atomic"
-	"time"
 )
 
 type agentListener struct {
@@ -29,9 +27,6 @@ func (agentListener *agentListener) Start() chan []byte {
 		panic(err)
 	}
 
-	agentInstrumentor := instrumentor.NewInstrumentor(5*time.Second, gosteno.LOG_DEBUG, agentListener.Logger)
-	stopChan := agentInstrumentor.Instrument(agentListener)
-
 	go func() {
 		readBuffer := make([]byte, 65535) //buffer with size = max theoretical UDP size
 
@@ -49,16 +44,16 @@ func (agentListener *agentListener) Start() chan []byte {
 			atomic.AddUint64(agentListener.receivedByteCount, uint64(readCount))
 			agentListener.dataChannel <- readData
 		}
-
-		agentInstrumentor.StopInstrumentation(stopChan)
 	}()
 	return agentListener.dataChannel
 }
 
-func (agentListener *agentListener) DumpData() []instrumentor.PropVal {
-	return []instrumentor.PropVal{
-		instrumentor.PropVal{"CurrentBufferCount", strconv.Itoa(len(agentListener.dataChannel))},
-		instrumentor.PropVal{"ReceivedMessageCount", strconv.FormatUint(atomic.LoadUint64(agentListener.receivedMessageCount), 10)},
-		instrumentor.PropVal{"ReceivedByteCount", strconv.FormatUint(atomic.LoadUint64(agentListener.receivedByteCount), 10)},
+func (agentListener *agentListener) Emit() instrumentation.Context {
+	return instrumentation.Context{"agentListener",
+		[]instrumentation.Metric{
+			instrumentation.Metric{"CurrentBufferCount", len(agentListener.dataChannel)},
+			instrumentation.Metric{"ReceivedMessageCount", atomic.LoadUint64(agentListener.receivedMessageCount)},
+			instrumentation.Metric{"ReceivedByteCount", atomic.LoadUint64(agentListener.receivedByteCount)},
+		},
 	}
 }

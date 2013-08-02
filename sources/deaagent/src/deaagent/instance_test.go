@@ -1,6 +1,7 @@
 package deaagent
 
 import (
+	"cfcomponent/instrumentation"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"logMessage"
@@ -23,18 +24,12 @@ type MockLoggregatorClient struct {
 	received chan *[]byte
 }
 
-func (m *MockLoggregatorClient) Send(data []byte) {
+func (m MockLoggregatorClient) Send(data []byte) {
 	m.received <- &data
 }
 
-func (m *MockLoggregatorClient) CurrentBufferCount() int {
-	return 0
-}
-func (m *MockLoggregatorClient) ReceivedMessageCount() uint64 {
-	return 0
-}
-func (m *MockLoggregatorClient) SentMessageCount() uint64 {
-	return 0
+func (m MockLoggregatorClient) Emit() instrumentation.Context {
+	return instrumentation.Context{}
 }
 
 func TestThatWeListenToStdOutUnixSocket(t *testing.T) {

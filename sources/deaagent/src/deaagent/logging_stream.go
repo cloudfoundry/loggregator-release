@@ -1,15 +1,14 @@
 package deaagent
 
 import (
+	"cfcomponent/instrumentation"
 	"code.google.com/p/gogoprotobuf/proto"
 	"deaagent/loggregatorclient"
 	"github.com/cloudfoundry/gosteno"
-	"instrumentor"
 	"logMessage"
 	"net"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"sync/atomic"
 	"time"
 )
@@ -28,9 +27,6 @@ func newLoggingStream(inst *instance, loggregatorClient loggregatorclient.Loggre
 }
 
 func (ls *loggingStream) listen() {
-	lsInstrumentor := instrumentor.NewInstrumentor(5*time.Second, gosteno.LOG_DEBUG, ls.logger)
-	stopChan := lsInstrumentor.Instrument(ls)
-
 	newLogMessage := func(message []byte) *logMessage.LogMessage {
 		currentTime := time.Now()
 		sourceType := logMessage.LogMessage_DEA
@@ -49,7 +45,6 @@ func (ls *loggingStream) listen() {
 	}
 
 	go func() {
-		defer lsInstrumentor.StopInstrumentation(stopChan)
 
 		connection, err := socket(ls.messageType)
 		if err != nil {
@@ -85,13 +80,12 @@ func (ls *loggingStream) listen() {
 	}()
 }
 
-func (ls *loggingStream) DumpData() []instrumentor.PropVal {
-	messagesProperty := "ReceivedMessageCount from " + ls.inst.wardenContainerPath + " type " + socketName(ls.messageType)
-	bytesProperty := "ReceivedByteCount from " + ls.inst.wardenContainerPath + " type " + socketName(ls.messageType)
-
-	return []instrumentor.PropVal{
-		instrumentor.PropVal{messagesProperty, strconv.FormatUint(atomic.LoadUint64(ls.messagesReceived), 10)},
-		instrumentor.PropVal{bytesProperty, strconv.FormatUint(atomic.LoadUint64(ls.bytesReceived), 10)},
+func (ls *loggingStream) Emit() instrumentation.Context {
+	return instrumentation.Context{"loggingStream:" + ls.inst.wardenContainerPath + " type " + socketName(ls.messageType),
+		[]instrumentation.Metric{
+			instrumentation.Metric{"ReceivedMessageCount", atomic.LoadUint64(ls.messagesReceived)},
+			instrumentation.Metric{"ReceivedByteCount", atomic.LoadUint64(ls.bytesReceived)},
+		},
 	}
 }
 

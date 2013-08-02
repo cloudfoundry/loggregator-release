@@ -26,7 +26,7 @@ type RouterMessage struct {
 	Uris []string `json:"uris"`
 }
 
-func NewAnnounceComponentMessage(cfc *cfcomponent.Component) (message *AnnounceComponentMessage) {
+func NewAnnounceComponentMessage(cfc cfcomponent.Component) (message *AnnounceComponentMessage) {
 	message = &AnnounceComponentMessage{
 		Type:        cfc.Type,
 		Index:       cfc.Index,

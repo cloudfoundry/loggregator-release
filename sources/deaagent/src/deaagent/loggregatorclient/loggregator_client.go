@@ -1,15 +1,14 @@
 package loggregatorclient
 
 import (
+	"cfcomponent/instrumentation"
 	"github.com/cloudfoundry/gosteno"
-	"instrumentor"
 	"net"
-	"strconv"
 	"sync/atomic"
-	"time"
 )
 
 type LoggregatorClient interface {
+	instrumentation.Instrumentable
 	Send([]byte)
 }
 
@@ -25,9 +24,6 @@ func NewLoggregatorClient(loggregatorAddress string, logger *gosteno.Logger, buf
 	loggregatorClient := &udpLoggregatorClient{receivedMessageCount: new(uint64), sentMessageCount: new(uint64),
 		receivedByteCount: new(uint64), sentByteCount: new(uint64)}
 
-	lcInstrumentor := instrumentor.NewInstrumentor(5*time.Second, gosteno.LOG_DEBUG, logger)
-	stopChan := lcInstrumentor.Instrument(loggregatorClient)
-
 	connection, err := net.Dial("udp", loggregatorAddress)
 	if err != nil {
 		logger.Fatalf("Error resolving loggregator address %s, %s", loggregatorAddress, err)
@@ -36,7 +32,6 @@ func NewLoggregatorClient(loggregatorAddress string, logger *gosteno.Logger, buf
 	loggregatorClient.sendChannel = make(chan []byte, bufferSize)
 
 	go func() {
-		defer lcInstrumentor.StopInstrumentation(stopChan)
 		for {
 			dataToSend := <-loggregatorClient.sendChannel
 			if len(dataToSend) > 0 {
@@ -62,12 +57,14 @@ func (loggregatorClient *udpLoggregatorClient) Send(data []byte) {
 	loggregatorClient.sendChannel <- data
 }
 
-func (loggregatorClient *udpLoggregatorClient) DumpData() []instrumentor.PropVal {
-	return []instrumentor.PropVal{
-		instrumentor.PropVal{"CurrentBufferCount", strconv.Itoa(len(loggregatorClient.sendChannel))},
-		instrumentor.PropVal{"ReceivedMessageCount", strconv.FormatUint(atomic.LoadUint64(loggregatorClient.receivedMessageCount), 10)},
-		instrumentor.PropVal{"SentMessageCount", strconv.FormatUint(atomic.LoadUint64(loggregatorClient.sentMessageCount), 10)},
-		instrumentor.PropVal{"ReceivedByteCount", strconv.FormatUint(atomic.LoadUint64(loggregatorClient.receivedByteCount), 10)},
-		instrumentor.PropVal{"SentByteCount", strconv.FormatUint(atomic.LoadUint64(loggregatorClient.sentByteCount), 10)},
+func (loggregatorClient *udpLoggregatorClient) Emit() instrumentation.Context {
+	return instrumentation.Context{"loggregatorClient",
+		[]instrumentation.Metric{
+			instrumentation.Metric{"CurrentBufferCount", len(loggregatorClient.sendChannel)},
+			instrumentation.Metric{"ReceivedMessageCount", atomic.LoadUint64(loggregatorClient.receivedMessageCount)},
+			instrumentation.Metric{"SentMessageCount", atomic.LoadUint64(loggregatorClient.sentMessageCount)},
+			instrumentation.Metric{"ReceivedByteCount", atomic.LoadUint64(loggregatorClient.receivedByteCount)},
+			instrumentation.Metric{"SentByteCount", atomic.LoadUint64(loggregatorClient.sentByteCount)},
+		},
 	}
 }

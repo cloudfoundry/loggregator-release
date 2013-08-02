@@ -2,6 +2,7 @@ package main
 
 import (
 	"cfcomponent"
+	"cfcomponent/instrumentation"
 	"deaagent"
 	"deaagent/loggregatorclient"
 	"encoding/json"
@@ -9,8 +10,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
-	vcap "govarz"
-	"instrumentor"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -103,39 +102,21 @@ func main() {
 
 	agent := deaagent.NewAgent(*instancesJsonFilePath, logger)
 
-	instrumentable, ok := loggregatorClient.(instrumentor.Instrumentable)
+	cfc, err := cfcomponent.NewComponent(
+		"",
+		0,
+		"LoggregatorServer",
+		0,
+		&DeaAgentHealthMonitor{},
+		config.VarzPort,
+		[]string{config.VarzUser, config.VarzPass},
+		[]instrumentation.Instrumentable{loggregatorClient},
+	)
 
-	if !ok {
-		panic(fmt.Sprintf("loggregatorClient cannot be converted to instrumentor.Instrumentable"))
+	if err != nil {
+		panic(err)
 	}
 
-	cfc := &cfcomponent.Component{
-		IpAddress:         "0.0.0.0",
-		SystemDomain:      "",
-		WebPort:           0,
-		Type:              "LoggregatorServer",
-		Index:             0,
-		HealthMonitor:     &DeaAgentHealthMonitor{},
-		StatusPort:        config.VarzPort,
-		StatusCredentials: []string{config.VarzUser, config.VarzPass},
-	}
-
-	cfc.StartHealthz()
-
-	varz := &vcap.Varz{
-		UniqueVarz: instrumentor.NewVarzStats([]instrumentor.Instrumentable{instrumentable}),
-	}
-
-	component := &vcap.VcapComponent{
-		Type:        "Loggregator Server",
-		Index:       0,
-		Host:        fmt.Sprintf("0.0.0.0:%d", config.VarzPort),
-		Credentials: []string{config.VarzUser, config.VarzPass},
-		Config:      nil,
-		Varz:        varz,
-		InfoRoutes:  nil,
-	}
-	vcap.StartComponent(component)
-
+	cfc.StartMonitoringEndpoints()
 	agent.Start(loggregatorClient)
 }

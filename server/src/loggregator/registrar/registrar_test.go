@@ -51,7 +51,7 @@ func TestRegisterWithRouter(t *testing.T) {
 }
 
 func TestAnnounceComponent(t *testing.T) {
-	cfc := &cfcomponent.Component{
+	cfc := cfcomponent.Component{
 		IpAddress:         "1.2.3.4",
 		Type:              "Loggregator Server",
 		Index:             0,
@@ -87,7 +87,7 @@ func TestAnnounceComponent(t *testing.T) {
 }
 
 func TestSubscribeToComponentDiscover(t *testing.T) {
-	cfc := &cfcomponent.Component{
+	cfc := cfcomponent.Component{
 		IpAddress:         "1.2.3.4",
 		Type:              "Loggregator Server",
 		Index:             0,
@@ -126,7 +126,7 @@ func TestKeepRegisteringWithRouter(t *testing.T) {
 	routerReceivedChannel := make(chan []byte)
 	fakeRouter(mbusClient, routerReceivedChannel)
 
-	cfc := &cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083, IpAddress: "13.12.14.15"}
+	cfc := cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083, IpAddress: "13.12.14.15"}
 	registrar := NewRegistrar(mbusClient, gosteno.NewLogger("TestLogger"))
 	cfc.RegisterInterval = 50 * time.Millisecond
 	registrar.KeepRegisteringWithRouter(cfc)
@@ -177,7 +177,7 @@ func TestUnregister(t *testing.T) {
 	routerReceivedChannel := make(chan []byte)
 	fakeRouter(mbusClient, routerReceivedChannel)
 
-	cfc := &cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083, IpAddress: "13.12.14.15"}
+	cfc := cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083, IpAddress: "13.12.14.15"}
 	registrar := NewRegistrar(mbusClient, gosteno.NewLogger("TestLogger"))
 	registrar.UnregisterFromRouter(cfc)
 
