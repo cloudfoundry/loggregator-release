@@ -1,6 +1,9 @@
 package registrar
 
-import "fmt"
+import (
+	"cfcomponent"
+	"fmt"
+)
 
 const AnnounceComponentMessageSubject = "vcap.component.announce"
 const DiscoverComponentMessageSubject = "vcap.component.discover"
@@ -23,7 +26,7 @@ type RouterMessage struct {
 	Uris []string `json:"uris"`
 }
 
-func NewAnnounceComponentMessage(cfc *CfComponent) (message *AnnounceComponentMessage) {
+func NewAnnounceComponentMessage(cfc *cfcomponent.Component) (message *AnnounceComponentMessage) {
 	message = &AnnounceComponentMessage{
 		Type:        cfc.Type,
 		Index:       cfc.Index,

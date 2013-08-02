@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cfcomponent"
 	"deaagent"
 	"deaagent/loggregatorclient"
 	"encoding/json"
@@ -16,7 +17,7 @@ import (
 )
 
 type Config struct {
-	VarzPort           int
+	VarzPort           uint32
 	VarzUser           string
 	VarzPass           string
 	LoggregatorAddress string
@@ -42,6 +43,13 @@ var instancesJsonFilePath = flag.String("instancesFile", "/var/vcap/data/dea_nex
 
 const versionNumber = `0.0.TRAVIS_BUILD_NUMBER`
 const gitSha = `TRAVIS_COMMIT`
+
+type DeaAgentHealthMonitor struct {
+}
+
+func (hm DeaAgentHealthMonitor) Ok() bool {
+	return true
+}
 
 func main() {
 	flag.Parse()
@@ -101,6 +109,19 @@ func main() {
 		panic(fmt.Sprintf("loggregatorClient cannot be converted to instrumentor.Instrumentable"))
 	}
 
+	cfc := &cfcomponent.Component{
+		IpAddress:         "0.0.0.0",
+		SystemDomain:      "",
+		WebPort:           0,
+		Type:              "LoggregatorServer",
+		Index:             0,
+		HealthMonitor:     &DeaAgentHealthMonitor{},
+		StatusPort:        config.VarzPort,
+		StatusCredentials: []string{config.VarzUser, config.VarzPass},
+	}
+
+	cfc.StartHealthz()
+
 	varz := &vcap.Varz{
 		UniqueVarz: instrumentor.NewVarzStats([]instrumentor.Instrumentable{instrumentable}),
 	}
@@ -112,7 +133,6 @@ func main() {
 		Credentials: []string{config.VarzUser, config.VarzPass},
 		Config:      nil,
 		Varz:        varz,
-		Healthz:     &vcap.Healthz{},
 		InfoRoutes:  nil,
 	}
 	vcap.StartComponent(component)

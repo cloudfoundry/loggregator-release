@@ -12,6 +12,7 @@ packages=(
     loggregator/registrar
     instrumentor
     govarz
+    cfcomponent
 );
 
 for package in "${packages[@]}"

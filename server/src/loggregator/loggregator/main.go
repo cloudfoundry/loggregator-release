@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cfcomponent"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -76,6 +77,13 @@ var uaaVerificationKeyFile = flag.String("tokenFile", "config/uaa_token.pub", "L
 const versionNumber = `0.0.TRAVIS_BUILD_NUMBER`
 const gitSha = `TRAVIS_COMMIT`
 
+type LoggregatorServerHealthMonitor struct {
+}
+
+func (hm LoggregatorServerHealthMonitor) Ok() bool {
+	return true
+}
+
 func main() {
 	flag.Parse()
 
@@ -132,12 +140,13 @@ func main() {
 		panic("Could not determine local ip address.")
 	}
 
-	cfc := &registrar.CfComponent{
+	cfc := &cfcomponent.Component{
 		IpAddress:         ip,
 		SystemDomain:      config.SystemDomain,
 		WebPort:           config.WebPort,
 		Type:              "LoggregatorServer",
 		Index:             0,
+		HealthMonitor:     &LoggregatorServerHealthMonitor{},
 		StatusPort:        config.VarzPort,
 		StatusCredentials: []string{config.VarzUser, config.VarzPass},
 	}
@@ -150,6 +159,8 @@ func main() {
 	r.SubscribeToComponentDiscover(cfc)
 	r.AnnounceComponent(cfc)
 
+	cfc.StartHealthz()
+
 	varz := &vcap.Varz{
 		UniqueVarz: instrumentor.NewVarzStats([]instrumentor.Instrumentable{listener}),
 	}
@@ -161,7 +172,6 @@ func main() {
 		Credentials: []string{config.VarzUser, config.VarzPass},
 		Config:      nil,
 		Varz:        varz,
-		Healthz:     &vcap.Healthz{},
 		InfoRoutes:  nil,
 	}
 	vcap.StartComponent(component)

@@ -10,7 +10,6 @@ import (
 )
 
 var Component VcapComponent
-var healthz *Healthz
 var varz *Varz
 
 var procStat *ProcessStatus
@@ -23,20 +22,12 @@ type VcapComponent struct {
 	Credentials []string                  `json:"credentials"`
 	Config      interface{}               `json:"config"`
 	Varz        *Varz                     `json:"-"`
-	Healthz     *Healthz                  `json:"-"`
 	InfoRoutes  map[string]json.Marshaler `json:"-"`
 
 	// These fields are automatically generated
 	UUID   string   `json:"uuid"`
 	Start  Time     `json:"start"`
 	Uptime Duration `json:"uptime"`
-}
-
-func UpdateHealthz() *Healthz {
-	// lock and unlock immediately to determine if we are in deadlock state
-	healthz.LockableObject.Lock()
-	healthz.LockableObject.Unlock()
-	return healthz
 }
 
 func UpdateVarz() *Varz {
@@ -85,8 +76,6 @@ func StartComponent(c *VcapComponent) {
 
 	procStat = NewProcessStatus()
 
-	healthz = Component.Healthz
-
 	go c.ListenAndServe()
 }
 
@@ -109,13 +98,6 @@ func Register(c *VcapComponent, mbusClient mbus.MessageBus) {
 
 func (c *VcapComponent) ListenAndServe() {
 	hs := http.NewServeMux()
-
-//	hs.HandleFunc("/healthz", func(w http.ResponseWriter, req *http.Request) {
-//		w.Header().Set("Content-Type", "text/plain")
-//		w.WriteHeader(http.StatusOK)
-//
-//		fmt.Fprintf(w, UpdateHealthz().Value())
-//	})
 
 	hs.HandleFunc("/varz", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

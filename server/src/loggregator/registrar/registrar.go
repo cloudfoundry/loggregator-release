@@ -1,27 +1,14 @@
 package registrar
 
 import (
+	"cfcomponent"
 	"encoding/json"
 	"errors"
 	"fmt"
 	mbus "github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/gosteno"
-	"sync"
 	"time"
 )
-
-type CfComponent struct {
-	sync.RWMutex
-	IpAddress         string
-	SystemDomain      string
-	WebPort           uint32
-	RegisterInterval  time.Duration `json:"minimumRegisterIntervalInSeconds"`
-	Type              string        //Used by the collector to find data processing class
-	Index             uint
-	UUID              string
-	StatusPort        uint32
-	StatusCredentials []string
-}
 
 const loggregatorHostname = "loggregator"
 
@@ -34,7 +21,7 @@ func NewRegistrar(mBusClient mbus.MessageBus, logger *gosteno.Logger) *registrar
 	return &registrar{mBusClient: mBusClient, Logger: logger}
 }
 
-func (r *registrar) AnnounceComponent(cfc *CfComponent) error {
+func (r *registrar) AnnounceComponent(cfc *cfcomponent.Component) error {
 	json, err := json.Marshal(NewAnnounceComponentMessage(cfc))
 	if err != nil {
 		return err
@@ -44,7 +31,7 @@ func (r *registrar) AnnounceComponent(cfc *CfComponent) error {
 	return nil
 }
 
-func (r *registrar) SubscribeToComponentDiscover(cfc *CfComponent) error {
+func (r *registrar) SubscribeToComponentDiscover(cfc *cfcomponent.Component) error {
 	r.mBusClient.RespondToChannel(DiscoverComponentMessageSubject, func(msg []byte) []byte {
 		json, err := json.Marshal(NewAnnounceComponentMessage(cfc))
 		if err != nil {
@@ -56,7 +43,7 @@ func (r *registrar) SubscribeToComponentDiscover(cfc *CfComponent) error {
 	return nil
 }
 
-func (r *registrar) RegisterWithRouter(cfc *CfComponent) (err error) {
+func (r *registrar) RegisterWithRouter(cfc *cfcomponent.Component) (err error) {
 	response := make(chan []byte)
 
 	r.mBusClient.Request(RouterGreetMessageSubject, []byte{}, func(payload []byte) {
@@ -81,7 +68,7 @@ func (r *registrar) RegisterWithRouter(cfc *CfComponent) (err error) {
 	return err
 }
 
-func (r *registrar) SubscribeToRouterStart(cfc *CfComponent) (err error) {
+func (r *registrar) SubscribeToRouterStart(cfc *cfcomponent.Component) (err error) {
 	r.mBusClient.Subscribe(RouterStartMessageSubject, func(payload []byte) {
 		cfc.Lock()
 		defer cfc.Unlock()
@@ -98,7 +85,7 @@ func (r *registrar) SubscribeToRouterStart(cfc *CfComponent) (err error) {
 	return err
 }
 
-func (r *registrar) KeepRegisteringWithRouter(cfc *CfComponent) {
+func (r *registrar) KeepRegisteringWithRouter(cfc *cfcomponent.Component) {
 	go func() {
 		for {
 			err := r.publishRouterMessage(cfc, RouterRegisterMessageSubject)
@@ -111,7 +98,7 @@ func (r *registrar) KeepRegisteringWithRouter(cfc *CfComponent) {
 	}()
 }
 
-func (r *registrar) UnregisterFromRouter(cfc *CfComponent) {
+func (r *registrar) UnregisterFromRouter(cfc *cfcomponent.Component) {
 	err := r.publishRouterMessage(cfc, RouterUnregisterMessageSubject)
 	if err != nil {
 		r.Error(err.Error())
@@ -119,7 +106,7 @@ func (r *registrar) UnregisterFromRouter(cfc *CfComponent) {
 	r.Info("Unregistered from router")
 }
 
-func (r *registrar) publishRouterMessage(cfc *CfComponent, subject string) error {
+func (r *registrar) publishRouterMessage(cfc *cfcomponent.Component, subject string) error {
 	full_hostname := loggregatorHostname + "." + cfc.SystemDomain
 	message := &RouterMessage{
 		Host: cfc.IpAddress,
