@@ -142,7 +142,7 @@ func main() {
 		&LoggregatorServerHealthMonitor{},
 		config.VarzPort,
 		[]string{config.VarzUser, config.VarzPass},
-		[]instrumentation.Instrumentable{listener},
+		[]instrumentation.Instrumentable{listener, sinkServer},
 	)
 
 	if err != nil {
