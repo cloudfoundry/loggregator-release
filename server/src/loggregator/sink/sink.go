@@ -91,8 +91,8 @@ func (sink *sink) Run(listenerChannel chan []byte, sinkCloseChan chan chan []byt
 func (sink *sink) Emit() instrumentation.Context {
 	return instrumentation.Context{"cfSink",
 		[]instrumentation.Metric{
-			instrumentation.Metric{"SentMessageCount:" + sink.clientIdentifier(), atomic.LoadUint64(sink.sentMessageCount)},
-			instrumentation.Metric{"SentByteCount:" + sink.clientIdentifier(), atomic.LoadUint64(sink.sentByteCount)},
+			instrumentation.Metric{"sentMessageCount:" + sink.clientIdentifier(), atomic.LoadUint64(sink.sentMessageCount)},
+			instrumentation.Metric{"sentByteCount:" + sink.clientIdentifier(), atomic.LoadUint64(sink.sentByteCount)},
 		},
 	}
 }

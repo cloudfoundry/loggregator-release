@@ -60,11 +60,11 @@ func (loggregatorClient *udpLoggregatorClient) Send(data []byte) {
 func (loggregatorClient *udpLoggregatorClient) Emit() instrumentation.Context {
 	return instrumentation.Context{"loggregatorClient",
 		[]instrumentation.Metric{
-			instrumentation.Metric{"CurrentBufferCount", len(loggregatorClient.sendChannel)},
-			instrumentation.Metric{"ReceivedMessageCount", atomic.LoadUint64(loggregatorClient.receivedMessageCount)},
-			instrumentation.Metric{"SentMessageCount", atomic.LoadUint64(loggregatorClient.sentMessageCount)},
-			instrumentation.Metric{"ReceivedByteCount", atomic.LoadUint64(loggregatorClient.receivedByteCount)},
-			instrumentation.Metric{"SentByteCount", atomic.LoadUint64(loggregatorClient.sentByteCount)},
+			instrumentation.Metric{"currentBufferCount", len(loggregatorClient.sendChannel)},
+			instrumentation.Metric{"receivedMessageCount", atomic.LoadUint64(loggregatorClient.receivedMessageCount)},
+			instrumentation.Metric{"sentMessageCount", atomic.LoadUint64(loggregatorClient.sentMessageCount)},
+			instrumentation.Metric{"receivedByteCount", atomic.LoadUint64(loggregatorClient.receivedByteCount)},
+			instrumentation.Metric{"sentByteCount", atomic.LoadUint64(loggregatorClient.sentByteCount)},
 		},
 	}
 }

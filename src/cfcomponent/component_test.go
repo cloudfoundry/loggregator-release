@@ -22,17 +22,6 @@ func (hm BadHealthMonitor) Ok() bool {
 	return false
 }
 
-//func init() {
-//	component := &Component{
-//		HealthMonitor:     GoodHealthMonitor{},
-//		StatusPort:        7876,
-//		Type: "loggregator",
-//		StatusCredentials: []string{"user", "pass"},
-//	}
-//
-//	component.StartMonitoringEndpoints()
-//}
-
 func TestGoodHealthzEndpoint(t *testing.T) {
 	component := &Component{
 		HealthMonitor:     GoodHealthMonitor{},
