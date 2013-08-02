@@ -11,6 +11,7 @@ packages=(
     loggregator/agentlistener
     loggregator/registrar
     instrumentor
+    govarz
 );
 
 for package in "${packages[@]}"
