@@ -13,6 +13,8 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"runtime/pprof"
+	"os/signal"
 )
 
 type Config struct {
@@ -117,6 +119,18 @@ func main() {
 		panic(err)
 	}
 
+	threadDumpChan := make(chan os.Signal)
+	signal.Notify(threadDumpChan, syscall.SIGUSR1)
+
 	cfc.StartMonitoringEndpoints()
-	agent.Start(loggregatorClient)
+	go agent.Start(loggregatorClient)
+
+	for {
+		select {
+		case <-threadDumpChan:
+			goRoutineProfiles := pprof.Lookup("goroutine")
+			goRoutineProfiles.WriteTo(os.Stdout, 2)
+		}
+	}
+
 }

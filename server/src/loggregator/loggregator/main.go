@@ -16,8 +16,10 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"runtime/pprof"
 	"strings"
 	"time"
+	"syscall"
 )
 
 type Config struct {
@@ -161,12 +163,20 @@ func main() {
 
 	go sinkServer.Start()
 
-	systemChan := make(chan os.Signal)
-	signal.Notify(systemChan, os.Kill)
+	killChan := make(chan os.Signal)
+	signal.Notify(killChan, os.Kill)
 
-	select {
-	case <-systemChan:
-		r.UnregisterFromRouter(cfc)
-		os.Exit(0)
+	threadDumpChan := make(chan os.Signal)
+	signal.Notify(threadDumpChan, syscall.SIGUSR1)
+
+	for {
+		select {
+		case <-killChan:
+			r.UnregisterFromRouter(cfc)
+			os.Exit(0)
+		case <-threadDumpChan:
+			goRoutineProfiles := pprof.Lookup("goroutine")
+			goRoutineProfiles.WriteTo(os.Stdout, 2)
+		}
 	}
 }
