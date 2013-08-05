@@ -18,8 +18,8 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"strings"
-	"time"
 	"syscall"
+	"time"
 )
 
 type Config struct {

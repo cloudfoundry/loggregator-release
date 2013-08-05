@@ -12,9 +12,10 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"io/ioutil"
 	"os"
-	"strings"
-	"runtime/pprof"
 	"os/signal"
+	"runtime/pprof"
+	"strings"
+	"syscall"
 )
 
 type Config struct {
