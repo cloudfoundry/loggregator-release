@@ -1,0 +1,11 @@
+{
+	"ApiHost": "localhost",
+	"SystemDomain": "localhost",
+	"NatsHost": "localhost",
+  	"NatsPort": 4222,
+  	"NatsUser": "nats",
+  	"NatsPass": "password",
+  	"VarzUser": "varz",
+  	"VarzPass": "password",
+  	"VarzPort": 8888
+}  
