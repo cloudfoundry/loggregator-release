@@ -70,7 +70,7 @@ func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 	}
 
 	if !sinkServer.authorize(sinkServer.apiHost, authToken, spaceId, appId, sinkServer.logger) {
-		message := fmt.Sprintf("User not authorized to access space [%s].", spaceId)
+		message := fmt.Sprintf("Auth token [%s] not authorized to access space [%s].", authToken, spaceId)
 		sinkServer.logger.Warn(message)
 		return
 	}
