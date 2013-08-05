@@ -218,16 +218,19 @@ func TestDropUnmarshallableMessage(t *testing.T) {
 	dataReadChannel <- mySpaceMarshalledMessage
 }
 
-func TestDropSinkWithoutApp(t *testing.T) {
+func TestDropSinkWithoutAppAndContinuesToWork(t *testing.T) {
 	AssertConnecitonFails(t, "8081", "/tail/")
+	TestThatItSends(t)
 }
 
-func TestDropSinkWithoutAuthorization(t *testing.T) {
+func TestDropSinkWithoutAuthorizationAndContinuesToWork(t *testing.T) {
 	AssertConnecitonFails(t, "8081", "/tail/spaces/mySpace/apps/myApp")
+	TestThatItSends(t)
 }
 
-func TestDropSinkWhenAuthorizationFails(t *testing.T) {
+func TestDropSinkWhenAuthorizationFailsAndContinuesToWork(t *testing.T) {
 	AssertConnecitonFails(t, "8081", "/tail/spaces/mySpace/apps/myApp?authorization=incorrectAuthToken")
+	TestThatItSends(t)
 }
 
 func TestKeepAlive(t *testing.T) {
