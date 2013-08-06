@@ -3,7 +3,6 @@ package main
 import (
 	"cfcomponent"
 	"cfcomponent/instrumentation"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -93,20 +92,15 @@ func main() {
 		return
 	}
 
-	config := &Config{SourcePort: 3456, WebPort: 8080, UaaVerificationKeyFile: *uaaVerificationKeyFile}
-	configBytes, err := ioutil.ReadFile(*configFile)
-	if err != nil {
-		panic(fmt.Sprintf("Can not read config file [%s]: %s", *configFile, err))
-	}
-	err = json.Unmarshal(configBytes, config)
-	if err != nil {
-		panic(fmt.Sprintf("Can not parse config file %s: %s", *configFile, err))
-	}
-
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "loggregator")
 
+	config := &Config{SourcePort: 3456, WebPort: 8080, UaaVerificationKeyFile: *uaaVerificationKeyFile}
+	err := cfcomponent.ReadConfigInto(config, *configFile)
+	if err != nil {
+		panic(err)
+	}
 	err = config.validate(logger)
 	if err != nil {
 		panic(err)

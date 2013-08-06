@@ -5,13 +5,11 @@ import (
 	"cfcomponent/instrumentation"
 	"deaagent"
 	"deaagent/loggregatorclient"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/gosteno"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"registrar"
@@ -83,13 +81,9 @@ func main() {
 
 	// ** Config Setup
 	config := &Config{}
-	configBytes, err := ioutil.ReadFile(*configFile)
+	err := cfcomponent.ReadConfigInto(config, *configFile)
 	if err != nil {
-		panic(fmt.Sprintf("Can not read config file [%s]: %s", *configFile, err))
-	}
-	err = json.Unmarshal(configBytes, config)
-	if err != nil {
-		panic(fmt.Sprintf("Can not parse config file [%s]: %s", *configFile, err))
+		panic(err)
 	}
 
 	err = config.validate(logger)
