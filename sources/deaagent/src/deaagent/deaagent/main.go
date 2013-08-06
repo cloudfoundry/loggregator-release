@@ -16,7 +16,6 @@ import (
 	"os/signal"
 	"registrar"
 	"runtime/pprof"
-	"strings"
 	"syscall"
 )
 
@@ -80,27 +79,7 @@ func main() {
 		return
 	}
 
-	// ** Steno Setup
-	level := gosteno.LOG_INFO
-
-	if *logLevel {
-		level = gosteno.LOG_DEBUG
-	}
-
-	loggingConfig := &gosteno.Config{
-		Sinks:     make([]gosteno.Sink, 1),
-		Level:     level,
-		Codec:     gosteno.NewJsonCodec(),
-		EnableLOC: true}
-	if strings.TrimSpace(*logFilePath) == "" {
-		loggingConfig.Sinks[0] = gosteno.NewIOSink(os.Stdout)
-	} else {
-		loggingConfig.Sinks[0] = gosteno.NewFileSink(*logFilePath)
-	}
-	gosteno.Init(loggingConfig)
-	logger := gosteno.NewLogger("deaagent")
-
-	// ** END Steno Seteup
+	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "deaagent")
 
 	// ** Config Setup
 	config := &Config{}

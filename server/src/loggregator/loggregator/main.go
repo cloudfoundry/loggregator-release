@@ -17,7 +17,6 @@ import (
 	"registrar"
 	"runtime"
 	"runtime/pprof"
-	"strings"
 	"syscall"
 	"time"
 )
@@ -106,25 +105,7 @@ func main() {
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	level := gosteno.LOG_INFO
-
-	if *logLevel {
-		level = gosteno.LOG_DEBUG
-	}
-
-	loggingConfig := &gosteno.Config{
-		Sinks:     make([]gosteno.Sink, 1),
-		Level:     level,
-		Codec:     gosteno.NewJsonCodec(),
-		EnableLOC: true}
-
-	if strings.TrimSpace(*logFilePath) == "" {
-		loggingConfig.Sinks[0] = gosteno.NewIOSink(os.Stdout)
-	} else {
-		loggingConfig.Sinks[0] = gosteno.NewFileSink(*logFilePath)
-	}
-	gosteno.Init(loggingConfig)
-	logger := gosteno.NewLogger("loggregator")
+	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "loggregator")
 
 	err = config.validate(logger)
 	if err != nil {
