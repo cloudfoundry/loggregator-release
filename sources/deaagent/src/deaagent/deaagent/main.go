@@ -9,10 +9,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/gosteno"
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"registrar"
 	"runtime/pprof"
 	"strings"
 	"syscall"
@@ -22,16 +24,32 @@ type Config struct {
 	VarzPort           uint32
 	VarzUser           string
 	VarzPass           string
+	NatsHost           string
+	NatsPort           int
+	NatsUser           string
+	NatsPass           string
 	LoggregatorAddress string
+	mbusClient         cfmessagebus.MessageBus
 }
 
-func (c *Config) validate() (err error) {
+func (c *Config) validate(logger *gosteno.Logger) (err error) {
 	if c.VarzPass == "" || c.VarzUser == "" || c.VarzPort == 0 {
 		return errors.New("Need VARZ username/password/port.")
 	}
 
 	if c.LoggregatorAddress == "" {
 		return errors.New("Need Loggregator address (host:port).")
+	}
+
+	c.mbusClient, err = cfmessagebus.NewMessageBus("NATS")
+	if err != nil {
+		return errors.New(fmt.Sprintf("Can not create message bus to NATS: %s", err))
+	}
+	c.mbusClient.Configure(c.NatsHost, c.NatsPort, c.NatsUser, c.NatsPass)
+	c.mbusClient.SetLogger(logger)
+	err = c.mbusClient.Connect()
+	if err != nil {
+		return errors.New(fmt.Sprintf("Could not connect to NATS: ", err.Error()))
 	}
 
 	return nil
@@ -61,24 +79,6 @@ func main() {
 		return
 	}
 
-	// ** Config Setup
-	config := &Config{}
-	configBytes, err := ioutil.ReadFile(*configFile)
-	if err != nil {
-		panic(fmt.Sprintf("Can not read config file [%s]: %s", *configFile, err))
-	}
-	err = json.Unmarshal(configBytes, config)
-	if err != nil {
-		panic(fmt.Sprintf("Can not parse config file [%s]: %s", *configFile, err))
-	}
-
-	err = config.validate()
-	if err != nil {
-		panic(err)
-	}
-
-	// ** END Config Setup
-
 	// ** Steno Setup
 	level := gosteno.LOG_INFO
 
@@ -101,6 +101,24 @@ func main() {
 
 	// ** END Steno Seteup
 
+	// ** Config Setup
+	config := &Config{}
+	configBytes, err := ioutil.ReadFile(*configFile)
+	if err != nil {
+		panic(fmt.Sprintf("Can not read config file [%s]: %s", *configFile, err))
+	}
+	err = json.Unmarshal(configBytes, config)
+	if err != nil {
+		panic(fmt.Sprintf("Can not parse config file [%s]: %s", *configFile, err))
+	}
+
+	err = config.validate(logger)
+	if err != nil {
+		panic(err)
+	}
+
+	// ** END Config Setup
+
 	loggregatorClient := loggregatorclient.NewLoggregatorClient(config.LoggregatorAddress, logger, 4096)
 
 	agent := deaagent.NewAgent(*instancesJsonFilePath, logger)
@@ -108,7 +126,7 @@ func main() {
 	cfc, err := cfcomponent.NewComponent(
 		"",
 		0,
-		"LoggregatorServer",
+		"LoggregatorDeaAgent",
 		0,
 		&DeaAgentHealthMonitor{},
 		config.VarzPort,
@@ -119,6 +137,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	r := registrar.NewRegistrar(config.mbusClient, logger)
+	r.SubscribeToComponentDiscover(cfc)
+	r.AnnounceComponent(cfc)
 
 	threadDumpChan := make(chan os.Signal)
 	signal.Notify(threadDumpChan, syscall.SIGUSR1)
