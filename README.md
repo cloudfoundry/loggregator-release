@@ -35,7 +35,6 @@ Started GET "/assets/rails.png" for 127.0.0.1 at 2013-04-05 13:14:58 -0700
 1. Loggregator collects STDOUT & STDERR from the customer's application.  This may require configuration on the developer's side.
 1. A Loggregator outage must not affect the running application.
 1. Loggregator gathers and stores logs in a best-effort manner.  While undesirable, losing the current buffer of application logs is acceptable.
-1. As much as possible, Loggregator should be disconnected from the rest of Cloud Foundry.  Ideally, it's deployable outside of Cloud Foundry, entirely.
 1. The 3rd party drain API should mimic Heroku's in order to reduce integration effort for our partners.  The Heroku drain API is simply remote syslog over TCP.
 
 ### Architecture
@@ -80,6 +79,19 @@ git submodule update --init
 
 ```
 bin/test
+```
+
+### Debugging
+
+Loggregator will dump information about the running goroutines to stdout if sent a `USR1` signal.
+
+```
+goroutine 1 [running]:
+runtime/pprof.writeGoroutineStacks(0xc2000bc3f0, 0xc200000008, 0xc200000001, 0xca0000c2001fcfc0)
+	/home/travis/.gvm/gos/go1.1.1/src/pkg/runtime/pprof/pprof.go:511 +0x7a
+runtime/pprof.writeGoroutine(0xc2000bc3f0, 0xc200000008, 0x2, 0xca74765c960d5c8f, 0x40bbf7, ...)
+	/home/travis/.gvm/gos/go1.1.1/src/pkg/runtime/pprof/pprof.go:500 +0x3a
+...
 ```
 
 #### Development binary builds
