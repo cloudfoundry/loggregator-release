@@ -143,11 +143,11 @@ func main() {
 	r.SubscribeToComponentDiscover(cfc)
 	r.AnnounceComponent(cfc)
 
-	threadDumpChan := make(chan os.Signal)
-	signal.Notify(threadDumpChan, syscall.SIGUSR1)
-
 	cfc.StartMonitoringEndpoints()
 	go agent.Start(loggregatorClient)
+
+	threadDumpChan := make(chan os.Signal)
+	signal.Notify(threadDumpChan, syscall.SIGUSR1)
 
 	for {
 		select {
