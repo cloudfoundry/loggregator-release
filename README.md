@@ -83,6 +83,7 @@ bin/test
 
 ### Debugging
 
+
 Loggregator will dump information about the running goroutines to stdout if sent a `USR1` signal.
 
 ```
