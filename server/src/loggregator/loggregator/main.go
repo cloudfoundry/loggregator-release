@@ -23,6 +23,7 @@ import (
 )
 
 type Config struct {
+	Index                  uint
 	ApiHost                string
 	UaaVerificationKeyFile string
 	SystemDomain           string
@@ -140,7 +141,7 @@ func main() {
 		config.SystemDomain,
 		config.WebPort,
 		"LoggregatorServer",
-		0,
+		config.Index,
 		&LoggregatorServerHealthMonitor{},
 		config.VarzPort,
 		[]string{config.VarzUser, config.VarzPass},

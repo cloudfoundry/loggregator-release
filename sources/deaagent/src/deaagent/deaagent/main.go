@@ -21,6 +21,7 @@ import (
 )
 
 type Config struct {
+	Index              uint
 	VarzPort           uint32
 	VarzUser           string
 	VarzPass           string
@@ -127,7 +128,7 @@ func main() {
 		"",
 		0,
 		"LoggregatorDeaAgent",
-		0,
+		config.Index,
 		&DeaAgentHealthMonitor{},
 		config.VarzPort,
 		[]string{config.VarzUser, config.VarzPass},
