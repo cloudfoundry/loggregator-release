@@ -9,7 +9,7 @@ packages=(
     loggregator/loggregator
     loggregator/sink
     loggregator/agentlistener
-    loggregator/registrar
+    registrar
     loggregator
     cfcomponent
 );
