@@ -45,7 +45,14 @@ func NewComponent(systemDomain string, webPort uint32, componentType string, ind
 }
 
 func (c Component) StartMonitoringEndpoints() {
-	healthzHandler := func(w http.ResponseWriter, req *http.Request) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", healthzHandlerFor(c))
+	mux.HandleFunc("/varz", varzHandlerFor(c))
+	go http.ListenAndServe(fmt.Sprintf("%s:%d", c.IpAddress, c.StatusPort), mux)
+}
+
+func healthzHandlerFor(c Component) func(w http.ResponseWriter, req *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
 		if c.HealthMonitor.Ok() {
@@ -54,8 +61,10 @@ func (c Component) StartMonitoringEndpoints() {
 			fmt.Fprintf(w, "bad")
 		}
 	}
+}
 
-	varzHandler := func(w http.ResponseWriter, req *http.Request) {
+func varzHandlerFor(c Component) func(w http.ResponseWriter, req *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
 		message := instrumentation.NewVarzMessage(c.Type, c.Instrumentables)
 
 		json, err := json.Marshal(message)
@@ -69,11 +78,6 @@ func (c Component) StartMonitoringEndpoints() {
 
 		w.Write(json)
 	}
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", healthzHandler)
-	mux.HandleFunc("/varz", varzHandler)
-	go http.ListenAndServe(fmt.Sprintf("%s:%d", c.IpAddress, c.StatusPort), mux)
 }
 
 func localIP() (string, error) {
