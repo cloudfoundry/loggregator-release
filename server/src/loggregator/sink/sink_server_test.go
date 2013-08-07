@@ -2,9 +2,7 @@ package sink
 
 import (
 	"code.google.com/p/go.net/websocket"
-	"github.com/cloudfoundry/gosteno"
 	"github.com/stretchr/testify/assert"
-	"strings"
 	"testhelpers"
 	"testing"
 	"time"
@@ -18,7 +16,7 @@ func init() {
 	// agent listener is unbuffered?
 	//	dataReadChannel = make(chan []byte, 10)
 	dataReadChannel = make(chan []byte, 10)
-	TestSinkServer = NewSinkServer(dataReadChannel, logger(), "localhost:8081", "/tail/", "http://localhost:9876", SuccessfulAuthorizer, 50*time.Millisecond)
+	TestSinkServer = NewSinkServer(dataReadChannel, logger(), "localhost:8081", "/tail/", "http://localhost:9876", testhelpers.SuccessfulAuthorizer, 50*time.Millisecond)
 	go TestSinkServer.Start()
 	time.Sleep(1 * time.Millisecond)
 }
@@ -41,16 +39,6 @@ func AssertConnecitonFails(t *testing.T, port string, path string, authToken str
 	if err == nil {
 		t.Errorf("Connection did not get closed.")
 	}
-}
-
-func SuccessfulAuthorizer(a, b, c, d string, l *gosteno.Logger) bool {
-	if b != "" {
-		authString := strings.Split(b, " ")
-		if len(authString) > 1 {
-			return authString[1] == "correctAuthorizationToken"
-		}
-	}
-	return false
 }
 
 func TestThatItSends(t *testing.T) {

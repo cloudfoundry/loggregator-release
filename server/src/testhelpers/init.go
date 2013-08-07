@@ -3,11 +3,23 @@ package testhelpers
 import (
 	"code.google.com/p/go.net/websocket"
 	"code.google.com/p/gogoprotobuf/proto"
+	"github.com/cloudfoundry/gosteno"
 	"github.com/stretchr/testify/assert"
 	"logMessage"
+	"strings"
 	"testing"
 	"time"
 )
+
+func SuccessfulAuthorizer(a, b, c, d string, l *gosteno.Logger) bool {
+	if b != "" {
+		authString := strings.Split(b, " ")
+		if len(authString) > 1 {
+			return authString[1] == "correctAuthorizationToken"
+		}
+	}
+	return false
+}
 
 func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string, authToken string) (*websocket.Conn, chan bool) {
 	dontKeepAliveChan := make(chan bool)

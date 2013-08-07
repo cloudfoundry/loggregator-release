@@ -6,27 +6,16 @@ import (
 	"loggregator/agentlistener"
 	"loggregator/sink"
 	"net"
-	"strings"
 	"testhelpers"
 	"testing"
 	"time"
 )
 
-func SuccessfulAuthorizer(a, b, c, d string, l *gosteno.Logger) bool {
-	if b != "" {
-		authString := strings.Split(b, " ")
-		if len(authString) > 1 {
-			return authString[1] == "correctAuthorizationToken"
-		}
-	}
-	return false
-}
-
 func TestEndtoEndMessage(t *testing.T) {
 	logger := gosteno.NewLogger("TestLogger")
 	listener := agentlistener.NewAgentListener("localhost:3456", logger)
 	dataChannel := listener.Start()
-	sinkServer := sink.NewSinkServer(dataChannel, logger, "localhost:8081", "/tail/", "http://localhost:9876", SuccessfulAuthorizer, 30*time.Second)
+	sinkServer := sink.NewSinkServer(dataChannel, logger, "localhost:8081", "/tail/", "http://localhost:9876", testhelpers.SuccessfulAuthorizer, 30*time.Second)
 	go sinkServer.Start()
 	time.Sleep(1 * time.Millisecond)
 
