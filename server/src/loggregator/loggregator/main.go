@@ -128,9 +128,15 @@ func main() {
 	}
 
 	r := registrar.NewRegistrar(config.mbusClient, logger)
-	r.RegisterWithRouter(&cfc)
+	err = r.RegisterWithRouter(&cfc)
+	if err != nil {
+		panic(err)
+	}
 
-	r.RegisterWithCollector(cfc)
+	err = r.RegisterWithCollector(cfc)
+	if err != nil {
+		panic(err)
+	}
 
 	cfc.StartMonitoringEndpoints()
 

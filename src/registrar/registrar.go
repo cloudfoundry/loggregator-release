@@ -33,7 +33,7 @@ func (r *registrar) RegisterWithRouter(cfc *cfcomponent.Component) error {
 }
 
 func (r *registrar) RegisterWithCollector(cfc cfcomponent.Component) (err error) {
-	r.announceComponent(cfc)
+	err = r.announceComponent(cfc)
 	r.subscribeToComponentDiscover(cfc)
 
 	return
@@ -49,7 +49,7 @@ func (r *registrar) announceComponent(cfc cfcomponent.Component) error {
 	return nil
 }
 
-func (r *registrar) subscribeToComponentDiscover(cfc cfcomponent.Component) error {
+func (r *registrar) subscribeToComponentDiscover(cfc cfcomponent.Component) {
 	r.mBusClient.RespondToChannel(DiscoverComponentMessageSubject, func(msg []byte) []byte {
 		json, err := json.Marshal(NewAnnounceComponentMessage(cfc))
 		if err != nil {
@@ -58,7 +58,7 @@ func (r *registrar) subscribeToComponentDiscover(cfc cfcomponent.Component) erro
 		}
 		return json
 	})
-	return nil
+	return
 }
 
 func (r *registrar) greetRouter(cfc *cfcomponent.Component) (err error) {

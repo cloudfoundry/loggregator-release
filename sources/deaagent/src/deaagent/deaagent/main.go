@@ -113,7 +113,10 @@ func main() {
 	}
 
 	r := registrar.NewRegistrar(config.mbusClient, logger)
-	r.RegisterWithCollector(cfc)
+	err = r.RegisterWithCollector(cfc)
+	if err != nil {
+		panic(err)
+	}
 
 	cfc.StartMonitoringEndpoints()
 	go agent.Start(loggregatorClient)
