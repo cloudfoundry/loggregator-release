@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"testhelpers"
 	"testing"
 )
 
@@ -62,7 +63,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	mockLoggregatorClient := new(MockLoggregatorClient)
 
 	mockLoggregatorClient.received = make(chan *[]byte)
-	instance.startListening(mockLoggregatorClient, logger())
+	instance.startListening(mockLoggregatorClient, testhelpers.Logger())
 
 	connection, err := stdoutListener.Accept()
 	defer connection.Close()
@@ -119,7 +120,7 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	mockLoggregatorClient := new(MockLoggregatorClient)
 
 	mockLoggregatorClient.received = make(chan *[]byte)
-	instance.startListening(mockLoggregatorClient, logger())
+	instance.startListening(mockLoggregatorClient, testhelpers.Logger())
 
 	connection, err := stderrListener.Accept()
 	defer connection.Close()
