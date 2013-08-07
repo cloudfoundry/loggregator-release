@@ -10,11 +10,7 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/gosteno"
-	"os"
-	"os/signal"
 	"registrar"
-	"runtime/pprof"
-	"syscall"
 )
 
 type Config struct {
@@ -121,15 +117,5 @@ func main() {
 	cfc.StartMonitoringEndpoints()
 	go agent.Start(loggregatorClient)
 
-	threadDumpChan := make(chan os.Signal)
-	signal.Notify(threadDumpChan, syscall.SIGUSR1)
-
-	for {
-		select {
-		case <-threadDumpChan:
-			goRoutineProfiles := pprof.Lookup("goroutine")
-			goRoutineProfiles.WriteTo(os.Stdout, 2)
-		}
-	}
-
+	cfcomponent.DumpGoroutineInfoOnCommand()
 }

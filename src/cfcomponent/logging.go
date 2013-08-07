@@ -3,7 +3,10 @@ package cfcomponent
 import (
 	"github.com/cloudfoundry/gosteno"
 	"os"
+	"os/signal"
+	"runtime/pprof"
 	"strings"
+	"syscall"
 )
 
 func NewLogger(verbose bool, logFilePath, name string) *gosteno.Logger {
@@ -26,4 +29,15 @@ func NewLogger(verbose bool, logFilePath, name string) *gosteno.Logger {
 	}
 	gosteno.Init(loggingConfig)
 	return gosteno.NewLogger(name)
+}
+
+func DumpGoroutineInfoOnCommand() {
+	threadDumpChan := make(chan os.Signal)
+	signal.Notify(threadDumpChan, syscall.SIGUSR1)
+
+	for {
+		<-threadDumpChan
+		goRoutineProfiles := pprof.Lookup("goroutine")
+		goRoutineProfiles.WriteTo(os.Stdout, 2)
+	}
 }

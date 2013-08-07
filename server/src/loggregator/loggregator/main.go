@@ -15,8 +15,6 @@ import (
 	"os/signal"
 	"registrar"
 	"runtime"
-	"runtime/pprof"
-	"syscall"
 	"time"
 )
 
@@ -141,21 +139,11 @@ func main() {
 	cfc.StartMonitoringEndpoints()
 
 	go sinkServer.Start()
+	go cfcomponent.DumpGoroutineInfoOnCommand()
 
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Kill)
 
-	threadDumpChan := make(chan os.Signal)
-	signal.Notify(threadDumpChan, syscall.SIGUSR1)
-
-	for {
-		select {
-		case <-killChan:
-			r.UnregisterFromRouter(cfc)
-			os.Exit(0)
-		case <-threadDumpChan:
-			goRoutineProfiles := pprof.Lookup("goroutine")
-			goRoutineProfiles.WriteTo(os.Stdout, 2)
-		}
-	}
+	<-killChan
+	r.UnregisterFromRouter(cfc)
 }
