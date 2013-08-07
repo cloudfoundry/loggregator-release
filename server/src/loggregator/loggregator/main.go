@@ -128,12 +128,9 @@ func main() {
 	}
 
 	r := registrar.NewRegistrar(config.mbusClient, logger)
-	r.SubscribeToRouterStart(&cfc)
 	r.RegisterWithRouter(&cfc)
-	r.KeepRegisteringWithRouter(cfc)
 
-	r.SubscribeToComponentDiscover(cfc)
-	r.AnnounceComponent(cfc)
+	r.RegisterWithCollector(cfc)
 
 	cfc.StartMonitoringEndpoints()
 

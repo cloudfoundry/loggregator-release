@@ -3,6 +3,7 @@ package registrar
 import (
 	"cfcomponent"
 	"fmt"
+	"time"
 )
 
 const AnnounceComponentMessageSubject = "vcap.component.announce"
@@ -24,6 +25,10 @@ type RouterMessage struct {
 	Host string   `json:"host"`
 	Port uint32   `json:"port"`
 	Uris []string `json:"uris"`
+}
+
+type RouterResponse struct {
+	RegisterInterval time.Duration `json:"minimumRegisterIntervalInSeconds"`
 }
 
 func NewAnnounceComponentMessage(cfc cfcomponent.Component) (message *AnnounceComponentMessage) {

@@ -16,7 +16,7 @@ func init() {
 	// agent listener is unbuffered?
 	//	dataReadChannel = make(chan []byte, 10)
 	dataReadChannel = make(chan []byte, 10)
-	TestSinkServer = NewSinkServer(dataReadChannel, logger(), "localhost:8081", "/tail/", "http://localhost:9876", testhelpers.SuccessfulAuthorizer, 50*time.Millisecond)
+	TestSinkServer = NewSinkServer(dataReadChannel, testhelpers.Logger(), "localhost:8081", "/tail/", "http://localhost:9876", testhelpers.SuccessfulAuthorizer, 50*time.Millisecond)
 	go TestSinkServer.Start()
 	time.Sleep(1 * time.Millisecond)
 }

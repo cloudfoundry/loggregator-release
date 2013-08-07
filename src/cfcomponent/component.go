@@ -16,8 +16,8 @@ type Component struct {
 	HealthMonitor     HealthMonitor
 	SystemDomain      string
 	WebPort           uint32
-	RegisterInterval  time.Duration `json:"minimumRegisterIntervalInSeconds"`
-	Type              string        //Used by the collector to find data processing class
+	RegisterInterval  time.Duration
+	Type              string //Used by the collector to find data processing class
 	Index             uint
 	UUID              string
 	StatusPort        uint32

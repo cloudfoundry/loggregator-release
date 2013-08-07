@@ -7,9 +7,10 @@ import (
 	"encoding/json"
 	mbus "github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/go_cfmessagebus/mock_cfmessagebus"
-	"github.com/cloudfoundry/gosteno"
 	"github.com/stretchr/testify/assert"
+	"os"
 	"os/exec"
+	"testhelpers"
 	"testing"
 	"time"
 )
@@ -20,13 +21,13 @@ func init() {
 	_, mbusClient = setupNatsServer(34783)
 }
 
-func TestRegisterWithRouter(t *testing.T) {
+func TestGreetRouter(t *testing.T) {
 	routerReceivedChannel := make(chan []byte)
 	fakeRouter(mbusClient, routerReceivedChannel)
 
 	cfc := &cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083}
-	registrar := NewRegistrar(mbusClient, gosteno.NewLogger("TestLogger"))
-	err := registrar.RegisterWithRouter(cfc)
+	registrar := NewRegistrar(mbusClient, testhelpers.Logger())
+	err := registrar.greetRouter(cfc)
 	assert.NoError(t, err)
 
 	resultChan := make(chan bool)
@@ -67,9 +68,9 @@ func TestAnnounceComponent(t *testing.T) {
 	}
 	mbus.Subscribe(AnnounceComponentMessageSubject, callback)
 
-	registrar := NewRegistrar(mbus, gosteno.NewLogger("TestLogger"))
+	registrar := NewRegistrar(mbus, testhelpers.Logger())
 
-	registrar.AnnounceComponent(cfc)
+	registrar.announceComponent(cfc)
 
 	actual := <-called
 
@@ -97,9 +98,9 @@ func TestSubscribeToComponentDiscover(t *testing.T) {
 	}
 
 	mbus := mock_cfmessagebus.NewMockMessageBus()
-	registrar := NewRegistrar(mbus, gosteno.NewLogger("TestLogger"))
+	registrar := NewRegistrar(mbus, testhelpers.Logger())
 
-	registrar.SubscribeToComponentDiscover(cfc)
+	registrar.subscribeToComponentDiscover(cfc)
 
 	called := make(chan []byte)
 	callback := func(response []byte) {
@@ -123,20 +124,20 @@ func TestSubscribeToComponentDiscover(t *testing.T) {
 }
 
 func TestKeepRegisteringWithRouter(t *testing.T) {
+	os.Setenv("LOG_TO_STDOUT", "false")
 	routerReceivedChannel := make(chan []byte)
 	fakeRouter(mbusClient, routerReceivedChannel)
 
 	cfc := cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083, IpAddress: "13.12.14.15"}
-	registrar := NewRegistrar(mbusClient, gosteno.NewLogger("TestLogger"))
+	registrar := NewRegistrar(mbusClient, testhelpers.Logger())
 	cfc.RegisterInterval = 50 * time.Millisecond
-	registrar.KeepRegisteringWithRouter(cfc)
+	registrar.keepRegisteringWithRouter(cfc)
 
 	for i := 0; i < 3; i++ {
 		time.Sleep(55 * time.Millisecond)
 		select {
 		case msg := <-routerReceivedChannel:
-			host := "13.12.14.15"
-			assert.Equal(t, `registering:{"host":"`+host+`","port":8083,"uris":["loggregator.vcap.me"]}`, string(msg))
+			assert.Equal(t, `registering:{"host":"13.12.14.15","port":8083,"uris":["loggregator.vcap.me"]}`, string(msg))
 		default:
 			t.Error("Router did not receive a router.register in time!")
 		}
@@ -145,11 +146,10 @@ func TestKeepRegisteringWithRouter(t *testing.T) {
 
 func TestSubscribeToRouterStart(t *testing.T) {
 	cfc := &cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083}
-	registrar := NewRegistrar(mbusClient, gosteno.NewLogger("TestLogger"))
-	err := registrar.SubscribeToRouterStart(cfc)
-	assert.NoError(t, err)
+	registrar := NewRegistrar(mbusClient, testhelpers.Logger())
+	registrar.subscribeToRouterStart(cfc)
 
-	err = mbusClient.Publish("router.start", []byte(messageFromRouter))
+	err := mbusClient.Publish("router.start", []byte(messageFromRouter))
 	assert.NoError(t, err)
 
 	resultChan := make(chan bool)
@@ -173,12 +173,12 @@ func TestSubscribeToRouterStart(t *testing.T) {
 	}
 }
 
-func TestUnregister(t *testing.T) {
+func TestUnregisterFromRouter(t *testing.T) {
 	routerReceivedChannel := make(chan []byte)
 	fakeRouter(mbusClient, routerReceivedChannel)
 
 	cfc := cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083, IpAddress: "13.12.14.15"}
-	registrar := NewRegistrar(mbusClient, gosteno.NewLogger("TestLogger"))
+	registrar := NewRegistrar(mbusClient, testhelpers.Logger())
 	registrar.UnregisterFromRouter(cfc)
 
 	select {
@@ -241,7 +241,7 @@ func newMBusClient(port int) mbus.MessageBus {
 		panic("Could not connect to NATS")
 	}
 	mBusClient.Configure("127.0.0.1", port, "nats", "nats")
-	log := gosteno.NewLogger("TestLogger")
+	log := testhelpers.Logger()
 	mBusClient.SetLogger(log)
 	for {
 		err := mBusClient.Connect()

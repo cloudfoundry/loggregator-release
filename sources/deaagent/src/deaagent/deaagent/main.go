@@ -113,8 +113,7 @@ func main() {
 	}
 
 	r := registrar.NewRegistrar(config.mbusClient, logger)
-	r.SubscribeToComponentDiscover(cfc)
-	r.AnnounceComponent(cfc)
+	r.RegisterWithCollector(cfc)
 
 	cfc.StartMonitoringEndpoints()
 	go agent.Start(loggregatorClient)

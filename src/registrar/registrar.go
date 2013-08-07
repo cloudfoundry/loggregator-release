@@ -21,7 +21,25 @@ func NewRegistrar(mBusClient mbus.MessageBus, logger *gosteno.Logger) *registrar
 	return &registrar{mBusClient: mBusClient, Logger: logger}
 }
 
-func (r *registrar) AnnounceComponent(cfc cfcomponent.Component) error {
+func (r *registrar) RegisterWithRouter(cfc *cfcomponent.Component) error {
+	r.subscribeToRouterStart(cfc)
+	err := r.greetRouter(cfc)
+	if err != nil {
+		return err
+	}
+	r.keepRegisteringWithRouter(*cfc)
+
+	return nil
+}
+
+func (r *registrar) RegisterWithCollector(cfc cfcomponent.Component) (err error) {
+	r.announceComponent(cfc)
+	r.subscribeToComponentDiscover(cfc)
+
+	return
+}
+
+func (r *registrar) announceComponent(cfc cfcomponent.Component) error {
 	json, err := json.Marshal(NewAnnounceComponentMessage(cfc))
 	if err != nil {
 		return err
@@ -31,7 +49,7 @@ func (r *registrar) AnnounceComponent(cfc cfcomponent.Component) error {
 	return nil
 }
 
-func (r *registrar) SubscribeToComponentDiscover(cfc cfcomponent.Component) error {
+func (r *registrar) subscribeToComponentDiscover(cfc cfcomponent.Component) error {
 	r.mBusClient.RespondToChannel(DiscoverComponentMessageSubject, func(msg []byte) []byte {
 		json, err := json.Marshal(NewAnnounceComponentMessage(cfc))
 		if err != nil {
@@ -43,7 +61,7 @@ func (r *registrar) SubscribeToComponentDiscover(cfc cfcomponent.Component) erro
 	return nil
 }
 
-func (r *registrar) RegisterWithRouter(cfc *cfcomponent.Component) (err error) {
+func (r *registrar) greetRouter(cfc *cfcomponent.Component) (err error) {
 	response := make(chan []byte)
 
 	r.mBusClient.Request(RouterGreetMessageSubject, []byte{}, func(payload []byte) {
@@ -52,14 +70,16 @@ func (r *registrar) RegisterWithRouter(cfc *cfcomponent.Component) (err error) {
 
 	select {
 	case msg := <-response:
-		cfc.Lock()
-		defer cfc.Unlock()
-		err = json.Unmarshal(msg, cfc)
+		routerResponse := &RouterResponse{}
+		err = json.Unmarshal(msg, routerResponse)
 		if err != nil {
 			r.Errorf("Error unmarshalling the greet response: %v\n", err)
 		} else {
-			r.Infof("Greeted the router. Setting register interval to %v seconds\n", cfc.RegisterInterval)
-			cfc.RegisterInterval = cfc.RegisterInterval * time.Second
+			r.Infof("Greeted the router. Setting register interval to %v seconds\n", routerResponse.RegisterInterval)
+			cfc.Lock()
+			cfc.RegisterInterval = routerResponse.RegisterInterval * time.Second
+			cfc.Unlock()
+
 		}
 	case <-time.After(2 * time.Second):
 		err = errors.New("Did not get a response to router.greet!")
@@ -68,24 +88,25 @@ func (r *registrar) RegisterWithRouter(cfc *cfcomponent.Component) (err error) {
 	return err
 }
 
-func (r *registrar) SubscribeToRouterStart(cfc *cfcomponent.Component) (err error) {
+func (r *registrar) subscribeToRouterStart(cfc *cfcomponent.Component) {
 	r.mBusClient.Subscribe(RouterStartMessageSubject, func(payload []byte) {
-		cfc.Lock()
-		defer cfc.Unlock()
-		err = json.Unmarshal(payload, cfc)
+		routerResponse := &RouterResponse{}
+		err := json.Unmarshal(payload, routerResponse)
 		if err != nil {
 			r.Errorf("Error unmarshalling the router start message: %v\n", err)
 		} else {
 			r.Infof("Received router.start. Setting register interval to %v seconds\n", cfc.RegisterInterval)
-			cfc.RegisterInterval = cfc.RegisterInterval * time.Second
+			cfc.Lock()
+			cfc.RegisterInterval = routerResponse.RegisterInterval * time.Second
+			cfc.Unlock()
 		}
 	})
 	r.Info("Subscribed to router.start")
 
-	return err
+	return
 }
 
-func (r *registrar) KeepRegisteringWithRouter(cfc cfcomponent.Component) {
+func (r *registrar) keepRegisteringWithRouter(cfc cfcomponent.Component) {
 	go func() {
 		for {
 			err := r.publishRouterMessage(cfc, RouterRegisterMessageSubject)
