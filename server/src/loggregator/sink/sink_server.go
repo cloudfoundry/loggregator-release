@@ -32,12 +32,7 @@ func NewSinkServer(givenChannel chan []byte, logger *gosteno.Logger, listenHost 
 }
 
 func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
-	extractAppIdAndAuthTokenFromUrl := func(u *url.URL) (string, string, string) {
-		authorization := ""
-		queryValues := u.Query()
-		if len(queryValues["authorization"]) == 1 {
-			authorization = queryValues["authorization"][0]
-		}
+	extractAppIdAndSpaceIdFromUrl := func(u *url.URL) (string, string) {
 		appId := ""
 		spaceId := ""
 		re := regexp.MustCompile("^" + sinkServer.listenPath + "spaces/([^/]+)(?:/apps/([^/]+))?$")
@@ -51,12 +46,13 @@ func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 			appId = result[2]
 		}
 
-		return spaceId, appId, authorization
+		return spaceId, appId
 	}
 
 	clientAddress := ws.RemoteAddr()
 
-	spaceId, appId, authToken := extractAppIdAndAuthTokenFromUrl(ws.Request().URL)
+	spaceId, appId := extractAppIdAndSpaceIdFromUrl(ws.Request().URL)
+	authToken := ws.Request().Header.Get("Authorization")
 
 	if spaceId == "" {
 		message := fmt.Sprintf("Did not accept sink connection from %s without spaceId.", clientAddress)

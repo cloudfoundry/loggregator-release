@@ -3,6 +3,7 @@
 result=0
 
 packages=(
+    testhelpers
     deaagent
     deaagent/deaagent
     deaagent/loggregatorclient
