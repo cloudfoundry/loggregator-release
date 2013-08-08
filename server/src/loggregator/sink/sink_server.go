@@ -18,17 +18,16 @@ type sinkServer struct {
 	dataChannel       chan []byte
 	listenHost        string
 	listenPath        string
-	apiHost           string
 	listenerChannels  *groupedChannels
 	authorize         LogAccessAuthorizer
 	sinkCloseChan     chan chan []byte
 	keepAliveInterval time.Duration
 }
 
-func NewSinkServer(givenChannel chan []byte, logger *gosteno.Logger, listenHost string, listenPath string, apiHost string, authorize LogAccessAuthorizer, keepAliveInterval time.Duration) *sinkServer {
+func NewSinkServer(givenChannel chan []byte, logger *gosteno.Logger, listenHost string, listenPath string, authorize LogAccessAuthorizer, keepAliveInterval time.Duration) *sinkServer {
 	listeners := newGroupedChannels()
 	sinkCloseChan := make(chan chan []byte, 4)
-	return &sinkServer{logger, givenChannel, listenHost, listenPath, apiHost, listeners, authorize, sinkCloseChan, keepAliveInterval}
+	return &sinkServer{logger, givenChannel, listenHost, listenPath, listeners, authorize, sinkCloseChan, keepAliveInterval}
 }
 
 func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
@@ -65,7 +64,7 @@ func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 		return
 	}
 
-	if !sinkServer.authorize(sinkServer.apiHost, authToken, spaceId, appId, sinkServer.logger) {
+	if !sinkServer.authorize(authToken, spaceId, appId, sinkServer.logger) {
 		message := fmt.Sprintf("Auth token [%s] not authorized to access space [%s].", authToken, spaceId)
 		sinkServer.logger.Warn(message)
 		return

@@ -31,9 +31,9 @@ func Logger() *gosteno.Logger {
 	return gosteno.NewLogger("TestLogger")
 }
 
-func SuccessfulAuthorizer(a, b, c, d string, l *gosteno.Logger) bool {
-	if b != "" {
-		authString := strings.Split(b, " ")
+func SuccessfulAuthorizer(authToken, spaceId, appId string, l *gosteno.Logger) bool {
+	if authToken != "" {
+		authString := strings.Split(authToken, " ")
 		if len(authString) > 1 {
 			return authString[1] == "correctAuthorizationToken"
 		}

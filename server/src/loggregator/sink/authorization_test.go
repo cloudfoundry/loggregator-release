@@ -98,8 +98,8 @@ func TestAllowsAccessForUserWhoIsSpaceManager(t *testing.T) {
 	}
 
 	decoder := &TestUaaTokenDecoder{userDetails}
-	authorizer := NewLogAccessAuthorizer(decoder)
-	result := authorizer("http://localhost:9876", "bearer manager", "mySpaceId", "myAppId", testhelpers.Logger())
+	authorizer := NewLogAccessAuthorizer(decoder, "http://localhost:9876")
+	result := authorizer("bearer manager", "mySpaceId", "myAppId", testhelpers.Logger())
 	assert.True(t, result)
 }
 
@@ -109,8 +109,8 @@ func TestAllowsAccessForUserWhoIsSpaceAuditor(t *testing.T) {
 	}
 
 	decoder := &TestUaaTokenDecoder{userDetails}
-	authorizer := NewLogAccessAuthorizer(decoder)
-	result := authorizer("http://localhost:9876", "bearer auditor", "mySpaceId", "myAppId", testhelpers.Logger())
+	authorizer := NewLogAccessAuthorizer(decoder, "http://localhost:9876")
+	result := authorizer("bearer auditor", "mySpaceId", "myAppId", testhelpers.Logger())
 	assert.True(t, result)
 }
 
@@ -120,8 +120,8 @@ func TestAllowsAccessForUserWhoIsSpaceDeveloper(t *testing.T) {
 	}
 
 	decoder := &TestUaaTokenDecoder{userDetails}
-	authorizer := NewLogAccessAuthorizer(decoder)
-	result := authorizer("http://localhost:9876", "bearer developer", "mySpaceId", "myAppId", testhelpers.Logger())
+	authorizer := NewLogAccessAuthorizer(decoder, "http://localhost:9876")
+	result := authorizer("bearer developer", "mySpaceId", "myAppId", testhelpers.Logger())
 	assert.True(t, result)
 }
 
@@ -131,8 +131,8 @@ func TestDeniesAccessForUserWhoIsNoneOfTheAbove(t *testing.T) {
 	}
 
 	decoder := &TestUaaTokenDecoder{userDetails}
-	authorizer := NewLogAccessAuthorizer(decoder)
-	result := authorizer("http://localhost:9876", "bearer noneOfTheAbove", "mySpaceId", "myAppId", testhelpers.Logger())
+	authorizer := NewLogAccessAuthorizer(decoder, "http://localhost:9876")
+	result := authorizer("bearer noneOfTheAbove", "mySpaceId", "myAppId", testhelpers.Logger())
 	assert.False(t, result)
 }
 
@@ -142,8 +142,8 @@ func TestDeniesAccessIfAppIsNotInSpace(t *testing.T) {
 	}
 
 	decoder := &TestUaaTokenDecoder{userDetails}
-	authorizer := NewLogAccessAuthorizer(decoder)
-	result := authorizer("http://localhost:9876", "bearer developer", "mySpaceId", "anotherAppId", testhelpers.Logger())
+	authorizer := NewLogAccessAuthorizer(decoder, "http://localhost:9876")
+	result := authorizer("bearer developer", "mySpaceId", "anotherAppId", testhelpers.Logger())
 	assert.False(t, result)
 }
 
@@ -153,8 +153,8 @@ func TestAllowsAccessIfYouDoNotHaveAppId(t *testing.T) {
 	}
 
 	decoder := &TestUaaTokenDecoder{userDetails}
-	authorizer := NewLogAccessAuthorizer(decoder)
-	result := authorizer("http://localhost:9876", "bearer developer", "mySpaceId", "", testhelpers.Logger())
+	authorizer := NewLogAccessAuthorizer(decoder, "http://localhost:9876")
+	result := authorizer("bearer developer", "mySpaceId", "", testhelpers.Logger())
 	assert.True(t, result)
 }
 
@@ -164,7 +164,7 @@ func TestDeniesAccessIfWeGetANon200Response(t *testing.T) {
 	}
 
 	decoder := &TestUaaTokenDecoder{userDetails}
-	authorizer := NewLogAccessAuthorizer(decoder)
-	result := authorizer("http://localhost:9876", "bearer developer", "send401Response", "", testhelpers.Logger())
+	authorizer := NewLogAccessAuthorizer(decoder, "http://localhost:9876")
+	result := authorizer("bearer developer", "send401Response", "", testhelpers.Logger())
 	assert.False(t, result)
 }

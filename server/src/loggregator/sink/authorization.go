@@ -7,10 +7,10 @@ import (
 	"net/http"
 )
 
-type LogAccessAuthorizer func(apiHost, authToken, spaceId, appId string, logger *gosteno.Logger) bool
+type LogAccessAuthorizer func(authToken, spaceId, appId string, logger *gosteno.Logger) bool
 
-func NewLogAccessAuthorizer(tokenDecoder TokenDecoder) LogAccessAuthorizer {
-	authorizer := func(apiHost, authToken, spaceId, appId string, logger *gosteno.Logger) bool {
+func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccessAuthorizer {
+	authorizer := func(authToken, spaceId, appId string, logger *gosteno.Logger) bool {
 		idIsInGroup := func(id string, group []interface{}) bool {
 			for _, individual := range group {
 				metadata := individual.(map[string]interface{})["metadata"]
