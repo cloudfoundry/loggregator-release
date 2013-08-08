@@ -101,7 +101,7 @@ type LogMessage struct {
 	AppId            *string                 `protobuf:"bytes,4,req,name=app_id" json:"app_id,omitempty"`
 	SourceType       *LogMessage_SourceType  `protobuf:"varint,5,req,name=source_type,enum=logMessage.LogMessage_SourceType" json:"source_type,omitempty"`
 	SourceId         *string                 `protobuf:"bytes,6,opt,name=source_id" json:"source_id,omitempty"`
-	SpaceId          *string                 `protobuf:"bytes,7,req,name=space_id" json:"space_id,omitempty"`
+	SpaceId          *string                 `protobuf:"bytes,7,opt,name=space_id" json:"space_id,omitempty"`
 	XXX_unrecognized []byte                  `json:"-"`
 }
 

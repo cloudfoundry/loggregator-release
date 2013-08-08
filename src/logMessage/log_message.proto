@@ -20,5 +20,5 @@ message LogMessage {
     required string app_id = 4;
     required SourceType source_type = 5;
     optional string source_id = 6;
-    required string space_id = 7;
+    optional string space_id = 7;
 }
