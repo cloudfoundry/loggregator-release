@@ -31,26 +31,9 @@ func NewSinkServer(givenChannel chan []byte, logger *gosteno.Logger, listenHost 
 }
 
 func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
-	extractAppIdAndSpaceIdFromUrl := func(u *url.URL) (string, string) {
-		appId := ""
-		spaceId := ""
-		re := regexp.MustCompile("^" + sinkServer.listenPath + "spaces/([^/]+)(?:/apps/([^/]+))?$")
-		result := re.FindStringSubmatch(u.Path)
-
-		switch len(result) {
-		case 2:
-			spaceId = result[1]
-		case 3:
-			spaceId = result[1]
-			appId = result[2]
-		}
-
-		return spaceId, appId
-	}
-
 	clientAddress := ws.RemoteAddr()
 
-	spaceId, appId := extractAppIdAndSpaceIdFromUrl(ws.Request().URL)
+	spaceId, appId := extractAppIdAndSpaceIdFromUrl(sinkServer.listenPath, ws.Request().URL)
 	authToken := ws.Request().Header.Get("Authorization")
 
 	if spaceId == "" {
@@ -129,4 +112,21 @@ func (sinkServer *sinkServer) Emit() instrumentation.Context {
 			instrumentation.Metric{"numberOfSinks", sinkServer.listenerChannels.NumberOfChannels()},
 		},
 	}
+}
+
+func extractAppIdAndSpaceIdFromUrl(listenPath string, u *url.URL) (string, string) {
+	appId := ""
+	spaceId := ""
+	re := regexp.MustCompile("^" + listenPath + "spaces/([^/]+)(?:/apps/([^/]+))?$")
+	result := re.FindStringSubmatch(u.Path)
+
+	switch len(result) {
+	case 2:
+		spaceId = result[1]
+	case 3:
+		spaceId = result[1]
+		appId = result[2]
+	}
+
+	return spaceId, appId
 }
