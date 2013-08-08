@@ -8,6 +8,12 @@ import (
 	"time"
 )
 
+const (
+	VALID_AUTHENTICATION_TOKEN   = "bearer correctAuthorizationToken"
+	INVALID_AUTHENTICATION_TOKEN = "incorrectAuthorizationToken"
+	SERVER_PORT                  = "8081"
+)
+
 var TestSinkServer *sinkServer
 var dataReadChannel chan []byte
 
@@ -16,7 +22,7 @@ func init() {
 	// agent listener is unbuffered?
 	//	dataReadChannel = make(chan []byte, 10)
 	dataReadChannel = make(chan []byte, 10)
-	TestSinkServer = NewSinkServer(dataReadChannel, testhelpers.Logger(), "localhost:8081", testhelpers.SuccessfulAuthorizer, 50*time.Millisecond)
+	TestSinkServer = NewSinkServer(dataReadChannel, testhelpers.Logger(), "localhost:"+SERVER_PORT, testhelpers.SuccessfulAuthorizer, 50*time.Millisecond)
 	go TestSinkServer.Start()
 	time.Sleep(1 * time.Millisecond)
 }
@@ -49,7 +55,7 @@ func TestThatItSends(t *testing.T) {
 	otherMessageString := "Some more stuff"
 	otherMessage := testhelpers.MarshalledLogMessage(t, otherMessageString, "mySpace", "myApp", "myOrg")
 
-	testhelpers.AddWSSink(t, receivedChan, "8081", "/tail/?space=mySpace&app=myApp", "bearer correctAuthorizationToken")
+	testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?space=mySpace&app=myApp", VALID_AUTHENTICATION_TOKEN)
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- expectedMessage
@@ -76,10 +82,10 @@ func TestThatItSendsAllDataToAllSinks(t *testing.T) {
 	space1ReceivedChan := make(chan []byte)
 	space2ReceivedChan := make(chan []byte)
 
-	testhelpers.AddWSSink(t, client1ReceivedChan, "8081", "/tail/?space=mySpace&app=myApp", "bearer correctAuthorizationToken")
-	testhelpers.AddWSSink(t, client2ReceivedChan, "8081", "/tail/?space=mySpace&app=myApp", "bearer correctAuthorizationToken")
-	testhelpers.AddWSSink(t, space1ReceivedChan, "8081", "/tail/?space=mySpace", "bearer correctAuthorizationToken")
-	testhelpers.AddWSSink(t, space2ReceivedChan, "8081", "/tail/?space=mySpace", "bearer correctAuthorizationToken")
+	testhelpers.AddWSSink(t, client1ReceivedChan, SERVER_PORT, TAIL_PATH+"?space=mySpace&app=myApp", VALID_AUTHENTICATION_TOKEN)
+	testhelpers.AddWSSink(t, client2ReceivedChan, SERVER_PORT, TAIL_PATH+"?space=mySpace&app=myApp", VALID_AUTHENTICATION_TOKEN)
+	testhelpers.AddWSSink(t, space1ReceivedChan, SERVER_PORT, TAIL_PATH+"?space=mySpace", VALID_AUTHENTICATION_TOKEN)
+	testhelpers.AddWSSink(t, space2ReceivedChan, SERVER_PORT, TAIL_PATH+"?space=mySpace", VALID_AUTHENTICATION_TOKEN)
 	WaitForWebsocketRegistration()
 
 	expectedMessageString := "Some Data"
@@ -101,7 +107,7 @@ func TestThatItSendsLogsToProperAppSink(t *testing.T) {
 	expectedMessageString := "My important message"
 	myAppsMarshalledMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp", "myOrg")
 
-	testhelpers.AddWSSink(t, receivedChan, "8081", "/tail/?space=mySpace&app=myApp", "bearer correctAuthorizationToken")
+	testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?space=mySpace&app=myApp", VALID_AUTHENTICATION_TOKEN)
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- otherAppsMarshalledMessage
@@ -118,7 +124,7 @@ func TestThatItSendsLogsToProperSpaceSink(t *testing.T) {
 	expectedMessageString := "My important message"
 	mySpaceMarshalledMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp", "myOrg")
 
-	testhelpers.AddWSSink(t, receivedChan, "8081", "/tail/?space=mySpace", "bearer correctAuthorizationToken")
+	testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?space=mySpace", VALID_AUTHENTICATION_TOKEN)
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- otherSpaceMarshalledMessage
@@ -130,7 +136,7 @@ func TestThatItSendsLogsToProperSpaceSink(t *testing.T) {
 func TestDropUnmarshallableMessage(t *testing.T) {
 	receivedChan := make(chan []byte)
 
-	sink, _ := testhelpers.AddWSSink(t, receivedChan, "8081", "/tail/?space=mySpace&app=myApp", "bearer correctAuthorizationToken")
+	sink, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?space=mySpace&app=myApp", VALID_AUTHENTICATION_TOKEN)
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- make([]byte, 10)
@@ -150,24 +156,24 @@ func TestDropUnmarshallableMessage(t *testing.T) {
 }
 
 func TestDropSinkWithoutAppAndContinuesToWork(t *testing.T) {
-	AssertConnecitonFails(t, "8081", "/tail/", "")
+	AssertConnecitonFails(t, SERVER_PORT, TAIL_PATH+"", "")
 	TestThatItSends(t)
 }
 
 func TestDropSinkWithoutAuthorizationAndContinuesToWork(t *testing.T) {
-	AssertConnecitonFails(t, "8081", "/tail/?space=mySpace&app=myApp", "")
+	AssertConnecitonFails(t, SERVER_PORT, TAIL_PATH+"?space=mySpace&app=myApp", "")
 	TestThatItSends(t)
 }
 
 func TestDropSinkWhenAuthorizationFailsAndContinuesToWork(t *testing.T) {
-	AssertConnecitonFails(t, "8081", "/tail/?space=mySpace&app=myApp", "incorrectAuthorizationToken")
+	AssertConnecitonFails(t, SERVER_PORT, TAIL_PATH+"?space=mySpace&app=myApp", INVALID_AUTHENTICATION_TOKEN)
 	TestThatItSends(t)
 }
 
 func TestKeepAlive(t *testing.T) {
 	receivedChan := make(chan []byte)
 
-	_, killKeepAliveChan := testhelpers.AddWSSink(t, receivedChan, "8081", "/tail/?space=mySpace&app=myApp", "bearer correctAuthorizationToken")
+	_, killKeepAliveChan := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?space=mySpace&app=myApp", VALID_AUTHENTICATION_TOKEN)
 	WaitForWebsocketRegistration()
 
 	killKeepAliveChan <- true
