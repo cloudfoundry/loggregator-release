@@ -108,7 +108,7 @@ func main() {
 	incomingData := listener.Start()
 
 	authorizer := sink.NewLogAccessAuthorizer(config.decoder, config.ApiHost)
-	sinkServer := sink.NewSinkServer(incomingData, logger, fmt.Sprintf("0.0.0.0:%d", config.WebPort), "/tail/", authorizer, 30*time.Second)
+	sinkServer := sink.NewSinkServer(incomingData, logger, fmt.Sprintf("0.0.0.0:%d", config.WebPort), authorizer, 30*time.Second)
 
 	cfc, err := cfcomponent.NewComponent(
 		config.SystemDomain,

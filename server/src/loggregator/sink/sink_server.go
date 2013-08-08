@@ -13,27 +13,30 @@ import (
 	"time"
 )
 
+const (
+	TAIL_PATH = "/tail/"
+)
+
 type sinkServer struct {
 	logger            *gosteno.Logger
 	dataChannel       chan []byte
 	listenHost        string
-	listenPath        string
 	listenerChannels  *groupedChannels
 	authorize         LogAccessAuthorizer
 	sinkCloseChan     chan chan []byte
 	keepAliveInterval time.Duration
 }
 
-func NewSinkServer(givenChannel chan []byte, logger *gosteno.Logger, listenHost string, listenPath string, authorize LogAccessAuthorizer, keepAliveInterval time.Duration) *sinkServer {
+func NewSinkServer(givenChannel chan []byte, logger *gosteno.Logger, listenHost string, authorize LogAccessAuthorizer, keepAliveInterval time.Duration) *sinkServer {
 	listeners := newGroupedChannels()
 	sinkCloseChan := make(chan chan []byte, 4)
-	return &sinkServer{logger, givenChannel, listenHost, listenPath, listeners, authorize, sinkCloseChan, keepAliveInterval}
+	return &sinkServer{logger, givenChannel, listenHost, listeners, authorize, sinkCloseChan, keepAliveInterval}
 }
 
 func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 	clientAddress := ws.RemoteAddr()
 
-	spaceId, appId := extractAppIdAndSpaceIdFromUrl(sinkServer.listenPath, ws.Request().URL)
+	spaceId, appId := extractAppIdAndSpaceIdFromUrl(TAIL_PATH, ws.Request().URL)
 	authToken := ws.Request().Header.Get("Authorization")
 
 	if spaceId == "" {
@@ -98,7 +101,7 @@ func (sinkServer *sinkServer) Start() {
 	go sinkServer.relayMessagesToAllSinks()
 
 	sinkServer.logger.Infof("Listening on port %s", sinkServer.listenHost)
-	http.Handle(sinkServer.listenPath, websocket.Handler(sinkServer.sinkRelayHandler))
+	http.Handle(TAIL_PATH, websocket.Handler(sinkServer.sinkRelayHandler))
 	err := http.ListenAndServe(sinkServer.listenHost, nil)
 	if err != nil {
 		panic(err)
