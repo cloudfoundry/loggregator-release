@@ -9,7 +9,6 @@ import (
 	"logMessage"
 	"net/http"
 	"net/url"
-	"regexp"
 	"time"
 )
 
@@ -118,18 +117,7 @@ func (sinkServer *sinkServer) Emit() instrumentation.Context {
 }
 
 func extractAppIdAndSpaceIdFromUrl(listenPath string, u *url.URL) (string, string) {
-	appId := ""
-	spaceId := ""
-	re := regexp.MustCompile("^" + listenPath + "spaces/([^/]+)(?:/apps/([^/]+))?$")
-	result := re.FindStringSubmatch(u.Path)
-
-	switch len(result) {
-	case 2:
-		spaceId = result[1]
-	case 3:
-		spaceId = result[1]
-		appId = result[2]
-	}
-
+	appId := u.Query().Get("app")
+	spaceId := u.Query().Get("space")
 	return spaceId, appId
 }
