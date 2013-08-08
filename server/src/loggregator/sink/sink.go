@@ -19,17 +19,28 @@ type sink struct {
 	sentMessageCount  *uint64
 	sentByteCount     *uint64
 	keepAliveInterval time.Duration
+	listenerChannel   chan []byte
 }
 
 func newCfSink(spaceId string, appId string, givenLogger *gosteno.Logger, ws *websocket.Conn, clientAddress net.Addr, keepAliveInterval time.Duration) *sink {
-	return &sink{givenLogger, spaceId, appId, ws, clientAddress, new(uint64), new(uint64), keepAliveInterval}
+	return &sink{
+		givenLogger,
+		spaceId,
+		appId,
+		ws,
+		clientAddress,
+		new(uint64),
+		new(uint64),
+		keepAliveInterval,
+		make(chan []byte),
+	}
 }
 
 func (sink *sink) clientIdentifier() string {
 	return strings.Join([]string{sink.spaceId, sink.appId}, ":")
 }
 
-func (sink *sink) Run(listenerChannel chan []byte, sinkCloseChan chan chan []byte) {
+func (sink *sink) Run(sinkCloseChan chan chan []byte) {
 	if sink.appId != "" {
 		sink.logger.Debugf("Adding Tail client %s for space [%s] and app [%s].", sink.clientAddress, sink.spaceId, sink.appId)
 	} else {
@@ -59,7 +70,7 @@ func (sink *sink) Run(listenerChannel chan []byte, sinkCloseChan chan chan []byt
 			case <-keepAliveChan:
 				sink.logger.Debugf("Keep-alive processed for %v", sink.clientAddress)
 			case <-time.After(sink.keepAliveInterval):
-				sinkCloseChan <- listenerChannel
+				sinkCloseChan <- sink.listenerChannel
 				alreadyAskedForClose = true
 				return
 			}
@@ -68,7 +79,7 @@ func (sink *sink) Run(listenerChannel chan []byte, sinkCloseChan chan chan []byt
 
 	for {
 		sink.logger.Debugf("Tail client %s is waiting for data", sink.clientAddress)
-		data, ok := <-listenerChannel
+		data, ok := <-sink.listenerChannel
 		if !ok {
 			sink.ws.Close()
 			sink.logger.Debug("Sink client channel closed.")
@@ -79,7 +90,7 @@ func (sink *sink) Run(listenerChannel chan []byte, sinkCloseChan chan chan []byt
 		if err != nil {
 			sink.logger.Debugf("Error when sending data to sink %s. Err: %v", sink.clientAddress, err)
 			if !alreadyAskedForClose {
-				sinkCloseChan <- listenerChannel
+				sinkCloseChan <- sink.listenerChannel
 				alreadyAskedForClose = true
 			}
 		}

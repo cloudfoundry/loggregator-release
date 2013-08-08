@@ -72,9 +72,8 @@ func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 
 	sink := newCfSink(spaceId, appId, sinkServer.logger, ws, clientAddress, sinkServer.keepAliveInterval)
 
-	listenerChannel := make(chan []byte)
-	sinkServer.listenerChannels.add(listenerChannel, spaceId, appId)
-	sink.Run(listenerChannel, sinkServer.sinkCloseChan)
+	sinkServer.listenerChannels.add(sink.listenerChannel, spaceId, appId)
+	sink.Run(sinkServer.sinkCloseChan)
 }
 
 func (sinkServer *sinkServer) relayMessagesToAllSinks() {
