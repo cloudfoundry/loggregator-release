@@ -27,7 +27,7 @@ func TestEndtoEndMessage(t *testing.T) {
 	connection, err := net.Dial("udp", "localhost:3456")
 
 	expectedMessageString := "Some Data"
-	expectedMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp")
+	expectedMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp", "myOrg")
 
 	_, err = connection.Write(expectedMessage)
 	assert.NoError(t, err)

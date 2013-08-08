@@ -45,9 +45,9 @@ func TestThatItSends(t *testing.T) {
 	receivedChan := make(chan []byte, 2)
 
 	expectedMessageString := "Some data"
-	expectedMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp")
+	expectedMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp", "myOrg")
 	otherMessageString := "Some more stuff"
-	otherMessage := testhelpers.MarshalledLogMessage(t, otherMessageString, "mySpace", "myApp")
+	otherMessage := testhelpers.MarshalledLogMessage(t, otherMessageString, "mySpace", "myApp", "myOrg")
 
 	testhelpers.AddWSSink(t, receivedChan, "8081", "/tail/?space=mySpace&app=myApp", "bearer correctAuthorizationToken")
 	WaitForWebsocketRegistration()
@@ -83,7 +83,7 @@ func TestThatItSendsAllDataToAllSinks(t *testing.T) {
 	WaitForWebsocketRegistration()
 
 	expectedMessageString := "Some Data"
-	expectedMarshalledProtoBuffer := testhelpers.MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp")
+	expectedMarshalledProtoBuffer := testhelpers.MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp", "myOrg")
 
 	dataReadChannel <- expectedMarshalledProtoBuffer
 
@@ -96,10 +96,10 @@ func TestThatItSendsAllDataToAllSinks(t *testing.T) {
 func TestThatItSendsLogsToProperAppSink(t *testing.T) {
 	receivedChan := make(chan []byte)
 
-	otherAppsMarshalledMessage := testhelpers.MarshalledLogMessage(t, "Some other message", "mySpace", "otherApp")
+	otherAppsMarshalledMessage := testhelpers.MarshalledLogMessage(t, "Some other message", "mySpace", "otherApp", "myOrg")
 
 	expectedMessageString := "My important message"
-	myAppsMarshalledMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp")
+	myAppsMarshalledMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp", "myOrg")
 
 	testhelpers.AddWSSink(t, receivedChan, "8081", "/tail/?space=mySpace&app=myApp", "bearer correctAuthorizationToken")
 	WaitForWebsocketRegistration()
@@ -113,10 +113,10 @@ func TestThatItSendsLogsToProperAppSink(t *testing.T) {
 func TestThatItSendsLogsToProperSpaceSink(t *testing.T) {
 	receivedChan := make(chan []byte)
 
-	otherSpaceMarshalledMessage := testhelpers.MarshalledLogMessage(t, "Some other message", "otherSpace", "otherApp")
+	otherSpaceMarshalledMessage := testhelpers.MarshalledLogMessage(t, "Some other message", "otherSpace", "otherApp", "myOrg")
 
 	expectedMessageString := "My important message"
-	mySpaceMarshalledMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp")
+	mySpaceMarshalledMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp", "myOrg")
 
 	testhelpers.AddWSSink(t, receivedChan, "8081", "/tail/?space=mySpace", "bearer correctAuthorizationToken")
 	WaitForWebsocketRegistration()
@@ -145,7 +145,7 @@ func TestDropUnmarshallableMessage(t *testing.T) {
 
 	sink.Close()
 	expectedMessageString := "My important message"
-	mySpaceMarshalledMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp")
+	mySpaceMarshalledMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp", "myOrg")
 	dataReadChannel <- mySpaceMarshalledMessage
 }
 
@@ -175,7 +175,7 @@ func TestKeepAlive(t *testing.T) {
 	time.Sleep(60 * time.Millisecond) //wait a little bit to make sure the keep-alive has successfully been stopped
 
 	expectedMessageString := "My important message"
-	myAppsMarshalledMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp")
+	myAppsMarshalledMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp", "myOrg")
 	dataReadChannel <- myAppsMarshalledMessage
 
 	time.Sleep(10 * time.Millisecond) //wait a little bit to give a potential message time to arrive

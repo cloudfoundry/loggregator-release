@@ -49,6 +49,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	instance := &instance{
 		applicationId:       "1234",
 		spaceId:             "5678",
+		organizationId:      "5678",
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
 		index:               3}
@@ -106,6 +107,8 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 
 	instance := &instance{
 		applicationId:       "1234",
+		spaceId:             "5678",
+		organizationId:      "5678",
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
 		index:               4}

@@ -109,19 +109,13 @@ func TestTheAgentReadsAllExistingInstances(t *testing.T) {
 	filepath := path.Join(path.Dir(filename), "..", "..", "samples", "multi_instances.json")
 	testAgent := &agent{InstancesJsonFilePath: filepath, logger: testhelpers.Logger()}
 	instancesChan := testAgent.watchInstancesJsonFileForChanges()
-	expectedApplicationIds := [8]string{
+	expectedApplicationIds := [2]string{
 		"e0e12b41-78d4-43ff-a5ae-20422bedf22f",
 		"a59ebe7a-002a-4530-8d69-8bf53bc845d5",
-		"01780118-4680-4779-9eb7-65c7f60cdc76",
-		"67fa7adf-746a-446a-8f1b-d2f291bc8459",
-		"e6eca3c8-7fd1-4876-8545-ce5acf67db66",
-		"b88d0b09-8275-445f-bd83-1941362db7aa",
-		"d2fb0f4b-81a9-47a4-8eb4-292456030fa3",
-		"d3532fe5-1ad8-4418-b6fb-4d72be408b72",
 	}
-	for i := 0; i > 8; i++ {
+	for _, expectedInstance := range expectedApplicationIds {
 		instance := <-instancesChan
-		assert.Equal(t, expectedApplicationIds[i], instance.applicationId)
+		assert.Equal(t, expectedInstance, instance.applicationId)
 	}
 }
 

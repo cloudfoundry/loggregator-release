@@ -7,7 +7,8 @@ import (
 
 func readInstances(data []byte) (map[string]instance, error) {
 	type tagsJson struct {
-		Space string
+		Space        string
+		Organization string
 	}
 	type instanceJson struct {
 		Application_id        string
@@ -38,6 +39,7 @@ func readInstances(data []byte) (map[string]instance, error) {
 			instance := instance{
 				applicationId:       jsonInstance.Application_id,
 				spaceId:             jsonInstance.Tags.Space,
+				organizationId:      jsonInstance.Tags.Organization,
 				wardenContainerPath: jsonInstance.Warden_container_path,
 				wardenJobId:         jsonInstance.Warden_job_id,
 				index:               jsonInstance.Instance_index}

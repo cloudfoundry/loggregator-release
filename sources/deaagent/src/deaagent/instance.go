@@ -11,6 +11,7 @@ import (
 type instance struct {
 	applicationId       string
 	spaceId             string
+	organizationId      string
 	wardenJobId         uint64
 	wardenContainerPath string
 	index               uint64

@@ -21,4 +21,5 @@ message LogMessage {
     required SourceType source_type = 5;
     optional string source_id = 6;
     optional string space_id = 7;
+    required string organization_id = 8;
 }

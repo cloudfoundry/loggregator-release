@@ -3,7 +3,8 @@
     "instances": [
         {
             "tags": {
-                "space": "4aa9506e-277f-41ab-b764-a35c0b123456"
+                "space": "4aa9506e-277f-41ab-b764-a35c0b123456",
+                "organization": "9876506e-277f-41ab-b764-a35c0b123456"
             },
             "executableFile": "deprecated",
             "services": [],

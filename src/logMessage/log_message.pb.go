@@ -102,6 +102,7 @@ type LogMessage struct {
 	SourceType       *LogMessage_SourceType  `protobuf:"varint,5,req,name=source_type,enum=logMessage.LogMessage_SourceType" json:"source_type,omitempty"`
 	SourceId         *string                 `protobuf:"bytes,6,opt,name=source_id" json:"source_id,omitempty"`
 	SpaceId          *string                 `protobuf:"bytes,7,opt,name=space_id" json:"space_id,omitempty"`
+	OrganizationId   *string                 `protobuf:"bytes,8,req,name=organization_id" json:"organization_id,omitempty"`
 	XXX_unrecognized []byte                  `json:"-"`
 }
 
@@ -154,6 +155,13 @@ func (m *LogMessage) GetSourceId() string {
 func (m *LogMessage) GetSpaceId() string {
 	if m != nil && m.SpaceId != nil {
 		return *m.SpaceId
+	}
+	return ""
+}
+
+func (m *LogMessage) GetOrganizationId() string {
+	if m != nil && m.OrganizationId != nil {
+		return *m.OrganizationId
 	}
 	return ""
 }
