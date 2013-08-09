@@ -1,10 +1,8 @@
 package testhelpers
 
 import (
-	"bytes"
 	"code.google.com/p/go.net/websocket"
 	"code.google.com/p/gogoprotobuf/proto"
-	"encoding/binary"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/stretchr/testify/assert"
 	"logMessage"
@@ -108,20 +106,4 @@ func AssertProtoBufferMessageEquals(t *testing.T, expectedMessage string, actual
 	err := proto.Unmarshal(actual, receivedMessage)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedMessage, string(receivedMessage.GetMessage()))
-}
-
-func ParseDumpedMessages(b []byte) (messages [][]byte, err error) {
-	buffer := bytes.NewBuffer(b)
-	var length uint32
-	for buffer.Len() > 0 {
-		lengthBytes := bytes.NewBuffer(buffer.Next(4))
-		err = binary.Read(lengthBytes, binary.BigEndian, &length)
-		if err != nil {
-			return
-		}
-
-		msg := buffer.Next(int(length))
-		messages = append(messages, msg)
-	}
-	return
 }

@@ -3,9 +3,6 @@ package sink
 import (
 	"code.google.com/p/go.net/websocket"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
-	"loggregator/messagestore"
-	"net/http"
 	"testhelpers"
 	"testing"
 	"time"
@@ -25,7 +22,7 @@ func init() {
 	// agent listener is unbuffered?
 	//	dataReadChannel = make(chan []byte, 10)
 	dataReadChannel = make(chan []byte, 10)
-	TestSinkServer = NewSinkServer(dataReadChannel, messagestore.NewMessageStore(10), testhelpers.Logger(), "localhost:"+SERVER_PORT, testhelpers.SuccessfulAuthorizer, 50*time.Millisecond)
+	TestSinkServer = NewSinkServer(dataReadChannel, testhelpers.Logger(), "localhost:"+SERVER_PORT, testhelpers.SuccessfulAuthorizer, 50*time.Millisecond)
 	go TestSinkServer.Start()
 	time.Sleep(1 * time.Millisecond)
 }
@@ -196,67 +193,3 @@ func TestKeepAlive(t *testing.T) {
 		//no communication. That's good!
 	}
 }
-
-// *** Start dump tests
-
-func TestItDumpsAllMessages(t *testing.T) {
-	expectedMessageString := "Some data"
-	expectedMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp", "myOrg")
-
-	dataReadChannel <- expectedMessage
-
-	req, err := http.NewRequest("GET", "http://localhost:"+SERVER_PORT+DUMP_PATH+"?space=mySpace&app=myApp", nil)
-	assert.NoError(t, err)
-	req.Header.Add("Authorization", VALID_AUTHENTICATION_TOKEN)
-
-	resp, err := http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-
-	assert.Equal(t, resp.Header.Get("Content-Type"), "application/octet-stream")
-	assert.Equal(t, resp.StatusCode, 200)
-
-	body, err := ioutil.ReadAll(resp.Body)
-	assert.NoError(t, err)
-	resp.Body.Close()
-
-	messages, err := testhelpers.ParseDumpedMessages(body)
-	assert.NoError(t, err)
-
-	testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, messages[len(messages)-1])
-}
-
-func TestItReturns401WithIncorrectAuthToken(t *testing.T) {
-	req, err := http.NewRequest("GET", "http://localhost:"+SERVER_PORT+DUMP_PATH+"?space=mySpace&app=myApp", nil)
-	assert.NoError(t, err)
-	req.Header.Add("Authorization", INVALID_AUTHENTICATION_TOKEN)
-
-	resp, err := http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-
-	assert.Equal(t, resp.StatusCode, 401)
-
-	body, err := ioutil.ReadAll(resp.Body)
-	assert.NoError(t, err)
-	resp.Body.Close()
-
-	assert.Equal(t, "", string(body))
-}
-
-func TestItReturns404WithoutSpaceId(t *testing.T) {
-	req, err := http.NewRequest("GET", "http://localhost:"+SERVER_PORT+DUMP_PATH, nil)
-	assert.NoError(t, err)
-	req.Header.Add("Authorization", VALID_AUTHENTICATION_TOKEN)
-
-	resp, err := http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-
-	assert.Equal(t, resp.StatusCode, 404)
-
-	body, err := ioutil.ReadAll(resp.Body)
-	assert.NoError(t, err)
-	resp.Body.Close()
-
-	assert.Equal(t, "", string(body))
-}
-
-// *** End dump tests
