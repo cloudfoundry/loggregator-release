@@ -10,6 +10,7 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"io/ioutil"
 	"loggregator/agentlistener"
+	"loggregator/messagestore"
 	"loggregator/sink"
 	"os"
 	"os/signal"
@@ -35,6 +36,7 @@ type Config struct {
 	LogFilePath            string
 	decoder                sink.TokenDecoder
 	mbusClient             cfmessagebus.MessageBus
+	MaxRetainedLogMessages int
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
@@ -44,6 +46,11 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 	if c.SystemDomain == "" {
 		return errors.New("Need system domain to register with NATS")
 	}
+
+	if c.MaxRetainedLogMessages == 0 {
+		return errors.New("Need max number of log messages to retain per application")
+	}
+
 	uaaVerificationKey, err := ioutil.ReadFile(c.UaaVerificationKeyFile)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Can not read UAA verification key from file %s: %s", c.UaaVerificationKeyFile, err))
@@ -108,7 +115,14 @@ func main() {
 	incomingData := listener.Start()
 
 	authorizer := sink.NewLogAccessAuthorizer(config.decoder, config.ApiHost)
-	sinkServer := sink.NewSinkServer(incomingData, logger, fmt.Sprintf("0.0.0.0:%d", config.WebPort), authorizer, 30*time.Second)
+	sinkServer := sink.NewSinkServer(
+		incomingData,
+		messagestore.NewMessageStore(config.MaxRetainedLogMessages),
+		logger,
+		fmt.Sprintf("0.0.0.0:%d", config.WebPort),
+		authorizer,
+		30*time.Second,
+	)
 
 	cfc, err := cfcomponent.NewComponent(
 		config.SystemDomain,
