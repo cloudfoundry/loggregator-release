@@ -48,3 +48,18 @@ func TestFindingMessagesForSpace(t *testing.T) {
 	assert.Equal(t, len(messages), 1)
 	assert.Equal(t, messages[0], message)
 }
+
+// This test exists because the ring buffer will dump messages
+// that actually exist.
+func TestOnlyDumpsMessagesThatHaveALength(t *testing.T) {
+	message := []byte("Hello world")
+	store := NewMessageStore(2)
+
+	store.Add(message, "spaceId", "appId")
+
+	messages, err := testhelpers.ParseDumpedMessages(store.DumpFor("spaceId", "appId"))
+	assert.NoError(t, err)
+
+	assert.Equal(t, len(messages), 1)
+	assert.Equal(t, messages[0], message)
+}

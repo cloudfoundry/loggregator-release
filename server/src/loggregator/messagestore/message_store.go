@@ -54,8 +54,10 @@ func (ms *MessageStore) DumpFor(spaceId string, appId string) ([]byte) {
 
 	writeMessages := func(m interface {}) {
 		message, _ := m.(Message)
-		binary.Write(buffer, binary.BigEndian, message.length)
-		buffer.Write(message.payload)
+		if message.length > 0 {
+			binary.Write(buffer, binary.BigEndian, message.length)
+			buffer.Write(message.payload)
+		}
 	}
 
 	if appId == "" {
