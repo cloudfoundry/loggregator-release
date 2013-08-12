@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"logMessage"
+	"loggregator/messagestore"
 	"net/http"
 	"net/url"
 	"time"
@@ -14,6 +15,7 @@ import (
 
 const (
 	TAIL_PATH = "/tail/"
+	DUMP_PATH = "/dump/"
 )
 
 type sinkServer struct {
@@ -24,12 +26,13 @@ type sinkServer struct {
 	authorize         LogAccessAuthorizer
 	sinkCloseChan     chan chan []byte
 	keepAliveInterval time.Duration
+	messageStore      *messagestore.MessageStore
 }
 
-func NewSinkServer(givenChannel chan []byte, logger *gosteno.Logger, listenHost string, authorize LogAccessAuthorizer, keepAliveInterval time.Duration) *sinkServer {
+func NewSinkServer(givenChannel chan []byte, messageStore *messagestore.MessageStore, logger *gosteno.Logger, listenHost string, authorize LogAccessAuthorizer, keepAliveInterval time.Duration) *sinkServer {
 	listeners := newGroupedChannels()
 	sinkCloseChan := make(chan chan []byte, 4)
-	return &sinkServer{logger, givenChannel, listenHost, listeners, authorize, sinkCloseChan, keepAliveInterval}
+	return &sinkServer{logger, givenChannel, listenHost, listeners, authorize, sinkCloseChan, keepAliveInterval, messageStore}
 }
 
 func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
@@ -61,6 +64,28 @@ func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 	sink.Run(sinkServer.sinkCloseChan)
 }
 
+func (sinkServer *sinkServer) dumpHandler(rw http.ResponseWriter, req *http.Request) {
+	spaceId, appId := extractAppIdAndSpaceIdFromUrl(DUMP_PATH, req.URL)
+	authToken := req.Header.Get("Authorization")
+
+	if spaceId == "" {
+		message := fmt.Sprintf("Did not accept dump connection without spaceId.")
+		sinkServer.logger.Warn(message)
+		rw.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	if !sinkServer.authorize(authToken, spaceId, appId, sinkServer.logger) {
+		message := fmt.Sprintf("Auth token [%s] not authorized to access space [%s].", authToken, spaceId)
+		sinkServer.logger.Warn(message)
+		rw.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/octet-stream")
+	rw.Write(sinkServer.messageStore.DumpFor(spaceId, appId))
+}
+
 func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 	extractReceivedSpaceAndAppId := func(data []byte) (string, string) {
 		receivedMessage := &logMessage.LogMessage{}
@@ -81,6 +106,9 @@ func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 		case data := <-sinkServer.dataChannel:
 			sinkServer.logger.Debugf("Received %d bytes of data from agent listener.", len(data))
 			receivedSpaceId, receivedAppId := extractReceivedSpaceAndAppId(data)
+
+			sinkServer.messageStore.Add(data, receivedSpaceId, receivedAppId)
+
 			sinkServer.logger.Debugf("Searching for channels with spaceId [%s] and appId [%s].", receivedSpaceId, receivedAppId)
 			for _, listenerChannel := range sinkServer.listenerChannels.get(receivedSpaceId, receivedAppId) {
 				sinkServer.logger.Debugf("Sending Message to channel %s for space [%s] and app [%s].", listenerChannel, receivedSpaceId, receivedAppId)
@@ -101,6 +129,7 @@ func (sinkServer *sinkServer) Start() {
 
 	sinkServer.logger.Infof("Listening on port %s", sinkServer.listenHost)
 	http.Handle(TAIL_PATH, websocket.Handler(sinkServer.sinkRelayHandler))
+	http.HandleFunc(DUMP_PATH, sinkServer.dumpHandler)
 	err := http.ListenAndServe(sinkServer.listenHost, nil)
 	if err != nil {
 		panic(err)
