@@ -3,13 +3,10 @@ package sink
 import (
 	"code.google.com/p/go.net/websocket"
 	"github.com/stretchr/testify/assert"
-<<<<<<< HEAD
 	"io/ioutil"
 	"loggregator/messagestore"
 	"net/http"
-=======
 	"net/url"
->>>>>>> refactor and test extractAppIdAndSpaceIdFromURL function
 	"testhelpers"
 	"testing"
 	"time"
@@ -201,7 +198,6 @@ func TestKeepAlive(t *testing.T) {
 	}
 }
 
-<<<<<<< HEAD
 // *** Start dump tests
 
 func TestItDumpsAllMessages(t *testing.T) {

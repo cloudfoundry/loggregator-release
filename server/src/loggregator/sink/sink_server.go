@@ -65,7 +65,7 @@ func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 }
 
 func (sinkServer *sinkServer) dumpHandler(rw http.ResponseWriter, req *http.Request) {
-	spaceId, appId := extractAppIdAndSpaceIdFromUrl(DUMP_PATH, req.URL)
+	spaceId, appId := extractAppIdAndSpaceIdFromUrl(req.URL)
 	authToken := req.Header.Get("Authorization")
 
 	if spaceId == "" {
