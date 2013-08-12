@@ -3,9 +3,13 @@ package sink
 import (
 	"code.google.com/p/go.net/websocket"
 	"github.com/stretchr/testify/assert"
+<<<<<<< HEAD
 	"io/ioutil"
 	"loggregator/messagestore"
 	"net/http"
+=======
+	"net/url"
+>>>>>>> refactor and test extractAppIdAndSpaceIdFromURL function
 	"testhelpers"
 	"testing"
 	"time"
@@ -197,6 +201,7 @@ func TestKeepAlive(t *testing.T) {
 	}
 }
 
+<<<<<<< HEAD
 // *** Start dump tests
 
 func TestItDumpsAllMessages(t *testing.T) {
@@ -259,4 +264,10 @@ func TestItReturns404WithoutSpaceId(t *testing.T) {
 	assert.Equal(t, "", string(body))
 }
 
-// *** End dump tests
+func TestExtractAppIdSpaceId(t *testing.T) {
+	theUrl, err := url.Parse("wss://loggregator.loggregatorci.cf-app.com:4443/tail/?org=6e6926ce-bd94-428d-944f-9446ae446deb&space=e0c78fc4-443b-43d0-840f-ed8b0823b4fd&app=11bfecc7-7128-4e56-83a0-d8e0814ed7e6")
+	assert.NoError(t, err)
+	spaceId, appId := extractAppIdAndSpaceIdFromUrl(theUrl)
+	assert.Equal(t, "e0c78fc4-443b-43d0-840f-ed8b0823b4fd", spaceId)
+	assert.Equal(t, "11bfecc7-7128-4e56-83a0-d8e0814ed7e6", appId)
+}

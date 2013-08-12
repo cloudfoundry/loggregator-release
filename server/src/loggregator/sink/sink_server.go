@@ -38,7 +38,7 @@ func NewSinkServer(givenChannel chan []byte, messageStore *messagestore.MessageS
 func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 	clientAddress := ws.RemoteAddr()
 
-	spaceId, appId := extractAppIdAndSpaceIdFromUrl(TAIL_PATH, ws.Request().URL)
+	spaceId, appId := extractAppIdAndSpaceIdFromUrl(ws.Request().URL)
 	authToken := ws.Request().Header.Get("Authorization")
 
 	if spaceId == "" {
@@ -145,7 +145,7 @@ func (sinkServer *sinkServer) Emit() instrumentation.Context {
 	}
 }
 
-func extractAppIdAndSpaceIdFromUrl(listenPath string, u *url.URL) (string, string) {
+func extractAppIdAndSpaceIdFromUrl(u *url.URL) (string, string) {
 	appId := u.Query().Get("app")
 	spaceId := u.Query().Get("space")
 	return spaceId, appId
