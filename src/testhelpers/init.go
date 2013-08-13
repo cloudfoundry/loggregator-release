@@ -43,8 +43,9 @@ func SuccessfulAuthorizer(authToken, spaceId, appId string, l *gosteno.Logger) b
 	return false
 }
 
-func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string, authToken string) (*websocket.Conn, chan bool) {
+func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string, authToken string) (*websocket.Conn, chan bool, <-chan bool) {
 	dontKeepAliveChan := make(chan bool)
+	connectionDroppedChannel := make(chan bool)
 
 	config, err := websocket.NewConfig("ws://localhost:"+port+path, "http://localhost")
 	assert.NoError(t, err)
@@ -57,7 +58,8 @@ func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string,
 			var data []byte
 			err := websocket.Message.Receive(ws, &data)
 			if err != nil {
-				break
+				connectionDroppedChannel <- true
+				return
 			}
 
 			receivedChan <- data
@@ -78,7 +80,7 @@ func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string,
 			}
 		}
 	}()
-	return ws, dontKeepAliveChan
+	return ws, dontKeepAliveChan, connectionDroppedChannel
 }
 
 func MarshalledLogMessage(t *testing.T, messageString string, spaceId string, appId string, organizationId string) []byte {

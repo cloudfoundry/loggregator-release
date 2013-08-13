@@ -173,7 +173,7 @@ func TestThatItSendsLogsToProperSpaceSink(t *testing.T) {
 func TestDropUnmarshallableMessage(t *testing.T) {
 	receivedChan := make(chan []byte)
 
-	sink, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?org=myOrg&space=mySpace&app=myApp", VALID_AUTHENTICATION_TOKEN)
+	sink, _, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?org=myOrg&space=mySpace&app=myApp", VALID_AUTHENTICATION_TOKEN)
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- make([]byte, 10)
@@ -192,25 +192,60 @@ func TestDropUnmarshallableMessage(t *testing.T) {
 	dataReadChannel <- mySpaceMarshalledMessage
 }
 
-//func TestDropSinkWithoutAppAndContinuesToWork(t *testing.T) {
-//	AssertConnecitonFails(t, SERVER_PORT, TAIL_PATH+"", "")
-//	TestThatItSends(t)
-//}
-//
-//func TestDropSinkWithoutAuthorizationAndContinuesToWork(t *testing.T) {
-//	AssertConnecitonFails(t, SERVER_PORT, TAIL_PATH+"?space=mySpace&app=myApp", "")
-//	TestThatItSends(t)
-//}
-//
-//func TestDropSinkWhenAuthorizationFailsAndContinuesToWork(t *testing.T) {
-//	AssertConnecitonFails(t, SERVER_PORT, TAIL_PATH+"?space=mySpace&app=myApp", INVALID_AUTHENTICATION_TOKEN)
-//	TestThatItSends(t)
-//}
+func TestDontDropSinkThatWorks(t *testing.T) {
+	receivedChan := make(chan []byte, 2)
+	_, _, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?org=myOrg&space=mySpace&app=myApp", VALID_AUTHENTICATION_TOKEN)
+
+	select {
+	case <-time.After(200 * time.Millisecond):
+	case <-droppedChannel:
+		t.Errorf("Channel drop, but shouldn't have.")
+	}
+
+	TestThatItSends(t)
+}
+
+var queryStringFailingCombinationTests = []struct {
+	queryString string
+}{
+	{"?space=mySpace&app=myApp"},
+	{"?app=myApp"},
+	{"?space=mySpace"},
+	{"?org=myOrg&app=myApp"},
+	{"?"},
+}
+
+func TestQueryStringCombinationsThatDropSinkButContinueToWork(t *testing.T) {
+	for _, test := range queryStringFailingCombinationTests {
+		receivedChan := make(chan []byte, 2)
+		_, _, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+test.queryString, VALID_AUTHENTICATION_TOKEN)
+		assert.Equal(t, true, <-droppedChannel)
+
+		TestThatItSends(t)
+	}
+}
+
+var authTokenFailingCombinationTests = []struct {
+	authToken string
+}{
+	{""},
+	{INVALID_AUTHENTICATION_TOKEN},
+}
+
+func TestAuthTokenCombinationsThatDropSinkButContinueToWork(t *testing.T) {
+	for _, test := range authTokenFailingCombinationTests {
+		receivedChan := make(chan []byte, 2)
+		_, _, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?org=MyOrg&space=mySpace&app=myApp", test.authToken)
+		assert.Equal(t, true, <-droppedChannel)
+
+		TestThatItSends(t)
+	}
+}
 
 func TestKeepAlive(t *testing.T) {
 	receivedChan := make(chan []byte)
 
-	_, killKeepAliveChan := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?org=MyOrg&space=mySpace&app=myApp", VALID_AUTHENTICATION_TOKEN)
+	_, killKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?org=MyOrg&space=mySpace&app=myApp", VALID_AUTHENTICATION_TOKEN)
 	WaitForWebsocketRegistration()
 
 	killKeepAliveChan <- true
@@ -292,6 +327,8 @@ func TestItReturns404WithoutSpaceId(t *testing.T) {
 
 	assert.Equal(t, "", string(body))
 }
+
+// *** End dump tests
 
 func TestExtractTarget(t *testing.T) {
 	theUrl, err := url.Parse("wss://loggregator.loggregatorci.cf-app.com:4443/tail/?org=6e6926ce-bd94-428d-944f-9446ae446deb&space=e0c78fc4-443b-43d0-840f-ed8b0823b4fd&app=11bfecc7-7128-4e56-83a0-d8e0814ed7e6")
