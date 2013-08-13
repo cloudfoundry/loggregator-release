@@ -1,15 +1,15 @@
-package sink
+package groupedchannels
 
 import (
 	"strings"
 	"sync"
 )
 
-func newGroupedChannels() *groupedChannels {
-	return &groupedChannels{make(map[string]map[chan []byte]bool), new(sync.Mutex)}
+func NewGroupedChannels() *GroupedChannels {
+	return &GroupedChannels{make(map[string]map[chan []byte]bool), new(sync.Mutex)}
 }
 
-type groupedChannels struct {
+type GroupedChannels struct {
 	channels map[string]map[chan []byte]bool //{key => {channel => true, ...}, ...}
 	mutex    *sync.Mutex
 }
@@ -24,7 +24,7 @@ func keyify(keys []string) string {
 	return strings.Join(nonEmptyKeys, ":")
 }
 
-func (gc *groupedChannels) add(channel chan []byte, keys ...string) {
+func (gc *GroupedChannels) Add(channel chan []byte, keys ...string) {
 	gc.mutex.Lock()
 	defer gc.mutex.Unlock()
 
@@ -35,7 +35,7 @@ func (gc *groupedChannels) add(channel chan []byte, keys ...string) {
 
 }
 
-func (gc *groupedChannels) get(keys ...string) []chan []byte {
+func (gc *GroupedChannels) Get(keys ...string) []chan []byte {
 	gc.mutex.Lock()
 	defer gc.mutex.Unlock()
 
@@ -48,7 +48,7 @@ func (gc *groupedChannels) get(keys ...string) []chan []byte {
 	return result
 }
 
-func (gc *groupedChannels) delete(channel chan []byte) {
+func (gc *GroupedChannels) Delete(channel chan []byte) {
 	gc.mutex.Lock()
 	defer gc.mutex.Unlock()
 
@@ -57,7 +57,7 @@ func (gc *groupedChannels) delete(channel chan []byte) {
 	}
 }
 
-func (gc *groupedChannels) NumberOfChannels() (numberOfChannels int) {
+func (gc *GroupedChannels) NumberOfChannels() (numberOfChannels int) {
 	for _, channels := range gc.channels {
 		numberOfChannels += len(channels)
 	}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"logMessage"
+	"loggregator/groupedchannels"
 	"loggregator/logtarget"
 	"loggregator/messagestore"
 	"net/http"
@@ -23,7 +24,7 @@ type sinkServer struct {
 	logger            *gosteno.Logger
 	dataChannel       chan []byte
 	listenHost        string
-	listenerChannels  *groupedChannels
+	listenerChannels  *groupedchannels.GroupedChannels
 	authorize         LogAccessAuthorizer
 	sinkCloseChan     chan chan []byte
 	keepAliveInterval time.Duration
@@ -31,7 +32,7 @@ type sinkServer struct {
 }
 
 func NewSinkServer(givenChannel chan []byte, messageStore *messagestore.MessageStore, logger *gosteno.Logger, listenHost string, authorize LogAccessAuthorizer, keepAliveInterval time.Duration) *sinkServer {
-	listeners := newGroupedChannels()
+	listeners := groupedchannels.NewGroupedChannels()
 	sinkCloseChan := make(chan chan []byte, 4)
 	return &sinkServer{logger, givenChannel, listenHost, listeners, authorize, sinkCloseChan, keepAliveInterval, messageStore}
 }
@@ -62,7 +63,7 @@ func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 
 	sink := newCfSink(target, sinkServer.logger, ws, clientAddress, sinkServer.keepAliveInterval)
 
-	sinkServer.listenerChannels.add(sink.listenerChannel, target.SpaceId, target.AppId)
+	sinkServer.listenerChannels.Add(sink.listenerChannel, target.SpaceId, target.AppId)
 	sink.Run(sinkServer.sinkCloseChan)
 }
 
@@ -101,7 +102,7 @@ func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 	for {
 		select {
 		case sin := <-sinkServer.sinkCloseChan:
-			sinkServer.listenerChannels.delete(sin)
+			sinkServer.listenerChannels.Delete(sin)
 			close(sin)
 			sinkServer.logger.Info("A Tail client went have away. Closed it.")
 		case data := <-sinkServer.dataChannel:
@@ -111,12 +112,12 @@ func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 			sinkServer.messageStore.Add(data, receivedSpaceId, receivedAppId)
 
 			sinkServer.logger.Debugf("Searching for channels with spaceId [%s] and appId [%s].", receivedSpaceId, receivedAppId)
-			for _, listenerChannel := range sinkServer.listenerChannels.get(receivedSpaceId, receivedAppId) {
+			for _, listenerChannel := range sinkServer.listenerChannels.Get(receivedSpaceId, receivedAppId) {
 				sinkServer.logger.Debugf("Sending Message to channel %s for space [%s] and app [%s].", listenerChannel, receivedSpaceId, receivedAppId)
 				listenerChannel <- data
 			}
 			sinkServer.logger.Debugf("Searching for channels with spaceId [%s].", receivedSpaceId)
-			for _, listenerChannel := range sinkServer.listenerChannels.get(receivedSpaceId) {
+			for _, listenerChannel := range sinkServer.listenerChannels.Get(receivedSpaceId) {
 				sinkServer.logger.Debugf("Sending Message to channel %s for space [%s].", listenerChannel, receivedSpaceId)
 				listenerChannel <- data
 			}
