@@ -13,14 +13,15 @@ Loggregator allows users to:
 1. Continually drain their application logs to 3rd party log archive and analysis services.
 
 ### Usage
-Proposed syntax:
 
 ```
-cf logs [--space] [--app=APP_NAME|] [--tail]
+cf logs [--app=APP_NAME|--space|--org] [--recent]
 ```
+
+`APP_NAME` defaults to the current application in your `manifest.yml` file.
 
 ``` bash
-$ cf logs --tail
+$ cf logs
 Started GET "/" for 127.0.0.1 at 2013-04-05 13:14:58 -0700
 Processing by Rails::WelcomeController#index as HTML
   Rendered /Users/tsaleh/.rbenv/versions/2.0.0-p0/lib/ruby/gems/2.0.0/gems/railties-4.0.0.beta1/lib/rails/templates/rails/welcome/index.html.erb (1.9ms)
