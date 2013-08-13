@@ -183,7 +183,12 @@ again:
 		}
 		ws.frameReader, err = ws.frameHandler.HandleFrame(frame)
 		if err != nil {
-			return 0, err
+			if ws.frameReader != nil && ws.frameReader.PayloadType() == CloseFrame && err == io.EOF {
+				n, _ := ws.frameReader.Read(msg)
+				return n, err
+			} else {
+				return 0, err
+			}
 		}
 		if ws.frameReader == nil {
 			goto again
@@ -219,7 +224,11 @@ func (ws *Conn) Write(msg []byte) (n int, err error) {
 
 // Close implements the io.Closer interface.
 func (ws *Conn) Close() error {
-	err := ws.frameHandler.WriteClose(ws.defaultCloseStatus)
+	return ws.CloseWithStatus(ws.defaultCloseStatus)
+}
+
+func (ws *Conn) CloseWithStatus(status int) error {
+	err := ws.frameHandler.WriteClose(status)
 	if err != nil {
 		return err
 	}

@@ -287,7 +287,7 @@ func (handler *hybiFrameHandler) HandleFrame(frame frameReader) (r frameReader, 
 	case TextFrame, BinaryFrame:
 		handler.payloadType = frame.PayloadType()
 	case CloseFrame:
-		return nil, io.EOF
+		return frame, io.EOF
 	case PingFrame:
 		pingMsg := make([]byte, maxControlFramePayloadLength)
 		n, err := io.ReadFull(frame, pingMsg)

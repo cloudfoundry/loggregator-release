@@ -1,6 +1,8 @@
 package sink
 
 import (
+	"code.google.com/p/go.net/websocket"
+	"encoding/binary"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"loggregator/messagestore"
@@ -31,6 +33,22 @@ func WaitForWebsocketRegistration() {
 	time.Sleep(50 * time.Millisecond)
 }
 
+func AssertConnectionFails(t *testing.T, port string, path string, authToken string, expectedErrorCode uint16) {
+	config, err := websocket.NewConfig("ws://localhost:"+port+path, "http://localhost")
+	assert.NoError(t, err)
+	if authToken != "" {
+		config.Header.Add("Authorization", authToken)
+	}
+
+	ws, err := websocket.DialConfig(config)
+	assert.NoError(t, err)
+	data := make([]byte, 2)
+	_, err = ws.Read(data)
+	errorCode := binary.BigEndian.Uint16(data)
+	assert.Equal(t, expectedErrorCode, errorCode)
+	assert.Equal(t, "EOF", err.Error())
+}
+
 func TestThatItSends(t *testing.T) {
 	receivedChan := make(chan []byte, 2)
 
@@ -58,6 +76,7 @@ func TestThatItSends(t *testing.T) {
 	case message := <-receivedChan:
 		testhelpers.AssertProtoBufferMessageEquals(t, otherMessageString, message)
 	}
+
 }
 
 func TestThatItSendsAllDataToAllSinks(t *testing.T) {
@@ -249,6 +268,21 @@ func TestAuthTokenCombinationsThatDropSinkButContinueToWork(t *testing.T) {
 
 		TestThatItSends(t)
 	}
+}
+
+func TestDropSinkWhenLogTargetisinvalidAndContinuesToWork(t *testing.T) {
+	AssertConnectionFails(t, SERVER_PORT, TAIL_PATH+"invalidtarget", "", 4000)
+	TestThatItSends(t)
+}
+
+func TestDropSinkWithoutAuthorizationAndContinuesToWork(t *testing.T) {
+	AssertConnectionFails(t, SERVER_PORT, TAIL_PATH+"?org=myOrg&space=mySpace&app=myApp", "", 4001)
+	TestThatItSends(t)
+}
+
+func TestDropSinkWhenAuthorizationFailsAndContinuesToWork(t *testing.T) {
+	AssertConnectionFails(t, SERVER_PORT, TAIL_PATH+"?org=myOrg&space=mySpace&app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN, 4002)
+	TestThatItSends(t)
 }
 
 func TestKeepAlive(t *testing.T) {

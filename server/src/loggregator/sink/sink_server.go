@@ -46,18 +46,21 @@ func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 	if !target.IsValid() {
 		message := fmt.Sprintf("Did not accept sink connection with invalid org, space, app combination: %s.", clientAddress)
 		sinkServer.logger.Warn(message)
+		ws.CloseWithStatus(4000)
 		return
 	}
 
 	if authToken == "" {
 		message := fmt.Sprintf("Did not accept sink connection from %s without authorization.", clientAddress)
 		sinkServer.logger.Warnf(message)
+		ws.CloseWithStatus(4001)
 		return
 	}
 
 	if !sinkServer.authorize(authToken, target, sinkServer.logger) {
 		message := fmt.Sprintf("Auth token [%s] not authorized to access target [%s].", authToken, target)
 		sinkServer.logger.Warn(message)
+		ws.CloseWithStatus(4002)
 		return
 	}
 
