@@ -16,7 +16,7 @@ env:
   - secure: GGNK3EdRGczAeow8u6/UuS3qg6tgGfHfoinzM8Vxmo2ik1bKJHZYLR9JpYILtj0+dv/Hz8ZPDvH1Htci8ZaIZTsU2CL8XeTKQCVdNfSGLOKqcC4+eBTmoFVp//GtRrTW7LGQOFhaN9I41bFWdAxYcQsc6wCUGeJvFZStQW0ebmQ=
 language: go
 go:
-- 1.1.1
+- 1.1.2
 before_install:
 - gem install nats --no-rdoc --no-ri && git submodule update --init --recursive
 install: ./bin/build && ./bin/install
