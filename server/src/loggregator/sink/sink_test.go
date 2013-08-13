@@ -1,3 +1,3 @@
 package sink
 
-//tested through the cf_sink_server
+//tested through the sink_server
