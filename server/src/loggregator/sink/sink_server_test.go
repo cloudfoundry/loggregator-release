@@ -50,14 +50,14 @@ func TestThatItSends(t *testing.T) {
 
 	select {
 	case <-time.After(1 * time.Second):
-		t.Errorf("Did not get message.")
+		t.Errorf("Did not get message 1.")
 	case message := <-receivedChan:
 		testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
 	}
 
 	select {
 	case <-time.After(1 * time.Second):
-		t.Errorf("Did not get message.")
+		t.Errorf("Did not get message 2.")
 	case message := <-receivedChan:
 		testhelpers.AssertProtoBufferMessageEquals(t, otherMessageString, message)
 	}
@@ -80,10 +80,33 @@ func TestThatItSendsAllDataToAllSinks(t *testing.T) {
 
 	dataReadChannel <- expectedMarshalledProtoBuffer
 
-	testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, <-client1ReceivedChan)
-	testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, <-client2ReceivedChan)
-	testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, <-space1ReceivedChan)
-	testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, <-space2ReceivedChan)
+	select {
+	case <-time.After(1 * time.Second):
+		t.Errorf("Did not get message from client 1.")
+	case message := <-client1ReceivedChan:
+		testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
+	}
+
+	select {
+	case <-time.After(1 * time.Second):
+		t.Errorf("Did not get message from client 2.")
+	case message := <-client2ReceivedChan:
+		testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
+	}
+
+	select {
+	case <-time.After(1 * time.Second):
+		t.Errorf("Did not get message from space 2.")
+	case message := <-space1ReceivedChan:
+		testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
+	}
+
+	select {
+	case <-time.After(1 * time.Second):
+		t.Errorf("Did not get message from space 2.")
+	case message := <-space2ReceivedChan:
+		testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
+	}
 }
 
 func TestThatItSendsLogsToProperAppSink(t *testing.T) {
@@ -100,8 +123,30 @@ func TestThatItSendsLogsToProperAppSink(t *testing.T) {
 	dataReadChannel <- otherAppsMarshalledMessage
 	dataReadChannel <- myAppsMarshalledMessage
 
-	testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, <-receivedChan)
+	select {
+	case <-time.After(1 * time.Second):
+		t.Errorf("Did not get message from app sink.")
+	case message := <-receivedChan:
+		testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
+	}
 }
+
+//func TestThatItSendsLogsToProperOrgSink(t *testing.T) {
+//	receivedChan := make(chan []byte)
+//
+//	otherOrgMarshalledMessage := testhelpers.MarshalledLogMessage(t, "Some other message", "otherSpace", "otherApp", "otherOrg")
+//
+//	expectedMessageString := "My important message"
+//	myOrgMarshalledMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp", "myOrg")
+//
+//	testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?org=myOrg", VALID_AUTHENTICATION_TOKEN)
+//	WaitForWebsocketRegistration()
+//
+//	dataReadChannel <- otherOrgMarshalledMessage
+//	dataReadChannel <- myOrgMarshalledMessage
+//
+//	testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, <-receivedChan)
+//}
 
 func TestThatItSendsLogsToProperSpaceSink(t *testing.T) {
 	receivedChan := make(chan []byte)
@@ -117,7 +162,12 @@ func TestThatItSendsLogsToProperSpaceSink(t *testing.T) {
 	dataReadChannel <- otherSpaceMarshalledMessage
 	dataReadChannel <- mySpaceMarshalledMessage
 
-	testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, <-receivedChan)
+	select {
+	case <-time.After(1 * time.Second):
+		t.Errorf("Did not get message from space sink.")
+	case message := <-receivedChan:
+		testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
+	}
 }
 
 func TestDropUnmarshallableMessage(t *testing.T) {
