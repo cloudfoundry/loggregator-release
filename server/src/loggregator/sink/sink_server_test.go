@@ -1,7 +1,6 @@
 package sink
 
 import (
-	"code.google.com/p/go.net/websocket"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"loggregator/messagestore"
@@ -33,22 +32,6 @@ func init() {
 
 func WaitForWebsocketRegistration() {
 	time.Sleep(50 * time.Millisecond)
-}
-
-func AssertConnecitonFails(t *testing.T, port string, path string, authToken string) {
-	config, err := websocket.NewConfig("ws://localhost:"+port+path, "http://localhost")
-	assert.NoError(t, err)
-	if authToken != "" {
-		config.Header.Add("Authorization", authToken)
-	}
-
-	ws, err := websocket.DialConfig(config)
-	assert.NoError(t, err)
-	var data []byte
-	err = websocket.Message.Receive(ws, &data)
-	if err == nil {
-		t.Errorf("Connection did not get closed.")
-	}
 }
 
 func TestThatItSends(t *testing.T) {
