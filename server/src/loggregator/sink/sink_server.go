@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"logMessage"
+	"loggregator/logtarget"
 	"loggregator/messagestore"
 	"net/http"
 	"net/url"
@@ -38,52 +39,52 @@ func NewSinkServer(givenChannel chan []byte, messageStore *messagestore.MessageS
 func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 	clientAddress := ws.RemoteAddr()
 
-	spaceId, appId := extractAppIdAndSpaceIdFromUrl(ws.Request().URL)
+	target := extractTarget(ws.Request().URL)
 	authToken := ws.Request().Header.Get("Authorization")
 
-	if spaceId == "" {
-		message := fmt.Sprintf("Did not accept sink connection from %s without spaceId.", clientAddress)
+	if !target.IsValid() {
+		message := fmt.Sprintf("Did not accept sink connection with invalid org, space, app combination: %s.", clientAddress)
 		sinkServer.logger.Warn(message)
 		return
 	}
+
 	if authToken == "" {
 		message := fmt.Sprintf("Did not accept sink connection from %s without authorization.", clientAddress)
 		sinkServer.logger.Warnf(message)
 		return
 	}
 
-	if !sinkServer.authorize(authToken, spaceId, appId, sinkServer.logger) {
-		message := fmt.Sprintf("Auth token [%s] not authorized to access space [%s].", authToken, spaceId)
+	if !sinkServer.authorize(authToken, target.SpaceId, target.AppId, sinkServer.logger) {
+		message := fmt.Sprintf("Auth token [%s] not authorized to access space [%s].", authToken, target.SpaceId)
 		sinkServer.logger.Warn(message)
 		return
 	}
 
-	sink := newCfSink(spaceId, appId, sinkServer.logger, ws, clientAddress, sinkServer.keepAliveInterval)
+	sink := newCfSink(target, sinkServer.logger, ws, clientAddress, sinkServer.keepAliveInterval)
 
-	sinkServer.listenerChannels.add(sink.listenerChannel, spaceId, appId)
+	sinkServer.listenerChannels.add(sink.listenerChannel, target.SpaceId, target.AppId)
 	sink.Run(sinkServer.sinkCloseChan)
 }
 
 func (sinkServer *sinkServer) dumpHandler(rw http.ResponseWriter, req *http.Request) {
-	spaceId, appId := extractAppIdAndSpaceIdFromUrl(req.URL)
+	target := extractTarget(req.URL)
 	authToken := req.Header.Get("Authorization")
 
-	if spaceId == "" {
-		message := fmt.Sprintf("Did not accept dump connection without spaceId.")
-		sinkServer.logger.Warn(message)
+	if !target.IsValid() {
+		sinkServer.logger.Warn("Did not accept dump connection with invalid org, space, app combination.")
 		rw.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	if !sinkServer.authorize(authToken, spaceId, appId, sinkServer.logger) {
-		message := fmt.Sprintf("Auth token [%s] not authorized to access space [%s].", authToken, spaceId)
+	if !sinkServer.authorize(authToken, target.SpaceId, target.AppId, sinkServer.logger) {
+		message := fmt.Sprintf("Auth token [%s] not authorized to access space [%s].", authToken, target.SpaceId)
 		sinkServer.logger.Warn(message)
 		rw.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	rw.Header().Set("Content-Type", "application/octet-stream")
-	rw.Write(sinkServer.messageStore.DumpFor(spaceId, appId))
+	rw.Write(sinkServer.messageStore.DumpFor(target.SpaceId, target.AppId))
 }
 
 func (sinkServer *sinkServer) relayMessagesToAllSinks() {
@@ -145,8 +146,10 @@ func (sinkServer *sinkServer) Emit() instrumentation.Context {
 	}
 }
 
-func extractAppIdAndSpaceIdFromUrl(u *url.URL) (string, string) {
+func extractTarget(u *url.URL) *logtarget.LogTarget {
 	appId := u.Query().Get("app")
 	spaceId := u.Query().Get("space")
-	return spaceId, appId
+	orgId := u.Query().Get("org")
+	target := &logtarget.LogTarget{orgId, spaceId, appId}
+	return target
 }

@@ -4,16 +4,15 @@ import (
 	"cfcomponent/instrumentation"
 	"code.google.com/p/go.net/websocket"
 	"github.com/cloudfoundry/gosteno"
+	"loggregator/logtarget"
 	"net"
-	"strings"
 	"sync/atomic"
 	"time"
 )
 
 type sink struct {
 	logger            *gosteno.Logger
-	spaceId           string
-	appId             string
+	target            *logtarget.LogTarget
 	ws                *websocket.Conn
 	clientAddress     net.Addr
 	sentMessageCount  *uint64
@@ -22,11 +21,10 @@ type sink struct {
 	listenerChannel   chan []byte
 }
 
-func newCfSink(spaceId string, appId string, givenLogger *gosteno.Logger, ws *websocket.Conn, clientAddress net.Addr, keepAliveInterval time.Duration) *sink {
+func newCfSink(lg *logtarget.LogTarget, givenLogger *gosteno.Logger, ws *websocket.Conn, clientAddress net.Addr, keepAliveInterval time.Duration) *sink {
 	return &sink{
 		givenLogger,
-		spaceId,
-		appId,
+		lg,
 		ws,
 		clientAddress,
 		new(uint64),
@@ -36,15 +34,11 @@ func newCfSink(spaceId string, appId string, givenLogger *gosteno.Logger, ws *we
 	}
 }
 
-func (sink *sink) clientIdentifier() string {
-	return strings.Join([]string{sink.spaceId, sink.appId}, ":")
-}
-
 func (sink *sink) Run(sinkCloseChan chan chan []byte) {
-	if sink.appId != "" {
-		sink.logger.Debugf("Adding Tail client %s for space [%s] and app [%s].", sink.clientAddress, sink.spaceId, sink.appId)
+	if sink.target.AppId != "" {
+		sink.logger.Debugf("Adding Tail client %s for space [%s] and app [%s].", sink.clientAddress, sink.target.SpaceId, sink.target.AppId)
 	} else {
-		sink.logger.Debugf("Adding Tail client %s for space [%s].", sink.clientAddress, sink.spaceId)
+		sink.logger.Debugf("Adding Tail client %s for space [%s].", sink.clientAddress, sink.target.SpaceId)
 	}
 
 	alreadyAskedForClose := false
@@ -102,8 +96,8 @@ func (sink *sink) Run(sinkCloseChan chan chan []byte) {
 func (sink *sink) Emit() instrumentation.Context {
 	return instrumentation.Context{"cfSink",
 		[]instrumentation.Metric{
-			instrumentation.Metric{"sentMessageCount:" + sink.clientIdentifier(), atomic.LoadUint64(sink.sentMessageCount)},
-			instrumentation.Metric{"sentByteCount:" + sink.clientIdentifier(), atomic.LoadUint64(sink.sentByteCount)},
+			instrumentation.Metric{"sentMessageCount:" + sink.target.Identifier(), atomic.LoadUint64(sink.sentMessageCount)},
+			instrumentation.Metric{"sentByteCount:" + sink.target.Identifier(), atomic.LoadUint64(sink.sentByteCount)},
 		},
 	}
 }
