@@ -11,7 +11,6 @@ import (
 type LogAccessAuthorizer func(authToken string, target *logtarget.LogTarget, logger *gosteno.Logger) bool
 
 func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccessAuthorizer {
-
 	type Metadata struct {
 		Guid string
 	}
@@ -43,26 +42,19 @@ func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccess
 		OrgEntity `json:"entity"`
 	}
 
-	authorizer := func(authToken string, target *logtarget.LogTarget, logger *gosteno.Logger) bool {
-		idIsInGroup := func(id string, group []MetadataObject) bool {
-			for _, individual := range group {
-				if individual.Guid == id {
-					return true
-				}
+	idIsInGroup := func(id string, group []MetadataObject) bool {
+		for _, individual := range group {
+			if individual.Guid == id {
+				return true
 			}
-			return false
 		}
+		return false
+	}
 
-		decodedInformation, err := tokenDecoder.Decode(authToken)
-
+	authorizer := func(authToken string, target *logtarget.LogTarget, logger *gosteno.Logger) bool {
+		tokenPayload, err := tokenDecoder.Decode(authToken)
 		if err != nil {
 			logger.Errorf("Could not decode auth token. %s", authToken)
-			return false
-		}
-		userId, found := decodedInformation["user_id"].(string)
-
-		if !found {
-			logger.Errorf("No User ID found in the auth token. %v", decodedInformation)
 			return false
 		}
 
@@ -83,15 +75,13 @@ func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccess
 
 		jsonBytes, err := ioutil.ReadAll(res.Body)
 		res.Body.Close()
-
 		if err != nil {
-			logger.Errorf("Could not read organization json: %s", err)
+			logger.Errorf("Could not response body: %s", err)
 			return false
 		}
 
 		var org Org
 		err = json.Unmarshal(jsonBytes, &org)
-
 		if err != nil {
 			logger.Errorf("Error parsing organization JSON. json: %s\nerror: %s", jsonBytes, err)
 			return false
@@ -100,22 +90,16 @@ func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccess
 		orgManagers := org.Managers
 		orgAuditors := org.Auditors
 
-		foundOrgManager := idIsInGroup(userId, orgManagers)
-		foundOrgAuditor := idIsInGroup(userId, orgAuditors)
+		foundOrgManager := idIsInGroup(tokenPayload.UserId, orgManagers)
+		foundOrgAuditor := idIsInGroup(tokenPayload.UserId, orgAuditors)
 
 		if target.SpaceId == "" {
 			return foundOrgManager || foundOrgAuditor
 		}
 
-		spaces := org.Spaces
-		spacesMetadata := make([]Metadata, len(spaces))
-		for i, space := range spaces {
-			spacesMetadata[i] = space.Metadata
-		}
-
 		var targetSpace Space
 
-		for _, space := range spaces {
+		for _, space := range org.Spaces {
 			if space.Guid == target.SpaceId {
 				targetSpace = space
 			}
@@ -124,18 +108,16 @@ func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccess
 			return false
 		}
 
-		apps := targetSpace.Apps
-
-		if target.AppId != "" && !idIsInGroup(target.AppId, apps) {
+		if target.AppId != "" && !idIsInGroup(target.AppId, targetSpace.Apps) {
 			logger.Warnf("AppId (%s) not in space (%s)", target.AppId, target.SpaceId)
 			return false
 		}
 
-		foundSpaceManager := idIsInGroup(userId, targetSpace.Managers)
-		foundSpaceAuditor := idIsInGroup(userId, targetSpace.Auditors)
-		foundSpaceDeveloper := idIsInGroup(userId, targetSpace.Developers)
-
-		return foundOrgManager || foundOrgAuditor || foundSpaceManager || foundSpaceAuditor || foundSpaceDeveloper
+		return foundOrgManager ||
+			foundOrgAuditor ||
+			idIsInGroup(tokenPayload.UserId, targetSpace.Managers) ||
+			idIsInGroup(tokenPayload.UserId, targetSpace.Auditors) ||
+			idIsInGroup(tokenPayload.UserId, targetSpace.Developers)
 	}
 
 	return LogAccessAuthorizer(authorizer)

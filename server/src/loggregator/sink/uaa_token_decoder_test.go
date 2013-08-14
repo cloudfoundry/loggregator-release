@@ -95,5 +95,5 @@ uxVPJqICvuV6sIukJXXEzfblneN2GeEVqgeNvglAU9tnm3OIKzlwM5UCAwEAAQ==
 
 	assert.NoError(t, err)
 
-	assert.Equal(t, results["user_id"], "abc1234")
+	assert.Equal(t, results.UserId, "abc1234")
 }

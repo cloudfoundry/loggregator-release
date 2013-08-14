@@ -14,7 +14,12 @@ import (
 )
 
 type TokenDecoder interface {
-	Decode(token string) (map[string]interface{}, error)
+	Decode(token string) (TokenPayload, error)
+}
+
+type TokenPayload struct {
+	UserId string `json:"user_id"`
+	Exp    uint64 `json:"exp"`
 }
 
 func NewUaaTokenDecoder(uaaVerificationKey []byte) (TokenDecoder, error) {
@@ -40,22 +45,25 @@ type UaaTokenDecoder struct {
 	key *rsa.PublicKey
 }
 
-func (d UaaTokenDecoder) Decode(authToken string) (map[string]interface{}, error) {
+func (d UaaTokenDecoder) Decode(authToken string) (tp TokenPayload, err error) {
 	authTokenParts := strings.Split(authToken, " ")
 
 	if len(authTokenParts) != 2 || authTokenParts[0] != "bearer" {
-		return nil, errors.New(fmt.Sprintf("invalid authentication header: %s", authToken))
+		err = errors.New(fmt.Sprintf("invalid authentication header: %s", authToken))
+		return
 	}
 
 	jwtTokenParts := strings.Split(authTokenParts[1], ".")
 
 	if len(jwtTokenParts) != 3 {
-		return nil, errors.New("Not enough or too many segments")
+		err = errors.New("Not enough or too many segments")
+		return
 	}
 
 	signature, err := base64.URLEncoding.DecodeString(restorePadding(jwtTokenParts[2]))
 	if err != nil {
-		return nil, errors.New("Trouble base64 decoding signature")
+		err = errors.New("Trouble base64 decoding signature")
+		return
 	}
 
 	signingString := strings.Join(jwtTokenParts[0:2], ".")
@@ -65,18 +73,23 @@ func (d UaaTokenDecoder) Decode(authToken string) (map[string]interface{}, error
 
 	err = rsa.VerifyPKCS1v15(d.key, crypto.SHA256, hasher.Sum(nil), signature)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Signature verification failed: %s", err))
+		err = errors.New(fmt.Sprintf("Signature verification failed: %s", err))
+		return
 	}
 
-	var parsedPayload map[string]interface{}
 	payload, err := base64.URLEncoding.DecodeString(restorePadding(jwtTokenParts[1]))
-
-	err = json.Unmarshal(payload, &parsedPayload)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Can not unmarshall payload JSON %s: %s", payload, err))
+		err = errors.New(fmt.Sprintf("base64.URLEncoding.DecodeString failed: %s", err))
+		return
 	}
 
-	return parsedPayload, nil
+	err = json.Unmarshal(payload, &tp)
+	if err != nil {
+		err = errors.New(fmt.Sprintf("Can not unmarshall payload JSON %s: %s", payload, err))
+		return
+	}
+
+	return
 }
 
 func restorePadding(seg string) string {
