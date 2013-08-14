@@ -6,7 +6,7 @@ import (
 	"loggregator/logtarget"
 )
 
-func TestAddAndGet(t *testing.T) {
+func TestRegisterAndFor(t *testing.T) {
 	groupedChannels := NewGroupedChannels()
 
 	orgChannel := make(chan []byte)
@@ -37,7 +37,7 @@ func TestAddAndGet(t *testing.T) {
 	assert.Equal(t, orgChannels[0], orgChannel)
 }
 
-func TestGetForEmptyCollection(t *testing.T) {
+func TestEmptyCollection(t *testing.T) {
 	groupedChannels := NewGroupedChannels()
 	targetWithOnlyOrg := &logtarget.LogTarget{OrgId: "123"}
 	targetWithOrgAndSpace := &logtarget.LogTarget{OrgId: "123", SpaceId: "456"}
