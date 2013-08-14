@@ -1,25 +1,54 @@
 package sink
 
 import (
-	"github.com/bitly/simplejson"
+	"encoding/json"
 	"github.com/cloudfoundry/gosteno"
 	"io/ioutil"
+	"loggregator/logtarget"
 	"net/http"
 )
 
-type LogAccessAuthorizer func(authToken, spaceId, appId string, logger *gosteno.Logger) bool
+type LogAccessAuthorizer func(authToken string, target *logtarget.LogTarget, logger *gosteno.Logger) bool
 
 func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccessAuthorizer {
-	authorizer := func(authToken, spaceId, appId string, logger *gosteno.Logger) bool {
-		idIsInGroup := func(id string, group []interface{}) bool {
-			for _, individual := range group {
-				metadata := individual.(map[string]interface{})["metadata"]
-				guid := metadata.(map[string]interface{})["guid"]
 
-				if guid == id {
+	type Metadata struct {
+		Guid string
+	}
+
+	type MetadataObject struct {
+		Metadata `json:"metadata"`
+	}
+
+	type SpaceEntity struct {
+		Developers []MetadataObject
+		Managers   []MetadataObject
+		Auditors   []MetadataObject
+		Apps       []MetadataObject
+	}
+
+	type Space struct {
+		Metadata    `json:"metadata"`
+		SpaceEntity `json:"entity"`
+	}
+
+	type OrgEntity struct {
+		Spaces   []Space
+		Managers []MetadataObject
+		Auditors []MetadataObject
+	}
+
+	type Org struct {
+		Metadata  `json:"metadata"`
+		OrgEntity `json:"entity"`
+	}
+
+	authorizer := func(authToken string, target *logtarget.LogTarget, logger *gosteno.Logger) bool {
+		idIsInGroup := func(id string, group []MetadataObject) bool {
+			for _, individual := range group {
+				if individual.Guid == id {
 					return true
 				}
-
 			}
 			return false
 		}
@@ -39,11 +68,11 @@ func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccess
 
 		client := &http.Client{}
 
-		req, _ := http.NewRequest("GET", apiHost+"/v2/spaces/"+spaceId+"?inline-relations-depth=1", nil)
+		req, _ := http.NewRequest("GET", apiHost+"/v2/organizations/"+target.OrgId+"?inline-relations-depth=2", nil)
 		req.Header.Set("Authorization", authToken)
 		res, err := client.Do(req)
 		if err != nil {
-			logger.Errorf("Could not get space information: %s", err)
+			logger.Errorf("Could not get space information: [%s]", err)
 			return false
 		}
 
@@ -52,54 +81,61 @@ func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccess
 			return false
 		}
 
-		json, err := ioutil.ReadAll(res.Body)
+		jsonBytes, err := ioutil.ReadAll(res.Body)
 		res.Body.Close()
 
 		if err != nil {
-			logger.Errorf("Could not read space json: %s", err)
+			logger.Errorf("Could not read organization json: %s", err)
 			return false
 		}
 
-		js, err := simplejson.NewJson(json)
-		res.Body.Close()
+		var org Org
+		err = json.Unmarshal(jsonBytes, &org)
 
 		if err != nil {
-			logger.Errorf("Error parsing space JSON. json: %s\nerror: %s", json, err)
+			logger.Errorf("Error parsing organization JSON. json: %s\nerror: %s", jsonBytes, err)
 			return false
 		}
 
-		logger.Debugf("JSON: %s\nuserId: %s", json, userId)
+		orgManagers := org.Managers
+		orgAuditors := org.Auditors
 
-		apps, err := js.Get("entity").Get("apps").Array()
-		if err != nil {
-			logger.Errorf("Error getting apps from space JSON: %s, err: %s", json, err)
+		foundOrgManager := idIsInGroup(userId, orgManagers)
+		foundOrgAuditor := idIsInGroup(userId, orgAuditors)
+
+		if target.SpaceId == "" {
+			return foundOrgManager || foundOrgAuditor
+		}
+
+		spaces := org.Spaces
+		spacesMetadata := make([]Metadata, len(spaces))
+		for i, space := range spaces {
+			spacesMetadata[i] = space.Metadata
+		}
+
+		var targetSpace Space
+
+		for _, space := range spaces {
+			if space.Guid == target.SpaceId {
+				targetSpace = space
+			}
+		}
+		if targetSpace.Guid == "" {
 			return false
 		}
 
-		if appId != "" && !idIsInGroup(appId, apps) {
-			logger.Warnf("AppId (%s) not in space (%s)", appId, spaceId)
+		apps := targetSpace.Apps
+
+		if target.AppId != "" && !idIsInGroup(target.AppId, apps) {
+			logger.Warnf("AppId (%s) not in space (%s)", target.AppId, target.SpaceId)
 			return false
 		}
 
-		managers, err := js.Get("entity").Get("managers").Array()
-		if err != nil {
-			logger.Errorf("Error getting managers from space JSON: %s, err: %s", json, err)
-			return false
-		}
+		foundSpaceManager := idIsInGroup(userId, targetSpace.Managers)
+		foundSpaceAuditor := idIsInGroup(userId, targetSpace.Auditors)
+		foundSpaceDeveloper := idIsInGroup(userId, targetSpace.Developers)
 
-		auditors, err := js.Get("entity").Get("auditors").Array()
-		if err != nil {
-			logger.Errorf("Error getting auditors from space JSON: %s, err: %s", json, err)
-			return false
-		}
-
-		developers, err := js.Get("entity").Get("developers").Array()
-		if err != nil {
-			logger.Errorf("Error getting developers from space JSON: %s, err: %s", json, err)
-			return false
-		}
-
-		return idIsInGroup(userId, managers) || idIsInGroup(userId, auditors) || idIsInGroup(userId, developers)
+		return foundOrgManager || foundOrgAuditor || foundSpaceManager || foundSpaceAuditor || foundSpaceDeveloper
 	}
 
 	return LogAccessAuthorizer(authorizer)

@@ -8,14 +8,22 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/stretchr/testify/assert"
 	"logMessage"
+	"loggregator/logtarget"
 	"os"
-	"strings"
 	"testing"
 	"time"
 )
 
+func StdOutLogger() *gosteno.Logger {
+	return getLogger(true)
+}
+
 func Logger() *gosteno.Logger {
-	if os.Getenv("LOG_TO_STDOUT") == "true" {
+	return getLogger(false)
+}
+
+func getLogger(debug bool) *gosteno.Logger {
+	if debug {
 		level := gosteno.LOG_DEBUG
 
 		loggingConfig := &gosteno.Config{
@@ -33,14 +41,14 @@ func Logger() *gosteno.Logger {
 	return gosteno.NewLogger("TestLogger")
 }
 
-func SuccessfulAuthorizer(authToken, spaceId, appId string, l *gosteno.Logger) bool {
-	if authToken != "" {
-		authString := strings.Split(authToken, " ")
-		if len(authString) > 1 {
-			return authString[1] == "correctAuthorizationToken"
-		}
-	}
-	return false
+const (
+	VALID_ORG_AUTHENTICATION_TOKEN   = "bearer correctOrgLevelAuthorizationToken"
+	INVALID_AUTHENTICATION_TOKEN     = "incorrectAuthorizationToken"
+	VALID_SPACE_AUTHENTICATION_TOKEN = "bearer correctSpaceLevelAuthorizationToken"
+)
+
+func SuccessfulAuthorizer(authToken string, target *logtarget.LogTarget, l *gosteno.Logger) bool {
+	return authToken == VALID_SPACE_AUTHENTICATION_TOKEN || authToken == VALID_ORG_AUTHENTICATION_TOKEN
 }
 
 func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string, authToken string) (*websocket.Conn, chan bool, <-chan bool) {

@@ -38,3 +38,11 @@ func TestValidity(t *testing.T) {
 		assert.Equal(t, validity.valid, target.IsValid())
 	}
 }
+
+func TestStringifying(t *testing.T) {
+	target := LogTarget{"org", "space", "app"}
+	expectedString := "Org: org, Space: space, App: app"
+
+	assert.Equal(t, target.String(), expectedString)
+
+}

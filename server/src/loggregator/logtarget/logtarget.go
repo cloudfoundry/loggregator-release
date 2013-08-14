@@ -1,6 +1,9 @@
 package logtarget
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type LogTarget struct {
 	OrgId		string
@@ -16,4 +19,8 @@ func (lt *LogTarget) IsValid() bool {
 	return (lt.OrgId != "" && lt.SpaceId != "" && lt.AppId != "") ||
 			(lt.OrgId != "" && lt.SpaceId != "" && lt.AppId == "") ||
 			(lt.OrgId != "" && lt.SpaceId == "" && lt.AppId == "")
+}
+
+func (lt *LogTarget) String() string {
+	return fmt.Sprintf("Org: %s, Space: %s, App: %s", lt.OrgId, lt.SpaceId, lt.AppId)
 }

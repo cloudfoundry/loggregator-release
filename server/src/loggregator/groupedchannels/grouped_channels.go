@@ -1,65 +1,126 @@
 package groupedchannels
 
 import (
-	"strings"
 	"sync"
+	"loggregator/logtarget"
 )
 
 func NewGroupedChannels() *GroupedChannels {
-	return &GroupedChannels{make(map[string]map[chan []byte]bool), new(sync.Mutex)}
+	return &GroupedChannels{make(map[string]*node), new(sync.RWMutex)}
 }
 
-type GroupedChannels struct {
-	channels map[string]map[chan []byte]bool //{key => {channel => true, ...}, ...}
-	mutex    *sync.Mutex
+func newNode() *node {
+	return &node{childNodes: make(map[string]*node), channelSet: make(map[chan []byte]bool)}
 }
 
-func keyify(keys []string) string {
-	nonEmptyKeys := []string{}
-	for i := range keys {
-		if keys[i] != "" {
-			nonEmptyKeys = append(nonEmptyKeys, keys[i])
+type node struct {
+	childNodes map[string]*node
+	channelSet map[chan []byte]bool
+}
+
+func (n *node) addChannel(c chan []byte) {
+	n.channelSet[c] = true
+}
+
+type GroupedChannels struct{
+	orgs map[string]*node
+	*sync.RWMutex
+}
+
+func (gc *GroupedChannels) Register(c chan []byte, lt *logtarget.LogTarget) {
+	gc.Lock()
+	defer gc.Unlock()
+
+	if lt.OrgId != "" {
+		org, found := gc.orgs[lt.OrgId]
+		if !found {
+			org = newNode()
+			gc.orgs[lt.OrgId] = org
+		}
+		if lt.SpaceId != "" {
+			space, found := org.childNodes[lt.SpaceId]
+			if !found {
+				space = newNode()
+				org.childNodes[lt.SpaceId] = space
+			}
+			if lt.AppId != "" {
+				app, found := space.childNodes[lt.AppId]
+				if !found {
+					app = newNode()
+					space.childNodes[lt.AppId] = app
+				}
+				app.addChannel(c)
+			} else {
+				space.addChannel(c)
+			}
+		} else {
+			org.addChannel(c)
 		}
 	}
-	return strings.Join(nonEmptyKeys, ":")
 }
 
-func (gc *GroupedChannels) Add(channel chan []byte, keys ...string) {
-	gc.mutex.Lock()
-	defer gc.mutex.Unlock()
+func (gc *GroupedChannels) For(lt *logtarget.LogTarget) (results []chan []byte) {
+	gc.RLock()
+	defer gc.RUnlock()
 
-	if gc.channels[keyify(keys)] == nil {
-		gc.channels[keyify(keys)] = make(map[chan []byte]bool)
-	}
-	gc.channels[keyify(keys)][channel] = true
+	results = make([]chan []byte, 0)
 
-}
 
-func (gc *GroupedChannels) Get(keys ...string) []chan []byte {
-	gc.mutex.Lock()
-	defer gc.mutex.Unlock()
+	org, found := gc.orgs[lt.OrgId]
 
-	result := make([]chan []byte, 0, len(gc.channels[keyify(keys)]))
-
-	for channel, _ := range gc.channels[keyify(keys)] {
-		result = append(result, channel)
+	if found {
+		for c, _ := range org.channelSet {
+			results = append(results, c)
+		}
+	} else {
+		return
 	}
 
-	return result
+
+	space, found := org.childNodes[lt.SpaceId]
+
+	if found {
+		for c, _ := range space.channelSet {
+			results = append(results, c)
+		}
+	} else {
+		return
+	}
+
+	app, found := space.childNodes[lt.AppId]
+
+	if found {
+		for c, _ := range app.channelSet {
+			results = append(results, c)
+		}
+	}
+	return
 }
 
-func (gc *GroupedChannels) Delete(channel chan []byte) {
-	gc.mutex.Lock()
-	defer gc.mutex.Unlock()
+func (gc *GroupedChannels) Delete(c chan []byte) {
+	gc.Lock()
+	defer gc.Unlock()
 
-	for _, channels := range gc.channels {
-		delete(channels, channel)
+	for _, org := range gc.orgs {
+		delete(org.channelSet, c)
+		for _, space := range org.childNodes {
+			delete(space.channelSet, c)
+			for _, app := range space.childNodes {
+				delete(app.channelSet, c)
+			}
+		}
 	}
 }
 
 func (gc *GroupedChannels) NumberOfChannels() (numberOfChannels int) {
-	for _, channels := range gc.channels {
-		numberOfChannels += len(channels)
+	for _, org := range gc.orgs {
+		numberOfChannels += len(org.channelSet)
+		for _, space := range org.childNodes {
+			numberOfChannels += len(space.channelSet)
+			for _, app := range space.childNodes {
+				numberOfChannels += len(app.channelSet)
+			}
+		}
 	}
-	return numberOfChannels
+	return
 }

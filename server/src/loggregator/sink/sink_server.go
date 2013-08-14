@@ -55,15 +55,15 @@ func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 		return
 	}
 
-	if !sinkServer.authorize(authToken, target.SpaceId, target.AppId, sinkServer.logger) {
-		message := fmt.Sprintf("Auth token [%s] not authorized to access space [%s].", authToken, target.SpaceId)
+	if !sinkServer.authorize(authToken, target, sinkServer.logger) {
+		message := fmt.Sprintf("Auth token [%s] not authorized to access target [%s].", authToken, target)
 		sinkServer.logger.Warn(message)
 		return
 	}
 
 	sink := newCfSink(target, sinkServer.logger, ws, clientAddress, sinkServer.keepAliveInterval)
 
-	sinkServer.listenerChannels.Add(sink.listenerChannel, target.SpaceId, target.AppId)
+	sinkServer.listenerChannels.Register(sink.listenerChannel, target)
 	sink.Run(sinkServer.sinkCloseChan)
 }
 
@@ -77,7 +77,7 @@ func (sinkServer *sinkServer) dumpHandler(rw http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	if !sinkServer.authorize(authToken, target.SpaceId, target.AppId, sinkServer.logger) {
+	if !sinkServer.authorize(authToken, target, sinkServer.logger) {
 		message := fmt.Sprintf("Auth token [%s] not authorized to access space [%s].", authToken, target.SpaceId)
 		sinkServer.logger.Warn(message)
 		rw.WriteHeader(http.StatusUnauthorized)
@@ -89,14 +89,20 @@ func (sinkServer *sinkServer) dumpHandler(rw http.ResponseWriter, req *http.Requ
 }
 
 func (sinkServer *sinkServer) relayMessagesToAllSinks() {
-	extractReceivedSpaceAndAppId := func(data []byte) (string, string) {
+	extractTargetFromMessage := func(data []byte) (lt *logtarget.LogTarget) {
 		receivedMessage := &logMessage.LogMessage{}
 		err := proto.Unmarshal(data, receivedMessage)
 		if err != nil {
 			sinkServer.logger.Debugf("Log message could not be unmarshaled. Dropping it... Error: %v. Data: %v", err, data)
-			return "", ""
+			return &logtarget.LogTarget{}
 		}
-		return *receivedMessage.SpaceId, *receivedMessage.AppId
+		lt = &logtarget.LogTarget{
+			OrgId:   *receivedMessage.OrganizationId,
+			SpaceId: *receivedMessage.SpaceId,
+			AppId:   *receivedMessage.AppId,
+		}
+
+		return
 	}
 
 	for {
@@ -107,18 +113,16 @@ func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 			sinkServer.logger.Info("A Tail client went have away. Closed it.")
 		case data := <-sinkServer.dataChannel:
 			sinkServer.logger.Debugf("Received %d bytes of data from agent listener.", len(data))
-			receivedSpaceId, receivedAppId := extractReceivedSpaceAndAppId(data)
+			target := extractTargetFromMessage(data)
 
-			sinkServer.messageStore.Add(data, receivedSpaceId, receivedAppId)
-
-			sinkServer.logger.Debugf("Searching for channels with spaceId [%s] and appId [%s].", receivedSpaceId, receivedAppId)
-			for _, listenerChannel := range sinkServer.listenerChannels.Get(receivedSpaceId, receivedAppId) {
-				sinkServer.logger.Debugf("Sending Message to channel %s for space [%s] and app [%s].", listenerChannel, receivedSpaceId, receivedAppId)
-				listenerChannel <- data
+			if target != nil {
+				sinkServer.messageStore.Add(data, target.SpaceId, target.AppId)
 			}
-			sinkServer.logger.Debugf("Searching for channels with spaceId [%s].", receivedSpaceId)
-			for _, listenerChannel := range sinkServer.listenerChannels.Get(receivedSpaceId) {
-				sinkServer.logger.Debugf("Sending Message to channel %s for space [%s].", listenerChannel, receivedSpaceId)
+
+			sinkServer.logger.Debugf("Searching for channels with target [%s].", target)
+
+			for _, listenerChannel := range sinkServer.listenerChannels.For(target) {
+				sinkServer.logger.Debugf("Sending Message to channel %s for target [%s].", listenerChannel, target)
 				listenerChannel <- data
 			}
 			sinkServer.logger.Debugf("Done sending message to tail clients.")

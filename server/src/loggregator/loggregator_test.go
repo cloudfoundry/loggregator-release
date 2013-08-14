@@ -21,7 +21,7 @@ func TestEndtoEndMessage(t *testing.T) {
 	time.Sleep(1 * time.Millisecond)
 
 	receivedChan := make(chan []byte)
-	ws, _, _ := testhelpers.AddWSSink(t, receivedChan, "8081", "/tail/?org=myOrg&space=mySpace&app=myApp", "bearer correctAuthorizationToken")
+	ws, _, _ := testhelpers.AddWSSink(t, receivedChan, "8081", "/tail/?org=myOrg&space=mySpace&app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
 	defer ws.Close()
 	time.Sleep(50 * time.Millisecond)
 
