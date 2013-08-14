@@ -81,14 +81,14 @@ func (sinkServer *sinkServer) dumpHandler(rw http.ResponseWriter, req *http.Requ
 	}
 
 	if !sinkServer.authorize(authToken, target, sinkServer.logger) {
-		message := fmt.Sprintf("Auth token [%s] not authorized to access space [%s].", authToken, target.SpaceId)
+		message := fmt.Sprintf("Auth token [%s] not authorized to access target [%s].", authToken, target.SpaceId)
 		sinkServer.logger.Warn(message)
 		rw.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	rw.Header().Set("Content-Type", "application/octet-stream")
-	rw.Write(sinkServer.messageStore.DumpFor(target.SpaceId, target.AppId))
+	rw.Write(sinkServer.messageStore.DumpFor(target))
 }
 
 func (sinkServer *sinkServer) relayMessagesToAllSinks() {
@@ -119,7 +119,7 @@ func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 			target := extractTargetFromMessage(data)
 
 			if target != nil {
-				sinkServer.messageStore.Add(data, target.SpaceId, target.AppId)
+				sinkServer.messageStore.Add(data, target)
 			}
 
 			sinkServer.logger.Debugf("Searching for channels with target [%s].", target)

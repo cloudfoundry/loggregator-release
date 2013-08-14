@@ -317,7 +317,7 @@ func TestItDumpsAllMessagesForASpaceUser(t *testing.T) {
 
 	dataReadChannel <- expectedMessage
 
-	req, err := http.NewRequest("GET", "http://localhost:"+SERVER_PORT+DUMP_PATH+"?org=MyOrg&space=mySpace&app=myApp", nil)
+	req, err := http.NewRequest("GET", "http://localhost:"+SERVER_PORT+DUMP_PATH+"?org=myOrg&space=mySpace&app=myApp", nil)
 	assert.NoError(t, err)
 	req.Header.Add("Authorization", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
 
@@ -343,7 +343,7 @@ func TestItDumpsAllMessagesForAnOrgUser(t *testing.T) {
 
 	dataReadChannel <- expectedMessage
 
-	req, err := http.NewRequest("GET", "http://localhost:"+SERVER_PORT+DUMP_PATH+"?org=MyOrg&space=mySpace&app=myApp", nil)
+	req, err := http.NewRequest("GET", "http://localhost:"+SERVER_PORT+DUMP_PATH+"?org=myOrg&space=mySpace&app=myApp", nil)
 	assert.NoError(t, err)
 	req.Header.Add("Authorization", testhelpers.VALID_ORG_AUTHENTICATION_TOKEN)
 
