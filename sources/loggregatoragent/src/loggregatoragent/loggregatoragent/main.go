@@ -2,13 +2,13 @@ package main
 
 import (
 	"cfcomponent"
+	"errors"
 	"flag"
 	"fmt"
-	"runtime"
-	"loggregatorclient"
 	cfmessagebus "github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/gosteno"
-	"errors"
+	"loggregatorclient"
+	"runtime"
 )
 
 var version = flag.Bool("version", false, "Version info")
