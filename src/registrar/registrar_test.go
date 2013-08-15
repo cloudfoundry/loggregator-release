@@ -51,6 +51,63 @@ func TestGreetRouter(t *testing.T) {
 	}
 }
 
+func TestDefaultIntervalIsSetWhenGreetRouterFails(t *testing.T) {
+	cfc := &cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083}
+	routerReceivedChannel := make(chan []byte)
+	fakeBrokenGreeterRouter(mbusClient, routerReceivedChannel)
+
+	registrar := NewRegistrar(mbusClient, testhelpers.Logger())
+	err := registrar.greetRouter(cfc)
+	assert.Error(t, err)
+
+	resultChan := make(chan bool)
+	go func() {
+		for {
+			cfc.RLock()
+			if cfc.RegisterInterval == 20*time.Second {
+				resultChan <- true
+				break
+			}
+			cfc.RUnlock()
+			time.Sleep(5 * time.Millisecond)
+		}
+		cfc.RUnlock()
+	}()
+
+	select {
+	case <-resultChan:
+	case <-time.After(2 * time.Second):
+		t.Error("Default register interval was never set!")
+	}
+}
+
+func TestDefaultIntervalIsSetWhenGreetWithoutRouter(t *testing.T) {
+	cfc := &cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083}
+	registrar := NewRegistrar(mbusClient, testhelpers.Logger())
+	err := registrar.greetRouter(cfc)
+	assert.Error(t, err)
+
+	resultChan := make(chan bool)
+	go func() {
+		for {
+			cfc.RLock()
+			if cfc.RegisterInterval == 20*time.Second {
+				resultChan <- true
+				break
+			}
+			cfc.RUnlock()
+			time.Sleep(5 * time.Millisecond)
+		}
+		cfc.RUnlock()
+	}()
+
+	select {
+	case <-resultChan:
+	case <-time.After(2 * time.Second):
+		t.Error("Default register interval was never set!")
+	}
+}
+
 func TestAnnounceComponent(t *testing.T) {
 	cfc := cfcomponent.Component{
 		IpAddress:         "1.2.3.4",
@@ -210,6 +267,13 @@ func fakeRouter(mBusClient mbus.MessageBus, returnChannel chan []byte) {
 	mBusClient.RespondToChannel("router.unregister", func(content []byte) []byte {
 		returnChannel <- []byte("unregistering:" + string(content))
 		return content
+	})
+}
+
+func fakeBrokenGreeterRouter(mBusClient mbus.MessageBus, returnChannel chan []byte) {
+	mBusClient.RespondToChannel("router.greet", func(_ []byte) []byte {
+		response := []byte("garbel garbel")
+		return response
 	})
 }
 

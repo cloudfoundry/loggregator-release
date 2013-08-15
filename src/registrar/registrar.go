@@ -68,6 +68,7 @@ func (r *registrar) greetRouter(cfc *cfcomponent.Component) (err error) {
 		response <- payload
 	})
 
+	routerRegisterInterval := 20 * time.Second
 	select {
 	case msg := <-response:
 		routerResponse := &RouterResponse{}
@@ -75,15 +76,17 @@ func (r *registrar) greetRouter(cfc *cfcomponent.Component) (err error) {
 		if err != nil {
 			r.Errorf("Error unmarshalling the greet response: %v\n", err)
 		} else {
+			routerRegisterInterval = routerResponse.RegisterInterval * time.Second
 			r.Infof("Greeted the router. Setting register interval to %v seconds\n", routerResponse.RegisterInterval)
-			cfc.Lock()
-			cfc.RegisterInterval = routerResponse.RegisterInterval * time.Second
-			cfc.Unlock()
 
 		}
 	case <-time.After(2 * time.Second):
 		err = errors.New("Did not get a response to router.greet!")
 	}
+
+	cfc.Lock()
+	cfc.RegisterInterval = routerRegisterInterval
+	cfc.Unlock()
 
 	return err
 }

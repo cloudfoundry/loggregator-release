@@ -143,12 +143,12 @@ func main() {
 	r := registrar.NewRegistrar(config.mbusClient, logger)
 	err = r.RegisterWithRouter(&cfc)
 	if err != nil {
-		panic(err)
+		logger.Warnf("Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
 	}
 
 	err = r.RegisterWithCollector(cfc)
 	if err != nil {
-		panic(err)
+		logger.Fatalf("Unable to register with collector. Err: %v.", err)
 	}
 
 	cfc.StartMonitoringEndpoints()
