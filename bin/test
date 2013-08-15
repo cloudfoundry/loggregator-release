@@ -27,12 +27,12 @@ do
     $(dirname $0)/go fmt $package
     $(dirname $0)/go test -i --race $package
     $(dirname $0)/go test -v --race $package
-    result+=$?
+    let "result += $?"
 done
 
 echo -e "\n Running build script to confirm main compiles"
 $(dirname $0)/build
-result+=$?
+let "result += $?"
 rm -f deaagent loggregatoragent loggregator
 
 if [ $result -eq 0 ]; then
@@ -42,3 +42,4 @@ else
 fi
 
 exit $result
+

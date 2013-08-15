@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func getBackendMessage(t *testing.T, data *[]byte) *logMessage.LogMessage {
+func getBackendMessage(t *testing.T, data *[]byte) *logmessage.LogMessage {
 	receivedMessage := &logmessage.LogMessage{}
 
 	err := proto.Unmarshal(*data, receivedMessage)
