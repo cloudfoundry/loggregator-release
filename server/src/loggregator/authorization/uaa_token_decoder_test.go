@@ -1,4 +1,4 @@
-package sink
+package authorization
 
 import (
 	"github.com/stretchr/testify/assert"

@@ -1,4 +1,4 @@
-package sink
+package authorization
 
 import (
 	"encoding/json"

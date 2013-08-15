@@ -10,6 +10,7 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"io/ioutil"
 	"loggregator/agentlistener"
+	"loggregator/authorization"
 	"loggregator/messagestore"
 	"loggregator/sink"
 	"os"
@@ -34,7 +35,7 @@ type Config struct {
 	SourcePort             uint32
 	WebPort                uint32
 	LogFilePath            string
-	decoder                sink.TokenDecoder
+	decoder                authorization.TokenDecoder
 	mbusClient             cfmessagebus.MessageBus
 	MaxRetainedLogMessages int
 }
@@ -55,7 +56,7 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 	if err != nil {
 		return errors.New(fmt.Sprintf("Can not read UAA verification key from file %s: %s", c.UaaVerificationKeyFile, err))
 	}
-	c.decoder, err = sink.NewUaaTokenDecoder(uaaVerificationKey)
+	c.decoder, err = authorization.NewUaaTokenDecoder(uaaVerificationKey)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Can not parse UAA verification key: %s", err))
 	}
@@ -114,7 +115,7 @@ func main() {
 	listener := agentlistener.NewAgentListener(fmt.Sprintf("0.0.0.0:%d", config.SourcePort), logger)
 	incomingData := listener.Start()
 
-	authorizer := sink.NewLogAccessAuthorizer(config.decoder, config.ApiHost)
+	authorizer := authorization.NewLogAccessAuthorizer(config.decoder, config.ApiHost)
 	sinkServer := sink.NewSinkServer(
 		incomingData,
 		messagestore.NewMessageStore(config.MaxRetainedLogMessages),

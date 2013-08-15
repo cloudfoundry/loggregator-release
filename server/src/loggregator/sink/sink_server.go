@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"logMessage"
+	"loggregator/authorization"
 	"loggregator/groupedchannels"
 	"loggregator/logtarget"
 	"loggregator/messagestore"
@@ -25,13 +26,13 @@ type sinkServer struct {
 	dataChannel       chan []byte
 	listenHost        string
 	listenerChannels  *groupedchannels.GroupedChannels
-	authorize         LogAccessAuthorizer
+	authorize         authorization.LogAccessAuthorizer
 	sinkCloseChan     chan chan []byte
 	keepAliveInterval time.Duration
 	messageStore      *messagestore.MessageStore
 }
 
-func NewSinkServer(givenChannel chan []byte, messageStore *messagestore.MessageStore, logger *gosteno.Logger, listenHost string, authorize LogAccessAuthorizer, keepAliveInterval time.Duration) *sinkServer {
+func NewSinkServer(givenChannel chan []byte, messageStore *messagestore.MessageStore, logger *gosteno.Logger, listenHost string, authorize authorization.LogAccessAuthorizer, keepAliveInterval time.Duration) *sinkServer {
 	listeners := groupedchannels.NewGroupedChannels()
 	sinkCloseChan := make(chan chan []byte, 4)
 	return &sinkServer{logger, givenChannel, listenHost, listeners, authorize, sinkCloseChan, keepAliveInterval, messageStore}
