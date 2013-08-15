@@ -3,16 +3,13 @@ package sink
 import (
 	"cfcomponent/instrumentation"
 	"code.google.com/p/go.net/websocket"
-	"code.google.com/p/gogoprotobuf/proto"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
-	"logMessage"
 	"loggregator/authorization"
 	"loggregator/groupedchannels"
 	"loggregator/logtarget"
 	"loggregator/messagestore"
 	"net/http"
-	"net/url"
 	"time"
 )
 
@@ -41,7 +38,7 @@ func NewSinkServer(givenChannel chan []byte, messageStore *messagestore.MessageS
 func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 	clientAddress := ws.RemoteAddr()
 
-	target := extractTarget(ws.Request().URL)
+	target := logtarget.FromUrl(ws.Request().URL)
 	authToken := ws.Request().Header.Get("Authorization")
 
 	if !target.IsValid() {
@@ -72,7 +69,7 @@ func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 }
 
 func (sinkServer *sinkServer) dumpHandler(rw http.ResponseWriter, req *http.Request) {
-	target := extractTarget(req.URL)
+	target := logtarget.FromUrl(req.URL)
 	authToken := req.Header.Get("Authorization")
 
 	if !target.IsValid() {
@@ -93,22 +90,6 @@ func (sinkServer *sinkServer) dumpHandler(rw http.ResponseWriter, req *http.Requ
 }
 
 func (sinkServer *sinkServer) relayMessagesToAllSinks() {
-	extractTargetFromMessage := func(data []byte) (lt *logtarget.LogTarget) {
-		receivedMessage := &logMessage.LogMessage{}
-		err := proto.Unmarshal(data, receivedMessage)
-		if err != nil {
-			sinkServer.logger.Debugf("Log message could not be unmarshaled. Dropping it... Error: %v. Data: %v", err, data)
-			return &logtarget.LogTarget{}
-		}
-		lt = &logtarget.LogTarget{
-			OrgId:   *receivedMessage.OrganizationId,
-			SpaceId: *receivedMessage.SpaceId,
-			AppId:   *receivedMessage.AppId,
-		}
-
-		return
-	}
-
 	for {
 		select {
 		case sin := <-sinkServer.sinkCloseChan:
@@ -117,19 +98,18 @@ func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 			sinkServer.logger.Info("A Tail client went have away. Closed it.")
 		case data := <-sinkServer.dataChannel:
 			sinkServer.logger.Debugf("Received %d bytes of data from agent listener.", len(data))
-			target := extractTargetFromMessage(data)
-
-			if target != nil {
+			target, err := logtarget.FromLogMessage(data)
+			if err != nil {
+				sinkServer.logger.Error(err.Error())
+			} else {
 				sinkServer.messageStore.Add(data, target)
+				sinkServer.logger.Debugf("Searching for channels with target [%s].", target)
+				for _, listenerChannel := range sinkServer.listenerChannels.For(target) {
+					sinkServer.logger.Debugf("Sending Message to channel %s for target [%s].", listenerChannel, target)
+					listenerChannel <- data
+				}
+				sinkServer.logger.Debugf("Done sending message to tail clients.")
 			}
-
-			sinkServer.logger.Debugf("Searching for channels with target [%s].", target)
-
-			for _, listenerChannel := range sinkServer.listenerChannels.For(target) {
-				sinkServer.logger.Debugf("Sending Message to channel %s for target [%s].", listenerChannel, target)
-				listenerChannel <- data
-			}
-			sinkServer.logger.Debugf("Done sending message to tail clients.")
 		}
 	}
 }
@@ -153,12 +133,4 @@ func (sinkServer *sinkServer) Emit() instrumentation.Context {
 			instrumentation.Metric{"numberOfSinks", sinkServer.listenerChannels.NumberOfChannels()},
 		},
 	}
-}
-
-func extractTarget(u *url.URL) *logtarget.LogTarget {
-	appId := u.Query().Get("app")
-	spaceId := u.Query().Get("space")
-	orgId := u.Query().Get("org")
-	target := &logtarget.LogTarget{orgId, spaceId, appId}
-	return target
 }

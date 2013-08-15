@@ -3,6 +3,7 @@ package logtarget
 import (
 	"testing"
 	"github.com/stretchr/testify/assert"
+	"net/url"
 )
 
 func TestIdentifier(t *testing.T) {
@@ -46,3 +47,13 @@ func TestStringifying(t *testing.T) {
 	assert.Equal(t, target.String(), expectedString)
 
 }
+
+func TestFromUrl(t *testing.T) {
+	theUrl, err := url.Parse("wss://loggregator.loggregatorci.cf-app.com:4443/tail/?org=6e6926ce-bd94-428d-944f-9446ae446deb&space=e0c78fc4-443b-43d0-840f-ed8b0823b4fd&app=11bfecc7-7128-4e56-83a0-d8e0814ed7e6")
+	assert.NoError(t, err)
+	target := FromUrl(theUrl)
+	assert.Equal(t, "6e6926ce-bd94-428d-944f-9446ae446deb", target.OrgId)
+	assert.Equal(t, "e0c78fc4-443b-43d0-840f-ed8b0823b4fd", target.SpaceId)
+	assert.Equal(t, "11bfecc7-7128-4e56-83a0-d8e0814ed7e6", target.AppId)
+}
+

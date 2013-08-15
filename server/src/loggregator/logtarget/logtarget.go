@@ -3,12 +3,41 @@ package logtarget
 import (
 	"fmt"
 	"strings"
+	"net/url"
+	"logMessage"
+	"code.google.com/p/gogoprotobuf/proto"
+	"errors"
 )
 
+func FromUrl(u *url.URL) *LogTarget {
+	appId := u.Query().Get("app")
+	spaceId := u.Query().Get("space")
+	orgId := u.Query().Get("org")
+	target := &LogTarget{orgId, spaceId, appId}
+	return target
+}
+
+func FromLogMessage(data []byte) (lt *LogTarget, err error) {
+	receivedMessage := &logMessage.LogMessage{}
+	err = proto.Unmarshal(data, receivedMessage)
+	if err != nil {
+		err = errors.New(fmt.Sprintf("Log message could not be unmarshaled. Dropping it... Error: %v. Data: %v", err, data))
+		return
+	}
+
+	lt = &LogTarget{
+		OrgId:   *receivedMessage.OrganizationId,
+		SpaceId: *receivedMessage.SpaceId,
+		AppId:   *receivedMessage.AppId,
+	}
+
+	return
+}
+
 type LogTarget struct {
-	OrgId		string
+	OrgId		  string
 	SpaceId		string
-	AppId		string
+	AppId		  string
 }
 
 func (lt *LogTarget) Identifier() string {
