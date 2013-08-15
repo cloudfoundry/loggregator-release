@@ -158,6 +158,12 @@ var accessTests = []struct {
 		"bearer noneOfTheAbove",
 		false,
 	},
+	{
+		TokenPayload{UserId: "developerId"},
+		&logtarget.LogTarget{OrgId: "myOrgId"},
+		"bearer developer",
+		false,
+	},
 }
 
 func TestUserRoleAccessCombinations(t *testing.T) {

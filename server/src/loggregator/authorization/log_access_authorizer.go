@@ -2,6 +2,8 @@ package authorization
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"io/ioutil"
 	"loggregator/logtarget"
@@ -51,6 +53,37 @@ func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccess
 		return false
 	}
 
+	getOrgFromCC := func(target *logtarget.LogTarget, authToken string) (o Org, err error) {
+		client := &http.Client{}
+
+		req, _ := http.NewRequest("GET", apiHost+"/v2/organizations/"+target.OrgId+"?inline-relations-depth=2", nil)
+		req.Header.Set("Authorization", authToken)
+		res, err := client.Do(req)
+		if err != nil {
+			err = errors.New(fmt.Sprintf("Could not get space information: [%s]", err))
+			return
+		}
+
+		if res.StatusCode != 200 {
+			err = errors.New(fmt.Sprintf("Non 200 response from CC API: %d", res.StatusCode))
+			return
+		}
+
+		jsonBytes, err := ioutil.ReadAll(res.Body)
+		res.Body.Close()
+		if err != nil {
+			err = errors.New(fmt.Sprintf("Could not response body: %s", err))
+			return
+		}
+
+		err = json.Unmarshal(jsonBytes, &o)
+		if err != nil {
+			err = errors.New(fmt.Sprintf("Error parsing organization JSON. json: %s\nerror: %s", jsonBytes, err))
+			return
+		}
+		return
+	}
+
 	authorizer := func(authToken string, target *logtarget.LogTarget, logger *gosteno.Logger) bool {
 		tokenPayload, err := tokenDecoder.Decode(authToken)
 		if err != nil {
@@ -58,32 +91,10 @@ func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccess
 			return false
 		}
 
-		client := &http.Client{}
+		org, err := getOrgFromCC(target, authToken)
 
-		req, _ := http.NewRequest("GET", apiHost+"/v2/organizations/"+target.OrgId+"?inline-relations-depth=2", nil)
-		req.Header.Set("Authorization", authToken)
-		res, err := client.Do(req)
 		if err != nil {
-			logger.Errorf("Could not get space information: [%s]", err)
-			return false
-		}
-
-		if res.StatusCode != 200 {
-			logger.Warnf("Non 200 response from CC API: %d", res.StatusCode)
-			return false
-		}
-
-		jsonBytes, err := ioutil.ReadAll(res.Body)
-		res.Body.Close()
-		if err != nil {
-			logger.Errorf("Could not response body: %s", err)
-			return false
-		}
-
-		var org Org
-		err = json.Unmarshal(jsonBytes, &org)
-		if err != nil {
-			logger.Errorf("Error parsing organization JSON. json: %s\nerror: %s", jsonBytes, err)
+			logger.Errorf("Could not get Org info from CloudController: [%s]", err)
 			return false
 		}
 
