@@ -7,7 +7,7 @@ import (
 	"encoding/binary"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/stretchr/testify/assert"
-	"logMessage"
+	"logmessage"
 	"loggregator/logtarget"
 	"os"
 	"testing"
@@ -94,9 +94,9 @@ func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string,
 func MarshalledLogMessage(t *testing.T, messageString string, spaceId string, appId string, organizationId string) []byte {
 	currentTime := time.Now()
 
-	messageType := logMessage.LogMessage_OUT
-	sourceType := logMessage.LogMessage_DEA
-	protoMessage := &logMessage.LogMessage{
+	messageType := logmessage.LogMessage_OUT
+	sourceType := logmessage.LogMessage_DEA
+	protoMessage := &logmessage.LogMessage{
 		Message:        []byte(messageString),
 		AppId:          proto.String(appId),
 		OrganizationId: proto.String(organizationId),
@@ -113,7 +113,7 @@ func MarshalledLogMessage(t *testing.T, messageString string, spaceId string, ap
 }
 
 func AssertProtoBufferMessageEquals(t *testing.T, expectedMessage string, actual []byte) {
-	receivedMessage := &logMessage.LogMessage{}
+	receivedMessage := &logmessage.LogMessage{}
 
 	err := proto.Unmarshal(actual, receivedMessage)
 	assert.NoError(t, err)

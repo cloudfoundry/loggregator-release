@@ -4,7 +4,7 @@ import (
 	"cfcomponent/instrumentation"
 	"code.google.com/p/gogoprotobuf/proto"
 	"github.com/cloudfoundry/gosteno"
-	"logMessage"
+	"logmessage"
 	"loggregatorclient"
 	"net"
 	"path/filepath"
@@ -17,20 +17,20 @@ type loggingStream struct {
 	inst              *instance
 	loggregatorClient loggregatorclient.LoggregatorClient
 	logger            *gosteno.Logger
-	messageType       logMessage.LogMessage_MessageType
+	messageType       logmessage.LogMessage_MessageType
 	messagesReceived  *uint64
 	bytesReceived     *uint64
 }
 
-func newLoggingStream(inst *instance, loggregatorClient loggregatorclient.LoggregatorClient, logger *gosteno.Logger, messageType logMessage.LogMessage_MessageType) (ls *loggingStream) {
+func newLoggingStream(inst *instance, loggregatorClient loggregatorclient.LoggregatorClient, logger *gosteno.Logger, messageType logmessage.LogMessage_MessageType) (ls *loggingStream) {
 	return &loggingStream{inst, loggregatorClient, logger, messageType, new(uint64), new(uint64)}
 }
 
 func (ls *loggingStream) listen() {
-	newLogMessage := func(message []byte) *logMessage.LogMessage {
+	newLogMessage := func(message []byte) *logmessage.LogMessage {
 		currentTime := time.Now()
-		sourceType := logMessage.LogMessage_DEA
-		return &logMessage.LogMessage{
+		sourceType := logmessage.LogMessage_DEA
+		return &logmessage.LogMessage{
 			Message:        message,
 			AppId:          proto.String(ls.inst.applicationId),
 			SpaceId:        proto.String(ls.inst.spaceId),
@@ -41,7 +41,7 @@ func (ls *loggingStream) listen() {
 		}
 	}
 
-	socket := func(messageType logMessage.LogMessage_MessageType) (net.Conn, error) {
+	socket := func(messageType logmessage.LogMessage_MessageType) (net.Conn, error) {
 		return net.Dial("unix", filepath.Join(ls.inst.identifier(), socketName(messageType)))
 	}
 
@@ -92,8 +92,8 @@ func (ls *loggingStream) Emit() instrumentation.Context {
 	}
 }
 
-func socketName(messageType logMessage.LogMessage_MessageType) string {
-	if messageType == logMessage.LogMessage_OUT {
+func socketName(messageType logmessage.LogMessage_MessageType) string {
+	if messageType == logmessage.LogMessage_OUT {
 		return "stdout.sock"
 	} else {
 		return "stderr.sock"

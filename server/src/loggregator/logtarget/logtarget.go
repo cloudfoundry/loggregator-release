@@ -4,7 +4,7 @@ import (
 	"code.google.com/p/gogoprotobuf/proto"
 	"errors"
 	"fmt"
-	"logMessage"
+	"logmessage"
 	"net/url"
 	"strings"
 )
@@ -18,7 +18,7 @@ func FromUrl(u *url.URL) *LogTarget {
 }
 
 func FromLogMessage(data []byte) (lt *LogTarget, err error) {
-	receivedMessage := &logMessage.LogMessage{}
+	receivedMessage := &logmessage.LogMessage{}
 	err = proto.Unmarshal(data, receivedMessage)
 	if err != nil {
 		err = errors.New(fmt.Sprintf("Log message could not be unmarshaled. Dropping it... Error: %v. Data: %v", err, data))

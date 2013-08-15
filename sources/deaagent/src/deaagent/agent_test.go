@@ -3,7 +3,7 @@ package deaagent
 import (
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
-	"logMessage"
+	"logmessage"
 	"net"
 	"os"
 	"path"
@@ -99,8 +99,8 @@ func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
 	receivedMessage := getBackendMessage(t, <-mockLoggregatorClient.received)
 
 	assert.Equal(t, "1234", receivedMessage.GetAppId())
-	assert.Equal(t, logMessage.LogMessage_DEA, receivedMessage.GetSourceType())
-	assert.Equal(t, logMessage.LogMessage_OUT, receivedMessage.GetMessageType())
+	assert.Equal(t, logmessage.LogMessage_DEA, receivedMessage.GetSourceType())
+	assert.Equal(t, logmessage.LogMessage_OUT, receivedMessage.GetMessageType())
 	assert.Equal(t, expectedMessage, string(receivedMessage.GetMessage()))
 }
 

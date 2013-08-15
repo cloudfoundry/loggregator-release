@@ -2,7 +2,7 @@
 // source: log_message.proto
 // DO NOT EDIT!
 
-package logMessage
+package logmessage
 
 import proto "code.google.com/p/gogoprotobuf/proto"
 import json "encoding/json"

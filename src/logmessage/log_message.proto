@@ -1,4 +1,4 @@
-package logMessage;
+package logmessage;
 
 message LogMessage {
     enum MessageType {
