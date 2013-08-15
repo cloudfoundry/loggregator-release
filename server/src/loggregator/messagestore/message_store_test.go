@@ -2,9 +2,9 @@ package messagestore
 
 import (
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"testhelpers"
 	"loggregator/logtarget"
+	"testhelpers"
+	"testing"
 )
 
 func TestRegisterAndFor(t *testing.T) {
@@ -17,7 +17,6 @@ func TestRegisterAndFor(t *testing.T) {
 	orgSpaceTarget := &logtarget.LogTarget{OrgId: "myOrg", SpaceId: "mySpace"}
 	orgSpaceMessageString := "OrgSpaceMessage"
 	orgSpaceMessage := testhelpers.MarshalledLogMessage(t, orgSpaceMessageString, "mySpace", "", "myOrg")
-
 
 	orgTarget := &logtarget.LogTarget{OrgId: "myOrg"}
 	orgMessageString := "OrgMessage"
@@ -135,7 +134,7 @@ func TestOnlyDumpsMessagesThatHaveALength(t *testing.T) {
 	message := []byte("Hello world")
 	store := NewMessageStore(2)
 
-	target := &logtarget.LogTarget{OrgId: "orgId", SpaceId:"spaceId", AppId:"appId" }
+	target := &logtarget.LogTarget{OrgId: "orgId", SpaceId: "spaceId", AppId: "appId"}
 	store.Add(message, target)
 
 	messages, err := testhelpers.ParseDumpedMessages(store.DumpFor(target))

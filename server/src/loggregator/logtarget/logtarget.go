@@ -1,12 +1,12 @@
 package logtarget
 
 import (
-	"fmt"
-	"strings"
-	"net/url"
-	"logMessage"
 	"code.google.com/p/gogoprotobuf/proto"
 	"errors"
+	"fmt"
+	"logMessage"
+	"net/url"
+	"strings"
 )
 
 func FromUrl(u *url.URL) *LogTarget {
@@ -35,9 +35,9 @@ func FromLogMessage(data []byte) (lt *LogTarget, err error) {
 }
 
 type LogTarget struct {
-	OrgId		  string
-	SpaceId		string
-	AppId		  string
+	OrgId   string
+	SpaceId string
+	AppId   string
 }
 
 func (lt *LogTarget) Identifier() string {
@@ -46,8 +46,8 @@ func (lt *LogTarget) Identifier() string {
 
 func (lt *LogTarget) IsValid() bool {
 	return (lt.OrgId != "" && lt.SpaceId != "" && lt.AppId != "") ||
-			(lt.OrgId != "" && lt.SpaceId != "" && lt.AppId == "") ||
-			(lt.OrgId != "" && lt.SpaceId == "" && lt.AppId == "")
+		(lt.OrgId != "" && lt.SpaceId != "" && lt.AppId == "") ||
+		(lt.OrgId != "" && lt.SpaceId == "" && lt.AppId == "")
 }
 
 func (lt *LogTarget) String() string {

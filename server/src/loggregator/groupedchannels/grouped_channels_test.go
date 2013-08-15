@@ -2,8 +2,8 @@ package groupedchannels
 
 import (
 	"github.com/stretchr/testify/assert"
-	"testing"
 	"loggregator/logtarget"
+	"testing"
 )
 
 func TestRegisterAndFor(t *testing.T) {
@@ -112,7 +112,6 @@ func TestTotalNumberOfChannels(t *testing.T) {
 	channel3 := make(chan []byte)
 	targetWithOrgSpaceAndApp := &logtarget.LogTarget{OrgId: "123", SpaceId: "456", AppId: "789"}
 	groupedChannels.Register(channel3, targetWithOrgSpaceAndApp)
-
 
 	assert.Equal(t, groupedChannels.NumberOfChannels(), 3)
 

@@ -1,9 +1,9 @@
 package logtarget
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
 	"net/url"
+	"testing"
 )
 
 func TestIdentifier(t *testing.T) {
@@ -26,7 +26,6 @@ var validityTests = []struct {
 	{"", "space", "", false},
 	{"", "", "app", false},
 	{"", "", "", false},
-
 }
 
 func TestValidity(t *testing.T) {
@@ -56,4 +55,3 @@ func TestFromUrl(t *testing.T) {
 	assert.Equal(t, "e0c78fc4-443b-43d0-840f-ed8b0823b4fd", target.SpaceId)
 	assert.Equal(t, "11bfecc7-7128-4e56-83a0-d8e0814ed7e6", target.AppId)
 }
-

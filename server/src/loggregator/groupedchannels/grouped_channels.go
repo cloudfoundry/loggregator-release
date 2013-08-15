@@ -1,8 +1,8 @@
 package groupedchannels
 
 import (
-	"sync"
 	"loggregator/logtarget"
+	"sync"
 )
 
 func NewGroupedChannels() *GroupedChannels {
@@ -22,7 +22,7 @@ func (n *node) addChannel(c chan []byte) {
 	n.channelSet[c] = true
 }
 
-type GroupedChannels struct{
+type GroupedChannels struct {
 	orgs map[string]*node
 	*sync.RWMutex
 }
@@ -65,7 +65,6 @@ func (gc *GroupedChannels) For(lt *logtarget.LogTarget) (results []chan []byte) 
 
 	results = make([]chan []byte, 0)
 
-
 	org, found := gc.orgs[lt.OrgId]
 
 	if found {
@@ -75,7 +74,6 @@ func (gc *GroupedChannels) For(lt *logtarget.LogTarget) (results []chan []byte) 
 	} else {
 		return
 	}
-
 
 	space, found := org.childNodes[lt.SpaceId]
 

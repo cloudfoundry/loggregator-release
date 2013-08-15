@@ -1,11 +1,11 @@
 package messagestore
 
 import (
-	"container/ring"
 	"bytes"
-	"sync"
+	"container/ring"
 	"encoding/binary"
 	"loggregator/logtarget"
+	"sync"
 )
 
 type Message struct {
@@ -19,7 +19,7 @@ func newNode(size int) *node {
 
 type node struct {
 	childNodes map[string]*node
-	entries *ring.Ring
+	entries    *ring.Ring
 }
 
 func (n *node) addData(d []byte) {
@@ -34,7 +34,7 @@ func NewMessageStore(size int) *MessageStore {
 	}
 }
 
-type MessageStore struct{
+type MessageStore struct {
 	size int
 	orgs map[string]*node
 	sync.RWMutex
@@ -74,13 +74,13 @@ func (ms *MessageStore) Add(data []byte, lt *logtarget.LogTarget) {
 	return
 }
 
-func (ms *MessageStore) DumpFor(lt *logtarget.LogTarget) ([]byte) {
+func (ms *MessageStore) DumpFor(lt *logtarget.LogTarget) []byte {
 	ms.RLock()
 	defer ms.RUnlock()
 
 	buffer := bytes.NewBufferString("")
 
-	writeEntries := func(m interface {}) {
+	writeEntries := func(m interface{}) {
 		message, _ := m.(Message)
 		if message.length > 0 {
 			binary.Write(buffer, binary.BigEndian, message.length)
@@ -98,7 +98,7 @@ func (ms *MessageStore) DumpFor(lt *logtarget.LogTarget) ([]byte) {
 		app, appFound := space.childNodes[lt.AppId]
 		if appFound {
 			app.entries.Do(writeEntries)
-		}else {
+		} else {
 			space.entries.Do(writeEntries)
 			for _, app := range space.childNodes {
 				app.entries.Do(writeEntries)

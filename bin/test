@@ -3,18 +3,22 @@
 result=0
 
 packages=(
-    testhelpers
+    cfcomponent
     deaagent
-    deaagent/deaagent
+    loggregator
+    loggregator/agentlistener
+    loggregator/authorization
+    loggregator/groupedchannels
+    loggregator/loggregator
+    loggregator/logtarget
+    loggregator/messagestore
+    loggregator/sink
     loggregatoragent
     loggregatoragent/loggregatoragent
-    loggregator/loggregator
-    loggregator/sink
-    loggregator/agentlistener
-    registrar
-    loggregator
-    cfcomponent
     loggregatorclient
+    logmessage
+    registrar
+    testhelpers
 );
 
 for package in "${packages[@]}"
