@@ -100,6 +100,5 @@ runtime/pprof.writeGoroutine(0xc2000bc3f0, 0xc200000008, 0x2, 0xca74765c960d5c8f
 
 Note: This is linux amd64 only
 
-* [dea_agent](https://dl.bintray.com/ajackson/loggregator/dea_logging_agent)
 * [loggregator](https://dl.bintray.com/ajackson/loggregator/loggregator)
 
