@@ -4,12 +4,12 @@ import (
 	"cfcomponent"
 	"cfcomponent/instrumentation"
 	"deaagent"
-	"deaagent/loggregatorclient"
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/cloudfoundry/go_cfmessagebus"
+	cfmessagebus "github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/gosteno"
+	"loggregatorclient"
 	"registrar"
 )
 

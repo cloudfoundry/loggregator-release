@@ -17,5 +17,6 @@ if [ "$TRAVIS_BUILD_NUMBER" != "" ]; then
 fi
 
 $(dirname $0)/go install deaagent/deaagent
+$(dirname $0)/go install loggregatoragent/loggregatoragent
 $(dirname $0)/go install loggregator/loggregator
 

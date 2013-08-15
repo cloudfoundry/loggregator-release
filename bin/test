@@ -6,13 +6,15 @@ packages=(
     testhelpers
     deaagent
     deaagent/deaagent
-    deaagent/loggregatorclient
+    loggregatoragent
+    loggregatoragent/loggregatoragent
     loggregator/loggregator
     loggregator/sink
     loggregator/agentlistener
     registrar
     loggregator
     cfcomponent
+    loggregatorclient
 );
 
 for package in "${packages[@]}"
@@ -27,7 +29,7 @@ done
 echo -e "\n Running build script to confirm main compiles"
 $(dirname $0)/build
 result+=$?
-rm -f deaagent loggregator
+rm -f deaagent loggregatoragent loggregator
 
 if [ $result -eq 0 ]; then
 	echo -e "\nSUITE SUCCESS"

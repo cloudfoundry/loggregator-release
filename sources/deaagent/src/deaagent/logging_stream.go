@@ -3,9 +3,9 @@ package deaagent
 import (
 	"cfcomponent/instrumentation"
 	"code.google.com/p/gogoprotobuf/proto"
-	"deaagent/loggregatorclient"
 	"github.com/cloudfoundry/gosteno"
 	"logMessage"
+	"loggregatorclient"
 	"net"
 	"path/filepath"
 	"runtime"

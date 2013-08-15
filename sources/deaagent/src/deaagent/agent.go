@@ -1,10 +1,10 @@
 package deaagent
 
 import (
-	"deaagent/loggregatorclient"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/howeyc/fsnotify"
 	"io/ioutil"
+	"loggregatorclient"
 	"path"
 	"runtime"
 	"time"
