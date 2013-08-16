@@ -34,62 +34,67 @@ func newCfSink(lg *logtarget.LogTarget, givenLogger *gosteno.Logger, ws *websock
 	}
 }
 
-func (sink *sink) Run(sinkCloseChan chan chan []byte) {
-	if sink.target.AppId != "" {
-		sink.logger.Debugf("Adding Tail client %s for space [%s] and app [%s].", sink.clientAddress, sink.target.SpaceId, sink.target.AppId)
-	} else {
-		sink.logger.Debugf("Adding Tail client %s for space [%s].", sink.clientAddress, sink.target.SpaceId)
-	}
-
-	alreadyAskedForClose := false
-
-	keepAliveChan := make(chan []byte)
+func (sink *sink) keepAliveChannel() <-chan bool {
+	keepAliveChan := make(chan bool)
+	var keepAlive []byte
 	go func() {
 		for {
-			var keepAlive []byte
 			err := websocket.Message.Receive(sink.ws, &keepAlive)
 			if err != nil {
-				sink.logger.Debugf("Error receiving keep-alive. %v for %v", err, sink.clientAddress)
-				break
-			}
-			sink.logger.Debugf("Received a keep-alive for %v", sink.clientAddress)
-			keepAliveChan <- keepAlive
-		}
-	}()
-
-	go func() {
-		for {
-			sink.logger.Debugf("Waiting for keep-alive for %v", sink.clientAddress)
-			select {
-			case <-keepAliveChan:
-				sink.logger.Debugf("Keep-alive processed for %v", sink.clientAddress)
-			case <-time.After(sink.keepAliveInterval):
-				sinkCloseChan <- sink.listenerChannel
-				alreadyAskedForClose = true
+				sink.logger.Debugf("Sink %s: Error receiving keep-alive. Stopping listening. Err: %v", sink.clientAddress, err)
 				return
 			}
+			keepAliveChan <- true
 		}
 	}()
+	return keepAliveChan
+}
+
+func (sink *sink) Run(sinkCloseChan chan chan []byte) {
+	sink.logger.Debugf("Sink %s: Created for target %s", sink.clientAddress, sink.target)
+
+	keepAliveChan := sink.keepAliveChannel()
+	alreadyRequestedClose := false
 
 	for {
-		sink.logger.Debugf("Tail client %s is waiting for data", sink.clientAddress)
-		data, ok := <-sink.listenerChannel
-		if !ok {
-			sink.ws.Close()
-			sink.logger.Debug("Sink client channel closed.")
-			return
-		}
-		sink.logger.Debugf("Tail client %s got %d bytes", sink.clientAddress, len(data))
-		err := websocket.Message.Send(sink.ws, data)
-		if err != nil {
-			sink.logger.Debugf("Error when sending data to sink %s. Err: %v", sink.clientAddress, err)
-			if !alreadyAskedForClose {
+		sink.logger.Debugf("Sink %s: Waiting for activity", sink.clientAddress)
+		select {
+		case <-keepAliveChan:
+			sink.logger.Debugf("Sink %s: Keep-alive processed", sink.clientAddress)
+		case <-time.After(sink.keepAliveInterval):
+			sink.logger.Debugf("Sink %s: No keep keep-alive received. Requesting close.", sink.clientAddress)
+			if !alreadyRequestedClose {
 				sinkCloseChan <- sink.listenerChannel
-				alreadyAskedForClose = true
+				alreadyRequestedClose = true
+				sink.logger.Debugf("Sink %s: Successfully requested listener channel close", sink.clientAddress)
+			} else {
+				sink.logger.Debugf("Sink %s: Previously requested close. Doing nothing", sink.clientAddress)
 			}
+			return
+		case data, ok := <-sink.listenerChannel:
+			if !ok {
+				sink.logger.Debugf("Sink %s: Closed listener channel detected. Closing websocket", sink.clientAddress)
+				sink.ws.Close()
+				sink.logger.Debugf("Sink %s: Websocket successfully closed", sink.clientAddress)
+				return
+			}
+			sink.logger.Debugf("Sink %s: Got %d bytes. Sending data", sink.clientAddress, len(data))
+			err := websocket.Message.Send(sink.ws, data)
+			if err != nil {
+				sink.logger.Debugf("Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", sink.clientAddress, err)
+				if !alreadyRequestedClose {
+					sinkCloseChan <- sink.listenerChannel
+					alreadyRequestedClose = true
+					sink.logger.Debugf("Sink %s: Successfully requested listener channel close", sink.clientAddress)
+				} else {
+					sink.logger.Debugf("Sink %s: Previously requested close. Doing nothing", sink.clientAddress)
+				}
+			} else {
+				sink.logger.Debugf("Sink %s: Successfully sent data", sink.clientAddress)
+			}
+			atomic.AddUint64(sink.sentMessageCount, 1)
+			atomic.AddUint64(sink.sentByteCount, uint64(len(data)))
 		}
-		atomic.AddUint64(sink.sentMessageCount, 1)
-		atomic.AddUint64(sink.sentByteCount, uint64(len(data)))
 	}
 }
 

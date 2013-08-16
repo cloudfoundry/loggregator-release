@@ -75,7 +75,6 @@ func TestThatItSends(t *testing.T) {
 	case message := <-receivedChan:
 		testhelpers.AssertProtoBufferMessageEquals(t, otherMessageString, message)
 	}
-
 }
 
 func TestThatItSendsAllDataToAllSinks(t *testing.T) {

@@ -42,21 +42,21 @@ func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 	authToken := ws.Request().Header.Get("Authorization")
 
 	if !target.IsValid() {
-		message := fmt.Sprintf("Did not accept sink connection with invalid org, space, app combination: %s.", clientAddress)
+		message := fmt.Sprintf("SinkServer: Did not accept sink connection with invalid org, space, app combination: %s.", clientAddress)
 		sinkServer.logger.Warn(message)
 		ws.CloseWithStatus(4000)
 		return
 	}
 
 	if authToken == "" {
-		message := fmt.Sprintf("Did not accept sink connection from %s without authorization.", clientAddress)
+		message := fmt.Sprintf("SinkServer: Did not accept sink connection from %s without authorization.", clientAddress)
 		sinkServer.logger.Warnf(message)
 		ws.CloseWithStatus(4001)
 		return
 	}
 
 	if !sinkServer.authorize(authToken, target, sinkServer.logger) {
-		message := fmt.Sprintf("Auth token [%s] not authorized to access target [%s].", authToken, target)
+		message := fmt.Sprintf("SinkServer: Auth token [%s] not authorized to access target [%s].", authToken, target)
 		sinkServer.logger.Warn(message)
 		ws.CloseWithStatus(4002)
 		return
@@ -73,13 +73,13 @@ func (sinkServer *sinkServer) dumpHandler(rw http.ResponseWriter, req *http.Requ
 	authToken := req.Header.Get("Authorization")
 
 	if !target.IsValid() {
-		sinkServer.logger.Warn("Did not accept dump connection with invalid org, space, app combination.")
+		sinkServer.logger.Warn("SinkServer: Did not accept dump connection with invalid org, space, app combination.")
 		rw.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	if !sinkServer.authorize(authToken, target, sinkServer.logger) {
-		message := fmt.Sprintf("Auth token [%s] not authorized to access target [%s].", authToken, target.SpaceId)
+		message := fmt.Sprintf("SinkServer: Auth token [%s] not authorized to access target [%s].", authToken, target.SpaceId)
 		sinkServer.logger.Warn(message)
 		rw.WriteHeader(http.StatusUnauthorized)
 		return
@@ -95,20 +95,20 @@ func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 		case sin := <-sinkServer.sinkCloseChan:
 			sinkServer.listenerChannels.Delete(sin)
 			close(sin)
-			sinkServer.logger.Info("A Tail client went have away. Closed it.")
+			sinkServer.logger.Infof("SinkServer: Sink with channel %v requested closing. Closed it.", sin)
 		case data := <-sinkServer.dataChannel:
-			sinkServer.logger.Debugf("Received %d bytes of data from agent listener.", len(data))
+			sinkServer.logger.Debugf("SinkServer: Received %d bytes of data from agent listener.", len(data))
 			target, err := logtarget.FromLogMessage(data)
 			if err != nil {
 				sinkServer.logger.Error(err.Error())
 			} else {
 				sinkServer.messageStore.Add(data, target)
-				sinkServer.logger.Debugf("Searching for channels with target [%s].", target)
+				sinkServer.logger.Debugf("SinkServer: Searching for sinks with target [%s].", target)
 				for _, listenerChannel := range sinkServer.listenerChannels.For(target) {
-					sinkServer.logger.Debugf("Sending Message to channel %s for target [%s].", listenerChannel, target)
+					sinkServer.logger.Debugf("SinkServer: Sending Message to channel %v for sinks targeting [%s].", listenerChannel, target)
 					listenerChannel <- data
 				}
-				sinkServer.logger.Debugf("Done sending message to tail clients.")
+				sinkServer.logger.Debugf("SinkServer: Done sending message to tail clients.")
 			}
 		}
 	}
@@ -117,7 +117,7 @@ func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 func (sinkServer *sinkServer) Start() {
 	go sinkServer.relayMessagesToAllSinks()
 
-	sinkServer.logger.Infof("Listening on port %s", sinkServer.listenHost)
+	sinkServer.logger.Infof("SinkServer: Listening on port %s", sinkServer.listenHost)
 	http.Handle(TAIL_PATH, websocket.Handler(sinkServer.sinkRelayHandler))
 	http.HandleFunc(DUMP_PATH, sinkServer.dumpHandler)
 	err := http.ListenAndServe(sinkServer.listenHost, nil)
