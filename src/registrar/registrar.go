@@ -32,11 +32,11 @@ func (r *registrar) RegisterWithRouter(cfc *cfcomponent.Component) error {
 	return nil
 }
 
-func (r *registrar) RegisterWithCollector(cfc cfcomponent.Component) (err error) {
-	err = r.announceComponent(cfc)
+func (r *registrar) RegisterWithCollector(cfc cfcomponent.Component) error {
+	err := r.announceComponent(cfc)
 	r.subscribeToComponentDiscover(cfc)
 
-	return
+	return err
 }
 
 func (r *registrar) announceComponent(cfc cfcomponent.Component) error {

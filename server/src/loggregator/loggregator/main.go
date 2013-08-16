@@ -148,7 +148,7 @@ func main() {
 
 	err = r.RegisterWithCollector(cfc)
 	if err != nil {
-		logger.Fatalf("Unable to register with collector. Err: %v.", err)
+		logger.Warnf("Unable to register with collector. Err: %v.", err)
 	}
 
 	cfc.StartMonitoringEndpoints()
