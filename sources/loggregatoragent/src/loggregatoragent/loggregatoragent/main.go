@@ -7,6 +7,7 @@ import (
 	"fmt"
 	cfmessagebus "github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/gosteno"
+	"loggregatoragent"
 	"loggregatorclient"
 	"runtime"
 )
@@ -20,7 +21,7 @@ const versionNumber = `0.0.TRAVIS_BUILD_NUMBER`
 const gitSha = `TRAVIS_COMMIT`
 
 type Config struct {
-	Index              uint
+	UnixSocketPath     string
 	VarzPort           uint32
 	VarzUser           string
 	VarzPass           string
@@ -84,5 +85,9 @@ func main() {
 	// ** END Config Setup
 
 	loggregatorClient := loggregatorclient.NewLoggregatorClient(config.LoggregatorAddress, logger, 4096)
-	loggregatorClient.IncLogStreamPbByteCount(1)
+
+	agent := loggregatoragent.NewAgent(config.UnixSocketPath, logger)
+	go agent.Start(loggregatorClient)
+
+	cfcomponent.DumpGoroutineInfoOnCommand()
 }
