@@ -65,7 +65,7 @@ func (ls *loggingStream) listen() {
 				ls.logger.Infof("Error while reading from socket %s, %s", ls.messageType, err)
 				break
 			}
-			ls.logger.Debugf("Read %d bytes from instance socket", readCount)
+			ls.logger.Debugf("Read %d bytes from instance socket %s", readCount, ls.messageType)
 			atomic.AddUint64(ls.messagesReceived, 1)
 			atomic.AddUint64(ls.bytesReceived, uint64(readCount))
 			ls.loggregatorClient.IncLogStreamRawByteCount(uint64(readCount))
