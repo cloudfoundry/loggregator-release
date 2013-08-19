@@ -107,8 +107,9 @@ func TestVarzEndpoint(t *testing.T) {
 	assert.NoError(t, err)
 
 	expected := map[string]interface{}{
-		"name":    "loggregator",
-		"numCPUS": runtime.NumCPU(),
+		"name":          "loggregator",
+		"numCPUS":       runtime.NumCPU(),
+		"numGoRoutines": runtime.NumGoroutine(),
 		"contexts": []interface{}{
 			map[string]interface{}{
 				"name": "agentListener",
