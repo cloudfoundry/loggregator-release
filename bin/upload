@@ -34,11 +34,6 @@ gzip $SCRIPT_HOME/../sources/deaagent/bin/deaagent
 DEAAGENT_BIN=$SCRIPT_HOME/../sources/deaagent/bin/deaagent.gz
 package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggregator $TRAVIS_BUILD_NUMBER $DEAAGENT_BIN
 
-gzip $SCRIPT_HOME/../sources/loggregatoragent/bin/loggregatoragent
-
-AGENT_BIN=$SCRIPT_HOME/../sources/loggregatoragent/bin/loggregatoragent.gz
-package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggregator $TRAVIS_BUILD_NUMBER $AGENT_BIN
-
 gzip $SCRIPT_HOME/../server/bin/loggregator
 
 LOGGREGATOR_BIN=$SCRIPT_HOME/../server/bin/loggregator.gz

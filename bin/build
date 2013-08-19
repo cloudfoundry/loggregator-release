@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 
 set -e
 
@@ -7,5 +7,4 @@ $(dirname $0)/go clean deaagent/deaagent
 $(dirname $0)/go clean loggregator/loggregator
 
 $(dirname $0)/go build -v deaagent/deaagent
-$(dirname $0)/go build -v loggregatoragent/loggregatoragent
 $(dirname $0)/go build -v loggregator/loggregator

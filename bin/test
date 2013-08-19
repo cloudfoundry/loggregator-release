@@ -13,8 +13,6 @@ packages=(
     loggregator/logtarget
     loggregator/messagestore
     loggregator/sink
-    loggregatoragent
-    loggregatoragent/loggregatoragent
     loggregatorclient
     logmessage
     registrar
@@ -33,7 +31,7 @@ done
 echo -e "\n Running build script to confirm main compiles"
 $(dirname $0)/build
 let "result += $?"
-rm -f deaagent loggregatoragent loggregator
+rm -f deaagent loggregator
 
 if [ $result -eq 0 ]; then
 	echo -e "\nSUITE SUCCESS"
