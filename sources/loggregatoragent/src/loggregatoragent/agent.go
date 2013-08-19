@@ -10,10 +10,11 @@ import (
 type agent struct {
 	*gosteno.Logger
 	unixSocketPath string
+	KillChan       chan bool
 }
 
 func NewAgent(unixSocketPath string, logger *gosteno.Logger) agent {
-	return agent{logger, unixSocketPath}
+	return agent{logger, unixSocketPath, make(chan bool)}
 }
 
 func (a agent) Start(loggregatorClient loggregatorclient.LoggregatorClient) {
@@ -21,6 +22,8 @@ func (a agent) Start(loggregatorClient loggregatorclient.LoggregatorClient) {
 	addr, err := net.ResolveUnixAddr("unixgram", a.unixSocketPath)
 	if err != nil {
 		a.Logger.Errorf("Error resolving Unix address from socket path %s", a.unixSocketPath)
+		a.KillChan <- true
+		return
 	}
 	socketListener, err := net.ListenUnixgram("unixgram", addr)
 	if err != nil {
@@ -29,6 +32,8 @@ func (a agent) Start(loggregatorClient loggregatorclient.LoggregatorClient) {
 		socketListener, err = net.ListenUnixgram("unixgram", addr)
 		if err != nil {
 			a.Logger.Errorf("Error listening to socket at address %s", a.unixSocketPath)
+			a.KillChan <- true
+			return
 		}
 	}
 	defer socketListener.Close()

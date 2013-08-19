@@ -90,8 +90,11 @@ func main() {
 	go agent.Start(loggregatorClient)
 
 	for {
-		<-cfcomponent.RegisterGoRoutineDumpSignalChannel()
-
-		cfcomponent.DumpGoRoutine()
+		select {
+		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
+			cfcomponent.DumpGoRoutine()
+		case <-agent.KillChan:
+			break
+		}
 	}
 }
