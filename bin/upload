@@ -32,15 +32,18 @@ function package_upload {
 gzip $SCRIPT_HOME/../sources/deaagent/bin/deaagent
 
 DEAAGENT_BIN=$SCRIPT_HOME/../sources/deaagent/bin/deaagent.gz
+echo 'Uploading deaagent.gz'
 package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggregator $TRAVIS_BUILD_NUMBER $DEAAGENT_BIN
 
 gzip $SCRIPT_HOME/../server/bin/loggregator
 
 LOGGREGATOR_BIN=$SCRIPT_HOME/../server/bin/loggregator.gz
+echo 'Uploading loggregator.gz'
 package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggregator $TRAVIS_BUILD_NUMBER $LOGGREGATOR_BIN
 
 # Deploy to Staging
 
+echo 'Trigger prism deploy'
 curl -X POST http://inception.prism.cf-app.com:4567/deploy/$STAGING_API_KEY
 
 # Mark trakcer stories as delivered
