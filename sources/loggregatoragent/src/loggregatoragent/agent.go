@@ -4,6 +4,7 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"loggregatorclient"
 	"net"
+	"os"
 )
 
 type agent struct {
@@ -16,13 +17,19 @@ func NewAgent(unixSocketPath string, logger *gosteno.Logger) agent {
 }
 
 func (a agent) Start(loggregatorClient loggregatorclient.LoggregatorClient) {
+
 	addr, err := net.ResolveUnixAddr("unixgram", a.unixSocketPath)
 	if err != nil {
-		panic(err)
+		a.Logger.Errorf("Error resolving Unix address from socket path %s", a.unixSocketPath)
 	}
 	socketListener, err := net.ListenUnixgram("unixgram", addr)
 	if err != nil {
-		panic(err)
+		a.Logger.Warnf("Could not listen to socket at address %s, retrying.", a.unixSocketPath)
+		os.Remove(a.unixSocketPath)
+		socketListener, err = net.ListenUnixgram("unixgram", addr)
+		if err != nil {
+			a.Logger.Errorf("Error listening to socket at address %s", a.unixSocketPath)
+		}
 	}
 	defer socketListener.Close()
 	for {

@@ -89,5 +89,9 @@ func main() {
 	agent := loggregatoragent.NewAgent(config.UnixSocketPath, logger)
 	go agent.Start(loggregatorClient)
 
-	cfcomponent.DumpGoroutineInfoOnCommand()
+	for {
+		<-cfcomponent.RegisterGoRoutineDumpSignalChannel()
+
+		cfcomponent.DumpGoRoutine()
+	}
 }

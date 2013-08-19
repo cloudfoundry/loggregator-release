@@ -69,7 +69,6 @@ func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string,
 				connectionDroppedChannel <- true
 				return
 			}
-
 			receivedChan <- data
 		}
 

@@ -154,11 +154,17 @@ func main() {
 	cfc.StartMonitoringEndpoints()
 
 	go sinkServer.Start()
-	go cfcomponent.DumpGoroutineInfoOnCommand()
 
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Kill)
 
-	<-killChan
-	r.UnregisterFromRouter(cfc)
+	for {
+		select {
+		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
+			cfcomponent.DumpGoRoutine()
+		case <-killChan:
+			r.UnregisterFromRouter(cfc)
+			break
+		}
+	}
 }

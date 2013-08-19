@@ -31,13 +31,14 @@ func NewLogger(verbose bool, logFilePath, name string) *gosteno.Logger {
 	return gosteno.NewLogger(name)
 }
 
-func DumpGoroutineInfoOnCommand() {
+func DumpGoRoutine() {
+	goRoutineProfiles := pprof.Lookup("goroutine")
+	goRoutineProfiles.WriteTo(os.Stdout, 2)
+}
+
+func RegisterGoRoutineDumpSignalChannel() chan os.Signal {
 	threadDumpChan := make(chan os.Signal)
 	signal.Notify(threadDumpChan, syscall.SIGUSR1)
 
-	for {
-		<-threadDumpChan
-		goRoutineProfiles := pprof.Lookup("goroutine")
-		goRoutineProfiles.WriteTo(os.Stdout, 2)
-	}
+	return threadDumpChan
 }

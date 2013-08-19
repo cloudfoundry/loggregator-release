@@ -117,5 +117,10 @@ func main() {
 	cfc.StartMonitoringEndpoints()
 	go agent.Start(loggregatorClient)
 
-	cfcomponent.DumpGoroutineInfoOnCommand()
+	for {
+		select {
+		case <- cfcomponent.RegisterGoRoutineDumpSignalChannel():
+			cfcomponent.DumpGoRoutine()
+		}
+	}
 }
