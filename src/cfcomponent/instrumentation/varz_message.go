@@ -5,10 +5,10 @@ import (
 )
 
 type VarzMessage struct {
-	Name string `json:"name"`
-	NumCpus int `json:"numCPUS"`
-	NumGoRoutines int `json:"numGoRoutines"`
-	Contexts []Context `json:"contexts"`
+	Name          string    `json:"name"`
+	NumCpus       int       `json:"numCPUS"`
+	NumGoRoutines int       `json:"numGoRoutines"`
+	Contexts      []Context `json:"contexts"`
 }
 
 func NewVarzMessage(name string, instrumentables []Instrumentable) *VarzMessage {

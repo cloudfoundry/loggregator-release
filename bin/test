@@ -4,6 +4,7 @@ result=0
 
 packages=(
     cfcomponent
+    cfcomponent/instrumentation
     deaagent
     loggregator
     loggregator/agentlistener
