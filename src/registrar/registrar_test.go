@@ -9,24 +9,18 @@ import (
 	"github.com/cloudfoundry/go_cfmessagebus/mock_cfmessagebus"
 	"github.com/stretchr/testify/assert"
 	"os"
-	"os/exec"
 	"testhelpers"
 	"testing"
 	"time"
 )
 
-var mbusClient mbus.MessageBus
-
-func init() {
-	_, mbusClient = setupNatsServer(34783)
-}
-
 func TestGreetRouter(t *testing.T) {
+	mbus := mock_cfmessagebus.NewMockMessageBus()
 	routerReceivedChannel := make(chan []byte)
-	fakeRouter(mbusClient, routerReceivedChannel)
+	fakeRouter(mbus, routerReceivedChannel)
 
 	cfc := &cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083}
-	registrar := NewRegistrar(mbusClient, testhelpers.Logger())
+	registrar := NewRegistrar(mbus, testhelpers.Logger())
 	err := registrar.greetRouter(cfc)
 	assert.NoError(t, err)
 
@@ -52,11 +46,12 @@ func TestGreetRouter(t *testing.T) {
 }
 
 func TestDefaultIntervalIsSetWhenGreetRouterFails(t *testing.T) {
+	mbus := mock_cfmessagebus.NewMockMessageBus()
 	cfc := &cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083}
 	routerReceivedChannel := make(chan []byte)
-	fakeBrokenGreeterRouter(mbusClient, routerReceivedChannel)
+	fakeBrokenGreeterRouter(mbus, routerReceivedChannel)
 
-	registrar := NewRegistrar(mbusClient, testhelpers.Logger())
+	registrar := NewRegistrar(mbus, testhelpers.Logger())
 	err := registrar.greetRouter(cfc)
 	assert.Error(t, err)
 
@@ -82,8 +77,9 @@ func TestDefaultIntervalIsSetWhenGreetRouterFails(t *testing.T) {
 }
 
 func TestDefaultIntervalIsSetWhenGreetWithoutRouter(t *testing.T) {
+	mbus := mock_cfmessagebus.NewMockMessageBus()
 	cfc := &cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083}
-	registrar := NewRegistrar(mbusClient, testhelpers.Logger())
+	registrar := NewRegistrar(mbus, testhelpers.Logger())
 	err := registrar.greetRouter(cfc)
 	assert.Error(t, err)
 
@@ -181,12 +177,13 @@ func TestSubscribeToComponentDiscover(t *testing.T) {
 }
 
 func TestKeepRegisteringWithRouter(t *testing.T) {
+	mbus := mock_cfmessagebus.NewMockMessageBus()
 	os.Setenv("LOG_TO_STDOUT", "false")
 	routerReceivedChannel := make(chan []byte)
-	fakeRouter(mbusClient, routerReceivedChannel)
+	fakeRouter(mbus, routerReceivedChannel)
 
 	cfc := cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083, IpAddress: "13.12.14.15"}
-	registrar := NewRegistrar(mbusClient, testhelpers.Logger())
+	registrar := NewRegistrar(mbus, testhelpers.Logger())
 	cfc.RegisterInterval = 50 * time.Millisecond
 	registrar.keepRegisteringWithRouter(cfc)
 
@@ -202,11 +199,12 @@ func TestKeepRegisteringWithRouter(t *testing.T) {
 }
 
 func TestSubscribeToRouterStart(t *testing.T) {
+	mbus := mock_cfmessagebus.NewMockMessageBus()
 	cfc := &cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083}
-	registrar := NewRegistrar(mbusClient, testhelpers.Logger())
+	registrar := NewRegistrar(mbus, testhelpers.Logger())
 	registrar.subscribeToRouterStart(cfc)
 
-	err := mbusClient.Publish("router.start", []byte(messageFromRouter))
+	err := mbus.Publish("router.start", []byte(messageFromRouter))
 	assert.NoError(t, err)
 
 	resultChan := make(chan bool)
@@ -231,11 +229,12 @@ func TestSubscribeToRouterStart(t *testing.T) {
 }
 
 func TestUnregisterFromRouter(t *testing.T) {
+	mbus := mock_cfmessagebus.NewMockMessageBus()
 	routerReceivedChannel := make(chan []byte)
-	fakeRouter(mbusClient, routerReceivedChannel)
+	fakeRouter(mbus, routerReceivedChannel)
 
 	cfc := cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083, IpAddress: "13.12.14.15"}
-	registrar := NewRegistrar(mbusClient, testhelpers.Logger())
+	registrar := NewRegistrar(mbus, testhelpers.Logger())
 	registrar.UnregisterFromRouter(cfc)
 
 	select {
@@ -253,68 +252,26 @@ const messageFromRouter = `{
   							"minimumRegisterIntervalInSeconds": 42
 							}`
 
-func fakeRouter(mBusClient mbus.MessageBus, returnChannel chan []byte) {
-	mBusClient.RespondToChannel("router.greet", func(_ []byte) []byte {
+func fakeRouter(mbus mbus.MessageBus, returnChannel chan []byte) {
+	mbus.RespondToChannel("router.greet", func(_ []byte) []byte {
 		response := []byte(messageFromRouter)
 		return response
 	})
 
-	mBusClient.RespondToChannel("router.register", func(content []byte) []byte {
+	mbus.RespondToChannel("router.register", func(content []byte) []byte {
 		returnChannel <- []byte("registering:" + string(content))
 		return content
 	})
 
-	mBusClient.RespondToChannel("router.unregister", func(content []byte) []byte {
+	mbus.RespondToChannel("router.unregister", func(content []byte) []byte {
 		returnChannel <- []byte("unregistering:" + string(content))
 		return content
 	})
 }
 
-func fakeBrokenGreeterRouter(mBusClient mbus.MessageBus, returnChannel chan []byte) {
-	mBusClient.RespondToChannel("router.greet", func(_ []byte) []byte {
+func fakeBrokenGreeterRouter(mbus mbus.MessageBus, returnChannel chan []byte) {
+	mbus.RespondToChannel("router.greet", func(_ []byte) []byte {
 		response := []byte("garbel garbel")
 		return response
 	})
-}
-
-func setupNatsServer(port int) (*exec.Cmd, mbus.MessageBus) {
-	natsServerCmd := mbus.StartNats(port)
-	mbusClient := newMBusClient(port)
-	waitUntilNatsIsUp(mbusClient)
-	return natsServerCmd, mbusClient
-}
-
-func waitUntilNatsIsUp(mBusClient mbus.MessageBus) {
-	natsConnected := make(chan bool, 1)
-	go func() {
-		for {
-			if mBusClient.Publish("asdf", []byte("data")) == nil {
-				break
-			}
-			time.Sleep(50 * time.Millisecond)
-		}
-		natsConnected <- true
-	}()
-	<-natsConnected
-	return
-}
-
-func newMBusClient(port int) mbus.MessageBus {
-	mBusClient, err := mbus.NewMessageBus("NATS")
-	if err != nil {
-		panic("Could not connect to NATS")
-	}
-	mBusClient.Configure("127.0.0.1", port, "nats", "nats")
-	log := testhelpers.Logger()
-	mBusClient.SetLogger(log)
-	for {
-		err := mBusClient.Connect()
-		if err == nil {
-			break
-		}
-		log.Errorf("Could not connect to NATS: ", err.Error())
-		time.Sleep(50 * time.Millisecond)
-	}
-
-	return mBusClient
 }
