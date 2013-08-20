@@ -5,6 +5,7 @@ result=0
 packages=(
     cfcomponent
     cfcomponent/instrumentation
+    cfcomponent/registrars
     deaagent
     loggregator
     loggregator/agentlistener
@@ -16,7 +17,6 @@ packages=(
     loggregator/sink
     loggregatorclient
     logmessage
-    registrar
     testhelpers
 );
 

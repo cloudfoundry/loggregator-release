@@ -1,10 +1,7 @@
-//We're testing only public functions
-
-package registrar
+package registrars
 
 import (
 	"cfcomponent"
-	"encoding/json"
 	mbus "github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/go_cfmessagebus/mock_cfmessagebus"
 	"github.com/stretchr/testify/assert"
@@ -20,7 +17,7 @@ func TestGreetRouter(t *testing.T) {
 	fakeRouter(mbus, routerReceivedChannel)
 
 	cfc := &cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083}
-	registrar := NewRegistrar(mbus, testhelpers.Logger())
+	registrar := NewRouterRegistrar(mbus, testhelpers.Logger())
 	err := registrar.greetRouter(cfc)
 	assert.NoError(t, err)
 
@@ -51,7 +48,7 @@ func TestDefaultIntervalIsSetWhenGreetRouterFails(t *testing.T) {
 	routerReceivedChannel := make(chan []byte)
 	fakeBrokenGreeterRouter(mbus, routerReceivedChannel)
 
-	registrar := NewRegistrar(mbus, testhelpers.Logger())
+	registrar := NewRouterRegistrar(mbus, testhelpers.Logger())
 	err := registrar.greetRouter(cfc)
 	assert.Error(t, err)
 
@@ -79,7 +76,7 @@ func TestDefaultIntervalIsSetWhenGreetRouterFails(t *testing.T) {
 func TestDefaultIntervalIsSetWhenGreetWithoutRouter(t *testing.T) {
 	mbus := mock_cfmessagebus.NewMockMessageBus()
 	cfc := &cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083}
-	registrar := NewRegistrar(mbus, testhelpers.Logger())
+	registrar := NewRouterRegistrar(mbus, testhelpers.Logger())
 	err := registrar.greetRouter(cfc)
 	assert.Error(t, err)
 
@@ -104,78 +101,6 @@ func TestDefaultIntervalIsSetWhenGreetWithoutRouter(t *testing.T) {
 	}
 }
 
-func TestAnnounceComponent(t *testing.T) {
-	cfc := cfcomponent.Component{
-		IpAddress:         "1.2.3.4",
-		Type:              "Loggregator Server",
-		Index:             0,
-		StatusPort:        5678,
-		StatusCredentials: []string{"user", "pass"},
-		UUID:              "abc123",
-	}
-	mbus := mock_cfmessagebus.NewMockMessageBus()
-
-	called := make(chan []byte)
-	callback := func(response []byte) {
-		called <- response
-	}
-	mbus.Subscribe(AnnounceComponentMessageSubject, callback)
-
-	registrar := NewRegistrar(mbus, testhelpers.Logger())
-
-	registrar.announceComponent(cfc)
-
-	actual := <-called
-
-	expected := &AnnounceComponentMessage{
-		Type:        "Loggregator Server",
-		Index:       0,
-		Host:        "1.2.3.4:5678",
-		UUID:        "0-abc123",
-		Credentials: []string{"user", "pass"},
-	}
-
-	expectedJson, err := json.Marshal(expected)
-	assert.NoError(t, err)
-	assert.Equal(t, string(expectedJson), string(actual))
-}
-
-func TestSubscribeToComponentDiscover(t *testing.T) {
-	cfc := cfcomponent.Component{
-		IpAddress:         "1.2.3.4",
-		Type:              "Loggregator Server",
-		Index:             0,
-		StatusPort:        5678,
-		StatusCredentials: []string{"user", "pass"},
-		UUID:              "abc123",
-	}
-
-	mbus := mock_cfmessagebus.NewMockMessageBus()
-	registrar := NewRegistrar(mbus, testhelpers.Logger())
-
-	registrar.subscribeToComponentDiscover(cfc)
-
-	called := make(chan []byte)
-	callback := func(response []byte) {
-		called <- response
-	}
-
-	message := []byte("")
-	mbus.Request(DiscoverComponentMessageSubject, message, callback)
-
-	expected := &AnnounceComponentMessage{
-		Type:        "Loggregator Server",
-		Index:       0,
-		Host:        "1.2.3.4:5678",
-		UUID:        "0-abc123",
-		Credentials: []string{"user", "pass"},
-	}
-
-	expectedJson, err := json.Marshal(expected)
-	assert.NoError(t, err)
-	assert.Equal(t, string(expectedJson), string(<-called))
-}
-
 func TestKeepRegisteringWithRouter(t *testing.T) {
 	mbus := mock_cfmessagebus.NewMockMessageBus()
 	os.Setenv("LOG_TO_STDOUT", "false")
@@ -183,7 +108,7 @@ func TestKeepRegisteringWithRouter(t *testing.T) {
 	fakeRouter(mbus, routerReceivedChannel)
 
 	cfc := cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083, IpAddress: "13.12.14.15"}
-	registrar := NewRegistrar(mbus, testhelpers.Logger())
+	registrar := NewRouterRegistrar(mbus, testhelpers.Logger())
 	cfc.RegisterInterval = 50 * time.Millisecond
 	registrar.keepRegisteringWithRouter(cfc)
 
@@ -201,7 +126,7 @@ func TestKeepRegisteringWithRouter(t *testing.T) {
 func TestSubscribeToRouterStart(t *testing.T) {
 	mbus := mock_cfmessagebus.NewMockMessageBus()
 	cfc := &cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083}
-	registrar := NewRegistrar(mbus, testhelpers.Logger())
+	registrar := NewRouterRegistrar(mbus, testhelpers.Logger())
 	registrar.subscribeToRouterStart(cfc)
 
 	err := mbus.Publish("router.start", []byte(messageFromRouter))
@@ -234,7 +159,7 @@ func TestUnregisterFromRouter(t *testing.T) {
 	fakeRouter(mbus, routerReceivedChannel)
 
 	cfc := cfcomponent.Component{SystemDomain: "vcap.me", WebPort: 8083, IpAddress: "13.12.14.15"}
-	registrar := NewRegistrar(mbus, testhelpers.Logger())
+	registrar := NewRouterRegistrar(mbus, testhelpers.Logger())
 	registrar.UnregisterFromRouter(cfc)
 
 	select {

@@ -3,6 +3,7 @@ package main
 import (
 	"cfcomponent"
 	"cfcomponent/instrumentation"
+	"cfcomponent/registrars"
 	"deaagent"
 	"errors"
 	"flag"
@@ -10,7 +11,6 @@ import (
 	cfmessagebus "github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/gosteno"
 	"loggregatorclient"
-	"registrar"
 )
 
 type Config struct {
@@ -108,11 +108,12 @@ func main() {
 		panic(err)
 	}
 
-	r := registrar.NewRegistrar(config.mbusClient, logger)
-	err = r.RegisterWithCollector(cfc)
+	cr := registrars.NewCollectorRegistrar(config.mbusClient, logger)
+	err = cr.RegisterWithCollector(cfc)
 	if err != nil {
 		panic(err)
 	}
+
 
 	cfc.StartMonitoringEndpoints()
 	go agent.Start(loggregatorClient)

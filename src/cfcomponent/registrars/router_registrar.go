@@ -1,4 +1,4 @@
-package registrar
+package registrars
 
 import (
 	"cfcomponent"
@@ -17,7 +17,7 @@ type registrar struct {
 	mBusClient mbus.MessageBus
 }
 
-func NewRegistrar(mBusClient mbus.MessageBus, logger *gosteno.Logger) *registrar {
+func NewRouterRegistrar(mBusClient mbus.MessageBus, logger *gosteno.Logger) *registrar {
 	return &registrar{mBusClient: mBusClient, Logger: logger}
 }
 
@@ -30,35 +30,6 @@ func (r *registrar) RegisterWithRouter(cfc *cfcomponent.Component) error {
 	r.keepRegisteringWithRouter(*cfc)
 
 	return nil
-}
-
-func (r *registrar) RegisterWithCollector(cfc cfcomponent.Component) error {
-	err := r.announceComponent(cfc)
-	r.subscribeToComponentDiscover(cfc)
-
-	return err
-}
-
-func (r *registrar) announceComponent(cfc cfcomponent.Component) error {
-	json, err := json.Marshal(NewAnnounceComponentMessage(cfc))
-	if err != nil {
-		return err
-	}
-
-	r.mBusClient.Publish(AnnounceComponentMessageSubject, json)
-	return nil
-}
-
-func (r *registrar) subscribeToComponentDiscover(cfc cfcomponent.Component) {
-	r.mBusClient.RespondToChannel(DiscoverComponentMessageSubject, func(msg []byte) []byte {
-		json, err := json.Marshal(NewAnnounceComponentMessage(cfc))
-		if err != nil {
-			r.Warnf("Failed to marshal response to message [%s]: %s", DiscoverComponentMessageSubject, err.Error())
-			return nil
-		}
-		return json
-	})
-	return
 }
 
 func (r *registrar) greetRouter(cfc *cfcomponent.Component) (err error) {

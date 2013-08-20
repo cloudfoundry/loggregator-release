@@ -3,6 +3,7 @@ package main
 import (
 	"cfcomponent"
 	"cfcomponent/instrumentation"
+	"cfcomponent/registrars"
 	"errors"
 	"flag"
 	"fmt"
@@ -15,7 +16,6 @@ import (
 	"loggregator/sink"
 	"os"
 	"os/signal"
-	"registrar"
 	"runtime"
 	"time"
 )
@@ -140,13 +140,14 @@ func main() {
 		panic(err)
 	}
 
-	r := registrar.NewRegistrar(config.mbusClient, logger)
-	err = r.RegisterWithRouter(&cfc)
+	rr := registrars.NewRouterRegistrar(config.mbusClient, logger)
+	err = rr.RegisterWithRouter(&cfc)
 	if err != nil {
 		logger.Warnf("Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
 	}
 
-	err = r.RegisterWithCollector(cfc)
+	cr := registrars.NewCollectorRegistrar(config.mbusClient, logger)
+	err = cr.RegisterWithCollector(cfc)
 	if err != nil {
 		logger.Warnf("Unable to register with collector. Err: %v.", err)
 	}
@@ -163,7 +164,7 @@ func main() {
 		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
 			cfcomponent.DumpGoRoutine()
 		case <-killChan:
-			r.UnregisterFromRouter(cfc)
+			rr.UnregisterFromRouter(cfc)
 			break
 		}
 	}
