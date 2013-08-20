@@ -42,7 +42,7 @@ func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 	authToken := ws.Request().Header.Get("Authorization")
 
 	if !target.IsValid() {
-		message := fmt.Sprintf("SinkServer: Did not accept sink connection with invalid org, space, app combination: %s.", clientAddress)
+		message := fmt.Sprintf("SinkServer: Did not accept sink connection with invalid app id: %s.", clientAddress)
 		sinkServer.logger.Warn(message)
 		ws.CloseWithStatus(4000)
 		return
@@ -73,13 +73,13 @@ func (sinkServer *sinkServer) dumpHandler(rw http.ResponseWriter, req *http.Requ
 	authToken := req.Header.Get("Authorization")
 
 	if !target.IsValid() {
-		sinkServer.logger.Warn("SinkServer: Did not accept dump connection with invalid org, space, app combination.")
+		sinkServer.logger.Warn("SinkServer: Did not accept dump connection with invalid app id.")
 		rw.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	if !sinkServer.authorize(authToken, target, sinkServer.logger) {
-		message := fmt.Sprintf("SinkServer: Auth token [%s] not authorized to access target [%s].", authToken, target.SpaceId)
+		message := fmt.Sprintf("SinkServer: Auth token [%s] not authorized to access target [%s].", authToken, target.AppId)
 		sinkServer.logger.Warn(message)
 		rw.WriteHeader(http.StatusUnauthorized)
 		return

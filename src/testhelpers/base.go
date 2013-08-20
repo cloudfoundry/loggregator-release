@@ -90,19 +90,17 @@ func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string,
 	return ws, dontKeepAliveChan, connectionDroppedChannel
 }
 
-func MarshalledLogMessage(t *testing.T, messageString string, spaceId string, appId string, organizationId string) []byte {
+func MarshalledLogMessage(t *testing.T, messageString string, appId string) []byte {
 	currentTime := time.Now()
 
 	messageType := logmessage.LogMessage_OUT
 	sourceType := logmessage.LogMessage_DEA
 	protoMessage := &logmessage.LogMessage{
-		Message:        []byte(messageString),
-		AppId:          proto.String(appId),
-		OrganizationId: proto.String(organizationId),
-		SpaceId:        proto.String(spaceId),
-		MessageType:    &messageType,
-		SourceType:     &sourceType,
-		Timestamp:      proto.Int64(currentTime.UnixNano()),
+		Message:     []byte(messageString),
+		AppId:       proto.String(appId),
+		MessageType: &messageType,
+		SourceType:  &sourceType,
+		Timestamp:   proto.Int64(currentTime.UnixNano()),
 	}
 
 	message, err := proto.Marshal(protoMessage)

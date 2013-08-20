@@ -15,7 +15,7 @@ Loggregator allows users to:
 ### Usage
 
 ```
-cf logs [--app=APP_NAME|--space|--org] [--recent]
+cf logs [--app=APP_NAME] [--recent]
 ```
 
 `APP_NAME` defaults to the current application in your `manifest.yml` file.

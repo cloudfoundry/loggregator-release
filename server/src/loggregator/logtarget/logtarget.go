@@ -11,9 +11,7 @@ import (
 
 func FromUrl(u *url.URL) *LogTarget {
 	appId := u.Query().Get("app")
-	spaceId := u.Query().Get("space")
-	orgId := u.Query().Get("org")
-	target := &LogTarget{orgId, spaceId, appId}
+	target := &LogTarget{appId}
 	return target
 }
 
@@ -26,30 +24,24 @@ func FromLogMessage(data []byte) (lt *LogTarget, err error) {
 	}
 
 	lt = &LogTarget{
-		OrgId:   *receivedMessage.OrganizationId,
-		SpaceId: *receivedMessage.SpaceId,
-		AppId:   *receivedMessage.AppId,
+		AppId: *receivedMessage.AppId,
 	}
 
 	return
 }
 
 type LogTarget struct {
-	OrgId   string
-	SpaceId string
-	AppId   string
+	AppId string
 }
 
 func (lt *LogTarget) Identifier() string {
-	return strings.Join([]string{lt.OrgId, lt.SpaceId, lt.AppId}, ":")
+	return strings.Join([]string{lt.AppId}, ":")
 }
 
 func (lt *LogTarget) IsValid() bool {
-	return (lt.OrgId != "" && lt.SpaceId != "" && lt.AppId != "") ||
-		(lt.OrgId != "" && lt.SpaceId != "" && lt.AppId == "") ||
-		(lt.OrgId != "" && lt.SpaceId == "" && lt.AppId == "")
+	return lt.AppId != ""
 }
 
 func (lt *LogTarget) String() string {
-	return fmt.Sprintf("Org: %s, Space: %s, App: %s", lt.OrgId, lt.SpaceId, lt.AppId)
+	return fmt.Sprintf("App: %s", lt.AppId)
 }

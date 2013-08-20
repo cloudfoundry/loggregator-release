@@ -6,13 +6,8 @@ import (
 )
 
 func readInstances(data []byte) (map[string]instance, error) {
-	type tagsJson struct {
-		Space        string
-		Organization string
-	}
 	type instanceJson struct {
 		Application_id        string
-		Tags                  tagsJson
 		Warden_job_id         uint64
 		Warden_container_path string
 		Instance_index        uint64
@@ -38,8 +33,6 @@ func readInstances(data []byte) (map[string]instance, error) {
 		if jsonInstance.State == "RUNNING" {
 			instance := instance{
 				applicationId:       jsonInstance.Application_id,
-				spaceId:             jsonInstance.Tags.Space,
-				organizationId:      jsonInstance.Tags.Organization,
 				wardenContainerPath: jsonInstance.Warden_container_path,
 				wardenJobId:         jsonInstance.Warden_job_id,
 				index:               jsonInstance.Instance_index}

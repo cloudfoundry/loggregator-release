@@ -21,14 +21,14 @@ func TestEndtoEndMessage(t *testing.T) {
 	time.Sleep(1 * time.Millisecond)
 
 	receivedChan := make(chan []byte)
-	ws, _, _ := testhelpers.AddWSSink(t, receivedChan, "8081", "/tail/?org=myOrg&space=mySpace&app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
+	ws, _, _ := testhelpers.AddWSSink(t, receivedChan, "8081", "/tail/?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
 	defer ws.Close()
 	time.Sleep(50 * time.Millisecond)
 
 	connection, err := net.Dial("udp", "localhost:3456")
 
 	expectedMessageString := "Some Data"
-	expectedMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "mySpace", "myApp", "myOrg")
+	expectedMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
 
 	_, err = connection.Write(expectedMessage)
 	assert.NoError(t, err)

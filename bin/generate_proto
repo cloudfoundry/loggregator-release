@@ -2,4 +2,4 @@
 
 set -e
 
-exec $(dirname $0)/env protoc --plugin=$(dirname $0)/protoc-gen-gogo --proto_path=$(dirname $0)/../src/LogMessage/ --gogo_out=src/LogMessage $(dirname $0)/../src/LogMessage/log_message.proto
+exec $(dirname $0)/env protoc --plugin=$(dirname $0)/protoc-gen-gogo --proto_path=$(dirname $0)/../src/logmessage/ --gogo_out=src/logmessage $(dirname $0)/../src/logmessage/log_message.proto

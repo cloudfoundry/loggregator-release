@@ -96,13 +96,11 @@ func (x *LogMessage_SourceType) UnmarshalJSON(data []byte) error {
 
 type LogMessage struct {
 	Message          []byte                  `protobuf:"bytes,1,req,name=message" json:"message,omitempty"`
-	MessageType      *LogMessage_MessageType `protobuf:"varint,2,req,name=message_type,enum=logMessage.LogMessage_MessageType" json:"message_type,omitempty"`
+	MessageType      *LogMessage_MessageType `protobuf:"varint,2,req,name=message_type,enum=logmessage.LogMessage_MessageType" json:"message_type,omitempty"`
 	Timestamp        *int64                  `protobuf:"zigzag64,3,req,name=timestamp" json:"timestamp,omitempty"`
-	AppId            *string                 `protobuf:"bytes,4,req,name=app_id" json:"app_id,omitempty"`
-	SourceType       *LogMessage_SourceType  `protobuf:"varint,5,req,name=source_type,enum=logMessage.LogMessage_SourceType" json:"source_type,omitempty"`
+	AppId            *string                 `protobuf:"bytes,4,opt,name=app_id" json:"app_id,omitempty"`
+	SourceType       *LogMessage_SourceType  `protobuf:"varint,5,req,name=source_type,enum=logmessage.LogMessage_SourceType" json:"source_type,omitempty"`
 	SourceId         *string                 `protobuf:"bytes,6,opt,name=source_id" json:"source_id,omitempty"`
-	SpaceId          *string                 `protobuf:"bytes,7,opt,name=space_id" json:"space_id,omitempty"`
-	OrganizationId   *string                 `protobuf:"bytes,8,req,name=organization_id" json:"organization_id,omitempty"`
 	XXX_unrecognized []byte                  `json:"-"`
 }
 
@@ -152,21 +150,7 @@ func (m *LogMessage) GetSourceId() string {
 	return ""
 }
 
-func (m *LogMessage) GetSpaceId() string {
-	if m != nil && m.SpaceId != nil {
-		return *m.SpaceId
-	}
-	return ""
-}
-
-func (m *LogMessage) GetOrganizationId() string {
-	if m != nil && m.OrganizationId != nil {
-		return *m.OrganizationId
-	}
-	return ""
-}
-
 func init() {
-	proto.RegisterEnum("logMessage.LogMessage_MessageType", LogMessage_MessageType_name, LogMessage_MessageType_value)
-	proto.RegisterEnum("logMessage.LogMessage_SourceType", LogMessage_SourceType_name, LogMessage_SourceType_value)
+	proto.RegisterEnum("logmessage.LogMessage_MessageType", LogMessage_MessageType_name, LogMessage_MessageType_value)
+	proto.RegisterEnum("logmessage.LogMessage_SourceType", LogMessage_SourceType_name, LogMessage_SourceType_value)
 }

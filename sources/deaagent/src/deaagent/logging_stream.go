@@ -31,13 +31,11 @@ func (ls *loggingStream) listen() {
 		currentTime := time.Now()
 		sourceType := logmessage.LogMessage_DEA
 		return &logmessage.LogMessage{
-			Message:        message,
-			AppId:          proto.String(ls.inst.applicationId),
-			SpaceId:        proto.String(ls.inst.spaceId),
-			OrganizationId: proto.String(ls.inst.organizationId),
-			MessageType:    &ls.messageType,
-			SourceType:     &sourceType,
-			Timestamp:      proto.Int64(currentTime.UnixNano()),
+			Message:     message,
+			AppId:       proto.String(ls.inst.applicationId),
+			MessageType: &ls.messageType,
+			SourceType:  &sourceType,
+			Timestamp:   proto.Int64(currentTime.UnixNano()),
 		}
 	}
 

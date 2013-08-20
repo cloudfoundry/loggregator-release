@@ -25,7 +25,6 @@ func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccess
 		Developers []MetadataObject
 		Managers   []MetadataObject
 		Auditors   []MetadataObject
-		Apps       []MetadataObject
 	}
 
 	type Space struct {
@@ -33,15 +32,13 @@ func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccess
 		SpaceEntity `json:"entity"`
 	}
 
-	type OrgEntity struct {
-		Spaces   []Space
-		Managers []MetadataObject
-		Auditors []MetadataObject
+	type AppEntity struct {
+		Space Space
 	}
 
-	type Org struct {
+	type App struct {
 		Metadata  `json:"metadata"`
-		OrgEntity `json:"entity"`
+		AppEntity `json:"entity"`
 	}
 
 	idIsInGroup := func(id string, group []MetadataObject) bool {
@@ -53,10 +50,10 @@ func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccess
 		return false
 	}
 
-	getOrgFromCC := func(target *logtarget.LogTarget, authToken string) (o Org, err error) {
+	getAppFromCC := func(target *logtarget.LogTarget, authToken string) (a App, error error) {
 		client := &http.Client{}
 
-		req, _ := http.NewRequest("GET", apiHost+"/v2/organizations/"+target.OrgId+"?inline-relations-depth=2", nil)
+		req, _ := http.NewRequest("GET", apiHost+"/v2/apps/"+target.AppId+"?inline-relations-depth=2", nil)
 		req.Header.Set("Authorization", authToken)
 		res, err := client.Do(req)
 		if err != nil {
@@ -72,13 +69,13 @@ func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccess
 		jsonBytes, err := ioutil.ReadAll(res.Body)
 		res.Body.Close()
 		if err != nil {
-			err = errors.New(fmt.Sprintf("Could not response body: %s", err))
+			err = errors.New(fmt.Sprintf("Could not read response body: %s", err))
 			return
 		}
 
-		err = json.Unmarshal(jsonBytes, &o)
+		err = json.Unmarshal(jsonBytes, &a)
 		if err != nil {
-			err = errors.New(fmt.Sprintf("Error parsing organization JSON. json: %s\nerror: %s", jsonBytes, err))
+			err = errors.New(fmt.Sprintf("Error parsing application JSON. json: %s\nerror: %s", jsonBytes, err))
 			return
 		}
 		return
@@ -91,44 +88,15 @@ func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccess
 			return false
 		}
 
-		org, err := getOrgFromCC(target, authToken)
-
+		app, err := getAppFromCC(target, authToken)
 		if err != nil {
-			logger.Errorf("Could not get Org info from CloudController: [%s]", err)
+			logger.Errorf("Could not get Application info from CloudController: [%s]", err)
 			return false
 		}
 
-		orgManagers := org.Managers
-		orgAuditors := org.Auditors
-
-		foundOrgManager := idIsInGroup(tokenPayload.UserId, orgManagers)
-		foundOrgAuditor := idIsInGroup(tokenPayload.UserId, orgAuditors)
-
-		if target.SpaceId == "" {
-			return foundOrgManager || foundOrgAuditor
-		}
-
-		var targetSpace Space
-
-		for _, space := range org.Spaces {
-			if space.Guid == target.SpaceId {
-				targetSpace = space
-			}
-		}
-		if targetSpace.Guid == "" {
-			return false
-		}
-
-		if target.AppId != "" && !idIsInGroup(target.AppId, targetSpace.Apps) {
-			logger.Warnf("AppId (%s) not in space (%s)", target.AppId, target.SpaceId)
-			return false
-		}
-
-		return foundOrgManager ||
-			foundOrgAuditor ||
-			idIsInGroup(tokenPayload.UserId, targetSpace.Managers) ||
-			idIsInGroup(tokenPayload.UserId, targetSpace.Auditors) ||
-			idIsInGroup(tokenPayload.UserId, targetSpace.Developers)
+		return idIsInGroup(tokenPayload.UserId, app.Space.Managers) ||
+			idIsInGroup(tokenPayload.UserId, app.Space.Auditors) ||
+			idIsInGroup(tokenPayload.UserId, app.Space.Developers)
 	}
 
 	return LogAccessAuthorizer(authorizer)

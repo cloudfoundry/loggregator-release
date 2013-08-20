@@ -21,8 +21,6 @@ func TestReadingInstances(t *testing.T) {
 
 	expectedInstance := instance{
 		applicationId:       "4aa9506e-277f-41ab-b764-a35c0b96fa1b",
-		spaceId:             "4aa9506e-277f-41ab-b764-a35c0b123456",
-		organizationId:      "9876506e-277f-41ab-b764-a35c0b123456",
 		wardenJobId:         272,
 		wardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo1",
 		index:               0}
