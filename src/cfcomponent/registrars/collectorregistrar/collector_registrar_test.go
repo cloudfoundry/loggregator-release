@@ -1,4 +1,4 @@
-package registrars
+package collectorregistrar
 
 import (
 	"cfcomponent"

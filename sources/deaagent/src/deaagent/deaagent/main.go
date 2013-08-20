@@ -3,7 +3,7 @@ package main
 import (
 	"cfcomponent"
 	"cfcomponent/instrumentation"
-	"cfcomponent/registrars"
+	"cfcomponent/registrars/collectorregistrar"
 	"deaagent"
 	"errors"
 	"flag"
@@ -108,7 +108,7 @@ func main() {
 		panic(err)
 	}
 
-	cr := registrars.NewCollectorRegistrar(config.mbusClient, logger)
+	cr := collectorregistrar.NewCollectorRegistrar(config.mbusClient, logger)
 	err = cr.RegisterWithCollector(cfc)
 	if err != nil {
 		panic(err)

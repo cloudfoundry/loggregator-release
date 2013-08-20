@@ -5,7 +5,8 @@ result=0
 packages=(
     cfcomponent
     cfcomponent/instrumentation
-    cfcomponent/registrars
+    cfcomponent/registrars/collectorregistrar
+    cfcomponent/registrars/routerregistrar
     deaagent
     loggregator
     loggregator/agentlistener

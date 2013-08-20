@@ -3,7 +3,8 @@ package main
 import (
 	"cfcomponent"
 	"cfcomponent/instrumentation"
-	"cfcomponent/registrars"
+	"cfcomponent/registrars/collectorregistrar"
+	"cfcomponent/registrars/routerregistrar"
 	"errors"
 	"flag"
 	"fmt"
@@ -140,13 +141,13 @@ func main() {
 		panic(err)
 	}
 
-	rr := registrars.NewRouterRegistrar(config.mbusClient, logger)
+	rr := routerregistrar.NewRouterRegistrar(config.mbusClient, logger)
 	err = rr.RegisterWithRouter(&cfc)
 	if err != nil {
 		logger.Warnf("Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
 	}
 
-	cr := registrars.NewCollectorRegistrar(config.mbusClient, logger)
+	cr := collectorregistrar.NewCollectorRegistrar(config.mbusClient, logger)
 	err = cr.RegisterWithCollector(cfc)
 	if err != nil {
 		logger.Warnf("Unable to register with collector. Err: %v.", err)
