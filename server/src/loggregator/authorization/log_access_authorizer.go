@@ -57,7 +57,7 @@ func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccess
 		req.Header.Set("Authorization", authToken)
 		res, err := client.Do(req)
 		if err != nil {
-			err = errors.New(fmt.Sprintf("Could not get space information: [%s]", err))
+			err = errors.New(fmt.Sprintf("Could not get app information: [%s]", err))
 			return
 		}
 
