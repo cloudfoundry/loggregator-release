@@ -20,8 +20,7 @@ go:
 before_install:
 - git submodule update --init --recursive
 install: ./bin/build && ./bin/install
-script: ./bin/test
-after_success: ./bin/upload
+script: ./bin/test && ./bin/upload
 branches:
   only:
   - master
