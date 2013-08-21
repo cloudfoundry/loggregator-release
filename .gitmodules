@@ -19,3 +19,6 @@
 [submodule "src/github.com/nu7hatch/gouuid"]
 	path = src/github.com/nu7hatch/gouuid
 	url = https://github.com/nu7hatch/gouuid.git
+[submodule "src/github.com/cloudfoundry/loggregatorlib"]
+	path = src/github.com/cloudfoundry/loggregatorlib
+	url = https://github.com/cloudfoundry/loggregatorlib.git
