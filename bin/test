@@ -3,21 +3,14 @@
 result=0
 
 packages=(
-    cfcomponent
-    cfcomponent/instrumentation
-    cfcomponent/registrars/collectorregistrar
-    cfcomponent/registrars/routerregistrar
     deaagent
     loggregator
     loggregator/agentlistener
     loggregator/authorization
     loggregator/groupedchannels
     loggregator/loggregator
-    loggregator/logtarget
     loggregator/messagestore
     loggregator/sink
-    loggregatorclient
-    logmessage
     testhelpers
 );
 

@@ -1,13 +1,13 @@
 package sink
 
 import (
-	"cfcomponent/instrumentation"
 	"code.google.com/p/go.net/websocket"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	"github.com/cloudfoundry/loggregatorlib/logtarget"
 	"loggregator/authorization"
 	"loggregator/groupedchannels"
-	"loggregator/logtarget"
 	"loggregator/messagestore"
 	"net/http"
 	"time"

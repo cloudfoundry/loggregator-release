@@ -1,10 +1,10 @@
 package sink
 
 import (
-	"cfcomponent/instrumentation"
 	"code.google.com/p/go.net/websocket"
 	"github.com/cloudfoundry/gosteno"
-	"loggregator/logtarget"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	"github.com/cloudfoundry/loggregatorlib/logtarget"
 	"net"
 	"sync/atomic"
 	"time"

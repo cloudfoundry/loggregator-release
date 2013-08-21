@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/logtarget"
 	"io/ioutil"
-	"loggregator/logtarget"
 	"net/http"
 )
 

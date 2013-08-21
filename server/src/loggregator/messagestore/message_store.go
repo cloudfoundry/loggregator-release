@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"container/ring"
 	"encoding/binary"
-	"loggregator/logtarget"
+	"github.com/cloudfoundry/loggregatorlib/logtarget"
 	"sync"
 )
 

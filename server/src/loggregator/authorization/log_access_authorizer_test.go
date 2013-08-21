@@ -1,8 +1,8 @@
 package authorization
 
 import (
+	"github.com/cloudfoundry/loggregatorlib/logtarget"
 	"github.com/stretchr/testify/assert"
-	"loggregator/logtarget"
 	"net/http"
 	"regexp"
 	"testhelpers"

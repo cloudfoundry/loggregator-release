@@ -1,9 +1,9 @@
 package deaagent
 
 import (
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
-	"logmessage"
 	"net"
 	"os"
 	"path"

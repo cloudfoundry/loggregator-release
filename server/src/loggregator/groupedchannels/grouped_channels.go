@@ -1,7 +1,7 @@
 package groupedchannels
 
 import (
-	"loggregator/logtarget"
+	"github.com/cloudfoundry/loggregatorlib/logtarget"
 	"sync"
 )
 

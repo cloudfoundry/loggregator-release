@@ -1,10 +1,10 @@
 package deaagent
 
 import (
-	"cfcomponent/instrumentation"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
-	"logmessage"
 	"net"
 	"os"
 	"path/filepath"

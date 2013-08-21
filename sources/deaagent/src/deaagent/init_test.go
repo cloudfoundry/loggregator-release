@@ -2,7 +2,7 @@ package deaagent
 
 import (
 	"code.google.com/p/gogoprotobuf/proto"
-	"logmessage"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"testing"
 )
 

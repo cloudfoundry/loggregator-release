@@ -1,8 +1,8 @@
 package agentlistener
 
 import (
-	"cfcomponent/instrumentation"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"net"
 	"sync/atomic"
 )

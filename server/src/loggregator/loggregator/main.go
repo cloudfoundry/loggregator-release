@@ -1,15 +1,15 @@
 package main
 
 import (
-	"cfcomponent"
-	"cfcomponent/instrumentation"
-	"cfcomponent/registrars/collectorregistrar"
-	"cfcomponent/registrars/routerregistrar"
 	"errors"
 	"flag"
 	"fmt"
 	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar"
 	"io/ioutil"
 	"loggregator/agentlistener"
 	"loggregator/authorization"

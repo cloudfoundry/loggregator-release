@@ -1,16 +1,16 @@
 package main
 
 import (
-	"cfcomponent"
-	"cfcomponent/instrumentation"
-	"cfcomponent/registrars/collectorregistrar"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"deaagent"
 	"errors"
 	"flag"
 	"fmt"
 	cfmessagebus "github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/gosteno"
-	"loggregatorclient"
+	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
 )
 
 type Config struct {

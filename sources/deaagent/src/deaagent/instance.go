@@ -2,8 +2,8 @@ package deaagent
 
 import (
 	"github.com/cloudfoundry/gosteno"
-	"loggregatorclient"
-	"logmessage"
+	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"path/filepath"
 	"strconv"
 )
