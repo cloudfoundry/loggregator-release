@@ -99,10 +99,10 @@ func (sink *sink) Run(sinkCloseChan chan chan []byte) {
 }
 
 func (sink *sink) Emit() instrumentation.Context {
-	return instrumentation.Context{"cfSink",
-		[]instrumentation.Metric{
-			instrumentation.Metric{"sentMessageCount:" + sink.target.Identifier(), atomic.LoadUint64(sink.sentMessageCount)},
-			instrumentation.Metric{"sentByteCount:" + sink.target.Identifier(), atomic.LoadUint64(sink.sentByteCount)},
+	return instrumentation.Context{Name: "cfSink",
+		Metrics: []instrumentation.Metric{
+			instrumentation.Metric{Name: "sentMessageCount:" + sink.target.Identifier(), Value: atomic.LoadUint64(sink.sentMessageCount)},
+			instrumentation.Metric{Name: "sentByteCount:" + sink.target.Identifier(), Value: atomic.LoadUint64(sink.sentByteCount)},
 		},
 	}
 }
