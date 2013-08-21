@@ -114,8 +114,12 @@ func main() {
 		panic(err)
 	}
 
-
-	cfc.StartMonitoringEndpoints()
+	go func() {
+		err := cfc.StartMonitoringEndpoints()
+		if err != nil {
+			panic(err)
+		}
+	}()
 	go agent.Start(loggregatorClient)
 
 	for {

@@ -153,7 +153,12 @@ func main() {
 		logger.Warnf("Unable to register with collector. Err: %v.", err)
 	}
 
-	cfc.StartMonitoringEndpoints()
+	go func() {
+		err := cfc.StartMonitoringEndpoints()
+		if err != nil {
+			panic(err)
+		}
+	}()
 
 	go sinkServer.Start()
 
