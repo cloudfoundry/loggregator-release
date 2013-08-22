@@ -82,10 +82,10 @@ func (ls *loggingStream) listen() {
 }
 
 func (ls *loggingStream) Emit() instrumentation.Context {
-	return instrumentation.Context{"loggingStream:" + ls.inst.wardenContainerPath + " type " + socketName(ls.messageType),
-		[]instrumentation.Metric{
-			instrumentation.Metric{"receivedMessageCount", atomic.LoadUint64(ls.messagesReceived)},
-			instrumentation.Metric{"receivedByteCount", atomic.LoadUint64(ls.bytesReceived)},
+	return instrumentation.Context{Name: "loggingStream:" + ls.inst.wardenContainerPath + " type " + socketName(ls.messageType),
+		Metrics: []instrumentation.Metric{
+			instrumentation.Metric{Name: "receivedMessageCount", Value: atomic.LoadUint64(ls.messagesReceived)},
+			instrumentation.Metric{Name: "receivedByteCount", Value: atomic.LoadUint64(ls.bytesReceived)},
 		},
 	}
 }

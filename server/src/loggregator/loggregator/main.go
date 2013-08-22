@@ -70,7 +70,7 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 	c.mbusClient.SetLogger(logger)
 	err = c.mbusClient.Connect()
 	if err != nil {
-		return errors.New(fmt.Sprintf("Could not connect to NATS: ", err.Error()))
+		return errors.New(fmt.Sprintf("Could not connect to NATS: %s", err.Error()))
 	}
 	return nil
 }
