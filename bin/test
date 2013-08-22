@@ -1,5 +1,7 @@
 #!/bin/bash
 
+rm -rf ./pkg
+
 result=0
 
 packages=(
