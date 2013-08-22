@@ -1,6 +1,6 @@
-*.iml
-.idea/
 pkg/
 */bin
 */**/bin
 .DS_Store
+**/.idea/workspace.xml
+**/.idea/tasks.xml
