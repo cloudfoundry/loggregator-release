@@ -49,11 +49,11 @@ func (agentListener *agentListener) Start() chan []byte {
 }
 
 func (agentListener *agentListener) Emit() instrumentation.Context {
-	return instrumentation.Context{"agentListener",
-		[]instrumentation.Metric{
-			instrumentation.Metric{"currentBufferCount", len(agentListener.dataChannel)},
-			instrumentation.Metric{"receivedMessageCount", atomic.LoadUint64(agentListener.receivedMessageCount)},
-			instrumentation.Metric{"receivedByteCount", atomic.LoadUint64(agentListener.receivedByteCount)},
+	return instrumentation.Context{Name: "agentListener",
+		Metrics: []instrumentation.Metric{
+			instrumentation.Metric{Name: "currentBufferCount", Value: len(agentListener.dataChannel)},
+			instrumentation.Metric{Name: "receivedMessageCount", Value: atomic.LoadUint64(agentListener.receivedMessageCount)},
+			instrumentation.Metric{Name: "receivedByteCount", Value: atomic.LoadUint64(agentListener.receivedByteCount)},
 		},
 	}
 }

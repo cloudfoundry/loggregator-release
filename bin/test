@@ -4,6 +4,14 @@ rm -rf ./pkg
 
 result=0
 
+function green {
+    echo -e "$(tput setaf 2)$1$(tput setaf 9)"
+}
+
+function red {
+    echo -e "$(tput setaf 1)$1$(tput setaf 9)"
+}
+
 packages=(
     deaagent
     loggregator
@@ -18,22 +26,36 @@ packages=(
 
 for package in "${packages[@]}"
 do
-    echo -e "\n Testing package $package"
+    local_result=$result
+    echo -e "\n Testing $package"
     $(dirname $0)/go fmt $package
     $(dirname $0)/go test -i --race $package
     $(dirname $0)/go test -v --race $package
     let "result += $?"
+    echo -e "\n Vetting $package"
+    $(dirname $0)/go vet $package
+    let "result += $?"
+    if [ $result -gt $local_result ]; then
+        red " Package $package FAILED"
+    else
+        green " Package $package PASSED"
+    fi
 done
 
 echo -e "\n Running build script to confirm main compiles"
-$(dirname $0)/build
-let "result += $?"
+build_status=$($(dirname $0)/build)$?
+let "result += $build_status"
+if [ $build_status -eq 0 ]; then
+    green " build script SUCCESS"
+else
+    red " build script FAILURE"
+fi
 rm -f deaagent loggregator
 
 if [ $result -eq 0 ]; then
-	echo -e "\nSUITE SUCCESS"
+	green "\nSUITE SUCCESS"
 else
-	echo -e "\nSUITE FAILURE"
+	red "\nSUITE FAILURE"
 fi
 
 exit $result

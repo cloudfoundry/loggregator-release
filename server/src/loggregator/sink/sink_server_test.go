@@ -138,7 +138,7 @@ func TestDropUnmarshallableMessage(t *testing.T) {
 	time.Sleep(1 * time.Millisecond)
 	select {
 	case msg1 := <-receivedChan:
-		t.Error("We should not have received a message, but got: %v", msg1)
+		t.Errorf("We should not have received a message, but got: %v", msg1)
 	default:
 		//no communication. That's good!
 	}
@@ -220,7 +220,7 @@ func TestKeepAlive(t *testing.T) {
 
 	select {
 	case msg1 := <-receivedChan:
-		t.Error("We should not have received a message, but got: %v", msg1)
+		t.Errorf("We should not have received a message, but got: %v", msg1)
 	default:
 		//no communication. That's good!
 	}
