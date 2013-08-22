@@ -11,7 +11,7 @@ function populate_build_info() {
 
 if [ "$TRAVIS_BUILD_NUMBER" != "" ]; then
 
-  populate_build_info sources/deaagent/src/deaagent/deaagent/main.go
+  populate_build_info dea_logging_agent/src/deaagent/deaagent/main.go
   populate_build_info server/src/loggregator/loggregator/main.go
 
 fi
