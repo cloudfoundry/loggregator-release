@@ -58,27 +58,27 @@ func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccess
 		res, err := client.Do(req)
 		if err != nil {
 			err = errors.New(fmt.Sprintf("Could not get app information: [%s]", err))
-			return
+			return a, err
 		}
 
 		if res.StatusCode != 200 {
 			err = errors.New(fmt.Sprintf("Non 200 response from CC API: %d", res.StatusCode))
-			return
+			return a, err
 		}
 
 		jsonBytes, err := ioutil.ReadAll(res.Body)
 		res.Body.Close()
 		if err != nil {
 			err = errors.New(fmt.Sprintf("Could not read response body: %s", err))
-			return
+			return a, err
 		}
 
 		err = json.Unmarshal(jsonBytes, &a)
 		if err != nil {
 			err = errors.New(fmt.Sprintf("Error parsing application JSON. json: %s\nerror: %s", jsonBytes, err))
-			return
+			return a, err
 		}
-		return
+		return a, nil
 	}
 
 	authorizer := func(authToken string, target *logtarget.LogTarget, logger *gosteno.Logger) bool {

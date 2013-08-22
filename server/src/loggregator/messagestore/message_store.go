@@ -51,7 +51,6 @@ func (ms *MessageStore) Add(data []byte, lt *logtarget.LogTarget) {
 		}
 		app.addData(data)
 	}
-	return
 }
 
 func (ms *MessageStore) DumpFor(lt *logtarget.LogTarget) []byte {

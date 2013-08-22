@@ -54,7 +54,7 @@ func (gc *GroupedChannels) For(lt *logtarget.LogTarget) (results []chan []byte) 
 		}
 	}
 
-	return
+	return results
 }
 
 func (gc *GroupedChannels) Delete(c chan []byte) {
@@ -69,5 +69,5 @@ func (gc *GroupedChannels) NumberOfChannels() (numberOfChannels int) {
 	for _, app := range gc.apps {
 		numberOfChannels += len(app.channelSet)
 	}
-	return
+	return numberOfChannels
 }
