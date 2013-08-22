@@ -2,7 +2,6 @@
 
 set -e
 
-$(dirname $0)/go clean deaagent
 $(dirname $0)/go clean deaagent/deaagent
 $(dirname $0)/go clean loggregator/loggregator
 

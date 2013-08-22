@@ -2,6 +2,7 @@ package deaagent
 
 import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"github.com/cloudfoundry/loggregatorlib/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net"
@@ -9,7 +10,6 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	"testhelpers"
 	"testing"
 	"time"
 )

@@ -3,12 +3,12 @@ package deaagent
 import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"github.com/cloudfoundry/loggregatorlib/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
-	"testhelpers"
 	"testing"
 )
 

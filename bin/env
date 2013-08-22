@@ -4,7 +4,7 @@ set -e
 
 SCRIPT_HOME=$( cd "$( dirname "$0" )" && pwd )
 
-base=$SCRIPT_HOME/..:$SCRIPT_HOME/../sources/deaagent:$SCRIPT_HOME/../server
+base=$SCRIPT_HOME/..:$SCRIPT_HOME/../dea_logging_agent:$SCRIPT_HOME/../server
 
 exec env GOPATH=$base $@
 

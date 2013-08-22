@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/sources/deaagent/deaagent.iml" filepath="$PROJECT_DIR$/sources/deaagent/deaagent.iml" />
+      <module fileurl="file://$PROJECT_DIR$/dea_logging_agent/deaagent.iml" filepath="$PROJECT_DIR$/dea_logging_agent/deaagent.iml" />
       <module fileurl="file://$PROJECT_DIR$/loggregator.iml" filepath="$PROJECT_DIR$/loggregator.iml" />
       <module fileurl="file://$PROJECT_DIR$/server/server.iml" filepath="$PROJECT_DIR$/server/server.iml" />
     </modules>
