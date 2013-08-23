@@ -22,6 +22,7 @@ packages=(
     loggregator/loggregator
     loggregator/messagestore
     loggregator/sink
+    sourcehasher
 );
 
 for package in "${packages[@]}"
