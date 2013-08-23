@@ -43,7 +43,7 @@ package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggrega
 
 gzip $SCRIPT_HOME/../proxy/bin/sourcehasher
 
-SOURCEHASHER_BIN=$SCRIPT_HOME/../server/bin/sourcehasher.gz
+SOURCEHASHER_BIN=$SCRIPT_HOME/../proxy/bin/sourcehasher.gz
 echo 'Uploading sourcehasher.gz'
 package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggregator $TRAVIS_BUILD_NUMBER $SOURCEHASHER_BIN
 
