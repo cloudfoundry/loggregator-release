@@ -44,8 +44,7 @@ Loggregator is composed of:
 
 * **Sources**: Logging agents that run on the Cloud Foundry components.  They forward logs to:
 * **Loggregator Server**: Responsible for gathering logs from the **sources**, and storing in the temporary buffers.
-* **Loggregator Sink Server**: Accepts connections from the `cf` CLI, allowing users to access their logs.
-* **Loggregator Drain Server**: Implements the Heroku Drain API for 3rd party partners.
+* **Hashing Layer**: Makes the Loggregator Servers horizontally scalable by partitioning incoming log messages and outgoing traffic. Routes incoming log messages and proxies outgoing connections to the CLI and to drains for 3rd party partners.
 
 Source agents emit the logging data as [protocol-buffers](https://code.google.com/p/protobuf/), and the data stays in that format throughout the system.
 
