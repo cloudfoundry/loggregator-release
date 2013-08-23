@@ -13,9 +13,11 @@ if [ "$TRAVIS_BUILD_NUMBER" != "" ]; then
 
   populate_build_info dea_logging_agent/src/deaagent/deaagent/main.go
   populate_build_info server/src/loggregator/loggregator/main.go
+  populate_build_info proxy/src/sourcehasher/sourcehasher/main.go
 
 fi
 
 $(dirname $0)/go install deaagent/deaagent
 $(dirname $0)/go install loggregator/loggregator
+$(dirname $0)/go install sourcehasher/sourcehasher
 
