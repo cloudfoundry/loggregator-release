@@ -41,11 +41,17 @@ LOGGREGATOR_BIN=$SCRIPT_HOME/../server/bin/loggregator.gz
 echo 'Uploading loggregator.gz'
 package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggregator $TRAVIS_BUILD_NUMBER $LOGGREGATOR_BIN
 
+gzip $SCRIPT_HOME/../proxy/bin/sourcehasher
+
+SOURCEHASHER_BIN=$SCRIPT_HOME/../server/bin/sourcehasher.gz
+echo 'Uploading sourcehasher.gz'
+package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggregator $TRAVIS_BUILD_NUMBER $SOURCEHASHER_BIN
+
 # Deploy to Staging
 
 echo 'Trigger prism deploy'
 curl -X POST http://inception.prism.cf-app.com:4567/deploy/$STAGING_API_KEY
 
-# Mark trakcer stories as delivered
+# Mark tracker stories as delivered
 
 #$SCRIPT_HOME/gotelltracker --githubToken $GITHUB_TOKEN --trackerToken $TRACKER_TOKEN --githubRepoLocation "cloudfoundry/loggregator" $TRAVIS_COMMIT

@@ -4,6 +4,8 @@ set -e
 
 $(dirname $0)/go clean deaagent/deaagent
 $(dirname $0)/go clean loggregator/loggregator
+$(dirname $0)/go clean sourcehasher/sourcehasher
 
 $(dirname $0)/go build -v deaagent/deaagent
 $(dirname $0)/go build -v loggregator/loggregator
+$(dirname $0)/go build -v sourcehasher/sourcehasher
