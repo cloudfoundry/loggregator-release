@@ -2,12 +2,12 @@ package loggregator
 
 import (
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"loggregator/agentlistener"
 	"loggregator/messagestore"
 	"loggregator/sink"
 	"net"
-	"testhelpers"
 	"testing"
 	"time"
 )

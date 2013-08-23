@@ -2,8 +2,8 @@ package messagestore
 
 import (
 	"github.com/cloudfoundry/loggregatorlib/logtarget"
+	"github.com/cloudfoundry/loggregatorlib/testhelpers"
 	"github.com/stretchr/testify/assert"
-	"testhelpers"
 	"testing"
 )
 
