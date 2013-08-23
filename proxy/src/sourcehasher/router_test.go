@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"loggregator/agentlistener"
 	"testing"
+	"time"
 )
 
 var logger = steno.NewLogger("TestLogger")
@@ -19,7 +20,8 @@ func TestThatItWorksWithOneLoggregator(t *testing.T) {
 
 	loggregatorServers := []string{"localhost:9999"}
 	h := NewRouter("localhost:3456", loggregatorServers, logger)
-	h.Start(logger)
+	go h.Start(logger)
+	time.Sleep(50 * time.Millisecond)
 
 	logEmitter, _ := emitter.NewEmitter("localhost:3456", "ROUTER", logger)
 	logEmitter.Emit("my_awesome_app", "Hello World")
@@ -38,7 +40,8 @@ func TestThatItIgnoresBadMessages(t *testing.T) {
 
 	loggregatorServers := []string{"localhost:9996"}
 	h := NewRouter("localhost:3455", loggregatorServers, logger)
-	h.Start(logger)
+	go h.Start(logger)
+	time.Sleep(50 * time.Millisecond)
 
 	lc := loggregatorclient.NewLoggregatorClient("localhost:3455", logger, loggregatorclient.DefaultBufferSize)
 	lc.Send([]byte("This is poorly formatted"))
@@ -63,7 +66,8 @@ func TestThatItWorksWithTwoLoggregators(t *testing.T) {
 
 	loggregatorServers := []string{"localhost:9998", "localhost:9997"}
 	rt := NewRouter("localhost:3457", loggregatorServers, logger)
-	rt.Start(logger)
+	go rt.Start(logger)
+	time.Sleep(50 * time.Millisecond)
 
 	logEmitter, _ := emitter.NewEmitter("localhost:3457", "ROUTER", logger)
 	logEmitter.Emit("testId", "My message")

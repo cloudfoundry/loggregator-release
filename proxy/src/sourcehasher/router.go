@@ -20,18 +20,16 @@ type router struct {
 func (h router) Start(logger *gosteno.Logger) {
 	agentListener := agentlistener.NewAgentListener(h.host, logger)
 	dataChan := agentListener.Start()
-	go func() {
-		for {
-			dataToProxy := <-dataChan
-			appId, err := appIdFromLogMessage(dataToProxy)
-			if err != nil {
-				logger.Warn(err.Error())
-			} else {
-				lc := h.lookupLoggregatorClientForAppId(appId)
-				go lc.Send(dataToProxy)
-			}
+	for {
+		dataToProxy := <-dataChan
+		appId, err := appIdFromLogMessage(dataToProxy)
+		if err != nil {
+			logger.Warn(err.Error())
+		} else {
+			lc := h.lookupLoggregatorClientForAppId(appId)
+			go lc.Send(dataToProxy)
 		}
-	}()
+	}
 }
 
 func appIdFromLogMessage(data []byte) (appId string, err error) {

@@ -16,7 +16,7 @@ var (
 	logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 	logLevel    = flag.Bool("v", false, "Verbose logging")
 	version     = flag.Bool("version", false, "Version info")
-	configFile  = flag.String("config", "config/loggregator.json", "Location of the loggregator config json file")
+	configFile  = flag.String("config", "config/loggregator_router.json", "Location of the loggregator router config json file")
 )
 
 const versionNumber = `0.0.TRAVIS_BUILD_NUMBER`
