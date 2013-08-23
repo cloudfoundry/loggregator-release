@@ -65,7 +65,7 @@ func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 	sink := newCfSink(target, sinkServer.logger, ws, clientAddress, sinkServer.keepAliveInterval)
 
 	sinkServer.listenerChannels.Register(sink.listenerChannel, target)
-	sink.Run(sinkServer.sinkCloseChan)
+	sink.run(sinkServer.sinkCloseChan)
 }
 
 func (sinkServer *sinkServer) dumpHandler(rw http.ResponseWriter, req *http.Request) {

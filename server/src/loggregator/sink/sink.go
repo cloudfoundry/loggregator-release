@@ -50,7 +50,7 @@ func (sink *sink) keepAliveChannel() <-chan bool {
 	return keepAliveChan
 }
 
-func (sink *sink) Run(sinkCloseChan chan chan []byte) {
+func (sink *sink) run(sinkCloseChan chan chan []byte) {
 	sink.logger.Debugf("Sink %s: Created for target %s", sink.clientAddress, sink.target)
 
 	keepAliveChan := sink.keepAliveChannel()
