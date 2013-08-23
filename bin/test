@@ -14,6 +14,7 @@ function red {
 
 packages=(
     deaagent
+    deaagent/deaagent
     loggregator
     loggregator/agentlistener
     loggregator/authorization
@@ -21,7 +22,6 @@ packages=(
     loggregator/loggregator
     loggregator/messagestore
     loggregator/sink
-    testhelpers
 );
 
 for package in "${packages[@]}"

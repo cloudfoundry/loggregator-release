@@ -1,15 +1,15 @@
 package main
 
 import (
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"deaagent"
 	"errors"
 	"flag"
 	"fmt"
 	cfmessagebus "github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
 )
 
@@ -43,7 +43,7 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 	c.mbusClient.SetLogger(logger)
 	err = c.mbusClient.Connect()
 	if err != nil {
-		return errors.New(fmt.Sprintf("Could not connect to NATS: ", err.Error()))
+		return errors.New(fmt.Sprintf("Could not connect to NATS: %v", err.Error()))
 	}
 
 	return nil
@@ -124,7 +124,7 @@ func main() {
 
 	for {
 		select {
-		case <- cfcomponent.RegisterGoRoutineDumpSignalChannel():
+		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
 			cfcomponent.DumpGoRoutine()
 		}
 	}
