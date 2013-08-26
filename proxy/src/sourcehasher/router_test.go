@@ -3,11 +3,11 @@ package sourcehasher
 import (
 	"code.google.com/p/gogoprotobuf/proto"
 	steno "github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/emitter"
 	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/stretchr/testify/assert"
-	"loggregator/agentlistener"
 	"testing"
 	"time"
 )

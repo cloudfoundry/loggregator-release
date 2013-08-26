@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/stathat/consistent"
-	"loggregator/agentlistener"
 )
 
 type router struct {

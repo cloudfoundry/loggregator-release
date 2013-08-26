@@ -30,7 +30,7 @@ func main() {
 		fmt.Printf("\n\nversion: %s\ngitSha: %s\n\n", versionNumber, gitSha)
 		return
 	}
-	config := &Config{Host: "10.10.16.14:3456", Loggregators: []string{"10.10.15.14:3456"}}
+	config := &Config{Host: "0.0.0.0:3456"}
 	err := cfcomponent.ReadConfigInto(config, *configFile)
 	if err != nil {
 		panic(err)
@@ -38,4 +38,11 @@ func main() {
 
 	h := sourcehasher.NewRouter(config.Host, config.Loggregators, logger)
 	go h.Start(logger)
+
+	for {
+		select {
+		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
+			cfcomponent.DumpGoRoutine()
+		}
+	}
 }
