@@ -60,22 +60,40 @@ var accessTests = []struct {
 	expectedResult bool
 }{
 	{
-		TokenPayload{UserId: "managerId"},
+		TokenPayload{UserId: "managerId", Scope: []string{"loggregator"}},
 		&logtarget.LogTarget{AppId: "myAppId"},
 		"bearer manager",
 		true,
 	},
 	{
-		TokenPayload{UserId: "auditorId"},
+		TokenPayload{UserId: "managerId", Scope: []string{"notLoggregator"}},
+		&logtarget.LogTarget{AppId: "myAppId"},
+		"bearer manager",
+		false,
+	},
+	{
+		TokenPayload{UserId: "auditorId", Scope: []string{"loggregator"}},
 		&logtarget.LogTarget{AppId: "myAppId"},
 		"bearer auditor",
 		true,
 	},
 	{
-		TokenPayload{UserId: "developerId"},
+		TokenPayload{UserId: "auditorId", Scope: []string{"notLoggregator"}},
+		&logtarget.LogTarget{AppId: "myAppId"},
+		"bearer auditor",
+		false,
+	},
+	{
+		TokenPayload{UserId: "developerId", Scope: []string{"loggregator"}},
 		&logtarget.LogTarget{AppId: "myAppId"},
 		"bearer developer",
 		true,
+	},
+	{
+		TokenPayload{UserId: "developerId", Scope: []string{"notLoggregator"}},
+		&logtarget.LogTarget{AppId: "myAppId"},
+		"bearer developer",
+		false,
 	},
 	{
 		TokenPayload{UserId: "noneOfTheAboveId"},

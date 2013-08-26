@@ -50,6 +50,15 @@ func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccess
 		return false
 	}
 
+	userIsInLoggregatorGroup := func(scopes []string) bool {
+		for _, scope := range scopes {
+			if scope == "loggregator" {
+				return true
+			}
+		}
+		return false
+	}
+
 	getAppFromCC := func(target *logtarget.LogTarget, authToken string) (a App, error error) {
 		client := &http.Client{}
 
@@ -94,9 +103,11 @@ func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccess
 			return false
 		}
 
-		return idIsInGroup(tokenPayload.UserId, app.Space.Managers) ||
+		return (idIsInGroup(tokenPayload.UserId, app.Space.Managers) ||
 			idIsInGroup(tokenPayload.UserId, app.Space.Auditors) ||
-			idIsInGroup(tokenPayload.UserId, app.Space.Developers)
+			idIsInGroup(tokenPayload.UserId, app.Space.Developers)) &&
+			userIsInLoggregatorGroup(tokenPayload.Scope)
+
 	}
 
 	return LogAccessAuthorizer(authorizer)

@@ -13,21 +13,20 @@ payload: {"user_id":"abc1234","exp":137452386}
 
 eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJ1c2VyX2lkIjoiYWJjMTIzNCIsImV4cCI6MTM3NDUyMzg2MH0.JF8dTUJp3NaZhfIhYgesKh-HmV9isnJc51eFaqeFuIhJQ73wiyekfgu-5jSoquVRITSL3cIRjD42F8WabCMYHA
 
-Private Key:
------BEGIN RSA PRIVATE KEY-----
-      MIIBOwIBAAJBAN+5O6n85LSs/fj46Ht1jNbc5e+3QX+suxVPJqICvuV6sIukJXXE
-      zfblneN2GeEVqgeNvglAU9tnm3OIKzlwM5UCAwEAAQJAEhJ2fV7OYsHuqiQBM6fl
-      Pp4NfPXCtruPSUNhjYjHPuYpnqo6cpuUNAzRvqAdDkJJsPCPt1E5AWOYUYOmLE+d
-      AQIhAO/XxMb9GrTDyqJDvS8T1EcJpLCaUIReae0jSg1RnBrhAiEA7st6WLmOyTxX
-      JgLcO6LUfW6RsE3pgi9NGL25P3eOAzUCIQDUFKi1CJR36XWh/GIqYc9grX9KhnnS
-      QqZKAd12X4a5IQIhAMTOJKaNP/Xwai7kupfX6mL6Rs5UWDg4PcU/UDbTlNJlAiBv
-      2yrlT5h164jGCxqe7++1kIl4ollFCgz6QJ8lcmb/2Q==
-      -----END RSA PRIVATE KEY-----
+If you need a new test for this, you can get the UAA public key from:
+$ uaac signing key
+
+The encrypted toekn comes from
+$ cat ~/.cf/tokens.yml
+
+You can read your encrypter
 
 Public Key:
 -----BEGIN PUBLIC KEY-----
-MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAN+5O6n85LSs/fj46Ht1jNbc5e+3QX+s
-uxVPJqICvuV6sIukJXXEzfblneN2GeEVqgeNvglAU9tnm3OIKzlwM5UCAwEAAQ==
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDHFr+KICms+tuT1OXJwhCUmR2d
+KVy7psa8xzElSyzqx7oJyfJ1JZyOzToj9T5SfTIq396agbHJWVfYphNahvZ/7uMX
+qHxf+ZH9BL1gk9Y6kCnbM5R60gfwjyW1/dQPjOzn9N394zd2FJoFHwdq9Qs0wBug
+spULZVNRxq7veq/fzwIDAQAB
 -----END PUBLIC KEY-----
 */
 
@@ -96,4 +95,24 @@ uxVPJqICvuV6sIukJXXEzfblneN2GeEVqgeNvglAU9tnm3OIKzlwM5UCAwEAAQ==
 	assert.NoError(t, err)
 
 	assert.Equal(t, results.UserId, "abc1234")
+}
+
+func TestThatPArsesTheScopeArray(t *testing.T) {
+	publicKey := `-----BEGIN PUBLIC KEY-----
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDHFr+KICms+tuT1OXJwhCUmR2d
+KVy7psa8xzElSyzqx7oJyfJ1JZyOzToj9T5SfTIq396agbHJWVfYphNahvZ/7uMX
+qHxf+ZH9BL1gk9Y6kCnbM5R60gfwjyW1/dQPjOzn9N394zd2FJoFHwdq9Qs0wBug
+spULZVNRxq7veq/fzwIDAQAB
+-----END PUBLIC KEY-----
+`
+	decoder, _ := NewUaaTokenDecoder([]byte(publicKey))
+	//payload: {"jti":"6ff754ac-3a46-4271-917b-5a08ec090206","sub":"2a9f46f0-fdca-4c78-be13-0453d542dc78","scope":["cloud_controller.read","cloud_controller.write","loggregator","openid","password.write"],"client_id":"cf","cid":"cf","grant_type":"password","user_id":"2a9f46f0-fdca-4c78-be13-0453d542dc78","user_name":"user1@example.com","email":"user1@example.com","iat":1377526827,"exp":1377534027,"iss":"https://uaa.oak.cf-app.com/oauth/token","aud":["openid","cloud_controller","password"]}
+	tokenWithValidScopes := `bearer eyJhbGciOiJSUzI1NiJ9.eyJqdGkiOiI2ZmY3NTRhYy0zYTQ2LTQyNzEtOTE3Yi01YTA4ZWMwOTAyMDYiLCJzdWIiOiIyYTlmNDZmMC1mZGNhLTRjNzgtYmUxMy0wNDUzZDU0MmRjNzgiLCJzY29wZSI6WyJjbG91ZF9jb250cm9sbGVyLnJlYWQiLCJjbG91ZF9jb250cm9sbGVyLndyaXRlIiwibG9nZ3JlZ2F0b3IiLCJvcGVuaWQiLCJwYXNzd29yZC53cml0ZSJdLCJjbGllbnRfaWQiOiJjZiIsImNpZCI6ImNmIiwiZ3JhbnRfdHlwZSI6InBhc3N3b3JkIiwidXNlcl9pZCI6IjJhOWY0NmYwLWZkY2EtNGM3OC1iZTEzLTA0NTNkNTQyZGM3OCIsInVzZXJfbmFtZSI6InVzZXIxQGV4YW1wbGUuY29tIiwiZW1haWwiOiJ1c2VyMUBleGFtcGxlLmNvbSIsImlhdCI6MTM3NzUyNjgyNywiZXhwIjoxMzc3NTM0MDI3LCJpc3MiOiJodHRwczovL3VhYS5vYWsuY2YtYXBwLmNvbS9vYXV0aC90b2tlbiIsImF1ZCI6WyJvcGVuaWQiLCJjbG91ZF9jb250cm9sbGVyIiwicGFzc3dvcmQiXX0.Vobn4P7HHGkhaeGhHeS2LWccWQ4HmlhgUiu9JaRlZEMPH6hnrCH8VKKwZQfXObENydgqcs3C85_nT4a94vmtG9dDDSxWZ8juJbfmsftud31j0_s_Y3iV-NekY0EbuH_2MG0DqJc9Xl2aJIbJ1OIX9Dr1e9krtMHmjmia0jErHUU`
+
+	results, err := decoder.Decode(tokenWithValidScopes)
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, results.UserId, "2a9f46f0-fdca-4c78-be13-0453d542dc78")
+	assert.Equal(t, results.Scope, []string{"cloud_controller.read", "cloud_controller.write", "loggregator", "openid", "password.write"})
 }
