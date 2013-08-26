@@ -6,7 +6,7 @@ Loggregator is the user application logging subsystem for Cloud Foundry.
 
 ### Features
 
-Loggregator allows users to:
+Loggregator allows users to: 
 
 1. Tail their application logs.
 1. Dump a recent set of application logs (where recent is on the order of an hour).
