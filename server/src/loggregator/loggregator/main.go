@@ -144,7 +144,7 @@ func main() {
 	rr := routerregistrar.NewRouterRegistrar(config.mbusClient, logger)
 	err = rr.RegisterWithRouter(&cfc)
 	if err != nil {
-		logger.Warnf("Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
+		logger.Fatalf("Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
 	}
 
 	cr := collectorregistrar.NewCollectorRegistrar(config.mbusClient, logger)
