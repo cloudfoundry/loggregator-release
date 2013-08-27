@@ -57,7 +57,7 @@ if [ $build_status -eq 0 ]; then
 else
     red " build script FAILURE"
 fi
-rm -f deaagent loggregator
+rm -f deaagent loggregator sourcehasher
 
 if [ $result -eq 0 ]; then
 	green "\nSUITE SUCCESS"

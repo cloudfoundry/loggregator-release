@@ -27,7 +27,7 @@ func (h router) Start(logger *gosteno.Logger) {
 			logger.Warn(err.Error())
 		} else {
 			lc := h.lookupLoggregatorClientForAppId(appId)
-			go lc.Send(dataToProxy)
+			lc.Send(dataToProxy)
 		}
 	}
 }
