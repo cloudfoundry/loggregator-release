@@ -5,7 +5,12 @@ set -e
 rm -rf $(dirname $0)/../release
 mkdir -p $(dirname $0)/../release
 
-PLATFORMS="darwin/amd64 linux/amd64"
+if [ "$TRAVIS_BUILD_NUMBER" != "" ]; then
+  PLATFORMS="darwin/amd64 linux/amd64"
+else
+  PLATFORMS="linux/amd64"
+fi
+
 COMPONENTS="deaagent loggregator loggregatorrouter"
 
 function build-architecture {
