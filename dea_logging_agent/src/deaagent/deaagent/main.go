@@ -51,7 +51,7 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 
 var version = flag.Bool("version", false, "Version info")
 var logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
-var logLevel = flag.Bool("v", false, "Verbose logging")
+var logLevel = flag.Bool("debug", false, "Debug logging")
 var configFile = flag.String("config", "config/dea_logging_agent.json", "Location of the DEA loggregator agent config json file")
 var instancesJsonFilePath = flag.String("instancesFile", "/var/vcap/data/dea_next/db/instances.json", "The DEA instances JSON file")
 

@@ -29,23 +29,12 @@ function package_upload {
    esac
 }
 
-gzip $SCRIPT_HOME/../dea_logging_agent/bin/deaagent
+# Upload artifacts to bintray.com
 
-DEAAGENT_BIN=$SCRIPT_HOME/../dea_logging_agent/bin/deaagent.gz
-echo 'Uploading deaagent.gz'
-package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggregator $TRAVIS_BUILD_NUMBER $DEAAGENT_BIN
-
-gzip $SCRIPT_HOME/../server/bin/loggregator
-
-LOGGREGATOR_BIN=$SCRIPT_HOME/../server/bin/loggregator.gz
-echo 'Uploading loggregator.gz'
-package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggregator $TRAVIS_BUILD_NUMBER $LOGGREGATOR_BIN
-
-gzip $SCRIPT_HOME/../router/bin/loggregatorrouter
-
-LOGGREGATORROUTER_BIN=$SCRIPT_HOME/../router/bin/loggregatorrouter.gz
-echo 'Uploading loggregatorrouter.gz'
-package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggregator $TRAVIS_BUILD_NUMBER $LOGGREGATORROUTER_BIN
+for ARTIFACT in `ls -1 $SCRIPT_HOME/../release/*.gz`; do
+  echo 'Uploading $ARTIFACT'
+  package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggregator $TRAVIS_BUILD_NUMBER $ARTIFACT
+done
 
 # Deploy to Staging
 

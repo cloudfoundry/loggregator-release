@@ -5,11 +5,11 @@ rm -rf ./pkg
 result=0
 
 function green {
-    echo -e "$(tput setaf 2)$1$(tput setaf 9)"
+    echo -e "$(tput setaf 2)$1$(tput sgr0)"
 }
 
 function red {
-    echo -e "$(tput setaf 1)$1$(tput setaf 9)"
+    echo -e "$(tput setaf 1)$1$(tput sgr0)"
 }
 
 packages=(
@@ -48,16 +48,6 @@ do
         green " Package $package PASSED"
     fi
 done
-
-echo -e "\n Running build script to confirm main compiles"
-build_status=$($(dirname $0)/build)$?
-let "result += $build_status"
-if [ $build_status -eq 0 ]; then
-    green " build script SUCCESS"
-else
-    red " build script FAILURE"
-fi
-rm -f deaagent loggregator loggregatorrouter
 
 if [ $result -eq 0 ]; then
 	green "\nSUITE SUCCESS"

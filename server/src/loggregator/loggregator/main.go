@@ -77,7 +77,7 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 
 var version = flag.Bool("version", false, "Version info")
 var logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
-var logLevel = flag.Bool("v", false, "Verbose logging")
+var logLevel = flag.Bool("debug", false, "Debug logging")
 var configFile = flag.String("config", "config/loggregator.json", "Location of the loggregator config json file")
 var uaaVerificationKeyFile = flag.String("tokenFile", "config/uaa_token.pub", "Location of the loggregator's uaa public token file")
 

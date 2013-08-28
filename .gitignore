@@ -1,4 +1,5 @@
 pkg/
+release/
 */bin
 */**/bin
 .DS_Store
