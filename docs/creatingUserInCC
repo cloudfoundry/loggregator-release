@@ -1,0 +1,138 @@
+Creating user:
+cf create_user --trace
+
+Grab the user GUID from the response
+
+Associating user with space
+Get the GUID for the organization (cf curl get /v2/organizations)
+
+Create a space (cf curl post /v2/spaces -b '{"name": "Dev1", "organization_guid": "<your org guid here>", "developer_guids": ["user 1 guid here"]}')
+
+You will want to do this once for each user to get them in different spaces.
+
+Push an app to the space
+cf login. make sure you log into the space the user is associated with even though you see both.
+
+cf push myApp
+
+
+
+
+377831b3-4290-4a59-b9c9-38011a36726e - user1
+
+b635f470-d55a-4900-8e54-fa8f5f6c2f1d - user2
+
+991816db-09bc-45cc-ad06-580ed84dc32c - org
+
+a8977cb6-3365-4be1-907e-0c878b3a4c6b - dev2
+
+
+
+
+{"name": "Dev1", "organization_guid": "991816db-09bc-45cc-ad06-580ed84dc32c", "developer_guids": ["772dda3f-669f-4276-b2bd-90486abe1f6f"]}
+
+
+
+{"developer_guids": ["8565ba7d-5065-447d-a049-8d491105578e","772dda3f-669f-4276-b2bd-90486abe1f6f"]}
+
+Switching to a space cf space <spaceName>), even though you don't have push access allows you to see a list of the apps (cf apps)
+
+making a call to /vs/apps/<appGuid> with a user that does not have "push" rights to the app still gives me data back about the app and allows me to tail the app. Should having the ability to see an app allow me to see the logs?
+
+cf curl get /v2/apps/6bd8483a-7f7f-4e11-800a-4369501752c3?inline-relations-depth=2
+
+
+dev1 - dcbb5518-533e-4d4c-a116-51fad762ddd4
+dev2 - a8977cb6-3365-4be1-907e-0c878b3a4c6b
+
+hello2 - d8df836e-e27d-45d4-a890-b2ce899788a4
+
+hello1 - 6bd8483a-7f7f-4e11-800a-4369501752c3
+
+
+CI Environment Setup
+
+Create Orgs (cf create-org --trace)
+
+Friends - a6e4b44a-7e10-46c4-8901-c36da8f51b9e
+Strangers - aaf264fe-6dd7-40ce-942a-6178919cf4dc
+
+Create Users (cf create-user --trace)
+
+admin/jeopardizes9-preps
+
+tsaleh/password - 19a72086-6b5e-4246-a5cc-01eb8ac59d3f
+friend/password - ebf6cc5e-7b48-4bd1-8bb2-bd18cd1e042f
+stranger/password - 7955d051-198b-4f8e-9b48-dc85b0436008
+
+Update Orgs with proper users/roles
+Friends - tsaleh (manager, user), friend (user)  cf curl PUT /v2/organizations/a6e4b44a-7e10-46c4-8901-c36da8f51b9e -b '{"user_guids":["19a72086-6b5e-4246-a5cc-01eb8ac59d3f", "ebf6cc5e-7b48-4bd1-8bb2-bd18cd1e042f"], "manager_guids":["19a72086-6b5e-4246-a5cc-01eb8ac59d3f"]}'
+
+Strangers - stranger(manager) cf curl PUT /v2/organizations/aaf264fe-6dd7-40ce-942a-6178919cf4dc -b '{"user_guids":["7955d051-198b-4f8e-9b48-dc85b0436008"], "manager_guids":["7955d051-198b-4f8e-9b48-dc85b0436008"]}'
+
+Create Spaces
+
+cf login tsaleh
+cf create-space private
+cf create-space friendly(28b06d06-e703-4e48-9e3a-4288f43ebe0a)
+
+cf curl PUT /v2/spaces/28b06d06-e703-4e48-9e3a-4288f43ebe0a -b '{"developer_guids":["ebf6cc5e-7b48-4bd1-8bb2-bd18cd1e042f", "19a72086-6b5e-4246-a5cc-01eb8ac59d3f"], "manager_guids":["19a72086-6b5e-4246-a5cc-01eb8ac59d3f"]}'
+
+straingers org
+
+cf login stranger
+cf create-space strange
+
+
+Apps
+Friends - Private - Pushed as tsaleh
+      - private-app
+      - cf push private-app --host private-app --no-bind-services --no-create-services  --memory 128M --domain loggregatorci.cf-app.com --instances 1
+      - private-app2
+
+Friends - Friendly - pushed as friend
+      - friendly-app
+      - friendly-app2
+
+Straingers - Strange - pushed as stranger
+      - strange-app
+      - strange-app2
+
+Acceptance Env Setup
+
+Users (cf create-user --trace)
+
+tsaleh/password a5c1bfe0-87a5-452a-9ea9-30b6e16ba6d8
+stranger/password 6fc7a317-479b-4444-bf94-95c9726c01d2
+friend/password 2538da10-b090-47ff-a6e1-56e58a7c5acd
+
+Orgs
+
+friends(ac411d31-5e3b-4bea-ba5e-a0540627d1e7) - tsaleh (manager, user), friend (user)  cf curl POST /v2/organizations -b '{"name": "Friends", "user_guids":["a5c1bfe0-87a5-452a-9ea9-30b6e16ba6d8", "2538da10-b090-47ff-a6e1-56e58a7c5acd"], "manager_guids":["a5c1bfe0-87a5-452a-9ea9-30b6e16ba6d8"]}'
+
+strangers(89f0cd9a-e4c9-4458-bce1-3a6dec8198ea) - stranger(manager) cf curl POST /v2/organizations -b '{"name": "Straingers", "user_guids":["6fc7a317-479b-4444-bf94-95c9726c01d2"], "manager_guids":["6fc7a317-479b-4444-bf94-95c9726c01d2"]}'
+
+Spaces
+friends org
+private (232719be-8742-4b4d-98ff-5862fc826386) - tsaleh(manager, developer) cf curl POST /v2/spaces -b '{"name": "Private", "organization_guid":"ac411d31-5e3b-4bea-ba5e-a0540627d1e7", "developer_guids":["a5c1bfe0-87a5-452a-9ea9-30b6e16ba6d8"], "manager_guids":["a5c1bfe0-87a5-452a-9ea9-30b6e16ba6d8"]}'
+
+friendly(436250b9-c9d5-42c6-a885-6b5a6323a84d) - tsaleh(manager), friend(developer) cf curl POST /v2/spaces -b '{"name": "Friendly", "organization_guid":"ac411d31-5e3b-4bea-ba5e-a0540627d1e7", "developer_guids":["2538da10-b090-47ff-a6e1-56e58a7c5acd"], "manager_guids":["a5c1bfe0-87a5-452a-9ea9-30b6e16ba6d8"]}'
+
+straingers org
+strange (1149f092-66c7-42f5-9cdc-52fa76dbcc6a) - stranger(manager, developer) cf curl POST /v2/spaces -b '{"name": "Strange", "organization_guid":"89f0cd9a-e4c9-4458-bce1-3a6dec8198ea", "developer_guids":["6fc7a317-479b-4444-bf94-95c9726c01d2"], "manager_guids":["6fc7a317-479b-4444-bf94-95c9726c01d2"]}'
+
+Change to an org/space: cf target -o <orgName> -s <spaceName>
+
+Apps
+Friends - Private - Pushed as tsaleh
+      - private-app
+      - cf push private-app --host private-app --no-bind-services --no-create-services  --memory 128M --domain loggregatorci.cf-app.com --instances 1
+      - private-app2
+
+Friends - Friendly - pushed as friend
+      - friendly-app
+      - friendly-app2
+
+Straingers - Strange - pushed as stranger
+      - strange-app
+      - strange-app2
