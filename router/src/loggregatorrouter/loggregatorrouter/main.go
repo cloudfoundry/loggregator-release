@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"sourcehasher"
+	"loggregatorrouter"
 )
 
 type Config struct {
@@ -36,7 +36,7 @@ func main() {
 		panic(err)
 	}
 
-	h := sourcehasher.NewRouter(config.Host, config.Loggregators, logger)
+	h := loggregatorrouter.NewRouter(config.Host, config.Loggregators, logger)
 	go h.Start(logger)
 
 	for {

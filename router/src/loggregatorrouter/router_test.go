@@ -1,4 +1,4 @@
-package sourcehasher
+package loggregatorrouter
 
 import (
 	"code.google.com/p/gogoprotobuf/proto"

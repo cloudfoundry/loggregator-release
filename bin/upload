@@ -41,11 +41,11 @@ LOGGREGATOR_BIN=$SCRIPT_HOME/../server/bin/loggregator.gz
 echo 'Uploading loggregator.gz'
 package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggregator $TRAVIS_BUILD_NUMBER $LOGGREGATOR_BIN
 
-gzip $SCRIPT_HOME/../proxy/bin/sourcehasher
+gzip $SCRIPT_HOME/../router/bin/loggregatorrouter
 
-SOURCEHASHER_BIN=$SCRIPT_HOME/../proxy/bin/sourcehasher.gz
-echo 'Uploading sourcehasher.gz'
-package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggregator $TRAVIS_BUILD_NUMBER $SOURCEHASHER_BIN
+LOGGREGATORROUTER_BIN=$SCRIPT_HOME/../router/bin/loggregatorrouter.gz
+echo 'Uploading loggregatorrouter.gz'
+package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggregator $TRAVIS_BUILD_NUMBER $LOGGREGATORROUTER_BIN
 
 # Deploy to Staging
 

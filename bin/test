@@ -21,8 +21,8 @@ packages=(
     loggregator/loggregator
     loggregator/messagestore
     loggregator/sink
-    sourcehasher
-    sourcehasher/sourcehasher
+    loggregatorrouter
+    loggregatorrouter/loggregatorrouter
     github.com/cloudfoundry/loggregatorlib/agentlistener
     github.com/cloudfoundry/loggregatorlib/cfcomponent
     github.com/cloudfoundry/loggregatorlib/emitter
@@ -57,7 +57,7 @@ if [ $build_status -eq 0 ]; then
 else
     red " build script FAILURE"
 fi
-rm -f deaagent loggregator sourcehasher
+rm -f deaagent loggregator loggregatorrouter
 
 if [ $result -eq 0 ]; then
 	green "\nSUITE SUCCESS"
