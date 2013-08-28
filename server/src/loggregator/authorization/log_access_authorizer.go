@@ -103,11 +103,19 @@ func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccess
 			return false
 		}
 
-		return (idIsInGroup(tokenPayload.UserId, app.Space.Managers) ||
+		if !(idIsInGroup(tokenPayload.UserId, app.Space.Managers) ||
 			idIsInGroup(tokenPayload.UserId, app.Space.Auditors) ||
-			idIsInGroup(tokenPayload.UserId, app.Space.Developers)) &&
-			userIsInLoggregatorGroup(tokenPayload.Scope)
+			idIsInGroup(tokenPayload.UserId, app.Space.Developers)) {
+			logger.Errorf("User is neither manager, auditor, or developer of the space")
+			return false
+		}
 
+		if !userIsInLoggregatorGroup(tokenPayload.Scope) {
+			logger.Errorf("Only users in 'loggregator' scope can access logs")
+			return false
+		}
+
+		return true
 	}
 
 	return LogAccessAuthorizer(authorizer)
