@@ -1,4 +1,6 @@
 {
+    "Index": 0,
+    "MaxRetainedLogMessages": 10,
 	"ApiHost": "localhost",
 	"SystemDomain": "localhost",
 	"NatsHost": "localhost",
