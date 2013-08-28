@@ -1,0 +1,30 @@
+#!/bin/bash
+
+set -e
+
+rm -rf $(dirname $0)/../release
+mkdir -p $(dirname $0)/../release
+
+PLATFORMS="darwin/amd64 linux/amd64"
+COMPONENTS="deaagent loggregator loggregatorrouter"
+
+function build-architecture {
+
+  GOOS=${1%/*}
+  GOARCH=${1#*/}
+  COMPONENT=${2}
+  echo "Creating $GOOS $GOARCH $COMPONENT binary..."
+
+  $(dirname $0)/go clean $COMPONENT/$COMPONENT
+
+  GOOS=$GOOS GOARCH=$GOARCH $(dirname $0)/go build -v $COMPONENT/$COMPONENT
+  gzip $COMPONENT
+
+  mv $COMPONENT.gz $(dirname $0)/../release/$COMPONENT-$GOOS-$GOARCH.gz
+}
+
+for COMPONENT in $COMPONENTS; do
+  for PLATFORM in $PLATFORMS; do
+    build-architecture $PLATFORM $COMPONENT
+  done
+done
