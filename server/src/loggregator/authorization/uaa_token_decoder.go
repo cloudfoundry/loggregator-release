@@ -18,9 +18,9 @@ type TokenDecoder interface {
 }
 
 type TokenPayload struct {
-	UserId string   `json:"user_id"`
-	Exp    uint64   `json:"exp"`
-	Scope  []string `json:"scope"`
+	UserId string `json:"user_id"`
+	Exp    uint64 `json:"exp"`
+	Email  string `json:"email"`
 }
 
 func NewUaaTokenDecoder(uaaVerificationKey []byte) (TokenDecoder, error) {

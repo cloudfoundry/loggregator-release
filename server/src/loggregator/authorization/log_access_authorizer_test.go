@@ -48,26 +48,47 @@ var accessTests = []struct {
 	authToken      string
 	expectedResult bool
 }{
+	//Allowed domains
 	{
-		TokenPayload{UserId: "userId", Scope: []string{"loggregator"}},
+		TokenPayload{UserId: "userId", Email: "user1@pivotallabs.com"},
 		&logtarget.LogTarget{AppId: "myAppId"},
 		"bearer something",
 		true,
 	},
 	{
-		TokenPayload{UserId: "userId", Scope: []string{"loggregator"}},
+		TokenPayload{UserId: "userId", Email: "user2@gopivotal.com"},
+		&logtarget.LogTarget{AppId: "myAppId"},
+		"bearer something",
+		true,
+	},
+	{
+		TokenPayload{UserId: "userId", Email: "user3@vmware.com"},
+		&logtarget.LogTarget{AppId: "myAppId"},
+		"bearer something",
+		true,
+	},
+	//Funky domain casing
+	{
+		TokenPayload{UserId: "userId", Email: "user3@VmWaRe.com"},
+		&logtarget.LogTarget{AppId: "myAppId"},
+		"bearer something",
+		true,
+	},
+	//Not allowed stuff
+	{
+		TokenPayload{UserId: "userId", Email: "user3@vmware.com"},
 		&logtarget.LogTarget{AppId: "notMyAppId"},
 		"bearer something",
 		false,
 	},
 	{
-		TokenPayload{UserId: "userId", Scope: []string{"loggregator"}},
+		TokenPayload{UserId: "userId", Email: "user3@vmware.com"},
 		&logtarget.LogTarget{AppId: "nonExistantAppId"},
 		"bearer something",
 		false,
 	},
 	{
-		TokenPayload{UserId: "userId", Scope: []string{"notLoggregator"}},
+		TokenPayload{UserId: "userId", Email: "user3@gmail.com"},
 		&logtarget.LogTarget{AppId: "myAppId"},
 		"bearer something",
 		false,

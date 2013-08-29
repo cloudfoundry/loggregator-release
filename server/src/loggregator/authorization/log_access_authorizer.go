@@ -4,18 +4,15 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/logtarget"
 	"net/http"
+	"regexp"
 )
 
 type LogAccessAuthorizer func(authToken string, target *logtarget.LogTarget, logger *gosteno.Logger) bool
 
 func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccessAuthorizer {
-	userIsInLoggregatorGroup := func(scopes []string) bool {
-		for _, scope := range scopes {
-			if scope == "loggregator" {
-				return true
-			}
-		}
-		return false
+	userIsInAllowedEmailDomain := func(email string) bool {
+		re := regexp.MustCompile("(?i)^[^@]+@(vmware.com|pivotallabs.com|gopivotal.com)$")
+		return re.MatchString(email)
 	}
 
 	isAccessAllowed := func(target *logtarget.LogTarget, authToken string, logger *gosteno.Logger) bool {
@@ -46,7 +43,7 @@ func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccess
 			return false
 		}
 
-		if !userIsInLoggregatorGroup(tokenPayload.Scope) {
+		if !userIsInAllowedEmailDomain(tokenPayload.Email) {
 			logger.Errorf("Only users in 'loggregator' scope can access logs")
 			return false
 		}

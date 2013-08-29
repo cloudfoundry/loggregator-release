@@ -9,7 +9,7 @@ import (
 Parts:
 
 header: {"typ":"JWT","alg":"RS256"}
-payload: {"user_id":"abc1234","exp":137452386}
+payload: {"user_id":"abc1234","exp":137452386, "email": "someone@pivotallabs.com"}
 
 eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJ1c2VyX2lkIjoiYWJjMTIzNCIsImV4cCI6MTM3NDUyMzg2MH0.JF8dTUJp3NaZhfIhYgesKh-HmV9isnJc51eFaqeFuIhJQ73wiyekfgu-5jSoquVRITSL3cIRjD42F8WabCMYHA
 
@@ -97,7 +97,7 @@ uxVPJqICvuV6sIukJXXEzfblneN2GeEVqgeNvglAU9tnm3OIKzlwM5UCAwEAAQ==
 	assert.Equal(t, results.UserId, "abc1234")
 }
 
-func TestThatPArsesTheScopeArray(t *testing.T) {
+func TestThatParsesTheEmail(t *testing.T) {
 	publicKey := `-----BEGIN PUBLIC KEY-----
 MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDHFr+KICms+tuT1OXJwhCUmR2d
 KVy7psa8xzElSyzqx7oJyfJ1JZyOzToj9T5SfTIq396agbHJWVfYphNahvZ/7uMX
@@ -114,5 +114,5 @@ spULZVNRxq7veq/fzwIDAQAB
 	assert.NoError(t, err)
 
 	assert.Equal(t, results.UserId, "2a9f46f0-fdca-4c78-be13-0453d542dc78")
-	assert.Equal(t, results.Scope, []string{"cloud_controller.read", "cloud_controller.write", "loggregator", "openid", "password.write"})
+	assert.Equal(t, results.Email, "user1@example.com")
 }
