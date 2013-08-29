@@ -14,39 +14,20 @@ import (
 )
 
 type Config struct {
+	cfcomponent.Config
 	Index              uint
-	VarzPort           uint32
-	VarzUser           string
-	VarzPass           string
-	NatsHost           string
-	NatsPort           int
-	NatsUser           string
-	NatsPass           string
 	LoggregatorAddress string
 	mbusClient         cfmessagebus.MessageBus
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
-	if c.VarzPass == "" || c.VarzUser == "" || c.VarzPort == 0 {
-		return errors.New("Need VARZ username/password/port.")
-	}
-
 	if c.LoggregatorAddress == "" {
 		return errors.New("Need Loggregator address (host:port).")
 	}
 
-	c.mbusClient, err = cfmessagebus.NewMessageBus("NATS")
-	if err != nil {
-		return errors.New(fmt.Sprintf("Can not create message bus to NATS: %s", err))
-	}
-	c.mbusClient.Configure(c.NatsHost, c.NatsPort, c.NatsUser, c.NatsPass)
-	c.mbusClient.SetLogger(logger)
-	err = c.mbusClient.Connect()
-	if err != nil {
-		return errors.New(fmt.Sprintf("Could not connect to NATS: %v", err.Error()))
-	}
+	err = c.Validate(logger)
 
-	return nil
+	return
 }
 
 var version = flag.Bool("version", false, "Version info")
@@ -108,7 +89,7 @@ func main() {
 		panic(err)
 	}
 
-	cr := collectorregistrar.NewCollectorRegistrar(config.mbusClient, logger)
+	cr := collectorregistrar.NewCollectorRegistrar(config.MbusClient, logger)
 	err = cr.RegisterWithCollector(cfc)
 	if err != nil {
 		panic(err)

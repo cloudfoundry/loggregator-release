@@ -29,10 +29,6 @@ func (m MockLoggregatorClient) Send(data []byte) {
 	m.received <- &data
 }
 
-func (m MockLoggregatorClient) Metrics() []instrumentation.Metric {
-	return []instrumentation.Metric{}
-}
-
 func (m MockLoggregatorClient) Emit() instrumentation.Context {
 	return instrumentation.Context{}
 }

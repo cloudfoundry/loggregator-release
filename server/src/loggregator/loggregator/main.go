@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
@@ -22,29 +21,19 @@ import (
 )
 
 type Config struct {
+	cfcomponent.Config
 	Index                  uint
 	ApiHost                string
 	UaaVerificationKeyFile string
 	SystemDomain           string
-	NatsHost               string
-	NatsPort               int
-	NatsUser               string
-	NatsPass               string
-	VarzUser               string
-	VarzPass               string
-	VarzPort               uint32
 	SourcePort             uint32
 	WebPort                uint32
 	LogFilePath            string
 	decoder                authorization.TokenDecoder
-	mbusClient             cfmessagebus.MessageBus
 	MaxRetainedLogMessages int
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
-	if c.VarzPass == "" || c.VarzUser == "" || c.VarzPort == 0 {
-		return errors.New("Need VARZ username/password/port.")
-	}
 	if c.SystemDomain == "" {
 		return errors.New("Need system domain to register with NATS")
 	}
@@ -61,18 +50,8 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 	if err != nil {
 		return errors.New(fmt.Sprintf("Can not parse UAA verification key: %s", err))
 	}
-
-	c.mbusClient, err = cfmessagebus.NewMessageBus("NATS")
-	if err != nil {
-		return errors.New(fmt.Sprintf("Can not create message bus to NATS: %s", err))
-	}
-	c.mbusClient.Configure(c.NatsHost, c.NatsPort, c.NatsUser, c.NatsPass)
-	c.mbusClient.SetLogger(logger)
-	err = c.mbusClient.Connect()
-	if err != nil {
-		return errors.New(fmt.Sprintf("Could not connect to NATS: %s", err.Error()))
-	}
-	return nil
+	err = c.Validate(logger)
+	return
 }
 
 var version = flag.Bool("version", false, "Version info")
@@ -141,13 +120,13 @@ func main() {
 		panic(err)
 	}
 
-	rr := routerregistrar.NewRouterRegistrar(config.mbusClient, logger)
+	rr := routerregistrar.NewRouterRegistrar(config.MbusClient, logger)
 	err = rr.RegisterWithRouter(&cfc)
 	if err != nil {
 		logger.Fatalf("Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
 	}
 
-	cr := collectorregistrar.NewCollectorRegistrar(config.mbusClient, logger)
+	cr := collectorregistrar.NewCollectorRegistrar(config.MbusClient, logger)
 	err = cr.RegisterWithCollector(cfc)
 	if err != nil {
 		logger.Warnf("Unable to register with collector. Err: %v.", err)
