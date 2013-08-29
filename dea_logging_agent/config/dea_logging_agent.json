@@ -1,5 +1,9 @@
 {
     "LoggregatorAddress": "localhost:3456",
+    "NatsHost": "localhost",
+    "NatsPort": 4222,
+    "NatsUser": "nats",
+    "NatsPass": "password",
     "VarzUser": "varz",
     "VarzPass": "password",
     "VarzPort": 8888

@@ -88,3 +88,52 @@ func TestThatItWorksWithTwoLoggregators(t *testing.T) {
 	assert.Equal(t, receivedMsg.GetAppId(), "anotherId")
 	assert.Equal(t, string(receivedMsg.GetMessage()), "Another message")
 }
+
+func TestThatEmitWorks(t *testing.T) {
+	loggregatorServers := []string{"127.0.0.2:9998", "127.0.0.3:9997"}
+	rt := NewRouter("127.0.0.1:3457", loggregatorServers, logger)
+	context := rt.Emit()
+	assert.Equal(t, "loggregatorRouter", context.Name)
+	metrics := context.Metrics
+	assert.Equal(t, len(metrics), 17) //make sure all expected metrics are present
+	for _, metric := range metrics {
+		switch metric.Name {
+		case "127:0:0:1.currentBufferCount":
+			assert.NotNil(t, metric.Value)
+		case "127:0:0:1.receivedMessageCount":
+			assert.NotNil(t, metric.Value)
+		case "127:0:0:1.receivedByteCount":
+			assert.NotNil(t, metric.Value)
+		case "127:0:0:2.currentBufferCount":
+			assert.NotNil(t, metric.Value)
+		case "127:0:0:2.sentMessageCount":
+			assert.NotNil(t, metric.Value)
+		case "127:0:0:2.sentByteCount":
+			assert.NotNil(t, metric.Value)
+		case "127:0:0:2.receivedMessageCount":
+			assert.NotNil(t, metric.Value)
+		case "127:0:0:2.receivedByteCount":
+			assert.NotNil(t, metric.Value)
+		case "127:0:0:2.logStreamRawByteCount":
+			assert.NotNil(t, metric.Value)
+		case "127:0:0:2.logStreamPbByteCount":
+			assert.NotNil(t, metric.Value)
+		case "127:0:0:3.currentBufferCount":
+			assert.NotNil(t, metric.Value)
+		case "127:0:0:3.sentMessageCount":
+			assert.NotNil(t, metric.Value)
+		case "127:0:0:3.sentByteCount":
+			assert.NotNil(t, metric.Value)
+		case "127:0:0:3.receivedMessageCount":
+			assert.NotNil(t, metric.Value)
+		case "127:0:0:3.receivedByteCount":
+			assert.NotNil(t, metric.Value)
+		case "127:0:0:3.logStreamRawByteCount":
+			assert.NotNil(t, metric.Value)
+		case "127:0:0:3.logStreamPbByteCount":
+			assert.NotNil(t, metric.Value)
+		default:
+			t.Error("Got an invalid metric name: ", metric.Name)
+		}
+	}
+}

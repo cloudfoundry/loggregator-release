@@ -6,20 +6,21 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/stathat/consistent"
 )
 
 type router struct {
-	c    *consistent.Consistent
-	lcs  map[string]loggregatorclient.LoggregatorClient
-	host string
+	c             *consistent.Consistent
+	lcs           map[string]loggregatorclient.LoggregatorClient
+	agentListener agentlistener.AgentListener
+	host          string
 }
 
 func (h router) Start(logger *gosteno.Logger) {
-	agentListener := agentlistener.NewAgentListener(h.host, logger)
-	dataChan := agentListener.Start()
+	dataChan := h.agentListener.Start()
 	for {
 		dataToProxy := <-dataChan
 		appId, err := appIdFromLogMessage(dataToProxy)
@@ -30,6 +31,19 @@ func (h router) Start(logger *gosteno.Logger) {
 			lc.Send(dataToProxy)
 		}
 	}
+}
+
+func (h router) Metrics() []instrumentation.Metric {
+	var metrics []instrumentation.Metric
+	for _, lc := range h.lcs {
+		metrics = append(metrics, lc.Metrics()...)
+	}
+	metrics = append(metrics, h.agentListener.Metrics()...)
+	return metrics
+}
+
+func (h router) Emit() instrumentation.Context {
+	return instrumentation.Context{Name: "loggregatorRouter", Metrics: h.Metrics()}
 }
 
 func appIdFromLogMessage(data []byte) (appId string, err error) {
@@ -58,7 +72,7 @@ func NewRouter(host string, loggregatorServers []string, logger *gosteno.Logger)
 		loggregatorClients[server] = client
 	}
 
-	h = &router{c: c, lcs: loggregatorClients, host: host}
+	h = &router{c: c, lcs: loggregatorClients, agentListener: agentlistener.NewAgentListener(host, logger), host: host}
 
 	return
 }

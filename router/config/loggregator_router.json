@@ -1,4 +1,11 @@
 {
     "Loggregators": ["10.10.16.14:3456"],
-    "Host": "0.0.0.0:3456"
+    "Host": "0.0.0.0:3456",
+    "NatsHost": "localhost",
+    "NatsPort": 4222,
+    "NatsUser": "nats",
+    "NatsPass": "password",
+    "VarzUser": "varz",
+    "VarzPass": "password",
+    "VarzPort": 8888
 }
