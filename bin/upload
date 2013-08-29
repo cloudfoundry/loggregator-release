@@ -32,7 +32,7 @@ function package_upload {
 # Upload artifacts to bintray.com
 
 for ARTIFACT in `ls -1 $SCRIPT_HOME/../release/*.gz`; do
-  echo 'Uploading $ARTIFACT'
+  echo "Uploading $ARTIFACT"
   package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggregator $TRAVIS_BUILD_NUMBER $ARTIFACT
 done
 
