@@ -126,11 +126,15 @@ func (sinkServer *sinkServer) Start() {
 	}
 }
 
+func (sinkServer *sinkServer) Metrics() []instrumentation.Metric {
+	return []instrumentation.Metric{
+		instrumentation.Metric{Name: "numberOfSinks", Value: sinkServer.listenerChannels.NumberOfChannels()},
+	}
+}
+
 func (sinkServer *sinkServer) Emit() instrumentation.Context {
 	return instrumentation.Context{
 		Name: "sinkServer",
-		Metrics: []instrumentation.Metric{
-			instrumentation.Metric{Name: "numberOfSinks", Value: sinkServer.listenerChannels.NumberOfChannels()},
-		},
+		Metrics: sinkServer.Metrics(),
 	}
 }

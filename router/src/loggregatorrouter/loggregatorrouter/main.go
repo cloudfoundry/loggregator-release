@@ -7,6 +7,7 @@ import (
 	cfmessagebus "github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"loggregatorrouter"
 )
@@ -29,8 +30,8 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 		return errors.New("Need VARZ username/password/port.")
 	}
 
-	if c.LoggregatorAddress == "" {
-		return errors.New("Need Loggregator address (host:port).")
+	if len(c.Loggregators) < 1 || c.Loggregators[0] == "" {
+		return errors.New("Need a loggregator server (host:port).")
 	}
 
 	c.mbusClient, err = cfmessagebus.NewMessageBus("NATS")
@@ -87,8 +88,8 @@ func main() {
 	cfc, err := cfcomponent.NewComponent(
 		"",
 		0,
-		"LoggregatorDeaAgent",
-		config.Index,
+		"LoggregatorRouter",
+		0,
 		&LoggregatorRouterMonitor{},
 		config.VarzPort,
 		[]string{config.VarzUser, config.VarzPass},
