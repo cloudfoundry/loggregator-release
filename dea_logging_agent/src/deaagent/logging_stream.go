@@ -29,7 +29,7 @@ func newLoggingStream(inst *instance, loggregatorClient loggregatorclient.Loggre
 func (ls *loggingStream) listen() {
 	newLogMessage := func(message []byte) *logmessage.LogMessage {
 		currentTime := time.Now()
-		sourceType := logmessage.LogMessage_DEA
+		sourceType := logmessage.LogMessage_WARDEN_CONTAINER
 		return &logmessage.LogMessage{
 			Message:     message,
 			AppId:       proto.String(ls.inst.applicationId),

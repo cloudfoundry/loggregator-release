@@ -99,7 +99,7 @@ func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
 	receivedMessage := getBackendMessage(t, <-mockLoggregatorClient.received)
 
 	assert.Equal(t, "1234", receivedMessage.GetAppId())
-	assert.Equal(t, logmessage.LogMessage_DEA, receivedMessage.GetSourceType())
+	assert.Equal(t, logmessage.LogMessage_WARDEN_CONTAINER, receivedMessage.GetSourceType())
 	assert.Equal(t, logmessage.LogMessage_OUT, receivedMessage.GetMessageType())
 	assert.Equal(t, expectedMessage, string(receivedMessage.GetMessage()))
 }

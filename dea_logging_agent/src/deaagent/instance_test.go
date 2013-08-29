@@ -82,7 +82,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	receivedMessage := getBackendMessage(t, <-mockLoggregatorClient.received)
 
 	assert.Equal(t, "1234", receivedMessage.GetAppId())
-	assert.Equal(t, logmessage.LogMessage_DEA, receivedMessage.GetSourceType())
+	assert.Equal(t, logmessage.LogMessage_WARDEN_CONTAINER, receivedMessage.GetSourceType())
 	assert.Equal(t, logmessage.LogMessage_OUT, receivedMessage.GetMessageType())
 	assert.Equal(t, expectedMessage, string(receivedMessage.GetMessage()))
 
@@ -92,7 +92,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	receivedMessage = getBackendMessage(t, <-mockLoggregatorClient.received)
 
 	assert.Equal(t, "1234", receivedMessage.GetAppId())
-	assert.Equal(t, logmessage.LogMessage_DEA, receivedMessage.GetSourceType())
+	assert.Equal(t, logmessage.LogMessage_WARDEN_CONTAINER, receivedMessage.GetSourceType())
 	assert.Equal(t, logmessage.LogMessage_OUT, receivedMessage.GetMessageType())
 	assert.Equal(t, secondLogMessage, string(receivedMessage.GetMessage()))
 }
@@ -138,7 +138,7 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	receivedMessage := getBackendMessage(t, <-mockLoggregatorClient.received)
 
 	assert.Equal(t, "1234", receivedMessage.GetAppId())
-	assert.Equal(t, logmessage.LogMessage_DEA, receivedMessage.GetSourceType())
+	assert.Equal(t, logmessage.LogMessage_WARDEN_CONTAINER, receivedMessage.GetSourceType())
 	assert.Equal(t, logmessage.LogMessage_ERR, receivedMessage.GetMessageType())
 	assert.Equal(t, expectedMessage, string(receivedMessage.GetMessage()))
 
@@ -148,7 +148,7 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	receivedMessage = getBackendMessage(t, <-mockLoggregatorClient.received)
 
 	assert.Equal(t, "1234", receivedMessage.GetAppId())
-	assert.Equal(t, logmessage.LogMessage_DEA, receivedMessage.GetSourceType())
+	assert.Equal(t, logmessage.LogMessage_WARDEN_CONTAINER, receivedMessage.GetSourceType())
 	assert.Equal(t, logmessage.LogMessage_ERR, receivedMessage.GetMessageType())
 	assert.Equal(t, secondLogMessage, string(receivedMessage.GetMessage()))
 }
