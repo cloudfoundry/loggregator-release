@@ -27,7 +27,6 @@ func main() {
 
 	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "udprouter")
 
-
 	if *version {
 		fmt.Printf("\n\nversion: %s\ngitSha: %s\n\n", versionNumber, gitSha)
 		return
