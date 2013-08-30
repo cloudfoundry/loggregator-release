@@ -52,9 +52,7 @@ Source agents emit the logging data as [protocol-buffers](https://code.google.co
 
 ### Emitting Messages from other Cloud Foundry components
 
-Cloud Foundry developers can easily add source clients to new CF components that emit messages to the loggregator server.
-
-There is currently a Go Library (https://github.com/cloudfoundry/loggregatorlib/tree/master/emitter) and a Ruby Gem (https://github.com/cloudfoundry/loggregator_emitter) that can be used to emit messages to the loggregator server. For usage information, look at their respective READMEs.
+Cloud Foundry developers can easily add source clients to new CF components that emit messages to the loggregator server.  Currently, there are libraries for [Go](https://github.com/cloudfoundry/loggregatorlib/tree/master/emitter) and [Ruby](https://github.com/cloudfoundry/loggregator_emitter). For usage information, look at their respective READMEs.
 
 ### Development
 
