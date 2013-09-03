@@ -1,7 +1,6 @@
 package authorization
 
 import (
-	"github.com/cloudfoundry/loggregatorlib/logtarget"
 	"net/http"
 	"regexp"
 	testhelpers "server_testhelpers"
@@ -44,52 +43,52 @@ func (d TestUaaTokenDecoder) Decode(token string) (TokenPayload, error) {
 
 var accessTests = []struct {
 	userDetails    TokenPayload
-	target         *logtarget.LogTarget
+	target         string
 	authToken      string
 	expectedResult bool
 }{
 	//Allowed domains
 	{
 		TokenPayload{UserId: "userId", Email: "user1@pivotallabs.com"},
-		&logtarget.LogTarget{AppId: "myAppId"},
+		"myAppId",
 		"bearer something",
 		true,
 	},
 	{
 		TokenPayload{UserId: "userId", Email: "user2@gopivotal.com"},
-		&logtarget.LogTarget{AppId: "myAppId"},
+		"myAppId",
 		"bearer something",
 		true,
 	},
 	{
 		TokenPayload{UserId: "userId", Email: "user3@vmware.com"},
-		&logtarget.LogTarget{AppId: "myAppId"},
+		"myAppId",
 		"bearer something",
 		true,
 	},
 	//Funky domain casing
 	{
 		TokenPayload{UserId: "userId", Email: "user3@VmWaRe.com"},
-		&logtarget.LogTarget{AppId: "myAppId"},
+		"myAppId",
 		"bearer something",
 		true,
 	},
 	//Not allowed stuff
 	{
 		TokenPayload{UserId: "userId", Email: "user3@vmware.com"},
-		&logtarget.LogTarget{AppId: "notMyAppId"},
+		"notMyAppId",
 		"bearer something",
 		false,
 	},
 	{
 		TokenPayload{UserId: "userId", Email: "user3@vmware.com"},
-		&logtarget.LogTarget{AppId: "nonExistantAppId"},
+		"nonExistantAppId",
 		"bearer something",
 		false,
 	},
 	{
 		TokenPayload{UserId: "userId", Email: "user3@gmail.com"},
-		&logtarget.LogTarget{AppId: "myAppId"},
+		"myAppId",
 		"bearer something",
 		false,
 	},

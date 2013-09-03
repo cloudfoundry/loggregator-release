@@ -7,7 +7,6 @@ import (
 	"encoding/binary"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"github.com/cloudfoundry/loggregatorlib/logtarget"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
@@ -47,7 +46,7 @@ const (
 	VALID_SPACE_AUTHENTICATION_TOKEN = "bearer correctSpaceLevelAuthorizationToken"
 )
 
-func SuccessfulAuthorizer(authToken string, target *logtarget.LogTarget, l *gosteno.Logger) bool {
+func SuccessfulAuthorizer(authToken string, target string, l *gosteno.Logger) bool {
 	return authToken == VALID_SPACE_AUTHENTICATION_TOKEN || authToken == VALID_ORG_AUTHENTICATION_TOKEN
 }
 

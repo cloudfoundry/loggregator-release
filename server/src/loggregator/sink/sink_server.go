@@ -4,8 +4,8 @@ import (
 	"code.google.com/p/go.net/websocket"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/appid"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"github.com/cloudfoundry/loggregatorlib/logtarget"
 	"loggregator/authorization"
 	"loggregator/groupedchannels"
 	"loggregator/messagestore"
@@ -38,10 +38,10 @@ func NewSinkServer(givenChannel chan []byte, messageStore *messagestore.MessageS
 func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 	clientAddress := ws.RemoteAddr()
 
-	target := logtarget.FromUrl(ws.Request().URL)
+	appId := appid.FromUrl(ws.Request().URL)
 	authToken := ws.Request().Header.Get("Authorization")
 
-	if !target.IsValid() {
+	if appId == "" {
 		message := fmt.Sprintf("SinkServer: Did not accept sink connection with invalid app id: %s.", clientAddress)
 		sinkServer.logger.Warn(message)
 		ws.CloseWithStatus(4000)
@@ -55,38 +55,38 @@ func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 		return
 	}
 
-	if !sinkServer.authorize(authToken, target, sinkServer.logger) {
-		message := fmt.Sprintf("SinkServer: Auth token [%s] not authorized to access target [%s].", authToken, target)
+	if !sinkServer.authorize(authToken, appId, sinkServer.logger) {
+		message := fmt.Sprintf("SinkServer: Auth token [%s] not authorized to access appId [%s].", authToken, appId)
 		sinkServer.logger.Warn(message)
 		ws.CloseWithStatus(4002)
 		return
 	}
 
-	sink := newCfSink(target, sinkServer.logger, ws, clientAddress, sinkServer.keepAliveInterval)
+	sink := newCfSink(appId, sinkServer.logger, ws, clientAddress, sinkServer.keepAliveInterval)
 
-	sinkServer.listenerChannels.Register(sink.listenerChannel, target)
+	sinkServer.listenerChannels.Register(sink.listenerChannel, appId)
 	sink.run(sinkServer.sinkCloseChan)
 }
 
 func (sinkServer *sinkServer) dumpHandler(rw http.ResponseWriter, req *http.Request) {
-	target := logtarget.FromUrl(req.URL)
+	appId := appid.FromUrl(req.URL)
 	authToken := req.Header.Get("Authorization")
 
-	if !target.IsValid() {
+	if appId == "" {
 		sinkServer.logger.Warn("SinkServer: Did not accept dump connection with invalid app id.")
 		rw.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	if !sinkServer.authorize(authToken, target, sinkServer.logger) {
-		message := fmt.Sprintf("SinkServer: Auth token [%s] not authorized to access target [%s].", authToken, target.AppId)
+	if !sinkServer.authorize(authToken, appId, sinkServer.logger) {
+		message := fmt.Sprintf("SinkServer: Auth token [%s] not authorized to access target [%s].", authToken, appId)
 		sinkServer.logger.Warn(message)
 		rw.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	rw.Header().Set("Content-Type", "application/octet-stream")
-	rw.Write(sinkServer.messageStore.DumpFor(target))
+	rw.Write(sinkServer.messageStore.DumpFor(appId))
 }
 
 func (sinkServer *sinkServer) relayMessagesToAllSinks() {
@@ -98,7 +98,7 @@ func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 			sinkServer.logger.Infof("SinkServer: Sink with channel %v requested closing. Closed it.", sin)
 		case data := <-sinkServer.dataChannel:
 			sinkServer.logger.Debugf("SinkServer: Received %d bytes of data from agent listener.", len(data))
-			target, err := logtarget.FromLogMessage(data)
+			target, err := appid.FromLogMessage(data)
 			if err != nil {
 				sinkServer.logger.Error(err.Error())
 			} else {

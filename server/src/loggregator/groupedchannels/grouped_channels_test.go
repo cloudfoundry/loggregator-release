@@ -1,7 +1,6 @@
 package groupedchannels
 
 import (
-	"github.com/cloudfoundry/loggregatorlib/logtarget"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -10,24 +9,24 @@ func TestRegisterAndFor(t *testing.T) {
 	groupedChannels := NewGroupedChannels()
 
 	appChannel := make(chan []byte)
-	targetWithApp := &logtarget.LogTarget{AppId: "789"}
-	groupedChannels.Register(appChannel, targetWithApp)
+	appId := "789"
+	groupedChannels.Register(appChannel, appId)
 
-	appChannels := groupedChannels.For(targetWithApp)
+	appChannels := groupedChannels.For(appId)
 	assert.Equal(t, len(appChannels), 1)
 	assert.Equal(t, appChannels[0], appChannel)
 }
 
 func TestEmptyCollection(t *testing.T) {
 	groupedChannels := NewGroupedChannels()
-	targetWithApp := &logtarget.LogTarget{AppId: "789"}
+	appId := "789"
 
-	assert.Equal(t, len(groupedChannels.For(targetWithApp)), 0)
+	assert.Equal(t, len(groupedChannels.For(appId)), 0)
 }
 
 func TestDeleteForOrgSpaceApp(t *testing.T) {
 	groupedChannels := NewGroupedChannels()
-	target := &logtarget.LogTarget{AppId: "789"}
+	target := "789"
 
 	channel1 := make(chan []byte)
 	channel2 := make(chan []byte)
@@ -45,16 +44,16 @@ func TestDeleteForOrgSpaceApp(t *testing.T) {
 func TestTotalNumberOfChannels(t *testing.T) {
 	groupedChannels := NewGroupedChannels()
 	channel1 := make(chan []byte)
-	targetWithApp1 := &logtarget.LogTarget{AppId: "1"}
-	groupedChannels.Register(channel1, targetWithApp1)
+	appId1 := "1"
+	groupedChannels.Register(channel1, appId1)
 
 	channel2 := make(chan []byte)
-	targetWithApp2 := &logtarget.LogTarget{AppId: "2"}
-	groupedChannels.Register(channel2, targetWithApp2)
+	appId2 := "2"
+	groupedChannels.Register(channel2, appId2)
 
 	channel3 := make(chan []byte)
-	targetWithApp3 := &logtarget.LogTarget{AppId: "3"}
-	groupedChannels.Register(channel3, targetWithApp3)
+	appId3 := "3"
+	groupedChannels.Register(channel3, appId3)
 
 	assert.Equal(t, groupedChannels.NumberOfChannels(), 3)
 

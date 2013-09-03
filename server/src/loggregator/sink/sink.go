@@ -4,7 +4,6 @@ import (
 	"code.google.com/p/go.net/websocket"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"github.com/cloudfoundry/loggregatorlib/logtarget"
 	"net"
 	"sync/atomic"
 	"time"
@@ -12,7 +11,7 @@ import (
 
 type sink struct {
 	logger            *gosteno.Logger
-	target            *logtarget.LogTarget
+	appId             string
 	ws                *websocket.Conn
 	clientAddress     net.Addr
 	sentMessageCount  *uint64
@@ -21,7 +20,7 @@ type sink struct {
 	listenerChannel   chan []byte
 }
 
-func newCfSink(lg *logtarget.LogTarget, givenLogger *gosteno.Logger, ws *websocket.Conn, clientAddress net.Addr, keepAliveInterval time.Duration) *sink {
+func newCfSink(lg string, givenLogger *gosteno.Logger, ws *websocket.Conn, clientAddress net.Addr, keepAliveInterval time.Duration) *sink {
 	return &sink{
 		givenLogger,
 		lg,
@@ -51,7 +50,7 @@ func (sink *sink) keepAliveChannel() <-chan bool {
 }
 
 func (sink *sink) run(sinkCloseChan chan chan []byte) {
-	sink.logger.Debugf("Sink %s: Created for target %s", sink.clientAddress, sink.target)
+	sink.logger.Debugf("Sink %s: Created for appId [%s]", sink.clientAddress, sink.appId)
 
 	keepAliveChan := sink.keepAliveChannel()
 	alreadyRequestedClose := false
@@ -101,8 +100,8 @@ func (sink *sink) run(sinkCloseChan chan chan []byte) {
 func (sink *sink) Emit() instrumentation.Context {
 	return instrumentation.Context{Name: "cfSink",
 		Metrics: []instrumentation.Metric{
-			instrumentation.Metric{Name: "sentMessageCount:" + sink.target.Identifier(), Value: atomic.LoadUint64(sink.sentMessageCount)},
-			instrumentation.Metric{Name: "sentByteCount:" + sink.target.Identifier(), Value: atomic.LoadUint64(sink.sentByteCount)},
+			instrumentation.Metric{Name: "sentMessageCount:" + sink.appId, Value: atomic.LoadUint64(sink.sentMessageCount)},
+			instrumentation.Metric{Name: "sentByteCount:" + sink.appId, Value: atomic.LoadUint64(sink.sentByteCount)},
 		},
 	}
 }

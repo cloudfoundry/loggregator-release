@@ -1,7 +1,6 @@
 package groupedchannels
 
 import (
-	"github.com/cloudfoundry/loggregatorlib/logtarget"
 	"sync"
 )
 
@@ -26,27 +25,27 @@ type GroupedChannels struct {
 	*sync.RWMutex
 }
 
-func (gc *GroupedChannels) Register(c chan []byte, lt *logtarget.LogTarget) {
+func (gc *GroupedChannels) Register(c chan []byte, appId string) {
 	gc.Lock()
 	defer gc.Unlock()
 
-	if lt.AppId != "" {
-		app, found := gc.apps[lt.AppId]
+	if appId != "" {
+		app, found := gc.apps[appId]
 		if !found {
 			app = newNode()
-			gc.apps[lt.AppId] = app
+			gc.apps[appId] = app
 		}
 		app.addChannel(c)
 	}
 }
 
-func (gc *GroupedChannels) For(lt *logtarget.LogTarget) (results []chan []byte) {
+func (gc *GroupedChannels) For(appId string) (results []chan []byte) {
 	gc.RLock()
 	defer gc.RUnlock()
 
 	results = make([]chan []byte, 0)
 
-	app, found := gc.apps[lt.AppId]
+	app, found := gc.apps[appId]
 
 	if found {
 		for c, _ := range app.channelSet {

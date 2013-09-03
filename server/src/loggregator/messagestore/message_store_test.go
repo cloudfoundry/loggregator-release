@@ -1,7 +1,6 @@
 package messagestore
 
 import (
-	"github.com/cloudfoundry/loggregatorlib/logtarget"
 	"github.com/stretchr/testify/assert"
 	testhelpers "server_testhelpers"
 	"testing"
@@ -10,13 +9,13 @@ import (
 func TestRegisterAndFor(t *testing.T) {
 	store := NewMessageStore(2)
 
-	appTarget := &logtarget.LogTarget{AppId: "myApp"}
+	appId := "myApp"
 	appMessageString := "AppMessage"
 	appMessage := testhelpers.MarshalledLogMessage(t, appMessageString, "myApp")
 
-	store.Add(appMessage, appTarget)
+	store.Add(appMessage, appId)
 
-	messages, err := testhelpers.ParseDumpedMessages(store.DumpFor(appTarget))
+	messages, err := testhelpers.ParseDumpedMessages(store.DumpFor(appId))
 	assert.NoError(t, err)
 
 	assert.Equal(t, len(messages), 1)
@@ -26,21 +25,21 @@ func TestRegisterAndFor(t *testing.T) {
 func TestAddingForAnotherApp(t *testing.T) {
 	store := NewMessageStore(2)
 
-	appTarget := &logtarget.LogTarget{AppId: "myApp"}
+	appId := "myApp"
 	message := []byte("Message")
-	store.Add(message, appTarget)
+	store.Add(message, appId)
 
-	anotherAppTarget := &logtarget.LogTarget{AppId: "anotherApp"}
+	anotherAppId := "anotherApp"
 	anotherAppMessage := []byte("AnotherAppMessage")
-	store.Add(anotherAppMessage, anotherAppTarget)
+	store.Add(anotherAppMessage, anotherAppId)
 
-	messages, err := testhelpers.ParseDumpedMessages(store.DumpFor(appTarget))
+	messages, err := testhelpers.ParseDumpedMessages(store.DumpFor(appId))
 	assert.NoError(t, err)
 
 	assert.Equal(t, len(messages), 1)
 	assert.Equal(t, message, messages[0])
 
-	messages, err = testhelpers.ParseDumpedMessages(store.DumpFor(anotherAppTarget))
+	messages, err = testhelpers.ParseDumpedMessages(store.DumpFor(anotherAppId))
 	assert.NoError(t, err)
 
 	assert.Equal(t, len(messages), 1)
@@ -53,7 +52,7 @@ func TestOnlyDumpsMessagesThatHaveALength(t *testing.T) {
 	message := []byte("Hello world")
 	store := NewMessageStore(2)
 
-	target := &logtarget.LogTarget{AppId: "appId"}
+	target := "appId"
 	store.Add(message, target)
 
 	messages, err := testhelpers.ParseDumpedMessages(store.DumpFor(target))
