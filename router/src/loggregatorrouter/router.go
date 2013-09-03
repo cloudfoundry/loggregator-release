@@ -1,15 +1,12 @@
 package loggregatorrouter
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
-	"errors"
-	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
+	"github.com/cloudfoundry/loggregatorlib/appid"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
 )
 
 type LoggregatorRouterMonitor struct {
@@ -31,7 +28,7 @@ func (r router) Start(logger *gosteno.Logger) {
 	dataChan := r.agentListener.Start()
 	for {
 		dataToProxy := <-dataChan
-		appId, err := appIdFromLogMessage(dataToProxy)
+		appId, err := appid.FromLogMessage(dataToProxy)
 		if err != nil {
 			logger.Warn(err.Error())
 		} else {
@@ -39,16 +36,6 @@ func (r router) Start(logger *gosteno.Logger) {
 			lc.Send(dataToProxy)
 		}
 	}
-}
-
-func appIdFromLogMessage(data []byte) (appId string, err error) {
-	receivedMessage := &logmessage.LogMessage{}
-	err = proto.Unmarshal(data, receivedMessage)
-	if err != nil {
-		err = errors.New(fmt.Sprintf("Log message could not be unmarshaled. Dropping it... Error: %v. Data: %v", err, data))
-		return
-	}
-	return *receivedMessage.AppId, err
 }
 
 func (r router) lookupLoggregatorClientForAppId(appId string) loggregatorclient.LoggregatorClient {
