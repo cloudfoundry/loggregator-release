@@ -20,7 +20,7 @@ go:
 before_install:
 - git submodule update --init --recursive
 install: ./bin/build
-script: ./bin/test && ./bin/upload
+script: ./bin/travis_test && ./bin/upload
 branches:
   only:
   - master

@@ -1,0 +1,59 @@
+#!/bin/bash
+
+rm -rf ./pkg
+
+result=0
+
+function green {
+    echo -e "$(tput setaf 2)$1$(tput sgr0)"
+}
+
+function red {
+    echo -e "$(tput setaf 1)$1$(tput sgr0)"
+}
+
+packages=(
+    deaagent
+    deaagent/deaagent
+    loggregator
+    loggregator/authorization
+    loggregator/groupedchannels
+    loggregator/loggregator
+    loggregator/messagestore
+    loggregator/sink
+    loggregatorrouter
+    loggregatorrouter/loggregatorrouter
+    github.com/cloudfoundry/loggregatorlib/agentlistener
+    github.com/cloudfoundry/loggregatorlib/cfcomponent
+    github.com/cloudfoundry/loggregatorlib/emitter
+    github.com/cloudfoundry/loggregatorlib/loggregatorclient
+    github.com/cloudfoundry/loggregatorlib/logmessage
+    github.com/cloudfoundry/loggregatorlib/appid
+)
+
+for package in "${packages[@]}"
+do
+    local_result=$result
+    echo -e "\n Testing $package"
+    $(dirname $0)/go fmt $package
+    $(dirname $0)/go test -i --race $package
+    $(dirname $0)/go test -v --race $package
+    let "result += $?"
+    echo -e "\n Vetting $package"
+    $(dirname $0)/go vet $package
+    let "result += $?"
+    if [ $result -gt $local_result ]; then
+        red " Package $package FAILED"
+    else
+        green " Package $package PASSED"
+    fi
+done
+
+if [ $result -eq 0 ]; then
+	green "\nSUITE SUCCESS"
+else
+	red "\nSUITE FAILURE"
+fi
+
+exit $result
+
