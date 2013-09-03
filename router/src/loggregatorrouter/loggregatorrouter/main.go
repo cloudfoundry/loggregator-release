@@ -55,7 +55,7 @@ func main() {
 		panic(err)
 	}
 
-	h := NewHasher(config.Loggregators)
+	h := loggregatorrouter.NewHasher(config.Loggregators)
 	r, err := loggregatorrouter.NewRouter(config.Host, h, config.Config, logger)
 	if err != nil {
 		panic(err)
