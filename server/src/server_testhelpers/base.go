@@ -1,9 +1,9 @@
-package testhelpers
+package server_testhelpers
 
 import (
 	"bytes"
-	"code.google.com/p/go.net/websocket"
 	"code.google.com/p/gogoprotobuf/proto"
+	"code.google.com/p/go.net/websocket"
 	"encoding/binary"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
@@ -51,45 +51,6 @@ func SuccessfulAuthorizer(authToken string, target *logtarget.LogTarget, l *gost
 	return authToken == VALID_SPACE_AUTHENTICATION_TOKEN || authToken == VALID_ORG_AUTHENTICATION_TOKEN
 }
 
-func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string, authToken string) (*websocket.Conn, chan bool, <-chan bool) {
-	dontKeepAliveChan := make(chan bool)
-	connectionDroppedChannel := make(chan bool)
-
-	config, err := websocket.NewConfig("ws://localhost:"+port+path, "http://localhost")
-	assert.NoError(t, err)
-	config.Header.Add("Authorization", authToken)
-	ws, err := websocket.DialConfig(config)
-	assert.NoError(t, err)
-
-	go func() {
-		for {
-			var data []byte
-			err := websocket.Message.Receive(ws, &data)
-			if err != nil {
-				connectionDroppedChannel <- true
-				return
-			}
-			receivedChan <- data
-		}
-
-	}()
-	go func() {
-		for {
-			err := websocket.Message.Send(ws, []byte{42})
-			if err != nil {
-				break
-			}
-			select {
-			case <-dontKeepAliveChan:
-				return
-			case <-time.After(44 * time.Millisecond):
-				// keep-alive
-			}
-		}
-	}()
-	return ws, dontKeepAliveChan, connectionDroppedChannel
-}
-
 func MarshalledLogMessage(t *testing.T, messageString string, appId string) []byte {
 	currentTime := time.Now()
 
@@ -131,4 +92,43 @@ func ParseDumpedMessages(b []byte) (messages [][]byte, err error) {
 		messages = append(messages, msg)
 	}
 	return
+}
+
+func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string, authToken string) (*websocket.Conn, chan bool, <-chan bool) {
+	dontKeepAliveChan := make(chan bool)
+	connectionDroppedChannel := make(chan bool)
+
+	config, err := websocket.NewConfig("ws://localhost:"+port+path, "http://localhost")
+	assert.NoError(t, err)
+	config.Header.Add("Authorization", authToken)
+	ws, err := websocket.DialConfig(config)
+	assert.NoError(t, err)
+
+	go func() {
+		for {
+			var data []byte
+			err := websocket.Message.Receive(ws, &data)
+			if err != nil {
+				connectionDroppedChannel <- true
+				return
+			}
+			receivedChan <- data
+		}
+
+	}()
+	go func() {
+		for {
+			err := websocket.Message.Send(ws, []byte{42})
+			if err != nil {
+				break
+			}
+			select {
+			case <-dontKeepAliveChan:
+				return
+			case <-time.After(44 * time.Millisecond):
+				// keep-alive
+			}
+		}
+	}()
+	return ws, dontKeepAliveChan, connectionDroppedChannel
 }

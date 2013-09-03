@@ -3,11 +3,11 @@ package loggregator
 import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
-	"github.com/cloudfoundry/loggregatorlib/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"loggregator/messagestore"
 	"loggregator/sink"
 	"net"
+	testhelpers "server_testhelpers"
 	"testing"
 	"time"
 )

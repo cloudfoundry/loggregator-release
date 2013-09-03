@@ -2,9 +2,9 @@ package authorization
 
 import (
 	"github.com/cloudfoundry/loggregatorlib/logtarget"
-	"github.com/cloudfoundry/loggregatorlib/testhelpers"
 	"net/http"
 	"regexp"
+	testhelpers "server_testhelpers"
 	"testing"
 )
 

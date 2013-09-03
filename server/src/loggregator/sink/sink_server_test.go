@@ -3,11 +3,11 @@ package sink
 import (
 	"code.google.com/p/go.net/websocket"
 	"encoding/binary"
-	"github.com/cloudfoundry/loggregatorlib/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"loggregator/messagestore"
 	"net/http"
+	testhelpers "server_testhelpers"
 	"testing"
 	"time"
 )
