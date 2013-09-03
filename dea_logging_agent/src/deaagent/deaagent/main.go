@@ -75,7 +75,6 @@ func main() {
 	agent := deaagent.NewAgent(*instancesJsonFilePath, logger)
 
 	cfc, err := cfcomponent.NewComponent(
-		"",
 		0,
 		"LoggregatorDeaAgent",
 		config.Index,

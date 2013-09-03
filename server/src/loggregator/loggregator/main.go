@@ -17,6 +17,8 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -106,7 +108,6 @@ func main() {
 	)
 
 	cfc, err := cfcomponent.NewComponent(
-		config.SystemDomain,
 		config.WebPort,
 		"LoggregatorServer",
 		config.Index,
@@ -121,7 +122,9 @@ func main() {
 	}
 
 	rr := routerregistrar.NewRouterRegistrar(config.MbusClient, logger)
-	err = rr.RegisterWithRouter(&cfc)
+	uri := strings.Replace(cfc.IpAddress, ".", "-", -1)
+	uri = uri + "-" + strconv.Itoa(int(config.SourcePort)) + "." + config.SystemDomain
+	err = rr.RegisterWithRouter(cfc.IpAddress, config.WebPort, []string{uri})
 	if err != nil {
 		logger.Fatalf("Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
 	}
@@ -149,7 +152,7 @@ func main() {
 		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
 			cfcomponent.DumpGoRoutine()
 		case <-killChan:
-			rr.UnregisterFromRouter(cfc)
+			rr.UnregisterFromRouter(cfc.IpAddress, cfc.WebPort, []string{uri})
 			break
 		}
 	}

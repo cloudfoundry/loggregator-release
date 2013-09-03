@@ -7,16 +7,25 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar"
 	"loggregatorrouter"
+	"os"
+	"os/signal"
 )
 
 type Config struct {
 	cfcomponent.Config
 	Host         string
 	Loggregators []string
+	SystemDomain string
+	WebPort      uint32
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
+	if c.SystemDomain == "" {
+		return errors.New("Need system domain to register with NATS")
+	}
+
 	if len(c.Loggregators) < 1 || c.Loggregators[0] == "" {
 		return errors.New("Need a loggregator server (host:port).")
 	}
@@ -45,7 +54,7 @@ func main() {
 		fmt.Printf("\n\nversion: %s\ngitSha: %s\n\n", versionNumber, gitSha)
 		return
 	}
-	config := &Config{Host: "0.0.0.0:3456"}
+	config := &Config{Host: "0.0.0.0:3456", WebPort: 8080}
 	err := cfcomponent.ReadConfigInto(config, *configFile)
 	if err != nil {
 		panic(err)
@@ -69,6 +78,13 @@ func main() {
 		}
 	}()
 
+	rr := routerregistrar.NewRouterRegistrar(config.MbusClient, logger)
+	uri := "loggregator." + config.SystemDomain
+	err = rr.RegisterWithRouter(r.Component.IpAddress, config.WebPort, []string{uri})
+	if err != nil {
+		logger.Fatalf("Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
+	}
+
 	cr := collectorregistrar.NewCollectorRegistrar(config.MbusClient, logger)
 	err = cr.RegisterWithCollector(r.Component)
 	if err != nil {
@@ -84,10 +100,16 @@ func main() {
 
 	go r.Start(logger)
 
+	killChan := make(chan os.Signal)
+	signal.Notify(killChan, os.Kill)
+
 	for {
 		select {
 		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
 			cfcomponent.DumpGoRoutine()
+		case <-killChan:
+			rr.UnregisterFromRouter(r.Component.IpAddress, config.WebPort, []string{uri})
+			break
 		}
 	}
 }
