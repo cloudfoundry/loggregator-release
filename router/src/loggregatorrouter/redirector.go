@@ -37,16 +37,12 @@ func (r *redirector) generateRedirectUrl(req *http.Request) string {
 	return uri
 }
 
-func (r *redirector) Start() {
-	var err error
-
+func (r *redirector) Start() (err error) {
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		urlStr := r.generateRedirectUrl(req)
 		http.Redirect(w, req, urlStr, http.StatusFound)
 	})
 
 	err = http.ListenAndServe(r.host, nil)
-	if err != nil {
-		panic(err)
-	}
+	return
 }

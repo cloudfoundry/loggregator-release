@@ -61,6 +61,14 @@ func main() {
 		panic(err)
 	}
 
+	redirector := loggregatorrouter.NewRedirector(config.Host, h, logger)
+	go func() {
+		err := redirector.Start()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
 	cr := collectorregistrar.NewCollectorRegistrar(config.MbusClient, logger)
 	err = cr.RegisterWithCollector(r.Component)
 	if err != nil {
