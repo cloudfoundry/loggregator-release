@@ -55,25 +55,26 @@ func main() {
 		panic(err)
 	}
 
-	h, err := loggregatorrouter.NewRouter(config.Host, config.Loggregators, config.Config, logger)
+	h := NewHasher(config.Loggregators)
+	r, err := loggregatorrouter.NewRouter(config.Host, h, config.Config, logger)
 	if err != nil {
 		panic(err)
 	}
 
 	cr := collectorregistrar.NewCollectorRegistrar(config.MbusClient, logger)
-	err = cr.RegisterWithCollector(h.Component)
+	err = cr.RegisterWithCollector(r.Component)
 	if err != nil {
 		panic(err)
 	}
 
 	go func() {
-		err := h.StartMonitoringEndpoints()
+		err := r.StartMonitoringEndpoints()
 		if err != nil {
 			panic(err)
 		}
 	}()
 
-	go h.Start(logger)
+	go r.Start(logger)
 
 	for {
 		select {

@@ -10,7 +10,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"github.com/stathat/consistent"
 )
 
 type LoggregatorRouterMonitor struct {
@@ -22,21 +21,21 @@ func (hm LoggregatorRouterMonitor) Ok() bool {
 
 type router struct {
 	cfcomponent.Component
-	c             *consistent.Consistent
+	h             *hasher
 	lcs           map[string]loggregatorclient.LoggregatorClient
 	agentListener agentlistener.AgentListener
 	host          string
 }
 
-func (h router) Start(logger *gosteno.Logger) {
-	dataChan := h.agentListener.Start()
+func (r router) Start(logger *gosteno.Logger) {
+	dataChan := r.agentListener.Start()
 	for {
 		dataToProxy := <-dataChan
 		appId, err := appIdFromLogMessage(dataToProxy)
 		if err != nil {
 			logger.Warn(err.Error())
 		} else {
-			lc := h.lookupLoggregatorClientForAppId(appId)
+			lc := r.lookupLoggregatorClientForAppId(appId)
 			lc.Send(dataToProxy)
 		}
 	}
@@ -52,19 +51,16 @@ func appIdFromLogMessage(data []byte) (appId string, err error) {
 	return *receivedMessage.AppId, err
 }
 
-func (h router) lookupLoggregatorClientForAppId(appId string) loggregatorclient.LoggregatorClient {
-	key, _ := h.c.Get(appId)
-	return h.lcs[key]
+func (r router) lookupLoggregatorClientForAppId(appId string) loggregatorclient.LoggregatorClient {
+	ls, _ := r.h.getLoggregatorServerForAppId(appId)
+	return r.lcs[ls]
 }
 
-func NewRouter(host string, loggregatorServers []string, config cfcomponent.Config, logger *gosteno.Logger) (h *router, err error) {
+func NewRouter(host string, h *hasher, config cfcomponent.Config, logger *gosteno.Logger) (r *router, err error) {
 	var instrumentables []instrumentation.Instrumentable
-	c := consistent.New()
-	c.Set(loggregatorServers)
+	loggregatorClients := make(map[string]loggregatorclient.LoggregatorClient, len(h.loggregatorServers()))
 
-	loggregatorClients := make(map[string]loggregatorclient.LoggregatorClient, len(loggregatorServers))
-
-	for _, server := range loggregatorServers {
+	for _, server := range h.loggregatorServers() {
 		client := loggregatorclient.NewLoggregatorClient(server, logger, loggregatorclient.DefaultBufferSize)
 		loggregatorClients[server] = client
 		instrumentables = append(instrumentables, client)
@@ -88,7 +84,7 @@ func NewRouter(host string, loggregatorServers []string, config cfcomponent.Conf
 		return
 	}
 
-	h = &router{Component: cfc, c: c, lcs: loggregatorClients, agentListener: al, host: host}
+	r = &router{Component: cfc, h: h, lcs: loggregatorClients, agentListener: al, host: host}
 
 	return
 }

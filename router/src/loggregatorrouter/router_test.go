@@ -24,15 +24,18 @@ func TestThatItWorksWithOneLoggregator(t *testing.T) {
 	dataChannel := listener.Start()
 
 	loggregatorServers := []string{"localhost:9999"}
-	h, err := NewRouter("localhost:3456", loggregatorServers, newCfConfig(), logger)
+	hasher := NewHasher(loggregatorServers)
+	r, err := NewRouter("localhost:3456", hasher, newCfConfig(), logger)
 	assert.NoError(t, err)
-	go h.Start(logger)
+
+	go r.Start(logger)
 	time.Sleep(50 * time.Millisecond)
 
 	logEmitter, _ := emitter.NewEmitter("localhost:3456", "ROUTER", logger)
 	logEmitter.Emit("my_awesome_app", "Hello World")
 
 	received := <-dataChannel
+
 	receivedMessage := &logmessage.LogMessage{}
 	proto.Unmarshal(received, receivedMessage)
 
@@ -45,9 +48,11 @@ func TestThatItIgnoresBadMessages(t *testing.T) {
 	dataChannel := listener.Start()
 
 	loggregatorServers := []string{"localhost:9996"}
-	h, err := NewRouter("localhost:3455", loggregatorServers, newCfConfig(), logger)
+	hasher := NewHasher(loggregatorServers)
+	r, err := NewRouter("localhost:3455", hasher, newCfConfig(), logger)
 	assert.NoError(t, err)
-	go h.Start(logger)
+
+	go r.Start(logger)
 	time.Sleep(50 * time.Millisecond)
 
 	lc := loggregatorclient.NewLoggregatorClient("localhost:3455", logger, loggregatorclient.DefaultBufferSize)
@@ -72,8 +77,10 @@ func TestThatItWorksWithTwoLoggregators(t *testing.T) {
 	dataChan2 := listener2.Start()
 
 	loggregatorServers := []string{"localhost:9998", "localhost:9997"}
-	rt, err := NewRouter("localhost:3457", loggregatorServers, newCfConfig(), logger)
+	hasher := NewHasher(loggregatorServers)
+	rt, err := NewRouter("localhost:3457", hasher, newCfConfig(), logger)
 	assert.NoError(t, err)
+
 	go rt.Start(logger)
 	time.Sleep(50 * time.Millisecond)
 
