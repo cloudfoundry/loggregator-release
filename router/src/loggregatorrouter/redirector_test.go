@@ -25,7 +25,7 @@ func TestThatItRedirects(t *testing.T) {
 	// appId that hashes to first loggregatorServer entry
 	appId := "appId"
 	endpoint := "http://localhost:4443/tail/?app=" + appId
-	expectedUrl := "https://10-10-10-10-9991-localhost:4443/tail/?app=" + appId
+	expectedUrl := "wss://10-10-10-10-9991-localhost:4443/tail/?app=" + appId
 
 	req, err := http.NewRequest("GET", endpoint, nil)
 	assert.NoError(t, err)
@@ -36,7 +36,7 @@ func TestThatItRedirects(t *testing.T) {
 	// appId that hashes to second loggregatorServer entry
 	appId = "c53734e6-a5ef-45dd-b62f-827158356fa5"
 	endpoint = "http://localhost:4443/tail/?app=" + appId
-	expectedUrl = "https://10-20-30-40-9992-localhost:4443/tail/?app=" + appId
+	expectedUrl = "wss://10-20-30-40-9992-localhost:4443/tail/?app=" + appId
 
 	req, err = http.NewRequest("GET", endpoint, nil)
 	assert.NoError(t, err)
@@ -51,7 +51,7 @@ func TestThatItGeneratesRedirectUrlWithoutProtoHeaderWithSSLHostPort(t *testing.
 	r := NewRedirector(redirector_host+":"+redirector_port, hasher, testhelpers.Logger())
 
 	fakeReq0, _ := http.NewRequest("GET", "https://localhost:4443/tail/?app=appId", nil)
-	expectedUrl0 := "https://10-10-10-10-9991-localhost:4443/tail/?app=appId"
+	expectedUrl0 := "wss://10-10-10-10-9991-localhost:4443/tail/?app=appId"
 	redirectUrl0 := r.generateRedirectUrl(fakeReq0)
 
 	assert.Equal(t, redirectUrl0, expectedUrl0)
@@ -63,7 +63,7 @@ func TestThatItGeneratesRedirectUrlWithoutProtoHeaderWithNonSSLHostPort(t *testi
 	r := NewRedirector(redirector_host+":"+redirector_port, hasher, testhelpers.Logger())
 
 	fakeReq0, _ := http.NewRequest("GET", "http://localhost:1234/tail/?app=appId", nil)
-	expectedUrl0 := "http://10-10-10-10-9991-localhost:1234/tail/?app=appId"
+	expectedUrl0 := "ws://10-10-10-10-9991-localhost:1234/tail/?app=appId"
 	redirectUrl0 := r.generateRedirectUrl(fakeReq0)
 
 	assert.Equal(t, redirectUrl0, expectedUrl0)
@@ -75,7 +75,7 @@ func TestThatItGeneratesRedirectUrlWithoutProtoHeaderWithoutHostPort(t *testing.
 	r := NewRedirector(redirector_host+":"+redirector_port, hasher, testhelpers.Logger())
 
 	fakeReq1, _ := http.NewRequest("GET", "http://localhost/tail/?app=appId", nil)
-	expectedUrl1 := "http://10-10-10-10-9991-localhost/tail/?app=appId"
+	expectedUrl1 := "ws://10-10-10-10-9991-localhost/tail/?app=appId"
 	redirectUrl1 := r.generateRedirectUrl(fakeReq1)
 
 	assert.Equal(t, redirectUrl1, expectedUrl1)

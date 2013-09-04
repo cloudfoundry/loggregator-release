@@ -26,16 +26,18 @@ func (r *redirector) generateRedirectUrl(req *http.Request) string {
 
 	var proto string
 	if proto = req.Header.Get("X-Forwarded-Proto"); proto != "" {
-		proto = proto + "://" // if the reverse proxy set the header, just use it
+		// X-Forwarded-Proto is set for all https and http requests
+		proto = proto + "://"
+		r.logger.Debugf("Using X-Forwarded-Proto value %v for redirect protocol", proto)
 	} else if strings.Contains(req.Host, ":4443") {
-		proto = "https://" // otherwise, we assume https if port 4443 is specified
+		proto = "wss://"
+		r.logger.Debug("Using wss protocol because request port was 4443")
 	} else {
-		proto = "http://" // default to http
+		proto = "ws://"
+		r.logger.Debug("Falling back to ws protocol")
 	}
 
-	uri = proto + uri
-
-	return uri
+	return proto + uri
 }
 
 func (r *redirector) Start() (err error) {
