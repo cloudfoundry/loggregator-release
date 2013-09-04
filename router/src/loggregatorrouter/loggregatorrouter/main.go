@@ -9,8 +9,10 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar"
 	"loggregatorrouter"
+	"net"
 	"os"
 	"os/signal"
+	"strconv"
 )
 
 type Config struct {
@@ -70,7 +72,7 @@ func main() {
 		panic(err)
 	}
 
-	redirector := loggregatorrouter.NewRedirector(config.Host, h, logger)
+	redirector := loggregatorrouter.NewRedirector(net.JoinHostPort(r.Component.IpAddress, strconv.Itoa(int(config.WebPort))), h, logger)
 	go func() {
 		err := redirector.Start()
 		if err != nil {

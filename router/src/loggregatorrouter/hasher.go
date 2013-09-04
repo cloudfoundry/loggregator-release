@@ -18,7 +18,7 @@ func NewHasher(loggregatorServers []string) (h *hasher) {
 	return
 }
 
-func (h *hasher) getLoggregatorServerForAppId(appId string) (lc string, err error) {
+func (h *hasher) getLoggregatorServerForAppId(appId string) (string, error) {
 	return h.c.Get(appId)
 }
 

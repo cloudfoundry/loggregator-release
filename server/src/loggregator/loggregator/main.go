@@ -10,15 +10,16 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar"
+	"github.com/cloudfoundry/loggregatorlib/servernamer"
 	"io/ioutil"
 	"loggregator/authorization"
 	"loggregator/messagestore"
 	"loggregator/sink"
+	"net"
 	"os"
 	"os/signal"
 	"runtime"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -122,8 +123,10 @@ func main() {
 	}
 
 	rr := routerregistrar.NewRouterRegistrar(config.MbusClient, logger)
-	uri := strings.Replace(cfc.IpAddress, ".", "-", -1)
-	uri = uri + "-" + strconv.Itoa(int(config.SourcePort)) + "." + config.SystemDomain
+
+	uri := servernamer.ServerName(
+		net.JoinHostPort(cfc.IpAddress, strconv.Itoa(int(config.SourcePort))),
+		"loggregator."+config.SystemDomain)
 	err = rr.RegisterWithRouter(cfc.IpAddress, config.WebPort, []string{uri})
 	if err != nil {
 		logger.Fatalf("Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
