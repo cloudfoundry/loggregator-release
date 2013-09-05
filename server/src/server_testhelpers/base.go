@@ -50,6 +50,25 @@ func SuccessfulAuthorizer(authToken string, target string, l *gosteno.Logger) bo
 	return authToken == VALID_SPACE_AUTHENTICATION_TOKEN || authToken == VALID_ORG_AUTHENTICATION_TOKEN
 }
 
+func MarshalledErrorLogMessage(t *testing.T, messageString string, appId string) []byte {
+	currentTime := time.Now()
+
+	messageType := logmessage.LogMessage_ERR
+	sourceType := logmessage.LogMessage_DEA
+	protoMessage := &logmessage.LogMessage{
+		Message:     []byte(messageString),
+		AppId:       proto.String(appId),
+		MessageType: &messageType,
+		SourceType:  &sourceType,
+		Timestamp:   proto.Int64(currentTime.UnixNano()),
+	}
+
+	message, err := proto.Marshal(protoMessage)
+	assert.NoError(t, err)
+
+	return message
+}
+
 func MarshalledLogMessage(t *testing.T, messageString string, appId string) []byte {
 	currentTime := time.Now()
 
@@ -60,6 +79,26 @@ func MarshalledLogMessage(t *testing.T, messageString string, appId string) []by
 		AppId:       proto.String(appId),
 		MessageType: &messageType,
 		SourceType:  &sourceType,
+		Timestamp:   proto.Int64(currentTime.UnixNano()),
+	}
+
+	message, err := proto.Marshal(protoMessage)
+	assert.NoError(t, err)
+
+	return message
+}
+
+func MarshalledDrainedLogMessage(t *testing.T, messageString string, appId string, drainUrls... string) []byte {
+	currentTime := time.Now()
+
+	messageType := logmessage.LogMessage_OUT
+	sourceType := logmessage.LogMessage_DEA
+	protoMessage := &logmessage.LogMessage{
+		Message:     []byte(messageString),
+		AppId:       proto.String(appId),
+		MessageType: &messageType,
+		SourceType:  &sourceType,
+		DrainUrls:   drainUrls,
 		Timestamp:   proto.Int64(currentTime.UnixNano()),
 	}
 

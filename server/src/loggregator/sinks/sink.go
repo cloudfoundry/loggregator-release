@@ -1,4 +1,4 @@
-package sink
+package sinks
 
 import "github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 

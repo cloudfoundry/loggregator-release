@@ -20,7 +20,7 @@ packages=(
     loggregator/groupedchannels
     loggregator/loggregator
     loggregator/messagestore
-    loggregator/sink
+    loggregator/sinks
     loggregatorrouter
     loggregatorrouter/loggregatorrouter
     github.com/cloudfoundry/loggregatorlib/agentlistener
