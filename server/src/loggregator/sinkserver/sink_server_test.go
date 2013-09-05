@@ -24,7 +24,7 @@ func init() {
 	// This needs be unbuffered as the channel we get from the
 	// agent listener is unbuffered?
 	dataReadChannel = make(chan []byte, 10)
-	TestSinkServer = NewWebsocketSinkServer(dataReadChannel, messagestore.NewMessageStore(10), testhelpers.Logger(), "localhost:" + SERVER_PORT, testhelpers.SuccessfulAuthorizer, 50*time.Millisecond)
+	TestSinkServer = NewSinkServer(dataReadChannel, messagestore.NewMessageStore(10), testhelpers.Logger(), "localhost:" + SERVER_PORT, testhelpers.SuccessfulAuthorizer, 50*time.Millisecond)
 	go TestSinkServer.Start()
 	time.Sleep(1*time.Millisecond)
 }
@@ -276,26 +276,55 @@ func TestItReturns401WithIncorrectAuthToken(t *testing.T) {
 
 // *** Start Syslog Sink tests
 
-func addSyslogListener(port string, receivedChan chan []byte) {
+func addSyslogListener(t *testing.T, port string, receivedChan chan []byte) {
 	testSink, err := net.Listen("tcp", "localhost:" + port)
-	if (err != nil) {
-		panic(err)
-	}
+	assert.NoError(t, err)
 	go func() {
 		for {
 			buffer := make([]byte, 1024)
 			conn, err := testSink.Accept()
+			assert.NoError(t, err)
 			defer conn.Close()
-			if (err != nil) {
-				panic(err)
+
+			for {
+				readCount, err := conn.Read(buffer)
+				assert.NoError(t, err)
+				receivedChan <- buffer[:readCount]
 			}
-			readCount, err := conn.Read(buffer)
-			if (err != nil) {
-				panic(err)
-			}
-			receivedChan <- buffer[:readCount]
 		}
 	}()
+}
+
+func TestThatItSendsAllMessageToKnownDrains(t *testing.T) {
+	client1ReceivedChan := make(chan []byte)
+
+
+	addSyslogListener(t, "34566", client1ReceivedChan)
+
+
+	expectedMessageString := "Some Data"
+	expectedMarshalledProtoBuffer := testhelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "localhost:34566")
+
+	expectedSecondMessageString := "Some Data Without a drainurl"
+	expectedSecondMarshalledProtoBuffer := testhelpers.MarshalledLogMessage(t, expectedSecondMessageString, "myApp")
+
+	dataReadChannel <- expectedMarshalledProtoBuffer
+
+	select {
+	case <-time.After(200*time.Millisecond):
+		t.Errorf("Did not get the first message")
+	case message := <-client1ReceivedChan:
+		assert.Contains(t, string(message), expectedMessageString)
+	}
+
+	dataReadChannel <- expectedSecondMarshalledProtoBuffer
+
+	select {
+	case <-time.After(200*time.Millisecond):
+		t.Errorf("Did not get the second message")
+	case message := <-client1ReceivedChan:
+		assert.Contains(t, string(message), expectedSecondMessageString)
+	}
 }
 
 func TestThatItSendsAllDataToAllDrainUrls(t *testing.T) {
@@ -303,8 +332,8 @@ func TestThatItSendsAllDataToAllDrainUrls(t *testing.T) {
 	client2ReceivedChan := make(chan []byte)
 
 
-	addSyslogListener("34567", client1ReceivedChan)
-	addSyslogListener("34568", client2ReceivedChan)
+	addSyslogListener(t, "34567", client1ReceivedChan)
+	addSyslogListener(t, "34568", client2ReceivedChan)
 
 
 	expectedMessageString := "Some Data"

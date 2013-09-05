@@ -31,7 +31,7 @@ type sinkServer struct {
 	messageStore      *messagestore.MessageStore
 }
 
-func NewWebsocketSinkServer(givenChannel chan []byte, messageStore *messagestore.MessageStore, logger *gosteno.Logger, listenHost string, authorize authorization.LogAccessAuthorizer, keepAliveInterval time.Duration) *sinkServer {
+func NewSinkServer(givenChannel chan []byte, messageStore *messagestore.MessageStore, logger *gosteno.Logger, listenHost string, authorize authorization.LogAccessAuthorizer, keepAliveInterval time.Duration) *sinkServer {
 	listeners := groupedchannels.NewGroupedChannels()
 	sinkCloseChan := make(chan chan []byte, 4)
 	drainUrlsForApps := make(map[string]map[string]sinks.Sink, 100)
@@ -92,6 +92,27 @@ func (sinkServer *sinkServer) dumpHandler(rw http.ResponseWriter, req *http.Requ
 	rw.Write(sinkServer.messageStore.DumpFor(appId))
 }
 
+func (sinkServer *sinkServer) registerDrainUrls(appId string, drainUrls []string) {
+	if len(drainUrls) == 0 {
+		return
+	}
+	if sinkServer.drainUrlsForApps[appId] == nil {
+		sinkServer.drainUrlsForApps[appId] = make(map[string]sinks.Sink, len(drainUrls))
+	}
+	for _, drainUrl := range(drainUrls) {
+		if sinkServer.drainUrlsForApps[appId][drainUrl] == nil {
+			s, err := sinks.NewSyslogSink(appId, drainUrl, sinkServer.logger)
+			if (err != nil) {
+				sinkServer.logger.Error(err.Error())
+				continue
+			}
+			go s.Run(sinkServer.sinkCloseChan)
+			sinkServer.listenerChannels.Register(s.ListenerChannel(), appId)
+			sinkServer.drainUrlsForApps[appId][drainUrl] = s
+		}
+	}
+}
+
 func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 	for {
 		select {
@@ -106,22 +127,7 @@ func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 				sinkServer.logger.Error(err.Error())
 				continue
 			}
-			if len(drainUrls) > 0 && sinkServer.drainUrlsForApps[appId] == nil {
-				sinkServer.drainUrlsForApps[appId] = make(map[string]sinks.Sink, len(drainUrls))
-			}
-			for _, drainUrl := range(drainUrls) {
-				if sinkServer.drainUrlsForApps[appId][drainUrl] == nil {
-					s, err := sinks.NewSyslogSink(appId, drainUrl, sinkServer.logger)
-					if (err != nil) {
-						sinkServer.logger.Error(err.Error())
-						continue
-					}
-					sinkServer.listenerChannels.Register(s.ListenerChannel(), appId)
-					go s.Run(sinkServer.sinkCloseChan)
-					sinkServer.drainUrlsForApps[appId][drainUrl] = s
-				}
-			}
-
+			sinkServer.registerDrainUrls(appId, drainUrls)
 			sinkServer.messageStore.Add(data, appId)
 			sinkServer.logger.Debugf("SinkServer: Searching for sinks with appId [%s].", appId)
 			for _, listenerChannel := range sinkServer.listenerChannels.For(appId) {

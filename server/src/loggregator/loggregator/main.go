@@ -99,7 +99,7 @@ func main() {
 	incomingData := listener.Start()
 
 	authorizer := authorization.NewLogAccessAuthorizer(config.decoder, config.ApiHost)
-	sinkServer := sinkserver.NewWebsocketSinkServer(
+	sinkServer := sinkserver.NewSinkServer(
 		incomingData,
 		messagestore.NewMessageStore(config.MaxRetainedLogMessages),
 		logger,
