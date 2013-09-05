@@ -14,7 +14,7 @@ import (
 	"io/ioutil"
 	"loggregator/authorization"
 	"loggregator/messagestore"
-	"loggregator/sink"
+	"loggregator/sinkserver"
 	"net"
 	"os"
 	"os/signal"
@@ -99,7 +99,7 @@ func main() {
 	incomingData := listener.Start()
 
 	authorizer := authorization.NewLogAccessAuthorizer(config.decoder, config.ApiHost)
-	sinkServer := sink.NewSinkServer(
+	sinkServer := sinkserver.NewWebsocketSinkServer(
 		incomingData,
 		messagestore.NewMessageStore(config.MaxRetainedLogMessages),
 		logger,
