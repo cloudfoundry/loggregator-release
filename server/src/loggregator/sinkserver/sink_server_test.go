@@ -284,13 +284,18 @@ func addSyslogListener(t *testing.T, port string, receivedChan chan []byte) {
 			buffer := make([]byte, 1024)
 			conn, err := testSink.Accept()
 			assert.NoError(t, err)
-			defer conn.Close()
 
-			for {
-				readCount, err := conn.Read(buffer)
-				assert.NoError(t, err)
-				receivedChan <- buffer[:readCount]
-			}
+			go func() {
+				defer conn.Close()
+				for {
+					readCount, err := conn.Read(buffer)
+					if err != nil {
+//						t.Errorf("Got an error, %v", err)
+						break
+					}
+					receivedChan <- buffer[:readCount]
+				}
+			}()
 		}
 	}()
 }
@@ -356,4 +361,55 @@ func TestThatItSendsAllDataToAllDrainUrls(t *testing.T) {
 	}
 }
 
+func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) {
+	client1ReceivedChan := make(chan []byte)
+	client2ReceivedChan := make(chan []byte)
+
+
+	addSyslogListener(t, "34569", client1ReceivedChan)
+	addSyslogListener(t, "34540", client2ReceivedChan)
+
+
+	expectedMessageString := "Some Data"
+	expectedMarshalledProtoBuffer := testhelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "localhost:34569")
+
+	dataReadChannel <- expectedMarshalledProtoBuffer
+
+	select {
+	case <-time.After(200*time.Millisecond):
+		t.Errorf("Did not get message 1")
+	case message := <-client1ReceivedChan:
+		assert.Contains(t, string(message), expectedMessageString)
+	}
+
+	expectedSecondMessageString := "Some More Data"
+	expectedSecondMarshalledProtoBuffer := testhelpers.MarshalledDrainedNonWardenLogMessage(t, expectedSecondMessageString, "myApp", "localhost:34540")
+
+	dataReadChannel <- expectedSecondMarshalledProtoBuffer
+
+	select {
+	case <-time.After(200*time.Millisecond):
+		t.Errorf("Did not get message 2")
+	case message := <-client1ReceivedChan:
+		assert.Contains(t, string(message), expectedSecondMessageString)
+	case <-client2ReceivedChan:
+		t.Error("Should not have gotten the new message in this drain")
+	}
+}
+
 // *** End Syslog Sink tests
+
+func TestDrainUpdatesWithDrainUrls(t *testing.T) {
+	net.Listen("tcp", "localhost:2345")
+	net.Listen("tcp", "localhost:3456")
+	net.Listen("tcp", "localhost:7890")
+	assert.Nil(t, TestSinkServer.drainUrlsForApps["specialApp"])
+	TestSinkServer.registerDrainUrls("specialApp", []string{"localhost:2345"})
+	assert.Equal(t, 1, len(TestSinkServer.drainUrlsForApps["specialApp"]))
+	TestSinkServer.registerDrainUrls("specialApp", []string{"localhost:2345", "localhost:3456"})
+	assert.Equal(t, 2, len(TestSinkServer.drainUrlsForApps["specialApp"]))
+	TestSinkServer.registerDrainUrls("specialApp", []string{"localhost:3456", "localhost:7890"})
+	assert.Equal(t, 2, len(TestSinkServer.drainUrlsForApps["specialApp"]))
+	TestSinkServer.registerDrainUrls("specialApp", []string{})
+	assert.Equal(t, 0, len(TestSinkServer.drainUrlsForApps["specialApp"]))
+}

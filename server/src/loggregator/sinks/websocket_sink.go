@@ -53,6 +53,10 @@ func (sink *websocketSink) ListenerChannel() chan []byte {
 	return sink.listenerChannel
 }
 
+func (sink *websocketSink) Identifier() string {
+	return sink.clientAddress.String()
+}
+
 func (sink *websocketSink) Run(sinkCloseChan chan chan []byte) {
 	sink.logger.Debugf("Websocket Sink %s: Created for appId [%s]", sink.clientAddress, sink.appId)
 

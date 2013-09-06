@@ -81,6 +81,10 @@ func (s *syslogSink) ListenerChannel() chan []byte {
 	return s.listenerChannel
 }
 
+func (s *syslogSink) Identifier() string {
+	return s.drainUrl
+}
+
 func (sink *syslogSink) Emit() instrumentation.Context {
 	return instrumentation.Context{Name: "syslogSink",
 		Metrics: []instrumentation.Metric{

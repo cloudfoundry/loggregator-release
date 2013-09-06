@@ -92,6 +92,26 @@ func MarshalledDrainedLogMessage(t *testing.T, messageString string, appId strin
 	currentTime := time.Now()
 
 	messageType := logmessage.LogMessage_OUT
+	sourceType := logmessage.LogMessage_WARDEN_CONTAINER
+	protoMessage := &logmessage.LogMessage{
+		Message:     []byte(messageString),
+		AppId:       proto.String(appId),
+		MessageType: &messageType,
+		SourceType:  &sourceType,
+		DrainUrls:   drainUrls,
+		Timestamp:   proto.Int64(currentTime.UnixNano()),
+	}
+
+	message, err := proto.Marshal(protoMessage)
+	assert.NoError(t, err)
+
+	return message
+}
+
+func MarshalledDrainedNonWardenLogMessage(t *testing.T, messageString string, appId string, drainUrls... string) []byte {
+	currentTime := time.Now()
+
+	messageType := logmessage.LogMessage_OUT
 	sourceType := logmessage.LogMessage_DEA
 	protoMessage := &logmessage.LogMessage{
 		Message:     []byte(messageString),

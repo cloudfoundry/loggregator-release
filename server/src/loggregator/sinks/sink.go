@@ -6,4 +6,5 @@ type Sink interface {
 	instrumentation.Instrumentable
 	Run(sinkCloseChan chan chan []byte)
 	ListenerChannel() chan []byte
+	Identifier() string
 }

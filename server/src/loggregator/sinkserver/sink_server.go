@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/appid"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"loggregator/authorization"
 	"loggregator/groupedchannels"
@@ -12,6 +13,7 @@ import (
 	"loggregator/sinks"
 	"net/http"
 	"time"
+	"code.google.com/p/gogoprotobuf/proto"
 )
 
 const (
@@ -92,12 +94,35 @@ func (sinkServer *sinkServer) dumpHandler(rw http.ResponseWriter, req *http.Requ
 	rw.Write(sinkServer.messageStore.DumpFor(appId))
 }
 
+
+func contains(valueToFind string , values []string) bool {
+	for _, value := range(values) {
+		if valueToFind == value {
+			return true
+		}
+	}
+	return false
+}
+
 func (sinkServer *sinkServer) registerDrainUrls(appId string, drainUrls []string) {
 	if len(drainUrls) == 0 {
+		for _, sink := range(sinkServer.drainUrlsForApps[appId]) {
+			sinkServer.listenerChannels.Delete(sink.ListenerChannel())
+			close(sink.ListenerChannel())
+		}
+		delete(sinkServer.drainUrlsForApps, appId)
 		return
 	}
 	if sinkServer.drainUrlsForApps[appId] == nil {
 		sinkServer.drainUrlsForApps[appId] = make(map[string]sinks.Sink, len(drainUrls))
+	}
+	for _, sink := range(sinkServer.drainUrlsForApps[appId]) {
+		if contains(sink.Identifier(), drainUrls) {
+			continue
+		}
+		sinkServer.listenerChannels.Delete(sink.ListenerChannel())
+		close(sink.ListenerChannel())
+		delete(sinkServer.drainUrlsForApps[appId], sink.Identifier())
 	}
 	for _, drainUrl := range(drainUrls) {
 		if sinkServer.drainUrlsForApps[appId][drainUrl] == nil {
@@ -122,12 +147,18 @@ func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 			sinkServer.logger.Infof("SinkServer: Sink with channel %v requested closing. Closed it.", sin)
 		case data := <-sinkServer.dataChannel:
 			sinkServer.logger.Debugf("SinkServer: Received %d bytes of data from agent listener.", len(data))
-			appId, drainUrls, err := appid.FromLogMessage(data)
+
+			receivedMessage := new(logmessage.LogMessage)
+			err := proto.Unmarshal(data, receivedMessage)
 			if err != nil {
-				sinkServer.logger.Error(err.Error())
+				sinkServer.logger.Error(fmt.Sprintf("Log message could not be unmarshaled. Dropping it... Error: %v. Data: %v", err, data))
 				continue
 			}
-			sinkServer.registerDrainUrls(appId, drainUrls)
+
+			appId := receivedMessage.GetAppId()
+			if (receivedMessage.GetSourceType() == logmessage.LogMessage_WARDEN_CONTAINER) {
+				sinkServer.registerDrainUrls(appId, receivedMessage.GetDrainUrls())
+			}
 			sinkServer.messageStore.Add(data, appId)
 			sinkServer.logger.Debugf("SinkServer: Searching for sinks with appId [%s].", appId)
 			for _, listenerChannel := range sinkServer.listenerChannels.For(appId) {
