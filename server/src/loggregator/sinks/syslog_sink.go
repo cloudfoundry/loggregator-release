@@ -5,6 +5,7 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"net/url"
 	"sync/atomic"
 )
 
@@ -19,7 +20,12 @@ type syslogSink struct {
 }
 
 func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger) (Sink, error) {
-	sysLogger, err := dial("tcp", drainUrl, appId)
+
+	dl, err := url.Parse(drainUrl)
+	if err != nil {
+		return nil, err
+	}
+	sysLogger, err := dial("tcp", dl.Host, appId)
 	if err != nil {
 		return nil, err
 	}

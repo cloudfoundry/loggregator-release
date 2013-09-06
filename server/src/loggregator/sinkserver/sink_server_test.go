@@ -308,7 +308,7 @@ func TestThatItSendsAllMessageToKnownDrains(t *testing.T) {
 
 
 	expectedMessageString := "Some Data"
-	expectedMarshalledProtoBuffer := testhelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "localhost:34566")
+	expectedMarshalledProtoBuffer := testhelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "syslog://localhost:34566")
 
 	expectedSecondMessageString := "Some Data Without a drainurl"
 	expectedSecondMarshalledProtoBuffer := testhelpers.MarshalledLogMessage(t, expectedSecondMessageString, "myApp")
@@ -342,7 +342,7 @@ func TestThatItSendsAllDataToAllDrainUrls(t *testing.T) {
 
 
 	expectedMessageString := "Some Data"
-	expectedMarshalledProtoBuffer := testhelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "localhost:34567", "localhost:34568")
+	expectedMarshalledProtoBuffer := testhelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "syslog://localhost:34567", "syslog://localhost:34568")
 
 	dataReadChannel <- expectedMarshalledProtoBuffer
 
@@ -371,7 +371,7 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 
 
 	expectedMessageString := "Some Data"
-	expectedMarshalledProtoBuffer := testhelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "localhost:34569")
+	expectedMarshalledProtoBuffer := testhelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "syslog://localhost:34569")
 
 	dataReadChannel <- expectedMarshalledProtoBuffer
 
@@ -383,7 +383,7 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 	}
 
 	expectedSecondMessageString := "Some More Data"
-	expectedSecondMarshalledProtoBuffer := testhelpers.MarshalledDrainedNonWardenLogMessage(t, expectedSecondMessageString, "myApp", "localhost:34540")
+	expectedSecondMarshalledProtoBuffer := testhelpers.MarshalledDrainedNonWardenLogMessage(t, expectedSecondMessageString, "myApp", "syslog://localhost:34540")
 
 	dataReadChannel <- expectedSecondMarshalledProtoBuffer
 
@@ -404,11 +404,11 @@ func TestDrainUpdatesWithDrainUrls(t *testing.T) {
 	net.Listen("tcp", "localhost:3456")
 	net.Listen("tcp", "localhost:7890")
 	assert.Nil(t, TestSinkServer.drainUrlsForApps["specialApp"])
-	TestSinkServer.registerDrainUrls("specialApp", []string{"localhost:2345"})
+	TestSinkServer.registerDrainUrls("specialApp", []string{"syslog://localhost:2345"})
 	assert.Equal(t, 1, len(TestSinkServer.drainUrlsForApps["specialApp"]))
-	TestSinkServer.registerDrainUrls("specialApp", []string{"localhost:2345", "localhost:3456"})
+	TestSinkServer.registerDrainUrls("specialApp", []string{"syslog://localhost:2345", "syslog://localhost:3456"})
 	assert.Equal(t, 2, len(TestSinkServer.drainUrlsForApps["specialApp"]))
-	TestSinkServer.registerDrainUrls("specialApp", []string{"localhost:3456", "localhost:7890"})
+	TestSinkServer.registerDrainUrls("specialApp", []string{"syslog://localhost:3456", "syslog://localhost:7890"})
 	assert.Equal(t, 2, len(TestSinkServer.drainUrlsForApps["specialApp"]))
 	TestSinkServer.registerDrainUrls("specialApp", []string{})
 	assert.Equal(t, 0, len(TestSinkServer.drainUrlsForApps["specialApp"]))

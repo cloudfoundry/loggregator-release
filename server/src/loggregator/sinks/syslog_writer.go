@@ -1,17 +1,17 @@
 package sinks
 
 import (
-	"sync"
-	"net"
-	"time"
-	"strings"
 	"fmt"
+	"net"
+	"strings"
+	"sync"
+	"time"
 )
 
 type writer struct {
-	appId      string
-	network    string
-	raddr      string
+	appId   string
+	network string
+	raddr   string
 
 	mu   sync.Mutex // guards conn
 	conn net.Conn
@@ -85,9 +85,9 @@ func (w *writer) write(p int, msg string) (int, error) {
 func dial(network, raddr string, appId string) (*writer, error) {
 
 	w := &writer{
-		appId:      appId,
-		network:  network,
-		raddr:    raddr,
+		appId:   appId,
+		network: network,
+		raddr:   raddr,
 	}
 
 	w.mu.Lock()
@@ -99,4 +99,3 @@ func dial(network, raddr string, appId string) (*writer, error) {
 	}
 	return w, err
 }
-

@@ -36,7 +36,7 @@ func init() {
 }
 
 func TestThatItSendsStdOutAsInfo(t *testing.T) {
-	sink, err := NewSyslogSink("appId", "localhost:24631", testhelpers.Logger())
+	sink, err := NewSyslogSink("appId", "syslog://localhost:24631", testhelpers.Logger())
 	assert.NoError(t, err)
 	closeChan := make(chan chan []byte)
 	go sink.Run(closeChan)
@@ -49,7 +49,7 @@ func TestThatItSendsStdOutAsInfo(t *testing.T) {
 }
 
 func TestThatItSendsStdErrAsErr(t *testing.T) {
-	sink, err := NewSyslogSink("appId", "localhost:24631", testhelpers.Logger())
+	sink, err := NewSyslogSink("appId", "syslog://localhost:24631", testhelpers.Logger())
 	assert.NoError(t, err)
 	closeChan := make(chan chan []byte)
 	go sink.Run(closeChan)
