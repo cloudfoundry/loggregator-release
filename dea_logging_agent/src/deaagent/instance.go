@@ -10,9 +10,10 @@ import (
 
 type instance struct {
 	applicationId       string
+	drainUrls           []string
+	index               uint64
 	wardenJobId         uint64
 	wardenContainerPath string
-	index               uint64
 }
 
 func (instance *instance) identifier() string {

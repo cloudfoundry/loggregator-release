@@ -1,97 +1,47 @@
 {
-    "time": 1374253619.7919264,
+    "time": 1378422338.6501207,
     "instances": [
         {
-            "tags": {
-                "space": "b6e6f61b-85b1-4608-8a89-7b807c5aad78",
-                "organization": "9876506e-277f-41ab-b764-a35c0b123456"
-            },
-            "executableFile": "deprecated",
-            "services": [
-
-            ],
-            "limits": {
-                "mem": 256,
-                "disk": 1024,
-                "fds": 16384
-            },
-            "cc_partition": "default",
-            "console": true,
-            "debug": null,
-            "instance_index": 0,
             "application_id": "e0e12b41-78d4-43ff-a5ae-20422bedf22f",
-            "application_version": "e1ec7765-e8d6-42e9-9a29-62f6a26e1214",
-            "application_name": "test-app",
-            "application_uris": [
-                "test-app.prism.cf-app.com"
-            ],
-            "application_prod": false,
-            "droplet_sha1": "55d3068c5bded6f4cc98bfb99e1522fe0119328e",
-            "droplet_uri": "https://prism-cf-app-com-cc-droplets.s3.amazonaws.com/e0/e1/e0e12b41-78d4-43ff-a5ae-20422bedf22f/55d3068c5bded6f4cc98bfb99e1522fe0119328e?AWSAccessKeyId=AKIAIY7ODV7RCQWEJ7VA&Signature=7XnDsAbGIgHozK22TpzmEzv5fDc%3D&Expires=1374257200",
-            "environment": {
-
-            },
-            "instance_id": "d460b7d7ec545c782f0875bd35703d6d",
-            "private_instance_id": "521e0a50b710fd4885e4d5b846796e12198ce1ae0958933636134ea379dd36aa",
             "state": "RUNNING",
-            "state_timestamp": 1374253614.313688,
-            "state_born_timestamp": 1374253600.4413674,
-            "state_starting_timestamp": 1374253600.4429064,
-            "warden_handle": "171s1cqvvb6",
+            "warden_job_id": 15,
+            "instance_index": 0,
+            "warden_container_path": "/var/vcap/data/warden/depot/170os7ali6q",
+            "warden_host_ip": "10.254.0.1",
             "instance_host_port": 61001,
             "instance_container_port": 61001,
-            "instance_console_host_port": 61003,
-            "instance_console_container_port": 61003,
-            "warden_job_id": 18,
-            "warden_container_path": "/var/vcap/data/warden/depot/171s1cqvvb6",
-            "warden_host_ip": "10.254.0.1",
-            "state_running_timestamp": 1374253614.3136976
+            "instance_id": "e2e76b2cfe370c7e213f2e3e36af621e"
         },
         {
-            "tags": {
-                "space": "232719be-8742-4b4d-98ff-5862fc826386",
-                "organization": "1234506e-277f-41ab-b764-a35c0b123456"
-            },
-            "executableFile": "deprecated",
-            "services": [
-
-            ],
-            "limits": {
-                "mem": 128,
-                "disk": 1024,
-                "fds": 16384
-            },
-            "cc_partition": "default",
-            "console": true,
-            "debug": null,
-            "instance_index": 0,
-            "application_id": "a59ebe7a-002a-4530-8d69-8bf53bc845d5",
-            "application_version": "8939189a-41c9-4d60-a8c8-79a316b05b8c",
-            "application_name": "private-app2",
-            "application_uris": [
-                "private-app2.prism.cf-app.com"
-            ],
-            "application_prod": false,
-            "droplet_sha1": "686a48ca5de2fc8e3225ce710d34504910c06a3f",
-            "droplet_uri": "https://prism-cf-app-com-cc-droplets.s3.amazonaws.com/a5/9e/a59ebe7a-002a-4530-8d69-8bf53bc845d5/686a48ca5de2fc8e3225ce710d34504910c06a3f?AWSAccessKeyId=AKIAIY7ODV7RCQWEJ7VA&Signature=7tM88WMZCueJHx1vTFCjepAraSU%3D&Expires=1374257200",
-            "environment": {
-
-            },
-            "instance_id": "2a4399429d8fc9a61d27d8da5ac512dd",
-            "private_instance_id": "cad1c3a74b49adcf3705e8dade6c9956b68f2410b5517d59484298ae096e1e7e",
+            "application_id": "d8df836e-e27d-45d4-a890-b2ce899788a4",
             "state": "RUNNING",
-            "state_timestamp": 1374253611.781083,
-            "state_born_timestamp": 1374253600.4645476,
-            "state_starting_timestamp": 1374253600.4656408,
-            "warden_handle": "171s1cqvvb7",
+            "warden_job_id": 13,
+            "instance_index": 0,
+            "warden_container_path": "/var/vcap/data/warden/depot/123ajkljfa",
+            "warden_host_ip": "10.254.0.5",
             "instance_host_port": 61002,
             "instance_container_port": 61002,
-            "instance_console_host_port": 61004,
-            "instance_console_container_port": 61004,
-            "warden_job_id": 17,
-            "warden_container_path": "/var/vcap/data/warden/depot/171s1cqvvb7",
+            "instance_id": "72a997d8a1d7baca5a78b00dc6d2cddb",
+            "tags": {
+                "syslog_drains": [
+                ]
+            }
+        },
+        {
+            "application_id": "a59ebe7a-002a-4530-8d69-8bf53bc845d5",
+            "state": "RUNNING",
+            "warden_job_id": 12,
+            "instance_index": 0,
+            "warden_container_path": "/var/vcap/data/warden/depot/345asndhaena",
             "warden_host_ip": "10.254.0.5",
-            "state_running_timestamp": 1374253611.7810931
+            "instance_host_port": 61008,
+            "instance_container_port": 61008,
+            "instance_id": "72a997d8a1d7baca5a78b00dc6d2cddb",
+            "tags": {
+                "syslog_drains": [
+                    "syslog://10.20.30.40:8050"
+                ]
+            }
         }
     ]
 }

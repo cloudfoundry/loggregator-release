@@ -33,6 +33,7 @@ func (ls *loggingStream) listen() {
 		return &logmessage.LogMessage{
 			Message:     message,
 			AppId:       proto.String(ls.inst.applicationId),
+			DrainUrls:   ls.inst.drainUrls,
 			MessageType: &ls.messageType,
 			SourceType:  &sourceType,
 			Timestamp:   proto.Int64(currentTime.UnixNano()),

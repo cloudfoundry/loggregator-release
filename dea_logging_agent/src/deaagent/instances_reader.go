@@ -12,6 +12,7 @@ func readInstances(data []byte) (map[string]instance, error) {
 		Warden_container_path string
 		Instance_index        uint64
 		State                 string
+		Tags                  map[string][]string
 	}
 
 	type instancesJson struct {
@@ -35,10 +36,20 @@ func readInstances(data []byte) (map[string]instance, error) {
 				applicationId:       jsonInstance.Application_id,
 				wardenContainerPath: jsonInstance.Warden_container_path,
 				wardenJobId:         jsonInstance.Warden_job_id,
-				index:               jsonInstance.Instance_index}
+				index:               jsonInstance.Instance_index,
+				drainUrls:           extractDrains(jsonInstance.Tags)}
 			instances[instance.identifier()] = instance
 		}
 	}
 
 	return instances, nil
+}
+
+func extractDrains(tags map[string][]string) []string {
+	if drains, ok := tags["syslog_drains"]; !ok || len(drains) == 0 {
+		return nil
+	} else {
+		return drains
+	}
+
 }
