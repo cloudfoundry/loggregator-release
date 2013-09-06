@@ -1,17 +1,30 @@
 package sinks
 
 import (
+	"errors"
 	"fmt"
+	"math"
 	"net"
 	"strings"
 	"sync"
 	"time"
 )
 
+type retryStrategy func(counter int) time.Duration
+
+func newExponentialRetryStrategy() retryStrategy {
+	exponential := func(counter int) time.Duration {
+		duration := math.Pow(2, float64(counter))
+		return time.Duration(int(duration)) * time.Millisecond
+	}
+	return exponential
+}
+
 type writer struct {
-	appId   string
-	network string
-	raddr   string
+	appId         string
+	network       string
+	raddr         string
+	retryStrategy retryStrategy
 
 	mu   sync.Mutex // guards conn
 	conn net.Conn
@@ -62,10 +75,21 @@ func (w *writer) writeAndRetry(p int, s string) (int, error) {
 			return n, err
 		}
 	}
-	if err := w.connect(); err != nil {
+	if err := w.connectWithRetry(1); err != nil {
 		return 0, err
 	}
 	return w.write(p, s)
+}
+
+func (w *writer) connectWithRetry(counter int) error {
+	if counter > 13 {
+		return errors.New("Exceeded maximum wait time for establishing a connection to write to.")
+	}
+	if err := w.connect(); err != nil {
+		time.Sleep(w.retryStrategy(counter))
+		return w.connectWithRetry(counter + 1)
+	}
+	return nil
 }
 
 func (w *writer) write(p int, msg string) (int, error) {
@@ -85,9 +109,10 @@ func (w *writer) write(p int, msg string) (int, error) {
 func dial(network, raddr string, appId string) (*writer, error) {
 
 	w := &writer{
-		appId:   appId,
-		network: network,
-		raddr:   raddr,
+		appId:         appId,
+		network:       network,
+		raddr:         raddr,
+		retryStrategy: newExponentialRetryStrategy(),
 	}
 
 	w.mu.Lock()
