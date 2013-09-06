@@ -5,7 +5,6 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"log/syslog"
 	"sync/atomic"
 )
 
@@ -13,14 +12,14 @@ type syslogSink struct {
 	logger           *gosteno.Logger
 	appId            string
 	drainUrl         string
-	sysLogger        *syslog.Writer
+	sysLogger        *writer
 	sentMessageCount *uint64
 	sentByteCount    *uint64
 	listenerChannel  chan []byte
 }
 
 func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger) (Sink, error) {
-	sysLogger, err := syslog.Dial("tcp", drainUrl, 0, appId)
+	sysLogger, err := dial("tcp", drainUrl, appId)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +37,7 @@ func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger) (
 
 func (sink *syslogSink) Run(closeChan chan chan []byte) {
 	alreadyRequestedClose := false
-	defer sink.sysLogger.Close()
+	defer sink.sysLogger.close()
 
 	for {
 		sink.logger.Debugf("Syslog Sink %s: Waiting for activity", sink.drainUrl)
@@ -56,9 +55,9 @@ func (sink *syslogSink) Run(closeChan chan chan []byte) {
 		}
 		switch message.GetMessageType() {
 		case logmessage.LogMessage_OUT:
-			err = sink.sysLogger.Info(string(message.GetMessage()))
+			_, err = sink.sysLogger.writeStdout(message.GetMessage())
 		case logmessage.LogMessage_ERR:
-			err = sink.sysLogger.Err(string(message.GetMessage()))
+			_, err = sink.sysLogger.writeStderr(message.GetMessage())
 		}
 		if err != nil {
 			sink.logger.Debugf("Syslog Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", sink.drainUrl, err)
