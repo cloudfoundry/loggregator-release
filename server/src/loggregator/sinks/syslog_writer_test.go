@@ -16,11 +16,11 @@ func newSimpleRetryStrategy() retryStrategy {
 
 func TestConnectWithRetry(t *testing.T) {
 	w := &writer{
-		appId:         "appId",
-		network:       "tcp",
-		raddr:         "localhost:3456",
-		retryStrategy: newSimpleRetryStrategy(),
-		logger:        testhelpers.Logger(),
+		appId:                "appId",
+		network:              "tcp",
+		raddr:                "localhost:3456",
+		getNextSleepDuration: newSimpleRetryStrategy(),
+		logger:               testhelpers.Logger(),
 	}
 
 	err := w.connectWithRetry(0)

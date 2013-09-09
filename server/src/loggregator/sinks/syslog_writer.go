@@ -22,11 +22,11 @@ func newExponentialRetryStrategy() retryStrategy {
 }
 
 type writer struct {
-	appId         string
-	network       string
-	raddr         string
-	retryStrategy retryStrategy
-	logger        *gosteno.Logger
+	appId                string
+	network              string
+	raddr                string
+	getNextSleepDuration retryStrategy
+	logger               *gosteno.Logger
 
 	mu   sync.Mutex // guards conn
 	conn net.Conn
@@ -88,8 +88,8 @@ func (w *writer) connectWithRetry(counter int) error {
 		return errors.New("Exceeded maximum wait time for establishing a connection to write to.")
 	}
 	if err := w.connect(); err != nil {
-		w.logger.Warnf("Syslog socket not reachable, retrying in %s", w.retryStrategy(counter))
-		time.Sleep(w.retryStrategy(counter))
+		w.logger.Warnf("Syslog socket on %s not reachable, retrying in %s", w.raddr, w.getNextSleepDuration(counter))
+		time.Sleep(w.getNextSleepDuration(counter))
 		return w.connectWithRetry(counter + 1)
 	}
 	return nil
@@ -112,11 +112,11 @@ func (w *writer) write(p int, msg string) (int, error) {
 func dial(network, raddr string, appId string, logger *gosteno.Logger) (*writer, error) {
 
 	w := &writer{
-		appId:         appId,
-		network:       network,
-		raddr:         raddr,
-		retryStrategy: newExponentialRetryStrategy(),
-		logger:        logger,
+		appId:                appId,
+		network:              network,
+		raddr:                raddr,
+		getNextSleepDuration: newExponentialRetryStrategy(),
+		logger:               logger,
 	}
 
 	w.mu.Lock()
