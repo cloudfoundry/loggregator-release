@@ -4,13 +4,9 @@ import (
 	"bytes"
 	"container/ring"
 	"encoding/binary"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"sync"
 )
-
-type Message struct {
-	length  uint32
-	payload []byte
-}
 
 func newNode(size int) *node {
 	return &node{entries: ring.New(size)}
@@ -20,8 +16,8 @@ type node struct {
 	entries *ring.Ring
 }
 
-func (n *node) addData(d []byte) {
-	n.entries.Value = Message{uint32(len(d)), d}
+func (n *node) addData(d *logmessage.Message) {
+	n.entries.Value = *d
 	n.entries = n.entries.Next()
 }
 
@@ -38,7 +34,7 @@ type MessageStore struct {
 	sync.RWMutex
 }
 
-func (ms *MessageStore) Add(data []byte, appId string) {
+func (ms *MessageStore) Add(message *logmessage.Message, appId string) {
 	ms.Lock()
 	defer ms.Unlock()
 
@@ -48,7 +44,7 @@ func (ms *MessageStore) Add(data []byte, appId string) {
 			app = newNode(ms.size)
 			ms.apps[appId] = app
 		}
-		app.addData(data)
+		app.addData(message)
 	}
 }
 
@@ -59,10 +55,11 @@ func (ms *MessageStore) DumpFor(appId string) []byte {
 	buffer := bytes.NewBufferString("")
 
 	writeEntries := func(m interface{}) {
-		message, _ := m.(Message)
-		if message.length > 0 {
-			binary.Write(buffer, binary.BigEndian, message.length)
-			buffer.Write(message.payload)
+		message, _ := m.(logmessage.Message)
+
+		if rawMessageLength := message.GetRawMessageLength(); rawMessageLength > 0 {
+			binary.Write(buffer, binary.BigEndian, rawMessageLength)
+			buffer.Write(message.GetRawMessage())
 		}
 	}
 	app, appFound := ms.apps[appId]
@@ -70,5 +67,6 @@ func (ms *MessageStore) DumpFor(appId string) []byte {
 		return buffer.Bytes()
 	}
 	app.entries.Do(writeEntries)
+
 	return buffer.Bytes()
 }

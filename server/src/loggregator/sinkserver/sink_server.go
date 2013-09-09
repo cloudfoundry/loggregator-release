@@ -13,7 +13,6 @@ import (
 	"loggregator/sinks"
 	"net/http"
 	"time"
-	"code.google.com/p/gogoprotobuf/proto"
 )
 
 const (
@@ -24,20 +23,22 @@ const (
 type sinkServer struct {
 	logger            *gosteno.Logger
 	dataChannel       chan []byte
+	messageChannel    chan *logmessage.Message
 	drainUrlsForApps  map[string]map[string]sinks.Sink
 	listenHost        string
 	listenerChannels  *groupedchannels.GroupedChannels
 	authorize         authorization.LogAccessAuthorizer
-	sinkCloseChan     chan chan []byte
+	sinkCloseChan     chan chan *logmessage.Message
 	keepAliveInterval time.Duration
 	messageStore      *messagestore.MessageStore
 }
 
 func NewSinkServer(givenChannel chan []byte, messageStore *messagestore.MessageStore, logger *gosteno.Logger, listenHost string, authorize authorization.LogAccessAuthorizer, keepAliveInterval time.Duration) *sinkServer {
 	listeners := groupedchannels.NewGroupedChannels()
-	sinkCloseChan := make(chan chan []byte, 4)
+	sinkCloseChan := make(chan chan *logmessage.Message, 4)
 	drainUrlsForApps := make(map[string]map[string]sinks.Sink, 100)
-	return &sinkServer{logger, givenChannel, drainUrlsForApps, listenHost, listeners, authorize, sinkCloseChan, keepAliveInterval, messageStore}
+	messageChannel := make(chan *logmessage.Message, 2048)
+	return &sinkServer{logger, givenChannel, messageChannel, drainUrlsForApps, listenHost, listeners, authorize, sinkCloseChan, keepAliveInterval, messageStore}
 }
 
 func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
@@ -145,32 +146,38 @@ func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 			sinkServer.listenerChannels.Delete(sin)
 			close(sin)
 			sinkServer.logger.Infof("SinkServer: Sink with channel %v requested closing. Closed it.", sin)
-		case data := <-sinkServer.dataChannel:
-			sinkServer.logger.Debugf("SinkServer: Received %d bytes of data from agent listener.", len(data))
+		case receivedMessage := <-sinkServer.messageChannel:
+			sinkServer.logger.Debugf("SinkServer: Received %d bytes of data from agent listener.", receivedMessage.GetRawMessageLength())
 
-			receivedMessage := new(logmessage.LogMessage)
-			err := proto.Unmarshal(data, receivedMessage)
-			if err != nil {
-				sinkServer.logger.Error(fmt.Sprintf("Log message could not be unmarshaled. Dropping it... Error: %v. Data: %v", err, data))
-				continue
+			appId := receivedMessage.GetLogMessage().GetAppId()
+			if (receivedMessage.GetLogMessage().GetSourceType() == logmessage.LogMessage_WARDEN_CONTAINER) {
+				sinkServer.registerDrainUrls(appId, receivedMessage.GetLogMessage().GetDrainUrls())
 			}
-
-			appId := receivedMessage.GetAppId()
-			if (receivedMessage.GetSourceType() == logmessage.LogMessage_WARDEN_CONTAINER) {
-				sinkServer.registerDrainUrls(appId, receivedMessage.GetDrainUrls())
-			}
-			sinkServer.messageStore.Add(data, appId)
+			sinkServer.messageStore.Add(receivedMessage, appId)
 			sinkServer.logger.Debugf("SinkServer: Searching for sinks with appId [%s].", appId)
 			for _, listenerChannel := range sinkServer.listenerChannels.For(appId) {
 				sinkServer.logger.Debugf("SinkServer: Sending Message to channel %v for sinks targeting [%s].", listenerChannel, appId)
-				listenerChannel <- data
+				listenerChannel <- receivedMessage
 			}
 			sinkServer.logger.Debugf("SinkServer: Done sending message to tail clients.")
 		}
 	}
 }
 
+func (sinkServer *sinkServer) parseMessages() {
+	for {
+		data := <- sinkServer.dataChannel
+		message, err := logmessage.ParseMessage(data)
+		if err != nil {
+			sinkServer.logger.Error(fmt.Sprintf("Log message could not be unmarshaled. Dropping it... Error: %v. Data: %v", err, data))
+			continue
+		}
+		sinkServer.messageChannel <- message
+	}
+}
+
 func (sinkServer *sinkServer) Start() {
+	go sinkServer.parseMessages()
 	go sinkServer.relayMessagesToAllSinks()
 
 	sinkServer.logger.Infof("SinkServer: Listening on port %s", sinkServer.listenHost)

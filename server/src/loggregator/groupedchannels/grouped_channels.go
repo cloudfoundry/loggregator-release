@@ -1,6 +1,7 @@
 package groupedchannels
 
 import (
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"sync"
 )
 
@@ -9,14 +10,14 @@ func NewGroupedChannels() *GroupedChannels {
 }
 
 func newNode() *node {
-	return &node{channelSet: make(map[chan []byte]bool)}
+	return &node{channelSet: make(map[chan *logmessage.Message]bool)}
 }
 
 type node struct {
-	channelSet map[chan []byte]bool
+	channelSet map[chan *logmessage.Message]bool
 }
 
-func (n *node) addChannel(c chan []byte) {
+func (n *node) addChannel(c chan *logmessage.Message) {
 	n.channelSet[c] = true
 }
 
@@ -25,7 +26,7 @@ type GroupedChannels struct {
 	*sync.RWMutex
 }
 
-func (gc *GroupedChannels) Register(c chan []byte, appId string) {
+func (gc *GroupedChannels) Register(c chan *logmessage.Message, appId string) {
 	gc.Lock()
 	defer gc.Unlock()
 
@@ -39,11 +40,11 @@ func (gc *GroupedChannels) Register(c chan []byte, appId string) {
 	}
 }
 
-func (gc *GroupedChannels) For(appId string) (results []chan []byte) {
+func (gc *GroupedChannels) For(appId string) (results []chan *logmessage.Message) {
 	gc.RLock()
 	defer gc.RUnlock()
 
-	results = make([]chan []byte, 0)
+	results = make([]chan *logmessage.Message, 0)
 
 	app, found := gc.apps[appId]
 
@@ -56,7 +57,7 @@ func (gc *GroupedChannels) For(appId string) (results []chan []byte) {
 	return results
 }
 
-func (gc *GroupedChannels) Delete(c chan []byte) {
+func (gc *GroupedChannels) Delete(c chan *logmessage.Message) {
 	gc.Lock()
 	defer gc.Unlock()
 	for _, app := range gc.apps {

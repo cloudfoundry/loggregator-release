@@ -20,6 +20,7 @@ func newExponentialRetryStrategy() retryStrategy {
 	return exponential
 }
 
+// this is derived from log/syslog/syslog.go, that implementation didn't let us override the hostname, now we can!
 type writer struct {
 	appId                string
 	network              string
@@ -48,10 +49,12 @@ func (w *writer) connect() (err error) {
 }
 
 func (w *writer) writeStdout(b []byte) (int, error) {
+	// 6 is int value of LOG_NOTICE
 	return w.writeAndRetry(6, string(b))
 }
 
 func (w *writer) writeStderr(b []byte) (int, error) {
+	// 3 is int value of LOG_ERR
 	return w.writeAndRetry(3, string(b))
 }
 

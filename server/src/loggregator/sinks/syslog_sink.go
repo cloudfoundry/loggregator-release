@@ -1,7 +1,6 @@
 package sinks
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
@@ -16,7 +15,7 @@ type syslogSink struct {
 	sysLogger        *writer
 	sentMessageCount *uint64
 	sentByteCount    *uint64
-	listenerChannel  chan []byte
+	listenerChannel  chan *logmessage.Message
 }
 
 func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger) (Sink, error) {
@@ -37,33 +36,30 @@ func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger) (
 		logger:           givenLogger,
 		sentMessageCount: new(uint64),
 		sentByteCount:    new(uint64),
-		listenerChannel:  make(chan []byte),
+		listenerChannel:  make(chan *logmessage.Message),
 	}, nil
 }
 
-func (sink *syslogSink) Run(closeChan chan chan []byte) {
+func (sink *syslogSink) Run(closeChan chan chan *logmessage.Message) {
 	alreadyRequestedClose := false
 	defer sink.sysLogger.close()
 
 	for {
 		sink.logger.Debugf("Syslog Sink %s: Waiting for activity", sink.drainUrl)
-		data, ok := <-sink.listenerChannel
+		message, ok := <-sink.listenerChannel
 		if !ok {
 			sink.logger.Debugf("Syslog Sink %s: Closed listener channel detected. Closing.", sink.drainUrl)
 			return
 		}
-		sink.logger.Debugf("Syslog Sink %s: Got %d bytes. Sending data", sink.drainUrl, len(data))
-		message := new(logmessage.LogMessage)
-		err := proto.Unmarshal(data, message)
-		if err != nil {
-			sink.logger.Debugf("Syslog Sink %s: Could not unmarshal a logmessage dropping it, %v", sink.drainUrl, err)
-			continue
-		}
-		switch message.GetMessageType() {
+		sink.logger.Debugf("Syslog Sink %s: Got %d bytes. Sending data", sink.drainUrl, message.GetRawMessageLength())
+
+		var err error
+
+		switch message.GetLogMessage().GetMessageType() {
 		case logmessage.LogMessage_OUT:
-			_, err = sink.sysLogger.writeStdout(message.GetMessage())
+			_, err = sink.sysLogger.writeStdout(message.GetRawMessage())
 		case logmessage.LogMessage_ERR:
-			_, err = sink.sysLogger.writeStderr(message.GetMessage())
+			_, err = sink.sysLogger.writeStderr(message.GetRawMessage())
 		}
 		if err != nil {
 			sink.logger.Debugf("Syslog Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", sink.drainUrl, err)
@@ -77,12 +73,12 @@ func (sink *syslogSink) Run(closeChan chan chan []byte) {
 		} else {
 			sink.logger.Debugf("Syslog Sink %s: Successfully sent data", sink.drainUrl)
 			atomic.AddUint64(sink.sentMessageCount, 1)
-			atomic.AddUint64(sink.sentByteCount, uint64(len(data)))
+			atomic.AddUint64(sink.sentByteCount, uint64(message.GetRawMessageLength()))
 		}
 	}
 }
 
-func (s *syslogSink) ListenerChannel() chan []byte {
+func (s *syslogSink) ListenerChannel() chan *logmessage.Message {
 	return s.listenerChannel
 }
 

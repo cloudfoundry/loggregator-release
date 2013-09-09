@@ -1,6 +1,7 @@
 package groupedchannels
 
 import (
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -8,7 +9,7 @@ import (
 func TestRegisterAndFor(t *testing.T) {
 	groupedChannels := NewGroupedChannels()
 
-	appChannel := make(chan []byte)
+	appChannel := make(chan *logmessage.Message)
 	appId := "789"
 	groupedChannels.Register(appChannel, appId)
 
@@ -28,8 +29,8 @@ func TestDeleteForOrgSpaceApp(t *testing.T) {
 	groupedChannels := NewGroupedChannels()
 	target := "789"
 
-	channel1 := make(chan []byte)
-	channel2 := make(chan []byte)
+	channel1 := make(chan *logmessage.Message)
+	channel2 := make(chan *logmessage.Message)
 
 	groupedChannels.Register(channel1, target)
 	groupedChannels.Register(channel2, target)
@@ -43,15 +44,15 @@ func TestDeleteForOrgSpaceApp(t *testing.T) {
 
 func TestTotalNumberOfChannels(t *testing.T) {
 	groupedChannels := NewGroupedChannels()
-	channel1 := make(chan []byte)
+	channel1 := make(chan *logmessage.Message)
 	appId1 := "1"
 	groupedChannels.Register(channel1, appId1)
 
-	channel2 := make(chan []byte)
+	channel2 := make(chan *logmessage.Message)
 	appId2 := "2"
 	groupedChannels.Register(channel2, appId2)
 
-	channel3 := make(chan []byte)
+	channel3 := make(chan *logmessage.Message)
 	appId3 := "3"
 	groupedChannels.Register(channel3, appId3)
 
