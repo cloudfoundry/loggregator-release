@@ -102,10 +102,9 @@ func (w *writer) write(p int, msg string) (int, error) {
 	}
 
 	timestamp := time.Now().Format(time.RFC3339)
-	fmt.Fprintf(w.conn, "<%d>%s %s %s: %s%s",
+	return fmt.Fprintf(w.conn, "<%d>%s %s %s: %s%s",
 		p, timestamp, "loggregator",
 		w.appId, msg, nl)
-	return len(msg), nil
 }
 
 func dial(network, raddr string, appId string, logger *gosteno.Logger) (*writer, error) {
