@@ -25,7 +25,7 @@ func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger) (
 	if err != nil {
 		return nil, err
 	}
-	sysLogger, err := dial("tcp", dl.Host, appId)
+	sysLogger, err := dial("tcp", dl.Host, appId, givenLogger)
 	if err != nil {
 		return nil, err
 	}

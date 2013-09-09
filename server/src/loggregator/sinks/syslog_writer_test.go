@@ -2,6 +2,7 @@ package sinks
 
 import (
 	"github.com/stretchr/testify/assert"
+	testhelpers "server_testhelpers"
 	"testing"
 	"time"
 )
@@ -19,6 +20,7 @@ func TestConnectWithRetry(t *testing.T) {
 		network:       "tcp",
 		raddr:         "localhost:3456",
 		retryStrategy: newSimpleRetryStrategy(),
+		logger:        testhelpers.Logger(),
 	}
 
 	err := w.connectWithRetry(0)

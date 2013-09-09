@@ -3,6 +3,7 @@ package sinks
 import (
 	"errors"
 	"fmt"
+	"github.com/cloudfoundry/gosteno"
 	"math"
 	"net"
 	"strings"
@@ -25,6 +26,7 @@ type writer struct {
 	network       string
 	raddr         string
 	retryStrategy retryStrategy
+	logger        *gosteno.Logger
 
 	mu   sync.Mutex // guards conn
 	conn net.Conn
@@ -86,6 +88,7 @@ func (w *writer) connectWithRetry(counter int) error {
 		return errors.New("Exceeded maximum wait time for establishing a connection to write to.")
 	}
 	if err := w.connect(); err != nil {
+		w.logger.Warnf("Syslog socket not reachable, retrying in %s", w.retryStrategy(counter))
 		time.Sleep(w.retryStrategy(counter))
 		return w.connectWithRetry(counter + 1)
 	}
@@ -106,13 +109,14 @@ func (w *writer) write(p int, msg string) (int, error) {
 	return len(msg), nil
 }
 
-func dial(network, raddr string, appId string) (*writer, error) {
+func dial(network, raddr string, appId string, logger *gosteno.Logger) (*writer, error) {
 
 	w := &writer{
 		appId:         appId,
 		network:       network,
 		raddr:         raddr,
 		retryStrategy: newExponentialRetryStrategy(),
+		logger:        logger,
 	}
 
 	w.mu.Lock()
