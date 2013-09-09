@@ -103,8 +103,9 @@ func (w *writer) write(p int, msg string) (int, error) {
 	if !strings.HasSuffix(msg, "\n") {
 		nl = "\n"
 	}
-
-	timestamp := time.Now().Format(time.RFC3339)
+	now := time.Now()
+	w.conn.SetWriteDeadline(now.Add(1 * time.Second))
+	timestamp := now.Format(time.RFC3339)
 	return fmt.Fprintf(w.conn, "<%d>%s %s %s: %s%s",
 		p, timestamp, "loggregator",
 		w.appId, msg, nl)
