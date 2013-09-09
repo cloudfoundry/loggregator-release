@@ -2,8 +2,8 @@ package server_testhelpers
 
 import (
 	"bytes"
-	"code.google.com/p/gogoprotobuf/proto"
 	"code.google.com/p/go.net/websocket"
+	"code.google.com/p/gogoprotobuf/proto"
 	"encoding/binary"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
@@ -88,7 +88,7 @@ func MarshalledLogMessage(t *testing.T, messageString string, appId string) []by
 	return message
 }
 
-func MarshalledDrainedLogMessage(t *testing.T, messageString string, appId string, drainUrls... string) []byte {
+func MarshalledDrainedLogMessage(t *testing.T, messageString string, appId string, drainUrls ...string) []byte {
 	currentTime := time.Now()
 
 	messageType := logmessage.LogMessage_OUT
@@ -108,7 +108,7 @@ func MarshalledDrainedLogMessage(t *testing.T, messageString string, appId strin
 	return message
 }
 
-func MarshalledDrainedNonWardenLogMessage(t *testing.T, messageString string, appId string, drainUrls... string) []byte {
+func MarshalledDrainedNonWardenLogMessage(t *testing.T, messageString string, appId string, drainUrls ...string) []byte {
 	currentTime := time.Now()
 
 	messageType := logmessage.LogMessage_OUT

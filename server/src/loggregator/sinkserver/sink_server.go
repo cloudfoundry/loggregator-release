@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/appid"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"loggregator/authorization"
 	"loggregator/groupedchannels"
 	"loggregator/messagestore"
@@ -95,9 +95,8 @@ func (sinkServer *sinkServer) dumpHandler(rw http.ResponseWriter, req *http.Requ
 	rw.Write(sinkServer.messageStore.DumpFor(appId))
 }
 
-
-func contains(valueToFind string , values []string) bool {
-	for _, value := range(values) {
+func contains(valueToFind string, values []string) bool {
+	for _, value := range values {
 		if valueToFind == value {
 			return true
 		}
@@ -107,7 +106,7 @@ func contains(valueToFind string , values []string) bool {
 
 func (sinkServer *sinkServer) registerDrainUrls(appId string, drainUrls []string) {
 	if len(drainUrls) == 0 {
-		for _, sink := range(sinkServer.drainUrlsForApps[appId]) {
+		for _, sink := range sinkServer.drainUrlsForApps[appId] {
 			sinkServer.listenerChannels.Delete(sink.ListenerChannel())
 			close(sink.ListenerChannel())
 		}
@@ -117,7 +116,7 @@ func (sinkServer *sinkServer) registerDrainUrls(appId string, drainUrls []string
 	if sinkServer.drainUrlsForApps[appId] == nil {
 		sinkServer.drainUrlsForApps[appId] = make(map[string]sinks.Sink, len(drainUrls))
 	}
-	for _, sink := range(sinkServer.drainUrlsForApps[appId]) {
+	for _, sink := range sinkServer.drainUrlsForApps[appId] {
 		if contains(sink.Identifier(), drainUrls) {
 			continue
 		}
@@ -125,10 +124,10 @@ func (sinkServer *sinkServer) registerDrainUrls(appId string, drainUrls []string
 		close(sink.ListenerChannel())
 		delete(sinkServer.drainUrlsForApps[appId], sink.Identifier())
 	}
-	for _, drainUrl := range(drainUrls) {
+	for _, drainUrl := range drainUrls {
 		if sinkServer.drainUrlsForApps[appId][drainUrl] == nil {
 			s, err := sinks.NewSyslogSink(appId, drainUrl, sinkServer.logger)
-			if (err != nil) {
+			if err != nil {
 				sinkServer.logger.Error(err.Error())
 				continue
 			}
@@ -150,7 +149,7 @@ func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 			sinkServer.logger.Debugf("SinkServer: Received %d bytes of data from agent listener.", receivedMessage.GetRawMessageLength())
 
 			appId := receivedMessage.GetLogMessage().GetAppId()
-			if (receivedMessage.GetLogMessage().GetSourceType() == logmessage.LogMessage_WARDEN_CONTAINER) {
+			if receivedMessage.GetLogMessage().GetSourceType() == logmessage.LogMessage_WARDEN_CONTAINER {
 				sinkServer.registerDrainUrls(appId, receivedMessage.GetLogMessage().GetDrainUrls())
 			}
 			sinkServer.messageStore.Add(receivedMessage, appId)
@@ -166,7 +165,7 @@ func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 
 func (sinkServer *sinkServer) parseMessages() {
 	for {
-		data := <- sinkServer.dataChannel
+		data := <-sinkServer.dataChannel
 		message, err := logmessage.ParseMessage(data)
 		if err != nil {
 			sinkServer.logger.Error(fmt.Sprintf("Log message could not be unmarshaled. Dropping it... Error: %v. Data: %v", err, data))

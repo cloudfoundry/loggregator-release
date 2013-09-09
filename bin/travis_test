@@ -15,20 +15,28 @@ function red {
 packages=(
     deaagent
     deaagent/deaagent
+    deaagent_testhelpers
     loggregator
     loggregator/authorization
     loggregator/groupedchannels
     loggregator/loggregator
     loggregator/messagestore
     loggregator/sinks
+    loggregator/sinkserver
+    server_testhelpers
     loggregatorrouter
     loggregatorrouter/loggregatorrouter
     github.com/cloudfoundry/loggregatorlib/agentlistener
+    github.com/cloudfoundry/loggregatorlib/appid
     github.com/cloudfoundry/loggregatorlib/cfcomponent
+    github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation
+    github.com/cloudfoundry/loggregatorlib/cfcomponent/localip
+    github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar
+    github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar
     github.com/cloudfoundry/loggregatorlib/emitter
+    github.com/cloudfoundry/loggregatorlib/lib_testhelpers
     github.com/cloudfoundry/loggregatorlib/loggregatorclient
     github.com/cloudfoundry/loggregatorlib/logmessage
-    github.com/cloudfoundry/loggregatorlib/appid
     github.com/cloudfoundry/loggregatorlib/servernamer
 )
 

@@ -2,9 +2,9 @@ package deaagent_testhelpers
 
 import (
 	"code.google.com/p/gogoprotobuf/proto"
+	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"os"
-	"github.com/cloudfoundry/gosteno"
 	"testing"
 )
 
@@ -18,7 +18,6 @@ func GetBackendMessage(t *testing.T, data *[]byte) *logmessage.LogMessage {
 	}
 	return receivedMessage
 }
-
 
 func Logger() *gosteno.Logger {
 	return getLogger(false)
