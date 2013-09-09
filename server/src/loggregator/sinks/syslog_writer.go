@@ -1,7 +1,6 @@
 package sinks
 
 import (
-	"errors"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"math"
@@ -41,7 +40,7 @@ func (w *writer) connect() (err error) {
 		w.conn = nil
 	}
 	var c net.Conn
-	c, err = net.Dial(w.network, w.raddr)
+	c, err = net.DialTimeout(w.network, w.raddr, 1*time.Second)
 	if err == nil {
 		w.conn = c
 	}
@@ -85,10 +84,10 @@ func (w *writer) writeAndRetry(p int, s string) (int, error) {
 
 func (w *writer) connectWithRetry(counter int) error {
 	if counter > 13 {
-		return errors.New("Exceeded maximum wait time for establishing a connection to write to.")
+		return fmt.Errorf("Exceeded maximum number of tries (13) establishing a connection to %s.", w.raddr)
 	}
 	if err := w.connect(); err != nil {
-		w.logger.Warnf("Syslog socket on %s not reachable, retrying in %s", w.raddr, w.getNextSleepDuration(counter))
+		w.logger.Warnf("Syslog socket on %s not reachable, retrying in %s. error: %s", w.raddr, w.getNextSleepDuration(counter), err)
 		time.Sleep(w.getNextSleepDuration(counter))
 		return w.connectWithRetry(counter + 1)
 	}
