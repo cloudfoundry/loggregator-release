@@ -100,10 +100,8 @@ func main() {
 
 	authorizer := authorization.NewLogAccessAuthorizer(config.decoder, config.ApiHost)
 	sinkServer := sinkserver.NewSinkServer(
-		incomingData,
 		messagestore.NewMessageStore(config.MaxRetainedLogMessages),
 		logger,
-		fmt.Sprintf("0.0.0.0:%d", config.WebPort),
 		authorizer,
 		30*time.Second,
 	)
@@ -145,7 +143,7 @@ func main() {
 		}
 	}()
 
-	go sinkServer.Start()
+	go sinkServer.Start(incomingData, fmt.Sprintf("0.0.0.0:%d", config.WebPort))
 
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Kill)

@@ -78,7 +78,7 @@ func (sink *syslogSink) Run(closeChan chan Sink) {
 	}
 }
 
-func (s *syslogSink) ListenerChannel() chan *logmessage.Message {
+func (s *syslogSink) Channel() chan *logmessage.Message {
 	return s.listenerChannel
 }
 

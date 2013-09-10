@@ -50,7 +50,7 @@ func (sink *websocketSink) keepAliveChannel() <-chan bool {
 	return keepAliveChan
 }
 
-func (sink *websocketSink) ListenerChannel() chan *logmessage.Message {
+func (sink *websocketSink) Channel() chan *logmessage.Message {
 	return sink.listenerChannel
 }
 

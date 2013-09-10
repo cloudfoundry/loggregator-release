@@ -9,6 +9,6 @@ type Sink interface {
 	instrumentation.Instrumentable
 	AppId() string
 	Run(sinkCloseChan chan Sink)
-	ListenerChannel() chan *logmessage.Message
+	Channel() chan *logmessage.Message
 	Identifier() string
 }

@@ -21,24 +21,34 @@ const (
 )
 
 type sinkServer struct {
-	logger            *gosteno.Logger
-	dataChannel       chan []byte
-	messageChannel    chan *logmessage.Message
-	drainUrlsForApps  map[string]map[string]sinks.Sink
-	listenHost        string
-	listenerChannels  *groupedchannels.GroupedChannels
-	authorize         authorization.LogAccessAuthorizer
+	parsedMessageChan chan *logmessage.Message
 	sinkCloseChan     chan sinks.Sink
+
+	activeSinksChans  *groupedchannels.GroupedChannels
+	messageStore     *messagestore.MessageStore
+	drainUrlsForApps map[string]map[string]sinks.Sink
+
+	authorize         authorization.LogAccessAuthorizer
 	keepAliveInterval time.Duration
-	messageStore      *messagestore.MessageStore
+
+	logger *gosteno.Logger
 }
 
-func NewSinkServer(givenChannel chan []byte, messageStore *messagestore.MessageStore, logger *gosteno.Logger, listenHost string, authorize authorization.LogAccessAuthorizer, keepAliveInterval time.Duration) *sinkServer {
-	listeners := groupedchannels.NewGroupedChannels()
+func NewSinkServer(messageStore *messagestore.MessageStore, logger *gosteno.Logger, authorize authorization.LogAccessAuthorizer, keepAliveInterval time.Duration) *sinkServer {
+	activeSinks := groupedchannels.NewGroupedChannels()
 	sinkCloseChan := make(chan sinks.Sink, 4)
 	drainUrlsForApps := make(map[string]map[string]sinks.Sink, 100)
 	messageChannel := make(chan *logmessage.Message, 2048)
-	return &sinkServer{logger, givenChannel, messageChannel, drainUrlsForApps, listenHost, listeners, authorize, sinkCloseChan, keepAliveInterval, messageStore}
+
+	return &sinkServer{
+		logger:            logger,
+		parsedMessageChan: messageChannel,
+		drainUrlsForApps:  drainUrlsForApps,
+		activeSinksChans:  activeSinks,
+		authorize:         authorize,
+		sinkCloseChan:     sinkCloseChan,
+		keepAliveInterval: keepAliveInterval,
+		messageStore:      messageStore}
 }
 
 func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
@@ -70,7 +80,7 @@ func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 
 	s := sinks.NewWebsocketSink(appId, sinkServer.logger, ws, clientAddress, sinkServer.keepAliveInterval)
 
-	sinkServer.listenerChannels.Register(s.ListenerChannel(), appId)
+	sinkServer.activeSinksChans.Register(s.Channel(), appId)
 	s.Run(sinkServer.sinkCloseChan)
 }
 
@@ -107,8 +117,8 @@ func contains(valueToFind string, values []string) bool {
 func (sinkServer *sinkServer) registerDrainUrls(appId string, drainUrls []string) {
 	if len(drainUrls) == 0 {
 		for _, sink := range sinkServer.drainUrlsForApps[appId] {
-			sinkServer.listenerChannels.Delete(sink.ListenerChannel())
-			close(sink.ListenerChannel())
+			sinkServer.activeSinksChans.Delete(sink.Channel())
+			close(sink.Channel())
 		}
 		delete(sinkServer.drainUrlsForApps, appId)
 		return
@@ -120,8 +130,8 @@ func (sinkServer *sinkServer) registerDrainUrls(appId string, drainUrls []string
 		if contains(sink.Identifier(), drainUrls) {
 			continue
 		}
-		sinkServer.listenerChannels.Delete(sink.ListenerChannel())
-		close(sink.ListenerChannel())
+		sinkServer.activeSinksChans.Delete(sink.Channel())
+		close(sink.Channel())
 		delete(sinkServer.drainUrlsForApps[appId], sink.Identifier())
 	}
 	for _, drainUrl := range drainUrls {
@@ -132,7 +142,7 @@ func (sinkServer *sinkServer) registerDrainUrls(appId string, drainUrls []string
 				continue
 			}
 			go s.Run(sinkServer.sinkCloseChan)
-			sinkServer.listenerChannels.Register(s.ListenerChannel(), appId)
+			sinkServer.activeSinksChans.Register(s.Channel(), appId)
 			sinkServer.drainUrlsForApps[appId][drainUrl] = s
 		}
 	}
@@ -142,48 +152,53 @@ func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 	for {
 		select {
 		case s := <-sinkServer.sinkCloseChan:
-			sinkServer.listenerChannels.Delete(s.ListenerChannel())
+			sinkServer.activeSinksChans.Delete(s.Channel())
 			delete(sinkServer.drainUrlsForApps[s.AppId()], s.Identifier())
-			close(s.ListenerChannel())
-			sinkServer.logger.Infof("SinkServer: Sink with channel %v requested closing. Closed it.", s.ListenerChannel())
-		case receivedMessage := <-sinkServer.messageChannel:
+			close(s.Channel())
+			sinkServer.logger.Infof("SinkServer: Sink with channel %v requested closing. Closed it.", s.Channel())
+		case receivedMessage := <-sinkServer.parsedMessageChan:
 			sinkServer.logger.Debugf("SinkServer: Received %d bytes of data from agent listener.", receivedMessage.GetRawMessageLength())
 
+			//drain management
 			appId := receivedMessage.GetLogMessage().GetAppId()
 			if receivedMessage.GetLogMessage().GetSourceType() == logmessage.LogMessage_WARDEN_CONTAINER {
 				sinkServer.registerDrainUrls(appId, receivedMessage.GetLogMessage().GetDrainUrls())
 			}
+
+			//dump management
 			sinkServer.messageStore.Add(receivedMessage, appId)
+
+			//send to drains and sinks
 			sinkServer.logger.Debugf("SinkServer: Searching for sinks with appId [%s].", appId)
-			for _, listenerChannel := range sinkServer.listenerChannels.For(appId) {
-				sinkServer.logger.Debugf("SinkServer: Sending Message to channel %v for sinks targeting [%s].", listenerChannel, appId)
-				listenerChannel <- receivedMessage
+			for _, sinkChan := range sinkServer.activeSinksChans.For(appId) {
+				sinkServer.logger.Debugf("SinkServer: Sending Message to channel %v for sinks targeting [%s].", sinkChan, appId)
+				sinkChan <- receivedMessage
 			}
 			sinkServer.logger.Debugf("SinkServer: Done sending message to tail clients.")
 		}
 	}
 }
 
-func (sinkServer *sinkServer) parseMessages() {
+func (sinkServer *sinkServer) parseMessages(incomingProtobufChan <-chan []byte) {
 	for {
-		data := <-sinkServer.dataChannel
+		data := <-incomingProtobufChan
 		message, err := logmessage.ParseMessage(data)
 		if err != nil {
 			sinkServer.logger.Error(fmt.Sprintf("Log message could not be unmarshaled. Dropping it... Error: %v. Data: %v", err, data))
 			continue
 		}
-		sinkServer.messageChannel <- message
+		sinkServer.parsedMessageChan <- message
 	}
 }
 
-func (sinkServer *sinkServer) Start() {
-	go sinkServer.parseMessages()
+func (sinkServer *sinkServer) Start(incomingProtobufChan <-chan []byte, apiEndpoint string) {
+	go sinkServer.parseMessages(incomingProtobufChan)
 	go sinkServer.relayMessagesToAllSinks()
 
-	sinkServer.logger.Infof("SinkServer: Listening on port %s", sinkServer.listenHost)
+	sinkServer.logger.Infof("SinkServer: Listening for sinks at %s", apiEndpoint)
 	http.Handle(TAIL_PATH, websocket.Handler(sinkServer.sinkRelayHandler))
 	http.HandleFunc(DUMP_PATH, sinkServer.dumpHandler)
-	err := http.ListenAndServe(sinkServer.listenHost, nil)
+	err := http.ListenAndServe(apiEndpoint, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -191,7 +206,7 @@ func (sinkServer *sinkServer) Start() {
 
 func (sinkServer *sinkServer) metrics() []instrumentation.Metric {
 	return []instrumentation.Metric{
-		instrumentation.Metric{Name: "numberOfSinks", Value: sinkServer.listenerChannels.NumberOfChannels()},
+		instrumentation.Metric{Name: "numberOfSinks", Value: sinkServer.activeSinksChans.NumberOfChannels()},
 	}
 }
 

@@ -16,8 +16,8 @@ func TestEndtoEndMessage(t *testing.T) {
 	logger := gosteno.NewLogger("TestLogger")
 	listener := agentlistener.NewAgentListener("localhost:3456", logger)
 	dataChannel := listener.Start()
-	sinkServer := sinkserver.NewSinkServer(dataChannel, messagestore.NewMessageStore(10), logger, "localhost:8081", testhelpers.SuccessfulAuthorizer, 30*time.Second)
-	go sinkServer.Start()
+	sinkServer := sinkserver.NewSinkServer(messagestore.NewMessageStore(10), logger, testhelpers.SuccessfulAuthorizer, 30*time.Second)
+	go sinkServer.Start(dataChannel, "localhost:8081")
 	time.Sleep(1 * time.Millisecond)
 
 	receivedChan := make(chan []byte)

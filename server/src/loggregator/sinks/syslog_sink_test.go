@@ -43,7 +43,7 @@ func TestThatItSendsStdOutAsInfo(t *testing.T) {
 	go sink.Run(closeChan)
 	logMessage, err := logmessage.ParseMessage(testhelpers.MarshalledLogMessage(t, "hi", "appId"))
 	assert.NoError(t, err)
-	sink.ListenerChannel() <- logMessage
+	sink.Channel() <- logMessage
 	data := <-dataReadChannel
 	assert.Contains(t, string(data), "<6>")
 	assert.Contains(t, string(data), "appId")
@@ -57,7 +57,7 @@ func TestThatItSendsStdErrAsErr(t *testing.T) {
 	go sink.Run(closeChan)
 	logMessage, err := logmessage.ParseMessage(testhelpers.MarshalledErrorLogMessage(t, "err", "appId"))
 	assert.NoError(t, err)
-	sink.ListenerChannel() <- logMessage
+	sink.Channel() <- logMessage
 	data := <-dataReadChannel
 	assert.Contains(t, string(data), "<3>")
 	assert.Contains(t, string(data), "appId")
