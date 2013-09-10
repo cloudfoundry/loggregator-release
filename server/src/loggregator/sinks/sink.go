@@ -7,7 +7,8 @@ import (
 
 type Sink interface {
 	instrumentation.Instrumentable
-	Run(sinkCloseChan chan chan *logmessage.Message)
+	AppId() string
+	Run(sinkCloseChan chan Sink)
 	ListenerChannel() chan *logmessage.Message
 	Identifier() string
 }

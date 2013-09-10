@@ -58,7 +58,11 @@ func (sink *websocketSink) Identifier() string {
 	return sink.clientAddress.String()
 }
 
-func (sink *websocketSink) Run(sinkCloseChan chan chan *logmessage.Message) {
+func (sink *websocketSink) AppId() string {
+	return sink.appId
+}
+
+func (sink *websocketSink) Run(sinkCloseChan chan Sink) {
 	sink.logger.Debugf("Websocket Sink %s: Created for appId [%s]", sink.clientAddress, sink.appId)
 
 	keepAliveChan := sink.keepAliveChannel()
@@ -75,7 +79,7 @@ func (sink *websocketSink) Run(sinkCloseChan chan chan *logmessage.Message) {
 		case <-time.After(sink.keepAliveInterval):
 			sink.logger.Debugf("Websocket Sink %s: No keep keep-alive received. Requesting close.", sink.clientAddress)
 			if !alreadyRequestedClose {
-				sinkCloseChan <- sink.listenerChannel
+				sinkCloseChan <- sink
 				alreadyRequestedClose = true
 				sink.logger.Debugf("Websocket Sink %s: Successfully requested listener channel close", sink.clientAddress)
 			} else {
@@ -94,7 +98,7 @@ func (sink *websocketSink) Run(sinkCloseChan chan chan *logmessage.Message) {
 			if err != nil {
 				sink.logger.Debugf("Websocket Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", sink.clientAddress, err)
 				if !alreadyRequestedClose {
-					sinkCloseChan <- sink.listenerChannel
+					sinkCloseChan <- sink
 					alreadyRequestedClose = true
 					sink.logger.Debugf("Websocket Sink %s: Successfully requested listener channel close", sink.clientAddress)
 				} else {

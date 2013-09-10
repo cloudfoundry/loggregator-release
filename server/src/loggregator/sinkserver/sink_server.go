@@ -28,14 +28,14 @@ type sinkServer struct {
 	listenHost        string
 	listenerChannels  *groupedchannels.GroupedChannels
 	authorize         authorization.LogAccessAuthorizer
-	sinkCloseChan     chan chan *logmessage.Message
+	sinkCloseChan     chan sinks.Sink
 	keepAliveInterval time.Duration
 	messageStore      *messagestore.MessageStore
 }
 
 func NewSinkServer(givenChannel chan []byte, messageStore *messagestore.MessageStore, logger *gosteno.Logger, listenHost string, authorize authorization.LogAccessAuthorizer, keepAliveInterval time.Duration) *sinkServer {
 	listeners := groupedchannels.NewGroupedChannels()
-	sinkCloseChan := make(chan chan *logmessage.Message, 4)
+	sinkCloseChan := make(chan sinks.Sink, 4)
 	drainUrlsForApps := make(map[string]map[string]sinks.Sink, 100)
 	messageChannel := make(chan *logmessage.Message, 2048)
 	return &sinkServer{logger, givenChannel, messageChannel, drainUrlsForApps, listenHost, listeners, authorize, sinkCloseChan, keepAliveInterval, messageStore}
@@ -141,10 +141,11 @@ func (sinkServer *sinkServer) registerDrainUrls(appId string, drainUrls []string
 func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 	for {
 		select {
-		case sin := <-sinkServer.sinkCloseChan:
-			sinkServer.listenerChannels.Delete(sin)
-			close(sin)
-			sinkServer.logger.Infof("SinkServer: Sink with channel %v requested closing. Closed it.", sin)
+		case s := <-sinkServer.sinkCloseChan:
+			sinkServer.listenerChannels.Delete(s.ListenerChannel())
+			delete(sinkServer.drainUrlsForApps[s.AppId()], s.Identifier())
+			close(s.ListenerChannel())
+			sinkServer.logger.Infof("SinkServer: Sink with channel %v requested closing. Closed it.", s.ListenerChannel())
 		case receivedMessage := <-sinkServer.messageChannel:
 			sinkServer.logger.Debugf("SinkServer: Received %d bytes of data from agent listener.", receivedMessage.GetRawMessageLength())
 

@@ -40,7 +40,7 @@ func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger) (
 	}, nil
 }
 
-func (sink *syslogSink) Run(closeChan chan chan *logmessage.Message) {
+func (sink *syslogSink) Run(closeChan chan Sink) {
 	alreadyRequestedClose := false
 	defer sink.sysLogger.close()
 
@@ -62,10 +62,10 @@ func (sink *syslogSink) Run(closeChan chan chan *logmessage.Message) {
 			_, err = sink.sysLogger.writeStderr(message.GetRawMessage())
 		}
 		if err != nil {
-			sink.logger.Debugf("Syslog Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", sink.drainUrl, err)
+			sink.logger.Debugf("Syslog Sink %s: Error when trying to send data to sink. Requesting close. Err: %v", sink.drainUrl, err)
 			if !alreadyRequestedClose {
-				closeChan <- sink.listenerChannel
 				alreadyRequestedClose = true
+				closeChan <- sink
 				sink.logger.Debugf("Syslog Sink %s: Successfully requested listener channel close", sink.drainUrl)
 			} else {
 				sink.logger.Debugf("Syslog Sink %s: Previously requested close. Doing nothing", sink.drainUrl)
@@ -84,6 +84,10 @@ func (s *syslogSink) ListenerChannel() chan *logmessage.Message {
 
 func (s *syslogSink) Identifier() string {
 	return s.drainUrl
+}
+
+func (s *syslogSink) AppId() string {
+	return s.appId
 }
 
 func (sink *syslogSink) Emit() instrumentation.Context {
