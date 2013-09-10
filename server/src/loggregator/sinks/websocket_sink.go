@@ -64,6 +64,9 @@ func (sink *websocketSink) Run(sinkCloseChan chan chan *logmessage.Message) {
 	keepAliveChan := sink.keepAliveChannel()
 	alreadyRequestedClose := false
 
+	outMessageChan := make(chan *logmessage.Message, 10)
+	go OverwritingMessageChannel(sink.listenerChannel, outMessageChan, sink.logger)
+
 	for {
 		sink.logger.Debugf("Websocket Sink %s: Waiting for activity", sink.clientAddress)
 		select {
@@ -79,7 +82,7 @@ func (sink *websocketSink) Run(sinkCloseChan chan chan *logmessage.Message) {
 				sink.logger.Debugf("Websocket Sink %s: Previously requested close. Doing nothing", sink.clientAddress)
 			}
 			return
-		case message, ok := <-sink.listenerChannel:
+		case message, ok := <-outMessageChan:
 			if !ok {
 				sink.logger.Debugf("Websocket Sink %s: Closed listener channel detected. Closing websocket", sink.clientAddress)
 				sink.ws.Close()
