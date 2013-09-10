@@ -8,6 +8,7 @@ import (
 	"loggregator/messagestore"
 	"net"
 	"net/http"
+	"regexp"
 	testhelpers "server_testhelpers"
 	"testing"
 	"time"
@@ -417,7 +418,7 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 		assert.Contains(t, string(message), expectedMessageString)
 	}
 
-	expectedSecondMessageString := "Some More Data"
+	expectedSecondMessageString := "loggregator myApp: loggregator myApp: Some More Data"
 	expectedSecondMarshalledProtoBuffer := testhelpers.MarshalledDrainedNonWardenLogMessage(t, expectedSecondMessageString, "myApp", "syslog://localhost:34540")
 
 	dataReadChannel <- expectedSecondMarshalledProtoBuffer
@@ -426,7 +427,8 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 	case <-time.After(200 * time.Millisecond):
 		t.Errorf("Did not get message 2")
 	case message := <-client1ReceivedChan:
-		assert.Contains(t, string(message), expectedSecondMessageString)
+		matched, _ := regexp.MatchString(`<6>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}-\d{2}:\d{2} loggregator myApp: loggregator myApp: loggregator myApp: Some More Data`, string(message))
+		assert.True(t, matched, string(message))
 	case <-client2ReceivedChan:
 		t.Error("Should not have gotten the new message in this drain")
 	}

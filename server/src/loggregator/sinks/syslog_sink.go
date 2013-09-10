@@ -57,9 +57,9 @@ func (sink *syslogSink) Run(closeChan chan Sink) {
 
 		switch message.GetLogMessage().GetMessageType() {
 		case logmessage.LogMessage_OUT:
-			_, err = sink.sysLogger.writeStdout(message.GetRawMessage())
+			_, err = sink.sysLogger.writeStdout(message.GetLogMessage().GetMessage())
 		case logmessage.LogMessage_ERR:
-			_, err = sink.sysLogger.writeStderr(message.GetRawMessage())
+			_, err = sink.sysLogger.writeStderr(message.GetLogMessage().GetMessage())
 		}
 		if err != nil {
 			sink.logger.Debugf("Syslog Sink %s: Error when trying to send data to sink. Requesting close. Err: %v", sink.drainUrl, err)

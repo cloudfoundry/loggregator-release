@@ -24,7 +24,7 @@ type sinkServer struct {
 	parsedMessageChan chan *logmessage.Message
 	sinkCloseChan     chan sinks.Sink
 
-	activeSinksChans  *groupedchannels.GroupedChannels
+	activeSinksChans *groupedchannels.GroupedChannels
 	messageStore     *messagestore.MessageStore
 	drainUrlsForApps map[string]map[string]sinks.Sink
 
