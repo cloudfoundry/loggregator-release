@@ -11,11 +11,9 @@
             "instance_host_port": 61001,
             "instance_container_port": 61001,
             "instance_id": "e2e76b2cfe370c7e213f2e3e36af621e",
-            "tags": {
-                "syslog_drains": [
+            "syslog_drain_urls": [
 
-                ]
-            }
+            ]
         }
     ]
 }

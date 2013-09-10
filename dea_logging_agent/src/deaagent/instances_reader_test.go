@@ -23,7 +23,8 @@ func TestReadingInstance(t *testing.T) {
 		applicationId:       "4aa9506e-277f-41ab-b764-a35c0b96fa1b",
 		index:               0,
 		wardenJobId:         272,
-		wardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo1"}
+		wardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo1",
+		drainUrls:			 []string{}}
 
 	assert.Equal(t, expectedInstance, instances["/var/vcap/data/warden/depot/16vbs06ibo1/jobs/272"])
 }
@@ -65,7 +66,7 @@ func TestReadingMultipleInstancesWithDrainUrls(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Nil(t, instances["/var/vcap/data/warden/depot/170os7ali6q/jobs/15"].drainUrls)
-	assert.Nil(t, instances["/var/vcap/data/warden/depot/123ajkljfa/jobs/13"].drainUrls)
+	assert.Equal(t, instances["/var/vcap/data/warden/depot/123ajkljfa/jobs/13"].drainUrls, []string{})
 	assert.Equal(t, instances["/var/vcap/data/warden/depot/345asndhaena/jobs/12"].drainUrls, []string{"syslog://10.20.30.40:8050"})
 }
 
