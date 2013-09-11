@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"loggregator/messagestore"
-	"net"
 	"net/http"
 	"regexp"
 	testhelpers "server_testhelpers"
@@ -48,6 +47,47 @@ func AssertConnectionFails(t *testing.T, port string, path string, authToken str
 	errorCode := binary.BigEndian.Uint16(data)
 	assert.Equal(t, expectedErrorCode, errorCode)
 	assert.Equal(t, "EOF", err.Error())
+}
+
+// Metrics test
+
+func TestMetrics(t *testing.T) {
+	oldSinksCounter := TestSinkServer.Emit().Metrics[0].Value.(int)
+
+	client1ReceivedChan := make(chan []byte)
+	fakeSyslogDrain1, err := NewService(client1ReceivedChan, "127.0.0.1:32564")
+	assert.NoError(t, err)
+	go fakeSyslogDrain1.Serve()
+	<-fakeSyslogDrain1.readyChan
+
+	assert.Equal(t, TestSinkServer.Emit().Metrics[0].Name, "numberOfSinks")
+	assert.Equal(t, TestSinkServer.Emit().Metrics[0].Value, oldSinksCounter)
+
+	marshalledProtoBuffer := testhelpers.MarshalledDrainedLogMessage(t, "expectedMessageString", "myApp", "syslog://localhost:32564")
+	dataReadChannel <- marshalledProtoBuffer
+
+	select {
+	case <-time.After(1000 * time.Millisecond):
+		t.Errorf("Did not get message 1")
+	case <-client1ReceivedChan:
+	}
+
+	assert.Equal(t, TestSinkServer.Emit().Metrics[0].Name, "numberOfSinks")
+	assert.Equal(t, TestSinkServer.Emit().Metrics[0].Value, oldSinksCounter+1)
+
+	receivedChan := make(chan []byte, 2)
+
+	_, dontKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
+	WaitForWebsocketRegistration()
+
+	assert.Equal(t, TestSinkServer.Emit().Metrics[0].Name, "numberOfSinks")
+	assert.Equal(t, TestSinkServer.Emit().Metrics[0].Value, oldSinksCounter+2)
+
+	dontKeepAliveChan <- true
+	time.Sleep(50 * time.Millisecond)
+
+	assert.Equal(t, TestSinkServer.Emit().Metrics[0].Name, "numberOfSinks")
+	assert.Equal(t, TestSinkServer.Emit().Metrics[0].Value, oldSinksCounter+1)
 }
 
 func TestThatItSends(t *testing.T) {
@@ -435,18 +475,3 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 }
 
 // *** End Syslog Sink tests
-
-func TestDrainUpdatesWithDrainUrls(t *testing.T) {
-	net.Listen("tcp", "localhost:2345")
-	net.Listen("tcp", "localhost:3456")
-	net.Listen("tcp", "localhost:7890")
-	assert.Equal(t, 0, len(TestSinkServer.activeSinks.DrainsFor("specialApp")))
-	TestSinkServer.manageDrainUrls("specialApp", []string{"syslog://localhost:2345"})
-	assert.Equal(t, 1, len(TestSinkServer.activeSinks.DrainsFor("specialApp")))
-	TestSinkServer.manageDrainUrls("specialApp", []string{"syslog://localhost:2345", "syslog://localhost:3456"})
-	assert.Equal(t, 2, len(TestSinkServer.activeSinks.DrainsFor("specialApp")))
-	TestSinkServer.manageDrainUrls("specialApp", []string{"syslog://localhost:3456", "syslog://localhost:7890"})
-	assert.Equal(t, 2, len(TestSinkServer.activeSinks.DrainsFor("specialApp")))
-	TestSinkServer.manageDrainUrls("specialApp", []string{})
-	assert.Equal(t, 0, len(TestSinkServer.activeSinks.DrainsFor("specialApp")))
-}

@@ -12,6 +12,7 @@ import (
 	"loggregator/messagestore"
 	"loggregator/sinks"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -21,31 +22,34 @@ const (
 )
 
 type sinkServer struct {
-	parsedMessageChan chan *logmessage.Message
-	sinkCloseChan     chan sinks.Sink
-
-	activeSinks  *groupedsinks.GroupedSinks
-	messageStore *messagestore.MessageStore
+	parsedMessageChan  chan *logmessage.Message
+	sinkCloseChan      chan sinks.Sink
+	sinkOpenChan       chan sinks.Sink
+	activeSinksCounter int
+	messageStore       *messagestore.MessageStore
 
 	authorize         authorization.LogAccessAuthorizer
 	keepAliveInterval time.Duration
 
 	logger *gosteno.Logger
+
+	*sync.RWMutex
 }
 
 func NewSinkServer(messageStore *messagestore.MessageStore, logger *gosteno.Logger, authorize authorization.LogAccessAuthorizer, keepAliveInterval time.Duration) *sinkServer {
-	activeSinks := groupedsinks.NewGroupedSinks()
-	sinkCloseChan := make(chan sinks.Sink, 4)
+	sinkCloseChan := make(chan sinks.Sink, 20)
+	sinkOpenChan := make(chan sinks.Sink, 20)
 	messageChannel := make(chan *logmessage.Message, 2048)
 
 	return &sinkServer{
 		logger:            logger,
 		parsedMessageChan: messageChannel,
-		activeSinks:       activeSinks,
 		authorize:         authorize,
 		sinkCloseChan:     sinkCloseChan,
+		sinkOpenChan:      sinkOpenChan,
 		keepAliveInterval: keepAliveInterval,
-		messageStore:      messageStore}
+		messageStore:      messageStore,
+		RWMutex:           &sync.RWMutex{}}
 }
 
 func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
@@ -76,8 +80,8 @@ func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 	}
 
 	s := sinks.NewWebsocketSink(appId, sinkServer.logger, ws, clientAddress, sinkServer.keepAliveInterval)
-
-	sinkServer.activeSinks.Register(s, appId)
+	sinkServer.logger.Debugf("SinkServer: Requesting a wss sink for app %s", s.AppId())
+	sinkServer.sinkOpenChan <- s
 	s.Run(sinkServer.sinkCloseChan)
 }
 
@@ -111,49 +115,68 @@ func contains(valueToFind string, values []string) bool {
 	return false
 }
 
-func (sinkServer *sinkServer) manageDrainUrls(appId string, drainUrls []string) {
+func (sinkServer *sinkServer) manageDrainUrls(activeSinks *groupedsinks.GroupedSinks, appId string, drainUrls []string) {
 	//delete all drains for app
 	if len(drainUrls) == 0 {
-		for _, sink := range sinkServer.activeSinks.DrainsFor(appId) {
-			sinkServer.activeSinks.Delete(sink)
-			close(sink.Channel())
+		for _, sink := range activeSinks.DrainsFor(appId) {
+			sinkServer.unregisterSink(sink, activeSinks)
 		}
 		return
 	}
 
 	//delete all drains that were not sent
-	for _, sink := range sinkServer.activeSinks.DrainsFor(appId) {
+	for _, sink := range activeSinks.DrainsFor(appId) {
 		if contains(sink.Identifier(), drainUrls) {
 			continue
 		}
-		sinkServer.activeSinks.Delete(sink)
-		close(sink.Channel())
+		sinkServer.unregisterSink(sink, activeSinks)
 	}
 
 	//add all drains that didn't exist
 	for _, drainUrl := range drainUrls {
-		if sinkServer.activeSinks.DrainFor(appId, drainUrl) == nil {
+		if activeSinks.DrainFor(appId, drainUrl) == nil {
 			s := sinks.NewSyslogSink(appId, drainUrl, sinkServer.logger)
 			go s.Run(sinkServer.sinkCloseChan)
-			sinkServer.activeSinks.Register(s, appId)
+			sinkServer.registerSink(s, activeSinks)
 		}
 	}
 }
 
+func (sinkServer *sinkServer) registerSink(s sinks.Sink, activeSinks *groupedsinks.GroupedSinks) {
+	sinkServer.Lock()
+	defer sinkServer.Unlock()
+
+	activeSinks.Register(s, s.AppId())
+	sinkServer.activeSinksCounter++
+	sinkServer.logger.Infof("SinkServer: Sink with channel %v requested. Opened it.", s.Channel())
+}
+
+func (sinkServer *sinkServer) unregisterSink(s sinks.Sink, activeSinks *groupedsinks.GroupedSinks) {
+	sinkServer.Lock()
+	defer sinkServer.Unlock()
+
+	activeSinks.Delete(s)
+	close(s.Channel())
+	sinkServer.activeSinksCounter--
+	sinkServer.logger.Infof("SinkServer: Sink with channel %v requested closing. Closed it.", s.Channel())
+}
+
 func (sinkServer *sinkServer) relayMessagesToAllSinks() {
+	activeSinks := groupedsinks.NewGroupedSinks()
+
 	for {
 		select {
+		case s := <-sinkServer.sinkOpenChan:
+			sinkServer.registerSink(s, activeSinks)
 		case s := <-sinkServer.sinkCloseChan:
-			sinkServer.activeSinks.Delete(s)
-			close(s.Channel())
-			sinkServer.logger.Infof("SinkServer: Sink with channel %v requested closing. Closed it.", s.Channel())
+			sinkServer.unregisterSink(s, activeSinks)
 		case receivedMessage := <-sinkServer.parsedMessageChan:
 			sinkServer.logger.Debugf("SinkServer: Received %d bytes of data from agent listener.", receivedMessage.GetRawMessageLength())
 
 			//drain management
 			appId := receivedMessage.GetLogMessage().GetAppId()
 			if receivedMessage.GetLogMessage().GetSourceType() == logmessage.LogMessage_WARDEN_CONTAINER {
-				sinkServer.manageDrainUrls(appId, receivedMessage.GetLogMessage().GetDrainUrls())
+				sinkServer.manageDrainUrls(activeSinks, appId, receivedMessage.GetLogMessage().GetDrainUrls())
 			}
 
 			//dump management
@@ -161,7 +184,7 @@ func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 
 			//send to drains and sinks
 			sinkServer.logger.Debugf("SinkServer: Searching for sinks with appId [%s].", appId)
-			for _, s := range sinkServer.activeSinks.For(appId) {
+			for _, s := range activeSinks.For(appId) {
 				sinkServer.logger.Debugf("SinkServer: Sending Message to channel %v for sinks targeting [%s].", s, appId)
 				s.Channel() <- receivedMessage
 			}
@@ -175,7 +198,7 @@ func (sinkServer *sinkServer) parseMessages(incomingProtobufChan <-chan []byte) 
 		data := <-incomingProtobufChan
 		message, err := logmessage.ParseMessage(data)
 		if err != nil {
-			sinkServer.logger.Error(fmt.Sprintf("Log message could not be unmarshaled. Dropping it... Error: %v. Data: %v", err, data))
+			sinkServer.logger.Errorf("Log message could not be unmarshaled. Dropping it... Error: %v. Data: %v", err, data)
 			continue
 		}
 		sinkServer.parsedMessageChan <- message
@@ -196,8 +219,11 @@ func (sinkServer *sinkServer) Start(incomingProtobufChan <-chan []byte, apiEndpo
 }
 
 func (sinkServer *sinkServer) metrics() []instrumentation.Metric {
+	sinkServer.RLock()
+	defer sinkServer.RUnlock()
+
 	return []instrumentation.Metric{
-		instrumentation.Metric{Name: "numberOfSinks", Value: sinkServer.activeSinks.Count()},
+		instrumentation.Metric{Name: "numberOfSinks", Value: sinkServer.activeSinksCounter},
 	}
 }
 

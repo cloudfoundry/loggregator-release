@@ -95,10 +95,3 @@ func (gc *GroupedSinks) Delete(s sinks.Sink) {
 		delete(app.sinkSet, s)
 	}
 }
-
-func (gc *GroupedSinks) Count() (numberOfSinks int) {
-	for _, app := range gc.apps {
-		numberOfSinks += len(app.sinkSet)
-	}
-	return numberOfSinks
-}

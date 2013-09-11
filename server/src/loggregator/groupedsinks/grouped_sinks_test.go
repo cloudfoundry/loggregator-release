@@ -71,29 +71,3 @@ func TestDrainForReturnsOnly(t *testing.T) {
 	sinkDrain := groupedSinks.DrainFor(target, "sink we are searching for")
 	assert.Equal(t, sink2, sinkDrain)
 }
-
-func TestTotalCount(t *testing.T) {
-	groupedSinks := NewGroupedSinks()
-	sink1 := sinks.NewSyslogSink("1", "url", server_testhelpers.Logger())
-	appId1 := "1"
-	groupedSinks.Register(sink1, appId1)
-
-	sink2 := sinks.NewSyslogSink("2", "url", server_testhelpers.Logger())
-	appId2 := "2"
-	groupedSinks.Register(sink2, appId2)
-
-	sink3 := sinks.NewSyslogSink("3", "url", server_testhelpers.Logger())
-	appId3 := "3"
-	groupedSinks.Register(sink3, appId3)
-
-	assert.Equal(t, groupedSinks.Count(), 3)
-
-	groupedSinks.Delete(sink1)
-	assert.Equal(t, groupedSinks.Count(), 2)
-
-	groupedSinks.Delete(sink2)
-	assert.Equal(t, groupedSinks.Count(), 1)
-
-	groupedSinks.Delete(sink3)
-	assert.Equal(t, groupedSinks.Count(), 0)
-}
