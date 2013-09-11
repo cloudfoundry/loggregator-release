@@ -18,7 +18,7 @@ packages=(
     deaagent_testhelpers
     loggregator
     loggregator/authorization
-    loggregator/groupedchannels
+    loggregator/groupedsinks
     loggregator/loggregator
     loggregator/messagestore
     loggregator/sinks

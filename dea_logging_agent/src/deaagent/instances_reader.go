@@ -12,7 +12,7 @@ func readInstances(data []byte) (map[string]instance, error) {
 		Warden_container_path string
 		Instance_index        uint64
 		State                 string
-		Syslog_drain_urls	  []string
+		Syslog_drain_urls     []string
 	}
 
 	type instancesJson struct {

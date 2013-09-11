@@ -62,6 +62,10 @@ func (sink *websocketSink) AppId() string {
 	return sink.appId
 }
 
+func (s *websocketSink) Logger() *gosteno.Logger {
+	return s.logger
+}
+
 func (sink *websocketSink) Run(sinkCloseChan chan Sink) {
 	sink.logger.Debugf("Websocket Sink %s: Created for appId [%s]", sink.clientAddress, sink.appId)
 
@@ -69,7 +73,7 @@ func (sink *websocketSink) Run(sinkCloseChan chan Sink) {
 	alreadyRequestedClose := false
 
 	outMessageChan := make(chan *logmessage.Message, 10)
-	go OverwritingMessageChannel(sink.listenerChannel, outMessageChan, sink.logger)
+	go RingBufferChannel(sink.listenerChannel, outMessageChan, sink.logger)
 
 	for {
 		sink.logger.Debugf("Websocket Sink %s: Waiting for activity", sink.clientAddress)
@@ -78,13 +82,7 @@ func (sink *websocketSink) Run(sinkCloseChan chan Sink) {
 			sink.logger.Debugf("Websocket Sink %s: Keep-alive processed", sink.clientAddress)
 		case <-time.After(sink.keepAliveInterval):
 			sink.logger.Debugf("Websocket Sink %s: No keep keep-alive received. Requesting close.", sink.clientAddress)
-			if !alreadyRequestedClose {
-				sinkCloseChan <- sink
-				alreadyRequestedClose = true
-				sink.logger.Debugf("Websocket Sink %s: Successfully requested listener channel close", sink.clientAddress)
-			} else {
-				sink.logger.Debugf("Websocket Sink %s: Previously requested close. Doing nothing", sink.clientAddress)
-			}
+			requestClose(sink, sinkCloseChan, alreadyRequestedClose)
 			return
 		case message, ok := <-outMessageChan:
 			if !ok {
@@ -97,13 +95,7 @@ func (sink *websocketSink) Run(sinkCloseChan chan Sink) {
 			err := websocket.Message.Send(sink.ws, message.GetRawMessage())
 			if err != nil {
 				sink.logger.Debugf("Websocket Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", sink.clientAddress, err)
-				if !alreadyRequestedClose {
-					sinkCloseChan <- sink
-					alreadyRequestedClose = true
-					sink.logger.Debugf("Websocket Sink %s: Successfully requested listener channel close", sink.clientAddress)
-				} else {
-					sink.logger.Debugf("Websocket Sink %s: Previously requested close. Doing nothing", sink.clientAddress)
-				}
+				requestClose(sink, sinkCloseChan, alreadyRequestedClose)
 			} else {
 				sink.logger.Debugf("Websocket Sink %s: Successfully sent data", sink.clientAddress)
 				atomic.AddUint64(sink.sentMessageCount, 1)

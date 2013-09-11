@@ -5,7 +5,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 )
 
-func OverwritingMessageChannel(in <-chan *logmessage.Message, out chan *logmessage.Message, logger *gosteno.Logger) {
+func RingBufferChannel(in <-chan *logmessage.Message, out chan *logmessage.Message, logger *gosteno.Logger) {
 	for v := range in {
 		select {
 		case out <- v:

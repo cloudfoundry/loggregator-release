@@ -8,7 +8,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"loggregator/authorization"
-	"loggregator/groupedchannels"
+	"loggregator/groupedsinks"
 	"loggregator/messagestore"
 	"loggregator/sinks"
 	"net/http"
@@ -24,9 +24,8 @@ type sinkServer struct {
 	parsedMessageChan chan *logmessage.Message
 	sinkCloseChan     chan sinks.Sink
 
-	activeSinksChans *groupedchannels.GroupedChannels
-	messageStore     *messagestore.MessageStore
-	drainUrlsForApps map[string]map[string]sinks.Sink
+	activeSinks  *groupedsinks.GroupedSinks
+	messageStore *messagestore.MessageStore
 
 	authorize         authorization.LogAccessAuthorizer
 	keepAliveInterval time.Duration
@@ -35,16 +34,14 @@ type sinkServer struct {
 }
 
 func NewSinkServer(messageStore *messagestore.MessageStore, logger *gosteno.Logger, authorize authorization.LogAccessAuthorizer, keepAliveInterval time.Duration) *sinkServer {
-	activeSinks := groupedchannels.NewGroupedChannels()
+	activeSinks := groupedsinks.NewGroupedSinks()
 	sinkCloseChan := make(chan sinks.Sink, 4)
-	drainUrlsForApps := make(map[string]map[string]sinks.Sink, 100)
 	messageChannel := make(chan *logmessage.Message, 2048)
 
 	return &sinkServer{
 		logger:            logger,
 		parsedMessageChan: messageChannel,
-		drainUrlsForApps:  drainUrlsForApps,
-		activeSinksChans:  activeSinks,
+		activeSinks:       activeSinks,
 		authorize:         authorize,
 		sinkCloseChan:     sinkCloseChan,
 		keepAliveInterval: keepAliveInterval,
@@ -80,7 +77,7 @@ func (sinkServer *sinkServer) sinkRelayHandler(ws *websocket.Conn) {
 
 	s := sinks.NewWebsocketSink(appId, sinkServer.logger, ws, clientAddress, sinkServer.keepAliveInterval)
 
-	sinkServer.activeSinksChans.Register(s.Channel(), appId)
+	sinkServer.activeSinks.Register(s, appId)
 	s.Run(sinkServer.sinkCloseChan)
 }
 
@@ -114,36 +111,31 @@ func contains(valueToFind string, values []string) bool {
 	return false
 }
 
-func (sinkServer *sinkServer) registerDrainUrls(appId string, drainUrls []string) {
+func (sinkServer *sinkServer) manageDrainUrls(appId string, drainUrls []string) {
+	//delete all drains for app
 	if len(drainUrls) == 0 {
-		for _, sink := range sinkServer.drainUrlsForApps[appId] {
-			sinkServer.activeSinksChans.Delete(sink.Channel())
+		for _, sink := range sinkServer.activeSinks.DrainsFor(appId) {
+			sinkServer.activeSinks.Delete(sink)
 			close(sink.Channel())
 		}
-		delete(sinkServer.drainUrlsForApps, appId)
 		return
 	}
-	if sinkServer.drainUrlsForApps[appId] == nil {
-		sinkServer.drainUrlsForApps[appId] = make(map[string]sinks.Sink, len(drainUrls))
-	}
-	for _, sink := range sinkServer.drainUrlsForApps[appId] {
+
+	//delete all drains that were not sent
+	for _, sink := range sinkServer.activeSinks.DrainsFor(appId) {
 		if contains(sink.Identifier(), drainUrls) {
 			continue
 		}
-		sinkServer.activeSinksChans.Delete(sink.Channel())
+		sinkServer.activeSinks.Delete(sink)
 		close(sink.Channel())
-		delete(sinkServer.drainUrlsForApps[appId], sink.Identifier())
 	}
+
+	//add all drains that didn't exist
 	for _, drainUrl := range drainUrls {
-		if sinkServer.drainUrlsForApps[appId][drainUrl] == nil {
-			s, err := sinks.NewSyslogSink(appId, drainUrl, sinkServer.logger)
-			if err != nil {
-				sinkServer.logger.Error(err.Error())
-				continue
-			}
+		if sinkServer.activeSinks.DrainFor(appId, drainUrl) == nil {
+			s := sinks.NewSyslogSink(appId, drainUrl, sinkServer.logger)
 			go s.Run(sinkServer.sinkCloseChan)
-			sinkServer.activeSinksChans.Register(s.Channel(), appId)
-			sinkServer.drainUrlsForApps[appId][drainUrl] = s
+			sinkServer.activeSinks.Register(s, appId)
 		}
 	}
 }
@@ -152,8 +144,7 @@ func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 	for {
 		select {
 		case s := <-sinkServer.sinkCloseChan:
-			sinkServer.activeSinksChans.Delete(s.Channel())
-			delete(sinkServer.drainUrlsForApps[s.AppId()], s.Identifier())
+			sinkServer.activeSinks.Delete(s)
 			close(s.Channel())
 			sinkServer.logger.Infof("SinkServer: Sink with channel %v requested closing. Closed it.", s.Channel())
 		case receivedMessage := <-sinkServer.parsedMessageChan:
@@ -162,7 +153,7 @@ func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 			//drain management
 			appId := receivedMessage.GetLogMessage().GetAppId()
 			if receivedMessage.GetLogMessage().GetSourceType() == logmessage.LogMessage_WARDEN_CONTAINER {
-				sinkServer.registerDrainUrls(appId, receivedMessage.GetLogMessage().GetDrainUrls())
+				sinkServer.manageDrainUrls(appId, receivedMessage.GetLogMessage().GetDrainUrls())
 			}
 
 			//dump management
@@ -170,9 +161,9 @@ func (sinkServer *sinkServer) relayMessagesToAllSinks() {
 
 			//send to drains and sinks
 			sinkServer.logger.Debugf("SinkServer: Searching for sinks with appId [%s].", appId)
-			for _, sinkChan := range sinkServer.activeSinksChans.For(appId) {
-				sinkServer.logger.Debugf("SinkServer: Sending Message to channel %v for sinks targeting [%s].", sinkChan, appId)
-				sinkChan <- receivedMessage
+			for _, s := range sinkServer.activeSinks.For(appId) {
+				sinkServer.logger.Debugf("SinkServer: Sending Message to channel %v for sinks targeting [%s].", s, appId)
+				s.Channel() <- receivedMessage
 			}
 			sinkServer.logger.Debugf("SinkServer: Done sending message to tail clients.")
 		}
@@ -206,7 +197,7 @@ func (sinkServer *sinkServer) Start(incomingProtobufChan <-chan []byte, apiEndpo
 
 func (sinkServer *sinkServer) metrics() []instrumentation.Metric {
 	return []instrumentation.Metric{
-		instrumentation.Metric{Name: "numberOfSinks", Value: sinkServer.activeSinksChans.NumberOfChannels()},
+		instrumentation.Metric{Name: "numberOfSinks", Value: sinkServer.activeSinks.Count()},
 	}
 }
 

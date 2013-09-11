@@ -24,7 +24,7 @@ func TestReadingInstance(t *testing.T) {
 		index:               0,
 		wardenJobId:         272,
 		wardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo1",
-		drainUrls:			 []string{}}
+		drainUrls:           []string{}}
 
 	assert.Equal(t, expectedInstance, instances["/var/vcap/data/warden/depot/16vbs06ibo1/jobs/272"])
 }
