@@ -1,4 +1,4 @@
-package sinkserver
+package sinks
 
 import (
 	"net"
@@ -11,10 +11,10 @@ type Service struct {
 	waitGroup    *sync.WaitGroup
 	receivedChan chan []byte
 	listener     *net.TCPListener
-	readyChan    chan bool
+	ReadyChan    chan bool
 }
 
-func NewService(receivedChan chan []byte, host string) (s *Service, err error) {
+func NewFakeService(receivedChan chan []byte, host string) (s *Service, err error) {
 	var (
 		laddr    *net.TCPAddr
 		listener *net.TCPListener
@@ -32,7 +32,7 @@ func NewService(receivedChan chan []byte, host string) (s *Service, err error) {
 		waitGroup:    &sync.WaitGroup{},
 		receivedChan: receivedChan,
 		listener:     listener,
-		readyChan:    make(chan bool),
+		ReadyChan:    make(chan bool),
 	}
 	s.waitGroup.Add(1)
 	return s, nil
@@ -49,7 +49,7 @@ func (s *Service) Serve() {
 		}
 		s.listener.SetDeadline(time.Now().Add(1e9))
 		select {
-		case s.readyChan <- true:
+		case s.ReadyChan <- true:
 		default:
 		}
 		conn, err := s.listener.AcceptTCP()

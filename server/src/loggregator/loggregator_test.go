@@ -16,8 +16,10 @@ func TestEndtoEndMessage(t *testing.T) {
 	logger := gosteno.NewLogger("TestLogger")
 	listener := agentlistener.NewAgentListener("localhost:3456", logger)
 	dataChannel := listener.Start()
-	sinkServer := sinkserver.NewSinkServer(messagestore.NewMessageStore(10), logger, testhelpers.SuccessfulAuthorizer, 30*time.Second)
-	go sinkServer.Start(dataChannel, "localhost:8081")
+	messageRouter := sinkserver.NewMessageRouter(messagestore.NewMessageStore(10), logger)
+	httpServer := sinkserver.NewHttpServer(messageRouter, testhelpers.SuccessfulAuthorizer, 30*time.Second, logger)
+	go messageRouter.Start()
+	go httpServer.Start(dataChannel, "localhost:8081")
 	time.Sleep(1 * time.Millisecond)
 
 	receivedChan := make(chan []byte)

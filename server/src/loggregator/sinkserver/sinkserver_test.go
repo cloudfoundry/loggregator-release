@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"loggregator/messagestore"
+	"loggregator/sinks"
 	"net/http"
 	"regexp"
 	testhelpers "server_testhelpers"
@@ -13,7 +14,8 @@ import (
 	"time"
 )
 
-var TestSinkServer *sinkServer
+var TestMessageRouter *messageRouter
+var TestHttpServer *httpServer
 var dataReadChannel chan []byte
 
 const (
@@ -24,8 +26,10 @@ func init() {
 	// This needs be unbuffered as the channel we get from the
 	// agent listener is unbuffered?
 	dataReadChannel = make(chan []byte, 10)
-	TestSinkServer = NewSinkServer(messagestore.NewMessageStore(10), testhelpers.Logger(), testhelpers.SuccessfulAuthorizer, 50*time.Millisecond)
-	go TestSinkServer.Start(dataReadChannel, "localhost:"+SERVER_PORT)
+	TestMessageRouter = NewMessageRouter(messagestore.NewMessageStore(10), testhelpers.Logger())
+	go TestMessageRouter.Start()
+	TestHttpServer = NewHttpServer(TestMessageRouter, testhelpers.SuccessfulAuthorizer, 50*time.Millisecond, testhelpers.Logger())
+	go TestHttpServer.Start(dataReadChannel, "localhost:"+SERVER_PORT)
 	time.Sleep(1 * time.Millisecond)
 }
 
@@ -52,16 +56,16 @@ func AssertConnectionFails(t *testing.T, port string, path string, authToken str
 // Metrics test
 
 func TestMetrics(t *testing.T) {
-	oldSinksCounter := TestSinkServer.Emit().Metrics[0].Value.(int)
+	oldSinksCounter := TestMessageRouter.Emit().Metrics[0].Value.(int)
 
 	client1ReceivedChan := make(chan []byte)
-	fakeSyslogDrain1, err := NewService(client1ReceivedChan, "127.0.0.1:32564")
+	fakeSyslogDrain1, err := sinks.NewFakeService(client1ReceivedChan, "127.0.0.1:32564")
 	assert.NoError(t, err)
 	go fakeSyslogDrain1.Serve()
-	<-fakeSyslogDrain1.readyChan
+	<-fakeSyslogDrain1.ReadyChan
 
-	assert.Equal(t, TestSinkServer.Emit().Metrics[0].Name, "numberOfSinks")
-	assert.Equal(t, TestSinkServer.Emit().Metrics[0].Value, oldSinksCounter)
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Name, "numberOfSinks")
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Value, oldSinksCounter)
 
 	marshalledProtoBuffer := testhelpers.MarshalledDrainedLogMessage(t, "expectedMessageString", "myApp", "syslog://localhost:32564")
 	dataReadChannel <- marshalledProtoBuffer
@@ -72,22 +76,22 @@ func TestMetrics(t *testing.T) {
 	case <-client1ReceivedChan:
 	}
 
-	assert.Equal(t, TestSinkServer.Emit().Metrics[0].Name, "numberOfSinks")
-	assert.Equal(t, TestSinkServer.Emit().Metrics[0].Value, oldSinksCounter+1)
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Name, "numberOfSinks")
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Value, oldSinksCounter+1)
 
 	receivedChan := make(chan []byte, 2)
 
 	_, dontKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
 	WaitForWebsocketRegistration()
 
-	assert.Equal(t, TestSinkServer.Emit().Metrics[0].Name, "numberOfSinks")
-	assert.Equal(t, TestSinkServer.Emit().Metrics[0].Value, oldSinksCounter+2)
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Name, "numberOfSinks")
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Value, oldSinksCounter+2)
 
 	dontKeepAliveChan <- true
 	time.Sleep(50 * time.Millisecond)
 
-	assert.Equal(t, TestSinkServer.Emit().Metrics[0].Name, "numberOfSinks")
-	assert.Equal(t, TestSinkServer.Emit().Metrics[0].Value, oldSinksCounter+1)
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Name, "numberOfSinks")
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Value, oldSinksCounter+1)
 }
 
 func TestThatItSends(t *testing.T) {
@@ -319,11 +323,11 @@ func TestItReturns401WithIncorrectAuthToken(t *testing.T) {
 func TestThatItSendsAllMessageToKnownDrains(t *testing.T) {
 	client1ReceivedChan := make(chan []byte)
 
-	fakeSyslogDrain, err := NewService(client1ReceivedChan, "127.0.0.1:34566")
+	fakeSyslogDrain, err := sinks.NewFakeService(client1ReceivedChan, "127.0.0.1:34566")
 	defer fakeSyslogDrain.Stop()
 	assert.NoError(t, err)
 	go fakeSyslogDrain.Serve()
-	<-fakeSyslogDrain.readyChan
+	<-fakeSyslogDrain.ReadyChan
 
 	expectedMessageString := "Some Data"
 	expectedMarshalledProtoBuffer := testhelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "syslog://localhost:34566")
@@ -353,10 +357,10 @@ func TestThatItSendsAllMessageToKnownDrains(t *testing.T) {
 func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	client1ReceivedChan := make(chan []byte)
 
-	fakeSyslogDrain, err := NewService(client1ReceivedChan, "127.0.0.1:34569")
+	fakeSyslogDrain, err := sinks.NewFakeService(client1ReceivedChan, "127.0.0.1:34569")
 	assert.NoError(t, err)
 	go fakeSyslogDrain.Serve()
-	<-fakeSyslogDrain.readyChan
+	<-fakeSyslogDrain.ReadyChan
 
 	expectedMessageString := "Some Data"
 	expectedMarshalledProtoBuffer := testhelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "syslog://localhost:34569")
@@ -375,11 +379,11 @@ func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	time.Sleep(18 * time.Second)
 
 	client2ReceivedChan := make(chan []byte)
-	fakeSyslogDrain, err = NewService(client2ReceivedChan, "127.0.0.1:34569")
+	fakeSyslogDrain, err = sinks.NewFakeService(client2ReceivedChan, "127.0.0.1:34569")
 	assert.NoError(t, err)
 
 	go fakeSyslogDrain.Serve()
-	<-fakeSyslogDrain.readyChan
+	<-fakeSyslogDrain.ReadyChan
 
 	expectedMessageString3 := "Some Data3"
 	expectedMarshalledProtoBuffer3 := testhelpers.MarshalledDrainedLogMessage(t, expectedMessageString3, "myApp", "syslog://localhost:34569")
@@ -398,17 +402,17 @@ func TestThatItSendsAllDataToAllDrainUrls(t *testing.T) {
 	client1ReceivedChan := make(chan []byte)
 	client2ReceivedChan := make(chan []byte)
 
-	fakeSyslogDrain1, err := NewService(client1ReceivedChan, "127.0.0.1:34567")
+	fakeSyslogDrain1, err := sinks.NewFakeService(client1ReceivedChan, "127.0.0.1:34567")
 	defer fakeSyslogDrain1.Stop()
 	assert.NoError(t, err)
 	go fakeSyslogDrain1.Serve()
-	<-fakeSyslogDrain1.readyChan
+	<-fakeSyslogDrain1.ReadyChan
 
-	fakeSyslogDrain2, err := NewService(client2ReceivedChan, "127.0.0.1:34568")
+	fakeSyslogDrain2, err := sinks.NewFakeService(client2ReceivedChan, "127.0.0.1:34568")
 	defer fakeSyslogDrain2.Stop()
 	assert.NoError(t, err)
 	go fakeSyslogDrain2.Serve()
-	<-fakeSyslogDrain2.readyChan
+	<-fakeSyslogDrain2.ReadyChan
 
 	expectedMessageString := "Some Data"
 	expectedMarshalledProtoBuffer := testhelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "syslog://localhost:34567", "syslog://localhost:34568")
@@ -434,17 +438,17 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 	client1ReceivedChan := make(chan []byte)
 	client2ReceivedChan := make(chan []byte)
 
-	fakeSyslogDrain1, err := NewService(client1ReceivedChan, "127.0.0.1:34569")
+	fakeSyslogDrain1, err := sinks.NewFakeService(client1ReceivedChan, "127.0.0.1:34569")
 	defer fakeSyslogDrain1.Stop()
 	assert.NoError(t, err)
 	go fakeSyslogDrain1.Serve()
-	<-fakeSyslogDrain1.readyChan
+	<-fakeSyslogDrain1.ReadyChan
 
-	fakeSyslogDrain2, err := NewService(client2ReceivedChan, "127.0.0.1:34540")
+	fakeSyslogDrain2, err := sinks.NewFakeService(client2ReceivedChan, "127.0.0.1:34540")
 	defer fakeSyslogDrain2.Stop()
 	assert.NoError(t, err)
 	go fakeSyslogDrain2.Serve()
-	<-fakeSyslogDrain2.readyChan
+	<-fakeSyslogDrain2.ReadyChan
 
 	expectedMessageString := "Some Data"
 	expectedMarshalledProtoBuffer := testhelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "syslog://localhost:34569")

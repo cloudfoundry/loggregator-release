@@ -99,12 +99,8 @@ func main() {
 	incomingData := listener.Start()
 
 	authorizer := authorization.NewLogAccessAuthorizer(config.decoder, config.ApiHost)
-	sinkServer := sinkserver.NewSinkServer(
-		messagestore.NewMessageStore(config.MaxRetainedLogMessages),
-		logger,
-		authorizer,
-		30*time.Second,
-	)
+	messageRouter := sinkserver.NewMessageRouter(messagestore.NewMessageStore(config.MaxRetainedLogMessages), logger)
+	httpServer := sinkserver.NewHttpServer(messageRouter, authorizer, 30*time.Second, logger)
 
 	cfc, err := cfcomponent.NewComponent(
 		config.WebPort,
@@ -113,7 +109,7 @@ func main() {
 		&LoggregatorServerHealthMonitor{},
 		config.VarzPort,
 		[]string{config.VarzUser, config.VarzPass},
-		[]instrumentation.Instrumentable{listener, sinkServer},
+		[]instrumentation.Instrumentable{listener, messageRouter},
 	)
 
 	if err != nil {
@@ -143,7 +139,8 @@ func main() {
 		}
 	}()
 
-	go sinkServer.Start(incomingData, fmt.Sprintf("0.0.0.0:%d", config.WebPort))
+	go messageRouter.Start()
+	go httpServer.Start(incomingData, fmt.Sprintf("0.0.0.0:%d", config.WebPort))
 
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Kill)
