@@ -24,3 +24,9 @@ func requestClose(sink Sink, sinkCloseChan chan Sink, alreadyRequestedClose bool
 		sink.Logger().Debugf("Sink %s: Previously requested close. Doing nothing", sink)
 	}
 }
+
+func newRingBufferChannel(sink Sink) <-chan *logmessage.Message {
+	outMessageChan := make(chan *logmessage.Message, 10)
+	go RingBufferChannel(sink.Channel(), outMessageChan, sink.Logger())
+	return outMessageChan
+}

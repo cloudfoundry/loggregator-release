@@ -72,9 +72,7 @@ func (sink *websocketSink) Run(sinkCloseChan chan Sink) {
 	keepAliveChan := sink.keepAliveChannel()
 	alreadyRequestedClose := false
 
-	outMessageChan := make(chan *logmessage.Message, 10)
-	go RingBufferChannel(sink.listenerChannel, outMessageChan, sink.logger)
-
+	messageChannel := newRingBufferChannel(sink)
 	for {
 		sink.logger.Debugf("Websocket Sink %s: Waiting for activity", sink.clientAddress)
 		select {
@@ -84,7 +82,7 @@ func (sink *websocketSink) Run(sinkCloseChan chan Sink) {
 			sink.logger.Debugf("Websocket Sink %s: No keep keep-alive received. Requesting close.", sink.clientAddress)
 			requestClose(sink, sinkCloseChan, alreadyRequestedClose)
 			return
-		case message, ok := <-outMessageChan:
+		case message, ok := <-messageChannel:
 			if !ok {
 				sink.logger.Debugf("Websocket Sink %s: Closed listener channel detected. Closing websocket", sink.clientAddress)
 				sink.ws.Close()

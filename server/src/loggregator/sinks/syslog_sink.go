@@ -44,9 +44,10 @@ func (s *SyslogSink) Run(closeChan chan Sink) {
 		requestClose(s, closeChan, alreadyRequestedClose)
 	}
 
+	messageChannel := newRingBufferChannel(s)
 	for {
 		s.logger.Debugf("Syslog Sink %s: Waiting for activity", s.drainUrl)
-		message, ok := <-s.listenerChannel
+		message, ok := <-messageChannel
 		if !ok {
 			s.logger.Debugf("Syslog Sink %s: Closed listener channel detected. Closing.", s.drainUrl)
 			return
