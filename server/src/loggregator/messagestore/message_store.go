@@ -3,7 +3,6 @@ package messagestore
 import (
 	"bytes"
 	"container/ring"
-	"encoding/binary"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"sync"
 )
@@ -57,9 +56,8 @@ func (ms *MessageStore) DumpFor(appId string) []byte {
 	writeEntries := func(m interface{}) {
 		message, _ := m.(logmessage.Message)
 
-		if rawMessageLength := message.GetRawMessageLength(); rawMessageLength > 0 {
-			binary.Write(buffer, binary.BigEndian, rawMessageLength)
-			buffer.Write(message.GetRawMessage())
+		if message.GetRawMessageLength() > 0 {
+			logmessage.DumpMessage(message, buffer)
 		}
 	}
 	app, appFound := ms.apps[appId]

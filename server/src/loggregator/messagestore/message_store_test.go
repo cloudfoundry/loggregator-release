@@ -17,12 +17,11 @@ func TestRegisterAndFor(t *testing.T) {
 
 	store.Add(message, appId)
 
-	messages, err := testhelpers.ParseDumpedMessages(store.DumpFor(appId))
+	messages, err := logmessage.ParseDumpedMessages(store.DumpFor(appId))
 	assert.NoError(t, err)
 
 	assert.Equal(t, len(messages), 1)
-
-	testhelpers.AssertProtoBufferMessageEquals(t, appMessageString, messages[0])
+	assert.Equal(t, appMessage, messages[0].GetRawMessage())
 }
 
 func TestAddingForAnotherApp(t *testing.T) {
@@ -38,17 +37,17 @@ func TestAddingForAnotherApp(t *testing.T) {
 	assert.NoError(t, err)
 	store.Add(anotherAppMessage, anotherAppId)
 
-	messages, err := testhelpers.ParseDumpedMessages(store.DumpFor(appId))
+	messages, err := logmessage.ParseDumpedMessages(store.DumpFor(appId))
 	assert.NoError(t, err)
 
 	assert.Equal(t, len(messages), 1)
-	assert.Equal(t, message.GetRawMessage(), messages[0])
+	assert.Equal(t, message, messages[0])
 
-	messages, err = testhelpers.ParseDumpedMessages(store.DumpFor(anotherAppId))
+	messages, err = logmessage.ParseDumpedMessages(store.DumpFor(anotherAppId))
 	assert.NoError(t, err)
 
 	assert.Equal(t, len(messages), 1)
-	assert.Equal(t, anotherAppMessage.GetRawMessage(), messages[0])
+	assert.Equal(t, anotherAppMessage, messages[0])
 }
 
 // This test exists because the ring buffer will dump messages
@@ -61,9 +60,9 @@ func TestOnlyDumpsMessagesThatHaveALength(t *testing.T) {
 	assert.NoError(t, err)
 	store.Add(message, target)
 
-	messages, err := testhelpers.ParseDumpedMessages(store.DumpFor(target))
+	messages, err := logmessage.ParseDumpedMessages(store.DumpFor(target))
 	assert.NoError(t, err)
 
 	assert.Equal(t, len(messages), 1)
-	assert.Equal(t, messages[0], message.GetRawMessage())
+	assert.Equal(t, message, messages[0])
 }

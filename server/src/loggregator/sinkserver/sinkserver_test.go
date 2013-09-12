@@ -3,6 +3,7 @@ package sinkserver
 import (
 	"code.google.com/p/go.net/websocket"
 	"encoding/binary"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"loggregator/messagestore"
@@ -294,10 +295,10 @@ func TestItDumpsAllMessagesForAnAppUser(t *testing.T) {
 	assert.NoError(t, err)
 	resp.Body.Close()
 
-	messages, err := testhelpers.ParseDumpedMessages(body)
+	messages, err := logmessage.ParseDumpedMessages(body)
 	assert.NoError(t, err)
 
-	testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, messages[len(messages)-1])
+	assert.Equal(t, expectedMessage, messages[len(messages)-1].GetRawMessage())
 }
 
 func TestItReturns401WithIncorrectAuthToken(t *testing.T) {
