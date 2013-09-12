@@ -80,7 +80,7 @@ func (sink *websocketSink) Run(sinkCloseChan chan Sink) {
 			sink.logger.Debugf("Websocket Sink %s: Keep-alive processed", sink.clientAddress)
 		case <-time.After(sink.keepAliveInterval):
 			sink.logger.Debugf("Websocket Sink %s: No keep keep-alive received. Requesting close.", sink.clientAddress)
-			requestClose(sink, sinkCloseChan, alreadyRequestedClose)
+			requestClose(sink, sinkCloseChan, &alreadyRequestedClose)
 			return
 		case message, ok := <-messageChannel:
 			if !ok {
@@ -93,7 +93,7 @@ func (sink *websocketSink) Run(sinkCloseChan chan Sink) {
 			err := websocket.Message.Send(sink.ws, message.GetRawMessage())
 			if err != nil {
 				sink.logger.Debugf("Websocket Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", sink.clientAddress, err)
-				requestClose(sink, sinkCloseChan, alreadyRequestedClose)
+				requestClose(sink, sinkCloseChan, &alreadyRequestedClose)
 			} else {
 				sink.logger.Debugf("Websocket Sink %s: Successfully sent data", sink.clientAddress)
 				atomic.AddUint64(sink.sentMessageCount, 1)

@@ -15,10 +15,11 @@ type Sink interface {
 	Logger() *gosteno.Logger
 }
 
-func requestClose(sink Sink, sinkCloseChan chan Sink, alreadyRequestedClose bool) {
-	if !alreadyRequestedClose {
+func requestClose(sink Sink, sinkCloseChan chan Sink, alreadyRequestedClose *bool) {
+
+	if !(*alreadyRequestedClose) {
 		sinkCloseChan <- sink
-		alreadyRequestedClose = true
+		*alreadyRequestedClose = true
 		sink.Logger().Debugf("Sink %s: Successfully requested listener channel close", sink)
 	} else {
 		sink.Logger().Debugf("Sink %s: Previously requested close. Doing nothing", sink)

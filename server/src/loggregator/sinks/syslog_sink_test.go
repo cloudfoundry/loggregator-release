@@ -11,9 +11,11 @@ import (
 
 var TestRsyslogServer net.TCPListener
 var dataReadChannel chan []byte
+var closeChannel chan bool
 
 func init() {
 	dataReadChannel = make(chan []byte, 10)
+	closeChannel = make(chan bool)
 	testSink, err := net.Listen("tcp", "localhost:24631")
 	if err != nil {
 		panic(err)
@@ -23,13 +25,16 @@ func init() {
 			buffer := make([]byte, 1024)
 			conn, err := testSink.Accept()
 			defer conn.Close()
+			defer testSink.Close()
 			if err != nil {
 				panic(err)
 			}
 			readCount, err := conn.Read(buffer)
+
 			if err != nil {
 				panic(err)
 			}
+
 			dataReadChannel <- buffer[:readCount]
 		}
 	}()

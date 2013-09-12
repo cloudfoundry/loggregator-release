@@ -35,13 +35,13 @@ func (s *SyslogSink) Run(closeChan chan Sink) {
 	dl, err := url.Parse(s.drainUrl)
 	if err != nil {
 		s.logger.Warnf("Syslog Sink %s: Error when trying to parse syslog url. Requesting close. Err: %v", s.drainUrl, err)
-		requestClose(s, closeChan, alreadyRequestedClose)
+		requestClose(s, closeChan, &alreadyRequestedClose)
 	}
 	sysLogger, err := dial("tcp", dl.Host, s.appId, s.logger)
 	defer sysLogger.close()
 	if err != nil {
 		s.logger.Warnf("Syslog Sink %s: Error when dialing out. Requesting close. Err: %v", s.drainUrl, err)
-		requestClose(s, closeChan, alreadyRequestedClose)
+		requestClose(s, closeChan, &alreadyRequestedClose)
 	}
 
 	messageChannel := newRingBufferChannel(s)
@@ -64,7 +64,7 @@ func (s *SyslogSink) Run(closeChan chan Sink) {
 		}
 		if err != nil {
 			s.logger.Debugf("Syslog Sink %s: Error when trying to send data to sink. Requesting close. Err: %v", s.drainUrl, err)
-			requestClose(s, closeChan, alreadyRequestedClose)
+			requestClose(s, closeChan, &alreadyRequestedClose)
 		} else {
 			s.logger.Debugf("Syslog Sink %s: Successfully sent data", s.drainUrl)
 			atomic.AddUint64(s.sentMessageCount, 1)
