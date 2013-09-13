@@ -8,8 +8,11 @@ import (
 
 type LogAccessAuthorizer func(authToken string, appId string, logger *gosteno.Logger) bool
 
-func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string) LogAccessAuthorizer {
+func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string, disableEmailDomainAuthorization bool) LogAccessAuthorizer {
 	userIsInAllowedEmailDomain := func(email string) bool {
+		if disableEmailDomainAuthorization {
+			return true
+		}
 		re := regexp.MustCompile("(?i)^[^@]+@(vmware.com|pivotallabs.com|gopivotal.com)$")
 		return re.MatchString(email)
 	}
