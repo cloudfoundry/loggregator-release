@@ -68,3 +68,15 @@ func TestThatItSendsStdErrAsErr(t *testing.T) {
 	assert.Contains(t, string(data), "appId")
 	assert.Contains(t, string(data), "err")
 }
+
+func TestThatItClosesWhenNoConnectionIsEstablished(t *testing.T) {
+	sink := NewSyslogSink("appId", "syslog://badsyslog:24632", testhelpers.Logger())
+	closeChan := make(chan Sink)
+
+	go func() {
+		<-closeChan
+	}()
+
+	assert.NotPanics(t, func() { sink.Run(closeChan) })
+
+}

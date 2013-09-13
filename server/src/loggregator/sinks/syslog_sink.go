@@ -36,13 +36,17 @@ func (s *SyslogSink) Run(closeChan chan Sink) {
 	if err != nil {
 		s.logger.Warnf("Syslog Sink %s: Error when trying to parse syslog url. Requesting close. Err: %v", s.drainUrl, err)
 		requestClose(s, closeChan, &alreadyRequestedClose)
+		return
 	}
+
 	sysLogger, err := dial("tcp", dl.Host, s.appId, s.logger)
-	defer sysLogger.close()
 	if err != nil {
 		s.logger.Warnf("Syslog Sink %s: Error when dialing out. Requesting close. Err: %v", s.drainUrl, err)
 		requestClose(s, closeChan, &alreadyRequestedClose)
+		return
 	}
+
+	defer sysLogger.close()
 
 	messageChannel := newRingBufferChannel(s)
 	for {
