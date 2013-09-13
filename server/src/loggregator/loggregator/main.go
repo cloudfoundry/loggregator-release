@@ -25,15 +25,16 @@ import (
 
 type Config struct {
 	cfcomponent.Config
-	Index                  uint
-	ApiHost                string
-	UaaVerificationKeyFile string
-	SystemDomain           string
-	SourcePort             uint32
-	WebPort                uint32
-	LogFilePath            string
-	decoder                authorization.TokenDecoder
-	MaxRetainedLogMessages int
+	Index                           uint
+	ApiHost                         string
+	UaaVerificationKeyFile          string
+	DisableEmailDomainAuthorization bool
+	SystemDomain                    string
+	SourcePort                      uint32
+	WebPort                         uint32
+	LogFilePath                     string
+	decoder                         authorization.TokenDecoder
+	MaxRetainedLogMessages          int
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
@@ -98,7 +99,7 @@ func main() {
 	listener := agentlistener.NewAgentListener(fmt.Sprintf("0.0.0.0:%d", config.SourcePort), logger)
 	incomingData := listener.Start()
 
-	authorizer := authorization.NewLogAccessAuthorizer(config.decoder, config.ApiHost)
+	authorizer := authorization.NewLogAccessAuthorizer(config.decoder, config.ApiHost, config.DisableEmailDomainAuthorization)
 	messageRouter := sinkserver.NewMessageRouter(messagestore.NewMessageStore(config.MaxRetainedLogMessages), logger)
 	httpServer := sinkserver.NewHttpServer(messageRouter, authorizer, 30*time.Second, logger)
 
