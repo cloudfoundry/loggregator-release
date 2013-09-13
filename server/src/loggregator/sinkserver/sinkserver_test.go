@@ -4,6 +4,7 @@ import (
 	"code.google.com/p/go.net/websocket"
 	"encoding/binary"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"loggregator/messagestore"
@@ -68,7 +69,7 @@ func TestMetrics(t *testing.T) {
 	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Name, "numberOfSinks")
 	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Value, oldSinksCounter)
 
-	marshalledProtoBuffer := testhelpers.MarshalledDrainedLogMessage(t, "expectedMessageString", "myApp", "syslog://localhost:32564")
+	marshalledProtoBuffer := messagetesthelpers.MarshalledDrainedLogMessage(t, "expectedMessageString", "myApp", "syslog://localhost:32564")
 	dataReadChannel <- marshalledProtoBuffer
 
 	select {
@@ -99,9 +100,9 @@ func TestThatItSends(t *testing.T) {
 	receivedChan := make(chan []byte, 2)
 
 	expectedMessageString := "Some data"
-	expectedMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
+	expectedMessage := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
 	otherMessageString := "Some more stuff"
-	otherMessage := testhelpers.MarshalledLogMessage(t, otherMessageString, "myApp")
+	otherMessage := messagetesthelpers.MarshalledLogMessage(t, otherMessageString, "myApp")
 
 	testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
 	WaitForWebsocketRegistration()
@@ -113,14 +114,14 @@ func TestThatItSends(t *testing.T) {
 	case <-time.After(1 * time.Second):
 		t.Errorf("Did not get message 1.")
 	case message := <-receivedChan:
-		testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
+		messagetesthelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
 	}
 
 	select {
 	case <-time.After(1 * time.Second):
 		t.Errorf("Did not get message 2.")
 	case message := <-receivedChan:
-		testhelpers.AssertProtoBufferMessageEquals(t, otherMessageString, message)
+		messagetesthelpers.AssertProtoBufferMessageEquals(t, otherMessageString, message)
 	}
 }
 
@@ -133,7 +134,7 @@ func TestThatItSendsAllDataToAllSinks(t *testing.T) {
 	WaitForWebsocketRegistration()
 
 	expectedMessageString := "Some Data"
-	expectedMarshalledProtoBuffer := testhelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
+	expectedMarshalledProtoBuffer := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
 
 	dataReadChannel <- expectedMarshalledProtoBuffer
 
@@ -141,24 +142,24 @@ func TestThatItSendsAllDataToAllSinks(t *testing.T) {
 	case <-time.After(200 * time.Millisecond):
 		t.Errorf("Did not get message from client 1.")
 	case message := <-client1ReceivedChan:
-		testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
+		messagetesthelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
 	}
 
 	select {
 	case <-time.After(200 * time.Millisecond):
 		t.Errorf("Did not get message from client 2.")
 	case message := <-client2ReceivedChan:
-		testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
+		messagetesthelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
 	}
 }
 
 func TestThatItSendsLogsToProperAppSink(t *testing.T) {
 	receivedChan := make(chan []byte)
 
-	otherAppsMarshalledMessage := testhelpers.MarshalledLogMessage(t, "Some other message", "otherApp")
+	otherAppsMarshalledMessage := messagetesthelpers.MarshalledLogMessage(t, "Some other message", "otherApp")
 
 	expectedMessageString := "My important message"
-	myAppsMarshalledMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
+	myAppsMarshalledMessage := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
 
 	testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
 	WaitForWebsocketRegistration()
@@ -170,7 +171,7 @@ func TestThatItSendsLogsToProperAppSink(t *testing.T) {
 	case <-time.After(1 * time.Second):
 		t.Errorf("Did not get message from app sink.")
 	case message := <-receivedChan:
-		testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
+		messagetesthelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
 	}
 }
 
@@ -192,7 +193,7 @@ func TestDropUnmarshallableMessage(t *testing.T) {
 
 	sink.Close()
 	expectedMessageString := "My important message"
-	mySpaceMarshalledMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
+	mySpaceMarshalledMessage := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
 	dataReadChannel <- mySpaceMarshalledMessage
 }
 
@@ -260,7 +261,7 @@ func TestKeepAlive(t *testing.T) {
 	time.Sleep(60 * time.Millisecond) //wait a little bit to make sure the keep-alive has successfully been stopped
 
 	expectedMessageString := "My important message"
-	myAppsMarshalledMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
+	myAppsMarshalledMessage := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
 	dataReadChannel <- myAppsMarshalledMessage
 
 	time.Sleep(10 * time.Millisecond) //wait a little bit to give a potential message time to arrive
@@ -277,7 +278,7 @@ func TestKeepAlive(t *testing.T) {
 
 func TestItDumpsAllMessagesForAnAppUser(t *testing.T) {
 	expectedMessageString := "Some data"
-	expectedMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
+	expectedMessage := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
 
 	dataReadChannel <- expectedMessage
 
@@ -295,10 +296,10 @@ func TestItDumpsAllMessagesForAnAppUser(t *testing.T) {
 	assert.NoError(t, err)
 	resp.Body.Close()
 
-	messages, err := logmessage.ParseDumpedMessages(body)
+	logMessages, err := logmessage.ParseDumpedLogMessages(body)
 	assert.NoError(t, err)
 
-	assert.Equal(t, expectedMessage, messages[len(messages)-1].GetRawMessage())
+	assert.Equal(t, expectedMessageString, string(logMessages[len(logMessages)-1].GetMessage()))
 }
 
 func TestItReturns401WithIncorrectAuthToken(t *testing.T) {
@@ -331,10 +332,10 @@ func TestThatItSendsAllMessageToKnownDrains(t *testing.T) {
 	<-fakeSyslogDrain.ReadyChan
 
 	expectedMessageString := "Some Data"
-	expectedMarshalledProtoBuffer := testhelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "syslog://localhost:34566")
+	expectedMarshalledProtoBuffer := messagetesthelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "syslog://localhost:34566")
 
 	expectedSecondMessageString := "Some Data Without a drainurl"
-	expectedSecondMarshalledProtoBuffer := testhelpers.MarshalledLogMessage(t, expectedSecondMessageString, "myApp")
+	expectedSecondMarshalledProtoBuffer := messagetesthelpers.MarshalledLogMessage(t, expectedSecondMessageString, "myApp")
 
 	dataReadChannel <- expectedMarshalledProtoBuffer
 
@@ -364,7 +365,7 @@ func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	<-fakeSyslogDrain.ReadyChan
 
 	expectedMessageString := "Some Data"
-	expectedMarshalledProtoBuffer := testhelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "syslog://localhost:34569")
+	expectedMarshalledProtoBuffer := messagetesthelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "syslog://localhost:34569")
 	dataReadChannel <- expectedMarshalledProtoBuffer
 
 	select {
@@ -387,7 +388,7 @@ func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	<-fakeSyslogDrain.ReadyChan
 
 	expectedMessageString3 := "Some Data3"
-	expectedMarshalledProtoBuffer3 := testhelpers.MarshalledDrainedLogMessage(t, expectedMessageString3, "myApp", "syslog://localhost:34569")
+	expectedMarshalledProtoBuffer3 := messagetesthelpers.MarshalledDrainedLogMessage(t, expectedMessageString3, "myApp", "syslog://localhost:34569")
 	dataReadChannel <- expectedMarshalledProtoBuffer3
 
 	select {
@@ -416,7 +417,7 @@ func TestThatItSendsAllDataToAllDrainUrls(t *testing.T) {
 	<-fakeSyslogDrain2.ReadyChan
 
 	expectedMessageString := "Some Data"
-	expectedMarshalledProtoBuffer := testhelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "syslog://localhost:34567", "syslog://localhost:34568")
+	expectedMarshalledProtoBuffer := messagetesthelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "syslog://localhost:34567", "syslog://localhost:34568")
 
 	dataReadChannel <- expectedMarshalledProtoBuffer
 
@@ -452,7 +453,7 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 	<-fakeSyslogDrain2.ReadyChan
 
 	expectedMessageString := "Some Data"
-	expectedMarshalledProtoBuffer := testhelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "syslog://localhost:34569")
+	expectedMarshalledProtoBuffer := messagetesthelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "syslog://localhost:34569")
 
 	dataReadChannel <- expectedMarshalledProtoBuffer
 
@@ -464,7 +465,7 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 	}
 
 	expectedSecondMessageString := "loggregator myApp: loggregator myApp: Some More Data"
-	expectedSecondMarshalledProtoBuffer := testhelpers.MarshalledDrainedNonWardenLogMessage(t, expectedSecondMessageString, "myApp", "syslog://localhost:34540")
+	expectedSecondMarshalledProtoBuffer := messagetesthelpers.MarshalledDrainedNonWardenLogMessage(t, expectedSecondMessageString, "myApp", "syslog://localhost:34540")
 
 	dataReadChannel <- expectedSecondMarshalledProtoBuffer
 

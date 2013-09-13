@@ -2,6 +2,7 @@ package sinks
 
 import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"net"
 	"runtime"
@@ -46,7 +47,7 @@ func TestThatItSendsStdOutAsInfo(t *testing.T) {
 
 	closeChan := make(chan Sink)
 	go sink.Run(closeChan)
-	logMessage, err := logmessage.ParseMessage(testhelpers.MarshalledLogMessage(t, "hi", "appId"))
+	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledLogMessage(t, "hi", "appId"))
 	assert.NoError(t, err)
 	sink.Channel() <- logMessage
 	data := <-dataReadChannel
@@ -59,7 +60,7 @@ func TestThatItSendsStdErrAsErr(t *testing.T) {
 	sink := NewSyslogSink("appId", "syslog://localhost:24631", testhelpers.Logger())
 	closeChan := make(chan Sink)
 	go sink.Run(closeChan)
-	logMessage, err := logmessage.ParseMessage(testhelpers.MarshalledErrorLogMessage(t, "err", "appId"))
+	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"))
 	assert.NoError(t, err)
 	sink.Channel() <- logMessage
 	data := <-dataReadChannel

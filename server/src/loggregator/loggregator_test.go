@@ -3,6 +3,7 @@ package loggregator
 import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
+	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"loggregator/messagestore"
 	"loggregator/sinkserver"
@@ -30,10 +31,10 @@ func TestEndtoEndMessage(t *testing.T) {
 	connection, err := net.Dial("udp", "localhost:3456")
 
 	expectedMessageString := "Some Data"
-	expectedMessage := testhelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
+	expectedMessage := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
 
 	_, err = connection.Write(expectedMessage)
 	assert.NoError(t, err)
 
-	testhelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, <-receivedChan)
+	messagetesthelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, <-receivedChan)
 }

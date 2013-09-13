@@ -2,67 +2,65 @@ package messagestore
 
 import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
-	testhelpers "server_testhelpers"
 	"testing"
 )
 
-func TestRegisterAndFor(t *testing.T) {
-	store := NewMessageStore(2)
-
+func TestAddingAndDumping(t *testing.T) {
 	appId := "myApp"
-	appMessageString := "AppMessage"
-	appMessage := testhelpers.MarshalledLogMessage(t, appMessageString, "myApp")
-	message, err := logmessage.ParseMessage(appMessage)
+	expectedMessage := "AppMessage"
 
-	store.Add(message, appId)
+	store := NewMessageStore(1)
+	store.Add(createMessage(t, appId, expectedMessage), appId)
+	dump := store.DumpFor(appId)
 
-	messages, err := logmessage.ParseDumpedMessages(store.DumpFor(appId))
+	logMessages, err := logmessage.ParseDumpedLogMessages(dump)
 	assert.NoError(t, err)
-
-	assert.Equal(t, len(messages), 1)
-	assert.Equal(t, appMessage, messages[0].GetRawMessage())
+	assert.Equal(t, len(logMessages), 1)
+	assert.Equal(t, expectedMessage, string(logMessages[0].GetMessage()))
 }
 
-func TestAddingForAnotherApp(t *testing.T) {
+func TestAddingForMultipleApps(t *testing.T) {
 	store := NewMessageStore(2)
 
 	appId := "myApp"
-	message, err := logmessage.ParseMessage(testhelpers.MarshalledLogMessage(t, "Message", appId))
-	assert.NoError(t, err)
-	store.Add(message, appId)
+	message := createMessage(t, appId, "Message")
 
 	anotherAppId := "anotherApp"
-	anotherAppMessage, err := logmessage.ParseMessage(testhelpers.MarshalledLogMessage(t, "AnotherAppMessage", anotherAppId))
-	assert.NoError(t, err)
+	anotherAppMessage := createMessage(t, anotherAppId, "AnotherAppMessage")
+
+	store.Add(message, appId)
 	store.Add(anotherAppMessage, anotherAppId)
 
-	messages, err := logmessage.ParseDumpedMessages(store.DumpFor(appId))
+	logMessages, err := logmessage.ParseDumpedLogMessages(store.DumpFor(appId))
 	assert.NoError(t, err)
+	assert.Equal(t, len(logMessages), 1)
+	assert.Equal(t, "Message", string(logMessages[0].GetMessage()))
 
-	assert.Equal(t, len(messages), 1)
-	assert.Equal(t, message, messages[0])
-
-	messages, err = logmessage.ParseDumpedMessages(store.DumpFor(anotherAppId))
+	logMessages, err = logmessage.ParseDumpedLogMessages(store.DumpFor(anotherAppId))
 	assert.NoError(t, err)
-
-	assert.Equal(t, len(messages), 1)
-	assert.Equal(t, anotherAppMessage, messages[0])
+	assert.Equal(t, len(logMessages), 1)
+	assert.Equal(t, "AnotherAppMessage", string(logMessages[0].GetMessage()))
 }
 
 // This test exists because the ring buffer will dump messages
 // that actually exist.
 func TestOnlyDumpsMessagesThatHaveALength(t *testing.T) {
-	store := NewMessageStore(2)
+	store := NewMessageStore(200)
 
-	target := "appId"
-	message, err := logmessage.ParseMessage(testhelpers.MarshalledLogMessage(t, "Hello world", target))
+	appId := "appId"
+	store.Add(createMessage(t, appId, "Hello world"), appId)
+
+	logMessages, err := logmessage.ParseDumpedLogMessages(store.DumpFor(appId))
 	assert.NoError(t, err)
-	store.Add(message, target)
+	assert.Equal(t, len(logMessages), 1)
+	assert.Equal(t, "Hello world", string(logMessages[0].GetMessage()))
+}
 
-	messages, err := logmessage.ParseDumpedMessages(store.DumpFor(target))
+func createMessage(t *testing.T, appId, messageString string) (message *logmessage.Message) {
+	appMessage := messagetesthelpers.MarshalledLogMessage(t, messageString, appId)
+	message, err := logmessage.ParseMessage(appMessage)
 	assert.NoError(t, err)
-
-	assert.Equal(t, len(messages), 1)
-	assert.Equal(t, message, messages[0])
+	return
 }
