@@ -42,28 +42,32 @@ func (d TestUaaTokenDecoder) Decode(token string) (TokenPayload, error) {
 }
 
 var accessTests = []struct {
-	userDetails    TokenPayload
-	target         string
-	authToken      string
-	expectedResult bool
+	userDetails                     TokenPayload
+	target                          string
+	authToken                       string
+	disableEmailDomainAuthorization bool
+	expectedResult                  bool
 }{
 	//Allowed domains
 	{
 		TokenPayload{UserId: "userId", Email: "user1@pivotallabs.com"},
 		"myAppId",
 		"bearer something",
+		false,
 		true,
 	},
 	{
 		TokenPayload{UserId: "userId", Email: "user2@gopivotal.com"},
 		"myAppId",
 		"bearer something",
+		false,
 		true,
 	},
 	{
 		TokenPayload{UserId: "userId", Email: "user3@vmware.com"},
 		"myAppId",
 		"bearer something",
+		false,
 		true,
 	},
 	//Funky domain casing
@@ -71,6 +75,15 @@ var accessTests = []struct {
 		TokenPayload{UserId: "userId", Email: "user3@VmWaRe.com"},
 		"myAppId",
 		"bearer something",
+		false,
+		true,
+	},
+	//Allowed domains - disabled email domain authorization
+	{
+		TokenPayload{UserId: "userId", Email: "user3@gmail.com"},
+		"myAppId",
+		"bearer something",
+		true,
 		true,
 	},
 	//Not allowed stuff
@@ -79,11 +92,13 @@ var accessTests = []struct {
 		"notMyAppId",
 		"bearer something",
 		false,
+		false,
 	},
 	{
 		TokenPayload{UserId: "userId", Email: "user3@vmware.com"},
 		"nonExistantAppId",
 		"bearer something",
+		false,
 		false,
 	},
 	{
@@ -91,13 +106,14 @@ var accessTests = []struct {
 		"myAppId",
 		"bearer something",
 		false,
+		false,
 	},
 }
 
 func TestUserRoleAccessCombinations(t *testing.T) {
 	for i, test := range accessTests {
 		decoder := &TestUaaTokenDecoder{test.userDetails}
-		authorizer := NewLogAccessAuthorizer(decoder, "http://localhost:9876")
+		authorizer := NewLogAccessAuthorizer(decoder, "http://localhost:9876", test.disableEmailDomainAuthorization)
 		result := authorizer(test.authToken, test.target, testhelpers.Logger())
 		if result != test.expectedResult {
 			t.Errorf("Access combination %d for %v failed.", i, test.userDetails)
