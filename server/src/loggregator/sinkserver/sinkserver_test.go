@@ -7,7 +7,6 @@ import (
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
-	"loggregator/sinks"
 	"net/http"
 	"regexp"
 	testhelpers "server_testhelpers"
@@ -60,7 +59,7 @@ func TestMetrics(t *testing.T) {
 	oldSinksCounter := TestMessageRouter.Emit().Metrics[0].Value.(int)
 
 	client1ReceivedChan := make(chan []byte)
-	fakeSyslogDrain1, err := sinks.NewFakeService(client1ReceivedChan, "127.0.0.1:32564")
+	fakeSyslogDrain1, err := NewFakeService(client1ReceivedChan, "127.0.0.1:32564")
 	assert.NoError(t, err)
 	go fakeSyslogDrain1.Serve()
 	<-fakeSyslogDrain1.ReadyChan
@@ -326,7 +325,7 @@ func TestItReturns401WithIncorrectAuthToken(t *testing.T) {
 func TestThatItSendsAllMessageToKnownDrains(t *testing.T) {
 	client1ReceivedChan := make(chan []byte)
 
-	fakeSyslogDrain, err := sinks.NewFakeService(client1ReceivedChan, "127.0.0.1:34566")
+	fakeSyslogDrain, err := NewFakeService(client1ReceivedChan, "127.0.0.1:34566")
 	defer fakeSyslogDrain.Stop()
 	assert.NoError(t, err)
 	go fakeSyslogDrain.Serve()
@@ -360,7 +359,7 @@ func TestThatItSendsAllMessageToKnownDrains(t *testing.T) {
 func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	client1ReceivedChan := make(chan []byte)
 
-	fakeSyslogDrain, err := sinks.NewFakeService(client1ReceivedChan, "127.0.0.1:34569")
+	fakeSyslogDrain, err := NewFakeService(client1ReceivedChan, "127.0.0.1:34569")
 	assert.NoError(t, err)
 	go fakeSyslogDrain.Serve()
 	<-fakeSyslogDrain.ReadyChan
@@ -382,7 +381,7 @@ func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	time.Sleep(18 * time.Second)
 
 	client2ReceivedChan := make(chan []byte)
-	fakeSyslogDrain, err = sinks.NewFakeService(client2ReceivedChan, "127.0.0.1:34569")
+	fakeSyslogDrain, err = NewFakeService(client2ReceivedChan, "127.0.0.1:34569")
 	assert.NoError(t, err)
 
 	go fakeSyslogDrain.Serve()
@@ -405,13 +404,13 @@ func TestThatItSendsAllDataToAllDrainUrls(t *testing.T) {
 	client1ReceivedChan := make(chan []byte)
 	client2ReceivedChan := make(chan []byte)
 
-	fakeSyslogDrain1, err := sinks.NewFakeService(client1ReceivedChan, "127.0.0.1:34567")
+	fakeSyslogDrain1, err := NewFakeService(client1ReceivedChan, "127.0.0.1:34567")
 	defer fakeSyslogDrain1.Stop()
 	assert.NoError(t, err)
 	go fakeSyslogDrain1.Serve()
 	<-fakeSyslogDrain1.ReadyChan
 
-	fakeSyslogDrain2, err := sinks.NewFakeService(client2ReceivedChan, "127.0.0.1:34568")
+	fakeSyslogDrain2, err := NewFakeService(client2ReceivedChan, "127.0.0.1:34568")
 	defer fakeSyslogDrain2.Stop()
 	assert.NoError(t, err)
 	go fakeSyslogDrain2.Serve()
@@ -441,13 +440,13 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 	client1ReceivedChan := make(chan []byte)
 	client2ReceivedChan := make(chan []byte)
 
-	fakeSyslogDrain1, err := sinks.NewFakeService(client1ReceivedChan, "127.0.0.1:34569")
+	fakeSyslogDrain1, err := NewFakeService(client1ReceivedChan, "127.0.0.1:34569")
 	defer fakeSyslogDrain1.Stop()
 	assert.NoError(t, err)
 	go fakeSyslogDrain1.Serve()
 	<-fakeSyslogDrain1.ReadyChan
 
-	fakeSyslogDrain2, err := sinks.NewFakeService(client2ReceivedChan, "127.0.0.1:34540")
+	fakeSyslogDrain2, err := NewFakeService(client2ReceivedChan, "127.0.0.1:34540")
 	defer fakeSyslogDrain2.Stop()
 	assert.NoError(t, err)
 	go fakeSyslogDrain2.Serve()

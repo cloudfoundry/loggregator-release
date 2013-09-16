@@ -1,4 +1,4 @@
-package sinks
+package sinkserver
 
 import (
 	"net"
