@@ -74,9 +74,8 @@ func TestThatItClosesWhenNoConnectionIsEstablished(t *testing.T) {
 	closeChan := make(chan Sink)
 
 	go func() {
-		<-closeChan
+		assert.NotPanics(t, func() { sink.Run(closeChan) })
 	}()
 
-	assert.NotPanics(t, func() { sink.Run(closeChan) })
-
+	<-closeChan
 }
