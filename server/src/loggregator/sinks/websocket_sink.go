@@ -72,7 +72,7 @@ func (sink *websocketSink) Run(sinkCloseChan chan Sink) {
 	keepAliveChan := sink.keepAliveChannel()
 	alreadyRequestedClose := false
 
-	messageChannel := newRingBufferChannel(sink)
+	messageChannel := runNewRingBuffer(sink, 10).GetOutputChannel()
 	for {
 		sink.logger.Debugf("Websocket Sink %s: Waiting for activity", sink.clientAddress)
 		select {

@@ -46,12 +46,15 @@ func TestDelete(t *testing.T) {
 func TestDrainsFor(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 	target := "789"
+	otherTarget := "790"
 
 	sink1 := *new(sinks.Sink)
 	sink2 := sinks.NewSyslogSink("1", "url", server_testhelpers.Logger())
+	sink3 := sinks.NewSyslogSink("1", "url", server_testhelpers.Logger())
 
 	groupedSinks.Register(sink1, target)
 	groupedSinks.Register(sink2, target)
+	groupedSinks.Register(sink3, otherTarget)
 
 	appSinks := groupedSinks.DrainsFor(target)
 	assert.Equal(t, len(appSinks), 1)
@@ -70,4 +73,35 @@ func TestDrainForReturnsOnly(t *testing.T) {
 
 	sinkDrain := groupedSinks.DrainFor(target, "sink we are searching for")
 	assert.Equal(t, sink2, sinkDrain)
+}
+
+func TestDumpForReturnsOnyDumps(t *testing.T) {
+	groupedSinks := NewGroupedSinks()
+	target := "789"
+
+	sink1 := *new(sinks.Sink)
+	sink2 := sinks.NewSyslogSink("2", "sink we are searching for", server_testhelpers.Logger())
+	sink3 := sinks.NewDumpSink("1", 5, server_testhelpers.Logger())
+
+	groupedSinks.Register(sink1, target)
+	groupedSinks.Register(sink2, target)
+	groupedSinks.Register(sink3, target)
+
+	appSink := groupedSinks.DumpFor(target)
+	assert.Equal(t, appSink, sink3)
+}
+
+func TestDumpForReturnsOnlyDumpsForTheGivenAppId(t *testing.T) {
+	groupedSinks := NewGroupedSinks()
+	target := "789"
+	otherTarget := "789"
+
+	sink1 := sinks.NewDumpSink("1", 5, server_testhelpers.Logger())
+	sink2 := sinks.NewDumpSink("1", 5, server_testhelpers.Logger())
+
+	groupedSinks.Register(sink1, target)
+	groupedSinks.Register(sink2, otherTarget)
+
+	appSink := groupedSinks.DumpFor(target)
+	assert.Equal(t, appSink, sink1)
 }

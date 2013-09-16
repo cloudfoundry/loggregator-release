@@ -4,9 +4,13 @@ import (
 	"code.google.com/p/go.net/websocket"
 	"encoding/binary"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+<<<<<<< HEAD
+=======
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
+>>>>>>> master
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
+	"loggregator/messagestore"
 	"loggregator/sinks"
 	"net/http"
 	"regexp"
@@ -27,7 +31,7 @@ func init() {
 	// This needs be unbuffered as the channel we get from the
 	// agent listener is unbuffered?
 	dataReadChannel = make(chan []byte, 10)
-	TestMessageRouter = NewMessageRouter(1024, testhelpers.Logger())
+	TestMessageRouter = NewMessageRouter(messagestore.NewMessageStore(10), testhelpers.Logger())
 	go TestMessageRouter.Start()
 	TestHttpServer = NewHttpServer(TestMessageRouter, testhelpers.SuccessfulAuthorizer, 50*time.Millisecond, testhelpers.Logger())
 	go TestHttpServer.Start(dataReadChannel, "localhost:"+SERVER_PORT)
@@ -277,12 +281,11 @@ func TestKeepAlive(t *testing.T) {
 
 func TestItDumpsAllMessagesForAnAppUser(t *testing.T) {
 	expectedMessageString := "Some data"
-	expectedMessage := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp543")
+	expectedMessage := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
 
 	dataReadChannel <- expectedMessage
-	dataReadChannel <- expectedMessage
 
-	req, err := http.NewRequest("GET", "http://localhost:"+SERVER_PORT+DUMP_PATH+"?app=myApp543", nil)
+	req, err := http.NewRequest("GET", "http://localhost:"+SERVER_PORT+DUMP_PATH+"?app=myApp", nil)
 	assert.NoError(t, err)
 	req.Header.Add("Authorization", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
 
@@ -296,15 +299,21 @@ func TestItDumpsAllMessagesForAnAppUser(t *testing.T) {
 	assert.NoError(t, err)
 	resp.Body.Close()
 
+<<<<<<< HEAD
+	messages, err := logmessage.ParseDumpedLogMessages(body)
+	assert.NoError(t, err)
+
+	assert.Equal(t, testhelpers.UnmarshalledLogMessage(t, expectedMessage), messages[len(messages)-1])
+=======
 	logMessages, err := logmessage.ParseDumpedLogMessages(body)
 	assert.NoError(t, err)
 
-	assert.Equal(t, len(logMessages), 2)
 	assert.Equal(t, expectedMessageString, string(logMessages[len(logMessages)-1].GetMessage()))
+>>>>>>> master
 }
 
 func TestItReturns401WithIncorrectAuthToken(t *testing.T) {
-	req, err := http.NewRequest("GET", "http://localhost:"+SERVER_PORT+DUMP_PATH+"?app=myApp543", nil)
+	req, err := http.NewRequest("GET", "http://localhost:"+SERVER_PORT+DUMP_PATH+"?app=myApp", nil)
 	assert.NoError(t, err)
 	req.Header.Add("Authorization", testhelpers.INVALID_AUTHENTICATION_TOKEN)
 

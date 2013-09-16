@@ -13,7 +13,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/servernamer"
 	"io/ioutil"
 	"loggregator/authorization"
-	"loggregator/messagestore"
 	"loggregator/sinkserver"
 	"net"
 	"os"
@@ -34,7 +33,7 @@ type Config struct {
 	WebPort                         uint32
 	LogFilePath                     string
 	decoder                         authorization.TokenDecoder
-	MaxRetainedLogMessages          int
+	MaxRetainedLogMessages          uint
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
@@ -100,7 +99,7 @@ func main() {
 	incomingData := listener.Start()
 
 	authorizer := authorization.NewLogAccessAuthorizer(config.decoder, config.ApiHost, config.DisableEmailDomainAuthorization)
-	messageRouter := sinkserver.NewMessageRouter(messagestore.NewMessageStore(config.MaxRetainedLogMessages), logger)
+	messageRouter := sinkserver.NewMessageRouter(config.MaxRetainedLogMessages, logger)
 	httpServer := sinkserver.NewHttpServer(messageRouter, authorizer, 30*time.Second, logger)
 
 	cfc, err := cfcomponent.NewComponent(

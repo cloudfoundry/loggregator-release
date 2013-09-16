@@ -20,7 +20,6 @@ packages=(
     loggregator/authorization
     loggregator/groupedsinks
     loggregator/loggregator
-    loggregator/messagestore
     loggregator/sinks
     loggregator/sinkserver
     server_testhelpers

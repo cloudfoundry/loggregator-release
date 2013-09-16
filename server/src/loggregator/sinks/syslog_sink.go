@@ -48,7 +48,7 @@ func (s *SyslogSink) Run(closeChan chan Sink) {
 
 	defer sysLogger.close()
 
-	messageChannel := newRingBufferChannel(s)
+	messageChannel := runNewRingBuffer(s, 10).GetOutputChannel()
 	for {
 		s.logger.Debugf("Syslog Sink %s: Waiting for activity", s.drainUrl)
 		message, ok := <-messageChannel

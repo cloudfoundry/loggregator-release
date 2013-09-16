@@ -5,7 +5,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
-	"loggregator/messagestore"
 	"loggregator/sinkserver"
 	"net"
 	testhelpers "server_testhelpers"
@@ -17,7 +16,7 @@ func TestEndtoEndMessage(t *testing.T) {
 	logger := gosteno.NewLogger("TestLogger")
 	listener := agentlistener.NewAgentListener("localhost:3456", logger)
 	dataChannel := listener.Start()
-	messageRouter := sinkserver.NewMessageRouter(messagestore.NewMessageStore(10), logger)
+	messageRouter := sinkserver.NewMessageRouter(10, logger)
 	httpServer := sinkserver.NewHttpServer(messageRouter, testhelpers.SuccessfulAuthorizer, 30*time.Second, logger)
 	go messageRouter.Start()
 	go httpServer.Start(dataChannel, "localhost:8081")

@@ -1,6 +1,7 @@
 package sinkserver
 
 import (
+	"bytes"
 	"code.google.com/p/go.net/websocket"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
@@ -103,8 +104,19 @@ func (httpServer *httpServer) dumpSinkHandler(rw http.ResponseWriter, req *http.
 		return
 	}
 
+	buffer := bytes.NewBufferString("")
+	dumpChan := make(chan logmessage.Message)
+	dumpReceiver := dumpReceiver{appId: appId, outputChannel: dumpChan}
+	httpServer.messageRouter.dumpReceiverChan <- dumpReceiver
+
+	for message := range dumpChan {
+		if message.GetRawMessageLength() > 0 {
+			logmessage.DumpMessage(message, buffer)
+		}
+	}
+
 	rw.Header().Set("Content-Type", "application/octet-stream")
-	rw.Write(httpServer.messageRouter.messageStore.DumpFor(appId))
+	rw.Write(buffer.Bytes())
 }
 
 func contains(valueToFind string, values []string) bool {

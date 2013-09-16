@@ -73,6 +73,22 @@ func (gc *GroupedSinks) DrainsFor(appId string) (results []sinks.Sink) {
 	return results
 }
 
+func (gc *GroupedSinks) DumpFor(appId string) *sinks.DumpSink {
+	gc.RLock()
+	defer gc.RUnlock()
+
+	if app, found := gc.apps[appId]; found {
+		for s, _ := range app.sinkSet {
+			_, isDumpSink := s.(*sinks.DumpSink)
+			if isDumpSink {
+				return s.(*sinks.DumpSink)
+			}
+		}
+	}
+
+	return nil
+}
+
 func (gc *GroupedSinks) DrainFor(appId, drainUrl string) (result sinks.Sink) {
 	gc.RLock()
 	defer gc.RUnlock()
@@ -84,7 +100,6 @@ func (gc *GroupedSinks) DrainFor(appId, drainUrl string) (result sinks.Sink) {
 			}
 		}
 	}
-
 	return nil
 }
 
