@@ -45,8 +45,8 @@ func (d *DumpSink) Dump() []logmessage.Message {
 	for moreMessage {
 		select {
 		case logMessage, ok := <-currentMessageChan:
-			newMessageChan <- logMessage
 			if ok {
+				newMessageChan <- logMessage
 				messages = append(messages, *logMessage)
 			}
 		default:

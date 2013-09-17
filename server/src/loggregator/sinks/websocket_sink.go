@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-type websocketSink struct {
+type WebsocketSink struct {
 	logger            *gosteno.Logger
 	appId             string
 	ws                *websocket.Conn
@@ -22,7 +22,7 @@ type websocketSink struct {
 }
 
 func NewWebsocketSink(appId string, givenLogger *gosteno.Logger, ws *websocket.Conn, clientAddress net.Addr, keepAliveInterval time.Duration) Sink {
-	return &websocketSink{
+	return &WebsocketSink{
 		givenLogger,
 		appId,
 		ws,
@@ -34,7 +34,7 @@ func NewWebsocketSink(appId string, givenLogger *gosteno.Logger, ws *websocket.C
 	}
 }
 
-func (sink *websocketSink) keepAliveChannel() <-chan bool {
+func (sink *WebsocketSink) keepAliveChannel() <-chan bool {
 	keepAliveChan := make(chan bool)
 	var keepAlive []byte
 	go func() {
@@ -50,23 +50,23 @@ func (sink *websocketSink) keepAliveChannel() <-chan bool {
 	return keepAliveChan
 }
 
-func (sink *websocketSink) Channel() chan *logmessage.Message {
+func (sink *WebsocketSink) Channel() chan *logmessage.Message {
 	return sink.listenerChannel
 }
 
-func (sink *websocketSink) Identifier() string {
-	return sink.clientAddress.String()
+func (sink *WebsocketSink) Identifier() string {
+	return sink.ws.Request().RemoteAddr
 }
 
-func (sink *websocketSink) AppId() string {
+func (sink *WebsocketSink) AppId() string {
 	return sink.appId
 }
 
-func (s *websocketSink) Logger() *gosteno.Logger {
+func (s *WebsocketSink) Logger() *gosteno.Logger {
 	return s.logger
 }
 
-func (sink *websocketSink) Run(sinkCloseChan chan Sink) {
+func (sink *WebsocketSink) Run(sinkCloseChan chan Sink) {
 	sink.logger.Debugf("Websocket Sink %s: Created for appId [%s]", sink.clientAddress, sink.appId)
 
 	keepAliveChan := sink.keepAliveChannel()
@@ -85,7 +85,6 @@ func (sink *websocketSink) Run(sinkCloseChan chan Sink) {
 		case message, ok := <-messageChannel:
 			if !ok {
 				sink.logger.Debugf("Websocket Sink %s: Closed listener channel detected. Closing websocket", sink.clientAddress)
-				sink.ws.Close()
 				sink.logger.Debugf("Websocket Sink %s: Websocket successfully closed", sink.clientAddress)
 				return
 			}
@@ -103,7 +102,7 @@ func (sink *websocketSink) Run(sinkCloseChan chan Sink) {
 	}
 }
 
-func (sink *websocketSink) Emit() instrumentation.Context {
+func (sink *WebsocketSink) Emit() instrumentation.Context {
 	return instrumentation.Context{Name: "websocketSink",
 		Metrics: []instrumentation.Metric{
 			instrumentation.Metric{Name: "sentMessageCount:" + sink.appId, Value: atomic.LoadUint64(sink.sentMessageCount)},

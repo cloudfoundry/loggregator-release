@@ -15,7 +15,9 @@ type messageRouter struct {
 	sinkCloseChan      chan sinks.Sink
 	sinkOpenChan       chan sinks.Sink
 	dumpReceiverChan   chan dumpReceiver
-	activeSinksCounter int
+	activeDumpSinksCounter int
+	activeWebsocketSinksCounter int
+	activeSyslogSinksCounter int
 	logger             *gosteno.Logger
 	*sync.RWMutex
 }
@@ -71,13 +73,21 @@ func (messageRouter *messageRouter) Start() {
 	}
 }
 
-func (messageRouter *messageRouter) registerSink(s sinks.Sink, activeSinks *groupedsinks.GroupedSinks) {
+func (messageRouter *messageRouter) registerSink(s sinks.Sink, activeSinks *groupedsinks.GroupedSinks) bool {
 	messageRouter.Lock()
 	defer messageRouter.Unlock()
 
-	activeSinks.Register(s, s.AppId())
-	messageRouter.activeSinksCounter++
+	ok := activeSinks.Register(s)
+	switch s.(type) {
+	case *sinks.DumpSink:
+		messageRouter.activeDumpSinksCounter++
+	case *sinks.SyslogSink:
+		messageRouter.activeSyslogSinksCounter++
+	case *sinks.WebsocketSink:
+		messageRouter.activeWebsocketSinksCounter++
+	}
 	messageRouter.logger.Infof("MessageRouter: Sink with channel %v requested. Opened it.", s.Channel())
+	return ok
 }
 
 func (messageRouter *messageRouter) unregisterSink(s sinks.Sink, activeSinks *groupedsinks.GroupedSinks) {
@@ -86,42 +96,54 @@ func (messageRouter *messageRouter) unregisterSink(s sinks.Sink, activeSinks *gr
 
 	activeSinks.Delete(s)
 	close(s.Channel())
-	messageRouter.activeSinksCounter--
+	switch s.(type) {
+	case *sinks.DumpSink:
+		messageRouter.activeDumpSinksCounter--
+	case *sinks.SyslogSink:
+		messageRouter.activeSyslogSinksCounter--
+	case *sinks.WebsocketSink:
+		messageRouter.activeWebsocketSinksCounter--
+	}
 	messageRouter.logger.Infof("MessageRouter: Sink with channel %v requested closing. Closed it.", s.Channel())
 }
 
 func (messageRouter *messageRouter) manageDumps(activeSinks *groupedsinks.GroupedSinks, appId string) {
 	if activeSinks.DumpFor(appId) == nil {
 		s := sinks.NewDumpSink(appId, messageRouter.dumpBuffer, messageRouter.logger)
-		go s.Run(messageRouter.sinkCloseChan)
-		messageRouter.registerSink(s, activeSinks)
+		ok := messageRouter.registerSink(s, activeSinks)
+		if ok {
+			go s.Run(messageRouter.sinkCloseChan)
+		}
 	}
 }
 
 func (messageRouter *messageRouter) manageDrains(activeSinks *groupedsinks.GroupedSinks, appId string, drainUrls []string, sourceType logmessage.LogMessage_SourceType) {
-	if sourceType == logmessage.LogMessage_WARDEN_CONTAINER {
-		//delete all drains for app
-		if len(drainUrls) == 0 {
-			for _, sink := range activeSinks.DrainsFor(appId) {
-				messageRouter.unregisterSink(sink, activeSinks)
-			}
-			return
-		}
-
-		//delete all drains that were not sent
+	if sourceType != logmessage.LogMessage_WARDEN_CONTAINER {
+		return
+	}
+	//delete all drains for app
+	if len(drainUrls) == 0 {
 		for _, sink := range activeSinks.DrainsFor(appId) {
-			if contains(sink.Identifier(), drainUrls) {
-				continue
-			}
 			messageRouter.unregisterSink(sink, activeSinks)
 		}
+		return
+	}
 
-		//add all drains that didn't exist
-		for _, drainUrl := range drainUrls {
-			if activeSinks.DrainFor(appId, drainUrl) == nil {
-				s := sinks.NewSyslogSink(appId, drainUrl, messageRouter.logger)
+	//delete all drains that were not sent
+	for _, sink := range activeSinks.DrainsFor(appId) {
+		if contains(sink.Identifier(), drainUrls) {
+			continue
+		}
+		messageRouter.unregisterSink(sink, activeSinks)
+	}
+
+	//add all drains that didn't exist
+	for _, drainUrl := range drainUrls {
+		if activeSinks.DrainFor(appId, drainUrl) == nil {
+			s := sinks.NewSyslogSink(appId, drainUrl, messageRouter.logger)
+			ok := messageRouter.registerSink(s, activeSinks)
+			if ok {
 				go s.Run(messageRouter.sinkCloseChan)
-				messageRouter.registerSink(s, activeSinks)
 			}
 		}
 	}
@@ -132,7 +154,9 @@ func (messageRouter *messageRouter) metrics() []instrumentation.Metric {
 	defer messageRouter.RUnlock()
 
 	return []instrumentation.Metric{
-		instrumentation.Metric{Name: "numberOfSinks", Value: messageRouter.activeSinksCounter},
+		instrumentation.Metric{Name: "numberOfDumpSinks", Value: messageRouter.activeDumpSinksCounter},
+		instrumentation.Metric{Name: "numberOfSyslogSinks", Value: messageRouter.activeSyslogSinksCounter},
+		instrumentation.Metric{Name: "numberOfWebsocketSinks", Value: messageRouter.activeWebsocketSinksCounter},
 	}
 }
 

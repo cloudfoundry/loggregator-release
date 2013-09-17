@@ -77,7 +77,7 @@ func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string,
 			select {
 			case <-dontKeepAliveChan:
 				return
-			case <-time.After(44 * time.Millisecond):
+			case <-time.After(4 * time.Millisecond):
 				// keep-alive
 			}
 		}

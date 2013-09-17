@@ -10,13 +10,45 @@ import (
 func TestRegisterAndFor(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 
-	appSink := *new(sinks.Sink)
 	appId := "789"
-	groupedSinks.Register(appSink, appId)
+	appSink := sinks.NewSyslogSink(appId, "url", server_testhelpers.Logger())
+	result := groupedSinks.Register(appSink)
 
 	appSinks := groupedSinks.For(appId)
+	assert.True(t, result)
 	assert.Equal(t, len(appSinks), 1)
 	assert.Equal(t, appSinks[0], appSink)
+}
+
+func TestRegisterReturnsFalseForEmptyAppId(t *testing.T) {
+	groupedSinks := NewGroupedSinks()
+
+	appId := ""
+	appSink := sinks.NewSyslogSink(appId, "url", server_testhelpers.Logger())
+	result := groupedSinks.Register(appSink)
+
+	assert.False(t, result)
+}
+
+func TestRegisterReturnsFalseForEmptyIdentifier(t *testing.T) {
+	groupedSinks := NewGroupedSinks()
+
+	appId := "appId"
+	appSink := sinks.NewSyslogSink(appId, "", server_testhelpers.Logger())
+	result := groupedSinks.Register(appSink)
+
+	assert.False(t, result)
+}
+
+func TestRegisterReturnsFalseWhenAttemptingToAddADuplicateSink(t *testing.T) {
+	groupedSinks := NewGroupedSinks()
+
+	appId := "789"
+	appSink := sinks.NewSyslogSink(appId, "url", server_testhelpers.Logger())
+	groupedSinks.Register(appSink)
+	result := groupedSinks.Register(appSink)
+
+	assert.False(t, result)
 }
 
 func TestEmptyCollection(t *testing.T) {
@@ -30,11 +62,11 @@ func TestDelete(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 	target := "789"
 
-	sink1 := sinks.NewSyslogSink("1", "url", server_testhelpers.Logger())
-	sink2 := sinks.NewSyslogSink("2", "url", server_testhelpers.Logger())
+	sink1 := sinks.NewSyslogSink(target, "url1", server_testhelpers.Logger())
+	sink2 := sinks.NewSyslogSink(target, "url2", server_testhelpers.Logger())
 
-	groupedSinks.Register(sink1, target)
-	groupedSinks.Register(sink2, target)
+	groupedSinks.Register(sink1)
+	groupedSinks.Register(sink2)
 
 	groupedSinks.Delete(sink1)
 
@@ -48,13 +80,13 @@ func TestDrainsFor(t *testing.T) {
 	target := "789"
 	otherTarget := "790"
 
-	sink1 := *new(sinks.Sink)
-	sink2 := sinks.NewSyslogSink("1", "url", server_testhelpers.Logger())
-	sink3 := sinks.NewSyslogSink("1", "url", server_testhelpers.Logger())
+	sink1 := sinks.NewDumpSink(target, 10, server_testhelpers.Logger())
+	sink2 := sinks.NewSyslogSink(target, "url", server_testhelpers.Logger())
+	sink3 := sinks.NewSyslogSink(otherTarget, "url", server_testhelpers.Logger())
 
-	groupedSinks.Register(sink1, target)
-	groupedSinks.Register(sink2, target)
-	groupedSinks.Register(sink3, otherTarget)
+	groupedSinks.Register(sink1)
+	groupedSinks.Register(sink2)
+	groupedSinks.Register(sink3)
 
 	appSinks := groupedSinks.DrainsFor(target)
 	assert.Equal(t, len(appSinks), 1)
@@ -65,11 +97,11 @@ func TestDrainForReturnsOnly(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 	target := "789"
 
-	sink1 := sinks.NewSyslogSink("1", "other sink", server_testhelpers.Logger())
-	sink2 := sinks.NewSyslogSink("2", "sink we are searching for", server_testhelpers.Logger())
+	sink1 := sinks.NewSyslogSink(target, "other sink", server_testhelpers.Logger())
+	sink2 := sinks.NewSyslogSink(target, "sink we are searching for", server_testhelpers.Logger())
 
-	groupedSinks.Register(sink1, target)
-	groupedSinks.Register(sink2, target)
+	groupedSinks.Register(sink1)
+	groupedSinks.Register(sink2)
 
 	sinkDrain := groupedSinks.DrainFor(target, "sink we are searching for")
 	assert.Equal(t, sink2, sinkDrain)
@@ -79,13 +111,13 @@ func TestDumpForReturnsOnyDumps(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 	target := "789"
 
-	sink1 := *new(sinks.Sink)
-	sink2 := sinks.NewSyslogSink("2", "sink we are searching for", server_testhelpers.Logger())
-	sink3 := sinks.NewDumpSink("1", 5, server_testhelpers.Logger())
+	sink1 := sinks.NewSyslogSink(target, "url1", server_testhelpers.Logger())
+	sink2 := sinks.NewSyslogSink(target, "url2", server_testhelpers.Logger())
+	sink3 := sinks.NewDumpSink(target, 5, server_testhelpers.Logger())
 
-	groupedSinks.Register(sink1, target)
-	groupedSinks.Register(sink2, target)
-	groupedSinks.Register(sink3, target)
+	groupedSinks.Register(sink1)
+	groupedSinks.Register(sink2)
+	groupedSinks.Register(sink3)
 
 	appSink := groupedSinks.DumpFor(target)
 	assert.Equal(t, appSink, sink3)
@@ -94,14 +126,34 @@ func TestDumpForReturnsOnyDumps(t *testing.T) {
 func TestDumpForReturnsOnlyDumpsForTheGivenAppId(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 	target := "789"
-	otherTarget := "789"
+	otherTarget := "790"
 
-	sink1 := sinks.NewDumpSink("1", 5, server_testhelpers.Logger())
-	sink2 := sinks.NewDumpSink("1", 5, server_testhelpers.Logger())
+	sink1 := sinks.NewDumpSink(target, 5, server_testhelpers.Logger())
+	sink2 := sinks.NewDumpSink(otherTarget, 5, server_testhelpers.Logger())
 
-	groupedSinks.Register(sink1, target)
-	groupedSinks.Register(sink2, otherTarget)
+	groupedSinks.Register(sink1)
+	groupedSinks.Register(sink2)
 
 	appSink := groupedSinks.DumpFor(target)
 	assert.Equal(t, appSink, sink1)
+}
+
+func TestDumpForReturnsNilIfThereIsNone(t *testing.T) {
+	groupedSinks := NewGroupedSinks()
+	target := "789"
+
+	sink1 := sinks.NewSyslogSink(target, "url1", server_testhelpers.Logger())
+
+	groupedSinks.Register(sink1)
+
+	appSink := groupedSinks.DumpFor(target)
+	assert.Nil(t, appSink)
+}
+
+func TestDumpForReturnsNilIfThereIsNothing(t *testing.T) {
+	groupedSinks := NewGroupedSinks()
+	target := "789"
+
+	appSink := groupedSinks.DumpFor(target)
+	assert.Nil(t, appSink)
 }

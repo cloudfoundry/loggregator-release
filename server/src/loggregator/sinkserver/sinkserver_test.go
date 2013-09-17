@@ -28,7 +28,7 @@ func init() {
 	dataReadChannel = make(chan []byte, 10)
 	TestMessageRouter = NewMessageRouter(1024, testhelpers.Logger())
 	go TestMessageRouter.Start()
-	TestHttpServer = NewHttpServer(TestMessageRouter, testhelpers.SuccessfulAuthorizer, 50*time.Millisecond, testhelpers.Logger())
+	TestHttpServer = NewHttpServer(TestMessageRouter, testhelpers.SuccessfulAuthorizer, 5*time.Millisecond, testhelpers.Logger())
 	go TestHttpServer.Start(dataReadChannel, "localhost:"+SERVER_PORT)
 	time.Sleep(1 * time.Millisecond)
 }
@@ -56,7 +56,9 @@ func AssertConnectionFails(t *testing.T, port string, path string, authToken str
 // Metrics test
 
 func TestMetrics(t *testing.T) {
-	oldSinksCounter := TestMessageRouter.Emit().Metrics[0].Value.(int)
+	oldDumpSinksCounter := TestMessageRouter.Emit().Metrics[0].Value.(int)
+	oldSyslogSinksCounter := TestMessageRouter.Emit().Metrics[1].Value.(int)
+	oldWebsocketSinksCounter := TestMessageRouter.Emit().Metrics[2].Value.(int)
 
 	client1ReceivedChan := make(chan []byte)
 	fakeSyslogDrain1, err := NewFakeService(client1ReceivedChan, "127.0.0.1:32564")
@@ -64,8 +66,14 @@ func TestMetrics(t *testing.T) {
 	go fakeSyslogDrain1.Serve()
 	<-fakeSyslogDrain1.ReadyChan
 
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Name, "numberOfSinks")
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Value, oldSinksCounter)
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Name, "numberOfDumpSinks")
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Value, oldDumpSinksCounter)
+
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[1].Name, "numberOfSyslogSinks")
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[1].Value, oldSyslogSinksCounter)
+
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Value, oldWebsocketSinksCounter)
 
 	marshalledProtoBuffer := messagetesthelpers.MarshalledDrainedLogMessage(t, "expectedMessageString", "myApp", "syslog://localhost:32564")
 	dataReadChannel <- marshalledProtoBuffer
@@ -76,22 +84,57 @@ func TestMetrics(t *testing.T) {
 	case <-client1ReceivedChan:
 	}
 
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Name, "numberOfSinks")
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Value, oldSinksCounter+2)
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Name, "numberOfDumpSinks")
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Value, oldDumpSinksCounter + 1)
+
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[1].Name, "numberOfSyslogSinks")
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[1].Value, oldSyslogSinksCounter + 1)
+
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Value, oldWebsocketSinksCounter)
+
+	dataReadChannel <- marshalledProtoBuffer
+
+	select {
+	case <-time.After(1000 * time.Millisecond):
+		t.Errorf("Did not get message 1")
+	case <-client1ReceivedChan:
+	}
+
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Name, "numberOfDumpSinks")
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Value, oldDumpSinksCounter + 1)
+
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[1].Name, "numberOfSyslogSinks")
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[1].Value, oldSyslogSinksCounter + 1)
+
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Value, oldWebsocketSinksCounter)
 
 	receivedChan := make(chan []byte, 2)
 
 	_, dontKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
 	WaitForWebsocketRegistration()
 
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Name, "numberOfSinks")
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Value, oldSinksCounter+3)
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Name, "numberOfDumpSinks")
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Value, oldDumpSinksCounter + 1)
+
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[1].Name, "numberOfSyslogSinks")
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[1].Value, oldSyslogSinksCounter + 1)
+
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Value, oldWebsocketSinksCounter +1)
 
 	dontKeepAliveChan <- true
-	time.Sleep(50 * time.Millisecond)
+	WaitForWebsocketRegistration()
 
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Name, "numberOfSinks")
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Value, oldSinksCounter+2)
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Name, "numberOfDumpSinks")
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Value, oldDumpSinksCounter + 1)
+
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[1].Name, "numberOfSyslogSinks")
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[1].Value, oldSyslogSinksCounter + 1)
+
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
+	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Value, oldWebsocketSinksCounter)
 }
 
 func TestThatItSends(t *testing.T) {
@@ -102,7 +145,7 @@ func TestThatItSends(t *testing.T) {
 	otherMessageString := "Some more stuff"
 	otherMessage := messagetesthelpers.MarshalledLogMessage(t, otherMessageString, "myApp")
 
-	testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
+	_, dontKeppAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- expectedMessage
@@ -121,14 +164,16 @@ func TestThatItSends(t *testing.T) {
 	case message := <-receivedChan:
 		messagetesthelpers.AssertProtoBufferMessageEquals(t, otherMessageString, message)
 	}
+
+	dontKeppAliveChan <- true
 }
 
 func TestThatItSendsAllDataToAllSinks(t *testing.T) {
 	client1ReceivedChan := make(chan []byte)
 	client2ReceivedChan := make(chan []byte)
 
-	testhelpers.AddWSSink(t, client1ReceivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
-	testhelpers.AddWSSink(t, client2ReceivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
+	_, stopKeepAlive1, _ := testhelpers.AddWSSink(t, client1ReceivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
+	_, stopKeepAlive2, _ := testhelpers.AddWSSink(t, client2ReceivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
 	WaitForWebsocketRegistration()
 
 	expectedMessageString := "Some Data"
@@ -149,6 +194,12 @@ func TestThatItSendsAllDataToAllSinks(t *testing.T) {
 	case message := <-client2ReceivedChan:
 		messagetesthelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
 	}
+
+	stopKeepAlive1 <- true
+	WaitForWebsocketRegistration()
+
+	stopKeepAlive2 <- true
+	WaitForWebsocketRegistration()
 }
 
 func TestThatItSendsLogsToProperAppSink(t *testing.T) {
@@ -159,7 +210,7 @@ func TestThatItSendsLogsToProperAppSink(t *testing.T) {
 	expectedMessageString := "My important message"
 	myAppsMarshalledMessage := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
 
-	testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
+	_, stopKeepAlive, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- otherAppsMarshalledMessage
@@ -171,12 +222,15 @@ func TestThatItSendsLogsToProperAppSink(t *testing.T) {
 	case message := <-receivedChan:
 		messagetesthelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
 	}
+
+	stopKeepAlive <- true
+	WaitForWebsocketRegistration()
 }
 
 func TestDropUnmarshallableMessage(t *testing.T) {
 	receivedChan := make(chan []byte)
 
-	sink, _, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
+	sink, stopKeepAlive, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- make([]byte, 10)
@@ -193,11 +247,14 @@ func TestDropUnmarshallableMessage(t *testing.T) {
 	expectedMessageString := "My important message"
 	mySpaceMarshalledMessage := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
 	dataReadChannel <- mySpaceMarshalledMessage
+
+	stopKeepAlive <- true
+	WaitForWebsocketRegistration()
 }
 
 func TestDontDropSinkThatWorks(t *testing.T) {
 	receivedChan := make(chan []byte, 2)
-	_, _, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
+	_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
 
 	select {
 	case <-time.After(200 * time.Millisecond):
@@ -205,15 +262,26 @@ func TestDontDropSinkThatWorks(t *testing.T) {
 		t.Errorf("Channel drop, but shouldn't have.")
 	}
 
-	TestThatItSends(t)
+	expectedMessageString := "Some data"
+	expectedMessage := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
+
+	dataReadChannel <- expectedMessage
+
+	select {
+	case <-time.After(1 * time.Second):
+		t.Errorf("Did not get message.")
+	case message := <-receivedChan:
+		messagetesthelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
+	}
+
+	stopKeepAlive <- true
+	WaitForWebsocketRegistration()
 }
 
 func TestQueryStringCombinationsThatDropSinkButContinueToWork(t *testing.T) {
 	receivedChan := make(chan []byte, 2)
 	_, _, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
 	assert.Equal(t, true, <-droppedChannel)
-
-	TestThatItSends(t)
 }
 
 var authTokenFailingCombinationTests = []struct {
