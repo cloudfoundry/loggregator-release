@@ -4,7 +4,6 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/servernamer"
 	"net/http"
-	"strings"
 )
 
 type redirector struct {
@@ -25,16 +24,17 @@ func (r *redirector) generateRedirectUrl(req *http.Request) string {
 	uri := servernamer.ServerName(server, req.Host) + req.URL.RequestURI()
 
 	var proto string
-	if proto = req.Header.Get("X-Forwarded-Proto"); proto != "" {
-		// X-Forwarded-Proto is set for all https and http requests
-		proto = proto + "://"
-		r.logger.Debugf("Using X-Forwarded-Proto value %v for redirect protocol", proto)
-	} else if strings.Contains(req.Host, ":4443") {
-		proto = "wss://"
-		r.logger.Debug("Using wss protocol because request port was 4443")
-	} else {
-		proto = "ws://"
-		r.logger.Debug("Falling back to ws protocol")
+	reqProto := req.Header.Get("X-Forwarded-Proto")
+
+	switch req.URL.Path {
+	case "/tail/":
+		if reqProto == "http" {
+			proto = "ws://"
+		} else {
+			proto = "wss://"
+		}
+	case "/dump/":
+		proto = reqProto + "://"
 	}
 
 	return proto + uri
