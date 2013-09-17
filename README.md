@@ -54,6 +54,53 @@ Source agents emit the logging data as [protocol-buffers](https://code.google.co
 
 Cloud Foundry developers can easily add source clients to new CF components that emit messages to the loggregator server.  Currently, there are libraries for [Go](https://github.com/cloudfoundry/loggregatorlib/tree/master/emitter) and [Ruby](https://github.com/cloudfoundry/loggregator_emitter). For usage information, look at their respective READMEs.
 
+### Deploying via BOSH
+
+Below are example snippets for deploying the DEA Logging Agent (source), Loggregator Server, and Loggregator Router (hashing layer) via BOSH.
+
+```yaml
+jobs:
+- name: dea_next
+  template:
+  - dea_next
+  - dea_logging_agent
+  instances: 1
+  resource_pool: dea
+  networks:
+  - name: cf1
+    default:
+    - dns
+    - gateway
+
+- name: loggregator
+  template: loggregator
+  instances: 1  # Scale out as neccessary
+  resource_pool: common
+  networks:
+  - name: cf1
+    static_ips:
+    - 10.10.16.14
+
+- name: loggregator-router
+  template: loggregatorrouter
+  instances: 1  # Only one loggregator router per CF installation
+  resource_pool: common
+  networks:
+  - name: cf1
+    static_ips:
+    - 10.10.16.16
+
+properties:
+  loggregator:
+    router: 10.10.16.16:3456  # host:port that will receive messages emitted by Sources
+    servers: 
+    - 10.10.16.14:3456  # 
+    status:  # CF /varz HTTP endpoint configuration
+      user: foo 
+      password: bar
+      port: 5768
+```
+
 ### Development
 
 The Cloud Foundry team uses GitHub and accepts contributions via [pull request](https://help.github.com/articles/using-pull-requests).
