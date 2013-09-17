@@ -40,7 +40,6 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 	if c.SystemDomain == "" {
 		return errors.New("Need system domain to register with NATS")
 	}
-
 	if c.MaxRetainedLogMessages == 0 {
 		return errors.New("Need max number of log messages to retain per application")
 	}
@@ -49,22 +48,28 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 	if err != nil {
 		return errors.New(fmt.Sprintf("Can not read UAA verification key from file %s: %s", c.UaaVerificationKeyFile, err))
 	}
+
 	c.decoder, err = authorization.NewUaaTokenDecoder(uaaVerificationKey)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Can not parse UAA verification key: %s", err))
 	}
+
 	err = c.Validate(logger)
 	return
 }
 
-var version = flag.Bool("version", false, "Version info")
-var logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
-var logLevel = flag.Bool("debug", false, "Debug logging")
-var configFile = flag.String("config", "config/loggregator.json", "Location of the loggregator config json file")
-var uaaVerificationKeyFile = flag.String("tokenFile", "config/uaa_token.pub", "Location of the loggregator's uaa public token file")
+var (
+	version                = flag.Bool("version", false, "Version info")
+	logFilePath            = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
+	logLevel               = flag.Bool("debug", false, "Debug logging")
+	configFile             = flag.String("config", "config/loggregator.json", "Location of the loggregator config json file")
+	uaaVerificationKeyFile = flag.String("tokenFile", "config/uaa_token.pub", "Location of the loggregator's uaa public token file")
+)
 
-const versionNumber = `0.0.TRAVIS_BUILD_NUMBER`
-const gitSha = `TRAVIS_COMMIT`
+const (
+	versionNumber = `0.0.TRAVIS_BUILD_NUMBER`
+	gitSha        = `TRAVIS_COMMIT`
+)
 
 type LoggregatorServerHealthMonitor struct {
 }
@@ -77,7 +82,8 @@ func main() {
 	flag.Parse()
 
 	if *version {
-		fmt.Printf("\n\nversion: %s\ngitSha: %s\n\n", versionNumber, gitSha)
+		fmt.Printf("version: %s\ngitSha: %s\nsourceUrl: https://github.com/cloudfoundry/loggregator/tree/%s\n",
+			versionNumber, gitSha, gitSha)
 		return
 	}
 

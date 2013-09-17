@@ -27,13 +27,11 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 	if c.SystemDomain == "" {
 		return errors.New("Need system domain to register with NATS")
 	}
-
 	if len(c.Loggregators) < 1 || c.Loggregators[0] == "" {
 		return errors.New("Need a loggregator server (host:port).")
 	}
 
 	err = c.Validate(logger)
-
 	return
 }
 
@@ -44,8 +42,10 @@ var (
 	configFile  = flag.String("config", "config/loggregator_router.json", "Location of the loggregator router config json file")
 )
 
-const versionNumber = `0.0.TRAVIS_BUILD_NUMBER`
-const gitSha = `TRAVIS_COMMIT`
+const (
+	versionNumber = `0.0.TRAVIS_BUILD_NUMBER`
+	gitSha        = `TRAVIS_COMMIT`
+)
 
 func main() {
 	flag.Parse()
@@ -53,7 +53,8 @@ func main() {
 	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "udprouter")
 
 	if *version {
-		fmt.Printf("\n\nversion: %s\ngitSha: %s\n\n", versionNumber, gitSha)
+		fmt.Printf("version: %s\ngitSha: %s\nsourceUrl: https://github.com/cloudfoundry/loggregator/tree/%s\n",
+			versionNumber, gitSha, gitSha)
 		return
 	}
 	config := &Config{Host: "0.0.0.0:3456", WebPort: 8080}
