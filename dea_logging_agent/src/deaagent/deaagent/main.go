@@ -53,7 +53,7 @@ func main() {
 	flag.Parse()
 
 	if *version {
-		fmt.Printf("version: %s\ngitSha: %s\nsourceUrl: https://github.com/cloudfoundry/loggregator/tree/%s\n",
+		fmt.Printf("version: %s\ngitSha: %s\nsourceUrl: https://github.com/cloudfoundry/loggregator/tree/%s\n\n",
 			versionNumber, gitSha, gitSha)
 		return
 	}
