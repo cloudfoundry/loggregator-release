@@ -10,15 +10,15 @@ import (
 )
 
 type messageRouter struct {
-	dumpBuffer         uint
-	parsedMessageChan  chan *logmessage.Message
-	sinkCloseChan      chan sinks.Sink
-	sinkOpenChan       chan sinks.Sink
-	dumpReceiverChan   chan dumpReceiver
-	activeDumpSinksCounter int
+	dumpBuffer                  uint
+	parsedMessageChan           chan *logmessage.Message
+	sinkCloseChan               chan sinks.Sink
+	sinkOpenChan                chan sinks.Sink
+	dumpReceiverChan            chan dumpReceiver
+	activeDumpSinksCounter      int
 	activeWebsocketSinksCounter int
-	activeSyslogSinksCounter int
-	logger             *gosteno.Logger
+	activeSyslogSinksCounter    int
+	logger                      *gosteno.Logger
 	*sync.RWMutex
 }
 
