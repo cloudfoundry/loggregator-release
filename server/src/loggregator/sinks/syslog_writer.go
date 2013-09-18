@@ -98,9 +98,7 @@ func (w *writer) write(p int, msg string) (int, error) {
 
 	timestamp := time.Now().Format(time.RFC3339)
 
-	_, err := net.Dial(w.network, w.raddr)
-
-	fmt.Fprintf(w.conn, "<%d>%s %s %s: %s%s",
+	_, err := fmt.Fprintf(w.conn, "<%d>%s %s %s: %s%s",
 		p, timestamp, "loggregator",
 		w.appId, msg, nl)
 

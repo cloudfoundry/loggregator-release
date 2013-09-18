@@ -449,19 +449,24 @@ func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	go fakeSyslogDrain.Serve()
 	<-fakeSyslogDrain.ReadyChan
 
-	expectedMessageString := "Some Data"
-	expectedMarshalledProtoBuffer := messagetesthelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "syslog://localhost:34569")
-	dataReadChannel <- expectedMarshalledProtoBuffer
+	expectedMessageString1 := "Some Data 1"
+	expectedMarshalledProtoBuffer1 := messagetesthelpers.MarshalledDrainedLogMessage(t, expectedMessageString1, "myApp", "syslog://localhost:34569")
+	dataReadChannel <- expectedMarshalledProtoBuffer1
 
 	errorString := "Did not get the first message. Server was up, it should have been there"
-	AssertMessageOnChannel(t, 200, client1ReceivedChan, errorString, expectedMessageString)
+	AssertMessageOnChannel(t, 200, client1ReceivedChan, errorString, expectedMessageString1)
 	fakeSyslogDrain.Stop()
+	time.Sleep(50 * time.Millisecond)
 
-	dataReadChannel <- expectedMarshalledProtoBuffer
+	expectedMessageString2 := "Some Data 2"
+	expectedMarshalledProtoBuffer2 := messagetesthelpers.MarshalledDrainedLogMessage(t, expectedMessageString2, "myApp", "syslog://localhost:34569")
+	dataReadChannel <- expectedMarshalledProtoBuffer2
 	errorString = "Did get a second message! Shouldn't be since the server is down"
 	AssertMessageNotOnChannel(t, 200, client1ReceivedChan, errorString)
 
-	dataReadChannel <- expectedMarshalledProtoBuffer
+	expectedMessageString3 := "Some Data 3"
+	expectedMarshalledProtoBuffer3 := messagetesthelpers.MarshalledDrainedLogMessage(t, expectedMessageString3, "myApp", "syslog://localhost:34569")
+	dataReadChannel <- expectedMarshalledProtoBuffer3
 	errorString = "Did get a third message! Shouldn't be since the server is down"
 	AssertMessageNotOnChannel(t, 200, client1ReceivedChan, errorString)
 
@@ -476,15 +481,12 @@ func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 
 	time.Sleep(2200 * time.Millisecond)
 
-	expectedMessageString3 := "Some Data3"
-	expectedMarshalledProtoBuffer3 := messagetesthelpers.MarshalledDrainedLogMessage(t, expectedMessageString3, "myApp", "syslog://localhost:34569")
-	dataReadChannel <- expectedMarshalledProtoBuffer3
-
-	errorString = "Did not get the third message, which should have come out, because it was still buffered"
-	AssertMessageOnChannel(t, 200, client2ReceivedChan, errorString, expectedMessageString)
+	expectedMessageString4 := "Some Data 4"
+	expectedMarshalledProtoBuffer4 := messagetesthelpers.MarshalledDrainedLogMessage(t, expectedMessageString4, "myApp", "syslog://localhost:34569")
+	dataReadChannel <- expectedMarshalledProtoBuffer4
 
 	errorString = "Did not get the fourth message, but it should have been just fine since the server was up"
-	AssertMessageOnChannel(t, 200, client2ReceivedChan, errorString, expectedMessageString3)
+	AssertMessageOnChannel(t, 200, client2ReceivedChan, errorString, expectedMessageString4)
 
 	fakeSyslogDrain.Stop()
 }
