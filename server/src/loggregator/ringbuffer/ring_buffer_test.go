@@ -12,7 +12,7 @@ func TestThatItWorksLikeAChannel(t *testing.T) {
 	inMessageChan := make(chan *logmessage.Message)
 	outMessageChan := make(chan *logmessage.Message, 2)
 	ringBufferChannel := NewRingBuffer(inMessageChan, outMessageChan, nil)
-	go ringBufferChannel.run()
+	go ringBufferChannel.Run()
 
 	logMessage1, err := logmessage.ParseMessage(messagetesthelpers.MarshalledLogMessage(t, "message 1", "appId"))
 	assert.NoError(t, err)
@@ -32,7 +32,7 @@ func TestThatItWorksLikeABufferedRingChannel(t *testing.T) {
 	inMessageChan := make(chan *logmessage.Message)
 	outMessageChan := make(chan *logmessage.Message, 2)
 	ringBufferChannel := NewRingBuffer(inMessageChan, outMessageChan, nil)
-	go ringBufferChannel.run()
+	go ringBufferChannel.Run()
 
 	logMessage1, err := logmessage.ParseMessage(messagetesthelpers.MarshalledLogMessage(t, "message 1", "appId"))
 	assert.NoError(t, err)
