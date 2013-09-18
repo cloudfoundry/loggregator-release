@@ -22,5 +22,4 @@ func TestThatOnlyOneRequestCloseOccurs(t *testing.T) {
 		t.Error("Should not have received value on closeChan")
 	case <-time.After(50 * time.Millisecond):
 	}
-
 }

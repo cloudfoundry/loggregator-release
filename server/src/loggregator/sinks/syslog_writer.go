@@ -1,35 +1,56 @@
+//
+// Forked and simplified from http://golang.org/src/pkg/log/syslog/syslog.go
+// Fork needed to set the propper hostname in the write() function
+//
+
 package sinks
 
 import (
 	"fmt"
-	"github.com/cloudfoundry/gosteno"
-	"math"
 	"net"
 	"strings"
 	"sync"
 	"time"
 )
 
-type retryStrategy func(counter int) time.Duration
-
-func newExponentialRetryStrategy() retryStrategy {
-	exponential := func(counter int) time.Duration {
-		duration := math.Pow(2, float64(counter))
-		return time.Duration(int(duration)) * time.Millisecond
-	}
-	return exponential
+type SyslogWriter interface {
+	Connect() error
+	WriteStdout(b []byte) (int, error)
+	WriteStderr(b []byte) (int, error)
+	Close() error
+	IsConnected() bool
+	SetConnected(bool)
 }
 
-// this is derived from log/syslog/syslog.go, that implementation didn't let us override the hostname, now we can!
 type writer struct {
-	appId                string
-	network              string
-	raddr                string
-	getNextSleepDuration retryStrategy
-	logger               *gosteno.Logger
+	appId   string
+	network string
+	raddr   string
+
+	connected bool
 
 	mu   sync.Mutex // guards conn
 	conn net.Conn
+}
+
+func NewSyslogWriter(network, raddr string, appId string) (w *writer) {
+	return &writer{
+		appId:     appId,
+		network:   network,
+		raddr:     raddr,
+		connected: false,
+	}
+}
+
+func (w *writer) Connect() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	err := w.connect()
+	if err == nil {
+		w.SetConnected(true)
+	}
+	return err
 }
 
 // connect makes a connection to the syslog server.
@@ -41,24 +62,22 @@ func (w *writer) connect() (err error) {
 		w.conn = nil
 	}
 	var c net.Conn
-	c, err = net.DialTimeout(w.network, w.raddr, 1*time.Second)
+	c, err = net.Dial(w.network, w.raddr)
 	if err == nil {
 		w.conn = c
 	}
 	return
 }
 
-func (w *writer) writeStdout(b []byte) (int, error) {
-	// 6 is int value of LOG_NOTICE
-	return w.writeAndRetry(6, string(b))
+func (w *writer) WriteStdout(b []byte) (int, error) {
+	return w.write(6, string(b))
 }
 
-func (w *writer) writeStderr(b []byte) (int, error) {
-	// 3 is int value of LOG_ERR
-	return w.writeAndRetry(3, string(b))
+func (w *writer) WriteStderr(b []byte) (int, error) {
+	return w.write(3, string(b))
 }
 
-func (w *writer) close() error {
+func (w *writer) Close() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -70,63 +89,28 @@ func (w *writer) close() error {
 	return nil
 }
 
-func (w *writer) writeAndRetry(p int, s string) (int, error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	if w.conn != nil {
-		if n, err := w.write(p, s); err == nil {
-			return n, err
-		}
-	}
-	if err := w.connectWithRetry(1); err != nil {
-		return 0, err
-	}
-	return w.write(p, s)
-}
-
-func (w *writer) connectWithRetry(counter int) error {
-	if counter > 13 {
-		return fmt.Errorf("Exceeded maximum number of tries (13) establishing a connection to %s.", w.raddr)
-	}
-	if err := w.connect(); err != nil {
-		w.logger.Warnf("Syslog socket on %s not reachable, retrying in %s. error: %s", w.raddr, w.getNextSleepDuration(counter), err)
-		time.Sleep(w.getNextSleepDuration(counter))
-		return w.connectWithRetry(counter + 1)
-	}
-	return nil
-}
-
 func (w *writer) write(p int, msg string) (int, error) {
 	// ensure it ends in a \n
 	nl := ""
 	if !strings.HasSuffix(msg, "\n") {
 		nl = "\n"
 	}
-	now := time.Now()
-	w.conn.SetWriteDeadline(now.Add(1 * time.Second))
-	timestamp := now.Format(time.RFC3339)
-	return fmt.Fprintf(w.conn, "<%d>%s %s %s: %s%s",
+
+	timestamp := time.Now().Format(time.RFC3339)
+
+	_, err := net.Dial(w.network, w.raddr)
+
+	fmt.Fprintf(w.conn, "<%d>%s %s %s: %s%s",
 		p, timestamp, "loggregator",
 		w.appId, msg, nl)
+
+	return len(msg), err
 }
 
-func dial(network, raddr string, appId string, logger *gosteno.Logger) (*writer, error) {
+func (w *writer) IsConnected() bool {
+	return w.connected
+}
 
-	w := &writer{
-		appId:                appId,
-		network:              network,
-		raddr:                raddr,
-		getNextSleepDuration: newExponentialRetryStrategy(),
-		logger:               logger,
-	}
-
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	err := w.connect()
-	if err != nil {
-		return nil, err
-	}
-	return w, err
+func (w *writer) SetConnected(newValue bool) {
+	w.connected = newValue
 }

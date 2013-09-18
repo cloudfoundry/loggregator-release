@@ -424,6 +424,23 @@ func TestThatItSendsAllMessageToKnownDrains(t *testing.T) {
 	}
 }
 
+func AssertMessageOnChannel(t *testing.T, timeout int, receiveChan chan []byte, errorMessage string, expectedMessage string) {
+	select {
+	case <-time.After(time.Duration(timeout) * time.Millisecond):
+		t.Errorf("%s", errorMessage)
+	case message := <-receiveChan:
+		assert.Contains(t, string(message), expectedMessage)
+	}
+}
+
+func AssertMessageNotOnChannel(t *testing.T, timeout int, receiveChan chan []byte, errorMessage string) {
+	select {
+	case <-time.After(time.Duration(timeout) * time.Millisecond):
+	case message := <-receiveChan:
+		t.Errorf("%s %s", errorMessage, string(message))
+	}
+}
+
 func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	client1ReceivedChan := make(chan []byte)
 
@@ -436,35 +453,39 @@ func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	expectedMarshalledProtoBuffer := messagetesthelpers.MarshalledDrainedLogMessage(t, expectedMessageString, "myApp", "syslog://localhost:34569")
 	dataReadChannel <- expectedMarshalledProtoBuffer
 
-	select {
-	case <-time.After(200 * time.Millisecond):
-		t.Errorf("Did not get the first message")
-	case message := <-client1ReceivedChan:
-		assert.Contains(t, string(message), expectedMessageString)
-	}
+	errorString := "Did not get the first message. Server was up, it should have been there"
+	AssertMessageOnChannel(t, 200, client1ReceivedChan, errorString, expectedMessageString)
 	fakeSyslogDrain.Stop()
 
 	dataReadChannel <- expectedMarshalledProtoBuffer
-	dataReadChannel <- expectedMarshalledProtoBuffer
-	time.Sleep(18 * time.Second)
+	errorString = "Did get a second message! Shouldn't be since the server is down"
+	AssertMessageNotOnChannel(t, 200, client1ReceivedChan, errorString)
 
-	client2ReceivedChan := make(chan []byte)
+	dataReadChannel <- expectedMarshalledProtoBuffer
+	errorString = "Did get a third message! Shouldn't be since the server is down"
+	AssertMessageNotOnChannel(t, 200, client1ReceivedChan, errorString)
+
+	time.Sleep(2200 * time.Millisecond)
+
+	client2ReceivedChan := make(chan []byte, 10)
 	fakeSyslogDrain, err = NewFakeService(client2ReceivedChan, "127.0.0.1:34569")
 	assert.NoError(t, err)
 
 	go fakeSyslogDrain.Serve()
 	<-fakeSyslogDrain.ReadyChan
 
+	time.Sleep(2200 * time.Millisecond)
+
 	expectedMessageString3 := "Some Data3"
 	expectedMarshalledProtoBuffer3 := messagetesthelpers.MarshalledDrainedLogMessage(t, expectedMessageString3, "myApp", "syslog://localhost:34569")
 	dataReadChannel <- expectedMarshalledProtoBuffer3
 
-	select {
-	case <-time.After(200 * time.Millisecond):
-		t.Errorf("Did not get the third message")
-	case message := <-client2ReceivedChan:
-		assert.Contains(t, string(message), expectedMessageString3)
-	}
+	errorString = "Did not get the third message, which should have come out, because it was still buffered"
+	AssertMessageOnChannel(t, 200, client2ReceivedChan, errorString, expectedMessageString)
+
+	errorString = "Did not get the fourth message, but it should have been just fine since the server was up"
+	AssertMessageOnChannel(t, 200, client2ReceivedChan, errorString, expectedMessageString3)
+
 	fakeSyslogDrain.Stop()
 }
 
@@ -473,13 +494,11 @@ func TestThatItSendsAllDataToAllDrainUrls(t *testing.T) {
 	client2ReceivedChan := make(chan []byte)
 
 	fakeSyslogDrain1, err := NewFakeService(client1ReceivedChan, "127.0.0.1:34567")
-	defer fakeSyslogDrain1.Stop()
 	assert.NoError(t, err)
 	go fakeSyslogDrain1.Serve()
 	<-fakeSyslogDrain1.ReadyChan
 
 	fakeSyslogDrain2, err := NewFakeService(client2ReceivedChan, "127.0.0.1:34568")
-	defer fakeSyslogDrain2.Stop()
 	assert.NoError(t, err)
 	go fakeSyslogDrain2.Serve()
 	<-fakeSyslogDrain2.ReadyChan
@@ -489,19 +508,14 @@ func TestThatItSendsAllDataToAllDrainUrls(t *testing.T) {
 
 	dataReadChannel <- expectedMarshalledProtoBuffer
 
-	select {
-	case <-time.After(200 * time.Millisecond):
-		t.Errorf("Did not get message from client 1.")
-	case message := <-client1ReceivedChan:
-		assert.Contains(t, string(message), expectedMessageString)
-	}
+	errString := "Did not get message from client 1."
+	AssertMessageOnChannel(t, 200, client1ReceivedChan, errString, expectedMessageString)
 
-	select {
-	case <-time.After(200 * time.Millisecond):
-		t.Errorf("Did not get message from client 2.")
-	case message := <-client2ReceivedChan:
-		assert.Contains(t, string(message), expectedMessageString)
-	}
+	errString = "Did not get message from client 2."
+	AssertMessageOnChannel(t, 200, client2ReceivedChan, errString, expectedMessageString)
+
+	fakeSyslogDrain1.Stop()
+	fakeSyslogDrain2.Stop()
 }
 
 func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) {

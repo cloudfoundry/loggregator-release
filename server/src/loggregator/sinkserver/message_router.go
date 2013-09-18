@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"loggregator/groupedsinks"
 	"loggregator/sinks"
+	"net/url"
 	"sync"
 )
 
@@ -140,7 +141,13 @@ func (messageRouter *messageRouter) manageDrains(activeSinks *groupedsinks.Group
 	//add all drains that didn't exist
 	for _, drainUrl := range drainUrls {
 		if activeSinks.DrainFor(appId, drainUrl) == nil {
-			s := sinks.NewSyslogSink(appId, drainUrl, messageRouter.logger)
+			dl, err := url.Parse(drainUrl)
+			if err != nil {
+				messageRouter.logger.Warnf("MessageRouter: Error when trying to parse syslog url %v. Requesting close. Err: %v", drainUrl, err)
+				continue
+			}
+			sysLogger := sinks.NewSyslogWriter("tcp", dl.Host, appId)
+			s := sinks.NewSyslogSink(appId, drainUrl, messageRouter.logger, sysLogger)
 			ok := messageRouter.registerSink(s, activeSinks)
 			if ok {
 				go s.Run(messageRouter.sinkCloseChan)

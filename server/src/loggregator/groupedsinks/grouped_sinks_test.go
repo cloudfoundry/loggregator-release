@@ -7,11 +7,17 @@ import (
 	"testing"
 )
 
+var syslogWriter sinks.SyslogWriter
+
+func init() {
+	syslogWriter = sinks.NewSyslogWriter("tcp", "localhost:24631", "appId")
+}
+
 func TestRegisterAndFor(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 
 	appId := "789"
-	appSink := sinks.NewSyslogSink(appId, "url", server_testhelpers.Logger())
+	appSink := sinks.NewSyslogSink(appId, "url", server_testhelpers.Logger(), syslogWriter)
 	result := groupedSinks.Register(appSink)
 
 	appSinks := groupedSinks.For(appId)
@@ -24,7 +30,7 @@ func TestRegisterReturnsFalseForEmptyAppId(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 
 	appId := ""
-	appSink := sinks.NewSyslogSink(appId, "url", server_testhelpers.Logger())
+	appSink := sinks.NewSyslogSink(appId, "url", server_testhelpers.Logger(), syslogWriter)
 	result := groupedSinks.Register(appSink)
 
 	assert.False(t, result)
@@ -34,7 +40,7 @@ func TestRegisterReturnsFalseForEmptyIdentifier(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 
 	appId := "appId"
-	appSink := sinks.NewSyslogSink(appId, "", server_testhelpers.Logger())
+	appSink := sinks.NewSyslogSink(appId, "", server_testhelpers.Logger(), syslogWriter)
 	result := groupedSinks.Register(appSink)
 
 	assert.False(t, result)
@@ -44,7 +50,7 @@ func TestRegisterReturnsFalseWhenAttemptingToAddADuplicateSink(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 
 	appId := "789"
-	appSink := sinks.NewSyslogSink(appId, "url", server_testhelpers.Logger())
+	appSink := sinks.NewSyslogSink(appId, "url", server_testhelpers.Logger(), syslogWriter)
 	groupedSinks.Register(appSink)
 	result := groupedSinks.Register(appSink)
 
@@ -62,8 +68,8 @@ func TestDelete(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 	target := "789"
 
-	sink1 := sinks.NewSyslogSink(target, "url1", server_testhelpers.Logger())
-	sink2 := sinks.NewSyslogSink(target, "url2", server_testhelpers.Logger())
+	sink1 := sinks.NewSyslogSink(target, "url1", server_testhelpers.Logger(), syslogWriter)
+	sink2 := sinks.NewSyslogSink(target, "url2", server_testhelpers.Logger(), syslogWriter)
 
 	groupedSinks.Register(sink1)
 	groupedSinks.Register(sink2)
@@ -81,8 +87,8 @@ func TestDrainsFor(t *testing.T) {
 	otherTarget := "790"
 
 	sink1 := sinks.NewDumpSink(target, 10, server_testhelpers.Logger())
-	sink2 := sinks.NewSyslogSink(target, "url", server_testhelpers.Logger())
-	sink3 := sinks.NewSyslogSink(otherTarget, "url", server_testhelpers.Logger())
+	sink2 := sinks.NewSyslogSink(target, "url", server_testhelpers.Logger(), syslogWriter)
+	sink3 := sinks.NewSyslogSink(otherTarget, "url", server_testhelpers.Logger(), syslogWriter)
 
 	groupedSinks.Register(sink1)
 	groupedSinks.Register(sink2)
@@ -97,8 +103,8 @@ func TestDrainForReturnsOnly(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 	target := "789"
 
-	sink1 := sinks.NewSyslogSink(target, "other sink", server_testhelpers.Logger())
-	sink2 := sinks.NewSyslogSink(target, "sink we are searching for", server_testhelpers.Logger())
+	sink1 := sinks.NewSyslogSink(target, "other sink", server_testhelpers.Logger(), syslogWriter)
+	sink2 := sinks.NewSyslogSink(target, "sink we are searching for", server_testhelpers.Logger(), syslogWriter)
 
 	groupedSinks.Register(sink1)
 	groupedSinks.Register(sink2)
@@ -111,8 +117,8 @@ func TestDumpForReturnsOnyDumps(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 	target := "789"
 
-	sink1 := sinks.NewSyslogSink(target, "url1", server_testhelpers.Logger())
-	sink2 := sinks.NewSyslogSink(target, "url2", server_testhelpers.Logger())
+	sink1 := sinks.NewSyslogSink(target, "url1", server_testhelpers.Logger(), syslogWriter)
+	sink2 := sinks.NewSyslogSink(target, "url2", server_testhelpers.Logger(), syslogWriter)
 	sink3 := sinks.NewDumpSink(target, 5, server_testhelpers.Logger())
 
 	groupedSinks.Register(sink1)
@@ -142,7 +148,7 @@ func TestDumpForReturnsNilIfThereIsNone(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 	target := "789"
 
-	sink1 := sinks.NewSyslogSink(target, "url1", server_testhelpers.Logger())
+	sink1 := sinks.NewSyslogSink(target, "url1", server_testhelpers.Logger(), syslogWriter)
 
 	groupedSinks.Register(sink1)
 

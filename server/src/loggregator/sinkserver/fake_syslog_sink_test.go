@@ -64,7 +64,7 @@ func (s *Service) Serve() {
 }
 
 func (s *Service) Stop() {
-	close(s.ch)
+	s.ch <- true
 	s.waitGroup.Wait()
 }
 
