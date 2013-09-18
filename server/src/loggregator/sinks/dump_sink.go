@@ -31,7 +31,7 @@ func (d *DumpSink) Run(sinkCloseChan chan Sink) {
 	d.Lock()
 	defer d.Unlock()
 
-	d.ringBuffer = runNewRingBuffer(d, d.bufferSize)
+	d.ringBuffer = runNewRingBuffer(d, d.bufferSize, nil)
 }
 
 func (d *DumpSink) Dump() []logmessage.Message {

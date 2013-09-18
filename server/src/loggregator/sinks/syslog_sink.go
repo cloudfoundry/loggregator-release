@@ -40,7 +40,7 @@ func (s *SyslogSink) Run(closeChan chan Sink) {
 	backoffStrategy := newExponentialRetryStrategy()
 	numberOfTries := 0
 
-	messageChannel := runNewRingBuffer(s, 10).GetOutputChannel()
+	messageChannel := runNewRingBuffer(s, 10, s.Logger()).GetOutputChannel()
 	for {
 		s.logger.Debugf("Syslog Sink %s: Starting loop. Current backoff: %v", s.drainUrl, backoffStrategy(numberOfTries))
 

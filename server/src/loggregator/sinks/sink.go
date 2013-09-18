@@ -26,9 +26,9 @@ func requestClose(sink Sink, sinkCloseChan chan Sink, alreadyRequestedClose *boo
 	}
 }
 
-func runNewRingBuffer(sink Sink, bufferSize uint) *ringbuffer.RingBuffer {
+func runNewRingBuffer(sink Sink, bufferSize uint, logger *gosteno.Logger) *ringbuffer.RingBuffer {
 	outMessageChan := make(chan *logmessage.Message, bufferSize)
-	ringBufferChannel := ringbuffer.NewRingBuffer(sink.Channel(), outMessageChan, sink.Logger())
+	ringBufferChannel := ringbuffer.NewRingBuffer(sink.Channel(), outMessageChan, logger)
 	go ringBufferChannel.Run()
 	return ringBufferChannel
 }
