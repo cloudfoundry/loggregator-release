@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ "$TRAVIS_BRANCH" != "master" ]; then
+  echo 'Skipping upload, since we are not building master.'
+  exit 0
+fi
+
 set -e
 
 SCRIPT_HOME=$( cd "$( dirname "$0" )" && pwd )
