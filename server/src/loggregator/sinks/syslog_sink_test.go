@@ -259,4 +259,10 @@ func TestExponentialRetryStrategy(t *testing.T) {
 	assert.Equal(t, strategy(1).String(), "2ms")
 	assert.Equal(t, strategy(5).String(), "32ms")
 	assert.Equal(t, strategy(10).String(), "1.024s")
+	assert.Equal(t, strategy(20).String(), "17m28.576s")
+	assert.Equal(t, strategy(21).String(), "34m57.152s")
+	assert.Equal(t, strategy(22).String(), "1h9m54.304s")
+	assert.Equal(t, strategy(23).String(), "1h9m54.304s")
+	assert.Equal(t, strategy(24).String(), "1h9m54.304s")
+	assert.Equal(t, strategy(25).String(), "1h9m54.304s")
 }
