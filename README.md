@@ -4,7 +4,7 @@
 
 Loggregator is the user application logging subsystem for Cloud Foundry.
 
-### Features 
+### Features
 
 Loggregator allows users to: 
 

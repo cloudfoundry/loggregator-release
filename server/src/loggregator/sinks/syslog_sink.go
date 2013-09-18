@@ -33,6 +33,8 @@ func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, s
 }
 
 func (s *SyslogSink) Run(closeChan chan Sink) {
+	defer s.logger.Errorf("Syslog Sink %s: Stopped. This should never happen", s.drainUrl)
+
 	backoffStrategy := newExponentialRetryStrategy()
 	numberOfTries := 0
 
@@ -42,11 +44,13 @@ func (s *SyslogSink) Run(closeChan chan Sink) {
 		if !s.syslogWriter.IsConnected() {
 			err := s.syslogWriter.Connect()
 			if err != nil {
-				s.logger.Warnf("Syslog Sink %s: Error when dialing out. Backing off. Err: %v", s.drainUrl, err)
+				s.logger.Warnf("Syslog Sink %s: Error when dialing out. Backing off for %v. Err: %v", s.drainUrl, backoffStrategy(numberOfTries+1), err)
 				numberOfTries++
 				continue
 			}
+			s.logger.Infof("Syslog Sink %s: successfully connected.", s.drainUrl)
 			s.syslogWriter.SetConnected(true)
+			numberOfTries = 0
 			defer s.syslogWriter.Close()
 		}
 
