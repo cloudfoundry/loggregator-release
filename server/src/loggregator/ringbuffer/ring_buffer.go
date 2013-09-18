@@ -10,7 +10,7 @@ type RingBuffer struct {
 	inputChanel   <-chan *logmessage.Message
 	outputChannel chan *logmessage.Message
 	logger        *gosteno.Logger
-	lock *sync.RWMutex
+	lock          *sync.RWMutex
 }
 
 func NewRingBuffer(inputChannel <-chan *logmessage.Message, outputChannel chan *logmessage.Message, logger *gosteno.Logger) *RingBuffer {

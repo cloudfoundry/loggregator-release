@@ -5,9 +5,9 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"math"
+	"math/rand"
 	"sync/atomic"
 	"time"
-	"math/rand"
 )
 
 type SyslogSink struct {
@@ -123,9 +123,9 @@ func newExponentialRetryStrategy() retryStrategy {
 		if counter > 23 {
 			counter = 23
 		}
-		tenthDuration := int(math.Pow(2, float64(counter - 1)) * 100)
+		tenthDuration := int(math.Pow(2, float64(counter-1)) * 100)
 		duration := tenthDuration * 10
-		randomOffset := rand.Intn(tenthDuration * 2) - tenthDuration
+		randomOffset := rand.Intn(tenthDuration*2) - tenthDuration
 		return (time.Duration(duration) * time.Microsecond) + (time.Duration(randomOffset) * time.Microsecond)
 	}
 	return exponential

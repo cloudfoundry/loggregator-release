@@ -47,7 +47,7 @@ func (r *SyslogWriterRecorder) WriteStdout(b []byte) (int, error) {
 	defer r.Unlock()
 
 	if r.up {
-		r.receivedMessages = append(r.receivedMessages, "out: " + string(b))
+		r.receivedMessages = append(r.receivedMessages, "out: "+string(b))
 		return len(b), nil
 	} else {
 		return 0, errors.New("Error writing to stdout.")
@@ -59,7 +59,7 @@ func (r *SyslogWriterRecorder) WriteStderr(b []byte) (int, error) {
 	defer r.Unlock()
 
 	if r.up {
-		r.receivedMessages = append(r.receivedMessages, "err: " + string(b))
+		r.receivedMessages = append(r.receivedMessages, "err: "+string(b))
 		return len(b), nil
 	} else {
 		return 0, errors.New("Error writing to stderr.")
@@ -102,7 +102,7 @@ type FakeSyslogServer struct {
 
 func startFakeSyslogServer(port string) FakeSyslogServer {
 	syslogServer := &FakeSyslogServer{make(chan []byte, 10), make(chan bool)}
-	testSink, err := net.Listen("tcp", "localhost:" + port)
+	testSink, err := net.Listen("tcp", "localhost:"+port)
 	if err != nil {
 		panic(err)
 	}
@@ -124,7 +124,7 @@ func startFakeSyslogServer(port string) FakeSyslogServer {
 			syslogServer.dataReadChannel <- buffer[:readCount]
 		}
 	}()
-	time.Sleep(10*time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 	return *syslogServer
 }
 
@@ -187,7 +187,7 @@ func TestSysLoggerComesUpLate(t *testing.T) {
 
 	go func() {
 		for i := 0; i < 15; i++ {
-			time.Sleep(1*time.Millisecond)
+			time.Sleep(1 * time.Millisecond)
 
 			msg := fmt.Sprintf("message no %v", i)
 			logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, msg, "appId"))
@@ -196,16 +196,16 @@ func TestSysLoggerComesUpLate(t *testing.T) {
 			sink.Channel() <- logMessage
 		}
 	}()
-	time.Sleep(30*time.Millisecond)
+	time.Sleep(30 * time.Millisecond)
 
 	sysLogger.SetUp(true)
-	time.Sleep(100*time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
 	data := sysLogger.ReceivedMessages()
 	assert.Equal(t, len(data), 10)
 
 	for i := 0; i < 10; i++ {
-		msg := fmt.Sprintf("err: message no %v", i + 5)
+		msg := fmt.Sprintf("err: message no %v", i+5)
 		assert.Equal(t, data[i], msg)
 	}
 }
@@ -225,17 +225,17 @@ func TestSysLoggerDiesAndComesBack(t *testing.T) {
 			assert.NoError(t, err)
 
 			sink.Channel() <- logMessage
-			time.Sleep(100*time.Millisecond)
+			time.Sleep(100 * time.Millisecond)
 		}
 	}()
 
-	time.Sleep(50*time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 	sysLogger.SetUp(false)
 	assert.Equal(t, len(sysLogger.ReceivedMessages()), 1)
 
-	time.Sleep(800*time.Millisecond)
+	time.Sleep(800 * time.Millisecond)
 	sysLogger.SetUp(true)
-	time.Sleep(300*time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 
 	assert.Equal(t, len(sysLogger.ReceivedMessages()), 9)
 
@@ -259,8 +259,8 @@ var backoffTests = []struct {
 }{
 	{1, 1000},
 	{5, 16000},
-	{11, 1024000}, //1.024s
-	{20, 524288000}, //8m and a bit
+	{11, 1024000},    //1.024s
+	{20, 524288000},  //8m and a bit
 	{21, 1048576000}, //17m28.576s
 	{22, 2097152000}, //34m57.152s
 	{23, 4194304000}, //1h9m54.304s
@@ -279,13 +279,13 @@ func TestExponentialRetryStrategy(t *testing.T) {
 	oldBackoff := time.Now()
 
 	for _, bt := range backoffTests {
-		delta := int(bt.expected/10)
+		delta := int(bt.expected / 10)
 		for i := 0; i < 10; i++ {
 			backoff = now.Add(strategy(bt.backoffCount))
 			assert.WithinDuration(t,
 				now.Add(time.Duration(bt.expected)*time.Microsecond),
 				backoff,
-					time.Duration(delta)*time.Microsecond)
+				time.Duration(delta)*time.Microsecond)
 			assert.NotEqual(t, oldBackoff, backoff)
 			oldBackoff = backoff
 		}
