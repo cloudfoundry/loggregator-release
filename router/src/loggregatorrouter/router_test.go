@@ -31,7 +31,7 @@ func TestThatItWorksWithOneLoggregator(t *testing.T) {
 	go r.Start(logger)
 	time.Sleep(50 * time.Millisecond)
 
-	logEmitter, _ := emitter.NewEmitter("localhost:3456", "ROUTER", logger)
+	logEmitter, _ := emitter.NewEmitter("localhost:3456", "ROUTER", "42", logger)
 	logEmitter.Emit("my_awesome_app", "Hello World")
 
 	received := <-dataChannel
@@ -58,7 +58,7 @@ func TestThatItIgnoresBadMessages(t *testing.T) {
 	lc := loggregatorclient.NewLoggregatorClient("localhost:3455", logger, loggregatorclient.DefaultBufferSize)
 	lc.Send([]byte("This is poorly formatted"))
 
-	logEmitter, _ := emitter.NewEmitter("localhost:3455", "ROUTER", logger)
+	logEmitter, _ := emitter.NewEmitter("localhost:3455", "ROUTER", "42", logger)
 	logEmitter.Emit("my_awesome_app", "Hello World")
 
 	received := <-dataChannel
@@ -84,7 +84,7 @@ func TestThatItWorksWithTwoLoggregators(t *testing.T) {
 	go rt.Start(logger)
 	time.Sleep(50 * time.Millisecond)
 
-	logEmitter, _ := emitter.NewEmitter("localhost:3457", "ROUTER", logger)
+	logEmitter, _ := emitter.NewEmitter("localhost:3457", "ROUTER", "42", logger)
 	logEmitter.Emit("testId", "My message")
 
 	receivedData := <-dataChan1
