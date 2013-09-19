@@ -25,7 +25,7 @@ const (
 func init() {
 	// This needs be unbuffered as the channel we get from the
 	// agent listener is unbuffered?
-	dataReadChannel = make(chan []byte, 10)
+	dataReadChannel = make(chan []byte, 20)
 	TestMessageRouter = NewMessageRouter(1024, testhelpers.Logger())
 	go TestMessageRouter.Start()
 	TestHttpServer = NewHttpServer(TestMessageRouter, testhelpers.SuccessfulAuthorizer, 5*time.Millisecond, testhelpers.Logger())
@@ -291,29 +291,24 @@ var authTokenFailingCombinationTests = []struct {
 	{testhelpers.INVALID_AUTHENTICATION_TOKEN},
 }
 
-func TestAuthTokenCombinationsThatDropSinkButContinueToWork(t *testing.T) {
+func TestAuthTokenCombinationsThatDropSink(t *testing.T) {
 	for _, test := range authTokenFailingCombinationTests {
 		receivedChan := make(chan []byte, 2)
 		_, _, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", test.authToken)
 		assert.Equal(t, true, <-droppedChannel)
-
-		TestThatItSends(t)
 	}
 }
 
-func TestDropSinkWhenLogTargetisinvalidAndContinuesToWork(t *testing.T) {
+func TestDropSinkWhenLogTargetisinvalid(t *testing.T) {
 	AssertConnectionFails(t, SERVER_PORT, TAIL_PATH+"invalidtarget", "", 4000)
-	TestThatItSends(t)
 }
 
-func TestDropSinkWithoutAuthorizationAndContinuesToWork(t *testing.T) {
+func TestDropSinkWithoutAuthorization(t *testing.T) {
 	AssertConnectionFails(t, SERVER_PORT, TAIL_PATH+"?app=myApp", "", 4001)
-	TestThatItSends(t)
 }
 
-func TestDropSinkWhenAuthorizationFailsAndContinuesToWork(t *testing.T) {
+func TestDropSinkWhenAuthorizationFails(t *testing.T) {
 	AssertConnectionFails(t, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN, 4002)
-	TestThatItSends(t)
 }
 
 func TestKeepAlive(t *testing.T) {

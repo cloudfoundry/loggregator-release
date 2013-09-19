@@ -7,7 +7,7 @@ import (
 )
 
 type RingBuffer struct {
-	inputChanel   <-chan *logmessage.Message
+	inputChannel  <-chan *logmessage.Message
 	outputChannel chan *logmessage.Message
 	logger        *gosteno.Logger
 	lock          *sync.RWMutex
@@ -32,7 +32,7 @@ func (r *RingBuffer) GetOutputChannel() chan *logmessage.Message {
 }
 
 func (r *RingBuffer) Run() {
-	for v := range r.inputChanel {
+	for v := range r.inputChannel {
 		r.lock.Lock()
 		select {
 		case r.outputChannel <- v:

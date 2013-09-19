@@ -14,6 +14,7 @@ import (
 )
 
 type SyslogWriterRecorder struct {
+	recievedChannel  chan string
 	receivedMessages []string
 	up               bool
 	connected        bool
@@ -22,6 +23,7 @@ type SyslogWriterRecorder struct {
 
 func NewSyslogWriterRecorder() *SyslogWriterRecorder {
 	return &SyslogWriterRecorder{
+		make(chan string, 20),
 		[]string{},
 		false,
 		false,
@@ -48,6 +50,7 @@ func (r *SyslogWriterRecorder) WriteStdout(b []byte) (int, error) {
 
 	if r.up {
 		r.receivedMessages = append(r.receivedMessages, "out: "+string(b))
+		r.recievedChannel <- string(b)
 		return len(b), nil
 	} else {
 		return 0, errors.New("Error writing to stdout.")
@@ -60,6 +63,7 @@ func (r *SyslogWriterRecorder) WriteStderr(b []byte) (int, error) {
 
 	if r.up {
 		r.receivedMessages = append(r.receivedMessages, "err: "+string(b))
+		r.recievedChannel <- string(b)
 		return len(b), nil
 	} else {
 		return 0, errors.New("Error writing to stderr.")
@@ -139,6 +143,8 @@ func TestThatItSendsStdOutAsInfo(t *testing.T) {
 
 	closeChan := make(chan Sink)
 	go sink.Run(closeChan)
+	defer close(sink.Channel())
+
 	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledLogMessage(t, "hi", "appId"))
 	assert.NoError(t, err)
 	sink.Channel() <- logMessage
@@ -154,6 +160,8 @@ func TestThatItStripsNullControlCharacterFromMsg(t *testing.T) {
 
 	closeChan := make(chan Sink)
 	go sink.Run(closeChan)
+	defer close(sink.Channel())
+
 	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledLogMessage(t, string(0)+" hi", "appId"))
 	assert.NoError(t, err)
 	sink.Channel() <- logMessage
@@ -170,6 +178,7 @@ func TestThatItSendsStdErrAsErr(t *testing.T) {
 	sink := NewSyslogSink("appId", "syslog://localhost:24632", testhelpers.Logger(), sysLogger)
 	closeChan := make(chan Sink)
 	go sink.Run(closeChan)
+	defer close(sink.Channel())
 
 	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"))
 	assert.NoError(t, err)
@@ -183,10 +192,11 @@ func TestThatItSendsStdErrAsErr(t *testing.T) {
 }
 
 func TestThatItHandlesMessagesEvenIfThereIsNoSyslogServer(t *testing.T) {
-	sysLogger := NewSyslogWriter("tcp", "localhost:24631", "appId")
-	sink := NewSyslogSink("appId", "syslog://localhost:24631", testhelpers.Logger(), sysLogger)
+	sysLogger := NewSyslogWriter("tcp", "localhost:-1", "appId")
+	sink := NewSyslogSink("appId", "syslog://localhost:-1", testhelpers.Logger(), sysLogger)
 	closeChan := make(chan Sink)
 	go sink.Run(closeChan)
+	defer close(sink.Channel())
 	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"))
 	assert.NoError(t, err)
 
@@ -197,26 +207,27 @@ func TestThatItHandlesMessagesEvenIfThereIsNoSyslogServer(t *testing.T) {
 
 func TestSysLoggerComesUpLate(t *testing.T) {
 	sysLogger := NewSyslogWriterRecorder()
-	sink := NewSyslogSink("appId", "syslog://localhost:24631", testhelpers.Logger(), sysLogger)
+	sysLogger.SetUp(false)
+	sink := NewSyslogSink("appId", "url_not_used", testhelpers.Logger(), sysLogger)
 
 	closeChan := make(chan Sink)
-	go sink.Run(closeChan)
-
+	done := make(chan bool)
 	go func() {
-		for i := 0; i < 15; i++ {
-			time.Sleep(1 * time.Millisecond)
-
-			msg := fmt.Sprintf("message no %v", i)
-			logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, msg, "appId"))
-			assert.NoError(t, err)
-
-			sink.Channel() <- logMessage
-		}
+		sink.Run(closeChan)
+		done <- true
 	}()
-	time.Sleep(30 * time.Millisecond)
+
+	for i := 0; i < 15; i++ {
+		msg := fmt.Sprintf("message no %v", i)
+		logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, msg, "appId"))
+		assert.NoError(t, err)
+
+		sink.Channel() <- logMessage
+	}
+	close(sink.Channel())
 
 	sysLogger.SetUp(true)
-	time.Sleep(100 * time.Millisecond)
+	<-done
 
 	data := sysLogger.ReceivedMessages()
 	assert.Equal(t, len(data), 10)
@@ -229,36 +240,49 @@ func TestSysLoggerComesUpLate(t *testing.T) {
 
 func TestSysLoggerDiesAndComesBack(t *testing.T) {
 	sysLogger := NewSyslogWriterRecorder()
-	sink := NewSyslogSink("appId", "syslog://localhost:24633", testhelpers.Logger(), sysLogger)
+	sink := NewSyslogSink("appId", "url_not_used", testhelpers.Logger(), sysLogger)
 	sysLogger.SetUp(true)
 
 	closeChan := make(chan Sink)
-	go sink.Run(closeChan)
-
+	done := make(chan bool)
 	go func() {
-		for i := 0; i < 10; i++ {
-			msg := fmt.Sprintf("message no %v", i)
-			logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, msg, "appId"))
-			assert.NoError(t, err)
-
-			sink.Channel() <- logMessage
-			time.Sleep(100 * time.Millisecond)
-		}
+		sink.Run(closeChan)
+		done <- true
 	}()
 
-	time.Sleep(50 * time.Millisecond)
+	msg := fmt.Sprintf("first message")
+	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, msg, "appId"))
+	assert.NoError(t, err)
+	sink.Channel() <- logMessage
+
+	select {
+	case <-sysLogger.recievedChannel:
+		break
+	case <-time.After(10 * time.Millisecond):
+		t.Error("Should have received a message by now")
+	}
 	sysLogger.SetUp(false)
+
 	assert.Equal(t, len(sysLogger.ReceivedMessages()), 1)
 
-	time.Sleep(800 * time.Millisecond)
-	sysLogger.SetUp(true)
-	time.Sleep(300 * time.Millisecond)
+	for i := 0; i < 11; i++ {
+		msg := fmt.Sprintf("message no %v", i)
+		logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, msg, "appId"))
+		assert.NoError(t, err)
 
-	assert.Equal(t, len(sysLogger.ReceivedMessages()), 9)
+		sink.Channel() <- logMessage
+	}
+
+	sysLogger.SetUp(true)
+	close(sink.Channel())
+	<-done
+
+	assert.Equal(t, len(sysLogger.ReceivedMessages()), 11)
 
 	stringOfMessages := fmt.Sprintf("%v", sysLogger.ReceivedMessages())
-	assert.Contains(t, stringOfMessages, "err: message no 0", "This message should have been there, since the server was up")
-	assert.NotContains(t, stringOfMessages, "err: message no 1", "This message should have been lost because the connection problem was detected while trying to send it.")
+	assert.Contains(t, stringOfMessages, "first message", "This message should have been there, since the server was up")
+	assert.NotContains(t, stringOfMessages, "err: message no 0", "This message should have been lost because the connection problem was detected while trying to send it.")
+	assert.Contains(t, stringOfMessages, "err: message no 1", "This message should have been there, since it was in the ringbuffer while the server was down")
 	assert.Contains(t, stringOfMessages, "err: message no 2", "This message should have been there, since it was in the ringbuffer while the server was down")
 	assert.Contains(t, stringOfMessages, "err: message no 3", "This message should have been there, since it was in the ringbuffer while the server was down")
 	assert.Contains(t, stringOfMessages, "err: message no 4", "This message should have been there, since it was in the ringbuffer while the server was down")
@@ -267,7 +291,7 @@ func TestSysLoggerDiesAndComesBack(t *testing.T) {
 	assert.Contains(t, stringOfMessages, "err: message no 7", "This message should have been there, since it was in the ringbuffer while the server was down")
 	assert.Contains(t, stringOfMessages, "err: message no 8", "This message should have been there, since it was in the ringbuffer while the server was down")
 	assert.Contains(t, stringOfMessages, "err: message no 9", "This message should have been there, since it was in the ringbuffer while the server was down")
-
+	assert.Contains(t, stringOfMessages, "err: message no 10", "This message should have been there, since it was in the ringbuffer while the server was down")
 }
 
 var backoffTests = []struct {
