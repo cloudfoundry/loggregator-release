@@ -148,6 +148,23 @@ func TestThatItSendsStdOutAsInfo(t *testing.T) {
 	assert.Contains(t, string(data), "hi")
 }
 
+func TestThatItStripsNullControlCharacterFromMsg(t *testing.T) {
+	sysLogger := NewSyslogWriter("tcp", "localhost:24631", "appId")
+	sink := NewSyslogSink("appId", "syslog://localhost:24631", testhelpers.Logger(), sysLogger)
+
+	closeChan := make(chan Sink)
+	go sink.Run(closeChan)
+	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledLogMessage(t, string(0)+" hi", "appId"))
+	assert.NoError(t, err)
+	sink.Channel() <- logMessage
+
+	data := <-fakeSyslogServer.dataReadChannel
+	assert.NotContains(t, string(data), "\000")
+	assert.Contains(t, string(data), "<6>")
+	assert.Contains(t, string(data), "appId")
+	assert.Contains(t, string(data), "hi")
+}
+
 func TestThatItSendsStdErrAsErr(t *testing.T) {
 	sysLogger := NewSyslogWriter("tcp", "localhost:24632", "appId")
 	sink := NewSyslogSink("appId", "syslog://localhost:24632", testhelpers.Logger(), sysLogger)

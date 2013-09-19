@@ -100,7 +100,7 @@ func (w *writer) write(p int, msg string) (int, error) {
 
 	_, err := fmt.Fprintf(w.conn, "<%d>%s %s %s: %s%s",
 		p, timestamp, "loggregator",
-		w.appId, msg, nl)
+		w.appId, clean(msg), nl)
 
 	return len(msg), err
 }
@@ -111,4 +111,8 @@ func (w *writer) IsConnected() bool {
 
 func (w *writer) SetConnected(newValue bool) {
 	w.connected = newValue
+}
+
+func clean(in string) string {
+	return strings.Replace(in, "\000", "", -1)
 }
