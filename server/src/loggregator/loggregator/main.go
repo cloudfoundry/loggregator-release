@@ -14,6 +14,7 @@ import (
 	"io/ioutil"
 	"loggregator/authorization"
 	"loggregator/sinkserver"
+	"math/rand"
 	"net"
 	"os"
 	"os/signal"
@@ -79,6 +80,9 @@ func (hm LoggregatorServerHealthMonitor) Ok() bool {
 }
 
 func main() {
+	seed := time.Now().UnixNano()
+	rand.Seed(seed)
+
 	flag.Parse()
 
 	if *version {

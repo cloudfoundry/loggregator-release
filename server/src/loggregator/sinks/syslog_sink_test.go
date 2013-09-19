@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
+	"math/rand"
 	"net"
 	testhelpers "server_testhelpers"
 	"sync"
@@ -14,7 +15,7 @@ import (
 )
 
 type SyslogWriterRecorder struct {
-	recievedChannel  chan string
+	receivedChannel  chan string
 	receivedMessages []string
 	up               bool
 	connected        bool
@@ -50,7 +51,7 @@ func (r *SyslogWriterRecorder) WriteStdout(b []byte) (int, error) {
 
 	if r.up {
 		r.receivedMessages = append(r.receivedMessages, "out: "+string(b))
-		r.recievedChannel <- string(b)
+		r.receivedChannel <- string(b)
 		return len(b), nil
 	} else {
 		return 0, errors.New("Error writing to stdout.")
@@ -63,7 +64,7 @@ func (r *SyslogWriterRecorder) WriteStderr(b []byte) (int, error) {
 
 	if r.up {
 		r.receivedMessages = append(r.receivedMessages, "err: "+string(b))
-		r.recievedChannel <- string(b)
+		r.receivedChannel <- string(b)
 		return len(b), nil
 	} else {
 		return 0, errors.New("Error writing to stderr.")
@@ -256,7 +257,7 @@ func TestSysLoggerDiesAndComesBack(t *testing.T) {
 	sink.Channel() <- logMessage
 
 	select {
-	case <-sysLogger.recievedChannel:
+	case <-sysLogger.receivedChannel:
 		break
 	case <-time.After(10 * time.Millisecond):
 		t.Error("Should have received a message by now")
@@ -311,24 +312,40 @@ var backoffTests = []struct {
 }
 
 func TestExponentialRetryStrategy(t *testing.T) {
+	rand.Seed(1)
 	strategy := newExponentialRetryStrategy()
+	otherStrategy := newExponentialRetryStrategy()
 
 	assert.Equal(t, strategy(0).String(), "0")
+	assert.Equal(t, otherStrategy(0).String(), "0")
 
 	var backoff time.Time
+	var otherBackoff time.Time
+
 	now := time.Now()
 	oldBackoff := time.Now()
+	otherOldBackoff := time.Now()
 
 	for _, bt := range backoffTests {
 		delta := int(bt.expected / 10)
 		for i := 0; i < 10; i++ {
 			backoff = now.Add(strategy(bt.backoffCount))
+			otherBackoff = now.Add(otherStrategy(bt.backoffCount))
+
+			assert.NotEqual(t, backoff, otherBackoff)
 			assert.WithinDuration(t,
 				now.Add(time.Duration(bt.expected)*time.Microsecond),
 				backoff,
 				time.Duration(delta)*time.Microsecond)
+			assert.WithinDuration(t,
+				now.Add(time.Duration(bt.expected)*time.Microsecond),
+				otherBackoff,
+				time.Duration(delta)*time.Microsecond)
 			assert.NotEqual(t, oldBackoff, backoff)
+			assert.NotEqual(t, otherOldBackoff, otherBackoff)
+
 			oldBackoff = backoff
+			otherOldBackoff = otherBackoff
 		}
 	}
 }
