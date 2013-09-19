@@ -9,6 +9,7 @@ import (
 	"net"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"sync/atomic"
 	"time"
 )
@@ -30,12 +31,15 @@ func (ls *loggingStream) listen() {
 	newLogMessage := func(message []byte) *logmessage.LogMessage {
 		currentTime := time.Now()
 		sourceType := logmessage.LogMessage_WARDEN_CONTAINER
+		sourceId := strconv.FormatUint(ls.inst.index, 10)
+
 		return &logmessage.LogMessage{
 			Message:     message,
 			AppId:       proto.String(ls.inst.applicationId),
 			DrainUrls:   ls.inst.drainUrls,
 			MessageType: &ls.messageType,
 			SourceType:  &sourceType,
+			SourceId:    &sourceId,
 			Timestamp:   proto.Int64(currentTime.UnixNano()),
 		}
 	}

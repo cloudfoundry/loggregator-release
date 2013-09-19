@@ -88,6 +88,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	assert.Equal(t, logmessage.LogMessage_OUT, receivedMessage.GetMessageType())
 	assert.Equal(t, expectedMessage, string(receivedMessage.GetMessage()))
 	assert.Equal(t, []string{"syslog://10.20.30.40:8050"}, receivedMessage.GetDrainUrls())
+	assert.Equal(t, "3", receivedMessage.GetSourceId())
 
 	_, err = connection.Write([]byte(secondLogMessage))
 	assert.NoError(t, err)
@@ -99,6 +100,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	assert.Equal(t, logmessage.LogMessage_OUT, receivedMessage.GetMessageType())
 	assert.Equal(t, secondLogMessage, string(receivedMessage.GetMessage()))
 	assert.Equal(t, []string{"syslog://10.20.30.40:8050"}, receivedMessage.GetDrainUrls())
+	assert.Equal(t, "3", receivedMessage.GetSourceId())
 }
 
 func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
@@ -147,6 +149,7 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	assert.Equal(t, logmessage.LogMessage_ERR, receivedMessage.GetMessageType())
 	assert.Equal(t, expectedMessage, string(receivedMessage.GetMessage()))
 	assert.Equal(t, []string{"syslog://10.20.30.40:8050"}, receivedMessage.GetDrainUrls())
+	assert.Equal(t, "4", receivedMessage.GetSourceId())
 
 	_, err = connection.Write([]byte(secondLogMessage))
 	assert.NoError(t, err)
@@ -158,4 +161,5 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	assert.Equal(t, logmessage.LogMessage_ERR, receivedMessage.GetMessageType())
 	assert.Equal(t, secondLogMessage, string(receivedMessage.GetMessage()))
 	assert.Equal(t, []string{"syslog://10.20.30.40:8050"}, receivedMessage.GetDrainUrls())
+	assert.Equal(t, "4", receivedMessage.GetSourceId())
 }
