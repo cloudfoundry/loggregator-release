@@ -85,6 +85,7 @@ func (sink *WebsocketSink) Run(sinkCloseChan chan Sink) {
 		case message, ok := <-messageChannel:
 			if !ok {
 				sink.logger.Debugf("Websocket Sink %s: Closed listener channel detected. Closing websocket", sink.clientAddress)
+				sink.ws.Close()
 				sink.logger.Debugf("Websocket Sink %s: Websocket successfully closed", sink.clientAddress)
 				return
 			}

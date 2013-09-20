@@ -28,7 +28,7 @@ func init() {
 	dataReadChannel = make(chan []byte, 20)
 	TestMessageRouter = NewMessageRouter(1024, testhelpers.Logger())
 	go TestMessageRouter.Start()
-	TestHttpServer = NewHttpServer(TestMessageRouter, testhelpers.SuccessfulAuthorizer, 5*time.Millisecond, testhelpers.Logger())
+	TestHttpServer = NewHttpServer(TestMessageRouter, testhelpers.SuccessfulAuthorizer, 10*time.Millisecond, testhelpers.Logger())
 	go TestHttpServer.Start(dataReadChannel, "localhost:"+SERVER_PORT)
 	time.Sleep(1 * time.Millisecond)
 }

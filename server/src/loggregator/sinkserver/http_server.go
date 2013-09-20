@@ -80,7 +80,6 @@ func (httpServer *httpServer) websocketSinkHandler(ws *websocket.Conn) {
 		return
 	}
 
-	defer ws.Close()
 	s := sinks.NewWebsocketSink(appId, httpServer.logger, ws, clientAddress, httpServer.keepAliveInterval)
 	httpServer.logger.Debugf("HttpServer: Requesting a wss sink for app %s", s.AppId())
 	httpServer.messageRouter.sinkOpenChan <- s
