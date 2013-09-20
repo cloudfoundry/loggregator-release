@@ -23,8 +23,7 @@ func NewAgent(instancesJsonFilePath string, logger *gosteno.Logger) *agent {
 
 func (agent *agent) Start(loggregatorClient loggregatorclient.LoggregatorClient) {
 	newInstances := agent.watchInstancesJsonFileForChanges()
-	for {
-		instance := <-newInstances
+	for instance := range(newInstances){
 		agent.logger.Infof("Starting to listen to %v\n", instance.identifier())
 		instance.startListening(loggregatorClient, agent.logger)
 	}
