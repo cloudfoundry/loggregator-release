@@ -1,7 +1,6 @@
 package sinkserver
 
 import (
-	"bytes"
 	"code.google.com/p/go.net/websocket"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
@@ -9,6 +8,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"loggregator/authorization"
 	"loggregator/sinks"
+	"net"
 	"net/http"
 	"time"
 )
@@ -34,7 +34,7 @@ func (httpServer *httpServer) Start(incomingProtobufChan <-chan []byte, apiEndpo
 
 	httpServer.logger.Infof("HttpServer: Listening for sinks at %s", apiEndpoint)
 	http.Handle(TAIL_PATH, websocket.Handler(httpServer.websocketSinkHandler))
-	http.HandleFunc(DUMP_PATH, httpServer.dumpSinkHandler)
+	http.Handle(DUMP_PATH, websocket.Handler(httpServer.dumpSinkHandler))
 	err := http.ListenAndServe(apiEndpoint, nil)
 	if err != nil {
 		panic(err)
@@ -53,30 +53,35 @@ func (httpServer *httpServer) parseMessages(incomingProtobufChan <-chan []byte) 
 	}
 }
 
-func (httpServer *httpServer) websocketSinkHandler(ws *websocket.Conn) {
-	clientAddress := ws.RemoteAddr()
-
-	appId := appid.FromUrl(ws.Request().URL)
-	authToken := ws.Request().Header.Get("Authorization")
-
+func (httpServer *httpServer) isAuthorized(appId, authToken string, clientAddress net.Addr) int {
 	if appId == "" {
 		message := fmt.Sprintf("HttpServer: Did not accept sink connection with invalid app id: %s.", clientAddress)
 		httpServer.logger.Warn(message)
-		ws.CloseWithStatus(4000)
-		return
+		return 4000
 	}
 
 	if authToken == "" {
 		message := fmt.Sprintf("HttpServer: Did not accept sink connection from %s without authorization.", clientAddress)
 		httpServer.logger.Warnf(message)
-		ws.CloseWithStatus(4001)
-		return
+		return 4001
 	}
 
 	if !httpServer.authorize(authToken, appId, httpServer.logger) {
 		message := fmt.Sprintf("HttpServer: Auth token [%s] not authorized to access appId [%s].", authToken, appId)
 		httpServer.logger.Warn(message)
-		ws.CloseWithStatus(4002)
+		return 4002
+	}
+
+	return 0
+}
+
+func (httpServer *httpServer) websocketSinkHandler(ws *websocket.Conn) {
+	clientAddress := ws.RemoteAddr()
+	appId := appid.FromUrl(ws.Request().URL)
+	authToken := ws.Request().Header.Get("Authorization")
+
+	if code := httpServer.isAuthorized(appId, authToken, clientAddress); code > 200 {
+		ws.CloseWithStatus(code)
 		return
 	}
 
@@ -87,36 +92,28 @@ func (httpServer *httpServer) websocketSinkHandler(ws *websocket.Conn) {
 	s.Run(httpServer.messageRouter.sinkCloseChan)
 }
 
-func (httpServer *httpServer) dumpSinkHandler(rw http.ResponseWriter, req *http.Request) {
-	appId := appid.FromUrl(req.URL)
-	authToken := req.Header.Get("Authorization")
+func (httpServer *httpServer) dumpSinkHandler(ws *websocket.Conn) {
+	clientAddress := ws.RemoteAddr()
+	appId := appid.FromUrl(ws.Request().URL)
+	authToken := ws.Request().Header.Get("Authorization")
 
-	if appId == "" {
-		httpServer.logger.Warn("HttpServer: Did not accept dump connection with invalid app id.")
-		rw.WriteHeader(http.StatusNotFound)
+	if code := httpServer.isAuthorized(appId, authToken, clientAddress); code > 200 {
+		ws.CloseWithStatus(code)
 		return
 	}
 
-	if !httpServer.authorize(authToken, appId, httpServer.logger) {
-		message := fmt.Sprintf("HttpServer: Auth token [%s] not authorized to access target [%s].", authToken, appId)
-		httpServer.logger.Warn(message)
-		rw.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
-	buffer := bytes.NewBufferString("")
-	dumpChan := make(chan logmessage.Message)
-	dumpReceiver := dumpReceiver{appId: appId, outputChannel: dumpChan}
-	httpServer.messageRouter.dumpReceiverChan <- dumpReceiver
+	dumpChan := httpServer.messageRouter.registerDumpChan(appId)
 
 	for message := range dumpChan {
-		if message.GetRawMessageLength() > 0 {
-			logmessage.DumpMessage(message, buffer)
+		err := websocket.Message.Send(ws, message.GetRawMessage())
+		if err != nil {
+			httpServer.logger.Debugf("Dump Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", clientAddress, err)
+		} else {
+			httpServer.logger.Debugf("Dump Sink %s: Successfully sent data", clientAddress)
 		}
 	}
 
-	rw.Header().Set("Content-Type", "application/octet-stream")
-	rw.Write(buffer.Bytes())
+	ws.Close()
 }
 
 func contains(valueToFind string, values []string) bool {

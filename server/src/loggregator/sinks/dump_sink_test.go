@@ -6,10 +6,19 @@ import (
 	"github.com/stretchr/testify/assert"
 	"runtime"
 	testhelpers "server_testhelpers"
-
 	"strconv"
 	"testing"
 )
+
+func dumpAllMessages(dump *DumpSink) []*logmessage.Message {
+	logMessages := []*logmessage.Message{}
+	receivedChan := make(chan *logmessage.Message, 10)
+	go dump.Dump(receivedChan)
+	for message := range receivedChan {
+		logMessages = append(logMessages, message)
+	}
+	return logMessages
+}
 
 func TestDumpForOneMessage(t *testing.T) {
 	closeChan := make(chan Sink)
@@ -19,8 +28,7 @@ func TestDumpForOneMessage(t *testing.T) {
 	logMessage, _ := logmessage.ParseMessage(messagetesthelpers.MarshalledLogMessage(t, "hi", "appId"))
 	dump.Channel() <- logMessage
 
-	logMessages := dump.Dump()
-	assert.Equal(t, len(logMessages), 1)
+	logMessages := dumpAllMessages(dump)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "hi")
 }
 
@@ -38,7 +46,7 @@ func TestDumpForTwoMessages(t *testing.T) {
 
 	runtime.Gosched()
 
-	logMessages := dump.Dump()
+	logMessages := dumpAllMessages(dump)
 	assert.Equal(t, len(logMessages), 2)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "1")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "2")
@@ -75,7 +83,7 @@ func TestDumpAlwaysReturnsTheNewestMessages(t *testing.T) {
 
 	runtime.Gosched()
 
-	logMessages := dump.Dump()
+	logMessages := dumpAllMessages(dump)
 	assert.Equal(t, len(logMessages), 2)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "2")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "3")
@@ -97,12 +105,12 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequests(t *testing.T) {
 
 	runtime.Gosched()
 
-	logMessages := dump.Dump()
+	logMessages := dumpAllMessages(dump)
 	assert.Equal(t, len(logMessages), 2)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "2")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "3")
 
-	logMessages = dump.Dump()
+	logMessages = dumpAllMessages(dump)
 	assert.Equal(t, len(logMessages), 2)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "2")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "3")
@@ -124,7 +132,7 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequestsWithMessagesCloningIn
 
 	runtime.Gosched()
 
-	logMessages := dump.Dump()
+	logMessages := dumpAllMessages(dump)
 	assert.Equal(t, len(logMessages), 2)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "2")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "3")
@@ -134,7 +142,7 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequestsWithMessagesCloningIn
 
 	runtime.Gosched()
 
-	logMessages = dump.Dump()
+	logMessages = dumpAllMessages(dump)
 	assert.Equal(t, len(logMessages), 2)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "3")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "4")
@@ -154,7 +162,7 @@ func TestDumpWithLotsOfMessages(t *testing.T) {
 
 	runtime.Gosched()
 
-	logMessages := dump.Dump()
+	logMessages := dumpAllMessages(dump)
 	assert.Equal(t, len(logMessages), 2)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "98")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "99")
@@ -166,12 +174,12 @@ func TestDumpWithLotsOfMessages(t *testing.T) {
 
 	runtime.Gosched()
 
-	logMessages = dump.Dump()
+	logMessages = dumpAllMessages(dump)
 	assert.Equal(t, len(logMessages), 2)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "198")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "199")
 
-	logMessages = dump.Dump()
+	logMessages = dumpAllMessages(dump)
 	assert.Equal(t, len(logMessages), 2)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "198")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "199")
@@ -191,7 +199,7 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer(t *testing.T) {
 
 	runtime.Gosched()
 
-	logMessages := dump.Dump()
+	logMessages := dumpAllMessages(dump)
 	assert.Equal(t, len(logMessages), 200)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "800")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "801")
@@ -203,12 +211,12 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer(t *testing.T) {
 
 	runtime.Gosched()
 
-	logMessages = dump.Dump()
+	logMessages = dumpAllMessages(dump)
 	assert.Equal(t, len(logMessages), 200)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "1800")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "1801")
 
-	logMessages = dump.Dump()
+	logMessages = dumpAllMessages(dump)
 	assert.Equal(t, len(logMessages), 200)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "1800")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "1801")
@@ -228,7 +236,7 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
 
 	runtime.Gosched()
 
-	logMessages := dump.Dump()
+	logMessages := dumpAllMessages(dump)
 	assert.Equal(t, len(logMessages), 100)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "0")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "1")
@@ -240,7 +248,7 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
 
 	runtime.Gosched()
 
-	logMessages = dump.Dump()
+	logMessages = dumpAllMessages(dump)
 	assert.Equal(t, len(logMessages), 200)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "0")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "1")
@@ -252,7 +260,7 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
 
 	runtime.Gosched()
 
-	logMessages = dump.Dump()
+	logMessages = dumpAllMessages(dump)
 	assert.Equal(t, len(logMessages), 200)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "100")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "101")
@@ -275,7 +283,7 @@ func TestDumpWithLotsOfDumps(t *testing.T) {
 
 	for i := 0; i < 200; i++ {
 		go func() {
-			logMessages := dump.Dump()
+			logMessages := dumpAllMessages(dump)
 
 			assert.Equal(t, len(logMessages), 5)
 			assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "5")

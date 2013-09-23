@@ -34,28 +34,20 @@ func (d *DumpSink) Run(sinkCloseChan chan Sink) {
 	d.ringBuffer = runNewRingBuffer(d, d.bufferSize, nil)
 }
 
-func (d *DumpSink) Dump() []logmessage.Message {
+func (d *DumpSink) Dump(outputChan chan<- *logmessage.Message) {
 	d.Lock()
 	defer d.Unlock()
 
-	moreMessage := true
-	messages := []logmessage.Message{}
 	currentMessageChan := d.ringBuffer.GetOutputChannel()
 	newMessageChan := make(chan *logmessage.Message, d.bufferSize)
-	for moreMessage {
-		select {
-		case logMessage, ok := <-currentMessageChan:
-			if ok {
-				newMessageChan <- logMessage
-				messages = append(messages, *logMessage)
-			}
-		default:
-			close(currentMessageChan)
-			d.ringBuffer.SetOutputChannel(newMessageChan)
-			moreMessage = false
-		}
+
+	close(currentMessageChan)
+	for message := range currentMessageChan {
+		newMessageChan <- message
+		outputChan <- message
 	}
-	return messages
+	close(outputChan)
+	d.ringBuffer.SetOutputChannel(newMessageChan)
 }
 
 func (d *DumpSink) Channel() chan *logmessage.Message {

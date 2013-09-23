@@ -26,15 +26,10 @@ func (r *redirector) generateRedirectUrl(req *http.Request) string {
 	var proto string
 	reqProto := req.Header.Get("X-Forwarded-Proto")
 
-	switch req.URL.Path {
-	case "/tail/":
-		if reqProto == "http" {
-			proto = "ws://"
-		} else {
-			proto = "wss://"
-		}
-	case "/dump/":
-		proto = reqProto + "://"
+	if reqProto == "http" {
+		proto = "ws://"
+	} else {
+		proto = "wss://"
 	}
 
 	return proto + uri

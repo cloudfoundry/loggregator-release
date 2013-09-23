@@ -47,8 +47,8 @@ func SuccessfulAuthorizer(authToken string, target string, l *gosteno.Logger) bo
 }
 
 func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string, authToken string) (*websocket.Conn, chan bool, <-chan bool) {
-	dontKeepAliveChan := make(chan bool)
-	connectionDroppedChannel := make(chan bool)
+	dontKeepAliveChan := make(chan bool, 1)
+	connectionDroppedChannel := make(chan bool, 1)
 
 	config, err := websocket.NewConfig("ws://localhost:"+port+path, "http://localhost")
 	assert.NoError(t, err)
@@ -62,6 +62,7 @@ func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string,
 			err := websocket.Message.Receive(ws, &data)
 			if err != nil {
 				connectionDroppedChannel <- true
+				close(receivedChan)
 				return
 			}
 			receivedChan <- data

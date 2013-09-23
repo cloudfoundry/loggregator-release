@@ -25,12 +25,12 @@ var redirectTests = []struct {
 	},
 	{
 		"http://localhost:4443/dump/?app=appId",
-		"http://10-10-10-10-9991-localhost:4443/dump/?app=appId",
+		"ws://10-10-10-10-9991-localhost:4443/dump/?app=appId",
 		"http",
 	},
 	{
 		"http://localhost:4443/dump/?app=c53734e6-a5ef-45dd-b62f-827158356fa5",
-		"https://10-20-30-40-9992-localhost:4443/dump/?app=c53734e6-a5ef-45dd-b62f-827158356fa5",
+		"wss://10-20-30-40-9992-localhost:4443/dump/?app=c53734e6-a5ef-45dd-b62f-827158356fa5",
 		"https",
 	},
 }

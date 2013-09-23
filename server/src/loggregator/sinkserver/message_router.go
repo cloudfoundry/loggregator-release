@@ -46,10 +46,7 @@ func (messageRouter *messageRouter) Start() {
 		select {
 		case dr := <-messageRouter.dumpReceiverChan:
 			if sink := activeSinks.DumpFor(dr.appId); sink != nil {
-				for _, message := range sink.Dump() {
-					dr.outputChannel <- message
-				}
-				close(dr.outputChannel)
+				sink.Dump(dr.outputChannel)
 			}
 		case s := <-messageRouter.sinkOpenChan:
 			messageRouter.registerSink(s, activeSinks)
@@ -72,6 +69,13 @@ func (messageRouter *messageRouter) Start() {
 			messageRouter.logger.Debugf("MessageRouter: Done sending message to tail clients.")
 		}
 	}
+}
+
+func (messageRouter *messageRouter) registerDumpChan(appId string) <-chan *logmessage.Message {
+	dumpChan := make(chan *logmessage.Message, messageRouter.dumpBuffer)
+	dr := dumpReceiver{appId: appId, outputChannel: dumpChan}
+	messageRouter.dumpReceiverChan <- dr
+	return dumpChan
 }
 
 func (messageRouter *messageRouter) registerSink(s sinks.Sink, activeSinks *groupedsinks.GroupedSinks) bool {
