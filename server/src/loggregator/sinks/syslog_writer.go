@@ -96,11 +96,14 @@ func (w *writer) write(p int, msg string) (int, error) {
 		nl = "\n"
 	}
 
+	msg = clean(msg)
 	timestamp := time.Now().Format(time.RFC3339)
 
-	_, err := fmt.Fprintf(w.conn, "<%d>%s %s %s: %s%s",
-		p, timestamp, "loggregator",
-		w.appId, clean(msg), nl)
+	syslogMsg := fmt.Sprintf("<%d>%s %s %s: %s%s",
+		p, timestamp, "loggregator", w.appId, msg, nl)
+
+	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
+	_, err := fmt.Fprintf(w.conn, "%d %s", len(syslogMsg), syslogMsg)
 
 	return len(msg), err
 }

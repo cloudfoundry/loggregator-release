@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net"
 	testhelpers "server_testhelpers"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -190,6 +191,25 @@ func TestThatItSendsStdErrAsErr(t *testing.T) {
 	assert.Contains(t, string(data), "<3>")
 	assert.Contains(t, string(data), "appId")
 	assert.Contains(t, string(data), "err")
+}
+
+func TestThatItUsesOctetFramingWhenSending(t *testing.T) {
+	sysLogger := NewSyslogWriter("tcp", "localhost:24632", "appId")
+	sink := NewSyslogSink("appId", "syslog://localhost:24632", testhelpers.Logger(), sysLogger)
+	closeChan := make(chan Sink)
+	go sink.Run(closeChan)
+	defer close(sink.Channel())
+
+	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"))
+	assert.NoError(t, err)
+
+	sink.Channel() <- logMessage
+	data := <-fakeSyslogServer2.dataReadChannel
+
+	assert.Contains(t, string(data), "<3>")
+	assert.Contains(t, string(data), "appId")
+	assert.Contains(t, string(data), "err")
+	assert.True(t, strings.HasPrefix(string(data), "52 "))
 }
 
 func TestThatItHandlesMessagesEvenIfThereIsNoSyslogServer(t *testing.T) {
