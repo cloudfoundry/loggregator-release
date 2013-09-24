@@ -6,8 +6,6 @@ release/
 .idea
 *.iml
 
-src/github.com
-src/labix.org
 dea_logging_agent/src/code.google.com
 dea_logging_agent/src/github.com
 router/src/code.google.com
