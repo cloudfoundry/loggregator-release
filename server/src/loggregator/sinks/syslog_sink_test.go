@@ -8,7 +8,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"net"
+	"regexp"
 	testhelpers "server_testhelpers"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -206,10 +208,11 @@ func TestThatItUsesOctetFramingWhenSending(t *testing.T) {
 	sink.Channel() <- logMessage
 	data := <-fakeSyslogServer2.dataReadChannel
 
-	assert.Contains(t, string(data), "<3>")
-	assert.Contains(t, string(data), "appId")
-	assert.Contains(t, string(data), "err")
-	assert.True(t, strings.HasPrefix(string(data), "52 "))
+	syslogMsg := string(data)
+
+	syslogRegexp := regexp.MustCompile(`<3>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|-\d{2}:\d{2}) loggregator appId: err\n`)
+	msgBeforeOctetCounting := syslogRegexp.FindString(syslogMsg)
+	assert.True(t, strings.HasPrefix(syslogMsg, strconv.Itoa(len(msgBeforeOctetCounting))+" "))
 }
 
 func TestThatItHandlesMessagesEvenIfThereIsNoSyslogServer(t *testing.T) {
