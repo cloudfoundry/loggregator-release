@@ -15,8 +15,6 @@ type agent struct {
 	logger                *gosteno.Logger
 }
 
-const bufferSize = 4096
-
 func NewAgent(instancesJsonFilePath string, logger *gosteno.Logger) *agent {
 	return &agent{instancesJsonFilePath, logger}
 }

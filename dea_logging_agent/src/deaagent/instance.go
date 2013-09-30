@@ -16,11 +16,11 @@ type instance struct {
 	wardenContainerPath string
 }
 
-func (instance *instance) identifier() string {
+func (instance instance) identifier() string {
 	return filepath.Join(instance.wardenContainerPath, "jobs", strconv.FormatUint(instance.wardenJobId, 10))
 }
 
-func (inst *instance) startListening(loggregatorClient loggregatorclient.LoggregatorClient, logger *gosteno.Logger) {
+func (inst instance) startListening(loggregatorClient loggregatorclient.LoggregatorClient, logger *gosteno.Logger) {
 	newLoggingStream(inst, loggregatorClient, logger, logmessage.LogMessage_OUT).listen()
 	newLoggingStream(inst, loggregatorClient, logger, logmessage.LogMessage_ERR).listen()
 }

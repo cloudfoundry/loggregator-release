@@ -15,7 +15,7 @@ import (
 )
 
 type loggingStream struct {
-	inst              *instance
+	inst              instance
 	loggregatorClient loggregatorclient.LoggregatorClient
 	logger            *gosteno.Logger
 	messageType       logmessage.LogMessage_MessageType
@@ -23,11 +23,13 @@ type loggingStream struct {
 	bytesReceived     *uint64
 }
 
-func newLoggingStream(inst *instance, loggregatorClient loggregatorclient.LoggregatorClient, logger *gosteno.Logger, messageType logmessage.LogMessage_MessageType) (ls *loggingStream) {
+const bufferSize = 4096
+
+func newLoggingStream(inst instance, loggregatorClient loggregatorclient.LoggregatorClient, logger *gosteno.Logger, messageType logmessage.LogMessage_MessageType) (ls *loggingStream) {
 	return &loggingStream{inst, loggregatorClient, logger, messageType, new(uint64), new(uint64)}
 }
 
-func (ls *loggingStream) listen() {
+func (ls loggingStream) listen() {
 	newLogMessage := func(message []byte) *logmessage.LogMessage {
 		currentTime := time.Now()
 		sourceType := logmessage.LogMessage_WARDEN_CONTAINER
@@ -52,23 +54,23 @@ func (ls *loggingStream) listen() {
 
 		connection, err := socket(ls.messageType)
 		if err != nil {
-			ls.logger.Errorf("Error while dialing into socket %s, %s", ls.messageType, err)
+			ls.logger.Errorf("Error while dialing into socket %s, %s, %s", ls.messageType, ls.inst.identifier(), err)
 			return
 		}
 		defer func() {
 			connection.Close()
-			ls.logger.Infof("Stopped reading from socket %s", ls.messageType)
+			ls.logger.Infof("Stopped reading from socket %s, %s", ls.messageType, ls.inst.identifier())
 		}()
 
 		buffer := make([]byte, bufferSize)
 
 		for {
 			readCount, err := connection.Read(buffer)
-			if readCount == 0 && err != nil {
-				ls.logger.Infof("Error while reading from socket %s, %s", ls.messageType, err)
+			if err != nil {
+				ls.logger.Infof("Error while reading from socket %s, %s, %s", ls.messageType, ls.inst.identifier(), err)
 				break
 			}
-			ls.logger.Debugf("Read %d bytes from instance socket %s", readCount, ls.messageType)
+			ls.logger.Debugf("Read %d bytes from instance socket %s, %s", readCount, ls.messageType, ls.inst.identifier())
 			atomic.AddUint64(ls.messagesReceived, 1)
 			atomic.AddUint64(ls.bytesReceived, uint64(readCount))
 			ls.loggregatorClient.IncLogStreamRawByteCount(uint64(readCount))
@@ -80,13 +82,13 @@ func (ls *loggingStream) listen() {
 			ls.loggregatorClient.IncLogStreamPbByteCount(uint64(len(data)))
 
 			ls.loggregatorClient.Send(data)
-			ls.logger.Debugf("Sent %d bytes to loggregator client", readCount)
+			ls.logger.Debugf("Sent %d bytes to loggregator client from %s, %s", readCount, ls.messageType, ls.inst.identifier())
 			runtime.Gosched()
 		}
 	}()
 }
 
-func (ls *loggingStream) Emit() instrumentation.Context {
+func (ls loggingStream) Emit() instrumentation.Context {
 	return instrumentation.Context{Name: "loggingStream:" + ls.inst.wardenContainerPath + " type " + socketName(ls.messageType),
 		Metrics: []instrumentation.Metric{
 			instrumentation.Metric{Name: "receivedMessageCount", Value: atomic.LoadUint64(ls.messagesReceived)},

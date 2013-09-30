@@ -59,49 +59,89 @@ func TestNewAgent(t *testing.T) {
 }
 
 func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
-	//	defer os.RemoveAll(tmpdir)
-
-	helperInstance := &instance{
+	helperInstance1 := &instance{
 		applicationId:       "1234",
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
 		index:               3}
-	os.MkdirAll(helperInstance.identifier(), 0777)
+	os.MkdirAll(helperInstance1.identifier(), 0777)
 
-	stdoutSocketPath := filepath.Join(helperInstance.identifier(), "stdout.sock")
-	stderrSocketPath := filepath.Join(helperInstance.identifier(), "stderr.sock")
-	os.Remove(stdoutSocketPath)
-	os.Remove(stderrSocketPath)
-	stdoutListener, err := net.Listen("unix", stdoutSocketPath)
-	defer stdoutListener.Close()
+	instance1StdoutSocketPath := filepath.Join(helperInstance1.identifier(), "stdout.sock")
+	instance1StderrSocketPath := filepath.Join(helperInstance1.identifier(), "stderr.sock")
+	os.Remove(instance1StdoutSocketPath)
+	os.Remove(instance1StderrSocketPath)
+	instance1StdoutListener, err := net.Listen("unix", instance1StdoutSocketPath)
+	defer instance1StdoutListener.Close()
 	assert.NoError(t, err)
-	stderrListener, err := net.Listen("unix", stderrSocketPath)
-	defer stderrListener.Close()
+	instance1StderrListener, err := net.Listen("unix", instance1StderrSocketPath)
+	defer instance1StderrListener.Close()
+	assert.NoError(t, err)
+
+	helperInstance2 := &instance{
+		applicationId:       "5678",
+		wardenJobId:         58,
+		wardenContainerPath: tmpdir,
+		index:               0}
+	os.MkdirAll(helperInstance2.identifier(), 0777)
+
+	instance2StdoutSocketPath := filepath.Join(helperInstance2.identifier(), "stdout.sock")
+	instance2StderrSocketPath := filepath.Join(helperInstance2.identifier(), "stderr.sock")
+	os.Remove(instance2StdoutSocketPath)
+	os.Remove(instance2StderrSocketPath)
+	instance2StdoutListener, err := net.Listen("unix", instance2StdoutSocketPath)
+	defer instance2StdoutListener.Close()
+	assert.NoError(t, err)
+	instance2StderrListener, err := net.Listen("unix", instance2StderrSocketPath)
+	defer instance2StderrListener.Close()
 	assert.NoError(t, err)
 
 	expectedMessage := "Some Output\n"
 
 	mockLoggregatorClient := new(MockLoggregatorClient)
 
-	mockLoggregatorClient.received = make(chan *[]byte)
+	mockLoggregatorClient.received = make(chan *[]byte, 2)
 
 	writeToFile(t, `{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3}]}`, true)
+
 	agent := NewAgent(filePath(), testhelpers.Logger())
 	go agent.Start(mockLoggregatorClient)
 
-	connection, err := stdoutListener.Accept()
-	defer connection.Close()
+	instance1Connection, err := instance1StdoutListener.Accept()
+	defer instance1Connection.Close()
 	assert.NoError(t, err)
 
-	_, err = connection.Write([]byte(expectedMessage))
+	writeToFile(t, `{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3},
+	                               {"state": "RUNNING", "application_id": "5678", "warden_job_id": 58, "warden_container_path":"`+tmpdir+`", "instance_index": 0}]}`, true)
+
+	instance2Connection, err := instance2StdoutListener.Accept()
+	defer instance2Connection.Close()
 	assert.NoError(t, err)
+
+	_, err = instance1Connection.Write([]byte(expectedMessage))
+	assert.NoError(t, err)
+
+	_, err = instance2Connection.Write([]byte(expectedMessage))
+	assert.NoError(t, err)
+
+	receivedMessages := make(map[string]*logmessage.LogMessage)
 
 	receivedMessage := testhelpers.GetBackendMessage(t, <-mockLoggregatorClient.received)
+	receivedMessages[receivedMessage.GetAppId()] = receivedMessage
 
-	assert.Equal(t, "1234", receivedMessage.GetAppId())
-	assert.Equal(t, logmessage.LogMessage_WARDEN_CONTAINER, receivedMessage.GetSourceType())
-	assert.Equal(t, logmessage.LogMessage_OUT, receivedMessage.GetMessageType())
-	assert.Equal(t, expectedMessage, string(receivedMessage.GetMessage()))
+	receivedMessage = testhelpers.GetBackendMessage(t, <-mockLoggregatorClient.received)
+	receivedMessages[receivedMessage.GetAppId()] = receivedMessage
+
+	assert.Equal(t, 2, len(receivedMessages))
+
+	assert.NotNil(t, receivedMessages["1234"])
+	assert.Equal(t, logmessage.LogMessage_WARDEN_CONTAINER, receivedMessages["1234"].GetSourceType())
+	assert.Equal(t, logmessage.LogMessage_OUT, receivedMessages["1234"].GetMessageType())
+	assert.Equal(t, expectedMessage, string(receivedMessages["1234"].GetMessage()))
+
+	assert.NotNil(t, receivedMessages["5678"])
+	assert.Equal(t, logmessage.LogMessage_WARDEN_CONTAINER, receivedMessages["5678"].GetSourceType())
+	assert.Equal(t, logmessage.LogMessage_OUT, receivedMessages["5678"].GetMessageType())
+	assert.Equal(t, expectedMessage, string(receivedMessages["5678"].GetMessage()))
 }
 
 func TestTheAgentReadsAllExistingInstances(t *testing.T) {
