@@ -96,10 +96,6 @@ properties:
     router: 10.10.16.16:3456  # host:port that will receive messages emitted by Sources
     servers: 
     - 10.10.16.14:3456  # 
-    status:  # CF /varz HTTP endpoint configuration
-      user: foo 
-      password: bar
-      port: 5768
 ```
 
 ### Development
