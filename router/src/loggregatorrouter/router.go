@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
+	"loggregatorrouter/hasher"
 )
 
 type LoggregatorRouterMonitor struct {
@@ -18,7 +19,7 @@ func (hm LoggregatorRouterMonitor) Ok() bool {
 
 type router struct {
 	cfcomponent.Component
-	h             *hasher
+	h             *hasher.Hasher
 	lcs           map[string]loggregatorclient.LoggregatorClient
 	agentListener agentlistener.AgentListener
 	host          string
@@ -39,15 +40,16 @@ func (r router) Start(logger *gosteno.Logger) {
 }
 
 func (r router) lookupLoggregatorClientForAppId(appId string) loggregatorclient.LoggregatorClient {
-	ls, _ := r.h.getLoggregatorServerForAppId(appId)
+	ls, _ := r.h.GetLoggregatorServerForAppId(appId)
 	return r.lcs[ls]
 }
 
-func NewRouter(host string, h *hasher, config cfcomponent.Config, logger *gosteno.Logger) (r *router, err error) {
+func NewRouter(host string, h *hasher.Hasher, config cfcomponent.Config, logger *gosteno.Logger) (r *router, err error) {
 	var instrumentables []instrumentation.Instrumentable
-	loggregatorClients := make(map[string]loggregatorclient.LoggregatorClient, len(h.loggregatorServers()))
+	servers := h.LoggregatorServers()
+	loggregatorClients := make(map[string]loggregatorclient.LoggregatorClient, len(servers))
 
-	for _, server := range h.loggregatorServers() {
+	for _, server := range servers {
 		client := loggregatorclient.NewLoggregatorClient(server, logger, loggregatorclient.DefaultBufferSize)
 		loggregatorClients[server] = client
 		instrumentables = append(instrumentables, client)

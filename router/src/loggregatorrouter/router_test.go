@@ -9,6 +9,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/stretchr/testify/assert"
+	"loggregatorrouter/hasher"
 	"testing"
 	"time"
 )
@@ -24,7 +25,7 @@ func TestThatItWorksWithOneLoggregator(t *testing.T) {
 	dataChannel := listener.Start()
 
 	loggregatorServers := []string{"localhost:9999"}
-	hasher := NewHasher(loggregatorServers)
+	hasher := hasher.NewHasher(loggregatorServers)
 	r, err := NewRouter("localhost:3456", hasher, newCfConfig(), logger)
 	assert.NoError(t, err)
 
@@ -48,7 +49,7 @@ func TestThatItIgnoresBadMessages(t *testing.T) {
 	dataChannel := listener.Start()
 
 	loggregatorServers := []string{"localhost:9996"}
-	hasher := NewHasher(loggregatorServers)
+	hasher := hasher.NewHasher(loggregatorServers)
 	r, err := NewRouter("localhost:3455", hasher, newCfConfig(), logger)
 	assert.NoError(t, err)
 
@@ -77,7 +78,7 @@ func TestThatItWorksWithTwoLoggregators(t *testing.T) {
 	dataChan2 := listener2.Start()
 
 	loggregatorServers := []string{"localhost:9998", "localhost:9997"}
-	hasher := NewHasher(loggregatorServers)
+	hasher := hasher.NewHasher(loggregatorServers)
 	rt, err := NewRouter("localhost:3457", hasher, newCfConfig(), logger)
 	assert.NoError(t, err)
 

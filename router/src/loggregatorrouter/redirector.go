@@ -3,23 +3,24 @@ package loggregatorrouter
 import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/servernamer"
+	"loggregatorrouter/hasher"
 	"net/http"
 )
 
 type redirector struct {
 	host   string
-	h      *hasher
+	h      *hasher.Hasher
 	logger *gosteno.Logger
 }
 
-func NewRedirector(host string, h *hasher, logger *gosteno.Logger) (r *redirector) {
+func NewRedirector(host string, h *hasher.Hasher, logger *gosteno.Logger) (r *redirector) {
 	r = &redirector{host: host, h: h, logger: logger}
 	return
 }
 
 func (r *redirector) generateRedirectUrl(req *http.Request) string {
 	req.ParseForm()
-	server, _ := r.h.getLoggregatorServerForAppId(req.Form.Get("app"))
+	server, _ := r.h.GetLoggregatorServerForAppId(req.Form.Get("app"))
 
 	uri := servernamer.ServerName(server, req.Host) + req.URL.RequestURI()
 

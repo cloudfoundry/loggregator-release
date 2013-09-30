@@ -9,6 +9,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar"
 	"loggregatorrouter"
+	"loggregatorrouter/hasher"
 	"net"
 	"os"
 	"os/signal"
@@ -67,7 +68,7 @@ func main() {
 		panic(err)
 	}
 
-	h := loggregatorrouter.NewHasher(config.Loggregators)
+	h := hasher.NewHasher(config.Loggregators)
 	r, err := loggregatorrouter.NewRouter(config.Host, h, config.Config, logger)
 	if err != nil {
 		panic(err)

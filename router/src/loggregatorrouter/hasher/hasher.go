@@ -1,12 +1,12 @@
-package loggregatorrouter
+package hasher
 
 import "github.com/stathat/consistent"
 
-type hasher struct {
+type Hasher struct {
 	c *consistent.Consistent
 }
 
-func NewHasher(loggregatorServers []string) (h *hasher) {
+func NewHasher(loggregatorServers []string) (h *Hasher) {
 	if len(loggregatorServers) == 0 {
 		panic("Hasher must be seeded with one or more Loggregator Servers")
 	}
@@ -14,14 +14,14 @@ func NewHasher(loggregatorServers []string) (h *hasher) {
 	c := consistent.New()
 	c.Set(loggregatorServers)
 
-	h = &hasher{c: c}
+	h = &Hasher{c: c}
 	return
 }
 
-func (h *hasher) getLoggregatorServerForAppId(appId string) (string, error) {
+func (h *Hasher) GetLoggregatorServerForAppId(appId string) (string, error) {
 	return h.c.Get(appId)
 }
 
-func (h *hasher) loggregatorServers() []string {
+func (h *Hasher) LoggregatorServers() []string {
 	return h.c.Members()
 }

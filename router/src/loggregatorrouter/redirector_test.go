@@ -4,6 +4,7 @@ import (
 	"errors"
 	testhelpers "github.com/cloudfoundry/loggregatorlib/lib_testhelpers"
 	"github.com/stretchr/testify/assert"
+	"loggregatorrouter/hasher"
 	"net/http"
 	"testing"
 )
@@ -37,7 +38,7 @@ var redirectTests = []struct {
 
 func TestRedirects(t *testing.T) {
 	loggregatorServers := []string{"10.10.10.10:9991", "10.20.30.40:9992"}
-	hasher := NewHasher(loggregatorServers)
+	hasher := hasher.NewHasher(loggregatorServers)
 	r := NewRedirector("0.0.0.0:4443", hasher, testhelpers.Logger())
 	go r.Start()
 
