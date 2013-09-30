@@ -57,7 +57,7 @@ func NewRouter(host string, h *hasher, config cfcomponent.Config, logger *gosten
 	instrumentables = append(instrumentables, al)
 
 	cfc, err := cfcomponent.NewComponent(
-		0,
+		logger,
 		"LoggregatorRouter",
 		0,
 		&LoggregatorRouterMonitor{},

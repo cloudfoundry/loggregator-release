@@ -113,7 +113,7 @@ func main() {
 	httpServer := sinkserver.NewHttpServer(messageRouter, authorizer, 30*time.Second, logger)
 
 	cfc, err := cfcomponent.NewComponent(
-		config.WebPort,
+		logger,
 		"LoggregatorServer",
 		config.Index,
 		&LoggregatorServerHealthMonitor{},
@@ -160,7 +160,7 @@ func main() {
 		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
 			cfcomponent.DumpGoRoutine()
 		case <-killChan:
-			rr.UnregisterFromRouter(cfc.IpAddress, cfc.WebPort, []string{uri})
+			rr.UnregisterFromRouter(cfc.IpAddress, config.WebPort, []string{uri})
 			break
 		}
 	}
