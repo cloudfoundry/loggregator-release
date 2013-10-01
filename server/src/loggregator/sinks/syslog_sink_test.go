@@ -153,7 +153,7 @@ func TestThatItSendsStdOutAsInfo(t *testing.T) {
 	assert.NoError(t, err)
 	sink.Channel() <- logMessage
 	data := <-fakeSyslogServer.dataReadChannel
-	assert.Contains(t, string(data), "<6>")
+	assert.Contains(t, string(data), "<14>1")
 	assert.Contains(t, string(data), "appId")
 	assert.Contains(t, string(data), "hi")
 }
@@ -172,7 +172,7 @@ func TestThatItStripsNullControlCharacterFromMsg(t *testing.T) {
 
 	data := <-fakeSyslogServer.dataReadChannel
 	assert.NotContains(t, string(data), "\000")
-	assert.Contains(t, string(data), "<6>")
+	assert.Contains(t, string(data), "<14>1")
 	assert.Contains(t, string(data), "appId")
 	assert.Contains(t, string(data), "hi")
 }
@@ -190,7 +190,7 @@ func TestThatItSendsStdErrAsErr(t *testing.T) {
 	sink.Channel() <- logMessage
 	data := <-fakeSyslogServer2.dataReadChannel
 
-	assert.Contains(t, string(data), "<3>")
+	assert.Contains(t, string(data), "<11>1")
 	assert.Contains(t, string(data), "appId")
 	assert.Contains(t, string(data), "err")
 }
@@ -210,7 +210,7 @@ func TestThatItUsesOctetFramingWhenSending(t *testing.T) {
 
 	syslogMsg := string(data)
 
-	syslogRegexp := regexp.MustCompile(`<3>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|-\d{2}:\d{2}) loggregator appId: err\n`)
+	syslogRegexp := regexp.MustCompile(`<11>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|-\d{2}:\d{2}) loggregator appId: err\n`)
 	msgBeforeOctetCounting := syslogRegexp.FindString(syslogMsg)
 	assert.True(t, strings.HasPrefix(syslogMsg, strconv.Itoa(len(msgBeforeOctetCounting))+" "))
 }

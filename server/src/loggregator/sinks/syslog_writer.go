@@ -70,11 +70,11 @@ func (w *writer) connect() (err error) {
 }
 
 func (w *writer) WriteStdout(b []byte) (int, error) {
-	return w.write(6, string(b))
+	return w.write(14, string(b))
 }
 
 func (w *writer) WriteStderr(b []byte) (int, error) {
-	return w.write(3, string(b))
+	return w.write(11, string(b))
 }
 
 func (w *writer) Close() error {
@@ -99,7 +99,7 @@ func (w *writer) write(p int, msg string) (int, error) {
 	msg = clean(msg)
 	timestamp := time.Now().Format(time.RFC3339)
 
-	syslogMsg := fmt.Sprintf("<%d>%s %s %s: %s%s",
+	syslogMsg := fmt.Sprintf("<%d>1 %s %s %s: %s%s",
 		p, timestamp, "loggregator", w.appId, msg, nl)
 
 	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
