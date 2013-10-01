@@ -210,7 +210,7 @@ func TestThatItUsesOctetFramingWhenSending(t *testing.T) {
 
 	syslogMsg := string(data)
 
-	syslogRegexp := regexp.MustCompile(`<11>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|-\d{2}:\d{2}) loggregator appId: err\n`)
+	syslogRegexp := regexp.MustCompile(`<11>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|-\d{2}:\d{2}) loggregator appId - - - err\n`)
 	msgBeforeOctetCounting := syslogRegexp.FindString(syslogMsg)
 	assert.True(t, strings.HasPrefix(syslogMsg, strconv.Itoa(len(msgBeforeOctetCounting))+" "))
 }

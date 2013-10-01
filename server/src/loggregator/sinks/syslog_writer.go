@@ -99,7 +99,8 @@ func (w *writer) write(p int, msg string) (int, error) {
 	msg = clean(msg)
 	timestamp := time.Now().Format(time.RFC3339)
 
-	syslogMsg := fmt.Sprintf("<%d>1 %s %s %s: %s%s",
+	// syslog format https://tools.ietf.org/html/rfc5424#section-6
+	syslogMsg := fmt.Sprintf("<%d>1 %s %s %s - - - %s%s",
 		p, timestamp, "loggregator", w.appId, msg, nl)
 
 	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
