@@ -98,6 +98,7 @@ func (w *writer) write(p int, msg string) (int, error) {
 
 	msg = clean(msg)
 	timestamp := time.Now().Format(time.RFC3339)
+	timestamp = strings.Replace(timestamp, "Z", "+00:00", 1)
 
 	// syslog format https://tools.ietf.org/html/rfc5424#section-6
 	syslogMsg := fmt.Sprintf("<%d>1 %s %s %s - - - %s%s",

@@ -175,7 +175,7 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 	case <-time.After(200 * time.Millisecond):
 		t.Errorf("Did not get message 2")
 	case message := <-client1ReceivedChan:
-		matched, _ := regexp.MatchString(`<14>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|-\d{2}:\d{2}) loggregator myApp - - - loggregator myApp: loggregator myApp: Some More Data`, string(message))
+		matched, _ := regexp.MatchString(`<14>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([-+]\d{2}:\d{2}) loggregator myApp - - - loggregator myApp: loggregator myApp: Some More Data`, string(message))
 		assert.True(t, matched, string(message))
 	case <-client2ReceivedChan:
 		t.Error("Should not have gotten the new message in this drain")
