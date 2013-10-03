@@ -10,10 +10,12 @@ Loggregator is the user application logging subsystem for Cloud Foundry.
 Loggregator allows users to:
 
 1. Tail their application logs.
-1. Dump a recent set of application logs (where recent is on the order of an hour).
+1. Dump a recent set of application logs (where recent is a configurable number of log packets).
 1. Continually drain their application logs to 3rd party log archive and analysis services.
 
 ### Usage
+
+First, make sure you're using the new [golang based CF CLI](https://github.com/cloudfoundry/cli).  Once that's installed:
 
 ```
 cf logs [--app=APP_NAME] [--recent]
@@ -22,13 +24,12 @@ cf logs [--app=APP_NAME] [--recent]
 `APP_NAME` defaults to the current application in your `manifest.yml` file.
 
 ``` bash
-$ cf logs
-Started GET "/" for 127.0.0.1 at 2013-04-05 13:14:58 -0700
-Processing by Rails::WelcomeController#index as HTML
-  Rendered /Users/tsaleh/.rbenv/versions/2.0.0-p0/lib/ruby/gems/2.0.0/gems/railties-4.0.0.beta1/lib/rails/templates/rails/welcome/index.html.erb (1.9ms)
-Completed 200 OK in 12ms (Views: 11.3ms | ActiveRecord: 0.0ms)
-Started GET "/assets/rails.png" for 127.0.0.1 at 2013-04-05 13:14:58 -0700
-...
+$ cf logs private-app
+Connected, tailing...
+Oct 3 15:09:26 private-app App/0 STDERR This message is on stderr at 2013-10-03 22:09:26 +0000 for private-app instance 0
+Oct 3 15:09:26 private-app App/0 STDERR 204.15.2.45, 10.10.2.148 - - [03/Oct/2013 22:09:26] "GET / HTTP/1.1" 200 81 0.0010
+Oct 3 15:09:26 private-app App/0 This message is on stdout at 2013-10-03 22:09:26 +0000 for private-app instance 0
+Oct 3 15:09:26 private-app App/0 STDERR This message is on stderr at 2013-10-03 22:09:26 +0000 for private-app instance 0
 ^C
 ```
 
