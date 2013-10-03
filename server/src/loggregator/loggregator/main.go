@@ -30,8 +30,8 @@ type Config struct {
 	UaaVerificationKeyFile          string
 	DisableEmailDomainAuthorization bool
 	SystemDomain                    string
-	SourcePort                      uint32
-	WebPort                         uint32
+	IncomingPort                    uint32
+	OutgoingPort                    uint32
 	LogFilePath                     string
 	decoder                         authorization.TokenDecoder
 	MaxRetainedLogMessages          uint
@@ -95,7 +95,7 @@ func main() {
 
 	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "loggregator")
 
-	config := &Config{SourcePort: 3456, WebPort: 8080, UaaVerificationKeyFile: *uaaVerificationKeyFile}
+	config := &Config{IncomingPort: 3456, OutgoingPort: 8080, UaaVerificationKeyFile: *uaaVerificationKeyFile}
 	err := cfcomponent.ReadConfigInto(config, *configFile)
 	if err != nil {
 		panic(err)
@@ -105,7 +105,7 @@ func main() {
 		panic(err)
 	}
 
-	listener := agentlistener.NewAgentListener(fmt.Sprintf("0.0.0.0:%d", config.SourcePort), logger)
+	listener := agentlistener.NewAgentListener(fmt.Sprintf("0.0.0.0:%d", config.IncomingPort), logger)
 	incomingData := listener.Start()
 
 	authorizer := authorization.NewLogAccessAuthorizer(config.decoder, config.ApiHost, config.DisableEmailDomainAuthorization)
@@ -129,9 +129,9 @@ func main() {
 	rr := routerregistrar.NewRouterRegistrar(config.MbusClient, logger)
 
 	uri := servernamer.ServerName(
-		net.JoinHostPort(cfc.IpAddress, strconv.Itoa(int(config.SourcePort))),
+		net.JoinHostPort(cfc.IpAddress, strconv.Itoa(int(config.IncomingPort))),
 		"loggregator."+config.SystemDomain)
-	err = rr.RegisterWithRouter(cfc.IpAddress, config.WebPort, []string{uri})
+	err = rr.RegisterWithRouter(cfc.IpAddress, config.OutgoingPort, []string{uri})
 	if err != nil {
 		logger.Fatalf("Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
 	}
@@ -150,7 +150,7 @@ func main() {
 	}()
 
 	go messageRouter.Start()
-	go httpServer.Start(incomingData, fmt.Sprintf("0.0.0.0:%d", config.WebPort))
+	go httpServer.Start(incomingData, fmt.Sprintf("0.0.0.0:%d", config.OutgoingPort))
 
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Kill)
@@ -160,7 +160,7 @@ func main() {
 		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
 			cfcomponent.DumpGoRoutine()
 		case <-killChan:
-			rr.UnregisterFromRouter(cfc.IpAddress, config.WebPort, []string{uri})
+			rr.UnregisterFromRouter(cfc.IpAddress, config.OutgoingPort, []string{uri})
 			break
 		}
 	}

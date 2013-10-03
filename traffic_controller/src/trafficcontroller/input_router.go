@@ -1,4 +1,4 @@
-package loggregatorrouter
+package trafficcontroller
 
 import (
 	"github.com/cloudfoundry/gosteno"
@@ -7,13 +7,13 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
-	"loggregatorrouter/hasher"
+	"trafficcontroller/hasher"
 )
 
-type LoggregatorRouterMonitor struct {
+type TrafficControllerMonitor struct {
 }
 
-func (hm LoggregatorRouterMonitor) Ok() bool {
+func (hm TrafficControllerMonitor) Ok() bool {
 	return true
 }
 
@@ -60,9 +60,9 @@ func NewRouter(host string, h *hasher.Hasher, config cfcomponent.Config, logger 
 
 	cfc, err := cfcomponent.NewComponent(
 		logger,
-		"LoggregatorRouter",
+		"TrafficController",
 		0,
-		&LoggregatorRouterMonitor{},
+		&TrafficControllerMonitor{},
 		config.VarzPort,
 		[]string{config.VarzUser, config.VarzPass},
 		instrumentables,

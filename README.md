@@ -82,8 +82,8 @@ jobs:
     static_ips:
     - 10.10.16.14
 
-- name: loggregator-router
-  template: loggregatorrouter
+- name: loggregator-trafficcontroller
+  template: loggregator-trafficcontroller
   instances: 1  # Only one loggregator router per CF installation
   resource_pool: common
   networks:

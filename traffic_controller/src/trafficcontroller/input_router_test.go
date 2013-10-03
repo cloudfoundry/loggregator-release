@@ -1,4 +1,4 @@
-package loggregatorrouter
+package trafficcontroller
 
 import (
 	"code.google.com/p/gogoprotobuf/proto"
@@ -9,9 +9,9 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/stretchr/testify/assert"
-	"loggregatorrouter/hasher"
 	"testing"
 	"time"
+	"trafficcontroller/hasher"
 )
 
 var logger = steno.NewLogger("TestLogger")
