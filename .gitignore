@@ -8,8 +8,8 @@ release/
 
 dea_logging_agent/src/code.google.com
 dea_logging_agent/src/github.com
-router/src/code.google.com
-router/src/github.com
+traffic_controller/src/code.google.com
+traffic_controller/src/github.com
 server/src/code.google.com
 server/src/github.com
 out/production/

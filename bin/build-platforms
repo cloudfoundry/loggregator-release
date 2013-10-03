@@ -32,7 +32,7 @@ function populate_build_info() {
 if [ "$TRAVIS_BUILD_NUMBER" != "" ]; then
   populate_build_info dea_logging_agent/src/deaagent/deaagent/main.go
   populate_build_info server/src/loggregator/loggregator/main.go
-  populate_build_info trafficcontroller/src/trafficcontroller/trafficcontroller/main.go
+  populate_build_info traffic_controller/src/trafficcontroller/trafficcontroller/main.go
 fi
 
 for PLATFORM in $PLATFORMS; do

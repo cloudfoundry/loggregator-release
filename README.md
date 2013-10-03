@@ -84,7 +84,7 @@ jobs:
 
 - name: loggregator-trafficcontroller
   template: loggregator-trafficcontroller
-  instances: 1  # Only one loggregator router per CF installation
+  instances: 1  # Only one loggregator trafficcontroller per CF installation
   resource_pool: common
   networks:
   - name: cf1
@@ -93,7 +93,7 @@ jobs:
 
 properties:
   loggregator:
-    router: 10.10.16.16:3456  # host:port that will receive messages emitted by Sources
+    trafficcontroller: 10.10.16.16:3456  # host:port that will receive messages emitted by Sources
     servers: 
     - 10.10.16.14:3456  # 
 ```

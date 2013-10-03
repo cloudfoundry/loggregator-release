@@ -4,7 +4,7 @@ set -e
 
 SRC_DIR=$( cd "$( dirname "$0" )" && pwd )/../src
 
-PACKAGES="server router dea_logging_agent"
+PACKAGES="server trafficcontroller dea_logging_agent"
 
 for package in $PACKAGES; do
   ln -s $SRC_DIR/code.google.com $SRC_DIR/../$package/src/code.google.com

@@ -42,7 +42,7 @@ var (
 	logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 	logLevel    = flag.Bool("debug", false, "Debug logging")
 	version     = flag.Bool("version", false, "Version info")
-	configFile  = flag.String("config", "config/loggregator_router.json", "Location of the loggregator router config json file")
+	configFile  = flag.String("config", "config/loggregator_trafficcontroller.json", "Location of the loggregator trafficcontroller config json file")
 )
 
 const (
