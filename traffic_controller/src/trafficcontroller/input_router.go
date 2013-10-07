@@ -60,7 +60,7 @@ func NewRouter(host string, h *hasher.Hasher, config cfcomponent.Config, logger 
 
 	cfc, err := cfcomponent.NewComponent(
 		logger,
-		"TrafficController",
+		"LoggregatorTrafficcontroller",
 		0,
 		&TrafficControllerMonitor{},
 		config.VarzPort,
