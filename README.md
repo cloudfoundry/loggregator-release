@@ -46,9 +46,13 @@ Loggregator is composed of:
 
 * **Sources**: Logging agents that run on the Cloud Foundry components.  They forward logs to:
 * **Loggregator Server**: Responsible for gathering logs from the **sources**, and storing in the temporary buffers.
-* **Hashing Layer**: Makes the Loggregator Servers horizontally scalable by partitioning incoming log messages and outgoing traffic. Routes incoming log messages and proxies outgoing connections to the CLI and to drains for 3rd party partners.
+* **Traffic Controller**: Makes the Loggregator Servers horizontally scalable by partitioning incoming log messages and outgoing traffic. Routes incoming log messages and proxies outgoing connections to the CLI and to drains for 3rd party partners.
 
 Source agents emit the logging data as [protocol-buffers](https://code.google.com/p/protobuf/), and the data stays in that format throughout the system.
+
+![Loggregator Diagram](docs/loggregator.png)
+
+In a redundant CloudFoundry setup, Loggregator can be configured to survive zone failures. Log messages from non-affected zones will still make it to the end user. On AWS, availability zones could be used as redundancy zones. The following is an example of a multi zone setup with two zones.
 
 ![Loggregator Diagram](docs/loggregator.png)
 
@@ -58,7 +62,7 @@ Cloud Foundry developers can easily add source clients to new CF components that
 
 ### Deploying via BOSH
 
-Below are example snippets for deploying the DEA Logging Agent (source), Loggregator Server, and Loggregator Router (hashing layer) via BOSH.
+Below are example snippets for deploying the DEA Logging Agent (source), Loggregator Server, and Loggregator Traffic Controller via BOSH.
 
 ```yaml
 jobs:
@@ -73,6 +77,9 @@ jobs:
     default:
     - dns
     - gateway
+  properties:
+    loggregator:
+      trafficcontroller: 10.10.16.16:3456 # pick a traffic controller from the same redundancy zone as this job
 
 - name: loggregator
   template: loggregator
@@ -85,18 +92,22 @@ jobs:
 
 - name: loggregator-trafficcontroller
   template: loggregator-trafficcontroller
-  instances: 1  # Only one loggregator trafficcontroller per CF installation
+  instances: 1  # Scale out as necessary
   resource_pool: common
   networks:
   - name: cf1
     static_ips:
     - 10.10.16.16
+  properties:
+    zone: z1 # Denoting which one of the redundancy zones this traffic controller is servicing
 
 properties:
   loggregator:
-    trafficcontroller: 10.10.16.16:3456  # host:port that will receive messages emitted by Sources
-    servers: 
-    - 10.10.16.14:3456  # 
+    servers:
+      z1: # A list of loggregator servers for every redundancy zone
+      - 10.10.16.14
+    incoming_port: 3456
+    outgoing_port: 8080
 ```
 
 ### Development
