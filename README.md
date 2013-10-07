@@ -54,7 +54,7 @@ Source agents emit the logging data as [protocol-buffers](https://code.google.co
 
 In a redundant CloudFoundry setup, Loggregator can be configured to survive zone failures. Log messages from non-affected zones will still make it to the end user. On AWS, availability zones could be used as redundancy zones. The following is an example of a multi zone setup with two zones.
 
-![Loggregator Diagram](docs/loggregator.png)
+![Loggregator Diagram](docs/loggregator_multizone.png)
 
 ### Emitting Messages from other Cloud Foundry components
 
