@@ -1,1 +1,0 @@
-/Users/pivotal/workspace/loggregator/bin/../src/github.com
