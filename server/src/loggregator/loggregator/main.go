@@ -9,17 +9,13 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar"
-	"github.com/cloudfoundry/loggregatorlib/servernamer"
 	"io/ioutil"
 	"loggregator/authorization"
 	"loggregator/sinkserver"
 	"math/rand"
-	"net"
 	"os"
 	"os/signal"
 	"runtime"
-	"strconv"
 	"time"
 )
 
@@ -126,16 +122,6 @@ func main() {
 		panic(err)
 	}
 
-	rr := routerregistrar.NewRouterRegistrar(config.MbusClient, logger)
-
-	uri := servernamer.ServerName(
-		net.JoinHostPort(cfc.IpAddress, strconv.Itoa(int(config.IncomingPort))),
-		"loggregator."+config.SystemDomain)
-	err = rr.RegisterWithRouter(cfc.IpAddress, config.OutgoingPort, []string{uri})
-	if err != nil {
-		logger.Fatalf("Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
-	}
-
 	cr := collectorregistrar.NewCollectorRegistrar(config.MbusClient, logger)
 	err = cr.RegisterWithCollector(cfc)
 	if err != nil {
@@ -160,7 +146,6 @@ func main() {
 		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
 			cfcomponent.DumpGoRoutine()
 		case <-killChan:
-			rr.UnregisterFromRouter(cfc.IpAddress, config.OutgoingPort, []string{uri})
 			break
 		}
 	}
