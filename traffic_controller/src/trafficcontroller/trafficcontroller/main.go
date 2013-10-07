@@ -53,7 +53,7 @@ const (
 func main() {
 	flag.Parse()
 
-	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "udprouter")
+	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller")
 	logger.Debugf("Setting up the loggregator traffic controller")
 
 	if *version {
