@@ -1,9 +1,11 @@
 package hasher
 
-import "github.com/stathat/consistent"
+import (
+	"math/big"
+)
 
 type Hasher struct {
-	c *consistent.Consistent
+	items []string
 }
 
 func NewHasher(loggregatorServers []string) (h *Hasher) {
@@ -11,17 +13,19 @@ func NewHasher(loggregatorServers []string) (h *Hasher) {
 		panic("Hasher must be seeded with one or more Loggregator Servers")
 	}
 
-	c := consistent.New()
-	c.Set(loggregatorServers)
-
-	h = &Hasher{c: c}
+	h = &Hasher{items: loggregatorServers}
 	return
 }
 
-func (h *Hasher) GetLoggregatorServerForAppId(appId string) (string, error) {
-	return h.c.Get(appId)
+func (h *Hasher) GetLoggregatorServerForAppId(appId string) string {
+	var id, numberOfItems big.Int
+	id.SetBytes([]byte(appId))
+	numberOfItems.SetInt64(int64(len(h.items)))
+
+	id.Mod(&id, &numberOfItems)
+	return h.items[id.Int64()]
 }
 
 func (h *Hasher) LoggregatorServers() []string {
-	return h.c.Members()
+	return h.items
 }

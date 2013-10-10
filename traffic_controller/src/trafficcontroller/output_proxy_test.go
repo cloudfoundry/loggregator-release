@@ -63,7 +63,7 @@ func TestProxyingWithHashingBetweenServers(t *testing.T) {
 	go proxy.Start()
 	WaitForServerStart("62024", "/")
 
-	receivedChan := Client(t, "62026", "/?app=myServer1App")
+	receivedChan := Client(t, "62026", "/?app=0")
 
 	select {
 	case data := <-receivedChan:
@@ -72,7 +72,7 @@ func TestProxyingWithHashingBetweenServers(t *testing.T) {
 		t.Error("Did not receive response within one second")
 	}
 
-	receivedChan = Client(t, "62026", "/?app=myServer2App")
+	receivedChan = Client(t, "62026", "/?app=1")
 
 	select {
 	case data := <-receivedChan:
@@ -99,7 +99,7 @@ func TestProxyingWithMultipleAZs(t *testing.T) {
 	go proxy.Start()
 	WaitForServerStart("62027", "/")
 
-	receivedChan := Client(t, "62031", "/?app=myServerApp1")
+	receivedChan := Client(t, "62031", "/?app=0")
 	messages := ""
 	for message := range receivedChan {
 		messages = messages + string(message)
@@ -107,7 +107,7 @@ func TestProxyingWithMultipleAZs(t *testing.T) {
 	assert.Contains(t, messages, "Hello World from the server 1 - AZ1")
 	assert.Contains(t, messages, "Hello World from the server 1 - AZ2")
 
-	receivedChan = Client(t, "62031", "/?app=myServer2App")
+	receivedChan = Client(t, "62031", "/?app=1")
 	messages = ""
 	for message := range receivedChan {
 		messages = messages + string(message)

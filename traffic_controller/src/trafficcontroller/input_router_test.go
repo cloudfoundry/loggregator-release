@@ -86,21 +86,21 @@ func TestThatItWorksWithTwoLoggregators(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	logEmitter, _ := emitter.NewEmitter("localhost:3457", "ROUTER", "42", logger)
-	logEmitter.Emit("testId", "My message")
+	logEmitter.Emit("2", "My message")
 
 	receivedData := <-dataChan1
 	receivedMsg := &logmessage.LogMessage{}
 	proto.Unmarshal(receivedData, receivedMsg)
 
-	assert.Equal(t, receivedMsg.GetAppId(), "testId")
+	assert.Equal(t, receivedMsg.GetAppId(), "2")
 	assert.Equal(t, string(receivedMsg.GetMessage()), "My message")
 
-	logEmitter.Emit("anotherId", "Another message")
+	logEmitter.Emit("1", "Another message")
 
 	receivedData = <-dataChan2
 	receivedMsg = &logmessage.LogMessage{}
 	proto.Unmarshal(receivedData, receivedMsg)
 
-	assert.Equal(t, receivedMsg.GetAppId(), "anotherId")
+	assert.Equal(t, receivedMsg.GetAppId(), "1")
 	assert.Equal(t, string(receivedMsg.GetMessage()), "Another message")
 }

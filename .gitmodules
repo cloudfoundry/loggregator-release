@@ -22,6 +22,3 @@
 [submodule "src/github.com/cloudfoundry/loggregatorlib"]
 	path = src/github.com/cloudfoundry/loggregatorlib
 	url = https://github.com/cloudfoundry/loggregatorlib.git
-[submodule "src/github.com/stathat/consistent"]
-	path = src/github.com/stathat/consistent
-	url = https://github.com/stathat/consistent.git

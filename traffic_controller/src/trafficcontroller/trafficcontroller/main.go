@@ -54,7 +54,7 @@ func main() {
 	flag.Parse()
 
 	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller")
-	logger.Debugf("Setting up the loggregator traffic controller")
+	logger.Debugf("Startup: Setting up the loggregator traffic controller")
 
 	if *version {
 		fmt.Printf("version: %s\ngitSha: %s\nsourceUrl: https://github.com/cloudfoundry/loggregator/tree/%s\n\n",
@@ -73,62 +73,84 @@ func main() {
 		panic(err)
 	}
 
-	servers := make([]string, len(config.Loggregators[config.Zone]))
-	copy(servers, config.Loggregators[config.Zone])
-	for index, server := range servers {
-		logger.Debugf("Got loggregator server at this address: %v", net.JoinHostPort(server, strconv.FormatUint(uint64(config.IncomingPort), 10)))
-		servers[index] = net.JoinHostPort(server, strconv.FormatUint(uint64(config.IncomingPort), 10))
-	}
-	h := hasher.NewHasher(servers)
-	logger.Debugf("Loggregator Server in the zone: %v", config.Loggregators[config.Zone])
-	logger.Debugf("Hashed Loggregator Server in the zone: %v", h.LoggregatorServers())
-	logger.Debugf("Going to start incoming router on %v", config.Host)
-	r, err := trafficcontroller.NewRouter(config.Host, h, config.Config, logger)
-	if err != nil {
-		panic(err)
-	}
-
-	hashers := make([]*hasher.Hasher, len(config.Loggregators))
-	logger.Debugf("Number of zones: %v", len(config.Loggregators))
-	counter := 0
-	for _, servers := range config.Loggregators {
-		logger.Debugf("Hashing server: %v", servers)
+	makeIncomingRouter := func() *trafficcontroller.Router {
+		servers := make([]string, len(config.Loggregators[config.Zone]))
+		copy(servers, config.Loggregators[config.Zone])
 		for index, server := range servers {
-			servers[index] = net.JoinHostPort(server, strconv.FormatUint(uint64(config.OutgoingPort), 10))
+			logger.Debugf("Incoming Router Startup: Forwarding messages from source to loggregator server [%v] at %v", index, net.JoinHostPort(server, strconv.FormatUint(uint64(config.IncomingPort), 10)))
+			servers[index] = net.JoinHostPort(server, strconv.FormatUint(uint64(config.IncomingPort), 10))
 		}
-		hashers[counter] = hasher.NewHasher(servers)
-		counter++
-	}
-	logger.Debugf("Number of hashers for the proxy: %v", len(hashers))
-	proxy := trafficcontroller.NewProxy(net.JoinHostPort(r.Component.IpAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), hashers, logger)
-	go func() {
-		err := proxy.Start()
+		h := hasher.NewHasher(servers)
+		logger.Debugf("Incoming Router Startup: Loggregator Servers in the zone: %v", config.Loggregators[config.Zone])
+		logger.Debugf("Incoming Router Startup: Hashed Loggregator Server in the zone: %v", h.LoggregatorServers())
+		logger.Debugf("Incoming Router Startup: Going to start incoming router on %v", config.Host)
+		router, err := trafficcontroller.NewRouter(config.Host, h, config.Config, logger)
 		if err != nil {
 			panic(err)
 		}
-	}()
+		return router
+	}
+
+	startIncomingRouter := func(router *trafficcontroller.Router) {
+		go router.Start(logger)
+	}
+
+	setupMonitoring := func(router *trafficcontroller.Router) {
+		cr := collectorregistrar.NewCollectorRegistrar(config.MbusClient, logger)
+		err = cr.RegisterWithCollector(router.Component)
+		if err != nil {
+			panic(err)
+		}
+
+		go func() {
+			err := router.StartMonitoringEndpoints()
+			if err != nil {
+				panic(err)
+			}
+		}()
+	}
+
+	makeOutgoingProxy := func(ipAddress string) *trafficcontroller.Proxy {
+		hashers := make([]*hasher.Hasher, len(config.Loggregators))
+		logger.Debugf("Output Proxy Startup: Number of zones: %v", len(config.Loggregators))
+		counter := 0
+		for _, servers := range config.Loggregators {
+			logger.Debugf("Output Proxy Startup: Hashing servers: %v", servers)
+			for index, server := range servers {
+				logger.Debugf("Output Proxy Startup: Forwarding messages to client from loggregator server [%v] at %v", index, net.JoinHostPort(server, strconv.FormatUint(uint64(config.OutgoingPort), 10)))
+				servers[index] = net.JoinHostPort(server, strconv.FormatUint(uint64(config.OutgoingPort), 10))
+			}
+			hashers[counter] = hasher.NewHasher(servers)
+			counter++
+		}
+		logger.Debugf("Output Proxy Startup: Number of hashers for the proxy: %v", len(hashers))
+		proxy := trafficcontroller.NewProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), hashers, logger)
+		return proxy
+	}
+
+	startOutgoingProxy := func(proxy *trafficcontroller.Proxy) {
+		go func() {
+			err := proxy.Start()
+			if err != nil {
+				panic(err)
+			}
+		}()
+	}
+
+	router := makeIncomingRouter()
+	startIncomingRouter(router)
+
+	proxy := makeOutgoingProxy(router.Component.IpAddress)
+	startOutgoingProxy(proxy)
+
+	setupMonitoring(router)
 
 	rr := routerregistrar.NewRouterRegistrar(config.MbusClient, logger)
 	uri := "loggregator." + config.SystemDomain
-	err = rr.RegisterWithRouter(r.Component.IpAddress, config.OutgoingPort, []string{uri})
+	err = rr.RegisterWithRouter(router.Component.IpAddress, config.OutgoingPort, []string{uri})
 	if err != nil {
-		logger.Fatalf("Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
+		logger.Fatalf("Startup: Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
 	}
-
-	cr := collectorregistrar.NewCollectorRegistrar(config.MbusClient, logger)
-	err = cr.RegisterWithCollector(r.Component)
-	if err != nil {
-		panic(err)
-	}
-
-	go func() {
-		err := r.StartMonitoringEndpoints()
-		if err != nil {
-			panic(err)
-		}
-	}()
-
-	go r.Start(logger)
 
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Kill)
@@ -138,7 +160,7 @@ func main() {
 		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
 			cfcomponent.DumpGoRoutine()
 		case <-killChan:
-			rr.UnregisterFromRouter(r.Component.IpAddress, config.OutgoingPort, []string{uri})
+			rr.UnregisterFromRouter(router.Component.IpAddress, config.OutgoingPort, []string{uri})
 			break
 		}
 	}

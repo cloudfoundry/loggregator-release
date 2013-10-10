@@ -7,42 +7,37 @@ import (
 	"trafficcontroller/hasher"
 )
 
-type redirector struct {
+type Proxy struct {
 	host    string
 	hashers []*hasher.Hasher
 	logger  *gosteno.Logger
 }
 
-func NewProxy(host string, hashers []*hasher.Hasher, logger *gosteno.Logger) *redirector {
-	r := &redirector{host: host, hashers: hashers, logger: logger}
-	return r
+func NewProxy(host string, hashers []*hasher.Hasher, logger *gosteno.Logger) *Proxy {
+	return &Proxy{host: host, hashers: hashers, logger: logger}
 }
 
-func (r *redirector) Start() error {
-	return http.ListenAndServe(r.host, websocket.Handler(r.HandleWebSocket))
+func (proxy *Proxy) Start() error {
+	return http.ListenAndServe(proxy.host, websocket.Handler(proxy.HandleWebSocket))
 }
 
-func (r *redirector) HandleWebSocket(clientWS *websocket.Conn) {
+func (proxy *Proxy) HandleWebSocket(clientWS *websocket.Conn) {
 	defer clientWS.Close()
 	closeChan := make(chan bool)
 	req := clientWS.Request()
 	req.ParseForm()
-	r.logger.Debugf("Request for app: %v", req.Form.Get("app"))
-	serverWSs := make([]*websocket.Conn, len(r.hashers))
-	for index, hasher := range r.hashers {
-		r.logger.Debugf("Hashing between: %v", hasher.LoggregatorServers())
+	proxy.logger.Debugf("Output Proxy: Request for app: %v", req.Form.Get("app"))
+	serverWSs := make([]*websocket.Conn, len(proxy.hashers))
+	for index, hasher := range proxy.hashers {
+		proxy.logger.Debugf("Output Proxy: Servers in group [%v]: %v", index, hasher.LoggregatorServers())
 
-		server, err := hasher.GetLoggregatorServerForAppId(req.Form.Get("app"))
-		r.logger.Debugf("Using server: %v", server)
-
-		if err != nil {
-			r.logger.Errorf("Error extracting appId from request URL - %v", err)
-		}
+		server := hasher.GetLoggregatorServerForAppId(req.Form.Get("app"))
+		proxy.logger.Debugf("Output Proxy: AppId is %v. Using server: %v", req.Form.Get("app"), server)
 
 		config, err := websocket.NewConfig("ws://"+server+req.URL.RequestURI(), "http://localhost")
 
 		if err != nil {
-			r.logger.Errorf("Error creating config for websocket - %v", err)
+			proxy.logger.Errorf("Output Proxy: Error creating config for websocket - %v", err)
 		}
 
 		authToken := clientWS.Request().Header.Get("Authorization")
@@ -50,35 +45,35 @@ func (r *redirector) HandleWebSocket(clientWS *websocket.Conn) {
 
 		serverWS, err := websocket.DialConfig(config)
 		if err != nil {
-			r.logger.Errorf("Error connecting to loggregator server - %v", err)
+			proxy.logger.Errorf("Output Proxy: Error connecting to loggregator server - %v", err)
 		}
 
 		if serverWS != nil {
 			serverWSs[index] = serverWS
 		}
 	}
-	r.forwardIO(serverWSs, clientWS, closeChan)
+	proxy.forwardIO(serverWSs, clientWS, closeChan)
 
 }
 
-func (r *redirector) forwardIO(servers []*websocket.Conn, client *websocket.Conn, closeChan chan bool) {
+func (proxy *Proxy) forwardIO(servers []*websocket.Conn, client *websocket.Conn, closeChan chan bool) {
 	doneChan := make(chan bool)
 
 	var logMessage []byte
 	for _, server := range servers {
 		go func(server *websocket.Conn) {
-			r.logger.Debugf("Starting to listen to server %v", server.RemoteAddr().String())
+			proxy.logger.Debugf("Output Proxy: Starting to listen to server %v", server.RemoteAddr().String())
 
 			defer server.Close()
 			for {
 				err := websocket.Message.Receive(server, &logMessage)
 				if err != nil {
-					r.logger.Errorf("Error reading from the server - %v - %v", err, server.RemoteAddr().String())
+					proxy.logger.Errorf("Output Proxy: Error reading from the server - %v - %v", err, server.RemoteAddr().String())
 					doneChan <- true
 					return
 				}
 				if err == nil {
-					r.logger.Debugf("Got message from server %v bytes", len(logMessage))
+					proxy.logger.Debugf("Output Proxy: Got message from server %v bytes", len(logMessage))
 					websocket.Message.Send(client, logMessage)
 				}
 			}
@@ -90,11 +85,11 @@ func (r *redirector) forwardIO(servers []*websocket.Conn, client *websocket.Conn
 		for {
 			err := websocket.Message.Receive(client, &keepAlive)
 			if err != nil {
-				r.logger.Errorf("Error reading from the client - %v", err)
+				proxy.logger.Errorf("Output Proxy: Error reading from the client - %v", err)
 				return
 			}
 			if err == nil {
-				r.logger.Debugf("Got message from client %v bytes", len(keepAlive))
+				proxy.logger.Debugf("Output Proxy: Got message from client %v bytes", len(keepAlive))
 				for _, server := range servers {
 					websocket.Message.Send(server, keepAlive)
 				}
@@ -104,7 +99,7 @@ func (r *redirector) forwardIO(servers []*websocket.Conn, client *websocket.Conn
 
 	for i := 0; i < len(servers); i++ {
 		<-doneChan
-		r.logger.Debug("Lost one server")
+		proxy.logger.Debug("Output Proxy: Lost one server")
 	}
-	r.logger.Debugf("Terminating connection. All clients disconnected")
+	proxy.logger.Debugf("Output Proxy: Terminating connection. All clients disconnected")
 }

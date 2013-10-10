@@ -17,36 +17,17 @@ func (hm TrafficControllerMonitor) Ok() bool {
 	return true
 }
 
-type router struct {
+type Router struct {
 	cfcomponent.Component
-	h             *hasher.Hasher
-	lcs           map[string]loggregatorclient.LoggregatorClient
-	agentListener agentlistener.AgentListener
-	host          string
+	hasher             *hasher.Hasher
+	loggregatorClients map[string]loggregatorclient.LoggregatorClient
+	agentListener      agentlistener.AgentListener
+	host               string
 }
 
-func (r router) Start(logger *gosteno.Logger) {
-	dataChan := r.agentListener.Start()
-	for {
-		dataToProxy := <-dataChan
-		appId, err := appid.FromLogMessage(dataToProxy)
-		if err != nil {
-			logger.Warn(err.Error())
-		} else {
-			lc := r.lookupLoggregatorClientForAppId(appId)
-			lc.Send(dataToProxy)
-		}
-	}
-}
-
-func (r router) lookupLoggregatorClientForAppId(appId string) loggregatorclient.LoggregatorClient {
-	ls, _ := r.h.GetLoggregatorServerForAppId(appId)
-	return r.lcs[ls]
-}
-
-func NewRouter(host string, h *hasher.Hasher, config cfcomponent.Config, logger *gosteno.Logger) (r *router, err error) {
+func NewRouter(host string, hasher *hasher.Hasher, config cfcomponent.Config, logger *gosteno.Logger) (r *Router, err error) {
 	var instrumentables []instrumentation.Instrumentable
-	servers := h.LoggregatorServers()
+	servers := hasher.LoggregatorServers()
 	loggregatorClients := make(map[string]loggregatorclient.LoggregatorClient, len(servers))
 
 	for _, server := range servers {
@@ -55,8 +36,8 @@ func NewRouter(host string, h *hasher.Hasher, config cfcomponent.Config, logger 
 		instrumentables = append(instrumentables, client)
 	}
 
-	al := agentlistener.NewAgentListener(host, logger)
-	instrumentables = append(instrumentables, al)
+	agentListener := agentlistener.NewAgentListener(host, logger)
+	instrumentables = append(instrumentables, agentListener)
 
 	cfc, err := cfcomponent.NewComponent(
 		logger,
@@ -72,7 +53,23 @@ func NewRouter(host string, h *hasher.Hasher, config cfcomponent.Config, logger 
 		return
 	}
 
-	r = &router{Component: cfc, h: h, lcs: loggregatorClients, agentListener: al, host: host}
+	r = &Router{Component: cfc, hasher: hasher, loggregatorClients: loggregatorClients, agentListener: agentListener, host: host}
 
 	return
+}
+
+func (r Router) Start(logger *gosteno.Logger) {
+	dataChan := r.agentListener.Start()
+	for {
+		dataToProxy := <-dataChan
+		appId, err := appid.FromLogMessage(dataToProxy)
+		if err != nil {
+			logger.Warn(err.Error())
+		} else {
+			server := r.hasher.GetLoggregatorServerForAppId(appId)
+			lc := r.loggregatorClients[server]
+			r.Component.Logger.Debugf("Incoming Router: AppId is %v. Using server: %v", appId, server)
+			lc.Send(dataToProxy)
+		}
+	}
 }
