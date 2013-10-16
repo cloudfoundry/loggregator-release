@@ -78,7 +78,7 @@ func main() {
 			versionNumber, gitSha, gitSha)
 		return
 	}
-	config := &Config{OutgoingPort: 8080}
+	config := &Config{OutgoingPort: 8080, UaaVerificationKeyFile: *uaaVerificationKeyFile}
 	err := cfcomponent.ReadConfigInto(config, *configFile)
 	config.Host = net.JoinHostPort(config.Host, strconv.FormatUint(uint64(config.IncomingPort), 10))
 
