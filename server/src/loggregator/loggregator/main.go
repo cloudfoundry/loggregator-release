@@ -9,8 +9,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
-	"io/ioutil"
-	"loggregator/authorization"
 	"loggregator/sinkserver"
 	"math/rand"
 	"os"
@@ -21,16 +19,13 @@ import (
 
 type Config struct {
 	cfcomponent.Config
-	Index                           uint
-	ApiHost                         string
-	UaaVerificationKeyFile          string
-	DisableEmailDomainAuthorization bool
-	SystemDomain                    string
-	IncomingPort                    uint32
-	OutgoingPort                    uint32
-	LogFilePath                     string
-	decoder                         authorization.TokenDecoder
-	MaxRetainedLogMessages          uint
+	Index                  uint
+	ApiHost                string
+	SystemDomain           string
+	IncomingPort           uint32
+	OutgoingPort           uint32
+	LogFilePath            string
+	MaxRetainedLogMessages uint
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
@@ -41,26 +36,15 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 		return errors.New("Need max number of log messages to retain per application")
 	}
 
-	uaaVerificationKey, err := ioutil.ReadFile(c.UaaVerificationKeyFile)
-	if err != nil {
-		return errors.New(fmt.Sprintf("Can not read UAA verification key from file %s: %s", c.UaaVerificationKeyFile, err))
-	}
-
-	c.decoder, err = authorization.NewUaaTokenDecoder(uaaVerificationKey)
-	if err != nil {
-		return errors.New(fmt.Sprintf("Can not parse UAA verification key: %s", err))
-	}
-
 	err = c.Validate(logger)
 	return
 }
 
 var (
-	version                = flag.Bool("version", false, "Version info")
-	logFilePath            = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
-	logLevel               = flag.Bool("debug", false, "Debug logging")
-	configFile             = flag.String("config", "config/loggregator.json", "Location of the loggregator config json file")
-	uaaVerificationKeyFile = flag.String("tokenFile", "config/uaa_token.pub", "Location of the loggregator's uaa public token file")
+	version     = flag.Bool("version", false, "Version info")
+	logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
+	logLevel    = flag.Bool("debug", false, "Debug logging")
+	configFile  = flag.String("config", "config/loggregator.json", "Location of the loggregator config json file")
 )
 
 const (
@@ -91,7 +75,7 @@ func main() {
 
 	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "loggregator")
 
-	config := &Config{IncomingPort: 3456, OutgoingPort: 8080, UaaVerificationKeyFile: *uaaVerificationKeyFile}
+	config := &Config{IncomingPort: 3456, OutgoingPort: 8080}
 	err := cfcomponent.ReadConfigInto(config, *configFile)
 	if err != nil {
 		panic(err)
@@ -104,9 +88,8 @@ func main() {
 	listener := agentlistener.NewAgentListener(fmt.Sprintf("0.0.0.0:%d", config.IncomingPort), logger)
 	incomingData := listener.Start()
 
-	authorizer := authorization.NewLogAccessAuthorizer(config.decoder, config.ApiHost, config.DisableEmailDomainAuthorization)
 	messageRouter := sinkserver.NewMessageRouter(config.MaxRetainedLogMessages, logger)
-	httpServer := sinkserver.NewHttpServer(messageRouter, authorizer, 30*time.Second, logger)
+	httpServer := sinkserver.NewHttpServer(messageRouter, 30*time.Second, logger)
 
 	cfc, err := cfcomponent.NewComponent(
 		logger,

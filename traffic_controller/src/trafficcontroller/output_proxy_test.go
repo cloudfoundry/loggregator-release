@@ -2,12 +2,12 @@ package trafficcontroller
 
 import (
 	"code.google.com/p/go.net/websocket"
-	testhelpers "github.com/cloudfoundry/loggregatorlib/lib_testhelpers"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
 	"time"
 	"trafficcontroller/hasher"
+	testhelpers "trafficcontroller_testhelpers"
 )
 
 func TestProxying(t *testing.T) {
@@ -16,6 +16,7 @@ func TestProxying(t *testing.T) {
 	proxy := NewProxy(
 		"localhost:62022",
 		[]*hasher.Hasher{hasher.NewHasher([]string{"localhost:62023"})},
+		testhelpers.SuccessfulAuthorizer,
 		testhelpers.Logger(),
 	)
 	go proxy.Start()
@@ -37,6 +38,7 @@ func TestProxyingWithTwoMessages(t *testing.T) {
 	proxy := NewProxy(
 		"localhost:62021",
 		[]*hasher.Hasher{hasher.NewHasher([]string{"localhost:62020"})},
+		testhelpers.SuccessfulAuthorizer,
 		testhelpers.Logger(),
 	)
 	go proxy.Start()
@@ -58,6 +60,7 @@ func TestProxyingWithHashingBetweenServers(t *testing.T) {
 	proxy := NewProxy(
 		"localhost:62026",
 		[]*hasher.Hasher{hasher.NewHasher([]string{"localhost:62024", "localhost:62025"})},
+		testhelpers.SuccessfulAuthorizer,
 		testhelpers.Logger(),
 	)
 	go proxy.Start()
@@ -94,6 +97,7 @@ func TestProxyingWithMultipleAZs(t *testing.T) {
 			hasher.NewHasher([]string{"localhost:62027", "localhost:62028"}),
 			hasher.NewHasher([]string{"localhost:62029", "localhost:62030"}),
 		},
+		testhelpers.SuccessfulAuthorizer,
 		testhelpers.Logger(),
 	)
 	go proxy.Start()
@@ -128,6 +132,7 @@ func TestKeepAliveWithMultipleAZs(t *testing.T) {
 			hasher.NewHasher([]string{"localhost:62032"}),
 			hasher.NewHasher([]string{"localhost:62033"}),
 		},
+		testhelpers.SuccessfulAuthorizer,
 		testhelpers.Logger(),
 	)
 	go proxy.Start()
@@ -149,27 +154,49 @@ func TestKeepAliveWithMultipleAZs(t *testing.T) {
 	}
 }
 
-func TestAuthorization(t *testing.T) {
-	authorizationChannel := make(chan string)
-	go authServer("localhost:62035", authorizationChannel)
-
+func TestProxyWhenLogTargetisinvalid(t *testing.T) {
 	proxy := NewProxy(
-		"localhost:62037",
+		"localhost:62060",
 		[]*hasher.Hasher{
-			hasher.NewHasher([]string{"localhost:62035"})},
+			hasher.NewHasher([]string{"localhost:62032"}),
+		},
+		testhelpers.SuccessfulAuthorizer,
 		testhelpers.Logger(),
 	)
 	go proxy.Start()
-	WaitForServerStart("62035", "/?poll=true")
+	time.Sleep(time.Millisecond * 50)
+	testhelpers.AssertConnectionFails(t, "62060", "/invalidtarget", "", 4000)
 
-	authClient(t, "62037", "/?app=myServer2App", "AUTH HEADER")
+}
 
-	select {
-	case receivedAuth := <-authorizationChannel:
-		assert.Equal(t, receivedAuth, "AUTH HEADER")
-	case <-time.After(1 * time.Second):
-		t.Error("Did not receive response within one second")
-	}
+func TestProxyWithoutAuthorization(t *testing.T) {
+	proxy := NewProxy(
+		"localhost:62061",
+		[]*hasher.Hasher{
+			hasher.NewHasher([]string{"localhost:62032"}),
+		},
+		testhelpers.SuccessfulAuthorizer,
+		testhelpers.Logger(),
+	)
+	go proxy.Start()
+	time.Sleep(time.Millisecond * 50)
+
+	testhelpers.AssertConnectionFails(t, "62061", "/?app=myApp", "", 4001)
+}
+
+func TestProxyWhenAuthorizationFails(t *testing.T) {
+	proxy := NewProxy(
+		"localhost:62062",
+		[]*hasher.Hasher{
+			hasher.NewHasher([]string{"localhost:62032"}),
+		},
+		testhelpers.SuccessfulAuthorizer,
+		testhelpers.Logger(),
+	)
+	go proxy.Start()
+	time.Sleep(time.Millisecond * 50)
+
+	testhelpers.AssertConnectionFails(t, "62062", "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN, 4002)
 }
 
 func WaitForServerStart(port string, path string) {
@@ -189,6 +216,7 @@ func WaitForServerStart(port string, path string) {
 func Client(t *testing.T, port string, path string) chan []byte {
 	receivedChan := make(chan []byte)
 	config, err := websocket.NewConfig("ws://localhost:"+port+path, "http://localhost")
+	config.Header.Add("Authorization", testhelpers.VALID_AUTHENTICATION_TOKEN)
 	assert.NoError(t, err)
 	ws, err := websocket.DialConfig(config)
 	assert.NoError(t, err)
@@ -258,33 +286,7 @@ func KeepAliveServer(apiEndpoint string, keepAliveChan chan []byte) {
 
 func KeepAliveClient(t *testing.T, port string, path string) {
 	config, err := websocket.NewConfig("ws://localhost:"+port+path, "http://localhost")
-	assert.NoError(t, err)
-	ws, err := websocket.DialConfig(config)
-	assert.NoError(t, err)
-
-	websocket.Message.Send(ws, []byte("keep alive"))
-}
-
-func authServer(apiEndpoint string, authChan chan string) {
-	websocketHandler := func(ws *websocket.Conn) {
-		defer ws.Close()
-		req := ws.Request()
-		req.ParseForm()
-		if req.Form.Get("poll") != "true" {
-			header := req.Header.Get("Authorization")
-			authChan <- header
-		}
-	}
-
-	err := http.ListenAndServe(apiEndpoint, websocket.Handler(websocketHandler))
-	if err != nil {
-		panic(err)
-	}
-}
-
-func authClient(t *testing.T, port, path, authToken string) {
-	config, err := websocket.NewConfig("ws://localhost:"+port+path, "http://localhost")
-	config.Header.Add("Authorization", authToken)
+	config.Header.Add("Authorization", testhelpers.VALID_AUTHENTICATION_TOKEN)
 	assert.NoError(t, err)
 	ws, err := websocket.DialConfig(config)
 	assert.NoError(t, err)

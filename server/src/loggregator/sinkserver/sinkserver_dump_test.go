@@ -24,7 +24,7 @@ func TestItDumpsAllMessagesForAnAppUser(t *testing.T) {
 	dataReadChannel <- expectedMessage
 
 	receivedChan := make(chan []byte, 2)
-	_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, DUMP_PATH+"?app=myOtherApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
+	_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, DUMP_PATH+"?app=myOtherApp")
 
 	logMessages := dumpAllMessages(receivedChan)
 
@@ -39,22 +39,6 @@ func TestItDumpsAllMessagesForAnAppUser(t *testing.T) {
 	stopKeepAlive <- true
 }
 
-func TestDumpAuthTokenCombinationsThatDropSink(t *testing.T) {
-	for _, test := range authTokenFailingCombinationTests {
-		receivedChan := make(chan []byte, 2)
-		_, _, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, DUMP_PATH+"?app=myApp", test.authToken)
-		assert.Equal(t, true, <-droppedChannel)
-	}
-}
-
 func TestDumpDropSinkWhenLogTargetisinvalid(t *testing.T) {
-	AssertConnectionFails(t, SERVER_PORT, DUMP_PATH+"invalidtarget", "", 4000)
-}
-
-func TestDumpDropSinkWithoutAuthorization(t *testing.T) {
-	AssertConnectionFails(t, SERVER_PORT, DUMP_PATH+"?app=myApp", "", 4001)
-}
-
-func TestDumpDropSinkWhenAuthorizationFails(t *testing.T) {
-	AssertConnectionFails(t, SERVER_PORT, DUMP_PATH+"?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN, 4002)
+	AssertConnectionFails(t, SERVER_PORT, DUMP_PATH+"invalidtarget", 4000)
 }

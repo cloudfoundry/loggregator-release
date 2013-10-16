@@ -16,7 +16,7 @@ func TestThatItSends(t *testing.T) {
 	otherMessageString := "Some more stuff"
 	otherMessage := messagetesthelpers.MarshalledLogMessage(t, otherMessageString, "myApp")
 
-	_, dontKeppAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
+	_, dontKeppAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp")
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- expectedMessage
@@ -43,8 +43,8 @@ func TestThatItSendsAllDataToAllSinks(t *testing.T) {
 	client1ReceivedChan := make(chan []byte)
 	client2ReceivedChan := make(chan []byte)
 
-	_, stopKeepAlive1, _ := testhelpers.AddWSSink(t, client1ReceivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
-	_, stopKeepAlive2, _ := testhelpers.AddWSSink(t, client2ReceivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
+	_, stopKeepAlive1, _ := testhelpers.AddWSSink(t, client1ReceivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp")
+	_, stopKeepAlive2, _ := testhelpers.AddWSSink(t, client2ReceivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp")
 	WaitForWebsocketRegistration()
 
 	expectedMessageString := "Some Data"
@@ -81,7 +81,7 @@ func TestThatItSendsLogsToProperAppSink(t *testing.T) {
 	expectedMessageString := "My important message"
 	myAppsMarshalledMessage := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
 
-	_, stopKeepAlive, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
+	_, stopKeepAlive, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp")
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- otherAppsMarshalledMessage
@@ -101,7 +101,7 @@ func TestThatItSendsLogsToProperAppSink(t *testing.T) {
 func TestDropUnmarshallableMessage(t *testing.T) {
 	receivedChan := make(chan []byte)
 
-	sink, stopKeepAlive, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
+	sink, stopKeepAlive, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp")
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- make([]byte, 10)
@@ -125,7 +125,7 @@ func TestDropUnmarshallableMessage(t *testing.T) {
 
 func TestDontDropSinkThatWorks(t *testing.T) {
 	receivedChan := make(chan []byte, 2)
-	_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
+	_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp")
 
 	select {
 	case <-time.After(200 * time.Millisecond):
@@ -151,41 +151,18 @@ func TestDontDropSinkThatWorks(t *testing.T) {
 
 func TestQueryStringCombinationsThatDropSinkButContinueToWork(t *testing.T) {
 	receivedChan := make(chan []byte, 2)
-	_, _, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
+	_, _, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?")
 	assert.Equal(t, true, <-droppedChannel)
 }
 
-var authTokenFailingCombinationTests = []struct {
-	authToken string
-}{
-	{""},
-	{testhelpers.INVALID_AUTHENTICATION_TOKEN},
-}
-
-func TestAuthTokenCombinationsThatDropSink(t *testing.T) {
-	for _, test := range authTokenFailingCombinationTests {
-		receivedChan := make(chan []byte, 2)
-		_, _, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", test.authToken)
-		assert.Equal(t, true, <-droppedChannel)
-	}
-}
-
 func TestDropSinkWhenLogTargetisinvalid(t *testing.T) {
-	AssertConnectionFails(t, SERVER_PORT, TAIL_PATH+"invalidtarget", "", 4000)
-}
-
-func TestDropSinkWithoutAuthorization(t *testing.T) {
-	AssertConnectionFails(t, SERVER_PORT, TAIL_PATH+"?app=myApp", "", 4001)
-}
-
-func TestDropSinkWhenAuthorizationFails(t *testing.T) {
-	AssertConnectionFails(t, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN, 4002)
+	AssertConnectionFails(t, SERVER_PORT, TAIL_PATH+"invalidtarget", 4000)
 }
 
 func TestKeepAlive(t *testing.T) {
 	receivedChan := make(chan []byte)
 
-	_, killKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
+	_, killKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp")
 	WaitForWebsocketRegistration()
 
 	killKeepAliveChan <- true

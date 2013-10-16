@@ -36,23 +36,12 @@ func getLogger(debug bool) *gosteno.Logger {
 	return gosteno.NewLogger("TestLogger")
 }
 
-const (
-	VALID_ORG_AUTHENTICATION_TOKEN   = "bearer correctOrgLevelAuthorizationToken"
-	INVALID_AUTHENTICATION_TOKEN     = "incorrectAuthorizationToken"
-	VALID_SPACE_AUTHENTICATION_TOKEN = "bearer correctSpaceLevelAuthorizationToken"
-)
-
-func SuccessfulAuthorizer(authToken string, target string, l *gosteno.Logger) bool {
-	return authToken == VALID_SPACE_AUTHENTICATION_TOKEN || authToken == VALID_ORG_AUTHENTICATION_TOKEN
-}
-
-func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string, authToken string) (*websocket.Conn, chan bool, <-chan bool) {
+func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string) (*websocket.Conn, chan bool, <-chan bool) {
 	dontKeepAliveChan := make(chan bool, 1)
 	connectionDroppedChannel := make(chan bool, 1)
 
 	config, err := websocket.NewConfig("ws://localhost:"+port+path, "http://localhost")
 	assert.NoError(t, err)
-	config.Header.Add("Authorization", authToken)
 	ws, err := websocket.DialConfig(config)
 	assert.NoError(t, err)
 

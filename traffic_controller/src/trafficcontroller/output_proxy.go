@@ -2,46 +2,81 @@ package trafficcontroller
 
 import (
 	"code.google.com/p/go.net/websocket"
+	"fmt"
 	"github.com/cloudfoundry/gosteno"
+	"net"
 	"net/http"
+	"trafficcontroller/authorization"
 	"trafficcontroller/hasher"
 )
 
 type Proxy struct {
-	host    string
-	hashers []*hasher.Hasher
-	logger  *gosteno.Logger
+	host      string
+	hashers   []*hasher.Hasher
+	logger    *gosteno.Logger
+	authorize authorization.LogAccessAuthorizer
 }
 
-func NewProxy(host string, hashers []*hasher.Hasher, logger *gosteno.Logger) *Proxy {
-	return &Proxy{host: host, hashers: hashers, logger: logger}
+func NewProxy(host string, hashers []*hasher.Hasher, authorizer authorization.LogAccessAuthorizer, logger *gosteno.Logger) *Proxy {
+	return &Proxy{host: host, hashers: hashers, authorize: authorizer, logger: logger}
 }
 
 func (proxy *Proxy) Start() error {
 	return http.ListenAndServe(proxy.host, websocket.Handler(proxy.HandleWebSocket))
 }
 
+func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress net.Addr) int {
+	if appId == "" {
+		message := fmt.Sprintf("HttpServer: Did not accept sink connection with invalid app id: %s.", clientAddress)
+		proxy.logger.Warn(message)
+		return 4000
+	}
+
+	if authToken == "" {
+		message := fmt.Sprintf("HttpServer: Did not accept sink connection from %s without authorization.", clientAddress)
+		proxy.logger.Warnf(message)
+		return 4001
+	}
+
+	if !proxy.authorize(authToken, appId, proxy.logger) {
+		message := fmt.Sprintf("HttpServer: Auth token [%s] not authorized to access appId [%s].", authToken, appId)
+		proxy.logger.Warn(message)
+		return 4002
+	}
+
+	return 0
+}
+
 func (proxy *Proxy) HandleWebSocket(clientWS *websocket.Conn) {
-	defer clientWS.Close()
-	closeChan := make(chan bool)
+
 	req := clientWS.Request()
 	req.ParseForm()
+	req.Form.Get("app")
+	clientAddress := clientWS.RemoteAddr()
+
+	appId := req.Form.Get("app")
+	authToken := clientWS.Request().Header.Get("Authorization")
+
+	if code := proxy.isAuthorized(appId, authToken, clientAddress); code > 200 {
+		clientWS.CloseWithStatus(code)
+		return
+	}
+
+	defer clientWS.Close()
+
 	proxy.logger.Debugf("Output Proxy: Request for app: %v", req.Form.Get("app"))
 	serverWSs := make([]*websocket.Conn, len(proxy.hashers))
 	for index, hasher := range proxy.hashers {
 		proxy.logger.Debugf("Output Proxy: Servers in group [%v]: %v", index, hasher.LoggregatorServers())
 
-		server := hasher.GetLoggregatorServerForAppId(req.Form.Get("app"))
-		proxy.logger.Debugf("Output Proxy: AppId is %v. Using server: %v", req.Form.Get("app"), server)
+		server := hasher.GetLoggregatorServerForAppId(appId)
+		proxy.logger.Debugf("Output Proxy: AppId is %v. Using server: %v", appId, server)
 
 		config, err := websocket.NewConfig("ws://"+server+req.URL.RequestURI(), "http://localhost")
 
 		if err != nil {
 			proxy.logger.Errorf("Output Proxy: Error creating config for websocket - %v", err)
 		}
-
-		authToken := clientWS.Request().Header.Get("Authorization")
-		config.Header.Add("Authorization", authToken)
 
 		serverWS, err := websocket.DialConfig(config)
 		if err != nil {
@@ -52,11 +87,11 @@ func (proxy *Proxy) HandleWebSocket(clientWS *websocket.Conn) {
 			serverWSs[index] = serverWS
 		}
 	}
-	proxy.forwardIO(serverWSs, clientWS, closeChan)
+	proxy.forwardIO(serverWSs, clientWS)
 
 }
 
-func (proxy *Proxy) forwardIO(servers []*websocket.Conn, client *websocket.Conn, closeChan chan bool) {
+func (proxy *Proxy) forwardIO(servers []*websocket.Conn, client *websocket.Conn) {
 	doneChan := make(chan bool)
 
 	var logMessage []byte

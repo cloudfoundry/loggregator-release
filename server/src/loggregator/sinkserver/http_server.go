@@ -6,9 +6,7 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/appid"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"loggregator/authorization"
 	"loggregator/sinks"
-	"net"
 	"net/http"
 	"time"
 )
@@ -20,13 +18,12 @@ const (
 
 type httpServer struct {
 	messageRouter     *messageRouter
-	authorize         authorization.LogAccessAuthorizer
 	keepAliveInterval time.Duration
 	logger            *gosteno.Logger
 }
 
-func NewHttpServer(messageRouter *messageRouter, authorize authorization.LogAccessAuthorizer, keepAliveInterval time.Duration, logger *gosteno.Logger) *httpServer {
-	return &httpServer{messageRouter, authorize, keepAliveInterval, logger}
+func NewHttpServer(messageRouter *messageRouter, keepAliveInterval time.Duration, logger *gosteno.Logger) *httpServer {
+	return &httpServer{messageRouter, keepAliveInterval, logger}
 }
 
 func (httpServer *httpServer) Start(incomingProtobufChan <-chan []byte, apiEndpoint string) {
@@ -53,35 +50,18 @@ func (httpServer *httpServer) parseMessages(incomingProtobufChan <-chan []byte) 
 	}
 }
 
-func (httpServer *httpServer) isAuthorized(appId, authToken string, clientAddress net.Addr) int {
-	if appId == "" {
-		message := fmt.Sprintf("HttpServer: Did not accept sink connection with invalid app id: %s.", clientAddress)
-		httpServer.logger.Warn(message)
-		return 4000
-	}
-
-	if authToken == "" {
-		message := fmt.Sprintf("HttpServer: Did not accept sink connection from %s without authorization.", clientAddress)
-		httpServer.logger.Warnf(message)
-		return 4001
-	}
-
-	if !httpServer.authorize(authToken, appId, httpServer.logger) {
-		message := fmt.Sprintf("HttpServer: Auth token [%s] not authorized to access appId [%s].", authToken, appId)
-		httpServer.logger.Warn(message)
-		return 4002
-	}
-
-	return 0
+func (httpServer *httpServer) logInvalidApp(address string) {
+	message := fmt.Sprintf("HttpServer: Did not accept sink connection with invalid app id: %s.", address)
+	httpServer.logger.Warn(message)
 }
 
 func (httpServer *httpServer) websocketSinkHandler(ws *websocket.Conn) {
 	clientAddress := ws.RemoteAddr()
 	appId := appid.FromUrl(ws.Request().URL)
-	authToken := ws.Request().Header.Get("Authorization")
 
-	if code := httpServer.isAuthorized(appId, authToken, clientAddress); code > 200 {
-		ws.CloseWithStatus(code)
+	if appId == "" {
+		httpServer.logInvalidApp(clientAddress)
+		ws.CloseWithStatus(4000)
 		return
 	}
 
@@ -95,10 +75,10 @@ func (httpServer *httpServer) websocketSinkHandler(ws *websocket.Conn) {
 func (httpServer *httpServer) dumpSinkHandler(ws *websocket.Conn) {
 	clientAddress := ws.RemoteAddr()
 	appId := appid.FromUrl(ws.Request().URL)
-	authToken := ws.Request().Header.Get("Authorization")
 
-	if code := httpServer.isAuthorized(appId, authToken, clientAddress); code > 200 {
-		ws.CloseWithStatus(code)
+	if appId == "" {
+		httpServer.logInvalidApp(clientAddress)
+		ws.CloseWithStatus(4000)
 		return
 	}
 

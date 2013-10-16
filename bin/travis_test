@@ -17,7 +17,7 @@ packages=(
     deaagent/deaagent
     deaagent_testhelpers
     loggregator
-    loggregator/authorization
+    trafficcontroller/authorization
     loggregator/groupedsinks
     loggregator/loggregator
     loggregator/ringbuffer

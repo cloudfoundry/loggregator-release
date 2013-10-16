@@ -22,7 +22,7 @@ func init() {
 	dataReadChannel = make(chan []byte, 20)
 	TestMessageRouter = NewMessageRouter(1024, testhelpers.Logger())
 	go TestMessageRouter.Start()
-	TestHttpServer = NewHttpServer(TestMessageRouter, testhelpers.SuccessfulAuthorizer, 10*time.Millisecond, testhelpers.Logger())
+	TestHttpServer = NewHttpServer(TestMessageRouter, 10*time.Millisecond, testhelpers.Logger())
 	go TestHttpServer.Start(dataReadChannel, "localhost:"+SERVER_PORT)
 	time.Sleep(1 * time.Millisecond)
 }
@@ -31,12 +31,9 @@ func WaitForWebsocketRegistration() {
 	time.Sleep(50 * time.Millisecond)
 }
 
-func AssertConnectionFails(t *testing.T, port string, path string, authToken string, expectedErrorCode uint16) {
+func AssertConnectionFails(t *testing.T, port string, path string, expectedErrorCode uint16) {
 	config, err := websocket.NewConfig("ws://localhost:"+port+path, "http://localhost")
 	assert.NoError(t, err)
-	if authToken != "" {
-		config.Header.Add("Authorization", authToken)
-	}
 
 	ws, err := websocket.DialConfig(config)
 	assert.NoError(t, err)
@@ -104,7 +101,7 @@ func TestMetrics(t *testing.T) {
 
 	receivedChan := make(chan []byte, 2)
 
-	_, dontKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myMetricsApp", testhelpers.VALID_SPACE_AUTHENTICATION_TOKEN)
+	_, dontKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myMetricsApp")
 	WaitForWebsocketRegistration()
 
 	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Name, "numberOfDumpSinks")
