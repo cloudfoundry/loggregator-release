@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/appid"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"loggregator/sinks"
+	"net"
 	"net/http"
 	"time"
 )
@@ -50,7 +51,7 @@ func (httpServer *httpServer) parseMessages(incomingProtobufChan <-chan []byte) 
 	}
 }
 
-func (httpServer *httpServer) logInvalidApp(address string) {
+func (httpServer *httpServer) logInvalidApp(address net.Addr) {
 	message := fmt.Sprintf("HttpServer: Did not accept sink connection with invalid app id: %s.", address)
 	httpServer.logger.Warn(message)
 }
