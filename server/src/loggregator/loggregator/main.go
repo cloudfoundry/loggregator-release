@@ -20,7 +20,6 @@ import (
 type Config struct {
 	cfcomponent.Config
 	Index                  uint
-	ApiHost                string
 	SystemDomain           string
 	IncomingPort           uint32
 	OutgoingPort           uint32

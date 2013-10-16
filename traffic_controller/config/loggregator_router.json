@@ -2,6 +2,7 @@
     "Loggregators": ["10.10.16.14:3456"],
     "Host": "0.0.0.0:3456",
     "SystemDomain": "localhost",
+    "ApiHost": "localhost",
     "NatsHost": "localhost",
     "NatsPort": 4222,
     "NatsUser": "nats",
