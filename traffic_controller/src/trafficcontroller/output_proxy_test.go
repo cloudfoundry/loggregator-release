@@ -2,6 +2,7 @@ package trafficcontroller
 
 import (
 	"code.google.com/p/go.net/websocket"
+	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
@@ -165,8 +166,18 @@ func TestProxyWhenLogTargetisinvalid(t *testing.T) {
 	)
 	go proxy.Start()
 	time.Sleep(time.Millisecond * 50)
-	testhelpers.AssertConnectionFails(t, "62060", "/invalidtarget", "", 4000)
 
+	receivedChan := Client(t, "62060", "/invalid_target")
+
+	select {
+	case data := <-receivedChan:
+		messagetesthelpers.AssertProtoBufferMessageEquals(t, "Error: Invalid target", data)
+	case <-time.After(1 * time.Second):
+		t.Error("Did not receive response within one second")
+	}
+
+	_, stillOpen := <-receivedChan
+	assert.False(t, stillOpen)
 }
 
 func TestProxyWithoutAuthorization(t *testing.T) {
@@ -181,7 +192,17 @@ func TestProxyWithoutAuthorization(t *testing.T) {
 	go proxy.Start()
 	time.Sleep(time.Millisecond * 50)
 
-	testhelpers.AssertConnectionFails(t, "62061", "/?app=myApp", "", 4001)
+	receivedChan := ClientWithAuth(t, "62061", "/?app=myApp", "")
+
+	select {
+	case data := <-receivedChan:
+		messagetesthelpers.AssertProtoBufferMessageEquals(t, "Error: Authorization not provided", data)
+	case <-time.After(1 * time.Second):
+		t.Error("Did not receive response within one second")
+	}
+
+	_, stillOpen := <-receivedChan
+	assert.False(t, stillOpen)
 }
 
 func TestProxyWhenAuthorizationFails(t *testing.T) {
@@ -196,7 +217,17 @@ func TestProxyWhenAuthorizationFails(t *testing.T) {
 	go proxy.Start()
 	time.Sleep(time.Millisecond * 50)
 
-	testhelpers.AssertConnectionFails(t, "62062", "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN, 4002)
+	receivedChan := ClientWithAuth(t, "62062", "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN)
+
+	select {
+	case data := <-receivedChan:
+		messagetesthelpers.AssertProtoBufferMessageEquals(t, "Error: Invalid authorization", data)
+	case <-time.After(1 * time.Second):
+		t.Error("Did not receive response within one second")
+	}
+
+	_, stillOpen := <-receivedChan
+	assert.False(t, stillOpen)
 }
 
 func WaitForServerStart(port string, path string) {
@@ -214,9 +245,13 @@ func WaitForServerStart(port string, path string) {
 }
 
 func Client(t *testing.T, port string, path string) chan []byte {
+	return ClientWithAuth(t, port, path, testhelpers.VALID_AUTHENTICATION_TOKEN)
+}
+
+func ClientWithAuth(t *testing.T, port string, path string, authToken string) chan []byte {
 	receivedChan := make(chan []byte)
 	config, err := websocket.NewConfig("ws://localhost:"+port+path, "http://localhost")
-	config.Header.Add("Authorization", testhelpers.VALID_AUTHENTICATION_TOKEN)
+	config.Header.Add("Authorization", authToken)
 	assert.NoError(t, err)
 	ws, err := websocket.DialConfig(config)
 	assert.NoError(t, err)

@@ -2,10 +2,13 @@ package trafficcontroller
 
 import (
 	"code.google.com/p/go.net/websocket"
+	"code.google.com/p/gogoprotobuf/proto"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"net"
 	"net/http"
+	"time"
 	"trafficcontroller/authorization"
 	"trafficcontroller/hasher"
 )
@@ -25,30 +28,43 @@ func (proxy *Proxy) Start() error {
 	return http.ListenAndServe(proxy.host, websocket.Handler(proxy.HandleWebSocket))
 }
 
-func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress net.Addr) int {
+func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress net.Addr) (bool, *logmessage.LogMessage) {
+	newLogMessage := func(message []byte) *logmessage.LogMessage {
+		currentTime := time.Now()
+		sourceType := logmessage.LogMessage_LOGGREGATOR
+		messageType := logmessage.LogMessage_ERR
+
+		return &logmessage.LogMessage{
+			Message:     message,
+			AppId:       proto.String(appId),
+			MessageType: &messageType,
+			SourceType:  &sourceType,
+			Timestamp:   proto.Int64(currentTime.UnixNano()),
+		}
+	}
+
 	if appId == "" {
 		message := fmt.Sprintf("HttpServer: Did not accept sink connection with invalid app id: %s.", clientAddress)
 		proxy.logger.Warn(message)
-		return 4000
+		return false, newLogMessage([]byte("Error: Invalid target"))
 	}
 
 	if authToken == "" {
 		message := fmt.Sprintf("HttpServer: Did not accept sink connection from %s without authorization.", clientAddress)
 		proxy.logger.Warnf(message)
-		return 4001
+		return false, newLogMessage([]byte("Error: Authorization not provided"))
 	}
 
 	if !proxy.authorize(authToken, appId, proxy.logger) {
 		message := fmt.Sprintf("HttpServer: Auth token [%s] not authorized to access appId [%s].", authToken, appId)
 		proxy.logger.Warn(message)
-		return 4002
+		return false, newLogMessage([]byte("Error: Invalid authorization"))
 	}
 
-	return 0
+	return true, nil
 }
 
 func (proxy *Proxy) HandleWebSocket(clientWS *websocket.Conn) {
-
 	req := clientWS.Request()
 	req.ParseForm()
 	req.Form.Get("app")
@@ -57,8 +73,13 @@ func (proxy *Proxy) HandleWebSocket(clientWS *websocket.Conn) {
 	appId := req.Form.Get("app")
 	authToken := clientWS.Request().Header.Get("Authorization")
 
-	if code := proxy.isAuthorized(appId, authToken, clientAddress); code > 200 {
-		clientWS.CloseWithStatus(code)
+	if authorized, errorMessage := proxy.isAuthorized(appId, authToken, clientAddress); !authorized {
+		data, err := proto.Marshal(errorMessage)
+		if err != nil {
+			proxy.logger.Errorf("Error marshalling log message: %s", err)
+		}
+		websocket.Message.Send(clientWS, data)
+		clientWS.Close()
 		return
 	}
 
