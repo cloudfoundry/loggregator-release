@@ -62,7 +62,7 @@ func (r Router) Start(logger *gosteno.Logger) {
 	dataChan := r.agentListener.Start()
 	for {
 		dataToProxy := <-dataChan
-		appId, err := appid.FromLogMessage(dataToProxy)
+		appId, err := appid.FromProtobufferMessage(dataToProxy)
 		if err != nil {
 			logger.Warn(err.Error())
 		} else {
