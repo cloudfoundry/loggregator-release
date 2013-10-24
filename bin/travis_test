@@ -17,7 +17,6 @@ packages=(
     deaagent/deaagent
     deaagent_testhelpers
     loggregator
-    trafficcontroller/authorization
     loggregator/groupedsinks
     loggregator/loggregator
     loggregator/ringbuffer
@@ -25,8 +24,10 @@ packages=(
     loggregator/sinkserver
     server_testhelpers
     trafficcontroller
-    trafficcontroller/trafficcontroller
+    trafficcontroller/authorization
     trafficcontroller/hasher
+    trafficcontroller/trafficcontroller
+    trafficcontroller_testhelpers
     github.com/cloudfoundry/loggregatorlib/agentlistener
     github.com/cloudfoundry/loggregatorlib/appid
     github.com/cloudfoundry/loggregatorlib/cfcomponent
@@ -38,6 +39,7 @@ packages=(
     github.com/cloudfoundry/loggregatorlib/lib_testhelpers
     github.com/cloudfoundry/loggregatorlib/loggregatorclient
     github.com/cloudfoundry/loggregatorlib/logmessage
+    github.com/cloudfoundry/loggregatorlib/signature
 )
 
 for package in "${packages[@]}"
