@@ -12,16 +12,21 @@ import (
 	"time"
 )
 
-func TestEndtoEndMessage(t *testing.T) {
+func init() {
 	logger := gosteno.NewLogger("TestLogger")
+
 	listener := agentlistener.NewAgentListener("localhost:3456", logger)
 	dataChannel := listener.Start()
-	messageRouter := sinkserver.NewMessageRouter(10, logger)
-	httpServer := sinkserver.NewHttpServer(messageRouter, 30*time.Second, logger)
-	go messageRouter.Start()
-	go httpServer.Start(dataChannel, "localhost:8081")
-	time.Sleep(1 * time.Millisecond)
 
+	messageRouter := sinkserver.NewMessageRouter(10, logger)
+	go messageRouter.Start()
+	httpServer := sinkserver.NewHttpServer(messageRouter, 30*time.Second, logger)
+	go httpServer.Start(dataChannel, "localhost:8081")
+
+	time.Sleep(1 * time.Millisecond)
+}
+
+func TestEndtoEndMessage(t *testing.T) {
 	receivedChan := make(chan []byte)
 	ws, _, _ := testhelpers.AddWSSink(t, receivedChan, "8081", "/tail/?app=myApp")
 	defer ws.Close()
@@ -31,6 +36,25 @@ func TestEndtoEndMessage(t *testing.T) {
 
 	expectedMessageString := "Some Data"
 	expectedMessage := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
+
+	_, err = connection.Write(expectedMessage)
+	assert.NoError(t, err)
+
+	messagetesthelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, <-receivedChan)
+}
+
+func TestEndtoEndEnvelopeToMessage(t *testing.T) {
+	receivedChan := make(chan []byte)
+	ws, _, _ := testhelpers.AddWSSink(t, receivedChan, "8081", "/tail/?app=myApp")
+	defer ws.Close()
+	time.Sleep(50 * time.Millisecond)
+
+	connection, err := net.Dial("udp", "localhost:3456")
+
+	expectedMessageString := "Some Data"
+	unmarshalledLogMessage := messagetesthelpers.NewLogMessage(expectedMessageString, "myApp")
+
+	expectedMessage := messagetesthelpers.MarshalledLogEnvelope(t, unmarshalledLogMessage, "secret")
 
 	_, err = connection.Write(expectedMessage)
 	assert.NoError(t, err)

@@ -28,7 +28,7 @@ func NewHttpServer(messageRouter *messageRouter, keepAliveInterval time.Duration
 }
 
 func (httpServer *httpServer) Start(incomingProtobufChan <-chan []byte, apiEndpoint string) {
-	go httpServer.parseMessages(incomingProtobufChan)
+	go httpServer.ParseProtobuffers(incomingProtobufChan)
 
 	httpServer.logger.Infof("HttpServer: Listening for sinks at %s", apiEndpoint)
 	http.Handle(TAIL_PATH, websocket.Handler(httpServer.websocketSinkHandler))
@@ -39,10 +39,10 @@ func (httpServer *httpServer) Start(incomingProtobufChan <-chan []byte, apiEndpo
 	}
 }
 
-func (httpServer *httpServer) parseMessages(incomingProtobufChan <-chan []byte) {
+func (httpServer *httpServer) ParseProtobuffers(incomingProtobufChan <-chan []byte) {
 	for {
 		data := <-incomingProtobufChan
-		message, err := logmessage.ParseMessage(data)
+		message, err := logmessage.ParseProtobuffer(data)
 		if err != nil {
 			httpServer.logger.Errorf("Log message could not be unmarshaled. Dropping it... Error: %v. Data: %v", err, data)
 			continue
