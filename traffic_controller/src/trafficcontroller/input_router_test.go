@@ -32,7 +32,7 @@ func TestThatItWorksWithOneLoggregator(t *testing.T) {
 	go r.Start(logger)
 	time.Sleep(50 * time.Millisecond)
 
-	logEmitter, _ := emitter.NewLogMessageEmitter("localhost:3456", "ROUTER", "42", logger)
+	logEmitter, _ := emitter.NewEmitter("localhost:3456", "ROUTER", "42", logger)
 	logEmitter.Emit("my_awesome_app", "Hello World")
 
 	received := <-dataChannel
@@ -59,7 +59,7 @@ func TestThatItIgnoresBadMessages(t *testing.T) {
 	lc := loggregatorclient.NewLoggregatorClient("localhost:3455", logger, loggregatorclient.DefaultBufferSize)
 	lc.Send([]byte("This is poorly formatted"))
 
-	logEmitter, _ := emitter.NewLogMessageEmitter("localhost:3455", "ROUTER", "42", logger)
+	logEmitter, _ := emitter.NewEmitter("localhost:3455", "ROUTER", "42", logger)
 	logEmitter.Emit("my_awesome_app", "Hello World")
 
 	received := <-dataChannel
@@ -85,7 +85,7 @@ func TestThatItWorksWithTwoLoggregators(t *testing.T) {
 	go rt.Start(logger)
 	time.Sleep(50 * time.Millisecond)
 
-	logEmitter, _ := emitter.NewLogMessageEmitter("localhost:3457", "ROUTER", "42", logger)
+	logEmitter, _ := emitter.NewEmitter("localhost:3457", "ROUTER", "42", logger)
 	logEmitter.Emit("2", "My message")
 
 	receivedData := <-dataChan1
@@ -103,28 +103,4 @@ func TestThatItWorksWithTwoLoggregators(t *testing.T) {
 
 	assert.Equal(t, receivedMsg.GetAppId(), "1")
 	assert.Equal(t, string(receivedMsg.GetMessage()), "Another message")
-}
-
-func TestThatItWorksWithLogEnvelope(t *testing.T) {
-	listener := agentlistener.NewAgentListener("localhost:9902", logger)
-	dataChannel := listener.Start()
-
-	loggregatorServers := []string{"localhost:9902"}
-	hasher := hasher.NewHasher(loggregatorServers)
-	r, err := NewRouter("localhost:3551", hasher, newCfConfig(), logger)
-	assert.NoError(t, err)
-
-	go r.Start(logger)
-	time.Sleep(50 * time.Millisecond)
-
-	logEmitter, _ := emitter.NewLogEnvelopeEmitter("localhost:3551", "ROUTER", "42", "secret", logger)
-	logEmitter.Emit("my_awesome_app", "Hello World")
-
-	received := <-dataChannel
-
-	receivedEnvelope := &logmessage.LogEnvelope{}
-	proto.Unmarshal(received, receivedEnvelope)
-
-	assert.Equal(t, receivedEnvelope.GetLogMessage().GetAppId(), "my_awesome_app")
-	assert.Equal(t, string(receivedEnvelope.GetLogMessage().GetMessage()), "Hello World")
 }

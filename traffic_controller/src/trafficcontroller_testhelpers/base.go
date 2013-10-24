@@ -30,7 +30,7 @@ func getLogger(debug bool) *gosteno.Logger {
 
 const (
 	VALID_AUTHENTICATION_TOKEN   = "bearer correctAuthorizationToken"
-	INVALID_AUTHENTICATION_TOKEN = "incorrectAuthorizationToken"
+	INVALID_AUTHENTICATION_TOKEN     = "incorrectAuthorizationToken"
 )
 
 func SuccessfulAuthorizer(authToken string, target string, l *gosteno.Logger) bool {
