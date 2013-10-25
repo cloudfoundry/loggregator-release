@@ -3,9 +3,9 @@ package sinks
 import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"runtime"
-	testhelpers "server_testhelpers"
 )
 
 type testSink struct {
@@ -25,7 +25,7 @@ func (sink *testSink) Identifier() string {
 }
 
 func (sink *testSink) Logger() *gosteno.Logger {
-	return testhelpers.Logger()
+	return loggertesthelper.Logger()
 }
 
 func (sink *testSink) Run(sinkCloseChan chan Sink) {

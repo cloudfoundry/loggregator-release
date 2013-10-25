@@ -3,6 +3,7 @@ package deaagent
 import (
 	testhelpers "deaagent_testhelpers"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -72,7 +73,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	mockLoggregatorClient := new(MockLoggregatorClient)
 
 	mockLoggregatorClient.received = make(chan *[]byte)
-	instance.startListening(mockLoggregatorClient, testhelpers.Logger())
+	instance.startListening(mockLoggregatorClient, loggertesthelper.Logger())
 
 	connection, err := stdoutListener.Accept()
 	defer connection.Close()
@@ -133,7 +134,7 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	mockLoggregatorClient := new(MockLoggregatorClient)
 
 	mockLoggregatorClient.received = make(chan *[]byte)
-	instance.startListening(mockLoggregatorClient, testhelpers.Logger())
+	instance.startListening(mockLoggregatorClient, loggertesthelper.Logger())
 
 	connection, err := stderrListener.Accept()
 	defer connection.Close()

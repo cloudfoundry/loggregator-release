@@ -1,9 +1,9 @@
 package authorization
 
 import (
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"net/http"
 	"regexp"
-	testhelpers "server_testhelpers"
 	"testing"
 )
 
@@ -114,7 +114,7 @@ func TestUserRoleAccessCombinations(t *testing.T) {
 	for i, test := range accessTests {
 		decoder := &TestUaaTokenDecoder{test.userDetails}
 		authorizer := NewLogAccessAuthorizer(decoder, "http://localhost:9876", test.disableEmailDomainAuthorization)
-		result := authorizer(test.authToken, test.target, testhelpers.Logger())
+		result := authorizer(test.authToken, test.target, loggertesthelper.Logger())
 		if result != test.expectedResult {
 			t.Errorf("Access combination %d for %v failed.", i, test.userDetails)
 		}

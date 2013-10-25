@@ -2,6 +2,7 @@ package deaagent
 
 import (
 	testhelpers "deaagent_testhelpers"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -53,8 +54,8 @@ func loggregatorAddress() string {
 }
 
 func TestNewAgent(t *testing.T) {
-	actualAgent := NewAgent("path", testhelpers.Logger())
-	expectedAgent := &agent{"path", testhelpers.Logger()}
+	actualAgent := NewAgent("path", loggertesthelper.Logger())
+	expectedAgent := &agent{"path", loggertesthelper.Logger()}
 	assert.Equal(t, expectedAgent, actualAgent)
 }
 
@@ -103,7 +104,7 @@ func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
 
 	writeToFile(t, `{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3}]}`, true)
 
-	agent := NewAgent(filePath(), testhelpers.Logger())
+	agent := NewAgent(filePath(), loggertesthelper.Logger())
 	go agent.Start(mockLoggregatorClient)
 
 	instance1Connection, err := instance1StdoutListener.Accept()
@@ -147,7 +148,7 @@ func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
 func TestTheAgentReadsAllExistingInstances(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	filepath := path.Join(path.Dir(filename), "..", "..", "samples", "multi_instances.json")
-	testAgent := &agent{InstancesJsonFilePath: filepath, logger: testhelpers.Logger()}
+	testAgent := &agent{InstancesJsonFilePath: filepath, logger: loggertesthelper.Logger()}
 	instancesChan := testAgent.watchInstancesJsonFileForChanges()
 	expectedApplicationIds := [3]string{
 		"e0e12b41-78d4-43ff-a5ae-20422bedf22f",
@@ -162,7 +163,7 @@ func TestTheAgentReadsAllExistingInstances(t *testing.T) {
 
 func TestThatFunctionContinuesToPollWhenFileCantBeOpened(t *testing.T) {
 	os.Remove(filePath())
-	agent := &agent{filePath(), testhelpers.Logger()}
+	agent := &agent{filePath(), loggertesthelper.Logger()}
 
 	instancesChan := agent.watchInstancesJsonFileForChanges()
 
@@ -185,7 +186,7 @@ func TestThatFunctionContinuesToPollWhenFileCantBeOpened(t *testing.T) {
 
 func TestThatAnExistinginstanceWillBeSeen(t *testing.T) {
 	writeToFile(t, `{"instances": [{"state": "RUNNING", "instance_index": 123}]}`, true)
-	agent := &agent{filePath(), testhelpers.Logger()}
+	agent := &agent{filePath(), loggertesthelper.Logger()}
 
 	instancesChan := agent.watchInstancesJsonFileForChanges()
 
@@ -197,7 +198,7 @@ func TestThatAnExistinginstanceWillBeSeen(t *testing.T) {
 func TestThatANewinstanceWillBeSeen(t *testing.T) {
 	file := createFile(t)
 	defer file.Close()
-	agent := &agent{filePath(), testhelpers.Logger()}
+	agent := &agent{filePath(), loggertesthelper.Logger()}
 
 	instancesChan := agent.watchInstancesJsonFileForChanges()
 
@@ -214,7 +215,7 @@ func TestThatANewinstanceWillBeSeen(t *testing.T) {
 
 func TestThatOnlyOneNewInstancesWillBeSeen(t *testing.T) {
 	writeToFile(t, `{"instances": [{"state": "RUNNING", "instance_index": 123}]}`, true)
-	agent := &agent{filePath(), testhelpers.Logger()}
+	agent := &agent{filePath(), loggertesthelper.Logger()}
 
 	instancesChan := agent.watchInstancesJsonFileForChanges()
 
@@ -234,7 +235,7 @@ func TestThatOnlyOneNewInstancesWillBeSeen(t *testing.T) {
 
 func TestThatARemovedInstanceWillBeRemoved(t *testing.T) {
 	writeToFile(t, `{"instances": [{"state": "RUNNING", "instance_index": 123}]}`, true)
-	agent := &agent{filePath(), testhelpers.Logger()}
+	agent := &agent{filePath(), loggertesthelper.Logger()}
 
 	instancesChan := agent.watchInstancesJsonFileForChanges()
 

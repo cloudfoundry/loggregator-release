@@ -5,28 +5,8 @@ import (
 	"encoding/binary"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/stretchr/testify/assert"
-	"os"
 	"testing"
 )
-
-func Logger() *gosteno.Logger {
-	return getLogger(false)
-}
-
-func getLogger(debug bool) *gosteno.Logger {
-	if debug {
-		level := gosteno.LOG_DEBUG
-		loggingConfig := &gosteno.Config{
-			Sinks:     make([]gosteno.Sink, 1),
-			Level:     level,
-			Codec:     gosteno.NewJsonCodec(),
-			EnableLOC: true,
-		}
-		loggingConfig.Sinks[0] = gosteno.NewIOSink(os.Stdout)
-		gosteno.Init(loggingConfig)
-	}
-	return gosteno.NewLogger("TestLogger")
-}
 
 const (
 	VALID_AUTHENTICATION_TOKEN   = "bearer correctAuthorizationToken"
@@ -38,7 +18,6 @@ func SuccessfulAuthorizer(authToken string, target string, l *gosteno.Logger) bo
 }
 
 func AssertConnectionFails(t *testing.T, port string, path string, authToken string, expectedErrorCode uint16) {
-
 	config, err := websocket.NewConfig("ws://localhost:"+port+path, "http://localhost")
 	assert.NoError(t, err)
 	if authToken != "" {

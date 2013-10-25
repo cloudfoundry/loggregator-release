@@ -2,6 +2,7 @@ package trafficcontroller
 
 import (
 	"code.google.com/p/go.net/websocket"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"net/http"
@@ -18,7 +19,7 @@ func TestProxying(t *testing.T) {
 		"localhost:62022",
 		[]*hasher.Hasher{hasher.NewHasher([]string{"localhost:62023"})},
 		testhelpers.SuccessfulAuthorizer,
-		testhelpers.Logger(),
+		loggertesthelper.Logger(),
 	)
 	go proxy.Start()
 	WaitForServerStart("62023", "/")
@@ -40,7 +41,7 @@ func TestProxyingWithTwoMessages(t *testing.T) {
 		"localhost:62021",
 		[]*hasher.Hasher{hasher.NewHasher([]string{"localhost:62020"})},
 		testhelpers.SuccessfulAuthorizer,
-		testhelpers.Logger(),
+		loggertesthelper.Logger(),
 	)
 	go proxy.Start()
 	WaitForServerStart("62020", "/")
@@ -62,7 +63,7 @@ func TestProxyingWithHashingBetweenServers(t *testing.T) {
 		"localhost:62026",
 		[]*hasher.Hasher{hasher.NewHasher([]string{"localhost:62024", "localhost:62025"})},
 		testhelpers.SuccessfulAuthorizer,
-		testhelpers.Logger(),
+		loggertesthelper.Logger(),
 	)
 	go proxy.Start()
 	WaitForServerStart("62024", "/")
@@ -99,7 +100,7 @@ func TestProxyingWithMultipleAZs(t *testing.T) {
 			hasher.NewHasher([]string{"localhost:62029", "localhost:62030"}),
 		},
 		testhelpers.SuccessfulAuthorizer,
-		testhelpers.Logger(),
+		loggertesthelper.Logger(),
 	)
 	go proxy.Start()
 	WaitForServerStart("62027", "/")
@@ -134,7 +135,7 @@ func TestKeepAliveWithMultipleAZs(t *testing.T) {
 			hasher.NewHasher([]string{"localhost:62033"}),
 		},
 		testhelpers.SuccessfulAuthorizer,
-		testhelpers.Logger(),
+		loggertesthelper.Logger(),
 	)
 	go proxy.Start()
 	WaitForServerStart("62032", "/")
@@ -162,7 +163,7 @@ func TestProxyWhenLogTargetisinvalid(t *testing.T) {
 			hasher.NewHasher([]string{"localhost:62032"}),
 		},
 		testhelpers.SuccessfulAuthorizer,
-		testhelpers.Logger(),
+		loggertesthelper.Logger(),
 	)
 	go proxy.Start()
 	time.Sleep(time.Millisecond * 50)
@@ -187,7 +188,7 @@ func TestProxyWithoutAuthorization(t *testing.T) {
 			hasher.NewHasher([]string{"localhost:62032"}),
 		},
 		testhelpers.SuccessfulAuthorizer,
-		testhelpers.Logger(),
+		loggertesthelper.Logger(),
 	)
 	go proxy.Start()
 	time.Sleep(time.Millisecond * 50)
@@ -212,7 +213,7 @@ func TestProxyWhenAuthorizationFails(t *testing.T) {
 			hasher.NewHasher([]string{"localhost:62032"}),
 		},
 		testhelpers.SuccessfulAuthorizer,
-		testhelpers.Logger(),
+		loggertesthelper.Logger(),
 	)
 	go proxy.Start()
 	time.Sleep(time.Millisecond * 50)

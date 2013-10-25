@@ -1,11 +1,11 @@
 package sinks
 
 import (
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"runtime"
-	testhelpers "server_testhelpers"
 	"strconv"
 	"testing"
 )
@@ -22,7 +22,7 @@ func dumpAllMessages(dump *DumpSink) []*logmessage.Message {
 
 func TestDumpForOneMessage(t *testing.T) {
 	closeChan := make(chan Sink)
-	dump := NewDumpSink("myApp", 1, testhelpers.Logger())
+	dump := NewDumpSink("myApp", 1, loggertesthelper.Logger())
 	dump.Run(closeChan)
 
 	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "hi", "appId"))
@@ -36,7 +36,7 @@ func TestDumpForTwoMessages(t *testing.T) {
 	var bufferSize uint
 	bufferSize = 2
 	closeChan := make(chan Sink)
-	dump := NewDumpSink("myApp", bufferSize, testhelpers.Logger())
+	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
 	dump.Run(closeChan)
 
 	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "1", "appId"))
@@ -56,7 +56,7 @@ func TestTheDumpSinkNeverFillsUp(t *testing.T) {
 	var bufferSize uint
 	bufferSize = 3
 	closeChan := make(chan Sink)
-	dump := NewDumpSink("myApp", bufferSize, testhelpers.Logger())
+	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
 	dump.Run(closeChan)
 
 	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "hi", "appId"))
@@ -71,7 +71,7 @@ func TestDumpAlwaysReturnsTheNewestMessages(t *testing.T) {
 	var bufferSize uint
 	bufferSize = 2
 	closeChan := make(chan Sink)
-	dump := NewDumpSink("myApp", bufferSize, testhelpers.Logger())
+	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
 	dump.Run(closeChan)
 
 	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "1", "appId"))
@@ -93,7 +93,7 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequests(t *testing.T) {
 	var bufferSize uint
 	bufferSize = 2
 	closeChan := make(chan Sink)
-	dump := NewDumpSink("myApp", bufferSize, testhelpers.Logger())
+	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
 	dump.Run(closeChan)
 
 	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "1", "appId"))
@@ -120,7 +120,7 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequestsWithMessagesCloningIn
 	var bufferSize uint
 	bufferSize = 2
 	closeChan := make(chan Sink)
-	dump := NewDumpSink("myApp", bufferSize, testhelpers.Logger())
+	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
 	dump.Run(closeChan)
 
 	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "1", "appId"))
@@ -152,7 +152,7 @@ func TestDumpWithLotsOfMessages(t *testing.T) {
 	var bufferSize uint
 	bufferSize = 2
 	closeChan := make(chan Sink)
-	dump := NewDumpSink("myApp", bufferSize, testhelpers.Logger())
+	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
 	dump.Run(closeChan)
 
 	for i := 0; i < 100; i++ {
@@ -189,7 +189,7 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer(t *testing.T) {
 	var bufferSize uint
 	bufferSize = 200
 	closeChan := make(chan Sink)
-	dump := NewDumpSink("myApp", bufferSize, testhelpers.Logger())
+	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
 	dump.Run(closeChan)
 
 	for i := 0; i < 1000; i++ {
@@ -226,7 +226,7 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
 	var bufferSize uint
 	bufferSize = 200
 	closeChan := make(chan Sink)
-	dump := NewDumpSink("myApp", bufferSize, testhelpers.Logger())
+	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
 	dump.Run(closeChan)
 
 	for i := 0; i < 100; i++ {
@@ -271,7 +271,7 @@ func TestDumpWithLotsOfDumps(t *testing.T) {
 	var bufferSize uint
 	bufferSize = 5
 	closeChan := make(chan Sink)
-	dump := NewDumpSink("myApp", bufferSize, testhelpers.Logger())
+	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
 	dump.Run(closeChan)
 
 	for i := 0; i < 10; i++ {

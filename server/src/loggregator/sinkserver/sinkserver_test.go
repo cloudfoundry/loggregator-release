@@ -3,6 +3,7 @@ package sinkserver
 import (
 	"code.google.com/p/go.net/websocket"
 	"encoding/binary"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
 	testhelpers "server_testhelpers"
@@ -20,9 +21,9 @@ const (
 
 func init() {
 	dataReadChannel = make(chan []byte, 20)
-	TestMessageRouter = NewMessageRouter(1024, testhelpers.Logger())
+	TestMessageRouter = NewMessageRouter(1024, loggertesthelper.Logger())
 	go TestMessageRouter.Start()
-	TestHttpServer = NewHttpServer(TestMessageRouter, 10*time.Millisecond, testhelpers.Logger())
+	TestHttpServer = NewHttpServer(TestMessageRouter, 10*time.Millisecond, loggertesthelper.Logger())
 	go TestHttpServer.Start(dataReadChannel, "localhost:"+SERVER_PORT)
 	time.Sleep(1 * time.Millisecond)
 }

@@ -2,39 +2,10 @@ package server_testhelpers
 
 import (
 	"code.google.com/p/go.net/websocket"
-	"github.com/cloudfoundry/gosteno"
 	"github.com/stretchr/testify/assert"
-	"os"
 	"testing"
 	"time"
 )
-
-func StdOutLogger() *gosteno.Logger {
-	return getLogger(true)
-}
-
-func Logger() *gosteno.Logger {
-	return getLogger(false)
-}
-
-func getLogger(debug bool) *gosteno.Logger {
-	if debug {
-		level := gosteno.LOG_DEBUG
-
-		loggingConfig := &gosteno.Config{
-			Sinks:     make([]gosteno.Sink, 1),
-			Level:     level,
-			Codec:     gosteno.NewJsonCodec(),
-			EnableLOC: true,
-		}
-
-		loggingConfig.Sinks[0] = gosteno.NewIOSink(os.Stdout)
-
-		gosteno.Init(loggingConfig)
-	}
-
-	return gosteno.NewLogger("TestLogger")
-}
 
 func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string) (*websocket.Conn, chan bool, <-chan bool) {
 	dontKeepAliveChan := make(chan bool, 1)

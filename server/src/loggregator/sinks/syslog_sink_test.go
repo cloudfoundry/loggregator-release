@@ -3,13 +3,13 @@ package sinks
 import (
 	"errors"
 	"fmt"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"net"
 	"regexp"
-	testhelpers "server_testhelpers"
 	"strconv"
 	"strings"
 	"sync"
@@ -143,7 +143,7 @@ func init() {
 
 func TestThatItSendsStdOutAsInfo(t *testing.T) {
 	sysLogger := NewSyslogWriter("tcp", "localhost:24631", "appId")
-	sink := NewSyslogSink("appId", "syslog://localhost:24631", testhelpers.Logger(), sysLogger)
+	sink := NewSyslogSink("appId", "syslog://localhost:24631", loggertesthelper.Logger(), sysLogger)
 
 	closeChan := make(chan Sink)
 	go sink.Run(closeChan)
@@ -160,7 +160,7 @@ func TestThatItSendsStdOutAsInfo(t *testing.T) {
 
 func TestThatItStripsNullControlCharacterFromMsg(t *testing.T) {
 	sysLogger := NewSyslogWriter("tcp", "localhost:24631", "appId")
-	sink := NewSyslogSink("appId", "syslog://localhost:24631", testhelpers.Logger(), sysLogger)
+	sink := NewSyslogSink("appId", "syslog://localhost:24631", loggertesthelper.Logger(), sysLogger)
 
 	closeChan := make(chan Sink)
 	go sink.Run(closeChan)
@@ -179,7 +179,7 @@ func TestThatItStripsNullControlCharacterFromMsg(t *testing.T) {
 
 func TestThatItSendsStdErrAsErr(t *testing.T) {
 	sysLogger := NewSyslogWriter("tcp", "localhost:24632", "appId")
-	sink := NewSyslogSink("appId", "syslog://localhost:24632", testhelpers.Logger(), sysLogger)
+	sink := NewSyslogSink("appId", "syslog://localhost:24632", loggertesthelper.Logger(), sysLogger)
 	closeChan := make(chan Sink)
 	go sink.Run(closeChan)
 	defer close(sink.Channel())
@@ -197,7 +197,7 @@ func TestThatItSendsStdErrAsErr(t *testing.T) {
 
 func TestThatItUsesOctetFramingWhenSending(t *testing.T) {
 	sysLogger := NewSyslogWriter("tcp", "localhost:24632", "appId")
-	sink := NewSyslogSink("appId", "syslog://localhost:24632", testhelpers.Logger(), sysLogger)
+	sink := NewSyslogSink("appId", "syslog://localhost:24632", loggertesthelper.Logger(), sysLogger)
 	closeChan := make(chan Sink)
 	go sink.Run(closeChan)
 	defer close(sink.Channel())
@@ -217,7 +217,7 @@ func TestThatItUsesOctetFramingWhenSending(t *testing.T) {
 
 func TestThatItHandlesMessagesEvenIfThereIsNoSyslogServer(t *testing.T) {
 	sysLogger := NewSyslogWriter("tcp", "localhost:-1", "appId")
-	sink := NewSyslogSink("appId", "syslog://localhost:-1", testhelpers.Logger(), sysLogger)
+	sink := NewSyslogSink("appId", "syslog://localhost:-1", loggertesthelper.Logger(), sysLogger)
 	closeChan := make(chan Sink)
 	go sink.Run(closeChan)
 	defer close(sink.Channel())
@@ -232,7 +232,7 @@ func TestThatItHandlesMessagesEvenIfThereIsNoSyslogServer(t *testing.T) {
 func TestSysLoggerComesUpLate(t *testing.T) {
 	sysLogger := NewSyslogWriterRecorder()
 	sysLogger.SetUp(false)
-	sink := NewSyslogSink("appId", "url_not_used", testhelpers.Logger(), sysLogger)
+	sink := NewSyslogSink("appId", "url_not_used", loggertesthelper.Logger(), sysLogger)
 
 	closeChan := make(chan Sink)
 	done := make(chan bool)
@@ -264,7 +264,7 @@ func TestSysLoggerComesUpLate(t *testing.T) {
 
 func TestSysLoggerDiesAndComesBack(t *testing.T) {
 	sysLogger := NewSyslogWriterRecorder()
-	sink := NewSyslogSink("appId", "url_not_used", testhelpers.Logger(), sysLogger)
+	sink := NewSyslogSink("appId", "url_not_used", loggertesthelper.Logger(), sysLogger)
 	sysLogger.SetUp(true)
 
 	closeChan := make(chan Sink)
