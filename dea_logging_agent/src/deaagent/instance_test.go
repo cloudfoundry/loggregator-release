@@ -34,14 +34,6 @@ func (m MockLoggregatorClient) Emit() instrumentation.Context {
 	return instrumentation.Context{}
 }
 
-func (m MockLoggregatorClient) IncLogStreamRawByteCount(uint64) {
-
-}
-
-func (m MockLoggregatorClient) IncLogStreamPbByteCount(uint64) {
-
-}
-
 func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "testing")
 	assert.NoError(t, err)

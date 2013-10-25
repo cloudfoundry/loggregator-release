@@ -73,13 +73,11 @@ func (ls loggingStream) listen() {
 			ls.logger.Debugf("Read %d bytes from instance socket %s, %s", readCount, ls.messageType, ls.inst.identifier())
 			atomic.AddUint64(ls.messagesReceived, 1)
 			atomic.AddUint64(ls.bytesReceived, uint64(readCount))
-			ls.loggregatorClient.IncLogStreamRawByteCount(uint64(readCount))
 
 			data, err := proto.Marshal(newLogMessage(buffer[0:readCount]))
 			if err != nil {
 				ls.logger.Errorf("Error marshalling log message: %s", err)
 			}
-			ls.loggregatorClient.IncLogStreamPbByteCount(uint64(len(data)))
 
 			ls.loggregatorClient.Send(data)
 			ls.logger.Debugf("Sent %d bytes to loggregator client from %s, %s", readCount, ls.messageType, ls.inst.identifier())
