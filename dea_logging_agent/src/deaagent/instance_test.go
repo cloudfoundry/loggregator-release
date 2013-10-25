@@ -1,8 +1,6 @@
 package deaagent
 
 import (
-	testhelpers "deaagent_testhelpers"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/stretchr/testify/assert"
@@ -22,16 +20,16 @@ func TestIdentifier(t *testing.T) {
 	assert.Equal(t, "/var/vcap/data/warden/depot/16vbs06ibo1/jobs/272", instance.identifier())
 }
 
-type MockLoggregatorClient struct {
-	received chan *[]byte
+type MockLoggregatorEmitter struct {
+	received chan *logmessage.LogMessage
 }
 
-func (m MockLoggregatorClient) Send(data []byte) {
-	m.received <- &data
+func (m MockLoggregatorEmitter) Emit(a, b string) {
+
 }
 
-func (m MockLoggregatorClient) Emit() instrumentation.Context {
-	return instrumentation.Context{}
+func (m MockLoggregatorEmitter) EmitLogMessage(message *logmessage.LogMessage) {
+	m.received <- message
 }
 
 func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
@@ -62,10 +60,10 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	expectedMessage := "Some Output\n"
 	secondLogMessage := "toally different\n"
 
-	mockLoggregatorClient := new(MockLoggregatorClient)
+	mockLoggregatorEmitter := new(MockLoggregatorEmitter)
 
-	mockLoggregatorClient.received = make(chan *[]byte)
-	instance.startListening(mockLoggregatorClient, loggertesthelper.Logger())
+	mockLoggregatorEmitter.received = make(chan *logmessage.LogMessage)
+	instance.startListening(mockLoggregatorEmitter, loggertesthelper.Logger())
 
 	connection, err := stdoutListener.Accept()
 	defer connection.Close()
@@ -74,7 +72,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	_, err = connection.Write([]byte(expectedMessage))
 	assert.NoError(t, err)
 
-	receivedMessage := testhelpers.GetBackendMessage(t, <-mockLoggregatorClient.received)
+	receivedMessage := <-mockLoggregatorEmitter.received
 
 	assert.Equal(t, "1234", receivedMessage.GetAppId())
 	assert.Equal(t, logmessage.LogMessage_WARDEN_CONTAINER, receivedMessage.GetSourceType())
@@ -86,7 +84,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	_, err = connection.Write([]byte(secondLogMessage))
 	assert.NoError(t, err)
 
-	receivedMessage = testhelpers.GetBackendMessage(t, <-mockLoggregatorClient.received)
+	receivedMessage = <-mockLoggregatorEmitter.received
 
 	assert.Equal(t, "1234", receivedMessage.GetAppId())
 	assert.Equal(t, logmessage.LogMessage_WARDEN_CONTAINER, receivedMessage.GetSourceType())
@@ -123,10 +121,10 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	expectedMessage := "Some Output\n"
 	secondLogMessage := "toally different\n"
 
-	mockLoggregatorClient := new(MockLoggregatorClient)
+	mockLoggregatorEmitter := new(MockLoggregatorEmitter)
 
-	mockLoggregatorClient.received = make(chan *[]byte)
-	instance.startListening(mockLoggregatorClient, loggertesthelper.Logger())
+	mockLoggregatorEmitter.received = make(chan *logmessage.LogMessage)
+	instance.startListening(mockLoggregatorEmitter, loggertesthelper.Logger())
 
 	connection, err := stderrListener.Accept()
 	defer connection.Close()
@@ -135,7 +133,7 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	_, err = connection.Write([]byte(expectedMessage))
 	assert.NoError(t, err)
 
-	receivedMessage := testhelpers.GetBackendMessage(t, <-mockLoggregatorClient.received)
+	receivedMessage := <-mockLoggregatorEmitter.received
 
 	assert.Equal(t, "1234", receivedMessage.GetAppId())
 	assert.Equal(t, logmessage.LogMessage_WARDEN_CONTAINER, receivedMessage.GetSourceType())
@@ -147,7 +145,7 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	_, err = connection.Write([]byte(secondLogMessage))
 	assert.NoError(t, err)
 
-	receivedMessage = testhelpers.GetBackendMessage(t, <-mockLoggregatorClient.received)
+	receivedMessage = <-mockLoggregatorEmitter.received
 
 	assert.Equal(t, "1234", receivedMessage.GetAppId())
 	assert.Equal(t, logmessage.LogMessage_WARDEN_CONTAINER, receivedMessage.GetSourceType())

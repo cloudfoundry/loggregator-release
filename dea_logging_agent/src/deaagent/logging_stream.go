@@ -4,7 +4,7 @@ import (
 	"code.google.com/p/gogoprotobuf/proto"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
+	"github.com/cloudfoundry/loggregatorlib/emitter"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"net"
 	"path/filepath"
@@ -15,18 +15,18 @@ import (
 )
 
 type loggingStream struct {
-	inst              instance
-	loggregatorClient loggregatorclient.LoggregatorClient
-	logger            *gosteno.Logger
-	messageType       logmessage.LogMessage_MessageType
-	messagesReceived  *uint64
-	bytesReceived     *uint64
+	inst             instance
+	emitter          emitter.Emitter
+	logger           *gosteno.Logger
+	messageType      logmessage.LogMessage_MessageType
+	messagesReceived *uint64
+	bytesReceived    *uint64
 }
 
 const bufferSize = 4096
 
-func newLoggingStream(inst instance, loggregatorClient loggregatorclient.LoggregatorClient, logger *gosteno.Logger, messageType logmessage.LogMessage_MessageType) (ls *loggingStream) {
-	return &loggingStream{inst, loggregatorClient, logger, messageType, new(uint64), new(uint64)}
+func newLoggingStream(inst instance, emitter emitter.Emitter, logger *gosteno.Logger, messageType logmessage.LogMessage_MessageType) (ls *loggingStream) {
+	return &loggingStream{inst, emitter, logger, messageType, new(uint64), new(uint64)}
 }
 
 func (ls loggingStream) listen() {
@@ -74,12 +74,10 @@ func (ls loggingStream) listen() {
 			atomic.AddUint64(ls.messagesReceived, 1)
 			atomic.AddUint64(ls.bytesReceived, uint64(readCount))
 
-			data, err := proto.Marshal(newLogMessage(buffer[0:readCount]))
-			if err != nil {
-				ls.logger.Errorf("Error marshalling log message: %s", err)
-			}
+			logMessage := newLogMessage(buffer[0:readCount])
 
-			ls.loggregatorClient.Send(data)
+			ls.emitter.EmitLogMessage(logMessage)
+
 			ls.logger.Debugf("Sent %d bytes to loggregator client from %s, %s", readCount, ls.messageType, ls.inst.identifier())
 			runtime.Gosched()
 		}

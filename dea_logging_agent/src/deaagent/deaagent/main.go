@@ -10,13 +10,14 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
-	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
+	"github.com/cloudfoundry/loggregatorlib/emitter"
 )
 
 type Config struct {
 	cfcomponent.Config
 	Index              uint
 	LoggregatorAddress string
+	SharedSecret	   string
 	mbusClient         cfmessagebus.MessageBus
 }
 
@@ -71,10 +72,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
 	// ** END Config Setup
 
-	loggregatorClient := loggregatorclient.NewLoggregatorClient(config.LoggregatorAddress, logger, 4096)
+	loggregatorEmitter, err := emitter.NewLogEnvelopeEmitter(config.LoggregatorAddress, "WARDEN_CONTAINER", "NA", config.SharedSecret, logger)
+
+	if err != nil {
+		panic(err)
+	}
 
 	agent := deaagent.NewAgent(*instancesJsonFilePath, logger)
 
@@ -85,7 +89,7 @@ func main() {
 		&DeaAgentHealthMonitor{},
 		config.VarzPort,
 		[]string{config.VarzUser, config.VarzPass},
-		[]instrumentation.Instrumentable{loggregatorClient},
+		[]instrumentation.Instrumentable{loggregatorEmitter.LoggregatorClient},
 	)
 
 	if err != nil {
@@ -104,7 +108,7 @@ func main() {
 			panic(err)
 		}
 	}()
-	go agent.Start(loggregatorClient)
+	go agent.Start(loggregatorEmitter)
 
 	for {
 		select {

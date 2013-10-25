@@ -1,7 +1,6 @@
 package deaagent
 
 import (
-	testhelpers "deaagent_testhelpers"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/stretchr/testify/assert"
@@ -98,14 +97,14 @@ func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
 
 	expectedMessage := "Some Output\n"
 
-	mockLoggregatorClient := new(MockLoggregatorClient)
+	mockLoggregatorEmitter := new(MockLoggregatorEmitter)
 
-	mockLoggregatorClient.received = make(chan *[]byte, 2)
+	mockLoggregatorEmitter.received = make(chan *logmessage.LogMessage, 2)
 
 	writeToFile(t, `{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3}]}`, true)
 
 	agent := NewAgent(filePath(), loggertesthelper.Logger())
-	go agent.Start(mockLoggregatorClient)
+	go agent.Start(mockLoggregatorEmitter)
 
 	instance1Connection, err := instance1StdoutListener.Accept()
 	defer instance1Connection.Close()
@@ -126,10 +125,10 @@ func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
 
 	receivedMessages := make(map[string]*logmessage.LogMessage)
 
-	receivedMessage := testhelpers.GetBackendMessage(t, <-mockLoggregatorClient.received)
+	receivedMessage := <-mockLoggregatorEmitter.received
 	receivedMessages[receivedMessage.GetAppId()] = receivedMessage
 
-	receivedMessage = testhelpers.GetBackendMessage(t, <-mockLoggregatorClient.received)
+	receivedMessage = <-mockLoggregatorEmitter.received
 	receivedMessages[receivedMessage.GetAppId()] = receivedMessage
 
 	assert.Equal(t, 2, len(receivedMessages))

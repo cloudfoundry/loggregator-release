@@ -1,5 +1,6 @@
 {
     "LoggregatorAddress": "localhost:3456",
+    "SharedSecret": "MFyeczR98mA8JGLf2iOwmlghBtJE85D3hLwoj",
     "NatsHost": "localhost",
     "NatsPort": 4222,
     "NatsUser": "nats",

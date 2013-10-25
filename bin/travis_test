@@ -15,7 +15,6 @@ function red {
 packages=(
     deaagent
     deaagent/deaagent
-    deaagent_testhelpers
     loggregator
     loggregator/groupedsinks
     loggregator/loggregator

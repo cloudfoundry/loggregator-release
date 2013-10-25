@@ -2,7 +2,7 @@ package deaagent
 
 import (
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
+	"github.com/cloudfoundry/loggregatorlib/emitter"
 	"github.com/howeyc/fsnotify"
 	"io/ioutil"
 	"path"
@@ -19,11 +19,11 @@ func NewAgent(instancesJsonFilePath string, logger *gosteno.Logger) *agent {
 	return &agent{instancesJsonFilePath, logger}
 }
 
-func (agent *agent) Start(loggregatorClient loggregatorclient.LoggregatorClient) {
+func (agent *agent) Start(emitter emitter.Emitter) {
 	newInstances := agent.watchInstancesJsonFileForChanges()
 	for instance := range newInstances {
 		agent.logger.Infof("Starting to listen to %v\n", instance.identifier())
-		instance.startListening(loggregatorClient, agent.logger)
+		instance.startListening(emitter, agent.logger)
 	}
 }
 

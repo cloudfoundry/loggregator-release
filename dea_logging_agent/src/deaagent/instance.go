@@ -2,7 +2,7 @@ package deaagent
 
 import (
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
+	"github.com/cloudfoundry/loggregatorlib/emitter"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"path/filepath"
 	"strconv"
@@ -20,7 +20,7 @@ func (instance instance) identifier() string {
 	return filepath.Join(instance.wardenContainerPath, "jobs", strconv.FormatUint(instance.wardenJobId, 10))
 }
 
-func (inst instance) startListening(loggregatorClient loggregatorclient.LoggregatorClient, logger *gosteno.Logger) {
-	newLoggingStream(inst, loggregatorClient, logger, logmessage.LogMessage_OUT).listen()
-	newLoggingStream(inst, loggregatorClient, logger, logmessage.LogMessage_ERR).listen()
+func (inst instance) startListening(emitter emitter.Emitter, logger *gosteno.Logger) {
+	newLoggingStream(inst, emitter, logger, logmessage.LogMessage_OUT).listen()
+	newLoggingStream(inst, emitter, logger, logmessage.LogMessage_ERR).listen()
 }
