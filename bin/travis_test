@@ -36,7 +36,6 @@ packages=(
     github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar
     github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar
     github.com/cloudfoundry/loggregatorlib/emitter
-    github.com/cloudfoundry/loggregatorlib/lib_testhelpers
     github.com/cloudfoundry/loggregatorlib/loggregatorclient
     github.com/cloudfoundry/loggregatorlib/logmessage
     github.com/cloudfoundry/loggregatorlib/signature
