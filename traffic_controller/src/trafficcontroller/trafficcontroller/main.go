@@ -8,7 +8,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/signal"
@@ -21,15 +20,12 @@ import (
 type Config struct {
 	Zone string
 	cfcomponent.Config
-	ApiHost                         string
-	Host                            string
-	Loggregators                    map[string][]string
-	IncomingPort                    uint32
-	OutgoingPort                    uint32
-	SystemDomain                    string
-	decoder                         authorization.TokenDecoder
-	DisableEmailDomainAuthorization bool
-	UaaVerificationKeyFile          string
+	ApiHost      string
+	Host         string
+	Loggregators map[string][]string
+	IncomingPort uint32
+	OutgoingPort uint32
+	SystemDomain string
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
@@ -40,26 +36,15 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 		return errors.New("Need a loggregator server (host:port).")
 	}
 
-	uaaVerificationKey, err := ioutil.ReadFile(c.UaaVerificationKeyFile)
-	if err != nil {
-		return errors.New(fmt.Sprintf("Can not read UAA verification key from file %s: %s", c.UaaVerificationKeyFile, err))
-	}
-
-	c.decoder, err = authorization.NewUaaTokenDecoder(uaaVerificationKey)
-	if err != nil {
-		return errors.New(fmt.Sprintf("Can not parse UAA verification key: %s", err))
-	}
-
 	err = c.Validate(logger)
 	return
 }
 
 var (
-	logFilePath            = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
-	logLevel               = flag.Bool("debug", false, "Debug logging")
-	version                = flag.Bool("version", false, "Version info")
-	configFile             = flag.String("config", "config/loggregator_trafficcontroller.json", "Location of the loggregator trafficcontroller config json file")
-	uaaVerificationKeyFile = flag.String("tokenFile", "config/uaa_token.pub", "Location of the loggregator's uaa public token file")
+	logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
+	logLevel    = flag.Bool("debug", false, "Debug logging")
+	version     = flag.Bool("version", false, "Version info")
+	configFile  = flag.String("config", "config/loggregator_trafficcontroller.json", "Location of the loggregator trafficcontroller config json file")
 )
 
 const (
@@ -78,7 +63,7 @@ func main() {
 			versionNumber, gitSha, gitSha)
 		return
 	}
-	config := &Config{OutgoingPort: 8080, UaaVerificationKeyFile: *uaaVerificationKeyFile}
+	config := &Config{OutgoingPort: 8080}
 	err := cfcomponent.ReadConfigInto(config, *configFile)
 	config.Host = net.JoinHostPort(config.Host, strconv.FormatUint(uint64(config.IncomingPort), 10))
 
@@ -127,7 +112,7 @@ func main() {
 		}()
 	}
 
-	authorizer := authorization.NewLogAccessAuthorizer(config.decoder, config.ApiHost, config.DisableEmailDomainAuthorization)
+	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost)
 
 	makeOutgoingProxy := func(ipAddress string) *trafficcontroller.Proxy {
 		hashers := make([]*hasher.Hasher, len(config.Loggregators))

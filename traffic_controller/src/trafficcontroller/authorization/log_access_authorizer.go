@@ -3,19 +3,11 @@ package authorization
 import (
 	"github.com/cloudfoundry/gosteno"
 	"net/http"
-	"regexp"
 )
 
 type LogAccessAuthorizer func(authToken string, appId string, logger *gosteno.Logger) bool
 
-func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string, disableEmailDomainAuthorization bool) LogAccessAuthorizer {
-	userIsInAllowedEmailDomain := func(email string) bool {
-		if disableEmailDomainAuthorization {
-			return true
-		}
-		re := regexp.MustCompile("(?i)^[^@]+@(vmware.com|pivotallabs.com|gopivotal.com)$")
-		return re.MatchString(email)
-	}
+func NewLogAccessAuthorizer(apiHost string) LogAccessAuthorizer {
 
 	isAccessAllowed := func(target string, authToken string, logger *gosteno.Logger) bool {
 		client := &http.Client{}
@@ -35,22 +27,7 @@ func NewLogAccessAuthorizer(tokenDecoder TokenDecoder, apiHost string, disableEm
 	}
 
 	authorizer := func(authToken string, appId string, logger *gosteno.Logger) bool {
-		tokenPayload, err := tokenDecoder.Decode(authToken)
-		if err != nil {
-			logger.Errorf("Could not decode auth token. %s", authToken)
-			return false
-		}
-
-		if !isAccessAllowed(appId, authToken, logger) {
-			return false
-		}
-
-		if !userIsInAllowedEmailDomain(tokenPayload.Email) {
-			logger.Errorf("Only users in 'loggregator' scope can access logs")
-			return false
-		}
-
-		return true
+		return isAccessAllowed(appId, authToken, logger)
 	}
 
 	return LogAccessAuthorizer(authorizer)

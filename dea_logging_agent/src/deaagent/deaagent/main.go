@@ -17,7 +17,7 @@ type Config struct {
 	cfcomponent.Config
 	Index              uint
 	LoggregatorAddress string
-	SharedSecret	   string
+	SharedSecret       string
 	mbusClient         cfmessagebus.MessageBus
 }
 
