@@ -20,7 +20,6 @@ import (
 type Config struct {
 	cfcomponent.Config
 	Index                  uint
-	SystemDomain           string
 	IncomingPort           uint32
 	OutgoingPort           uint32
 	LogFilePath            string
@@ -28,9 +27,6 @@ type Config struct {
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
-	if c.SystemDomain == "" {
-		return errors.New("Need system domain to register with NATS")
-	}
 	if c.MaxRetainedLogMessages == 0 {
 		return errors.New("Need max number of log messages to retain per application")
 	}
