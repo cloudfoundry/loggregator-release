@@ -1,6 +1,7 @@
 package ringbuffer
 
 import (
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
@@ -14,13 +15,13 @@ func TestThatItWorksLikeAChannel(t *testing.T) {
 	ringBufferChannel := NewRingBuffer(inMessageChan, outMessageChan, nil)
 	go ringBufferChannel.Run()
 
-	logMessage1, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "message 1", "appId"))
+	logMessage1, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "message 1", "appId"), loggertesthelper.Logger())
 	assert.NoError(t, err)
 	inMessageChan <- logMessage1
 	readMessage := <-outMessageChan
 	assert.Contains(t, string(readMessage.GetRawMessage()), "message 1")
 
-	logMessage2, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "message 2", "appId"))
+	logMessage2, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "message 2", "appId"), loggertesthelper.Logger())
 	assert.NoError(t, err)
 	inMessageChan <- logMessage2
 	readMessage2 := <-outMessageChan
@@ -34,15 +35,15 @@ func TestThatItWorksLikeABufferedRingChannel(t *testing.T) {
 	ringBufferChannel := NewRingBuffer(inMessageChan, outMessageChan, nil)
 	go ringBufferChannel.Run()
 
-	logMessage1, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "message 1", "appId"))
+	logMessage1, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "message 1", "appId"), loggertesthelper.Logger())
 	assert.NoError(t, err)
 	inMessageChan <- logMessage1
 
-	logMessage2, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "message 2", "appId"))
+	logMessage2, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "message 2", "appId"), loggertesthelper.Logger())
 	assert.NoError(t, err)
 	inMessageChan <- logMessage2
 
-	logMessage3, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "message 3", "appId"))
+	logMessage3, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "message 3", "appId"), loggertesthelper.Logger())
 	assert.NoError(t, err)
 	inMessageChan <- logMessage3
 	time.Sleep(5 + time.Millisecond)

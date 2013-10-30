@@ -25,7 +25,7 @@ func TestDumpForOneMessage(t *testing.T) {
 	dump := NewDumpSink("myApp", 1, loggertesthelper.Logger())
 	dump.Run(closeChan)
 
-	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "hi", "appId"))
+	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "hi", "appId"), loggertesthelper.Logger())
 	dump.Channel() <- logMessage
 
 	logMessages := dumpAllMessages(dump)
@@ -39,9 +39,9 @@ func TestDumpForTwoMessages(t *testing.T) {
 	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
 	dump.Run(closeChan)
 
-	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "1", "appId"))
+	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "1", "appId"), loggertesthelper.Logger())
 	dump.Channel() <- logMessage
-	logMessage, _ = logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "2", "appId"))
+	logMessage, _ = logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "2", "appId"), loggertesthelper.Logger())
 	dump.Channel() <- logMessage
 
 	runtime.Gosched()
@@ -59,7 +59,7 @@ func TestTheDumpSinkNeverFillsUp(t *testing.T) {
 	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
 	dump.Run(closeChan)
 
-	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "hi", "appId"))
+	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "hi", "appId"), loggertesthelper.Logger())
 
 	var i uint
 	for i = 0; i < bufferSize+1; i++ {
@@ -74,11 +74,11 @@ func TestDumpAlwaysReturnsTheNewestMessages(t *testing.T) {
 	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
 	dump.Run(closeChan)
 
-	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "1", "appId"))
+	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "1", "appId"), loggertesthelper.Logger())
 	dump.Channel() <- logMessage
-	logMessage, _ = logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "2", "appId"))
+	logMessage, _ = logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "2", "appId"), loggertesthelper.Logger())
 	dump.Channel() <- logMessage
-	logMessage, _ = logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "3", "appId"))
+	logMessage, _ = logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "3", "appId"), loggertesthelper.Logger())
 	dump.Channel() <- logMessage
 
 	runtime.Gosched()
@@ -96,11 +96,11 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequests(t *testing.T) {
 	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
 	dump.Run(closeChan)
 
-	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "1", "appId"))
+	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "1", "appId"), loggertesthelper.Logger())
 	dump.Channel() <- logMessage
-	logMessage, _ = logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "2", "appId"))
+	logMessage, _ = logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "2", "appId"), loggertesthelper.Logger())
 	dump.Channel() <- logMessage
-	logMessage, _ = logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "3", "appId"))
+	logMessage, _ = logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "3", "appId"), loggertesthelper.Logger())
 	dump.Channel() <- logMessage
 
 	runtime.Gosched()
@@ -123,11 +123,11 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequestsWithMessagesCloningIn
 	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
 	dump.Run(closeChan)
 
-	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "1", "appId"))
+	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "1", "appId"), loggertesthelper.Logger())
 	dump.Channel() <- logMessage
-	logMessage, _ = logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "2", "appId"))
+	logMessage, _ = logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "2", "appId"), loggertesthelper.Logger())
 	dump.Channel() <- logMessage
-	logMessage, _ = logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "3", "appId"))
+	logMessage, _ = logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "3", "appId"), loggertesthelper.Logger())
 	dump.Channel() <- logMessage
 
 	runtime.Gosched()
@@ -137,7 +137,7 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequestsWithMessagesCloningIn
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "2")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "3")
 
-	logMessage, _ = logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "4", "appId"))
+	logMessage, _ = logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "4", "appId"), loggertesthelper.Logger())
 	dump.Channel() <- logMessage
 
 	runtime.Gosched()
@@ -156,7 +156,7 @@ func TestDumpWithLotsOfMessages(t *testing.T) {
 	dump.Run(closeChan)
 
 	for i := 0; i < 100; i++ {
-		logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, strconv.Itoa(i), "appId"))
+		logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, strconv.Itoa(i), "appId"), loggertesthelper.Logger())
 		dump.Channel() <- logMessage
 	}
 
@@ -168,7 +168,7 @@ func TestDumpWithLotsOfMessages(t *testing.T) {
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "99")
 
 	for i := 100; i < 200; i++ {
-		logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, strconv.Itoa(i), "appId"))
+		logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, strconv.Itoa(i), "appId"), loggertesthelper.Logger())
 		dump.Channel() <- logMessage
 	}
 
@@ -193,7 +193,7 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer(t *testing.T) {
 	dump.Run(closeChan)
 
 	for i := 0; i < 1000; i++ {
-		logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, strconv.Itoa(i), "appId"))
+		logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, strconv.Itoa(i), "appId"), loggertesthelper.Logger())
 		dump.Channel() <- logMessage
 	}
 
@@ -205,7 +205,7 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer(t *testing.T) {
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "801")
 
 	for i := 1000; i < 2000; i++ {
-		logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, strconv.Itoa(i), "appId"))
+		logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, strconv.Itoa(i), "appId"), loggertesthelper.Logger())
 		dump.Channel() <- logMessage
 	}
 
@@ -230,7 +230,7 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
 	dump.Run(closeChan)
 
 	for i := 0; i < 100; i++ {
-		logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, strconv.Itoa(i), "appId"))
+		logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, strconv.Itoa(i), "appId"), loggertesthelper.Logger())
 		dump.Channel() <- logMessage
 	}
 
@@ -242,7 +242,7 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "1")
 
 	for i := 100; i < 200; i++ {
-		logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, strconv.Itoa(i), "appId"))
+		logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, strconv.Itoa(i), "appId"), loggertesthelper.Logger())
 		dump.Channel() <- logMessage
 	}
 
@@ -254,7 +254,7 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "1")
 
 	for i := 200; i < 300; i++ {
-		logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, strconv.Itoa(i), "appId"))
+		logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, strconv.Itoa(i), "appId"), loggertesthelper.Logger())
 		dump.Channel() <- logMessage
 	}
 
@@ -275,7 +275,7 @@ func TestDumpWithLotsOfDumps(t *testing.T) {
 	dump.Run(closeChan)
 
 	for i := 0; i < 10; i++ {
-		logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, strconv.Itoa(i), "appId"))
+		logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, strconv.Itoa(i), "appId"), loggertesthelper.Logger())
 		dump.Channel() <- logMessage
 	}
 
