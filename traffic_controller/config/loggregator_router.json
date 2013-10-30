@@ -12,5 +12,6 @@
     "NatsPass": "password",
     "VarzUser": "varz",
     "VarzPass": "password",
-    "VarzPort": 8888
+    "VarzPort": 8888,
+    "Syslog"  : ""
 }

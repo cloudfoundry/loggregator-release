@@ -59,14 +59,15 @@ func main() {
 		return
 	}
 
-	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "deaagent")
-
 	// ** Config Setup
 	config := &Config{}
 	err := cfcomponent.ReadConfigInto(config, *configFile)
 	if err != nil {
 		panic(err)
 	}
+
+	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "deaagent", config.Config)
+	logger.Info("Startup: Setting up the loggregator dea logging agent")
 
 	err = config.validate(logger)
 	if err != nil {

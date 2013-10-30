@@ -55,9 +55,6 @@ const (
 func main() {
 	flag.Parse()
 
-	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller")
-	logger.Debugf("Startup: Setting up the loggregator traffic controller")
-
 	if *version {
 		fmt.Printf("version: %s\ngitSha: %s\nsourceUrl: https://github.com/cloudfoundry/loggregator/tree/%s\n\n",
 			versionNumber, gitSha, gitSha)
@@ -70,6 +67,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller", config.Config)
+	logger.Info("Startup: Setting up the loggregator traffic controller")
+
 	err = config.validate(logger)
 	if err != nil {
 		panic(err)

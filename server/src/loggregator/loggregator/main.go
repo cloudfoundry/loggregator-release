@@ -68,13 +68,15 @@ func main() {
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "loggregator")
-
 	config := &Config{IncomingPort: 3456, OutgoingPort: 8080}
 	err := cfcomponent.ReadConfigInto(config, *configFile)
 	if err != nil {
 		panic(err)
 	}
+
+	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "loggregator", config.Config)
+	logger.Info("Startup: Setting up the loggregator server")
+
 	err = config.validate(logger)
 	if err != nil {
 		panic(err)
