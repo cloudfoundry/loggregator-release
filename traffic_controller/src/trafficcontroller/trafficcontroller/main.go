@@ -20,12 +20,13 @@ import (
 type Config struct {
 	Zone string
 	cfcomponent.Config
-	ApiHost      string
-	Host         string
-	Loggregators map[string][]string
-	IncomingPort uint32
-	OutgoingPort uint32
-	SystemDomain string
+	ApiHost        string
+	Host           string
+	Loggregators   map[string][]string
+	IncomingPort   uint32
+	OutgoingPort   uint32
+	SystemDomain   string
+	SkipCertVerify bool
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
@@ -125,7 +126,7 @@ func makeIncomingRouter(config *Config, logger *gosteno.Logger) *trafficcontroll
 }
 
 func makeOutgoingProxy(ipAddress string, config *Config, logger *gosteno.Logger) *trafficcontroller.Proxy {
-	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost)
+	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
 
 	hashers := make([]*hasher.Hasher, len(config.Loggregators))
 	logger.Debugf("Output Proxy Startup: Number of zones: %v", len(config.Loggregators))

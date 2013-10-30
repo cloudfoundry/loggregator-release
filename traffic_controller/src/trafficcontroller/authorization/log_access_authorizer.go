@@ -1,16 +1,20 @@
 package authorization
 
 import (
+	"crypto/tls"
 	"github.com/cloudfoundry/gosteno"
 	"net/http"
 )
 
 type LogAccessAuthorizer func(authToken string, appId string, logger *gosteno.Logger) bool
 
-func NewLogAccessAuthorizer(apiHost string) LogAccessAuthorizer {
+func NewLogAccessAuthorizer(apiHost string, skipCertVerify bool) LogAccessAuthorizer {
 
 	isAccessAllowed := func(target string, authToken string, logger *gosteno.Logger) bool {
-		client := &http.Client{}
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: skipCertVerify},
+		}
+		client := &http.Client{Transport: tr}
 
 		req, _ := http.NewRequest("GET", apiHost+"/v2/apps/"+target, nil)
 		req.Header.Set("Authorization", authToken)
