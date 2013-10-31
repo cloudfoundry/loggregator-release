@@ -5,6 +5,7 @@ release/
 .DS_Store
 .idea
 *.iml
+*.pem
 
 dea_logging_agent/src/code.google.com
 dea_logging_agent/src/github.com
