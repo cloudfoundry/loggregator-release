@@ -48,7 +48,7 @@ func (r *SyslogWriterRecorder) Connect() error {
 	}
 }
 
-func (r *SyslogWriterRecorder) WriteStdout(b []byte) (int, error) {
+func (r *SyslogWriterRecorder) WriteStdout(b []byte, timestamp int64) (int, error) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -61,7 +61,7 @@ func (r *SyslogWriterRecorder) WriteStdout(b []byte) (int, error) {
 	}
 }
 
-func (r *SyslogWriterRecorder) WriteStderr(b []byte) (int, error) {
+func (r *SyslogWriterRecorder) WriteStderr(b []byte, timestamp int64) (int, error) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -213,6 +213,26 @@ func TestThatItUsesOctetFramingWhenSending(t *testing.T) {
 	syslogRegexp := regexp.MustCompile(`<11>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([-+]\d{2}:\d{2}) loggregator appId - - - err\n`)
 	msgBeforeOctetCounting := syslogRegexp.FindString(syslogMsg)
 	assert.True(t, strings.HasPrefix(syslogMsg, strconv.Itoa(len(msgBeforeOctetCounting))+" "))
+}
+
+func TestThatItUsesTheOriginalTimestampOfTheLogmessageWhenSending(t *testing.T) {
+	sysLogger := NewSyslogWriter("tcp", "localhost:24632", "appId")
+	sink := NewSyslogSink("appId", "syslog://localhost:24632", loggertesthelper.Logger(), sysLogger)
+	closeChan := make(chan Sink)
+	go sink.Run(closeChan)
+	defer close(sink.Channel())
+
+	logMessage, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"), loggertesthelper.Logger())
+	expectedTimeString := strings.Replace(time.Unix(0, logMessage.GetLogMessage().GetTimestamp()).Format(time.RFC3339), "Z", "+00:00", 1)
+
+	assert.NoError(t, err)
+
+	time.Sleep(1200 * time.Millisecond) //wait so that a second will pass, to allow timestamps to differ
+
+	sink.Channel() <- logMessage
+	data := <-fakeSyslogServer2.dataReadChannel
+
+	assert.Equal(t, "60 <11>1 "+expectedTimeString+" loggregator appId - - - err\n", string(data))
 }
 
 func TestThatItHandlesMessagesEvenIfThereIsNoSyslogServer(t *testing.T) {

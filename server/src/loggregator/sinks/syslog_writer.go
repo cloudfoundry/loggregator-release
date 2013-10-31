@@ -15,8 +15,8 @@ import (
 
 type SyslogWriter interface {
 	Connect() error
-	WriteStdout(b []byte) (int, error)
-	WriteStderr(b []byte) (int, error)
+	WriteStdout(b []byte, timestamp int64) (int, error)
+	WriteStderr(b []byte, timestamp int64) (int, error)
 	Close() error
 	IsConnected() bool
 	SetConnected(bool)
@@ -69,12 +69,12 @@ func (w *writer) connect() (err error) {
 	return
 }
 
-func (w *writer) WriteStdout(b []byte) (int, error) {
-	return w.write(14, string(b))
+func (w *writer) WriteStdout(b []byte, timestamp int64) (int, error) {
+	return w.write(14, string(b), timestamp)
 }
 
-func (w *writer) WriteStderr(b []byte) (int, error) {
-	return w.write(11, string(b))
+func (w *writer) WriteStderr(b []byte, timestamp int64) (int, error) {
+	return w.write(11, string(b), timestamp)
 }
 
 func (w *writer) Close() error {
@@ -89,7 +89,7 @@ func (w *writer) Close() error {
 	return nil
 }
 
-func (w *writer) write(p int, msg string) (int, error) {
+func (w *writer) write(p int, msg string, timestamp int64) (int, error) {
 	// ensure it ends in a \n
 	nl := ""
 	if !strings.HasSuffix(msg, "\n") {
@@ -97,12 +97,11 @@ func (w *writer) write(p int, msg string) (int, error) {
 	}
 
 	msg = clean(msg)
-	timestamp := time.Now().Format(time.RFC3339)
-	timestamp = strings.Replace(timestamp, "Z", "+00:00", 1)
+	timeString := time.Unix(0, timestamp).Format(time.RFC3339)
+	timeString = strings.Replace(timeString, "Z", "+00:00", 1)
 
 	// syslog format https://tools.ietf.org/html/rfc5424#section-6
-	syslogMsg := fmt.Sprintf("<%d>1 %s %s %s - - - %s%s",
-		p, timestamp, "loggregator", w.appId, msg, nl)
+	syslogMsg := fmt.Sprintf("<%d>1 %s %s %s - - - %s%s", p, timeString, "loggregator", w.appId, msg, nl)
 
 	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
 	_, err := fmt.Fprintf(w.conn, "%d %s", len(syslogMsg), syslogMsg)

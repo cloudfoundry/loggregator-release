@@ -71,9 +71,9 @@ func (s *SyslogSink) Run(closeChan chan Sink) {
 
 		switch message.GetLogMessage().GetMessageType() {
 		case logmessage.LogMessage_OUT:
-			_, err = s.syslogWriter.WriteStdout(message.GetLogMessage().GetMessage())
+			_, err = s.syslogWriter.WriteStdout(message.GetLogMessage().GetMessage(), *message.GetLogMessage().Timestamp)
 		case logmessage.LogMessage_ERR:
-			_, err = s.syslogWriter.WriteStderr(message.GetLogMessage().GetMessage())
+			_, err = s.syslogWriter.WriteStderr(message.GetLogMessage().GetMessage(), *message.GetLogMessage().Timestamp)
 		}
 		if err != nil {
 			s.logger.Debugf("Syslog Sink %s: Error when trying to send data to sink. Backing off. Err: %v\n", s.drainUrl, err)
