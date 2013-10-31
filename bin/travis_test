@@ -30,6 +30,7 @@ packages=(
     github.com/cloudfoundry/loggregatorlib/agentlistener
     github.com/cloudfoundry/loggregatorlib/appid
     github.com/cloudfoundry/loggregatorlib/cfcomponent
+    github.com/cloudfoundry/loggregatorlib/cfcomponent/auth
     github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation
     github.com/cloudfoundry/loggregatorlib/cfcomponent/localip
     github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar
