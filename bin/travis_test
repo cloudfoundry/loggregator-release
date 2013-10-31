@@ -41,6 +41,10 @@ packages=(
     github.com/cloudfoundry/loggregatorlib/signature
 )
 
+performance_tests=(
+    github.com/cloudfoundry/loggregatorlib/emitter/emitter_performance
+)
+
 for package in "${packages[@]}"
 do
     local_result=$result
@@ -48,6 +52,24 @@ do
     $(dirname $0)/go fmt $package
     $(dirname $0)/go test -i --race $package
     $(dirname $0)/go test -v --race $package
+    let "result += $?"
+    echo -e "\n Vetting $package"
+    $(dirname $0)/go vet $package
+    let "result += $?"
+    if [ $result -gt $local_result ]; then
+        red " Package $package FAILED"
+    else
+        green " Package $package PASSED"
+    fi
+done
+
+for package in "${performance_tests[@]}"
+do
+    local_result=$result
+    echo -e "\n Testing $package"
+    $(dirname $0)/go fmt $package
+    $(dirname $0)/go test -i $package
+    $(dirname $0)/go test -v $package
     let "result += $?"
     echo -e "\n Vetting $package"
     $(dirname $0)/go vet $package
