@@ -31,7 +31,7 @@ func (proxy *Proxy) Start() error {
 func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress net.Addr) (bool, *logmessage.LogMessage) {
 	newLogMessage := func(message []byte) *logmessage.LogMessage {
 		currentTime := time.Now()
-		sourceType := "LGR"
+		sourceType := logmessage.LogMessage_LOGGREGATOR
 		messageType := logmessage.LogMessage_ERR
 
 		return &logmessage.LogMessage{

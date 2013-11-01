@@ -122,8 +122,8 @@ func (messageRouter *messageRouter) manageDumps(activeSinks *groupedsinks.Groupe
 	}
 }
 
-func (messageRouter *messageRouter) manageDrains(activeSinks *groupedsinks.GroupedSinks, appId string, drainUrls []string, sourceType string) {
-	if sourceType != "APP" {
+func (messageRouter *messageRouter) manageDrains(activeSinks *groupedsinks.GroupedSinks, appId string, drainUrls []string, sourceType logmessage.LogMessage_SourceType) {
+	if sourceType != logmessage.LogMessage_WARDEN_CONTAINER {
 		return
 	}
 	//delete all drains for app

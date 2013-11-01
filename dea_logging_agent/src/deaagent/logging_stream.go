@@ -32,7 +32,7 @@ func newLoggingStream(inst instance, emitter emitter.Emitter, logger *gosteno.Lo
 func (ls loggingStream) listen() {
 	newLogMessage := func(message []byte) *logmessage.LogMessage {
 		currentTime := time.Now()
-		sourceType := "APP"
+		sourceType := logmessage.LogMessage_WARDEN_CONTAINER
 		sourceId := strconv.FormatUint(ls.inst.index, 10)
 
 		return &logmessage.LogMessage{
