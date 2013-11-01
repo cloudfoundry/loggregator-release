@@ -128,26 +128,33 @@ func makeIncomingRouter(config *Config, logger *gosteno.Logger) *trafficcontroll
 func makeOutgoingProxy(ipAddress string, config *Config, logger *gosteno.Logger) *trafficcontroller.Proxy {
 	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
 
-	hashers := make([]*hasher.Hasher, len(config.Loggregators))
 	logger.Debugf("Output Proxy Startup: Number of zones: %v", len(config.Loggregators))
-	counter := 0
+	hashers := makeHashers(config.Loggregators, config.OutgoingPort, logger)
 
-	for _, servers := range config.Loggregators {
-		logger.Debugf("Output Proxy Startup: Hashing servers: %v", servers)
+	logger.Debugf("Output Proxy Startup: Number of hashers for the proxy: %v", len(hashers))
+	proxy := trafficcontroller.NewProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), hashers, authorizer, logger)
+	return proxy
+}
+
+func makeHashers(loggregators map[string][]string, outgoingPort uint32, logger *gosteno.Logger) []*hasher.Hasher {
+	counter := 0
+	hashers := make([]*hasher.Hasher, 0, len(loggregators))
+	for _, servers := range loggregators {
+		logger.Debugf("Output Proxy Startup: Hashing servers: %v  Length: %d", servers, len(servers))
 
 		if len(servers) == 0 {
 			continue
 		}
+
 		for index, server := range servers {
-			logger.Debugf("Output Proxy Startup: Forwarding messages to client from loggregator server [%v] at %v", index, net.JoinHostPort(server, strconv.FormatUint(uint64(config.OutgoingPort), 10)))
-			servers[index] = net.JoinHostPort(server, strconv.FormatUint(uint64(config.OutgoingPort), 10))
+			logger.Debugf("Output Proxy Startup: Forwarding messages to client from loggregator server [%v] at %v", index, net.JoinHostPort(server, strconv.FormatUint(uint64(outgoingPort), 10)))
+			servers[index] = net.JoinHostPort(server, strconv.FormatUint(uint64(outgoingPort), 10))
 		}
+		hashers = hashers[:(counter + 1)]
 		hashers[counter] = hasher.NewHasher(servers)
 		counter++
 	}
-	logger.Debugf("Output Proxy Startup: Number of hashers for the proxy: %v", len(hashers))
-	proxy := trafficcontroller.NewProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), hashers, authorizer, logger)
-	return proxy
+	return hashers
 }
 
 func startIncomingRouter(router *trafficcontroller.Router, logger *gosteno.Logger) {
