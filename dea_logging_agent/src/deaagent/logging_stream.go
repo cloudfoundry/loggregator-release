@@ -51,12 +51,25 @@ func (ls loggingStream) listen() {
 	}
 
 	go func() {
-
-		connection, err := socket(ls.messageType)
-		if err != nil {
-			ls.logger.Errorf("Error while dialing into socket %s, %s, %s", ls.messageType, ls.inst.identifier(), err)
-			return
+		var connection net.Conn
+		i := 0
+		for {
+			var err error
+			connection, err = socket(ls.messageType)
+			if err == nil {
+				break
+			} else {
+				ls.logger.Errorf("Error while dialing into socket %s, %s, %s", ls.messageType, ls.inst.identifier(), err)
+				i += 1
+				if i < 86400 {
+					time.Sleep(1 * time.Second)
+				} else {
+					ls.logger.Errorf("Giving up after %d tries dialing into socket %s, %s, %s", i, ls.messageType, ls.inst.identifier(), err)
+					return
+				}
+			}
 		}
+
 		defer func() {
 			connection.Close()
 			ls.logger.Infof("Stopped reading from socket %s, %s", ls.messageType, ls.inst.identifier())
