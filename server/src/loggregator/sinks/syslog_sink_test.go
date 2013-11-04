@@ -48,7 +48,7 @@ func (r *SyslogWriterRecorder) Connect() error {
 	}
 }
 
-func (r *SyslogWriterRecorder) WriteStdout(b []byte, timestamp int64) (int, error) {
+func (r *SyslogWriterRecorder) WriteStdout(b []byte, source string, timestamp int64) (int, error) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -61,7 +61,7 @@ func (r *SyslogWriterRecorder) WriteStdout(b []byte, timestamp int64) (int, erro
 	}
 }
 
-func (r *SyslogWriterRecorder) WriteStderr(b []byte, timestamp int64) (int, error) {
+func (r *SyslogWriterRecorder) WriteStderr(b []byte, source string, timestamp int64) (int, error) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -153,9 +153,8 @@ func TestThatItSendsStdOutAsInfo(t *testing.T) {
 	assert.NoError(t, err)
 	sink.Channel() <- logMessage
 	data := <-fakeSyslogServer.dataReadChannel
-	assert.Contains(t, string(data), "<14>1")
-	assert.Contains(t, string(data), "appId")
-	assert.Contains(t, string(data), "hi")
+	assert.Contains(t, string(data), "61 <14>1 ")
+	assert.Contains(t, string(data), " loggregator appId DEA - - hi\n")
 }
 
 func TestThatItStripsNullControlCharacterFromMsg(t *testing.T) {
@@ -210,7 +209,7 @@ func TestThatItUsesOctetFramingWhenSending(t *testing.T) {
 
 	syslogMsg := string(data)
 
-	syslogRegexp := regexp.MustCompile(`<11>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([-+]\d{2}:\d{2}) loggregator appId - - - err\n`)
+	syslogRegexp := regexp.MustCompile(`<11>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([-+]\d{2}:\d{2}) loggregator appId DEA - - err\n`)
 	msgBeforeOctetCounting := syslogRegexp.FindString(syslogMsg)
 	assert.True(t, strings.HasPrefix(syslogMsg, strconv.Itoa(len(msgBeforeOctetCounting))+" "))
 }
@@ -232,7 +231,7 @@ func TestThatItUsesTheOriginalTimestampOfTheLogmessageWhenSending(t *testing.T) 
 	sink.Channel() <- logMessage
 	data := <-fakeSyslogServer2.dataReadChannel
 
-	assert.Equal(t, "60 <11>1 "+expectedTimeString+" loggregator appId - - - err\n", string(data))
+	assert.Equal(t, "62 <11>1 "+expectedTimeString+" loggregator appId DEA - - err\n", string(data))
 }
 
 func TestThatItHandlesMessagesEvenIfThereIsNoSyslogServer(t *testing.T) {
