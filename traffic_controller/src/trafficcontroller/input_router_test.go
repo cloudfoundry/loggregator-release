@@ -105,26 +105,26 @@ func TestThatItWorksWithTwoLoggregators(t *testing.T) {
 	assert.Equal(t, string(receivedMsg.GetMessage()), "Another message")
 }
 
-//func TestThatItWorksWithLogEnvelope(t *testing.T) {
-//	listener := agentlistener.NewAgentListener("localhost:9902", logger)
-//	dataChannel := listener.Start()
-//
-//	loggregatorServers := []string{"localhost:9902"}
-//	hasher := hasher.NewHasher(loggregatorServers)
-//	r, err := NewRouter("localhost:3551", hasher, newCfConfig(), logger)
-//	assert.NoError(t, err)
-//
-//	go r.Start(logger)
-//	time.Sleep(50 * time.Millisecond)
-//
-//	logEmitter, _ := emitter.NewLogEnvelopeEmitter("localhost:3551", "ROUTER", "42", "secret", logger)
-//	logEmitter.Emit("my_awesome_app", "Hello World")
-//
-//	received := <-dataChannel
-//
-//	receivedEnvelope := &logmessage.LogEnvelope{}
-//	proto.Unmarshal(received, receivedEnvelope)
-//
-//	assert.Equal(t, receivedEnvelope.GetLogMessage().GetAppId(), "my_awesome_app")
-//	assert.Equal(t, string(receivedEnvelope.GetLogMessage().GetMessage()), "Hello World")
-//}
+func TestThatItWorksWithLogEnvelope(t *testing.T) {
+	listener := agentlistener.NewAgentListener("localhost:9902", logger)
+	dataChannel := listener.Start()
+
+	loggregatorServers := []string{"localhost:9902"}
+	hasher := hasher.NewHasher(loggregatorServers)
+	r, err := NewRouter("localhost:3551", hasher, newCfConfig(), logger)
+	assert.NoError(t, err)
+
+	go r.Start(logger)
+	time.Sleep(50 * time.Millisecond)
+
+	logEmitter, _ := emitter.NewLogEnvelopeEmitter("localhost:3551", "RTR", "42", "secret", logger)
+	logEmitter.Emit("my_awesome_app", "Hello World")
+
+	received := <-dataChannel
+
+	receivedEnvelope := &logmessage.LogEnvelope{}
+	proto.Unmarshal(received, receivedEnvelope)
+
+	assert.Equal(t, receivedEnvelope.GetLogMessage().GetAppId(), "my_awesome_app")
+	assert.Equal(t, string(receivedEnvelope.GetLogMessage().GetMessage()), "Hello World")
+}
