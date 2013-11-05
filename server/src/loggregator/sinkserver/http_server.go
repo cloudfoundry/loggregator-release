@@ -18,13 +18,14 @@ const (
 )
 
 type httpServer struct {
-	messageRouter     *messageRouter
-	keepAliveInterval time.Duration
-	logger            *gosteno.Logger
+	messageRouter           *messageRouter
+	keepAliveInterval       time.Duration
+	protoBufferUnmarshaller func([]byte) (*logmessage.Message, error)
+	logger                  *gosteno.Logger
 }
 
-func NewHttpServer(messageRouter *messageRouter, keepAliveInterval time.Duration, logger *gosteno.Logger) *httpServer {
-	return &httpServer{messageRouter, keepAliveInterval, logger}
+func NewHttpServer(messageRouter *messageRouter, keepAliveInterval time.Duration, protoBufferUnmarshaller func([]byte) (*logmessage.Message, error), logger *gosteno.Logger) *httpServer {
+	return &httpServer{messageRouter, keepAliveInterval, protoBufferUnmarshaller, logger}
 }
 
 func (httpServer *httpServer) Start(incomingProtobufChan <-chan []byte, apiEndpoint string) {
@@ -42,7 +43,7 @@ func (httpServer *httpServer) Start(incomingProtobufChan <-chan []byte, apiEndpo
 func (httpServer *httpServer) ParseProtobuffers(incomingProtobufChan <-chan []byte) {
 	for {
 		data := <-incomingProtobufChan
-		message, err := logmessage.ParseProtobuffer(data)
+		message, err := httpServer.protoBufferUnmarshaller(data)
 		if err != nil {
 			httpServer.logger.Errorf("Log message could not be unmarshaled. Dropping it... Error: %v. Data: %v", err, data)
 			continue

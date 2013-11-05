@@ -9,6 +9,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"loggregator/sinkserver"
 	"math/rand"
 	"os"
@@ -24,6 +25,7 @@ type Config struct {
 	OutgoingPort           uint32
 	LogFilePath            string
 	MaxRetainedLogMessages uint
+	SharedSecret           string
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
@@ -86,7 +88,12 @@ func main() {
 	incomingData := listener.Start()
 
 	messageRouter := sinkserver.NewMessageRouter(config.MaxRetainedLogMessages, logger)
-	httpServer := sinkserver.NewHttpServer(messageRouter, 30*time.Second, logger)
+
+	unmarshaller := func(data []byte) (*logmessage.Message, error) {
+		return logmessage.ParseProtobuffer(data, config.SharedSecret)
+	}
+
+	httpServer := sinkserver.NewHttpServer(messageRouter, 30*time.Second, unmarshaller, logger)
 
 	cfc, err := cfcomponent.NewComponent(
 		logger,

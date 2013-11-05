@@ -2,6 +2,7 @@ package server_testhelpers
 
 import (
 	"code.google.com/p/go.net/websocket"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -44,4 +45,10 @@ func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string)
 		}
 	}()
 	return ws, dontKeepAliveChan, connectionDroppedChannel
+}
+
+func UnmarshallerMaker(secret string) func([]byte) (*logmessage.Message, error) {
+	return func(data []byte) (*logmessage.Message, error) {
+		return logmessage.ParseProtobuffer(data, secret)
+	}
 }
