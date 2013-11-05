@@ -75,7 +75,7 @@ func main() {
 	}
 	// ** END Config Setup
 
-	loggregatorEmitter, err := emitter.NewLogEnvelopeEmitter(config.LoggregatorAddress, "APP", "NA", config.SharedSecret, logger)
+	loggregatorEmitter, err := emitter.NewEmitter(config.LoggregatorAddress, "APP", "NA", config.SharedSecret, logger)
 
 	if err != nil {
 		panic(err)

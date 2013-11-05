@@ -32,16 +32,16 @@ func TestThatItWorksWithOneLoggregator(t *testing.T) {
 	go r.Start(logger)
 	time.Sleep(50 * time.Millisecond)
 
-	logEmitter, _ := emitter.NewLogMessageEmitter("localhost:3456", "ROUTER", "42", logger)
+	logEmitter, _ := emitter.NewEmitter("localhost:3456", "ROUTER", "42", "secret", logger)
 	logEmitter.Emit("my_awesome_app", "Hello World")
 
 	received := <-dataChannel
 
-	receivedMessage := &logmessage.LogMessage{}
-	proto.Unmarshal(received, receivedMessage)
+	receivedEnvelope := &logmessage.LogEnvelope{}
+	proto.Unmarshal(received, receivedEnvelope)
 
-	assert.Equal(t, receivedMessage.GetAppId(), "my_awesome_app")
-	assert.Equal(t, string(receivedMessage.GetMessage()), "Hello World")
+	assert.Equal(t, receivedEnvelope.GetLogMessage().GetAppId(), "my_awesome_app")
+	assert.Equal(t, string(receivedEnvelope.GetLogMessage().GetMessage()), "Hello World")
 }
 
 func TestThatItIgnoresBadMessages(t *testing.T) {
@@ -59,15 +59,15 @@ func TestThatItIgnoresBadMessages(t *testing.T) {
 	lc := loggregatorclient.NewLoggregatorClient("localhost:3455", logger, loggregatorclient.DefaultBufferSize)
 	lc.Send([]byte("This is poorly formatted"))
 
-	logEmitter, _ := emitter.NewLogMessageEmitter("localhost:3455", "ROUTER", "42", logger)
+	logEmitter, _ := emitter.NewEmitter("localhost:3455", "ROUTER", "42", "secret", logger)
 	logEmitter.Emit("my_awesome_app", "Hello World")
 
 	received := <-dataChannel
-	receivedMessage := &logmessage.LogMessage{}
-	proto.Unmarshal(received, receivedMessage)
+	receivedEnvelope := &logmessage.LogEnvelope{}
+	proto.Unmarshal(received, receivedEnvelope)
 
-	assert.Equal(t, receivedMessage.GetAppId(), "my_awesome_app")
-	assert.Equal(t, string(receivedMessage.GetMessage()), "Hello World")
+	assert.Equal(t, receivedEnvelope.GetLogMessage().GetAppId(), "my_awesome_app")
+	assert.Equal(t, string(receivedEnvelope.GetLogMessage().GetMessage()), "Hello World")
 }
 
 func TestThatItWorksWithTwoLoggregators(t *testing.T) {
@@ -85,24 +85,24 @@ func TestThatItWorksWithTwoLoggregators(t *testing.T) {
 	go rt.Start(logger)
 	time.Sleep(50 * time.Millisecond)
 
-	logEmitter, _ := emitter.NewLogMessageEmitter("localhost:3457", "ROUTER", "42", logger)
+	logEmitter, _ := emitter.NewEmitter("localhost:3457", "ROUTER", "42", "secret", logger)
 	logEmitter.Emit("2", "My message")
 
 	receivedData := <-dataChan1
-	receivedMsg := &logmessage.LogMessage{}
-	proto.Unmarshal(receivedData, receivedMsg)
+	receivedEnvelope := &logmessage.LogEnvelope{}
+	proto.Unmarshal(receivedData, receivedEnvelope)
 
-	assert.Equal(t, receivedMsg.GetAppId(), "2")
-	assert.Equal(t, string(receivedMsg.GetMessage()), "My message")
+	assert.Equal(t, receivedEnvelope.GetLogMessage().GetAppId(), "2")
+	assert.Equal(t, string(receivedEnvelope.GetLogMessage().GetMessage()), "My message")
 
 	logEmitter.Emit("1", "Another message")
 
 	receivedData = <-dataChan2
-	receivedMsg = &logmessage.LogMessage{}
-	proto.Unmarshal(receivedData, receivedMsg)
+	receivedEnvelope = &logmessage.LogEnvelope{}
+	proto.Unmarshal(receivedData, receivedEnvelope)
 
-	assert.Equal(t, receivedMsg.GetAppId(), "1")
-	assert.Equal(t, string(receivedMsg.GetMessage()), "Another message")
+	assert.Equal(t, receivedEnvelope.GetLogMessage().GetAppId(), "1")
+	assert.Equal(t, string(receivedEnvelope.GetLogMessage().GetMessage()), "Another message")
 }
 
 func TestThatItWorksWithLogEnvelope(t *testing.T) {
@@ -117,7 +117,7 @@ func TestThatItWorksWithLogEnvelope(t *testing.T) {
 	go r.Start(logger)
 	time.Sleep(50 * time.Millisecond)
 
-	logEmitter, _ := emitter.NewLogEnvelopeEmitter("localhost:3551", "RTR", "42", "secret", logger)
+	logEmitter, _ := emitter.NewEmitter("localhost:3551", "RTR", "42", "secret", logger)
 	logEmitter.Emit("my_awesome_app", "Hello World")
 
 	received := <-dataChannel
