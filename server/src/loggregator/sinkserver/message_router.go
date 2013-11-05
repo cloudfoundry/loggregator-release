@@ -11,7 +11,7 @@ import (
 )
 
 type messageRouter struct {
-	dumpBuffer                  uint
+	dumpBufferSize              uint
 	parsedMessageChan           chan *logmessage.Message
 	sinkCloseChan               chan sinks.Sink
 	sinkOpenChan                chan sinks.Sink
@@ -35,7 +35,7 @@ func NewMessageRouter(maxRetainedLogMessages uint, logger *gosteno.Logger) *mess
 		sinkCloseChan:     sinkCloseChan,
 		sinkOpenChan:      sinkOpenChan,
 		dumpReceiverChan:  dumpReceiverChan,
-		dumpBuffer:        maxRetainedLogMessages,
+		dumpBufferSize:    maxRetainedLogMessages,
 		RWMutex:           &sync.RWMutex{}}
 }
 
@@ -72,7 +72,7 @@ func (messageRouter *messageRouter) Start() {
 }
 
 func (messageRouter *messageRouter) registerDumpChan(appId string) <-chan *logmessage.Message {
-	dumpChan := make(chan *logmessage.Message, messageRouter.dumpBuffer)
+	dumpChan := make(chan *logmessage.Message, messageRouter.dumpBufferSize)
 	dr := dumpReceiver{appId: appId, outputChannel: dumpChan}
 	messageRouter.dumpReceiverChan <- dr
 	return dumpChan
@@ -114,8 +114,10 @@ func (messageRouter *messageRouter) unregisterSink(s sinks.Sink, activeSinks *gr
 
 func (messageRouter *messageRouter) manageDumps(activeSinks *groupedsinks.GroupedSinks, appId string) {
 	if activeSinks.DumpFor(appId) == nil {
-		s := sinks.NewDumpSink(appId, messageRouter.dumpBuffer, messageRouter.logger)
+		s := sinks.NewDumpSink(appId, messageRouter.dumpBufferSize, messageRouter.logger)
+
 		ok := messageRouter.registerSink(s, activeSinks)
+
 		if ok {
 			go s.Run()
 		}
