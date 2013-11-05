@@ -10,7 +10,7 @@ import (
 type Sink interface {
 	instrumentation.Instrumentable
 	AppId() string
-	Run(sinkCloseChan chan Sink)
+	Run()
 	Channel() chan *logmessage.Message
 	Identifier() string
 	Logger() *gosteno.Logger

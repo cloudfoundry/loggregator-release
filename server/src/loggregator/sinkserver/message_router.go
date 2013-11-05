@@ -117,7 +117,7 @@ func (messageRouter *messageRouter) manageDumps(activeSinks *groupedsinks.Groupe
 		s := sinks.NewDumpSink(appId, messageRouter.dumpBuffer, messageRouter.logger)
 		ok := messageRouter.registerSink(s, activeSinks)
 		if ok {
-			go s.Run(messageRouter.sinkCloseChan)
+			go s.Run()
 		}
 	}
 }
@@ -154,7 +154,7 @@ func (messageRouter *messageRouter) manageDrains(activeSinks *groupedsinks.Group
 			s := sinks.NewSyslogSink(appId, drainUrl, messageRouter.logger, sysLogger)
 			ok := messageRouter.registerSink(s, activeSinks)
 			if ok {
-				go s.Run(messageRouter.sinkCloseChan)
+				go s.Run()
 			}
 		}
 	}

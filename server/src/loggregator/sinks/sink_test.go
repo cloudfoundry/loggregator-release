@@ -10,8 +10,8 @@ import (
 func TestThatOnlyOneRequestCloseOccurs(t *testing.T) {
 	closeChan := make(chan Sink)
 
-	sink := testSink{"1"}
-	go sink.Run(closeChan)
+	sink := testSink{"1", closeChan}
+	go sink.Run()
 	runtime.Gosched()
 
 	closeSink := <-closeChan

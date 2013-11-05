@@ -33,7 +33,7 @@ func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, s
 	}
 }
 
-func (s *SyslogSink) Run(closeChan chan Sink) {
+func (s *SyslogSink) Run() {
 	s.logger.Infof("Syslog Sink %s: Running.", s.drainUrl)
 	defer s.logger.Errorf("Syslog Sink %s: Stopped. This should never happen", s.drainUrl)
 

@@ -145,8 +145,7 @@ func TestThatItSendsStdOutAsInfo(t *testing.T) {
 	sysLogger := NewSyslogWriter("tcp", "localhost:24631", "appId")
 	sink := NewSyslogSink("appId", "syslog://localhost:24631", loggertesthelper.Logger(), sysLogger)
 
-	closeChan := make(chan Sink)
-	go sink.Run(closeChan)
+	go sink.Run()
 	defer close(sink.Channel())
 
 	logMessage, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "hi", "appId"), "")
@@ -161,8 +160,7 @@ func TestThatItStripsNullControlCharacterFromMsg(t *testing.T) {
 	sysLogger := NewSyslogWriter("tcp", "localhost:24631", "appId")
 	sink := NewSyslogSink("appId", "syslog://localhost:24631", loggertesthelper.Logger(), sysLogger)
 
-	closeChan := make(chan Sink)
-	go sink.Run(closeChan)
+	go sink.Run()
 	defer close(sink.Channel())
 
 	logMessage, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, string(0)+" hi", "appId"), "")
@@ -179,8 +177,7 @@ func TestThatItStripsNullControlCharacterFromMsg(t *testing.T) {
 func TestThatItSendsStdErrAsErr(t *testing.T) {
 	sysLogger := NewSyslogWriter("tcp", "localhost:24632", "appId")
 	sink := NewSyslogSink("appId", "syslog://localhost:24632", loggertesthelper.Logger(), sysLogger)
-	closeChan := make(chan Sink)
-	go sink.Run(closeChan)
+	go sink.Run()
 	defer close(sink.Channel())
 
 	logMessage, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"), "")
@@ -197,8 +194,7 @@ func TestThatItSendsStdErrAsErr(t *testing.T) {
 func TestThatItUsesOctetFramingWhenSending(t *testing.T) {
 	sysLogger := NewSyslogWriter("tcp", "localhost:24632", "appId")
 	sink := NewSyslogSink("appId", "syslog://localhost:24632", loggertesthelper.Logger(), sysLogger)
-	closeChan := make(chan Sink)
-	go sink.Run(closeChan)
+	go sink.Run()
 	defer close(sink.Channel())
 
 	logMessage, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"), "")
@@ -217,8 +213,7 @@ func TestThatItUsesOctetFramingWhenSending(t *testing.T) {
 func TestThatItUsesTheOriginalTimestampOfTheLogmessageWhenSending(t *testing.T) {
 	sysLogger := NewSyslogWriter("tcp", "localhost:24632", "appId")
 	sink := NewSyslogSink("appId", "syslog://localhost:24632", loggertesthelper.Logger(), sysLogger)
-	closeChan := make(chan Sink)
-	go sink.Run(closeChan)
+	go sink.Run()
 	defer close(sink.Channel())
 
 	logMessage, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"), "")
@@ -237,8 +232,7 @@ func TestThatItUsesTheOriginalTimestampOfTheLogmessageWhenSending(t *testing.T) 
 func TestThatItHandlesMessagesEvenIfThereIsNoSyslogServer(t *testing.T) {
 	sysLogger := NewSyslogWriter("tcp", "localhost:-1", "appId")
 	sink := NewSyslogSink("appId", "syslog://localhost:-1", loggertesthelper.Logger(), sysLogger)
-	closeChan := make(chan Sink)
-	go sink.Run(closeChan)
+	go sink.Run()
 	defer close(sink.Channel())
 	logMessage, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"), "")
 	assert.NoError(t, err)
@@ -253,10 +247,9 @@ func TestSysLoggerComesUpLate(t *testing.T) {
 	sysLogger.SetUp(false)
 	sink := NewSyslogSink("appId", "url_not_used", loggertesthelper.Logger(), sysLogger)
 
-	closeChan := make(chan Sink)
 	done := make(chan bool)
 	go func() {
-		sink.Run(closeChan)
+		sink.Run()
 		done <- true
 	}()
 
@@ -286,10 +279,9 @@ func TestSysLoggerDiesAndComesBack(t *testing.T) {
 	sink := NewSyslogSink("appId", "url_not_used", loggertesthelper.Logger(), sysLogger)
 	sysLogger.SetUp(true)
 
-	closeChan := make(chan Sink)
 	done := make(chan bool)
 	go func() {
-		sink.Run(closeChan)
+		sink.Run()
 		done <- true
 	}()
 

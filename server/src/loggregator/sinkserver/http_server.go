@@ -67,11 +67,11 @@ func (httpServer *httpServer) websocketSinkHandler(ws *websocket.Conn) {
 		return
 	}
 
-	s := sinks.NewWebsocketSink(appId, httpServer.logger, ws, clientAddress, httpServer.keepAliveInterval)
+	s := sinks.NewWebsocketSink(appId, httpServer.logger, ws, clientAddress, httpServer.messageRouter.sinkCloseChan, httpServer.keepAliveInterval)
 	httpServer.logger.Debugf("HttpServer: Requesting a wss sink for app %s", s.AppId())
 	httpServer.messageRouter.sinkOpenChan <- s
 
-	s.Run(httpServer.messageRouter.sinkCloseChan)
+	s.Run()
 }
 
 func (httpServer *httpServer) dumpSinkHandler(ws *websocket.Conn) {

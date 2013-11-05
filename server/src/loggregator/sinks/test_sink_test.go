@@ -9,7 +9,8 @@ import (
 )
 
 type testSink struct {
-	name string
+	name          string
+	sinkCloseChan chan Sink
 }
 
 func (sink *testSink) AppId() string {
@@ -28,11 +29,11 @@ func (sink *testSink) Logger() *gosteno.Logger {
 	return loggertesthelper.Logger()
 }
 
-func (sink *testSink) Run(sinkCloseChan chan Sink) {
+func (sink *testSink) Run() {
 	alreadyRequestedClose := false
 	for {
 		runtime.Gosched()
-		requestClose(sink, sinkCloseChan, &alreadyRequestedClose)
+		requestClose(sink, sink.sinkCloseChan, &alreadyRequestedClose)
 	}
 }
 

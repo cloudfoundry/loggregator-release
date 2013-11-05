@@ -27,7 +27,7 @@ func NewDumpSink(appId string, bufferSize uint, givenLogger *gosteno.Logger) *Du
 	return dumpSink
 }
 
-func (d *DumpSink) Run(sinkCloseChan chan Sink) {
+func (d *DumpSink) Run() {
 	d.Lock()
 	defer d.Unlock()
 

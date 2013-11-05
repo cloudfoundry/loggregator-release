@@ -21,9 +21,8 @@ func dumpAllMessages(dump *DumpSink) []*logmessage.Message {
 }
 
 func TestDumpForOneMessage(t *testing.T) {
-	closeChan := make(chan Sink)
 	dump := NewDumpSink("myApp", 1, loggertesthelper.Logger())
-	dump.Run(closeChan)
+	dump.Run()
 
 	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "hi", "appId"), "")
 	dump.Channel() <- logMessage
@@ -35,9 +34,8 @@ func TestDumpForOneMessage(t *testing.T) {
 func TestDumpForTwoMessages(t *testing.T) {
 	var bufferSize uint
 	bufferSize = 2
-	closeChan := make(chan Sink)
 	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
-	dump.Run(closeChan)
+	dump.Run()
 
 	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "1", "appId"), "")
 	dump.Channel() <- logMessage
@@ -55,9 +53,8 @@ func TestDumpForTwoMessages(t *testing.T) {
 func TestTheDumpSinkNeverFillsUp(t *testing.T) {
 	var bufferSize uint
 	bufferSize = 3
-	closeChan := make(chan Sink)
 	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
-	dump.Run(closeChan)
+	dump.Run()
 
 	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "hi", "appId"), "")
 
@@ -70,9 +67,8 @@ func TestTheDumpSinkNeverFillsUp(t *testing.T) {
 func TestDumpAlwaysReturnsTheNewestMessages(t *testing.T) {
 	var bufferSize uint
 	bufferSize = 2
-	closeChan := make(chan Sink)
 	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
-	dump.Run(closeChan)
+	dump.Run()
 
 	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "1", "appId"), "")
 	dump.Channel() <- logMessage
@@ -92,9 +88,8 @@ func TestDumpAlwaysReturnsTheNewestMessages(t *testing.T) {
 func TestDumpReturnsAllRecentMessagesToMultipleDumpRequests(t *testing.T) {
 	var bufferSize uint
 	bufferSize = 2
-	closeChan := make(chan Sink)
 	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
-	dump.Run(closeChan)
+	dump.Run()
 
 	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "1", "appId"), "")
 	dump.Channel() <- logMessage
@@ -119,9 +114,9 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequests(t *testing.T) {
 func TestDumpReturnsAllRecentMessagesToMultipleDumpRequestsWithMessagesCloningInInTheMeantime(t *testing.T) {
 	var bufferSize uint
 	bufferSize = 2
-	closeChan := make(chan Sink)
+
 	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
-	dump.Run(closeChan)
+	dump.Run()
 
 	logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "1", "appId"), "")
 	dump.Channel() <- logMessage
@@ -151,9 +146,8 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequestsWithMessagesCloningIn
 func TestDumpWithLotsOfMessages(t *testing.T) {
 	var bufferSize uint
 	bufferSize = 2
-	closeChan := make(chan Sink)
 	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
-	dump.Run(closeChan)
+	dump.Run()
 
 	for i := 0; i < 100; i++ {
 		logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, strconv.Itoa(i), "appId"), "")
@@ -188,9 +182,8 @@ func TestDumpWithLotsOfMessages(t *testing.T) {
 func TestDumpWithLotsOfMessagesAndLargeBuffer(t *testing.T) {
 	var bufferSize uint
 	bufferSize = 200
-	closeChan := make(chan Sink)
 	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
-	dump.Run(closeChan)
+	dump.Run()
 
 	for i := 0; i < 1000; i++ {
 		logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, strconv.Itoa(i), "appId"), "")
@@ -225,9 +218,8 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer(t *testing.T) {
 func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
 	var bufferSize uint
 	bufferSize = 200
-	closeChan := make(chan Sink)
 	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
-	dump.Run(closeChan)
+	dump.Run()
 
 	for i := 0; i < 100; i++ {
 		logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, strconv.Itoa(i), "appId"), "")
@@ -270,9 +262,8 @@ func TestDumpWithLotsOfDumps(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	var bufferSize uint
 	bufferSize = 5
-	closeChan := make(chan Sink)
 	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
-	dump.Run(closeChan)
+	dump.Run()
 
 	for i := 0; i < 10; i++ {
 		logMessage, _ := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, strconv.Itoa(i), "appId"), "")
