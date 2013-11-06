@@ -148,7 +148,7 @@ func TestThatItSendsStdOutAsInfo(t *testing.T) {
 	go sink.Run()
 	defer close(sink.Channel())
 
-	logMessage, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, "hi", "appId"), "")
+	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledLogMessage(t, "hi", "appId"))
 	assert.NoError(t, err)
 	sink.Channel() <- logMessage
 	data := <-fakeSyslogServer.dataReadChannel
@@ -163,7 +163,7 @@ func TestThatItStripsNullControlCharacterFromMsg(t *testing.T) {
 	go sink.Run()
 	defer close(sink.Channel())
 
-	logMessage, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledLogMessage(t, string(0)+" hi", "appId"), "")
+	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledLogMessage(t, string(0)+" hi", "appId"))
 	assert.NoError(t, err)
 	sink.Channel() <- logMessage
 
@@ -180,7 +180,7 @@ func TestThatItSendsStdErrAsErr(t *testing.T) {
 	go sink.Run()
 	defer close(sink.Channel())
 
-	logMessage, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"), "")
+	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"))
 	assert.NoError(t, err)
 
 	sink.Channel() <- logMessage
@@ -197,7 +197,7 @@ func TestThatItUsesOctetFramingWhenSending(t *testing.T) {
 	go sink.Run()
 	defer close(sink.Channel())
 
-	logMessage, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"), "")
+	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"))
 	assert.NoError(t, err)
 
 	sink.Channel() <- logMessage
@@ -216,7 +216,7 @@ func TestThatItUsesTheOriginalTimestampOfTheLogmessageWhenSending(t *testing.T) 
 	go sink.Run()
 	defer close(sink.Channel())
 
-	logMessage, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"), "")
+	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"))
 	expectedTimeString := strings.Replace(time.Unix(0, logMessage.GetLogMessage().GetTimestamp()).Format(time.RFC3339), "Z", "+00:00", 1)
 
 	assert.NoError(t, err)
@@ -234,7 +234,7 @@ func TestThatItHandlesMessagesEvenIfThereIsNoSyslogServer(t *testing.T) {
 	sink := NewSyslogSink("appId", "syslog://localhost:-1", loggertesthelper.Logger(), sysLogger)
 	go sink.Run()
 	defer close(sink.Channel())
-	logMessage, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"), "")
+	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"))
 	assert.NoError(t, err)
 
 	for i := 0; i < 100; i++ {
@@ -255,7 +255,7 @@ func TestSysLoggerComesUpLate(t *testing.T) {
 
 	for i := 0; i < 15; i++ {
 		msg := fmt.Sprintf("message no %v", i)
-		logMessage, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledErrorLogMessage(t, msg, "appId"), "")
+		logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, msg, "appId"))
 		assert.NoError(t, err)
 
 		sink.Channel() <- logMessage
@@ -286,7 +286,7 @@ func TestSysLoggerDiesAndComesBack(t *testing.T) {
 	}()
 
 	msg := fmt.Sprintf("first message")
-	logMessage, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledErrorLogMessage(t, msg, "appId"), "")
+	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, msg, "appId"))
 	assert.NoError(t, err)
 	sink.Channel() <- logMessage
 
@@ -302,7 +302,7 @@ func TestSysLoggerDiesAndComesBack(t *testing.T) {
 
 	for i := 0; i < 11; i++ {
 		msg := fmt.Sprintf("message no %v", i)
-		logMessage, err := logmessage.ParseProtobuffer(messagetesthelpers.MarshalledErrorLogMessage(t, msg, "appId"), "")
+		logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, msg, "appId"))
 		assert.NoError(t, err)
 
 		sink.Channel() <- logMessage

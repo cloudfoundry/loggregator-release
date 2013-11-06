@@ -19,11 +19,13 @@ const (
 	SERVER_PORT = "8081"
 )
 
+const SECRET = "secret"
+
 func init() {
 	dataReadChannel = make(chan []byte, 20)
 	TestMessageRouter = NewMessageRouter(1024, loggertesthelper.Logger())
 	go TestMessageRouter.Start()
-	TestHttpServer = NewHttpServer(TestMessageRouter, 10*time.Millisecond, testhelpers.UnmarshallerMaker(""), loggertesthelper.Logger())
+	TestHttpServer = NewHttpServer(TestMessageRouter, 10*time.Millisecond, testhelpers.UnmarshallerMaker(SECRET), loggertesthelper.Logger())
 	go TestHttpServer.Start(dataReadChannel, "localhost:"+SERVER_PORT)
 	time.Sleep(1 * time.Millisecond)
 }
@@ -65,8 +67,10 @@ func TestMetrics(t *testing.T) {
 	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
 	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Value, oldWebsocketSinksCounter)
 
-	marshalledProtoBuffer := messagetesthelpers.MarshalledDrainedLogMessage(t, "expectedMessageString", "myMetricsApp", "syslog://localhost:32564")
-	dataReadChannel <- marshalledProtoBuffer
+	logMessage := messagetesthelpers.NewLogMessage("expectedMessageString", "myMetricsApp")
+	logMessage.DrainUrls = []string{"syslog://localhost:32564"}
+	logEnvelope := messagetesthelpers.MarshalledLogEnvelope(t, logMessage, SECRET)
+	dataReadChannel <- logEnvelope
 
 	select {
 	case <-time.After(1000 * time.Millisecond):
@@ -83,7 +87,7 @@ func TestMetrics(t *testing.T) {
 	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
 	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Value, oldWebsocketSinksCounter)
 
-	dataReadChannel <- marshalledProtoBuffer
+	dataReadChannel <- logEnvelope
 
 	select {
 	case <-time.After(1000 * time.Millisecond):

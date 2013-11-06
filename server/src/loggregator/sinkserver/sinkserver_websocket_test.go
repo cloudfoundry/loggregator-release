@@ -12,15 +12,17 @@ func TestThatItSends(t *testing.T) {
 	receivedChan := make(chan []byte, 2)
 
 	expectedMessageString := "Some data"
-	expectedMessage := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp01")
+	logMessage := messagetesthelpers.NewLogMessage(expectedMessageString, "myApp01")
+	logEnvelope := messagetesthelpers.MarshalledLogEnvelope(t, logMessage, SECRET)
 	otherMessageString := "Some more stuff"
-	otherMessage := messagetesthelpers.MarshalledLogMessage(t, otherMessageString, "myApp01")
+	logMessage = messagetesthelpers.NewLogMessage(otherMessageString, "myApp01")
+	otherLogEnvelope := messagetesthelpers.MarshalledLogEnvelope(t, logMessage, SECRET)
 
 	_, dontKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp01")
 	WaitForWebsocketRegistration()
 
-	dataReadChannel <- expectedMessage
-	dataReadChannel <- otherMessage
+	dataReadChannel <- logEnvelope
+	dataReadChannel <- otherLogEnvelope
 
 	select {
 	case <-time.After(1 * time.Second):
@@ -48,9 +50,10 @@ func TestThatItSendsAllDataToAllSinks(t *testing.T) {
 	WaitForWebsocketRegistration()
 
 	expectedMessageString := "Some Data"
-	expectedMarshalledProtoBuffer := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp")
+	logMessage := messagetesthelpers.NewLogMessage(expectedMessageString, "myApp")
+	logEnvelope := messagetesthelpers.MarshalledLogEnvelope(t, logMessage, SECRET)
 
-	dataReadChannel <- expectedMarshalledProtoBuffer
+	dataReadChannel <- logEnvelope
 
 	select {
 	case <-time.After(200 * time.Millisecond):
@@ -76,16 +79,18 @@ func TestThatItSendsAllDataToAllSinks(t *testing.T) {
 func TestThatItSendsLogsToProperAppSink(t *testing.T) {
 	receivedChan := make(chan []byte)
 
-	otherAppsMarshalledMessage := messagetesthelpers.MarshalledLogMessage(t, "Some other message", "otherApp")
+	otherLogMessage := messagetesthelpers.NewLogMessage("Some other message", "otherApp")
+	otherLogEnvelope := messagetesthelpers.MarshalledLogEnvelope(t, otherLogMessage, SECRET)
 
 	expectedMessageString := "My important message"
-	myAppsMarshalledMessage := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp02")
+	logMessage := messagetesthelpers.NewLogMessage(expectedMessageString, "myApp02")
+	logEnvelope := messagetesthelpers.MarshalledLogEnvelope(t, logMessage, SECRET)
 
 	_, stopKeepAlive, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp02")
 	WaitForWebsocketRegistration()
 
-	dataReadChannel <- otherAppsMarshalledMessage
-	dataReadChannel <- myAppsMarshalledMessage
+	dataReadChannel <- otherLogEnvelope
+	dataReadChannel <- logEnvelope
 
 	select {
 	case <-time.After(1 * time.Second):
@@ -102,9 +107,10 @@ func TestThatItDumpsLogsBeforeTailing(t *testing.T) {
 	receivedChan := make(chan []byte)
 
 	expectedMessageString := "My important message"
-	myAppsMarshalledMessage := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp06")
+	logMessage := messagetesthelpers.NewLogMessage(expectedMessageString, "myApp06")
+	logEnvelope := messagetesthelpers.MarshalledLogEnvelope(t, logMessage, SECRET)
 
-	dataReadChannel <- myAppsMarshalledMessage
+	dataReadChannel <- logEnvelope
 
 	_, stopKeepAlive, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp06")
 	WaitForWebsocketRegistration()
@@ -117,9 +123,10 @@ func TestThatItDumpsLogsBeforeTailing(t *testing.T) {
 	}
 
 	expectedMessageString2 := "My Other important message"
-	myAppsMarshalledMessage = messagetesthelpers.MarshalledLogMessage(t, expectedMessageString2, "myApp06")
+	logMessage = messagetesthelpers.NewLogMessage(expectedMessageString2, "myApp06")
+	logEnvelope = messagetesthelpers.MarshalledLogEnvelope(t, logMessage, SECRET)
 
-	dataReadChannel <- myAppsMarshalledMessage
+	dataReadChannel <- logEnvelope
 
 	select {
 	case <-time.After(1 * time.Second):
@@ -150,8 +157,9 @@ func TestDropUnmarshallableMessage(t *testing.T) {
 
 	sink.Close()
 	expectedMessageString := "My important message"
-	mySpaceMarshalledMessage := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp03")
-	dataReadChannel <- mySpaceMarshalledMessage
+	logMessage := messagetesthelpers.NewLogMessage(expectedMessageString, "myApp03")
+	logEnvelope := messagetesthelpers.MarshalledLogEnvelope(t, logMessage, SECRET)
+	dataReadChannel <- logEnvelope
 
 	stopKeepAlive <- true
 	WaitForWebsocketRegistration()
@@ -168,9 +176,10 @@ func TestDontDropSinkThatWorks(t *testing.T) {
 	}
 
 	expectedMessageString := "Some data"
-	expectedMessage := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp04")
+	logMessage := messagetesthelpers.NewLogMessage(expectedMessageString, "myApp04")
+	logEnvelope := messagetesthelpers.MarshalledLogEnvelope(t, logMessage, SECRET)
 
-	dataReadChannel <- expectedMessage
+	dataReadChannel <- logEnvelope
 
 	select {
 	case <-time.After(1 * time.Second):
@@ -204,8 +213,9 @@ func TestKeepAlive(t *testing.T) {
 	time.Sleep(60 * time.Millisecond) //wait a little bit to make sure the keep-alive has successfully been stopped
 
 	expectedMessageString := "My important message"
-	myAppsMarshalledMessage := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myApp05")
-	dataReadChannel <- myAppsMarshalledMessage
+	logMessage := messagetesthelpers.NewLogMessage(expectedMessageString, "myApp05")
+	logEnvelope := messagetesthelpers.MarshalledLogEnvelope(t, logMessage, SECRET)
+	dataReadChannel <- logEnvelope
 
 	select {
 	case msg1, ok := <-receivedChan:

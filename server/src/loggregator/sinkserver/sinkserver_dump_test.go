@@ -18,10 +18,11 @@ func dumpAllMessages(receivedChan chan []byte) [][]byte {
 
 func TestItDumpsAllMessagesForAnAppUser(t *testing.T) {
 	expectedMessageString := "Some data"
-	expectedMessage := messagetesthelpers.MarshalledLogMessage(t, expectedMessageString, "myOtherApp")
+	logMessage := messagetesthelpers.NewLogMessage(expectedMessageString, "myOtherApp")
+	envelope := messagetesthelpers.MarshalledLogEnvelope(t, logMessage, SECRET)
 
-	dataReadChannel <- expectedMessage
-	dataReadChannel <- expectedMessage
+	dataReadChannel <- envelope
+	dataReadChannel <- envelope
 
 	receivedChan := make(chan []byte, 2)
 	_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, DUMP_PATH+"?app=myOtherApp")

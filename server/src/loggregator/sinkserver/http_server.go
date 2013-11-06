@@ -29,7 +29,7 @@ func NewHttpServer(messageRouter *messageRouter, keepAliveInterval time.Duration
 }
 
 func (httpServer *httpServer) Start(incomingProtobufChan <-chan []byte, apiEndpoint string) {
-	go httpServer.ParseProtobuffers(incomingProtobufChan)
+	go httpServer.ParseEnvelopes(incomingProtobufChan)
 
 	httpServer.logger.Infof("HttpServer: Listening for sinks at %s", apiEndpoint)
 	http.Handle(TAIL_PATH, websocket.Handler(httpServer.websocketSinkHandler))
@@ -40,7 +40,7 @@ func (httpServer *httpServer) Start(incomingProtobufChan <-chan []byte, apiEndpo
 	}
 }
 
-func (httpServer *httpServer) ParseProtobuffers(incomingProtobufChan <-chan []byte) {
+func (httpServer *httpServer) ParseEnvelopes(incomingProtobufChan <-chan []byte) {
 	for {
 		data := <-incomingProtobufChan
 		message, err := httpServer.protoBufferUnmarshaller(data)

@@ -90,7 +90,7 @@ func main() {
 	messageRouter := sinkserver.NewMessageRouter(config.MaxRetainedLogMessages, logger)
 
 	unmarshaller := func(data []byte) (*logmessage.Message, error) {
-		return logmessage.ParseProtobuffer(data, config.SharedSecret)
+		return logmessage.ParseEnvelope(data, config.SharedSecret)
 	}
 
 	httpServer := sinkserver.NewHttpServer(messageRouter, 30*time.Second, unmarshaller, logger)

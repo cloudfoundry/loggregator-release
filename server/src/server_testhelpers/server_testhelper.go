@@ -49,6 +49,6 @@ func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string)
 
 func UnmarshallerMaker(secret string) func([]byte) (*logmessage.Message, error) {
 	return func(data []byte) (*logmessage.Message, error) {
-		return logmessage.ParseProtobuffer(data, secret)
+		return logmessage.ParseEnvelope(data, secret)
 	}
 }

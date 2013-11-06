@@ -26,7 +26,7 @@ func init() {
 	time.Sleep(1 * time.Millisecond)
 }
 
-func TestEndtoEndMessage(t *testing.T) {
+func TestEndtoEndMessageShouldNotWork(t *testing.T) {
 	receivedChan := make(chan []byte)
 	ws, _, _ := testhelpers.AddWSSink(t, receivedChan, "8081", "/tail/?app=myApp")
 	defer ws.Close()
@@ -40,7 +40,12 @@ func TestEndtoEndMessage(t *testing.T) {
 	_, err = connection.Write(expectedMessage)
 	assert.NoError(t, err)
 
-	messagetesthelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, <-receivedChan)
+	select {
+	case _ = <-receivedChan:
+		t.Error("Message should have been dropped")
+	case <-time.After(2 * time.Second):
+		//success
+	}
 }
 
 func TestEndtoEndEnvelopeToMessage(t *testing.T) {
