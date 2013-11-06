@@ -19,14 +19,10 @@ func TestThatItSendsAllMessageToKnownDrains(t *testing.T) {
 	<-fakeSyslogDrain.ReadyChan
 
 	expectedMessageString := "Some Data"
-	logMessage1 := messagetesthelpers.NewLogMessage(expectedMessageString, "myApp")
-	logMessage1.DrainUrls = []string{"syslog://localhost:34566"}
-	logEnvelope1 := messagetesthelpers.MarshalledLogEnvelope(t, logMessage1, SECRET)
+	logEnvelope1 := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString, "myApp", SECRET, "syslog://localhost:34566")
 
 	expectedSecondMessageString := "Some Data Without a drainurl"
-	logMessage2 := messagetesthelpers.NewLogMessage(expectedSecondMessageString, "myApp")
-	logMessage2.DrainUrls = []string{"syslog://localhost:34566"}
-	logEnvelope2 := messagetesthelpers.MarshalledLogEnvelope(t, logMessage2, SECRET)
+	logEnvelope2 := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedSecondMessageString, "myApp", SECRET, "syslog://localhost:34566")
 
 	dataReadChannel <- logEnvelope1
 
@@ -73,9 +69,7 @@ func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	<-fakeSyslogDrain.ReadyChan
 
 	expectedMessageString1 := "Some Data 1"
-	logMessage := messagetesthelpers.NewLogMessage(expectedMessageString1, "myApp")
-	logMessage.DrainUrls = []string{"syslog://localhost:34569"}
-	logEnvelope := messagetesthelpers.MarshalledLogEnvelope(t, logMessage, SECRET)
+	logEnvelope := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString1, "myApp", SECRET, "syslog://localhost:34569")
 	dataReadChannel <- logEnvelope
 
 	errorString := "Did not get the first message. Server was up, it should have been there"
@@ -84,17 +78,13 @@ func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	expectedMessageString2 := "Some Data 2"
-	logMessage = messagetesthelpers.NewLogMessage(expectedMessageString2, "myApp")
-	logMessage.DrainUrls = []string{"syslog://localhost:34569"}
-	logEnvelope = messagetesthelpers.MarshalledLogEnvelope(t, logMessage, SECRET)
+	logEnvelope = messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString2, "myApp", SECRET, "syslog://localhost:34569")
 	dataReadChannel <- logEnvelope
 	errorString = "Did get a second message! Shouldn't be since the server is down"
 	AssertMessageNotOnChannel(t, 200, client1ReceivedChan, errorString)
 
 	expectedMessageString3 := "Some Data 3"
-	logMessage = messagetesthelpers.NewLogMessage(expectedMessageString3, "myApp")
-	logMessage.DrainUrls = []string{"syslog://localhost:34569"}
-	logEnvelope = messagetesthelpers.MarshalledLogEnvelope(t, logMessage, SECRET)
+	logEnvelope = messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString3, "myApp", SECRET, "syslog://localhost:34569")
 	dataReadChannel <- logEnvelope
 	errorString = "Did get a third message! Shouldn't be since the server is down"
 	AssertMessageNotOnChannel(t, 200, client1ReceivedChan, errorString)
@@ -111,9 +101,7 @@ func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	time.Sleep(2260 * time.Millisecond)
 
 	expectedMessageString4 := "Some Data 4"
-	logMessage = messagetesthelpers.NewLogMessage(expectedMessageString4, "myApp")
-	logMessage.DrainUrls = []string{"syslog://localhost:34569"}
-	logEnvelope = messagetesthelpers.MarshalledLogEnvelope(t, logMessage, SECRET)
+	logEnvelope = messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString4, "myApp", SECRET, "syslog://localhost:34569")
 	dataReadChannel <- logEnvelope
 
 	errorString = "Did not get the fourth message, but it should have been just fine since the server was up"
@@ -137,10 +125,7 @@ func TestThatItSendsAllDataToAllDrainUrls(t *testing.T) {
 	<-fakeSyslogDrain2.ReadyChan
 
 	expectedMessageString := "Some Data"
-	logMessage := messagetesthelpers.NewLogMessage(expectedMessageString, "myApp")
-	logMessage.DrainUrls = []string{"syslog://localhost:34567", "syslog://localhost:34568"}
-	logEnvelope := messagetesthelpers.MarshalledLogEnvelope(t, logMessage, SECRET)
-
+	logEnvelope := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString, "myApp", SECRET, "syslog://localhost:34567", "syslog://localhost:34568")
 	dataReadChannel <- logEnvelope
 
 	errString := "Did not get message from client 1."
@@ -170,10 +155,7 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 	<-fakeSyslogDrain2.ReadyChan
 
 	expectedMessageString := "Some Data"
-	logMessage := messagetesthelpers.NewLogMessage(expectedMessageString, "myApp")
-	logMessage.DrainUrls = []string{"syslog://localhost:34569"}
-	logEnvelope := messagetesthelpers.MarshalledLogEnvelope(t, logMessage, SECRET)
-
+	logEnvelope := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString, "myApp", SECRET, "syslog://localhost:34569")
 	dataReadChannel <- logEnvelope
 
 	select {

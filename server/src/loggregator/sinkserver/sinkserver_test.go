@@ -67,9 +67,7 @@ func TestMetrics(t *testing.T) {
 	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
 	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Value, oldWebsocketSinksCounter)
 
-	logMessage := messagetesthelpers.NewLogMessage("expectedMessageString", "myMetricsApp")
-	logMessage.DrainUrls = []string{"syslog://localhost:32564"}
-	logEnvelope := messagetesthelpers.MarshalledLogEnvelope(t, logMessage, SECRET)
+	logEnvelope := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, "expectedMessageString", "myMetricsApp", SECRET, "syslog://localhost:32564")
 	dataReadChannel <- logEnvelope
 
 	select {
