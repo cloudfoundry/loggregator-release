@@ -90,9 +90,22 @@ func (messageRouter *messageRouter) registerSink(s sinks.Sink, activeSinks *grou
 		messageRouter.activeSyslogSinksCounter++
 	case *sinks.WebsocketSink:
 		messageRouter.activeWebsocketSinksCounter++
+		go messageRouter.dumpToSink(s, activeSinks)
 	}
 	messageRouter.logger.Infof("MessageRouter: Sink with channel %v requested. Opened it.", s.Channel())
 	return ok
+}
+
+func (messageRouter *messageRouter) dumpToSink(sink sinks.Sink, activeSinks *groupedsinks.GroupedSinks) {
+	dumpChan := make(chan *logmessage.Message, 20)
+	if sink := activeSinks.DumpFor(sink.AppId()); sink != nil {
+		sink.Dump(dumpChan)
+	} else {
+		close(dumpChan)
+	}
+	for message := range dumpChan {
+		sink.Channel() <- message
+	}
 }
 
 func (messageRouter *messageRouter) unregisterSink(s sinks.Sink, activeSinks *groupedsinks.GroupedSinks) {

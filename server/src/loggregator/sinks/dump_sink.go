@@ -34,7 +34,7 @@ func (d *DumpSink) Run() {
 	d.ringBuffer = runNewRingBuffer(d, d.bufferSize, nil)
 }
 
-func (d *DumpSink) Dump(outputChan chan<- *logmessage.Message) {
+func (d *DumpSink) Dump(outputChan chan *logmessage.Message) {
 	d.Lock()
 	defer d.Unlock()
 
@@ -44,7 +44,12 @@ func (d *DumpSink) Dump(outputChan chan<- *logmessage.Message) {
 	close(currentMessageChan)
 	for message := range currentMessageChan {
 		newMessageChan <- message
-		outputChan <- message
+		select {
+		case outputChan <- message:
+		default:
+			<-outputChan
+			outputChan <- message
+		}
 	}
 	close(outputChan)
 	d.ringBuffer.SetOutputChannel(newMessageChan)

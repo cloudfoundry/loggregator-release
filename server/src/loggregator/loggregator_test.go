@@ -64,14 +64,14 @@ func TestEndtoEndEnvelopeToMessage(t *testing.T) {
 
 func TestInvalidEnvelopeEndtoEnd(t *testing.T) {
 	receivedChan := make(chan []byte)
-	ws, _, _ := testhelpers.AddWSSink(t, receivedChan, "8081", "/tail/?app=myApp")
+	ws, _, _ := testhelpers.AddWSSink(t, receivedChan, "8081", "/tail/?app=myApp2")
 	defer ws.Close()
 	time.Sleep(50 * time.Millisecond)
 
 	connection, err := net.Dial("udp", "localhost:3456")
 
 	expectedMessageString := "Some Data"
-	unmarshalledLogMessage := messagetesthelpers.NewLogMessage(expectedMessageString, "myApp")
+	unmarshalledLogMessage := messagetesthelpers.NewLogMessage(expectedMessageString, "myApp2")
 
 	expectedMessage := messagetesthelpers.MarshalledLogEnvelope(t, unmarshalledLogMessage, "invalid")
 
