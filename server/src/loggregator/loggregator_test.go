@@ -23,7 +23,7 @@ func init() {
 	httpServer := sinkserver.NewHttpServer(messageRouter, 30*time.Second, testhelpers.UnmarshallerMaker("secret"), logger)
 	go httpServer.Start(dataChannel, "localhost:8081")
 
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 }
 
 func TestEndtoEndMessageShouldNotWork(t *testing.T) {
