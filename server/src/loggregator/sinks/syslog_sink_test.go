@@ -148,12 +148,11 @@ func TestThatItSendsStdOutAsInfo(t *testing.T) {
 	go sink.Run()
 	defer close(sink.Channel())
 
-	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledLogMessage(t, "hi", "appId"))
-	assert.NoError(t, err)
+	logMessage := messagetesthelpers.NewMessage(t, "hi", "appId")
 	sink.Channel() <- logMessage
 	data := <-fakeSyslogServer.dataReadChannel
 	assert.Contains(t, string(data), "61 <14>1 ")
-	assert.Contains(t, string(data), " loggregator appId DEA - - hi\n")
+	assert.Contains(t, string(data), " loggregator appId App - - hi\n")
 }
 
 func TestThatItStripsNullControlCharacterFromMsg(t *testing.T) {
@@ -163,8 +162,7 @@ func TestThatItStripsNullControlCharacterFromMsg(t *testing.T) {
 	go sink.Run()
 	defer close(sink.Channel())
 
-	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledLogMessage(t, string(0)+" hi", "appId"))
-	assert.NoError(t, err)
+	logMessage := messagetesthelpers.NewMessage(t, string(0)+" hi", "appId")
 	sink.Channel() <- logMessage
 
 	data := <-fakeSyslogServer.dataReadChannel
@@ -197,15 +195,14 @@ func TestThatItUsesOctetFramingWhenSending(t *testing.T) {
 	go sink.Run()
 	defer close(sink.Channel())
 
-	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"))
-	assert.NoError(t, err)
+	logMessage := messagetesthelpers.NewMessage(t, "err", "appId")
 
 	sink.Channel() <- logMessage
 	data := <-fakeSyslogServer2.dataReadChannel
 
 	syslogMsg := string(data)
 
-	syslogRegexp := regexp.MustCompile(`<11>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([-+]\d{2}:\d{2}) loggregator appId DEA - - err\n`)
+	syslogRegexp := regexp.MustCompile(`<14>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([-+]\d{2}:\d{2}) loggregator appId App - - err\n`)
 	msgBeforeOctetCounting := syslogRegexp.FindString(syslogMsg)
 	assert.True(t, strings.HasPrefix(syslogMsg, strconv.Itoa(len(msgBeforeOctetCounting))+" "))
 }
@@ -216,17 +213,15 @@ func TestThatItUsesTheOriginalTimestampOfTheLogmessageWhenSending(t *testing.T) 
 	go sink.Run()
 	defer close(sink.Channel())
 
-	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"))
+	logMessage := messagetesthelpers.NewMessage(t, "err", "appId")
 	expectedTimeString := strings.Replace(time.Unix(0, logMessage.GetLogMessage().GetTimestamp()).Format(time.RFC3339), "Z", "+00:00", 1)
-
-	assert.NoError(t, err)
 
 	time.Sleep(1200 * time.Millisecond) //wait so that a second will pass, to allow timestamps to differ
 
 	sink.Channel() <- logMessage
 	data := <-fakeSyslogServer2.dataReadChannel
 
-	assert.Equal(t, "62 <11>1 "+expectedTimeString+" loggregator appId DEA - - err\n", string(data))
+	assert.Equal(t, "62 <14>1 "+expectedTimeString+" loggregator appId App - - err\n", string(data))
 }
 
 func TestThatItHandlesMessagesEvenIfThereIsNoSyslogServer(t *testing.T) {
@@ -234,8 +229,7 @@ func TestThatItHandlesMessagesEvenIfThereIsNoSyslogServer(t *testing.T) {
 	sink := NewSyslogSink("appId", "syslog://localhost:-1", loggertesthelper.Logger(), sysLogger)
 	go sink.Run()
 	defer close(sink.Channel())
-	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"))
-	assert.NoError(t, err)
+	logMessage := messagetesthelpers.NewMessage(t, "err", "appId")
 
 	for i := 0; i < 100; i++ {
 		sink.Channel() <- logMessage
@@ -255,8 +249,7 @@ func TestSysLoggerComesUpLate(t *testing.T) {
 
 	for i := 0; i < 15; i++ {
 		msg := fmt.Sprintf("message no %v", i)
-		logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, msg, "appId"))
-		assert.NoError(t, err)
+		logMessage := messagetesthelpers.NewMessage(t, msg, "appId")
 
 		sink.Channel() <- logMessage
 	}
@@ -269,7 +262,7 @@ func TestSysLoggerComesUpLate(t *testing.T) {
 	assert.Equal(t, len(data), 10)
 
 	for i := 0; i < 10; i++ {
-		msg := fmt.Sprintf("err: message no %v", i+5)
+		msg := fmt.Sprintf("out: message no %v", i+5)
 		assert.Equal(t, data[i], msg)
 	}
 }
@@ -286,8 +279,7 @@ func TestSysLoggerDiesAndComesBack(t *testing.T) {
 	}()
 
 	msg := fmt.Sprintf("first message")
-	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, msg, "appId"))
-	assert.NoError(t, err)
+	logMessage := messagetesthelpers.NewMessage(t, msg, "appId")
 	sink.Channel() <- logMessage
 
 	select {
@@ -302,8 +294,7 @@ func TestSysLoggerDiesAndComesBack(t *testing.T) {
 
 	for i := 0; i < 11; i++ {
 		msg := fmt.Sprintf("message no %v", i)
-		logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, msg, "appId"))
-		assert.NoError(t, err)
+		logMessage := messagetesthelpers.NewMessage(t, msg, "appId")
 
 		sink.Channel() <- logMessage
 	}
@@ -316,17 +307,17 @@ func TestSysLoggerDiesAndComesBack(t *testing.T) {
 
 	stringOfMessages := fmt.Sprintf("%v", sysLogger.ReceivedMessages())
 	assert.Contains(t, stringOfMessages, "first message", "This message should have been there, since the server was up")
-	assert.NotContains(t, stringOfMessages, "err: message no 0", "This message should have been lost because the connection problem was detected while trying to send it.")
-	assert.Contains(t, stringOfMessages, "err: message no 1", "This message should have been there, since it was in the ringbuffer while the server was down")
-	assert.Contains(t, stringOfMessages, "err: message no 2", "This message should have been there, since it was in the ringbuffer while the server was down")
-	assert.Contains(t, stringOfMessages, "err: message no 3", "This message should have been there, since it was in the ringbuffer while the server was down")
-	assert.Contains(t, stringOfMessages, "err: message no 4", "This message should have been there, since it was in the ringbuffer while the server was down")
-	assert.Contains(t, stringOfMessages, "err: message no 5", "This message should have been there, since it was in the ringbuffer while the server was down")
-	assert.Contains(t, stringOfMessages, "err: message no 6", "This message should have been there, since it was in the ringbuffer while the server was down")
-	assert.Contains(t, stringOfMessages, "err: message no 7", "This message should have been there, since it was in the ringbuffer while the server was down")
-	assert.Contains(t, stringOfMessages, "err: message no 8", "This message should have been there, since it was in the ringbuffer while the server was down")
-	assert.Contains(t, stringOfMessages, "err: message no 9", "This message should have been there, since it was in the ringbuffer while the server was down")
-	assert.Contains(t, stringOfMessages, "err: message no 10", "This message should have been there, since it was in the ringbuffer while the server was down")
+	assert.NotContains(t, stringOfMessages, "out: message no 0", "This message should have been lost because the connection problem was detected while trying to send it.")
+	assert.Contains(t, stringOfMessages, "out: message no 1", "This message should have been there, since it was in the ringbuffer while the server was down")
+	assert.Contains(t, stringOfMessages, "out: message no 2", "This message should have been there, since it was in the ringbuffer while the server was down")
+	assert.Contains(t, stringOfMessages, "out: message no 3", "This message should have been there, since it was in the ringbuffer while the server was down")
+	assert.Contains(t, stringOfMessages, "out: message no 4", "This message should have been there, since it was in the ringbuffer while the server was down")
+	assert.Contains(t, stringOfMessages, "out: message no 5", "This message should have been there, since it was in the ringbuffer while the server was down")
+	assert.Contains(t, stringOfMessages, "out: message no 6", "This message should have been there, since it was in the ringbuffer while the server was down")
+	assert.Contains(t, stringOfMessages, "out: message no 7", "This message should have been there, since it was in the ringbuffer while the server was down")
+	assert.Contains(t, stringOfMessages, "out: message no 8", "This message should have been there, since it was in the ringbuffer while the server was down")
+	assert.Contains(t, stringOfMessages, "out: message no 9", "This message should have been there, since it was in the ringbuffer while the server was down")
+	assert.Contains(t, stringOfMessages, "out: message no 10", "This message should have been there, since it was in the ringbuffer while the server was down")
 }
 
 var backoffTests = []struct {
