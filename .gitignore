@@ -1,4 +1,5 @@
 pkg/
+out/
 release/
 */bin
 */**/bin
@@ -7,10 +8,3 @@ release/
 *.iml
 *.pem
 
-dea_logging_agent/src/code.google.com
-dea_logging_agent/src/github.com
-traffic_controller/src/code.google.com
-traffic_controller/src/github.com
-server/src/code.google.com
-server/src/github.com
-out/production/
