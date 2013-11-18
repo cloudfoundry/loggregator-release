@@ -74,7 +74,7 @@ func (sink *WebsocketSink) Run() {
 	keepAliveChan := sink.keepAliveChannel()
 	alreadyRequestedClose := false
 
-	messageChannel := runNewRingBuffer(sink, 10, sink.Logger()).GetOutputChannel()
+	buffer := runTruncatingBuffer(sink, 100, sink.Logger())
 	for {
 		sink.logger.Debugf("Websocket Sink %s: Waiting for activity", sink.clientAddress)
 		select {
@@ -84,7 +84,7 @@ func (sink *WebsocketSink) Run() {
 			sink.logger.Debugf("Websocket Sink %s: No keep keep-alive received. Requesting close.", sink.clientAddress)
 			requestClose(sink, sink.sinkCloseChan, &alreadyRequestedClose)
 			return
-		case message, ok := <-messageChannel:
+		case message, ok := <-buffer.GetOutputChannel():
 			if !ok {
 				sink.logger.Debugf("Websocket Sink %s: Closed listener channel detected. Closing websocket", sink.clientAddress)
 				sink.ws.Close()

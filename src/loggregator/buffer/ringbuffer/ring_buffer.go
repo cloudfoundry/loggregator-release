@@ -14,7 +14,8 @@ type ringBuffer struct {
 	lock          *sync.RWMutex
 }
 
-func NewRingBuffer(inputChannel <-chan *logmessage.Message, outputChannel chan *logmessage.Message, logger *gosteno.Logger) buffer.MessageBuffer {
+func NewRingBuffer(inputChannel <-chan *logmessage.Message, bufferSize uint, logger *gosteno.Logger) buffer.MessageBuffer {
+	outputChannel := make(chan *logmessage.Message, bufferSize)
 	return &ringBuffer{inputChannel, outputChannel, logger, &sync.RWMutex{}}
 }
 

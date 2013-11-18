@@ -20,7 +20,9 @@ packages=(
     loggregator
     loggregator/groupedsinks
     loggregator/loggregator
-    loggregator/ringbuffer
+    loggregator/buffer
+    loggregator/buffer/ringbuffer
+    loggregator/buffer/truncatingbuffer
     loggregator/sinks
     loggregator/sinkserver
     server_testhelpers

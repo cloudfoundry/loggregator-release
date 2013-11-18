@@ -40,7 +40,7 @@ func (s *SyslogSink) Run() {
 	backoffStrategy := newExponentialRetryStrategy()
 	numberOfTries := 0
 
-	messageChannel := runNewRingBuffer(s, 10, s.Logger()).GetOutputChannel()
+	buffer := runTruncatingBuffer(s, 100, s.Logger())
 	for {
 		s.logger.Debugf("Syslog Sink %s: Starting loop. Current backoff: %v", s.drainUrl, backoffStrategy(numberOfTries))
 
@@ -60,7 +60,7 @@ func (s *SyslogSink) Run() {
 		}
 
 		s.logger.Debugf("Syslog Sink %s: Waiting for activity\n", s.drainUrl)
-		message, ok := <-messageChannel
+		message, ok := <-buffer.GetOutputChannel()
 		if !ok {
 			s.logger.Debugf("Syslog Sink %s: Closed listener channel detected. Closing.\n", s.drainUrl)
 			return

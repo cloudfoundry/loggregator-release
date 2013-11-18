@@ -247,7 +247,7 @@ func TestSysLoggerComesUpLate(t *testing.T) {
 		done <- true
 	}()
 
-	for i := 0; i < 15; i++ {
+	for i := 0; i < 105; i++ {
 		msg := fmt.Sprintf("message no %v", i)
 		logMessage := messagetesthelpers.NewMessage(t, msg, "appId")
 
@@ -259,11 +259,13 @@ func TestSysLoggerComesUpLate(t *testing.T) {
 	<-done
 
 	data := sysLogger.ReceivedMessages()
-	assert.Equal(t, len(data), 10)
+	assert.Equal(t, len(data), 6)
 
-	for i := 0; i < 10; i++ {
-		msg := fmt.Sprintf("out: message no %v", i+5)
-		assert.Equal(t, data[i], msg)
+	msg := "err: We've truncated 100 messages"
+	assert.Equal(t, data[0], msg)
+	for i := 0; i < 5; i++ {
+		msg := fmt.Sprintf("out: message no %v", i+100)
+		assert.Equal(t, data[i+1], msg)
 	}
 }
 

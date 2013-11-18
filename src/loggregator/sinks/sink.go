@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"loggregator/buffer"
 	"loggregator/buffer/ringbuffer"
+	"loggregator/buffer/truncatingbuffer"
 )
 
 type Sink interface {
@@ -28,8 +29,13 @@ func requestClose(sink Sink, sinkCloseChan chan Sink, alreadyRequestedClose *boo
 }
 
 func runNewRingBuffer(sink Sink, bufferSize uint, logger *gosteno.Logger) buffer.MessageBuffer {
-	outMessageChan := make(chan *logmessage.Message, bufferSize)
-	ringBufferChannel := ringbuffer.NewRingBuffer(sink.Channel(), outMessageChan, logger)
+	ringBufferChannel := ringbuffer.NewRingBuffer(sink.Channel(), bufferSize, logger)
 	go ringBufferChannel.Run()
 	return ringBufferChannel
+}
+
+func runTruncatingBuffer(sink Sink, bufferSize uint, logger *gosteno.Logger) buffer.MessageBuffer {
+	b := truncatingbuffer.NewTruncatingBuffer(sink.Channel(), bufferSize, logger)
+	go b.Run()
+	return b
 }
