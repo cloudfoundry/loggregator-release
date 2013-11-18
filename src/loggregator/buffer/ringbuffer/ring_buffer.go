@@ -3,35 +3,40 @@ package ringbuffer
 import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"loggregator/buffer"
 	"sync"
 )
 
-type RingBuffer struct {
+type ringBuffer struct {
 	inputChannel  <-chan *logmessage.Message
 	outputChannel chan *logmessage.Message
 	logger        *gosteno.Logger
 	lock          *sync.RWMutex
 }
 
-func NewRingBuffer(inputChannel <-chan *logmessage.Message, outputChannel chan *logmessage.Message, logger *gosteno.Logger) *RingBuffer {
-	return &RingBuffer{inputChannel, outputChannel, logger, &sync.RWMutex{}}
+func NewRingBuffer(inputChannel <-chan *logmessage.Message, outputChannel chan *logmessage.Message, logger *gosteno.Logger) buffer.MessageBuffer {
+	return &ringBuffer{inputChannel, outputChannel, logger, &sync.RWMutex{}}
 }
 
-func (r *RingBuffer) SetOutputChannel(out chan *logmessage.Message) {
+func (r *ringBuffer) SetOutputChannel(out chan *logmessage.Message) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
 	r.outputChannel = out
 }
 
-func (r *RingBuffer) GetOutputChannel() chan *logmessage.Message {
+func (r *ringBuffer) GetOutputChannel() <-chan *logmessage.Message {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
 	return r.outputChannel
 }
 
-func (r *RingBuffer) Run() {
+func (r *ringBuffer) CloseOutputChannel() {
+	close(r.outputChannel)
+}
+
+func (r *ringBuffer) Run() {
 	for v := range r.inputChannel {
 		r.lock.Lock()
 		select {

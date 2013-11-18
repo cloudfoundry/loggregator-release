@@ -4,16 +4,16 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"loggregator/ringbuffer"
+	"loggregator/buffer"
 	"sync"
 )
 
 type DumpSink struct {
-	appId      string
-	logger     *gosteno.Logger
-	inputChan  chan *logmessage.Message
-	ringBuffer *ringbuffer.RingBuffer
-	bufferSize uint
+	appId         string
+	logger        *gosteno.Logger
+	inputChan     chan *logmessage.Message
+	messageBuffer buffer.MessageBuffer
+	bufferSize    uint
 	*sync.RWMutex
 }
 
@@ -31,17 +31,17 @@ func (d *DumpSink) Run() {
 	d.Lock()
 	defer d.Unlock()
 
-	d.ringBuffer = runNewRingBuffer(d, d.bufferSize, nil)
+	d.messageBuffer = runNewRingBuffer(d, d.bufferSize, nil)
 }
 
 func (d *DumpSink) Dump(outputChan chan *logmessage.Message) {
 	d.Lock()
 	defer d.Unlock()
 
-	currentMessageChan := d.ringBuffer.GetOutputChannel()
+	currentMessageChan := d.messageBuffer.GetOutputChannel()
 	newMessageChan := make(chan *logmessage.Message, d.bufferSize)
 
-	close(currentMessageChan)
+	d.messageBuffer.CloseOutputChannel()
 	for message := range currentMessageChan {
 		newMessageChan <- message
 		select {
@@ -52,7 +52,7 @@ func (d *DumpSink) Dump(outputChan chan *logmessage.Message) {
 		}
 	}
 	close(outputChan)
-	d.ringBuffer.SetOutputChannel(newMessageChan)
+	d.messageBuffer.SetOutputChannel(newMessageChan)
 }
 
 func (d *DumpSink) Channel() chan *logmessage.Message {

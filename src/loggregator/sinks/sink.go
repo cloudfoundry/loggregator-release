@@ -4,7 +4,8 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"loggregator/ringbuffer"
+	"loggregator/buffer"
+	"loggregator/buffer/ringbuffer"
 )
 
 type Sink interface {
@@ -26,7 +27,7 @@ func requestClose(sink Sink, sinkCloseChan chan Sink, alreadyRequestedClose *boo
 	}
 }
 
-func runNewRingBuffer(sink Sink, bufferSize uint, logger *gosteno.Logger) *ringbuffer.RingBuffer {
+func runNewRingBuffer(sink Sink, bufferSize uint, logger *gosteno.Logger) buffer.MessageBuffer {
 	outMessageChan := make(chan *logmessage.Message, bufferSize)
 	ringBufferChannel := ringbuffer.NewRingBuffer(sink.Channel(), outMessageChan, logger)
 	go ringBufferChannel.Run()
