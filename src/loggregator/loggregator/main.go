@@ -24,7 +24,7 @@ type Config struct {
 	IncomingPort           uint32
 	OutgoingPort           uint32
 	LogFilePath            string
-	MaxRetainedLogMessages uint
+	MaxRetainedLogMessages int
 	SharedSecret           string
 }
 
