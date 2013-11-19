@@ -21,7 +21,6 @@ packages=(
     loggregator/groupedsinks
     loggregator/loggregator
     loggregator/buffer
-    loggregator/buffer/ringbuffer
     loggregator/buffer/truncatingbuffer
     loggregator/sinks
     loggregator/sinkserver

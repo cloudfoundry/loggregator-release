@@ -100,11 +100,11 @@ func startHTTPServer() {
 func startHTTPSServer(logger *gosteno.Logger) {
 	generateCert(logger)
 	startFakeCloudController := func() {
-
 		http.ListenAndServeTLS(":9877", "cert.pem", "key.pem", &handler{})
 	}
 
 	go startFakeCloudController()
+	<-time.After(300 * time.Millisecond)
 }
 
 func generateCert(logger *gosteno.Logger) {

@@ -11,7 +11,7 @@ import (
 )
 
 type messageRouter struct {
-	dumpBufferSize              uint
+	dumpBufferSize              int
 	parsedMessageChan           chan *logmessage.Message
 	sinkCloseChan               chan sinks.Sink
 	sinkOpenChan                chan sinks.Sink
@@ -23,7 +23,7 @@ type messageRouter struct {
 	*sync.RWMutex
 }
 
-func NewMessageRouter(maxRetainedLogMessages uint, logger *gosteno.Logger) *messageRouter {
+func NewMessageRouter(maxRetainedLogMessages int, logger *gosteno.Logger) *messageRouter {
 	sinkCloseChan := make(chan sinks.Sink, 20)
 	sinkOpenChan := make(chan sinks.Sink, 20)
 	dumpReceiverChan := make(chan dumpReceiver)
@@ -46,7 +46,11 @@ func (messageRouter *messageRouter) Start() {
 		select {
 		case dr := <-messageRouter.dumpReceiverChan:
 			if sink := activeSinks.DumpFor(dr.appId); sink != nil {
-				sink.Dump(dr.outputChannel)
+				data := sink.Dump()
+				for _, m := range data {
+					dr.outputChannel <- m
+				}
+				close(dr.outputChannel)
 			}
 		case s := <-messageRouter.sinkOpenChan:
 			messageRouter.registerSink(s, activeSinks)
@@ -97,13 +101,14 @@ func (messageRouter *messageRouter) registerSink(s sinks.Sink, activeSinks *grou
 }
 
 func (messageRouter *messageRouter) dumpToSink(sink sinks.Sink, activeSinks *groupedsinks.GroupedSinks) {
-	dumpChan := make(chan *logmessage.Message, 20)
-	if sink := activeSinks.DumpFor(sink.AppId()); sink != nil {
-		sink.Dump(dumpChan)
-	} else {
-		close(dumpChan)
+	var data []*logmessage.Message
+	if dumpSink := activeSinks.DumpFor(sink.AppId()); dumpSink != nil {
+		data = dumpSink.Dump()
+		if len(data) > 20 {
+			data = data[len(data)-20:]
+		}
 	}
-	for message := range dumpChan {
+	for _, message := range data {
 		sink.Channel() <- message
 	}
 }
