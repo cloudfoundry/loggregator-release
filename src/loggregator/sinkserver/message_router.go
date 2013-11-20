@@ -170,7 +170,7 @@ func (messageRouter *messageRouter) manageDrains(activeSinks *groupedsinks.Group
 				messageRouter.logger.Warnf("MessageRouter: Error when trying to parse syslog url %v. Requesting close. Err: %v", drainUrl, err)
 				continue
 			}
-			sysLogger := sinks.NewSyslogWriter("tcp", dl.Host, appId)
+			sysLogger := sinks.NewSyslogWriter(dl.Scheme, dl.Host, appId)
 			s := sinks.NewSyslogSink(appId, drainUrl, messageRouter.logger, sysLogger)
 			ok := messageRouter.registerSink(s, activeSinks)
 			if ok {

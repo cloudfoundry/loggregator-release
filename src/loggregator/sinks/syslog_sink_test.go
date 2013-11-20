@@ -142,7 +142,7 @@ func init() {
 }
 
 func TestThatItSendsStdOutAsInfo(t *testing.T) {
-	sysLogger := NewSyslogWriter("tcp", "localhost:24631", "appId")
+	sysLogger := NewSyslogWriter("syslog", "localhost:24631", "appId")
 	sink := NewSyslogSink("appId", "syslog://localhost:24631", loggertesthelper.Logger(), sysLogger)
 
 	go sink.Run()
@@ -156,7 +156,7 @@ func TestThatItSendsStdOutAsInfo(t *testing.T) {
 }
 
 func TestThatItStripsNullControlCharacterFromMsg(t *testing.T) {
-	sysLogger := NewSyslogWriter("tcp", "localhost:24631", "appId")
+	sysLogger := NewSyslogWriter("syslog", "localhost:24631", "appId")
 	sink := NewSyslogSink("appId", "syslog://localhost:24631", loggertesthelper.Logger(), sysLogger)
 
 	go sink.Run()
@@ -173,7 +173,7 @@ func TestThatItStripsNullControlCharacterFromMsg(t *testing.T) {
 }
 
 func TestThatItSendsStdErrAsErr(t *testing.T) {
-	sysLogger := NewSyslogWriter("tcp", "localhost:24632", "appId")
+	sysLogger := NewSyslogWriter("syslog", "localhost:24632", "appId")
 	sink := NewSyslogSink("appId", "syslog://localhost:24632", loggertesthelper.Logger(), sysLogger)
 	go sink.Run()
 	defer close(sink.Channel())
@@ -190,7 +190,7 @@ func TestThatItSendsStdErrAsErr(t *testing.T) {
 }
 
 func TestThatItUsesOctetFramingWhenSending(t *testing.T) {
-	sysLogger := NewSyslogWriter("tcp", "localhost:24632", "appId")
+	sysLogger := NewSyslogWriter("syslog", "localhost:24632", "appId")
 	sink := NewSyslogSink("appId", "syslog://localhost:24632", loggertesthelper.Logger(), sysLogger)
 	go sink.Run()
 	defer close(sink.Channel())
@@ -208,7 +208,7 @@ func TestThatItUsesOctetFramingWhenSending(t *testing.T) {
 }
 
 func TestThatItUsesTheOriginalTimestampOfTheLogmessageWhenSending(t *testing.T) {
-	sysLogger := NewSyslogWriter("tcp", "localhost:24632", "appId")
+	sysLogger := NewSyslogWriter("syslog", "localhost:24632", "appId")
 	sink := NewSyslogSink("appId", "syslog://localhost:24632", loggertesthelper.Logger(), sysLogger)
 	go sink.Run()
 	defer close(sink.Channel())
@@ -225,7 +225,7 @@ func TestThatItUsesTheOriginalTimestampOfTheLogmessageWhenSending(t *testing.T) 
 }
 
 func TestThatItHandlesMessagesEvenIfThereIsNoSyslogServer(t *testing.T) {
-	sysLogger := NewSyslogWriter("tcp", "localhost:-1", "appId")
+	sysLogger := NewSyslogWriter("syslog", "localhost:-1", "appId")
 	sink := NewSyslogSink("appId", "syslog://localhost:-1", loggertesthelper.Logger(), sysLogger)
 	go sink.Run()
 	defer close(sink.Channel())

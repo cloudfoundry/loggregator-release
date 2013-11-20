@@ -6,6 +6,7 @@
 package sinks
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net"
 	"strings"
@@ -23,22 +24,25 @@ type SyslogWriter interface {
 }
 
 type writer struct {
-	appId   string
-	network string
-	raddr   string
+	appId  string
+	raddr  string
+	scheme string
 
 	connected bool
 
 	mu   sync.Mutex // guards conn
 	conn net.Conn
+
+	tlsConfig *tls.Config
 }
 
-func NewSyslogWriter(network, raddr string, appId string) (w *writer) {
+func NewSyslogWriter(scheme, raddr string, appId string) (w *writer) {
 	return &writer{
 		appId:     appId,
-		network:   network,
 		raddr:     raddr,
 		connected: false,
+		scheme:    scheme,
+		tlsConfig: &tls.Config{},
 	}
 }
 
@@ -46,7 +50,12 @@ func (w *writer) Connect() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	err := w.connect()
+	var err error
+	if strings.Contains(w.scheme, "syslog-tls") {
+		err = w.connectTLS()
+	} else {
+		err = w.connect()
+	}
 	if err == nil {
 		w.SetConnected(true)
 	}
@@ -61,8 +70,20 @@ func (w *writer) connect() (err error) {
 		w.conn.Close()
 		w.conn = nil
 	}
-	var c net.Conn
-	c, err = net.Dial(w.network, w.raddr)
+	c, err := net.Dial("tcp", w.raddr)
+	if err == nil {
+		w.conn = c
+	}
+	return
+}
+
+func (w *writer) connectTLS() (err error) {
+	if w.conn != nil {
+		// ignore err from close, it makes sense to continue anyway
+		w.conn.Close()
+		w.conn = nil
+	}
+	c, err := tls.Dial("tcp", w.raddr, w.tlsConfig)
 	if err == nil {
 		w.conn = c
 	}
