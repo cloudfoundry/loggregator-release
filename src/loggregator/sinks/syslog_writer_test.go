@@ -47,38 +47,35 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func startTLSSyslogServer(logger *gosteno.Logger) {
 	generateCert(logger)
-	startFakeTLSSyslogServer := func() {
-		cert, err := tls.LoadX509KeyPair("cert.pem", "key.pem")
-		if err != nil {
-			println("Err loading cert: ", err)
-			panic(err)
-		}
-		config := &tls.Config{
-			Certificates: []tls.Certificate{cert},
-		}
-
-		listener, err := tls.Listen("tcp", "localhost:9999", config)
-
-		if err != nil {
-			panic(err)
-		}
-		go func() {
-			for {
-				buffer := make([]byte, 1024)
-				conn, err := listener.Accept()
-				if err != nil {
-					panic(err)
-				}
-				_, err = conn.Read(buffer)
-
-				conn.Close()
-				listener.Close()
-				return
-			}
-		}()
+	cert, err := tls.LoadX509KeyPair("cert.pem", "key.pem")
+	if err != nil {
+		println("Err loading cert: ", err)
+		panic(err)
+	}
+	config := &tls.Config{
+		Certificates: []tls.Certificate{cert},
 	}
 
-	go startFakeTLSSyslogServer()
+	listener, err := tls.Listen("tcp", "localhost:9999", config)
+
+	if err != nil {
+		panic(err)
+	}
+	go func() {
+		for {
+			buffer := make([]byte, 1024)
+			conn, err := listener.Accept()
+			if err != nil {
+				panic(err)
+			}
+			_, err = conn.Read(buffer)
+
+			conn.Close()
+			listener.Close()
+			return
+		}
+	}()
+
 	<-time.After(300 * time.Millisecond)
 }
 
