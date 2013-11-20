@@ -125,9 +125,9 @@ func (w *writer) write(p int, source, msg string, timestamp int64) (int, error) 
 	syslogMsg := fmt.Sprintf("<%d>1 %s %s %s %s - - %s%s", p, timeString, "loggregator", w.appId, source, msg, nl)
 
 	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
-	_, err := fmt.Fprintf(w.conn, "%d %s", len(syslogMsg), syslogMsg)
+	byte_count, err := fmt.Fprintf(w.conn, "%d %s", len(syslogMsg), syslogMsg)
 
-	return len(msg), err
+	return byte_count, err
 }
 
 func (w *writer) IsConnected() bool {
