@@ -143,7 +143,7 @@ func init() {
 
 func TestThatItSendsStdOutAsInfo(t *testing.T) {
 	sysLogger := NewSyslogWriter("syslog", "localhost:24631", "appId")
-	sink := NewSyslogSink("appId", "syslog://localhost:24631", loggertesthelper.Logger(), sysLogger)
+	sink := NewSyslogSink("appId", "syslog://localhost:24631", loggertesthelper.Logger(), sysLogger, make(chan *logmessage.Message))
 
 	go sink.Run()
 	defer close(sink.Channel())
@@ -157,7 +157,7 @@ func TestThatItSendsStdOutAsInfo(t *testing.T) {
 
 func TestThatItStripsNullControlCharacterFromMsg(t *testing.T) {
 	sysLogger := NewSyslogWriter("syslog", "localhost:24631", "appId")
-	sink := NewSyslogSink("appId", "syslog://localhost:24631", loggertesthelper.Logger(), sysLogger)
+	sink := NewSyslogSink("appId", "syslog://localhost:24631", loggertesthelper.Logger(), sysLogger, make(chan *logmessage.Message))
 
 	go sink.Run()
 	defer close(sink.Channel())
@@ -174,7 +174,7 @@ func TestThatItStripsNullControlCharacterFromMsg(t *testing.T) {
 
 func TestThatItSendsStdErrAsErr(t *testing.T) {
 	sysLogger := NewSyslogWriter("syslog", "localhost:24632", "appId")
-	sink := NewSyslogSink("appId", "syslog://localhost:24632", loggertesthelper.Logger(), sysLogger)
+	sink := NewSyslogSink("appId", "syslog://localhost:24632", loggertesthelper.Logger(), sysLogger, make(chan *logmessage.Message))
 	go sink.Run()
 	defer close(sink.Channel())
 
@@ -191,7 +191,7 @@ func TestThatItSendsStdErrAsErr(t *testing.T) {
 
 func TestThatItUsesOctetFramingWhenSending(t *testing.T) {
 	sysLogger := NewSyslogWriter("syslog", "localhost:24632", "appId")
-	sink := NewSyslogSink("appId", "syslog://localhost:24632", loggertesthelper.Logger(), sysLogger)
+	sink := NewSyslogSink("appId", "syslog://localhost:24632", loggertesthelper.Logger(), sysLogger, make(chan *logmessage.Message))
 	go sink.Run()
 	defer close(sink.Channel())
 
@@ -209,7 +209,7 @@ func TestThatItUsesOctetFramingWhenSending(t *testing.T) {
 
 func TestThatItUsesTheOriginalTimestampOfTheLogmessageWhenSending(t *testing.T) {
 	sysLogger := NewSyslogWriter("syslog", "localhost:24632", "appId")
-	sink := NewSyslogSink("appId", "syslog://localhost:24632", loggertesthelper.Logger(), sysLogger)
+	sink := NewSyslogSink("appId", "syslog://localhost:24632", loggertesthelper.Logger(), sysLogger, make(chan *logmessage.Message))
 	go sink.Run()
 	defer close(sink.Channel())
 
@@ -226,7 +226,7 @@ func TestThatItUsesTheOriginalTimestampOfTheLogmessageWhenSending(t *testing.T) 
 
 func TestThatItHandlesMessagesEvenIfThereIsNoSyslogServer(t *testing.T) {
 	sysLogger := NewSyslogWriter("syslog", "localhost:-1", "appId")
-	sink := NewSyslogSink("appId", "syslog://localhost:-1", loggertesthelper.Logger(), sysLogger)
+	sink := NewSyslogSink("appId", "syslog://localhost:-1", loggertesthelper.Logger(), sysLogger, make(chan *logmessage.Message))
 	go sink.Run()
 	defer close(sink.Channel())
 	logMessage := messagetesthelpers.NewMessage(t, "err", "appId")
@@ -239,7 +239,7 @@ func TestThatItHandlesMessagesEvenIfThereIsNoSyslogServer(t *testing.T) {
 func TestSysLoggerComesUpLate(t *testing.T) {
 	sysLogger := NewSyslogWriterRecorder()
 	sysLogger.SetUp(false)
-	sink := NewSyslogSink("appId", "url_not_used", loggertesthelper.Logger(), sysLogger)
+	sink := NewSyslogSink("appId", "url_not_used", loggertesthelper.Logger(), sysLogger, make(chan *logmessage.Message, 10))
 
 	done := make(chan bool)
 	go func() {
@@ -269,9 +269,37 @@ func TestSysLoggerComesUpLate(t *testing.T) {
 	}
 }
 
+func TestSinkReportsErrorsOnTheErrorChannel(t *testing.T) {
+	sysLogger := NewSyslogWriterRecorder()
+	sysLogger.SetUp(false)
+
+	errorChannel := make(chan *logmessage.Message, 10)
+	sink := NewSyslogSink("appId", "url_not_used", loggertesthelper.Logger(), sysLogger, errorChannel)
+
+	done := make(chan bool)
+	go func() {
+		sink.Run()
+		done <- true
+	}()
+
+	msg := fmt.Sprintf("first message")
+	logMessage := messagetesthelpers.NewMessage(t, msg, "appId")
+	sink.Channel() <- logMessage
+
+	select {
+	case errorLog := <-errorChannel:
+		errorMsg := string(errorLog.GetLogMessage().GetMessage())
+		assert.Contains(t, errorMsg, "Syslog Sink url_not_used: Error when dialing out. Backing off for")
+		assert.Contains(t, errorMsg, "Err: Error connecting.")
+		assert.Equal(t, errorLog.GetLogMessage().GetSourceType(), logmessage.LogMessage_LOGGREGATOR)
+	case <-time.After(10 * time.Millisecond):
+		t.Error("Should have received an error message by now")
+	}
+}
+
 func TestSysLoggerDiesAndComesBack(t *testing.T) {
 	sysLogger := NewSyslogWriterRecorder()
-	sink := NewSyslogSink("appId", "url_not_used", loggertesthelper.Logger(), sysLogger)
+	sink := NewSyslogSink("appId", "url_not_used", loggertesthelper.Logger(), sysLogger, make(chan *logmessage.Message))
 	sysLogger.SetUp(true)
 
 	done := make(chan bool)

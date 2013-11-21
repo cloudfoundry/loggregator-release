@@ -37,6 +37,10 @@ func (sink *testSink) Run() {
 	}
 }
 
+func (sink *testSink) ShouldReceiveErrors() bool {
+	return false
+}
+
 func (sink *testSink) Emit() instrumentation.Context {
 	return instrumentation.Context{}
 

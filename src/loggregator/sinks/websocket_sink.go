@@ -64,6 +64,10 @@ func (sink *WebsocketSink) AppId() string {
 	return sink.appId
 }
 
+func (sink *WebsocketSink) ShouldReceiveErrors() bool {
+	return true
+}
+
 func (s *WebsocketSink) Logger() *gosteno.Logger {
 	return s.logger
 }

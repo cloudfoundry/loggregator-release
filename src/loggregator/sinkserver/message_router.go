@@ -20,6 +20,7 @@ type messageRouter struct {
 	activeWebsocketSinksCounter int
 	activeSyslogSinksCounter    int
 	logger                      *gosteno.Logger
+	errorChannel                chan *logmessage.Message
 	*sync.RWMutex
 }
 
@@ -36,7 +37,8 @@ func NewMessageRouter(maxRetainedLogMessages int, logger *gosteno.Logger) *messa
 		sinkOpenChan:      sinkOpenChan,
 		dumpReceiverChan:  dumpReceiverChan,
 		dumpBufferSize:    maxRetainedLogMessages,
-		RWMutex:           &sync.RWMutex{}}
+		RWMutex:           &sync.RWMutex{},
+		errorChannel:      make(chan *logmessage.Message, 10)}
 }
 
 func (messageRouter *messageRouter) Start() {
@@ -56,8 +58,19 @@ func (messageRouter *messageRouter) Start() {
 			messageRouter.registerSink(s, activeSinks)
 		case s := <-messageRouter.sinkCloseChan:
 			messageRouter.unregisterSink(s, activeSinks)
+		case receivedMessage := <-messageRouter.errorChannel:
+			appId := receivedMessage.GetLogMessage().GetAppId()
+
+			messageRouter.logger.Debugf("MessageRouter:ErrorChannel: Searching for sinks with appId [%s].", appId)
+			for _, s := range activeSinks.For(appId) {
+				if s.ShouldReceiveErrors() {
+					messageRouter.logger.Debugf("MessageRouter:ErrorChannel: Sending Message to channel %v for sinks targeting [%s].", s.Identifier(), appId)
+					s.Channel() <- receivedMessage
+				}
+			}
+			messageRouter.logger.Debugf("MessageRouter:ErrorChannel: Done sending error message.")
 		case receivedMessage := <-messageRouter.parsedMessageChan:
-			messageRouter.logger.Debugf("MessageRouter: Received %d bytes of data from agent listener.", receivedMessage.GetRawMessageLength())
+			messageRouter.logger.Debugf("MessageRouter:ParsedMessageChan: Received %d bytes of data from agent listener.", receivedMessage.GetRawMessageLength())
 
 			//drain management
 			appId := receivedMessage.GetLogMessage().GetAppId()
@@ -65,12 +78,12 @@ func (messageRouter *messageRouter) Start() {
 			messageRouter.manageDumps(activeSinks, appId)
 
 			//send to drains and sinks
-			messageRouter.logger.Debugf("MessageRouter: Searching for sinks with appId [%s].", appId)
+			messageRouter.logger.Debugf("MessageRouter:ParsedMessageChan: Searching for sinks with appId [%s].", appId)
 			for _, s := range activeSinks.For(appId) {
-				messageRouter.logger.Debugf("MessageRouter: Sending Message to channel %v for sinks targeting [%s].", s.Identifier(), appId)
+				messageRouter.logger.Debugf("MessageRouter:ParsedMessageChan: Sending Message to channel %v for sinks targeting [%s].", s.Identifier(), appId)
 				s.Channel() <- receivedMessage
 			}
-			messageRouter.logger.Debugf("MessageRouter: Done sending message to tail clients.")
+			messageRouter.logger.Debugf("MessageRouter:ParsedMessageChan: Done sending message.")
 		}
 	}
 }
@@ -171,7 +184,7 @@ func (messageRouter *messageRouter) manageDrains(activeSinks *groupedsinks.Group
 				continue
 			}
 			sysLogger := sinks.NewSyslogWriter(dl.Scheme, dl.Host, appId)
-			s := sinks.NewSyslogSink(appId, drainUrl, messageRouter.logger, sysLogger)
+			s := sinks.NewSyslogSink(appId, drainUrl, messageRouter.logger, sysLogger, messageRouter.errorChannel)
 			ok := messageRouter.registerSink(s, activeSinks)
 			if ok {
 				go s.Run()

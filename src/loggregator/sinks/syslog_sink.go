@@ -1,6 +1,8 @@
 package sinks
 
 import (
+	"code.google.com/p/gogoprotobuf/proto"
+	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
@@ -18,9 +20,10 @@ type SyslogSink struct {
 	sentByteCount    *uint64
 	listenerChannel  chan *logmessage.Message
 	syslogWriter     SyslogWriter
+	errorChannel     chan<- *logmessage.Message
 }
 
-func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter SyslogWriter) Sink {
+func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter SyslogWriter, errorChannel chan<- *logmessage.Message) Sink {
 	givenLogger.Debugf("Syslog Sink %s: Created for appId [%s]", drainUrl, appId)
 	return &SyslogSink{
 		appId:            appId,
@@ -30,6 +33,7 @@ func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, s
 		sentByteCount:    new(uint64),
 		listenerChannel:  make(chan *logmessage.Message),
 		syslogWriter:     syslogWriter,
+		errorChannel:     errorChannel,
 	}
 }
 
@@ -49,8 +53,17 @@ func (s *SyslogSink) Run() {
 			s.logger.Debugf("Syslog Sink %s: Not connected. Trying to connect.", s.drainUrl)
 			err := s.syslogWriter.Connect()
 			if err != nil {
-				s.logger.Warnf("Syslog Sink %s: Error when dialing out. Backing off for %v. Err: %v", s.drainUrl, backoffStrategy(numberOfTries+1), err)
+				errorMsg := fmt.Sprintf("Syslog Sink %s: Error when dialing out. Backing off for %v. Err: %v", s.drainUrl, backoffStrategy(numberOfTries+1), err)
 				numberOfTries++
+
+				s.logger.Warnf(errorMsg)
+				lm := generateLogMessage(errorMsg, &s.appId)
+				lmBytes, err := proto.Marshal(lm)
+				if err == nil {
+					s.errorChannel <- logmessage.NewMessage(lm, lmBytes)
+				} else {
+					s.logger.Infof("Error marshalling message: %v", err)
+				}
 				continue
 			}
 			s.logger.Infof("Syslog Sink %s: successfully connected.", s.drainUrl)
@@ -104,6 +117,10 @@ func (s *SyslogSink) AppId() string {
 	return s.appId
 }
 
+func (s *SyslogSink) ShouldReceiveErrors() bool {
+	return false
+}
+
 func (s *SyslogSink) Emit() instrumentation.Context {
 	return instrumentation.Context{Name: "syslogSink",
 		Metrics: []instrumentation.Metric{
@@ -129,4 +146,19 @@ func newExponentialRetryStrategy() retryStrategy {
 		return (time.Duration(duration) * time.Microsecond) + (time.Duration(randomOffset) * time.Microsecond)
 	}
 	return exponential
+}
+
+func generateLogMessage(messageString string, appId *string) *logmessage.LogMessage {
+	messageType := logmessage.LogMessage_ERR
+	sourceType := logmessage.LogMessage_LOGGREGATOR
+	currentTime := time.Now()
+	logMessage := &logmessage.LogMessage{
+		Message:     []byte(messageString),
+		AppId:       appId,
+		MessageType: &messageType,
+		SourceType:  &sourceType,
+		Timestamp:   proto.Int64(currentTime.UnixNano()),
+	}
+
+	return logMessage
 }

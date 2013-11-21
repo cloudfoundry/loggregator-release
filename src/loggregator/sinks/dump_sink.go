@@ -52,3 +52,7 @@ func (d *DumpSink) Identifier() string {
 func (d *DumpSink) Emit() instrumentation.Context {
 	return instrumentation.Context{}
 }
+
+func (d *DumpSink) ShouldReceiveErrors() bool {
+	return true
+}

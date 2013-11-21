@@ -106,7 +106,6 @@ func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 
 	errorString = "Did not get the fourth message, but it should have been just fine since the server was up"
 	AssertMessageOnChannel(t, 200, client2ReceivedChan, errorString, expectedMessageString4)
-
 	fakeSyslogDrain.Stop()
 }
 

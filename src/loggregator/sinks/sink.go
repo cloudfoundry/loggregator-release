@@ -15,6 +15,7 @@ type Sink interface {
 	Channel() chan *logmessage.Message
 	Identifier() string
 	Logger() *gosteno.Logger
+	ShouldReceiveErrors() bool
 }
 
 func requestClose(sink Sink, sinkCloseChan chan Sink, alreadyRequestedClose *bool) {
