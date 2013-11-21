@@ -22,10 +22,7 @@ import (
 func TestTLSConnection(t *testing.T) {
 	startTLSSyslogServer(loggertesthelper.Logger())
 
-	w := NewSyslogWriter("syslog-tls", "localhost:9999", "appId")
-	w.tlsConfig = &tls.Config{
-		InsecureSkipVerify: true,
-	}
+	w := NewSyslogWriter("syslog-tls", "localhost:9999", "appId", true)
 	err := w.Connect()
 	assert.NoError(t, err)
 	_, err = w.write(4, "test", "just a test", time.Now().UnixNano())
@@ -35,7 +32,7 @@ func TestTLSConnection(t *testing.T) {
 func TestTLSConnectionRejectsSelfSignedCertsByDefault(t *testing.T) {
 	startTLSSyslogServer(loggertesthelper.Logger())
 
-	w := NewSyslogWriter("syslog-tls", "localhost:9999", "appId")
+	w := NewSyslogWriter("syslog-tls", "localhost:9999", "appId", false)
 	err := w.Connect()
 	assert.Error(t, err)
 }

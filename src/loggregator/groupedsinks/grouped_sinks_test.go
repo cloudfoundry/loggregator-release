@@ -11,7 +11,7 @@ import (
 var syslogWriter sinks.SyslogWriter
 
 func init() {
-	syslogWriter = sinks.NewSyslogWriter("syslog", "localhost:24631", "appId")
+	syslogWriter = sinks.NewSyslogWriter("syslog", "localhost:24631", "appId", false)
 }
 
 func TestRegisterAndFor(t *testing.T) {

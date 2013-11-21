@@ -48,7 +48,7 @@ func (ts testSink) Logger() *gosteno.Logger {
 }
 
 func TestDumpToSinkWithLessThan20Messages(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, loggertesthelper.Logger())
+	testMessageRouter := NewMessageRouter(1024, loggertesthelper.Logger(), false)
 
 	activeSinks := groupedsinks.NewGroupedSinks()
 	dumpSink := sinks.NewDumpSink("appId", 100, loggertesthelper.Logger())
@@ -68,7 +68,7 @@ func TestDumpToSinkWithLessThan20Messages(t *testing.T) {
 }
 
 func TestDumpToSinkLimitsMessagesTo20(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, loggertesthelper.Logger())
+	testMessageRouter := NewMessageRouter(1024, loggertesthelper.Logger(), false)
 	sink := testSink{make(chan *logmessage.Message, 100), false}
 	activeSinks := groupedsinks.NewGroupedSinks()
 	dumpSink := sinks.NewDumpSink("appId", 100, loggertesthelper.Logger())
@@ -85,7 +85,7 @@ func TestDumpToSinkLimitsMessagesTo20(t *testing.T) {
 }
 
 func TestErrorMessagesAreDeliveredToSinksThatSupportThem(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, loggertesthelper.Logger())
+	testMessageRouter := NewMessageRouter(1024, loggertesthelper.Logger(), false)
 	go testMessageRouter.Start()
 
 	ourSink := testSink{make(chan *logmessage.Message, 100), true}
@@ -101,7 +101,7 @@ func TestErrorMessagesAreDeliveredToSinksThatSupportThem(t *testing.T) {
 }
 
 func TestErrorMessagesAreNotDeliveredToSinksThatDontAcceptErrors(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, loggertesthelper.Logger())
+	testMessageRouter := NewMessageRouter(1024, loggertesthelper.Logger(), false)
 	go testMessageRouter.Start()
 
 	ourSink := testSink{make(chan *logmessage.Message, 100), false}

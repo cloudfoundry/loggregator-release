@@ -36,13 +36,14 @@ type writer struct {
 	tlsConfig *tls.Config
 }
 
-func NewSyslogWriter(scheme, raddr string, appId string) (w *writer) {
+func NewSyslogWriter(scheme, raddr string, appId string, skipCertVerify bool) (w *writer) {
+	tlsConfig := &tls.Config{InsecureSkipVerify: skipCertVerify}
 	return &writer{
 		appId:     appId,
 		raddr:     raddr,
 		connected: false,
 		scheme:    scheme,
-		tlsConfig: &tls.Config{},
+		tlsConfig: tlsConfig,
 	}
 }
 

@@ -21,10 +21,11 @@ type messageRouter struct {
 	activeSyslogSinksCounter    int
 	logger                      *gosteno.Logger
 	errorChannel                chan *logmessage.Message
+	skipCertVerify              bool
 	*sync.RWMutex
 }
 
-func NewMessageRouter(maxRetainedLogMessages int, logger *gosteno.Logger) *messageRouter {
+func NewMessageRouter(maxRetainedLogMessages int, logger *gosteno.Logger, skipCertVerify bool) *messageRouter {
 	sinkCloseChan := make(chan sinks.Sink, 20)
 	sinkOpenChan := make(chan sinks.Sink, 20)
 	dumpReceiverChan := make(chan dumpReceiver)
@@ -38,7 +39,8 @@ func NewMessageRouter(maxRetainedLogMessages int, logger *gosteno.Logger) *messa
 		dumpReceiverChan:  dumpReceiverChan,
 		dumpBufferSize:    maxRetainedLogMessages,
 		RWMutex:           &sync.RWMutex{},
-		errorChannel:      make(chan *logmessage.Message, 10)}
+		errorChannel:      make(chan *logmessage.Message, 10),
+		skipCertVerify:    skipCertVerify}
 }
 
 func (messageRouter *messageRouter) Start() {
@@ -183,7 +185,7 @@ func (messageRouter *messageRouter) manageDrains(activeSinks *groupedsinks.Group
 				messageRouter.logger.Warnf("MessageRouter: Error when trying to parse syslog url %v. Requesting close. Err: %v", drainUrl, err)
 				continue
 			}
-			sysLogger := sinks.NewSyslogWriter(dl.Scheme, dl.Host, appId)
+			sysLogger := sinks.NewSyslogWriter(dl.Scheme, dl.Host, appId, messageRouter.skipCertVerify)
 			s := sinks.NewSyslogSink(appId, drainUrl, messageRouter.logger, sysLogger, messageRouter.errorChannel)
 			ok := messageRouter.registerSink(s, activeSinks)
 			if ok {

@@ -23,7 +23,7 @@ const SECRET = "secret"
 
 func init() {
 	dataReadChannel = make(chan []byte, 20)
-	TestMessageRouter = NewMessageRouter(1024, loggertesthelper.Logger())
+	TestMessageRouter = NewMessageRouter(1024, loggertesthelper.Logger(), false)
 	go TestMessageRouter.Start()
 	TestHttpServer = NewHttpServer(TestMessageRouter, 10*time.Millisecond, testhelpers.UnmarshallerMaker(SECRET), loggertesthelper.Logger())
 	go TestHttpServer.Start(dataReadChannel, "localhost:"+SERVER_PORT)

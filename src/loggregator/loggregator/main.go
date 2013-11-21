@@ -26,6 +26,7 @@ type Config struct {
 	LogFilePath            string
 	MaxRetainedLogMessages int
 	SharedSecret           string
+	SkipCertVerify         bool
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
@@ -87,7 +88,7 @@ func main() {
 	listener := agentlistener.NewAgentListener(fmt.Sprintf("0.0.0.0:%d", config.IncomingPort), logger)
 	incomingData := listener.Start()
 
-	messageRouter := sinkserver.NewMessageRouter(config.MaxRetainedLogMessages, logger)
+	messageRouter := sinkserver.NewMessageRouter(config.MaxRetainedLogMessages, logger, config.SkipCertVerify)
 
 	unmarshaller := func(data []byte) (*logmessage.Message, error) {
 		return logmessage.ParseEnvelope(data, config.SharedSecret)
