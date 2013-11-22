@@ -157,6 +157,7 @@ func generateLogMessage(messageString string, appId *string) *logmessage.LogMess
 		AppId:       appId,
 		MessageType: &messageType,
 		SourceType:  &sourceType,
+		SourceName:  proto.String("LGR"),
 		Timestamp:   proto.Int64(currentTime.UnixNano()),
 	}
 

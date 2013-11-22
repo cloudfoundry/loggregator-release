@@ -292,6 +292,7 @@ func TestSinkReportsErrorsOnTheErrorChannel(t *testing.T) {
 		assert.Contains(t, errorMsg, "Syslog Sink url_not_used: Error when dialing out. Backing off for")
 		assert.Contains(t, errorMsg, "Err: Error connecting.")
 		assert.Equal(t, errorLog.GetLogMessage().GetSourceType(), logmessage.LogMessage_LOGGREGATOR)
+		assert.Equal(t, errorLog.GetLogMessage().GetSourceName(), "LGR")
 	case <-time.After(10 * time.Millisecond):
 		t.Error("Should have received an error message by now")
 	}
