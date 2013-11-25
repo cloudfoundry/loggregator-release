@@ -28,7 +28,7 @@ type messageRouter struct {
 func NewMessageRouter(maxRetainedLogMessages int, logger *gosteno.Logger, skipCertVerify bool) *messageRouter {
 	sinkCloseChan := make(chan sinks.Sink, 20)
 	sinkOpenChan := make(chan sinks.Sink, 20)
-	dumpReceiverChan := make(chan dumpReceiver)
+	dumpReceiverChan := make(chan dumpReceiver, 10)
 	messageChannel := make(chan *logmessage.Message, 2048)
 
 	return &messageRouter{
@@ -54,8 +54,8 @@ func (messageRouter *messageRouter) Start() {
 				for _, m := range data {
 					dr.outputChannel <- m
 				}
-				close(dr.outputChannel)
 			}
+			close(dr.outputChannel)
 		case s := <-messageRouter.sinkOpenChan:
 			messageRouter.registerSink(s, activeSinks)
 		case s := <-messageRouter.sinkCloseChan:

@@ -86,16 +86,20 @@ func (httpServer *httpServer) dumpSinkHandler(ws *websocket.Conn) {
 
 	dumpChan := httpServer.messageRouter.registerDumpChan(appId)
 
+	dumpMessagesFromChannelToWebsocket(dumpChan, ws, clientAddress, httpServer.logger)
+
+	ws.Close()
+}
+
+func dumpMessagesFromChannelToWebsocket(dumpChan <-chan *logmessage.Message, ws *websocket.Conn, clientAddress net.Addr, logger *gosteno.Logger) {
 	for message := range dumpChan {
 		err := websocket.Message.Send(ws, message.GetRawMessage())
 		if err != nil {
-			httpServer.logger.Debugf("Dump Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", clientAddress, err)
+			logger.Debugf("Dump Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", clientAddress, err)
 		} else {
-			httpServer.logger.Debugf("Dump Sink %s: Successfully sent data", clientAddress)
+			logger.Debugf("Dump Sink %s: Successfully sent data", clientAddress)
 		}
 	}
-
-	ws.Close()
 }
 
 func contains(valueToFind string, values []string) bool {
