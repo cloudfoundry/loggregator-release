@@ -29,6 +29,10 @@ func (m MockLoggregatorEmitter) Emit(a, b string) {
 
 }
 
+func (m MockLoggregatorEmitter) EmitError(a, b string) {
+
+}
+
 func (m MockLoggregatorEmitter) EmitLogMessage(message *logmessage.LogMessage) {
 	m.received <- message
 }
