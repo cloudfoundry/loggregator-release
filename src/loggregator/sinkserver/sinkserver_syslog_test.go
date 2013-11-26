@@ -5,6 +5,7 @@ import (
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"regexp"
+	testhelpers "server_testhelpers"
 	"testing"
 	"time"
 )
@@ -43,23 +44,6 @@ func TestThatItSendsAllMessageToKnownDrains(t *testing.T) {
 	}
 }
 
-func AssertMessageOnChannel(t *testing.T, timeout int, receiveChan chan []byte, errorMessage string, expectedMessage string) {
-	select {
-	case <-time.After(time.Duration(timeout) * time.Millisecond):
-		t.Errorf("%s", errorMessage)
-	case message := <-receiveChan:
-		assert.Contains(t, string(message), expectedMessage)
-	}
-}
-
-func AssertMessageNotOnChannel(t *testing.T, timeout int, receiveChan chan []byte, errorMessage string) {
-	select {
-	case <-time.After(time.Duration(timeout) * time.Millisecond):
-	case message := <-receiveChan:
-		t.Errorf("%s %s", errorMessage, string(message))
-	}
-}
-
 func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	client1ReceivedChan := make(chan []byte)
 
@@ -73,7 +57,7 @@ func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	dataReadChannel <- logEnvelope
 
 	errorString := "Did not get the first message. Server was up, it should have been there"
-	AssertMessageOnChannel(t, 200, client1ReceivedChan, errorString, expectedMessageString1)
+	assertMessageOnChannel(t, 200, client1ReceivedChan, errorString, expectedMessageString1)
 	fakeSyslogDrain.Stop()
 	time.Sleep(50 * time.Millisecond)
 
@@ -81,13 +65,13 @@ func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	logEnvelope = messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString2, "myApp", SECRET, "syslog://localhost:34569")
 	dataReadChannel <- logEnvelope
 	errorString = "Did get a second message! Shouldn't be since the server is down"
-	AssertMessageNotOnChannel(t, 200, client1ReceivedChan, errorString)
+	assertMessageNotOnChannel(t, 200, client1ReceivedChan, errorString)
 
 	expectedMessageString3 := "Some Data 3"
 	logEnvelope = messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString3, "myApp", SECRET, "syslog://localhost:34569")
 	dataReadChannel <- logEnvelope
 	errorString = "Did get a third message! Shouldn't be since the server is down"
-	AssertMessageNotOnChannel(t, 200, client1ReceivedChan, errorString)
+	assertMessageNotOnChannel(t, 200, client1ReceivedChan, errorString)
 
 	time.Sleep(2260 * time.Millisecond)
 
@@ -105,7 +89,7 @@ func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	dataReadChannel <- logEnvelope
 
 	errorString = "Did not get the fourth message, but it should have been just fine since the server was up"
-	AssertMessageOnChannel(t, 200, client2ReceivedChan, errorString, expectedMessageString4)
+	assertMessageOnChannel(t, 200, client2ReceivedChan, errorString, expectedMessageString4)
 	fakeSyslogDrain.Stop()
 }
 
@@ -128,10 +112,10 @@ func TestThatItSendsAllDataToAllDrainUrls(t *testing.T) {
 	dataReadChannel <- logEnvelope
 
 	errString := "Did not get message from client 1."
-	AssertMessageOnChannel(t, 200, client1ReceivedChan, errString, expectedMessageString)
+	assertMessageOnChannel(t, 200, client1ReceivedChan, errString, expectedMessageString)
 
 	errString = "Did not get message from client 2."
-	AssertMessageOnChannel(t, 200, client2ReceivedChan, errString, expectedMessageString)
+	assertMessageOnChannel(t, 200, client2ReceivedChan, errString, expectedMessageString)
 
 	fakeSyslogDrain1.Stop()
 	fakeSyslogDrain2.Stop()
@@ -181,5 +165,54 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 		assert.True(t, matched, string(message))
 	case <-client2ReceivedChan:
 		t.Error("Should not have gotten the new message in this drain")
+	}
+}
+
+func TestThatItDoesNotRegisterADrainIfItsURLIsBlacklisted(t *testing.T) {
+	receivedChan := make(chan []byte, 2)
+	testhelpers.AddWSSink(t, receivedChan, BLACKLIST_SERVER_PORT, TAIL_PATH+"?app=myApp01")
+	WaitForWebsocketRegistration()
+
+	clientReceivedChan := make(chan []byte)
+
+	blackListedSyslogDrain, err := NewFakeService(clientReceivedChan, "127.0.0.1:34570")
+	defer blackListedSyslogDrain.Stop()
+	assert.NoError(t, err)
+	go blackListedSyslogDrain.Serve()
+	<-blackListedSyslogDrain.ReadyChan
+
+	logEnvelope1 := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, "Some Data", "myApp01", SECRET, "syslog://127.0.0.1:34570")
+	blackListDataReadChannel <- logEnvelope1
+
+	assertMessageNotOnChannel(t, 1000, clientReceivedChan, "Should not have received message on blacklisted Syslog drain")
+
+	select {
+	case <-time.After(1 * time.Second):
+		t.Errorf("Did not get the real message.")
+	case <-receivedChan:
+	}
+
+	select {
+	case <-time.After(1 * time.Second):
+		t.Errorf("Did not get the error message about the blacklisted syslog drain.")
+	case receivedMessage := <-receivedChan:
+		messagetesthelpers.AssertProtoBufferMessageEquals(t, "MessageRouter: Syslog drain url is blacklisted: syslog://127.0.0.1:34570", receivedMessage)
+	}
+}
+
+func assertMessageOnChannel(t *testing.T, timeout int, receiveChan chan []byte, errorMessage string, expectedMessage string) {
+	select {
+	case <-time.After(time.Duration(timeout) * time.Millisecond):
+		t.Errorf("%s", errorMessage)
+	case message := <-receiveChan:
+		assert.Contains(t, string(message), expectedMessage)
+	}
+}
+
+func assertMessageNotOnChannel(t *testing.T, timeout int, receiveChan chan []byte, errorMessage string) {
+	select {
+	case <-time.After(time.Duration(timeout) * time.Millisecond):
+	case message := <-receiveChan:
+		t.Errorf("%s %s", errorMessage, string(message))
 	}
 }

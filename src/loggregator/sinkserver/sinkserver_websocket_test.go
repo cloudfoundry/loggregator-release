@@ -189,7 +189,7 @@ func TestQueryStringCombinationsThatDropSinkButContinueToWork(t *testing.T) {
 }
 
 func TestDropSinkWhenLogTargetisinvalid(t *testing.T) {
-	AssertConnectionFails(t, SERVER_PORT, TAIL_PATH+"invalidtarget", 4000)
+	AssertConnectionFails(t, SERVER_PORT, TAIL_PATH+"?something=invalidtarget", 4000)
 }
 
 func TestKeepAlive(t *testing.T) {

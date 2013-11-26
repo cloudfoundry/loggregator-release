@@ -10,6 +10,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"loggregator/iprange"
 	"loggregator/sinkserver"
 	"math/rand"
 	"os"
@@ -27,11 +28,19 @@ type Config struct {
 	MaxRetainedLogMessages int
 	SharedSecret           string
 	SkipCertVerify         bool
+	BlackListIps           []iprange.IPRange
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
 	if c.MaxRetainedLogMessages == 0 {
 		return errors.New("Need max number of log messages to retain per application")
+	}
+
+	if c.BlackListIps != nil {
+		err = iprange.ValidateIpAddresses(c.BlackListIps)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = c.Validate(logger)
@@ -71,16 +80,8 @@ func main() {
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	config := &Config{IncomingPort: 3456, OutgoingPort: 8080}
-	err := cfcomponent.ReadConfigInto(config, *configFile)
-	if err != nil {
-		panic(err)
-	}
-
-	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "loggregator", config.Config)
-	logger.Info("Startup: Setting up the loggregator server")
-
-	err = config.validate(logger)
+	config, logger := parseConfig(logLevel, configFile, logFilePath)
+	err := config.validate(logger)
 	if err != nil {
 		panic(err)
 	}
@@ -88,7 +89,7 @@ func main() {
 	listener := agentlistener.NewAgentListener(fmt.Sprintf("0.0.0.0:%d", config.IncomingPort), logger)
 	incomingData := listener.Start()
 
-	messageRouter := sinkserver.NewMessageRouter(config.MaxRetainedLogMessages, logger, config.SkipCertVerify)
+	messageRouter := sinkserver.NewMessageRouter(config.MaxRetainedLogMessages, config.SkipCertVerify, config.BlackListIps, logger)
 
 	unmarshaller := func(data []byte) (*logmessage.Message, error) {
 		return logmessage.ParseEnvelope(data, config.SharedSecret)
@@ -137,4 +138,17 @@ func main() {
 			break
 		}
 	}
+}
+
+func parseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gosteno.Logger) {
+	config := &Config{IncomingPort: 3456, OutgoingPort: 8080}
+	err := cfcomponent.ReadConfigInto(config, *configFile)
+	if err != nil {
+		panic(err)
+	}
+
+	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "loggregator", config.Config)
+	logger.Info("Startup: Setting up the loggregator server")
+
+	return config, logger
 }

@@ -26,3 +26,7 @@ func TestDumpMessagesFromChannelToWebsocketWhenEmpty(t *testing.T) {
 	}
 
 }
+
+func TestConnectingToUnknownEndpointReturns400(t *testing.T) {
+	AssertConnectionFails(t, SERVER_PORT, "/INVALID_PATH", 400)
+}

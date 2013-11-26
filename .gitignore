@@ -1,5 +1,6 @@
 pkg/
 out/
+*/**/test_assets/stdout.log
 release/
 */bin
 */**/bin

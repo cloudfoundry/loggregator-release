@@ -1,10 +1,12 @@
 package sinkserver
 
 import (
+	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"loggregator/groupedsinks"
+	"loggregator/iprange"
 	"loggregator/sinks"
 	"net/url"
 	"sync"
@@ -22,10 +24,11 @@ type messageRouter struct {
 	logger                      *gosteno.Logger
 	errorChannel                chan *logmessage.Message
 	skipCertVerify              bool
+	blackListIPs                []iprange.IPRange
 	*sync.RWMutex
 }
 
-func NewMessageRouter(maxRetainedLogMessages int, logger *gosteno.Logger, skipCertVerify bool) *messageRouter {
+func NewMessageRouter(maxRetainedLogMessages int, skipCertVerify bool, blackListIPs []iprange.IPRange, logger *gosteno.Logger) *messageRouter {
 	sinkCloseChan := make(chan sinks.Sink, 20)
 	sinkOpenChan := make(chan sinks.Sink, 20)
 	dumpReceiverChan := make(chan dumpReceiver, 10)
@@ -40,6 +43,7 @@ func NewMessageRouter(maxRetainedLogMessages int, logger *gosteno.Logger, skipCe
 		dumpBufferSize:    maxRetainedLogMessages,
 		RWMutex:           &sync.RWMutex{},
 		errorChannel:      make(chan *logmessage.Message, 10),
+		blackListIPs:      blackListIPs,
 		skipCertVerify:    skipCertVerify}
 }
 
@@ -182,16 +186,38 @@ func (messageRouter *messageRouter) manageDrains(activeSinks *groupedsinks.Group
 		if activeSinks.DrainFor(appId, drainUrl) == nil {
 			dl, err := url.Parse(drainUrl)
 			if err != nil {
-				messageRouter.logger.Warnf("MessageRouter: Error when trying to parse syslog url %v. Requesting close. Err: %v", drainUrl, err)
+				errorMessage := fmt.Sprintf("MessageRouter: Error when trying to parse syslog url %v. Requesting close. Err: %v", drainUrl, err)
+				messageRouter.sendLoggregatorErrorMessage(errorMessage, appId)
 				continue
 			}
-			sysLogger := sinks.NewSyslogWriter(dl.Scheme, dl.Host, appId, messageRouter.skipCertVerify)
-			s := sinks.NewSyslogSink(appId, drainUrl, messageRouter.logger, sysLogger, messageRouter.errorChannel)
-			ok := messageRouter.registerSink(s, activeSinks)
-			if ok {
-				go s.Run()
+			ipNotBlacklisted, err := iprange.IpOutsideOfRanges(*dl, messageRouter.blackListIPs)
+			if err != nil {
+				errorMessage := fmt.Sprintf("MessageRouter: Error when trying to check syslog url %v against blacklist ip ranges. Requesting close. Err: %v", drainUrl, err)
+				messageRouter.sendLoggregatorErrorMessage(errorMessage, appId)
+				continue
+			}
+			if ipNotBlacklisted {
+				sysLogger := sinks.NewSyslogWriter(dl.Scheme, dl.Host, appId, messageRouter.skipCertVerify)
+				s := sinks.NewSyslogSink(appId, drainUrl, messageRouter.logger, sysLogger, messageRouter.errorChannel)
+				ok := messageRouter.registerSink(s, activeSinks)
+				if ok {
+					go s.Run()
+				}
+			} else {
+				errorMsg := fmt.Sprintf("MessageRouter: Syslog drain url is blacklisted: %s", drainUrl)
+				messageRouter.sendLoggregatorErrorMessage(errorMsg, appId)
 			}
 		}
+	}
+}
+
+func (messageRouter *messageRouter) sendLoggregatorErrorMessage(errorMsg, appId string) {
+	messageRouter.logger.Warnf(errorMsg)
+	logMessage, err := logmessage.GenerateMessage(logmessage.LogMessage_ERR, logmessage.LogMessage_LOGGREGATOR, errorMsg, appId, "LGR")
+	if err == nil {
+		messageRouter.errorChannel <- logMessage
+	} else {
+		messageRouter.logger.Warnf("Error marshalling message: %v", err)
 	}
 }
 

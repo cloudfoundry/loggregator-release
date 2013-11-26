@@ -58,5 +58,5 @@ func TestItDoesntHangWhenThereAreNoMessages(t *testing.T) {
 }
 
 func TestDumpDropSinkWhenLogTargetisinvalid(t *testing.T) {
-	AssertConnectionFails(t, SERVER_PORT, DUMP_PATH+"invalidtarget", 4000)
+	AssertConnectionFails(t, SERVER_PORT, DUMP_PATH+"?something=invalidtarget", 4000)
 }

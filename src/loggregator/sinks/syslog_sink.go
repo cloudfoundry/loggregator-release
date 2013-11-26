@@ -1,7 +1,6 @@
 package sinks
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
@@ -57,12 +56,11 @@ func (s *SyslogSink) Run() {
 				numberOfTries++
 
 				s.logger.Warnf(errorMsg)
-				lm := generateLogMessage(errorMsg, &s.appId)
-				lmBytes, err := proto.Marshal(lm)
+				logMessage, err := logmessage.GenerateMessage(logmessage.LogMessage_ERR, logmessage.LogMessage_LOGGREGATOR, errorMsg, s.appId, "LGR")
 				if err == nil {
-					s.errorChannel <- logmessage.NewMessage(lm, lmBytes)
+					s.errorChannel <- logMessage
 				} else {
-					s.logger.Infof("Error marshalling message: %v", err)
+					s.logger.Warnf("Error marshalling message: %v", err)
 				}
 				continue
 			}
@@ -146,20 +144,4 @@ func newExponentialRetryStrategy() retryStrategy {
 		return (time.Duration(duration) * time.Microsecond) + (time.Duration(randomOffset) * time.Microsecond)
 	}
 	return exponential
-}
-
-func generateLogMessage(messageString string, appId *string) *logmessage.LogMessage {
-	messageType := logmessage.LogMessage_ERR
-	sourceType := logmessage.LogMessage_LOGGREGATOR
-	currentTime := time.Now()
-	logMessage := &logmessage.LogMessage{
-		Message:     []byte(messageString),
-		AppId:       appId,
-		MessageType: &messageType,
-		SourceType:  &sourceType,
-		SourceName:  proto.String("LGR"),
-		Timestamp:   proto.Int64(currentTime.UnixNano()),
-	}
-
-	return logMessage
 }

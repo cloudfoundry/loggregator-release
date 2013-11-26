@@ -8,6 +8,7 @@ import (
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"loggregator/groupedsinks"
+	"loggregator/iprange"
 	"loggregator/sinks"
 	"testing"
 	"time"
@@ -48,7 +49,7 @@ func (ts testSink) Logger() *gosteno.Logger {
 }
 
 func TestDumpToSinkWithLessThan20Messages(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, loggertesthelper.Logger(), false)
+	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger())
 
 	activeSinks := groupedsinks.NewGroupedSinks()
 	dumpSink := sinks.NewDumpSink("appId", 100, loggertesthelper.Logger())
@@ -68,7 +69,7 @@ func TestDumpToSinkWithLessThan20Messages(t *testing.T) {
 }
 
 func TestDumpToSinkLimitsMessagesTo20(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, loggertesthelper.Logger(), false)
+	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger())
 	sink := testSink{make(chan *logmessage.Message, 100), false}
 	activeSinks := groupedsinks.NewGroupedSinks()
 	dumpSink := sinks.NewDumpSink("appId", 100, loggertesthelper.Logger())
@@ -85,7 +86,7 @@ func TestDumpToSinkLimitsMessagesTo20(t *testing.T) {
 }
 
 func TestErrorMessagesAreDeliveredToSinksThatSupportThem(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, loggertesthelper.Logger(), false)
+	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger())
 	go testMessageRouter.Start()
 
 	ourSink := testSink{make(chan *logmessage.Message, 100), true}
@@ -101,7 +102,7 @@ func TestErrorMessagesAreDeliveredToSinksThatSupportThem(t *testing.T) {
 }
 
 func TestErrorMessagesAreNotDeliveredToSinksThatDontAcceptErrors(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, loggertesthelper.Logger(), false)
+	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger())
 	go testMessageRouter.Start()
 
 	ourSink := testSink{make(chan *logmessage.Message, 100), false}
@@ -113,5 +114,38 @@ func TestErrorMessagesAreNotDeliveredToSinksThatDontAcceptErrors(t *testing.T) {
 		t.Error("Should not have received a message")
 	case <-time.After(10 * time.Millisecond):
 		break
+	}
+}
+
+func TestSimpleBlacklistRule(t *testing.T) {
+	testMessageRouter := NewMessageRouter(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, loggertesthelper.Logger())
+	oldActiveSyslogSinksCounter := testMessageRouter.activeSyslogSinksCounter
+
+	go testMessageRouter.Start()
+	ourSink := testSink{make(chan *logmessage.Message, 100), false}
+	testMessageRouter.sinkOpenChan <- ourSink
+	<-time.After(1 * time.Millisecond)
+
+	message := messagetesthelpers.NewMessage(t, "error msg", "appId")
+	message.GetLogMessage().DrainUrls = []string{"http://10.10.123.1"}
+	testMessageRouter.parsedMessageChan <- message
+	waitForMessageGettingProcessed(t, ourSink, 10*time.Millisecond)
+
+	assert.Equal(t, testMessageRouter.activeSyslogSinksCounter, oldActiveSyslogSinksCounter)
+
+	message = messagetesthelpers.NewMessage(t, "error msg", "appId")
+	message.GetLogMessage().DrainUrls = []string{"http://10.10.123.2"}
+	testMessageRouter.parsedMessageChan <- message
+	waitForMessageGettingProcessed(t, ourSink, 10*time.Millisecond)
+
+	assert.Equal(t, testMessageRouter.activeSyslogSinksCounter, oldActiveSyslogSinksCounter+1)
+}
+
+func waitForMessageGettingProcessed(t *testing.T, ourSink testSink, timeout time.Duration) {
+	select {
+	case _ = <-ourSink.Channel():
+
+	case <-time.After(timeout):
+		t.Error("Message didn't get processed")
 	}
 }

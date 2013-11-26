@@ -32,9 +32,7 @@ func (httpServer *httpServer) Start(incomingProtobufChan <-chan []byte, apiEndpo
 	go httpServer.ParseEnvelopes(incomingProtobufChan)
 
 	httpServer.logger.Infof("HttpServer: Listening for sinks at %s", apiEndpoint)
-	http.Handle(TAIL_PATH, websocket.Handler(httpServer.websocketSinkHandler))
-	http.Handle(DUMP_PATH, websocket.Handler(httpServer.dumpSinkHandler))
-	err := http.ListenAndServe(apiEndpoint, nil)
+	err := http.ListenAndServe(apiEndpoint, websocket.Handler(httpServer.websocketRouter))
 	if err != nil {
 		panic(err)
 	}
@@ -55,6 +53,17 @@ func (httpServer *httpServer) ParseEnvelopes(incomingProtobufChan <-chan []byte)
 func (httpServer *httpServer) logInvalidApp(address net.Addr) {
 	message := fmt.Sprintf("HttpServer: Did not accept sink connection with invalid app id: %s.", address)
 	httpServer.logger.Warn(message)
+}
+
+func (httpServer *httpServer) websocketRouter(ws *websocket.Conn) {
+	if ws.Request().URL.Path == TAIL_PATH {
+		httpServer.websocketSinkHandler(ws)
+	} else if ws.Request().URL.Path == DUMP_PATH {
+		httpServer.dumpSinkHandler(ws)
+	} else {
+		ws.CloseWithStatus(400)
+		return
+	}
 }
 
 func (httpServer *httpServer) websocketSinkHandler(ws *websocket.Conn) {
