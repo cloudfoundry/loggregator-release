@@ -117,6 +117,28 @@ func TestErrorMessagesAreNotDeliveredToSinksThatDontAcceptErrors(t *testing.T) {
 	}
 }
 
+func TestThatItDoesNotCreateAnotherSyslogDrainIfItIsAlreadyThere(t *testing.T) {
+	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger())
+	oldActiveSyslogSinksCounter := testMessageRouter.activeSyslogSinksCounter
+
+	go testMessageRouter.Start()
+	ourSink := testSink{make(chan *logmessage.Message, 100), false}
+	testMessageRouter.sinkOpenChan <- ourSink
+	<-time.After(1 * time.Millisecond)
+
+	message := messagetesthelpers.NewMessage(t, "error msg", "appId")
+	message.GetLogMessage().DrainUrls = []string{"http://10.10.123.1"}
+	testMessageRouter.parsedMessageChan <- message
+	waitForMessageGettingProcessed(t, ourSink, 10*time.Millisecond)
+
+	assert.Equal(t, testMessageRouter.activeSyslogSinksCounter, oldActiveSyslogSinksCounter+1)
+
+	testMessageRouter.parsedMessageChan <- message
+	waitForMessageGettingProcessed(t, ourSink, 10*time.Millisecond)
+
+	assert.Equal(t, testMessageRouter.activeSyslogSinksCounter, oldActiveSyslogSinksCounter+1)
+}
+
 func TestSimpleBlacklistRule(t *testing.T) {
 	testMessageRouter := NewMessageRouter(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, loggertesthelper.Logger())
 	oldActiveSyslogSinksCounter := testMessageRouter.activeSyslogSinksCounter
