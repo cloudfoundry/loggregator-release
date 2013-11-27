@@ -144,14 +144,39 @@ func TestSimpleBlacklistRule(t *testing.T) {
 	oldActiveSyslogSinksCounter := testMessageRouter.activeSyslogSinksCounter
 
 	go testMessageRouter.Start()
-	ourSink := testSink{make(chan *logmessage.Message, 100), false}
+	ourSink := testSink{make(chan *logmessage.Message, 100), true}
 	testMessageRouter.sinkOpenChan <- ourSink
 	<-time.After(1 * time.Millisecond)
 
 	message := messagetesthelpers.NewMessage(t, "error msg", "appId")
 	message.GetLogMessage().DrainUrls = []string{"http://10.10.123.1"}
 	testMessageRouter.parsedMessageChan <- message
-	waitForMessageGettingProcessed(t, ourSink, 10*time.Millisecond)
+
+	select {
+	case message = <-ourSink.Channel():
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Did not receive real message")
+	}
+
+	select {
+	case message = <-ourSink.Channel():
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Did not message about blacklisted syslog drain")
+	}
+
+	testMessageRouter.parsedMessageChan <- message
+
+	select {
+	case message = <-ourSink.Channel():
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Did not receive real message")
+	}
+
+	select {
+	case message = <-ourSink.Channel():
+		t.Error("Should not receive another message about the blacklisted url since we cache blacklisted urls")
+	case <-time.After(100 * time.Millisecond):
+	}
 
 	assert.Equal(t, testMessageRouter.activeSyslogSinksCounter, oldActiveSyslogSinksCounter)
 

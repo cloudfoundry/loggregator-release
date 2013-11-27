@@ -25,6 +25,7 @@ type messageRouter struct {
 	errorChannel                chan *logmessage.Message
 	skipCertVerify              bool
 	blackListIPs                []iprange.IPRange
+	blacklistedURLS             []string
 	*sync.RWMutex
 }
 
@@ -183,7 +184,7 @@ func (messageRouter *messageRouter) manageDrains(activeSinks *groupedsinks.Group
 
 	//add all drains that didn't exist
 	for _, drainUrl := range drainUrls {
-		if activeSinks.DrainFor(appId, drainUrl) == nil {
+		if activeSinks.DrainFor(appId, drainUrl) == nil && !messageRouter.urlIsBlackListed(drainUrl) {
 			dl, err := url.Parse(drainUrl)
 			if err != nil {
 				errorMessage := fmt.Sprintf("MessageRouter: Error when trying to parse syslog url %v. Requesting close. Err: %v", drainUrl, err)
@@ -204,6 +205,7 @@ func (messageRouter *messageRouter) manageDrains(activeSinks *groupedsinks.Group
 					go s.Run()
 				}
 			} else {
+				messageRouter.blacklistedURLS = append(messageRouter.blacklistedURLS, drainUrl)
 				errorMsg := fmt.Sprintf("MessageRouter: Syslog drain url is blacklisted: %s", drainUrl)
 				messageRouter.sendLoggregatorErrorMessage(errorMsg, appId)
 			}
@@ -237,4 +239,13 @@ func (messageRouter *messageRouter) Emit() instrumentation.Context {
 		Name:    "messageRouter",
 		Metrics: messageRouter.metrics(),
 	}
+}
+
+func (messageRouter *messageRouter) urlIsBlackListed(testUrl string) bool {
+	for _, url := range messageRouter.blacklistedURLS {
+		if url == testUrl {
+			return true
+		}
+	}
+	return false
 }
