@@ -7,9 +7,6 @@
 [submodule "src/code.google.com/p/gogoprotobuf"]
         path=src/code.google.com/p/gogoprotobuf
         url = https://code.google.com/p/gogoprotobuf/
-[submodule "src/github.com/cloudfoundry/go_cfmessagebus"]
-	path = src/github.com/cloudfoundry/go_cfmessagebus
-	url = https://github.com/cloudfoundry/go_cfmessagebus
 [submodule "src/github.com/cloudfoundry/yagnats"]
 	path = src/github.com/cloudfoundry/yagnats
 	url = https://github.com/cloudfoundry/yagnats
