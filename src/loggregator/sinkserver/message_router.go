@@ -147,7 +147,7 @@ func (messageRouter *messageRouter) unregisterSink(s sinks.Sink, activeSinks *gr
 	case *sinks.WebsocketSink:
 		messageRouter.activeWebsocketSinksCounter--
 	}
-	messageRouter.logger.Infof("MessageRouter: Sink with channel %v requested closing. Closed it.", s.Channel())
+	messageRouter.logger.Infof("MessageRouter: Sink with channel %v and identifier %s requested closing. Closed it.", s.Channel(), s.Identifier())
 }
 
 func (messageRouter *messageRouter) manageDumps(activeSinks *groupedsinks.GroupedSinks, appId string) {
