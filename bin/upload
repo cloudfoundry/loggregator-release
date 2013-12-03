@@ -10,9 +10,17 @@ set -e
 # Deploy to Staging
 
 echo 'Trigger prism deploy'
-curl -X POST http://inception.prism.cf-app.com:4567/deploy/$STAGING_API_KEY
+curl -s -X POST http://inception.prism.cf-app.com:4567/deploy/$STAGING_API_KEY | tee deploy.txt
+
+grep "Deployed \`cf_prism.yml' to \`micro-prism'" deploy.txt
+
+if [ $? != 0 ]; then
+    echo "Deploy unsuccessful."
+    exit 1
+fi
 
 # Run integration tests
 
 echo 'Trigger integration tests'
-curl -X POST http://inception.prism.cf-app.com:4567/run_loggregator_integration/$STAGING_API_KEY
+curl -s -X POST http://inception.prism.cf-app.com:4567/run_loggregator_integration/$STAGING_API_KEY | tee integration.txt
+grep "0 failures" integration.txt
