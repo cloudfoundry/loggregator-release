@@ -58,3 +58,8 @@ done
 
 echo 'Trigger prism deploy'
 curl -X POST http://inception.prism.cf-app.com:4567/deploy/$STAGING_API_KEY
+
+# Run integration tests
+
+echo 'Trigger integration tests'
+curl -X POST http://inception.prism.cf-app.com:4567/run_loggregator_integration/$STAGING_API_KEY
