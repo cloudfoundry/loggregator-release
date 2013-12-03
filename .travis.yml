@@ -19,8 +19,9 @@ env:
   - secure: GGNK3EdRGczAeow8u6/UuS3qg6tgGfHfoinzM8Vxmo2ik1bKJHZYLR9JpYILtj0+dv/Hz8ZPDvH1Htci8ZaIZTsU2CL8XeTKQCVdNfSGLOKqcC4+eBTmoFVp//GtRrTW7LGQOFhaN9I41bFWdAxYcQsc6wCUGeJvFZStQW0ebmQ=
 language: go
 go:
-- 1.1.2
+- 1.2
 before_install:
+- go get code.google.com/p/go.tools/cmd/vet
 - git submodule update --init --recursive
 install: ./bin/build
 script: ./bin/travis_test && ./bin/upload
