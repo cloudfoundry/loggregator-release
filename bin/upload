@@ -7,53 +7,6 @@ fi
 
 set -e
 
-SCRIPT_HOME=$( cd "$( dirname "$0" )" && pwd )
-API=https://api.bintray.com
-NOT_FOUND=404
-CONFLICT=409
-SUCCESS=200
-CREATED=201
-OK=200
-
-function package_upload {
-   [ $# -ne 7 ] && {
-       echo >&2 'usage: package_upload subject apikey org repo package version file'
-       return 2
-   }
-   local subject=$1 apikey=$2 org=$3 repo=$4 package=$5 version=$6 file=$7
-   filename=$(basename $file)
-
-   http_code=$(curl -u${subject}:${apikey} -H Accept:application/json \
-       --write-out %{http_code} --silent --output /dev/null \
-       -T ${file} -H X-Bintray-Package:${package} -H X-Bintray-Version:${version} \
-       -X PUT ${API}/content/${org}/${repo}/${package}/${version}/${filename}\;publish=1)
-
-   case ${http_code} in
-       ${CREATED}) echo >&2 "Uploaded." ;;
-       ${CONFLICT}) echo >&2 "Conflict. File already uploaded for /$org/$repo/$package/$version";  return $http_code ;;
-       *) echo >&2 "unexpected response code: $http_code" ; return 1 ;;
-   esac
-
-   let previous_version=$version-5
-   http_code=$(curl -u${subject}:${apikey} -H Accept:application/json \
-       --write-out %{http_code} --silent --output /dev/null \
-       -X DELETE ${API}/packages/${org}/${repo}/${package}/versions/${previous_version})
-   
-   case ${http_code} in
-       ${OK}) echo >&2 "Deleted version ${previous_version}." ;;
-       *) echo >&2 "Delete of version ${previous_version} did not work: $http_code" ;;
-   esac
-   
-   return 0
-}
-
-# Upload artifacts to bintray.com
-
-for ARTIFACT in `ls -1 $SCRIPT_HOME/../release/*.gz`; do
-  echo "Uploading $ARTIFACT"
-  package_upload $BINTRAY_USER $BINTRAY_API_KEY $BINTRAY_USER loggregator loggregator $TRAVIS_BUILD_NUMBER $ARTIFACT
-done
-
 # Deploy to Staging
 
 echo 'Trigger prism deploy'
