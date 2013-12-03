@@ -5,7 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	cfmessagebus "github.com/cloudfoundry/go_cfmessagebus"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
@@ -18,7 +17,6 @@ type Config struct {
 	Index              uint
 	LoggregatorAddress string
 	SharedSecret       string
-	mbusClient         cfmessagebus.MessageBus
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
