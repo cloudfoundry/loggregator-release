@@ -107,6 +107,10 @@ func (messageRouter *messageRouter) registerSink(s sinks.Sink, activeSinks *grou
 	defer messageRouter.Unlock()
 
 	ok := activeSinks.Register(s)
+	if !ok {
+		return false
+	}
+
 	switch s.(type) {
 	case *sinks.DumpSink:
 		messageRouter.activeDumpSinksCounter++
@@ -117,7 +121,7 @@ func (messageRouter *messageRouter) registerSink(s sinks.Sink, activeSinks *grou
 		go messageRouter.dumpToSink(s, activeSinks)
 	}
 	messageRouter.logger.Infof("MessageRouter: Sink with channel %v requested. Opened it.", s.Channel())
-	return ok
+	return true
 }
 
 func (messageRouter *messageRouter) dumpToSink(sink sinks.Sink, activeSinks *groupedsinks.GroupedSinks) {
@@ -151,14 +155,14 @@ func (messageRouter *messageRouter) unregisterSink(s sinks.Sink, activeSinks *gr
 }
 
 func (messageRouter *messageRouter) manageDumps(activeSinks *groupedsinks.GroupedSinks, appId string) {
-	if activeSinks.DumpFor(appId) == nil {
-		s := sinks.NewDumpSink(appId, messageRouter.dumpBufferSize, messageRouter.logger)
+	if activeSinks.DumpFor(appId) != nil {
+		return
+	}
 
-		ok := messageRouter.registerSink(s, activeSinks)
+	s := sinks.NewDumpSink(appId, messageRouter.dumpBufferSize, messageRouter.logger)
 
-		if ok {
-			go s.Run()
-		}
+	if messageRouter.registerSink(s, activeSinks) {
+		go s.Run()
 	}
 }
 
