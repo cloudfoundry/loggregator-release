@@ -77,9 +77,6 @@ jobs:
     default:
     - dns
     - gateway
-  properties:
-    loggregator:
-      trafficcontroller: 10.10.16.16:3456 # pick a traffic controller from the same redundancy zone as this job
 
 - name: loggregator
   template: loggregator
@@ -108,6 +105,11 @@ properties:
       - 10.10.16.14
     incoming_port: 3456
     outgoing_port: 8080
+    
+  loggregator_endpoint: # The end point sources will connect to
+    shared_secret: loggregatorEndPointSharedSecret  
+    host: 10.10.16.16
+    port: 3456
 ```
 
 ### Development
