@@ -24,4 +24,4 @@ before_install:
 - go get code.google.com/p/go.tools/cmd/vet
 - git submodule update --init --recursive
 install: ./bin/build
-script: ./bin/travis_test && ./bin/upload
+script: ./bin/travis_test && ./bin/upload 0
