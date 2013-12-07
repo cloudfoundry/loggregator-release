@@ -56,6 +56,14 @@ In a redundant CloudFoundry setup, Loggregator can be configured to survive zone
 
 ![Loggregator Diagram](docs/loggregator_multizone.png)
 
+The loggregator Traffic Controller has two roles.   
+
+The first role is to take traffic from the various emitter sources (dea, dea-logging-agent router, etc) and route that traffic to one or more loggregator servers.   In the current config we route this traffic to the loggregator servers in the same az.   The traffic is sharded across loggregator servers by application id.    In this role the traffic between the traffic_controller and loggregator server(s) is all within the same az.
+
+The second role is to handle inbound web socket requests for log data.    It does this by proxying the request to the correct loggregator server (sharded by application id) within all azs configured.  Since an application can be deployed to multiple az, it's logs can potentially end up in multiple azs.   This is why the traffic controller will attempt to connect to loggregator servers in each az and will collate the data into a single stream for the web socket client.    In the role the traffic between the traffic_controller and loggregator server(s) in across azs.
+
+The traffic controller itself is stateless and a web socket request can be handle by any instance in any az.    The inbound emitter source connections could be load balanced across traffic controllers as well but we have yet to deploy this configuration.
+
 ### Emitting Messages from other Cloud Foundry components
 
 Cloud Foundry developers can easily add source clients to new CF components that emit messages to the loggregator server.  Currently, there are libraries for [Go](https://github.com/cloudfoundry/loggregatorlib/tree/master/emitter) and [Ruby](https://github.com/cloudfoundry/loggregator_emitter). For usage information, look at their respective READMEs.
