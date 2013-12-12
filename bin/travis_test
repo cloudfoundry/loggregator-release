@@ -16,7 +16,8 @@ function red {
 
 packages=(
     deaagent
-    deaagent/deaagent
+    deaagent/metadataservice
+    deaagent/syslogreader
     loggregator
     loggregator/groupedsinks
     loggregator/loggregator

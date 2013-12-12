@@ -1,6 +1,8 @@
 {
     "Index": 0,
+    "WardenSyslogPort" : 54321,
     "LoggregatorAddress": "localhost:3456",
+    "WardenMetadataEndpoint": "localhost:8888",
     "SharedSecret": "mysecret",
     "NatsHost":  "localhost",
     "NatsPort": 4222,
