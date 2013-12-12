@@ -20,7 +20,7 @@ func init() {
 
 	messageRouter := sinkserver.NewMessageRouter(10, false, nil, logger)
 	go messageRouter.Start()
-	httpServer := sinkserver.NewHttpServer(messageRouter, 30*time.Second, testhelpers.UnmarshallerMaker("secret"), logger)
+	httpServer := sinkserver.NewHttpServer(messageRouter, 30*time.Second, testhelpers.UnmarshallerMaker("secret"), 100, logger)
 	go httpServer.Start(dataChannel, "localhost:8081")
 
 	time.Sleep(50 * time.Millisecond)
