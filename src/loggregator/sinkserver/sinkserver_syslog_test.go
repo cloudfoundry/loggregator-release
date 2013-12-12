@@ -1,7 +1,6 @@
 package sinkserver
 
 import (
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"regexp"
@@ -150,8 +149,8 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 
 	expectedSecondMessageString := "loggregator myApp: loggregator myApp: Some More Data"
 	logMessage2 := messagetesthelpers.NewLogMessage(expectedSecondMessageString, "myApp")
-	sourceType := logmessage.LogMessage_DEA
-	logMessage2.SourceType = &sourceType
+	sourceName := "DEA"
+	logMessage2.SourceName = &sourceName
 	logMessage2.DrainUrls = []string{"syslog://localhost:34540"}
 	logEnvelope2 := messagetesthelpers.MarshalledLogEnvelope(t, logMessage2, SECRET)
 
