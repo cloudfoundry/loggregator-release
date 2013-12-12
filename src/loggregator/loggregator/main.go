@@ -142,7 +142,7 @@ func main() {
 }
 
 func parseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gosteno.Logger) {
-	config := &Config{IncomingPort: 3456, OutgoingPort: 8080}
+	config := &Config{IncomingPort: 3456, OutgoingPort: 8080, WSMessageBufferSize: 100}
 	err := cfcomponent.ReadConfigInto(config, *configFile)
 	if err != nil {
 		panic(err)

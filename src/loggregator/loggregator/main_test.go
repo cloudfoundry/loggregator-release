@@ -14,6 +14,7 @@ func TestDefaultConfig(t *testing.T) {
 	config, _ := parseConfig(&logLevel, &configFile, &logFilePath)
 	assert.Equal(t, config.IncomingPort, uint32(3456))
 	assert.Equal(t, config.OutgoingPort, uint32(8080))
+	assert.Equal(t, config.WSMessageBufferSize, uint(100))
 }
 
 func TestParseConfigWorksWithEmptyBlackligtIpProperty(t *testing.T) {
