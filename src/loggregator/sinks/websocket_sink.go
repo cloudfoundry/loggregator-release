@@ -11,18 +11,19 @@ import (
 )
 
 type WebsocketSink struct {
-	logger            *gosteno.Logger
-	appId             string
-	ws                *websocket.Conn
-	clientAddress     net.Addr
-	sentMessageCount  *uint64
-	sentByteCount     *uint64
-	keepAliveInterval time.Duration
-	listenerChannel   chan *logmessage.Message
-	sinkCloseChan     chan Sink
+	logger              *gosteno.Logger
+	appId               string
+	ws                  *websocket.Conn
+	clientAddress       net.Addr
+	sentMessageCount    *uint64
+	sentByteCount       *uint64
+	keepAliveInterval   time.Duration
+	listenerChannel     chan *logmessage.Message
+	sinkCloseChan       chan Sink
+	wsMessageBufferSize uint
 }
 
-func NewWebsocketSink(appId string, givenLogger *gosteno.Logger, ws *websocket.Conn, clientAddress net.Addr, sinkCloseChan chan Sink, keepAliveInterval time.Duration) Sink {
+func NewWebsocketSink(appId string, givenLogger *gosteno.Logger, ws *websocket.Conn, clientAddress net.Addr, sinkCloseChan chan Sink, keepAliveInterval time.Duration, wsMessageBufferSize uint) Sink {
 	return &WebsocketSink{
 		givenLogger,
 		appId,
@@ -33,6 +34,7 @@ func NewWebsocketSink(appId string, givenLogger *gosteno.Logger, ws *websocket.C
 		keepAliveInterval,
 		make(chan *logmessage.Message),
 		sinkCloseChan,
+		wsMessageBufferSize,
 	}
 }
 
@@ -78,7 +80,7 @@ func (sink *WebsocketSink) Run() {
 	keepAliveChan := sink.keepAliveChannel()
 	alreadyRequestedClose := false
 
-	buffer := runTruncatingBuffer(sink, 100, sink.Logger())
+	buffer := runTruncatingBuffer(sink, sink.wsMessageBufferSize, sink.Logger())
 	for {
 		sink.logger.Debugf("Websocket Sink %s: Waiting for activity", sink.clientAddress)
 		select {

@@ -21,11 +21,12 @@ type httpServer struct {
 	messageRouter           *messageRouter
 	keepAliveInterval       time.Duration
 	protoBufferUnmarshaller func([]byte) (*logmessage.Message, error)
+	wSMessageBufferSize     uint
 	logger                  *gosteno.Logger
 }
 
-func NewHttpServer(messageRouter *messageRouter, keepAliveInterval time.Duration, protoBufferUnmarshaller func([]byte) (*logmessage.Message, error), logger *gosteno.Logger) *httpServer {
-	return &httpServer{messageRouter, keepAliveInterval, protoBufferUnmarshaller, logger}
+func NewHttpServer(messageRouter *messageRouter, keepAliveInterval time.Duration, protoBufferUnmarshaller func([]byte) (*logmessage.Message, error), wSMessageBufferSize uint, logger *gosteno.Logger) *httpServer {
+	return &httpServer{messageRouter, keepAliveInterval, protoBufferUnmarshaller, wSMessageBufferSize, logger}
 }
 
 func (httpServer *httpServer) Start(incomingProtobufChan <-chan []byte, apiEndpoint string) {
@@ -76,7 +77,7 @@ func (httpServer *httpServer) websocketSinkHandler(ws *websocket.Conn) {
 		return
 	}
 
-	s := sinks.NewWebsocketSink(appId, httpServer.logger, ws, clientAddress, httpServer.messageRouter.sinkCloseChan, httpServer.keepAliveInterval)
+	s := sinks.NewWebsocketSink(appId, httpServer.logger, ws, clientAddress, httpServer.messageRouter.sinkCloseChan, httpServer.keepAliveInterval, httpServer.wSMessageBufferSize)
 	httpServer.logger.Debugf("HttpServer: Requesting a wss sink for app %s", s.AppId())
 	httpServer.messageRouter.sinkOpenChan <- s
 

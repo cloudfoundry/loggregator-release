@@ -31,6 +31,7 @@ func TestParseConfigReturnsProperConfigObject(t *testing.T) {
 	config, _ := parseConfig(&logLevel, &configFile, &logFilePath)
 	assert.Equal(t, config.IncomingPort, uint32(8765))
 	assert.Equal(t, config.OutgoingPort, uint32(4567))
+	assert.Equal(t, config.WSMessageBufferSize, uint(100))
 	assert.Equal(t, config.BlackListIps[0].Start, "127.0.0.0")
 	assert.Equal(t, config.BlackListIps[0].End, "127.0.0.2")
 	assert.Equal(t, config.BlackListIps[1].Start, "127.0.1.12")

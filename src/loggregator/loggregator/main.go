@@ -26,6 +26,7 @@ type Config struct {
 	OutgoingPort           uint32
 	LogFilePath            string
 	MaxRetainedLogMessages int
+	WSMessageBufferSize    uint
 	SharedSecret           string
 	SkipCertVerify         bool
 	BlackListIps           []iprange.IPRange
@@ -95,7 +96,7 @@ func main() {
 		return logmessage.ParseEnvelope(data, config.SharedSecret)
 	}
 
-	httpServer := sinkserver.NewHttpServer(messageRouter, 30*time.Second, unmarshaller, logger)
+	httpServer := sinkserver.NewHttpServer(messageRouter, 30*time.Second, unmarshaller, config.WSMessageBufferSize, logger)
 
 	cfc, err := cfcomponent.NewComponent(
 		logger,
