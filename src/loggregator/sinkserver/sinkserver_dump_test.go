@@ -24,6 +24,8 @@ func TestItDumpsAllMessagesForAnAppUser(t *testing.T) {
 	dataReadChannel <- envelope
 	dataReadChannel <- envelope
 
+	time.Sleep(100 * time.Millisecond)
+
 	receivedChan := make(chan []byte, 2)
 	_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, DUMP_PATH+"?app=myOtherApp")
 
