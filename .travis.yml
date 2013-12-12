@@ -1,7 +1,7 @@
 ---
 notifications:
   email:
-  - cf-loggregator@pivotallabs.com
+  - cf-lamb@pivotallabs.com
 env:
   global:
   - secure: ! 'jAPpeCpKZrRdVrexHONGy1YUksbb7WYMvYLGKbcatvRXW7pw/l77uGvg+93e
