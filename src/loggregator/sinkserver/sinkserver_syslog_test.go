@@ -111,10 +111,10 @@ func TestThatItSendsAllDataToAllDrainUrls(t *testing.T) {
 	dataReadChannel <- logEnvelope
 
 	errString := "Did not get message from client 1."
-	assertMessageOnChannel(t, 200, client1ReceivedChan, errString, expectedMessageString)
+	assertMessageOnChannel(t, 500, client1ReceivedChan, errString, expectedMessageString)
 
 	errString = "Did not get message from client 2."
-	assertMessageOnChannel(t, 200, client2ReceivedChan, errString, expectedMessageString)
+	assertMessageOnChannel(t, 500, client2ReceivedChan, errString, expectedMessageString)
 
 	fakeSyslogDrain1.Stop()
 	fakeSyslogDrain2.Stop()
