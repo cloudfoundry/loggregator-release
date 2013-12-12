@@ -18,13 +18,13 @@ Loggregator allows users to:
 First, make sure you're using the new [golang based CF CLI](https://github.com/cloudfoundry/cli).  Once that's installed:
 
 ```
-cf logs [--app=APP_NAME] [--recent]
+gcf logs [--app=APP_NAME] [--recent]
 ```
 
 `APP_NAME` defaults to the current application in your `manifest.yml` file.
 
 ``` bash
-$ cf logs private-app
+$ gcf logs private-app
 Connected, tailing...
 Oct 3 15:09:26 private-app App/0 STDERR This message is on stderr at 2013-10-03 22:09:26 +0000 for private-app instance 0
 Oct 3 15:09:26 private-app App/0 STDERR 204.15.2.45, 10.10.2.148 - - [03/Oct/2013 22:09:26] "GET / HTTP/1.1" 200 81 0.0010
