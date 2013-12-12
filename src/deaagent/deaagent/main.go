@@ -2,10 +2,12 @@ package main
 
 import (
 	"deaagent"
+	"deaagent/metadataservice"
 	"errors"
 	"flag"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
@@ -14,14 +16,22 @@ import (
 
 type Config struct {
 	cfcomponent.Config
-	Index              uint
-	LoggregatorAddress string
-	SharedSecret       string
+	Index                  uint
+	WardenSyslogPort       uint
+	WardenMetadataEndpoint string
+	LoggregatorAddress     string
+	SharedSecret           string
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
 	if c.LoggregatorAddress == "" {
 		return errors.New("Need Loggregator address (host:port).")
+	}
+	if !(c.WardenSyslogPort > 0) {
+		return errors.New("Need a valid warden syslog port.")
+	}
+	if c.WardenMetadataEndpoint == "" {
+		return errors.New("Need a valid warden metadata endpoint")
 	}
 
 	err = c.Validate(logger)
@@ -29,11 +39,10 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 }
 
 var (
-	version               = flag.Bool("version", false, "Version info")
-	logFilePath           = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
-	logLevel              = flag.Bool("debug", false, "Debug logging")
-	configFile            = flag.String("config", "config/dea_logging_agent.json", "Location of the DEA loggregator agent config json file")
-	instancesJsonFilePath = flag.String("instancesFile", "/var/vcap/data/dea_next/db/instances.json", "The DEA instances JSON file")
+	version     = flag.Bool("version", false, "Version info")
+	logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
+	logLevel    = flag.Bool("debug", false, "Debug logging")
+	configFile  = flag.String("config", "config/dea_logging_agent.json", "Location of the DEA loggregator agent config json file")
 )
 
 const (
@@ -79,7 +88,9 @@ func main() {
 		panic(err)
 	}
 
-	agent := deaagent.NewAgent(*instancesJsonFilePath, logger)
+	service := metadataservice.NewRestMetaDataService(config.WardenMetadataEndpoint, logger)
+	listener := agentlistener.NewAgentListener(fmt.Sprintf("127.0.0.1:%d", config.WardenSyslogPort), logger)
+	agent := deaagent.NewAgent(listener, service, loggregatorEmitter, logger)
 
 	cfc, err := cfcomponent.NewComponent(
 		logger,
@@ -107,7 +118,7 @@ func main() {
 			panic(err)
 		}
 	}()
-	go agent.Start(loggregatorEmitter)
+	go agent.Start()
 
 	for {
 		select {

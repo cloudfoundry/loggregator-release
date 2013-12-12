@@ -1,261 +1,45 @@
 package deaagent
 
 import (
+	"deaagent/metadataservice"
+	"deaagent_testhelpers"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
-	"net"
-	"os"
-	"path"
-	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 )
 
-var tmpdir string
+func TestThatItEmitsToLoggregator(t *testing.T) {
 
-func init() {
-	var err error
-	tmpdir, err = ioutil.TempDir("", "testing")
-	if err != nil {
-		panic(err)
-	}
-}
-
-func createFile(t *testing.T) *os.File {
-	file, err := os.Create(filePath())
-	assert.NoError(t, err)
-	return file
-}
-
-func writeToFile(t *testing.T, text string, truncate bool) {
-	var err error
-
-	file := createFile(t)
-	defer file.Close()
-
-	if truncate {
-		file.Truncate(0)
+	mockEmitter := &deaagent_testhelpers.MockLoggregatorEmitter{
+		Received: make(chan *logmessage.LogMessage),
 	}
 
-	_, err = file.WriteString(text)
-	assert.NoError(t, err)
-}
-
-func filePath() string {
-	return tmpdir + "/config.json"
-}
-
-func loggregatorAddress() string {
-	return "localhost:9876"
-}
-
-func TestNewAgent(t *testing.T) {
-	actualAgent := NewAgent("path", loggertesthelper.Logger())
-	expectedAgent := &agent{"path", loggertesthelper.Logger()}
-	assert.Equal(t, expectedAgent, actualAgent)
-}
-
-func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
-	helperInstance1 := &instance{
-		applicationId:       "1234",
-		wardenJobId:         56,
-		wardenContainerPath: tmpdir,
-		index:               3}
-	os.MkdirAll(helperInstance1.identifier(), 0777)
-
-	instance1StdoutSocketPath := filepath.Join(helperInstance1.identifier(), "stdout.sock")
-	instance1StderrSocketPath := filepath.Join(helperInstance1.identifier(), "stderr.sock")
-	os.Remove(instance1StdoutSocketPath)
-	os.Remove(instance1StderrSocketPath)
-	instance1StdoutListener, err := net.Listen("unix", instance1StdoutSocketPath)
-	defer instance1StdoutListener.Close()
-	assert.NoError(t, err)
-	instance1StderrListener, err := net.Listen("unix", instance1StderrSocketPath)
-	defer instance1StderrListener.Close()
-	assert.NoError(t, err)
-
-	helperInstance2 := &instance{
-		applicationId:       "5678",
-		wardenJobId:         58,
-		wardenContainerPath: tmpdir,
-		index:               0}
-	os.MkdirAll(helperInstance2.identifier(), 0777)
-
-	instance2StdoutSocketPath := filepath.Join(helperInstance2.identifier(), "stdout.sock")
-	instance2StderrSocketPath := filepath.Join(helperInstance2.identifier(), "stderr.sock")
-	os.Remove(instance2StdoutSocketPath)
-	os.Remove(instance2StderrSocketPath)
-	instance2StdoutListener, err := net.Listen("unix", instance2StdoutSocketPath)
-	defer instance2StdoutListener.Close()
-	assert.NoError(t, err)
-	instance2StderrListener, err := net.Listen("unix", instance2StderrSocketPath)
-	defer instance2StderrListener.Close()
-	assert.NoError(t, err)
-
-	expectedMessage := "Some Output\n"
-
-	mockLoggregatorEmitter := new(MockLoggregatorEmitter)
-
-	mockLoggregatorEmitter.received = make(chan *logmessage.LogMessage, 2)
-
-	writeToFile(t, `{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3}]}`, true)
-
-	agent := NewAgent(filePath(), loggertesthelper.Logger())
-	go agent.Start(mockLoggregatorEmitter)
-
-	instance1Connection, err := instance1StdoutListener.Accept()
-	defer instance1Connection.Close()
-	assert.NoError(t, err)
-
-	writeToFile(t, `{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3},
-	                               {"state": "RUNNING", "application_id": "5678", "warden_job_id": 58, "warden_container_path":"`+tmpdir+`", "instance_index": 0}]}`, true)
-
-	instance2Connection, err := instance2StdoutListener.Accept()
-	defer instance2Connection.Close()
-	assert.NoError(t, err)
-
-	_, err = instance1Connection.Write([]byte(expectedMessage))
-	assert.NoError(t, err)
-
-	_, err = instance2Connection.Write([]byte(expectedMessage))
-	assert.NoError(t, err)
-
-	receivedMessages := make(map[string]*logmessage.LogMessage)
-
-	receivedMessage := <-mockLoggregatorEmitter.received
-	receivedMessages[receivedMessage.GetAppId()] = receivedMessage
-
-	receivedMessage = <-mockLoggregatorEmitter.received
-	receivedMessages[receivedMessage.GetAppId()] = receivedMessage
-
-	assert.Equal(t, 2, len(receivedMessages))
-
-	assert.NotNil(t, receivedMessages["1234"])
-	assert.Equal(t, logmessage.LogMessage_WARDEN_CONTAINER, receivedMessages["1234"].GetSourceType())
-	assert.Equal(t, logmessage.LogMessage_OUT, receivedMessages["1234"].GetMessageType())
-	assert.Equal(t, expectedMessage, string(receivedMessages["1234"].GetMessage()))
-
-	assert.NotNil(t, receivedMessages["5678"])
-	assert.Equal(t, logmessage.LogMessage_WARDEN_CONTAINER, receivedMessages["5678"].GetSourceType())
-	assert.Equal(t, logmessage.LogMessage_OUT, receivedMessages["5678"].GetMessageType())
-	assert.Equal(t, expectedMessage, string(receivedMessages["5678"].GetMessage()))
-}
-
-func TestTheAgentReadsAllExistingInstances(t *testing.T) {
-	_, filename, _, _ := runtime.Caller(0)
-	filepath := path.Join(path.Dir(filename), "..", "..", "samples", "multi_instances.json")
-	testAgent := &agent{InstancesJsonFilePath: filepath, logger: loggertesthelper.Logger()}
-	instancesChan := testAgent.watchInstancesJsonFileForChanges()
-	expectedApplicationIds := [3]string{
-		"e0e12b41-78d4-43ff-a5ae-20422bedf22f",
-		"d8df836e-e27d-45d4-a890-b2ce899788a4",
-		"a59ebe7a-002a-4530-8d69-8bf53bc845d5",
+	inputChan := make(chan []byte, 5)
+	data := make(map[string]metadataservice.Metadata)
+	data["warden_handle"] = metadataservice.Metadata{
+		Index:           "42",
+		Guid:            "some-app-id",
+		SyslogDrainUrls: []string{"drain-uri-1", "drain-uri-2"},
 	}
-	for _, expectedInstance := range expectedApplicationIds {
-		instance := <-instancesChan
-		assert.Equal(t, expectedInstance, instance.applicationId)
-	}
-}
+	metaDataService := deaagent_testhelpers.FakeMetaDataService{Data: data}
+	agent := Agent{deaagent_testhelpers.FakeListener{SendingChan: inputChan}, metaDataService, mockEmitter, loggertesthelper.Logger()}
 
-func TestThatFunctionContinuesToPollWhenFileCantBeOpened(t *testing.T) {
-	os.Remove(filePath())
-	agent := &agent{filePath(), loggertesthelper.Logger()}
+	agent.Start()
 
-	instancesChan := agent.watchInstancesJsonFileForChanges()
+	inputChan <- []byte("<14>2013-12-11T13:50:09-08:00 majestic warden.App.warden_handle[123]: TEST MESSAGE\n")
 
 	select {
-	case <-instancesChan:
-		t.Error("Should not have any instances, the file doesn't exist")
-	case <-time.After(2 * time.Second):
-		// OK
+	case message := <-mockEmitter.Received:
+		assert.Equal(t, message.GetAppId(), "some-app-id")
+		assert.Equal(t, message.GetDrainUrls(), []string{"drain-uri-1", "drain-uri-2"})
+		assert.Equal(t, string(message.GetMessage()), "TEST MESSAGE")
+		assert.Equal(t, message.GetSourceId(), "42")
+		assert.Equal(t, message.GetMessageType(), logmessage.LogMessage_OUT)
+		assert.Equal(t, message.GetSourceName(), "App")
+		assert.Equal(t, message.GetTimestamp(), 1386798609000000000)
+	case <-time.After(5 * time.Second):
+		t.Errorf("Timed out waiting for message")
 	}
-
-	writeToFile(t, `{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path": "/tmp", "instance_index": 3}]}`, false)
-
-	select {
-	case instance := <-instancesChan:
-		assert.NotNil(t, instance)
-	case <-time.After(2 * time.Second):
-		t.Error("Should have gotten an instance by now.")
-	}
-}
-
-func TestThatAnExistinginstanceWillBeSeen(t *testing.T) {
-	writeToFile(t, `{"instances": [{"state": "RUNNING", "instance_index": 123}]}`, true)
-	agent := &agent{filePath(), loggertesthelper.Logger()}
-
-	instancesChan := agent.watchInstancesJsonFileForChanges()
-
-	inst := <-instancesChan
-	expectedInst := instance{index: 123}
-	assert.Equal(t, expectedInst, inst)
-}
-
-func TestThatANewinstanceWillBeSeen(t *testing.T) {
-	file := createFile(t)
-	defer file.Close()
-	agent := &agent{filePath(), loggertesthelper.Logger()}
-
-	instancesChan := agent.watchInstancesJsonFileForChanges()
-
-	time.Sleep(1 * time.Nanosecond) // ensure that the go function starts before we add proper data to the json config
-
-	writeToFile(t, `{"instances": [{"state": "RUNNING", "instance_index": 123}]}`, true)
-
-	inst, ok := <-instancesChan
-	assert.True(t, ok, "Channel is closed")
-
-	expectedInst := instance{index: 123}
-	assert.Equal(t, expectedInst, inst)
-}
-
-func TestThatOnlyOneNewInstancesWillBeSeen(t *testing.T) {
-	writeToFile(t, `{"instances": [{"state": "RUNNING", "instance_index": 123}]}`, true)
-	agent := &agent{filePath(), loggertesthelper.Logger()}
-
-	instancesChan := agent.watchInstancesJsonFileForChanges()
-
-	inst, ok := <-instancesChan
-	assert.True(t, ok, "Channel is closed")
-
-	expectedInst := instance{index: 123}
-	assert.Equal(t, expectedInst, inst)
-
-	select {
-	case inst = <-instancesChan:
-		assert.Nil(t, inst, "We just got an old instance")
-	default:
-		// OK
-	}
-}
-
-func TestThatARemovedInstanceWillBeRemoved(t *testing.T) {
-	writeToFile(t, `{"instances": [{"state": "RUNNING", "instance_index": 123}]}`, true)
-	agent := &agent{filePath(), loggertesthelper.Logger()}
-
-	instancesChan := agent.watchInstancesJsonFileForChanges()
-
-	inst, ok := <-instancesChan
-	assert.True(t, ok, "Channel is closed")
-	assert.NotNil(t, inst)
-
-	os.Remove(filePath())
-
-	select {
-	case inst = <-instancesChan:
-		t.Errorf("We just got an old instance: %v", inst)
-	case <-time.After(2 * time.Millisecond):
-		// OK
-	}
-
-	writeToFile(t, `{"instances": [{"state": "RUNNING", "instance_index": 1234}]}`, true)
-
-	inst, ok = <-instancesChan
-	assert.True(t, ok, "Channel is closed")
-
-	expectedInst := instance{index: 1234}
-	assert.Equal(t, expectedInst, inst)
 }
