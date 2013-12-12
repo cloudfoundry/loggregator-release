@@ -46,6 +46,8 @@ func TestThatItSendsAllMessageToKnownDrains(t *testing.T) {
 func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	client1ReceivedChan := make(chan []byte)
 
+	assert.Equal(t, len(dataReadChannel), 0)
+
 	fakeSyslogDrain, err := NewFakeService(client1ReceivedChan, "127.0.0.1:34569")
 	assert.NoError(t, err)
 	go fakeSyslogDrain.Serve()
@@ -58,21 +60,19 @@ func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	errorString := "Did not get the first message. Server was up, it should have been there"
 	assertMessageOnChannel(t, 200, client1ReceivedChan, errorString, expectedMessageString1)
 	fakeSyslogDrain.Stop()
-	time.Sleep(50 * time.Millisecond)
 
 	expectedMessageString2 := "Some Data 2"
 	logEnvelope = messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString2, "myApp", SECRET, "syslog://localhost:34569")
 	dataReadChannel <- logEnvelope
-	errorString = "Did get a second message! Shouldn't be since the server is down"
-	assertMessageNotOnChannel(t, 200, client1ReceivedChan, errorString)
+	error2String := "Did get a second message! Shouldn't be since the server is down"
+	assertMessageNotOnChannel(t, 200, client1ReceivedChan, error2String)
 
 	expectedMessageString3 := "Some Data 3"
 	logEnvelope = messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString3, "myApp", SECRET, "syslog://localhost:34569")
 	dataReadChannel <- logEnvelope
-	errorString = "Did get a third message! Shouldn't be since the server is down"
-	assertMessageNotOnChannel(t, 200, client1ReceivedChan, errorString)
+	error3String := "Did get a third message! Shouldn't be since the server is down"
+	assertMessageNotOnChannel(t, 200, client1ReceivedChan, error3String)
 
-	time.Sleep(2260 * time.Millisecond)
 
 	client2ReceivedChan := make(chan []byte, 10)
 	fakeSyslogDrain, err = NewFakeService(client2ReceivedChan, "127.0.0.1:34569")
@@ -81,14 +81,13 @@ func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	go fakeSyslogDrain.Serve()
 	<-fakeSyslogDrain.ReadyChan
 
-	time.Sleep(2260 * time.Millisecond)
 
 	expectedMessageString4 := "Some Data 4"
 	logEnvelope = messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString4, "myApp", SECRET, "syslog://localhost:34569")
 	dataReadChannel <- logEnvelope
 
-	errorString = "Did not get the fourth message, but it should have been just fine since the server was up"
-	assertMessageOnChannel(t, 200, client2ReceivedChan, errorString, expectedMessageString4)
+	error4String := "Did not get the fourth message, but it should have been just fine since the server was up"
+	assertMessageOnChannel(t, 200, client2ReceivedChan, error4String, expectedMessageString4)
 	fakeSyslogDrain.Stop()
 }
 
