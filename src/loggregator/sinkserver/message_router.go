@@ -43,7 +43,7 @@ func NewMessageRouter(maxRetainedLogMessages int, skipCertVerify bool, blackList
 		dumpReceiverChan:  dumpReceiverChan,
 		dumpBufferSize:    maxRetainedLogMessages,
 		RWMutex:           &sync.RWMutex{},
-		errorChannel:      make(chan *logmessage.Message, 10),
+		errorChannel:      make(chan *logmessage.Message, 100),
 		blackListIPs:      blackListIPs,
 		skipCertVerify:    skipCertVerify}
 }
@@ -191,12 +191,14 @@ func (messageRouter *messageRouter) manageDrains(activeSinks *groupedsinks.Group
 		if activeSinks.DrainFor(appId, drainUrl) == nil && !messageRouter.urlIsBlackListed(drainUrl) {
 			dl, err := url.Parse(drainUrl)
 			if err != nil {
+				messageRouter.blacklistedURLS = append(messageRouter.blacklistedURLS, drainUrl)
 				errorMessage := fmt.Sprintf("MessageRouter: Error when trying to parse syslog url %v. Requesting close. Err: %v", drainUrl, err)
 				messageRouter.sendLoggregatorErrorMessage(errorMessage, appId)
 				continue
 			}
 			ipNotBlacklisted, err := iprange.IpOutsideOfRanges(*dl, messageRouter.blackListIPs)
 			if err != nil {
+				messageRouter.blacklistedURLS = append(messageRouter.blacklistedURLS, drainUrl)
 				errorMessage := fmt.Sprintf("MessageRouter: Error when trying to check syslog url %v against blacklist ip ranges. Requesting close. Err: %v", drainUrl, err)
 				messageRouter.sendLoggregatorErrorMessage(errorMessage, appId)
 				continue
