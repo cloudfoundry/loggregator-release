@@ -56,7 +56,7 @@ func (s *SyslogSink) Run() {
 				numberOfTries++
 
 				s.logger.Warnf(errorMsg)
-				logMessage, err := logmessage.GenerateMessage(logmessage.LogMessage_ERR, errorMsg, s.appId, "LGR")
+				logMessage, err := logmessage.GenerateMessage(logmessage.LogMessage_ERR, logmessage.LogMessage_LOGGREGATOR, errorMsg, s.appId, "LGR")
 				if err == nil {
 					s.errorChannel <- logMessage
 				} else {
@@ -82,9 +82,9 @@ func (s *SyslogSink) Run() {
 
 		switch message.GetLogMessage().GetMessageType() {
 		case logmessage.LogMessage_OUT:
-			_, err = s.syslogWriter.WriteStdout(message.GetLogMessage().GetMessage(), message.GetLogMessage().GetSourceName(), *message.GetLogMessage().Timestamp)
+			_, err = s.syslogWriter.WriteStdout(message.GetLogMessage().GetMessage(), message.GetShortSourceTypeName(), *message.GetLogMessage().Timestamp)
 		case logmessage.LogMessage_ERR:
-			_, err = s.syslogWriter.WriteStderr(message.GetLogMessage().GetMessage(), message.GetLogMessage().GetSourceName(), *message.GetLogMessage().Timestamp)
+			_, err = s.syslogWriter.WriteStderr(message.GetLogMessage().GetMessage(), message.GetShortSourceTypeName(), *message.GetLogMessage().Timestamp)
 		}
 		if err != nil {
 			s.logger.Debugf("Syslog Sink %s: Error when trying to send data to sink. Backing off. Err: %v\n", s.drainUrl, err)

@@ -32,11 +32,13 @@ func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress net.Addr
 	newLogMessage := func(message []byte) *logmessage.LogMessage {
 		currentTime := time.Now()
 		messageType := logmessage.LogMessage_ERR
+		sourceType := logmessage.LogMessage_UNKNOWN
 
 		return &logmessage.LogMessage{
 			Message:     message,
 			AppId:       proto.String(appId),
 			MessageType: &messageType,
+			SourceType:  &sourceType,
 			SourceName:  proto.String("LGR"),
 			Timestamp:   proto.Int64(currentTime.UnixNano()),
 		}

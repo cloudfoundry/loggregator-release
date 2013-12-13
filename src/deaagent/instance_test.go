@@ -80,7 +80,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	receivedMessage := <-mockLoggregatorEmitter.received
 
 	assert.Equal(t, "1234", receivedMessage.GetAppId())
-	assert.Equal(t, "App", receivedMessage.GetSourceName())
+	assert.Equal(t, logmessage.LogMessage_WARDEN_CONTAINER, receivedMessage.GetSourceType())
 	assert.Equal(t, logmessage.LogMessage_OUT, receivedMessage.GetMessageType())
 	assert.Equal(t, expectedMessage, string(receivedMessage.GetMessage()))
 	assert.Equal(t, []string{"syslog://10.20.30.40:8050"}, receivedMessage.GetDrainUrls())
@@ -92,7 +92,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	receivedMessage = <-mockLoggregatorEmitter.received
 
 	assert.Equal(t, "1234", receivedMessage.GetAppId())
-	assert.Equal(t, "App", receivedMessage.GetSourceName())
+	assert.Equal(t, logmessage.LogMessage_WARDEN_CONTAINER, receivedMessage.GetSourceType())
 	assert.Equal(t, logmessage.LogMessage_OUT, receivedMessage.GetMessageType())
 	assert.Equal(t, secondLogMessage, string(receivedMessage.GetMessage()))
 	assert.Equal(t, []string{"syslog://10.20.30.40:8050"}, receivedMessage.GetDrainUrls())
@@ -141,7 +141,7 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	receivedMessage := <-mockLoggregatorEmitter.received
 
 	assert.Equal(t, "1234", receivedMessage.GetAppId())
-	assert.Equal(t, "App", receivedMessage.GetSourceName())
+	assert.Equal(t, logmessage.LogMessage_WARDEN_CONTAINER, receivedMessage.GetSourceType())
 	assert.Equal(t, logmessage.LogMessage_ERR, receivedMessage.GetMessageType())
 	assert.Equal(t, expectedMessage, string(receivedMessage.GetMessage()))
 	assert.Equal(t, []string{"syslog://10.20.30.40:8050"}, receivedMessage.GetDrainUrls())
@@ -153,7 +153,7 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	receivedMessage = <-mockLoggregatorEmitter.received
 
 	assert.Equal(t, "1234", receivedMessage.GetAppId())
-	assert.Equal(t, "App", receivedMessage.GetSourceName())
+	assert.Equal(t, logmessage.LogMessage_WARDEN_CONTAINER, receivedMessage.GetSourceType())
 	assert.Equal(t, logmessage.LogMessage_ERR, receivedMessage.GetMessageType())
 	assert.Equal(t, secondLogMessage, string(receivedMessage.GetMessage()))
 	assert.Equal(t, []string{"syslog://10.20.30.40:8050"}, receivedMessage.GetDrainUrls())

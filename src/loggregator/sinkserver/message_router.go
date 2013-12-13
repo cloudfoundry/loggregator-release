@@ -71,7 +71,7 @@ func (messageRouter *messageRouter) Start() {
 
 				//drain management
 				appId := receivedMessage.GetLogMessage().GetAppId()
-				messageRouter.manageDrains(activeSinks, appId, receivedMessage.GetLogMessage().GetDrainUrls(), receivedMessage.GetLogMessage().GetSourceName())
+				messageRouter.manageDrains(activeSinks, appId, receivedMessage.GetLogMessage().GetDrainUrls(), receivedMessage.GetLogMessage().GetSourceType())
 				messageRouter.manageDumps(activeSinks, appId)
 
 				//send to drains and sinks
@@ -172,8 +172,8 @@ func (messageRouter *messageRouter) manageDumps(activeSinks *groupedsinks.Groupe
 	}
 }
 
-func (messageRouter *messageRouter) manageDrains(activeSinks *groupedsinks.GroupedSinks, appId string, drainUrls []string, sourceName string) {
-	if sourceName != "App" {
+func (messageRouter *messageRouter) manageDrains(activeSinks *groupedsinks.GroupedSinks, appId string, drainUrls []string, sourceType logmessage.LogMessage_SourceType) {
+	if sourceType != logmessage.LogMessage_WARDEN_CONTAINER {
 		return
 	}
 	//delete all drains for app
@@ -227,7 +227,7 @@ func (messageRouter *messageRouter) manageDrains(activeSinks *groupedsinks.Group
 
 func (messageRouter *messageRouter) sendLoggregatorErrorMessage(errorMsg, appId string) {
 	messageRouter.logger.Warnf(errorMsg)
-	logMessage, err := logmessage.GenerateMessage(logmessage.LogMessage_ERR, errorMsg, appId, "LGR")
+	logMessage, err := logmessage.GenerateMessage(logmessage.LogMessage_ERR, logmessage.LogMessage_LOGGREGATOR, errorMsg, appId, "LGR")
 	if err == nil {
 		messageRouter.errorChannel <- logMessage
 	} else {
