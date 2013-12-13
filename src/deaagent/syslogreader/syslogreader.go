@@ -70,14 +70,11 @@ func ReadMessage(metaDataService metadataservice.MetaDataService, input []byte) 
 		return nil, err
 	}
 
-	sourceType := logmessage.LogMessage_UNKNOWN
-
 	return &logmessage.LogMessage{
 		Message:     bytes.TrimRight(message, "\n"),
 		AppId:       proto.String(appMetaData.Guid),
 		DrainUrls:   appMetaData.SyslogDrainUrls,
 		MessageType: &messageType,
-		SourceType:  &sourceType,
 		SourceName:  proto.String(sourceName),
 		SourceId:    &appMetaData.Index,
 		Timestamp:   proto.Int64(messageTime.UnixNano()),
