@@ -28,6 +28,11 @@ func NewRestMetaDataService(serviceLocation string, logger *gosteno.Logger) Rest
 }
 
 func (s RestMetaDataService) Lookup(wardenHandle string) (Metadata, error) {
+	metaData, ok := s.knownMetaData[wardenHandle]
+
+	if ok {
+		return metaData, nil
+	}
 
 	var appMetaData metadataResponse
 	var services []serviceResponse
@@ -60,7 +65,8 @@ func (s RestMetaDataService) Lookup(wardenHandle string) (Metadata, error) {
 		return Metadata{}, err
 	}
 
-	metaData := Metadata{appMetaData.Index, appMetaData.AppGUID, drainURIsFromServices(services)}
+	metaData = Metadata{appMetaData.Index, appMetaData.AppGUID, drainURIsFromServices(services)}
+	s.knownMetaData[wardenHandle] = metaData
 
 	return metaData, nil
 }

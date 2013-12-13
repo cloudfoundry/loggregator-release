@@ -14,7 +14,7 @@ import (
 
 type FakeMetadataServer struct {
 	containers map[string]FakeContainer
-
+	NumCalls int
 	sync.RWMutex
 }
 
@@ -36,6 +36,7 @@ type FakeService struct {
 func NewFakeMetadataServer() *FakeMetadataServer {
 	return &FakeMetadataServer{
 		containers: make(map[string]FakeContainer),
+		NumCalls: 0,
 	}
 }
 
@@ -80,6 +81,8 @@ func (s *FakeMetadataServer) ServeHTTP(writer http.ResponseWriter, req *http.Req
 		writer.WriteHeader(400)
 		return
 	}
+
+	s.NumCalls++
 
 	handle := pathSegments[1]
 	requestedAttribute := pathSegments[2]
@@ -130,9 +133,10 @@ func (s *FakeMetadataServer) handleServices(writer http.ResponseWriter, handle s
 }
 
 var ServerEndpoint string
+var fakeServer *FakeMetadataServer
 
 func init() {
-	fakeServer := NewFakeMetadataServer()
+	fakeServer = NewFakeMetadataServer()
 
 	fakeMetaData := FakeMetadata{"12", "appguid"}
 	fakeService := FakeService{"syslog://drains.co"}
@@ -188,4 +192,22 @@ func TestReturnsAppropriateErrorWhenServiceServiceReturnsBadJson(t *testing.T) {
 
 	_, err := metaDataService.Lookup("bad_services_json")
 	assert.IsType(t, &json.SyntaxError{}, err)
+}
+
+func TestThatItCachesMetaData(t *testing.T) {
+
+	metaDataService := NewRestMetaDataService(ServerEndpoint, loggertesthelper.Logger())
+
+	_, err := metaDataService.Lookup("warden_handle")
+	assert.NoError(t, err)
+
+	numCalls := fakeServer.NumCalls
+
+	Metadata, err := metaDataService.Lookup("warden_handle")
+	assert.Equal(t, numCalls, fakeServer.NumCalls)
+
+	assert.Equal(t, Metadata.Guid, "appguid")
+	assert.Equal(t, Metadata.Index, "12")
+	assert.Equal(t, Metadata.SyslogDrainUrls, []string{"syslog://drains.co", "syslog://brains.co"})
+
 }
