@@ -1,6 +1,7 @@
 package sinkserver
 
 import (
+	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
@@ -114,6 +115,33 @@ func TestErrorMessagesAreNotDeliveredToSinksThatDontAcceptErrors(t *testing.T) {
 		t.Error("Should not have received a message")
 	case <-time.After(10 * time.Millisecond):
 		break
+	}
+}
+
+func TestSendingToErrorChannelDoesNotBlock(t *testing.T) {
+	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger())
+	testMessageRouter.errorChannel = make(chan *logmessage.Message, 1)
+	go testMessageRouter.Start()
+
+	sinkChannel := make(chan *logmessage.Message, 10)
+	ourSink := testSink{sinkChannel, false}
+
+	testMessageRouter.sinkOpenChan <- ourSink
+	<-time.After(1 * time.Millisecond)
+
+	for i := 0; i < 10; i++ {
+		badMessage := messagetesthelpers.NewMessage(t, "error msg", "appIdWeDontCareAbout")
+		badMessage.GetLogMessage().DrainUrls = []string{fmt.Sprintf("<nil%d>", i)}
+		testMessageRouter.parsedMessageChan <- badMessage
+	}
+
+	goodMessage := messagetesthelpers.NewMessage(t, "error msg", "appId")
+	testMessageRouter.parsedMessageChan <- goodMessage
+
+	select {
+	case _ = <-ourSink.Channel():
+	case <-time.After(1000 * time.Millisecond):
+		t.Error("Should have received a message")
 	}
 }
 

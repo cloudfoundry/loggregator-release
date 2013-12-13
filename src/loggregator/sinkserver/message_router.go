@@ -51,20 +51,41 @@ func NewMessageRouter(maxRetainedLogMessages int, skipCertVerify bool, blackList
 func (messageRouter *messageRouter) Start() {
 	activeSinks := groupedsinks.NewGroupedSinks()
 
+	go func() {
+		for {
+			select {
+			case dr := <-messageRouter.dumpReceiverChan:
+				if sink := activeSinks.DumpFor(dr.appId); sink != nil {
+					data := sink.Dump()
+					for _, m := range data {
+						dr.outputChannel <- m
+					}
+				}
+				close(dr.outputChannel)
+			case s := <-messageRouter.sinkOpenChan:
+				messageRouter.registerSink(s, activeSinks)
+			case s := <-messageRouter.sinkCloseChan:
+				messageRouter.unregisterSink(s, activeSinks)
+			case receivedMessage := <-messageRouter.parsedMessageChan:
+				messageRouter.logger.Debugf("MessageRouter:ParsedMessageChan: Received %d bytes of data from agent listener.", receivedMessage.GetRawMessageLength())
+
+				//drain management
+				appId := receivedMessage.GetLogMessage().GetAppId()
+				messageRouter.manageDrains(activeSinks, appId, receivedMessage.GetLogMessage().GetDrainUrls(), receivedMessage.GetLogMessage().GetSourceName())
+				messageRouter.manageDumps(activeSinks, appId)
+
+				//send to drains and sinks
+				messageRouter.logger.Debugf("MessageRouter:ParsedMessageChan: Searching for sinks with appId [%s].", appId)
+				for _, s := range activeSinks.For(appId) {
+					messageRouter.logger.Debugf("MessageRouter:ParsedMessageChan: Sending Message to channel %v for sinks targeting [%s].", s.Identifier(), appId)
+					s.Channel() <- receivedMessage
+				}
+				messageRouter.logger.Debugf("MessageRouter:ParsedMessageChan: Done sending message.")
+			}
+		}
+	}()
 	for {
 		select {
-		case dr := <-messageRouter.dumpReceiverChan:
-			if sink := activeSinks.DumpFor(dr.appId); sink != nil {
-				data := sink.Dump()
-				for _, m := range data {
-					dr.outputChannel <- m
-				}
-			}
-			close(dr.outputChannel)
-		case s := <-messageRouter.sinkOpenChan:
-			messageRouter.registerSink(s, activeSinks)
-		case s := <-messageRouter.sinkCloseChan:
-			messageRouter.unregisterSink(s, activeSinks)
 		case receivedMessage := <-messageRouter.errorChannel:
 			appId := receivedMessage.GetLogMessage().GetAppId()
 
@@ -76,21 +97,6 @@ func (messageRouter *messageRouter) Start() {
 				}
 			}
 			messageRouter.logger.Debugf("MessageRouter:ErrorChannel: Done sending error message.")
-		case receivedMessage := <-messageRouter.parsedMessageChan:
-			messageRouter.logger.Debugf("MessageRouter:ParsedMessageChan: Received %d bytes of data from agent listener.", receivedMessage.GetRawMessageLength())
-
-			//drain management
-			appId := receivedMessage.GetLogMessage().GetAppId()
-			messageRouter.manageDrains(activeSinks, appId, receivedMessage.GetLogMessage().GetDrainUrls(), receivedMessage.GetLogMessage().GetSourceName())
-			messageRouter.manageDumps(activeSinks, appId)
-
-			//send to drains and sinks
-			messageRouter.logger.Debugf("MessageRouter:ParsedMessageChan: Searching for sinks with appId [%s].", appId)
-			for _, s := range activeSinks.For(appId) {
-				messageRouter.logger.Debugf("MessageRouter:ParsedMessageChan: Sending Message to channel %v for sinks targeting [%s].", s.Identifier(), appId)
-				s.Channel() <- receivedMessage
-			}
-			messageRouter.logger.Debugf("MessageRouter:ParsedMessageChan: Done sending message.")
 		}
 	}
 }
