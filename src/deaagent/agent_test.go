@@ -134,12 +134,12 @@ func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
 	assert.Equal(t, 2, len(receivedMessages))
 
 	assert.NotNil(t, receivedMessages["1234"])
-	assert.Equal(t, logmessage.LogMessage_WARDEN_CONTAINER, receivedMessages["1234"].GetSourceType())
+	assert.Equal(t, "App", receivedMessages["1234"].GetSourceName())
 	assert.Equal(t, logmessage.LogMessage_OUT, receivedMessages["1234"].GetMessageType())
 	assert.Equal(t, expectedMessage, string(receivedMessages["1234"].GetMessage()))
 
 	assert.NotNil(t, receivedMessages["5678"])
-	assert.Equal(t, logmessage.LogMessage_WARDEN_CONTAINER, receivedMessages["5678"].GetSourceType())
+	assert.Equal(t, "App", receivedMessages["5678"].GetSourceName())
 	assert.Equal(t, logmessage.LogMessage_OUT, receivedMessages["5678"].GetMessageType())
 	assert.Equal(t, expectedMessage, string(receivedMessages["5678"].GetMessage()))
 }

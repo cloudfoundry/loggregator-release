@@ -67,13 +67,12 @@ func (r *truncatingBuffer) Run() {
 
 func generateLogMessage(messageString string, appId *string) *logmessage.LogMessage {
 	messageType := logmessage.LogMessage_ERR
-	sourceType := logmessage.LogMessage_UNKNOWN
 	currentTime := time.Now()
 	logMessage := &logmessage.LogMessage{
 		Message:     []byte(messageString),
 		AppId:       appId,
 		MessageType: &messageType,
-		SourceType:  &sourceType,
+		SourceName:  proto.String("LGR"),
 		Timestamp:   proto.Int64(currentTime.UnixNano()),
 	}
 
