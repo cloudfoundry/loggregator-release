@@ -73,14 +73,12 @@ func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	error3String := "Did get a third message! Shouldn't be since the server is down"
 	assertMessageNotOnChannel(t, 200, client1ReceivedChan, error3String)
 
-
 	client2ReceivedChan := make(chan []byte, 10)
 	fakeSyslogDrain, err = NewFakeService(client2ReceivedChan, "127.0.0.1:34569")
 	assert.NoError(t, err)
 
 	go fakeSyslogDrain.Serve()
 	<-fakeSyslogDrain.ReadyChan
-
 
 	expectedMessageString4 := "Some Data 4"
 	logEnvelope = messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString4, "myApp", SECRET, "syslog://localhost:34569")
