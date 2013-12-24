@@ -14,7 +14,7 @@ import (
 
 type FakeMetadataServer struct {
 	containers map[string]FakeContainer
-	NumCalls int
+	NumCalls   int
 	sync.RWMutex
 }
 
@@ -36,7 +36,7 @@ type FakeService struct {
 func NewFakeMetadataServer() *FakeMetadataServer {
 	return &FakeMetadataServer{
 		containers: make(map[string]FakeContainer),
-		NumCalls: 0,
+		NumCalls:   0,
 	}
 }
 
