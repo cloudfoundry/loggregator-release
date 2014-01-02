@@ -40,7 +40,7 @@ func TestThatItWorksLikeATruncatingChannel(t *testing.T) {
 	time.Sleep(5 + time.Millisecond)
 
 	readMessage := <-buffer.GetOutputChannel()
-	assert.Contains(t, string(readMessage.GetRawMessage()), "We've truncated 2 messages")
+	assert.Contains(t, string(readMessage.GetRawMessage()), "Log message output too high. We've dropped 2 messages")
 
 	readMessage2 := <-buffer.GetOutputChannel()
 	assert.Contains(t, string(readMessage2.GetRawMessage()), "message 3")

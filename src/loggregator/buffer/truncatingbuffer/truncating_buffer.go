@@ -48,16 +48,16 @@ func (r *truncatingBuffer) Run() {
 		default:
 			messageCount := len(r.outputChannel)
 			r.outputChannel = make(chan *logmessage.Message, cap(r.outputChannel))
-			lm := generateLogMessage(fmt.Sprintf("We've truncated %d messages", messageCount), v.GetLogMessage().AppId)
+			lm := generateLogMessage(fmt.Sprintf("Log message output too high. We've dropped %d messages", messageCount), v.GetLogMessage().AppId)
 			lmBytes, err := proto.Marshal(lm)
 			if err != nil {
-				r.logger.Info("RBC: Reader was too slow. And we failed to notify them. Dropping Buffer.")
+				r.logger.Error("TB: Output channel too full. And we failed to notify them. Dropping Buffer.")
 				continue
 			}
 			r.outputChannel <- logmessage.NewMessage(lm, lmBytes)
 			r.outputChannel <- v
 			if r.logger != nil {
-				r.logger.Warnf("RBC: Reader was too slow. Dropped Buffer.")
+				r.logger.Warn("TB: Output channel too full. Dropped Buffer.")
 			}
 		}
 		r.lock.Unlock()

@@ -261,7 +261,7 @@ func TestSysLoggerComesUpLate(t *testing.T) {
 	data := sysLogger.ReceivedMessages()
 	assert.Equal(t, len(data), 6)
 
-	msg := "err: We've truncated 100 messages"
+	msg := "err: Log message output too high. We've dropped 100 messages"
 	assert.Equal(t, data[0], msg)
 	for i := 0; i < 5; i++ {
 		msg := fmt.Sprintf("out: message no %v", i+100)
