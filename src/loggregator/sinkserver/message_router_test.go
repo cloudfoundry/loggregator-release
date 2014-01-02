@@ -8,9 +8,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
-	"loggregator/groupedsinks"
 	"loggregator/iprange"
-	"loggregator/sinks"
 	"testing"
 	"time"
 )
@@ -47,43 +45,6 @@ func (ts testSink) Identifier() string {
 
 func (ts testSink) Logger() *gosteno.Logger {
 	return loggertesthelper.Logger()
-}
-
-func TestDumpToSinkWithLessThan20Messages(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger())
-
-	activeSinks := groupedsinks.NewGroupedSinks()
-	dumpSink := sinks.NewDumpSink("appId", 100, loggertesthelper.Logger())
-	activeSinks.Register(dumpSink)
-
-	message := messagetesthelpers.NewMessage(t, "message 1", "appId")
-	for i := 0; i < 19; i++ {
-		dumpSink.Channel() <- message
-	}
-	close(dumpSink.Channel())
-	<-time.After(10 * time.Millisecond)
-
-	sink := testSink{make(chan *logmessage.Message, 100), false}
-	testMessageRouter.dumpToSink(sink, activeSinks)
-
-	assert.Equal(t, 19, len(sink.Channel()))
-}
-
-func TestDumpToSinkLimitsMessagesTo20(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger())
-	sink := testSink{make(chan *logmessage.Message, 100), false}
-	activeSinks := groupedsinks.NewGroupedSinks()
-	dumpSink := sinks.NewDumpSink("appId", 100, loggertesthelper.Logger())
-
-	message := messagetesthelpers.NewMessage(t, "message 1", "appId")
-	for i := 0; i < 100; i++ {
-		dumpSink.Channel() <- message
-	}
-
-	activeSinks.Register(dumpSink)
-	testMessageRouter.dumpToSink(sink, activeSinks)
-
-	assert.Equal(t, 20, len(sink.Channel()))
 }
 
 func TestErrorMessagesAreDeliveredToSinksThatSupportThem(t *testing.T) {

@@ -98,7 +98,7 @@ func TestThatItSendsLogsToProperAppSink(t *testing.T) {
 	WaitForWebsocketRegistration()
 }
 
-func TestThatItDumpsLogsBeforeTailing(t *testing.T) {
+func TestThatItDoesNotDumpLogsBeforeTailing(t *testing.T) {
 	receivedChan := make(chan []byte)
 
 	expectedMessageString := "My important message"
@@ -111,21 +111,9 @@ func TestThatItDumpsLogsBeforeTailing(t *testing.T) {
 
 	select {
 	case <-time.After(1 * time.Second):
-		t.Errorf("Did not get message from app sink.")
-	case message := <-receivedChan:
-		messagetesthelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
-	}
-
-	expectedMessageString2 := "My Other important message"
-	logEnvelope = messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString2, "myApp06", SECRET)
-
-	dataReadChannel <- logEnvelope
-
-	select {
-	case <-time.After(1 * time.Second):
-		t.Errorf("Did not get message from app sink.")
-	case message := <-receivedChan:
-		messagetesthelpers.AssertProtoBufferMessageEquals(t, expectedMessageString2, message)
+		break
+	case <-receivedChan:
+		t.Errorf("Recieved unexpected message from app sink")
 	}
 
 	stopKeepAlive <- true
