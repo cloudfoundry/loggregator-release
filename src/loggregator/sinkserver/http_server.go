@@ -94,7 +94,7 @@ func (httpServer *httpServer) dumpSinkHandler(ws *websocket.Conn) {
 		return
 	}
 
-	dumpChan := httpServer.messageRouter.registerDumpChan(appId)
+	dumpChan := httpServer.messageRouter.getDumpChanFor(appId)
 
 	dumpMessagesFromChannelToWebsocket(dumpChan, ws, clientAddress, httpServer.logger)
 

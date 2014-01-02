@@ -1,6 +1,6 @@
 //
 // Forked and simplified from http://golang.org/src/pkg/log/syslog/syslog.go
-// Fork needed to set the propper hostname in the write() function
+// Fork needed to set the proper hostname in the write() function
 //
 
 package sinks

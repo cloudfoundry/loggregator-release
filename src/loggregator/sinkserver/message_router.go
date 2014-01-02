@@ -101,7 +101,7 @@ func (messageRouter *messageRouter) Start() {
 	}
 }
 
-func (messageRouter *messageRouter) registerDumpChan(appId string) <-chan *logmessage.Message {
+func (messageRouter *messageRouter) getDumpChanFor(appId string) <-chan *logmessage.Message {
 	dumpChan := make(chan *logmessage.Message, messageRouter.dumpBufferSize)
 	dr := dumpReceiver{appId: appId, outputChannel: dumpChan}
 	messageRouter.dumpReceiverChan <- dr
