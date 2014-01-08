@@ -6,6 +6,7 @@ import (
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
 	"trafficcontroller/hasher"
@@ -25,6 +26,28 @@ func TestProxying(t *testing.T) {
 	WaitForServerStart("62023", "/")
 
 	receivedChan := Client(t, "62022", "/?app=myApp")
+
+	select {
+	case data := <-receivedChan:
+		assert.Equal(t, string(data), "Hello World from the server")
+	case <-time.After(1 * time.Second):
+		t.Error("Did not receive response within one second")
+	}
+}
+
+func TestProxyingWithAuthThroughQueryParam(t *testing.T) {
+	go Server("localhost:62038", "Hello World from the server", 1)
+
+	proxy := NewProxy(
+		"localhost:62022",
+		[]*hasher.Hasher{hasher.NewHasher([]string{"localhost:62038"})},
+		testhelpers.SuccessfulAuthorizer,
+		loggertesthelper.Logger(),
+	)
+	go proxy.Start()
+	WaitForServerStart("62038", "/")
+
+	receivedChan := ClientWithQueryParamAuth(t, "62022", "/?app=myApp")
 
 	select {
 	case data := <-receivedChan:
@@ -193,7 +216,9 @@ func TestProxyWithoutAuthorization(t *testing.T) {
 	go proxy.Start()
 	time.Sleep(time.Millisecond * 50)
 
-	receivedChan := ClientWithAuth(t, "62061", "/?app=myApp", "")
+	config, err := websocket.NewConfig("ws://localhost:62061/?app=myApp", "http://localhost")
+	assert.NoError(t, err)
+	receivedChan := ClientWithAuth(t, "62061", "/?app=myApp", config)
 
 	select {
 	case data := <-receivedChan:
@@ -206,7 +231,7 @@ func TestProxyWithoutAuthorization(t *testing.T) {
 	assert.False(t, stillOpen)
 }
 
-func TestProxyWhenAuthorizationFails(t *testing.T) {
+func TestProxyWhenAuthorizationFailsThroughHeader(t *testing.T) {
 	proxy := NewProxy(
 		"localhost:62062",
 		[]*hasher.Hasher{
@@ -218,7 +243,37 @@ func TestProxyWhenAuthorizationFails(t *testing.T) {
 	go proxy.Start()
 	time.Sleep(time.Millisecond * 50)
 
-	receivedChan := ClientWithAuth(t, "62062", "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN)
+	config, err := websocket.NewConfig("ws://localhost:62061/?app=myApp", "http://localhost")
+	assert.NoError(t, err)
+	config.Header.Add("Authorization", testhelpers.INVALID_AUTHENTICATION_TOKEN)
+	receivedChan := ClientWithAuth(t, "62062", "/?app=myApp", config)
+
+	select {
+	case data := <-receivedChan:
+		messagetesthelpers.AssertProtoBufferMessageEquals(t, "Error: Invalid authorization", data)
+	case <-time.After(1 * time.Second):
+		t.Error("Did not receive response within one second")
+	}
+
+	_, stillOpen := <-receivedChan
+	assert.False(t, stillOpen)
+}
+
+func TestProxyWhenAuthorizationFailsThroughQueryParams(t *testing.T) {
+	proxy := NewProxy(
+		"localhost:62062",
+		[]*hasher.Hasher{
+			hasher.NewHasher([]string{"localhost:62032"}),
+		},
+		testhelpers.SuccessfulAuthorizer,
+		loggertesthelper.Logger(),
+	)
+	go proxy.Start()
+	time.Sleep(time.Millisecond * 50)
+
+	config, err := websocket.NewConfig("ws://localhost:62061/?app=myApp&authorization="+url.QueryEscape(testhelpers.INVALID_AUTHENTICATION_TOKEN), "http://localhost")
+	assert.NoError(t, err)
+	receivedChan := ClientWithAuth(t, "62062", "/?app=myApp", config)
 
 	select {
 	case data := <-receivedChan:
@@ -245,15 +300,23 @@ func WaitForServerStart(port string, path string) {
 	}
 }
 
-func Client(t *testing.T, port string, path string) chan []byte {
-	return ClientWithAuth(t, port, path, testhelpers.VALID_AUTHENTICATION_TOKEN)
+func ClientWithQueryParamAuth(t *testing.T, port string, path string) chan []byte {
+	config, err := websocket.NewConfig("ws://localhost:"+port+path+"&authorization="+url.QueryEscape(testhelpers.VALID_AUTHENTICATION_TOKEN), "http://localhost")
+	assert.NoError(t, err)
+
+	return ClientWithAuth(t, port, path, config)
 }
 
-func ClientWithAuth(t *testing.T, port string, path string, authToken string) chan []byte {
-	receivedChan := make(chan []byte)
+func Client(t *testing.T, port string, path string) chan []byte {
 	config, err := websocket.NewConfig("ws://localhost:"+port+path, "http://localhost")
-	config.Header.Add("Authorization", authToken)
+	config.Header.Add("Authorization", testhelpers.VALID_AUTHENTICATION_TOKEN)
 	assert.NoError(t, err)
+
+	return ClientWithAuth(t, port, path, config)
+}
+
+func ClientWithAuth(t *testing.T, port string, path string, config *websocket.Config) chan []byte {
+	receivedChan := make(chan []byte)
 	ws, err := websocket.DialConfig(config)
 	assert.NoError(t, err)
 

@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"net"
 	"net/http"
+	"net/url"
 	"time"
 	"trafficcontroller/authorization"
 	"trafficcontroller/hasher"
@@ -70,7 +71,20 @@ func (proxy *Proxy) HandleWebSocket(clientWS *websocket.Conn) {
 	clientAddress := clientWS.RemoteAddr()
 
 	appId := req.Form.Get("app")
+
+	extractAuthTokenFromUrl := func(u *url.URL) string {
+		authorization := ""
+		queryValues := u.Query()
+		if len(queryValues["authorization"]) == 1 {
+			authorization = queryValues["authorization"][0]
+		}
+		return authorization
+	}
+
 	authToken := clientWS.Request().Header.Get("Authorization")
+	if authToken == "" {
+		authToken = extractAuthTokenFromUrl(req.URL)
+	}
 
 	if authorized, errorMessage := proxy.isAuthorized(appId, authToken, clientAddress); !authorized {
 		data, err := proto.Marshal(errorMessage)
