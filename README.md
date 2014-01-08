@@ -120,6 +120,12 @@ properties:
     port: 3456
 ```
 
+#### Capacity/Scaling
+
+There is a the limitation about how many messages are retained for the --recent command. If you want to increase that number, you probably want to increase the number of Loggregator servers.
+
+Increase the number of traffic controllers and Loggregator servers when to (better) handle many apps in a deployment. For each app we spin up a go routine (something like a java thread). There is a limit to how many you should spin up per go process.
+
 ### Development
 
 The Cloud Foundry team uses GitHub and accepts contributions via [pull request](https://help.github.com/articles/using-pull-requests).
