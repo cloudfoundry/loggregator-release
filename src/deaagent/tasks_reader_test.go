@@ -8,37 +8,37 @@ import (
 	"testing"
 )
 
-func TestReadingInstance(t *testing.T) {
+func TestReadingTask(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	filepath := path.Join(path.Dir(filename), "..", "..", "samples", "dea_instances.json")
 	json, _ := ioutil.ReadFile(filepath)
 
-	instances, err := readInstances(json)
+	tasks, err := readTasks(json)
 
 	assert.NoError(t, err)
 
-	assert.Equal(t, 1, len(instances))
+	assert.Equal(t, 1, len(tasks))
 
-	expectedInstance := instance{
+	expectedTask := task{
 		applicationId:       "4aa9506e-277f-41ab-b764-a35c0b96fa1b",
 		index:               0,
 		wardenJobId:         272,
 		wardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo1",
 		drainUrls:           []string{}}
 
-	assert.Equal(t, expectedInstance, instances["/var/vcap/data/warden/depot/16vbs06ibo1/jobs/272"])
+	assert.Equal(t, expectedTask, tasks["/var/vcap/data/warden/depot/16vbs06ibo1/jobs/272"])
 }
 
-func TestReadingMultipleInstances(t *testing.T) {
+func TestReadingMultipleTasks(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	filepath := path.Join(path.Dir(filename), "..", "..", "samples", "multi_instances.json")
 	json, _ := ioutil.ReadFile(filepath)
 
-	instances, err := readInstances(json)
+	tasks, err := readTasks(json)
 
 	assert.NoError(t, err)
 
-	assert.Equal(t, 3, len(instances))
+	assert.Equal(t, 3, len(tasks))
 
 	var applicationIds [3]string
 	expectedApplicationIds := [3]string{
@@ -48,60 +48,60 @@ func TestReadingMultipleInstances(t *testing.T) {
 	}
 
 	i := 0
-	for _, instance := range instances {
-		applicationIds[i] = instance.applicationId
+	for _, task := range tasks {
+		applicationIds[i] = task.applicationId
 		i++
 	}
 
 	assert.Equal(t, applicationIds, expectedApplicationIds)
 }
 
-func TestReadingMultipleInstancesWithDrainUrls(t *testing.T) {
+func TestReadingMultipleTasksWithDrainUrls(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	filepath := path.Join(path.Dir(filename), "..", "..", "samples", "multi_instances.json")
 	json, _ := ioutil.ReadFile(filepath)
 
-	instances, err := readInstances(json)
+	tasks, err := readTasks(json)
 
 	assert.NoError(t, err)
 
-	assert.Nil(t, instances["/var/vcap/data/warden/depot/170os7ali6q/jobs/15"].drainUrls)
-	assert.Equal(t, instances["/var/vcap/data/warden/depot/123ajkljfa/jobs/13"].drainUrls, []string{})
-	assert.Equal(t, instances["/var/vcap/data/warden/depot/345asndhaena/jobs/12"].drainUrls, []string{"syslog://10.20.30.40:8050"})
+	assert.Nil(t, tasks["/var/vcap/data/warden/depot/170os7ali6q/jobs/15"].drainUrls)
+	assert.Equal(t, tasks["/var/vcap/data/warden/depot/123ajkljfa/jobs/13"].drainUrls, []string{})
+	assert.Equal(t, tasks["/var/vcap/data/warden/depot/345asndhaena/jobs/12"].drainUrls, []string{"syslog://10.20.30.40:8050"})
 }
 
 func TestErrorHandlingWhenParsingEmptyData(t *testing.T) {
-	_, err := readInstances(make([]byte, 0))
+	_, err := readTasks(make([]byte, 0))
 	assert.Error(t, err)
 
-	_, err = readInstances(make([]byte, 10))
+	_, err = readTasks(make([]byte, 10))
 	assert.Error(t, err)
 
-	_, err = readInstances(nil)
+	_, err = readTasks(nil)
 	assert.Error(t, err)
 }
 
 func TestErrorHandlingWithBadJson(t *testing.T) {
-	_, err := readInstances([]byte(`{ "instances" : [}`))
+	_, err := readTasks([]byte(`{ "instances" : [}`))
 	assert.Error(t, err)
 }
 
-func TestReadingInstancesIgnoresNonRunningInstances(t *testing.T) {
+func TestReadingTasksIgnoresNonRunningInstances(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	filepath := path.Join(path.Dir(filename), "..", "..", "samples", "instances.crashed.json")
 	json, _ := ioutil.ReadFile(filepath)
 
-	instances, err := readInstances(json)
+	tasks, err := readTasks(json)
 
 	assert.NoError(t, err)
 
-	assert.Equal(t, 1, len(instances))
+	assert.Equal(t, 1, len(tasks))
 
-	if _, ok := instances["/var/vcap/data/warden/depot/170os7ali6q/jobs/15"]; !ok {
+	if _, ok := tasks["/var/vcap/data/warden/depot/170os7ali6q/jobs/15"]; !ok {
 		t.Errorf("Did not find active applicaiton.")
 	}
 
-	if _, ok := instances["/var/vcap/data/warden/depot/345asndhaena/jobs/12"]; ok {
+	if _, ok := tasks["/var/vcap/data/warden/depot/345asndhaena/jobs/12"]; ok {
 		t.Errorf("Found crashed applicaiton.")
 	}
 }

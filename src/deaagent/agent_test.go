@@ -58,41 +58,41 @@ func TestNewAgent(t *testing.T) {
 	assert.Equal(t, expectedAgent, actualAgent)
 }
 
-func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
-	helperInstance1 := &instance{
+func TestTheAgentMonitorsChangesInTasks(t *testing.T) {
+	helperTask1 := &task{
 		applicationId:       "1234",
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
 		index:               3}
-	os.MkdirAll(helperInstance1.identifier(), 0777)
+	os.MkdirAll(helperTask1.identifier(), 0777)
 
-	instance1StdoutSocketPath := filepath.Join(helperInstance1.identifier(), "stdout.sock")
-	instance1StderrSocketPath := filepath.Join(helperInstance1.identifier(), "stderr.sock")
-	os.Remove(instance1StdoutSocketPath)
-	os.Remove(instance1StderrSocketPath)
-	instance1StdoutListener, err := net.Listen("unix", instance1StdoutSocketPath)
-	defer instance1StdoutListener.Close()
+	task1StdoutSocketPath := filepath.Join(helperTask1.identifier(), "stdout.sock")
+	task1StderrSocketPath := filepath.Join(helperTask1.identifier(), "stderr.sock")
+	os.Remove(task1StdoutSocketPath)
+	os.Remove(task1StderrSocketPath)
+	task1StdoutListener, err := net.Listen("unix", task1StdoutSocketPath)
+	defer task1StdoutListener.Close()
 	assert.NoError(t, err)
-	instance1StderrListener, err := net.Listen("unix", instance1StderrSocketPath)
-	defer instance1StderrListener.Close()
+	task1StderrListener, err := net.Listen("unix", task1StderrSocketPath)
+	defer task1StderrListener.Close()
 	assert.NoError(t, err)
 
-	helperInstance2 := &instance{
+	helperTask2 := &task{
 		applicationId:       "5678",
 		wardenJobId:         58,
 		wardenContainerPath: tmpdir,
 		index:               0}
-	os.MkdirAll(helperInstance2.identifier(), 0777)
+	os.MkdirAll(helperTask2.identifier(), 0777)
 
-	instance2StdoutSocketPath := filepath.Join(helperInstance2.identifier(), "stdout.sock")
-	instance2StderrSocketPath := filepath.Join(helperInstance2.identifier(), "stderr.sock")
-	os.Remove(instance2StdoutSocketPath)
-	os.Remove(instance2StderrSocketPath)
-	instance2StdoutListener, err := net.Listen("unix", instance2StdoutSocketPath)
-	defer instance2StdoutListener.Close()
+	task2StdoutSocketPath := filepath.Join(helperTask2.identifier(), "stdout.sock")
+	task2StderrSocketPath := filepath.Join(helperTask2.identifier(), "stderr.sock")
+	os.Remove(task2StdoutSocketPath)
+	os.Remove(task2StderrSocketPath)
+	task2StdoutListener, err := net.Listen("unix", task2StdoutSocketPath)
+	defer task2StdoutListener.Close()
 	assert.NoError(t, err)
-	instance2StderrListener, err := net.Listen("unix", instance2StderrSocketPath)
-	defer instance2StderrListener.Close()
+	task2StderrListener, err := net.Listen("unix", task2StderrSocketPath)
+	defer task2StderrListener.Close()
 	assert.NoError(t, err)
 
 	expectedMessage := "Some Output\n"
@@ -106,21 +106,21 @@ func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
 	agent := NewAgent(filePath(), loggertesthelper.Logger())
 	go agent.Start(mockLoggregatorEmitter)
 
-	instance1Connection, err := instance1StdoutListener.Accept()
-	defer instance1Connection.Close()
+	task1Connection, err := task1StdoutListener.Accept()
+	defer task1Connection.Close()
 	assert.NoError(t, err)
 
 	writeToFile(t, `{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3},
 	                               {"state": "RUNNING", "application_id": "5678", "warden_job_id": 58, "warden_container_path":"`+tmpdir+`", "instance_index": 0}]}`, true)
 
-	instance2Connection, err := instance2StdoutListener.Accept()
-	defer instance2Connection.Close()
+	task2Connection, err := task2StdoutListener.Accept()
+	defer task2Connection.Close()
 	assert.NoError(t, err)
 
-	_, err = instance1Connection.Write([]byte(expectedMessage))
+	_, err = task1Connection.Write([]byte(expectedMessage))
 	assert.NoError(t, err)
 
-	_, err = instance2Connection.Write([]byte(expectedMessage))
+	_, err = task2Connection.Write([]byte(expectedMessage))
 	assert.NoError(t, err)
 
 	receivedMessages := make(map[string]*logmessage.LogMessage)
@@ -144,19 +144,19 @@ func TestTheAgentMonitorsChangesInInstances(t *testing.T) {
 	assert.Equal(t, expectedMessage, string(receivedMessages["5678"].GetMessage()))
 }
 
-func TestTheAgentReadsAllExistingInstances(t *testing.T) {
+func TestTheAgentReadsAllExistingTasks(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	filepath := path.Join(path.Dir(filename), "..", "..", "samples", "multi_instances.json")
 	testAgent := &agent{InstancesJsonFilePath: filepath, logger: loggertesthelper.Logger()}
-	instancesChan := testAgent.watchInstancesJsonFileForChanges()
+	tasksChan := testAgent.watchInstancesJsonFileForChanges()
 	expectedApplicationIds := [3]string{
 		"e0e12b41-78d4-43ff-a5ae-20422bedf22f",
 		"d8df836e-e27d-45d4-a890-b2ce899788a4",
 		"a59ebe7a-002a-4530-8d69-8bf53bc845d5",
 	}
-	for _, expectedInstance := range expectedApplicationIds {
-		instance := <-instancesChan
-		assert.Equal(t, expectedInstance, instance.applicationId)
+	for _, expectedTask := range expectedApplicationIds {
+		task := <-tasksChan
+		assert.Equal(t, expectedTask, task.applicationId)
 	}
 }
 
@@ -164,11 +164,11 @@ func TestThatFunctionContinuesToPollWhenFileCantBeOpened(t *testing.T) {
 	os.Remove(filePath())
 	agent := &agent{filePath(), loggertesthelper.Logger()}
 
-	instancesChan := agent.watchInstancesJsonFileForChanges()
+	tasksChan := agent.watchInstancesJsonFileForChanges()
 
 	select {
-	case <-instancesChan:
-		t.Error("Should not have any instances, the file doesn't exist")
+	case <-tasksChan:
+		t.Error("Should not have any tasks, the file doesn't exist")
 	case <-time.After(2 * time.Second):
 		// OK
 	}
@@ -176,86 +176,86 @@ func TestThatFunctionContinuesToPollWhenFileCantBeOpened(t *testing.T) {
 	writeToFile(t, `{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path": "/tmp", "instance_index": 3}]}`, false)
 
 	select {
-	case instance := <-instancesChan:
-		assert.NotNil(t, instance)
+	case task := <-tasksChan:
+		assert.NotNil(t, task)
 	case <-time.After(2 * time.Second):
-		t.Error("Should have gotten an instance by now.")
+		t.Error("Should have gotten an task by now.")
 	}
 }
 
-func TestThatAnExistinginstanceWillBeSeen(t *testing.T) {
+func TestThatAnExistingtaskWillBeSeen(t *testing.T) {
 	writeToFile(t, `{"instances": [{"state": "RUNNING", "instance_index": 123}]}`, true)
 	agent := &agent{filePath(), loggertesthelper.Logger()}
 
-	instancesChan := agent.watchInstancesJsonFileForChanges()
+	tasksChan := agent.watchInstancesJsonFileForChanges()
 
-	inst := <-instancesChan
-	expectedInst := instance{index: 123}
+	inst := <-tasksChan
+	expectedInst := task{index: 123}
 	assert.Equal(t, expectedInst, inst)
 }
 
-func TestThatANewinstanceWillBeSeen(t *testing.T) {
+func TestThatANewtaskWillBeSeen(t *testing.T) {
 	file := createFile(t)
 	defer file.Close()
 	agent := &agent{filePath(), loggertesthelper.Logger()}
 
-	instancesChan := agent.watchInstancesJsonFileForChanges()
+	tasksChan := agent.watchInstancesJsonFileForChanges()
 
 	time.Sleep(1 * time.Nanosecond) // ensure that the go function starts before we add proper data to the json config
 
 	writeToFile(t, `{"instances": [{"state": "RUNNING", "instance_index": 123}]}`, true)
 
-	inst, ok := <-instancesChan
+	inst, ok := <-tasksChan
 	assert.True(t, ok, "Channel is closed")
 
-	expectedInst := instance{index: 123}
+	expectedInst := task{index: 123}
 	assert.Equal(t, expectedInst, inst)
 }
 
-func TestThatOnlyOneNewInstancesWillBeSeen(t *testing.T) {
+func TestThatOnlyOneNewTasksWillBeSeen(t *testing.T) {
 	writeToFile(t, `{"instances": [{"state": "RUNNING", "instance_index": 123}]}`, true)
 	agent := &agent{filePath(), loggertesthelper.Logger()}
 
-	instancesChan := agent.watchInstancesJsonFileForChanges()
+	tasksChan := agent.watchInstancesJsonFileForChanges()
 
-	inst, ok := <-instancesChan
+	inst, ok := <-tasksChan
 	assert.True(t, ok, "Channel is closed")
 
-	expectedInst := instance{index: 123}
+	expectedInst := task{index: 123}
 	assert.Equal(t, expectedInst, inst)
 
 	select {
-	case inst = <-instancesChan:
-		assert.Nil(t, inst, "We just got an old instance")
+	case inst = <-tasksChan:
+		assert.Nil(t, inst, "We just got an old task")
 	default:
 		// OK
 	}
 }
 
-func TestThatARemovedInstanceWillBeRemoved(t *testing.T) {
+func TestThatARemovedTaskWillBeRemoved(t *testing.T) {
 	writeToFile(t, `{"instances": [{"state": "RUNNING", "instance_index": 123}]}`, true)
 	agent := &agent{filePath(), loggertesthelper.Logger()}
 
-	instancesChan := agent.watchInstancesJsonFileForChanges()
+	tasksChan := agent.watchInstancesJsonFileForChanges()
 
-	inst, ok := <-instancesChan
+	inst, ok := <-tasksChan
 	assert.True(t, ok, "Channel is closed")
 	assert.NotNil(t, inst)
 
 	os.Remove(filePath())
 
 	select {
-	case inst = <-instancesChan:
-		t.Errorf("We just got an old instance: %v", inst)
+	case inst = <-tasksChan:
+		t.Errorf("We just got an old task: %v", inst)
 	case <-time.After(2 * time.Millisecond):
 		// OK
 	}
 
 	writeToFile(t, `{"instances": [{"state": "RUNNING", "instance_index": 1234}]}`, true)
 
-	inst, ok = <-instancesChan
+	inst, ok = <-tasksChan
 	assert.True(t, ok, "Channel is closed")
 
-	expectedInst := instance{index: 1234}
+	expectedInst := task{index: 1234}
 	assert.Equal(t, expectedInst, inst)
 }

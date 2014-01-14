@@ -5,7 +5,7 @@ import (
 	"errors"
 )
 
-func readInstances(data []byte) (map[string]instance, error) {
+func readTasks(data []byte) (map[string]task, error) {
 	type instanceJson struct {
 		Application_id        string
 		Warden_job_id         uint64
@@ -29,18 +29,18 @@ func readInstances(data []byte) (map[string]instance, error) {
 	if err != nil {
 		return nil, err
 	}
-	instances := make(map[string]instance, len(jsonInstances.Instances))
+	tasks := make(map[string]task, len(jsonInstances.Instances))
 	for _, jsonInstance := range jsonInstances.Instances {
 		if jsonInstance.State == "RUNNING" {
-			instance := instance{
+			task := task{
 				applicationId:       jsonInstance.Application_id,
 				wardenContainerPath: jsonInstance.Warden_container_path,
 				wardenJobId:         jsonInstance.Warden_job_id,
 				index:               jsonInstance.Instance_index,
 				drainUrls:           jsonInstance.Syslog_drain_urls}
-			instances[instance.identifier()] = instance
+			tasks[task.identifier()] = task
 		}
 	}
 
-	return instances, nil
+	return tasks, nil
 }

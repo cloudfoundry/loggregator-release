@@ -20,16 +20,16 @@ func NewAgent(instancesJsonFilePath string, logger *gosteno.Logger) *agent {
 }
 
 func (agent *agent) Start(emitter emitter.Emitter) {
-	newInstances := agent.watchInstancesJsonFileForChanges()
-	for instance := range newInstances {
-		agent.logger.Infof("Starting to listen to %v\n", instance.identifier())
-		instance.startListening(emitter, agent.logger)
+	newTasks := agent.watchInstancesJsonFileForChanges()
+	for task := range newTasks {
+		agent.logger.Infof("Starting to listen to %v\n", task.identifier())
+		task.startListening(emitter, agent.logger)
 	}
 }
 
-func (agent *agent) watchInstancesJsonFileForChanges() chan instance {
-	instancesChan := make(chan instance)
-	knownInstances := make(map[string]bool)
+func (agent *agent) watchInstancesJsonFileForChanges() chan task {
+	tasksChan := make(chan task)
+	knownTasks := make(map[string]bool)
 
 	readInstancesJson := func() {
 		json, err := ioutil.ReadFile(agent.InstancesJsonFilePath)
@@ -38,34 +38,34 @@ func (agent *agent) watchInstancesJsonFileForChanges() chan instance {
 			return
 		}
 
-		currentInstances, err := readInstances(json)
+		currentTasks, err := readTasks(json)
 		if err != nil {
 			agent.logger.Warnf("Failed parsing json %s: %v Trying again...\n", err, string(json))
 			return
 		}
 
-		agent.logger.Debug("Reading instances data after event on instances.json")
-		agent.logger.Debugf("Current known instances are %v", knownInstances)
+		agent.logger.Debug("Reading tasks data after event on instances.json")
+		agent.logger.Debugf("Current known tasks are %v", knownTasks)
 
-		for instanceIdentifier, _ := range knownInstances {
-			_, present := currentInstances[instanceIdentifier]
+		for taskIdentifier, _ := range knownTasks {
+			_, present := currentTasks[taskIdentifier]
 			if present {
 				continue
 			}
 
-			delete(knownInstances, instanceIdentifier)
-			agent.logger.Infof("Removing stale instance %v", instanceIdentifier)
+			delete(knownTasks, taskIdentifier)
+			agent.logger.Infof("Removing stale task %v", taskIdentifier)
 		}
 
-		for _, instance := range currentInstances {
-			_, present := knownInstances[instance.identifier()]
+		for _, task := range currentTasks {
+			_, present := knownTasks[task.identifier()]
 			if present {
 				continue
 			}
 
-			knownInstances[instance.identifier()] = true
-			agent.logger.Infof("Adding new instance %s", instance.identifier())
-			instancesChan <- instance
+			knownTasks[task.identifier()] = true
+			agent.logger.Infof("Adding new task %s", task.identifier())
+			tasksChan <- task
 		}
 	}
 
@@ -87,14 +87,14 @@ func (agent *agent) watchInstancesJsonFileForChanges() chan instance {
 		}
 
 		readInstancesJson()
-		agent.logger.Info("Read initial instances data")
+		agent.logger.Info("Read initial tasks data")
 
 		for {
 			select {
 			case ev := <-watcher.Event:
 				agent.logger.Debugf("Got Event: %v\n", ev)
 				if ev.IsDelete() {
-					knownInstances = make(map[string]bool)
+					knownTasks = make(map[string]bool)
 				} else {
 					readInstancesJson()
 				}
@@ -106,5 +106,5 @@ func (agent *agent) watchInstancesJsonFileForChanges() chan instance {
 	}
 
 	go pollInstancesJson()
-	return instancesChan
+	return tasksChan
 }

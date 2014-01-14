@@ -13,12 +13,12 @@ import (
 )
 
 func TestIdentifier(t *testing.T) {
-	instance := instance{
+	task := task{
 		applicationId:       "4aa9506e-277f-41ab-b764-a35c0b96fa1b",
 		wardenJobId:         272,
 		wardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo1"}
 
-	assert.Equal(t, "/var/vcap/data/warden/depot/16vbs06ibo1/jobs/272", instance.identifier())
+	assert.Equal(t, "/var/vcap/data/warden/depot/16vbs06ibo1/jobs/272", task.identifier())
 }
 
 type MockLoggregatorEmitter struct {
@@ -42,17 +42,17 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
-	instance := &instance{
+	task := &task{
 		applicationId:       "1234",
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
 		index:               3,
 		drainUrls:           []string{"syslog://10.20.30.40:8050"}}
 
-	os.MkdirAll(instance.identifier(), 0777)
+	os.MkdirAll(task.identifier(), 0777)
 
-	stdoutSocketPath := filepath.Join(instance.identifier(), "stdout.sock")
-	stderrSocketPath := filepath.Join(instance.identifier(), "stderr.sock")
+	stdoutSocketPath := filepath.Join(task.identifier(), "stdout.sock")
+	stderrSocketPath := filepath.Join(task.identifier(), "stderr.sock")
 	os.Remove(stdoutSocketPath)
 	os.Remove(stderrSocketPath)
 	stdoutListener, err := net.Listen("unix", stdoutSocketPath)
@@ -68,7 +68,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	mockLoggregatorEmitter := new(MockLoggregatorEmitter)
 
 	mockLoggregatorEmitter.received = make(chan *logmessage.LogMessage)
-	instance.startListening(mockLoggregatorEmitter, loggertesthelper.Logger())
+	task.startListening(mockLoggregatorEmitter, loggertesthelper.Logger())
 
 	connection, err := stdoutListener.Accept()
 	defer connection.Close()
@@ -104,16 +104,16 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
-	instance := &instance{
+	task := &task{
 		applicationId:       "1234",
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
 		index:               4,
 		drainUrls:           []string{"syslog://10.20.30.40:8050"}}
-	os.MkdirAll(instance.identifier(), 0777)
+	os.MkdirAll(task.identifier(), 0777)
 
-	stdoutSocketPath := filepath.Join(instance.identifier(), "stdout.sock")
-	stderrSocketPath := filepath.Join(instance.identifier(), "stderr.sock")
+	stdoutSocketPath := filepath.Join(task.identifier(), "stdout.sock")
+	stderrSocketPath := filepath.Join(task.identifier(), "stderr.sock")
 	os.Remove(stdoutSocketPath)
 	os.Remove(stderrSocketPath)
 	stdoutListener, err := net.Listen("unix", stdoutSocketPath)
@@ -129,7 +129,7 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	mockLoggregatorEmitter := new(MockLoggregatorEmitter)
 
 	mockLoggregatorEmitter.received = make(chan *logmessage.LogMessage)
-	instance.startListening(mockLoggregatorEmitter, loggertesthelper.Logger())
+	task.startListening(mockLoggregatorEmitter, loggertesthelper.Logger())
 
 	connection, err := stderrListener.Accept()
 	defer connection.Close()
@@ -165,7 +165,7 @@ func TestThatWeRetryListeningToStdOutUnixSocket(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
-	instance := &instance{
+	task := &task{
 		applicationId:       "1234",
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
@@ -173,10 +173,10 @@ func TestThatWeRetryListeningToStdOutUnixSocket(t *testing.T) {
 		drainUrls:           []string{"syslog://10.20.30.40:8050"},
 	}
 
-	os.MkdirAll(instance.identifier(), 0777)
+	os.MkdirAll(task.identifier(), 0777)
 
-	stdoutSocketPath := filepath.Join(instance.identifier(), "stdout.sock")
-	stderrSocketPath := filepath.Join(instance.identifier(), "stderr.sock")
+	stdoutSocketPath := filepath.Join(task.identifier(), "stdout.sock")
+	stderrSocketPath := filepath.Join(task.identifier(), "stderr.sock")
 	loggerPath := filepath.Join(tmpdir, "logger")
 	os.Remove(stdoutSocketPath)
 	os.Remove(stderrSocketPath)
@@ -186,7 +186,7 @@ func TestThatWeRetryListeningToStdOutUnixSocket(t *testing.T) {
 
 	mockLoggregatorEmitter.received = make(chan *logmessage.LogMessage)
 
-	instance.startListening(mockLoggregatorEmitter, loggertesthelper.FileLogger(loggerPath))
+	task.startListening(mockLoggregatorEmitter, loggertesthelper.FileLogger(loggerPath))
 
 	go func() {
 		time.Sleep(950 * time.Millisecond)
@@ -216,7 +216,7 @@ func TestThatWeRetryListeningToStdErrUnixSocket(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
-	instance := &instance{
+	task := &task{
 		applicationId:       "1234",
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
@@ -224,10 +224,10 @@ func TestThatWeRetryListeningToStdErrUnixSocket(t *testing.T) {
 		drainUrls:           []string{"syslog://10.20.30.40:8050"},
 	}
 
-	os.MkdirAll(instance.identifier(), 0777)
+	os.MkdirAll(task.identifier(), 0777)
 
-	stdoutSocketPath := filepath.Join(instance.identifier(), "stdout.sock")
-	stderrSocketPath := filepath.Join(instance.identifier(), "stderr.sock")
+	stdoutSocketPath := filepath.Join(task.identifier(), "stdout.sock")
+	stderrSocketPath := filepath.Join(task.identifier(), "stderr.sock")
 	loggerPath := filepath.Join(tmpdir, "logger")
 	os.Remove(stdoutSocketPath)
 	os.Remove(stderrSocketPath)
@@ -237,7 +237,7 @@ func TestThatWeRetryListeningToStdErrUnixSocket(t *testing.T) {
 
 	mockLoggregatorEmitter.received = make(chan *logmessage.LogMessage)
 
-	instance.startListening(mockLoggregatorEmitter, loggertesthelper.FileLogger(loggerPath))
+	task.startListening(mockLoggregatorEmitter, loggertesthelper.FileLogger(loggerPath))
 
 	go func() {
 		time.Sleep(950 * time.Millisecond)
