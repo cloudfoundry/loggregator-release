@@ -17,16 +17,23 @@ func TestReadingTask(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	assert.Equal(t, 1, len(tasks))
+	assert.Equal(t, 2, len(tasks))
 
-	expectedTask := task{
+	expectedInstanceTask := task{
 		applicationId:       "4aa9506e-277f-41ab-b764-a35c0b96fa1b",
 		index:               0,
 		wardenJobId:         272,
 		wardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo1",
 		drainUrls:           []string{}}
 
-	assert.Equal(t, expectedTask, tasks["/var/vcap/data/warden/depot/16vbs06ibo1/jobs/272"])
+	expectedStagingTask := task{
+		applicationId:       "23489sd0-f985-fjga-nsd1-sdg5lhd9nskh",
+		wardenJobId:         355,
+		wardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo2",
+		drainUrls:           []string{}}
+
+	assert.Equal(t, expectedInstanceTask, tasks["/var/vcap/data/warden/depot/16vbs06ibo1/jobs/272"])
+	assert.Equal(t, expectedStagingTask, tasks["/var/vcap/data/warden/depot/16vbs06ibo2/jobs/355"])
 }
 
 func TestReadingMultipleTasks(t *testing.T) {
@@ -38,13 +45,16 @@ func TestReadingMultipleTasks(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	assert.Equal(t, 3, len(tasks))
+	assert.Equal(t, 6, len(tasks))
 
-	var applicationIds [3]string
-	expectedApplicationIds := [3]string{
+	var applicationIds [6]string
+	expectedApplicationIds := [6]string{
 		"e0e12b41-78d4-43ff-a5ae-20422bedf22f",
 		"d8df836e-e27d-45d4-a890-b2ce899788a4",
 		"a59ebe7a-002a-4530-8d69-8bf53bc845d5",
+		"cc01f618-6b62-428e-96c6-bc743dd235cd",
+		"09fbc153-e2ed-43b3-8f42-b270d1937ec6",
+		"243a34f-0724-4d9c-a0de-a0811cbabce6",
 	}
 
 	i := 0
@@ -68,6 +78,10 @@ func TestReadingMultipleTasksWithDrainUrls(t *testing.T) {
 	assert.Nil(t, tasks["/var/vcap/data/warden/depot/170os7ali6q/jobs/15"].drainUrls)
 	assert.Equal(t, tasks["/var/vcap/data/warden/depot/123ajkljfa/jobs/13"].drainUrls, []string{})
 	assert.Equal(t, tasks["/var/vcap/data/warden/depot/345asndhaena/jobs/12"].drainUrls, []string{"syslog://10.20.30.40:8050"})
+
+	assert.Nil(t, tasks["/var/vcap/data/warden/depot/17fsdo7qpeq/jobs/46"].drainUrls)
+	assert.Equal(t, tasks["/var/vcap/data/warden/depot/17fsdo7qper/jobs/49"].drainUrls, []string{})
+	assert.Equal(t, tasks["/var/vcap/data/warden/depot/17fsdo7qpes/jobs/56"].drainUrls, []string{"syslog://10.20.30.40:8050"})
 }
 
 func TestErrorHandlingWhenParsingEmptyData(t *testing.T) {
@@ -103,5 +117,21 @@ func TestReadingTasksIgnoresNonRunningInstances(t *testing.T) {
 
 	if _, ok := tasks["/var/vcap/data/warden/depot/345asndhaena/jobs/12"]; ok {
 		t.Errorf("Found crashed applicaiton.")
+	}
+}
+
+func TestReadingTasksIgnoreStagingTasksWithoutWardenJobId(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	filepath := path.Join(path.Dir(filename), "..", "..", "samples", "staging_tasks.no_job_id.json")
+	json, _ := ioutil.ReadFile(filepath)
+
+	tasks, err := readTasks(json)
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, 1, len(tasks))
+
+	if _, ok := tasks["/var/vcap/data/warden/depot/17fsdo7qper/jobs/49"]; !ok {
+		t.Errorf("Did not find staging task with warden job id.")
 	}
 }

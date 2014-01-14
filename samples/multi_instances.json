@@ -39,5 +39,34 @@
                 "syslog://10.20.30.40:8050"
             ]
         }
+    ],
+    "staging_tasks": [
+        {
+            "staging_message": {
+                "app_id": "cc01f618-6b62-428e-96c6-bc743dd235cd"
+            },
+            "warden_job_id": 46,
+            "warden_container_path": "/var/vcap/data/warden/depot/17fsdo7qpeq"
+        },
+        {
+            "staging_message": {
+                "app_id": "09fbc153-e2ed-43b3-8f42-b270d1937ec6"
+            },
+            "warden_job_id": 49,
+            "warden_container_path": "/var/vcap/data/warden/depot/17fsdo7qper",
+            "syslog_drain_urls": [
+
+            ]
+        },
+        {
+            "staging_message": {
+                "app_id": "243a34f-0724-4d9c-a0de-a0811cbabce6"
+            },
+            "warden_job_id": 56,
+            "warden_container_path": "/var/vcap/data/warden/depot/17fsdo7qpes",
+            "syslog_drain_urls": [
+                "syslog://10.20.30.40:8050"
+            ]
+        }
     ]
 }

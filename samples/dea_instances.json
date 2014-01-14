@@ -15,5 +15,17 @@
 
             ]
         }
+    ],
+    "staging_tasks": [
+        {
+            "staging_message": {
+                "app_id": "23489sd0-f985-fjga-nsd1-sdg5lhd9nskh"
+            },
+            "warden_job_id": 355,
+            "warden_container_path": "/var/vcap/data/warden/depot/16vbs06ibo2",
+            "syslog_drain_urls": [
+
+            ]
+        }
     ]
 }
