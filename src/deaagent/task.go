@@ -14,6 +14,7 @@ type task struct {
 	index               uint64
 	wardenJobId         uint64
 	wardenContainerPath string
+	sourceName          string
 }
 
 func (task task) identifier() string {

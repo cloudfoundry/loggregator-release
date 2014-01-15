@@ -32,7 +32,7 @@ func newLoggingStream(task task, emitter emitter.Emitter, logger *gosteno.Logger
 func (ls loggingStream) listen() {
 	newLogMessage := func(message []byte) *logmessage.LogMessage {
 		currentTime := time.Now()
-		sourceName := "App"
+		sourceName := ls.task.sourceName
 		sourceId := strconv.FormatUint(ls.task.index, 10)
 
 		return &logmessage.LogMessage{

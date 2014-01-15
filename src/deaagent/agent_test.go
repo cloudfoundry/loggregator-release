@@ -61,6 +61,7 @@ func TestNewAgent(t *testing.T) {
 func TestTheAgentMonitorsChangesInTasks(t *testing.T) {
 	helperTask1 := &task{
 		applicationId:       "1234",
+		sourceName:          "App",
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
 		index:               3}
@@ -79,6 +80,7 @@ func TestTheAgentMonitorsChangesInTasks(t *testing.T) {
 
 	helperTask2 := &task{
 		applicationId:       "5678",
+		sourceName:          "App",
 		wardenJobId:         58,
 		wardenContainerPath: tmpdir,
 		index:               0}
@@ -190,7 +192,7 @@ func TestThatAnExistingtaskWillBeSeen(t *testing.T) {
 	tasksChan := agent.watchInstancesJsonFileForChanges()
 
 	inst := <-tasksChan
-	expectedInst := task{index: 123}
+	expectedInst := task{index: 123, sourceName: "App"}
 	assert.Equal(t, expectedInst, inst)
 }
 
@@ -208,7 +210,7 @@ func TestThatANewtaskWillBeSeen(t *testing.T) {
 	inst, ok := <-tasksChan
 	assert.True(t, ok, "Channel is closed")
 
-	expectedInst := task{index: 123}
+	expectedInst := task{index: 123, sourceName: "App"}
 	assert.Equal(t, expectedInst, inst)
 }
 
@@ -221,7 +223,7 @@ func TestThatOnlyOneNewTasksWillBeSeen(t *testing.T) {
 	inst, ok := <-tasksChan
 	assert.True(t, ok, "Channel is closed")
 
-	expectedInst := task{index: 123}
+	expectedInst := task{index: 123, sourceName: "App"}
 	assert.Equal(t, expectedInst, inst)
 
 	select {
@@ -256,6 +258,6 @@ func TestThatARemovedTaskWillBeRemoved(t *testing.T) {
 	inst, ok = <-tasksChan
 	assert.True(t, ok, "Channel is closed")
 
-	expectedInst := task{index: 1234}
+	expectedInst := task{index: 1234, sourceName: "App"}
 	assert.Equal(t, expectedInst, inst)
 }

@@ -47,6 +47,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
 		index:               3,
+		sourceName:          "App",
 		drainUrls:           []string{"syslog://10.20.30.40:8050"}}
 
 	os.MkdirAll(task.identifier(), 0777)
@@ -109,6 +110,7 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
 		index:               4,
+		sourceName:          "App",
 		drainUrls:           []string{"syslog://10.20.30.40:8050"}}
 	os.MkdirAll(task.identifier(), 0777)
 
@@ -170,6 +172,7 @@ func TestThatWeRetryListeningToStdOutUnixSocket(t *testing.T) {
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
 		index:               3,
+		sourceName:          "App",
 		drainUrls:           []string{"syslog://10.20.30.40:8050"},
 	}
 
@@ -221,6 +224,7 @@ func TestThatWeRetryListeningToStdErrUnixSocket(t *testing.T) {
 		wardenJobId:         56,
 		wardenContainerPath: tmpdir,
 		index:               3,
+		sourceName:          "App",
 		drainUrls:           []string{"syslog://10.20.30.40:8050"},
 	}
 

@@ -24,12 +24,14 @@ func TestReadingTask(t *testing.T) {
 		index:               0,
 		wardenJobId:         272,
 		wardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo1",
+		sourceName:          "App",
 		drainUrls:           []string{}}
 
 	expectedStagingTask := task{
 		applicationId:       "23489sd0-f985-fjga-nsd1-sdg5lhd9nskh",
 		wardenJobId:         355,
 		wardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo2",
+		sourceName:          "STG",
 		drainUrls:           []string{}}
 
 	assert.Equal(t, expectedInstanceTask, tasks["/var/vcap/data/warden/depot/16vbs06ibo1/jobs/272"])

@@ -46,6 +46,7 @@ func readTasks(data []byte) (map[string]task, error) {
 		if jsonInstance.State == "RUNNING" {
 			task := task{
 				applicationId:       jsonInstance.Application_id,
+				sourceName:          "App",
 				wardenContainerPath: jsonInstance.Warden_container_path,
 				wardenJobId:         jsonInstance.Warden_job_id,
 				index:               jsonInstance.Instance_index,
@@ -58,6 +59,7 @@ func readTasks(data []byte) (map[string]task, error) {
 		if jsonStagingTask.Warden_job_id != 0 {
 			task := task{
 				applicationId:       jsonStagingTask.Staging_message.App_id,
+				sourceName:          "STG",
 				wardenContainerPath: jsonStagingTask.Warden_container_path,
 				wardenJobId:         jsonStagingTask.Warden_job_id,
 				drainUrls:           jsonStagingTask.Syslog_drain_urls}
