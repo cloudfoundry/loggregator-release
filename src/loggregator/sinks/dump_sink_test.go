@@ -11,23 +11,28 @@ import (
 )
 
 func dumpAllMessages(dump *DumpSink) []*logmessage.Message {
-	return dump.Dump()
+	in := make(chan *logmessage.Message, 200)
+	var r []*logmessage.Message
+	dump.Dump(in)
+	for m := range in {
+		r = append(r, m)
+	}
+	return r
 }
 
 func TestDumpForOneMessage(t *testing.T) {
 	dump := NewDumpSink("myApp", 1, loggertesthelper.Logger())
-	dump.Run()
 
 	logMessage := messagetesthelpers.NewMessage(t, "hi", "appId")
 	dump.Channel() <- logMessage
 
-	logMessages := dumpAllMessages(dump)
-	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "hi")
+	data := dumpAllMessages(dump)
+	assert.Equal(t, len(data), 1)
+	assert.Equal(t, string(data[0].GetLogMessage().GetMessage()), "hi")
 }
 
 func TestDumpForTwoMessages(t *testing.T) {
 	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger())
-	dump.Run()
 
 	logMessage := messagetesthelpers.NewMessage(t, "1", "appId")
 	dump.Channel() <- logMessage
@@ -45,7 +50,6 @@ func TestDumpForTwoMessages(t *testing.T) {
 func TestTheDumpSinkNeverFillsUp(t *testing.T) {
 	bufferSize := 3
 	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
-	dump.Run()
 
 	logMessage := messagetesthelpers.NewMessage(t, "hi", "appId")
 
@@ -56,7 +60,6 @@ func TestTheDumpSinkNeverFillsUp(t *testing.T) {
 
 func TestDumpAlwaysReturnsTheNewestMessages(t *testing.T) {
 	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger())
-	dump.Run()
 
 	logMessage := messagetesthelpers.NewMessage(t, "1", "appId")
 	dump.Channel() <- logMessage
@@ -75,7 +78,6 @@ func TestDumpAlwaysReturnsTheNewestMessages(t *testing.T) {
 
 func TestDumpReturnsAllRecentMessagesToMultipleDumpRequests(t *testing.T) {
 	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger())
-	dump.Run()
 
 	logMessage := messagetesthelpers.NewMessage(t, "1", "appId")
 	dump.Channel() <- logMessage
@@ -100,7 +102,6 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequests(t *testing.T) {
 func TestDumpReturnsAllRecentMessagesToMultipleDumpRequestsWithMessagesCloningInInTheMeantime(t *testing.T) {
 
 	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger())
-	dump.Run()
 
 	logMessage := messagetesthelpers.NewMessage(t, "1", "appId")
 	dump.Channel() <- logMessage
@@ -129,7 +130,6 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequestsWithMessagesCloningIn
 
 func TestDumpWithLotsOfMessages(t *testing.T) {
 	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger())
-	dump.Run()
 
 	for i := 0; i < 100; i++ {
 		logMessage := messagetesthelpers.NewMessage(t, strconv.Itoa(i), "appId")
@@ -163,7 +163,6 @@ func TestDumpWithLotsOfMessages(t *testing.T) {
 
 func TestDumpWithLotsOfMessagesAndLargeBuffer(t *testing.T) {
 	dump := NewDumpSink("myApp", 200, loggertesthelper.Logger())
-	dump.Run()
 
 	for i := 0; i < 1000; i++ {
 		logMessage := messagetesthelpers.NewMessage(t, strconv.Itoa(i), "appId")
@@ -239,7 +238,6 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
 func TestDumpWithLotsOfDumps(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger())
-	dump.Run()
 
 	for i := 0; i < 10; i++ {
 		logMessage := messagetesthelpers.NewMessage(t, strconv.Itoa(i), "appId")

@@ -55,13 +55,11 @@ func (messageRouter *messageRouter) Start() {
 		for {
 			select {
 			case dr := <-messageRouter.dumpReceiverChan:
-				if sink := activeSinks.DumpFor(dr.appId); sink != nil {
-					data := sink.Dump()
-					for _, m := range data {
-						dr.outputChannel <- m
+				go func() {
+					if sink := activeSinks.DumpFor(dr.appId); sink != nil {
+						sink.Dump(dr.outputChannel)
 					}
-				}
-				close(dr.outputChannel)
+				}()
 			case s := <-messageRouter.sinkOpenChan:
 				messageRouter.registerSink(s, activeSinks)
 			case s := <-messageRouter.sinkCloseChan:

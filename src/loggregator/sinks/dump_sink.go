@@ -26,11 +26,11 @@ func NewDumpSink(appId string, bufferSize int, givenLogger *gosteno.Logger) *Dum
 }
 
 func (d *DumpSink) Run() {
-
+	// no-op to conform to Sink interface
 }
 
-func (d *DumpSink) Dump() []*logmessage.Message {
-	return d.messageBuffer.Dump()
+func (d *DumpSink) Dump(in chan<- *logmessage.Message) {
+	d.messageBuffer.Dump(in)
 }
 
 func (d *DumpSink) Channel() chan *logmessage.Message {

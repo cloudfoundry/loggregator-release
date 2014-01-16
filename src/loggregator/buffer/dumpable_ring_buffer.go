@@ -24,10 +24,10 @@ func NewDumpableRingBuffer(in <-chan *logmessage.Message, bufferSize int) *Dumpa
 		for m := range in {
 			rb.addData(m)
 			select {
-			case rb.outChannel <- rb.head():
+			case rb.outChannel <- m:
 			default:
 				<-rb.outChannel
-				rb.outChannel <- rb.head()
+				rb.outChannel <- m
 			}
 		}
 		close(rb.closed)
@@ -40,10 +40,11 @@ func (r *DumpableRingBuffer) WaitForClose() {
 	<-r.closed
 }
 
-func (r *DumpableRingBuffer) Dump() []*logmessage.Message {
-	r.RLock()
-	defer r.RUnlock()
-	return r.data
+func (r *DumpableRingBuffer) Dump(outChan chan<- *logmessage.Message) {
+	for _, m := range r.copyData() {
+		outChan <- m
+	}
+	close(outChan)
 }
 
 func (r *DumpableRingBuffer) OutputChannel() <-chan *logmessage.Message {
@@ -60,8 +61,10 @@ func (r *DumpableRingBuffer) addData(m *logmessage.Message) {
 	}
 }
 
-func (r *DumpableRingBuffer) head() *logmessage.Message {
+func (r *DumpableRingBuffer) copyData() []*logmessage.Message {
 	r.RLock()
 	defer r.RUnlock()
-	return r.data[0]
+	result := make([]*logmessage.Message, len(r.data))
+	copy(result, r.data)
+	return result
 }
