@@ -112,8 +112,10 @@ func TestThatItDoesNotDumpLogsBeforeTailing(t *testing.T) {
 	select {
 	case <-time.After(1 * time.Second):
 		break
-	case <-receivedChan:
-		t.Errorf("Recieved unexpected message from app sink")
+	case _, ok := <-receivedChan:
+		if ok {
+			t.Errorf("Recieved unexpected message from app sink")
+		}
 	}
 
 	stopKeepAlive <- true
@@ -130,8 +132,10 @@ func TestDropUnmarshallableMessage(t *testing.T) {
 
 	time.Sleep(1 * time.Millisecond)
 	select {
-	case msg1 := <-receivedChan:
-		t.Errorf("We should not have received a message, but got: %v", msg1)
+	case msg1, ok := <-receivedChan:
+		if ok {
+			t.Errorf("We should not have received a message, but got: %v", msg1)
+		}
 	default:
 		//no communication. That's good!
 	}
