@@ -125,50 +125,50 @@ func (proxy *Proxy) HandleWebSocket(clientWS *websocket.Conn) {
 
 }
 
+func (proxy *Proxy) proxyConnectionTo(server *websocket.Conn, client *websocket.Conn, doneChan chan bool) {
+	proxy.logger.Debugf("Output Proxy: Starting to listen to server %v", server.RemoteAddr().String())
+
+	var logMessage []byte
+	defer server.Close()
+	for {
+		err := websocket.Message.Receive(server, &logMessage)
+		if err != nil {
+			proxy.logger.Errorf("Output Proxy: Error reading from the server - %v - %v", err, server.RemoteAddr().String())
+			doneChan <- true
+			return
+		}
+		proxy.logger.Debugf("Output Proxy: Got message from server %v bytes", len(logMessage))
+		websocket.Message.Send(client, logMessage)
+	}
+}
+
+func (proxy *Proxy) watchKeepAlive(servers []*websocket.Conn, client *websocket.Conn) {
+	var keepAlive []byte
+	for {
+		err := websocket.Message.Receive(client, &keepAlive)
+		if err != nil {
+			proxy.logger.Errorf("Output Proxy: Error reading from the client - %v", err)
+			return
+		}
+		proxy.logger.Debugf("Output Proxy: Got message from client %v bytes", len(keepAlive))
+		for _, server := range servers {
+			websocket.Message.Send(server, keepAlive)
+		}
+	}
+}
+
 func (proxy *Proxy) forwardIO(servers []*websocket.Conn, client *websocket.Conn) {
 	doneChan := make(chan bool)
 
-	var logMessage []byte
 	for _, server := range servers {
-		go func(server *websocket.Conn) {
-			proxy.logger.Debugf("Output Proxy: Starting to listen to server %v", server.RemoteAddr().String())
-
-			defer server.Close()
-			for {
-				err := websocket.Message.Receive(server, &logMessage)
-				if err != nil {
-					proxy.logger.Errorf("Output Proxy: Error reading from the server - %v - %v", err, server.RemoteAddr().String())
-					doneChan <- true
-					return
-				}
-				if err == nil {
-					proxy.logger.Debugf("Output Proxy: Got message from server %v bytes", len(logMessage))
-					websocket.Message.Send(client, logMessage)
-				}
-			}
-		}(server)
+		go proxy.proxyConnectionTo(server, client, doneChan)
 	}
 
-	var keepAlive []byte
-	go func() {
-		for {
-			err := websocket.Message.Receive(client, &keepAlive)
-			if err != nil {
-				proxy.logger.Errorf("Output Proxy: Error reading from the client - %v", err)
-				return
-			}
-			if err == nil {
-				proxy.logger.Debugf("Output Proxy: Got message from client %v bytes", len(keepAlive))
-				for _, server := range servers {
-					websocket.Message.Send(server, keepAlive)
-				}
-			}
-		}
-	}()
+	go proxy.watchKeepAlive(servers, client)
 
-	for i := 0; i < len(servers); i++ {
+	for _, server := range servers {
 		<-doneChan
-		proxy.logger.Debug("Output Proxy: Lost one server")
+		proxy.logger.Debugf("Output Proxy: Lost one server %s", server.RemoteAddr().String())
 	}
 	proxy.logger.Debugf("Output Proxy: Terminating connection. All clients disconnected")
 }

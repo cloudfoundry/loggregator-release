@@ -38,7 +38,8 @@ func NewWebsocketSink(appId string, givenLogger *gosteno.Logger, ws *websocket.C
 	}
 }
 
-func (sink *WebsocketSink) keepAliveChannel() <-chan bool {
+func (sink *WebsocketSink) keepAliveFailureChannel() <-chan bool {
+	keepAliveFailureChan := make(chan bool)
 	keepAliveChan := make(chan bool)
 	var keepAlive []byte
 	go func() {
@@ -51,7 +52,19 @@ func (sink *WebsocketSink) keepAliveChannel() <-chan bool {
 			keepAliveChan <- true
 		}
 	}()
-	return keepAliveChan
+
+	go func() {
+		for {
+			select {
+			case <-keepAliveChan:
+				sink.logger.Debugf("Websocket Sink %s: Keep-alive received", sink.clientAddress)
+			case <-time.After(sink.keepAliveInterval):
+				keepAliveFailureChan <- true
+				return
+			}
+		}
+	}()
+	return keepAliveFailureChan
 }
 
 func (sink *WebsocketSink) Channel() chan *logmessage.Message {
@@ -77,16 +90,14 @@ func (s *WebsocketSink) Logger() *gosteno.Logger {
 func (sink *WebsocketSink) Run() {
 	sink.logger.Debugf("Websocket Sink %s: Created for appId [%s]", sink.clientAddress, sink.appId)
 
-	keepAliveChan := sink.keepAliveChannel()
+	keepAliveFailure := sink.keepAliveFailureChannel()
 	alreadyRequestedClose := false
 
 	buffer := runTruncatingBuffer(sink, sink.wsMessageBufferSize, sink.Logger())
 	for {
 		sink.logger.Debugf("Websocket Sink %s: Waiting for activity", sink.clientAddress)
 		select {
-		case <-keepAliveChan:
-			sink.logger.Debugf("Websocket Sink %s: Keep-alive processed", sink.clientAddress)
-		case <-time.After(sink.keepAliveInterval):
+		case <-keepAliveFailure:
 			sink.logger.Debugf("Websocket Sink %s: No keep keep-alive received. Requesting close.", sink.clientAddress)
 			requestClose(sink, sink.sinkCloseChan, &alreadyRequestedClose)
 			return

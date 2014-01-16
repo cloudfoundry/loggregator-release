@@ -181,25 +181,39 @@ func TestDropSinkWhenLogTargetisinvalid(t *testing.T) {
 }
 
 func TestKeepAlive(t *testing.T) {
-	receivedChan := make(chan []byte)
+	receivedChan := make(chan []byte, 10)
 
-	_, killKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp05")
+	_, killKeepAliveChan, connectionDroppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myApp05")
 	WaitForWebsocketRegistration()
+
+	go func() {
+		for {
+			expectedMessageString := "My important message"
+			logEnvelope := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString, "myApp05", SECRET)
+			dataReadChannel <- logEnvelope
+			time.Sleep(2 * time.Millisecond)
+		}
+	}()
+
+	time.Sleep(10 * time.Millisecond) //wait a little bit to make sure some messages are sent
 
 	killKeepAliveChan <- true
 
-	time.Sleep(60 * time.Millisecond) //wait a little bit to make sure the keep-alive has successfully been stopped
+	go func() {
+		for {
+			select {
 
-	expectedMessageString := "My important message"
-	logEnvelope := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString, "myApp05", SECRET)
-	dataReadChannel <- logEnvelope
-
-	select {
-	case msg1, ok := <-receivedChan:
-		if ok {
-			t.Errorf("We should not have received a message, but got: %v", msg1)
+			case _, ok := <-receivedChan:
+				if !ok {
+					// channel closed good!
+					break
+				}
+			case <-time.After(10 * time.Millisecond):
+				//no communication. That's good!
+				break
+			}
 		}
-	case <-time.After(10 * time.Millisecond):
-		//no communication. That's good!
-	}
+	}()
+
+	assert.True(t, <-connectionDroppedChannel, "We should have been dropped since we stopped the keepalive")
 }
