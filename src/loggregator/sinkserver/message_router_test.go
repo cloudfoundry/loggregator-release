@@ -47,6 +47,26 @@ func (ts testSink) Logger() *gosteno.Logger {
 	return loggertesthelper.Logger()
 }
 
+func TestThatDumpingForAnAppWithoutADumpSinkDoesNotBlockForever(t *testing.T) {
+	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger())
+	go testMessageRouter.Start()
+
+	outputChannel := make(chan *logmessage.Message)
+	dumpReceiver := dumpReceiver{outputChannel: outputChannel, appId: "doesNotExist"}
+	testMessageRouter.dumpReceiverChan <- dumpReceiver
+
+	select {
+	case _, ok := <-outputChannel:
+		if !ok {
+			// All is good. Channel got closed
+		} else {
+			t.Error("Should not Receive anything")
+		}
+	case <-time.After(1 * time.Second):
+		t.Error("Channel should be closed right away if there is no dump sink for the given app.")
+	}
+}
+
 func TestErrorMessagesAreDeliveredToSinksThatSupportThem(t *testing.T) {
 	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger())
 	go testMessageRouter.Start()

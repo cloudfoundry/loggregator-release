@@ -58,6 +58,9 @@ func (messageRouter *messageRouter) Start() {
 				go func() {
 					if sink := activeSinks.DumpFor(dr.appId); sink != nil {
 						sink.Dump(dr.outputChannel)
+					} else {
+						messageRouter.logger.Debugf("MessageRouter:DumpReceiverChan: No dump exists for appId [%s].", dr.appId)
+						close(dr.outputChannel)
 					}
 				}()
 			case s := <-messageRouter.sinkOpenChan:
