@@ -12,27 +12,29 @@ import (
 )
 
 type SyslogSink struct {
-	logger           *gosteno.Logger
-	appId            string
-	drainUrl         string
-	sentMessageCount *uint64
-	sentByteCount    *uint64
-	listenerChannel  chan *logmessage.Message
-	syslogWriter     SyslogWriter
-	errorChannel     chan<- *logmessage.Message
+	logger            *gosteno.Logger
+	appId             string
+	drainUrl          string
+	sentMessageCount  *uint64
+	sentByteCount     *uint64
+	listenerChannel   chan *logmessage.Message
+	syslogWriter      SyslogWriter
+	errorChannel      chan<- *logmessage.Message
+	disconnectChannel chan int
 }
 
 func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter SyslogWriter, errorChannel chan<- *logmessage.Message) Sink {
 	givenLogger.Debugf("Syslog Sink %s: Created for appId [%s]", drainUrl, appId)
 	return &SyslogSink{
-		appId:            appId,
-		drainUrl:         drainUrl,
-		logger:           givenLogger,
-		sentMessageCount: new(uint64),
-		sentByteCount:    new(uint64),
-		listenerChannel:  make(chan *logmessage.Message),
-		syslogWriter:     syslogWriter,
-		errorChannel:     errorChannel,
+		appId:             appId,
+		drainUrl:          drainUrl,
+		logger:            givenLogger,
+		sentMessageCount:  new(uint64),
+		sentByteCount:     new(uint64),
+		listenerChannel:   make(chan *logmessage.Message),
+		syslogWriter:      syslogWriter,
+		errorChannel:      errorChannel,
+		disconnectChannel: make(chan int),
 	}
 }
 
@@ -47,7 +49,12 @@ func (s *SyslogSink) Run() {
 	for {
 		s.logger.Debugf("Syslog Sink %s: Starting loop. Current backoff: %v", s.drainUrl, backoffStrategy(numberOfTries))
 
-		time.Sleep(backoffStrategy(numberOfTries))
+		select {
+		case <-s.disconnectChannel:
+			return
+		case <-time.After(backoffStrategy(numberOfTries)):
+		}
+
 		if !s.syslogWriter.IsConnected() {
 			s.logger.Debugf("Syslog Sink %s: Not connected. Trying to connect.", s.drainUrl)
 			err := s.syslogWriter.Connect()
@@ -71,11 +78,13 @@ func (s *SyslogSink) Run() {
 		}
 
 		s.logger.Debugf("Syslog Sink %s: Waiting for activity\n", s.drainUrl)
+
 		message, ok := <-buffer.GetOutputChannel()
 		if !ok {
 			s.logger.Debugf("Syslog Sink %s: Closed listener channel detected. Closing.\n", s.drainUrl)
 			return
 		}
+
 		s.logger.Debugf("Syslog Sink %s: Got %d bytes. Sending data\n", s.drainUrl, message.GetRawMessageLength())
 
 		var err error
@@ -101,6 +110,12 @@ func (s *SyslogSink) Run() {
 
 func (s *SyslogSink) Channel() chan *logmessage.Message {
 	return s.listenerChannel
+}
+
+func (s *SyslogSink) Disconnect() {
+	if !s.syslogWriter.IsConnected() {
+		s.disconnectChannel <- 0
+	}
 }
 
 func (s *SyslogSink) Logger() *gosteno.Logger {

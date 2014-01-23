@@ -140,6 +140,8 @@ func (messageRouter *messageRouter) unregisterSink(s sinks.Sink, activeSinks *gr
 	case *sinks.DumpSink:
 		messageRouter.activeDumpSinksCounter--
 	case *sinks.SyslogSink:
+		syslogSink, _ := s.(*sinks.SyslogSink)
+		syslogSink.Disconnect()
 		messageRouter.activeSyslogSinksCounter--
 	case *sinks.WebsocketSink:
 		messageRouter.activeWebsocketSinksCounter--

@@ -9,6 +9,7 @@ import (
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"loggregator/iprange"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -35,7 +36,6 @@ func (ts testSink) ShouldReceiveErrors() bool {
 }
 
 func (ts testSink) Channel() chan *logmessage.Message {
-
 	return ts.channel
 }
 
@@ -280,6 +280,38 @@ func TestInvalidUrlForSyslogDrain(t *testing.T) {
 	}
 
 	assert.Equal(t, testMessageRouter.activeSyslogSinksCounter, oldActiveSyslogSinksCounter)
+}
+
+func TestStopsRetryingWhenSinkIsUnregistered(t *testing.T) {
+	testMessageRouter := NewMessageRouter(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, loggertesthelper.Logger())
+	go testMessageRouter.Start()
+
+	ourSink := testSink{make(chan *logmessage.Message, 100), true}
+	testMessageRouter.sinkOpenChan <- ourSink
+	runtime.Gosched()
+
+	go func() {
+		message := messagetesthelpers.NewMessage(t, "error msg", "appId")
+		message.GetLogMessage().DrainUrls = []string{"syslog://localhost:41223"}
+		testMessageRouter.parsedMessageChan <- message
+
+		newMessage := messagetesthelpers.NewMessage(t, "RemoveSyslogSink", "appId")
+		testMessageRouter.parsedMessageChan <- newMessage
+
+	}()
+
+	for {
+		readMessage := <-ourSink.Channel()
+		if string(readMessage.GetLogMessage().GetMessage()) == "RemoveSyslogSink" {
+			break
+		}
+	}
+
+	select {
+	case message := <-ourSink.Channel():
+		t.Errorf("Should not receive another message after removal; message was %v", string(message.GetLogMessage().GetMessage()))
+	case <-time.After(2 * time.Second):
+	}
 }
 
 func waitForMessageGettingProcessed(t *testing.T, ourSink testSink, timeout time.Duration) {
