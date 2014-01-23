@@ -1,6 +1,7 @@
 package deaagent
 
 import (
+	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/stretchr/testify/assert"
@@ -11,6 +12,8 @@ import (
 	"testing"
 	"time"
 )
+
+const SOCKET_PREFIX = "\n\n\n\n"
 
 func TestIdentifier(t *testing.T) {
 	task := task{
@@ -38,47 +41,26 @@ func (m MockLoggregatorEmitter) EmitLogMessage(message *logmessage.LogMessage) {
 }
 
 func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "testing")
-	assert.NoError(t, err)
+	task, tmpdir := setupTask(t, 3)
 	defer os.RemoveAll(tmpdir)
 
-	task := &task{
-		applicationId:       "1234",
-		wardenJobId:         56,
-		wardenContainerPath: tmpdir,
-		index:               3,
-		sourceName:          "App",
-		drainUrls:           []string{"syslog://10.20.30.40:8050"}}
-
-	os.MkdirAll(task.identifier(), 0777)
-
-	stdoutSocketPath := filepath.Join(task.identifier(), "stdout.sock")
-	stderrSocketPath := filepath.Join(task.identifier(), "stderr.sock")
-	os.Remove(stdoutSocketPath)
-	os.Remove(stderrSocketPath)
-	stdoutListener, err := net.Listen("unix", stdoutSocketPath)
+	stdoutListener, stderrListener := setupSockets(t, task)
 	defer stdoutListener.Close()
-	assert.NoError(t, err)
-	stderrListener, err := net.Listen("unix", stderrSocketPath)
 	defer stderrListener.Close()
-	assert.NoError(t, err)
+
+	receiveChannel := setupEmitter(t, task, loggertesthelper.Logger())
 
 	expectedMessage := "Some Output\n"
 	secondLogMessage := "toally different\n"
-
-	mockLoggregatorEmitter := new(MockLoggregatorEmitter)
-
-	mockLoggregatorEmitter.received = make(chan *logmessage.LogMessage)
-	task.startListening(mockLoggregatorEmitter, loggertesthelper.Logger())
 
 	connection, err := stdoutListener.Accept()
 	defer connection.Close()
 	assert.NoError(t, err)
 
-	_, err = connection.Write([]byte(expectedMessage))
+	_, err = connection.Write([]byte(SOCKET_PREFIX + expectedMessage))
 	assert.NoError(t, err)
 
-	receivedMessage := <-mockLoggregatorEmitter.received
+	receivedMessage := <-receiveChannel
 
 	assert.Equal(t, "1234", receivedMessage.GetAppId())
 	assert.Equal(t, "App", receivedMessage.GetSourceName())
@@ -90,7 +72,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	_, err = connection.Write([]byte(secondLogMessage))
 	assert.NoError(t, err)
 
-	receivedMessage = <-mockLoggregatorEmitter.received
+	receivedMessage = <-receiveChannel
 
 	assert.Equal(t, "1234", receivedMessage.GetAppId())
 	assert.Equal(t, "App", receivedMessage.GetSourceName())
@@ -100,83 +82,78 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	assert.Equal(t, "3", receivedMessage.GetSourceId())
 }
 
-func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "testing")
-	assert.NoError(t, err)
+func TestThatWeHandleFourByteOffset(t *testing.T) {
+	task, tmpdir := setupTask(t, 3)
 	defer os.RemoveAll(tmpdir)
 
-	task := &task{
-		applicationId:       "1234",
-		wardenJobId:         56,
-		wardenContainerPath: tmpdir,
-		index:               4,
-		sourceName:          "App",
-		drainUrls:           []string{"syslog://10.20.30.40:8050"}}
-	os.MkdirAll(task.identifier(), 0777)
-
-	stdoutSocketPath := filepath.Join(task.identifier(), "stdout.sock")
-	stderrSocketPath := filepath.Join(task.identifier(), "stderr.sock")
-	os.Remove(stdoutSocketPath)
-	os.Remove(stderrSocketPath)
-	stdoutListener, err := net.Listen("unix", stdoutSocketPath)
+	stdoutListener, stderrListener := setupSockets(t, task)
 	defer stdoutListener.Close()
-	assert.NoError(t, err)
-	stderrListener, err := net.Listen("unix", stderrSocketPath)
 	defer stderrListener.Close()
-	assert.NoError(t, err)
+
+	receiveChannel := setupEmitter(t, task, loggertesthelper.Logger())
 
 	expectedMessage := "Some Output\n"
 	secondLogMessage := "toally different\n"
 
-	mockLoggregatorEmitter := new(MockLoggregatorEmitter)
+	connection, err := stdoutListener.Accept()
+	defer connection.Close()
 
-	mockLoggregatorEmitter.received = make(chan *logmessage.LogMessage)
-	task.startListening(mockLoggregatorEmitter, loggertesthelper.Logger())
+	assert.NoError(t, err)
+
+	_, err = connection.Write([]byte("\n"))
+	_, err = connection.Write([]byte("\n"))
+
+	select {
+	case _ = <-receiveChannel:
+		t.Error("Should not receive a message")
+	case <-time.After(200 * time.Millisecond):
+	}
+
+	_, err = connection.Write([]byte("\n\n"))
+	_, err = connection.Write([]byte(expectedMessage))
+	assert.NoError(t, err)
+
+	receivedMessage := <-receiveChannel
+	assert.Equal(t, expectedMessage, string(receivedMessage.GetMessage()))
+
+	_, err = connection.Write([]byte(secondLogMessage))
+	assert.NoError(t, err)
+
+	receivedMessage = <-receiveChannel
+	assert.Equal(t, secondLogMessage, string(receivedMessage.GetMessage()))
+}
+
+func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
+	task, tmpdir := setupTask(t, 4)
+	defer os.RemoveAll(tmpdir)
+
+	stdoutListener, stderrListener := setupSockets(t, task)
+	defer stdoutListener.Close()
+	defer stderrListener.Close()
+
+	expectedMessage := "Some Output\n"
+	secondLogMessage := "toally different\n"
+
+	receiveChannel := setupEmitter(t, task, loggertesthelper.Logger())
 
 	connection, err := stderrListener.Accept()
 	defer connection.Close()
 	assert.NoError(t, err)
 
-	_, err = connection.Write([]byte(expectedMessage))
+	_, err = connection.Write([]byte(SOCKET_PREFIX + expectedMessage))
 	assert.NoError(t, err)
-
-	receivedMessage := <-mockLoggregatorEmitter.received
-
-	assert.Equal(t, "1234", receivedMessage.GetAppId())
-	assert.Equal(t, "App", receivedMessage.GetSourceName())
-	assert.Equal(t, logmessage.LogMessage_ERR, receivedMessage.GetMessageType())
+	receivedMessage := <-receiveChannel
 	assert.Equal(t, expectedMessage, string(receivedMessage.GetMessage()))
-	assert.Equal(t, []string{"syslog://10.20.30.40:8050"}, receivedMessage.GetDrainUrls())
-	assert.Equal(t, "4", receivedMessage.GetSourceId())
 
 	_, err = connection.Write([]byte(secondLogMessage))
 	assert.NoError(t, err)
-
-	receivedMessage = <-mockLoggregatorEmitter.received
-
-	assert.Equal(t, "1234", receivedMessage.GetAppId())
-	assert.Equal(t, "App", receivedMessage.GetSourceName())
-	assert.Equal(t, logmessage.LogMessage_ERR, receivedMessage.GetMessageType())
+	receivedMessage = <-receiveChannel
 	assert.Equal(t, secondLogMessage, string(receivedMessage.GetMessage()))
-	assert.Equal(t, []string{"syslog://10.20.30.40:8050"}, receivedMessage.GetDrainUrls())
-	assert.Equal(t, "4", receivedMessage.GetSourceId())
 }
 
 func TestThatWeRetryListeningToStdOutUnixSocket(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "testing")
-	assert.NoError(t, err)
+	task, tmpdir := setupTask(t, 3)
 	defer os.RemoveAll(tmpdir)
-
-	task := &task{
-		applicationId:       "1234",
-		wardenJobId:         56,
-		wardenContainerPath: tmpdir,
-		index:               3,
-		sourceName:          "App",
-		drainUrls:           []string{"syslog://10.20.30.40:8050"},
-	}
-
-	os.MkdirAll(task.identifier(), 0777)
 
 	stdoutSocketPath := filepath.Join(task.identifier(), "stdout.sock")
 	stderrSocketPath := filepath.Join(task.identifier(), "stderr.sock")
@@ -185,11 +162,7 @@ func TestThatWeRetryListeningToStdOutUnixSocket(t *testing.T) {
 	os.Remove(stderrSocketPath)
 	os.Remove(loggerPath)
 
-	mockLoggregatorEmitter := new(MockLoggregatorEmitter)
-
-	mockLoggregatorEmitter.received = make(chan *logmessage.LogMessage)
-
-	task.startListening(mockLoggregatorEmitter, loggertesthelper.FileLogger(loggerPath))
+	receiveChannel := setupEmitter(t, task, loggertesthelper.FileLogger(loggerPath))
 
 	go func() {
 		time.Sleep(950 * time.Millisecond)
@@ -199,11 +172,11 @@ func TestThatWeRetryListeningToStdOutUnixSocket(t *testing.T) {
 		connection, err := stdoutListener.Accept()
 		defer connection.Close()
 		assert.NoError(t, err)
-		_, err = connection.Write([]byte("Hi there"))
+		_, err = connection.Write([]byte(SOCKET_PREFIX + "Hi there"))
 	}()
 
 	select {
-	case receivedMessage := <-mockLoggregatorEmitter.received:
+	case receivedMessage := <-receiveChannel:
 		assert.Contains(t, string(receivedMessage.GetMessage()), "Hi there")
 	case <-time.After(3 * time.Second):
 		t.Error("Timed out waiting for message")
@@ -215,20 +188,8 @@ func TestThatWeRetryListeningToStdOutUnixSocket(t *testing.T) {
 }
 
 func TestThatWeRetryListeningToStdErrUnixSocket(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "testing")
-	assert.NoError(t, err)
+	task, tmpdir := setupTask(t, 3)
 	defer os.RemoveAll(tmpdir)
-
-	task := &task{
-		applicationId:       "1234",
-		wardenJobId:         56,
-		wardenContainerPath: tmpdir,
-		index:               3,
-		sourceName:          "App",
-		drainUrls:           []string{"syslog://10.20.30.40:8050"},
-	}
-
-	os.MkdirAll(task.identifier(), 0777)
 
 	stdoutSocketPath := filepath.Join(task.identifier(), "stdout.sock")
 	stderrSocketPath := filepath.Join(task.identifier(), "stderr.sock")
@@ -237,11 +198,7 @@ func TestThatWeRetryListeningToStdErrUnixSocket(t *testing.T) {
 	os.Remove(stderrSocketPath)
 	os.Remove(loggerPath)
 
-	mockLoggregatorEmitter := new(MockLoggregatorEmitter)
-
-	mockLoggregatorEmitter.received = make(chan *logmessage.LogMessage)
-
-	task.startListening(mockLoggregatorEmitter, loggertesthelper.FileLogger(loggerPath))
+	receiveChannel := setupEmitter(t, task, loggertesthelper.FileLogger(loggerPath))
 
 	go func() {
 		time.Sleep(950 * time.Millisecond)
@@ -251,11 +208,11 @@ func TestThatWeRetryListeningToStdErrUnixSocket(t *testing.T) {
 		connection, err := stderrListener.Accept()
 		defer connection.Close()
 		assert.NoError(t, err)
-		_, err = connection.Write([]byte("Error Message!!!"))
+		_, err = connection.Write([]byte(SOCKET_PREFIX + "Error Message!!!"))
 	}()
 
 	select {
-	case receivedMessage := <-mockLoggregatorEmitter.received:
+	case receivedMessage := <-receiveChannel:
 		assert.Contains(t, string(receivedMessage.GetMessage()), "Error Message!!!")
 	case <-time.After(3 * time.Second):
 		t.Error("Timed out waiting for message")
@@ -264,4 +221,41 @@ func TestThatWeRetryListeningToStdErrUnixSocket(t *testing.T) {
 	logContents, err := ioutil.ReadFile(loggerPath)
 	assert.NoError(t, err)
 	assert.Contains(t, string(logContents), "Error while dialing into socket ERR")
+}
+
+func setupEmitter(t *testing.T, task *task, logger *gosteno.Logger) chan *logmessage.LogMessage {
+	mockLoggregatorEmitter := new(MockLoggregatorEmitter)
+
+	mockLoggregatorEmitter.received = make(chan *logmessage.LogMessage)
+	task.startListening(mockLoggregatorEmitter, logger)
+	return mockLoggregatorEmitter.received
+}
+
+func setupSockets(t *testing.T, task *task) (net.Listener, net.Listener) {
+	stdoutSocketPath := filepath.Join(task.identifier(), "stdout.sock")
+	stderrSocketPath := filepath.Join(task.identifier(), "stderr.sock")
+	os.Remove(stdoutSocketPath)
+	os.Remove(stderrSocketPath)
+	stdoutListener, err := net.Listen("unix", stdoutSocketPath)
+	assert.NoError(t, err)
+	stderrListener, err := net.Listen("unix", stderrSocketPath)
+	assert.NoError(t, err)
+	return stdoutListener, stderrListener
+}
+
+func setupTask(t *testing.T, index uint64) (appTask *task, tmpdir string) {
+	tmpdir, err := ioutil.TempDir("", "testing")
+	assert.NoError(t, err)
+
+	appTask = &task{
+		applicationId:       "1234",
+		wardenJobId:         56,
+		wardenContainerPath: tmpdir,
+		index:               index,
+		sourceName:          "App",
+		drainUrls:           []string{"syslog://10.20.30.40:8050"}}
+
+	os.MkdirAll(appTask.identifier(), 0777)
+
+	return appTask, tmpdir
 }

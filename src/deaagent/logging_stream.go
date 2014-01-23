@@ -76,6 +76,8 @@ func (ls loggingStream) listen() {
 		}()
 
 		buffer := make([]byte, bufferSize)
+		totalRead := 0
+		const _skippedBytes = 4
 
 		for {
 			readCount, err := connection.Read(buffer)
@@ -88,13 +90,29 @@ func (ls loggingStream) listen() {
 			atomic.AddUint64(ls.messagesReceived, 1)
 			atomic.AddUint64(ls.bytesReceived, uint64(readCount))
 
-			rawMessageBytes := make([]byte, readCount)
-			copy(rawMessageBytes, buffer[:readCount])
-			logMessage := newLogMessage(rawMessageBytes)
+			skipCount := 0
+			if totalRead < _skippedBytes {
+				skipCount = _skippedBytes - totalRead
+				if skipCount > readCount {
+					skipCount = readCount
+				}
 
-			ls.emitter.EmitLogMessage(logMessage)
+				ls.logger.Debugf("Skipping %d bytes from task socket (offset message)", skipCount)
+			}
+			totalRead += readCount
 
-			ls.logger.Debugf("Sent %d bytes to loggregator client from %s, %s", readCount, ls.messageType, ls.task.identifier())
+			if readCount > skipCount {
+				rawMessageBytes := make([]byte, readCount-skipCount)
+				copy(rawMessageBytes, buffer[skipCount:readCount])
+
+				ls.logger.Debugf("This is the message we just read % 02x", rawMessageBytes)
+				logMessage := newLogMessage(rawMessageBytes)
+
+				ls.emitter.EmitLogMessage(logMessage)
+
+				ls.logger.Debugf("Sent %d bytes to loggregator client from %s, %s", readCount-skipCount, ls.messageType, ls.task.identifier())
+			}
+
 			runtime.Gosched()
 		}
 	}()
@@ -112,7 +130,6 @@ func (ls loggingStream) Emit() instrumentation.Context {
 func socketName(messageType logmessage.LogMessage_MessageType) string {
 	if messageType == logmessage.LogMessage_OUT {
 		return "stdout.sock"
-	} else {
-		return "stderr.sock"
 	}
+	return "stderr.sock"
 }

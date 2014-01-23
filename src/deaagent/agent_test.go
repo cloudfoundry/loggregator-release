@@ -119,10 +119,10 @@ func TestTheAgentMonitorsChangesInTasks(t *testing.T) {
 	defer task2Connection.Close()
 	assert.NoError(t, err)
 
-	_, err = task1Connection.Write([]byte(expectedMessage))
+	_, err = task1Connection.Write([]byte(SOCKET_PREFIX + expectedMessage))
 	assert.NoError(t, err)
 
-	_, err = task2Connection.Write([]byte(expectedMessage))
+	_, err = task2Connection.Write([]byte(SOCKET_PREFIX + expectedMessage))
 	assert.NoError(t, err)
 
 	receivedMessages := make(map[string]*logmessage.LogMessage)
