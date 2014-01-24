@@ -4,6 +4,7 @@ import (
 	"testing"
 	"github.com/stretchr/testify/assert"
 	"net/url"
+	"fmt"
 )
 
 // Tests for ValidateIpAddresses
@@ -84,13 +85,24 @@ func TestParsesTheIPAddressProperly(t *testing.T) {
 	}
 }
 
-func TestReturnErrorWhenUrlDoesNotContainProtocol(t *testing.T) {
+var malformattedURLs = []struct {
+	url  string
+}{
+	{"127.0.0.1:300/new"},
+	{"syslog:127.0.0.1:300/new"},
+	{"<nil>"},
+}
+
+func TestReturnErrorOnMalformattedURL(t *testing.T) {
 	ranges := []IPRange{IPRange{Start: "127.0.2.2", End: "127.0.2.4"}}
 
-	parsedURL, _ := url.Parse("127.0.0.1:300/new")
-	_, err := IpOutsideOfRanges(*parsedURL, ranges)
-	assert.Error(t, err)
-	assert.Equal(t, err.Error(), "Missing protocol for url: {  <nil>  127.0.0.1:300/new  }")
+	for _, testUrl := range malformattedURLs {
+		parsedURL, _ := url.Parse(testUrl.url)
+		_, err := IpOutsideOfRanges(*parsedURL, ranges)
+		if err == nil {
+			t.Fatal(fmt.Sprintf("There should be an error about malformatted URL for %s", testUrl))
+		}
+	}
 }
 
 func TestReturnsAlwaysTrueWhenIpRangesIsNilOrEmpty(t *testing.T) {

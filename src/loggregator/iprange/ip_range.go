@@ -32,8 +32,9 @@ func ValidateIpAddresses(ranges []IPRange) error {
 }
 
 func IpOutsideOfRanges(testURL url.URL, ranges []IPRange) (bool, error) {
-	if !testURL.IsAbs() {
-		return false, errors.New(fmt.Sprintf("Missing protocol for url: %s", testURL))
+	if len(testURL.Host) == 0 {
+		return false, errors.New(fmt.Sprintf("Incomplete URL %s. " +
+				"This could be caused by an URL without slashes or protocol.", testURL))
 	}
 	host := strings.Split(testURL.Host,":")[0]
 	ipAddress := net.ParseIP(host)

@@ -197,48 +197,6 @@ func TestSimpleBlacklistRule(t *testing.T) {
 	assert.Equal(t, testMessageRouter.activeSyslogSinksCounter, oldActiveSyslogSinksCounter+1)
 }
 
-func TestMisformattedSyslogDrain(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, loggertesthelper.Logger())
-	oldActiveSyslogSinksCounter := testMessageRouter.activeSyslogSinksCounter
-
-	go testMessageRouter.Start()
-	ourSink := testSink{make(chan *logmessage.Message, 100), true}
-	testMessageRouter.sinkOpenChan <- ourSink
-	<-time.After(1 * time.Millisecond)
-
-	message := messagetesthelpers.NewMessage(t, "error msg", "appId")
-	message.GetLogMessage().DrainUrls = []string{"<nil>"}
-	testMessageRouter.parsedMessageChan <- message
-
-	select {
-	case _ = <-ourSink.Channel():
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Did not receive real message")
-	}
-
-	select {
-	case _ = <-ourSink.Channel():
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Did not message about blacklisted syslog drain")
-	}
-
-	testMessageRouter.parsedMessageChan <- message
-
-	select {
-	case _ = <-ourSink.Channel():
-	case <-time.After(1000 * time.Millisecond):
-		t.Error("Did not receive real message")
-	}
-
-	select {
-	case _ = <-ourSink.Channel():
-		t.Error("Should not receive another message about the blacklisted url since we cache blacklisted urls")
-	case <-time.After(100 * time.Millisecond):
-	}
-
-	assert.Equal(t, testMessageRouter.activeSyslogSinksCounter, oldActiveSyslogSinksCounter)
-}
-
 func TestInvalidUrlForSyslogDrain(t *testing.T) {
 	testMessageRouter := NewMessageRouter(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, loggertesthelper.Logger())
 	oldActiveSyslogSinksCounter := testMessageRouter.activeSyslogSinksCounter
@@ -273,8 +231,7 @@ func TestInvalidUrlForSyslogDrain(t *testing.T) {
 	}
 
 	select {
-	case readMessage := <-ourSink.Channel():
-		println(string(readMessage.GetLogMessage().GetMessage()))
+	case _ = <-ourSink.Channel():
 		t.Error("Should not receive another message about the blacklisted url since we cache blacklisted urls")
 	case <-time.After(100 * time.Millisecond):
 	}

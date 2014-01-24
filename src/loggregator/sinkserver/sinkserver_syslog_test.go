@@ -192,7 +192,7 @@ func TestThatItDoesNotRegisterADrainIfItsURLIsBlacklisted(t *testing.T) {
 	case <-time.After(1 * time.Second):
 		t.Errorf("Did not get the error message about the blacklisted syslog drain.")
 	case receivedMessage := <-receivedChan:
-		messagetesthelpers.AssertProtoBufferMessageEquals(t, "MessageRouter: Syslog drain url is blacklisted: syslog://127.0.0.1:34570", receivedMessage)
+		messagetesthelpers.AssertProtoBufferMessageContains(t, "URL is blacklisted", receivedMessage)
 	}
 }
 
