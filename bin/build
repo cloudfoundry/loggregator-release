@@ -5,4 +5,11 @@ set -e
 rm -rf $(dirname $0)/../release
 mkdir -p $(dirname $0)/../release
 
+pushd $(dirname $0)/../src/github.com/coreos/etcd
+./build
+mv ./bin/etcd $(dirname $0)/etcd
+popd
+
+export PATH=$PATH:$(dirname $0)
+
 PLATFORMS="linux/amd64" $(dirname $0)/build-platforms

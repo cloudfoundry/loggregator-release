@@ -159,6 +159,18 @@ cd loggregator
 git submodule update --init
 ```
 
+#### Build etcd
+```
+cd src/github.com/coreos/etcd
+./build
+```
+
+#### Install etcd
+```
+cp src/github.com/coreos/etcd/bin/etcd ./bin
+# Note: Make sure ./bin is in your $PATH
+```
+
 #### Running tests
 
 ```
