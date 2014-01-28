@@ -24,6 +24,7 @@ packages=(
     loggregator/buffer/truncatingbuffer
     loggregator/sinks
     loggregator/sinkserver
+    loggregator/store
     server_testhelpers
     trafficcontroller
     trafficcontroller/authorization
