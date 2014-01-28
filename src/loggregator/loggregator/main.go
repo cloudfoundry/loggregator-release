@@ -90,7 +90,7 @@ func main() {
 	listener := agentlistener.NewAgentListener(fmt.Sprintf("0.0.0.0:%d", config.IncomingPort), logger)
 	incomingData := listener.Start()
 
-	messageRouter := sinkserver.NewMessageRouter(config.MaxRetainedLogMessages, config.SkipCertVerify, config.BlackListIps, logger)
+	messageRouter := sinkserver.NewMessageRouter(config.MaxRetainedLogMessages, config.SkipCertVerify, config.BlackListIps, logger, 2048)
 
 	unmarshaller := func(data []byte) (*logmessage.Message, error) {
 		return logmessage.ParseEnvelope(data, config.SharedSecret)
@@ -105,7 +105,7 @@ func main() {
 		&LoggregatorServerHealthMonitor{},
 		config.VarzPort,
 		[]string{config.VarzUser, config.VarzPass},
-		[]instrumentation.Instrumentable{listener, messageRouter},
+		[]instrumentation.Instrumentable{listener, messageRouter, httpServer},
 	)
 
 	if err != nil {

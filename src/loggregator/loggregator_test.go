@@ -18,7 +18,7 @@ func init() {
 	listener := agentlistener.NewAgentListener("localhost:3456", logger)
 	dataChannel := listener.Start()
 
-	messageRouter := sinkserver.NewMessageRouter(10, false, nil, logger)
+	messageRouter := sinkserver.NewMessageRouter(10, false, nil, logger, 2048)
 	go messageRouter.Start()
 	httpServer := sinkserver.NewHttpServer(messageRouter, 30*time.Second, testhelpers.UnmarshallerMaker("secret"), 100, logger)
 	go httpServer.Start(dataChannel, "localhost:8081")

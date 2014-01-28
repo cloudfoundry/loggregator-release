@@ -48,7 +48,7 @@ func (ts testSink) Logger() *gosteno.Logger {
 }
 
 func TestThatDumpingForAnAppWithoutADumpSinkDoesNotBlockForever(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger())
+	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger(), 2048)
 	go testMessageRouter.Start()
 
 	outputChannel := make(chan *logmessage.Message)
@@ -68,7 +68,7 @@ func TestThatDumpingForAnAppWithoutADumpSinkDoesNotBlockForever(t *testing.T) {
 }
 
 func TestErrorMessagesAreDeliveredToSinksThatSupportThem(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger())
+	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger(), 2048)
 	go testMessageRouter.Start()
 
 	ourSink := testSink{make(chan *logmessage.Message, 100), true}
@@ -84,7 +84,7 @@ func TestErrorMessagesAreDeliveredToSinksThatSupportThem(t *testing.T) {
 }
 
 func TestErrorMessagesAreNotDeliveredToSinksThatDontAcceptErrors(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger())
+	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger(), 2048)
 	go testMessageRouter.Start()
 
 	ourSink := testSink{make(chan *logmessage.Message, 100), false}
@@ -100,7 +100,7 @@ func TestErrorMessagesAreNotDeliveredToSinksThatDontAcceptErrors(t *testing.T) {
 }
 
 func TestSendingToErrorChannelDoesNotBlock(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger())
+	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger(), 2048)
 	testMessageRouter.errorChannel = make(chan *logmessage.Message, 1)
 	go testMessageRouter.Start()
 
@@ -127,7 +127,7 @@ func TestSendingToErrorChannelDoesNotBlock(t *testing.T) {
 }
 
 func TestThatItDoesNotCreateAnotherSyslogDrainIfItIsAlreadyThere(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger())
+	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger(), 2048)
 	oldActiveSyslogSinksCounter := testMessageRouter.activeSyslogSinksCounter
 
 	go testMessageRouter.Start()
@@ -149,7 +149,7 @@ func TestThatItDoesNotCreateAnotherSyslogDrainIfItIsAlreadyThere(t *testing.T) {
 }
 
 func TestSimpleBlacklistRule(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, loggertesthelper.Logger())
+	testMessageRouter := NewMessageRouter(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, loggertesthelper.Logger(), 2048)
 	oldActiveSyslogSinksCounter := testMessageRouter.activeSyslogSinksCounter
 
 	go testMessageRouter.Start()
@@ -198,7 +198,7 @@ func TestSimpleBlacklistRule(t *testing.T) {
 }
 
 func TestInvalidUrlForSyslogDrain(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, loggertesthelper.Logger())
+	testMessageRouter := NewMessageRouter(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, loggertesthelper.Logger(), 2048)
 	oldActiveSyslogSinksCounter := testMessageRouter.activeSyslogSinksCounter
 
 	go testMessageRouter.Start()
@@ -240,7 +240,7 @@ func TestInvalidUrlForSyslogDrain(t *testing.T) {
 }
 
 func TestStopsRetryingWhenSinkIsUnregistered(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, loggertesthelper.Logger())
+	testMessageRouter := NewMessageRouter(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, loggertesthelper.Logger(), 2048)
 	go testMessageRouter.Start()
 
 	ourSink := testSink{make(chan *logmessage.Message, 100), true}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/appid"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"loggregator/sinks"
 	"net"
@@ -18,15 +19,18 @@ const (
 )
 
 type httpServer struct {
-	messageRouter           *messageRouter
-	keepAliveInterval       time.Duration
-	protoBufferUnmarshaller func([]byte) (*logmessage.Message, error)
-	wSMessageBufferSize     uint
-	logger                  *gosteno.Logger
+	messageRouter                                   *messageRouter
+	keepAliveInterval                               time.Duration
+	protoBufferUnmarshaller                         func([]byte) (*logmessage.Message, error)
+	wSMessageBufferSize                             uint
+	logger                                          *gosteno.Logger
+	numberOfMessagesUnmarshalledInParseEnvelopes    uint
+	numberOfMessagesUnmarshalErrorsInParseEnvelopes uint
+	numberOfMessagesDroppedInParseEnvelopes         uint
 }
 
 func NewHttpServer(messageRouter *messageRouter, keepAliveInterval time.Duration, protoBufferUnmarshaller func([]byte) (*logmessage.Message, error), wSMessageBufferSize uint, logger *gosteno.Logger) *httpServer {
-	return &httpServer{messageRouter, keepAliveInterval, protoBufferUnmarshaller, wSMessageBufferSize, logger}
+	return &httpServer{messageRouter, keepAliveInterval, protoBufferUnmarshaller, wSMessageBufferSize, logger, 0, 0, 0}
 }
 
 func (httpServer *httpServer) Start(incomingProtobufChan <-chan []byte, apiEndpoint string) {
@@ -44,10 +48,34 @@ func (httpServer *httpServer) ParseEnvelopes(incomingProtobufChan <-chan []byte)
 		data := <-incomingProtobufChan
 		message, err := httpServer.protoBufferUnmarshaller(data)
 		if err != nil {
+			httpServer.numberOfMessagesUnmarshalErrorsInParseEnvelopes++
 			httpServer.logger.Errorf("Log message could not be unmarshaled. Dropping it... Error: %v. Data: %v", err, data)
 			continue
 		}
-		httpServer.messageRouter.parsedMessageChan <- message
+
+		httpServer.numberOfMessagesUnmarshalledInParseEnvelopes++
+
+		select {
+		case httpServer.messageRouter.parsedMessageChan <- message:
+		default:
+			httpServer.numberOfMessagesDroppedInParseEnvelopes++
+			httpServer.logger.Debug("HttpServer:ParseEnvelopes(): parsedMessageChan full -- dropping message")
+		}
+	}
+}
+
+func (httpServer *httpServer) metrics() []instrumentation.Metric {
+	return []instrumentation.Metric{
+		instrumentation.Metric{Name: "numberOfMessagesUnmarshalledInParseEnvelopes", Value: httpServer.numberOfMessagesUnmarshalledInParseEnvelopes},
+		instrumentation.Metric{Name: "numberOfMessagesUnmarshalErrorsInParseEnvelopes", Value: httpServer.numberOfMessagesUnmarshalErrorsInParseEnvelopes},
+		instrumentation.Metric{Name: "numberOfMessagesDroppedInParseEnvelopes", Value: httpServer.numberOfMessagesDroppedInParseEnvelopes},
+	}
+}
+
+func (httpServer *httpServer) Emit() instrumentation.Context {
+	return instrumentation.Context{
+		Name:    "httpServer",
+		Metrics: httpServer.metrics(),
 	}
 }
 

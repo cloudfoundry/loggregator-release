@@ -30,11 +30,11 @@ type messageRouter struct {
 	*sync.RWMutex
 }
 
-func NewMessageRouter(maxRetainedLogMessages int, skipCertVerify bool, blackListIPs []iprange.IPRange, logger *gosteno.Logger) *messageRouter {
+func NewMessageRouter(maxRetainedLogMessages int, skipCertVerify bool, blackListIPs []iprange.IPRange, logger *gosteno.Logger, messageChannelLength int) *messageRouter {
 	sinkCloseChan := make(chan sinks.Sink, 20)
 	sinkOpenChan := make(chan sinks.Sink, 20)
 	dumpReceiverChan := make(chan dumpReceiver, 10)
-	messageChannel := make(chan *logmessage.Message, 2048)
+	messageChannel := make(chan *logmessage.Message, messageChannelLength)
 
 	return &messageRouter{
 		logger:            logger,
