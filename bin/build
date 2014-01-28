@@ -2,14 +2,17 @@
 
 set -e
 
-rm -rf $(dirname $0)/../release
-mkdir -p $(dirname $0)/../release
+BIN_DIR=$(dirname $0)
 
-pushd $(dirname $0)/../src/github.com/coreos/etcd
+rm -rf $BIN_DIR/../release
+mkdir -p $BIN_DIR/../release
+
+pushd $BIN_DIR/../src/github.com/coreos/etcd
 ./build
-mv ./bin/etcd $(dirname $0)/etcd
 popd
 
-export PATH=$PATH:$(dirname $0)
+mv $BIN_DIR/../src/github.com/coreos/etcd/bin/etcd $BIN_DIR/etcd
 
-PLATFORMS="linux/amd64" $(dirname $0)/build-platforms
+export PATH=$PATH:$BIN_DIR
+
+PLATFORMS="linux/amd64" $BIN_DIR/build-platforms
