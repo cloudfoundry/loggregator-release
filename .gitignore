@@ -9,3 +9,4 @@ release/
 *.iml
 *.pem
 bin/etcd
+bin/ginkgo
