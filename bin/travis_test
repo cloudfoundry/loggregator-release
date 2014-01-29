@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 trap "echo Exited!; exit 1;" SIGINT SIGTERM
 
