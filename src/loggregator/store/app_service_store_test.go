@@ -16,8 +16,8 @@ func buildNode(appService AppService) storeadapter.StoreNode {
 	}
 }
 
-var _ = Describe("Store", func() {
-	var store *Store
+var _ = Describe("AppServiceStore", func() {
+	var store *AppServiceStore
 	var adapter storeadapter.StoreAdapter
 	var outAddChan chan AppService
 	var outRemoveChan chan AppService
@@ -27,19 +27,23 @@ var _ = Describe("Store", func() {
 	var app1Service2 AppService
 	var app2Service1 AppService
 
-	assertNoOutgoingData := func() {
+	assertNoOutgoingData := func(c chan AppService) {
 		select {
-		case <-outAddChan:
+		case <-c:
 			Fail("Should not have any data on the channel", 1)
 		case <-time.After(2 * time.Millisecond):
 			// OK
 		}
 	}
 
-	drainOutgoingChannel := func(count int) []AppService {
+	drainOutgoingChannel := func(c chan AppService, count int) []AppService {
 		appServices := []AppService{}
 		for i := 0; i < count; i++ {
-			appServices = append(appServices, <-outAddChan)
+			appService, ok := <-c
+			if !ok {
+				break
+			}
+			appServices = append(appServices, appService)
 		}
 		return appServices
 	}
@@ -71,7 +75,7 @@ var _ = Describe("Store", func() {
 		outRemoveChan = make(chan AppService)
 		incomingChan = make(chan AppServices)
 
-		store = NewStore(adapter, outAddChan, outRemoveChan, incomingChan)
+		store = NewAppServiceStore(adapter, outAddChan, outRemoveChan, incomingChan)
 
 		app1Service1 = AppService{AppId: "app-1", Url: "syslog://example.com:12345"}
 		app1Service2 = AppService{AppId: "app-1", Url: "syslog://example.com:12346"}
@@ -81,7 +85,9 @@ var _ = Describe("Store", func() {
 	AfterEach(func() {
 		err := adapter.Disconnect()
 		Expect(err).NotTo(HaveOccurred())
-		close(incomingChan)
+		if incomingChan != nil {
+			close(incomingChan)
+		}
 	})
 
 	Describe("Loading store state on startup", func() {
@@ -89,7 +95,8 @@ var _ = Describe("Store", func() {
 			It("should not send anything on the channel", func() {
 				go store.Run()
 
-				assertNoOutgoingData()
+				assertNoOutgoingData(outAddChan)
+				assertNoOutgoingData(outRemoveChan)
 			})
 		})
 
@@ -103,11 +110,13 @@ var _ = Describe("Store", func() {
 			It("should send all the AppServices on the channel", func(done Done) {
 				go store.Run()
 
-				appServices := drainOutgoingChannel(3)
+				appServices := drainOutgoingChannel(outAddChan, 3)
 
 				Expect(appServices).To(ContainElement(app1Service1))
 				Expect(appServices).To(ContainElement(app1Service2))
 				Expect(appServices).To(ContainElement(app2Service1))
+
+				assertNoOutgoingData(outRemoveChan)
 
 				close(done)
 			})
@@ -121,11 +130,29 @@ var _ = Describe("Store", func() {
 			adapter.Create(buildNode(app2Service1))
 
 			go store.Run()
-			drainOutgoingChannel(3) //perhaps, ideally, we don't need to do this?
+			drainOutgoingChannel(outAddChan, 3)
 		})
 
 		Context("when it's closed", func() {
-			PIt("should stop sending notifications about changes", func() {})
+			BeforeEach(func() {
+				close(incomingChan)
+			})
+
+			AfterEach(func() {
+				incomingChan = nil //want the clean-up in AfterEach not to panic
+			})
+
+			It("should close the outing channels", func(done Done) {
+				_, open := <-outAddChan
+				Expect(open).To(BeFalse())
+				_, open = <-outRemoveChan
+				Expect(open).To(BeFalse())
+				close(done)
+			})
+
+			PContext("when an event in etcd occurs", func() {
+				It("should not attempt to tell the outgoing channels...", func() {})
+			})
 		})
 
 		It("does not modify the store, if the incoming data is already there", func(done Done) {
@@ -134,7 +161,8 @@ var _ = Describe("Store", func() {
 				Urls:  []string{app1Service1.Url, app1Service2.Url},
 			}
 
-			assertNoOutgoingData()
+			assertNoOutgoingData(outAddChan)
+			assertNoOutgoingData(outRemoveChan)
 
 			assertInStore(app1Service1, app1Service2, app2Service1)
 
@@ -155,6 +183,8 @@ var _ = Describe("Store", func() {
 
 					assertInStore(app2Service1, app2Service2)
 
+					assertNoOutgoingData(outRemoveChan)
+
 					close(done)
 				})
 			})
@@ -169,12 +199,13 @@ var _ = Describe("Store", func() {
 						Urls:  []string{app3Service1.Url, app3Service2.Url},
 					}
 
-					appServices := drainOutgoingChannel(2)
+					appServices := drainOutgoingChannel(outAddChan, 2)
 
 					Expect(appServices).To(ContainElement(app3Service1))
 					Expect(appServices).To(ContainElement(app3Service2))
 
 					assertInStore(app3Service1, app3Service2)
+					assertNoOutgoingData(outRemoveChan)
 
 					close(done)
 				})
@@ -189,7 +220,8 @@ var _ = Describe("Store", func() {
 						Urls:  []string{app1Service1.Url},
 					}
 
-					assertNoOutgoingData()
+					Expect(<-outRemoveChan).To(Equal(app1Service2))
+					assertNoOutgoingData(outAddChan)
 
 					assertInStore(app1Service1)
 					assertNotInStore(app1Service2)
@@ -205,10 +237,30 @@ var _ = Describe("Store", func() {
 						Urls:  []string{},
 					}
 
-					assertNoOutgoingData()
+					assertNoOutgoingData(outAddChan)
+
+					appServices := drainOutgoingChannel(outRemoveChan, 2)
+
+					Expect(appServices).To(ContainElement(app1Service1))
+					Expect(appServices).To(ContainElement(app1Service2))
 
 					assertNotInStore(app1Service1, app1Service2)
 					assertAppNotInStore(app1Service1.AppId)
+
+					incomingChan <- AppServices{
+						AppId: app1Service1.AppId,
+						Urls:  []string{app1Service1.Url, app1Service2.Url},
+					}
+
+					assertNoOutgoingData(outRemoveChan)
+
+					appServices = drainOutgoingChannel(outAddChan, 2)
+
+					Expect(appServices).To(ContainElement(app1Service1))
+					Expect(appServices).To(ContainElement(app1Service2))
+
+					assertInStore(app1Service1, app1Service2)
+
 					close(done)
 				})
 			})
@@ -225,7 +277,8 @@ var _ = Describe("Store", func() {
 					Urls:  []string{app1Service1.Url},
 				}
 
-				assertNoOutgoingData()
+				assertNoOutgoingData(outAddChan)
+				Expect(<-outRemoveChan).To(Equal(app1Service2))
 
 				assertInStore(app1Service1)
 				assertNotInStore(app1Service2)
@@ -236,6 +289,7 @@ var _ = Describe("Store", func() {
 				}
 
 				Expect(<-outAddChan).To(Equal(app1Service2))
+				assertNoOutgoingData(outRemoveChan)
 
 				assertInStore(app1Service1, app1Service2)
 
@@ -244,7 +298,8 @@ var _ = Describe("Store", func() {
 					Urls:  []string{app1Service2.Url},
 				}
 
-				assertNoOutgoingData()
+				assertNoOutgoingData(outAddChan)
+				Expect(<-outRemoveChan).To(Equal(app1Service1))
 
 				assertInStore(app1Service2)
 				assertNotInStore(app1Service1)

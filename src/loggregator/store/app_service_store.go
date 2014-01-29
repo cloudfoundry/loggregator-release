@@ -5,24 +5,28 @@ import (
 	"path"
 )
 
-type Store struct {
+type AppServiceStore struct {
 	adapter                   storeadapter.StoreAdapter
 	outAddChan, outRemoveChan chan<- AppService
 	incomingChan              <-chan AppServices
 	cache                     map[string]map[string]AppService
 }
 
-func NewStore(adapter storeadapter.StoreAdapter, outAdd, outRemove chan<- AppService, in <-chan AppServices) *Store {
-	return &Store{
-		adapter:      adapter,
-		outAddChan:   outAdd,
-		outRemoveChan:   outRemove,
-		incomingChan: in,
-		cache:        make(map[string]map[string]AppService),
+func NewAppServiceStore(adapter storeadapter.StoreAdapter, outAdd, outRemove chan<- AppService, in <-chan AppServices) *AppServiceStore {
+	return &AppServiceStore{
+		adapter:       adapter,
+		outAddChan:    outAdd,
+		outRemoveChan: outRemove,
+		incomingChan:  in,
+		cache:         make(map[string]map[string]AppService),
 	}
 }
 
-func (s Store) Run() {
+func (s AppServiceStore) Run() {
+	defer func() {
+		close(s.outAddChan)
+		close(s.outRemoveChan)
+	}()
 	services, _ := s.adapter.ListRecursively("/loggregator/services/")
 	for _, appNode := range services.ChildNodes {
 		appId := path.Base(appNode.Key)
@@ -69,7 +73,7 @@ func (s Store) Run() {
 	}
 }
 
-func (s Store) addToStore(appServices []AppService) {
+func (s AppServiceStore) addToStore(appServices []AppService) {
 	nodes := make([]storeadapter.StoreNode, len(appServices))
 	for i, appService := range appServices {
 		s.addToCache(appService)
@@ -85,7 +89,7 @@ func (s Store) addToStore(appServices []AppService) {
 	}
 }
 
-func (s Store) removeFromStore(appServices []AppService) {
+func (s AppServiceStore) removeFromStore(appServices []AppService) {
 	keys := make([]string, len(appServices))
 	for i, appService := range appServices {
 		s.removeFromCache(appService)
@@ -93,13 +97,20 @@ func (s Store) removeFromStore(appServices []AppService) {
 	}
 
 	s.adapter.Delete(keys...)
+	for _, appService := range appServices {
+		s.outRemoveChan <- appService
+	}
 }
 
-func (s Store) removeAppFromStore(appId string) {
+func (s AppServiceStore) removeAppFromStore(appId string) {
 	s.adapter.Delete(path.Join("/loggregator/services", appId))
+	appServices := s.removeAppFromCache(appId)
+	for _, appService := range appServices {
+		s.outRemoveChan <- appService
+	}
 }
 
-func (s Store) addToCache(appService AppService) {
+func (s AppServiceStore) addToCache(appService AppService) {
 	appCache, ok := s.cache[appService.AppId]
 	if !ok {
 		appCache = make(map[string]AppService)
@@ -109,7 +120,7 @@ func (s Store) addToCache(appService AppService) {
 	appCache[appService.Id()] = appService
 }
 
-func (s Store) removeFromCache(appService AppService) {
+func (s AppServiceStore) removeFromCache(appService AppService) {
 	appCache, ok := s.cache[appService.AppId]
 	if !ok {
 		return
@@ -118,4 +129,10 @@ func (s Store) removeFromCache(appService AppService) {
 	if len(appCache) == 0 {
 		delete(s.cache, appService.AppId)
 	}
+}
+
+func (s AppServiceStore) removeAppFromCache(appId string) map[string]AppService {
+	appCache := s.cache[appId]
+	delete(s.cache, appId)
+	return appCache
 }
