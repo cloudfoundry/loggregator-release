@@ -13,15 +13,6 @@ func setup(bufferSize int) (chan *logmessage.Message, *DumpableRingBuffer) {
 	return channel, NewDumpableRingBuffer(channel, bufferSize)
 }
 
-func TestCanWaitForCloseMoreThanOnce(t *testing.T) {
-	channel, buffer := setup(10)
-	close(channel)
-	assert.NotPanics(t, func() {
-		buffer.WaitForClose()
-		buffer.WaitForClose()
-	})
-}
-
 func TestInputChannelAddToBuffer(t *testing.T) {
 	channel, buffer := setup(10)
 	message1 := messagetesthelpers.NewMessage(t, "message 1", "appId")
@@ -30,7 +21,7 @@ func TestInputChannelAddToBuffer(t *testing.T) {
 	channel <- message2
 
 	close(channel)
-	buffer.WaitForClose()
+	buffer.waitForClose()
 
 	dump := buffer.Dump()
 	assert.Equal(t, 2, len(dump))
@@ -46,7 +37,7 @@ func TestBufferDropsOldMessages(t *testing.T) {
 	channel <- message2
 
 	close(channel)
-	buffer.WaitForClose()
+	buffer.waitForClose()
 
 	dump := buffer.Dump()
 	assert.Equal(t, 1, len(dump))

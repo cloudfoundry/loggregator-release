@@ -36,7 +36,7 @@ func NewDumpableRingBuffer(in <-chan *logmessage.Message, bufferSize int) *Dumpa
 	return rb
 }
 
-func (r *DumpableRingBuffer) WaitForClose() {
+func (r *DumpableRingBuffer) waitForClose() {
 	<-r.closed
 }
 

@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"loggregator/sinks"
 	"testing"
+	"time"
 )
 
 var syslogWriter sinks.SyslogWriter
@@ -87,7 +88,7 @@ func TestDrainsFor(t *testing.T) {
 	target := "789"
 	otherTarget := "790"
 
-	sink1 := sinks.NewDumpSink(target, 10, loggertesthelper.Logger())
+	sink1 := sinks.NewDumpSink(target, 10, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
 	sink2 := sinks.NewSyslogSink(target, "url", loggertesthelper.Logger(), syslogWriter, make(chan<- *logmessage.Message))
 	sink3 := sinks.NewSyslogSink(otherTarget, "url", loggertesthelper.Logger(), syslogWriter, make(chan<- *logmessage.Message))
 
@@ -120,7 +121,7 @@ func TestDumpForReturnsOnyDumps(t *testing.T) {
 
 	sink1 := sinks.NewSyslogSink(target, "url1", loggertesthelper.Logger(), syslogWriter, make(chan<- *logmessage.Message))
 	sink2 := sinks.NewSyslogSink(target, "url2", loggertesthelper.Logger(), syslogWriter, make(chan<- *logmessage.Message))
-	sink3 := sinks.NewDumpSink(target, 5, loggertesthelper.Logger())
+	sink3 := sinks.NewDumpSink(target, 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
 
 	groupedSinks.Register(sink1)
 	groupedSinks.Register(sink2)
@@ -135,8 +136,8 @@ func TestDumpForReturnsOnlyDumpsForTheGivenAppId(t *testing.T) {
 	target := "789"
 	otherTarget := "790"
 
-	sink1 := sinks.NewDumpSink(target, 5, loggertesthelper.Logger())
-	sink2 := sinks.NewDumpSink(otherTarget, 5, loggertesthelper.Logger())
+	sink1 := sinks.NewDumpSink(target, 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
+	sink2 := sinks.NewDumpSink(otherTarget, 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
 
 	groupedSinks.Register(sink1)
 	groupedSinks.Register(sink2)

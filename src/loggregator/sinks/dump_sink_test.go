@@ -7,10 +7,13 @@ import (
 	"runtime"
 	"strconv"
 	"testing"
+	"time"
 )
 
 func TestDumpForOneMessage(t *testing.T) {
-	dump := NewDumpSink("myApp", 1, loggertesthelper.Logger())
+	dump := NewDumpSink("myApp", 1, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+
+	go dump.Run()
 
 	logMessage := messagetesthelpers.NewMessage(t, "hi", "appId")
 	dump.Channel() <- logMessage
@@ -21,7 +24,9 @@ func TestDumpForOneMessage(t *testing.T) {
 }
 
 func TestDumpForTwoMessages(t *testing.T) {
-	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger())
+	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+
+	go dump.Run()
 
 	logMessage := messagetesthelpers.NewMessage(t, "1", "appId")
 	dump.Channel() <- logMessage
@@ -38,7 +43,9 @@ func TestDumpForTwoMessages(t *testing.T) {
 
 func TestTheDumpSinkNeverFillsUp(t *testing.T) {
 	bufferSize := 3
-	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger())
+	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+
+	go dump.Run()
 
 	logMessage := messagetesthelpers.NewMessage(t, "hi", "appId")
 
@@ -48,7 +55,9 @@ func TestTheDumpSinkNeverFillsUp(t *testing.T) {
 }
 
 func TestDumpAlwaysReturnsTheNewestMessages(t *testing.T) {
-	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger())
+	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+
+	go dump.Run()
 
 	logMessage := messagetesthelpers.NewMessage(t, "1", "appId")
 	dump.Channel() <- logMessage
@@ -66,7 +75,9 @@ func TestDumpAlwaysReturnsTheNewestMessages(t *testing.T) {
 }
 
 func TestDumpReturnsAllRecentMessagesToMultipleDumpRequests(t *testing.T) {
-	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger())
+	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+
+	go dump.Run()
 
 	logMessage := messagetesthelpers.NewMessage(t, "1", "appId")
 	dump.Channel() <- logMessage
@@ -89,8 +100,9 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequests(t *testing.T) {
 }
 
 func TestDumpReturnsAllRecentMessagesToMultipleDumpRequestsWithMessagesCloningInInTheMeantime(t *testing.T) {
+	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
 
-	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger())
+	go dump.Run()
 
 	logMessage := messagetesthelpers.NewMessage(t, "1", "appId")
 	dump.Channel() <- logMessage
@@ -118,7 +130,9 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequestsWithMessagesCloningIn
 }
 
 func TestDumpWithLotsOfMessages(t *testing.T) {
-	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger())
+	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+
+	go dump.Run()
 
 	for i := 0; i < 100; i++ {
 		logMessage := messagetesthelpers.NewMessage(t, strconv.Itoa(i), "appId")
@@ -151,7 +165,9 @@ func TestDumpWithLotsOfMessages(t *testing.T) {
 }
 
 func TestDumpWithLotsOfMessagesAndLargeBuffer(t *testing.T) {
-	dump := NewDumpSink("myApp", 200, loggertesthelper.Logger())
+	dump := NewDumpSink("myApp", 200, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+
+	go dump.Run()
 
 	for i := 0; i < 1000; i++ {
 		logMessage := messagetesthelpers.NewMessage(t, strconv.Itoa(i), "appId")
@@ -184,15 +200,15 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer(t *testing.T) {
 }
 
 func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
-	dump := NewDumpSink("myApp", 200, loggertesthelper.Logger())
-	dump.Run()
+	dump := NewDumpSink("myApp", 200, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+	go dump.Run()
 
 	for i := 0; i < 100; i++ {
 		logMessage := messagetesthelpers.NewMessage(t, strconv.Itoa(i), "appId")
 		dump.Channel() <- logMessage
 	}
 
-	runtime.Gosched()
+	time.Sleep(10 * time.Millisecond)
 
 	logMessages := dump.Dump()
 	assert.Equal(t, len(logMessages), 100)
@@ -204,7 +220,7 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
 		dump.Channel() <- logMessage
 	}
 
-	runtime.Gosched()
+	time.Sleep(10 * time.Millisecond)
 
 	logMessages = dump.Dump()
 	assert.Equal(t, len(logMessages), 200)
@@ -216,7 +232,7 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
 		dump.Channel() <- logMessage
 	}
 
-	runtime.Gosched()
+	time.Sleep(10 * time.Millisecond)
 
 	logMessages = dump.Dump()
 	assert.Equal(t, len(logMessages), 200)
@@ -226,14 +242,15 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
 
 func TestDumpWithLotsOfDumps(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger())
+	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+	go dump.Run()
 
 	for i := 0; i < 10; i++ {
 		logMessage := messagetesthelpers.NewMessage(t, strconv.Itoa(i), "appId")
 		dump.Channel() <- logMessage
 	}
 
-	runtime.Gosched()
+	time.Sleep(10 * time.Millisecond)
 
 	for i := 0; i < 200; i++ {
 		go func() {
@@ -243,5 +260,60 @@ func TestDumpWithLotsOfDumps(t *testing.T) {
 			assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "5")
 			assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "6")
 		}()
+	}
+}
+
+func TestClosingInputChanAlsoClosesPassThruChan(t *testing.T) {
+	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+	go dump.Run()
+
+	close(dump.Channel())
+
+	select {
+	case _, open := <-dump.passThruChan:
+		assert.False(t, open)
+	case <-time.After(time.Second):
+		assert.Fail(t, "Expected the pass thru channel to have been closed")
+	}
+}
+
+func TestDumpSinkClosesItselfAfterPeriodOfInactivity(t *testing.T) {
+	timeoutChan := make(chan Sink, 1)
+	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), timeoutChan, 10*time.Millisecond)
+	go dump.Run()
+
+	time.Sleep(9 * time.Millisecond)
+	assert.Equal(t, len(timeoutChan), 0)
+
+	time.Sleep(2 * time.Millisecond)
+	assert.Equal(t, len(timeoutChan), 1)
+	select {
+	case sink := <-timeoutChan:
+		assert.Equal(t, sink, dump)
+	case <-time.After(5 * time.Millisecond):
+		assert.Fail(t, "Should have closed")
+	}
+}
+
+func TestDumpSinkClosingTimeIsResetWhenAMessageArrives(t *testing.T) {
+	timeoutChan := make(chan Sink, 1)
+	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), timeoutChan, 10*time.Millisecond)
+	go dump.Run()
+
+	time.Sleep(5 * time.Millisecond)
+
+	logMessage := messagetesthelpers.NewMessage(t, "0", "appId")
+	dump.Channel() <- logMessage
+
+	time.Sleep(8 * time.Millisecond)
+	assert.Equal(t, len(timeoutChan), 0)
+
+	time.Sleep(3 * time.Millisecond)
+	assert.Equal(t, len(timeoutChan), 1)
+	select {
+	case sink := <-timeoutChan:
+		assert.Equal(t, sink, dump)
+	case <-time.After(5 * time.Millisecond):
+		assert.Fail(t, "Should have closed")
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"loggregator/sinks"
 	"net/url"
 	"sync"
+	"time"
 )
 
 type messageRouter struct {
@@ -149,7 +150,7 @@ func (messageRouter *messageRouter) manageDumps(appId string) {
 		return
 	}
 
-	s := sinks.NewDumpSink(appId, messageRouter.dumpBufferSize, messageRouter.logger)
+	s := sinks.NewDumpSink(appId, messageRouter.dumpBufferSize, messageRouter.logger, messageRouter.sinkCloseChan, time.Hour)
 
 	if messageRouter.registerSink(s) {
 		go s.Run()

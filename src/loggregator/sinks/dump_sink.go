@@ -5,32 +5,61 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"loggregator/buffer"
+	"time"
 )
 
 type DumpSink struct {
-	appId         string
-	logger        *gosteno.Logger
-	messageBuffer *buffer.DumpableRingBuffer
-	inputChan     chan *logmessage.Message
+	appId              string
+	logger             *gosteno.Logger
+	messageBuffer      *buffer.DumpableRingBuffer
+	inputChan          chan *logmessage.Message
+	passThruChan       chan *logmessage.Message
+	dumpChan           chan chan []*logmessage.Message
+	timeoutChan        chan Sink
+	inactivityDuration time.Duration
 }
 
-func NewDumpSink(appId string, bufferSize int, givenLogger *gosteno.Logger) *DumpSink {
+func NewDumpSink(appId string, bufferSize int, givenLogger *gosteno.Logger, timeoutChan chan Sink, inactivityDuration time.Duration) *DumpSink {
 	inputChan := make(chan *logmessage.Message)
+	passThruChan := make(chan *logmessage.Message)
+	dumpChan := make(chan chan []*logmessage.Message)
+
 	dumpSink := &DumpSink{
-		appId:         appId,
-		logger:        givenLogger,
-		inputChan:     inputChan,
-		messageBuffer: buffer.NewDumpableRingBuffer(inputChan, bufferSize),
+		appId:              appId,
+		logger:             givenLogger,
+		inputChan:          inputChan,
+		passThruChan:       passThruChan,
+		messageBuffer:      buffer.NewDumpableRingBuffer(passThruChan, bufferSize),
+		dumpChan:           dumpChan,
+		timeoutChan:        timeoutChan,
+		inactivityDuration: inactivityDuration,
 	}
 	return dumpSink
 }
 
 func (d *DumpSink) Run() {
-	// no-op to conform to Sink interface
+	for {
+		countdown := time.After(d.inactivityDuration)
+		select {
+		case msg, ok := <-d.inputChan:
+			if !ok {
+				close(d.passThruChan)
+
+				return
+			}
+			d.passThruChan <- msg
+		case dump := <-d.dumpChan:
+			dump <- d.messageBuffer.Dump()
+		case <-countdown:
+			d.timeoutChan <- d
+		}
+	}
 }
 
 func (d *DumpSink) Dump() []*logmessage.Message {
-	return d.messageBuffer.Dump()
+	dump := make(chan []*logmessage.Message)
+	d.dumpChan <- dump
+	return <-dump
 }
 
 func (d *DumpSink) Channel() chan *logmessage.Message {
