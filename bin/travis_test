@@ -2,7 +2,7 @@
 
 trap "echo Exited!; exit 1;" SIGINT SIGTERM
 
-BIN_DIR=$(dirname $0)
+BIN_DIR=$( cd "$( dirname "$0" )" && pwd )
 
 pushd $BIN_DIR/../src/github.com/coreos/etcd
 ./build
