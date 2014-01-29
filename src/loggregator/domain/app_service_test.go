@@ -1,9 +1,9 @@
-package store_test
+package domain_test
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "loggregator/store"
+	. "loggregator/domain"
 )
 
 var _ = Describe("AppService", func() {

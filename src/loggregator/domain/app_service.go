@@ -1,4 +1,4 @@
-package store
+package domain
 
 import (
 	"crypto/sha1"
