@@ -122,15 +122,15 @@ func (httpServer *httpServer) dumpSinkHandler(ws *websocket.Conn) {
 		return
 	}
 
-	dumpChan := httpServer.messageRouter.getDumpChanFor(appId)
+	dump := httpServer.messageRouter.getDumpFor(appId)
 
-	dumpMessagesFromChannelToWebsocket(dumpChan, ws, clientAddress, httpServer.logger)
+	dumpMessagesToWebsocket(dump, ws, clientAddress, httpServer.logger)
 
 	ws.Close()
 }
 
-func dumpMessagesFromChannelToWebsocket(dumpChan <-chan *logmessage.Message, ws *websocket.Conn, clientAddress net.Addr, logger *gosteno.Logger) {
-	for message := range dumpChan {
+func dumpMessagesToWebsocket(dump []*logmessage.Message, ws *websocket.Conn, clientAddress net.Addr, logger *gosteno.Logger) {
+	for _, message := range dump {
 		err := websocket.Message.Send(ws, message.GetRawMessage())
 		if err != nil {
 			logger.Debugf("Dump Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", clientAddress, err)

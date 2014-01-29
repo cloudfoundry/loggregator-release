@@ -18,7 +18,6 @@ type messageRouter struct {
 	parsedMessageChan           chan *logmessage.Message
 	sinkCloseChan               chan sinks.Sink
 	sinkOpenChan                chan sinks.Sink
-	dumpReceiverChan            chan dumpReceiver
 	activeDumpSinksCounter      int
 	activeWebsocketSinksCounter int
 	activeSyslogSinksCounter    int
@@ -27,13 +26,13 @@ type messageRouter struct {
 	skipCertVerify              bool
 	blackListIPs                []iprange.IPRange
 	blacklistedURLS             []string
+	activeSinks                 *groupedsinks.GroupedSinks
 	*sync.RWMutex
 }
 
 func NewMessageRouter(maxRetainedLogMessages int, skipCertVerify bool, blackListIPs []iprange.IPRange, logger *gosteno.Logger, messageChannelLength int) *messageRouter {
 	sinkCloseChan := make(chan sinks.Sink, 20)
 	sinkOpenChan := make(chan sinks.Sink, 20)
-	dumpReceiverChan := make(chan dumpReceiver, 10)
 	messageChannel := make(chan *logmessage.Message, messageChannelLength)
 
 	return &messageRouter{
@@ -41,47 +40,37 @@ func NewMessageRouter(maxRetainedLogMessages int, skipCertVerify bool, blackList
 		parsedMessageChan: messageChannel,
 		sinkCloseChan:     sinkCloseChan,
 		sinkOpenChan:      sinkOpenChan,
-		dumpReceiverChan:  dumpReceiverChan,
 		dumpBufferSize:    maxRetainedLogMessages,
 		RWMutex:           &sync.RWMutex{},
 		errorChannel:      make(chan *logmessage.Message, 100),
 		blackListIPs:      blackListIPs,
-		skipCertVerify:    skipCertVerify}
+		skipCertVerify:    skipCertVerify,
+		activeSinks:       groupedsinks.NewGroupedSinks()}
 }
 
 func (messageRouter *messageRouter) Start() {
-	activeSinks := groupedsinks.NewGroupedSinks()
 
 	go func() {
 		for {
 			select {
-			case dr := <-messageRouter.dumpReceiverChan:
-				go func() {
-					if sink := activeSinks.DumpFor(dr.appId); sink != nil {
-						sink.Dump(dr.outputChannel)
-					} else {
-						messageRouter.logger.Debugf("MessageRouter:DumpReceiverChan: No dump exists for appId [%s].", dr.appId)
-						close(dr.outputChannel)
-					}
-				}()
 			case s := <-messageRouter.sinkOpenChan:
-				messageRouter.registerSink(s, activeSinks)
+				messageRouter.registerSink(s)
 			case s := <-messageRouter.sinkCloseChan:
-				messageRouter.unregisterSink(s, activeSinks)
+				messageRouter.unregisterSink(s)
 			case receivedMessage := <-messageRouter.parsedMessageChan:
 				messageRouter.logger.Debugf("MessageRouter:ParsedMessageChan: Received %d bytes of data from agent listener.", receivedMessage.GetRawMessageLength())
 
 				//drain management
 				appId := receivedMessage.GetLogMessage().GetAppId()
 				if receivedMessage.GetLogMessage().GetSourceName() == "App" {
-					messageRouter.manageDrains(activeSinks, appId, receivedMessage.GetLogMessage().GetDrainUrls())
+					messageRouter.manageDrains(appId, receivedMessage.GetLogMessage().GetDrainUrls())
 				}
 
-				messageRouter.manageDumps(activeSinks, appId)
+				messageRouter.manageDumps(appId)
 
 				//send to drains and sinks
 				messageRouter.logger.Debugf("MessageRouter:ParsedMessageChan: Searching for sinks with appId [%s].", appId)
-				for _, s := range activeSinks.For(appId) {
+				for _, s := range messageRouter.activeSinks.For(appId) {
 					messageRouter.logger.Debugf("MessageRouter:ParsedMessageChan: Sending Message to channel %v for sinks targeting [%s].", s.Identifier(), appId)
 					s.Channel() <- receivedMessage
 				}
@@ -95,7 +84,7 @@ func (messageRouter *messageRouter) Start() {
 			appId := receivedMessage.GetLogMessage().GetAppId()
 
 			messageRouter.logger.Debugf("MessageRouter:ErrorChannel: Searching for sinks with appId [%s].", appId)
-			for _, s := range activeSinks.For(appId) {
+			for _, s := range messageRouter.activeSinks.For(appId) {
 				if s.ShouldReceiveErrors() {
 					messageRouter.logger.Debugf("MessageRouter:ErrorChannel: Sending Message to channel %v for sinks targeting [%s].", s.Identifier(), appId)
 					s.Channel() <- receivedMessage
@@ -106,18 +95,20 @@ func (messageRouter *messageRouter) Start() {
 	}
 }
 
-func (messageRouter *messageRouter) getDumpChanFor(appId string) <-chan *logmessage.Message {
-	dumpChan := make(chan *logmessage.Message, messageRouter.dumpBufferSize)
-	dr := dumpReceiver{appId: appId, outputChannel: dumpChan}
-	messageRouter.dumpReceiverChan <- dr
-	return dumpChan
+func (messageRouter *messageRouter) getDumpFor(appId string) []*logmessage.Message {
+	if sink := messageRouter.activeSinks.DumpFor(appId); sink != nil {
+		return sink.Dump()
+	} else {
+		messageRouter.logger.Debugf("MessageRouter:DumpReceiverChan: No dump exists for appId [%s].", appId)
+		return []*logmessage.Message{}
+	}
 }
 
-func (messageRouter *messageRouter) registerSink(s sinks.Sink, activeSinks *groupedsinks.GroupedSinks) bool {
+func (messageRouter *messageRouter) registerSink(s sinks.Sink) bool {
 	messageRouter.Lock()
 	defer messageRouter.Unlock()
 
-	ok := activeSinks.Register(s)
+	ok := messageRouter.activeSinks.Register(s)
 	if !ok {
 		return false
 	}
@@ -134,11 +125,11 @@ func (messageRouter *messageRouter) registerSink(s sinks.Sink, activeSinks *grou
 	return true
 }
 
-func (messageRouter *messageRouter) unregisterSink(s sinks.Sink, activeSinks *groupedsinks.GroupedSinks) {
+func (messageRouter *messageRouter) unregisterSink(s sinks.Sink) {
 	messageRouter.Lock()
 	defer messageRouter.Unlock()
 
-	activeSinks.Delete(s)
+	messageRouter.activeSinks.Delete(s)
 	close(s.Channel())
 	switch s.(type) {
 	case *sinks.DumpSink:
@@ -153,38 +144,38 @@ func (messageRouter *messageRouter) unregisterSink(s sinks.Sink, activeSinks *gr
 	messageRouter.logger.Infof("MessageRouter: Sink with channel %v and identifier %s requested closing. Closed it.", s.Channel(), s.Identifier())
 }
 
-func (messageRouter *messageRouter) manageDumps(activeSinks *groupedsinks.GroupedSinks, appId string) {
-	if activeSinks.DumpFor(appId) != nil {
+func (messageRouter *messageRouter) manageDumps(appId string) {
+	if messageRouter.activeSinks.DumpFor(appId) != nil {
 		return
 	}
 
 	s := sinks.NewDumpSink(appId, messageRouter.dumpBufferSize, messageRouter.logger)
 
-	if messageRouter.registerSink(s, activeSinks) {
+	if messageRouter.registerSink(s) {
 		go s.Run()
 	}
 }
 
-func (messageRouter *messageRouter) manageDrains(activeSinks *groupedsinks.GroupedSinks, appId string, drainUrls []string) {
+func (messageRouter *messageRouter) manageDrains(appId string, drainUrls []string) {
 	//delete all drains for app
 	if len(drainUrls) == 0 {
-		for _, sink := range activeSinks.DrainsFor(appId) {
-			messageRouter.unregisterSink(sink, activeSinks)
+		for _, sink := range messageRouter.activeSinks.DrainsFor(appId) {
+			messageRouter.unregisterSink(sink)
 		}
 		return
 	}
 
 	//delete all drains that were not sent
-	for _, sink := range activeSinks.DrainsFor(appId) {
+	for _, sink := range messageRouter.activeSinks.DrainsFor(appId) {
 		if contains(sink.Identifier(), drainUrls) {
 			continue
 		}
-		messageRouter.unregisterSink(sink, activeSinks)
+		messageRouter.unregisterSink(sink)
 	}
 
 	//add all drains that didn't exist
 	for _, drainUrl := range drainUrls {
-		if activeSinks.DrainFor(appId, drainUrl) == nil && !messageRouter.urlIsBlackListed(drainUrl) {
+		if messageRouter.activeSinks.DrainFor(appId, drainUrl) == nil && !messageRouter.urlIsBlackListed(drainUrl) {
 			parsedSyslogDrainUrl, err := checkURL(drainUrl, messageRouter.blackListIPs)
 			if err != nil {
 				messageRouter.blacklistedURLS = append(messageRouter.blacklistedURLS, drainUrl)
@@ -193,7 +184,7 @@ func (messageRouter *messageRouter) manageDrains(activeSinks *groupedsinks.Group
 			} else {
 				sysLogger := sinks.NewSyslogWriter(parsedSyslogDrainUrl.Scheme, parsedSyslogDrainUrl.Host, appId, messageRouter.skipCertVerify)
 				s := sinks.NewSyslogSink(appId, drainUrl, messageRouter.logger, sysLogger, messageRouter.errorChannel)
-				ok := messageRouter.registerSink(s, activeSinks)
+				ok := messageRouter.registerSink(s)
 				if ok {
 					go s.Run()
 				}

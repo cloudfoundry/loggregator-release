@@ -40,11 +40,8 @@ func (r *DumpableRingBuffer) WaitForClose() {
 	<-r.closed
 }
 
-func (r *DumpableRingBuffer) Dump(outChan chan<- *logmessage.Message) {
-	for _, m := range r.copyData() {
-		outChan <- m
-	}
-	close(outChan)
+func (r *DumpableRingBuffer) Dump() []*logmessage.Message {
+	return r.copyData()
 }
 
 func (r *DumpableRingBuffer) OutputChannel() <-chan *logmessage.Message {

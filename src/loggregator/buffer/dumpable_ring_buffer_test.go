@@ -32,11 +32,10 @@ func TestInputChannelAddToBuffer(t *testing.T) {
 	close(channel)
 	buffer.WaitForClose()
 
-	dumpChan := make(chan *logmessage.Message, 10)
-	buffer.Dump(dumpChan)
-	assert.Equal(t, 2, len(dumpChan))
-	assert.Equal(t, message1, <-dumpChan)
-	assert.Equal(t, message2, <-dumpChan)
+	dump := buffer.Dump()
+	assert.Equal(t, 2, len(dump))
+	assert.Equal(t, message1, dump[0])
+	assert.Equal(t, message2, dump[1])
 }
 
 func TestBufferDropsOldMessages(t *testing.T) {
@@ -48,11 +47,10 @@ func TestBufferDropsOldMessages(t *testing.T) {
 
 	close(channel)
 	buffer.WaitForClose()
-	dumpChan := make(chan *logmessage.Message, 10)
 
-	buffer.Dump(dumpChan)
-	assert.Equal(t, 1, len(dumpChan))
-	assert.Equal(t, message2, <-dumpChan)
+	dump := buffer.Dump()
+	assert.Equal(t, 1, len(dump))
+	assert.Equal(t, message2, dump[0])
 }
 
 func TestBufferHasChannelListenerWithLimitOne(t *testing.T) {
