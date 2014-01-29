@@ -19,7 +19,8 @@ func buildNode(appService AppService) storeadapter.StoreNode {
 var _ = Describe("Store", func() {
 	var store *Store
 	var adapter storeadapter.StoreAdapter
-	var outChan chan AppService
+	var outAddChan chan AppService
+	var outRemoveChan chan AppService
 	var incomingChan chan AppServices
 
 	var app1Service1 AppService
@@ -28,7 +29,7 @@ var _ = Describe("Store", func() {
 
 	assertNoOutgoingData := func() {
 		select {
-		case <-outChan:
+		case <-outAddChan:
 			Fail("Should not have any data on the channel", 1)
 		case <-time.After(2 * time.Millisecond):
 			// OK
@@ -38,7 +39,7 @@ var _ = Describe("Store", func() {
 	drainOutgoingChannel := func(count int) []AppService {
 		appServices := []AppService{}
 		for i := 0; i < count; i++ {
-			appServices = append(appServices, <-outChan)
+			appServices = append(appServices, <-outAddChan)
 		}
 		return appServices
 	}
@@ -66,10 +67,11 @@ var _ = Describe("Store", func() {
 
 	BeforeEach(func() {
 		adapter = etcdRunner.Adapter()
-		outChan = make(chan AppService)
+		outAddChan = make(chan AppService)
+		outRemoveChan = make(chan AppService)
 		incomingChan = make(chan AppServices)
 
-		store = NewStore(adapter, outChan, incomingChan)
+		store = NewStore(adapter, outAddChan, outRemoveChan, incomingChan)
 
 		app1Service1 = AppService{AppId: "app-1", Url: "syslog://example.com:12345"}
 		app1Service2 = AppService{AppId: "app-1", Url: "syslog://example.com:12346"}
@@ -149,7 +151,7 @@ var _ = Describe("Store", func() {
 						Urls:  []string{app2Service1.Url, app2Service2.Url},
 					}
 
-					Expect(<-outChan).To(Equal(app2Service2))
+					Expect(<-outAddChan).To(Equal(app2Service2))
 
 					assertInStore(app2Service1, app2Service2)
 
@@ -233,7 +235,7 @@ var _ = Describe("Store", func() {
 					Urls:  []string{app1Service1.Url, app1Service2.Url},
 				}
 
-				Expect(<-outChan).To(Equal(app1Service2))
+				Expect(<-outAddChan).To(Equal(app1Service2))
 
 				assertInStore(app1Service1, app1Service2)
 

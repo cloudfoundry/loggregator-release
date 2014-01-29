@@ -6,16 +6,17 @@ import (
 )
 
 type Store struct {
-	adapter      storeadapter.StoreAdapter
-	outgoingChan chan<- AppService
-	incomingChan <-chan AppServices
-	cache        map[string]map[string]AppService
+	adapter                   storeadapter.StoreAdapter
+	outAddChan, outRemoveChan chan<- AppService
+	incomingChan              <-chan AppServices
+	cache                     map[string]map[string]AppService
 }
 
-func NewStore(adapter storeadapter.StoreAdapter, out chan<- AppService, in <-chan AppServices) *Store {
+func NewStore(adapter storeadapter.StoreAdapter, outAdd, outRemove chan<- AppService, in <-chan AppServices) *Store {
 	return &Store{
 		adapter:      adapter,
-		outgoingChan: out,
+		outAddChan:   outAdd,
+		outRemoveChan:   outRemove,
 		incomingChan: in,
 		cache:        make(map[string]map[string]AppService),
 	}
@@ -28,7 +29,7 @@ func (s Store) Run() {
 		for _, serviceNode := range appNode.ChildNodes {
 			appService := AppService{AppId: appId, Url: string(serviceNode.Value)}
 			s.addToCache(appService)
-			s.outgoingChan <- appService
+			s.outAddChan <- appService
 		}
 	}
 
@@ -80,7 +81,7 @@ func (s Store) addToStore(appServices []AppService) {
 
 	s.adapter.SetMulti(nodes)
 	for _, appService := range appServices {
-		s.outgoingChan <- appService
+		s.outAddChan <- appService
 	}
 }
 
