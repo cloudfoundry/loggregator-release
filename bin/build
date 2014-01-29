@@ -7,12 +7,4 @@ BIN_DIR=$(dirname $0)
 rm -rf $BIN_DIR/../release
 mkdir -p $BIN_DIR/../release
 
-pushd $BIN_DIR/../src/github.com/coreos/etcd
-./build
-popd
-
-mv $BIN_DIR/../src/github.com/coreos/etcd/bin/etcd $BIN_DIR/etcd
-
-export PATH=$PATH:$BIN_DIR
-
 PLATFORMS="linux/amd64" $BIN_DIR/build-platforms

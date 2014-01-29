@@ -76,6 +76,12 @@ var _ = Describe("Store", func() {
 		app2Service1 = AppService{AppId: "app-2", Url: "syslog://example.com:12345"}
 	})
 
+	AfterEach(func() {
+		err := adapter.Disconnect()
+		Expect(err).NotTo(HaveOccurred())
+		close(incomingChan)
+	})
+
 	Describe("Loading store state on startup", func() {
 		Context("when the store is empty", func() {
 			It("should not send anything on the channel", func() {

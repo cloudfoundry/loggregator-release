@@ -2,6 +2,16 @@
 
 trap "echo Exited!; exit 1;" SIGINT SIGTERM
 
+BIN_DIR=$(dirname $0)
+
+pushd $BIN_DIR/../src/github.com/coreos/etcd
+./build
+popd
+
+mv $BIN_DIR/../src/github.com/coreos/etcd/bin/etcd $BIN_DIR/etcd
+
+export PATH=$PATH:$BIN_DIR
+
 rm -rf ./pkg
 
 result=0
