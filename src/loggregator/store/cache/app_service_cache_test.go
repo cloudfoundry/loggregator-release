@@ -91,12 +91,12 @@ var _ = Describe("AppServiceCache", func() {
 
 	Describe("Exists", func() {
 		It("returns true for known AppService", func() {
-			Expect(appServiceCache.Exists(appService1)).To(Equal(true))
+			Expect(appServiceCache.Exists(appService1)).To(BeTrue())
 		})
 
 		It("returns the removed AppServices", func() {
-			anotherAppService := AppService{AppId: "98765", Url: "http://foo.com"}
-			Expect(appServiceCache.Exists(anotherAppService)).To(Equal(false))
+			anotherAppService := domain.AppService{AppId: "98765", Url: "http://foo.com"}
+			Expect(appServiceCache.Exists(anotherAppService)).To(BeFalse())
 		})
 	})
 })

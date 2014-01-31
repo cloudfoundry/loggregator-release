@@ -10,37 +10,37 @@ func NewAppServiceCache() AppServiceCache {
 	return AppServiceCache{make(map[string]map[string]domain.AppService)}
 }
 
-func (s AppServiceCache) Add(appService domain.AppService) {
-	appServicesById, ok := s.appServicesByAppId[appService.AppId]
+func (cache AppServiceCache) Add(appService domain.AppService) {
+	appServicesById, ok := cache.appServicesByAppId[appService.AppId]
 	if !ok {
 		appServicesById = make(map[string]domain.AppService)
-		s.appServicesByAppId[appService.AppId] = appServicesById
+		cache.appServicesByAppId[appService.AppId] = appServicesById
 	}
 
 	appServicesById[appService.Id()] = appService
 }
 
-func (s AppServiceCache) Remove(appService domain.AppService) {
-	appCache := s.appServicesByAppId[appService.AppId]
+func (cache AppServiceCache) Remove(appService domain.AppService) {
+	appCache := cache.appServicesByAppId[appService.AppId]
 	delete(appCache, appService.Id())
 	if len(appCache) == 0 {
-		delete(s.appServicesByAppId, appService.AppId)
+		delete(cache.appServicesByAppId, appService.AppId)
 	}
 }
 
-func (s AppServiceCache) RemoveApp(appId string) []domain.AppService {
-	appCache := s.appServicesByAppId[appId]
-	delete(s.appServicesByAppId, appId)
+func (cache AppServiceCache) RemoveApp(appId string) []domain.AppService {
+	appCache := cache.appServicesByAppId[appId]
+	delete(cache.appServicesByAppId, appId)
 	return values(appCache)
 }
 
-func (s AppServiceCache) Get(appId string) []domain.AppService {
-	return values(s.appServicesByAppId[appId])
+func (cache AppServiceCache) Get(appId string) []domain.AppService {
+	return values(cache.appServicesByAppId[appId])
 }
 
-func (s AppServiceCache) Size() int {
+func (cache AppServiceCache) Size() int {
 	count := 0
-	for _, m := range(s.appServicesByAppId) {
+	for _, m := range cache.appServicesByAppId {
 		serviceCountForApp := len(m)
 		if serviceCountForApp > 0 {
 			count += serviceCountForApp
@@ -51,9 +51,9 @@ func (s AppServiceCache) Size() int {
 	return count
 }
 
-func (s AppServiceCache) Exists(appService domain.AppService) bool {
+func (cache AppServiceCache) Exists(appService domain.AppService) bool {
 	serviceExists := false
-	appServices, appExists := s.appServicesByAppId[appService.AppId]
+	appServices, appExists := cache.appServicesByAppId[appService.AppId]
 	if appExists {
 		_, serviceExists = appServices[appService.Id()]
 	}
@@ -63,7 +63,7 @@ func (s AppServiceCache) Exists(appService domain.AppService) bool {
 func values(appCache map[string]domain.AppService) []domain.AppService {
 	appServices := make([]domain.AppService, len(appCache))
 	i := 0
-	for _, appService := range(appCache) {
+	for _, appService := range appCache {
 		appServices[i] = appService
 		i++
 	}
