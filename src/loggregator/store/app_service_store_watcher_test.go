@@ -8,6 +8,7 @@ import (
 	"path"
 
 	"loggregator/domain"
+	"time"
 )
 
 var _ = PDescribe("AppServiceStoreWatcher", func() {
@@ -92,6 +93,8 @@ var _ = PDescribe("AppServiceStoreWatcher", func() {
 			})
 		})
 	})
+
+	PIt("handles errors")
 
 	Describe("when the store has data and listener is bootstrapped", func() {
 		BeforeEach(func() {
@@ -221,6 +224,24 @@ var _ = PDescribe("AppServiceStoreWatcher", func() {
 				Expect(<-outRemoveChan).To(Equal(app1Service1))
 
 				close(done)
+			})
+		})
+
+		Context("when an existing app service expires", func() {
+			It("removes the app service from the cache", func() {
+				app2Service2 := domain.AppService{AppId: "app-2", Url: "syslog://foo/a"}
+				adapter.Create(buildNode(app2Service2))
+				Expect(<-outAddChan).To(Equal(app2Service2))
+
+				adapter.UpdateDirTTL("/loggregator/services/app-2", 1)
+
+				time.Sleep(2 * time.Second)
+
+				assertNoDataOnChannel(outAddChan)
+				assertNoDataOnChannel(outRemoveChan)
+
+				adapter.Create(buildNode(app2Service2))
+				Expect(<-outAddChan).To(Equal(app2Service2))
 			})
 		})
 	})

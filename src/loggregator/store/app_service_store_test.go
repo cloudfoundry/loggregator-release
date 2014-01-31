@@ -60,6 +60,7 @@ var _ = PDescribe("AppServiceStore", func() {
 	AfterEach(func() {
 		err := adapter.Disconnect()
 		Expect(err).NotTo(HaveOccurred())
+
 		if incomingChan != nil {
 			close(incomingChan)
 		}
@@ -136,6 +137,23 @@ var _ = PDescribe("AppServiceStore", func() {
 
 					close(done)
 				})
+			})
+
+			It("adds a TTL to the associated app", func(done Done) {
+				app2Service2 := domain.AppService{app2Service1.AppId, "syslog://new.example.com:12345"}
+
+				incomingChan <- domain.AppServices{
+					AppId: app2Service1.AppId,
+					Urls:  []string{app2Service1.Url, app2Service2.Url},
+				}
+
+				assertInStore(app2Service1, app2Service2)
+
+				node, err := adapter.ListRecursively("/loggregator/services/app-2")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(node.TTL).NotTo(BeZero())
+
+				close(done)
 			})
 		})
 

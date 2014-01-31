@@ -38,7 +38,7 @@ func (w *AppServiceStoreWatcher) Run() {
 	for event := range events {
 		switch event.Type {
 		case storeadapter.CreateEvent, storeadapter.UpdateEvent:
-			if event.Node.Dir {
+			if event.Node.Dir || len(event.Node.Value) == 0 {
 				// we can ignore any directory nodes (app or other namespace additions)
 				continue
 			}
@@ -49,6 +49,8 @@ func (w *AppServiceStoreWatcher) Run() {
 			} else {
 				w.serviceDeleted(appServiceFromStoreNode(event.Node))
 			}
+		case storeadapter.ExpireEvent:
+		  w.appExpired(event.Node)
 		}
 	}
 }
@@ -93,4 +95,10 @@ func (w *AppServiceStoreWatcher) appDeleted(node storeadapter.StoreNode) {
 	for _, appService := range appServices {
 		w.outRemoveChan <- appService
 	}
+}
+
+func (w *AppServiceStoreWatcher) appExpired(node storeadapter.StoreNode) {
+	key := node.Key
+	appId := path.Base(key)
+	w.cache.RemoveApp(appId)
 }

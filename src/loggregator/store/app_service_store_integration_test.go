@@ -43,6 +43,7 @@ var _ = PDescribe("AppServiceStoreIntegration", func() {
 		}))
 
 		appServices = domain.AppServices{AppId: "12345", Urls: []string{"syslog://bar"}}
+
 		incomingChan <- appServices
 
 		Expect(<-outRemoveChan).To(Equal(domain.AppService{

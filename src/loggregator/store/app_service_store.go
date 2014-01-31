@@ -80,6 +80,9 @@ func (s *AppServiceStore) addToStore(appServices []domain.AppService) {
 	}
 
 	s.adapter.SetMulti(nodes)
+	if len(appServices) > 0 {
+		s.adapter.UpdateDirTTL(path.Join("/loggregator/services", appServices[0].AppId), 60*60*24*7)
+	}
 }
 
 func (s *AppServiceStore) removeFromStore(appServices []domain.AppService) {
