@@ -27,7 +27,7 @@ func TestItDumpsAllMessagesForAnAppUser(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	receivedChan := make(chan []byte, 2)
-	_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, DUMP_PATH+"?app=myOtherApp")
+	_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, RECENT_LOGS_PATH+"?app=myOtherApp")
 
 	logMessages := dumpAllMessages(receivedChan)
 
@@ -44,7 +44,7 @@ func TestItDumpsAllMessagesForAnAppUser(t *testing.T) {
 
 func TestItDoesntHangWhenThereAreNoMessages(t *testing.T) {
 	receivedChan := make(chan []byte, 1)
-	testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, DUMP_PATH+"?app=myOtherApp")
+	testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, RECENT_LOGS_PATH+"?app=myOtherApp")
 
 	doneChan := make(chan bool)
 	go func() {
@@ -60,5 +60,5 @@ func TestItDoesntHangWhenThereAreNoMessages(t *testing.T) {
 }
 
 func TestDumpDropSinkWhenLogTargetisinvalid(t *testing.T) {
-	AssertConnectionFails(t, SERVER_PORT, DUMP_PATH+"?something=invalidtarget", 4000)
+	AssertConnectionFails(t, SERVER_PORT, RECENT_LOGS_PATH+"?something=invalidtarget", 4000)
 }

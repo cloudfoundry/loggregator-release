@@ -16,19 +16,23 @@ func init() {
 	logger := gosteno.NewLogger("TestLogger")
 
 	listener := agentlistener.NewAgentListener("localhost:3456", logger)
-	dataChannel := listener.Start()
+	incomingLogChan := listener.Start()
 
-	messageRouter := sinkserver.NewMessageRouter(10, false, nil, logger, 2048)
+	sinkManager := sinkserver.NewSinkManager(1024, false, nil, logger)
+	go sinkManager.Start()
+
+	messageRouter := sinkserver.NewMessageRouter(incomingLogChan, testhelpers.UnmarshallerMaker("secret"), sinkManager, 2048, logger)
 	go messageRouter.Start()
-	httpServer := sinkserver.NewHttpServer(messageRouter, 30*time.Second, testhelpers.UnmarshallerMaker("secret"), 100, logger)
-	go httpServer.Start(dataChannel, "localhost:8081")
+
+	websocketServer := sinkserver.NewWebsocketServer("localhost:8083", sinkManager, 30*time.Second, 100, logger)
+	go websocketServer.Start()
 
 	time.Sleep(50 * time.Millisecond)
 }
 
 func TestEndtoEndMessageShouldNotWork(t *testing.T) {
 	receivedChan := make(chan []byte)
-	ws, _, _ := testhelpers.AddWSSink(t, receivedChan, "8081", "/tail/?app=myApp")
+	ws, _, _ := testhelpers.AddWSSink(t, receivedChan, "8083", "/tail/?app=myApp")
 	defer ws.Close()
 	time.Sleep(50 * time.Millisecond)
 
@@ -50,7 +54,7 @@ func TestEndtoEndMessageShouldNotWork(t *testing.T) {
 
 func TestEndtoEndEnvelopeToMessage(t *testing.T) {
 	receivedChan := make(chan []byte)
-	ws, _, _ := testhelpers.AddWSSink(t, receivedChan, "8081", "/tail/?app=myApp")
+	ws, _, _ := testhelpers.AddWSSink(t, receivedChan, "8083", "/tail/?app=myApp")
 	defer ws.Close()
 	time.Sleep(50 * time.Millisecond)
 
@@ -69,7 +73,7 @@ func TestEndtoEndEnvelopeToMessage(t *testing.T) {
 
 func TestInvalidEnvelopeEndtoEnd(t *testing.T) {
 	receivedChan := make(chan []byte)
-	ws, _, _ := testhelpers.AddWSSink(t, receivedChan, "8081", "/tail/?app=myApp2")
+	ws, _, _ := testhelpers.AddWSSink(t, receivedChan, "8083", "/tail/?app=myApp2")
 	defer ws.Close()
 	time.Sleep(50 * time.Millisecond)
 

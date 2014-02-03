@@ -14,11 +14,11 @@ import (
 var sinkManager *SinkManager
 
 var TestMessageRouter *messageRouter
-var TestHttpServer *httpServer
+var TestWebsocketServer *websocketServer
 var dataReadChannel chan []byte
 
 var blacklistTestMessageRouter *messageRouter
-var blackListTestHttpServer *httpServer
+var blackListTestWebsocketServer *websocketServer
 var blackListDataReadChannel chan []byte
 
 const (
@@ -32,24 +32,28 @@ func init() {
 	dataReadChannel = make(chan []byte, 20)
 
 	logger := loggertesthelper.Logger()
+
 	sinkManager = NewSinkManager(1024, false, nil, logger)
 	go sinkManager.Start()
 
-	TestMessageRouter = NewMessageRouter(sinkManager, 2048, logger)
+	TestMessageRouter = NewMessageRouter(dataReadChannel, testhelpers.UnmarshallerMaker(SECRET), sinkManager, 2048, logger)
 	go TestMessageRouter.Start()
 
-	TestHttpServer = NewHttpServer(TestMessageRouter, 10*time.Millisecond, testhelpers.UnmarshallerMaker(SECRET), 100, loggertesthelper.Logger())
-	go TestHttpServer.Start(dataReadChannel, "localhost:"+SERVER_PORT)
+	apiEndpoint := "localhost:" + SERVER_PORT
+	TestWebsocketServer = NewWebsocketServer(apiEndpoint, sinkManager, 10*time.Millisecond, 100, loggertesthelper.Logger())
+	go TestWebsocketServer.Start()
 
 	blackListDataReadChannel = make(chan []byte, 20)
-	blacklistsinkManager := NewSinkManager(1024, false, []iprange.IPRange{iprange.IPRange{Start: "127.0.0.0", End: "127.0.0.2"}}, logger)
-	go blacklistsinkManager.Start()
+	blacklistSinkManager := NewSinkManager(1024, false, []iprange.IPRange{iprange.IPRange{Start: "127.0.0.0", End: "127.0.0.2"}}, logger)
+	go blacklistSinkManager.Start()
 
-	blacklistTestMessageRouter := NewMessageRouter(blacklistsinkManager, 2048, logger)
+	blacklistTestMessageRouter := NewMessageRouter(blackListDataReadChannel, testhelpers.UnmarshallerMaker(SECRET), blacklistSinkManager, 2048, logger)
 	go blacklistTestMessageRouter.Start()
 
-	blackListTestHttpServer = NewHttpServer(blacklistTestMessageRouter, 10*time.Millisecond, testhelpers.UnmarshallerMaker(SECRET), 100, loggertesthelper.Logger())
-	go blackListTestHttpServer.Start(blackListDataReadChannel, "localhost:"+BLACKLIST_SERVER_PORT)
+	blacklistApiEndpoint := "localhost:" + BLACKLIST_SERVER_PORT
+	blackListTestWebsocketServer = NewWebsocketServer(blacklistApiEndpoint, blacklistSinkManager, 10*time.Millisecond, 100, loggertesthelper.Logger())
+	go blackListTestWebsocketServer.Start()
+
 	time.Sleep(2 * time.Millisecond)
 }
 

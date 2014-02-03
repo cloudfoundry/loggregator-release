@@ -8,7 +8,6 @@ import (
 	"loggregator/groupedsinks"
 	"loggregator/iprange"
 	"loggregator/sinks"
-	"sync"
 	"time"
 )
 
@@ -22,7 +21,6 @@ type SinkManager struct {
 	recentLogCount      int
 	Metrics             *SinkManagerMetrics
 	logger              *gosteno.Logger
-	*sync.RWMutex
 }
 
 func NewSinkManager(maxRetainedLogMessages int, skipCertVerify bool, blackListIPs []iprange.IPRange, logger *gosteno.Logger) *SinkManager {
@@ -38,7 +36,6 @@ func NewSinkManager(maxRetainedLogMessages int, skipCertVerify bool, blackListIP
 		recentLogCount: maxRetainedLogMessages,
 		Metrics:        NewSinkManagerMetrics(),
 		logger:         logger,
-		RWMutex:        &sync.RWMutex{},
 	}
 }
 
@@ -82,9 +79,6 @@ func (sinkManager *SinkManager) listenForErrorMessages() {
 }
 
 func (sinkManager *SinkManager) registerSink(sink sinks.Sink) bool {
-	sinkManager.Lock()
-	defer sinkManager.Unlock()
-
 	ok := sinkManager.sinks.Register(sink)
 	if !ok {
 		return false
@@ -97,9 +91,6 @@ func (sinkManager *SinkManager) registerSink(sink sinks.Sink) bool {
 }
 
 func (sinkManager *SinkManager) unregisterSink(sink sinks.Sink) {
-	sinkManager.Lock()
-	defer sinkManager.Unlock()
-
 	sinkManager.sinks.Delete(sink)
 	close(sink.Channel())
 

@@ -167,7 +167,7 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 
 func TestThatItDoesNotRegisterADrainIfItsURLIsBlacklisted(t *testing.T) {
 	receivedChan := make(chan []byte, 2)
-	testhelpers.AddWSSink(t, receivedChan, BLACKLIST_SERVER_PORT, TAIL_PATH+"?app=myApp01")
+	testhelpers.AddWSSink(t, receivedChan, BLACKLIST_SERVER_PORT, TAIL_LOGS_PATH+"?app=myApp01")
 	WaitForWebsocketRegistration()
 
 	clientReceivedChan := make(chan []byte)

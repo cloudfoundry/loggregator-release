@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"loggregator/iprange"
 	"runtime"
+	testhelpers "server_testhelpers"
 	"testing"
 	"time"
 )
@@ -52,7 +53,8 @@ func TestErrorMessagesAreDeliveredToSinksThatSupportThem(t *testing.T) {
 	sinkManager := NewSinkManager(1024, false, nil, logger)
 	go sinkManager.Start()
 
-	testMessageRouter := NewMessageRouter(sinkManager, 2048, logger)
+	incomingLogChan := make(chan []byte, 10)
+	testMessageRouter := NewMessageRouter(incomingLogChan, testhelpers.UnmarshallerMaker("secret"), sinkManager, 2048, logger)
 	go testMessageRouter.Start()
 
 	ourSink := testSink{make(chan *logmessage.Message, 100), true}
@@ -72,7 +74,8 @@ func TestErrorMessagesAreNotDeliveredToSinksThatDontAcceptErrors(t *testing.T) {
 	sinkManager := NewSinkManager(1024, false, nil, logger)
 	go sinkManager.Start()
 
-	testMessageRouter := NewMessageRouter(sinkManager, 2048, logger)
+	incomingLogChan := make(chan []byte, 10)
+	testMessageRouter := NewMessageRouter(incomingLogChan, testhelpers.UnmarshallerMaker("secret"), sinkManager, 2048, logger)
 	go testMessageRouter.Start()
 
 	ourSink := testSink{make(chan *logmessage.Message, 100), false}
@@ -93,7 +96,8 @@ func TestSendingToErrorChannelDoesNotBlock(t *testing.T) {
 	sinkManager.errorChannel = make(chan *logmessage.Message, 1)
 	go sinkManager.Start()
 
-	testMessageRouter := NewMessageRouter(sinkManager, 2048, logger)
+	incomingLogChan := make(chan []byte, 10)
+	testMessageRouter := NewMessageRouter(incomingLogChan, testhelpers.UnmarshallerMaker("secret"), sinkManager, 2048, logger)
 	go testMessageRouter.Start()
 
 	sinkChannel := make(chan *logmessage.Message, 10)
@@ -105,11 +109,11 @@ func TestSendingToErrorChannelDoesNotBlock(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		badMessage := messagetesthelpers.NewMessage(t, "error msg", "appIdWeDontCareAbout")
 		badMessage.GetLogMessage().DrainUrls = []string{fmt.Sprintf("<nil%d>", i)}
-		testMessageRouter.parsedMessageChan <- badMessage
+		testMessageRouter.outgoingLogChan <- badMessage
 	}
 
 	goodMessage := messagetesthelpers.NewMessage(t, "error msg", "appId")
-	testMessageRouter.parsedMessageChan <- goodMessage
+	testMessageRouter.outgoingLogChan <- goodMessage
 
 	select {
 	case _ = <-ourSink.Channel():
@@ -124,7 +128,8 @@ func TestThatItDoesNotCreateAnotherSyslogDrainIfItIsAlreadyThere(t *testing.T) {
 	oldActiveSyslogSinksCounter := sinkManager.Metrics.SyslogSinks
 	go sinkManager.Start()
 
-	testMessageRouter := NewMessageRouter(sinkManager, 2048, logger)
+	incomingLogChan := make(chan []byte, 10)
+	testMessageRouter := NewMessageRouter(incomingLogChan, testhelpers.UnmarshallerMaker("secret"), sinkManager, 2048, logger)
 
 	go testMessageRouter.Start()
 	ourSink := testSink{make(chan *logmessage.Message, 100), false}
@@ -133,12 +138,12 @@ func TestThatItDoesNotCreateAnotherSyslogDrainIfItIsAlreadyThere(t *testing.T) {
 
 	message := messagetesthelpers.NewMessage(t, "error msg", "appId")
 	message.GetLogMessage().DrainUrls = []string{"http://10.10.123.1"}
-	testMessageRouter.parsedMessageChan <- message
+	testMessageRouter.outgoingLogChan <- message
 	waitForMessageGettingProcessed(t, ourSink, 10*time.Millisecond)
 
 	assert.Equal(t, sinkManager.Metrics.SyslogSinks, oldActiveSyslogSinksCounter+1)
 
-	testMessageRouter.parsedMessageChan <- message
+	testMessageRouter.outgoingLogChan <- message
 	waitForMessageGettingProcessed(t, ourSink, 10*time.Millisecond)
 
 	assert.Equal(t, sinkManager.Metrics.SyslogSinks, oldActiveSyslogSinksCounter+1)
@@ -150,7 +155,8 @@ func TestSimpleBlacklistRule(t *testing.T) {
 	oldActiveSyslogSinksCounter := sinkManager.Metrics.SyslogSinks
 	go sinkManager.Start()
 
-	testMessageRouter := NewMessageRouter(sinkManager, 2048, logger)
+	incomingLogChan := make(chan []byte, 10)
+	testMessageRouter := NewMessageRouter(incomingLogChan, testhelpers.UnmarshallerMaker("secret"), sinkManager, 2048, logger)
 	go testMessageRouter.Start()
 
 	ourSink := testSink{make(chan *logmessage.Message, 100), true}
@@ -159,7 +165,7 @@ func TestSimpleBlacklistRule(t *testing.T) {
 
 	message := messagetesthelpers.NewMessage(t, "error msg", "appId")
 	message.GetLogMessage().DrainUrls = []string{"http://10.10.123.1"}
-	testMessageRouter.parsedMessageChan <- message
+	testMessageRouter.outgoingLogChan <- message
 
 	select {
 	case _ = <-ourSink.Channel():
@@ -173,7 +179,7 @@ func TestSimpleBlacklistRule(t *testing.T) {
 		t.Error("Did not message about blacklisted syslog drain")
 	}
 
-	testMessageRouter.parsedMessageChan <- message
+	testMessageRouter.outgoingLogChan <- message
 
 	select {
 	case _ = <-ourSink.Channel():
@@ -191,7 +197,7 @@ func TestSimpleBlacklistRule(t *testing.T) {
 
 	message = messagetesthelpers.NewMessage(t, "error msg", "appId")
 	message.GetLogMessage().DrainUrls = []string{"http://10.10.123.2"}
-	testMessageRouter.parsedMessageChan <- message
+	testMessageRouter.outgoingLogChan <- message
 	waitForMessageGettingProcessed(t, ourSink, 10*time.Millisecond)
 
 	assert.Equal(t, sinkManager.Metrics.SyslogSinks, oldActiveSyslogSinksCounter+1)
@@ -203,7 +209,8 @@ func TestInvalidUrlForSyslogDrain(t *testing.T) {
 	oldActiveSyslogSinksCounter := sinkManager.Metrics.SyslogSinks
 	go sinkManager.Start()
 
-	testMessageRouter := NewMessageRouter(sinkManager, 2048, logger)
+	incomingLogChan := make(chan []byte, 10)
+	testMessageRouter := NewMessageRouter(incomingLogChan, testhelpers.UnmarshallerMaker("secret"), sinkManager, 2048, logger)
 	go testMessageRouter.Start()
 
 	ourSink := testSink{make(chan *logmessage.Message, 100), true}
@@ -212,7 +219,7 @@ func TestInvalidUrlForSyslogDrain(t *testing.T) {
 
 	message := messagetesthelpers.NewMessage(t, "error msg", "appId")
 	message.GetLogMessage().DrainUrls = []string{"ht tp://bad.protocol.com"}
-	testMessageRouter.parsedMessageChan <- message
+	testMessageRouter.outgoingLogChan <- message
 
 	select {
 	case _ = <-ourSink.Channel():
@@ -226,7 +233,7 @@ func TestInvalidUrlForSyslogDrain(t *testing.T) {
 		t.Error("Did not message about blacklisted syslog drain")
 	}
 
-	testMessageRouter.parsedMessageChan <- message
+	testMessageRouter.outgoingLogChan <- message
 
 	select {
 	case _ = <-ourSink.Channel():
@@ -248,7 +255,8 @@ func TestStopsRetryingWhenSinkIsUnregistered(t *testing.T) {
 	sinkManager := NewSinkManager(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, logger)
 	go sinkManager.Start()
 
-	testMessageRouter := NewMessageRouter(sinkManager, 2048, logger)
+	incomingLogChan := make(chan []byte, 10)
+	testMessageRouter := NewMessageRouter(incomingLogChan, testhelpers.UnmarshallerMaker("secret"), sinkManager, 2048, logger)
 	go testMessageRouter.Start()
 
 	ourSink := testSink{make(chan *logmessage.Message, 100), true}
@@ -258,10 +266,10 @@ func TestStopsRetryingWhenSinkIsUnregistered(t *testing.T) {
 	go func() {
 		message := messagetesthelpers.NewMessage(t, "error msg", "appId")
 		message.GetLogMessage().DrainUrls = []string{"syslog://localhost:41223"}
-		testMessageRouter.parsedMessageChan <- message
+		testMessageRouter.outgoingLogChan <- message
 
 		newMessage := messagetesthelpers.NewMessage(t, "RemoveSyslogSink", "appId")
-		testMessageRouter.parsedMessageChan <- newMessage
+		testMessageRouter.outgoingLogChan <- newMessage
 
 	}()
 

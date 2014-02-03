@@ -1,11 +1,10 @@
 package sinkserver
 
 import (
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"loggregator/sinks"
 	"sync"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 )
-
 
 type SinkManagerMetrics struct {
 	DumpSinks      int
@@ -16,11 +15,14 @@ type SinkManagerMetrics struct {
 
 func NewSinkManagerMetrics() *SinkManagerMetrics {
 	return &SinkManagerMetrics{
-		RWMutex:        &sync.RWMutex{},
+		RWMutex: &sync.RWMutex{},
 	}
 }
 
 func (sinkManagerMetrics *SinkManagerMetrics) Inc(sink sinks.Sink) {
+	sinkManagerMetrics.Lock()
+	defer sinkManagerMetrics.Unlock()
+
 	switch sink.(type) {
 	case *sinks.DumpSink:
 		sinkManagerMetrics.DumpSinks++
@@ -32,6 +34,9 @@ func (sinkManagerMetrics *SinkManagerMetrics) Inc(sink sinks.Sink) {
 }
 
 func (sinkManagerMetrics *SinkManagerMetrics) Dec(sink sinks.Sink) {
+	sinkManagerMetrics.Lock()
+	defer sinkManagerMetrics.Unlock()
+
 	switch sink.(type) {
 	case *sinks.DumpSink:
 		sinkManagerMetrics.DumpSinks--

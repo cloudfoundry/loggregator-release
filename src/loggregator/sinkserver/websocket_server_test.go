@@ -19,16 +19,15 @@ func TestParseEnvelopesDoesntBlockWhenMessageRouterChannelIsFull(t *testing.T) {
 	messageChannelLength := 1
 	sinkManager := NewSinkManager(1, true, []iprange.IPRange{}, logger)
 	go sinkManager.Start()
-	messageRouter := NewMessageRouter(sinkManager, messageChannelLength, logger)
-	httpServer := NewHttpServer(messageRouter, 30*time.Second, testhelpers.UnmarshallerMaker("secret"), 10, logger)
-	incomingProtobufChan := make(chan []byte, 1)
-	go httpServer.ParseEnvelopes(incomingProtobufChan)
+	incomingLogChan := make(chan []byte, 1)
+	messageRouter := NewMessageRouter(incomingLogChan, testhelpers.UnmarshallerMaker("secret"), sinkManager, messageChannelLength, logger)
+	go messageRouter.listenForLogs()
 
 	testMessage := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, "msg", "appName", "secret")
 
 	for i := 0; i < 10; i++ {
 		select {
-		case incomingProtobufChan <- testMessage:
+		case incomingLogChan <- testMessage:
 			break
 		case <-time.After(1 * time.Second):
 			t.Fatal("Shouldn't have blocked")

@@ -65,7 +65,7 @@ func TestMetrics(t *testing.T) {
 
 	receivedChan := make(chan []byte, 2)
 
-	_, dontKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myMetricsApp")
+	_, dontKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_LOGS_PATH+"?app=myMetricsApp")
 	WaitForWebsocketRegistration()
 
 	assert.Equal(t, sinkManager.Emit().Metrics[0].Name, "numberOfDumpSinks")

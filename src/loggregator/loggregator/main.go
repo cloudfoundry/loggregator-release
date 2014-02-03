@@ -87,19 +87,22 @@ func main() {
 		panic(err)
 	}
 
-	listener := agentlistener.NewAgentListener(fmt.Sprintf("0.0.0.0:%d", config.IncomingPort), logger)
-	incomingData := listener.Start()
+	agentListener := agentlistener.NewAgentListener(fmt.Sprintf("0.0.0.0:%d", config.IncomingPort), logger)
+	incomingLogChan := agentListener.Start()
 
-	sinkManager := NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, config.BlackListIps, logger)
+	sinkManager := sinkserver.NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, config.BlackListIps, logger)
 	go sinkManager.Start()
-
-	messageRouter := sinkserver.NewMessageRouter(sinkManager, 2048, logger)
 
 	unmarshaller := func(data []byte) (*logmessage.Message, error) {
 		return logmessage.ParseEnvelope(data, config.SharedSecret)
 	}
 
-	httpServer := sinkserver.NewHttpServer(messageRouter, 30*time.Second, unmarshaller, config.WSMessageBufferSize, logger)
+	messageChannelLength := 2048
+	messageRouter := sinkserver.NewMessageRouter(incomingLogChan, unmarshaller, sinkManager, messageChannelLength, logger)
+
+	apiEndpoint := fmt.Sprintf("0.0.0.0:%d", config.OutgoingPort)
+	keepAliveInterval := 30 * time.Second
+	websocketServer := sinkserver.NewWebsocketServer(apiEndpoint, sinkManager, keepAliveInterval, config.WSMessageBufferSize, logger)
 
 	cfc, err := cfcomponent.NewComponent(
 		logger,
@@ -108,7 +111,7 @@ func main() {
 		&LoggregatorServerHealthMonitor{},
 		config.VarzPort,
 		[]string{config.VarzUser, config.VarzPass},
-		[]instrumentation.Instrumentable{listener, sinkManager, httpServer},
+		[]instrumentation.Instrumentable{agentListener, sinkManager, messageRouter},
 	)
 
 	if err != nil {
@@ -129,7 +132,7 @@ func main() {
 	}()
 
 	go messageRouter.Start()
-	go httpServer.Start(incomingData, fmt.Sprintf("0.0.0.0:%d", config.OutgoingPort))
+	go websocketServer.Start()
 
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Kill)
