@@ -22,13 +22,6 @@ func NewTruncatingBuffer(inputChannel <-chan *logmessage.Message, bufferSize uin
 	return &truncatingBuffer{inputChannel, outputChannel, logger, &sync.RWMutex{}}
 }
 
-func (r *truncatingBuffer) SetOutputChannel(out chan *logmessage.Message) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
-	r.outputChannel = out
-}
-
 func (r *truncatingBuffer) GetOutputChannel() <-chan *logmessage.Message {
 	r.lock.Lock()
 	defer r.lock.Unlock()
