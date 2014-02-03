@@ -60,9 +60,9 @@ func AssertConnectionFails(t *testing.T, port string, path string, expectedError
 }
 
 func TestMetrics(t *testing.T) {
-	oldDumpSinksCounter := TestMessageRouter.Emit().Metrics[0].Value.(int)
-	oldSyslogSinksCounter := TestMessageRouter.Emit().Metrics[1].Value.(int)
-	oldWebsocketSinksCounter := TestMessageRouter.Emit().Metrics[2].Value.(int)
+	oldDumpSinksCounter := TestMessageRouter.SinkManager.Emit().Metrics[0].Value.(int)
+	oldSyslogSinksCounter := TestMessageRouter.SinkManager.Emit().Metrics[1].Value.(int)
+	oldWebsocketSinksCounter := TestMessageRouter.SinkManager.Emit().Metrics[2].Value.(int)
 
 	clientReceivedChan := make(chan []byte)
 	fakeSyslogDrain, err := NewFakeService(clientReceivedChan, "127.0.0.1:32564")
@@ -70,14 +70,14 @@ func TestMetrics(t *testing.T) {
 	go fakeSyslogDrain.Serve()
 	<-fakeSyslogDrain.ReadyChan
 
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Name, "numberOfDumpSinks")
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Value, oldDumpSinksCounter)
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[0].Name, "numberOfDumpSinks")
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[0].Value, oldDumpSinksCounter)
 
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[1].Name, "numberOfSyslogSinks")
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[1].Value, oldSyslogSinksCounter)
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[1].Name, "numberOfSyslogSinks")
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[1].Value, oldSyslogSinksCounter)
 
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Value, oldWebsocketSinksCounter)
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[2].Value, oldWebsocketSinksCounter)
 
 	logEnvelope := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, "expectedMessageString", "myMetricsApp", SECRET, "syslog://localhost:32564")
 	dataReadChannel <- logEnvelope
@@ -88,14 +88,14 @@ func TestMetrics(t *testing.T) {
 	case <-clientReceivedChan:
 	}
 
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Name, "numberOfDumpSinks")
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Value, oldDumpSinksCounter+1)
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[0].Name, "numberOfDumpSinks")
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[0].Value, oldDumpSinksCounter+1)
 
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[1].Name, "numberOfSyslogSinks")
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[1].Value, oldSyslogSinksCounter+1)
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[1].Name, "numberOfSyslogSinks")
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[1].Value, oldSyslogSinksCounter+1)
 
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Value, oldWebsocketSinksCounter)
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[2].Value, oldWebsocketSinksCounter)
 
 	dataReadChannel <- logEnvelope
 
@@ -105,38 +105,38 @@ func TestMetrics(t *testing.T) {
 	case <-clientReceivedChan:
 	}
 
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Name, "numberOfDumpSinks")
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Value, oldDumpSinksCounter+1)
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[0].Name, "numberOfDumpSinks")
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[0].Value, oldDumpSinksCounter+1)
 
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[1].Name, "numberOfSyslogSinks")
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[1].Value, oldSyslogSinksCounter+1)
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[1].Name, "numberOfSyslogSinks")
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[1].Value, oldSyslogSinksCounter+1)
 
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Value, oldWebsocketSinksCounter)
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[2].Value, oldWebsocketSinksCounter)
 
 	receivedChan := make(chan []byte, 2)
 
 	_, dontKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_PATH+"?app=myMetricsApp")
 	WaitForWebsocketRegistration()
 
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Name, "numberOfDumpSinks")
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Value, oldDumpSinksCounter+1)
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[0].Name, "numberOfDumpSinks")
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[0].Value, oldDumpSinksCounter+1)
 
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[1].Name, "numberOfSyslogSinks")
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[1].Value, oldSyslogSinksCounter+1)
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[1].Name, "numberOfSyslogSinks")
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[1].Value, oldSyslogSinksCounter+1)
 
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Value, oldWebsocketSinksCounter+1)
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[2].Value, oldWebsocketSinksCounter+1)
 
 	dontKeepAliveChan <- true
 	WaitForWebsocketRegistration()
 
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Name, "numberOfDumpSinks")
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[0].Value, oldDumpSinksCounter+1)
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[0].Name, "numberOfDumpSinks")
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[0].Value, oldDumpSinksCounter+1)
 
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[1].Name, "numberOfSyslogSinks")
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[1].Value, oldSyslogSinksCounter+1)
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[1].Name, "numberOfSyslogSinks")
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[1].Value, oldSyslogSinksCounter+1)
 
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
-	assert.Equal(t, TestMessageRouter.Emit().Metrics[2].Value, oldWebsocketSinksCounter)
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
+	assert.Equal(t, TestMessageRouter.SinkManager.Emit().Metrics[2].Value, oldWebsocketSinksCounter)
 }

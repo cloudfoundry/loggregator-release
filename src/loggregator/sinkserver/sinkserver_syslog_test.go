@@ -117,6 +117,7 @@ func TestThatItSendsAllDataToAllDrainUrls(t *testing.T) {
 	fakeSyslogDrain2.Stop()
 }
 
+// this test fails intermittently
 func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) {
 	client1ReceivedChan := make(chan []byte)
 	client2ReceivedChan := make(chan []byte)

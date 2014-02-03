@@ -52,9 +52,9 @@ func TestErrorMessagesAreDeliveredToSinksThatSupportThem(t *testing.T) {
 	go testMessageRouter.Start()
 
 	ourSink := testSink{make(chan *logmessage.Message, 100), true}
-	testMessageRouter.sinkOpenChan <- ourSink
+	testMessageRouter.SinkManager.sinkOpenChan <- ourSink
 	<-time.After(1 * time.Millisecond)
-	testMessageRouter.errorChannel <- messagetesthelpers.NewMessage(t, "error msg", "appId")
+	testMessageRouter.SinkManager.errorChannel <- messagetesthelpers.NewMessage(t, "error msg", "appId")
 	select {
 	case errorMsg := <-ourSink.Channel():
 		assert.Equal(t, string(errorMsg.GetLogMessage().GetMessage()), "error msg")
@@ -68,9 +68,9 @@ func TestErrorMessagesAreNotDeliveredToSinksThatDontAcceptErrors(t *testing.T) {
 	go testMessageRouter.Start()
 
 	ourSink := testSink{make(chan *logmessage.Message, 100), false}
-	testMessageRouter.sinkOpenChan <- ourSink
+	testMessageRouter.SinkManager.sinkOpenChan <- ourSink
 	<-time.After(1 * time.Millisecond)
-	testMessageRouter.errorChannel <- messagetesthelpers.NewMessage(t, "error msg", "appId")
+	testMessageRouter.SinkManager.errorChannel <- messagetesthelpers.NewMessage(t, "error msg", "appId")
 	select {
 	case _ = <-ourSink.Channel():
 		t.Error("Should not have received a message")
@@ -81,13 +81,13 @@ func TestErrorMessagesAreNotDeliveredToSinksThatDontAcceptErrors(t *testing.T) {
 
 func TestSendingToErrorChannelDoesNotBlock(t *testing.T) {
 	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger(), 2048)
-	testMessageRouter.errorChannel = make(chan *logmessage.Message, 1)
+	testMessageRouter.SinkManager.errorChannel = make(chan *logmessage.Message, 1)
 	go testMessageRouter.Start()
 
 	sinkChannel := make(chan *logmessage.Message, 10)
 	ourSink := testSink{sinkChannel, false}
 
-	testMessageRouter.sinkOpenChan <- ourSink
+	testMessageRouter.SinkManager.sinkOpenChan <- ourSink
 	<-time.After(1 * time.Millisecond)
 
 	for i := 0; i < 10; i++ {
@@ -108,11 +108,11 @@ func TestSendingToErrorChannelDoesNotBlock(t *testing.T) {
 
 func TestThatItDoesNotCreateAnotherSyslogDrainIfItIsAlreadyThere(t *testing.T) {
 	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger(), 2048)
-	oldActiveSyslogSinksCounter := testMessageRouter.activeSyslogSinksCounter
+	oldActiveSyslogSinksCounter := testMessageRouter.SinkManager.activeSyslogSinksCounter
 
 	go testMessageRouter.Start()
 	ourSink := testSink{make(chan *logmessage.Message, 100), false}
-	testMessageRouter.sinkOpenChan <- ourSink
+	testMessageRouter.SinkManager.sinkOpenChan <- ourSink
 	<-time.After(1 * time.Millisecond)
 
 	message := messagetesthelpers.NewMessage(t, "error msg", "appId")
@@ -120,21 +120,21 @@ func TestThatItDoesNotCreateAnotherSyslogDrainIfItIsAlreadyThere(t *testing.T) {
 	testMessageRouter.parsedMessageChan <- message
 	waitForMessageGettingProcessed(t, ourSink, 10*time.Millisecond)
 
-	assert.Equal(t, testMessageRouter.activeSyslogSinksCounter, oldActiveSyslogSinksCounter+1)
+	assert.Equal(t, testMessageRouter.SinkManager.activeSyslogSinksCounter, oldActiveSyslogSinksCounter+1)
 
 	testMessageRouter.parsedMessageChan <- message
 	waitForMessageGettingProcessed(t, ourSink, 10*time.Millisecond)
 
-	assert.Equal(t, testMessageRouter.activeSyslogSinksCounter, oldActiveSyslogSinksCounter+1)
+	assert.Equal(t, testMessageRouter.SinkManager.activeSyslogSinksCounter, oldActiveSyslogSinksCounter+1)
 }
 
 func TestSimpleBlacklistRule(t *testing.T) {
 	testMessageRouter := NewMessageRouter(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, loggertesthelper.Logger(), 2048)
-	oldActiveSyslogSinksCounter := testMessageRouter.activeSyslogSinksCounter
+	oldActiveSyslogSinksCounter := testMessageRouter.SinkManager.activeSyslogSinksCounter
 
 	go testMessageRouter.Start()
 	ourSink := testSink{make(chan *logmessage.Message, 100), true}
-	testMessageRouter.sinkOpenChan <- ourSink
+	testMessageRouter.SinkManager.sinkOpenChan <- ourSink
 	<-time.After(1 * time.Millisecond)
 
 	message := messagetesthelpers.NewMessage(t, "error msg", "appId")
@@ -167,23 +167,23 @@ func TestSimpleBlacklistRule(t *testing.T) {
 	case <-time.After(100 * time.Millisecond):
 	}
 
-	assert.Equal(t, testMessageRouter.activeSyslogSinksCounter, oldActiveSyslogSinksCounter)
+	assert.Equal(t, testMessageRouter.SinkManager.activeSyslogSinksCounter, oldActiveSyslogSinksCounter)
 
 	message = messagetesthelpers.NewMessage(t, "error msg", "appId")
 	message.GetLogMessage().DrainUrls = []string{"http://10.10.123.2"}
 	testMessageRouter.parsedMessageChan <- message
 	waitForMessageGettingProcessed(t, ourSink, 10*time.Millisecond)
 
-	assert.Equal(t, testMessageRouter.activeSyslogSinksCounter, oldActiveSyslogSinksCounter+1)
+	assert.Equal(t, testMessageRouter.SinkManager.activeSyslogSinksCounter, oldActiveSyslogSinksCounter+1)
 }
 
 func TestInvalidUrlForSyslogDrain(t *testing.T) {
 	testMessageRouter := NewMessageRouter(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, loggertesthelper.Logger(), 2048)
-	oldActiveSyslogSinksCounter := testMessageRouter.activeSyslogSinksCounter
+	oldActiveSyslogSinksCounter := testMessageRouter.SinkManager.activeSyslogSinksCounter
 
 	go testMessageRouter.Start()
 	ourSink := testSink{make(chan *logmessage.Message, 100), true}
-	testMessageRouter.sinkOpenChan <- ourSink
+	testMessageRouter.SinkManager.sinkOpenChan <- ourSink
 	<-time.After(1 * time.Millisecond)
 
 	message := messagetesthelpers.NewMessage(t, "error msg", "appId")
@@ -216,7 +216,7 @@ func TestInvalidUrlForSyslogDrain(t *testing.T) {
 	case <-time.After(100 * time.Millisecond):
 	}
 
-	assert.Equal(t, testMessageRouter.activeSyslogSinksCounter, oldActiveSyslogSinksCounter)
+	assert.Equal(t, testMessageRouter.SinkManager.activeSyslogSinksCounter, oldActiveSyslogSinksCounter)
 }
 
 func TestStopsRetryingWhenSinkIsUnregistered(t *testing.T) {
@@ -224,7 +224,7 @@ func TestStopsRetryingWhenSinkIsUnregistered(t *testing.T) {
 	go testMessageRouter.Start()
 
 	ourSink := testSink{make(chan *logmessage.Message, 100), true}
-	testMessageRouter.sinkOpenChan <- ourSink
+	testMessageRouter.SinkManager.sinkOpenChan <- ourSink
 	runtime.Gosched()
 
 	go func() {
