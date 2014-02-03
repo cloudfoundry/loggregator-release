@@ -17,7 +17,9 @@ func TestParseEnvelopesDoesntBlockWhenMessageRouterChannelIsFull(t *testing.T) {
 	logger := gosteno.NewLogger("TestLogger")
 
 	messageChannelLength := 1
-	messageRouter := NewMessageRouter(1, true, []iprange.IPRange{}, logger, messageChannelLength)
+	sinkManager := NewSinkManager(1, true, []iprange.IPRange{}, logger)
+	go sinkManager.Start()
+	messageRouter := NewMessageRouter(sinkManager, messageChannelLength, logger)
 	httpServer := NewHttpServer(messageRouter, 30*time.Second, testhelpers.UnmarshallerMaker("secret"), 10, logger)
 	incomingProtobufChan := make(chan []byte, 1)
 	go httpServer.ParseEnvelopes(incomingProtobufChan)

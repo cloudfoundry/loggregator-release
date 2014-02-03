@@ -1,7 +1,6 @@
 package sinkserver
 
 import (
-	"errors"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
@@ -9,173 +8,155 @@ import (
 	"loggregator/groupedsinks"
 	"loggregator/iprange"
 	"loggregator/sinks"
-	"net/url"
 	"sync"
 	"time"
 )
 
 type SinkManager struct {
-	activeDumpSinksCounter      int
-	activeWebsocketSinksCounter int
-	activeSyslogSinksCounter    int
-	activeSinks                 *groupedsinks.GroupedSinks
-	skipCertVerify              bool
-	errorChannel                chan *logmessage.Message
-	blackListIPs                []iprange.IPRange
-	blacklistedURLS             []string
-	logger                      *gosteno.Logger
-	dumpBufferSize              int
-	sinkCloseChan               chan sinks.Sink
-	sinkOpenChan                chan sinks.Sink
+	sinkOpenChan        chan sinks.Sink
+	sinkCloseChan       chan sinks.Sink
+	errorChannel        chan *logmessage.Message
+	urlBlacklistManager *URLBlacklistManager
+	sinks               *groupedsinks.GroupedSinks
+	skipCertVerify      bool
+	recentLogCount      int
+	Metrics             *SinkManagerMetrics
+	logger              *gosteno.Logger
 	*sync.RWMutex
 }
 
 func NewSinkManager(maxRetainedLogMessages int, skipCertVerify bool, blackListIPs []iprange.IPRange, logger *gosteno.Logger) *SinkManager {
-	sinkCloseChan := make(chan sinks.Sink, 20)
-	sinkOpenChan := make(chan sinks.Sink, 20)
-	errorChan := make(chan *logmessage.Message, 100)
-
 	return &SinkManager{
+		sinkOpenChan:  make(chan sinks.Sink, 20),
+		sinkCloseChan: make(chan sinks.Sink, 20),
+		errorChannel:  make(chan *logmessage.Message, 100),
+		urlBlacklistManager: &URLBlacklistManager{
+			blacklistIPs: blackListIPs,
+		},
+		sinks:          groupedsinks.NewGroupedSinks(),
+		skipCertVerify: skipCertVerify,
+		recentLogCount: maxRetainedLogMessages,
+		Metrics:        NewSinkManagerMetrics(),
 		logger:         logger,
 		RWMutex:        &sync.RWMutex{},
-		skipCertVerify: skipCertVerify,
-		activeSinks:    groupedsinks.NewGroupedSinks(),
-		errorChannel:   errorChan,
-		blackListIPs:   blackListIPs,
-		dumpBufferSize: maxRetainedLogMessages,
-		sinkCloseChan:  sinkCloseChan,
-		sinkOpenChan:   sinkOpenChan,
 	}
 }
 
 func (sinkManager *SinkManager) Start() {
-	go func() {
-		for {
-			select {
-			case sink := <-sinkManager.sinkOpenChan:
-				sinkManager.registerSink(sink)
-			case sink := <-sinkManager.sinkCloseChan:
-				sinkManager.unregisterSink(sink)
-			}
-		}
-	}()
+	go sinkManager.listenForSinkChanges()
 
+	sinkManager.listenForErrorMessages()
+}
+
+func (sinkManager *SinkManager) SendTo(appId string, receivedMessage *logmessage.Message) {
+	for _, sink := range sinkManager.sinks.For(appId) {
+		sinkManager.logger.Debugf("MessageRouter:ParsedMessageChan: Sending Message to channel %v for sinks targeting [%s].", sink.Identifier(), appId)
+		sink.Channel() <- receivedMessage
+	}
+}
+
+func (sinkManager *SinkManager) listenForSinkChanges() {
 	for {
 		select {
-		case receivedMessage := <-sinkManager.errorChannel:
-			appId := receivedMessage.GetLogMessage().GetAppId()
-
-			sinkManager.logger.Debugf("SinkManager:ErrorChannel: Searching for sinks with appId [%s].", appId)
-		for _, sink := range sinkManager.activeSinks.For(appId) {
-			if sink.ShouldReceiveErrors() {
-				sinkManager.logger.Debugf("SinkManager:ErrorChannel: Sending Message to channel %v for sinks targeting [%s].", sink.Identifier(), appId)
-				sink.Channel() <- receivedMessage
-			}
-		}
-			sinkManager.logger.Debugf("SinkManager:ErrorChannel: Done sending error message.")
+		case sink := <-sinkManager.sinkOpenChan:
+			sinkManager.registerSink(sink)
+		case sink := <-sinkManager.sinkCloseChan:
+			sinkManager.unregisterSink(sink)
 		}
 	}
 }
 
-func (sinkManager *SinkManager) registerSink(s sinks.Sink) bool {
+func (sinkManager *SinkManager) listenForErrorMessages() {
+	for errorMessage := range sinkManager.errorChannel {
+		appId := errorMessage.GetLogMessage().GetAppId()
+		sinkManager.logger.Debugf("SinkManager:ErrorChannel: Searching for sinks with appId [%s].", appId)
+
+		for _, sink := range sinkManager.sinks.For(appId) {
+			if sink.ShouldReceiveErrors() {
+				sinkManager.logger.Debugf("SinkManager:ErrorChannel: Sending Message to channel %v for sinks targeting [%s].", sink.Identifier(), appId)
+				sink.Channel() <- errorMessage
+			}
+		}
+		sinkManager.logger.Debugf("SinkManager:ErrorChannel: Done sending error message.")
+	}
+}
+
+func (sinkManager *SinkManager) registerSink(sink sinks.Sink) bool {
 	sinkManager.Lock()
 	defer sinkManager.Unlock()
 
-	ok := sinkManager.activeSinks.Register(s)
+	ok := sinkManager.sinks.Register(sink)
 	if !ok {
 		return false
 	}
 
-	switch s.(type) {
-	case *sinks.DumpSink:
-		sinkManager.activeDumpSinksCounter++
-	case *sinks.SyslogSink:
-		sinkManager.activeSyslogSinksCounter++
-	case *sinks.WebsocketSink:
-		sinkManager.activeWebsocketSinksCounter++
-	}
-	sinkManager.logger.Infof("SinkManager: Sink with channel %v requested. Opened it.", s.Channel())
+	sinkManager.Metrics.Inc(sink)
+
+	sinkManager.logger.Infof("SinkManager: Sink with channel %v requested. Opened it.", sink.Channel())
 	return true
 }
 
-func (sinkManager *SinkManager) unregisterSink(s sinks.Sink) {
+func (sinkManager *SinkManager) unregisterSink(sink sinks.Sink) {
 	sinkManager.Lock()
 	defer sinkManager.Unlock()
 
-	sinkManager.activeSinks.Delete(s)
-	close(s.Channel())
-	switch s.(type) {
-	case *sinks.DumpSink:
-		sinkManager.activeDumpSinksCounter--
-	case *sinks.SyslogSink:
-		syslogSink, _ := s.(*sinks.SyslogSink)
+	sinkManager.sinks.Delete(sink)
+	close(sink.Channel())
+
+	sinkManager.Metrics.Dec(sink)
+
+	if syslogSink, ok := sink.(*sinks.SyslogSink); ok {
 		syslogSink.Disconnect()
-		sinkManager.activeSyslogSinksCounter--
-	case *sinks.WebsocketSink:
-		sinkManager.activeWebsocketSinksCounter--
 	}
-	sinkManager.logger.Infof("SinkManager: Sink with channel %v and identifier %s requested closing. Closed it.", s.Channel(), s.Identifier())
+
+	sinkManager.logger.Infof("SinkManager: Sink with channel %v and identifier %s requested closing. Closed it.", sink.Channel(), sink.Identifier())
 }
 
-func (sinkManager *SinkManager) manageSyslogSinks(appId string, drainUrls []string) {
-	//delete all drains for app
-	if len(drainUrls) == 0 {
-		for _, sink := range sinkManager.activeSinks.DrainsFor(appId) {
-			sinkManager.unregisterSink(sink)
-		}
+func (sinkManager *SinkManager) manageSyslogSinks(appId string, syslogSinkUrls []string) {
+	if len(syslogSinkUrls) == 0 {
+		sinkManager.unregisterAllSyslogSinks(appId)
 		return
 	}
 
-	//delete all drains that were not sent
-	for _, sink := range sinkManager.activeSinks.DrainsFor(appId) {
-		if contains(sink.Identifier(), drainUrls) {
-			continue
-		}
+	sinkManager.unregisterUnboundSyslogSinks(appId, syslogSinkUrls)
+
+	sinkManager.registerNewSyslogSinks(appId, syslogSinkUrls)
+}
+
+func (sinkManager *SinkManager) unregisterAllSyslogSinks(appId string) {
+	for _, sink := range sinkManager.sinks.DrainsFor(appId) {
 		sinkManager.unregisterSink(sink)
 	}
+}
 
-	//add all drains that didn't exist
-	for _, drainUrl := range drainUrls {
-		if sinkManager.activeSinks.DrainFor(appId, drainUrl) == nil && !sinkManager.urlIsBlackListed(drainUrl) {
-			parsedSyslogDrainUrl, err := checkURL(drainUrl, sinkManager.blackListIPs)
+func (sinkManager *SinkManager) unregisterUnboundSyslogSinks(appId string, syslogSinkUrls []string) {
+	for _, sink := range sinkManager.sinks.DrainsFor(appId) {
+		if !contains(sink.Identifier(), syslogSinkUrls) {
+			sinkManager.unregisterSink(sink)
+		}
+	}
+}
+
+func (sinkManager *SinkManager) registerNewSyslogSinks(appId string, syslogSinkUrls []string) {
+	for _, syslogSinkUrl := range syslogSinkUrls {
+		if sinkManager.sinks.DrainFor(appId, syslogSinkUrl) == nil && !sinkManager.urlBlacklistManager.isBlackListed(syslogSinkUrl) {
+			parsedSyslogDrainUrl, err := sinkManager.urlBlacklistManager.checkURL(syslogSinkUrl)
 			if err != nil {
-				sinkManager.blacklistedURLS = append(sinkManager.blacklistedURLS, drainUrl)
-				errorMsg := fmt.Sprintf("SinkManager: Invalid syslog drain URL: %s. Err: %v", drainUrl, err)
-				sinkManager.sendLoggregatorErrorMessage(errorMsg, appId)
+				sinkManager.urlBlacklistManager.blacklistURL(syslogSinkUrl)
+				errorMsg := fmt.Sprintf("SinkManager: Invalid syslog drain URL: %s. Err: %v", syslogSinkUrl, err)
+				sinkManager.sendSyslogErrorToLoggregator(errorMsg, appId)
 			} else {
-				sysLogger := sinks.NewSyslogWriter(parsedSyslogDrainUrl.Scheme, parsedSyslogDrainUrl.Host, appId, sinkManager.skipCertVerify)
-				s := sinks.NewSyslogSink(appId, drainUrl, sinkManager.logger, sysLogger, sinkManager.errorChannel)
-				ok := sinkManager.registerSink(s)
-				if ok {
-					go s.Run()
+				syslogWriter := sinks.NewSyslogWriter(parsedSyslogDrainUrl.Scheme, parsedSyslogDrainUrl.Host, appId, sinkManager.skipCertVerify)
+				syslogSink := sinks.NewSyslogSink(appId, syslogSinkUrl, sinkManager.logger, syslogWriter, sinkManager.errorChannel)
+				if sinkManager.registerSink(syslogSink) {
+					go syslogSink.Run()
 				}
 			}
 		}
 	}
 }
 
-func (sinkManager *SinkManager) getDumpFor(appId string) []*logmessage.Message {
-	if sink := sinkManager.activeSinks.DumpFor(appId); sink != nil {
-		return sink.Dump()
-	} else {
-		sinkManager.logger.Debugf("SinkManager:DumpReceiverChan: No dump exists for appId [%s].", appId)
-		return []*logmessage.Message{}
-	}
-}
-
-func (sinkManager *SinkManager) manageDumpSinks(appId string) {
-	if sinkManager.activeSinks.DumpFor(appId) != nil {
-		return
-	}
-
-	s := sinks.NewDumpSink(appId, sinkManager.dumpBufferSize, sinkManager.logger, sinkManager.sinkCloseChan, time.Hour)
-
-	if sinkManager.registerSink(s) {
-		go s.Run()
-	}
-}
-
-func (sinkManager *SinkManager) sendLoggregatorErrorMessage(errorMsg, appId string) {
+func (sinkManager *SinkManager) sendSyslogErrorToLoggregator(errorMsg, appId string) {
 	sinkManager.logger.Warnf(errorMsg)
 	logMessage, err := logmessage.GenerateMessage(logmessage.LogMessage_ERR, errorMsg, appId, "LGR")
 	if err == nil {
@@ -185,52 +166,36 @@ func (sinkManager *SinkManager) sendLoggregatorErrorMessage(errorMsg, appId stri
 	}
 }
 
-func (sinkManager *SinkManager) urlIsBlackListed(testUrl string) bool {
-	for _, url := range sinkManager.blacklistedURLS {
-		if url == testUrl {
-			return true
-		}
+func (sinkManager *SinkManager) ensureRecentLogsSinkFor(appId string) {
+	if sinkManager.sinks.DumpFor(appId) != nil {
+		return
 	}
-	return false
+
+	s := sinks.NewDumpSink(appId, sinkManager.recentLogCount, sinkManager.logger, sinkManager.sinkCloseChan, time.Hour)
+
+	if sinkManager.registerSink(s) {
+		go s.Run()
+	}
 }
 
-func checkURL(rawUrl string, blacklistedIPs []iprange.IPRange) (outputURL *url.URL, err error) {
-	outputURL, err = url.Parse(rawUrl)
-	if err != nil {
-		return nil, err
-	}
-
-	ipNotBlacklisted, err := iprange.IpOutsideOfRanges(*outputURL, blacklistedIPs)
-	if err != nil {
-		return nil, err
-	}
-	if !ipNotBlacklisted {
-		return nil, errors.New("Syslog Drain URL is blacklisted")
-	}
-	return outputURL, nil
-}
-
-func (sinkManager *SinkManager) metrics() []instrumentation.Metric {
-	sinkManager.RLock()
-	defer sinkManager.RUnlock()
-
-	return []instrumentation.Metric{
-		instrumentation.Metric{Name: "numberOfDumpSinks", Value: sinkManager.activeDumpSinksCounter},
-		instrumentation.Metric{Name: "numberOfSyslogSinks", Value: sinkManager.activeSyslogSinksCounter},
-		instrumentation.Metric{Name: "numberOfWebsocketSinks", Value: sinkManager.activeWebsocketSinksCounter},
+func (sinkManager *SinkManager) recentLogsFor(appId string) []*logmessage.Message {
+	if sink := sinkManager.sinks.DumpFor(appId); sink != nil {
+		return sink.Dump()
+	} else {
+		sinkManager.logger.Debugf("SinkManager:DumpReceiverChan: No dump exists for appId [%s].", appId)
+		return []*logmessage.Message{}
 	}
 }
 
 func (sinkManager *SinkManager) Emit() instrumentation.Context {
-	return instrumentation.Context{
-		Name:    "messageRouter",
-		Metrics: sinkManager.metrics(),
-	}
+	return sinkManager.Metrics.Emit()
 }
 
-func (sinkManager *SinkManager) sendToActiveSinks(appId string, receivedMessage *logmessage.Message) {
-	for _, sink := range sinkManager.activeSinks.For(appId) {
-		sinkManager.logger.Debugf("MessageRouter:ParsedMessageChan: Sending Message to channel %v for sinks targeting [%s].", sink.Identifier(), appId)
-		sink.Channel() <- receivedMessage
+func contains(valueToFind string, values []string) bool {
+	for _, value := range values {
+		if valueToFind == value {
+			return true
+		}
 	}
+	return false
 }

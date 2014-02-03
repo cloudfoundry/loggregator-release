@@ -48,13 +48,17 @@ func (ts testSink) Logger() *gosteno.Logger {
 }
 
 func TestErrorMessagesAreDeliveredToSinksThatSupportThem(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger(), 2048)
+	logger := loggertesthelper.Logger()
+	sinkManager := NewSinkManager(1024, false, nil, logger)
+	go sinkManager.Start()
+
+	testMessageRouter := NewMessageRouter(sinkManager, 2048, logger)
 	go testMessageRouter.Start()
 
 	ourSink := testSink{make(chan *logmessage.Message, 100), true}
-	testMessageRouter.SinkManager.sinkOpenChan <- ourSink
+	sinkManager.sinkOpenChan <- ourSink
 	<-time.After(1 * time.Millisecond)
-	testMessageRouter.SinkManager.errorChannel <- messagetesthelpers.NewMessage(t, "error msg", "appId")
+	sinkManager.errorChannel <- messagetesthelpers.NewMessage(t, "error msg", "appId")
 	select {
 	case errorMsg := <-ourSink.Channel():
 		assert.Equal(t, string(errorMsg.GetLogMessage().GetMessage()), "error msg")
@@ -64,13 +68,17 @@ func TestErrorMessagesAreDeliveredToSinksThatSupportThem(t *testing.T) {
 }
 
 func TestErrorMessagesAreNotDeliveredToSinksThatDontAcceptErrors(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger(), 2048)
+	logger := loggertesthelper.Logger()
+	sinkManager := NewSinkManager(1024, false, nil, logger)
+	go sinkManager.Start()
+
+	testMessageRouter := NewMessageRouter(sinkManager, 2048, logger)
 	go testMessageRouter.Start()
 
 	ourSink := testSink{make(chan *logmessage.Message, 100), false}
-	testMessageRouter.SinkManager.sinkOpenChan <- ourSink
+	sinkManager.sinkOpenChan <- ourSink
 	<-time.After(1 * time.Millisecond)
-	testMessageRouter.SinkManager.errorChannel <- messagetesthelpers.NewMessage(t, "error msg", "appId")
+	sinkManager.errorChannel <- messagetesthelpers.NewMessage(t, "error msg", "appId")
 	select {
 	case _ = <-ourSink.Channel():
 		t.Error("Should not have received a message")
@@ -80,14 +88,18 @@ func TestErrorMessagesAreNotDeliveredToSinksThatDontAcceptErrors(t *testing.T) {
 }
 
 func TestSendingToErrorChannelDoesNotBlock(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger(), 2048)
-	testMessageRouter.SinkManager.errorChannel = make(chan *logmessage.Message, 1)
+	logger := loggertesthelper.Logger()
+	sinkManager := NewSinkManager(1024, false, nil, logger)
+	sinkManager.errorChannel = make(chan *logmessage.Message, 1)
+	go sinkManager.Start()
+
+	testMessageRouter := NewMessageRouter(sinkManager, 2048, logger)
 	go testMessageRouter.Start()
 
 	sinkChannel := make(chan *logmessage.Message, 10)
 	ourSink := testSink{sinkChannel, false}
 
-	testMessageRouter.SinkManager.sinkOpenChan <- ourSink
+	sinkManager.sinkOpenChan <- ourSink
 	<-time.After(1 * time.Millisecond)
 
 	for i := 0; i < 10; i++ {
@@ -107,12 +119,16 @@ func TestSendingToErrorChannelDoesNotBlock(t *testing.T) {
 }
 
 func TestThatItDoesNotCreateAnotherSyslogDrainIfItIsAlreadyThere(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, false, nil, loggertesthelper.Logger(), 2048)
-	oldActiveSyslogSinksCounter := testMessageRouter.SinkManager.activeSyslogSinksCounter
+	logger := loggertesthelper.Logger()
+	sinkManager := NewSinkManager(1024, false, nil, logger)
+	oldActiveSyslogSinksCounter := sinkManager.Metrics.SyslogSinks
+	go sinkManager.Start()
+
+	testMessageRouter := NewMessageRouter(sinkManager, 2048, logger)
 
 	go testMessageRouter.Start()
 	ourSink := testSink{make(chan *logmessage.Message, 100), false}
-	testMessageRouter.SinkManager.sinkOpenChan <- ourSink
+	sinkManager.sinkOpenChan <- ourSink
 	<-time.After(1 * time.Millisecond)
 
 	message := messagetesthelpers.NewMessage(t, "error msg", "appId")
@@ -120,21 +136,25 @@ func TestThatItDoesNotCreateAnotherSyslogDrainIfItIsAlreadyThere(t *testing.T) {
 	testMessageRouter.parsedMessageChan <- message
 	waitForMessageGettingProcessed(t, ourSink, 10*time.Millisecond)
 
-	assert.Equal(t, testMessageRouter.SinkManager.activeSyslogSinksCounter, oldActiveSyslogSinksCounter+1)
+	assert.Equal(t, sinkManager.Metrics.SyslogSinks, oldActiveSyslogSinksCounter+1)
 
 	testMessageRouter.parsedMessageChan <- message
 	waitForMessageGettingProcessed(t, ourSink, 10*time.Millisecond)
 
-	assert.Equal(t, testMessageRouter.SinkManager.activeSyslogSinksCounter, oldActiveSyslogSinksCounter+1)
+	assert.Equal(t, sinkManager.Metrics.SyslogSinks, oldActiveSyslogSinksCounter+1)
 }
 
 func TestSimpleBlacklistRule(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, loggertesthelper.Logger(), 2048)
-	oldActiveSyslogSinksCounter := testMessageRouter.SinkManager.activeSyslogSinksCounter
+	logger := loggertesthelper.Logger()
+	sinkManager := NewSinkManager(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, logger)
+	oldActiveSyslogSinksCounter := sinkManager.Metrics.SyslogSinks
+	go sinkManager.Start()
 
+	testMessageRouter := NewMessageRouter(sinkManager, 2048, logger)
 	go testMessageRouter.Start()
+
 	ourSink := testSink{make(chan *logmessage.Message, 100), true}
-	testMessageRouter.SinkManager.sinkOpenChan <- ourSink
+	sinkManager.sinkOpenChan <- ourSink
 	<-time.After(1 * time.Millisecond)
 
 	message := messagetesthelpers.NewMessage(t, "error msg", "appId")
@@ -167,23 +187,27 @@ func TestSimpleBlacklistRule(t *testing.T) {
 	case <-time.After(100 * time.Millisecond):
 	}
 
-	assert.Equal(t, testMessageRouter.SinkManager.activeSyslogSinksCounter, oldActiveSyslogSinksCounter)
+	assert.Equal(t, sinkManager.Metrics.SyslogSinks, oldActiveSyslogSinksCounter)
 
 	message = messagetesthelpers.NewMessage(t, "error msg", "appId")
 	message.GetLogMessage().DrainUrls = []string{"http://10.10.123.2"}
 	testMessageRouter.parsedMessageChan <- message
 	waitForMessageGettingProcessed(t, ourSink, 10*time.Millisecond)
 
-	assert.Equal(t, testMessageRouter.SinkManager.activeSyslogSinksCounter, oldActiveSyslogSinksCounter+1)
+	assert.Equal(t, sinkManager.Metrics.SyslogSinks, oldActiveSyslogSinksCounter+1)
 }
 
 func TestInvalidUrlForSyslogDrain(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, loggertesthelper.Logger(), 2048)
-	oldActiveSyslogSinksCounter := testMessageRouter.SinkManager.activeSyslogSinksCounter
+	logger := loggertesthelper.Logger()
+	sinkManager := NewSinkManager(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, logger)
+	oldActiveSyslogSinksCounter := sinkManager.Metrics.SyslogSinks
+	go sinkManager.Start()
 
+	testMessageRouter := NewMessageRouter(sinkManager, 2048, logger)
 	go testMessageRouter.Start()
+
 	ourSink := testSink{make(chan *logmessage.Message, 100), true}
-	testMessageRouter.SinkManager.sinkOpenChan <- ourSink
+	sinkManager.sinkOpenChan <- ourSink
 	<-time.After(1 * time.Millisecond)
 
 	message := messagetesthelpers.NewMessage(t, "error msg", "appId")
@@ -216,15 +240,19 @@ func TestInvalidUrlForSyslogDrain(t *testing.T) {
 	case <-time.After(100 * time.Millisecond):
 	}
 
-	assert.Equal(t, testMessageRouter.SinkManager.activeSyslogSinksCounter, oldActiveSyslogSinksCounter)
+	assert.Equal(t, sinkManager.Metrics.SyslogSinks, oldActiveSyslogSinksCounter)
 }
 
 func TestStopsRetryingWhenSinkIsUnregistered(t *testing.T) {
-	testMessageRouter := NewMessageRouter(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, loggertesthelper.Logger(), 2048)
+	logger := loggertesthelper.Logger()
+	sinkManager := NewSinkManager(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, logger)
+	go sinkManager.Start()
+
+	testMessageRouter := NewMessageRouter(sinkManager, 2048, logger)
 	go testMessageRouter.Start()
 
 	ourSink := testSink{make(chan *logmessage.Message, 100), true}
-	testMessageRouter.SinkManager.sinkOpenChan <- ourSink
+	sinkManager.sinkOpenChan <- ourSink
 	runtime.Gosched()
 
 	go func() {

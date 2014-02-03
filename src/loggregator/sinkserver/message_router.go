@@ -1,61 +1,49 @@
 package sinkserver
 
 import (
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"loggregator/iprange"
+	"github.com/cloudfoundry/gosteno"
 )
 
 type messageRouter struct {
+	SinkManager       *SinkManager
 	parsedMessageChan chan *logmessage.Message
 	logger            *gosteno.Logger
-	SinkManager *SinkManager
 }
 
-func NewMessageRouter(maxRetainedLogMessages int, skipCertVerify bool, blackListIPs []iprange.IPRange, logger *gosteno.Logger, messageChannelLength int) *messageRouter {
-	messageChannel := make(chan *logmessage.Message, messageChannelLength)
-
-	sinkManager := NewSinkManager(maxRetainedLogMessages, skipCertVerify, blackListIPs, logger)
-	go sinkManager.Start()
-
+func NewMessageRouter(sinkManager *SinkManager, messageChannelLength int, logger *gosteno.Logger) *messageRouter {
 	return &messageRouter{
-		parsedMessageChan: messageChannel,
-		logger:            logger,
 		SinkManager:       sinkManager,
+		parsedMessageChan: make(chan *logmessage.Message, messageChannelLength),
+		logger:            logger,
 	}
 }
 
 func (messageRouter *messageRouter) Start() {
-	for receivedMessage := range messageRouter.parsedMessageChan {
-		messageRouter.logger.Debugf("MessageRouter:ParsedMessageChan: Received %d bytes of data from agent listener.", receivedMessage.GetRawMessageLength())
+	for message := range messageRouter.parsedMessageChan {
+		messageRouter.logger.Debugf("MessageRouter:ParsedMessageChan: Received %d bytes of data from agent listener.", message.GetRawMessageLength())
 
-		messageRouter.manageSyslogSinks(receivedMessage)
-		messageRouter.manageDumpSinks(receivedMessage)
-		messageRouter.sendToActiveSinks(receivedMessage)
+		messageRouter.manageSinks(message)
+
+		messageRouter.send(message)
 	}
 }
 
-func (messageRouter *messageRouter) manageSyslogSinks(receivedMessage *logmessage.Message) {
-	logMessage := receivedMessage.GetLogMessage()
+func (messageRouter *messageRouter) manageSinks(message *logmessage.Message) {
+	logMessage := message.GetLogMessage()
 	appId := logMessage.GetAppId()
 
 	if logMessage.GetSourceName() == "App" {
 		messageRouter.SinkManager.manageSyslogSinks(appId, logMessage.GetDrainUrls())
 	}
+	messageRouter.SinkManager.ensureRecentLogsSinkFor(appId)
 }
 
-func (messageRouter *messageRouter) manageDumpSinks(receivedMessage *logmessage.Message) {
-	logMessage := receivedMessage.GetLogMessage()
-	appId := logMessage.GetAppId()
-
-	messageRouter.SinkManager.manageDumpSinks(appId)
-}
-
-func (messageRouter *messageRouter) sendToActiveSinks(receivedMessage *logmessage.Message) {
-	logMessage := receivedMessage.GetLogMessage()
+func (messageRouter *messageRouter) send(message *logmessage.Message) {
+	logMessage := message.GetLogMessage()
 	appId := logMessage.GetAppId()
 
 	messageRouter.logger.Debugf("MessageRouter:ParsedMessageChan: Searching for sinks with appId [%s].", appId)
-	messageRouter.SinkManager.sendToActiveSinks(appId, receivedMessage)
+	messageRouter.SinkManager.SendTo(appId, message)
 	messageRouter.logger.Debugf("MessageRouter:ParsedMessageChan: Done sending message.")
 }

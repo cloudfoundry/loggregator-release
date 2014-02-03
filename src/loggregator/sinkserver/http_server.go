@@ -122,9 +122,9 @@ func (httpServer *httpServer) dumpSinkHandler(ws *websocket.Conn) {
 		return
 	}
 
-	dump := httpServer.messageRouter.SinkManager.getDumpFor(appId)
+	logMessages := httpServer.messageRouter.SinkManager.recentLogsFor(appId)
 
-	dumpMessagesToWebsocket(dump, ws, clientAddress, httpServer.logger)
+	dumpMessagesToWebsocket(logMessages, ws, clientAddress, httpServer.logger)
 
 	ws.Close()
 }
@@ -138,13 +138,4 @@ func dumpMessagesToWebsocket(dump []*logmessage.Message, ws *websocket.Conn, cli
 			logger.Debugf("Dump Sink %s: Successfully sent data", clientAddress)
 		}
 	}
-}
-
-func contains(valueToFind string, values []string) bool {
-	for _, value := range values {
-		if valueToFind == value {
-			return true
-		}
-	}
-	return false
 }
