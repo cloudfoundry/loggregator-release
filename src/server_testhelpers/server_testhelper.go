@@ -4,11 +4,10 @@ import (
 	"code.google.com/p/go.net/websocket"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/stretchr/testify/assert"
-	"testing"
 	"time"
 )
 
-func AddWSSink(t *testing.T, receivedChan chan []byte, port string, path string) (*websocket.Conn, chan bool, <-chan bool) {
+func AddWSSink(t assert.TestingT, receivedChan chan []byte, port string, path string) (*websocket.Conn, chan bool, <-chan bool) {
 	dontKeepAliveChan := make(chan bool, 1)
 	connectionDroppedChannel := make(chan bool, 1)
 

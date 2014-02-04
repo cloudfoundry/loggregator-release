@@ -130,10 +130,10 @@ func (sinkManager *SinkManager) unregisterUnboundSyslogSinks(appId string, syslo
 
 func (sinkManager *SinkManager) registerNewSyslogSinks(appId string, syslogSinkUrls []string) {
 	for _, syslogSinkUrl := range syslogSinkUrls {
-		if sinkManager.sinks.DrainFor(appId, syslogSinkUrl) == nil && !sinkManager.urlBlacklistManager.isBlackListed(syslogSinkUrl) {
-			parsedSyslogDrainUrl, err := sinkManager.urlBlacklistManager.checkURL(syslogSinkUrl)
+		if sinkManager.sinks.DrainFor(appId, syslogSinkUrl) == nil && !sinkManager.urlBlacklistManager.IsBlacklisted(syslogSinkUrl) {
+			parsedSyslogDrainUrl, err := sinkManager.urlBlacklistManager.CheckUrl(syslogSinkUrl)
 			if err != nil {
-				sinkManager.urlBlacklistManager.blacklistURL(syslogSinkUrl)
+				sinkManager.urlBlacklistManager.BlacklistUrl(syslogSinkUrl)
 				errorMsg := fmt.Sprintf("SinkManager: Invalid syslog drain URL: %s. Err: %v", syslogSinkUrl, err)
 				sinkManager.sendSyslogErrorToLoggregator(errorMsg, appId)
 			} else {
