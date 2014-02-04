@@ -54,7 +54,7 @@ func (d *DumpSink) Run() {
 			if !ok {
 				return
 			}
-		dump <- d.messageBuffer.Dump()
+			dump <- d.messageBuffer.Dump()
 		case <-countdown:
 			return
 		}

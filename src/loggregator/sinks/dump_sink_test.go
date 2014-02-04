@@ -6,9 +6,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"runtime"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
-	"sync"
 )
 
 func TestDumpForOneMessage(t *testing.T) {
