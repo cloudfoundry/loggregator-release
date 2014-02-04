@@ -50,7 +50,7 @@ func (w *AppServiceStoreWatcher) Run() {
 				w.serviceDeleted(appServiceFromStoreNode(event.Node))
 			}
 		case storeadapter.ExpireEvent:
-		  w.appExpired(event.Node)
+			w.appExpired(event.Node)
 		}
 	}
 }
