@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"testing"
 	"time"
+	"sync"
 )
 
 func TestDumpForOneMessage(t *testing.T) {
@@ -280,18 +281,24 @@ func TestClosingInputChanAlsoClosesPassThruChan(t *testing.T) {
 func TestDumpSinkClosesItselfAfterPeriodOfInactivity(t *testing.T) {
 	timeoutChan := make(chan Sink, 1)
 	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), timeoutChan, 10*time.Millisecond)
-	go dump.Run()
+	wait := sync.WaitGroup{}
+	wait.Add(1)
+	go func() {
+		dump.Run()
+		wait.Done()
+	}()
 
 	time.Sleep(9 * time.Millisecond)
 	assert.Equal(t, len(timeoutChan), 0)
 
-	time.Sleep(2 * time.Millisecond)
+	wait.Wait()
 	assert.Equal(t, len(timeoutChan), 1)
+
 	select {
 	case sink := <-timeoutChan:
 		assert.Equal(t, sink, dump)
 	case <-time.After(5 * time.Millisecond):
-		assert.Fail(t, "Should have closed")
+		assert.Fail(t, "Should have gotten data on timeoutChan")
 	}
 }
 

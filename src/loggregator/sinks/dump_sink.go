@@ -38,20 +38,25 @@ func NewDumpSink(appId string, bufferSize int, givenLogger *gosteno.Logger, time
 }
 
 func (d *DumpSink) Run() {
+	defer func() {
+		d.timeoutChan <- d
+	}()
 	for {
 		countdown := time.After(d.inactivityDuration)
 		select {
 		case msg, ok := <-d.inputChan:
 			if !ok {
 				close(d.passThruChan)
-
 				return
 			}
 			d.passThruChan <- msg
-		case dump := <-d.dumpChan:
-			dump <- d.messageBuffer.Dump()
+		case dump, ok := <-d.dumpChan:
+			if !ok {
+				return
+			}
+		dump <- d.messageBuffer.Dump()
 		case <-countdown:
-			d.timeoutChan <- d
+			return
 		}
 	}
 }
