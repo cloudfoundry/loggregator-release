@@ -10,7 +10,7 @@ import (
 	"loggregator/domain"
 )
 
-var _ = Describe("AppServiceStoreWatcher", func() {
+var _ = PDescribe("AppServiceStoreWatcher", func() {
 	var listener *AppServiceStoreWatcher
 	var adapter storeadapter.StoreAdapter
 	var outAddChan <-chan domain.AppService
@@ -47,7 +47,7 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	PDescribe("Shutdown", func() {
+	Describe("Shutdown", func() {
 		BeforeEach(func() {
 			go listener.Run()
 
@@ -117,7 +117,7 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 		Context("when there is new data in the store", func() {
 			Context("when an existing app has a new service (create)", func() {
 				It("adds that service to the outgoing add channel", func(done Done) {
-					app2Service2 := domain.AppService{app2Service1.AppId, "syslog://new.example.com:12345"}
+					app2Service2 := domain.AppService{AppId: app2Service1.AppId, Url: "syslog://new.example.com:12345"}
 					adapter.Create(buildNode(app2Service2))
 
 					Expect(<-outAddChan).To(Equal(app2Service2))
@@ -129,7 +129,7 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 
 			Context("When an existing app gets a new service (update)", func() {
 				It("adds that service to the outgoing add channel", func(done Done) {
-					app2Service2 := domain.AppService{app2Service1.AppId, "syslog://new.example.com:12345"}
+					app2Service2 := domain.AppService{AppId: app2Service1.AppId, Url: "syslog://new.example.com:12345"}
 					adapter.SetMulti([]storeadapter.StoreNode{buildNode(app2Service2)})
 
 					Expect(<-outAddChan).To(Equal(app2Service2))
@@ -141,8 +141,8 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 
 			Context("when a new app appears", func() {
 				It("adds that app and its services to the outgoing add channel", func(done Done) {
-					app3Service1 := domain.AppService{"app-3", "syslog://app3.example.com:12345"}
-					app3Service2 := domain.AppService{"app-3", "syslog://app3.example.com:12346"}
+					app3Service1 := domain.AppService{AppId: "app-3", Url: "syslog://app3.example.com:12345"}
+					app3Service2 := domain.AppService{AppId: "app-3", Url: "syslog://app3.example.com:12346"}
 
 					adapter.Create(buildNode(app3Service1))
 					adapter.Create(buildNode(app3Service2))
