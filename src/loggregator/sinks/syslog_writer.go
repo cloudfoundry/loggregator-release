@@ -16,8 +16,8 @@ import (
 
 type SyslogWriter interface {
 	Connect() error
-	WriteStdout(b []byte, source string, timestamp int64) (int, error)
-	WriteStderr(b []byte, source string, timestamp int64) (int, error)
+	WriteStdout(b []byte, source, sourceId string, timestamp int64) (int, error)
+	WriteStderr(b []byte, source, sourceId string, timestamp int64) (int, error)
 	Close() error
 	IsConnected() bool
 	SetConnected(bool)
@@ -91,12 +91,12 @@ func (w *writer) connectTLS() (err error) {
 	return
 }
 
-func (w *writer) WriteStdout(b []byte, source string, timestamp int64) (int, error) {
-	return w.write(14, source, string(b), timestamp)
+func (w *writer) WriteStdout(b []byte, source, sourceId string, timestamp int64) (int, error) {
+	return w.write(14, source, sourceId, string(b), timestamp)
 }
 
-func (w *writer) WriteStderr(b []byte, source string, timestamp int64) (int, error) {
-	return w.write(11, source, string(b), timestamp)
+func (w *writer) WriteStderr(b []byte, source, sourceId string, timestamp int64) (int, error) {
+	return w.write(11, source, sourceId, string(b), timestamp)
 }
 
 func (w *writer) Close() error {
@@ -111,7 +111,7 @@ func (w *writer) Close() error {
 	return nil
 }
 
-func (w *writer) write(p int, source, msg string, timestamp int64) (int, error) {
+func (w *writer) write(p int, source, sourceId, msg string, timestamp int64) (int, error) {
 	// ensure it ends in a \n
 	nl := ""
 	if !strings.HasSuffix(msg, "\n") {
@@ -122,8 +122,14 @@ func (w *writer) write(p int, source, msg string, timestamp int64) (int, error) 
 	timeString := time.Unix(0, timestamp).Format(time.RFC3339)
 	timeString = strings.Replace(timeString, "Z", "+00:00", 1)
 
+	var formattedSource string
+	if source == "App" {
+		formattedSource = fmt.Sprintf("[%s/%s]", source, sourceId)
+	} else {
+		formattedSource = fmt.Sprintf("[%s]", source)
+	}
 	// syslog format https://tools.ietf.org/html/rfc5424#section-6
-	syslogMsg := fmt.Sprintf("<%d>1 %s %s %s %s - - %s%s", p, timeString, "loggregator", w.appId, source, msg, nl)
+	syslogMsg := fmt.Sprintf("<%d>1 %s %s %s %s - - %s%s", p, timeString, "loggregator", w.appId, formattedSource, msg, nl)
 
 	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
 	byte_count, err := fmt.Fprintf(w.conn, "%d %s", len(syslogMsg), syslogMsg)

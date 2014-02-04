@@ -25,7 +25,7 @@ func TestTLSConnection(t *testing.T) {
 	w := NewSyslogWriter("syslog-tls", "localhost:9999", "appId", true)
 	err := w.Connect()
 	assert.NoError(t, err)
-	_, err = w.write(4, "test", "just a test", time.Now().UnixNano())
+	_, err = w.write(4, "test", "just a test", "", time.Now().UnixNano())
 	assert.NoError(t, err)
 }
 

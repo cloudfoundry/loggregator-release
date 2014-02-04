@@ -48,7 +48,7 @@ func (r *SyslogWriterRecorder) Connect() error {
 	}
 }
 
-func (r *SyslogWriterRecorder) WriteStdout(b []byte, source string, timestamp int64) (int, error) {
+func (r *SyslogWriterRecorder) WriteStdout(b []byte, source, sourceId string, timestamp int64) (int, error) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -61,7 +61,7 @@ func (r *SyslogWriterRecorder) WriteStdout(b []byte, source string, timestamp in
 	}
 }
 
-func (r *SyslogWriterRecorder) WriteStderr(b []byte, source string, timestamp int64) (int, error) {
+func (r *SyslogWriterRecorder) WriteStderr(b []byte, source, sourceId string, timestamp int64) (int, error) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -115,21 +115,29 @@ func startFakeSyslogServer(port string) FakeSyslogServer {
 		panic(err)
 	}
 	go func() {
+		defer testSink.Close()
+
 		for {
 			buffer := make([]byte, 1024)
 			conn, err := testSink.Accept()
-			defer conn.Close()
-			defer testSink.Close()
-			if err != nil {
-				panic(err)
-			}
-			readCount, err := conn.Read(buffer)
 
-			if err != nil {
-				continue
-			}
+			go func() {
+				defer conn.Close()
+				if err != nil {
+					panic(err)
+				}
+				for {
 
-			syslogServer.dataReadChannel <- buffer[:readCount]
+					readCount, err := conn.Read(buffer)
+
+					if err != nil {
+						break
+					}
+					buffer2 := make([]byte, readCount)
+					copy(buffer2, buffer[:readCount])
+					syslogServer.dataReadChannel <- buffer2
+				}
+			}()
 		}
 	}()
 	time.Sleep(10 * time.Millisecond)
@@ -148,11 +156,17 @@ func TestThatItSendsStdOutAsInfo(t *testing.T) {
 	go sink.Run()
 	defer close(sink.Channel())
 
-	logMessage := messagetesthelpers.NewMessage(t, "hi", "appId")
+	logMessage := messagetesthelpers.NewMessageWithSourceId(t, "hi", "appId", "3")
 	sink.Channel() <- logMessage
 	data := <-fakeSyslogServer.dataReadChannel
-	assert.Contains(t, string(data), "61 <14>1 ")
-	assert.Contains(t, string(data), " loggregator appId App - - hi\n")
+	assert.Contains(t, string(data), "65 <14>1 ")
+	assert.Contains(t, string(data), " loggregator appId [App/3] - - hi\n")
+
+	logMessage = messagetesthelpers.NewErrMessageWithSourceId(t, "hi", "appId", "5")
+	sink.Channel() <- logMessage
+	data = <-fakeSyslogServer.dataReadChannel
+	assert.Contains(t, string(data), "65 <11>1 ")
+	assert.Contains(t, string(data), " loggregator appId [App/5] - - hi\n")
 }
 
 func TestThatItStripsNullControlCharacterFromMsg(t *testing.T) {
@@ -178,7 +192,7 @@ func TestThatItSendsStdErrAsErr(t *testing.T) {
 	go sink.Run()
 	defer close(sink.Channel())
 
-	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId"))
+	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId", "7"))
 	assert.NoError(t, err)
 
 	sink.Channel() <- logMessage
@@ -187,6 +201,7 @@ func TestThatItSendsStdErrAsErr(t *testing.T) {
 	assert.Contains(t, string(data), "<11>1")
 	assert.Contains(t, string(data), "appId")
 	assert.Contains(t, string(data), "err")
+	assert.Contains(t, string(data), "[DEA]")
 }
 
 func TestThatItUsesOctetFramingWhenSending(t *testing.T) {
@@ -195,14 +210,14 @@ func TestThatItUsesOctetFramingWhenSending(t *testing.T) {
 	go sink.Run()
 	defer close(sink.Channel())
 
-	logMessage := messagetesthelpers.NewMessage(t, "err", "appId")
+	logMessage := messagetesthelpers.NewMessageWithSourceId(t, "err", "appId", "2")
 
 	sink.Channel() <- logMessage
 	data := <-fakeSyslogServer2.dataReadChannel
 
 	syslogMsg := string(data)
 
-	syslogRegexp := regexp.MustCompile(`<14>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([-+]\d{2}:\d{2}) loggregator appId App - - err\n`)
+	syslogRegexp := regexp.MustCompile(`<14>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([-+]\d{2}:\d{2}) loggregator appId \[App/2\] - - err\n`)
 	msgBeforeOctetCounting := syslogRegexp.FindString(syslogMsg)
 	assert.True(t, strings.HasPrefix(syslogMsg, strconv.Itoa(len(msgBeforeOctetCounting))+" "))
 }
@@ -221,7 +236,7 @@ func TestThatItUsesTheOriginalTimestampOfTheLogmessageWhenSending(t *testing.T) 
 	sink.Channel() <- logMessage
 	data := <-fakeSyslogServer2.dataReadChannel
 
-	assert.Equal(t, "62 <14>1 "+expectedTimeString+" loggregator appId App - - err\n", string(data))
+	assert.Contains(t, string(data), expectedTimeString)
 }
 
 func TestThatItHandlesMessagesEvenIfThereIsNoSyslogServer(t *testing.T) {
