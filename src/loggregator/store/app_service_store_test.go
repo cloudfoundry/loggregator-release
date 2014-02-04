@@ -10,7 +10,7 @@ import (
 	"loggregator/domain"
 )
 
-var _ = PDescribe("AppServiceStore", func() {
+var _ = Describe("AppServiceStore", func() {
 	var store *AppServiceStore
 	var adapter storeadapter.StoreAdapter
 	var incomingChan chan domain.AppServices
@@ -140,7 +140,7 @@ var _ = PDescribe("AppServiceStore", func() {
 			})
 
 			It("adds a TTL to the associated app", func(done Done) {
-				app2Service2 := domain.AppService{app2Service1.AppId, "syslog://new.example.com:12345"}
+				app2Service2 := domain.AppService{AppId: app2Service1.AppId, Url: "syslog://new.example.com:12345"}
 
 				incomingChan <- domain.AppServices{
 					AppId: app2Service1.AppId,

@@ -7,7 +7,7 @@ import (
 	. "loggregator/store"
 )
 
-var _ = PDescribe("AppServiceStoreIntegration", func() {
+var _ = Describe("AppServiceStoreIntegration", func() {
 	var (
 		incomingChan  chan domain.AppServices
 		outAddChan    <-chan domain.AppService

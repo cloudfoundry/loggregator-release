@@ -8,7 +8,7 @@ import (
 	"loggregator/domain"
 )
 
-var _ = PDescribe("AppServiceCache", func() {
+var _ = Describe("AppServiceCache", func() {
 	var appServiceCache AppServiceCache
 	var appService1 domain.AppService
 	var appService2 domain.AppService
