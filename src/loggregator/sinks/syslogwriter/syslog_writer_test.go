@@ -76,8 +76,15 @@ var _ = Describe("SyslogWriter", func() {
 
 	Context("With TLS Connection", func() {
 
+		var shutdownChan chan bool
+
 		BeforeEach(func() {
-			startTLSSyslogServer(loggertesthelper.Logger())
+			shutdownChan = make(chan bool)
+			startTLSSyslogServer(shutdownChan, loggertesthelper.Logger())
+		})
+
+		AfterEach(func() {
+			close(shutdownChan)
 		})
 
 		It("should connect", func() {
@@ -132,7 +139,7 @@ func startSyslogServer(shutdownChan <-chan bool) <-chan []byte {
 	return dataChan
 }
 
-func startTLSSyslogServer(logger *gosteno.Logger) {
+func startTLSSyslogServer(shutdownChan <-chan bool, logger *gosteno.Logger) {
 	generateCert(logger)
 	cert, err := tls.LoadX509KeyPair("cert.pem", "key.pem")
 	if err != nil {
@@ -148,6 +155,12 @@ func startTLSSyslogServer(logger *gosteno.Logger) {
 	if err != nil {
 		panic(err)
 	}
+
+	go func() {
+		<-shutdownChan
+		listener.Close()
+	}()
+
 	go func() {
 		buffer := make([]byte, 1024)
 		conn, err := listener.Accept()
