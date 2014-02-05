@@ -15,7 +15,7 @@ func TestThatItSendsAllMessageToKnownDrains(t *testing.T) {
 	fakeSyslogDrain, err := NewFakeService(client1ReceivedChan, "127.0.0.1:34566")
 	defer fakeSyslogDrain.Stop()
 	assert.NoError(t, err)
-	go fakeSyslogDrain.Serve()
+	fakeSyslogDrain.Serve()
 	<-fakeSyslogDrain.ReadyChan
 
 	expectedMessageString := "Some Data"
@@ -50,7 +50,7 @@ func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 
 	fakeSyslogDrain, err := NewFakeService(client1ReceivedChan, "127.0.0.1:34569")
 	assert.NoError(t, err)
-	go fakeSyslogDrain.Serve()
+	fakeSyslogDrain.Serve()
 	<-fakeSyslogDrain.ReadyChan
 
 	expectedMessageString1 := "Some Data 1"
@@ -77,7 +77,7 @@ func TestThatItReestablishesConnectionToSinks(t *testing.T) {
 	fakeSyslogDrain, err = NewFakeService(client2ReceivedChan, "127.0.0.1:34569")
 	assert.NoError(t, err)
 
-	go fakeSyslogDrain.Serve()
+	fakeSyslogDrain.Serve()
 	<-fakeSyslogDrain.ReadyChan
 
 	expectedMessageString4 := "Some Data 4"
@@ -95,12 +95,12 @@ func TestThatItSendsAllDataToAllDrainUrls(t *testing.T) {
 
 	fakeSyslogDrain1, err := NewFakeService(client1ReceivedChan, "127.0.0.1:34567")
 	assert.NoError(t, err)
-	go fakeSyslogDrain1.Serve()
+	fakeSyslogDrain1.Serve()
 	<-fakeSyslogDrain1.ReadyChan
 
 	fakeSyslogDrain2, err := NewFakeService(client2ReceivedChan, "127.0.0.1:34568")
 	assert.NoError(t, err)
-	go fakeSyslogDrain2.Serve()
+	fakeSyslogDrain2.Serve()
 	<-fakeSyslogDrain2.ReadyChan
 
 	expectedMessageString := "Some Data"
@@ -125,13 +125,13 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 	fakeSyslogDrain1, err := NewFakeService(client1ReceivedChan, "127.0.0.1:34569")
 	defer fakeSyslogDrain1.Stop()
 	assert.NoError(t, err)
-	go fakeSyslogDrain1.Serve()
+	fakeSyslogDrain1.Serve()
 	<-fakeSyslogDrain1.ReadyChan
 
 	fakeSyslogDrain2, err := NewFakeService(client2ReceivedChan, "127.0.0.1:34540")
 	defer fakeSyslogDrain2.Stop()
 	assert.NoError(t, err)
-	go fakeSyslogDrain2.Serve()
+	fakeSyslogDrain2.Serve()
 	<-fakeSyslogDrain2.ReadyChan
 
 	expectedMessageString := "Some Data"
@@ -175,7 +175,7 @@ func TestThatItDoesNotRegisterADrainIfItsURLIsBlacklisted(t *testing.T) {
 	blackListedSyslogDrain, err := NewFakeService(clientReceivedChan, "127.0.0.1:34570")
 	defer blackListedSyslogDrain.Stop()
 	assert.NoError(t, err)
-	go blackListedSyslogDrain.Serve()
+	blackListedSyslogDrain.Serve()
 	<-blackListedSyslogDrain.ReadyChan
 
 	logEnvelope1 := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, "Some Data", "myApp01", SECRET, "syslog://127.0.0.1:34570")

@@ -1,91 +1,82 @@
-package sinkserver
+package sinkserver_test
 
 import (
-	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
-	"github.com/stretchr/testify/assert"
-	testhelpers "server_testhelpers"
-	"testing"
-	"time"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"loggregator/sinks"
+	"loggregator/sinkserver"
 )
 
-func TestMetrics(t *testing.T) {
-	oldDumpSinksCounter := sinkManager.Emit().Metrics[0].Value.(int)
-	oldSyslogSinksCounter := sinkManager.Emit().Metrics[1].Value.(int)
-	oldWebsocketSinksCounter := sinkManager.Emit().Metrics[2].Value.(int)
+var _ = Describe("SinkManagerMetrics", func() {
 
-	clientReceivedChan := make(chan []byte)
-	fakeSyslogDrain, err := NewFakeService(clientReceivedChan, "127.0.0.1:32564")
-	assert.NoError(t, err)
-	go fakeSyslogDrain.Serve()
-	<-fakeSyslogDrain.ReadyChan
+	var sinkManagerMetrics *sinkserver.SinkManagerMetrics
+	var sink sinks.Sink
 
-	assert.Equal(t, sinkManager.Emit().Metrics[0].Name, "numberOfDumpSinks")
-	assert.Equal(t, sinkManager.Emit().Metrics[0].Value, oldDumpSinksCounter)
+	BeforeEach(func() {
+		sinkManagerMetrics = sinkserver.NewSinkManagerMetrics()
+	})
 
-	assert.Equal(t, sinkManager.Emit().Metrics[1].Name, "numberOfSyslogSinks")
-	assert.Equal(t, sinkManager.Emit().Metrics[1].Value, oldSyslogSinksCounter)
+	It("Should have metrics for dump sinks", func() {
 
-	assert.Equal(t, sinkManager.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
-	assert.Equal(t, sinkManager.Emit().Metrics[2].Value, oldWebsocketSinksCounter)
+		Expect(sinkManagerMetrics.Emit().Metrics[0].Name).To(Equal("numberOfDumpSinks"))
+		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(0))
+		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(0))
+		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(0))
 
-	logEnvelope := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, "expectedMessageString", "myMetricsApp", SECRET, "syslog://localhost:32564")
-	dataReadChannel <- logEnvelope
+		sink = &sinks.DumpSink{}
+		sinkManagerMetrics.Inc(sink)
 
-	select {
-	case <-time.After(1000 * time.Millisecond):
-		t.Errorf("Did not get message 1")
-	case <-clientReceivedChan:
-	}
+		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(1))
+		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(0))
+		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(0))
 
-	assert.Equal(t, sinkManager.Emit().Metrics[0].Name, "numberOfDumpSinks")
-	assert.Equal(t, sinkManager.Emit().Metrics[0].Value, oldDumpSinksCounter+1)
+		sinkManagerMetrics.Dec(sink)
 
-	assert.Equal(t, sinkManager.Emit().Metrics[1].Name, "numberOfSyslogSinks")
-	assert.Equal(t, sinkManager.Emit().Metrics[1].Value, oldSyslogSinksCounter+1)
+		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(0))
+		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(0))
+		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(0))
+	})
 
-	assert.Equal(t, sinkManager.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
-	assert.Equal(t, sinkManager.Emit().Metrics[2].Value, oldWebsocketSinksCounter)
+	It("Should have metrics for syslog sinks", func() {
 
-	dataReadChannel <- logEnvelope
+		Expect(sinkManagerMetrics.Emit().Metrics[1].Name).To(Equal("numberOfSyslogSinks"))
+		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(0))
+		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(0))
+		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(0))
 
-	select {
-	case <-time.After(1000 * time.Millisecond):
-		t.Errorf("Did not get message 1")
-	case <-clientReceivedChan:
-	}
+		sink := &sinks.SyslogSink{}
+		sinkManagerMetrics.Inc(sink)
 
-	assert.Equal(t, sinkManager.Emit().Metrics[0].Name, "numberOfDumpSinks")
-	assert.Equal(t, sinkManager.Emit().Metrics[0].Value, oldDumpSinksCounter+1)
+		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(0))
+		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(1))
+		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(0))
 
-	assert.Equal(t, sinkManager.Emit().Metrics[1].Name, "numberOfSyslogSinks")
-	assert.Equal(t, sinkManager.Emit().Metrics[1].Value, oldSyslogSinksCounter+1)
+		sinkManagerMetrics.Dec(sink)
 
-	assert.Equal(t, sinkManager.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
-	assert.Equal(t, sinkManager.Emit().Metrics[2].Value, oldWebsocketSinksCounter)
+		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(0))
+		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(0))
+		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(0))
+	})
 
-	receivedChan := make(chan []byte, 2)
+	It("Should have metrics for websocket sinks", func() {
 
-	_, dontKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_LOGS_PATH+"?app=myMetricsApp")
-	WaitForWebsocketRegistration()
+		Expect(sinkManagerMetrics.Emit().Metrics[2].Name).To(Equal("numberOfWebsocketSinks"))
+		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(0))
+		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(0))
+		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(0))
 
-	assert.Equal(t, sinkManager.Emit().Metrics[0].Name, "numberOfDumpSinks")
-	assert.Equal(t, sinkManager.Emit().Metrics[0].Value, oldDumpSinksCounter+1)
+		sink := &sinks.WebsocketSink{}
+		sinkManagerMetrics.Inc(sink)
 
-	assert.Equal(t, sinkManager.Emit().Metrics[1].Name, "numberOfSyslogSinks")
-	assert.Equal(t, sinkManager.Emit().Metrics[1].Value, oldSyslogSinksCounter+1)
+		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(0))
+		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(0))
+		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(1))
 
-	assert.Equal(t, sinkManager.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
-	assert.Equal(t, sinkManager.Emit().Metrics[2].Value, oldWebsocketSinksCounter+1)
+		sinkManagerMetrics.Dec(sink)
 
-	dontKeepAliveChan <- true
-	WaitForWebsocketRegistration()
+		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(0))
+		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(0))
+		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(0))
+	})
 
-	assert.Equal(t, sinkManager.Emit().Metrics[0].Name, "numberOfDumpSinks")
-	assert.Equal(t, sinkManager.Emit().Metrics[0].Value, oldDumpSinksCounter+1)
-
-	assert.Equal(t, sinkManager.Emit().Metrics[1].Name, "numberOfSyslogSinks")
-	assert.Equal(t, sinkManager.Emit().Metrics[1].Value, oldSyslogSinksCounter+1)
-
-	assert.Equal(t, sinkManager.Emit().Metrics[2].Name, "numberOfWebsocketSinks")
-	assert.Equal(t, sinkManager.Emit().Metrics[2].Value, oldWebsocketSinksCounter)
-}
+})

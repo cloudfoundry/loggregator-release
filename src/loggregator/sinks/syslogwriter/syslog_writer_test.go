@@ -24,12 +24,13 @@ var _ = Describe("SyslogWriter", func() {
 	Context("With syslog Connection", func() {
 
 		var dataChan <-chan []byte
+		var serverStoppedChan <-chan bool
 		var shutdownChan chan bool
 		var sysLogWriter syslogwriter.SyslogWriter
 
 		BeforeEach(func() {
 			shutdownChan = make(chan bool)
-			dataChan = startSyslogServer(shutdownChan)
+			dataChan, serverStoppedChan = startSyslogServer(shutdownChan)
 			sysLogWriter = syslogwriter.NewSyslogWriter("syslog", "localhost:9999", "appId", false)
 			sysLogWriter.Connect()
 		})
@@ -37,6 +38,7 @@ var _ = Describe("SyslogWriter", func() {
 		AfterEach(func() {
 			close(shutdownChan)
 			sysLogWriter.Close()
+			<-serverStoppedChan
 		})
 
 		Context("Message Format", func() {
@@ -77,14 +79,16 @@ var _ = Describe("SyslogWriter", func() {
 	Context("With TLS Connection", func() {
 
 		var shutdownChan chan bool
+		var serverStoppedChan <-chan bool
 
 		BeforeEach(func() {
 			shutdownChan = make(chan bool)
-			startTLSSyslogServer(shutdownChan, loggertesthelper.Logger())
+			serverStoppedChan = startTLSSyslogServer(shutdownChan, loggertesthelper.Logger())
 		})
 
 		AfterEach(func() {
 			close(shutdownChan)
+			<-serverStoppedChan
 		})
 
 		It("should connect", func() {
@@ -109,8 +113,9 @@ type handler struct{}
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
-func startSyslogServer(shutdownChan <-chan bool) <-chan []byte {
+func startSyslogServer(shutdownChan <-chan bool) (<-chan []byte, <-chan bool) {
 	dataChan := make(chan []byte)
+	doneChan := make(chan bool)
 	listener, err := net.Listen("tcp", "localhost:9999")
 	if err != nil {
 		panic(err)
@@ -119,6 +124,7 @@ func startSyslogServer(shutdownChan <-chan bool) <-chan []byte {
 	go func() {
 		<-shutdownChan
 		listener.Close()
+		close(doneChan)
 	}()
 
 	go func() {
@@ -136,14 +142,14 @@ func startSyslogServer(shutdownChan <-chan bool) <-chan []byte {
 	}()
 
 	<-time.After(300 * time.Millisecond)
-	return dataChan
+	return dataChan, doneChan
 }
 
-func startTLSSyslogServer(shutdownChan <-chan bool, logger *gosteno.Logger) {
+func startTLSSyslogServer(shutdownChan <-chan bool, logger *gosteno.Logger) <-chan bool {
+	doneChan := make(chan bool)
 	generateCert(logger)
 	cert, err := tls.LoadX509KeyPair("cert.pem", "key.pem")
 	if err != nil {
-		println("Err loading cert: ", err)
 		panic(err)
 	}
 	config := &tls.Config{
@@ -159,21 +165,22 @@ func startTLSSyslogServer(shutdownChan <-chan bool, logger *gosteno.Logger) {
 	go func() {
 		<-shutdownChan
 		listener.Close()
+		close(doneChan)
 	}()
 
 	go func() {
 		buffer := make([]byte, 1024)
 		conn, err := listener.Accept()
 		if err != nil {
-			panic(err)
+			return
 		}
 		_, err = conn.Read(buffer)
 
 		conn.Close()
-		listener.Close()
 	}()
 
 	<-time.After(300 * time.Millisecond)
+	return doneChan
 }
 
 func generateCert(logger *gosteno.Logger) {

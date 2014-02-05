@@ -3,12 +3,11 @@ package sinkserver
 import (
 	"net"
 	"sync"
-	"time"
 )
 
 type Service struct {
 	ch           chan bool
-	waitGroup    *sync.WaitGroup
+	waitGroup    sync.WaitGroup
 	receivedChan chan []byte
 	listener     *net.TCPListener
 	ReadyChan    chan bool
@@ -29,59 +28,49 @@ func NewFakeService(receivedChan chan []byte, host string) (s *Service, err erro
 
 	s = &Service{
 		ch:           make(chan bool),
-		waitGroup:    &sync.WaitGroup{},
 		receivedChan: receivedChan,
 		listener:     listener,
 		ReadyChan:    make(chan bool),
 	}
-	s.waitGroup.Add(1)
 	return s, nil
 }
 
 func (s *Service) Serve() {
+	s.waitGroup.Add(1)
 	defer s.waitGroup.Done()
-	for {
-		select {
-		case <-s.ch:
-			s.listener.Close()
-			return
-		default:
-		}
-		s.listener.SetDeadline(time.Now().Add(1e9))
+	go func() {
 		select {
 		case s.ReadyChan <- true:
 		default:
 		}
-		conn, err := s.listener.AcceptTCP()
-		if nil != err {
-			if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
-				continue
+		for {
+			conn, err := s.listener.AcceptTCP()
+			if err != nil {
+				return
 			}
+			go s.serve(conn)
 		}
-		s.waitGroup.Add(1)
-		go s.serve(conn)
-	}
+	}()
 }
 
 func (s *Service) Stop() {
 	close(s.ch)
+	s.listener.Close()
 	s.waitGroup.Wait()
 }
 
 func (s *Service) serve(conn *net.TCPConn) {
-	defer conn.Close()
+	go func() {
+		<-s.ch
+		conn.Close()
+	}()
+	s.waitGroup.Add(1)
 	defer s.waitGroup.Done()
 	for {
-		select {
-		case <-s.ch:
-			return
-		default:
-		}
-		conn.SetDeadline(time.Now().Add(1e9))
 		buf := make([]byte, 4096)
 		readCount, err := conn.Read(buf)
 		if err != nil {
-			break
+			return
 		}
 		s.receivedChan <- buf[:readCount]
 	}

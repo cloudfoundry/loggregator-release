@@ -10,13 +10,11 @@ type SinkManagerMetrics struct {
 	DumpSinks      int
 	WebsocketSinks int
 	SyslogSinks    int
-	*sync.RWMutex
+	sync.RWMutex
 }
 
 func NewSinkManagerMetrics() *SinkManagerMetrics {
-	return &SinkManagerMetrics{
-		RWMutex: &sync.RWMutex{},
-	}
+	return &SinkManagerMetrics{}
 }
 
 func (sinkManagerMetrics *SinkManagerMetrics) Inc(sink sinks.Sink) {
