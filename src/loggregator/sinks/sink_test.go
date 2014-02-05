@@ -1,25 +1,24 @@
-package sinks
+package sinks_test
 
 import (
-	"github.com/stretchr/testify/assert"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"loggregator/sinks"
 	"runtime"
-	"testing"
-	"time"
 )
 
-func TestThatOnlyOneRequestCloseOccurs(t *testing.T) {
-	closeChan := make(chan Sink)
+var _ = Describe("SyslogSink", func() {
+	It("should only allow one request to close", func(done Done) {
+		closeChan := make(chan sinks.Sink, 1)
 
-	sink := testSink{"1", closeChan}
-	go sink.Run()
-	runtime.Gosched()
+		sink := testSink{"1", closeChan}
+		go sink.Run()
+		runtime.Gosched()
 
-	closeSink := <-closeChan
-	assert.Equal(t, &sink, closeSink)
+		closeSink := <-closeChan
+		Expect(&sink).To(Equal(closeSink))
 
-	select {
-	case <-closeChan:
-		t.Error("Should not have received value on closeChan")
-	case <-time.After(50 * time.Millisecond):
-	}
-}
+		Expect(closeChan).To(BeEmpty())
+		close(done)
+	})
+})

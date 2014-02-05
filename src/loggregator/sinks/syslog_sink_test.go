@@ -1,37 +1,28 @@
-package sinks
+package sinks_test
 
 import (
 	"errors"
 	"fmt"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
-	"github.com/stretchr/testify/assert"
-	"math/rand"
-	"net"
-	"regexp"
-	"strconv"
-	"strings"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"loggregator/sinks"
 	"sync"
-	"testing"
 	"time"
 )
 
 type SyslogWriterRecorder struct {
 	receivedChannel  chan string
 	receivedMessages []string
-	up               bool
-	connected        bool
-	*sync.Mutex
+	down             bool
+	disconnected     bool
+	sync.Mutex
 }
 
 func NewSyslogWriterRecorder() *SyslogWriterRecorder {
 	return &SyslogWriterRecorder{
-		make(chan string, 20),
-		[]string{},
-		false,
-		false,
-		&sync.Mutex{},
+		receivedChannel: make(chan string, 20),
 	}
 }
 
@@ -39,12 +30,12 @@ func (r *SyslogWriterRecorder) Connect() error {
 	r.Lock()
 	defer r.Unlock()
 
-	if r.up {
-		r.connected = true
-		return nil
-	} else {
-		r.connected = false
+	if r.down {
+		r.disconnected = true
 		return errors.New("Error connecting.")
+	} else {
+		r.disconnected = false
+		return nil
 	}
 }
 
@@ -52,41 +43,43 @@ func (r *SyslogWriterRecorder) WriteStdout(b []byte, source, sourceId string, ti
 	r.Lock()
 	defer r.Unlock()
 
-	if r.up {
-		r.receivedMessages = append(r.receivedMessages, "out: "+string(b))
-		r.receivedChannel <- string(b)
-		return len(b), nil
-	} else {
+	if r.down {
 		return 0, errors.New("Error writing to stdout.")
 	}
+
+	messageString := fmt.Sprintf("out: %s ts: %d src: %s srcId: %s", string(b), timestamp, source, sourceId)
+	r.receivedMessages = append(r.receivedMessages, messageString)
+	r.receivedChannel <- messageString
+	return len(b), nil
 }
 
 func (r *SyslogWriterRecorder) WriteStderr(b []byte, source, sourceId string, timestamp int64) (int, error) {
 	r.Lock()
 	defer r.Unlock()
 
-	if r.up {
-		r.receivedMessages = append(r.receivedMessages, "err: "+string(b))
-		r.receivedChannel <- string(b)
-		return len(b), nil
-	} else {
+	if r.down {
 		return 0, errors.New("Error writing to stderr.")
 	}
+
+	messageString := fmt.Sprintf("err: %s ts: %d src: %s srcId: %s", string(b), timestamp, source, sourceId)
+	r.receivedMessages = append(r.receivedMessages, messageString)
+	r.receivedChannel <- messageString
+	return len(b), nil
 }
 
-func (r *SyslogWriterRecorder) SetUp(newState bool) {
+func (r *SyslogWriterRecorder) SetDown(newState bool) {
 	r.Lock()
 	defer r.Unlock()
 
-	r.up = newState
+	r.down = newState
 }
 
 func (w *SyslogWriterRecorder) IsConnected() bool {
-	return w.connected
+	return !w.disconnected
 }
 
 func (w *SyslogWriterRecorder) SetConnected(newValue bool) {
-	w.connected = newValue
+	w.disconnected = !newValue
 }
 
 func (r *SyslogWriterRecorder) Close() error {
@@ -100,326 +93,152 @@ func (r *SyslogWriterRecorder) ReceivedMessages() []string {
 	return r.receivedMessages
 }
 
-var fakeSyslogServer FakeSyslogServer
-var fakeSyslogServer2 FakeSyslogServer
+var _ = Describe("SyslogSink", func() {
+	var syslogSink sinks.Sink
+	var sysLogger *SyslogWriterRecorder
+	var sysLoggerDoneChan chan bool
+	var errorChannel chan *logmessage.Message
+	var mutex sync.Mutex
 
-type FakeSyslogServer struct {
-	dataReadChannel chan []byte
-	closeChannel    chan bool
-}
-
-func startFakeSyslogServer(port string) FakeSyslogServer {
-	syslogServer := &FakeSyslogServer{make(chan []byte, 10), make(chan bool)}
-	testSink, err := net.Listen("tcp", "localhost:"+port)
-	if err != nil {
-		panic(err)
+	closeSysLoggerDoneChan := func() {
+		mutex.Lock()
+		defer mutex.Unlock()
+		close(sysLoggerDoneChan)
 	}
-	go func() {
-		defer testSink.Close()
 
-		for {
-			buffer := make([]byte, 1024)
-			conn, err := testSink.Accept()
+	newSysLoggerDoneChan := func() {
+		mutex.Lock()
+		defer mutex.Unlock()
+		sysLoggerDoneChan = make(chan bool)
+	}
 
+	BeforeEach(func() {
+		newSysLoggerDoneChan()
+		sysLogger = NewSyslogWriterRecorder()
+		errorChannel = make(chan *logmessage.Message, 10)
+		syslogSink = sinks.NewSyslogSink("appId", "syslog://localhost:24632", loggertesthelper.Logger(), sysLogger, errorChannel)
+	})
+
+	AfterEach(func() {
+		select {
+		case <-sysLoggerDoneChan:
+		default:
+			closeSysLoggerDoneChan()
+		}
+	})
+
+	Context("when remote syslog server is down", func() {
+		BeforeEach(func() {
+			sysLogger.SetDown(true)
 			go func() {
-				defer conn.Close()
-				if err != nil {
-					panic(err)
-				}
-				for {
-
-					readCount, err := conn.Read(buffer)
-
-					if err != nil {
-						break
-					}
-					buffer2 := make([]byte, readCount)
-					copy(buffer2, buffer[:readCount])
-					syslogServer.dataReadChannel <- buffer2
-				}
+				syslogSink.Run()
+				closeSysLoggerDoneChan()
 			}()
-		}
-	}()
-	time.Sleep(10 * time.Millisecond)
-	return *syslogServer
-}
+		})
 
-func init() {
-	fakeSyslogServer = startFakeSyslogServer("24631")
-	fakeSyslogServer2 = startFakeSyslogServer("24632")
-}
+		It("should still accept messages without blocking", func(done Done) {
+			logMessage := NewMessage("test message", "appId")
 
-func TestThatItSendsStdOutAsInfo(t *testing.T) {
-	sysLogger := NewSyslogWriter("syslog", "localhost:24631", "appId", false)
-	sink := NewSyslogSink("appId", "syslog://localhost:24631", loggertesthelper.Logger(), sysLogger, make(chan *logmessage.Message))
+			for i := 0; i < 100; i++ {
+				syslogSink.Channel() <- logMessage
+			}
+			close(done)
+		})
 
-	go sink.Run()
-	defer close(sink.Channel())
+		Context("when remote syslog server comes up", func() {
+			BeforeEach(func() {
+				logMessage := NewMessage("test message", "appId")
 
-	logMessage := messagetesthelpers.NewMessageWithSourceId(t, "hi", "appId", "3")
-	sink.Channel() <- logMessage
-	data := <-fakeSyslogServer.dataReadChannel
-	assert.Contains(t, string(data), "65 <14>1 ")
-	assert.Contains(t, string(data), " loggregator appId [App/3] - - hi\n")
+				for i := 0; i < 5; i++ {
+					syslogSink.Channel() <- logMessage
+				}
+				close(syslogSink.Channel())
+				sysLogger.SetDown(false)
+			})
 
-	logMessage = messagetesthelpers.NewErrMessageWithSourceId(t, "hi", "appId", "5")
-	sink.Channel() <- logMessage
-	data = <-fakeSyslogServer.dataReadChannel
-	assert.Contains(t, string(data), "65 <11>1 ")
-	assert.Contains(t, string(data), " loggregator appId [App/5] - - hi\n")
-}
+			It("should send all the messages in the buffer", func(done Done) {
+				<-sysLoggerDoneChan
+				data := sysLogger.ReceivedMessages()
+				Expect(data).To(HaveLen(5))
+				close(done)
+			})
+		})
+	})
 
-func TestThatItStripsNullControlCharacterFromMsg(t *testing.T) {
-	sysLogger := NewSyslogWriter("syslog", "localhost:24631", "appId", false)
-	sink := NewSyslogSink("appId", "syslog://localhost:24631", loggertesthelper.Logger(), sysLogger, make(chan *logmessage.Message))
+	Context("when remote syslog server is up", func() {
 
-	go sink.Run()
-	defer close(sink.Channel())
+		BeforeEach(func() {
+			go func() {
+				syslogSink.Run()
+				closeSysLoggerDoneChan()
+			}()
+		})
 
-	logMessage := messagetesthelpers.NewMessage(t, string(0)+" hi", "appId")
-	sink.Channel() <- logMessage
+		It("Uses the timestamp of the logmessage when sending", func(done Done) {
+			message := NewMessage("test message", "appId")
+			expectedTimeString := fmt.Sprintf("ts: %d", message.GetLogMessage().GetTimestamp())
 
-	data := <-fakeSyslogServer.dataReadChannel
-	assert.NotContains(t, string(data), "\000")
-	assert.Contains(t, string(data), "<14>1")
-	assert.Contains(t, string(data), "appId")
-	assert.Contains(t, string(data), "hi")
-}
+			time.Sleep(100 * time.Millisecond) //wait a bit to allow timestamps to differ
 
-func TestThatItSendsStdErrAsErr(t *testing.T) {
-	sysLogger := NewSyslogWriter("syslog", "localhost:24632", "appId", false)
-	sink := NewSyslogSink("appId", "syslog://localhost:24632", loggertesthelper.Logger(), sysLogger, make(chan *logmessage.Message))
-	go sink.Run()
-	defer close(sink.Channel())
+			syslogSink.Channel() <- message
+			data := <-sysLogger.receivedChannel
 
-	logMessage, err := logmessage.ParseMessage(messagetesthelpers.MarshalledErrorLogMessage(t, "err", "appId", "7"))
-	assert.NoError(t, err)
+			Expect(string(data)).To(MatchRegexp(expectedTimeString))
+			close(done)
+		})
 
-	sink.Channel() <- logMessage
-	data := <-fakeSyslogServer2.dataReadChannel
+		Context("when remote syslog server goes down", func() {
+			BeforeEach(func() {
+				sysLogger.SetDown(true)
+			})
 
-	assert.Contains(t, string(data), "<11>1")
-	assert.Contains(t, string(data), "appId")
-	assert.Contains(t, string(data), "err")
-	assert.Contains(t, string(data), "[DEA]")
-}
+			It("should report error messages", func(done Done) {
+				logMessage := NewMessage("test message", "appId")
+				syslogSink.Channel() <- logMessage
+				errorLog := <-errorChannel
+				errorMsg := string(errorLog.GetLogMessage().GetMessage())
+				Expect(errorMsg).To(MatchRegexp(`Syslog Sink syslog://localhost:24632: Error when dialing out. Backing off for \d\.\d+ms. Err: Error connecting.`))
+				Expect(errorLog.GetLogMessage().GetSourceName()).To(Equal("LGR"))
+				close(done)
+			})
 
-func TestThatItUsesOctetFramingWhenSending(t *testing.T) {
-	sysLogger := NewSyslogWriter("syslog", "localhost:24632", "appId", false)
-	sink := NewSyslogSink("appId", "syslog://localhost:24632", loggertesthelper.Logger(), sysLogger, make(chan *logmessage.Message))
-	go sink.Run()
-	defer close(sink.Channel())
+			Context("when the buffer overflows", func() {
 
-	logMessage := messagetesthelpers.NewMessageWithSourceId(t, "err", "appId", "2")
+				BeforeEach(func() {
+					for i := 0; i < 105; i++ {
+						msg := fmt.Sprintf("message no %v", i)
+						logMessage := NewMessage(msg, "appId")
 
-	sink.Channel() <- logMessage
-	data := <-fakeSyslogServer2.dataReadChannel
+						syslogSink.Channel() <- logMessage
+					}
+					close(syslogSink.Channel())
+				})
 
-	syslogMsg := string(data)
+				Context("when the remote syslog server comes back up again", func() {
+					BeforeEach(func() {
+						sysLogger.SetDown(false)
+						<-sysLoggerDoneChan
+					})
 
-	syslogRegexp := regexp.MustCompile(`<14>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([-+]\d{2}:\d{2}) loggregator appId \[App/2\] - - err\n`)
-	msgBeforeOctetCounting := syslogRegexp.FindString(syslogMsg)
-	assert.True(t, strings.HasPrefix(syslogMsg, strconv.Itoa(len(msgBeforeOctetCounting))+" "))
-}
+					It("should resume sending messages", func(done Done) {
+						data := sysLogger.ReceivedMessages()
+						Expect(data).To(HaveLen(5))
+						for i := 1; i < 5; i++ {
+							msg := fmt.Sprintf("out: message no %v", i+100)
+							Expect(data[i]).To(MatchRegexp(msg))
+						}
+						close(done)
+					})
 
-func TestThatItUsesTheOriginalTimestampOfTheLogmessageWhenSending(t *testing.T) {
-	sysLogger := NewSyslogWriter("syslog", "localhost:24632", "appId", false)
-	sink := NewSyslogSink("appId", "syslog://localhost:24632", loggertesthelper.Logger(), sysLogger, make(chan *logmessage.Message))
-	go sink.Run()
-	defer close(sink.Channel())
+					It("should send a message about the buffer overflow", func(done Done) {
+						data := sysLogger.ReceivedMessages()
+						Expect(len(data)).To(BeNumerically(">", 1))
+						Expect(data[0]).To(MatchRegexp("err: Log message output too high. We've dropped 100 messages"))
+						close(done)
+					})
+				})
+			})
 
-	logMessage := messagetesthelpers.NewMessage(t, "err", "appId")
-	expectedTimeString := strings.Replace(time.Unix(0, logMessage.GetLogMessage().GetTimestamp()).Format(time.RFC3339), "Z", "+00:00", 1)
-
-	time.Sleep(1200 * time.Millisecond) //wait so that a second will pass, to allow timestamps to differ
-
-	sink.Channel() <- logMessage
-	data := <-fakeSyslogServer2.dataReadChannel
-
-	assert.Contains(t, string(data), expectedTimeString)
-}
-
-func TestThatItHandlesMessagesEvenIfThereIsNoSyslogServer(t *testing.T) {
-	sysLogger := NewSyslogWriter("syslog", "localhost:-1", "appId", false)
-	sink := NewSyslogSink("appId", "syslog://localhost:-1", loggertesthelper.Logger(), sysLogger, make(chan *logmessage.Message))
-	go sink.Run()
-	defer close(sink.Channel())
-	logMessage := messagetesthelpers.NewMessage(t, "err", "appId")
-
-	for i := 0; i < 100; i++ {
-		sink.Channel() <- logMessage
-	}
-}
-
-func TestSysLoggerComesUpLate(t *testing.T) {
-	sysLogger := NewSyslogWriterRecorder()
-	sysLogger.SetUp(false)
-	sink := NewSyslogSink("appId", "url_not_used", loggertesthelper.Logger(), sysLogger, make(chan *logmessage.Message, 10))
-
-	done := make(chan bool)
-	go func() {
-		sink.Run()
-		done <- true
-	}()
-
-	for i := 0; i < 105; i++ {
-		msg := fmt.Sprintf("message no %v", i)
-		logMessage := messagetesthelpers.NewMessage(t, msg, "appId")
-
-		sink.Channel() <- logMessage
-	}
-	close(sink.Channel())
-
-	sysLogger.SetUp(true)
-	<-done
-
-	data := sysLogger.ReceivedMessages()
-	assert.Equal(t, len(data), 6)
-
-	msg := "err: Log message output too high. We've dropped 100 messages"
-	assert.Equal(t, data[0], msg)
-	for i := 0; i < 5; i++ {
-		msg := fmt.Sprintf("out: message no %v", i+100)
-		assert.Equal(t, data[i+1], msg)
-	}
-}
-
-func TestSinkReportsErrorsOnTheErrorChannel(t *testing.T) {
-	sysLogger := NewSyslogWriterRecorder()
-	sysLogger.SetUp(false)
-
-	errorChannel := make(chan *logmessage.Message, 10)
-	sink := NewSyslogSink("appId", "url_not_used", loggertesthelper.Logger(), sysLogger, errorChannel)
-
-	done := make(chan bool)
-	go func() {
-		sink.Run()
-		done <- true
-	}()
-
-	msg := fmt.Sprintf("first message")
-	logMessage := messagetesthelpers.NewMessage(t, msg, "appId")
-	sink.Channel() <- logMessage
-
-	select {
-	case errorLog := <-errorChannel:
-		errorMsg := string(errorLog.GetLogMessage().GetMessage())
-		assert.Contains(t, errorMsg, "Syslog Sink url_not_used: Error when dialing out. Backing off for")
-		assert.Contains(t, errorMsg, "Err: Error connecting.")
-		assert.Equal(t, errorLog.GetLogMessage().GetSourceName(), "LGR")
-	case <-time.After(10 * time.Millisecond):
-		t.Error("Should have received an error message by now")
-	}
-}
-
-func TestSysLoggerDiesAndComesBack(t *testing.T) {
-	sysLogger := NewSyslogWriterRecorder()
-	sink := NewSyslogSink("appId", "url_not_used", loggertesthelper.Logger(), sysLogger, make(chan *logmessage.Message))
-	sysLogger.SetUp(true)
-
-	done := make(chan bool)
-	go func() {
-		sink.Run()
-		done <- true
-	}()
-
-	msg := fmt.Sprintf("first message")
-	logMessage := messagetesthelpers.NewMessage(t, msg, "appId")
-	sink.Channel() <- logMessage
-
-	select {
-	case <-sysLogger.receivedChannel:
-		break
-	case <-time.After(10 * time.Millisecond):
-		t.Error("Should have received a message by now")
-	}
-	sysLogger.SetUp(false)
-
-	assert.Equal(t, len(sysLogger.ReceivedMessages()), 1)
-
-	for i := 0; i < 11; i++ {
-		msg := fmt.Sprintf("message no %v", i)
-		logMessage := messagetesthelpers.NewMessage(t, msg, "appId")
-
-		sink.Channel() <- logMessage
-	}
-
-	sysLogger.SetUp(true)
-	close(sink.Channel())
-	<-done
-
-	assert.Equal(t, len(sysLogger.ReceivedMessages()), 11)
-
-	stringOfMessages := fmt.Sprintf("%v", sysLogger.ReceivedMessages())
-	assert.Contains(t, stringOfMessages, "first message", "This message should have been there, since the server was up")
-	assert.NotContains(t, stringOfMessages, "out: message no 0", "This message should have been lost because the connection problem was detected while trying to send it.")
-	assert.Contains(t, stringOfMessages, "out: message no 1", "This message should have been there, since it was in the ringbuffer while the server was down")
-	assert.Contains(t, stringOfMessages, "out: message no 2", "This message should have been there, since it was in the ringbuffer while the server was down")
-	assert.Contains(t, stringOfMessages, "out: message no 3", "This message should have been there, since it was in the ringbuffer while the server was down")
-	assert.Contains(t, stringOfMessages, "out: message no 4", "This message should have been there, since it was in the ringbuffer while the server was down")
-	assert.Contains(t, stringOfMessages, "out: message no 5", "This message should have been there, since it was in the ringbuffer while the server was down")
-	assert.Contains(t, stringOfMessages, "out: message no 6", "This message should have been there, since it was in the ringbuffer while the server was down")
-	assert.Contains(t, stringOfMessages, "out: message no 7", "This message should have been there, since it was in the ringbuffer while the server was down")
-	assert.Contains(t, stringOfMessages, "out: message no 8", "This message should have been there, since it was in the ringbuffer while the server was down")
-	assert.Contains(t, stringOfMessages, "out: message no 9", "This message should have been there, since it was in the ringbuffer while the server was down")
-	assert.Contains(t, stringOfMessages, "out: message no 10", "This message should have been there, since it was in the ringbuffer while the server was down")
-}
-
-var backoffTests = []struct {
-	backoffCount int
-	expected     time.Duration
-}{
-	{1, 1000},
-	{2, 2000},
-	{3, 4000},
-	{4, 8000},
-	{5, 16000},
-	{11, 1024000},    //1.024s
-	{12, 2048000},    //2.048s
-	{20, 524288000},  //8m and a bit
-	{21, 1048576000}, //17m28.576s
-	{22, 2097152000}, //34m57.152s
-	{23, 4194304000}, //1h9m54.304s
-	{24, 4194304000}, //1h9m54.304s
-	{25, 4194304000}, //1h9m54.304s
-	{26, 4194304000}, //1h9m54.304s
-}
-
-func TestExponentialRetryStrategy(t *testing.T) {
-	rand.Seed(1)
-	strategy := newExponentialRetryStrategy()
-	otherStrategy := newExponentialRetryStrategy()
-
-	assert.Equal(t, strategy(0).String(), "0")
-	assert.Equal(t, otherStrategy(0).String(), "0")
-
-	var backoff time.Time
-	var otherBackoff time.Time
-
-	now := time.Now()
-	oldBackoff := time.Now()
-	otherOldBackoff := time.Now()
-
-	for _, bt := range backoffTests {
-		delta := int(bt.expected / 10)
-		for i := 0; i < 10; i++ {
-			backoff = now.Add(strategy(bt.backoffCount))
-			otherBackoff = now.Add(otherStrategy(bt.backoffCount))
-
-			assert.NotEqual(t, backoff, otherBackoff)
-			assert.WithinDuration(t,
-				now.Add(time.Duration(bt.expected)*time.Microsecond),
-				backoff,
-				time.Duration(delta)*time.Microsecond)
-			assert.WithinDuration(t,
-				now.Add(time.Duration(bt.expected)*time.Microsecond),
-				otherBackoff,
-				time.Duration(delta)*time.Microsecond)
-			assert.NotEqual(t, oldBackoff, backoff)
-			assert.NotEqual(t, otherOldBackoff, otherBackoff)
-
-			oldBackoff = backoff
-			otherOldBackoff = otherBackoff
-		}
-	}
-}
+		})
+	})
+})

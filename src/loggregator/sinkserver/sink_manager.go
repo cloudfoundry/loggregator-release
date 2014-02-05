@@ -8,6 +8,7 @@ import (
 	"loggregator/groupedsinks"
 	"loggregator/iprange"
 	"loggregator/sinks"
+	"loggregator/sinks/syslogwriter"
 	"time"
 )
 
@@ -137,7 +138,7 @@ func (sinkManager *SinkManager) registerNewSyslogSinks(appId string, syslogSinkU
 				errorMsg := fmt.Sprintf("SinkManager: Invalid syslog drain URL: %s. Err: %v", syslogSinkUrl, err)
 				sinkManager.sendSyslogErrorToLoggregator(errorMsg, appId)
 			} else {
-				syslogWriter := sinks.NewSyslogWriter(parsedSyslogDrainUrl.Scheme, parsedSyslogDrainUrl.Host, appId, sinkManager.skipCertVerify)
+				syslogWriter := syslogwriter.NewSyslogWriter(parsedSyslogDrainUrl.Scheme, parsedSyslogDrainUrl.Host, appId, sinkManager.skipCertVerify)
 				syslogSink := sinks.NewSyslogSink(appId, syslogSinkUrl, sinkManager.logger, syslogWriter, sinkManager.errorChannel)
 				if sinkManager.registerSink(syslogSink) {
 					go syslogSink.Run()

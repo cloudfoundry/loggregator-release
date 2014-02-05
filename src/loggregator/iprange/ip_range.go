@@ -1,17 +1,17 @@
 package iprange
 
 import (
-	"net"
+	"bytes"
 	"errors"
 	"fmt"
-	"bytes"
+	"net"
 	"net/url"
 	"strings"
 )
 
 type IPRange struct {
 	Start string
-	End string
+	End   string
 }
 
 func ValidateIpAddresses(ranges []IPRange) error {
@@ -33,15 +33,15 @@ func ValidateIpAddresses(ranges []IPRange) error {
 
 func IpOutsideOfRanges(testURL url.URL, ranges []IPRange) (bool, error) {
 	if len(testURL.Host) == 0 {
-		return false, errors.New(fmt.Sprintf("Incomplete URL %s. " +
-				"This could be caused by an URL without slashes or protocol.", testURL))
+		return false, errors.New(fmt.Sprintf("Incomplete URL %s. "+
+			"This could be caused by an URL without slashes or protocol.", testURL))
 	}
-	host := strings.Split(testURL.Host,":")[0]
+	host := strings.Split(testURL.Host, ":")[0]
 	ipAddress := net.ParseIP(host)
-	if(ipAddress == nil) {
+	if ipAddress == nil {
 		ipAddr, err := net.ResolveIPAddr("ip", host)
 		if err != nil {
-			return false, errors.New(fmt.Sprintf("Resolving host failed: %s",err))
+			return false, errors.New(fmt.Sprintf("Resolving host failed: %s", err))
 		}
 		ipAddress = net.ParseIP(ipAddr.String())
 	}

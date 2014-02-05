@@ -18,7 +18,7 @@ type Sink interface {
 	ShouldReceiveErrors() bool
 }
 
-func requestClose(sink Sink, sinkCloseChan chan Sink, alreadyRequestedClose *bool) {
+func RequestClose(sink Sink, sinkCloseChan chan Sink, alreadyRequestedClose *bool) {
 	if !(*alreadyRequestedClose) {
 		sinkCloseChan <- sink
 		*alreadyRequestedClose = true

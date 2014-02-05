@@ -5,8 +5,8 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"math"
-	"math/rand"
+	"loggregator/sinks/retrystrategy"
+	"loggregator/sinks/syslogwriter"
 	"sync/atomic"
 	"time"
 )
@@ -18,12 +18,12 @@ type SyslogSink struct {
 	sentMessageCount  *uint64
 	sentByteCount     *uint64
 	listenerChannel   chan *logmessage.Message
-	syslogWriter      SyslogWriter
+	syslogWriter      syslogwriter.SyslogWriter
 	errorChannel      chan<- *logmessage.Message
 	disconnectChannel chan int
 }
 
-func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter SyslogWriter, errorChannel chan<- *logmessage.Message) Sink {
+func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.SyslogWriter, errorChannel chan<- *logmessage.Message) Sink {
 	givenLogger.Debugf("Syslog Sink %s: Created for appId [%s]", drainUrl, appId)
 	return &SyslogSink{
 		appId:             appId,
@@ -42,7 +42,7 @@ func (s *SyslogSink) Run() {
 	s.logger.Infof("Syslog Sink %s: Running.", s.drainUrl)
 	defer s.logger.Errorf("Syslog Sink %s: Stopped. This should never happen", s.drainUrl)
 
-	backoffStrategy := newExponentialRetryStrategy()
+	backoffStrategy := retrystrategy.NewExponentialRetryStrategy()
 	numberOfTries := 0
 
 	buffer := runTruncatingBuffer(s, 100, s.Logger())
@@ -141,22 +141,4 @@ func (s *SyslogSink) Emit() instrumentation.Context {
 			instrumentation.Metric{Name: "sentByteCount:" + s.appId, Value: atomic.LoadUint64(s.sentByteCount)},
 		},
 	}
-}
-
-type retryStrategy func(counter int) time.Duration
-
-func newExponentialRetryStrategy() retryStrategy {
-	exponential := func(counter int) time.Duration {
-		if counter == 0 {
-			return time.Duration(0)
-		}
-		if counter > 23 {
-			counter = 23
-		}
-		tenthDuration := int(math.Pow(2, float64(counter-1)) * 100)
-		duration := tenthDuration * 10
-		randomOffset := rand.Intn(tenthDuration*2) - tenthDuration
-		return (time.Duration(duration) * time.Microsecond) + (time.Duration(randomOffset) * time.Microsecond)
-	}
-	return exponential
 }

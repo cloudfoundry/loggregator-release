@@ -3,7 +3,7 @@
 // Fork needed to set the proper hostname in the write() function
 //
 
-package sinks
+package syslogwriter
 
 import (
 	"crypto/tls"
@@ -111,7 +111,7 @@ func (w *writer) Close() error {
 	return nil
 }
 
-func (w *writer) write(p int, source, sourceId, msg string, timestamp int64) (int, error) {
+func (w *writer) write(p int, source, sourceId, msg string, timestamp int64) (byte_count int, err error) {
 	// ensure it ends in a \n
 	nl := ""
 	if !strings.HasSuffix(msg, "\n") {
@@ -132,7 +132,11 @@ func (w *writer) write(p int, source, sourceId, msg string, timestamp int64) (in
 	syslogMsg := fmt.Sprintf("<%d>1 %s %s %s %s - - %s%s", p, timeString, "loggregator", w.appId, formattedSource, msg, nl)
 
 	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
-	byte_count, err := fmt.Fprintf(w.conn, "%d %s", len(syslogMsg), syslogMsg)
+	w.mu.Lock()
+	if w.conn != nil {
+		byte_count, err = fmt.Fprintf(w.conn, "%d %s", len(syslogMsg), syslogMsg)
+	}
+	w.mu.Unlock()
 
 	return byte_count, err
 }

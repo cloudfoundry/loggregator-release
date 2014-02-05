@@ -33,6 +33,8 @@ packages=(
     loggregator/buffer
     loggregator/buffer/truncatingbuffer
     loggregator/sinks
+    loggregator/sinks/retrystrategy
+    loggregator/sinks/syslogwriter
     loggregator/sinkserver
     loggregator/store
     server_testhelpers

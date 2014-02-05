@@ -1,4 +1,4 @@
-package sinks
+package syslogwriter_test
 
 import (
 	"crypto/rand"
@@ -9,37 +9,127 @@ import (
 	"encoding/pem"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	"github.com/stretchr/testify/assert"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"loggregator/sinks/syslogwriter"
 	"math/big"
 	"net"
 	"net/http"
 	"os"
 	"strings"
-	"testing"
 	"time"
 )
 
-func TestTLSConnection(t *testing.T) {
-	startTLSSyslogServer(loggertesthelper.Logger())
+var _ = Describe("SyslogWriter", func() {
+	Context("With syslog Connection", func() {
 
-	w := NewSyslogWriter("syslog-tls", "localhost:9999", "appId", true)
-	err := w.Connect()
-	assert.NoError(t, err)
-	_, err = w.write(4, "test", "just a test", "", time.Now().UnixNano())
-	assert.NoError(t, err)
-}
+		var dataChan <-chan []byte
+		var shutdownChan chan bool
+		var sysLogWriter syslogwriter.SyslogWriter
 
-func TestTLSConnectionRejectsSelfSignedCertsByDefault(t *testing.T) {
-	startTLSSyslogServer(loggertesthelper.Logger())
+		BeforeEach(func() {
+			shutdownChan = make(chan bool)
+			dataChan = startSyslogServer(shutdownChan)
+			sysLogWriter = syslogwriter.NewSyslogWriter("syslog", "localhost:9999", "appId", false)
+			sysLogWriter.Connect()
+		})
 
-	w := NewSyslogWriter("syslog-tls", "localhost:9999", "appId", false)
-	err := w.Connect()
-	assert.Error(t, err)
-}
+		AfterEach(func() {
+			close(shutdownChan)
+			sysLogWriter.Close()
+		})
+
+		Context("Message Format", func() {
+			It("should send messages from stdout with INFO priority", func(done Done) {
+				sysLogWriter.WriteStdout([]byte("just a test"), "test", "", time.Now().UnixNano())
+
+				data := <-dataChan
+				Expect(string(data)).To(MatchRegexp(`\d <14>\d `))
+				close(done)
+			})
+
+			It("should send messages from stderr with ERROR priority", func(done Done) {
+				sysLogWriter.WriteStderr([]byte("just a test"), "test", "", time.Now().UnixNano())
+
+				data := <-dataChan
+				Expect(string(data)).To(MatchRegexp(`\d <11>\d `))
+				close(done)
+			})
+
+			It("should send messages in the proper format", func(done Done) {
+				sysLogWriter.WriteStdout([]byte("just a test"), "App", "2", time.Now().UnixNano())
+
+				data := <-dataChan
+				Expect(string(data)).To(MatchRegexp(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([-+]\d{2}:\d{2}) loggregator appId \[App/2\] - - just a test\n`))
+				close(done)
+			})
+
+			It("should strip null termination char from message", func(done Done) {
+				sysLogWriter.WriteStdout([]byte(string(0)+" hi"), "appId", "", time.Now().UnixNano())
+
+				data := <-dataChan
+				Expect(string(data)).ToNot(MatchRegexp("\000"))
+				close(done)
+			})
+		})
+	})
+
+	Context("With TLS Connection", func() {
+
+		BeforeEach(func() {
+			startTLSSyslogServer(loggertesthelper.Logger())
+		})
+
+		It("should connect", func() {
+			w := syslogwriter.NewSyslogWriter("syslog-tls", "localhost:9999", "appId", true)
+			err := w.Connect()
+			Expect(err).To(BeNil())
+			_, err = w.WriteStdout([]byte("just a test"), "test", "", time.Now().UnixNano())
+			Expect(err).To(BeNil())
+			w.Close()
+		})
+
+		It("should reject self-signed certs", func() {
+			w := syslogwriter.NewSyslogWriter("syslog-tls", "localhost:9999", "appId", false)
+			err := w.Connect()
+			Expect(err).ToNot(BeNil())
+		})
+	})
+})
 
 type handler struct{}
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+}
+
+func startSyslogServer(shutdownChan <-chan bool) <-chan []byte {
+	dataChan := make(chan []byte)
+	listener, err := net.Listen("tcp", "localhost:9999")
+	if err != nil {
+		panic(err)
+	}
+
+	go func() {
+		<-shutdownChan
+		listener.Close()
+	}()
+
+	go func() {
+		buffer := make([]byte, 1024)
+		conn, err := listener.Accept()
+		if err != nil {
+			return
+		}
+
+		readCount, err := conn.Read(buffer)
+		buffer2 := make([]byte, readCount)
+		copy(buffer2, buffer[:readCount])
+		dataChan <- buffer2
+		conn.Close()
+	}()
+
+	<-time.After(300 * time.Millisecond)
+	return dataChan
 }
 
 func startTLSSyslogServer(logger *gosteno.Logger) {
@@ -59,18 +149,15 @@ func startTLSSyslogServer(logger *gosteno.Logger) {
 		panic(err)
 	}
 	go func() {
-		for {
-			buffer := make([]byte, 1024)
-			conn, err := listener.Accept()
-			if err != nil {
-				panic(err)
-			}
-			_, err = conn.Read(buffer)
-
-			conn.Close()
-			listener.Close()
-			return
+		buffer := make([]byte, 1024)
+		conn, err := listener.Accept()
+		if err != nil {
+			panic(err)
 		}
+		_, err = conn.Read(buffer)
+
+		conn.Close()
+		listener.Close()
 	}()
 
 	<-time.After(300 * time.Millisecond)

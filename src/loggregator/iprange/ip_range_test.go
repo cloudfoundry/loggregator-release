@@ -1,10 +1,10 @@
 package iprange
 
 import (
-	"testing"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"net/url"
-	"fmt"
+	"testing"
 )
 
 // Tests for ValidateIpAddresses
@@ -52,7 +52,7 @@ func TestAcceptsStartAndEndAsTheSame(t *testing.T) {
 
 // Tests for IpOutsideOfRanges
 var ipTests = []struct {
-	url  string
+	url    string
 	output bool
 }{
 	{"http://127.0.0.1", true},
@@ -86,7 +86,7 @@ func TestParsesTheIPAddressProperly(t *testing.T) {
 }
 
 var malformattedURLs = []struct {
-	url  string
+	url string
 }{
 	{"127.0.0.1:300/new"},
 	{"syslog:127.0.0.1:300/new"},
