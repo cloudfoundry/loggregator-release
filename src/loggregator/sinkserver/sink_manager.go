@@ -57,9 +57,9 @@ func (sinkManager *SinkManager) listenForSinkChanges() {
 	for {
 		select {
 		case sink := <-sinkManager.sinkOpenChan:
-			sinkManager.registerSink(sink)
+			sinkManager.RegisterSink(sink)
 		case sink := <-sinkManager.sinkCloseChan:
-			sinkManager.unregisterSink(sink)
+			sinkManager.UnregisterSink(sink)
 		}
 	}
 }
@@ -79,7 +79,7 @@ func (sinkManager *SinkManager) listenForErrorMessages() {
 	}
 }
 
-func (sinkManager *SinkManager) registerSink(sink sinks.Sink) bool {
+func (sinkManager *SinkManager) RegisterSink(sink sinks.Sink) bool {
 	ok := sinkManager.sinks.Register(sink)
 	if !ok {
 		return false
@@ -91,7 +91,7 @@ func (sinkManager *SinkManager) registerSink(sink sinks.Sink) bool {
 	return true
 }
 
-func (sinkManager *SinkManager) unregisterSink(sink sinks.Sink) {
+func (sinkManager *SinkManager) UnregisterSink(sink sinks.Sink) {
 	sinkManager.sinks.Delete(sink)
 	close(sink.Channel())
 
@@ -117,14 +117,14 @@ func (sinkManager *SinkManager) manageSyslogSinks(appId string, syslogSinkUrls [
 
 func (sinkManager *SinkManager) unregisterAllSyslogSinks(appId string) {
 	for _, sink := range sinkManager.sinks.DrainsFor(appId) {
-		sinkManager.unregisterSink(sink)
+		sinkManager.UnregisterSink(sink)
 	}
 }
 
 func (sinkManager *SinkManager) unregisterUnboundSyslogSinks(appId string, syslogSinkUrls []string) {
 	for _, sink := range sinkManager.sinks.DrainsFor(appId) {
 		if !contains(sink.Identifier(), syslogSinkUrls) {
-			sinkManager.unregisterSink(sink)
+			sinkManager.UnregisterSink(sink)
 		}
 	}
 }
@@ -140,7 +140,7 @@ func (sinkManager *SinkManager) registerNewSyslogSinks(appId string, syslogSinkU
 			} else {
 				syslogWriter := syslogwriter.NewSyslogWriter(parsedSyslogDrainUrl.Scheme, parsedSyslogDrainUrl.Host, appId, sinkManager.skipCertVerify)
 				syslogSink := sinks.NewSyslogSink(appId, syslogSinkUrl, sinkManager.logger, syslogWriter, sinkManager.errorChannel)
-				if sinkManager.registerSink(syslogSink) {
+				if sinkManager.RegisterSink(syslogSink) {
 					go syslogSink.Run()
 				}
 			}
@@ -165,7 +165,7 @@ func (sinkManager *SinkManager) ensureRecentLogsSinkFor(appId string) {
 
 	s := sinks.NewDumpSink(appId, sinkManager.recentLogCount, sinkManager.logger, sinkManager.sinkCloseChan, time.Hour)
 
-	if sinkManager.registerSink(s) {
+	if sinkManager.RegisterSink(s) {
 		go s.Run()
 	}
 }

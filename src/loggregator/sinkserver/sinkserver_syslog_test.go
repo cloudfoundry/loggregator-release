@@ -9,129 +9,21 @@ import (
 	"time"
 )
 
-func TestThatItSendsAllMessageToKnownDrains(t *testing.T) {
-	client1ReceivedChan := make(chan []byte)
-
-	fakeSyslogDrain, err := NewFakeService(client1ReceivedChan, "127.0.0.1:34566")
-	defer fakeSyslogDrain.Stop()
-	assert.NoError(t, err)
-	fakeSyslogDrain.Serve()
-	<-fakeSyslogDrain.ReadyChan
-
-	expectedMessageString := "Some Data"
-	logEnvelope1 := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString, "myApp", SECRET, "syslog://localhost:34566")
-
-	expectedSecondMessageString := "Some Data Without a drainurl"
-	logEnvelope2 := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedSecondMessageString, "myApp", SECRET, "syslog://localhost:34566")
-
-	dataReadChannel <- logEnvelope1
-
-	select {
-	case <-time.After(200 * time.Millisecond):
-		t.Errorf("Did not get the first message")
-	case message := <-client1ReceivedChan:
-		assert.Contains(t, string(message), expectedMessageString)
-	}
-
-	dataReadChannel <- logEnvelope2
-
-	select {
-	case <-time.After(200 * time.Millisecond):
-		t.Errorf("Did not get the second message")
-	case message := <-client1ReceivedChan:
-		assert.Contains(t, string(message), expectedSecondMessageString)
-	}
-}
-
-func TestThatItReestablishesConnectionToSinks(t *testing.T) {
-	client1ReceivedChan := make(chan []byte)
-
-	assert.Equal(t, len(dataReadChannel), 0)
-
-	fakeSyslogDrain, err := NewFakeService(client1ReceivedChan, "127.0.0.1:34569")
-	assert.NoError(t, err)
-	fakeSyslogDrain.Serve()
-	<-fakeSyslogDrain.ReadyChan
-
-	expectedMessageString1 := "Some Data 1"
-	logEnvelope := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString1, "myApp", SECRET, "syslog://localhost:34569")
-	dataReadChannel <- logEnvelope
-
-	errorString := "Did not get the first message. Server was up, it should have been there"
-	assertMessageOnChannel(t, 200, client1ReceivedChan, errorString, expectedMessageString1)
-	fakeSyslogDrain.Stop()
-
-	expectedMessageString2 := "Some Data 2"
-	logEnvelope = messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString2, "myApp", SECRET, "syslog://localhost:34569")
-	dataReadChannel <- logEnvelope
-	error2String := "Did get a second message! Shouldn't be since the server is down"
-	assertMessageNotOnChannel(t, 200, client1ReceivedChan, error2String)
-
-	expectedMessageString3 := "Some Data 3"
-	logEnvelope = messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString3, "myApp", SECRET, "syslog://localhost:34569")
-	dataReadChannel <- logEnvelope
-	error3String := "Did get a third message! Shouldn't be since the server is down"
-	assertMessageNotOnChannel(t, 200, client1ReceivedChan, error3String)
-
-	client2ReceivedChan := make(chan []byte, 10)
-	fakeSyslogDrain, err = NewFakeService(client2ReceivedChan, "127.0.0.1:34569")
-	assert.NoError(t, err)
-
-	fakeSyslogDrain.Serve()
-	<-fakeSyslogDrain.ReadyChan
-
-	expectedMessageString4 := "Some Data 4"
-	logEnvelope = messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString4, "myApp", SECRET, "syslog://localhost:34569")
-	dataReadChannel <- logEnvelope
-
-	error4String := "Did not get the fourth message, but it should have been just fine since the server was up"
-	assertMessageOnChannel(t, 200, client2ReceivedChan, error4String, expectedMessageString4)
-	fakeSyslogDrain.Stop()
-}
-
-func TestThatItSendsAllDataToAllDrainUrls(t *testing.T) {
-	client1ReceivedChan := make(chan []byte)
-	client2ReceivedChan := make(chan []byte)
-
-	fakeSyslogDrain1, err := NewFakeService(client1ReceivedChan, "127.0.0.1:34567")
-	assert.NoError(t, err)
-	fakeSyslogDrain1.Serve()
-	<-fakeSyslogDrain1.ReadyChan
-
-	fakeSyslogDrain2, err := NewFakeService(client2ReceivedChan, "127.0.0.1:34568")
-	assert.NoError(t, err)
-	fakeSyslogDrain2.Serve()
-	<-fakeSyslogDrain2.ReadyChan
-
-	expectedMessageString := "Some Data"
-	logEnvelope := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString, "myApp", SECRET, "syslog://localhost:34567", "syslog://localhost:34568")
-	dataReadChannel <- logEnvelope
-
-	errString := "Did not get message from client 1."
-	assertMessageOnChannel(t, 500, client1ReceivedChan, errString, expectedMessageString)
-
-	errString = "Did not get message from client 2."
-	assertMessageOnChannel(t, 500, client2ReceivedChan, errString, expectedMessageString)
-
-	fakeSyslogDrain1.Stop()
-	fakeSyslogDrain2.Stop()
-}
-
 // this test fails intermittently
 func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) {
 	client1ReceivedChan := make(chan []byte)
 	client2ReceivedChan := make(chan []byte)
 
 	fakeSyslogDrain1, err := NewFakeService(client1ReceivedChan, "127.0.0.1:34569")
-	defer fakeSyslogDrain1.Stop()
 	assert.NoError(t, err)
 	fakeSyslogDrain1.Serve()
+	defer fakeSyslogDrain1.Stop()
 	<-fakeSyslogDrain1.ReadyChan
 
 	fakeSyslogDrain2, err := NewFakeService(client2ReceivedChan, "127.0.0.1:34540")
-	defer fakeSyslogDrain2.Stop()
 	assert.NoError(t, err)
 	fakeSyslogDrain2.Serve()
+	defer fakeSyslogDrain2.Stop()
 	<-fakeSyslogDrain2.ReadyChan
 
 	expectedMessageString := "Some Data"

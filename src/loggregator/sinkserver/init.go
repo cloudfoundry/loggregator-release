@@ -29,7 +29,7 @@ const (
 const SECRET = "secret"
 
 func init() {
-	dataReadChannel = make(chan []byte, 20)
+	dataReadChannel = make(chan []byte)
 
 	logger := loggertesthelper.Logger()
 
@@ -43,7 +43,7 @@ func init() {
 	TestWebsocketServer = NewWebsocketServer(apiEndpoint, sinkManager, 10*time.Millisecond, 100, loggertesthelper.Logger())
 	go TestWebsocketServer.Start()
 
-	blackListDataReadChannel = make(chan []byte, 20)
+	blackListDataReadChannel = make(chan []byte)
 	blacklistSinkManager := NewSinkManager(1024, false, []iprange.IPRange{iprange.IPRange{Start: "127.0.0.0", End: "127.0.0.2"}}, logger)
 	go blacklistSinkManager.Start()
 
