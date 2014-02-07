@@ -13,11 +13,20 @@ func AddWSSink(t assert.TestingT, receivedChan chan []byte, port string, path st
 	connectionDroppedChannel := make(chan bool, 1)
 
 	ws, _, err := websocket.DefaultDialer.Dial("ws://localhost:"+port+path, http.Header{})
-	assert.NoError(t, err)
+	if err != nil {
+		assert.NoError(t, err)
+		panic(err)
+	}
+
+	if ws == nil {
+		panic("its nil")
+	}
 
 	go func() {
 		for {
+
 			_, data, err := ws.ReadMessage()
+
 			if err != nil {
 				connectionDroppedChannel <- true
 				close(receivedChan)
@@ -27,6 +36,7 @@ func AddWSSink(t assert.TestingT, receivedChan chan []byte, port string, path st
 		}
 
 	}()
+
 	go func() {
 		for {
 			err := ws.WriteMessage(websocket.BinaryMessage, []byte{42})

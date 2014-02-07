@@ -97,6 +97,7 @@ func (sink *WebsocketSink) Run() {
 		sink.logger.Debugf("Websocket Sink %s: Waiting for activity", sink.clientAddress)
 		select {
 		case <-keepAliveFailure:
+			sink.ws.Close()
 			sink.logger.Debugf("Websocket Sink %s: No keep keep-alive received. Requesting close.", sink.clientAddress)
 			RequestClose(sink, sink.sinkCloseChan, &alreadyRequestedClose)
 			return

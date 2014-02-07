@@ -1,8 +1,9 @@
-package sinkserver
+package sinkserver_test
 
 import (
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
+	"loggregator/sinkserver"
 	testhelpers "server_testhelpers"
 	"testing"
 	"time"
@@ -16,7 +17,7 @@ func TestThatItSends(t *testing.T) {
 	otherMessageString := "Some more stuff"
 	otherMessage := messagetesthelpers.NewMessage(t, otherMessageString, "myApp01")
 
-	_, dontKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_LOGS_PATH+"?app=myApp01")
+	_, dontKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?app=myApp01")
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- message
@@ -47,7 +48,7 @@ func TestThatItDoesNotDumpLogsBeforeTailing(t *testing.T) {
 
 	dataReadChannel <- message
 
-	_, stopKeepAlive, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_LOGS_PATH+"?app=myApp06")
+	_, stopKeepAlive, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?app=myApp06")
 	WaitForWebsocketRegistration()
 
 	select {
@@ -65,7 +66,7 @@ func TestThatItDoesNotDumpLogsBeforeTailing(t *testing.T) {
 
 func TestDontDropSinkThatWorks(t *testing.T) {
 	receivedChan := make(chan []byte, 2)
-	_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_LOGS_PATH+"?app=myApp04")
+	_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?app=myApp04")
 
 	select {
 	case <-time.After(200 * time.Millisecond):
@@ -89,19 +90,17 @@ func TestDontDropSinkThatWorks(t *testing.T) {
 }
 
 func TestQueryStringCombinationsThatDropSinkButContinueToWork(t *testing.T) {
-	receivedChan := make(chan []byte, 2)
-	_, _, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_LOGS_PATH+"?")
-	assert.Equal(t, true, <-droppedChannel)
+	AssertConnectionFails(t, SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?")
 }
 
 func TestDropSinkWhenLogTargetisinvalid(t *testing.T) {
-	AssertConnectionFails(t, SERVER_PORT, TAIL_LOGS_PATH+"?something=invalidtarget", 4000)
+	AssertConnectionFails(t, SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?something=invalidtarget")
 }
 
 func TestKeepAlive(t *testing.T) {
 	receivedChan := make(chan []byte, 10)
 
-	_, killKeepAliveChan, connectionDroppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_LOGS_PATH+"?app=myApp05")
+	_, killKeepAliveChan, connectionDroppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?app=myApp05")
 	WaitForWebsocketRegistration()
 
 	go func() {
@@ -133,5 +132,11 @@ func TestKeepAlive(t *testing.T) {
 		}
 	}()
 
-	assert.True(t, <-connectionDroppedChannel, "We should have been dropped since we stopped the keepalive")
+	select {
+	case fu := <-connectionDroppedChannel:
+		assert.True(t, fu, "We should have been dropped since we stopped the keepalive")
+	case <-time.After(1 * time.Second):
+		t.Fatal("Should have read from connnectionDropppedChannel by now")
+	}
+
 }

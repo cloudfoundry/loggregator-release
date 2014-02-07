@@ -33,7 +33,7 @@ var _ = Describe("LogMessageUnmarshaller", func() {
 		BeforeEach(func() {
 			errorChan = make(chan error)
 			anUnmarshaller, outChan = unmarshaller.NewLogMessageUnmarshaller(secret, inChan)
-			go anUnmarshaller.Run(errorChan)
+			go anUnmarshaller.Start(errorChan)
 		})
 
 		Describe("Start", func() {

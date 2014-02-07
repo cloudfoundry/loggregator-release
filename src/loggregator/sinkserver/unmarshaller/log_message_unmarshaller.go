@@ -5,8 +5,8 @@ import (
 )
 
 type LogMessageUnmarshaller struct {
-	secret string
-	incomingBytes <-chan []byte
+	secret           string
+	incomingBytes    <-chan []byte
 	outgoingMessages chan *logmessage.Message
 }
 

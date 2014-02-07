@@ -26,7 +26,6 @@ func NewMessageRouter(incomingLogChan <-chan *logmessage.Message, sinkManager *S
 }
 
 func (r *MessageRouter) Start() {
-	//	go MessageRouter.listenForLogs()
 
 	for message := range r.incomingLogChan {
 		r.logger.Debugf("MessageRouter:outgoingLogChan: Received %d bytes of data from agent listener.", message.GetRawMessageLength())

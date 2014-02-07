@@ -1,4 +1,4 @@
-package sinkserver
+package sinkserver_test
 
 import (
 	"encoding/binary"

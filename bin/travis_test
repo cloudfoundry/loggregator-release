@@ -36,6 +36,7 @@ packages=(
     loggregator/sinks/retrystrategy
     loggregator/sinks/syslogwriter
     loggregator/sinkserver
+    loggregator/sinkserver/unmarshaller
     loggregator/store
     server_testhelpers
     trafficcontroller

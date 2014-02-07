@@ -6,6 +6,8 @@ import (
 
 	"code.google.com/p/gogoprotobuf/proto"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"github.com/gorilla/websocket"
+	"net/http"
 	"testing"
 	"time"
 )
@@ -13,7 +15,10 @@ import (
 func NewMessage(messageString, appId string) *logmessage.Message {
 	logMessage := generateLogMessage(messageString, appId, logmessage.LogMessage_OUT, "App", "")
 
-	marshalledLogMessage, _ := proto.Marshal(logMessage)
+	marshalledLogMessage, err := proto.Marshal(logMessage)
+	if err != nil {
+		Fail(err.Error())
+	}
 
 	return logmessage.NewMessage(logMessage, marshalledLogMessage)
 }
@@ -43,4 +48,16 @@ func TestSinkserver(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	RunSpecs(t, "Sinkserver Suite")
+}
+
+func AddWSSink(receivedChan chan []byte, port string, path string) (*websocket.Conn, chan bool, <-chan bool) {
+
+	dontKeepAliveChan := make(chan bool, 1)
+	connectionDroppedChannel := make(chan bool, 1)
+	ws, _, err := websocket.DefaultDialer.Dial("ws://localhost:"+port+path, http.Header{})
+
+	if err != nil {
+		Fail(err.Error())
+	}
+	return ws, dontKeepAliveChan, connectionDroppedChannel
 }

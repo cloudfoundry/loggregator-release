@@ -22,9 +22,9 @@ func RequestClose(sink Sink, sinkCloseChan chan Sink, alreadyRequestedClose *boo
 	if !(*alreadyRequestedClose) {
 		sinkCloseChan <- sink
 		*alreadyRequestedClose = true
-		sink.Logger().Debugf("Sink %s: Successfully requested listener channel close", sink)
+		sink.Logger().Debugf("Sink for App %s: Successfully requested listener channel close", sink.AppId())
 	} else {
-		sink.Logger().Debugf("Sink %s: Previously requested close. Doing nothing", sink)
+		sink.Logger().Debugf("Sink for App %s: Previously requested close. Doing nothing", sink.AppId())
 	}
 }
 

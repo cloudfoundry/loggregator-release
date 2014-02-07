@@ -16,25 +16,25 @@ type SyslogWriterRecorder struct {
 	receivedChannel  chan string
 	receivedMessages []string
 	down             bool
-	disconnected     bool
+	connected        bool
 	sync.Mutex
 }
 
 func NewSyslogWriterRecorder() *SyslogWriterRecorder {
 	return &SyslogWriterRecorder{
 		receivedChannel: make(chan string, 20),
+		connected:       false,
 	}
 }
 
 func (r *SyslogWriterRecorder) Connect() error {
 	r.Lock()
 	defer r.Unlock()
-
 	if r.down {
-		r.disconnected = true
+		r.connected = false
 		return errors.New("Error connecting.")
 	} else {
-		r.disconnected = false
+		r.connected = true
 		return nil
 	}
 }
@@ -75,11 +75,11 @@ func (r *SyslogWriterRecorder) SetDown(newState bool) {
 }
 
 func (w *SyslogWriterRecorder) IsConnected() bool {
-	return !w.disconnected
+	return w.connected
 }
 
 func (w *SyslogWriterRecorder) SetConnected(newValue bool) {
-	w.disconnected = !newValue
+	w.connected = newValue
 }
 
 func (r *SyslogWriterRecorder) Close() error {
@@ -129,6 +129,7 @@ var _ = Describe("SyslogSink", func() {
 
 	Context("when remote syslog server is down", func() {
 		BeforeEach(func() {
+
 			sysLogger.SetDown(true)
 			go func() {
 				syslogSink.Run()
@@ -147,12 +148,11 @@ var _ = Describe("SyslogSink", func() {
 
 		Context("when remote syslog server comes up", func() {
 			BeforeEach(func() {
-				logMessage := NewMessage("test message", "appId")
-
 				for i := 0; i < 5; i++ {
-					syslogSink.Channel() <- logMessage
+					syslogSink.Channel() <- NewMessage(fmt.Sprintf("test message: %d\n", i), "appId")
 				}
 				close(syslogSink.Channel())
+
 				sysLogger.SetDown(false)
 			})
 
@@ -197,7 +197,7 @@ var _ = Describe("SyslogSink", func() {
 				syslogSink.Channel() <- logMessage
 				errorLog := <-errorChannel
 				errorMsg := string(errorLog.GetLogMessage().GetMessage())
-				Expect(errorMsg).To(MatchRegexp(`Syslog Sink syslog://using-fake: Error when dialing out. Backing off for \d\.\d+ms. Err: Error connecting.`))
+				Expect(errorMsg).To(MatchRegexp(`Syslog Sink syslog://using-fake: Error when dialing out. Backing off for (\d\.\d+ms|\d+us). Err: Error connecting.`))
 				Expect(errorLog.GetLogMessage().GetSourceName()).To(Equal("LGR"))
 
 				syslogSink.Disconnect()
@@ -228,10 +228,10 @@ var _ = Describe("SyslogSink", func() {
 
 					It("should resume sending messages", func(done Done) {
 						data := sysLogger.ReceivedMessages()
-						Expect(data).To(HaveLen(5))
-						for i := 1; i < 5; i++ {
+						Expect(data).To(HaveLen(6))
+						for i := 0; i < 5; i++ {
 							msg := fmt.Sprintf("out: message no %v", i+100)
-							Expect(data[i]).To(MatchRegexp(msg))
+							Expect(data[i+1]).To(MatchRegexp(msg))
 						}
 						close(done)
 					})

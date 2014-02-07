@@ -37,14 +37,30 @@ func NewWebsocketServer(apiEndpoint string, sinkManager *SinkManager, keepAliveI
 
 func (w *WebsocketServer) Start() {
 	w.logger.Infof("WebsocketServer: Listening for sinks at %s", w.apiEndpoint)
-	http.HandleFunc(TAIL_LOGS_PATH, w.handleTail)
-	http.HandleFunc(RECENT_LOGS_PATH, w.handleRecent)
-	if err := http.ListenAndServe(w.apiEndpoint, nil); err != nil {
+
+	if err := http.ListenAndServe(w.apiEndpoint, w); err != nil {
 		panic(err)
 	}
 }
 
 func (w *WebsocketServer) Stop() {
+}
+
+func (w *WebsocketServer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	appId, err := w.validate(r)
+	if err != nil {
+		http.Error(rw, err.Error(), 400)
+		return
+	}
+	switch r.URL.Path {
+	case TAIL_LOGS_PATH:
+		w.streamLogs(appId, upgrade(rw, r))
+	case RECENT_LOGS_PATH:
+		w.recentLogs(appId, upgrade(rw, r))
+	default:
+		http.Error(rw, err.Error(), 400)
+		return
+	}
 }
 
 func upgrade(w http.ResponseWriter, r *http.Request) *websocket.Conn {
@@ -64,26 +80,6 @@ func (w *WebsocketServer) validate(r *http.Request) (string, error) {
 		return "", errors.New("Invalid AppId")
 	}
 	return appId, nil
-}
-
-func (w *WebsocketServer) handleTail(rw http.ResponseWriter, r *http.Request) {
-	appId, err := w.validate(r)
-	if err != nil {
-		http.Error(rw, err.Error(), 400)
-		return
-	}
-
-	w.streamLogs(appId, upgrade(rw, r))
-}
-
-func (w *WebsocketServer) handleRecent(rw http.ResponseWriter, r *http.Request) {
-	appId, err := w.validate(r)
-	if err != nil {
-		http.Error(rw, err.Error(), 400)
-		return
-	}
-
-	w.recentLogs(appId, upgrade(rw, r))
 }
 
 func (w *WebsocketServer) streamLogs(appId string, ws *websocket.Conn) {

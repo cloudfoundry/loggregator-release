@@ -2,6 +2,7 @@ package loggregator_test
 
 import (
 	"code.google.com/p/gogoprotobuf/proto"
+	"fmt"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/gorilla/websocket"
@@ -20,16 +21,30 @@ func AddWSSink(receivedChan chan []byte, port string, path string) (*websocket.C
 	dontKeepAliveChan := make(chan bool, 1)
 	connectionDroppedChannel := make(chan bool, 1)
 
-	ws, _, err := websocket.DefaultDialer.Dial("ws://localhost:"+port+path, http.Header{})
-	if err != nil {
-		Fail(err.Error())
+	var ws *websocket.Conn
+	i := 0
+	for {
+		var err error
+		ws, _, err = websocket.DefaultDialer.Dial("ws://localhost:"+port+path, http.Header{})
+		if err != nil {
+			i++
+			if i > 10 {
+				fmt.Printf("Unable to connect to Server in 100ms, giving up.\n")
+				return nil, nil, nil
+			}
+			<-time.After(10 * time.Millisecond)
+			continue
+		} else {
+			break
+		}
+
 	}
 
 	go func() {
 		for {
 			_, data, err := ws.ReadMessage()
 			if err != nil {
-				connectionDroppedChannel <- true
+				close(connectionDroppedChannel)
 				close(receivedChan)
 				return
 			}
@@ -98,13 +113,19 @@ var _ = Describe("Loggregator Server", func() {
 	BeforeEach(func() {
 		receivedChan = make(chan []byte)
 		ws, dontKeepAliveChan, connectionDroppedChannel = AddWSSink(receivedChan, "8083", "/tail/?app=myApp")
+		if ws == nil || dontKeepAliveChan == nil || connectionDroppedChannel == nil {
+
+		}
+
 	})
 
 	AfterEach(func(done Done) {
-		close(dontKeepAliveChan)
-		ws.Close()
-		Eventually(receivedChan).Should(BeClosed())
-		close(done)
+		if dontKeepAliveChan != nil {
+			close(dontKeepAliveChan)
+			ws.Close()
+			Eventually(receivedChan).Should(BeClosed())
+			close(done)
+		}
 	})
 
 	It("should work from udp socket to websocket client", func() {

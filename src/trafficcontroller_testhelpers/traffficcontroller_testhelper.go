@@ -21,14 +21,14 @@ func SuccessfulAuthorizer(authToken string, target string, l *gosteno.Logger) bo
 func AssertConnectionFails(t *testing.T, port string, path string, authToken string, expectedErrorCode uint16) {
 	requestHeader := http.Header{}
 	if authToken != "" {
-		requestHeader = http.Header{"Authorization": authToken}
+		requestHeader = http.Header{"Authorization": []string{authToken}}
 	}
 
 	ws, _, err := websocket.DefaultDialer.Dial("ws://localhost:"+port+path, requestHeader)
 
 	assert.NoError(t, err)
-	data := make([]byte, 2)
-	_, err = ws.Read(data)
+	_, data, err := ws.ReadMessage()
+	assert.NoError(t, err)
 	errorCode := binary.BigEndian.Uint16(data)
 	assert.Equal(t, expectedErrorCode, errorCode)
 	assert.Equal(t, "EOF", err.Error())

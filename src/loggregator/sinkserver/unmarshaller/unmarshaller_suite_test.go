@@ -4,10 +4,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"testing"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"time"
 	"code.google.com/p/gogoprotobuf/proto"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"testing"
+	"time"
 )
 
 func MarshalledLogEnvelope(unmarshalledMessage *logmessage.LogMessage, secret string) []byte {
