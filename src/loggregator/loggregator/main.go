@@ -1,52 +1,18 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"loggregator/iprange"
-	"loggregator/sinkserver"
+	. "loggregator"
 	"math/rand"
 	"os"
 	"os/signal"
 	"runtime"
 	"time"
 )
-
-type Config struct {
-	cfcomponent.Config
-	Index                  uint
-	IncomingPort           uint32
-	OutgoingPort           uint32
-	LogFilePath            string
-	MaxRetainedLogMessages int
-	WSMessageBufferSize    uint
-	SharedSecret           string
-	SkipCertVerify         bool
-	BlackListIps           []iprange.IPRange
-}
-
-func (c *Config) validate(logger *gosteno.Logger) (err error) {
-	if c.MaxRetainedLogMessages == 0 {
-		return errors.New("Need max number of log messages to retain per application")
-	}
-
-	if c.BlackListIps != nil {
-		err = iprange.ValidateIpAddresses(c.BlackListIps)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = c.Validate(logger)
-	return
-}
 
 var (
 	version     = flag.Bool("version", false, "Version info")
@@ -82,27 +48,12 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	config, logger := parseConfig(logLevel, configFile, logFilePath)
-	err := config.validate(logger)
+	err := config.Validate(logger)
 	if err != nil {
 		panic(err)
 	}
 
-	agentListener := agentlistener.NewAgentListener(fmt.Sprintf("0.0.0.0:%d", config.IncomingPort), logger)
-	incomingLogChan := agentListener.Start()
-
-	sinkManager := sinkserver.NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, config.BlackListIps, logger)
-	go sinkManager.Start()
-
-	unmarshaller := func(data []byte) (*logmessage.Message, error) {
-		return logmessage.ParseEnvelope(data, config.SharedSecret)
-	}
-
-	messageChannelLength := 2048
-	messageRouter := sinkserver.NewMessageRouter(incomingLogChan, unmarshaller, sinkManager, messageChannelLength, logger)
-
-	apiEndpoint := fmt.Sprintf("0.0.0.0:%d", config.OutgoingPort)
-	keepAliveInterval := 30 * time.Second
-	websocketServer := sinkserver.NewWebsocketServer(apiEndpoint, sinkManager, keepAliveInterval, config.WSMessageBufferSize, logger)
+	l := New("0.0.0.0", config, logger)
 
 	cfc, err := cfcomponent.NewComponent(
 		logger,
@@ -111,7 +62,7 @@ func main() {
 		&LoggregatorServerHealthMonitor{},
 		config.VarzPort,
 		[]string{config.VarzUser, config.VarzPass},
-		[]instrumentation.Instrumentable{agentListener, sinkManager, messageRouter},
+		l.Emitters(),
 	)
 
 	if err != nil {
@@ -131,8 +82,7 @@ func main() {
 		}
 	}()
 
-	go messageRouter.Start()
-	go websocketServer.Start()
+	l.Start()
 
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Kill)
@@ -142,6 +92,7 @@ func main() {
 		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
 			cfcomponent.DumpGoRoutine()
 		case <-killChan:
+			l.Stop()
 			break
 		}
 	}

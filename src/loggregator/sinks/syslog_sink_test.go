@@ -94,7 +94,7 @@ func (r *SyslogWriterRecorder) ReceivedMessages() []string {
 }
 
 var _ = Describe("SyslogSink", func() {
-	var syslogSink sinks.Sink
+	var syslogSink *sinks.SyslogSink
 	var sysLogger *SyslogWriterRecorder
 	var sysLoggerDoneChan chan bool
 	var errorChannel chan *logmessage.Message
@@ -116,7 +116,7 @@ var _ = Describe("SyslogSink", func() {
 		newSysLoggerDoneChan()
 		sysLogger = NewSyslogWriterRecorder()
 		errorChannel = make(chan *logmessage.Message, 10)
-		syslogSink = sinks.NewSyslogSink("appId", "syslog://localhost:24632", loggertesthelper.Logger(), sysLogger, errorChannel)
+		syslogSink = sinks.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorChannel).(*sinks.SyslogSink)
 	})
 
 	AfterEach(func() {
@@ -192,13 +192,19 @@ var _ = Describe("SyslogSink", func() {
 				sysLogger.SetDown(true)
 			})
 
-			It("should report error messages", func(done Done) {
+			It("should report error messages unit it's disconnected", func(done Done) {
 				logMessage := NewMessage("test message", "appId")
 				syslogSink.Channel() <- logMessage
 				errorLog := <-errorChannel
 				errorMsg := string(errorLog.GetLogMessage().GetMessage())
-				Expect(errorMsg).To(MatchRegexp(`Syslog Sink syslog://localhost:24632: Error when dialing out. Backing off for \d\.\d+ms. Err: Error connecting.`))
+				Expect(errorMsg).To(MatchRegexp(`Syslog Sink syslog://using-fake: Error when dialing out. Backing off for \d\.\d+ms. Err: Error connecting.`))
 				Expect(errorLog.GetLogMessage().GetSourceName()).To(Equal("LGR"))
+
+				syslogSink.Disconnect()
+				<-sysLoggerDoneChan
+				logMessage = NewMessage("test message", "appId")
+				syslogSink.Channel() <- logMessage
+				Expect(errorChannel).To(BeEmpty())
 				close(done)
 			})
 

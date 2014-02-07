@@ -1,13 +1,13 @@
 package sinkserver
 
 import (
-	"code.google.com/p/go.net/websocket"
+	"errors"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/appid"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"github.com/gorilla/websocket"
 	"loggregator/sinks"
-	"net"
 	"net/http"
 	"time"
 )
@@ -17,7 +17,7 @@ const (
 	RECENT_LOGS_PATH = "/dump/"
 )
 
-type websocketServer struct {
+type WebsocketServer struct {
 	apiEndpoint       string
 	sinkManager       *SinkManager
 	keepAliveInterval time.Duration
@@ -25,8 +25,8 @@ type websocketServer struct {
 	logger            *gosteno.Logger
 }
 
-func NewWebsocketServer(apiEndpoint string, sinkManager *SinkManager, keepAliveInterval time.Duration, wSMessageBufferSize uint, logger *gosteno.Logger) *websocketServer {
-	return &websocketServer{
+func NewWebsocketServer(apiEndpoint string, sinkManager *SinkManager, keepAliveInterval time.Duration, wSMessageBufferSize uint, logger *gosteno.Logger) *WebsocketServer {
+	return &WebsocketServer{
 		apiEndpoint:       apiEndpoint,
 		sinkManager:       sinkManager,
 		keepAliveInterval: keepAliveInterval,
@@ -35,79 +35,92 @@ func NewWebsocketServer(apiEndpoint string, sinkManager *SinkManager, keepAliveI
 	}
 }
 
-func (websocketServer *websocketServer) Start() {
-	websocketServer.logger.Infof("WebsocketServer: Listening for sinks at %s", websocketServer.apiEndpoint)
-	if err := http.ListenAndServe(websocketServer.apiEndpoint, websocket.Handler(websocketServer.route)); err != nil {
+func (w *WebsocketServer) Start() {
+	w.logger.Infof("WebsocketServer: Listening for sinks at %s", w.apiEndpoint)
+	http.HandleFunc(TAIL_LOGS_PATH, w.handleTail)
+	http.HandleFunc(RECENT_LOGS_PATH, w.handleRecent)
+	if err := http.ListenAndServe(w.apiEndpoint, nil); err != nil {
 		panic(err)
 	}
 }
 
-func (websocketServer *websocketServer) route(ws *websocket.Conn) {
-	switch ws.Request().URL.Path {
-	case TAIL_LOGS_PATH:
-		websocketServer.streamLogs(ws)
-	case RECENT_LOGS_PATH:
-		websocketServer.recentLogs(ws)
-	default:
-		ws.CloseWithStatus(400)
-		return
-	}
+func (w *WebsocketServer) Stop() {
 }
 
-func (websocketServer *websocketServer) streamLogs(ws *websocket.Conn) {
-	clientAddress := ws.RemoteAddr()
-	appId := appid.FromUrl(ws.Request().URL)
+func upgrade(w http.ResponseWriter, r *http.Request) *websocket.Conn {
+	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
+	if err != nil {
+		http.Error(w, "Not a websocket handshake", 400)
+		return nil
+	}
+	return ws
+}
 
+func (w *WebsocketServer) validate(r *http.Request) (string, error) {
+	appId := appid.FromUrl(r.URL)
+	clientAddress := r.RemoteAddr
 	if appId == "" {
-		websocketServer.logInvalidApp(clientAddress)
-		ws.CloseWithStatus(4000)
+		w.logInvalidApp(clientAddress)
+		return "", errors.New("Invalid AppId")
+	}
+	return appId, nil
+}
+
+func (w *WebsocketServer) handleTail(rw http.ResponseWriter, r *http.Request) {
+	appId, err := w.validate(r)
+	if err != nil {
+		http.Error(rw, err.Error(), 400)
 		return
 	}
+
+	w.streamLogs(appId, upgrade(rw, r))
+}
+
+func (w *WebsocketServer) handleRecent(rw http.ResponseWriter, r *http.Request) {
+	appId, err := w.validate(r)
+	if err != nil {
+		http.Error(rw, err.Error(), 400)
+		return
+	}
+
+	w.recentLogs(appId, upgrade(rw, r))
+}
+
+func (w *WebsocketServer) streamLogs(appId string, ws *websocket.Conn) {
 
 	websocketSink := sinks.NewWebsocketSink(
 		appId,
-		websocketServer.logger,
+		w.logger,
 		ws,
-		clientAddress,
-		websocketServer.sinkManager.sinkCloseChan,
-		websocketServer.keepAliveInterval,
-		websocketServer.bufferSize,
+		w.sinkManager.sinkCloseChan,
+		w.keepAliveInterval,
+		w.bufferSize,
 	)
-	websocketServer.logger.Debugf("WebsocketServer: Requesting a wss sink for app %s", websocketSink.AppId())
-	websocketServer.sinkManager.sinkOpenChan <- websocketSink
+	w.logger.Debugf("WebsocketServer: Requesting a wss sink for app %s", websocketSink.AppId())
+	w.sinkManager.sinkOpenChan <- websocketSink
 
 	websocketSink.Run()
 }
 
-func (websocketServer *websocketServer) recentLogs(ws *websocket.Conn) {
-	clientAddress := ws.RemoteAddr()
-	appId := appid.FromUrl(ws.Request().URL)
+func (w *WebsocketServer) recentLogs(appId string, ws *websocket.Conn) {
+	defer ws.Close()
 
-	if appId == "" {
-		websocketServer.logInvalidApp(clientAddress)
-		ws.CloseWithStatus(4000)
-		return
-	}
-
-	logMessages := websocketServer.sinkManager.recentLogsFor(appId)
-
-	sendMessagesToWebsocket(logMessages, ws, clientAddress, websocketServer.logger)
-
-	ws.Close()
+	logMessages := w.sinkManager.recentLogsFor(appId)
+	sendMessagesToWebsocket(logMessages, ws, w.logger)
 }
 
-func (websocketServer *websocketServer) logInvalidApp(address net.Addr) {
-	message := fmt.Sprintf("websocketServer: Did not accept sink connection with invalid app id: %s.", address)
-	websocketServer.logger.Warn(message)
+func (w *WebsocketServer) logInvalidApp(address string) {
+	message := fmt.Sprintf("WebsocketServer: Did not accept sink connection with invalid app id: %s.", address)
+	w.logger.Warn(message)
 }
 
-func sendMessagesToWebsocket(logMessages []*logmessage.Message, ws *websocket.Conn, clientAddress net.Addr, logger *gosteno.Logger) {
+func sendMessagesToWebsocket(logMessages []*logmessage.Message, ws *websocket.Conn, logger *gosteno.Logger) {
 	for _, message := range logMessages {
-		err := websocket.Message.Send(ws, message.GetRawMessage())
+		err := ws.WriteMessage(websocket.BinaryMessage, message.GetRawMessage())
 		if err != nil {
-			logger.Debugf("Dump Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", clientAddress, err)
+			logger.Debugf("Dump Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", ws.RemoteAddr(), err)
 		} else {
-			logger.Debugf("Dump Sink %s: Successfully sent data", clientAddress)
+			logger.Debugf("Dump Sink %s: Successfully sent data", ws.RemoteAddr())
 		}
 	}
 }

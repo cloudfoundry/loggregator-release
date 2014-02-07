@@ -46,6 +46,9 @@ func (sinkManager *SinkManager) Start() {
 	sinkManager.listenForErrorMessages()
 }
 
+func (sinkManager *SinkManager) Stop() {
+}
+
 func (sinkManager *SinkManager) SendTo(appId string, receivedMessage *logmessage.Message) {
 	for _, sink := range sinkManager.sinks.For(appId) {
 		sinkManager.logger.Debugf("MessageRouter:ParsedMessageChan: Sending Message to channel %v for sinks targeting [%s].", sink.Identifier(), appId)

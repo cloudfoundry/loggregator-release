@@ -27,8 +27,8 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 	<-fakeSyslogDrain2.ReadyChan
 
 	expectedMessageString := "Some Data"
-	logEnvelope := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString, "myApp", SECRET, "syslog://localhost:34569")
-	dataReadChannel <- logEnvelope
+	message := messagetesthelpers.NewMessageWithSyslogDrain(t, expectedMessageString, "myApp", "syslog://localhost:34569")
+	dataReadChannel <- message
 
 	select {
 	case <-time.After(200 * time.Millisecond):
@@ -42,9 +42,9 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 	sourceName := "DEA"
 	logMessage2.SourceName = &sourceName
 	logMessage2.DrainUrls = []string{"syslog://localhost:34540"}
-	logEnvelope2 := messagetesthelpers.MarshalledLogEnvelope(t, logMessage2, SECRET)
+	message2 := messagetesthelpers.NewMessageFromLogMessage(t, logMessage2)
 
-	dataReadChannel <- logEnvelope2
+	dataReadChannel <- message2
 
 	select {
 	case <-time.After(200 * time.Millisecond):
@@ -70,8 +70,8 @@ func TestThatItDoesNotRegisterADrainIfItsURLIsBlacklisted(t *testing.T) {
 	blackListedSyslogDrain.Serve()
 	<-blackListedSyslogDrain.ReadyChan
 
-	logEnvelope1 := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, "Some Data", "myApp01", SECRET, "syslog://127.0.0.1:34570")
-	blackListDataReadChannel <- logEnvelope1
+	message1 := messagetesthelpers.NewMessageWithSyslogDrain(t, "Some Data", "myApp01", "syslog://127.0.0.1:34570")
+	blackListDataReadChannel <- message1
 
 	assertMessageNotOnChannel(t, 1000, clientReceivedChan, "Should not have received message on blacklisted Syslog drain")
 

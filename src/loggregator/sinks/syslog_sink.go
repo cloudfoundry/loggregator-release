@@ -20,7 +20,7 @@ type SyslogSink struct {
 	listenerChannel   chan *logmessage.Message
 	syslogWriter      syslogwriter.SyslogWriter
 	errorChannel      chan<- *logmessage.Message
-	disconnectChannel chan int
+	disconnectChannel chan struct{}
 }
 
 func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.SyslogWriter, errorChannel chan<- *logmessage.Message) Sink {
@@ -34,7 +34,7 @@ func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, s
 		listenerChannel:   make(chan *logmessage.Message),
 		syslogWriter:      syslogWriter,
 		errorChannel:      errorChannel,
-		disconnectChannel: make(chan int),
+		disconnectChannel: make(chan struct{}),
 	}
 }
 
@@ -114,7 +114,7 @@ func (s *SyslogSink) Channel() chan *logmessage.Message {
 
 func (s *SyslogSink) Disconnect() {
 	if !s.syslogWriter.IsConnected() {
-		s.disconnectChannel <- 0
+		close(s.disconnectChannel)
 	}
 }
 

@@ -1,7 +1,6 @@
 package trafficcontroller
 
 import (
-	"code.google.com/p/go.net/websocket"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"

@@ -65,5 +65,34 @@ var _ = Describe("SinkManager", func() {
 
 			close(done)
 		})
+
+		It("should only send to sinks that match the appID", func(done Done) {
+
+			client1ReceivedChan := make(chan *logmessage.Message)
+			client2ReceivedChan := make(chan *logmessage.Message)
+			sink1 := &ChannelSink{appId: "myApp1",
+				identifier: "myAppChan1",
+				logger:     loggertesthelper.Logger(),
+				channel:    client1ReceivedChan,
+			}
+			sink2 := &ChannelSink{appId: "myApp2",
+				identifier: "myAppChan2",
+				logger:     loggertesthelper.Logger(),
+				channel:    client2ReceivedChan,
+			}
+
+			sinkManager.RegisterSink(sink1)
+			sinkManager.RegisterSink(sink2)
+
+			expectedMessageString := "Some Data"
+			expectedMessage := NewMessage(expectedMessageString, "myApp")
+			go sinkManager.SendTo("myApp1", expectedMessage)
+
+			receiveMessage := <-client1ReceivedChan
+			Expect(receiveMessage).To(Equal(expectedMessage))
+			Expect(client2ReceivedChan).To(BeEmpty())
+
+			close(done)
+		})
 	})
 })

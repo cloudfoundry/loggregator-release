@@ -1,7 +1,6 @@
 package trafficcontroller
 
 import (
-	"code.google.com/p/go.net/websocket"
 	"code.google.com/p/gogoprotobuf/proto"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"

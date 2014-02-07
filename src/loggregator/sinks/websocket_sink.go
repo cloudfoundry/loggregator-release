@@ -1,10 +1,10 @@
 package sinks
 
 import (
-	"code.google.com/p/go.net/websocket"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"github.com/gorilla/websocket"
 	"net"
 	"sync/atomic"
 	"time"
@@ -23,12 +23,12 @@ type WebsocketSink struct {
 	wsMessageBufferSize uint
 }
 
-func NewWebsocketSink(appId string, givenLogger *gosteno.Logger, ws *websocket.Conn, clientAddress net.Addr, sinkCloseChan chan Sink, keepAliveInterval time.Duration, wsMessageBufferSize uint) Sink {
+func NewWebsocketSink(appId string, givenLogger *gosteno.Logger, ws *websocket.Conn, sinkCloseChan chan Sink, keepAliveInterval time.Duration, wsMessageBufferSize uint) Sink {
 	return &WebsocketSink{
 		givenLogger,
 		appId,
 		ws,
-		clientAddress,
+		ws.RemoteAddr(),
 		new(uint64),
 		new(uint64),
 		keepAliveInterval,
@@ -41,10 +41,9 @@ func NewWebsocketSink(appId string, givenLogger *gosteno.Logger, ws *websocket.C
 func (sink *WebsocketSink) keepAliveFailureChannel() <-chan bool {
 	keepAliveFailureChan := make(chan bool)
 	keepAliveChan := make(chan bool)
-	var keepAlive []byte
 	go func() {
 		for {
-			err := websocket.Message.Receive(sink.ws, &keepAlive)
+			_, _, err := sink.ws.ReadMessage()
 			if err != nil {
 				sink.logger.Debugf("Websocket Sink %s: Error receiving keep-alive. Stopping listening. Err: %v", sink.clientAddress, err)
 				return
@@ -72,7 +71,7 @@ func (sink *WebsocketSink) Channel() chan *logmessage.Message {
 }
 
 func (sink *WebsocketSink) Identifier() string {
-	return sink.ws.Request().RemoteAddr
+	return sink.ws.RemoteAddr().String()
 }
 
 func (sink *WebsocketSink) AppId() string {
@@ -109,7 +108,7 @@ func (sink *WebsocketSink) Run() {
 				return
 			}
 			sink.logger.Debugf("Websocket Sink %s: Got %d bytes. Sending data", sink.clientAddress, message.GetRawMessageLength())
-			err := websocket.Message.Send(sink.ws, message.GetRawMessage())
+			err := sink.ws.WriteMessage(websocket.BinaryMessage, message.GetRawMessage())
 			if err != nil {
 				sink.logger.Debugf("Websocket Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", sink.clientAddress, err)
 				RequestClose(sink, sink.sinkCloseChan, &alreadyRequestedClose)
