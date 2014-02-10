@@ -100,7 +100,7 @@ func TestDropSinkWhenLogTargetisinvalid(t *testing.T) {
 func TestKeepAlive(t *testing.T) {
 	receivedChan := make(chan []byte, 10)
 
-	_, killKeepAliveChan, connectionDroppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?app=myApp05")
+	_, killKeepAliveChan, connectionDroppedChannel := testhelpers.AddWSSink(t, receivedChan, FAST_TIMEOUT_SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?app=myApp05")
 	WaitForWebsocketRegistration()
 
 	go func() {

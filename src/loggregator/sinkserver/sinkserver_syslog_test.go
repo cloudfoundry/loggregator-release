@@ -79,13 +79,20 @@ func TestThatItDoesNotRegisterADrainIfItsURLIsBlacklisted(t *testing.T) {
 	select {
 	case <-time.After(1 * time.Second):
 		t.Errorf("Did not get the real message.")
-	case <-receivedChan:
+	case receivedMessage, ok := <-receivedChan:
+		if !ok {
+			t.Fatal("Error reading from channel.")
+		}
+		messagetesthelpers.AssertProtoBufferMessageContains(t, "Some Data", receivedMessage)
 	}
 
 	select {
 	case <-time.After(1 * time.Second):
 		t.Errorf("Did not get the error message about the blacklisted syslog drain.")
-	case receivedMessage := <-receivedChan:
+	case receivedMessage, ok := <-receivedChan:
+		if !ok {
+			t.Fatal("Error reading from channel.")
+		}
 		messagetesthelpers.AssertProtoBufferMessageContains(t, "URL is blacklisted", receivedMessage)
 	}
 }

@@ -25,6 +25,7 @@ var blackListDataReadChannel chan *logmessage.Message
 const (
 	SERVER_PORT           = "8081"
 	BLACKLIST_SERVER_PORT = "8082"
+	FAST_TIMEOUT_SERVER_PORT = "8083"
 )
 
 const SECRET = "secret"
@@ -41,8 +42,12 @@ func init() {
 	go TestMessageRouter.Start()
 
 	apiEndpoint := "localhost:" + SERVER_PORT
-	TestWebsocketServer = sinkserver.NewWebsocketServer(apiEndpoint, sinkManager, 10*time.Millisecond, 100, loggertesthelper.Logger())
+	TestWebsocketServer = sinkserver.NewWebsocketServer(apiEndpoint, sinkManager, 10*time.Second, 100, loggertesthelper.Logger())
 	go TestWebsocketServer.Start()
+
+	timeoutApiEndpoint := "localhost:" + FAST_TIMEOUT_SERVER_PORT
+	FastTimeoutTestWebsocketServer := sinkserver.NewWebsocketServer(timeoutApiEndpoint, sinkManager, 10*time.Millisecond, 100, loggertesthelper.Logger())
+	go FastTimeoutTestWebsocketServer.Start()
 
 	blackListDataReadChannel = make(chan *logmessage.Message)
 	blacklistSinkManager := sinkserver.NewSinkManager(1024, false, []iprange.IPRange{iprange.IPRange{Start: "127.0.0.0", End: "127.0.0.2"}}, logger)
@@ -52,7 +57,7 @@ func init() {
 	go blacklistTestMessageRouter.Start()
 
 	blacklistApiEndpoint := "localhost:" + BLACKLIST_SERVER_PORT
-	blackListTestWebsocketServer = sinkserver.NewWebsocketServer(blacklistApiEndpoint, blacklistSinkManager, 10*time.Millisecond, 100, loggertesthelper.Logger())
+	blackListTestWebsocketServer = sinkserver.NewWebsocketServer(blacklistApiEndpoint, blacklistSinkManager, 10*time.Second, 100, loggertesthelper.Logger())
 	go blackListTestWebsocketServer.Start()
 
 	time.Sleep(2 * time.Millisecond)
