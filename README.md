@@ -95,8 +95,8 @@ jobs:
     static_ips:
     - 10.10.16.14
 
-- name: loggregator-trafficcontroller
-  template: loggregator-trafficcontroller
+- name: loggregator_trafficcontroller
+  template: loggregator_trafficcontroller
   instances: 1  # Scale out as necessary
   resource_pool: common
   networks:
@@ -104,7 +104,8 @@ jobs:
     static_ips:
     - 10.10.16.16
   properties:
-    zone: z1 # Denoting which one of the redundancy zones this traffic controller is servicing
+    traffic_controller:
+      zone: z1 # Denoting which one of the redundancy zones this traffic controller is servicing
 
 properties:
   loggregator:
