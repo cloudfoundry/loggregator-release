@@ -15,6 +15,7 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -31,7 +32,8 @@ var _ = Describe("SyslogWriter", func() {
 		BeforeEach(func() {
 			shutdownChan = make(chan bool)
 			dataChan, serverStoppedChan = startSyslogServer(shutdownChan)
-			sysLogWriter = syslogwriter.NewSyslogWriter("syslog", "localhost:9999", "appId", false)
+			outputUrl, _ := url.Parse("syslog://localhost:9999")
+			sysLogWriter = syslogwriter.NewSyslogWriter(outputUrl, "appId", false)
 			sysLogWriter.Connect()
 		})
 
@@ -92,7 +94,8 @@ var _ = Describe("SyslogWriter", func() {
 		})
 
 		It("should connect", func() {
-			w := syslogwriter.NewSyslogWriter("syslog-tls", "localhost:9999", "appId", true)
+			outputUrl, _ := url.Parse("syslog-tls://localhost:9999")
+			w := syslogwriter.NewSyslogWriter(outputUrl, "appId", true)
 			err := w.Connect()
 			Expect(err).To(BeNil())
 			_, err = w.WriteStdout([]byte("just a test"), "test", "", time.Now().UnixNano())
@@ -101,7 +104,8 @@ var _ = Describe("SyslogWriter", func() {
 		})
 
 		It("should reject self-signed certs", func() {
-			w := syslogwriter.NewSyslogWriter("syslog-tls", "localhost:9999", "appId", false)
+			outputUrl, _ := url.Parse("syslog-tls://localhost:9999")
+			w := syslogwriter.NewSyslogWriter(outputUrl, "appId", false)
 			err := w.Connect()
 			Expect(err).ToNot(BeNil())
 		})

@@ -138,7 +138,7 @@ func (sinkManager *SinkManager) registerNewSyslogSinks(appId string, syslogSinkU
 				errorMsg := fmt.Sprintf("SinkManager: Invalid syslog drain URL: %s. Err: %v", syslogSinkUrl, err)
 				sinkManager.sendSyslogErrorToLoggregator(errorMsg, appId)
 			} else {
-				syslogWriter := syslogwriter.NewSyslogWriter(parsedSyslogDrainUrl.Scheme, parsedSyslogDrainUrl.Host, appId, sinkManager.skipCertVerify)
+				syslogWriter := syslogwriter.NewSyslogWriter(parsedSyslogDrainUrl, appId, sinkManager.skipCertVerify)
 				syslogSink := sinks.NewSyslogSink(appId, syslogSinkUrl, sinkManager.logger, syslogWriter, sinkManager.errorChannel)
 				if sinkManager.RegisterSink(syslogSink) {
 					go syslogSink.Run()

@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -36,13 +37,13 @@ type writer struct {
 	tlsConfig *tls.Config
 }
 
-func NewSyslogWriter(scheme, raddr string, appId string, skipCertVerify bool) (w *writer) {
+func NewSyslogWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (w *writer) {
 	tlsConfig := &tls.Config{InsecureSkipVerify: skipCertVerify}
 	return &writer{
 		appId:     appId,
-		raddr:     raddr,
+		raddr:     outputUrl.Host,
 		connected: false,
-		scheme:    scheme,
+		scheme:    outputUrl.Scheme,
 		tlsConfig: tlsConfig,
 	}
 }
