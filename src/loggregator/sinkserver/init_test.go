@@ -23,8 +23,8 @@ var blackListTestWebsocketServer *sinkserver.WebsocketServer
 var blackListDataReadChannel chan *logmessage.Message
 
 const (
-	SERVER_PORT           = "8081"
-	BLACKLIST_SERVER_PORT = "8082"
+	SERVER_PORT              = "8081"
+	BLACKLIST_SERVER_PORT    = "8082"
 	FAST_TIMEOUT_SERVER_PORT = "8083"
 )
 
