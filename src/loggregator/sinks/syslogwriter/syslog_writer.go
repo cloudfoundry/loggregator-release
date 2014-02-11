@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
+	"net/http"
 	"net/url"
 	"strings"
 	"sync"
@@ -25,10 +26,10 @@ type SyslogWriter interface {
 }
 
 type writer struct {
-	appId  string
-	raddr  string
-	scheme string
-
+	appId     string
+	raddr     string
+	scheme    string
+	outputUrl *url.URL
 	connected bool
 
 	mu   sync.Mutex // guards conn
@@ -41,6 +42,7 @@ func NewSyslogWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (w *
 	tlsConfig := &tls.Config{InsecureSkipVerify: skipCertVerify}
 	return &writer{
 		appId:     appId,
+		outputUrl: outputUrl,
 		raddr:     outputUrl.Host,
 		connected: false,
 		scheme:    outputUrl.Scheme,
@@ -55,6 +57,8 @@ func (w *writer) Connect() error {
 	var err error
 	if strings.Contains(w.scheme, "syslog-tls") {
 		err = w.connectTLS()
+	} else if strings.Contains(w.scheme, "https") {
+		// no connection for https
 	} else {
 		err = w.connect()
 	}
@@ -112,7 +116,25 @@ func (w *writer) Close() error {
 	return nil
 }
 
-func (w *writer) write(p int, source, sourceId, msg string, timestamp int64) (byte_count int, err error) {
+func (w *writer) write(p int, source, sourceId, msg string, timestamp int64) (byteCount int, err error) {
+	syslogMsg := w.createMessage(p, source, sourceId, msg, timestamp)
+	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
+	finalMsg := fmt.Sprintf("%d %s", len(syslogMsg), syslogMsg)
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.conn != nil {
+		byteCount, err = fmt.Fprint(w.conn, finalMsg)
+	} else {
+		tr := &http.Transport{TLSClientConfig: w.tlsConfig}
+		client := &http.Client{Transport: tr}
+		_, err = client.Post(w.outputUrl.String(), "text/plain", strings.NewReader(finalMsg))
+		byteCount = len(finalMsg)
+	}
+	return byteCount, err
+}
+
+func (w *writer) createMessage(p int, source, sourceId, msg string, timestamp int64) string {
 	// ensure it ends in a \n
 	nl := ""
 	if !strings.HasSuffix(msg, "\n") {
@@ -129,17 +151,9 @@ func (w *writer) write(p int, source, sourceId, msg string, timestamp int64) (by
 	} else {
 		formattedSource = fmt.Sprintf("[%s]", source)
 	}
+
 	// syslog format https://tools.ietf.org/html/rfc5424#section-6
-	syslogMsg := fmt.Sprintf("<%d>1 %s %s %s %s - - %s%s", p, timeString, "loggregator", w.appId, formattedSource, msg, nl)
-
-	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
-	w.mu.Lock()
-	if w.conn != nil {
-		byte_count, err = fmt.Fprintf(w.conn, "%d %s", len(syslogMsg), syslogMsg)
-	}
-	w.mu.Unlock()
-
-	return byte_count, err
+	return fmt.Sprintf("<%d>1 %s %s %s %s - - %s%s", p, timeString, "loggregator", w.appId, formattedSource, msg, nl)
 }
 
 func (w *writer) IsConnected() bool {

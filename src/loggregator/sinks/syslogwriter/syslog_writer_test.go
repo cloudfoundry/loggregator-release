@@ -78,6 +78,39 @@ var _ = Describe("SyslogWriter", func() {
 		})
 	})
 
+	Context("With an HTTPS Connection", func() {
+		It("should HTTP POST each log message to the HTTPS syslog endpoint", func() {
+			requestChan := make(chan []byte, 1)
+			go ServeHTTP(requestChan, loggertesthelper.Logger())
+			<-time.After(1 * time.Second)
+
+			outputUrl, _ := url.Parse("https://localhost:4443/234-bxg-234/")
+
+			w := syslogwriter.NewSyslogWriter(outputUrl, "appId", true)
+			err := w.Connect()
+			Expect(err).ToNot(HaveOccurred())
+
+			byteCount, err := w.WriteStdout([]byte("Message"), "just a test", "TEST", time.Now().UnixNano())
+			Expect(byteCount).To(Equal(79))
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(func() string {
+				return string(<-requestChan)
+			}).Should(ContainSubstring("loggregator appId [just a test] - - Message"))
+		})
+
+		It("should return an error when unable to HTTP POST the log message", func() {
+			outputUrl, _ := url.Parse("https://")
+
+			w := syslogwriter.NewSyslogWriter(outputUrl, "appId", true)
+			err := w.Connect()
+			Expect(err).ToNot(HaveOccurred())
+
+			_, err = w.WriteStdout([]byte("Message"), "just a test", "TEST", time.Now().UnixNano())
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
 	Context("With TLS Connection", func() {
 
 		var shutdownChan chan bool
@@ -112,9 +145,20 @@ var _ = Describe("SyslogWriter", func() {
 	})
 })
 
-type handler struct{}
+func ServeHTTP(requestChan chan []byte, logger *gosteno.Logger) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		bytes := make([]byte, 1024)
+		byteCount, _ := r.Body.Read(bytes)
+		r.Body.Close()
+		requestChan <- bytes[:byteCount]
+	}
 
-func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	generateCert(logger)
+	http.HandleFunc("/234-bxg-234/", handler)
+	err := http.ListenAndServeTLS(":4443", "cert.pem", "key.pem", nil)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func startSyslogServer(shutdownChan <-chan bool) (<-chan []byte, <-chan bool) {
