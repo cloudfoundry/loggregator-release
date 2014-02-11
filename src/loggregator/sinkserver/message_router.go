@@ -4,6 +4,7 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"loggregator/sinkserver/metrics"
 )
 
 type MessageRouter struct {
@@ -11,7 +12,7 @@ type MessageRouter struct {
 	unmarshaller    func([]byte) (*logmessage.Message, error)
 	outgoingLogChan chan *logmessage.Message
 	SinkManager     *SinkManager
-	Metrics         *MessageRouterMetrics
+	Metrics         *metrics.MessageRouterMetrics
 	logger          *gosteno.Logger
 }
 
@@ -20,7 +21,7 @@ func NewMessageRouter(incomingLogChan <-chan *logmessage.Message, sinkManager *S
 		incomingLogChan: incomingLogChan,
 		outgoingLogChan: make(chan *logmessage.Message),
 		SinkManager:     sinkManager,
-		Metrics:         &MessageRouterMetrics{},
+		Metrics:         &metrics.MessageRouterMetrics{},
 		logger:          logger,
 	}
 }

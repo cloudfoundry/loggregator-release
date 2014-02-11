@@ -3,6 +3,8 @@ package groupedsinks
 import (
 	"loggregator/sinks"
 	"sync"
+	"loggregator/sinks/dump"
+	"loggregator/sinks/syslog"
 )
 
 func NewGroupedSinks() *GroupedSinks {
@@ -49,7 +51,7 @@ func (gc *GroupedSinks) DrainsFor(appId string) (results []sinks.Sink) {
 	defer gc.RUnlock()
 
 	for _, s := range gc.apps[appId] {
-		_, isSyslogSink := s.(*sinks.SyslogSink)
+		_, isSyslogSink := s.(*syslog.SyslogSink)
 		if isSyslogSink {
 			results = append(results, s)
 		}
@@ -58,14 +60,14 @@ func (gc *GroupedSinks) DrainsFor(appId string) (results []sinks.Sink) {
 	return results
 }
 
-func (gc *GroupedSinks) DumpFor(appId string) *sinks.DumpSink {
+func (gc *GroupedSinks) DumpFor(appId string) *dump.DumpSink {
 	gc.RLock()
 	defer gc.RUnlock()
 
 	if gc.apps[appId][appId] == nil {
 		return nil
 	}
-	return gc.apps[appId][appId].(*sinks.DumpSink)
+	return gc.apps[appId][appId].(*dump.DumpSink)
 }
 
 func (gc *GroupedSinks) DrainFor(appId, drainUrl string) (result sinks.Sink) {

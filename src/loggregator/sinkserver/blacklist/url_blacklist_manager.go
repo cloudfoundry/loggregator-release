@@ -1,4 +1,4 @@
-package sinkserver
+package blacklist
 
 import (
 	"errors"
@@ -9,6 +9,10 @@ import (
 type URLBlacklistManager struct {
 	blacklistIPs    []iprange.IPRange
 	blacklistedURLs []string
+}
+
+func New(blacklistIPs    []iprange.IPRange) *URLBlacklistManager {
+	return &URLBlacklistManager{blacklistIPs: blacklistIPs}
 }
 
 func (blacklistManager *URLBlacklistManager) IsBlacklisted(testUrl string) bool {

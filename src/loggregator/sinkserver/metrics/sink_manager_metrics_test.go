@@ -1,10 +1,14 @@
-package sinkserver_test
+package metrics_test
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"loggregator/sinks/dump"
+	"loggregator/sinks/syslog"
+	"loggregator/sinks/dump"
+
+	"loggregator/sinkserver/metrics"
 	"loggregator/sinks"
-	"loggregator/sinkserver"
 )
 
 var _ = Describe("SinkManagerMetrics", func() {
@@ -13,7 +17,7 @@ var _ = Describe("SinkManagerMetrics", func() {
 	var sink sinks.Sink
 
 	BeforeEach(func() {
-		sinkManagerMetrics = sinkserver.NewSinkManagerMetrics()
+		sinkManagerMetrics = metrics.NewSinkManagerMetrics()
 	})
 
 	It("Should have metrics for dump sinks", func() {
@@ -23,7 +27,7 @@ var _ = Describe("SinkManagerMetrics", func() {
 		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(0))
 		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(0))
 
-		sink = &sinks.DumpSink{}
+		sink = &dump.DumpSink{}
 		sinkManagerMetrics.Inc(sink)
 
 		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(1))
@@ -44,7 +48,7 @@ var _ = Describe("SinkManagerMetrics", func() {
 		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(0))
 		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(0))
 
-		sink := &sinks.SyslogSink{}
+		sink := &syslog.SyslogSink{}
 		sinkManagerMetrics.Inc(sink)
 
 		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(0))

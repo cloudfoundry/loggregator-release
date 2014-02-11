@@ -10,17 +10,21 @@ import (
 	"loggregator/sinks"
 	"loggregator/sinks/syslogwriter"
 	"time"
+	"loggregator/sinkserver/blacklist"
+	"loggregator/sinkserver/metrics"
+	"loggregator/sinks/syslog"
+	"loggregator/sinks/dump"
 )
 
 type SinkManager struct {
 	sinkOpenChan        chan sinks.Sink
 	sinkCloseChan       chan sinks.Sink
 	errorChannel        chan *logmessage.Message
-	urlBlacklistManager *URLBlacklistManager
+	urlBlacklistManager *blacklist.URLBlacklistManager
 	sinks               *groupedsinks.GroupedSinks
 	skipCertVerify      bool
 	recentLogCount      int
-	Metrics             *SinkManagerMetrics
+	Metrics             *metrics.SinkManagerMetrics
 	logger              *gosteno.Logger
 }
 
@@ -29,13 +33,11 @@ func NewSinkManager(maxRetainedLogMessages int, skipCertVerify bool, blackListIP
 		sinkOpenChan:  make(chan sinks.Sink, 20),
 		sinkCloseChan: make(chan sinks.Sink, 20),
 		errorChannel:  make(chan *logmessage.Message, 100),
-		urlBlacklistManager: &URLBlacklistManager{
-			blacklistIPs: blackListIPs,
-		},
+		urlBlacklistManager: blacklist.New(blackListIPs),
 		sinks:          groupedsinks.NewGroupedSinks(),
 		skipCertVerify: skipCertVerify,
 		recentLogCount: maxRetainedLogMessages,
-		Metrics:        NewSinkManagerMetrics(),
+		Metrics:        metrics.NewSinkManagerMetrics(),
 		logger:         logger,
 	}
 }
@@ -100,7 +102,7 @@ func (sinkManager *SinkManager) UnregisterSink(sink sinks.Sink) {
 
 	sinkManager.Metrics.Dec(sink)
 
-	if syslogSink, ok := sink.(*sinks.SyslogSink); ok {
+	if syslogSink, ok := sink.(*syslog.SyslogSink); ok {
 		syslogSink.Disconnect()
 	}
 
@@ -142,7 +144,7 @@ func (sinkManager *SinkManager) registerNewSyslogSinks(appId string, syslogSinkU
 				sinkManager.sendSyslogErrorToLoggregator(errorMsg, appId)
 			} else {
 				syslogWriter := syslogwriter.NewSyslogWriter(parsedSyslogDrainUrl, appId, sinkManager.skipCertVerify)
-				syslogSink := sinks.NewSyslogSink(appId, syslogSinkUrl, sinkManager.logger, syslogWriter, sinkManager.errorChannel)
+				syslogSink := syslog.NewSyslogSink(appId, syslogSinkUrl, sinkManager.logger, syslogWriter, sinkManager.errorChannel)
 				if sinkManager.RegisterSink(syslogSink) {
 					go syslogSink.Run()
 				}
@@ -166,7 +168,7 @@ func (sinkManager *SinkManager) ensureRecentLogsSinkFor(appId string) {
 		return
 	}
 
-	s := sinks.NewDumpSink(appId, sinkManager.recentLogCount, sinkManager.logger, sinkManager.sinkCloseChan, time.Hour)
+	s := dump.NewDumpSink(appId, sinkManager.recentLogCount, sinkManager.logger, sinkManager.sinkCloseChan, time.Hour)
 
 	if sinkManager.RegisterSink(s) {
 		go s.Run()

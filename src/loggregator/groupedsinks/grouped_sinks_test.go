@@ -7,6 +7,8 @@ import (
 	"loggregator/sinks"
 	"testing"
 	"time"
+	"loggregator/sinks/syslog"
+	"loggregator/sinks/dump"
 )
 
 type DummySyslogWriter struct{}
@@ -26,7 +28,7 @@ func TestRegisterAndFor(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 
 	appId := "789"
-	appSink := sinks.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
+	appSink := syslog.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
 	result := groupedSinks.Register(appSink)
 
 	appSinks := groupedSinks.For(appId)
@@ -39,7 +41,7 @@ func TestRegisterReturnsFalseForEmptyAppId(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 
 	appId := ""
-	appSink := sinks.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
+	appSink := syslog.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
 	result := groupedSinks.Register(appSink)
 
 	assert.False(t, result)
@@ -49,7 +51,7 @@ func TestRegisterReturnsFalseForEmptyIdentifier(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 
 	appId := "appId"
-	appSink := sinks.NewSyslogSink(appId, "", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
+	appSink := syslog.NewSyslogSink(appId, "", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
 	result := groupedSinks.Register(appSink)
 
 	assert.False(t, result)
@@ -59,7 +61,7 @@ func TestRegisterReturnsFalseWhenAttemptingToAddADuplicateSink(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 
 	appId := "789"
-	appSink := sinks.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
+	appSink := syslog.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
 	groupedSinks.Register(appSink)
 	result := groupedSinks.Register(appSink)
 
@@ -77,8 +79,8 @@ func TestDelete(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 	target := "789"
 
-	sink1 := sinks.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
-	sink2 := sinks.NewSyslogSink(target, "url2", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
+	sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
+	sink2 := syslog.NewSyslogSink(target, "url2", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
 
 	groupedSinks.Register(sink1)
 	groupedSinks.Register(sink2)
@@ -95,9 +97,9 @@ func TestDrainsFor(t *testing.T) {
 	target := "789"
 	otherTarget := "790"
 
-	sink1 := sinks.NewDumpSink(target, 10, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
-	sink2 := sinks.NewSyslogSink(target, "url", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
-	sink3 := sinks.NewSyslogSink(otherTarget, "url", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
+	sink1 := dump.NewDumpSink(target, 10, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
+	sink2 := syslog.NewSyslogSink(target, "url", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
+	sink3 := syslog.NewSyslogSink(otherTarget, "url", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
 
 	groupedSinks.Register(sink1)
 	groupedSinks.Register(sink2)
@@ -112,8 +114,8 @@ func TestDrainForReturnsOnly(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 	target := "789"
 
-	sink1 := sinks.NewSyslogSink(target, "other sink", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
-	sink2 := sinks.NewSyslogSink(target, "sink we are searching for", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
+	sink1 := syslog.NewSyslogSink(target, "other sink", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
+	sink2 := syslog.NewSyslogSink(target, "sink we are searching for", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
 
 	groupedSinks.Register(sink1)
 	groupedSinks.Register(sink2)
@@ -126,9 +128,9 @@ func TestDumpForReturnsOnyDumps(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 	target := "789"
 
-	sink1 := sinks.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
-	sink2 := sinks.NewSyslogSink(target, "url2", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
-	sink3 := sinks.NewDumpSink(target, 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
+	sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
+	sink2 := syslog.NewSyslogSink(target, "url2", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
+	sink3 := dump.NewDumpSink(target, 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
 
 	groupedSinks.Register(sink1)
 	groupedSinks.Register(sink2)
@@ -143,8 +145,8 @@ func TestDumpForReturnsOnlyDumpsForTheGivenAppId(t *testing.T) {
 	target := "789"
 	otherTarget := "790"
 
-	sink1 := sinks.NewDumpSink(target, 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
-	sink2 := sinks.NewDumpSink(otherTarget, 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
+	sink1 := dump.NewDumpSink(target, 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
+	sink2 := dump.NewDumpSink(otherTarget, 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
 
 	groupedSinks.Register(sink1)
 	groupedSinks.Register(sink2)
@@ -157,7 +159,7 @@ func TestDumpForReturnsNilIfThereIsNone(t *testing.T) {
 	groupedSinks := NewGroupedSinks()
 	target := "789"
 
-	sink1 := sinks.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
+	sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
 
 	groupedSinks.Register(sink1)
 

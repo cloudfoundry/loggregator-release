@@ -28,7 +28,7 @@ func RequestClose(sink Sink, sinkCloseChan chan Sink, alreadyRequestedClose *boo
 	}
 }
 
-func runTruncatingBuffer(sink Sink, bufferSize uint, logger *gosteno.Logger) buffer.MessageBuffer {
+func RunTruncatingBuffer(sink Sink, bufferSize uint, logger *gosteno.Logger) buffer.MessageBuffer {
 	b := truncatingbuffer.NewTruncatingBuffer(sink.Channel(), bufferSize, logger)
 	go b.Run()
 	return b

@@ -1,4 +1,4 @@
-package sinks
+package dump
 
 import (
 	"github.com/cloudfoundry/gosteno"
@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"loggregator/buffer"
 	"time"
+	"loggregator/sinks"
 )
 
 type DumpSink struct {
@@ -15,11 +16,11 @@ type DumpSink struct {
 	inputChan          chan *logmessage.Message
 	passThruChan       chan *logmessage.Message
 	dumpChan           chan chan []*logmessage.Message
-	timeoutChan        chan Sink
+	timeoutChan        chan sinks.Sink
 	inactivityDuration time.Duration
 }
 
-func NewDumpSink(appId string, bufferSize int, givenLogger *gosteno.Logger, timeoutChan chan Sink, inactivityDuration time.Duration) *DumpSink {
+func NewDumpSink(appId string, bufferSize int, givenLogger *gosteno.Logger, timeoutChan chan sinks.Sink, inactivityDuration time.Duration) *DumpSink {
 	inputChan := make(chan *logmessage.Message)
 	passThruChan := make(chan *logmessage.Message)
 	dumpChan := make(chan chan []*logmessage.Message)

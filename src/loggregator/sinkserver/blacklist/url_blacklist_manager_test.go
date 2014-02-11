@@ -1,16 +1,17 @@
-package sinkserver_test
+package blacklist_test
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"loggregator/sinkserver"
+	"loggregator/sinkserver/blacklist"
+	"loggregator/iprange"
 )
 
 var _ = Describe("UrlBlacklistManager", func() {
-	var urlBlacklistManager sinkserver.URLBlacklistManager
+	var urlBlacklistManager *blacklist.URLBlacklistManager
 
 	BeforeEach(func() {
-		urlBlacklistManager = sinkserver.URLBlacklistManager{}
+		urlBlacklistManager = blacklist.New([]iprange.IPRange{})
 		urlBlacklistManager.BlacklistUrl("http://www.example.com/bad")
 	})
 

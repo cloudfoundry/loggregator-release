@@ -92,7 +92,7 @@ func (sink *WebsocketSink) Run() {
 	keepAliveFailure := sink.keepAliveFailureChannel()
 	alreadyRequestedClose := false
 
-	buffer := runTruncatingBuffer(sink, sink.wsMessageBufferSize, sink.Logger())
+	buffer := RunTruncatingBuffer(sink, sink.wsMessageBufferSize, sink.Logger())
 	for {
 		sink.logger.Debugf("Websocket Sink %s: Waiting for activity", sink.clientAddress)
 		select {

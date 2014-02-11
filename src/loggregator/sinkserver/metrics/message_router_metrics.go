@@ -1,4 +1,4 @@
-package sinkserver
+package metrics
 
 import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"

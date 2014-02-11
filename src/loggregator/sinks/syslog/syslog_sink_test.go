@@ -1,4 +1,4 @@
-package sinks_test
+package syslog_test
 
 import (
 	"errors"
@@ -94,7 +94,7 @@ func (r *SyslogWriterRecorder) ReceivedMessages() []string {
 }
 
 var _ = Describe("SyslogSink", func() {
-	var syslogSink *sinks.SyslogSink
+	var syslogSink *syslog.SyslogSink
 	var sysLogger *SyslogWriterRecorder
 	var sysLoggerDoneChan chan bool
 	var errorChannel chan *logmessage.Message
@@ -116,7 +116,7 @@ var _ = Describe("SyslogSink", func() {
 		newSysLoggerDoneChan()
 		sysLogger = NewSyslogWriterRecorder()
 		errorChannel = make(chan *logmessage.Message, 10)
-		syslogSink = sinks.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorChannel).(*sinks.SyslogSink)
+		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorChannel).(*sinks.SyslogSink)
 	})
 
 	AfterEach(func() {

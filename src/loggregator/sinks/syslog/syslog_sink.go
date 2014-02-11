@@ -1,10 +1,11 @@
-package sinks
+package syslog
 
 import (
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"loggregator/sinks"
 	"loggregator/sinks/retrystrategy"
 	"loggregator/sinks/syslogwriter"
 	"sync/atomic"
@@ -23,7 +24,7 @@ type SyslogSink struct {
 	disconnectChannel chan struct{}
 }
 
-func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.SyslogWriter, errorChannel chan<- *logmessage.Message) Sink {
+func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.SyslogWriter, errorChannel chan<- *logmessage.Message) sinks.Sink {
 	givenLogger.Debugf("Syslog Sink %s: Created for appId [%s]", drainUrl, appId)
 	return &SyslogSink{
 		appId:             appId,
@@ -45,7 +46,7 @@ func (s *SyslogSink) Run() {
 	backoffStrategy := retrystrategy.NewExponentialRetryStrategy()
 	numberOfTries := 0
 
-	buffer := runTruncatingBuffer(s, 100, s.Logger())
+	buffer := sinks.RunTruncatingBuffer(s, 100, s.Logger())
 	for {
 		s.logger.Debugf("Syslog Sink %s: Starting loop. Current backoff: %v", s.drainUrl, backoffStrategy(numberOfTries))
 

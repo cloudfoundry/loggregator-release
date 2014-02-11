@@ -1,4 +1,4 @@
-package sinks
+package dump
 
 import (
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
@@ -9,10 +9,11 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"loggregator/sinks"
 )
 
 func TestDumpForOneMessage(t *testing.T) {
-	dump := NewDumpSink("myApp", 1, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+	dump := NewDumpSink("myApp", 1, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
 
 	go dump.Run()
 
@@ -25,7 +26,7 @@ func TestDumpForOneMessage(t *testing.T) {
 }
 
 func TestDumpForTwoMessages(t *testing.T) {
-	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
 
 	go dump.Run()
 
@@ -44,7 +45,7 @@ func TestDumpForTwoMessages(t *testing.T) {
 
 func TestTheDumpSinkNeverFillsUp(t *testing.T) {
 	bufferSize := 3
-	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
 
 	go dump.Run()
 
@@ -56,7 +57,7 @@ func TestTheDumpSinkNeverFillsUp(t *testing.T) {
 }
 
 func TestDumpAlwaysReturnsTheNewestMessages(t *testing.T) {
-	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
 
 	go dump.Run()
 
@@ -76,7 +77,7 @@ func TestDumpAlwaysReturnsTheNewestMessages(t *testing.T) {
 }
 
 func TestDumpReturnsAllRecentMessagesToMultipleDumpRequests(t *testing.T) {
-	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
 
 	go dump.Run()
 
@@ -101,7 +102,7 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequests(t *testing.T) {
 }
 
 func TestDumpReturnsAllRecentMessagesToMultipleDumpRequestsWithMessagesCloningInInTheMeantime(t *testing.T) {
-	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
 
 	go dump.Run()
 
@@ -131,7 +132,7 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequestsWithMessagesCloningIn
 }
 
 func TestDumpWithLotsOfMessages(t *testing.T) {
-	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
 
 	go dump.Run()
 
@@ -166,7 +167,7 @@ func TestDumpWithLotsOfMessages(t *testing.T) {
 }
 
 func TestDumpWithLotsOfMessagesAndLargeBuffer(t *testing.T) {
-	dump := NewDumpSink("myApp", 200, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+	dump := NewDumpSink("myApp", 200, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
 
 	go dump.Run()
 
@@ -201,7 +202,7 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer(t *testing.T) {
 }
 
 func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
-	dump := NewDumpSink("myApp", 200, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+	dump := NewDumpSink("myApp", 200, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
 	go dump.Run()
 
 	for i := 0; i < 100; i++ {
@@ -243,7 +244,7 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
 
 func TestDumpWithLotsOfDumps(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
 	go dump.Run()
 
 	for i := 0; i < 10; i++ {
@@ -265,7 +266,7 @@ func TestDumpWithLotsOfDumps(t *testing.T) {
 }
 
 func TestClosingInputChanAlsoClosesPassThruChan(t *testing.T) {
-	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), make(chan Sink, 1), time.Second)
+	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
 	go dump.Run()
 
 	close(dump.Channel())
@@ -279,7 +280,7 @@ func TestClosingInputChanAlsoClosesPassThruChan(t *testing.T) {
 }
 
 func TestDumpSinkClosesItselfAfterPeriodOfInactivity(t *testing.T) {
-	timeoutChan := make(chan Sink, 1)
+	timeoutChan := make(chan sinks.Sink, 1)
 	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), timeoutChan, 10*time.Millisecond)
 	wait := sync.WaitGroup{}
 	wait.Add(1)
@@ -304,7 +305,7 @@ func TestDumpSinkClosesItselfAfterPeriodOfInactivity(t *testing.T) {
 
 // TODO: this test is very prone to race conditions and timing issues on slow boxes (ie travis)
 func xTestDumpSinkClosingTimeIsResetWhenAMessageArrives(t *testing.T) {
-	timeoutChan := make(chan Sink, 1)
+	timeoutChan := make(chan sinks.Sink, 1)
 	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), timeoutChan, 10*time.Millisecond)
 	go dump.Run()
 
