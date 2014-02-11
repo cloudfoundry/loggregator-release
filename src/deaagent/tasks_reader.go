@@ -43,7 +43,7 @@ func readTasks(data []byte) (map[string]task, error) {
 	}
 	tasks := make(map[string]task, len(jsonInstances.Instances))
 	for _, jsonInstance := range jsonInstances.Instances {
-		if jsonInstance.State == "RUNNING" {
+		if jsonInstance.State == "RUNNING" || jsonInstance.State == "STARTING" {
 			task := task{
 				applicationId:       jsonInstance.Application_id,
 				sourceName:          "App",

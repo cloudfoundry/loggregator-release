@@ -86,6 +86,21 @@ func TestReadingMultipleTasksWithDrainUrls(t *testing.T) {
 	assert.Equal(t, tasks["/var/vcap/data/warden/depot/17fsdo7qpes/jobs/56"].drainUrls, []string{"syslog://10.20.30.40:8050"})
 }
 
+func TestReadingStartingTasks(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	filepath := path.Join(path.Dir(filename), "..", "..", "samples", "starting_instances.json")
+	json, _ := ioutil.ReadFile(filepath)
+
+	tasks, err := readTasks(json)
+	assert.NoError(t, err)
+
+	assert.Equal(t, 1, len(tasks))
+
+	if _, ok := tasks["/var/vcap/data/warden/depot/345asndhaena/jobs/12"]; !ok {
+		t.Errorf("Did not find starting application.")
+	}
+}
+
 func TestErrorHandlingWhenParsingEmptyData(t *testing.T) {
 	_, err := readTasks(make([]byte, 0))
 	assert.Error(t, err)
