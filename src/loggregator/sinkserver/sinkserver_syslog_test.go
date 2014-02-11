@@ -78,7 +78,8 @@ func TestThatItDoesNotRegisterADrainIfItsURLIsBlacklisted(t *testing.T) {
 	select {
 	case <-time.After(1 * time.Second):
 		t.Errorf("Did not get the real message.")
-	case <-receivedChan:
+	case receivedMessage := <-receivedChan:
+		messagetesthelpers.AssertProtoBufferMessageContains(t, "Some Data", receivedMessage)
 	}
 
 	select {
