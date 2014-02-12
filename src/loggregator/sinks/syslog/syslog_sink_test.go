@@ -207,7 +207,6 @@ var _ = Describe("SyslogSink", func() {
 
 			It("should not report error messages when it's disconnected", func(done Done) {
 				syslogSink.Disconnect()
-				<-sysLoggerDoneChan
 
 				logMessage := NewMessage("test message", "appId")
 				inputChan <- logMessage
