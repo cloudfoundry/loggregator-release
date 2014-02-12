@@ -29,7 +29,6 @@ function red {
 packages=(
     deaagent
     loggregator
-    server_testhelpers
     trafficcontroller
     github.com/cloudfoundry/loggregatorlib
 )

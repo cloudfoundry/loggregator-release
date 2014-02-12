@@ -7,9 +7,9 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"loggregator/sinks"
 	"sync"
 	"time"
+	"loggregator/sinks/syslog"
 )
 
 type SyslogWriterRecorder struct {
@@ -99,6 +99,7 @@ var _ = Describe("SyslogSink", func() {
 	var sysLoggerDoneChan chan bool
 	var errorChannel chan *logmessage.Message
 	var mutex sync.Mutex
+	var inputChan chan *logmessage.Message
 
 	closeSysLoggerDoneChan := func() {
 		mutex.Lock()
@@ -116,7 +117,8 @@ var _ = Describe("SyslogSink", func() {
 		newSysLoggerDoneChan()
 		sysLogger = NewSyslogWriterRecorder()
 		errorChannel = make(chan *logmessage.Message, 10)
-		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorChannel).(*sinks.SyslogSink)
+		inputChan = make(chan *logmessage.Message)
+		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorChannel).(*syslog.SyslogSink)
 	})
 
 	AfterEach(func() {
@@ -132,7 +134,7 @@ var _ = Describe("SyslogSink", func() {
 
 			sysLogger.SetDown(true)
 			go func() {
-				syslogSink.Run()
+				syslogSink.Run(inputChan)
 				closeSysLoggerDoneChan()
 			}()
 		})
@@ -141,7 +143,7 @@ var _ = Describe("SyslogSink", func() {
 			logMessage := NewMessage("test message", "appId")
 
 			for i := 0; i < 100; i++ {
-				syslogSink.Channel() <- logMessage
+				inputChan <- logMessage
 			}
 			close(done)
 		})
@@ -149,9 +151,9 @@ var _ = Describe("SyslogSink", func() {
 		Context("when remote syslog server comes up", func() {
 			BeforeEach(func() {
 				for i := 0; i < 5; i++ {
-					syslogSink.Channel() <- NewMessage(fmt.Sprintf("test message: %d\n", i), "appId")
+					inputChan <- NewMessage(fmt.Sprintf("test message: %d\n", i), "appId")
 				}
-				close(syslogSink.Channel())
+				close(inputChan)
 
 				sysLogger.SetDown(false)
 			})
@@ -169,7 +171,7 @@ var _ = Describe("SyslogSink", func() {
 
 		BeforeEach(func() {
 			go func() {
-				syslogSink.Run()
+				syslogSink.Run(inputChan)
 				closeSysLoggerDoneChan()
 			}()
 		})
@@ -180,7 +182,7 @@ var _ = Describe("SyslogSink", func() {
 
 			time.Sleep(100 * time.Millisecond) //wait a bit to allow timestamps to differ
 
-			syslogSink.Channel() <- message
+			inputChan <- message
 			data := <-sysLogger.receivedChannel
 
 			Expect(string(data)).To(MatchRegexp(expectedTimeString))
@@ -194,7 +196,7 @@ var _ = Describe("SyslogSink", func() {
 
 			It("should report error messages when it's connected", func(done Done) {
 				logMessage := NewMessage("test message", "appId")
-				syslogSink.Channel() <- logMessage
+				inputChan <- logMessage
 				errorLog := <-errorChannel
 				errorMsg := string(errorLog.GetLogMessage().GetMessage())
 				Expect(errorMsg).To(MatchRegexp(`Syslog Sink syslog://using-fake: Error when dialing out. Backing off for (\d\.\d+ms|\d+us). Err: Error connecting.`))
@@ -208,7 +210,7 @@ var _ = Describe("SyslogSink", func() {
 				<-sysLoggerDoneChan
 
 				logMessage := NewMessage("test message", "appId")
-				syslogSink.Channel() <- logMessage
+				inputChan <- logMessage
 				Expect(errorChannel).To(BeEmpty())
 				close(done)
 			})
@@ -220,9 +222,9 @@ var _ = Describe("SyslogSink", func() {
 						msg := fmt.Sprintf("message no %v", i)
 						logMessage := NewMessage(msg, "appId")
 
-						syslogSink.Channel() <- logMessage
+						inputChan <- logMessage
 					}
-					close(syslogSink.Channel())
+					close(inputChan)
 				})
 
 				Context("when the remote syslog server comes back up again", func() {

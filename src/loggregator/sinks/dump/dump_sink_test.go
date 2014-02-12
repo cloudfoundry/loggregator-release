@@ -6,19 +6,31 @@ import (
 	"github.com/stretchr/testify/assert"
 	"runtime"
 	"strconv"
-	"sync"
 	"testing"
 	"time"
 	"loggregator/sinks"
+	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 )
 
-func TestDumpForOneMessage(t *testing.T) {
-	dump := NewDumpSink("myApp", 1, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
+var fakeTimeProvider = faketimeprovider.New(time.Now())
 
-	go dump.Run()
+func TestDumpForOneMessage(t *testing.T) {
+	dump := NewDumpSink("myApp", 1, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+
+	dumpRunnerDone := make(chan struct{})
+	inputChan := make(chan *logmessage.Message)
+
+	go func() {
+		dump.Run(inputChan)
+		close(dumpRunnerDone)
+	}()
 
 	logMessage := messagetesthelpers.NewMessage(t, "hi", "appId")
-	dump.Channel() <- logMessage
+	inputChan <- logMessage
+
+	close(inputChan)
+	<-dumpRunnerDone
 
 	data := dump.Dump()
 	assert.Equal(t, len(data), 1)
@@ -26,69 +38,102 @@ func TestDumpForOneMessage(t *testing.T) {
 }
 
 func TestDumpForTwoMessages(t *testing.T) {
-	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
+	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
 
-	go dump.Run()
+	dumpRunnerDone := make(chan struct{})
+	inputChan := make(chan *logmessage.Message)
+	
+	go func() {
+		dump.Run(inputChan)
+		close(dumpRunnerDone)
+	}()
 
 	logMessage := messagetesthelpers.NewMessage(t, "1", "appId")
-	dump.Channel() <- logMessage
+	inputChan <- logMessage
 	logMessage = messagetesthelpers.NewMessage(t, "2", "appId")
-	dump.Channel() <- logMessage
+	inputChan <- logMessage
 
-	runtime.Gosched()
+	close(inputChan)
+	<-dumpRunnerDone
 
 	logMessages := dump.Dump()
+
 	assert.Equal(t, len(logMessages), 2)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "1")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "2")
 }
 
 func TestTheDumpSinkNeverFillsUp(t *testing.T) {
-	bufferSize := 3
-	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
+	bufferSize := uint32(3)
+	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
 
-	go dump.Run()
+	dumpRunnerDone := make(chan struct{})
+	inputChan := make(chan *logmessage.Message)
+
+	go func() {
+		dump.Run(inputChan)
+		close(dumpRunnerDone)
+	}()
 
 	logMessage := messagetesthelpers.NewMessage(t, "hi", "appId")
 
-	for i := 0; i < bufferSize+1; i++ {
-		dump.Channel() <- logMessage
+	for i := uint32(0); i < bufferSize+1; i++ {
+		inputChan <- logMessage
 	}
+
+	close(inputChan)
+	<-dumpRunnerDone
 }
 
 func TestDumpAlwaysReturnsTheNewestMessages(t *testing.T) {
-	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
+	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
 
-	go dump.Run()
+	dumpRunnerDone := make(chan struct{})
+
+	inputChan := make(chan *logmessage.Message)
+	
+	go func() {
+		dump.Run(inputChan)
+		close(dumpRunnerDone)
+	}()
 
 	logMessage := messagetesthelpers.NewMessage(t, "1", "appId")
-	dump.Channel() <- logMessage
+	inputChan <- logMessage
 	logMessage = messagetesthelpers.NewMessage(t, "2", "appId")
-	dump.Channel() <- logMessage
+	inputChan <- logMessage
 	logMessage = messagetesthelpers.NewMessage(t, "3", "appId")
-	dump.Channel() <- logMessage
+	inputChan <- logMessage
 
-	runtime.Gosched()
+	close(inputChan)
+	<-dumpRunnerDone
 
 	logMessages := dump.Dump()
 	assert.Equal(t, len(logMessages), 2)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "2")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "3")
+
 }
 
 func TestDumpReturnsAllRecentMessagesToMultipleDumpRequests(t *testing.T) {
-	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
+	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
 
-	go dump.Run()
+	dumpRunnerDone := make(chan struct{})
+	inputChan := make(chan *logmessage.Message)
+
+	go func() {
+		dump.Run(inputChan)
+		close(dumpRunnerDone)
+	}()
 
 	logMessage := messagetesthelpers.NewMessage(t, "1", "appId")
-	dump.Channel() <- logMessage
+	inputChan <- logMessage
 	logMessage = messagetesthelpers.NewMessage(t, "2", "appId")
-	dump.Channel() <- logMessage
+	inputChan <- logMessage
 	logMessage = messagetesthelpers.NewMessage(t, "3", "appId")
-	dump.Channel() <- logMessage
+	inputChan <- logMessage
 
-	runtime.Gosched()
+	close(inputChan)
+	<-dumpRunnerDone
 
 	logMessages := dump.Dump()
 	assert.Equal(t, len(logMessages), 2)
@@ -102,28 +147,41 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequests(t *testing.T) {
 }
 
 func TestDumpReturnsAllRecentMessagesToMultipleDumpRequestsWithMessagesCloningInInTheMeantime(t *testing.T) {
-	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
+	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
 
-	go dump.Run()
+	dumpRunnerDone := make(chan struct{})
+	inputChan := make(chan *logmessage.Message)
+
+	go func() {
+		dump.Run(inputChan)
+		close(dumpRunnerDone)
+	}()
 
 	logMessage := messagetesthelpers.NewMessage(t, "1", "appId")
-	dump.Channel() <- logMessage
+	inputChan <- logMessage
 	logMessage = messagetesthelpers.NewMessage(t, "2", "appId")
-	dump.Channel() <- logMessage
+	inputChan <- logMessage
 	logMessage = messagetesthelpers.NewMessage(t, "3", "appId")
-	dump.Channel() <- logMessage
+	inputChan <- logMessage
 
-	runtime.Gosched()
+	close(inputChan)
+	<-dumpRunnerDone
 
 	logMessages := dump.Dump()
 	assert.Equal(t, len(logMessages), 2)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "2")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "3")
 
-	logMessage = messagetesthelpers.NewMessage(t, "4", "appId")
-	dump.Channel() <- logMessage
+	dumpRunnerDone = make(chan struct{})
+	inputChan = make(chan *logmessage.Message)
 
-	runtime.Gosched()
+	go func() {
+		dump.Run(inputChan)
+		close(dumpRunnerDone)
+	}()
+
+	logMessage = messagetesthelpers.NewMessage(t, "4", "appId")
+	inputChan <- logMessage
 
 	logMessages = dump.Dump()
 	assert.Equal(t, len(logMessages), 2)
@@ -132,28 +190,45 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequestsWithMessagesCloningIn
 }
 
 func TestDumpWithLotsOfMessages(t *testing.T) {
-	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
+	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan sinks.Sink, 2), time.Second, fakeTimeProvider)
 
-	go dump.Run()
+	dumpRunnerDone := make(chan struct{})
+	inputChan := make(chan *logmessage.Message)
+
+	go func() {
+		dump.Run(inputChan)
+		close(dumpRunnerDone)
+	}()
 
 	for i := 0; i < 100; i++ {
 		logMessage := messagetesthelpers.NewMessage(t, strconv.Itoa(i), "appId")
-		dump.Channel() <- logMessage
+		inputChan <- logMessage
 	}
 
-	runtime.Gosched()
+
+	close(inputChan)
+	<-dumpRunnerDone
 
 	logMessages := dump.Dump()
 	assert.Equal(t, len(logMessages), 2)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "98")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "99")
 
+	dumpRunnerDone = make(chan struct{})
+	inputChan = make(chan *logmessage.Message)
+
+	go func() {
+		dump.Run(inputChan)
+		close(dumpRunnerDone)
+	}()
+
 	for i := 100; i < 200; i++ {
 		logMessage := messagetesthelpers.NewMessage(t, strconv.Itoa(i), "appId")
-		dump.Channel() <- logMessage
+		inputChan <- logMessage
 	}
 
-	runtime.Gosched()
+	close(inputChan)
+	<-dumpRunnerDone
 
 	logMessages = dump.Dump()
 	assert.Equal(t, len(logMessages), 2)
@@ -167,28 +242,44 @@ func TestDumpWithLotsOfMessages(t *testing.T) {
 }
 
 func TestDumpWithLotsOfMessagesAndLargeBuffer(t *testing.T) {
-	dump := NewDumpSink("myApp", 200, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
+	dump := NewDumpSink("myApp", 200, loggertesthelper.Logger(), make(chan sinks.Sink, 2), time.Second, fakeTimeProvider)
 
-	go dump.Run()
+	dumpRunnerDone := make(chan struct{})
+	inputChan := make(chan *logmessage.Message)
+
+	go func() {
+		dump.Run(inputChan)
+		close(dumpRunnerDone)
+	}()
 
 	for i := 0; i < 1000; i++ {
 		logMessage := messagetesthelpers.NewMessage(t, strconv.Itoa(i), "appId")
-		dump.Channel() <- logMessage
+		inputChan <- logMessage
 	}
 
-	runtime.Gosched()
+	close(inputChan)
+	<-dumpRunnerDone
 
 	logMessages := dump.Dump()
 	assert.Equal(t, len(logMessages), 200)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "800")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "801")
 
+	dumpRunnerDone = make(chan struct{})
+	inputChan = make(chan *logmessage.Message)
+
+	go func() {
+		dump.Run(inputChan)
+		close(dumpRunnerDone)
+	}()
+
 	for i := 1000; i < 2000; i++ {
 		logMessage := messagetesthelpers.NewMessage(t, strconv.Itoa(i), "appId")
-		dump.Channel() <- logMessage
+		inputChan <- logMessage
 	}
 
-	runtime.Gosched()
+	close(inputChan)
+	<-dumpRunnerDone
 
 	logMessages = dump.Dump()
 	assert.Equal(t, len(logMessages), 200)
@@ -202,40 +293,64 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer(t *testing.T) {
 }
 
 func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
-	dump := NewDumpSink("myApp", 200, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
-	go dump.Run()
+	dump := NewDumpSink("myApp", 200, loggertesthelper.Logger(), make(chan sinks.Sink, 3), time.Second, fakeTimeProvider)
+	dumpRunnerDone := make(chan struct{})
+	inputChan := make(chan *logmessage.Message)
+
+	go func() {
+		dump.Run(inputChan)
+		close(dumpRunnerDone)
+	}()
 
 	for i := 0; i < 100; i++ {
 		logMessage := messagetesthelpers.NewMessage(t, strconv.Itoa(i), "appId")
-		dump.Channel() <- logMessage
+		inputChan <- logMessage
 	}
 
-	time.Sleep(10 * time.Millisecond)
+	close(inputChan)
+	<-dumpRunnerDone
 
 	logMessages := dump.Dump()
 	assert.Equal(t, len(logMessages), 100)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "0")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "1")
+	assert.Equal(t, string(logMessages[99].GetLogMessage().GetMessage()), "99")
+
+	dumpRunnerDone = make(chan struct{})
+	inputChan = make(chan *logmessage.Message)
+
+	go func() {
+		dump.Run(inputChan)
+		close(dumpRunnerDone)
+	}()
 
 	for i := 100; i < 200; i++ {
 		logMessage := messagetesthelpers.NewMessage(t, strconv.Itoa(i), "appId")
-		dump.Channel() <- logMessage
+		inputChan <- logMessage
 	}
 
-	time.Sleep(10 * time.Millisecond)
-
+	close(inputChan)
+	<-dumpRunnerDone
 	logMessages = dump.Dump()
 	assert.Equal(t, len(logMessages), 200)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "0")
 	assert.Equal(t, string(logMessages[1].GetLogMessage().GetMessage()), "1")
 
+	dumpRunnerDone = make(chan struct{})
+	inputChan = make(chan *logmessage.Message)
+
+	go func() {
+		dump.Run(inputChan)
+		close(dumpRunnerDone)
+	}()
+
 	for i := 200; i < 300; i++ {
 		logMessage := messagetesthelpers.NewMessage(t, strconv.Itoa(i), "appId")
-		dump.Channel() <- logMessage
+		inputChan <- logMessage
 	}
 
-	time.Sleep(10 * time.Millisecond)
-
+	close(inputChan)
+	<-dumpRunnerDone
 	logMessages = dump.Dump()
 	assert.Equal(t, len(logMessages), 200)
 	assert.Equal(t, string(logMessages[0].GetLogMessage().GetMessage()), "100")
@@ -244,15 +359,22 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
 
 func TestDumpWithLotsOfDumps(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
-	go dump.Run()
+	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+	dumpRunnerDone := make(chan struct{})
+	inputChan := make(chan *logmessage.Message)
+
+	go func() {
+		dump.Run(inputChan)
+		close(dumpRunnerDone)
+	}()
 
 	for i := 0; i < 10; i++ {
 		logMessage := messagetesthelpers.NewMessage(t, strconv.Itoa(i), "appId")
-		dump.Channel() <- logMessage
+		inputChan <- logMessage
 	}
 
-	time.Sleep(10 * time.Millisecond)
+	close(inputChan)
+	<-dumpRunnerDone
 
 	for i := 0; i < 200; i++ {
 		go func() {
@@ -265,34 +387,21 @@ func TestDumpWithLotsOfDumps(t *testing.T) {
 	}
 }
 
-func TestClosingInputChanAlsoClosesPassThruChan(t *testing.T) {
-	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
-	go dump.Run()
-
-	close(dump.Channel())
-
-	select {
-	case _, open := <-dump.passThruChan:
-		assert.False(t, open)
-	case <-time.After(time.Second):
-		assert.Fail(t, "Expected the pass thru channel to have been closed")
-	}
-}
-
 func TestDumpSinkClosesItselfAfterPeriodOfInactivity(t *testing.T) {
 	timeoutChan := make(chan sinks.Sink, 1)
-	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), timeoutChan, 10*time.Millisecond)
-	wait := sync.WaitGroup{}
-	wait.Add(1)
+	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), timeoutChan, 10*time.Millisecond, fakeTimeProvider)
+	dumpRunnerDone := make(chan struct{})
+	inputChan := make(chan *logmessage.Message)
+
 	go func() {
-		dump.Run()
-		wait.Done()
+		dump.Run(inputChan)
+		close(dumpRunnerDone)
 	}()
 
-	time.Sleep(9 * time.Millisecond)
-	assert.Equal(t, len(timeoutChan), 0)
+	fakeTimeProvider.IncrementBySeconds(uint64(1))
 
-	wait.Wait()
+	<-dumpRunnerDone
+
 	assert.Equal(t, len(timeoutChan), 1)
 
 	select {
@@ -303,21 +412,28 @@ func TestDumpSinkClosesItselfAfterPeriodOfInactivity(t *testing.T) {
 	}
 }
 
-// TODO: this test is very prone to race conditions and timing issues on slow boxes (ie travis)
 func xTestDumpSinkClosingTimeIsResetWhenAMessageArrives(t *testing.T) {
 	timeoutChan := make(chan sinks.Sink, 1)
-	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), timeoutChan, 10*time.Millisecond)
-	go dump.Run()
+	fakeTimeProvider.ProvideFakeChannels = true
+	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), timeoutChan, 10*time.Second, fakeTimeProvider)
 
-	time.Sleep(5 * time.Millisecond)
+	dumpRunnerDone := make(chan struct{})
+	inputChan := make(chan *logmessage.Message)
 
+	go func() {
+		dump.Run(inputChan)
+		close(dumpRunnerDone)
+	}()
+
+	fakeTimeProvider.IncrementBySeconds(uint64(5))
 	logMessage := messagetesthelpers.NewMessage(t, "0", "appId")
-	dump.Channel() <- logMessage
+	inputChan <- logMessage
+	fakeTimeProvider.IncrementBySeconds(uint64(8))
 
-	time.Sleep(8 * time.Millisecond)
 	assert.Equal(t, len(timeoutChan), 0)
+	fakeTimeProvider.IncrementBySeconds(uint64(3))
+	<-dumpRunnerDone
 
-	time.Sleep(3 * time.Millisecond)
 	assert.Equal(t, len(timeoutChan), 1)
 	select {
 	case sink := <-timeoutChan:

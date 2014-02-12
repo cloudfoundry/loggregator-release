@@ -5,18 +5,24 @@ import (
 	"sync"
 	"loggregator/sinks/dump"
 	"loggregator/sinks/syslog"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 )
 
 func NewGroupedSinks() *GroupedSinks {
-	return &GroupedSinks{make(map[string]map[string]sinks.Sink), new(sync.RWMutex)}
+	return &GroupedSinks{apps: make(map[string]map[string]sinkWrapper)}
+}
+
+type sinkWrapper struct {
+	inputChan chan<- *logmessage.Message
+	s sinks.Sink
 }
 
 type GroupedSinks struct {
-	apps map[string]map[string]sinks.Sink
-	*sync.RWMutex
+	apps map[string]map[string]sinkWrapper
+	sync.RWMutex
 }
 
-func (gc *GroupedSinks) Register(s sinks.Sink) bool {
+func (gc *GroupedSinks) Register(in chan<- *logmessage.Message, s sinks.Sink) bool {
 	gc.Lock()
 	defer gc.Unlock()
 
@@ -25,35 +31,44 @@ func (gc *GroupedSinks) Register(s sinks.Sink) bool {
 		return false
 	}
 	if gc.apps[appId] == nil {
-		gc.apps[appId] = make(map[string]sinks.Sink)
+		gc.apps[appId] = make(map[string]sinkWrapper)
 	}
 
-	if gc.apps[appId][s.Identifier()] != nil {
+	if _, ok := gc.apps[appId][s.Identifier()]; !ok {
 		return false
 	}
-	gc.apps[appId][s.Identifier()] = s
+	gc.apps[appId][s.Identifier()] = sinkWrapper{inputChan: in, s: s}
 	return true
 }
 
-func (gc *GroupedSinks) For(appId string) (results []sinks.Sink) {
+func (gc *GroupedSinks) BroadCast(appId string, msg *logmessage.Message) {
 	gc.RLock()
 	defer gc.RUnlock()
 
-	for _, sink := range gc.apps[appId] {
-		results = append(results, sink)
+	for _, wrapper := range gc.apps[appId] {
+//		gc.logger.Debugf("MessageRouter:ParsedMessageChan: Sending Message to channel %v for sinks targeting [%s].", wrapper.s.Identifier(), appId)
+		wrapper.inputChan <- msg
 	}
+}
 
-	return results
+func (gc *GroupedSinks) CountFor(appId string) int {
+	gc.RLock()
+	defer gc.RUnlock()
+
+	if _, ok := gc.apps[appId]; !ok {
+		return 0
+	}
+	return len(gc.apps[appId])
 }
 
 func (gc *GroupedSinks) DrainsFor(appId string) (results []sinks.Sink) {
 	gc.RLock()
 	defer gc.RUnlock()
 
-	for _, s := range gc.apps[appId] {
-		_, isSyslogSink := s.(*syslog.SyslogSink)
+	for _, wrapper := range gc.apps[appId] {
+		_, isSyslogSink := wrapper.s.(*syslog.SyslogSink)
 		if isSyslogSink {
-			results = append(results, s)
+			results = append(results, wrapper.s)
 		}
 	}
 
@@ -64,17 +79,17 @@ func (gc *GroupedSinks) DumpFor(appId string) *dump.DumpSink {
 	gc.RLock()
 	defer gc.RUnlock()
 
-	if gc.apps[appId][appId] == nil {
+	if _, ok := gc.apps[appId][appId]; !ok {
 		return nil
 	}
-	return gc.apps[appId][appId].(*dump.DumpSink)
+	return gc.apps[appId][appId].s.(*dump.DumpSink)
 }
 
 func (gc *GroupedSinks) DrainFor(appId, drainUrl string) (result sinks.Sink) {
 	gc.RLock()
 	defer gc.RUnlock()
 
-	return gc.apps[appId][drainUrl]
+	return gc.apps[appId][drainUrl].s
 }
 
 func (gc *GroupedSinks) Delete(sink sinks.Sink) {

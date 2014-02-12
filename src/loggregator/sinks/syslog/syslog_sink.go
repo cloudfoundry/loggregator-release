@@ -32,21 +32,20 @@ func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, s
 		logger:            givenLogger,
 		sentMessageCount:  new(uint64),
 		sentByteCount:     new(uint64),
-		listenerChannel:   make(chan *logmessage.Message),
 		syslogWriter:      syslogWriter,
 		errorChannel:      errorChannel,
 		disconnectChannel: make(chan struct{}),
 	}
 }
 
-func (s *SyslogSink) Run() {
+func (s *SyslogSink) Run(inputChan <-chan *logmessage.Message) {
 	s.logger.Infof("Syslog Sink %s: Running.", s.drainUrl)
 	defer s.logger.Errorf("Syslog Sink %s: Stopped. This should never happen", s.drainUrl)
 
 	backoffStrategy := retrystrategy.NewExponentialRetryStrategy()
 	numberOfTries := 0
 
-	buffer := sinks.RunTruncatingBuffer(s, 100, s.Logger())
+	buffer := sinks.RunTruncatingBuffer(inputChan, 100, s.logger)
 	for {
 		s.logger.Debugf("Syslog Sink %s: Starting loop. Current backoff: %v", s.drainUrl, backoffStrategy(numberOfTries))
 
@@ -109,18 +108,10 @@ func (s *SyslogSink) Run() {
 	}
 }
 
-func (s *SyslogSink) Channel() chan *logmessage.Message {
-	return s.listenerChannel
-}
-
 func (s *SyslogSink) Disconnect() {
 	if !s.syslogWriter.IsConnected() {
 		close(s.disconnectChannel)
 	}
-}
-
-func (s *SyslogSink) Logger() *gosteno.Logger {
-	return s.logger
 }
 
 func (s *SyslogSink) Identifier() string {

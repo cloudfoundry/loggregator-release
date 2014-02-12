@@ -5,7 +5,6 @@ import (
 	. "github.com/onsi/gomega"
 	"loggregator/sinks/dump"
 	"loggregator/sinks/syslog"
-	"loggregator/sinks/dump"
 
 	"loggregator/sinkserver/metrics"
 	"loggregator/sinks"
@@ -13,7 +12,7 @@ import (
 
 var _ = Describe("SinkManagerMetrics", func() {
 
-	var sinkManagerMetrics *sinkserver.SinkManagerMetrics
+	var sinkManagerMetrics *metrics.SinkManagerMetrics
 	var sink sinks.Sink
 
 	BeforeEach(func() {

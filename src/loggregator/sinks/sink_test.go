@@ -7,8 +7,8 @@ import (
 	"runtime"
 )
 
-var _ = Describe("SyslogSink", func() {
-	It("should only allow one request to close", func(done Done) {
+var _ = Describe("Sink", func() {
+	PIt("should only allow one request to close", func(done Done) {
 		closeChan := make(chan sinks.Sink, 1)
 
 		sink := testSink{"1", closeChan}

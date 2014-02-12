@@ -66,10 +66,9 @@ func (sink *testSink) Logger() *gosteno.Logger {
 }
 
 func (sink *testSink) Run() {
-	alreadyRequestedClose := false
 	for {
 		runtime.Gosched()
-		sinks.RequestClose(sink, sink.sinkCloseChan, &alreadyRequestedClose)
+
 	}
 }
 

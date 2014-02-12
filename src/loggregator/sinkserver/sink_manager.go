@@ -14,6 +14,7 @@ import (
 	"loggregator/sinkserver/metrics"
 	"loggregator/sinks/syslog"
 	"loggregator/sinks/dump"
+	"github.com/cloudfoundry/gunk/timeprovider"
 )
 
 type SinkManager struct {
@@ -52,10 +53,7 @@ func (sinkManager *SinkManager) Stop() {
 }
 
 func (sinkManager *SinkManager) SendTo(appId string, receivedMessage *logmessage.Message) {
-	for _, sink := range sinkManager.sinks.For(appId) {
-		sinkManager.logger.Debugf("MessageRouter:ParsedMessageChan: Sending Message to channel %v for sinks targeting [%s].", sink.Identifier(), appId)
-		sink.Channel() <- receivedMessage
-	}
+	sinkManager.sinks.BroadCast(appId, receivedMessage) {
 }
 
 func (sinkManager *SinkManager) listenForSinkChanges() {
@@ -84,7 +82,7 @@ func (sinkManager *SinkManager) listenForErrorMessages() {
 	}
 }
 
-func (sinkManager *SinkManager) RegisterSink(sink sinks.Sink) bool {
+func (sinkManager *SinkManager) RegisterSink(inputChan chan<-*logmessage.Message, sink sinks.Sink) bool {
 	ok := sinkManager.sinks.Register(sink)
 	if !ok {
 		return false
@@ -168,10 +166,12 @@ func (sinkManager *SinkManager) ensureRecentLogsSinkFor(appId string) {
 		return
 	}
 
-	s := dump.NewDumpSink(appId, sinkManager.recentLogCount, sinkManager.logger, sinkManager.sinkCloseChan, time.Hour)
+	s := dump.NewDumpSink(appId, sinkManager.recentLogCount, sinkManager.logger, sinkManager.sinkCloseChan, time.Hour, timeprovider.NewTimeProvider())
 
-	if sinkManager.RegisterSink(s) {
-		go s.Run()
+
+	inputChan := make(chan *logmessage.Message)
+	if sinkManager.RegisterSink(inputChan, s) {
+		go s.Run(inputChan)
 	}
 }
 
