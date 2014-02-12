@@ -19,7 +19,7 @@ type Config struct {
 	IncomingPort           uint32
 	OutgoingPort           uint32
 	LogFilePath            string
-	MaxRetainedLogMessages int
+	MaxRetainedLogMessages uint32
 	WSMessageBufferSize    uint
 	SharedSecret           string
 	SkipCertVerify         bool

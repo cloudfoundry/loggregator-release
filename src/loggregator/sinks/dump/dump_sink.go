@@ -71,9 +71,6 @@ func (d *DumpSink) copyBuffer() (int, []*logmessage.Message) {
 }
 
 func (d *DumpSink) Dump() []*logmessage.Message {
-
-
-
 	sequence := atomic.LoadUint32(&d.sequence)
 	out := make([]*logmessage.Message, d.bufferSize)
 	_, buffer := d.copyBuffer()
@@ -109,7 +106,7 @@ func (d *DumpSink) Logger() *gosteno.Logger {
 }
 
 func (d *DumpSink) Identifier() string {
-	return "dump"
+	return d.appId
 }
 
 func (d *DumpSink) Emit() instrumentation.Context {

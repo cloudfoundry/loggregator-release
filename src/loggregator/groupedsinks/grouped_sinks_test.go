@@ -42,27 +42,68 @@ var _ = Describe("GroupedSink", func() {
 	})
 
 	Describe("BroadCast", func() {
-		It("should send message to all registered sinks that match the appId", func() {
+		It("should send message to all registered sinks that match the appId", func(done Done) {
 			appId := "123"
 			appSink := syslog.NewSyslogSink("123", "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
 			otherInputChan := make(chan *logmessage.Message)
-			result := groupedSinks.Register(otherInputChan, appSink)
-			Expect(result).To(BeTrue())
+			groupedSinks.Register(otherInputChan, appSink)
 
 			appId = "789"
 			appSink = syslog.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
 
-			result = groupedSinks.Register(inputChan, appSink)
-			Expect(result).To(BeTrue())
-//			groupedSinks.BroadCast(appId, msg)
+			groupedSinks.Register(inputChan, appSink)
 
+			msg := NewMessage("test message", appId)
+			go groupedSinks.BroadCast(appId, msg)
+
+			Expect(<-inputChan).To(Equal(msg))
 			Expect(otherInputChan).To(HaveLen(0))
+			close(done)
 		})
 
-		It("should handle sending to an appId that has no sinks", func() {
-//			groupedSinks.BroadCast("i-dont-exist", msg)
+		It("should not block when sending to an appId that has no sinks", func(done Done) {
+			appId := "NonExistantApp"
+			msg := NewMessage("test message", appId)
+			groupedSinks.BroadCast(appId, msg)
+			close(done)
 		})
 	})
+
+	Describe("BroadCastError", func(){
+			It("should send message to all registered sinks that match the appId", func(done Done) {
+				appId := "123"
+				appSink := dump.NewDumpSink(appId, 10, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+				otherInputChan := make(chan *logmessage.Message)
+				groupedSinks.Register(otherInputChan, appSink)
+
+				appId = "789"
+				appSink = dump.NewDumpSink(appId, 10, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+
+				groupedSinks.Register(inputChan, appSink)
+				msg := NewMessage("error message", appId)
+				go groupedSinks.BroadCastError(appId, msg)
+
+				Expect(<-inputChan).To(Equal(msg))
+				Expect(otherInputChan).To(HaveLen(0))
+				close(done)
+			})
+
+			It("should not send to sinks that don't want errors", func(done Done){
+				appId := "789"
+
+				sink1 := dump.NewDumpSink(appId, 10, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+				sink2 := syslog.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+
+				groupedSinks.Register(inputChan,sink1)
+				groupedSinks.Register(inputChan,sink2)
+				msg := NewMessage("error message", appId)
+				go groupedSinks.BroadCastError(appId, msg)
+				Expect(<-inputChan).To(Equal(msg))
+				Expect(inputChan).To(HaveLen(0))
+				close(done)
+			})
+	})
+
 
 	Describe("Register", func() {
 		It("should return false for empty app ids", func() {
@@ -101,6 +142,15 @@ var _ = Describe("GroupedSink", func() {
 			groupedSinks.Delete(sink1)
 			Expect(groupedSinks.CountFor(target)).To(Equal(1))
 		})
+
+		It("should close the inputChan", func() {
+			target := "789"
+
+			sink := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			groupedSinks.Register(inputChan,sink)
+			groupedSinks.Delete(sink)
+			Expect(inputChan).To(BeClosed())
+		})
 	})
 
 	Describe("DrainsFor", func(){
@@ -128,9 +178,7 @@ var _ = Describe("GroupedSink", func() {
 			groupedSinks.Register(inputChan,sink2)
 
 			sinkDrain := groupedSinks.DrainFor(target, "sink we are searching for")
-			Expect(sinkDrain).To(HaveLen(1))
 			Expect(sinkDrain).To(Equal(sink2))
-
 		})
 	})
 

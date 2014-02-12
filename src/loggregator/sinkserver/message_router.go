@@ -48,7 +48,7 @@ func (r *MessageRouter) manageSinks(message *logmessage.Message) {
 	appId := logMessage.GetAppId()
 
 	if logMessage.GetSourceName() == "App" {
-		r.SinkManager.manageSyslogSinks(appId, logMessage.GetDrainUrls())
+		r.SinkManager.ManageSyslogSinks(appId, logMessage.GetDrainUrls())
 	}
 	r.SinkManager.ensureRecentLogsSinkFor(appId)
 }

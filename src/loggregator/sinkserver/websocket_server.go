@@ -93,9 +93,7 @@ func (w *WebsocketServer) streamLogs(appId string, ws *websocket.Conn) {
 		w.bufferSize,
 	)
 	w.logger.Debugf("WebsocketServer: Requesting a wss sink for app %s", websocketSink.AppId())
-	w.sinkManager.sinkOpenChan <- websocketSink
-
-	websocketSink.Run()
+	w.sinkManager.RegisterSink(websocketSink, false)
 }
 
 func (w *WebsocketServer) recentLogs(appId string, ws *websocket.Conn) {

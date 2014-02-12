@@ -30,14 +30,16 @@ func (gc *GroupedSinks) Register(in chan<- *logmessage.Message, s sinks.Sink) bo
 	if appId == "" || s.Identifier() == "" {
 		return false
 	}
-	if gc.apps[appId] == nil {
+	sinksForApp := gc.apps[appId]
+	if sinksForApp == nil {
 		gc.apps[appId] = make(map[string]sinkWrapper)
+		sinksForApp = gc.apps[appId]
 	}
 
-	if _, ok := gc.apps[appId][s.Identifier()]; !ok {
+	if _, ok := sinksForApp[s.Identifier()]; ok {
 		return false
 	}
-	gc.apps[appId][s.Identifier()] = sinkWrapper{inputChan: in, s: s}
+	sinksForApp[s.Identifier()] = sinkWrapper{inputChan: in, s: s}
 	return true
 }
 
@@ -48,6 +50,15 @@ func (gc *GroupedSinks) BroadCast(appId string, msg *logmessage.Message) {
 	for _, wrapper := range gc.apps[appId] {
 //		gc.logger.Debugf("MessageRouter:ParsedMessageChan: Sending Message to channel %v for sinks targeting [%s].", wrapper.s.Identifier(), appId)
 		wrapper.inputChan <- msg
+	}
+}
+
+func (gc *GroupedSinks) BroadCastError(appId string, errorMsg *logmessage.Message) {
+	for _, wrapper := range gc.apps[appId] {
+		if wrapper.s.ShouldReceiveErrors() {
+//			sinkManager.logger.Debugf("SinkManager:ErrorChannel: Sending Message to channel %v for sinks targeting [%s].", sink.Identifier(), appId)
+			wrapper.inputChan <- errorMsg
+		}
 	}
 }
 
@@ -79,10 +90,15 @@ func (gc *GroupedSinks) DumpFor(appId string) *dump.DumpSink {
 	gc.RLock()
 	defer gc.RUnlock()
 
-	if _, ok := gc.apps[appId][appId]; !ok {
+	appCache, ok  := gc.apps[appId]
+
+	if !ok {
 		return nil
 	}
-	return gc.apps[appId][appId].s.(*dump.DumpSink)
+	if _, ok := appCache[appId]; !ok {
+		return nil
+	}
+	return appCache[appId].s.(*dump.DumpSink)
 }
 
 func (gc *GroupedSinks) DrainFor(appId, drainUrl string) (result sinks.Sink) {
@@ -95,6 +111,9 @@ func (gc *GroupedSinks) DrainFor(appId, drainUrl string) (result sinks.Sink) {
 func (gc *GroupedSinks) Delete(sink sinks.Sink) {
 	gc.Lock()
 	defer gc.Unlock()
-
-	delete(gc.apps[sink.AppId()], sink.Identifier())
+	wrapper, ok := gc.apps[sink.AppId()][sink.Identifier()]
+	if (ok) {
+		close(wrapper.inputChan)
+		delete(gc.apps[sink.AppId()], sink.Identifier())
+	}
 }
