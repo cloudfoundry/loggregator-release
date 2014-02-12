@@ -1,12 +1,17 @@
-package groupedsinks
+package groupedsinks_test
 
 import (
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"github.com/stretchr/testify/assert"
+	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
+	"loggregator/groupedsinks"
 	"loggregator/sinks"
-	"testing"
 	"time"
+	"loggregator/sinks/syslog"
+	"loggregator/sinks/dump"
 )
 
 type DummySyslogWriter struct{}
@@ -22,153 +27,201 @@ func (d DummySyslogWriter) Close() error      { return nil }
 func (d DummySyslogWriter) IsConnected() bool { return false }
 func (d DummySyslogWriter) SetConnected(bool) {}
 
-func TestRegisterAndFor(t *testing.T) {
-	groupedSinks := NewGroupedSinks()
+var _ = Describe("GroupedSink", func() {
+	var fakeTimeProvider *faketimeprovider.FakeTimeProvider
+	var groupedSinks *groupedsinks.GroupedSinks
+	var inputChan, errorChan chan *logmessage.Message
 
-	appId := "789"
-	appSink := sinks.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
-	result := groupedSinks.Register(appSink)
 
-	appSinks := groupedSinks.For(appId)
-	assert.True(t, result)
-	assert.Equal(t, len(appSinks), 1)
-	assert.Equal(t, appSinks[0], appSink)
-}
+	BeforeEach(func(){
+		fakeTimeProvider = faketimeprovider.New(time.Now())
+		groupedSinks = groupedsinks.NewGroupedSinks()
+		inputChan = make(chan *logmessage.Message)
+		errorChan = make(chan *logmessage.Message)
 
-func TestRegisterReturnsFalseForEmptyAppId(t *testing.T) {
-	groupedSinks := NewGroupedSinks()
+	})
 
-	appId := ""
-	appSink := sinks.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
-	result := groupedSinks.Register(appSink)
+	Describe("BroadCast", func() {
+		It("should send message to all registered sinks that match the appId", func(done Done) {
+			appId := "123"
+			appSink := syslog.NewSyslogSink("123", "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			otherInputChan := make(chan *logmessage.Message)
+			groupedSinks.Register(otherInputChan, appSink)
 
-	assert.False(t, result)
-}
+			appId = "789"
+			appSink = syslog.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
 
-func TestRegisterReturnsFalseForEmptyIdentifier(t *testing.T) {
-	groupedSinks := NewGroupedSinks()
+			groupedSinks.Register(inputChan, appSink)
 
-	appId := "appId"
-	appSink := sinks.NewSyslogSink(appId, "", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
-	result := groupedSinks.Register(appSink)
+			msg := NewMessage("test message", appId)
+			go groupedSinks.BroadCast(appId, msg)
 
-	assert.False(t, result)
-}
+			Expect(<-inputChan).To(Equal(msg))
+			Expect(otherInputChan).To(HaveLen(0))
+			close(done)
+		})
 
-func TestRegisterReturnsFalseWhenAttemptingToAddADuplicateSink(t *testing.T) {
-	groupedSinks := NewGroupedSinks()
+		It("should not block when sending to an appId that has no sinks", func(done Done) {
+			appId := "NonExistantApp"
+			msg := NewMessage("test message", appId)
+			groupedSinks.BroadCast(appId, msg)
+			close(done)
+		})
+	})
 
-	appId := "789"
-	appSink := sinks.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
-	groupedSinks.Register(appSink)
-	result := groupedSinks.Register(appSink)
+	Describe("BroadCastError", func(){
+			It("should send message to all registered sinks that match the appId", func(done Done) {
+				appId := "123"
+				appSink := dump.NewDumpSink(appId, 10, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+				otherInputChan := make(chan *logmessage.Message)
+				groupedSinks.Register(otherInputChan, appSink)
 
-	assert.False(t, result)
-}
+				appId = "789"
+				appSink = dump.NewDumpSink(appId, 10, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
 
-func TestEmptyCollection(t *testing.T) {
-	groupedSinks := NewGroupedSinks()
-	appId := "789"
+				groupedSinks.Register(inputChan, appSink)
+				msg := NewMessage("error message", appId)
+				go groupedSinks.BroadCastError(appId, msg)
 
-	assert.Equal(t, len(groupedSinks.For(appId)), 0)
-}
+				Expect(<-inputChan).To(Equal(msg))
+				Expect(otherInputChan).To(HaveLen(0))
+				close(done)
+			})
 
-func TestDelete(t *testing.T) {
-	groupedSinks := NewGroupedSinks()
-	target := "789"
+			It("should not send to sinks that don't want errors", func(done Done){
+				appId := "789"
 
-	sink1 := sinks.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
-	sink2 := sinks.NewSyslogSink(target, "url2", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
+				sink1 := dump.NewDumpSink(appId, 10, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+				sink2 := syslog.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
 
-	groupedSinks.Register(sink1)
-	groupedSinks.Register(sink2)
+				groupedSinks.Register(inputChan,sink1)
+				groupedSinks.Register(inputChan,sink2)
+				msg := NewMessage("error message", appId)
+				go groupedSinks.BroadCastError(appId, msg)
+				Expect(<-inputChan).To(Equal(msg))
+				Expect(inputChan).To(HaveLen(0))
+				close(done)
+			})
+	})
 
-	groupedSinks.Delete(sink1)
 
-	appSinks := groupedSinks.For(target)
-	assert.Equal(t, len(appSinks), 1)
-	assert.Equal(t, appSinks[0], sink2)
-}
+	Describe("Register", func() {
+		It("should return false for empty app ids", func() {
+			appId := ""
+			appSink := syslog.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			result := groupedSinks.Register(inputChan, appSink)
+			Expect(result).To(BeFalse())
+		})
 
-func TestDrainsFor(t *testing.T) {
-	groupedSinks := NewGroupedSinks()
-	target := "789"
-	otherTarget := "790"
+		It("should return false for emtpy identifiers", func() {
+			appId := "appId"
+			appSink := syslog.NewSyslogSink(appId, "", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			result := groupedSinks.Register(inputChan, appSink)
+			Expect(result).To(BeFalse())
+		})
 
-	sink1 := sinks.NewDumpSink(target, 10, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
-	sink2 := sinks.NewSyslogSink(target, "url", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
-	sink3 := sinks.NewSyslogSink(otherTarget, "url", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
+		It("should return false when registring a duplicate", func(){
+			appId := "789"
+			appSink := syslog.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			groupedSinks.Register(inputChan, appSink)
+			result := groupedSinks.Register(inputChan, appSink)
+			Expect(result).To(BeFalse())
+		})
+	})
 
-	groupedSinks.Register(sink1)
-	groupedSinks.Register(sink2)
-	groupedSinks.Register(sink3)
+	Describe("Delete", func() {
+		It("should delete all sinks for the appId", func(){
+			target := "789"
 
-	appSinks := groupedSinks.DrainsFor(target)
-	assert.Equal(t, len(appSinks), 1)
-	assert.Equal(t, appSinks[0], sink2)
-}
+			sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			sink2 := syslog.NewSyslogSink(target, "url2", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
 
-func TestDrainForReturnsOnly(t *testing.T) {
-	groupedSinks := NewGroupedSinks()
-	target := "789"
+			groupedSinks.Register(inputChan,sink1)
+			groupedSinks.Register(inputChan,sink2)
 
-	sink1 := sinks.NewSyslogSink(target, "other sink", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
-	sink2 := sinks.NewSyslogSink(target, "sink we are searching for", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
+			groupedSinks.Delete(sink1)
+			Expect(groupedSinks.CountFor(target)).To(Equal(1))
+		})
 
-	groupedSinks.Register(sink1)
-	groupedSinks.Register(sink2)
+		It("should close the inputChan", func() {
+			target := "789"
 
-	sinkDrain := groupedSinks.DrainFor(target, "sink we are searching for")
-	assert.Equal(t, sink2, sinkDrain)
-}
+			sink := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			groupedSinks.Register(inputChan,sink)
+			groupedSinks.Delete(sink)
+			Expect(inputChan).To(BeClosed())
+		})
+	})
 
-func TestDumpForReturnsOnyDumps(t *testing.T) {
-	groupedSinks := NewGroupedSinks()
-	target := "789"
+	Describe("DrainsFor", func(){
+		It("should not return dump sinks", func(){
+			target := "789"
 
-	sink1 := sinks.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
-	sink2 := sinks.NewSyslogSink(target, "url2", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
-	sink3 := sinks.NewDumpSink(target, 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
+			sink1 := dump.NewDumpSink(target, 10, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+			sink2 := syslog.NewSyslogSink(target, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
 
-	groupedSinks.Register(sink1)
-	groupedSinks.Register(sink2)
-	groupedSinks.Register(sink3)
+			groupedSinks.Register(inputChan,sink1)
+			groupedSinks.Register(inputChan,sink2)
 
-	appSink := groupedSinks.DumpFor(target)
-	assert.Equal(t, appSink, sink3)
-}
+			sinkDrain := groupedSinks.DrainsFor(target)
+			Expect(sinkDrain).To(HaveLen(1))
+			Expect(sinkDrain[0]).To(Equal(sink2))
+		})
 
-func TestDumpForReturnsOnlyDumpsForTheGivenAppId(t *testing.T) {
-	groupedSinks := NewGroupedSinks()
-	target := "789"
-	otherTarget := "790"
+		It("should return only sinks that match the appid", func() {
+			target := "789"
 
-	sink1 := sinks.NewDumpSink(target, 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
-	sink2 := sinks.NewDumpSink(otherTarget, 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second)
+			sink1 := syslog.NewSyslogSink(target, "other sink", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			sink2 := syslog.NewSyslogSink(target, "sink we are searching for", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
 
-	groupedSinks.Register(sink1)
-	groupedSinks.Register(sink2)
+			groupedSinks.Register(inputChan,sink1)
+			groupedSinks.Register(inputChan,sink2)
 
-	appSink := groupedSinks.DumpFor(target)
-	assert.Equal(t, appSink, sink1)
-}
+			sinkDrain := groupedSinks.DrainFor(target, "sink we are searching for")
+			Expect(sinkDrain).To(Equal(sink2))
+		})
+	})
 
-func TestDumpForReturnsNilIfThereIsNone(t *testing.T) {
-	groupedSinks := NewGroupedSinks()
-	target := "789"
+	Describe("DumpFor", func(){
+		It("should return only dumps", func(){
+			target := "789"
 
-	sink1 := sinks.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, make(chan<- *logmessage.Message))
+			sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			sink2 := syslog.NewSyslogSink(target, "url2", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			sink3 := dump.NewDumpSink(target, 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
 
-	groupedSinks.Register(sink1)
+			groupedSinks.Register(inputChan,sink1)
+			groupedSinks.Register(inputChan,sink2)
+			groupedSinks.Register(inputChan,sink3)
 
-	appSink := groupedSinks.DumpFor(target)
-	assert.Nil(t, appSink)
-}
+			Expect(groupedSinks.DumpFor(target)).To(Equal(sink3))
+		})
 
-func TestDumpForReturnsNilIfThereIsNothing(t *testing.T) {
-	groupedSinks := NewGroupedSinks()
-	target := "789"
+		It("should return only dumps that match the appId", func(){
+			target := "789"
+			otherTarget := "790"
 
-	appSink := groupedSinks.DumpFor(target)
-	assert.Nil(t, appSink)
-}
+			sink1 := dump.NewDumpSink(target, 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+			sink2 := dump.NewDumpSink(otherTarget, 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+
+			groupedSinks.Register(inputChan,sink1)
+			groupedSinks.Register(inputChan,sink2)
+
+			Expect(groupedSinks.DumpFor(target)).To(Equal(sink1))
+		})
+
+		It("should return nil if no dumps are registered", func(){
+			target := "789"
+
+			sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+
+			groupedSinks.Register(inputChan, sink1)
+
+			Expect(groupedSinks.DumpFor(target)).To(BeNil())
+		})
+
+		It("should return nil if no sinks exist", func() {
+			Expect(groupedSinks.DumpFor("empty")).To(BeNil())
+		})
+	})
+})

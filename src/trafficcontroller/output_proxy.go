@@ -1,12 +1,11 @@
 package trafficcontroller
 
 import (
-	"code.google.com/p/go.net/websocket"
 	"code.google.com/p/gogoprotobuf/proto"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"net"
+	"github.com/gorilla/websocket"
 	"net/http"
 	"net/url"
 	"time"
@@ -26,10 +25,10 @@ func NewProxy(host string, hashers []*hasher.Hasher, authorizer authorization.Lo
 }
 
 func (proxy *Proxy) Start() error {
-	return http.ListenAndServe(proxy.host, websocket.Handler(proxy.HandleWebSocket))
+	return http.ListenAndServe(proxy.host, proxy)
 }
 
-func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress net.Addr) (bool, *logmessage.LogMessage) {
+func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress string) (bool, *logmessage.LogMessage) {
 	newLogMessage := func(message []byte) *logmessage.LogMessage {
 		currentTime := time.Now()
 		messageType := logmessage.LogMessage_ERR
@@ -64,13 +63,21 @@ func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress net.Addr
 	return true, nil
 }
 
-func (proxy *Proxy) HandleWebSocket(clientWS *websocket.Conn) {
-	req := clientWS.Request()
-	req.ParseForm()
-	req.Form.Get("app")
-	clientAddress := clientWS.RemoteAddr()
+func upgrade(w http.ResponseWriter, r *http.Request) *websocket.Conn {
+	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
+	if err != nil {
+		http.Error(w, "Not a websocket handshake", 400)
+		return nil
+	}
+	return ws
+}
 
-	appId := req.Form.Get("app")
+func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	r.Form.Get("app")
+	clientAddress := r.RemoteAddr
+	requestUri := r.URL.RequestURI()
+	appId := r.Form.Get("app")
 
 	extractAuthTokenFromUrl := func(u *url.URL) string {
 		authorization := ""
@@ -81,24 +88,30 @@ func (proxy *Proxy) HandleWebSocket(clientWS *websocket.Conn) {
 		return authorization
 	}
 
-	authToken := clientWS.Request().Header.Get("Authorization")
+	authToken := r.Header.Get("Authorization")
 	if authToken == "" {
-		authToken = extractAuthTokenFromUrl(req.URL)
+		authToken = extractAuthTokenFromUrl(r.URL)
 	}
 
+	ws := upgrade(rw, r)
 	if authorized, errorMessage := proxy.isAuthorized(appId, authToken, clientAddress); !authorized {
 		data, err := proto.Marshal(errorMessage)
 		if err != nil {
 			proxy.logger.Errorf("Error marshalling log message: %s", err)
 		}
-		websocket.Message.Send(clientWS, data)
-		clientWS.Close()
+		ws.WriteMessage(websocket.BinaryMessage, data)
+
+		ws.Close()
 		return
 	}
 
+	proxy.HandleWebSocket(ws, appId, requestUri)
+}
+
+func (proxy *Proxy) HandleWebSocket(clientWS *websocket.Conn, appId, requestUri string) {
 	defer clientWS.Close()
 
-	proxy.logger.Debugf("Output Proxy: Request for app: %v", req.Form.Get("app"))
+	proxy.logger.Debugf("Output Proxy: Request for app: %v", appId)
 	serverWSs := make([]*websocket.Conn, len(proxy.hashers))
 	for index, hasher := range proxy.hashers {
 		proxy.logger.Debugf("Output Proxy: Servers in group [%v]: %v", index, hasher.LoggregatorServers())
@@ -106,13 +119,8 @@ func (proxy *Proxy) HandleWebSocket(clientWS *websocket.Conn) {
 		server := hasher.GetLoggregatorServerForAppId(appId)
 		proxy.logger.Debugf("Output Proxy: AppId is %v. Using server: %v", appId, server)
 
-		config, err := websocket.NewConfig("ws://"+server+req.URL.RequestURI(), "http://localhost")
+		serverWS, _, err := websocket.DefaultDialer.Dial("ws://"+server+requestUri, http.Header{})
 
-		if err != nil {
-			proxy.logger.Errorf("Output Proxy: Error creating config for websocket - %v", err)
-		}
-
-		serverWS, err := websocket.DialConfig(config)
 		if err != nil {
 			proxy.logger.Errorf("Output Proxy: Error connecting to loggregator server - %v", err)
 		}
@@ -131,28 +139,34 @@ func (proxy *Proxy) proxyConnectionTo(server *websocket.Conn, client *websocket.
 	var logMessage []byte
 	defer server.Close()
 	for {
-		err := websocket.Message.Receive(server, &logMessage)
+
+		_, data, err := server.ReadMessage()
+
 		if err != nil {
 			proxy.logger.Errorf("Output Proxy: Error reading from the server - %v - %v", err, server.RemoteAddr().String())
 			doneChan <- true
 			return
 		}
 		proxy.logger.Debugf("Output Proxy: Got message from server %v bytes", len(logMessage))
-		websocket.Message.Send(client, logMessage)
+
+		err = client.WriteMessage(websocket.BinaryMessage, data)
+		if err != nil {
+			proxy.logger.Errorf("Output Proxy: Error writing to client websocket - %v", err)
+			return
+		}
 	}
 }
 
 func (proxy *Proxy) watchKeepAlive(servers []*websocket.Conn, client *websocket.Conn) {
-	var keepAlive []byte
 	for {
-		err := websocket.Message.Receive(client, &keepAlive)
+		_, keepAlive, err := client.ReadMessage()
 		if err != nil {
 			proxy.logger.Errorf("Output Proxy: Error reading from the client - %v", err)
 			return
 		}
 		proxy.logger.Debugf("Output Proxy: Got message from client %v bytes", len(keepAlive))
 		for _, server := range servers {
-			websocket.Message.Send(server, keepAlive)
+			server.WriteMessage(websocket.BinaryMessage, keepAlive)
 		}
 	}
 }

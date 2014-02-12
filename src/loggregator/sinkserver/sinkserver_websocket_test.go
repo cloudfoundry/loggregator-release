@@ -1,8 +1,9 @@
-package sinkserver
+package sinkserver_test
 
 import (
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
+	"loggregator/sinkserver"
 	testhelpers "server_testhelpers"
 	"testing"
 	"time"
@@ -12,15 +13,15 @@ func TestThatItSends(t *testing.T) {
 	receivedChan := make(chan []byte, 2)
 
 	expectedMessageString := "Some data"
-	logEnvelope := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString, "myApp01", SECRET)
+	message := messagetesthelpers.NewMessage(t, expectedMessageString, "myApp01")
 	otherMessageString := "Some more stuff"
-	otherLogEnvelope := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, otherMessageString, "myApp01", SECRET)
+	otherMessage := messagetesthelpers.NewMessage(t, otherMessageString, "myApp01")
 
-	_, dontKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_LOGS_PATH+"?app=myApp01")
+	_, dontKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?app=myApp01")
 	WaitForWebsocketRegistration()
 
-	dataReadChannel <- logEnvelope
-	dataReadChannel <- otherLogEnvelope
+	dataReadChannel <- message
+	dataReadChannel <- otherMessage
 
 	select {
 	case <-time.After(1 * time.Second):
@@ -39,74 +40,15 @@ func TestThatItSends(t *testing.T) {
 	dontKeepAliveChan <- true
 }
 
-func TestThatItSendsAllDataToAllSinks(t *testing.T) {
-	client1ReceivedChan := make(chan []byte)
-	client2ReceivedChan := make(chan []byte)
-
-	_, stopKeepAlive1, _ := testhelpers.AddWSSink(t, client1ReceivedChan, SERVER_PORT, TAIL_LOGS_PATH+"?app=myApp")
-	_, stopKeepAlive2, _ := testhelpers.AddWSSink(t, client2ReceivedChan, SERVER_PORT, TAIL_LOGS_PATH+"?app=myApp")
-	WaitForWebsocketRegistration()
-
-	expectedMessageString := "Some Data"
-	logEnvelope := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString, "myApp", SECRET)
-	dataReadChannel <- logEnvelope
-
-	select {
-	case <-time.After(200 * time.Millisecond):
-		t.Errorf("Did not get message from client 1.")
-	case message := <-client1ReceivedChan:
-		messagetesthelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
-	}
-
-	select {
-	case <-time.After(200 * time.Millisecond):
-		t.Errorf("Did not get message from client 2.")
-	case message := <-client2ReceivedChan:
-		messagetesthelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
-	}
-
-	stopKeepAlive1 <- true
-	WaitForWebsocketRegistration()
-
-	stopKeepAlive2 <- true
-	WaitForWebsocketRegistration()
-}
-
-func TestThatItSendsLogsToProperAppSink(t *testing.T) {
-	receivedChan := make(chan []byte)
-
-	otherLogMessage := messagetesthelpers.NewLogMessage("Some other message", "otherApp")
-	otherLogEnvelope := messagetesthelpers.MarshalledLogEnvelope(t, otherLogMessage, SECRET)
-
-	expectedMessageString := "My important message"
-	logEnvelope := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString, "myApp02", SECRET)
-
-	_, stopKeepAlive, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_LOGS_PATH+"?app=myApp02")
-	WaitForWebsocketRegistration()
-
-	dataReadChannel <- otherLogEnvelope
-	dataReadChannel <- logEnvelope
-
-	select {
-	case <-time.After(1 * time.Second):
-		t.Errorf("Did not get message from app sink.")
-	case message := <-receivedChan:
-		messagetesthelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
-	}
-
-	stopKeepAlive <- true
-	WaitForWebsocketRegistration()
-}
-
 func TestThatItDoesNotDumpLogsBeforeTailing(t *testing.T) {
 	receivedChan := make(chan []byte)
 
 	expectedMessageString := "My important message"
-	logEnvelope := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString, "myApp06", SECRET)
+	message := messagetesthelpers.NewMessage(t, expectedMessageString, "myApp06")
 
-	dataReadChannel <- logEnvelope
+	dataReadChannel <- message
 
-	_, stopKeepAlive, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_LOGS_PATH+"?app=myApp06")
+	_, stopKeepAlive, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?app=myApp06")
 	WaitForWebsocketRegistration()
 
 	select {
@@ -122,36 +64,9 @@ func TestThatItDoesNotDumpLogsBeforeTailing(t *testing.T) {
 	WaitForWebsocketRegistration()
 }
 
-func TestDropUnmarshallableMessage(t *testing.T) {
-	receivedChan := make(chan []byte)
-
-	sink, stopKeepAlive, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_LOGS_PATH+"?app=myApp03")
-	WaitForWebsocketRegistration()
-
-	dataReadChannel <- make([]byte, 10)
-
-	time.Sleep(1 * time.Millisecond)
-	select {
-	case msg1, ok := <-receivedChan:
-		if ok {
-			t.Errorf("We should not have received a message, but got: %v", msg1)
-		}
-	default:
-		//no communication. That's good!
-	}
-
-	sink.Close()
-	expectedMessageString := "My important message"
-	logEnvelope := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString, "myApp03", SECRET)
-	dataReadChannel <- logEnvelope
-
-	stopKeepAlive <- true
-	WaitForWebsocketRegistration()
-}
-
 func TestDontDropSinkThatWorks(t *testing.T) {
 	receivedChan := make(chan []byte, 2)
-	_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_LOGS_PATH+"?app=myApp04")
+	_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?app=myApp04")
 
 	select {
 	case <-time.After(200 * time.Millisecond):
@@ -160,8 +75,8 @@ func TestDontDropSinkThatWorks(t *testing.T) {
 	}
 
 	expectedMessageString := "Some data"
-	logEnvelope := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString, "myApp04", SECRET)
-	dataReadChannel <- logEnvelope
+	message := messagetesthelpers.NewMessage(t, expectedMessageString, "myApp04")
+	dataReadChannel <- message
 
 	select {
 	case <-time.After(1 * time.Second):
@@ -175,26 +90,24 @@ func TestDontDropSinkThatWorks(t *testing.T) {
 }
 
 func TestQueryStringCombinationsThatDropSinkButContinueToWork(t *testing.T) {
-	receivedChan := make(chan []byte, 2)
-	_, _, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_LOGS_PATH+"?")
-	assert.Equal(t, true, <-droppedChannel)
+	AssertConnectionFails(t, SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?")
 }
 
 func TestDropSinkWhenLogTargetisinvalid(t *testing.T) {
-	AssertConnectionFails(t, SERVER_PORT, TAIL_LOGS_PATH+"?something=invalidtarget", 4000)
+	AssertConnectionFails(t, SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?something=invalidtarget")
 }
 
 func TestKeepAlive(t *testing.T) {
 	receivedChan := make(chan []byte, 10)
 
-	_, killKeepAliveChan, connectionDroppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, TAIL_LOGS_PATH+"?app=myApp05")
+	_, killKeepAliveChan, connectionDroppedChannel := testhelpers.AddWSSink(t, receivedChan, FAST_TIMEOUT_SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?app=myApp05")
 	WaitForWebsocketRegistration()
 
 	go func() {
 		for {
 			expectedMessageString := "My important message"
-			logEnvelope := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString, "myApp05", SECRET)
-			dataReadChannel <- logEnvelope
+			message := messagetesthelpers.NewMessage(t, expectedMessageString, "myApp05")
+			dataReadChannel <- message
 			time.Sleep(2 * time.Millisecond)
 		}
 	}()
@@ -219,5 +132,11 @@ func TestKeepAlive(t *testing.T) {
 		}
 	}()
 
-	assert.True(t, <-connectionDroppedChannel, "We should have been dropped since we stopped the keepalive")
+	select {
+	case fu := <-connectionDroppedChannel:
+		assert.True(t, fu, "We should have been dropped since we stopped the keepalive")
+	case <-time.After(1 * time.Second):
+		t.Fatal("Should have read from connnectionDropppedChannel by now")
+	}
+
 }

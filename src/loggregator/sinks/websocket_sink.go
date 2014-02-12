@@ -1,10 +1,10 @@
 package sinks
 
 import (
-	"code.google.com/p/go.net/websocket"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"github.com/gorilla/websocket"
 	"net"
 	"sync/atomic"
 	"time"
@@ -15,36 +15,31 @@ type WebsocketSink struct {
 	appId               string
 	ws                  *websocket.Conn
 	clientAddress       net.Addr
-	sentMessageCount    *uint64
-	sentByteCount       *uint64
+	sentMessageCount    uint64
+	sentByteCount       uint64
 	keepAliveInterval   time.Duration
-	listenerChannel     chan *logmessage.Message
 	sinkCloseChan       chan Sink
 	wsMessageBufferSize uint
 }
 
-func NewWebsocketSink(appId string, givenLogger *gosteno.Logger, ws *websocket.Conn, clientAddress net.Addr, sinkCloseChan chan Sink, keepAliveInterval time.Duration, wsMessageBufferSize uint) Sink {
+func NewWebsocketSink(appId string, givenLogger *gosteno.Logger, ws *websocket.Conn, sinkCloseChan chan Sink, keepAliveInterval time.Duration, wsMessageBufferSize uint) Sink {
 	return &WebsocketSink{
-		givenLogger,
-		appId,
-		ws,
-		clientAddress,
-		new(uint64),
-		new(uint64),
-		keepAliveInterval,
-		make(chan *logmessage.Message),
-		sinkCloseChan,
-		wsMessageBufferSize,
+		logger:              givenLogger,
+		appId:               appId,
+		ws:                  ws,
+		clientAddress:       ws.RemoteAddr(),
+		keepAliveInterval:   keepAliveInterval,
+		sinkCloseChan:       sinkCloseChan,
+		wsMessageBufferSize: wsMessageBufferSize,
 	}
 }
 
 func (sink *WebsocketSink) keepAliveFailureChannel() <-chan bool {
 	keepAliveFailureChan := make(chan bool)
 	keepAliveChan := make(chan bool)
-	var keepAlive []byte
 	go func() {
 		for {
-			err := websocket.Message.Receive(sink.ws, &keepAlive)
+			_, _, err := sink.ws.ReadMessage()
 			if err != nil {
 				sink.logger.Debugf("Websocket Sink %s: Error receiving keep-alive. Stopping listening. Err: %v", sink.clientAddress, err)
 				return
@@ -67,12 +62,8 @@ func (sink *WebsocketSink) keepAliveFailureChannel() <-chan bool {
 	return keepAliveFailureChan
 }
 
-func (sink *WebsocketSink) Channel() chan *logmessage.Message {
-	return sink.listenerChannel
-}
-
 func (sink *WebsocketSink) Identifier() string {
-	return sink.ws.Request().RemoteAddr
+	return sink.ws.RemoteAddr().String()
 }
 
 func (sink *WebsocketSink) AppId() string {
@@ -83,23 +74,21 @@ func (sink *WebsocketSink) ShouldReceiveErrors() bool {
 	return true
 }
 
-func (s *WebsocketSink) Logger() *gosteno.Logger {
-	return s.logger
-}
 
-func (sink *WebsocketSink) Run() {
+func (sink *WebsocketSink) Run(inputChan <-chan *logmessage.Message) {
 	sink.logger.Debugf("Websocket Sink %s: Created for appId [%s]", sink.clientAddress, sink.appId)
 
 	keepAliveFailure := sink.keepAliveFailureChannel()
 	alreadyRequestedClose := false
 
-	buffer := runTruncatingBuffer(sink, sink.wsMessageBufferSize, sink.Logger())
+	buffer := RunTruncatingBuffer(inputChan, sink.wsMessageBufferSize, sink.logger)
 	for {
 		sink.logger.Debugf("Websocket Sink %s: Waiting for activity", sink.clientAddress)
 		select {
 		case <-keepAliveFailure:
+			sink.ws.Close()
 			sink.logger.Debugf("Websocket Sink %s: No keep keep-alive received. Requesting close.", sink.clientAddress)
-			RequestClose(sink, sink.sinkCloseChan, &alreadyRequestedClose)
+			sink.requestClose(sink.sinkCloseChan, &alreadyRequestedClose)
 			return
 		case message, ok := <-buffer.GetOutputChannel():
 			if !ok {
@@ -109,14 +98,14 @@ func (sink *WebsocketSink) Run() {
 				return
 			}
 			sink.logger.Debugf("Websocket Sink %s: Got %d bytes. Sending data", sink.clientAddress, message.GetRawMessageLength())
-			err := websocket.Message.Send(sink.ws, message.GetRawMessage())
+			err := sink.ws.WriteMessage(websocket.BinaryMessage, message.GetRawMessage())
 			if err != nil {
 				sink.logger.Debugf("Websocket Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", sink.clientAddress, err)
-				RequestClose(sink, sink.sinkCloseChan, &alreadyRequestedClose)
+				sink.requestClose(sink.sinkCloseChan, &alreadyRequestedClose)
 			} else {
 				sink.logger.Debugf("Websocket Sink %s: Successfully sent data", sink.clientAddress)
-				atomic.AddUint64(sink.sentMessageCount, 1)
-				atomic.AddUint64(sink.sentByteCount, uint64(message.GetRawMessageLength()))
+				atomic.AddUint64(&sink.sentMessageCount, 1)
+				atomic.AddUint64(&sink.sentByteCount, uint64(message.GetRawMessageLength()))
 			}
 		}
 	}
@@ -125,8 +114,18 @@ func (sink *WebsocketSink) Run() {
 func (sink *WebsocketSink) Emit() instrumentation.Context {
 	return instrumentation.Context{Name: "websocketSink",
 		Metrics: []instrumentation.Metric{
-			instrumentation.Metric{Name: "sentMessageCount:" + sink.appId, Value: atomic.LoadUint64(sink.sentMessageCount)},
-			instrumentation.Metric{Name: "sentByteCount:" + sink.appId, Value: atomic.LoadUint64(sink.sentByteCount)},
+			instrumentation.Metric{Name: "sentMessageCount:" + sink.appId, Value: atomic.LoadUint64(&sink.sentMessageCount)},
+			instrumentation.Metric{Name: "sentByteCount:" + sink.appId, Value: atomic.LoadUint64(&sink.sentByteCount)},
 		},
+	}
+}
+
+func (sink *WebsocketSink) requestClose(sinkCloseChan chan Sink, alreadyRequestedClose *bool) {
+	if !(*alreadyRequestedClose) {
+		sinkCloseChan <- sink
+		*alreadyRequestedClose = true
+		sink.logger.Debugf("Sink for App %s: Successfully requested listener channel close", sink.AppId())
+	} else {
+		sink.logger.Debugf("Sink for App %s: Previously requested close. Doing nothing", sink.AppId())
 	}
 }

@@ -1,9 +1,10 @@
 package server_testhelpers
 
 import (
-	"code.google.com/p/go.net/websocket"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
+	"net/http"
 	"time"
 )
 
@@ -11,15 +12,21 @@ func AddWSSink(t assert.TestingT, receivedChan chan []byte, port string, path st
 	dontKeepAliveChan := make(chan bool, 1)
 	connectionDroppedChannel := make(chan bool, 1)
 
-	config, err := websocket.NewConfig("ws://localhost:"+port+path, "http://localhost")
-	assert.NoError(t, err)
-	ws, err := websocket.DialConfig(config)
-	assert.NoError(t, err)
+	ws, _, err := websocket.DefaultDialer.Dial("ws://localhost:"+port+path, http.Header{})
+	if err != nil {
+		assert.NoError(t, err)
+		panic(err)
+	}
+
+	if ws == nil {
+		panic("its nil")
+	}
 
 	go func() {
 		for {
-			var data []byte
-			err := websocket.Message.Receive(ws, &data)
+
+			_, data, err := ws.ReadMessage()
+
 			if err != nil {
 				connectionDroppedChannel <- true
 				close(receivedChan)
@@ -29,9 +36,10 @@ func AddWSSink(t assert.TestingT, receivedChan chan []byte, port string, path st
 		}
 
 	}()
+
 	go func() {
 		for {
-			err := websocket.Message.Send(ws, []byte{42})
+			err := ws.WriteMessage(websocket.BinaryMessage, []byte{42})
 			if err != nil {
 				break
 			}

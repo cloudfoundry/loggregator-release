@@ -40,3 +40,9 @@
 [submodule "src/github.com/onsi/gomega"]
 	path = src/github.com/onsi/gomega
 	url = https://github.com/onsi/gomega
+[submodule "src/github.com/gorilla/websocket"]
+	path = src/github.com/gorilla/websocket
+	url = https://github.com/gorilla/websocket
+[submodule "src/github.com/cloudfoundry/gunk"]
+	path = src/github.com/cloudfoundry/gunk
+	url = https://github.com/cloudfoundry/gunk

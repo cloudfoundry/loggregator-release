@@ -22,6 +22,7 @@ type Router struct {
 	hasher             *hasher.Hasher
 	loggregatorClients map[string]loggregatorclient.LoggregatorClient
 	agentListener      agentlistener.AgentListener
+	dataChan           <-chan []byte
 	host               string
 }
 
@@ -36,7 +37,7 @@ func NewRouter(host string, hasher *hasher.Hasher, config cfcomponent.Config, lo
 		instrumentables = append(instrumentables, client)
 	}
 
-	agentListener := agentlistener.NewAgentListener(host, logger)
+	agentListener, dataChan := agentlistener.NewAgentListener(host, logger)
 	instrumentables = append(instrumentables, agentListener)
 
 	cfc, err := cfcomponent.NewComponent(
@@ -53,15 +54,15 @@ func NewRouter(host string, hasher *hasher.Hasher, config cfcomponent.Config, lo
 		return
 	}
 
-	r = &Router{Component: cfc, hasher: hasher, loggregatorClients: loggregatorClients, agentListener: agentListener, host: host}
+	r = &Router{Component: cfc, hasher: hasher, loggregatorClients: loggregatorClients, agentListener: agentListener, dataChan: dataChan, host: host}
 
 	return
 }
 
 func (r Router) Start(logger *gosteno.Logger) {
-	dataChan := r.agentListener.Start()
-	for {
-		dataToProxy := <-dataChan
+	go r.agentListener.Start()
+	defer r.agentListener.Stop()
+	for dataToProxy := range r.dataChan {
 		appId, err := appid.FromProtobufferMessage(dataToProxy)
 		if err != nil {
 			logger.Warn(err.Error())

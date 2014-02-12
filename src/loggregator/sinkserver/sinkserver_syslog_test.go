@@ -1,8 +1,9 @@
-package sinkserver
+package sinkserver_test
 
 import (
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
+	"loggregator/sinkserver"
 	"regexp"
 	testhelpers "server_testhelpers"
 	"testing"
@@ -27,8 +28,8 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 	<-fakeSyslogDrain2.ReadyChan
 
 	expectedMessageString := "Some Data"
-	logEnvelope := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, expectedMessageString, "myApp", SECRET, "syslog://localhost:34569")
-	dataReadChannel <- logEnvelope
+	message := messagetesthelpers.NewMessageWithSyslogDrain(t, expectedMessageString, "myApp", "syslog://localhost:34569")
+	dataReadChannel <- message
 
 	select {
 	case <-time.After(200 * time.Millisecond):
@@ -42,9 +43,9 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 	sourceName := "DEA"
 	logMessage2.SourceName = &sourceName
 	logMessage2.DrainUrls = []string{"syslog://localhost:34540"}
-	logEnvelope2 := messagetesthelpers.MarshalledLogEnvelope(t, logMessage2, SECRET)
+	message2 := messagetesthelpers.NewMessageFromLogMessage(t, logMessage2)
 
-	dataReadChannel <- logEnvelope2
+	dataReadChannel <- message2
 
 	select {
 	case <-time.After(200 * time.Millisecond):
@@ -59,7 +60,7 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 
 func TestThatItDoesNotRegisterADrainIfItsURLIsBlacklisted(t *testing.T) {
 	receivedChan := make(chan []byte, 2)
-	testhelpers.AddWSSink(t, receivedChan, BLACKLIST_SERVER_PORT, TAIL_LOGS_PATH+"?app=myApp01")
+	testhelpers.AddWSSink(t, receivedChan, BLACKLIST_SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?app=myApp01")
 	WaitForWebsocketRegistration()
 
 	clientReceivedChan := make(chan []byte)
@@ -70,22 +71,28 @@ func TestThatItDoesNotRegisterADrainIfItsURLIsBlacklisted(t *testing.T) {
 	blackListedSyslogDrain.Serve()
 	<-blackListedSyslogDrain.ReadyChan
 
-	logEnvelope1 := messagetesthelpers.MarshalledLogEnvelopeForMessage(t, "Some Data", "myApp01", SECRET, "syslog://127.0.0.1:34570")
-	blackListDataReadChannel <- logEnvelope1
+	message1 := messagetesthelpers.NewMessageWithSyslogDrain(t, "Some Data", "myApp01", "syslog://127.0.0.1:34570")
+	blackListDataReadChannel <- message1
 
 	assertMessageNotOnChannel(t, 1000, clientReceivedChan, "Should not have received message on blacklisted Syslog drain")
 
 	select {
 	case <-time.After(1 * time.Second):
 		t.Errorf("Did not get the real message.")
-	case receivedMessage := <-receivedChan:
+	case receivedMessage, ok := <-receivedChan:
+		if !ok {
+			t.Fatal("Error reading from channel.")
+		}
 		messagetesthelpers.AssertProtoBufferMessageContains(t, "Some Data", receivedMessage)
 	}
 
 	select {
 	case <-time.After(1 * time.Second):
 		t.Errorf("Did not get the error message about the blacklisted syslog drain.")
-	case receivedMessage := <-receivedChan:
+	case receivedMessage, ok := <-receivedChan:
+		if !ok {
+			t.Fatal("Error reading from channel.")
+		}
 		messagetesthelpers.AssertProtoBufferMessageContains(t, "URL is blacklisted", receivedMessage)
 	}
 }

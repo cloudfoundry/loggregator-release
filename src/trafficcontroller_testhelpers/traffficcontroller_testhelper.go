@@ -1,10 +1,11 @@
 package trafficcontroller_testhelpers
 
 import (
-	"code.google.com/p/go.net/websocket"
 	"encoding/binary"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
+	"net/http"
 	"testing"
 )
 
@@ -18,17 +19,16 @@ func SuccessfulAuthorizer(authToken string, target string, l *gosteno.Logger) bo
 }
 
 func AssertConnectionFails(t *testing.T, port string, path string, authToken string, expectedErrorCode uint16) {
-	config, err := websocket.NewConfig("ws://localhost:"+port+path, "http://localhost")
-	assert.NoError(t, err)
+	requestHeader := http.Header{}
 	if authToken != "" {
-		config.Header.Add("Authorization", authToken)
+		requestHeader = http.Header{"Authorization": []string{authToken}}
 	}
 
-	ws, err := websocket.DialConfig(config)
+	ws, _, err := websocket.DefaultDialer.Dial("ws://localhost:"+port+path, requestHeader)
 
 	assert.NoError(t, err)
-	data := make([]byte, 2)
-	_, err = ws.Read(data)
+	_, data, err := ws.ReadMessage()
+	assert.NoError(t, err)
 	errorCode := binary.BigEndian.Uint16(data)
 	assert.Equal(t, expectedErrorCode, errorCode)
 	assert.Equal(t, "EOF", err.Error())

@@ -1,9 +1,9 @@
 package trafficcontroller
 
 import (
-	"code.google.com/p/go.net/websocket"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
+	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/url"
@@ -37,7 +37,6 @@ func TestProxying(t *testing.T) {
 
 func TestProxyingWithAuthThroughQueryParam(t *testing.T) {
 	go Server("localhost:62038", "Hello World from the server", 1)
-
 	proxy := NewProxy(
 		"localhost:62022",
 		[]*hasher.Hasher{hasher.NewHasher([]string{"localhost:62038"})},
@@ -216,9 +215,10 @@ func TestProxyWithoutAuthorization(t *testing.T) {
 	go proxy.Start()
 	time.Sleep(time.Millisecond * 50)
 
-	config, err := websocket.NewConfig("ws://localhost:62061/?app=myApp", "http://localhost")
+	ws, _, err := websocket.DefaultDialer.Dial("ws://localhost:62061/?app=myApp", http.Header{})
 	assert.NoError(t, err)
-	receivedChan := ClientWithAuth(t, "62061", "/?app=myApp", config)
+
+	receivedChan := ClientWithAuth(t, ws)
 
 	select {
 	case data := <-receivedChan:
@@ -243,10 +243,11 @@ func TestProxyWhenAuthorizationFailsThroughHeader(t *testing.T) {
 	go proxy.Start()
 	time.Sleep(time.Millisecond * 50)
 
-	config, err := websocket.NewConfig("ws://localhost:62061/?app=myApp", "http://localhost")
+	ws, _, err := websocket.DefaultDialer.Dial("ws://localhost:62061/?app=myApp", http.Header{"Authorization": []string{testhelpers.INVALID_AUTHENTICATION_TOKEN}})
+
 	assert.NoError(t, err)
-	config.Header.Add("Authorization", testhelpers.INVALID_AUTHENTICATION_TOKEN)
-	receivedChan := ClientWithAuth(t, "62062", "/?app=myApp", config)
+
+	receivedChan := ClientWithAuth(t, ws)
 
 	select {
 	case data := <-receivedChan:
@@ -271,9 +272,9 @@ func TestProxyWhenAuthorizationFailsThroughQueryParams(t *testing.T) {
 	go proxy.Start()
 	time.Sleep(time.Millisecond * 50)
 
-	config, err := websocket.NewConfig("ws://localhost:62061/?app=myApp&authorization="+url.QueryEscape(testhelpers.INVALID_AUTHENTICATION_TOKEN), "http://localhost")
+	ws, _, err := websocket.DefaultDialer.Dial("ws://localhost:62061/?app=myApp&authorization="+url.QueryEscape(testhelpers.INVALID_AUTHENTICATION_TOKEN), http.Header{})
 	assert.NoError(t, err)
-	receivedChan := ClientWithAuth(t, "62062", "/?app=myApp", config)
+	receivedChan := ClientWithAuth(t, ws)
 
 	select {
 	case data := <-receivedChan:
@@ -288,8 +289,7 @@ func TestProxyWhenAuthorizationFailsThroughQueryParams(t *testing.T) {
 
 func WaitForServerStart(port string, path string) {
 	serverStarted := func() bool {
-		config, err := websocket.NewConfig("ws://localhost:"+port+path, "http://localhost")
-		_, err = websocket.DialConfig(config)
+		_, _, err := websocket.DefaultDialer.Dial("ws://localhost:"+port+path, http.Header{})
 		if err != nil {
 			return false
 		}
@@ -301,29 +301,27 @@ func WaitForServerStart(port string, path string) {
 }
 
 func ClientWithQueryParamAuth(t *testing.T, port string, path string) chan []byte {
-	config, err := websocket.NewConfig("ws://localhost:"+port+path+"&authorization="+url.QueryEscape(testhelpers.VALID_AUTHENTICATION_TOKEN), "http://localhost")
+	ws, _, err := websocket.DefaultDialer.Dial("ws://localhost:"+port+path+"&authorization="+url.QueryEscape(testhelpers.VALID_AUTHENTICATION_TOKEN), http.Header{})
 	assert.NoError(t, err)
 
-	return ClientWithAuth(t, port, path, config)
+	return ClientWithAuth(t, ws)
 }
 
 func Client(t *testing.T, port string, path string) chan []byte {
-	config, err := websocket.NewConfig("ws://localhost:"+port+path, "http://localhost")
-	config.Header.Add("Authorization", testhelpers.VALID_AUTHENTICATION_TOKEN)
+	ws, _, err := websocket.DefaultDialer.Dial("ws://localhost:"+port+path, http.Header{"Authorization": []string{testhelpers.VALID_AUTHENTICATION_TOKEN}})
 	assert.NoError(t, err)
 
-	return ClientWithAuth(t, port, path, config)
+	return ClientWithAuth(t, ws)
 }
 
-func ClientWithAuth(t *testing.T, port string, path string, config *websocket.Config) chan []byte {
+func ClientWithAuth(t *testing.T, ws *websocket.Conn) chan []byte {
 	receivedChan := make(chan []byte)
-	ws, err := websocket.DialConfig(config)
-	assert.NoError(t, err)
 
 	go func() {
 		for {
-			var data []byte
-			err := websocket.Message.Receive(ws, &data)
+
+			_, data, err := ws.ReadMessage()
+
 			if err != nil {
 				close(receivedChan)
 				ws.Close()
@@ -336,59 +334,79 @@ func ClientWithAuth(t *testing.T, port string, path string, config *websocket.Co
 	return receivedChan
 }
 
-func Server(apiEndpoint, response string, numberOfMessages int) {
-	websocketHandler := func(ws *websocket.Conn) {
-		doneChan := make(chan bool)
-		defer ws.Close()
-		for ii := 1; ii <= numberOfMessages; ii++ {
+type fakeServer struct {
+	response         string
+	numberOfMessages int
+}
 
-			go func(i int) {
-				time.Sleep(time.Duration(i) * time.Millisecond)
-				websocket.Message.Send(ws, []byte(response))
-				if i == numberOfMessages {
-					doneChan <- true
-				}
-			}(ii)
-		}
-		<-doneChan
+func (f *fakeServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
+	if err != nil {
+		http.Error(w, "Not a websocket handshake", 400)
+		return
 	}
 
-	err := http.ListenAndServe(apiEndpoint, websocket.Handler(websocketHandler))
+	doneChan := make(chan bool)
+	defer ws.Close()
+	go func() {
+		for ii := 1; ii <= f.numberOfMessages; ii++ {
+			time.Sleep(time.Duration(ii) * time.Millisecond)
+
+			ws.WriteMessage(websocket.BinaryMessage, []byte(f.response))
+
+			if ii == f.numberOfMessages {
+				doneChan <- true
+			}
+
+		}
+	}()
+	<-doneChan
+}
+
+func Server(apiEndpoint, response string, numberOfMessages int) {
+	fake := fakeServer{response, numberOfMessages}
+	err := http.ListenAndServe(apiEndpoint, &fake)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func KeepAliveServer(apiEndpoint string, keepAliveChan chan []byte) {
-	websocketHandler := func(ws *websocket.Conn) {
-		doneChan := make(chan bool)
-		var keepAlive []byte
-		go func() {
-			for {
-				err := websocket.Message.Receive(ws, &keepAlive)
-				if err != nil {
-					doneChan <- true
-					return
-				}
-				keepAliveChan <- keepAlive
+type fakeKeepAliveServer struct {
+	keepAliveChan chan []byte
+}
 
-			}
-		}()
-		<-doneChan
+func (f *fakeKeepAliveServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
+	if err != nil {
+		http.Error(w, "Not a websocket handshake", 400)
+		return
 	}
 
-	err := http.ListenAndServe(apiEndpoint, websocket.Handler(websocketHandler))
+	doneChan := make(chan bool)
+	go func() {
+		for {
+			_, data, err := ws.ReadMessage()
+			if err != nil {
+				doneChan <- true
+				return
+			}
+			f.keepAliveChan <- data
+
+		}
+	}()
+	<-doneChan
+}
+
+func KeepAliveServer(apiEndpoint string, keepAliveChan chan []byte) {
+	fakeServer := fakeKeepAliveServer{keepAliveChan}
+	err := http.ListenAndServe(apiEndpoint, &fakeServer)
 	if err != nil {
 		panic(err)
 	}
 }
 
 func KeepAliveClient(t *testing.T, port string, path string) {
-	config, err := websocket.NewConfig("ws://localhost:"+port+path, "http://localhost")
-	config.Header.Add("Authorization", testhelpers.VALID_AUTHENTICATION_TOKEN)
+	ws, _, err := websocket.DefaultDialer.Dial("ws://localhost:"+port+path, http.Header{"Authorization": []string{testhelpers.VALID_AUTHENTICATION_TOKEN}})
 	assert.NoError(t, err)
-	ws, err := websocket.DialConfig(config)
-	assert.NoError(t, err)
-
-	websocket.Message.Send(ws, []byte("keep alive"))
+	ws.WriteMessage(websocket.BinaryMessage, []byte("keep alive"))
 }

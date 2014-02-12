@@ -10,6 +10,8 @@ popd
 
 mv $BIN_DIR/../src/github.com/coreos/etcd/bin/etcd $BIN_DIR/etcd
 
+$(dirname $0)/go install github.com/onsi/ginkgo/ginkgo
+
 export PATH=$PATH:$BIN_DIR
 
 rm -rf ./pkg
@@ -26,36 +28,9 @@ function red {
 
 packages=(
     deaagent
-    deaagent/deaagent
     loggregator
-    loggregator/groupedsinks
-    loggregator/loggregator
-    loggregator/buffer
-    loggregator/buffer/truncatingbuffer
-    loggregator/sinks
-    loggregator/sinks/retrystrategy
-    loggregator/sinks/syslogwriter
-    loggregator/sinkserver
-    loggregator/store
-    server_testhelpers
     trafficcontroller
-    trafficcontroller/authorization
-    trafficcontroller/hasher
-    trafficcontroller/trafficcontroller
-    trafficcontroller_testhelpers
-    github.com/cloudfoundry/loggregatorlib/agentlistener
-    github.com/cloudfoundry/loggregatorlib/appid
-    github.com/cloudfoundry/loggregatorlib/cfcomponent
-    github.com/cloudfoundry/loggregatorlib/cfcomponent/auth
-    github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation
-    github.com/cloudfoundry/loggregatorlib/cfcomponent/localip
-    github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar
-    github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar
-    github.com/cloudfoundry/loggregatorlib/cfcomponent/uaa
-    github.com/cloudfoundry/loggregatorlib/emitter
-    github.com/cloudfoundry/loggregatorlib/loggregatorclient
-    github.com/cloudfoundry/loggregatorlib/logmessage
-    github.com/cloudfoundry/loggregatorlib/signature
+    github.com/cloudfoundry/loggregatorlib
 )
 
 performance_tests=(
@@ -67,8 +42,7 @@ do
     local_result=$result
     echo -e "\n Testing $package"
     $(dirname $0)/go fmt $package
-    $(dirname $0)/go test -i --race $package
-    $(dirname $0)/go test -v --race $package
+    $(dirname $0)/env ginkgo -r -race -keepGoing src/$package
     let "result += $?"
     echo -e "\n Vetting $package"
     $(dirname $0)/go vet $package
