@@ -10,8 +10,6 @@ popd
 
 mv $BIN_DIR/../src/github.com/coreos/etcd/bin/etcd $BIN_DIR/etcd
 
-$(dirname $0)/go install github.com/onsi/ginkgo/ginkgo
-
 export PATH=$PATH:$BIN_DIR
 
 rm -rf ./pkg
