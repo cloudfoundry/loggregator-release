@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"loggregator/iprange"
 	"loggregator/sinkserver"
 	"loggregator/sinkserver/sinkmanager"
@@ -49,6 +50,7 @@ type Loggregator struct {
 	listener        agentlistener.AgentListener
 	sinkManager     *sinkmanager.SinkManager
 	messageRouter   *sinkserver.MessageRouter
+	messageChan     <-chan *logmessage.Message
 	u               *unmarshaller.LogMessageUnmarshaller
 	websocketServer *websocket.WebsocketServer
 }
@@ -63,7 +65,8 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 		listener:        listener,
 		u:               u,
 		sinkManager:     sinkManager,
-		messageRouter:   sinkserver.NewMessageRouter(messageChan, sinkManager, logger),
+		messageChan:     messageChan,
+		messageRouter:   sinkserver.NewMessageRouter(sinkManager, logger),
 		websocketServer: websocket.NewWebsocketServer(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.WSMessageBufferSize, logger),
 	}
 }
@@ -72,7 +75,7 @@ func (l *Loggregator) Start() {
 	go l.listener.Start()
 	go l.u.Start(l.errChan)
 	go l.sinkManager.Start()
-	go l.messageRouter.Start()
+	go l.messageRouter.Start(l.messageChan)
 	go l.websocketServer.Start()
 }
 

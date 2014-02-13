@@ -49,8 +49,8 @@ func TestSendingToErrorChannelDoesNotBlock(t *testing.T) {
 	go sinkManager.Start()
 
 	incomingLogChan := make(chan *logmessage.Message, 10)
-	testMessageRouter := NewMessageRouter(incomingLogChan, sinkManager, logger)
-	go testMessageRouter.Start()
+	testMessageRouter := NewMessageRouter(sinkManager, logger)
+	go testMessageRouter.Start(incomingLogChan)
 
 	ourSink := testSink{make(chan *logmessage.Message, 10), false}
 
@@ -79,8 +79,8 @@ func TestSimpleBlacklistRule(t *testing.T) {
 	go sinkManager.Start()
 
 	incomingLogChan := make(chan *logmessage.Message, 10)
-	testMessageRouter := NewMessageRouter(incomingLogChan, sinkManager, logger)
-	go testMessageRouter.Start()
+	testMessageRouter := NewMessageRouter(sinkManager, logger)
+	go testMessageRouter.Start(incomingLogChan)
 
 	ourSink := testSink{make(chan *logmessage.Message, 100), true}
 	sinkManager.RegisterSink(ourSink)
@@ -132,8 +132,8 @@ func TestInvalidUrlForSyslogDrain(t *testing.T) {
 	go sinkManager.Start()
 
 	incomingLogChan := make(chan *logmessage.Message, 10)
-	testMessageRouter := NewMessageRouter(incomingLogChan, sinkManager, logger)
-	go testMessageRouter.Start()
+	testMessageRouter := NewMessageRouter(sinkManager, logger)
+	go testMessageRouter.Start(incomingLogChan)
 
 	ourSink := testSink{make(chan *logmessage.Message, 100), true}
 	sinkManager.RegisterSink(ourSink)
@@ -186,8 +186,8 @@ func TestParseEnvelopesDoesntBlockWhenMessageRouterChannelIsFull(t *testing.T) {
 	sinkManager := sinkmanager.NewSinkManager(1, true, []iprange.IPRange{}, logger)
 	go sinkManager.Start()
 	incomingLogChan := make(chan *logmessage.Message, 1)
-	messageRouter := NewMessageRouter(incomingLogChan, sinkManager, logger)
-	go messageRouter.Start()
+	messageRouter := NewMessageRouter(sinkManager, logger)
+	go messageRouter.Start(incomingLogChan)
 
 	testMessage := messagetesthelpers.NewMessage(t, "msg", "appid")
 

@@ -9,35 +9,40 @@ import (
 )
 
 type MessageRouter struct {
-	incomingLogChan <-chan *logmessage.Message
-	unmarshaller    func([]byte) (*logmessage.Message, error)
-	outgoingLogChan chan *logmessage.Message
-	SinkManager     *sinkmanager.SinkManager
-	Metrics         *metrics.MessageRouterMetrics
-	logger          *gosteno.Logger
+	unmarshaller func([]byte) (*logmessage.Message, error)
+	SinkManager  *sinkmanager.SinkManager
+	Metrics      *metrics.MessageRouterMetrics
+	logger       *gosteno.Logger
+	done         chan struct{}
 }
 
-func NewMessageRouter(incomingLogChan <-chan *logmessage.Message, sinkManager *sinkmanager.SinkManager, logger *gosteno.Logger) *MessageRouter {
+func NewMessageRouter(sinkManager *sinkmanager.SinkManager, logger *gosteno.Logger) *MessageRouter {
 	return &MessageRouter{
-		incomingLogChan: incomingLogChan,
-		outgoingLogChan: make(chan *logmessage.Message),
-		SinkManager:     sinkManager,
-		Metrics:         &metrics.MessageRouterMetrics{},
-		logger:          logger,
+		SinkManager: sinkManager,
+		Metrics:     &metrics.MessageRouterMetrics{},
+		logger:      logger,
+		done:        make(chan struct{}),
 	}
 }
 
-func (r *MessageRouter) Start() {
-
-	for message := range r.incomingLogChan {
-		r.logger.Debugf("MessageRouter:outgoingLogChan: Received %d bytes of data from agent listener.", message.GetRawMessageLength())
-
-		r.manageSinks(message)
-
-		r.send(message)
+func (r *MessageRouter) Start(incomingLogChan <-chan *logmessage.Message) {
+	for {
+		select {
+		case <-r.done:
+			return
+		case message, ok := <-incomingLogChan:
+			if !ok {
+				return
+			}
+			r.logger.Debugf("MessageRouter:outgoingLogChan: Received %d bytes of data from agent listener.", message.GetRawMessageLength())
+			r.manageSinks(message)
+			r.send(message)
+		}
 	}
 }
+
 func (r *MessageRouter) Stop() {
+	close(r.done)
 }
 
 func (r *MessageRouter) Emit() instrumentation.Context {

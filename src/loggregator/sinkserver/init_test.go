@@ -36,8 +36,8 @@ func init() {
 	sinkManager = sinkmanager.NewSinkManager(1024, false, nil, logger)
 	go sinkManager.Start()
 
-	TestMessageRouter = sinkserver.NewMessageRouter(dataReadChannel, sinkManager, logger)
-	go TestMessageRouter.Start()
+	TestMessageRouter = sinkserver.NewMessageRouter(sinkManager, logger)
+	go TestMessageRouter.Start(dataReadChannel)
 
 	apiEndpoint := "localhost:" + SERVER_PORT
 	TestWebsocketServer = websocket.NewWebsocketServer(apiEndpoint, sinkManager, 10*time.Second, 100, loggertesthelper.Logger())
@@ -51,8 +51,8 @@ func init() {
 	blacklistSinkManager := sinkmanager.NewSinkManager(1024, false, []iprange.IPRange{iprange.IPRange{Start: "127.0.0.0", End: "127.0.0.2"}}, logger)
 	go blacklistSinkManager.Start()
 
-	blacklistTestMessageRouter := sinkserver.NewMessageRouter(blackListDataReadChannel, blacklistSinkManager, logger)
-	go blacklistTestMessageRouter.Start()
+	blacklistTestMessageRouter := sinkserver.NewMessageRouter(blacklistSinkManager, logger)
+	go blacklistTestMessageRouter.Start(blackListDataReadChannel)
 
 	blacklistApiEndpoint := "localhost:" + BLACKLIST_SERVER_PORT
 	blackListTestWebsocketServer = websocket.NewWebsocketServer(blacklistApiEndpoint, blacklistSinkManager, 10*time.Second, 100, loggertesthelper.Logger())
