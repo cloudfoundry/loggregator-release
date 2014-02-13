@@ -18,8 +18,6 @@ import (
 )
 
 type SinkManager struct {
-	sinkOpenChan        chan sinks.Sink
-	sinkCloseChan       chan sinks.Sink
 	errorChannel        chan *logmessage.Message
 	urlBlacklistManager *blacklist.URLBlacklistManager
 	sinks               *groupedsinks.GroupedSinks
@@ -31,8 +29,6 @@ type SinkManager struct {
 
 func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListIPs []iprange.IPRange, logger *gosteno.Logger) *SinkManager {
 	return &SinkManager{
-		sinkOpenChan:  make(chan sinks.Sink, 20),
-		sinkCloseChan: make(chan sinks.Sink, 20),
 		errorChannel:  make(chan *logmessage.Message, 100),
 		urlBlacklistManager: blacklist.New(blackListIPs),
 		sinks:          groupedsinks.NewGroupedSinks(),
@@ -44,8 +40,6 @@ func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackLis
 }
 
 func (sinkManager *SinkManager) Start() {
-	go sinkManager.listenForSinkChanges()
-
 	sinkManager.listenForErrorMessages()
 }
 
@@ -55,17 +49,6 @@ func (sinkManager *SinkManager) Stop() {
 func (sinkManager *SinkManager) SendTo(appId string, receivedMessage *logmessage.Message) {
 	sinkManager.ensureRecentLogsSinkFor(appId)
 	sinkManager.sinks.BroadCast(appId, receivedMessage)
-}
-
-func (sinkManager *SinkManager) listenForSinkChanges() {
-	for {
-		select {
-		case sink := <-sinkManager.sinkOpenChan:
-			sinkManager.RegisterSink(sink)
-		case sink := <-sinkManager.sinkCloseChan:
-			sinkManager.UnregisterSink(sink)
-		}
-	}
 }
 
 func (sinkManager *SinkManager) listenForErrorMessages() {
@@ -89,13 +72,17 @@ func (sinkManager *SinkManager) RegisterSink(sink sinks.Sink, block ...bool) boo
 	sinkManager.logger.Infof("SinkManager: Sink with identifier %v requested. Opened it.", sink.Identifier())
 	if len(block) > 0 {
 		sink.Run(inputChan)
+		sinkManager.unregisterSink(sink)
 	} else {
-		go sink.Run(inputChan)
+		go func() {
+			sink.Run(inputChan)
+			sinkManager.unregisterSink(sink)
+		}()
 	}
 	return true
 }
 
-func (sinkManager *SinkManager) UnregisterSink(sink sinks.Sink) {
+func (sinkManager *SinkManager) unregisterSink(sink sinks.Sink) {
 	sinkManager.sinks.Delete(sink)
 
 	sinkManager.Metrics.Dec(sink)
@@ -120,14 +107,14 @@ func (sinkManager *SinkManager) ManageSyslogSinks(appId string, syslogSinkUrls [
 
 func (sinkManager *SinkManager) unregisterAllSyslogSinks(appId string) {
 	for _, sink := range sinkManager.sinks.DrainsFor(appId) {
-		sinkManager.UnregisterSink(sink)
+		sinkManager.unregisterSink(sink)
 	}
 }
 
 func (sinkManager *SinkManager) unregisterUnboundSyslogSinks(appId string, syslogSinkUrls []string) {
 	for _, sink := range sinkManager.sinks.DrainsFor(appId) {
 		if !contains(sink.Identifier(), syslogSinkUrls) {
-			sinkManager.UnregisterSink(sink)
+			sinkManager.unregisterSink(sink)
 		}
 	}
 }
@@ -164,9 +151,7 @@ func (sinkManager *SinkManager) ensureRecentLogsSinkFor(appId string) {
 		return
 	}
 
-	s := dump.NewDumpSink(appId, sinkManager.recentLogCount, sinkManager.logger, sinkManager.sinkCloseChan, time.Hour, timeprovider.NewTimeProvider())
-
-
+	s := dump.NewDumpSink(appId, sinkManager.recentLogCount, sinkManager.logger, time.Hour, timeprovider.NewTimeProvider())
 	sinkManager.RegisterSink(s)
 }
 

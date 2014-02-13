@@ -8,7 +8,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
 	"loggregator/groupedsinks"
-	"loggregator/sinks"
 	"time"
 	"loggregator/sinks/syslog"
 	"loggregator/sinks/dump"
@@ -72,12 +71,12 @@ var _ = Describe("GroupedSink", func() {
 	Describe("BroadCastError", func(){
 			It("should send message to all registered sinks that match the appId", func(done Done) {
 				appId := "123"
-				appSink := dump.NewDumpSink(appId, 10, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+				appSink := dump.NewDumpSink(appId, 10, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
 				otherInputChan := make(chan *logmessage.Message)
 				groupedSinks.Register(otherInputChan, appSink)
 
 				appId = "789"
-				appSink = dump.NewDumpSink(appId, 10, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+				appSink = dump.NewDumpSink(appId, 10, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
 
 				groupedSinks.Register(inputChan, appSink)
 				msg := NewMessage("error message", appId)
@@ -91,7 +90,7 @@ var _ = Describe("GroupedSink", func() {
 			It("should not send to sinks that don't want errors", func(done Done){
 				appId := "789"
 
-				sink1 := dump.NewDumpSink(appId, 10, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+				sink1 := dump.NewDumpSink(appId, 10, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
 				sink2 := syslog.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
 
 				groupedSinks.Register(inputChan,sink1)
@@ -157,7 +156,7 @@ var _ = Describe("GroupedSink", func() {
 		It("should not return dump sinks", func(){
 			target := "789"
 
-			sink1 := dump.NewDumpSink(target, 10, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+			sink1 := dump.NewDumpSink(target, 10, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
 			sink2 := syslog.NewSyslogSink(target, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
 
 			groupedSinks.Register(inputChan,sink1)
@@ -188,7 +187,7 @@ var _ = Describe("GroupedSink", func() {
 
 			sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
 			sink2 := syslog.NewSyslogSink(target, "url2", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
-			sink3 := dump.NewDumpSink(target, 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+			sink3 := dump.NewDumpSink(target, 5, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
 
 			groupedSinks.Register(inputChan,sink1)
 			groupedSinks.Register(inputChan,sink2)
@@ -201,8 +200,8 @@ var _ = Describe("GroupedSink", func() {
 			target := "789"
 			otherTarget := "790"
 
-			sink1 := dump.NewDumpSink(target, 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
-			sink2 := dump.NewDumpSink(otherTarget, 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+			sink1 := dump.NewDumpSink(target, 5, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
+			sink2 := dump.NewDumpSink(otherTarget, 5, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
 
 			groupedSinks.Register(inputChan,sink1)
 			groupedSinks.Register(inputChan,sink2)

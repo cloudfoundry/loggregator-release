@@ -94,7 +94,6 @@ func (w *WebsocketServer) streamLogs(appId string, ws *websocket.Conn) {
 	)
 	w.logger.Debugf("WebsocketServer: Requesting a wss sink for app %s", websocketSink.AppId())
 	w.sinkManager.RegisterSink(websocketSink, false)
-	w.sinkManager.UnregisterSink(websocketSink)
 }
 
 func (w *WebsocketServer) recentLogs(appId string, ws *websocket.Conn) {

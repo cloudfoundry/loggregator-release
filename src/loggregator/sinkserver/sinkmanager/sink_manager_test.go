@@ -114,16 +114,16 @@ var _ = Describe("SinkManager", func() {
 	})
 
 	Describe("ManageSyslogSinks", func(){
-			It("not allow duplicate sinks to be registered", func(){
-					activeSyslogSinksCounter := sinkManager.Metrics.SyslogSinks
+		It("not allow duplicate sinks to be registered", func(){
+			activeSyslogSinksCounter := sinkManager.Metrics.SyslogSinks
 
-					sinkManager.ManageSyslogSinks("appid",[]string{"http://10.10.123.1"})
+			sinkManager.ManageSyslogSinks("appid",[]string{"http://10.10.123.1"})
 
-					Expect(sinkManager.Metrics.SyslogSinks).To(Equal(activeSyslogSinksCounter+1))
+			Expect(sinkManager.Metrics.SyslogSinks).To(Equal(activeSyslogSinksCounter+1))
 
-					sinkManager.ManageSyslogSinks("appid",[]string{"http://10.10.123.1"})
+			sinkManager.ManageSyslogSinks("appid",[]string{"http://10.10.123.1"})
 
-					Expect(sinkManager.Metrics.SyslogSinks).To(Equal(activeSyslogSinksCounter+1))
-				})
+			Expect(sinkManager.Metrics.SyslogSinks).To(Equal(activeSyslogSinksCounter+1))
 		})
+	})
 })

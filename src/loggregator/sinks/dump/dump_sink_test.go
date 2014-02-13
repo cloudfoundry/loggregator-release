@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"testing"
 	"time"
-	"loggregator/sinks"
 	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 )
@@ -16,7 +15,7 @@ import (
 var fakeTimeProvider = faketimeprovider.New(time.Now())
 
 func TestDumpForOneMessage(t *testing.T) {
-	dump := NewDumpSink("myApp", 1, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+	dump := NewDumpSink("myApp", 1, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
 
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
@@ -38,7 +37,7 @@ func TestDumpForOneMessage(t *testing.T) {
 }
 
 func TestDumpForTwoMessages(t *testing.T) {
-	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
 
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
@@ -65,7 +64,7 @@ func TestDumpForTwoMessages(t *testing.T) {
 
 func TestTheDumpSinkNeverFillsUp(t *testing.T) {
 	bufferSize := uint32(3)
-	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+	dump := NewDumpSink("myApp", bufferSize, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
 
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
@@ -86,7 +85,7 @@ func TestTheDumpSinkNeverFillsUp(t *testing.T) {
 }
 
 func TestDumpAlwaysReturnsTheNewestMessages(t *testing.T) {
-	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
 
 	dumpRunnerDone := make(chan struct{})
 
@@ -115,7 +114,7 @@ func TestDumpAlwaysReturnsTheNewestMessages(t *testing.T) {
 }
 
 func TestDumpReturnsAllRecentMessagesToMultipleDumpRequests(t *testing.T) {
-	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
 
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
@@ -147,7 +146,7 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequests(t *testing.T) {
 }
 
 func TestDumpReturnsAllRecentMessagesToMultipleDumpRequestsWithMessagesCloningInInTheMeantime(t *testing.T) {
-	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
 
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
@@ -190,7 +189,7 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequestsWithMessagesCloningIn
 }
 
 func TestDumpWithLotsOfMessages(t *testing.T) {
-	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), make(chan sinks.Sink, 2), time.Second, fakeTimeProvider)
+	dump := NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
 
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
@@ -242,7 +241,7 @@ func TestDumpWithLotsOfMessages(t *testing.T) {
 }
 
 func TestDumpWithLotsOfMessagesAndLargeBuffer(t *testing.T) {
-	dump := NewDumpSink("myApp", 200, loggertesthelper.Logger(), make(chan sinks.Sink, 2), time.Second, fakeTimeProvider)
+	dump := NewDumpSink("myApp", 200, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
 
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
@@ -293,7 +292,7 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer(t *testing.T) {
 }
 
 func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
-	dump := NewDumpSink("myApp", 200, loggertesthelper.Logger(), make(chan sinks.Sink, 3), time.Second, fakeTimeProvider)
+	dump := NewDumpSink("myApp", 200, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
 
@@ -359,7 +358,7 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
 
 func TestDumpWithLotsOfDumps(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), make(chan sinks.Sink, 1), time.Second, fakeTimeProvider)
+	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
 
@@ -388,8 +387,7 @@ func TestDumpWithLotsOfDumps(t *testing.T) {
 }
 
 func TestDumpSinkClosesItselfAfterPeriodOfInactivity(t *testing.T) {
-	timeoutChan := make(chan sinks.Sink, 1)
-	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), timeoutChan, 10*time.Millisecond, fakeTimeProvider)
+	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), 2*time.Millisecond, fakeTimeProvider)
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
 
@@ -398,24 +396,16 @@ func TestDumpSinkClosesItselfAfterPeriodOfInactivity(t *testing.T) {
 		close(dumpRunnerDone)
 	}()
 
-	fakeTimeProvider.IncrementBySeconds(uint64(1))
-
-	<-dumpRunnerDone
-
-	assert.Equal(t, len(timeoutChan), 1)
-
 	select {
-	case sink := <-timeoutChan:
-		assert.Equal(t, sink, dump)
+	case <-dumpRunnerDone:
+		// OK
 	case <-time.After(5 * time.Millisecond):
-		assert.Fail(t, "Should have gotten data on timeoutChan")
+		assert.Fail(t, "Should have timeouted the dump")
 	}
 }
 
 func xTestDumpSinkClosingTimeIsResetWhenAMessageArrives(t *testing.T) {
-	timeoutChan := make(chan sinks.Sink, 1)
-	fakeTimeProvider.ProvideFakeChannels = true
-	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), timeoutChan, 10*time.Second, fakeTimeProvider)
+	dump := NewDumpSink("myApp", 5, loggertesthelper.Logger(), 10*time.Millisecond, fakeTimeProvider)
 
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
@@ -430,13 +420,10 @@ func xTestDumpSinkClosingTimeIsResetWhenAMessageArrives(t *testing.T) {
 	inputChan <- logMessage
 	fakeTimeProvider.IncrementBySeconds(uint64(8))
 
-	assert.Equal(t, len(timeoutChan), 0)
 	fakeTimeProvider.IncrementBySeconds(uint64(3))
-	<-dumpRunnerDone
 
-	assert.Equal(t, len(timeoutChan), 1)
 	select {
-	case sink := <-timeoutChan:
+	case sink := <-dumpRunnerDone:
 		assert.Equal(t, sink, dump)
 	case <-time.After(5 * time.Millisecond):
 		assert.Fail(t, "Should have closed")

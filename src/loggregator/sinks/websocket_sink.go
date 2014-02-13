@@ -95,11 +95,11 @@ func (sink *WebsocketSink) Run(inputChan <-chan *logmessage.Message) {
 			if err != nil {
 				sink.logger.Debugf("Websocket Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", sink.clientAddress, err)
 				return
-			} else {
-				sink.logger.Debugf("Websocket Sink %s: Successfully sent data", sink.clientAddress)
-				atomic.AddUint64(&sink.sentMessageCount, 1)
-				atomic.AddUint64(&sink.sentByteCount, uint64(message.GetRawMessageLength()))
 			}
+
+			sink.logger.Debugf("Websocket Sink %s: Successfully sent data", sink.clientAddress)
+			atomic.AddUint64(&sink.sentMessageCount, 1)
+			atomic.AddUint64(&sink.sentByteCount, uint64(message.GetRawMessageLength()))
 		}
 	}
 }

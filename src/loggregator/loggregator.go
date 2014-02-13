@@ -9,10 +9,10 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"loggregator/iprange"
 	"loggregator/sinkserver"
+	"loggregator/sinkserver/sinkmanager"
 	"loggregator/sinkserver/unmarshaller"
 	"loggregator/sinkserver/websocket"
 	"time"
-	"loggregator/sinkserver/sinkmanager"
 )
 
 type Config struct {

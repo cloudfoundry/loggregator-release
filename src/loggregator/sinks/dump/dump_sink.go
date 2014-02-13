@@ -5,7 +5,6 @@ import (
 	"github.com/cloudfoundry/gunk/timeprovider"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"loggregator/sinks"
 	"time"
 	"sync/atomic"
 	"sync"
@@ -17,19 +16,17 @@ type DumpSink struct {
 	logger             *gosteno.Logger
 	messageBuffer      []*logmessage.Message
 	inputChan          chan *logmessage.Message
-	timeoutChan        chan sinks.Sink
 	inactivityDuration time.Duration
 	sequence		   uint32
 	bufferSize		   uint32
 	tp                 timeprovider.TimeProvider
 }
 
-func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, timeoutChan chan sinks.Sink, inactivityDuration time.Duration, tp timeprovider.TimeProvider) *DumpSink {
+func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, inactivityDuration time.Duration, tp timeprovider.TimeProvider) *DumpSink {
 	dumpSink := &DumpSink{
 		appId:              appId,
 		logger:             givenLogger,
 		messageBuffer:      make([]*logmessage.Message, bufferSize),
-		timeoutChan:        timeoutChan,
 		inactivityDuration: inactivityDuration,
 		tp:                 tp,
 		bufferSize:			bufferSize,
@@ -38,9 +35,6 @@ func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, t
 }
 
 func (d *DumpSink) Run(inputChan <-chan *logmessage.Message) {
-	defer func() {
-		d.timeoutChan <- d
-	}()
 	for {
 		countdown := d.tp.NewTickerChannel("", d.inactivityDuration)
 		select {
