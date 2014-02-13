@@ -12,6 +12,7 @@ import (
 	"loggregator/sinkserver/unmarshaller"
 	"loggregator/sinkserver/websocket"
 	"time"
+	"loggregator/sinkserver/sinkmanager"
 )
 
 type Config struct {
@@ -46,7 +47,7 @@ func (c *Config) Validate(logger *gosteno.Logger) (err error) {
 type Loggregator struct {
 	errChan         chan error
 	listener        agentlistener.AgentListener
-	sinkManager     *sinkserver.SinkManager
+	sinkManager     *sinkmanager.SinkManager
 	messageRouter   *sinkserver.MessageRouter
 	u               *unmarshaller.LogMessageUnmarshaller
 	websocketServer *websocket.WebsocketServer
@@ -56,7 +57,7 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 	keepAliveInterval := 30 * time.Second
 	listener, incomingLogChan := agentlistener.NewAgentListener(fmt.Sprintf("%s:%d", host, config.IncomingPort), logger)
 	u, messageChan := unmarshaller.NewLogMessageUnmarshaller(config.SharedSecret, incomingLogChan)
-	sinkManager := sinkserver.NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, config.BlackListIps, logger)
+	sinkManager := sinkmanager.NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, config.BlackListIps, logger)
 	return &Loggregator{
 		errChan:         make(chan error),
 		listener:        listener,
