@@ -18,8 +18,8 @@ var _ = Describe("AppServiceStoreIntegration", func() {
 		adapter := etcdRunner.Adapter()
 
 		incomingChan = make(chan domain.AppServices)
-		store := NewAppServiceStore(adapter, incomingChan)
-		go store.Run()
+		store := NewAppServiceStore(adapter)
+		go store.Run(incomingChan)
 
 		var watcher *AppServiceStoreWatcher
 		watcher, outAddChan, outRemoveChan = NewAppServiceStoreWatcher(adapter)

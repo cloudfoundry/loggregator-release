@@ -50,7 +50,7 @@ var _ = Describe("AppServiceStore", func() {
 		adapter = etcdRunner.Adapter()
 		incomingChan = make(chan domain.AppServices)
 
-		store = NewAppServiceStore(adapter, incomingChan)
+		store = NewAppServiceStore(adapter)
 
 		app1Service1 = domain.AppService{AppId: "app-1", Url: "syslog://example.com:12345"}
 		app1Service2 = domain.AppService{AppId: "app-1", Url: "syslog://example.com:12346"}
@@ -76,7 +76,7 @@ var _ = Describe("AppServiceStore", func() {
 		})
 
 		It("should return", func(done Done) {
-			store.Run()
+			store.Run(incomingChan)
 			close(done)
 		})
 	})
@@ -87,7 +87,7 @@ var _ = Describe("AppServiceStore", func() {
 			adapter.Create(buildNode(app1Service2))
 			adapter.Create(buildNode(app2Service1))
 
-			go store.Run()
+			go store.Run(incomingChan)
 		})
 
 		It("does not modify the store, if the incoming data is already there", func(done Done) {

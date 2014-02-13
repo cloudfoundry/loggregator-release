@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 	"loggregator/sinkserver/sinkmanager"
+	"loggregator/sinkserver/blacklist"
 )
 
 type testSink struct {
@@ -44,7 +45,8 @@ func (ts testSink) Identifier() string {
 // TODO: move to sink manager
 func TestSendingToErrorChannelDoesNotBlock(t *testing.T) {
 	logger := loggertesthelper.Logger()
-	sinkManager := sinkmanager.NewSinkManager(1024, false, nil, logger)
+	bl := blacklist.New(nil)
+	sinkManager := sinkmanager.NewSinkManager(1024, false, bl, logger)
 	//sinkManager.errorChannel = make(chan *logmessage.Message, 1)
 	go sinkManager.Start()
 
@@ -74,7 +76,8 @@ func TestSendingToErrorChannelDoesNotBlock(t *testing.T) {
 
 func TestSimpleBlacklistRule(t *testing.T) {
 	logger := loggertesthelper.Logger()
-	sinkManager := sinkmanager.NewSinkManager(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, logger)
+	bl := blacklist.New([]iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}})
+	sinkManager := sinkmanager.NewSinkManager(1024, false, bl, logger)
 	oldActiveSyslogSinksCounter := sinkManager.Metrics.SyslogSinks
 	go sinkManager.Start()
 
@@ -127,7 +130,8 @@ func TestSimpleBlacklistRule(t *testing.T) {
 
 func TestInvalidUrlForSyslogDrain(t *testing.T) {
 	logger := loggertesthelper.Logger()
-	sinkManager := sinkmanager.NewSinkManager(1024, false, []iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}}, logger)
+	bl := blacklist.New([]iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}})
+	sinkManager := sinkmanager.NewSinkManager(1024, false, bl, logger)
 	oldActiveSyslogSinksCounter := sinkManager.Metrics.SyslogSinks
 	go sinkManager.Start()
 
@@ -183,7 +187,8 @@ func waitForMessageGettingProcessed(t *testing.T, ourSink testSink, timeout time
 func TestParseEnvelopesDoesntBlockWhenMessageRouterChannelIsFull(t *testing.T) {
 	logger := gosteno.NewLogger("TestLogger")
 
-	sinkManager := sinkmanager.NewSinkManager(1, true, []iprange.IPRange{}, logger)
+	bl := blacklist.New(nil)
+	sinkManager := sinkmanager.NewSinkManager(1, true, bl, logger)
 	go sinkManager.Start()
 	incomingLogChan := make(chan *logmessage.Message, 1)
 	messageRouter := NewMessageRouter(sinkManager, logger)

@@ -10,22 +10,20 @@ import (
 
 type AppServiceStore struct {
 	adapter      storeadapter.StoreAdapter
-	incomingChan <-chan domain.AppServices
 	cache        cache.AppServiceCache
 }
 
-func NewAppServiceStore(adapter storeadapter.StoreAdapter, in <-chan domain.AppServices) *AppServiceStore {
+func NewAppServiceStore(adapter storeadapter.StoreAdapter) *AppServiceStore {
 	return &AppServiceStore{
 		adapter:      adapter,
-		incomingChan: in,
 		cache:        cache.NewAppServiceCache(),
 	}
 }
 
-func (s *AppServiceStore) Run() {
+func (s *AppServiceStore) Run(incomingChan <-chan domain.AppServices) {
 	s.warmUpCache()
 
-	for appServices := range s.incomingChan {
+	for appServices := range incomingChan {
 		if len(appServices.Urls) == 0 {
 			s.removeAppFromStore(appServices.AppId)
 			continue

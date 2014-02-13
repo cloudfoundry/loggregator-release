@@ -9,6 +9,7 @@ import (
 	"loggregator/iprange"
 	"loggregator/sinkserver/sinkmanager"
 	"sync"
+	"loggregator/sinkserver/blacklist"
 )
 
 type ChannelSink struct {
@@ -42,28 +43,30 @@ func (c *ChannelSink) Emit() instrumentation.Context {
 
 var _ = Describe("SinkManager", func() {
 	var sinkManager *sinkmanager.SinkManager
+	var blackListManager *blacklist.URLBlacklistManager
 
 	BeforeEach(func() {
-		sinkManager = sinkmanager.NewSinkManager(1, true, []iprange.IPRange{}, loggertesthelper.Logger())
+		blackListManager = blacklist.New([]iprange.IPRange{})
+		sinkManager = sinkmanager.NewSinkManager(1, true, blackListManager, loggertesthelper.Logger())
 		go sinkManager.Start()
 	})
 
-	Context("broadcasting error messages", func() {
-			It("should listen and broadcast error messages", func() {
+	Describe("SendSyslogErrorToLoggregator", func() {
+		It("should listen and broadcast error messages", func() {
 
-				sink := &ChannelSink{appId: "myApp",
-					identifier: "myAppChan1",
-				}
-				sinkManager.RegisterSink(sink)
-				sinkManager.SendSyslogErrorToLoggregator("error msg", "myApp")
+			sink := &ChannelSink{appId: "myApp",
+				identifier: "myAppChan1",
+			}
+			sinkManager.RegisterSink(sink)
+			sinkManager.SendSyslogErrorToLoggregator("error msg", "myApp")
 
-				Eventually(sink.Received).Should(HaveLen(1))
+			Eventually(sink.Received).Should(HaveLen(1))
 
-				errorMsg := sink.Received()[0]
-				Expect(string(errorMsg.GetLogMessage().GetMessage())).To(Equal("error msg"))
+			errorMsg := sink.Received()[0]
+			Expect(string(errorMsg.GetLogMessage().GetMessage())).To(Equal("error msg"))
 
-			})
 		})
+	})
 
 	Describe("SendTo", func() {
 		It("should send to all known sinks", func() {
@@ -114,6 +117,11 @@ var _ = Describe("SinkManager", func() {
 	})
 
 	Describe("ManageSyslogSinks", func(){
+
+		It("should send new sinks to the app store", func() {
+
+		})
+
 		It("not allow duplicate sinks to be registered", func(){
 			activeSyslogSinksCounter := sinkManager.Metrics.SyslogSinks
 

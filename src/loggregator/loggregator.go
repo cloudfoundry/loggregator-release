@@ -10,6 +10,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"loggregator/iprange"
 	"loggregator/sinkserver"
+	"loggregator/sinkserver/blacklist"
 	"loggregator/sinkserver/sinkmanager"
 	"loggregator/sinkserver/unmarshaller"
 	"loggregator/sinkserver/websocket"
@@ -59,7 +60,8 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 	keepAliveInterval := 30 * time.Second
 	listener, incomingLogChan := agentlistener.NewAgentListener(fmt.Sprintf("%s:%d", host, config.IncomingPort), logger)
 	u, messageChan := unmarshaller.NewLogMessageUnmarshaller(config.SharedSecret, incomingLogChan)
-	sinkManager := sinkmanager.NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, config.BlackListIps, logger)
+	blacklist := blacklist.New(config.BlackListIps)
+	sinkManager := sinkmanager.NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger)
 	return &Loggregator{
 		errChan:         make(chan error),
 		listener:        listener,

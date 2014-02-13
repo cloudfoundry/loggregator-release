@@ -6,7 +6,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"loggregator/groupedsinks"
-	"loggregator/iprange"
 	"loggregator/sinks"
 	"loggregator/sinks/syslogwriter"
 	"time"
@@ -27,10 +26,10 @@ type SinkManager struct {
 	logger              *gosteno.Logger
 }
 
-func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListIPs []iprange.IPRange, logger *gosteno.Logger) *SinkManager {
+func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger) *SinkManager {
 	return &SinkManager{
 		errorChannel:  make(chan *logmessage.Message, 100),
-		urlBlacklistManager: blacklist.New(blackListIPs),
+		urlBlacklistManager: blackListManager,
 		sinks:          groupedsinks.NewGroupedSinks(),
 		skipCertVerify: skipCertVerify,
 		recentLogCount: maxRetainedLogMessages,
@@ -40,6 +39,7 @@ func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackLis
 }
 
 func (sinkManager *SinkManager) Start() {
+	// TODO: listen for new data from app store (watcher)
 	sinkManager.listenForErrorMessages()
 }
 
@@ -83,6 +83,16 @@ func (sinkManager *SinkManager) RegisterSink(sink sinks.Sink, block ...bool) boo
 }
 
 func (sinkManager *SinkManager) unregisterSink(sink sinks.Sink) {
+
+	if syslogSink, ok := sink.(*syslog.SyslogSink); ok {
+		syslogSink.Disconnect()
+	}
+
+	// TODO: clean up all apps in app store here
+//	if dumpSink, ok := sink.(*dump.DumpSink); ok {
+//		dumpSink.AppId()
+//	}
+
 	sinkManager.sinks.Delete(sink)
 
 	sinkManager.Metrics.Dec(sink)
@@ -95,6 +105,8 @@ func (sinkManager *SinkManager) unregisterSink(sink sinks.Sink) {
 }
 
 func (sinkManager *SinkManager) ManageSyslogSinks(appId string, syslogSinkUrls []string) {
+
+	// TODO: send new data to app store
 	if len(syslogSinkUrls) == 0 {
 		sinkManager.unregisterAllSyslogSinks(appId)
 		return
