@@ -7,9 +7,10 @@ import (
 	"loggregator/sinkserver"
 	"loggregator/sinkserver/websocket"
 	"time"
+	"loggregator/sinkserver/sinkmanager"
 )
 
-var sinkManager *sinkserver.SinkManager
+var sinkManager *sinkmanager.SinkManager
 
 var TestMessageRouter *sinkserver.MessageRouter
 var TestWebsocketServer *websocket.WebsocketServer
@@ -32,7 +33,7 @@ func init() {
 
 	logger := loggertesthelper.Logger()
 
-	sinkManager = sinkserver.NewSinkManager(1024, false, nil, logger)
+	sinkManager = sinkmanager.NewSinkManager(1024, false, nil, logger)
 	go sinkManager.Start()
 
 	TestMessageRouter = sinkserver.NewMessageRouter(dataReadChannel, sinkManager, logger)
@@ -47,7 +48,7 @@ func init() {
 	go FastTimeoutTestWebsocketServer.Start()
 
 	blackListDataReadChannel = make(chan *logmessage.Message)
-	blacklistSinkManager := sinkserver.NewSinkManager(1024, false, []iprange.IPRange{iprange.IPRange{Start: "127.0.0.0", End: "127.0.0.2"}}, logger)
+	blacklistSinkManager := sinkmanager.NewSinkManager(1024, false, []iprange.IPRange{iprange.IPRange{Start: "127.0.0.0", End: "127.0.0.2"}}, logger)
 	go blacklistSinkManager.Start()
 
 	blacklistTestMessageRouter := sinkserver.NewMessageRouter(blackListDataReadChannel, blacklistSinkManager, logger)

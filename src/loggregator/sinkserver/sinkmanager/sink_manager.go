@@ -1,4 +1,4 @@
-package sinkserver
+package sinkmanager
 
 import (
 	"fmt"
@@ -53,6 +53,7 @@ func (sinkManager *SinkManager) Stop() {
 }
 
 func (sinkManager *SinkManager) SendTo(appId string, receivedMessage *logmessage.Message) {
+	sinkManager.ensureRecentLogsSinkFor(appId)
 	sinkManager.sinks.BroadCast(appId, receivedMessage)
 }
 

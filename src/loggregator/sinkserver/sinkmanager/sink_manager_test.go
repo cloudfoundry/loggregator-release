@@ -1,4 +1,4 @@
-package sinkserver_test
+package sinkmanager_test
 
 import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"loggregator/iprange"
-	"loggregator/sinkserver"
+	"loggregator/sinkserver/sinkmanager"
 	"sync"
 )
 
@@ -41,10 +41,10 @@ func (c *ChannelSink) Emit() instrumentation.Context {
 }
 
 var _ = Describe("SinkManager", func() {
-	var sinkManager *sinkserver.SinkManager
+	var sinkManager *sinkmanager.SinkManager
 
 	BeforeEach(func() {
-		sinkManager = sinkserver.NewSinkManager(1, true, []iprange.IPRange{}, loggertesthelper.Logger())
+		sinkManager = sinkmanager.NewSinkManager(1, true, []iprange.IPRange{}, loggertesthelper.Logger())
 		go sinkManager.Start()
 	})
 

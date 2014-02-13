@@ -10,7 +10,7 @@ import (
 	"loggregator/sinks"
 	"net/http"
 	"time"
-	"loggregator/sinkserver"
+	"loggregator/sinkserver/sinkmanager"
 )
 
 const (
@@ -20,13 +20,13 @@ const (
 
 type WebsocketServer struct {
 	apiEndpoint       string
-	sinkManager       *sinkserver.SinkManager
+	sinkManager       *sinkmanager.SinkManager
 	keepAliveInterval time.Duration
 	bufferSize        uint
 	logger            *gosteno.Logger
 }
 
-func NewWebsocketServer(apiEndpoint string, sinkManager *sinkserver.SinkManager, keepAliveInterval time.Duration, wSMessageBufferSize uint, logger *gosteno.Logger) *WebsocketServer {
+func NewWebsocketServer(apiEndpoint string, sinkManager *sinkmanager.SinkManager, keepAliveInterval time.Duration, wSMessageBufferSize uint, logger *gosteno.Logger) *WebsocketServer {
 	return &WebsocketServer{
 		apiEndpoint:       apiEndpoint,
 		sinkManager:       sinkManager,

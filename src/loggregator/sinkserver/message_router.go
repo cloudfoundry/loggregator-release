@@ -5,18 +5,19 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"loggregator/sinkserver/metrics"
+	"loggregator/sinkserver/sinkmanager"
 )
 
 type MessageRouter struct {
 	incomingLogChan <-chan *logmessage.Message
 	unmarshaller    func([]byte) (*logmessage.Message, error)
 	outgoingLogChan chan *logmessage.Message
-	SinkManager     *SinkManager
+	SinkManager     *sinkmanager.SinkManager
 	Metrics         *metrics.MessageRouterMetrics
 	logger          *gosteno.Logger
 }
 
-func NewMessageRouter(incomingLogChan <-chan *logmessage.Message, sinkManager *SinkManager, logger *gosteno.Logger) *MessageRouter {
+func NewMessageRouter(incomingLogChan <-chan *logmessage.Message, sinkManager *sinkmanager.SinkManager, logger *gosteno.Logger) *MessageRouter {
 	return &MessageRouter{
 		incomingLogChan: incomingLogChan,
 		outgoingLogChan: make(chan *logmessage.Message),
@@ -50,7 +51,6 @@ func (r *MessageRouter) manageSinks(message *logmessage.Message) {
 	if logMessage.GetSourceName() == "App" {
 		r.SinkManager.ManageSyslogSinks(appId, logMessage.GetDrainUrls())
 	}
-	r.SinkManager.ensureRecentLogsSinkFor(appId)
 }
 
 func (r *MessageRouter) send(message *logmessage.Message) {
