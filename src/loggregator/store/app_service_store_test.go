@@ -139,7 +139,7 @@ var _ = Describe("AppServiceStore", func() {
 				})
 			})
 
-			It("adds a TTL to the associated app", func(done Done) {
+			PIt("adds a TTL to the associated app", func(done Done) {
 				app2Service2 := domain.AppService{AppId: app2Service1.AppId, Url: "syslog://new.example.com:12345"}
 
 				incomingChan <- domain.AppServices{
