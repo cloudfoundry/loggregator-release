@@ -14,11 +14,12 @@ import (
 	"loggregator/sinks/syslogwriter"
 	"math/big"
 	"net"
-	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
+	"net/http/httptest"
+	"net/http"
 )
 
 var _ = Describe("SyslogWriter", func() {
@@ -79,12 +80,23 @@ var _ = Describe("SyslogWriter", func() {
 	})
 
 	Context("With an HTTPS Connection", func() {
-		It("should HTTP POST each log message to the HTTPS syslog endpoint", func() {
-			requestChan := make(chan []byte, 1)
-			go ServeHTTP(requestChan, loggertesthelper.Logger())
-			<-time.After(1 * time.Second)
 
-			outputUrl, _ := url.Parse("https://localhost:4443/234-bxg-234/")
+		var server *httptest.Server
+		var requestChan chan []byte
+
+		BeforeEach(func() {
+			requestChan = make(chan []byte, 1)
+			server = ServeHTTP(requestChan, loggertesthelper.Logger())
+		})
+
+		AfterEach(func() {
+			server.Close()
+			http.DefaultServeMux = http.NewServeMux()
+		})
+
+
+		It("should HTTP POST each log message to the HTTPS syslog endpoint", func() {
+			outputUrl, _ := url.Parse(server.URL + "/234-bxg-234/")
 
 			w := syslogwriter.NewSyslogWriter(outputUrl, "appId", true)
 			err := w.Connect()
@@ -145,7 +157,7 @@ var _ = Describe("SyslogWriter", func() {
 	})
 })
 
-func ServeHTTP(requestChan chan []byte, logger *gosteno.Logger) {
+func ServeHTTP(requestChan chan []byte, logger *gosteno.Logger) *httptest.Server{
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		bytes := make([]byte, 1024)
 		byteCount, _ := r.Body.Read(bytes)
@@ -153,12 +165,10 @@ func ServeHTTP(requestChan chan []byte, logger *gosteno.Logger) {
 		requestChan <- bytes[:byteCount]
 	}
 
-	generateCert(logger)
-	http.HandleFunc("/234-bxg-234/", handler)
-	err := http.ListenAndServeTLS(":4443", "cert.pem", "key.pem", nil)
-	if err != nil {
-		panic(err)
-	}
+	http.HandleFunc("/234-bxg-234/",handler)
+
+	server := httptest.NewTLSServer(http.DefaultServeMux)
+	return server
 }
 
 func startSyslogServer(shutdownChan <-chan bool) (<-chan []byte, <-chan bool) {
