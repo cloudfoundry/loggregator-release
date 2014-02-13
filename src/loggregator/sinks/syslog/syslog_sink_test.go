@@ -74,12 +74,16 @@ func (r *SyslogWriterRecorder) SetDown(newState bool) {
 	r.down = newState
 }
 
-func (w *SyslogWriterRecorder) IsConnected() bool {
-	return w.connected
+func (r *SyslogWriterRecorder) IsConnected() bool {
+	r.Lock()
+	defer r.Unlock()
+	return r.connected
 }
 
-func (w *SyslogWriterRecorder) SetConnected(newValue bool) {
-	w.connected = newValue
+func (r *SyslogWriterRecorder) SetConnected(newValue bool) {
+	r.Lock()
+	defer r.Unlock()
+	r.connected = newValue
 }
 
 func (r *SyslogWriterRecorder) Close() error {
@@ -210,6 +214,9 @@ var _ = Describe("SyslogSink", func() {
 
 				logMessage := NewMessage("test message", "appId")
 				inputChan <- logMessage
+				close(inputChan)
+				<-sysLoggerDoneChan
+
 				Expect(errorChannel).To(BeEmpty())
 				close(done)
 			})
