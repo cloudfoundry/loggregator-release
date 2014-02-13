@@ -40,7 +40,7 @@ do
     local_result=$result
     echo -e "\n Testing $package"
     $(dirname $0)/go fmt $package
-    $(dirname $0)/env ginkgo -r -race -keepGoing src/$package
+    $(dirname $0)/env ginkgo -r -race src/$package
     let "result += $?"
     echo -e "\n Vetting $package"
     $(dirname $0)/go vet $package
