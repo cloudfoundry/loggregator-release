@@ -132,7 +132,7 @@ func TestResolvesIpAddresses(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, outSideOfRange)
 
-	parsedURL, _ = url.Parse("syslog://doesNotExist.nowhere:3000?app=great")
+	parsedURL, _ = url.Parse("syslog://doesNotExist.local:3000?app=great")
 	outSideOfRange, err = IpOutsideOfRanges(*parsedURL, ranges)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Resolving host failed: ")
