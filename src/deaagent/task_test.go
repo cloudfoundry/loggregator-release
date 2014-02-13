@@ -15,6 +15,8 @@ import (
 
 const SOCKET_PREFIX = "\n\n\n\n"
 
+var testLogger = loggertesthelper.Logger()
+
 func TestIdentifier(t *testing.T) {
 	task := task{
 		applicationId:       "4aa9506e-277f-41ab-b764-a35c0b96fa1b",
@@ -48,7 +50,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	defer stdoutListener.Close()
 	defer stderrListener.Close()
 
-	receiveChannel := setupEmitter(t, task, loggertesthelper.Logger())
+	receiveChannel := setupEmitter(t, task, testLogger)
 
 	expectedMessage := "Some Output\n"
 	secondLogMessage := "toally different\n"
@@ -90,7 +92,7 @@ func TestThatWeHandleFourByteOffset(t *testing.T) {
 	defer stdoutListener.Close()
 	defer stderrListener.Close()
 
-	receiveChannel := setupEmitter(t, task, loggertesthelper.Logger())
+	receiveChannel := setupEmitter(t, task, testLogger)
 
 	expectedMessage := "Some Output\n"
 	secondLogMessage := "toally different\n"
@@ -134,7 +136,7 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	expectedMessage := "Some Output\n"
 	secondLogMessage := "toally different\n"
 
-	receiveChannel := setupEmitter(t, task, loggertesthelper.Logger())
+	receiveChannel := setupEmitter(t, task, testLogger)
 
 	connection, err := stderrListener.Accept()
 	defer connection.Close()
@@ -162,7 +164,7 @@ func TestThatWeRetryListeningToStdOutUnixSocket(t *testing.T) {
 	os.Remove(stderrSocketPath)
 	os.Remove(loggerPath)
 
-	receiveChannel := setupEmitter(t, task, loggertesthelper.FileLogger(loggerPath))
+	receiveChannel := setupEmitter(t, task, testLogger)
 
 	go func() {
 		time.Sleep(950 * time.Millisecond)
@@ -182,8 +184,7 @@ func TestThatWeRetryListeningToStdOutUnixSocket(t *testing.T) {
 		t.Error("Timed out waiting for message")
 	}
 
-	logContents, err := ioutil.ReadFile(loggerPath)
-	assert.NoError(t, err)
+	logContents := loggertesthelper.TestLoggerSink.LogContents()
 	assert.Contains(t, string(logContents), "Error while dialing into socket OUT")
 }
 
@@ -198,7 +199,7 @@ func TestThatWeRetryListeningToStdErrUnixSocket(t *testing.T) {
 	os.Remove(stderrSocketPath)
 	os.Remove(loggerPath)
 
-	receiveChannel := setupEmitter(t, task, loggertesthelper.FileLogger(loggerPath))
+	receiveChannel := setupEmitter(t, task, testLogger)
 
 	go func() {
 		time.Sleep(950 * time.Millisecond)
@@ -218,8 +219,7 @@ func TestThatWeRetryListeningToStdErrUnixSocket(t *testing.T) {
 		t.Error("Timed out waiting for message")
 	}
 
-	logContents, err := ioutil.ReadFile(loggerPath)
-	assert.NoError(t, err)
+	logContents := loggertesthelper.TestLoggerSink.LogContents()
 	assert.Contains(t, string(logContents), "Error while dialing into socket ERR")
 }
 
