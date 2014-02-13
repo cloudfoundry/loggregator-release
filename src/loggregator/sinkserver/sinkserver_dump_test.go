@@ -18,11 +18,6 @@ func dumpAllMessages(receivedChan chan []byte) [][]byte {
 	return logMessages
 }
 
-func AssertConnectionFails(t *testing.T, port string, path string) {
-
-
-}
-
 func TestItDumpsAllMessagesForAnAppUser(t *testing.T) {
 	expectedMessageString := "Some data"
 	message := messagetesthelpers.NewMessage(t, expectedMessageString, "myOtherApp")
