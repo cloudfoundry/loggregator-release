@@ -1,4 +1,4 @@
-package sinkserver_test
+package websocket_test
 
 import (
 	"encoding/binary"
@@ -26,7 +26,7 @@ var _ = Describe("WebsocketServer", func() {
 	Describe("Start", func() {
 		Context("given an unknown path", func() {
 			PIt("returns an HTTP 400", func() {
-				assertConnectionFails(SERVER_PORT, "/INVALID_PATH", 400)
+				assertConnectionFails("123", "/INVALID_PATH", 400)
 			})
 		})
 	})

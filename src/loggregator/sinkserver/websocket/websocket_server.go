@@ -1,4 +1,4 @@
-package sinkserver
+package websocket
 
 import (
 	"errors"
@@ -10,6 +10,7 @@ import (
 	"loggregator/sinks"
 	"net/http"
 	"time"
+	"loggregator/sinkserver"
 )
 
 const (
@@ -19,13 +20,13 @@ const (
 
 type WebsocketServer struct {
 	apiEndpoint       string
-	sinkManager       *SinkManager
+	sinkManager       *sinkserver.SinkManager
 	keepAliveInterval time.Duration
 	bufferSize        uint
 	logger            *gosteno.Logger
 }
 
-func NewWebsocketServer(apiEndpoint string, sinkManager *SinkManager, keepAliveInterval time.Duration, wSMessageBufferSize uint, logger *gosteno.Logger) *WebsocketServer {
+func NewWebsocketServer(apiEndpoint string, sinkManager *sinkserver.SinkManager, keepAliveInterval time.Duration, wSMessageBufferSize uint, logger *gosteno.Logger) *WebsocketServer {
 	return &WebsocketServer{
 		apiEndpoint:       apiEndpoint,
 		sinkManager:       sinkManager,
@@ -83,23 +84,23 @@ func (w *WebsocketServer) validate(r *http.Request) (string, error) {
 }
 
 func (w *WebsocketServer) streamLogs(appId string, ws *websocket.Conn) {
-
+	defer ws.Close()
 	websocketSink := sinks.NewWebsocketSink(
 		appId,
 		w.logger,
 		ws,
-		w.sinkManager.sinkCloseChan,
 		w.keepAliveInterval,
 		w.bufferSize,
 	)
 	w.logger.Debugf("WebsocketServer: Requesting a wss sink for app %s", websocketSink.AppId())
 	w.sinkManager.RegisterSink(websocketSink, false)
+	w.sinkManager.UnregisterSink(websocketSink)
 }
 
 func (w *WebsocketServer) recentLogs(appId string, ws *websocket.Conn) {
 	defer ws.Close()
 
-	logMessages := w.sinkManager.recentLogsFor(appId)
+	logMessages := w.sinkManager.RecentLogsFor(appId)
 	sendMessagesToWebsocket(logMessages, ws, w.logger)
 }
 

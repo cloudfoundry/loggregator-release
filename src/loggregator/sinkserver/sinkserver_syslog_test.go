@@ -3,7 +3,6 @@ package sinkserver_test
 import (
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
-	"loggregator/sinkserver"
 	"regexp"
 	testhelpers "server_testhelpers"
 	"testing"
@@ -60,7 +59,7 @@ func TestThatItSendsAllDataToOnlyAuthoritiveMessagesWithDrainUrls(t *testing.T) 
 
 func TestThatItDoesNotRegisterADrainIfItsURLIsBlacklisted(t *testing.T) {
 	receivedChan := make(chan []byte, 2)
-	testhelpers.AddWSSink(t, receivedChan, BLACKLIST_SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?app=myApp01")
+	testhelpers.AddWSSink(t, receivedChan, BLACKLIST_SERVER_PORT, "/tail/?app=myApp01")
 	WaitForWebsocketRegistration()
 
 	clientReceivedChan := make(chan []byte)

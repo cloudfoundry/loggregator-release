@@ -10,6 +10,7 @@ import (
 	"loggregator/iprange"
 	"loggregator/sinkserver"
 	"loggregator/sinkserver/unmarshaller"
+	"loggregator/sinkserver/websocket"
 	"time"
 )
 
@@ -48,7 +49,7 @@ type Loggregator struct {
 	sinkManager     *sinkserver.SinkManager
 	messageRouter   *sinkserver.MessageRouter
 	u               *unmarshaller.LogMessageUnmarshaller
-	websocketServer *sinkserver.WebsocketServer
+	websocketServer *websocket.WebsocketServer
 }
 
 func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
@@ -62,7 +63,7 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 		u:               u,
 		sinkManager:     sinkManager,
 		messageRouter:   sinkserver.NewMessageRouter(messageChan, sinkManager, logger),
-		websocketServer: sinkserver.NewWebsocketServer(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.WSMessageBufferSize, logger),
+		websocketServer: websocket.NewWebsocketServer(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.WSMessageBufferSize, logger),
 	}
 }
 

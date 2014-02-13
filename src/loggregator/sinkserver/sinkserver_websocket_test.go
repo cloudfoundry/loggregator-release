@@ -3,11 +3,18 @@ package sinkserver_test
 import (
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
-	"loggregator/sinkserver"
 	testhelpers "server_testhelpers"
 	"testing"
 	"time"
+	"github.com/gorilla/websocket"
+	"net/http"
 )
+
+func AssertWsConnectionFails(t *testing.T, port string, path string) {
+	_, _, err := websocket.DefaultDialer.Dial("ws://localhost:"+port+path, http.Header{})
+assert.Error(t, err)
+
+}
 
 func TestThatItSends(t *testing.T) {
 	receivedChan := make(chan []byte, 2)
@@ -17,7 +24,7 @@ func TestThatItSends(t *testing.T) {
 	otherMessageString := "Some more stuff"
 	otherMessage := messagetesthelpers.NewMessage(t, otherMessageString, "myApp01")
 
-	_, dontKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?app=myApp01")
+	_, dontKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, "/tail/?app=myApp01")
 	WaitForWebsocketRegistration()
 
 	dataReadChannel <- message
@@ -48,7 +55,7 @@ func TestThatItDoesNotDumpLogsBeforeTailing(t *testing.T) {
 
 	dataReadChannel <- message
 
-	_, stopKeepAlive, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?app=myApp06")
+	_, stopKeepAlive, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, "/tail/?app=myApp06")
 	WaitForWebsocketRegistration()
 
 	select {
@@ -66,7 +73,7 @@ func TestThatItDoesNotDumpLogsBeforeTailing(t *testing.T) {
 
 func TestDontDropSinkThatWorks(t *testing.T) {
 	receivedChan := make(chan []byte, 2)
-	_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?app=myApp04")
+	_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, "/tail/?app=myApp04")
 
 	select {
 	case <-time.After(200 * time.Millisecond):
@@ -90,17 +97,17 @@ func TestDontDropSinkThatWorks(t *testing.T) {
 }
 
 func TestQueryStringCombinationsThatDropSinkButContinueToWork(t *testing.T) {
-	AssertConnectionFails(t, SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?")
+	AssertWsConnectionFails(t, SERVER_PORT, "/tail/?")
 }
 
 func TestDropSinkWhenLogTargetisinvalid(t *testing.T) {
-	AssertConnectionFails(t, SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?something=invalidtarget")
+	AssertWsConnectionFails(t, SERVER_PORT, "/tail/?something=invalidtarget")
 }
 
 func TestKeepAlive(t *testing.T) {
 	receivedChan := make(chan []byte, 10)
 
-	_, killKeepAliveChan, connectionDroppedChannel := testhelpers.AddWSSink(t, receivedChan, FAST_TIMEOUT_SERVER_PORT, sinkserver.TAIL_LOGS_PATH+"?app=myApp05")
+	_, killKeepAliveChan, connectionDroppedChannel := testhelpers.AddWSSink(t, receivedChan, FAST_TIMEOUT_SERVER_PORT, "/tail/?app=myApp05")
 	WaitForWebsocketRegistration()
 
 	go func() {

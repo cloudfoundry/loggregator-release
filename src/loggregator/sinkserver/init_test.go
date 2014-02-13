@@ -3,23 +3,20 @@ package sinkserver_test
 import (
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"github.com/gorilla/websocket"
-	"github.com/stretchr/testify/assert"
 	"loggregator/iprange"
 	"loggregator/sinkserver"
-	"net/http"
-	"testing"
+	"loggregator/sinkserver/websocket"
 	"time"
 )
 
 var sinkManager *sinkserver.SinkManager
 
 var TestMessageRouter *sinkserver.MessageRouter
-var TestWebsocketServer *sinkserver.WebsocketServer
+var TestWebsocketServer *websocket.WebsocketServer
 var dataReadChannel chan *logmessage.Message
 
 var blacklistTestMessageRouter *sinkserver.MessageRouter
-var blackListTestWebsocketServer *sinkserver.WebsocketServer
+var blackListTestWebsocketServer *websocket.WebsocketServer
 var blackListDataReadChannel chan *logmessage.Message
 
 const (
@@ -42,11 +39,11 @@ func init() {
 	go TestMessageRouter.Start()
 
 	apiEndpoint := "localhost:" + SERVER_PORT
-	TestWebsocketServer = sinkserver.NewWebsocketServer(apiEndpoint, sinkManager, 10*time.Second, 100, loggertesthelper.Logger())
+	TestWebsocketServer = websocket.NewWebsocketServer(apiEndpoint, sinkManager, 10*time.Second, 100, loggertesthelper.Logger())
 	go TestWebsocketServer.Start()
 
 	timeoutApiEndpoint := "localhost:" + FAST_TIMEOUT_SERVER_PORT
-	FastTimeoutTestWebsocketServer := sinkserver.NewWebsocketServer(timeoutApiEndpoint, sinkManager, 10*time.Millisecond, 100, loggertesthelper.Logger())
+	FastTimeoutTestWebsocketServer := websocket.NewWebsocketServer(timeoutApiEndpoint, sinkManager, 10*time.Millisecond, 100, loggertesthelper.Logger())
 	go FastTimeoutTestWebsocketServer.Start()
 
 	blackListDataReadChannel = make(chan *logmessage.Message)
@@ -57,7 +54,7 @@ func init() {
 	go blacklistTestMessageRouter.Start()
 
 	blacklistApiEndpoint := "localhost:" + BLACKLIST_SERVER_PORT
-	blackListTestWebsocketServer = sinkserver.NewWebsocketServer(blacklistApiEndpoint, blacklistSinkManager, 10*time.Second, 100, loggertesthelper.Logger())
+	blackListTestWebsocketServer = websocket.NewWebsocketServer(blacklistApiEndpoint, blacklistSinkManager, 10*time.Second, 100, loggertesthelper.Logger())
 	go blackListTestWebsocketServer.Start()
 
 	time.Sleep(2 * time.Millisecond)
@@ -65,10 +62,4 @@ func init() {
 
 func WaitForWebsocketRegistration() {
 	time.Sleep(50 * time.Millisecond)
-}
-
-func AssertConnectionFails(t *testing.T, port string, path string) {
-	_, _, err := websocket.DefaultDialer.Dial("ws://localhost:"+port+path, http.Header{})
-	assert.Error(t, err)
-
 }

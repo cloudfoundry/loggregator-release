@@ -169,7 +169,7 @@ func (sinkManager *SinkManager) ensureRecentLogsSinkFor(appId string) {
 	sinkManager.RegisterSink(s)
 }
 
-func (sinkManager *SinkManager) recentLogsFor(appId string) []*logmessage.Message {
+func (sinkManager *SinkManager) RecentLogsFor(appId string) []*logmessage.Message {
 	if sink := sinkManager.sinks.DumpFor(appId); sink != nil {
 		return sink.Dump()
 	} else {
