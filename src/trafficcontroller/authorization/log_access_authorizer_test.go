@@ -83,9 +83,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func startHTTPServer() *httptest.Server {
-	return  httptest.NewServer(new(handler))
+	return httptest.NewServer(new(handler))
 }
 
 func startHTTPSServer() *httptest.Server {
-	return  httptest.NewTLSServer(new(handler))
+	return httptest.NewTLSServer(new(handler))
 }

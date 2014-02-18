@@ -4,9 +4,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"testing"
 	"code.google.com/p/gogoprotobuf/proto"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"testing"
 	"time"
 )
 
@@ -29,13 +29,13 @@ func NewMessage(messageString, appId string) *logmessage.Message {
 func generateLogMessage(messageString, appId string, messageType logmessage.LogMessage_MessageType, sourceName, sourceId string) *logmessage.LogMessage {
 	currentTime := time.Now()
 	logMessage := &logmessage.LogMessage{
-Message:     []byte(messageString),
-AppId:       proto.String(appId),
-	MessageType: &messageType,
-	SourceName:  proto.String(sourceName),
-	SourceId:    proto.String(sourceId),
-	Timestamp:   proto.Int64(currentTime.UnixNano()),
-}
+		Message:     []byte(messageString),
+		AppId:       proto.String(appId),
+		MessageType: &messageType,
+		SourceName:  proto.String(sourceName),
+		SourceId:    proto.String(sourceId),
+		Timestamp:   proto.Int64(currentTime.UnixNano()),
+	}
 
-return logMessage
+	return logMessage
 }

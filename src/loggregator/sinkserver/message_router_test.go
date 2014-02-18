@@ -1,207 +1,111 @@
-package sinkserver
+package sinkserver_test
 
 import (
-	"fmt"
-	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
-	"github.com/stretchr/testify/assert"
-	"loggregator/iprange"
-	"testing"
-	"time"
-	"loggregator/sinkserver/sinkmanager"
-	"loggregator/sinkserver/blacklist"
+	"loggregator/sinkserver"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"sync"
 )
 
-type testSink struct {
-	received            chan *logmessage.Message
-	shouldReceiveErrors bool
+type fakeSinkManager struct {
+	sync.RWMutex
+	receivedMessages []*logmessage.Message
+	receivedDrains [][]string
 }
 
-func (ts testSink) Emit() instrumentation.Context {
-	return instrumentation.Context{}
+func (f *fakeSinkManager) SendTo(appId string, receivedMessage *logmessage.Message) {
+	f.Lock()
+	defer f.Unlock()
+	f.receivedMessages = append(f.receivedMessages,receivedMessage)
 }
 
-func (ts testSink) AppId() string {
-	return "appId"
+func (f *fakeSinkManager) ManageSyslogSinks(appId string, syslogSinkUrls []string) {
+	f.Lock()
+	defer f.Unlock()
+	f.receivedDrains = append(f.receivedDrains,syslogSinkUrls)
 }
 
-func (ts testSink) Run(in <-chan *logmessage.Message) {
-	for msg := range(in) {
-		ts.received <- msg
-	}
+func (f *fakeSinkManager) received() []*logmessage.Message {
+	f.RLock()
+	defer f.RUnlock()
+	return f.receivedMessages
 }
 
-func (ts testSink) ShouldReceiveErrors() bool {
-	return ts.shouldReceiveErrors
+func (f *fakeSinkManager) drains() [][]string {
+	f.RLock()
+	defer f.RUnlock()
+	return f.receivedDrains
 }
 
-func (ts testSink) Identifier() string {
-	return "testSink"
-}
 
-// TODO: move to sink manager
-func TestSendingToErrorChannelDoesNotBlock(t *testing.T) {
-	logger := loggertesthelper.Logger()
-	bl := blacklist.New(nil)
-	sinkManager := sinkmanager.NewSinkManager(1024, false, bl, logger)
-	//sinkManager.errorChannel = make(chan *logmessage.Message, 1)
-	go sinkManager.Start()
 
-	incomingLogChan := make(chan *logmessage.Message, 10)
-	testMessageRouter := NewMessageRouter(sinkManager, logger)
-	go testMessageRouter.Start(incomingLogChan)
+var _ = Describe("Message Router", func() {
 
-	ourSink := testSink{make(chan *logmessage.Message, 10), false}
+	var fakeManager *fakeSinkManager
+	var messageRouter *sinkserver.MessageRouter
 
-	sinkManager.RegisterSink(ourSink)
+	BeforeEach(func(){
+		fakeManager = &fakeSinkManager{receivedMessages: make([]*logmessage.Message,0),receivedDrains: make([][]string,0)}
+		messageRouter = sinkserver.NewMessageRouter(fakeManager,loggertesthelper.Logger())
+	})
 
-	for i := 0; i < 10; i++ {
-		badMessage := messagetesthelpers.NewMessage(t, "error msg", "appIdWeDontCareAbout")
-		badMessage.GetLogMessage().DrainUrls = []string{fmt.Sprintf("<nil%d>", i)}
-		incomingLogChan <- badMessage
-	}
+	Describe("Start", func() {
+			Context("With an incoming message", func() {
+					var incomingLogChan chan *logmessage.Message
+					BeforeEach(func(){
+						incomingLogChan = make(chan *logmessage.Message)
+						go messageRouter.Start(incomingLogChan)
+					})
 
-	goodMessage := messagetesthelpers.NewMessage(t, "error msg", "appId")
-	incomingLogChan <- goodMessage
+					AfterEach(func(){
+						messageRouter.Stop()
+					})
 
-	select {
-	case <- ourSink.received:
-	case <-time.After(1000 * time.Millisecond):
-		t.Error("Should have received a message")
-	}
-}
+					It("sends the message to the sink manager if it is an app message", func() {
+						message := NewMessage("testMessage","app")
+						incomingLogChan <- message
+						Eventually(fakeManager.received).Should(HaveLen(1))
+						Expect(fakeManager.received()[0].GetLogMessage()).To(Equal(message.GetLogMessage()))
+					})
 
-func TestSimpleBlacklistRule(t *testing.T) {
-	logger := loggertesthelper.Logger()
-	bl := blacklist.New([]iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}})
-	sinkManager := sinkmanager.NewSinkManager(1024, false, bl, logger)
-	oldActiveSyslogSinksCounter := sinkManager.Metrics.SyslogSinks
-	go sinkManager.Start()
+					It("sends the appropriate drain URLs via sink manager", func() {
+						message := NewMessage("testMessage","app")
+						drains := []string{"drainurl"}
 
-	incomingLogChan := make(chan *logmessage.Message, 10)
-	testMessageRouter := NewMessageRouter(sinkManager, logger)
-	go testMessageRouter.Start(incomingLogChan)
+						message.GetLogMessage().DrainUrls = drains
+						incomingLogChan <- message
+						Eventually(fakeManager.drains).Should(HaveLen(1))
+						Expect(fakeManager.drains()[0]).To(Equal(drains))
+					})
 
-	ourSink := testSink{make(chan *logmessage.Message, 100), true}
-	sinkManager.RegisterSink(ourSink)
+					It("doesn't send drain URLs not from Warden", func() {
+						message := NewMessage("testMessage","app")
+						dea := "DEA"
+						message.GetLogMessage().SourceName = &dea
+						drains := []string{"drainurl"}
 
-	message := messagetesthelpers.NewMessage(t, "error msg", "appId")
-	message.GetLogMessage().DrainUrls = []string{"http://10.10.123.1"}
-	incomingLogChan <- message
+						message.GetLogMessage().DrainUrls = drains
+						incomingLogChan <- message
+						Eventually(fakeManager.drains).ShouldNot(HaveLen(1))
+					})
+			})
+	})
 
-	select {
-	case _ = <-ourSink.received:
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Did not receive real message")
-	}
+	Describe("Stop", func() {
+		It("should return", func(){
+			incomingLogChan := make(chan *logmessage.Message)
+			done := make(chan struct{})
+			go func() {
+				messageRouter.Start(incomingLogChan)
+				close(done)
+			}()
+			messageRouter.Stop()
+			Eventually(done).Should(BeClosed())
+		})
 
-	select {
-	case _ = <-ourSink.received:
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Did not message about blacklisted syslog drain")
-	}
+	})
 
-	incomingLogChan <- message
-
-	select {
-	case _ = <-ourSink.received:
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Did not receive real message")
-	}
-
-	select {
-	case _ = <-ourSink.received:
-		t.Error("Should not receive another message about the blacklisted url since we cache blacklisted urls")
-	case <-time.After(100 * time.Millisecond):
-	}
-
-	assert.Equal(t, sinkManager.Metrics.SyslogSinks, oldActiveSyslogSinksCounter)
-
-	message = messagetesthelpers.NewMessage(t, "error msg", "appId")
-	message.GetLogMessage().DrainUrls = []string{"http://10.10.123.2"}
-	incomingLogChan <- message
-	waitForMessageGettingProcessed(t, ourSink, 10*time.Millisecond)
-
-	assert.Equal(t, sinkManager.Metrics.SyslogSinks, oldActiveSyslogSinksCounter+1)
-}
-
-func TestInvalidUrlForSyslogDrain(t *testing.T) {
-	logger := loggertesthelper.Logger()
-	bl := blacklist.New([]iprange.IPRange{iprange.IPRange{Start: "10.10.123.1", End: "10.10.123.1"}})
-	sinkManager := sinkmanager.NewSinkManager(1024, false, bl, logger)
-	oldActiveSyslogSinksCounter := sinkManager.Metrics.SyslogSinks
-	go sinkManager.Start()
-
-	incomingLogChan := make(chan *logmessage.Message, 10)
-	testMessageRouter := NewMessageRouter(sinkManager, logger)
-	go testMessageRouter.Start(incomingLogChan)
-
-	ourSink := testSink{make(chan *logmessage.Message, 100), true}
-	sinkManager.RegisterSink(ourSink)
-
-	message := messagetesthelpers.NewMessage(t, "error msg", "appId")
-	message.GetLogMessage().DrainUrls = []string{"ht tp://bad.protocol.com"}
-	incomingLogChan <- message
-
-	select {
-	case _ = <-ourSink.received:
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Did not receive real message")
-	}
-
-	select {
-	case _ = <-ourSink.received:
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Did not message about blacklisted syslog drain")
-	}
-
-	incomingLogChan <- message
-
-	select {
-	case _ = <-ourSink.received:
-	case <-time.After(1000 * time.Millisecond):
-		t.Error("Did not receive real message")
-	}
-
-	select {
-	case _ = <-ourSink.received:
-		t.Error("Should not receive another message about the blacklisted url since we cache blacklisted urls")
-	case <-time.After(100 * time.Millisecond):
-	}
-
-	assert.Equal(t, sinkManager.Metrics.SyslogSinks, oldActiveSyslogSinksCounter)
-}
-
-func waitForMessageGettingProcessed(t *testing.T, ourSink testSink, timeout time.Duration) {
-	select {
-	case _ = <-ourSink.received:
-
-	case <-time.After(timeout):
-		t.Error("Message didn't get processed")
-	}
-}
-
-func TestParseEnvelopesDoesntBlockWhenMessageRouterChannelIsFull(t *testing.T) {
-	logger := gosteno.NewLogger("TestLogger")
-
-	bl := blacklist.New(nil)
-	sinkManager := sinkmanager.NewSinkManager(1, true, bl, logger)
-	go sinkManager.Start()
-	incomingLogChan := make(chan *logmessage.Message, 1)
-	messageRouter := NewMessageRouter(sinkManager, logger)
-	go messageRouter.Start(incomingLogChan)
-
-	testMessage := messagetesthelpers.NewMessage(t, "msg", "appid")
-
-	for i := 0; i < 10; i++ {
-		select {
-		case incomingLogChan <- testMessage:
-			break
-		case <-time.After(1 * time.Second):
-			t.Fatal("Shouldn't have blocked")
-		}
-	}
-}
+})

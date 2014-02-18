@@ -5,9 +5,9 @@ import (
 	"github.com/cloudfoundry/gunk/timeprovider"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"time"
-	"sync/atomic"
 	"sync"
+	"sync/atomic"
+	"time"
 )
 
 type DumpSink struct {
@@ -17,8 +17,8 @@ type DumpSink struct {
 	messageBuffer      []*logmessage.Message
 	inputChan          chan *logmessage.Message
 	inactivityDuration time.Duration
-	sequence		   uint32
-	bufferSize		   uint32
+	sequence           uint32
+	bufferSize         uint32
 	tp                 timeprovider.TimeProvider
 }
 
@@ -29,7 +29,7 @@ func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, i
 		messageBuffer:      make([]*logmessage.Message, bufferSize),
 		inactivityDuration: inactivityDuration,
 		tp:                 tp,
-		bufferSize:			bufferSize,
+		bufferSize:         bufferSize,
 	}
 	return dumpSink
 }
@@ -49,7 +49,7 @@ func (d *DumpSink) Run(inputChan <-chan *logmessage.Message) {
 	}
 }
 
-func (d *DumpSink) addMsg(msg *logmessage.Message){
+func (d *DumpSink) addMsg(msg *logmessage.Message) {
 	d.Lock()
 	defer d.Unlock()
 	position := atomic.AddUint32(&d.sequence, uint32(1)) % d.bufferSize
@@ -78,7 +78,7 @@ func (d *DumpSink) Dump() []*logmessage.Message {
 	oldestPosition := (sequence + 1) % d.bufferSize
 
 	if !lapped {
-		copyCount:= copy(out, buffer[1:newestPosition+1])
+		copyCount := copy(out, buffer[1:newestPosition+1])
 		return out[:copyCount]
 	}
 

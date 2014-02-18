@@ -79,6 +79,7 @@ func (s *SyslogSink) Run(inputChan <-chan *logmessage.Message) {
 
 		s.logger.Debugf("Syslog Sink %s: Waiting for activity\n", s.drainUrl)
 
+
 		message, ok := <-buffer.GetOutputChannel()
 		if !ok {
 			s.logger.Debugf("Syslog Sink %s: Closed listener channel detected. Closing.\n", s.drainUrl)
@@ -106,6 +107,7 @@ func (s *SyslogSink) Run(inputChan <-chan *logmessage.Message) {
 			atomic.AddUint64(s.sentByteCount, uint64(message.GetRawMessageLength()))
 		}
 	}
+
 }
 
 func (s *SyslogSink) Disconnect() {

@@ -3,20 +3,22 @@ package sinkmanager
 import (
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/gunk/timeprovider"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"loggregator/domain"
 	"loggregator/groupedsinks"
 	"loggregator/sinks"
+	"loggregator/sinks/dump"
+	"loggregator/sinks/syslog"
 	"loggregator/sinks/syslogwriter"
-	"time"
 	"loggregator/sinkserver/blacklist"
 	"loggregator/sinkserver/metrics"
-	"loggregator/sinks/syslog"
-	"loggregator/sinks/dump"
-	"github.com/cloudfoundry/gunk/timeprovider"
+	"time"
 )
 
 type SinkManager struct {
+	doneChannel         chan struct{}
 	errorChannel        chan *logmessage.Message
 	urlBlacklistManager *blacklist.URLBlacklistManager
 	sinks               *groupedsinks.GroupedSinks
@@ -24,26 +26,39 @@ type SinkManager struct {
 	recentLogCount      uint32
 	Metrics             *metrics.SinkManagerMetrics
 	logger              *gosteno.Logger
+	appStoreUpdateChan  chan<- domain.AppServices
 }
 
-func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger) *SinkManager {
+func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger) (*SinkManager, <-chan domain.AppServices) {
+	appStoreUpdateChan := make(chan domain.AppServices, 10)
 	return &SinkManager{
-		errorChannel:  make(chan *logmessage.Message, 100),
+		doneChannel:         make(chan struct{}),
+		errorChannel:        make(chan *logmessage.Message, 100),
 		urlBlacklistManager: blackListManager,
-		sinks:          groupedsinks.NewGroupedSinks(),
-		skipCertVerify: skipCertVerify,
-		recentLogCount: maxRetainedLogMessages,
-		Metrics:        metrics.NewSinkManagerMetrics(),
-		logger:         logger,
-	}
+		sinks:               groupedsinks.NewGroupedSinks(),
+		skipCertVerify:      skipCertVerify,
+		recentLogCount:      maxRetainedLogMessages,
+		Metrics:             metrics.NewSinkManagerMetrics(),
+		logger:              logger,
+		appStoreUpdateChan:  appStoreUpdateChan,
+	}, appStoreUpdateChan
 }
 
-func (sinkManager *SinkManager) Start() {
-	// TODO: listen for new data from app store (watcher)
+func (sinkManager *SinkManager) Start(newAppServiceChan, deletedAppServiceChan <-chan domain.AppService ) {
+	go sinkManager.listenForNewAppServices(newAppServiceChan)
+	go sinkManager.listenForDeletedAppServices(deletedAppServiceChan)
+
 	sinkManager.listenForErrorMessages()
 }
 
 func (sinkManager *SinkManager) Stop() {
+	select {
+	case <-sinkManager.doneChannel:
+	default:
+		close(sinkManager.doneChannel)
+		sinkManager.sinks.DeleteAll()
+		close(sinkManager.appStoreUpdateChan)
+	}
 }
 
 func (sinkManager *SinkManager) SendTo(appId string, receivedMessage *logmessage.Message) {
@@ -51,12 +66,35 @@ func (sinkManager *SinkManager) SendTo(appId string, receivedMessage *logmessage
 	sinkManager.sinks.BroadCast(appId, receivedMessage)
 }
 
+func (sinkManager *SinkManager) listenForNewAppServices(newAppServiceChan <-chan domain.AppService) {
+	for appService :=  range newAppServiceChan{
+		sinkManager.registerNewSyslogSink(appService.AppId, appService.Url)
+	}
+}
+
+func (sinkManager *SinkManager) listenForDeletedAppServices(deletedAppServiceChan <-chan domain.AppService) {
+	for appService := range deletedAppServiceChan{
+		syslogSink := sinkManager.sinks.DrainFor(appService.AppId,appService.Url)
+		if syslogSink != nil {
+			sinkManager.unregisterSink(syslogSink)
+		}
+	}
+}
+
 func (sinkManager *SinkManager) listenForErrorMessages() {
-	for errorMessage := range sinkManager.errorChannel {
-		appId := errorMessage.GetLogMessage().GetAppId()
-		sinkManager.logger.Debugf("SinkManager:ErrorChannel: Searching for sinks with appId [%s].", appId)
-		sinkManager.sinks.BroadCastError(appId, errorMessage)
-		sinkManager.logger.Debugf("SinkManager:ErrorChannel: Done sending error message.")
+	for {
+		select {
+		case <-sinkManager.doneChannel:
+			return
+		case errorMessage, ok := <-sinkManager.errorChannel:
+			if !ok {
+				return
+			}
+			appId := errorMessage.GetLogMessage().GetAppId()
+			sinkManager.logger.Debugf("SinkManager:ErrorChannel: Searching for sinks with appId [%s].", appId)
+			sinkManager.sinks.BroadCastError(appId, errorMessage)
+			sinkManager.logger.Debugf("SinkManager:ErrorChannel: Done sending error message.")
+		}
 	}
 }
 
@@ -84,37 +122,23 @@ func (sinkManager *SinkManager) RegisterSink(sink sinks.Sink, block ...bool) boo
 
 func (sinkManager *SinkManager) unregisterSink(sink sinks.Sink) {
 
-	if syslogSink, ok := sink.(*syslog.SyslogSink); ok {
-		syslogSink.Disconnect()
+	ok := sinkManager.sinks.Delete(sink)
+	if !ok {
+		return
 	}
-
-	// TODO: clean up all apps in app store here
-//	if dumpSink, ok := sink.(*dump.DumpSink); ok {
-//		dumpSink.AppId()
-//	}
-
-	sinkManager.sinks.Delete(sink)
-
 	sinkManager.Metrics.Dec(sink)
 
 	if syslogSink, ok := sink.(*syslog.SyslogSink); ok {
 		syslogSink.Disconnect()
+	}else if _, ok := sink.(*dump.DumpSink); ok {
+		sinkManager.appStoreUpdateChan <- domain.AppServices{AppId: sink.AppId() }
 	}
 
 	sinkManager.logger.Infof("SinkManager: Sink with channel %v and identifier %s requested closing. Closed it.", sink.Identifier())
 }
 
 func (sinkManager *SinkManager) ManageSyslogSinks(appId string, syslogSinkUrls []string) {
-
-	// TODO: send new data to app store
-	if len(syslogSinkUrls) == 0 {
-		sinkManager.unregisterAllSyslogSinks(appId)
-		return
-	}
-
-	sinkManager.unregisterUnboundSyslogSinks(appId, syslogSinkUrls)
-
-	sinkManager.registerNewSyslogSinks(appId, syslogSinkUrls)
+	sinkManager.appStoreUpdateChan <- domain.AppServices{AppId: appId, Urls: syslogSinkUrls }
 }
 
 func (sinkManager *SinkManager) unregisterAllSyslogSinks(appId string) {
@@ -131,21 +155,17 @@ func (sinkManager *SinkManager) unregisterUnboundSyslogSinks(appId string, syslo
 	}
 }
 
-func (sinkManager *SinkManager) registerNewSyslogSinks(appId string, syslogSinkUrls []string) {
-	for _, syslogSinkUrl := range syslogSinkUrls {
-		if sinkManager.sinks.DrainFor(appId, syslogSinkUrl) == nil && !sinkManager.urlBlacklistManager.IsBlacklisted(syslogSinkUrl) {
-			parsedSyslogDrainUrl, err := sinkManager.urlBlacklistManager.CheckUrl(syslogSinkUrl)
-			if err != nil {
-				sinkManager.urlBlacklistManager.BlacklistUrl(syslogSinkUrl)
-				errorMsg := fmt.Sprintf("SinkManager: Invalid syslog drain URL: %s. Err: %v", syslogSinkUrl, err)
-				sinkManager.SendSyslogErrorToLoggregator(errorMsg, appId)
-			} else {
-				syslogWriter := syslogwriter.NewSyslogWriter(parsedSyslogDrainUrl, appId, sinkManager.skipCertVerify)
-				syslogSink := syslog.NewSyslogSink(appId, syslogSinkUrl, sinkManager.logger, syslogWriter, sinkManager.errorChannel)
-				sinkManager.RegisterSink(syslogSink)
-			}
-		}
+func (sinkManager *SinkManager) registerNewSyslogSink(appId string, syslogSinkUrl string) {
+	parsedSyslogDrainUrl, err := sinkManager.urlBlacklistManager.CheckUrl(syslogSinkUrl)
+	if err != nil {
+		errorMsg := fmt.Sprintf("SinkManager: Invalid syslog drain URL: %s. Err: %v", syslogSinkUrl, err)
+		sinkManager.SendSyslogErrorToLoggregator(errorMsg, appId)
+	} else {
+		syslogWriter := syslogwriter.NewSyslogWriter(parsedSyslogDrainUrl, appId, sinkManager.skipCertVerify)
+		syslogSink := syslog.NewSyslogSink(appId, syslogSinkUrl, sinkManager.logger, syslogWriter, sinkManager.errorChannel)
+		sinkManager.RegisterSink(syslogSink)
 	}
+
 }
 
 func (sinkManager *SinkManager) SendSyslogErrorToLoggregator(errorMsg, appId string) {

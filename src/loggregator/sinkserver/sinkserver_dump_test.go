@@ -2,12 +2,12 @@ package sinkserver_test
 
 import (
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
+	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
+	"net/http"
 	testhelpers "server_testhelpers"
 	"testing"
 	"time"
-	"github.com/gorilla/websocket"
-	"net/http"
 )
 
 func dumpAllMessages(receivedChan chan []byte) [][]byte {

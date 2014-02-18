@@ -4,9 +4,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"testing"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"code.google.com/p/gogoprotobuf/proto"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"testing"
 	"time"
 )
 

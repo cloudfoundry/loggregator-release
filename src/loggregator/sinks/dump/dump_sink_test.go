@@ -1,15 +1,15 @@
 package dump
 
 import (
+	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"runtime"
 	"strconv"
 	"testing"
 	"time"
-	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
 )
 
 var fakeTimeProvider = faketimeprovider.New(time.Now())
@@ -41,7 +41,7 @@ func TestDumpForTwoMessages(t *testing.T) {
 
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
-	
+
 	go func() {
 		dump.Run(inputChan)
 		close(dumpRunnerDone)
@@ -90,7 +90,7 @@ func TestDumpAlwaysReturnsTheNewestMessages(t *testing.T) {
 	dumpRunnerDone := make(chan struct{})
 
 	inputChan := make(chan *logmessage.Message)
-	
+
 	go func() {
 		dump.Run(inputChan)
 		close(dumpRunnerDone)
@@ -203,7 +203,6 @@ func TestDumpWithLotsOfMessages(t *testing.T) {
 		logMessage := messagetesthelpers.NewMessage(t, strconv.Itoa(i), "appId")
 		inputChan <- logMessage
 	}
-
 
 	close(inputChan)
 	<-dumpRunnerDone

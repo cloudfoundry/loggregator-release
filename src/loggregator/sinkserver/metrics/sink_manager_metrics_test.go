@@ -6,8 +6,8 @@ import (
 	"loggregator/sinks/dump"
 	"loggregator/sinks/syslog"
 
-	"loggregator/sinkserver/metrics"
 	"loggregator/sinks"
+	"loggregator/sinkserver/metrics"
 )
 
 var _ = Describe("SinkManagerMetrics", func() {

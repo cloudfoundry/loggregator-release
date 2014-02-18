@@ -5,18 +5,22 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"loggregator/sinkserver/metrics"
-	"loggregator/sinkserver/sinkmanager"
 )
 
 type MessageRouter struct {
 	unmarshaller func([]byte) (*logmessage.Message, error)
-	SinkManager  *sinkmanager.SinkManager
+	SinkManager  sinkManager
 	Metrics      *metrics.MessageRouterMetrics
 	logger       *gosteno.Logger
 	done         chan struct{}
 }
 
-func NewMessageRouter(sinkManager *sinkmanager.SinkManager, logger *gosteno.Logger) *MessageRouter {
+type sinkManager interface{
+	SendTo(string, *logmessage.Message)
+	ManageSyslogSinks(string,[]string)
+}
+
+func NewMessageRouter(sinkManager sinkManager, logger *gosteno.Logger) *MessageRouter {
 	return &MessageRouter{
 		SinkManager: sinkManager,
 		Metrics:     &metrics.MessageRouterMetrics{},

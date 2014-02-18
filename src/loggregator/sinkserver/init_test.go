@@ -5,10 +5,11 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"loggregator/iprange"
 	"loggregator/sinkserver"
+	"loggregator/sinkserver/blacklist"
+	"loggregator/sinkserver/sinkmanager"
 	"loggregator/sinkserver/websocket"
 	"time"
-	"loggregator/sinkserver/sinkmanager"
-	"loggregator/sinkserver/blacklist"
+	"loggregator/domain"
 )
 
 var sinkManager *sinkmanager.SinkManager
@@ -34,9 +35,12 @@ func init() {
 
 	logger := loggertesthelper.Logger()
 
+	newAppServiceChan := make(chan domain.AppService)
+	deletedAppServiceChan := make(chan domain.AppService)
+
 	emptyBlacklist := blacklist.New(nil)
-	sinkManager = sinkmanager.NewSinkManager(1024, false, emptyBlacklist, logger)
-	go sinkManager.Start()
+	sinkManager, _ = sinkmanager.NewSinkManager(1024, false, emptyBlacklist, logger)
+	go sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
 
 	TestMessageRouter = sinkserver.NewMessageRouter(sinkManager, logger)
 	go TestMessageRouter.Start(dataReadChannel)
@@ -51,8 +55,8 @@ func init() {
 
 	blackListDataReadChannel = make(chan *logmessage.Message)
 	localhostBlacklist := blacklist.New([]iprange.IPRange{iprange.IPRange{Start: "127.0.0.0", End: "127.0.0.2"}})
-	blacklistSinkManager := sinkmanager.NewSinkManager(1024, false, localhostBlacklist, logger)
-	go blacklistSinkManager.Start()
+	blacklistSinkManager, _ := sinkmanager.NewSinkManager(1024, false, localhostBlacklist, logger)
+	go blacklistSinkManager.Start(newAppServiceChan, deletedAppServiceChan)
 
 	blacklistTestMessageRouter := sinkserver.NewMessageRouter(blacklistSinkManager, logger)
 	go blacklistTestMessageRouter.Start(blackListDataReadChannel)

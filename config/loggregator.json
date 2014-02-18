@@ -1,4 +1,6 @@
 {
+    "EtcdUrls"    : ["http://localhost:5000"],
+    "EtcdMaxConcurrentRequests" : 10,
     "IncomingPort": 3456,
     "OutgoingPort": 8080,
     "SkipCertVerify": false,

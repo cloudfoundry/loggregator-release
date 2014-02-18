@@ -3,9 +3,9 @@ package metrics
 import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"loggregator/sinks"
-	"sync"
 	"loggregator/sinks/dump"
 	"loggregator/sinks/syslog"
+	"sync"
 )
 
 type SinkManagerMetrics struct {

@@ -72,7 +72,6 @@ func (sink *WebsocketSink) ShouldReceiveErrors() bool {
 	return true
 }
 
-
 func (sink *WebsocketSink) Run(inputChan <-chan *logmessage.Message) {
 	sink.logger.Debugf("Websocket Sink %s: Created for appId [%s]", sink.clientAddress, sink.appId)
 

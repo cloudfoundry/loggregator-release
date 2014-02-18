@@ -8,10 +8,10 @@ import (
 	. "github.com/onsi/gomega"
 	"loggregator/sinks/syslogwriter"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"time"
-	"net/http/httptest"
-	"net/http"
 )
 
 var _ = Describe("SyslogWriter", func() {
@@ -86,7 +86,6 @@ var _ = Describe("SyslogWriter", func() {
 			http.DefaultServeMux = http.NewServeMux()
 		})
 
-
 		It("should HTTP POST each log message to the HTTPS syslog endpoint", func() {
 			outputUrl, _ := url.Parse(server.URL + "/234-bxg-234/")
 
@@ -149,7 +148,7 @@ var _ = Describe("SyslogWriter", func() {
 	})
 })
 
-func ServeHTTP(requestChan chan []byte, logger *gosteno.Logger) *httptest.Server{
+func ServeHTTP(requestChan chan []byte, logger *gosteno.Logger) *httptest.Server {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		bytes := make([]byte, 1024)
 		byteCount, _ := r.Body.Read(bytes)
@@ -157,7 +156,7 @@ func ServeHTTP(requestChan chan []byte, logger *gosteno.Logger) *httptest.Server
 		requestChan <- bytes[:byteCount]
 	}
 
-	http.HandleFunc("/234-bxg-234/",handler)
+	http.HandleFunc("/234-bxg-234/", handler)
 
 	server := httptest.NewTLSServer(http.DefaultServeMux)
 	return server

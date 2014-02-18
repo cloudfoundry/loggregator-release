@@ -7,9 +7,9 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"loggregator/sinks/syslog"
 	"sync"
 	"time"
-	"loggregator/sinks/syslog"
 )
 
 type SyslogWriterRecorder struct {
