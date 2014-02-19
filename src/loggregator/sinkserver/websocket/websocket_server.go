@@ -84,7 +84,7 @@ func (w *WebsocketServer) validate(r *http.Request) (string, error) {
 }
 
 func (w *WebsocketServer) streamLogs(appId string, ws *websocket.Conn) {
-	defer ws.Close()
+	defer ws.WriteControl(websocket.CloseMessage, []byte{}, time.Now().Add(100*time.Millisecond))
 	websocketSink := sinks.NewWebsocketSink(
 		appId,
 		w.logger,
@@ -97,7 +97,7 @@ func (w *WebsocketServer) streamLogs(appId string, ws *websocket.Conn) {
 }
 
 func (w *WebsocketServer) recentLogs(appId string, ws *websocket.Conn) {
-	defer ws.Close()
+	defer ws.WriteControl(websocket.CloseMessage, []byte{}, time.Now().Add(100*time.Millisecond))
 
 	logMessages := w.sinkManager.RecentLogsFor(appId)
 	sendMessagesToWebsocket(logMessages, ws, w.logger)
