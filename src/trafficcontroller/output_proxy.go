@@ -20,6 +20,18 @@ type Proxy struct {
 	authorize authorization.LogAccessAuthorizer
 }
 
+type websocketHandler interface {
+	HandleWebSocket(string, string, []*hasher.Hasher)
+}
+
+var NewProxyHandlerProvider func(*websocket.Conn, *gosteno.Logger) websocketHandler
+
+func init() {
+	NewProxyHandlerProvider = func(ws *websocket.Conn, logger *gosteno.Logger) websocketHandler {
+		return NewProxyHandler(ws, logger)
+	}
+}
+
 func NewProxy(host string, hashers []*hasher.Hasher, authorizer authorization.LogAccessAuthorizer, logger *gosteno.Logger) *Proxy {
 	return &Proxy{host: host, hashers: hashers, authorize: authorizer, logger: logger}
 }
@@ -75,7 +87,6 @@ func upgrade(w http.ResponseWriter, r *http.Request) *websocket.Conn {
 func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	clientAddress := r.RemoteAddr
-	requestUri := r.URL.RequestURI()
 	appId := r.Form.Get("app")
 
 	authToken := r.Header.Get("Authorization")
@@ -84,7 +95,8 @@ func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	ws := upgrade(rw, r)
-	if authorized, errorMessage := proxy.isAuthorized(appId, authToken, clientAddress); !authorized {
+	authorized, errorMessage := proxy.isAuthorized(appId, authToken, clientAddress)
+	if !authorized {
 		data, err := proto.Marshal(errorMessage)
 		if err != nil {
 			proxy.logger.Errorf("Error marshalling log message: %s", err)
@@ -95,7 +107,9 @@ func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	NewProxyHandler(ws, proxy.logger).HandleWebSocket(appId, requestUri, proxy.hashers)
+	proxyHandler := NewProxyHandlerProvider(ws, proxy.logger)
+
+	proxyHandler.HandleWebSocket(appId, r.URL.RequestURI(), proxy.hashers)
 }
 
 func extractAuthTokenFromUrl(u *url.URL) string {

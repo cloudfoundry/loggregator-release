@@ -2,227 +2,179 @@ package trafficcontroller
 
 import (
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"code.google.com/p/gogoprotobuf/proto"
+	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/gorilla/websocket"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/url"
-	"testing"
+	"sync"
 	"time"
 	"trafficcontroller/hasher"
 	testhelpers "trafficcontroller_testhelpers"
 )
 
-func TestProxyingWithAuthThroughQueryParam(t *testing.T) {
-	go Server("localhost:62038", "Hello World from the server", 1)
-	proxy := NewProxy(
-		"localhost:62022",
-		[]*hasher.Hasher{hasher.NewHasher([]string{"localhost:62038"})},
-		testhelpers.SuccessfulAuthorizer,
-		loggertesthelper.Logger(),
-	)
-	go proxy.Start()
-	WaitForServerStart("62038", "/")
-
-	receivedChan := ClientWithQueryParamAuth(t, "62022", "/?app=myApp")
-
-	select {
-	case data := <-receivedChan:
-		assert.Equal(t, string(data), "Hello World from the server")
-	case <-time.After(1 * time.Second):
-		t.Error("Did not receive response within one second")
-	}
+type fakeProxyHandler struct {
+	sync.Mutex
+	callParams          [][]interface{}
+	WebsocketConnection *websocket.Conn
 }
 
-func TestProxyWhenLogTargetisinvalid(t *testing.T) {
-	proxy := NewProxy(
-		"localhost:62060",
-		[]*hasher.Hasher{
-			hasher.NewHasher([]string{"localhost:62032"}),
-		},
-		testhelpers.SuccessfulAuthorizer,
-		loggertesthelper.Logger(),
-	)
-	go proxy.Start()
-	time.Sleep(time.Millisecond * 50)
-
-	receivedChan := Client(t, "62060", "/invalid_target")
-
-	select {
-	case data := <-receivedChan:
-		messagetesthelpers.AssertProtoBufferMessageEquals(t, "Error: Invalid target", data)
-	case <-time.After(1 * time.Second):
-		t.Error("Did not receive response within one second")
-	}
-
-	_, stillOpen := <-receivedChan
-	assert.False(t, stillOpen)
+func (f *fakeProxyHandler) CallParams() [][]interface{} {
+	f.Lock()
+	defer f.Unlock()
+	copyOfParams := make([][]interface{}, len(f.callParams))
+	copy(copyOfParams, f.callParams)
+	return copyOfParams
+}
+func (f *fakeProxyHandler) HandleWebSocket(appid, requestUri string, hashers []*hasher.Hasher) {
+	f.Lock()
+	defer f.Unlock()
+	f.callParams = append(f.callParams, []interface{}{appid, requestUri, hashers})
+	f.WebsocketConnection.Close()
 }
 
-func TestProxyWithoutAuthorization(t *testing.T) {
-	proxy := NewProxy(
-		"localhost:62061",
-		[]*hasher.Hasher{
-			hasher.NewHasher([]string{"localhost:62032"}),
-		},
-		testhelpers.SuccessfulAuthorizer,
-		loggertesthelper.Logger(),
-	)
-	go proxy.Start()
-	time.Sleep(time.Millisecond * 50)
+var _ = Describe("OutPutProxy", func() {
 
-	ws, _, err := websocket.DefaultDialer.Dial("ws://localhost:62061/?app=myApp", http.Header{})
-	assert.NoError(t, err)
+	var fph *fakeProxyHandler
+	var hashers []*hasher.Hasher
+	var PORT = "62022"
 
-	receivedChan := ClientWithAuth(t, ws)
+	BeforeEach(func() {
+		fph = &fakeProxyHandler{callParams: make([][]interface{}, 0)}
+		NewProxyHandlerProvider = func(ws *websocket.Conn, logger *gosteno.Logger) websocketHandler {
+			fph.WebsocketConnection = ws
+			return fph
+		}
+		hashers = []*hasher.Hasher{hasher.NewHasher([]string{"localhost:62038"})}
+		proxy := NewProxy(
+			"localhost:"+PORT,
+			hashers,
+			testhelpers.SuccessfulAuthorizer,
+			loggertesthelper.Logger(),
+		)
+		go proxy.Start()
+	})
 
-	select {
-	case data := <-receivedChan:
-		messagetesthelpers.AssertProtoBufferMessageEquals(t, "Error: Authorization not provided", data)
-	case <-time.After(1 * time.Second):
-		t.Error("Did not receive response within one second")
+	Context("Auth Params", func() {
+		It("Should Authenticate with Auth Query Params", func() {
+			ClientWithQueryParamAuth(PORT, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+
+			callParams := fph.CallParams()
+			Expect(callParams).To(HaveLen(1))
+			Expect(callParams[0][0]).To(Equal("myApp"))
+			Expect(callParams[0][1]).To(Equal("/?app=myApp&authorization=bearer+correctAuthorizationToken"))
+			Expect(callParams[0][2]).To(Equal(hashers))
+		})
+
+		It("Should Fail to Authenticate with Incorrect Auth Query Params", func() {
+			data := ClientWithQueryParamAuth(PORT, "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN)
+
+			receivedMessage := &logmessage.LogMessage{}
+			err := proto.Unmarshal(data, receivedMessage)
+
+			Expect(err).To(BeNil())
+			Expect(string(receivedMessage.GetMessage())).To(Equal("Error: Invalid authorization"))
+			Expect(fph.callParams).To(HaveLen(0))
+		})
+
+		It("Should Fail to Authenticate without Authorization", func() {
+
+			data := ClientWithQueryParamAuth(PORT, "/?app=myApp", "")
+
+			receivedMessage := &logmessage.LogMessage{}
+			err := proto.Unmarshal(data, receivedMessage)
+
+			Expect(err).To(BeNil())
+			Expect(string(receivedMessage.GetMessage())).To(Equal("Error: Authorization not provided"))
+			Expect(fph.callParams).To(HaveLen(0))
+		})
+
+		It("Should Fail With Invalid Target", func() {
+
+			data := ClientWithQueryParamAuth(PORT, "/invalid_target", testhelpers.VALID_AUTHENTICATION_TOKEN)
+
+			receivedMessage := &logmessage.LogMessage{}
+			err := proto.Unmarshal(data, receivedMessage)
+
+			Expect(err).To(BeNil())
+			Expect(string(receivedMessage.GetMessage())).To(Equal("Error: Invalid target"))
+			Expect(fph.callParams).To(HaveLen(0))
+		})
+
+	})
+
+	Context("Auth Headers", func() {
+		It("Should Authenticate with Correct Auth Header", func() {
+			ClientWithHeaderAuth(PORT, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+
+			callParams := fph.CallParams()
+			Expect(callParams).To(HaveLen(1))
+			Expect(callParams[0][0]).To(Equal("myApp"))
+			Expect(callParams[0][1]).To(Equal("/?app=myApp"))
+			Expect(callParams[0][2]).To(Equal(hashers))
+		})
+
+		It("Should Fail to Authenticate with Incorrect Auth Header", func() {
+			data := ClientWithHeaderAuth(PORT, "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN)
+
+			receivedMessage := &logmessage.LogMessage{}
+			err := proto.Unmarshal(data, receivedMessage)
+
+			Expect(err).To(BeNil())
+			Expect(string(receivedMessage.GetMessage())).To(Equal("Error: Invalid authorization"))
+			Expect(fph.callParams).To(HaveLen(0))
+		})
+
+	})
+
+})
+
+func ClientWithQueryParamAuth(port string, path string, auth string) []byte {
+	authorizationParams := ""
+	if auth != "" {
+		authorizationParams = "&authorization=" + url.QueryEscape(auth)
 	}
+	url := "ws://localhost:" + port + path + authorizationParams
 
-	_, stillOpen := <-receivedChan
-	assert.False(t, stillOpen)
+	return DialConnection(url, http.Header{})
 }
 
-func TestProxyWhenAuthorizationFailsThroughHeader(t *testing.T) {
-	proxy := NewProxy(
-		"localhost:62062",
-		[]*hasher.Hasher{
-			hasher.NewHasher([]string{"localhost:62032"}),
-		},
-		testhelpers.SuccessfulAuthorizer,
-		loggertesthelper.Logger(),
-	)
-	go proxy.Start()
-	time.Sleep(time.Millisecond * 50)
-
-	ws, _, err := websocket.DefaultDialer.Dial("ws://localhost:62061/?app=myApp", http.Header{"Authorization": []string{testhelpers.INVALID_AUTHENTICATION_TOKEN}})
-
-	assert.NoError(t, err)
-
-	receivedChan := ClientWithAuth(t, ws)
-
-	select {
-	case data := <-receivedChan:
-		messagetesthelpers.AssertProtoBufferMessageEquals(t, "Error: Invalid authorization", data)
-	case <-time.After(1 * time.Second):
-		t.Error("Did not receive response within one second")
-	}
-
-	_, stillOpen := <-receivedChan
-	assert.False(t, stillOpen)
+func ClientWithHeaderAuth(port string, path string, auth string) []byte {
+	url := "ws://localhost:" + port + path
+	headers := http.Header{"Authorization": []string{auth}}
+	return DialConnection(url, headers)
 }
 
-func TestProxyWhenAuthorizationFailsThroughQueryParams(t *testing.T) {
-	proxy := NewProxy(
-		"localhost:62062",
-		[]*hasher.Hasher{
-			hasher.NewHasher([]string{"localhost:62032"}),
-		},
-		testhelpers.SuccessfulAuthorizer,
-		loggertesthelper.Logger(),
-	)
-	go proxy.Start()
-	time.Sleep(time.Millisecond * 50)
-
-	ws, _, err := websocket.DefaultDialer.Dial("ws://localhost:62061/?app=myApp&authorization="+url.QueryEscape(testhelpers.INVALID_AUTHENTICATION_TOKEN), http.Header{})
-	assert.NoError(t, err)
-	receivedChan := ClientWithAuth(t, ws)
-
-	select {
-	case data := <-receivedChan:
-		messagetesthelpers.AssertProtoBufferMessageEquals(t, "Error: Invalid authorization", data)
-	case <-time.After(1 * time.Second):
-		t.Error("Did not receive response within one second")
-	}
-
-	_, stillOpen := <-receivedChan
-	assert.False(t, stillOpen)
-}
-
-func WaitForServerStart(port string, path string) {
-	serverStarted := func() bool {
-		_, _, err := websocket.DefaultDialer.Dial("ws://localhost:"+port+path, http.Header{})
+func DialConnection(url string, headers http.Header) []byte {
+	numTries := 0
+	for {
+		ws, _, err := websocket.DefaultDialer.Dial(url, headers)
 		if err != nil {
-			return false
-		}
-		return true
-	}
-	for !serverStarted() {
-		time.Sleep(1 * time.Microsecond)
-	}
-}
-
-func ClientWithQueryParamAuth(t *testing.T, port string, path string) chan []byte {
-	ws, _, err := websocket.DefaultDialer.Dial("ws://localhost:"+port+path+"&authorization="+url.QueryEscape(testhelpers.VALID_AUTHENTICATION_TOKEN), http.Header{})
-	assert.NoError(t, err)
-
-	return ClientWithAuth(t, ws)
-}
-
-func Client(t *testing.T, port string, path string) chan []byte {
-	ws, _, err := websocket.DefaultDialer.Dial("ws://localhost:"+port+path, http.Header{"Authorization": []string{testhelpers.VALID_AUTHENTICATION_TOKEN}})
-	assert.NoError(t, err)
-
-	return ClientWithAuth(t, ws)
-}
-
-func ClientWithAuth(t *testing.T, ws *websocket.Conn) chan []byte {
-	receivedChan := make(chan []byte)
-
-	go func() {
-		for {
-
-			_, data, err := ws.ReadMessage()
-
-			if err != nil {
-				close(receivedChan)
-				ws.Close()
-				return
+			numTries++
+			if numTries == 5 {
+				Fail(err.Error())
+				return nil
 			}
-			receivedChan <- data
+			time.Sleep(1)
+			continue
+		} else {
+			defer ws.Close()
+			return ClientWithAuth(ws)
 		}
-
-	}()
-	return receivedChan
-}
-
-type fakeServer struct {
-	response         string
-	numberOfMessages int
-}
-
-func (f *fakeServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
-	if err != nil {
-		http.Error(w, "Not a websocket handshake", 400)
-		return
 	}
-
-	doneChan := make(chan bool)
-	defer ws.Close()
-	go func() {
-		for ii := 1; ii <= f.numberOfMessages; ii++ {
-			time.Sleep(time.Duration(ii) * time.Millisecond)
-
-			ws.WriteMessage(websocket.BinaryMessage, []byte(f.response))
-
-			if ii == f.numberOfMessages {
-				doneChan <- true
-			}
-
-		}
-	}()
-	<-doneChan
 }
 
-func Server(apiEndpoint, response string, numberOfMessages int) {
-	fake := fakeServer{response, numberOfMessages}
-	err := http.ListenAndServe(apiEndpoint, &fake)
+func ClientWithAuth(ws *websocket.Conn) []byte {
+
+	_, data, err := ws.ReadMessage()
+
 	if err != nil {
-		panic(err)
+		ws.Close()
+		return nil
 	}
+	return data
+
 }
