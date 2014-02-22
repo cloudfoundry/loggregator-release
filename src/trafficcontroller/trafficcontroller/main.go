@@ -20,16 +20,24 @@ import (
 type Config struct {
 	Zone string
 	cfcomponent.Config
-	ApiHost        string
-	Host           string
-	Loggregators   map[string][]string
-	IncomingPort   uint32
-	OutgoingPort   uint32
-	SystemDomain   string
-	SkipCertVerify bool
+	ApiHost                 string
+	Host                    string
+	Loggregators            map[string][]string
+	LoggregatorIncomingPort uint32
+	LoggregatorOutgoingPort uint32
+	IncomingPort            uint32
+	OutgoingPort            uint32
+	SystemDomain            string
+	SkipCertVerify          bool
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
+	if c.LoggregatorIncomingPort == 0 {
+		c.LoggregatorIncomingPort = c.IncomingPort
+	}
+	if c.LoggregatorOutgoingPort == 0 {
+		c.LoggregatorOutgoingPort = c.OutgoingPort
+	}
 	if c.SystemDomain == "" {
 		return errors.New("Need system domain to register with NATS")
 	}
@@ -110,8 +118,8 @@ func makeIncomingRouter(config *Config, logger *gosteno.Logger) *trafficcontroll
 	serversForZone := config.Loggregators[config.Zone]
 	servers := make([]string, len(serversForZone))
 	for index, server := range serversForZone {
-		logger.Debugf("Incoming Router Startup: Forwarding messages from source to loggregator server [%v] at %v", index, net.JoinHostPort(server, strconv.FormatUint(uint64(config.IncomingPort), 10)))
-		servers[index] = net.JoinHostPort(serversForZone[index], strconv.FormatUint(uint64(config.IncomingPort), 10))
+		logger.Debugf("Incoming Router Startup: Forwarding messages from source to loggregator server [%v] at %v", index, net.JoinHostPort(server, strconv.FormatUint(uint64(config.LoggregatorIncomingPort), 10)))
+		servers[index] = net.JoinHostPort(serversForZone[index], strconv.FormatUint(uint64(config.LoggregatorIncomingPort), 10))
 	}
 	logger.Debugf("Incoming Router Startup: Loggregator Servers in the zone %s: %v", config.Zone, servers)
 
@@ -129,14 +137,14 @@ func makeOutgoingProxy(ipAddress string, config *Config, logger *gosteno.Logger)
 	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
 
 	logger.Debugf("Output Proxy Startup: Number of zones: %v", len(config.Loggregators))
-	hashers := makeHashers(config.Loggregators, config.OutgoingPort, logger)
+	hashers := makeHashers(config.Loggregators, config.LoggregatorOutgoingPort, logger)
 
 	logger.Debugf("Output Proxy Startup: Number of hashers for the proxy: %v", len(hashers))
 	proxy := trafficcontroller.NewProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), hashers, authorizer, logger)
 	return proxy
 }
 
-func makeHashers(loggregators map[string][]string, outgoingPort uint32, logger *gosteno.Logger) []*hasher.Hasher {
+func makeHashers(loggregators map[string][]string, LoggregatorOutgoingPort uint32, logger *gosteno.Logger) []*hasher.Hasher {
 	counter := 0
 	hashers := make([]*hasher.Hasher, 0, len(loggregators))
 	for _, servers := range loggregators {
@@ -147,8 +155,8 @@ func makeHashers(loggregators map[string][]string, outgoingPort uint32, logger *
 		}
 
 		for index, server := range servers {
-			logger.Debugf("Output Proxy Startup: Forwarding messages to client from loggregator server [%v] at %v", index, net.JoinHostPort(server, strconv.FormatUint(uint64(outgoingPort), 10)))
-			servers[index] = net.JoinHostPort(server, strconv.FormatUint(uint64(outgoingPort), 10))
+			logger.Debugf("Output Proxy Startup: Forwarding messages to client from loggregator server [%v] at %v", index, net.JoinHostPort(server, strconv.FormatUint(uint64(LoggregatorOutgoingPort), 10)))
+			servers[index] = net.JoinHostPort(server, strconv.FormatUint(uint64(LoggregatorOutgoingPort), 10))
 		}
 		hashers = hashers[:(counter + 1)]
 		hashers[counter] = hasher.NewHasher(servers)
