@@ -27,7 +27,7 @@ func NewProxyHandler(clientWS clientWebsocket, logger *gosteno.Logger) *handler 
 }
 
 func (handler *handler) HandleWebSocket(appId, requestUri string, hashers []*hasher.Hasher) {
-	defer handler.clientWS.WriteControl(websocket.CloseMessage, []byte{}, time.Now().Add(100*time.Millisecond))
+	defer handler.clientWS.WriteControl(websocket.CloseMessage, []byte{}, time.Time{})
 
 	handler.logger.Debugf("Ouxtput Proxy: Request for app: %v", appId)
 	serverWSs := make([]*websocket.Conn, len(hashers))
@@ -91,7 +91,7 @@ func (handler *handler) watchKeepAlive(servers []*websocket.Conn) {
 		if err != nil {
 			handler.logger.Errorf("Output Proxy: Error reading from the client - %v", err)
 			for _, server := range servers {
-				server.WriteControl(websocket.CloseMessage, []byte{}, time.Now().Add(10*time.Millisecond))
+				server.WriteControl(websocket.CloseMessage, []byte{}, time.Time{})
 			}
 
 			return
