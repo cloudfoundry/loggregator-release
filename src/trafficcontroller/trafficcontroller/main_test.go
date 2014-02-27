@@ -4,7 +4,24 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"github.com/cloudfoundry/yagnats"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
+	"github.com/cloudfoundry/gosteno"
 )
+
+type FakeYagnatsClient struct {
+
+}
+
+func (c *FakeYagnatsClient) Ping() bool { return true}
+func (c *FakeYagnatsClient) Connect(connectionProvider yagnats.ConnectionProvider) error {return nil}
+func (c *FakeYagnatsClient) Disconnect() {}
+func (c *FakeYagnatsClient) Publish(subject string, payload []byte) error {return nil}
+func (c *FakeYagnatsClient) PublishWithReplyTo(subject, reply string, payload []byte) error {return nil}
+func (c *FakeYagnatsClient) Subscribe(subject string, callback yagnats.Callback) (int, error) { return 0, nil }
+func (c *FakeYagnatsClient) SubscribeWithQueue(subject, queue string, callback yagnats.Callback) (int, error) {return 0, nil}
+func (c *FakeYagnatsClient) Unsubscribe(subscription int) error {return nil}
+func (c *FakeYagnatsClient) UnsubscribeAll(subject string) {}
 
 func TestOutgoingProxyConfigWithEmptyAZ(t *testing.T) {
 	config := &Config{
@@ -38,72 +55,42 @@ func TestOutgoingProxyConfigWithTwoAZs(t *testing.T) {
 	assert.Equal(t, len(hashers), 2)
 }
 
-func TestConfigWithEmptyLoggregatorIncomingPort(t *testing.T) {
-	config := &Config{
-		IncomingPort: 3456,
-		SystemDomain: "192.168.1.10.xip.io",
-		Loggregators: map[string][]string{
-			"z1": []string{"10.244.0.14"},
-			"z2": []string{"10.244.0.14"},
-		},
+func TestConfigWithEmptyLoggregatorPorts(t *testing.T) {
+	cfcomponent.DefaultYagnatsClientProvider = func (logger *gosteno.Logger) yagnats.NATSClient {
+		return &FakeYagnatsClient{}
 	}
 
+	logLevel := false
+	configFile := "./test_assets/minimal_loggregator_trafficcontroller.json"
+	logFilePath := "./test_assets/stdout.log"
+
+	var config *Config
+
 	assert.NotPanics(t, func() {
-		config.validate(loggertesthelper.Logger())
-	})
-	assert.Equal(t, config.IncomingPort, uint32(3456))
-	assert.Equal(t, config.LoggregatorIncomingPort, uint32(3456))
+			config, _, _ = parseConfig(&logLevel, &configFile, &logFilePath)
+		})
+	assert.Equal(t, config.IncomingPort, uint32(8765))
+	assert.Equal(t, config.LoggregatorIncomingPort, uint32(8765))
+	assert.Equal(t, config.OutgoingPort, uint32(4567))
+	assert.Equal(t, string(config.LoggregatorOutgoingPort), string(uint32(4567)))
 }
 
-func TestConfigWithLoggregatorIncomingPort(t *testing.T) {
-	config := &Config{
-		IncomingPort:            3456,
-		LoggregatorIncomingPort: 13456,
-		SystemDomain:            "192.168.1.10.xip.io",
-		Loggregators: map[string][]string{
-			"z1": []string{"10.244.0.14"},
-			"z2": []string{"10.244.0.14"},
-		},
+func TestConfigWithSpecifiedLoggregatorPorts(t *testing.T) {
+	cfcomponent.DefaultYagnatsClientProvider = func (logger *gosteno.Logger) yagnats.NATSClient {
+		return &FakeYagnatsClient{}
 	}
 
-	assert.NotPanics(t, func() {
-		config.validate(loggertesthelper.Logger())
-	})
-	assert.Equal(t, config.IncomingPort, uint32(3456))
-	assert.Equal(t, config.LoggregatorIncomingPort, uint32(13456))
-}
+	logLevel := false
+	configFile := "./test_assets/loggregator_trafficcontroller.json"
+	logFilePath := "./test_assets/stdout.log"
 
-func TestConfigWithEmptyLoggregatorOutgoingPort(t *testing.T) {
-	config := &Config{
-		OutgoingPort: 8080,
-		SystemDomain: "192.168.1.10.xip.io",
-		Loggregators: map[string][]string{
-			"z1": []string{"10.244.0.14"},
-			"z2": []string{"10.244.0.14"},
-		},
-	}
+	var config *Config
 
 	assert.NotPanics(t, func() {
-		config.validate(loggertesthelper.Logger())
-	})
-	assert.Equal(t, config.OutgoingPort, uint32(8080))
-	assert.Equal(t, config.LoggregatorOutgoingPort, uint32(8080))
-}
-
-func TestConfigWithLoggregatorOutgoingPort(t *testing.T) {
-	config := &Config{
-		OutgoingPort:            8080,
-		LoggregatorOutgoingPort: 18080,
-		SystemDomain:            "192.168.1.10.xip.io",
-		Loggregators: map[string][]string{
-			"z1": []string{"10.244.0.14"},
-			"z2": []string{"10.244.0.14"},
-		},
-	}
-
-	assert.NotPanics(t, func() {
-		config.validate(loggertesthelper.Logger())
-	})
-	assert.Equal(t, config.OutgoingPort, uint32(8080))
-	assert.Equal(t, config.LoggregatorOutgoingPort, uint32(18080))
+			config, _, _ = parseConfig(&logLevel, &configFile, &logFilePath)
+		})
+	assert.Equal(t, config.IncomingPort, uint32(8765))
+	assert.Equal(t, config.LoggregatorIncomingPort, uint32(8766))
+	assert.Equal(t, config.OutgoingPort, uint32(4567))
+	assert.Equal(t, config.LoggregatorOutgoingPort, uint32(4568))
 }

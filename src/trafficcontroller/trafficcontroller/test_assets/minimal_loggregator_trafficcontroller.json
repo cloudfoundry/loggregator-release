@@ -1,0 +1,20 @@
+{
+    "Loggregators": {"z1":["10.10.16.31","10.10.16.32"],"z2":["10.10.80.31","10.10.80.32"]},
+    "IncomingPort": 8765,
+    "OutgoingPort": 4567,
+    "SkipCertVerify": true,
+    "SharedSecret": "SUPER_SECRET",
+    "Zone": "z1",
+    "Host": "0.0.0.0",
+    "ApiHost": "https://vcap.me",
+    "SystemDomain": "vcap.me",
+
+    "NatsHost": "0.0.0.0",
+    "NatsPort": 4222,
+    "NatsUser": "nats",
+    "NatsPass": "nats",
+    "VarzUser": "",
+    "VarzPass": "",
+    "VarzPort": 0,
+    "Syslog": "vcap.trafficcontroller"
+}

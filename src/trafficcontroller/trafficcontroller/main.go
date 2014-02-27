@@ -31,13 +31,16 @@ type Config struct {
 	SkipCertVerify          bool
 }
 
-func (c *Config) validate(logger *gosteno.Logger) (err error) {
+func (c *Config) setDefaults() {
 	if c.LoggregatorIncomingPort == 0 {
 		c.LoggregatorIncomingPort = c.IncomingPort
 	}
 	if c.LoggregatorOutgoingPort == 0 {
 		c.LoggregatorOutgoingPort = c.OutgoingPort
 	}
+}
+
+func (c *Config) validate(logger *gosteno.Logger) (err error) {
 	if c.SystemDomain == "" {
 		return errors.New("Need system domain to register with NATS")
 	}
@@ -69,18 +72,8 @@ func main() {
 			versionNumber, gitSha, gitSha)
 		return
 	}
-	config := &Config{OutgoingPort: 8080}
-	err := cfcomponent.ReadConfigInto(config, *configFile)
-	config.Host = net.JoinHostPort(config.Host, strconv.FormatUint(uint64(config.IncomingPort), 10))
 
-	if err != nil {
-		panic(err)
-	}
-
-	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller", config.Config)
-	logger.Info("Startup: Setting up the loggregator traffic controller")
-
-	err = config.validate(logger)
+	config, logger, err := parseConfig(logLevel, configFile, logFilePath)
 	if err != nil {
 		panic(err)
 	}
@@ -114,6 +107,25 @@ func main() {
 	}
 }
 
+func parseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gosteno.Logger, error) {
+	config := &Config{OutgoingPort: 8080}
+	err := cfcomponent.ReadConfigInto(config, *configFile)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	config.setDefaults()
+	config.Host = net.JoinHostPort(config.Host, strconv.FormatUint(uint64(config.IncomingPort), 10))
+	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller", config.Config)
+	logger.Info("Startup: Setting up the loggregator traffic controller")
+
+	err = config.validate(logger)
+	if err != nil {
+		return nil, nil, err
+	}
+	return config, logger, nil
+}
+
 func makeIncomingRouter(config *Config, logger *gosteno.Logger) *trafficcontroller.Router {
 	serversForZone := config.Loggregators[config.Zone]
 	servers := make([]string, len(serversForZone))
@@ -144,7 +156,7 @@ func makeOutgoingProxy(ipAddress string, config *Config, logger *gosteno.Logger)
 	return proxy
 }
 
-func makeHashers(loggregators map[string][]string, LoggregatorOutgoingPort uint32, logger *gosteno.Logger) []*hasher.Hasher {
+func makeHashers(loggregators map[string][]string, loggregatorOutgoingPort uint32, logger *gosteno.Logger) []*hasher.Hasher {
 	counter := 0
 	hashers := make([]*hasher.Hasher, 0, len(loggregators))
 	for _, servers := range loggregators {
@@ -155,8 +167,8 @@ func makeHashers(loggregators map[string][]string, LoggregatorOutgoingPort uint3
 		}
 
 		for index, server := range servers {
-			logger.Debugf("Output Proxy Startup: Forwarding messages to client from loggregator server [%v] at %v", index, net.JoinHostPort(server, strconv.FormatUint(uint64(LoggregatorOutgoingPort), 10)))
-			servers[index] = net.JoinHostPort(server, strconv.FormatUint(uint64(LoggregatorOutgoingPort), 10))
+			logger.Debugf("Output Proxy Startup: Forwarding messages to client from loggregator server [%v] at %v", index, net.JoinHostPort(server, strconv.FormatUint(uint64(loggregatorOutgoingPort), 10)))
+			servers[index] = net.JoinHostPort(server, strconv.FormatUint(uint64(loggregatorOutgoingPort), 10))
 		}
 		hashers = hashers[:(counter + 1)]
 		hashers[counter] = hasher.NewHasher(servers)

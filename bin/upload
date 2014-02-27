@@ -29,6 +29,6 @@ fi
 
 # Run integration tests
 
-#echo 'Trigger integration tests'
-#curl -s -X POST http://inception.prism.cf-app.com:4567/run_loggregator_integration/$STAGING_API_KEY | tee integration.txt
-#grep "0 failures" integration.txt
+echo 'Trigger integration tests'
+curl -s -X POST http://inception.prism.cf-app.com:4567/run_loggregator_integration/$STAGING_API_KEY | tee integration.txt
+grep "SUCCESS!" integration.txt
