@@ -221,7 +221,7 @@ var _ = Describe("SinkManager", func() {
 			Context("When an add update is received", func() {
 				It("Should create a new syslog sink from the newAppServicesChan", func(){
 					initialNumSinks := numSyslogSinks()
-					newAppServiceChan <- domain.AppService{AppId: "aptastic", Url: "https://localhost:884" }
+					newAppServiceChan <- domain.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:885" }
 
 					Eventually(numSyslogSinks).Should(Equal(initialNumSinks + 1))
 				})
@@ -259,18 +259,18 @@ var _ = Describe("SinkManager", func() {
 			Context("When a delete update is received", func(){
 				It("Should delete the corresponding syslog sink if it exists", func() {
 						initialNumSinks := numSyslogSinks()
-						newAppServiceChan <- domain.AppService{AppId: "aptastic", Url: "https://localhost:884" }
+						newAppServiceChan <- domain.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886" }
 
 						Eventually(numSyslogSinks).Should(Equal(initialNumSinks + 1))
 
-						deletedAppServiceChan <- domain.AppService{AppId: "aptastic", Url: "https://localhost:884" }
+						deletedAppServiceChan <- domain.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886" }
 
 						Eventually(numSyslogSinks).Should(Equal(initialNumSinks))
 				})
 
 				It("Should handle a delete for a nonexistent sink", func(){
 						initialNumSinks := numSyslogSinks()
-						deletedAppServiceChan <- domain.AppService{AppId: "aptastic", Url: "https://localhost:884" }
+						deletedAppServiceChan <- domain.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886" }
 						Eventually(numSyslogSinks).Should(Equal(initialNumSinks))
 				})
 
@@ -281,7 +281,7 @@ var _ = Describe("SinkManager", func() {
 	Context("When a dump sink times out", func() {
 
 		BeforeEach(func() {
-			newAppServiceChan <- domain.AppService{AppId: "appId", Url: "https://localhost:884" }
+			newAppServiceChan <- domain.AppService{AppId: "appId", Url: "syslog://127.0.1.1:887" }
 		})
 
 		It("should remove the app from etcd", func(done Done) {
