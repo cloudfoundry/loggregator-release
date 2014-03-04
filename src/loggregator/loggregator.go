@@ -54,6 +54,7 @@ func (c *Config) Validate(logger *gosteno.Logger) (err error) {
 }
 
 type Loggregator struct {
+	*gosteno.Logger
 	appStore          *store.AppServiceStore
 	appStoreInputChan <-chan domain.AppServices
 
@@ -78,6 +79,7 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 	storeAdapter := etcdstoreadapter.NewETCDStoreAdapter(config.EtcdUrls, workerPool)
 	appStore := store.NewAppServiceStore(storeAdapter)
 	return &Loggregator{
+		Logger:			   logger,
 		errChan:           make(chan error),
 		listener:          listener,
 		unmarshaller:      unmarshaller,
@@ -111,7 +113,7 @@ func (l *Loggregator) Start() {
 
 	go func() {
 		for err := range(l.errChan) {
-			cfcomponent.Logger.Errorf("Got error %s", err)
+			l.Errorf("Got error %s", err)
 		}
 	}()
 }
