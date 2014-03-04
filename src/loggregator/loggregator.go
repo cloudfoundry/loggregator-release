@@ -62,7 +62,7 @@ type Loggregator struct {
 	sinkManager     *sinkmanager.SinkManager
 	messageRouter   *sinkserver.MessageRouter
 	messageChan     <-chan *logmessage.Message
-	u               *unmarshaller.LogMessageUnmarshaller
+	unmarshaller    *unmarshaller.LogMessageUnmarshaller
 	websocketServer *websocket.WebsocketServer
 	storeAdapter    storeadapter.StoreAdapter
 }
@@ -70,7 +70,7 @@ type Loggregator struct {
 func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 	keepAliveInterval := 30 * time.Second
 	listener, incomingLogChan := agentlistener.NewAgentListener(fmt.Sprintf("%s:%d", host, config.IncomingPort), logger)
-	u, messageChan := unmarshaller.NewLogMessageUnmarshaller(config.SharedSecret, incomingLogChan)
+	unmarshaller, messageChan := unmarshaller.NewLogMessageUnmarshaller(config.SharedSecret, incomingLogChan)
 	blacklist := blacklist.New(config.BlackListIps)
 	sinkManager, appStoreInputChan := sinkmanager.NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger)
 	workerPool := workerpool.NewWorkerPool(config.EtcdMaxConcurrentRequests)
@@ -80,7 +80,7 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 	return &Loggregator{
 		errChan:           make(chan error),
 		listener:          listener,
-		u:                 u,
+		unmarshaller:      unmarshaller,
 		sinkManager:       sinkManager,
 		messageChan:       messageChan,
 		appStoreInputChan: appStoreInputChan,
@@ -102,20 +102,27 @@ func (l *Loggregator) Start() {
 
 	go l.appStore.Run(l.appStoreInputChan)
 	go l.listener.Start()
-	go l.u.Start(l.errChan)
+	go l.unmarshaller.Start(l.errChan)
 	go l.sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
 
 	go l.messageRouter.Start(l.messageChan)
 
 	go l.websocketServer.Start()
+
+	go func() {
+		for err := range(l.errChan) {
+			cfcomponent.Logger.Errorf("Got error %s", err)
+		}
+	}()
 }
 
 func (l *Loggregator) Stop() {
 	l.listener.Stop()
-	l.u.Stop()
+	l.unmarshaller.Stop()
 	l.sinkManager.Stop()
 	l.messageRouter.Stop()
 	l.websocketServer.Stop()
+	close(l.errChan)
 }
 
 func (l *Loggregator) Emitters() []instrumentation.Instrumentable {
