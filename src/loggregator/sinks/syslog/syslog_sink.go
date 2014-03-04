@@ -79,7 +79,6 @@ func (s *SyslogSink) Run(inputChan <-chan *logmessage.Message) {
 
 		s.logger.Debugf("Syslog Sink %s: Waiting for activity\n", s.drainUrl)
 
-
 		message, ok := <-buffer.GetOutputChannel()
 		if !ok {
 			s.logger.Debugf("Syslog Sink %s: Closed listener channel detected. Closing.\n", s.drainUrl)
@@ -111,9 +110,7 @@ func (s *SyslogSink) Run(inputChan <-chan *logmessage.Message) {
 }
 
 func (s *SyslogSink) Disconnect() {
-	if !s.syslogWriter.IsConnected() {
-		close(s.disconnectChannel)
-	}
+	close(s.disconnectChannel)
 }
 
 func (s *SyslogSink) Identifier() string {

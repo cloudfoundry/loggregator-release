@@ -180,6 +180,28 @@ var _ = Describe("SyslogSink", func() {
 			}()
 		})
 
+		It("should stop sending messages when the disconnect comes in", func(done Done) {
+			logMessage := NewMessage("test message", "appId")
+			inputChan <- logMessage
+
+			_, ok := <-sysLogger.receivedChannel
+			Expect(ok).To(BeTrue())
+
+			syslogSink.Disconnect()
+
+			logMessage = NewMessage("test message 2", "appId")
+			inputChan <- logMessage
+
+			select {
+			case <-sysLogger.receivedChannel:
+				Fail("Received unexpected message - disconnect signal did not prevent message afterwards")
+			case <-time.After(900 * time.Millisecond):
+
+			}
+
+			close(done)
+		})
+
 		It("Uses the timestamp of the logmessage when sending", func(done Done) {
 			message := NewMessage("test message", "appId")
 			expectedTimeString := fmt.Sprintf("ts: %d", message.GetLogMessage().GetTimestamp())
@@ -210,7 +232,7 @@ var _ = Describe("SyslogSink", func() {
 			})
 
 			// TODO fix me #flakey
-			PIt("should not report error messages when it's disconnected", func(done Done) {
+			It("should not report error messages when it's disconnected", func(done Done) {
 				syslogSink.Disconnect()
 
 				logMessage := NewMessage("test message", "appId")
@@ -219,6 +241,24 @@ var _ = Describe("SyslogSink", func() {
 				<-sysLoggerDoneChan
 
 				Expect(errorChannel).To(BeEmpty())
+				close(done)
+			})
+
+			It("should stop sending messages when the disconnect comes in", func(done Done) {
+				logMessage := NewMessage("test message", "appId")
+				inputChan <- logMessage
+
+				<-time.After(5 * time.Millisecond)
+				Expect(errorChannel).NotTo(BeEmpty())
+				numErrors := len(errorChannel)
+				syslogSink.Disconnect()
+
+				logMessage = NewMessage("test message 2", "appId")
+				inputChan <- logMessage
+				close(inputChan)
+				<-sysLoggerDoneChan
+
+				Expect(errorChannel).To(HaveLen(numErrors))
 				close(done)
 			})
 
