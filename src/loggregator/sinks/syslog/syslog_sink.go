@@ -106,7 +106,6 @@ func (s *SyslogSink) Run(inputChan <-chan *logmessage.Message) {
 			atomic.AddUint64(s.sentByteCount, uint64(message.GetRawMessageLength()))
 		}
 	}
-
 }
 
 func (s *SyslogSink) Disconnect() {

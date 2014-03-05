@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"runtime/pprof"
 	"time"
 )
 
@@ -19,6 +20,8 @@ var (
 	logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 	logLevel    = flag.Bool("debug", false, "Debug logging")
 	configFile  = flag.String("config", "config/loggregator.json", "Location of the loggregator config json file")
+	cpuprofile  = flag.String("cpuprofile", "", "write cpu profile to file")
+	memprofile  = flag.String("memprofile", "", "write memory profile to this file")
 )
 
 const (
@@ -46,6 +49,32 @@ func main() {
 	}
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			panic(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer func() {
+			pprof.StopCPUProfile()
+			f.Close()
+		}()
+	}
+
+	if *memprofile != "" {
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			panic(err)
+		}
+		go func() {
+			defer f.Close()
+			for {
+				<-time.After(time.Second * 1)
+				pprof.WriteHeapProfile(f)
+			}
+		}()
+	}
 
 	config, logger := parseConfig(logLevel, configFile, logFilePath)
 	err := config.Validate(logger)
@@ -83,17 +112,19 @@ func main() {
 	}()
 
 	l.Start()
+	logger.Info("Startup: loggregator server started.")
 
 	killChan := make(chan os.Signal)
-	signal.Notify(killChan, os.Kill)
+	signal.Notify(killChan, os.Kill, os.Interrupt)
 
 	for {
 		select {
 		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
 			cfcomponent.DumpGoRoutine()
 		case <-killChan:
+			logger.Info("Shutting down")
 			l.Stop()
-			break
+			return
 		}
 	}
 }

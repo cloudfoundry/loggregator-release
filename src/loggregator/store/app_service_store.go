@@ -6,6 +6,7 @@ import (
 
 	"loggregator/domain"
 	"loggregator/store/cache"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 )
 
 type AppServiceStore struct {
@@ -24,6 +25,7 @@ func (s *AppServiceStore) Run(incomingChan <-chan domain.AppServices) {
 	s.warmUpCache()
 
 	for appServices := range incomingChan {
+		cfcomponent.Logger.Debugf("AppStore: New services for %s", appServices.AppId)
 		if len(appServices.Urls) == 0 {
 			s.removeAppFromStore(appServices.AppId)
 			continue
@@ -53,10 +55,12 @@ func (s *AppServiceStore) Run(incomingChan <-chan domain.AppServices) {
 
 		s.addToStore(appServiceToAdd)
 		s.removeFromStore(appServiceToRemove)
+		cfcomponent.Logger.Debugf("AppStore: Successfully updated app service %s", appServices.AppId)
 	}
 }
 
 func (s *AppServiceStore) warmUpCache() {
+	cfcomponent.Logger.Debug("AppStore: Lighting the fires to warm the cache")
 	services, _ := s.adapter.ListRecursively("/loggregator/services/")
 	for _, appNode := range services.ChildNodes {
 		appId := path.Base(appNode.Key)
@@ -65,6 +69,7 @@ func (s *AppServiceStore) warmUpCache() {
 			s.cache.Add(appService)
 		}
 	}
+	cfcomponent.Logger.Debug("AppStore: Cache all warm and cozy")
 }
 
 func (s *AppServiceStore) addToStore(appServices []domain.AppService) {
@@ -94,6 +99,7 @@ func (s *AppServiceStore) removeFromStore(appServices []domain.AppService) {
 }
 
 func (s *AppServiceStore) removeAppFromStore(appId string) {
+	cfcomponent.Logger.Debugf("AppStore: removing app %s", appId)
 	s.adapter.Delete(path.Join("/loggregator/services", appId))
 	s.cache.RemoveApp(appId)
 }

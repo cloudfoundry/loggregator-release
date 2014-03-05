@@ -2,12 +2,15 @@ package unmarshaller
 
 import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"sync"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 )
 
 type LogMessageUnmarshaller struct {
 	secret           string
 	incomingBytes    <-chan []byte
 	outgoingMessages chan *logmessage.Message
+	sync.WaitGroup
 }
 
 func NewLogMessageUnmarshaller(secret string, incomingBytes <-chan []byte) (*LogMessageUnmarshaller, <-chan *logmessage.Message) {
@@ -17,13 +20,17 @@ func NewLogMessageUnmarshaller(secret string, incomingBytes <-chan []byte) (*Log
 
 func (l *LogMessageUnmarshaller) Start(errorChan chan<- error) {
 	defer close(l.outgoingMessages)
+	cfcomponent.Logger.Debug("LogMessageUnmarshaller: Starting")
 	for messageBytes := range l.incomingBytes {
+		cfcomponent.Logger.Debug("LogMessageUnmarshaller: Parsing a message")
 		message, err := logmessage.ParseEnvelope(messageBytes, l.secret)
 		if err != nil {
+			cfcomponent.Logger.Debugf("LogMessageUnmarshaller: Error while parsing a message %s", err)
 			errorChan <- err
 			continue
 		}
 		l.outgoingMessages <- message
+		cfcomponent.Logger.Debug("LogMessageUnmarshaller: Sent a message")
 	}
 }
 

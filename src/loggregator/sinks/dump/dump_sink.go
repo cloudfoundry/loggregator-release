@@ -4,10 +4,9 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/timeprovider"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"sync"
-	"sync/atomic"
 	"time"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 )
 
 type DumpSink struct {
@@ -19,6 +18,7 @@ type DumpSink struct {
 	inactivityDuration time.Duration
 	sequence           uint32
 	bufferSize         uint32
+	bufferFull		   bool
 	tp                 timeprovider.TimeProvider
 }
 
@@ -52,43 +52,29 @@ func (d *DumpSink) Run(inputChan <-chan *logmessage.Message) {
 func (d *DumpSink) addMsg(msg *logmessage.Message) {
 	d.Lock()
 	defer d.Unlock()
-	position := atomic.AddUint32(&d.sequence, uint32(1)) % d.bufferSize
-	d.messageBuffer[position] = msg
-}
 
-func (d *DumpSink) copyBuffer() (int, []*logmessage.Message) {
-	d.RLock()
-	defer d.RUnlock()
-	data := make([]*logmessage.Message, d.bufferSize)
-	copyCount := copy(data, d.messageBuffer)
-	return copyCount, data
+	if d.bufferFull {
+		d.messageBuffer = append(d.messageBuffer[1:], msg)
+	} else {
+		d.messageBuffer = append(d.messageBuffer, msg)
+		if uint32(len(d.messageBuffer)) == d.bufferSize {
+			d.bufferFull = true
+		}
+	}
 }
 
 func (d *DumpSink) Dump() []*logmessage.Message {
-	sequence := atomic.LoadUint32(&d.sequence)
-	out := make([]*logmessage.Message, d.bufferSize)
-	_, buffer := d.copyBuffer()
-
-	if d.bufferSize == 1 {
-		return buffer
-	}
-
-	lapped := d.messageBuffer[0] != nil
-	newestPosition := sequence % d.bufferSize
-	oldestPosition := (sequence + 1) % d.bufferSize
-
-	if !lapped {
-		copyCount := copy(out, buffer[1:newestPosition+1])
-		return out[:copyCount]
-	}
-
-	if oldestPosition == 0 {
-		copy(out, d.messageBuffer)
+	d.RLock()
+	defer d.RUnlock()
+	var bufferSize uint32
+	if d.bufferFull {
+		bufferSize = d.bufferSize
 	} else {
-		copyCount := copy(out, buffer[oldestPosition:])
-		copy(out[copyCount:], buffer[:newestPosition+1])
+		bufferSize = uint32(len(d.messageBuffer))
 	}
-	return out
+	result := make([]*logmessage.Message, bufferSize)
+	copy(result, d.messageBuffer)
+	return result
 }
 
 func (d *DumpSink) AppId() string {

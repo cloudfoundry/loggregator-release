@@ -5,6 +5,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"loggregator/sinkserver/metrics"
+	"sync/atomic"
 )
 
 type MessageRouter struct {
@@ -25,17 +26,22 @@ func NewMessageRouter(sinkManager sinkManager, logger *gosteno.Logger) *MessageR
 		SinkManager: sinkManager,
 		Metrics:     &metrics.MessageRouterMetrics{},
 		logger:      logger,
-		done:        make(chan struct{}),
 	}
 }
 
 func (r *MessageRouter) Start(incomingLogChan <-chan *logmessage.Message) {
+	r.logger.Debug("MessageRouter:Sarting")
+	r.done = make(chan struct{})
 	for {
 		select {
 		case <-r.done:
+			r.logger.Debug("MessageRouter:MessageReceived:Done")
 			return
 		case message, ok := <-incomingLogChan:
+			atomic.AddUint64(&r.Metrics.ReceivedMessages, 1)
+			r.logger.Debug("MessageRouter:MessageReceived")
 			if !ok {
+				r.logger.Debug("MessageRouter:MessageReceived:NotOkay")
 				return
 			}
 			r.logger.Debugf("MessageRouter:outgoingLogChan: Received %d bytes of data from agent listener.", message.GetRawMessageLength())
@@ -46,7 +52,12 @@ func (r *MessageRouter) Start(incomingLogChan <-chan *logmessage.Message) {
 }
 
 func (r *MessageRouter) Stop() {
-	close(r.done)
+	select {
+	case <-r.done:
+		// already stopped
+	default:
+		close(r.done)
+	}
 }
 
 func (r *MessageRouter) Emit() instrumentation.Context {

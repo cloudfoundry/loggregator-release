@@ -14,9 +14,9 @@ function build-architecture {
   COMPONENT=${2}
   echo "Creating $GOOS $GOARCH $COMPONENT binary..."
 
-  $(dirname $0)/go clean $COMPONENT/$COMPONENT
+  go clean $COMPONENT/$COMPONENT
 
-  GOOS=$GOOS GOARCH=$GOARCH $(dirname $0)/go build -v $COMPONENT/$COMPONENT
+  GOOS=$GOOS GOARCH=$GOARCH go build -v $COMPONENT/$COMPONENT
   gzip $COMPONENT
 
   mv $COMPONENT.gz $(dirname $0)/../release/$COMPONENT-$GOOS-$GOARCH.gz

@@ -61,7 +61,6 @@ func NewRouter(host string, hasher *hasher.Hasher, config cfcomponent.Config, lo
 
 func (r Router) Start(logger *gosteno.Logger) {
 	go r.agentListener.Start()
-	defer r.agentListener.Stop()
 	for dataToProxy := range r.dataChan {
 		appId, err := appid.FromProtobufferMessage(dataToProxy)
 		if err != nil {
@@ -73,4 +72,8 @@ func (r Router) Start(logger *gosteno.Logger) {
 			lc.Send(dataToProxy)
 		}
 	}
+}
+
+func (r Router) Stop() {
+	r.agentListener.Stop()
 }

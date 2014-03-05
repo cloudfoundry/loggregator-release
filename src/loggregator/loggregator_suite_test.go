@@ -5,6 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"fmt"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"github.com/onsi/ginkgo/config"
@@ -36,6 +37,7 @@ func TestLoggregator(t *testing.T) {
 		SkipCertVerify:         true,
 		BlackListIps:           []iprange.IPRange{},
 	}
+	cfcomponent.Logger = loggertesthelper.Logger()
 
 	l := loggregator.New("127.0.0.1", loggregatorConfig, loggertesthelper.Logger())
 	l.Start()

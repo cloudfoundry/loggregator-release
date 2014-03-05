@@ -6,6 +6,7 @@ import (
 
 	"loggregator/domain"
 	"loggregator/store/cache"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 )
 
 type AppServiceStoreWatcher struct {
@@ -36,6 +37,7 @@ func (w *AppServiceStoreWatcher) Run() {
 	events, _, _ := w.adapter.Watch("/loggregator/services")
 
 	for event := range events {
+		cfcomponent.Logger.Debugf("AppStoreWatcher: Got an event from store %s", event.Type)
 		switch event.Type {
 		case storeadapter.CreateEvent, storeadapter.UpdateEvent:
 			if event.Node.Dir || len(event.Node.Value) == 0 {
@@ -56,6 +58,7 @@ func (w *AppServiceStoreWatcher) Run() {
 }
 
 func (w *AppServiceStoreWatcher) warmUpCache() {
+	cfcomponent.Logger.Debug("AppStoreWatcher: Lighting the fires to warm the cache")
 	services, _ := w.adapter.ListRecursively("/loggregator/services/")
 	for _, node := range services.ChildNodes {
 		for _, node := range node.ChildNodes {
@@ -63,6 +66,7 @@ func (w *AppServiceStoreWatcher) warmUpCache() {
 			w.serviceCreatedOrUpdated(appService)
 		}
 	}
+	cfcomponent.Logger.Debug("AppStoreWatcher: Cache all warm and cozy")
 }
 
 func appServiceFromStoreNode(node storeadapter.StoreNode) domain.AppService {

@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/gorilla/websocket"
+	"net"
 	"net/http"
 	"net/url"
 	"time"
@@ -18,6 +19,7 @@ type Proxy struct {
 	hashers   []*hasher.Hasher
 	logger    *gosteno.Logger
 	authorize authorization.LogAccessAuthorizer
+	listener  net.Listener
 }
 
 type websocketHandler interface {
@@ -37,7 +39,17 @@ func NewProxy(host string, hashers []*hasher.Hasher, authorizer authorization.Lo
 }
 
 func (proxy *Proxy) Start() error {
-	return http.ListenAndServe(proxy.host, proxy)
+	l, err := net.Listen("tcp", proxy.host)
+	if err != nil {
+		return err
+	}
+	proxy.listener = l
+	server := &http.Server{Addr: proxy.host, Handler: proxy}
+	return server.Serve(proxy.listener)
+}
+
+func (proxy *Proxy) Stop() {
+	proxy.listener.Close()
 }
 
 func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress string) (bool, *logmessage.LogMessage) {

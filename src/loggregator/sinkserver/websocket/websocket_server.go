@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"time"
 	"loggregator/sinkserver/sinkmanager"
+	"net"
 )
 
 const (
@@ -24,6 +25,7 @@ type WebsocketServer struct {
 	keepAliveInterval time.Duration
 	bufferSize        uint
 	logger            *gosteno.Logger
+	listener		  net.Listener
 }
 
 func NewWebsocketServer(apiEndpoint string, sinkManager *sinkmanager.SinkManager, keepAliveInterval time.Duration, wSMessageBufferSize uint, logger *gosteno.Logger) *WebsocketServer {
@@ -39,12 +41,18 @@ func NewWebsocketServer(apiEndpoint string, sinkManager *sinkmanager.SinkManager
 func (w *WebsocketServer) Start() {
 	w.logger.Infof("WebsocketServer: Listening for sinks at %s", w.apiEndpoint)
 
-	if err := http.ListenAndServe(w.apiEndpoint, w); err != nil {
-		panic(err)
+	listener, e := net.Listen("tcp", w.apiEndpoint)
+	if e != nil {
+		panic(e)
 	}
+	w.listener = listener
+
+	server := &http.Server{Addr: w.apiEndpoint, Handler: w}
+	server.Serve(w.listener)
 }
 
 func (w *WebsocketServer) Stop() {
+	w.listener.Close()
 }
 
 func (w *WebsocketServer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {

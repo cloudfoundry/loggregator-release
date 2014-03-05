@@ -11,7 +11,9 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"runtime/pprof"
 	"strconv"
+	"time"
 	"trafficcontroller"
 	"trafficcontroller/authorization"
 	"trafficcontroller/hasher"
@@ -57,6 +59,8 @@ var (
 	logLevel    = flag.Bool("debug", false, "Debug logging")
 	version     = flag.Bool("version", false, "Version info")
 	configFile  = flag.String("config", "config/loggregator_trafficcontroller.json", "Location of the loggregator trafficcontroller config json file")
+	cpuprofile  = flag.String("cpuprofile", "", "write cpu profile to file")
+	memprofile  = flag.String("memprofile", "", "write memory profile to this file")
 )
 
 const (
@@ -71,6 +75,32 @@ func main() {
 		fmt.Printf("version: %s\ngitSha: %s\nsourceUrl: https://github.com/cloudfoundry/loggregator/tree/%s\n\n",
 			versionNumber, gitSha, gitSha)
 		return
+	}
+
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			panic(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer func() {
+			pprof.StopCPUProfile()
+			f.Close()
+		}()
+	}
+
+	if *memprofile != "" {
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			panic(err)
+		}
+		go func() {
+			defer f.Close()
+			for {
+				<-time.After(time.Second * 1)
+				pprof.WriteHeapProfile(f)
+			}
+		}()
 	}
 
 	config, logger, err := parseConfig(logLevel, configFile, logFilePath)
@@ -94,7 +124,7 @@ func main() {
 	}
 
 	killChan := make(chan os.Signal)
-	signal.Notify(killChan, os.Kill)
+	signal.Notify(killChan, os.Kill, os.Interrupt)
 
 	for {
 		select {
@@ -102,6 +132,8 @@ func main() {
 			cfcomponent.DumpGoRoutine()
 		case <-killChan:
 			rr.UnregisterFromRouter(router.Component.IpAddress, config.OutgoingPort, []string{uri})
+			proxy.Stop()
+			router.Stop()
 			break
 		}
 	}

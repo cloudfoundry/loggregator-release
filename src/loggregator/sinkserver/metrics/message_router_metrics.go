@@ -8,6 +8,7 @@ type MessageRouterMetrics struct {
 	UnmarshalledInParseEnvelopes    uint
 	UnmarshalErrorsInParseEnvelopes uint
 	DroppedInParseEnvelopes         uint
+	ReceivedMessages				uint64
 }
 
 func (messageRouterMetrics *MessageRouterMetrics) Emit() instrumentation.Context {
@@ -15,6 +16,7 @@ func (messageRouterMetrics *MessageRouterMetrics) Emit() instrumentation.Context
 		instrumentation.Metric{Name: "numberOfMessagesUnmarshalledInParseEnvelopes", Value: messageRouterMetrics.UnmarshalledInParseEnvelopes},
 		instrumentation.Metric{Name: "numberOfMessagesUnmarshalErrorsInParseEnvelopes", Value: messageRouterMetrics.UnmarshalErrorsInParseEnvelopes},
 		instrumentation.Metric{Name: "numberOfMessagesDroppedInParseEnvelopes", Value: messageRouterMetrics.DroppedInParseEnvelopes},
+		instrumentation.Metric{Name: "receivedMessages", Value: messageRouterMetrics.ReceivedMessages},
 	}
 
 	return instrumentation.Context{

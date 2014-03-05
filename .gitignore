@@ -10,3 +10,8 @@ release/
 *.pem
 bin/etcd
 bin/ginkgo
+bin/loggregator
+src/code.google.com/p/go.tools/
+*.etcd
+*.prof
+*.mprof

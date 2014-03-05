@@ -15,9 +15,11 @@ import (
 	"loggregator/sinkserver/blacklist"
 	"loggregator/sinkserver/metrics"
 	"time"
+	"sync"
 )
 
 type SinkManager struct {
+	sync.RWMutex
 	doneChannel         chan struct{}
 	errorChannel        chan *logmessage.Message
 	urlBlacklistManager *blacklist.URLBlacklistManager
@@ -27,6 +29,7 @@ type SinkManager struct {
 	Metrics             *metrics.SinkManagerMetrics
 	logger              *gosteno.Logger
 	appStoreUpdateChan  chan<- domain.AppServices
+	stopped				bool
 }
 
 func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger) (*SinkManager, <-chan domain.AppServices) {
@@ -45,6 +48,7 @@ func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackLis
 }
 
 func (sinkManager *SinkManager) Start(newAppServiceChan, deletedAppServiceChan <-chan domain.AppService ) {
+	sinkManager.setStopped(false)
 	go sinkManager.listenForNewAppServices(newAppServiceChan)
 	go sinkManager.listenForDeletedAppServices(deletedAppServiceChan)
 
@@ -52,12 +56,13 @@ func (sinkManager *SinkManager) Start(newAppServiceChan, deletedAppServiceChan <
 }
 
 func (sinkManager *SinkManager) Stop() {
+	sinkManager.setStopped(true)
 	select {
 	case <-sinkManager.doneChannel:
 	default:
 		close(sinkManager.doneChannel)
 		sinkManager.sinks.DeleteAll()
-		close(sinkManager.appStoreUpdateChan)
+//		close(sinkManager.appStoreUpdateChan)
 	}
 }
 
@@ -67,7 +72,7 @@ func (sinkManager *SinkManager) SendTo(appId string, receivedMessage *logmessage
 }
 
 func (sinkManager *SinkManager) listenForNewAppServices(newAppServiceChan <-chan domain.AppService) {
-	for appService :=  range newAppServiceChan{
+	for appService := range newAppServiceChan{
 		sinkManager.registerNewSyslogSink(appService.AppId, appService.Url)
 	}
 }
@@ -137,7 +142,22 @@ func (sinkManager *SinkManager) unregisterSink(sink sinks.Sink) {
 	sinkManager.logger.Infof("SinkManager: Sink with channel %v and identifier %s requested closing. Closed it.", sink.Identifier())
 }
 
+func (sinkManager *SinkManager) setStopped(v bool) {
+	sinkManager.Lock()
+	defer sinkManager.Unlock()
+	sinkManager.stopped = v
+}
+
+func (sinkManager *SinkManager) isStopped() bool {
+	sinkManager.RLock()
+	defer sinkManager.RUnlock()
+	return sinkManager.stopped
+}
+
 func (sinkManager *SinkManager) ManageSyslogSinks(appId string, syslogSinkUrls []string) {
+	if sinkManager.isStopped() {
+		return
+	}
 	sinkManager.appStoreUpdateChan <- domain.AppServices{AppId: appId, Urls: syslogSinkUrls }
 }
 

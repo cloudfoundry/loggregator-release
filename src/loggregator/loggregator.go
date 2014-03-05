@@ -79,7 +79,7 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 	storeAdapter := etcdstoreadapter.NewETCDStoreAdapter(config.EtcdUrls, workerPool)
 	appStore := store.NewAppServiceStore(storeAdapter)
 	return &Loggregator{
-		Logger:			   logger,
+		Logger:            logger,
 		errChan:           make(chan error),
 		listener:          listener,
 		unmarshaller:      unmarshaller,
@@ -112,7 +112,7 @@ func (l *Loggregator) Start() {
 	go l.websocketServer.Start()
 
 	go func() {
-		for err := range(l.errChan) {
+		for err := range l.errChan {
 			l.Errorf("Got error %s", err)
 		}
 	}()
