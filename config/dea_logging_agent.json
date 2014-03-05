@@ -1,7 +1,7 @@
 {
     "Index": 0,
     "LoggregatorAddress": "localhost:3456",
-    "SharedSecret": "mysecret",
+    "SharedSecret": "secret",
     "NatsHost":  "localhost",
     "NatsPort": 4222,
     "NatsUser": "nats",

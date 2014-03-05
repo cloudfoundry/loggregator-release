@@ -3,7 +3,7 @@
     "IncomingPort": 3456,
     "OutgoingPort": 8080,
     "Zone": "z1",
-    "Host": "0.0.0.0",
+    "Host": "localhost",
     "ApiHost": "http://ccng.example.cf-app.com",
     "SystemDomain": "example.cf-app.com",
     "NatsHost": "localhost",
