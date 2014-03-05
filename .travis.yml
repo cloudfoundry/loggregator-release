@@ -27,4 +27,4 @@ before_install:
 - go install -v github.com/onsi/ginkgo/ginkgo
 - git submodule update --init --recursive
 install: ./bin/build
-script: PATH=$HOME/gopath/bin:$PATH ./bin/travis_test && ./bin/upload 0
+script: PATH=$HOME/gopath/bin:$PATH GOPATH=$GOPATH:`pwd` ./bin/travis_test && ./bin/upload 0
