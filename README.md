@@ -171,6 +171,16 @@ git submodule update --init
 bin/test
 ```
 
+### Running specific tests
+
+```
+export GOPATH=`pwd` #in the root of the project
+go get github.com/onsi/ginkgo/ginkgo
+export PATH=$PATH:$GOPATH/bin
+cd src/loggregator # or any other component
+ginkgo -r
+```
+
 ### Debugging
 
 
