@@ -4,9 +4,9 @@ import (
 	"github.com/cloudfoundry/storeadapter"
 	"path"
 
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"loggregator/domain"
 	"loggregator/store/cache"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 )
 
 type AppServiceStoreWatcher struct {

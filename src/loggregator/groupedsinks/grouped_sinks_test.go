@@ -170,19 +170,18 @@ var _ = Describe("GroupedSink", func() {
 		})
 
 		It("should handle delete for existing appIds but unregistered drain URLs", func() {
-				target := "789"
+			target := "789"
 
-				sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
-				sink2 := syslog.NewSyslogSink(target, "url2", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			sink2 := syslog.NewSyslogSink(target, "url2", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
 
-				groupedSinks.Register(inputChan, sink1)
+			groupedSinks.Register(inputChan, sink1)
 
-				ok := groupedSinks.Delete(sink2)
-				Expect(ok).To(BeFalse())
+			ok := groupedSinks.Delete(sink2)
+			Expect(ok).To(BeFalse())
 
-				Expect(groupedSinks.CountFor(target)).To(Equal(1))
+			Expect(groupedSinks.CountFor(target)).To(Equal(1))
 		})
-
 
 		It("should close the inputChan", func() {
 			target := "789"

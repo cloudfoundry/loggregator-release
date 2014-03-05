@@ -8,10 +8,10 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/gorilla/websocket"
 	"loggregator/sinks"
-	"net/http"
-	"time"
 	"loggregator/sinkserver/sinkmanager"
 	"net"
+	"net/http"
+	"time"
 )
 
 const (
@@ -25,7 +25,7 @@ type WebsocketServer struct {
 	keepAliveInterval time.Duration
 	bufferSize        uint
 	logger            *gosteno.Logger
-	listener		  net.Listener
+	listener          net.Listener
 }
 
 func NewWebsocketServer(apiEndpoint string, sinkManager *sinkmanager.SinkManager, keepAliveInterval time.Duration, wSMessageBufferSize uint, logger *gosteno.Logger) *WebsocketServer {

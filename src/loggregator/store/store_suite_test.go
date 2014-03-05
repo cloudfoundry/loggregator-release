@@ -4,6 +4,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"github.com/onsi/ginkgo/config"
@@ -19,6 +21,7 @@ import (
 var etcdRunner *etcdstorerunner.ETCDClusterRunner
 
 func TestStore(t *testing.T) {
+	cfcomponent.Logger = loggertesthelper.Logger()
 	registerSignalHandler()
 
 	RegisterFailHandler(Fail)

@@ -5,6 +5,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	"code.google.com/p/gogoprotobuf/proto"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"testing"
 	"time"
@@ -44,6 +46,7 @@ func marshalProtoBuf(pb proto.Message) []byte {
 }
 
 func TestUnmarshaller(t *testing.T) {
+	cfcomponent.Logger = loggertesthelper.Logger()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Unmarshaller Suite")
 }

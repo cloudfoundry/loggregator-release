@@ -1,8 +1,4 @@
 #!/bin/bash
 
-echo $GOPATH
-echo $GOROOT
-echo $PATH
-
 trap "echo Exited!; exit 1;" SIGINT SIGTERM
 $(dirname $0)/travis_test && $(dirname $0)/build

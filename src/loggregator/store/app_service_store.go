@@ -4,20 +4,20 @@ import (
 	"github.com/cloudfoundry/storeadapter"
 	"path"
 
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"loggregator/domain"
 	"loggregator/store/cache"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 )
 
 type AppServiceStore struct {
-	adapter      storeadapter.StoreAdapter
-	cache        cache.AppServiceCache
+	adapter storeadapter.StoreAdapter
+	cache   cache.AppServiceCache
 }
 
 func NewAppServiceStore(adapter storeadapter.StoreAdapter) *AppServiceStore {
 	return &AppServiceStore{
-		adapter:      adapter,
-		cache:        cache.NewAppServiceCache(),
+		adapter: adapter,
+		cache:   cache.NewAppServiceCache(),
 	}
 }
 
@@ -83,9 +83,9 @@ func (s *AppServiceStore) addToStore(appServices []domain.AppService) {
 	}
 
 	s.adapter.SetMulti(nodes)
-//	if len(appServices) > 0 {
-//		s.adapter.UpdateDirTTL(path.Join("/loggregator/services", appServices[0].AppId), 60*60*24*7)
-//	}
+	//	if len(appServices) > 0 {
+	//		s.adapter.UpdateDirTTL(path.Join("/loggregator/services", appServices[0].AppId), 60*60*24*7)
+	//	}
 }
 
 func (s *AppServiceStore) removeFromStore(appServices []domain.AppService) {

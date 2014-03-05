@@ -1,27 +1,32 @@
 package main
 
 import (
+	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/yagnats"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"github.com/cloudfoundry/yagnats"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/gosteno"
 )
 
 type FakeYagnatsClient struct {
-
 }
 
-func (c *FakeYagnatsClient) Ping() bool { return true}
-func (c *FakeYagnatsClient) Connect(connectionProvider yagnats.ConnectionProvider) error {return nil}
-func (c *FakeYagnatsClient) Disconnect() {}
-func (c *FakeYagnatsClient) Publish(subject string, payload []byte) error {return nil}
-func (c *FakeYagnatsClient) PublishWithReplyTo(subject, reply string, payload []byte) error {return nil}
-func (c *FakeYagnatsClient) Subscribe(subject string, callback yagnats.Callback) (int, error) { return 0, nil }
-func (c *FakeYagnatsClient) SubscribeWithQueue(subject, queue string, callback yagnats.Callback) (int, error) {return 0, nil}
-func (c *FakeYagnatsClient) Unsubscribe(subscription int) error {return nil}
-func (c *FakeYagnatsClient) UnsubscribeAll(subject string) {}
+func (c *FakeYagnatsClient) Ping() bool                                                  { return true }
+func (c *FakeYagnatsClient) Connect(connectionProvider yagnats.ConnectionProvider) error { return nil }
+func (c *FakeYagnatsClient) Disconnect()                                                 {}
+func (c *FakeYagnatsClient) Publish(subject string, payload []byte) error                { return nil }
+func (c *FakeYagnatsClient) PublishWithReplyTo(subject, reply string, payload []byte) error {
+	return nil
+}
+func (c *FakeYagnatsClient) Subscribe(subject string, callback yagnats.Callback) (int, error) {
+	return 0, nil
+}
+func (c *FakeYagnatsClient) SubscribeWithQueue(subject, queue string, callback yagnats.Callback) (int, error) {
+	return 0, nil
+}
+func (c *FakeYagnatsClient) Unsubscribe(subscription int) error { return nil }
+func (c *FakeYagnatsClient) UnsubscribeAll(subject string)      {}
 
 func TestOutgoingProxyConfigWithEmptyAZ(t *testing.T) {
 	config := &Config{
@@ -56,7 +61,7 @@ func TestOutgoingProxyConfigWithTwoAZs(t *testing.T) {
 }
 
 func TestConfigWithEmptyLoggregatorPorts(t *testing.T) {
-	cfcomponent.DefaultYagnatsClientProvider = func (logger *gosteno.Logger) yagnats.NATSClient {
+	cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger) yagnats.NATSClient {
 		return &FakeYagnatsClient{}
 	}
 
@@ -67,8 +72,8 @@ func TestConfigWithEmptyLoggregatorPorts(t *testing.T) {
 	var config *Config
 
 	assert.NotPanics(t, func() {
-			config, _, _ = parseConfig(&logLevel, &configFile, &logFilePath)
-		})
+		config, _, _ = parseConfig(&logLevel, &configFile, &logFilePath)
+	})
 	assert.Equal(t, config.IncomingPort, uint32(8765))
 	assert.Equal(t, config.LoggregatorIncomingPort, uint32(8765))
 	assert.Equal(t, config.OutgoingPort, uint32(4567))
@@ -76,7 +81,7 @@ func TestConfigWithEmptyLoggregatorPorts(t *testing.T) {
 }
 
 func TestConfigWithSpecifiedLoggregatorPorts(t *testing.T) {
-	cfcomponent.DefaultYagnatsClientProvider = func (logger *gosteno.Logger) yagnats.NATSClient {
+	cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger) yagnats.NATSClient {
 		return &FakeYagnatsClient{}
 	}
 
@@ -87,8 +92,8 @@ func TestConfigWithSpecifiedLoggregatorPorts(t *testing.T) {
 	var config *Config
 
 	assert.NotPanics(t, func() {
-			config, _, _ = parseConfig(&logLevel, &configFile, &logFilePath)
-		})
+		config, _, _ = parseConfig(&logLevel, &configFile, &logFilePath)
+	})
 	assert.Equal(t, config.IncomingPort, uint32(8765))
 	assert.Equal(t, config.LoggregatorIncomingPort, uint32(8766))
 	assert.Equal(t, config.OutgoingPort, uint32(4567))

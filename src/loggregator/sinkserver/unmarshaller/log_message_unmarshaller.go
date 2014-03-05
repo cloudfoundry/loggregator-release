@@ -1,9 +1,9 @@
 package unmarshaller
 
 import (
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"sync"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 )
 
 type LogMessageUnmarshaller struct {

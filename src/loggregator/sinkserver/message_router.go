@@ -16,9 +16,9 @@ type MessageRouter struct {
 	done         chan struct{}
 }
 
-type sinkManager interface{
+type sinkManager interface {
 	SendTo(string, *logmessage.Message)
-	ManageSyslogSinks(string,[]string)
+	ManageSyslogSinks(string, []string)
 }
 
 func NewMessageRouter(sinkManager sinkManager, logger *gosteno.Logger) *MessageRouter {
@@ -26,12 +26,12 @@ func NewMessageRouter(sinkManager sinkManager, logger *gosteno.Logger) *MessageR
 		SinkManager: sinkManager,
 		Metrics:     &metrics.MessageRouterMetrics{},
 		logger:      logger,
+		done:        make(chan struct{}),
 	}
 }
 
 func (r *MessageRouter) Start(incomingLogChan <-chan *logmessage.Message) {
 	r.logger.Debug("MessageRouter:Sarting")
-	r.done = make(chan struct{})
 	for {
 		select {
 		case <-r.done:

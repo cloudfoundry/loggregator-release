@@ -8,7 +8,7 @@ type MessageRouterMetrics struct {
 	UnmarshalledInParseEnvelopes    uint
 	UnmarshalErrorsInParseEnvelopes uint
 	DroppedInParseEnvelopes         uint
-	ReceivedMessages				uint64
+	ReceivedMessages                uint64
 }
 
 func (messageRouterMetrics *MessageRouterMetrics) Emit() instrumentation.Context {

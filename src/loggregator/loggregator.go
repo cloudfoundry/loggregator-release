@@ -69,6 +69,7 @@ type Loggregator struct {
 }
 
 func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
+	cfcomponent.Logger = logger
 	keepAliveInterval := 30 * time.Second
 	listener, incomingLogChan := agentlistener.NewAgentListener(fmt.Sprintf("%s:%d", host, config.IncomingPort), logger)
 	unmarshaller, messageChan := unmarshaller.NewLogMessageUnmarshaller(config.SharedSecret, incomingLogChan)

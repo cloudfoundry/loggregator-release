@@ -14,8 +14,8 @@ import (
 	"loggregator/sinks/syslogwriter"
 	"loggregator/sinkserver/blacklist"
 	"loggregator/sinkserver/metrics"
-	"time"
 	"sync"
+	"time"
 )
 
 type SinkManager struct {
@@ -29,7 +29,7 @@ type SinkManager struct {
 	Metrics             *metrics.SinkManagerMetrics
 	logger              *gosteno.Logger
 	appStoreUpdateChan  chan<- domain.AppServices
-	stopped				bool
+	stopped             bool
 }
 
 func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger) (*SinkManager, <-chan domain.AppServices) {
@@ -47,7 +47,7 @@ func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackLis
 	}, appStoreUpdateChan
 }
 
-func (sinkManager *SinkManager) Start(newAppServiceChan, deletedAppServiceChan <-chan domain.AppService ) {
+func (sinkManager *SinkManager) Start(newAppServiceChan, deletedAppServiceChan <-chan domain.AppService) {
 	sinkManager.setStopped(false)
 	go sinkManager.listenForNewAppServices(newAppServiceChan)
 	go sinkManager.listenForDeletedAppServices(deletedAppServiceChan)
@@ -62,7 +62,7 @@ func (sinkManager *SinkManager) Stop() {
 	default:
 		close(sinkManager.doneChannel)
 		sinkManager.sinks.DeleteAll()
-//		close(sinkManager.appStoreUpdateChan)
+		//		close(sinkManager.appStoreUpdateChan)
 	}
 }
 
@@ -72,14 +72,14 @@ func (sinkManager *SinkManager) SendTo(appId string, receivedMessage *logmessage
 }
 
 func (sinkManager *SinkManager) listenForNewAppServices(newAppServiceChan <-chan domain.AppService) {
-	for appService := range newAppServiceChan{
+	for appService := range newAppServiceChan {
 		sinkManager.registerNewSyslogSink(appService.AppId, appService.Url)
 	}
 }
 
 func (sinkManager *SinkManager) listenForDeletedAppServices(deletedAppServiceChan <-chan domain.AppService) {
-	for appService := range deletedAppServiceChan{
-		syslogSink := sinkManager.sinks.DrainFor(appService.AppId,appService.Url)
+	for appService := range deletedAppServiceChan {
+		syslogSink := sinkManager.sinks.DrainFor(appService.AppId, appService.Url)
 		if syslogSink != nil {
 			sinkManager.unregisterSink(syslogSink)
 		}
@@ -135,8 +135,8 @@ func (sinkManager *SinkManager) unregisterSink(sink sinks.Sink) {
 
 	if syslogSink, ok := sink.(*syslog.SyslogSink); ok {
 		syslogSink.Disconnect()
-	}else if _, ok := sink.(*dump.DumpSink); ok {
-		sinkManager.appStoreUpdateChan <- domain.AppServices{AppId: sink.AppId() }
+	} else if _, ok := sink.(*dump.DumpSink); ok {
+		sinkManager.appStoreUpdateChan <- domain.AppServices{AppId: sink.AppId()}
 	}
 
 	sinkManager.logger.Infof("SinkManager: Sink with channel %v and identifier %s requested closing. Closed it.", sink.Identifier())
@@ -158,7 +158,7 @@ func (sinkManager *SinkManager) ManageSyslogSinks(appId string, syslogSinkUrls [
 	if sinkManager.isStopped() {
 		return
 	}
-	sinkManager.appStoreUpdateChan <- domain.AppServices{AppId: appId, Urls: syslogSinkUrls }
+	sinkManager.appStoreUpdateChan <- domain.AppServices{AppId: appId, Urls: syslogSinkUrls}
 }
 
 func (sinkManager *SinkManager) unregisterAllSyslogSinks(appId string) {

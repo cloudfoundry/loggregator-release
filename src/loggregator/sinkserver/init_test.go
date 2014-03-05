@@ -1,15 +1,16 @@
 package sinkserver_test
 
 import (
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"loggregator/domain"
 	"loggregator/iprange"
 	"loggregator/sinkserver"
 	"loggregator/sinkserver/blacklist"
 	"loggregator/sinkserver/sinkmanager"
 	"loggregator/sinkserver/websocket"
 	"time"
-	"loggregator/domain"
 )
 
 var sinkManager *sinkmanager.SinkManager
@@ -34,6 +35,7 @@ func init() {
 	dataReadChannel = make(chan *logmessage.Message)
 
 	logger := loggertesthelper.Logger()
+	cfcomponent.Logger = logger
 
 	newAppServiceChan := make(chan domain.AppService)
 	deletedAppServiceChan := make(chan domain.AppService)
