@@ -26,5 +26,5 @@ before_install:
 - go get -v github.com/onsi/gomega
 - go install -v github.com/onsi/ginkgo/ginkgo
 - git submodule update --init --recursive
-install: ./bin/build
+install: GOPATH=$GOPATH:`pwd` ./bin/build
 script: PATH=$HOME/gopath/bin:$PATH GOPATH=$GOPATH:`pwd` ./bin/travis_test && ./bin/upload 0
