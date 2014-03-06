@@ -14,6 +14,7 @@ type FakeAdapter struct {
 
 func (adapter *FakeAdapter) Connect() error                                { return nil }
 func (adapter *FakeAdapter) Create(storeadapter.StoreNode) error           { return nil }
+func (adapter *FakeAdapter) Update(storeadapter.StoreNode) error           { return nil }
 func (adapter *FakeAdapter) SetMulti(nodes []storeadapter.StoreNode) error { return nil }
 func (adapter *FakeAdapter) Get(key string) (storeadapter.StoreNode, error) {
 	return storeadapter.StoreNode{}, nil
@@ -30,7 +31,7 @@ func (adapter *FakeAdapter) Watch(key string) (events <-chan storeadapter.WatchE
 	return nil, nil, nil
 }
 func (adapter *FakeAdapter) Disconnect() error { return nil }
-func (adapter *FakeAdapter) GetAndMaintainLock(lockName string, lockTTL uint64) (lostLock <-chan bool, releaseLock chan<- bool, err error) {
+func (adapter *FakeAdapter) MaintainNode(storeNode storeadapter.StoreNode) (lostNode <-chan bool, releaseNode chan chan bool, err error) {
 	return nil, nil, nil
 }
 
