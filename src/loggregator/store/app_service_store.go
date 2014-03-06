@@ -41,8 +41,7 @@ func (s *AppServiceStore) Run(incomingChan <-chan domain.AppServices) {
 			serviceUrls[serviceUrl] = true
 
 			appService := domain.AppService{AppId: appServices.AppId, Url: serviceUrl}
-			ok := s.cache.Exists(appService)
-			if !ok {
+			if !s.cache.Exists(appService) {
 				appServiceToAdd = append(appServiceToAdd, appService)
 			}
 		}
@@ -94,12 +93,15 @@ func (s *AppServiceStore) removeFromStore(appServices []domain.AppService) {
 		s.cache.Remove(appService)
 		keys[i] = path.Join("/loggregator/services", appService.AppId, appService.Id())
 	}
-
-	s.adapter.Delete(keys...)
+	if len(keys) > 0 {
+		s.adapter.Delete(keys...)
+	}
 }
 
 func (s *AppServiceStore) removeAppFromStore(appId string) {
 	cfcomponent.Logger.Debugf("AppStore: removing app %s", appId)
-	s.adapter.Delete(path.Join("/loggregator/services", appId))
-	s.cache.RemoveApp(appId)
+	removedApps := s.cache.RemoveApp(appId)
+	if len(removedApps) > 0 {
+		s.adapter.Delete(path.Join("/loggregator/services", appId))
+	}
 }
