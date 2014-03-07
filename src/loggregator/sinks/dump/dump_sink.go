@@ -46,6 +46,7 @@ func (d *DumpSink) Run(inputChan <-chan *logmessage.Message) {
 		case <-countdown:
 			return
 		}
+		d.tp.Stop()
 	}
 }
 

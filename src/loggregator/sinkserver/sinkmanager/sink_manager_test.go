@@ -65,6 +65,8 @@ func (e *easyReturn) NewTickerChannel(name string, d time.Duration) <-chan time.
 	return completed
 }
 
+func (e *easyReturn) Stop() {}
+
 var _ = Describe("SinkManager", func() {
 	var blackListManager = blacklist.New([]iprange.IPRange{iprange.IPRange{Start: "10.10.10.10", End: "10.10.10.20"}})
 	var sinkManager *sinkmanager.SinkManager
