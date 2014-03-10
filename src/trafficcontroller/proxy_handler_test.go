@@ -29,10 +29,11 @@ func (fl *fakeLoggregator) ReceivedKeepAlives() int {
 func (fl *fakeLoggregator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fl.receivedRequests = append(fl.receivedRequests, r)
 	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
-	if _, ok := err.(websocket.HandshakeError); ok {
-		Fail("Bad Handshake")
-		return
-	} else if err != nil {
+	if err != nil {
+		if _, ok := err.(websocket.HandshakeError); ok {
+			Fail("Bad Handshake")
+			return
+		}
 		Fail("Upgrade Close")
 		return
 	}
@@ -199,7 +200,7 @@ var _ = Describe("ProxyHandler", func() {
 				server.Close()
 			}
 		})
-		It("Proxies messages", func() {
+		It("Proxies messages", func(done Done) {
 			fakeClient := &fakeClient{}
 			handler := NewProxyHandler(
 				fakeClient,
@@ -216,6 +217,7 @@ var _ = Describe("ProxyHandler", func() {
 			Expect(fakeClient.ReceivedMessages()).To(ContainElement("loggregator:AZ1:SERVER1"))
 			Expect(fakeClient.ReceivedMessages()).To(ContainElement("loggregator:AZ2:SERVER1"))
 			Expect(fakeClient.ReceivedMessageTypes()).To(ContainElement(websocket.BinaryMessage))
+			close(done)
 		})
 
 		It("Forwards KeepAlives", func() {

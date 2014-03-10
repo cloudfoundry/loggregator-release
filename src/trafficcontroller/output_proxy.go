@@ -107,6 +107,7 @@ func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	ws := upgrade(rw, r)
+	defer ws.Close()
 	authorized, errorMessage := proxy.isAuthorized(appId, authToken, clientAddress)
 	if !authorized {
 		data, err := proto.Marshal(errorMessage)
@@ -115,7 +116,6 @@ func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		}
 		ws.WriteMessage(websocket.BinaryMessage, data)
 
-		ws.Close()
 		return
 	}
 

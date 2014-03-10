@@ -61,24 +61,21 @@ func (w *WebsocketServer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		http.Error(rw, err.Error(), 400)
 		return
 	}
+	ws, err := websocket.Upgrade(rw, r, nil, 1024, 1024)
+	if err != nil {
+		http.Error(rw, err.Error(), 400)
+		return
+	}
+	defer ws.Close()
 	switch r.URL.Path {
 	case TAIL_LOGS_PATH:
-		w.streamLogs(appId, upgrade(rw, r))
+		w.streamLogs(appId, ws)
 	case RECENT_LOGS_PATH:
-		w.recentLogs(appId, upgrade(rw, r))
+		w.recentLogs(appId, ws)
 	default:
 		http.Error(rw, err.Error(), 400)
 		return
 	}
-}
-
-func upgrade(w http.ResponseWriter, r *http.Request) *websocket.Conn {
-	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
-	if err != nil {
-		http.Error(w, "Not a websocket handshake", 400)
-		return nil
-	}
-	return ws
 }
 
 func (w *WebsocketServer) validate(r *http.Request) (string, error) {

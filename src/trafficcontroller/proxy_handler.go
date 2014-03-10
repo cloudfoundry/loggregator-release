@@ -55,13 +55,13 @@ func (handler *handler) proxyConnectionTo(server *websocket.Conn) {
 
 	var logMessage []byte
 	defer server.Close()
+	defer handler.Done()
 	count := 0
 	for {
 		_, data, err := server.ReadMessage()
 
 		if err != nil {
 			handler.logger.Errorf("Output Proxy: Error reading from the server - %v - %v", err, server.RemoteAddr().String())
-			handler.Done()
 			return
 		}
 
@@ -108,9 +108,9 @@ func (handler *handler) forwardIO(servers []*websocket.Conn) {
 	for _, server := range servers {
 		go handler.proxyConnectionTo(server)
 	}
-
-	go handler.watchKeepAlive(servers)
+	handler.watchKeepAlive(servers)
 
 	handler.Wait()
+
 	handler.logger.Debugf("Output Proxy: Terminating connection. All clients disconnected")
 }
