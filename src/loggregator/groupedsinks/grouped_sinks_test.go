@@ -4,7 +4,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
@@ -44,12 +43,10 @@ func (c *TestSink) Emit() instrumentation.Context {
 }
 
 var _ = Describe("GroupedSink", func() {
-	var fakeTimeProvider *faketimeprovider.FakeTimeProvider
 	var groupedSinks *groupedsinks.GroupedSinks
 	var inputChan, errorChan chan *logmessage.Message
 
 	BeforeEach(func() {
-		fakeTimeProvider = faketimeprovider.New(time.Now())
 		groupedSinks = groupedsinks.NewGroupedSinks()
 		inputChan = make(chan *logmessage.Message)
 		errorChan = make(chan *logmessage.Message)
@@ -87,12 +84,12 @@ var _ = Describe("GroupedSink", func() {
 	Describe("BroadCastError", func() {
 		It("should send message to all registered sinks that match the appId", func(done Done) {
 			appId := "123"
-			appSink := dump.NewDumpSink(appId, 10, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
+			appSink := dump.NewDumpSink(appId, 10, loggertesthelper.Logger(), time.Second)
 			otherInputChan := make(chan *logmessage.Message)
 			groupedSinks.Register(otherInputChan, appSink)
 
 			appId = "789"
-			appSink = dump.NewDumpSink(appId, 10, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
+			appSink = dump.NewDumpSink(appId, 10, loggertesthelper.Logger(), time.Second)
 
 			groupedSinks.Register(inputChan, appSink)
 			msg := NewMessage("error message", appId)
@@ -106,7 +103,7 @@ var _ = Describe("GroupedSink", func() {
 		It("should not send to sinks that don't want errors", func(done Done) {
 			appId := "789"
 
-			sink1 := dump.NewDumpSink(appId, 10, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
+			sink1 := dump.NewDumpSink(appId, 10, loggertesthelper.Logger(), time.Second)
 			sink2 := syslog.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
 
 			groupedSinks.Register(inputChan, sink1)
@@ -223,7 +220,7 @@ var _ = Describe("GroupedSink", func() {
 		It("should not return dump sinks", func() {
 			target := "789"
 
-			sink1 := dump.NewDumpSink(target, 10, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
+			sink1 := dump.NewDumpSink(target, 10, loggertesthelper.Logger(), time.Second)
 			sink2 := syslog.NewSyslogSink(target, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
 
 			groupedSinks.Register(inputChan, sink1)
@@ -269,7 +266,7 @@ var _ = Describe("GroupedSink", func() {
 
 			sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
 			sink2 := syslog.NewSyslogSink(target, "url2", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
-			sink3 := dump.NewDumpSink(target, 5, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
+			sink3 := dump.NewDumpSink(target, 5, loggertesthelper.Logger(), time.Second)
 
 			groupedSinks.Register(inputChan, sink1)
 			groupedSinks.Register(inputChan, sink2)
@@ -282,8 +279,8 @@ var _ = Describe("GroupedSink", func() {
 			target := "789"
 			otherTarget := "790"
 
-			sink1 := dump.NewDumpSink(target, 5, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
-			sink2 := dump.NewDumpSink(otherTarget, 5, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
+			sink1 := dump.NewDumpSink(target, 5, loggertesthelper.Logger(), time.Second)
+			sink2 := dump.NewDumpSink(otherTarget, 5, loggertesthelper.Logger(), time.Second)
 
 			groupedSinks.Register(inputChan, sink1)
 			groupedSinks.Register(inputChan, sink2)

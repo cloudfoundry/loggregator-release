@@ -3,7 +3,6 @@ package sinkmanager
 import (
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/gunk/timeprovider"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"loggregator/domain"
@@ -203,7 +202,7 @@ func (sinkManager *SinkManager) ensureRecentLogsSinkFor(appId string) {
 		return
 	}
 
-	s := dump.NewDumpSink(appId, sinkManager.recentLogCount, sinkManager.logger, time.Hour, timeprovider.NewTimeProvider())
+	s := dump.NewDumpSink(appId, sinkManager.recentLogCount, sinkManager.logger, time.Hour)
 	sinkManager.RegisterSink(s)
 }
 

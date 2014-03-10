@@ -52,21 +52,6 @@ func (c *ChannelSink) Emit() instrumentation.Context {
 	return instrumentation.Context{}
 }
 
-type easyReturn struct {
-}
-
-func (e *easyReturn) Time() time.Time {
-	return time.Now()
-}
-
-func (e *easyReturn) NewTickerChannel(name string, d time.Duration) <-chan time.Time {
-	completed := make(chan time.Time)
-	close(completed)
-	return completed
-}
-
-func (e *easyReturn) Stop() {}
-
 var _ = Describe("SinkManager", func() {
 	var blackListManager = blacklist.New([]iprange.IPRange{iprange.IPRange{Start: "10.10.10.10", End: "10.10.10.20"}})
 	var sinkManager *sinkmanager.SinkManager
@@ -281,8 +266,8 @@ var _ = Describe("SinkManager", func() {
 		})
 
 		It("should remove the app from etcd", func(done Done) {
-			dumpSink := dump.NewDumpSink("appId", 0, loggertesthelper.Logger(), 1*time.Second, &easyReturn{})
-			sinkManager.RegisterSink(dumpSink)
+			dumpSink := dump.NewDumpSink("appId", 0, loggertesthelper.Logger(), 1*time.Millisecond)
+			sinkManager.RegisterSink(dumpSink, true)
 
 			Expect(<-appServicesChan).To(Equal(domain.AppServices{AppId: "appId"}))
 			close(done)

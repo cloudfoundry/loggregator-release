@@ -1,7 +1,6 @@
 package dump_test
 
 import (
-	"github.com/cloudfoundry/gunk/timeprovider/faketimeprovider"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
@@ -13,10 +12,8 @@ import (
 	"time"
 )
 
-var fakeTimeProvider = faketimeprovider.New(time.Now())
-
 func TestDumpForOneMessage(t *testing.T) {
-	testDump := dump.NewDumpSink("myApp", 1, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
+	testDump := dump.NewDumpSink("myApp", 1, loggertesthelper.Logger(), time.Second)
 
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
@@ -38,7 +35,7 @@ func TestDumpForOneMessage(t *testing.T) {
 }
 
 func TestDumpForTwoMessages(t *testing.T) {
-	testDump := dump.NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
+	testDump := dump.NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second)
 
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
@@ -65,7 +62,7 @@ func TestDumpForTwoMessages(t *testing.T) {
 
 func TestTheDumpSinkNeverFillsUp(t *testing.T) {
 	bufferSize := uint32(3)
-	testDump := dump.NewDumpSink("myApp", bufferSize, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
+	testDump := dump.NewDumpSink("myApp", bufferSize, loggertesthelper.Logger(), time.Second)
 
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
@@ -86,7 +83,7 @@ func TestTheDumpSinkNeverFillsUp(t *testing.T) {
 }
 
 func TestDumpAlwaysReturnsTheNewestMessages(t *testing.T) {
-	testDump := dump.NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
+	testDump := dump.NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second)
 
 	dumpRunnerDone := make(chan struct{})
 
@@ -115,7 +112,7 @@ func TestDumpAlwaysReturnsTheNewestMessages(t *testing.T) {
 }
 
 func TestDumpReturnsAllRecentMessagesToMultipleDumpRequests(t *testing.T) {
-	testDump := dump.NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
+	testDump := dump.NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second)
 
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
@@ -147,7 +144,7 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequests(t *testing.T) {
 }
 
 func TestDumpReturnsAllRecentMessagesToMultipleDumpRequestsWithMessagesCloningInInTheMeantime(t *testing.T) {
-	testDump := dump.NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
+	testDump := dump.NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second)
 
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
@@ -190,7 +187,7 @@ func TestDumpReturnsAllRecentMessagesToMultipleDumpRequestsWithMessagesCloningIn
 }
 
 func TestDumpWithLotsOfMessages(t *testing.T) {
-	testDump := dump.NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
+	testDump := dump.NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second)
 
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
@@ -241,7 +238,7 @@ func TestDumpWithLotsOfMessages(t *testing.T) {
 }
 
 func TestDumpWithLotsOfMessagesAndLargeBuffer(t *testing.T) {
-	testDump := dump.NewDumpSink("myApp", 200, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
+	testDump := dump.NewDumpSink("myApp", 200, loggertesthelper.Logger(), time.Second)
 
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
@@ -292,7 +289,7 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer(t *testing.T) {
 }
 
 func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
-	testDump := dump.NewDumpSink("myApp", 200, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
+	testDump := dump.NewDumpSink("myApp", 200, loggertesthelper.Logger(), time.Second)
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
 
@@ -358,7 +355,7 @@ func TestDumpWithLotsOfMessagesAndLargeBuffer2(t *testing.T) {
 
 func TestDumpWithLotsOfDumps(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), time.Second, fakeTimeProvider)
+	testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), time.Second)
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
 
@@ -387,7 +384,7 @@ func TestDumpWithLotsOfDumps(t *testing.T) {
 }
 
 func TestDumpSinkClosesItselfAfterPeriodOfInactivity(t *testing.T) {
-	testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), 2*time.Millisecond, fakeTimeProvider)
+	testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), 2*time.Millisecond)
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
 
@@ -405,7 +402,7 @@ func TestDumpSinkClosesItselfAfterPeriodOfInactivity(t *testing.T) {
 }
 
 func xTestDumpSinkClosingTimeIsResetWhenAMessageArrives(t *testing.T) {
-	testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), 10*time.Millisecond, fakeTimeProvider)
+	testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), 10*time.Millisecond)
 
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
@@ -415,12 +412,8 @@ func xTestDumpSinkClosingTimeIsResetWhenAMessageArrives(t *testing.T) {
 		close(dumpRunnerDone)
 	}()
 
-	fakeTimeProvider.IncrementBySeconds(uint64(5))
 	logMessage := messagetesthelpers.NewMessage(t, "0", "appId")
 	inputChan <- logMessage
-	fakeTimeProvider.IncrementBySeconds(uint64(8))
-
-	fakeTimeProvider.IncrementBySeconds(uint64(3))
 
 	select {
 	case sink := <-dumpRunnerDone:

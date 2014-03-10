@@ -2,7 +2,6 @@ package dump
 
 import (
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/gunk/timeprovider"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"sync"
@@ -19,16 +18,14 @@ type DumpSink struct {
 	inactivityDuration time.Duration
 	sequence           uint32
 	bufferSize         uint32
-	tp                 timeprovider.TimeProvider
 }
 
-func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, inactivityDuration time.Duration, tp timeprovider.TimeProvider) *DumpSink {
+func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, inactivityDuration time.Duration) *DumpSink {
 	dumpSink := &DumpSink{
 		appId:              appId,
 		logger:             givenLogger,
 		messageBuffer:      make([]*logmessage.Message, bufferSize),
 		inactivityDuration: inactivityDuration,
-		tp:                 tp,
 		bufferSize:         bufferSize,
 	}
 	return dumpSink
@@ -36,17 +33,16 @@ func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, i
 
 func (d *DumpSink) Run(inputChan <-chan *logmessage.Message) {
 	for {
-		countdown := d.tp.NewTickerChannel("", d.inactivityDuration)
+
 		select {
 		case msg, ok := <-inputChan:
 			if !ok {
 				return
 			}
 			d.addMsg(msg)
-		case <-countdown:
+		case <-time.After(d.inactivityDuration):
 			return
 		}
-		d.tp.Stop()
 	}
 }
 
