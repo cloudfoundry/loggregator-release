@@ -8,6 +8,7 @@ import (
 	"path"
 
 	"loggregator/domain"
+	"loggregator/store/cache"
 )
 
 var _ = Describe("AppServiceStore", func() {
@@ -48,13 +49,11 @@ var _ = Describe("AppServiceStore", func() {
 
 	BeforeEach(func() {
 		adapter = etcdRunner.Adapter()
+
 		incomingChan = make(chan domain.AppServices)
+		c := cache.NewAppServiceCache()
 
-		store = NewAppServiceStore(adapter)
-
-		app1Service1 = domain.AppService{AppId: "app-1", Url: "syslog://example.com:12345"}
-		app1Service2 = domain.AppService{AppId: "app-1", Url: "syslog://example.com:12346"}
-		app2Service1 = domain.AppService{AppId: "app-2", Url: "syslog://example.com:12345"}
+		store = NewAppServiceStore(adapter, c)
 	})
 
 	AfterEach(func() {
@@ -83,11 +82,22 @@ var _ = Describe("AppServiceStore", func() {
 
 	Context("when the store has data", func() {
 		BeforeEach(func() {
-			adapter.Create(buildNode(app1Service1))
-			adapter.Create(buildNode(app1Service2))
-			adapter.Create(buildNode(app2Service1))
-
 			go store.Run(incomingChan)
+
+			app1Service1 = domain.AppService{AppId: "app-1", Url: "syslog://example.com:12345"}
+			app1Service2 = domain.AppService{AppId: "app-1", Url: "syslog://example.com:12346"}
+			app2Service1 = domain.AppService{AppId: "app-2", Url: "syslog://example.com:12345"}
+
+			incomingChan <- domain.AppServices{
+				AppId: app1Service1.AppId,
+				Urls:  []string{app1Service1.Url, app1Service2.Url},
+			}
+			incomingChan <- domain.AppServices{
+				AppId: app2Service1.AppId,
+				Urls:  []string{app2Service1.Url},
+			}
+			Eventually(incomingChan).Should(BeEmpty())
+			assertInStore(app1Service1, app1Service2, app2Service1)
 		})
 
 		It("does not modify the store, if the incoming data is already there", func(done Done) {
@@ -98,14 +108,12 @@ var _ = Describe("AppServiceStore", func() {
 				Urls:  []string{app1Service1.Url, app1Service2.Url},
 			}
 
-			assertInStore(app1Service1, app1Service2, app2Service1)
-
 			assertNoDataOnChannel(events)
 
 			stop <- true
 
 			close(done)
-		})
+		}, 2)
 
 		Context("when there is new data for the store", func() {
 			Context("when an existing app has a new service", func() {
@@ -200,6 +208,7 @@ var _ = Describe("AppServiceStore", func() {
 
 		Describe("with multiple updates to the same app-id", func() {
 			It("should perform the updates correctly in the store", func(done Done) {
+				// Remove service 2
 				incomingChan <- domain.AppServices{
 					AppId: app1Service1.AppId,
 					Urls:  []string{app1Service1.Url},
@@ -208,6 +217,7 @@ var _ = Describe("AppServiceStore", func() {
 				assertInStore(app1Service1)
 				assertNotInStore(app1Service2)
 
+				// Add service 2 back
 				incomingChan <- domain.AppServices{
 					AppId: app1Service1.AppId,
 					Urls:  []string{app1Service1.Url, app1Service2.Url},
@@ -215,6 +225,7 @@ var _ = Describe("AppServiceStore", func() {
 
 				assertInStore(app1Service1, app1Service2)
 
+				// Remove service 1
 				incomingChan <- domain.AppServices{
 					AppId: app1Service1.AppId,
 					Urls:  []string{app1Service2.Url},

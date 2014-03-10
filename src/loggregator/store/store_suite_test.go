@@ -74,7 +74,3 @@ func assertNoDataOnChannel(channel interface{}) {
 		Fail("Should not have any data on the channel", 1)
 	}
 }
-
-func ensureWatchersAreHookedUp() {
-	time.Sleep(100 * time.Millisecond) //give watchers time to get running
-}

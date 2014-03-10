@@ -12,18 +12,48 @@ import (
 type AppServiceStoreWatcher struct {
 	adapter                   storeadapter.StoreAdapter
 	outAddChan, outRemoveChan chan<- domain.AppService
-	cache                     cache.AppServiceCache
+	cache                     cache.AppServiceWatcherCache
 }
 
-func NewAppServiceStoreWatcher(adapter storeadapter.StoreAdapter) (*AppServiceStoreWatcher, <-chan domain.AppService, <-chan domain.AppService) {
+func NewAppServiceStoreWatcher(adapter storeadapter.StoreAdapter, cache cache.AppServiceWatcherCache) (*AppServiceStoreWatcher, <-chan domain.AppService, <-chan domain.AppService) {
 	outAddChan := make(chan domain.AppService)
 	outRemoveChan := make(chan domain.AppService)
 	return &AppServiceStoreWatcher{
 		adapter:       adapter,
 		outAddChan:    outAddChan,
 		outRemoveChan: outRemoveChan,
-		cache:         cache.NewAppServiceCache(),
+		cache:         cache,
 	}, outAddChan, outRemoveChan
+}
+
+func (w *AppServiceStoreWatcher) Add(appService domain.AppService) {
+	if !w.cache.Exists(appService) {
+		w.cache.Add(appService)
+		w.outAddChan <- appService
+	}
+}
+
+func (w *AppServiceStoreWatcher) Remove(appService domain.AppService) {
+	if w.cache.Exists(appService) {
+		w.cache.Remove(appService)
+		w.outRemoveChan <- appService
+	}
+}
+
+func (w *AppServiceStoreWatcher) RemoveApp(appId string) []domain.AppService {
+	appServices := w.cache.RemoveApp(appId)
+	for _, appService := range appServices {
+		w.outRemoveChan <- appService
+	}
+	return appServices
+}
+
+func (w *AppServiceStoreWatcher) Get(appId string) []domain.AppService {
+	return w.cache.Get(appId)
+}
+
+func (w *AppServiceStoreWatcher) Exists(appService domain.AppService) bool {
+	return w.cache.Exists(appService)
 }
 
 func (w *AppServiceStoreWatcher) Run() {
@@ -32,7 +62,7 @@ func (w *AppServiceStoreWatcher) Run() {
 		close(w.outRemoveChan)
 	}()
 
-	w.warmUpCache()
+	w.registerExistingServicesFromStore()
 
 	events, _, _ := w.adapter.Watch("/loggregator/services")
 
@@ -44,29 +74,25 @@ func (w *AppServiceStoreWatcher) Run() {
 				// we can ignore any directory nodes (app or other namespace additions)
 				continue
 			}
-			w.serviceCreatedOrUpdated(appServiceFromStoreNode(event.Node))
+			w.Add(appServiceFromStoreNode(event.Node))
 		case storeadapter.DeleteEvent:
-			if event.Node.Dir {
-				w.appDeleted(event.Node)
-			} else {
-				w.serviceDeleted(appServiceFromStoreNode(event.Node))
-			}
+			w.deleteEvent(event.Node)
 		case storeadapter.ExpireEvent:
-			w.appExpired(event.Node)
+			w.deleteEvent(event.Node)
 		}
 	}
 }
 
-func (w *AppServiceStoreWatcher) warmUpCache() {
-	cfcomponent.Logger.Debug("AppStoreWatcher: Lighting the fires to warm the cache")
+func (w *AppServiceStoreWatcher) registerExistingServicesFromStore() {
+	cfcomponent.Logger.Debug("AppStoreWatcher: Ensuring existing services are registered")
 	services, _ := w.adapter.ListRecursively("/loggregator/services/")
 	for _, node := range services.ChildNodes {
 		for _, node := range node.ChildNodes {
 			appService := appServiceFromStoreNode(node)
-			w.serviceCreatedOrUpdated(appService)
+			w.Add(appService)
 		}
 	}
-	cfcomponent.Logger.Debug("AppStoreWatcher: Cache all warm and cozy")
+	cfcomponent.Logger.Debug("AppStoreWatcher: Existing services all registered")
 }
 
 func appServiceFromStoreNode(node storeadapter.StoreNode) domain.AppService {
@@ -78,31 +104,12 @@ func appServiceFromStoreNode(node storeadapter.StoreNode) domain.AppService {
 	return appService
 }
 
-func (w *AppServiceStoreWatcher) serviceCreatedOrUpdated(appService domain.AppService) {
-	if !w.cache.Exists(appService) {
-		w.cache.Add(appService)
-		w.outAddChan <- appService
+func (w *AppServiceStoreWatcher) deleteEvent(node storeadapter.StoreNode) {
+	if node.Dir {
+		key := node.Key
+		appId := path.Base(key)
+		w.RemoveApp(appId)
+	} else {
+		w.Remove(appServiceFromStoreNode(node))
 	}
-}
-
-func (w *AppServiceStoreWatcher) serviceDeleted(appService domain.AppService) {
-	if w.cache.Exists(appService) {
-		w.cache.Remove(appService)
-		w.outRemoveChan <- appService
-	}
-}
-
-func (w *AppServiceStoreWatcher) appDeleted(node storeadapter.StoreNode) {
-	key := node.Key
-	appId := path.Base(key)
-	appServices := w.cache.RemoveApp(appId)
-	for _, appService := range appServices {
-		w.outRemoveChan <- appService
-	}
-}
-
-func (w *AppServiceStoreWatcher) appExpired(node storeadapter.StoreNode) {
-	key := node.Key
-	appId := path.Base(key)
-	w.cache.RemoveApp(appId)
 }

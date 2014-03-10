@@ -1,46 +1,86 @@
 package cache
 
-import "loggregator/domain"
+import (
+	"loggregator/domain"
+	"sync"
+)
 
-type AppServiceCache struct {
+type AppServiceCache interface {
+	Add(appService domain.AppService)
+	Remove(appService domain.AppService)
+	RemoveApp(appId string) []domain.AppService
+
+	Get(appId string) []domain.AppService
+	Exists(appService domain.AppService) bool
+}
+
+type AppServiceWatcherCache interface {
+	AppServiceCache
+	GetAll() []domain.AppService
+	Size() int
+}
+
+type appServiceCache struct {
+	sync.RWMutex
 	appServicesByAppId map[string]map[string]domain.AppService
 }
 
-func NewAppServiceCache() AppServiceCache {
-	return AppServiceCache{make(map[string]map[string]domain.AppService)}
+func NewAppServiceCache() AppServiceWatcherCache {
+	c := &appServiceCache{appServicesByAppId: make(map[string]map[string]domain.AppService)}
+	return c
 }
 
-func (cache AppServiceCache) Add(appService domain.AppService) {
-	appServicesById, ok := cache.appServicesByAppId[appService.AppId]
+func (c *appServiceCache) Add(appService domain.AppService) {
+	c.Lock()
+	defer c.Unlock()
+	appServicesById, ok := c.appServicesByAppId[appService.AppId]
 	if !ok {
 		appServicesById = make(map[string]domain.AppService)
-		cache.appServicesByAppId[appService.AppId] = appServicesById
+		c.appServicesByAppId[appService.AppId] = appServicesById
 	}
 
 	appServicesById[appService.Id()] = appService
 }
 
-func (cache AppServiceCache) Remove(appService domain.AppService) {
-	appCache := cache.appServicesByAppId[appService.AppId]
+func (c *appServiceCache) Remove(appService domain.AppService) {
+	c.Lock()
+	defer c.Unlock()
+	appCache := c.appServicesByAppId[appService.AppId]
 	delete(appCache, appService.Id())
 	if len(appCache) == 0 {
-		delete(cache.appServicesByAppId, appService.AppId)
+		delete(c.appServicesByAppId, appService.AppId)
 	}
 }
 
-func (cache AppServiceCache) RemoveApp(appId string) []domain.AppService {
-	appCache := cache.appServicesByAppId[appId]
-	delete(cache.appServicesByAppId, appId)
+func (c *appServiceCache) RemoveApp(appId string) []domain.AppService {
+	c.Lock()
+	defer c.Unlock()
+	appCache := c.appServicesByAppId[appId]
+	delete(c.appServicesByAppId, appId)
 	return values(appCache)
 }
 
-func (cache AppServiceCache) Get(appId string) []domain.AppService {
-	return values(cache.appServicesByAppId[appId])
+func (c *appServiceCache) Get(appId string) []domain.AppService {
+	c.RLock()
+	defer c.RUnlock()
+	return values(c.appServicesByAppId[appId])
 }
 
-func (cache AppServiceCache) Size() int {
+func (c *appServiceCache) GetAll() []domain.AppService {
+	c.RLock()
+	defer c.RUnlock()
+	var result []domain.AppService
+	for _, appServices := range c.appServicesByAppId {
+		result = append(result, values(appServices)...)
+	}
+	return result
+}
+
+func (c *appServiceCache) Size() int {
+	c.RLock()
+	defer c.RUnlock()
 	count := 0
-	for _, m := range cache.appServicesByAppId {
+	for _, m := range c.appServicesByAppId {
 		serviceCountForApp := len(m)
 		if serviceCountForApp > 0 {
 			count += serviceCountForApp
@@ -51,9 +91,11 @@ func (cache AppServiceCache) Size() int {
 	return count
 }
 
-func (cache AppServiceCache) Exists(appService domain.AppService) bool {
+func (c *appServiceCache) Exists(appService domain.AppService) bool {
+	c.RLock()
+	defer c.RUnlock()
 	serviceExists := false
-	appServices, appExists := cache.appServicesByAppId[appService.AppId]
+	appServices, appExists := c.appServicesByAppId[appService.AppId]
 	if appExists {
 		_, serviceExists = appServices[appService.Id()]
 	}

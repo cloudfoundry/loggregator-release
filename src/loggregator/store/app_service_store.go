@@ -14,15 +14,14 @@ type AppServiceStore struct {
 	cache   cache.AppServiceCache
 }
 
-func NewAppServiceStore(adapter storeadapter.StoreAdapter) *AppServiceStore {
+func NewAppServiceStore(adapter storeadapter.StoreAdapter, cache cache.AppServiceCache) *AppServiceStore {
 	return &AppServiceStore{
 		adapter: adapter,
-		cache:   cache.NewAppServiceCache(),
+		cache:   cache,
 	}
 }
 
 func (s *AppServiceStore) Run(incomingChan <-chan domain.AppServices) {
-	s.warmUpCache()
 
 	for appServices := range incomingChan {
 		cfcomponent.Logger.Debugf("AppStore: New services for %s", appServices.AppId)
@@ -56,19 +55,6 @@ func (s *AppServiceStore) Run(incomingChan <-chan domain.AppServices) {
 		s.removeFromStore(appServiceToRemove)
 		cfcomponent.Logger.Debugf("AppStore: Successfully updated app service %s", appServices.AppId)
 	}
-}
-
-func (s *AppServiceStore) warmUpCache() {
-	cfcomponent.Logger.Debug("AppStore: Lighting the fires to warm the cache")
-	services, _ := s.adapter.ListRecursively("/loggregator/services/")
-	for _, appNode := range services.ChildNodes {
-		appId := path.Base(appNode.Key)
-		for _, serviceNode := range appNode.ChildNodes {
-			appService := domain.AppService{AppId: appId, Url: string(serviceNode.Value)}
-			s.cache.Add(appService)
-		}
-	}
-	cfcomponent.Logger.Debug("AppStore: Cache all warm and cozy")
 }
 
 func (s *AppServiceStore) addToStore(appServices []domain.AppService) {

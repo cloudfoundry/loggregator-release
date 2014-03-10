@@ -5,6 +5,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "loggregator/store"
+	"loggregator/store/cache"
 	"path"
 
 	"loggregator/domain"
@@ -34,13 +35,14 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 	}
 
 	BeforeEach(func() {
-		adapter = etcdRunner.Adapter()
-
-		listener, outAddChan, outRemoveChan = NewAppServiceStoreWatcher(adapter)
-
 		app1Service1 = domain.AppService{AppId: "app-1", Url: "syslog://example.com:12345"}
 		app1Service2 = domain.AppService{AppId: "app-1", Url: "syslog://example.com:12346"}
 		app2Service1 = domain.AppService{AppId: "app-2", Url: "syslog://example.com:12345"}
+
+		adapter = etcdRunner.Adapter()
+
+		c := cache.NewAppServiceCache()
+		listener, outAddChan, outRemoveChan = NewAppServiceStoreWatcher(adapter, c)
 	})
 
 	AfterEach(func() {
@@ -97,14 +99,14 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 	PIt("handles errors")
 
 	Describe("when the store has data and listener is bootstrapped", func() {
-		BeforeEach(func() {
+		BeforeEach(func(done Done) {
 			adapter.Create(buildNode(app1Service1))
 			adapter.Create(buildNode(app1Service2))
 			adapter.Create(buildNode(app2Service1))
 
 			go listener.Run()
 			drainOutgoingChannel(outAddChan, 3)
-			ensureWatchersAreHookedUp()
+			close(done)
 		})
 
 		It("does not send updates when the data has already been processed", func(done Done) {
@@ -228,7 +230,7 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 		})
 
 		Context("when an existing app service expires", func() {
-			It("removes the app service from the cache", func() {
+			It("removes the app service from the cache", func(done Done) {
 				app2Service2 := domain.AppService{AppId: "app-2", Url: "syslog://foo/a"}
 				adapter.Create(buildNode(app2Service2))
 				Expect(<-outAddChan).To(Equal(app2Service2))
@@ -238,11 +240,16 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 				time.Sleep(2 * time.Second)
 
 				assertNoDataOnChannel(outAddChan)
-				assertNoDataOnChannel(outRemoveChan)
+				appServices := drainOutgoingChannel(outRemoveChan, 2)
+
+				Expect(appServices).To(ContainElement(app2Service1))
+				Expect(appServices).To(ContainElement(app2Service2))
 
 				adapter.Create(buildNode(app2Service2))
 				Expect(<-outAddChan).To(Equal(app2Service2))
-			})
+
+				close(done)
+			}, 3)
 		})
 	})
 })

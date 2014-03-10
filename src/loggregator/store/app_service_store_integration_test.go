@@ -5,6 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 	"loggregator/domain"
 	. "loggregator/store"
+	"loggregator/store/cache"
 )
 
 var _ = Describe("AppServiceStoreIntegration", func() {
@@ -18,16 +19,16 @@ var _ = Describe("AppServiceStoreIntegration", func() {
 		adapter := etcdRunner.Adapter()
 
 		incomingChan = make(chan domain.AppServices)
-		store := NewAppServiceStore(adapter)
-		go store.Run(incomingChan)
-
+		c := cache.NewAppServiceCache()
 		var watcher *AppServiceStoreWatcher
-		watcher, outAddChan, outRemoveChan = NewAppServiceStoreWatcher(adapter)
+		watcher, outAddChan, outRemoveChan = NewAppServiceStoreWatcher(adapter, c)
 		go watcher.Run()
-		ensureWatchersAreHookedUp()
+
+		store := NewAppServiceStore(adapter, watcher)
+		go store.Run(incomingChan)
 	})
 
-	It("should receive, store, and republish AppServices", func() {
+	It("should receive, store, and republish AppServices", func(done Done) {
 		appServices := domain.AppServices{AppId: "12345", Urls: []string{"syslog://foo"}}
 		incomingChan <- appServices
 
@@ -49,5 +50,6 @@ var _ = Describe("AppServiceStoreIntegration", func() {
 		Expect(<-outRemoveChan).To(Equal(domain.AppService{
 			AppId: "12345", Url: "syslog://foo",
 		}))
-	})
+		close(done)
+	}, 5)
 })

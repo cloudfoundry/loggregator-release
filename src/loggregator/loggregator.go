@@ -19,6 +19,7 @@ import (
 	"loggregator/sinkserver/unmarshaller"
 	"loggregator/sinkserver/websocket"
 	"loggregator/store"
+	"loggregator/store/cache"
 	"time"
 )
 
@@ -55,7 +56,9 @@ func (c *Config) Validate(logger *gosteno.Logger) (err error) {
 
 type Loggregator struct {
 	*gosteno.Logger
-	appStore          *store.AppServiceStore
+	appStore        *store.AppServiceStore
+	appStoreWatcher *store.AppServiceStoreWatcher
+
 	appStoreInputChan <-chan domain.AppServices
 
 	errChan         chan error
@@ -65,7 +68,10 @@ type Loggregator struct {
 	messageChan     <-chan *logmessage.Message
 	unmarshaller    *unmarshaller.LogMessageUnmarshaller
 	websocketServer *websocket.WebsocketServer
-	storeAdapter    storeadapter.StoreAdapter
+
+	storeAdapter storeadapter.StoreAdapter
+
+	newAppServiceChan, deletedAppServiceChan <-chan domain.AppService
 }
 
 func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
@@ -78,19 +84,24 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 	workerPool := workerpool.NewWorkerPool(config.EtcdMaxConcurrentRequests)
 
 	storeAdapter := etcdstoreadapter.NewETCDStoreAdapter(config.EtcdUrls, workerPool)
-	appStore := store.NewAppServiceStore(storeAdapter)
+	appStoreCache := cache.NewAppServiceCache()
+	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
+	appStore := store.NewAppServiceStore(storeAdapter, appStoreWatcher)
 	return &Loggregator{
-		Logger:            logger,
-		errChan:           make(chan error),
-		listener:          listener,
-		unmarshaller:      unmarshaller,
-		sinkManager:       sinkManager,
-		messageChan:       messageChan,
-		appStoreInputChan: appStoreInputChan,
-		appStore:          appStore,
-		messageRouter:     sinkserver.NewMessageRouter(sinkManager, logger),
-		websocketServer:   websocket.NewWebsocketServer(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.WSMessageBufferSize, logger),
-		storeAdapter:      storeAdapter,
+		Logger:                logger,
+		errChan:               make(chan error),
+		listener:              listener,
+		unmarshaller:          unmarshaller,
+		sinkManager:           sinkManager,
+		messageChan:           messageChan,
+		appStoreInputChan:     appStoreInputChan,
+		appStore:              appStore,
+		messageRouter:         sinkserver.NewMessageRouter(sinkManager, logger),
+		websocketServer:       websocket.NewWebsocketServer(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.WSMessageBufferSize, logger),
+		newAppServiceChan:     newAppServiceChan,
+		deletedAppServiceChan: deletedAppServiceChan,
+		appStoreWatcher:       appStoreWatcher,
+		storeAdapter:          storeAdapter,
 	}
 }
 
@@ -100,13 +111,12 @@ func (l *Loggregator) Start() {
 		panic(err)
 	}
 
-	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(l.storeAdapter)
-	go appStoreWatcher.Run()
+	go l.appStoreWatcher.Run()
 
 	go l.appStore.Run(l.appStoreInputChan)
 	go l.listener.Start()
 	go l.unmarshaller.Start(l.errChan)
-	go l.sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
+	go l.sinkManager.Start(l.newAppServiceChan, l.deletedAppServiceChan)
 
 	go l.messageRouter.Start(l.messageChan)
 

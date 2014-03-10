@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/gomega"
 	"loggregator/domain"
 	. "loggregator/store"
+	"loggregator/store/cache"
 )
 
 type FakeAdapter struct {
@@ -44,9 +45,10 @@ var _ = Describe("AppServiceUnit", func() {
 
 		BeforeEach(func() {
 			adapter = &FakeAdapter{}
+			c := cache.NewAppServiceCache()
 			incomingChan = make(chan domain.AppServices)
 			app1Service1 = domain.AppService{AppId: "app-1", Url: "syslog://example.com:12345"}
-			store = NewAppServiceStore(adapter)
+			store = NewAppServiceStore(adapter, c)
 
 			go store.Run(incomingChan)
 		})

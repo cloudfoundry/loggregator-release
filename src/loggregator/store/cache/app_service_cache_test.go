@@ -9,26 +9,29 @@ import (
 )
 
 var _ = Describe("AppServiceCache", func() {
-	var appServiceCache AppServiceCache
-	var appService1 domain.AppService
-	var appService2 domain.AppService
+	var appServiceCache AppServiceWatcherCache
+	var app1Service1, app1Service2, app2Service1 domain.AppService
 
 	BeforeEach(func() {
 		appServiceCache = NewAppServiceCache()
-		appService1 = domain.AppService{AppId: "12345", Url: "http://example.com"}
-		appService2 = domain.AppService{AppId: "12345", Url: "http://example.com:1234"}
 
-		appServiceCache.Add(appService1)
-		appServiceCache.Add(appService2)
+		app1Service1 = domain.AppService{AppId: "app-1", Url: "syslog://example.com:12345"}
+		app1Service2 = domain.AppService{AppId: "app-1", Url: "syslog://example.com:12346"}
+		app2Service1 = domain.AppService{AppId: "app-2", Url: "syslog://example.com:12345"}
+
+		appServiceCache.Add(app1Service1)
+		appServiceCache.Add(app1Service2)
+		appServiceCache.Add(app2Service1)
 	})
 
 	Describe("Get", func() {
+
 		It("returns the AppServices for the given AppId", func() {
-			appServices := appServiceCache.Get(appService1.AppId)
+			appServices := appServiceCache.Get(app1Service1.AppId)
 
 			Expect(len(appServices)).To(Equal(2))
-			Expect(appServices[0]).To(Equal(appService1))
-			Expect(appServices[1]).To(Equal(appService2))
+			Expect(appServices[0]).To(Equal(app1Service1))
+			Expect(appServices[1]).To(Equal(app1Service2))
 		})
 
 		It("returns an empty slice of AppServices for an unknown AppId", func() {
@@ -39,59 +42,61 @@ var _ = Describe("AppServiceCache", func() {
 	})
 
 	Describe("Size", func() {
+
 		It("returns the total number of AppServices for all AppIds", func() {
 			anotherAppService := domain.AppService{AppId: "98765", Url: "http://foo.com"}
 			appServiceCache.Add(anotherAppService)
 
-			Expect(appServiceCache.Size()).To(Equal(3))
+			Expect(appServiceCache.Size()).To(Equal(4))
 		})
 	})
 
 	Describe("Add", func() {
-		It("does not add the given AppService to the cache twice", func() {
-			Expect(appServiceCache.Size()).To(Equal(2))
 
-			appServiceCache.Add(appService1)
-			Expect(appServiceCache.Size()).To(Equal(2))
+		It("does not add the given AppService to the cache twice", func() {
+			Expect(appServiceCache.Size()).To(Equal(3))
+
+			appServiceCache.Add(app1Service1)
+			Expect(appServiceCache.Size()).To(Equal(3))
 		})
 	})
 
 	Describe("Remove", func() {
 		It("removes the given AppService from the cache", func() {
-			Expect(appServiceCache.Size()).To(Equal(2))
+			Expect(appServiceCache.Size()).To(Equal(3))
 
-			appServiceCache.Remove(appService1)
-			Expect(appServiceCache.Size()).To(Equal(1))
+			appServiceCache.Remove(app1Service1)
+			Expect(appServiceCache.Size()).To(Equal(2))
 		})
 
 		It("removes all the AppServices for a given app", func() {
-			Expect(appServiceCache.Size()).To(Equal(2))
+			Expect(appServiceCache.Size()).To(Equal(3))
 
-			appServiceCache.Remove(appService1)
-			appServiceCache.Remove(appService2)
-			Expect(appServiceCache.Size()).To(Equal(0))
+			appServiceCache.Remove(app1Service1)
+			appServiceCache.Remove(app1Service2)
+			Expect(appServiceCache.Size()).To(Equal(1))
 		})
 	})
 
 	Describe("RemoveApp", func() {
 		It("removes the AppServices for the given AppId from the cache", func() {
-			Expect(appServiceCache.Size()).To(Equal(2))
+			Expect(appServiceCache.Size()).To(Equal(3))
 
-			appServiceCache.RemoveApp(appService1.AppId)
-			Expect(appServiceCache.Size()).To(Equal(0))
+			appServiceCache.RemoveApp(app1Service1.AppId)
+			Expect(appServiceCache.Size()).To(Equal(1))
 		})
 
 		It("returns the removed AppServices", func() {
-			appServices := appServiceCache.RemoveApp(appService1.AppId)
+			appServices := appServiceCache.RemoveApp(app1Service1.AppId)
 			Expect(len(appServices)).To(Equal(2))
-			Expect(appServices[0]).To(Equal(appService1))
-			Expect(appServices[1]).To(Equal(appService2))
+			Expect(appServices[0]).To(Equal(app1Service1))
+			Expect(appServices[1]).To(Equal(app1Service2))
 		})
 	})
 
 	Describe("Exists", func() {
 		It("returns true for known AppService", func() {
-			Expect(appServiceCache.Exists(appService1)).To(BeTrue())
+			Expect(appServiceCache.Exists(app1Service1)).To(BeTrue())
 		})
 
 		It("returns the removed AppServices", func() {
