@@ -32,12 +32,14 @@ func TestStore(t *testing.T) {
 
 	RunSpecs(t, "Store Suite")
 
+	etcdRunner.Adapter().Disconnect()
 	etcdRunner.Stop()
 }
 
 var _ = BeforeEach(func() {
-	etcdRunner.Stop()
-	etcdRunner.Start()
+	etcdRunner.Adapter().Disconnect()
+	etcdRunner.Reset()
+	etcdRunner.Adapter().Connect()
 })
 
 func registerSignalHandler() {
