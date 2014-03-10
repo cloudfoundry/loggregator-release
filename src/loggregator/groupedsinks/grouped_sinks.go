@@ -56,7 +56,7 @@ func (gc *GroupedSinks) BroadCast(appId string, msg *logmessage.Message) {
 func (gc *GroupedSinks) BroadCastError(appId string, errorMsg *logmessage.Message) {
 	gc.RLock()
 	defer gc.RUnlock()
-	
+
 	for _, wrapper := range gc.apps[appId] {
 		if wrapper.s.ShouldReceiveErrors() {
 			//			sinkManager.logger.Debugf("SinkManager:ErrorChannel: Sending Message to channel %v for sinks targeting [%s].", sink.Identifier(), appId)

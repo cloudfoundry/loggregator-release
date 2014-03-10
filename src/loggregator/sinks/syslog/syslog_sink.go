@@ -46,13 +46,15 @@ func (s *SyslogSink) Run(inputChan <-chan *logmessage.Message) {
 	numberOfTries := 0
 
 	buffer := sinks.RunTruncatingBuffer(inputChan, 100, s.logger)
+	timer := time.NewTimer(backoffStrategy(numberOfTries))
+	defer timer.Stop()
 	for {
 		s.logger.Debugf("Syslog Sink %s: Starting loop. Current backoff: %v", s.drainUrl, backoffStrategy(numberOfTries))
-
+		timer.Reset(backoffStrategy(numberOfTries))
 		select {
 		case <-s.disconnectChannel:
 			return
-		case <-time.After(backoffStrategy(numberOfTries)):
+		case <-timer.C:
 		}
 
 		if !s.syslogWriter.IsConnected() {

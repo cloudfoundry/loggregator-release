@@ -69,8 +69,10 @@ func main() {
 		}
 		go func() {
 			defer f.Close()
+			ticker := time.NewTicker(time.Second * 1)
+			defer ticker.Stop()
 			for {
-				<-time.After(time.Second * 1)
+				<-ticker.C
 				pprof.WriteHeapProfile(f)
 			}
 		}()

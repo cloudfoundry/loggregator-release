@@ -47,11 +47,14 @@ func (sink *WebsocketSink) keepAliveFailureChannel() <-chan bool {
 	}()
 
 	go func() {
+		timer := time.NewTimer(sink.keepAliveInterval)
+		defer timer.Stop()
 		for {
+			timer.Reset(sink.keepAliveInterval)
 			select {
 			case <-keepAliveChan:
 				sink.logger.Debugf("Websocket Sink %s: Keep-alive received", sink.clientAddress)
-			case <-time.After(sink.keepAliveInterval):
+			case <-timer.C:
 				keepAliveFailureChan <- true
 				return
 			}
