@@ -1,4 +1,4 @@
-package trafficcontroller
+package trafficcontroller_test
 
 import (
 	"errors"
@@ -8,7 +8,9 @@ import (
 	. "github.com/onsi/gomega"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"time"
+	"trafficcontroller"
 	"trafficcontroller/hasher"
 )
 
@@ -38,12 +40,17 @@ func (fl *fakeLoggregator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer ws.Close()
+	defer ws.WriteControl(websocket.CloseMessage, []byte{}, time.Time{})
 
 	r.ParseForm()
 
 	for _, msg := range fl.messages {
 		ws.WriteMessage(websocket.BinaryMessage, []byte(msg))
 	}
+	if strings.Contains(r.URL.Path, "/dump") {
+		return
+	}
+
 	for {
 		_, _, err := ws.ReadMessage()
 
@@ -69,6 +76,10 @@ func (f *fakeClient) WriteMessage(messageType int, data []byte) error {
 }
 
 func (f *fakeClient) ReadMessage() (int, []byte, error) {
+	if f.keepAlives == -1 {
+		time.Sleep(1 * time.Second)
+		return 0, []byte("Keep Alive"), nil
+	}
 	if f.keepAlives == 0 {
 		return 0, []byte(""), errors.New("EOF")
 	}
@@ -76,7 +87,10 @@ func (f *fakeClient) ReadMessage() (int, []byte, error) {
 	return 0, []byte("Keep Alive"), nil
 }
 
-func (f *fakeClient) WriteControl(int, []byte, time.Time) error {
+func (f *fakeClient) WriteControl(messageType int, data []byte, _ time.Time) error {
+	f.receivedMessages = append(f.receivedMessages, string(data))
+	f.receivedMessageTypes = append(f.receivedMessageTypes, messageType)
+
 	return nil
 }
 
@@ -106,7 +120,7 @@ var _ = Describe("ProxyHandler", func() {
 
 		It("Proxies multiple messages", func() {
 			fakeClient := &fakeClient{}
-			handler := NewProxyHandler(
+			handler := trafficcontroller.NewProxyHandler(
 				fakeClient,
 				loggertesthelper.Logger(),
 			)
@@ -116,14 +130,15 @@ var _ = Describe("ProxyHandler", func() {
 				"/dump",
 				[]*hasher.Hasher{hasher.NewHasher([]string{fakeServer.Listener.Addr().String()})})
 
-			Expect(fakeClient.ReceivedMessageTypes()).To(HaveLen(2))
-			Expect(fakeClient.ReceivedMessages()).To(Equal([]string{"Message1", "Message2"}))
+			Expect(fakeClient.ReceivedMessageTypes()).To(HaveLen(3))
+			Expect(fakeClient.ReceivedMessages()).To(ContainElement("Message1"))
+			Expect(fakeClient.ReceivedMessages()).To(ContainElement("Message2"))
 			Expect(fakeClient.ReceivedMessageTypes()).To(ContainElement(websocket.BinaryMessage))
 
 		})
 
 		It("Uses the Correct Request URI", func() {
-			handler := NewProxyHandler(
+			handler := trafficcontroller.NewProxyHandler(
 				&fakeClient{},
 				loggertesthelper.Logger(),
 			)
@@ -138,14 +153,14 @@ var _ = Describe("ProxyHandler", func() {
 		})
 
 		It("Forwards KeepAlives", func() {
-			handler := NewProxyHandler(
+			handler := trafficcontroller.NewProxyHandler(
 				&fakeClient{keepAlives: 5},
 				loggertesthelper.Logger(),
 			)
 
 			handler.HandleWebSocket(
 				"appId",
-				"/dump",
+				"/tail",
 				[]*hasher.Hasher{hasher.NewHasher([]string{fakeServer.Listener.Addr().String()})})
 
 			Expect(loggregator.ReceivedKeepAlives()).Should(Equal(5))
@@ -158,7 +173,7 @@ var _ = Describe("ProxyHandler", func() {
 			defer s1.Close()
 			defer s2.Close()
 			fakeClient := &fakeClient{}
-			handler := NewProxyHandler(
+			handler := trafficcontroller.NewProxyHandler(
 				fakeClient,
 				loggertesthelper.Logger(),
 			)
@@ -170,8 +185,8 @@ var _ = Describe("ProxyHandler", func() {
 				"/dump",
 				[]*hasher.Hasher{hasher.NewHasher(loggregators)})
 
-			Expect(fakeClient.ReceivedMessages()).To(HaveLen(1))
-			Expect(fakeClient.ReceivedMessageTypes()).To(HaveLen(1))
+			Expect(fakeClient.ReceivedMessages()).To(HaveLen(2))
+			Expect(fakeClient.ReceivedMessageTypes()).To(HaveLen(2))
 			Expect(fakeClient.ReceivedMessages()).To(ContainElement("loggregator1:a"))
 			Expect(fakeClient.ReceivedMessageTypes()).To(ContainElement(websocket.BinaryMessage))
 		})
@@ -201,8 +216,8 @@ var _ = Describe("ProxyHandler", func() {
 			}
 		})
 		It("Proxies messages", func(done Done) {
-			fakeClient := &fakeClient{}
-			handler := NewProxyHandler(
+			fakeClient := &fakeClient{keepAlives: -1}
+			handler := trafficcontroller.NewProxyHandler(
 				fakeClient,
 				loggertesthelper.Logger(),
 			)
@@ -212,23 +227,25 @@ var _ = Describe("ProxyHandler", func() {
 				"/dump",
 				[]*hasher.Hasher{hashersAZ1, hashersAZ2})
 
-			Expect(fakeClient.ReceivedMessages()).To(HaveLen(2))
-			Expect(fakeClient.ReceivedMessageTypes()).To(HaveLen(2))
+			Expect(fakeClient.ReceivedMessages()).To(HaveLen(3))
+			Expect(fakeClient.ReceivedMessageTypes()).To(HaveLen(3))
 			Expect(fakeClient.ReceivedMessages()).To(ContainElement("loggregator:AZ1:SERVER1"))
 			Expect(fakeClient.ReceivedMessages()).To(ContainElement("loggregator:AZ2:SERVER1"))
 			Expect(fakeClient.ReceivedMessageTypes()).To(ContainElement(websocket.BinaryMessage))
+			Expect(fakeClient.ReceivedMessageTypes()).To(ContainElement(websocket.CloseMessage))
+
 			close(done)
 		})
 
 		It("Forwards KeepAlives", func() {
-			handler := NewProxyHandler(
+			handler := trafficcontroller.NewProxyHandler(
 				&fakeClient{keepAlives: 3},
 				loggertesthelper.Logger(),
 			)
 
 			handler.HandleWebSocket(
 				"appId",
-				"/dump",
+				"/tail",
 				[]*hasher.Hasher{hashersAZ1, hashersAZ2})
 
 			Expect(fakeLoggregators[0].ReceivedKeepAlives()).Should(Equal(3))

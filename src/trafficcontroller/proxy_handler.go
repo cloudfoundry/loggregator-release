@@ -108,7 +108,7 @@ func (handler *handler) forwardIO(servers []*websocket.Conn) {
 	for _, server := range servers {
 		go handler.proxyConnectionTo(server)
 	}
-	handler.watchKeepAlive(servers)
+	go handler.watchKeepAlive(servers)
 
 	handler.Wait()
 
