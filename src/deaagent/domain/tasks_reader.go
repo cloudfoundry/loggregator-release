@@ -1,11 +1,11 @@
-package deaagent
+package domain
 
 import (
 	"encoding/json"
 	"errors"
 )
 
-func readTasks(data []byte) (map[string]Task, error) {
+func ReadTasks(data []byte) (map[string]Task, error) {
 	type instanceJson struct {
 		Application_id        string
 		Warden_job_id         uint64

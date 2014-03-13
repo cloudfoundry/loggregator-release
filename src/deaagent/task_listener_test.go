@@ -1,7 +1,9 @@
-package deaagent
+package deaagent_test
 
 import (
-	"github.com/cloudfoundry/gosteno"
+	"deaagent"
+	"deaagent/domain"
+	"github.com/cloudfoundry/loggregatorlib/emitter"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/stretchr/testify/assert"
@@ -13,34 +15,7 @@ import (
 	"time"
 )
 
-const SOCKET_PREFIX = "\n\n\n\n"
-
 var testLogger = loggertesthelper.Logger()
-
-func TestIdentifier(t *testing.T) {
-	task := Task{
-		ApplicationId:       "4aa9506e-277f-41ab-b764-a35c0b96fa1b",
-		WardenJobId:         272,
-		WardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo1"}
-
-	assert.Equal(t, "/var/vcap/data/warden/depot/16vbs06ibo1/jobs/272", task.Identifier())
-}
-
-type MockLoggregatorEmitter struct {
-	received chan *logmessage.LogMessage
-}
-
-func (m MockLoggregatorEmitter) Emit(a, b string) {
-
-}
-
-func (m MockLoggregatorEmitter) EmitError(a, b string) {
-
-}
-
-func (m MockLoggregatorEmitter) EmitLogMessage(message *logmessage.LogMessage) {
-	m.received <- message
-}
 
 func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	task, tmpdir := setupTask(t, 3)
@@ -50,7 +25,9 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	defer stdoutListener.Close()
 	defer stderrListener.Close()
 
-	receiveChannel := setupEmitter(t, task, testLogger)
+	emitter, receiveChannel := setupEmitter()
+	taskListner := deaagent.NewTaskListener(task, emitter, testLogger)
+	go taskListner.StartListening()
 
 	expectedMessage := "Some Output"
 	secondLogMessage := "toally different"
@@ -102,7 +79,9 @@ func TestThatWeHandleFourByteOffset(t *testing.T) {
 	defer stdoutListener.Close()
 	defer stderrListener.Close()
 
-	receiveChannel := setupEmitter(t, task, testLogger)
+	emitter, receiveChannel := setupEmitter()
+	taskListner := deaagent.NewTaskListener(task, emitter, testLogger)
+	go taskListner.StartListening()
 
 	expectedMessage := "Some Output"
 	secondLogMessage := "toally different"
@@ -148,7 +127,9 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	expectedMessage := "Some Output"
 	secondLogMessage := "toally different"
 
-	receiveChannel := setupEmitter(t, task, testLogger)
+	emitter, receiveChannel := setupEmitter()
+	taskListner := deaagent.NewTaskListener(task, emitter, testLogger)
+	go taskListner.StartListening()
 
 	connection, err := stderrListener.Accept()
 	defer connection.Close()
@@ -167,15 +148,13 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	assert.Equal(t, secondLogMessage, string(receivedMessage.GetMessage()))
 }
 
-func setupEmitter(t *testing.T, task *Task, logger *gosteno.Logger) chan *logmessage.LogMessage {
+func setupEmitter() (emitter.Emitter, chan *logmessage.LogMessage) {
 	mockLoggregatorEmitter := new(MockLoggregatorEmitter)
-
 	mockLoggregatorEmitter.received = make(chan *logmessage.LogMessage)
-	go task.startListening(mockLoggregatorEmitter, logger)
-	return mockLoggregatorEmitter.received
+	return mockLoggregatorEmitter, mockLoggregatorEmitter.received
 }
 
-func setupSockets(t *testing.T, task *Task) (net.Listener, net.Listener) {
+func setupSockets(t *testing.T, task *domain.Task) (net.Listener, net.Listener) {
 	stdoutSocketPath := filepath.Join(task.Identifier(), "stdout.sock")
 	stderrSocketPath := filepath.Join(task.Identifier(), "stderr.sock")
 	os.Remove(stdoutSocketPath)
@@ -187,11 +166,11 @@ func setupSockets(t *testing.T, task *Task) (net.Listener, net.Listener) {
 	return stdoutListener, stderrListener
 }
 
-func setupTask(t *testing.T, index uint64) (appTask *Task, tmpdir string) {
+func setupTask(t *testing.T, index uint64) (appTask *domain.Task, tmpdir string) {
 	tmpdir, err := ioutil.TempDir("", "testing")
 	assert.NoError(t, err)
 
-	appTask = &Task{
+	appTask = &domain.Task{
 		ApplicationId:       "1234",
 		WardenJobId:         56,
 		WardenContainerPath: tmpdir,

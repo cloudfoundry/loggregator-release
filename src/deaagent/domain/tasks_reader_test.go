@@ -1,6 +1,7 @@
-package deaagent
+package domain_test
 
 import (
+	"deaagent/domain"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"path"
@@ -10,16 +11,16 @@ import (
 
 func TestReadingTask(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
-	filepath := path.Join(path.Dir(filename), "..", "..", "samples", "dea_instances.json")
+	filepath := path.Join(path.Dir(filename), "..", "..", "..", "samples", "dea_instances.json")
 	json, _ := ioutil.ReadFile(filepath)
 
-	tasks, err := readTasks(json)
+	tasks, err := domain.ReadTasks(json)
 
 	assert.NoError(t, err)
 
 	assert.Equal(t, 2, len(tasks))
 
-	expectedInstanceTask := Task{
+	expectedInstanceTask := domain.Task{
 		ApplicationId:       "4aa9506e-277f-41ab-b764-a35c0b96fa1b",
 		Index:               0,
 		WardenJobId:         272,
@@ -27,7 +28,7 @@ func TestReadingTask(t *testing.T) {
 		SourceName:          "App",
 		DrainUrls:           []string{}}
 
-	expectedStagingTask := Task{
+	expectedStagingTask := domain.Task{
 		ApplicationId:       "23489sd0-f985-fjga-nsd1-sdg5lhd9nskh",
 		WardenJobId:         355,
 		WardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo2",
@@ -40,10 +41,10 @@ func TestReadingTask(t *testing.T) {
 
 func TestReadingMultipleTasks(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
-	filepath := path.Join(path.Dir(filename), "..", "..", "samples", "multi_instances.json")
+	filepath := path.Join(path.Dir(filename), "..", "..", "..", "samples", "multi_instances.json")
 	json, _ := ioutil.ReadFile(filepath)
 
-	tasks, err := readTasks(json)
+	tasks, err := domain.ReadTasks(json)
 
 	assert.NoError(t, err)
 
@@ -70,10 +71,10 @@ func TestReadingMultipleTasks(t *testing.T) {
 
 func TestReadingMultipleTasksWithDrainUrls(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
-	filepath := path.Join(path.Dir(filename), "..", "..", "samples", "multi_instances.json")
+	filepath := path.Join(path.Dir(filename), "..", "..", "..", "samples", "multi_instances.json")
 	json, _ := ioutil.ReadFile(filepath)
 
-	tasks, err := readTasks(json)
+	tasks, err := domain.ReadTasks(json)
 
 	assert.NoError(t, err)
 
@@ -88,10 +89,10 @@ func TestReadingMultipleTasksWithDrainUrls(t *testing.T) {
 
 func TestReadingStartingTasks(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
-	filepath := path.Join(path.Dir(filename), "..", "..", "samples", "starting_instances.json")
+	filepath := path.Join(path.Dir(filename), "..", "..", "..", "samples", "starting_instances.json")
 	json, _ := ioutil.ReadFile(filepath)
 
-	tasks, err := readTasks(json)
+	tasks, err := domain.ReadTasks(json)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 1, len(tasks))
@@ -102,27 +103,27 @@ func TestReadingStartingTasks(t *testing.T) {
 }
 
 func TestErrorHandlingWhenParsingEmptyData(t *testing.T) {
-	_, err := readTasks(make([]byte, 0))
+	_, err := domain.ReadTasks(make([]byte, 0))
 	assert.Error(t, err)
 
-	_, err = readTasks(make([]byte, 10))
+	_, err = domain.ReadTasks(make([]byte, 10))
 	assert.Error(t, err)
 
-	_, err = readTasks(nil)
+	_, err = domain.ReadTasks(nil)
 	assert.Error(t, err)
 }
 
 func TestErrorHandlingWithBadJson(t *testing.T) {
-	_, err := readTasks([]byte(`{ "instances" : [}`))
+	_, err := domain.ReadTasks([]byte(`{ "instances" : [}`))
 	assert.Error(t, err)
 }
 
 func TestReadingTasksIgnoresNonRunningInstances(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
-	filepath := path.Join(path.Dir(filename), "..", "..", "samples", "instances.crashed.json")
+	filepath := path.Join(path.Dir(filename), "..", "..", "..", "samples", "instances.crashed.json")
 	json, _ := ioutil.ReadFile(filepath)
 
-	tasks, err := readTasks(json)
+	tasks, err := domain.ReadTasks(json)
 
 	assert.NoError(t, err)
 
@@ -139,10 +140,10 @@ func TestReadingTasksIgnoresNonRunningInstances(t *testing.T) {
 
 func TestReadingTasksIgnoreStagingTasksWithoutWardenJobId(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
-	filepath := path.Join(path.Dir(filename), "..", "..", "samples", "staging_tasks.no_job_id.json")
+	filepath := path.Join(path.Dir(filename), "..", "..", "..", "samples", "staging_tasks.no_job_id.json")
 	json, _ := ioutil.ReadFile(filepath)
 
-	tasks, err := readTasks(json)
+	tasks, err := domain.ReadTasks(json)
 
 	assert.NoError(t, err)
 

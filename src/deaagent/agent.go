@@ -1,6 +1,7 @@
 package deaagent
 
 import (
+	"deaagent/domain"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/emitter"
 	"github.com/howeyc/fsnotify"
@@ -12,7 +13,7 @@ import (
 type agent struct {
 	InstancesJsonFilePath string
 	logger                *gosteno.Logger
-	knownInstancesChan    chan<- func(map[string]*Task)
+	knownInstancesChan    chan<- func(map[string]*TaskListener)
 }
 
 func NewAgent(instancesJsonFilePath string, logger *gosteno.Logger) *agent {
@@ -24,8 +25,8 @@ func (agent *agent) Start(emitter emitter.Emitter) {
 	go agent.pollInstancesJson(emitter)
 }
 
-func (agent *agent) processTasks(currentTasks map[string]Task, emitter emitter.Emitter) func(knownTasks map[string]*Task) {
-	return func(knownTasks map[string]*Task) {
+func (agent *agent) processTasks(currentTasks map[string]domain.Task, emitter emitter.Emitter) func(knownTasks map[string]*TaskListener) {
+	return func(knownTasks map[string]*TaskListener) {
 		agent.logger.Debug("Reading tasks data after event on instances.json")
 		agent.logger.Debugf("Current known tasks are %v", knownTasks)
 		for taskIdentifier, _ := range knownTasks {
@@ -33,7 +34,7 @@ func (agent *agent) processTasks(currentTasks map[string]Task, emitter emitter.E
 			if present {
 				continue
 			}
-			knownTasks[taskIdentifier].stopListening()
+			knownTasks[taskIdentifier].StopListening()
 			delete(knownTasks, taskIdentifier)
 			agent.logger.Debugf("Removing stale task %v", taskIdentifier)
 		}
@@ -45,13 +46,13 @@ func (agent *agent) processTasks(currentTasks map[string]Task, emitter emitter.E
 				continue
 			}
 			agent.logger.Debugf("Adding new task %s", task.Identifier())
-			knownTasks[identifier] = &task
+			knownTasks[identifier] = NewTaskListener(&task, emitter, agent.logger)
 
 			go func() {
 				defer func() {
 					agent.knownInstancesChan <- removeFromCache(identifier)
 				}()
-				knownTasks[identifier].startListening(emitter, agent.logger)
+				knownTasks[identifier].StartListening()
 			}()
 		}
 	}
@@ -98,7 +99,7 @@ func (agent *agent) readInstancesJson(emitter emitter.Emitter) {
 		return
 	}
 
-	currentTasks, err := readTasks(json)
+	currentTasks, err := domain.ReadTasks(json)
 	if err != nil {
 		agent.logger.Warnf("Failed parsing json %s: %v Trying again...\n", err, string(json))
 		return
@@ -107,23 +108,23 @@ func (agent *agent) readInstancesJson(emitter emitter.Emitter) {
 	agent.knownInstancesChan <- agent.processTasks(currentTasks, emitter)
 }
 
-func removeFromCache(taskId string) func(knownTasks map[string]*Task) {
-	return func(knownTasks map[string]*Task) {
+func removeFromCache(taskId string) func(knownTasks map[string]*TaskListener) {
+	return func(knownTasks map[string]*TaskListener) {
 		delete(knownTasks, taskId)
 	}
 }
 
-func resetCache(knownTasks map[string]*Task) {
+func resetCache(knownTasks map[string]*TaskListener) {
 	for _, task := range knownTasks {
-		task.stopListening()
+		task.StopListening()
 	}
-	knownTasks = make(map[string]*Task)
+	knownTasks = make(map[string]*TaskListener)
 }
 
-func atomicCacheOperator() chan<- func(map[string]*Task) {
-	operations := make(chan func(map[string]*Task))
+func atomicCacheOperator() chan<- func(map[string]*TaskListener) {
+	operations := make(chan func(map[string]*TaskListener))
 	go func() {
-		knownTasks := make(map[string]*Task)
+		knownTasks := make(map[string]*TaskListener)
 		for operation := range operations {
 			operation(knownTasks)
 		}

@@ -1,8 +1,10 @@
-package deaagent
+package loggingstream
 
 import (
 	"bufio"
 	"code.google.com/p/gogoprotobuf/proto"
+	"deaagent/domain"
+	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
@@ -16,7 +18,7 @@ import (
 
 type LoggingStream struct {
 	connection       net.Conn
-	task             *Task
+	task             *domain.Task
 	logger           *gosteno.Logger
 	messageType      logmessage.LogMessage_MessageType
 	messagesReceived uint64
@@ -24,7 +26,7 @@ type LoggingStream struct {
 	sync.Mutex
 }
 
-func NewLoggingStream(task *Task, logger *gosteno.Logger, messageType logmessage.LogMessage_MessageType) (ls *LoggingStream) {
+func NewLoggingStream(task *domain.Task, logger *gosteno.Logger, messageType logmessage.LogMessage_MessageType) (ls *LoggingStream) {
 	return &LoggingStream{task: task, logger: logger, messageType: messageType}
 }
 
@@ -41,29 +43,28 @@ func (ls *LoggingStream) Listen() <-chan *logmessage.LogMessage {
 		}
 		ls.setConnection(connection)
 
-		for {
-			scanner := bufio.NewScanner(connection)
-			for scanner.Scan() {
-				line := scanner.Bytes()
-				readCount := len(line)
-				if readCount < 1 {
-					continue
-				}
-				ls.logger.Debugf("Read %d bytes from task socket %s, %s", readCount, ls.messageType, ls.task.Identifier())
-				atomic.AddUint64(&ls.messagesReceived, 1)
-				atomic.AddUint64(&ls.bytesReceived, uint64(readCount))
-
-				messageChan <- ls.newLogMessage(line)
-
-				ls.logger.Debugf("Sent %d bytes to loggregator client from %s, %s", readCount, ls.messageType, ls.task.Identifier())
+		scanner := bufio.NewScanner(connection)
+		for scanner.Scan() {
+			line := scanner.Bytes()
+			readCount := len(line)
+			if readCount < 1 {
+				continue
 			}
-			err := scanner.Err()
-			if err == nil {
-				ls.logger.Debugf("EOF while reading from socket %s, %s", ls.messageType, ls.task.Identifier())
-				return
-			}
-			ls.logger.Infof("Error while reading from socket %s, %s, %s", ls.messageType, ls.task.Identifier(), err)
+			ls.logger.Debugf("Read %d bytes from task socket %s, %s", readCount, ls.messageType, ls.task.Identifier())
+			atomic.AddUint64(&ls.messagesReceived, 1)
+			atomic.AddUint64(&ls.bytesReceived, uint64(readCount))
+
+			messageChan <- ls.newLogMessage(line)
+
+			ls.logger.Debugf("Sent %d bytes to loggregator client from %s, %s", readCount, ls.messageType, ls.task.Identifier())
 		}
+		err = scanner.Err()
+
+		if err != nil {
+			ls.logger.Infof("Error while reading from socket %s, %s, %s", ls.messageType, ls.task.Identifier(), err)
+			return
+		}
+		ls.logger.Debugf("EOF while reading from socket %s, %s", ls.messageType, ls.task.Identifier())
 	}()
 
 	return messageChan
@@ -119,9 +120,13 @@ func (ls *LoggingStream) newLogMessage(message []byte) *logmessage.LogMessage {
 	currentTime := time.Now()
 	sourceName := ls.task.SourceName
 	sourceId := strconv.FormatUint(ls.task.Index, 10)
-
+	messageCopy := make([]byte, len(message))
+	copyCount := copy(messageCopy, message)
+	if copyCount != len(message) {
+		panic(fmt.Sprintf("Didn't copy the message %d, %s", copyCount, message))
+	}
 	return &logmessage.LogMessage{
-		Message:     message,
+		Message:     messageCopy,
 		AppId:       proto.String(ls.task.ApplicationId),
 		DrainUrls:   ls.task.DrainUrls,
 		MessageType: &ls.messageType,

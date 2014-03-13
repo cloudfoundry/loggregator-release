@@ -1,6 +1,8 @@
-package deaagent
+package deaagent_test
 
 import (
+	"deaagent"
+	"deaagent/domain"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/stretchr/testify/assert"
@@ -12,6 +14,8 @@ import (
 	"time"
 )
 
+const SOCKET_PREFIX = "\n\n\n\n"
+
 var tmpdir string
 
 func init() {
@@ -20,6 +24,22 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+type MockLoggregatorEmitter struct {
+	received chan *logmessage.LogMessage
+}
+
+func (m MockLoggregatorEmitter) Emit(a, b string) {
+
+}
+
+func (m MockLoggregatorEmitter) EmitError(a, b string) {
+
+}
+
+func (m MockLoggregatorEmitter) EmitLogMessage(message *logmessage.LogMessage) {
+	m.received <- message
 }
 
 func createFile(t *testing.T) *os.File {
@@ -43,7 +63,7 @@ func writeToFile(t *testing.T, text string, truncate bool) {
 }
 
 func filePath() string {
-	return tmpdir + "/config.json"
+	return tmpdir + "/instances.json"
 }
 
 func loggregatorAddress() string {
@@ -51,7 +71,7 @@ func loggregatorAddress() string {
 }
 
 func TestTheAgentMonitorsChangesInTasks(t *testing.T) {
-	helperTask1 := &Task{
+	helperTask1 := &domain.Task{
 		ApplicationId:       "1234",
 		SourceName:          "App",
 		WardenJobId:         56,
@@ -70,7 +90,7 @@ func TestTheAgentMonitorsChangesInTasks(t *testing.T) {
 	defer task1StderrListener.Close()
 	assert.NoError(t, err)
 
-	helperTask2 := &Task{
+	helperTask2 := &domain.Task{
 		ApplicationId:       "5678",
 		SourceName:          "App",
 		WardenJobId:         58,
@@ -97,7 +117,7 @@ func TestTheAgentMonitorsChangesInTasks(t *testing.T) {
 
 	writeToFile(t, `{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3}]}`, true)
 
-	agent := NewAgent(filePath(), loggertesthelper.Logger())
+	agent := deaagent.NewAgent(filePath(), loggertesthelper.Logger())
 	go agent.Start(mockLoggregatorEmitter)
 
 	task1Connection, err := task1StdoutListener.Accept()
@@ -150,7 +170,7 @@ func xTestThatFunctionContinuesToPollWhenFileCantBeOpened(t *testing.T) {
 	os.Remove(filePath())
 	os.Remove(task1StdoutSocketPath)
 	os.Remove(task1StderrSocketPath)
-	agent := NewAgent(filePath(), loggertesthelper.StdOutLogger())
+	agent := deaagent.NewAgent(filePath(), loggertesthelper.StdOutLogger())
 	mockLoggregatorEmitter := new(MockLoggregatorEmitter)
 
 	mockLoggregatorEmitter.received = make(chan *logmessage.LogMessage, 2)

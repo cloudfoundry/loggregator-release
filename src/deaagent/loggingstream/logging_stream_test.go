@@ -1,7 +1,9 @@
-package deaagent_test
+package loggingstream_test
 
 import (
-	"deaagent"
+	"deaagent/domain"
+	"deaagent/loggingstream"
+	"fmt"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	. "github.com/onsi/ginkgo"
@@ -15,14 +17,14 @@ import (
 
 var _ = Describe("LoggingStream", func() {
 
-	var loggingStream *deaagent.LoggingStream
+	var loggingStream *loggingstream.LoggingStream
 	var socketPath string
 
 	BeforeEach(func() {
 		tmpdir, _ := ioutil.TempDir("", "testing")
-		task := &deaagent.Task{
+		task := &domain.Task{
 			ApplicationId:       "1234",
-			WardenJobId:         56,
+			WardenJobId:         42,
 			WardenContainerPath: tmpdir,
 			Index:               1,
 			SourceName:          "App",
@@ -32,7 +34,8 @@ var _ = Describe("LoggingStream", func() {
 		os.MkdirAll(value, 0777)
 
 		socketPath = filepath.Join(task.Identifier(), "stdout.sock")
-		loggingStream = deaagent.NewLoggingStream(task, loggertesthelper.Logger(), logmessage.LogMessage_OUT)
+		loggingStream = loggingstream.NewLoggingStream(task, loggertesthelper.Logger(), logmessage.LogMessage_OUT)
+		loggertesthelper.TestLoggerSink.Clear()
 	})
 
 	Describe("Listen", func() {
@@ -48,6 +51,50 @@ var _ = Describe("LoggingStream", func() {
 			Expect(string(logContents)).To(ContainSubstring("Could not read from socket OUT"))
 			Expect(string(logContents)).To(ContainSubstring("EOF while reading from socket OUT"))
 			close(done)
+		})
+
+		Context("with a socket already running", func() {
+
+			var listener net.Listener
+			var messagesToSend chan string
+
+			BeforeEach(func() {
+				listener, _ = net.Listen("unix", socketPath)
+				messagesToSend = make(chan string)
+				go func() {
+					connection, _ := listener.Accept()
+					connection.Write([]byte("Test Message\n"))
+					for msg := range messagesToSend {
+						loggertesthelper.Logger().Debugf("writing %s", msg)
+						connection.Write([]byte(msg))
+					}
+				}()
+			})
+
+			AfterEach(func() {
+				listener.Close()
+				close(messagesToSend)
+			})
+
+			It("should read from the socket", func(done Done) {
+				channel := loggingStream.Listen()
+
+				message := <-channel
+				Expect(string(message.GetMessage())).To(Equal("Test Message"))
+
+				for i := 0; i < 5; i++ {
+					time.Sleep(100 * time.Millisecond)
+					testMessage := fmt.Sprintf("Another Test Message %d", i)
+					messagesToSend <- testMessage + "\n"
+					message := <-channel
+					Expect(string(message.GetMessage())).To(Equal(testMessage))
+				}
+
+				logContents := loggertesthelper.TestLoggerSink.LogContents()
+				Expect(string(logContents)).To(ContainSubstring("Opened socket OUT"))
+				close(done)
+			}, 5)
+
 		})
 	})
 
@@ -82,5 +129,4 @@ func sendMessageToSocket(path, message string) {
 	connection, _ := listener.Accept()
 	defer connection.Close()
 	connection.Write([]byte(message + "\n"))
-
 }
