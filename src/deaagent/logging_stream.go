@@ -1,130 +1,111 @@
 package deaagent
 
 import (
+	"bufio"
 	"code.google.com/p/gogoprotobuf/proto"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"github.com/cloudfoundry/loggregatorlib/emitter"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"net"
 	"path/filepath"
-	"runtime"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"time"
 )
 
-type loggingStream struct {
-	task             task
-	emitter          emitter.Emitter
+type LoggingStream struct {
+	connection       net.Conn
+	task             *Task
 	logger           *gosteno.Logger
 	messageType      logmessage.LogMessage_MessageType
-	messagesReceived *uint64
-	bytesReceived    *uint64
+	messagesReceived uint64
+	bytesReceived    uint64
+	sync.Mutex
 }
 
-const bufferSize = 4096
-
-func newLoggingStream(task task, emitter emitter.Emitter, logger *gosteno.Logger, messageType logmessage.LogMessage_MessageType) (ls *loggingStream) {
-	return &loggingStream{task, emitter, logger, messageType, new(uint64), new(uint64)}
+func NewLoggingStream(task *Task, logger *gosteno.Logger, messageType logmessage.LogMessage_MessageType) (ls *LoggingStream) {
+	return &LoggingStream{task: task, logger: logger, messageType: messageType}
 }
 
-func (ls loggingStream) listen() {
-	newLogMessage := func(message []byte) *logmessage.LogMessage {
-		currentTime := time.Now()
-		sourceName := ls.task.sourceName
-		sourceId := strconv.FormatUint(ls.task.index, 10)
+func (ls *LoggingStream) Listen() <-chan *logmessage.LogMessage {
 
-		return &logmessage.LogMessage{
-			Message:     message,
-			AppId:       proto.String(ls.task.applicationId),
-			DrainUrls:   ls.task.drainUrls,
-			MessageType: &ls.messageType,
-			SourceName:  &sourceName,
-			SourceId:    &sourceId,
-			Timestamp:   proto.Int64(currentTime.UnixNano()),
-		}
-	}
-
-	socket := func(messageType logmessage.LogMessage_MessageType) (net.Conn, error) {
-		return net.Dial("unix", filepath.Join(ls.task.identifier(), socketName(messageType)))
-	}
+	messageChan := make(chan *logmessage.LogMessage, 1024)
 
 	go func() {
-		var connection net.Conn
-		i := 0
-		for {
-			var err error
-			connection, err = socket(ls.messageType)
-			if err == nil {
-				break
-			} else {
-				ls.logger.Errorf("Error while dialing into socket %s, %s, %s", ls.messageType, ls.task.identifier(), err)
-				i += 1
-				if i < 86400 {
-					time.Sleep(1 * time.Second)
-				} else {
-					ls.logger.Errorf("Giving up after %d tries dialing into socket %s, %s, %s", i, ls.messageType, ls.task.identifier(), err)
-					return
-				}
-			}
+		defer close(messageChan)
+		connection, err := ls.connect()
+		if err != nil {
+			ls.logger.Infof("Error while reading from socket %s, %s, %s", ls.messageType, ls.task.Identifier(), err)
+			return
 		}
-
-		defer func() {
-			connection.Close()
-			ls.logger.Infof("Stopped reading from socket %s, %s", ls.messageType, ls.task.identifier())
-		}()
-
-		buffer := make([]byte, bufferSize)
-		totalRead := 0
-		const _skippedBytes = 4
+		ls.setConnection(connection)
 
 		for {
-			readCount, err := connection.Read(buffer)
-			if err != nil {
-				ls.logger.Infof("Error while reading from socket %s, %s, %s", ls.messageType, ls.task.identifier(), err)
-				break
-			}
-
-			ls.logger.Debugf("Read %d bytes from task socket %s, %s", readCount, ls.messageType, ls.task.identifier())
-			atomic.AddUint64(ls.messagesReceived, 1)
-			atomic.AddUint64(ls.bytesReceived, uint64(readCount))
-
-			skipCount := 0
-			if totalRead < _skippedBytes {
-				skipCount = _skippedBytes - totalRead
-				if skipCount > readCount {
-					skipCount = readCount
+			scanner := bufio.NewScanner(connection)
+			for scanner.Scan() {
+				line := scanner.Bytes()
+				readCount := len(line)
+				if readCount < 1 {
+					continue
 				}
+				ls.logger.Debugf("Read %d bytes from task socket %s, %s", readCount, ls.messageType, ls.task.Identifier())
+				atomic.AddUint64(&ls.messagesReceived, 1)
+				atomic.AddUint64(&ls.bytesReceived, uint64(readCount))
 
-				ls.logger.Debugf("Skipping %d bytes from task socket (offset message)", skipCount)
+				messageChan <- ls.newLogMessage(line)
+
+				ls.logger.Debugf("Sent %d bytes to loggregator client from %s, %s", readCount, ls.messageType, ls.task.Identifier())
 			}
-			totalRead += readCount
-
-			if readCount > skipCount {
-				rawMessageBytes := make([]byte, readCount-skipCount)
-				copy(rawMessageBytes, buffer[skipCount:readCount])
-
-				ls.logger.Debugf("This is the message we just read % 02x", rawMessageBytes)
-				logMessage := newLogMessage(rawMessageBytes)
-
-				ls.emitter.EmitLogMessage(logMessage)
-
-				ls.logger.Debugf("Sent %d bytes to loggregator client from %s, %s", readCount-skipCount, ls.messageType, ls.task.identifier())
+			err := scanner.Err()
+			if err == nil {
+				ls.logger.Debugf("EOF while reading from socket %s, %s", ls.messageType, ls.task.Identifier())
+				return
 			}
-
-			runtime.Gosched()
+			ls.logger.Infof("Error while reading from socket %s, %s, %s", ls.messageType, ls.task.Identifier(), err)
 		}
 	}()
+
+	return messageChan
 }
 
-func (ls loggingStream) Emit() instrumentation.Context {
-	return instrumentation.Context{Name: "loggingStream:" + ls.task.wardenContainerPath + " type " + socketName(ls.messageType),
+func (ls *LoggingStream) setConnection(connection net.Conn) {
+	ls.Lock()
+	defer ls.Unlock()
+	ls.connection = connection
+}
+
+func (ls *LoggingStream) Stop() {
+	ls.Lock()
+	defer ls.Unlock()
+	if ls.connection != nil {
+		ls.connection.Close()
+	}
+	ls.logger.Infof("Stopped reading from socket %s, %s", ls.messageType, ls.task.Identifier())
+}
+
+func (ls *LoggingStream) Emit() instrumentation.Context {
+	return instrumentation.Context{Name: "loggingStream:" + ls.task.WardenContainerPath + " type " + socketName(ls.messageType),
 		Metrics: []instrumentation.Metric{
-			instrumentation.Metric{Name: "receivedMessageCount", Value: atomic.LoadUint64(ls.messagesReceived)},
-			instrumentation.Metric{Name: "receivedByteCount", Value: atomic.LoadUint64(ls.bytesReceived)},
+			instrumentation.Metric{Name: "receivedMessageCount", Value: atomic.LoadUint64(&ls.messagesReceived)},
+			instrumentation.Metric{Name: "receivedByteCount", Value: atomic.LoadUint64(&ls.bytesReceived)},
 		},
 	}
+}
+
+func (ls *LoggingStream) connect() (net.Conn, error) {
+	var err error
+	var connection net.Conn
+	for i := 0; i < 10; i++ {
+		connection, err = net.Dial("unix", filepath.Join(ls.task.Identifier(), socketName(ls.messageType)))
+		if err == nil {
+			ls.logger.Debugf("Opened socket %s, %s", ls.messageType, ls.task.Identifier())
+			break
+		}
+		ls.logger.Debugf("Could not read from socket %s, %s, retrying: %s", ls.messageType, ls.task.Identifier(), err)
+		time.Sleep(100 * time.Millisecond)
+	}
+	return connection, err
 }
 
 func socketName(messageType logmessage.LogMessage_MessageType) string {
@@ -132,4 +113,20 @@ func socketName(messageType logmessage.LogMessage_MessageType) string {
 		return "stdout.sock"
 	}
 	return "stderr.sock"
+}
+
+func (ls *LoggingStream) newLogMessage(message []byte) *logmessage.LogMessage {
+	currentTime := time.Now()
+	sourceName := ls.task.SourceName
+	sourceId := strconv.FormatUint(ls.task.Index, 10)
+
+	return &logmessage.LogMessage{
+		Message:     message,
+		AppId:       proto.String(ls.task.ApplicationId),
+		DrainUrls:   ls.task.DrainUrls,
+		MessageType: &ls.messageType,
+		SourceName:  &sourceName,
+		SourceId:    &sourceId,
+		Timestamp:   proto.Int64(currentTime.UnixNano()),
+	}
 }

@@ -19,20 +19,20 @@ func TestReadingTask(t *testing.T) {
 
 	assert.Equal(t, 2, len(tasks))
 
-	expectedInstanceTask := task{
-		applicationId:       "4aa9506e-277f-41ab-b764-a35c0b96fa1b",
-		index:               0,
-		wardenJobId:         272,
-		wardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo1",
-		sourceName:          "App",
-		drainUrls:           []string{}}
+	expectedInstanceTask := Task{
+		ApplicationId:       "4aa9506e-277f-41ab-b764-a35c0b96fa1b",
+		Index:               0,
+		WardenJobId:         272,
+		WardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo1",
+		SourceName:          "App",
+		DrainUrls:           []string{}}
 
-	expectedStagingTask := task{
-		applicationId:       "23489sd0-f985-fjga-nsd1-sdg5lhd9nskh",
-		wardenJobId:         355,
-		wardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo2",
-		sourceName:          "STG",
-		drainUrls:           []string{}}
+	expectedStagingTask := Task{
+		ApplicationId:       "23489sd0-f985-fjga-nsd1-sdg5lhd9nskh",
+		WardenJobId:         355,
+		WardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo2",
+		SourceName:          "STG",
+		DrainUrls:           []string{}}
 
 	assert.Equal(t, expectedInstanceTask, tasks["/var/vcap/data/warden/depot/16vbs06ibo1/jobs/272"])
 	assert.Equal(t, expectedStagingTask, tasks["/var/vcap/data/warden/depot/16vbs06ibo2/jobs/355"])
@@ -61,7 +61,7 @@ func TestReadingMultipleTasks(t *testing.T) {
 
 	i := 0
 	for _, task := range tasks {
-		applicationIds[i] = task.applicationId
+		applicationIds[i] = task.ApplicationId
 		i++
 	}
 
@@ -77,13 +77,13 @@ func TestReadingMultipleTasksWithDrainUrls(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	assert.Nil(t, tasks["/var/vcap/data/warden/depot/170os7ali6q/jobs/15"].drainUrls)
-	assert.Equal(t, tasks["/var/vcap/data/warden/depot/123ajkljfa/jobs/13"].drainUrls, []string{})
-	assert.Equal(t, tasks["/var/vcap/data/warden/depot/345asndhaena/jobs/12"].drainUrls, []string{"syslog://10.20.30.40:8050"})
+	assert.Nil(t, tasks["/var/vcap/data/warden/depot/170os7ali6q/jobs/15"].DrainUrls)
+	assert.Equal(t, tasks["/var/vcap/data/warden/depot/123ajkljfa/jobs/13"].DrainUrls, []string{})
+	assert.Equal(t, tasks["/var/vcap/data/warden/depot/345asndhaena/jobs/12"].DrainUrls, []string{"syslog://10.20.30.40:8050"})
 
-	assert.Nil(t, tasks["/var/vcap/data/warden/depot/17fsdo7qpeq/jobs/46"].drainUrls)
-	assert.Equal(t, tasks["/var/vcap/data/warden/depot/17fsdo7qper/jobs/49"].drainUrls, []string{})
-	assert.Equal(t, tasks["/var/vcap/data/warden/depot/17fsdo7qpes/jobs/56"].drainUrls, []string{"syslog://10.20.30.40:8050"})
+	assert.Nil(t, tasks["/var/vcap/data/warden/depot/17fsdo7qpeq/jobs/46"].DrainUrls)
+	assert.Equal(t, tasks["/var/vcap/data/warden/depot/17fsdo7qper/jobs/49"].DrainUrls, []string{})
+	assert.Equal(t, tasks["/var/vcap/data/warden/depot/17fsdo7qpes/jobs/56"].DrainUrls, []string{"syslog://10.20.30.40:8050"})
 }
 
 func TestReadingStartingTasks(t *testing.T) {
