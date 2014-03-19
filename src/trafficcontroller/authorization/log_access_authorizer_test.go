@@ -1,11 +1,15 @@
 package authorization
 
 import (
+	"bytes"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"regexp"
+	"runtime/pprof"
 	"testing"
+	"time"
 )
 
 var accessTests = []struct {
@@ -59,6 +63,40 @@ func TestWorksIfServerIsSSLWithoutValidCertAndSkipVerifyCertIsTrue(t *testing.T)
 	result = authorizer("bearer something", "myAppId", logger)
 	if result != false {
 		t.Errorf("Should not be able to connect to secure server with a self signed cert if SkipVerifyCert is false.")
+	}
+}
+
+func TestThatThereIsNoLeakingGoRoutine(t *testing.T) {
+	logger := loggertesthelper.Logger()
+	server := startHTTPServer()
+	defer server.Close()
+
+	authorizer := NewLogAccessAuthorizer(server.URL, true)
+	authorizer("bearer something", "myAppId", logger)
+	time.Sleep(10 * time.Millisecond)
+
+	var buf bytes.Buffer
+	goRoutineProfiles := pprof.Lookup("goroutine")
+	goRoutineProfiles.WriteTo(&buf, 2)
+
+	match, err := regexp.Match("readLoop", buf.Bytes())
+	if err != nil {
+		t.Error("Unable to match /readLoop/ regexp against goRoutineProfile")
+		goRoutineProfiles.WriteTo(os.Stdout, 2)
+	}
+
+	if match {
+		t.Error("We are leaking readLoop goroutines.")
+	}
+
+	match, err = regexp.Match("writeLoop", buf.Bytes())
+	if err != nil {
+		t.Error("Unable to match /writeLoop/ regexp against goRoutineProfile")
+	}
+
+	if match {
+		t.Error("We are leaking writeLoop goroutines.")
+		goRoutineProfiles.WriteTo(os.Stdout, 2)
 	}
 }
 

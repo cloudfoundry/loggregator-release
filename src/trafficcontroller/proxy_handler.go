@@ -56,7 +56,7 @@ func (handler *handler) proxyConnectionTo(server *websocket.Conn) {
 	var logMessage []byte
 	defer server.Close()
 	defer handler.Done()
-	count := 0
+
 	for {
 		_, data, err := server.ReadMessage()
 
@@ -66,8 +66,6 @@ func (handler *handler) proxyConnectionTo(server *websocket.Conn) {
 		}
 
 		handler.logger.Debugf("Output Proxy: Got message from server %v bytes", len(logMessage))
-
-		count++
 
 		err = handler.writeMessage(data)
 

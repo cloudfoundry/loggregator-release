@@ -10,7 +10,7 @@ type LogAccessAuthorizer func(authToken string, appId string, logger *gosteno.Lo
 
 func NewLogAccessAuthorizer(apiHost string, skipCertVerify bool) LogAccessAuthorizer {
 
-	isAccessAllowed := func(target string, authToken string, logger *gosteno.Logger) bool {
+	isAccessAllowed := func(authToken string, target string, logger *gosteno.Logger) bool {
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: skipCertVerify},
 		}
@@ -23,6 +23,9 @@ func NewLogAccessAuthorizer(apiHost string, skipCertVerify bool) LogAccessAuthor
 			logger.Errorf("Could not get app information: [%s]", err)
 			return false
 		}
+
+		defer res.Body.Close()
+
 		if res.StatusCode != 200 {
 			logger.Warnf("Non 200 response from CC API: %d", res.StatusCode)
 			return false
@@ -30,9 +33,5 @@ func NewLogAccessAuthorizer(apiHost string, skipCertVerify bool) LogAccessAuthor
 		return true
 	}
 
-	authorizer := func(authToken string, appId string, logger *gosteno.Logger) bool {
-		return isAccessAllowed(appId, authToken, logger)
-	}
-
-	return LogAccessAuthorizer(authorizer)
+	return LogAccessAuthorizer(isAccessAllowed)
 }
