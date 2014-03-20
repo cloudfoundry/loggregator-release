@@ -131,11 +131,11 @@ func TestTheAgentMonitorsChangesInTasks(t *testing.T) {
 	                               ]}`, true)
 
 	connectionChannel := make(chan net.Conn)
-	go func(){
+	go func() {
 		task2Connection, _ := task2StdoutListener.Accept()
 		connectionChannel <- task2Connection
 	}()
-    var task2Connection net.Conn
+	var task2Connection net.Conn
 	select {
 	case task2Connection = <-connectionChannel:
 		defer task2Connection.Close()

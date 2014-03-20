@@ -46,13 +46,14 @@ func (agent *agent) processTasks(currentTasks map[string]domain.Task, emitter em
 				continue
 			}
 			agent.logger.Debugf("Adding new task %s", task.Identifier())
-			knownTasks[identifier] = NewTaskListener(task, emitter, agent.logger)
+			listener := NewTaskListener(task, emitter, agent.logger)
+			knownTasks[identifier] = listener
 
 			go func() {
 				defer func() {
 					agent.knownInstancesChan <- removeFromCache(identifier)
 				}()
-				knownTasks[identifier].StartListening()
+				listener.StartListening()
 			}()
 		}
 	}
