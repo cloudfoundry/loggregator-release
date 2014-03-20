@@ -138,6 +138,18 @@ func TestReadingTasksIgnoresNonRunningInstances(t *testing.T) {
 	}
 }
 
+func TestReadingTasksIgnoresTasksWithouteWardenContainerPathOrJobId(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	filepath := path.Join(path.Dir(filename), "..", "..", "..", "samples", "instances.no_warden_path_or_id.json")
+	json, _ := ioutil.ReadFile(filepath)
+
+	tasks, err := domain.ReadTasks(json)
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, 0, len(tasks))
+}
+
 func TestReadingTasksIgnoreStagingTasksWithoutWardenJobId(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	filepath := path.Join(path.Dir(filename), "..", "..", "..", "samples", "staging_tasks.no_job_id.json")

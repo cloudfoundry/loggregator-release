@@ -43,7 +43,7 @@ func ReadTasks(data []byte) (map[string]Task, error) {
 	}
 	tasks := make(map[string]Task, len(jsonInstances.Instances))
 	for _, jsonInstance := range jsonInstances.Instances {
-		if jsonInstance.Warden_job_id == 0 {
+		if jsonInstance.Warden_container_path == "" || jsonInstance.Warden_job_id == 0 {
 			continue
 		}
 		if jsonInstance.State == "RUNNING" || jsonInstance.State == "STARTING" {
