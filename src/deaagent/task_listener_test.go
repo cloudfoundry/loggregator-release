@@ -26,7 +26,7 @@ func TestThatWeListenToStdOutUnixSocket(t *testing.T) {
 	defer stderrListener.Close()
 
 	emitter, receiveChannel := setupEmitter()
-	taskListner := deaagent.NewTaskListener(task, emitter, testLogger)
+	taskListner := deaagent.NewTaskListener(*task, emitter, testLogger)
 	go taskListner.StartListening()
 
 	expectedMessage := "Some Output"
@@ -80,7 +80,7 @@ func TestThatWeHandleFourByteOffset(t *testing.T) {
 	defer stderrListener.Close()
 
 	emitter, receiveChannel := setupEmitter()
-	taskListner := deaagent.NewTaskListener(task, emitter, testLogger)
+	taskListner := deaagent.NewTaskListener(*task, emitter, testLogger)
 	go taskListner.StartListening()
 
 	expectedMessage := "Some Output"
@@ -128,7 +128,7 @@ func TestThatWeListenToStdErrUnixSocket(t *testing.T) {
 	secondLogMessage := "toally different"
 
 	emitter, receiveChannel := setupEmitter()
-	taskListner := deaagent.NewTaskListener(task, emitter, testLogger)
+	taskListner := deaagent.NewTaskListener(*task, emitter, testLogger)
 	go taskListner.StartListening()
 
 	connection, err := stderrListener.Accept()

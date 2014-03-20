@@ -15,13 +15,13 @@ type TaskListener struct {
 	stdOutListener, stdErrListener *loggingstream.LoggingStream
 }
 
-func NewTaskListener(task *domain.Task, e emitter.Emitter, logger *gosteno.Logger) *TaskListener {
+func NewTaskListener(task domain.Task, e emitter.Emitter, logger *gosteno.Logger) *TaskListener {
 	return &TaskListener{
 		Logger:         logger,
 		emitter:        e,
 		taskIdentifier: task.Identifier(),
-		stdOutListener: loggingstream.NewLoggingStream(task, logger, logmessage.LogMessage_OUT),
-		stdErrListener: loggingstream.NewLoggingStream(task, logger, logmessage.LogMessage_ERR),
+		stdOutListener: loggingstream.NewLoggingStream(&task, logger, logmessage.LogMessage_OUT),
+		stdErrListener: loggingstream.NewLoggingStream(&task, logger, logmessage.LogMessage_ERR),
 	}
 }
 

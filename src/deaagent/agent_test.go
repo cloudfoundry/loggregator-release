@@ -125,11 +125,23 @@ func TestTheAgentMonitorsChangesInTasks(t *testing.T) {
 	assert.NoError(t, err)
 
 	writeToFile(t, `{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3},
-	                               {"state": "RUNNING", "application_id": "5678", "warden_job_id": 58, "warden_container_path":"`+tmpdir+`", "instance_index": 0}]}`, true)
+								   {"state": "RUNNING", "application_id": "5678", "warden_job_id": 58, "warden_container_path":"`+tmpdir+`", "instance_index": 0},
+	                               {"state": "RUNNING", "application_id": "1234", "warden_job_id": 57, "warden_container_path":"`+tmpdir+`", "instance_index": 2},
+	                               {"state": "RUNNING", "application_id": "3456", "warden_job_id": 59, "warden_container_path":"`+tmpdir+`", "instance_index": 1}
+	                               ]}`, true)
 
-	task2Connection, err := task2StdoutListener.Accept()
-	defer task2Connection.Close()
-	assert.NoError(t, err)
+	connectionChannel := make(chan net.Conn)
+	go func(){
+		task2Connection, _ := task2StdoutListener.Accept()
+		connectionChannel <- task2Connection
+	}()
+    var task2Connection net.Conn
+	select {
+	case task2Connection = <-connectionChannel:
+		defer task2Connection.Close()
+	case <-time.After(1 * time.Second):
+		t.Fatal("Should have been able to open the socket listener")
+	}
 
 	_, err = task1Connection.Write([]byte(SOCKET_PREFIX + expectedMessage))
 	_, err = task1Connection.Write([]byte("\n"))
