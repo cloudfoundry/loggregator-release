@@ -115,7 +115,7 @@ func (gc *GroupedSinks) DumpFor(appId string) *dump.DumpSink {
 	return appCache[appId].s.(*dump.DumpSink)
 }
 
-func (gc *GroupedSinks) Delete(sink sinks.Sink) bool {
+func (gc *GroupedSinks) CloseAndDelete(sink sinks.Sink) bool {
 	gc.Lock()
 	defer gc.Unlock()
 	wrapper, ok := gc.apps[sink.AppId()][sink.Identifier()]

@@ -11,6 +11,7 @@ import (
 	"loggregator/sinkserver/sinkmanager"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -56,26 +57,34 @@ func (w *WebsocketServer) Stop() {
 }
 
 func (w *WebsocketServer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	var handler func(string, *websocket.Conn)
+
+	switch r.URL.Path {
+	case TAIL_LOGS_PATH:
+		handler = w.streamLogs
+	case RECENT_LOGS_PATH:
+		handler = w.recentLogs
+	default:
+		http.Error(rw, "invalid path "+r.URL.Path, 400)
+		return
+	}
+
 	appId, err := w.validate(r)
 	if err != nil {
 		http.Error(rw, err.Error(), 400)
 		return
 	}
+
 	ws, err := websocket.Upgrade(rw, r, nil, 1024, 1024)
 	if err != nil {
 		http.Error(rw, err.Error(), 400)
 		return
 	}
+
 	defer ws.Close()
-	switch r.URL.Path {
-	case TAIL_LOGS_PATH:
-		w.streamLogs(appId, ws)
-	case RECENT_LOGS_PATH:
-		w.recentLogs(appId, ws)
-	default:
-		http.Error(rw, err.Error(), 400)
-		return
-	}
+	defer ws.WriteControl(websocket.CloseMessage, []byte{}, time.Time{})
+
+	handler(appId, ws)
 }
 
 func (w *WebsocketServer) validate(r *http.Request) (string, error) {
@@ -89,21 +98,23 @@ func (w *WebsocketServer) validate(r *http.Request) (string, error) {
 }
 
 func (w *WebsocketServer) streamLogs(appId string, ws *websocket.Conn) {
-	defer ws.WriteControl(websocket.CloseMessage, []byte{}, time.Time{})
+	w.logger.Debugf("WebsocketServer: Requesting a wss sink for app %s", appId)
 	websocketSink := sinks.NewWebsocketSink(
 		appId,
 		w.logger,
 		ws,
-		w.keepAliveInterval,
 		w.bufferSize,
 	)
-	w.logger.Debugf("WebsocketServer: Requesting a wss sink for app %s", websocketSink.AppId())
-	w.sinkManager.RegisterSink(websocketSink, false)
+
+	w.sinkManager.RegisterSink(websocketSink)
+
+	timeoutOccurred := w.waitForKeepAliveTimeout(ws)
+	if timeoutOccurred {
+		w.sinkManager.UnregisterSink(websocketSink)
+	}
 }
 
 func (w *WebsocketServer) recentLogs(appId string, ws *websocket.Conn) {
-	defer ws.WriteControl(websocket.CloseMessage, []byte{}, time.Time{})
-
 	logMessages := w.sinkManager.RecentLogsFor(appId)
 	sendMessagesToWebsocket(logMessages, ws, w.logger)
 }
@@ -122,4 +133,18 @@ func sendMessagesToWebsocket(logMessages []*logmessage.Message, ws *websocket.Co
 			logger.Debugf("Dump Sink %s: Successfully sent data", ws.RemoteAddr())
 		}
 	}
+}
+
+func (w *WebsocketServer) waitForKeepAliveTimeout(ws *websocket.Conn) bool {
+	var err error
+	for {
+		ws.SetReadDeadline(time.Now().Add(w.keepAliveInterval))
+		_, _, err = ws.ReadMessage()
+		if err != nil {
+			break
+		}
+	}
+
+	w.logger.Debugf("Websocket Sink %s: Error receiving keep-alive. Stopping listening. Err: %v", ws.RemoteAddr(), err)
+	return strings.Contains(err.Error(), "i/o timeout")
 }

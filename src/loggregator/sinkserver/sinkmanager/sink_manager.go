@@ -80,7 +80,7 @@ func (sinkManager *SinkManager) listenForDeletedAppServices(deletedAppServiceCha
 	for appService := range deletedAppServiceChan {
 		syslogSink := sinkManager.sinks.DrainFor(appService.AppId, appService.Url)
 		if syslogSink != nil {
-			sinkManager.unregisterSink(syslogSink)
+			sinkManager.UnregisterSink(syslogSink)
 		}
 	}
 }
@@ -102,7 +102,7 @@ func (sinkManager *SinkManager) listenForErrorMessages() {
 	}
 }
 
-func (sinkManager *SinkManager) RegisterSink(sink sinks.Sink, block ...bool) bool {
+func (sinkManager *SinkManager) RegisterSink(sink sinks.Sink) bool {
 	inputChan := make(chan *logmessage.Message)
 	ok := sinkManager.sinks.Register(inputChan, sink)
 	if !ok {
@@ -112,21 +112,18 @@ func (sinkManager *SinkManager) RegisterSink(sink sinks.Sink, block ...bool) boo
 	sinkManager.Metrics.Inc(sink)
 
 	sinkManager.logger.Infof("SinkManager: Sink with identifier %v requested. Opened it.", sink.Identifier())
-	if len(block) > 0 {
+
+	go func() {
 		sink.Run(inputChan)
-		sinkManager.unregisterSink(sink)
-	} else {
-		go func() {
-			sink.Run(inputChan)
-			sinkManager.unregisterSink(sink)
-		}()
-	}
+		sinkManager.UnregisterSink(sink)
+	}()
+
 	return true
 }
 
-func (sinkManager *SinkManager) unregisterSink(sink sinks.Sink) {
+func (sinkManager *SinkManager) UnregisterSink(sink sinks.Sink) {
 
-	ok := sinkManager.sinks.Delete(sink)
+	ok := sinkManager.sinks.CloseAndDelete(sink)
 	if !ok {
 		return
 	}
@@ -162,14 +159,14 @@ func (sinkManager *SinkManager) ManageSyslogSinks(appId string, syslogSinkUrls [
 
 func (sinkManager *SinkManager) unregisterAllSyslogSinks(appId string) {
 	for _, sink := range sinkManager.sinks.DrainsFor(appId) {
-		sinkManager.unregisterSink(sink)
+		sinkManager.UnregisterSink(sink)
 	}
 }
 
 func (sinkManager *SinkManager) unregisterUnboundSyslogSinks(appId string, syslogSinkUrls []string) {
 	for _, sink := range sinkManager.sinks.DrainsFor(appId) {
 		if !contains(sink.Identifier(), syslogSinkUrls) {
-			sinkManager.unregisterSink(sink)
+			sinkManager.UnregisterSink(sink)
 		}
 	}
 }

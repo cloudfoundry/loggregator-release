@@ -140,7 +140,7 @@ var _ = Describe("GroupedSink", func() {
 		})
 	})
 
-	Describe("Delete", func() {
+	Describe("CloseAndDelete", func() {
 		It("should only delete a specific sink", func() {
 			target := "789"
 
@@ -150,7 +150,7 @@ var _ = Describe("GroupedSink", func() {
 			groupedSinks.Register(inputChan, sink1)
 			groupedSinks.Register(inputChan, sink2)
 
-			ok := groupedSinks.Delete(sink1)
+			ok := groupedSinks.CloseAndDelete(sink1)
 			Expect(ok).To(BeTrue())
 			Expect(groupedSinks.CountFor(target)).To(Equal(1))
 		})
@@ -160,7 +160,7 @@ var _ = Describe("GroupedSink", func() {
 
 			sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
 
-			ok := groupedSinks.Delete(sink1)
+			ok := groupedSinks.CloseAndDelete(sink1)
 			Expect(ok).To(BeFalse())
 
 			Expect(groupedSinks.CountFor(target)).To(BeZero())
@@ -174,7 +174,7 @@ var _ = Describe("GroupedSink", func() {
 
 			groupedSinks.Register(inputChan, sink1)
 
-			ok := groupedSinks.Delete(sink2)
+			ok := groupedSinks.CloseAndDelete(sink2)
 			Expect(ok).To(BeFalse())
 
 			Expect(groupedSinks.CountFor(target)).To(Equal(1))
@@ -185,7 +185,7 @@ var _ = Describe("GroupedSink", func() {
 
 			sink := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
 			groupedSinks.Register(inputChan, sink)
-			groupedSinks.Delete(sink)
+			groupedSinks.CloseAndDelete(sink)
 			Expect(inputChan).To(BeClosed())
 		})
 

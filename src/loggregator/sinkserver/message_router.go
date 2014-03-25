@@ -31,7 +31,7 @@ func NewMessageRouter(sinkManager sinkManager, logger *gosteno.Logger) *MessageR
 }
 
 func (r *MessageRouter) Start(incomingLogChan <-chan *logmessage.Message) {
-	r.logger.Debug("MessageRouter:Sarting")
+	r.logger.Debug("MessageRouter:Starting")
 	for {
 		select {
 		case <-r.done:

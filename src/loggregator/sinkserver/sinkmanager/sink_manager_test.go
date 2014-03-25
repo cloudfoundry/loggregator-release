@@ -267,7 +267,7 @@ var _ = Describe("SinkManager", func() {
 
 		It("should remove the app from etcd", func(done Done) {
 			dumpSink := dump.NewDumpSink("appId", 1, loggertesthelper.Logger(), 1*time.Millisecond)
-			sinkManager.RegisterSink(dumpSink, true)
+			sinkManager.RegisterSink(dumpSink)
 
 			Expect(<-appServicesChan).To(Equal(domain.AppServices{AppId: "appId"}))
 			close(done)
