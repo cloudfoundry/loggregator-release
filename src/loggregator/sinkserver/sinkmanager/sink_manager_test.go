@@ -8,10 +8,14 @@ import (
 	. "github.com/onsi/gomega"
 	"loggregator/domain"
 	"loggregator/iprange"
+	"loggregator/sinks"
 	"loggregator/sinks/dump"
+	"loggregator/sinks/syslog"
+	"loggregator/sinks/syslogwriter"
 	"loggregator/sinkserver/blacklist"
 	"loggregator/sinkserver/metrics"
 	"loggregator/sinkserver/sinkmanager"
+	"net/url"
 	"sync"
 	"time"
 )
@@ -273,5 +277,71 @@ var _ = Describe("SinkManager", func() {
 			close(done)
 		})
 
+	})
+
+	Describe("UnregisterSink", func() {
+		Context("with a DumpSink", func() {
+			var dumpSink *dump.DumpSink
+
+			BeforeEach(func() {
+				dumpSink = dump.NewDumpSink("appId", 1, loggertesthelper.Logger(), time.Hour)
+				sinkManager.RegisterSink(dumpSink)
+			})
+
+			It("clears the recent logs buffer", func() {
+				expectedMessageString := "Some Data"
+				expectedMessage := NewMessage(expectedMessageString, "appId")
+				sinkManager.SendTo("appId", expectedMessage)
+
+				Eventually(func() []*logmessage.Message {
+					return sinkManager.RecentLogsFor("appId")
+				}).Should(HaveLen(1))
+
+				sinkManager.UnregisterSink(dumpSink)
+
+				Eventually(func() []*logmessage.Message {
+					return sinkManager.RecentLogsFor("appId")
+				}).Should(HaveLen(0))
+			})
+		})
+
+		Context("with a SyslogSink", func() {
+			var syslogSink sinks.Sink
+
+			BeforeEach(func() {
+				url, err := url.Parse("syslog://localhost:9998")
+				Expect(err).To(BeNil())
+				writer := syslogwriter.NewSyslogWriter(url, "appId", true)
+				errorChan := make(chan *logmessage.Message)
+				syslogSink = syslog.NewSyslogSink("appId", "localhost:9999", loggertesthelper.Logger(), writer, errorChan)
+
+				sinkManager.RegisterSink(syslogSink)
+			})
+
+			It("removes the sink", func() {
+				Expect(sinkManager.Metrics.SyslogSinks).To(Equal(1))
+
+				sinkManager.UnregisterSink(syslogSink)
+
+				Expect(sinkManager.Metrics.SyslogSinks).To(Equal(0))
+			})
+		})
+
+		Context("when called twice", func() {
+			var dumpSink *dump.DumpSink
+
+			BeforeEach(func() {
+				dumpSink = dump.NewDumpSink("appId", 1, loggertesthelper.Logger(), time.Hour)
+				sinkManager.RegisterSink(dumpSink)
+			})
+
+			It("decrements the metric only once", func() {
+				Expect(sinkManager.Metrics.DumpSinks).To(Equal(1))
+				sinkManager.UnregisterSink(dumpSink)
+				Expect(sinkManager.Metrics.DumpSinks).To(Equal(0))
+				sinkManager.UnregisterSink(dumpSink)
+				Expect(sinkManager.Metrics.DumpSinks).To(Equal(0))
+			})
+		})
 	})
 })
