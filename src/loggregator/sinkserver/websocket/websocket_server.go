@@ -11,7 +11,6 @@ import (
 	"loggregator/sinkserver/sinkmanager"
 	"net"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -107,11 +106,9 @@ func (w *WebsocketServer) streamLogs(appId string, ws *websocket.Conn) {
 	)
 
 	w.sinkManager.RegisterSink(websocketSink)
+	defer w.sinkManager.UnregisterSink(websocketSink)
 
-	timeoutOccurred := w.waitForKeepAliveTimeout(ws)
-	if timeoutOccurred {
-		w.sinkManager.UnregisterSink(websocketSink)
-	}
+	w.waitForKeepAliveTimeout(ws)
 }
 
 func (w *WebsocketServer) recentLogs(appId string, ws *websocket.Conn) {
@@ -135,16 +132,14 @@ func sendMessagesToWebsocket(logMessages []*logmessage.Message, ws *websocket.Co
 	}
 }
 
-func (w *WebsocketServer) waitForKeepAliveTimeout(ws *websocket.Conn) bool {
-	var err error
+func (w *WebsocketServer) waitForKeepAliveTimeout(ws *websocket.Conn) {
 	for {
 		ws.SetReadDeadline(time.Now().Add(w.keepAliveInterval))
-		_, _, err = ws.ReadMessage()
+		_, _, err := ws.ReadMessage()
 		if err != nil {
+			w.logger.Debugf("Websocket Sink %s: Error receiving keep-alive. Stopping listening. Err: %v", ws.RemoteAddr(), err)
 			break
 		}
 	}
 
-	w.logger.Debugf("Websocket Sink %s: Error receiving keep-alive. Stopping listening. Err: %v", ws.RemoteAddr(), err)
-	return strings.Contains(err.Error(), "i/o timeout")
 }
