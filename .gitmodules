@@ -46,6 +46,6 @@
 [submodule "src/github.com/cloudfoundry/gunk"]
 	path = src/github.com/cloudfoundry/gunk
 	url = https://github.com/cloudfoundry/gunk
-[submodule "src/github.com/cloudfoundry/dropsonde"]
-	path = src/github.com/cloudfoundry/dropsonde
-	url = https://github.com/cloudfoundry/dropsonde
+[submodule "src/github.com/cloudfoundry-incubator/dropsonde"]
+	path = src/github.com/cloudfoundry-incubator/dropsonde
+	url = https://github.com/cloudfoundry-incubator/dropsonde
