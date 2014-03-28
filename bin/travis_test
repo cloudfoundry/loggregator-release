@@ -42,9 +42,11 @@ do
     go fmt $package/...
     go test -v -race $package/...
     let "result += $?"
+    echo "Current result: $result"
     echo -e "\n Vetting $package"
     go vet $package/...
     let "result += $?"
+    echo "Current result: $result"
     if [ $result -gt $local_result ]; then
         red " Package $package FAILED"
     else
