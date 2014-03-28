@@ -18,7 +18,7 @@ func TestLoggregator(t *testing.T) {
 
 	RegisterFailHandler(Fail)
 
-	etcdPort := 5000 + (config.GinkgoConfig.ParallelNode-1)*10
+	etcdPort := 5500 + (config.GinkgoConfig.ParallelNode-1)*10
 	etcdRunner := etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
 	etcdRunner.Start()
 
