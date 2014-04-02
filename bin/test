@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 trap "echo Exited!; exit 1;" SIGINT SIGTERM
 
@@ -9,7 +10,8 @@ else
     export PLATFORMS="linux/amd64"
 fi
 
-$(dirname $0)/travis_test && $(dirname $0)/build-platforms
+$(dirname $0)/travis_test
+$(dirname $0)/build-platforms
 
 echo "RACE DETECTION"
 ./release/loggregator --config=./config/loggregator_with_fake_nats.json > /tmp/tmp.log 2>&1 &
@@ -20,9 +22,9 @@ sleep 2s
 
 set +e
 grep "WARNING: DATA RACE" /tmp/tmp.log > /dev/null 2>&1
+found_race=$?
 set -e
 
-found_race=$?
 if [[ $found_race == 1 ]]; then
     exit 0
 else
