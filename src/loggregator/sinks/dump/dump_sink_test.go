@@ -384,7 +384,7 @@ func TestDumpWithLotsOfDumps(t *testing.T) {
 }
 
 func TestDumpSinkClosesItselfAfterPeriodOfInactivity(t *testing.T) {
-	testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), 2*time.Millisecond)
+	testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), 2*time.Microsecond)
 	dumpRunnerDone := make(chan struct{})
 	inputChan := make(chan *logmessage.Message)
 
@@ -396,7 +396,7 @@ func TestDumpSinkClosesItselfAfterPeriodOfInactivity(t *testing.T) {
 	select {
 	case <-dumpRunnerDone:
 		// OK
-	case <-time.After(5 * time.Millisecond):
+	case <-time.After(200 * time.Millisecond):
 		assert.Fail(t, "Should have timeouted the dump")
 	}
 }
