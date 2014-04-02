@@ -26,5 +26,5 @@ before_install:
 - go get -v github.com/onsi/gomega
 - go install -v github.com/onsi/ginkgo/ginkgo
 - git submodule update --init --recursive
-install: GOPATH=$GOPATH:`pwd` ./bin/build
+install: echo "Build later"
 script: PATH=$HOME/gopath/bin:$PATH GOPATH=$GOPATH:`pwd` ./bin/test && ./bin/upload 0
