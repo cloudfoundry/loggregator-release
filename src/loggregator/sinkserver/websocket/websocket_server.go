@@ -11,6 +11,7 @@ import (
 	"loggregator/sinkserver/sinkmanager"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -26,6 +27,7 @@ type WebsocketServer struct {
 	bufferSize        uint
 	logger            *gosteno.Logger
 	listener          net.Listener
+	sync.RWMutex
 }
 
 func NewWebsocketServer(apiEndpoint string, sinkManager *sinkmanager.SinkManager, keepAliveInterval time.Duration, wSMessageBufferSize uint, logger *gosteno.Logger) *WebsocketServer {
@@ -45,13 +47,18 @@ func (w *WebsocketServer) Start() {
 	if e != nil {
 		panic(e)
 	}
+
+	w.Lock()
 	w.listener = listener
+	w.Unlock()
 
 	server := &http.Server{Addr: w.apiEndpoint, Handler: w}
 	server.Serve(w.listener)
 }
 
 func (w *WebsocketServer) Stop() {
+	w.Lock()
+	defer w.Unlock()
 	w.listener.Close()
 }
 
