@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
+	"github.com/cloudfoundry/yagnats"
 	. "loggregator"
 	"math/rand"
 	"os"
@@ -79,6 +80,14 @@ func main() {
 	}
 
 	config, logger := parseConfig(logLevel, configFile, logFilePath)
+
+	if config.NatsHost == "" {
+		logger.Warn("Startup: Did not receive a NATS host - not going to regsiter component")
+		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger) yagnats.NATSClient {
+			return &cfcomponent.FakeYagnatsClient{}
+		}
+	}
+
 	err := config.Validate(logger)
 	if err != nil {
 		panic(err)

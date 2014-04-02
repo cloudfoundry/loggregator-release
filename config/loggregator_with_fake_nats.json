@@ -1,0 +1,14 @@
+{
+    "EtcdUrls"    : ["http://127.0.0.1:4001"],
+    "EtcdMaxConcurrentRequests" : 10,
+    "IncomingPort": 3456,
+    "OutgoingPort": 8080,
+    "SkipCertVerify": false,
+    "Index": 0,
+    "MaxRetainedLogMessages": 10,
+    "SharedSecret": "secret",
+    "VarzUser": "varz",
+    "VarzPass": "password",
+    "VarzPort": 8888,
+    "Syslog"  : ""
+}

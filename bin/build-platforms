@@ -16,10 +16,13 @@ function build-architecture {
 
   go clean $COMPONENT/$COMPONENT
 
-  GOOS=$GOOS GOARCH=$GOARCH go build -v $COMPONENT/$COMPONENT
-  gzip $COMPONENT
+  GOOS=$GOOS GOARCH=$GOARCH go build -v -race $COMPONENT/$COMPONENT
 
-  mv $COMPONENT.gz $(dirname $0)/../release/$COMPONENT-$GOOS-$GOARCH.gz
+  mv $COMPONENT $(dirname $0)/../release/$COMPONENT-$GOOS-$GOARCH
+  (
+    cd $(dirname $0)/../release/
+    ln -s $COMPONENT-$GOOS-$GOARCH $COMPONENT
+  )
 }
 
 function populate_build_info() {
