@@ -26,6 +26,7 @@ found_race=$?
 set -e
 
 if [[ $found_race == 1 ]]; then
+    echo "No race condition detected"
     exit 0
 else
     echo "Race condition detected"
