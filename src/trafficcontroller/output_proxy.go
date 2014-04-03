@@ -22,14 +22,14 @@ type Proxy struct {
 	listener  net.Listener
 }
 
-type websocketHandler interface {
+type WebsocketHandler interface {
 	HandleWebSocket(string, string, []*hasher.Hasher)
 }
 
-var NewProxyHandlerProvider func(*websocket.Conn, *gosteno.Logger) websocketHandler
+var NewProxyHandlerProvider func(*websocket.Conn, *gosteno.Logger) WebsocketHandler
 
 func init() {
-	NewProxyHandlerProvider = func(ws *websocket.Conn, logger *gosteno.Logger) websocketHandler {
+	NewProxyHandlerProvider = func(ws *websocket.Conn, logger *gosteno.Logger) WebsocketHandler {
 		return NewProxyHandler(ws, logger)
 	}
 }
@@ -106,18 +106,15 @@ func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		authToken = extractAuthTokenFromUrl(r.URL)
 	}
 
-	ws := upgrade(rw, r)
-	defer ws.Close()
 	authorized, errorMessage := proxy.isAuthorized(appId, authToken, clientAddress)
 	if !authorized {
-		data, err := proto.Marshal(errorMessage)
-		if err != nil {
-			proxy.logger.Errorf("Error marshalling log message: %s", err)
-		}
-		ws.WriteMessage(websocket.BinaryMessage, data)
-
+		rw.Header().Set("WWW-Authenticate", "Basic")
+		rw.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprintf(rw, "You are not authorized. %s", errorMessage)
 		return
 	}
+	ws := upgrade(rw, r)
+	defer ws.Close()
 
 	proxyHandler := NewProxyHandlerProvider(ws, proxy.logger)
 

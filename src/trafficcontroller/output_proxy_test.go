@@ -1,10 +1,8 @@
-package trafficcontroller
+package trafficcontroller_test
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/gorilla/websocket"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -12,6 +10,7 @@ import (
 	"net/url"
 	"sync"
 	"time"
+	"trafficcontroller"
 	"trafficcontroller/hasher"
 	testhelpers "trafficcontroller_testhelpers"
 )
@@ -44,12 +43,12 @@ var _ = Describe("OutPutProxy", func() {
 
 	BeforeEach(func() {
 		fph = &fakeProxyHandler{callParams: make([][]interface{}, 0)}
-		NewProxyHandlerProvider = func(ws *websocket.Conn, logger *gosteno.Logger) websocketHandler {
+		trafficcontroller.NewProxyHandlerProvider = func(ws *websocket.Conn, logger *gosteno.Logger) trafficcontroller.WebsocketHandler {
 			fph.WebsocketConnection = ws
 			return fph
 		}
 		hashers = []*hasher.Hasher{hasher.NewHasher([]string{"localhost:62038"})}
-		proxy := NewProxy(
+		proxy := trafficcontroller.NewProxy(
 			"localhost:"+PORT,
 			hashers,
 			testhelpers.SuccessfulAuthorizer,
@@ -60,7 +59,7 @@ var _ = Describe("OutPutProxy", func() {
 
 	Context("Auth Params", func() {
 		It("Should Authenticate with Auth Query Params", func() {
-			ClientWithQueryParamAuth(PORT, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+			clientWithQueryParamAuth(PORT, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
 
 			callParams := fph.CallParams()
 			Expect(callParams).To(HaveLen(1))
@@ -69,46 +68,28 @@ var _ = Describe("OutPutProxy", func() {
 			Expect(callParams[0][2]).To(Equal(hashers))
 		})
 
-		It("Should Fail to Authenticate with Incorrect Auth Query Params", func() {
-			data := ClientWithQueryParamAuth(PORT, "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN)
+		Context("when auth fails", func() {
+			It("Should Fail to Authenticate with Incorrect Auth Query Params", func() {
+				_, resp, err := clientWithQueryParamAuth(PORT, "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN)
+				assertAuthorizationError(resp, err, "Error: Invalid authorization")
+			})
 
-			receivedMessage := &logmessage.LogMessage{}
-			err := proto.Unmarshal(data, receivedMessage)
+			It("Should Fail to Authenticate without Authorization", func() {
+				_, resp, err := clientWithQueryParamAuth(PORT, "/?app=myApp", "")
+				assertAuthorizationError(resp, err, "Error: Authorization not provided")
+			})
 
-			Expect(err).To(BeNil())
-			Expect(string(receivedMessage.GetMessage())).To(Equal("Error: Invalid authorization"))
-			Expect(fph.callParams).To(HaveLen(0))
-		})
-
-		It("Should Fail to Authenticate without Authorization", func() {
-
-			data := ClientWithQueryParamAuth(PORT, "/?app=myApp", "")
-
-			receivedMessage := &logmessage.LogMessage{}
-			err := proto.Unmarshal(data, receivedMessage)
-
-			Expect(err).To(BeNil())
-			Expect(string(receivedMessage.GetMessage())).To(Equal("Error: Authorization not provided"))
-			Expect(fph.callParams).To(HaveLen(0))
-		})
-
-		It("Should Fail With Invalid Target", func() {
-
-			data := ClientWithQueryParamAuth(PORT, "/invalid_target", testhelpers.VALID_AUTHENTICATION_TOKEN)
-
-			receivedMessage := &logmessage.LogMessage{}
-			err := proto.Unmarshal(data, receivedMessage)
-
-			Expect(err).To(BeNil())
-			Expect(string(receivedMessage.GetMessage())).To(Equal("Error: Invalid target"))
-			Expect(fph.callParams).To(HaveLen(0))
+			It("Should Fail With Invalid Target", func() {
+				_, resp, err := clientWithQueryParamAuth(PORT, "/invalid_target", testhelpers.VALID_AUTHENTICATION_TOKEN)
+				assertAuthorizationError(resp, err, "Error: Invalid target")
+			})
 		})
 
 	})
 
 	Context("Auth Headers", func() {
 		It("Should Authenticate with Correct Auth Header", func() {
-			ClientWithHeaderAuth(PORT, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+			clientWithHeaderAuth(PORT, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
 
 			callParams := fph.CallParams()
 			Expect(callParams).To(HaveLen(1))
@@ -117,58 +98,61 @@ var _ = Describe("OutPutProxy", func() {
 			Expect(callParams[0][2]).To(Equal(hashers))
 		})
 
-		It("Should Fail to Authenticate with Incorrect Auth Header", func() {
-			data := ClientWithHeaderAuth(PORT, "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN)
-
-			receivedMessage := &logmessage.LogMessage{}
-			err := proto.Unmarshal(data, receivedMessage)
-
-			Expect(err).To(BeNil())
-			Expect(string(receivedMessage.GetMessage())).To(Equal("Error: Invalid authorization"))
-			Expect(fph.callParams).To(HaveLen(0))
+		Context("when auth fails", func() {
+			It("Should Fail to Authenticate with Incorrect Auth Header", func() {
+				_, resp, err := clientWithHeaderAuth(PORT, "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN)
+				assertAuthorizationError(resp, err, "Error: Invalid authorization")
+			})
 		})
-
 	})
 
 })
 
-func ClientWithQueryParamAuth(port string, path string, auth string) []byte {
+func assertAuthorizationError(resp *http.Response, err error, msg string) {
+	Expect(err).To(HaveOccurred())
+
+	respBody := make([]byte, 4096)
+	resp.Body.Read(respBody)
+	resp.Body.Close()
+	Expect(resp.StatusCode).To(Equal(http.StatusUnauthorized))
+	Expect(string(respBody)).To(ContainSubstring(msg))
+}
+
+func clientWithQueryParamAuth(port string, path string, auth string) ([]byte, *http.Response, error) {
 	authorizationParams := ""
 	if auth != "" {
 		authorizationParams = "&authorization=" + url.QueryEscape(auth)
 	}
 	url := "ws://localhost:" + port + path + authorizationParams
 
-	return DialConnection(url, http.Header{})
+	return dialConnection(url, http.Header{})
 }
 
-func ClientWithHeaderAuth(port string, path string, auth string) []byte {
+func clientWithHeaderAuth(port string, path string, auth string) ([]byte, *http.Response, error) {
 	url := "ws://localhost:" + port + path
 	headers := http.Header{"Authorization": []string{auth}}
-	return DialConnection(url, headers)
+	return dialConnection(url, headers)
 }
 
-func DialConnection(url string, headers http.Header) []byte {
+func dialConnection(url string, headers http.Header) ([]byte, *http.Response, error) {
 	numTries := 0
 	for {
-		ws, _, err := websocket.DefaultDialer.Dial(url, headers)
+		ws, resp, err := websocket.DefaultDialer.Dial(url, headers)
 		if err != nil {
 			numTries++
 			if numTries == 5 {
-				Fail(err.Error())
-				return nil
+				return nil, resp, err
 			}
 			time.Sleep(1)
 			continue
 		} else {
 			defer ws.Close()
-			return ClientWithAuth(ws)
+			return clientWithAuth(ws), resp, nil
 		}
 	}
 }
 
-func ClientWithAuth(ws *websocket.Conn) []byte {
-
+func clientWithAuth(ws *websocket.Conn) []byte {
 	_, data, err := ws.ReadMessage()
 
 	if err != nil {
@@ -176,5 +160,4 @@ func ClientWithAuth(ws *websocket.Conn) []byte {
 		return nil
 	}
 	return data
-
 }
