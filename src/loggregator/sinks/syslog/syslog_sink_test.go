@@ -192,12 +192,7 @@ var _ = Describe("SyslogSink", func() {
 			logMessage = NewMessage("test message 2", "appId")
 			inputChan <- logMessage
 
-			select {
-			case <-sysLogger.receivedChannel:
-				Fail("Received unexpected message - disconnect signal did not prevent message afterwards")
-			case <-time.After(900 * time.Millisecond):
-
-			}
+			Consistently(sysLogger.receivedChannel).ShouldNot(Receive())
 
 			close(done)
 		})
@@ -248,8 +243,7 @@ var _ = Describe("SyslogSink", func() {
 				logMessage := NewMessage("test message", "appId")
 				inputChan <- logMessage
 
-				<-time.After(5 * time.Millisecond)
-				Expect(errorChannel).NotTo(BeEmpty())
+				Eventually(errorChannel).ShouldNot(BeEmpty())
 				numErrors := len(errorChannel)
 				syslogSink.Disconnect()
 
