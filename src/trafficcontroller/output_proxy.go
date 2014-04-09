@@ -114,6 +114,9 @@ func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ws := upgrade(rw, r)
+	if ws == nil {
+		return
+	}
 	defer ws.Close()
 
 	proxyHandler := NewProxyHandlerProvider(ws, proxy.logger)
