@@ -28,12 +28,11 @@ before_install:
 - go get code.google.com/p/go.tools/cmd/cover
 - go get github.com/mattn/goveralls
 - go get github.com/onsi/ginkgo
-- go get github.com/onsi/gomega
 - git submodule update --init --recursive
 
 install: echo "Build later"
 
-script: PATH=$HOME/gopath/bin:$PATH GOPATH=$GOPATH:`pwd` ./bin/test && ./bin/upload 0
+script: PATH=$HOME/gopath/bin:$PATH ./bin/test && ./bin/upload 0
 
 after_success:
 - 'echo "mode: set" > all.coverprofile'
