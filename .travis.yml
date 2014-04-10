@@ -24,7 +24,8 @@ go:
 - 1.2.1
 
 before_install:
-- export GOPATH=`pwd`
+- export WORK_DIR=`pwd`
+- export GOPATH=$WORK_DIR
 - go get -v code.google.com/p/go.tools/cmd/vet
 - go get -v code.google.com/p/go.tools/cmd/cover
 - go get -v github.com/mattn/goveralls
@@ -40,4 +41,4 @@ script: PATH=$HOME/gopath/bin:$PATH ./bin/test && ./bin/upload 0
 after_success:
 - 'echo "mode: set" > all.coverprofile'
 - 'find . -name "*.coverprofile" -exec grep -v mode: {} >> all.coverprofile \;'
-- PATH=$HOME/gopath/bin:$PATH goveralls -coverprofile=all.coverprofile -repotoken=$COVERALLS_TOKEN
+- $WORK_DIR/bin/goveralls -coverprofile=all.coverprofile -repotoken=$COVERALLS_TOKEN
