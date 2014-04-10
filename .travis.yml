@@ -25,7 +25,6 @@ go:
 
 before_install:
 - export GOPATH=`pwd`
-- echo $GOPATH
 - go get -v code.google.com/p/go.tools/cmd/vet
 - go get -v code.google.com/p/go.tools/cmd/cover
 - go get -v github.com/mattn/goveralls
@@ -36,7 +35,7 @@ before_install:
 
 install: echo "Build later"
 
-script: PATH=$HOME/gopath/bin:$PATH GOPATH=$GOPATH:`pwd` ./bin/test && ./bin/upload 0
+script: PATH=$HOME/gopath/bin:$PATH ./bin/test && ./bin/upload 0
 
 after_success:
 - 'echo "mode: set" > all.coverprofile'
