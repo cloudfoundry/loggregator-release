@@ -1,6 +1,6 @@
 # Loggregator 
 
-[![Build Status](https://travis-ci.org/cloudfoundry/loggregator.png?branch=master)](https://travis-ci.org/cloudfoundry/loggregator) [![Coverage Status](https://coveralls.io/repos/cloudfoundry/loggregator/badge.png?branch=master)](https://coveralls.io/r/cloudfoundry/loggregator?branch=master)
+[![Build Status](https://travis-ci.org/cloudfoundry/loggregator.png?branch=master)](https://travis-ci.org/cloudfoundry/loggregator)
    
 ### Logging in the Clouds   
   
