@@ -24,8 +24,8 @@ go:
 - 1.2.1
 
 before_install:
-- PATH=$HOME/gopath/bin:$PATH ginkgo version || true
-- PATH=$HOME/gopath/bin:$PATH type ginkgo || true
+- export GOPATH=`pwd`
+- echo $GOPATH
 - go get -v code.google.com/p/go.tools/cmd/vet
 - go get -v code.google.com/p/go.tools/cmd/cover
 - go get -v github.com/mattn/goveralls
@@ -33,8 +33,6 @@ before_install:
 - go get -v github.com/onsi/gomega
 - go install -v github.com/onsi/ginkgo/ginkgo
 - git submodule update --init --recursive
-- PATH=$HOME/gopath/bin:$PATH ginkgo version || true
-- PATH=$HOME/gopath/bin:$PATH type ginkgo || true
 
 install: echo "Build later"
 
