@@ -24,11 +24,15 @@ go:
 - 1.2.1
 
 before_install:
+- ginkgo version || true
+- type ginkgo || true
 - go get code.google.com/p/go.tools/cmd/vet
 - go get code.google.com/p/go.tools/cmd/cover
 - go get github.com/mattn/goveralls
 - go get github.com/onsi/ginkgo/ginkgo
 - git submodule update --init --recursive
+- ginkgo version || true
+- type ginkgo || true
 
 install: echo "Build later"
 
