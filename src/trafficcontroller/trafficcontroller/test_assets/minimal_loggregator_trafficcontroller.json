@@ -9,7 +9,7 @@
     "ApiHost": "https://vcap.me",
     "SystemDomain": "vcap.me",
 
-    "NatsHost": "0.0.0.0",
+    "NatsHosts": ["0.0.0.0"],
     "NatsPort": 4222,
     "NatsUser": "nats",
     "NatsPass": "nats",

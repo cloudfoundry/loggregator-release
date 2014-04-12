@@ -6,7 +6,7 @@
     "MaxRetainedLogMessages": 10,
     "WSMessageBufferSize": 100,
     "SharedSecret": "mysecret",
-    "NatsHost": "10.10.16.11",
+    "NatsHosts": ["10.10.16.11"],
     "NatsPort": 4222,
     "NatsUser": "nats",
     "NatsPass": "password",

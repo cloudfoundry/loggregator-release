@@ -4,10 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar"
 	"net"
 	"os"
 	"os/signal"
@@ -17,6 +13,11 @@ import (
 	"trafficcontroller"
 	"trafficcontroller/authorization"
 	"trafficcontroller/hasher"
+
+	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar"
 )
 
 type Config struct {

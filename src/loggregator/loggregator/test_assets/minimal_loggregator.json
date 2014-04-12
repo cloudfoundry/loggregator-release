@@ -3,7 +3,7 @@
     "Index": 0,
     "MaxRetainedLogMessages": 10,
     "SharedSecret": "mysecret",
-    "NatsHost": "10.10.16.11",
+    "NatsHosts": ["10.10.16.11"],
     "NatsPort": 4222,
     "NatsUser": "nats",
     "NatsPass": "password",

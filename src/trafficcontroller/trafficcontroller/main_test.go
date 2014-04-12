@@ -1,12 +1,13 @@
 package main
 
 import (
+	"testing"
+
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 type FakeYagnatsClient struct {
@@ -61,8 +62,8 @@ func TestOutgoingProxyConfigWithTwoAZs(t *testing.T) {
 }
 
 func TestConfigWithEmptyLoggregatorPorts(t *testing.T) {
-	cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger) yagnats.NATSClient {
-		return &FakeYagnatsClient{}
+	cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.NATSClient, error) {
+		return &FakeYagnatsClient{}, nil
 	}
 
 	logLevel := false
@@ -81,8 +82,8 @@ func TestConfigWithEmptyLoggregatorPorts(t *testing.T) {
 }
 
 func TestConfigWithSpecifiedLoggregatorPorts(t *testing.T) {
-	cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger) yagnats.NATSClient {
-		return &FakeYagnatsClient{}
+	cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.NATSClient, error) {
+		return &FakeYagnatsClient{}, nil
 	}
 
 	logLevel := false
