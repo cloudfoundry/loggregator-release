@@ -7,7 +7,7 @@
     "Index": 0,
     "MaxRetainedLogMessages": 10,
     "SharedSecret": "secret",
-    "NatsHost": "localhost",
+    "NatsHosts": ["localhost"],
     "NatsPort": 4222,
     "NatsUser": "nats",
     "NatsPass": "password",

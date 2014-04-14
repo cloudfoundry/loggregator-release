@@ -6,7 +6,7 @@
     "Host": "localhost",
     "ApiHost": "http://ccng.example.cf-app.com",
     "SystemDomain": "example.cf-app.com",
-    "NatsHost": "localhost",
+    "NatsHosts": ["localhost"],
     "NatsPort": 4222,
     "NatsUser": "nats",
     "NatsPass": "password",
