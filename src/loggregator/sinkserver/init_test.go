@@ -67,7 +67,7 @@ func init() {
 	blackListTestWebsocketServer = websocket.NewWebsocketServer(blacklistApiEndpoint, blacklistSinkManager, 10*time.Second, 100, loggertesthelper.Logger())
 	go blackListTestWebsocketServer.Start()
 
-	time.Sleep(2 * time.Millisecond)
+	time.Sleep(5 * time.Millisecond)
 }
 
 func WaitForWebsocketRegistration() {
