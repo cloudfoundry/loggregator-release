@@ -16,3 +16,4 @@ src/code.google.com/p/go.tools/
 *.prof
 *.mprof
 *.coverprofile
+bin/protoc-gen-gogo
