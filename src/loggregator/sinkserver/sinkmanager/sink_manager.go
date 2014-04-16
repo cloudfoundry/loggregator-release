@@ -157,20 +157,6 @@ func (sinkManager *SinkManager) ManageSyslogSinks(appId string, syslogSinkUrls [
 	sinkManager.appStoreUpdateChan <- domain.AppServices{AppId: appId, Urls: syslogSinkUrls}
 }
 
-func (sinkManager *SinkManager) unregisterAllSyslogSinks(appId string) {
-	for _, sink := range sinkManager.sinks.DrainsFor(appId) {
-		sinkManager.UnregisterSink(sink)
-	}
-}
-
-func (sinkManager *SinkManager) unregisterUnboundSyslogSinks(appId string, syslogSinkUrls []string) {
-	for _, sink := range sinkManager.sinks.DrainsFor(appId) {
-		if !contains(sink.Identifier(), syslogSinkUrls) {
-			sinkManager.UnregisterSink(sink)
-		}
-	}
-}
-
 func (sinkManager *SinkManager) registerNewSyslogSink(appId string, syslogSinkUrl string) {
 	parsedSyslogDrainUrl, err := sinkManager.urlBlacklistManager.CheckUrl(syslogSinkUrl)
 	if err != nil {
