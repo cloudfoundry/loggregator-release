@@ -1,25 +1,31 @@
-package sinks
+package websocket
 
 import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"github.com/gorilla/websocket"
+	gorilla "github.com/gorilla/websocket"
+	"loggregator/sinks"
 	"net"
 	"sync/atomic"
 )
 
+type remoteMessageWriter interface {
+	RemoteAddr() net.Addr
+	WriteMessage(messageType int, data []byte) error
+}
+
 type WebsocketSink struct {
 	logger              *gosteno.Logger
 	appId               string
-	ws                  *websocket.Conn
+	ws                  remoteMessageWriter
 	clientAddress       net.Addr
 	sentMessageCount    uint64
 	sentByteCount       uint64
 	wsMessageBufferSize uint
 }
 
-func NewWebsocketSink(appId string, givenLogger *gosteno.Logger, ws *websocket.Conn, wsMessageBufferSize uint) Sink {
+func NewWebsocketSink(appId string, givenLogger *gosteno.Logger, ws remoteMessageWriter, wsMessageBufferSize uint) *WebsocketSink {
 	return &WebsocketSink{
 		logger:              givenLogger,
 		appId:               appId,
@@ -44,7 +50,7 @@ func (sink *WebsocketSink) ShouldReceiveErrors() bool {
 func (sink *WebsocketSink) Run(inputChan <-chan *logmessage.Message) {
 	sink.logger.Debugf("Websocket Sink %s: Running for appId [%s]", sink.clientAddress, sink.appId)
 
-	buffer := RunTruncatingBuffer(inputChan, sink.wsMessageBufferSize, sink.logger)
+	buffer := sinks.RunTruncatingBuffer(inputChan, sink.wsMessageBufferSize, sink.logger)
 	for {
 		sink.logger.Debugf("Websocket Sink %s: Waiting for activity", sink.clientAddress)
 		message, ok := <-buffer.GetOutputChannel()
@@ -53,7 +59,7 @@ func (sink *WebsocketSink) Run(inputChan <-chan *logmessage.Message) {
 			return
 		}
 		sink.logger.Debugf("Websocket Sink %s: Got %d bytes. Sending data", sink.clientAddress, message.GetRawMessageLength())
-		err := sink.ws.WriteMessage(websocket.BinaryMessage, message.GetRawMessage())
+		err := sink.ws.WriteMessage(gorilla.BinaryMessage, message.GetRawMessage())
 		if err != nil {
 			sink.logger.Debugf("Websocket Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", sink.clientAddress, err)
 			return

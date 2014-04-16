@@ -17,7 +17,7 @@ import (
 	"loggregator/sinkserver/blacklist"
 	"loggregator/sinkserver/sinkmanager"
 	"loggregator/sinkserver/unmarshaller"
-	"loggregator/sinkserver/websocket"
+	"loggregator/sinkserver/websocketserver"
 	"loggregator/store"
 	"loggregator/store/cache"
 	"time"
@@ -67,7 +67,7 @@ type Loggregator struct {
 	messageRouter   *sinkserver.MessageRouter
 	messageChan     <-chan *logmessage.Message
 	unmarshaller    *unmarshaller.LogMessageUnmarshaller
-	websocketServer *websocket.WebsocketServer
+	websocketServer *websocketserver.WebsocketServer
 
 	storeAdapter storeadapter.StoreAdapter
 
@@ -97,7 +97,7 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 		appStoreInputChan:     appStoreInputChan,
 		appStore:              appStore,
 		messageRouter:         sinkserver.NewMessageRouter(sinkManager, logger),
-		websocketServer:       websocket.NewWebsocketServer(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.WSMessageBufferSize, logger),
+		websocketServer:       websocketserver.New(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.WSMessageBufferSize, logger),
 		newAppServiceChan:     newAppServiceChan,
 		deletedAppServiceChan: deletedAppServiceChan,
 		appStoreWatcher:       appStoreWatcher,

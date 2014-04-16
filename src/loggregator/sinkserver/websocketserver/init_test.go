@@ -1,4 +1,4 @@
-package websocket_test
+package websocketserver_test
 
 import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
@@ -8,7 +8,7 @@ import (
 	"loggregator/sinkserver"
 	"loggregator/sinkserver/blacklist"
 	"loggregator/sinkserver/sinkmanager"
-	"loggregator/sinkserver/websocket"
+	"loggregator/sinkserver/websocketserver"
 	"time"
 )
 
@@ -33,7 +33,7 @@ func init() {
 	go testMessageRouter.Start(dataReadChannel)
 
 	apiEndpoint := "localhost:" + SERVER_PORT
-	testWebsocketServer := websocket.NewWebsocketServer(apiEndpoint, sinkManager, 10*time.Millisecond, 100, logger)
+	testWebsocketServer := websocketserver.New(apiEndpoint, sinkManager, 10*time.Millisecond, 100, logger)
 	go testWebsocketServer.Start()
 
 	time.Sleep(5 * time.Millisecond)

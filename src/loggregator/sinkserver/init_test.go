@@ -9,18 +9,17 @@ import (
 	"loggregator/sinkserver"
 	"loggregator/sinkserver/blacklist"
 	"loggregator/sinkserver/sinkmanager"
-	"loggregator/sinkserver/websocket"
+	"loggregator/sinkserver/websocketserver"
 	"time"
 )
 
 var sinkManager *sinkmanager.SinkManager
 
 var TestMessageRouter *sinkserver.MessageRouter
-var TestWebsocketServer *websocket.WebsocketServer
+var TestWebsocketServer *websocketserver.WebsocketServer
 var dataReadChannel chan *logmessage.Message
 
-var blacklistTestMessageRouter *sinkserver.MessageRouter
-var blackListTestWebsocketServer *websocket.WebsocketServer
+var blackListTestWebsocketServer *websocketserver.WebsocketServer
 var blackListDataReadChannel chan *logmessage.Message
 
 const (
@@ -48,11 +47,11 @@ func init() {
 	go TestMessageRouter.Start(dataReadChannel)
 
 	apiEndpoint := "localhost:" + SERVER_PORT
-	TestWebsocketServer = websocket.NewWebsocketServer(apiEndpoint, sinkManager, 10*time.Second, 100, loggertesthelper.Logger())
+	TestWebsocketServer = websocketserver.New(apiEndpoint, sinkManager, 10*time.Second, 100, loggertesthelper.Logger())
 	go TestWebsocketServer.Start()
 
 	timeoutApiEndpoint := "localhost:" + FAST_TIMEOUT_SERVER_PORT
-	FastTimeoutTestWebsocketServer := websocket.NewWebsocketServer(timeoutApiEndpoint, sinkManager, 10*time.Millisecond, 100, loggertesthelper.Logger())
+	FastTimeoutTestWebsocketServer := websocketserver.New(timeoutApiEndpoint, sinkManager, 10*time.Millisecond, 100, loggertesthelper.Logger())
 	go FastTimeoutTestWebsocketServer.Start()
 
 	blackListDataReadChannel = make(chan *logmessage.Message)
@@ -64,7 +63,7 @@ func init() {
 	go blacklistTestMessageRouter.Start(blackListDataReadChannel)
 
 	blacklistApiEndpoint := "localhost:" + BLACKLIST_SERVER_PORT
-	blackListTestWebsocketServer = websocket.NewWebsocketServer(blacklistApiEndpoint, blacklistSinkManager, 10*time.Second, 100, loggertesthelper.Logger())
+	blackListTestWebsocketServer = websocketserver.New(blacklistApiEndpoint, blacklistSinkManager, 10*time.Second, 100, loggertesthelper.Logger())
 	go blackListTestWebsocketServer.Start()
 
 	time.Sleep(5 * time.Millisecond)

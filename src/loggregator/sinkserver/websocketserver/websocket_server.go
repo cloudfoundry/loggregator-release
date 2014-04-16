@@ -1,4 +1,4 @@
-package websocket
+package websocketserver
 
 import (
 	"errors"
@@ -6,8 +6,8 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/appid"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"github.com/gorilla/websocket"
-	"loggregator/sinks"
+	gorilla "github.com/gorilla/websocket"
+	"loggregator/sinks/websocket"
 	"loggregator/sinkserver/sinkmanager"
 	"net"
 	"net/http"
@@ -30,7 +30,7 @@ type WebsocketServer struct {
 	sync.RWMutex
 }
 
-func NewWebsocketServer(apiEndpoint string, sinkManager *sinkmanager.SinkManager, keepAliveInterval time.Duration, wSMessageBufferSize uint, logger *gosteno.Logger) *WebsocketServer {
+func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, keepAliveInterval time.Duration, wSMessageBufferSize uint, logger *gosteno.Logger) *WebsocketServer {
 	return &WebsocketServer{
 		apiEndpoint:       apiEndpoint,
 		sinkManager:       sinkManager,
@@ -63,7 +63,7 @@ func (w *WebsocketServer) Stop() {
 }
 
 func (w *WebsocketServer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	var handler func(string, *websocket.Conn)
+	var handler func(string, *gorilla.Conn)
 
 	switch r.URL.Path {
 	case TAIL_LOGS_PATH:
@@ -81,14 +81,14 @@ func (w *WebsocketServer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ws, err := websocket.Upgrade(rw, r, nil, 1024, 1024)
+	ws, err := gorilla.Upgrade(rw, r, nil, 1024, 1024)
 	if err != nil {
 		http.Error(rw, err.Error(), 400)
 		return
 	}
 
 	defer ws.Close()
-	defer ws.WriteControl(websocket.CloseMessage, []byte{}, time.Time{})
+	defer ws.WriteControl(gorilla.CloseMessage, []byte{}, time.Time{})
 
 	handler(appId, ws)
 }
@@ -103,9 +103,9 @@ func (w *WebsocketServer) validate(r *http.Request) (string, error) {
 	return appId, nil
 }
 
-func (w *WebsocketServer) streamLogs(appId string, ws *websocket.Conn) {
+func (w *WebsocketServer) streamLogs(appId string, ws *gorilla.Conn) {
 	w.logger.Debugf("WebsocketServer: Requesting a wss sink for app %s", appId)
-	websocketSink := sinks.NewWebsocketSink(
+	websocketSink := websocket.NewWebsocketSink(
 		appId,
 		w.logger,
 		ws,
@@ -118,7 +118,7 @@ func (w *WebsocketServer) streamLogs(appId string, ws *websocket.Conn) {
 	w.waitForKeepAliveTimeout(ws)
 }
 
-func (w *WebsocketServer) recentLogs(appId string, ws *websocket.Conn) {
+func (w *WebsocketServer) recentLogs(appId string, ws *gorilla.Conn) {
 	logMessages := w.sinkManager.RecentLogsFor(appId)
 	sendMessagesToWebsocket(logMessages, ws, w.logger)
 }
@@ -128,9 +128,9 @@ func (w *WebsocketServer) logInvalidApp(address string) {
 	w.logger.Warn(message)
 }
 
-func sendMessagesToWebsocket(logMessages []*logmessage.Message, ws *websocket.Conn, logger *gosteno.Logger) {
+func sendMessagesToWebsocket(logMessages []*logmessage.Message, ws *gorilla.Conn, logger *gosteno.Logger) {
 	for _, message := range logMessages {
-		err := ws.WriteMessage(websocket.BinaryMessage, message.GetRawMessage())
+		err := ws.WriteMessage(gorilla.BinaryMessage, message.GetRawMessage())
 		if err != nil {
 			logger.Debugf("Dump Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", ws.RemoteAddr(), err)
 		} else {
@@ -139,7 +139,7 @@ func sendMessagesToWebsocket(logMessages []*logmessage.Message, ws *websocket.Co
 	}
 }
 
-func (w *WebsocketServer) waitForKeepAliveTimeout(ws *websocket.Conn) {
+func (w *WebsocketServer) waitForKeepAliveTimeout(ws *gorilla.Conn) {
 	for {
 		ws.SetReadDeadline(time.Now().Add(w.keepAliveInterval))
 		_, _, err := ws.ReadMessage()

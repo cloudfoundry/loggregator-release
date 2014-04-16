@@ -1,4 +1,4 @@
-package websocket_test
+package websocketserver_test
 
 import (
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"

@@ -5,6 +5,7 @@ import (
 	"loggregator/sinks"
 	"loggregator/sinks/dump"
 	"loggregator/sinks/syslog"
+	"loggregator/sinks/websocket"
 	"sync"
 )
 
@@ -28,7 +29,7 @@ func (sinkManagerMetrics *SinkManagerMetrics) Inc(sink sinks.Sink) {
 		sinkManagerMetrics.DumpSinks++
 	case *syslog.SyslogSink:
 		sinkManagerMetrics.SyslogSinks++
-	case *sinks.WebsocketSink:
+	case *websocket.WebsocketSink:
 		sinkManagerMetrics.WebsocketSinks++
 	}
 }
@@ -42,7 +43,7 @@ func (sinkManagerMetrics *SinkManagerMetrics) Dec(sink sinks.Sink) {
 		sinkManagerMetrics.DumpSinks--
 	case *syslog.SyslogSink:
 		sinkManagerMetrics.SyslogSinks--
-	case *sinks.WebsocketSink:
+	case *websocket.WebsocketSink:
 		sinkManagerMetrics.WebsocketSinks--
 	}
 }

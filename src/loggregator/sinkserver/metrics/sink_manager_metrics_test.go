@@ -5,6 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 	"loggregator/sinks/dump"
 	"loggregator/sinks/syslog"
+	"loggregator/sinks/websocket"
 
 	"loggregator/sinks"
 	"loggregator/sinkserver/metrics"
@@ -68,7 +69,7 @@ var _ = Describe("SinkManagerMetrics", func() {
 		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(0))
 		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(0))
 
-		sink := &sinks.WebsocketSink{}
+		sink := &websocket.WebsocketSink{}
 		sinkManagerMetrics.Inc(sink)
 
 		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(0))
