@@ -13,7 +13,8 @@ import (
 )
 
 var dataReadChannel chan *logmessage.Message
-const SERVER_PORT              = "9081"
+
+const SERVER_PORT = "9081"
 
 func init() {
 	dataReadChannel = make(chan *logmessage.Message)
@@ -41,5 +42,3 @@ func init() {
 func WaitForWebsocketRegistration() {
 	time.Sleep(50 * time.Millisecond)
 }
-
-
