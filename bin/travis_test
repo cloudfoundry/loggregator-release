@@ -28,11 +28,6 @@ packages=(
     deaagent
     loggregator
     trafficcontroller
-    github.com/cloudfoundry/loggregatorlib
-)
-
-performance_tests=(
-    github.com/cloudfoundry/loggregatorlib/emitter/emitter_performance
 )
 
 for package in "${packages[@]}"
@@ -47,24 +42,6 @@ do
     go vet $package/...
     let "result += $?"
     echo "Current result: $result"
-    if [ $result -gt $local_result ]; then
-        red " Package $package FAILED"
-    else
-        green " Package $package PASSED"
-    fi
-done
-
-for package in "${performance_tests[@]}"
-do
-    local_result=$result
-    echo -e "\n Testing $package"
-    go fmt $package/...
-    go test -i $package/...
-    go test -v $package/...
-    let "result += $?"
-    echo -e "\n Vetting $package"
-    go vet $package/...
-    let "result += $?"
     if [ $result -gt $local_result ]; then
         red " Package $package FAILED"
     else
