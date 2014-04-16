@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 	"loggregator/sinks/websocket"
 	"net"
+	"sync"
 )
 
 type fakeAddr struct{}
@@ -21,15 +22,26 @@ func (fake fakeAddr) String() string {
 }
 
 type fakeMessageWriter struct {
-	Messages [][]byte
+	messages [][]byte
+	sync.RWMutex
 }
 
 func (fake *fakeMessageWriter) RemoteAddr() net.Addr {
 	return fakeAddr{}
 }
 func (fake *fakeMessageWriter) WriteMessage(messageType int, data []byte) error {
-	fake.Messages = append(fake.Messages, data)
+	fake.Lock()
+	defer fake.Unlock()
+
+	fake.messages = append(fake.messages, data)
 	return nil
+}
+
+func (fake *fakeMessageWriter) ReadMessages() [][]byte {
+	fake.RLock()
+	defer fake.RUnlock()
+
+	return fake.messages
 }
 
 var _ = Describe("WebsocketSink", func() {
@@ -77,13 +89,13 @@ var _ = Describe("WebsocketSink", func() {
 
 			message, _ := loghelpers.NewMessageWithError("hello world", "appId")
 			inputChan <- message
-			Eventually(func() [][]byte { return fakeWebsocket.Messages }).Should(HaveLen(1))
-			Expect(fakeWebsocket.Messages[0]).To(Equal(message.GetRawMessage()))
+			Eventually(fakeWebsocket.ReadMessages).Should(HaveLen(1))
+			Expect(fakeWebsocket.ReadMessages()[0]).To(Equal(message.GetRawMessage()))
 
 			messageTwo, _ := loghelpers.NewMessageWithError("goodbye world", "appId")
 			inputChan <- messageTwo
-			Eventually(func() [][]byte { return fakeWebsocket.Messages }).Should(HaveLen(2))
-			Expect(fakeWebsocket.Messages[1]).To(Equal(messageTwo.GetRawMessage()))
+			Eventually(fakeWebsocket.ReadMessages).Should(HaveLen(2))
+			Expect(fakeWebsocket.ReadMessages()[1]).To(Equal(messageTwo.GetRawMessage()))
 		})
 
 		It("increments counters", func(done Done) {
@@ -92,7 +104,7 @@ var _ = Describe("WebsocketSink", func() {
 
 			message, _ := loghelpers.NewMessageWithError("hello world", "appId")
 			inputChan <- message
-			Eventually(func() [][]byte { return fakeWebsocket.Messages }).Should(HaveLen(1))
+			Eventually(fakeWebsocket.ReadMessages).Should(HaveLen(1))
 
 			metrics := websocketSink.Emit().Metrics
 			Expect(metrics).To(HaveLen(2))
