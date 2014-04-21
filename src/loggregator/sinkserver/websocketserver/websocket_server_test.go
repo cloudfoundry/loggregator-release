@@ -1,149 +1,126 @@
 package websocketserver_test
 
 import (
-	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
+	"fmt"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/gorilla/websocket"
-	"github.com/stretchr/testify/assert"
-	"net/http"
-	testhelpers "server_testhelpers"
-	"testing"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"loggregator/sinkserver/blacklist"
+	"loggregator/sinkserver/sinkmanager"
+	"loggregator/sinkserver/websocketserver"
 	"time"
 )
 
-func AssertWsConnectionFails(t *testing.T, port string, path string) {
-	_, _, err := websocket.DefaultDialer.Dial("ws://localhost:"+port+path, http.Header{})
-	assert.Error(t, err)
+var _ = Describe("WebsocketServer", func() {
 
-}
+	var server *websocketserver.WebsocketServer
+	var tailClient *websocket.Conn
+	var sinkManager *sinkmanager.SinkManager
+	var appId = "my-app"
+	var wsReceivedChan chan []byte
+	var stopKeepAlive chan<- struct{}
+	var connectionDropped <-chan struct{}
+	var apiEndpoint = "127.0.0.1:9091"
 
-func TestThatItSends(t *testing.T) {
-	receivedChan := make(chan []byte, 2)
+	BeforeEach(func(done Done) {
+		var err error
+		wsReceivedChan = make(chan []byte)
+		logger := loggertesthelper.Logger()
+		cfcomponent.Logger = logger
 
-	expectedMessageString := "Some data"
-	message := messagetesthelpers.NewMessage(t, expectedMessageString, "myApp01")
-	otherMessageString := "Some more stuff"
-	otherMessage := messagetesthelpers.NewMessage(t, otherMessageString, "myApp01")
+		emptyBlacklist := blacklist.New(nil)
+		sinkManager, _ = sinkmanager.NewSinkManager(1024, false, emptyBlacklist, logger)
 
-	_, dontKeepAliveChan, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, "/tail/?app=myApp01")
-	WaitForWebsocketRegistration()
+		server = websocketserver.New(apiEndpoint, sinkManager, 10*time.Millisecond, 100, logger)
+		go server.Start()
+		<-time.After(5 * time.Millisecond)
+		tailClient, stopKeepAlive, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?app=%s", apiEndpoint, appId))
+		Expect(err).NotTo(HaveOccurred())
+		close(done)
+	})
 
-	dataReadChannel <- message
-	dataReadChannel <- otherMessage
+	AfterEach(func() {
+		server.Stop()
+	})
 
-	select {
-	case <-time.After(1 * time.Second):
-		t.Errorf("Did not get message 1.")
-	case message := <-receivedChan:
-		messagetesthelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
-	}
+	Describe("failed connections", func() {
+		It("should fail without an appId", func() {
+			_, _, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?", apiEndpoint))
+			Expect(connectionDropped).To(BeClosed())
+		})
 
-	select {
-	case <-time.After(1 * time.Second):
-		t.Errorf("Did not get message 2.")
-	case message := <-receivedChan:
-		messagetesthelpers.AssertProtoBufferMessageEquals(t, otherMessageString, message)
-	}
+		It("should fail with an invalid appId", func() {
+			_, _, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?app=", apiEndpoint))
+			Expect(connectionDropped).To(BeClosed())
+		})
 
-	dontKeepAliveChan <- true
-}
+		It("should fail with something invalid", func() {
+			_, _, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?something=invalidtarget", apiEndpoint))
+			Expect(connectionDropped).To(BeClosed())
+		})
+	})
 
-func TestThatItDoesNotDumpLogsBeforeTailing(t *testing.T) {
-	receivedChan := make(chan []byte)
+	It("should send data to the websocket client", func(done Done) {
+		lm, err := NewMessageWithError("my message", appId)
+		Expect(err).NotTo(HaveOccurred())
+		sinkManager.SendTo(appId, lm)
 
-	expectedMessageString := "My important message"
-	message := messagetesthelpers.NewMessage(t, expectedMessageString, "myApp06")
+		rlm, err := receiveLogMessage(wsReceivedChan)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rlm).To(Equal(lm.GetLogMessage()))
+		close(done)
+	})
 
-	dataReadChannel <- message
+	It("should still send to 'live' sinks", func(done Done) {
+		<-time.After(200 * time.Millisecond)
+		Expect(connectionDropped).ToNot(BeClosed())
 
-	_, stopKeepAlive, _ := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, "/tail/?app=myApp06")
-	WaitForWebsocketRegistration()
+		lm, err := NewMessageWithError("my message", appId)
+		Expect(err).NotTo(HaveOccurred())
+		sinkManager.SendTo(appId, lm)
 
-	select {
-	case <-time.After(1 * time.Second):
-		break
-	case _, ok := <-receivedChan:
-		if ok {
-			t.Errorf("Recieved unexpected message from app sink")
-		}
-	}
+		rlm, err := receiveLogMessage(wsReceivedChan)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rlm).To(Equal(lm.GetLogMessage()))
+		close(done)
+	})
 
-	stopKeepAlive <- true
-	WaitForWebsocketRegistration()
-}
+	It("should close the client when the keep-alive stops", func(done Done) {
+		go func() {
+			for {
+				lm, err := NewMessageWithError("my message", appId)
+				Expect(err).NotTo(HaveOccurred())
+				sinkManager.SendTo(appId, lm)
+				time.Sleep(2 * time.Millisecond)
+			}
+		}()
 
-func TestDontDropSinkThatWorks(t *testing.T) {
-	receivedChan := make(chan []byte, 2)
-	_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, "/tail/?app=myApp04")
-
-	select {
-	case <-time.After(200 * time.Millisecond):
-	case <-droppedChannel:
-		t.Errorf("Channel drop, but shouldn't have.")
-	}
-
-	expectedMessageString := "Some data"
-	message := messagetesthelpers.NewMessage(t, expectedMessageString, "myApp04")
-	dataReadChannel <- message
-
-	select {
-	case <-time.After(1 * time.Second):
-		t.Errorf("Did not get message.")
-	case message := <-receivedChan:
-		messagetesthelpers.AssertProtoBufferMessageEquals(t, expectedMessageString, message)
-	}
-
-	stopKeepAlive <- true
-	WaitForWebsocketRegistration()
-}
-
-func TestQueryStringCombinationsThatDropSinkButContinueToWork(t *testing.T) {
-	AssertWsConnectionFails(t, SERVER_PORT, "/tail/?")
-}
-
-func TestDropSinkWhenLogTargetisinvalid(t *testing.T) {
-	AssertWsConnectionFails(t, SERVER_PORT, "/tail/?something=invalidtarget")
-}
-
-func TestKeepAlive(t *testing.T) {
-	receivedChan := make(chan []byte, 10)
-
-	_, killKeepAliveChan, connectionDroppedChannel := testhelpers.AddWSSink(t, receivedChan, SERVER_PORT, "/tail/?app=myApp05")
-	WaitForWebsocketRegistration()
-
-	go func() {
-		for {
-			expectedMessageString := "My important message"
-			message := messagetesthelpers.NewMessage(t, expectedMessageString, "myApp05")
-			dataReadChannel <- message
-			time.Sleep(2 * time.Millisecond)
-		}
-	}()
-
-	time.Sleep(10 * time.Millisecond) //wait a little bit to make sure some messages are sent
-
-	killKeepAliveChan <- true
-
-	go func() {
-		for {
-			select {
-
-			case _, ok := <-receivedChan:
-				if !ok {
-					// channel closed good!
+		go func() {
+			for {
+				select {
+				case <-wsReceivedChan:
+					// got a message... keep trying
+				case <-connectionDropped:
+					//no communication. That's good!
 					break
 				}
-			case <-time.After(10 * time.Millisecond):
-				//no communication. That's good!
-				break
 			}
-		}
-	}()
+		}()
 
-	select {
-	case fu := <-connectionDroppedChannel:
-		assert.True(t, fu, "We should have been dropped since we stopped the keepalive")
-	case <-time.After(1 * time.Second):
-		t.Fatal("Should have read from connnectionDropppedChannel by now")
-	}
+		time.Sleep(10 * time.Millisecond) //wait a little bit to make sure some messages are sent
 
+		close(stopKeepAlive)
+
+		Eventually(connectionDropped).Should(BeClosed())
+		close(done)
+	})
+})
+
+func receiveLogMessage(dataChan <-chan []byte) (*logmessage.LogMessage, error) {
+	var receivedData []byte
+	Eventually(dataChan).Should(Receive(&receivedData))
+	return parseLogMessage(receivedData)
 }
