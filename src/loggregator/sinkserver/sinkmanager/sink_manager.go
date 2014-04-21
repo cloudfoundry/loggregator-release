@@ -111,7 +111,7 @@ func (sinkManager *SinkManager) RegisterSink(sink sinks.Sink) bool {
 
 	sinkManager.Metrics.Inc(sink)
 
-	sinkManager.logger.Infof("SinkManager: Sink with identifier %v requested. Opened it.", sink.Identifier())
+	sinkManager.logger.Debugf("SinkManager: Sink with identifier %v requested. Opened it.", sink.Identifier())
 
 	go func() {
 		sink.Run(inputChan)
@@ -135,7 +135,7 @@ func (sinkManager *SinkManager) UnregisterSink(sink sinks.Sink) {
 		sinkManager.appStoreUpdateChan <- domain.AppServices{AppId: sink.AppId()}
 	}
 
-	sinkManager.logger.Infof("SinkManager: Sink with channel %v and identifier %s requested closing. Closed it.", sink.Identifier())
+	sinkManager.logger.Debugf("SinkManager: Sink with identifier %s requested closing. Closed it.", sink.Identifier())
 }
 
 func (sinkManager *SinkManager) setStopped(v bool) {
