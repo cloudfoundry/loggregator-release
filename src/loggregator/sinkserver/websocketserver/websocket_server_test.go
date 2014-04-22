@@ -90,23 +90,16 @@ var _ = Describe("WebsocketServer", func() {
 
 	It("should close the client when the keep-alive stops", func(done Done) {
 		go func() {
-			for {
-				lm, err := NewMessageWithError("my message", appId)
-				Expect(err).NotTo(HaveOccurred())
-				sinkManager.SendTo(appId, lm)
-				time.Sleep(2 * time.Millisecond)
+			for _ = range wsReceivedChan {
 			}
 		}()
 
 		go func() {
 			for {
-				select {
-				case <-wsReceivedChan:
-					// got a message... keep trying
-				case <-connectionDropped:
-					//no communication. That's good!
-					break
-				}
+				lm, err := NewMessageWithError("my message", appId)
+				Expect(err).NotTo(HaveOccurred())
+				sinkManager.SendTo(appId, lm)
+				time.Sleep(2 * time.Millisecond)
 			}
 		}()
 
