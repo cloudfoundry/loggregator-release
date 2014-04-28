@@ -34,14 +34,16 @@ var _ = Describe("HttpHandler", func() {
 		fakeListenerCounter = 0
 	})
 
+	JustBeforeEach(func() {
+		handler = trafficcontroller.NewHttpHandler(hashers, loggertesthelper.Logger())
+	})
+
 	Context("One Loggregator Server", func() {
 		BeforeEach(func() {
 			hashers = append(hashers, hasher.NewHasher([]string{"loggregator1"}))
 		})
 
 		It("uses the Correct Request URI", func() {
-			handler = trafficcontroller.NewHttpHandler(hashers, loggertesthelper.Logger())
-
 			r, _ := http.NewRequest("GET", "wss://loggregator.place/dump/?app=abc-123", nil)
 
 			handler.ServeHttp(fakeResponseWriter, r)
@@ -49,7 +51,6 @@ var _ = Describe("HttpHandler", func() {
 		})
 
 		It("grabs recent logs and creates a multi-part HTTP response", func() {
-			handler = trafficcontroller.NewHttpHandler(hashers, loggertesthelper.Logger())
 			r, _ := http.NewRequest("GET", "wss://loggregator.place/dump/?app=abc-123", nil)
 
 			for i := 0; i < 5; i++ {
@@ -86,7 +87,6 @@ var _ = Describe("HttpHandler", func() {
 		})
 
 		It("handles hashing between loggregator servers", func() {
-			handler = trafficcontroller.NewHttpHandler(hashers, loggertesthelper.Logger())
 			r, _ := http.NewRequest("GET", "wss://loggregator.place/dump/?app=abc-123", nil)
 
 			correctAddress := hashers[0].GetLoggregatorServerForAppId("abc-123")
@@ -102,7 +102,6 @@ var _ = Describe("HttpHandler", func() {
 		})
 
 		It("aggregates logs from multiple servers into one response", func() {
-			handler = trafficcontroller.NewHttpHandler(hashers, loggertesthelper.Logger())
 			r, _ := http.NewRequest("GET", "wss://loggregator.place/dump/?app=abc-123", nil)
 
 			fakeListeners[0].Channel <- []byte("message1")
@@ -143,8 +142,6 @@ var _ = Describe("HttpHandler", func() {
 	})
 
 	It("sets the MIME type correctly", func() {
-		handler = trafficcontroller.NewHttpHandler(hashers, loggertesthelper.Logger())
-
 		r, err := http.NewRequest("GET", "", nil)
 		Expect(err).ToNot(HaveOccurred())
 
