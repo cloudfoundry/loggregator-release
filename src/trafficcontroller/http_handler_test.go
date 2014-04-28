@@ -46,7 +46,7 @@ var _ = Describe("HttpHandler", func() {
 		It("uses the Correct Request URI", func() {
 			r, _ := http.NewRequest("GET", "wss://loggregator.place/dump/?app=abc-123", nil)
 
-			handler.ServeHttp(fakeResponseWriter, r)
+			handler.ServeHTTP(fakeResponseWriter, r)
 			Expect(fakeListeners[0].Uri).To(Equal("ws://loggregator1/dump/?app=abc-123"))
 		})
 
@@ -58,7 +58,7 @@ var _ = Describe("HttpHandler", func() {
 			}
 
 			close(fakeListeners[0].Channel)
-			handler.ServeHttp(fakeResponseWriter, r)
+			handler.ServeHTTP(fakeResponseWriter, r)
 
 			reader := multipart.NewReader(fakeResponseWriter.Body, "loggregator-message")
 			partsCount := 0
@@ -90,7 +90,7 @@ var _ = Describe("HttpHandler", func() {
 			r, _ := http.NewRequest("GET", "wss://loggregator.place/dump/?app=abc-123", nil)
 
 			correctAddress := hashers[0].GetLoggregatorServerForAppId("abc-123")
-			handler.ServeHttp(fakeResponseWriter, r)
+			handler.ServeHTTP(fakeResponseWriter, r)
 			Expect(fakeListeners[0].Uri).To(Equal("ws://" + correctAddress + "/dump/?app=abc-123"))
 		})
 	})
@@ -109,7 +109,7 @@ var _ = Describe("HttpHandler", func() {
 
 			close(fakeListeners[0].Channel)
 			close(fakeListeners[1].Channel)
-			handler.ServeHttp(fakeResponseWriter, r)
+			handler.ServeHTTP(fakeResponseWriter, r)
 
 			reader := multipart.NewReader(fakeResponseWriter.Body, "loggregator-message")
 			partsCount := 0
@@ -145,7 +145,7 @@ var _ = Describe("HttpHandler", func() {
 		r, err := http.NewRequest("GET", "", nil)
 		Expect(err).ToNot(HaveOccurred())
 
-		handler.ServeHttp(fakeResponseWriter, r)
+		handler.ServeHTTP(fakeResponseWriter, r)
 		Expect(fakeResponseWriter.Header().Get("Content-Type")).To(Equal(`multipart/x-protobuf; boundary="loggregator-message"`))
 	})
 })

@@ -24,7 +24,7 @@ func NewHttpHandler(hashers []*hasher.Hasher, logger *gosteno.Logger) *HttpHandl
 	return &HttpHandler{hashers: hashers, logger: logger}
 }
 
-func (h *HttpHandler) ServeHttp(rw http.ResponseWriter, r *http.Request) {
+func (h *HttpHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	mp := multipart.NewWriter(rw)
 
 	defer func() {
