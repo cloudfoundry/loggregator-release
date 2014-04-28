@@ -140,13 +140,32 @@ func sendMessagesToWebsocket(logMessages []*logmessage.Message, ws *gorilla.Conn
 }
 
 func (w *WebsocketServer) waitForKeepAliveTimeout(ws *gorilla.Conn) {
-	for {
+	ws.SetPongHandler(func(message string) error {
+		w.logger.Debugf("Websocket Sink %s: Got pong %s, extending deadline\n", ws.RemoteAddr(), message)
 		ws.SetReadDeadline(time.Now().Add(w.keepAliveInterval))
+		return nil
+	})
+
+	go emitPings(ws, w.keepAliveInterval/2, w.logger)
+
+	for {
 		_, _, err := ws.ReadMessage()
 		if err != nil {
-			w.logger.Debugf("Websocket Sink %s: Error receiving keep-alive. Stopping listening. Err: %v", ws.RemoteAddr(), err)
-			break
+			w.logger.Debugf("Websocket Sink %s: Timeout waiting for pong. Stopping listening\n", ws.RemoteAddr())
+			return
 		}
+		w.logger.Debugf("Websocket Sink %s: Got pong; waiting for next one\n", ws.RemoteAddr())
 	}
+}
 
+func emitPings(ws *gorilla.Conn, interval time.Duration, logger *gosteno.Logger) {
+	for {
+		err := ws.WriteControl(gorilla.PingMessage, []byte{42}, time.Time{})
+		if err != nil {
+			logger.Debugf("Websocket Sink %s: Error sending ping: %v\n", ws.RemoteAddr(), err)
+			return
+		}
+
+		time.Sleep(interval)
+	}
 }

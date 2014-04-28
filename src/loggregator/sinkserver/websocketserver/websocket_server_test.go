@@ -30,7 +30,7 @@ var _ = Describe("WebsocketServer", func() {
 		wsReceivedChan = make(chan []byte)
 		logger := loggertesthelper.Logger()
 		cfcomponent.Logger = logger
-		
+
 		server = websocketserver.New(apiEndpoint, sinkManager, 10*time.Millisecond, 100, logger)
 		go server.Start()
 		<-time.After(5 * time.Millisecond)
@@ -110,7 +110,6 @@ var _ = Describe("WebsocketServer", func() {
 })
 
 func receiveLogMessage(dataChan <-chan []byte) (*logmessage.LogMessage, error) {
-	var receivedData []byte
-	Eventually(dataChan).Should(Receive(&receivedData))
+	receivedData := <-dataChan
 	return parseLogMessage(receivedData)
 }
