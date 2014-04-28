@@ -26,12 +26,12 @@ type WebsocketHandler interface {
 	HandleWebSocket(string, string, []*hasher.Hasher)
 }
 
-var NewProxyHandlerProvider func(*websocket.Conn, *gosteno.Logger) WebsocketHandler
+var NewProxyHandlerProvider func(*websocket.Conn, *gosteno.Logger) WebsocketHandler = func(ws *websocket.Conn, logger *gosteno.Logger) WebsocketHandler {
+	return NewProxyHandler(ws, logger)
+}
 
-func init() {
-	NewProxyHandlerProvider = func(ws *websocket.Conn, logger *gosteno.Logger) WebsocketHandler {
-		return NewProxyHandler(ws, logger)
-	}
+var NewHttpHandlerProvider func(hashers []*hasher.Hasher, logger *gosteno.Logger) http.Handler = func(hashers []*hasher.Hasher, logger *gosteno.Logger) http.Handler {
+	return NewHttpHandler(hashers, logger)
 }
 
 func NewProxy(host string, hashers []*hasher.Hasher, authorizer authorization.LogAccessAuthorizer, logger *gosteno.Logger) *Proxy {
@@ -113,6 +113,13 @@ func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(rw, "You are not authorized. %s", errorMessage)
 		return
 	}
+
+	if recentViaHttp(r) {
+		h := NewHttpHandlerProvider(proxy.hashers, proxy.logger)
+		h.ServeHTTP(rw, r)
+		return
+	}
+
 	ws := upgrade(rw, r)
 	if ws == nil {
 		return
@@ -131,4 +138,8 @@ func extractAuthTokenFromUrl(u *url.URL) string {
 		authorization = queryValues["authorization"][0]
 	}
 	return authorization
+}
+
+func recentViaHttp(r *http.Request) bool {
+	return r.URL.Path == "/recent"
 }
