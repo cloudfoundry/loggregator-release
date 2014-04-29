@@ -67,7 +67,7 @@ var _ = Describe("WebsocketServer", func() {
 
 		rlm, err := receiveLogMessage(wsReceivedChan)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(rlm).To(Equal(lm.GetLogMessage()))
+		Expect(rlm.GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
 		close(done)
 	})
 
