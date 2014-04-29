@@ -33,3 +33,23 @@ func AssertConnectionFails(t *testing.T, port string, path string, authToken str
 	assert.Equal(t, expectedErrorCode, errorCode)
 	assert.Equal(t, "EOF", err.Error())
 }
+
+type FakeListener struct {
+	Uri string
+	Channel chan []byte
+}
+
+func NewFakeListener() *FakeListener {
+	return &FakeListener{
+		Channel: make(chan []byte, 1024),
+	}
+}
+
+func (f *FakeListener) Start(url string)  (<-chan []byte, error){
+	f.Uri = url
+	return f.Channel, nil
+}
+
+func (f *FakeListener) Stop() {
+	close(f.Channel)
+}

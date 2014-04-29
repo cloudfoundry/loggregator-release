@@ -5,12 +5,17 @@ import (
 	. "github.com/onsi/gomega"
 
 	"code.google.com/p/gogoprotobuf/proto"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/gorilla/websocket"
+	"io"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 )
+
+var logger = loggertesthelper.Logger()
 
 func TestWebsocketServer(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -43,6 +48,8 @@ func AddWSSink(receivedChan chan []byte, url string) (*websocket.Conn, chan<- st
 	stopKeepAlive := make(chan struct{})
 	connectionDropped := make(chan struct{})
 
+	lock := sync.RWMutex{}
+
 	ws, _, err := websocket.DefaultDialer.Dial(url, http.Header{})
 	if err != nil {
 		close(stopKeepAlive)
@@ -51,34 +58,45 @@ func AddWSSink(receivedChan chan []byte, url string) (*websocket.Conn, chan<- st
 	}
 
 	go func() {
+		lock.Lock()
+		ws.SetPingHandler(func(message string) error {
+			logger.Debugf("Client: got ping '%s' sending pong at %v\n", message, time.Now())
+			return ws.WriteControl(websocket.PongMessage, []byte(message), time.Time{})
+		})
+		lock.Unlock()
+
+		select {
+		case <-stopKeepAlive:
+			logger.Debugf("Client: asked to stop keepalive")
+			lock.Lock()
+			ws.SetPingHandler(func(string) error { logger.Debugf("Client: ignoring ping"); return nil })
+			lock.Unlock()
+			close(connectionDropped)
+		case <-connectionDropped:
+			logger.Debugf("Client: connection closed stopping keepalive")
+		}
+	}()
+
+	go func() {
 		for {
-
+			lock.RLock()
 			_, data, err := ws.ReadMessage()
+			lock.RUnlock()
 
+			if err == io.EOF {
+				continue
+			}
 			if err != nil {
+				logger.Debugf("Client: error %s reading from websocket, closing connection\n", err)
 				close(connectionDropped)
-				close(receivedChan)
 				return
 			}
+
 			receivedChan <- data
 		}
 
 	}()
 
-	go func() {
-		for {
-			err := ws.WriteMessage(websocket.BinaryMessage, []byte{42})
-			if err != nil {
-				break
-			}
-			select {
-			case <-stopKeepAlive:
-				return
-			case <-time.After(4 * time.Millisecond):
-				// keep-alive
-			}
-		}
-	}()
 	return ws, stopKeepAlive, connectionDropped
 }
 

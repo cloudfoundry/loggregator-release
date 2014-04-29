@@ -28,6 +28,7 @@ func (f *fakeProxyHandler) CallParams() [][]interface{} {
 	copy(copyOfParams, f.callParams)
 	return copyOfParams
 }
+
 func (f *fakeProxyHandler) HandleWebSocket(appid, requestUri string, hashers []*hasher.Hasher) {
 	f.Lock()
 	defer f.Unlock()
@@ -35,7 +36,15 @@ func (f *fakeProxyHandler) HandleWebSocket(appid, requestUri string, hashers []*
 	f.WebsocketConnection.Close()
 }
 
-var _ = Describe("OutPutProxy", func() {
+type fakeHttpHandler struct {
+	called bool
+}
+
+func (f *fakeHttpHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	f.called = true
+}
+
+var _ = Describe("OutputProxy", func() {
 
 	var fph *fakeProxyHandler
 	var hashers []*hasher.Hasher
@@ -47,6 +56,7 @@ var _ = Describe("OutPutProxy", func() {
 			fph.WebsocketConnection = ws
 			return fph
 		}
+
 		hashers = []*hasher.Hasher{hasher.NewHasher([]string{"localhost:62038"})}
 		proxy := trafficcontroller.NewProxy(
 			"localhost:"+PORT,
@@ -106,6 +116,28 @@ var _ = Describe("OutPutProxy", func() {
 		})
 	})
 
+	Context("/recent", func() {
+		var fhh *fakeHttpHandler
+
+		BeforeEach(func() {
+			fhh = &fakeHttpHandler{}
+
+			trafficcontroller.NewHttpHandlerProvider = func(hashers []*hasher.Hasher, logger *gosteno.Logger) http.Handler {
+				return fhh
+			}
+		})
+
+		It("should use HttpHandler instead of ProxyHandler", func() {
+			url := "http://localhost:" + PORT + "/recent?app=myApp"
+			r, _ := http.NewRequest("GET", url, nil)
+			r.Header = http.Header{"Authorization": []string{testhelpers.VALID_AUTHENTICATION_TOKEN}}
+			client := &http.Client{}
+			_, err := client.Do(r)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(fhh.called).To(BeTrue())
+		})
+	})
 })
 
 func assertAuthorizationError(resp *http.Response, err error, msg string) {
