@@ -4,7 +4,7 @@
     "OutgoingPort": 8080,
     "Zone": "z1",
     "Host": "localhost",
-    "ApiHost": "http://ccng.example.cf-app.com",
+    "ApiHost": "http://cc.example.cf-app.com",
     "SystemDomain": "example.cf-app.com",
     "NatsHosts": ["localhost"],
     "NatsPort": 4222,
