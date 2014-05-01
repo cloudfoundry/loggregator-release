@@ -220,7 +220,7 @@ var _ = Describe("SyslogSink", func() {
 				inputChan <- logMessage
 				errorLog := <-errorChannel
 				errorMsg := string(errorLog.GetLogMessage().GetMessage())
-				Expect(errorMsg).To(MatchRegexp(`Syslog Sink syslog://using-fake: Error when dialing out. Backing off for (\d\.\d+ms|\d+us). Err: Error connecting.`))
+				Expect(errorMsg).To(MatchRegexp(`Syslog Sink syslog://using-fake: Error when dialing out. Backing off for (\d(\.\d+)?ms|\d+us). Err: Error connecting.`))
 				Expect(errorLog.GetLogMessage().GetSourceName()).To(Equal("LGR"))
 
 				close(done)
