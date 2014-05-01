@@ -52,6 +52,7 @@ func (h *HttpHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	h.Add(len(h.hashers))
 	for _, hasher := range h.hashers {
 		loggregatorAddress := hasher.GetLoggregatorServerForAppId(appId)
+		h.logger.Debugf("HttpHandler: Connecting to loggregator on %s", "ws://"+loggregatorAddress+"/dump/?app="+appId)
 		go h.proxyConnection(messages, "ws://"+loggregatorAddress+"/dump/?app="+appId)
 	}
 
@@ -69,11 +70,6 @@ func (h *HttpHandler) proxyConnection(outgoing chan<- []byte, serverAddress stri
 	l := NewWebsocketListener()
 	incoming, _ := l.Start(serverAddress)
 
-	if len(incoming) == 0 {
-		h.logger.Debugf("HttpHandler: no messages from " + serverAddress)
-		return
-	}
-
 	for message := range incoming {
 		outgoing <- message
 	}
@@ -82,6 +78,7 @@ func (h *HttpHandler) proxyConnection(outgoing chan<- []byte, serverAddress stri
 
 func (h *HttpHandler) writeMultiPartResponse(mp *multipart.Writer, messages <-chan []byte) {
 	for message := range messages {
+		h.logger.Debugf("HttpHandler: Writing message %v to multipart response", message)
 		func() {
 			h.Lock()
 			defer h.Unlock()

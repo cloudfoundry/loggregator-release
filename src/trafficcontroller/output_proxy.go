@@ -115,6 +115,7 @@ func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if recentViaHttp(r) {
+		proxy.logger.Debugf("OutputProxy: handling request via HTTP")
 		h := NewHttpHandlerProvider(proxy.hashers, proxy.logger)
 		h.ServeHTTP(rw, r)
 		return

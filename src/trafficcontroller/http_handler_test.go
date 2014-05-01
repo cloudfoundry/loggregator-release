@@ -45,6 +45,7 @@ var _ = Describe("HttpHandler", func() {
 
 		It("uses the Correct Request URI", func() {
 			r, _ := http.NewRequest("GET", "wss://loggregator.place/dump/?app=abc-123", nil)
+			close(fakeListeners[0].Channel)
 
 			handler.ServeHTTP(fakeResponseWriter, r)
 			Expect(fakeListeners[0].Uri).To(Equal("ws://loggregator1/dump/?app=abc-123"))
@@ -88,6 +89,7 @@ var _ = Describe("HttpHandler", func() {
 
 		It("handles hashing between loggregator servers", func() {
 			r, _ := http.NewRequest("GET", "wss://loggregator.place/dump/?app=abc-123", nil)
+			close(fakeListeners[0].Channel)
 
 			correctAddress := hashers[0].GetLoggregatorServerForAppId("abc-123")
 			handler.ServeHTTP(fakeResponseWriter, r)
