@@ -8,32 +8,22 @@ import (
 	. "github.com/onsi/gomega"
 	"net/http"
 	"net/url"
-	"sync"
 	"time"
 	"trafficcontroller"
 	"trafficcontroller/hasher"
 	testhelpers "trafficcontroller_testhelpers"
 )
 
-type fakeProxyHandler struct {
-	sync.Mutex
-	callParams          [][]interface{}
-	WebsocketConnection *websocket.Conn
+type fakeWebsocketHandler struct {
+	called             bool
+	lastResponseWriter http.ResponseWriter
+	lastRequest        *http.Request
 }
 
-func (f *fakeProxyHandler) CallParams() [][]interface{} {
-	f.Lock()
-	defer f.Unlock()
-	copyOfParams := make([][]interface{}, len(f.callParams))
-	copy(copyOfParams, f.callParams)
-	return copyOfParams
-}
-
-func (f *fakeProxyHandler) HandleWebSocket(appid, requestUri string, hashers []*hasher.Hasher) {
-	f.Lock()
-	defer f.Unlock()
-	f.callParams = append(f.callParams, []interface{}{appid, requestUri, hashers})
-	f.WebsocketConnection.Close()
+func (f *fakeWebsocketHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	f.called = true
+	f.lastRequest = r
+	f.lastResponseWriter = rw
 }
 
 type fakeHttpHandler struct {
@@ -44,21 +34,21 @@ func (f *fakeHttpHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	f.called = true
 }
 
-var _ = Describe("OutputProxy", func() {
+var _ = Describe("OutputProxySingleHasher", func() {
 
-	var fph *fakeProxyHandler
-	var hashers []*hasher.Hasher
+	var fwsh *fakeWebsocketHandler
+	var hashers []hasher.Hasher
 	var PORT = "62022"
+	var proxy *trafficcontroller.Proxy
 
 	BeforeEach(func() {
-		fph = &fakeProxyHandler{callParams: make([][]interface{}, 0)}
-		trafficcontroller.NewProxyHandlerProvider = func(ws *websocket.Conn, logger *gosteno.Logger) trafficcontroller.WebsocketHandler {
-			fph.WebsocketConnection = ws
-			return fph
+		fwsh = &fakeWebsocketHandler{}
+		trafficcontroller.NewWebsocketHandlerProvider = func(messageChan <-chan []byte, logger *gosteno.Logger) http.Handler {
+			return fwsh
 		}
 
-		hashers = []*hasher.Hasher{hasher.NewHasher([]string{"localhost:62038"})}
-		proxy := trafficcontroller.NewProxy(
+		hashers = []hasher.Hasher{hasher.NewHasher([]string{"localhost:62038"})}
+		proxy = trafficcontroller.NewProxy(
 			"localhost:"+PORT,
 			hashers,
 			testhelpers.SuccessfulAuthorizer,
@@ -67,30 +57,31 @@ var _ = Describe("OutputProxy", func() {
 		go proxy.Start()
 	})
 
+	AfterEach(func() {
+		proxy.Stop()
+	})
+
 	Context("Auth Params", func() {
 		It("Should Authenticate with Auth Query Params", func() {
-			clientWithQueryParamAuth(PORT, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+			websocketClientWithQueryParamAuth(PORT, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
 
-			callParams := fph.CallParams()
-			Expect(callParams).To(HaveLen(1))
-			Expect(callParams[0][0]).To(Equal("myApp"))
-			Expect(callParams[0][1]).To(Equal("/?app=myApp&authorization=bearer+correctAuthorizationToken"))
-			Expect(callParams[0][2]).To(Equal(hashers))
+			req := fwsh.lastRequest
+			Expect(req.URL.RawQuery).To(Equal("app=myApp&authorization=bearer+correctAuthorizationToken"))
 		})
 
 		Context("when auth fails", func() {
 			It("Should Fail to Authenticate with Incorrect Auth Query Params", func() {
-				_, resp, err := clientWithQueryParamAuth(PORT, "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN)
+				_, resp, err := websocketClientWithQueryParamAuth(PORT, "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN)
 				assertAuthorizationError(resp, err, "Error: Invalid authorization")
 			})
 
 			It("Should Fail to Authenticate without Authorization", func() {
-				_, resp, err := clientWithQueryParamAuth(PORT, "/?app=myApp", "")
+				_, resp, err := websocketClientWithQueryParamAuth(PORT, "/?app=myApp", "")
 				assertAuthorizationError(resp, err, "Error: Authorization not provided")
 			})
 
 			It("Should Fail With Invalid Target", func() {
-				_, resp, err := clientWithQueryParamAuth(PORT, "/invalid_target", testhelpers.VALID_AUTHENTICATION_TOKEN)
+				_, resp, err := websocketClientWithQueryParamAuth(PORT, "/invalid_target", testhelpers.VALID_AUTHENTICATION_TOKEN)
 				assertAuthorizationError(resp, err, "Error: Invalid target")
 			})
 		})
@@ -99,21 +90,29 @@ var _ = Describe("OutputProxy", func() {
 
 	Context("Auth Headers", func() {
 		It("Should Authenticate with Correct Auth Header", func() {
-			clientWithHeaderAuth(PORT, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+			websocketClientWithHeaderAuth(PORT, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
 
-			callParams := fph.CallParams()
-			Expect(callParams).To(HaveLen(1))
-			Expect(callParams[0][0]).To(Equal("myApp"))
-			Expect(callParams[0][1]).To(Equal("/?app=myApp"))
-			Expect(callParams[0][2]).To(Equal(hashers))
+			req := fwsh.lastRequest
+			authenticateHeader := req.Header.Get("Authorization")
+			Expect(authenticateHeader).To(Equal(testhelpers.VALID_AUTHENTICATION_TOKEN))
+
 		})
 
 		Context("when auth fails", func() {
 			It("Should Fail to Authenticate with Incorrect Auth Header", func() {
-				_, resp, err := clientWithHeaderAuth(PORT, "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN)
+				_, resp, err := websocketClientWithHeaderAuth(PORT, "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN)
 				assertAuthorizationError(resp, err, "Error: Invalid authorization")
 			})
 		})
+	})
+
+	Context("websocket client", func() {
+
+		It("should use the WebsocketHandler", func() {
+			websocketClientWithHeaderAuth(PORT, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+			Expect(fwsh.called).To(BeTrue())
+		})
+
 	})
 
 	Context("/recent", func() {
@@ -122,12 +121,12 @@ var _ = Describe("OutputProxy", func() {
 		BeforeEach(func() {
 			fhh = &fakeHttpHandler{}
 
-			trafficcontroller.NewHttpHandlerProvider = func(hashers []*hasher.Hasher, logger *gosteno.Logger) http.Handler {
+			trafficcontroller.NewHttpHandlerProvider = func(<-chan []byte, *gosteno.Logger) http.Handler {
 				return fhh
 			}
 		})
 
-		It("should use HttpHandler instead of ProxyHandler", func() {
+		It("should use HttpHandler instead of WebsocketHandler", func() {
 			url := "http://localhost:" + PORT + "/recent?app=myApp"
 			r, _ := http.NewRequest("GET", url, nil)
 			r.Header = http.Header{"Authorization": []string{testhelpers.VALID_AUTHENTICATION_TOKEN}}
@@ -150,7 +149,7 @@ func assertAuthorizationError(resp *http.Response, err error, msg string) {
 	Expect(string(respBody)).To(ContainSubstring(msg))
 }
 
-func clientWithQueryParamAuth(port string, path string, auth string) ([]byte, *http.Response, error) {
+func websocketClientWithQueryParamAuth(port string, path string, auth string) ([]byte, *http.Response, error) {
 	authorizationParams := ""
 	if auth != "" {
 		authorizationParams = "&authorization=" + url.QueryEscape(auth)
@@ -160,7 +159,7 @@ func clientWithQueryParamAuth(port string, path string, auth string) ([]byte, *h
 	return dialConnection(url, http.Header{})
 }
 
-func clientWithHeaderAuth(port string, path string, auth string) ([]byte, *http.Response, error) {
+func websocketClientWithHeaderAuth(port string, path string, auth string) ([]byte, *http.Response, error) {
 	url := "ws://localhost:" + port + path
 	headers := http.Header{"Authorization": []string{auth}}
 	return dialConnection(url, headers)

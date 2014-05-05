@@ -2,22 +2,32 @@ package hasher
 
 import (
 	"math/big"
+	"trafficcontroller/listener"
 )
 
-type Hasher struct {
+var NewWebsocketListener = func() listener.Listener {
+	return listener.NewWebsocket()
+}
+
+type Hasher interface {
+	LoggregatorServers() []string
+	GetLoggregatorServerForAppId(string) string
+	ProxyMessagesFor(string, listener.OutputChannel, listener.StopChannel)
+}
+
+type hasher struct {
 	items []string
 }
 
-func NewHasher(loggregatorServers []string) (h *Hasher) {
+func NewHasher(loggregatorServers []string) Hasher {
 	if len(loggregatorServers) == 0 {
 		panic("Hasher must be seeded with one or more Loggregator Servers")
 	}
 
-	h = &Hasher{items: loggregatorServers}
-	return
+	return &hasher{items: loggregatorServers}
 }
 
-func (h *Hasher) GetLoggregatorServerForAppId(appId string) string {
+func (h *hasher) GetLoggregatorServerForAppId(appId string) string {
 	var id, numberOfItems big.Int
 	id.SetBytes([]byte(appId))
 	numberOfItems.SetInt64(int64(len(h.items)))
@@ -26,6 +36,12 @@ func (h *Hasher) GetLoggregatorServerForAppId(appId string) string {
 	return h.items[id.Int64()]
 }
 
-func (h *Hasher) LoggregatorServers() []string {
+func (h *hasher) LoggregatorServers() []string {
 	return h.items
+}
+
+func (h *hasher) ProxyMessagesFor(appId string, outgoing listener.OutputChannel, stop listener.StopChannel) {
+	l := NewWebsocketListener()
+	serverAddress := h.GetLoggregatorServerForAppId(appId)
+	l.Start(serverAddress, outgoing, stop)
 }

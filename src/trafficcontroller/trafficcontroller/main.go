@@ -191,9 +191,9 @@ func makeOutgoingProxy(ipAddress string, config *Config, logger *gosteno.Logger)
 	return proxy
 }
 
-func makeHashers(loggregators map[string][]string, loggregatorOutgoingPort uint32, logger *gosteno.Logger) []*hasher.Hasher {
+func makeHashers(loggregators map[string][]string, loggregatorOutgoingPort uint32, logger *gosteno.Logger) []hasher.Hasher {
 	counter := 0
-	hashers := make([]*hasher.Hasher, 0, len(loggregators))
+	hashers := make([]hasher.Hasher, 0, len(loggregators))
 	for _, servers := range loggregators {
 		logger.Debugf("Output Proxy Startup: Hashing servers: %v  Length: %d", servers, len(servers))
 

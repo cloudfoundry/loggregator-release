@@ -20,6 +20,7 @@ import (
 	"loggregator/sinkserver/websocketserver"
 	"loggregator/store"
 	"loggregator/store/cache"
+	"sync"
 	"time"
 )
 
@@ -72,6 +73,8 @@ type Loggregator struct {
 	storeAdapter storeadapter.StoreAdapter
 
 	newAppServiceChan, deletedAppServiceChan <-chan domain.AppService
+	sync.Mutex
+	sync.WaitGroup
 }
 
 func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
@@ -89,7 +92,6 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 	appStore := store.NewAppServiceStore(storeAdapter, appStoreWatcher)
 	return &Loggregator{
 		Logger:                logger,
-		errChan:               make(chan error),
 		listener:              listener,
 		unmarshaller:          unmarshaller,
 		sinkManager:           sinkManager,
@@ -106,35 +108,66 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 }
 
 func (l *Loggregator) Start() {
+	l.Lock()
+	l.errChan = make(chan error)
+	l.Unlock()
+
 	err := l.storeAdapter.Connect()
 	if err != nil {
 		panic(err)
 	}
-
-	go l.appStoreWatcher.Run()
-
-	go l.appStore.Run(l.appStoreInputChan)
-	go l.listener.Start()
-	go l.unmarshaller.Start(l.errChan)
-	go l.sinkManager.Start(l.newAppServiceChan, l.deletedAppServiceChan)
-
-	go l.messageRouter.Start(l.messageChan)
-
-	go l.websocketServer.Start()
+	l.Add(7)
 
 	go func() {
-		for err := range l.errChan {
-			l.Errorf("Got error %s", err)
-		}
+		defer l.Done()
+		l.appStoreWatcher.Run()
 	}()
+
+	go func() {
+		defer l.Done()
+		l.appStore.Run(l.appStoreInputChan)
+	}()
+
+	go func() {
+		defer l.Done()
+		l.listener.Start()
+	}()
+
+	go func() {
+		defer l.Done()
+		l.unmarshaller.Start(l.errChan)
+	}()
+
+	go func() {
+		defer l.Done()
+		l.sinkManager.Start(l.newAppServiceChan, l.deletedAppServiceChan)
+	}()
+
+	go func() {
+		defer l.Done()
+		l.messageRouter.Start(l.messageChan)
+	}()
+
+	go func() {
+		defer l.Done()
+		l.websocketServer.Start()
+	}()
+
+	for err := range l.errChan {
+		l.Errorf("Got error %s", err)
+	}
 }
 
 func (l *Loggregator) Stop() {
+	l.Lock()
+	defer l.Unlock()
 	l.listener.Stop()
-	l.unmarshaller.Stop()
 	l.sinkManager.Stop()
 	l.messageRouter.Stop()
 	l.websocketServer.Stop()
+	l.storeAdapter.Disconnect()
+
+	l.Wait()
 	close(l.errChan)
 }
 

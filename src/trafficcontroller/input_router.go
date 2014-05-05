@@ -19,14 +19,14 @@ func (hm TrafficControllerMonitor) Ok() bool {
 
 type Router struct {
 	cfcomponent.Component
-	hasher             *hasher.Hasher
+	hasher             hasher.Hasher
 	loggregatorClients map[string]loggregatorclient.LoggregatorClient
 	agentListener      agentlistener.AgentListener
 	dataChan           <-chan []byte
 	host               string
 }
 
-func NewRouter(host string, hasher *hasher.Hasher, config cfcomponent.Config, logger *gosteno.Logger) (r *Router, err error) {
+func NewRouter(host string, hasher hasher.Hasher, config cfcomponent.Config, logger *gosteno.Logger) (r *Router, err error) {
 	var instrumentables []instrumentation.Instrumentable
 	servers := hasher.LoggregatorServers()
 	loggregatorClients := make(map[string]loggregatorclient.LoggregatorClient, len(servers))

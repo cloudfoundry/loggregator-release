@@ -40,11 +40,14 @@ func (f fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 var _ = Describe("WebsocketListener", func() {
 
 	var ts *httptest.Server
-	var messageChan chan []byte
+	var messageChan, outputChan chan []byte
+	var stopChan chan struct{}
 	var l listener.Listener
 
 	BeforeEach(func() {
 		messageChan = make(chan []byte)
+		outputChan = make(chan []byte)
+		stopChan = make(chan struct{})
 		ts = httptest.NewUnstartedServer(fakeHandler{messageChan})
 		l = listener.NewWebsocket()
 	})
@@ -56,9 +59,8 @@ var _ = Describe("WebsocketListener", func() {
 
 	Context("when the server is not running", func() {
 		It("should error when connecting", func() {
-			outputChan, err := l.Start("ws://localhost:1234")
+			err := l.Start("ws://localhost:1234", outputChan, stopChan)
 			Expect(err).To(HaveOccurred())
-			Expect(outputChan).To(BeClosed())
 		})
 	})
 
@@ -68,13 +70,12 @@ var _ = Describe("WebsocketListener", func() {
 		})
 
 		It("should connect to a websocket", func() {
-			outputChan, err := l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr().String()))
+			err := l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr().String()), outputChan, stopChan)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(outputChan).NotTo(BeClosed())
 		})
 
 		It("should output messages recieved from the server", func(done Done) {
-			outputChan, _ := l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr().String()))
+			l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr().String()), outputChan, stopChan)
 
 			message := []byte("hello world")
 			messageChan <- message
@@ -86,10 +87,27 @@ var _ = Describe("WebsocketListener", func() {
 			close(done)
 		})
 
-		It("should close the channel when server returns an error", func() {
-			outputChan, _ := l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr().String()))
+		It("should not close the channel when stopped", func() {
+			l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr().String()), outputChan, stopChan)
+			close(stopChan)
+			Eventually(outputChan).ShouldNot(BeClosed())
+		})
+
+		It("should stop all goroutines when done", func(done Done) {
+			l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr().String()), outputChan, stopChan)
+			close(stopChan)
+			l.Wait()
+			Expect(outputChan).NotTo(BeClosed())
+			close(done)
+		})
+
+		It("should stop all goroutines when server returns an error", func(done Done) {
+			l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr().String()), outputChan, stopChan)
 			ts.CloseClientConnections()
-			Eventually(outputChan).Should(BeClosed())
+			l.Wait()
+			Expect(outputChan).NotTo(BeClosed())
+			Expect(stopChan).NotTo(BeClosed())
+			close(done)
 		})
 	})
 })

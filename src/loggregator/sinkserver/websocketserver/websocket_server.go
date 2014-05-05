@@ -148,13 +148,10 @@ func (w *WebsocketServer) waitForKeepAliveTimeout(ws *gorilla.Conn) {
 
 	go emitPings(ws, w.keepAliveInterval/2, w.logger)
 
-	for {
-		_, _, err := ws.ReadMessage()
-		if err != nil {
-			w.logger.Debugf("Websocket Sink %s: Timeout waiting for pong. Stopping listening\n", ws.RemoteAddr())
-			return
-		}
-		w.logger.Debugf("Websocket Sink %s: Got pong; waiting for next one\n", ws.RemoteAddr())
+	_, _, err := ws.ReadMessage()
+	if err != nil {
+		w.logger.Debugf("Websocket Sink %s: Timeout waiting for pong. Stopping listening\n", ws.RemoteAddr())
+		return
 	}
 }
 

@@ -1,6 +1,9 @@
 package listener
 
+type StopChannel <-chan struct{}
+type OutputChannel chan<- []byte
+
 type Listener interface {
-	Start(string) (<-chan []byte, error)
-	Stop()
+	Start(string, OutputChannel, StopChannel) error
+	Wait()
 }

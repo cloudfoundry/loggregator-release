@@ -61,7 +61,7 @@ func (sinkManager *SinkManager) Stop() {
 	default:
 		close(sinkManager.doneChannel)
 		sinkManager.sinks.DeleteAll()
-		//		close(sinkManager.appStoreUpdateChan)
+		close(sinkManager.appStoreUpdateChan)
 	}
 }
 

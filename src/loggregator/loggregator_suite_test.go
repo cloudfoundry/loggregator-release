@@ -40,9 +40,10 @@ func TestLoggregator(t *testing.T) {
 	cfcomponent.Logger = loggertesthelper.Logger()
 
 	l := loggregator.New("127.0.0.1", loggregatorConfig, loggertesthelper.Logger())
-	l.Start()
+	go l.Start()
 
 	RunSpecs(t, "Loggregator Suite")
+
 	l.Stop()
 	etcdRunner.Stop()
 }

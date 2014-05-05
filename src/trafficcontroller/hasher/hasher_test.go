@@ -1,98 +1,136 @@
-package hasher
+package hasher_test
 
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"github.com/stretchr/testify/assert"
-	"math"
-	"testing"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"trafficcontroller/hasher"
+	"trafficcontroller/listener"
 )
 
-func TestThatItPanicsWhenNotSeededWithLoggregatorServers(t *testing.T) {
-	assert.Panics(t, func() {
-		NewHasher([]string{})
+var _ = Describe("Hasher", func() {
+	It("should panic when not seeded with servers", func() {
+		Expect(func() {
+			hasher.NewHasher([]string{})
+		}).To(Panic())
 	})
+
+	Describe("LoggregatorServers", func() {
+
+		It("should return one server", func() {
+			loggregatorServer := []string{"10.10.0.16:9998"}
+			h := hasher.NewHasher(loggregatorServer)
+			Expect(h.LoggregatorServers()).To(Equal(loggregatorServer))
+		})
+
+		It("should return all servers", func() {
+			loggregatorServers := []string{"10.10.0.16:9998", "10.10.0.17:9997"}
+			h := hasher.NewHasher(loggregatorServers)
+			Expect(h.LoggregatorServers()).To(Equal(loggregatorServers))
+		})
+
+	})
+
+	Describe("GetLoggregatorServerForAppId", func() {
+
+		It("should hashes accross one server", func() {
+			loggregatorServer := []string{"10.10.0.16:9998"}
+			h := hasher.NewHasher(loggregatorServer)
+			ls := h.GetLoggregatorServerForAppId("app1")
+			Expect(ls).To(Equal(loggregatorServer[0]))
+		})
+
+		It("should hash accross two servers", func() {
+			loggregatorServer := []string{"server1", "server2"}
+			h := hasher.NewHasher(loggregatorServer)
+			ls := h.GetLoggregatorServerForAppId("app1")
+
+			Expect(ls).To(Equal(loggregatorServer[1]))
+
+			ls = h.GetLoggregatorServerForAppId("app2")
+			Expect(ls).To(Equal(loggregatorServer[0]))
+		})
+
+		It("should uniformly hash traffic accross servers", func() {
+			loggregatorServers := []string{"server1", "server2", "server3"}
+			hitCounters := map[string]int{"server1": 0, "server2": 0, "server3": 0}
+
+			h := hasher.NewHasher(loggregatorServers)
+			target := 1000000
+			for i := 0; i < target; i++ {
+				ls := h.GetLoggregatorServerForAppId(GenUUID())
+				hitCounters[ls] = hitCounters[ls] + 1
+			}
+
+			targetHitsPerServer := target / len(hitCounters)
+			Expect(hitCounters["server1"]).To(BeNumerically("~", targetHitsPerServer, 3000))
+			Expect(hitCounters["server2"]).To(BeNumerically("~", targetHitsPerServer, 3000))
+			Expect(hitCounters["server3"]).To(BeNumerically("~", targetHitsPerServer, 3000))
+		})
+
+		It("should always return the same server for the given appId", func() {
+			loggregatorServers := []string{"10.10.0.16:9998", "10.10.0.17:9997"}
+			h := hasher.NewHasher(loggregatorServers)
+			for i := 0; i < 1000; i++ {
+				ls0 := h.GetLoggregatorServerForAppId("appId")
+				Expect(ls0).To(Equal(loggregatorServers[0]))
+
+				ls1 := h.GetLoggregatorServerForAppId("appId23")
+				Expect(ls1).To(Equal(loggregatorServers[1]))
+			}
+		})
+	})
+
+	Describe("ProxyMessagesFor", func() {
+
+		var loggregatorServers = []string{"10.10.0.16:9998", "10.10.0.17:9997"}
+		var h = hasher.NewHasher(loggregatorServers)
+		var fl = &fakeListener{make(chan []byte)}
+		var outChan = make(chan []byte, 1)
+		var stopChan = make(chan struct{})
+
+		hasher.NewWebsocketListener = func() listener.Listener {
+			return fl
+		}
+
+		BeforeEach(func() {
+			h.ProxyMessagesFor("appId", outChan, stopChan)
+		})
+
+		AfterEach(func() {
+			close(stopChan)
+		})
+
+		It("should forward all traffic from the listener to the outChan", func(done Done) {
+			inputChan := fl.messageChan
+			inputChan <- []byte("Hello World!")
+			message := <-outChan
+			Expect(string(message)).To(Equal("Hello World!"))
+			close(done)
+		})
+	})
+})
+
+type fakeListener struct {
+	messageChan chan []byte
 }
 
-func TestThatLoggregatorServersReturnsOneServer(t *testing.T) {
-	loggregatorServer := []string{"10.10.0.16:9998"}
-	h := NewHasher(loggregatorServer)
-	assert.Equal(t, loggregatorServer, h.LoggregatorServers())
+func (fl *fakeListener) Start(host string, o listener.OutputChannel, s listener.StopChannel) error {
+	Expect(host).To(Equal("10.10.0.16:9998"))
+	go func() {
+		<-s
+		close(fl.messageChan)
+	}()
+	go func() {
+		for msg := range fl.messageChan {
+			o <- msg
+		}
+	}()
+	return nil
 }
 
-func TestThatLoggregatorServersReturnsAllServers(t *testing.T) {
-	loggregatorServers := []string{"10.10.0.16:9998", "10.10.0.17:9997"}
-	h := NewHasher(loggregatorServers)
-	assert.Equal(t, loggregatorServers, h.LoggregatorServers())
-}
-
-func TestThatGetLoggregatorServerForAppIdWorksWithOneServer(t *testing.T) {
-	loggregatorServer := []string{"10.10.0.16:9998"}
-	h := NewHasher(loggregatorServer)
-	ls := h.GetLoggregatorServerForAppId("app1")
-	assert.Equal(t, loggregatorServer[0], ls)
-}
-
-func TestThatGetLoggregatorServerForAppIdWorksWithTwoServers(t *testing.T) {
-	loggregatorServer := []string{"server1", "server2"}
-
-	h := NewHasher(loggregatorServer)
-	ls := h.GetLoggregatorServerForAppId("app1")
-	assert.Equal(t, loggregatorServer[1], ls)
-
-	ls = h.GetLoggregatorServerForAppId("app2")
-	assert.Equal(t, loggregatorServer[0], ls)
-}
-
-func TestThatTwoServersActuallyGetUsed(t *testing.T) {
-	loggregatorServer := []string{"server1", "server2"}
-
-	h := NewHasher(loggregatorServer)
-	ls := h.GetLoggregatorServerForAppId("0")
-	assert.Equal(t, loggregatorServer[0], ls)
-
-	ls = h.GetLoggregatorServerForAppId("1")
-	assert.Equal(t, loggregatorServer[1], ls)
-
-	ls = h.GetLoggregatorServerForAppId("2")
-	assert.Equal(t, loggregatorServer[0], ls)
-
-	ls = h.GetLoggregatorServerForAppId("3")
-	assert.Equal(t, loggregatorServer[1], ls)
-}
-
-func TestThatMultipleServersGetUsedUniformly(t *testing.T) {
-	loggregatorServers := []string{"server1", "server2", "server3"}
-	hitCounters := map[string]int{"server1": 0, "server2": 0, "server3": 0}
-
-	h := NewHasher(loggregatorServers)
-	target := 1000000
-	for i := 0; i < target; i++ {
-		ls := h.GetLoggregatorServerForAppId(GenUUID())
-		hitCounters[ls] = hitCounters[ls] + 1
-	}
-
-	withinLimits := func(target, actual, e int) bool {
-		return math.Abs(float64(actual)-float64(target)) < float64(e)
-	}
-
-	assert.True(t, withinLimits(target/3, hitCounters["server1"], 30000))
-	assert.True(t, withinLimits(target/3, hitCounters["server2"], 30000))
-	assert.True(t, withinLimits(target/3, hitCounters["server3"], 30000))
-}
-
-func TestThatItIsDeterministic(t *testing.T) {
-	loggregatorServers := []string{"10.10.0.16:9998", "10.10.0.17:9997"}
-	h := NewHasher(loggregatorServers)
-
-	for i := 0; i < 1000; i++ {
-		ls0 := h.GetLoggregatorServerForAppId("appId")
-		assert.Equal(t, loggregatorServers[0], ls0)
-
-		ls1 := h.GetLoggregatorServerForAppId("appId23")
-		assert.Equal(t, loggregatorServers[1], ls1)
-	}
-}
+func (fl *fakeListener) Wait() {}
 
 func GenUUID() string {
 	uuid := make([]byte, 16)

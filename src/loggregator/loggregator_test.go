@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -22,6 +23,8 @@ func AddWSSink(receivedChan chan []byte, port string, path string) (*websocket.C
 	connectionDroppedChannel := make(chan bool, 1)
 
 	var ws *websocket.Conn
+	var lock sync.Mutex
+
 	i := 0
 	for {
 		var err error
@@ -52,19 +55,12 @@ func AddWSSink(receivedChan chan []byte, port string, path string) (*websocket.C
 		}
 
 	}()
+
 	go func() {
-		for {
-			err := ws.WriteMessage(websocket.BinaryMessage, []byte{42})
-			if err != nil {
-				break
-			}
-			select {
-			case <-dontKeepAliveChan:
-				return
-			case <-time.After(4 * time.Millisecond):
-				// keep-alive
-			}
-		}
+		<-dontKeepAliveChan
+		lock.Lock()
+		ws.SetPingHandler(func(string) error { return nil })
+		lock.Unlock()
 	}()
 	return ws, dontKeepAliveChan, connectionDroppedChannel
 }

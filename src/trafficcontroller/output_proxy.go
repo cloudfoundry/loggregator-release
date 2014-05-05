@@ -5,36 +5,36 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"github.com/gorilla/websocket"
 	"net"
 	"net/http"
 	"net/url"
 	"time"
 	"trafficcontroller/authorization"
+	"trafficcontroller/handlers"
 	"trafficcontroller/hasher"
 )
 
 type Proxy struct {
 	host      string
-	hashers   []*hasher.Hasher
+	hashers   []hasher.Hasher
 	logger    *gosteno.Logger
 	authorize authorization.LogAccessAuthorizer
 	listener  net.Listener
 }
 
 type WebsocketHandler interface {
-	HandleWebSocket(string, string, []*hasher.Hasher)
+	HandleWebSocket(string, string, []hasher.Hasher)
 }
 
-var NewProxyHandlerProvider func(*websocket.Conn, *gosteno.Logger) WebsocketHandler = func(ws *websocket.Conn, logger *gosteno.Logger) WebsocketHandler {
-	return NewProxyHandler(ws, logger)
+var NewWebsocketHandlerProvider = func(messages <-chan []byte, logger *gosteno.Logger) http.Handler {
+	return handlers.NewWebsocketHandler(messages, logger)
 }
 
-var NewHttpHandlerProvider func(hashers []*hasher.Hasher, logger *gosteno.Logger) http.Handler = func(hashers []*hasher.Hasher, logger *gosteno.Logger) http.Handler {
-	return NewHttpHandler(hashers, logger)
+var NewHttpHandlerProvider = func(messages <-chan []byte, logger *gosteno.Logger) http.Handler {
+	return handlers.NewHttpHandler(messages, logger)
 }
 
-func NewProxy(host string, hashers []*hasher.Hasher, authorizer authorization.LogAccessAuthorizer, logger *gosteno.Logger) *Proxy {
+func NewProxy(host string, hashers []hasher.Hasher, authorizer authorization.LogAccessAuthorizer, logger *gosteno.Logger) *Proxy {
 	return &Proxy{host: host, hashers: hashers, authorize: authorizer, logger: logger}
 }
 
@@ -87,15 +87,6 @@ func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress string) 
 	return true, nil
 }
 
-func upgrade(w http.ResponseWriter, r *http.Request) *websocket.Conn {
-	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
-	if err != nil {
-		http.Error(w, "Not a websocket handshake", 400)
-		return nil
-	}
-	return ws
-}
-
 func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	clientAddress := r.RemoteAddr
@@ -114,22 +105,22 @@ func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	messagesChan := make(chan []byte)
+	stopChan := make(chan struct{})
+	defer close(stopChan)
+	for _, h := range proxy.hashers {
+		h.ProxyMessagesFor(appId, messagesChan, stopChan)
+	}
+
+	var h http.Handler
+
 	if recentViaHttp(r) {
-		proxy.logger.Debugf("OutputProxy: handling request via HTTP")
-		h := NewHttpHandlerProvider(proxy.hashers, proxy.logger)
-		h.ServeHTTP(rw, r)
-		return
+		h = NewHttpHandlerProvider(messagesChan, proxy.logger)
+	} else {
+		h = NewWebsocketHandlerProvider(messagesChan, proxy.logger)
 	}
 
-	ws := upgrade(rw, r)
-	if ws == nil {
-		return
-	}
-	defer ws.Close()
-
-	proxyHandler := NewProxyHandlerProvider(ws, proxy.logger)
-
-	proxyHandler.HandleWebSocket(appId, r.URL.RequestURI(), proxy.hashers)
+	h.ServeHTTP(rw, r)
 }
 
 func extractAuthTokenFromUrl(u *url.URL) string {

@@ -33,7 +33,3 @@ func (l *LogMessageUnmarshaller) Start(errorChan chan<- error) {
 		cfcomponent.Logger.Debug("LogMessageUnmarshaller: Sent a message")
 	}
 }
-
-func (l *LogMessageUnmarshaller) Stop() {
-
-}
