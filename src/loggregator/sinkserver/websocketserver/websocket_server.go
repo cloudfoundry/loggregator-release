@@ -11,6 +11,7 @@ import (
 	"loggregator/sinkserver/sinkmanager"
 	"net"
 	"net/http"
+	"servertools"
 	"sync"
 	"time"
 )
@@ -115,7 +116,8 @@ func (w *WebsocketServer) streamLogs(appId string, ws *gorilla.Conn) {
 	w.sinkManager.RegisterSink(websocketSink)
 	defer w.sinkManager.UnregisterSink(websocketSink)
 
-	w.waitForKeepAliveTimeout(ws)
+	go ws.ReadMessage()
+	servertools.NewKeepAlive(ws, 100*time.Millisecond).Run()
 }
 
 func (w *WebsocketServer) recentLogs(appId string, ws *gorilla.Conn) {
@@ -136,33 +138,5 @@ func sendMessagesToWebsocket(logMessages []*logmessage.Message, ws *gorilla.Conn
 		} else {
 			logger.Debugf("Dump Sink %s: Successfully sent data", ws.RemoteAddr())
 		}
-	}
-}
-
-func (w *WebsocketServer) waitForKeepAliveTimeout(ws *gorilla.Conn) {
-	ws.SetPongHandler(func(message string) error {
-		w.logger.Debugf("Websocket Sink %s: Got pong %s, extending deadline\n", ws.RemoteAddr(), message)
-		ws.SetReadDeadline(time.Now().Add(w.keepAliveInterval))
-		return nil
-	})
-
-	go emitPings(ws, w.keepAliveInterval/2, w.logger)
-
-	_, _, err := ws.ReadMessage()
-	if err != nil {
-		w.logger.Debugf("Websocket Sink %s: Timeout waiting for pong. Stopping listening\n", ws.RemoteAddr())
-		return
-	}
-}
-
-func emitPings(ws *gorilla.Conn, interval time.Duration, logger *gosteno.Logger) {
-	for {
-		err := ws.WriteControl(gorilla.PingMessage, []byte{42}, time.Time{})
-		if err != nil {
-			logger.Debugf("Websocket Sink %s: Error sending ping: %v\n", ws.RemoteAddr(), err)
-			return
-		}
-
-		time.Sleep(interval)
 	}
 }
