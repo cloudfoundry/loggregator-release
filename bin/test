@@ -17,7 +17,7 @@ echo "RACE DETECTION"
 ./release/loggregator --config=./config/loggregator_with_fake_nats.json > /tmp/tmp.log 2>&1 &
 pid=$!
 sleep 2s
-kill -2 $pid
+kill $pid
 sleep 2s
 
 set +e

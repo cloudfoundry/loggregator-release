@@ -54,7 +54,6 @@ var _ = Describe("WebsocketHandler", func() {
 			Expect(string(msg)).To(Equal("message"))
 		}
 		go ws.ReadMessage()
-		Consistently(handlerDone, 200*time.Millisecond).ShouldNot(BeClosed())
 		close(messagesChan)
 	})
 
@@ -70,7 +69,7 @@ var _ = Describe("WebsocketHandler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		ws.Close()
 		go func() {
-			handlerDone := handlerDone
+			handlerDone, messagesChan := handlerDone, messagesChan
 			for {
 				select {
 				case messagesChan <- []byte("message"):
@@ -91,6 +90,32 @@ var _ = Describe("WebsocketHandler", func() {
 		go ws.ReadMessage()
 
 		Eventually(handlerDone).Should(BeClosed())
+	})
+
+	It("should continue when the client resonds to pings", func() {
+		ws, _, err := websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
+		Expect(err).NotTo(HaveOccurred())
+
+		go ws.ReadMessage()
+
+		Consistently(handlerDone, 200*time.Millisecond).ShouldNot(BeClosed())
+		close(messagesChan)
+	})
+
+	It("should continue when the client sends old style keepalives", func() {
+		ws, _, err := websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
+		Expect(err).NotTo(HaveOccurred())
+
+		go func() {
+			for {
+				ws.WriteMessage(websocket.TextMessage, []byte("I'm alive!"))
+				time.Sleep(100 * time.Millisecond)
+			}
+		}()
+		go ws.ReadMessage()
+
+		Consistently(handlerDone, 200*time.Millisecond).ShouldNot(BeClosed())
+		close(messagesChan)
 	})
 
 })
