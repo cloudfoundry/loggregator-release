@@ -5,14 +5,14 @@ import (
 	"trafficcontroller/listener"
 )
 
-var NewWebsocketListener = func() listener.Listener {
-	return listener.NewWebsocket()
+var NewWebsocketListener = func(appId string) listener.Listener {
+	return listener.NewWebsocket(appId)
 }
 
 type Hasher interface {
 	LoggregatorServers() []string
 	GetLoggregatorServerForAppId(string) string
-	ProxyMessagesFor(string, listener.OutputChannel, listener.StopChannel)
+	ProxyMessagesFor(string, listener.OutputChannel, listener.StopChannel) error
 }
 
 type hasher struct {
@@ -40,8 +40,8 @@ func (h *hasher) LoggregatorServers() []string {
 	return h.items
 }
 
-func (h *hasher) ProxyMessagesFor(appId string, outgoing listener.OutputChannel, stop listener.StopChannel) {
-	l := NewWebsocketListener()
+func (h *hasher) ProxyMessagesFor(appId string, outgoing listener.OutputChannel, stop listener.StopChannel) error {
+	l := NewWebsocketListener(appId)
 	serverAddress := h.GetLoggregatorServerForAppId(appId)
-	l.Start(serverAddress, outgoing, stop)
+	return l.Start(serverAddress, outgoing, stop)
 }

@@ -27,7 +27,7 @@ type WebsocketHandler interface {
 }
 
 var NewWebsocketHandlerProvider = func(messages <-chan []byte, logger *gosteno.Logger) http.Handler {
-	return handlers.NewWebsocketHandler(messages, logger)
+	return handlers.NewWebsocketHandler(messages, logger, 30*time.Second)
 }
 
 var NewHttpHandlerProvider = func(messages <-chan []byte, logger *gosteno.Logger) http.Handler {
@@ -105,11 +105,17 @@ func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	messagesChan := make(chan []byte)
+	messagesChan := make(chan []byte, 100)
 	stopChan := make(chan struct{})
 	defer close(stopChan)
+
 	for _, h := range proxy.hashers {
-		h.ProxyMessagesFor(appId, messagesChan, stopChan)
+		err := h.ProxyMessagesFor(appId, messagesChan, stopChan)
+		if err != nil {
+			errorMsg := fmt.Sprintf("proxy: error connecting to a loggregator server")
+			messagesChan <- generateLogMessage(errorMsg, appId)
+			proxy.logger.Info(errorMsg)
+		}
 	}
 
 	var h http.Handler
@@ -134,4 +140,19 @@ func extractAuthTokenFromUrl(u *url.URL) string {
 
 func recentViaHttp(r *http.Request) bool {
 	return r.URL.Path == "/recent"
+}
+
+func generateLogMessage(messageString string, appId string) []byte {
+	messageType := logmessage.LogMessage_ERR
+	currentTime := time.Now()
+	logMessage := &logmessage.LogMessage{
+		Message:     []byte(messageString),
+		AppId:       proto.String(appId),
+		MessageType: &messageType,
+		SourceName:  proto.String("LGR"),
+		Timestamp:   proto.Int64(currentTime.UnixNano()),
+	}
+
+	msg, _ := proto.Marshal(logMessage)
+	return msg
 }

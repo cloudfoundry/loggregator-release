@@ -4,48 +4,47 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/gorilla/websocket"
 	"net/http"
+	"servertools"
 	"time"
 )
 
 type websocketHandler struct {
-	messages <-chan []byte
-	logger   *gosteno.Logger
+	messages  <-chan []byte
+	logger    *gosteno.Logger
+	keepAlive time.Duration
 }
 
-func NewWebsocketHandler(m <-chan []byte, logger *gosteno.Logger) *websocketHandler {
-	return &websocketHandler{messages: m, logger: logger}
+func NewWebsocketHandler(m <-chan []byte, logger *gosteno.Logger, keepAlive time.Duration) *websocketHandler {
+	return &websocketHandler{messages: m, logger: logger, keepAlive: keepAlive}
 }
 
 func (h *websocketHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	ws, err := websocket.Upgrade(rw, r, nil, 1024, 1024)
+	ws, err := websocket.Upgrade(rw, r, nil, 0, 0)
 	if err != nil {
 		http.Error(rw, "Not a websocket handshake", http.StatusBadRequest)
 		return
 	}
 	defer ws.Close()
 	defer ws.WriteControl(websocket.CloseMessage, []byte{}, time.Time{})
+	keepAliveExpired := make(chan struct{})
+	go ws.ReadMessage()
+	go func() {
+		servertools.NewKeepAlive(ws, h.keepAlive).Run()
+		close(keepAliveExpired)
+	}()
 
-	for message := range h.messages {
-		ws.WriteMessage(websocket.BinaryMessage, message)
+	for {
+		select {
+		case <-keepAliveExpired:
+			return
+		case message, ok := <-h.messages:
+			if !ok {
+				return
+			}
+			err = ws.WriteMessage(websocket.BinaryMessage, message)
+			if err != nil {
+				return
+			}
+		}
 	}
 }
-
-// TODO fix this - implement keepAlive so that connection doesn't die
-//func (handler *handler) watchKeepAlive(servers []*websocket.Conn) {
-//	for {
-//		_, keepAlive, err := handler.clientWS.ReadMessage()
-//
-//		if err != nil {
-//			handler.logger.Errorf("Output Proxy: Error reading from the client - %v", err)
-//			for _, server := range servers {
-//				server.WriteControl(websocket.CloseMessage, []byte{}, time.Time{})
-//			}
-//
-//			return
-//		}
-//		handler.logger.Debugf("Output Proxy: Got message from client %v bytes", len(keepAlive))
-//		for _, server := range servers {
-//			server.WriteMessage(websocket.BinaryMessage, keepAlive)
-//		}
-//	}
-//}

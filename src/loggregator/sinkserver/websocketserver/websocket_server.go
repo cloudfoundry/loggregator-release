@@ -117,7 +117,7 @@ func (w *WebsocketServer) streamLogs(appId string, ws *gorilla.Conn) {
 	defer w.sinkManager.UnregisterSink(websocketSink)
 
 	go ws.ReadMessage()
-	servertools.NewKeepAlive(ws, 100*time.Millisecond).Run()
+	servertools.NewKeepAlive(ws, w.keepAliveInterval).Run()
 }
 
 func (w *WebsocketServer) recentLogs(appId string, ws *gorilla.Conn) {

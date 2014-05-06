@@ -1,8 +1,10 @@
 package trafficcontroller_test
 
 import (
+	"errors"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/gorilla/websocket"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -11,6 +13,7 @@ import (
 	"time"
 	"trafficcontroller"
 	"trafficcontroller/hasher"
+	"trafficcontroller/listener"
 	testhelpers "trafficcontroller_testhelpers"
 )
 
@@ -40,10 +43,12 @@ var _ = Describe("OutputProxySingleHasher", func() {
 	var hashers []hasher.Hasher
 	var PORT = "62022"
 	var proxy *trafficcontroller.Proxy
+	var outputMessages <-chan []byte
 
 	BeforeEach(func() {
 		fwsh = &fakeWebsocketHandler{}
 		trafficcontroller.NewWebsocketHandlerProvider = func(messageChan <-chan []byte, logger *gosteno.Logger) http.Handler {
+			outputMessages = messageChan
 			return fwsh
 		}
 
@@ -103,6 +108,21 @@ var _ = Describe("OutputProxySingleHasher", func() {
 				_, resp, err := websocketClientWithHeaderAuth(PORT, "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN)
 				assertAuthorizationError(resp, err, "Error: Invalid authorization")
 			})
+		})
+	})
+
+	Context("when a connection to a loggregator server fails", func() {
+		BeforeEach(func() {
+			hashers = []hasher.Hasher{newFailingHasher([]string{"localhost:62038"})}
+		})
+
+		It("should return an error message to the client", func(done Done) {
+			websocketClientWithHeaderAuth(PORT, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+			msgData := <-outputMessages
+			msg, _ := logmessage.ParseMessage(msgData)
+			Expect(msg.GetLogMessage().GetSourceName()).To(Equal("LGR"))
+			Expect(string(msg.GetLogMessage().GetMessage())).To(Equal("proxy: error connecting to a loggregator server"))
+			close(done)
 		})
 	})
 
@@ -191,4 +211,22 @@ func clientWithAuth(ws *websocket.Conn) []byte {
 		return nil
 	}
 	return data
+}
+
+type failingHasher struct {
+	servers []string
+}
+
+func (fh *failingHasher) LoggregatorServers() []string {
+	return fh.servers
+}
+func (fh *failingHasher) GetLoggregatorServerForAppId(string) string {
+	return fh.servers[0]
+}
+func (fh *failingHasher) ProxyMessagesFor(appId string, out listener.OutputChannel, stop listener.StopChannel) error {
+	return errors.New("connection failed")
+}
+
+func newFailingHasher(servers []string) hasher.Hasher {
+	return &failingHasher{servers}
 }

@@ -2,6 +2,7 @@ package listener_test
 
 import (
 	"fmt"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/gorilla/websocket"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -12,16 +13,17 @@ import (
 )
 
 type fakeHandler struct {
-	messages <-chan []byte
+	messages chan []byte
 }
 
-func (f fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (f *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", 405)
 		return
 	}
 
-	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
+	ws, err := websocket.Upgrade(w, r, nil, 0, 0)
+	defer ws.Close()
 	if _, ok := err.(websocket.HandshakeError); ok {
 		http.Error(w, "Not a websocket handshake", 400)
 		return
@@ -37,23 +39,34 @@ func (f fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (f *fakeHandler) Close() {
+	close(f.messages)
+}
+
 var _ = Describe("WebsocketListener", func() {
 
 	var ts *httptest.Server
 	var messageChan, outputChan chan []byte
 	var stopChan chan struct{}
 	var l listener.Listener
+	var fh *fakeHandler
 
 	BeforeEach(func() {
 		messageChan = make(chan []byte)
-		outputChan = make(chan []byte)
+		outputChan = make(chan []byte, 10)
 		stopChan = make(chan struct{})
-		ts = httptest.NewUnstartedServer(fakeHandler{messageChan})
-		l = listener.NewWebsocket()
+		fh = &fakeHandler{messageChan}
+		ts = httptest.NewUnstartedServer(fh)
+		l = listener.NewWebsocket("myApp")
 	})
 
 	AfterEach(func() {
-		close(messageChan)
+		select {
+		case <-messageChan:
+			// already closed
+		default:
+			close(messageChan)
+		}
 		ts.Close()
 	})
 
@@ -107,6 +120,23 @@ var _ = Describe("WebsocketListener", func() {
 			l.Wait()
 			Expect(outputChan).NotTo(BeClosed())
 			Expect(stopChan).NotTo(BeClosed())
+			close(done)
+		})
+	})
+
+	Context("when the server has errors", func() {
+		BeforeEach(func() {
+			ts.Start()
+			err := l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr().String()), outputChan, stopChan)
+			Expect(err).NotTo(HaveOccurred())
+			fh.Close()
+		})
+
+		It("should send an error message to the channel", func(done Done) {
+			msgData := <-outputChan
+			msg, _ := logmessage.ParseMessage(msgData)
+			Expect(msg.GetLogMessage().GetSourceName()).To(Equal("LGR"))
+			Expect(string(msg.GetLogMessage().GetMessage())).To(Equal("proxy: error connecting to a loggregator server"))
 			close(done)
 		})
 	})

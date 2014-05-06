@@ -90,7 +90,7 @@ var _ = Describe("Hasher", func() {
 		var outChan = make(chan []byte, 1)
 		var stopChan = make(chan struct{})
 
-		hasher.NewWebsocketListener = func() listener.Listener {
+		hasher.NewWebsocketListener = func(appId string) listener.Listener {
 			return fl
 		}
 

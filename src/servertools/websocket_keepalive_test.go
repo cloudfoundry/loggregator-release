@@ -55,7 +55,7 @@ var _ = Describe("WebsocketKeepalive", func() {
 
 func makeTestHandler(keepAliveCompleted chan struct{}) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		conn, _ := websocket.Upgrade(rw, req, nil, 1000, 1000)
+		conn, _ := websocket.Upgrade(rw, req, nil, 0, 0)
 		go conn.ReadMessage()
 		servertools.NewKeepAlive(conn, 50*time.Millisecond).Run()
 		close(keepAliveCompleted)
