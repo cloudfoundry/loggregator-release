@@ -8,9 +8,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/gorilla/websocket"
-	"io"
 	"net/http"
-	"sync"
 	"testing"
 	"time"
 )
@@ -44,60 +42,39 @@ func generateLogMessage(messageString, appId string, messageType logmessage.LogM
 	return logMessage
 }
 
-func AddWSSink(receivedChan chan []byte, url string) (*websocket.Conn, chan<- struct{}, <-chan struct{}) {
+func AddWSSink(receivedChan chan []byte, url string) (chan struct{}, <-chan struct{}) {
 	stopKeepAlive := make(chan struct{})
 	connectionDropped := make(chan struct{})
-
-	lock := sync.RWMutex{}
 
 	ws, _, err := websocket.DefaultDialer.Dial(url, http.Header{})
 	if err != nil {
 		close(stopKeepAlive)
 		close(connectionDropped)
-		return nil, stopKeepAlive, connectionDropped
+		return stopKeepAlive, connectionDropped
 	}
 
-	go func() {
-		lock.Lock()
-		ws.SetPingHandler(func(message string) error {
-			logger.Debugf("Client: got ping '%s' sending pong at %v\n", message, time.Now())
-			return ws.WriteControl(websocket.PongMessage, []byte(message), time.Time{})
-		})
-		lock.Unlock()
-
+	ws.SetPingHandler(func(message string) error {
 		select {
 		case <-stopKeepAlive:
-			logger.Debugf("Client: asked to stop keepalive")
-			lock.Lock()
-			ws.SetPingHandler(func(string) error { logger.Debugf("Client: ignoring ping"); return nil })
-			lock.Unlock()
-			close(connectionDropped)
-		case <-connectionDropped:
-			logger.Debugf("Client: connection closed stopping keepalive")
+			return nil
+		default:
+			return ws.WriteControl(websocket.PongMessage, []byte(message), time.Time{})
 		}
-	}()
+	})
 
 	go func() {
+		defer close(connectionDropped)
 		for {
-			lock.RLock()
 			_, data, err := ws.ReadMessage()
-			lock.RUnlock()
-
-			if err == io.EOF {
-				continue
-			}
 			if err != nil {
-				logger.Debugf("Client: error %s reading from websocket, closing connection\n", err)
-				close(connectionDropped)
 				return
 			}
 
 			receivedChan <- data
 		}
-
 	}()
 
-	return ws, stopKeepAlive, connectionDropped
+	return stopKeepAlive, connectionDropped
 }
 
 func parseLogMessage(actual []byte) (*logmessage.LogMessage, error) {

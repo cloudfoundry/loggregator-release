@@ -11,32 +11,27 @@ import (
 	"loggregator/sinkserver/blacklist"
 	"loggregator/sinkserver/sinkmanager"
 	"loggregator/sinkserver/websocketserver"
+	"net/http"
 	"time"
 )
 
 var _ = Describe("WebsocketServer", func() {
 
 	var server *websocketserver.WebsocketServer
-	var tailClient *websocket.Conn
 	var sinkManager, _ = sinkmanager.NewSinkManager(1024, false, blacklist.New(nil), loggertesthelper.Logger())
 	var appId = "my-app"
-	var wsReceivedChan chan []byte
-	var stopKeepAlive chan<- struct{}
+	var wsReceivedChan = make(chan []byte)
 	var connectionDropped <-chan struct{}
 	var apiEndpoint = "127.0.0.1:9091"
 
-	BeforeEach(func(done Done) {
-		var err error
-		wsReceivedChan = make(chan []byte)
+	BeforeEach(func() {
 		logger := loggertesthelper.Logger()
 		cfcomponent.Logger = logger
 
-		server = websocketserver.New(apiEndpoint, sinkManager, 10*time.Millisecond, 100, logger)
+		server = websocketserver.New(apiEndpoint, sinkManager, 100*time.Millisecond, 100, logger)
 		go server.Start()
-		<-time.After(5 * time.Millisecond)
-		tailClient, stopKeepAlive, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?app=%s", apiEndpoint, appId))
-		Expect(err).NotTo(HaveOccurred())
-		close(done)
+		serverUrl := fmt.Sprintf("ws://%s/tail/?app=%s", apiEndpoint, appId)
+		Eventually(func() error { _, _, err := websocket.DefaultDialer.Dial(serverUrl, http.Header{}); return err }).ShouldNot(HaveOccurred())
 	})
 
 	AfterEach(func() {
@@ -45,22 +40,23 @@ var _ = Describe("WebsocketServer", func() {
 
 	Describe("failed connections", func() {
 		It("should fail without an appId", func() {
-			_, _, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?", apiEndpoint))
+			_, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?", apiEndpoint))
 			Expect(connectionDropped).To(BeClosed())
 		})
 
 		It("should fail with an invalid appId", func() {
-			_, _, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?app=", apiEndpoint))
+			_, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?app=", apiEndpoint))
 			Expect(connectionDropped).To(BeClosed())
 		})
 
 		It("should fail with something invalid", func() {
-			_, _, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?something=invalidtarget", apiEndpoint))
+			_, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?something=invalidtarget", apiEndpoint))
 			Expect(connectionDropped).To(BeClosed())
 		})
 	})
 
 	It("should send data to the websocket client", func(done Done) {
+		stopKeepAlive, _ := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?app=%s", apiEndpoint, appId))
 		lm, err := NewMessageWithError("my message", appId)
 		Expect(err).NotTo(HaveOccurred())
 		sinkManager.SendTo(appId, lm)
@@ -68,12 +64,13 @@ var _ = Describe("WebsocketServer", func() {
 		rlm, err := receiveLogMessage(wsReceivedChan)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rlm.GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
+		close(stopKeepAlive)
 		close(done)
 	})
 
 	It("should still send to 'live' sinks", func(done Done) {
-		<-time.After(200 * time.Millisecond)
-		Expect(connectionDropped).ToNot(BeClosed())
+		stopKeepAlive, connectionDropped := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?app=%s", apiEndpoint, appId))
+		Consistently(connectionDropped, 0.2).ShouldNot(BeClosed())
 
 		lm, err := NewMessageWithError("my message", appId)
 		Expect(err).NotTo(HaveOccurred())
@@ -82,30 +79,15 @@ var _ = Describe("WebsocketServer", func() {
 		rlm, err := receiveLogMessage(wsReceivedChan)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rlm).ToNot(BeNil())
+		close(stopKeepAlive)
 		close(done)
 	})
 
-	It("should close the client when the keep-alive stops", func(done Done) {
-		go func() {
-			for _ = range wsReceivedChan {
-			}
-		}()
-
-		go func() {
-			for {
-				lm, err := NewMessageWithError("my message", appId)
-				Expect(err).NotTo(HaveOccurred())
-				sinkManager.SendTo(appId, lm)
-				time.Sleep(2 * time.Millisecond)
-			}
-		}()
-
-		time.Sleep(10 * time.Millisecond) //wait a little bit to make sure some messages are sent
-
+	It("should close the client when the keep-alive stops", func() {
+		stopKeepAlive, connectionDropped := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?app=%s", apiEndpoint, appId))
+		Expect(stopKeepAlive).ToNot(Receive())
 		close(stopKeepAlive)
-
 		Eventually(connectionDropped).Should(BeClosed())
-		close(done)
 	})
 })
 
