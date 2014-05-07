@@ -95,7 +95,7 @@ var _ = Describe("Hasher", func() {
 		}
 
 		BeforeEach(func() {
-			h.ProxyMessagesFor("appId", outChan, stopChan)
+			h.ProxyMessagesFor("appId", "/tail/", outChan, stopChan)
 		})
 
 		AfterEach(func() {
@@ -117,7 +117,7 @@ type fakeListener struct {
 }
 
 func (fl *fakeListener) Start(host string, o listener.OutputChannel, s listener.StopChannel) error {
-	Expect(host).To(Equal("10.10.0.16:9998"))
+	Expect(host).To(Equal("ws://10.10.0.16:9998/tail/"))
 	go func() {
 		<-s
 		close(fl.messageChan)

@@ -26,7 +26,7 @@ func (f *fakeHasher) LoggregatorServers() []string {
 func (f *fakeHasher) GetLoggregatorServerForAppId(string) string {
 	return f.hostAndPort
 }
-func (f *fakeHasher) ProxyMessagesFor(string, listener.OutputChannel, listener.StopChannel) error {
+func (f *fakeHasher) ProxyMessagesFor(string, string, listener.OutputChannel, listener.StopChannel) error {
 	f.Lock()
 	defer f.Unlock()
 	f.proxyStarted = true

@@ -223,7 +223,7 @@ func (fh *failingHasher) LoggregatorServers() []string {
 func (fh *failingHasher) GetLoggregatorServerForAppId(string) string {
 	return fh.servers[0]
 }
-func (fh *failingHasher) ProxyMessagesFor(appId string, out listener.OutputChannel, stop listener.StopChannel) error {
+func (fh *failingHasher) ProxyMessagesFor(appId, path string, out listener.OutputChannel, stop listener.StopChannel) error {
 	return errors.New("connection failed")
 }
 

@@ -110,11 +110,11 @@ func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	defer close(stopChan)
 
 	for _, h := range proxy.hashers {
-		err := h.ProxyMessagesFor(appId, messagesChan, stopChan)
+		err := h.ProxyMessagesFor(appId, r.URL.Path, messagesChan, stopChan)
 		if err != nil {
 			errorMsg := fmt.Sprintf("proxy: error connecting to a loggregator server")
 			messagesChan <- generateLogMessage(errorMsg, appId)
-			proxy.logger.Info(errorMsg)
+			proxy.logger.Info(err.Error())
 		}
 	}
 
