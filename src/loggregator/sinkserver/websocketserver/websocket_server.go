@@ -6,12 +6,12 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/appid"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"github.com/cloudfoundry/loggregatorlib/server"
 	gorilla "github.com/gorilla/websocket"
 	"loggregator/sinks/websocket"
 	"loggregator/sinkserver/sinkmanager"
 	"net"
 	"net/http"
-	"servertools"
 	"sync"
 	"time"
 )
@@ -53,8 +53,8 @@ func (w *WebsocketServer) Start() {
 	w.listener = listener
 	w.Unlock()
 
-	server := &http.Server{Addr: w.apiEndpoint, Handler: w}
-	server.Serve(w.listener)
+	s := &http.Server{Addr: w.apiEndpoint, Handler: w}
+	s.Serve(w.listener)
 }
 
 func (w *WebsocketServer) Stop() {
@@ -117,7 +117,7 @@ func (w *WebsocketServer) streamLogs(appId string, ws *gorilla.Conn) {
 	defer w.sinkManager.UnregisterSink(websocketSink)
 
 	go ws.ReadMessage()
-	servertools.NewKeepAlive(ws, w.keepAliveInterval).Run()
+	server.NewKeepAlive(ws, w.keepAliveInterval).Run()
 }
 
 func (w *WebsocketServer) recentLogs(appId string, ws *gorilla.Conn) {

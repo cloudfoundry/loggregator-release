@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"github.com/cloudfoundry/loggregatorlib/server/handlers"
 	"net"
 	"net/http"
 	"net/url"
 	"time"
 	"trafficcontroller/authorization"
-	"trafficcontroller/handlers"
 	"trafficcontroller/hasher"
 )
 
