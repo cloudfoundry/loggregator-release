@@ -1,83 +1,82 @@
 package trafficcontroller_test
 
 import (
-	"github.com/cloudfoundry/gosteno"
+	"fmt"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/gorilla/websocket"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"net/http"
-	"sync"
+	"net/http/httptest"
 	"trafficcontroller"
 	"trafficcontroller/hasher"
 	"trafficcontroller/listener"
 	testhelpers "trafficcontroller_testhelpers"
 )
 
-type fakeHasher struct {
-	sync.Mutex
-	hostAndPort  string
-	proxyStarted bool
-}
-
-func (f *fakeHasher) LoggregatorServers() []string {
-	return []string{f.hostAndPort}
-}
-
-func (f *fakeHasher) GetLoggregatorServerForAppId(string) string {
-	return f.hostAndPort
-}
-func (f *fakeHasher) ProxyMessagesFor(string, string, listener.OutputChannel, listener.StopChannel) error {
-	f.Lock()
-	defer f.Unlock()
-	f.proxyStarted = true
-	return nil
-}
-
-func (f *fakeHasher) isStarted() bool {
-	f.Lock()
-	defer f.Unlock()
-	return f.proxyStarted
-}
-
 var _ = Describe("OutputProxyMultipleHasher", func() {
 
-	var fwsh *fakeWebsocketHandler
-	var fakehashers []*fakeHasher
-	var PORT = "62028"
-	var proxy *trafficcontroller.Proxy
+	var hashers []hasher.Hasher
+
+	var fls []*fakeListener
+	var count int
+	var ts *httptest.Server
 
 	BeforeEach(func() {
-		fwsh = &fakeWebsocketHandler{}
-		trafficcontroller.NewWebsocketHandlerProvider = func(messageChan <-chan []byte, logger *gosteno.Logger) http.Handler {
-			return fwsh
+		count = 0
+
+		hashers = []hasher.Hasher{
+			hasher.NewHasher([]string{"localhost:62038"}),
+			hasher.NewHasher([]string{"localhost:62039"}),
 		}
 
-		fakehashers = []*fakeHasher{
-			&fakeHasher{hostAndPort: "localhost:62038"},
-			&fakeHasher{hostAndPort: "localhost:62039"},
+		fls = []*fakeListener{
+			&fakeListener{messageChan: make(chan []byte, 1), expectedHost: "ws://" + hashers[0].LoggregatorServers()[0] + "/tail/?app=myApp"},
+			&fakeListener{messageChan: make(chan []byte, 1), expectedHost: "ws://" + hashers[1].LoggregatorServers()[0] + "/tail/?app=myApp"},
 		}
 
-		hashers := []hasher.Hasher{
-			fakehashers[0],
-			fakehashers[1],
-		}
-
-		proxy = trafficcontroller.NewProxy(
-			"localhost:"+PORT,
+		proxy := trafficcontroller.NewProxy(
 			hashers,
 			testhelpers.SuccessfulAuthorizer,
 			loggertesthelper.Logger(),
 		)
-		go proxy.Start()
+
+		trafficcontroller.NewWebsocketListener = func() listener.Listener {
+			defer func() { count++ }()
+			return fls[count]
+		}
+
+		ts = httptest.NewServer(proxy)
+		Eventually(serverUp(ts)).Should(BeTrue())
 	})
 
 	AfterEach(func() {
-		proxy.Stop()
+		ts.Close()
 	})
 
-	It("should listen to all hashers", func() {
-		websocketClientWithHeaderAuth(PORT, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
-		Expect(fakehashers[0].isStarted()).To(BeTrue())
-		Expect(fakehashers[1].isStarted()).To(BeTrue())
+	Describe("Listeners", func() {
+
+		It("should listen to all servers", func() {
+			fls[0].messageChan <- []byte("data")
+			websocketClientWithHeaderAuth(ts, "/tail/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+			Eventually(fls[0].IsStarted).Should(BeTrue())
+			Eventually(fls[1].IsStarted).Should(BeTrue())
+			fls[0].Close()
+			fls[1].Close()
+		})
+
+		It("should close the message chan once all listeners are done", func(done Done) {
+			url := fmt.Sprintf("ws://%s/tail/?app=myApp", ts.Listener.Addr())
+			headers := http.Header{"Authorization": []string{testhelpers.VALID_AUTHENTICATION_TOKEN}}
+			ws, _, err := websocket.DefaultDialer.Dial(url, headers)
+			Expect(err).NotTo(HaveOccurred())
+			go func() {
+				_, _, err := ws.ReadMessage()
+				Expect(err).To(HaveOccurred())
+				close(done)
+			}()
+			fls[0].Close()
+			fls[1].Close()
+		})
 	})
 })

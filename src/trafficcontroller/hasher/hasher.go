@@ -1,19 +1,12 @@
 package hasher
 
 import (
-	"fmt"
 	"math/big"
-	"trafficcontroller/listener"
 )
-
-var NewWebsocketListener = func(appId string) listener.Listener {
-	return listener.NewWebsocket(appId)
-}
 
 type Hasher interface {
 	LoggregatorServers() []string
 	GetLoggregatorServerForAppId(string) string
-	ProxyMessagesFor(string, string, listener.OutputChannel, listener.StopChannel) error
 }
 
 type hasher struct {
@@ -39,10 +32,4 @@ func (h *hasher) GetLoggregatorServerForAppId(appId string) string {
 
 func (h *hasher) LoggregatorServers() []string {
 	return h.items
-}
-
-func (h *hasher) ProxyMessagesFor(appId, endpoint string, outgoing listener.OutputChannel, stop listener.StopChannel) error {
-	l := NewWebsocketListener(appId)
-	serverAddress := h.GetLoggregatorServerForAppId(appId)
-	return l.Start(fmt.Sprintf("ws://%s%s", serverAddress, endpoint), outgoing, stop)
 }

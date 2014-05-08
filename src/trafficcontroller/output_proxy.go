@@ -9,13 +9,14 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 	"trafficcontroller/authorization"
 	"trafficcontroller/hasher"
+	"trafficcontroller/listener"
 )
 
 type Proxy struct {
-	host      string
 	hashers   []hasher.Hasher
 	logger    *gosteno.Logger
 	authorize authorization.LogAccessAuthorizer
@@ -34,22 +35,12 @@ var NewHttpHandlerProvider = func(messages <-chan []byte, logger *gosteno.Logger
 	return handlers.NewHttpHandler(messages, logger)
 }
 
-func NewProxy(host string, hashers []hasher.Hasher, authorizer authorization.LogAccessAuthorizer, logger *gosteno.Logger) *Proxy {
-	return &Proxy{host: host, hashers: hashers, authorize: authorizer, logger: logger}
+var NewWebsocketListener = func() listener.Listener {
+	return listener.NewWebsocket()
 }
 
-func (proxy *Proxy) Start() error {
-	l, err := net.Listen("tcp", proxy.host)
-	if err != nil {
-		return err
-	}
-	proxy.listener = l
-	server := &http.Server{Addr: proxy.host, Handler: proxy}
-	return server.Serve(proxy.listener)
-}
-
-func (proxy *Proxy) Stop() {
-	proxy.listener.Close()
+func NewProxy(hashers []hasher.Hasher, authorizer authorization.LogAccessAuthorizer, logger *gosteno.Logger) *Proxy {
+	return &Proxy{hashers: hashers, authorize: authorizer, logger: logger}
 }
 
 func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress string) (bool, *logmessage.LogMessage) {
@@ -88,9 +79,16 @@ func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress string) 
 }
 
 func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	if r.Method == "HEAD" {
+		rw.WriteHeader(http.StatusOK)
+		return
+	}
+
 	r.ParseForm()
 	clientAddress := r.RemoteAddr
 	appId := r.Form.Get("app")
+
+	var loggregatorServerListenerCount sync.WaitGroup
 
 	authToken := r.Header.Get("Authorization")
 	if authToken == "" {
@@ -110,13 +108,25 @@ func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	defer close(stopChan)
 
 	for _, h := range proxy.hashers {
-		err := h.ProxyMessagesFor(appId, r.URL.Path, messagesChan, stopChan)
-		if err != nil {
-			errorMsg := fmt.Sprintf("proxy: error connecting to a loggregator server")
-			messagesChan <- generateLogMessage(errorMsg, appId)
-			proxy.logger.Info(err.Error())
-		}
+		l := NewWebsocketListener()
+		serverAddress := h.GetLoggregatorServerForAppId(appId)
+		serverUrlForAppId := fmt.Sprintf("ws://%s%s?app=%s", serverAddress, r.URL.Path, appId)
+		loggregatorServerListenerCount.Add(1)
+		go func() {
+			err := l.Start(serverUrlForAppId, appId, messagesChan, stopChan)
+			if err != nil {
+				errorMsg := fmt.Sprintf("proxy: error connecting to a loggregator server")
+				messagesChan <- generateLogMessage(errorMsg, appId)
+				proxy.logger.Infof("proxy: error connecting %s %s %s", appId, r.URL.Path, err.Error())
+			}
+			loggregatorServerListenerCount.Done()
+		}()
 	}
+
+	go func() {
+		loggregatorServerListenerCount.Wait()
+		close(messagesChan)
+	}()
 
 	var h http.Handler
 

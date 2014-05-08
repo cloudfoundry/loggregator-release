@@ -11,21 +11,20 @@ import (
 
 type websocketListener struct {
 	sync.WaitGroup
-	appId string
 }
 
-func NewWebsocket(appId string) *websocketListener {
-	return &websocketListener{appId: appId}
+func NewWebsocket() *websocketListener {
+	return new(websocketListener)
 }
 
-func (l *websocketListener) Start(url string, outputChan OutputChannel, stopChan StopChannel) error {
+func (l *websocketListener) Start(url, appId string, outputChan OutputChannel, stopChan StopChannel) error {
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		return err
 	}
 
 	serverError := make(chan struct{})
-	l.Add(2)
+	l.Add(1)
 	go func() {
 		defer l.Done()
 		select {
@@ -35,26 +34,19 @@ func (l *websocketListener) Start(url string, outputChan OutputChannel, stopChan
 		}
 	}()
 
-	go func() {
-		defer l.Done()
-		defer close(serverError)
-
-		for {
-			_, msg, err := conn.ReadMessage()
-			if err != nil {
-				errorMsg := fmt.Sprintf("proxy: error connecting to a loggregator server")
-				outputChan <- generateLogMessage(errorMsg, l.appId)
-				return
-			}
-			outputChan <- msg
+	for {
+		_, msg, err := conn.ReadMessage()
+		if err != nil {
+			errorMsg := fmt.Sprintf("proxy: error connecting to a loggregator server")
+			outputChan <- generateLogMessage(errorMsg, appId)
+			close(serverError)
+			break
 		}
-	}()
+		outputChan <- msg
+	}
 
+	l.Wait()
 	return nil
-}
-
-func (l *websocketListener) Wait() {
-	l.WaitGroup.Wait()
 }
 
 func generateLogMessage(messageString string, appId string) []byte {

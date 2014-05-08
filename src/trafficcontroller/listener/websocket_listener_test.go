@@ -17,6 +17,11 @@ type fakeHandler struct {
 }
 
 func (f *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "HEAD" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", 405)
 		return
@@ -57,7 +62,7 @@ var _ = Describe("WebsocketListener", func() {
 		stopChan = make(chan struct{})
 		fh = &fakeHandler{messageChan}
 		ts = httptest.NewUnstartedServer(fh)
-		l = listener.NewWebsocket("myApp")
+		l = listener.NewWebsocket()
 	})
 
 	AfterEach(func() {
@@ -71,24 +76,37 @@ var _ = Describe("WebsocketListener", func() {
 	})
 
 	Context("when the server is not running", func() {
-		It("should error when connecting", func() {
-			err := l.Start("ws://localhost:1234", outputChan, stopChan)
+		It("should error when connecting", func(done Done) {
+			err := l.Start("ws://localhost:1234", "myApp", outputChan, stopChan)
 			Expect(err).To(HaveOccurred())
+			close(done)
 		})
 	})
 
 	Context("when the server is running", func() {
 		BeforeEach(func() {
 			ts.Start()
+			Eventually(func() bool {
+				resp, _ := http.Head(fmt.Sprintf("http://%s", ts.Listener.Addr()))
+				return resp != nil && resp.StatusCode == http.StatusOK
+			}).Should(BeTrue())
 		})
 
-		It("should connect to a websocket", func() {
-			err := l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr().String()), outputChan, stopChan)
-			Expect(err).NotTo(HaveOccurred())
+		It("should connect to a websocket", func(done Done) {
+			doneWaiting := make(chan struct{})
+			go func() {
+				defer GinkgoRecover()
+				err := l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
+				Expect(err).NotTo(HaveOccurred())
+				close(doneWaiting)
+			}()
+			close(stopChan)
+			Eventually(doneWaiting).Should(BeClosed())
+			close(done)
 		})
 
 		It("should output messages recieved from the server", func(done Done) {
-			l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr().String()), outputChan, stopChan)
+			go l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
 
 			message := []byte("hello world")
 			messageChan <- message
@@ -100,26 +118,35 @@ var _ = Describe("WebsocketListener", func() {
 			close(done)
 		})
 
-		It("should not close the channel when stopped", func() {
-			l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr().String()), outputChan, stopChan)
+		It("should stop all goroutines when done", func() {
+			doneWaiting := make(chan struct{})
+			go func() {
+				l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
+				close(doneWaiting)
+			}()
 			close(stopChan)
-			Eventually(outputChan).ShouldNot(BeClosed())
-		})
-
-		It("should stop all goroutines when done", func(done Done) {
-			l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr().String()), outputChan, stopChan)
-			close(stopChan)
-			l.Wait()
-			Expect(outputChan).NotTo(BeClosed())
-			close(done)
+			Consistently(outputChan).ShouldNot(BeClosed())
+			Eventually(doneWaiting).Should(BeClosed())
 		})
 
 		It("should stop all goroutines when server returns an error", func(done Done) {
-			l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr().String()), outputChan, stopChan)
-			ts.CloseClientConnections()
-			l.Wait()
-			Expect(outputChan).NotTo(BeClosed())
-			Expect(stopChan).NotTo(BeClosed())
+			doneWaiting := make(chan struct{})
+			go func() {
+				l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
+				close(doneWaiting)
+			}()
+
+			// Ensure listener is up by sending message through
+			message := []byte("hello world")
+			messageChan <- message
+			outMessage := <-outputChan
+			Expect(outMessage).To(Equal(message))
+
+			// Take server down to cause listener to go down
+			close(messageChan)
+			Consistently(outputChan).ShouldNot(BeClosed())
+			Consistently(stopChan).ShouldNot(BeClosed())
+			Eventually(doneWaiting).Should(BeClosed())
 			close(done)
 		})
 	})
@@ -127,8 +154,7 @@ var _ = Describe("WebsocketListener", func() {
 	Context("when the server has errors", func() {
 		BeforeEach(func() {
 			ts.Start()
-			err := l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr().String()), outputChan, stopChan)
-			Expect(err).NotTo(HaveOccurred())
+			go l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
 			fh.Close()
 		})
 

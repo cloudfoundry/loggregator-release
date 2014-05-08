@@ -38,7 +38,7 @@ func TestOutgoingProxyConfigWithEmptyAZ(t *testing.T) {
 	}
 
 	assert.NotPanics(t, func() {
-		makeOutgoingProxy("0.0.0.0", config, loggertesthelper.Logger())
+		makeOutgoingProxy(config, loggertesthelper.Logger())
 	})
 
 	hashers := makeHashers(config.Loggregators, 3456, loggertesthelper.Logger())
@@ -54,7 +54,7 @@ func TestOutgoingProxyConfigWithTwoAZs(t *testing.T) {
 	}
 
 	assert.NotPanics(t, func() {
-		makeOutgoingProxy("0.0.0.0", config, loggertesthelper.Logger())
+		makeOutgoingProxy(config, loggertesthelper.Logger())
 	})
 
 	hashers := makeHashers(config.Loggregators, 3456, loggertesthelper.Logger())

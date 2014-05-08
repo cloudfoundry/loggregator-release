@@ -2,6 +2,7 @@ package trafficcontroller_test
 
 import (
 	"errors"
+	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
@@ -9,8 +10,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
-	"time"
+	"sync"
 	"trafficcontroller"
 	"trafficcontroller/hasher"
 	"trafficcontroller/listener"
@@ -41,34 +43,43 @@ var _ = Describe("OutputProxySingleHasher", func() {
 
 	var fwsh *fakeWebsocketHandler
 	var hashers []hasher.Hasher
-	var PORT = "62022"
-	var proxy *trafficcontroller.Proxy
 	var outputMessages <-chan []byte
+	var fl *fakeListener
+	var ts *httptest.Server
+	var existingWsProvider = trafficcontroller.NewWebsocketHandlerProvider
 
 	BeforeEach(func() {
 		fwsh = &fakeWebsocketHandler{}
+		fl = &fakeListener{messageChan: make(chan []byte)}
+
 		trafficcontroller.NewWebsocketHandlerProvider = func(messageChan <-chan []byte, logger *gosteno.Logger) http.Handler {
 			outputMessages = messageChan
 			return fwsh
 		}
 
+		trafficcontroller.NewWebsocketListener = func() listener.Listener {
+			return fl
+		}
+
 		hashers = []hasher.Hasher{hasher.NewHasher([]string{"localhost:62038"})}
-		proxy = trafficcontroller.NewProxy(
-			"localhost:"+PORT,
+		proxy := trafficcontroller.NewProxy(
 			hashers,
 			testhelpers.SuccessfulAuthorizer,
 			loggertesthelper.Logger(),
 		)
-		go proxy.Start()
+
+		ts = httptest.NewServer(proxy)
+		Eventually(serverUp(ts)).Should(BeTrue())
 	})
 
 	AfterEach(func() {
-		proxy.Stop()
+		ts.Close()
+		trafficcontroller.NewWebsocketHandlerProvider = existingWsProvider
 	})
 
 	Context("Auth Params", func() {
 		It("Should Authenticate with Auth Query Params", func() {
-			websocketClientWithQueryParamAuth(PORT, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+			websocketClientWithQueryParamAuth(ts, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
 
 			req := fwsh.lastRequest
 			Expect(req.URL.RawQuery).To(Equal("app=myApp&authorization=bearer+correctAuthorizationToken"))
@@ -76,17 +87,17 @@ var _ = Describe("OutputProxySingleHasher", func() {
 
 		Context("when auth fails", func() {
 			It("Should Fail to Authenticate with Incorrect Auth Query Params", func() {
-				_, resp, err := websocketClientWithQueryParamAuth(PORT, "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN)
+				_, resp, err := websocketClientWithQueryParamAuth(ts, "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN)
 				assertAuthorizationError(resp, err, "Error: Invalid authorization")
 			})
 
 			It("Should Fail to Authenticate without Authorization", func() {
-				_, resp, err := websocketClientWithQueryParamAuth(PORT, "/?app=myApp", "")
+				_, resp, err := websocketClientWithQueryParamAuth(ts, "/?app=myApp", "")
 				assertAuthorizationError(resp, err, "Error: Authorization not provided")
 			})
 
 			It("Should Fail With Invalid Target", func() {
-				_, resp, err := websocketClientWithQueryParamAuth(PORT, "/invalid_target", testhelpers.VALID_AUTHENTICATION_TOKEN)
+				_, resp, err := websocketClientWithQueryParamAuth(ts, "/invalid_target", testhelpers.VALID_AUTHENTICATION_TOKEN)
 				assertAuthorizationError(resp, err, "Error: Invalid target")
 			})
 		})
@@ -95,7 +106,7 @@ var _ = Describe("OutputProxySingleHasher", func() {
 
 	Context("Auth Headers", func() {
 		It("Should Authenticate with Correct Auth Header", func() {
-			websocketClientWithHeaderAuth(PORT, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+			websocketClientWithHeaderAuth(ts, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
 
 			req := fwsh.lastRequest
 			authenticateHeader := req.Header.Get("Authorization")
@@ -105,7 +116,7 @@ var _ = Describe("OutputProxySingleHasher", func() {
 
 		Context("when auth fails", func() {
 			It("Should Fail to Authenticate with Incorrect Auth Header", func() {
-				_, resp, err := websocketClientWithHeaderAuth(PORT, "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN)
+				_, resp, err := websocketClientWithHeaderAuth(ts, "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN)
 				assertAuthorizationError(resp, err, "Error: Invalid authorization")
 			})
 		})
@@ -113,11 +124,13 @@ var _ = Describe("OutputProxySingleHasher", func() {
 
 	Context("when a connection to a loggregator server fails", func() {
 		BeforeEach(func() {
-			hashers = []hasher.Hasher{newFailingHasher([]string{"localhost:62038"})}
+			trafficcontroller.NewWebsocketListener = func() listener.Listener {
+				return &failingListener{}
+			}
 		})
 
 		It("should return an error message to the client", func(done Done) {
-			websocketClientWithHeaderAuth(PORT, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+			websocketClientWithHeaderAuth(ts, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
 			msgData := <-outputMessages
 			msg, _ := logmessage.ParseMessage(msgData)
 			Expect(msg.GetLogMessage().GetSourceName()).To(Equal("LGR"))
@@ -128,8 +141,15 @@ var _ = Describe("OutputProxySingleHasher", func() {
 
 	Context("websocket client", func() {
 
-		It("should use the WebsocketHandler", func() {
-			websocketClientWithHeaderAuth(PORT, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+		It("should use the WebsocketHandler for tail", func() {
+			fl.SetExpectedHost("ws://localhost:62038/tail/?app=myApp")
+			websocketClientWithHeaderAuth(ts, "/tail/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+			Expect(fwsh.called).To(BeTrue())
+		})
+
+		It("should use the WebsocketHandler for dump", func() {
+			fl.SetExpectedHost("ws://localhost:62038/dump/?app=myApp")
+			websocketClientWithHeaderAuth(ts, "/dump/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
 			Expect(fwsh.called).To(BeTrue())
 		})
 
@@ -140,14 +160,14 @@ var _ = Describe("OutputProxySingleHasher", func() {
 
 		BeforeEach(func() {
 			fhh = &fakeHttpHandler{}
-
+			fl.SetExpectedHost("ws://localhost:62038/recent?app=myApp")
 			trafficcontroller.NewHttpHandlerProvider = func(<-chan []byte, *gosteno.Logger) http.Handler {
 				return fhh
 			}
 		})
 
 		It("should use HttpHandler instead of WebsocketHandler", func() {
-			url := "http://localhost:" + PORT + "/recent?app=myApp"
+			url := fmt.Sprintf("http://%s/recent?app=myApp", ts.Listener.Addr())
 			r, _ := http.NewRequest("GET", url, nil)
 			r.Header = http.Header{"Authorization": []string{testhelpers.VALID_AUTHENTICATION_TOKEN}}
 			client := &http.Client{}
@@ -169,41 +189,34 @@ func assertAuthorizationError(resp *http.Response, err error, msg string) {
 	Expect(string(respBody)).To(ContainSubstring(msg))
 }
 
-func websocketClientWithQueryParamAuth(port string, path string, auth string) ([]byte, *http.Response, error) {
+func websocketClientWithQueryParamAuth(ts *httptest.Server, path string, auth string) ([]byte, *http.Response, error) {
 	authorizationParams := ""
 	if auth != "" {
 		authorizationParams = "&authorization=" + url.QueryEscape(auth)
 	}
-	url := "ws://localhost:" + port + path + authorizationParams
+	url := fmt.Sprintf("ws://%s%s%s", ts.Listener.Addr(), path, authorizationParams)
 
 	return dialConnection(url, http.Header{})
 }
 
-func websocketClientWithHeaderAuth(port string, path string, auth string) ([]byte, *http.Response, error) {
-	url := "ws://localhost:" + port + path
+func websocketClientWithHeaderAuth(ts *httptest.Server, path string, auth string) ([]byte, *http.Response, error) {
+	url := fmt.Sprintf("ws://%s%s", ts.Listener.Addr(), path)
 	headers := http.Header{"Authorization": []string{auth}}
 	return dialConnection(url, headers)
 }
 
 func dialConnection(url string, headers http.Header) ([]byte, *http.Response, error) {
-	numTries := 0
-	for {
-		ws, resp, err := websocket.DefaultDialer.Dial(url, headers)
-		if err != nil {
-			numTries++
-			if numTries == 5 {
-				return nil, resp, err
-			}
-			time.Sleep(1)
-			continue
-		} else {
-			defer ws.Close()
-			return clientWithAuth(ws), resp, nil
-		}
+	ws, resp, err := websocket.DefaultDialer.Dial(url, headers)
+	if err == nil {
+		defer ws.Close()
 	}
+	return clientWithAuth(ws), resp, err
 }
 
 func clientWithAuth(ws *websocket.Conn) []byte {
+	if ws == nil {
+		return nil
+	}
 	_, data, err := ws.ReadMessage()
 
 	if err != nil {
@@ -213,20 +226,74 @@ func clientWithAuth(ws *websocket.Conn) []byte {
 	return data
 }
 
-type failingHasher struct {
-	servers []string
+type fakeListener struct {
+	messageChan     chan []byte
+	started, closed bool
+	expectedHost    string
+	sync.Mutex
 }
 
-func (fh *failingHasher) LoggregatorServers() []string {
-	return fh.servers
-}
-func (fh *failingHasher) GetLoggregatorServerForAppId(string) string {
-	return fh.servers[0]
-}
-func (fh *failingHasher) ProxyMessagesFor(appId, path string, out listener.OutputChannel, stop listener.StopChannel) error {
-	return errors.New("connection failed")
+func (fl *fakeListener) Start(host string, appId string, o listener.OutputChannel, s listener.StopChannel) error {
+	defer GinkgoRecover()
+	fl.Lock()
+
+	fl.started = true
+	if fl.expectedHost != "" {
+		Expect(host).To(Equal(fl.expectedHost))
+	}
+	fl.Unlock()
+
+	for {
+		select {
+		case <-s:
+			return nil
+		case msg, ok := <-fl.messageChan:
+			if !ok {
+				return nil
+			}
+			o <- msg
+		}
+	}
 }
 
-func newFailingHasher(servers []string) hasher.Hasher {
-	return &failingHasher{servers}
+func (fl *fakeListener) Close() {
+	fl.Lock()
+	defer fl.Unlock()
+	if fl.closed {
+		return
+	}
+	fl.closed = true
+	close(fl.messageChan)
+}
+
+func (fl *fakeListener) IsStarted() bool {
+	fl.Lock()
+	defer fl.Unlock()
+	return fl.started
+}
+
+func (fl *fakeListener) IsClosed() bool {
+	fl.Lock()
+	defer fl.Unlock()
+	return fl.closed
+}
+
+func (fl *fakeListener) SetExpectedHost(value string) {
+	fl.Lock()
+	defer fl.Unlock()
+	fl.expectedHost = value
+}
+
+type failingListener struct{}
+
+func (fl *failingListener) Start(string, string, listener.OutputChannel, listener.StopChannel) error {
+	return errors.New("fail")
+}
+
+func serverUp(ts *httptest.Server) func() bool {
+	return func() bool {
+		url := fmt.Sprintf("http://%s", ts.Listener.Addr())
+		resp, _ := http.Head(url)
+		return resp != nil && resp.StatusCode == http.StatusOK
+	}
 }

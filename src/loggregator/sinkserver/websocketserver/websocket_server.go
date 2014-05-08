@@ -18,7 +18,8 @@ import (
 
 const (
 	TAIL_LOGS_PATH   = "/tail/"
-	RECENT_LOGS_PATH = "/dump/"
+	RECENT_LOGS_PATH = "/recent"
+	DUMP_LOGS_PATH   = "/dump/"
 )
 
 type WebsocketServer struct {
@@ -70,6 +71,8 @@ func (w *WebsocketServer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	case TAIL_LOGS_PATH:
 		handler = w.streamLogs
 	case RECENT_LOGS_PATH:
+		handler = w.recentLogs
+	case DUMP_LOGS_PATH:
 		handler = w.recentLogs
 	default:
 		http.Error(rw, "invalid path "+r.URL.Path, 400)

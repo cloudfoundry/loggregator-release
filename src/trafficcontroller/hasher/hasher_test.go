@@ -6,7 +6,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"trafficcontroller/hasher"
-	"trafficcontroller/listener"
 )
 
 var _ = Describe("Hasher", func() {
@@ -81,56 +80,7 @@ var _ = Describe("Hasher", func() {
 			}
 		})
 	})
-
-	Describe("ProxyMessagesFor", func() {
-
-		var loggregatorServers = []string{"10.10.0.16:9998", "10.10.0.17:9997"}
-		var h = hasher.NewHasher(loggregatorServers)
-		var fl = &fakeListener{make(chan []byte)}
-		var outChan = make(chan []byte, 1)
-		var stopChan = make(chan struct{})
-
-		hasher.NewWebsocketListener = func(appId string) listener.Listener {
-			return fl
-		}
-
-		BeforeEach(func() {
-			h.ProxyMessagesFor("appId", "/tail/", outChan, stopChan)
-		})
-
-		AfterEach(func() {
-			close(stopChan)
-		})
-
-		It("should forward all traffic from the listener to the outChan", func(done Done) {
-			inputChan := fl.messageChan
-			inputChan <- []byte("Hello World!")
-			message := <-outChan
-			Expect(string(message)).To(Equal("Hello World!"))
-			close(done)
-		})
-	})
 })
-
-type fakeListener struct {
-	messageChan chan []byte
-}
-
-func (fl *fakeListener) Start(host string, o listener.OutputChannel, s listener.StopChannel) error {
-	Expect(host).To(Equal("ws://10.10.0.16:9998/tail/"))
-	go func() {
-		<-s
-		close(fl.messageChan)
-	}()
-	go func() {
-		for msg := range fl.messageChan {
-			o <- msg
-		}
-	}()
-	return nil
-}
-
-func (fl *fakeListener) Wait() {}
 
 func GenUUID() string {
 	uuid := make([]byte, 16)

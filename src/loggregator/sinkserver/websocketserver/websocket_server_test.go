@@ -49,10 +49,41 @@ var _ = Describe("WebsocketServer", func() {
 			Expect(connectionDropped).To(BeClosed())
 		})
 
-		It("should fail with something invalid", func() {
+		It("should fail with something invalid in query string", func() {
 			_, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?something=invalidtarget", apiEndpoint))
 			Expect(connectionDropped).To(BeClosed())
 		})
+
+		It("should fail with bad path", func() {
+			_, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/bad_path/", apiEndpoint))
+			Expect(connectionDropped).To(BeClosed())
+		})
+	})
+
+	It("should dump buffer data to the websocket client", func(done Done) {
+		lm, err := NewMessageWithError("my message", appId)
+		Expect(err).NotTo(HaveOccurred())
+		sinkManager.SendTo(appId, lm)
+
+		AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/dump/?app=%s", apiEndpoint, appId))
+
+		rlm, err := receiveLogMessage(wsReceivedChan)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rlm.GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
+		close(done)
+	})
+
+	It("should dump buffer data to the websocket client with /recent", func(done Done) {
+		lm, err := NewMessageWithError("my message", appId)
+		Expect(err).NotTo(HaveOccurred())
+		sinkManager.SendTo(appId, lm)
+
+		AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/recent?app=%s", apiEndpoint, appId))
+
+		rlm, err := receiveLogMessage(wsReceivedChan)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rlm.GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
+		close(done)
 	})
 
 	It("should send data to the websocket client", func(done Done) {

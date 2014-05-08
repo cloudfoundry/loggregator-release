@@ -4,6 +4,5 @@ type StopChannel <-chan struct{}
 type OutputChannel chan<- []byte
 
 type Listener interface {
-	Start(string, OutputChannel, StopChannel) error
-	Wait()
+	Start(string, string, OutputChannel, StopChannel) error
 }

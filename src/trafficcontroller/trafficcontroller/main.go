@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime/pprof"
@@ -114,8 +115,8 @@ func main() {
 	router := makeIncomingRouter(config, logger)
 	startIncomingRouter(router, logger)
 
-	proxy := makeOutgoingProxy(router.Component.IpAddress, config, logger)
-	startOutgoingProxy(proxy)
+	proxy := makeOutgoingProxy(config, logger)
+	startOutgoingProxy(net.JoinHostPort(router.Component.IpAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), proxy)
 
 	setupMonitoring(router, config, logger)
 
@@ -135,7 +136,6 @@ func main() {
 			cfcomponent.DumpGoRoutine()
 		case <-killChan:
 			rr.UnregisterFromRouter(router.Component.IpAddress, config.OutgoingPort, []string{uri})
-			proxy.Stop()
 			router.Stop()
 			break
 		}
@@ -180,14 +180,14 @@ func makeIncomingRouter(config *Config, logger *gosteno.Logger) *trafficcontroll
 	return router
 }
 
-func makeOutgoingProxy(ipAddress string, config *Config, logger *gosteno.Logger) *trafficcontroller.Proxy {
+func makeOutgoingProxy(config *Config, logger *gosteno.Logger) *trafficcontroller.Proxy {
 	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
 
 	logger.Debugf("Output Proxy Startup: Number of zones: %v", len(config.Loggregators))
 	hashers := makeHashers(config.Loggregators, config.LoggregatorOutgoingPort, logger)
 
 	logger.Debugf("Output Proxy Startup: Number of hashers for the proxy: %v", len(hashers))
-	proxy := trafficcontroller.NewProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), hashers, authorizer, logger)
+	proxy := trafficcontroller.NewProxy(hashers, authorizer, logger)
 	return proxy
 }
 
@@ -231,9 +231,9 @@ func setupMonitoring(router *trafficcontroller.Router, config *Config, logger *g
 	}()
 }
 
-func startOutgoingProxy(proxy *trafficcontroller.Proxy) {
+func startOutgoingProxy(host string, proxy http.Handler) {
 	go func() {
-		err := proxy.Start()
+		err := http.ListenAndServe(host, proxy)
 		if err != nil {
 			panic(err)
 		}
