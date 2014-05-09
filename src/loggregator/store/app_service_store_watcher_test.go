@@ -48,6 +48,7 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 	AfterEach(func() {
 		err := adapter.Disconnect()
 		Expect(err).NotTo(HaveOccurred())
+		Eventually(outAddChan).Should(BeClosed())
 	})
 
 	Describe("Shutdown", func() {
