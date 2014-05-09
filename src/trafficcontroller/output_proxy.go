@@ -27,12 +27,12 @@ type WebsocketHandler interface {
 	HandleWebSocket(string, string, []hasher.Hasher)
 }
 
-var NewWebsocketHandlerProvider = func(messages <-chan []byte, logger *gosteno.Logger) http.Handler {
-	return handlers.NewWebsocketHandler(messages, logger, 30*time.Second)
+var NewWebsocketHandlerProvider = func(messages <-chan []byte) http.Handler {
+	return handlers.NewWebsocketHandler(messages, 30*time.Second)
 }
 
-var NewHttpHandlerProvider = func(messages <-chan []byte, logger *gosteno.Logger) http.Handler {
-	return handlers.NewHttpHandler(messages, logger)
+var NewHttpHandlerProvider = func(messages <-chan []byte) http.Handler {
+	return handlers.NewHttpHandler(messages)
 }
 
 var NewWebsocketListener = func() listener.Listener {
@@ -131,9 +131,9 @@ func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	var h http.Handler
 
 	if recentViaHttp(r) {
-		h = NewHttpHandlerProvider(messagesChan, proxy.logger)
+		h = NewHttpHandlerProvider(messagesChan)
 	} else {
-		h = NewWebsocketHandlerProvider(messagesChan, proxy.logger)
+		h = NewWebsocketHandlerProvider(messagesChan)
 	}
 
 	h.ServeHTTP(rw, r)

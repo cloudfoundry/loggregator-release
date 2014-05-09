@@ -182,7 +182,7 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 					assertNoDataOnChannel(outAddChan)
 
 					close(done)
-				})
+				}, 3)
 			})
 
 			Context("when an existing app loses all of its services", func() {

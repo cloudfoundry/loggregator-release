@@ -3,7 +3,6 @@ package trafficcontroller_test
 import (
 	"errors"
 	"fmt"
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/gorilla/websocket"
@@ -52,7 +51,7 @@ var _ = Describe("OutputProxySingleHasher", func() {
 		fwsh = &fakeWebsocketHandler{}
 		fl = &fakeListener{messageChan: make(chan []byte)}
 
-		trafficcontroller.NewWebsocketHandlerProvider = func(messageChan <-chan []byte, logger *gosteno.Logger) http.Handler {
+		trafficcontroller.NewWebsocketHandlerProvider = func(messageChan <-chan []byte) http.Handler {
 			outputMessages = messageChan
 			return fwsh
 		}
@@ -161,7 +160,7 @@ var _ = Describe("OutputProxySingleHasher", func() {
 		BeforeEach(func() {
 			fhh = &fakeHttpHandler{}
 			fl.SetExpectedHost("ws://localhost:62038/recent?app=myApp")
-			trafficcontroller.NewHttpHandlerProvider = func(<-chan []byte, *gosteno.Logger) http.Handler {
+			trafficcontroller.NewHttpHandlerProvider = func(<-chan []byte) http.Handler {
 				return fhh
 			}
 		})
