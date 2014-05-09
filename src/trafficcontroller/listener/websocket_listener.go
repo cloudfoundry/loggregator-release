@@ -2,9 +2,9 @@ package listener
 
 import (
 	"code.google.com/p/gogoprotobuf/proto"
-	"fmt"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/gorilla/websocket"
+	"io"
 	"sync"
 	"time"
 )
@@ -29,16 +29,21 @@ func (l *websocketListener) Start(url, appId string, outputChan OutputChannel, s
 		defer l.Done()
 		select {
 		case <-stopChan:
-			conn.Close()
+			conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), time.Time{})
 		case <-serverError:
 		}
 	}()
 
 	for {
 		_, msg, err := conn.ReadMessage()
+
+		if err == io.EOF {
+			close(serverError)
+			break
+		}
+
 		if err != nil {
-			errorMsg := fmt.Sprintf("proxy: error connecting to a loggregator server")
-			outputChan <- generateLogMessage(errorMsg, appId)
+			outputChan <- generateLogMessage("proxy: error connecting to a loggregator server", appId)
 			close(serverError)
 			break
 		}

@@ -9,11 +9,15 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"sync"
+	"time"
 	"trafficcontroller/listener"
 )
 
 type fakeHandler struct {
-	messages chan []byte
+	messages   chan []byte
+	lastWSConn *websocket.Conn
+	sync.Mutex
 }
 
 func (f *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -28,7 +32,6 @@ func (f *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ws, err := websocket.Upgrade(w, r, nil, 0, 0)
-	defer ws.Close()
 	if _, ok := err.(websocket.HandshakeError); ok {
 		http.Error(w, "Not a websocket handshake", 400)
 		return
@@ -36,6 +39,13 @@ func (f *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
+	defer ws.Close()
+	defer ws.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), time.Time{})
+	f.Lock()
+	f.lastWSConn = ws
+	f.Unlock()
+
+	go ws.ReadMessage()
 
 	for msg := range f.messages {
 		if err := ws.WriteMessage(websocket.BinaryMessage, msg); err != nil {
@@ -46,6 +56,17 @@ func (f *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (f *fakeHandler) Close() {
 	close(f.messages)
+}
+
+func (f *fakeHandler) CloseAbruptly() {
+	Eventually(f.lastConn).ShouldNot(BeNil())
+	f.lastConn().Close()
+}
+
+func (f *fakeHandler) lastConn() *websocket.Conn {
+	f.Lock()
+	defer f.Unlock()
+	return f.lastWSConn
 }
 
 var _ = Describe("WebsocketListener", func() {
@@ -60,7 +81,7 @@ var _ = Describe("WebsocketListener", func() {
 		messageChan = make(chan []byte)
 		outputChan = make(chan []byte, 10)
 		stopChan = make(chan struct{})
-		fh = &fakeHandler{messageChan}
+		fh = &fakeHandler{messages: messageChan}
 		ts = httptest.NewUnstartedServer(fh)
 		l = listener.NewWebsocket()
 	})
@@ -118,6 +139,28 @@ var _ = Describe("WebsocketListener", func() {
 			close(done)
 		})
 
+		It("should not send errors when client requests close without issue", func() {
+			doneWaiting := make(chan struct{})
+			go func() {
+				l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
+				close(doneWaiting)
+			}()
+			close(stopChan)
+			Eventually(doneWaiting).Should(BeClosed())
+			Consistently(outputChan).Should(BeEmpty())
+		})
+
+		It("should not send errors when server closes connection without issue", func() {
+			doneWaiting := make(chan struct{})
+			go func() {
+				l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
+				close(doneWaiting)
+			}()
+			close(messageChan)
+			Eventually(doneWaiting).Should(BeClosed())
+			Consistently(outputChan).Should(BeEmpty())
+		})
+
 		It("should stop all goroutines when done", func() {
 			doneWaiting := make(chan struct{})
 			go func() {
@@ -155,7 +198,7 @@ var _ = Describe("WebsocketListener", func() {
 		BeforeEach(func() {
 			ts.Start()
 			go l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
-			fh.Close()
+			fh.CloseAbruptly()
 		})
 
 		It("should send an error message to the channel", func(done Done) {

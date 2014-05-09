@@ -92,7 +92,7 @@ func (w *WebsocketServer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	defer ws.Close()
-	defer ws.WriteControl(gorilla.CloseMessage, []byte{}, time.Time{})
+	defer ws.WriteControl(gorilla.CloseMessage, gorilla.FormatCloseMessage(gorilla.CloseNormalClosure, ""), time.Time{})
 
 	handler(appId, ws)
 }
