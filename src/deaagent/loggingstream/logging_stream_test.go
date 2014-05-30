@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -49,7 +50,9 @@ var _ = Describe("LoggingStream", func() {
 			Expect(string(message.GetMessage())).To(Equal(testMessage))
 			logContents := loggertesthelper.TestLoggerSink.LogContents()
 			Expect(string(logContents)).To(ContainSubstring("Could not read from socket OUT"))
-			Expect(string(logContents)).To(ContainSubstring("EOF while reading from socket OUT"))
+			Eventually(func() string { return string(loggertesthelper.TestLoggerSink.LogContents()) }).Should(ContainSubstring("EOF while reading from socket OUT"))
+			Eventually(channel).Should(BeClosed())
+
 			close(done)
 		})
 
@@ -95,6 +98,23 @@ var _ = Describe("LoggingStream", func() {
 				close(done)
 			}, 5)
 
+			It("should reconnect if there is an error while reading from the socket", func(done Done) {
+				channel := loggingStream.Listen()
+				<-channel
+
+				// scanner chokes on first 64K; last character remains in buffer
+				bigMessage := strings.Repeat("x", 65537) + "\n"
+				messagesToSend <- bigMessage
+				messagesToSend <- "small message\n"
+
+				message := <-channel
+				Expect(string(message.GetMessage())).To(ContainSubstring("Dropped a message because of read error:"))
+				message = <-channel
+				Expect(string(message.GetMessage())).To(Equal("x"))
+				message = <-channel
+				Expect(string(message.GetMessage())).To(Equal("small message"))
+				close(done)
+			})
 		})
 	})
 
@@ -118,6 +138,11 @@ var _ = Describe("LoggingStream", func() {
 				loggingStream.Stop()
 				Eventually(channel, 2).Should(BeClosed())
 			})
+		})
+
+		It("should not panic when called a second time", func() {
+			loggingStream.Stop()
+			Expect(loggingStream.Stop).NotTo(Panic())
 		})
 	})
 })
