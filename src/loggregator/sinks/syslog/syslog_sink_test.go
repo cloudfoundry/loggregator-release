@@ -189,10 +189,7 @@ var _ = Describe("SyslogSink", func() {
 
 			syslogSink.Disconnect()
 
-			logMessage = NewMessage("test message 2", "appId")
-			inputChan <- logMessage
-
-			Consistently(sysLogger.receivedChannel).ShouldNot(Receive())
+			Eventually(sysLoggerDoneChan).Should(BeClosed())
 
 			close(done)
 		})
@@ -244,13 +241,13 @@ var _ = Describe("SyslogSink", func() {
 				inputChan <- logMessage
 
 				Eventually(errorChannel).ShouldNot(BeEmpty())
-				numErrors := len(errorChannel)
 				syslogSink.Disconnect()
+				<-sysLoggerDoneChan
+				numErrors := len(errorChannel)
 
 				logMessage = NewMessage("test message 2", "appId")
 				inputChan <- logMessage
 				close(inputChan)
-				<-sysLoggerDoneChan
 
 				Expect(errorChannel).To(HaveLen(numErrors))
 				close(done)
