@@ -3,13 +3,6 @@ set -e
 
 trap "echo Exited!; exit 1;" SIGINT SIGTERM
 
-arch=`uname -a`
-if [[ $arch == *Darwin* ]]; then
-    export PLATFORMS="darwin/amd64"
-else
-    export PLATFORMS="linux/amd64"
-fi
-
 $(dirname $0)/travis_test
 $(dirname $0)/build-platforms
 

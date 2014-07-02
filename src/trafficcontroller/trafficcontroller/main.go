@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"flag"
-	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -59,25 +58,13 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 var (
 	logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 	logLevel    = flag.Bool("debug", false, "Debug logging")
-	version     = flag.Bool("version", false, "Version info")
 	configFile  = flag.String("config", "config/loggregator_trafficcontroller.json", "Location of the loggregator trafficcontroller config json file")
 	cpuprofile  = flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile  = flag.String("memprofile", "", "write memory profile to this file")
 )
 
-const (
-	versionNumber = `0.0.TRAVIS_BUILD_NUMBER`
-	gitSha        = `TRAVIS_COMMIT`
-)
-
 func main() {
 	flag.Parse()
-
-	if *version {
-		fmt.Printf("version: %s\ngitSha: %s\nsourceUrl: https://github.com/cloudfoundry/loggregator/tree/%s\n\n",
-			versionNumber, gitSha, gitSha)
-		return
-	}
 
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)

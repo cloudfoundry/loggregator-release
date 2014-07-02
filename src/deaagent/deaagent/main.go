@@ -4,7 +4,6 @@ import (
 	"deaagent"
 	"errors"
 	"flag"
-	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
@@ -33,18 +32,12 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 }
 
 var (
-	version               = flag.Bool("version", false, "Version info")
 	logFilePath           = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 	logLevel              = flag.Bool("debug", false, "Debug logging")
 	configFile            = flag.String("config", "config/dea_logging_agent.json", "Location of the DEA loggregator agent config json file")
 	instancesJsonFilePath = flag.String("instancesFile", "/var/vcap/data/dea_next/db/instances.json", "The DEA instances JSON file")
 	cpuprofile            = flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile            = flag.String("memprofile", "", "write memory profile to this file")
-)
-
-const (
-	versionNumber = `0.0.TRAVIS_BUILD_NUMBER`
-	gitSha        = `TRAVIS_COMMIT`
 )
 
 type DeaAgentHealthMonitor struct {
@@ -56,12 +49,6 @@ func (hm DeaAgentHealthMonitor) Ok() bool {
 
 func main() {
 	flag.Parse()
-
-	if *version {
-		fmt.Printf("version: %s\ngitSha: %s\nsourceUrl: https://github.com/cloudfoundry/loggregator/tree/%s\n\n",
-			versionNumber, gitSha, gitSha)
-		return
-	}
 
 	// ** Config Setup
 	config := &Config{}

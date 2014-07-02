@@ -8,38 +8,16 @@ mkdir -p $(dirname $0)/../release
 COMPONENTS="deaagent loggregator trafficcontroller"
 
 function build-architecture {
+    COMPONENT=${1}
+    echo "Creating $COMPONENT binary..."
 
-  GOOS=${1%/*}
-  GOARCH=${1#*/}
-  COMPONENT=${2}
-  echo "Creating $GOOS $GOARCH $COMPONENT binary..."
+    go clean $COMPONENT/$COMPONENT
 
-  go clean $COMPONENT/$COMPONENT
+    go build -v -race $COMPONENT/$COMPONENT
 
-  GOOS=$GOOS GOARCH=$GOARCH go build -v -race $COMPONENT/$COMPONENT
-
-  mv $COMPONENT $(dirname $0)/../release/$COMPONENT-$GOOS-$GOARCH
-  (
-    cd $(dirname $0)/../release/
-    ln -s $COMPONENT-$GOOS-$GOARCH $COMPONENT
-  )
+    mv $COMPONENT $(dirname $0)/../release/$COMPONENT
 }
 
-function populate_build_info() {
-    local main_file=$1
-
-	sed -i -e "s/TRAVIS_BUILD_NUMBER/$TRAVIS_BUILD_NUMBER/g" $main_file
-	sed -i -e "s/TRAVIS_COMMIT/$TRAVIS_COMMIT/g" $main_file
-}
-
-if [ "$TRAVIS_BUILD_NUMBER" != "" ]; then
-  populate_build_info src/deaagent/deaagent/main.go
-  populate_build_info src/loggregator/loggregator/main.go
-  populate_build_info src/trafficcontroller/trafficcontroller/main.go
-fi
-
-for PLATFORM in $PLATFORMS; do
-  for COMPONENT in $COMPONENTS; do
-    build-architecture $PLATFORM $COMPONENT
-  done
+for COMPONENT in $COMPONENTS; do
+    build-architecture $COMPONENT
 done

@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	. "loggregator"
 	"math/rand"
 	"os"
@@ -19,17 +18,11 @@ import (
 )
 
 var (
-	version     = flag.Bool("version", false, "Version info")
 	logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 	logLevel    = flag.Bool("debug", false, "Debug logging")
 	configFile  = flag.String("config", "config/loggregator.json", "Location of the loggregator config json file")
 	cpuprofile  = flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile  = flag.String("memprofile", "", "write memory profile to this file")
-)
-
-const (
-	versionNumber = `0.0.TRAVIS_BUILD_NUMBER`
-	gitSha        = `TRAVIS_COMMIT`
 )
 
 type LoggregatorServerHealthMonitor struct {
@@ -44,12 +37,6 @@ func main() {
 	rand.Seed(seed)
 
 	flag.Parse()
-
-	if *version {
-		fmt.Printf("version: %s\ngitSha: %s\nsourceUrl: https://github.com/cloudfoundry/loggregator/tree/%s\n\n",
-			versionNumber, gitSha, gitSha)
-		return
-	}
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
