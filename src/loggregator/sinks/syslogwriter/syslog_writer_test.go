@@ -93,7 +93,8 @@ var _ = Describe("SyslogWriter", func() {
 			err := w.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
-			byteCount, err := w.WriteStdout([]byte("Message"), "just a test", "TEST", time.Now().UnixNano())
+			parsedTime, err := time.Parse(time.RFC3339, "2006-01-02T15:04:05Z")
+			byteCount, err := w.WriteStdout([]byte("Message"), "just a test", "TEST", parsedTime.UnixNano())
 			Expect(byteCount).To(Equal(79))
 			Expect(err).ToNot(HaveOccurred())
 
