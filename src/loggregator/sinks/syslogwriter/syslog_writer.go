@@ -38,6 +38,10 @@ type writer struct {
 	tlsConfig *tls.Config
 }
 
+const (
+	rfc5424 = "2006-01-02T15:04:05.999999Z07:00"
+)
+
 func NewSyslogWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (w *writer) {
 	tlsConfig := &tls.Config{InsecureSkipVerify: skipCertVerify}
 	return &writer{
@@ -142,7 +146,7 @@ func (w *writer) createMessage(p int, source, sourceId, msg string, timestamp in
 	}
 
 	msg = clean(msg)
-	timeString := time.Unix(0, timestamp).Format(time.RFC3339)
+	timeString := time.Unix(0, timestamp).Format(rfc5424)
 	timeString = strings.Replace(timeString, "Z", "+00:00", 1)
 
 	var formattedSource string
