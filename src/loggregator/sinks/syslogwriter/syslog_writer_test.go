@@ -57,7 +57,7 @@ var _ = Describe("SyslogWriter", func() {
 				sysLogWriter.WriteStdout([]byte("just a test"), "App", "2", time.Now().UnixNano())
 
 				data := <-dataChan
-				Expect(string(data)).To(MatchRegexp(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([-+]\d{2}:\d{2}) loggregator appId \[App/2\] - - just a test\n`))
+				Expect(string(data)).To(MatchRegexp(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}([-+]\d{2}:\d{2}) loggregator appId \[App/2\] - - just a test\n`))
 				close(done)
 			})
 
@@ -93,7 +93,8 @@ var _ = Describe("SyslogWriter", func() {
 			err := w.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
-			byteCount, err := w.WriteStdout([]byte("Message"), "just a test", "TEST", time.Now().UnixNano())
+			parsedTime, err := time.Parse(time.RFC3339, "2006-01-02T15:04:05Z")
+			byteCount, err := w.WriteStdout([]byte("Message"), "just a test", "TEST", parsedTime.UnixNano())
 			Expect(byteCount).To(Equal(79))
 			Expect(err).ToNot(HaveOccurred())
 
