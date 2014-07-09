@@ -13,9 +13,16 @@ type FakeAdapter struct {
 	DeleteCount int
 }
 
-func (adapter *FakeAdapter) Connect() error                                { return nil }
-func (adapter *FakeAdapter) Create(storeadapter.StoreNode) error           { return nil }
-func (adapter *FakeAdapter) Update(storeadapter.StoreNode) error           { return nil }
+func (adapter *FakeAdapter) Connect() error                      { return nil }
+func (adapter *FakeAdapter) Create(storeadapter.StoreNode) error { return nil }
+func (adapter *FakeAdapter) Update(storeadapter.StoreNode) error { return nil }
+func (adapter *FakeAdapter) CompareAndSwap(storeadapter.StoreNode, storeadapter.StoreNode) error {
+	return nil
+}
+func (adapter *FakeAdapter) CompareAndSwapByIndex(uint64, storeadapter.StoreNode) error {
+	return nil
+}
+
 func (adapter *FakeAdapter) SetMulti(nodes []storeadapter.StoreNode) error { return nil }
 func (adapter *FakeAdapter) Get(key string) (storeadapter.StoreNode, error) {
 	return storeadapter.StoreNode{}, nil
@@ -27,7 +34,8 @@ func (adapter *FakeAdapter) Delete(keys ...string) error {
 	adapter.DeleteCount++
 	return nil
 }
-func (adapter *FakeAdapter) UpdateDirTTL(key string, ttl uint64) error { return nil }
+func (adapter *FakeAdapter) CompareAndDelete(storeadapter.StoreNode) error { return nil }
+func (adapter *FakeAdapter) UpdateDirTTL(key string, ttl uint64) error     { return nil }
 func (adapter *FakeAdapter) Watch(key string) (events <-chan storeadapter.WatchEvent, stop chan<- bool, errors <-chan error) {
 	return nil, nil, nil
 }

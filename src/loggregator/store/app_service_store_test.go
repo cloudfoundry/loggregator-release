@@ -108,7 +108,7 @@ var _ = Describe("AppServiceStore", func() {
 				Urls:  []string{app1Service1.Url, app1Service2.Url},
 			}
 
-			assertNoDataOnChannel(events)
+			Consistently(events).Should(BeEmpty())
 
 			stop <- true
 

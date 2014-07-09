@@ -74,11 +74,11 @@ func (w *AppServiceStoreWatcher) Run() {
 				// we can ignore any directory nodes (app or other namespace additions)
 				continue
 			}
-			w.Add(appServiceFromStoreNode(event.Node))
+			w.Add(appServiceFromStoreNode(*(event.Node)))
 		case storeadapter.DeleteEvent:
-			w.deleteEvent(event.Node)
+			w.deleteEvent(*(event.PrevNode))
 		case storeadapter.ExpireEvent:
-			w.deleteEvent(event.Node)
+			w.deleteEvent(*(event.PrevNode))
 		}
 	}
 }
