@@ -143,8 +143,8 @@ Follow these steps to make a contribution to any of our open source repositories
     git config --global user.email "your_email@youremail.com"
     ```
 
-1. Fork the repo
-1. Make your changes on a topic branch, commit, and push to github and open a pull request.
+1. Fork the repo (from `develop` branch to get the latest changes)
+1. Make your changes on a topic branch, commit, and push to github and open a pull request against the `develop` branch.
 
 Once your commits are approved by Travis CI and reviewed by the core team, they will be merged.
 
