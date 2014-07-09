@@ -13,7 +13,6 @@ import (
 	"os"
 	"os/signal"
 	"path"
-	"reflect"
 	"testing"
 	"time"
 )
@@ -21,6 +20,7 @@ import (
 var etcdRunner *etcdstorerunner.ETCDClusterRunner
 
 func TestStore(t *testing.T) {
+	SetDefaultEventuallyTimeout(5 * time.Second)
 	cfcomponent.Logger = loggertesthelper.Logger()
 	registerSignalHandler()
 
@@ -29,9 +29,7 @@ func TestStore(t *testing.T) {
 	etcdPort := 5800 + (config.GinkgoConfig.ParallelNode-1)*10
 	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
 	etcdRunner.Start()
-
 	RunSpecs(t, "Store Suite")
-
 	etcdRunner.Adapter().Disconnect()
 	etcdRunner.Stop()
 }
@@ -59,20 +57,5 @@ func buildNode(appService domain.AppService) storeadapter.StoreNode {
 	return storeadapter.StoreNode{
 		Key:   path.Join("/loggregator/services", appService.AppId, appService.Id()),
 		Value: []byte(appService.Url),
-	}
-}
-
-func assertNoDataOnChannel(channel interface{}) {
-	Consistently(channel).ShouldNot(Receive())
-	channelValue := reflect.ValueOf(channel)
-	timeout := reflect.ValueOf(time.After(2 * time.Millisecond))
-
-	winnerIndex, _, _ := reflect.Select([]reflect.SelectCase{
-		reflect.SelectCase{Dir: reflect.SelectRecv, Chan: channelValue},
-		reflect.SelectCase{Dir: reflect.SelectRecv, Chan: timeout},
-	})
-
-	if winnerIndex == 0 {
-		Fail("Should not have any data on the channel", 1)
 	}
 }

@@ -35,7 +35,7 @@ func AssertConnectionFails(t *testing.T, port string, path string, authToken str
 }
 
 type FakeListener struct {
-	Uri string
+	Uri     string
 	Channel chan []byte
 }
 
@@ -45,7 +45,7 @@ func NewFakeListener() *FakeListener {
 	}
 }
 
-func (f *FakeListener) Start(url string)  (<-chan []byte, error){
+func (f *FakeListener) Start(url string) (<-chan []byte, error) {
 	f.Uri = url
 	return f.Channel, nil
 }
