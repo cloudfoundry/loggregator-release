@@ -1,0 +1,6 @@
+---
+name: loggregator
+dependencies:
+- golang
+files:
+- loggregator/**/*

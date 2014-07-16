@@ -28,6 +28,7 @@ packages=(
     deaagent
     loggregator
     trafficcontroller
+    metron
 )
 
 for package in "${packages[@]}"
