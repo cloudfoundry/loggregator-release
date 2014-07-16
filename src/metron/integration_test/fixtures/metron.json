@@ -1,0 +1,7 @@
+{
+    "Index": 0,
+    "VarzPort": 1234,
+    "VarzUser": "admin",
+    "VarzPass": "admin",
+    "NatsUser": ""
+}
