@@ -3,5 +3,6 @@
     "VarzPort": 1234,
     "VarzUser": "admin",
     "VarzPass": "admin",
-    "NatsUser": ""
+    "NatsUser": "",
+    "UdpListeningPort": 51160
 }

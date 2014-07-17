@@ -3,11 +3,13 @@ package main
 import (
 	"flag"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
+	"strconv"
 )
 
 var (
@@ -16,21 +18,36 @@ var (
 	debug          = flag.Bool("debug", false, "Debug logging")
 )
 
+func drainMessages(messageChan <-chan []byte) {
+	for _ = range messageChan {
+	}
+}
+
 func main() {
 	flag.Parse()
 
 	config, logger := parseConfig(*debug, *configFilePath, *logFilePath)
 
-	component := InitializeComponent(DefaultRegistrarFactory, config, logger)
+	agentListener, messageChan := agentlistener.NewAgentListener("localhost:"+strconv.Itoa(config.UdpListeningPort), logger)
 
-	if err := component.StartMonitoringEndpoints(); err != nil {
-		component.Logger.Error(err.Error())
-	}
+	instrumentables := []instrumentation.Instrumentable{agentListener}
+	component := InitializeComponent(DefaultRegistrarFactory, config, logger, instrumentables)
+
+	go agentListener.Start()
+
+	go func() {
+		if err := component.StartMonitoringEndpoints(); err != nil {
+			component.Logger.Error(err.Error())
+		}
+	}()
+
+	drainMessages(messageChan)
 }
 
 type Config struct {
 	cfcomponent.Config
-	Index uint
+	Index            uint
+	UdpListeningPort int
 }
 
 type MetronHealthMonitor struct{}
@@ -48,7 +65,7 @@ func DefaultRegistrarFactory(mBusClient yagnats.NATSClient, logger *gosteno.Logg
 	return collectorregistrar.NewCollectorRegistrar(mBusClient, logger)
 }
 
-func InitializeComponent(registrarFactory RegistrarFactory, config Config, logger *gosteno.Logger) *cfcomponent.Component {
+func InitializeComponent(registrarFactory RegistrarFactory, config Config, logger *gosteno.Logger, instrumentables []instrumentation.Instrumentable) *cfcomponent.Component {
 	if len(config.NatsHosts) == 0 {
 		logger.Warn("Startup: Did not receive a NATS host - not going to register component")
 		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.NATSClient, error) {
@@ -61,7 +78,7 @@ func InitializeComponent(registrarFactory RegistrarFactory, config Config, logge
 		panic(err)
 	}
 
-	component, err := cfcomponent.NewComponent(logger, "MetronAgent", config.Index, &MetronHealthMonitor{}, config.VarzPort, []string{config.VarzUser, config.VarzPass}, []instrumentation.Instrumentable{})
+	component, err := cfcomponent.NewComponent(logger, "MetronAgent", config.Index, &MetronHealthMonitor{}, config.VarzPort, []string{config.VarzUser, config.VarzPass}, instrumentables)
 	if err != nil {
 		panic(err)
 	}
