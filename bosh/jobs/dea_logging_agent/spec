@@ -24,12 +24,12 @@ properties:
   dea_logging_agent.debug:
     description: boolean value to turn on verbose mode
     default: false
-  loggregator_endpoint.host:
-    description: "The host used to emit messages to the Loggregator"
-  loggregator_endpoint.port:
-    description: "The port used to emit messages to the Loggregator"
+  metron_endpoint.host:
+    description: "The host used to emit messages to the Metron agent"
+  metron_endpoint.port:
+    description: "The port used to emit messages to the Metron agent"
     default: 3456
-  loggregator_endpoint.shared_secret:
+  metron_endpoint.shared_secret:
     description: "The key used to sign log messages"
   dea_logging_agent.status.user:
     description: username used to log into varz endpoint

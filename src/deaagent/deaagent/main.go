@@ -24,7 +24,7 @@ type Config struct {
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
 	if c.LoggregatorAddress == "" {
-		return errors.New("Need Loggregator address (host:port).")
+		return errors.New("Need Metron address (host:port).")
 	}
 
 	err = c.Validate(logger)
