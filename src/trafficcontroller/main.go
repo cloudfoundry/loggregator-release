@@ -10,9 +10,10 @@ import (
 	"runtime/pprof"
 	"strconv"
 	"time"
-	"trafficcontroller"
 	"trafficcontroller/authorization"
 	"trafficcontroller/hasher"
+	"trafficcontroller/inputrouter"
+	"trafficcontroller/outputproxy"
 
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
@@ -94,7 +95,7 @@ func main() {
 		}()
 	}
 
-	config, logger, err := parseConfig(logLevel, configFile, logFilePath)
+	config, logger, err := ParseConfig(logLevel, configFile, logFilePath)
 	if err != nil {
 		panic(err)
 	}
@@ -129,7 +130,7 @@ func main() {
 	}
 }
 
-func parseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gosteno.Logger, error) {
+func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gosteno.Logger, error) {
 	config := &Config{OutgoingPort: 8080}
 	err := cfcomponent.ReadConfigInto(config, *configFile)
 	if err != nil {
@@ -148,7 +149,7 @@ func parseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gos
 	return config, logger, nil
 }
 
-func makeIncomingRouter(config *Config, logger *gosteno.Logger) *trafficcontroller.Router {
+func makeIncomingRouter(config *Config, logger *gosteno.Logger) *inputrouter.Router {
 	serversForZone := config.Loggregators[config.Zone]
 	servers := make([]string, len(serversForZone))
 	for index, server := range serversForZone {
@@ -160,25 +161,25 @@ func makeIncomingRouter(config *Config, logger *gosteno.Logger) *trafficcontroll
 	h := hasher.NewHasher(servers)
 	logger.Debugf("Incoming Router Startup: Hashed Loggregator Server in the zone: %v", h.LoggregatorServers())
 	logger.Debugf("Incoming Router Startup: Going to start incoming router on %v", config.Host)
-	router, err := trafficcontroller.NewRouter(config.Host, h, config.Config, logger)
+	router, err := inputrouter.NewRouter(config.Host, h, config.Config, logger)
 	if err != nil {
 		panic(err)
 	}
 	return router
 }
 
-func makeOutgoingProxy(config *Config, logger *gosteno.Logger) *trafficcontroller.Proxy {
+func makeOutgoingProxy(config *Config, logger *gosteno.Logger) *outputproxy.Proxy {
 	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
 
 	logger.Debugf("Output Proxy Startup: Number of zones: %v", len(config.Loggregators))
-	hashers := makeHashers(config.Loggregators, config.LoggregatorOutgoingPort, logger)
+	hashers := MakeHashers(config.Loggregators, config.LoggregatorOutgoingPort, logger)
 
 	logger.Debugf("Output Proxy Startup: Number of hashers for the proxy: %v", len(hashers))
-	proxy := trafficcontroller.NewProxy(hashers, authorizer, logger)
+	proxy := outputproxy.NewProxy(hashers, authorizer, logger)
 	return proxy
 }
 
-func makeHashers(loggregators map[string][]string, loggregatorOutgoingPort uint32, logger *gosteno.Logger) []hasher.Hasher {
+func MakeHashers(loggregators map[string][]string, loggregatorOutgoingPort uint32, logger *gosteno.Logger) []hasher.Hasher {
 	counter := 0
 	hashers := make([]hasher.Hasher, 0, len(loggregators))
 	for _, servers := range loggregators {
@@ -199,11 +200,11 @@ func makeHashers(loggregators map[string][]string, loggregatorOutgoingPort uint3
 	return hashers
 }
 
-func startIncomingRouter(router *trafficcontroller.Router, logger *gosteno.Logger) {
+func startIncomingRouter(router *inputrouter.Router, logger *gosteno.Logger) {
 	go router.Start(logger)
 }
 
-func setupMonitoring(router *trafficcontroller.Router, config *Config, logger *gosteno.Logger) {
+func setupMonitoring(router *inputrouter.Router, config *Config, logger *gosteno.Logger) {
 	cr := collectorregistrar.NewCollectorRegistrar(config.MbusClient, logger)
 	err := cr.RegisterWithCollector(router.Component)
 	if err != nil {

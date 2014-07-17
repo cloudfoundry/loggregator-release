@@ -17,4 +17,7 @@ src/code.google.com/p/go.tools/
 *.mprof
 *.coverprofile
 bin/protoc-gen-gogo
-/bin
+bin/trafficcontroller
+bin/loggregator
+bin/deaagent
+bin/metron

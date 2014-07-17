@@ -1,4 +1,4 @@
-package trafficcontroller
+package inputrouter
 
 import (
 	"github.com/cloudfoundry/gosteno"

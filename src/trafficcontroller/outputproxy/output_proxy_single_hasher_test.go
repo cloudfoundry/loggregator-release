@@ -1,4 +1,4 @@
-package trafficcontroller_test
+package outputproxy_test
 
 import (
 	"errors"
@@ -12,9 +12,9 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"sync"
-	"trafficcontroller"
 	"trafficcontroller/hasher"
 	"trafficcontroller/listener"
+	"trafficcontroller/outputproxy"
 	testhelpers "trafficcontroller_testhelpers"
 )
 
@@ -45,23 +45,23 @@ var _ = Describe("OutputProxySingleHasher", func() {
 	var outputMessages <-chan []byte
 	var fl *fakeListener
 	var ts *httptest.Server
-	var existingWsProvider = trafficcontroller.NewWebsocketHandlerProvider
+	var existingWsProvider = outputproxy.NewWebsocketHandlerProvider
 
 	BeforeEach(func() {
 		fwsh = &fakeWebsocketHandler{}
 		fl = &fakeListener{messageChan: make(chan []byte)}
 
-		trafficcontroller.NewWebsocketHandlerProvider = func(messageChan <-chan []byte) http.Handler {
+		outputproxy.NewWebsocketHandlerProvider = func(messageChan <-chan []byte) http.Handler {
 			outputMessages = messageChan
 			return fwsh
 		}
 
-		trafficcontroller.NewWebsocketListener = func() listener.Listener {
+		outputproxy.NewWebsocketListener = func() listener.Listener {
 			return fl
 		}
 
 		hashers = []hasher.Hasher{hasher.NewHasher([]string{"localhost:62038", "localhost:72038"})}
-		proxy := trafficcontroller.NewProxy(
+		proxy := outputproxy.NewProxy(
 			hashers,
 			testhelpers.SuccessfulAuthorizer,
 			loggertesthelper.Logger(),
@@ -73,7 +73,7 @@ var _ = Describe("OutputProxySingleHasher", func() {
 
 	AfterEach(func() {
 		ts.Close()
-		trafficcontroller.NewWebsocketHandlerProvider = existingWsProvider
+		outputproxy.NewWebsocketHandlerProvider = existingWsProvider
 	})
 
 	Context("Auth Params", func() {
@@ -123,7 +123,7 @@ var _ = Describe("OutputProxySingleHasher", func() {
 
 	Context("when a connection to a loggregator server fails", func() {
 		BeforeEach(func() {
-			trafficcontroller.NewWebsocketListener = func() listener.Listener {
+			outputproxy.NewWebsocketListener = func() listener.Listener {
 				return &failingListener{}
 			}
 		})
@@ -161,8 +161,13 @@ var _ = Describe("OutputProxySingleHasher", func() {
 
 		BeforeEach(func() {
 			fhh = &fakeHttpHandler{}
+<<<<<<< HEAD:src/trafficcontroller/output_proxy_single_hasher_test.go
 			fl.SetExpectedHosts("ws://localhost:62038/recent?app=myApp", "ws://localhost:72038/recent?app=myApp")
 			trafficcontroller.NewHttpHandlerProvider = func(<-chan []byte) http.Handler {
+=======
+			fl.SetExpectedHost("ws://localhost:62038/recent?app=myApp")
+			outputproxy.NewHttpHandlerProvider = func(<-chan []byte) http.Handler {
+>>>>>>> Move trafficcontroller/trafficontroller up; ginkgo-ify its tests [#74964290]:src/trafficcontroller/outputproxy/output_proxy_single_hasher_test.go
 				return fhh
 			}
 		})
