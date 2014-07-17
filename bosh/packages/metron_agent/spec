@@ -1,0 +1,6 @@
+---
+name: metron_agent
+dependencies:
+- golang
+files:
+- loggregator/**/*

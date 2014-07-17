@@ -1,0 +1,47 @@
+---
+name: metron_agent
+templates:
+  metron_agent_ctl.erb: bin/metron_agent_ctl
+  metron_agent.json.erb: config/metron_agent.json
+  syslog_forwarder.conf.erb: config/syslog_forwarder.conf
+
+packages:
+- common
+- metron_agent
+- syslog_aggregator
+properties:
+  syslog_aggregator.address:
+    description: "IP address for syslog aggregator"
+  syslog_aggregator.port:
+    description: "TCP port of syslog aggregator"
+  syslog_aggregator.all:
+    description: "Define whether forwarders should send all their syslog data to our aggregator."
+    default: false
+  syslog_aggregator.transport:
+    description: "Transport to be used when forwarding logs (tcp|udp|relp)."
+    default: "tcp"
+  metron_agent.incoming_port:
+    description: Port for incoming log messages
+    default: 3456
+  metron_agent.debug:
+    description: boolean value to turn on verbose mode
+    default: false
+  metron_agent.status.user:
+    description: username used to log into varz endpoint
+    default: ""
+  metron_agent.status.password:
+    description: password used to log into varz endpoint
+    default: ""
+  metron_agent.status.port:
+    description: port used to run the varz endpoint
+    default: 0
+  nats.user:
+    description: "Username for cc client to connect to NATS"
+  nats.password:
+    description: "Password for cc client to connect to NATS"
+  nats.machines:
+    description: "IP addresses of Cloud Foundry NATS servers"
+  nats.port:
+    description: "IP port of Cloud Foundry NATS server"
+  networks.apps:
+    description: "Metron Agent network information."
