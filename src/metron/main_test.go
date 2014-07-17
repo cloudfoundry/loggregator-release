@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/yagnats"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -44,7 +45,7 @@ var _ = Describe("InitializeComponent", func() {
 	})
 
 	It("registers with the collector", func() {
-		component := main.InitializeComponent(fakeFactory.Create, *config, logger)
+		component := main.InitializeComponent(fakeFactory.Create, *config, logger, []instrumentation.Instrumentable{})
 		Expect(fakeRegistrar.component).To(Equal(component))
 	})
 
@@ -55,7 +56,7 @@ var _ = Describe("InitializeComponent", func() {
 		}
 
 		Expect(func() {
-			main.InitializeComponent(fakeFactory.Create, *config, logger)
+			main.InitializeComponent(fakeFactory.Create, *config, logger, []instrumentation.Instrumentable{})
 		}).To(Panic())
 	})
 })

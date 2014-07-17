@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os/exec"
 )
@@ -38,7 +39,8 @@ var _ = Describe("Varz Endpoints", func() {
 	})
 
 	Context("/varz", func() {
-		It("shows basic metrics", func() {
+
+		var getVarzMessage = func() *instrumentation.VarzMessage {
 			req, _ := http.NewRequest("GET", "http://"+localIPAddress+":1234/varz", nil)
 			req.SetBasicAuth("admin", "admin")
 
@@ -47,11 +49,43 @@ var _ = Describe("Varz Endpoints", func() {
 			var message instrumentation.VarzMessage
 			json.NewDecoder(resp.Body).Decode(&message)
 
+			return &message
+		}
+
+		var getAgentListenerContext = func() *instrumentation.Context {
+			message := getVarzMessage()
+
+			for _, context := range message.Contexts {
+				if context.Name == "agentListener" {
+					return &context
+				}
+			}
+
+			return nil
+		}
+
+		It("shows basic metrics", func() {
+			message := getVarzMessage()
+
 			Expect(message.Name).To(Equal("MetronAgent"))
 			Expect(message.Tags).To(HaveKeyWithValue("ip", localIPAddress))
 			Expect(message.NumGoRoutines).To(BeNumerically(">", 0))
 			Expect(message.NumCpus).To(BeNumerically(">", 0))
 			Expect(message.MemoryStats.BytesAllocatedHeap).To(BeNumerically(">", 0))
+		})
+
+		It("Increments metric counter when it receives a message", func() {
+			agentListenerContext := getAgentListenerContext()
+			Expect(agentListenerContext.Metrics[1].Name).To(Equal("receivedMessageCount"))
+			Expect(agentListenerContext.Metrics[1].Value).To(BeEquivalentTo(0))
+
+			connection, _ := net.Dial("udp", "localhost:51160")
+			connection.Write([]byte("test-data"))
+
+			Eventually(func() interface{} {
+				agentListenerContext = getAgentListenerContext()
+				return agentListenerContext.Metrics[1].Value
+			}).Should(BeEquivalentTo(1))
 		})
 	})
 
