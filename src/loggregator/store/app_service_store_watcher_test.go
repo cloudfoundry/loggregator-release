@@ -240,7 +240,6 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 		Context("when an existing app service expires", func() {
 			It("removes the app service from the cache", func() {
 				app2Service2 := domain.AppService{AppId: APP2_ID, Url: "syslog://foo/a"}
-				adapter.Get(key(app2Service2))
 				adapter.Create(buildNode(app2Service2))
 				var appService domain.AppService
 
