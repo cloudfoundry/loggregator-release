@@ -50,6 +50,11 @@ properties:
   traffic_controller.status.port:
     description: port used to run the varz endpoint
     default: 0
+  etcd.machines:
+    description: "IPs pointing to the ETCD cluster"
+  etcd.maxconcurrentrequests:
+    description: "Number of concurrent requests to ETCD"
+    default: 10
   system_domain:
     description: "Domain reserved for CF operator, base URL where the login, uaa, and other non-user apps listen"
   nats.user:

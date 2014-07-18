@@ -1,4 +1,8 @@
 {
+    "JobName": "<%= name %>",
+    "JobIndex": <%= spec.index %>,
+    "EtcdUrls": [<%= p("etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
+    "EtcdMaxConcurrentRequests": <%= p("etcd.maxconcurrentrequests") %>,
     "Loggregators": <%= p("loggregator.servers").to_json %>,
     "LoggregatorIncomingPort": <%= p("loggregator.incoming_port") %>,
     "LoggregatorOutgoingPort": <%= p("loggregator.outgoing_port") %>,

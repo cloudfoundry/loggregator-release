@@ -2,20 +2,15 @@
 
 set -e
 
-rm -rf $(dirname $0)/../release
-mkdir -p $(dirname $0)/../release
-
-COMPONENTS="deaagent loggregator trafficcontroller"
+COMPONENTS="deaagent/deaagent loggregator/loggregator trafficcontroller"
 
 function build-architecture {
     COMPONENT=${1}
     echo "Creating $COMPONENT binary..."
 
-    go clean $COMPONENT/$COMPONENT
+    go clean $COMPONENT
 
-    go build -v -race $COMPONENT/$COMPONENT
-
-    mv $COMPONENT $(dirname $0)/../release/$COMPONENT
+    go install -v -race $COMPONENT
 }
 
 for COMPONENT in $COMPONENTS; do

@@ -1,4 +1,4 @@
-package trafficcontroller
+package outputproxy
 
 import (
 	"code.google.com/p/gogoprotobuf/proto"
