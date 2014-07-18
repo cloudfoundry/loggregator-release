@@ -60,7 +60,7 @@ var _ = Describe("OutputProxySingleHasher", func() {
 			return fl
 		}
 
-		hashers = []hasher.Hasher{hasher.NewHasher([]string{"localhost:62038"})}
+		hashers = []hasher.Hasher{hasher.NewHasher([]string{"localhost:62038", "localhost:72038"})}
 		proxy := trafficcontroller.NewProxy(
 			hashers,
 			testhelpers.SuccessfulAuthorizer,
@@ -141,14 +141,16 @@ var _ = Describe("OutputProxySingleHasher", func() {
 	Context("websocket client", func() {
 
 		It("should use the WebsocketHandler for tail", func() {
-			fl.SetExpectedHost("ws://localhost:62038/tail/?app=myApp")
+			fl.SetExpectedHosts("ws://localhost:62038/tail/?app=myApp", "ws://localhost:72038/tail/?app=myApp")
 			websocketClientWithHeaderAuth(ts, "/tail/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+			Expect(fl.RemainingExpectedHosts()).To(BeEmpty())
 			Expect(fwsh.called).To(BeTrue())
 		})
 
 		It("should use the WebsocketHandler for dump", func() {
-			fl.SetExpectedHost("ws://localhost:62038/dump/?app=myApp")
+			fl.SetExpectedHosts("ws://localhost:62038/dump/?app=myApp", "ws://localhost:72038/dump/?app=myApp")
 			websocketClientWithHeaderAuth(ts, "/dump/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+			Expect(fl.RemainingExpectedHosts()).To(BeEmpty())
 			Expect(fwsh.called).To(BeTrue())
 		})
 
@@ -159,7 +161,7 @@ var _ = Describe("OutputProxySingleHasher", func() {
 
 		BeforeEach(func() {
 			fhh = &fakeHttpHandler{}
-			fl.SetExpectedHost("ws://localhost:62038/recent?app=myApp")
+			fl.SetExpectedHosts("ws://localhost:62038/recent?app=myApp", "ws://localhost:72038/recent?app=myApp")
 			trafficcontroller.NewHttpHandlerProvider = func(<-chan []byte) http.Handler {
 				return fhh
 			}
@@ -228,7 +230,7 @@ func clientWithAuth(ws *websocket.Conn) []byte {
 type fakeListener struct {
 	messageChan     chan []byte
 	started, closed bool
-	expectedHost    string
+	remainingExpectedHosts []string
 	sync.Mutex
 }
 
@@ -237,8 +239,10 @@ func (fl *fakeListener) Start(host string, appId string, o listener.OutputChanne
 	fl.Lock()
 
 	fl.started = true
-	if fl.expectedHost != "" {
-		Expect(host).To(Equal(fl.expectedHost))
+
+	if fl.remainingExpectedHosts != nil {
+		Expect(fl.remainingExpectedHosts).To(ContainElement(host))
+		fl.remainingExpectedHosts = removeElement(fl.remainingExpectedHosts, host)
 	}
 	fl.Unlock()
 
@@ -253,6 +257,16 @@ func (fl *fakeListener) Start(host string, appId string, o listener.OutputChanne
 			o <- msg
 		}
 	}
+}
+
+func removeElement(items []string, item string) []string {
+	for i, value := range items {
+		if value == item {
+			return append(items[:i], items[i+1:]...)
+		}
+	}
+
+	return items
 }
 
 func (fl *fakeListener) Close() {
@@ -277,10 +291,16 @@ func (fl *fakeListener) IsClosed() bool {
 	return fl.closed
 }
 
-func (fl *fakeListener) SetExpectedHost(value string) {
+func (fl *fakeListener) SetExpectedHosts(value ...string) {
 	fl.Lock()
 	defer fl.Unlock()
-	fl.expectedHost = value
+	fl.remainingExpectedHosts = value
+}
+
+func (fl *fakeListener) RemainingExpectedHosts() []string {
+	fl.Lock()
+	defer fl.Unlock()
+	return fl.remainingExpectedHosts
 }
 
 type failingListener struct{}
