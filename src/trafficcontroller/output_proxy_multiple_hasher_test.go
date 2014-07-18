@@ -31,8 +31,8 @@ var _ = Describe("OutputProxyMultipleHasher", func() {
 		}
 
 		fls = []*fakeListener{
-			&fakeListener{messageChan: make(chan []byte, 1), expectedHost: "ws://" + hashers[0].LoggregatorServers()[0] + "/tail/?app=myApp"},
-			&fakeListener{messageChan: make(chan []byte, 1), expectedHost: "ws://" + hashers[1].LoggregatorServers()[0] + "/tail/?app=myApp"},
+			&fakeListener{messageChan: make(chan []byte, 1), remainingExpectedHosts: []string{"ws://" + hashers[0].LoggregatorServers()[0] + "/tail/?app=myApp"}},
+			&fakeListener{messageChan: make(chan []byte, 1), remainingExpectedHosts: []string{"ws://" + hashers[1].LoggregatorServers()[0] + "/tail/?app=myApp"}},
 		}
 
 		proxy := trafficcontroller.NewProxy(

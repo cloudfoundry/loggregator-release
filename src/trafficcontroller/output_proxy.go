@@ -109,18 +109,20 @@ func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	for _, h := range proxy.hashers {
 		l := NewWebsocketListener()
-		serverAddress := h.GetLoggregatorServerForAppId(appId)
-		serverUrlForAppId := fmt.Sprintf("ws://%s%s?app=%s", serverAddress, r.URL.Path, appId)
-		loggregatorServerListenerCount.Add(1)
-		go func() {
-			err := l.Start(serverUrlForAppId, appId, messagesChan, stopChan)
-			if err != nil {
-				errorMsg := fmt.Sprintf("proxy: error connecting to a loggregator server")
-				messagesChan <- generateLogMessage(errorMsg, appId)
-				proxy.logger.Infof("proxy: error connecting %s %s %s", appId, r.URL.Path, err.Error())
-			}
-			loggregatorServerListenerCount.Done()
-		}()
+		serverAddresses := h.LoggregatorServers()
+		for _, serverAddress := range serverAddresses {
+			serverUrlForAppId := fmt.Sprintf("ws://%s%s?app=%s", serverAddress, r.URL.Path, appId)
+			loggregatorServerListenerCount.Add(1)
+			go func() {
+				err := l.Start(serverUrlForAppId, appId, messagesChan, stopChan)
+				if err != nil {
+					errorMsg := fmt.Sprintf("proxy: error connecting to a loggregator server")
+					messagesChan <- generateLogMessage(errorMsg, appId)
+					proxy.logger.Infof("proxy: error connecting %s %s %s", appId, r.URL.Path, err.Error())
+				}
+				loggregatorServerListenerCount.Done()
+			}()
+		}
 	}
 
 	go func() {
