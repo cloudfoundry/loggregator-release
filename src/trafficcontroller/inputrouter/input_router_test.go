@@ -12,6 +12,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"net"
 	"time"
 	"trafficcontroller/hasher"
 )
@@ -28,13 +29,35 @@ var _ = Describe("InputRouter", func() {
 		r                    *inputrouter.Router
 	)
 
+	var verifyListenerStarted = func(listenerChan <-chan []byte, listenerPort string) {
+		var counter int
+	iLoop:
+		for {
+			select {
+			case <-listenerChan:
+				break iLoop
+			case <-time.After(time.Second):
+				counter++
+				connection, _ := net.Dial("udp", "localhost:"+listenerPort)
+				connection.Write([]byte("test-data"))
+				connection.Close()
+				if counter > 4 {
+					panic("Could not set up connection")
+				}
+			}
+		}
+
+	}
+
 	BeforeSuite(func() {
 		listener1, dataChan1 = agentlistener.NewAgentListener("localhost:"+listenerPort1, logger)
 		go listener1.Start()
 
 		listener2, dataChan2 = agentlistener.NewAgentListener("localhost:"+listenerPort2, logger)
 		go listener2.Start()
-		time.Sleep(50 * time.Millisecond)
+
+		verifyListenerStarted(dataChan1, listenerPort1)
+		verifyListenerStarted(dataChan2, listenerPort2)
 	})
 
 	JustBeforeEach(func() {
