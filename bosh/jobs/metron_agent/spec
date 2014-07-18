@@ -1,13 +1,13 @@
 ---
-name: dea_logging_agent
+name: metron_agent
 templates:
-  dea_logging_agent_ctl.erb: bin/dea_logging_agent_ctl
-  dea_logging_agent.json.erb: config/dea_logging_agent.json
+  metron_agent_ctl.erb: bin/metron_agent_ctl
+  metron_agent.json.erb: config/metron_agent.json
   syslog_forwarder.conf.erb: config/syslog_forwarder.conf
 
 packages:
 - common
-- dea_logging_agent
+- metron_agent
 - syslog_aggregator
 properties:
   syslog_aggregator.address:
@@ -20,24 +20,19 @@ properties:
   syslog_aggregator.transport:
     description: "Transport to be used when forwarding logs (tcp|udp|relp)."
     default: "tcp"
-
-  dea_logging_agent.debug:
+  metron_agent.incoming_port:
+    description: Port for incoming log messages
+    default: 3456
+  metron_agent.debug:
     description: boolean value to turn on verbose mode
     default: false
-  metron_endpoint.host:
-    description: "The host used to emit messages to the Metron agent"
-  metron_endpoint.port:
-    description: "The port used to emit messages to the Metron agent"
-    default: 3456
-  metron_endpoint.shared_secret:
-    description: "The key used to sign log messages"
-  dea_logging_agent.status.user:
+  metron_agent.status.user:
     description: username used to log into varz endpoint
     default: ""
-  dea_logging_agent.status.password:
+  metron_agent.status.password:
     description: password used to log into varz endpoint
     default: ""
-  dea_logging_agent.status.port:
+  metron_agent.status.port:
     description: port used to run the varz endpoint
     default: 0
   nats.user:
@@ -49,4 +44,4 @@ properties:
   nats.port:
     description: "IP port of Cloud Foundry NATS server"
   networks.apps:
-    description: "DEA Logging Agent network information."
+    description: "Metron Agent network information."

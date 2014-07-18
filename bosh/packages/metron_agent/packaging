@@ -1,0 +1,9 @@
+set -e -x
+
+export GOROOT=$(readlink -nf /var/vcap/packages/golang)
+export PATH=/var/vcap/packages/git/bin:$PATH
+export PATH=$GOROOT/bin:$PATH
+export GOPATH=$PWD/loggregator
+
+go install metron
+cp -a $PWD/loggregator/bin/metron ${BOSH_INSTALL_TARGET}
