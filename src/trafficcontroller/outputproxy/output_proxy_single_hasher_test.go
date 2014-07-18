@@ -161,13 +161,8 @@ var _ = Describe("OutputProxySingleHasher", func() {
 
 		BeforeEach(func() {
 			fhh = &fakeHttpHandler{}
-<<<<<<< HEAD:src/trafficcontroller/output_proxy_single_hasher_test.go
 			fl.SetExpectedHosts("ws://localhost:62038/recent?app=myApp", "ws://localhost:72038/recent?app=myApp")
-			trafficcontroller.NewHttpHandlerProvider = func(<-chan []byte) http.Handler {
-=======
-			fl.SetExpectedHost("ws://localhost:62038/recent?app=myApp")
 			outputproxy.NewHttpHandlerProvider = func(<-chan []byte) http.Handler {
->>>>>>> Move trafficcontroller/trafficontroller up; ginkgo-ify its tests [#74964290]:src/trafficcontroller/outputproxy/output_proxy_single_hasher_test.go
 				return fhh
 			}
 		})

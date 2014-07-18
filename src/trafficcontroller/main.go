@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -19,10 +20,24 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar"
+	"github.com/cloudfoundry/storeadapter"
+	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+	"github.com/cloudfoundry/storeadapter/workerpool"
 )
 
+var DefaultStoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
+	workerPool := workerpool.NewWorkerPool(concurrentRequests)
+
+	return etcdstoreadapter.NewETCDStoreAdapter(urls, workerPool)
+}
+
 type Config struct {
-	Zone string
+	EtcdUrls                  []string
+	EtcdMaxConcurrentRequests int
+
+	JobName  string
+	JobIndex int
+	Zone     string
 	cfcomponent.Config
 	ApiHost                 string
 	Host                    string
@@ -39,8 +54,17 @@ func (c *Config) setDefaults() {
 	if c.LoggregatorIncomingPort == 0 {
 		c.LoggregatorIncomingPort = c.IncomingPort
 	}
+
 	if c.LoggregatorOutgoingPort == 0 {
 		c.LoggregatorOutgoingPort = c.OutgoingPort
+	}
+
+	if c.JobName == "" {
+		c.JobName = "loggregator_trafficcontroller"
+	}
+
+	if c.EtcdMaxConcurrentRequests == 0 {
+		c.EtcdMaxConcurrentRequests = 10
 	}
 }
 
@@ -115,6 +139,8 @@ func main() {
 		logger.Fatalf("Startup: Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
 	}
 
+	StartHeartbeats(10*time.Second, config, logger)
+
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Kill, os.Interrupt)
 
@@ -149,6 +175,53 @@ func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gos
 	return config, logger, nil
 }
 
+func MakeHashers(loggregators map[string][]string, loggregatorOutgoingPort uint32, logger *gosteno.Logger) []hasher.Hasher {
+	counter := 0
+	hashers := make([]hasher.Hasher, 0, len(loggregators))
+	for _, servers := range loggregators {
+		logger.Debugf("Output Proxy Startup: Hashing servers: %v  Length: %d", servers, len(servers))
+
+		if len(servers) == 0 {
+			continue
+		}
+
+		for index, server := range servers {
+			logger.Debugf("Output Proxy Startup: Forwarding messages to client from loggregator server [%v] at %v", index, net.JoinHostPort(server, strconv.FormatUint(uint64(loggregatorOutgoingPort), 10)))
+			servers[index] = net.JoinHostPort(server, strconv.FormatUint(uint64(loggregatorOutgoingPort), 10))
+		}
+		hashers = hashers[:(counter + 1)]
+		hashers[counter] = hasher.NewHasher(servers)
+		counter++
+	}
+	return hashers
+}
+
+func StartHeartbeats(ttl time.Duration, config *Config, logger *gosteno.Logger) {
+	if len(config.EtcdUrls) == 0 {
+		return
+	}
+
+	adapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
+	adapter.Connect()
+	logger.Debugf("Starting Health Status Updates to Store: /healthstatus/%s/%d", config.JobName, config.JobIndex)
+	status, _, err := adapter.MaintainNode(storeadapter.StoreNode{
+		Key:   fmt.Sprintf("/healthstatus/%s/%d", config.JobName, config.JobIndex),
+		Value: []byte("alive"),
+		TTL:   uint64(ttl.Seconds()),
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	go func() {
+		for {
+			stat := <-status
+			logger.Debugf("Health updates channel pushed %v at time %v", stat, time.Now())
+		}
+	}()
+}
+
 func makeIncomingRouter(config *Config, logger *gosteno.Logger) *inputrouter.Router {
 	serversForZone := config.Loggregators[config.Zone]
 	servers := make([]string, len(serversForZone))
@@ -177,27 +250,6 @@ func makeOutgoingProxy(config *Config, logger *gosteno.Logger) *outputproxy.Prox
 	logger.Debugf("Output Proxy Startup: Number of hashers for the proxy: %v", len(hashers))
 	proxy := outputproxy.NewProxy(hashers, authorizer, logger)
 	return proxy
-}
-
-func MakeHashers(loggregators map[string][]string, loggregatorOutgoingPort uint32, logger *gosteno.Logger) []hasher.Hasher {
-	counter := 0
-	hashers := make([]hasher.Hasher, 0, len(loggregators))
-	for _, servers := range loggregators {
-		logger.Debugf("Output Proxy Startup: Hashing servers: %v  Length: %d", servers, len(servers))
-
-		if len(servers) == 0 {
-			continue
-		}
-
-		for index, server := range servers {
-			logger.Debugf("Output Proxy Startup: Forwarding messages to client from loggregator server [%v] at %v", index, net.JoinHostPort(server, strconv.FormatUint(uint64(loggregatorOutgoingPort), 10)))
-			servers[index] = net.JoinHostPort(server, strconv.FormatUint(uint64(loggregatorOutgoingPort), 10))
-		}
-		hashers = hashers[:(counter + 1)]
-		hashers[counter] = hasher.NewHasher(servers)
-		counter++
-	}
-	return hashers
 }
 
 func startIncomingRouter(router *inputrouter.Router, logger *gosteno.Logger) {
