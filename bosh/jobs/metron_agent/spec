@@ -20,6 +20,11 @@ properties:
   syslog_aggregator.transport:
     description: "Transport to be used when forwarding logs (tcp|udp|relp)."
     default: "tcp"
+  loggregator_endpoint.host:
+    description: "The host used to emit messages to Loggregator"
+  loggregator_endpoint.port:
+    description: "The port used to emit messages to Loggregator"
+    default: 3456
   metron_agent.incoming_port:
     description: Port for incoming log messages
     default: 3456

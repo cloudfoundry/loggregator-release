@@ -1,4 +1,5 @@
 {
+  "LoggregatorAddress": "<%= p("loggregator_endpoint.host") %>:<%= p("loggregator_endpoint.port") %>",
   "UdpListeningPort": <%= p("metron_agent.incoming_port") %>,
   "Index": <%= spec.index %>,
   "VarzUser": "<%= p("metron_agent.status.user") %>",

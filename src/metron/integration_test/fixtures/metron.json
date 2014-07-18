@@ -4,5 +4,6 @@
     "VarzUser": "admin",
     "VarzPass": "admin",
     "NatsUser": "",
-    "UdpListeningPort": 51160
+    "UdpListeningPort": 51160,
+    "LoggregatorAddress": "localhost:3456"
 }
