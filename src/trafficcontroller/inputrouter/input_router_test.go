@@ -12,8 +12,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"net"
-	"time"
 	"trafficcontroller/hasher"
 )
 
@@ -27,27 +25,8 @@ var _ = Describe("InputRouter", func() {
 		listener1, listener2 agentlistener.AgentListener
 		h                    hasher.Hasher
 		r                    *inputrouter.Router
+		logEmitter           *emitter.LoggregatorEmitter
 	)
-
-	var verifyListenerStarted = func(listenerChan <-chan []byte, listenerPort string) {
-		var counter int
-	iLoop:
-		for {
-			select {
-			case <-listenerChan:
-				break iLoop
-			case <-time.After(time.Second):
-				counter++
-				connection, _ := net.Dial("udp", "localhost:"+listenerPort)
-				connection.Write([]byte("test-data"))
-				connection.Close()
-				if counter > 4 {
-					panic("Could not set up connection")
-				}
-			}
-		}
-
-	}
 
 	BeforeSuite(func() {
 		listener1, dataChan1 = agentlistener.NewAgentListener("localhost:"+listenerPort1, logger)
@@ -64,6 +43,14 @@ var _ = Describe("InputRouter", func() {
 		r, _ = inputrouter.NewRouter("localhost:3551", h, cfcomponent.Config{}, logger)
 
 		go r.Start(logger)
+		logEmitter, _ = emitter.NewEmitter("localhost:3551", "ROUTER", "42", "secret", logger)
+
+		var received []byte
+		Eventually(func() []byte {
+			logEmitter.Emit("test message appId", "test message")
+			received = <-dataChan1
+			return received
+		}).ShouldNot(BeEmpty())
 	})
 
 	AfterEach(func() {
@@ -82,7 +69,6 @@ var _ = Describe("InputRouter", func() {
 		})
 
 		It("routes messages", func() {
-			logEmitter, _ := emitter.NewEmitter("localhost:3551", "ROUTER", "42", "secret", logger)
 			logEmitter.Emit("my_awesome_app", "Hello World")
 
 			var received []byte
@@ -103,7 +89,6 @@ var _ = Describe("InputRouter", func() {
 		})
 
 		It("routes messages to the correct Loggregator", func() {
-			logEmitter, _ := emitter.NewEmitter("localhost:3551", "ROUTER", "42", "secret", logger)
 			logEmitter.Emit("2", "My message")
 
 			var receivedData []byte
@@ -134,7 +119,6 @@ var _ = Describe("InputRouter", func() {
 			lc := loggregatorclient.NewLoggregatorClient("localhost:3551", logger, loggregatorclient.DefaultBufferSize)
 			lc.Send([]byte("This is poorly formatted"))
 
-			logEmitter, _ := emitter.NewEmitter("localhost:3551", "ROUTER", "42", "secret", logger)
 			logEmitter.Emit("my_awesome_app", "Hello World")
 
 			var received []byte
@@ -153,7 +137,6 @@ var _ = Describe("InputRouter", func() {
 		})
 
 		It("routes based on routing key in envelope", func() {
-			logEmitter, _ := emitter.NewEmitter("localhost:3551", "RTR", "42", "secret", logger)
 			logEmitter.Emit("my_awesome_app", "Hello World")
 
 			var received []byte
