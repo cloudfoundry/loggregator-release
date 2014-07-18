@@ -77,7 +77,7 @@ var _ = Describe("Varz Endpoints", func() {
 		It("Increments metric counter when it receives a message", func() {
 			agentListenerContext := getAgentListenerContext()
 			Expect(agentListenerContext.Metrics[1].Name).To(Equal("receivedMessageCount"))
-			Expect(agentListenerContext.Metrics[1].Value).To(BeEquivalentTo(0))
+			expectedValue := agentListenerContext.Metrics[1].Value.(float64) + 1
 
 			connection, _ := net.Dial("udp", "localhost:51160")
 			connection.Write([]byte("test-data"))
@@ -85,7 +85,7 @@ var _ = Describe("Varz Endpoints", func() {
 			Eventually(func() interface{} {
 				agentListenerContext = getAgentListenerContext()
 				return agentListenerContext.Metrics[1].Value
-			}).Should(BeEquivalentTo(1))
+			}).Should(Equal(expectedValue))
 		})
 	})
 
@@ -95,6 +95,24 @@ var _ = Describe("Varz Endpoints", func() {
 
 			bodyString, _ := ioutil.ReadAll(resp.Body)
 			Expect(string(bodyString)).To(Equal("ok"))
+		})
+	})
+
+	Context("Message forwarding", func() {
+		It("forwards messages to the specified UDP server", func(done Done) {
+			defer close(done)
+			testServer, _ := net.ListenPacket("udp", "localhost:3456")
+			defer testServer.Close()
+
+			connection, _ := net.Dial("udp", "localhost:51160")
+			connection.Write([]byte("test-data"))
+
+			readBuffer := make([]byte, 65535)
+			readCount, _, _ := testServer.ReadFrom(readBuffer)
+			readData := make([]byte, readCount)
+			copy(readData, readBuffer[:readCount])
+
+			Expect(readData).Should(BeEquivalentTo("test-data"))
 		})
 	})
 })

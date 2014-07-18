@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
+	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	"strconv"
@@ -18,8 +19,9 @@ var (
 	debug          = flag.Bool("debug", false, "Debug logging")
 )
 
-func drainMessages(messageChan <-chan []byte) {
-	for _ = range messageChan {
+func forwardMessagesToLoggregator(loggregatorClient loggregatorclient.LoggregatorClient, messageChan <-chan []byte) {
+	for message := range messageChan {
+		loggregatorClient.Send(message)
 	}
 }
 
@@ -41,13 +43,16 @@ func main() {
 		}
 	}()
 
-	drainMessages(messageChan)
+	loggregatorClient := loggregatorclient.NewLoggregatorClient(config.LoggregatorAddress, logger, loggregatorclient.DefaultBufferSize)
+
+	forwardMessagesToLoggregator(loggregatorClient, messageChan)
 }
 
 type Config struct {
 	cfcomponent.Config
-	Index            uint
-	UdpListeningPort int
+	Index              uint
+	UdpListeningPort   int
+	LoggregatorAddress string
 }
 
 type MetronHealthMonitor struct{}
