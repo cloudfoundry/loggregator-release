@@ -38,7 +38,8 @@ func TestTrafficcontroller(t *testing.T) {
 }
 
 var _ = BeforeEach(func() {
-	etcdRunner.Adapter().Disconnect()
+	adapter := etcdRunner.Adapter()
+	adapter.Disconnect()
 	etcdRunner.Reset()
-	etcdRunner.Adapter().Connect()
+	adapter.Connect()
 })
