@@ -19,12 +19,6 @@ var (
 	debug          = flag.Bool("debug", false, "Debug logging")
 )
 
-func forwardMessagesToLoggregator(loggregatorClient loggregatorclient.LoggregatorClient, messageChan <-chan []byte) {
-	for message := range messageChan {
-		loggregatorClient.Send(message)
-	}
-}
-
 func main() {
 	flag.Parse()
 
@@ -108,4 +102,10 @@ func parseConfig(debug bool, configFile, logFilePath string) (Config, *gosteno.L
 	logger.Info("Startup: Setting up the Metron agent")
 
 	return config, logger
+}
+
+func forwardMessagesToLoggregator(loggregatorClient loggregatorclient.LoggregatorClient, messageChan <-chan []byte) {
+	for message := range messageChan {
+		loggregatorClient.Send(message)
+	}
 }
