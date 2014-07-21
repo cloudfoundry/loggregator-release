@@ -1,150 +1,131 @@
 package inputrouter_test
 
 import (
-	"trafficcontroller/inputrouter"
-
 	"code.google.com/p/gogoprotobuf/proto"
-	"github.com/cloudfoundry/gosteno"
+	steno "github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/emitter"
 	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
+	"testing"
+	"time"
 	"trafficcontroller/hasher"
+	"trafficcontroller/inputrouter"
 )
 
-var _ = Describe("InputRouter", func() {
-	var logger = gosteno.NewLogger("TestLogger")
+var logger = steno.NewLogger("TestLogger")
 
-	var (
-		dataChan1, dataChan2 <-chan []byte
-		listenerPort1        = "9998"
-		listenerPort2        = "9997"
-		listener1, listener2 agentlistener.AgentListener
-		h                    hasher.Hasher
-		r                    *inputrouter.Router
-		logEmitter           *emitter.LoggregatorEmitter
-	)
+func newCfConfig() cfcomponent.Config {
+	return cfcomponent.Config{}
+}
 
-	BeforeSuite(func() {
-		listener1, dataChan1 = agentlistener.NewAgentListener("localhost:"+listenerPort1, logger)
-		go listener1.Start()
+func TestThatItWorksWithOneLoggregator(t *testing.T) {
+	listener, dataChannel := agentlistener.NewAgentListener("localhost:9999", logger)
+	go listener.Start()
 
-		listener2, dataChan2 = agentlistener.NewAgentListener("localhost:"+listenerPort2, logger)
-		go listener2.Start()
+	loggregatorServers := []string{"localhost:9999"}
+	hasher := hasher.NewHasher(loggregatorServers)
+	r, err := inputrouter.NewRouter("localhost:3456", hasher, newCfConfig(), logger)
+	assert.NoError(t, err)
 
-		verifyListenerStarted(dataChan1, listenerPort1)
-		verifyListenerStarted(dataChan2, listenerPort2)
-	})
+	go r.Start(logger)
+	time.Sleep(50 * time.Millisecond)
 
-	JustBeforeEach(func() {
-		r, _ = inputrouter.NewRouter("localhost:3551", h, cfcomponent.Config{}, logger)
+	logEmitter, _ := emitter.NewEmitter("localhost:3456", "ROUTER", "42", "secret", logger)
+	logEmitter.Emit("my_awesome_app", "Hello World")
 
-		go r.Start(logger)
-		logEmitter, _ = emitter.NewEmitter("localhost:3551", "ROUTER", "42", "secret", logger)
+	received := <-dataChannel
 
-		var received []byte
-		Eventually(func() []byte {
-			logEmitter.Emit("test message appId", "test message")
-			received = <-dataChan1
-			return received
-		}).ShouldNot(BeEmpty())
-	})
+	receivedEnvelope := &logmessage.LogEnvelope{}
+	proto.Unmarshal(received, receivedEnvelope)
 
-	AfterEach(func() {
-		r.Stop()
-	})
+	assert.Equal(t, receivedEnvelope.GetLogMessage().GetAppId(), "my_awesome_app")
+	assert.Equal(t, string(receivedEnvelope.GetLogMessage().GetMessage()), "Hello World")
+}
 
-	AfterSuite(func() {
-		listener1.Stop()
-		listener2.Stop()
-	})
+func TestThatItIgnoresBadMessages(t *testing.T) {
+	listener, dataChannel := agentlistener.NewAgentListener("localhost:9996", logger)
+	go listener.Start()
 
-	Context("with one Loggregator", func() {
-		BeforeEach(func() {
-			loggregatorServers := []string{"localhost:" + listenerPort1}
-			h = hasher.NewHasher(loggregatorServers)
-		})
+	loggregatorServers := []string{"localhost:9996"}
+	hasher := hasher.NewHasher(loggregatorServers)
+	r, err := inputrouter.NewRouter("localhost:3455", hasher, newCfConfig(), logger)
+	assert.NoError(t, err)
 
-		It("routes messages", func() {
-			logEmitter.Emit("my_awesome_app", "Hello World")
+	go r.Start(logger)
+	time.Sleep(50 * time.Millisecond)
 
-			var received []byte
-			Eventually(dataChan1).Should(Receive(&received))
+	lc := loggregatorclient.NewLoggregatorClient("localhost:3455", logger, loggregatorclient.DefaultBufferSize)
+	lc.Send([]byte("This is poorly formatted"))
 
-			receivedEnvelope := &logmessage.LogEnvelope{}
-			proto.Unmarshal(received, receivedEnvelope)
+	logEmitter, _ := emitter.NewEmitter("localhost:3455", "ROUTER", "42", "secret", logger)
+	logEmitter.Emit("my_awesome_app", "Hello World")
 
-			Expect(receivedEnvelope.GetLogMessage().GetAppId()).To(Equal("my_awesome_app"))
-			Expect(string(receivedEnvelope.GetLogMessage().GetMessage())).To(Equal("Hello World"))
-		})
-	})
+	received := <-dataChannel
+	receivedEnvelope := &logmessage.LogEnvelope{}
+	proto.Unmarshal(received, receivedEnvelope)
 
-	Context("with two Loggregators", func() {
-		BeforeEach(func() {
-			loggregatorServers := []string{"localhost:" + listenerPort1, "localhost:" + listenerPort2}
-			h = hasher.NewHasher(loggregatorServers)
-		})
+	assert.Equal(t, receivedEnvelope.GetLogMessage().GetAppId(), "my_awesome_app")
+	assert.Equal(t, string(receivedEnvelope.GetLogMessage().GetMessage()), "Hello World")
+}
 
-		It("routes messages to the correct Loggregator", func() {
-			logEmitter.Emit("2", "My message")
+func TestThatItWorksWithTwoLoggregators(t *testing.T) {
+	listener1, dataChan1 := agentlistener.NewAgentListener("localhost:9998", logger)
+	go listener1.Start()
 
-			var receivedData []byte
-			Eventually(dataChan1).Should(Receive(&receivedData))
+	listener2, dataChan2 := agentlistener.NewAgentListener("localhost:9997", logger)
+	go listener2.Start()
 
-			receivedEnvelope := &logmessage.LogEnvelope{}
-			proto.Unmarshal(receivedData, receivedEnvelope)
+	loggregatorServers := []string{"localhost:9998", "localhost:9997"}
+	hasher := hasher.NewHasher(loggregatorServers)
+	rt, err := inputrouter.NewRouter("localhost:3457", hasher, newCfConfig(), logger)
+	assert.NoError(t, err)
 
-			Expect(string(receivedEnvelope.GetLogMessage().GetMessage())).To(Equal("My message"))
+	go rt.Start(logger)
+	time.Sleep(50 * time.Millisecond)
 
-			logEmitter.Emit("1", "Another message")
+	logEmitter, _ := emitter.NewEmitter("localhost:3457", "ROUTER", "42", "secret", logger)
+	logEmitter.Emit("2", "My message")
 
-			Eventually(dataChan2).Should(Receive(&receivedData))
-			receivedEnvelope = &logmessage.LogEnvelope{}
-			proto.Unmarshal(receivedData, receivedEnvelope)
+	receivedData := <-dataChan1
+	receivedEnvelope := &logmessage.LogEnvelope{}
+	proto.Unmarshal(receivedData, receivedEnvelope)
 
-			Expect(string(receivedEnvelope.GetLogMessage().GetMessage())).To(Equal("Another message"))
-		})
-	})
+	assert.Equal(t, receivedEnvelope.GetLogMessage().GetAppId(), "2")
+	assert.Equal(t, string(receivedEnvelope.GetLogMessage().GetMessage()), "My message")
 
-	Context("with bad messages", func() {
-		BeforeEach(func() {
-			loggregatorServers := []string{"localhost:" + listenerPort1}
-			h = hasher.NewHasher(loggregatorServers)
-		})
+	logEmitter.Emit("1", "Another message")
 
-		It("only routes properly formatted messages", func() {
-			lc := loggregatorclient.NewLoggregatorClient("localhost:3551", logger, loggregatorclient.DefaultBufferSize)
-			lc.Send([]byte("This is poorly formatted"))
+	receivedData = <-dataChan2
+	receivedEnvelope = &logmessage.LogEnvelope{}
+	proto.Unmarshal(receivedData, receivedEnvelope)
 
-			logEmitter.Emit("my_awesome_app", "Hello World")
+	assert.Equal(t, receivedEnvelope.GetLogMessage().GetAppId(), "1")
+	assert.Equal(t, string(receivedEnvelope.GetLogMessage().GetMessage()), "Another message")
+}
 
-			var received []byte
-			Eventually(dataChan1).Should(Receive(&received))
-			receivedEnvelope := &logmessage.LogEnvelope{}
-			proto.Unmarshal(received, receivedEnvelope)
+func TestThatItWorksWithLogEnvelope(t *testing.T) {
+	listener, dataChannel := agentlistener.NewAgentListener("localhost:9902", logger)
+	go listener.Start()
 
-			Expect(string(receivedEnvelope.GetLogMessage().GetMessage())).To(Equal("Hello World"))
-		})
-	})
+	loggregatorServers := []string{"localhost:9902"}
+	hasher := hasher.NewHasher(loggregatorServers)
+	r, err := inputrouter.NewRouter("localhost:3551", hasher, newCfConfig(), logger)
+	assert.NoError(t, err)
 
-	Context("with envelopes", func() {
-		BeforeEach(func() {
-			loggregatorServers := []string{"localhost:" + listenerPort1}
-			h = hasher.NewHasher(loggregatorServers)
-		})
+	go r.Start(logger)
+	time.Sleep(50 * time.Millisecond)
 
-		It("routes based on routing key in envelope", func() {
-			logEmitter.Emit("my_awesome_app", "Hello World")
+	logEmitter, _ := emitter.NewEmitter("localhost:3551", "RTR", "42", "secret", logger)
+	logEmitter.Emit("my_awesome_app", "Hello World")
 
-			var received []byte
-			Eventually(dataChan1).Should(Receive(&received))
-			receivedEnvelope := &logmessage.LogEnvelope{}
-			proto.Unmarshal(received, receivedEnvelope)
+	received := <-dataChannel
 
-			Expect(string(receivedEnvelope.GetLogMessage().GetMessage())).To(Equal("Hello World"))
-		})
-	})
-})
+	receivedEnvelope := &logmessage.LogEnvelope{}
+	proto.Unmarshal(received, receivedEnvelope)
+
+	assert.Equal(t, receivedEnvelope.GetLogMessage().GetAppId(), "my_awesome_app")
+	assert.Equal(t, string(receivedEnvelope.GetLogMessage().GetMessage()), "Hello World")
+}
