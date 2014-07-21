@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/localip"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -135,6 +136,7 @@ var _ = Describe("Main", func() {
 					JobIndex:                  0,
 					EtcdMaxConcurrentRequests: 10,
 					EtcdUrls:                  []string{"test:123", "test:456"},
+					Zone:                      "z1",
 				}
 			})
 
@@ -145,7 +147,9 @@ var _ = Describe("Main", func() {
 
 			It("sends a heartbeat to etcd", func() {
 				main.StartHeartbeats(time.Second, &config, loggertesthelper.Logger())
-				Expect(adapter.MaintainedNodeName).To(Equal("/healthstatus/loggregator_trafficcontroller/0"))
+				Expect(adapter.MaintainedNodeName).To(Equal("/healthstatus/trafficcontroller/z1/loggregator_trafficcontroller/0"))
+				local_ip, _ := localip.LocalIP()
+				Expect(adapter.MaintainedNodeValue).To(Equal([]byte(local_ip)))
 			})
 
 			Context("when there is an error", func() {
