@@ -127,6 +127,8 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 			Context("when an existing app has a new service through a create operation", func() {
 				It("adds that service to the outgoing add channel", func() {
 					app2Service2 := domain.AppService{AppId: APP2_ID, Url: "syslog://new.example.com:12345"}
+					adapter.Get(key(app2Service2))
+
 					adapter.Create(buildNode(app2Service2))
 
 					var appService domain.AppService
@@ -164,8 +166,7 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 
 					appServices := drainOutgoingChannel(outAddChan, 2)
 
-					Expect(appServices).To(ContainElement(app3Service1))
-					Expect(appServices).To(ContainElement(app3Service2))
+					Expect(appServices).To(ConsistOf(app3Service1, app3Service2))
 
 					Expect(outRemoveChan).To(BeEmpty())
 
@@ -200,15 +201,13 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 					adapter.Get(path.Join("/loggregator/services", APP1_ID))
 					adapter.Delete(path.Join("/loggregator/services", APP1_ID))
 					appServices := drainOutgoingChannel(outRemoveChan, 2)
-					Expect(appServices).To(ContainElement(app1Service1))
-					Expect(appServices).To(ContainElement(app1Service2))
+					Expect(appServices).To(ConsistOf(app1Service1, app1Service2))
 					Expect(outAddChan).To(BeEmpty())
 
 					adapter.Create(buildNode(app1Service1))
 					adapter.Create(buildNode(app1Service2))
 					appServices = drainOutgoingChannel(outAddChan, 2)
-					Expect(appServices).To(ContainElement(app1Service1))
-					Expect(appServices).To(ContainElement(app1Service2))
+					Expect(appServices).To(ConsistOf(app1Service1, app1Service2))
 					Expect(outRemoveChan).To(BeEmpty())
 				})
 			})
@@ -241,6 +240,7 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 		Context("when an existing app service expires", func() {
 			It("removes the app service from the cache", func() {
 				app2Service2 := domain.AppService{AppId: APP2_ID, Url: "syslog://foo/a"}
+				adapter.Get(key(app2Service2))
 				adapter.Create(buildNode(app2Service2))
 				var appService domain.AppService
 
@@ -253,8 +253,7 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 				Expect(outAddChan).To(BeEmpty())
 				appServices := drainOutgoingChannel(outRemoveChan, 2)
 
-				Expect(appServices).To(ContainElement(app2Service1))
-				Expect(appServices).To(ContainElement(app2Service2))
+				Expect(appServices).To(ConsistOf(app2Service1, app2Service2))
 
 				adapter.Create(buildNode(app2Service2))
 

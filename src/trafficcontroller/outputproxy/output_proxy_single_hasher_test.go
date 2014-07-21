@@ -228,8 +228,8 @@ func clientWithAuth(ws *websocket.Conn) []byte {
 }
 
 type fakeListener struct {
-	messageChan     chan []byte
-	started, closed bool
+	messageChan            chan []byte
+	started, closed        bool
 	remainingExpectedHosts []string
 	sync.Mutex
 }
