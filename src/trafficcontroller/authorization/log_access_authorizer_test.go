@@ -1,6 +1,7 @@
-package authorization
+package authorization_test
 
 import (
+	"trafficcontroller/authorization"
 	"bytes"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"net/http"
@@ -40,7 +41,7 @@ func TestUserRoleAccessCombinations(t *testing.T) {
 	server := startHTTPServer()
 	defer server.Close()
 	for i, test := range accessTests {
-		authorizer := NewLogAccessAuthorizer(server.URL, true)
+		authorizer := authorization.NewLogAccessAuthorizer(server.URL, true)
 		result := authorizer(test.authToken, test.target, loggertesthelper.Logger())
 		if result != test.expectedResult {
 			t.Errorf("Access combination %d failed.", i)
@@ -53,13 +54,13 @@ func TestWorksIfServerIsSSLWithoutValidCertAndSkipVerifyCertIsTrue(t *testing.T)
 	server := startHTTPSServer()
 	defer server.Close()
 
-	authorizer := NewLogAccessAuthorizer(server.URL, true)
+	authorizer := authorization.NewLogAccessAuthorizer(server.URL, true)
 	result := authorizer("bearer something", "myAppId", logger)
 	if result != true {
 		t.Errorf("Could not connect to secure server.")
 	}
 
-	authorizer = NewLogAccessAuthorizer(server.URL, false)
+	authorizer = authorization.NewLogAccessAuthorizer(server.URL, false)
 	result = authorizer("bearer something", "myAppId", logger)
 	if result != false {
 		t.Errorf("Should not be able to connect to secure server with a self signed cert if SkipVerifyCert is false.")
@@ -71,7 +72,7 @@ func TestThatThereIsNoLeakingGoRoutine(t *testing.T) {
 	server := startHTTPServer()
 	defer server.Close()
 
-	authorizer := NewLogAccessAuthorizer(server.URL, true)
+	authorizer := authorization.NewLogAccessAuthorizer(server.URL, true)
 	authorizer("bearer something", "myAppId", logger)
 	time.Sleep(10 * time.Millisecond)
 
