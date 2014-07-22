@@ -1,4 +1,4 @@
-package loggregator
+package main
 
 import (
 	"errors"
@@ -37,6 +37,8 @@ type Config struct {
 	SharedSecret              string
 	SkipCertVerify            bool
 	BlackListIps              []iprange.IPRange
+	JobName                   string
+	Zone                      string
 }
 
 func (c *Config) Validate(logger *gosteno.Logger) (err error) {

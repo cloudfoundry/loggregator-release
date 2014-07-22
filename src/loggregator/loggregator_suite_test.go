@@ -1,4 +1,4 @@
-package loggregator_test
+package main_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -9,7 +9,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"github.com/onsi/ginkgo/config"
-	"loggregator"
+	loggregator "loggregator"
 	"loggregator/iprange"
 	"testing"
 )

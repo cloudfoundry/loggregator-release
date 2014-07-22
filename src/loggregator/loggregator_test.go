@@ -1,4 +1,4 @@
-package loggregator_test
+package main_test
 
 import (
 	"code.google.com/p/gogoprotobuf/proto"

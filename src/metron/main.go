@@ -67,7 +67,6 @@ type Config struct {
 	Zone                          string
 	Index                         uint
 	UdpListeningPort              int
-	LoggregatorAddress            string
 	EtcdUrls                      []string
 	EtcdMaxConcurrentRequests     int
 	EtcdQueryIntervalMilliseconds int
