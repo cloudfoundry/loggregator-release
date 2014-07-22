@@ -18,6 +18,7 @@ import (
 
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/localip"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar"
 	"github.com/cloudfoundry/storeadapter"
@@ -203,10 +204,17 @@ func StartHeartbeats(ttl time.Duration, config *Config, logger *gosteno.Logger) 
 
 	adapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	adapter.Connect()
-	logger.Debugf("Starting Health Status Updates to Store: /healthstatus/%s/%d", config.JobName, config.JobIndex)
+
+	local_ip, err := localip.LocalIP()
+	if err != nil {
+		panic(errors.New("StartHeartbeats: unable to resolve own IP address: " + err.Error()))
+	}
+
+	address := fmt.Sprintf("%s:%d", local_ip, config.IncomingPort)
+	logger.Debugf("Starting Health Status Updates to Store: /healthstatus/trafficcontroller/%s/%s/%d", config.Zone, config.JobName, config.JobIndex)
 	status, _, err := adapter.MaintainNode(storeadapter.StoreNode{
-		Key:   fmt.Sprintf("/healthstatus/%s/%d", config.JobName, config.JobIndex),
-		Value: []byte("alive"),
+		Key:   fmt.Sprintf("/healthstatus/trafficcontroller/%s/%s/%d", config.Zone, config.JobName, config.JobIndex),
+		Value: []byte(address),
 		TTL:   uint64(ttl.Seconds()),
 	})
 
@@ -215,8 +223,7 @@ func StartHeartbeats(ttl time.Duration, config *Config, logger *gosteno.Logger) 
 	}
 
 	go func() {
-		for {
-			stat := <-status
+		for stat := range status {
 			logger.Debugf("Health updates channel pushed %v at time %v", stat, time.Now())
 		}
 	}()

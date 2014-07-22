@@ -18,6 +18,7 @@ var _ = Describe("Etcd Integration tests", func() {
 			JobIndex:                  0,
 			EtcdMaxConcurrentRequests: 1,
 			EtcdUrls:                  []string{fmt.Sprintf("http://127.0.0.1:%d", etcdPort)},
+			Zone:                      "z1",
 		}
 
 	})
@@ -27,14 +28,14 @@ var _ = Describe("Etcd Integration tests", func() {
 			adapter := etcdRunner.Adapter()
 
 			Consistently(func() error {
-				_, err := adapter.Get("healthstatus/loggregator_trafficcontroller/0")
+				_, err := adapter.Get("healthstatus/trafficcontroller/z1/loggregator_trafficcontroller/0")
 				return err
 			}).Should(HaveOccurred())
 
 			main.StartHeartbeats(time.Second, &config, loggertesthelper.Logger())
 
 			Eventually(func() error {
-				_, err := adapter.Get("healthstatus/loggregator_trafficcontroller/0")
+				_, err := adapter.Get("healthstatus/trafficcontroller/z1/loggregator_trafficcontroller/0")
 				return err
 			}).ShouldNot(HaveOccurred())
 		})
@@ -44,7 +45,7 @@ var _ = Describe("Etcd Integration tests", func() {
 			adapter := etcdRunner.Adapter()
 
 			Eventually(func() uint64 {
-				node, _ := adapter.Get("healthstatus/loggregator_trafficcontroller/0")
+				node, _ := adapter.Get("healthstatus/trafficcontroller/z1/loggregator_trafficcontroller/0")
 				return node.TTL
 			}).Should(BeNumerically(">", 0))
 		})
@@ -56,7 +57,7 @@ var _ = Describe("Etcd Integration tests", func() {
 			var indices []uint64
 			var index uint64
 			Eventually(func() uint64 {
-				node, _ := adapter.Get("healthstatus/loggregator_trafficcontroller/0")
+				node, _ := adapter.Get("healthstatus/trafficcontroller/z1/loggregator_trafficcontroller/0")
 				index = node.Index
 				return node.Index
 			}).Should(BeNumerically(">", 0))
@@ -64,7 +65,7 @@ var _ = Describe("Etcd Integration tests", func() {
 
 			for i := 0; i < 3; i++ {
 				Eventually(func() uint64 {
-					node, _ := adapter.Get("healthstatus/loggregator_trafficcontroller/0")
+					node, _ := adapter.Get("healthstatus/trafficcontroller/z1/loggregator_trafficcontroller/0")
 					index = node.Index
 					return node.Index
 				}).Should(BeNumerically(">", indices[i]))
