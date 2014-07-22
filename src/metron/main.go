@@ -7,10 +7,13 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
-	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
+	"github.com/cloudfoundry/storeadapter"
+	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+	"github.com/cloudfoundry/storeadapter/workerpool"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	"strconv"
+	"time"
 )
 
 var (
@@ -19,34 +22,55 @@ var (
 	debug          = flag.Bool("debug", false, "Debug logging")
 )
 
+var StoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
+	workerPool := workerpool.NewWorkerPool(concurrentRequests)
+
+	return etcdstoreadapter.NewETCDStoreAdapter(urls, workerPool)
+}
+
 func main() {
 	flag.Parse()
-
 	config, logger := parseConfig(*debug, *configFilePath, *logFilePath)
 
 	agentListener, messageChan := agentlistener.NewAgentListener("localhost:"+strconv.Itoa(config.UdpListeningPort), logger)
+	adapter, clientPool := initializeClientPool(config, logger)
 
 	instrumentables := []instrumentation.Instrumentable{agentListener}
 	component := InitializeComponent(DefaultRegistrarFactory, config, logger, instrumentables)
 
+	go startMonitoringEndpoints(component, logger)
 	go agentListener.Start()
+	go clientPool.RunUpdateLoop(adapter, config.Zone, nil, time.Duration(config.EtcdQueryIntervalMilliseconds)*time.Millisecond)
 
-	go func() {
-		if err := component.StartMonitoringEndpoints(); err != nil {
-			component.Logger.Error(err.Error())
-		}
-	}()
+	forwardMessagesToLoggregator(clientPool, messageChan, logger)
+}
 
-	loggregatorClient := loggregatorclient.NewLoggregatorClient(config.LoggregatorAddress, logger, loggregatorclient.DefaultBufferSize)
+func startMonitoringEndpoints(component *cfcomponent.Component, logger *gosteno.Logger) {
+	if err := component.StartMonitoringEndpoints(); err != nil {
+		component.Logger.Error(err.Error())
+	}
+}
 
-	forwardMessagesToLoggregator(loggregatorClient, messageChan)
+func initializeClientPool(config Config, logger *gosteno.Logger) (storeadapter.StoreAdapter, *LoggregatorClientPool) {
+	adapter := StoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
+	err := adapter.Connect()
+	if err != nil {
+		logger.Errorf("Error connecting to ETCD: %v", err)
+	}
+
+	clientPool := NewLoggregatorClientPool(logger)
+	return adapter, clientPool
 }
 
 type Config struct {
 	cfcomponent.Config
-	Index              uint
-	UdpListeningPort   int
-	LoggregatorAddress string
+	Zone                          string
+	Index                         uint
+	UdpListeningPort              int
+	LoggregatorAddress            string
+	EtcdUrls                      []string
+	EtcdMaxConcurrentRequests     int
+	EtcdQueryIntervalMilliseconds int
 }
 
 type MetronHealthMonitor struct{}
@@ -104,8 +128,13 @@ func parseConfig(debug bool, configFile, logFilePath string) (Config, *gosteno.L
 	return config, logger
 }
 
-func forwardMessagesToLoggregator(loggregatorClient loggregatorclient.LoggregatorClient, messageChan <-chan []byte) {
+func forwardMessagesToLoggregator(clientPool *LoggregatorClientPool, messageChan <-chan []byte, logger *gosteno.Logger) {
 	for message := range messageChan {
-		loggregatorClient.Send(message)
+		client, err := clientPool.RandomClient()
+		if err != nil {
+			logger.Errorf("can't forward message: %v", err)
+			continue
+		}
+		client.Send(message)
 	}
 }

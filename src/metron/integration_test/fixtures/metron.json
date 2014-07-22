@@ -5,5 +5,9 @@
     "VarzPass": "admin",
     "NatsUser": "",
     "UdpListeningPort": 51160,
-    "LoggregatorAddress": "localhost:3456"
+    "LoggregatorAddress": "localhost:3456",
+    "EtcdUrls"    : ["http://127.0.0.1:5800"],
+    "EtcdMaxConcurrentRequests": 1,
+    "EtcdQueryIntervalMilliseconds": 10,
+    "Zone": "z1"
 }
