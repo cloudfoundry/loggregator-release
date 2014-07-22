@@ -26,7 +26,7 @@ func NewLoggregatorClientPool(logger *gosteno.Logger) *LoggregatorClientPool {
 	}
 }
 
-func (pool *LoggregatorClientPool) PickOne() (loggregatorclient.LoggregatorClient, error) {
+func (pool *LoggregatorClientPool) RandomClient() (loggregatorclient.LoggregatorClient, error) {
 	list := pool.List()
 	if len(list) == 0 {
 		return nil, ErrorEmptyClientPool

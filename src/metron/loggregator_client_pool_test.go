@@ -37,7 +37,7 @@ var _ = Describe("LoggregatorClientPool", func() {
 		pool = main.NewLoggregatorClientPool(logger)
 	})
 
-	Describe("PickOne", func() {
+	Describe("RandomClient", func() {
 		Context("with a non-empty client pool", func() {
 			It("chooses a client with roughly uniform distribution", func() {
 				for i := 0; i < 5; i++ {
@@ -48,7 +48,7 @@ var _ = Describe("LoggregatorClientPool", func() {
 
 				counts := make(map[loggregatorclient.LoggregatorClient]int)
 				for i := 0; i < 100000; i++ {
-					pick, _ := pool.PickOne()
+					pick, _ := pool.RandomClient()
 					counts[pick]++
 				}
 
@@ -60,7 +60,7 @@ var _ = Describe("LoggregatorClientPool", func() {
 
 		Context("with an empty client pool", func() {
 			It("returns an error", func() {
-				_, err := pool.PickOne()
+				_, err := pool.RandomClient()
 				Expect(err).To(Equal(main.ErrorEmptyClientPool))
 			})
 		})

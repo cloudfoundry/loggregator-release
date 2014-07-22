@@ -1,7 +1,6 @@
 package authorization_test
 
 import (
-	"trafficcontroller/authorization"
 	"bytes"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"net/http"
@@ -11,6 +10,7 @@ import (
 	"runtime/pprof"
 	"testing"
 	"time"
+	"trafficcontroller/authorization"
 )
 
 var accessTests = []struct {
