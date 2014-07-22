@@ -92,7 +92,7 @@ var _ = Describe("LoggregatorClientPool", func() {
 				}()
 
 				adapter.Create(storeadapter.StoreNode{
-					Key:   "healthstatus/trafficcontroller/z1/loggregator_trafficcontroller_z1/0",
+					Key:   "healthstatus/loggregator/z1/loggregator_z1/0",
 					Value: []byte("127.0.0.1:1"),
 				})
 
@@ -110,14 +110,14 @@ var _ = Describe("LoggregatorClientPool", func() {
 				}()
 
 				adapter.Create(storeadapter.StoreNode{
-					Key:   "healthstatus/trafficcontroller/z1/loggregator_trafficcontroller_z1/0",
+					Key:   "healthstatus/loggregator/z1/loggregator_z1/0",
 					Value: []byte("127.0.0.1:1"),
 				})
 
 				Eventually(pool.List).Should(HaveLen(1))
 
 				adapter.Create(storeadapter.StoreNode{
-					Key:   "healthstatus/trafficcontroller/z1/loggregator_trafficcontroller_z1/1",
+					Key:   "healthstatus/loggregator/z1/loggregator_z1/1",
 					Value: []byte("127.0.0.1:2"),
 				})
 
@@ -137,7 +137,7 @@ var _ = Describe("LoggregatorClientPool", func() {
 				}()
 
 				adapter.Create(storeadapter.StoreNode{
-					Key:   "healthstatus/trafficcontroller/z1/loggregator_trafficcontroller_z1/0",
+					Key:   "healthstatus/loggregator/z1/loggregator_z1/0",
 					Value: []byte("127.0.0.1:1"),
 				})
 
