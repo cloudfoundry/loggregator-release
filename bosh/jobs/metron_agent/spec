@@ -20,11 +20,6 @@ properties:
   syslog_aggregator.transport:
     description: "Transport to be used when forwarding logs (tcp|udp|relp)."
     default: "tcp"
-  loggregator_endpoint.host:
-    description: "The host used to emit messages to Loggregator"
-  loggregator_endpoint.port:
-    description: "The port used to emit messages to Loggregator"
-    default: 3456
   metron_agent.incoming_port:
     description: Port for incoming log messages
     default: 3456
@@ -40,6 +35,11 @@ properties:
   metron_agent.status.port:
     description: port used to run the varz endpoint
     default: 0
+  metron_agent.zone:
+    description: "Availability zone where this agent is running"
+  metron_agent.etcd_query_interval_milliseconds:
+    description: "Interval for querying ETCD for trafficcontroller heartbeats"
+    default: 5000
   nats.user:
     description: "Username for cc client to connect to NATS"
   nats.password:
@@ -50,3 +50,8 @@ properties:
     description: "IP port of Cloud Foundry NATS server"
   networks.apps:
     description: "Metron Agent network information."
+  etcd.machines:
+    description: "IPs pointing to the ETCD cluster"
+  etcd.maxconcurrentrequests:
+    description: "Number of concurrent requests to ETCD"
+    default: 10

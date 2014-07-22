@@ -1,5 +1,6 @@
 {
-  "LoggregatorAddress": "<%= p("loggregator_endpoint.host") %>:<%= p("loggregator_endpoint.port") %>",
+  "EtcdUrls": [<%= p("etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
+  "EtcdMaxConcurrentRequests": <%= p("etcd.maxconcurrentrequests") %>,
   "UdpListeningPort": <%= p("metron_agent.incoming_port") %>,
   "Index": <%= spec.index %>,
   "VarzUser": "<%= p("metron_agent.status.user") %>",
@@ -8,8 +9,11 @@
   "NatsHosts": <%= p("nats.machines") %>,
   "NatsPort": <%= p("nats.port") %>,
   "NatsUser": "<%= p("nats.user") %>",
-  "NatsPass": "<%= p("nats.password") %>"
-  <% if_p("syslog_aggregator") do |_| %>
+  "NatsPass": "<%= p("nats.password") %>",
+  "EtcdQueryIntervalMilliseconds": <%= p("metron_agent.etcd_query_interval_milliseconds") %>,
+  "Zone": "<%= p("metron_agent.zone") %>"
+
+    <% if_p("syslog_aggregator") do |_| %>
   , "Syslog": "vcap.metron_agent"
   <% end %>
 }
