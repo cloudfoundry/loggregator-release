@@ -11,7 +11,9 @@
   "NatsUser": "<%= p("nats.user") %>",
   "NatsPass": "<%= p("nats.password") %>",
   "EtcdQueryIntervalMilliseconds": <%= p("metron_agent.etcd_query_interval_milliseconds") %>,
-  "Zone": "<%= p("metron_agent.zone") %>"
+  "Zone": "<%= p("metron_agent.zone") %>",
+  "LoggregatorIncomingPort":<%= p("loggregator.incoming_port") %>,
+  "HealthcheckPrefix": "<%= p("loggregator.servers").length == 0 ? "/healthstatus/loggregator/" : "/healthstatus/trafficcontroller/" %>"
 
     <% if_p("syslog_aggregator") do |_| %>
   , "Syslog": "vcap.metron_agent"

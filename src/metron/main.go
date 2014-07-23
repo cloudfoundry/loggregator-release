@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
+	"github.com/cloudfoundry/loggregatorlib/clientpool"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/storeadapter/workerpool"
@@ -40,7 +41,7 @@ func main() {
 
 	go startMonitoringEndpoints(component, logger)
 	go agentListener.Start()
-	go clientPool.RunUpdateLoop(adapter, config.Zone, nil, time.Duration(config.EtcdQueryIntervalMilliseconds)*time.Millisecond)
+	go clientPool.RunUpdateLoop(adapter, config.HealthcheckPrefix+config.Zone, nil, time.Duration(config.EtcdQueryIntervalMilliseconds)*time.Millisecond)
 
 	forwardMessagesToLoggregator(clientPool, messageChan, logger)
 }
@@ -51,14 +52,14 @@ func startMonitoringEndpoints(component *cfcomponent.Component, logger *gosteno.
 	}
 }
 
-func initializeClientPool(config Config, logger *gosteno.Logger) (storeadapter.StoreAdapter, *LoggregatorClientPool) {
+func initializeClientPool(config Config, logger *gosteno.Logger) (storeadapter.StoreAdapter, *clientpool.LoggregatorClientPool) {
 	adapter := StoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	err := adapter.Connect()
 	if err != nil {
 		logger.Errorf("Error connecting to ETCD: %v", err)
 	}
 
-	clientPool := NewLoggregatorClientPool(logger)
+	clientPool := clientpool.NewLoggregatorClientPool(logger, config.LoggregatorIncomingPort, true)
 	return adapter, clientPool
 }
 
@@ -70,6 +71,8 @@ type Config struct {
 	EtcdUrls                      []string
 	EtcdMaxConcurrentRequests     int
 	EtcdQueryIntervalMilliseconds int
+	LoggregatorIncomingPort       int
+	HealthcheckPrefix             string
 }
 
 type MetronHealthMonitor struct{}
@@ -127,7 +130,7 @@ func parseConfig(debug bool, configFile, logFilePath string) (Config, *gosteno.L
 	return config, logger
 }
 
-func forwardMessagesToLoggregator(clientPool *LoggregatorClientPool, messageChan <-chan []byte, logger *gosteno.Logger) {
+func forwardMessagesToLoggregator(clientPool *clientpool.LoggregatorClientPool, messageChan <-chan []byte, logger *gosteno.Logger) {
 	for message := range messageChan {
 		client, err := clientPool.RandomClient()
 		if err != nil {
