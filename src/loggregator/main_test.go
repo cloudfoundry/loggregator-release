@@ -112,7 +112,7 @@ var _ = Describe("Main", func() {
 				main.StartHeartbeats(time.Second, &config, loggertesthelper.Logger())
 				Expect(adapter.MaintainedNodeName).To(Equal("/healthstatus/loggregator/z1/loggregator_z1/0"))
 				local_ip, _ := localip.LocalIP()
-				Expect(adapter.MaintainedNodeValue).To(Equal([]byte(local_ip + ":1234")))
+				Expect(adapter.MaintainedNodeValue).To(Equal([]byte(local_ip)))
 			})
 
 			Context("when there is an error", func() {

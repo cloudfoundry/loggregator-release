@@ -212,11 +212,10 @@ func StartHeartbeats(ttl time.Duration, config *Config, logger *gosteno.Logger) 
 		panic(errors.New("StartHeartbeats: unable to resolve own IP address: " + err.Error()))
 	}
 
-	address := fmt.Sprintf("%s:%d", local_ip, config.IncomingPort)
 	logger.Debugf("Starting Health Status Updates to Store: /healthstatus/trafficcontroller/%s/%s/%d", config.Zone, config.JobName, config.JobIndex)
 	status, _, err := adapter.MaintainNode(storeadapter.StoreNode{
 		Key:   fmt.Sprintf("/healthstatus/trafficcontroller/%s/%s/%d", config.Zone, config.JobName, config.JobIndex),
-		Value: []byte(address),
+		Value: []byte(local_ip),
 		TTL:   uint64(ttl.Seconds()),
 	})
 
