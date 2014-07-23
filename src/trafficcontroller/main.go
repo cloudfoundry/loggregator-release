@@ -21,6 +21,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/localip"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar"
+	"github.com/cloudfoundry/loggregatorlib/clientpool"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/storeadapter/workerpool"
@@ -265,7 +266,7 @@ func MakeProvider(config *Config, logger *gosteno.Logger, stopChan <-chan struct
 		logger.Debugf("Output Proxy Startup: Number of hashers for the proxy: %v", len(hashers))
 		provider = outputproxy.NewHashingLoggregatorServerProvider(hashers)
 	} else {
-		clientPool := outputproxy.NewLoggregatorClientPool(logger, int(config.LoggregatorOutgoingPort), false)
+		clientPool := clientpool.NewLoggregatorClientPool(logger, int(config.LoggregatorOutgoingPort), false)
 		adapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 		adapter.Connect()
 		go clientPool.RunUpdateLoop(adapter, "/healthstatus/loggregator", stopChan, EtcdQueryInterval)

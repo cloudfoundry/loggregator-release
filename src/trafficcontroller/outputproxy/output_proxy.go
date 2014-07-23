@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	"github.com/cloudfoundry/loggregatorlib/clientpool"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/loggregatorlib/server/handlers"
 	"net"
@@ -63,10 +64,10 @@ func (h *hashingLoggregatorServerProvider) LoggregatorServersForAppId(appId stri
 }
 
 type dynamicLoggregatorServerProvider struct {
-	clientPool *LoggregatorClientPool
+	clientPool *clientpool.LoggregatorClientPool
 }
 
-func NewDynamicLoggregatorServerProvider(clientPool *LoggregatorClientPool) LoggregatorServerProvider {
+func NewDynamicLoggregatorServerProvider(clientPool *clientpool.LoggregatorClientPool) LoggregatorServerProvider {
 	return &dynamicLoggregatorServerProvider{clientPool}
 }
 
