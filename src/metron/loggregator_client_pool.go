@@ -42,7 +42,7 @@ func (pool *LoggregatorClientPool) RunUpdateLoop(storeAdapter storeadapter.Store
 	for {
 		select {
 		case <-ticker.C:
-			key := fmt.Sprintf("/healthstatus/loggregator/%s/", zone)
+			key := fmt.Sprintf("/healthstatus/trafficcontroller/%s/", zone)
 			serverRoot, err := storeAdapter.ListRecursively(key)
 
 			var nodes []storeadapter.StoreNode
