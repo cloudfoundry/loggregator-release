@@ -3,7 +3,6 @@ package outputproxy_test
 import (
 	"errors"
 	"fmt"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/gorilla/websocket"
@@ -65,7 +64,6 @@ var _ = Describe("OutputProxySingleHasher", func() {
 		proxy := outputproxy.NewProxy(
 			hashers,
 			testhelpers.SuccessfulAuthorizer,
-			cfcomponent.Config{},
 			loggertesthelper.Logger(),
 		)
 
