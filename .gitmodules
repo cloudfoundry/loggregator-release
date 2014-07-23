@@ -28,12 +28,6 @@
 [submodule "src/github.com/coreos/go-etcd"]
 	path = src/github.com/coreos/go-etcd
 	url = https://github.com/coreos/go-etcd
-[submodule "src/github.com/coreos/go-log"]
-	path = src/github.com/coreos/go-log
-	url = https://github.com/coreos/go-log
-[submodule "src/github.com/coreos/go-systemd"]
-	path = src/github.com/coreos/go-systemd
-	url = https://github.com/coreos/go-systemd
 [submodule "src/github.com/onsi/ginkgo"]
 	path = src/github.com/onsi/ginkgo
 	url = https://github.com/onsi/ginkgo
