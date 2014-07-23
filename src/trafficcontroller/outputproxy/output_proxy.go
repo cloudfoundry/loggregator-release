@@ -4,6 +4,9 @@ import (
 	"code.google.com/p/gogoprotobuf/proto"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	"github.com/cloudfoundry/loggregatorlib/clientpool"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/loggregatorlib/server/handlers"
 	"net"
@@ -17,10 +20,11 @@ import (
 )
 
 type Proxy struct {
-	hashers   []hasher.Hasher
-	logger    *gosteno.Logger
-	authorize authorization.LogAccessAuthorizer
-	listener  net.Listener
+	cfcomponent.Component
+	loggregatorServerProvider LoggregatorServerProvider
+	logger                    *gosteno.Logger
+	authorize                 authorization.LogAccessAuthorizer
+	listener                  net.Listener
 }
 
 type WebsocketHandler interface {
@@ -39,8 +43,56 @@ var NewWebsocketListener = func() listener.Listener {
 	return listener.NewWebsocket()
 }
 
-func NewProxy(hashers []hasher.Hasher, authorizer authorization.LogAccessAuthorizer, logger *gosteno.Logger) *Proxy {
-	return &Proxy{hashers: hashers, authorize: authorizer, logger: logger}
+type LoggregatorServerProvider interface {
+	LoggregatorServersForAppId(appId string) []string
+}
+
+type hashingLoggregatorServerProvider struct {
+	hashers []hasher.Hasher
+}
+
+func NewHashingLoggregatorServerProvider(hashers []hasher.Hasher) LoggregatorServerProvider {
+	return &hashingLoggregatorServerProvider{hashers: hashers}
+}
+
+func (h *hashingLoggregatorServerProvider) LoggregatorServersForAppId(appId string) []string {
+	result := []string{}
+	for _, hasher := range h.hashers {
+		result = append(result, hasher.GetLoggregatorServerForAppId(appId))
+	}
+	return result
+}
+
+type dynamicLoggregatorServerProvider struct {
+	clientPool *clientpool.LoggregatorClientPool
+}
+
+func NewDynamicLoggregatorServerProvider(clientPool *clientpool.LoggregatorClientPool) LoggregatorServerProvider {
+	return &dynamicLoggregatorServerProvider{clientPool}
+}
+
+func (p *dynamicLoggregatorServerProvider) LoggregatorServersForAppId(appId string) []string {
+	return p.clientPool.ListAddresses()
+}
+
+func NewProxy(loggregatorServerProvider LoggregatorServerProvider, authorizer authorization.LogAccessAuthorizer, config cfcomponent.Config, logger *gosteno.Logger) *Proxy {
+	var instrumentables []instrumentation.Instrumentable
+
+	cfc, err := cfcomponent.NewComponent(
+		logger,
+		"LoggregatorTrafficcontroller",
+		0,
+		&TrafficControllerMonitor{},
+		config.VarzPort,
+		[]string{config.VarzUser, config.VarzPass},
+		instrumentables,
+	)
+
+	if err != nil {
+		return nil
+	}
+
+	return &Proxy{Component: cfc, loggregatorServerProvider: loggregatorServerProvider, authorize: authorizer, logger: logger}
 }
 
 func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress string) (bool, *logmessage.LogMessage) {
@@ -107,11 +159,12 @@ func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	stopChan := make(chan struct{})
 	defer close(stopChan)
 
-	for _, h := range proxy.hashers {
-		l := NewWebsocketListener()
-		serverAddress := h.GetLoggregatorServerForAppId(appId)
+	serverAddresses := proxy.loggregatorServerProvider.LoggregatorServersForAppId(appId)
+
+	for _, serverAddress := range serverAddresses {
 		serverUrlForAppId := fmt.Sprintf("ws://%s%s?app=%s", serverAddress, r.URL.Path, appId)
 		loggregatorServerListenerCount.Add(1)
+		l := NewWebsocketListener()
 		go func() {
 			err := l.Start(serverUrlForAppId, appId, messagesChan, stopChan)
 			if err != nil {
@@ -165,4 +218,11 @@ func generateLogMessage(messageString string, appId string) []byte {
 
 	msg, _ := proto.Marshal(logMessage)
 	return msg
+}
+
+type TrafficControllerMonitor struct {
+}
+
+func (hm TrafficControllerMonitor) Ok() bool {
+	return true
 }

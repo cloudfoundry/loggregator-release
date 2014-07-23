@@ -21,3 +21,4 @@ bin/trafficcontroller
 bin/loggregator
 bin/deaagent
 bin/metron
+*.test

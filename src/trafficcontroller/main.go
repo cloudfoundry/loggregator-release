@@ -21,6 +21,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/localip"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar"
+	"github.com/cloudfoundry/loggregatorlib/clientpool"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/storeadapter/workerpool"
@@ -31,6 +32,8 @@ var DefaultStoreAdapterProvider = func(urls []string, concurrentRequests int) st
 
 	return etcdstoreadapter.NewETCDStoreAdapter(urls, workerPool)
 }
+
+var EtcdQueryInterval = 5 * time.Second
 
 type Config struct {
 	EtcdUrls                  []string
@@ -125,17 +128,20 @@ func main() {
 		panic(err)
 	}
 
-	router := makeIncomingRouter(config, logger)
-	startIncomingRouter(router, logger)
+	if HashingEnabled(config, logger) {
+		router := makeIncomingRouter(config, logger)
+		startIncomingRouter(router, logger)
+		defer router.Stop()
+	}
 
 	proxy := makeOutgoingProxy(config, logger)
-	startOutgoingProxy(net.JoinHostPort(router.Component.IpAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), proxy)
+	startOutgoingProxy(net.JoinHostPort(proxy.IpAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), proxy)
 
-	setupMonitoring(router, config, logger)
+	setupMonitoring(proxy, config, logger)
 
 	rr := routerregistrar.NewRouterRegistrar(config.MbusClient, logger)
 	uri := "loggregator." + config.SystemDomain
-	err = rr.RegisterWithRouter(router.Component.IpAddress, config.OutgoingPort, []string{uri})
+	err = rr.RegisterWithRouter(proxy.IpAddress, config.OutgoingPort, []string{uri})
 	if err != nil {
 		logger.Fatalf("Startup: Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
 	}
@@ -150,11 +156,16 @@ func main() {
 		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
 			cfcomponent.DumpGoRoutine()
 		case <-killChan:
-			rr.UnregisterFromRouter(router.Component.IpAddress, config.OutgoingPort, []string{uri})
-			router.Stop()
+			rr.UnregisterFromRouter(proxy.IpAddress, config.OutgoingPort, []string{uri})
 			break
 		}
 	}
+}
+
+func HashingEnabled(config *Config, logger *gosteno.Logger) bool {
+	enabled := len(config.Loggregators) > 0
+	logger.Infof("Hashing for loggregator servers enabled?: %v", enabled)
+	return enabled
 }
 
 func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gosteno.Logger, error) {
@@ -210,11 +221,10 @@ func StartHeartbeats(ttl time.Duration, config *Config, logger *gosteno.Logger) 
 		panic(errors.New("StartHeartbeats: unable to resolve own IP address: " + err.Error()))
 	}
 
-	address := fmt.Sprintf("%s:%d", local_ip, config.IncomingPort)
 	logger.Debugf("Starting Health Status Updates to Store: /healthstatus/trafficcontroller/%s/%s/%d", config.Zone, config.JobName, config.JobIndex)
 	status, _, err := adapter.MaintainNode(storeadapter.StoreNode{
 		Key:   fmt.Sprintf("/healthstatus/trafficcontroller/%s/%s/%d", config.Zone, config.JobName, config.JobIndex),
-		Value: []byte(address),
+		Value: []byte(local_ip),
 		TTL:   uint64(ttl.Seconds()),
 	})
 
@@ -248,14 +258,26 @@ func makeIncomingRouter(config *Config, logger *gosteno.Logger) *inputrouter.Rou
 	return router
 }
 
+func MakeProvider(config *Config, logger *gosteno.Logger, stopChan <-chan struct{}) outputproxy.LoggregatorServerProvider {
+	var provider outputproxy.LoggregatorServerProvider
+	if HashingEnabled(config, logger) {
+		logger.Debugf("Output Proxy Startup: Number of zones: %v", len(config.Loggregators))
+		hashers := MakeHashers(config.Loggregators, config.LoggregatorOutgoingPort, logger)
+		logger.Debugf("Output Proxy Startup: Number of hashers for the proxy: %v", len(hashers))
+		provider = outputproxy.NewHashingLoggregatorServerProvider(hashers)
+	} else {
+		clientPool := clientpool.NewLoggregatorClientPool(logger, int(config.LoggregatorOutgoingPort), false)
+		adapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
+		adapter.Connect()
+		go clientPool.RunUpdateLoop(adapter, "/healthstatus/loggregator", stopChan, EtcdQueryInterval)
+		provider = outputproxy.NewDynamicLoggregatorServerProvider(clientPool)
+	}
+	return provider
+}
+
 func makeOutgoingProxy(config *Config, logger *gosteno.Logger) *outputproxy.Proxy {
 	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
-
-	logger.Debugf("Output Proxy Startup: Number of zones: %v", len(config.Loggregators))
-	hashers := MakeHashers(config.Loggregators, config.LoggregatorOutgoingPort, logger)
-
-	logger.Debugf("Output Proxy Startup: Number of hashers for the proxy: %v", len(hashers))
-	proxy := outputproxy.NewProxy(hashers, authorizer, logger)
+	proxy := outputproxy.NewProxy(MakeProvider(config, logger, nil), authorizer, config.Config, logger)
 	return proxy
 }
 
@@ -263,15 +285,15 @@ func startIncomingRouter(router *inputrouter.Router, logger *gosteno.Logger) {
 	go router.Start(logger)
 }
 
-func setupMonitoring(router *inputrouter.Router, config *Config, logger *gosteno.Logger) {
+func setupMonitoring(proxy *outputproxy.Proxy, config *Config, logger *gosteno.Logger) {
 	cr := collectorregistrar.NewCollectorRegistrar(config.MbusClient, logger)
-	err := cr.RegisterWithCollector(router.Component)
+	err := cr.RegisterWithCollector(proxy.Component)
 	if err != nil {
 		panic(err)
 	}
 
 	go func() {
-		err := router.StartMonitoringEndpoints()
+		err := proxy.StartMonitoringEndpoints()
 		if err != nil {
 			panic(err)
 		}

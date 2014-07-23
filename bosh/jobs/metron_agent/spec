@@ -40,6 +40,11 @@ properties:
   metron_agent.etcd_query_interval_milliseconds:
     description: "Interval for querying ETCD for trafficcontroller heartbeats"
     default: 5000
+  loggregator.incoming_port:
+    description: "Port for incoming log messages"
+    default: 3456
+  loggregator.servers:
+    description: "a map of zones to loggregator servers (hostname/IP only, no port)"
   nats.user:
     description: "Username for cc client to connect to NATS"
   nats.password:

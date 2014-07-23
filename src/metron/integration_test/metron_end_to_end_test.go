@@ -129,7 +129,7 @@ var _ = Describe("Varz Endpoints", func() {
 
 			node := storeadapter.StoreNode{
 				Key:   "healthstatus/trafficcontroller/z1/loggregator_trafficcontroller/0",
-				Value: []byte("localhost:3456"),
+				Value: []byte("localhost"),
 			}
 			adapter := etcdRunner.Adapter()
 			adapter.Create(node)

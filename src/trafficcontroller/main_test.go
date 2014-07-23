@@ -10,9 +10,28 @@ import (
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
 
+	"github.com/cloudfoundry/gosteno"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
+
+var _ = Describe("HashingEnabled", func() {
+	var logger = gosteno.NewLogger("TestLogger")
+	It("returns true if the loggregators are configured", func() {
+		config := &main.Config{
+			Loggregators: map[string][]string{
+				"z1": []string{"10.244.0.14"},
+				"z2": []string{},
+			},
+		}
+		Expect(main.HashingEnabled(config, logger)).To(BeTrue())
+	})
+
+	It("returns false if the loggregators are not configured", func() {
+		config := &main.Config{}
+		Expect(main.HashingEnabled(config, logger)).To(BeFalse())
+	})
+})
 
 var _ = Describe("Main", func() {
 	Describe("MakeHashers", func() {
@@ -150,7 +169,7 @@ var _ = Describe("Main", func() {
 				main.StartHeartbeats(time.Second, &config, loggertesthelper.Logger())
 				Expect(adapter.MaintainedNodeName).To(Equal("/healthstatus/trafficcontroller/z1/loggregator_trafficcontroller/0"))
 				local_ip, _ := localip.LocalIP()
-				Expect(adapter.MaintainedNodeValue).To(Equal([]byte(local_ip + ":1234")))
+				Expect(adapter.MaintainedNodeValue).To(Equal([]byte(local_ip)))
 			})
 
 			Context("when there is an error", func() {
