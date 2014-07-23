@@ -62,7 +62,7 @@ var _ = Describe("OutputProxySingleHasher", func() {
 
 		hashers = []hasher.Hasher{hasher.NewHasher([]string{"localhost:62038"})}
 		proxy := outputproxy.NewProxy(
-			hashers,
+			outputproxy.NewHashingLoggregatorServerProvider(hashers),
 			testhelpers.SuccessfulAuthorizer,
 			loggertesthelper.Logger(),
 		)

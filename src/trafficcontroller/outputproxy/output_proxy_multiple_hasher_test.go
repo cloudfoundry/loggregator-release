@@ -36,7 +36,7 @@ var _ = Describe("OutputProxyMultipleHasher", func() {
 		}
 
 		proxy := outputproxy.NewProxy(
-			hashers,
+			outputproxy.NewHashingLoggregatorServerProvider(hashers),
 			testhelpers.SuccessfulAuthorizer,
 			loggertesthelper.Logger(),
 		)

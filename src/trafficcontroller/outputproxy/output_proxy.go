@@ -17,10 +17,10 @@ import (
 )
 
 type Proxy struct {
-	hashers   []hasher.Hasher
-	logger    *gosteno.Logger
-	authorize authorization.LogAccessAuthorizer
-	listener  net.Listener
+	loggregatorServerProvider LoggregatorServerProvider
+	logger                    *gosteno.Logger
+	authorize                 authorization.LogAccessAuthorizer
+	listener                  net.Listener
 }
 
 type WebsocketHandler interface {
@@ -39,8 +39,28 @@ var NewWebsocketListener = func() listener.Listener {
 	return listener.NewWebsocket()
 }
 
-func NewProxy(hashers []hasher.Hasher, authorizer authorization.LogAccessAuthorizer, logger *gosteno.Logger) *Proxy {
-	return &Proxy{hashers: hashers, authorize: authorizer, logger: logger}
+type LoggregatorServerProvider interface {
+	LoggregatorServersForAppId(appId string) []string
+}
+
+type hashingLoggregatorServerProvider struct {
+	hashers []hasher.Hasher
+}
+
+func NewHashingLoggregatorServerProvider(hashers []hasher.Hasher) LoggregatorServerProvider {
+	return &hashingLoggregatorServerProvider{hashers: hashers}
+}
+
+func (h *hashingLoggregatorServerProvider) LoggregatorServersForAppId(appId string) []string {
+	result := []string{}
+	for _, hasher := range h.hashers {
+		result = append(result, hasher.GetLoggregatorServerForAppId(appId))
+	}
+	return result
+}
+
+func NewProxy(loggregatorServerProvider LoggregatorServerProvider, authorizer authorization.LogAccessAuthorizer, logger *gosteno.Logger) *Proxy {
+	return &Proxy{loggregatorServerProvider: loggregatorServerProvider, authorize: authorizer, logger: logger}
 }
 
 func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress string) (bool, *logmessage.LogMessage) {
@@ -107,11 +127,12 @@ func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	stopChan := make(chan struct{})
 	defer close(stopChan)
 
-	for _, h := range proxy.hashers {
-		l := NewWebsocketListener()
-		serverAddress := h.GetLoggregatorServerForAppId(appId)
+	serverAddresses := proxy.loggregatorServerProvider.LoggregatorServersForAppId(appId)
+
+	for _, serverAddress := range serverAddresses {
 		serverUrlForAppId := fmt.Sprintf("ws://%s%s?app=%s", serverAddress, r.URL.Path, appId)
 		loggregatorServerListenerCount.Add(1)
+		l := NewWebsocketListener()
 		go func() {
 			err := l.Start(serverUrlForAppId, appId, messagesChan, stopChan)
 			if err != nil {

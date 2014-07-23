@@ -255,7 +255,7 @@ func makeOutgoingProxy(config *Config, logger *gosteno.Logger) *outputproxy.Prox
 	hashers := MakeHashers(config.Loggregators, config.LoggregatorOutgoingPort, logger)
 
 	logger.Debugf("Output Proxy Startup: Number of hashers for the proxy: %v", len(hashers))
-	proxy := outputproxy.NewProxy(hashers, authorizer, logger)
+	proxy := outputproxy.NewProxy(outputproxy.NewHashingLoggregatorServerProvider(hashers), authorizer, logger)
 	return proxy
 }
 
