@@ -127,17 +127,20 @@ func main() {
 		panic(err)
 	}
 
-	router := makeIncomingRouter(config, logger)
-	startIncomingRouter(router, logger)
+	if HashingEnabled(config, logger) {
+		router := makeIncomingRouter(config, logger)
+		startIncomingRouter(router, logger)
+		defer router.Stop()
+	}
 
 	proxy := makeOutgoingProxy(config, logger)
-	startOutgoingProxy(net.JoinHostPort(router.Component.IpAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), proxy)
+	startOutgoingProxy(net.JoinHostPort(proxy.IpAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), proxy)
 
-	setupMonitoring(router, config, logger)
+	setupMonitoring(proxy, config, logger)
 
 	rr := routerregistrar.NewRouterRegistrar(config.MbusClient, logger)
 	uri := "loggregator." + config.SystemDomain
-	err = rr.RegisterWithRouter(router.Component.IpAddress, config.OutgoingPort, []string{uri})
+	err = rr.RegisterWithRouter(proxy.IpAddress, config.OutgoingPort, []string{uri})
 	if err != nil {
 		logger.Fatalf("Startup: Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
 	}
@@ -152,11 +155,16 @@ func main() {
 		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
 			cfcomponent.DumpGoRoutine()
 		case <-killChan:
-			rr.UnregisterFromRouter(router.Component.IpAddress, config.OutgoingPort, []string{uri})
-			router.Stop()
+			rr.UnregisterFromRouter(proxy.IpAddress, config.OutgoingPort, []string{uri})
 			break
 		}
 	}
+}
+
+func HashingEnabled(config *Config, logger *gosteno.Logger) bool {
+	enabled := len(config.Loggregators) > 0
+	logger.Infof("Hashing for loggregator servers enabled?: %v", enabled)
+	return enabled
 }
 
 func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gosteno.Logger, error) {
@@ -251,7 +259,7 @@ func makeIncomingRouter(config *Config, logger *gosteno.Logger) *inputrouter.Rou
 
 func MakeProvider(config *Config, logger *gosteno.Logger, stopChan <-chan struct{}) outputproxy.LoggregatorServerProvider {
 	var provider outputproxy.LoggregatorServerProvider
-	if len(config.Loggregators) > 0 {
+	if HashingEnabled(config, logger) {
 		logger.Debugf("Output Proxy Startup: Number of zones: %v", len(config.Loggregators))
 		hashers := MakeHashers(config.Loggregators, config.LoggregatorOutgoingPort, logger)
 		logger.Debugf("Output Proxy Startup: Number of hashers for the proxy: %v", len(hashers))
@@ -268,7 +276,7 @@ func MakeProvider(config *Config, logger *gosteno.Logger, stopChan <-chan struct
 
 func makeOutgoingProxy(config *Config, logger *gosteno.Logger) *outputproxy.Proxy {
 	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
-	proxy := outputproxy.NewProxy(MakeProvider(config, logger, nil), authorizer, logger)
+	proxy := outputproxy.NewProxy(MakeProvider(config, logger, nil), authorizer, config.Config, logger)
 	return proxy
 }
 
@@ -276,15 +284,15 @@ func startIncomingRouter(router *inputrouter.Router, logger *gosteno.Logger) {
 	go router.Start(logger)
 }
 
-func setupMonitoring(router *inputrouter.Router, config *Config, logger *gosteno.Logger) {
+func setupMonitoring(proxy *outputproxy.Proxy, config *Config, logger *gosteno.Logger) {
 	cr := collectorregistrar.NewCollectorRegistrar(config.MbusClient, logger)
-	err := cr.RegisterWithCollector(router.Component)
+	err := cr.RegisterWithCollector(proxy.Component)
 	if err != nil {
 		panic(err)
 	}
 
 	go func() {
-		err := router.StartMonitoringEndpoints()
+		err := proxy.StartMonitoringEndpoints()
 		if err != nil {
 			panic(err)
 		}

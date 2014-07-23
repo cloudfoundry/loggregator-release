@@ -4,6 +4,8 @@ import (
 	"code.google.com/p/gogoprotobuf/proto"
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/loggregatorlib/server/handlers"
 	"net"
@@ -17,6 +19,7 @@ import (
 )
 
 type Proxy struct {
+	cfcomponent.Component
 	loggregatorServerProvider LoggregatorServerProvider
 	logger                    *gosteno.Logger
 	authorize                 authorization.LogAccessAuthorizer
@@ -71,8 +74,24 @@ func (p *dynamicLoggregatorServerProvider) LoggregatorServersForAppId(appId stri
 	return p.clientPool.ListAddresses()
 }
 
-func NewProxy(loggregatorServerProvider LoggregatorServerProvider, authorizer authorization.LogAccessAuthorizer, logger *gosteno.Logger) *Proxy {
-	return &Proxy{loggregatorServerProvider: loggregatorServerProvider, authorize: authorizer, logger: logger}
+func NewProxy(loggregatorServerProvider LoggregatorServerProvider, authorizer authorization.LogAccessAuthorizer, config cfcomponent.Config, logger *gosteno.Logger) *Proxy {
+	var instrumentables []instrumentation.Instrumentable
+
+	cfc, err := cfcomponent.NewComponent(
+		logger,
+		"LoggregatorTrafficcontroller",
+		0,
+		&TrafficControllerMonitor{},
+		config.VarzPort,
+		[]string{config.VarzUser, config.VarzPass},
+		instrumentables,
+	)
+
+	if err != nil {
+		return nil
+	}
+
+	return &Proxy{Component: cfc, loggregatorServerProvider: loggregatorServerProvider, authorize: authorizer, logger: logger}
 }
 
 func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress string) (bool, *logmessage.LogMessage) {
@@ -198,4 +217,11 @@ func generateLogMessage(messageString string, appId string) []byte {
 
 	msg, _ := proto.Marshal(logMessage)
 	return msg
+}
+
+type TrafficControllerMonitor struct {
+}
+
+func (hm TrafficControllerMonitor) Ok() bool {
+	return true
 }
