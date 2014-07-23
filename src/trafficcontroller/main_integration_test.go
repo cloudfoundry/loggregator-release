@@ -2,12 +2,65 @@ package main_test
 
 import (
 	"fmt"
+	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/storeadapter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"time"
 	"trafficcontroller"
 )
+
+var _ = Describe("Provider", func() {
+	var config main.Config
+	var logger = gosteno.NewLogger("TestLogger")
+
+	Context("with hasher configuration", func() {
+		BeforeEach(func() {
+			config = main.Config{
+				JobName:                 "loggregator_trafficcontroller",
+				JobIndex:                0,
+				Zone:                    "z1",
+				Loggregators:            map[string][]string{"z1": {"1.2.3.4", "1.2.3.5"}, "z2": {"5.6.7.8", "5.6.7.9"}},
+				LoggregatorOutgoingPort: 3456,
+			}
+		})
+		It("returns a hashing provider", func() {
+			provider := main.MakeProvider(&config, logger, nil)
+			servers := provider.LoggregatorServersForAppId("123")
+			Expect(servers).To(ConsistOf("1.2.3.5:3456", "5.6.7.9:3456"))
+		})
+	})
+	Context("with dynamic configuration", func() {
+		BeforeEach(func() {
+			main.EtcdQueryInterval = 10 * time.Millisecond
+			config = main.Config{
+				JobName:  "loggregator_trafficcontroller",
+				JobIndex: 0,
+				Zone:     "z1",
+				EtcdMaxConcurrentRequests: 1,
+				EtcdUrls:                  []string{fmt.Sprintf("http://127.0.0.1:%d", etcdPort)},
+				LoggregatorOutgoingPort:   3456,
+			}
+			node := storeadapter.StoreNode{
+				Key:   "healthstatus/loggregator/z1/loggregator/0",
+				Value: []byte("1.2.3.4"),
+			}
+			adapter := etcdRunner.Adapter()
+			adapter.Create(node)
+		})
+		It("returns a hashing provider", func() {
+			stopChan := make(chan struct{})
+			defer close(stopChan)
+			provider := main.MakeProvider(&config, logger, stopChan)
+
+			Eventually(func() []string {
+				return provider.LoggregatorServersForAppId("123")
+			}).Should(ConsistOf("1.2.3.4:3456"))
+
+		})
+	})
+})
 
 var _ = Describe("Etcd Integration tests", func() {
 	var config main.Config

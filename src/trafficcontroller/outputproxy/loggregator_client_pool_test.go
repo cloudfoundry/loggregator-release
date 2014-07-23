@@ -33,7 +33,7 @@ var _ = Describe("LoggregatorClientPool", func() {
 
 		stopChan = make(chan struct{})
 		logger = steno.NewLogger("TestLogger")
-		pool = outputproxy.NewLoggregatorClientPool(logger)
+		pool = outputproxy.NewLoggregatorClientPool(logger, 3456, false)
 	})
 
 	Describe("RandomClient", func() {
@@ -107,8 +107,8 @@ var _ = Describe("LoggregatorClientPool", func() {
 			Context("with 'create clients' enabled", func() {
 				It("a non-nil client eventually appears in the pool", func() {
 					defer close(stopChan)
+					pool = outputproxy.NewLoggregatorClientPool(logger, 3456, true)
 
-					pool.EnableCreateClients(3456)
 					addServer()
 
 					Eventually(pool.ListClients).Should(HaveLen(1))
@@ -139,7 +139,7 @@ var _ = Describe("LoggregatorClientPool", func() {
 				})
 
 				Eventually(pool.ListClients).Should(HaveLen(2))
-				Eventually(pool.ListAddresses).Should(ConsistOf("127.0.0.1", "127.0.0.2"))
+				Eventually(pool.ListAddresses).Should(ConsistOf("127.0.0.1:3456", "127.0.0.2:3456"))
 			})
 
 			It("does not duplicate known servers", func() {

@@ -32,6 +32,8 @@ var DefaultStoreAdapterProvider = func(urls []string, concurrentRequests int) st
 	return etcdstoreadapter.NewETCDStoreAdapter(urls, workerPool)
 }
 
+var EtcdQueryInterval = 5 * time.Second
+
 type Config struct {
 	EtcdUrls                  []string
 	EtcdMaxConcurrentRequests int
@@ -248,14 +250,26 @@ func makeIncomingRouter(config *Config, logger *gosteno.Logger) *inputrouter.Rou
 	return router
 }
 
+func MakeProvider(config *Config, logger *gosteno.Logger, stopChan <-chan struct{}) outputproxy.LoggregatorServerProvider {
+	var provider outputproxy.LoggregatorServerProvider
+	if len(config.Loggregators) > 0 {
+		logger.Debugf("Output Proxy Startup: Number of zones: %v", len(config.Loggregators))
+		hashers := MakeHashers(config.Loggregators, config.LoggregatorOutgoingPort, logger)
+		logger.Debugf("Output Proxy Startup: Number of hashers for the proxy: %v", len(hashers))
+		provider = outputproxy.NewHashingLoggregatorServerProvider(hashers)
+	} else {
+		clientPool := outputproxy.NewLoggregatorClientPool(logger, int(config.LoggregatorOutgoingPort), false)
+		adapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
+		adapter.Connect()
+		go clientPool.RunUpdateLoop(adapter, "/healthstatus/loggregator", stopChan, EtcdQueryInterval)
+		provider = outputproxy.NewDynamicLoggregatorServerProvider(clientPool)
+	}
+	return provider
+}
+
 func makeOutgoingProxy(config *Config, logger *gosteno.Logger) *outputproxy.Proxy {
 	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
-
-	logger.Debugf("Output Proxy Startup: Number of zones: %v", len(config.Loggregators))
-	hashers := MakeHashers(config.Loggregators, config.LoggregatorOutgoingPort, logger)
-
-	logger.Debugf("Output Proxy Startup: Number of hashers for the proxy: %v", len(hashers))
-	proxy := outputproxy.NewProxy(outputproxy.NewHashingLoggregatorServerProvider(hashers), authorizer, logger)
+	proxy := outputproxy.NewProxy(MakeProvider(config, logger, nil), authorizer, logger)
 	return proxy
 }
 

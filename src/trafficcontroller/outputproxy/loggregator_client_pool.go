@@ -14,23 +14,20 @@ import (
 var ErrorEmptyClientPool = errors.New("loggregator client pool is empty")
 
 type LoggregatorClientPool struct {
-	clients                 map[string]loggregatorclient.LoggregatorClient
-	logger                  *gosteno.Logger
-	createClientsEnabled    bool
-	loggregatorIncomingPort int
+	clients              map[string]loggregatorclient.LoggregatorClient
+	logger               *gosteno.Logger
+	createClientsEnabled bool
+	loggregatorPort      int
 	sync.RWMutex
 }
 
-func NewLoggregatorClientPool(logger *gosteno.Logger) *LoggregatorClientPool {
+func NewLoggregatorClientPool(logger *gosteno.Logger, port int, createClients bool) *LoggregatorClientPool {
 	return &LoggregatorClientPool{
-		clients: make(map[string]loggregatorclient.LoggregatorClient),
-		logger:  logger,
+		createClientsEnabled: createClients,
+		loggregatorPort:      port,
+		clients:              make(map[string]loggregatorclient.LoggregatorClient),
+		logger:               logger,
 	}
-}
-
-func (pool *LoggregatorClientPool) EnableCreateClients(loggregatorIncomingPort int) {
-	pool.createClientsEnabled = true
-	pool.loggregatorIncomingPort = loggregatorIncomingPort
 }
 
 func (pool *LoggregatorClientPool) RandomClient() (loggregatorclient.LoggregatorClient, error) {
@@ -81,17 +78,16 @@ func (pool *LoggregatorClientPool) syncWithNodes(nodes []storeadapter.StoreNode)
 	}
 
 	for _, node := range nodes {
-		addr := string(node.Value)
+		addr := fmt.Sprintf("%s:%d", node.Value, pool.loggregatorPort)
 		delete(addressesToBeDeleted, addr)
 
 		if pool.hasServerFor(addr) {
 			continue
 		}
 
-		serverAddr := fmt.Sprintf("%s:%d", addr, pool.loggregatorIncomingPort)
 		var client loggregatorclient.LoggregatorClient
 		if pool.createClientsEnabled {
-			client = loggregatorclient.NewLoggregatorClient(serverAddr, pool.logger, loggregatorclient.DefaultBufferSize)
+			client = loggregatorclient.NewLoggregatorClient(addr, pool.logger, loggregatorclient.DefaultBufferSize)
 		}
 		pool.clients[addr] = client
 	}

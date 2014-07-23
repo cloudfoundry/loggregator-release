@@ -59,6 +59,18 @@ func (h *hashingLoggregatorServerProvider) LoggregatorServersForAppId(appId stri
 	return result
 }
 
+type dynamicLoggregatorServerProvider struct {
+	clientPool *LoggregatorClientPool
+}
+
+func NewDynamicLoggregatorServerProvider(clientPool *LoggregatorClientPool) LoggregatorServerProvider {
+	return &dynamicLoggregatorServerProvider{clientPool}
+}
+
+func (p *dynamicLoggregatorServerProvider) LoggregatorServersForAppId(appId string) []string {
+	return p.clientPool.ListAddresses()
+}
+
 func NewProxy(loggregatorServerProvider LoggregatorServerProvider, authorizer authorization.LogAccessAuthorizer, logger *gosteno.Logger) *Proxy {
 	return &Proxy{loggregatorServerProvider: loggregatorServerProvider, authorize: authorizer, logger: logger}
 }
