@@ -76,9 +76,6 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 	if c.SystemDomain == "" {
 		return errors.New("Need system domain to register with NATS")
 	}
-	if len(c.Loggregators) < 1 {
-		return errors.New("Need a loggregator server (host:port).")
-	}
 
 	err = c.Validate(logger)
 	return

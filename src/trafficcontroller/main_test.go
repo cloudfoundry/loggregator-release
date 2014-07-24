@@ -117,7 +117,7 @@ var _ = Describe("Main", func() {
 
 		Context("with ETCD/heartbeat specific configuration", func() {
 			It("uses specified properties", func() {
-				configFile := "./test_assets/loggregator_trafficcontroller.json"
+				configFile := "./test_assets/no_hashing_loggregator_trafficcontroller.json"
 
 				var config *main.Config
 
