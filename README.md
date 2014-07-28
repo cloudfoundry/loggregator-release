@@ -4,8 +4,7 @@
    
 ### Logging in the Clouds   
   
-Loggregator is the user application logging subsystem for Cloud Foundry.
- 
+Loggregator is the user application logging subsystem for Cloud Foundry.    
 
 ### Features
 
