@@ -13,7 +13,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"sync"
-	"trafficcontroller/hasher"
+	"time"
 	"trafficcontroller/listener"
 	"trafficcontroller/outputproxy"
 	testhelpers "trafficcontroller_testhelpers"
@@ -39,19 +39,45 @@ func (f *fakeHttpHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	f.called = true
 }
 
+type fakeLoggregatorServerProvider struct {
+	serverAddresses []string
+	callCount       int
+	sync.Mutex
+}
+
+func (p *fakeLoggregatorServerProvider) CallCount() int {
+	p.Lock()
+	defer p.Unlock()
+	return p.callCount
+}
+
+func (p *fakeLoggregatorServerProvider) SetServerAddresses(addresses []string) {
+	p.Lock()
+	defer p.Unlock()
+	p.serverAddresses = addresses
+}
+
+func (p *fakeLoggregatorServerProvider) LoggregatorServersForAppId(appId string) []string {
+	p.Lock()
+	defer p.Unlock()
+	p.callCount += 1
+	return p.serverAddresses
+}
+
 var _ = Describe("OutputProxySingleHasher", func() {
 
 	var fwsh *fakeWebsocketHandler
-	var hashers []hasher.Hasher
 	var outputMessages <-chan []byte
 	var fl *fakeListener
 	var ts *httptest.Server
 	var existingWsProvider = outputproxy.NewWebsocketHandlerProvider
+	var fakeLoggregatorProvider *fakeLoggregatorServerProvider
 
 	BeforeEach(func() {
 		fwsh = &fakeWebsocketHandler{}
 		fl = &fakeListener{messageChan: make(chan []byte)}
 
+		outputMessages = nil
 		outputproxy.NewWebsocketHandlerProvider = func(messageChan <-chan []byte) http.Handler {
 			outputMessages = messageChan
 			return fwsh
@@ -61,9 +87,9 @@ var _ = Describe("OutputProxySingleHasher", func() {
 			return fl
 		}
 
-		hashers = []hasher.Hasher{hasher.NewHasher([]string{"localhost:62038"})}
+		fakeLoggregatorProvider = &fakeLoggregatorServerProvider{serverAddresses: []string{"localhost:62038"}}
 		proxy := outputproxy.NewProxy(
-			outputproxy.NewHashingLoggregatorServerProvider(hashers),
+			fakeLoggregatorProvider,
 			testhelpers.SuccessfulAuthorizer,
 			cfcomponent.Config{},
 			loggertesthelper.Logger(),
@@ -71,10 +97,15 @@ var _ = Describe("OutputProxySingleHasher", func() {
 
 		ts = httptest.NewServer(proxy)
 		Eventually(serverUp(ts)).Should(BeTrue())
+		outputproxy.CheckLoggregatorServersInterval = 10 * time.Millisecond
+		outputproxy.WebsocketKeepAliveDuration = time.Second
 	})
 
 	AfterEach(func() {
 		ts.Close()
+		if outputMessages != nil {
+			Eventually(outputMessages).Should(BeClosed())
+		}
 		outputproxy.NewWebsocketHandlerProvider = existingWsProvider
 	})
 
@@ -124,24 +155,66 @@ var _ = Describe("OutputProxySingleHasher", func() {
 	})
 
 	Context("when a connection to a loggregator server fails", func() {
+		var failingWsListener *failingListener
+
 		BeforeEach(func() {
+			failingWsListener = &failingListener{}
 			outputproxy.NewWebsocketListener = func() listener.Listener {
-				return &failingListener{}
+				return failingWsListener
 			}
 		})
 
 		It("should return an error message to the client", func(done Done) {
 			websocketClientWithHeaderAuth(ts, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
-			msgData := <-outputMessages
-			msg, _ := logmessage.ParseMessage(msgData)
+			msgData, ok := <-outputMessages
+			Expect(ok).To(BeTrue())
+			msg, err := logmessage.ParseMessage(msgData)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(msg.GetLogMessage().GetSourceName()).To(Equal("LGR"))
 			Expect(string(msg.GetLogMessage().GetMessage())).To(Equal("proxy: error connecting to a loggregator server"))
 			close(done)
 		})
+
+		It("should periodically retry to connect to the loggregator server", func() {
+			outputproxy.NewWebsocketHandlerProvider = func(messageChan <-chan []byte) http.Handler {
+				outputMessages = messageChan
+				return existingWsProvider(messageChan)
+			}
+
+			url := fmt.Sprintf("ws://%s%s", ts.Listener.Addr(), "/tail/?app=myApp")
+			headers := http.Header{"Authorization": []string{testhelpers.VALID_AUTHENTICATION_TOKEN}}
+			ws, _, err := websocket.DefaultDialer.Dial(url, headers)
+			Expect(err).ToNot(HaveOccurred())
+			defer ws.Close()
+
+			Eventually(failingWsListener.StartCount).Should(BeNumerically(">", 1))
+		})
+	})
+
+	Context("when a new loggregator server comes up after the client is connected", func() {
+		It("should connect to the new loggregator server", func() {
+			outputproxy.NewWebsocketHandlerProvider = func(messageChan <-chan []byte) http.Handler {
+				outputMessages = messageChan
+				return existingWsProvider(messageChan)
+			}
+			fakeLoggregatorProvider.serverAddresses = []string{}
+
+			url := fmt.Sprintf("ws://%s%s", ts.Listener.Addr(), "/tail/?app=myApp")
+			headers := http.Header{"Authorization": []string{testhelpers.VALID_AUTHENTICATION_TOKEN}}
+			ws, _, err := websocket.DefaultDialer.Dial(url, headers)
+			Expect(err).ToNot(HaveOccurred())
+			defer ws.Close()
+
+			Eventually(fakeLoggregatorProvider.CallCount).Should(BeNumerically(">", 0))
+
+			fl.SetExpectedHost("ws://fake-server/tail/?app=myApp")
+			Expect(fl.IsStarted()).To(BeFalse())
+			fakeLoggregatorProvider.SetServerAddresses([]string{"fake-server"})
+			Eventually(fl.IsStarted, 1*time.Second).Should(BeTrue())
+		})
 	})
 
 	Context("websocket client", func() {
-
 		It("should use the WebsocketHandler for tail", func() {
 			fl.SetExpectedHost("ws://localhost:62038/tail/?app=myApp")
 			websocketClientWithHeaderAuth(ts, "/tail/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
@@ -153,21 +226,27 @@ var _ = Describe("OutputProxySingleHasher", func() {
 			websocketClientWithHeaderAuth(ts, "/dump/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
 			Expect(fwsh.called).To(BeTrue())
 		})
-
 	})
 
 	Context("/recent", func() {
 		var fhh *fakeHttpHandler
+		var originalNewHttpHandlerProvider func(messages <-chan []byte) http.Handler
 
 		BeforeEach(func() {
 			fhh = &fakeHttpHandler{}
 			fl.SetExpectedHost("ws://localhost:62038/recent?app=myApp")
-			outputproxy.NewHttpHandlerProvider = func(<-chan []byte) http.Handler {
+			originalNewHttpHandlerProvider = outputproxy.NewHttpHandlerProvider
+			outputproxy.NewHttpHandlerProvider = func(messageChan <-chan []byte) http.Handler {
+				outputMessages = messageChan
 				return fhh
 			}
 		})
 
-		It("should use HttpHandler instead of WebsocketHandler", func() {
+		AfterEach(func() {
+			outputproxy.NewHttpHandlerProvider = originalNewHttpHandlerProvider
+		})
+
+		It("uses HttpHandler instead of WebsocketHandler", func() {
 			url := fmt.Sprintf("http://%s/recent?app=myApp", ts.Listener.Addr())
 			r, _ := http.NewRequest("GET", url, nil)
 			r.Header = http.Header{"Authorization": []string{testhelpers.VALID_AUTHENTICATION_TOKEN}}
@@ -176,6 +255,22 @@ var _ = Describe("OutputProxySingleHasher", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fhh.called).To(BeTrue())
+		})
+
+		It("closes the connection", func() {
+			outputproxy.NewHttpHandlerProvider = func(messageChan <-chan []byte) http.Handler {
+				outputMessages = messageChan
+				return originalNewHttpHandlerProvider(messageChan)
+			}
+
+			fakeLoggregatorProvider.serverAddresses = []string{}
+			url := fmt.Sprintf("http://%s/recent?app=myApp", ts.Listener.Addr())
+			r, _ := http.NewRequest("GET", url, nil)
+			r.Header = http.Header{"Authorization": []string{testhelpers.VALID_AUTHENTICATION_TOKEN}}
+			client := &http.Client{}
+			_, err := client.Do(r)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(outputMessages).To(BeClosed())
 		})
 	})
 })
@@ -228,9 +323,10 @@ func clientWithAuth(ws *websocket.Conn) []byte {
 }
 
 type fakeListener struct {
-	messageChan     chan []byte
-	started, closed bool
-	expectedHost    string
+	messageChan  chan []byte
+	closed       bool
+	startCount   int
+	expectedHost string
 	sync.Mutex
 }
 
@@ -238,7 +334,7 @@ func (fl *fakeListener) Start(host string, appId string, o listener.OutputChanne
 	defer GinkgoRecover()
 	fl.Lock()
 
-	fl.started = true
+	fl.startCount += 1
 	if fl.expectedHost != "" {
 		Expect(host).To(Equal(fl.expectedHost))
 	}
@@ -270,7 +366,13 @@ func (fl *fakeListener) Close() {
 func (fl *fakeListener) IsStarted() bool {
 	fl.Lock()
 	defer fl.Unlock()
-	return fl.started
+	return fl.startCount > 0
+}
+
+func (fl *fakeListener) StartCount() int {
+	fl.Lock()
+	defer fl.Unlock()
+	return fl.startCount
 }
 
 func (fl *fakeListener) IsClosed() bool {
@@ -285,10 +387,22 @@ func (fl *fakeListener) SetExpectedHost(value string) {
 	fl.expectedHost = value
 }
 
-type failingListener struct{}
+type failingListener struct {
+	startCount int
+	sync.Mutex
+}
 
 func (fl *failingListener) Start(string, string, listener.OutputChannel, listener.StopChannel) error {
+	fl.Lock()
+	defer fl.Unlock()
+	fl.startCount += 1
 	return errors.New("fail")
+}
+
+func (fl *failingListener) StartCount() int {
+	fl.Lock()
+	defer fl.Unlock()
+	return fl.startCount
 }
 
 func serverUp(ts *httptest.Server) func() bool {
