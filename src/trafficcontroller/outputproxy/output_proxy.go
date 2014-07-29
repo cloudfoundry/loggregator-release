@@ -19,6 +19,9 @@ import (
 	"trafficcontroller/listener"
 )
 
+var CheckLoggregatorServersInterval = 1 * time.Second
+var WebsocketKeepAliveDuration = 30 * time.Second
+
 type Proxy struct {
 	cfcomponent.Component
 	loggregatorServerProvider LoggregatorServerProvider
@@ -32,7 +35,7 @@ type WebsocketHandler interface {
 }
 
 var NewWebsocketHandlerProvider = func(messages <-chan []byte) http.Handler {
-	return handlers.NewWebsocketHandler(messages, 30*time.Second)
+	return handlers.NewWebsocketHandler(messages, WebsocketKeepAliveDuration)
 }
 
 var NewHttpHandlerProvider = func(messages <-chan []byte) http.Handler {
@@ -140,8 +143,6 @@ func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	clientAddress := r.RemoteAddr
 	appId := r.Form.Get("app")
 
-	var loggregatorServerListenerCount sync.WaitGroup
-
 	authToken := r.Header.Get("Authorization")
 	if authToken == "" {
 		authToken = extractAuthTokenFromUrl(r.URL)
@@ -159,27 +160,7 @@ func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	stopChan := make(chan struct{})
 	defer close(stopChan)
 
-	serverAddresses := proxy.loggregatorServerProvider.LoggregatorServersForAppId(appId)
-
-	for _, serverAddress := range serverAddresses {
-		serverUrlForAppId := fmt.Sprintf("ws://%s%s?app=%s", serverAddress, r.URL.Path, appId)
-		loggregatorServerListenerCount.Add(1)
-		l := NewWebsocketListener()
-		go func() {
-			err := l.Start(serverUrlForAppId, appId, messagesChan, stopChan)
-			if err != nil {
-				errorMsg := fmt.Sprintf("proxy: error connecting to a loggregator server")
-				messagesChan <- generateLogMessage(errorMsg, appId)
-				proxy.logger.Infof("proxy: error connecting %s %s %s", appId, r.URL.Path, err.Error())
-			}
-			loggregatorServerListenerCount.Done()
-		}()
-	}
-
-	go func() {
-		loggregatorServerListenerCount.Wait()
-		close(messagesChan)
-	}()
+	go proxy.handleLoggregatorConnections(r, appId, messagesChan, stopChan)
 
 	var h http.Handler
 
@@ -225,4 +206,87 @@ type TrafficControllerMonitor struct {
 
 func (hm TrafficControllerMonitor) Ok() bool {
 	return true
+}
+
+func (proxy *Proxy) handleLoggregatorConnections(r *http.Request, appId string, messagesChan chan<- []byte, stopChan <-chan struct{}) {
+	defer close(messagesChan)
+	loggregatorConnections := &loggregatorConnections{}
+
+	connectToNewServerAddresses := func(serverAddresses []string) {
+		for _, serverAddress := range serverAddresses {
+			if loggregatorConnections.alreadyConnectedToServer(serverAddress) {
+				continue
+			}
+			loggregatorConnections.addConnectedServer(serverAddress)
+
+			serverUrlForAppId := fmt.Sprintf("ws://%s%s?app=%s", serverAddress, r.URL.Path, appId)
+			l := NewWebsocketListener()
+			serverAddress := serverAddress
+			go func() {
+				err := l.Start(serverUrlForAppId, appId, messagesChan, stopChan)
+
+				if err != nil {
+					errorMsg := fmt.Sprintf("proxy: error connecting to a loggregator server")
+					messagesChan <- generateLogMessage(errorMsg, appId)
+					proxy.logger.Infof("proxy: error connecting %s %s %s", appId, r.URL.Path, err.Error())
+				}
+				loggregatorConnections.removeConnectedServer(serverAddress)
+			}()
+		}
+	}
+
+	checkLoggregatorServersTicker := time.NewTicker(CheckLoggregatorServersInterval)
+	defer checkLoggregatorServersTicker.Stop()
+loop:
+	for {
+		serverAddresses := proxy.loggregatorServerProvider.LoggregatorServersForAppId(appId)
+		connectToNewServerAddresses(serverAddresses)
+		select {
+		case <-checkLoggregatorServersTicker.C:
+		case <-stopChan:
+			break loop
+		}
+	}
+
+	loggregatorConnections.Wait()
+}
+
+type loggregatorConnections struct {
+	connectedAddresses []string
+	sync.Mutex
+	sync.WaitGroup
+}
+
+func (l *loggregatorConnections) alreadyConnectedToServer(serverAddress string) bool {
+	l.Lock()
+	defer l.Unlock()
+
+	for _, address := range l.connectedAddresses {
+		if address == serverAddress {
+			return true
+		}
+	}
+	return false
+}
+
+func (l *loggregatorConnections) addConnectedServer(serverAddress string) {
+	l.Lock()
+	defer l.Unlock()
+
+	l.Add(1)
+	l.connectedAddresses = append(l.connectedAddresses, serverAddress)
+}
+
+func (l *loggregatorConnections) removeConnectedServer(serverAddress string) {
+	l.Lock()
+	defer l.Unlock()
+	defer l.Done()
+
+	for index, address := range l.connectedAddresses {
+		if address == serverAddress {
+			l.connectedAddresses = append(l.connectedAddresses[0:index],
+				l.connectedAddresses[index+1:]...)
+			return
+		}
+	}
 }
