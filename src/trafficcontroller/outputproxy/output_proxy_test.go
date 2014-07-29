@@ -215,7 +215,6 @@ var _ = Describe("OutputProxySingleHasher", func() {
 	})
 
 	Context("websocket client", func() {
-
 		It("should use the WebsocketHandler for tail", func() {
 			fl.SetExpectedHost("ws://localhost:62038/tail/?app=myApp")
 			websocketClientWithHeaderAuth(ts, "/tail/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
@@ -227,22 +226,27 @@ var _ = Describe("OutputProxySingleHasher", func() {
 			websocketClientWithHeaderAuth(ts, "/dump/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
 			Expect(fwsh.called).To(BeTrue())
 		})
-
 	})
 
 	Context("/recent", func() {
 		var fhh *fakeHttpHandler
+		var originalNewHttpHandlerProvider func(messages <-chan []byte) http.Handler
 
 		BeforeEach(func() {
 			fhh = &fakeHttpHandler{}
 			fl.SetExpectedHost("ws://localhost:62038/recent?app=myApp")
+			originalNewHttpHandlerProvider = outputproxy.NewHttpHandlerProvider
 			outputproxy.NewHttpHandlerProvider = func(messageChan <-chan []byte) http.Handler {
 				outputMessages = messageChan
 				return fhh
 			}
 		})
 
-		It("should use HttpHandler instead of WebsocketHandler", func() {
+		AfterEach(func() {
+			outputproxy.NewHttpHandlerProvider = originalNewHttpHandlerProvider
+		})
+
+		It("uses HttpHandler instead of WebsocketHandler", func() {
 			url := fmt.Sprintf("http://%s/recent?app=myApp", ts.Listener.Addr())
 			r, _ := http.NewRequest("GET", url, nil)
 			r.Header = http.Header{"Authorization": []string{testhelpers.VALID_AUTHENTICATION_TOKEN}}
@@ -251,6 +255,22 @@ var _ = Describe("OutputProxySingleHasher", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fhh.called).To(BeTrue())
+		})
+
+		It("closes the connection", func() {
+			outputproxy.NewHttpHandlerProvider = func(messageChan <-chan []byte) http.Handler {
+				outputMessages = messageChan
+				return originalNewHttpHandlerProvider(messageChan)
+			}
+
+			fakeLoggregatorProvider.serverAddresses = []string{}
+			url := fmt.Sprintf("http://%s/recent?app=myApp", ts.Listener.Addr())
+			r, _ := http.NewRequest("GET", url, nil)
+			r.Header = http.Header{"Authorization": []string{testhelpers.VALID_AUTHENTICATION_TOKEN}}
+			client := &http.Client{}
+			_, err := client.Do(r)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(outputMessages).To(BeClosed())
 		})
 	})
 })

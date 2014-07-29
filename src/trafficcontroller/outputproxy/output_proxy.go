@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sync"
 	"time"
 	"trafficcontroller/authorization"
@@ -183,7 +184,13 @@ func extractAuthTokenFromUrl(u *url.URL) string {
 }
 
 func recentViaHttp(r *http.Request) bool {
-	return r.URL.Path == "/recent"
+	matched, _ := regexp.MatchString(`^/recent\b`, r.URL.Path)
+	return matched
+}
+
+func recent(r *http.Request) bool {
+	matched, _ := regexp.MatchString(`^/(recent|dump)\b`, r.URL.Path)
+	return matched
 }
 
 func generateLogMessage(messageString string, appId string) []byte {
@@ -241,6 +248,9 @@ loop:
 	for {
 		serverAddresses := proxy.loggregatorServerProvider.LoggregatorServersForAppId(appId)
 		connectToNewServerAddresses(serverAddresses)
+		if recent(r) {
+			break
+		}
 		select {
 		case <-checkLoggregatorServersTicker.C:
 		case <-stopChan:
