@@ -27,7 +27,7 @@
 	url = https://github.com/coreos/etcd
 [submodule "src/github.com/coreos/go-etcd"]
 	path = src/github.com/coreos/go-etcd
-	url = https://github.com/onsi/go-etcd
+	url = https://github.com/coreos/go-etcd
 [submodule "src/github.com/onsi/ginkgo"]
 	path = src/github.com/onsi/ginkgo
 	url = https://github.com/onsi/ginkgo
