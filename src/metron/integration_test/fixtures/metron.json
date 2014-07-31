@@ -4,11 +4,14 @@
     "VarzUser": "admin",
     "VarzPass": "admin",
     "NatsUser": "",
-    "UdpListeningPort": 51160,
+    "LegacyIncomingMessagesPort": 51160,
+    "DropsondeIncomingMessagesPort": 51161,
+    "SharedSecret": "shared_secret",
     "EtcdUrls"    : ["http://127.0.0.1:5800"],
     "EtcdMaxConcurrentRequests": 1,
     "EtcdQueryIntervalMilliseconds": 10,
     "Zone": "z1",
-    "LoggregatorIncomingPort": 3456,
+    "LoggregatorLegacyPort": 3456,
+    "LoggregatorDropsondePort": 3457,
     "HealthcheckPrefix": "/healthstatus/trafficcontroller/"
 }
