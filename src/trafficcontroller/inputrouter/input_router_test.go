@@ -22,7 +22,7 @@ func newCfConfig() cfcomponent.Config {
 }
 
 func TestThatItWorksWithOneLoggregator(t *testing.T) {
-	listener, dataChannel := agentlistener.NewAgentListener("localhost:9999", logger)
+	listener, dataChannel := agentlistener.NewAgentListener("localhost:9999", logger, "agentListener")
 	go listener.Start()
 
 	loggregatorServers := []string{"localhost:9999"}
@@ -46,7 +46,7 @@ func TestThatItWorksWithOneLoggregator(t *testing.T) {
 }
 
 func TestThatItIgnoresBadMessages(t *testing.T) {
-	listener, dataChannel := agentlistener.NewAgentListener("localhost:9996", logger)
+	listener, dataChannel := agentlistener.NewAgentListener("localhost:9996", logger, "agentListener")
 	go listener.Start()
 
 	loggregatorServers := []string{"localhost:9996"}
@@ -72,10 +72,10 @@ func TestThatItIgnoresBadMessages(t *testing.T) {
 }
 
 func TestThatItWorksWithTwoLoggregators(t *testing.T) {
-	listener1, dataChan1 := agentlistener.NewAgentListener("localhost:9998", logger)
+	listener1, dataChan1 := agentlistener.NewAgentListener("localhost:9998", logger, "agentListener")
 	go listener1.Start()
 
-	listener2, dataChan2 := agentlistener.NewAgentListener("localhost:9997", logger)
+	listener2, dataChan2 := agentlistener.NewAgentListener("localhost:9997", logger, "agentListener")
 	go listener2.Start()
 
 	loggregatorServers := []string{"localhost:9998", "localhost:9997"}
@@ -107,7 +107,7 @@ func TestThatItWorksWithTwoLoggregators(t *testing.T) {
 }
 
 func TestThatItWorksWithLogEnvelope(t *testing.T) {
-	listener, dataChannel := agentlistener.NewAgentListener("localhost:9902", logger)
+	listener, dataChannel := agentlistener.NewAgentListener("localhost:9902", logger, "agentListener")
 	go listener.Start()
 
 	loggregatorServers := []string{"localhost:9902"}

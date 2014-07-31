@@ -81,7 +81,7 @@ var _ = Describe("Varz Endpoints", func() {
 			message := getVarzMessage()
 
 			for _, context := range message.Contexts {
-				if context.Name == "agentListener" {
+				if context.Name == "legacyAgentListener" {
 					return &context
 				}
 			}

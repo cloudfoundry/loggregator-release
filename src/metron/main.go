@@ -36,10 +36,10 @@ func main() {
 	config, logger := parseConfig(*debug, *configFilePath, *logFilePath)
 
 	// TODO: delete next two lines when "legacy" format goes away
-	legacyMessageListener, legacyMessageChan := agentlistener.NewAgentListener("localhost:"+strconv.Itoa(config.LegacyIncomingMessagesPort), logger)
+	legacyMessageListener, legacyMessageChan := agentlistener.NewAgentListener("localhost:"+strconv.Itoa(config.LegacyIncomingMessagesPort), logger, "legacyAgentListener")
 	legacyPoolEtcdAdapter, legacyClientPool := initializeClientPool(config, logger, config.LoggregatorLegacyPort)
 
-	dropsondeMessageListener, dropsondeMessageChan := agentlistener.NewAgentListener("localhost:"+strconv.Itoa(config.DropsondeIncomingMessagesPort), logger)
+	dropsondeMessageListener, dropsondeMessageChan := agentlistener.NewAgentListener("localhost:"+strconv.Itoa(config.DropsondeIncomingMessagesPort), logger, "dropsondeAgentListener")
 	dropsondePoolEtcdAdapter, dropsondeClientPool := initializeClientPool(config, logger, config.LoggregatorDropsondePort)
 
 	instrumentables := []instrumentation.Instrumentable{
