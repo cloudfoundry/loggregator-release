@@ -15,8 +15,7 @@
   "EtcdQueryIntervalMilliseconds": <%= p("metron_agent.etcd_query_interval_milliseconds") %>,
   "Zone": "<%= p("metron_agent.zone") %>",
   "LoggregatorLegacyPort": <%= p("loggregator.incoming_port") %>,
-  "LoggregatorDropsondePort": <%= p("loggregator.dropsonde_incoming_port") %>,
-  "HealthcheckPrefix": "<%= p("loggregator.servers").length == 0 ? "/healthstatus/loggregator/" : "/healthstatus/trafficcontroller/" %>"
+  "LoggregatorDropsondePort": <%= p("loggregator.dropsonde_incoming_port") %>
 
   <% if_p("syslog_aggregator") do |_| %>
   , "Syslog": "vcap.metron_agent"

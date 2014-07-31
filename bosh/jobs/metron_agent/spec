@@ -49,8 +49,6 @@ properties:
   loggregator.dropsonde_incoming_port:
     description: "Port where loggregator listens for dropsonde log messages"
     default: 3457
-  loggregator.servers:
-    description: "a map of zones to loggregator servers (hostname/IP only, no port)"
   loggregator_endpoint.shared_secret:
     description: "Shared secret used to verify cryptographically signed loggregator messages"
   nats.user:

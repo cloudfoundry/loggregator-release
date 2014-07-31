@@ -54,11 +54,11 @@ func main() {
 
 	// TODO: delete next three lines when "legacy" format goes away
 	go legacyMessageListener.Start()
-	go legacyClientPool.RunUpdateLoop(legacyPoolEtcdAdapter, config.HealthcheckPrefix+config.Zone, nil, time.Duration(config.EtcdQueryIntervalMilliseconds)*time.Millisecond)
+	go legacyClientPool.RunUpdateLoop(legacyPoolEtcdAdapter, "/healthstatus/loggregator/"+config.Zone, nil, time.Duration(config.EtcdQueryIntervalMilliseconds)*time.Millisecond)
 	go forwardMessagesToLoggregator(legacyClientPool, legacyMessageChan, logger)
 
 	go dropsondeMessageListener.Start()
-	go dropsondeClientPool.RunUpdateLoop(dropsondePoolEtcdAdapter, config.HealthcheckPrefix+config.Zone, nil, time.Duration(config.EtcdQueryIntervalMilliseconds)*time.Millisecond)
+	go dropsondeClientPool.RunUpdateLoop(dropsondePoolEtcdAdapter, "/healthstatus/loggregator/"+config.Zone, nil, time.Duration(config.EtcdQueryIntervalMilliseconds)*time.Millisecond)
 	signedMessageChan := make(chan ([]byte))
 	go signMessages(config.SharedSecret, dropsondeMessageChan, signedMessageChan)
 	forwardMessagesToLoggregator(dropsondeClientPool, signedMessageChan, logger)
@@ -103,7 +103,6 @@ type Config struct {
 	EtcdQueryIntervalMilliseconds int
 	LoggregatorLegacyPort         int
 	LoggregatorDropsondePort      int
-	HealthcheckPrefix             string
 	SharedSecret                  string
 }
 

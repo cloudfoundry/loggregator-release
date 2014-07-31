@@ -16,7 +16,6 @@ import (
 	"sync"
 	"time"
 	"trafficcontroller/authorization"
-	"trafficcontroller/hasher"
 	"trafficcontroller/listener"
 )
 
@@ -29,10 +28,6 @@ type Proxy struct {
 	logger                    *gosteno.Logger
 	authorize                 authorization.LogAccessAuthorizer
 	listener                  net.Listener
-}
-
-type WebsocketHandler interface {
-	HandleWebSocket(string, string, []hasher.Hasher)
 }
 
 var NewWebsocketHandlerProvider = func(messages <-chan []byte) http.Handler {
@@ -48,23 +43,7 @@ var NewWebsocketListener = func() listener.Listener {
 }
 
 type LoggregatorServerProvider interface {
-	LoggregatorServersForAppId(appId string) []string
-}
-
-type hashingLoggregatorServerProvider struct {
-	hashers []hasher.Hasher
-}
-
-func NewHashingLoggregatorServerProvider(hashers []hasher.Hasher) LoggregatorServerProvider {
-	return &hashingLoggregatorServerProvider{hashers: hashers}
-}
-
-func (h *hashingLoggregatorServerProvider) LoggregatorServersForAppId(appId string) []string {
-	result := []string{}
-	for _, hasher := range h.hashers {
-		result = append(result, hasher.GetLoggregatorServerForAppId(appId))
-	}
-	return result
+	LoggregatorServerAddresses() []string
 }
 
 type dynamicLoggregatorServerProvider struct {
@@ -75,7 +54,7 @@ func NewDynamicLoggregatorServerProvider(clientPool *clientpool.LoggregatorClien
 	return &dynamicLoggregatorServerProvider{clientPool}
 }
 
-func (p *dynamicLoggregatorServerProvider) LoggregatorServersForAppId(appId string) []string {
+func (p *dynamicLoggregatorServerProvider) LoggregatorServerAddresses() []string {
 	return p.clientPool.ListAddresses()
 }
 
@@ -246,7 +225,7 @@ func (proxy *Proxy) handleLoggregatorConnections(r *http.Request, appId string, 
 	defer checkLoggregatorServersTicker.Stop()
 loop:
 	for {
-		serverAddresses := proxy.loggregatorServerProvider.LoggregatorServersForAppId(appId)
+		serverAddresses := proxy.loggregatorServerProvider.LoggregatorServerAddresses()
 		connectToNewServerAddresses(serverAddresses)
 		if recent(r) {
 			break

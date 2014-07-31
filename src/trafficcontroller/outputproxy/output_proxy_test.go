@@ -57,7 +57,7 @@ func (p *fakeLoggregatorServerProvider) SetServerAddresses(addresses []string) {
 	p.serverAddresses = addresses
 }
 
-func (p *fakeLoggregatorServerProvider) LoggregatorServersForAppId(appId string) []string {
+func (p *fakeLoggregatorServerProvider) LoggregatorServerAddresses() []string {
 	p.Lock()
 	defer p.Unlock()
 	p.callCount += 1

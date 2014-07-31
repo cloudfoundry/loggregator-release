@@ -130,7 +130,7 @@ var _ = Describe("Varz Endpoints", func() {
 			defer testServer.Close()
 
 			node := storeadapter.StoreNode{
-				Key:   "healthstatus/trafficcontroller/z1/loggregator_trafficcontroller/0",
+				Key:   "/healthstatus/loggregator/z1/loggregator_trafficcontroller/0",
 				Value: []byte("localhost"),
 			}
 			adapter := etcdRunner.Adapter()
@@ -177,7 +177,7 @@ var _ = Describe("Varz Endpoints", func() {
 			defer testServer.Close()
 
 			node := storeadapter.StoreNode{
-				Key:   "healthstatus/trafficcontroller/z1/loggregator_trafficcontroller/0",
+				Key:   "/healthstatus/loggregator/z1/loggregator_trafficcontroller/0",
 				Value: []byte("localhost"),
 			}
 			adapter := etcdRunner.Adapter()
