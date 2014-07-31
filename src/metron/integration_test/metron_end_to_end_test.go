@@ -1,6 +1,8 @@
 package integration_test
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/json"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/localip"
@@ -79,7 +81,7 @@ var _ = Describe("Varz Endpoints", func() {
 			message := getVarzMessage()
 
 			for _, context := range message.Contexts {
-				if context.Name == "agentListener" {
+				if context.Name == "legacyAgentListener" {
 					return &context
 				}
 			}
@@ -121,8 +123,8 @@ var _ = Describe("Varz Endpoints", func() {
 		})
 	})
 
-	Context("Message forwarding", func() {
-		It("forwards messages to the specified UDP server", func(done Done) {
+	Context("Legacy message forwarding", func() {
+		It("forwards messages to a healthy loggregator server", func(done Done) {
 			defer close(done)
 			testServer, _ := net.ListenPacket("udp", "localhost:3456")
 			defer testServer.Close()
@@ -158,6 +160,56 @@ var _ = Describe("Varz Endpoints", func() {
 			copy(readData, readBuffer[:readCount])
 
 			Expect(readData).Should(BeEquivalentTo("test-data"))
+		})
+	})
+
+	Context("Dropsonde message forwarding", func() {
+		It("forwards hmac signed messages to a healthy loggregator server", func(done Done) {
+			defer close(done)
+
+			messageString := "test-data"
+
+			mac := hmac.New(sha256.New, []byte("shared_secret"))
+			mac.Write([]byte(messageString))
+			expectedMAC := mac.Sum(nil)
+
+			testServer, _ := net.ListenPacket("udp", "localhost:3457")
+			defer testServer.Close()
+
+			node := storeadapter.StoreNode{
+				Key:   "healthstatus/trafficcontroller/z1/loggregator_trafficcontroller/0",
+				Value: []byte("localhost"),
+			}
+			adapter := etcdRunner.Adapter()
+			adapter.Create(node)
+
+			connection, _ := net.Dial("udp", "localhost:51161")
+
+			stopWrite := make(chan struct{})
+			defer close(stopWrite)
+			go func() {
+				ticker := time.NewTicker(10 * time.Millisecond)
+				defer ticker.Stop()
+				for {
+					connection.Write([]byte(messageString))
+
+					select {
+					case <-stopWrite:
+						return
+					case <-ticker.C:
+					}
+				}
+			}()
+
+			readBuffer := make([]byte, 65535)
+			readCount, _, _ := testServer.ReadFrom(readBuffer)
+			readData := make([]byte, readCount)
+			copy(readData, readBuffer[:readCount])
+
+			signature := readData[:32]
+			messageData := readData[32:]
+			Expect(messageData).Should(BeEquivalentTo(messageString))
+			Expect(hmac.Equal(signature, expectedMAC)).To(BeTrue())
 		})
 	})
 })

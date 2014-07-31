@@ -37,7 +37,7 @@ func NewRouter(host string, hasher hasher.Hasher, config cfcomponent.Config, log
 		instrumentables = append(instrumentables, client)
 	}
 
-	agentListener, dataChan := agentlistener.NewAgentListener(host, logger)
+	agentListener, dataChan := agentlistener.NewAgentListener(host, logger, "agentListener")
 	instrumentables = append(instrumentables, agentListener)
 
 	cfc, err := cfcomponent.NewComponent(

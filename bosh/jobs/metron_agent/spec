@@ -21,19 +21,22 @@ properties:
     description: "Transport to be used when forwarding logs (tcp|udp|relp)."
     default: "tcp"
   metron_agent.incoming_port:
-    description: Port for incoming log messages
+    description: "Incoming port for legacy log messages"
     default: 3456
+  metron_agent.dropsonde_incoming_port:
+    description: "Incoming port for dropsonde log messages"
+    default: 3457
   metron_agent.debug:
-    description: boolean value to turn on verbose mode
+    description: "boolean value to turn on verbose mode"
     default: false
   metron_agent.status.user:
-    description: username used to log into varz endpoint
+    description: "username used to log into varz endpoint"
     default: ""
   metron_agent.status.password:
-    description: password used to log into varz endpoint
+    description: "password used to log into varz endpoint"
     default: ""
   metron_agent.status.port:
-    description: port used to run the varz endpoint
+    description: "port used to run the varz endpoint"
     default: 0
   metron_agent.zone:
     description: "Availability zone where this agent is running"
@@ -41,10 +44,15 @@ properties:
     description: "Interval for querying ETCD for trafficcontroller heartbeats"
     default: 5000
   loggregator.incoming_port:
-    description: "Port for incoming log messages"
+    description: "Port where loggregator listens for legacy log messages"
     default: 3456
+  loggregator.dropsonde_incoming_port:
+    description: "Port where loggregator listens for dropsonde log messages"
+    default: 3457
   loggregator.servers:
     description: "a map of zones to loggregator servers (hostname/IP only, no port)"
+  loggregator_endpoint.shared_secret:
+    description: "Shared secret used to verify cryptographically signed loggregator messages"
   nats.user:
     description: "Username for cc client to connect to NATS"
   nats.password:

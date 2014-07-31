@@ -82,7 +82,7 @@ type Loggregator struct {
 func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 	cfcomponent.Logger = logger
 	keepAliveInterval := 30 * time.Second
-	listener, incomingLogChan := agentlistener.NewAgentListener(fmt.Sprintf("%s:%d", host, config.IncomingPort), logger)
+	listener, incomingLogChan := agentlistener.NewAgentListener(fmt.Sprintf("%s:%d", host, config.IncomingPort), logger, "agentListener")
 	unmarshaller, messageChan := unmarshaller.NewLogMessageUnmarshaller(config.SharedSecret, incomingLogChan)
 	blacklist := blacklist.New(config.BlackListIps)
 	sinkManager, appStoreInputChan := sinkmanager.NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger)

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"flag"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
@@ -33,17 +35,44 @@ func main() {
 	flag.Parse()
 	config, logger := parseConfig(*debug, *configFilePath, *logFilePath)
 
-	agentListener, messageChan := agentlistener.NewAgentListener("localhost:"+strconv.Itoa(config.UdpListeningPort), logger)
-	adapter, clientPool := initializeClientPool(config, logger)
+	// TODO: delete next two lines when "legacy" format goes away
+	legacyMessageListener, legacyMessageChan := agentlistener.NewAgentListener("localhost:"+strconv.Itoa(config.LegacyIncomingMessagesPort), logger, "legacyAgentListener")
+	legacyPoolEtcdAdapter, legacyClientPool := initializeClientPool(config, logger, config.LoggregatorLegacyPort)
 
-	instrumentables := []instrumentation.Instrumentable{agentListener}
+	dropsondeMessageListener, dropsondeMessageChan := agentlistener.NewAgentListener("localhost:"+strconv.Itoa(config.DropsondeIncomingMessagesPort), logger, "dropsondeAgentListener")
+	dropsondePoolEtcdAdapter, dropsondeClientPool := initializeClientPool(config, logger, config.LoggregatorDropsondePort)
+
+	instrumentables := []instrumentation.Instrumentable{
+		// TODO: delete next line when "legacy" format goes away
+		legacyMessageListener,
+		dropsondeMessageListener,
+	}
+
 	component := InitializeComponent(DefaultRegistrarFactory, config, logger, instrumentables)
 
 	go startMonitoringEndpoints(component, logger)
-	go agentListener.Start()
-	go clientPool.RunUpdateLoop(adapter, config.HealthcheckPrefix+config.Zone, nil, time.Duration(config.EtcdQueryIntervalMilliseconds)*time.Millisecond)
 
-	forwardMessagesToLoggregator(clientPool, messageChan, logger)
+	// TODO: delete next three lines when "legacy" format goes away
+	go legacyMessageListener.Start()
+	go legacyClientPool.RunUpdateLoop(legacyPoolEtcdAdapter, config.HealthcheckPrefix+config.Zone, nil, time.Duration(config.EtcdQueryIntervalMilliseconds)*time.Millisecond)
+	go forwardMessagesToLoggregator(legacyClientPool, legacyMessageChan, logger)
+
+	go dropsondeMessageListener.Start()
+	go dropsondeClientPool.RunUpdateLoop(dropsondePoolEtcdAdapter, config.HealthcheckPrefix+config.Zone, nil, time.Duration(config.EtcdQueryIntervalMilliseconds)*time.Millisecond)
+	signedMessageChan := make(chan ([]byte))
+	go signMessages(config.SharedSecret, dropsondeMessageChan, signedMessageChan)
+	forwardMessagesToLoggregator(dropsondeClientPool, signedMessageChan, logger)
+}
+
+func signMessages(sharedSecret string, dropsondeMessageChan <-chan ([]byte), signedMessageChan chan<- ([]byte)) {
+	for message := range dropsondeMessageChan {
+		mac := hmac.New(sha256.New, []byte(sharedSecret))
+		mac.Write(message)
+		signature := mac.Sum(nil)
+
+		signedMessage := append(signature, message...)
+		signedMessageChan <- signedMessage
+	}
 }
 
 func startMonitoringEndpoints(component *cfcomponent.Component, logger *gosteno.Logger) {
@@ -52,14 +81,14 @@ func startMonitoringEndpoints(component *cfcomponent.Component, logger *gosteno.
 	}
 }
 
-func initializeClientPool(config Config, logger *gosteno.Logger) (storeadapter.StoreAdapter, *clientpool.LoggregatorClientPool) {
+func initializeClientPool(config Config, logger *gosteno.Logger, port int) (storeadapter.StoreAdapter, *clientpool.LoggregatorClientPool) {
 	adapter := StoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	err := adapter.Connect()
 	if err != nil {
 		logger.Errorf("Error connecting to ETCD: %v", err)
 	}
 
-	clientPool := clientpool.NewLoggregatorClientPool(logger, config.LoggregatorIncomingPort, true)
+	clientPool := clientpool.NewLoggregatorClientPool(logger, port, true)
 	return adapter, clientPool
 }
 
@@ -67,12 +96,15 @@ type Config struct {
 	cfcomponent.Config
 	Zone                          string
 	Index                         uint
-	UdpListeningPort              int
+	LegacyIncomingMessagesPort    int
+	DropsondeIncomingMessagesPort int
 	EtcdUrls                      []string
 	EtcdMaxConcurrentRequests     int
 	EtcdQueryIntervalMilliseconds int
-	LoggregatorIncomingPort       int
+	LoggregatorLegacyPort         int
+	LoggregatorDropsondePort      int
 	HealthcheckPrefix             string
+	SharedSecret                  string
 }
 
 type MetronHealthMonitor struct{}

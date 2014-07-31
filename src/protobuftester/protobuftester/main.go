@@ -17,7 +17,7 @@ func main() {
 
 	flag.Parse()
 
-	listener := agentlistener.NewAgentListener(*host, logger)
+	listener := agentlistener.NewAgentListener(*host, logger, "agentListener")
 	dataChannel := listener.Start()
 
 	for data := range dataChannel {
