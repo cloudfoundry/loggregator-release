@@ -3,7 +3,6 @@
     "JobIndex": <%= spec.index %>,
     "EtcdUrls": [<%= p("etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
     "EtcdMaxConcurrentRequests": <%= p("etcd.maxconcurrentrequests") %>,
-    "Loggregators": <%= p("loggregator.servers").to_json %>,
     "LoggregatorIncomingPort": <%= p("loggregator.incoming_port") %>,
     "LoggregatorOutgoingPort": <%= p("loggregator.outgoing_port") %>,
     "IncomingPort": <%= p("traffic_controller.incoming_port") %>,
@@ -14,7 +13,6 @@
     "Host": "<%= p("traffic_controller.host") %>",
     "ApiHost": "<%= p("cc.srv_api_uri") %>",
     "SystemDomain": "<%= p("system_domain") %>",
-
     "NatsHosts": <%= p("nats.machines") %>,
     "NatsPort": <%= p("nats.port") %>,
     "NatsUser": "<%= p("nats.user") %>",

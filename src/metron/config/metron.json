@@ -12,6 +12,5 @@
     "EtcdQueryIntervalMilliseconds": 10,
     "Zone": "z1",
     "LoggregatorLegacyPort": 3456,
-    "LoggregatorDropsondePort": 3457,
-    "HealthcheckPrefix": "/healthstatus/trafficcontroller/"
+    "LoggregatorDropsondePort": 3457
 }
