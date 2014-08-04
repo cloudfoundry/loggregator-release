@@ -36,6 +36,7 @@ func IpOutsideOfRanges(testURL url.URL, ranges []IPRange) (bool, error) {
 		return false, errors.New(fmt.Sprintf("Incomplete URL %s. "+
 			"This could be caused by an URL without slashes or protocol.", testURL))
 	}
+	
 	host := strings.Split(testURL.Host, ":")[0]
 	ipAddress := net.ParseIP(host)
 	if ipAddress == nil {
