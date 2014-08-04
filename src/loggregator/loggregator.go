@@ -5,21 +5,21 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
+	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"github.com/cloudfoundry/loggregatorlib/store"
+	"github.com/cloudfoundry/loggregatorlib/store/cache"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/storeadapter/workerpool"
-	"loggregator/domain"
 	"loggregator/iprange"
 	"loggregator/sinkserver"
 	"loggregator/sinkserver/blacklist"
 	"loggregator/sinkserver/sinkmanager"
 	"loggregator/sinkserver/unmarshaller"
 	"loggregator/sinkserver/websocketserver"
-	"loggregator/store"
-	"loggregator/store/cache"
 	"sync"
 	"time"
 )
@@ -62,7 +62,7 @@ type Loggregator struct {
 	appStore        *store.AppServiceStore
 	appStoreWatcher *store.AppServiceStoreWatcher
 
-	appStoreInputChan <-chan domain.AppServices
+	appStoreInputChan <-chan appservice.AppServices
 
 	errChan         chan error
 	listener        agentlistener.AgentListener
@@ -74,7 +74,7 @@ type Loggregator struct {
 
 	storeAdapter storeadapter.StoreAdapter
 
-	newAppServiceChan, deletedAppServiceChan <-chan domain.AppService
+	newAppServiceChan, deletedAppServiceChan <-chan appservice.AppService
 	sync.Mutex
 	sync.WaitGroup
 }

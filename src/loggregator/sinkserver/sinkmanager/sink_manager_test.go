@@ -1,12 +1,12 @@
 package sinkmanager_test
 
 import (
+	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"loggregator/domain"
 	"loggregator/iprange"
 	"loggregator/sinks"
 	"loggregator/sinks/dump"
@@ -59,15 +59,15 @@ func (c *ChannelSink) Emit() instrumentation.Context {
 var _ = Describe("SinkManager", func() {
 	var blackListManager = blacklist.New([]iprange.IPRange{iprange.IPRange{Start: "10.10.10.10", End: "10.10.10.20"}})
 	var sinkManager *sinkmanager.SinkManager
-	var appServicesChan <-chan domain.AppServices
+	var appServicesChan <-chan appservice.AppServices
 	var sinkManagerDone chan struct{}
-	var newAppServiceChan, deletedAppServiceChan chan domain.AppService
+	var newAppServiceChan, deletedAppServiceChan chan appservice.AppService
 
 	BeforeEach(func() {
 		sinkManager, appServicesChan = sinkmanager.NewSinkManager(1, true, blackListManager, loggertesthelper.Logger())
 
-		newAppServiceChan = make(chan domain.AppService)
-		deletedAppServiceChan = make(chan domain.AppService)
+		newAppServiceChan = make(chan appservice.AppService)
+		deletedAppServiceChan = make(chan appservice.AppService)
 
 		sinkManagerDone = make(chan struct{})
 		go func() {
@@ -155,7 +155,7 @@ var _ = Describe("SinkManager", func() {
 
 		It("should send new sinks to the app store", func(done Done) {
 
-			appServices := domain.AppServices{AppId: "appid", Urls: []string{"http://10.10.123.1"}}
+			appServices := appservice.AppServices{AppId: "appid", Urls: []string{"http://10.10.123.1"}}
 			go sinkManager.ManageSyslogSinks(appServices.AppId, appServices.Urls)
 
 			Expect(<-appServicesChan).To(Equal(appServices))
@@ -207,7 +207,7 @@ var _ = Describe("SinkManager", func() {
 		Context("When an add update is received", func() {
 			It("Should create a new syslog sink from the newAppServicesChan", func() {
 				initialNumSinks := numSyslogSinks()
-				newAppServiceChan <- domain.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:885"}
+				newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:885"}
 
 				Eventually(numSyslogSinks).Should(Equal(initialNumSinks + 1))
 			})
@@ -224,14 +224,14 @@ var _ = Describe("SinkManager", func() {
 				})
 
 				It("Should send an error message if the drain URL is blacklisted", func() {
-					newAppServiceChan <- domain.AppService{AppId: "aptastic", Url: "syslog://10.10.10.11:884"}
+					newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://10.10.10.11:884"}
 					Eventually(errorSink.Received).Should(HaveLen(1))
 					errorMsg := errorSink.Received()[0]
 					Expect(string(errorMsg.GetLogMessage().GetMessage())).To(MatchRegexp("Invalid syslog drain URL"))
 				})
 
 				It("Should send an error message if the drain URL is blacklisted", func() {
-					newAppServiceChan <- domain.AppService{AppId: "aptastic", Url: "syslog//invalid"}
+					newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog//invalid"}
 					Eventually(errorSink.Received).Should(HaveLen(1))
 					errorMsg := errorSink.Received()[0]
 					Expect(string(errorMsg.GetLogMessage().GetMessage())).To(MatchRegexp("Invalid syslog drain URL"))
@@ -244,18 +244,18 @@ var _ = Describe("SinkManager", func() {
 		Context("When a delete update is received", func() {
 			It("Should delete the corresponding syslog sink if it exists", func() {
 				initialNumSinks := numSyslogSinks()
-				newAppServiceChan <- domain.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886"}
+				newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886"}
 
 				Eventually(numSyslogSinks).Should(Equal(initialNumSinks + 1))
 
-				deletedAppServiceChan <- domain.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886"}
+				deletedAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886"}
 
 				Eventually(numSyslogSinks).Should(Equal(initialNumSinks))
 			})
 
 			It("Should handle a delete for a nonexistent sink", func() {
 				initialNumSinks := numSyslogSinks()
-				deletedAppServiceChan <- domain.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886"}
+				deletedAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886"}
 				Eventually(numSyslogSinks).Should(Equal(initialNumSinks))
 			})
 
@@ -266,14 +266,14 @@ var _ = Describe("SinkManager", func() {
 	Context("When a dump sink times out", func() {
 
 		BeforeEach(func() {
-			newAppServiceChan <- domain.AppService{AppId: "appId", Url: "syslog://127.0.1.1:887"}
+			newAppServiceChan <- appservice.AppService{AppId: "appId", Url: "syslog://127.0.1.1:887"}
 		})
 
 		It("should remove the app from etcd", func(done Done) {
 			dumpSink := dump.NewDumpSink("appId", 1, loggertesthelper.Logger(), 1*time.Millisecond)
 			sinkManager.RegisterSink(dumpSink)
 
-			Expect(<-appServicesChan).To(Equal(domain.AppServices{AppId: "appId"}))
+			Expect(<-appServicesChan).To(Equal(appservice.AppServices{AppId: "appId"}))
 			close(done)
 		})
 

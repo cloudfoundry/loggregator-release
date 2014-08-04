@@ -3,9 +3,9 @@ package sinkmanager
 import (
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"loggregator/domain"
 	"loggregator/groupedsinks"
 	"loggregator/sinks"
 	"loggregator/sinks/dump"
@@ -27,12 +27,12 @@ type SinkManager struct {
 	recentLogCount      uint32
 	Metrics             *metrics.SinkManagerMetrics
 	logger              *gosteno.Logger
-	appStoreUpdateChan  chan<- domain.AppServices
+	appStoreUpdateChan  chan<- appservice.AppServices
 	stopped             bool
 }
 
-func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger) (*SinkManager, <-chan domain.AppServices) {
-	appStoreUpdateChan := make(chan domain.AppServices, 10)
+func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger) (*SinkManager, <-chan appservice.AppServices) {
+	appStoreUpdateChan := make(chan appservice.AppServices, 10)
 	return &SinkManager{
 		doneChannel:         make(chan struct{}),
 		errorChannel:        make(chan *logmessage.Message, 100),
@@ -46,7 +46,7 @@ func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackLis
 	}, appStoreUpdateChan
 }
 
-func (sinkManager *SinkManager) Start(newAppServiceChan, deletedAppServiceChan <-chan domain.AppService) {
+func (sinkManager *SinkManager) Start(newAppServiceChan, deletedAppServiceChan <-chan appservice.AppService) {
 	sinkManager.setStopped(false)
 	go sinkManager.listenForNewAppServices(newAppServiceChan)
 	go sinkManager.listenForDeletedAppServices(deletedAppServiceChan)
@@ -70,13 +70,13 @@ func (sinkManager *SinkManager) SendTo(appId string, receivedMessage *logmessage
 	sinkManager.sinks.BroadCast(appId, receivedMessage)
 }
 
-func (sinkManager *SinkManager) listenForNewAppServices(newAppServiceChan <-chan domain.AppService) {
+func (sinkManager *SinkManager) listenForNewAppServices(newAppServiceChan <-chan appservice.AppService) {
 	for appService := range newAppServiceChan {
 		sinkManager.registerNewSyslogSink(appService.AppId, appService.Url)
 	}
 }
 
-func (sinkManager *SinkManager) listenForDeletedAppServices(deletedAppServiceChan <-chan domain.AppService) {
+func (sinkManager *SinkManager) listenForDeletedAppServices(deletedAppServiceChan <-chan appservice.AppService) {
 	for appService := range deletedAppServiceChan {
 		syslogSink := sinkManager.sinks.DrainFor(appService.AppId, appService.Url)
 		if syslogSink != nil {
@@ -132,7 +132,7 @@ func (sinkManager *SinkManager) UnregisterSink(sink sinks.Sink) {
 	if syslogSink, ok := sink.(*syslog.SyslogSink); ok {
 		syslogSink.Disconnect()
 	} else if _, ok := sink.(*dump.DumpSink); ok {
-		sinkManager.appStoreUpdateChan <- domain.AppServices{AppId: sink.AppId()}
+		sinkManager.appStoreUpdateChan <- appservice.AppServices{AppId: sink.AppId()}
 	}
 
 	sinkManager.logger.Debugf("SinkManager: Sink with identifier %s requested closing. Closed it.", sink.Identifier())
@@ -154,7 +154,7 @@ func (sinkManager *SinkManager) ManageSyslogSinks(appId string, syslogSinkUrls [
 	if sinkManager.isStopped() {
 		return
 	}
-	sinkManager.appStoreUpdateChan <- domain.AppServices{AppId: appId, Urls: syslogSinkUrls}
+	sinkManager.appStoreUpdateChan <- appservice.AppServices{AppId: appId, Urls: syslogSinkUrls}
 }
 
 func (sinkManager *SinkManager) registerNewSyslogSink(appId string, syslogSinkUrl string) {

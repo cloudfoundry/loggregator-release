@@ -1,10 +1,10 @@
 package sinkserver_test
 
 import (
+	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"loggregator/domain"
 	"loggregator/iprange"
 	"loggregator/sinkserver"
 	"loggregator/sinkserver/blacklist"
@@ -36,8 +36,8 @@ func init() {
 	logger := loggertesthelper.Logger()
 	cfcomponent.Logger = logger
 
-	newAppServiceChan := make(chan domain.AppService)
-	deletedAppServiceChan := make(chan domain.AppService)
+	newAppServiceChan := make(chan appservice.AppService)
+	deletedAppServiceChan := make(chan appservice.AppService)
 
 	emptyBlacklist := blacklist.New(nil)
 	sinkManager, _ = sinkmanager.NewSinkManager(1024, false, emptyBlacklist, logger)
