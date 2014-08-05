@@ -3,6 +3,7 @@ package deaagent
 import (
 	"deaagent/domain"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/emitter"
 	"github.com/howeyc/fsnotify"
 	"io/ioutil"
@@ -10,22 +11,29 @@ import (
 	"time"
 )
 
-type agent struct {
+type Agent struct {
 	InstancesJsonFilePath string
 	logger                *gosteno.Logger
 	knownInstancesChan    chan<- func(map[string]*TaskListener)
+	appStoreUpdateChan    chan<- appservice.AppServices
 }
 
-func NewAgent(instancesJsonFilePath string, logger *gosteno.Logger) *agent {
+func NewAgent(instancesJsonFilePath string, logger *gosteno.Logger, appStoreUpdateChan chan<- appservice.AppServices) *Agent {
 	knownInstancesChan := atomicCacheOperator()
-	return &agent{instancesJsonFilePath, logger, knownInstancesChan}
+
+	return &Agent{
+		InstancesJsonFilePath: instancesJsonFilePath,
+		logger:                logger,
+		knownInstancesChan:    knownInstancesChan,
+		appStoreUpdateChan:    appStoreUpdateChan,
+	}
 }
 
-func (agent *agent) Start(emitter emitter.Emitter) {
+func (agent *Agent) Start(emitter emitter.Emitter) {
 	go agent.pollInstancesJson(emitter)
 }
 
-func (agent *agent) processTasks(currentTasks map[string]domain.Task, emitter emitter.Emitter) func(knownTasks map[string]*TaskListener) {
+func (agent *Agent) processTasks(currentTasks map[string]domain.Task, emitter emitter.Emitter) func(knownTasks map[string]*TaskListener) {
 	return func(knownTasks map[string]*TaskListener) {
 		agent.logger.Debug("Reading tasks data after event on instances.json")
 		agent.logger.Debugf("Current known tasks are %v", knownTasks)
@@ -42,9 +50,20 @@ func (agent *agent) processTasks(currentTasks map[string]domain.Task, emitter em
 		for _, task := range currentTasks {
 			identifier := task.Identifier()
 			_, present := knownTasks[identifier]
+
 			if present {
 				continue
 			}
+
+			drainUrls := task.DrainUrls
+			if drainUrls == nil {
+				drainUrls = []string{}
+			}
+
+			task.DrainUrls = nil
+
+			agent.appStoreUpdateChan <- appservice.AppServices{AppId: task.ApplicationId, Urls: drainUrls}
+
 			agent.logger.Debugf("Adding new task %s", task.Identifier())
 			listener := NewTaskListener(task, emitter, agent.logger)
 			knownTasks[identifier] = listener
@@ -59,7 +78,7 @@ func (agent *agent) processTasks(currentTasks map[string]domain.Task, emitter em
 	}
 }
 
-func (agent *agent) pollInstancesJson(emitter emitter.Emitter) {
+func (agent *Agent) pollInstancesJson(emitter emitter.Emitter) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		panic(err)
@@ -93,7 +112,7 @@ func (agent *agent) pollInstancesJson(emitter emitter.Emitter) {
 	}
 }
 
-func (agent *agent) readInstancesJson(emitter emitter.Emitter) {
+func (agent *Agent) readInstancesJson(emitter emitter.Emitter) {
 	json, err := ioutil.ReadFile(agent.InstancesJsonFilePath)
 	if err != nil {
 		agent.logger.Warnf("Reading failed, retrying. %s\n", err)

@@ -5,10 +5,15 @@ import (
 	"errors"
 	"flag"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/loggregatorlib/emitter"
+	"github.com/cloudfoundry/loggregatorlib/store"
+	"github.com/cloudfoundry/loggregatorlib/store/cache"
+	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+	"github.com/cloudfoundry/storeadapter/workerpool"
 	"os"
 	"os/signal"
 	"runtime/pprof"
@@ -17,9 +22,11 @@ import (
 
 type Config struct {
 	cfcomponent.Config
-	Index              uint
-	LoggregatorAddress string
-	SharedSecret       string
+	Index                     uint
+	LoggregatorAddress        string
+	SharedSecret              string
+	EtcdUrls                  []string
+	EtcdMaxConcurrentRequests int
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
@@ -100,7 +107,8 @@ func main() {
 		panic(err)
 	}
 
-	agent := deaagent.NewAgent(*instancesJsonFilePath, logger)
+	appStoreUpdateChan := newRunningAppStoreUpdateChannel(config)
+	agent := deaagent.NewAgent(*instancesJsonFilePath, logger, appStoreUpdateChan)
 
 	cfc, err := cfcomponent.NewComponent(
 		logger,
@@ -142,4 +150,17 @@ func main() {
 			return
 		}
 	}
+}
+
+func newRunningAppStoreUpdateChannel(config *Config) chan<- appservice.AppServices {
+	appStoreUpdateChan := make(chan appservice.AppServices, 10)
+	workerPool := workerpool.NewWorkerPool(config.EtcdMaxConcurrentRequests)
+	storeAdapter := etcdstoreadapter.NewETCDStoreAdapter(config.EtcdUrls, workerPool)
+	appStoreCache := cache.NewAppServiceCache()
+	appStoreWatcher, _, _ := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
+	appStore := store.NewAppServiceStore(storeAdapter, appStoreWatcher)
+
+	go appStore.Run(appStoreUpdateChan)
+
+	return appStoreUpdateChan
 }

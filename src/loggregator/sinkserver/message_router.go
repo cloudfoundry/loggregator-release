@@ -18,7 +18,6 @@ type MessageRouter struct {
 
 type sinkManager interface {
 	SendTo(string, *logmessage.Message)
-	ManageSyslogSinks(string, []string)
 }
 
 func NewMessageRouter(sinkManager sinkManager, logger *gosteno.Logger) *MessageRouter {
@@ -45,7 +44,6 @@ func (r *MessageRouter) Start(incomingLogChan <-chan *logmessage.Message) {
 				return
 			}
 			r.logger.Debugf("MessageRouter:outgoingLogChan: Received %d bytes of data from agent listener.", message.GetRawMessageLength())
-			r.manageSinks(message)
 			r.send(message)
 		}
 	}
@@ -62,15 +60,6 @@ func (r *MessageRouter) Stop() {
 
 func (r *MessageRouter) Emit() instrumentation.Context {
 	return r.Metrics.Emit()
-}
-
-func (r *MessageRouter) manageSinks(message *logmessage.Message) {
-	logMessage := message.GetLogMessage()
-	appId := logMessage.GetAppId()
-
-	if logMessage.GetSourceName() == "App" {
-		r.SinkManager.ManageSyslogSinks(appId, logMessage.GetDrainUrls())
-	}
 }
 
 func (r *MessageRouter) send(message *logmessage.Message) {

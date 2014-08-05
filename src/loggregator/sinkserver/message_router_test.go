@@ -69,16 +69,6 @@ var _ = Describe("Message Router", func() {
 				Expect(fakeManager.received()[0].GetLogMessage()).To(Equal(message.GetLogMessage()))
 			})
 
-			It("sends the appropriate drain URLs via sink manager", func() {
-				message := NewMessage("testMessage", "app")
-				drains := []string{"drainurl"}
-
-				message.GetLogMessage().DrainUrls = drains
-				incomingLogChan <- message
-				Eventually(fakeManager.drains).Should(HaveLen(1))
-				Expect(fakeManager.drains()[0]).To(Equal(drains))
-			})
-
 			It("doesn't send drain URLs not from Warden", func() {
 				message := NewMessage("testMessage", "app")
 				dea := "DEA"

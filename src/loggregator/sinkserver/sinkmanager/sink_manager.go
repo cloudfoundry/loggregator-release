@@ -150,13 +150,6 @@ func (sinkManager *SinkManager) isStopped() bool {
 	return sinkManager.stopped
 }
 
-func (sinkManager *SinkManager) ManageSyslogSinks(appId string, syslogSinkUrls []string) {
-	if sinkManager.isStopped() {
-		return
-	}
-	sinkManager.appStoreUpdateChan <- appservice.AppServices{AppId: appId, Urls: syslogSinkUrls}
-}
-
 func (sinkManager *SinkManager) registerNewSyslogSink(appId string, syslogSinkUrl string) {
 	parsedSyslogDrainUrl, err := sinkManager.urlBlacklistManager.CheckUrl(syslogSinkUrl)
 	if err != nil {

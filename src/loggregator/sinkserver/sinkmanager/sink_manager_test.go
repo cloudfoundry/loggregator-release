@@ -151,20 +151,6 @@ var _ = Describe("SinkManager", func() {
 		})
 	})
 
-	Describe("ManageSyslogSinks", func() {
-
-		It("should send new sinks to the app store", func(done Done) {
-
-			appServices := appservice.AppServices{AppId: "appid", Urls: []string{"http://10.10.123.1"}}
-			go sinkManager.ManageSyslogSinks(appServices.AppId, appServices.Urls)
-
-			Expect(<-appServicesChan).To(Equal(appServices))
-
-			close(done)
-		})
-
-	})
-
 	Describe("Stop", func() {
 
 		It("should stop", func() {
