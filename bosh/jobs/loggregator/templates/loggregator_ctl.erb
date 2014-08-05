@@ -42,7 +42,3 @@ case $1 in
     ;;
 
 esac
-<% if_p('loggregator.servers') do |servers| %>
-<%= "# The property below is unused, but emitting it changes this file,\n# which causes BOSH to restart the loggregator servers." %>
-<%= "#   loggregator.servers: #{servers}" %>
-<% end %>
