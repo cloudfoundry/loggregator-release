@@ -169,11 +169,6 @@ var _ = Describe("SinkManager", func() {
 
 			close(done)
 		})
-
-		PIt("should close the app store chan when stopped", func() {
-			sinkManager.Stop()
-			Eventually(appServicesChan).Should(BeClosed())
-		})
 	})
 
 	Context("With updates from appstore", func() {

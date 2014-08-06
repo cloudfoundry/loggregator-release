@@ -62,6 +62,7 @@ func (agent *Agent) processTasks(currentTasks map[string]domain.Task, emitter em
 
 			task.DrainUrls = nil
 
+			agent.logger.Infof("Updating services for %s to %#v", task.ApplicationId, drainUrls)
 			agent.appStoreUpdateChan <- appservice.AppServices{AppId: task.ApplicationId, Urls: drainUrls}
 
 			agent.logger.Debugf("Adding new task %s", task.Identifier())

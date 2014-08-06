@@ -156,10 +156,19 @@ func newRunningAppStoreUpdateChannel(config *Config) chan<- appservice.AppServic
 	appStoreUpdateChan := make(chan appservice.AppServices, 10)
 	workerPool := workerpool.NewWorkerPool(config.EtcdMaxConcurrentRequests)
 	storeAdapter := etcdstoreadapter.NewETCDStoreAdapter(config.EtcdUrls, workerPool)
+	storeAdapter.Connect()
 	appStoreCache := cache.NewAppServiceCache()
-	appStoreWatcher, _, _ := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
+	appStoreWatcher, updateChan, removeChan := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
 	appStore := store.NewAppServiceStore(storeAdapter, appStoreWatcher)
 
+	go func() {
+		for _ = range updateChan {
+		}
+	}()
+	go func() {
+		for _ = range removeChan {
+		}
+	}()
 	go appStore.Run(appStoreUpdateChan)
 
 	return appStoreUpdateChan

@@ -51,3 +51,5 @@ properties:
     description: "IP port of Cloud Foundry NATS server"
   networks.apps:
     description: "DEA Logging Agent network information."
+  etcd.machines:
+    description: "IPs pointing to the ETCD cluster"

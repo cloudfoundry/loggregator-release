@@ -89,6 +89,7 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 	workerPool := workerpool.NewWorkerPool(config.EtcdMaxConcurrentRequests)
 
 	storeAdapter := etcdstoreadapter.NewETCDStoreAdapter(config.EtcdUrls, workerPool)
+	storeAdapter.Connect()
 	appStoreCache := cache.NewAppServiceCache()
 	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
 	appStore := store.NewAppServiceStore(storeAdapter, appStoreWatcher)
