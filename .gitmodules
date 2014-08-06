@@ -43,3 +43,9 @@
 [submodule "src/github.com/cloudfoundry/loggregator_consumer"]
 	path = src/github.com/cloudfoundry/loggregator_consumer
 	url = https://github.com/cloudfoundry/loggregator_consumer
+[submodule "src/github.com/davecgh/go-spew"]
+	path = src/github.com/davecgh/go-spew
+	url = https://github.com/davecgh/go-spew
+[submodule "src/github.com/cloudfoundry/dropsonde"]
+	path = src/github.com/cloudfoundry/dropsonde
+	url = https://github.com/cloudfoundry/dropsonde
