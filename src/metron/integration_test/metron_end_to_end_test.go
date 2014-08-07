@@ -116,6 +116,7 @@ var _ = Describe("Varz Endpoints", func() {
 		It("updates message aggregator metrics when it receives a message", func() {
 			context := getContext("MessageAggregator")
 			Expect(context.Metrics[3].Name).To(Equal("unmarshalErrors"))
+			expectedValue := context.Metrics[3].Value.(float64) + 1
 
 			connection, _ := net.Dial("udp", "localhost:51161")
 			connection.Write([]byte("test-data"))
@@ -123,7 +124,7 @@ var _ = Describe("Varz Endpoints", func() {
 			Eventually(func() interface{} {
 				context = getContext("MessageAggregator")
 				return context.Metrics[3].Value
-			}).Should(BeEquivalentTo(1))
+			}).Should(Equal(expectedValue))
 		})
 	})
 
