@@ -5,13 +5,16 @@ import (
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/davecgh/go-spew/spew"
+	"sync"
 	"time"
 )
 
 var MaxTTL = time.Minute
 
 type MessageAggregator interface {
+	instrumentation.Instrumentable
 	Run(inputChan <-chan []byte, outputChan chan<- []byte)
 }
 
@@ -23,8 +26,10 @@ func NewMessageAggregator(logger *gosteno.Logger) MessageAggregator {
 }
 
 type messageAggregator struct {
-	logger               *gosteno.Logger
-	startEventsByEventId map[eventId]startEventEntry
+	sync.Mutex
+	logger                 *gosteno.Logger
+	startEventsByEventId   map[eventId]startEventEntry
+	httpStartReceivedCount uint64
 }
 
 type eventId struct {
@@ -67,6 +72,11 @@ func (m *messageAggregator) Run(inputChan <-chan []byte, outputChan chan<- []byt
 }
 
 func (m *messageAggregator) handleHttpStart(envelope *events.Envelope) {
+	m.Lock()
+	defer m.Unlock()
+
+	m.httpStartReceivedCount++
+
 	m.logger.Debugf("handling HTTP start message %v", spew.Sprintf("%v", envelope))
 	startEvent := envelope.GetHttpStart()
 
@@ -119,5 +129,21 @@ func (m *messageAggregator) cleanupOrphanedHttpStart() {
 		if currentTime.Sub(eventEntry.entryTime) > MaxTTL {
 			delete(m.startEventsByEventId, key)
 		}
+	}
+}
+
+func (m *messageAggregator) metrics() []instrumentation.Metric {
+	m.Lock()
+	defer m.Unlock()
+
+	return []instrumentation.Metric{
+		instrumentation.Metric{Name: "httpStartReceived", Value: m.httpStartReceivedCount},
+	}
+}
+
+func (m *messageAggregator) Emit() instrumentation.Context {
+	return instrumentation.Context{
+		Name:    "MessageAggregator",
+		Metrics: m.metrics(),
 	}
 }

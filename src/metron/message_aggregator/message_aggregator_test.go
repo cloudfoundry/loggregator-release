@@ -17,6 +17,7 @@ var _ = Describe("MessageAggregator", func() {
 		outputChan        chan []byte
 		runComplete       chan struct{}
 		messageAggregator message_aggregator.MessageAggregator
+		originalTTL       time.Duration
 	)
 
 	BeforeEach(func() {
@@ -24,6 +25,7 @@ var _ = Describe("MessageAggregator", func() {
 		outputChan = make(chan []byte)
 		runComplete = make(chan struct{})
 		messageAggregator = message_aggregator.NewMessageAggregator(loggertesthelper.Logger())
+		originalTTL = message_aggregator.MaxTTL
 
 		go func() {
 			messageAggregator.Run(inputChan, outputChan)
@@ -34,6 +36,7 @@ var _ = Describe("MessageAggregator", func() {
 	AfterEach(func() {
 		close(inputChan)
 		Eventually(runComplete).Should(BeClosed())
+		message_aggregator.MaxTTL = originalTTL
 	})
 
 	It("passes non-marshallable messages through", func() {
@@ -77,13 +80,8 @@ var _ = Describe("MessageAggregator", func() {
 	})
 
 	Context("message expiry", func() {
-		var originalTTL time.Duration
 		BeforeEach(func() {
-			originalTTL = message_aggregator.MaxTTL
 			message_aggregator.MaxTTL = 0
-		})
-		AfterEach(func() {
-			message_aggregator.MaxTTL = originalTTL
 		})
 
 		It("does not send a combined event if the stop event doesn't arrive within the TTL", func() {
@@ -92,6 +90,24 @@ var _ = Describe("MessageAggregator", func() {
 			inputChan <- createStopMessage(123, events.PeerType_Client)
 
 			Consistently(outputChan).ShouldNot(Receive())
+		})
+	})
+
+	var metricValue = func(name string) interface{} {
+		for _, metric := range messageAggregator.Emit().Metrics {
+			if metric.Name == name {
+				return metric.Value
+			}
+		}
+		return nil
+	}
+
+	Context("metrics", func() {
+		It("emits a HTTP start counter", func() {
+			inputChan <- createStartMessage(123, events.PeerType_Client)
+			Eventually(func() interface{} {
+				return metricValue("httpStartReceived")
+			}).Should(Equal(uint64(1)))
 		})
 	})
 })
