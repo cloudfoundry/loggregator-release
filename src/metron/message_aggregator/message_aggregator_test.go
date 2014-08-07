@@ -22,7 +22,7 @@ var _ = Describe("MessageAggregator", func() {
 
 	BeforeEach(func() {
 		inputChan = make(chan []byte, 10)
-		outputChan = make(chan []byte)
+		outputChan = make(chan []byte, 10)
 		runComplete = make(chan struct{})
 		messageAggregator = message_aggregator.NewMessageAggregator(loggertesthelper.Logger())
 		originalTTL = message_aggregator.MaxTTL
@@ -103,11 +103,49 @@ var _ = Describe("MessageAggregator", func() {
 	}
 
 	Context("metrics", func() {
+		var eventuallyExpectMetric = func(name string, value uint64) {
+			Eventually(func() interface{} {
+				return metricValue(name)
+			}).Should(Equal(value))
+		}
+
 		It("emits a HTTP start counter", func() {
 			inputChan <- createStartMessage(123, events.PeerType_Client)
-			Eventually(func() interface{} {
-				return metricValue("httpStartReceived")
-			}).Should(Equal(uint64(1)))
+			eventuallyExpectMetric("httpStartReceived", 1)
+		})
+
+		It("emits a HTTP stop counter", func() {
+			inputChan <- createStopMessage(123, events.PeerType_Client)
+			eventuallyExpectMetric("httpStopReceived", 1)
+		})
+
+		It("emits a HTTP StartStop counter", func() {
+			inputChan <- createStartMessage(123, events.PeerType_Client)
+			inputChan <- createStopMessage(123, events.PeerType_Client)
+			eventuallyExpectMetric("httpStartStopEmitted", 1)
+		})
+
+		It("emits an unmarshal error counter", func() {
+			inputChan <- []byte{1, 2, 3}
+			eventuallyExpectMetric("unmarshalErrors", 1)
+		})
+
+		It("emits a counter for uncategorized events", func() {
+			inputChan <- createHeartbeatMessage()
+			eventuallyExpectMetric("uncategorizedEvents", 1)
+		})
+
+		It("emits a counter for unmatched start events", func() {
+			message_aggregator.MaxTTL = 0
+			inputChan <- createStartMessage(123, events.PeerType_Client)
+			time.Sleep(1)
+			inputChan <- createStartMessage(123, events.PeerType_Client)
+			eventuallyExpectMetric("httpUnmatchedStartReceived", 1)
+		})
+
+		It("emits a counter for unmatched stop events", func() {
+			inputChan <- createStopMessage(123, events.PeerType_Client)
+			eventuallyExpectMetric("httpUnmatchedStopReceived", 1)
 		})
 	})
 })

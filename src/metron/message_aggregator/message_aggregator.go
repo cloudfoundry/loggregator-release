@@ -27,9 +27,15 @@ func NewMessageAggregator(logger *gosteno.Logger) MessageAggregator {
 
 type messageAggregator struct {
 	sync.Mutex
-	logger                 *gosteno.Logger
-	startEventsByEventId   map[eventId]startEventEntry
-	httpStartReceivedCount uint64
+	logger                          *gosteno.Logger
+	startEventsByEventId            map[eventId]startEventEntry
+	httpStartReceivedCount          uint64
+	httpStopReceivedCount           uint64
+	httpStartStopEmittedCount       uint64
+	unmarshalErrorCount             uint64
+	uncategorizedEventCount         uint64
+	httpUnmatchedStartReceivedCount uint64
+	httpUnmatchedStopReceivedCount  uint64
 }
 
 type eventId struct {
@@ -50,6 +56,7 @@ func (m *messageAggregator) Run(inputChan <-chan []byte, outputChan chan<- []byt
 		var envelope events.Envelope
 		err := proto.Unmarshal(inputMessage, &envelope)
 		if err != nil {
+			m.incrementCounter(&m.unmarshalErrorCount)
 			m.logger.Warnf("unmarshal error %v for message %v", err, inputMessage)
 			outputChan <- inputMessage
 			continue
@@ -65,17 +72,21 @@ func (m *messageAggregator) Run(inputChan <-chan []byte, outputChan chan<- []byt
 				outputChan <- outputMessage
 			}
 		default:
+			m.incrementCounter(&m.uncategorizedEventCount)
 			m.logger.Debugf("passing through message %v", spew.Sprintf("%v", envelope))
 			outputChan <- inputMessage
 		}
 	}
 }
 
-func (m *messageAggregator) handleHttpStart(envelope *events.Envelope) {
+func (m *messageAggregator) incrementCounter(counter *uint64) {
 	m.Lock()
 	defer m.Unlock()
+	(*counter)++
+}
 
-	m.httpStartReceivedCount++
+func (m *messageAggregator) handleHttpStart(envelope *events.Envelope) {
+	m.incrementCounter(&m.httpStartReceivedCount)
 
 	m.logger.Debugf("handling HTTP start message %v", spew.Sprintf("%v", envelope))
 	startEvent := envelope.GetHttpStart()
@@ -86,6 +97,8 @@ func (m *messageAggregator) handleHttpStart(envelope *events.Envelope) {
 }
 
 func (m *messageAggregator) handleHttpStop(envelope *events.Envelope) *events.Envelope {
+	m.incrementCounter(&m.httpStopReceivedCount)
+
 	m.logger.Debugf("handling HTTP stop message %v", spew.Sprintf("%v", envelope))
 	stopEvent := envelope.GetHttpStop()
 
@@ -95,8 +108,11 @@ func (m *messageAggregator) handleHttpStop(envelope *events.Envelope) *events.En
 	startEventEntry, ok := m.startEventsByEventId[eventId]
 	if !ok {
 		m.logger.Warnf("no matching HTTP start message found for %v", eventId)
+		m.incrementCounter(&m.httpUnmatchedStopReceivedCount)
 		return nil
 	}
+
+	m.incrementCounter(&m.httpStartStopEmittedCount)
 
 	delete(m.startEventsByEventId, eventId)
 	startEvent := startEventEntry.startEvent
@@ -127,6 +143,7 @@ func (m *messageAggregator) cleanupOrphanedHttpStart() {
 	currentTime := time.Now()
 	for key, eventEntry := range m.startEventsByEventId {
 		if currentTime.Sub(eventEntry.entryTime) > MaxTTL {
+			m.incrementCounter(&m.httpUnmatchedStartReceivedCount)
 			delete(m.startEventsByEventId, key)
 		}
 	}
@@ -138,6 +155,12 @@ func (m *messageAggregator) metrics() []instrumentation.Metric {
 
 	return []instrumentation.Metric{
 		instrumentation.Metric{Name: "httpStartReceived", Value: m.httpStartReceivedCount},
+		instrumentation.Metric{Name: "httpStopReceived", Value: m.httpStopReceivedCount},
+		instrumentation.Metric{Name: "httpStartStopEmitted", Value: m.httpStartStopEmittedCount},
+		instrumentation.Metric{Name: "unmarshalErrors", Value: m.unmarshalErrorCount},
+		instrumentation.Metric{Name: "uncategorizedEvents", Value: m.uncategorizedEventCount},
+		instrumentation.Metric{Name: "httpUnmatchedStartReceived", Value: m.httpUnmatchedStartReceivedCount},
+		instrumentation.Metric{Name: "httpUnmatchedStopReceived", Value: m.httpUnmatchedStopReceivedCount},
 	}
 }
 
