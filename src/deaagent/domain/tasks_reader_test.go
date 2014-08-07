@@ -67,7 +67,7 @@ var _ = Describe("ReadTasks", func() {
 			i++
 		}
 
-		Expect(applicationIds).To(Equal(expectedApplicationIds))
+		Expect(applicationIds).To(ConsistOf(expectedApplicationIds))
 	})
 
 	It("reads multiple tasks with drain urls", func() {
