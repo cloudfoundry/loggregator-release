@@ -77,11 +77,11 @@ var _ = Describe("Varz Endpoints", func() {
 			return &message
 		}
 
-		var getAgentListenerContext = func() *instrumentation.Context {
+		var getContext = func(name string) *instrumentation.Context {
 			message := getVarzMessage()
 
 			for _, context := range message.Contexts {
-				if context.Name == "legacyAgentListener" {
+				if context.Name == name {
 					return &context
 				}
 			}
@@ -100,7 +100,7 @@ var _ = Describe("Varz Endpoints", func() {
 		})
 
 		It("Increments metric counter when it receives a message", func() {
-			agentListenerContext := getAgentListenerContext()
+			agentListenerContext := getContext("legacyAgentListener")
 			Expect(agentListenerContext.Metrics[1].Name).To(Equal("receivedMessageCount"))
 			expectedValue := agentListenerContext.Metrics[1].Value.(float64) + 1
 
@@ -108,9 +108,22 @@ var _ = Describe("Varz Endpoints", func() {
 			connection.Write([]byte("test-data"))
 
 			Eventually(func() interface{} {
-				agentListenerContext = getAgentListenerContext()
+				agentListenerContext = getContext("legacyAgentListener")
 				return agentListenerContext.Metrics[1].Value
 			}).Should(Equal(expectedValue))
+		})
+
+		It("updates message aggregator metrics when it receives a message", func() {
+			context := getContext("MessageAggregator")
+			Expect(context.Metrics[3].Name).To(Equal("unmarshalErrors"))
+
+			connection, _ := net.Dial("udp", "localhost:51161")
+			connection.Write([]byte("test-data"))
+
+			Eventually(func() interface{} {
+				context = getContext("MessageAggregator")
+				return context.Metrics[3].Value
+			}).Should(BeEquivalentTo(1))
 		})
 	})
 

@@ -15,6 +15,7 @@ import (
 	"github.com/cloudfoundry/storeadapter/workerpool"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
+	"metron/message_aggregator"
 	"strconv"
 	"time"
 )
@@ -42,10 +43,14 @@ func main() {
 	dropsondeMessageListener, dropsondeMessageChan := agentlistener.NewAgentListener("localhost:"+strconv.Itoa(config.DropsondeIncomingMessagesPort), logger, "dropsondeAgentListener")
 	dropsondePoolEtcdAdapter, dropsondeClientPool := initializeClientPool(config, logger, config.LoggregatorDropsondePort)
 
+	messageAggregator := message_aggregator.NewMessageAggregator(logger)
+	aggregatedDropsondeMessageChan := make(chan []byte)
+
 	instrumentables := []instrumentation.Instrumentable{
 		// TODO: delete next line when "legacy" format goes away
 		legacyMessageListener,
 		dropsondeMessageListener,
+		messageAggregator,
 	}
 
 	component := InitializeComponent(DefaultRegistrarFactory, config, logger, instrumentables)
@@ -58,9 +63,10 @@ func main() {
 	go forwardMessagesToLoggregator(legacyClientPool, legacyMessageChan, logger)
 
 	go dropsondeMessageListener.Start()
+	go messageAggregator.Run(dropsondeMessageChan, aggregatedDropsondeMessageChan)
 	go dropsondeClientPool.RunUpdateLoop(dropsondePoolEtcdAdapter, "/healthstatus/loggregator/"+config.Zone, nil, time.Duration(config.EtcdQueryIntervalMilliseconds)*time.Millisecond)
 	signedMessageChan := make(chan ([]byte))
-	go signMessages(config.SharedSecret, dropsondeMessageChan, signedMessageChan)
+	go signMessages(config.SharedSecret, aggregatedDropsondeMessageChan, signedMessageChan)
 	forwardMessagesToLoggregator(dropsondeClientPool, signedMessageChan, logger)
 }
 
