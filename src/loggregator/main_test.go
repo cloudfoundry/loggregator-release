@@ -39,7 +39,7 @@ var _ = Describe("Main", func() {
 			It("returns proper config", func() {
 				config, _ := main.ParseConfig(&logLevel, &configFile, &logFilePath)
 
-				Expect(config.IncomingPort).To(Equal(uint32(3456)))
+				Expect(config.LegacyIncomingMessagesPort).To(Equal(uint32(3456)))
 				Expect(config.OutgoingPort).To(Equal(uint32(8080)))
 				Expect(config.WSMessageBufferSize).To(Equal(uint(100)))
 			})
@@ -53,7 +53,7 @@ var _ = Describe("Main", func() {
 			It("returns proper config", func() {
 				config, _ := main.ParseConfig(&logLevel, &configFile, &logFilePath)
 
-				Expect(config.IncomingPort).To(Equal(uint32(8765)))
+				Expect(config.LegacyIncomingMessagesPort).To(Equal(uint32(8765)))
 				Expect(config.OutgoingPort).To(Equal(uint32(4567)))
 				Expect(config.WSMessageBufferSize).To(Equal(uint(100)))
 				Expect(config.BlackListIps[0].Start).To(Equal("127.0.0.0"))
@@ -99,7 +99,7 @@ var _ = Describe("Main", func() {
 					EtcdMaxConcurrentRequests: 10,
 					EtcdUrls:                  []string{"test:123", "test:456"},
 					Zone:                      "z1",
-					IncomingPort:              1234,
+					LegacyIncomingMessagesPort: 1234,
 				}
 			})
 

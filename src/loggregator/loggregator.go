@@ -28,20 +28,20 @@ import (
 
 type Config struct {
 	cfcomponent.Config
-	EtcdUrls                  []string
-	EtcdMaxConcurrentRequests int
-	Index                     uint
-	IncomingPort              uint32
-	DropsondeIncomingPort     uint32
-	OutgoingPort              uint32
-	LogFilePath               string
-	MaxRetainedLogMessages    uint32
-	WSMessageBufferSize       uint
-	SharedSecret              string
-	SkipCertVerify            bool
-	BlackListIps              []iprange.IPRange
-	JobName                   string
-	Zone                      string
+	EtcdUrls                      []string
+	EtcdMaxConcurrentRequests     int
+	Index                         uint
+	LegacyIncomingMessagesPort    uint32
+	DropsondeIncomingMessagesPort uint32
+	OutgoingPort                  uint32
+	LogFilePath                   string
+	MaxRetainedLogMessages        uint32
+	WSMessageBufferSize           uint
+	SharedSecret                  string
+	SkipCertVerify                bool
+	BlackListIps                  []iprange.IPRange
+	JobName                       string
+	Zone                          string
 }
 
 func (c *Config) Validate(logger *gosteno.Logger) (err error) {
@@ -90,8 +90,8 @@ type Loggregator struct {
 func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 	cfcomponent.Logger = logger
 	keepAliveInterval := 30 * time.Second
-	listener, incomingLogChan := agentlistener.NewAgentListener(fmt.Sprintf("%s:%d", host, config.IncomingPort), logger, "agentListener")
-	dropsondeListener, dropsondeBytesChan := agentlistener.NewAgentListener(fmt.Sprintf("%s:%d", host, config.DropsondeIncomingPort), logger, "dropsondeListener")
+	listener, incomingLogChan := agentlistener.NewAgentListener(fmt.Sprintf("%s:%d", host, config.LegacyIncomingMessagesPort), logger, "agentListener")
+	dropsondeListener, dropsondeBytesChan := agentlistener.NewAgentListener(fmt.Sprintf("%s:%d", host, config.DropsondeIncomingMessagesPort), logger, "dropsondeListener")
 
 	unmarshaller, messageChan := unmarshaller.NewLogMessageUnmarshaller(config.SharedSecret, incomingLogChan)
 	blacklist := blacklist.New(config.BlackListIps)

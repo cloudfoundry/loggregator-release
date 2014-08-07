@@ -2,7 +2,8 @@
 {
   "EtcdUrls": [<%= p("etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
   "EtcdMaxConcurrentRequests" : 10,
-  "IncomingPort": <%= p("loggregator.incoming_port") %>,
+  "LegacyIncomingMessagesPort": <%= p("loggregator.incoming_port") %>,
+  "DropsondeIncomingMessagesPort": <%= p("loggregator.dropsonde_incoming_port") %>,
   "OutgoingPort": <%= p("loggregator.outgoing_port") %>,
   "Zone": "<%= p("loggregator.zone") %>",
   "SkipCertVerify": <%= p("ssl.skip_cert_verify") %>,

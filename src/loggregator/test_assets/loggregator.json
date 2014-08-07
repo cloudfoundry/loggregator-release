@@ -1,5 +1,5 @@
 {
-    "IncomingPort": 8765,
+    "LegacyIncomingMessagesPort": 8765,
     "OutgoingPort": 4567,
     "SkipCertVerify": false,
     "Index": 0,

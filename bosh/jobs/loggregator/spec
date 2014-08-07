@@ -39,8 +39,11 @@ properties:
     description: number of log messages to retain per application
     default: 100
   loggregator.incoming_port:
-    description: Port for incoming log messages
+    description: Port for incoming log messages in the legacy format
     default: 3456
+  loggregator.dropsonde_incoming_port:
+    description: Port for incoming messages in the dropsonde format
+    default: 3457
   loggregator.outgoing_port:
     description: Port for outgoing log messages
     default: 8080
