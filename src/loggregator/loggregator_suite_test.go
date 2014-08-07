@@ -14,6 +14,10 @@ import (
 	"testing"
 )
 
+var (
+	loggregatorInstance *loggregator.Loggregator
+)
+
 func TestLoggregator(t *testing.T) {
 
 	RegisterFailHandler(Fail)
@@ -29,6 +33,7 @@ func TestLoggregator(t *testing.T) {
 
 		Index:                  0,
 		IncomingPort:           3456,
+		DropsondeIncomingPort:  3457,
 		OutgoingPort:           8083,
 		LogFilePath:            "",
 		MaxRetainedLogMessages: 100,
@@ -39,11 +44,11 @@ func TestLoggregator(t *testing.T) {
 	}
 	cfcomponent.Logger = loggertesthelper.Logger()
 
-	l := loggregator.New("127.0.0.1", loggregatorConfig, loggertesthelper.Logger())
-	go l.Start()
+	loggregatorInstance = loggregator.New("127.0.0.1", loggregatorConfig, loggertesthelper.Logger())
+	go loggregatorInstance.Start()
 
 	RunSpecs(t, "Loggregator Suite")
 
-	l.Stop()
+	loggregatorInstance.Stop()
 	etcdRunner.Stop()
 }

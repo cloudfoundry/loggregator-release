@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
+	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
@@ -30,6 +32,7 @@ type Config struct {
 	EtcdMaxConcurrentRequests int
 	Index                     uint
 	IncomingPort              uint32
+	DropsondeIncomingPort     uint32
 	OutgoingPort              uint32
 	LogFilePath               string
 	MaxRetainedLogMessages    uint32
@@ -64,13 +67,18 @@ type Loggregator struct {
 
 	appStoreInputChan <-chan appservice.AppServices
 
-	errChan         chan error
-	listener        agentlistener.AgentListener
-	sinkManager     *sinkmanager.SinkManager
-	messageRouter   *sinkserver.MessageRouter
-	messageChan     <-chan *logmessage.Message
-	unmarshaller    *unmarshaller.LogMessageUnmarshaller
-	websocketServer *websocketserver.WebsocketServer
+	errChan           chan error
+	listener          agentlistener.AgentListener
+	dropsondeListener agentlistener.AgentListener
+	sinkManager       *sinkmanager.SinkManager
+	messageRouter     *sinkserver.MessageRouter
+	messageChan       <-chan *logmessage.Message
+	unmarshaller      *unmarshaller.LogMessageUnmarshaller
+	websocketServer   *websocketserver.WebsocketServer
+
+	dropsondeUnmarshaller dropsonde_unmarshaller.DropsondeUnmarshaller
+	dropsondeBytesChan    <-chan []byte
+	dropsondeChan         chan *events.Envelope
 
 	storeAdapter storeadapter.StoreAdapter
 
@@ -83,10 +91,14 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 	cfcomponent.Logger = logger
 	keepAliveInterval := 30 * time.Second
 	listener, incomingLogChan := agentlistener.NewAgentListener(fmt.Sprintf("%s:%d", host, config.IncomingPort), logger, "agentListener")
+	dropsondeListener, dropsondeBytesChan := agentlistener.NewAgentListener(fmt.Sprintf("%s:%d", host, config.DropsondeIncomingPort), logger, "dropsondeListener")
+
 	unmarshaller, messageChan := unmarshaller.NewLogMessageUnmarshaller(config.SharedSecret, incomingLogChan)
 	blacklist := blacklist.New(config.BlackListIps)
 	sinkManager, appStoreInputChan := sinkmanager.NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger)
 	workerPool := workerpool.NewWorkerPool(config.EtcdMaxConcurrentRequests)
+
+	dropsondeUnmarshaller := dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger)
 
 	storeAdapter := etcdstoreadapter.NewETCDStoreAdapter(config.EtcdUrls, workerPool)
 	storeAdapter.Connect()
@@ -96,6 +108,7 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 	return &Loggregator{
 		Logger:                logger,
 		listener:              listener,
+		dropsondeListener:     dropsondeListener,
 		unmarshaller:          unmarshaller,
 		sinkManager:           sinkManager,
 		messageChan:           messageChan,
@@ -107,6 +120,9 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 		deletedAppServiceChan: deletedAppServiceChan,
 		appStoreWatcher:       appStoreWatcher,
 		storeAdapter:          storeAdapter,
+		dropsondeBytesChan:    dropsondeBytesChan,
+		dropsondeUnmarshaller: dropsondeUnmarshaller,
+		dropsondeChan:         make(chan *events.Envelope),
 	}
 }
 
@@ -119,7 +135,7 @@ func (l *Loggregator) Start() {
 	if err != nil {
 		panic(err)
 	}
-	l.Add(7)
+	l.Add(10)
 
 	go func() {
 		defer l.Done()
@@ -134,6 +150,23 @@ func (l *Loggregator) Start() {
 	go func() {
 		defer l.Done()
 		l.listener.Start()
+	}()
+
+	go func() {
+		defer l.Done()
+		l.dropsondeListener.Start()
+	}()
+
+	go func() {
+		defer l.Done()
+		defer close(l.dropsondeChan)
+		l.dropsondeUnmarshaller.Run(l.dropsondeBytesChan, l.dropsondeChan)
+	}()
+
+	go func() {
+		defer l.Done()
+		for _ = range l.dropsondeChan {
+		}
 	}()
 
 	go func() {
@@ -165,6 +198,7 @@ func (l *Loggregator) Stop() {
 	l.Lock()
 	defer l.Unlock()
 	l.listener.Stop()
+	l.dropsondeListener.Stop()
 	l.sinkManager.Stop()
 	l.messageRouter.Stop()
 	l.websocketServer.Stop()
@@ -175,5 +209,5 @@ func (l *Loggregator) Stop() {
 }
 
 func (l *Loggregator) Emitters() []instrumentation.Instrumentable {
-	return []instrumentation.Instrumentable{l.listener, l.messageRouter, l.sinkManager}
+	return []instrumentation.Instrumentable{l.listener, l.dropsondeListener, l.messageRouter, l.sinkManager, l.dropsondeUnmarshaller}
 }
