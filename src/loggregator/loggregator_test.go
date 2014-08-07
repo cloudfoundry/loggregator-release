@@ -208,7 +208,9 @@ var _ = Describe("Loggregator Server", func() {
 				Heartbeat: factories.NewHeartbeat(1, 2, 3),
 			}
 			message, _ := proto.Marshal(envelope)
-			connection.Write(message)
+			fakeSignature := make([]byte, 32)
+			messageWithFakeSignature := append(fakeSignature, message...)
+			connection.Write(messageWithFakeSignature)
 
 			Eventually(func() interface{} {
 				return getMetricValue("dropsondeUnmarshaller", "heartbeatReceived")

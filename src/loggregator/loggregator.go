@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
 	"github.com/cloudfoundry/dropsonde/events"
+	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
@@ -76,9 +77,11 @@ type Loggregator struct {
 	unmarshaller      *unmarshaller.LogMessageUnmarshaller
 	websocketServer   *websocketserver.WebsocketServer
 
-	dropsondeUnmarshaller dropsonde_unmarshaller.DropsondeUnmarshaller
-	dropsondeBytesChan    <-chan []byte
-	dropsondeChan         chan *events.Envelope
+	dropsondeUnmarshaller      dropsonde_unmarshaller.DropsondeUnmarshaller
+	dropsondeBytesChan         <-chan []byte
+	dropsondeVerifiedBytesChan chan []byte
+	dropsondeChan              chan *events.Envelope
+	signatureVerifier          signature.SignatureVerifier
 
 	storeAdapter storeadapter.StoreAdapter
 
@@ -99,6 +102,7 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 	workerPool := workerpool.NewWorkerPool(config.EtcdMaxConcurrentRequests)
 
 	dropsondeUnmarshaller := dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger)
+	signatureVerifier := signature.NewSignatureVerifier(logger)
 
 	storeAdapter := etcdstoreadapter.NewETCDStoreAdapter(config.EtcdUrls, workerPool)
 	storeAdapter.Connect()
@@ -106,23 +110,25 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
 	appStore := store.NewAppServiceStore(storeAdapter, appStoreWatcher)
 	return &Loggregator{
-		Logger:                logger,
-		listener:              listener,
-		dropsondeListener:     dropsondeListener,
-		unmarshaller:          unmarshaller,
-		sinkManager:           sinkManager,
-		messageChan:           messageChan,
-		appStoreInputChan:     appStoreInputChan,
-		appStore:              appStore,
-		messageRouter:         sinkserver.NewMessageRouter(sinkManager, logger),
-		websocketServer:       websocketserver.New(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.WSMessageBufferSize, logger),
-		newAppServiceChan:     newAppServiceChan,
-		deletedAppServiceChan: deletedAppServiceChan,
-		appStoreWatcher:       appStoreWatcher,
-		storeAdapter:          storeAdapter,
-		dropsondeBytesChan:    dropsondeBytesChan,
-		dropsondeUnmarshaller: dropsondeUnmarshaller,
-		dropsondeChan:         make(chan *events.Envelope),
+		Logger:                     logger,
+		listener:                   listener,
+		dropsondeListener:          dropsondeListener,
+		unmarshaller:               unmarshaller,
+		sinkManager:                sinkManager,
+		messageChan:                messageChan,
+		appStoreInputChan:          appStoreInputChan,
+		appStore:                   appStore,
+		messageRouter:              sinkserver.NewMessageRouter(sinkManager, logger),
+		websocketServer:            websocketserver.New(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.WSMessageBufferSize, logger),
+		newAppServiceChan:          newAppServiceChan,
+		deletedAppServiceChan:      deletedAppServiceChan,
+		appStoreWatcher:            appStoreWatcher,
+		storeAdapter:               storeAdapter,
+		dropsondeBytesChan:         dropsondeBytesChan,
+		dropsondeUnmarshaller:      dropsondeUnmarshaller,
+		dropsondeChan:              make(chan *events.Envelope),
+		signatureVerifier:          signatureVerifier,
+		dropsondeVerifiedBytesChan: make(chan []byte),
 	}
 }
 
@@ -135,7 +141,7 @@ func (l *Loggregator) Start() {
 	if err != nil {
 		panic(err)
 	}
-	l.Add(10)
+	l.Add(11)
 
 	go func() {
 		defer l.Done()
@@ -160,13 +166,19 @@ func (l *Loggregator) Start() {
 	go func() {
 		defer l.Done()
 		defer close(l.dropsondeChan)
-		l.dropsondeUnmarshaller.Run(l.dropsondeBytesChan, l.dropsondeChan)
+		l.dropsondeUnmarshaller.Run(l.dropsondeVerifiedBytesChan, l.dropsondeChan)
 	}()
 
 	go func() {
 		defer l.Done()
 		for _ = range l.dropsondeChan {
 		}
+	}()
+
+	go func() {
+		defer l.Done()
+		defer close(l.dropsondeVerifiedBytesChan)
+		l.signatureVerifier.Run(l.dropsondeBytesChan, l.dropsondeVerifiedBytesChan)
 	}()
 
 	go func() {
