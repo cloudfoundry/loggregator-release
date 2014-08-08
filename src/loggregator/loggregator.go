@@ -102,7 +102,7 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 	workerPool := workerpool.NewWorkerPool(config.EtcdMaxConcurrentRequests)
 
 	dropsondeUnmarshaller := dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger)
-	signatureVerifier := signature.NewSignatureVerifier(logger)
+	signatureVerifier := signature.NewSignatureVerifier(logger, config.SharedSecret)
 
 	storeAdapter := etcdstoreadapter.NewETCDStoreAdapter(config.EtcdUrls, workerPool)
 	storeAdapter.Connect()
@@ -221,5 +221,12 @@ func (l *Loggregator) Stop() {
 }
 
 func (l *Loggregator) Emitters() []instrumentation.Instrumentable {
-	return []instrumentation.Instrumentable{l.listener, l.dropsondeListener, l.messageRouter, l.sinkManager, l.dropsondeUnmarshaller}
+	return []instrumentation.Instrumentable{
+		l.listener,
+		l.dropsondeListener,
+		l.messageRouter,
+		l.sinkManager,
+		l.dropsondeUnmarshaller,
+		l.signatureVerifier,
+	}
 }

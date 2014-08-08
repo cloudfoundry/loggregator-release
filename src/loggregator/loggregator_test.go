@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
+	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	instrumentationtesthelpers "github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation/testhelpers"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/gorilla/websocket"
@@ -163,42 +165,29 @@ var _ = Describe("Loggregator Server", func() {
 	})
 
 	Context("metric emission", func() {
-		var getContext = func(name string) *instrumentation.Context {
+		var getEmitter = func(name string) instrumentation.Instrumentable {
 			for _, emitter := range loggregatorInstance.Emitters() {
 				context := emitter.Emit()
 				if context.Name == name {
-					return &context
-				}
-			}
-			return nil
-		}
-
-		var getMetricValue = func(contextName, metricName string) interface{} {
-			context := getContext(contextName)
-			if context == nil {
-				return nil
-			}
-			for _, metric := range context.Metrics {
-				if metric.Name == metricName {
-					return metric.Value
+					return emitter
 				}
 			}
 			return nil
 		}
 
 		It("emits metrics for the dropsonde message listener", func() {
-			countBefore := getMetricValue("dropsondeListener", "receivedMessageCount").(uint64)
+			emitter := getEmitter("dropsondeListener")
+			countBefore := instrumentationtesthelpers.MetricValue(emitter, "receivedMessageCount").(uint64)
 
 			connection, _ := net.Dial("udp", "127.0.0.1:3457")
 			connection.Write([]byte{1, 2, 3})
 
-			Eventually(func() interface{} {
-				return getMetricValue("dropsondeListener", "receivedMessageCount")
-			}).Should(Equal(countBefore + 1))
+			instrumentationtesthelpers.EventuallyExpectMetric(emitter, "receivedMessageCount", countBefore+1)
 		})
 
 		It("emits metrics for the dropsonde unmarshaller", func() {
-			countBefore := getMetricValue("dropsondeUnmarshaller", "heartbeatReceived").(uint64)
+			emitter := getEmitter("dropsondeUnmarshaller")
+			countBefore := instrumentationtesthelpers.MetricValue(emitter, "heartbeatReceived").(uint64)
 
 			connection, _ := net.Dial("udp", "127.0.0.1:3457")
 
@@ -208,13 +197,20 @@ var _ = Describe("Loggregator Server", func() {
 				Heartbeat: factories.NewHeartbeat(1, 2, 3),
 			}
 			message, _ := proto.Marshal(envelope)
-			fakeSignature := make([]byte, 32)
-			messageWithFakeSignature := append(fakeSignature, message...)
-			connection.Write(messageWithFakeSignature)
+			signedMessage := signature.SignMessage(message, []byte("secret"))
+			connection.Write(signedMessage)
 
-			Eventually(func() interface{} {
-				return getMetricValue("dropsondeUnmarshaller", "heartbeatReceived")
-			}).Should(Equal(countBefore + 1))
+			instrumentationtesthelpers.EventuallyExpectMetric(emitter, "heartbeatReceived", countBefore+1)
+		})
+
+		It("emits metrics for the dropsonde signature verifier", func() {
+			emitter := getEmitter("signatureVerifier")
+			countBefore := instrumentationtesthelpers.MetricValue(emitter, "missingSignatureErrors").(uint64)
+
+			connection, _ := net.Dial("udp", "127.0.0.1:3457")
+			connection.Write([]byte{1, 2, 3})
+
+			instrumentationtesthelpers.EventuallyExpectMetric(emitter, "missingSignatureErrors", countBefore+1)
 		})
 	})
 })
