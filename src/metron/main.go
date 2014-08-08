@@ -1,9 +1,8 @@
 package main
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
 	"flag"
+	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
@@ -72,11 +71,7 @@ func main() {
 
 func signMessages(sharedSecret string, dropsondeMessageChan <-chan ([]byte), signedMessageChan chan<- ([]byte)) {
 	for message := range dropsondeMessageChan {
-		mac := hmac.New(sha256.New, []byte(sharedSecret))
-		mac.Write(message)
-		signature := mac.Sum(nil)
-
-		signedMessage := append(signature, message...)
+		signedMessage := signature.SignMessage(message, []byte(sharedSecret))
 		signedMessageChan <- signedMessage
 	}
 }
