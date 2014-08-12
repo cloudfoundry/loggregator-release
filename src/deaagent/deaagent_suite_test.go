@@ -2,8 +2,8 @@ package deaagent_test
 
 import (
 	"deaagent/domain"
-	"github.com/cloudfoundry/loggregatorlib/emitter"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"github.com/cloudfoundry/dropsonde/emitter/logemitter"
+	"github.com/cloudfoundry/dropsonde/events"
 	"net"
 	"os"
 	"path/filepath"
@@ -21,7 +21,7 @@ func TestDeaagent(t *testing.T) {
 const SOCKET_PREFIX = "\n\n\n\n"
 
 type MockLoggregatorEmitter struct {
-	received chan *logmessage.LogMessage
+	received chan *events.LogMessage
 }
 
 func (m MockLoggregatorEmitter) Emit(a, b string) {
@@ -32,13 +32,13 @@ func (m MockLoggregatorEmitter) EmitError(a, b string) {
 
 }
 
-func (m MockLoggregatorEmitter) EmitLogMessage(message *logmessage.LogMessage) {
+func (m MockLoggregatorEmitter) EmitLogMessage(message *events.LogMessage) {
 	m.received <- message
 }
 
-func setupEmitter() (emitter.Emitter, chan *logmessage.LogMessage) {
+func setupEmitter() (logemitter.Emitter, chan *events.LogMessage) {
 	mockLoggregatorEmitter := new(MockLoggregatorEmitter)
-	mockLoggregatorEmitter.received = make(chan *logmessage.LogMessage)
+	mockLoggregatorEmitter.received = make(chan *events.LogMessage)
 	return mockLoggregatorEmitter, mockLoggregatorEmitter.received
 }
 

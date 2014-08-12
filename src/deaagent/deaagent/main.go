@@ -4,12 +4,12 @@ import (
 	"deaagent"
 	"errors"
 	"flag"
+	"github.com/cloudfoundry/dropsonde/emitter/logemitter"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
-	"github.com/cloudfoundry/loggregatorlib/emitter"
 	"github.com/cloudfoundry/loggregatorlib/store"
 	"github.com/cloudfoundry/loggregatorlib/store/cache"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
@@ -101,7 +101,7 @@ func main() {
 	}
 	// ** END Config Setup
 
-	loggregatorEmitter, err := emitter.NewEmitter(config.LoggregatorAddress, "APP", "NA", config.SharedSecret, logger)
+	loggregatorEmitter, err := logemitter.NewEmitter(config.LoggregatorAddress, "APP", "NA")
 
 	if err != nil {
 		panic(err)

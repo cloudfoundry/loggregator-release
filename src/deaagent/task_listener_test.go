@@ -3,8 +3,8 @@ package deaagent_test
 import (
 	"deaagent"
 	"deaagent/domain"
+	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"io/ioutil"
 	"os"
 	"time"
@@ -42,11 +42,10 @@ var _ = Describe("TaskListener", func() {
 		receivedMessage := <-receiveChannel
 
 		Expect(receivedMessage.GetAppId()).To(Equal("1234"))
-		Expect(receivedMessage.GetSourceName()).To(Equal("App"))
-		Expect(receivedMessage.GetMessageType()).To(Equal(logmessage.LogMessage_OUT))
+		Expect(receivedMessage.GetSourceType()).To(Equal("App"))
+		Expect(receivedMessage.GetMessageType()).To(Equal(events.LogMessage_OUT))
 		Expect(string(receivedMessage.GetMessage())).To(Equal(expectedMessage))
-		Expect(receivedMessage.GetDrainUrls()).To(Equal([]string{"syslog://10.20.30.40:8050"}))
-		Expect(receivedMessage.GetSourceId()).To(Equal("3"))
+		Expect(receivedMessage.GetSourceInstance()).To(Equal("3"))
 
 		_, err = connection.Write([]byte(secondLogMessage))
 		_, err = connection.Write([]byte("\n"))
@@ -55,11 +54,10 @@ var _ = Describe("TaskListener", func() {
 		receivedMessage = <-receiveChannel
 
 		Expect(receivedMessage.GetAppId()).To(Equal("1234"))
-		Expect(receivedMessage.GetSourceName()).To(Equal("App"))
-		Expect(receivedMessage.GetMessageType()).To(Equal(logmessage.LogMessage_OUT))
+		Expect(receivedMessage.GetSourceType()).To(Equal("App"))
+		Expect(receivedMessage.GetMessageType()).To(Equal(events.LogMessage_OUT))
 		Expect(string(receivedMessage.GetMessage())).To(Equal(secondLogMessage))
-		Expect(receivedMessage.GetDrainUrls()).To(Equal([]string{"syslog://10.20.30.40:8050"}))
-		Expect(receivedMessage.GetSourceId()).To(Equal("3"))
+		Expect(receivedMessage.GetSourceInstance()).To(Equal("3"))
 
 		_, err = connection.Write([]byte("a single line\nthat should be split\n"))
 		Expect(err).NotTo(HaveOccurred())

@@ -5,9 +5,9 @@ import (
 	"code.google.com/p/gogoprotobuf/proto"
 	"deaagent/domain"
 	"fmt"
+	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"net"
 	"path/filepath"
 	"strconv"
@@ -20,20 +20,20 @@ type LoggingStream struct {
 	connection       net.Conn
 	task             *domain.Task
 	logger           *gosteno.Logger
-	messageType      logmessage.LogMessage_MessageType
+	messageType      events.LogMessage_MessageType
 	messagesReceived uint64
 	bytesReceived    uint64
 	closeChan        chan struct{}
 	sync.Mutex
 }
 
-func NewLoggingStream(task *domain.Task, logger *gosteno.Logger, messageType logmessage.LogMessage_MessageType) (ls *LoggingStream) {
+func NewLoggingStream(task *domain.Task, logger *gosteno.Logger, messageType events.LogMessage_MessageType) (ls *LoggingStream) {
 	return &LoggingStream{task: task, logger: logger, messageType: messageType, closeChan: make(chan struct{})}
 }
 
-func (ls *LoggingStream) Listen() <-chan *logmessage.LogMessage {
+func (ls *LoggingStream) Listen() <-chan *events.LogMessage {
 
-	messageChan := make(chan *logmessage.LogMessage, 1024)
+	messageChan := make(chan *events.LogMessage, 1024)
 
 	go func() {
 		defer close(messageChan)
@@ -130,14 +130,14 @@ func (ls *LoggingStream) connect() (net.Conn, error) {
 	return connection, err
 }
 
-func socketName(messageType logmessage.LogMessage_MessageType) string {
-	if messageType == logmessage.LogMessage_OUT {
+func socketName(messageType events.LogMessage_MessageType) string {
+	if messageType == events.LogMessage_OUT {
 		return "stdout.sock"
 	}
 	return "stderr.sock"
 }
 
-func (ls *LoggingStream) newLogMessage(message []byte) *logmessage.LogMessage {
+func (ls *LoggingStream) newLogMessage(message []byte) *events.LogMessage {
 	currentTime := time.Now()
 	sourceName := ls.task.SourceName
 	sourceId := strconv.FormatUint(ls.task.Index, 10)
@@ -146,13 +146,12 @@ func (ls *LoggingStream) newLogMessage(message []byte) *logmessage.LogMessage {
 	if copyCount != len(message) {
 		panic(fmt.Sprintf("Didn't copy the message %d, %s", copyCount, message))
 	}
-	return &logmessage.LogMessage{
-		Message:     messageCopy,
-		AppId:       proto.String(ls.task.ApplicationId),
-		DrainUrls:   ls.task.DrainUrls,
-		MessageType: &ls.messageType,
-		SourceName:  &sourceName,
-		SourceId:    &sourceId,
-		Timestamp:   proto.Int64(currentTime.UnixNano()),
+	return &events.LogMessage{
+		Message:        messageCopy,
+		AppId:          proto.String(ls.task.ApplicationId),
+		MessageType:    &ls.messageType,
+		SourceType:     &sourceName,
+		SourceInstance: &sourceId,
+		Timestamp:      proto.Int64(currentTime.UnixNano()),
 	}
 }

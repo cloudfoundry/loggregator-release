@@ -2,9 +2,9 @@ package deaagent
 
 import (
 	"deaagent/domain"
+	"github.com/cloudfoundry/dropsonde/emitter/logemitter"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
-	"github.com/cloudfoundry/loggregatorlib/emitter"
 	"github.com/howeyc/fsnotify"
 	"io/ioutil"
 	"path"
@@ -29,11 +29,11 @@ func NewAgent(instancesJsonFilePath string, logger *gosteno.Logger, appStoreUpda
 	}
 }
 
-func (agent *Agent) Start(emitter emitter.Emitter) {
+func (agent *Agent) Start(emitter logemitter.Emitter) {
 	go agent.pollInstancesJson(emitter)
 }
 
-func (agent *Agent) processTasks(currentTasks map[string]domain.Task, emitter emitter.Emitter) func(knownTasks map[string]*TaskListener) {
+func (agent *Agent) processTasks(currentTasks map[string]domain.Task, emitter logemitter.Emitter) func(knownTasks map[string]*TaskListener) {
 	return func(knownTasks map[string]*TaskListener) {
 		agent.logger.Debug("Reading tasks data after event on instances.json")
 		agent.logger.Debugf("Current known tasks are %v", knownTasks)
@@ -79,7 +79,7 @@ func (agent *Agent) processTasks(currentTasks map[string]domain.Task, emitter em
 	}
 }
 
-func (agent *Agent) pollInstancesJson(emitter emitter.Emitter) {
+func (agent *Agent) pollInstancesJson(emitter logemitter.Emitter) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		panic(err)
@@ -113,7 +113,7 @@ func (agent *Agent) pollInstancesJson(emitter emitter.Emitter) {
 	}
 }
 
-func (agent *Agent) readInstancesJson(emitter emitter.Emitter) {
+func (agent *Agent) readInstancesJson(emitter logemitter.Emitter) {
 	json, err := ioutil.ReadFile(agent.InstancesJsonFilePath)
 	if err != nil {
 		agent.logger.Warnf("Reading failed, retrying. %s\n", err)

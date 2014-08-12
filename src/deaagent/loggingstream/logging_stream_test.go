@@ -4,8 +4,8 @@ import (
 	"deaagent/domain"
 	"deaagent/loggingstream"
 	"fmt"
+	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"io/ioutil"
@@ -35,7 +35,7 @@ var _ = Describe("LoggingStream", func() {
 		os.MkdirAll(value, 0777)
 
 		socketPath = filepath.Join(task.Identifier(), "stdout.sock")
-		loggingStream = loggingstream.NewLoggingStream(task, loggertesthelper.Logger(), logmessage.LogMessage_OUT)
+		loggingStream = loggingstream.NewLoggingStream(task, loggertesthelper.Logger(), events.LogMessage_OUT)
 		loggertesthelper.TestLoggerSink.Clear()
 	})
 

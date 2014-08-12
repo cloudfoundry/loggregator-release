@@ -3,25 +3,25 @@ package deaagent
 import (
 	"deaagent/domain"
 	"deaagent/loggingstream"
+	"github.com/cloudfoundry/dropsonde/emitter/logemitter"
+	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/emitter"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
 )
 
 type TaskListener struct {
 	*gosteno.Logger
-	emitter                        emitter.Emitter
+	emitter                        logemitter.Emitter
 	taskIdentifier                 string
 	stdOutListener, stdErrListener *loggingstream.LoggingStream
 }
 
-func NewTaskListener(task domain.Task, e emitter.Emitter, logger *gosteno.Logger) *TaskListener {
+func NewTaskListener(task domain.Task, e logemitter.Emitter, logger *gosteno.Logger) *TaskListener {
 	return &TaskListener{
 		Logger:         logger,
 		emitter:        e,
 		taskIdentifier: task.Identifier(),
-		stdOutListener: loggingstream.NewLoggingStream(&task, logger, logmessage.LogMessage_OUT),
-		stdErrListener: loggingstream.NewLoggingStream(&task, logger, logmessage.LogMessage_ERR),
+		stdOutListener: loggingstream.NewLoggingStream(&task, logger, events.LogMessage_OUT),
+		stdErrListener: loggingstream.NewLoggingStream(&task, logger, events.LogMessage_ERR),
 	}
 }
 

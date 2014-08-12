@@ -6,6 +6,8 @@ PIDFILE=$RUN_DIR/dea_logging_agent.pid
 
 source /var/vcap/packages/common/utils.sh
 
+export LOGGREGATOR_SHARED_SECRET=<%= p("metron_endpoint.shared_secret") %>
+
 case $1 in
 
   start)

@@ -3,9 +3,9 @@ package deaagent_test
 import (
 	"deaagent"
 	"deaagent/domain"
+	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"io/ioutil"
 	"net"
 	"os"
@@ -65,7 +65,7 @@ var _ = Describe("DeaAgent", func() {
 
 		mockLoggregatorEmitter = MockLoggregatorEmitter{}
 
-		mockLoggregatorEmitter.received = make(chan *logmessage.LogMessage, 2)
+		mockLoggregatorEmitter.received = make(chan *events.LogMessage, 2)
 
 		writeToFile(`{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3, "syslog_drain_urls": ["url1"]},
 	                                {"state": "RUNNING", "application_id": "3456", "warden_job_id": 59, "warden_container_path":"`+tmpdir+`", "instance_index": 1}]}`, true)
@@ -134,10 +134,9 @@ var _ = Describe("DeaAgent", func() {
 
 		receivedMessage := <-mockLoggregatorEmitter.received
 
-		Expect(receivedMessage.GetSourceName()).To(Equal("App"))
-		Expect(receivedMessage.GetMessageType()).To(Equal(logmessage.LogMessage_OUT))
+		Expect(receivedMessage.GetSourceType()).To(Equal("App"))
+		Expect(receivedMessage.GetMessageType()).To(Equal(events.LogMessage_OUT))
 		Expect(string(receivedMessage.GetMessage())).To(Equal(expectedMessage))
-		Expect(receivedMessage.GetDrainUrls()).To(BeNil())
 	})
 
 	It("pushes updates to syslog drain URLs to the appStoreUpdateChan", func() {
