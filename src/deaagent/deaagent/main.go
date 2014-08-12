@@ -101,7 +101,7 @@ func main() {
 	}
 	// ** END Config Setup
 
-	loggregatorEmitter, err := logemitter.NewEmitter(config.LoggregatorAddress, "APP", "NA")
+	loggregatorEmitter, err := logemitter.NewEmitter(config.LoggregatorAddress, "APP", "NA", *logLevel)
 
 	if err != nil {
 		panic(err)
