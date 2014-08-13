@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"github.com/cloudfoundry/dropsonde/emitter/logemitter"
+	_ "github.com/cloudfoundry/dropsonde/autowire"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
