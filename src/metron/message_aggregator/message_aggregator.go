@@ -1,7 +1,6 @@
 package message_aggregator
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/gosteno"
@@ -15,7 +14,7 @@ var MaxTTL = time.Minute
 
 type MessageAggregator interface {
 	instrumentation.Instrumentable
-	Run(inputChan <-chan []byte, outputChan chan<- []byte)
+	Run(inputChan <-chan *events.Envelope, outputChan chan<- *events.Envelope)
 }
 
 func NewMessageAggregator(logger *gosteno.Logger) MessageAggregator {
@@ -32,7 +31,6 @@ type messageAggregator struct {
 	httpStartReceivedCount          uint64
 	httpStopReceivedCount           uint64
 	httpStartStopEmittedCount       uint64
-	unmarshalErrorCount             uint64
 	uncategorizedEventCount         uint64
 	httpUnmatchedStartReceivedCount uint64
 	httpUnmatchedStopReceivedCount  uint64
@@ -48,33 +46,23 @@ type startEventEntry struct {
 	entryTime  time.Time
 }
 
-func (m *messageAggregator) Run(inputChan <-chan []byte, outputChan chan<- []byte) {
-	for inputMessage := range inputChan {
+func (m *messageAggregator) Run(inputChan <-chan *events.Envelope, outputChan chan<- *events.Envelope) {
+	for envelope := range inputChan {
 		// TODO: don't call for every message if throughput becomes a problem
 		m.cleanupOrphanedHttpStart()
 
-		var envelope events.Envelope
-		err := proto.Unmarshal(inputMessage, &envelope)
-		if err != nil {
-			m.incrementCounter(&m.unmarshalErrorCount)
-			m.logger.Warnf("unmarshal error %v for message %v", err, inputMessage)
-			outputChan <- inputMessage
-			continue
-		}
-
 		switch envelope.GetEventType() {
 		case events.Envelope_HttpStart:
-			m.handleHttpStart(&envelope)
+			m.handleHttpStart(envelope)
 		case events.Envelope_HttpStop:
-			startStopMessage := m.handleHttpStop(&envelope)
+			startStopMessage := m.handleHttpStop(envelope)
 			if startStopMessage != nil {
-				outputMessage, _ := proto.Marshal(startStopMessage)
-				outputChan <- outputMessage
+				outputChan <- startStopMessage
 			}
 		default:
 			m.incrementCounter(&m.uncategorizedEventCount)
 			m.logger.Debugf("passing through message %v", spew.Sprintf("%v", envelope))
-			outputChan <- inputMessage
+			outputChan <- envelope
 		}
 	}
 }
@@ -157,7 +145,6 @@ func (m *messageAggregator) metrics() []instrumentation.Metric {
 		instrumentation.Metric{Name: "httpStartReceived", Value: m.httpStartReceivedCount},
 		instrumentation.Metric{Name: "httpStopReceived", Value: m.httpStopReceivedCount},
 		instrumentation.Metric{Name: "httpStartStopEmitted", Value: m.httpStartStopEmittedCount},
-		instrumentation.Metric{Name: "unmarshalErrors", Value: m.unmarshalErrorCount},
 		instrumentation.Metric{Name: "uncategorizedEvents", Value: m.uncategorizedEventCount},
 		instrumentation.Metric{Name: "httpUnmatchedStartReceived", Value: m.httpUnmatchedStartReceivedCount},
 		instrumentation.Metric{Name: "httpUnmatchedStopReceived", Value: m.httpUnmatchedStopReceivedCount},

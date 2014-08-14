@@ -2,6 +2,9 @@ package main
 
 import (
 	"flag"
+	"github.com/cloudfoundry/dropsonde/dropsonde_marshaller"
+	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
+	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
@@ -42,14 +45,18 @@ func main() {
 	dropsondeMessageListener, dropsondeMessageChan := agentlistener.NewAgentListener("localhost:"+strconv.Itoa(config.DropsondeIncomingMessagesPort), logger, "dropsondeAgentListener")
 	dropsondePoolEtcdAdapter, dropsondeClientPool := initializeClientPool(config, logger, config.LoggregatorDropsondePort)
 
+	unmarshaller := dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger)
+	marshaller := dropsonde_marshaller.NewDropsondeMarshaller(logger)
 	messageAggregator := message_aggregator.NewMessageAggregator(logger)
-	aggregatedDropsondeMessageChan := make(chan []byte)
+	aggregatedDropsondeEventChan := make(chan *events.Envelope)
 
 	instrumentables := []instrumentation.Instrumentable{
 		// TODO: delete next line when "legacy" format goes away
 		legacyMessageListener,
 		dropsondeMessageListener,
 		messageAggregator,
+		unmarshaller,
+		marshaller,
 	}
 
 	component := InitializeComponent(DefaultRegistrarFactory, config, logger, instrumentables)
@@ -62,10 +69,20 @@ func main() {
 	go forwardMessagesToLoggregator(legacyClientPool, legacyMessageChan, logger)
 
 	go dropsondeMessageListener.Start()
-	go messageAggregator.Run(dropsondeMessageChan, aggregatedDropsondeMessageChan)
+
+	dropsondeEventChan := make(chan *events.Envelope)
+	go unmarshaller.Run(dropsondeMessageChan, dropsondeEventChan)
+
+	go messageAggregator.Run(dropsondeEventChan, aggregatedDropsondeEventChan)
+
 	go dropsondeClientPool.RunUpdateLoop(dropsondePoolEtcdAdapter, "/healthstatus/loggregator/"+config.Zone, nil, time.Duration(config.EtcdQueryIntervalMilliseconds)*time.Millisecond)
+
+	reMarshalledMessageChan := make(chan []byte)
+	go marshaller.Run(aggregatedDropsondeEventChan, reMarshalledMessageChan)
+
 	signedMessageChan := make(chan ([]byte))
-	go signMessages(config.SharedSecret, aggregatedDropsondeMessageChan, signedMessageChan)
+	go signMessages(config.SharedSecret, reMarshalledMessageChan, signedMessageChan)
+
 	forwardMessagesToLoggregator(dropsondeClientPool, signedMessageChan, logger)
 }
 

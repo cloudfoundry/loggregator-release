@@ -1,9 +1,11 @@
 package integration_test
 
 import (
+	"code.google.com/p/gogoprotobuf/proto"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/json"
+	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/localip"
 	"github.com/cloudfoundry/storeadapter"
@@ -115,16 +117,18 @@ var _ = Describe("Varz Endpoints", func() {
 
 		It("updates message aggregator metrics when it receives a message", func() {
 			context := getContext("MessageAggregator")
-			Expect(context.Metrics[3].Name).To(Equal("unmarshalErrors"))
+			Expect(context.Metrics[3].Name).To(Equal("uncategorizedEvents"))
 			expectedValue := context.Metrics[3].Value.(float64) + 1
 
 			connection, _ := net.Dial("udp", "localhost:51161")
-			connection.Write([]byte("test-data"))
+
+			message := basicHeartbeatMessage()
+			connection.Write(message)
 
 			Eventually(func() interface{} {
 				context = getContext("MessageAggregator")
 				return context.Metrics[3].Value
-			}).Should(Equal(expectedValue))
+			}).Should(Equal(expectedValue), "uncategorizedEvents counter did not increment")
 		})
 	})
 
@@ -181,10 +185,10 @@ var _ = Describe("Varz Endpoints", func() {
 		It("forwards hmac signed messages to a healthy loggregator server", func(done Done) {
 			defer close(done)
 
-			messageString := "test-data"
+			originalMessage := basicHeartbeatMessage()
 
 			mac := hmac.New(sha256.New, []byte("shared_secret"))
-			mac.Write([]byte(messageString))
+			mac.Write(originalMessage)
 			expectedMAC := mac.Sum(nil)
 
 			testServer, _ := net.ListenPacket("udp", "localhost:3457")
@@ -196,7 +200,6 @@ var _ = Describe("Varz Endpoints", func() {
 			}
 			adapter := etcdRunner.Adapter()
 			adapter.Create(node)
-
 			connection, _ := net.Dial("udp", "localhost:51161")
 
 			stopWrite := make(chan struct{})
@@ -205,7 +208,7 @@ var _ = Describe("Varz Endpoints", func() {
 				ticker := time.NewTicker(10 * time.Millisecond)
 				defer ticker.Stop()
 				for {
-					connection.Write([]byte(messageString))
+					connection.Write(originalMessage)
 
 					select {
 					case <-stopWrite:
@@ -222,8 +225,40 @@ var _ = Describe("Varz Endpoints", func() {
 
 			signature := readData[:32]
 			messageData := readData[32:]
-			Expect(messageData).Should(BeEquivalentTo(messageString))
+			Expect(messageData).Should(BeEquivalentTo(originalMessage))
 			Expect(hmac.Equal(signature, expectedMAC)).To(BeTrue())
 		})
 	})
 })
+
+func basicHeartbeatMessage() []byte {
+	peerType := events.PeerType_Server
+	message, _ := proto.Marshal(&events.Envelope{
+		Origin:    proto.String("fake-origin-1"),
+		EventType: events.Envelope_Heartbeat.Enum(),
+		HttpStart: &events.HttpStart{
+			Timestamp: proto.Int64(1),
+			RequestId: &events.UUID{
+				Low:  proto.Uint64(0),
+				High: proto.Uint64(1),
+			},
+			PeerType:      &peerType,
+			Method:        events.Method_GET.Enum(),
+			Uri:           proto.String("fake-uri-1"),
+			RemoteAddress: proto.String("fake-remote-addr-1"),
+			UserAgent:     proto.String("fake-user-agent-1"),
+			ParentRequestId: &events.UUID{
+				Low:  proto.Uint64(2),
+				High: proto.Uint64(3),
+			},
+			ApplicationId: &events.UUID{
+				Low:  proto.Uint64(4),
+				High: proto.Uint64(5),
+			},
+			InstanceIndex: proto.Int32(6),
+			InstanceId:    proto.String("fake-instance-id-1"),
+		},
+	})
+
+	return message
+}

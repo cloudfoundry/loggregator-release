@@ -2,27 +2,29 @@ package message_aggregator_test
 
 import (
 	"code.google.com/p/gogoprotobuf/proto"
+	"fmt"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"metron/message_aggregator"
 	"time"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("MessageAggregator", func() {
 	var (
-		inputChan         chan []byte
-		outputChan        chan []byte
+		inputChan         chan *events.Envelope
+		outputChan        chan *events.Envelope
 		runComplete       chan struct{}
 		messageAggregator message_aggregator.MessageAggregator
 		originalTTL       time.Duration
 	)
 
 	BeforeEach(func() {
-		inputChan = make(chan []byte, 10)
-		outputChan = make(chan []byte, 10)
+		inputChan = make(chan *events.Envelope, 10)
+		outputChan = make(chan *events.Envelope, 10)
 		runComplete = make(chan struct{})
 		messageAggregator = message_aggregator.NewMessageAggregator(loggertesthelper.Logger())
 		originalTTL = message_aggregator.MaxTTL
@@ -40,7 +42,7 @@ var _ = Describe("MessageAggregator", func() {
 	})
 
 	It("passes non-marshallable messages through", func() {
-		inputMessage := []byte{1, 2, 3}
+		inputMessage := &events.Envelope{}
 		inputChan <- inputMessage
 
 		outputMessage := <-outputChan
@@ -56,13 +58,12 @@ var _ = Describe("MessageAggregator", func() {
 	})
 
 	Context("single StartStop message", func() {
-		var outputMessage events.Envelope
+		var outputMessage *events.Envelope
 		BeforeEach(func() {
 			inputChan <- createStartMessage(123, events.PeerType_Client)
 			inputChan <- createStopMessage(123, events.PeerType_Client)
 
-			outputMessageBytes := <-outputChan
-			proto.Unmarshal(outputMessageBytes, &outputMessage)
+			outputMessage = <-outputChan
 		})
 
 		It("aggregates HTTP start+stop messages", func() {
@@ -70,7 +71,7 @@ var _ = Describe("MessageAggregator", func() {
 		})
 
 		It("populates all fields in the StartStop message correctly", func() {
-			Expect(&outputMessage).To(Equal(createStartStopMessage(123, events.PeerType_Client)))
+			Expect(outputMessage).To(Equal(createStartStopMessage(123, events.PeerType_Client)))
 		})
 	})
 
@@ -106,7 +107,7 @@ var _ = Describe("MessageAggregator", func() {
 		var eventuallyExpectMetric = func(name string, value uint64) {
 			Eventually(func() interface{} {
 				return metricValue(name)
-			}).Should(Equal(value))
+			}).Should(Equal(value), fmt.Sprintf("Metric %s was incorrect", name))
 		}
 
 		It("emits a HTTP start counter", func() {
@@ -123,11 +124,6 @@ var _ = Describe("MessageAggregator", func() {
 			inputChan <- createStartMessage(123, events.PeerType_Client)
 			inputChan <- createStopMessage(123, events.PeerType_Client)
 			eventuallyExpectMetric("httpStartStopEmitted", 1)
-		})
-
-		It("emits an unmarshal error counter", func() {
-			inputChan <- []byte{1, 2, 3}
-			eventuallyExpectMetric("unmarshalErrors", 1)
 		})
 
 		It("emits a counter for uncategorized events", func() {
@@ -150,8 +146,8 @@ var _ = Describe("MessageAggregator", func() {
 	})
 })
 
-func createStartMessage(requestId uint64, peerType events.PeerType) []byte {
-	message, _ := proto.Marshal(&events.Envelope{
+func createStartMessage(requestId uint64, peerType events.PeerType) *events.Envelope {
+	return &events.Envelope{
 		Origin:    proto.String("fake-origin-1"),
 		EventType: events.Envelope_HttpStart.Enum(),
 		HttpStart: &events.HttpStart{
@@ -176,13 +172,11 @@ func createStartMessage(requestId uint64, peerType events.PeerType) []byte {
 			InstanceIndex: proto.Int32(6),
 			InstanceId:    proto.String("fake-instance-id-1"),
 		},
-	})
-
-	return message
+	}
 }
 
-func createStopMessage(requestId uint64, peerType events.PeerType) []byte {
-	message, _ := proto.Marshal(&events.Envelope{
+func createStopMessage(requestId uint64, peerType events.PeerType) *events.Envelope {
+	return &events.Envelope{
 		Origin:    proto.String("fake-origin-2"),
 		EventType: events.Envelope_HttpStop.Enum(),
 		HttpStop: &events.HttpStop{
@@ -200,9 +194,7 @@ func createStopMessage(requestId uint64, peerType events.PeerType) []byte {
 				High: proto.Uint64(106),
 			},
 		},
-	})
-
-	return message
+	}
 }
 
 func createStartStopMessage(requestId uint64, peerType events.PeerType) *events.Envelope {
@@ -237,11 +229,10 @@ func createStartStopMessage(requestId uint64, peerType events.PeerType) *events.
 	}
 }
 
-func createHeartbeatMessage() []byte {
-	message, _ := proto.Marshal(&events.Envelope{
+func createHeartbeatMessage() *events.Envelope {
+	return &events.Envelope{
 		Origin:    proto.String("fake-origin-3"),
 		EventType: events.Envelope_Heartbeat.Enum(),
 		Heartbeat: factories.NewHeartbeat(1, 2, 3),
-	})
-	return message
+	}
 }
