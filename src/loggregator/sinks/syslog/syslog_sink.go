@@ -40,7 +40,7 @@ func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, s
 
 func (s *SyslogSink) Run(inputChan <-chan *logmessage.Message) {
 	s.logger.Infof("Syslog Sink %s: Running.", s.drainUrl)
-	defer s.logger.Errorf("Syslog Sink %s: Stopped. This should never happen", s.drainUrl)
+	defer s.logger.Errorf("Syslog Sink %s: Stopped.", s.drainUrl)
 
 	backoffStrategy := retrystrategy.NewExponentialRetryStrategy()
 	numberOfTries := 0
