@@ -82,7 +82,7 @@ var _ = Describe("VarzForwarder", func() {
 	})
 })
 
-func metric(origin, name string, value uint64) *events.Envelope {
+func metric(origin, name string, value float64) *events.Envelope {
 	return &events.Envelope{
 		Origin:      &origin,
 		EventType:   events.Envelope_ValueMetric.Enum(),

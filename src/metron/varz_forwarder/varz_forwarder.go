@@ -12,7 +12,7 @@ type VarzForwarder struct {
 	sync.RWMutex
 }
 
-type metricsByName map[string]uint64
+type metricsByName map[string]float64
 
 func NewVarzForwarder() *VarzForwarder {
 	return &VarzForwarder{

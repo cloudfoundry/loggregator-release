@@ -282,7 +282,8 @@ func basicValueMessage() []byte {
 		EventType: events.Envelope_ValueMetric.Enum(),
 		ValueMetric: &events.ValueMetric{
 			Name:  proto.String("metric"),
-			Value: proto.Uint64(42),
+			Value: proto.Float64(42),
+			Unit:  proto.String("count"),
 		},
 	})
 
