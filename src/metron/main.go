@@ -48,7 +48,7 @@ func main() {
 
 	unmarshaller := dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger)
 	marshaller := dropsonde_marshaller.NewDropsondeMarshaller(logger)
-	varzForwarder := varz_forwarder.NewVarzForwarder()
+	varzForwarder := varz_forwarder.NewVarzForwarder(config.Job)
 	messageAggregator := message_aggregator.NewMessageAggregator(logger)
 
 	instrumentables := []instrumentation.Instrumentable{
@@ -120,6 +120,7 @@ type Config struct {
 	cfcomponent.Config
 	Zone                          string
 	Index                         uint
+	Job                           string
 	LegacyIncomingMessagesPort    int
 	DropsondeIncomingMessagesPort int
 	EtcdUrls                      []string

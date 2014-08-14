@@ -1,5 +1,6 @@
 {
     "Index": 0,
+    "Job": "test-component",
     "VarzPort": 1234,
     "VarzUser": "admin",
     "VarzPass": "admin",

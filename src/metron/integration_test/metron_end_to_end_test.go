@@ -142,6 +142,7 @@ var _ = Describe("Varz Endpoints", func() {
 			Expect(context.Metrics).To(HaveLen(1))
 			Expect(context.Metrics[0].Name).To(Equal("fake-origin-2.metric"))
 			Expect(context.Metrics[0].Value).To(BeNumerically("==", 42))
+			Expect(context.Metrics[0].Tags["component"]).To(Equal("test-component"))
 		})
 	})
 

@@ -9,14 +9,16 @@ import (
 
 type VarzForwarder struct {
 	metricsByOrigin map[string]metricsByName
+	componentName   string
 	sync.RWMutex
 }
 
 type metricsByName map[string]float64
 
-func NewVarzForwarder() *VarzForwarder {
+func NewVarzForwarder(componentName string) *VarzForwarder {
 	return &VarzForwarder{
 		metricsByOrigin: make(map[string]metricsByName),
+		componentName:   componentName,
 	}
 }
 
@@ -36,11 +38,14 @@ func (vf *VarzForwarder) Emit() instrumentation.Context {
 
 	c := instrumentation.Context{Name: "forwarder"}
 	metrics := []instrumentation.Metric{}
+	tags := map[string]interface{}{
+		"component": vf.componentName,
+	}
 
 	for origin, originMetrics := range vf.metricsByOrigin {
 		for name, value := range originMetrics {
 			metricName := fmt.Sprintf("%s.%s", origin, name)
-			metrics = append(metrics, instrumentation.Metric{Name: metricName, Value: value})
+			metrics = append(metrics, instrumentation.Metric{Name: metricName, Value: value, Tags: tags})
 		}
 	}
 

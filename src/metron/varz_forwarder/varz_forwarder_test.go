@@ -18,7 +18,7 @@ var _ = Describe("VarzForwarder", func() {
 	)
 
 	BeforeEach(func() {
-		forwarder = varz_forwarder.NewVarzForwarder()
+		forwarder = varz_forwarder.NewVarzForwarder("test-component")
 		metricChan = make(chan *events.Envelope)
 		outputChan = make(chan *events.Envelope, 2)
 	})
@@ -50,6 +50,15 @@ var _ = Describe("VarzForwarder", func() {
 			Expect(varz.Metrics[0].Value).To(BeNumerically("==", 1))
 			Expect(varz.Metrics[1].Name).To(Equal("origin.metric-2"))
 			Expect(varz.Metrics[1].Value).To(BeNumerically("==", 2))
+		})
+
+		It("includes the VM name as a tag on each metric", func() {
+			perform()
+			metricChan <- metric("origin", "metric", 1)
+
+			var varz instrumentation.Context
+			Eventually(func() []instrumentation.Metric { varz = forwarder.Emit(); return varz.Metrics }).Should(HaveLen(1))
+			Expect(varz.Metrics[0].Tags["component"]).To(Equal("test-component"))
 		})
 
 		It("ignores non-ValueMetric messages", func() {
