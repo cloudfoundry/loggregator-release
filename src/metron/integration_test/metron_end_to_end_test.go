@@ -10,15 +10,16 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/localip"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/config"
-	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"os/exec"
 	"time"
+
+	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/config"
+	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
 )
 
 var _ = BeforeSuite(func() {
@@ -129,6 +130,18 @@ var _ = Describe("Varz Endpoints", func() {
 				context = getContext("MessageAggregator")
 				return context.Metrics[3].Value
 			}).Should(Equal(expectedValue), "uncategorizedEvents counter did not increment")
+		})
+
+		It("includes value metrics from sources", func() {
+			connection, _ := net.Dial("udp", "localhost:51161")
+			connection.Write(basicValueMessage())
+
+			Eventually(func() *instrumentation.Context { return getContext("forwarder") }).ShouldNot(BeNil())
+			context := getContext("forwarder")
+
+			Expect(context.Metrics).To(HaveLen(1))
+			Expect(context.Metrics[0].Name).To(Equal("fake-origin-2.metric"))
+			Expect(context.Metrics[0].Value).To(BeNumerically("==", 42))
 		})
 	})
 
@@ -257,6 +270,19 @@ func basicHeartbeatMessage() []byte {
 			},
 			InstanceIndex: proto.Int32(6),
 			InstanceId:    proto.String("fake-instance-id-1"),
+		},
+	})
+
+	return message
+}
+
+func basicValueMessage() []byte {
+	message, _ := proto.Marshal(&events.Envelope{
+		Origin:    proto.String("fake-origin-2"),
+		EventType: events.Envelope_ValueMetric.Enum(),
+		ValueMetric: &events.ValueMetric{
+			Name:  proto.String("metric"),
+			Value: proto.Uint64(42),
 		},
 	})
 

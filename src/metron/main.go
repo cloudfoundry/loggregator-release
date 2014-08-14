@@ -18,6 +18,7 @@ import (
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	"metron/message_aggregator"
+	"metron/varz_forwarder"
 	"strconv"
 	"time"
 )
@@ -47,15 +48,16 @@ func main() {
 
 	unmarshaller := dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger)
 	marshaller := dropsonde_marshaller.NewDropsondeMarshaller(logger)
+	varzForwarder := varz_forwarder.NewVarzForwarder()
 	messageAggregator := message_aggregator.NewMessageAggregator(logger)
-	aggregatedDropsondeEventChan := make(chan *events.Envelope)
 
 	instrumentables := []instrumentation.Instrumentable{
 		// TODO: delete next line when "legacy" format goes away
 		legacyMessageListener,
 		dropsondeMessageListener,
-		messageAggregator,
 		unmarshaller,
+		varzForwarder,
+		messageAggregator,
 		marshaller,
 	}
 
@@ -73,15 +75,19 @@ func main() {
 	dropsondeEventChan := make(chan *events.Envelope)
 	go unmarshaller.Run(dropsondeMessageChan, dropsondeEventChan)
 
-	go messageAggregator.Run(dropsondeEventChan, aggregatedDropsondeEventChan)
+	varzForwardedEventChan := make(chan *events.Envelope)
+	go varzForwarder.Run(dropsondeEventChan, varzForwardedEventChan)
 
-	go dropsondeClientPool.RunUpdateLoop(dropsondePoolEtcdAdapter, "/healthstatus/loggregator/"+config.Zone, nil, time.Duration(config.EtcdQueryIntervalMilliseconds)*time.Millisecond)
+	aggregatedDropsondeEventChan := make(chan *events.Envelope)
+	go messageAggregator.Run(varzForwardedEventChan, aggregatedDropsondeEventChan)
 
 	reMarshalledMessageChan := make(chan []byte)
 	go marshaller.Run(aggregatedDropsondeEventChan, reMarshalledMessageChan)
 
 	signedMessageChan := make(chan ([]byte))
 	go signMessages(config.SharedSecret, reMarshalledMessageChan, signedMessageChan)
+
+	go dropsondeClientPool.RunUpdateLoop(dropsondePoolEtcdAdapter, "/healthstatus/loggregator/"+config.Zone, nil, time.Duration(config.EtcdQueryIntervalMilliseconds)*time.Millisecond)
 
 	forwardMessagesToLoggregator(dropsondeClientPool, signedMessageChan, logger)
 }
