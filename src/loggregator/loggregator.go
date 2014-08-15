@@ -86,6 +86,7 @@ type Loggregator struct {
 	storeAdapter storeadapter.StoreAdapter
 
 	newAppServiceChan, deletedAppServiceChan <-chan appservice.AppService
+	stopChan                                 chan struct{}
 	sync.Mutex
 	sync.WaitGroup
 }
@@ -109,6 +110,7 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 	appStoreCache := cache.NewAppServiceCache()
 	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
 	appStore := store.NewAppServiceStore(storeAdapter, appStoreWatcher)
+	stopChan := make(chan struct{})
 	return &Loggregator{
 		Logger:                     logger,
 		listener:                   listener,
@@ -129,6 +131,7 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 		dropsondeChan:              make(chan *events.Envelope),
 		signatureVerifier:          signatureVerifier,
 		dropsondeVerifiedBytesChan: make(chan []byte),
+		stopChan:                   stopChan,
 	}
 }
 
@@ -145,7 +148,7 @@ func (l *Loggregator) Start() {
 
 	go func() {
 		defer l.Done()
-		l.appStoreWatcher.Run()
+		l.appStoreWatcher.Run(l.stopChan)
 	}()
 
 	go func() {
@@ -215,6 +218,7 @@ func (l *Loggregator) Stop() {
 	l.messageRouter.Stop()
 	l.websocketServer.Stop()
 	l.storeAdapter.Disconnect()
+	close(l.stopChan)
 
 	l.Wait()
 	close(l.errChan)
