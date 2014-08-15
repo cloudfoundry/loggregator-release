@@ -137,12 +137,24 @@ var _ = Describe("Varz Endpoints", func() {
 			connection.Write(basicValueMessage())
 
 			Eventually(func() *instrumentation.Context { return getContext("forwarder") }).ShouldNot(BeNil())
-			context := getContext("forwarder")
 
-			Expect(context.Metrics).To(HaveLen(1))
-			Expect(context.Metrics[0].Name).To(Equal("fake-origin-2.metric"))
-			Expect(context.Metrics[0].Value).To(BeNumerically("==", 42))
-			Expect(context.Metrics[0].Tags["component"]).To(Equal("test-component"))
+			metric := getMetricFromContext(getContext("forwarder"), "fake-origin-2.fake-metric-name")
+			Expect(metric.Name).To(Equal("fake-origin-2.fake-metric-name"))
+			Expect(metric.Value).To(BeNumerically("==", 42))
+			Expect(metric.Tags["component"]).To(Equal("test-component"))
+		})
+
+		It("includes counter event metrics from sources", func() {
+			connection, _ := net.Dial("udp", "localhost:51161")
+			connection.Write(basicCounterEventMessage())
+			connection.Write(basicCounterEventMessage())
+
+			Eventually(func() *instrumentation.Context { return getContext("forwarder") }).ShouldNot(BeNil())
+
+			metric := getMetricFromContext(getContext("forwarder"), "fake-origin-2.fake-counter-event-name")
+			Expect(metric.Name).To(Equal("fake-origin-2.fake-counter-event-name"))
+			Expect(metric.Value).To(BeNumerically("==", 2))
+			Expect(metric.Tags["component"]).To(Equal("test-component"))
 		})
 	})
 
@@ -282,11 +294,32 @@ func basicValueMessage() []byte {
 		Origin:    proto.String("fake-origin-2"),
 		EventType: events.Envelope_ValueMetric.Enum(),
 		ValueMetric: &events.ValueMetric{
-			Name:  proto.String("metric"),
+			Name:  proto.String("fake-metric-name"),
 			Value: proto.Float64(42),
-			Unit:  proto.String("count"),
+			Unit:  proto.String("fake-unit"),
 		},
 	})
 
 	return message
+}
+
+func basicCounterEventMessage() []byte {
+	message, _ := proto.Marshal(&events.Envelope{
+		Origin:    proto.String("fake-origin-2"),
+		EventType: events.Envelope_CounterEvent.Enum(),
+		CounterEvent: &events.CounterEvent{
+			Name: proto.String("fake-counter-event-name"),
+		},
+	})
+
+	return message
+}
+
+func getMetricFromContext(context *instrumentation.Context, name string) *instrumentation.Metric {
+	for _, metric := range context.Metrics {
+		if metric.Name == name {
+			return &metric
+		}
+	}
+	return nil
 }

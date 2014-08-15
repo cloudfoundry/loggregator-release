@@ -52,6 +52,20 @@ var _ = Describe("VarzForwarder", func() {
 			Expect(varz.Metrics[1].Value).To(BeNumerically("==", 2))
 		})
 
+		It("increments value for each CounterEvent name in a given origin", func() {
+			perform()
+			metricChan <- counterEvent("origin-0", "metric-1")
+			metricChan <- counterEvent("origin-0", "metric-1")
+			metricChan <- counterEvent("origin-1", "metric-1")
+
+			var varz instrumentation.Context
+			Eventually(func() []instrumentation.Metric { varz = forwarder.Emit(); return varz.Metrics }).Should(HaveLen(2))
+			Expect(varz.Metrics[0].Name).To(Equal("origin-0.metric-1"))
+			Expect(varz.Metrics[0].Value).To(BeNumerically("==", 2))
+			Expect(varz.Metrics[1].Name).To(Equal("origin-1.metric-1"))
+			Expect(varz.Metrics[1].Value).To(BeNumerically("==", 1))
+		})
+
 		It("includes the VM name as a tag on each metric", func() {
 			perform()
 			metricChan <- metric("origin", "metric", 1)
@@ -96,6 +110,14 @@ func metric(origin, name string, value float64) *events.Envelope {
 		Origin:      &origin,
 		EventType:   events.Envelope_ValueMetric.Enum(),
 		ValueMetric: &events.ValueMetric{Name: &name, Value: &value},
+	}
+}
+
+func counterEvent(origin, name string) *events.Envelope {
+	return &events.Envelope{
+		Origin:       &origin,
+		EventType:    events.Envelope_CounterEvent.Enum(),
+		CounterEvent: &events.CounterEvent{Name: &name},
 	}
 }
 

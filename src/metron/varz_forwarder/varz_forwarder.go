@@ -24,12 +24,28 @@ func NewVarzForwarder(componentName string) *VarzForwarder {
 
 func (vf *VarzForwarder) Run(metricChan <-chan *events.Envelope, outputChan chan<- *events.Envelope) {
 	for metric := range metricChan {
-		if metric.GetEventType() == events.Envelope_ValueMetric {
-			vf.addMetric(metric)
-		}
+		vf.addMetric(metric)
 
 		outputChan <- metric
 	}
+}
+
+func (vf *VarzForwarder) addMetric(metric *events.Envelope) {
+	metricProcessor, ok := metricProcessorsByType[metric.GetEventType()]
+	if !ok {
+		return
+	}
+
+	vf.Lock()
+	defer vf.Unlock()
+
+	originMetrics, ok := vf.metricsByOrigin[metric.GetOrigin()]
+	if !ok {
+		vf.metricsByOrigin[metric.GetOrigin()] = make(metricsByName)
+		originMetrics = vf.metricsByOrigin[metric.GetOrigin()]
+	}
+
+	metricProcessor(originMetrics, metric)
 }
 
 func (vf *VarzForwarder) Emit() instrumentation.Context {
@@ -53,15 +69,22 @@ func (vf *VarzForwarder) Emit() instrumentation.Context {
 	return c
 }
 
-func (vf *VarzForwarder) addMetric(metric *events.Envelope) {
-	vf.Lock()
-	defer vf.Unlock()
+var metricProcessorsByType = map[events.Envelope_EventType]func(metricsByName, *events.Envelope){
+	events.Envelope_ValueMetric:  metricsByName.processValueMetric,
+	events.Envelope_CounterEvent: metricsByName.processCounterEvent,
+}
 
-	originMetrics, ok := vf.metricsByOrigin[metric.GetOrigin()]
+func (metrics metricsByName) processValueMetric(metric *events.Envelope) {
+	metrics[metric.GetValueMetric().GetName()] = metric.GetValueMetric().GetValue()
+}
+
+func (metrics metricsByName) processCounterEvent(metric *events.Envelope) {
+	eventName := metric.GetCounterEvent().GetName()
+	count, ok := metrics[eventName]
+
 	if !ok {
-		vf.metricsByOrigin[metric.GetOrigin()] = make(metricsByName)
-		originMetrics = vf.metricsByOrigin[metric.GetOrigin()]
+		metrics[eventName] = 1
+	} else {
+		metrics[eventName] = count + 1
 	}
-
-	originMetrics[metric.GetValueMetric().GetName()] = metric.GetValueMetric().GetValue()
 }
