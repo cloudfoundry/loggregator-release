@@ -308,7 +308,8 @@ func basicCounterEventMessage() []byte {
 		Origin:    proto.String("fake-origin-2"),
 		EventType: events.Envelope_CounterEvent.Enum(),
 		CounterEvent: &events.CounterEvent{
-			Name: proto.String("fake-counter-event-name"),
+			Name:  proto.String("fake-counter-event-name"),
+			Delta: proto.Uint64(1),
 		},
 	})
 

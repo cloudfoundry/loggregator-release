@@ -58,7 +58,7 @@ var _ = Describe("LogMessageUnmarshaller", func() {
 				inChan <- []byte{1, 2, 3, 4}
 				Expect(outChan).To(BeEmpty())
 				error := <-errorChan
-				Expect(error.Error()).To(Equal("proto: illegal tag 0"))
+				Expect(error.Error()).To(ContainSubstring("illegal tag 0"))
 				close(done)
 			})
 

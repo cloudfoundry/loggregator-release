@@ -118,7 +118,7 @@ func main() {
 		&DeaAgentHealthMonitor{},
 		config.VarzPort,
 		[]string{config.VarzUser, config.VarzPass},
-		[]instrumentation.Instrumentable{loggregatorEmitter.LoggregatorClient},
+		[]instrumentation.Instrumentable{},
 	)
 
 	if err != nil {
