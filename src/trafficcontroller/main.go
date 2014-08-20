@@ -13,6 +13,7 @@ import (
 	"trafficcontroller/authorization"
 	"trafficcontroller/outputproxy"
 
+	_ "github.com/cloudfoundry/dropsonde/autowire"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
@@ -21,7 +22,6 @@ import (
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/storeadapter/workerpool"
-	_ "github.com/cloudfoundry/dropsonde/autowire"
 )
 
 var DefaultStoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
