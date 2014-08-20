@@ -19,51 +19,6 @@ import (
 	testhelpers "trafficcontroller_testhelpers"
 )
 
-type fakeWebsocketHandler struct {
-	called             bool
-	lastResponseWriter http.ResponseWriter
-	lastRequest        *http.Request
-}
-
-func (f *fakeWebsocketHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	f.called = true
-	f.lastRequest = r
-	f.lastResponseWriter = rw
-}
-
-type fakeHttpHandler struct {
-	called bool
-}
-
-func (f *fakeHttpHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	f.called = true
-}
-
-type fakeLoggregatorServerProvider struct {
-	serverAddresses []string
-	callCount       int
-	sync.Mutex
-}
-
-func (p *fakeLoggregatorServerProvider) CallCount() int {
-	p.Lock()
-	defer p.Unlock()
-	return p.callCount
-}
-
-func (p *fakeLoggregatorServerProvider) SetServerAddresses(addresses []string) {
-	p.Lock()
-	defer p.Unlock()
-	p.serverAddresses = addresses
-}
-
-func (p *fakeLoggregatorServerProvider) LoggregatorServerAddresses() []string {
-	p.Lock()
-	defer p.Unlock()
-	p.callCount += 1
-	return p.serverAddresses
-}
-
 var _ = Describe("OutputProxySingleHasher", func() {
 
 	var fwsh *fakeWebsocketHandler
@@ -110,34 +65,39 @@ var _ = Describe("OutputProxySingleHasher", func() {
 	})
 
 	Context("Auth Params", func() {
-		It("Should Authenticate with Auth Query Params", func() {
-			websocketClientWithQueryParamAuth(ts, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+		It("should NOT authenticate with Auth Query Params", func() {
+			_, resp, err := websocketClientWithQueryParamAuth(ts, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+			assertAuthorizationError(resp, err, "Error: Authorization not provided")
+		})
+	})
 
-			req := fwsh.lastRequest
-			Expect(req.URL.RawQuery).To(Equal("app=myApp&authorization=bearer+correctAuthorizationToken"))
+	Context("Auth in cookie", func() {
+		It("should Authenticate with cookie Params", func() {
+			_, resp, _ := websocketClientWithCookieAuth(ts, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+
+			Expect(resp.StatusCode).NotTo(Equal(http.StatusUnauthorized))
 		})
 
 		Context("when auth fails", func() {
-			It("Should Fail to Authenticate with Incorrect Auth Query Params", func() {
-				_, resp, err := websocketClientWithQueryParamAuth(ts, "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN)
+			It("should Fail to Authenticate with Incorrect Auth Query Params", func() {
+				_, resp, err := websocketClientWithCookieAuth(ts, "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN)
 				assertAuthorizationError(resp, err, "Error: Invalid authorization")
 			})
 
-			It("Should Fail to Authenticate without Authorization", func() {
-				_, resp, err := websocketClientWithQueryParamAuth(ts, "/?app=myApp", "")
+			It("should Fail to Authenticate without Authorization", func() {
+				_, resp, err := websocketClientWithCookieAuth(ts, "/?app=myApp", "")
 				assertAuthorizationError(resp, err, "Error: Authorization not provided")
 			})
 
-			It("Should Fail With Invalid Target", func() {
-				_, resp, err := websocketClientWithQueryParamAuth(ts, "/invalid_target", testhelpers.VALID_AUTHENTICATION_TOKEN)
+			It("should Fail With Invalid Target", func() {
+				_, resp, err := websocketClientWithCookieAuth(ts, "/invalid_target", testhelpers.VALID_AUTHENTICATION_TOKEN)
 				assertAuthorizationError(resp, err, "Error: Invalid target")
 			})
 		})
-
 	})
 
 	Context("Auth Headers", func() {
-		It("Should Authenticate with Correct Auth Header", func() {
+		It("should Authenticate with Correct Auth Header", func() {
 			websocketClientWithHeaderAuth(ts, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
 
 			req := fwsh.lastRequest
@@ -147,7 +107,7 @@ var _ = Describe("OutputProxySingleHasher", func() {
 		})
 
 		Context("when auth fails", func() {
-			It("Should Fail to Authenticate with Incorrect Auth Header", func() {
+			It("should Fail to Authenticate with Incorrect Auth Header", func() {
 				_, resp, err := websocketClientWithHeaderAuth(ts, "/?app=myApp", testhelpers.INVALID_AUTHENTICATION_TOKEN)
 				assertAuthorizationError(resp, err, "Error: Invalid authorization")
 			})
@@ -295,6 +255,14 @@ func websocketClientWithQueryParamAuth(ts *httptest.Server, path string, auth st
 	return dialConnection(url, http.Header{})
 }
 
+func websocketClientWithCookieAuth(ts *httptest.Server, path string, auth string) ([]byte, *http.Response, error) {
+	u := fmt.Sprintf("ws://%s%s", ts.Listener.Addr(), path)
+
+	h := http.Header{}
+	h.Add("Cookie", "authorization="+url.QueryEscape(auth))
+	return dialConnection(u, h)
+}
+
 func websocketClientWithHeaderAuth(ts *httptest.Server, path string, auth string) ([]byte, *http.Response, error) {
 	url := fmt.Sprintf("ws://%s%s", ts.Listener.Addr(), path)
 	headers := http.Header{"Authorization": []string{auth}}
@@ -411,4 +379,49 @@ func serverUp(ts *httptest.Server) func() bool {
 		resp, _ := http.Head(url)
 		return resp != nil && resp.StatusCode == http.StatusOK
 	}
+}
+
+type fakeWebsocketHandler struct {
+	called             bool
+	lastResponseWriter http.ResponseWriter
+	lastRequest        *http.Request
+}
+
+func (f *fakeWebsocketHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	f.called = true
+	f.lastRequest = r
+	f.lastResponseWriter = rw
+}
+
+type fakeHttpHandler struct {
+	called bool
+}
+
+func (f *fakeHttpHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	f.called = true
+}
+
+type fakeLoggregatorServerProvider struct {
+	serverAddresses []string
+	callCount       int
+	sync.Mutex
+}
+
+func (p *fakeLoggregatorServerProvider) CallCount() int {
+	p.Lock()
+	defer p.Unlock()
+	return p.callCount
+}
+
+func (p *fakeLoggregatorServerProvider) SetServerAddresses(addresses []string) {
+	p.Lock()
+	defer p.Unlock()
+	p.serverAddresses = addresses
+}
+
+func (p *fakeLoggregatorServerProvider) LoggregatorServerAddresses() []string {
+	p.Lock()
+	defer p.Unlock()
+	p.callCount += 1
+	return p.serverAddresses
 }

@@ -125,7 +125,7 @@ func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	authToken := r.Header.Get("Authorization")
 	if authToken == "" {
-		authToken = extractAuthTokenFromUrl(r.URL)
+		authToken = extractAuthTokenFromCookie(r.Cookies())
 	}
 
 	authorized, errorMessage := proxy.isAuthorized(appId, authToken, clientAddress)
@@ -160,6 +160,21 @@ func extractAuthTokenFromUrl(u *url.URL) string {
 		authorization = queryValues["authorization"][0]
 	}
 	return authorization
+}
+
+func extractAuthTokenFromCookie(cookies []*http.Cookie) string {
+	for _, cookie := range cookies {
+		if cookie.Name == "authorization" {
+			value, err := url.QueryUnescape(cookie.Value)
+			if err != nil {
+				return ""
+			}
+
+			return value
+		}
+	}
+
+	return ""
 }
 
 func recentViaHttp(r *http.Request) bool {
