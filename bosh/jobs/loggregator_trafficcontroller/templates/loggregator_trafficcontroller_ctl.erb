@@ -4,6 +4,9 @@ RUN_DIR=/var/vcap/sys/run/loggregator_trafficcontroller
 LOG_DIR=/var/vcap/sys/log/loggregator_trafficcontroller
 PIDFILE=$RUN_DIR/loggregator_trafficcontroller.pid
 
+export DROPSONDE_ORIGIN=LoggregatorTrafficcontroller
+export DROPSONDE_DESTINATION=localhost:<%= p("metron_endpoint.dropsonde_port") %>
+
 source /var/vcap/packages/common/utils.sh
 
 case $1 in
