@@ -14,6 +14,16 @@ var _ = Describe("Main", func() {
 			logFilePath = "./test_assets/stdout.log"
 		)
 
+		It("reads the outgoing dropsonde port from config", func() {
+			configFile := "./test_assets/minimal_loggregator_trafficcontroller.json"
+
+			var config *main.Config
+
+			config, _, _ = main.ParseConfig(&logLevel, &configFile, &logFilePath)
+
+			Expect(config.OutgoingDropsondePort).To(Equal(uint32(4566)))
+		})
+
 		Context("with empty Loggregator ports", func() {
 			It("uses defaults", func() {
 				configFile := "./test_assets/minimal_loggregator_trafficcontroller.json"

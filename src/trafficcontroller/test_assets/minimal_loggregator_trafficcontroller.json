@@ -1,4 +1,5 @@
 {
+    "OutgoingDropsondePort": 4566,
     "IncomingPort": 8765,
     "OutgoingPort": 4567,
     "SkipCertVerify": true,
@@ -8,7 +9,7 @@
     "ApiHost": "https://vcap.me",
     "SystemDomain": "vcap.me",
 
-    "NatsHosts": ["0.0.0.0"],
+    "NatsHosts": [],
     "NatsPort": 4222,
     "NatsUser": "nats",
     "NatsPass": "nats",

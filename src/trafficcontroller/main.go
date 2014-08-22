@@ -22,6 +22,9 @@ import (
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/storeadapter/workerpool"
+	"github.com/cloudfoundry/yagnats"
+	"github.com/cloudfoundry/yagnats/fakeyagnats"
+	"trafficcontroller/dropsondeproxy"
 )
 
 var DefaultStoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
@@ -47,6 +50,7 @@ type Config struct {
 	LoggregatorOutgoingPort uint32
 	IncomingPort            uint32
 	OutgoingPort            uint32
+	OutgoingDropsondePort   uint32
 	SystemDomain            string
 	SkipCertVerify          bool
 }
@@ -122,6 +126,9 @@ func main() {
 		panic(err)
 	}
 
+	dropsondeProxy := makeDropsondeProxy(config, logger)
+	startOutgoingDropsondeProxy(net.JoinHostPort(dropsondeProxy.IpAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dropsondeProxy)
+
 	proxy := makeOutgoingProxy(config, logger)
 	startOutgoingProxy(net.JoinHostPort(proxy.IpAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), proxy)
 
@@ -160,6 +167,13 @@ func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gos
 	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller", config.Config)
 	logger.Info("Startup: Setting up the loggregator traffic controller")
 
+	if len(config.NatsHosts) == 0 {
+		logger.Warn("Startup: Did not receive a NATS host - not going to regsiter component")
+		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.NATSClient, error) {
+			return fakeyagnats.New(), nil
+		}
+	}
+
 	err = config.validate(logger)
 	if err != nil {
 		return nil, nil, err
@@ -181,6 +195,15 @@ func makeOutgoingProxy(config *Config, logger *gosteno.Logger) *outputproxy.Prox
 	return proxy
 }
 
+func startOutgoingProxy(host string, proxy http.Handler) {
+	go func() {
+		err := http.ListenAndServe(host, proxy)
+		if err != nil {
+			panic(err)
+		}
+	}()
+}
+
 func setupMonitoring(proxy *outputproxy.Proxy, config *Config, logger *gosteno.Logger) {
 	cr := collectorregistrar.NewCollectorRegistrar(config.MbusClient, logger)
 	err := cr.RegisterWithCollector(proxy.Component)
@@ -196,7 +219,13 @@ func setupMonitoring(proxy *outputproxy.Proxy, config *Config, logger *gosteno.L
 	}()
 }
 
-func startOutgoingProxy(host string, proxy http.Handler) {
+func makeDropsondeProxy(config *Config, logger *gosteno.Logger) *dropsondeproxy.Proxy {
+	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
+	proxy := dropsondeproxy.NewDropsondeProxy(authorizer, config.Config, logger)
+	return proxy
+}
+
+func startOutgoingDropsondeProxy(host string, proxy http.Handler) {
 	go func() {
 		err := http.ListenAndServe(host, proxy)
 		if err != nil {

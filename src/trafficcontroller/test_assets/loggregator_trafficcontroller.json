@@ -3,6 +3,7 @@
     "JobIndex": 3,
     "EtcdUrls"    : ["http://127.0.0.1:4001", "http://127.0.0.1:4002"],
     "EtcdMaxConcurrentRequests": 5,
+    "OutgoingDropsondePort": 4566,
     "IncomingPort": 8765,
     "OutgoingPort": 4567,
     "LoggregatorIncomingPort": 8766,
@@ -14,7 +15,7 @@
     "ApiHost": "https://vcap.me",
     "SystemDomain": "vcap.me",
 
-    "NatsHosts": ["0.0.0.0"],
+    "NatsHosts": [],
     "NatsPort": 4222,
     "NatsUser": "nats",
     "NatsPass": "nats",
