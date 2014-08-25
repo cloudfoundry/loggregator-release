@@ -26,9 +26,10 @@ function red {
 
 packages=(
     deaagent
-    loggregator
     trafficcontroller
     metron
+    loggregator
+    doppler
 )
 
 for package in "${packages[@]}"

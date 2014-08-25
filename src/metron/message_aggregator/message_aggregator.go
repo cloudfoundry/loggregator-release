@@ -2,7 +2,6 @@ package message_aggregator
 
 import (
 	"github.com/cloudfoundry/dropsonde/events"
-	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/davecgh/go-spew/spew"
@@ -79,7 +78,7 @@ func (m *messageAggregator) handleHttpStart(envelope *events.Envelope) {
 	m.logger.Debugf("handling HTTP start message %v", spew.Sprintf("%v", envelope))
 	startEvent := envelope.GetHttpStart()
 
-	requestId := factories.StringFromUUID(startEvent.RequestId)
+	requestId := startEvent.RequestId.FormattedString()
 	eventId := eventId{requestId: requestId, peerType: startEvent.GetPeerType()}
 	m.startEventsByEventId[eventId] = startEventEntry{startEvent: startEvent, entryTime: time.Now()}
 }
@@ -90,7 +89,7 @@ func (m *messageAggregator) handleHttpStop(envelope *events.Envelope) *events.En
 	m.logger.Debugf("handling HTTP stop message %v", spew.Sprintf("%v", envelope))
 	stopEvent := envelope.GetHttpStop()
 
-	requestId := factories.StringFromUUID(stopEvent.RequestId)
+	requestId := stopEvent.RequestId.FormattedString()
 	eventId := eventId{requestId: requestId, peerType: stopEvent.GetPeerType()}
 
 	startEventEntry, ok := m.startEventsByEventId[eventId]
