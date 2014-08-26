@@ -43,6 +43,7 @@ func (d *DumpSink) Run(inputChan <-chan *logmessage.Message) {
 			d.addMsg(msg)
 		case <-timer.C:
 			timer.Stop()
+			d.logger.Debugf("Dump sink for app %s terminating due to inactivity", d.appId)
 			return
 		}
 	}
