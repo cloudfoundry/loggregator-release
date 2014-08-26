@@ -133,8 +133,6 @@ func (sinkManager *SinkManager) UnregisterSink(sink sinks.Sink) {
 
 	if syslogSink, ok := sink.(*syslog.SyslogSink); ok {
 		syslogSink.Disconnect()
-	} else if _, ok := sink.(*dump.DumpSink); ok {
-		sinkManager.appStoreUpdateChan <- appservice.AppServices{AppId: sink.AppId()}
 	}
 
 	sinkManager.logger.Debugf("SinkManager: Sink with identifier %s requested closing. Closed it.", sink.Identifier())

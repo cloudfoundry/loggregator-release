@@ -227,21 +227,6 @@ var _ = Describe("SinkManager", func() {
 
 	})
 
-	Context("when a dump sink times out", func() {
-		BeforeEach(func() {
-			newAppServiceChan <- appservice.AppService{AppId: "appId", Url: "syslog://127.0.1.1:887"}
-		})
-
-		It("removes the app from etcd", func(done Done) {
-			dumpSink := dump.NewDumpSink("appId", 1, loggertesthelper.Logger(), 1*time.Millisecond)
-			sinkManager.RegisterSink(dumpSink)
-
-			Expect(<-appServicesChan).To(Equal(appservice.AppServices{AppId: "appId"}))
-			close(done)
-		})
-
-	})
-
 	Describe("UnregisterSink", func() {
 		Context("with a DumpSink", func() {
 			var dumpSink *dump.DumpSink
