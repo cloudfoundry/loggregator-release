@@ -23,15 +23,17 @@ type WebsocketSink struct {
 	sentMessageCount    uint64
 	sentByteCount       uint64
 	wsMessageBufferSize uint
+	dropsondeOrigin     string
 }
 
-func NewWebsocketSink(appId string, givenLogger *gosteno.Logger, ws remoteMessageWriter, wsMessageBufferSize uint) *WebsocketSink {
+func NewWebsocketSink(appId string, givenLogger *gosteno.Logger, ws remoteMessageWriter, wsMessageBufferSize uint, dropsondeOrigin string) *WebsocketSink {
 	return &WebsocketSink{
 		logger:              givenLogger,
 		appId:               appId,
 		ws:                  ws,
 		clientAddress:       ws.RemoteAddr(),
 		wsMessageBufferSize: wsMessageBufferSize,
+		dropsondeOrigin:     dropsondeOrigin,
 	}
 }
 
@@ -50,7 +52,7 @@ func (sink *WebsocketSink) ShouldReceiveErrors() bool {
 func (sink *WebsocketSink) Run(inputChan <-chan *envelopewrapper.WrappedEnvelope) {
 	sink.logger.Debugf("Websocket Sink %s: Running for appId [%s]", sink.clientAddress, sink.appId)
 
-	buffer := sinks.RunTruncatingBuffer(inputChan, sink.wsMessageBufferSize, sink.logger)
+	buffer := sinks.RunTruncatingBuffer(inputChan, sink.wsMessageBufferSize, sink.logger, sink.dropsondeOrigin)
 	for {
 		sink.logger.Debugf("Websocket Sink %s: Waiting for activity", sink.clientAddress)
 		message, ok := <-buffer.GetOutputChannel()

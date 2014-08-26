@@ -3,9 +3,10 @@ package blacklist_test
 import (
 	"doppler/iprange"
 	"doppler/sinkserver/blacklist"
+	"net/url"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"net/url"
 )
 
 var _ = Describe("UrlBlacklistManager", func() {

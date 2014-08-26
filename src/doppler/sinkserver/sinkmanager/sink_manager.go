@@ -33,9 +33,10 @@ type SinkManager struct {
 	logger              *gosteno.Logger
 	appStoreUpdateChan  chan<- appservice.AppServices
 	stopped             bool
+	DropsondeOrigin     string
 }
 
-func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger) (*SinkManager, <-chan appservice.AppServices) {
+func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger, dropsondeOrigin string) (*SinkManager, <-chan appservice.AppServices) {
 	appStoreUpdateChan := make(chan appservice.AppServices, 10)
 	return &SinkManager{
 		doneChannel:         make(chan struct{}),
@@ -47,6 +48,7 @@ func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackLis
 		Metrics:             metrics.NewSinkManagerMetrics(),
 		logger:              logger,
 		appStoreUpdateChan:  appStoreUpdateChan,
+		DropsondeOrigin:     dropsondeOrigin,
 	}, appStoreUpdateChan
 }
 
@@ -161,7 +163,7 @@ func (sinkManager *SinkManager) registerNewSyslogSink(appId string, syslogSinkUr
 		sinkManager.SendSyslogErrorToLoggregator(errorMsg, appId)
 	} else {
 		syslogWriter := syslogwriter.NewSyslogWriter(parsedSyslogDrainUrl, appId, sinkManager.skipCertVerify)
-		syslogSink := syslog.NewSyslogSink(appId, syslogSinkUrl, sinkManager.logger, syslogWriter, sinkManager.errorChannel)
+		syslogSink := syslog.NewSyslogSink(appId, syslogSinkUrl, sinkManager.logger, syslogWriter, sinkManager.errorChannel, sinkManager.DropsondeOrigin)
 		sinkManager.RegisterSink(syslogSink)
 	}
 
@@ -172,7 +174,7 @@ func (sinkManager *SinkManager) SendSyslogErrorToLoggregator(errorMsg, appId str
 
 	logMessage := factories.NewLogMessage(events.LogMessage_ERR, errorMsg, appId, "LGR")
 
-	envelope, err := emitter.Wrap(logMessage, "FIXME")
+	envelope, err := emitter.Wrap(logMessage, sinkManager.DropsondeOrigin)
 
 	if err != nil {
 		sinkManager.logger.Warnf("Error marshalling message: %v", err)

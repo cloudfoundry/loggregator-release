@@ -29,6 +29,7 @@ type WebsocketServer struct {
 	bufferSize        uint
 	logger            *gosteno.Logger
 	listener          net.Listener
+	dropsondeOrigin   string
 	sync.RWMutex
 }
 
@@ -39,6 +40,7 @@ func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, keepAliveInte
 		keepAliveInterval: keepAliveInterval,
 		bufferSize:        wSMessageBufferSize,
 		logger:            logger,
+		dropsondeOrigin:   sinkManager.DropsondeOrigin,
 	}
 }
 
@@ -120,6 +122,7 @@ func (w *WebsocketServer) streamLogs(appId string, ws *gorilla.Conn) {
 		w.logger,
 		ws,
 		w.bufferSize,
+		w.dropsondeOrigin,
 	)
 
 	w.sinkManager.RegisterSink(websocketSink)

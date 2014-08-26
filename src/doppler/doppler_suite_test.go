@@ -1,9 +1,6 @@
 package main_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	doppler "doppler"
 	"doppler/iprange"
 	"fmt"
@@ -12,6 +9,9 @@ import (
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"github.com/onsi/ginkgo/config"
 	"testing"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var (
@@ -43,7 +43,7 @@ func TestDoppler(t *testing.T) {
 	}
 	cfcomponent.Logger = loggertesthelper.Logger()
 
-	dopplerInstance = doppler.New("127.0.0.1", dopplerConfig, loggertesthelper.Logger())
+	dopplerInstance = doppler.New("127.0.0.1", dopplerConfig, loggertesthelper.Logger(), "dropsondeOrigin")
 	go dopplerInstance.Start()
 
 	RunSpecs(t, "Doppler Suite")

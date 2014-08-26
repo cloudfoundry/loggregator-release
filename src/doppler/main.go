@@ -23,11 +23,12 @@ import (
 )
 
 var (
-	logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
-	logLevel    = flag.Bool("debug", false, "Debug logging")
-	configFile  = flag.String("config", "config/doppler.json", "Location of the doppler config json file")
-	cpuprofile  = flag.String("cpuprofile", "", "write cpu profile to file")
-	memprofile  = flag.String("memprofile", "", "write memory profile to this file")
+	logFilePath     = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
+	logLevel        = flag.Bool("debug", false, "Debug logging")
+	configFile      = flag.String("config", "config/doppler.json", "Location of the doppler config json file")
+	cpuprofile      = flag.String("cpuprofile", "", "write cpu profile to file")
+	memprofile      = flag.String("memprofile", "", "write memory profile to this file")
+	dropsondeOrigin = flag.String("dropsondeOrigin", "", "origin for messages created by this process")
 )
 
 type DopplerServerHealthMonitor struct {
@@ -95,7 +96,7 @@ func main() {
 		panic(err)
 	}
 
-	l := New("0.0.0.0", config, logger)
+	doppler := New("0.0.0.0", config, logger, *dropsondeOrigin)
 
 	cfc, err := cfcomponent.NewComponent(
 		logger,
@@ -104,7 +105,7 @@ func main() {
 		&DopplerServerHealthMonitor{},
 		config.VarzPort,
 		[]string{config.VarzUser, config.VarzPass},
-		l.Emitters(),
+		doppler.Emitters(),
 	)
 
 	if err != nil {
@@ -124,7 +125,7 @@ func main() {
 		}
 	}()
 
-	go l.Start()
+	go doppler.Start()
 	logger.Info("Startup: doppler server started.")
 
 	killChan := make(chan os.Signal)
@@ -138,7 +139,7 @@ func main() {
 			cfcomponent.DumpGoRoutine()
 		case <-killChan:
 			logger.Info("Shutting down")
-			l.Stop()
+			doppler.Stop()
 			return
 		}
 	}

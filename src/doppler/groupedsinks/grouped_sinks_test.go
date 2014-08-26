@@ -58,12 +58,12 @@ var _ = Describe("GroupedSink", func() {
 	Describe("BroadCast", func() {
 		It("should send message to all registered sinks that match the appId", func(done Done) {
 			appId := "123"
-			appSink := syslog.NewSyslogSink("123", "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			appSink := syslog.NewSyslogSink("123", "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
 			otherInputChan := make(chan *envelopewrapper.WrappedEnvelope)
 			groupedSinks.Register(otherInputChan, appSink)
 
 			appId = "789"
-			appSink = syslog.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			appSink = syslog.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
 
 			groupedSinks.Register(inputChan, appSink)
 
@@ -106,7 +106,7 @@ var _ = Describe("GroupedSink", func() {
 			appId := "789"
 
 			sink1 := dump.NewDumpSink(appId, 10, loggertesthelper.Logger(), time.Second)
-			sink2 := syslog.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			sink2 := syslog.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
 
 			groupedSinks.Register(inputChan, sink1)
 			groupedSinks.Register(inputChan, sink2)
@@ -121,21 +121,21 @@ var _ = Describe("GroupedSink", func() {
 	Describe("Register", func() {
 		It("should return false for empty app ids", func() {
 			appId := ""
-			appSink := syslog.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			appSink := syslog.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
 			result := groupedSinks.Register(inputChan, appSink)
 			Expect(result).To(BeFalse())
 		})
 
 		It("should return false for emtpy identifiers", func() {
 			appId := "appId"
-			appSink := syslog.NewSyslogSink(appId, "", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			appSink := syslog.NewSyslogSink(appId, "", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
 			result := groupedSinks.Register(inputChan, appSink)
 			Expect(result).To(BeFalse())
 		})
 
 		It("should return false when registring a duplicate", func() {
 			appId := "789"
-			appSink := syslog.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			appSink := syslog.NewSyslogSink(appId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
 			groupedSinks.Register(inputChan, appSink)
 			result := groupedSinks.Register(inputChan, appSink)
 			Expect(result).To(BeFalse())
@@ -146,8 +146,8 @@ var _ = Describe("GroupedSink", func() {
 		It("should only delete a specific sink", func() {
 			target := "789"
 
-			sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
-			sink2 := syslog.NewSyslogSink(target, "url2", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
+			sink2 := syslog.NewSyslogSink(target, "url2", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
 
 			groupedSinks.Register(inputChan, sink1)
 			groupedSinks.Register(inputChan, sink2)
@@ -160,7 +160,7 @@ var _ = Describe("GroupedSink", func() {
 		It("should handle delete for non-existing appIds", func() {
 			target := "789"
 
-			sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
 
 			ok := groupedSinks.CloseAndDelete(sink1)
 			Expect(ok).To(BeFalse())
@@ -171,8 +171,8 @@ var _ = Describe("GroupedSink", func() {
 		It("should handle delete for existing appIds but unregistered drain URLs", func() {
 			target := "789"
 
-			sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
-			sink2 := syslog.NewSyslogSink(target, "url2", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
+			sink2 := syslog.NewSyslogSink(target, "url2", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
 
 			groupedSinks.Register(inputChan, sink1)
 
@@ -185,7 +185,7 @@ var _ = Describe("GroupedSink", func() {
 		It("should close the inputChan", func() {
 			target := "789"
 
-			sink := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			sink := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
 			groupedSinks.Register(inputChan, sink)
 			groupedSinks.CloseAndDelete(sink)
 			Expect(inputChan).To(BeClosed())
@@ -223,7 +223,7 @@ var _ = Describe("GroupedSink", func() {
 			target := "789"
 
 			sink1 := dump.NewDumpSink(target, 10, loggertesthelper.Logger(), time.Second)
-			sink2 := syslog.NewSyslogSink(target, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			sink2 := syslog.NewSyslogSink(target, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
 
 			groupedSinks.Register(inputChan, sink1)
 			groupedSinks.Register(inputChan, sink2)
@@ -238,8 +238,8 @@ var _ = Describe("GroupedSink", func() {
 		It("should return only sinks that match the appid and drain URL", func() {
 			target := "789"
 
-			sink1 := syslog.NewSyslogSink(target, "other sink", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
-			sink2 := syslog.NewSyslogSink(target, "sink we are searching for", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			sink1 := syslog.NewSyslogSink(target, "other sink", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
+			sink2 := syslog.NewSyslogSink(target, "sink we are searching for", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
 
 			groupedSinks.Register(inputChan, sink1)
 			groupedSinks.Register(inputChan, sink2)
@@ -251,7 +251,7 @@ var _ = Describe("GroupedSink", func() {
 		It("should return nil if no drains are registered", func() {
 			target := "789"
 
-			sink := syslog.NewSyslogSink(target, "url2", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			sink := syslog.NewSyslogSink(target, "url2", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
 			groupedSinks.Register(inputChan, sink)
 
 			Expect(groupedSinks.DrainFor(target, "url1")).To(BeNil())
@@ -266,8 +266,8 @@ var _ = Describe("GroupedSink", func() {
 		It("should return only dumps", func() {
 			target := "789"
 
-			sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
-			sink2 := syslog.NewSyslogSink(target, "url2", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
+			sink2 := syslog.NewSyslogSink(target, "url2", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
 			sink3 := dump.NewDumpSink(target, 5, loggertesthelper.Logger(), time.Second)
 
 			groupedSinks.Register(inputChan, sink1)
@@ -293,7 +293,7 @@ var _ = Describe("GroupedSink", func() {
 		It("should return nil if no dumps are registered", func() {
 			target := "789"
 
-			sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan)
+			sink1 := syslog.NewSyslogSink(target, "url1", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
 
 			groupedSinks.Register(inputChan, sink1)
 

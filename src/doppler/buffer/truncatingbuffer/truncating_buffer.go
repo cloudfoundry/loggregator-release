@@ -12,15 +12,22 @@ import (
 )
 
 type truncatingBuffer struct {
-	inputChannel  <-chan *envelopewrapper.WrappedEnvelope
-	outputChannel chan *envelopewrapper.WrappedEnvelope
-	logger        *gosteno.Logger
-	lock          *sync.RWMutex
+	inputChannel    <-chan *envelopewrapper.WrappedEnvelope
+	outputChannel   chan *envelopewrapper.WrappedEnvelope
+	logger          *gosteno.Logger
+	lock            *sync.RWMutex
+	dropsondeOrigin string
 }
 
-func NewTruncatingBuffer(inputChannel <-chan *envelopewrapper.WrappedEnvelope, bufferSize uint, logger *gosteno.Logger) buffer.MessageBuffer {
+func NewTruncatingBuffer(inputChannel <-chan *envelopewrapper.WrappedEnvelope, bufferSize uint, logger *gosteno.Logger, dropsondeOrigin string) buffer.MessageBuffer {
 	outputChannel := make(chan *envelopewrapper.WrappedEnvelope, bufferSize)
-	return &truncatingBuffer{inputChannel, outputChannel, logger, &sync.RWMutex{}}
+	return &truncatingBuffer{
+		inputChannel:    inputChannel,
+		outputChannel:   outputChannel,
+		logger:          logger,
+		lock:            &sync.RWMutex{},
+		dropsondeOrigin: dropsondeOrigin,
+	}
 }
 
 func (r *truncatingBuffer) GetOutputChannel() <-chan *envelopewrapper.WrappedEnvelope {
@@ -47,7 +54,7 @@ func (r *truncatingBuffer) Run() {
 			env := &events.Envelope{
 				EventType:  events.Envelope_LogMessage.Enum(),
 				LogMessage: lm,
-				Origin:     proto.String("FIXME"),
+				Origin:     proto.String(r.dropsondeOrigin),
 			}
 			envBytes, err := proto.Marshal(env)
 

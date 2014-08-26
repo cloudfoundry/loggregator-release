@@ -1,13 +1,15 @@
 package sinkserver_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"doppler/envelopewrapper"
 	"doppler/sinkserver"
+	"github.com/cloudfoundry/dropsonde/events"
+	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"sync"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 type fakeSinkManager struct {
@@ -63,7 +65,7 @@ var _ = Describe("Message Router", func() {
 			})
 
 			It("sends the message to the sink manager if it is an app message", func() {
-				message := NewMessage("testMessage", "app")
+				message, _ := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, "testMessage", "app", "App"), "origin")
 				incomingLogChan <- message
 				Eventually(fakeManager.received).Should(HaveLen(1))
 				Expect(fakeManager.received()[0].Envelope.GetLogMessage()).To(Equal(message.Envelope.GetLogMessage()))

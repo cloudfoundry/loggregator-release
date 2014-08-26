@@ -126,7 +126,7 @@ var _ = Describe("SyslogSink", func() {
 		sysLogger = NewSyslogWriterRecorder()
 		errorChannel = make(chan *envelopewrapper.WrappedEnvelope, 10)
 		inputChan = make(chan *envelopewrapper.WrappedEnvelope)
-		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorChannel).(*syslog.SyslogSink)
+		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorChannel, "dropsonde-origin").(*syslog.SyslogSink)
 	})
 
 	AfterEach(func() {

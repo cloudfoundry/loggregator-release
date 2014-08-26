@@ -15,11 +15,12 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"net/url"
 	"sync"
 	"time"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 type ChannelSink struct {
@@ -66,7 +67,7 @@ var _ = Describe("SinkManager", func() {
 	var newAppServiceChan, deletedAppServiceChan chan appservice.AppService
 
 	BeforeEach(func() {
-		sinkManager, appServicesChan = sinkmanager.NewSinkManager(1, true, blackListManager, loggertesthelper.Logger())
+		sinkManager, appServicesChan = sinkmanager.NewSinkManager(1, true, blackListManager, loggertesthelper.Logger(), "dropsonde-origin")
 
 		newAppServiceChan = make(chan appservice.AppService)
 		deletedAppServiceChan = make(chan appservice.AppService)
@@ -296,7 +297,7 @@ var _ = Describe("SinkManager", func() {
 				Expect(err).To(BeNil())
 				writer := syslogwriter.NewSyslogWriter(url, "appId", true)
 				errorChan := make(chan *envelopewrapper.WrappedEnvelope)
-				syslogSink = syslog.NewSyslogSink("appId", "localhost:9999", loggertesthelper.Logger(), writer, errorChan)
+				syslogSink = syslog.NewSyslogSink("appId", "localhost:9999", loggertesthelper.Logger(), writer, errorChan, "dropsonde-origin")
 
 				sinkManager.RegisterSink(syslogSink)
 			})

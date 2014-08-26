@@ -26,9 +26,10 @@ type SyslogSink struct {
 	syslogWriter      syslogwriter.SyslogWriter
 	errorChannel      chan<- *envelopewrapper.WrappedEnvelope
 	disconnectChannel chan struct{}
+	dropsondeOrigin   string
 }
 
-func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.SyslogWriter, errorChannel chan<- *envelopewrapper.WrappedEnvelope) sinks.Sink {
+func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.SyslogWriter, errorChannel chan<- *envelopewrapper.WrappedEnvelope, dropsondeOrigin string) sinks.Sink {
 	givenLogger.Debugf("Syslog Sink %s: Created for appId [%s]", drainUrl, appId)
 	return &SyslogSink{
 		appId:             appId,
@@ -39,6 +40,7 @@ func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, s
 		syslogWriter:      syslogWriter,
 		errorChannel:      errorChannel,
 		disconnectChannel: make(chan struct{}),
+		dropsondeOrigin:   dropsondeOrigin,
 	}
 }
 
@@ -49,7 +51,7 @@ func (s *SyslogSink) Run(inputChan <-chan *envelopewrapper.WrappedEnvelope) {
 	backoffStrategy := retrystrategy.NewExponentialRetryStrategy()
 	numberOfTries := 0
 
-	buffer := sinks.RunTruncatingBuffer(inputChan, 100, s.logger)
+	buffer := sinks.RunTruncatingBuffer(inputChan, 100, s.logger, s.dropsondeOrigin)
 	timer := time.NewTimer(backoffStrategy(numberOfTries))
 	defer timer.Stop()
 	for {
@@ -70,7 +72,7 @@ func (s *SyslogSink) Run(inputChan <-chan *envelopewrapper.WrappedEnvelope) {
 
 				s.logger.Warnf(errorMsg)
 				msg := factories.NewLogMessage(events.LogMessage_ERR, errorMsg, s.appId, "LGR")
-				envelope, err := emitter.Wrap(msg, "FIXME")
+				envelope, err := emitter.Wrap(msg, s.dropsondeOrigin)
 
 				if err != nil {
 					s.logger.Warnf("Error marshalling message: %v", err)

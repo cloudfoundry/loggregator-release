@@ -57,7 +57,7 @@ var _ = Describe("WebsocketSink", func() {
 	BeforeEach(func() {
 		logger = loggertesthelper.Logger()
 		fakeWebsocket = &fakeMessageWriter{}
-		websocketSink = websocket.NewWebsocketSink("appId", logger, fakeWebsocket, 10)
+		websocketSink = websocket.NewWebsocketSink("appId", logger, fakeWebsocket, 10, "dropsonde-origin")
 	})
 
 	Describe("Identifier", func() {

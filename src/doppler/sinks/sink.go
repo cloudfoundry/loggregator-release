@@ -16,8 +16,8 @@ type Sink interface {
 	ShouldReceiveErrors() bool
 }
 
-func RunTruncatingBuffer(inputChan <-chan *envelopewrapper.WrappedEnvelope, bufferSize uint, logger *gosteno.Logger) buffer.MessageBuffer {
-	b := truncatingbuffer.NewTruncatingBuffer(inputChan, bufferSize, logger)
+func RunTruncatingBuffer(inputChan <-chan *envelopewrapper.WrappedEnvelope, bufferSize uint, logger *gosteno.Logger, dropsondeOrigin string) buffer.MessageBuffer {
+	b := truncatingbuffer.NewTruncatingBuffer(inputChan, bufferSize, logger, dropsondeOrigin)
 	go b.Run()
 	return b
 }

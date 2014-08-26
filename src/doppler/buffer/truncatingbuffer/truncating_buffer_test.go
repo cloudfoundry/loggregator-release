@@ -15,7 +15,7 @@ import (
 var _ = Describe("Truncating Buffer", func() {
 	It("works like a channel", func() {
 		inMessageChan := make(chan *envelopewrapper.WrappedEnvelope)
-		buffer := truncatingbuffer.NewTruncatingBuffer(inMessageChan, 2, loggertesthelper.Logger())
+		buffer := truncatingbuffer.NewTruncatingBuffer(inMessageChan, 2, loggertesthelper.Logger(), "dropsonde-origin")
 		go buffer.Run()
 
 		logMessage1, _ := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, "message 1", "appId", "App"), "origin")
@@ -33,7 +33,7 @@ var _ = Describe("Truncating Buffer", func() {
 
 	It("works like a truncating channel", func() {
 		inMessageChan := make(chan *envelopewrapper.WrappedEnvelope)
-		buffer := truncatingbuffer.NewTruncatingBuffer(inMessageChan, 2, loggertesthelper.Logger())
+		buffer := truncatingbuffer.NewTruncatingBuffer(inMessageChan, 2, loggertesthelper.Logger(), "dropsonde-origin")
 		go buffer.Run()
 
 		logMessage1, _ := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, "message 1", "appId", "App"), "origin")

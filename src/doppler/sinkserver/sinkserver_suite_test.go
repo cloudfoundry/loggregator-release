@@ -1,43 +1,62 @@
 package sinkserver_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"code.google.com/p/gogoprotobuf/proto"
 	"doppler/envelopewrapper"
-	"github.com/cloudfoundry/dropsonde/emitter"
-	"github.com/cloudfoundry/dropsonde/events"
-	"github.com/cloudfoundry/dropsonde/factories"
+	"doppler/sinkserver"
+	"doppler/sinkserver/blacklist"
+	"doppler/sinkserver/sinkmanager"
+	"doppler/sinkserver/websocketserver"
+	"github.com/cloudfoundry/loggregatorlib/appservice"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/gorilla/websocket"
 	"net/http"
 	"testing"
+	"time"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
-
-func NewMessage(messageString, appId string) *envelopewrapper.WrappedEnvelope {
-	logMessage := factories.NewLogMessage(events.LogMessage_OUT, messageString, appId, "App")
-	env, _ := emitter.Wrap(logMessage, "origin")
-	envBytes, _ := proto.Marshal(env)
-	wrappedEnv := &envelopewrapper.WrappedEnvelope{
-		Envelope:      env,
-		EnvelopeBytes: envBytes,
-	}
-
-	return wrappedEnv
-}
-
-func NewLogMessage(messageString, appId string) *events.LogMessage {
-	messageType := events.LogMessage_OUT
-	sourceType := "App"
-
-	return factories.NewLogMessage(messageType, messageString, appId, sourceType)
-}
 
 func TestSinkserver(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	RunSpecs(t, "Sinkserver Suite")
 }
+
+var (
+	sinkManager         *sinkmanager.SinkManager
+	TestMessageRouter   *sinkserver.MessageRouter
+	TestWebsocketServer *websocketserver.WebsocketServer
+	dataReadChannel     chan *envelopewrapper.WrappedEnvelope
+)
+
+const (
+	SERVER_PORT = "9081"
+)
+
+var _ = BeforeSuite(func() {
+	dataReadChannel = make(chan *envelopewrapper.WrappedEnvelope)
+
+	logger := loggertesthelper.Logger()
+	cfcomponent.Logger = logger
+
+	newAppServiceChan := make(chan appservice.AppService)
+	deletedAppServiceChan := make(chan appservice.AppService)
+
+	emptyBlacklist := blacklist.New(nil)
+	sinkManager, _ = sinkmanager.NewSinkManager(1024, false, emptyBlacklist, logger, "dropsonde-origin")
+	go sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
+
+	TestMessageRouter = sinkserver.NewMessageRouter(sinkManager, logger)
+	go TestMessageRouter.Start(dataReadChannel)
+
+	apiEndpoint := "localhost:" + SERVER_PORT
+	TestWebsocketServer = websocketserver.New(apiEndpoint, sinkManager, 10*time.Second, 100, loggertesthelper.Logger())
+	go TestWebsocketServer.Start()
+
+	time.Sleep(5 * time.Millisecond)
+})
 
 func AddWSSink(receivedChan chan []byte, port string, path string) (*websocket.Conn, chan bool, <-chan bool) {
 
@@ -49,4 +68,8 @@ func AddWSSink(receivedChan chan []byte, port string, path string) (*websocket.C
 		Fail(err.Error())
 	}
 	return ws, dontKeepAliveChan, connectionDroppedChannel
+}
+
+func WaitForWebsocketRegistration() {
+	time.Sleep(50 * time.Millisecond)
 }

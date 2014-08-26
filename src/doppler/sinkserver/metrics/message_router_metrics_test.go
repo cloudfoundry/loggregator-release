@@ -3,6 +3,7 @@ package metrics_test
 import (
 	"doppler/sinkserver/metrics"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

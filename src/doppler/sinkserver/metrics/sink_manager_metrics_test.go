@@ -1,14 +1,14 @@
 package metrics_test
 
 import (
+	"doppler/sinks"
 	"doppler/sinks/dump"
 	"doppler/sinks/syslog"
 	"doppler/sinks/websocket"
+	"doppler/sinkserver/metrics"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"doppler/sinks"
-	"doppler/sinkserver/metrics"
 )
 
 var _ = Describe("SinkManagerMetrics", func() {
