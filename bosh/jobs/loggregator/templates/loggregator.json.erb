@@ -19,7 +19,8 @@
   "NatsPass": "<%= p("nats.password") %>",
   "VarzUser": "<%= p("loggregator.status.user") %>",
   "VarzPass": "<%= p("loggregator.status.password") %>",
-  "VarzPort": <%= p("loggregator.status.port") %>
+  "VarzPort": <%= p("loggregator.status.port") %>,
+  "InactivityDurationInMilliseconds": <%= p("loggregator.inactivityDurationInMilliseconds") %>
     <% if_p("syslog_aggregator") do |_| %>
     , "Syslog": "vcap.loggregator"
     <% end %>

@@ -51,6 +51,9 @@ properties:
     description: "Blacklist for IPs that should not be used as syslog drains, e.g. internal ip addresses."
   loggregator_endpoint.shared_secret:
     description: "Shared secret used to verify cryptographically signed loggregator messages"
+  loggregator.inactivityDurationInMilliseconds:
+    description: "Duration of log inactivity before shutting down recent log cache"
+    default: 3600000
   etcd.machines:
     description: "IPs pointing to the ETCD cluster"
   nats.user:
