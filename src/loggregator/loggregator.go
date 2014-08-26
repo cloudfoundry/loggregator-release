@@ -29,20 +29,21 @@ import (
 
 type Config struct {
 	cfcomponent.Config
-	EtcdUrls                      []string
-	EtcdMaxConcurrentRequests     int
-	Index                         uint
-	LegacyIncomingMessagesPort    uint32
-	DropsondeIncomingMessagesPort uint32
-	OutgoingPort                  uint32
-	LogFilePath                   string
-	MaxRetainedLogMessages        uint32
-	WSMessageBufferSize           uint
-	SharedSecret                  string
-	SkipCertVerify                bool
-	BlackListIps                  []iprange.IPRange
-	JobName                       string
-	Zone                          string
+	EtcdUrls                         []string
+	EtcdMaxConcurrentRequests        int
+	Index                            uint
+	LegacyIncomingMessagesPort       uint32
+	DropsondeIncomingMessagesPort    uint32
+	OutgoingPort                     uint32
+	LogFilePath                      string
+	MaxRetainedLogMessages           uint32
+	WSMessageBufferSize              uint
+	SharedSecret                     string
+	SkipCertVerify                   bool
+	BlackListIps                     []iprange.IPRange
+	JobName                          string
+	Zone                             string
+	InactivityDurationInMilliseconds int
 }
 
 func (c *Config) Validate(logger *gosteno.Logger) (err error) {
@@ -98,7 +99,7 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 
 	unmarshaller, messageChan := unmarshaller.NewLogMessageUnmarshaller(config.SharedSecret, incomingLogChan)
 	blacklist := blacklist.New(config.BlackListIps)
-	sinkManager, appStoreInputChan := sinkmanager.NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger)
+	sinkManager, appStoreInputChan := sinkmanager.NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger, time.Duration(config.InactivityDurationInMilliseconds)*time.Millisecond)
 	workerPool := workerpool.NewWorkerPool(config.EtcdMaxConcurrentRequests)
 
 	dropsondeUnmarshaller := dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger)

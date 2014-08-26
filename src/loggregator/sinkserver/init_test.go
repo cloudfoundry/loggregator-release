@@ -40,7 +40,7 @@ func init() {
 	deletedAppServiceChan := make(chan appservice.AppService)
 
 	emptyBlacklist := blacklist.New(nil)
-	sinkManager, _ = sinkmanager.NewSinkManager(1024, false, emptyBlacklist, logger)
+	sinkManager, _ = sinkmanager.NewSinkManager(1024, false, emptyBlacklist, logger, 1*time.Hour)
 	go sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
 
 	TestMessageRouter = sinkserver.NewMessageRouter(sinkManager, logger)
@@ -56,7 +56,7 @@ func init() {
 
 	blackListDataReadChannel = make(chan *logmessage.Message)
 	localhostBlacklist := blacklist.New([]iprange.IPRange{iprange.IPRange{Start: "127.0.0.0", End: "127.0.0.2"}})
-	blacklistSinkManager, _ := sinkmanager.NewSinkManager(1024, false, localhostBlacklist, logger)
+	blacklistSinkManager, _ := sinkmanager.NewSinkManager(1024, false, localhostBlacklist, logger, 1*time.Hour)
 	go blacklistSinkManager.Start(newAppServiceChan, deletedAppServiceChan)
 
 	blacklistTestMessageRouter := sinkserver.NewMessageRouter(blacklistSinkManager, logger)

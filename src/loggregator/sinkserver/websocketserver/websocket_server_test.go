@@ -18,7 +18,7 @@ import (
 var _ = Describe("WebsocketServer", func() {
 
 	var server *websocketserver.WebsocketServer
-	var sinkManager, _ = sinkmanager.NewSinkManager(1024, false, blacklist.New(nil), loggertesthelper.Logger())
+	var sinkManager, _ = sinkmanager.NewSinkManager(1024, false, blacklist.New(nil), loggertesthelper.Logger(), 1*time.Hour)
 	var appId = "my-app"
 	var wsReceivedChan = make(chan []byte)
 	var connectionDropped <-chan struct{}

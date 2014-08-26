@@ -17,5 +17,6 @@
     "BlackListIps": [
         {"Start": "127.0.0.0", "end": "127.0.0.2"},
         {"start": "127.0.1.12", "End": "127.0.1.15"}
-    ]
+    ],
+    "InactivityDurationInMilliseconds": 3600000
 }

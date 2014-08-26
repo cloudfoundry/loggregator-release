@@ -29,9 +29,10 @@ type SinkManager struct {
 	logger              *gosteno.Logger
 	appStoreUpdateChan  chan<- appservice.AppServices
 	stopped             bool
+	inactivityDuration  time.Duration
 }
 
-func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger) (*SinkManager, <-chan appservice.AppServices) {
+func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger, inactivityDuration time.Duration) (*SinkManager, <-chan appservice.AppServices) {
 	appStoreUpdateChan := make(chan appservice.AppServices, 10)
 	return &SinkManager{
 		doneChannel:         make(chan struct{}),
@@ -43,6 +44,7 @@ func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackLis
 		Metrics:             metrics.NewSinkManagerMetrics(),
 		logger:              logger,
 		appStoreUpdateChan:  appStoreUpdateChan,
+		inactivityDuration:  inactivityDuration,
 	}, appStoreUpdateChan
 }
 
@@ -178,7 +180,7 @@ func (sinkManager *SinkManager) ensureRecentLogsSinkFor(appId string) {
 		return
 	}
 
-	s := dump.NewDumpSink(appId, sinkManager.recentLogCount, sinkManager.logger, time.Hour)
+	s := NewDumpSink(appId, sinkManager.recentLogCount, sinkManager.logger, sinkManager.inactivityDuration)
 	sinkManager.RegisterSink(s)
 }
 
@@ -202,4 +204,8 @@ func contains(valueToFind string, values []string) bool {
 		}
 	}
 	return false
+}
+
+var NewDumpSink = func(appId string, bufferSize uint32, givenLogger *gosteno.Logger, inactivityDuration time.Duration) *dump.DumpSink {
+	return dump.NewDumpSink(appId, bufferSize, givenLogger, inactivityDuration)
 }

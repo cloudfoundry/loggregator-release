@@ -42,6 +42,7 @@ var _ = Describe("Main", func() {
 				Expect(config.LegacyIncomingMessagesPort).To(Equal(uint32(3456)))
 				Expect(config.OutgoingPort).To(Equal(uint32(8080)))
 				Expect(config.WSMessageBufferSize).To(Equal(uint(100)))
+				Expect(config.InactivityDurationInMilliseconds).To(Equal(3600000))
 			})
 		})
 
@@ -60,6 +61,8 @@ var _ = Describe("Main", func() {
 				Expect(config.BlackListIps[0].End).To(Equal("127.0.0.2"))
 				Expect(config.BlackListIps[1].Start).To(Equal("127.0.1.12"))
 				Expect(config.BlackListIps[1].End).To(Equal("127.0.1.15"))
+
+				Expect(config.InactivityDurationInMilliseconds).To(Equal(3600000))
 			})
 
 			It("sets up logger", func() {

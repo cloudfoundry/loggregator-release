@@ -13,5 +13,6 @@
     "VarzUser": "varz",
     "VarzPass": "password",
     "VarzPort": 8888,
-    "Syslog"  : ""
+    "Syslog"  : "",
+    "InactivityDurationInMilliseconds": 3600000
 }
