@@ -1,0 +1,68 @@
+---
+name: doppler
+templates:
+  doppler_ctl.erb: bin/doppler_ctl
+  doppler.json.erb: config/doppler.json
+  syslog_forwarder.conf.erb: config/syslog_forwarder.conf
+
+packages:
+- common
+- doppler
+- syslog_aggregator
+properties:
+  syslog_aggregator.address:
+    description: "IP address for syslog aggregator"
+  syslog_aggregator.port:
+    description: "TCP port of syslog aggregator"
+  syslog_aggregator.all:
+    description: "Define whether forwarders should send all their syslog data to our aggregator."
+    default: false
+  syslog_aggregator.transport:
+    description: "Transport to be used when forwarding logs (tcp|udp|relp)."
+    default: "tcp"
+
+  doppler.zone:
+    description: Zone of the doppler server
+  doppler.debug:
+    description: boolean value to turn on verbose logging for doppler system (dea agent & doppler server)
+    default: false
+  doppler.status.user:
+    description: username used to log into varz endpoint
+    default: ""
+  doppler.status.password:
+    description: password used to log into varz endpoint
+    default: ""
+  doppler.status.port:
+    description: port used to run the varz endpoint
+    default: 0
+  doppler.maxRetainedLogMessages:
+    description: number of log messages to retain per application
+    default: 100
+  doppler.incoming_port:
+    description: Port for incoming log messages in the legacy format
+    default: 3456
+  doppler.dropsonde_incoming_port:
+    description: Port for incoming messages in the dropsonde format
+    default: 3457
+  doppler.outgoing_port:
+    description: Port for outgoing log messages
+    default: 8080
+  doppler.blacklisted_syslog_ranges:
+    description: "Blacklist for IPs that should not be used as syslog drains, e.g. internal ip addresses."
+  doppler_endpoint.shared_secret:
+    description: "Shared secret used to verify cryptographically signed doppler messages"
+  etcd.machines:
+    description: "IPs pointing to the ETCD cluster"
+  nats.user:
+    description: "Username for cc client to connect to NATS"
+  nats.password:
+    description: "Password for cc client to connect to NATS"
+  nats.machines:
+    description: "IP addresses of Cloud Foundry NATS servers"
+  nats.port:
+    description: "IP port of Cloud Foundry NATS server"
+  ssl.skip_cert_verify:
+    description: "when connecting over TLS, don't verify certificates"
+    default: false
+  networks.apps:
+    description: "doppler network information."

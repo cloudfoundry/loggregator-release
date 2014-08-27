@@ -1,0 +1,5 @@
+check process doppler
+  with pidfile /var/vcap/sys/run/doppler/doppler.pid
+  start program "/var/vcap/jobs/doppler/bin/doppler_ctl start"
+  stop program "/var/vcap/jobs/doppler/bin/doppler_ctl stop"
+  group vcap

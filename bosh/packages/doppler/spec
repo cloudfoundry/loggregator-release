@@ -1,0 +1,6 @@
+---
+name: doppler
+dependencies:
+- golang
+files:
+- loggregator/**/*

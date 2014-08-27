@@ -1,0 +1,29 @@
+<% require 'json' %>
+{
+  "EtcdUrls": [<%= p("etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
+  "EtcdMaxConcurrentRequests": 10,
+  "WSMessageBufferSize": 100,
+  "LegacyIncomingMessagesPort": <%= p("doppler.incoming_port") %>,
+  "DropsondeIncomingMessagesPort": <%= p("doppler.dropsonde_incoming_port") %>,
+  "OutgoingPort": <%= p("doppler.outgoing_port") %>,
+  "Zone": "<%= p("doppler.zone") %>",
+  "SkipCertVerify": <%= p("ssl.skip_cert_verify") %>,
+  "JobName": "<%= name %>",
+  "Index": <%= spec.index %>,
+  "MaxRetainedLogMessages": <%= p("doppler.maxRetainedLogMessages") %>,
+  "SharedSecret": "<%= p("doppler_endpoint.shared_secret") %>",
+
+  "NatsHosts": <%= p("nats.machines") %>,
+  "NatsPort": <%= p("nats.port") %>,
+  "NatsUser": "<%= p("nats.user") %>",
+  "NatsPass": "<%= p("nats.password") %>",
+  "VarzUser": "<%= p("doppler.status.user") %>",
+  "VarzPass": "<%= p("doppler.status.password") %>",
+  "VarzPort": <%= p("doppler.status.port") %>
+    <% if_p("syslog_aggregator") do |_| %>
+    , "Syslog": "vcap.doppler"
+    <% end %>
+    <% if_p("doppler.blacklisted_syslog_ranges") do |_| %>
+    , "BlackListIPs": <%= p("doppler.blacklisted_syslog_ranges").to_json %>
+    <% end %>
+}
