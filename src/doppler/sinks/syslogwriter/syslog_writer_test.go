@@ -37,7 +37,7 @@ var _ = Describe("SyslogWriter", func() {
 		})
 
 		Context("Message Format", func() {
-			It("should send messages from stdout with INFO priority", func(done Done) {
+			It("sends messages from stdout with INFO priority", func(done Done) {
 				sysLogWriter.WriteStdout([]byte("just a test"), "test", "", time.Now().UnixNano())
 
 				data := <-dataChan
@@ -45,7 +45,7 @@ var _ = Describe("SyslogWriter", func() {
 				close(done)
 			})
 
-			It("should send messages from stderr with ERROR priority", func(done Done) {
+			It("sends messages from stderr with ERROR priority", func(done Done) {
 				sysLogWriter.WriteStderr([]byte("just a test"), "test", "", time.Now().UnixNano())
 
 				data := <-dataChan
@@ -53,7 +53,7 @@ var _ = Describe("SyslogWriter", func() {
 				close(done)
 			})
 
-			It("should send messages in the proper format", func(done Done) {
+			It("sends messages in the proper format", func(done Done) {
 				sysLogWriter.WriteStdout([]byte("just a test"), "App", "2", time.Now().UnixNano())
 
 				data := <-dataChan
@@ -61,7 +61,7 @@ var _ = Describe("SyslogWriter", func() {
 				close(done)
 			})
 
-			It("should strip null termination char from message", func(done Done) {
+			It("strips null termination char from message", func(done Done) {
 				sysLogWriter.WriteStdout([]byte(string(0)+" hi"), "appId", "", time.Now().UnixNano())
 
 				data := <-dataChan
@@ -86,7 +86,7 @@ var _ = Describe("SyslogWriter", func() {
 			http.DefaultServeMux = http.NewServeMux()
 		})
 
-		It("should HTTP POST each log message to the HTTPS syslog endpoint", func() {
+		It("HTTP POSTs each log message to the HTTPS syslog endpoint", func() {
 			outputUrl, _ := url.Parse(server.URL + "/234-bxg-234/")
 
 			w := syslogwriter.NewSyslogWriter(outputUrl, "appId", true)
@@ -103,7 +103,7 @@ var _ = Describe("SyslogWriter", func() {
 			}).Should(ContainSubstring("loggregator appId [just a test] - - Message"))
 		})
 
-		It("should return an error when unable to HTTP POST the log message", func() {
+		It("returns an error when unable to HTTP POST the log message", func() {
 			outputUrl, _ := url.Parse("https://")
 
 			w := syslogwriter.NewSyslogWriter(outputUrl, "appId", true)
@@ -130,7 +130,7 @@ var _ = Describe("SyslogWriter", func() {
 			<-serverStoppedChan
 		})
 
-		It("should connect", func() {
+		It("connects", func() {
 			outputUrl, _ := url.Parse("syslog-tls://localhost:9999")
 			w := syslogwriter.NewSyslogWriter(outputUrl, "appId", true)
 			err := w.Connect()
@@ -140,7 +140,7 @@ var _ = Describe("SyslogWriter", func() {
 			w.Close()
 		})
 
-		It("should reject self-signed certs", func() {
+		It("rejects self-signed certs", func() {
 			outputUrl, _ := url.Parse("syslog-tls://localhost:9999")
 			w := syslogwriter.NewSyslogWriter(outputUrl, "appId", false)
 			err := w.Connect()

@@ -20,8 +20,7 @@ var _ = Describe("IPRange", func() {
 		It("validates the start address", func() {
 			ranges := []iprange.IPRange{iprange.IPRange{Start: "127.0.2.2.1", End: "127.0.2.4"}}
 			err := iprange.ValidateIpAddresses(ranges)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("Invalid IP Address for Blacklist IP Range: 127.0.2.2.1"))
+			Expect(err).To(MatchError("Invalid IP Address for Blacklist IP Range: 127.0.2.2.1"))
 		})
 
 		It("validates the end address", func() {
@@ -42,8 +41,7 @@ var _ = Describe("IPRange", func() {
 		It("validates that start IP is before end IP", func() {
 			ranges := []iprange.IPRange{iprange.IPRange{Start: "10.10.10.10", End: "10.8.10.12"}}
 			err := iprange.ValidateIpAddresses(ranges)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("Invalid Blacklist IP Range: Start 10.10.10.10 has to be before End 10.8.10.12"))
+			Expect(err).To(MatchError("Invalid Blacklist IP Range: Start 10.10.10.10 has to be before End 10.8.10.12"))
 		})
 
 		It("accepts start and end as the same", func() {

@@ -6,26 +6,11 @@ import (
 
 	"doppler"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 
 	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 )
 
-var etcdRunner *etcdstorerunner.ETCDClusterRunner
-var etcdPort int
-
-var _ = BeforeSuite(func() {
-	etcdPort = 5800 + (config.GinkgoConfig.ParallelNode-1)*10
-	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
-	etcdRunner.Start()
-})
-
-var _ = AfterSuite(func() {
-	etcdRunner.Adapter().Disconnect()
-	etcdRunner.Stop()
-})
 var _ = BeforeEach(func() {
 	adapter := etcdRunner.Adapter()
 	adapter.Disconnect()

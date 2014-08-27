@@ -20,7 +20,7 @@ var _ = Describe("MessageRouterMetrics", func() {
 		},
 	}
 
-	It("should emit metrics", func() {
+	It("emits metrics", func() {
 		routerMetrics := new(metrics.MessageRouterMetrics)
 		actualMetrics := routerMetrics.Emit()
 		Expect(actualMetrics.Name).To(Equal(expectedMetrics.Name))

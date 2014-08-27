@@ -4,11 +4,11 @@ import (
 	"errors"
 	"time"
 
+	"doppler"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/localip"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
-	"doppler"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

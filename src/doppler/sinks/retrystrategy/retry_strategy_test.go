@@ -31,7 +31,7 @@ var _ = Describe("RetryStrategy", func() {
 			{26, 4194304000}, //1h9m54.304s
 		}
 
-		It("should backoff exponentially with different random seeds", func() {
+		It("backs off exponentially with different random seeds", func() {
 			rand.Seed(1)
 			strategy := retrystrategy.NewExponentialRetryStrategy()
 			otherStrategy := retrystrategy.NewExponentialRetryStrategy()

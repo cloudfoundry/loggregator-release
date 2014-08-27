@@ -16,14 +16,18 @@ import (
 
 var (
 	dopplerInstance *doppler.Doppler
+	etcdRunner      *etcdstorerunner.ETCDClusterRunner
+	etcdPort        int
 )
 
 func TestDoppler(t *testing.T) {
-
 	RegisterFailHandler(Fail)
+	RunSpecs(t, "Doppler Suite")
+}
 
-	etcdPort := 5500 + (config.GinkgoConfig.ParallelNode-1)*10
-	etcdRunner := etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
+var _ = BeforeSuite(func() {
+	etcdPort = 5500 + (config.GinkgoConfig.ParallelNode-1)*10
+	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
 	etcdRunner.Start()
 
 	etcdUrl := fmt.Sprintf("http://localhost:%d", etcdPort)
@@ -45,9 +49,10 @@ func TestDoppler(t *testing.T) {
 
 	dopplerInstance = doppler.New("127.0.0.1", dopplerConfig, loggertesthelper.Logger(), "dropsondeOrigin")
 	go dopplerInstance.Start()
+})
 
-	RunSpecs(t, "Doppler Suite")
-
+var _ = AfterSuite(func() {
 	dopplerInstance.Stop()
+	etcdRunner.Adapter().Disconnect()
 	etcdRunner.Stop()
-}
+})
