@@ -2,13 +2,20 @@ package sinkserver_test
 
 import (
 	"code.google.com/p/gogoprotobuf/proto"
-	"doppler/envelopewrapper"
+	"doppler/sinkserver"
+	"doppler/sinkserver/blacklist"
+	"doppler/sinkserver/sinkmanager"
+	"doppler/sinkserver/websocketserver"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
+	"github.com/cloudfoundry/loggregatorlib/appservice"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/gorilla/websocket"
 	"net/http"
 	testhelpers "server_testhelpers"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -16,29 +23,77 @@ import (
 )
 
 var _ = Describe("Dumping", func() {
+	var (
+		sinkManager         *sinkmanager.SinkManager
+		TestMessageRouter   *sinkserver.MessageRouter
+		TestWebsocketServer *websocketserver.WebsocketServer
+		dataReadChannel     chan *events.Envelope
+		services            sync.WaitGroup
+	)
+
+	const (
+		SERVER_PORT = "9081"
+	)
+
+	BeforeEach(func() {
+		dataReadChannel = make(chan *events.Envelope)
+
+		logger := loggertesthelper.Logger()
+		cfcomponent.Logger = logger
+
+		newAppServiceChan := make(chan appservice.AppService)
+		deletedAppServiceChan := make(chan appservice.AppService)
+
+		emptyBlacklist := blacklist.New(nil)
+		sinkManager, _ = sinkmanager.NewSinkManager(1024, false, emptyBlacklist, logger, "dropsonde-origin")
+
+		services.Add(1)
+		go func() {
+			defer services.Done()
+			sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
+		}()
+
+		TestMessageRouter = sinkserver.NewMessageRouter(sinkManager, logger)
+
+		services.Add(1)
+		go func() {
+			defer services.Done()
+			TestMessageRouter.Start(dataReadChannel)
+		}()
+
+		apiEndpoint := "localhost:" + SERVER_PORT
+		TestWebsocketServer = websocketserver.New(apiEndpoint, sinkManager, 10*time.Second, 100, loggertesthelper.Logger())
+
+		services.Add(1)
+		go func() {
+			defer services.Done()
+			TestWebsocketServer.Start()
+		}()
+
+		time.Sleep(5 * time.Millisecond)
+	})
+
+	AfterEach(func() {
+		sinkManager.Stop()
+		TestMessageRouter.Stop()
+		TestWebsocketServer.Stop()
+
+		services.Wait()
+	})
+
 	It("dumps all messages for an app user", func() {
 		expectedMessageString := "Some data"
 
 		lm := factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myOtherApp", "APP")
 		env, _ := emitter.Wrap(lm, "ORIGIN")
-		envBytes, _ := proto.Marshal(env)
-		wrappedEnvelope := &envelopewrapper.WrappedEnvelope{
-			Envelope:      env,
-			EnvelopeBytes: envBytes,
-		}
 
-		dataReadChannel <- wrappedEnvelope
-		dataReadChannel <- wrappedEnvelope
+		dataReadChannel <- env
+		dataReadChannel <- env
 
 		receivedChan := make(chan []byte, 2)
 		_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(GinkgoT(), receivedChan, SERVER_PORT, "/dump/?app=myOtherApp")
 
-		select {
-		case <-droppedChannel:
-			// we should have been dropped
-		case <-time.After(10 * time.Millisecond):
-			Fail("we should have been dropped")
-		}
+		Eventually(droppedChannel).Should(Receive())
 
 		logMessages := dumpAllMessages(receivedChan)
 
@@ -60,13 +115,8 @@ var _ = Describe("Dumping", func() {
 			dumpAllMessages(receivedChan)
 			close(doneChan)
 		}()
-		select {
-		case <-doneChan:
-			break
-		case <-time.After(10 * time.Millisecond):
-			Fail("Should have returned by now")
-		}
 
+		Eventually(doneChan).Should(BeClosed())
 	})
 
 	It("errors when log target is invalid", func() {

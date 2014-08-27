@@ -1,8 +1,8 @@
 package websocket_test
 
 import (
-	"doppler/envelopewrapper"
 	"doppler/sinks/websocket"
+	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/gosteno"
@@ -10,6 +10,7 @@ import (
 	"net"
 	"sync"
 
+	"code.google.com/p/gogoprotobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -79,48 +80,28 @@ var _ = Describe("WebsocketSink", func() {
 	})
 
 	Describe("Run", func() {
-		var inputChan chan *envelopewrapper.WrappedEnvelope
+		var inputChan chan *events.Envelope
 
 		BeforeEach(func() {
-			inputChan = make(chan *envelopewrapper.WrappedEnvelope, 10)
+			inputChan = make(chan *events.Envelope, 10)
 		})
 
 		It("forwards messages", func(done Done) {
 			defer close(done)
 			go websocketSink.Run(inputChan)
 
-			message, _ := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, "hello world", "appId", "App"), "origin")
+			message, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "hello world", "appId", "App"), "origin")
+			messageBytes, _ := proto.Marshal(message)
+
 			inputChan <- message
 			Eventually(fakeWebsocket.ReadMessages).Should(HaveLen(1))
-			Expect(fakeWebsocket.ReadMessages()[0]).To(Equal(message.EnvelopeBytes))
+			Expect(fakeWebsocket.ReadMessages()[0]).To(Equal(messageBytes))
 
-			messageTwo, _ := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, "goodbye world", "appId", "App"), "origin")
+			messageTwo, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "goodbye world", "appId", "App"), "origin")
+			messageTwoBytes, _ := proto.Marshal(messageTwo)
 			inputChan <- messageTwo
 			Eventually(fakeWebsocket.ReadMessages).Should(HaveLen(2))
-			Expect(fakeWebsocket.ReadMessages()[1]).To(Equal(messageTwo.EnvelopeBytes))
-		})
-
-		It("increments counters", func(done Done) {
-			defer close(done)
-			go websocketSink.Run(inputChan)
-
-			message, _ := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, "hello world", "appId", "App"), "origin")
-			inputChan <- message
-			Eventually(fakeWebsocket.ReadMessages).Should(HaveLen(1))
-
-			metrics := websocketSink.Emit().Metrics
-			Expect(metrics).To(HaveLen(2))
-
-			for _, metric := range metrics {
-				switch metric.Name {
-				case "sentMessageCount:appId":
-					Expect(metric.Value).To(BeNumerically("==", 1))
-				case "sentByteCount:appId":
-					Expect(metric.Value).To(BeNumerically("==", message.EnvelopeLength()))
-				default:
-					Fail("Unexpected metric: " + metric.Name)
-				}
-			}
+			Expect(fakeWebsocket.ReadMessages()[1]).To(Equal(messageTwoBytes))
 		})
 	})
 })

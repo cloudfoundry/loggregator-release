@@ -1,7 +1,6 @@
 package sinkmanager_test
 
 import (
-	"doppler/envelopewrapper"
 	"doppler/iprange"
 	"doppler/sinks"
 	"doppler/sinks/dump"
@@ -10,6 +9,7 @@ import (
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/metrics"
 	"doppler/sinkserver/sinkmanager"
+	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
@@ -27,11 +27,11 @@ type ChannelSink struct {
 	sync.RWMutex
 	done              chan struct{}
 	appId, identifier string
-	received          []*envelopewrapper.WrappedEnvelope
+	received          []*events.Envelope
 }
 
 func (c *ChannelSink) AppId() string { return c.appId }
-func (c *ChannelSink) Run(msgChan <-chan *envelopewrapper.WrappedEnvelope) {
+func (c *ChannelSink) Run(msgChan <-chan *events.Envelope) {
 	defer close(c.done)
 	for msg := range msgChan {
 		c.Lock()
@@ -45,10 +45,10 @@ func (c *ChannelSink) RunFinished() bool {
 	return true
 }
 
-func (c *ChannelSink) Received() []*envelopewrapper.WrappedEnvelope {
+func (c *ChannelSink) Received() []*events.Envelope {
 	c.RLock()
 	defer c.RUnlock()
-	data := make([]*envelopewrapper.WrappedEnvelope, len(c.received))
+	data := make([]*events.Envelope, len(c.received))
 	copy(data, c.received)
 	return data
 }
@@ -85,7 +85,7 @@ var _ = Describe("SinkManager", func() {
 	})
 
 	Describe("SendSyslogErrorToLoggregator", func() {
-		It("should listen and broadcast error messages", func() {
+		It("listens and broadcasts error messages", func() {
 
 			sink := &ChannelSink{appId: "myApp",
 				identifier: "myAppChan1",
@@ -97,13 +97,13 @@ var _ = Describe("SinkManager", func() {
 			Eventually(sink.Received).Should(HaveLen(1))
 
 			errorMsg := sink.Received()[0]
-			Expect(string(errorMsg.Envelope.GetLogMessage().GetMessage())).To(Equal("error msg"))
+			Expect(string(errorMsg.GetLogMessage().GetMessage())).To(Equal("error msg"))
 
 		})
 	})
 
 	Describe("SendTo", func() {
-		It("should send to all known sinks", func() {
+		It("sends to all known sinks", func() {
 
 			sink1 := &ChannelSink{appId: "myApp",
 				identifier: "myAppChan1",
@@ -118,7 +118,7 @@ var _ = Describe("SinkManager", func() {
 			sinkManager.RegisterSink(sink2)
 
 			expectedMessageString := "Some Data"
-			expectedMessage, _ := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp", "App"), "origin")
+			expectedMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp", "App"), "origin")
 			go sinkManager.SendTo("myApp", expectedMessage)
 
 			Eventually(sink1.Received).Should(HaveLen(1))
@@ -128,7 +128,7 @@ var _ = Describe("SinkManager", func() {
 
 		})
 
-		It("should only send to sinks that match the appID", func(done Done) {
+		It("only sends to sinks that match the appID", func(done Done) {
 
 			sink1 := &ChannelSink{appId: "myApp1",
 				identifier: "myAppChan1",
@@ -143,7 +143,7 @@ var _ = Describe("SinkManager", func() {
 			sinkManager.RegisterSink(sink2)
 
 			expectedMessageString := "Some Data"
-			expectedMessage, _ := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp", "App"), "origin")
+			expectedMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp", "App"), "origin")
 			go sinkManager.SendTo("myApp1", expectedMessage)
 
 			Eventually(sink1.Received).Should(HaveLen(1))
@@ -156,12 +156,12 @@ var _ = Describe("SinkManager", func() {
 
 	Describe("Stop", func() {
 
-		It("should stop", func() {
+		It("stops", func() {
 			sinkManager.Stop()
 			Eventually(sinkManagerDone).Should(BeClosed())
 		})
 
-		It("should stop all registered sinks", func(done Done) {
+		It("stops all registered sinks", func(done Done) {
 			sink := &ChannelSink{appId: "myApp1",
 				identifier: "myAppChan1",
 				done:       make(chan struct{}),
@@ -174,7 +174,7 @@ var _ = Describe("SinkManager", func() {
 		})
 	})
 
-	Context("With updates from appstore", func() {
+	Context("with updates from appstore", func() {
 
 		var metrics *metrics.SinkManagerMetrics
 		var numSyslogSinks func() int
@@ -188,15 +188,15 @@ var _ = Describe("SinkManager", func() {
 			}
 		})
 
-		Context("When an add update is received", func() {
-			It("Should create a new syslog sink from the newAppServicesChan", func() {
+		Context("when an add update is received", func() {
+			It("creates a new syslog sink from the newAppServicesChan", func() {
 				initialNumSinks := numSyslogSinks()
 				newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:885"}
 
 				Eventually(numSyslogSinks).Should(Equal(initialNumSinks + 1))
 			})
 
-			Context("With an invalid drain Url", func() {
+			Context("with an invalid drain Url", func() {
 				var errorSink *ChannelSink
 
 				BeforeEach(func() {
@@ -207,26 +207,26 @@ var _ = Describe("SinkManager", func() {
 					sinkManager.RegisterSink(errorSink)
 				})
 
-				It("Should send an error message if the drain URL is blacklisted", func() {
+				It("sends an error message if the drain URL is blacklisted", func() {
 					newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://10.10.10.11:884"}
 					Eventually(errorSink.Received).Should(HaveLen(1))
 					errorMsg := errorSink.Received()[0]
-					Expect(string(errorMsg.Envelope.GetLogMessage().GetMessage())).To(MatchRegexp("Invalid syslog drain URL"))
+					Expect(string(errorMsg.GetLogMessage().GetMessage())).To(MatchRegexp("Invalid syslog drain URL"))
 				})
 
-				It("Should send an error message if the drain URL is blacklisted", func() {
+				It("sends an error message if the drain URL is invalid", func() {
 					newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog//invalid"}
 					Eventually(errorSink.Received).Should(HaveLen(1))
 					errorMsg := errorSink.Received()[0]
-					Expect(string(errorMsg.Envelope.GetLogMessage().GetMessage())).To(MatchRegexp("Invalid syslog drain URL"))
+					Expect(string(errorMsg.GetLogMessage().GetMessage())).To(MatchRegexp("Invalid syslog drain URL"))
 				})
 
 			})
 
 		})
 
-		Context("When a delete update is received", func() {
-			It("Should delete the corresponding syslog sink if it exists", func() {
+		Context("when a delete update is received", func() {
+			It("deletes the corresponding syslog sink if it exists", func() {
 				initialNumSinks := numSyslogSinks()
 				newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886"}
 
@@ -237,7 +237,7 @@ var _ = Describe("SinkManager", func() {
 				Eventually(numSyslogSinks).Should(Equal(initialNumSinks))
 			})
 
-			It("Should handle a delete for a nonexistent sink", func() {
+			It("handles a delete for a nonexistent sink", func() {
 				initialNumSinks := numSyslogSinks()
 				deletedAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886"}
 				Eventually(numSyslogSinks).Should(Equal(initialNumSinks))
@@ -247,13 +247,13 @@ var _ = Describe("SinkManager", func() {
 
 	})
 
-	Context("When a dump sink times out", func() {
+	Context("when a dump sink times out", func() {
 
 		BeforeEach(func() {
 			newAppServiceChan <- appservice.AppService{AppId: "appId", Url: "syslog://127.0.1.1:887"}
 		})
 
-		It("should remove the app from etcd", func(done Done) {
+		It("removes the app from etcd", func(done Done) {
 			dumpSink := dump.NewDumpSink("appId", 1, loggertesthelper.Logger(), 1*time.Millisecond)
 			sinkManager.RegisterSink(dumpSink)
 
@@ -274,16 +274,16 @@ var _ = Describe("SinkManager", func() {
 
 			It("clears the recent logs buffer", func() {
 				expectedMessageString := "Some Data"
-				expectedMessage, _ := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp", "App"), "origin")
+				expectedMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp", "App"), "origin")
 				sinkManager.SendTo("appId", expectedMessage)
 
-				Eventually(func() []*envelopewrapper.WrappedEnvelope {
+				Eventually(func() []*events.Envelope {
 					return sinkManager.RecentLogsFor("appId")
 				}).Should(HaveLen(1))
 
 				sinkManager.UnregisterSink(dumpSink)
 
-				Eventually(func() []*envelopewrapper.WrappedEnvelope {
+				Eventually(func() []*events.Envelope {
 					return sinkManager.RecentLogsFor("appId")
 				}).Should(HaveLen(0))
 			})
@@ -296,7 +296,7 @@ var _ = Describe("SinkManager", func() {
 				url, err := url.Parse("syslog://localhost:9998")
 				Expect(err).To(BeNil())
 				writer := syslogwriter.NewSyslogWriter(url, "appId", true)
-				errorChan := make(chan *envelopewrapper.WrappedEnvelope)
+				errorChan := make(chan *events.Envelope)
 				syslogSink = syslog.NewSyslogSink("appId", "localhost:9999", loggertesthelper.Logger(), writer, errorChan, "dropsonde-origin")
 
 				sinkManager.RegisterSink(syslogSink)

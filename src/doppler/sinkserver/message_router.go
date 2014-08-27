@@ -1,8 +1,8 @@
 package sinkserver
 
 import (
-	"doppler/envelopewrapper"
 	"doppler/sinkserver/metrics"
+	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"sync/atomic"
@@ -16,7 +16,7 @@ type MessageRouter struct {
 }
 
 type sinkManager interface {
-	SendTo(string, *envelopewrapper.WrappedEnvelope)
+	SendTo(string, *events.Envelope)
 }
 
 func NewMessageRouter(sinkManager sinkManager, logger *gosteno.Logger) *MessageRouter {
@@ -28,22 +28,22 @@ func NewMessageRouter(sinkManager sinkManager, logger *gosteno.Logger) *MessageR
 	}
 }
 
-func (r *MessageRouter) Start(incomingLogChan <-chan *envelopewrapper.WrappedEnvelope) {
+func (r *MessageRouter) Start(incomingLogChan <-chan *events.Envelope) {
 	r.logger.Debug("MessageRouter:Starting")
 	for {
 		select {
 		case <-r.done:
 			r.logger.Debug("MessageRouter:MessageReceived:Done")
 			return
-		case wrappedEnvelope, ok := <-incomingLogChan:
+		case envelope, ok := <-incomingLogChan:
 			atomic.AddUint64(&r.Metrics.ReceivedMessages, 1)
 			r.logger.Debug("MessageRouter:MessageReceived")
 			if !ok {
 				r.logger.Debug("MessageRouter:MessageReceived:NotOkay")
 				return
 			}
-			r.logger.Debugf("MessageRouter:outgoingLogChan: Received %d bytes of data from agent listener.", wrappedEnvelope.EnvelopeLength())
-			r.send(wrappedEnvelope)
+			r.logger.Debugf("MessageRouter:outgoingLogChan: Received %s message from %s at %d.", envelope.GetEventType().String(), envelope.Origin, envelope.Timestamp)
+			r.send(envelope)
 		}
 	}
 }
@@ -61,10 +61,10 @@ func (r *MessageRouter) Emit() instrumentation.Context {
 	return r.Metrics.Emit()
 }
 
-func (r *MessageRouter) send(wrappedEnvelope *envelopewrapper.WrappedEnvelope) {
-	appId := wrappedEnvelope.Envelope.GetAppId()
+func (r *MessageRouter) send(envelope *events.Envelope) {
+	appId := envelope.GetAppId()
 
 	r.logger.Debugf("MessageRouter:outgoingLogChan: Searching for sinks with appId [%s].", appId)
-	r.SinkManager.SendTo(appId, wrappedEnvelope)
+	r.SinkManager.SendTo(appId, envelope)
 	r.logger.Debugf("MessageRouter:outgoingLogChan: Done sending message.")
 }

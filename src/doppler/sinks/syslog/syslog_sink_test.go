@@ -1,10 +1,10 @@
 package syslog_test
 
 import (
-	"doppler/envelopewrapper"
 	"doppler/sinks/syslog"
 	"errors"
 	"fmt"
+	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
@@ -105,9 +105,9 @@ var _ = Describe("SyslogSink", func() {
 	var syslogSink *syslog.SyslogSink
 	var sysLogger *SyslogWriterRecorder
 	var sysLoggerDoneChan chan bool
-	var errorChannel chan *envelopewrapper.WrappedEnvelope
+	var errorChannel chan *events.Envelope
 	var mutex sync.Mutex
-	var inputChan chan *envelopewrapper.WrappedEnvelope
+	var inputChan chan *events.Envelope
 
 	closeSysLoggerDoneChan := func() {
 		mutex.Lock()
@@ -124,8 +124,8 @@ var _ = Describe("SyslogSink", func() {
 	BeforeEach(func() {
 		newSysLoggerDoneChan()
 		sysLogger = NewSyslogWriterRecorder()
-		errorChannel = make(chan *envelopewrapper.WrappedEnvelope, 10)
-		inputChan = make(chan *envelopewrapper.WrappedEnvelope)
+		errorChannel = make(chan *events.Envelope, 10)
+		inputChan = make(chan *events.Envelope)
 		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorChannel, "dropsonde-origin").(*syslog.SyslogSink)
 	})
 
@@ -147,8 +147,8 @@ var _ = Describe("SyslogSink", func() {
 			}()
 		})
 
-		It("should still accept messages without blocking", func(done Done) {
-			logMessage, _ := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
+		It("still accepts messages without blocking", func(done Done) {
+			logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
 
 			for i := 0; i < 100; i++ {
 				inputChan <- logMessage
@@ -159,7 +159,7 @@ var _ = Describe("SyslogSink", func() {
 		Context("when remote syslog server comes up", func() {
 			BeforeEach(func() {
 				for i := 0; i < 5; i++ {
-					message, _ := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, fmt.Sprintf("test message: %d\n", i), "appId", "App"), "origin")
+					message, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, fmt.Sprintf("test message: %d\n", i), "appId", "App"), "origin")
 					inputChan <- message
 				}
 				close(inputChan)
@@ -167,7 +167,7 @@ var _ = Describe("SyslogSink", func() {
 				sysLogger.SetDown(false)
 			})
 
-			It("should send all the messages in the buffer", func(done Done) {
+			It("sends all the messages in the buffer", func(done Done) {
 				<-sysLoggerDoneChan
 				data := sysLogger.ReceivedMessages()
 				Expect(data).To(HaveLen(5))
@@ -188,9 +188,9 @@ var _ = Describe("SyslogSink", func() {
 		It("sends input messages to the syslog writer", func(done Done) {
 			logMessage := factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App")
 			logMessage.SourceInstance = proto.String("123")
-			wrappedEnvelope, _ := envelopewrapper.WrapEvent(logMessage, "origin")
+			envelope, _ := emitter.Wrap(logMessage, "origin")
 
-			inputChan <- wrappedEnvelope
+			inputChan <- envelope
 			data := <-sysLogger.receivedChannel
 
 			expectedSyslogMessage := fmt.Sprintf(`out: test message ts: \d+ src: App srcId: 123`)
@@ -200,16 +200,16 @@ var _ = Describe("SyslogSink", func() {
 
 		It("does not send non-log messages to the syslog writer", func(done Done) {
 			nonLogMessage := factories.NewHeartbeat(1, 2, 3)
-			wrappedEnvelope, _ := envelopewrapper.WrapEvent(nonLogMessage, "origin")
+			envelope, _ := emitter.Wrap(nonLogMessage, "origin")
 
-			inputChan <- wrappedEnvelope
+			inputChan <- envelope
 
 			Consistently(sysLogger.receivedChannel).ShouldNot(Receive())
 			close(done)
 		})
 
-		It("should stop sending messages when the disconnect comes in", func(done Done) {
-			logMessage, _ := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
+		It("stops sending messages when the disconnect comes in", func(done Done) {
+			logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
 			inputChan <- logMessage
 
 			_, ok := <-sysLogger.receivedChannel
@@ -222,9 +222,9 @@ var _ = Describe("SyslogSink", func() {
 			close(done)
 		})
 
-		It("Uses the timestamp of the logmessage when sending", func(done Done) {
-			message, _ := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
-			expectedTimeString := fmt.Sprintf("ts: %d", message.Envelope.GetLogMessage().GetTimestamp())
+		It("uses the timestamp of the logmessage when sending", func(done Done) {
+			message, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
+			expectedTimeString := fmt.Sprintf("ts: %d", message.GetLogMessage().GetTimestamp())
 
 			time.Sleep(100 * time.Millisecond) //wait a bit to allow timestamps to differ
 
@@ -240,22 +240,22 @@ var _ = Describe("SyslogSink", func() {
 				sysLogger.SetDown(true)
 			})
 
-			It("should report error messages when it's connected", func(done Done) {
-				logMessage, _ := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
+			It("reports error messages when it's connected", func(done Done) {
+				logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
 				inputChan <- logMessage
 				errorLog := <-errorChannel
-				errorMsg := string(errorLog.Envelope.GetLogMessage().GetMessage())
+				errorMsg := string(errorLog.GetLogMessage().GetMessage())
 				Expect(errorMsg).To(MatchRegexp(`Syslog Sink syslog://using-fake: Error when dialing out. Backing off for (\d(\.\d+)?ms|\d+us). Err: Error connecting.`))
-				Expect(errorLog.Envelope.GetLogMessage().GetSourceType()).To(Equal("LGR"))
+				Expect(errorLog.GetLogMessage().GetSourceType()).To(Equal("LGR"))
 
 				close(done)
 			})
 
 			// TODO fix me #flakey
-			It("should not report error messages when it's disconnected", func(done Done) {
+			It("does not report error messages when it's disconnected", func(done Done) {
 				syslogSink.Disconnect()
 
-				logMessage, _ := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
+				logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
 				inputChan <- logMessage
 				close(inputChan)
 				<-sysLoggerDoneChan
@@ -264,8 +264,8 @@ var _ = Describe("SyslogSink", func() {
 				close(done)
 			})
 
-			It("should stop sending messages when the disconnect comes in", func(done Done) {
-				logMessage, _ := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
+			It("stops sending messages when the disconnect comes in", func(done Done) {
+				logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
 				inputChan <- logMessage
 
 				Eventually(errorChannel).ShouldNot(BeEmpty())
@@ -273,7 +273,7 @@ var _ = Describe("SyslogSink", func() {
 				<-sysLoggerDoneChan
 				numErrors := len(errorChannel)
 
-				logMessage, _ = envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, "test message 2", "appId", "App"), "origin")
+				logMessage, _ = emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message 2", "appId", "App"), "origin")
 				inputChan <- logMessage
 				close(inputChan)
 
@@ -286,7 +286,7 @@ var _ = Describe("SyslogSink", func() {
 				BeforeEach(func() {
 					for i := 0; i < 105; i++ {
 						msg := fmt.Sprintf("message no %v", i)
-						logMessage, _ := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, msg, "appId", "App"), "origin")
+						logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, msg, "appId", "App"), "origin")
 
 						inputChan <- logMessage
 					}
@@ -299,7 +299,7 @@ var _ = Describe("SyslogSink", func() {
 						<-sysLoggerDoneChan
 					})
 
-					It("should resume sending messages", func(done Done) {
+					It("resumes sending messages", func(done Done) {
 						data := sysLogger.ReceivedMessages()
 						Expect(data).To(HaveLen(6))
 						for i := 0; i < 5; i++ {
@@ -309,7 +309,7 @@ var _ = Describe("SyslogSink", func() {
 						close(done)
 					})
 
-					It("should send a message about the buffer overflow", func(done Done) {
+					It("sends a message about the buffer overflow", func(done Done) {
 						data := sysLogger.ReceivedMessages()
 						Expect(len(data)).To(BeNumerically(">", 1))
 						Expect(data[0]).To(MatchRegexp("err: Log message output too high. We've dropped 100 messages"))

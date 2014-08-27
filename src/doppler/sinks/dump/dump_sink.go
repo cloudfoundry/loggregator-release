@@ -1,7 +1,7 @@
 package dump
 
 import (
-	"doppler/envelopewrapper"
+	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"sync"
@@ -13,8 +13,8 @@ type DumpSink struct {
 	sync.RWMutex
 	appId              string
 	logger             *gosteno.Logger
-	messageBuffer      []*envelopewrapper.WrappedEnvelope
-	inputChan          chan *envelopewrapper.WrappedEnvelope
+	messageBuffer      []*events.Envelope
+	inputChan          chan *events.Envelope
 	inactivityDuration time.Duration
 	sequence           uint32
 	bufferSize         uint32
@@ -24,14 +24,14 @@ func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, i
 	dumpSink := &DumpSink{
 		appId:              appId,
 		logger:             givenLogger,
-		messageBuffer:      make([]*envelopewrapper.WrappedEnvelope, bufferSize),
+		messageBuffer:      make([]*events.Envelope, bufferSize),
 		inactivityDuration: inactivityDuration,
 		bufferSize:         bufferSize,
 	}
 	return dumpSink
 }
 
-func (d *DumpSink) Run(inputChan <-chan *envelopewrapper.WrappedEnvelope) {
+func (d *DumpSink) Run(inputChan <-chan *events.Envelope) {
 	timer := time.NewTimer(d.inactivityDuration)
 	for {
 		timer.Reset(d.inactivityDuration)
@@ -48,24 +48,24 @@ func (d *DumpSink) Run(inputChan <-chan *envelopewrapper.WrappedEnvelope) {
 	}
 }
 
-func (d *DumpSink) addMsg(msg *envelopewrapper.WrappedEnvelope) {
+func (d *DumpSink) addMsg(msg *events.Envelope) {
 	d.Lock()
 	defer d.Unlock()
 	position := atomic.AddUint32(&d.sequence, uint32(1)) % d.bufferSize
 	d.messageBuffer[position] = msg
 }
 
-func (d *DumpSink) copyBuffer() (int, []*envelopewrapper.WrappedEnvelope) {
+func (d *DumpSink) copyBuffer() (int, []*events.Envelope) {
 	d.RLock()
 	defer d.RUnlock()
-	data := make([]*envelopewrapper.WrappedEnvelope, d.bufferSize)
+	data := make([]*events.Envelope, d.bufferSize)
 	copyCount := copy(data, d.messageBuffer)
 	return copyCount, data
 }
 
-func (d *DumpSink) Dump() []*envelopewrapper.WrappedEnvelope {
+func (d *DumpSink) Dump() []*events.Envelope {
 	sequence := atomic.LoadUint32(&d.sequence)
-	out := make([]*envelopewrapper.WrappedEnvelope, d.bufferSize)
+	out := make([]*events.Envelope, d.bufferSize)
 	_, buffer := d.copyBuffer()
 
 	if d.bufferSize == 1 {

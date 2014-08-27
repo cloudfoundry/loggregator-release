@@ -1,8 +1,8 @@
 package sinkserver_test
 
 import (
-	"doppler/envelopewrapper"
 	"doppler/sinkserver"
+	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
@@ -14,11 +14,11 @@ import (
 
 type fakeSinkManager struct {
 	sync.RWMutex
-	receivedMessages []*envelopewrapper.WrappedEnvelope
+	receivedMessages []*events.Envelope
 	receivedDrains   [][]string
 }
 
-func (f *fakeSinkManager) SendTo(appId string, receivedMessage *envelopewrapper.WrappedEnvelope) {
+func (f *fakeSinkManager) SendTo(appId string, receivedMessage *events.Envelope) {
 	f.Lock()
 	defer f.Unlock()
 	f.receivedMessages = append(f.receivedMessages, receivedMessage)
@@ -30,7 +30,7 @@ func (f *fakeSinkManager) ManageSyslogSinks(appId string, syslogSinkUrls []strin
 	f.receivedDrains = append(f.receivedDrains, syslogSinkUrls)
 }
 
-func (f *fakeSinkManager) received() []*envelopewrapper.WrappedEnvelope {
+func (f *fakeSinkManager) received() []*events.Envelope {
 	f.RLock()
 	defer f.RUnlock()
 	return f.receivedMessages
@@ -48,15 +48,15 @@ var _ = Describe("Message Router", func() {
 	var messageRouter *sinkserver.MessageRouter
 
 	BeforeEach(func() {
-		fakeManager = &fakeSinkManager{receivedMessages: make([]*envelopewrapper.WrappedEnvelope, 0), receivedDrains: make([][]string, 0)}
+		fakeManager = &fakeSinkManager{receivedMessages: make([]*events.Envelope, 0), receivedDrains: make([][]string, 0)}
 		messageRouter = sinkserver.NewMessageRouter(fakeManager, loggertesthelper.Logger())
 	})
 
 	Describe("Start", func() {
-		Context("With an incoming message", func() {
-			var incomingLogChan chan *envelopewrapper.WrappedEnvelope
+		Context("with an incoming message", func() {
+			var incomingLogChan chan *events.Envelope
 			BeforeEach(func() {
-				incomingLogChan = make(chan *envelopewrapper.WrappedEnvelope)
+				incomingLogChan = make(chan *events.Envelope)
 				go messageRouter.Start(incomingLogChan)
 			})
 
@@ -65,17 +65,17 @@ var _ = Describe("Message Router", func() {
 			})
 
 			It("sends the message to the sink manager if it is an app message", func() {
-				message, _ := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, "testMessage", "app", "App"), "origin")
+				message, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "testMessage", "app", "App"), "origin")
 				incomingLogChan <- message
 				Eventually(fakeManager.received).Should(HaveLen(1))
-				Expect(fakeManager.received()[0].Envelope.GetLogMessage()).To(Equal(message.Envelope.GetLogMessage()))
+				Expect(fakeManager.received()[0].GetLogMessage()).To(Equal(message.GetLogMessage()))
 			})
 		})
 	})
 
 	Describe("Stop", func() {
-		It("should return", func() {
-			incomingLogChan := make(chan *envelopewrapper.WrappedEnvelope)
+		It("returns", func() {
+			incomingLogChan := make(chan *events.Envelope)
 			done := make(chan struct{})
 			go func() {
 				messageRouter.Start(incomingLogChan)

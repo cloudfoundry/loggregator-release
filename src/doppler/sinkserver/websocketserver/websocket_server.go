@@ -1,11 +1,12 @@
 package websocketserver
 
 import (
-	"doppler/envelopewrapper"
+	"code.google.com/p/gogoprotobuf/proto"
 	"doppler/sinks/websocket"
 	"doppler/sinkserver/sinkmanager"
 	"errors"
 	"fmt"
+	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/appid"
 	"github.com/cloudfoundry/loggregatorlib/server"
@@ -142,13 +143,19 @@ func (w *WebsocketServer) logInvalidApp(address string) {
 	w.logger.Warn(message)
 }
 
-func sendMessagesToWebsocket(logMessages []*envelopewrapper.WrappedEnvelope, ws *gorilla.Conn, logger *gosteno.Logger) {
-	for _, message := range logMessages {
-		err := ws.WriteMessage(gorilla.BinaryMessage, message.EnvelopeBytes)
+func sendMessagesToWebsocket(logMessages []*events.Envelope, ws *gorilla.Conn, logger *gosteno.Logger) {
+	for _, messageEnvelope := range logMessages {
+		envelopeBytes, err := proto.Marshal(messageEnvelope)
+
 		if err != nil {
-			logger.Debugf("Dump Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", ws.RemoteAddr(), err)
+			logger.Errorf("Websocket Server %s: Error marshalling %s envelope from origin %s: %s", ws.RemoteAddr(), messageEnvelope.GetEventType().String(), messageEnvelope.GetOrigin(), err.Error())
+		}
+
+		err = ws.WriteMessage(gorilla.BinaryMessage, envelopeBytes)
+		if err != nil {
+			logger.Debugf("Websocket Server %s: Error when trying to send data to sink %s. Requesting close. Err: %v", ws.RemoteAddr(), err)
 		} else {
-			logger.Debugf("Dump Sink %s: Successfully sent data", ws.RemoteAddr())
+			logger.Debugf("Websocket Server %s: Successfully sent data", ws.RemoteAddr())
 		}
 	}
 }

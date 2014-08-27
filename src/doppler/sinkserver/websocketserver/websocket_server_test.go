@@ -1,7 +1,6 @@
 package websocketserver_test
 
 import (
-	"doppler/envelopewrapper"
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
@@ -14,6 +13,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cloudfoundry/dropsonde/emitter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -43,68 +43,68 @@ var _ = Describe("WebsocketServer", func() {
 	})
 
 	Describe("failed connections", func() {
-		It("should fail without an appId", func() {
+		It("fails without an appId", func() {
 			_, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?", apiEndpoint))
 			Expect(connectionDropped).To(BeClosed())
 		})
 
-		It("should fail with an invalid appId", func() {
+		It("fails with an invalid appId", func() {
 			_, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?app=", apiEndpoint))
 			Expect(connectionDropped).To(BeClosed())
 		})
 
-		It("should fail with something invalid in query string", func() {
+		It("fails with something invalid in query string", func() {
 			_, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?something=invalidtarget", apiEndpoint))
 			Expect(connectionDropped).To(BeClosed())
 		})
 
-		It("should fail with bad path", func() {
+		It("fails with bad path", func() {
 			_, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/bad_path/", apiEndpoint))
 			Expect(connectionDropped).To(BeClosed())
 		})
 	})
 
-	It("should dump buffer data to the websocket client", func(done Done) {
-		lm, err := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
+	It("dumps buffer data to the websocket client", func(done Done) {
+		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 		sinkManager.SendTo(appId, lm)
 
 		AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/dump/?app=%s", apiEndpoint, appId))
 
 		rlm, err := receiveLogMessage(wsReceivedChan)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(rlm.GetLogMessage().GetMessage()).To(Equal(lm.Envelope.GetLogMessage().GetMessage()))
+		Expect(rlm.GetLogMessage().GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
 		close(done)
 	})
 
-	It("should dump buffer data to the websocket client with /recent", func(done Done) {
-		lm, err := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
+	It("dumps buffer data to the websocket client with /recent", func(done Done) {
+		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 		sinkManager.SendTo(appId, lm)
 
 		AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/recent?app=%s", apiEndpoint, appId))
 
 		rlm, err := receiveLogMessage(wsReceivedChan)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(rlm.GetLogMessage().GetMessage()).To(Equal(lm.Envelope.GetLogMessage().GetMessage()))
+		Expect(rlm.GetLogMessage().GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
 		close(done)
 	})
 
-	It("should send data to the websocket client", func(done Done) {
+	It("sends data to the websocket client", func(done Done) {
 		stopKeepAlive, _ := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?app=%s", apiEndpoint, appId))
-		lm, err := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
+		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 		sinkManager.SendTo(appId, lm)
 
 		rlm, err := receiveLogMessage(wsReceivedChan)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(rlm.GetLogMessage().GetMessage()).To(Equal(lm.Envelope.GetLogMessage().GetMessage()))
+		Expect(rlm.GetLogMessage().GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
 		close(stopKeepAlive)
 		close(done)
 	})
 
-	It("should still send to 'live' sinks", func(done Done) {
+	It("still sends to 'live' sinks", func(done Done) {
 		stopKeepAlive, connectionDropped := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?app=%s", apiEndpoint, appId))
 		Consistently(connectionDropped, 0.2).ShouldNot(BeClosed())
 
-		lm, err := envelopewrapper.WrapEvent(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
+		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 		sinkManager.SendTo(appId, lm)
 
 		rlm, err := receiveLogMessage(wsReceivedChan)
@@ -114,7 +114,7 @@ var _ = Describe("WebsocketServer", func() {
 		close(done)
 	})
 
-	It("should close the client when the keep-alive stops", func() {
+	It("closes the client when the keep-alive stops", func() {
 		stopKeepAlive, connectionDropped := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?app=%s", apiEndpoint, appId))
 		Expect(stopKeepAlive).ToNot(Receive())
 		close(stopKeepAlive)

@@ -1,10 +1,11 @@
 package groupedsinks
 
 import (
-	"doppler/envelopewrapper"
 	"doppler/sinks"
 	"doppler/sinks/dump"
 	"doppler/sinks/syslog"
+	"doppler/sinks/websocket"
+	"github.com/cloudfoundry/dropsonde/events"
 	"sync"
 )
 
@@ -13,8 +14,8 @@ func NewGroupedSinks() *GroupedSinks {
 }
 
 type sinkWrapper struct {
-	inputChan chan<- *envelopewrapper.WrappedEnvelope
-	s         sinks.Sink
+	inputChan chan<- *events.Envelope
+	sink      sinks.Sink
 }
 
 type GroupedSinks struct {
@@ -22,118 +23,134 @@ type GroupedSinks struct {
 	sync.RWMutex
 }
 
-func (gc *GroupedSinks) Register(in chan<- *envelopewrapper.WrappedEnvelope, s sinks.Sink) bool {
-	gc.Lock()
-	defer gc.Unlock()
+func (group *GroupedSinks) Register(in chan<- *events.Envelope, sink sinks.Sink) bool {
+	group.Lock()
+	defer group.Unlock()
 
-	appId := s.AppId()
-	if appId == "" || s.Identifier() == "" {
+	appId := sink.AppId()
+	if appId == "" || sink.Identifier() == "" {
 		return false
 	}
-	sinksForApp := gc.apps[appId]
+	sinksForApp := group.apps[appId]
 	if sinksForApp == nil {
-		gc.apps[appId] = make(map[string]*sinkWrapper)
-		sinksForApp = gc.apps[appId]
+		group.apps[appId] = make(map[string]*sinkWrapper)
+		sinksForApp = group.apps[appId]
 	}
 
-	if _, ok := sinksForApp[s.Identifier()]; ok {
+	if _, ok := sinksForApp[sink.Identifier()]; ok {
 		return false
 	}
-	sinksForApp[s.Identifier()] = &sinkWrapper{inputChan: in, s: s}
+	sinksForApp[sink.Identifier()] = &sinkWrapper{inputChan: in, sink: sink}
 	return true
 }
 
-func (gc *GroupedSinks) BroadCast(appId string, msg *envelopewrapper.WrappedEnvelope) {
-	gc.RLock()
-	defer gc.RUnlock()
+func (group *GroupedSinks) BroadCast(appId string, msg *events.Envelope) {
+	group.RLock()
+	defer group.RUnlock()
 
-	for _, wrapper := range gc.apps[appId] {
-		//		gc.logger.Debugf("MessageRouter:ParsedMessageChan: Sending Message to channel %v for sinks targeting [%s].", wrapper.s.Identifier(), appId)
+	for _, wrapper := range group.apps[appId] {
 		wrapper.inputChan <- msg
 	}
 }
 
-func (gc *GroupedSinks) BroadCastError(appId string, errorMsg *envelopewrapper.WrappedEnvelope) {
+func (gc *GroupedSinks) BroadCastError(appId string, errorMsg *events.Envelope) {
 	gc.RLock()
 	defer gc.RUnlock()
 
 	for _, wrapper := range gc.apps[appId] {
-		if wrapper.s.ShouldReceiveErrors() {
-			//			sinkManager.logger.Debugf("SinkManager:ErrorChannel: Sending Message to channel %v for sinks targeting [%s].", sink.Identifier(), appId)
+		if wrapper.sink.ShouldReceiveErrors() {
 			wrapper.inputChan <- errorMsg
 		}
 	}
 }
 
-func (gc *GroupedSinks) CountFor(appId string) int {
-	gc.RLock()
-	defer gc.RUnlock()
+func (group *GroupedSinks) CountFor(appId string) int {
+	group.RLock()
+	defer group.RUnlock()
 
-	if _, ok := gc.apps[appId]; !ok {
+	if _, ok := group.apps[appId]; !ok {
 		return 0
 	}
-	return len(gc.apps[appId])
+	return len(group.apps[appId])
 }
 
-func (gc *GroupedSinks) DrainFor(appId, drainUrl string) (result sinks.Sink) {
-	gc.RLock()
-	defer gc.RUnlock()
+func (group *GroupedSinks) DrainFor(appId, drainUrl string) sinks.Sink {
+	group.RLock()
+	defer group.RUnlock()
 
-	wrapper, ok := gc.apps[appId][drainUrl]
+	wrapper, ok := group.apps[appId][drainUrl]
 	if ok {
-		return wrapper.s
+		return wrapper.sink
 	}
 	return nil
 }
 
-func (gc *GroupedSinks) DrainsFor(appId string) (results []sinks.Sink) {
-	gc.RLock()
-	defer gc.RUnlock()
+func (group *GroupedSinks) DrainsFor(appId string) []sinks.Sink {
+	group.RLock()
+	defer group.RUnlock()
 
-	for _, wrapper := range gc.apps[appId] {
-		_, isSyslogSink := wrapper.s.(*syslog.SyslogSink)
+	results := []sinks.Sink{}
+	for _, wrapper := range group.apps[appId] {
+		_, isSyslogSink := wrapper.sink.(*syslog.SyslogSink)
 		if isSyslogSink {
-			results = append(results, wrapper.s)
+			results = append(results, wrapper.sink)
 		}
 	}
 
 	return results
 }
 
-func (gc *GroupedSinks) DumpFor(appId string) *dump.DumpSink {
-	gc.RLock()
-	defer gc.RUnlock()
+func (group *GroupedSinks) DumpFor(appId string) *dump.DumpSink {
+	group.RLock()
+	defer group.RUnlock()
 
-	appCache, ok := gc.apps[appId]
+	appCache, ok := group.apps[appId]
 
 	if !ok {
 		return nil
 	}
 	if _, ok := appCache[appId]; !ok {
+
 		return nil
 	}
-	return appCache[appId].s.(*dump.DumpSink)
+	return appCache[appId].sink.(*dump.DumpSink)
 }
 
-func (gc *GroupedSinks) CloseAndDelete(sink sinks.Sink) bool {
-	gc.Lock()
-	defer gc.Unlock()
-	wrapper, ok := gc.apps[sink.AppId()][sink.Identifier()]
+func (group *GroupedSinks) WebsocketSinksFor(appId string) []websocket.WebsocketSink {
+	results := []websocket.WebsocketSink{}
+
+	group.RLock()
+	group.RUnlock()
+
+	for _, wrapper := range group.apps[appId] {
+		webSocketSink, isWebsocketSink := wrapper.sink.(*websocket.WebsocketSink)
+		if isWebsocketSink {
+			results = append(results, *webSocketSink)
+		}
+	}
+
+	return results
+}
+
+func (group *GroupedSinks) CloseAndDelete(sink sinks.Sink) bool {
+	group.Lock()
+	defer group.Unlock()
+	wrapper, ok := group.apps[sink.AppId()][sink.Identifier()]
 	if ok {
 		close(wrapper.inputChan)
-		delete(gc.apps[sink.AppId()], sink.Identifier())
+		delete(group.apps[sink.AppId()], sink.Identifier())
 		return true
 	}
 	return false
 }
 
-func (gc *GroupedSinks) DeleteAll() {
-	gc.Lock()
-	defer gc.Unlock()
-	for appId, appSinks := range gc.apps {
+func (group *GroupedSinks) DeleteAll() {
+	group.Lock()
+	defer group.Unlock()
+	for appId, appSinks := range group.apps {
 		for _, wrapper := range appSinks {
 			close(wrapper.inputChan)
 		}
-		delete(gc.apps, appId)
+		delete(group.apps, appId)
 	}
 }

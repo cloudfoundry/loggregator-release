@@ -1,8 +1,6 @@
 package syslog
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
-	"doppler/envelopewrapper"
 	"doppler/sinks"
 	"doppler/sinks/retrystrategy"
 	"doppler/sinks/syslogwriter"
@@ -11,8 +9,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"sync/atomic"
 	"time"
 )
 
@@ -22,21 +18,19 @@ type SyslogSink struct {
 	drainUrl          string
 	sentMessageCount  *uint64
 	sentByteCount     *uint64
-	listenerChannel   chan *envelopewrapper.WrappedEnvelope
+	listenerChannel   chan *events.Envelope
 	syslogWriter      syslogwriter.SyslogWriter
-	errorChannel      chan<- *envelopewrapper.WrappedEnvelope
+	errorChannel      chan<- *events.Envelope
 	disconnectChannel chan struct{}
 	dropsondeOrigin   string
 }
 
-func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.SyslogWriter, errorChannel chan<- *envelopewrapper.WrappedEnvelope, dropsondeOrigin string) sinks.Sink {
+func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.SyslogWriter, errorChannel chan<- *events.Envelope, dropsondeOrigin string) sinks.Sink {
 	givenLogger.Debugf("Syslog Sink %s: Created for appId [%s]", drainUrl, appId)
 	return &SyslogSink{
 		appId:             appId,
 		drainUrl:          drainUrl,
 		logger:            givenLogger,
-		sentMessageCount:  new(uint64),
-		sentByteCount:     new(uint64),
 		syslogWriter:      syslogWriter,
 		errorChannel:      errorChannel,
 		disconnectChannel: make(chan struct{}),
@@ -44,7 +38,7 @@ func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, s
 	}
 }
 
-func (s *SyslogSink) Run(inputChan <-chan *envelopewrapper.WrappedEnvelope) {
+func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 	s.logger.Infof("Syslog Sink %s: Running.", s.drainUrl)
 	defer s.logger.Errorf("Syslog Sink %s: Stopped.", s.drainUrl)
 
@@ -72,27 +66,17 @@ func (s *SyslogSink) Run(inputChan <-chan *envelopewrapper.WrappedEnvelope) {
 
 				s.logger.Warnf(errorMsg)
 				msg := factories.NewLogMessage(events.LogMessage_ERR, errorMsg, s.appId, "LGR")
-				envelope, err := emitter.Wrap(msg, s.dropsondeOrigin)
+				errMsgEnvelope, err := emitter.Wrap(msg, s.dropsondeOrigin)
 
 				if err != nil {
-					s.logger.Warnf("Error marshalling message: %v", err)
+					s.logger.Errorf("Error enveloping message: %v", err)
 					continue
 				}
 
-				envBytes, err := proto.Marshal(envelope)
-
-				wrappedEnvelope := &envelopewrapper.WrappedEnvelope{
-					Envelope:      envelope,
-					EnvelopeBytes: envBytes,
-				}
-
-				if err == nil {
-					s.errorChannel <- wrappedEnvelope
-				} else {
-					s.logger.Warnf("Error marshalling message: %v", err)
-				}
+				s.errorChannel <- errMsgEnvelope
 				continue
 			}
+
 			s.logger.Infof("Syslog Sink %s: successfully connected.", s.drainUrl)
 			s.syslogWriter.SetConnected(true)
 			numberOfTries = 0
@@ -101,22 +85,22 @@ func (s *SyslogSink) Run(inputChan <-chan *envelopewrapper.WrappedEnvelope) {
 
 		s.logger.Debugf("Syslog Sink %s: Waiting for activity\n", s.drainUrl)
 
-		message, ok := <-buffer.GetOutputChannel()
+		messageEnvelope, ok := <-buffer.GetOutputChannel()
 		if !ok {
 			s.logger.Debugf("Syslog Sink %s: Closed listener channel detected. Closing.\n", s.drainUrl)
 			return
 		}
 
-		s.logger.Debugf("Syslog Sink %s: Got %d bytes. Sending data\n", s.drainUrl, message.EnvelopeLength())
+		s.logger.Debugf("SyslogSink:Run: Received %s message from %s at %d. Sending data.", messageEnvelope.GetEventType().String(), messageEnvelope.Origin, messageEnvelope.Timestamp)
 
 		var err error
 
-		if message.Envelope.GetEventType() != events.Envelope_LogMessage {
+		if messageEnvelope.GetEventType() != events.Envelope_LogMessage {
 			s.logger.Debugf("Syslog Sink %s: Skipping non-log message\n", s.drainUrl)
 			continue
 		}
 
-		logMessage := message.Envelope.GetLogMessage()
+		logMessage := messageEnvelope.GetLogMessage()
 
 		switch logMessage.GetMessageType() {
 		case events.LogMessage_OUT:
@@ -124,6 +108,7 @@ func (s *SyslogSink) Run(inputChan <-chan *envelopewrapper.WrappedEnvelope) {
 		case events.LogMessage_ERR:
 			_, err = s.syslogWriter.WriteStderr(logMessage.GetMessage(), logMessage.GetSourceType(), logMessage.GetSourceInstance(), *logMessage.Timestamp)
 		}
+
 		if err != nil {
 			s.logger.Debugf("Syslog Sink %s: Error when trying to send data to sink. Backing off. Err: %v\n", s.drainUrl, err)
 			numberOfTries++
@@ -131,8 +116,6 @@ func (s *SyslogSink) Run(inputChan <-chan *envelopewrapper.WrappedEnvelope) {
 		} else {
 			s.logger.Debugf("Syslog Sink %s: Successfully sent data\n", s.drainUrl)
 			numberOfTries = 0
-			atomic.AddUint64(s.sentMessageCount, 1)
-			atomic.AddUint64(s.sentByteCount, uint64(message.EnvelopeLength()))
 		}
 	}
 }
@@ -151,13 +134,4 @@ func (s *SyslogSink) AppId() string {
 
 func (s *SyslogSink) ShouldReceiveErrors() bool {
 	return false
-}
-
-func (s *SyslogSink) Emit() instrumentation.Context {
-	return instrumentation.Context{Name: "syslogSink",
-		Metrics: []instrumentation.Metric{
-			instrumentation.Metric{Name: "sentMessageCount:" + s.appId, Value: atomic.LoadUint64(s.sentMessageCount)},
-			instrumentation.Metric{Name: "sentByteCount:" + s.appId, Value: atomic.LoadUint64(s.sentByteCount)},
-		},
-	}
 }

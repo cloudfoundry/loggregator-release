@@ -1,8 +1,6 @@
 package sinkmanager
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
-	"doppler/envelopewrapper"
 	"doppler/groupedsinks"
 	"doppler/sinks"
 	"doppler/sinks/dump"
@@ -24,7 +22,7 @@ import (
 type SinkManager struct {
 	sync.RWMutex
 	doneChannel         chan struct{}
-	errorChannel        chan *envelopewrapper.WrappedEnvelope
+	errorChannel        chan *events.Envelope
 	urlBlacklistManager *blacklist.URLBlacklistManager
 	sinks               *groupedsinks.GroupedSinks
 	skipCertVerify      bool
@@ -40,7 +38,7 @@ func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackLis
 	appStoreUpdateChan := make(chan appservice.AppServices, 10)
 	return &SinkManager{
 		doneChannel:         make(chan struct{}),
-		errorChannel:        make(chan *envelopewrapper.WrappedEnvelope, 100),
+		errorChannel:        make(chan *events.Envelope, 100),
 		urlBlacklistManager: blackListManager,
 		sinks:               groupedsinks.NewGroupedSinks(),
 		skipCertVerify:      skipCertVerify,
@@ -71,7 +69,7 @@ func (sinkManager *SinkManager) Stop() {
 	}
 }
 
-func (sinkManager *SinkManager) SendTo(appId string, receivedMessage *envelopewrapper.WrappedEnvelope) {
+func (sinkManager *SinkManager) SendTo(appId string, receivedMessage *events.Envelope) {
 	sinkManager.ensureRecentLogsSinkFor(appId)
 	sinkManager.sinks.BroadCast(appId, receivedMessage)
 }
@@ -100,7 +98,7 @@ func (sinkManager *SinkManager) listenForErrorMessages() {
 			if !ok {
 				return
 			}
-			appId := errorMessage.Envelope.GetAppId()
+			appId := errorMessage.GetAppId()
 			sinkManager.logger.Debugf("SinkManager:ErrorChannel: Searching for sinks with appId [%s].", appId)
 			sinkManager.sinks.BroadCastError(appId, errorMessage)
 			sinkManager.logger.Debugf("SinkManager:ErrorChannel: Done sending error message.")
@@ -109,7 +107,7 @@ func (sinkManager *SinkManager) listenForErrorMessages() {
 }
 
 func (sinkManager *SinkManager) RegisterSink(sink sinks.Sink) bool {
-	inputChan := make(chan *envelopewrapper.WrappedEnvelope)
+	inputChan := make(chan *events.Envelope)
 	ok := sinkManager.sinks.Register(inputChan, sink)
 	if !ok {
 		return false
@@ -181,18 +179,7 @@ func (sinkManager *SinkManager) SendSyslogErrorToLoggregator(errorMsg, appId str
 		return
 	}
 
-	envBytes, err := proto.Marshal(envelope)
-
-	wrappedEnvelope := &envelopewrapper.WrappedEnvelope{
-		Envelope:      envelope,
-		EnvelopeBytes: envBytes,
-	}
-
-	if err == nil {
-		sinkManager.errorChannel <- wrappedEnvelope
-	} else {
-		sinkManager.logger.Warnf("Error marshalling message: %v", err)
-	}
+	sinkManager.errorChannel <- envelope
 }
 
 func (sinkManager *SinkManager) ensureRecentLogsSinkFor(appId string) {
@@ -204,12 +191,12 @@ func (sinkManager *SinkManager) ensureRecentLogsSinkFor(appId string) {
 	sinkManager.RegisterSink(s)
 }
 
-func (sinkManager *SinkManager) RecentLogsFor(appId string) []*envelopewrapper.WrappedEnvelope {
+func (sinkManager *SinkManager) RecentLogsFor(appId string) []*events.Envelope {
 	if sink := sinkManager.sinks.DumpFor(appId); sink != nil {
 		return sink.Dump()
 	} else {
 		sinkManager.logger.Debugf("SinkManager:DumpReceiverChan: No dump exists for appId [%s].", appId)
-		return []*envelopewrapper.WrappedEnvelope{}
+		return []*events.Envelope{}
 	}
 }
 

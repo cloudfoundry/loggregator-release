@@ -1,7 +1,6 @@
 package main
 
 import (
-	"doppler/envelopewrapper"
 	"doppler/iprange"
 	"doppler/sinkserver"
 	"doppler/sinkserver/blacklist"
@@ -73,11 +72,10 @@ type Doppler struct {
 	websocketServer   *websocketserver.WebsocketServer
 
 	dropsondeUnmarshaller      dropsonde_unmarshaller.DropsondeUnmarshaller
-	dropsondeEnvelopeWrapper   envelopewrapper.EnvelopeWrapper
 	dropsondeBytesChan         <-chan []byte
 	dropsondeVerifiedBytesChan chan []byte
 	envelopeChan               chan *events.Envelope
-	wrappedEnvelopeChan        chan *envelopewrapper.WrappedEnvelope
+	wrappedEnvelopeChan        chan *events.Envelope
 	signatureVerifier          signature.SignatureVerifier
 
 	storeAdapter storeadapter.StoreAdapter
@@ -103,8 +101,6 @@ func New(host string, config *Config, logger *gosteno.Logger, dropsondeOrigin st
 	signatureVerifier := signature.NewSignatureVerifier(logger, config.SharedSecret)
 	dropsondeUnmarshaller := dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger)
 
-	dropsondeEnvelopeWrapper := envelopewrapper.NewEnvelopeWrapper(logger)
-
 	blacklist := blacklist.New(config.BlackListIps)
 	sinkManager, appStoreInputChan := sinkmanager.NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger, dropsondeOrigin)
 
@@ -122,75 +118,68 @@ func New(host string, config *Config, logger *gosteno.Logger, dropsondeOrigin st
 		storeAdapter:               storeAdapter,
 		dropsondeBytesChan:         dropsondeBytesChan,
 		dropsondeUnmarshaller:      dropsondeUnmarshaller,
-		dropsondeEnvelopeWrapper:   dropsondeEnvelopeWrapper,
 		envelopeChan:               make(chan *events.Envelope),
-		wrappedEnvelopeChan:        make(chan *envelopewrapper.WrappedEnvelope),
+		wrappedEnvelopeChan:        make(chan *events.Envelope),
 		signatureVerifier:          signatureVerifier,
 		dropsondeVerifiedBytesChan: make(chan []byte),
 	}
 }
 
-func (d *Doppler) Start() {
-	d.Lock()
-	d.errChan = make(chan error)
-	d.Unlock()
+func (doppler *Doppler) Start() {
+	doppler.Lock()
+	doppler.errChan = make(chan error)
+	doppler.Unlock()
 
-	err := d.storeAdapter.Connect()
+	err := doppler.storeAdapter.Connect()
 	if err != nil {
 		panic(err)
 	}
-	d.Add(9)
+	doppler.Add(8)
 
 	go func() {
-		defer d.Done()
-		d.appStoreWatcher.Run()
+		defer doppler.Done()
+		doppler.appStoreWatcher.Run()
 	}()
 
 	go func() {
-		defer d.Done()
-		d.appStore.Run(d.appStoreInputChan)
+		defer doppler.Done()
+		doppler.appStore.Run(doppler.appStoreInputChan)
 	}()
 
 	go func() {
-		defer d.Done()
-		d.dropsondeListener.Start()
+		defer doppler.Done()
+		doppler.dropsondeListener.Start()
 	}()
 
 	go func() {
-		defer d.Done()
-		defer close(d.envelopeChan)
-		d.dropsondeUnmarshaller.Run(d.dropsondeVerifiedBytesChan, d.envelopeChan)
+		defer doppler.Done()
+		defer close(doppler.envelopeChan)
+		doppler.dropsondeUnmarshaller.Run(doppler.dropsondeVerifiedBytesChan, doppler.envelopeChan)
 	}()
 
 	go func() {
-		defer d.Done()
-		defer close(d.wrappedEnvelopeChan)
-		d.dropsondeEnvelopeWrapper.Run(d.envelopeChan, d.wrappedEnvelopeChan)
+		defer doppler.Done()
+		defer close(doppler.dropsondeVerifiedBytesChan)
+		doppler.signatureVerifier.Run(doppler.dropsondeBytesChan, doppler.dropsondeVerifiedBytesChan)
 	}()
 
 	go func() {
-		defer d.Done()
-		defer close(d.dropsondeVerifiedBytesChan)
-		d.signatureVerifier.Run(d.dropsondeBytesChan, d.dropsondeVerifiedBytesChan)
+		defer doppler.Done()
+		doppler.sinkManager.Start(doppler.newAppServiceChan, doppler.deletedAppServiceChan)
 	}()
 
 	go func() {
-		defer d.Done()
-		d.sinkManager.Start(d.newAppServiceChan, d.deletedAppServiceChan)
+		defer doppler.Done()
+		doppler.messageRouter.Start(doppler.envelopeChan)
 	}()
 
 	go func() {
-		defer d.Done()
-		d.messageRouter.Start(d.wrappedEnvelopeChan)
+		defer doppler.Done()
+		doppler.websocketServer.Start()
 	}()
 
-	go func() {
-		defer d.Done()
-		d.websocketServer.Start()
-	}()
-
-	for err := range d.errChan {
-		d.Errorf("Got error %s", err)
+	for err := range doppler.errChan {
+		doppler.Errorf("Got error %s", err)
 	}
 }
 

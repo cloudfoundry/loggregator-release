@@ -3,7 +3,6 @@ package truncatingbuffer
 import (
 	"code.google.com/p/gogoprotobuf/proto"
 	"doppler/buffer"
-	"doppler/envelopewrapper"
 	"fmt"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
@@ -12,15 +11,15 @@ import (
 )
 
 type truncatingBuffer struct {
-	inputChannel    <-chan *envelopewrapper.WrappedEnvelope
-	outputChannel   chan *envelopewrapper.WrappedEnvelope
+	inputChannel    <-chan *events.Envelope
+	outputChannel   chan *events.Envelope
 	logger          *gosteno.Logger
 	lock            *sync.RWMutex
 	dropsondeOrigin string
 }
 
-func NewTruncatingBuffer(inputChannel <-chan *envelopewrapper.WrappedEnvelope, bufferSize uint, logger *gosteno.Logger, dropsondeOrigin string) buffer.MessageBuffer {
-	outputChannel := make(chan *envelopewrapper.WrappedEnvelope, bufferSize)
+func NewTruncatingBuffer(inputChannel <-chan *events.Envelope, bufferSize uint, logger *gosteno.Logger, dropsondeOrigin string) buffer.MessageBuffer {
+	outputChannel := make(chan *events.Envelope, bufferSize)
 	return &truncatingBuffer{
 		inputChannel:    inputChannel,
 		outputChannel:   outputChannel,
@@ -30,7 +29,7 @@ func NewTruncatingBuffer(inputChannel <-chan *envelopewrapper.WrappedEnvelope, b
 	}
 }
 
-func (r *truncatingBuffer) GetOutputChannel() <-chan *envelopewrapper.WrappedEnvelope {
+func (r *truncatingBuffer) GetOutputChannel() <-chan *events.Envelope {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
@@ -48,22 +47,16 @@ func (r *truncatingBuffer) Run() {
 		case r.outputChannel <- msg:
 		default:
 			messageCount := len(r.outputChannel)
-			r.outputChannel = make(chan *envelopewrapper.WrappedEnvelope, cap(r.outputChannel))
-			lm := generateLogMessage(fmt.Sprintf("Log message output too high. We've dropped %d messages", messageCount), msg.Envelope.GetAppId())
+			r.outputChannel = make(chan *events.Envelope, cap(r.outputChannel))
+			lm := generateLogMessage(fmt.Sprintf("Log message output too high. We've dropped %d messages", messageCount), msg.GetAppId())
 
 			env := &events.Envelope{
 				EventType:  events.Envelope_LogMessage.Enum(),
 				LogMessage: lm,
 				Origin:     proto.String(r.dropsondeOrigin),
 			}
-			envBytes, err := proto.Marshal(env)
 
-			if err != nil {
-				r.logger.Error("TB: Output channel too full. And we failed to notify them. Dropping Buffer.")
-				continue
-			}
-
-			r.outputChannel <- &envelopewrapper.WrappedEnvelope{Envelope: env, EnvelopeBytes: envBytes}
+			r.outputChannel <- env
 			r.outputChannel <- msg
 
 			if r.logger != nil {
