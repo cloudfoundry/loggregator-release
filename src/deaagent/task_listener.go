@@ -13,6 +13,7 @@ type TaskListener struct {
 	emitter                        logemitter.Emitter
 	taskIdentifier                 string
 	stdOutListener, stdErrListener *loggingstream.LoggingStream
+	task                           domain.Task
 }
 
 func NewTaskListener(task domain.Task, e logemitter.Emitter, logger *gosteno.Logger) *TaskListener {
@@ -22,7 +23,12 @@ func NewTaskListener(task domain.Task, e logemitter.Emitter, logger *gosteno.Log
 		taskIdentifier: task.Identifier(),
 		stdOutListener: loggingstream.NewLoggingStream(&task, logger, events.LogMessage_OUT),
 		stdErrListener: loggingstream.NewLoggingStream(&task, logger, events.LogMessage_ERR),
+		task:           task,
 	}
+}
+
+func (tl *TaskListener) Task() domain.Task {
+	return tl.task
 }
 
 func (tl *TaskListener) StartListening() {

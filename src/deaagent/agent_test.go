@@ -4,7 +4,6 @@ import (
 	"deaagent"
 	"deaagent/domain"
 	"github.com/cloudfoundry/dropsonde/events"
-	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"io/ioutil"
 	"net"
@@ -12,6 +11,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"sync"
 	"time"
 )
 
@@ -28,7 +28,7 @@ var _ = Describe("DeaAgent", func() {
 		expectedMessage        = "Some Output"
 		mockLoggregatorEmitter MockLoggregatorEmitter
 		agent                  *deaagent.Agent
-		appUpdateChan          chan appservice.AppServices
+		fakeSyslogDrainStore   *FakeSyslogDrainStore
 	)
 
 	BeforeEach(func() {
@@ -70,8 +70,9 @@ var _ = Describe("DeaAgent", func() {
 		writeToFile(`{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3, "syslog_drain_urls": ["url1"]},
 	                                {"state": "RUNNING", "application_id": "3456", "warden_job_id": 59, "warden_container_path":"`+tmpdir+`", "instance_index": 1}]}`, true)
 
-		appUpdateChan = make(chan appservice.AppServices, 5)
-		agent = deaagent.NewAgent(filePath, loggertesthelper.Logger(), appUpdateChan)
+		fakeSyslogDrainStore = NewFakeSyslogDrainStore()
+		agent = deaagent.NewAgent(filePath, loggertesthelper.Logger(), fakeSyslogDrainStore,
+			10*time.Millisecond, 10*time.Millisecond)
 	})
 
 	AfterEach(func() {
@@ -124,6 +125,23 @@ var _ = Describe("DeaAgent", func() {
 		})
 	})
 
+	Describe("Refreshing app TTLs", func() {
+		It("periodically refreshes TTLs for app nodes", func() {
+			agent.Start(mockLoggregatorEmitter)
+
+			Eventually(func() int { return fakeSyslogDrainStore.AppNodeCallCount("1234") }).Should(BeNumerically(">", 1))
+			Eventually(func() int { return fakeSyslogDrainStore.AppNodeCallCount("3456") }).Should(BeNumerically(">", 1))
+		})
+	})
+
+	Describe("refreshing drain URLs in etcd to recover in case of etcd failure", func() {
+		It("periodically updates the drain store", func() {
+			agent.Start(mockLoggregatorEmitter)
+
+			Eventually(func() int { return len(fakeSyslogDrainStore.UpdateDrainCalls()) }).Should(BeNumerically(">", 2))
+		})
+	})
+
 	It("creates the correct structure on forwarded messages and does not contain drain URLs", func() {
 		agent.Start(mockLoggregatorEmitter)
 
@@ -139,20 +157,15 @@ var _ = Describe("DeaAgent", func() {
 		Expect(string(receivedMessage.GetMessage())).To(Equal(expectedMessage))
 	})
 
-	It("pushes updates to syslog drain URLs to the appStoreUpdateChan", func() {
+	It("pushes updates to syslog drain URLs to the syslog drain store", func() {
 		agent.Start(mockLoggregatorEmitter)
 
-		updates := make([]appservice.AppServices, 2)
-		for i := 0; i < 2; i++ {
-			updates[i] = <-appUpdateChan
+		expectedUpdates := []updateDrainParams{
+			{appId: "1234", drainUrls: []string{"url1"}},
+			{appId: "3456", drainUrls: []string{}},
 		}
 
-		expectedUpdates := []appservice.AppServices{
-			{AppId: "1234", Urls: []string{"url1"}},
-			{AppId: "3456", Urls: []string{}},
-		}
-
-		Expect(updates).To(ConsistOf(expectedUpdates))
+		Eventually(fakeSyslogDrainStore.UpdateDrainCalls).Should(ConsistOf(expectedUpdates))
 	})
 })
 
@@ -170,4 +183,46 @@ func writeToFile(text string, truncate bool) {
 func createFile() *os.File {
 	file, _ := os.Create(filePath)
 	return file
+}
+
+type FakeSyslogDrainStore struct {
+	updateDrainCalls    []updateDrainParams
+	refreshAppNodeCalls map[string]int
+	sync.Mutex
+}
+
+func NewFakeSyslogDrainStore() *FakeSyslogDrainStore {
+	return &FakeSyslogDrainStore{
+		refreshAppNodeCalls: make(map[string]int),
+	}
+}
+
+type updateDrainParams struct {
+	appId     string
+	drainUrls []string
+}
+
+func (s *FakeSyslogDrainStore) UpdateDrainCalls() []updateDrainParams {
+	s.Lock()
+	defer s.Unlock()
+	return s.updateDrainCalls
+}
+
+func (s *FakeSyslogDrainStore) AppNodeCallCount(appId string) int {
+	s.Lock()
+	defer s.Unlock()
+	return s.refreshAppNodeCalls[appId]
+}
+
+func (s *FakeSyslogDrainStore) UpdateDrains(appId string, drainUrls []string) error {
+	s.Lock()
+	defer s.Unlock()
+	s.updateDrainCalls = append(s.updateDrainCalls, updateDrainParams{appId, drainUrls})
+	return nil
+}
+func (s *FakeSyslogDrainStore) RefreshAppNode(appId string) error {
+	s.Lock()
+	defer s.Unlock()
+	s.refreshAppNodeCalls[appId] += 1
+	return nil
 }

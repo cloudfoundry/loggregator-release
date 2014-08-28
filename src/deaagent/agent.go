@@ -2,9 +2,9 @@ package deaagent
 
 import (
 	"deaagent/domain"
+	"deaagent/syslog_drain_store"
 	"github.com/cloudfoundry/dropsonde/emitter/logemitter"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/howeyc/fsnotify"
 	"io/ioutil"
 	"path"
@@ -12,25 +12,31 @@ import (
 )
 
 type Agent struct {
-	InstancesJsonFilePath string
-	logger                *gosteno.Logger
-	knownInstancesChan    chan<- func(map[string]*TaskListener)
-	appStoreUpdateChan    chan<- appservice.AppServices
+	InstancesJsonFilePath     string
+	logger                    *gosteno.Logger
+	knownInstancesChan        chan<- func(map[string]*TaskListener)
+	syslogDrainStore          syslog_drain_store.SyslogDrainStore
+	appNodeTTLRefreshInterval time.Duration
+	drainStoreRefreshInterval time.Duration
 }
 
-func NewAgent(instancesJsonFilePath string, logger *gosteno.Logger, appStoreUpdateChan chan<- appservice.AppServices) *Agent {
+func NewAgent(instancesJsonFilePath string, logger *gosteno.Logger, syslogDrainStore syslog_drain_store.SyslogDrainStore,
+	appNodeTTLRefreshInterval, drainStoreRefreshInterval time.Duration) *Agent {
 	knownInstancesChan := atomicCacheOperator()
 
 	return &Agent{
-		InstancesJsonFilePath: instancesJsonFilePath,
-		logger:                logger,
-		knownInstancesChan:    knownInstancesChan,
-		appStoreUpdateChan:    appStoreUpdateChan,
+		InstancesJsonFilePath:     instancesJsonFilePath,
+		logger:                    logger,
+		knownInstancesChan:        knownInstancesChan,
+		syslogDrainStore:          syslogDrainStore,
+		appNodeTTLRefreshInterval: appNodeTTLRefreshInterval,
+		drainStoreRefreshInterval: drainStoreRefreshInterval,
 	}
 }
 
 func (agent *Agent) Start(emitter logemitter.Emitter) {
 	go agent.pollInstancesJson(emitter)
+	go agent.runAppNodeRefreshLoop()
 }
 
 func (agent *Agent) processTasks(currentTasks map[string]domain.Task, emitter logemitter.Emitter) func(knownTasks map[string]*TaskListener) {
@@ -48,6 +54,19 @@ func (agent *Agent) processTasks(currentTasks map[string]domain.Task, emitter lo
 		}
 
 		for _, task := range currentTasks {
+			appId := task.ApplicationId
+
+			drainUrls := task.DrainUrls
+			if drainUrls == nil {
+				drainUrls = []string{}
+			}
+
+			agent.logger.Infof("Updating services for %s to %#v", appId, drainUrls)
+			err := agent.syslogDrainStore.UpdateDrains(appId, drainUrls)
+			if err != nil {
+				agent.logger.Errorf("Drains for app %v could not be updated. Drain Urls: %v: %v", appId, drainUrls, err)
+			}
+
 			identifier := task.Identifier()
 			_, present := knownTasks[identifier]
 
@@ -55,15 +74,7 @@ func (agent *Agent) processTasks(currentTasks map[string]domain.Task, emitter lo
 				continue
 			}
 
-			drainUrls := task.DrainUrls
-			if drainUrls == nil {
-				drainUrls = []string{}
-			}
-
 			task.DrainUrls = nil
-
-			agent.logger.Infof("Updating services for %s to %#v", task.ApplicationId, drainUrls)
-			agent.appStoreUpdateChan <- appservice.AppServices{AppId: task.ApplicationId, Urls: drainUrls}
 
 			agent.logger.Debugf("Adding new task %s", task.Identifier())
 			listener := NewTaskListener(task, emitter, agent.logger)
@@ -96,7 +107,10 @@ func (agent *Agent) pollInstancesJson(emitter logemitter.Emitter) {
 	}
 
 	agent.logger.Info("Read initial tasks data")
-	agent.readInstancesJson(emitter)
+	agent.processInstancesJson(emitter)
+
+	ticker := time.NewTicker(agent.drainStoreRefreshInterval)
+	defer ticker.Stop()
 
 	for {
 		select {
@@ -105,28 +119,60 @@ func (agent *Agent) pollInstancesJson(emitter logemitter.Emitter) {
 			if ev.IsDelete() {
 				agent.knownInstancesChan <- resetCache
 			} else {
-				agent.readInstancesJson(emitter)
+				agent.processInstancesJson(emitter)
 			}
+		case <-ticker.C:
+			agent.processInstancesJson(emitter)
 		case err := <-watcher.Error:
 			agent.logger.Warnf("Received error from file system notification: %s\n", err)
 		}
 	}
 }
 
-func (agent *Agent) readInstancesJson(emitter logemitter.Emitter) {
+func (agent *Agent) runAppNodeRefreshLoop() {
+	ticker := time.NewTicker(agent.appNodeTTLRefreshInterval)
+	defer ticker.Stop()
+
+	for {
+		<-ticker.C
+		agent.knownInstancesChan <- agent.refreshAppNodes
+	}
+}
+
+func (agent *Agent) refreshAppNodes(currentTasks map[string]*TaskListener) {
+	for _, taskListener := range currentTasks {
+		task := taskListener.Task()
+		agent.logger.Debugf("refreshing drain store app node for app %v", task.ApplicationId)
+		err := agent.syslogDrainStore.RefreshAppNode(task.ApplicationId)
+		if err != nil {
+			agent.logger.Errorf("Failed to refresh drain TTL for app %v: %v", task.ApplicationId, err)
+		}
+	}
+}
+
+func (agent *Agent) processInstancesJson(emitter logemitter.Emitter) {
+	currentTasks, err := agent.readInstancesJson()
+	if err != nil {
+		return
+	}
+
+	agent.knownInstancesChan <- agent.processTasks(currentTasks, emitter)
+}
+
+func (agent *Agent) readInstancesJson() (map[string]domain.Task, error) {
 	json, err := ioutil.ReadFile(agent.InstancesJsonFilePath)
 	if err != nil {
 		agent.logger.Warnf("Reading failed, retrying. %s\n", err)
-		return
+		return nil, err
 	}
 
 	currentTasks, err := domain.ReadTasks(json)
 	if err != nil {
 		agent.logger.Warnf("Failed parsing json %s: %v Trying again...\n", err, string(json))
-		return
+		return nil, err
 	}
 
-	agent.knownInstancesChan <- agent.processTasks(currentTasks, emitter)
+	return currentTasks, nil
 }
 
 func removeFromCache(taskId string) func(knownTasks map[string]*TaskListener) {

@@ -2,17 +2,15 @@ package main
 
 import (
 	"deaagent"
+	"deaagent/syslog_drain_store"
 	"errors"
 	"flag"
 	_ "github.com/cloudfoundry/dropsonde/autowire"
 	"github.com/cloudfoundry/dropsonde/emitter/logemitter"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
-	"github.com/cloudfoundry/loggregatorlib/store"
-	"github.com/cloudfoundry/loggregatorlib/store/cache"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/storeadapter/workerpool"
 	"os"
@@ -20,6 +18,9 @@ import (
 	"runtime/pprof"
 	"time"
 )
+
+const AppNodeTTLRefreshInterval = syslog_drain_store.APP_NODE_TTL / 2
+const DrainStoreRefreshInterval = 1 * time.Minute
 
 type Config struct {
 	cfcomponent.Config
@@ -108,8 +109,8 @@ func main() {
 		panic(err)
 	}
 
-	appStoreUpdateChan := newRunningAppStoreUpdateChannel(config)
-	agent := deaagent.NewAgent(*instancesJsonFilePath, logger, appStoreUpdateChan)
+	syslogDrainStore := newSyslogDrainStore(config, logger)
+	agent := deaagent.NewAgent(*instancesJsonFilePath, logger, syslogDrainStore, AppNodeTTLRefreshInterval, DrainStoreRefreshInterval)
 
 	cfc, err := cfcomponent.NewComponent(
 		logger,
@@ -153,24 +154,9 @@ func main() {
 	}
 }
 
-func newRunningAppStoreUpdateChannel(config *Config) chan<- appservice.AppServices {
-	appStoreUpdateChan := make(chan appservice.AppServices, 10)
+func newSyslogDrainStore(config *Config, logger *gosteno.Logger) syslog_drain_store.SyslogDrainStore {
 	workerPool := workerpool.NewWorkerPool(config.EtcdMaxConcurrentRequests)
 	storeAdapter := etcdstoreadapter.NewETCDStoreAdapter(config.EtcdUrls, workerPool)
 	storeAdapter.Connect()
-	appStoreCache := cache.NewAppServiceCache()
-	appStoreWatcher, updateChan, removeChan := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
-	appStore := store.NewAppServiceStore(storeAdapter, appStoreWatcher)
-
-	go func() {
-		for _ = range updateChan {
-		}
-	}()
-	go func() {
-		for _ = range removeChan {
-		}
-	}()
-	go appStore.Run(appStoreUpdateChan)
-
-	return appStoreUpdateChan
+	return syslog_drain_store.NewSyslogDrainStore(storeAdapter, logger)
 }
