@@ -3,11 +3,6 @@ package main_test
 import (
 	"code.google.com/p/gogoprotobuf/proto"
 	"fmt"
-	"github.com/cloudfoundry/dropsonde/events"
-	"github.com/cloudfoundry/dropsonde/factories"
-	"github.com/cloudfoundry/dropsonde/signature"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	instrumentationtesthelpers "github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation/testhelpers"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	messagetesthelpers "github.com/cloudfoundry/loggregatorlib/logmessage/testhelpers"
 	"github.com/gorilla/websocket"
@@ -162,55 +157,5 @@ var _ = Describe("Loggregator Server", func() {
 		_, err = connection.Write(expectedMessage)
 		Expect(err).To(BeNil())
 		Expect(receivedChan).To(BeEmpty())
-	})
-
-	Context("metric emission", func() {
-		var getEmitter = func(name string) instrumentation.Instrumentable {
-			for _, emitter := range loggregatorInstance.Emitters() {
-				context := emitter.Emit()
-				if context.Name == name {
-					return emitter
-				}
-			}
-			return nil
-		}
-
-		It("emits metrics for the dropsonde message listener", func() {
-			emitter := getEmitter("dropsondeListener")
-			countBefore := instrumentationtesthelpers.MetricValue(emitter, "receivedMessageCount").(uint64)
-
-			connection, _ := net.Dial("udp", "127.0.0.1:3457")
-			connection.Write([]byte{1, 2, 3})
-
-			instrumentationtesthelpers.EventuallyExpectMetric(emitter, "receivedMessageCount", countBefore+1)
-		})
-
-		It("emits metrics for the dropsonde unmarshaller", func() {
-			emitter := getEmitter("dropsondeUnmarshaller")
-			countBefore := instrumentationtesthelpers.MetricValue(emitter, "heartbeatReceived").(uint64)
-
-			connection, _ := net.Dial("udp", "127.0.0.1:3457")
-
-			envelope := &events.Envelope{
-				Origin:    proto.String("fake-origin-3"),
-				EventType: events.Envelope_Heartbeat.Enum(),
-				Heartbeat: factories.NewHeartbeat(1, 2, 3),
-			}
-			message, _ := proto.Marshal(envelope)
-			signedMessage := signature.SignMessage(message, []byte("secret"))
-			connection.Write(signedMessage)
-
-			instrumentationtesthelpers.EventuallyExpectMetric(emitter, "heartbeatReceived", countBefore+1)
-		})
-
-		It("emits metrics for the dropsonde signature verifier", func() {
-			emitter := getEmitter("signatureVerifier")
-			countBefore := instrumentationtesthelpers.MetricValue(emitter, "missingSignatureErrors").(uint64)
-
-			connection, _ := net.Dial("udp", "127.0.0.1:3457")
-			connection.Write([]byte{1, 2, 3})
-
-			instrumentationtesthelpers.EventuallyExpectMetric(emitter, "missingSignatureErrors", countBefore+1)
-		})
 	})
 })
