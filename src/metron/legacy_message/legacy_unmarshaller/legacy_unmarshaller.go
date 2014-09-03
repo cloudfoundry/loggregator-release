@@ -2,12 +2,11 @@ package legacy_unmarshaller
 
 import (
 	"code.google.com/p/gogoprotobuf/proto"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-//	"github.com/davecgh/go-spew/spew"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"github.com/davecgh/go-spew/spew"
 	"sync/atomic"
-//	"unicode"
 )
 
 type LegacyUnmarshaller interface {
@@ -18,7 +17,7 @@ type LegacyUnmarshaller interface {
 
 func NewLegacyUnmarshaller(logger *gosteno.Logger) LegacyUnmarshaller {
 	return &legacyUnmarshaller{
-		logger:        logger,
+		logger: logger,
 	}
 }
 
@@ -26,7 +25,6 @@ type legacyUnmarshaller struct {
 	logger              *gosteno.Logger
 	unmarshalErrorCount uint64
 }
-
 
 func (u *legacyUnmarshaller) Run(inputChan <-chan []byte, outputChan chan<- *logmessage.LogEnvelope) {
 	for message := range inputChan {
@@ -38,7 +36,6 @@ func (u *legacyUnmarshaller) Run(inputChan <-chan []byte, outputChan chan<- *log
 	}
 }
 
-
 func (u *legacyUnmarshaller) UnmarshalMessage(message []byte) (*logmessage.LogEnvelope, error) {
 	envelope := &logmessage.LogEnvelope{}
 	err := proto.Unmarshal(message, envelope)
@@ -48,6 +45,7 @@ func (u *legacyUnmarshaller) UnmarshalMessage(message []byte) (*logmessage.LogEn
 		return nil, err
 	}
 
+	u.logger.Debugf("legacyUnmarshaller: received message %v", spew.Sprintf("%v", envelope))
 
 	return envelope, nil
 }

@@ -2,12 +2,12 @@ package legacy_unmarshaller_test
 
 import (
 	"code.google.com/p/gogoprotobuf/proto"
-	"metron/legacy_message/legacy_unmarshaller"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation/testhelpers"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"metron/legacy_message/legacy_unmarshaller"
 )
 
 var _ = Describe("LegacyUnmarshaller", func() {
@@ -82,6 +82,11 @@ var _ = Describe("LegacyUnmarshaller", func() {
 			inputChan <- message
 			outputEnvelope := <-outputChan
 			Expect(outputEnvelope).To(Equal(envelope))
+		})
+
+		It("does not put an envelope on the output channel if there is unmarshal error", func() {
+			inputChan <- []byte{1, 2, 3}
+			Consistently(outputChan).ShouldNot(Receive())
 		})
 	})
 
