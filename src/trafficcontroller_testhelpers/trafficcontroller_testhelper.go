@@ -18,6 +18,19 @@ func SuccessfulAuthorizer(authToken string, target string, l *gosteno.Logger) bo
 	return authToken == VALID_AUTHENTICATION_TOKEN
 }
 
+type Authorizer struct {
+	TokenParam string
+	Target string
+	Result bool
+}
+
+func (a *Authorizer) Authorize(authToken string, target string, l *gosteno.Logger) bool {
+	a.TokenParam = authToken
+	a.Target = target
+
+	return a.Result
+}
+
 func AssertConnectionFails(t *testing.T, port string, path string, authToken string, expectedErrorCode uint16) {
 	requestHeader := http.Header{}
 	if authToken != "" {

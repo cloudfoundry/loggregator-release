@@ -8,13 +8,11 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/loggregatorlib/server/handlers"
-	"net"
 	"net/http"
 	"net/url"
 	"regexp"
 	"time"
 	"trafficcontroller/authorization"
-	"trafficcontroller/listener"
 )
 
 var WebsocketKeepAliveDuration = 30 * time.Second
@@ -23,19 +21,17 @@ type Proxy struct {
 	cfcomponent.Component
 	logger    *gosteno.Logger
 	authorize authorization.LogAccessAuthorizer
-	listener  net.Listener
 }
 
-var NewWebsocketHandlerProvider = func(messages <-chan []byte) http.Handler {
-	return handlers.NewWebsocketHandler(messages, WebsocketKeepAliveDuration)
-}
-
-var NewHttpHandlerProvider = func(messages chan []byte) http.Handler {
-	return handlers.NewHttpHandler(messages)
-}
-
-var NewWebsocketListener = func() listener.Listener {
-	return listener.NewWebsocket()
+var HandlerProvider = func(endpoint string, messages <-chan []byte) http.Handler {
+	switch endpoint {
+	case "recentlogs":
+		return handlers.NewHttpHandler(messages)
+	case "stream":
+		fallthrough
+	default:
+		return handlers.NewWebsocketHandler(messages, WebsocketKeepAliveDuration)
+	}
 }
 
 func NewDropsondeProxy(authorizer authorization.LogAccessAuthorizer, config cfcomponent.Config, logger *gosteno.Logger) *Proxy {
@@ -58,48 +54,46 @@ func NewDropsondeProxy(authorizer authorization.LogAccessAuthorizer, config cfco
 	return &Proxy{Component: cfc, authorize: authorizer, logger: logger}
 }
 
-func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	if r.Method == "HEAD" {
-		rw.WriteHeader(http.StatusOK)
+func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
+	if req.Method == "HEAD" {
 		return
 	}
 
-	r.ParseForm()
-	clientAddress := r.RemoteAddr
-	re := regexp.MustCompile("^/apps/(.*)/(tailinglogs|recentlogs|stream)$")
-	matches := re.FindStringSubmatch(r.URL.Path)
+	req.ParseForm()
+	clientAddress := req.RemoteAddr
+	validPaths := regexp.MustCompile("^/apps/(.*)/(tailinglogs|recentlogs|stream)$")
+	matches := validPaths.FindStringSubmatch(req.URL.Path)
 	if len(matches) != 3 {
-		rw.Header().Set("WWW-Authenticate", "Basic")
-		rw.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(rw, "Resource Not Found. %s", r.URL.Path)
+		writer.Header().Set("WWW-Authenticate", "Basic")
+		writer.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(writer, "Resource Not Found. %s", req.URL.Path)
 		return
 	}
 	appId := matches[1]
+
+	if appId == "" {
+		writer.Header().Set("WWW-Authenticate", "Basic")
+		writer.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(writer, "App ID missing. Make request to /apps/APP_ID/%s", matches[2])
+		return
+	}
 	endpoint := matches[2]
 
-	authToken := r.Header.Get("Authorization")
+	authToken := getAuthToken(req)
 
 	authorized, errorMessage := proxy.isAuthorized(appId, authToken, clientAddress)
 	if !authorized {
-		rw.Header().Set("WWW-Authenticate", "Basic")
-		rw.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprintf(rw, "You are not authorized. %s", errorMessage)
+		writer.Header().Set("WWW-Authenticate", "Basic")
+		writer.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprintf(writer, "You are not authorized. %s", errorMessage.GetMessage())
 		return
 	}
 
 	messagesChan := make(chan []byte, 100)
 
-	var h http.Handler
-	switch endpoint {
-	case "tailinglogs":
-		h = NewWebsocketHandlerProvider(messagesChan)
-	case "recentlogs":
-		h = NewHttpHandlerProvider(messagesChan)
-	case "stream":
-		h = NewWebsocketHandlerProvider(messagesChan)
-	}
+	handler := HandlerProvider(endpoint, messagesChan)
 
-	h.ServeHTTP(rw, r)
+	handler.ServeHTTP(writer, req)
 }
 
 func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress string) (bool, *logmessage.LogMessage) {
@@ -114,12 +108,6 @@ func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress string) 
 			SourceName:  proto.String("LGR"),
 			Timestamp:   proto.Int64(currentTime.UnixNano()),
 		}
-	}
-
-	if appId == "" {
-		message := fmt.Sprintf("HttpServer: Did not accept sink connection with invalid app id: %s.", clientAddress)
-		proxy.logger.Warn(message)
-		return false, newLogMessage([]byte("Error: Invalid target"))
 	}
 
 	if authToken == "" {
@@ -137,18 +125,29 @@ func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress string) 
 	return true, nil
 }
 
-func extractAuthTokenFromUrl(u *url.URL) string {
-	authorization := ""
-	queryValues := u.Query()
-	if len(queryValues["authorization"]) == 1 {
-		authorization = queryValues["authorization"][0]
+func getAuthToken(req *http.Request) string {
+	authToken := req.Header.Get("Authorization")
+
+	if authToken == "" {
+		authToken = extractAuthTokenFromCookie(req.Cookies())
 	}
-	return authorization
+
+	return authToken
 }
 
-func recent(r *http.Request) bool {
-	matched, _ := regexp.MatchString(`^/recentlogs\b`, r.URL.Path)
-	return matched
+func extractAuthTokenFromCookie(cookies []*http.Cookie) string {
+	for _, cookie := range cookies {
+		if cookie.Name == "authorization" {
+			value, err := url.QueryUnescape(cookie.Value)
+			if err != nil {
+				return ""
+			}
+
+			return value
+		}
+	}
+
+	return ""
 }
 
 type TrafficControllerMonitor struct {
