@@ -45,7 +45,6 @@ type Config struct {
 	cfcomponent.Config
 	ApiHost                 string
 	Host                    string
-	Loggregators            map[string][]string
 	LoggregatorIncomingPort uint32
 	LoggregatorOutgoingPort uint32
 	IncomingPort            uint32
