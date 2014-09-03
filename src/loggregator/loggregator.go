@@ -65,13 +65,13 @@ type Loggregator struct {
 
 	appStoreInputChan <-chan appservice.AppServices
 
-	errChan           chan error
-	listener          agentlistener.AgentListener
-	sinkManager       *sinkmanager.SinkManager
-	messageRouter     *sinkserver.MessageRouter
-	messageChan       <-chan *logmessage.Message
-	unmarshaller      *unmarshaller.LogMessageUnmarshaller
-	websocketServer   *websocketserver.WebsocketServer
+	errChan         chan error
+	listener        agentlistener.AgentListener
+	sinkManager     *sinkmanager.SinkManager
+	messageRouter   *sinkserver.MessageRouter
+	messageChan     <-chan *logmessage.Message
+	unmarshaller    *unmarshaller.LogMessageUnmarshaller
+	websocketServer *websocketserver.WebsocketServer
 
 	storeAdapter storeadapter.StoreAdapter
 
@@ -96,19 +96,19 @@ func New(host string, config *Config, logger *gosteno.Logger) *Loggregator {
 	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
 	appStore := store.NewAppServiceStore(storeAdapter, appStoreWatcher)
 	return &Loggregator{
-		Logger:                     logger,
-		listener:                   listener,
-		unmarshaller:               unmarshaller,
-		sinkManager:                sinkManager,
-		messageChan:                messageChan,
-		appStoreInputChan:          appStoreInputChan,
-		appStore:                   appStore,
-		messageRouter:              sinkserver.NewMessageRouter(sinkManager, logger),
-		websocketServer:            websocketserver.New(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.WSMessageBufferSize, logger),
-		newAppServiceChan:          newAppServiceChan,
-		deletedAppServiceChan:      deletedAppServiceChan,
-		appStoreWatcher:            appStoreWatcher,
-		storeAdapter:               storeAdapter,
+		Logger:                logger,
+		listener:              listener,
+		unmarshaller:          unmarshaller,
+		sinkManager:           sinkManager,
+		messageChan:           messageChan,
+		appStoreInputChan:     appStoreInputChan,
+		appStore:              appStore,
+		messageRouter:         sinkserver.NewMessageRouter(sinkManager, logger),
+		websocketServer:       websocketserver.New(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.WSMessageBufferSize, logger),
+		newAppServiceChan:     newAppServiceChan,
+		deletedAppServiceChan: deletedAppServiceChan,
+		appStoreWatcher:       appStoreWatcher,
+		storeAdapter:          storeAdapter,
 	}
 }
 

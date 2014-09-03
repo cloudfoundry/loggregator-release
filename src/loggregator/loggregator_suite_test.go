@@ -32,14 +32,14 @@ func TestLoggregator(t *testing.T) {
 		EtcdMaxConcurrentRequests: 10,
 
 		Index: 0,
-		LegacyIncomingMessagesPort:    3456,
-		OutgoingPort:                  8083,
-		LogFilePath:                   "",
-		MaxRetainedLogMessages:        100,
-		WSMessageBufferSize:           100,
-		SharedSecret:                  "secret",
-		SkipCertVerify:                true,
-		BlackListIps:                  []iprange.IPRange{},
+		LegacyIncomingMessagesPort: 3456,
+		OutgoingPort:               8083,
+		LogFilePath:                "",
+		MaxRetainedLogMessages:     100,
+		WSMessageBufferSize:        100,
+		SharedSecret:               "secret",
+		SkipCertVerify:             true,
+		BlackListIps:               []iprange.IPRange{},
 	}
 	cfcomponent.Logger = loggertesthelper.Logger()
 
