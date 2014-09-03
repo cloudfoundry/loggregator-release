@@ -112,7 +112,7 @@ func initializeClientPool(config Config, logger *gosteno.Logger, port int) (stor
 		logger.Errorf("Error connecting to ETCD: %v", err)
 	}
 
-	clientPool := clientpool.NewLoggregatorClientPool(logger, port, true)
+	clientPool := clientpool.NewLoggregatorClientPool(logger, port)
 	return adapter, clientPool
 }
 

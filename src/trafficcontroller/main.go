@@ -18,7 +18,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar"
-	"github.com/cloudfoundry/loggregatorlib/clientpool"
+	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/storeadapter/workerpool"
@@ -181,11 +181,18 @@ func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gos
 }
 
 func MakeProvider(config *Config, logger *gosteno.Logger, stopChan <-chan struct{}) outputproxy.LoggregatorServerProvider {
-	clientPool := clientpool.NewLoggregatorClientPool(logger, int(config.LoggregatorOutgoingPort), false)
 	adapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	adapter.Connect()
-	go clientPool.RunUpdateLoop(adapter, "/healthstatus/loggregator", stopChan, EtcdQueryInterval)
-	return outputproxy.NewDynamicLoggregatorServerProvider(clientPool)
+
+	loggregatorServerAddressList := servicediscovery.NewServerAddressList(adapter, "/healthstatus/loggregator", logger)
+	go loggregatorServerAddressList.Run(EtcdQueryInterval)
+
+	go func() {
+		<-stopChan
+		loggregatorServerAddressList.Stop()
+	}()
+
+	return outputproxy.NewDynamicLoggregatorServerProvider(loggregatorServerAddressList, config.LoggregatorOutgoingPort)
 }
 
 func makeOutgoingProxy(config *Config, logger *gosteno.Logger) *outputproxy.Proxy {

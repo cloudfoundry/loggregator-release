@@ -6,9 +6,9 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"github.com/cloudfoundry/loggregatorlib/clientpool"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/loggregatorlib/server/handlers"
+	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
 	"net"
 	"net/http"
 	"net/url"
@@ -47,15 +47,22 @@ type LoggregatorServerProvider interface {
 }
 
 type dynamicLoggregatorServerProvider struct {
-	clientPool *clientpool.LoggregatorClientPool
+	serverAddressList servicediscovery.ServerAddressList
+	port              uint32
 }
 
-func NewDynamicLoggregatorServerProvider(clientPool *clientpool.LoggregatorClientPool) LoggregatorServerProvider {
-	return &dynamicLoggregatorServerProvider{clientPool}
+func NewDynamicLoggregatorServerProvider(serverAddressList servicediscovery.ServerAddressList, port uint32) LoggregatorServerProvider {
+	return &dynamicLoggregatorServerProvider{serverAddressList: serverAddressList, port: port}
 }
 
 func (p *dynamicLoggregatorServerProvider) LoggregatorServerAddresses() []string {
-	return p.clientPool.ListAddresses()
+	addrsWithPort := []string{}
+
+	for _, addr := range p.serverAddressList.GetAddresses() {
+		addrsWithPort = append(addrsWithPort, fmt.Sprintf("%s:%d", addr, p.port))
+	}
+
+	return addrsWithPort
 }
 
 func NewProxy(loggregatorServerProvider LoggregatorServerProvider, authorizer authorization.LogAccessAuthorizer, config cfcomponent.Config, logger *gosteno.Logger) *Proxy {

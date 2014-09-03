@@ -16,7 +16,7 @@ import (
 
 func TestOutputProxy(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "OutputProxy Suite")
+	RunSpecs(t, "DropsondeProxy Suite")
 }
 
 type fakeWebsocketHandler struct {
