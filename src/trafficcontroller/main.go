@@ -25,6 +25,7 @@ import (
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	"trafficcontroller/dropsondeproxy"
+	"trafficcontroller/serveraddressprovider"
 )
 
 var DefaultStoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
@@ -125,10 +126,13 @@ func main() {
 		panic(err)
 	}
 
-	dropsondeProxy := makeDropsondeProxy(config, logger)
+	adapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
+	adapter.Connect()
+
+	dropsondeProxy := makeDropsondeProxy(adapter, config, logger)
 	startOutgoingDropsondeProxy(net.JoinHostPort(dropsondeProxy.IpAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dropsondeProxy)
 
-	proxy := makeOutgoingProxy(config, logger)
+	proxy := makeLoggregatorProxy(adapter, config, logger)
 	startOutgoingProxy(net.JoinHostPort(proxy.IpAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), proxy)
 
 	setupMonitoring(proxy, config, logger)
@@ -180,24 +184,17 @@ func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gos
 	return config, logger, nil
 }
 
-func MakeProvider(config *Config, logger *gosteno.Logger, stopChan <-chan struct{}) outputproxy.LoggregatorServerProvider {
-	adapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
-	adapter.Connect()
-
-	loggregatorServerAddressList := servicediscovery.NewServerAddressList(adapter, "/healthstatus/loggregator", logger)
+func MakeProvider(adapter storeadapter.StoreAdapter, storeKeyPrefix string, outgoingPort uint32, logger *gosteno.Logger) serveraddressprovider.ServerAddressProvider {
+	loggregatorServerAddressList := servicediscovery.NewServerAddressList(adapter, storeKeyPrefix, logger)
 	go loggregatorServerAddressList.Run(EtcdQueryInterval)
 
-	go func() {
-		<-stopChan
-		loggregatorServerAddressList.Stop()
-	}()
-
-	return outputproxy.NewDynamicLoggregatorServerProvider(loggregatorServerAddressList, config.LoggregatorOutgoingPort)
+	return serveraddressprovider.NewDynamicServerAddressProvider(loggregatorServerAddressList, outgoingPort)
 }
 
-func makeOutgoingProxy(config *Config, logger *gosteno.Logger) *outputproxy.Proxy {
+func makeLoggregatorProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger) *outputproxy.Proxy {
 	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
-	proxy := outputproxy.NewProxy(MakeProvider(config, logger, nil), authorizer, config.Config, logger)
+	provider := MakeProvider(adapter, "/healthstatus/loggregator", config.LoggregatorOutgoingPort, logger)
+	proxy := outputproxy.NewProxy(provider, authorizer, config.Config, logger)
 	return proxy
 }
 
@@ -225,8 +222,9 @@ func setupMonitoring(proxy *outputproxy.Proxy, config *Config, logger *gosteno.L
 	}()
 }
 
-func makeDropsondeProxy(config *Config, logger *gosteno.Logger) *dropsondeproxy.Proxy {
+func makeDropsondeProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger) *dropsondeproxy.Proxy {
 	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
+	//	provider := MakeProvider(adapter, "/healthstatus/doppler", config.LoggregatorOutgoingPort, logger)
 	proxy := dropsondeproxy.NewDropsondeProxy(authorizer, config.Config, logger)
 	return proxy
 }

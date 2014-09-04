@@ -26,7 +26,7 @@ var _ = Describe("OutputProxySingleHasher", func() {
 	var fl *fakeListener
 	var ts *httptest.Server
 	var existingWsProvider = outputproxy.NewWebsocketHandlerProvider
-	var fakeLoggregatorProvider *fakeLoggregatorServerProvider
+	var fakeLoggregatorProvider *fakeServerAddressProvider
 
 	BeforeEach(func() {
 		fwsh = &fakeWebsocketHandler{}
@@ -42,7 +42,7 @@ var _ = Describe("OutputProxySingleHasher", func() {
 			return fl
 		}
 
-		fakeLoggregatorProvider = &fakeLoggregatorServerProvider{serverAddresses: []string{"localhost:62038"}}
+		fakeLoggregatorProvider = &fakeServerAddressProvider{serverAddresses: []string{"localhost:62038"}}
 		proxy := outputproxy.NewProxy(
 			fakeLoggregatorProvider,
 			testhelpers.SuccessfulAuthorizer,
@@ -401,25 +401,25 @@ func (f *fakeHttpHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	f.called = true
 }
 
-type fakeLoggregatorServerProvider struct {
+type fakeServerAddressProvider struct {
 	serverAddresses []string
 	callCount       int
 	sync.Mutex
 }
 
-func (p *fakeLoggregatorServerProvider) CallCount() int {
+func (p *fakeServerAddressProvider) CallCount() int {
 	p.Lock()
 	defer p.Unlock()
 	return p.callCount
 }
 
-func (p *fakeLoggregatorServerProvider) SetServerAddresses(addresses []string) {
+func (p *fakeServerAddressProvider) SetServerAddresses(addresses []string) {
 	p.Lock()
 	defer p.Unlock()
 	p.serverAddresses = addresses
 }
 
-func (p *fakeLoggregatorServerProvider) LoggregatorServerAddresses() []string {
+func (p *fakeServerAddressProvider) ServerAddresses() []string {
 	p.Lock()
 	defer p.Unlock()
 	p.callCount += 1

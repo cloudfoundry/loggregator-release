@@ -8,8 +8,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/loggregatorlib/server/handlers"
-	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
-	"net"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -17,6 +15,7 @@ import (
 	"time"
 	"trafficcontroller/authorization"
 	"trafficcontroller/listener"
+	"trafficcontroller/serveraddressprovider"
 )
 
 var CheckLoggregatorServersInterval = 1 * time.Second
@@ -24,10 +23,9 @@ var WebsocketKeepAliveDuration = 30 * time.Second
 
 type Proxy struct {
 	cfcomponent.Component
-	loggregatorServerProvider LoggregatorServerProvider
+	loggregatorServerProvider serveraddressprovider.ServerAddressProvider
 	logger                    *gosteno.Logger
 	authorize                 authorization.LogAccessAuthorizer
-	listener                  net.Listener
 }
 
 var NewWebsocketHandlerProvider = func(messages <-chan []byte) http.Handler {
@@ -42,30 +40,7 @@ var NewWebsocketListener = func() listener.Listener {
 	return listener.NewWebsocket()
 }
 
-type LoggregatorServerProvider interface {
-	LoggregatorServerAddresses() []string
-}
-
-type dynamicLoggregatorServerProvider struct {
-	serverAddressList servicediscovery.ServerAddressList
-	port              uint32
-}
-
-func NewDynamicLoggregatorServerProvider(serverAddressList servicediscovery.ServerAddressList, port uint32) LoggregatorServerProvider {
-	return &dynamicLoggregatorServerProvider{serverAddressList: serverAddressList, port: port}
-}
-
-func (p *dynamicLoggregatorServerProvider) LoggregatorServerAddresses() []string {
-	addrsWithPort := []string{}
-
-	for _, addr := range p.serverAddressList.GetAddresses() {
-		addrsWithPort = append(addrsWithPort, fmt.Sprintf("%s:%d", addr, p.port))
-	}
-
-	return addrsWithPort
-}
-
-func NewProxy(loggregatorServerProvider LoggregatorServerProvider, authorizer authorization.LogAccessAuthorizer, config cfcomponent.Config, logger *gosteno.Logger) *Proxy {
+func NewProxy(loggregatorServerProvider serveraddressprovider.ServerAddressProvider, authorizer authorization.LogAccessAuthorizer, config cfcomponent.Config, logger *gosteno.Logger) *Proxy {
 	var instrumentables []instrumentation.Instrumentable
 
 	cfc, err := cfcomponent.NewComponent(
@@ -247,7 +222,7 @@ func (proxy *Proxy) handleLoggregatorConnections(r *http.Request, appId string, 
 	defer checkLoggregatorServersTicker.Stop()
 loop:
 	for {
-		serverAddresses := proxy.loggregatorServerProvider.LoggregatorServerAddresses()
+		serverAddresses := proxy.loggregatorServerProvider.ServerAddresses()
 		connectToNewServerAddresses(serverAddresses)
 		if recent(r) {
 			break
