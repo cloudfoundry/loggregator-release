@@ -2,7 +2,7 @@
 
 set -e
 
-COMPONENTS="deaagent/deaagent loggregator trafficcontroller"
+COMPONENTS="deaagent/deaagent loggregator trafficcontroller metron doppler"
 
 function build-architecture {
     COMPONENT=${1}

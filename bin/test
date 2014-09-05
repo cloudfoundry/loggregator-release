@@ -1,4 +1,30 @@
 #!/bin/bash
+
+check_for_data_race() {
+    name=$1
+    command=$2
+    echo "RACE DETECTION for $name"
+    $command > /tmp/tmp.log 2>&1 &
+    pid=$!
+    sleep 2s
+    kill $pid || sh -c 'cat /tmp/tmp.log && false'
+    sleep 2s
+
+    set +e
+    grep "WARNING: DATA RACE" /tmp/tmp.log > /dev/null 2>&1
+    found_race=$?
+    set -e
+
+    if [[ $found_race == 1 ]]; then
+        echo "No race condition detected"
+    else
+        echo "Race condition detected"
+        cat /tmp/tmp.log
+        exit 1
+    fi
+
+}
+
 set -e
 
 trap "echo Exited!; exit 1;" SIGINT SIGTERM
@@ -6,23 +32,9 @@ trap "echo Exited!; exit 1;" SIGINT SIGTERM
 $(dirname $0)/travis_test
 $(dirname $0)/build-platforms
 
-echo "RACE DETECTION"
-./bin/loggregator --config=./config/loggregator_with_fake_nats.json > /tmp/tmp.log 2>&1 &
-pid=$!
-sleep 2s
-kill $pid
-sleep 2s
 
-set +e
-grep "WARNING: DATA RACE" /tmp/tmp.log > /dev/null 2>&1
-found_race=$?
-set -e
-
-if [[ $found_race == 1 ]]; then
-    echo "No race condition detected"
-    exit 0
-else
-    echo "Race condition detected"
-    cat /tmp/tmp.log
-    exit 1
-fi
+check_for_data_race loggregator "./bin/loggregator --config=./config/loggregator_with_fake_nats.json"
+check_for_data_race doppler "./bin/doppler --config=./config/loggregator_with_fake_nats.json"
+LOGGREGATOR_SHARED_SECRET='asdf' check_for_data_race deaagent "./bin/deaagent --config=./config/dea_logging_agent_with_fake_nats.json"
+check_for_data_race trafficcontroller "./bin/trafficcontroller --config=./config/loggregator_trafficcontroller.json"
+check_for_data_race metron "./bin/metron --configFile=config/metron.json"

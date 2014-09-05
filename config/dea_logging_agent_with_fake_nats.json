@@ -1,0 +1,9 @@
+{
+    "Index": 0,
+    "LoggregatorAddress": "localhost:3456",
+    "SharedSecret": "secret",
+    "VarzUser": "varz",
+    "VarzPass": "password",
+    "VarzPort": 8888,
+    "Syslog"  : ""
+}

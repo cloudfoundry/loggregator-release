@@ -13,6 +13,8 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/storeadapter/workerpool"
+	"github.com/cloudfoundry/yagnats"
+	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	"os"
 	"os/signal"
 	"runtime/pprof"
@@ -96,6 +98,13 @@ func main() {
 
 	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "deaagent", config.Config)
 	logger.Info("Startup: Setting up the loggregator dea logging agent")
+
+	if len(config.NatsHosts) == 0 {
+		logger.Warn("Startup: Did not receive a NATS host - not going to register component")
+		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.NATSClient, error) {
+			return fakeyagnats.New(), nil
+		}
+	}
 
 	err = config.validate(logger)
 	if err != nil {
