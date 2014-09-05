@@ -158,7 +158,7 @@ func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gos
 	return config, logger
 }
 
-func StartHeartbeats(ttl time.Duration, config *Config, logger *gosteno.Logger) {
+func StartHeartbeats(ttl time.Duration, config *Config, logger *gosteno.Logger) (stopChan chan (chan bool)) {
 	if len(config.EtcdUrls) == 0 {
 		return
 	}
@@ -172,7 +172,7 @@ func StartHeartbeats(ttl time.Duration, config *Config, logger *gosteno.Logger) 
 	}
 
 	logger.Debugf("Starting Health Status Updates to Store: /healthstatus/doppler/%s/%s/%d", config.Zone, config.JobName, config.Index)
-	status, _, err := adapter.MaintainNode(storeadapter.StoreNode{
+	status, stopChan, err := adapter.MaintainNode(storeadapter.StoreNode{
 		Key:   fmt.Sprintf("/healthstatus/doppler/%s/%s/%d", config.Zone, config.JobName, config.Index),
 		Value: []byte(local_ip),
 		TTL:   uint64(ttl.Seconds()),
@@ -187,4 +187,6 @@ func StartHeartbeats(ttl time.Duration, config *Config, logger *gosteno.Logger) 
 			logger.Debugf("Health updates channel pushed %v at time %v", stat, time.Now())
 		}
 	}()
+
+	return stopChan
 }

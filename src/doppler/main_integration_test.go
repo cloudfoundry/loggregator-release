@@ -20,8 +20,11 @@ var _ = BeforeEach(func() {
 
 var _ = Describe("Etcd Integration tests", func() {
 	var config main.Config
+	var stopHeartbeats chan (chan bool)
 
 	BeforeEach(func() {
+		stopHeartbeats = nil
+
 		config = main.Config{
 			JobName: "doppler_z1",
 			Index:   0,
@@ -29,7 +32,14 @@ var _ = Describe("Etcd Integration tests", func() {
 			EtcdUrls:                  []string{fmt.Sprintf("http://127.0.0.1:%d", etcdPort)},
 			Zone:                      "z1",
 		}
+	})
 
+	AfterEach(func() {
+		if stopHeartbeats != nil {
+			heartbeatsStopped := make(chan bool)
+			stopHeartbeats <- heartbeatsStopped
+			<-heartbeatsStopped
+		}
 	})
 
 	Describe("Heartbeats", func() {
@@ -41,7 +51,7 @@ var _ = Describe("Etcd Integration tests", func() {
 				return err
 			}).Should(HaveOccurred())
 
-			main.StartHeartbeats(time.Second, &config, loggertesthelper.Logger())
+			stopHeartbeats = main.StartHeartbeats(time.Second, &config, loggertesthelper.Logger())
 
 			Eventually(func() error {
 				_, err := adapter.Get("healthstatus/doppler/z1/doppler_z1/0")
@@ -50,7 +60,7 @@ var _ = Describe("Etcd Integration tests", func() {
 		})
 
 		It("has a 10 sec TTL", func() {
-			main.StartHeartbeats(time.Second, &config, loggertesthelper.Logger())
+			stopHeartbeats = main.StartHeartbeats(time.Second, &config, loggertesthelper.Logger())
 			adapter := etcdRunner.Adapter()
 
 			Eventually(func() uint64 {
@@ -60,7 +70,7 @@ var _ = Describe("Etcd Integration tests", func() {
 		})
 
 		It("updates the value periodically", func() {
-			main.StartHeartbeats(time.Second, &config, loggertesthelper.Logger())
+			stopHeartbeats = main.StartHeartbeats(time.Second, &config, loggertesthelper.Logger())
 			adapter := etcdRunner.Adapter()
 
 			var indices []uint64
