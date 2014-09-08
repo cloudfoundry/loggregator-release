@@ -100,6 +100,18 @@ var _ = Describe("WebsocketServer", func() {
 		close(done)
 	})
 
+	It("sends data to the websocket firehose client", func(done Done) {
+		stopKeepAlive, _ := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/firehose", apiEndpoint))
+		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
+		sinkManager.SendTo(appId, lm)
+
+		rlm, err := receiveLogMessage(wsReceivedChan)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rlm.GetLogMessage().GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
+		close(stopKeepAlive)
+		close(done)
+	})
+
 	It("still sends to 'live' sinks", func(done Done) {
 		stopKeepAlive, connectionDropped := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?app=%s", apiEndpoint, appId))
 		Consistently(connectionDropped, 0.2).ShouldNot(BeClosed())

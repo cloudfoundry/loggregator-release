@@ -2,6 +2,7 @@ package websocketserver
 
 import (
 	"code.google.com/p/gogoprotobuf/proto"
+	"doppler/sinks"
 	"doppler/sinks/websocket"
 	"doppler/sinkserver/sinkmanager"
 	"errors"
@@ -21,6 +22,7 @@ const (
 	TAIL_LOGS_PATH   = "/tail/"
 	RECENT_LOGS_PATH = "/recent"
 	DUMP_LOGS_PATH   = "/dump/"
+	FIREHOSE_PATH    = "/firehose"
 )
 
 type WebsocketServer struct {
@@ -80,17 +82,23 @@ func (w *WebsocketServer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		handler = w.recentLogs
 	case DUMP_LOGS_PATH:
 		handler = w.recentLogs
+	case FIREHOSE_PATH:
+		handler = w.streamFirehose
 	default:
 		w.logger.Debugf("WebsocketServer.ServeHTTP: Invalid path (returning 400): %s", "invalid path "+r.URL.Path)
 		http.Error(rw, "invalid path "+r.URL.Path, 400)
 		return
 	}
 
-	appId, err := w.validate(r)
-	if err != nil {
-		w.logger.Debugf("WebsocketServer.ServeHTTP: Validation error (returning 400): %s", err.Error())
-		http.Error(rw, err.Error(), 400)
-		return
+	var appId string
+	if r.URL.Path != FIREHOSE_PATH {
+		var err error
+		appId, err = w.validate(r)
+		if err != nil {
+			w.logger.Debugf("WebsocketServer.ServeHTTP: Validation error (returning 400): %s", err.Error())
+			http.Error(rw, err.Error(), 400)
+			return
+		}
 	}
 
 	ws, err := gorilla.Upgrade(rw, r, nil, 1024, 1024)
@@ -118,6 +126,15 @@ func (w *WebsocketServer) validate(r *http.Request) (string, error) {
 
 func (w *WebsocketServer) streamLogs(appId string, ws *gorilla.Conn) {
 	w.logger.Debugf("WebsocketServer: Requesting a wss sink for app %s", appId)
+	w.streamWebsocket(appId, ws, w.sinkManager.RegisterSink, w.sinkManager.UnregisterSink)
+}
+
+func (w *WebsocketServer) streamFirehose(appId string, ws *gorilla.Conn) {
+	w.logger.Debugf("WebsocketServer: Requesting firehose wss sink")
+	w.streamWebsocket(websocket.FIREHOSE_APP_ID, ws, w.sinkManager.RegisterFirehoseSink, w.sinkManager.UnregisterFirehoseSink)
+}
+
+func (w *WebsocketServer) streamWebsocket(appId string, ws *gorilla.Conn, registerFunc func(sinks.Sink) bool, unregisterFunc func(sinks.Sink)) {
 	websocketSink := websocket.NewWebsocketSink(
 		appId,
 		w.logger,
@@ -126,8 +143,8 @@ func (w *WebsocketServer) streamLogs(appId string, ws *gorilla.Conn) {
 		w.dropsondeOrigin,
 	)
 
-	w.sinkManager.RegisterSink(websocketSink)
-	defer w.sinkManager.UnregisterSink(websocketSink)
+	registerFunc(websocketSink)
+	defer unregisterFunc(websocketSink)
 
 	go ws.ReadMessage()
 	server.NewKeepAlive(ws, w.keepAliveInterval).Run()

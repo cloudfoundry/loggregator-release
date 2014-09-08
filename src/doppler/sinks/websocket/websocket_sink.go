@@ -9,6 +9,8 @@ import (
 	"net"
 )
 
+const FIREHOSE_APP_ID = "firehose"
+
 type remoteMessageWriter interface {
 	RemoteAddr() net.Addr
 	WriteMessage(messageType int, data []byte) error
