@@ -28,10 +28,15 @@ type ChannelSink struct {
 	done              chan struct{}
 	appId, identifier string
 	received          []*events.Envelope
+	runCalled         bool
 }
 
 func (c *ChannelSink) AppId() string { return c.appId }
 func (c *ChannelSink) Run(msgChan <-chan *events.Envelope) {
+	c.Lock()
+	c.runCalled = true
+	c.Unlock()
+
 	defer close(c.done)
 	for msg := range msgChan {
 		c.Lock()
@@ -43,6 +48,12 @@ func (c *ChannelSink) Run(msgChan <-chan *events.Envelope) {
 func (c *ChannelSink) RunFinished() bool {
 	<-c.done
 	return true
+}
+
+func (c *ChannelSink) RunCalled() bool {
+	c.RLock()
+	defer c.RUnlock()
+	return c.runCalled
 }
 
 func (c *ChannelSink) Received() []*events.Envelope {
@@ -151,6 +162,17 @@ var _ = Describe("SinkManager", func() {
 			Expect(sink2.Received()).To(BeEmpty())
 
 			close(done)
+		})
+
+		It("sends messages to registered firehose sinks", func() {
+			sink1 := &ChannelSink{done: make(chan struct{})}
+			sinkManager.RegisterFirehoseSink(sink1)
+
+			expectedMessageString := "Some Data"
+			expectedMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp", "App"), "origin")
+			go sinkManager.SendTo("myApp1", expectedMessage)
+
+			Eventually(sink1.Received).Should(ContainElement(expectedMessage))
 		})
 	})
 
@@ -261,6 +283,43 @@ var _ = Describe("SinkManager", func() {
 			close(done)
 		})
 
+	})
+
+	Describe("RegisterFirehoseSink", func() {
+		It("runs the sink, updates metrics and returns true for registering a new firehose sink", func() {
+			sink := &ChannelSink{done: make(chan struct{})}
+			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
+			Eventually(sink.RunCalled).Should(BeTrue())
+			Expect(sinkManager.Metrics.Emit().Metrics[3].Value).To(Equal(1))
+		})
+
+		It("returns false for a duplicate sink and does not update the sink metrics", func() {
+			sink := &ChannelSink{done: make(chan struct{})}
+
+			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
+
+			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeFalse())
+			Expect(sinkManager.Metrics.Emit().Metrics[3].Value).To(Equal(1))
+		})
+	})
+
+	Describe("UnregisterFirehoseSink", func() {
+		It("stops the sink and updates metrics", func() {
+			sink := &ChannelSink{done: make(chan struct{})}
+
+			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
+
+			sinkManager.UnregisterFirehoseSink(sink)
+			Eventually(sink.RunFinished).Should(BeTrue())
+			Expect(sinkManager.Metrics.Emit().Metrics[3].Value).To(Equal(0))
+		})
+
+		It("does not update metrics when a sink is not registered", func() {
+			sink := &ChannelSink{done: make(chan struct{})}
+
+			sinkManager.UnregisterFirehoseSink(sink)
+			Expect(sinkManager.Metrics.Emit().Metrics[3].Value).To(Equal(0))
+		})
 	})
 
 	Describe("UnregisterSink", func() {

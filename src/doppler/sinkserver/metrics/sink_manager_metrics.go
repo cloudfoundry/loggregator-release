@@ -13,6 +13,7 @@ type SinkManagerMetrics struct {
 	DumpSinks      int
 	WebsocketSinks int
 	SyslogSinks    int
+	FirehoseSinks  int
 	sync.RWMutex
 }
 
@@ -48,6 +49,18 @@ func (sinkManagerMetrics *SinkManagerMetrics) Dec(sink sinks.Sink) {
 	}
 }
 
+func (sinkManagerMetrics *SinkManagerMetrics) IncFirehose() {
+	sinkManagerMetrics.Lock()
+	defer sinkManagerMetrics.Unlock()
+	sinkManagerMetrics.FirehoseSinks++
+}
+
+func (sinkManagerMetrics *SinkManagerMetrics) DecFirehose() {
+	sinkManagerMetrics.Lock()
+	defer sinkManagerMetrics.Unlock()
+	sinkManagerMetrics.FirehoseSinks--
+}
+
 func (sinkManagerMetrics *SinkManagerMetrics) Emit() instrumentation.Context {
 	sinkManagerMetrics.RLock()
 	defer sinkManagerMetrics.RUnlock()
@@ -56,6 +69,7 @@ func (sinkManagerMetrics *SinkManagerMetrics) Emit() instrumentation.Context {
 		instrumentation.Metric{Name: "numberOfDumpSinks", Value: sinkManagerMetrics.DumpSinks},
 		instrumentation.Metric{Name: "numberOfSyslogSinks", Value: sinkManagerMetrics.SyslogSinks},
 		instrumentation.Metric{Name: "numberOfWebsocketSinks", Value: sinkManagerMetrics.WebsocketSinks},
+		instrumentation.Metric{Name: "numberOfFirehoseSinks", Value: sinkManagerMetrics.FirehoseSinks},
 	}
 
 	return instrumentation.Context{

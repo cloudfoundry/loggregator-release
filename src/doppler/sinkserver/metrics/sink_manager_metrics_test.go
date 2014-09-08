@@ -83,4 +83,16 @@ var _ = Describe("SinkManagerMetrics", func() {
 		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(0))
 	})
 
+	It("Should have metrics for firehose sinks", func() {
+		Expect(sinkManagerMetrics.Emit().Metrics[3].Name).To(Equal("numberOfFirehoseSinks"))
+		Expect(sinkManagerMetrics.Emit().Metrics[3].Value).To(Equal(0))
+
+		sinkManagerMetrics.IncFirehose()
+		Expect(sinkManagerMetrics.Emit().Metrics[3].Value).To(Equal(1))
+
+		sinkManagerMetrics.DecFirehose()
+		Expect(sinkManagerMetrics.Emit().Metrics[3].Value).To(Equal(0))
+
+	})
+
 })
