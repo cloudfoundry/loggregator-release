@@ -7,7 +7,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 
 	"doppler/sinks/websocket"
@@ -30,20 +29,25 @@ func (d DummySyslogWriter) Close() error      { return nil }
 func (d DummySyslogWriter) IsConnected() bool { return false }
 func (d DummySyslogWriter) SetConnected(bool) {}
 
-type TestSink struct {
-	appId, identifier string
+type fakeSink struct {
+	sinkId string
+	appId  string
 }
 
-func (c *TestSink) AppId() string { return c.appId }
-func (c *TestSink) Run(msgChan <-chan *events.Envelope) {
-	for _ = range msgChan {
-	}
+func (f *fakeSink) AppId() string {
+	return f.appId
 }
 
-func (c *TestSink) Identifier() string        { return c.identifier }
-func (c *TestSink) ShouldReceiveErrors() bool { return true }
-func (c *TestSink) Emit() instrumentation.Context {
-	return instrumentation.Context{}
+func (f *fakeSink) Run(<-chan *events.Envelope) {
+
+}
+
+func (f *fakeSink) Identifier() string {
+	return f.sinkId
+}
+
+func (f *fakeSink) ShouldReceiveErrors() bool {
+	return false
 }
 
 var _ = Describe("GroupedSink", func() {
@@ -77,6 +81,22 @@ var _ = Describe("GroupedSink", func() {
 			close(done)
 		})
 
+		It("sends message to all registered firehose sinks", func() {
+			fakeSink1 := &fakeSink{sinkId: "sink1"}
+			inputChan1 := make(chan *events.Envelope)
+			groupedSinks.RegisterFirehose(inputChan1, fakeSink1)
+
+			fakeSink2 := &fakeSink{sinkId: "sink2"}
+			inputChan2 := make(chan *events.Envelope)
+			groupedSinks.RegisterFirehose(inputChan2, fakeSink2)
+
+			msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "app-id", "App"), "origin")
+			go groupedSinks.BroadCast("app-id", msg)
+
+			Eventually(inputChan1).Should(Receive(Equal(msg)))
+			Eventually(inputChan2).Should(Receive(Equal(msg)))
+		})
+
 		It("does not block when sending to an appId that has no sinks", func(done Done) {
 			appId := "NonExistantApp"
 			msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", appId, "App"), "origin")
@@ -102,6 +122,22 @@ var _ = Describe("GroupedSink", func() {
 			Expect(<-inputChan).To(Equal(msg))
 			Expect(otherInputChan).To(HaveLen(0))
 			close(done)
+		})
+
+		It("sends message to all registered firehose sinks", func() {
+			fakeSink1 := &fakeSink{sinkId: "sink1"}
+			inputChan1 := make(chan *events.Envelope)
+			groupedSinks.RegisterFirehose(inputChan1, fakeSink1)
+
+			fakeSink2 := &fakeSink{sinkId: "sink2"}
+			inputChan2 := make(chan *events.Envelope)
+			groupedSinks.RegisterFirehose(inputChan2, fakeSink2)
+
+			msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "app-id", "App"), "origin")
+			go groupedSinks.BroadCastError("app-id", msg)
+
+			Eventually(inputChan1).Should(Receive(Equal(msg)))
+			Eventually(inputChan2).Should(Receive(Equal(msg)))
 		})
 
 		It("does not send to sinks that don't want errors", func(done Done) {
@@ -141,6 +177,16 @@ var _ = Describe("GroupedSink", func() {
 			groupedSinks.Register(inputChan, appSink)
 			result := groupedSinks.Register(inputChan, appSink)
 			Expect(result).To(BeFalse())
+		})
+	})
+
+	Describe("RegisterFirehose", func() {
+		It("returns false when registering a duplicate", func() {
+			fakeSink := &fakeSink{sinkId: "sink"}
+			ok := groupedSinks.RegisterFirehose(inputChan, fakeSink)
+			Expect(ok).To(BeTrue())
+			ok = groupedSinks.RegisterFirehose(inputChan, fakeSink)
+			Expect(ok).To(BeFalse())
 		})
 	})
 
@@ -195,28 +241,66 @@ var _ = Describe("GroupedSink", func() {
 
 	})
 
+	Describe("CloseAndDeleteFirehose", func() {
+		It("only unregisters a specific sink", func() {
+			fakeSink1 := &fakeSink{sinkId: "sink1"}
+			fakeSink2 := &fakeSink{sinkId: "sink2"}
+
+			groupedSinks.RegisterFirehose(make(chan *events.Envelope), fakeSink1)
+			groupedSinks.RegisterFirehose(make(chan *events.Envelope), fakeSink2)
+
+			ok := groupedSinks.CloseAndDeleteFirehose(fakeSink1)
+			Expect(ok).To(BeTrue())
+			Expect(groupedSinks.RegisterFirehose(make(chan *events.Envelope), fakeSink1)).To(BeTrue())
+			Expect(groupedSinks.RegisterFirehose(make(chan *events.Envelope), fakeSink2)).To(BeFalse())
+		})
+
+		It("closes the sink's input channel", func() {
+			fakeSink1 := &fakeSink{sinkId: "sink1"}
+			inputChan1 := make(chan *events.Envelope)
+
+			groupedSinks.RegisterFirehose(inputChan1, fakeSink1)
+
+			groupedSinks.CloseAndDeleteFirehose(fakeSink1)
+			Expect(inputChan1).To(BeClosed())
+		})
+
+		It("returns false if the sink is not registered", func() {
+			fakeSink1 := &fakeSink{sinkId: "sink1"}
+			ok := groupedSinks.CloseAndDeleteFirehose(fakeSink1)
+			Expect(ok).To(BeFalse())
+		})
+	})
+
 	Describe("DeleteAll", func() {
 		It("removes all the sinks", func() {
-			sink1 := &TestSink{"123", "url1"}
-			sink2 := &TestSink{"465", "url2"}
+			sink1 := &fakeSink{sinkId: "sink1", appId: "app1"}
+			sink2 := &fakeSink{sinkId: "sink2", appId: "app2"}
+			sink3 := &fakeSink{sinkId: "sink3"}
 
 			groupedSinks.Register(make(chan *events.Envelope), sink1)
 			groupedSinks.Register(make(chan *events.Envelope), sink2)
+			groupedSinks.RegisterFirehose(make(chan *events.Envelope), sink3)
 
 			groupedSinks.DeleteAll()
 
 			Expect(groupedSinks.CountFor("123")).To(BeZero())
 			Expect(groupedSinks.CountFor("465")).To(BeZero())
+			Expect(groupedSinks.RegisterFirehose(make(chan *events.Envelope), sink3)).To(BeTrue())
 		})
 
 		It("closes all the sinks input chans", func() {
-			sink := &TestSink{"123", "url1"}
+			sink1 := &fakeSink{sinkId: "sink1", appId: "app1"}
+			sink2 := &fakeSink{sinkId: "sink2"}
 
-			groupedSinks.Register(inputChan, sink)
+			groupedSinks.Register(inputChan, sink1)
+			firehoseInputChan := make(chan *events.Envelope)
+			groupedSinks.RegisterFirehose(firehoseInputChan, sink2)
 
 			groupedSinks.DeleteAll()
 
-			Eventually(inputChan).Should(BeClosed())
+			Expect(inputChan).To(BeClosed())
+			Expect(firehoseInputChan).To(BeClosed())
 		})
 	})
 

@@ -10,7 +10,10 @@ import (
 )
 
 func NewGroupedSinks() *GroupedSinks {
-	return &GroupedSinks{apps: make(map[string]map[string]*sinkWrapper)}
+	return &GroupedSinks{
+		apps:      make(map[string]map[string]*sinkWrapper),
+		firehoses: make(map[string]*sinkWrapper),
+	}
 }
 
 type sinkWrapper struct {
@@ -19,7 +22,8 @@ type sinkWrapper struct {
 }
 
 type GroupedSinks struct {
-	apps map[string]map[string]*sinkWrapper
+	apps      map[string]map[string]*sinkWrapper
+	firehoses map[string]*sinkWrapper
 	sync.RWMutex
 }
 
@@ -44,6 +48,18 @@ func (group *GroupedSinks) Register(in chan<- *events.Envelope, sink sinks.Sink)
 	return true
 }
 
+func (group *GroupedSinks) RegisterFirehose(in chan<- *events.Envelope, sink sinks.Sink) bool {
+	group.Lock()
+	defer group.Unlock()
+
+	if _, ok := group.firehoses[sink.Identifier()]; ok {
+		return false
+	}
+
+	group.firehoses[sink.Identifier()] = &sinkWrapper{inputChan: in, sink: sink}
+	return true
+}
+
 func (group *GroupedSinks) BroadCast(appId string, msg *events.Envelope) {
 	group.RLock()
 	defer group.RUnlock()
@@ -51,16 +67,24 @@ func (group *GroupedSinks) BroadCast(appId string, msg *events.Envelope) {
 	for _, wrapper := range group.apps[appId] {
 		wrapper.inputChan <- msg
 	}
+
+	for _, firehose := range group.firehoses {
+		firehose.inputChan <- msg
+	}
 }
 
-func (gc *GroupedSinks) BroadCastError(appId string, errorMsg *events.Envelope) {
-	gc.RLock()
-	defer gc.RUnlock()
+func (group *GroupedSinks) BroadCastError(appId string, errorMsg *events.Envelope) {
+	group.RLock()
+	defer group.RUnlock()
 
-	for _, wrapper := range gc.apps[appId] {
+	for _, wrapper := range group.apps[appId] {
 		if wrapper.sink.ShouldReceiveErrors() {
 			wrapper.inputChan <- errorMsg
 		}
+	}
+
+	for _, firehose := range group.firehoses {
+		firehose.inputChan <- errorMsg
 	}
 }
 
@@ -144,6 +168,20 @@ func (group *GroupedSinks) CloseAndDelete(sink sinks.Sink) bool {
 	return false
 }
 
+func (group *GroupedSinks) CloseAndDeleteFirehose(sink sinks.Sink) bool {
+	group.Lock()
+	defer group.Unlock()
+	firehose, ok := group.firehoses[sink.Identifier()]
+	if !ok {
+		return false
+	}
+
+	close(firehose.inputChan)
+	delete(group.firehoses, sink.Identifier())
+
+	return true
+}
+
 func (group *GroupedSinks) DeleteAll() {
 	group.Lock()
 	defer group.Unlock()
@@ -152,5 +190,9 @@ func (group *GroupedSinks) DeleteAll() {
 			close(wrapper.inputChan)
 		}
 		delete(group.apps, appId)
+	}
+	for firehoseId, firehose := range group.firehoses {
+		close(firehose.inputChan)
+		delete(group.firehoses, firehoseId)
 	}
 }
