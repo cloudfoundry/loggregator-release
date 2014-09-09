@@ -17,12 +17,9 @@ import (
 	"time"
 )
 
-//TODO: change path structure to /apps/[APP_ID]/[ACTION]
-
 const (
 	STREAM_LOGS_PATH = "/stream"
 	RECENT_LOGS_PATH = "/recent"
-	DUMP_LOGS_PATH   = "/dump/"
 	FIREHOSE_PATH    = "/firehose"
 )
 
