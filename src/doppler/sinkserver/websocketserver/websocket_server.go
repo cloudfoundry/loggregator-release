@@ -5,6 +5,7 @@ import (
 	"doppler/sinks"
 	"doppler/sinks/websocket"
 	"doppler/sinkserver/sinkmanager"
+	"errors"
 	"fmt"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
@@ -69,28 +70,62 @@ func (w *WebsocketServer) Stop() {
 	w.listener.Close()
 }
 
-func (w *WebsocketServer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+type wsHandler func(*gorilla.Conn)
+
+func (w *WebsocketServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	w.logger.Debug("WebsocketServer.ServeHTTP: starting")
+	var handler wsHandler
+	var err error
+
+	if request.URL.Path == FIREHOSE_PATH {
+		handler, err = w.firehoseHandler(writer, request)
+	} else {
+		handler, err = w.appHandler(writer, request)
+	}
+
+	if err != nil {
+		w.logger.Errorf("WebsocketServer.ServeHTTP: %s", err.Error())
+		return
+	}
+
+	ws, err := gorilla.Upgrade(writer, request, nil, 1024, 1024)
+	if err != nil {
+		println("error" + err.Error())
+		w.logger.Debugf("WebsocketServer.ServeHTTP: Upgrade error (returning 400): %s", err.Error())
+		http.Error(writer, err.Error(), 400)
+		return
+	}
+
+	defer ws.Close()
+	defer ws.WriteControl(gorilla.CloseMessage, gorilla.FormatCloseMessage(gorilla.CloseNormalClosure, ""), time.Time{})
+
+	handler(ws)
+}
+
+func (w *WebsocketServer) firehoseHandler(writer http.ResponseWriter, request *http.Request) (wsHandler, error) {
+	return w.streamFirehose, nil
+}
+
+func (w *WebsocketServer) appHandler(writer http.ResponseWriter, request *http.Request) (wsHandler, error) {
 	var handler func(string, *gorilla.Conn)
 
 	validPaths := regexp.MustCompile("^/apps/(.*)/(recentlogs|stream)$")
-	matches := validPaths.FindStringSubmatch(r.URL.Path)
+	matches := validPaths.FindStringSubmatch(request.URL.Path)
 	if len(matches) != 3 {
-		rw.Header().Set("WWW-Authenticate", "Basic")
-		rw.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(rw, "Resource Not Found. %s", r.URL.Path)
-		return
+		writer.Header().Set("WWW-Authenticate", "Basic")
+		writer.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(writer, "Resource Not Found. %s", request.URL.Path)
+		return nil, fmt.Errorf("Resource Not Found. %s", request.URL.Path)
 	}
 	appId := matches[1]
 
 	if appId == "" {
-		rw.Header().Set("WWW-Authenticate", "Basic")
-		rw.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(rw, "App ID missing. Make request to /apps/APP_ID/%s", matches[2])
+		writer.Header().Set("WWW-Authenticate", "Basic")
+		writer.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(writer, "App ID missing. Make request to /apps/APP_ID/%s", matches[2])
 
-		w.logger.Debugf("WebsocketServer.ServeHTTP: Validation error (returning 400): Invalid AppId")
-		w.logInvalidApp(r.RemoteAddr)
-		return
+		w.logInvalidApp(request.RemoteAddr)
+		return nil, errors.New("Validation error (returning 400): No AppId")
 	}
 	endpoint := matches[2]
 
@@ -99,68 +134,46 @@ func (w *WebsocketServer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		handler = w.streamLogs
 	case "recentlogs":
 		handler = w.recentLogs
-	case FIREHOSE_PATH:
-		handler = w.streamFirehose
 	default:
-		w.logger.Debugf("WebsocketServer.ServeHTTP: Invalid path (returning 400): %s", "invalid path "+r.URL.Path)
-		http.Error(rw, "invalid path "+r.URL.Path, 400)
-		return
+		http.Error(writer, "invalid path "+request.URL.Path, 400)
+		return nil, fmt.Errorf("Invalid path (returning 400): invalid path %s", request.URL.Path)
 	}
 
-	var appId string
-	if r.URL.Path != FIREHOSE_PATH {
-		var err error
-		appId, err = w.validate(r)
-		if err != nil {
-			w.logger.Debugf("WebsocketServer.ServeHTTP: Validation error (returning 400): %s", err.Error())
-			http.Error(rw, err.Error(), 400)
-			return
-		}
+	f := func(ws *gorilla.Conn) {
+		handler(appId, ws)
 	}
-
-	ws, err := gorilla.Upgrade(rw, r, nil, 1024, 1024)
-	if err != nil {
-		println("error" + err.Error())
-		w.logger.Debugf("WebsocketServer.ServeHTTP: Upgrade error (returning 400): %s", err.Error())
-		http.Error(rw, err.Error(), 400)
-		return
-	}
-
-	defer ws.Close()
-	defer ws.WriteControl(gorilla.CloseMessage, gorilla.FormatCloseMessage(gorilla.CloseNormalClosure, ""), time.Time{})
-
-	handler(appId, ws)
+	return f, nil
 }
 
-func (w *WebsocketServer) streamLogs(appId string, ws *gorilla.Conn) {
+func (w *WebsocketServer) streamLogs(appId string, websocketConnection *gorilla.Conn) {
 	w.logger.Debugf("WebsocketServer: Requesting a wss sink for app %s", appId)
-	w.streamWebsocket(appId, ws, w.sinkManager.RegisterSink, w.sinkManager.UnregisterSink)
+	w.streamWebsocket(appId, websocketConnection, w.sinkManager.RegisterSink, w.sinkManager.UnregisterSink)
 }
 
-func (w *WebsocketServer) streamFirehose(appId string, ws *gorilla.Conn) {
+func (w *WebsocketServer) streamFirehose(websocketConnection *gorilla.Conn) {
 	w.logger.Debugf("WebsocketServer: Requesting firehose wss sink")
-	w.streamWebsocket(websocket.FIREHOSE_APP_ID, ws, w.sinkManager.RegisterFirehoseSink, w.sinkManager.UnregisterFirehoseSink)
+	w.streamWebsocket(websocket.FIREHOSE_APP_ID, websocketConnection, w.sinkManager.RegisterFirehoseSink, w.sinkManager.UnregisterFirehoseSink)
 }
 
-func (w *WebsocketServer) streamWebsocket(appId string, ws *gorilla.Conn, registerFunc func(sinks.Sink) bool, unregisterFunc func(sinks.Sink)) {
+func (w *WebsocketServer) streamWebsocket(appId string, websocketConnection *gorilla.Conn, register func(sinks.Sink) bool, unregister func(sinks.Sink)) {
 	websocketSink := websocket.NewWebsocketSink(
 		appId,
 		w.logger,
-		ws,
+		websocketConnection,
 		w.bufferSize,
 		w.dropsondeOrigin,
 	)
 
-	registerFunc(websocketSink)
-	defer unregisterFunc(websocketSink)
+	register(websocketSink)
+	defer unregister(websocketSink)
 
-	go ws.ReadMessage()
-	server.NewKeepAlive(ws, w.keepAliveInterval).Run()
+	go websocketConnection.ReadMessage()
+	server.NewKeepAlive(websocketConnection, w.keepAliveInterval).Run()
 }
 
-func (w *WebsocketServer) recentLogs(appId string, ws *gorilla.Conn) {
+func (w *WebsocketServer) recentLogs(appId string, websocketConnection *gorilla.Conn) {
 	logMessages := w.sinkManager.RecentLogsFor(appId)
-	sendMessagesToWebsocket(logMessages, ws, w.logger)
+	sendMessagesToWebsocket(logMessages, websocketConnection, w.logger)
 }
 
 func (w *WebsocketServer) logInvalidApp(address string) {
@@ -168,19 +181,19 @@ func (w *WebsocketServer) logInvalidApp(address string) {
 	w.logger.Warn(message)
 }
 
-func sendMessagesToWebsocket(logMessages []*events.Envelope, ws *gorilla.Conn, logger *gosteno.Logger) {
+func sendMessagesToWebsocket(logMessages []*events.Envelope, websocketConnection *gorilla.Conn, logger *gosteno.Logger) {
 	for _, messageEnvelope := range logMessages {
 		envelopeBytes, err := proto.Marshal(messageEnvelope)
 
 		if err != nil {
-			logger.Errorf("Websocket Server %s: Error marshalling %s envelope from origin %s: %s", ws.RemoteAddr(), messageEnvelope.GetEventType().String(), messageEnvelope.GetOrigin(), err.Error())
+			logger.Errorf("Websocket Server %s: Error marshalling %s envelope from origin %s: %s", websocketConnection.RemoteAddr(), messageEnvelope.GetEventType().String(), messageEnvelope.GetOrigin(), err.Error())
 		}
 
-		err = ws.WriteMessage(gorilla.BinaryMessage, envelopeBytes)
+		err = websocketConnection.WriteMessage(gorilla.BinaryMessage, envelopeBytes)
 		if err != nil {
-			logger.Debugf("Websocket Server %s: Error when trying to send data to sink %s. Requesting close. Err: %v", ws.RemoteAddr(), err)
+			logger.Debugf("Websocket Server %s: Error when trying to send data to sink %s. Requesting close. Err: %v", websocketConnection.RemoteAddr(), err)
 		} else {
-			logger.Debugf("Websocket Server %s: Successfully sent data", ws.RemoteAddr())
+			logger.Debugf("Websocket Server %s: Successfully sent data", websocketConnection.RemoteAddr())
 		}
 	}
 }

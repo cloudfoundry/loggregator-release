@@ -36,7 +36,7 @@ var _ = Describe("DropsondeLogMessage", func() {
 
 		logMessage := envelope.GetLogMessage()
 		Expect(logMessage.GetMessage()).To(BeEquivalentTo("hello"))
-		Expect(logMessage.GetSourceType()).To(Equal("LGR"))
+		Expect(logMessage.GetSourceType()).To(Equal("DOP"))
 		Expect(logMessage.GetMessageType()).To(Equal(events.LogMessage_ERR))
 	})
 })
