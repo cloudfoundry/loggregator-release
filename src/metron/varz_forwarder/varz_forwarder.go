@@ -3,28 +3,38 @@ package varz_forwarder
 import (
 	"fmt"
 	"github.com/cloudfoundry/dropsonde/events"
+	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"sync"
+	"time"
 )
 
 type VarzForwarder struct {
-	metricsByOrigin map[string]metricsByName
+	metricsByOrigin map[string]*metrics
 	componentName   string
+	ttl             time.Duration
+	logger          *gosteno.Logger
 	sync.RWMutex
 }
 
-type metricsByName map[string]float64
+type metrics struct {
+	metricsByName map[string]float64
+	timer         *time.Timer
+}
 
-func NewVarzForwarder(componentName string) *VarzForwarder {
+func NewVarzForwarder(componentName string, ttl time.Duration, logger *gosteno.Logger) *VarzForwarder {
 	return &VarzForwarder{
-		metricsByOrigin: make(map[string]metricsByName),
+		metricsByOrigin: make(map[string]*metrics),
 		componentName:   componentName,
+		ttl:             ttl,
+		logger:          logger,
 	}
 }
 
 func (vf *VarzForwarder) Run(metricChan <-chan *events.Envelope, outputChan chan<- *events.Envelope) {
 	for metric := range metricChan {
 		vf.addMetric(metric)
+		vf.resetTimer(metric.GetOrigin())
 
 		outputChan <- metric
 	}
@@ -41,7 +51,7 @@ func (vf *VarzForwarder) addMetric(metric *events.Envelope) {
 
 	originMetrics, ok := vf.metricsByOrigin[metric.GetOrigin()]
 	if !ok {
-		vf.metricsByOrigin[metric.GetOrigin()] = make(metricsByName)
+		vf.metricsByOrigin[metric.GetOrigin()] = vf.createMetrics(metric.GetOrigin())
 		originMetrics = vf.metricsByOrigin[metric.GetOrigin()]
 	}
 
@@ -59,7 +69,7 @@ func (vf *VarzForwarder) Emit() instrumentation.Context {
 	}
 
 	for origin, originMetrics := range vf.metricsByOrigin {
-		for name, value := range originMetrics {
+		for name, value := range originMetrics.metricsByName {
 			metricName := fmt.Sprintf("%s.%s", origin, name)
 			metrics = append(metrics, instrumentation.Metric{Name: metricName, Value: value, Tags: tags})
 		}
@@ -69,22 +79,45 @@ func (vf *VarzForwarder) Emit() instrumentation.Context {
 	return c
 }
 
-var metricProcessorsByType = map[events.Envelope_EventType]func(metricsByName, *events.Envelope){
-	events.Envelope_ValueMetric:  metricsByName.processValueMetric,
-	events.Envelope_CounterEvent: metricsByName.processCounterEvent,
+func (vf *VarzForwarder) createMetrics(origin string) *metrics {
+	vf.logger.Debugf("creating metrics for origin %v", origin)
+	return &metrics{
+		metricsByName: make(map[string]float64),
+		timer:         time.AfterFunc(vf.ttl, func() { vf.deleteMetrics(origin) }),
+	}
 }
 
-func (metrics metricsByName) processValueMetric(metric *events.Envelope) {
-	metrics[metric.GetValueMetric().GetName()] = metric.GetValueMetric().GetValue()
+func (vf *VarzForwarder) deleteMetrics(origin string) {
+	vf.logger.Debugf("deleting metrics for origin %v", origin)
+	vf.Lock()
+	defer vf.Unlock()
+
+	delete(vf.metricsByOrigin, origin)
 }
 
-func (metrics metricsByName) processCounterEvent(metric *events.Envelope) {
+func (vf *VarzForwarder) resetTimer(origin string) {
+	metrics, ok := vf.metricsByOrigin[origin]
+	if ok {
+		metrics.timer.Reset(vf.ttl)
+	}
+}
+
+var metricProcessorsByType = map[events.Envelope_EventType]func(*metrics, *events.Envelope){
+	events.Envelope_ValueMetric:  (*metrics).processValueMetric,
+	events.Envelope_CounterEvent: (*metrics).processCounterEvent,
+}
+
+func (metrics *metrics) processValueMetric(metric *events.Envelope) {
+	metrics.metricsByName[metric.GetValueMetric().GetName()] = metric.GetValueMetric().GetValue()
+}
+
+func (metrics *metrics) processCounterEvent(metric *events.Envelope) {
 	eventName := metric.GetCounterEvent().GetName()
-	count, ok := metrics[eventName]
+	count, ok := metrics.metricsByName[eventName]
 
 	if !ok {
-		metrics[eventName] = 1
+		metrics.metricsByName[eventName] = 1
 	} else {
-		metrics[eventName] = count + 1
+		metrics.metricsByName[eventName] = count + 1
 	}
 }

@@ -4,10 +4,11 @@ import (
 	"github.com/cloudfoundry/dropsonde/events"
 	"metron/varz_forwarder"
 
-	"code.google.com/p/gogoprotobuf/proto"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"time"
 )
 
 var _ = Describe("VarzForwarder", func() {
@@ -18,7 +19,7 @@ var _ = Describe("VarzForwarder", func() {
 	)
 
 	BeforeEach(func() {
-		forwarder = varz_forwarder.NewVarzForwarder("test-component")
+		forwarder = varz_forwarder.NewVarzForwarder("test-component", time.Millisecond*100, loggertesthelper.Logger())
 		metricChan = make(chan *events.Envelope)
 		outputChan = make(chan *events.Envelope, 2)
 	})
@@ -79,10 +80,53 @@ var _ = Describe("VarzForwarder", func() {
 			perform()
 
 			metricChan <- metric("origin", "metric-1", 0)
-			metricChan <- heartbeat()
+			metricChan <- heartbeat("origin")
 
 			var varz instrumentation.Context
 			Consistently(func() []instrumentation.Metric { varz = forwarder.Emit(); return varz.Metrics }).Should(HaveLen(1))
+		})
+
+		It("no longer emits metrics when the origin TTL expires", func() {
+			perform()
+
+			metricChan <- metric("origin", "metric-X", 0)
+
+			Eventually(func() []instrumentation.Metric { return forwarder.Emit().Metrics }).ShouldNot(HaveLen(0))
+
+			time.Sleep(time.Millisecond * 200)
+
+			Expect(forwarder.Emit().Metrics).To(HaveLen(0))
+		})
+
+		It("still emits metrics after origin TTL if new events were received", func() {
+			perform()
+
+			metricChan <- metric("origin", "metric-X", 0)
+
+			stopHeartbeats := make(chan struct{})
+			heartbeatsStopped := make(chan struct{})
+			go func() {
+				ticker := time.NewTicker(10 * time.Millisecond)
+				defer ticker.Stop()
+				for {
+					select {
+					case <-ticker.C:
+					case <-stopHeartbeats:
+						close(heartbeatsStopped)
+						return
+					}
+					metricChan <- heartbeat("origin")
+					<-outputChan
+				}
+			}()
+
+			Eventually(func() []instrumentation.Metric { return forwarder.Emit().Metrics }).ShouldNot(HaveLen(0))
+
+			time.Sleep(time.Millisecond * 200)
+
+			Expect(forwarder.Emit().Metrics).ToNot(HaveLen(0))
+			close(stopHeartbeats)
+			<-heartbeatsStopped
 		})
 	})
 
@@ -97,7 +141,7 @@ var _ = Describe("VarzForwarder", func() {
 
 		It("passes other metrics through", func() {
 			perform()
-			expectedMetric := heartbeat()
+			expectedMetric := heartbeat("origin")
 			metricChan <- expectedMetric
 
 			Eventually(outputChan).Should(Receive(Equal(expectedMetric)))
@@ -121,9 +165,9 @@ func counterEvent(origin, name string) *events.Envelope {
 	}
 }
 
-func heartbeat() *events.Envelope {
+func heartbeat(origin string) *events.Envelope {
 	return &events.Envelope{
-		Origin:    proto.String("heartbeat-origin"),
+		Origin:    &origin,
 		EventType: events.Envelope_Heartbeat.Enum(),
 		Heartbeat: &events.Heartbeat{},
 	}

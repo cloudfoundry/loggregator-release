@@ -4,6 +4,7 @@ import (
 	"flag"
 	"github.com/cloudfoundry/dropsonde/dropsonde_marshaller"
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
+	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/gosteno"
@@ -29,6 +30,8 @@ var (
 	debug          = flag.Bool("debug", false, "Debug logging")
 )
 
+var METRIC_TTL = emitter.HeartbeatInterval * 5
+
 var StoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
 	workerPool := workerpool.NewWorkerPool(concurrentRequests)
 
@@ -48,7 +51,7 @@ func main() {
 
 	unmarshaller := dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger)
 	marshaller := dropsonde_marshaller.NewDropsondeMarshaller(logger)
-	varzForwarder := varz_forwarder.NewVarzForwarder(config.Job)
+	varzForwarder := varz_forwarder.NewVarzForwarder(config.Job, METRIC_TTL, logger)
 	messageAggregator := message_aggregator.NewMessageAggregator(logger)
 
 	instrumentables := []instrumentation.Instrumentable{
