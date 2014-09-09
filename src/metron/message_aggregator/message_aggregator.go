@@ -119,7 +119,7 @@ func (m *messageAggregator) handleHttpStop(envelope *events.Envelope) *events.En
 			StatusCode:      stopEvent.StatusCode,
 			ContentLength:   stopEvent.ContentLength,
 			ParentRequestId: startEvent.ParentRequestId,
-			ApplicationId:   startEvent.ApplicationId,
+			ApplicationId:   stopEvent.ApplicationId,
 			InstanceIndex:   startEvent.InstanceIndex,
 			InstanceId:      startEvent.InstanceId,
 		},

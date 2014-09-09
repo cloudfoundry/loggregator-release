@@ -165,10 +165,6 @@ func createStartMessage(requestId uint64, peerType events.PeerType) *events.Enve
 				Low:  proto.Uint64(2),
 				High: proto.Uint64(3),
 			},
-			ApplicationId: &events.UUID{
-				Low:  proto.Uint64(4),
-				High: proto.Uint64(5),
-			},
 			InstanceIndex: proto.Int32(6),
 			InstanceId:    proto.String("fake-instance-id-1"),
 		},
@@ -220,8 +216,8 @@ func createStartStopMessage(requestId uint64, peerType events.PeerType) *events.
 				High: proto.Uint64(3),
 			},
 			ApplicationId: &events.UUID{
-				Low:  proto.Uint64(4),
-				High: proto.Uint64(5),
+				Low:  proto.Uint64(105),
+				High: proto.Uint64(106),
 			},
 			InstanceIndex: proto.Int32(6),
 			InstanceId:    proto.String("fake-instance-id-1"),
