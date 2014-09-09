@@ -24,7 +24,10 @@ import (
 	"github.com/cloudfoundry/storeadapter/workerpool"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
+	"trafficcontroller/channel_group_connector"
 	"trafficcontroller/dropsondeproxy"
+	"trafficcontroller/listener"
+	"trafficcontroller/marshaller"
 	"trafficcontroller/serveraddressprovider"
 )
 
@@ -144,6 +147,13 @@ func main() {
 		logger.Fatalf("Startup: Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
 	}
 
+	uri = "doppler." + config.SystemDomain
+	err = rr.RegisterWithRouter(proxy.IpAddress, config.OutgoingDropsondePort, []string{uri})
+	if err != nil {
+		logger.Fatalf("Startup: Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
+	}
+
+
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Kill, os.Interrupt)
 
@@ -224,8 +234,9 @@ func setupMonitoring(proxy *outputproxy.Proxy, config *Config, logger *gosteno.L
 
 func makeDropsondeProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger) *dropsondeproxy.Proxy {
 	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
-	//	provider := MakeProvider(adapter, "/healthstatus/doppler", config.LoggregatorOutgoingPort, logger)
-	proxy := dropsondeproxy.NewDropsondeProxy(authorizer, config.Config, logger)
+	provider := MakeProvider(adapter, "/healthstatus/doppler", config.OutgoingDropsondePort, logger)
+	cgc := channel_group_connector.NewChannelGroupConnector(provider, newWebsocketListener, marshaller.DropsondeLogMessage, logger)
+	proxy := dropsondeproxy.NewDropsondeProxy(authorizer, dropsondeproxy.DefaultHandlerProvider, cgc, config.Config, logger)
 	return proxy
 }
 
@@ -236,4 +247,8 @@ func startOutgoingDropsondeProxy(host string, proxy http.Handler) {
 			panic(err)
 		}
 	}()
+}
+
+func newWebsocketListener() listener.Listener {
+	return listener.NewWebsocket(marshaller.DropsondeLogMessage)
 }

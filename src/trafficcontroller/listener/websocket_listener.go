@@ -1,20 +1,20 @@
 package listener
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/gorilla/websocket"
 	"io"
 	"sync"
 	"time"
+	"trafficcontroller/marshaller"
 )
 
 type websocketListener struct {
 	sync.WaitGroup
+	generateLogMessage marshaller.MessageGenerator
 }
 
-func NewWebsocket() *websocketListener {
-	return new(websocketListener)
+func NewWebsocket(logMessageGenerator marshaller.MessageGenerator) *websocketListener {
+	return &websocketListener{generateLogMessage: logMessageGenerator}
 }
 
 func (l *websocketListener) Start(url, appId string, outputChan OutputChannel, stopChan StopChannel) error {
@@ -43,7 +43,7 @@ func (l *websocketListener) Start(url, appId string, outputChan OutputChannel, s
 		}
 
 		if err != nil {
-			outputChan <- generateLogMessage("proxy: error connecting to a loggregator server", appId)
+			outputChan <- l.generateLogMessage("proxy: error connecting to a loggregator server", appId)
 			close(serverError)
 			break
 		}
@@ -52,19 +52,4 @@ func (l *websocketListener) Start(url, appId string, outputChan OutputChannel, s
 
 	l.Wait()
 	return nil
-}
-
-func generateLogMessage(messageString string, appId string) []byte {
-	messageType := logmessage.LogMessage_ERR
-	currentTime := time.Now()
-	logMessage := &logmessage.LogMessage{
-		Message:     []byte(messageString),
-		AppId:       proto.String(appId),
-		MessageType: &messageType,
-		SourceName:  proto.String("LGR"),
-		Timestamp:   proto.Int64(currentTime.UnixNano()),
-	}
-
-	msg, _ := proto.Marshal(logMessage)
-	return msg
 }

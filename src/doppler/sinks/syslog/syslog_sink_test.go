@@ -251,7 +251,6 @@ var _ = Describe("SyslogSink", func() {
 				close(done)
 			})
 
-			// TODO fix me #flakey
 			It("does not report error messages when it's disconnected", func(done Done) {
 				syslogSink.Disconnect()
 

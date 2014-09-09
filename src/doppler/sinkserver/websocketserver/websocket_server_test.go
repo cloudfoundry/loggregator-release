@@ -34,7 +34,8 @@ var _ = Describe("WebsocketServer", func() {
 
 		server = websocketserver.New(apiEndpoint, sinkManager, 100*time.Millisecond, 100, logger)
 		go server.Start()
-		serverUrl := fmt.Sprintf("ws://%s/tail/?app=%s", apiEndpoint, appId)
+		serverUrl := fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId)
+		websocket.DefaultDialer = &websocket.Dialer{HandshakeTimeout: 10 * time.Millisecond}
 		Eventually(func() error { _, _, err := websocket.DefaultDialer.Dial(serverUrl, http.Header{}); return err }, 1).ShouldNot(HaveOccurred())
 	})
 
@@ -44,43 +45,21 @@ var _ = Describe("WebsocketServer", func() {
 
 	Describe("failed connections", func() {
 		It("fails without an appId", func() {
-			_, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?", apiEndpoint))
-			Expect(connectionDropped).To(BeClosed())
-		})
-
-		It("fails with an invalid appId", func() {
-			_, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?app=", apiEndpoint))
-			Expect(connectionDropped).To(BeClosed())
-		})
-
-		It("fails with something invalid in query string", func() {
-			_, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?something=invalidtarget", apiEndpoint))
+			_, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps//stream", apiEndpoint))
 			Expect(connectionDropped).To(BeClosed())
 		})
 
 		It("fails with bad path", func() {
-			_, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/bad_path/", apiEndpoint))
+			_, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/my-app/junk", apiEndpoint))
 			Expect(connectionDropped).To(BeClosed())
 		})
 	})
 
-	It("dumps buffer data to the websocket client", func(done Done) {
+	It("dumps buffer data to the websocket client with /recentlogs", func(done Done) {
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 		sinkManager.SendTo(appId, lm)
 
-		AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/dump/?app=%s", apiEndpoint, appId))
-
-		rlm, err := receiveLogMessage(wsReceivedChan)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(rlm.GetLogMessage().GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
-		close(done)
-	})
-
-	It("dumps buffer data to the websocket client with /recent", func(done Done) {
-		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
-		sinkManager.SendTo(appId, lm)
-
-		AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/recent?app=%s", apiEndpoint, appId))
+		AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/recentlogs", apiEndpoint, appId))
 
 		rlm, err := receiveLogMessage(wsReceivedChan)
 		Expect(err).NotTo(HaveOccurred())
@@ -89,7 +68,7 @@ var _ = Describe("WebsocketServer", func() {
 	})
 
 	It("sends data to the websocket client", func(done Done) {
-		stopKeepAlive, _ := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?app=%s", apiEndpoint, appId))
+		stopKeepAlive, _ := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 		sinkManager.SendTo(appId, lm)
 
@@ -113,7 +92,7 @@ var _ = Describe("WebsocketServer", func() {
 	})
 
 	It("still sends to 'live' sinks", func(done Done) {
-		stopKeepAlive, connectionDropped := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?app=%s", apiEndpoint, appId))
+		stopKeepAlive, connectionDropped := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
 		Consistently(connectionDropped, 0.2).ShouldNot(BeClosed())
 
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
@@ -127,7 +106,7 @@ var _ = Describe("WebsocketServer", func() {
 	})
 
 	It("closes the client when the keep-alive stops", func() {
-		stopKeepAlive, connectionDropped := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/tail/?app=%s", apiEndpoint, appId))
+		stopKeepAlive, connectionDropped := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
 		Expect(stopKeepAlive).ToNot(Receive())
 		close(stopKeepAlive)
 		Eventually(connectionDropped).Should(BeClosed())

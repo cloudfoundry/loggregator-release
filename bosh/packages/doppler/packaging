@@ -5,6 +5,6 @@ export PATH=/var/vcap/packages/git/bin:$PATH
 export PATH=$GOROOT/bin:$PATH
 export GOPATH=$PWD/loggregator
 
-go install loggregator
+go install doppler
 cp -a $PWD/loggregator/bin/doppler ${BOSH_INSTALL_TARGET}
 

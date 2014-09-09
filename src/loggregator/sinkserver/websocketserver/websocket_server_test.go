@@ -36,6 +36,7 @@ var _ = Describe("WebsocketServer", func() {
 
 	AfterEach(func() {
 		server.Stop()
+		time.Sleep(1 * time.Millisecond)
 	})
 
 	Describe("failed connections", func() {

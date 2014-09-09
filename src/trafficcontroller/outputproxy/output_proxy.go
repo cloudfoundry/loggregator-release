@@ -15,6 +15,7 @@ import (
 	"time"
 	"trafficcontroller/authorization"
 	"trafficcontroller/listener"
+	"trafficcontroller/marshaller"
 	"trafficcontroller/serveraddressprovider"
 )
 
@@ -37,7 +38,7 @@ var NewHttpHandlerProvider = func(messages <-chan []byte) http.Handler {
 }
 
 var NewWebsocketListener = func() listener.Listener {
-	return listener.NewWebsocket()
+	return listener.NewWebsocket(marshaller.LoggregatorLogMessage)
 }
 
 func NewProxy(loggregatorServerProvider serveraddressprovider.ServerAddressProvider, authorizer authorization.LogAccessAuthorizer, config cfcomponent.Config, logger *gosteno.Logger) *Proxy {
@@ -169,21 +170,6 @@ func recent(r *http.Request) bool {
 	return matched
 }
 
-func generateLogMessage(messageString string, appId string) []byte {
-	messageType := logmessage.LogMessage_ERR
-	currentTime := time.Now()
-	logMessage := &logmessage.LogMessage{
-		Message:     []byte(messageString),
-		AppId:       proto.String(appId),
-		MessageType: &messageType,
-		SourceName:  proto.String("LGR"),
-		Timestamp:   proto.Int64(currentTime.UnixNano()),
-	}
-
-	msg, _ := proto.Marshal(logMessage)
-	return msg
-}
-
 type TrafficControllerMonitor struct {
 }
 
@@ -210,7 +196,7 @@ func (proxy *Proxy) handleLoggregatorConnections(r *http.Request, appId string, 
 
 				if err != nil {
 					errorMsg := fmt.Sprintf("proxy: error connecting to a loggregator server")
-					messagesChan <- generateLogMessage(errorMsg, appId)
+					messagesChan <- marshaller.LoggregatorLogMessage(errorMsg, appId)
 					proxy.logger.Infof("proxy: error connecting %s %s %s", appId, r.URL.Path, err.Error())
 				}
 				loggregatorConnections.removeConnectedServer(serverAddress)

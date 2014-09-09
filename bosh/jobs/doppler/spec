@@ -46,7 +46,7 @@ properties:
     default: 3457
   doppler.outgoing_port:
     description: Port for outgoing log messages
-    default: 8080
+    default: 8081
   doppler.blacklisted_syslog_ranges:
     description: "Blacklist for IPs that should not be used as syslog drains, e.g. internal ip addresses."
   doppler_endpoint.shared_secret:

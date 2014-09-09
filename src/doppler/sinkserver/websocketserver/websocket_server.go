@@ -5,21 +5,22 @@ import (
 	"doppler/sinks"
 	"doppler/sinks/websocket"
 	"doppler/sinkserver/sinkmanager"
-	"errors"
 	"fmt"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/appid"
 	"github.com/cloudfoundry/loggregatorlib/server"
 	gorilla "github.com/gorilla/websocket"
 	"net"
 	"net/http"
+	"regexp"
 	"sync"
 	"time"
 )
 
+//TODO: change path structure to /apps/[APP_ID]/[ACTION]
+
 const (
-	TAIL_LOGS_PATH   = "/tail/"
+	STREAM_LOGS_PATH = "/stream"
 	RECENT_LOGS_PATH = "/recent"
 	DUMP_LOGS_PATH   = "/dump/"
 	FIREHOSE_PATH    = "/firehose"
@@ -75,12 +76,31 @@ func (w *WebsocketServer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	w.logger.Debug("WebsocketServer.ServeHTTP: starting")
 	var handler func(string, *gorilla.Conn)
 
-	switch r.URL.Path {
-	case TAIL_LOGS_PATH:
+	validPaths := regexp.MustCompile("^/apps/(.*)/(recentlogs|stream)$")
+	matches := validPaths.FindStringSubmatch(r.URL.Path)
+	if len(matches) != 3 {
+		rw.Header().Set("WWW-Authenticate", "Basic")
+		rw.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(rw, "Resource Not Found. %s", r.URL.Path)
+		return
+	}
+	appId := matches[1]
+
+	if appId == "" {
+		rw.Header().Set("WWW-Authenticate", "Basic")
+		rw.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(rw, "App ID missing. Make request to /apps/APP_ID/%s", matches[2])
+
+		w.logger.Debugf("WebsocketServer.ServeHTTP: Validation error (returning 400): Invalid AppId")
+		w.logInvalidApp(r.RemoteAddr)
+		return
+	}
+	endpoint := matches[2]
+
+	switch endpoint {
+	case "stream":
 		handler = w.streamLogs
-	case RECENT_LOGS_PATH:
-		handler = w.recentLogs
-	case DUMP_LOGS_PATH:
+	case "recentlogs":
 		handler = w.recentLogs
 	case FIREHOSE_PATH:
 		handler = w.streamFirehose
@@ -103,6 +123,7 @@ func (w *WebsocketServer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	ws, err := gorilla.Upgrade(rw, r, nil, 1024, 1024)
 	if err != nil {
+		println("error" + err.Error())
 		w.logger.Debugf("WebsocketServer.ServeHTTP: Upgrade error (returning 400): %s", err.Error())
 		http.Error(rw, err.Error(), 400)
 		return
@@ -112,16 +133,6 @@ func (w *WebsocketServer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	defer ws.WriteControl(gorilla.CloseMessage, gorilla.FormatCloseMessage(gorilla.CloseNormalClosure, ""), time.Time{})
 
 	handler(appId, ws)
-}
-
-func (w *WebsocketServer) validate(r *http.Request) (string, error) {
-	appId := appid.FromUrl(r.URL)
-	clientAddress := r.RemoteAddr
-	if appId == "" {
-		w.logInvalidApp(clientAddress)
-		return "", errors.New("Invalid AppId")
-	}
-	return appId, nil
 }
 
 func (w *WebsocketServer) streamLogs(appId string, ws *gorilla.Conn) {

@@ -13,17 +13,22 @@ import (
 	"regexp"
 	"time"
 	"trafficcontroller/authorization"
+	"trafficcontroller/channel_group_connector"
 )
 
 var WebsocketKeepAliveDuration = 30 * time.Second
 
 type Proxy struct {
+	authorize       authorization.LogAccessAuthorizer
+	handlerProvider HandlerProvider
+	connector       channel_group_connector.ChannelGroupConnector
+	logger          *gosteno.Logger
 	cfcomponent.Component
-	logger    *gosteno.Logger
-	authorize authorization.LogAccessAuthorizer
 }
 
-var HandlerProvider = func(endpoint string, messages <-chan []byte) http.Handler {
+type HandlerProvider func(string, <-chan []byte) http.Handler
+
+func DefaultHandlerProvider(endpoint string, messages <-chan []byte) http.Handler {
 	switch endpoint {
 	case "recentlogs":
 		return handlers.NewHttpHandler(messages)
@@ -34,7 +39,7 @@ var HandlerProvider = func(endpoint string, messages <-chan []byte) http.Handler
 	}
 }
 
-func NewDropsondeProxy(authorizer authorization.LogAccessAuthorizer, config cfcomponent.Config, logger *gosteno.Logger) *Proxy {
+func NewDropsondeProxy(authorizer authorization.LogAccessAuthorizer, handlerProvider HandlerProvider, connector channel_group_connector.ChannelGroupConnector, config cfcomponent.Config, logger *gosteno.Logger) *Proxy {
 	var instrumentables []instrumentation.Instrumentable
 
 	cfc, err := cfcomponent.NewComponent(
@@ -51,7 +56,13 @@ func NewDropsondeProxy(authorizer authorization.LogAccessAuthorizer, config cfco
 		return nil
 	}
 
-	return &Proxy{Component: cfc, authorize: authorizer, logger: logger}
+	return &Proxy{
+		Component:       cfc,
+		authorize:       authorizer,
+		handlerProvider: handlerProvider,
+		connector:       connector,
+		logger:          logger,
+	}
 }
 
 func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
@@ -59,9 +70,8 @@ func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	req.ParseForm()
 	clientAddress := req.RemoteAddr
-	validPaths := regexp.MustCompile("^/apps/(.*)/(tailinglogs|recentlogs|stream)$")
+	validPaths := regexp.MustCompile("^/apps/(.*)/(recentlogs|stream)$")
 	matches := validPaths.FindStringSubmatch(req.URL.Path)
 	if len(matches) != 3 {
 		writer.Header().Set("WWW-Authenticate", "Basic")
@@ -90,9 +100,14 @@ func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
 	}
 
 	messagesChan := make(chan []byte, 100)
+	stopChan := make(chan struct{})
+	defer close(stopChan)
 
-	handler := HandlerProvider(endpoint, messagesChan)
+	reconnect := endpoint != "recentlogs"
 
+	go proxy.connector.Connect("/"+endpoint, appId, messagesChan, stopChan, reconnect)
+
+	handler := proxy.handlerProvider(endpoint, messagesChan)
 	handler.ServeHTTP(writer, req)
 }
 

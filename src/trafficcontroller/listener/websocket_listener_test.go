@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 	"trafficcontroller/listener"
+	"trafficcontroller/marshaller"
 )
 
 type fakeHandler struct {
@@ -83,7 +84,7 @@ var _ = Describe("WebsocketListener", func() {
 		stopChan = make(chan struct{})
 		fh = &fakeHandler{messages: messageChan}
 		ts = httptest.NewUnstartedServer(fh)
-		l = listener.NewWebsocket()
+		l = listener.NewWebsocket(marshaller.LoggregatorLogMessage)
 	})
 
 	AfterEach(func() {

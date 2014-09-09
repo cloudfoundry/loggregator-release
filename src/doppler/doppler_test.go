@@ -31,7 +31,7 @@ var _ = Describe("Doppler Server", func() {
 
 	BeforeEach(func() {
 		receivedChan = make(chan []byte)
-		ws, dontKeepAliveChan, connectionDroppedChannel = AddWSSink(receivedChan, "8083", "/tail/?app=myApp")
+		ws, dontKeepAliveChan, connectionDroppedChannel = AddWSSink(receivedChan, "8083", "/apps/myApp/stream")
 	})
 
 	AfterEach(func(done Done) {
@@ -52,7 +52,10 @@ var _ = Describe("Doppler Server", func() {
 
 		_, err := connection.Write(expectedMessage)
 		Expect(err).To(BeNil())
-		receivedMessageString := parseProtoBufMessageString(<-receivedChan)
+
+		receivedMessageBytes := []byte{}
+		Eventually(receivedChan).Should(Receive(&receivedMessageBytes))
+		receivedMessageString := parseProtoBufMessageString(receivedMessageBytes)
 		Expect(expectedMessageString).To(Equal(receivedMessageString))
 	})
 

@@ -7,8 +7,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/gorilla/websocket"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -16,7 +14,11 @@ import (
 	"time"
 	"trafficcontroller/listener"
 	"trafficcontroller/outputproxy"
+	"trafficcontroller/serveraddressprovider"
 	testhelpers "trafficcontroller_testhelpers"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("OutputProxySingleHasher", func() {
@@ -26,7 +28,7 @@ var _ = Describe("OutputProxySingleHasher", func() {
 	var fl *fakeListener
 	var ts *httptest.Server
 	var existingWsProvider = outputproxy.NewWebsocketHandlerProvider
-	var fakeLoggregatorProvider *fakeServerAddressProvider
+	var fakeLoggregatorProvider *serveraddressprovider.FakeServerAddressProvider
 
 	BeforeEach(func() {
 		fwsh = &fakeWebsocketHandler{}
@@ -42,7 +44,8 @@ var _ = Describe("OutputProxySingleHasher", func() {
 			return fl
 		}
 
-		fakeLoggregatorProvider = &fakeServerAddressProvider{serverAddresses: []string{"localhost:62038"}}
+		fakeLoggregatorProvider = &serveraddressprovider.FakeServerAddressProvider{}
+		fakeLoggregatorProvider.SetServerAddresses([]string{"localhost:62038"})
 		proxy := outputproxy.NewProxy(
 			fakeLoggregatorProvider,
 			testhelpers.SuccessfulAuthorizer,
@@ -157,7 +160,7 @@ var _ = Describe("OutputProxySingleHasher", func() {
 				outputMessages = messageChan
 				return existingWsProvider(messageChan)
 			}
-			fakeLoggregatorProvider.serverAddresses = []string{}
+			fakeLoggregatorProvider.SetServerAddresses([]string{})
 
 			url := fmt.Sprintf("ws://%s%s", ts.Listener.Addr(), "/tail/?app=myApp")
 			headers := http.Header{"Authorization": []string{testhelpers.VALID_AUTHENTICATION_TOKEN}}
@@ -223,7 +226,7 @@ var _ = Describe("OutputProxySingleHasher", func() {
 				return originalNewHttpHandlerProvider(messageChan)
 			}
 
-			fakeLoggregatorProvider.serverAddresses = []string{}
+			fakeLoggregatorProvider.SetServerAddresses([]string{})
 			url := fmt.Sprintf("http://%s/recent?app=myApp", ts.Listener.Addr())
 			r, _ := http.NewRequest("GET", url, nil)
 			r.Header = http.Header{"Authorization": []string{testhelpers.VALID_AUTHENTICATION_TOKEN}}
@@ -399,29 +402,4 @@ type fakeHttpHandler struct {
 
 func (f *fakeHttpHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	f.called = true
-}
-
-type fakeServerAddressProvider struct {
-	serverAddresses []string
-	callCount       int
-	sync.Mutex
-}
-
-func (p *fakeServerAddressProvider) CallCount() int {
-	p.Lock()
-	defer p.Unlock()
-	return p.callCount
-}
-
-func (p *fakeServerAddressProvider) SetServerAddresses(addresses []string) {
-	p.Lock()
-	defer p.Unlock()
-	p.serverAddresses = addresses
-}
-
-func (p *fakeServerAddressProvider) ServerAddresses() []string {
-	p.Lock()
-	defer p.Unlock()
-	p.callCount += 1
-	return p.serverAddresses
 }

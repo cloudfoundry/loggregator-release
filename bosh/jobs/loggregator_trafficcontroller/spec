@@ -34,7 +34,7 @@ properties:
     default: 3456
   loggregator.outgoing_dropsonde_port:
     description: Port for outgoing dropsonde messages
-    default: 3466
+    default: 8081
   loggregator.outgoing_port:
     description: Port for outgoing log messages
     default: 8080

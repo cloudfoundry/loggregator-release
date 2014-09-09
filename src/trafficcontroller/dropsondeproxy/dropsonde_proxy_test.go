@@ -3,29 +3,43 @@ package dropsondeproxy_test
 import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/cloudfoundry/loggregatorlib/server/handlers"
 	"net/http"
 	"net/http/httptest"
-
-	"github.com/cloudfoundry/loggregatorlib/server/handlers"
+	"sync"
 	"time"
 	"trafficcontroller/dropsondeproxy"
 	testhelpers "trafficcontroller_testhelpers"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("ServeHTTP", func() {
 	var (
-		auth     testhelpers.Authorizer
-		proxy    *dropsondeproxy.Proxy
-		recorder *httptest.ResponseRecorder
+		auth          testhelpers.Authorizer
+		proxy         *dropsondeproxy.Proxy
+		recorder      *httptest.ResponseRecorder
+		fakeHandler   *fakeHttpHandler
+		fakeConnector *fakeChannelGroupConnector
 	)
+
+	var fakeHandlerProvider = func(endpoint string, messages <-chan []byte) http.Handler {
+		fakeHandler.endpoint = endpoint
+		fakeHandler.messages = messages
+		return fakeHandler
+	}
 
 	BeforeEach(func() {
 		auth = testhelpers.Authorizer{Result: true}
 
+		fakeHandler = &fakeHttpHandler{}
+		fakeConnector = &fakeChannelGroupConnector{messages: make(chan []byte, 10)}
+
 		proxy = dropsondeproxy.NewDropsondeProxy(
 			auth.Authorize,
+			fakeHandlerProvider,
+			fakeConnector,
 			cfcomponent.Config{},
 			loggertesthelper.Logger(),
 		)
@@ -113,35 +127,59 @@ var _ = Describe("ServeHTTP", func() {
 		req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
 		req.Header.Add("Authorization", "token")
 
-		fakeHandler := struct {
-			Endpoint string
-			Messages <-chan []byte
-		}{}
+		proxy.ServeHTTP(recorder, req)
 
-		fakeHttpHandler := &fakeHttpHandler{}
+		Expect(fakeHandler.endpoint).To(Equal("stream"))
+		Expect(fakeHandler.messages).ToNot(BeNil())
 
-		oldHandlerProvider := dropsondeproxy.HandlerProvider
-		dropsondeproxy.HandlerProvider = func(endpoint string, messages <-chan []byte) http.Handler {
-			fakeHandler.Endpoint = endpoint
-			fakeHandler.Messages = messages
-			return fakeHttpHandler
-		}
+		Expect(fakeHandler.called).To(BeTrue())
+	})
+
+	It("connects to doppler servers with correct parameters", func() {
+		req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
+		req.Header.Add("Authorization", "token")
 
 		proxy.ServeHTTP(recorder, req)
 
-		Expect(fakeHandler.Endpoint).To(Equal("stream"))
-		Expect(fakeHandler.Messages).ToNot(BeNil())
+		Eventually(fakeConnector.getPath).Should(Equal("/stream"))
+		Eventually(fakeConnector.getAppId).Should(Equal("abc123"))
+		Eventually(fakeConnector.getReconnect).Should(BeTrue())
+	})
 
-		Expect(fakeHttpHandler.called).To(BeTrue())
-		dropsondeproxy.HandlerProvider = oldHandlerProvider
+	It("connects to doppler servers without reconnecting for recentlogs", func() {
+		req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs", nil)
+		req.Header.Add("Authorization", "token")
+
+		proxy.ServeHTTP(recorder, req)
+
+		Eventually(fakeConnector.getReconnect).Should(BeFalse())
+	})
+
+	It("connects to doppler servers and passes their messages to the handler", func() {
+		req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
+		req.Header.Add("Authorization", "token")
+
+		proxy.ServeHTTP(recorder, req)
+		fakeConnector.messages <- []byte("hello")
+
+		Eventually(fakeHandler.messages).Should(Receive(BeEquivalentTo("hello")))
+	})
+
+	It("stops the connector when the handler finishes", func() {
+		req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
+		req.Header.Add("Authorization", "token")
+
+		proxy.ServeHTTP(recorder, req)
+
+		Eventually(fakeConnector.Stopped).Should(BeTrue())
 	})
 })
 
-var _ = Describe("HandlerProvider", func() {
+var _ = Describe("DefaultHandlerProvider", func() {
 	It("returns an HTTP handler for .../recentlogs", func() {
 		httpHandler := handlers.NewHttpHandler(make(chan []byte))
 
-		target := dropsondeproxy.HandlerProvider("recentlogs", make(chan []byte))
+		target := dropsondeproxy.DefaultHandlerProvider("recentlogs", make(chan []byte))
 
 		Expect(target).To(BeAssignableToTypeOf(httpHandler))
 	})
@@ -149,7 +187,7 @@ var _ = Describe("HandlerProvider", func() {
 	It("returns a Websocket handler for .../stream", func() {
 		wsHandler := handlers.NewWebsocketHandler(make(chan []byte), time.Minute)
 
-		target := dropsondeproxy.HandlerProvider("stream", make(chan []byte))
+		target := dropsondeproxy.DefaultHandlerProvider("stream", make(chan []byte))
 
 		Expect(target).To(BeAssignableToTypeOf(wsHandler))
 	})
@@ -157,8 +195,63 @@ var _ = Describe("HandlerProvider", func() {
 	It("returns a Websocket handler for anything else", func() {
 		wsHandler := handlers.NewWebsocketHandler(make(chan []byte), time.Minute)
 
-		target := dropsondeproxy.HandlerProvider("other", make(chan []byte))
+		target := dropsondeproxy.DefaultHandlerProvider("other", make(chan []byte))
 
 		Expect(target).To(BeAssignableToTypeOf(wsHandler))
 	})
 })
+
+type fakeChannelGroupConnector struct {
+	messages  chan []byte
+	path      string
+	appId     string
+	reconnect bool
+	stopped   bool
+	sync.Mutex
+}
+
+func (f *fakeChannelGroupConnector) Connect(path string, appId string, messagesChan chan<- []byte, stopChan <-chan struct{}, reconnect bool) {
+
+	go func() {
+		for m := range f.messages {
+			messagesChan <- m
+		}
+	}()
+
+	go func() {
+		<-stopChan
+		f.Lock()
+		defer f.Unlock()
+		f.stopped = true
+	}()
+
+	f.Lock()
+	defer f.Unlock()
+	f.path = path
+	f.appId = appId
+	f.reconnect = reconnect
+}
+
+func (f *fakeChannelGroupConnector) getPath() string {
+	f.Lock()
+	defer f.Unlock()
+	return f.path
+}
+
+func (f *fakeChannelGroupConnector) getAppId() string {
+	f.Lock()
+	defer f.Unlock()
+	return f.appId
+}
+
+func (f *fakeChannelGroupConnector) getReconnect() bool {
+	f.Lock()
+	defer f.Unlock()
+	return f.reconnect
+}
+
+func (f *fakeChannelGroupConnector) Stopped() bool {
+	f.Lock()
+	defer f.Unlock()
+	return f.stopped
+}

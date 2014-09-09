@@ -14,7 +14,7 @@ import (
 	"trafficcontroller/listener"
 )
 
-func TestOutputProxy(t *testing.T) {
+func TestDropsondeProxy(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "DropsondeProxy Suite")
 }
@@ -32,7 +32,9 @@ func (f *fakeWebsocketHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request
 }
 
 type fakeHttpHandler struct {
-	called bool
+	called   bool
+	endpoint string
+	messages <-chan []byte
 }
 
 func (f *fakeHttpHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {

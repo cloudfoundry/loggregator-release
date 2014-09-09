@@ -91,7 +91,7 @@ var _ = Describe("Dumping", func() {
 		dataReadChannel <- env
 
 		receivedChan := make(chan []byte, 2)
-		_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(GinkgoT(), receivedChan, SERVER_PORT, "/dump/?app=myOtherApp")
+		_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(GinkgoT(), receivedChan, SERVER_PORT, "/apps/myOtherApp/recentlogs")
 
 		Eventually(droppedChannel).Should(Receive())
 
@@ -108,7 +108,7 @@ var _ = Describe("Dumping", func() {
 
 	It("doesn't hang when there are no messages", func() {
 		receivedChan := make(chan []byte, 1)
-		testhelpers.AddWSSink(GinkgoT(), receivedChan, SERVER_PORT, "/dump/?app=myOtherApp")
+		testhelpers.AddWSSink(GinkgoT(), receivedChan, SERVER_PORT, "/apps/myOtherApp/recentlogs")
 
 		doneChan := make(chan bool)
 		go func() {
