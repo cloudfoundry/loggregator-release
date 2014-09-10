@@ -9,5 +9,5 @@ import (
 
 func TestSyslog(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Syslog Suite")
+	RunSpecs(t, "SyslogSink Suite")
 }

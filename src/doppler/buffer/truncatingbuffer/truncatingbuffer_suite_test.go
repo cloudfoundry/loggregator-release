@@ -9,5 +9,5 @@ import (
 
 func TestTruncatingbuffer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Truncatingbuffer Suite")
+	RunSpecs(t, "TruncatingBuffer Suite")
 }

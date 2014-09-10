@@ -9,5 +9,5 @@ import (
 
 func TestDump(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Dump Suite")
+	RunSpecs(t, "DumpSink Suite")
 }

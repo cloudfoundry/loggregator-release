@@ -177,7 +177,6 @@ var _ = Describe("SyslogSink", func() {
 	})
 
 	Context("when remote syslog server is up", func() {
-
 		BeforeEach(func() {
 			go func() {
 				syslogSink.Run(inputChan)
@@ -281,7 +280,6 @@ var _ = Describe("SyslogSink", func() {
 			})
 
 			Context("when the buffer overflows", func() {
-
 				BeforeEach(func() {
 					for i := 0; i < 105; i++ {
 						msg := fmt.Sprintf("message no %v", i)

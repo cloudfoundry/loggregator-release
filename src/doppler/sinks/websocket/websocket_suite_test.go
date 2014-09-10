@@ -9,5 +9,5 @@ import (
 
 func TestWebsocket(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Websocket Suite")
+	RunSpecs(t, "WebsocketSink Suite")
 }

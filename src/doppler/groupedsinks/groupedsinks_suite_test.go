@@ -10,7 +10,7 @@ import (
 
 func TestGroupedsinks(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Groupedsinks Suite")
+	RunSpecs(t, "GroupedSinks Suite")
 }
 
 type fakeMessageWriter struct {
