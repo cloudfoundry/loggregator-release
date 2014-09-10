@@ -95,8 +95,9 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 
 		var err error
 
-		if messageEnvelope.GetEventType() != events.Envelope_LogMessage {
-			s.logger.Debugf("Syslog Sink %s: Skipping non-log message\n", s.drainUrl)
+		_, keepMsg := envelopeTypeWhitelist[messageEnvelope.GetEventType()]
+		if !keepMsg {
+			s.logger.Debugf("Syslog sink %s: Skipping non-log message (type %s)", s.drainUrl, messageEnvelope.GetEventType().String())
 			continue
 		}
 
@@ -134,4 +135,8 @@ func (s *SyslogSink) AppId() string {
 
 func (s *SyslogSink) ShouldReceiveErrors() bool {
 	return false
+}
+
+var envelopeTypeWhitelist = map[events.Envelope_EventType]struct{}{
+	events.Envelope_LogMessage: struct{}{},
 }

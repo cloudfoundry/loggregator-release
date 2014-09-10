@@ -417,4 +417,31 @@ var _ = Describe("Dump Sink", func() {
 			assert.Fail(GinkgoT(), "Should have timed out the dump")
 		}
 	})
+
+	It("only stores log messages", func() {
+		testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), 2*time.Second)
+
+		dumpRunnerDone := make(chan struct{})
+		inputChan := make(chan *events.Envelope, 5)
+
+		go func() {
+			testDump.Run(inputChan)
+			close(dumpRunnerDone)
+		}()
+
+		var env *events.Envelope
+		env, _ = emitter.Wrap(&events.Heartbeat{}, "origin")
+		inputChan <- env
+		env, _ = emitter.Wrap(&events.LogMessage{}, "origin") // should keep this one
+		inputChan <- env
+		env, _ = emitter.Wrap(&events.HttpStartStop{}, "origin")
+		inputChan <- env
+		env, _ = emitter.Wrap(&events.ValueMetric{}, "origin")
+		inputChan <- env
+
+		close(inputChan)
+		<-dumpRunnerDone
+
+		Expect(testDump.Dump()).To(HaveLen(1))
+	})
 })

@@ -40,6 +40,13 @@ func (d *DumpSink) Run(inputChan <-chan *events.Envelope) {
 			if !ok {
 				return
 			}
+
+			_, keepMsg := envelopeTypeWhitelist[msg.GetEventType()]
+			if !keepMsg {
+				d.logger.Debugf("Dump sink (app id %s): Skipping non-log message (type %s)", d.appId, msg.GetEventType().String())
+				continue
+			}
+
 			d.addMsg(msg)
 		case <-timer.C:
 			timer.Stop()
@@ -108,4 +115,8 @@ func (d *DumpSink) Emit() instrumentation.Context {
 
 func (d *DumpSink) ShouldReceiveErrors() bool {
 	return true
+}
+
+var envelopeTypeWhitelist = map[events.Envelope_EventType]struct{}{
+	events.Envelope_LogMessage: struct{}{},
 }
