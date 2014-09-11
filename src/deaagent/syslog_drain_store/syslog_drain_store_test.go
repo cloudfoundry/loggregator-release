@@ -116,6 +116,13 @@ var _ = Describe("SyslogDrainStore", func() {
 			err := syslogDrainStore.UpdateDrains("app-id", []string{"url1"})
 			Expect(err).To(Equal(fakeError))
 		})
+
+		It("does not store drain nodes if they have an empty URL", func() {
+			syslogDrainStore.UpdateDrains("app-id", []string{" ", "", "\t"})
+			Expect(fakeStoreAdapter.SetKeyCounters).NotTo(HaveKey(syslog_drain_store.DrainKey("app-id", "")))
+			Expect(fakeStoreAdapter.SetKeyCounters).NotTo(HaveKey(syslog_drain_store.DrainKey("app-id", " ")))
+			Expect(fakeStoreAdapter.SetKeyCounters).NotTo(HaveKey(syslog_drain_store.DrainKey("app-id", "\t")))
+		})
 	})
 
 	var _ = Describe("RefreshAppNode", func() {

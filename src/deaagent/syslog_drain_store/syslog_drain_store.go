@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/storeadapter"
+	"strings"
 	"time"
 )
 
@@ -44,6 +45,11 @@ func (s *syslogDrainStore) UpdateDrains(appId string, drainUrls []string) error 
 		if _, ok := drainsToBeDeleted[drainUrl]; ok {
 			s.logger.Debugf("UpdateDrains: skipping drain %v", drainUrl)
 			delete(drainsToBeDeleted, drainUrl)
+			continue
+		}
+
+		if strings.TrimSpace(drainUrl) == "" {
+			s.logger.Infof("UpdateDrains: attempted to add whitespace-only drain url '%s' for app %s. Skipping.", drainUrl, appId)
 			continue
 		}
 
