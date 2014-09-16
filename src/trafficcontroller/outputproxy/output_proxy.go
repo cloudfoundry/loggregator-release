@@ -3,6 +3,7 @@ package outputproxy
 import (
 	"code.google.com/p/gogoprotobuf/proto"
 	"fmt"
+	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
@@ -19,14 +20,14 @@ import (
 	"trafficcontroller/serveraddressprovider"
 )
 
-var CheckLoggregatorServersInterval = 1 * time.Second
+var CheckDopplerServersInterval = 1 * time.Second
 var WebsocketKeepAliveDuration = 30 * time.Second
 
 type Proxy struct {
 	cfcomponent.Component
-	loggregatorServerProvider serveraddressprovider.ServerAddressProvider
-	logger                    *gosteno.Logger
-	authorize                 authorization.LogAccessAuthorizer
+	dopplerServerProvider serveraddressprovider.ServerAddressProvider
+	logger                *gosteno.Logger
+	authorize             authorization.LogAccessAuthorizer
 }
 
 var NewWebsocketHandlerProvider = func(messages <-chan []byte) http.Handler {
@@ -37,11 +38,44 @@ var NewHttpHandlerProvider = func(messages <-chan []byte) http.Handler {
 	return handlers.NewHttpHandler(messages)
 }
 
-var NewWebsocketListener = func() listener.Listener {
-	return listener.NewWebsocket(marshaller.LoggregatorLogMessage)
+var NewWebsocketListener = func(logger *gosteno.Logger) listener.Listener {
+
+	dropsondeToLegacyMessage := func(message []byte) []byte {
+
+		var receivedEnvelope events.Envelope
+		err := proto.Unmarshal(message, &receivedEnvelope)
+		if err != nil {
+			logger.Errorf("Failed converting message from dropsonde to legacy: %v", err)
+			return nil
+		}
+
+		messageBytes, err := proto.Marshal(dropsondeToLogMessage(&receivedEnvelope))
+		if err != nil {
+			logger.Errorf("Failed marshalling converted dropsonde message: %v", err)
+			return nil
+		}
+
+		return messageBytes
+	}
+
+	return listener.NewWebsocket(marshaller.LoggregatorLogMessage, dropsondeToLegacyMessage)
 }
 
-func NewProxy(loggregatorServerProvider serveraddressprovider.ServerAddressProvider, authorizer authorization.LogAccessAuthorizer, config cfcomponent.Config, logger *gosteno.Logger) *Proxy {
+func dropsondeToLogMessage(dropsondeEnvelope *events.Envelope) *logmessage.LogMessage {
+	logMessage := dropsondeEnvelope.GetLogMessage()
+	messageType := logMessage.GetMessageType()
+
+	return &logmessage.LogMessage{
+		Message:     logMessage.GetMessage(),
+		MessageType: (*logmessage.LogMessage_MessageType)(&messageType),
+		Timestamp:   proto.Int64(logMessage.GetTimestamp()),
+		AppId:       proto.String(logMessage.GetAppId()),
+		SourceId:    proto.String(logMessage.GetSourceInstance()),
+		SourceName:  proto.String(logMessage.GetSourceType()),
+	}
+}
+
+func NewProxy(dopplerServerProvider serveraddressprovider.ServerAddressProvider, authorizer authorization.LogAccessAuthorizer, config cfcomponent.Config, logger *gosteno.Logger) *Proxy {
 	var instrumentables []instrumentation.Instrumentable
 
 	cfc, err := cfcomponent.NewComponent(
@@ -58,7 +92,7 @@ func NewProxy(loggregatorServerProvider serveraddressprovider.ServerAddressProvi
 		return nil
 	}
 
-	return &Proxy{Component: cfc, loggregatorServerProvider: loggregatorServerProvider, authorize: authorizer, logger: logger}
+	return &Proxy{Component: cfc, dopplerServerProvider: dopplerServerProvider, authorize: authorizer, logger: logger}
 }
 
 func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress string) (bool, *logmessage.LogMessage) {
@@ -119,11 +153,18 @@ func (proxy *Proxy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	translatedPath, err := translatePath(r.URL.Path, appId)
+	if err != nil {
+		proxy.logger.Errorf("proxy: error translating path: %v", err)
+		http.Error(rw, "invalid path "+r.URL.Path, 400)
+		return
+	}
+
 	messagesChan := make(chan []byte, 100)
 	stopChan := make(chan struct{})
 	defer close(stopChan)
 
-	go proxy.handleLoggregatorConnections(r, appId, messagesChan, stopChan)
+	go proxy.handleDopplerConnections(r, translatedPath, appId, messagesChan, stopChan)
 
 	var h http.Handler
 
@@ -177,59 +218,75 @@ func (hm TrafficControllerMonitor) Ok() bool {
 	return true
 }
 
-func (proxy *Proxy) handleLoggregatorConnections(r *http.Request, appId string, messagesChan chan<- []byte, stopChan <-chan struct{}) {
+func translatePath(legacyPath, appId string) (string, error) {
+	switch legacyPath {
+
+	case "/tail/":
+		return fmt.Sprintf("/apps/%s/stream", appId), nil
+
+	case "/dump/":
+		fallthrough
+	case "/recent":
+		return fmt.Sprintf("/apps/%s/recentlogs", appId), nil
+
+	default:
+		return "", fmt.Errorf("unexpected path: %s", legacyPath)
+	}
+}
+
+func (proxy *Proxy) handleDopplerConnections(r *http.Request, translatedPath string, appId string, messagesChan chan<- []byte, stopChan <-chan struct{}) {
 	defer close(messagesChan)
-	loggregatorConnections := &loggregatorConnections{}
+	dopplerConnections := &dopplerConnections{}
 
 	connectToNewServerAddresses := func(serverAddresses []string) {
 		for _, serverAddress := range serverAddresses {
-			if loggregatorConnections.alreadyConnectedToServer(serverAddress) {
+			if dopplerConnections.alreadyConnectedToServer(serverAddress) {
 				continue
 			}
-			loggregatorConnections.addConnectedServer(serverAddress)
+			dopplerConnections.addConnectedServer(serverAddress)
 
-			serverUrlForAppId := fmt.Sprintf("ws://%s%s?app=%s", serverAddress, r.URL.Path, appId)
-			l := NewWebsocketListener()
+			serverUrlForAppId := fmt.Sprintf("ws://%s%s", serverAddress, translatedPath)
+			l := NewWebsocketListener(proxy.logger)
 			serverAddress := serverAddress
 			go func() {
 				err := l.Start(serverUrlForAppId, appId, messagesChan, stopChan)
 
 				if err != nil {
-					errorMsg := fmt.Sprintf("proxy: error connecting to a loggregator server")
+					errorMsg := fmt.Sprintf("proxy: error connecting to a doppler server")
 					messagesChan <- marshaller.LoggregatorLogMessage(errorMsg, appId)
 					proxy.logger.Infof("proxy: error connecting %s %s %s", appId, r.URL.Path, err.Error())
 				}
-				loggregatorConnections.removeConnectedServer(serverAddress)
+				dopplerConnections.removeConnectedServer(serverAddress)
 			}()
 		}
 	}
 
-	checkLoggregatorServersTicker := time.NewTicker(CheckLoggregatorServersInterval)
-	defer checkLoggregatorServersTicker.Stop()
+	checkDopplerServersTicker := time.NewTicker(CheckDopplerServersInterval)
+	defer checkDopplerServersTicker.Stop()
 loop:
 	for {
-		serverAddresses := proxy.loggregatorServerProvider.ServerAddresses()
+		serverAddresses := proxy.dopplerServerProvider.ServerAddresses()
 		connectToNewServerAddresses(serverAddresses)
 		if recent(r) {
 			break
 		}
 		select {
-		case <-checkLoggregatorServersTicker.C:
+		case <-checkDopplerServersTicker.C:
 		case <-stopChan:
 			break loop
 		}
 	}
 
-	loggregatorConnections.Wait()
+	dopplerConnections.Wait()
 }
 
-type loggregatorConnections struct {
+type dopplerConnections struct {
 	connectedAddresses []string
 	sync.Mutex
 	sync.WaitGroup
 }
 
-func (l *loggregatorConnections) alreadyConnectedToServer(serverAddress string) bool {
+func (l *dopplerConnections) alreadyConnectedToServer(serverAddress string) bool {
 	l.Lock()
 	defer l.Unlock()
 
@@ -241,7 +298,7 @@ func (l *loggregatorConnections) alreadyConnectedToServer(serverAddress string) 
 	return false
 }
 
-func (l *loggregatorConnections) addConnectedServer(serverAddress string) {
+func (l *dopplerConnections) addConnectedServer(serverAddress string) {
 	l.Lock()
 	defer l.Unlock()
 
@@ -249,7 +306,7 @@ func (l *loggregatorConnections) addConnectedServer(serverAddress string) {
 	l.connectedAddresses = append(l.connectedAddresses, serverAddress)
 }
 
-func (l *loggregatorConnections) removeConnectedServer(serverAddress string) {
+func (l *dopplerConnections) removeConnectedServer(serverAddress string) {
 	l.Lock()
 	defer l.Unlock()
 	defer l.Done()

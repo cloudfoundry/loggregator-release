@@ -47,26 +47,17 @@ type Config struct {
 	JobIndex int
 	Zone     string
 	cfcomponent.Config
-	ApiHost                 string
-	Host                    string
-	LoggregatorIncomingPort uint32
-	LoggregatorOutgoingPort uint32
-	IncomingPort            uint32
-	OutgoingPort            uint32
-	OutgoingDropsondePort   uint32
-	SystemDomain            string
-	SkipCertVerify          bool
+	ApiHost               string
+	Host                  string
+	IncomingPort          uint32
+	DopplerPort           uint32
+	OutgoingPort          uint32
+	OutgoingDropsondePort uint32
+	SystemDomain          string
+	SkipCertVerify        bool
 }
 
 func (c *Config) setDefaults() {
-	if c.LoggregatorIncomingPort == 0 {
-		c.LoggregatorIncomingPort = c.IncomingPort
-	}
-
-	if c.LoggregatorOutgoingPort == 0 {
-		c.LoggregatorOutgoingPort = c.OutgoingPort
-	}
-
 	if c.JobName == "" {
 		c.JobName = "loggregator_trafficcontroller"
 	}
@@ -202,7 +193,7 @@ func MakeProvider(adapter storeadapter.StoreAdapter, storeKeyPrefix string, outg
 
 func makeLoggregatorProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger) *outputproxy.Proxy {
 	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
-	provider := MakeProvider(adapter, "/healthstatus/loggregator", config.LoggregatorOutgoingPort, logger)
+	provider := MakeProvider(adapter, "/healthstatus/doppler", config.DopplerPort, logger)
 	proxy := outputproxy.NewProxy(provider, authorizer, config.Config, logger)
 	return proxy
 }
@@ -233,7 +224,7 @@ func setupMonitoring(proxy *outputproxy.Proxy, config *Config, logger *gosteno.L
 
 func makeDropsondeProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger) *dropsondeproxy.Proxy {
 	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
-	provider := MakeProvider(adapter, "/healthstatus/doppler", config.OutgoingDropsondePort, logger)
+	provider := MakeProvider(adapter, "/healthstatus/doppler", config.DopplerPort, logger)
 	cgc := channel_group_connector.NewChannelGroupConnector(provider, newWebsocketListener, marshaller.DropsondeLogMessage, logger)
 	proxy := dropsondeproxy.NewDropsondeProxy(authorizer, dropsondeproxy.DefaultHandlerProvider, cgc, config.Config, logger)
 	return proxy
@@ -249,5 +240,8 @@ func startOutgoingDropsondeProxy(host string, proxy http.Handler) {
 }
 
 func newWebsocketListener() listener.Listener {
-	return listener.NewWebsocket(marshaller.DropsondeLogMessage)
+	messageConverter := func(message []byte) []byte {
+		return message
+	}
+	return listener.NewWebsocket(marshaller.DropsondeLogMessage, messageConverter)
 }

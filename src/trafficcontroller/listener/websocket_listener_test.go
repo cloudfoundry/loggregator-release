@@ -84,7 +84,7 @@ var _ = Describe("WebsocketListener", func() {
 		stopChan = make(chan struct{})
 		fh = &fakeHandler{messages: messageChan}
 		ts = httptest.NewUnstartedServer(fh)
-		l = listener.NewWebsocket(marshaller.LoggregatorLogMessage)
+		l = listener.NewWebsocket(marshaller.LoggregatorLogMessage, func(d []byte) []byte { return d })
 	})
 
 	AfterEach(func() {
@@ -206,7 +206,7 @@ var _ = Describe("WebsocketListener", func() {
 			msgData := <-outputChan
 			msg, _ := logmessage.ParseMessage(msgData)
 			Expect(msg.GetLogMessage().GetSourceName()).To(Equal("LGR"))
-			Expect(string(msg.GetLogMessage().GetMessage())).To(Equal("proxy: error connecting to a loggregator server"))
+			Expect(string(msg.GetLogMessage().GetMessage())).To(Equal("proxy: error connecting to a loggregator/doppler server"))
 			close(done)
 		})
 	})

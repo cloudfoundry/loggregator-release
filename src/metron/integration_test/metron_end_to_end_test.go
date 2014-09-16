@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/localip"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"io/ioutil"
@@ -64,7 +65,7 @@ var _ = BeforeEach(func() {
 	adapter.Connect()
 })
 
-var _ = Describe("Varz Endpoints", func() {
+var _ = Describe("Metron", func() {
 
 	Context("/varz", func() {
 
@@ -168,13 +169,18 @@ var _ = Describe("Varz Endpoints", func() {
 	})
 
 	Context("Legacy message forwarding", func() {
-		It("forwards messages to a healthy loggregator server", func(done Done) {
+		It("converts to events message format and forwards to doppler", func(done Done) {
 			defer close(done)
-			testServer, _ := net.ListenPacket("udp", "localhost:3456")
+
+			currentTime := time.Now()
+			marshalledLegacyMessage := legacyLogMessage(123, "BLAH", currentTime)
+			marshalledEventsMessage := eventsLogMessage(123, "BLAH", currentTime)
+
+			testServer, _ := net.ListenPacket("udp", "localhost:3457")
 			defer testServer.Close()
 
 			node := storeadapter.StoreNode{
-				Key:   "/healthstatus/loggregator/z1/loggregator_trafficcontroller/0",
+				Key:   "/healthstatus/doppler/z1/0",
 				Value: []byte("localhost"),
 			}
 			adapter := etcdRunner.Adapter()
@@ -188,7 +194,7 @@ var _ = Describe("Varz Endpoints", func() {
 				ticker := time.NewTicker(10 * time.Millisecond)
 				defer ticker.Stop()
 				for {
-					connection.Write([]byte("test-data"))
+					connection.Write(marshalledLegacyMessage)
 
 					select {
 					case <-stopWrite:
@@ -203,12 +209,12 @@ var _ = Describe("Varz Endpoints", func() {
 			readData := make([]byte, readCount)
 			copy(readData, readBuffer[:readCount])
 
-			Expect(readData).Should(BeEquivalentTo("test-data"))
+			Expect(readData[32:]).Should(BeEquivalentTo(marshalledEventsMessage))
 		})
 	})
 
 	Context("Dropsonde message forwarding", func() {
-		It("forwards hmac signed messages to a healthy loggregator server", func(done Done) {
+		It("forwards hmac signed messages to a healthy doppler server", func(done Done) {
 			defer close(done)
 
 			originalMessage := basicHeartbeatMessage()
@@ -221,7 +227,7 @@ var _ = Describe("Varz Endpoints", func() {
 			defer testServer.Close()
 
 			node := storeadapter.StoreNode{
-				Key:   "/healthstatus/loggregator/z1/loggregator_trafficcontroller/0",
+				Key:   "/healthstatus/doppler/z1/0",
 				Value: []byte("localhost"),
 			}
 			adapter := etcdRunner.Adapter()
@@ -323,4 +329,40 @@ func getMetricFromContext(context *instrumentation.Context, name string) *instru
 		}
 	}
 	return nil
+}
+
+func legacyLogMessage(appId int, message string, timestamp time.Time) []byte {
+	envelope := &logmessage.LogEnvelope{
+		RoutingKey: proto.String("fake-routing-key"),
+		Signature:  []byte{1, 2, 3},
+		LogMessage: &logmessage.LogMessage{
+			Message:     []byte(message),
+			MessageType: logmessage.LogMessage_OUT.Enum(),
+			Timestamp:   proto.Int64(timestamp.UnixNano()),
+			AppId:       proto.String(string(appId)),
+			SourceName:  proto.String("fake-source-id"),
+			SourceId:    proto.String("fake-source-id"),
+		},
+	}
+
+	bytes, _ := proto.Marshal(envelope)
+	return bytes
+}
+
+func eventsLogMessage(appId int, message string, timestamp time.Time) []byte {
+	envelope := &events.Envelope{
+		Origin:    proto.String("legacy"),
+		EventType: events.Envelope_LogMessage.Enum(),
+		LogMessage: &events.LogMessage{
+			Message:        []byte(message),
+			MessageType:    events.LogMessage_OUT.Enum(),
+			Timestamp:      proto.Int64(timestamp.UnixNano()),
+			AppId:          proto.String(string(appId)),
+			SourceType:     proto.String("fake-source-id"),
+			SourceInstance: proto.String("fake-source-id"),
+		},
+	}
+
+	bytes, _ := proto.Marshal(envelope)
+	return bytes
 }

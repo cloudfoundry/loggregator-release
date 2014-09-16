@@ -13,11 +13,14 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/loggregatorlib/clientpool"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/storeadapter/workerpool"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
+	"metron/legacy_message/legacy_message_converter"
+	"metron/legacy_message/legacy_unmarshaller"
 	"metron/message_aggregator"
 	"metron/varz_forwarder"
 	"strconv"
@@ -44,10 +47,12 @@ func main() {
 
 	// TODO: delete next two lines when "legacy" format goes away
 	legacyMessageListener, legacyMessageChan := agentlistener.NewAgentListener("localhost:"+strconv.Itoa(config.LegacyIncomingMessagesPort), logger, "legacyAgentListener")
-	legacyPoolEtcdAdapter, legacyClientPool := initializeClientPool(config, logger, config.LoggregatorLegacyPort)
 
 	dropsondeMessageListener, dropsondeMessageChan := agentlistener.NewAgentListener("localhost:"+strconv.Itoa(config.DropsondeIncomingMessagesPort), logger, "dropsondeAgentListener")
 	dropsondePoolEtcdAdapter, dropsondeClientPool := initializeClientPool(config, logger, config.LoggregatorDropsondePort)
+
+	legacyUnmarshaller := legacy_unmarshaller.NewLegacyUnmarshaller(logger)
+	legacyMessageConverter := legacy_message_converter.NewLegacyMessageConverter(logger)
 
 	unmarshaller := dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger)
 	marshaller := dropsonde_marshaller.NewDropsondeMarshaller(logger)
@@ -55,7 +60,6 @@ func main() {
 	messageAggregator := message_aggregator.NewMessageAggregator(logger)
 
 	instrumentables := []instrumentation.Instrumentable{
-		// TODO: delete next line when "legacy" format goes away
 		legacyMessageListener,
 		dropsondeMessageListener,
 		unmarshaller,
@@ -67,15 +71,16 @@ func main() {
 	component := InitializeComponent(DefaultRegistrarFactory, config, logger, instrumentables)
 
 	go startMonitoringEndpoints(component, logger)
+	dropsondeEventChan := make(chan *events.Envelope)
 
-	// TODO: delete next three lines when "legacy" format goes away
 	go legacyMessageListener.Start()
-	go legacyClientPool.RunUpdateLoop(legacyPoolEtcdAdapter, "/healthstatus/loggregator/"+config.Zone, nil, time.Duration(config.EtcdQueryIntervalMilliseconds)*time.Millisecond)
-	go forwardMessagesToLoggregator(legacyClientPool, legacyMessageChan, logger)
+
+	logEnvelopesChan := make(chan *logmessage.LogEnvelope)
+	go legacyUnmarshaller.Run(legacyMessageChan, logEnvelopesChan)
+	go legacyMessageConverter.Run(logEnvelopesChan, dropsondeEventChan)
 
 	go dropsondeMessageListener.Start()
 
-	dropsondeEventChan := make(chan *events.Envelope)
 	go unmarshaller.Run(dropsondeMessageChan, dropsondeEventChan)
 
 	varzForwardedEventChan := make(chan *events.Envelope)
@@ -90,9 +95,9 @@ func main() {
 	signedMessageChan := make(chan ([]byte))
 	go signMessages(config.SharedSecret, reMarshalledMessageChan, signedMessageChan)
 
-	go dropsondeClientPool.RunUpdateLoop(dropsondePoolEtcdAdapter, "/healthstatus/loggregator/"+config.Zone, nil, time.Duration(config.EtcdQueryIntervalMilliseconds)*time.Millisecond)
+	go dropsondeClientPool.RunUpdateLoop(dropsondePoolEtcdAdapter, "/healthstatus/doppler/"+config.Zone, nil, time.Duration(config.EtcdQueryIntervalMilliseconds)*time.Millisecond)
 
-	forwardMessagesToLoggregator(dropsondeClientPool, signedMessageChan, logger)
+	forwardMessagesToDoppler(dropsondeClientPool, signedMessageChan, logger)
 }
 
 func signMessages(sharedSecret string, dropsondeMessageChan <-chan ([]byte), signedMessageChan chan<- ([]byte)) {
@@ -189,7 +194,7 @@ func parseConfig(debug bool, configFile, logFilePath string) (Config, *gosteno.L
 	return config, logger
 }
 
-func forwardMessagesToLoggregator(clientPool *clientpool.LoggregatorClientPool, messageChan <-chan []byte, logger *gosteno.Logger) {
+func forwardMessagesToDoppler(clientPool *clientpool.LoggregatorClientPool, messageChan <-chan []byte, logger *gosteno.Logger) {
 	for message := range messageChan {
 		client, err := clientPool.RandomClient()
 		if err != nil {

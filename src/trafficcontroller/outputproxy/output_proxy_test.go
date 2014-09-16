@@ -3,6 +3,7 @@ package outputproxy_test
 import (
 	"errors"
 	"fmt"
+	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
@@ -28,7 +29,7 @@ var _ = Describe("OutputProxySingleHasher", func() {
 	var fl *fakeListener
 	var ts *httptest.Server
 	var existingWsProvider = outputproxy.NewWebsocketHandlerProvider
-	var fakeLoggregatorProvider *serveraddressprovider.FakeServerAddressProvider
+	var fakeDopplerAddressProvider *serveraddressprovider.FakeServerAddressProvider
 
 	BeforeEach(func() {
 		fwsh = &fakeWebsocketHandler{}
@@ -40,14 +41,14 @@ var _ = Describe("OutputProxySingleHasher", func() {
 			return fwsh
 		}
 
-		outputproxy.NewWebsocketListener = func() listener.Listener {
+		outputproxy.NewWebsocketListener = func(*gosteno.Logger) listener.Listener {
 			return fl
 		}
 
-		fakeLoggregatorProvider = &serveraddressprovider.FakeServerAddressProvider{}
-		fakeLoggregatorProvider.SetServerAddresses([]string{"localhost:62038"})
+		fakeDopplerAddressProvider = &serveraddressprovider.FakeServerAddressProvider{}
+		fakeDopplerAddressProvider.SetServerAddresses([]string{"localhost:62038"})
 		proxy := outputproxy.NewProxy(
-			fakeLoggregatorProvider,
+			fakeDopplerAddressProvider,
 			testhelpers.SuccessfulAuthorizer,
 			cfcomponent.Config{},
 			loggertesthelper.Logger(),
@@ -55,7 +56,7 @@ var _ = Describe("OutputProxySingleHasher", func() {
 
 		ts = httptest.NewServer(proxy)
 		Eventually(serverUp(ts)).Should(BeTrue())
-		outputproxy.CheckLoggregatorServersInterval = 10 * time.Millisecond
+		outputproxy.CheckDopplerServersInterval = 10 * time.Millisecond
 		outputproxy.WebsocketKeepAliveDuration = time.Second
 	})
 
@@ -101,7 +102,7 @@ var _ = Describe("OutputProxySingleHasher", func() {
 
 	Context("Auth Headers", func() {
 		It("should Authenticate with Correct Auth Header", func() {
-			websocketClientWithHeaderAuth(ts, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+			websocketClientWithHeaderAuth(ts, "/tail/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
 
 			req := fwsh.lastRequest
 			authenticateHeader := req.Header.Get("Authorization")
@@ -117,28 +118,28 @@ var _ = Describe("OutputProxySingleHasher", func() {
 		})
 	})
 
-	Context("when a connection to a loggregator server fails", func() {
+	Context("when a connection to a doppler server fails", func() {
 		var failingWsListener *failingListener
 
 		BeforeEach(func() {
 			failingWsListener = &failingListener{}
-			outputproxy.NewWebsocketListener = func() listener.Listener {
+			outputproxy.NewWebsocketListener = func(*gosteno.Logger) listener.Listener {
 				return failingWsListener
 			}
 		})
 
 		It("should return an error message to the client", func(done Done) {
-			websocketClientWithHeaderAuth(ts, "/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
+			websocketClientWithHeaderAuth(ts, "/tail/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
 			msgData, ok := <-outputMessages
 			Expect(ok).To(BeTrue())
 			msg, err := logmessage.ParseMessage(msgData)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(msg.GetLogMessage().GetSourceName()).To(Equal("LGR"))
-			Expect(string(msg.GetLogMessage().GetMessage())).To(Equal("proxy: error connecting to a loggregator server"))
+			Expect(string(msg.GetLogMessage().GetMessage())).To(Equal("proxy: error connecting to a doppler server"))
 			close(done)
 		})
 
-		It("should periodically retry to connect to the loggregator server", func() {
+		It("should periodically retry to connect to the doppler server", func() {
 			outputproxy.NewWebsocketHandlerProvider = func(messageChan <-chan []byte) http.Handler {
 				outputMessages = messageChan
 				return existingWsProvider(messageChan)
@@ -154,38 +155,39 @@ var _ = Describe("OutputProxySingleHasher", func() {
 		})
 	})
 
-	Context("when a new loggregator server comes up after the client is connected", func() {
-		It("should connect to the new loggregator server", func() {
+	Context("when a new doppler server comes up after the client is connected", func() {
+		It("should connect to the new doppler server", func() {
 			outputproxy.NewWebsocketHandlerProvider = func(messageChan <-chan []byte) http.Handler {
 				outputMessages = messageChan
 				return existingWsProvider(messageChan)
 			}
-			fakeLoggregatorProvider.SetServerAddresses([]string{})
+			fakeDopplerAddressProvider.SetServerAddresses([]string{})
 
 			url := fmt.Sprintf("ws://%s%s", ts.Listener.Addr(), "/tail/?app=myApp")
 			headers := http.Header{"Authorization": []string{testhelpers.VALID_AUTHENTICATION_TOKEN}}
 			ws, _, err := websocket.DefaultDialer.Dial(url, headers)
+
 			Expect(err).ToNot(HaveOccurred())
 			defer ws.Close()
 
-			Eventually(fakeLoggregatorProvider.CallCount).Should(BeNumerically(">", 0))
+			Eventually(fakeDopplerAddressProvider.CallCount).Should(BeNumerically(">", 0))
 
-			fl.SetExpectedHost("ws://fake-server/tail/?app=myApp")
+			fl.SetExpectedHost("ws://fake-server/apps/myApp/stream")
 			Expect(fl.IsStarted()).To(BeFalse())
-			fakeLoggregatorProvider.SetServerAddresses([]string{"fake-server"})
+			fakeDopplerAddressProvider.SetServerAddresses([]string{"fake-server"})
 			Eventually(fl.IsStarted, 1*time.Second).Should(BeTrue())
 		})
 	})
 
 	Context("websocket client", func() {
 		It("should use the WebsocketHandler for tail", func() {
-			fl.SetExpectedHost("ws://localhost:62038/tail/?app=myApp")
+			fl.SetExpectedHost("ws://localhost:62038/apps/myApp/stream")
 			websocketClientWithHeaderAuth(ts, "/tail/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
 			Expect(fwsh.called).To(BeTrue())
 		})
 
 		It("should use the WebsocketHandler for dump", func() {
-			fl.SetExpectedHost("ws://localhost:62038/dump/?app=myApp")
+			fl.SetExpectedHost("ws://localhost:62038/apps/myApp/recentlogs")
 			websocketClientWithHeaderAuth(ts, "/dump/?app=myApp", testhelpers.VALID_AUTHENTICATION_TOKEN)
 			Expect(fwsh.called).To(BeTrue())
 		})
@@ -197,7 +199,7 @@ var _ = Describe("OutputProxySingleHasher", func() {
 
 		BeforeEach(func() {
 			fhh = &fakeHttpHandler{}
-			fl.SetExpectedHost("ws://localhost:62038/recent?app=myApp")
+			fl.SetExpectedHost("ws://localhost:62038/apps/myApp/recentlogs")
 			originalNewHttpHandlerProvider = outputproxy.NewHttpHandlerProvider
 			outputproxy.NewHttpHandlerProvider = func(messageChan <-chan []byte) http.Handler {
 				outputMessages = messageChan
@@ -226,7 +228,7 @@ var _ = Describe("OutputProxySingleHasher", func() {
 				return originalNewHttpHandlerProvider(messageChan)
 			}
 
-			fakeLoggregatorProvider.SetServerAddresses([]string{})
+			fakeDopplerAddressProvider.SetServerAddresses([]string{})
 			url := fmt.Sprintf("http://%s/recent?app=myApp", ts.Listener.Addr())
 			r, _ := http.NewRequest("GET", url, nil)
 			r.Header = http.Header{"Authorization": []string{testhelpers.VALID_AUTHENTICATION_TOKEN}}
@@ -303,13 +305,16 @@ type fakeListener struct {
 
 func (fl *fakeListener) Start(host string, appId string, o listener.OutputChannel, s listener.StopChannel) error {
 	defer GinkgoRecover()
-	fl.Lock()
 
-	fl.startCount += 1
-	if fl.expectedHost != "" {
-		Expect(host).To(Equal(fl.expectedHost))
-	}
-	fl.Unlock()
+	func() {
+		fl.Lock()
+		defer fl.Unlock()
+
+		fl.startCount += 1
+		if fl.expectedHost != "" {
+			Expect(host).To(Equal(fl.expectedHost))
+		}
+	}()
 
 	for {
 		select {

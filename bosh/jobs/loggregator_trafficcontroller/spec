@@ -29,15 +29,12 @@ properties:
   traffic_controller.debug:
     description: boolean value to turn on verbose logging for loggregator system (dea agent & loggregator server)
     default: false
-  loggregator.incoming_port:
-    description: Port for incoming log messages
-    default: 3456
   loggregator.outgoing_dropsonde_port:
     description: Port for outgoing dropsonde messages
     default: 8081
-  loggregator.outgoing_port:
-    description: Port for outgoing log messages
-    default: 8080
+  loggregator.doppler_port:
+    description: Port for outgoing doppler messages
+    default: 8081
   traffic_controller.incoming_port:
     default: 3456
   traffic_controller.outgoing_port:

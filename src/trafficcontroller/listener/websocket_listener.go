@@ -11,10 +11,13 @@ import (
 type websocketListener struct {
 	sync.WaitGroup
 	generateLogMessage marshaller.MessageGenerator
+	convertLogMessage  MessageConverter
 }
 
-func NewWebsocket(logMessageGenerator marshaller.MessageGenerator) *websocketListener {
-	return &websocketListener{generateLogMessage: logMessageGenerator}
+type MessageConverter func([]byte) []byte
+
+func NewWebsocket(logMessageGenerator marshaller.MessageGenerator, messageConverter MessageConverter) *websocketListener {
+	return &websocketListener{generateLogMessage: logMessageGenerator, convertLogMessage: messageConverter}
 }
 
 func (l *websocketListener) Start(url, appId string, outputChan OutputChannel, stopChan StopChannel) error {
@@ -43,11 +46,11 @@ func (l *websocketListener) Start(url, appId string, outputChan OutputChannel, s
 		}
 
 		if err != nil {
-			outputChan <- l.generateLogMessage("proxy: error connecting to a loggregator server", appId)
+			outputChan <- l.generateLogMessage("proxy: error connecting to a loggregator/doppler server", appId)
 			close(serverError)
 			break
 		}
-		outputChan <- msg
+		outputChan <- l.convertLogMessage(msg)
 	}
 
 	l.Wait()
