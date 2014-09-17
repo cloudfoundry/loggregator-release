@@ -20,6 +20,6 @@
     "NatsPass": "nats",
     "VarzUser": "",
     "VarzPass": "",
-    "VarzPort": 1235,
+    "VarzPort": 12350,
     "Syslog": "vcap.trafficcontroller"
 }
