@@ -1,4 +1,4 @@
-package dropsondeproxy_test
+package dopplerproxy_test
 
 import (
 	"errors"
@@ -14,9 +14,9 @@ import (
 	"trafficcontroller/listener"
 )
 
-func TestDropsondeProxy(t *testing.T) {
+func TestDopplerProxy(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "DropsondeProxy Suite")
+	RunSpecs(t, "DopplerProxy Suite")
 }
 
 type fakeWebsocketHandler struct {

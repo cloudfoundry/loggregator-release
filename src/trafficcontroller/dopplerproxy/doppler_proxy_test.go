@@ -1,4 +1,4 @@
-package dropsondeproxy_test
+package dopplerproxy_test
 
 import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"sync"
 	"time"
-	"trafficcontroller/dropsondeproxy"
+	"trafficcontroller/dopplerproxy"
 	testhelpers "trafficcontroller_testhelpers"
 
 	. "github.com/onsi/ginkgo"
@@ -18,7 +18,7 @@ import (
 var _ = Describe("ServeHTTP", func() {
 	var (
 		auth          testhelpers.Authorizer
-		proxy         *dropsondeproxy.Proxy
+		proxy         *dopplerproxy.Proxy
 		recorder      *httptest.ResponseRecorder
 		fakeHandler   *fakeHttpHandler
 		fakeConnector *fakeChannelGroupConnector
@@ -36,7 +36,7 @@ var _ = Describe("ServeHTTP", func() {
 		fakeHandler = &fakeHttpHandler{}
 		fakeConnector = &fakeChannelGroupConnector{messages: make(chan []byte, 10)}
 
-		proxy = dropsondeproxy.NewDropsondeProxy(
+		proxy = dopplerproxy.NewDopplerProxy(
 			auth.Authorize,
 			fakeHandlerProvider,
 			fakeConnector,
@@ -179,7 +179,7 @@ var _ = Describe("DefaultHandlerProvider", func() {
 	It("returns an HTTP handler for .../recentlogs", func() {
 		httpHandler := handlers.NewHttpHandler(make(chan []byte))
 
-		target := dropsondeproxy.DefaultHandlerProvider("recentlogs", make(chan []byte))
+		target := dopplerproxy.DefaultHandlerProvider("recentlogs", make(chan []byte))
 
 		Expect(target).To(BeAssignableToTypeOf(httpHandler))
 	})
@@ -187,7 +187,7 @@ var _ = Describe("DefaultHandlerProvider", func() {
 	It("returns a Websocket handler for .../stream", func() {
 		wsHandler := handlers.NewWebsocketHandler(make(chan []byte), time.Minute)
 
-		target := dropsondeproxy.DefaultHandlerProvider("stream", make(chan []byte))
+		target := dopplerproxy.DefaultHandlerProvider("stream", make(chan []byte))
 
 		Expect(target).To(BeAssignableToTypeOf(wsHandler))
 	})
@@ -195,7 +195,7 @@ var _ = Describe("DefaultHandlerProvider", func() {
 	It("returns a Websocket handler for anything else", func() {
 		wsHandler := handlers.NewWebsocketHandler(make(chan []byte), time.Minute)
 
-		target := dropsondeproxy.DefaultHandlerProvider("other", make(chan []byte))
+		target := dopplerproxy.DefaultHandlerProvider("other", make(chan []byte))
 
 		Expect(target).To(BeAssignableToTypeOf(wsHandler))
 	})

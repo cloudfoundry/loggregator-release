@@ -1,4 +1,4 @@
-package dropsondeproxy
+package dopplerproxy
 
 import (
 	"code.google.com/p/gogoprotobuf/proto"
@@ -39,7 +39,7 @@ func DefaultHandlerProvider(endpoint string, messages <-chan []byte) http.Handle
 	}
 }
 
-func NewDropsondeProxy(authorizer authorization.LogAccessAuthorizer, handlerProvider HandlerProvider, connector channel_group_connector.ChannelGroupConnector, config cfcomponent.Config, logger *gosteno.Logger) *Proxy {
+func NewDopplerProxy(authorizer authorization.LogAccessAuthorizer, handlerProvider HandlerProvider, connector channel_group_connector.ChannelGroupConnector, config cfcomponent.Config, logger *gosteno.Logger) *Proxy {
 	var instrumentables []instrumentation.Instrumentable
 
 	cfc, err := cfcomponent.NewComponent(

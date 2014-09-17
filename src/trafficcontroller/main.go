@@ -25,7 +25,7 @@ import (
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	"trafficcontroller/channel_group_connector"
-	"trafficcontroller/dropsondeproxy"
+	"trafficcontroller/dopplerproxy"
 	"trafficcontroller/listener"
 	"trafficcontroller/marshaller"
 	"trafficcontroller/serveraddressprovider"
@@ -123,8 +123,8 @@ func main() {
 	adapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	adapter.Connect()
 
-	dropsondeProxy := makeDropsondeProxy(adapter, config, logger)
-	startOutgoingDropsondeProxy(net.JoinHostPort(dropsondeProxy.IpAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dropsondeProxy)
+	dopplerProxy := makeDopplerProxy(adapter, config, logger)
+	startOutgoingDopplerProxy(net.JoinHostPort(dopplerProxy.IpAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dopplerProxy)
 
 	proxy := makeLoggregatorProxy(adapter, config, logger)
 	startOutgoingProxy(net.JoinHostPort(proxy.IpAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), proxy)
@@ -222,15 +222,15 @@ func setupMonitoring(proxy *outputproxy.Proxy, config *Config, logger *gosteno.L
 	}()
 }
 
-func makeDropsondeProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger) *dropsondeproxy.Proxy {
+func makeDopplerProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger) *dopplerproxy.Proxy {
 	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
 	provider := MakeProvider(adapter, "/healthstatus/doppler", config.DopplerPort, logger)
 	cgc := channel_group_connector.NewChannelGroupConnector(provider, newWebsocketListener, marshaller.DropsondeLogMessage, logger)
-	proxy := dropsondeproxy.NewDropsondeProxy(authorizer, dropsondeproxy.DefaultHandlerProvider, cgc, config.Config, logger)
+	proxy := dopplerproxy.NewDopplerProxy(authorizer, dopplerproxy.DefaultHandlerProvider, cgc, config.Config, logger)
 	return proxy
 }
 
-func startOutgoingDropsondeProxy(host string, proxy http.Handler) {
+func startOutgoingDopplerProxy(host string, proxy http.Handler) {
 	go func() {
 		err := http.ListenAndServe(host, proxy)
 		if err != nil {
