@@ -78,7 +78,7 @@ func (m *messageAggregator) handleHttpStart(envelope *events.Envelope) {
 	m.logger.Debugf("handling HTTP start message %v", spew.Sprintf("%v", envelope))
 	startEvent := envelope.GetHttpStart()
 
-	requestId := startEvent.RequestId.FormattedString()
+	requestId := startEvent.RequestId.String()
 	eventId := eventId{requestId: requestId, peerType: startEvent.GetPeerType()}
 	m.startEventsByEventId[eventId] = startEventEntry{startEvent: startEvent, entryTime: time.Now()}
 }
@@ -89,7 +89,7 @@ func (m *messageAggregator) handleHttpStop(envelope *events.Envelope) *events.En
 	m.logger.Debugf("handling HTTP stop message %v", spew.Sprintf("%v", envelope))
 	stopEvent := envelope.GetHttpStop()
 
-	requestId := stopEvent.RequestId.FormattedString()
+	requestId := stopEvent.RequestId.String()
 	eventId := eventId{requestId: requestId, peerType: stopEvent.GetPeerType()}
 
 	startEventEntry, ok := m.startEventsByEventId[eventId]

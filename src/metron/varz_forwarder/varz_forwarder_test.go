@@ -36,8 +36,8 @@ var _ = Describe("VarzForwarder", func() {
 
 			var varz instrumentation.Context
 			Eventually(func() []instrumentation.Metric { varz = forwarder.Emit(); return varz.Metrics }).Should(HaveLen(2))
-			Expect(varz.Metrics[0].Name).To(Equal("origin-1.metric"))
-			Expect(varz.Metrics[1].Name).To(Equal("origin-2.metric"))
+			Expect(findMetricByName(varz.Metrics, "origin-1.metric")).ToNot(BeNil())
+			Expect(findMetricByName(varz.Metrics, "origin-2.metric")).ToNot(BeNil())
 		})
 
 		It("includes metrics for each ValueMetric name in a given origin", func() {
@@ -47,10 +47,11 @@ var _ = Describe("VarzForwarder", func() {
 
 			var varz instrumentation.Context
 			Eventually(func() []instrumentation.Metric { varz = forwarder.Emit(); return varz.Metrics }).Should(HaveLen(2))
-			Expect(varz.Metrics[0].Name).To(Equal("origin.metric-1"))
-			Expect(varz.Metrics[0].Value).To(BeNumerically("==", 1))
-			Expect(varz.Metrics[1].Name).To(Equal("origin.metric-2"))
-			Expect(varz.Metrics[1].Value).To(BeNumerically("==", 2))
+			metric1 := findMetricByName(varz.Metrics, "origin.metric-1")
+			Expect(metric1.Value).To(BeNumerically("==", 1))
+
+			metric2 := findMetricByName(varz.Metrics, "origin.metric-2")
+			Expect(metric2.Value).To(BeNumerically("==", 2))
 		})
 
 		It("increments value for each CounterEvent name in a given origin", func() {
@@ -61,10 +62,12 @@ var _ = Describe("VarzForwarder", func() {
 
 			var varz instrumentation.Context
 			Eventually(func() []instrumentation.Metric { varz = forwarder.Emit(); return varz.Metrics }).Should(HaveLen(2))
-			Expect(varz.Metrics[0].Name).To(Equal("origin-0.metric-1"))
-			Expect(varz.Metrics[0].Value).To(BeNumerically("==", 2))
-			Expect(varz.Metrics[1].Name).To(Equal("origin-1.metric-1"))
-			Expect(varz.Metrics[1].Value).To(BeNumerically("==", 1))
+
+			metric1 := findMetricByName(varz.Metrics, "origin-0.metric-1")
+			Expect(metric1.Value).To(BeNumerically("==", 2))
+
+			metric2 := findMetricByName(varz.Metrics, "origin-1.metric-1")
+			Expect(metric2.Value).To(BeNumerically("==", 1))
 		})
 
 		It("includes the VM name as a tag on each metric", func() {
@@ -73,7 +76,8 @@ var _ = Describe("VarzForwarder", func() {
 
 			var varz instrumentation.Context
 			Eventually(func() []instrumentation.Metric { varz = forwarder.Emit(); return varz.Metrics }).Should(HaveLen(1))
-			Expect(varz.Metrics[0].Tags["component"]).To(Equal("test-component"))
+			metric := findMetricByName(varz.Metrics, "origin.metric")
+			Expect(metric.Tags["component"]).To(Equal("test-component"))
 		})
 
 		It("ignores non-ValueMetric messages", func() {
@@ -171,4 +175,15 @@ func heartbeat(origin string) *events.Envelope {
 		EventType: events.Envelope_Heartbeat.Enum(),
 		Heartbeat: &events.Heartbeat{},
 	}
+}
+
+func findMetricByName(metrics []instrumentation.Metric, metricName string) *instrumentation.Metric {
+
+	for _, metric := range metrics {
+		if metric.Name == metricName {
+			return &metric
+		}
+	}
+
+	return nil
 }

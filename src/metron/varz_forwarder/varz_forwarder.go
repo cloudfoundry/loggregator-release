@@ -20,6 +20,7 @@ type VarzForwarder struct {
 type metrics struct {
 	metricsByName map[string]float64
 	timer         *time.Timer
+	sync.RWMutex
 }
 
 func NewVarzForwarder(componentName string, ttl time.Duration, logger *gosteno.Logger) *VarzForwarder {
@@ -96,6 +97,9 @@ func (vf *VarzForwarder) deleteMetrics(origin string) {
 }
 
 func (vf *VarzForwarder) resetTimer(origin string) {
+	vf.RLock()
+	defer vf.RUnlock()
+
 	metrics, ok := vf.metricsByOrigin[origin]
 	if ok {
 		metrics.timer.Reset(vf.ttl)
@@ -108,10 +112,16 @@ var metricProcessorsByType = map[events.Envelope_EventType]func(*metrics, *event
 }
 
 func (metrics *metrics) processValueMetric(metric *events.Envelope) {
+	metrics.RLock()
+	defer metrics.RUnlock()
+
 	metrics.metricsByName[metric.GetValueMetric().GetName()] = metric.GetValueMetric().GetValue()
 }
 
 func (metrics *metrics) processCounterEvent(metric *events.Envelope) {
+	metrics.Lock()
+	defer metrics.Unlock()
+
 	eventName := metric.GetCounterEvent().GetName()
 	count, ok := metrics.metricsByName[eventName]
 

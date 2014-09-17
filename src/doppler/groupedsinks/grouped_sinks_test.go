@@ -93,8 +93,15 @@ var _ = Describe("GroupedSink", func() {
 			msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "app-id", "App"), "origin")
 			go groupedSinks.BroadCast("app-id", msg)
 
-			Eventually(inputChan1).Should(Receive(Equal(msg)))
-			Eventually(inputChan2).Should(Receive(Equal(msg)))
+			go func() {
+				defer GinkgoRecover()
+				Eventually(inputChan2).Should(Receive(Equal(msg)))
+			}()
+
+			go func() {
+				defer GinkgoRecover()
+				Eventually(inputChan1).Should(Receive(Equal(msg)))
+			}()
 		})
 
 		It("does not block when sending to an appId that has no sinks", func(done Done) {
@@ -136,8 +143,15 @@ var _ = Describe("GroupedSink", func() {
 			msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "app-id", "App"), "origin")
 			go groupedSinks.BroadCastError("app-id", msg)
 
-			Eventually(inputChan1).Should(Receive(Equal(msg)))
-			Eventually(inputChan2).Should(Receive(Equal(msg)))
+			go func() {
+				defer GinkgoRecover()
+				Eventually(inputChan2).Should(Receive(Equal(msg)))
+			}()
+
+			go func() {
+				defer GinkgoRecover()
+				Eventually(inputChan1).Should(Receive(Equal(msg)))
+			}()
 		})
 
 		It("does not send to sinks that don't want errors", func(done Done) {
