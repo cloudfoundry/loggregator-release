@@ -50,7 +50,8 @@ var _ = BeforeSuite(func() {
 	<-fakeDoppler.TrafficControllerConnected
 
 	Eventually(func() error {
-		_, err := http.Get("http://" + localIPAddress + ":4566")
+		trafficControllerDropsondeEndpoint := "http://" + localIPAddress + ":4566"
+		_, err := http.Get(trafficControllerDropsondeEndpoint)
 		return err
 	}).ShouldNot(HaveOccurred())
 
