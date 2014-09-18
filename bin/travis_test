@@ -28,7 +28,6 @@ packages=(
     deaagent
     trafficcontroller
     metron
-    loggregator
     doppler
 )
 

@@ -33,8 +33,7 @@ $(dirname $0)/travis_test
 $(dirname $0)/build-platforms
 
 
-check_for_data_race loggregator "./bin/loggregator --config=./config/loggregator_with_fake_nats.json"
-check_for_data_race doppler "./bin/doppler --config=./config/loggregator_with_fake_nats.json"
+check_for_data_race doppler "./bin/doppler --config=./config/doppler_with_fake_nats.json"
 LOGGREGATOR_SHARED_SECRET='asdf' check_for_data_race deaagent "./bin/deaagent --config=./config/dea_logging_agent_with_fake_nats.json"
 check_for_data_race trafficcontroller "./bin/trafficcontroller --config=./config/loggregator_trafficcontroller.json"
 check_for_data_race metron "./bin/metron --configFile=config/metron.json"
