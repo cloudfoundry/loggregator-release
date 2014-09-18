@@ -11,6 +11,7 @@ import (
 	"trafficcontroller/dopplerproxy"
 	testhelpers "trafficcontroller_testhelpers"
 
+	"github.com/cloudfoundry/gosteno"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -24,7 +25,7 @@ var _ = Describe("ServeHTTP", func() {
 		fakeConnector *fakeChannelGroupConnector
 	)
 
-	var fakeHandlerProvider = func(endpoint string, messages <-chan []byte) http.Handler {
+	var fakeHandlerProvider = func(endpoint string, messages <-chan []byte, logger *gosteno.Logger) http.Handler {
 		fakeHandler.endpoint = endpoint
 		fakeHandler.messages = messages
 		return fakeHandler
@@ -177,25 +178,25 @@ var _ = Describe("ServeHTTP", func() {
 
 var _ = Describe("DefaultHandlerProvider", func() {
 	It("returns an HTTP handler for .../recentlogs", func() {
-		httpHandler := handlers.NewHttpHandler(make(chan []byte))
+		httpHandler := handlers.NewHttpHandler(make(chan []byte), loggertesthelper.Logger())
 
-		target := dopplerproxy.DefaultHandlerProvider("recentlogs", make(chan []byte))
+		target := dopplerproxy.DefaultHandlerProvider("recentlogs", make(chan []byte), loggertesthelper.Logger())
 
 		Expect(target).To(BeAssignableToTypeOf(httpHandler))
 	})
 
 	It("returns a Websocket handler for .../stream", func() {
-		wsHandler := handlers.NewWebsocketHandler(make(chan []byte), time.Minute)
+		wsHandler := handlers.NewWebsocketHandler(make(chan []byte), time.Minute, loggertesthelper.Logger())
 
-		target := dopplerproxy.DefaultHandlerProvider("stream", make(chan []byte))
+		target := dopplerproxy.DefaultHandlerProvider("stream", make(chan []byte), loggertesthelper.Logger())
 
 		Expect(target).To(BeAssignableToTypeOf(wsHandler))
 	})
 
 	It("returns a Websocket handler for anything else", func() {
-		wsHandler := handlers.NewWebsocketHandler(make(chan []byte), time.Minute)
+		wsHandler := handlers.NewWebsocketHandler(make(chan []byte), time.Minute, loggertesthelper.Logger())
 
-		target := dopplerproxy.DefaultHandlerProvider("other", make(chan []byte))
+		target := dopplerproxy.DefaultHandlerProvider("other", make(chan []byte), loggertesthelper.Logger())
 
 		Expect(target).To(BeAssignableToTypeOf(wsHandler))
 	})

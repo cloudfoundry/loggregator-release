@@ -9,12 +9,13 @@ import (
 	"trafficcontroller/dopplerproxy"
 )
 
-func NewLegacyHandlerProvider(dopplerHandlerProvider dopplerproxy.HandlerProvider, logger *gosteno.Logger) dopplerproxy.HandlerProvider {
-	return func(endpoint string, messages <-chan []byte) http.Handler {
+func NewLegacyHandlerProvider(dopplerHandlerProvider dopplerproxy.HandlerProvider) dopplerproxy.HandlerProvider {
+	return func(endpoint string, messages <-chan []byte, logger *gosteno.Logger) http.Handler {
 
 		legacyMessageChan := make(chan []byte)
 
 		go func() {
+			defer close(legacyMessageChan)
 			for message := range messages {
 				legacyMessage := translateMessage(message, logger)
 				if legacyMessage != nil {
@@ -23,7 +24,7 @@ func NewLegacyHandlerProvider(dopplerHandlerProvider dopplerproxy.HandlerProvide
 			}
 		}()
 
-		return dopplerHandlerProvider(endpoint, legacyMessageChan)
+		return dopplerHandlerProvider(endpoint, legacyMessageChan, logger)
 	}
 }
 
@@ -36,6 +37,9 @@ func translateMessage(message []byte, logger *gosteno.Logger) []byte {
 	}
 
 	logMessage := receivedEnvelope.GetLogMessage()
+	if logMessage == nil {
+		return nil
+	}
 
 	messageBytes, err := proto.Marshal(
 		&logmessage.LogMessage{

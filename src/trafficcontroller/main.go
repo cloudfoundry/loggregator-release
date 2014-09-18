@@ -192,7 +192,7 @@ func MakeProvider(adapter storeadapter.StoreAdapter, storeKeyPrefix string, outg
 }
 
 func makeLegacyProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger) *legacyproxy.Proxy {
-	legacyHandlerProvider := legacyproxy.NewLegacyHandlerProvider(dopplerproxy.DefaultHandlerProvider, logger)
+	legacyHandlerProvider := legacyproxy.NewLegacyHandlerProvider(dopplerproxy.DefaultHandlerProvider)
 	dopplerProxy := makeDopplerProxy(adapter, config, logger, legacyHandlerProvider)
 
 	builder := legacyproxy.NewProxyBuilder()

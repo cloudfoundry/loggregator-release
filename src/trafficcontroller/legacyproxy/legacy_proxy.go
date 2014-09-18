@@ -56,6 +56,9 @@ func (proxyBuilder *ProxyBuilder) Build() *Proxy {
 }
 
 func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	proxy.logger.Debugf("legacy proxy: ServeHTTP entered with request %v", request)
+	defer proxy.logger.Debugf("legacy proxy: ServeHTTP exited")
+
 	request, err := proxy.requestTranslator.Translate(request)
 	if err != nil {
 		proxy.logger.Errorf("proxy: error translating request: %v", err)

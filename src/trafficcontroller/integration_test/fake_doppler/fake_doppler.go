@@ -1,6 +1,7 @@
 package fake_doppler
 
 import (
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/server/handlers"
 	gorilla "github.com/gorilla/websocket"
 	"net"
@@ -56,7 +57,7 @@ func (fakeDoppler *FakeDoppler) ServeHTTP(writer http.ResponseWriter, request *h
 	default:
 	}
 
-	handlers.NewWebsocketHandler(fakeDoppler.sendMessageChan, time.Millisecond*100).ServeHTTP(writer, request)
+	handlers.NewWebsocketHandler(fakeDoppler.sendMessageChan, time.Millisecond*100, loggertesthelper.Logger()).ServeHTTP(writer, request)
 }
 
 func (fakeDoppler *FakeDoppler) SendLogMessage(messageBody []byte) {

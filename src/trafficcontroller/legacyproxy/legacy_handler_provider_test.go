@@ -4,6 +4,7 @@ import (
 	"code.google.com/p/gogoprotobuf/proto"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
+	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	. "github.com/onsi/ginkgo"
@@ -23,11 +24,11 @@ var _ = Describe("LegacyHandlerProvider", func() {
 	BeforeEach(func() {
 		innerHandler = &dummyHandler{}
 		factory = &fakeHandlerProviderFactory{returnedHandler: innerHandler}
-		legacyHandlerProvider = legacyproxy.NewLegacyHandlerProvider(factory.fakeHandlerProvider, loggertesthelper.Logger())
+		legacyHandlerProvider = legacyproxy.NewLegacyHandlerProvider(factory.fakeHandlerProvider)
 	})
 
 	It("delegates to the wrapped handler provider", func() {
-		legacyHandler := legacyHandlerProvider("fake-endpoint", make(chan []byte))
+		legacyHandler := legacyHandlerProvider("fake-endpoint", make(chan []byte), loggertesthelper.Logger())
 
 		Expect(factory.endpoint).To(Equal("fake-endpoint"))
 		Expect(legacyHandler).To(Equal(innerHandler))
@@ -35,7 +36,7 @@ var _ = Describe("LegacyHandlerProvider", func() {
 
 	It("translates messages into the legacy format", func() {
 		var messageChan = make(chan []byte, 1)
-		legacyHandlerProvider("fake-endpoint", messageChan)
+		legacyHandlerProvider("fake-endpoint", messageChan, loggertesthelper.Logger())
 
 		messageChan <- makeDropsondeMessage("message", "app-id", 123)
 		legacyMessage := makeLegacyMessage("message", "app-id", 123)
@@ -45,12 +46,37 @@ var _ = Describe("LegacyHandlerProvider", func() {
 
 	It("drops messages that can't be translated", func() {
 		var messageChan = make(chan []byte, 1)
-		legacyHandlerProvider("fake-endpoint", messageChan)
+		legacyHandlerProvider("fake-endpoint", messageChan, loggertesthelper.Logger())
 
 		messageChan <- []byte{1, 2, 3}
 
 		Consistently(factory.messages).ShouldNot(Receive())
 	})
+
+	It("drops envelopes that don't contain log messages", func() {
+		var messageChan = make(chan []byte, 1)
+		legacyHandlerProvider("fake-endpoint", messageChan, loggertesthelper.Logger())
+
+		emptyEnvelope := &events.Envelope{
+			Origin:    proto.String("origin"),
+			EventType: events.Envelope_LogMessage.Enum(),
+		}
+
+		marshalledEnvelope, _ := proto.Marshal(emptyEnvelope)
+
+		messageChan <- marshalledEnvelope
+
+		Consistently(factory.messages).ShouldNot(Receive())
+	})
+
+	It("closes the legacy message channel", func() {
+		dropsondeMessageChan := make(chan []byte)
+		legacyHandlerProvider("fake-endpoint", dropsondeMessageChan, loggertesthelper.Logger())
+
+		close(dropsondeMessageChan)
+		Eventually(factory.messages).Should(BeClosed())
+	})
+
 })
 
 type fakeHandlerProviderFactory struct {
@@ -59,7 +85,7 @@ type fakeHandlerProviderFactory struct {
 	returnedHandler http.Handler
 }
 
-func (factory *fakeHandlerProviderFactory) fakeHandlerProvider(endpoint string, messages <-chan []byte) http.Handler {
+func (factory *fakeHandlerProviderFactory) fakeHandlerProvider(endpoint string, messages <-chan []byte, logger *gosteno.Logger) http.Handler {
 	factory.endpoint = endpoint
 	factory.messages = messages
 	return factory.returnedHandler

@@ -26,16 +26,16 @@ type Proxy struct {
 	cfcomponent.Component
 }
 
-type HandlerProvider func(string, <-chan []byte) http.Handler
+type HandlerProvider func(string, <-chan []byte, *gosteno.Logger) http.Handler
 
-func DefaultHandlerProvider(endpoint string, messages <-chan []byte) http.Handler {
+func DefaultHandlerProvider(endpoint string, messages <-chan []byte, logger *gosteno.Logger) http.Handler {
 	switch endpoint {
 	case "recentlogs":
-		return handlers.NewHttpHandler(messages)
+		return handlers.NewHttpHandler(messages, logger)
 	case "stream":
 		fallthrough
 	default:
-		return handlers.NewWebsocketHandler(messages, WebsocketKeepAliveDuration)
+		return handlers.NewWebsocketHandler(messages, WebsocketKeepAliveDuration, logger)
 	}
 }
 
@@ -66,6 +66,9 @@ func NewDopplerProxy(authorizer authorization.LogAccessAuthorizer, handlerProvid
 }
 
 func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
+	proxy.logger.Debugf("doppler proxy: ServeHTTP entered with request %v", req)
+	defer proxy.logger.Debugf("doppler proxy: ServeHTTP exited")
+
 	if req.Method == "HEAD" {
 		return
 	}
@@ -107,7 +110,7 @@ func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
 
 	go proxy.connector.Connect("/"+endpoint, appId, messagesChan, stopChan, reconnect)
 
-	handler := proxy.handlerProvider(endpoint, messagesChan)
+	handler := proxy.handlerProvider(endpoint, messagesChan, proxy.logger)
 	handler.ServeHTTP(writer, req)
 }
 

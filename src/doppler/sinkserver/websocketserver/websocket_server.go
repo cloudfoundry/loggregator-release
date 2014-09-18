@@ -90,7 +90,6 @@ func (w *WebsocketServer) ServeHTTP(writer http.ResponseWriter, request *http.Re
 
 	ws, err := gorilla.Upgrade(writer, request, nil, 1024, 1024)
 	if err != nil {
-		println("error" + err.Error())
 		w.logger.Debugf("WebsocketServer.ServeHTTP: Upgrade error (returning 400): %s", err.Error())
 		http.Error(writer, err.Error(), 400)
 		return
