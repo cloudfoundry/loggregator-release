@@ -1,4 +1,4 @@
-package outputproxy_test
+package legacyproxy_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestOutputProxy(t *testing.T) {
+func TestLegacyproxy(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "OutputProxy Suite")
+	RunSpecs(t, "Legacyproxy Suite")
 }

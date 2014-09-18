@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"time"
 	"trafficcontroller/authorization"
-	"trafficcontroller/outputproxy"
 
 	_ "github.com/cloudfoundry/dropsonde/autowire"
 	"github.com/cloudfoundry/gosteno"
@@ -26,6 +25,7 @@ import (
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	"trafficcontroller/channel_group_connector"
 	"trafficcontroller/dopplerproxy"
+	"trafficcontroller/legacyproxy"
 	"trafficcontroller/listener"
 	"trafficcontroller/marshaller"
 	"trafficcontroller/serveraddressprovider"
@@ -123,10 +123,10 @@ func main() {
 	adapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	adapter.Connect()
 
-	dopplerProxy := makeDopplerProxy(adapter, config, logger)
+	dopplerProxy := makeDopplerProxy(adapter, config, logger, dopplerproxy.DefaultHandlerProvider)
 	startOutgoingDopplerProxy(net.JoinHostPort(dopplerProxy.IpAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dopplerProxy)
 
-	proxy := makeLoggregatorProxy(adapter, config, logger)
+	proxy := makeLegacyProxy(adapter, config, logger)
 	startOutgoingProxy(net.JoinHostPort(proxy.IpAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), proxy)
 
 	setupMonitoring(proxy, config, logger)
@@ -191,11 +191,16 @@ func MakeProvider(adapter storeadapter.StoreAdapter, storeKeyPrefix string, outg
 	return serveraddressprovider.NewDynamicServerAddressProvider(loggregatorServerAddressList, outgoingPort)
 }
 
-func makeLoggregatorProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger) *outputproxy.Proxy {
-	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
-	provider := MakeProvider(adapter, "/healthstatus/doppler", config.DopplerPort, logger)
-	proxy := outputproxy.NewProxy(provider, authorizer, config.Config, logger)
-	return proxy
+func makeLegacyProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger) *legacyproxy.Proxy {
+	legacyHandlerProvider := legacyproxy.NewLegacyHandlerProvider(dopplerproxy.DefaultHandlerProvider, logger)
+	dopplerProxy := makeDopplerProxy(adapter, config, logger, legacyHandlerProvider)
+
+	builder := legacyproxy.NewProxyBuilder()
+	builder.Handler(dopplerProxy)
+	builder.Component(dopplerProxy.Component)
+	builder.Logger(logger)
+	builder.RequestTranslator(legacyproxy.NewRequestTranslator())
+	return builder.Build()
 }
 
 func startOutgoingProxy(host string, proxy http.Handler) {
@@ -207,7 +212,7 @@ func startOutgoingProxy(host string, proxy http.Handler) {
 	}()
 }
 
-func setupMonitoring(proxy *outputproxy.Proxy, config *Config, logger *gosteno.Logger) {
+func setupMonitoring(proxy *legacyproxy.Proxy, config *Config, logger *gosteno.Logger) {
 	cr := collectorregistrar.NewCollectorRegistrar(config.MbusClient, logger)
 	err := cr.RegisterWithCollector(proxy.Component)
 	if err != nil {
@@ -222,11 +227,11 @@ func setupMonitoring(proxy *outputproxy.Proxy, config *Config, logger *gosteno.L
 	}()
 }
 
-func makeDopplerProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger) *dopplerproxy.Proxy {
+func makeDopplerProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger, handlerProvider dopplerproxy.HandlerProvider) *dopplerproxy.Proxy {
 	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
 	provider := MakeProvider(adapter, "/healthstatus/doppler", config.DopplerPort, logger)
 	cgc := channel_group_connector.NewChannelGroupConnector(provider, newWebsocketListener, marshaller.DropsondeLogMessage, logger)
-	proxy := dopplerproxy.NewDopplerProxy(authorizer, dopplerproxy.DefaultHandlerProvider, cgc, config.Config, logger)
+	proxy := dopplerproxy.NewDopplerProxy(authorizer, handlerProvider, cgc, config.Config, logger)
 	return proxy
 }
 

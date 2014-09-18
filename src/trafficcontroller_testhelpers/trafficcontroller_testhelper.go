@@ -20,8 +20,8 @@ func SuccessfulAuthorizer(authToken string, target string, l *gosteno.Logger) bo
 
 type Authorizer struct {
 	TokenParam string
-	Target string
-	Result bool
+	Target     string
+	Result     bool
 }
 
 func (a *Authorizer) Authorize(authToken string, target string, l *gosteno.Logger) bool {

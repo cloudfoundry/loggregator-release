@@ -150,7 +150,7 @@ var _ = Describe("TrafficController", func() {
 				err, resp := client3.Start()
 				Expect(err).To(Equal(errors.New("websocket: bad handshake")))
 				errMsg, _ := ioutil.ReadAll(resp.Body)
-				Expect(errMsg).To(BeEquivalentTo("invalid path /invalid-path\n"))
+				Expect(errMsg).To(BeEquivalentTo("invalid request: unexpected path: /invalid-path\n"))
 			})
 		})
 	})
