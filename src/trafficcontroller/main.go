@@ -171,9 +171,9 @@ func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gos
 	logger.Info("Startup: Setting up the loggregator traffic controller")
 
 	if len(config.NatsHosts) == 0 {
-		logger.Warn("Startup: Did not receive a NATS host - not going to regsiter component")
-		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.NATSClient, error) {
-			return fakeyagnats.New(), nil
+		logger.Warn("Startup: Did not receive a NATS host - not going to register component")
+		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.ApceraWrapperNATSClient, error) {
+			return fakeyagnats.NewApceraClientWrapper(), nil
 		}
 	}
 

@@ -101,8 +101,8 @@ func main() {
 
 	if len(config.NatsHosts) == 0 {
 		logger.Warn("Startup: Did not receive a NATS host - not going to register component")
-		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.NATSClient, error) {
-			return fakeyagnats.New(), nil
+		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.ApceraWrapperNATSClient, error) {
+			return fakeyagnats.NewApceraClientWrapper(), nil
 		}
 	}
 

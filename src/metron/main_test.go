@@ -16,7 +16,7 @@ type fakeRegistrarFactory struct {
 	fakeRegistrar *fakeCollectorRegistrar
 }
 
-func (f *fakeRegistrarFactory) Create(mBusClient yagnats.NATSClient, logger *gosteno.Logger) main.CollectorRegistrar {
+func (f *fakeRegistrarFactory) Create(mBusClient yagnats.ApceraWrapperNATSClient, logger *gosteno.Logger) main.CollectorRegistrar {
 	return f.fakeRegistrar
 }
 
@@ -51,7 +51,7 @@ var _ = Describe("InitializeComponent", func() {
 
 	It("panics if the default yagnats provider returns an error", func() {
 		config.NatsHosts = []string{"fake-host"}
-		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.NATSClient, error) {
+		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.ApceraWrapperNATSClient, error) {
 			return nil, errors.New("fake error")
 		}
 

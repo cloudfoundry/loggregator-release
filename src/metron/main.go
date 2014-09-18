@@ -145,20 +145,20 @@ func (*MetronHealthMonitor) Ok() bool {
 	return true
 }
 
-type RegistrarFactory func(mBusClient yagnats.NATSClient, logger *gosteno.Logger) CollectorRegistrar
+type RegistrarFactory func(mBusClient yagnats.ApceraWrapperNATSClient, logger *gosteno.Logger) CollectorRegistrar
 type CollectorRegistrar interface {
 	RegisterWithCollector(cfc cfcomponent.Component) error
 }
 
-func DefaultRegistrarFactory(mBusClient yagnats.NATSClient, logger *gosteno.Logger) CollectorRegistrar {
+func DefaultRegistrarFactory(mBusClient yagnats.ApceraWrapperNATSClient, logger *gosteno.Logger) CollectorRegistrar {
 	return collectorregistrar.NewCollectorRegistrar(mBusClient, logger)
 }
 
 func InitializeComponent(registrarFactory RegistrarFactory, config Config, logger *gosteno.Logger, instrumentables []instrumentation.Instrumentable) *cfcomponent.Component {
 	if len(config.NatsHosts) == 0 {
 		logger.Warn("Startup: Did not receive a NATS host - not going to register component")
-		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.NATSClient, error) {
-			return fakeyagnats.New(), nil
+		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.ApceraWrapperNATSClient, error) {
+			return fakeyagnats.NewApceraClientWrapper(), nil
 		}
 	}
 
