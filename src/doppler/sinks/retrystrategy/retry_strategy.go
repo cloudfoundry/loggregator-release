@@ -11,7 +11,7 @@ type RetryStrategy func(counter int) time.Duration
 func NewExponentialRetryStrategy() RetryStrategy {
 	exponential := func(counter int) time.Duration {
 		if counter == 0 {
-			return time.Duration(0)
+			return time.Millisecond * 1
 		}
 		if counter > 23 {
 			counter = 23
