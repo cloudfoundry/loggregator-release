@@ -1,13 +1,13 @@
 package loggingstream
 
 import (
-	"bufio"
 	"code.google.com/p/gogoprotobuf/proto"
 	"deaagent/domain"
 	"fmt"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	"io"
 	"net"
 	"path/filepath"
 	"strconv"
@@ -23,65 +23,24 @@ type LoggingStream struct {
 	messageType      events.LogMessage_MessageType
 	messagesReceived uint64
 	bytesReceived    uint64
-	closeChan        chan struct{}
 	sync.Mutex
 }
 
 func NewLoggingStream(task *domain.Task, logger *gosteno.Logger, messageType events.LogMessage_MessageType) (ls *LoggingStream) {
-	return &LoggingStream{task: task, logger: logger, messageType: messageType, closeChan: make(chan struct{})}
+	return &LoggingStream{task: task, logger: logger, messageType: messageType}
 }
 
-func (ls *LoggingStream) Listen() <-chan *events.LogMessage {
+func (ls *LoggingStream) FetchReader(returnChan chan io.Reader) {
+	connection, err := ls.connect()
+	if err != nil {
+		ls.logger.Infof("Error while reading from socket %s, %s, %s", ls.messageType, ls.task.Identifier(), err)
+		close(returnChan)
+		return
+	}
+	ls.setConnection(connection)
 
-	messageChan := make(chan *events.LogMessage, 1024)
-
-	go func() {
-		defer close(messageChan)
-
-		connection, err := ls.connect()
-		if err != nil {
-			ls.logger.Infof("Error while reading from socket %s, %s, %s", ls.messageType, ls.task.Identifier(), err)
-			return
-		}
-		ls.setConnection(connection)
-
-		for {
-			select {
-			case <-ls.closeChan:
-				return
-			default:
-			}
-
-			scanner := bufio.NewScanner(connection)
-			for scanner.Scan() {
-				line := scanner.Bytes()
-				readCount := len(line)
-				if readCount < 1 {
-					continue
-				}
-				ls.logger.Debugf("Read %d bytes from task socket %s, %s", readCount, ls.messageType, ls.task.Identifier())
-				atomic.AddUint64(&ls.messagesReceived, 1)
-				atomic.AddUint64(&ls.bytesReceived, uint64(readCount))
-
-				messageChan <- ls.newLogMessage(line)
-
-				ls.logger.Debugf("Sent %d bytes to loggregator client from %s, %s", readCount, ls.messageType, ls.task.Identifier())
-			}
-			err = scanner.Err()
-
-			if err != nil {
-				ls.logger.Infof(fmt.Sprintf("Error while reading from socket %s, %s, %s", ls.messageType, ls.task.Identifier(), err))
-
-				messageChan <- ls.newLogMessage([]byte(fmt.Sprintf("Dropped a message because of read error: %s", err)))
-				continue
-			}
-
-			ls.logger.Debugf("EOF while reading from socket %s, %s", ls.messageType, ls.task.Identifier())
-			return
-		}
-	}()
-
-	return messageChan
+	returnChan <- connection
+	close(returnChan)
 }
 
 func (ls *LoggingStream) setConnection(connection net.Conn) {
@@ -93,12 +52,6 @@ func (ls *LoggingStream) setConnection(connection net.Conn) {
 func (ls *LoggingStream) Stop() {
 	ls.Lock()
 	defer ls.Unlock()
-
-	select {
-	case <-ls.closeChan:
-	default:
-		close(ls.closeChan)
-	}
 
 	if ls.connection != nil {
 		ls.connection.Close()

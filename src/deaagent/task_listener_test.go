@@ -3,11 +3,12 @@ package deaagent_test
 import (
 	"deaagent"
 	"deaagent/domain"
-	"github.com/cloudfoundry/dropsonde/events"
+	"github.com/cloudfoundry/dropsonde/autowire/logs"
+	"github.com/cloudfoundry/dropsonde/log_sender/fake"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"io/ioutil"
+	"net"
 	"os"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,133 +17,92 @@ import (
 var testLogger = loggertesthelper.Logger()
 
 var _ = Describe("TaskListener", func() {
-	It("listens to stdout unix socket", func() {
-		task, tmpdir := setupTask(3)
-		defer os.RemoveAll(tmpdir)
+	Describe("StartListening", func() {
+		var task *domain.Task
+		var tmpdir string
+		var stdoutListener, stderrListener net.Listener
+		var stdoutConnection, stderrConnection net.Conn
+		var fakeLogSender *fake.FakeLogSender
+		var message1 = "one"
+		var message2 = "two"
+		var taskListener *deaagent.TaskListener
 
-		stdoutListener, stderrListener := setupTaskSockets(task)
-		defer stdoutListener.Close()
-		defer stderrListener.Close()
+		BeforeEach(func() {
+			fakeLogSender = fake.NewFakeLogSender()
+			logs.Initialize(fakeLogSender)
 
-		emitter, receiveChannel := setupEmitter()
-		taskListner := deaagent.NewTaskListener(*task, emitter, testLogger)
-		go taskListner.StartListening()
+			task, tmpdir = setupTask(3)
 
-		expectedMessage := "Some Output"
-		secondLogMessage := "toally different"
+			stdoutListener, stderrListener = setupTaskSockets(task)
 
-		connection, err := stdoutListener.Accept()
-		defer connection.Close()
-		Expect(err).NotTo(HaveOccurred())
+			taskListener = deaagent.NewTaskListener(*task, testLogger)
+			go taskListener.StartListening()
 
-		_, err = connection.Write([]byte(SOCKET_PREFIX + expectedMessage))
-		_, err = connection.Write([]byte("\n"))
-		Expect(err).NotTo(HaveOccurred())
+			var err error
+			stdoutConnection, err = stdoutListener.Accept()
+			Expect(err).NotTo(HaveOccurred())
 
-		receivedMessage := <-receiveChannel
+			stderrConnection, err = stderrListener.Accept()
+			Expect(err).NotTo(HaveOccurred())
+		})
 
-		Expect(receivedMessage.GetAppId()).To(Equal("1234"))
-		Expect(receivedMessage.GetSourceType()).To(Equal("App"))
-		Expect(receivedMessage.GetMessageType()).To(Equal(events.LogMessage_OUT))
-		Expect(string(receivedMessage.GetMessage())).To(Equal(expectedMessage))
-		Expect(receivedMessage.GetSourceInstance()).To(Equal("3"))
+		AfterEach(func() {
+			os.RemoveAll(tmpdir)
+			stdoutListener.Close()
+			stderrListener.Close()
+			stdoutConnection.Close()
+			stderrConnection.Close()
+			taskListener.StopListening()
+		})
 
-		_, err = connection.Write([]byte(secondLogMessage))
-		_, err = connection.Write([]byte("\n"))
-		Expect(err).NotTo(HaveOccurred())
+		It("receives single line message sent to STDOUT", func() {
+			stdoutConnection.Write([]byte(SOCKET_PREFIX + message1 + "\n"))
 
-		receivedMessage = <-receiveChannel
+			Eventually(fakeLogSender.GetLogs).Should(HaveLen(1))
 
-		Expect(receivedMessage.GetAppId()).To(Equal("1234"))
-		Expect(receivedMessage.GetSourceType()).To(Equal("App"))
-		Expect(receivedMessage.GetMessageType()).To(Equal(events.LogMessage_OUT))
-		Expect(string(receivedMessage.GetMessage())).To(Equal(secondLogMessage))
-		Expect(receivedMessage.GetSourceInstance()).To(Equal("3"))
+			log := fakeLogSender.GetLogs()[0]
+			Expect(log.AppId).To(Equal("1234"))
+			Expect(log.SourceType).To(Equal("App"))
+			Expect(log.Message).To(Equal(message1))
+			Expect(log.SourceInstance).To(Equal("3"))
+			Expect(log.MessageType).To(Equal("OUT"))
 
-		_, err = connection.Write([]byte("a single line\nthat should be split\n"))
-		Expect(err).NotTo(HaveOccurred())
+			stdoutConnection.Write([]byte(SOCKET_PREFIX + message2 + "\n"))
 
-		receivedMessage = <-receiveChannel
-		Expect(string(receivedMessage.GetMessage())).To(Equal("a single line"))
-		receivedMessage = <-receiveChannel
-		Expect(string(receivedMessage.GetMessage())).To(Equal("that should be split"))
-	})
+			Eventually(fakeLogSender.GetLogs).Should(HaveLen(2))
 
-	It("handles four byte offset", func() {
-		task, tmpdir := setupTask(3)
-		defer os.RemoveAll(tmpdir)
+			log = fakeLogSender.GetLogs()[1]
+			Expect(log.Message).To(Equal(message2))
+		})
 
-		stdoutListener, stderrListener := setupTaskSockets(task)
-		defer stdoutListener.Close()
-		defer stderrListener.Close()
+		It("receives multiline messages by line", func() {
+			stdoutConnection.Write([]byte(SOCKET_PREFIX + message1 + "\n" + message2 + "\n"))
 
-		emitter, receiveChannel := setupEmitter()
-		taskListner := deaagent.NewTaskListener(*task, emitter, testLogger)
-		go taskListner.StartListening()
+			Eventually(fakeLogSender.GetLogs).Should(HaveLen(2))
 
-		expectedMessage := "Some Output"
-		secondLogMessage := "toally different"
+			Expect(fakeLogSender.GetLogs()[0].Message).To(Equal(message1))
+			Expect(fakeLogSender.GetLogs()[1].Message).To(Equal(message2))
+		})
 
-		connection, err := stdoutListener.Accept()
-		defer connection.Close()
+		It("receives single line message sent to STDERR", func() {
+			stderrConnection.Write([]byte(SOCKET_PREFIX + message1 + "\n"))
 
-		Expect(err).NotTo(HaveOccurred())
+			Eventually(fakeLogSender.GetLogs).Should(HaveLen(1))
 
-		_, err = connection.Write([]byte("\n"))
-		_, err = connection.Write([]byte("\n"))
+			log := fakeLogSender.GetLogs()[0]
+			Expect(log.AppId).To(Equal("1234"))
+			Expect(log.SourceType).To(Equal("App"))
+			Expect(log.Message).To(Equal(message1))
+			Expect(log.SourceInstance).To(Equal("3"))
+			Expect(log.MessageType).To(Equal("ERR"))
 
-		select {
-		case _ = <-receiveChannel:
-			Fail("Should not receive a message")
-		case <-time.After(200 * time.Millisecond):
-		}
+			stderrConnection.Write([]byte(SOCKET_PREFIX + message2 + "\n"))
 
-		_, err = connection.Write([]byte("\n\n"))
-		_, err = connection.Write([]byte(expectedMessage))
-		_, err = connection.Write([]byte("\n"))
-		Expect(err).NotTo(HaveOccurred())
+			Eventually(fakeLogSender.GetLogs).Should(HaveLen(2))
 
-		receivedMessage := <-receiveChannel
-		Expect(string(receivedMessage.GetMessage())).To(Equal(expectedMessage))
-
-		_, err = connection.Write([]byte(secondLogMessage))
-		_, err = connection.Write([]byte("\n"))
-		Expect(err).NotTo(HaveOccurred())
-
-		receivedMessage = <-receiveChannel
-		Expect(string(receivedMessage.GetMessage())).To(Equal(secondLogMessage))
-	})
-
-	It("listens to stderr unix socket", func() {
-		task, tmpdir := setupTask(4)
-		defer os.RemoveAll(tmpdir)
-
-		stdoutListener, stderrListener := setupTaskSockets(task)
-		defer stdoutListener.Close()
-		defer stderrListener.Close()
-
-		expectedMessage := "Some Output"
-		secondLogMessage := "toally different"
-
-		emitter, receiveChannel := setupEmitter()
-		taskListner := deaagent.NewTaskListener(*task, emitter, testLogger)
-		go taskListner.StartListening()
-
-		connection, err := stderrListener.Accept()
-		defer connection.Close()
-		Expect(err).NotTo(HaveOccurred())
-
-		_, err = connection.Write([]byte(SOCKET_PREFIX + expectedMessage))
-		_, err = connection.Write([]byte("\n"))
-		Expect(err).NotTo(HaveOccurred())
-		receivedMessage := <-receiveChannel
-		Expect(string(receivedMessage.GetMessage())).To(Equal(expectedMessage))
-
-		_, err = connection.Write([]byte(secondLogMessage))
-		_, err = connection.Write([]byte("\n"))
-		Expect(err).NotTo(HaveOccurred())
-		receivedMessage = <-receiveChannel
-		Expect(string(receivedMessage.GetMessage())).To(Equal(secondLogMessage))
+			log = fakeLogSender.GetLogs()[1]
+			Expect(log.Message).To(Equal(message2))
+		})
 	})
 })
 

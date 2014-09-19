@@ -3,16 +3,17 @@ package deaagent_test
 import (
 	"deaagent"
 	"deaagent/domain"
-	"github.com/cloudfoundry/dropsonde/events"
+	"github.com/cloudfoundry/dropsonde/autowire/logs"
+	"github.com/cloudfoundry/dropsonde/log_sender/fake"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"io/ioutil"
 	"net"
 	"os"
+	"sync"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"sync"
-	"time"
 )
 
 var (
@@ -23,15 +24,20 @@ var (
 var _ = Describe("DeaAgent", func() {
 
 	var (
-		task1StdoutListener    net.Listener
-		task2StdoutListener    net.Listener
-		expectedMessage        = "Some Output"
-		mockLoggregatorEmitter MockLoggregatorEmitter
-		agent                  *deaagent.Agent
-		fakeSyslogDrainStore   *FakeSyslogDrainStore
+		task1StdoutListener  net.Listener
+		task1StderrListener  net.Listener
+		task2StdoutListener  net.Listener
+		task2StderrListener  net.Listener
+		expectedMessage      = "Some Output"
+		agent                *deaagent.Agent
+		fakeSyslogDrainStore *FakeSyslogDrainStore
+		fakeLogSender        *fake.FakeLogSender
 	)
 
 	BeforeEach(func() {
+		fakeLogSender = fake.NewFakeLogSender()
+		logs.Initialize(fakeLogSender)
+
 		var err error
 		tmpdir, err = ioutil.TempDir("", "testing")
 		if err != nil {
@@ -47,9 +53,7 @@ var _ = Describe("DeaAgent", func() {
 			Index:               3,
 		}
 
-		var task1StderrListener net.Listener
 		task1StdoutListener, task1StderrListener = setupTaskSockets(helperTask1)
-		defer task1StderrListener.Close()
 
 		helperTask2 := &domain.Task{
 			ApplicationId:       "5678",
@@ -59,13 +63,7 @@ var _ = Describe("DeaAgent", func() {
 			Index:               0,
 		}
 
-		var task2StderrListener net.Listener
 		task2StdoutListener, task2StderrListener = setupTaskSockets(helperTask2)
-		defer task2StderrListener.Close()
-
-		mockLoggregatorEmitter = MockLoggregatorEmitter{}
-
-		mockLoggregatorEmitter.received = make(chan *events.LogMessage, 2)
 
 		writeToFile(`{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3, "syslog_drain_urls": ["url1"]},
 	                                {"state": "RUNNING", "application_id": "3456", "warden_job_id": 59, "warden_container_path":"`+tmpdir+`", "instance_index": 1}]}`, true)
@@ -77,27 +75,33 @@ var _ = Describe("DeaAgent", func() {
 
 	AfterEach(func() {
 		task1StdoutListener.Close()
+		task1StderrListener.Close()
 		task2StdoutListener.Close()
+		task2StderrListener.Close()
+		agent.Stop()
 	})
 
 	Describe("instances.json polling", func() {
 		Context("at startup", func() {
 			It("picks up new tasks", func() {
-				agent.Start(mockLoggregatorEmitter)
+				go agent.Start()
 
-				task1Connection, _ := task1StdoutListener.Accept()
-				defer task1Connection.Close()
+				task1StdoutConn, _ := task1StdoutListener.Accept()
+				defer task1StdoutConn.Close()
+				task1StderrConn, _ := task1StderrListener.Accept()
+				defer task1StderrConn.Close()
 
-				task1Connection.Write([]byte(SOCKET_PREFIX + expectedMessage + "\n"))
+				task1StdoutConn.Write([]byte(SOCKET_PREFIX + expectedMessage + "\n"))
 
-				msg := <-mockLoggregatorEmitter.received
-				Expect(msg.GetAppId()).To(Equal("1234"))
+				Eventually(fakeLogSender.GetLogs).Should(HaveLen(1))
+				logs := fakeLogSender.GetLogs()
+				Expect(logs[0].AppId).To(Equal("1234"))
 			})
 		})
 
 		Context("while running", func() {
 			It("picks up new tasks", func() {
-				agent.Start(mockLoggregatorEmitter)
+				go agent.Start()
 
 				writeToFile(`{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3, "syslog_drain_urls": ["url1"]},
 								   {"state": "RUNNING", "application_id": "5678", "warden_job_id": 58, "warden_container_path":"`+tmpdir+`", "instance_index": 0, "syslog_drain_urls": ["url2"]},
@@ -119,15 +123,16 @@ var _ = Describe("DeaAgent", func() {
 
 				task2Connection.Write([]byte(SOCKET_PREFIX + expectedMessage + "\n"))
 
-				msg := <-mockLoggregatorEmitter.received
-				Expect(msg.GetAppId()).To(Equal("5678"))
+				Eventually(fakeLogSender.GetLogs).Should(HaveLen(1))
+				logs := fakeLogSender.GetLogs()
+				Expect(logs[0].AppId).To(Equal("5678"))
 			})
 		})
 	})
 
 	Describe("Refreshing app TTLs", func() {
 		It("periodically refreshes TTLs for app nodes", func() {
-			agent.Start(mockLoggregatorEmitter)
+			go agent.Start()
 
 			Eventually(func() int { return fakeSyslogDrainStore.AppNodeCallCount("1234") }).Should(BeNumerically(">", 1))
 			Eventually(func() int { return fakeSyslogDrainStore.AppNodeCallCount("3456") }).Should(BeNumerically(">", 1))
@@ -136,29 +141,29 @@ var _ = Describe("DeaAgent", func() {
 
 	Describe("refreshing drain URLs in etcd to recover in case of etcd failure", func() {
 		It("periodically updates the drain store", func() {
-			agent.Start(mockLoggregatorEmitter)
+			agent.Start()
 
 			Eventually(func() int { return len(fakeSyslogDrainStore.UpdateDrainCalls()) }).Should(BeNumerically(">", 2))
 		})
 	})
 
 	It("creates the correct structure on forwarded messages and does not contain drain URLs", func() {
-		agent.Start(mockLoggregatorEmitter)
+		agent.Start()
 
 		task1Connection, _ := task1StdoutListener.Accept()
 		defer task1Connection.Close()
 
 		task1Connection.Write([]byte(SOCKET_PREFIX + expectedMessage + "\n"))
 
-		receivedMessage := <-mockLoggregatorEmitter.received
-
-		Expect(receivedMessage.GetSourceType()).To(Equal("App"))
-		Expect(receivedMessage.GetMessageType()).To(Equal(events.LogMessage_OUT))
-		Expect(string(receivedMessage.GetMessage())).To(Equal(expectedMessage))
+		Eventually(fakeLogSender.GetLogs).Should(HaveLen(1))
+		logs := fakeLogSender.GetLogs()
+		Expect(logs[0].SourceType).To(Equal("App"))
+		Expect(logs[0].MessageType).To(Equal("OUT"))
+		Expect(logs[0].Message).To(Equal(expectedMessage))
 	})
 
 	It("pushes updates to syslog drain URLs to the syslog drain store", func() {
-		agent.Start(mockLoggregatorEmitter)
+		agent.Start()
 
 		expectedUpdates := []updateDrainParams{
 			{appId: "1234", drainUrls: []string{"url1"}},

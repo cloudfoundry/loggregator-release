@@ -3,11 +3,11 @@ package deaagent
 import (
 	"deaagent/domain"
 	"deaagent/syslog_drain_store"
-	"github.com/cloudfoundry/dropsonde/emitter/logemitter"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/howeyc/fsnotify"
 	"io/ioutil"
 	"path"
+	"sync"
 	"time"
 )
 
@@ -18,6 +18,8 @@ type Agent struct {
 	syslogDrainStore          syslog_drain_store.SyslogDrainStore
 	appNodeTTLRefreshInterval time.Duration
 	drainStoreRefreshInterval time.Duration
+	stopChan                  chan struct{}
+	sync.WaitGroup
 }
 
 func NewAgent(instancesJsonFilePath string, logger *gosteno.Logger, syslogDrainStore syslog_drain_store.SyslogDrainStore,
@@ -31,15 +33,23 @@ func NewAgent(instancesJsonFilePath string, logger *gosteno.Logger, syslogDrainS
 		syslogDrainStore:          syslogDrainStore,
 		appNodeTTLRefreshInterval: appNodeTTLRefreshInterval,
 		drainStoreRefreshInterval: drainStoreRefreshInterval,
+		stopChan:                  make(chan struct{}),
 	}
 }
 
-func (agent *Agent) Start(emitter logemitter.Emitter) {
-	go agent.pollInstancesJson(emitter)
+func (agent *Agent) Start() {
+	go agent.pollInstancesJson()
 	go agent.runAppNodeRefreshLoop()
 }
 
-func (agent *Agent) processTasks(currentTasks map[string]domain.Task, emitter logemitter.Emitter) func(knownTasks map[string]*TaskListener) {
+func (agent *Agent) Stop() {
+	close(agent.stopChan)
+	agent.knownInstancesChan <- resetCache
+	agent.Wait()
+	close(agent.knownInstancesChan)
+}
+
+func (agent *Agent) processTasks(currentTasks map[string]domain.Task) func(knownTasks map[string]*TaskListener) {
 	return func(knownTasks map[string]*TaskListener) {
 		agent.logger.Debug("Reading tasks data after event on instances.json")
 		agent.logger.Debugf("Current known tasks are %v", knownTasks)
@@ -77,12 +87,14 @@ func (agent *Agent) processTasks(currentTasks map[string]domain.Task, emitter lo
 			task.DrainUrls = nil
 
 			agent.logger.Debugf("Adding new task %s", task.Identifier())
-			listener := NewTaskListener(task, emitter, agent.logger)
+			listener := NewTaskListener(task, agent.logger)
 			knownTasks[identifier] = listener
 
 			go func() {
+				agent.Add(1)
 				defer func() {
 					agent.knownInstancesChan <- removeFromCache(identifier)
+					agent.Done()
 				}()
 				listener.StartListening()
 			}()
@@ -90,7 +102,10 @@ func (agent *Agent) processTasks(currentTasks map[string]domain.Task, emitter lo
 	}
 }
 
-func (agent *Agent) pollInstancesJson(emitter logemitter.Emitter) {
+func (agent *Agent) pollInstancesJson() {
+	agent.Add(1)
+	defer agent.Done()
+
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		panic(err)
@@ -107,7 +122,7 @@ func (agent *Agent) pollInstancesJson(emitter logemitter.Emitter) {
 	}
 
 	agent.logger.Info("Read initial tasks data")
-	agent.processInstancesJson(emitter)
+	agent.processInstancesJson()
 
 	ticker := time.NewTicker(agent.drainStoreRefreshInterval)
 	defer ticker.Stop()
@@ -119,23 +134,32 @@ func (agent *Agent) pollInstancesJson(emitter logemitter.Emitter) {
 			if ev.IsDelete() {
 				agent.knownInstancesChan <- resetCache
 			} else {
-				agent.processInstancesJson(emitter)
+				agent.processInstancesJson()
 			}
 		case <-ticker.C:
-			agent.processInstancesJson(emitter)
+			agent.processInstancesJson()
 		case err := <-watcher.Error:
 			agent.logger.Warnf("Received error from file system notification: %s\n", err)
+		case <-agent.stopChan:
+			return
 		}
 	}
 }
 
 func (agent *Agent) runAppNodeRefreshLoop() {
+	agent.Add(1)
+	defer agent.Done()
+
 	ticker := time.NewTicker(agent.appNodeTTLRefreshInterval)
 	defer ticker.Stop()
 
 	for {
-		<-ticker.C
-		agent.knownInstancesChan <- agent.refreshAppNodes
+		select {
+		case <-ticker.C:
+			agent.knownInstancesChan <- agent.refreshAppNodes
+		case <-agent.stopChan:
+			return
+		}
 	}
 }
 
@@ -150,13 +174,13 @@ func (agent *Agent) refreshAppNodes(currentTasks map[string]*TaskListener) {
 	}
 }
 
-func (agent *Agent) processInstancesJson(emitter logemitter.Emitter) {
+func (agent *Agent) processInstancesJson() {
 	currentTasks, err := agent.readInstancesJson()
 	if err != nil {
 		return
 	}
 
-	agent.knownInstancesChan <- agent.processTasks(currentTasks, emitter)
+	agent.knownInstancesChan <- agent.processTasks(currentTasks)
 }
 
 func (agent *Agent) readInstancesJson() (map[string]domain.Task, error) {

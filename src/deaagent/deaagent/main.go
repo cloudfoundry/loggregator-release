@@ -6,7 +6,6 @@ import (
 	"errors"
 	"flag"
 	_ "github.com/cloudfoundry/dropsonde/autowire"
-	"github.com/cloudfoundry/dropsonde/emitter/logemitter"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
@@ -112,12 +111,6 @@ func main() {
 	}
 	// ** END Config Setup
 
-	loggregatorEmitter, err := logemitter.NewEmitter(config.LoggregatorAddress, "APP", "NA", *logLevel)
-
-	if err != nil {
-		panic(err)
-	}
-
 	syslogDrainStore := newSyslogDrainStore(config, logger)
 	agent := deaagent.NewAgent(*instancesJsonFilePath, logger, syslogDrainStore, AppNodeTTLRefreshInterval, DrainStoreRefreshInterval)
 
@@ -147,7 +140,7 @@ func main() {
 			panic(err)
 		}
 	}()
-	go agent.Start(loggregatorEmitter)
+	go agent.Start()
 
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Kill, os.Interrupt)
