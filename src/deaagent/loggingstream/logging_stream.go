@@ -23,40 +23,37 @@ type LoggingStream struct {
 	messageType      events.LogMessage_MessageType
 	messagesReceived uint64
 	bytesReceived    uint64
-	sync.Mutex
+	lock             sync.RWMutex
 }
 
 func NewLoggingStream(task *domain.Task, logger *gosteno.Logger, messageType events.LogMessage_MessageType) (ls *LoggingStream) {
 	return &LoggingStream{task: task, logger: logger, messageType: messageType}
 }
 
-func (ls *LoggingStream) FetchReader(returnChan chan io.Reader) {
-	connection, err := ls.connect()
-	if err != nil {
-		ls.logger.Infof("Error while reading from socket %s, %s, %s", ls.messageType, ls.task.Identifier(), err)
-		close(returnChan)
-		return
+func (ls *LoggingStream) Read(p []byte) (n int, err error) {
+	ls.lock.Lock()
+	defer ls.lock.Unlock()
+
+	if ls.connection == nil {
+		connection, err := ls.connect()
+		if err != nil {
+			return 0, io.ErrClosedPipe
+		}
+		ls.connection = connection
 	}
-	ls.setConnection(connection)
 
-	returnChan <- connection
-	close(returnChan)
+	return ls.connection.Read(p)
 }
 
-func (ls *LoggingStream) setConnection(connection net.Conn) {
-	ls.Lock()
-	defer ls.Unlock()
-	ls.connection = connection
-}
-
-func (ls *LoggingStream) Stop() {
-	ls.Lock()
-	defer ls.Unlock()
+func (ls *LoggingStream) Close() error {
+	ls.lock.RLock()
+	defer ls.lock.RUnlock()
 
 	if ls.connection != nil {
-		ls.connection.Close()
+		return ls.connection.Close()
 	}
-	ls.logger.Infof("Stopped reading from socket %s, %s", ls.messageType, ls.task.Identifier())
+	ls.logger.Debugf("Stopped reading from socket %s, %s", ls.messageType, ls.task.Identifier())
+	return nil
 }
 
 func (ls *LoggingStream) Emit() instrumentation.Context {

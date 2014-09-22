@@ -1,10 +1,8 @@
 package loggingstream_test
 
 import (
-	"bufio"
 	"deaagent/domain"
 	"deaagent/loggingstream"
-	"fmt"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	. "github.com/onsi/ginkgo"
@@ -40,123 +38,107 @@ var _ = Describe("LoggingStream", func() {
 		loggertesthelper.TestLoggerSink.Clear()
 	})
 
-	Describe("FetchReader", func() {
+	Describe("Reading from the stream", func() {
+		Context("When the socket is open", func() {
+			BeforeEach(func() {
+				listener, _ := net.Listen("unix", socketPath)
+				go func() {
+					connection, _ := listener.Accept()
+					connection.Write([]byte("Hello World!"))
+					connection.Write([]byte("Goodbye World!"))
+					defer connection.Close()
+				}()
+			})
+			It("reads the information from the socket multiple times", func() {
+				p := make([]byte, len("Hello World!"))
+				count, err := loggingStream.Read(p)
 
-		Context("when socket never opens", func() {
-			It("closes return channel without sending", func() {
-				readerChan := make(chan io.Reader)
+				Expect(err).To(BeNil())
+				Expect(count).To(Equal(len("Hello World!")))
+				Expect(string(p)).To(ContainSubstring("Hello World!"))
 
-				go loggingStream.FetchReader(readerChan)
-				Consistently(readerChan).Should(BeEmpty())
-				_, ok := <-readerChan
-				Expect(ok).To(BeFalse())
+				p = make([]byte, len("Goodbye World!"))
+
+				count, err = readWithTimeout(1*time.Second, p, loggingStream)
+
+				Expect(err).To(BeNil())
+				Expect(count).To(Equal(len("Goodbye World!")))
+				Expect(string(p)).To(ContainSubstring("Goodbye World!"))
 			})
 		})
-
-		It("reconnects to the socket if it fails at startup", func(done Done) {
-			testMessage := "a very nice test message"
-			readerChan := make(chan io.Reader)
-			go loggingStream.FetchReader(readerChan)
-			time.Sleep(150 * time.Millisecond) // ensure that reader tries to connect before socket is opened
-
-			go sendMessageToSocket(socketPath, testMessage)
-
-			reader := <-readerChan
-
-			b, _ := ioutil.ReadAll(reader)
-
-			Expect(string(b)).To(ContainSubstring(testMessage))
-			logContents := loggertesthelper.TestLoggerSink.LogContents()
-			Expect(string(logContents)).To(ContainSubstring("Could not read from socket OUT"))
-			Expect(string(logContents)).To(ContainSubstring("Opened socket OUT"))
-
-			close(done)
-		})
-
-		Context("with a socket already running", func() {
-			var listener net.Listener
-			var messagesToSend chan string
-
+		Context("When the socket is closed by the app", func() {
 			BeforeEach(func() {
-				listener, _ = net.Listen("unix", socketPath)
-				messagesToSend = make(chan string)
+				listener, _ := net.Listen("unix", socketPath)
 				go func() {
 					connection, _ := listener.Accept()
 					defer connection.Close()
-					for msg := range messagesToSend {
-						loggertesthelper.Logger().Debugf("writing %s", msg)
-						connection.Write([]byte(msg))
-					}
 				}()
 			})
-
-			AfterEach(func() {
-				listener.Close()
-				close(messagesToSend)
-			})
-
-			It("reads from the socket", func(done Done) {
-				readerChan := make(chan io.Reader)
-				go loggingStream.FetchReader(readerChan)
-				reader := <-readerChan
-				scanner := bufio.NewScanner(reader)
-
-				for i := 0; i < 5; i++ {
-					time.Sleep(100 * time.Millisecond)
-					testMessage := fmt.Sprintf("Another Test Message %d", i)
-					messagesToSend <- testMessage + "\n"
-
-					message, _ := readLineFromScanner(scanner)
-
-					Expect(string(message)).To(Equal(testMessage))
-				}
-
-				logContents := loggertesthelper.TestLoggerSink.LogContents()
-				Expect(string(logContents)).To(ContainSubstring("Opened socket OUT"))
-				close(done)
-			}, 5)
-		})
-	})
-
-	Describe("Stop", func() {
-		Context("when connected", func() {
-			var readerChan chan io.Reader
-			BeforeEach(func() {
-				readerChan = make(chan io.Reader)
-				go sendMessageToSocket(socketPath, "don't care")
-				go loggingStream.FetchReader(readerChan)
-			})
-
-			It("closes the listener connection", func() {
-				loggingStream.Stop()
-				buf := []byte{}
-				reader := <-readerChan
-				n, err := reader.Read(buf)
-				Expect(n).To(BeZero())
+			It("you get an EOF", func() {
+				p := make([]byte, 1024)
+				_, err := loggingStream.Read(p)
 				Expect(err).To(Equal(io.EOF))
 			})
 		})
+		Context("when socket never opens", func() {
+			It("returns a ErrClosedPipe error and 0 bytes ", func() {
+				p := make([]byte, 1024)
+				count, err := loggingStream.Read(p)
 
-		It("does not panic when called a second time", func() {
-			loggingStream.Stop()
-			Expect(loggingStream.Stop).NotTo(Panic())
+				Expect(err).To(Equal(io.ErrClosedPipe))
+				Expect(count).To(Equal(0))
+			})
+		})
+	})
+	Describe("Close", func() {
+		Context("after read is called", func() {
+			It("closes the socket connection", func() {
+				listener, _ := net.Listen("unix", socketPath)
+				var connection net.Conn
+				go func() {
+					connection, _ = listener.Accept()
+					connection.Write([]byte("Hello World!"))
+				}()
+
+				p := make([]byte, 1024)
+				loggingStream.Read(p)
+
+				loggingStream.Close()
+
+				_, err := connection.Write([]byte("Hello World!"))
+				Expect(err).ToNot(BeNil())
+			})
+		})
+
+		Context("if read is not called", func() {
+			It("does not panic", func() {
+				listener, _ := net.Listen("unix", socketPath)
+				var connection net.Conn
+				go func() {
+					connection, _ = listener.Accept()
+				}()
+
+				loggingStream.Close()
+			})
 		})
 	})
 })
 
-func sendMessageToSocket(path, message string) {
-	listener, _ := net.Listen("unix", path)
-	defer listener.Close()
-	connection, _ := listener.Accept()
-	defer connection.Close()
-	connection.Write([]byte(message + "\n"))
-}
+func readWithTimeout(duration time.Duration, p []byte, reader io.Reader) (int, error) {
+	doneChan := make(chan struct{})
 
-func readLineFromScanner(scanner *bufio.Scanner) (string, error) {
-	scanner.Scan()
-	if scanner.Err() == nil {
-		return scanner.Text(), nil
+	var count int
+	var err error
+
+	go func() {
+		count, err = reader.Read(p)
+		close(doneChan)
+	}()
+
+	select {
+	case <-time.After(duration):
+		panic("Read timed out")
+	case <-doneChan:
+		return count, err
 	}
-
-	return "", scanner.Err()
 }

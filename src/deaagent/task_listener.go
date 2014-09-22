@@ -13,7 +13,7 @@ import (
 type TaskListener struct {
 	*gosteno.Logger
 	taskIdentifier                 string
-	stdOutListener, stdErrListener *loggingstream.LoggingStream
+	stdOutListener, stdErrListener io.ReadCloser
 	task                           domain.Task
 	closeChan                      chan struct{}
 }
@@ -34,32 +34,17 @@ func (tl *TaskListener) Task() domain.Task {
 }
 
 func (tl *TaskListener) StartListening() {
-	tl.Infof("Starting to listen to %v\n", tl.taskIdentifier)
-
-	stdOutReaderChan := make(chan io.Reader)
-	stdErrReaderChan := make(chan io.Reader)
-	go tl.stdOutListener.FetchReader(stdOutReaderChan)
-	go tl.stdErrListener.FetchReader(stdErrReaderChan)
-
-	stdOutReader, ok := <-stdOutReaderChan
-	if !ok {
-		tl.Errorf("TaskListener.StartListening: could not open reader for STDOUT for task %s", tl.taskIdentifier)
-		return
-	}
-	stdErrReader, ok := <-stdErrReaderChan
-	if !ok {
-		tl.Errorf("TaskListener.StartListening: could not open reader for STDERR for task %s", tl.taskIdentifier)
-		return
-	}
-
-	go logs.ScanLogStream(tl.task.ApplicationId, tl.task.SourceName, strconv.FormatUint(tl.task.Index, 10), stdOutReader, tl.closeChan)
-	go logs.ScanErrorLogStream(tl.task.ApplicationId, tl.task.SourceName, strconv.FormatUint(tl.task.Index, 10), stdErrReader, tl.closeChan)
+	tl.Debugf("TaskListener.StartListening: Starting to listen to %v\n", tl.taskIdentifier)
+	tl.Debugf("TaskListener.StartListening: Scanning logs for %s", tl.task.ApplicationId)
+	go logs.ScanLogStream(tl.task.ApplicationId, tl.task.SourceName, strconv.FormatUint(tl.task.Index, 10), tl.stdOutListener, tl.closeChan)
+	go logs.ScanErrorLogStream(tl.task.ApplicationId, tl.task.SourceName, strconv.FormatUint(tl.task.Index, 10), tl.stdErrListener, tl.closeChan)
 
 	<-tl.closeChan
 }
 
 func (tl *TaskListener) StopListening() {
-	tl.stdOutListener.Stop()
-	tl.stdErrListener.Stop()
+	tl.stdOutListener.Close()
+	tl.stdErrListener.Close()
+	tl.Debugf("TaskListener.StopListening: Shutting down logs for %s", tl.task.ApplicationId)
 	close(tl.closeChan)
 }

@@ -6,12 +6,11 @@ import (
 	"github.com/cloudfoundry/dropsonde/autowire/logs"
 	"github.com/cloudfoundry/dropsonde/log_sender/fake"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"io/ioutil"
 	"net"
 	"os"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var testLogger = loggertesthelper.Logger()
