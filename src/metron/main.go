@@ -14,6 +14,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/loggregatorlib/clientpool"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/storeadapter/workerpool"
@@ -49,7 +50,7 @@ func main() {
 	legacyMessageListener, legacyMessageChan := agentlistener.NewAgentListener("localhost:"+strconv.Itoa(config.LegacyIncomingMessagesPort), logger, "legacyAgentListener")
 
 	dropsondeMessageListener, dropsondeMessageChan := agentlistener.NewAgentListener("localhost:"+strconv.Itoa(config.DropsondeIncomingMessagesPort), logger, "dropsondeAgentListener")
-	dropsondePoolEtcdAdapter, dropsondeClientPool := initializeClientPool(config, logger, config.LoggregatorDropsondePort)
+	dropsondeClientPool, dropsondeServerDiscovery := initializeClientPool(config, logger, config.LoggregatorDropsondePort)
 
 	legacyUnmarshaller := legacy_unmarshaller.NewLegacyUnmarshaller(logger)
 	legacyMessageConverter := legacy_message_converter.NewLegacyMessageConverter(logger)
@@ -95,7 +96,7 @@ func main() {
 	signedMessageChan := make(chan ([]byte))
 	go signMessages(config.SharedSecret, reMarshalledMessageChan, signedMessageChan)
 
-	go dropsondeClientPool.RunUpdateLoop(dropsondePoolEtcdAdapter, "/healthstatus/doppler/"+config.Zone, nil, time.Duration(config.EtcdQueryIntervalMilliseconds)*time.Millisecond)
+	go dropsondeServerDiscovery.Run(time.Duration(config.EtcdQueryIntervalMilliseconds) * time.Millisecond)
 
 	forwardMessagesToDoppler(dropsondeClientPool, signedMessageChan, logger)
 }
@@ -113,15 +114,17 @@ func startMonitoringEndpoints(component *cfcomponent.Component, logger *gosteno.
 	}
 }
 
-func initializeClientPool(config Config, logger *gosteno.Logger, port int) (storeadapter.StoreAdapter, *clientpool.LoggregatorClientPool) {
+func initializeClientPool(config Config, logger *gosteno.Logger, port int) (*clientpool.LoggregatorClientPool, servicediscovery.ServerAddressList) {
 	adapter := StoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	err := adapter.Connect()
 	if err != nil {
 		logger.Errorf("Error connecting to ETCD: %v", err)
 	}
 
-	clientPool := clientpool.NewLoggregatorClientPool(logger, port)
-	return adapter, clientPool
+	serverAddressDiscovery := servicediscovery.NewServerAddressList(adapter, "/healthstatus/doppler/"+config.Zone, logger)
+
+	clientPool := clientpool.NewLoggregatorClientPool(logger, port, serverAddressDiscovery)
+	return clientPool, serverAddressDiscovery
 }
 
 type Config struct {
