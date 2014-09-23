@@ -146,17 +146,17 @@ Follow these steps to make a contribution to any of our open source repositories
 
 Once your commits are approved by Travis CI and reviewed by the core team, they will be merged.
 
-#### Installing on OS X
+#### OS X prequisites
 
 Use brew and do
 
-    brew install direnv
     brew install go --cross-compile-all
-
-Install go vet
-
-    go get code.google.com/p/go.tools/cmd/vet
-
+    brew install direnv
+    
+Make sure you add the proper entry to load direnv into your shell. See `brew info direnv`
+for details. To be safe, close the terminal window that you are using to make sure the 
+changes to your shell are applied.
+    
 #### Checkout
 
 ```
@@ -164,6 +164,13 @@ git clone https://github.com/cloudfoundry/loggregator
 cd loggregator # When you cd into the loggregator dir for the first time direnv will prompt you to trust the config file
 git submodule update --init
 ```
+
+#### Additional go tools
+
+Install go vet and go cover
+
+    go get code.google.com/p/go.tools/cmd/vet
+    go get code.google.com/p/go.tools/cmd/cover
 
 #### Running tests
 
