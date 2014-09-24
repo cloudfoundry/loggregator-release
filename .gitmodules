@@ -52,3 +52,6 @@
 [submodule "src/github.com/apcera/nats"]
 	path = src/github.com/apcera/nats
 	url = https://github.com/apcera/nats
+[submodule "src/github.com/cloudfoundry/noaa"]
+	path = src/github.com/cloudfoundry/noaa
+	url = git@github.com:cloudfoundry/noaa.git
