@@ -1,14 +1,16 @@
 package varz_forwarder_test
 
 import (
-	"github.com/cloudfoundry/dropsonde/events"
 	"metron/varz_forwarder"
+	"time"
 
+	"code.google.com/p/gogoprotobuf/proto"
+	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"time"
 )
 
 var _ = Describe("VarzForwarder", func() {
@@ -21,7 +23,7 @@ var _ = Describe("VarzForwarder", func() {
 	BeforeEach(func() {
 		forwarder = varz_forwarder.NewVarzForwarder("test-component", time.Millisecond*100, loggertesthelper.Logger())
 		metricChan = make(chan *events.Envelope)
-		outputChan = make(chan *events.Envelope, 2)
+		outputChan = make(chan *events.Envelope, 1024)
 	})
 
 	var perform = func() {
@@ -54,17 +56,51 @@ var _ = Describe("VarzForwarder", func() {
 			Expect(metric2.Value).To(BeNumerically("==", 2))
 		})
 
+		It("includes metrics for http request count", func() {
+			perform()
+			metricChan <- httpmetric("origin", 100)
+			metricChan <- httpmetric("origin", 199)
+			metricChan <- httpmetric("origin", 200)
+			metricChan <- httpmetric("origin", 299)
+			metricChan <- httpmetric("origin", 300)
+			metricChan <- httpmetric("origin", 399)
+			metricChan <- httpmetric("origin", 400)
+			metricChan <- httpmetric("origin", 499)
+			metricChan <- httpmetric("origin", 500)
+			metricChan <- httpmetric("origin", 599)
+
+			Eventually(func() []instrumentation.Metric { return forwarder.Emit().Metrics }).Should(HaveLen(6))
+			Eventually(func() interface{} { return findMetricByName(forwarder.Emit().Metrics, "origin.requestCount").Value }).Should(BeNumerically("==", 10))
+
+			varz := forwarder.Emit()
+
+			metric := findMetricByName(varz.Metrics, "origin.responseCount1XX")
+			Expect(metric.Value).To(BeNumerically("==", 2))
+
+			metric = findMetricByName(varz.Metrics, "origin.responseCount2XX")
+			Expect(metric.Value).To(BeNumerically("==", 2))
+
+			metric = findMetricByName(varz.Metrics, "origin.responseCount3XX")
+			Expect(metric.Value).To(BeNumerically("==", 2))
+
+			metric = findMetricByName(varz.Metrics, "origin.responseCount4XX")
+			Expect(metric.Value).To(BeNumerically("==", 2))
+
+			metric = findMetricByName(varz.Metrics, "origin.responseCount5XX")
+			Expect(metric.Value).To(BeNumerically("==", 2))
+		})
+
 		It("increments value for each CounterEvent name in a given origin", func() {
 			perform()
-			metricChan <- counterEvent("origin-0", "metric-1")
-			metricChan <- counterEvent("origin-0", "metric-1")
-			metricChan <- counterEvent("origin-1", "metric-1")
+			metricChan <- counterEvent("origin-0", "metric-1", 1)
+			metricChan <- counterEvent("origin-0", "metric-1", 3)
+			metricChan <- counterEvent("origin-1", "metric-1", 1)
 
 			var varz instrumentation.Context
 			Eventually(func() []instrumentation.Metric { varz = forwarder.Emit(); return varz.Metrics }).Should(HaveLen(2))
 
 			metric1 := findMetricByName(varz.Metrics, "origin-0.metric-1")
-			Expect(metric1.Value).To(BeNumerically("==", 2))
+			Expect(metric1.Value).To(BeNumerically("==", 4))
 
 			metric2 := findMetricByName(varz.Metrics, "origin-1.metric-1")
 			Expect(metric2.Value).To(BeNumerically("==", 1))
@@ -161,11 +197,11 @@ func metric(origin, name string, value float64) *events.Envelope {
 	}
 }
 
-func counterEvent(origin, name string) *events.Envelope {
+func counterEvent(origin, name string, delta uint64) *events.Envelope {
 	return &events.Envelope{
 		Origin:       &origin,
 		EventType:    events.Envelope_CounterEvent.Enum(),
-		CounterEvent: &events.CounterEvent{Name: &name},
+		CounterEvent: &events.CounterEvent{Name: &name, Delta: proto.Uint64(delta)},
 	}
 }
 
@@ -177,8 +213,15 @@ func heartbeat(origin string) *events.Envelope {
 	}
 }
 
-func findMetricByName(metrics []instrumentation.Metric, metricName string) *instrumentation.Metric {
+func httpmetric(origin string, status int32) *events.Envelope {
+	return &events.Envelope{
+		Origin:        &origin,
+		EventType:     events.Envelope_HttpStartStop.Enum(),
+		HttpStartStop: &events.HttpStartStop{StatusCode: &status},
+	}
+}
 
+func findMetricByName(metrics []instrumentation.Metric, metricName string) *instrumentation.Metric {
 	for _, metric := range metrics {
 		if metric.Name == metricName {
 			return &metric

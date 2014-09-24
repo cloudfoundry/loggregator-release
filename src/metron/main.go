@@ -86,14 +86,14 @@ func main() {
 
 	go unmarshaller.Run(dropsondeMessageChan, dropsondeEventChan)
 
-	varzForwardedEventChan := make(chan *events.Envelope)
-	go varzForwarder.Run(dropsondeEventChan, varzForwardedEventChan)
+	aggregatedEventChan := make(chan *events.Envelope)
+	go messageAggregator.Run(dropsondeEventChan, aggregatedEventChan)
 
-	aggregatedDropsondeEventChan := make(chan *events.Envelope)
-	go messageAggregator.Run(varzForwardedEventChan, aggregatedDropsondeEventChan)
+	forwardedEventChan := make(chan *events.Envelope)
+	go varzForwarder.Run(aggregatedEventChan, forwardedEventChan)
 
 	reMarshalledMessageChan := make(chan []byte)
-	go marshaller.Run(aggregatedDropsondeEventChan, reMarshalledMessageChan)
+	go marshaller.Run(forwardedEventChan, reMarshalledMessageChan)
 
 	signedMessageChan := make(chan ([]byte))
 	go signMessages(config.SharedSecret, reMarshalledMessageChan, signedMessageChan)

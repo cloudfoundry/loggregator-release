@@ -2,11 +2,12 @@ package varz_forwarder
 
 import (
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"sync"
-	"time"
 )
 
 type VarzForwarder struct {
@@ -14,12 +15,6 @@ type VarzForwarder struct {
 	componentName   string
 	ttl             time.Duration
 	logger          *gosteno.Logger
-	sync.RWMutex
-}
-
-type metrics struct {
-	metricsByName map[string]float64
-	timer         *time.Timer
 	sync.RWMutex
 }
 
@@ -41,24 +36,6 @@ func (vf *VarzForwarder) Run(metricChan <-chan *events.Envelope, outputChan chan
 	}
 }
 
-func (vf *VarzForwarder) addMetric(metric *events.Envelope) {
-	metricProcessor, ok := metricProcessorsByType[metric.GetEventType()]
-	if !ok {
-		return
-	}
-
-	vf.Lock()
-	defer vf.Unlock()
-
-	originMetrics, ok := vf.metricsByOrigin[metric.GetOrigin()]
-	if !ok {
-		vf.metricsByOrigin[metric.GetOrigin()] = vf.createMetrics(metric.GetOrigin())
-		originMetrics = vf.metricsByOrigin[metric.GetOrigin()]
-	}
-
-	metricProcessor(originMetrics, metric)
-}
-
 func (vf *VarzForwarder) Emit() instrumentation.Context {
 	vf.RLock()
 	defer vf.RUnlock()
@@ -78,6 +55,19 @@ func (vf *VarzForwarder) Emit() instrumentation.Context {
 
 	c.Metrics = metrics
 	return c
+}
+
+func (vf *VarzForwarder) addMetric(metric *events.Envelope) {
+	vf.Lock()
+	defer vf.Unlock()
+
+	originMetrics, ok := vf.metricsByOrigin[metric.GetOrigin()]
+	if !ok {
+		vf.metricsByOrigin[metric.GetOrigin()] = vf.createMetrics(metric.GetOrigin())
+		originMetrics = vf.metricsByOrigin[metric.GetOrigin()]
+	}
+
+	originMetrics.ProcessMetric(metric)
 }
 
 func (vf *VarzForwarder) createMetrics(origin string) *metrics {
@@ -106,28 +96,50 @@ func (vf *VarzForwarder) resetTimer(origin string) {
 	}
 }
 
-var metricProcessorsByType = map[events.Envelope_EventType]func(*metrics, *events.Envelope){
-	events.Envelope_ValueMetric:  (*metrics).processValueMetric,
-	events.Envelope_CounterEvent: (*metrics).processCounterEvent,
+type metrics struct {
+	metricsByName map[string]float64
+	timer         *time.Timer
+}
+
+func (metrics *metrics) ProcessMetric(metric *events.Envelope) {
+	switch metric.GetEventType() {
+	case events.Envelope_ValueMetric:
+		metrics.processValueMetric(metric)
+	case events.Envelope_CounterEvent:
+		metrics.processCounterEvent(metric)
+	case events.Envelope_HttpStartStop:
+		metrics.processHttpStartStop(metric)
+	}
 }
 
 func (metrics *metrics) processValueMetric(metric *events.Envelope) {
-	metrics.RLock()
-	defer metrics.RUnlock()
-
 	metrics.metricsByName[metric.GetValueMetric().GetName()] = metric.GetValueMetric().GetValue()
 }
 
 func (metrics *metrics) processCounterEvent(metric *events.Envelope) {
-	metrics.Lock()
-	defer metrics.Unlock()
-
 	eventName := metric.GetCounterEvent().GetName()
-	count, ok := metrics.metricsByName[eventName]
+	count := metrics.metricsByName[eventName]
+	metrics.metricsByName[eventName] = count + float64(metric.GetCounterEvent().GetDelta())
+}
 
-	if !ok {
-		metrics.metricsByName[eventName] = 1
-	} else {
-		metrics.metricsByName[eventName] = count + 1
+func (metrics *metrics) processHttpStartStop(metric *events.Envelope) {
+	eventName := "requestCount"
+	count := metrics.metricsByName[eventName]
+	metrics.metricsByName[eventName] = count + 1
+
+	startStop := metric.GetHttpStartStop()
+	status := startStop.GetStatusCode()
+	switch {
+	case status >= 100 && status < 200:
+		metrics.metricsByName["responseCount1XX"] = metrics.metricsByName["responseCount1XX"] + 1
+	case status >= 200 && status < 300:
+		metrics.metricsByName["responseCount2XX"] = metrics.metricsByName["responseCount2XX"] + 1
+	case status >= 300 && status < 400:
+		metrics.metricsByName["responseCount3XX"] = metrics.metricsByName["responseCount3XX"] + 1
+	case status >= 400 && status < 500:
+		metrics.metricsByName["responseCount4XX"] = metrics.metricsByName["responseCount4XX"] + 1
+	case status >= 500 && status < 600:
+		metrics.metricsByName["responseCount5XX"] = metrics.metricsByName["responseCount5XX"] + 1
+	default:
 	}
 }
