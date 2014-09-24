@@ -5,7 +5,9 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/json"
+	"github.com/apcera/nats"
 	"github.com/cloudfoundry/dropsonde/events"
+	"github.com/cloudfoundry/gunk/natsrunner"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/localip"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
@@ -17,17 +19,20 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 )
 
+const NATS_PORT = 24484
+
 var _ = BeforeSuite(func() {
 	pathToMetronExecutable, err := gexec.Build("metron")
 	Expect(err).ShouldNot(HaveOccurred())
 
-	command := exec.Command(pathToMetronExecutable, "--configFile=fixtures/metron.json")
+	command := exec.Command(pathToMetronExecutable, "--configFile=fixtures/metron.json", "--debug")
 
 	session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).ShouldNot(HaveOccurred())
@@ -67,7 +72,23 @@ var _ = BeforeEach(func() {
 
 var _ = Describe("Metron", func() {
 
-	Context("/varz", func() {
+	Context("collector registration", func() {
+		It("registers itself with the collector", func() {
+			natsRunner := natsrunner.NewNATSRunner(NATS_PORT)
+			natsRunner.Start()
+			defer natsRunner.Stop()
+
+			messageChan := make(chan []byte)
+			natsClient := natsRunner.MessageBus
+			natsClient.Subscribe(collectorregistrar.AnnounceComponentMessageSubject, func(msg *nats.Msg) {
+				messageChan <- msg.Data
+			})
+
+			Eventually(messageChan).Should(Receive(MatchRegexp(`^\{"type":"MetronAgent","index":42,"host":"[^:]*:1234","uuid":"42-","credentials":\["admin","admin"\]\}$`)))
+		})
+	})
+
+	Context("/varz endpoint", func() {
 
 		var getVarzMessage = func() *instrumentation.VarzMessage {
 			req, _ := http.NewRequest("GET", "http://"+localIPAddress+":1234/varz", nil)

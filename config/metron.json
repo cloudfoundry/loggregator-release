@@ -12,5 +12,6 @@
     "EtcdQueryIntervalMilliseconds": 10,
     "Zone": "z1",
     "LoggregatorLegacyPort": 3456,
-    "LoggregatorDropsondePort": 3457
+    "LoggregatorDropsondePort": 3457,
+    "CollectorRegistrarIntervalMilliseconds": 60000
 }

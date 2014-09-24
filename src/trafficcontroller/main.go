@@ -15,7 +15,7 @@ import (
 	_ "github.com/cloudfoundry/dropsonde/autowire"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
+	collectorregistrar "github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/legacycollectorregistrar"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar"
 	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
 	"github.com/cloudfoundry/storeadapter"

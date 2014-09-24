@@ -69,7 +69,9 @@ func main() {
 		marshaller,
 	}
 
-	component := InitializeComponent(DefaultRegistrarFactory, config, logger, instrumentables)
+	component := InitializeComponent(config, logger, instrumentables)
+
+	go collectorregistrar.NewCollectorRegistrar(cfcomponent.DefaultYagnatsClientProvider, component, time.Duration(config.CollectorRegistrarIntervalMilliseconds)*time.Millisecond, &config.Config).Run(nil)
 
 	go startMonitoringEndpoints(component, logger)
 	dropsondeEventChan := make(chan *events.Envelope)
@@ -108,7 +110,7 @@ func signMessages(sharedSecret string, dropsondeMessageChan <-chan ([]byte), sig
 	}
 }
 
-func startMonitoringEndpoints(component *cfcomponent.Component, logger *gosteno.Logger) {
+func startMonitoringEndpoints(component cfcomponent.Component, logger *gosteno.Logger) {
 	if err := component.StartMonitoringEndpoints(); err != nil {
 		component.Logger.Error(err.Error())
 	}
@@ -129,17 +131,18 @@ func initializeClientPool(config Config, logger *gosteno.Logger, port int) (*cli
 
 type Config struct {
 	cfcomponent.Config
-	Zone                          string
-	Index                         uint
-	Job                           string
-	LegacyIncomingMessagesPort    int
-	DropsondeIncomingMessagesPort int
-	EtcdUrls                      []string
-	EtcdMaxConcurrentRequests     int
-	EtcdQueryIntervalMilliseconds int
-	LoggregatorLegacyPort         int
-	LoggregatorDropsondePort      int
-	SharedSecret                  string
+	Zone                                   string
+	Index                                  uint
+	Job                                    string
+	LegacyIncomingMessagesPort             int
+	DropsondeIncomingMessagesPort          int
+	EtcdUrls                               []string
+	EtcdMaxConcurrentRequests              int
+	EtcdQueryIntervalMilliseconds          int
+	LoggregatorLegacyPort                  int
+	LoggregatorDropsondePort               int
+	SharedSecret                           string
+	CollectorRegistrarIntervalMilliseconds int
 }
 
 type MetronHealthMonitor struct{}
@@ -148,16 +151,7 @@ func (*MetronHealthMonitor) Ok() bool {
 	return true
 }
 
-type RegistrarFactory func(mBusClient yagnats.ApceraWrapperNATSClient, logger *gosteno.Logger) CollectorRegistrar
-type CollectorRegistrar interface {
-	RegisterWithCollector(cfc cfcomponent.Component) error
-}
-
-func DefaultRegistrarFactory(mBusClient yagnats.ApceraWrapperNATSClient, logger *gosteno.Logger) CollectorRegistrar {
-	return collectorregistrar.NewCollectorRegistrar(mBusClient, logger)
-}
-
-func InitializeComponent(registrarFactory RegistrarFactory, config Config, logger *gosteno.Logger, instrumentables []instrumentation.Instrumentable) *cfcomponent.Component {
+func InitializeComponent(config Config, logger *gosteno.Logger, instrumentables []instrumentation.Instrumentable) cfcomponent.Component {
 	if len(config.NatsHosts) == 0 {
 		logger.Warn("Startup: Did not receive a NATS host - not going to register component")
 		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.ApceraWrapperNATSClient, error) {
@@ -165,23 +159,12 @@ func InitializeComponent(registrarFactory RegistrarFactory, config Config, logge
 		}
 	}
 
-	err := config.Validate(logger)
-	if err != nil {
-		panic(err)
-	}
-
 	component, err := cfcomponent.NewComponent(logger, "MetronAgent", config.Index, &MetronHealthMonitor{}, config.VarzPort, []string{config.VarzUser, config.VarzPass}, instrumentables)
 	if err != nil {
 		panic(err)
 	}
 
-	registrar := registrarFactory(config.MbusClient, logger)
-	err = registrar.RegisterWithCollector(component)
-	if err != nil {
-		logger.Warnf("Unable to register with collector. Err: %v.", err)
-	}
-
-	return &component
+	return component
 }
 
 func parseConfig(debug bool, configFile, logFilePath string) (Config, *gosteno.Logger) {

@@ -9,7 +9,7 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
+	collectorregistrar "github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/legacycollectorregistrar"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/storeadapter/workerpool"
 	"github.com/cloudfoundry/yagnats"

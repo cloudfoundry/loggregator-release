@@ -1,5 +1,5 @@
 {
-    "Index": 0,
+    "Index": 42,
     "Job": "test-component",
     "VarzPort": 1234,
     "VarzUser": "admin",
@@ -13,5 +13,10 @@
     "EtcdQueryIntervalMilliseconds": 10,
     "Zone": "z1",
     "LoggregatorLegacyPort": 3456,
-    "LoggregatorDropsondePort": 3457
+    "LoggregatorDropsondePort": 3457,
+    "CollectorRegistrarIntervalMilliseconds": 10,
+    "NatsHosts": ["127.0.0.1"],
+    "NatsPort": 24484,
+    "NatsUser": "nats",
+    "NatsPass": "nats"
 }
