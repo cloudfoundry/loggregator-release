@@ -28,7 +28,7 @@ var _ = AfterSuite(func() {
 })
 
 func TestTrafficcontroller(t *testing.T) {
-	cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.ApceraWrapperNATSClient, error) {
+	cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.NATSConn, error) {
 		return nil, nil
 	}
 	RegisterFailHandler(Fail)
