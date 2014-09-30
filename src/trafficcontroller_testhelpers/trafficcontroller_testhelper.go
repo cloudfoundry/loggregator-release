@@ -18,15 +18,25 @@ func SuccessfulAuthorizer(authToken string, target string, l *gosteno.Logger) bo
 	return authToken == VALID_AUTHENTICATION_TOKEN
 }
 
-type Authorizer struct {
+type LogAuthorizer struct {
 	TokenParam string
 	Target     string
 	Result     bool
 }
 
-func (a *Authorizer) Authorize(authToken string, target string, l *gosteno.Logger) bool {
+func (a *LogAuthorizer) Authorize(authToken string, target string, l *gosteno.Logger) bool {
 	a.TokenParam = authToken
 	a.Target = target
+
+	return a.Result
+}
+type AdminAuthorizer struct {
+	TokenParam string
+	Result     bool
+}
+
+func (a *AdminAuthorizer) Authorize(authToken string, l *gosteno.Logger) bool {
+	a.TokenParam = authToken
 
 	return a.Result
 }

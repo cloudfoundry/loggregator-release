@@ -6,11 +6,11 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"net/http"
-	"trafficcontroller/dopplerproxy"
+	"trafficcontroller/doppler_endpoint"
 )
 
-func NewLegacyHandlerProvider(dopplerHandlerProvider dopplerproxy.HandlerProvider) dopplerproxy.HandlerProvider {
-	return func(endpoint string, messages <-chan []byte, logger *gosteno.Logger) http.Handler {
+func NewLegacyHandlerProvider(dopplerHandlerProvider doppler_endpoint.HandlerProvider) doppler_endpoint.HandlerProvider {
+	return func(messages <-chan []byte, logger *gosteno.Logger) http.Handler {
 
 		legacyMessageChan := make(chan []byte)
 
@@ -24,7 +24,7 @@ func NewLegacyHandlerProvider(dopplerHandlerProvider dopplerproxy.HandlerProvide
 			}
 		}()
 
-		return dopplerHandlerProvider(endpoint, legacyMessageChan, logger)
+		return dopplerHandlerProvider(legacyMessageChan, logger)
 	}
 }
 

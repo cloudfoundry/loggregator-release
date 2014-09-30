@@ -7,39 +7,36 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"github.com/cloudfoundry/loggregatorlib/server/handlers"
 	"net/http"
 	"net/url"
 	"regexp"
 	"time"
 	"trafficcontroller/authorization"
 	"trafficcontroller/channel_group_connector"
+	"trafficcontroller/doppler_endpoint"
 )
 
-var WebsocketKeepAliveDuration = 30 * time.Second
+const (
+	FIREHOSE_ID = "firehose"
+)
 
 type Proxy struct {
-	authorize       authorization.LogAccessAuthorizer
-	handlerProvider HandlerProvider
+	logAuthorize    authorization.LogAccessAuthorizer
+	adminAuthorize  authorization.AdminAccessAuthorizer
+	handlerProvider doppler_endpoint.HandlerProvider
 	connector       channel_group_connector.ChannelGroupConnector
 	logger          *gosteno.Logger
 	cfcomponent.Component
 }
 
-type HandlerProvider func(string, <-chan []byte, *gosteno.Logger) http.Handler
+type Authorizer func(appId, authToken string, logger *gosteno.Logger) bool
 
-func DefaultHandlerProvider(endpoint string, messages <-chan []byte, logger *gosteno.Logger) http.Handler {
-	switch endpoint {
-	case "recentlogs":
-		return handlers.NewHttpHandler(messages, logger)
-	case "stream":
-		fallthrough
-	default:
-		return handlers.NewWebsocketHandler(messages, WebsocketKeepAliveDuration, logger)
-	}
-}
-
-func NewDopplerProxy(authorizer authorization.LogAccessAuthorizer, handlerProvider HandlerProvider, connector channel_group_connector.ChannelGroupConnector, config cfcomponent.Config, logger *gosteno.Logger) *Proxy {
+func NewDopplerProxy(logAuthorize authorization.LogAccessAuthorizer,
+	adminAuthorizer authorization.AdminAccessAuthorizer,
+	handlerProvider doppler_endpoint.HandlerProvider,
+	connector channel_group_connector.ChannelGroupConnector,
+	config cfcomponent.Config,
+	logger *gosteno.Logger) *Proxy {
 	var instrumentables []instrumentation.Instrumentable
 
 	cfc, err := cfcomponent.NewComponent(
@@ -58,28 +55,63 @@ func NewDopplerProxy(authorizer authorization.LogAccessAuthorizer, handlerProvid
 
 	return &Proxy{
 		Component:       cfc,
-		authorize:       authorizer,
+		logAuthorize:    logAuthorize,
+		adminAuthorize:  adminAuthorizer,
 		handlerProvider: handlerProvider,
 		connector:       connector,
 		logger:          logger,
 	}
 }
 
-func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
-	proxy.logger.Debugf("doppler proxy: ServeHTTP entered with request %v", req)
+func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	proxy.logger.Debugf("doppler proxy: ServeHTTP entered with request %v", request)
 	defer proxy.logger.Debugf("doppler proxy: ServeHTTP exited")
 
-	if req.Method == "HEAD" {
+	if request.Method == "HEAD" {
 		return
 	}
 
-	clientAddress := req.RemoteAddr
+	isFirehosePath, _ := regexp.MatchString(FIREHOSE_ID, request.URL.Path)
+	if isFirehosePath {
+		proxy.serveFirehose(writer, request)
+	} else {
+		proxy.serveAppLogs(writer, request)
+	}
+}
+
+func (proxy *Proxy) serveFirehose(writer http.ResponseWriter, request *http.Request) {
+	clientAddress := request.RemoteAddr
+	authToken := getAuthToken(request)
+
+	dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint(FIREHOSE_ID, FIREHOSE_ID, true)
+
+	authorizer := func(appId, authToken string, logger *gosteno.Logger) bool {
+		return proxy.adminAuthorize(authToken, logger)
+	}
+
+	authorized, errorMessage := proxy.isAuthorized(authorizer, FIREHOSE_ID, authToken, clientAddress)
+	if !authorized {
+		writer.Header().Set("WWW-Authenticate", "Basic")
+		writer.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprintf(writer, "You are not authorized. %s", errorMessage.GetMessage())
+		return
+	}
+
+	//proxy.serveWithDoppler(writer, request, endpoint, appId, reconnect)
+	proxy.serveWithDoppler(writer, request, dopplerEndpoint)
+
+}
+
+func (proxy *Proxy) serveAppLogs(writer http.ResponseWriter, request *http.Request) {
+	clientAddress := request.RemoteAddr
+	authToken := getAuthToken(request)
+
 	validPaths := regexp.MustCompile("^/apps/(.*)/(recentlogs|stream)$")
-	matches := validPaths.FindStringSubmatch(req.URL.Path)
+	matches := validPaths.FindStringSubmatch(request.URL.Path)
 	if len(matches) != 3 {
 		writer.Header().Set("WWW-Authenticate", "Basic")
 		writer.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(writer, "Resource Not Found. %s", req.URL.Path)
+		fmt.Fprintf(writer, "Resource Not Found. %s", request.URL.Path)
 		return
 	}
 	appId := matches[1]
@@ -90,11 +122,12 @@ func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(writer, "App ID missing. Make request to /apps/APP_ID/%s", matches[2])
 		return
 	}
-	endpoint := matches[2]
 
-	authToken := getAuthToken(req)
+	authorizer := func(appId, authToken string, logger *gosteno.Logger) bool {
+		return proxy.logAuthorize(authToken, appId, logger)
+	}
 
-	authorized, errorMessage := proxy.isAuthorized(appId, authToken, clientAddress)
+	authorized, errorMessage := proxy.isAuthorized(authorizer, appId, authToken, clientAddress)
 	if !authorized {
 		writer.Header().Set("WWW-Authenticate", "Basic")
 		writer.WriteHeader(http.StatusUnauthorized)
@@ -102,19 +135,32 @@ func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	var endpoint_type = matches[2]
+	reconnect := endpoint_type != "recentlogs"
+
+	var dopplerEndpoint doppler_endpoint.DopplerEndpoint
+
+	if endpoint_type == "recentlogs" {
+		dopplerEndpoint = doppler_endpoint.NewDopplerEndpoint(endpoint_type, appId, reconnect)
+	} else {
+		dopplerEndpoint = doppler_endpoint.NewDopplerEndpoint(endpoint_type, appId, reconnect)
+	}
+
+	proxy.serveWithDoppler(writer, request, dopplerEndpoint)
+}
+
+func (proxy *Proxy) serveWithDoppler(writer http.ResponseWriter, request *http.Request, dopplerEndpoint doppler_endpoint.DopplerEndpoint) {
 	messagesChan := make(chan []byte, 100)
 	stopChan := make(chan struct{})
 	defer close(stopChan)
 
-	reconnect := endpoint != "recentlogs"
+	go proxy.connector.Connect(dopplerEndpoint, messagesChan, stopChan)
 
-	go proxy.connector.Connect("/"+endpoint, appId, messagesChan, stopChan, reconnect)
-
-	handler := proxy.handlerProvider(endpoint, messagesChan, proxy.logger)
-	handler.ServeHTTP(writer, req)
+	handler := proxy.handlerProvider(messagesChan, proxy.logger)
+	handler.ServeHTTP(writer, request)
 }
 
-func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress string) (bool, *logmessage.LogMessage) {
+func (proxy *Proxy) isAuthorized(authorizer Authorizer, appId, authToken string, clientAddress string) (bool, *logmessage.LogMessage) {
 	newLogMessage := func(message []byte) *logmessage.LogMessage {
 		currentTime := time.Now()
 		messageType := logmessage.LogMessage_ERR
@@ -134,7 +180,7 @@ func (proxy *Proxy) isAuthorized(appId, authToken string, clientAddress string) 
 		return false, newLogMessage([]byte("Error: Authorization not provided"))
 	}
 
-	if !proxy.authorize(authToken, appId, proxy.logger) {
+	if !authorizer(appId, authToken, proxy.logger) {
 		message := fmt.Sprintf("HttpServer: Auth token [%s] not authorized to access appId [%s].", authToken, appId)
 		proxy.logger.Warn(message)
 		return false, newLogMessage([]byte("Error: Invalid authorization"))

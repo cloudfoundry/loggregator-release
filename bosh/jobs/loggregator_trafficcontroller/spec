@@ -48,6 +48,11 @@ properties:
   traffic_controller.status.port:
     description: port used to run the varz endpoint
     default: 0
+  doppler.uaa_client_id:
+    description: "Doppler's client id to connect to UAA"
+    default: "doppler"
+  uaa.clients.doppler.secret:
+    description: "Doppler's client secret to connect to UAA"
   metron_endpoint.dropsonde_port:
     description: "The port used to emit dropsonde messages to the Metron agent"
     default: 3457

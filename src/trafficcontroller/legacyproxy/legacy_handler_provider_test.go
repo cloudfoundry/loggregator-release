@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"net/http"
-	"trafficcontroller/dopplerproxy"
+	"trafficcontroller/doppler_endpoint"
 	"trafficcontroller/legacyproxy"
 )
 
@@ -18,7 +18,7 @@ var _ = Describe("LegacyHandlerProvider", func() {
 	var (
 		innerHandler          http.Handler
 		factory               *fakeHandlerProviderFactory
-		legacyHandlerProvider dopplerproxy.HandlerProvider
+		legacyHandlerProvider doppler_endpoint.HandlerProvider
 	)
 
 	BeforeEach(func() {
@@ -28,15 +28,14 @@ var _ = Describe("LegacyHandlerProvider", func() {
 	})
 
 	It("delegates to the wrapped handler provider", func() {
-		legacyHandler := legacyHandlerProvider("fake-endpoint", make(chan []byte), loggertesthelper.Logger())
+		legacyHandler := legacyHandlerProvider(make(chan []byte), loggertesthelper.Logger())
 
-		Expect(factory.endpoint).To(Equal("fake-endpoint"))
 		Expect(legacyHandler).To(Equal(innerHandler))
 	})
 
 	It("translates messages into the legacy format", func() {
 		var messageChan = make(chan []byte, 1)
-		legacyHandlerProvider("fake-endpoint", messageChan, loggertesthelper.Logger())
+		legacyHandlerProvider(messageChan, loggertesthelper.Logger())
 
 		messageChan <- makeDropsondeMessage("message", "app-id", 123)
 		legacyMessage := makeLegacyMessage("message", "app-id", 123)
@@ -46,7 +45,7 @@ var _ = Describe("LegacyHandlerProvider", func() {
 
 	It("drops messages that can't be translated", func() {
 		var messageChan = make(chan []byte, 1)
-		legacyHandlerProvider("fake-endpoint", messageChan, loggertesthelper.Logger())
+		legacyHandlerProvider(messageChan, loggertesthelper.Logger())
 
 		messageChan <- []byte{1, 2, 3}
 
@@ -55,7 +54,7 @@ var _ = Describe("LegacyHandlerProvider", func() {
 
 	It("drops envelopes that don't contain log messages", func() {
 		var messageChan = make(chan []byte, 1)
-		legacyHandlerProvider("fake-endpoint", messageChan, loggertesthelper.Logger())
+		legacyHandlerProvider(messageChan, loggertesthelper.Logger())
 
 		emptyEnvelope := &events.Envelope{
 			Origin:    proto.String("origin"),
@@ -71,7 +70,7 @@ var _ = Describe("LegacyHandlerProvider", func() {
 
 	It("closes the legacy message channel", func() {
 		dropsondeMessageChan := make(chan []byte)
-		legacyHandlerProvider("fake-endpoint", dropsondeMessageChan, loggertesthelper.Logger())
+		legacyHandlerProvider(dropsondeMessageChan, loggertesthelper.Logger())
 
 		close(dropsondeMessageChan)
 		Eventually(factory.messages).Should(BeClosed())
@@ -80,13 +79,11 @@ var _ = Describe("LegacyHandlerProvider", func() {
 })
 
 type fakeHandlerProviderFactory struct {
-	endpoint        string
 	messages        <-chan []byte
 	returnedHandler http.Handler
 }
 
-func (factory *fakeHandlerProviderFactory) fakeHandlerProvider(endpoint string, messages <-chan []byte, logger *gosteno.Logger) http.Handler {
-	factory.endpoint = endpoint
+func (factory *fakeHandlerProviderFactory) fakeHandlerProvider(messages <-chan []byte, logger *gosteno.Logger) http.Handler {
 	factory.messages = messages
 	return factory.returnedHandler
 }

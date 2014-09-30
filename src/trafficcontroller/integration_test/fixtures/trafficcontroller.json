@@ -21,5 +21,8 @@
     "VarzUser": "",
     "VarzPass": "",
     "VarzPort": 12350,
-    "Syslog": "vcap.trafficcontroller"
+    "Syslog": "vcap.trafficcontroller",
+    "UaaHost": "http://localhost:5678",
+    "UaaClientId": "bob",
+    "UaaClientSecret": "yourUncle"
 }

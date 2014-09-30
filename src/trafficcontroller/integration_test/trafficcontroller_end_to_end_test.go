@@ -15,6 +15,7 @@ import (
 	"time"
 	"trafficcontroller/integration_test/fake_auth_server"
 	"trafficcontroller/integration_test/fake_doppler"
+	"trafficcontroller/integration_test/fake_uaa_server"
 	"trafficcontroller/integration_test/traffic_controller_client"
 
 	"errors"
@@ -30,14 +31,19 @@ var localIPAddress string
 var fakeDoppler *fake_doppler.FakeDoppler
 
 var _ = BeforeSuite(func() {
+	killEtcdCmd := exec.Command("pkill", "etcd")
+	killEtcdCmd.Run()
+
 	setupEtcdAdapter()
 	setupDopplerInEtcd()
 	setupFakeDoppler()
+	setupFakeAuthServer()
+	setupFakeUaaServer()
 
 	pathToTrafficControllerExec, err := gexec.Build("trafficcontroller")
 	Expect(err).ShouldNot(HaveOccurred())
 
-	command = exec.Command(pathToTrafficControllerExec, "--config=fixtures/trafficcontroller.json", "--debug=true", "DROPSONDE_ORIGIN=TCT")
+	command = exec.Command(pathToTrafficControllerExec, "--config=fixtures/trafficcontroller.json", "--debug=true")
 	command.Start()
 
 	localIPAddress, _ = localip.LocalIP()
@@ -54,8 +60,6 @@ var _ = BeforeSuite(func() {
 		_, err := http.Get(trafficControllerDropsondeEndpoint)
 		return err
 	}).ShouldNot(HaveOccurred())
-
-	setupFakeAuthServer()
 })
 
 var _ = AfterSuite(func() {
@@ -95,6 +99,15 @@ var setupFakeAuthServer = func() {
 
 	Eventually(func() error {
 		_, err := http.Get("http://" + localIPAddress + ":42123")
+		return err
+	}).ShouldNot(HaveOccurred())
+}
+
+var setupFakeUaaServer = func() {
+	fakeUaaServer := &fake_uaa_server.FakeUaaHandler{}
+	go http.ListenAndServe(":5678", fakeUaaServer)
+	Eventually(func() error {
+		_, err := http.Get("http://" + localIPAddress + ":5678/check_token")
 		return err
 	}).ShouldNot(HaveOccurred())
 }
@@ -151,6 +164,24 @@ var _ = Describe("TrafficController", func() {
 				Expect(err).To(Equal(errors.New("websocket: bad handshake")))
 				errMsg, _ := ioutil.ReadAll(resp.Body)
 				Expect(errMsg).To(BeEquivalentTo("invalid request: unexpected path: /invalid-path\n"))
+			})
+		})
+
+		Context("Firehose", func() {
+			It("passes messages through for every app for uaa admins", func() {
+				client5 := &traffic_controller_client.TrafficControllerClient{ApiEndpoint: fmt.Sprintf("ws://%v:%v/%v", localIPAddress, 4566, "firehose")}
+				go client5.Start()
+				var request *http.Request
+				Eventually(fakeDoppler.TrafficControllerConnected, 10).Should(Receive(&request))
+				Expect(request.URL.Path).To(Equal("/firehose"))
+
+				messageBody := []byte("CUSTOM Doppler MESSAGE")
+				fakeDoppler.SendLogMessage(messageBody)
+				Eventually(func() bool {
+					return client5.DidReceiveLegacyMessage(messageBody)
+				}, 5).Should(BeTrue())
+
+				client5.Stop()
 			})
 		})
 	})

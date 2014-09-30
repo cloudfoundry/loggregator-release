@@ -5,6 +5,7 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"sync"
 	"time"
+	"trafficcontroller/doppler_endpoint"
 	"trafficcontroller/listener"
 	"trafficcontroller/marshaller"
 	"trafficcontroller/serveraddressprovider"
@@ -15,7 +16,7 @@ const checkServerAddressesInterval = 100 * time.Millisecond
 type ListenerConstructor func() listener.Listener
 
 type ChannelGroupConnector interface {
-	Connect(path string, appId string, messagesChan chan<- []byte, stopChan <-chan struct{}, reconnect bool)
+	Connect(dopplerConnector doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{})
 }
 
 type channelGroupConnector struct {
@@ -34,7 +35,7 @@ func NewChannelGroupConnector(provider serveraddressprovider.ServerAddressProvid
 	}
 }
 
-func (connector *channelGroupConnector) Connect(path string, appId string, messagesChan chan<- []byte, stopChan <-chan struct{}, reconnect bool) {
+func (connector *channelGroupConnector) Connect(dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{}) {
 	defer close(messagesChan)
 	connections := &serverConnections{
 		connectedAddresses: make(map[string]struct{}),
@@ -54,12 +55,12 @@ loop:
 			connections.addConnectedServer(serverAddress)
 
 			go func(addr string) {
-				connector.connectToServer(addr, path, appId, messagesChan, stopChan)
+				connector.connectToServer(addr, dopplerEndpoint, messagesChan, stopChan)
 				connections.removeConnectedServer(addr)
 			}(serverAddress)
 		}
 
-		if !reconnect {
+		if !dopplerEndpoint.Reconnect {
 			break
 		}
 
@@ -74,16 +75,26 @@ loop:
 	connections.Wait()
 }
 
-func (connector *channelGroupConnector) connectToServer(serverAddress string, path string, appId string, messagesChan chan<- []byte, stopChan <-chan struct{}) {
+func (connector *channelGroupConnector) connectToServer(serverAddress string, dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{}) {
+	//func (connector *channelGroupConnector) connectToServer(thing Thing, messagesChan chan<- []byte, stopChan <-chan struct{}) {
 	l := connector.listenerConstructor()
-	serverUrlForAppId := fmt.Sprintf("ws://%s/apps/%s%s", serverAddress, appId, path)
 
-	err := l.Start(serverUrlForAppId, appId, messagesChan, stopChan)
+	var serverUrl string
+
+	//if dopplerEndpoint.appId == "firehose" {
+	//	serverUrl = fmt.Sprintf("ws://%s/firehose", serverAddress)
+	//} else {
+	//	serverUrl = fmt.Sprintf("ws://%s/apps/%s%s", serverAddress, appId, path)
+	//}
+	serverUrl = fmt.Sprintf("ws://%s%s", serverAddress, dopplerEndpoint.GetPath())
+
+	appId := dopplerEndpoint.StreamId
+	err := l.Start(serverUrl, appId, messagesChan, stopChan)
 
 	if err != nil {
 		errorMsg := fmt.Sprintf("proxy: error connecting to %s: %s", serverAddress, err.Error())
 		messagesChan <- connector.generateLogMessage(errorMsg, appId)
-		connector.logger.Errorf("proxy: error connecting %s %s %s", appId, path, err.Error())
+		connector.logger.Errorf("proxy: error connecting %s %s %s", appId, dopplerEndpoint.Endpoint, err.Error())
 	}
 }
 
