@@ -31,7 +31,7 @@ trap "echo Exited!; exit 1;" SIGINT SIGTERM
 
 go install github.com/apcera/gnatsd
 
-$(dirname $0)/travis_test
+$(dirname $0)/travis_test $1
 $(dirname $0)/build-platforms
 
 

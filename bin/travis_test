@@ -36,7 +36,7 @@ do
     local_result=$result
     echo -e "\n Testing $package"
     go fmt $package/...
-    ginkgo -r --race --randomizeAllSpecs --cover src/$package
+    ginkgo -r --race --randomizeAllSpecs --cover $1 src/$package
     let "result += $?"
     echo "Current result: $result"
     echo -e "\n Vetting $package"
