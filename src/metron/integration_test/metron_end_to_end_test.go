@@ -63,15 +63,7 @@ var _ = AfterSuite(func() {
 	etcdRunner.Stop()
 })
 
-var _ = BeforeEach(func() {
-	adapter := etcdRunner.Adapter()
-	adapter.Disconnect()
-	etcdRunner.Reset()
-	adapter.Connect()
-})
-
 var _ = Describe("Metron", func() {
-
 	Context("collector registration", func() {
 		It("registers itself with the collector", func() {
 			natsRunner := natsrunner.NewNATSRunner(NATS_PORT)
@@ -89,7 +81,6 @@ var _ = Describe("Metron", func() {
 	})
 
 	Context("/varz endpoint", func() {
-
 		var getVarzMessage = func() *instrumentation.VarzMessage {
 			req, _ := http.NewRequest("GET", "http://"+localIPAddress+":1234/varz", nil)
 			req.SetBasicAuth("admin", "admin")
@@ -235,6 +226,25 @@ var _ = Describe("Metron", func() {
 	})
 
 	Context("Dropsonde message forwarding", func() {
+		var testServer net.PacketConn
+
+		BeforeEach(func() {
+			testServer, _ = net.ListenPacket("udp", "localhost:3457")
+
+			node := storeadapter.StoreNode{
+				Key:   "/healthstatus/doppler/z1/0",
+				Value: []byte("localhost"),
+			}
+
+			adapter := etcdRunner.Adapter()
+			adapter.Create(node)
+			adapter.Disconnect()
+		})
+
+		AfterEach(func() {
+		    testServer.Close()
+		})
+
 		It("forwards hmac signed messages to a healthy doppler server", func(done Done) {
 			defer close(done)
 
@@ -244,27 +254,18 @@ var _ = Describe("Metron", func() {
 			mac.Write(originalMessage)
 			expectedMAC := mac.Sum(nil)
 
-			testServer, _ := net.ListenPacket("udp", "localhost:3457")
-			defer testServer.Close()
-
-			node := storeadapter.StoreNode{
-				Key:   "/healthstatus/doppler/z1/0",
-				Value: []byte("localhost"),
-			}
-			adapter := etcdRunner.Adapter()
-			adapter.Create(node)
 			connection, _ := net.Dial("udp", "localhost:51161")
 
 			stopWrite := make(chan struct{})
 			defer close(stopWrite)
 			go func() {
 				ticker := time.NewTicker(10 * time.Millisecond)
-				defer ticker.Stop()
+
 				for {
 					connection.Write(originalMessage)
-
 					select {
 					case <-stopWrite:
+						ticker.Stop()
 						return
 					case <-ticker.C:
 					}
