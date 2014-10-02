@@ -13,7 +13,7 @@
   "NatsPort": <%= p("nats.port") %>,
   "NatsUser": "<%= p("nats.user") %>",
   "NatsPass": "<%= p("nats.password") %>",
-  "CollectorRegistrarIntervalMilliseconds": 60000,
+  "CollectorRegistrarIntervalMilliseconds": <%= p("metron_agent.collector_registrar_interval_milliseconds") %>,
   "EtcdQueryIntervalMilliseconds": <%= p("metron_agent.etcd_query_interval_milliseconds") %>,
   "Zone": "<%= p("metron_agent.zone") %>",
   "LoggregatorLegacyPort": <%= p("loggregator.incoming_port") %>,

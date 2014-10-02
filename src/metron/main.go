@@ -71,7 +71,7 @@ func main() {
 
 	component := InitializeComponent(config, logger, instrumentables)
 
-	go collectorregistrar.NewCollectorRegistrar(cfcomponent.DefaultYagnatsClientProvider, component, time.Duration(config.CollectorRegistrarIntervalMilliseconds)*time.Millisecond, &config.Config).Run(nil)
+	go collectorregistrar.NewCollectorRegistrar(cfcomponent.DefaultYagnatsClientProvider, component, time.Duration(config.CollectorRegistrarIntervalMilliseconds)*time.Millisecond, &config.Config).Run()
 
 	go startMonitoringEndpoints(component, logger)
 	dropsondeEventChan := make(chan *events.Envelope)
@@ -142,7 +142,6 @@ type Config struct {
 	LoggregatorLegacyPort                  int
 	LoggregatorDropsondePort               int
 	SharedSecret                           string
-	CollectorRegistrarIntervalMilliseconds int
 }
 
 type MetronHealthMonitor struct{}

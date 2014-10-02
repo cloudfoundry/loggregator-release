@@ -43,6 +43,9 @@ properties:
   metron_agent.etcd_query_interval_milliseconds:
     description: "Interval for querying ETCD for trafficcontroller heartbeats"
     default: 5000
+  metron_agent.collector_registrar_interval_milliseconds:
+    description: "Interval for registering with collector"
+    default: 60000
   loggregator.incoming_port:
     description: "Port where loggregator listens for legacy log messages"
     default: 3456
