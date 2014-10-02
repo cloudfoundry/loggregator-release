@@ -4,6 +4,7 @@ import (
 	"code.google.com/p/gogoprotobuf/proto"
 	"doppler/buffer"
 	"fmt"
+	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"sync"
@@ -48,7 +49,7 @@ func (r *truncatingBuffer) Run() {
 		default:
 			messageCount := len(r.outputChannel)
 			r.outputChannel = make(chan *events.Envelope, cap(r.outputChannel))
-			lm := generateLogMessage(fmt.Sprintf("Log message output too high. We've dropped %d messages", messageCount), msg.GetAppId())
+			lm := generateLogMessage(fmt.Sprintf("Log message output too high. We've dropped %d messages", messageCount), dropsonde.GetAppId(msg))
 
 			env := &events.Envelope{
 				EventType:  events.Envelope_LogMessage.Enum(),

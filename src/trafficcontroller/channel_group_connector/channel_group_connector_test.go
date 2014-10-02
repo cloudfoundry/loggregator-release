@@ -2,7 +2,7 @@ package channel_group_connector_test
 
 import (
 	"code.google.com/p/gogoprotobuf/proto"
-	"errors"
+	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
@@ -10,11 +10,11 @@ import (
 	"time"
 	"trafficcontroller/channel_group_connector"
 	"trafficcontroller/listener"
+	"trafficcontroller/marshaller"
 	"trafficcontroller/serveraddressprovider"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"trafficcontroller/marshaller"
 )
 
 var _ = Describe("ChannelGroupConnector", func() {
@@ -270,7 +270,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				err := proto.Unmarshal(*msg, envelope)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(envelope.GetAppId()).To(Equal("abc123"))
+				Expect(dropsonde.GetAppId(envelope)).To(Equal("abc123"))
 				Expect(envelope.GetLogMessage().GetMessage()).To(BeEquivalentTo("proxy: error connecting to 10.0.0.1:1234: failure"))
 			})
 		})
@@ -304,7 +304,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				err := proto.Unmarshal(msg, receivedEnvelope)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(receivedEnvelope.GetAppId()).To(Equal("abc123"))
+				Expect(dropsonde.GetAppId(receivedEnvelope)).To(Equal("abc123"))
 				Expect(receivedEnvelope.GetLogMessage().GetMessage()).To(ContainSubstring("boom"))
 			})
 		})

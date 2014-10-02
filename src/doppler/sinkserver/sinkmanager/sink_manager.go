@@ -9,6 +9,7 @@ import (
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/metrics"
 	"fmt"
+	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
@@ -98,7 +99,7 @@ func (sinkManager *SinkManager) listenForErrorMessages() {
 			if !ok {
 				return
 			}
-			appId := errorMessage.GetAppId()
+			appId := dropsonde.GetAppId(errorMessage)
 			sinkManager.logger.Debugf("SinkManager:ErrorChannel: Searching for sinks with appId [%s].", appId)
 			sinkManager.sinks.BroadCastError(appId, errorMessage)
 			sinkManager.logger.Debugf("SinkManager:ErrorChannel: Done sending error message.")
