@@ -131,17 +131,17 @@ func initializeClientPool(config Config, logger *gosteno.Logger, port int) (*cli
 
 type Config struct {
 	cfcomponent.Config
-	Zone                                   string
-	Index                                  uint
-	Job                                    string
-	LegacyIncomingMessagesPort             int
-	DropsondeIncomingMessagesPort          int
-	EtcdUrls                               []string
-	EtcdMaxConcurrentRequests              int
-	EtcdQueryIntervalMilliseconds          int
-	LoggregatorLegacyPort                  int
-	LoggregatorDropsondePort               int
-	SharedSecret                           string
+	Zone                          string
+	Index                         uint
+	Job                           string
+	LegacyIncomingMessagesPort    int
+	DropsondeIncomingMessagesPort int
+	EtcdUrls                      []string
+	EtcdMaxConcurrentRequests     int
+	EtcdQueryIntervalMilliseconds int
+	LoggregatorLegacyPort         int
+	LoggregatorDropsondePort      int
+	SharedSecret                  string
 }
 
 type MetronHealthMonitor struct{}

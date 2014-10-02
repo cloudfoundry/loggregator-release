@@ -14,7 +14,7 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/localip"
-	collectorregistrar "github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/legacycollectorregistrar"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/storeadapter/workerpool"
@@ -112,11 +112,7 @@ func main() {
 		panic(err)
 	}
 
-	cr := collectorregistrar.NewCollectorRegistrar(config.MbusClient, logger)
-	err = cr.RegisterWithCollector(cfc)
-	if err != nil {
-		logger.Warnf("Unable to register with collector. Err: %v.", err)
-	}
+	go collectorregistrar.NewCollectorRegistrar(cfcomponent.DefaultYagnatsClientProvider, cfc, time.Duration(config.CollectorRegistrarIntervalMilliseconds)*time.Millisecond, &config.Config).Run()
 
 	go func() {
 		err := cfc.StartMonitoringEndpoints()

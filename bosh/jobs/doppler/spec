@@ -49,6 +49,9 @@ properties:
     default: 8081
   doppler.blacklisted_syslog_ranges:
     description: "Blacklist for IPs that should not be used as syslog drains, e.g. internal ip addresses."
+  doppler.collector_registrar_interval_milliseconds:
+    description: "Interval for registering with collector"
+    default: 60000
   doppler_endpoint.shared_secret:
     description: "Shared secret used to verify cryptographically signed doppler messages"
   etcd.machines:
@@ -66,3 +69,4 @@ properties:
     default: false
   networks.apps:
     description: "doppler network information."
+

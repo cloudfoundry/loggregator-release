@@ -11,6 +11,7 @@
   "JobName": "<%= name %>",
   "Index": <%= spec.index %>,
   "MaxRetainedLogMessages": <%= p("doppler.maxRetainedLogMessages") %>,
+  "CollectorRegistrarIntervalMilliseconds": <%= p("metron_agent.collector_registrar_interval_milliseconds") %>,
   "SharedSecret": "<%= p("doppler_endpoint.shared_secret") %>",
 
   "NatsHosts": <%= p("nats.machines") %>,
