@@ -242,7 +242,7 @@ var _ = Describe("Metron", func() {
 		})
 
 		AfterEach(func() {
-		    testServer.Close()
+			testServer.Close()
 		})
 
 		It("forwards hmac signed messages to a healthy doppler server", func(done Done) {
