@@ -24,5 +24,6 @@
     "Syslog": "vcap.trafficcontroller",
     "UaaHost": "http://localhost:5678",
     "UaaClientId": "bob",
-    "UaaClientSecret": "yourUncle"
+    "UaaClientSecret": "yourUncle",
+    "CollectorRegistrarIntervalMilliseconds": 60000
 }

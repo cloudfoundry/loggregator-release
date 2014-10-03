@@ -15,7 +15,7 @@ import (
 	_ "github.com/cloudfoundry/dropsonde/autowire"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	collectorregistrar "github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/legacycollectorregistrar"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar"
 	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
 	"github.com/cloudfoundry/storeadapter"
@@ -218,11 +218,7 @@ func startOutgoingProxy(host string, proxy http.Handler) {
 }
 
 func setupMonitoring(proxy *legacyproxy.Proxy, config *Config, logger *gosteno.Logger) {
-	cr := collectorregistrar.NewCollectorRegistrar(config.MbusClient, logger)
-	err := cr.RegisterWithCollector(proxy.Component)
-	if err != nil {
-		panic(err)
-	}
+	go collectorregistrar.NewCollectorRegistrar(cfcomponent.DefaultYagnatsClientProvider, proxy.Component, time.Duration(config.CollectorRegistrarIntervalMilliseconds)*time.Millisecond, &config.Config).Run()
 
 	go func() {
 		err := proxy.StartMonitoringEndpoints()

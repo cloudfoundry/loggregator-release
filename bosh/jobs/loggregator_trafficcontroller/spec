@@ -48,6 +48,9 @@ properties:
   traffic_controller.status.port:
     description: port used to run the varz endpoint
     default: 0
+  traffic_controller.collector_registrar_interval_milliseconds:
+    description: "Interval for registering with collector"
+    default: 60000
   doppler.uaa_client_id:
     description: "Doppler's client id to connect to UAA"
     default: "doppler"
