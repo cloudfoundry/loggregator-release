@@ -12,7 +12,7 @@
   	"VarzUser": "<%= p("dea_logging_agent.status.user") %>",
   	"VarzPass": "<%= p("dea_logging_agent.status.password") %>",
   	"VarzPort": <%= p("dea_logging_agent.status.port") %>
-    <% if_p("syslog_aggregator") do |_| %>
+    <% if_p("syslog_daemon_config") do |_| %>
     , "Syslog": "vcap.dea_logging_agent"
     <% end %>
 }  

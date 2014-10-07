@@ -24,8 +24,6 @@ case $1 in
     ulimit -l unlimited
     ulimit -n 65536
 
-    /var/vcap/packages/syslog_aggregator/setup_syslog_forwarder.sh /var/vcap/jobs/loggregator_trafficcontroller/config
-
     <% p("traffic_controller.debug") == true ? debug_string = "--debug " : debug_string = "" %>
 
     exec chpst -u vcap:vcap /var/vcap/packages/loggregator_trafficcontroller/trafficcontroller <%= debug_string %> \

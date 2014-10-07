@@ -3,3 +3,9 @@ check process metron_agent
   start program "/var/vcap/jobs/metron_agent/bin/metron_agent_ctl start"
   stop program "/var/vcap/jobs/metron_agent/bin/metron_agent_ctl stop"
   group vcap
+
+check process syslog_daemon_config
+  with pidfile /var/vcap/sys/run/metron_agent/syslog_daemon_config.pid
+  start program "/var/vcap/jobs/metron_agent/bin/syslog_daemon_config_ctl start"
+  stop program "/var/vcap/jobs/metron_agent/bin/syslog_daemon_config_ctl stop"
+  group vcap

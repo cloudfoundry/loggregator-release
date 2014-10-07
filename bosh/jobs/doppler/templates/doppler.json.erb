@@ -21,7 +21,7 @@
   "VarzUser": "<%= p("doppler.status.user") %>",
   "VarzPass": "<%= p("doppler.status.password") %>",
   "VarzPort": <%= p("doppler.status.port") %>
-    <% if_p("syslog_aggregator") do |_| %>
+    <% if_p("syslog_daemon_config") do |_| %>
     , "Syslog": "vcap.doppler"
     <% end %>
     <% if_p("doppler.blacklisted_syslog_ranges") do |_| %>

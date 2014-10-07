@@ -19,7 +19,7 @@
   "LoggregatorLegacyPort": <%= p("loggregator.incoming_port") %>,
   "LoggregatorDropsondePort": <%= p("loggregator.dropsonde_incoming_port") %>
 
-  <% if_p("syslog_aggregator") do |_| %>
+  <% if_p("syslog_daemon_config") do |_| %>
   , "Syslog": "vcap.metron_agent"
   <% end %>
 }

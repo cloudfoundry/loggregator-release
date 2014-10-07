@@ -2,5 +2,6 @@
 name: metron_agent
 dependencies:
 - golang
+- ruby
 files:
 - loggregator/**/*

@@ -3,24 +3,11 @@ name: loggregator_trafficcontroller
 templates:
   loggregator_trafficcontroller_ctl.erb: bin/loggregator_trafficcontroller_ctl
   loggregator_trafficcontroller.json.erb: config/loggregator_trafficcontroller.json
-  syslog_forwarder.conf.erb: config/syslog_forwarder.conf
 
 packages:
 - common
 - loggregator_trafficcontroller
-- syslog_aggregator
 properties:
-  syslog_aggregator.address:
-    description: "IP address for syslog aggregator"
-  syslog_aggregator.port:
-    description: "TCP port of syslog aggregator"
-  syslog_aggregator.all:
-    description: "Define whether forwarders should send all their syslog data to our aggregator."
-    default: false
-  syslog_aggregator.transport:
-    description: "Transport to be used when forwarding logs (tcp|udp|relp)."
-    default: "tcp"
-
   traffic_controller.zone:
     description: Zone of the loggregator_trafficcontroller
   traffic_controller.host:

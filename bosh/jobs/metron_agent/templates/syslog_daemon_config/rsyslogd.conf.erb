@@ -1,0 +1,37 @@
+$ModLoad imuxsock
+$MaxMessageSize 4k
+
+# Caveat - This always binds to all interfaces (cannot specify otherwise).
+$ModLoad imudp
+$ModLoad imtcp
+$InputTCPMaxSessions 1024
+<% if properties.syslog_daemon_config.transport == "relp" %>
+$ModLoad imrelp
+$InputRELPServerRun <%= properties.syslog_daemon_config.port %>
+<% elsif properties.syslog_daemon_config.transport == "udp" %>
+$UDPServerRun <%= properties.syslog_daemon_config.port %>
+<% elsif properties.syslog_daemon_config.transport == "tcp" %>
+$InputTCPServerRun <%= properties.syslog_daemon_config.port %>
+<% else %>
+#only RELP, UDP, and TCP are supported
+<% end %>
+$PrivDropToUser vcap
+$PrivDropToGroup vcap
+
+# Write each component's messages to a separate log
+# programname is assumed to be 'vcap.<component>'
+# Directory is created automatically
+$template VcapComponentLogFile, "/var/vcap/store/log/%programname:6:$%/%$year%/%$month%/%$day%/%programname:6:$%.log"
+$template VcapComponentLogFormat, "%fromhost% -- %msg%\n"
+
+# The initial '-' tells rsyslogd to not sync the file after each write
+:programname, startswith, "vcap." ?VcapComponentLogFile;VcapComponentLogFormat
+
+<% if properties.syslog_daemon_config.relay_host then %>
+# relay to remote host
+$template VcapForwardFormat,"<%%PRI%>%TIMESTAMP% cf-<%= properties.syslog_daemon_config.address %> %syslogtag% %fromhost%%msg:::sp-if-no-1st-sp%%msg%"
+:programname, startswith, "vcap." @@<%= properties.syslog_daemon_config.relay_host %>:<%= properties.syslog_daemon_config.relay_host_port %>;VcapForwardFormat
+<% end %>
+
+# Prevent them from reaching anywhere else
+:programname, startswith, "vcap." ~

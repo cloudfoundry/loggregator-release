@@ -24,7 +24,7 @@
     "UaaHost": "https://uaa.<%= p("system_domain") %>",
     "UaaClientId": "<%= p("doppler.uaa_client_id") %>",
     "UaaClientSecret": "<%= p("uaa.clients.doppler.secret") %>"
-    <% if_p("syslog_aggregator") do |_| %>
+    <% if_p("syslog_daemon_config") do |_| %>
     , "Syslog": "vcap.trafficcontroller"
     <% end %>
 }
