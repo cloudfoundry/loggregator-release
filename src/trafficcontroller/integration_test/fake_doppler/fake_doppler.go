@@ -63,3 +63,7 @@ func (fakeDoppler *FakeDoppler) ServeHTTP(writer http.ResponseWriter, request *h
 func (fakeDoppler *FakeDoppler) SendLogMessage(messageBody []byte) {
 	fakeDoppler.sendMessageChan <- messageBody
 }
+
+func (fakeDoppler *FakeDoppler) CloseLogMessageStream() {
+	close(fakeDoppler.sendMessageChan)
+}
