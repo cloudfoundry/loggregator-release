@@ -24,7 +24,6 @@ import (
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	"trafficcontroller/channel_group_connector"
-	"trafficcontroller/doppler_endpoint"
 	"trafficcontroller/dopplerproxy"
 	"trafficcontroller/listener"
 	"trafficcontroller/marshaller"
@@ -127,7 +126,7 @@ func main() {
 	adapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	adapter.Connect()
 
-	dopplerProxy := makeDopplerProxy(adapter, config, logger, doppler_endpoint.WebsocketHandlerProvider)
+	dopplerProxy := makeDopplerProxy(adapter, config, logger)
 	startOutgoingDopplerProxy(net.JoinHostPort(dopplerProxy.IpAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dopplerProxy)
 
 	legacyProxy := makeLegacyProxy(adapter, config, logger)
@@ -215,24 +214,24 @@ func setupMonitoring(proxy *dopplerproxy.Proxy, config *Config, logger *gosteno.
 	}()
 }
 
-func makeDopplerProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger, handlerProvider doppler_endpoint.HandlerProvider) *dopplerproxy.Proxy {
-	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
-	uaaClient := uaa_client.NewUaaClient(config.UaaHost, config.UaaClientId, config.UaaClientSecret, config.SkipCertVerify)
-	adminAuthorizer := authorization.NewAdminAccessAuthorizer(&uaaClient)
-	provider := MakeProvider(adapter, "/healthstatus/doppler", config.DopplerPort, logger)
-	cgc := channel_group_connector.NewChannelGroupConnector(provider, newDropsondeWebsocketListener, marshaller.DropsondeLogMessage, logger)
-	proxy := dopplerproxy.NewDopplerProxy(authorizer, adminAuthorizer, cgc, config.Config, dopplerproxy.TranslateFromDropsondePath, logger)
-	return proxy
+func makeDopplerProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger) *dopplerproxy.Proxy {
+	return makeProxy(adapter, config, logger, marshaller.DropsondeLogMessage, dopplerproxy.TranslateFromDropsondePath)
 }
 
 func makeLegacyProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger) *dopplerproxy.Proxy {
-	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
+	return makeProxy(adapter, config, logger, marshaller.LoggregatorLogMessage, dopplerproxy.TranslateFromLegacyPath)
+}
+
+func makeProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger, messageGenerator marshaller.MessageGenerator, translator dopplerproxy.RequestTranslator) *dopplerproxy.Proxy {
+	logAuthorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
+
 	uaaClient := uaa_client.NewUaaClient(config.UaaHost, config.UaaClientId, config.UaaClientSecret, config.SkipCertVerify)
 	adminAuthorizer := authorization.NewAdminAccessAuthorizer(&uaaClient)
+
 	provider := MakeProvider(adapter, "/healthstatus/doppler", config.DopplerPort, logger)
-	cgc := channel_group_connector.NewChannelGroupConnector(provider, newLegacyWebsocketListener, marshaller.DropsondeLogMessage, logger)
-	proxy := dopplerproxy.NewDopplerProxy(authorizer, adminAuthorizer, cgc, config.Config, dopplerproxy.TranslateFromLegacyPath, logger)
-	return proxy
+	cgc := channel_group_connector.NewChannelGroupConnector(provider, newLegacyWebsocketListener, messageGenerator, logger)
+
+	return dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, cgc, config.Config, translator, logger)
 }
 
 func startOutgoingDopplerProxy(host string, proxy http.Handler) {

@@ -22,16 +22,16 @@ type Proxy struct {
 	logAuthorize   authorization.LogAccessAuthorizer
 	adminAuthorize authorization.AdminAccessAuthorizer
 	connector      channel_group_connector.ChannelGroupConnector
-	translate      requestTranslator
+	translate      RequestTranslator
 	logger         *gosteno.Logger
 	cfcomponent.Component
 }
 
-type requestTranslator func(request *http.Request) (*http.Request, error)
+type RequestTranslator func(request *http.Request) (*http.Request, error)
 
 type Authorizer func(appId, authToken string, logger *gosteno.Logger) bool
 
-func NewDopplerProxy(logAuthorize authorization.LogAccessAuthorizer, adminAuthorizer authorization.AdminAccessAuthorizer, connector channel_group_connector.ChannelGroupConnector, config cfcomponent.Config, translator requestTranslator, logger *gosteno.Logger) *Proxy {
+func NewDopplerProxy(logAuthorize authorization.LogAccessAuthorizer, adminAuthorizer authorization.AdminAccessAuthorizer, connector channel_group_connector.ChannelGroupConnector, config cfcomponent.Config, translator RequestTranslator, logger *gosteno.Logger) *Proxy {
 	var instrumentables []instrumentation.Instrumentable
 
 	cfc, err := cfcomponent.NewComponent(
