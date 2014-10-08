@@ -15,6 +15,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"io/ioutil"
 )
 
 var _ = Describe("ServeHTTP", func() {
@@ -23,7 +24,6 @@ var _ = Describe("ServeHTTP", func() {
 		adminAuth     testhelpers.AdminAuthorizer
 		proxy         *dopplerproxy.Proxy
 		recorder      *httptest.ResponseRecorder
-		fakeHandler   *fakeHttpHandler
 		fakeConnector *fakeChannelGroupConnector
 	)
 
@@ -31,7 +31,6 @@ var _ = Describe("ServeHTTP", func() {
 		auth = testhelpers.LogAuthorizer{Result: true}
 		adminAuth = testhelpers.AdminAuthorizer{Result: true}
 
-		fakeHandler = &fakeHttpHandler{}
 		fakeConnector = &fakeChannelGroupConnector{messages: make(chan []byte, 10)}
 
 		proxy = dopplerproxy.NewDopplerProxy(
@@ -124,17 +123,6 @@ var _ = Describe("ServeHTTP", func() {
 			Expect(auth.TokenParam).To(Equal("cookie-token"))
 		})
 
-		PIt("uses the handler provided to serve http", func() {
-			req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
-			req.Header.Add("Authorization", "token")
-
-			proxy.ServeHTTP(recorder, req)
-
-			Expect(fakeHandler.messages).ToNot(BeNil())
-
-			Expect(fakeHandler.called).To(BeTrue())
-		})
-
 		It("connects to doppler servers with correct parameters", func() {
 			req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
 			req.Header.Add("Authorization", "token")
@@ -145,7 +133,8 @@ var _ = Describe("ServeHTTP", func() {
 			Eventually(fakeConnector.getReconnect).Should(BeTrue())
 		})
 
-		PIt("connects to doppler servers without reconnecting for recentlogs", func() {
+		It("connects to doppler servers without reconnecting for recentlogs", func() {
+			close(fakeConnector.messages)
 			req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs", nil)
 			req.Header.Add("Authorization", "token")
 
@@ -154,14 +143,20 @@ var _ = Describe("ServeHTTP", func() {
 			Eventually(fakeConnector.getReconnect).Should(BeFalse())
 		})
 
-		PIt("connects to doppler servers and passes their messages to the handler", func() {
-			req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
+		It("passes messages back to the requestor", func() {
+			fakeConnector.messages <- []byte("hello")
+			fakeConnector.messages <- []byte("goodbye")
+			close(fakeConnector.messages)
+
+			req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs", nil)
 			req.Header.Add("Authorization", "token")
 
 			proxy.ServeHTTP(recorder, req)
-			fakeConnector.messages <- []byte("hello")
 
-			Eventually(fakeHandler.messages).Should(Receive(BeEquivalentTo("hello")))
+			responseBody, _ := ioutil.ReadAll(recorder.Body)
+
+			Expect(responseBody).To(ContainSubstring("hello"))
+			Expect(responseBody).To(ContainSubstring("goodbye"))
 		})
 
 		It("stops the connector when the handler finishes", func() {
@@ -257,6 +252,7 @@ func (f *fakeChannelGroupConnector) Connect(dopplerEndpoint doppler_endpoint.Dop
 		for m := range f.messages {
 			messagesChan <- m
 		}
+		close(messagesChan)
 	}()
 
 	go func() {

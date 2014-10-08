@@ -19,28 +19,6 @@ func TestDopplerProxy(t *testing.T) {
 	RunSpecs(t, "DopplerProxy Suite")
 }
 
-type fakeWebsocketHandler struct {
-	called             bool
-	lastResponseWriter http.ResponseWriter
-	lastRequest        *http.Request
-}
-
-func (f *fakeWebsocketHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	f.called = true
-	f.lastRequest = r
-	f.lastResponseWriter = rw
-}
-
-type fakeHttpHandler struct {
-	called   bool
-	endpoint string
-	messages <-chan []byte
-}
-
-func (f *fakeHttpHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	f.called = true
-}
-
 func assertAuthorizationError(resp *http.Response, err error, msg string) {
 	Expect(err).To(HaveOccurred())
 
