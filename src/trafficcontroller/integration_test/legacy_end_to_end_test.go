@@ -29,23 +29,6 @@ var _ = Describe("TrafficController for legacy messages", func() {
 			messages, err := legacy_consumer.Tail(APP_ID, AUTH_TOKEN)
 			Expect(err).NotTo(HaveOccurred())
 
-			stopChan := make(chan struct{})
-			receivedMessages := []*logmessage.LogMessage{}
-
-			go func() {
-				for {
-					select {
-					case <-stopChan:
-						return
-					case message, ok := <-messages:
-						if !ok {
-							return
-						}
-						receivedMessages = append(receivedMessages, message)
-					}
-				}
-			}()
-
 			var request *http.Request
 			Eventually(fakeDoppler.TrafficControllerConnected, 10).Should(Receive(&request))
 			Expect(request.URL.Path).To(Equal("/apps/1234/stream"))
@@ -54,12 +37,14 @@ var _ = Describe("TrafficController for legacy messages", func() {
 			dropsondeMessage := makeDropsondeMessage("Make me Legacy Format", APP_ID, currentTime)
 			fakeDoppler.SendLogMessage(dropsondeMessage)
 
-			Eventually(func() []*logmessage.LogMessage { return receivedMessages }).Should(HaveLen(1))
-			receivedMessage := receivedMessages[0]
+			var receivedMessage *logmessage.LogMessage
+			Eventually(messages).Should(Receive(&receivedMessage))
+
 			Expect(receivedMessage.GetMessage()).To(BeEquivalentTo("Make me Legacy Format"))
 			Expect(receivedMessage.GetAppId()).To(Equal(APP_ID))
 			Expect(receivedMessage.GetTimestamp()).To(Equal(currentTime))
-			close(stopChan)
+
+			legacy_consumer.Close()
 		})
 	})
 

@@ -2,11 +2,15 @@ package integration_test
 
 import (
 	"code.google.com/p/gogoprotobuf/proto"
+	"fmt"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
+	"github.com/cloudfoundry/gunk/localip"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"net/http"
+	"os/exec"
+	"testing"
 	"trafficcontroller/integration_test/fake_auth_server"
 	"trafficcontroller/integration_test/fake_doppler"
 	"trafficcontroller/integration_test/fake_uaa_server"
@@ -14,12 +18,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-
-	"fmt"
-	"github.com/cloudfoundry/gunk/localip"
-	"os/exec"
-	"testing"
-	"time"
 )
 
 func TestIntegrationTest(t *testing.T) {

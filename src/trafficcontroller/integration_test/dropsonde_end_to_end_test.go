@@ -29,23 +29,6 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 			messages, err := client.Stream(APP_ID, AUTH_TOKEN)
 			Expect(err).NotTo(HaveOccurred())
 
-			stopChan := make(chan struct{})
-			receivedMessages := []*events.Envelope{}
-
-			go func() {
-				for {
-					select {
-					case <-stopChan:
-						return
-					case message, ok := <-messages:
-						if !ok {
-							return
-						}
-						receivedMessages = append(receivedMessages, message)
-					}
-				}
-			}()
-
 			var request *http.Request
 			Eventually(fakeDoppler.TrafficControllerConnected, 10).Should(Receive(&request))
 			Expect(request.URL.Path).To(Equal("/apps/1234/stream"))
@@ -54,13 +37,15 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 			dropsondeMessage := makeDropsondeMessage("Hello through NOAA", APP_ID, currentTime)
 			fakeDoppler.SendLogMessage(dropsondeMessage)
 
-			Eventually(func() []*events.Envelope { return receivedMessages }).Should(HaveLen(1))
-			receivedMessage := receivedMessages[0].GetLogMessage()
+			var receivedEnvelope *events.Envelope
+			Eventually(messages).Should(Receive(&receivedEnvelope))
+
+			receivedMessage := receivedEnvelope.GetLogMessage()
 			Expect(receivedMessage.GetMessage()).To(BeEquivalentTo("Hello through NOAA"))
 			Expect(receivedMessage.GetAppId()).To(Equal(APP_ID))
 			Expect(receivedMessage.GetTimestamp()).To(Equal(currentTime))
 
-			close(stopChan)
+			client.Close()
 		})
 	})
 
@@ -70,23 +55,6 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 			messages, err := client.Firehose(AUTH_TOKEN)
 			Expect(err).NotTo(HaveOccurred())
 
-			stopChan := make(chan struct{})
-			receivedMessages := []*events.Envelope{}
-
-			go func() {
-				for {
-					select {
-					case <-stopChan:
-						return
-					case message, ok := <-messages:
-						if !ok {
-							return
-						}
-						receivedMessages = append(receivedMessages, message)
-					}
-				}
-			}()
-
 			var request *http.Request
 			Eventually(fakeDoppler.TrafficControllerConnected, 10).Should(Receive(&request))
 			Expect(request.URL.Path).To(Equal("/firehose"))
@@ -95,13 +63,15 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 			dropsondeMessage := makeDropsondeMessage("Hello through NOAA", APP_ID, currentTime)
 			fakeDoppler.SendLogMessage(dropsondeMessage)
 
-			Eventually(func() []*events.Envelope { return receivedMessages }).Should(HaveLen(1))
-			receivedMessage := receivedMessages[0].GetLogMessage()
+			var receivedEnvelope *events.Envelope
+			Eventually(messages).Should(Receive(&receivedEnvelope))
+
+			receivedMessage := receivedEnvelope.GetLogMessage()
 			Expect(receivedMessage.GetMessage()).To(BeEquivalentTo("Hello through NOAA"))
 			Expect(receivedMessage.GetAppId()).To(Equal(APP_ID))
 			Expect(receivedMessage.GetTimestamp()).To(Equal(currentTime))
 
-			close(stopChan)
+			client.Close()
 		})
 	})
 
