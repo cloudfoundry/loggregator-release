@@ -1,6 +1,7 @@
 package listener
 
 import (
+	"github.com/cloudfoundry/gosteno"
 	"github.com/gorilla/websocket"
 	"io"
 	"sync"
@@ -12,12 +13,17 @@ type websocketListener struct {
 	sync.WaitGroup
 	generateLogMessage marshaller.MessageGenerator
 	convertLogMessage  MessageConverter
+	logger             *gosteno.Logger
 }
 
-type MessageConverter func([]byte) []byte
+type MessageConverter func([]byte) ([]byte, error)
 
-func NewWebsocket(logMessageGenerator marshaller.MessageGenerator, messageConverter MessageConverter) *websocketListener {
-	return &websocketListener{generateLogMessage: logMessageGenerator, convertLogMessage: messageConverter}
+func NewWebsocket(logMessageGenerator marshaller.MessageGenerator, messageConverter MessageConverter, logger *gosteno.Logger) *websocketListener {
+	return &websocketListener{
+		generateLogMessage: logMessageGenerator,
+		convertLogMessage:  messageConverter,
+		logger:             logger,
+	}
 }
 
 func (l *websocketListener) Start(url, appId string, outputChan OutputChannel, stopChan StopChannel) error {
@@ -50,7 +56,12 @@ func (l *websocketListener) Start(url, appId string, outputChan OutputChannel, s
 			close(serverError)
 			break
 		}
-		outputChan <- l.convertLogMessage(msg)
+		convertedMessage, err := l.convertLogMessage(msg)
+		if err != nil {
+			l.logger.Errorf("WebsocketListener.Start: Error converting message %v. Message: %v", msg, err)
+		} else {
+			outputChan <- convertedMessage
+		}
 	}
 
 	l.Wait()

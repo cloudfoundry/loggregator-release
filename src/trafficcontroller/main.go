@@ -26,7 +26,6 @@ import (
 	"trafficcontroller/channel_group_connector"
 	"trafficcontroller/doppler_endpoint"
 	"trafficcontroller/dopplerproxy"
-	"trafficcontroller/legacyproxy"
 	"trafficcontroller/listener"
 	"trafficcontroller/marshaller"
 	"trafficcontroller/serveraddressprovider"
@@ -131,20 +130,20 @@ func main() {
 	dopplerProxy := makeDopplerProxy(adapter, config, logger, doppler_endpoint.WebsocketHandlerProvider)
 	startOutgoingDopplerProxy(net.JoinHostPort(dopplerProxy.IpAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dopplerProxy)
 
-	proxy := makeLegacyProxy(adapter, config, logger)
-	startOutgoingProxy(net.JoinHostPort(proxy.IpAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), proxy)
+	legacyProxy := makeLegacyProxy(adapter, config, logger)
+	startOutgoingProxy(net.JoinHostPort(legacyProxy.IpAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), legacyProxy)
 
-	setupMonitoring(proxy, config, logger)
+	setupMonitoring(legacyProxy, config, logger)
 
 	rr := routerregistrar.NewRouterRegistrar(config.MbusClient, logger)
 	uri := "loggregator." + config.SystemDomain
-	err = rr.RegisterWithRouter(proxy.IpAddress, config.OutgoingPort, []string{uri})
+	err = rr.RegisterWithRouter(legacyProxy.IpAddress, config.OutgoingPort, []string{uri})
 	if err != nil {
 		logger.Fatalf("Startup: Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
 	}
 
 	uri = "doppler." + config.SystemDomain
-	err = rr.RegisterWithRouter(proxy.IpAddress, config.OutgoingDropsondePort, []string{uri})
+	err = rr.RegisterWithRouter(legacyProxy.IpAddress, config.OutgoingDropsondePort, []string{uri})
 	if err != nil {
 		logger.Fatalf("Startup: Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
 	}
@@ -157,7 +156,7 @@ func main() {
 		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
 			cfcomponent.DumpGoRoutine()
 		case <-killChan:
-			rr.UnregisterFromRouter(proxy.IpAddress, config.OutgoingPort, []string{uri})
+			rr.UnregisterFromRouter(legacyProxy.IpAddress, config.OutgoingPort, []string{uri})
 			break
 		}
 	}
@@ -196,18 +195,6 @@ func MakeProvider(adapter storeadapter.StoreAdapter, storeKeyPrefix string, outg
 	return serveraddressprovider.NewDynamicServerAddressProvider(loggregatorServerAddressList, outgoingPort)
 }
 
-func makeLegacyProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger) *legacyproxy.Proxy {
-	legacyHandlerProvider := legacyproxy.NewLegacyHandlerProvider(doppler_endpoint.WebsocketHandlerProvider)
-	dopplerProxy := makeDopplerProxy(adapter, config, logger, legacyHandlerProvider)
-
-	builder := legacyproxy.NewProxyBuilder()
-	builder.Handler(dopplerProxy)
-	builder.Component(dopplerProxy.Component)
-	builder.Logger(logger)
-	builder.RequestTranslator(legacyproxy.NewRequestTranslator())
-	return builder.Build()
-}
-
 func startOutgoingProxy(host string, proxy http.Handler) {
 	go func() {
 		err := http.ListenAndServe(host, proxy)
@@ -217,7 +204,7 @@ func startOutgoingProxy(host string, proxy http.Handler) {
 	}()
 }
 
-func setupMonitoring(proxy *legacyproxy.Proxy, config *Config, logger *gosteno.Logger) {
+func setupMonitoring(proxy *dopplerproxy.Proxy, config *Config, logger *gosteno.Logger) {
 	go collectorregistrar.NewCollectorRegistrar(cfcomponent.DefaultYagnatsClientProvider, proxy.Component, time.Duration(config.CollectorRegistrarIntervalMilliseconds)*time.Millisecond, &config.Config).Run()
 
 	go func() {
@@ -233,8 +220,18 @@ func makeDopplerProxy(adapter storeadapter.StoreAdapter, config *Config, logger 
 	uaaClient := uaa_client.NewUaaClient(config.UaaHost, config.UaaClientId, config.UaaClientSecret, config.SkipCertVerify)
 	adminAuthorizer := authorization.NewAdminAccessAuthorizer(&uaaClient)
 	provider := MakeProvider(adapter, "/healthstatus/doppler", config.DopplerPort, logger)
-	cgc := channel_group_connector.NewChannelGroupConnector(provider, newWebsocketListener, marshaller.DropsondeLogMessage, logger)
-	proxy := dopplerproxy.NewDopplerProxy(authorizer, adminAuthorizer, handlerProvider, cgc, config.Config, logger)
+	cgc := channel_group_connector.NewChannelGroupConnector(provider, newDropsondeWebsocketListener, marshaller.DropsondeLogMessage, logger)
+	proxy := dopplerproxy.NewDopplerProxy(authorizer, adminAuthorizer, cgc, config.Config, dopplerproxy.TranslateFromDropsondePath, logger)
+	return proxy
+}
+
+func makeLegacyProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger) *dopplerproxy.Proxy {
+	authorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
+	uaaClient := uaa_client.NewUaaClient(config.UaaHost, config.UaaClientId, config.UaaClientSecret, config.SkipCertVerify)
+	adminAuthorizer := authorization.NewAdminAccessAuthorizer(&uaaClient)
+	provider := MakeProvider(adapter, "/healthstatus/doppler", config.DopplerPort, logger)
+	cgc := channel_group_connector.NewChannelGroupConnector(provider, newLegacyWebsocketListener, marshaller.DropsondeLogMessage, logger)
+	proxy := dopplerproxy.NewDopplerProxy(authorizer, adminAuthorizer, cgc, config.Config, dopplerproxy.TranslateFromLegacyPath, logger)
 	return proxy
 }
 
@@ -247,9 +244,13 @@ func startOutgoingDopplerProxy(host string, proxy http.Handler) {
 	}()
 }
 
-func newWebsocketListener() listener.Listener {
-	messageConverter := func(message []byte) []byte {
-		return message
+func newDropsondeWebsocketListener(logger *gosteno.Logger) listener.Listener {
+	messageConverter := func(message []byte) ([]byte, error) {
+		return message, nil
 	}
-	return listener.NewWebsocket(marshaller.DropsondeLogMessage, messageConverter)
+	return listener.NewWebsocket(marshaller.DropsondeLogMessage, messageConverter, logger)
+}
+
+func newLegacyWebsocketListener(logger *gosteno.Logger) listener.Listener {
+	return listener.NewWebsocket(marshaller.LoggregatorLogMessage, marshaller.TranslateDropsondeToLegacyLogMessage, logger)
 }

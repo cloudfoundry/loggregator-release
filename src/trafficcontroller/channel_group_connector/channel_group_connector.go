@@ -13,7 +13,7 @@ import (
 
 const checkServerAddressesInterval = 100 * time.Millisecond
 
-type ListenerConstructor func() listener.Listener
+type ListenerConstructor func(*gosteno.Logger) listener.Listener
 
 type ChannelGroupConnector interface {
 	Connect(dopplerConnector doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{})
@@ -48,20 +48,24 @@ loop:
 	for {
 		serverAddresses := connector.serverAddressProvider.ServerAddresses()
 
-		for _, serverAddress := range serverAddresses {
-			if connections.connectedToServer(serverAddress) {
-				continue
+		if len(serverAddresses) == 0 {
+			connector.logger.Debugf("ChannelGroupConnector.Connect: No doppler servers available. Trying again in %s", checkLoggregatorServersTicker)
+		} else {
+			for _, serverAddress := range serverAddresses {
+				if connections.connectedToServer(serverAddress) {
+					continue
+				}
+				connections.addConnectedServer(serverAddress)
+
+				go func(addr string) {
+					connector.connectToServer(addr, dopplerEndpoint, messagesChan, stopChan)
+					connections.removeConnectedServer(addr)
+				}(serverAddress)
 			}
-			connections.addConnectedServer(serverAddress)
 
-			go func(addr string) {
-				connector.connectToServer(addr, dopplerEndpoint, messagesChan, stopChan)
-				connections.removeConnectedServer(addr)
-			}(serverAddress)
-		}
-
-		if !dopplerEndpoint.Reconnect {
-			break
+			if !dopplerEndpoint.Reconnect {
+				break
+			}
 		}
 
 		select {
@@ -76,17 +80,10 @@ loop:
 }
 
 func (connector *channelGroupConnector) connectToServer(serverAddress string, dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{}) {
-	//func (connector *channelGroupConnector) connectToServer(thing Thing, messagesChan chan<- []byte, stopChan <-chan struct{}) {
-	l := connector.listenerConstructor()
+	l := connector.listenerConstructor(connector.logger)
 
-	var serverUrl string
-
-	//if dopplerEndpoint.appId == "firehose" {
-	//	serverUrl = fmt.Sprintf("ws://%s/firehose", serverAddress)
-	//} else {
-	//	serverUrl = fmt.Sprintf("ws://%s/apps/%s%s", serverAddress, appId, path)
-	//}
-	serverUrl = fmt.Sprintf("ws://%s%s", serverAddress, dopplerEndpoint.GetPath())
+	serverUrl := fmt.Sprintf("ws://%s%s", serverAddress, dopplerEndpoint.GetPath())
+	connector.logger.Debugf("proxy: connecting to doppler at %s", serverUrl)
 
 	appId := dopplerEndpoint.StreamId
 	err := l.Start(serverUrl, appId, messagesChan, stopChan)

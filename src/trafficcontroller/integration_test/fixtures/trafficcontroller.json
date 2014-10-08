@@ -14,10 +14,10 @@
     "ApiHost": "http://127.0.0.1:42123",
     "SystemDomain": "vcap.me",
 
-    "NatsHosts": [],
+    "NatsHosts": ["localhost"],
     "NatsPort": 4222,
-    "NatsUser": "nats",
-    "NatsPass": "nats",
+    "NatsUser": "",
+    "NatsPass": "",
     "VarzUser": "",
     "VarzPass": "",
     "VarzPort": 12350,

@@ -1,4 +1,4 @@
-package legacyproxy
+package dopplerproxy
 
 import (
 	"errors"
@@ -6,19 +6,9 @@ import (
 	"net/http"
 )
 
-type RequestTranslator interface {
-	Translate(legacyRequest *http.Request) (*http.Request, error)
-}
-
 var MissingAppIdError = errors.New("No App Id specified in request")
 
-type requestTranslator struct{}
-
-func NewRequestTranslator() RequestTranslator {
-	return &requestTranslator{}
-}
-
-func (pt *requestTranslator) Translate(request *http.Request) (*http.Request, error) {
+func TranslateFromLegacyPath(request *http.Request) (*http.Request, error) {
 	err := request.ParseForm()
 	if err != nil {
 		return nil, err
@@ -49,4 +39,8 @@ func (pt *requestTranslator) Translate(request *http.Request) (*http.Request, er
 	}
 
 	return &translatedRequest, nil
+}
+
+func TranslateFromDropsondePath(request *http.Request) (*http.Request, error) {
+	return request, nil
 }

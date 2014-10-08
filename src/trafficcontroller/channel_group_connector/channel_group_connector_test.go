@@ -1,6 +1,8 @@
 package channel_group_connector_test
 
 import (
+	"trafficcontroller/channel_group_connector"
+
 	"code.google.com/p/gogoprotobuf/proto"
 	"errors"
 	"github.com/cloudfoundry/dropsonde"
@@ -9,7 +11,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"sync/atomic"
 	"time"
-	"trafficcontroller/channel_group_connector"
 	"trafficcontroller/doppler_endpoint"
 	"trafficcontroller/listener"
 	"trafficcontroller/marshaller"
@@ -25,7 +26,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 			logger              *gosteno.Logger
 			provider            *serveraddressprovider.FakeServerAddressProvider
 			fakeListeners       []*listener.FakeListener
-			listenerConstructor func() listener.Listener
+			listenerConstructor func(*gosteno.Logger) listener.Listener
 			messageChan1        chan []byte
 			messageChan2        chan []byte
 			expectedMessage1    = []byte{0}
@@ -44,7 +45,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 			}
 
 			i := int32(-1)
-			listenerConstructor = func() listener.Listener {
+			listenerConstructor = func(logger *gosteno.Logger) listener.Listener {
 				atomic.AddInt32(&i, 1)
 				return fakeListeners[i]
 			}

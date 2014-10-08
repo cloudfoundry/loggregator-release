@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
+	"github.com/cloudfoundry/loggregator_consumer"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/localip"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/noaa"
@@ -23,12 +24,13 @@ import (
 	"trafficcontroller/integration_test/fake_uaa_server"
 	"trafficcontroller/integration_test/traffic_controller_client"
 
-	"github.com/cloudfoundry/loggregator_consumer"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var command *exec.Cmd
+var gnatsdCommand *exec.Cmd
+var routerCommand *exec.Cmd
 var etcdRunner *etcdstorerunner.ETCDClusterRunner
 var etcdPort int
 var localIPAddress string
@@ -47,8 +49,21 @@ var _ = BeforeSuite(func() {
 	setupFakeAuthServer()
 	setupFakeUaaServer()
 
+	gnatsdExec, err := gexec.Build("github.com/apcera/gnatsd")
+	Expect(err).ToNot(HaveOccurred())
+	gnatsdCommand = exec.Command(gnatsdExec, "-p", "4222")
+	gexec.Start(gnatsdCommand, nil, nil)
+
+	err = exec.Command("go", "get", "-d", "github.com/cloudfoundry/gorouter").Run()
+	Expect(err).NotTo(HaveOccurred())
+
+	routerExec, err := gexec.Build("github.com/cloudfoundry/gorouter")
+	Expect(err).ToNot(HaveOccurred())
+	routerCommand = exec.Command(routerExec)
+	gexec.Start(routerCommand, nil, nil)
+
 	pathToTrafficControllerExec, err := gexec.Build("trafficcontroller")
-	Expect(err).ShouldNot(HaveOccurred())
+	Expect(err).ToNot(HaveOccurred())
 
 	command = exec.Command(pathToTrafficControllerExec, "--config=fixtures/trafficcontroller.json", "--debug")
 	gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -71,6 +86,8 @@ var _ = BeforeSuite(func() {
 
 var _ = AfterSuite(func() {
 	command.Process.Kill()
+	gnatsdCommand.Process.Kill()
+	routerCommand.Process.Kill()
 	gexec.CleanupBuildArtifacts()
 
 	etcdRunner.Adapter().Disconnect()
@@ -128,8 +145,9 @@ var _ = Describe("TrafficController", func() {
 
 				err, resp := client.Start()
 				Expect(err).To(Equal(errors.New("websocket: bad handshake")))
+				Expect(resp.StatusCode).To(Equal(404))
 				errMsg, _ := ioutil.ReadAll(resp.Body)
-				Expect(errMsg).To(BeEquivalentTo("invalid request: unexpected path: /invalid-path\n"))
+				Expect(errMsg).To(BeEquivalentTo("Resource Not Found. /invalid-path"))
 			})
 		})
 
@@ -154,6 +172,7 @@ var _ = Describe("TrafficController", func() {
 
 	Context("Recent", func() {
 		var expectedMessages [][]byte
+
 		BeforeEach(func() {
 			expectedMessages = make([][]byte, 5)
 
@@ -170,11 +189,7 @@ var _ = Describe("TrafficController", func() {
 				endpoint := fmt.Sprintf("ws://%s:%d", localIPAddress, DOPPLER_DROPSONDE_PORT)
 				client := noaa.NewNoaa(endpoint, &tls.Config{}, nil)
 
-				var messages []*events.Envelope
-				var err error
-				go func() {
-					messages, err = client.RecentLogs("1234", "bearer iAmAnAdmin")
-				}()
+				messages, err := client.RecentLogs("1234", "bearer iAmAnAdmin")
 
 				var request *http.Request
 				Eventually(fakeDoppler.TrafficControllerConnected, 15).Should(Receive(&request))
@@ -194,11 +209,7 @@ var _ = Describe("TrafficController", func() {
 				endpoint := fmt.Sprintf("ws://%s:%d", localIPAddress, DOPPLER_LEGACY_PORT)
 				client := loggregator_consumer.New(endpoint, &tls.Config{}, nil)
 
-				var messages []*logmessage.LogMessage
-				var err error
-				go func() {
-					messages, err = client.Recent("1234", "bearer iAmAnAdmin")
-				}()
+				messages, err := client.Recent("1234", "bearer iAmAnAdmin")
 
 				var request *http.Request
 				Eventually(fakeDoppler.TrafficControllerConnected, 15).Should(Receive(&request))
@@ -206,9 +217,7 @@ var _ = Describe("TrafficController", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 
-				fmt.Printf("********** got %d messages\n", len(messages))
 				for i, message := range messages {
-					fmt.Printf("********* message: %v\n", message)
 					Expect(message.GetMessage()).To(BeEquivalentTo(strconv.Itoa(i)))
 				}
 				close(done)

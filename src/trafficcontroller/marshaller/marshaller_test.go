@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

@@ -1,18 +1,21 @@
 package listener_test
 
 import (
+	"trafficcontroller/listener"
+
 	"fmt"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/gorilla/websocket"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"time"
-	"trafficcontroller/listener"
 	"trafficcontroller/marshaller"
+
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 type fakeHandler struct {
@@ -84,7 +87,7 @@ var _ = Describe("WebsocketListener", func() {
 		stopChan = make(chan struct{})
 		fh = &fakeHandler{messages: messageChan}
 		ts = httptest.NewUnstartedServer(fh)
-		l = listener.NewWebsocket(marshaller.LoggregatorLogMessage, func(d []byte) []byte { return d })
+		l = listener.NewWebsocket(marshaller.LoggregatorLogMessage, func(d []byte) ([]byte, error) { return d, nil }, loggertesthelper.Logger())
 	})
 
 	AfterEach(func() {

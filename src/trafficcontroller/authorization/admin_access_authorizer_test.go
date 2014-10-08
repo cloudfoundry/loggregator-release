@@ -5,9 +5,10 @@ import (
 
 	"errors"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"trafficcontroller/uaa_client"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"trafficcontroller/uaa_client"
 )
 
 type LoggregatorAdminUaaClient struct {

@@ -4,6 +4,7 @@ import (
 	"trafficcontroller/doppler_endpoint"
 
 	"github.com/cloudfoundry/loggregatorlib/server/handlers"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -15,8 +16,8 @@ var _ = Describe("NewDopplerEndpoint", func() {
 		Expect(dopplerEndpoint.HProvider(nil, nil)).To(BeAssignableToTypeOf(knownHttpHandler))
 	})
 
-	It("when endpoint is not 'recentlogs', uses an socket handler", func() {
-		dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("firehose", "firehost", true)
+	It("when endpoint is not 'recentlogs', uses a socket handler", func() {
+		dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("firehose", "firehose", true)
 		knownWebsocketHandler := handlers.NewWebsocketHandler(nil, 0, nil)
 		Expect(dopplerEndpoint.HProvider(nil, nil)).To(BeAssignableToTypeOf(knownWebsocketHandler))
 	})
