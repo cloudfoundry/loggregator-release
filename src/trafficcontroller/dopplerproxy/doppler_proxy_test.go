@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"io/ioutil"
+	"strings"
 )
 
 var _ = Describe("ServeHTTP", func() {
@@ -39,6 +40,7 @@ var _ = Describe("ServeHTTP", func() {
 			fakeConnector,
 			cfcomponent.Config{},
 			dopplerproxy.TranslateFromDropsondePath,
+			"cookieDomain",
 			loggertesthelper.Logger(),
 		)
 
@@ -46,7 +48,6 @@ var _ = Describe("ServeHTTP", func() {
 	})
 
 	Context("App Logs", func() {
-
 		It("returns a 200 for a head request", func() {
 			req, _ := http.NewRequest("HEAD", "", nil)
 
@@ -209,6 +210,35 @@ var _ = Describe("ServeHTTP", func() {
 			Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
 			Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
 			Expect(recorder.Body.String()).To(Equal("You are not authorized. Error: Authorization not provided"))
+		})
+	})
+
+	Context("SetCookie", func() {
+		It("returns an OK status with a form", func() {
+			req, _ := http.NewRequest("POST", "/set-cookie", strings.NewReader("CookieName=cookie&CookieValue=monster"))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+			proxy.ServeHTTP(recorder, req)
+
+			Expect(recorder.Code).To(Equal(http.StatusOK))
+		})
+
+		It("sets the passed value as a cookie", func() {
+			req, _ := http.NewRequest("POST", "/set-cookie", strings.NewReader("CookieName=cookie&CookieValue=monster"))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+			proxy.ServeHTTP(recorder, req)
+
+			Expect(recorder.Header().Get("Set-Cookie")).To(Equal("cookie=monster; Domain=cookieDomain"))
+		})
+
+		It("returns a bad request if the form does not parse", func() {
+			req, _ := http.NewRequest("POST", "/set-cookie", nil)
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+			proxy.ServeHTTP(recorder, req)
+
+			Expect(recorder.Code).To(Equal(http.StatusBadRequest))
 		})
 	})
 })

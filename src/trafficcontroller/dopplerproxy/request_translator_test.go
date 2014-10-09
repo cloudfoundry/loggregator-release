@@ -32,6 +32,13 @@ var _ = Describe("TranslateFromLegacyPath", func() {
 		Expect(translatedRequest.URL.Path).To(Equal("/apps/my-app-id/recentlogs"))
 	})
 
+	It("does nothing for /set-cookie", func() {
+		request, _ := http.NewRequest("GET", "/set-cookie", nil)
+		translatedRequest, err := dopplerproxy.TranslateFromLegacyPath(request)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(translatedRequest).To(Equal(request))
+	})
+
 	It("returns an error for invalid paths", func() {
 		request, _ := http.NewRequest("GET", "/invalid-path?app=my-app-id", nil)
 		_, err := dopplerproxy.TranslateFromLegacyPath(request)

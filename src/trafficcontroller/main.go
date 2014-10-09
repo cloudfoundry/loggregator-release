@@ -215,14 +215,14 @@ func setupMonitoring(proxy *dopplerproxy.Proxy, config *Config, logger *gosteno.
 }
 
 func makeDopplerProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger) *dopplerproxy.Proxy {
-	return makeProxy(adapter, config, logger, marshaller.DropsondeLogMessage, dopplerproxy.TranslateFromDropsondePath, newDropsondeWebsocketListener)
+	return makeProxy(adapter, config, logger, marshaller.DropsondeLogMessage, dopplerproxy.TranslateFromDropsondePath, newDropsondeWebsocketListener, "doppler."+config.SystemDomain)
 }
 
 func makeLegacyProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger) *dopplerproxy.Proxy {
-	return makeProxy(adapter, config, logger, marshaller.LoggregatorLogMessage, dopplerproxy.TranslateFromLegacyPath, newLegacyWebsocketListener)
+	return makeProxy(adapter, config, logger, marshaller.LoggregatorLogMessage, dopplerproxy.TranslateFromLegacyPath, newLegacyWebsocketListener, "loggregator."+config.SystemDomain)
 }
 
-func makeProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger, messageGenerator marshaller.MessageGenerator, translator dopplerproxy.RequestTranslator, listenerConstructor channel_group_connector.ListenerConstructor) *dopplerproxy.Proxy {
+func makeProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger, messageGenerator marshaller.MessageGenerator, translator dopplerproxy.RequestTranslator, listenerConstructor channel_group_connector.ListenerConstructor, cookieDomain string) *dopplerproxy.Proxy {
 	logAuthorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
 
 	uaaClient := uaa_client.NewUaaClient(config.UaaHost, config.UaaClientId, config.UaaClientSecret, config.SkipCertVerify)
@@ -231,7 +231,7 @@ func makeProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosten
 	provider := MakeProvider(adapter, "/healthstatus/doppler", config.DopplerPort, logger)
 	cgc := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, messageGenerator, logger)
 
-	return dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, cgc, config.Config, translator, logger)
+	return dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, cgc, config.Config, translator, cookieDomain, logger)
 }
 
 func startOutgoingDopplerProxy(host string, proxy http.Handler) {
