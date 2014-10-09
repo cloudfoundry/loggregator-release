@@ -215,21 +215,21 @@ func setupMonitoring(proxy *dopplerproxy.Proxy, config *Config, logger *gosteno.
 }
 
 func makeDopplerProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger) *dopplerproxy.Proxy {
-	return makeProxy(adapter, config, logger, marshaller.DropsondeLogMessage, dopplerproxy.TranslateFromDropsondePath)
+	return makeProxy(adapter, config, logger, marshaller.DropsondeLogMessage, dopplerproxy.TranslateFromDropsondePath, newDropsondeWebsocketListener)
 }
 
 func makeLegacyProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger) *dopplerproxy.Proxy {
-	return makeProxy(adapter, config, logger, marshaller.LoggregatorLogMessage, dopplerproxy.TranslateFromLegacyPath)
+	return makeProxy(adapter, config, logger, marshaller.LoggregatorLogMessage, dopplerproxy.TranslateFromLegacyPath, newLegacyWebsocketListener)
 }
 
-func makeProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger, messageGenerator marshaller.MessageGenerator, translator dopplerproxy.RequestTranslator) *dopplerproxy.Proxy {
+func makeProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger, messageGenerator marshaller.MessageGenerator, translator dopplerproxy.RequestTranslator, listenerConstructor channel_group_connector.ListenerConstructor) *dopplerproxy.Proxy {
 	logAuthorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
 
 	uaaClient := uaa_client.NewUaaClient(config.UaaHost, config.UaaClientId, config.UaaClientSecret, config.SkipCertVerify)
 	adminAuthorizer := authorization.NewAdminAccessAuthorizer(&uaaClient)
 
 	provider := MakeProvider(adapter, "/healthstatus/doppler", config.DopplerPort, logger)
-	cgc := channel_group_connector.NewChannelGroupConnector(provider, newLegacyWebsocketListener, messageGenerator, logger)
+	cgc := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, messageGenerator, logger)
 
 	return dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, cgc, config.Config, translator, logger)
 }

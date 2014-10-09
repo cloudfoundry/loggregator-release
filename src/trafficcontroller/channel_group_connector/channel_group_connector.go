@@ -49,7 +49,7 @@ loop:
 		serverAddresses := connector.serverAddressProvider.ServerAddresses()
 
 		if len(serverAddresses) == 0 {
-			connector.logger.Debugf("ChannelGroupConnector.Connect: No doppler servers available. Trying again in %s", checkLoggregatorServersTicker)
+			connector.logger.Debugf("ChannelGroupConnector.Connect: No doppler servers available. Trying again in %s", checkServerAddressesInterval.String())
 		} else {
 			for _, serverAddress := range serverAddresses {
 				if connections.connectedToServer(serverAddress) {
