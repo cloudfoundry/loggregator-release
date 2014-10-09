@@ -3,9 +3,8 @@ package integration_test
 import (
 	"code.google.com/p/gogoprotobuf/proto"
 	"fmt"
-	"github.com/cloudfoundry/dropsonde/emitter"
-	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gunk/localip"
+	"github.com/cloudfoundry/noaa/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"net/http"
@@ -144,7 +143,11 @@ func makeDropsondeMessage(messageString string, appId string, currentTime int64)
 		SourceInstance: proto.String("SN"),
 	}
 
-	envelope, _ := emitter.Wrap(logMessage, "doppler")
+	envelope := &events.Envelope{
+		LogMessage: logMessage,
+		Origin:     proto.String("doppler"),
+		EventType:  events.Envelope_LogMessage.Enum(),
+	}
 	msg, _ := proto.Marshal(envelope)
 
 	return msg

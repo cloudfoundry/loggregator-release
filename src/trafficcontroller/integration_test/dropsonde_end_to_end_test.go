@@ -3,8 +3,8 @@ package integration_test
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/noaa"
+	"github.com/cloudfoundry/noaa/events"
 	"net/http"
 	"strconv"
 	"time"
