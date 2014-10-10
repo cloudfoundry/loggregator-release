@@ -240,6 +240,16 @@ var _ = Describe("ServeHTTP", func() {
 
 			Expect(recorder.Code).To(Equal(http.StatusBadRequest))
 		})
+
+		It("sets required CORS headers", func() {
+			req, _ := http.NewRequest("POST", "/set-cookie", nil)
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+			proxy.ServeHTTP(recorder, req)
+
+			Expect(recorder.Header().Get("Access-Control-Allow-Origin")).To(Equal("*"))
+			Expect(recorder.Header().Get("Access-Control-Allow-Credentials")).To(Equal("true"))
+		})
 	})
 })
 

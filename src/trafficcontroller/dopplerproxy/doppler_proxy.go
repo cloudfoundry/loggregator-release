@@ -237,6 +237,8 @@ func serveSetCookie(writer http.ResponseWriter, request *http.Request, cookieDom
 	cookieValue, _ := url.QueryUnescape(request.FormValue("CookieValue"))
 
 	http.SetCookie(writer, &http.Cookie{Name: cookieName, Value: cookieValue, Domain: cookieDomain})
+	writer.Header().Add("Access-Control-Allow-Origin", "*")
+	writer.Header().Add("Access-Control-Allow-Credentials", "true")
 }
 
 type TrafficControllerMonitor struct {
