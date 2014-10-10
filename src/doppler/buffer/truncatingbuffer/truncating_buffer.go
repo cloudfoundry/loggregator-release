@@ -49,7 +49,8 @@ func (r *truncatingBuffer) Run() {
 		default:
 			messageCount := len(r.outputChannel)
 			r.outputChannel = make(chan *events.Envelope, cap(r.outputChannel))
-			lm := generateLogMessage(fmt.Sprintf("Log message output too high. We've dropped %d messages", messageCount), dropsonde.GetAppId(msg))
+			appId := dropsonde.GetAppId(msg)
+			lm := generateLogMessage(fmt.Sprintf("Log message output too high. We've dropped %d messages", messageCount), appId)
 
 			env := &events.Envelope{
 				EventType:  events.Envelope_LogMessage.Enum(),
@@ -61,7 +62,7 @@ func (r *truncatingBuffer) Run() {
 			r.outputChannel <- msg
 
 			if r.logger != nil {
-				r.logger.Warn("TB: Output channel too full. Dropped Buffer.")
+				r.logger.Warn(fmt.Sprintf("TB: Output channel too full. Dropped %d messages for app %s.", messageCount, appId))
 			}
 		}
 		r.lock.Unlock()
