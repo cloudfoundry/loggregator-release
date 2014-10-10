@@ -85,7 +85,7 @@ func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 		proxy.serveFirehose(writer, translatedRequest)
 
 	case setCookieRegexp.MatchString(translatedRequest.URL.Path):
-		serveSetCookie(writer, translatedRequest, proxy.cookieDomain)
+		proxy.serveSetCookie(writer, translatedRequest, proxy.cookieDomain)
 
 		//case appLogsRegexp.MatchString(translatedRequest.URL.Path):
 	default:
@@ -227,7 +227,7 @@ func extractAuthTokenFromCookie(cookies []*http.Cookie) string {
 	return ""
 }
 
-func serveSetCookie(writer http.ResponseWriter, request *http.Request, cookieDomain string) {
+func (proxy *Proxy)serveSetCookie(writer http.ResponseWriter, request *http.Request, cookieDomain string) {
 	err := request.ParseForm()
 	if err != nil {
 		writer.WriteHeader(http.StatusBadRequest)
@@ -237,8 +237,9 @@ func serveSetCookie(writer http.ResponseWriter, request *http.Request, cookieDom
 	cookieValue, _ := url.QueryUnescape(request.FormValue("CookieValue"))
 
 	http.SetCookie(writer, &http.Cookie{Name: cookieName, Value: cookieValue, Domain: cookieDomain})
-	writer.Header().Add("Access-Control-Allow-Origin", "*")
+	writer.Header().Add("Access-Control-Allow-Origin", "http://jsdemo.10.244.0.34.xip.io/")
 	writer.Header().Add("Access-Control-Allow-Credentials", "true")
+	proxy.logger.Debug("Grandma's makin' cookies…")
 }
 
 type TrafficControllerMonitor struct {
