@@ -233,8 +233,8 @@ func serveSetCookie(writer http.ResponseWriter, request *http.Request, cookieDom
 		writer.WriteHeader(http.StatusBadRequest)
 	}
 
-	cookieName := request.FormValue("CookieName")
-	cookieValue := request.FormValue("CookieValue")
+	cookieName, _ := url.QueryUnescape(request.FormValue("CookieName"))
+	cookieValue, _ := url.QueryUnescape(request.FormValue("CookieValue"))
 
 	http.SetCookie(writer, &http.Cookie{Name: cookieName, Value: cookieValue, Domain: cookieDomain})
 }

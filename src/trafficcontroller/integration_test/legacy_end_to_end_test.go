@@ -83,7 +83,7 @@ var _ = Describe("TrafficController for legacy messages", func() {
 
 	Context("SetCookie", func() {
 		It("sets the desired cookie on the response", func() {
-			response, err := http.PostForm(fmt.Sprintf("http://%s:%d/set-cookie", localIPAddress, DOPPLER_LEGACY_PORT), url.Values{"CookieName": {"authorization"}, "CookieValue": {"bearer iAmAnAdmin"}})
+			response, err := http.PostForm(fmt.Sprintf("http://%s:%d/set-cookie", localIPAddress, DOPPLER_LEGACY_PORT), url.Values{"CookieName": {"authorization"}, "CookieValue": {url.QueryEscape("bearer iAmAnAdmin")}})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(response.Cookies()).NotTo(BeNil())
