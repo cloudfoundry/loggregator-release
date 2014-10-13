@@ -92,6 +92,7 @@ var fakeDoppler *fake_doppler.FakeDoppler
 
 const APP_ID = "1234"
 const AUTH_TOKEN = "bearer iAmAnAdmin"
+const SUBSCRIPTION_ID = "firehose-subscription-1"
 
 var setupFakeDoppler = func() {
 	fakeDoppler = &fake_doppler.FakeDoppler{ApiEndpoint: ":1235"}

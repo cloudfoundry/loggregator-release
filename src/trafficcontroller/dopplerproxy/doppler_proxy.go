@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strings"
 	"time"
 	"trafficcontroller/authorization"
 	"trafficcontroller/channel_group_connector"
@@ -74,17 +75,33 @@ func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	isFirehosePath, _ := regexp.MatchString(FIREHOSE_ID, translatedRequest.URL.Path)
-	if isFirehosePath {
+	endpointName := strings.Split(translatedRequest.URL.Path, "/")[1]
+
+	switch endpointName {
+	case "firehose":
 		proxy.serveFirehose(writer, translatedRequest)
-	} else {
+	case "apps":
 		proxy.serveAppLogs(writer, translatedRequest)
+	default:
+		writer.Header().Set("WWW-Authenticate", "Basic")
+		writer.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(writer, "Resource Not Found. %s", request.URL.Path)
 	}
 }
 
 func (proxy *Proxy) serveFirehose(writer http.ResponseWriter, request *http.Request) {
 	clientAddress := request.RemoteAddr
 	authToken := getAuthToken(request)
+
+	firehoseParams := strings.Split(request.URL.Path, "/")[2:]
+
+	if len(firehoseParams) != 1 || firehoseParams[0] == "" {
+		writer.Header().Set("WWW-Authenticate", "Basic")
+
+		writer.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(writer, "Firehose SUBSCRIPTION_ID missing. Make request to /firehose/SUBSCRIPTION_ID")
+		return
+	}
 
 	dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint(FIREHOSE_ID, FIREHOSE_ID, true)
 
@@ -101,7 +118,6 @@ func (proxy *Proxy) serveFirehose(writer http.ResponseWriter, request *http.Requ
 	}
 
 	proxy.serveWithDoppler(writer, request, dopplerEndpoint)
-
 }
 
 func (proxy *Proxy) serveAppLogs(writer http.ResponseWriter, request *http.Request) {

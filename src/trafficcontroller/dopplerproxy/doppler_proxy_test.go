@@ -20,23 +20,23 @@ import (
 
 var _ = Describe("ServeHTTP", func() {
 	var (
-		auth          testhelpers.LogAuthorizer
-		adminAuth     testhelpers.AdminAuthorizer
-		proxy         *dopplerproxy.Proxy
-		recorder      *httptest.ResponseRecorder
-		fakeConnector *fakeChannelGroupConnector
+		auth                  testhelpers.LogAuthorizer
+		adminAuth             testhelpers.AdminAuthorizer
+		proxy                 *dopplerproxy.Proxy
+		recorder              *httptest.ResponseRecorder
+		channelGroupConnector *fakeChannelGroupConnector
 	)
 
 	BeforeEach(func() {
 		auth = testhelpers.LogAuthorizer{Result: true}
 		adminAuth = testhelpers.AdminAuthorizer{Result: true}
 
-		fakeConnector = &fakeChannelGroupConnector{messages: make(chan []byte, 10)}
+		channelGroupConnector = &fakeChannelGroupConnector{messages: make(chan []byte, 10)}
 
 		proxy = dopplerproxy.NewDopplerProxy(
 			auth.Authorize,
 			adminAuth.Authorize,
-			fakeConnector,
+			channelGroupConnector,
 			cfcomponent.Config{},
 			dopplerproxy.TranslateFromDropsondePath,
 			loggertesthelper.Logger(),
@@ -46,7 +46,6 @@ var _ = Describe("ServeHTTP", func() {
 	})
 
 	Context("App Logs", func() {
-
 		It("returns a 200 for a head request", func() {
 			req, _ := http.NewRequest("HEAD", "", nil)
 
@@ -55,60 +54,96 @@ var _ = Describe("ServeHTTP", func() {
 			Expect(recorder.Code).To(Equal(http.StatusOK))
 		})
 
-		It("returns a 404 and sets the WWW-Authenticate to basic if the path does not start with /apps", func() {
-			req, _ := http.NewRequest("GET", "/notApps", nil)
+		Context("if the path does not end with /stream or /recentlogs", func() {
+			It("returns a 404 and sets the WWW-Authenticate to basic", func() {
+				req, _ := http.NewRequest("GET", "/apps/abc123/bar", nil)
 
-			proxy.ServeHTTP(recorder, req)
+				proxy.ServeHTTP(recorder, req)
 
-			Expect(recorder.Code).To(Equal(http.StatusNotFound))
-			Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
-			Expect(recorder.Body.String()).To(Equal("Resource Not Found. /notApps"))
+				Expect(recorder.Code).To(Equal(http.StatusNotFound))
+				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
+				Expect(recorder.Body.String()).To(Equal("Resource Not Found. /apps/abc123/bar"))
+			})
+
+			It("It does not attempt to connect to doppler", func() {
+				req, _ := http.NewRequest("GET", "/apps/abc123/bar", nil)
+
+				proxy.ServeHTTP(recorder, req)
+				Consistently(channelGroupConnector.getPath).Should(Equal(""))
+				Consistently(channelGroupConnector.getAppId).Should(Equal(""))
+				Consistently(channelGroupConnector.getReconnect).Should(BeFalse())
+			})
 		})
 
-		It("returns a 404 and sets the WWW-Authenticate to basic if the path does not end with /stream or /recentlogs", func() {
-			req, _ := http.NewRequest("GET", "/apps/abc123/bar", nil)
+		Context("if the app id is missing", func() {
+			It("returns a 404 and sets the WWW-Authenticate to basic", func() {
+				req, _ := http.NewRequest("GET", "/apps//stream", nil)
 
-			proxy.ServeHTTP(recorder, req)
+				proxy.ServeHTTP(recorder, req)
 
-			Expect(recorder.Code).To(Equal(http.StatusNotFound))
-			Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
-			Expect(recorder.Body.String()).To(Equal("Resource Not Found. /apps/abc123/bar"))
+				Expect(recorder.Code).To(Equal(http.StatusNotFound))
+				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
+				Expect(recorder.Body.String()).To(Equal("App ID missing. Make request to /apps/APP_ID/stream"))
+			})
+
+			It("It does not attempt to connect to doppler", func() {
+				req, _ := http.NewRequest("GET", "/apps//stream", nil)
+
+				proxy.ServeHTTP(recorder, req)
+				Consistently(channelGroupConnector.getPath).Should(Equal(""))
+				Consistently(channelGroupConnector.getAppId).Should(Equal(""))
+				Consistently(channelGroupConnector.getReconnect).Should(BeFalse())
+			})
 		})
 
-		It("returns a 404 and sets the WWW-Authenticate to basic if the app id is missing", func() {
-			req, _ := http.NewRequest("GET", "/apps//stream", nil)
+		Context("if auth not provided", func() {
+			It("returns a unauthorized status and sets the WWW-Authenticate header", func() {
+				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
 
-			proxy.ServeHTTP(recorder, req)
+				proxy.ServeHTTP(recorder, req)
 
-			Expect(recorder.Code).To(Equal(http.StatusNotFound))
-			Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
-			Expect(recorder.Body.String()).To(Equal("App ID missing. Make request to /apps/APP_ID/stream"))
+				Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
+				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
+				Expect(recorder.Body.String()).To(Equal("You are not authorized. Error: Authorization not provided"))
+			})
+
+			It("It does not attempt to connect to doppler", func() {
+				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
+
+				proxy.ServeHTTP(recorder, req)
+				Consistently(channelGroupConnector.getPath).Should(Equal(""))
+				Consistently(channelGroupConnector.getAppId).Should(Equal(""))
+				Consistently(channelGroupConnector.getReconnect).Should(BeFalse())
+			})
 		})
 
-		It("returns a unauthorized status and sets the WWW-Authenticate header if auth not provided", func() {
-			req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
+		Context("if authorization fails", func() {
+			It("returns an unauthorized status and sets the WWW-Authenticate header", func() {
+				auth.Result = false
 
-			proxy.ServeHTTP(recorder, req)
+				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
+				req.Header.Add("Authorization", "token")
 
-			Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
-			Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
-			Expect(recorder.Body.String()).To(Equal("You are not authorized. Error: Authorization not provided"))
-		})
+				proxy.ServeHTTP(recorder, req)
 
-		It("returns an unauthorized status and sets the WWW-Authenticate header if authorization fails", func() {
-			auth.Result = false
+				Expect(auth.TokenParam).To(Equal("token"))
+				Expect(auth.Target).To(Equal("abc123"))
 
-			req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
-			req.Header.Add("Authorization", "token")
+				Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
+				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
+				Expect(recorder.Body.String()).To(Equal("You are not authorized. Error: Invalid authorization"))
+			})
 
-			proxy.ServeHTTP(recorder, req)
+			It("It does not attempt to connect to doppler", func() {
+				auth.Result = false
+				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
+				req.Header.Add("Authorization", "token")
 
-			Expect(auth.TokenParam).To(Equal("token"))
-			Expect(auth.Target).To(Equal("abc123"))
-
-			Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
-			Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
-			Expect(recorder.Body.String()).To(Equal("You are not authorized. Error: Invalid authorization"))
+				proxy.ServeHTTP(recorder, req)
+				Consistently(channelGroupConnector.getPath).Should(Equal(""))
+				Consistently(channelGroupConnector.getAppId).Should(Equal(""))
+				Consistently(channelGroupConnector.getReconnect).Should(BeFalse())
+			})
 		})
 
 		It("can read the authorization information from a cookie", func() {
@@ -129,24 +164,24 @@ var _ = Describe("ServeHTTP", func() {
 
 			proxy.ServeHTTP(recorder, req)
 
-			Eventually(fakeConnector.getPath).Should(Equal("stream"))
-			Eventually(fakeConnector.getReconnect).Should(BeTrue())
+			Eventually(channelGroupConnector.getPath).Should(Equal("stream"))
+			Eventually(channelGroupConnector.getReconnect).Should(BeTrue())
 		})
 
 		It("connects to doppler servers without reconnecting for recentlogs", func() {
-			close(fakeConnector.messages)
+			close(channelGroupConnector.messages)
 			req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs", nil)
 			req.Header.Add("Authorization", "token")
 
 			proxy.ServeHTTP(recorder, req)
 
-			Eventually(fakeConnector.getReconnect).Should(BeFalse())
+			Eventually(channelGroupConnector.getReconnect).Should(BeFalse())
 		})
 
 		It("passes messages back to the requestor", func() {
-			fakeConnector.messages <- []byte("hello")
-			fakeConnector.messages <- []byte("goodbye")
-			close(fakeConnector.messages)
+			channelGroupConnector.messages <- []byte("hello")
+			channelGroupConnector.messages <- []byte("goodbye")
+			close(channelGroupConnector.messages)
 
 			req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs", nil)
 			req.Header.Add("Authorization", "token")
@@ -165,51 +200,169 @@ var _ = Describe("ServeHTTP", func() {
 
 			proxy.ServeHTTP(recorder, req)
 
-			Eventually(fakeConnector.Stopped).Should(BeTrue())
+			Eventually(channelGroupConnector.Stopped).Should(BeTrue())
 		})
 	})
 
 	Context("Firehose", func() {
-		It("connects to doppler servers with correct parameters", func() {
-			req, _ := http.NewRequest("GET", "/firehose", nil)
-			req.Header.Add("Authorization", "token")
+		Context("if a subscription_id is provided", func() {
+			It("connects to doppler servers with correct parameters", func() {
+				req, _ := http.NewRequest("GET", "/firehose/abc-123", nil)
+				req.Header.Add("Authorization", "token")
 
-			proxy.ServeHTTP(recorder, req)
+				proxy.ServeHTTP(recorder, req)
 
-			Eventually(fakeConnector.getPath).Should(Equal("firehose"))
-			Eventually(fakeConnector.getAppId).Should(Equal("firehose"))
-			Eventually(fakeConnector.getReconnect).Should(BeTrue())
+				Eventually(channelGroupConnector.getPath).Should(Equal("firehose"))
+				Eventually(channelGroupConnector.getAppId).Should(Equal("firehose"))
+				Eventually(channelGroupConnector.getReconnect).Should(BeTrue())
+			})
+
+			It("returns an unauthorized status and sets the WWW-Authenticate header if authorization fails", func() {
+				adminAuth.Result = false
+
+				req, _ := http.NewRequest("GET", "/firehose/abc-123", nil)
+				req.Header.Add("Authorization", "token")
+
+				proxy.ServeHTTP(recorder, req)
+
+				Expect(adminAuth.TokenParam).To(Equal("token"))
+
+				Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
+				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
+				Expect(recorder.Body.String()).To(Equal("You are not authorized. Error: Invalid authorization"))
+			})
+
+			It("returns an unauthorized status and sets the WWW-Authenticate header if the token is blank", func() {
+				adminAuth.Result = true
+
+				req, _ := http.NewRequest("GET", "/firehose/abc-123", nil)
+				req.Header.Add("Authorization", "")
+
+				proxy.ServeHTTP(recorder, req)
+
+				Expect(adminAuth.TokenParam).To(Equal(""))
+
+				Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
+				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
+				Expect(recorder.Body.String()).To(Equal("You are not authorized. Error: Authorization not provided"))
+			})
 		})
 
-		It("returns an unauthorized status and sets the WWW-Authenticate header if authorization fails", func() {
-			adminAuth.Result = false
+		Context("if subscription_id is not provided (no trailing slash)", func() {
+			It("returns a 404 and sets the WWW-Authenticate to basic", func() {
+				req, _ := http.NewRequest("GET", "/firehose", nil)
+				req.Header.Add("Authorization", "token")
 
-			req, _ := http.NewRequest("GET", "/firehose", nil)
-			req.Header.Add("Authorization", "token")
+				proxy.ServeHTTP(recorder, req)
+				Expect(recorder.Code).To(Equal(http.StatusNotFound))
+				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
+				Expect(recorder.Body.String()).To(Equal("Firehose SUBSCRIPTION_ID missing. Make request to /firehose/SUBSCRIPTION_ID"))
+			})
 
+			It("It does not attempt to connect to doppler", func() {
+				req, _ := http.NewRequest("GET", "/firehose", nil)
+				req.Header.Add("Authorization", "token")
+
+				proxy.ServeHTTP(recorder, req)
+				Consistently(channelGroupConnector.getPath).Should(Equal(""))
+				Consistently(channelGroupConnector.getAppId).Should(Equal(""))
+				Consistently(channelGroupConnector.getReconnect).Should(BeFalse())
+			})
+		})
+
+		Context("if subscription_id is not provided (with trailing slash)", func() {
+			It("returns a 404 and sets the WWW-Authenticate to basic", func() {
+				req, _ := http.NewRequest("GET", "/firehose/", nil)
+				req.Header.Add("Authorization", "token")
+
+				proxy.ServeHTTP(recorder, req)
+				Expect(recorder.Code).To(Equal(http.StatusNotFound))
+				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
+				Expect(recorder.Body.String()).To(Equal("Firehose SUBSCRIPTION_ID missing. Make request to /firehose/SUBSCRIPTION_ID"))
+			})
+
+			It("It does not attempt to connect to doppler", func() {
+				req, _ := http.NewRequest("GET", "/firehose/", nil)
+				req.Header.Add("Authorization", "token")
+
+				proxy.ServeHTTP(recorder, req)
+				Consistently(channelGroupConnector.getPath).Should(Equal(""))
+				Consistently(channelGroupConnector.getAppId).Should(Equal(""))
+				Consistently(channelGroupConnector.getReconnect).Should(BeFalse())
+			})
+		})
+
+		Context("if there is an extra trailing slash after a valid firehose URL", func() {
+			It("returns a 404 and sets the WWW-Authenticate to basic", func() {
+				req, _ := http.NewRequest("GET", "/firehose/abc/123", nil)
+				req.Header.Add("Authorization", "token")
+
+				proxy.ServeHTTP(recorder, req)
+				Expect(recorder.Code).To(Equal(http.StatusNotFound))
+				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
+				Expect(recorder.Body.String()).To(Equal("Firehose SUBSCRIPTION_ID missing. Make request to /firehose/SUBSCRIPTION_ID"))
+			})
+
+			It("It does not attempt to connect to doppler", func() {
+				req, _ := http.NewRequest("GET", "/firehose/abc/123", nil)
+				req.Header.Add("Authorization", "token")
+
+				proxy.ServeHTTP(recorder, req)
+				Consistently(channelGroupConnector.getPath).Should(Equal(""))
+				Consistently(channelGroupConnector.getAppId).Should(Equal(""))
+				Consistently(channelGroupConnector.getReconnect).Should(BeFalse())
+			})
+		})
+
+		Context("if path is invalid but contains the string 'firehose'", func() {
+			It("returns a 404 for a bad firehose endpoint", func() {
+				req, _ := http.NewRequest("GET", "/appsfirehosefoo/abc-123", nil)
+				req.Header.Add("Authorization", "token")
+
+				proxy.ServeHTTP(recorder, req)
+				Expect(recorder.Code).To(Equal(http.StatusNotFound))
+			})
+
+			It("It does not attempt to connect to doppler", func() {
+				req, _ := http.NewRequest("GET", "/appsfirehosefoo/abc-123", nil)
+				req.Header.Add("Authorization", "token")
+
+				proxy.ServeHTTP(recorder, req)
+				Consistently(channelGroupConnector.getPath).Should(Equal(""))
+				Consistently(channelGroupConnector.getAppId).Should(Equal(""))
+				Consistently(channelGroupConnector.getReconnect).Should(BeFalse())
+			})
+		})
+
+		Context("if attempting to access the 'firehose' app", func() {
+			It("It does not connect to the endpoint of type 'firehose' in doppler", func() {
+				req, _ := http.NewRequest("GET", "/apps/firehose/stream", nil)
+				req.Header.Add("Authorization", "token")
+
+				proxy.ServeHTTP(recorder, req)
+				Consistently(channelGroupConnector.getPath).ShouldNot(Equal("firehose"))
+				Eventually(channelGroupConnector.getAppId).Should(Equal("firehose"))
+				Eventually(channelGroupConnector.getReconnect).Should(BeTrue())
+			})
+		})
+	})
+
+	Context("Other invalid paths", func() {
+		It("returns a 404 and sets the WWW-Authenticate to basic for an empty path", func() {
+			req, _ := http.NewRequest("GET", "/", nil)
 			proxy.ServeHTTP(recorder, req)
-
-			Expect(adminAuth.TokenParam).To(Equal("token"))
-
-			Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
+			Expect(recorder.Code).To(Equal(http.StatusNotFound))
 			Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
-			Expect(recorder.Body.String()).To(Equal("You are not authorized. Error: Invalid authorization"))
+			Expect(recorder.Body.String()).To(Equal("Resource Not Found. /"))
 		})
+	})
 
-		It("returns an unauthorized status and sets the WWW-Authenticate header if the token is blank", func() {
-			adminAuth.Result = true
-
-			req, _ := http.NewRequest("GET", "/firehose", nil)
-			req.Header.Add("Authorization", "")
-
-			proxy.ServeHTTP(recorder, req)
-
-			Expect(adminAuth.TokenParam).To(Equal(""))
-
-			Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
-			Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
-			Expect(recorder.Body.String()).To(Equal("You are not authorized. Error: Authorization not provided"))
-		})
+	It("returns a 404 and sets the WWW-Authenticate to basic if the path does not start with /apps or /firehose", func() {
+		req, _ := http.NewRequest("GET", "/notApps", nil)
+		proxy.ServeHTTP(recorder, req)
+		Expect(recorder.Code).To(Equal(http.StatusNotFound))
+		Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
+		Expect(recorder.Body.String()).To(Equal("Resource Not Found. /notApps"))
 	})
 })
 

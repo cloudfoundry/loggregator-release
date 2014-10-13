@@ -15,11 +15,11 @@ import (
 
 var dropsondeEndpoint string
 
-const DOPPLER_DROPSONDE_PORT = 4566
+const TRAFFIC_CONTROLLER_DROPSONDE_PORT = 4566
 
 var _ = Describe("TrafficController for dropsonde messages", func() {
 	BeforeEach(func() {
-		dropsondeEndpoint = fmt.Sprintf("ws://%s:%d", localIPAddress, DOPPLER_DROPSONDE_PORT)
+		dropsondeEndpoint = fmt.Sprintf("ws://%s:%d", localIPAddress, TRAFFIC_CONTROLLER_DROPSONDE_PORT)
 		fakeDoppler.ResetMessageChan()
 	})
 
@@ -52,7 +52,7 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 	Context("Firehose", func() {
 		It("passes messages through for every app for uaa admins", func() {
 			client := noaa.NewNoaa(dropsondeEndpoint, &tls.Config{}, nil)
-			messages, err := client.Firehose(AUTH_TOKEN)
+			messages, err := client.Firehose(SUBSCRIPTION_ID, AUTH_TOKEN)
 			Expect(err).NotTo(HaveOccurred())
 
 			var request *http.Request
