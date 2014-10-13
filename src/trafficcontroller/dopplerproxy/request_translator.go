@@ -9,6 +9,10 @@ import (
 var MissingAppIdError = errors.New("No App Id specified in request")
 
 func TranslateFromLegacyPath(request *http.Request) (*http.Request, error) {
+	if request.URL.Path == "/set-cookie" {
+		return request, nil
+	}
+
 	err := request.ParseForm()
 	if err != nil {
 		return nil, err
@@ -25,7 +29,6 @@ func TranslateFromLegacyPath(request *http.Request) (*http.Request, error) {
 	translatedRequest.URL = &copiedUrl
 
 	switch request.URL.Path {
-
 	case "/tail/":
 		translatedRequest.URL.Path = fmt.Sprintf("/apps/%s/stream", appId)
 

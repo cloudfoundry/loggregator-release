@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/noaa"
 	"github.com/cloudfoundry/noaa/events"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -105,5 +106,19 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 			}
 			close(done)
 		}, 20)
+	})
+
+	Context("SetCookie", func() {
+		It("sets the desired cookie on the response", func() {
+			response, err := http.PostForm(fmt.Sprintf("http://%s:%d/set-cookie", localIPAddress, TRAFFIC_CONTROLLER_DROPSONDE_PORT), url.Values{"CookieName": {"authorization"}, "CookieValue": {url.QueryEscape("bearer iAmAnAdmin")}})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(response.Cookies()).NotTo(BeNil())
+			Expect(response.Cookies()).To(HaveLen(1))
+			cookie := response.Cookies()[0]
+			Expect(cookie.Domain).To(Equal("doppler.vcap.me"))
+			Expect(cookie.Name).To(Equal("authorization"))
+			Expect(cookie.Value).To(Equal("bearer+iAmAnAdmin"))
+		})
 	})
 })

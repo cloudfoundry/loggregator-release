@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/loggregator_consumer"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -15,11 +16,11 @@ import (
 
 var legacyEndpoint string
 
-const DOPPLER_LEGACY_PORT = 4567
+const TRAFFIC_CONTROLLER_LEGACY_PORT = 4567
 
 var _ = Describe("TrafficController for legacy messages", func() {
 	BeforeEach(func() {
-		legacyEndpoint = fmt.Sprintf("ws://%s:%d", localIPAddress, DOPPLER_LEGACY_PORT)
+		legacyEndpoint = fmt.Sprintf("ws://%s:%d", localIPAddress, TRAFFIC_CONTROLLER_LEGACY_PORT)
 		fakeDoppler.ResetMessageChan()
 	})
 
@@ -78,5 +79,19 @@ var _ = Describe("TrafficController for legacy messages", func() {
 			}
 			close(done)
 		}, 20)
+	})
+
+	Context("SetCookie", func() {
+		It("sets the desired cookie on the response", func() {
+			response, err := http.PostForm(fmt.Sprintf("http://%s:%d/set-cookie", localIPAddress, TRAFFIC_CONTROLLER_LEGACY_PORT), url.Values{"CookieName": {"authorization"}, "CookieValue": {url.QueryEscape("bearer iAmAnAdmin")}})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(response.Cookies()).NotTo(BeNil())
+			Expect(response.Cookies()).To(HaveLen(1))
+			cookie := response.Cookies()[0]
+			Expect(cookie.Domain).To(Equal("loggregator.vcap.me"))
+			Expect(cookie.Name).To(Equal("authorization"))
+			Expect(cookie.Value).To(Equal("bearer+iAmAnAdmin"))
+		})
 	})
 })

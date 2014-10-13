@@ -24,6 +24,7 @@ type Proxy struct {
 	adminAuthorize authorization.AdminAccessAuthorizer
 	connector      channel_group_connector.ChannelGroupConnector
 	translate      RequestTranslator
+	cookieDomain   string
 	logger         *gosteno.Logger
 	cfcomponent.Component
 }
@@ -32,7 +33,7 @@ type RequestTranslator func(request *http.Request) (*http.Request, error)
 
 type Authorizer func(appId, authToken string, logger *gosteno.Logger) bool
 
-func NewDopplerProxy(logAuthorize authorization.LogAccessAuthorizer, adminAuthorizer authorization.AdminAccessAuthorizer, connector channel_group_connector.ChannelGroupConnector, config cfcomponent.Config, translator RequestTranslator, logger *gosteno.Logger) *Proxy {
+func NewDopplerProxy(logAuthorize authorization.LogAccessAuthorizer, adminAuthorizer authorization.AdminAccessAuthorizer, connector channel_group_connector.ChannelGroupConnector, config cfcomponent.Config, translator RequestTranslator, cookieDomain string, logger *gosteno.Logger) *Proxy {
 	var instrumentables []instrumentation.Instrumentable
 
 	cfc, err := cfcomponent.NewComponent(
@@ -55,6 +56,7 @@ func NewDopplerProxy(logAuthorize authorization.LogAccessAuthorizer, adminAuthor
 		adminAuthorize: adminAuthorizer,
 		connector:      connector,
 		translate:      translator,
+		cookieDomain:   cookieDomain,
 		logger:         logger,
 	}
 }
@@ -82,6 +84,8 @@ func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 		proxy.serveFirehose(writer, translatedRequest)
 	case "apps":
 		proxy.serveAppLogs(writer, translatedRequest)
+	case "set-cookie":
+		proxy.serveSetCookie(writer, translatedRequest, proxy.cookieDomain)
 	default:
 		writer.Header().Set("WWW-Authenticate", "Basic")
 		writer.WriteHeader(http.StatusNotFound)
@@ -224,6 +228,24 @@ func extractAuthTokenFromCookie(cookies []*http.Cookie) string {
 	}
 
 	return ""
+}
+
+func (proxy *Proxy) serveSetCookie(writer http.ResponseWriter, request *http.Request, cookieDomain string) {
+	err := request.ParseForm()
+	if err != nil {
+		writer.WriteHeader(http.StatusBadRequest)
+	}
+
+	cookieName := request.FormValue("CookieName")
+	cookieValue := request.FormValue("CookieValue")
+	origin := request.Header.Get("Origin")
+
+	http.SetCookie(writer, &http.Cookie{Name: cookieName, Value: cookieValue, Domain: cookieDomain})
+
+	writer.Header().Add("Access-Control-Allow-Credentials", "true")
+	writer.Header().Add("Access-Control-Allow-Origin", origin)
+
+	proxy.logger.Debugf("Proxy: Set cookie name '%s' for origin '%s' on domain '%s'", cookieName, origin, cookieDomain)
 }
 
 type TrafficControllerMonitor struct {

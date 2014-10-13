@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"io/ioutil"
+	"strings"
 )
 
 var _ = Describe("ServeHTTP", func() {
@@ -39,6 +40,7 @@ var _ = Describe("ServeHTTP", func() {
 			channelGroupConnector,
 			cfcomponent.Config{},
 			dopplerproxy.TranslateFromDropsondePath,
+			"cookieDomain",
 			loggertesthelper.Logger(),
 		)
 
@@ -357,12 +359,52 @@ var _ = Describe("ServeHTTP", func() {
 		})
 	})
 
-	It("returns a 404 and sets the WWW-Authenticate to basic if the path does not start with /apps or /firehose", func() {
+	It("returns a 404 and sets the WWW-Authenticate to basic if the path does not start with /apps or /firehose or /set-cookie", func() {
 		req, _ := http.NewRequest("GET", "/notApps", nil)
 		proxy.ServeHTTP(recorder, req)
 		Expect(recorder.Code).To(Equal(http.StatusNotFound))
 		Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
 		Expect(recorder.Body.String()).To(Equal("Resource Not Found. /notApps"))
+	})
+
+	Context("SetCookie", func() {
+		It("returns an OK status with a form", func() {
+			req, _ := http.NewRequest("POST", "/set-cookie", strings.NewReader("CookieName=cookie&CookieValue=monster"))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+			proxy.ServeHTTP(recorder, req)
+
+			Expect(recorder.Code).To(Equal(http.StatusOK))
+		})
+
+		It("sets the passed value as a cookie", func() {
+			req, _ := http.NewRequest("POST", "/set-cookie", strings.NewReader("CookieName=cookie&CookieValue=monster"))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+			proxy.ServeHTTP(recorder, req)
+
+			Expect(recorder.Header().Get("Set-Cookie")).To(Equal("cookie=monster; Domain=cookieDomain"))
+		})
+
+		It("returns a bad request if the form does not parse", func() {
+			req, _ := http.NewRequest("POST", "/set-cookie", nil)
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+			proxy.ServeHTTP(recorder, req)
+
+			Expect(recorder.Code).To(Equal(http.StatusBadRequest))
+		})
+
+		It("sets required CORS headers", func() {
+			req, _ := http.NewRequest("POST", "/set-cookie", nil)
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.Header.Set("Origin", "fake-origin-string")
+
+			proxy.ServeHTTP(recorder, req)
+
+			Expect(recorder.Header().Get("Access-Control-Allow-Origin")).To(Equal("fake-origin-string"))
+			Expect(recorder.Header().Get("Access-Control-Allow-Credentials")).To(Equal("true"))
+		})
 	})
 })
 
