@@ -227,19 +227,22 @@ func extractAuthTokenFromCookie(cookies []*http.Cookie) string {
 	return ""
 }
 
-func (proxy *Proxy)serveSetCookie(writer http.ResponseWriter, request *http.Request, cookieDomain string) {
+func (proxy *Proxy) serveSetCookie(writer http.ResponseWriter, request *http.Request, cookieDomain string) {
 	err := request.ParseForm()
 	if err != nil {
 		writer.WriteHeader(http.StatusBadRequest)
 	}
 
-	cookieName, _ := url.QueryUnescape(request.FormValue("CookieName"))
-	cookieValue, _ := url.QueryUnescape(request.FormValue("CookieValue"))
+	cookieName := request.FormValue("CookieName")
+	cookieValue := request.FormValue("CookieValue")
+	origin := request.Header.Get("Origin")
 
 	http.SetCookie(writer, &http.Cookie{Name: cookieName, Value: cookieValue, Domain: cookieDomain})
-	writer.Header().Add("Access-Control-Allow-Origin", "http://jsdemo.10.244.0.34.xip.io/")
+
 	writer.Header().Add("Access-Control-Allow-Credentials", "true")
-	proxy.logger.Debug("Grandma's makin' cookies…")
+	writer.Header().Add("Access-Control-Allow-Origin", origin)
+
+	proxy.logger.Debugf("Proxy: Set cookie name '%s' for origin '%s' on domain '%s'", cookieName, origin, cookieDomain)
 }
 
 type TrafficControllerMonitor struct {

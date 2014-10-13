@@ -118,7 +118,7 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 			cookie := response.Cookies()[0]
 			Expect(cookie.Domain).To(Equal("doppler.vcap.me"))
 			Expect(cookie.Name).To(Equal("authorization"))
-			Expect(cookie.Value).To(Equal("bearer iAmAnAdmin"))
+			Expect(cookie.Value).To(Equal("bearer+iAmAnAdmin"))
 		})
 	})
 })

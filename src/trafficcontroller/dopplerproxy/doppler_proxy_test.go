@@ -244,10 +244,11 @@ var _ = Describe("ServeHTTP", func() {
 		It("sets required CORS headers", func() {
 			req, _ := http.NewRequest("POST", "/set-cookie", nil)
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.Header.Set("Origin", "fake-origin-string")
 
 			proxy.ServeHTTP(recorder, req)
 
-			Expect(recorder.Header().Get("Access-Control-Allow-Origin")).To(Equal("*"))
+			Expect(recorder.Header().Get("Access-Control-Allow-Origin")).To(Equal("fake-origin-string"))
 			Expect(recorder.Header().Get("Access-Control-Allow-Credentials")).To(Equal("true"))
 		})
 	})
