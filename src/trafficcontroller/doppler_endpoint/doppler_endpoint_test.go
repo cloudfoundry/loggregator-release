@@ -25,8 +25,8 @@ var _ = Describe("NewDopplerEndpoint", func() {
 
 var _ = Describe("GetPath", func() {
 	It("returns correct path for firehose", func() {
-		dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("firehose", "firehose", true)
-		Expect(dopplerEndpoint.GetPath()).To(Equal("/firehose"))
+		dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("firehose", "subscription-123", true)
+		Expect(dopplerEndpoint.GetPath()).To(Equal("/firehose/subscription-123"))
 	})
 
 	It("returns correct path for recentlogs", func() {

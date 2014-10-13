@@ -62,6 +62,25 @@ var _ = Describe("GroupedSink", func() {
 	})
 
 	Describe("BroadCast", func() {
+		Context("when all pre-existing firehose connections have been deleted", func() {
+			It("sends message to all registered app sinks", func() {
+				firehoseSink := &fakeSink{sinkId: "sink1", appId: "firehose-a"}
+				firehoseSinkChan := make(chan *events.Envelope, 2)
+				groupedSinks.RegisterFirehose(firehoseSinkChan, firehoseSink)
+
+				groupedSinks.CloseAndDeleteFirehose(firehoseSink)
+
+				appSink := syslog.NewSyslogSink("123", "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
+				appSinkInputChan := make(chan *events.Envelope)
+				groupedSinks.Register(appSinkInputChan, appSink)
+
+				msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "123", "App"), "origin")
+				go groupedSinks.BroadCast("123", msg)
+
+				Expect(<-appSinkInputChan).To(Equal(msg))
+			})
+		})
+
 		It("sends message to all registered sinks that match the appId", func(done Done) {
 			appId := "123"
 			appSink := syslog.NewSyslogSink("123", "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
@@ -81,27 +100,55 @@ var _ = Describe("GroupedSink", func() {
 			close(done)
 		})
 
-		It("sends message to all registered firehose sinks", func() {
-			fakeSink1 := &fakeSink{sinkId: "sink1"}
-			inputChan1 := make(chan *events.Envelope)
+		It("sends message to all registered firehose subscribers", func() {
+			fakeSink1 := &fakeSink{sinkId: "sink1", appId: "firehose-a"}
+			inputChan1 := make(chan *events.Envelope, 2)
 			groupedSinks.RegisterFirehose(inputChan1, fakeSink1)
 
-			fakeSink2 := &fakeSink{sinkId: "sink2"}
-			inputChan2 := make(chan *events.Envelope)
+			fakeSink2 := &fakeSink{sinkId: "sink2", appId: "firehose-b"}
+			inputChan2 := make(chan *events.Envelope, 2)
 			groupedSinks.RegisterFirehose(inputChan2, fakeSink2)
 
 			msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "app-id", "App"), "origin")
 			go groupedSinks.BroadCast("app-id", msg)
 
-			go func() {
-				defer GinkgoRecover()
-				Eventually(inputChan2).Should(Receive(Equal(msg)))
-			}()
+			Eventually(inputChan2).Should(Receive(Equal(msg)))
+			Eventually(inputChan1).Should(Receive(Equal(msg)))
+		})
 
-			go func() {
-				defer GinkgoRecover()
-				Eventually(inputChan1).Should(Receive(Equal(msg)))
-			}()
+		It("distributes messages to all firehose sinks with the same subscription id", func() {
+			fakeSink1A := &fakeSink{sinkId: "sink1", appId: "firehose-a"}
+			inputChan1A := make(chan *events.Envelope, 100)
+			groupedSinks.RegisterFirehose(inputChan1A, fakeSink1A)
+
+			fakeSink2A := &fakeSink{sinkId: "sink2", appId: "firehose-a"}
+			inputChan2A := make(chan *events.Envelope, 100)
+			groupedSinks.RegisterFirehose(inputChan2A, fakeSink2A)
+
+			fakeSinkB := &fakeSink{sinkId: "sink3", appId: "firehose-b"}
+			inputChanB := make(chan *events.Envelope, 100)
+			groupedSinks.RegisterFirehose(inputChanB, fakeSinkB)
+
+			msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "app-id", "App"), "origin")
+			for i := 0; i < 100; i++ {
+				go groupedSinks.BroadCast("app-id", msg)
+			}
+
+			Eventually(func() int {
+				return len(inputChan2A) + len(inputChan1A)
+			}).Should(Equal(100))
+
+			Consistently(func() int {
+				return len(inputChan1A)
+			}).Should(BeNumerically(">", 0))
+
+			Consistently(func() int {
+				return len(inputChan2A)
+			}).Should(BeNumerically(">", 0))
+
+			Eventually(func() int {
+				return len(inputChanB)
+			}).Should(Equal(100))
 		})
 
 		It("does not block when sending to an appId that has no sinks", func(done Done) {
@@ -131,27 +178,20 @@ var _ = Describe("GroupedSink", func() {
 			close(done)
 		})
 
-		It("sends message to all registered firehose sinks", func() {
-			fakeSink1 := &fakeSink{sinkId: "sink1"}
-			inputChan1 := make(chan *events.Envelope)
+		It("sends message to all registered firehose subscribers", func() {
+			fakeSink1 := &fakeSink{sinkId: "sink1", appId: "firehose-a"}
+			inputChan1 := make(chan *events.Envelope, 2)
 			groupedSinks.RegisterFirehose(inputChan1, fakeSink1)
 
-			fakeSink2 := &fakeSink{sinkId: "sink2"}
-			inputChan2 := make(chan *events.Envelope)
+			fakeSink2 := &fakeSink{sinkId: "sink2", appId: "firehose-b"}
+			inputChan2 := make(chan *events.Envelope, 2)
 			groupedSinks.RegisterFirehose(inputChan2, fakeSink2)
 
 			msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "app-id", "App"), "origin")
 			go groupedSinks.BroadCastError("app-id", msg)
 
-			go func() {
-				defer GinkgoRecover()
-				Eventually(inputChan2).Should(Receive(Equal(msg)))
-			}()
-
-			go func() {
-				defer GinkgoRecover()
-				Eventually(inputChan1).Should(Receive(Equal(msg)))
-			}()
+			Eventually(inputChan2).Should(Receive(Equal(msg)))
+			Eventually(inputChan1).Should(Receive(Equal(msg)))
 		})
 
 		It("does not send to sinks that don't want errors", func(done Done) {
@@ -178,7 +218,7 @@ var _ = Describe("GroupedSink", func() {
 			Expect(result).To(BeFalse())
 		})
 
-		It("returns false for emtpy identifiers", func() {
+		It("returns false for empty identifiers", func() {
 			appId := "appId"
 			appSink := syslog.NewSyslogSink(appId, "", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
 			result := groupedSinks.Register(inputChan, appSink)
@@ -195,12 +235,18 @@ var _ = Describe("GroupedSink", func() {
 	})
 
 	Describe("RegisterFirehose", func() {
-		It("returns false when registering a duplicate", func() {
-			fakeSink := &fakeSink{sinkId: "sink"}
-			ok := groupedSinks.RegisterFirehose(inputChan, fakeSink)
-			Expect(ok).To(BeTrue())
-			ok = groupedSinks.RegisterFirehose(inputChan, fakeSink)
-			Expect(ok).To(BeFalse())
+		It("returns false for empty subscription ids", func() {
+			subscriptionId := ""
+			firehoseSink := syslog.NewSyslogSink(subscriptionId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
+			result := groupedSinks.RegisterFirehose(inputChan, firehoseSink)
+			Expect(result).To(BeFalse())
+		})
+
+		It("returns true if a subscription id is present", func() {
+			subscriptionId := "firehose-subscription-a"
+			firehoseSink := syslog.NewSyslogSink(subscriptionId, "url", loggertesthelper.Logger(), DummySyslogWriter{}, errorChan, "dropsonde-origin")
+			result := groupedSinks.RegisterFirehose(inputChan, firehoseSink)
+			Expect(result).To(BeTrue())
 		})
 	})
 
@@ -257,8 +303,8 @@ var _ = Describe("GroupedSink", func() {
 
 	Describe("CloseAndDeleteFirehose", func() {
 		It("only unregisters a specific sink", func() {
-			fakeSink1 := &fakeSink{sinkId: "sink1"}
-			fakeSink2 := &fakeSink{sinkId: "sink2"}
+			fakeSink1 := &fakeSink{sinkId: "sink1", appId: "firehose-a"}
+			fakeSink2 := &fakeSink{sinkId: "sink2", appId: "firehose-a"}
 
 			groupedSinks.RegisterFirehose(make(chan *events.Envelope), fakeSink1)
 			groupedSinks.RegisterFirehose(make(chan *events.Envelope), fakeSink2)
@@ -270,7 +316,7 @@ var _ = Describe("GroupedSink", func() {
 		})
 
 		It("closes the sink's input channel", func() {
-			fakeSink1 := &fakeSink{sinkId: "sink1"}
+			fakeSink1 := &fakeSink{sinkId: "sink1", appId: "firehose-a"}
 			inputChan1 := make(chan *events.Envelope)
 
 			groupedSinks.RegisterFirehose(inputChan1, fakeSink1)
@@ -280,7 +326,7 @@ var _ = Describe("GroupedSink", func() {
 		})
 
 		It("returns false if the sink is not registered", func() {
-			fakeSink1 := &fakeSink{sinkId: "sink1"}
+			fakeSink1 := &fakeSink{sinkId: "sink1", appId: "firehose-a"}
 			ok := groupedSinks.CloseAndDeleteFirehose(fakeSink1)
 			Expect(ok).To(BeFalse())
 		})
@@ -290,7 +336,7 @@ var _ = Describe("GroupedSink", func() {
 		It("removes all the sinks", func() {
 			sink1 := &fakeSink{sinkId: "sink1", appId: "app1"}
 			sink2 := &fakeSink{sinkId: "sink2", appId: "app2"}
-			sink3 := &fakeSink{sinkId: "sink3"}
+			sink3 := &fakeSink{sinkId: "sink3", appId: "firehose-a"}
 
 			groupedSinks.Register(make(chan *events.Envelope), sink1)
 			groupedSinks.Register(make(chan *events.Envelope), sink2)
@@ -305,7 +351,7 @@ var _ = Describe("GroupedSink", func() {
 
 		It("closes all the sinks input chans", func() {
 			sink1 := &fakeSink{sinkId: "sink1", appId: "app1"}
-			sink2 := &fakeSink{sinkId: "sink2"}
+			sink2 := &fakeSink{sinkId: "sink2", appId: "firehose-a"}
 
 			groupedSinks.Register(inputChan, sink1)
 			firehoseInputChan := make(chan *events.Envelope)

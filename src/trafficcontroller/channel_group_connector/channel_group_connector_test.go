@@ -64,7 +64,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 					close(messageChan2)
 				})
 
-				It("opens a listener with the correct path", func() {
+				It("opens a listener with the correct app path", func() {
 					channelConnector := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, marshaller.DropsondeLogMessage, logger)
 					outputChan := make(chan []byte, 10)
 					stopChan := make(chan struct{})
@@ -80,10 +80,10 @@ var _ = Describe("ChannelGroupConnector", func() {
 					outputChan := make(chan []byte, 10)
 					stopChan := make(chan struct{})
 					defer close(stopChan)
-					dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("firehose", "firehose", true)
+					dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("firehose", "subscription-123", true)
 					go channelConnector.Connect(dopplerEndpoint, outputChan, stopChan)
 
-					Eventually(fakeListeners[0].ConnectedHost).Should(Equal("ws://10.0.0.1:1234/firehose"))
+					Eventually(fakeListeners[0].ConnectedHost).Should(Equal("ws://10.0.0.1:1234/firehose/subscription-123"))
 				})
 
 				It("puts messages on the channel received by the listener", func() {

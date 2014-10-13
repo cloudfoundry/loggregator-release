@@ -80,7 +80,7 @@ var _ = Describe("WebsocketServer", func() {
 	})
 
 	It("sends data to the websocket firehose client", func(done Done) {
-		stopKeepAlive, _ := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/firehose", apiEndpoint))
+		stopKeepAlive, _ := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/firehose/fire-subscription-a", apiEndpoint))
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 		sinkManager.SendTo(appId, lm)
 
@@ -88,6 +88,35 @@ var _ = Describe("WebsocketServer", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rlm.GetLogMessage().GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
 		close(stopKeepAlive)
+		close(done)
+	})
+
+	It("sends each message to only one of many firehoses with the same subscription id", func(done Done) {
+		firehoseAChan1 := make(chan []byte, 100)
+		stopKeepAlive1, _ := AddWSSink(firehoseAChan1, fmt.Sprintf("ws://%s/firehose/fire-subscription-x", apiEndpoint))
+
+		firehoseAChan2 := make(chan []byte, 100)
+		stopKeepAlive2, _ := AddWSSink(firehoseAChan2, fmt.Sprintf("ws://%s/firehose/fire-subscription-x", apiEndpoint))
+
+		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
+		for i := 0; i < 100; i++ {
+			sinkManager.SendTo(appId, lm)
+		}
+
+		Eventually(func() int {
+			return len(firehoseAChan1) + len(firehoseAChan2)
+		}).Should(Equal(100))
+
+		Consistently(func() int {
+			return len(firehoseAChan2)
+		}).Should(BeNumerically(">", 0))
+
+		Consistently(func() int {
+			return len(firehoseAChan1)
+		}).Should(BeNumerically(">", 0))
+
+		close(stopKeepAlive1)
+		close(stopKeepAlive2)
 		close(done)
 	})
 

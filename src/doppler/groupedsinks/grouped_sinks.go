@@ -1,6 +1,8 @@
 package groupedsinks
 
 import (
+	"doppler/groupedsinks/firehose_group"
+	"doppler/groupedsinks/sink_wrapper"
 	"doppler/sinks"
 	"doppler/sinks/dump"
 	"doppler/sinks/syslog"
@@ -11,19 +13,14 @@ import (
 
 func NewGroupedSinks() *GroupedSinks {
 	return &GroupedSinks{
-		apps:      make(map[string]map[string]*sinkWrapper),
-		firehoses: make(map[string]*sinkWrapper),
+		apps:      make(map[string]map[string]*sink_wrapper.SinkWrapper),
+		firehoses: make(map[string]firehose_group.FirehoseGroup),
 	}
 }
 
-type sinkWrapper struct {
-	inputChan chan<- *events.Envelope
-	sink      sinks.Sink
-}
-
 type GroupedSinks struct {
-	apps      map[string]map[string]*sinkWrapper
-	firehoses map[string]*sinkWrapper
+	apps      map[string]map[string]*sink_wrapper.SinkWrapper
+	firehoses map[string]firehose_group.FirehoseGroup
 	sync.RWMutex
 }
 
@@ -37,14 +34,14 @@ func (group *GroupedSinks) Register(in chan<- *events.Envelope, sink sinks.Sink)
 	}
 	sinksForApp := group.apps[appId]
 	if sinksForApp == nil {
-		group.apps[appId] = make(map[string]*sinkWrapper)
+		group.apps[appId] = make(map[string]*sink_wrapper.SinkWrapper)
 		sinksForApp = group.apps[appId]
 	}
 
 	if _, ok := sinksForApp[sink.Identifier()]; ok {
 		return false
 	}
-	sinksForApp[sink.Identifier()] = &sinkWrapper{inputChan: in, sink: sink}
+	sinksForApp[sink.Identifier()] = &sink_wrapper.SinkWrapper{InputChan: in, Sink: sink}
 	return true
 }
 
@@ -52,12 +49,18 @@ func (group *GroupedSinks) RegisterFirehose(in chan<- *events.Envelope, sink sin
 	group.Lock()
 	defer group.Unlock()
 
-	if _, ok := group.firehoses[sink.Identifier()]; ok {
+	subscriptionId := sink.AppId()
+	if subscriptionId == "" {
 		return false
 	}
 
-	group.firehoses[sink.Identifier()] = &sinkWrapper{inputChan: in, sink: sink}
-	return true
+	fgroup := group.firehoses[subscriptionId]
+	if fgroup == nil {
+		group.firehoses[subscriptionId] = firehose_group.NewFirehoseGroup()
+		fgroup = group.firehoses[subscriptionId]
+	}
+
+	return fgroup.AddSink(&sink_wrapper.SinkWrapper{InputChan: in, Sink: sink})
 }
 
 func (group *GroupedSinks) BroadCast(appId string, msg *events.Envelope) {
@@ -65,12 +68,11 @@ func (group *GroupedSinks) BroadCast(appId string, msg *events.Envelope) {
 	defer group.RUnlock()
 
 	for _, wrapper := range group.apps[appId] {
-		wrapper.inputChan <- msg
+		wrapper.InputChan <- msg
 	}
 
-	for _, firehose := range group.firehoses {
-		firehose.inputChan <- msg
-	}
+	group.BroadcastMessageToFirehoses(msg)
+
 }
 
 func (group *GroupedSinks) BroadCastError(appId string, errorMsg *events.Envelope) {
@@ -78,13 +80,17 @@ func (group *GroupedSinks) BroadCastError(appId string, errorMsg *events.Envelop
 	defer group.RUnlock()
 
 	for _, wrapper := range group.apps[appId] {
-		if wrapper.sink.ShouldReceiveErrors() {
-			wrapper.inputChan <- errorMsg
+		if wrapper.Sink.ShouldReceiveErrors() {
+			wrapper.InputChan <- errorMsg
 		}
 	}
 
-	for _, firehose := range group.firehoses {
-		firehose.inputChan <- errorMsg
+	group.BroadcastMessageToFirehoses(errorMsg)
+}
+
+func (group *GroupedSinks) BroadcastMessageToFirehoses(msg *events.Envelope) {
+	for _, fgroup := range group.firehoses {
+		fgroup.BroadcastMessage(msg)
 	}
 }
 
@@ -104,7 +110,7 @@ func (group *GroupedSinks) DrainFor(appId, drainUrl string) sinks.Sink {
 
 	wrapper, ok := group.apps[appId][drainUrl]
 	if ok {
-		return wrapper.sink
+		return wrapper.Sink
 	}
 	return nil
 }
@@ -115,9 +121,9 @@ func (group *GroupedSinks) DrainsFor(appId string) []sinks.Sink {
 
 	results := []sinks.Sink{}
 	for _, wrapper := range group.apps[appId] {
-		_, isSyslogSink := wrapper.sink.(*syslog.SyslogSink)
+		_, isSyslogSink := wrapper.Sink.(*syslog.SyslogSink)
 		if isSyslogSink {
-			results = append(results, wrapper.sink)
+			results = append(results, wrapper.Sink)
 		}
 	}
 
@@ -137,7 +143,7 @@ func (group *GroupedSinks) DumpFor(appId string) *dump.DumpSink {
 
 		return nil
 	}
-	return appCache[appId].sink.(*dump.DumpSink)
+	return appCache[appId].Sink.(*dump.DumpSink)
 }
 
 func (group *GroupedSinks) WebsocketSinksFor(appId string) []websocket.WebsocketSink {
@@ -147,7 +153,7 @@ func (group *GroupedSinks) WebsocketSinksFor(appId string) []websocket.Websocket
 	group.RUnlock()
 
 	for _, wrapper := range group.apps[appId] {
-		webSocketSink, isWebsocketSink := wrapper.sink.(*websocket.WebsocketSink)
+		webSocketSink, isWebsocketSink := wrapper.Sink.(*websocket.WebsocketSink)
 		if isWebsocketSink {
 			results = append(results, *webSocketSink)
 		}
@@ -161,7 +167,7 @@ func (group *GroupedSinks) CloseAndDelete(sink sinks.Sink) bool {
 	defer group.Unlock()
 	wrapper, ok := group.apps[sink.AppId()][sink.Identifier()]
 	if ok {
-		close(wrapper.inputChan)
+		close(wrapper.InputChan)
 		delete(group.apps[sink.AppId()], sink.Identifier())
 		return true
 	}
@@ -171,13 +177,20 @@ func (group *GroupedSinks) CloseAndDelete(sink sinks.Sink) bool {
 func (group *GroupedSinks) CloseAndDeleteFirehose(sink sinks.Sink) bool {
 	group.Lock()
 	defer group.Unlock()
-	firehose, ok := group.firehoses[sink.Identifier()]
+	fgroup, ok := group.firehoses[sink.AppId()]
 	if !ok {
 		return false
 	}
 
-	close(firehose.inputChan)
-	delete(group.firehoses, sink.Identifier())
+	removed := fgroup.RemoveSink(sink)
+
+	if removed == false {
+		return false
+	}
+
+	if fgroup.IsEmpty() == true {
+		delete(group.firehoses, sink.AppId())
+	}
 
 	return true
 }
@@ -187,12 +200,12 @@ func (group *GroupedSinks) DeleteAll() {
 	defer group.Unlock()
 	for appId, appSinks := range group.apps {
 		for _, wrapper := range appSinks {
-			close(wrapper.inputChan)
+			close(wrapper.InputChan)
 		}
 		delete(group.apps, appId)
 	}
-	for firehoseId, firehose := range group.firehoses {
-		close(firehose.inputChan)
-		delete(group.firehoses, firehoseId)
+	for subscriptionId, fgroup := range group.firehoses {
+		fgroup.RemoveAllSinks()
+		delete(group.firehoses, subscriptionId)
 	}
 }

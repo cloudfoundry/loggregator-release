@@ -165,7 +165,7 @@ var _ = Describe("SinkManager", func() {
 		})
 
 		It("sends messages to registered firehose sinks", func() {
-			sink1 := &ChannelSink{done: make(chan struct{})}
+			sink1 := &ChannelSink{done: make(chan struct{}), appId: "firehose-a"}
 			sinkManager.RegisterFirehoseSink(sink1)
 
 			expectedMessageString := "Some Data"
@@ -271,14 +271,14 @@ var _ = Describe("SinkManager", func() {
 
 	Describe("RegisterFirehoseSink", func() {
 		It("runs the sink, updates metrics and returns true for registering a new firehose sink", func() {
-			sink := &ChannelSink{done: make(chan struct{})}
+			sink := &ChannelSink{done: make(chan struct{}), appId: "firehose-a"}
 			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
 			Eventually(sink.RunCalled).Should(BeTrue())
 			Expect(sinkManager.Metrics.Emit().Metrics[3].Value).To(Equal(1))
 		})
 
 		It("returns false for a duplicate sink and does not update the sink metrics", func() {
-			sink := &ChannelSink{done: make(chan struct{})}
+			sink := &ChannelSink{done: make(chan struct{}), appId: "firehose-a"}
 
 			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
 
@@ -289,7 +289,7 @@ var _ = Describe("SinkManager", func() {
 
 	Describe("UnregisterFirehoseSink", func() {
 		It("stops the sink and updates metrics", func() {
-			sink := &ChannelSink{done: make(chan struct{})}
+			sink := &ChannelSink{done: make(chan struct{}), appId: "firehose-a"}
 
 			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
 

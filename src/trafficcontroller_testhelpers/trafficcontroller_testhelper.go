@@ -30,6 +30,7 @@ func (a *LogAuthorizer) Authorize(authToken string, target string, l *gosteno.Lo
 
 	return a.Result
 }
+
 type AdminAuthorizer struct {
 	TokenParam string
 	Result     bool

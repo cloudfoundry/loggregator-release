@@ -72,7 +72,7 @@ var _ = Describe("ServeHTTP", func() {
 
 				proxy.ServeHTTP(recorder, req)
 				Consistently(channelGroupConnector.getPath).Should(Equal(""))
-				Consistently(channelGroupConnector.getAppId).Should(Equal(""))
+				Consistently(channelGroupConnector.getStreamId).Should(Equal(""))
 				Consistently(channelGroupConnector.getReconnect).Should(BeFalse())
 			})
 		})
@@ -93,7 +93,7 @@ var _ = Describe("ServeHTTP", func() {
 
 				proxy.ServeHTTP(recorder, req)
 				Consistently(channelGroupConnector.getPath).Should(Equal(""))
-				Consistently(channelGroupConnector.getAppId).Should(Equal(""))
+				Consistently(channelGroupConnector.getStreamId).Should(Equal(""))
 				Consistently(channelGroupConnector.getReconnect).Should(BeFalse())
 			})
 		})
@@ -114,7 +114,7 @@ var _ = Describe("ServeHTTP", func() {
 
 				proxy.ServeHTTP(recorder, req)
 				Consistently(channelGroupConnector.getPath).Should(Equal(""))
-				Consistently(channelGroupConnector.getAppId).Should(Equal(""))
+				Consistently(channelGroupConnector.getStreamId).Should(Equal(""))
 				Consistently(channelGroupConnector.getReconnect).Should(BeFalse())
 			})
 		})
@@ -143,7 +143,7 @@ var _ = Describe("ServeHTTP", func() {
 
 				proxy.ServeHTTP(recorder, req)
 				Consistently(channelGroupConnector.getPath).Should(Equal(""))
-				Consistently(channelGroupConnector.getAppId).Should(Equal(""))
+				Consistently(channelGroupConnector.getStreamId).Should(Equal(""))
 				Consistently(channelGroupConnector.getReconnect).Should(BeFalse())
 			})
 		})
@@ -215,7 +215,7 @@ var _ = Describe("ServeHTTP", func() {
 				proxy.ServeHTTP(recorder, req)
 
 				Eventually(channelGroupConnector.getPath).Should(Equal("firehose"))
-				Eventually(channelGroupConnector.getAppId).Should(Equal("firehose"))
+				Eventually(channelGroupConnector.getStreamId).Should(Equal("abc-123"))
 				Eventually(channelGroupConnector.getReconnect).Should(BeTrue())
 			})
 
@@ -267,7 +267,7 @@ var _ = Describe("ServeHTTP", func() {
 
 				proxy.ServeHTTP(recorder, req)
 				Consistently(channelGroupConnector.getPath).Should(Equal(""))
-				Consistently(channelGroupConnector.getAppId).Should(Equal(""))
+				Consistently(channelGroupConnector.getStreamId).Should(Equal(""))
 				Consistently(channelGroupConnector.getReconnect).Should(BeFalse())
 			})
 		})
@@ -289,7 +289,7 @@ var _ = Describe("ServeHTTP", func() {
 
 				proxy.ServeHTTP(recorder, req)
 				Consistently(channelGroupConnector.getPath).Should(Equal(""))
-				Consistently(channelGroupConnector.getAppId).Should(Equal(""))
+				Consistently(channelGroupConnector.getStreamId).Should(Equal(""))
 				Consistently(channelGroupConnector.getReconnect).Should(BeFalse())
 			})
 		})
@@ -311,7 +311,7 @@ var _ = Describe("ServeHTTP", func() {
 
 				proxy.ServeHTTP(recorder, req)
 				Consistently(channelGroupConnector.getPath).Should(Equal(""))
-				Consistently(channelGroupConnector.getAppId).Should(Equal(""))
+				Consistently(channelGroupConnector.getStreamId).Should(Equal(""))
 				Consistently(channelGroupConnector.getReconnect).Should(BeFalse())
 			})
 		})
@@ -331,7 +331,7 @@ var _ = Describe("ServeHTTP", func() {
 
 				proxy.ServeHTTP(recorder, req)
 				Consistently(channelGroupConnector.getPath).Should(Equal(""))
-				Consistently(channelGroupConnector.getAppId).Should(Equal(""))
+				Consistently(channelGroupConnector.getStreamId).Should(Equal(""))
 				Consistently(channelGroupConnector.getReconnect).Should(BeFalse())
 			})
 		})
@@ -343,7 +343,7 @@ var _ = Describe("ServeHTTP", func() {
 
 				proxy.ServeHTTP(recorder, req)
 				Consistently(channelGroupConnector.getPath).ShouldNot(Equal("firehose"))
-				Eventually(channelGroupConnector.getAppId).Should(Equal("firehose"))
+				Eventually(channelGroupConnector.getStreamId).Should(Equal("firehose"))
 				Eventually(channelGroupConnector.getReconnect).Should(BeTrue())
 			})
 		})
@@ -468,7 +468,7 @@ func (f *fakeChannelGroupConnector) getPath() string {
 	return f.dopplerEndpoint.Endpoint
 }
 
-func (f *fakeChannelGroupConnector) getAppId() string {
+func (f *fakeChannelGroupConnector) getStreamId() string {
 	f.Lock()
 	defer f.Unlock()
 	return f.dopplerEndpoint.StreamId

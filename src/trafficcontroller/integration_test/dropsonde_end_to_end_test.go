@@ -58,7 +58,7 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 
 			var request *http.Request
 			Eventually(fakeDoppler.TrafficControllerConnected, 10).Should(Receive(&request))
-			Expect(request.URL.Path).To(Equal("/firehose"))
+			Expect(request.URL.Path).To(Equal("/firehose/" + SUBSCRIPTION_ID))
 
 			currentTime := time.Now().UnixNano()
 			dropsondeMessage := makeDropsondeMessage("Hello through NOAA", APP_ID, currentTime)

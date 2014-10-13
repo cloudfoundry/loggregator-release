@@ -99,7 +99,12 @@ func (proxy *Proxy) serveFirehose(writer http.ResponseWriter, request *http.Requ
 
 	firehoseParams := strings.Split(request.URL.Path, "/")[2:]
 
-	if len(firehoseParams) != 1 || firehoseParams[0] == "" {
+	var firehoseSubscriptionId string
+	if len(firehoseParams) == 1 {
+		firehoseSubscriptionId = firehoseParams[0]
+	}
+
+	if len(firehoseParams) != 1 || firehoseSubscriptionId == "" {
 		writer.Header().Set("WWW-Authenticate", "Basic")
 
 		writer.WriteHeader(http.StatusNotFound)
@@ -107,7 +112,7 @@ func (proxy *Proxy) serveFirehose(writer http.ResponseWriter, request *http.Requ
 		return
 	}
 
-	dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint(FIREHOSE_ID, FIREHOSE_ID, true)
+	dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint(FIREHOSE_ID, firehoseSubscriptionId, true)
 
 	authorizer := func(appId, authToken string, logger *gosteno.Logger) bool {
 		return proxy.adminAuthorize(authToken, logger)

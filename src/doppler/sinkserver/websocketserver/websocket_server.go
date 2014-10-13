@@ -14,14 +14,9 @@ import (
 	"net"
 	"net/http"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
-)
-
-const (
-	STREAM_LOGS_PATH = "/stream"
-	RECENT_LOGS_PATH = "/recent"
-	FIREHOSE_PATH    = "/firehose"
 )
 
 type WebsocketServer struct {
@@ -77,7 +72,9 @@ func (w *WebsocketServer) ServeHTTP(writer http.ResponseWriter, request *http.Re
 	var handler wsHandler
 	var err error
 
-	if request.URL.Path == FIREHOSE_PATH {
+	endpointName := strings.Split(request.URL.Path, "/")[1]
+
+	if endpointName == "firehose" {
 		handler, err = w.firehoseHandler(writer, request)
 	} else {
 		handler, err = w.appHandler(writer, request)
@@ -102,7 +99,13 @@ func (w *WebsocketServer) ServeHTTP(writer http.ResponseWriter, request *http.Re
 }
 
 func (w *WebsocketServer) firehoseHandler(writer http.ResponseWriter, request *http.Request) (wsHandler, error) {
-	return w.streamFirehose, nil
+	firehoseSubscriptionId := strings.Split(request.URL.Path, "/")[2]
+
+	f := func(ws *gorilla.Conn) {
+		w.streamFirehose(firehoseSubscriptionId, ws)
+	}
+	return f, nil
+
 }
 
 func (w *WebsocketServer) appHandler(writer http.ResponseWriter, request *http.Request) (wsHandler, error) {
@@ -149,9 +152,9 @@ func (w *WebsocketServer) streamLogs(appId string, websocketConnection *gorilla.
 	w.streamWebsocket(appId, websocketConnection, w.sinkManager.RegisterSink, w.sinkManager.UnregisterSink)
 }
 
-func (w *WebsocketServer) streamFirehose(websocketConnection *gorilla.Conn) {
+func (w *WebsocketServer) streamFirehose(subscriptionId string, websocketConnection *gorilla.Conn) {
 	w.logger.Debugf("WebsocketServer: Requesting firehose wss sink")
-	w.streamWebsocket(websocket.FIREHOSE_APP_ID, websocketConnection, w.sinkManager.RegisterFirehoseSink, w.sinkManager.UnregisterFirehoseSink)
+	w.streamWebsocket(subscriptionId, websocketConnection, w.sinkManager.RegisterFirehoseSink, w.sinkManager.UnregisterFirehoseSink)
 }
 
 func (w *WebsocketServer) streamWebsocket(appId string, websocketConnection *gorilla.Conn, register func(sinks.Sink) bool, unregister func(sinks.Sink)) {

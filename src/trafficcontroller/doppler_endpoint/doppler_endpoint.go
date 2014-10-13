@@ -51,7 +51,7 @@ func WebsocketHandlerProvider(messages <-chan []byte, logger *gosteno.Logger) ht
 
 func (endpoint *DopplerEndpoint) GetPath() string {
 	if endpoint.Endpoint == "firehose" {
-		return "/firehose"
+		return "/firehose/" + endpoint.StreamId
 	} else {
 		return fmt.Sprintf("/apps/%s/%s", endpoint.StreamId, endpoint.Endpoint)
 	}
