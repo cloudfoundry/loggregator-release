@@ -28,7 +28,7 @@ func (group *GroupedSinks) Register(in chan<- *events.Envelope, sink sinks.Sink)
 	group.Lock()
 	defer group.Unlock()
 
-	appId := sink.AppId()
+	appId := sink.StreamId()
 	if appId == "" || sink.Identifier() == "" {
 		return false
 	}
@@ -49,7 +49,7 @@ func (group *GroupedSinks) RegisterFirehose(in chan<- *events.Envelope, sink sin
 	group.Lock()
 	defer group.Unlock()
 
-	subscriptionId := sink.AppId()
+	subscriptionId := sink.StreamId()
 	if subscriptionId == "" {
 		return false
 	}
@@ -165,10 +165,12 @@ func (group *GroupedSinks) WebsocketSinksFor(appId string) []websocket.Websocket
 func (group *GroupedSinks) CloseAndDelete(sink sinks.Sink) bool {
 	group.Lock()
 	defer group.Unlock()
-	wrapper, ok := group.apps[sink.AppId()][sink.Identifier()]
+
+	appId := sink.StreamId()
+	wrapper, ok := group.apps[appId][sink.Identifier()]
 	if ok {
 		close(wrapper.InputChan)
-		delete(group.apps[sink.AppId()], sink.Identifier())
+		delete(group.apps[appId], sink.Identifier())
 		return true
 	}
 	return false
@@ -177,7 +179,8 @@ func (group *GroupedSinks) CloseAndDelete(sink sinks.Sink) bool {
 func (group *GroupedSinks) CloseAndDeleteFirehose(sink sinks.Sink) bool {
 	group.Lock()
 	defer group.Unlock()
-	fgroup, ok := group.firehoses[sink.AppId()]
+	firehoseSubscriptionId := sink.StreamId()
+	fgroup, ok := group.firehoses[firehoseSubscriptionId]
 	if !ok {
 		return false
 	}
@@ -189,7 +192,7 @@ func (group *GroupedSinks) CloseAndDeleteFirehose(sink sinks.Sink) bool {
 	}
 
 	if fgroup.IsEmpty() == true {
-		delete(group.firehoses, sink.AppId())
+		delete(group.firehoses, firehoseSubscriptionId)
 	}
 
 	return true

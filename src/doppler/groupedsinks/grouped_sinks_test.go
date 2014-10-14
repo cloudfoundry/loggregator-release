@@ -34,7 +34,7 @@ type fakeSink struct {
 	appId  string
 }
 
-func (f *fakeSink) AppId() string {
+func (f *fakeSink) StreamId() string {
 	return f.appId
 }
 

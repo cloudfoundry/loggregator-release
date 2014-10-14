@@ -18,17 +18,17 @@ type remoteMessageWriter interface {
 
 type WebsocketSink struct {
 	logger              *gosteno.Logger
-	appId               string
+	streamId            string
 	ws                  remoteMessageWriter
 	clientAddress       net.Addr
 	wsMessageBufferSize uint
 	dropsondeOrigin     string
 }
 
-func NewWebsocketSink(appId string, givenLogger *gosteno.Logger, ws remoteMessageWriter, wsMessageBufferSize uint, dropsondeOrigin string) *WebsocketSink {
+func NewWebsocketSink(streamId string, givenLogger *gosteno.Logger, ws remoteMessageWriter, wsMessageBufferSize uint, dropsondeOrigin string) *WebsocketSink {
 	return &WebsocketSink{
 		logger:              givenLogger,
-		appId:               appId,
+		streamId:            streamId,
 		ws:                  ws,
 		clientAddress:       ws.RemoteAddr(),
 		wsMessageBufferSize: wsMessageBufferSize,
@@ -40,8 +40,8 @@ func (sink *WebsocketSink) Identifier() string {
 	return sink.ws.RemoteAddr().String()
 }
 
-func (sink *WebsocketSink) AppId() string {
-	return sink.appId
+func (sink *WebsocketSink) StreamId() string {
+	return sink.streamId
 }
 
 func (sink *WebsocketSink) ShouldReceiveErrors() bool {
@@ -49,7 +49,7 @@ func (sink *WebsocketSink) ShouldReceiveErrors() bool {
 }
 
 func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
-	sink.logger.Debugf("Websocket Sink %s: Running for appId [%s]", sink.clientAddress, sink.appId)
+	sink.logger.Debugf("Websocket Sink %s: Running for streamId [%s]", sink.clientAddress, sink.streamId)
 
 	buffer := sinks.RunTruncatingBuffer(inputChan, sink.wsMessageBufferSize, sink.logger, sink.dropsondeOrigin)
 	for {

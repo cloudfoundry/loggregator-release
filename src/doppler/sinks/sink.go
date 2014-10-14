@@ -8,7 +8,7 @@ import (
 )
 
 type Sink interface {
-	AppId() string
+	StreamId() string
 	Run(<-chan *events.Envelope)
 	Identifier() string
 	ShouldReceiveErrors() bool

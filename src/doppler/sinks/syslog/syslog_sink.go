@@ -129,7 +129,7 @@ func (s *SyslogSink) Identifier() string {
 	return s.drainUrl
 }
 
-func (s *SyslogSink) AppId() string {
+func (s *SyslogSink) StreamId() string {
 	return s.appId
 }
 

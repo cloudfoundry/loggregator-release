@@ -34,7 +34,7 @@ packages=(
 for package in "${packages[@]}"
 do
     local_result=$result
-    echo -e "\n Testing $package"
+    echo -e "\n ==================================  Testing $package  =================================="
     go fmt $package/...
     ginkgo -r --race --randomizeAllSpecs --cover $1 src/$package
     let "result += $?"

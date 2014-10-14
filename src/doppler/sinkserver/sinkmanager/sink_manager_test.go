@@ -31,7 +31,7 @@ type ChannelSink struct {
 	runCalled         bool
 }
 
-func (c *ChannelSink) AppId() string { return c.appId }
+func (c *ChannelSink) StreamId() string { return c.appId }
 func (c *ChannelSink) Run(msgChan <-chan *events.Envelope) {
 	c.Lock()
 	c.runCalled = true
