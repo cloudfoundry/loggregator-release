@@ -6,7 +6,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/factories"
 
 	"doppler/groupedsinks/firehose_group"
-	"doppler/groupedsinks/sink_wrapper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -34,21 +33,15 @@ func (f *fakeSink) ShouldReceiveErrors() bool {
 var _ = Describe("FirehoseGroup", func() {
 	It("sends message to all registered sinks", func() {
 		receiveChan1 := make(chan *events.Envelope, 10)
-		swrapper1 := &sink_wrapper.SinkWrapper{
-			Sink:      &fakeSink{appId: "firehose-a", sinkId: "sink-a"},
-			InputChan: receiveChan1,
-		}
-
 		receiveChan2 := make(chan *events.Envelope, 10)
-		swrapper2 := &sink_wrapper.SinkWrapper{
-			Sink:      &fakeSink{appId: "firehose-a", sinkId: "sink-b"},
-			InputChan: receiveChan2,
-		}
+
+		sink1 := fakeSink{appId: "firehose-a", sinkId: "sink-a"}
+		sink2 := fakeSink{appId: "firehose-a", sinkId: "sink-b"}
 
 		group := firehose_group.NewFirehoseGroup()
 
-		group.AddSink(swrapper1)
-		group.AddSink(swrapper2)
+		group.AddSink(&sink1, receiveChan1)
+		group.AddSink(&sink2, receiveChan2)
 
 		msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "234", "App"), "origin")
 		group.BroadcastMessage(msg)
@@ -70,22 +63,16 @@ var _ = Describe("FirehoseGroup", func() {
 
 	It("does not send messages to unregistered sinks", func() {
 		receiveChan1 := make(chan *events.Envelope, 10)
-		swrapper1 := &sink_wrapper.SinkWrapper{
-			Sink:      &fakeSink{appId: "firehose-a", sinkId: "sink-a"},
-			InputChan: receiveChan1,
-		}
-
 		receiveChan2 := make(chan *events.Envelope, 10)
-		swrapper2 := &sink_wrapper.SinkWrapper{
-			Sink:      &fakeSink{appId: "firehose-a", sinkId: "sink-b"},
-			InputChan: receiveChan2,
-		}
+
+		sink1 := fakeSink{appId: "firehose-a", sinkId: "sink-a"}
+		sink2 := fakeSink{appId: "firehose-a", sinkId: "sink-b"}
 
 		group := firehose_group.NewFirehoseGroup()
 
-		group.AddSink(swrapper1)
-		group.AddSink(swrapper2)
-		group.RemoveSink(swrapper2.Sink)
+		group.AddSink(&sink1, receiveChan1)
+		group.AddSink(&sink2, receiveChan2)
+		group.RemoveSink(&sink2)
 
 		msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "234", "App"), "origin")
 
@@ -104,12 +91,9 @@ var _ = Describe("FirehoseGroup", func() {
 
 		It("is false when the group is not empty", func() {
 			group := firehose_group.NewFirehoseGroup()
+			sink := fakeSink{appId: "firehose-a", sinkId: "sink-a"}
 
-			swrapper1 := &sink_wrapper.SinkWrapper{
-				Sink:      &fakeSink{appId: "firehose-a", sinkId: "sink-a"},
-				InputChan: make(chan *events.Envelope, 10),
-			}
-			group.AddSink(swrapper1)
+			group.AddSink(&sink, make(chan *events.Envelope, 10))
 
 			Expect(group.IsEmpty()).To(BeFalse())
 		})
@@ -118,27 +102,23 @@ var _ = Describe("FirehoseGroup", func() {
 	Describe("RemoveSink", func() {
 		It("makes the group empty and returns true when there is one sink to remove", func() {
 			group := firehose_group.NewFirehoseGroup()
-			swrapper := &sink_wrapper.SinkWrapper{
-				Sink:      &fakeSink{appId: "firehose-a", sinkId: "sink-a"},
-				InputChan: make(chan *events.Envelope, 10),
-			}
-			group.AddSink(swrapper)
+			sink := fakeSink{appId: "firehose-a", sinkId: "sink-a"}
 
-			Expect(group.RemoveSink(swrapper.Sink)).To(BeTrue())
+			group.AddSink(&sink, make(chan *events.Envelope, 10))
+
+			Expect(group.RemoveSink(&sink)).To(BeTrue())
 			Expect(group.IsEmpty()).To(BeTrue())
 		})
 
 		It("returns false when the group does not contain the requested sink and does not remove any sinks from the group", func() {
 			group := firehose_group.NewFirehoseGroup()
-			swrapper := &sink_wrapper.SinkWrapper{
-				Sink:      &fakeSink{appId: "firehose-a", sinkId: "sink-a"},
-				InputChan: make(chan *events.Envelope, 10),
-			}
-			group.AddSink(swrapper)
+			sink := fakeSink{appId: "firehose-a", sinkId: "sink-a"}
 
-			otherSink := &fakeSink{appId: "firehose-a", sinkId: "sink-b"}
+			group.AddSink(&sink, make(chan *events.Envelope, 10))
 
-			Expect(group.RemoveSink(otherSink)).To(BeFalse())
+			otherSink := fakeSink{appId: "firehose-a", sinkId: "sink-b"}
+
+			Expect(group.RemoveSink(&otherSink)).To(BeFalse())
 			Expect(group.IsEmpty()).To(BeFalse())
 		})
 	})

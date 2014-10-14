@@ -60,7 +60,7 @@ func (group *GroupedSinks) RegisterFirehoseSink(in chan<- *events.Envelope, sink
 		fgroup = group.firehoses[subscriptionId]
 	}
 
-	return fgroup.AddSink(&sink_wrapper.SinkWrapper{InputChan: in, Sink: sink})
+	return fgroup.AddSink(sink, in)
 }
 
 func (group *GroupedSinks) Broadcast(appId string, msg *events.Envelope) {

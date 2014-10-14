@@ -8,7 +8,7 @@ import (
 )
 
 type FirehoseGroup interface {
-	AddSink(swrapper *sink_wrapper.SinkWrapper) bool
+	AddSink(sink sinks.Sink, in chan<- *events.Envelope) bool
 	RemoveSink(fsink sinks.Sink) bool
 	RemoveAllSinks()
 	IsEmpty() bool
@@ -27,9 +27,9 @@ func NewFirehoseGroup() *firehoseGroup {
 	}
 }
 
-func (group *firehoseGroup) AddSink(swrapper *sink_wrapper.SinkWrapper) bool {
-	for _, fsink := range group.sinkWrappers {
-		if swrapper.Sink.Identifier() == fsink.Sink.Identifier() {
+func (group *firehoseGroup) AddSink(sink sinks.Sink, in chan<- *events.Envelope) bool {
+	for _, sinkWrapper := range group.sinkWrappers {
+		if sink.Identifier() == sinkWrapper.Sink.Identifier() {
 			return false
 		}
 	}
@@ -37,17 +37,18 @@ func (group *firehoseGroup) AddSink(swrapper *sink_wrapper.SinkWrapper) bool {
 	group.Lock()
 	defer group.Unlock()
 
-	group.sinkWrappers = append(group.sinkWrappers, swrapper)
+	sinkWrapper := sink_wrapper.SinkWrapper{InputChan: in, Sink: sink}
+	group.sinkWrappers = append(group.sinkWrappers, &sinkWrapper)
 	return true
 }
 
 func (group *firehoseGroup) RemoveSink(fsink sinks.Sink) bool {
-	for i, swrapper := range group.sinkWrappers {
-		if swrapper.Sink == fsink {
+	for i, sinkWrapper := range group.sinkWrappers {
+		if sinkWrapper.Sink == fsink {
 			group.Lock()
 			defer group.Unlock()
 
-			close(swrapper.InputChan)
+			close(sinkWrapper.InputChan)
 			s := group.sinkWrappers
 			group.sinkWrappers = s[:i+copy(s[i:], s[i+1:])]
 
@@ -59,8 +60,8 @@ func (group *firehoseGroup) RemoveSink(fsink sinks.Sink) bool {
 }
 
 func (group *firehoseGroup) RemoveAllSinks() {
-	for _, swrapper := range group.sinkWrappers {
-		group.RemoveSink(swrapper.Sink)
+	for _, sinkWrapper := range group.sinkWrappers {
+		group.RemoveSink(sinkWrapper.Sink)
 	}
 }
 
@@ -73,15 +74,12 @@ func (group *firehoseGroup) BroadcastMessage(msg *events.Envelope) {
 	defer group.Unlock()
 
 	l := len(group.sinkWrappers)
-
 	lastUsed := group.lastUsedSinkIndex
-
 	if lastUsed >= l {
 		group.lastUsedSinkIndex = 0
 	}
 
 	group.sinkWrappers[group.lastUsedSinkIndex].InputChan <- msg
-
 	group.lastUsedSinkIndex += 1
 }
 
