@@ -72,7 +72,7 @@ func (sinkManager *SinkManager) Stop() {
 
 func (sinkManager *SinkManager) SendTo(appId string, receivedMessage *events.Envelope) {
 	sinkManager.ensureRecentLogsSinkFor(appId)
-	sinkManager.sinks.BroadCast(appId, receivedMessage)
+	sinkManager.sinks.Broadcast(appId, receivedMessage)
 }
 
 func (sinkManager *SinkManager) listenForNewAppServices(newAppServiceChan <-chan appservice.AppService) {
@@ -101,7 +101,7 @@ func (sinkManager *SinkManager) listenForErrorMessages() {
 			}
 			appId := dropsonde.GetAppId(errorMessage)
 			sinkManager.logger.Debugf("SinkManager:ErrorChannel: Searching for sinks with appId [%s].", appId)
-			sinkManager.sinks.BroadCastError(appId, errorMessage)
+			sinkManager.sinks.BroadcastError(appId, errorMessage)
 			sinkManager.logger.Debugf("SinkManager:ErrorChannel: Done sending error message.")
 		}
 	}
@@ -109,7 +109,7 @@ func (sinkManager *SinkManager) listenForErrorMessages() {
 
 func (sinkManager *SinkManager) RegisterSink(sink sinks.Sink) bool {
 	inputChan := make(chan *events.Envelope)
-	ok := sinkManager.sinks.Register(inputChan, sink)
+	ok := sinkManager.sinks.RegisterAppSink(inputChan, sink)
 	if !ok {
 		return false
 	}
@@ -143,7 +143,7 @@ func (sinkManager *SinkManager) UnregisterSink(sink sinks.Sink) {
 
 func (sinkManager *SinkManager) RegisterFirehoseSink(sink sinks.Sink) bool {
 	inputChan := make(chan *events.Envelope)
-	ok := sinkManager.sinks.RegisterFirehose(inputChan, sink)
+	ok := sinkManager.sinks.RegisterFirehoseSink(inputChan, sink)
 	if !ok {
 		return false
 	}

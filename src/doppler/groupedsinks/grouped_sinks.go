@@ -24,7 +24,7 @@ type GroupedSinks struct {
 	sync.RWMutex
 }
 
-func (group *GroupedSinks) Register(in chan<- *events.Envelope, sink sinks.Sink) bool {
+func (group *GroupedSinks) RegisterAppSink(in chan<- *events.Envelope, sink sinks.Sink) bool {
 	group.Lock()
 	defer group.Unlock()
 
@@ -45,7 +45,7 @@ func (group *GroupedSinks) Register(in chan<- *events.Envelope, sink sinks.Sink)
 	return true
 }
 
-func (group *GroupedSinks) RegisterFirehose(in chan<- *events.Envelope, sink sinks.Sink) bool {
+func (group *GroupedSinks) RegisterFirehoseSink(in chan<- *events.Envelope, sink sinks.Sink) bool {
 	group.Lock()
 	defer group.Unlock()
 
@@ -63,7 +63,7 @@ func (group *GroupedSinks) RegisterFirehose(in chan<- *events.Envelope, sink sin
 	return fgroup.AddSink(&sink_wrapper.SinkWrapper{InputChan: in, Sink: sink})
 }
 
-func (group *GroupedSinks) BroadCast(appId string, msg *events.Envelope) {
+func (group *GroupedSinks) Broadcast(appId string, msg *events.Envelope) {
 	group.RLock()
 	defer group.RUnlock()
 
@@ -75,7 +75,7 @@ func (group *GroupedSinks) BroadCast(appId string, msg *events.Envelope) {
 
 }
 
-func (group *GroupedSinks) BroadCastError(appId string, errorMsg *events.Envelope) {
+func (group *GroupedSinks) BroadcastError(appId string, errorMsg *events.Envelope) {
 	group.RLock()
 	defer group.RUnlock()
 
