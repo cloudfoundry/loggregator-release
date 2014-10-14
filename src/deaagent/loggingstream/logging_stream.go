@@ -3,6 +3,7 @@ package loggingstream
 import (
 	"code.google.com/p/gogoprotobuf/proto"
 	"deaagent/domain"
+	"errors"
 	"fmt"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
@@ -37,20 +38,37 @@ func (ls *LoggingStream) Read(p []byte) (n int, err error) {
 	if ls.connection == nil {
 		connection, err := ls.connect()
 		if err != nil {
-			return 0, io.ErrClosedPipe
+			ls.endConnection()
+			return 0, io.EOF
 		}
 		ls.connection = connection
 	}
 
-	return ls.connection.Read(p)
+	n, err = ls.connection.Read(p)
+
+	if err != nil {
+		endConnectionError := ls.endConnection()
+
+		if endConnectionError != nil {
+			err = errors.New(fmt.Sprintf("Error: %v\nClose Error: %v", err, endConnectionError))
+		}
+		ls.logger.Debugf("Stopped reading from socket %s", err.Error())
+	}
+
+	return
 }
 
 func (ls *LoggingStream) Close() error {
 	ls.lock.RLock()
 	defer ls.lock.RUnlock()
+	return ls.endConnection()
+}
 
+func (ls *LoggingStream) endConnection() error {
 	if ls.connection != nil {
-		return ls.connection.Close()
+		oldCon := ls.connection
+		ls.connection = nil
+		return oldCon.Close()
 	}
 	ls.logger.Debugf("Stopped reading from socket %s, %s", ls.messageType, ls.task.Identifier())
 	return nil

@@ -72,20 +72,41 @@ var _ = Describe("LoggingStream", func() {
 				go func() {
 					connection, _ := listener.Accept()
 					defer connection.Close()
+					defer listener.Close()
 				}()
 			})
 			It("you get an EOF", func() {
 				p := make([]byte, 1024)
 				_, err := loggingStream.Read(p)
+
+				Expect(err).To(Equal(io.EOF))
+			})
+			It("tries to reconnect after the first connection has closed", func() {
+				p := make([]byte, 1024)
+				_, err := loggingStream.Read(p)
+				Expect(err).To(Equal(io.EOF))
+
+				go func() {
+					listener, _ := net.Listen("unix", socketPath)
+					connection, _ := listener.Accept()
+					connection.Write([]byte("Hello"))
+					defer connection.Close()
+					defer listener.Close()
+				}()
+
+				n, err := loggingStream.Read(p)
+				Expect(n).To(Equal(5))
+				Expect(err).ToNot(HaveOccurred())
+
+				_, err = loggingStream.Read(p)
 				Expect(err).To(Equal(io.EOF))
 			})
 		})
 		Context("when socket never opens", func() {
-			It("returns a ErrClosedPipe error and 0 bytes ", func() {
+			It("returns an EOF error and 0 bytes ", func() {
 				p := make([]byte, 1024)
 				count, err := loggingStream.Read(p)
-
-				Expect(err).To(Equal(io.ErrClosedPipe))
+				Expect(err).To(Equal(io.EOF))
 				Expect(count).To(Equal(0))
 			})
 		})
