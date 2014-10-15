@@ -105,7 +105,7 @@ var _ = Describe("WebsocketListener", func() {
 			err := l.Start("ws://localhost:1234", "myApp", outputChan, stopChan)
 			Expect(err).To(HaveOccurred())
 			close(done)
-		})
+		}, 2)
 	})
 
 	Context("when the server is running", func() {

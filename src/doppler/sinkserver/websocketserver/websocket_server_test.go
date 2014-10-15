@@ -118,7 +118,7 @@ var _ = Describe("WebsocketServer", func() {
 		close(stopKeepAlive1)
 		close(stopKeepAlive2)
 		close(done)
-	})
+	}, 2)
 
 	It("still sends to 'live' sinks", func(done Done) {
 		stopKeepAlive, connectionDropped := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
