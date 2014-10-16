@@ -13,6 +13,7 @@ Loggregator allows users to:
 1. Tail their application logs.
 1. Dump a recent set of application logs (where recent is a configurable number of log packets).
 1. Continually drain their application logs to 3rd party log archive and analysis services.
+1. Access the firehose, which includes the combined stream of logs from all apps, plus metrics data from CF components.
 
 ### Usage
 
@@ -32,6 +33,11 @@ Oct 3 15:09:26 private-app App/0 This message is on stdout at 2013-10-03 22:09:2
 Oct 3 15:09:26 private-app App/0 STDERR This message is on stderr at 2013-10-03 22:09:26 +0000 for private-app instance 0
 ^C
 ```
+
+#### Creating custom clients to access all log and metrics data
+
+For operators who wish to write their own client (other than the CLI) to access log and metrics data, the [NOAA Client](https://github.com/cloudfoundry/noaa) library, written in Golang, can be used.
+It provides access to app log data as well as the log + metrics firehose.
 
 ### Constraints
 
@@ -126,6 +132,16 @@ properties:
 There is a the limitation about how many messages are retained for the --recent command. If you want to increase that number, you probably want to increase the number of Loggregator servers.
 
 Increase the number of traffic controllers and Loggregator servers when to (better) handle many apps in a deployment. For each app we spin up a go routine (something like a java thread). There is a limit to how many you should spin up per go process.
+
+### Configuring the Firehose
+
+Access to the firehose requires a user with the "doppler.firehose" scope.
+
+The "cf" uaa client needs permission to grant this custom scope to users.
+The configuration of the "uaa" job in Cloud Foundry [adds this scope by default](https://github.com/cloudfoundry/cf-release/blob/2a3d95417da3c59564daeecd754eb00862030cd6/jobs/uaa/templates/uaa.yml.erb#L111).
+However, if your Cloud Foundry instance overrides the "properties.uaa.clients.cf" property in a stub, you need to add "doppler.firehose" to the scope list in the "properties.uaa.clients.cf.scope" property.
+
+To add this scope to one of your users, please use the [uaac tool](http://docs.cloudfoundry.org/adminguide/uaa-user-management.html).
 
 ### Development
 
