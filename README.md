@@ -4,7 +4,7 @@
    
 ### Logging in the Clouds   
   
-Loggregator is the user application logging subsystem for Cloud Foundry.    
+Loggregator is the user application logging subsystem of Cloud Foundry.
 
 ### Features
 
@@ -13,7 +13,7 @@ Loggregator allows users to:
 1. Tail their application logs.
 1. Dump a recent set of application logs (where recent is a configurable number of log packets).
 1. Continually drain their application logs to 3rd party log archive and analysis services.
-1. Access the firehose, which includes the combined stream of logs from all apps, plus metrics data from CF components.
+1. (Operators and administrators only) Access the firehose, which includes the combined stream of logs from all apps, plus metrics data from CF components.
 
 ### Usage
 
@@ -34,14 +34,9 @@ Oct 3 15:09:26 private-app App/0 STDERR This message is on stderr at 2013-10-03 
 ^C
 ```
 
-#### Creating custom clients to access all log and metrics data
-
-For operators who wish to write their own client (other than the CLI) to access log and metrics data, the [NOAA Client](https://github.com/cloudfoundry/noaa) library, written in Golang, can be used.
-It provides access to app log data as well as the log + metrics firehose.
-
 ### Constraints
 
-1. Loggregator collects STDOUT & STDERR from the customer's application.  This may require configuration on the developer's side.
+1. Loggregator collects STDOUT & STDERR from applications.  This may require configuration on the developer's side.
 1. A Loggregator outage must not affect the running application.
 1. Loggregator gathers and stores logs in a best-effort manner.  While undesirable, losing the current buffer of application logs is acceptable.
 1. The 3rd party drain API should mimic Heroku's in order to reduce integration effort for our partners.  The Heroku drain API is simply remote syslog over TCP.
@@ -50,8 +45,9 @@ It provides access to app log data as well as the log + metrics firehose.
 
 Loggregator is composed of:
 
-* **Sources**: Logging agents that run on the Cloud Foundry components.  They forward logs to:
-* **Loggregator Server**: Responsible for gathering logs from the **sources**, and storing in the temporary buffers.
+* **Sources**: Logging agents that run on the Cloud Foundry components.
+* **Metron**: Metron agents are co-located with sources. They collect logs and forward them to:
+* **Loggregator Server (a.k.a. Doppler)**: Responsible for gathering logs from the **Metron agents**, and storing them in temporary buffers.
 * **Traffic Controller**: Makes the Loggregator Servers horizontally scalable by partitioning incoming log messages and outgoing traffic. Routes incoming log messages and proxies outgoing connections to the CLI and to drains for 3rd party partners.
 
 Source agents emit the logging data as [protocol-buffers](https://code.google.com/p/protobuf/), and the data stays in that format throughout the system.
@@ -62,17 +58,17 @@ In a redundant CloudFoundry setup, Loggregator can be configured to survive zone
 
 ![Loggregator Diagram](docs/loggregator_multizone.png)
 
-The loggregator Traffic Controller has two roles.   
+The role of Metron is to take traffic from the various emitter sources (dea, dea-logging-agent router, etc) and route that traffic to one or more loggregator servers. In the current config we route this traffic to the loggregator servers in the same az. The traffic is randomly distributed across loggregator servers.
 
-The first role is to take traffic from the various emitter sources (dea, dea-logging-agent router, etc) and route that traffic to one or more loggregator servers.   In the current config we route this traffic to the loggregator servers in the same az.   The traffic is sharded across loggregator servers by application id.    In this role the traffic between the traffic_controller and loggregator server(s) is all within the same az.
+The role of Traffic Controller is to handle inbound web socket requests for log data. It does this by proxying the request to all loggregator servers (regardless of az). Since an application can be deployed to multiple azs, its logs can potentially end up on loggregator servers in multiple azs. This is why the traffic controller will attempt to connect to loggregator servers in each az and will collate the data into a single stream for the web socket client.
 
-The second role is to handle inbound web socket requests for log data.    It does this by proxying the request to the correct loggregator server (sharded by application id) within all azs configured.  Since an application can be deployed to multiple az, it's logs can potentially end up in multiple azs.   This is why the traffic controller will attempt to connect to loggregator servers in each az and will collate the data into a single stream for the web socket client.    In the role the traffic between the traffic_controller and loggregator server(s) in across azs.
+The traffic controller itself is stateless; a web socket request can be handled by any instance in any az.
 
-The traffic controller itself is stateless and a web socket request can be handle by any instance in any az.    The inbound emitter source connections could be load balanced across traffic controllers as well but we have yet to deploy this configuration.
+Traffic controllers also exposes a `firehose` web socket endpoint. Connecting to this endpoint establishes connections to all loggregator servers, and streams logs and metrics for all applications and cf components.
 
 ### Emitting Messages from other Cloud Foundry components
 
-Cloud Foundry developers can easily add source clients to new CF components that emit messages to the loggregator server.  Currently, there are libraries for [Go](https://github.com/cloudfoundry/loggregatorlib/tree/master/emitter) and [Ruby](https://github.com/cloudfoundry/loggregator_emitter). For usage information, look at their respective READMEs.
+Cloud Foundry developers can easily add source clients to new CF components that emit messages to the loggregator server.  Currently, there are libraries for [Go](https://github.com/cloudfoundry/dropsonde/) and [Ruby](https://github.com/cloudfoundry/loggregator_emitter). For usage information, look at their respective READMEs.
 
 ### Deploying via BOSH
 
@@ -127,13 +123,9 @@ properties:
     port: 3456
 ```
 
-#### Capacity/Scaling
-
-There is a the limitation about how many messages are retained for the --recent command. If you want to increase that number, you probably want to increase the number of Loggregator servers.
-
-Increase the number of traffic controllers and Loggregator servers when to (better) handle many apps in a deployment. For each app we spin up a go routine (something like a java thread). There is a limit to how many you should spin up per go process.
-
 ### Configuring the Firehose
+
+The firehose feature includes the combined stream of logs from all apps, plus metrics data from CF components, and is intended to be used by operators and adminstrators.
 
 Access to the firehose requires a user with the "doppler.firehose" scope.
 
@@ -142,6 +134,10 @@ The configuration of the "uaa" job in Cloud Foundry [adds this scope by default]
 However, if your Cloud Foundry instance overrides the "properties.uaa.clients.cf" property in a stub, you need to add "doppler.firehose" to the scope list in the "properties.uaa.clients.cf.scope" property.
 
 To add this scope to one of your users, please use the [uaac tool](http://docs.cloudfoundry.org/adminguide/uaa-user-management.html).
+
+### Consuming log and metric data
+
+The [NOAA Client](https://github.com/cloudfoundry/noaa) library, written in Golang, can be used by Go applications to consume app log data as well as the log + metrics firehose. If you wish to write your own client, please refer to the NOAA source and documentation.
 
 ### Development
 
