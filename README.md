@@ -137,7 +137,9 @@ To add this scope to one of your users, please use the [uaac tool](http://docs.c
 
 ### Consuming log and metric data
 
-The [NOAA Client](https://github.com/cloudfoundry/noaa) library, written in Golang, can be used by Go applications to consume app log data as well as the log + metrics firehose. If you wish to write your own client, please refer to the NOAA source and documentation.
+The [NOAA Client](https://github.com/cloudfoundry/noaa) library, written in Golang, can be used by Go applications to consume app log data as well as the log + metrics firehose. If you wish to write your own client application using this library, please refer to the NOAA source and documentation.
+
+Multiple subscribers may connect to the firehose endpoint, each with a unique subscription_id. Each subscriber (in practice, a pool of clients with a common subscription_id) receives the entire stream. For each subscription_id, all data will be distributed evenly among that subscriber's client pool.
 
 ### Development
 
