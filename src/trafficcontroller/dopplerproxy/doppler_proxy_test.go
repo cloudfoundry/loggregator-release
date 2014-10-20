@@ -383,7 +383,7 @@ var _ = Describe("ServeHTTP", func() {
 
 			proxy.ServeHTTP(recorder, req)
 
-			Expect(recorder.Header().Get("Set-Cookie")).To(Equal("cookie=monster; Domain=cookieDomain"))
+			Expect(recorder.Header().Get("Set-Cookie")).To(Equal("cookie=monster; Domain=cookieDomain; Secure"))
 		})
 
 		It("returns a bad request if the form does not parse", func() {

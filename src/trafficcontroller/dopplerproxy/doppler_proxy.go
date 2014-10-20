@@ -245,7 +245,7 @@ func (proxy *Proxy) serveSetCookie(writer http.ResponseWriter, request *http.Req
 	cookieValue := request.FormValue("CookieValue")
 	origin := request.Header.Get("Origin")
 
-	http.SetCookie(writer, &http.Cookie{Name: cookieName, Value: cookieValue, Domain: cookieDomain})
+	http.SetCookie(writer, &http.Cookie{Name: cookieName, Value: cookieValue, Domain: cookieDomain, Secure: true})
 
 	writer.Header().Add("Access-Control-Allow-Credentials", "true")
 	writer.Header().Add("Access-Control-Allow-Origin", origin)
