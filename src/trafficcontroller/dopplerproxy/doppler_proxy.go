@@ -31,7 +31,7 @@ type Proxy struct {
 
 type RequestTranslator func(request *http.Request) (*http.Request, error)
 
-type Authorizer func(appId, authToken string, logger *gosteno.Logger) bool
+type Authorizer func(authToken string, appId string, logger *gosteno.Logger) (bool, error)
 
 func NewDopplerProxy(logAuthorize authorization.LogAccessAuthorizer, adminAuthorizer authorization.AdminAccessAuthorizer, connector channel_group_connector.ChannelGroupConnector, config cfcomponent.Config, translator RequestTranslator, cookieDomain string, logger *gosteno.Logger) *Proxy {
 	var instrumentables []instrumentation.Instrumentable
@@ -114,7 +114,7 @@ func (proxy *Proxy) serveFirehose(writer http.ResponseWriter, request *http.Requ
 
 	dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint(FIREHOSE_ID, firehoseSubscriptionId, true)
 
-	authorizer := func(appId, authToken string, logger *gosteno.Logger) bool {
+	authorizer := func(authToken string, appId string, logger *gosteno.Logger) (bool, error) {
 		return proxy.adminAuthorize(authToken, logger)
 	}
 
@@ -150,7 +150,7 @@ func (proxy *Proxy) serveAppLogs(writer http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	authorizer := func(appId, authToken string, logger *gosteno.Logger) bool {
+	authorizer := func(authToken string, appId string, logger *gosteno.Logger) (bool, error) {
 		return proxy.logAuthorize(authToken, appId, logger)
 	}
 
@@ -194,17 +194,10 @@ func (proxy *Proxy) isAuthorized(authorizer Authorizer, appId, authToken string,
 			Timestamp:   proto.Int64(currentTime.UnixNano()),
 		}
 	}
-
-	if authToken == "" {
-		message := fmt.Sprintf("HttpServer: Did not accept sink connection from %s without authorization.", clientAddress)
-		proxy.logger.Warnf(message)
-		return false, newLogMessage([]byte("Error: Authorization not provided"))
-	}
-
-	if !authorizer(appId, authToken, proxy.logger) {
+	if authorized, err := authorizer(authToken, appId, proxy.logger); !authorized {
 		message := fmt.Sprintf("HttpServer: Auth token [%s] not authorized to access appId [%s].", authToken, appId)
 		proxy.logger.Warn(message)
-		return false, newLogMessage([]byte("Error: Invalid authorization"))
+		return false, newLogMessage([]byte(err.Error()))
 	}
 
 	return true, nil

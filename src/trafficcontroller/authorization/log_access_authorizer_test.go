@@ -4,6 +4,7 @@ import (
 	"trafficcontroller/authorization"
 
 	"bytes"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -23,8 +24,11 @@ var _ = Describe("LogAccessAuthorizer", func() {
 	)
 
 	Context("Allow all access", func() {
-		authorizer := authorization.NewLogAccessAuthorizer(true, "http://cloudcontroller.example.com", true)
-		Expect(authorizer("bearer anything", "myAppId", logger)).To(Equal(true))
+		It("returns true", func() {
+			authorizer := authorization.NewLogAccessAuthorizer(true, "http://cloudcontroller.example.com", true)
+			Expect(authorizer("bearer anything", "myAppId", logger)).To(Equal(true))
+
+		})
 	})
 
 	Context("Server does not use SSL", func() {
@@ -37,13 +41,28 @@ var _ = Describe("LogAccessAuthorizer", func() {
 			server.Close()
 		})
 
-		It("allows access when the api returns 200", func() {
+		It("does not allow access for requests with empty AuthTokens", func() {
 			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL, true)
 
-			Expect(authorizer("bearer something", "myAppId", logger)).To(Equal(true))
-			Expect(authorizer("bearer something", "notMyAppId", logger)).To(Equal(false))
-			Expect(authorizer("bearer something", "nonExistantAppId", logger)).To(Equal(false))
+			authorized, err := authorizer("", "myAppId", logger)
+			Expect(authorized).To(Equal(false))
+			Expect(err).To(Equal(errors.New(authorization.NO_AUTH_TOKEN_PROVIDED_ERROR_MESSAGE)))
+		})
 
+		It("allows access when the api returns 200, and otherwise denies access", func() {
+			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL, true)
+
+			authorized, err := authorizer("bearer something", "myAppId", logger)
+			Expect(authorized).To(Equal(true))
+			Expect(err).To(BeNil())
+
+			authorized, err = authorizer("bearer something", "notMyAppId", logger)
+			Expect(authorized).To(Equal(false))
+			Expect(err).To(Equal(errors.New(authorization.INVALID_AUTH_TOKEN_ERROR_MESSAGE)))
+
+			authorized, err = authorizer("bearer something", "nonExistantAppId", logger)
+			Expect(authorized).To(Equal(false))
+			Expect(err).To(Equal(errors.New(authorization.INVALID_AUTH_TOKEN_ERROR_MESSAGE)))
 		})
 
 		It("has no leaking go routines", func() {
@@ -82,12 +101,16 @@ var _ = Describe("LogAccessAuthorizer", func() {
 
 		It("does allow access when cert verification is skipped", func() {
 			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL, true)
-			Expect(authorizer("bearer something", "myAppId", logger)).To(Equal(true))
+			authorized, err := authorizer("bearer something", "myAppId", logger)
+			Expect(authorized).To(Equal(true))
+			Expect(err).To(BeNil())
 		})
 
 		It("does not allow access when cert verifcation is not skipped", func() {
 			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL, false)
-			Expect(authorizer("bearer something", "myAppId", logger)).To(Equal(false))
+			authorized, err := authorizer("bearer something", "myAppId", logger)
+			Expect(authorized).To(Equal(false))
+			Expect(err).To(Equal(errors.New(authorization.INVALID_AUTH_TOKEN_ERROR_MESSAGE)))
 		})
 	})
 

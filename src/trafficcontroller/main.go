@@ -227,7 +227,7 @@ func makeProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosten
 	logAuthorizer := authorization.NewLogAccessAuthorizer(*alwaysAllowAccess, config.ApiHost, config.SkipCertVerify)
 
 	uaaClient := uaa_client.NewUaaClient(config.UaaHost, config.UaaClientId, config.UaaClientSecret, config.SkipCertVerify)
-	adminAuthorizer := authorization.NewAdminAccessAuthorizer(&uaaClient)
+	adminAuthorizer := authorization.NewAdminAccessAuthorizer(*alwaysAllowAccess, &uaaClient)
 
 	provider := MakeProvider(adapter, "/healthstatus/doppler", config.DopplerPort, logger)
 	cgc := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, messageGenerator, logger)

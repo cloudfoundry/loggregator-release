@@ -2,6 +2,7 @@ package trafficcontroller_testhelpers
 
 import (
 	"encoding/binary"
+	"errors"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
@@ -18,28 +19,33 @@ func SuccessfulAuthorizer(authToken string, target string, l *gosteno.Logger) bo
 	return authToken == VALID_AUTHENTICATION_TOKEN
 }
 
+type AuthorizerResult struct {
+	Authorized   bool
+	ErrorMessage string
+}
+
 type LogAuthorizer struct {
 	TokenParam string
 	Target     string
-	Result     bool
+	Result     AuthorizerResult
 }
 
-func (a *LogAuthorizer) Authorize(authToken string, target string, l *gosteno.Logger) bool {
+func (a *LogAuthorizer) Authorize(authToken string, target string, l *gosteno.Logger) (bool, error) {
 	a.TokenParam = authToken
 	a.Target = target
 
-	return a.Result
+	return a.Result.Authorized, errors.New(a.Result.ErrorMessage)
 }
 
 type AdminAuthorizer struct {
 	TokenParam string
-	Result     bool
+	Result     AuthorizerResult
 }
 
-func (a *AdminAuthorizer) Authorize(authToken string, l *gosteno.Logger) bool {
+func (a *AdminAuthorizer) Authorize(authToken string, l *gosteno.Logger) (bool, error) {
 	a.TokenParam = authToken
 
-	return a.Result
+	return a.Result.Authorized, errors.New(a.Result.ErrorMessage)
 }
 
 func AssertConnectionFails(t *testing.T, port string, path string, authToken string, expectedErrorCode uint16) {

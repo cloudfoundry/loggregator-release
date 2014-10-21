@@ -2,14 +2,20 @@ package authorization
 
 import (
 	"crypto/tls"
+	"errors"
 	"github.com/cloudfoundry/gosteno"
 	"net/http"
 )
 
-type LogAccessAuthorizer func(authToken string, appId string, logger *gosteno.Logger) bool
+const (
+	NO_AUTH_TOKEN_PROVIDED_ERROR_MESSAGE = "Error: Authorization not provided"
+	INVALID_AUTH_TOKEN_ERROR_MESSAGE     = "Error: Invalid authorization"
+)
 
-func alwaysAllowAccess(_, _ string, _ *gosteno.Logger) bool {
-	return true
+type LogAccessAuthorizer func(authToken string, appId string, logger *gosteno.Logger) (bool, error)
+
+func alwaysAllowAccess(_, _ string, _ *gosteno.Logger) (bool, error) {
+	return true, nil
 }
 
 func NewLogAccessAuthorizer(allowAllAccess bool, apiHost string, skipCertVerify bool) LogAccessAuthorizer {
@@ -18,7 +24,11 @@ func NewLogAccessAuthorizer(allowAllAccess bool, apiHost string, skipCertVerify 
 		return LogAccessAuthorizer(alwaysAllowAccess)
 	}
 
-	isAccessAllowed := func(authToken string, target string, logger *gosteno.Logger) bool {
+	isAccessAllowed := func(authToken string, target string, logger *gosteno.Logger) (bool, error) {
+		if authToken == "" {
+			return false, errors.New(NO_AUTH_TOKEN_PROVIDED_ERROR_MESSAGE)
+		}
+
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: skipCertVerify},
 		}
@@ -29,16 +39,16 @@ func NewLogAccessAuthorizer(allowAllAccess bool, apiHost string, skipCertVerify 
 		res, err := client.Do(req)
 		if err != nil {
 			logger.Errorf("Could not get app information: [%s]", err)
-			return false
+			return false, errors.New(INVALID_AUTH_TOKEN_ERROR_MESSAGE)
 		}
 
 		defer res.Body.Close()
 
 		if res.StatusCode != 200 {
 			logger.Warnf("Non 200 response from CC API: %d", res.StatusCode)
-			return false
+			return false, errors.New(INVALID_AUTH_TOKEN_ERROR_MESSAGE)
 		}
-		return true
+		return true, nil
 	}
 
 	return LogAccessAuthorizer(isAccessAllowed)
