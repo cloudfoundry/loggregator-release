@@ -3,12 +3,13 @@ package integration_test
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/cloudfoundry/noaa"
-	"github.com/cloudfoundry/noaa/events"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
+
+	"github.com/cloudfoundry/noaa"
+	"github.com/cloudfoundry/noaa/events"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -26,9 +27,8 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 
 	Context("Streaming", func() {
 		It("passes messages through", func() {
-			client := noaa.NewNoaa(dropsondeEndpoint, &tls.Config{}, nil)
-			messages, err := client.Stream(APP_ID, AUTH_TOKEN)
-			Expect(err).NotTo(HaveOccurred())
+			client := noaa.NewConsumer(dropsondeEndpoint, &tls.Config{}, nil)
+			messages := client.Stream(APP_ID, AUTH_TOKEN)
 
 			var request *http.Request
 			Eventually(fakeDoppler.TrafficControllerConnected, 10).Should(Receive(&request))
@@ -52,9 +52,8 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 
 	Context("Firehose", func() {
 		It("passes messages through for every app for uaa admins", func() {
-			client := noaa.NewNoaa(dropsondeEndpoint, &tls.Config{}, nil)
-			messages, err := client.Firehose(SUBSCRIPTION_ID, AUTH_TOKEN)
-			Expect(err).NotTo(HaveOccurred())
+			client := noaa.NewConsumer(dropsondeEndpoint, &tls.Config{}, nil)
+			messages := client.Firehose(SUBSCRIPTION_ID, AUTH_TOKEN)
 
 			var request *http.Request
 			Eventually(fakeDoppler.TrafficControllerConnected, 10).Should(Receive(&request))
@@ -91,7 +90,7 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 		})
 
 		It("returns a multi-part HTTP response with all recent messages", func(done Done) {
-			client := noaa.NewNoaa(dropsondeEndpoint, &tls.Config{}, nil)
+			client := noaa.NewConsumer(dropsondeEndpoint, &tls.Config{}, nil)
 
 			messages, err := client.RecentLogs("1234", "bearer iAmAnAdmin")
 
@@ -102,7 +101,7 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			for i, message := range messages {
-				Expect(message.GetLogMessage().GetMessage()).To(BeEquivalentTo(strconv.Itoa(i)))
+				Expect(message.GetMessage()).To(BeEquivalentTo(strconv.Itoa(i)))
 			}
 			close(done)
 		}, 20)
