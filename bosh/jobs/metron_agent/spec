@@ -4,12 +4,6 @@ templates:
   metron_agent_ctl.erb: bin/metron_agent_ctl
   metron_agent.json.erb: config/metron_agent.json
   syslog_forwarder.conf.erb: config/syslog_forwarder.conf
-  syslog_daemon_config/rsyslogd.conf.erb: config/rsyslogd.conf
-  syslog_daemon_config/syslog_daemon_config.yml.erb: config/syslog_daemon_config.yml
-  syslog_daemon_config/syslog_daemon_config_ctl: bin/syslog_daemon_config_ctl
-  syslog_daemon_config/gzip_old_logs: bin/gzip_old_logs
-  syslog_daemon_config/reap_old_logs: bin/reap_old_logs
-  syslog_daemon_config/symlink_logs: bin/symlink_logs
 
 
 packages:
@@ -20,9 +14,6 @@ properties:
     description: "IP address for syslog aggregator"
   syslog_daemon_config.port:
     description: "TCP port of syslog aggregator"
-  syslog_daemon_config.all:
-    description: "Define whether forwarders should send all their syslog data to our aggregator."
-    default: false
   syslog_daemon_config.transport:
     description: "Transport to be used when forwarding logs (tcp|udp|relp)."
     default: "tcp"
