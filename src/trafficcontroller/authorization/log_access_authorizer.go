@@ -8,7 +8,15 @@ import (
 
 type LogAccessAuthorizer func(authToken string, appId string, logger *gosteno.Logger) bool
 
-func NewLogAccessAuthorizer(apiHost string, skipCertVerify bool) LogAccessAuthorizer {
+func alwaysAllowAccess(_, _ string, _ *gosteno.Logger) bool {
+	return true
+}
+
+func NewLogAccessAuthorizer(allowAllAccess bool, apiHost string, skipCertVerify bool) LogAccessAuthorizer {
+
+	if allowAllAccess {
+		return LogAccessAuthorizer(alwaysAllowAccess)
+	}
 
 	isAccessAllowed := func(authToken string, target string, logger *gosteno.Logger) bool {
 		tr := &http.Transport{

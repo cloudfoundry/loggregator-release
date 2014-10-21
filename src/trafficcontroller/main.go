@@ -80,11 +80,12 @@ func (c *Config) validate(logger *gosteno.Logger) (err error) {
 }
 
 var (
-	logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
-	logLevel    = flag.Bool("debug", false, "Debug logging")
-	configFile  = flag.String("config", "config/loggregator_trafficcontroller.json", "Location of the loggregator trafficcontroller config json file")
-	cpuprofile  = flag.String("cpuprofile", "", "write cpu profile to file")
-	memprofile  = flag.String("memprofile", "", "write memory profile to this file")
+	logFilePath       = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
+	logLevel          = flag.Bool("debug", false, "Debug logging")
+	alwaysAllowAccess = flag.Bool("alwaysAllowAccess", false, "always all access to app logs")
+	configFile        = flag.String("config", "config/loggregator_trafficcontroller.json", "Location of the loggregator trafficcontroller config json file")
+	cpuprofile        = flag.String("cpuprofile", "", "write cpu profile to file")
+	memprofile        = flag.String("memprofile", "", "write memory profile to this file")
 )
 
 func main() {
@@ -223,7 +224,7 @@ func makeLegacyProxy(adapter storeadapter.StoreAdapter, config *Config, logger *
 }
 
 func makeProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosteno.Logger, messageGenerator marshaller.MessageGenerator, translator dopplerproxy.RequestTranslator, listenerConstructor channel_group_connector.ListenerConstructor, cookieDomain string) *dopplerproxy.Proxy {
-	logAuthorizer := authorization.NewLogAccessAuthorizer(config.ApiHost, config.SkipCertVerify)
+	logAuthorizer := authorization.NewLogAccessAuthorizer(*alwaysAllowAccess, config.ApiHost, config.SkipCertVerify)
 
 	uaaClient := uaa_client.NewUaaClient(config.UaaHost, config.UaaClientId, config.UaaClientSecret, config.SkipCertVerify)
 	adminAuthorizer := authorization.NewAdminAccessAuthorizer(&uaaClient)

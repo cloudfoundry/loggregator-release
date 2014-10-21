@@ -4,103 +4,94 @@ import (
 	"trafficcontroller/authorization"
 
 	"bytes"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"regexp"
 	"runtime/pprof"
-	"testing"
-	"time"
+
+	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-var accessTests = []struct {
-	target         string
-	authToken      string
-	expectedResult bool
-}{
-	//Allowed domains
-	{
-		"myAppId",
-		"bearer something",
-		true,
-	},
-	//Not allowed stuff
-	{
-		"notMyAppId",
-		"bearer something",
-		false,
-	},
-	{
-		"nonExistantAppId",
-		"bearer something",
-		false,
-	},
-}
+var _ = Describe("LogAccessAuthorizer", func() {
 
-func TestUserRoleAccessCombinations(t *testing.T) {
-	server := startHTTPServer()
-	defer server.Close()
-	for i, test := range accessTests {
-		authorizer := authorization.NewLogAccessAuthorizer(server.URL, true)
-		result := authorizer(test.authToken, test.target, loggertesthelper.Logger())
-		if result != test.expectedResult {
-			t.Errorf("Access combination %d failed.", i)
-		}
-	}
-}
+	var (
+		logger *gosteno.Logger = loggertesthelper.Logger()
+		server *httptest.Server
+	)
 
-func TestWorksIfServerIsSSLWithoutValidCertAndSkipVerifyCertIsTrue(t *testing.T) {
-	logger := loggertesthelper.Logger()
-	server := startHTTPSServer()
-	defer server.Close()
+	Context("Allow all access", func() {
+		authorizer := authorization.NewLogAccessAuthorizer(true, "http://cloudcontroller.example.com", true)
+		Expect(authorizer("bearer anything", "myAppId", logger)).To(Equal(true))
+	})
 
-	authorizer := authorization.NewLogAccessAuthorizer(server.URL, true)
-	result := authorizer("bearer something", "myAppId", logger)
-	if result != true {
-		t.Errorf("Could not connect to secure server.")
-	}
+	Context("Server does not use SSL", func() {
 
-	authorizer = authorization.NewLogAccessAuthorizer(server.URL, false)
-	result = authorizer("bearer something", "myAppId", logger)
-	if result != false {
-		t.Errorf("Should not be able to connect to secure server with a self signed cert if SkipVerifyCert is false.")
-	}
-}
+		BeforeEach(func() {
+			server = startHTTPServer()
+		})
 
-func TestThatThereIsNoLeakingGoRoutine(t *testing.T) {
-	logger := loggertesthelper.Logger()
-	server := startHTTPServer()
-	defer server.Close()
+		AfterEach(func() {
+			server.Close()
+		})
 
-	authorizer := authorization.NewLogAccessAuthorizer(server.URL, true)
-	authorizer("bearer something", "myAppId", logger)
-	time.Sleep(10 * time.Millisecond)
+		It("allows access when the api returns 200", func() {
+			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL, true)
 
-	var buf bytes.Buffer
-	goRoutineProfiles := pprof.Lookup("goroutine")
-	goRoutineProfiles.WriteTo(&buf, 2)
+			Expect(authorizer("bearer something", "myAppId", logger)).To(Equal(true))
+			Expect(authorizer("bearer something", "notMyAppId", logger)).To(Equal(false))
+			Expect(authorizer("bearer something", "nonExistantAppId", logger)).To(Equal(false))
 
-	match, err := regexp.Match("readLoop", buf.Bytes())
-	if err != nil {
-		t.Error("Unable to match /readLoop/ regexp against goRoutineProfile")
-		goRoutineProfiles.WriteTo(os.Stdout, 2)
-	}
+		})
 
-	if match {
-		t.Error("We are leaking readLoop goroutines.")
-	}
+		It("has no leaking go routines", func() {
+			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL, true)
+			authorizer("bearer something", "myAppId", logger)
 
-	match, err = regexp.Match("writeLoop", buf.Bytes())
-	if err != nil {
-		t.Error("Unable to match /writeLoop/ regexp against goRoutineProfile")
-	}
+			otherGoRoutines := func() bool {
+				var buf bytes.Buffer
+				goRoutineProfiles := pprof.Lookup("goroutine")
+				goRoutineProfiles.WriteTo(&buf, 2)
 
-	if match {
-		t.Error("We are leaking writeLoop goroutines.")
-		goRoutineProfiles.WriteTo(os.Stdout, 2)
-	}
-}
+				match, err := regexp.Match("readLoop", buf.Bytes())
+				Expect(err).To(BeNil(), "Unable to match /readLoop/ regexp against goRoutineProfile")
+				if match {
+					return match
+				}
+
+				match, err = regexp.Match("writeLoop", buf.Bytes())
+				Expect(err).To(BeNil(), "Unable to match /writeLoop/ regexp against goRoutineProfile")
+
+				return match
+			}
+
+			Eventually(otherGoRoutines).Should(Equal(false))
+		})
+	})
+
+	Context("Server uses SSL without valid certificate", func() {
+		BeforeEach(func() {
+			server = startHTTPSServer()
+		})
+
+		AfterEach(func() {
+			server.Close()
+		})
+
+		It("does allow access when cert verification is skipped", func() {
+			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL, true)
+			Expect(authorizer("bearer something", "myAppId", logger)).To(Equal(true))
+		})
+
+		It("does not allow access when cert verifcation is not skipped", func() {
+			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL, false)
+			Expect(authorizer("bearer something", "myAppId", logger)).To(Equal(false))
+		})
+	})
+
+})
 
 type handler struct{}
 
