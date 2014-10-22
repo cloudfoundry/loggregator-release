@@ -14,14 +14,14 @@ const (
 
 type LogAccessAuthorizer func(authToken string, appId string, logger *gosteno.Logger) (bool, error)
 
-func alwaysAllowAccess(_, _ string, _ *gosteno.Logger) (bool, error) {
+func disableLogAccessControlAuthorizer(_, _ string, _ *gosteno.Logger) (bool, error) {
 	return true, nil
 }
 
-func NewLogAccessAuthorizer(allowAllAccess bool, apiHost string, skipCertVerify bool) LogAccessAuthorizer {
+func NewLogAccessAuthorizer(disableAccessControl bool, apiHost string, skipCertVerify bool) LogAccessAuthorizer {
 
-	if allowAllAccess {
-		return LogAccessAuthorizer(alwaysAllowAccess)
+	if disableAccessControl {
+		return LogAccessAuthorizer(disableLogAccessControlAuthorizer)
 	}
 
 	isAccessAllowed := func(authToken string, target string, logger *gosteno.Logger) (bool, error) {

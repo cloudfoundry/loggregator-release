@@ -12,14 +12,14 @@ const BEARER_PREFIX = "bearer "
 
 type AdminAccessAuthorizer func(authToken string, logger *gosteno.Logger) (bool, error)
 
-func alwaysAllowAdminAccess(_ string, _ *gosteno.Logger) (bool, error) {
+func disableAdminAccessControlAuthorizer(_ string, _ *gosteno.Logger) (bool, error) {
 	return true, nil
 }
 
-func NewAdminAccessAuthorizer(allowAllAccess bool, client uaa_client.UaaClient) AdminAccessAuthorizer {
+func NewAdminAccessAuthorizer(disableAccessControl bool, client uaa_client.UaaClient) AdminAccessAuthorizer {
 
-	if allowAllAccess {
-		return AdminAccessAuthorizer(alwaysAllowAdminAccess)
+	if disableAccessControl {
+		return AdminAccessAuthorizer(disableAdminAccessControlAuthorizer)
 	}
 
 	isAccessAllowed := func(authToken string, logger *gosteno.Logger) (bool, error) {

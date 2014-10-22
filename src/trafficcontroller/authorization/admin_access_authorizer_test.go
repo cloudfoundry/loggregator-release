@@ -41,7 +41,7 @@ func (client *ErrorUaaClient) GetAuthData(token string) (*uaa_client.AuthData, e
 var _ = Describe("AdminAccessAuthorizer", func() {
 	authToken := "bearer my-token"
 
-	Context("Allow all access", func() {
+	Context("Disable Access Control", func() {
 		It("returns true", func() {
 			client := &NonAdminUaaClient{}
 			authorizer := authorization.NewAdminAccessAuthorizer(true, client)

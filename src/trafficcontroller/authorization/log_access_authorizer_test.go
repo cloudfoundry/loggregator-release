@@ -23,7 +23,7 @@ var _ = Describe("LogAccessAuthorizer", func() {
 		server *httptest.Server
 	)
 
-	Context("Allow all access", func() {
+	Context("Disable Access Control", func() {
 		It("returns true", func() {
 			authorizer := authorization.NewLogAccessAuthorizer(true, "http://cloudcontroller.example.com", true)
 			Expect(authorizer("bearer anything", "myAppId", logger)).To(Equal(true))
