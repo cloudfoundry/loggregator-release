@@ -29,8 +29,8 @@ var _ = Describe("ServeHTTP", func() {
 	)
 
 	BeforeEach(func() {
-		auth = testhelpers.LogAuthorizer{Result: true}
-		adminAuth = testhelpers.AdminAuthorizer{Result: true}
+		auth = testhelpers.LogAuthorizer{Result: testhelpers.AuthorizerResult{Authorized: true}}
+		adminAuth = testhelpers.AdminAuthorizer{Result: testhelpers.AuthorizerResult{Authorized: true}}
 
 		channelGroupConnector = &fakeChannelGroupConnector{messages: make(chan []byte, 10)}
 
@@ -98,30 +98,9 @@ var _ = Describe("ServeHTTP", func() {
 			})
 		})
 
-		Context("if auth not provided", func() {
-			It("returns a unauthorized status and sets the WWW-Authenticate header", func() {
-				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
-
-				proxy.ServeHTTP(recorder, req)
-
-				Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
-				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
-				Expect(recorder.Body.String()).To(Equal("You are not authorized. Error: Authorization not provided"))
-			})
-
-			It("It does not attempt to connect to doppler", func() {
-				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
-
-				proxy.ServeHTTP(recorder, req)
-				Consistently(channelGroupConnector.getPath).Should(Equal(""))
-				Consistently(channelGroupConnector.getStreamId).Should(Equal(""))
-				Consistently(channelGroupConnector.getReconnect).Should(BeFalse())
-			})
-		})
-
 		Context("if authorization fails", func() {
 			It("returns an unauthorized status and sets the WWW-Authenticate header", func() {
-				auth.Result = false
+				auth.Result = testhelpers.AuthorizerResult{Authorized: false, ErrorMessage: "Error: Invalid authorization"}
 
 				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
 				req.Header.Add("Authorization", "token")
@@ -137,7 +116,8 @@ var _ = Describe("ServeHTTP", func() {
 			})
 
 			It("It does not attempt to connect to doppler", func() {
-				auth.Result = false
+				auth.Result = testhelpers.AuthorizerResult{Authorized: false, ErrorMessage: "Authorization Failed"}
+
 				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
 				req.Header.Add("Authorization", "token")
 
@@ -149,7 +129,7 @@ var _ = Describe("ServeHTTP", func() {
 		})
 
 		It("can read the authorization information from a cookie", func() {
-			auth.Result = false
+			auth.Result = testhelpers.AuthorizerResult{Authorized: false, ErrorMessage: "Authorization Failed"}
 
 			req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
 
@@ -220,7 +200,7 @@ var _ = Describe("ServeHTTP", func() {
 			})
 
 			It("returns an unauthorized status and sets the WWW-Authenticate header if authorization fails", func() {
-				adminAuth.Result = false
+				adminAuth.Result = testhelpers.AuthorizerResult{Authorized: false, ErrorMessage: "Error: Invalid authorization"}
 
 				req, _ := http.NewRequest("GET", "/firehose/abc-123", nil)
 				req.Header.Add("Authorization", "token")
@@ -232,21 +212,6 @@ var _ = Describe("ServeHTTP", func() {
 				Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
 				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
 				Expect(recorder.Body.String()).To(Equal("You are not authorized. Error: Invalid authorization"))
-			})
-
-			It("returns an unauthorized status and sets the WWW-Authenticate header if the token is blank", func() {
-				adminAuth.Result = true
-
-				req, _ := http.NewRequest("GET", "/firehose/abc-123", nil)
-				req.Header.Add("Authorization", "")
-
-				proxy.ServeHTTP(recorder, req)
-
-				Expect(adminAuth.TokenParam).To(Equal(""))
-
-				Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
-				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
-				Expect(recorder.Body.String()).To(Equal("You are not authorized. Error: Authorization not provided"))
 			})
 		})
 
