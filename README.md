@@ -77,9 +77,13 @@ Below are example snippets for deploying the DEA Logging Agent (source), Loggreg
 ```yaml
 jobs:
 - name: dea_next
-  template:
-  - dea_next
-  - dea_logging_agent
+  templates:
+  - name: dea_next
+    release: cf
+  - name: dea_logging_agent
+    release: cf
+  - name: metron_agent
+    release: cf
   instances: 1
   resource_pool: dea
   networks:
@@ -87,27 +91,46 @@ jobs:
     default:
     - dns
     - gateway
+  properties:
+    dea_next:
+      zone: z1
+    metron_agent:
+      zone: z1
+    networks:
+      apps: cf1
 
 - name: loggregator
-  template: loggregator
+  templates: 
+  - name: doppler
+    release: cf
   instances: 1  # Scale out as neccessary
   resource_pool: common
   networks:
   - name: cf1
-    static_ips:
-    - 10.10.16.14
+  properties:
+    doppler:
+      zone: z1
+    networks:
+      apps: cf1
 
 - name: loggregator_trafficcontroller
-  template: loggregator_trafficcontroller
+  templates: 
+  - name: loggregator_trafficcontroller
+    release: cf
+  - name: metron_agent
+    release: cf
   instances: 1  # Scale out as necessary
   resource_pool: common
   networks:
   - name: cf1
-    static_ips:
-    - 10.10.16.16
   properties:
     traffic_controller:
       zone: z1 # Denoting which one of the redundancy zones this traffic controller is servicing
+    metron_agent:
+      zone: z1
+    networks:
+      apps: cf1
+
 
 properties:
   loggregator:
