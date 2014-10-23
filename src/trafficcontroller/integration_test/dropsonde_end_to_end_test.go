@@ -28,7 +28,8 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 	Context("Streaming", func() {
 		It("passes messages through", func() {
 			client := noaa.NewConsumer(dropsondeEndpoint, &tls.Config{}, nil)
-			messages := client.Stream(APP_ID, AUTH_TOKEN)
+			messages := make(chan *events.Envelope)
+			go client.StreamWithoutReconnect(APP_ID, AUTH_TOKEN, messages)
 
 			var request *http.Request
 			Eventually(fakeDoppler.TrafficControllerConnected, 10).Should(Receive(&request))
@@ -53,7 +54,8 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 	Context("Firehose", func() {
 		It("passes messages through for every app for uaa admins", func() {
 			client := noaa.NewConsumer(dropsondeEndpoint, &tls.Config{}, nil)
-			messages := client.Firehose(SUBSCRIPTION_ID, AUTH_TOKEN)
+			messages := make(chan *events.Envelope)
+			go client.FirehoseWithoutReconnect(SUBSCRIPTION_ID, AUTH_TOKEN, messages)
 
 			var request *http.Request
 			Eventually(fakeDoppler.TrafficControllerConnected, 10).Should(Receive(&request))
