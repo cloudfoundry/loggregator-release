@@ -4,7 +4,6 @@ import (
 	"flag"
 	"github.com/cloudfoundry/dropsonde/dropsonde_marshaller"
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
-	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/gosteno"
@@ -20,9 +19,11 @@ import (
 	"github.com/cloudfoundry/storeadapter/workerpool"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
+	"metron/eventlistener"
 	"metron/legacy_message/legacy_message_converter"
 	"metron/legacy_message/legacy_unmarshaller"
 	"metron/message_aggregator"
+	"metron/pingsender"
 	"metron/varz_forwarder"
 	"strconv"
 	"time"
@@ -34,7 +35,8 @@ var (
 	debug          = flag.Bool("debug", false, "Debug logging")
 )
 
-var METRIC_TTL = emitter.HeartbeatInterval * 5
+var METRIC_TTL = time.Second * 5
+var PING_SENDER_INTERVAL = time.Second * 1
 
 var StoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
 	workerPool := workerpool.NewWorkerPool(concurrentRequests)
@@ -46,10 +48,11 @@ func main() {
 	flag.Parse()
 	config, logger := parseConfig(*debug, *configFilePath, *logFilePath)
 
-	// TODO: delete next two lines when "legacy" format goes away
+	// TODO: delete next line when "legacy" format goes away
 	legacyMessageListener, legacyMessageChan := agentlistener.NewAgentListener("localhost:"+strconv.Itoa(config.LegacyIncomingMessagesPort), logger, "legacyAgentListener")
 
-	dropsondeMessageListener, dropsondeMessageChan := agentlistener.NewAgentListener("localhost:"+strconv.Itoa(config.DropsondeIncomingMessagesPort), logger, "dropsondeAgentListener")
+	pinger := pingsender.NewPingSender(PING_SENDER_INTERVAL)
+	dropsondeMessageListener, dropsondeMessageChan := eventlistener.NewEventListener("localhost:"+strconv.Itoa(config.DropsondeIncomingMessagesPort), logger, "dropsondeAgentListener", pinger)
 	dropsondeClientPool, dropsondeServerDiscovery := initializeClientPool(config, logger, config.LoggregatorDropsondePort)
 
 	legacyUnmarshaller := legacy_unmarshaller.NewLegacyUnmarshaller(logger)
