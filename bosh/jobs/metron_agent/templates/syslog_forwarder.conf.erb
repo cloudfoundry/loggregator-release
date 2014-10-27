@@ -16,6 +16,13 @@ $ActionQueueHighWaterMark 8000          # Num messages. Assuming avg size of 512
 $ActionQueueTimeoutEnqueue 0            # Discard messages if the queue + disk is full
 $ActionQueueSaveOnShutdown on           # Save in-memory data to disk if rsyslog shuts down
 
+# Listen for logs over UDP
+#
+$ModLoad imudp
+$UDPServerAddress 127.0.0.1
+$UDPServerRun 514
+
+
 <% ip = spec.networks.send(properties.networks.apps).ip %>
 template(name="CfLogTemplate" type="list") {
         constant(value="<")
