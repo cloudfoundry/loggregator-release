@@ -9,13 +9,15 @@ import (
 	"runtime"
 )
 
+func getJsonFromSampleFilePath(filename string) []byte {
+	_, thisTestFilename, _, _ := runtime.Caller(0)
+	json, _ := ioutil.ReadFile(path.Join(path.Dir(thisTestFilename), "..", "..", "..", "samples", filename))
+	return json
+}
+
 var _ = Describe("ReadTasks", func() {
 	It("reads tasks", func() {
-		_, filename, _, _ := runtime.Caller(0)
-		filepath := path.Join(path.Dir(filename), "..", "..", "..", "samples", "dea_instances.json")
-		json, _ := ioutil.ReadFile(filepath)
-
-		tasks, err := domain.ReadTasks(json)
+		tasks, err := domain.ReadTasks(getJsonFromSampleFilePath("dea_instances.json"))
 
 		Expect(err).NotTo(HaveOccurred())
 
@@ -71,11 +73,7 @@ var _ = Describe("ReadTasks", func() {
 	})
 
 	It("reads multiple tasks with drain urls", func() {
-		_, filename, _, _ := runtime.Caller(0)
-		filepath := path.Join(path.Dir(filename), "..", "..", "..", "samples", "multi_instances.json")
-		json, _ := ioutil.ReadFile(filepath)
-
-		tasks, err := domain.ReadTasks(json)
+		tasks, err := domain.ReadTasks(getJsonFromSampleFilePath("multi_instances.json"))
 
 		Expect(err).NotTo(HaveOccurred())
 
@@ -89,15 +87,9 @@ var _ = Describe("ReadTasks", func() {
 	})
 
 	It("reads starting tasks", func() {
-		_, filename, _, _ := runtime.Caller(0)
-		filepath := path.Join(path.Dir(filename), "..", "..", "..", "samples", "starting_instances.json")
-		json, _ := ioutil.ReadFile(filepath)
-
-		tasks, err := domain.ReadTasks(json)
+		tasks, err := domain.ReadTasks(getJsonFromSampleFilePath("starting_instances.json"))
 		Expect(err).NotTo(HaveOccurred())
-
 		Expect(tasks).To(HaveLen(1))
-
 		Expect(tasks).To(HaveKey("/var/vcap/data/warden/depot/345asndhaena/jobs/12"))
 	})
 
@@ -118,11 +110,8 @@ var _ = Describe("ReadTasks", func() {
 	})
 
 	It("ignores non running instances", func() {
-		_, filename, _, _ := runtime.Caller(0)
-		filepath := path.Join(path.Dir(filename), "..", "..", "..", "samples", "instances.crashed.json")
-		json, _ := ioutil.ReadFile(filepath)
+		tasks, err := domain.ReadTasks(getJsonFromSampleFilePath("instances.crashed.json"))
 
-		tasks, err := domain.ReadTasks(json)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(tasks).To(HaveLen(1))
 
@@ -131,25 +120,23 @@ var _ = Describe("ReadTasks", func() {
 	})
 
 	It("ignores tasks without warden container path or job id", func() {
-		_, filename, _, _ := runtime.Caller(0)
-		filepath := path.Join(path.Dir(filename), "..", "..", "..", "samples", "instances.no_warden_path_or_id.json")
-		json, _ := ioutil.ReadFile(filepath)
-
-		tasks, err := domain.ReadTasks(json)
+		tasks, err := domain.ReadTasks(getJsonFromSampleFilePath("instances.no_warden_path_or_id.json"))
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(tasks).To(BeEmpty())
 	})
 
 	It("ignores staging tasks without warden job id", func() {
-		_, filename, _, _ := runtime.Caller(0)
-		filepath := path.Join(path.Dir(filename), "..", "..", "..", "samples", "staging_tasks.no_job_id.json")
-		json, _ := ioutil.ReadFile(filepath)
-
-		tasks, err := domain.ReadTasks(json)
+		tasks, err := domain.ReadTasks(getJsonFromSampleFilePath("staging_tasks.no_job_id.json"))
 		Expect(err).ToNot(HaveOccurred())
 		Expect(tasks).To(HaveLen(1))
 
 		Expect(tasks).To(HaveKey("/var/vcap/data/warden/depot/17fsdo7qper/jobs/49"), "Did not find staging task with warden job id.")
+	})
+
+	It("reads stopping tasks", func() {
+		tasks, err := domain.ReadTasks(getJsonFromSampleFilePath("stopping_instances.json"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(tasks).To(HaveLen(1))
 	})
 })

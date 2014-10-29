@@ -46,7 +46,7 @@ func ReadTasks(data []byte) (map[string]Task, error) {
 		if jsonInstance.Warden_container_path == "" || jsonInstance.Warden_job_id == 0 {
 			continue
 		}
-		if jsonInstance.State == "RUNNING" || jsonInstance.State == "STARTING" {
+		if isStateTracked(jsonInstance.State) {
 			task := Task{
 				ApplicationId:       jsonInstance.Application_id,
 				SourceName:          "App",
@@ -72,4 +72,8 @@ func ReadTasks(data []byte) (map[string]Task, error) {
 	}
 
 	return tasks, nil
+}
+
+func isStateTracked(state string) bool {
+	return (state == "RUNNING" || state == "STARTING" || state == "STOPPING")
 }
