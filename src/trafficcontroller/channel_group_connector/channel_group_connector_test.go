@@ -9,7 +9,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	"sync/atomic"
+	"sync"
 	"time"
 	"trafficcontroller/doppler_endpoint"
 	"trafficcontroller/listener"
@@ -45,8 +45,11 @@ var _ = Describe("ChannelGroupConnector", func() {
 			}
 
 			i := int32(-1)
+			constructorLock := sync.Mutex{}
 			listenerConstructor = func(logger *gosteno.Logger) listener.Listener {
-				atomic.AddInt32(&i, 1)
+				constructorLock.Lock()
+				defer constructorLock.Unlock()
+				i++
 				return fakeListeners[i]
 			}
 		})
@@ -231,14 +234,17 @@ var _ = Describe("ChannelGroupConnector", func() {
 
 					counts := make([]int32, 2)
 
+					counterLock := sync.Mutex{}
 					go func() {
 						for msg := range outputChan {
-							atomic.AddInt32(&(counts[msg[0]]), 1)
+							counterLock.Lock()
+							counts[msg[0]] = counts[msg[0]] + 1
+							counterLock.Unlock()
 						}
 					}()
 
-					Eventually(func() int32 { return counts[0] }).Should(BeNumerically(">", 1))
-					Eventually(func() int32 { return counts[1] }).Should(BeNumerically(">", 1))
+					Eventually(func() int32 { counterLock.Lock(); defer counterLock.Unlock(); return counts[0] }).Should(BeNumerically(">", 1))
+					Eventually(func() int32 { counterLock.Lock(); defer counterLock.Unlock(); return counts[1] }).Should(BeNumerically(">", 1))
 				})
 
 				It("closes listeners and returns when stopChan is closed", func() {
