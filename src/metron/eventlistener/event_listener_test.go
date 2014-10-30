@@ -102,7 +102,7 @@ type fakePingSender struct {
 	sync.Mutex
 }
 
-func (pinger *fakePingSender) StartPing(senderAddr net.Addr, connection net.PacketConn) {
+func (pinger *fakePingSender) Start(senderAddr net.Addr, connection net.PacketConn) {
 	pinger.Add(1)
 	pinger.Lock()
 	_, targetKnown := pinger.pingTargets[senderAddr.String()]

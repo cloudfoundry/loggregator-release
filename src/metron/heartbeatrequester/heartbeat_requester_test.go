@@ -1,9 +1,9 @@
-package pingsender_test
+package heartbeatrequester_test
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"metron/pingsender"
+	"metron/heartbeatrequester"
 	"net"
 	"sync"
 	"time"
@@ -11,33 +11,33 @@ import (
 
 var _ = Describe("PingSender", func() {
 	var (
-		pingSender   *pingsender.PingSender
-		pingConn     net.PacketConn
-		pingers      sync.WaitGroup
-		startPinging func(target net.Addr)
+		heartbeatRequester     *heartbeatrequester.HeartbeatRequester
+		pingConn               net.PacketConn
+		pingers                sync.WaitGroup
+		startHeartbeatRequests func(target net.Addr)
 	)
 
 	BeforeEach(func() {
-		pingSender = pingsender.NewPingSender(40 * time.Millisecond)
+		heartbeatRequester = heartbeatrequester.NewHeartbeatRequester(40 * time.Millisecond)
 		pingConn, _ = net.ListenPacket("udp4", "")
-		startPinging = func(target net.Addr) {
+		startHeartbeatRequests = func(target net.Addr) {
 			pingers.Add(1)
-			pingSender.StartPing(target, pingConn)
+			heartbeatRequester.Start(target, pingConn)
 			pingers.Done()
 		}
 	})
 
 	AfterEach(func() {
 		pingers.Wait()
-		pingSender = nil
+		heartbeatRequester = nil
 	})
 
-	It("Start ping sends 4-5 unanswered pings to a target before timing out", func(done Done) {
+	It("StartHeartbeartRequests sends 4-5 unanswered heartbeat requests to a target before timing out", func(done Done) {
 		pingTarget, err := net.ListenPacket("udp4", "")
 		Expect(err).NotTo(HaveOccurred())
 
-		go startPinging(pingTarget.LocalAddr())
-		defer pingSender.StopPing(pingTarget.LocalAddr())
+		go startHeartbeatRequests(pingTarget.LocalAddr())
+		defer heartbeatRequester.Stop(pingTarget.LocalAddr())
 
 		var expectPingTimeout = func() {
 			messageSlice := make([]byte, 5)
@@ -58,7 +58,7 @@ var _ = Describe("PingSender", func() {
 		expectPingTimeout()
 
 		// start ping with the same address should reinitiate the cycle
-		pingSender.StartPing(pingTarget.LocalAddr(), pingConn)
+		heartbeatRequester.Start(pingTarget.LocalAddr(), pingConn)
 
 		expectPingTimeout()
 		close(done)
@@ -68,8 +68,8 @@ var _ = Describe("PingSender", func() {
 		pingTarget, err := net.ListenPacket("udp4", "")
 		Expect(err).NotTo(HaveOccurred())
 
-		go startPinging(pingTarget.LocalAddr())
-		defer pingSender.StopPing(pingTarget.LocalAddr())
+		go startHeartbeatRequests(pingTarget.LocalAddr())
+		defer heartbeatRequester.Stop(pingTarget.LocalAddr())
 
 		messageSlice := make([]byte, 5)
 		pingTarget.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
@@ -85,10 +85,10 @@ var _ = Describe("PingSender", func() {
 		pingTarget1, _ := net.ListenPacket("udp4", "")
 		pingTarget2, _ := net.ListenPacket("udp4", "")
 
-		go startPinging(pingTarget1.LocalAddr())
-		go startPinging(pingTarget2.LocalAddr())
-		defer pingSender.StopPing(pingTarget1.LocalAddr())
-		defer pingSender.StopPing(pingTarget2.LocalAddr())
+		go startHeartbeatRequests(pingTarget1.LocalAddr())
+		go startHeartbeatRequests(pingTarget2.LocalAddr())
+		defer heartbeatRequester.Stop(pingTarget1.LocalAddr())
+		defer heartbeatRequester.Stop(pingTarget2.LocalAddr())
 
 		pingTarget1.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
 		pingTarget2.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
@@ -104,9 +104,9 @@ var _ = Describe("PingSender", func() {
 	It("only pings target once per interval", func() {
 		pingTarget, _ := net.ListenPacket("udp4", "")
 
-		go startPinging(pingTarget.LocalAddr())
-		go startPinging(pingTarget.LocalAddr())
-		defer pingSender.StopPing(pingTarget.LocalAddr())
+		go startHeartbeatRequests(pingTarget.LocalAddr())
+		go startHeartbeatRequests(pingTarget.LocalAddr())
+		defer heartbeatRequester.Stop(pingTarget.LocalAddr())
 
 		messageSlice := make([]byte, 5)
 		messageCount := 0
@@ -131,12 +131,12 @@ var _ = Describe("PingSender", func() {
 	It("eventually stops sending pings asked to stop", func() {
 		pingTarget, _ := net.ListenPacket("udp4", "")
 
-		go startPinging(pingTarget.LocalAddr())
+		go startHeartbeatRequests(pingTarget.LocalAddr())
 
 		messageSlice := make([]byte, 5)
 		pingTarget.ReadFrom(messageSlice)
 
-		pingSender.StopPing(pingTarget.LocalAddr())
+		heartbeatRequester.Stop(pingTarget.LocalAddr())
 
 		messageCount := 0
 		timer := time.NewTimer(100 * time.Millisecond)
@@ -161,13 +161,13 @@ var _ = Describe("PingSender", func() {
 		pingTarget1, _ := net.ListenPacket("udp4", "")
 		pingTarget2, _ := net.ListenPacket("udp4", "")
 
-		go startPinging(pingTarget1.LocalAddr())
-		go startPinging(pingTarget2.LocalAddr())
+		go startHeartbeatRequests(pingTarget1.LocalAddr())
+		go startHeartbeatRequests(pingTarget2.LocalAddr())
 
 		messageSlice := make([]byte, 5)
 		pingTarget1.ReadFrom(messageSlice)
 
-		pingSender.StopPing(pingTarget1.LocalAddr())
+		heartbeatRequester.Stop(pingTarget1.LocalAddr())
 
 		messageCount := 0
 		timer := time.NewTimer(100 * time.Millisecond)
@@ -188,23 +188,23 @@ var _ = Describe("PingSender", func() {
 		}
 
 		Expect(messageCount).To(BeNumerically(">=", 2))
-		pingSender.StopPing(pingTarget2.LocalAddr())
+		heartbeatRequester.Stop(pingTarget2.LocalAddr())
 	})
 
 	It("restarts pinging a target that was previously stopped", func() {
 		pingTarget, _ := net.ListenPacket("udp4", "")
 
-		go startPinging(pingTarget.LocalAddr())
+		go startHeartbeatRequests(pingTarget.LocalAddr())
 
 		messageSlice := make([]byte, 5)
 		pingTarget.ReadFrom(messageSlice)
 
-		pingSender.StopPing(pingTarget.LocalAddr())
+		heartbeatRequester.Stop(pingTarget.LocalAddr())
 
 		pingers.Wait()
 
-		go startPinging(pingTarget.LocalAddr())
-		defer pingSender.StopPing(pingTarget.LocalAddr())
+		go startHeartbeatRequests(pingTarget.LocalAddr())
+		defer heartbeatRequester.Stop(pingTarget.LocalAddr())
 
 		messageCount := 0
 		timer := time.NewTimer(50 * time.Millisecond)
@@ -225,8 +225,8 @@ var _ = Describe("PingSender", func() {
 		Expect(messageCount).To(BeNumerically(">=", 1))
 	})
 
-	It("does not panic if stopping an unknown target", func() {
-		Expect(func() { pingSender.StopPing(fakeAddr{}) }).NotTo(Panic())
+	It("does not panic if Stop an unknown target", func() {
+		Expect(func() { heartbeatRequester.Stop(fakeAddr{}) }).NotTo(Panic())
 	})
 })
 

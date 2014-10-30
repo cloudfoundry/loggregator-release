@@ -20,10 +20,10 @@ import (
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	"metron/eventlistener"
+	"metron/heartbeatrequester"
 	"metron/legacy_message/legacy_message_converter"
 	"metron/legacy_message/legacy_unmarshaller"
 	"metron/message_aggregator"
-	"metron/pingsender"
 	"metron/varz_forwarder"
 	"strconv"
 	"time"
@@ -51,7 +51,7 @@ func main() {
 	// TODO: delete next line when "legacy" format goes away
 	legacyMessageListener, legacyMessageChan := agentlistener.NewAgentListener("localhost:"+strconv.Itoa(config.LegacyIncomingMessagesPort), logger, "legacyAgentListener")
 
-	pinger := pingsender.NewPingSender(PING_SENDER_INTERVAL)
+	pinger := heartbeatrequester.NewHeartbeatRequester(PING_SENDER_INTERVAL)
 	dropsondeMessageListener, dropsondeMessageChan := eventlistener.NewEventListener("localhost:"+strconv.Itoa(config.DropsondeIncomingMessagesPort), logger, "dropsondeAgentListener", pinger)
 	dropsondeClientPool, dropsondeServerDiscovery := initializeClientPool(config, logger, config.LoggregatorDropsondePort)
 

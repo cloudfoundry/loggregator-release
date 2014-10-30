@@ -14,15 +14,15 @@ type EventListener interface {
 	Stop()
 }
 
-type pingSender interface {
-	StartPing(net.Addr, net.PacketConn)
+type heartbeatRequester interface {
+	Start(net.Addr, net.PacketConn)
 }
 
 type eventListener struct {
 	host        string
 	dataChannel chan []byte
 	connection  net.PacketConn
-	pinger      pingSender
+	requester   heartbeatRequester
 
 	receivedMessageCount uint64
 	receivedByteCount    uint64
@@ -32,9 +32,9 @@ type eventListener struct {
 	*gosteno.Logger
 }
 
-func NewEventListener(host string, givenLogger *gosteno.Logger, name string, pinger pingSender) (EventListener, <-chan []byte) {
+func NewEventListener(host string, givenLogger *gosteno.Logger, name string, requester heartbeatRequester) (EventListener, <-chan []byte) {
 	byteChan := make(chan []byte, 1024)
-	return &eventListener{Logger: givenLogger, host: host, dataChannel: byteChan, contextName: name, pinger: pinger}, byteChan
+	return &eventListener{Logger: givenLogger, host: host, dataChannel: byteChan, contextName: name, requester: requester}, byteChan
 }
 
 func (eventListener *eventListener) Start() {
@@ -63,7 +63,7 @@ func (eventListener *eventListener) Start() {
 		atomic.AddUint64(&eventListener.receivedByteCount, uint64(readCount))
 		eventListener.dataChannel <- readData
 
-		go eventListener.pinger.StartPing(senderAddr, connection)
+		go eventListener.requester.Start(senderAddr, connection)
 	}
 }
 
