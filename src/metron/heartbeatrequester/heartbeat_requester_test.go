@@ -1,6 +1,8 @@
 package heartbeatrequester_test
 
 import (
+	"code.google.com/p/gogoprotobuf/proto"
+	"github.com/cloudfoundry/dropsonde/control"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"metron/heartbeatrequester"
@@ -40,15 +42,18 @@ var _ = Describe("PingSender", func() {
 		defer heartbeatRequester.Stop(pingTarget.LocalAddr())
 
 		var expectPingTimeout = func() {
-			messageSlice := make([]byte, 5)
+			messageSlice := make([]byte, 65535)
 			readCount := 0
 			for {
 				pingTarget.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
-				_, _, err = pingTarget.ReadFrom(messageSlice)
+				n, _, err := pingTarget.ReadFrom(messageSlice)
 				if err != nil {
 					break
 				}
-				Expect(string(messageSlice)).To(ContainSubstring("Ping"))
+				var controlMessage control.ControlMessage
+				err = proto.Unmarshal(messageSlice[0:n], &controlMessage)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(controlMessage.GetControlType()).To(Equal(control.ControlMessage_HeartbeatRequest))
 				readCount++
 			}
 			Expect(readCount).To(BeNumerically(">=", 4))

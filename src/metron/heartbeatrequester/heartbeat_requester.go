@@ -1,10 +1,16 @@
 package heartbeatrequester
 
 import (
+	"code.google.com/p/gogoprotobuf/proto"
+	"github.com/cloudfoundry/dropsonde/control"
+	"github.com/cloudfoundry/dropsonde/factories"
+	uuid "github.com/nu7hatch/gouuid"
 	"net"
 	"sync"
 	"time"
 )
+
+const METRON_ORIGIN = "MET"
 
 type HeartbeatRequester struct {
 	pingTargets  map[string]pingTarget
@@ -74,10 +80,27 @@ func (requester *HeartbeatRequester) sendPings(senderAddr net.Addr, connection n
 				requester.Unlock()
 				return
 			case <-intervalTicker.C:
-				connection.WriteTo([]byte("Ping"), senderAddr)
+				connection.WriteTo(newHeartbeatRequest(), senderAddr)
 			}
 		}
 	}
+}
+
+func newHeartbeatRequest() []byte {
+	id, _ := uuid.NewV4()
+
+	heartbeatRequest := &control.ControlMessage{
+		Origin:      proto.String(METRON_ORIGIN),
+		Identifier:  factories.NewControlUUID(id),
+		Timestamp:   proto.Int64(time.Now().UnixNano()),
+		ControlType: control.ControlMessage_HeartbeatRequest.Enum(),
+	}
+
+	bytes, err := proto.Marshal(heartbeatRequest)
+	if err != nil {
+		panic(err.Error())
+	}
+	return bytes
 }
 
 func (requester *HeartbeatRequester) resetTimer(senderAddr net.Addr) {
