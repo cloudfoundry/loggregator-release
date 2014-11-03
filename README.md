@@ -201,6 +201,7 @@ git clone https://github.com/cloudfoundry/loggregator
 cd loggregator # When you cd into the loggregator dir for the first time direnv will prompt you to trust the config file
 git submodule update --init
 ```
+Please run `bin/install-git-hooks` before committing for the first time. The pre-commit hook that this installs will ensure that all dependencies are properly listed in the `bosh/packages` directory. (Of course, you should probably convince yourself that the hooks are safe before installing them.) Without this script, it is possible to commit a version of the repository that will not compile.
 
 #### Additional go tools
 
@@ -209,6 +210,11 @@ Install go vet and go cover
     go get code.google.com/p/go.tools/cmd/vet
     go get code.google.com/p/go.tools/cmd/cover
 
+
+Install gosub
+```
+go get github.com/vito/gosub
+```
 #### Running tests
 
 ```

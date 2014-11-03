@@ -1,0 +1,37 @@
+#!/bin/bash
+
+set -e
+
+# ensure gosub is installed (this will recompile it only if necessary)
+go install github.com/vito/gosub
+
+loggregator_root=${GOPATH}
+
+function sync_package() {
+  bosh_pkg=${1}
+
+  shift
+
+  (
+    set -e
+
+    cd bosh/packages/${bosh_pkg}
+
+    {
+      cat spec | grep -v '# gosub'
+      gosub list "$@" | \
+        sed -e 's/\(.*\)/- loggregator\/src\/\1\/*.go # gosub/g'
+    } > spec.new
+
+    mv spec.new spec
+  )
+}
+
+sync_package metron_agent                  -app  metron/... &
+sync_package dea_logging_agent             -app  deaagent/... &
+sync_package doppler                       -app  doppler/... &
+sync_package loggregator_trafficcontroller -app  trafficcontroller/... &
+
+wait
+
+git diff --name-only bosh/packages/*/spec
