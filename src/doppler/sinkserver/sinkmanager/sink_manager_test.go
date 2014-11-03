@@ -103,7 +103,7 @@ var _ = Describe("SinkManager", func() {
 				done:       make(chan struct{}),
 			}
 			sinkManager.RegisterSink(sink)
-			sinkManager.SendSyslogErrorToLoggregator("error msg", "myApp")
+			sinkManager.SendSyslogErrorToLoggregator("error msg", "myApp", "drainUrl")
 
 			Eventually(sink.Received).Should(HaveLen(1))
 
@@ -339,8 +339,7 @@ var _ = Describe("SinkManager", func() {
 				url, err := url.Parse("syslog://localhost:9998")
 				Expect(err).To(BeNil())
 				writer := syslogwriter.NewSyslogWriter(url, "appId", true)
-				errorChan := make(chan *events.Envelope)
-				syslogSink = syslog.NewSyslogSink("appId", "localhost:9999", loggertesthelper.Logger(), writer, errorChan, "dropsonde-origin")
+				syslogSink = syslog.NewSyslogSink("appId", "localhost:9999", loggertesthelper.Logger(), writer, func(string, string, string) {}, "dropsonde-origin")
 
 				sinkManager.RegisterSink(syslogSink)
 			})

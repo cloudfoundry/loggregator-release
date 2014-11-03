@@ -16,96 +16,12 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-type SyslogWriterRecorder struct {
-	receivedChannel  chan string
-	receivedMessages []string
-	down             bool
-	connected        bool
-	sync.Mutex
-}
-
-func NewSyslogWriterRecorder() *SyslogWriterRecorder {
-	return &SyslogWriterRecorder{
-		receivedChannel: make(chan string, 20),
-		connected:       false,
-	}
-}
-
-func (r *SyslogWriterRecorder) Connect() error {
-	r.Lock()
-	defer r.Unlock()
-	if r.down {
-		r.connected = false
-		return errors.New("Error connecting.")
-	} else {
-		r.connected = true
-		return nil
-	}
-}
-
-func (r *SyslogWriterRecorder) WriteStdout(b []byte, source, sourceId string, timestamp int64) (int, error) {
-	r.Lock()
-	defer r.Unlock()
-
-	if r.down {
-		return 0, errors.New("Error writing to stdout.")
-	}
-
-	messageString := fmt.Sprintf("out: %s ts: %d src: %s srcId: %s", string(b), timestamp, source, sourceId)
-	r.receivedMessages = append(r.receivedMessages, messageString)
-	r.receivedChannel <- messageString
-	return len(b), nil
-}
-
-func (r *SyslogWriterRecorder) WriteStderr(b []byte, source, sourceId string, timestamp int64) (int, error) {
-	r.Lock()
-	defer r.Unlock()
-
-	if r.down {
-		return 0, errors.New("Error writing to stderr.")
-	}
-
-	messageString := fmt.Sprintf("err: %s ts: %d src: %s srcId: %s", string(b), timestamp, source, sourceId)
-	r.receivedMessages = append(r.receivedMessages, messageString)
-	r.receivedChannel <- messageString
-	return len(b), nil
-}
-
-func (r *SyslogWriterRecorder) SetDown(newState bool) {
-	r.Lock()
-	defer r.Unlock()
-
-	r.down = newState
-}
-
-func (r *SyslogWriterRecorder) IsConnected() bool {
-	r.Lock()
-	defer r.Unlock()
-	return r.connected
-}
-
-func (r *SyslogWriterRecorder) SetConnected(newValue bool) {
-	r.Lock()
-	defer r.Unlock()
-	r.connected = newValue
-}
-
-func (r *SyslogWriterRecorder) Close() error {
-	return nil
-}
-
-func (r *SyslogWriterRecorder) ReceivedMessages() []string {
-	r.Lock()
-	defer r.Unlock()
-
-	return r.receivedMessages
-}
-
 var _ = Describe("SyslogSink", func() {
 	var syslogSink *syslog.SyslogSink
 	var sysLogger *SyslogWriterRecorder
 	var sysLoggerDoneChan chan bool
 	var errorChannel chan *events.Envelope
+	var errorHandler func(string, string, string)
 	var mutex sync.Mutex
 	var inputChan chan *events.Envelope
 
@@ -126,7 +42,17 @@ var _ = Describe("SyslogSink", func() {
 		sysLogger = NewSyslogWriterRecorder()
 		errorChannel = make(chan *events.Envelope, 10)
 		inputChan = make(chan *events.Envelope)
-		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorChannel, "dropsonde-origin").(*syslog.SyslogSink)
+
+		errorHandler = func(errorMsg string, appId string, drainUrl string) {
+			logMessage := factories.NewLogMessage(events.LogMessage_ERR, errorMsg, appId, "LGR")
+			envelope, _ := emitter.Wrap(logMessage, "dropsonde-origin")
+
+			mutex.Lock()
+			defer mutex.Unlock()
+			errorChannel <- envelope
+		}
+
+		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorHandler, "dropsonde-origin").(*syslog.SyslogSink)
 	})
 
 	AfterEach(func() {
@@ -318,3 +244,88 @@ var _ = Describe("SyslogSink", func() {
 		})
 	})
 })
+
+type SyslogWriterRecorder struct {
+	receivedChannel  chan string
+	receivedMessages []string
+	down             bool
+	connected        bool
+	sync.Mutex
+}
+
+func NewSyslogWriterRecorder() *SyslogWriterRecorder {
+	return &SyslogWriterRecorder{
+		receivedChannel: make(chan string, 20),
+		connected:       false,
+	}
+}
+
+func (r *SyslogWriterRecorder) Connect() error {
+	r.Lock()
+	defer r.Unlock()
+	if r.down {
+		r.connected = false
+		return errors.New("Error connecting.")
+	} else {
+		r.connected = true
+		return nil
+	}
+}
+
+func (r *SyslogWriterRecorder) WriteStdout(b []byte, source, sourceId string, timestamp int64) (int, error) {
+	r.Lock()
+	defer r.Unlock()
+
+	if r.down {
+		return 0, errors.New("Error writing to stdout.")
+	}
+
+	messageString := fmt.Sprintf("out: %s ts: %d src: %s srcId: %s", string(b), timestamp, source, sourceId)
+	r.receivedMessages = append(r.receivedMessages, messageString)
+	r.receivedChannel <- messageString
+	return len(b), nil
+}
+
+func (r *SyslogWriterRecorder) WriteStderr(b []byte, source, sourceId string, timestamp int64) (int, error) {
+	r.Lock()
+	defer r.Unlock()
+
+	if r.down {
+		return 0, errors.New("Error writing to stderr.")
+	}
+
+	messageString := fmt.Sprintf("err: %s ts: %d src: %s srcId: %s", string(b), timestamp, source, sourceId)
+	r.receivedMessages = append(r.receivedMessages, messageString)
+	r.receivedChannel <- messageString
+	return len(b), nil
+}
+
+func (r *SyslogWriterRecorder) SetDown(newState bool) {
+	r.Lock()
+	defer r.Unlock()
+
+	r.down = newState
+}
+
+func (r *SyslogWriterRecorder) IsConnected() bool {
+	r.Lock()
+	defer r.Unlock()
+	return r.connected
+}
+
+func (r *SyslogWriterRecorder) SetConnected(newValue bool) {
+	r.Lock()
+	defer r.Unlock()
+	r.connected = newValue
+}
+
+func (r *SyslogWriterRecorder) Close() error {
+	return nil
+}
+
+func (r *SyslogWriterRecorder) ReceivedMessages() []string {
+	r.Lock()
+	defer r.Unlock()
+
+	return r.receivedMessages
+}

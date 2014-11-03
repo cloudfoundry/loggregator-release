@@ -5,9 +5,7 @@ import (
 	"doppler/sinks/retrystrategy"
 	"doppler/sinks/syslogwriter"
 	"fmt"
-	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
-	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/gosteno"
 	"time"
 )
@@ -20,19 +18,19 @@ type SyslogSink struct {
 	sentByteCount     *uint64
 	listenerChannel   chan *events.Envelope
 	syslogWriter      syslogwriter.SyslogWriter
-	errorChannel      chan<- *events.Envelope
+	handleSendError   func(errorMessage, appId, drainUrl string)
 	disconnectChannel chan struct{}
 	dropsondeOrigin   string
 }
 
-func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.SyslogWriter, errorChannel chan<- *events.Envelope, dropsondeOrigin string) sinks.Sink {
+func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.SyslogWriter, errorHandler func(string, string, string), dropsondeOrigin string) sinks.Sink {
 	givenLogger.Debugf("Syslog Sink %s: Created for appId [%s]", drainUrl, appId)
 	return &SyslogSink{
 		appId:             appId,
 		drainUrl:          drainUrl,
 		logger:            givenLogger,
 		syslogWriter:      syslogWriter,
-		errorChannel:      errorChannel,
+		handleSendError:   errorHandler,
 		disconnectChannel: make(chan struct{}),
 		dropsondeOrigin:   dropsondeOrigin,
 	}
@@ -61,19 +59,10 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 			s.logger.Debugf("Syslog Sink %s: Not connected. Trying to connect.", s.drainUrl)
 			err := s.syslogWriter.Connect()
 			if err != nil {
-				errorMsg := fmt.Sprintf("Syslog Sink %s: Error when dialing out. Backing off for %v. Err: %v", s.drainUrl, backoffStrategy(numberOfTries+1), err)
 				numberOfTries++
+				errorMsg := fmt.Sprintf("Syslog Sink %s: Error when dialing out. Backing off for %v. Err: %v", s.drainUrl, backoffStrategy(numberOfTries), err)
 
-				s.logger.Warnf(errorMsg)
-				msg := factories.NewLogMessage(events.LogMessage_ERR, errorMsg, s.appId, "LGR")
-				errMsgEnvelope, err := emitter.Wrap(msg, s.dropsondeOrigin)
-
-				if err != nil {
-					s.logger.Errorf("Error enveloping message: %v", err)
-					continue
-				}
-
-				s.errorChannel <- errMsgEnvelope
+				s.handleSendError(errorMsg, s.appId, s.drainUrl)
 				continue
 			}
 

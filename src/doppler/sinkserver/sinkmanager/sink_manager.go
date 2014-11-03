@@ -184,17 +184,17 @@ func (sinkManager *SinkManager) isStopped() bool {
 func (sinkManager *SinkManager) registerNewSyslogSink(appId string, syslogSinkUrl string) {
 	parsedSyslogDrainUrl, err := sinkManager.urlBlacklistManager.CheckUrl(syslogSinkUrl)
 	if err != nil {
-		errorMsg := fmt.Sprintf("SinkManager: Invalid syslog drain URL: %s. Err: %v", syslogSinkUrl, err)
-		sinkManager.SendSyslogErrorToLoggregator(errorMsg, appId)
+		errorMsg := fmt.Sprintf("SinkManager: Invalid syslog drain URL (%s) for application %s. Err: %v", syslogSinkUrl, appId, err)
+		sinkManager.SendSyslogErrorToLoggregator(errorMsg, appId, syslogSinkUrl)
 	} else {
 		syslogWriter := syslogwriter.NewSyslogWriter(parsedSyslogDrainUrl, appId, sinkManager.skipCertVerify)
-		syslogSink := syslog.NewSyslogSink(appId, syslogSinkUrl, sinkManager.logger, syslogWriter, sinkManager.errorChannel, sinkManager.DropsondeOrigin)
+		syslogSink := syslog.NewSyslogSink(appId, syslogSinkUrl, sinkManager.logger, syslogWriter, sinkManager.SendSyslogErrorToLoggregator, sinkManager.DropsondeOrigin)
 		sinkManager.RegisterSink(syslogSink)
 	}
 
 }
 
-func (sinkManager *SinkManager) SendSyslogErrorToLoggregator(errorMsg, appId string) {
+func (sinkManager *SinkManager) SendSyslogErrorToLoggregator(errorMsg string, appId string, sinkUrl string) {
 	sinkManager.logger.Warnf(errorMsg)
 
 	logMessage := factories.NewLogMessage(events.LogMessage_ERR, errorMsg, appId, "LGR")
