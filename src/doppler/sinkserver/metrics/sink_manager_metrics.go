@@ -10,15 +10,19 @@ import (
 )
 
 type SinkManagerMetrics struct {
-	DumpSinks      int
-	WebsocketSinks int
-	SyslogSinks    int
-	FirehoseSinks  int
+	DumpSinks              int
+	WebsocketSinks         int
+	SyslogSinks            int
+	FirehoseSinks          int
+	SyslogDrainErrorCounts map[string](map[string]int) // appId -> (url -> count)
+
 	sync.RWMutex
 }
 
 func NewSinkManagerMetrics() *SinkManagerMetrics {
-	return &SinkManagerMetrics{}
+	return &SinkManagerMetrics{
+		SyslogDrainErrorCounts: make(map[string](map[string]int)),
+	}
 }
 
 func (sinkManagerMetrics *SinkManagerMetrics) Inc(sink sinks.Sink) {
@@ -61,6 +65,20 @@ func (sinkManagerMetrics *SinkManagerMetrics) DecFirehose() {
 	sinkManagerMetrics.FirehoseSinks--
 }
 
+func (sinkManagerMetrics *SinkManagerMetrics) ReportSyslogError(appId string, drainUrl string) {
+	sinkManagerMetrics.Lock()
+	defer sinkManagerMetrics.Unlock()
+
+	errorsByDrainUrl, ok := sinkManagerMetrics.SyslogDrainErrorCounts[appId]
+
+	if !ok {
+		errorsByDrainUrl = make(map[string]int)
+		sinkManagerMetrics.SyslogDrainErrorCounts[appId] = errorsByDrainUrl
+	}
+
+	errorsByDrainUrl[drainUrl] = errorsByDrainUrl[drainUrl] + 1
+}
+
 func (sinkManagerMetrics *SinkManagerMetrics) Emit() instrumentation.Context {
 	sinkManagerMetrics.RLock()
 	defer sinkManagerMetrics.RUnlock()
@@ -70,6 +88,12 @@ func (sinkManagerMetrics *SinkManagerMetrics) Emit() instrumentation.Context {
 		instrumentation.Metric{Name: "numberOfSyslogSinks", Value: sinkManagerMetrics.SyslogSinks},
 		instrumentation.Metric{Name: "numberOfWebsocketSinks", Value: sinkManagerMetrics.WebsocketSinks},
 		instrumentation.Metric{Name: "numberOfFirehoseSinks", Value: sinkManagerMetrics.FirehoseSinks},
+	}
+
+	for appId, errorsByUrl := range sinkManagerMetrics.SyslogDrainErrorCounts {
+		for drainUrl, count := range errorsByUrl {
+			data = append(data, instrumentation.Metric{Name: "numberOfSyslogDrainErrors", Value: count, Tags: map[string]interface{}{"appId": appId, "drainUrl": drainUrl}})
+		}
 	}
 
 	return instrumentation.Context{

@@ -195,6 +195,8 @@ func (sinkManager *SinkManager) registerNewSyslogSink(appId string, syslogSinkUr
 }
 
 func (sinkManager *SinkManager) SendSyslogErrorToLoggregator(errorMsg string, appId string, sinkUrl string) {
+	sinkManager.Metrics.ReportSyslogError(appId, sinkUrl)
+
 	sinkManager.logger.Warnf(errorMsg)
 
 	logMessage := factories.NewLogMessage(events.LogMessage_ERR, errorMsg, appId, "LGR")

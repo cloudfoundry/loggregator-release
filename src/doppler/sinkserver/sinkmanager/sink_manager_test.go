@@ -97,8 +97,8 @@ var _ = Describe("SinkManager", func() {
 
 	Describe("SendSyslogErrorToLoggregator", func() {
 		It("listens and broadcasts error messages", func() {
-
-			sink := &ChannelSink{appId: "myApp",
+			sink := &ChannelSink{
+				appId:      "myApp",
 				identifier: "myAppChan1",
 				done:       make(chan struct{}),
 			}
@@ -109,13 +109,27 @@ var _ = Describe("SinkManager", func() {
 
 			errorMsg := sink.Received()[0]
 			Expect(string(errorMsg.GetLogMessage().GetMessage())).To(Equal("error msg"))
+		})
+
+		It("counts syslog send failures", func() {
+			sink := &ChannelSink{
+				appId:      "myApp",
+				identifier: "myAppChan1",
+				done:       make(chan struct{}),
+			}
+			sinkManager.RegisterSink(sink)
+			sinkManager.SendSyslogErrorToLoggregator("error msg", "myApp", "drainUrl")
+
+			syslogFailureMetrics := sinkManager.Metrics.Emit().Metrics[4:]
+			Expect(syslogFailureMetrics).To(ConsistOf(
+				instrumentation.Metric{Name: "numberOfSyslogDrainErrors", Value: 1, Tags: map[string]interface{}{"appId": "myApp", "drainUrl": "drainUrl"}},
+			))
 
 		})
 	})
 
 	Describe("SendTo", func() {
 		It("sends to all known sinks", func() {
-
 			sink1 := &ChannelSink{appId: "myApp",
 				identifier: "myAppChan1",
 				done:       make(chan struct{}),
@@ -136,11 +150,9 @@ var _ = Describe("SinkManager", func() {
 			Eventually(sink2.Received).Should(HaveLen(1))
 			Expect(sink1.Received()[0]).To(Equal(expectedMessage))
 			Expect(sink2.Received()[0]).To(Equal(expectedMessage))
-
 		})
 
 		It("only sends to sinks that match the appID", func(done Done) {
-
 			sink1 := &ChannelSink{appId: "myApp1",
 				identifier: "myAppChan1",
 				done:       make(chan struct{}),
@@ -197,7 +209,6 @@ var _ = Describe("SinkManager", func() {
 	})
 
 	Context("with updates from appstore", func() {
-
 		var metrics *metrics.SinkManagerMetrics
 		var numSyslogSinks func() int
 
