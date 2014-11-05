@@ -5,7 +5,7 @@ import (
 	"deaagent/syslog_drain_store"
 	"errors"
 	"flag"
-	_ "github.com/cloudfoundry/dropsonde/autowire"
+	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
@@ -26,14 +26,14 @@ const DrainStoreRefreshInterval = 1 * time.Minute
 type Config struct {
 	cfcomponent.Config
 	Index                     uint
-	LoggregatorAddress        string
+	MetronAddress             string
 	SharedSecret              string
 	EtcdUrls                  []string
 	EtcdMaxConcurrentRequests int
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {
-	if c.LoggregatorAddress == "" {
+	if c.MetronAddress == "" {
 		return errors.New("Need Metron address (host:port).")
 	}
 
@@ -66,6 +66,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	dropsonde.Initialize("DEA", config.MetronAddress)
 
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)

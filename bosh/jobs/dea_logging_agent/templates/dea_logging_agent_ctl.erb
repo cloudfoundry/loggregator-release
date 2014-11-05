@@ -8,10 +8,6 @@ source /var/vcap/packages/common/utils.sh
 
 export LOGGREGATOR_SHARED_SECRET=<%= p("metron_endpoint.shared_secret") %>
 
-export DROPSONDE_ORIGIN=dea_logging_agent
-export DROPSONDE_DESTINATION=<%= p("metron_endpoint.host") %>:<%= p("metron_endpoint.dropsonde_port") %>
-
-
 case $1 in
 
   start)

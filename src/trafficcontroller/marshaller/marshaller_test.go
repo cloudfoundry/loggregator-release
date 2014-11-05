@@ -4,7 +4,7 @@ import (
 	"trafficcontroller/marshaller"
 
 	"code.google.com/p/gogoprotobuf/proto"
-	"github.com/cloudfoundry/dropsonde"
+	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 
@@ -34,7 +34,7 @@ var _ = Describe("DropsondeLogMessage", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(envelope.GetEventType()).To(Equal(events.Envelope_LogMessage))
-		Expect(dropsonde.GetAppId(envelope)).To(Equal("abc123"))
+		Expect(envelope_extensions.GetAppId(envelope)).To(Equal("abc123"))
 
 		logMessage := envelope.GetLogMessage()
 		Expect(logMessage.GetMessage()).To(BeEquivalentTo("hello"))

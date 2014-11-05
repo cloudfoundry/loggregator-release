@@ -2,7 +2,7 @@ package sinkserver
 
 import (
 	"doppler/sinkserver/metrics"
-	"github.com/cloudfoundry/dropsonde"
+	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
@@ -63,7 +63,7 @@ func (r *MessageRouter) Emit() instrumentation.Context {
 }
 
 func (r *MessageRouter) send(envelope *events.Envelope) {
-	appId := dropsonde.GetAppId(envelope)
+	appId := envelope_extensions.GetAppId(envelope)
 
 	r.logger.Debugf("MessageRouter:outgoingLogChan: Searching for sinks with appId [%s].", appId)
 	r.SinkManager.SendTo(appId, envelope)

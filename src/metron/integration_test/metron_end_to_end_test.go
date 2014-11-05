@@ -28,6 +28,11 @@ import (
 
 const NATS_PORT = 24484
 
+var session *gexec.Session
+var etcdRunner *etcdstorerunner.ETCDClusterRunner
+var etcdPort int
+var localIPAddress string
+
 var _ = BeforeSuite(func() {
 	pathToMetronExecutable, err := gexec.Build("metron")
 	Expect(err).ShouldNot(HaveOccurred())
@@ -50,13 +55,8 @@ var _ = BeforeSuite(func() {
 	etcdRunner.Start()
 })
 
-var session *gexec.Session
-var etcdRunner *etcdstorerunner.ETCDClusterRunner
-var etcdPort int
-var localIPAddress string
-
 var _ = AfterSuite(func() {
-	session.Kill()
+	session.Command.Process.Kill()
 	gexec.CleanupBuildArtifacts()
 
 	etcdRunner.Adapter().Disconnect()
@@ -117,22 +117,22 @@ var _ = Describe("Metron", func() {
 
 		It("Increments metric counter when it receives a message", func() {
 			agentListenerContext := getContext("legacyAgentListener")
-			Expect(agentListenerContext.Metrics[1].Name).To(Equal("receivedMessageCount"))
-			expectedValue := agentListenerContext.Metrics[1].Value.(float64) + 1
+			metric := getMetricFromContext(agentListenerContext, "receivedMessageCount")
+			expectedValue := metric.Value.(float64) + 1
 
 			connection, _ := net.Dial("udp", "localhost:51160")
 			connection.Write([]byte("test-data"))
 
 			Eventually(func() interface{} {
 				agentListenerContext = getContext("legacyAgentListener")
-				return agentListenerContext.Metrics[1].Value
-			}).Should(Equal(expectedValue))
+				return getMetricFromContext(agentListenerContext, "receivedMessageCount").Value
+			}).Should(BeNumerically(">=", expectedValue))
 		})
 
 		It("updates message aggregator metrics when it receives a message", func() {
-			context := getContext("MessageAggregator")
-			Expect(context.Metrics[3].Name).To(Equal("uncategorizedEvents"))
-			expectedValue := context.Metrics[3].Value.(float64) + 1
+			context := getContext("dropsondeUnmarshaller")
+			metric := getMetricFromContext(context, "heartbeatReceived")
+			expectedValue := metric.Value.(float64) + 1
 
 			connection, _ := net.Dial("udp", "localhost:51161")
 
@@ -140,9 +140,9 @@ var _ = Describe("Metron", func() {
 			connection.Write(message)
 
 			Eventually(func() interface{} {
-				context = getContext("MessageAggregator")
-				return context.Metrics[3].Value
-			}).Should(Equal(expectedValue), "uncategorizedEvents counter did not increment")
+				context = getContext("dropsondeUnmarshaller")
+				return getMetricFromContext(context, "heartbeatReceived").Value
+			}).Should(BeNumerically(">=", expectedValue), "heartbeatReceived counter did not increment")
 		})
 
 		It("includes value metrics from sources", func() {
@@ -199,6 +199,22 @@ var _ = Describe("Metron", func() {
 			adapter.Create(node)
 
 			connection, _ := net.Dial("udp", "localhost:51160")
+			connection.Write(marshalledLegacyMessage)
+
+			readBuffer := make([]byte, 65535)
+			messageChan := make(chan []byte, 1000)
+
+			go func() {
+				for {
+					readCount, _, _ := testServer.ReadFrom(readBuffer)
+					readData := make([]byte, readCount)
+					copy(readData, readBuffer[:readCount])
+
+					if len(readData) > 32 {
+						messageChan <- readData[32:]
+					}
+				}
+			}()
 
 			stopWrite := make(chan struct{})
 			defer close(stopWrite)
@@ -216,12 +232,7 @@ var _ = Describe("Metron", func() {
 				}
 			}()
 
-			readBuffer := make([]byte, 65535)
-			readCount, _, _ := testServer.ReadFrom(readBuffer)
-			readData := make([]byte, readCount)
-			copy(readData, readBuffer[:readCount])
-
-			Expect(readData[32:]).Should(BeEquivalentTo(marshalledEventsMessage))
+			Eventually(messageChan).Should(Receive(Equal(marshalledEventsMessage)))
 		})
 	})
 
@@ -252,9 +263,23 @@ var _ = Describe("Metron", func() {
 
 			mac := hmac.New(sha256.New, []byte("shared_secret"))
 			mac.Write(originalMessage)
-			expectedMAC := mac.Sum(nil)
 
 			connection, _ := net.Dial("udp", "localhost:51161")
+
+			readBuffer := make([]byte, 65535)
+			messageChan := make(chan []byte, 1000)
+
+			go func() {
+				for {
+					readCount, _, _ := testServer.ReadFrom(readBuffer)
+					readData := make([]byte, readCount)
+					copy(readData, readBuffer[:readCount])
+
+					if len(readData) > 32 {
+						messageChan <- readData[32:]
+					}
+				}
+			}()
 
 			stopWrite := make(chan struct{})
 			defer close(stopWrite)
@@ -272,15 +297,7 @@ var _ = Describe("Metron", func() {
 				}
 			}()
 
-			readBuffer := make([]byte, 65535)
-			readCount, _, _ := testServer.ReadFrom(readBuffer)
-			readData := make([]byte, readCount)
-			copy(readData, readBuffer[:readCount])
-
-			signature := readData[:32]
-			messageData := readData[32:]
-			Expect(messageData).Should(BeEquivalentTo(originalMessage))
-			Expect(hmac.Equal(signature, expectedMAC)).To(BeTrue())
+			Eventually(messageChan).Should(Receive(Equal(originalMessage)))
 		})
 	})
 })

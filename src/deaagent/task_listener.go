@@ -3,8 +3,8 @@ package deaagent
 import (
 	"deaagent/domain"
 	"deaagent/loggingstream"
-	"github.com/cloudfoundry/dropsonde/autowire/logs"
 	"github.com/cloudfoundry/dropsonde/events"
+	"github.com/cloudfoundry/dropsonde/logs"
 	"github.com/cloudfoundry/gosteno"
 	"io"
 	"strconv"

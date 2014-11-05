@@ -1,6 +1,6 @@
 {
     "Index": 0,
-    "LoggregatorAddress": "localhost:3456",
+    "MetronAddress": "localhost:3457",
     "SharedSecret": "secret",
     "VarzUser": "varz",
     "VarzPass": "password",

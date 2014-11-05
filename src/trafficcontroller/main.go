@@ -12,7 +12,7 @@ import (
 	"time"
 	"trafficcontroller/authorization"
 
-	_ "github.com/cloudfoundry/dropsonde/autowire"
+	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
@@ -53,6 +53,7 @@ type Config struct {
 	DopplerPort           uint32
 	OutgoingPort          uint32
 	OutgoingDropsondePort uint32
+	MetronPort            int
 	SystemDomain          string
 	SkipCertVerify        bool
 	UaaHost               string
@@ -124,6 +125,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	dropsonde.Initialize("LoggregatorTrafficcontroller", "localhost:"+strconv.Itoa(config.MetronPort))
 
 	adapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	adapter.Connect()

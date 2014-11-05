@@ -3,8 +3,8 @@ package deaagent_test
 import (
 	"deaagent"
 	"deaagent/domain"
-	"github.com/cloudfoundry/dropsonde/autowire/logs"
 	"github.com/cloudfoundry/dropsonde/log_sender/fake"
+	"github.com/cloudfoundry/dropsonde/logs"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

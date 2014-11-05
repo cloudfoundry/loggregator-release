@@ -21,6 +21,7 @@
     "VarzUser": "",
     "VarzPass": "",
     "VarzPort": 12350,
+    "MetronPort": 3457,
     "Syslog": "vcap.trafficcontroller",
     "UaaHost": "http://localhost:5678",
     "UaaClientId": "bob",
