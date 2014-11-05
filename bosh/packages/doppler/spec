@@ -24,10 +24,10 @@ files:
 - loggregator/src/doppler/sinkserver/websocketserver/*.go # gosub
 - loggregator/src/code.google.com/p/gogoprotobuf/proto/*.go # gosub
 - loggregator/src/github.com/apcera/nats/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/control/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/envelope_extensions/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/events/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/factories/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/signature/*.go # gosub
