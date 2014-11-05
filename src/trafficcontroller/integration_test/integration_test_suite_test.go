@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry/noaa/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
+	"github.com/cloudfoundry/yagnats"
 	"net/http"
 	"os/exec"
 	"testing"
@@ -14,9 +15,12 @@ import (
 	"trafficcontroller/integration_test/fake_doppler"
 	"trafficcontroller/integration_test/fake_uaa_server"
 
+	"encoding/json"
+	"github.com/apcera/nats"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"net/url"
 )
 
 func TestIntegrationTest(t *testing.T) {
@@ -40,14 +44,7 @@ var _ = BeforeSuite(func() {
 
 	gexec.Start(gnatsdCommand, nil, nil)
 
-	// TODO this should be uncommented when gorouter upgrades dropsonde
-	//	err = exec.Command("go", "get", "-d", "github.com/cloudfoundry/gorouter").Run()
-	//	Expect(err).NotTo(HaveOccurred())
-	//
-	//	routerExec, err := gexec.Build("github.com/cloudfoundry/gorouter")
-	//	Expect(err).ToNot(HaveOccurred())
-	//	routerCommand = exec.Command(routerExec)
-	//	gexec.Start(routerCommand, nil, nil)
+	StartFakeRouter()
 
 	pathToTrafficControllerExec, err := gexec.Build("trafficcontroller")
 	Expect(err).ToNot(HaveOccurred())
@@ -75,9 +72,6 @@ var _ = AfterSuite(func() {
 	command.Process.Kill()
 	gnatsdCommand.Process.Kill()
 
-	// TODO this should be uncommented when gorouter upgrades dropsonde
-	//	routerCommand.Process.Kill()
-	
 	gexec.CleanupBuildArtifacts()
 
 	etcdRunner.Adapter().Disconnect()
@@ -156,4 +150,41 @@ func makeDropsondeMessage(messageString string, appId string, currentTime int64)
 	msg, _ := proto.Marshal(envelope)
 
 	return msg
+}
+
+func StartFakeRouter() {
+
+	var startMessage = func() []byte {
+		d := RouterStart{
+			MinimumRegisterIntervalInSeconds: 20,
+		}
+
+		value, _ := json.Marshal(d)
+		return value
+	}
+
+	natsMembers := make([]string, 1)
+	uri := url.URL{
+		Scheme: "nats",
+		User:   url.UserPassword("", ""),
+		Host:   "localhost:4222",
+	}
+	natsMembers = append(natsMembers, uri.String())
+
+	natsClient, err := yagnats.Connect(natsMembers)
+	Expect(err).ToNot(HaveOccurred())
+
+	natsClient.Subscribe("router.register", func(msg *nats.Msg) {
+	})
+	natsClient.Subscribe("router.greet", func(msg *nats.Msg) {
+		natsClient.Publish(msg.Reply, startMessage())
+	})
+
+	natsClient.Publish("router.start", startMessage())
+}
+
+type RouterStart struct {
+	Id                               string   `json:"id"`
+	Hosts                            []string `json:"hosts"`
+	MinimumRegisterIntervalInSeconds int      `json:"minimumRegisterIntervalInSeconds"`
 }
