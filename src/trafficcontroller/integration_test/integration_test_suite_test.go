@@ -2,25 +2,27 @@ package integration_test
 
 import (
 	"code.google.com/p/gogoprotobuf/proto"
-	"fmt"
+	"github.com/apcera/nats"
 	"github.com/cloudfoundry/gunk/localip"
 	"github.com/cloudfoundry/noaa/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"github.com/cloudfoundry/yagnats"
-	"net/http"
-	"os/exec"
-	"testing"
 	"trafficcontroller/integration_test/fake_auth_server"
 	"trafficcontroller/integration_test/fake_doppler"
 	"trafficcontroller/integration_test/fake_uaa_server"
 
-	"encoding/json"
-	"github.com/apcera/nats"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"net/url"
+	"os/exec"
+	"testing"
+	"time"
 )
 
 func TestIntegrationTest(t *testing.T) {
@@ -171,7 +173,15 @@ func StartFakeRouter() {
 	}
 	natsMembers = append(natsMembers, uri.String())
 
-	natsClient, err := yagnats.Connect(natsMembers)
+	var natsClient yagnats.NATSConn
+	var err error
+	for i := 0; i < 10; i++ {
+		natsClient, err = yagnats.Connect(natsMembers)
+		if err == nil {
+			break
+		}
+		time.Sleep(time.Second)
+	}
 	Expect(err).ToNot(HaveOccurred())
 
 	natsClient.Subscribe("router.register", func(msg *nats.Msg) {
