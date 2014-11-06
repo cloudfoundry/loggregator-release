@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime/pprof"
+	"strconv"
 	"time"
 )
 
@@ -67,7 +68,7 @@ func main() {
 		panic(err)
 	}
 
-	dropsonde.Initialize("DEA", config.MetronAddress)
+	dropsonde.Initialize([]string{"dea_logging_agent"}, config.MetronAddress)
 
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
