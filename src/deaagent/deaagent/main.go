@@ -67,7 +67,7 @@ func main() {
 		panic(err)
 	}
 
-	dropsonde.Initialize([]string{"dea_logging_agent"}, config.MetronAddress)
+	dropsonde.Initialize(config.MetronAddress, "dea_logging_agent")
 
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)

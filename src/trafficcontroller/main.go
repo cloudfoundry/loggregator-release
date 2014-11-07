@@ -126,7 +126,7 @@ func main() {
 		panic(err)
 	}
 
-	dropsonde.Initialize([]string{"LoggregatorTrafficController"}, "localhost:"+strconv.Itoa(config.MetronPort))
+	dropsonde.Initialize("localhost:"+strconv.Itoa(config.MetronPort), "LoggregatorTrafficController")
 
 	adapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	adapter.Connect()
