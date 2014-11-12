@@ -49,6 +49,7 @@ var _ = Describe("LoggingStream", func() {
 					defer connection.Close()
 				}()
 			})
+				
 			It("reads the information from the socket multiple times", func() {
 				p := make([]byte, len("Hello World!"))
 				count, err := loggingStream.Read(p)
@@ -66,6 +67,7 @@ var _ = Describe("LoggingStream", func() {
 				Expect(string(p)).To(ContainSubstring("Goodbye World!"))
 			})
 		})
+
 		Context("When the socket is closed by the app", func() {
 			BeforeEach(func() {
 				listener, _ := net.Listen("unix", socketPath)
@@ -75,12 +77,14 @@ var _ = Describe("LoggingStream", func() {
 					defer listener.Close()
 				}()
 			})
+
 			It("you get an EOF", func() {
 				p := make([]byte, 1024)
 				_, err := loggingStream.Read(p)
 
 				Expect(err).To(Equal(io.EOF))
 			})
+
 			It("tries to reconnect after the first connection has closed", func() {
 				p := make([]byte, 1024)
 				_, err := loggingStream.Read(p)
@@ -102,6 +106,7 @@ var _ = Describe("LoggingStream", func() {
 				Expect(err).To(Equal(io.EOF))
 			})
 		})
+
 		Context("when socket never opens", func() {
 			It("returns an EOF error and 0 bytes ", func() {
 				p := make([]byte, 1024)
@@ -111,6 +116,7 @@ var _ = Describe("LoggingStream", func() {
 			})
 		})
 	})
+
 	Describe("Close", func() {
 		Context("after read is called", func() {
 			It("closes the socket connection", func() {
