@@ -5,14 +5,15 @@ import (
 	"deaagent/loggingstream"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"io"
 	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
 	"time"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("LoggingStream", func() {
@@ -49,7 +50,7 @@ var _ = Describe("LoggingStream", func() {
 					defer connection.Close()
 				}()
 			})
-				
+
 			It("reads the information from the socket multiple times", func() {
 				p := make([]byte, len("Hello World!"))
 				count, err := loggingStream.Read(p)
@@ -147,6 +148,29 @@ var _ = Describe("LoggingStream", func() {
 
 				loggingStream.Close()
 			})
+		})
+
+		Context("while read is listening", func() {
+			It("closes the ongoing read", func(done Done) {
+				listener, _ := net.Listen("unix", socketPath)
+				var connection net.Conn
+				go func() {
+					connection, _ = listener.Accept()
+				}()
+
+				readDone := make(chan struct{})
+				go func() {
+					p := make([]byte, 1024)
+					loggingStream.Read(p)
+					close(readDone)
+				}()
+
+				time.Sleep(100 * time.Millisecond) // wait for Read to get to a blocking point
+
+				loggingStream.Close()
+				Eventually(readDone).Should(BeClosed())
+				close(done)
+			}, 2)
 		})
 	})
 })

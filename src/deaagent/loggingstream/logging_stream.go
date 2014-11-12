@@ -1,53 +1,61 @@
 package loggingstream
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
 	"deaagent/domain"
 	"errors"
 	"fmt"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"io"
 	"net"
 	"path/filepath"
-	"strconv"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
 type LoggingStream struct {
-	connection       net.Conn
-	task             *domain.Task
-	logger           *gosteno.Logger
-	messageType      events.LogMessage_MessageType
-	messagesReceived uint64
-	bytesReceived    uint64
-	lock             sync.RWMutex
+	connection  net.Conn
+	task        *domain.Task
+	logger      *gosteno.Logger
+	messageType events.LogMessage_MessageType
+	close       chan struct{}
+	sync.RWMutex
 }
 
 func NewLoggingStream(task *domain.Task, logger *gosteno.Logger, messageType events.LogMessage_MessageType) (ls *LoggingStream) {
-	return &LoggingStream{task: task, logger: logger, messageType: messageType}
+	return &LoggingStream{task: task, logger: logger, messageType: messageType, close: make(chan struct{})}
 }
 
 func (ls *LoggingStream) Read(p []byte) (n int, err error) {
-	ls.lock.Lock()
-	defer ls.lock.Unlock()
+	ls.Lock()
+	defer ls.Unlock()
 
 	if ls.connection == nil {
 		connection, err := ls.connect()
 		if err != nil {
-			ls.endConnection()
+			ls.disconnect()
 			return 0, io.EOF
 		}
 		ls.connection = connection
 	}
 
-	n, err = ls.connection.Read(p)
+	read := make(chan readReturn)
+
+	go func() {
+		n, err := ls.connection.Read(p)
+		read <- readReturn{n: n, err: err}
+	}()
+
+	select {
+	case <-ls.close:
+		err = errors.New("Closed from outside")
+	case readReturnValue := <-read:
+		n = readReturnValue.n
+		err = readReturnValue.err
+	}
 
 	if err != nil {
-		endConnectionError := ls.endConnection()
+		endConnectionError := ls.disconnect()
 
 		if endConnectionError != nil {
 			err = errors.New(fmt.Sprintf("Error: %v\nClose Error: %v", err, endConnectionError))
@@ -59,28 +67,21 @@ func (ls *LoggingStream) Read(p []byte) (n int, err error) {
 }
 
 func (ls *LoggingStream) Close() error {
-	ls.lock.RLock()
-	defer ls.lock.RUnlock()
-	return ls.endConnection()
+	close(ls.close)
+	ls.RLock()
+	defer ls.RUnlock()
+	return ls.disconnect()
 }
 
-func (ls *LoggingStream) endConnection() error {
-	if ls.connection != nil {
-		oldCon := ls.connection
-		ls.connection = nil
-		return oldCon.Close()
+func (ls *LoggingStream) disconnect() error {
+	if ls.connection == nil {
+		return nil
 	}
+
+	err := ls.connection.Close()
+	ls.connection = nil
 	ls.logger.Debugf("Stopped reading from socket %s, %s", ls.messageType, ls.task.Identifier())
-	return nil
-}
-
-func (ls *LoggingStream) Emit() instrumentation.Context {
-	return instrumentation.Context{Name: "loggingStream:" + ls.task.WardenContainerPath + " type " + socketName(ls.messageType),
-		Metrics: []instrumentation.Metric{
-			instrumentation.Metric{Name: "receivedMessageCount", Value: atomic.LoadUint64(&ls.messagesReceived)},
-			instrumentation.Metric{Name: "receivedByteCount", Value: atomic.LoadUint64(&ls.bytesReceived)},
-		},
-	}
+	return err
 }
 
 func (ls *LoggingStream) connect() (net.Conn, error) {
@@ -105,21 +106,7 @@ func socketName(messageType events.LogMessage_MessageType) string {
 	return "stderr.sock"
 }
 
-func (ls *LoggingStream) newLogMessage(message []byte) *events.LogMessage {
-	currentTime := time.Now()
-	sourceName := ls.task.SourceName
-	sourceId := strconv.FormatUint(ls.task.Index, 10)
-	messageCopy := make([]byte, len(message))
-	copyCount := copy(messageCopy, message)
-	if copyCount != len(message) {
-		panic(fmt.Sprintf("Didn't copy the message %d, %s", copyCount, message))
-	}
-	return &events.LogMessage{
-		Message:        messageCopy,
-		AppId:          proto.String(ls.task.ApplicationId),
-		MessageType:    &ls.messageType,
-		SourceType:     &sourceName,
-		SourceInstance: &sourceId,
-		Timestamp:      proto.Int64(currentTime.UnixNano()),
-	}
+type readReturn struct {
+	n   int
+	err error
 }
