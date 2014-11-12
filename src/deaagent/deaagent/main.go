@@ -8,8 +8,6 @@ import (
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	collectorregistrar "github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/legacycollectorregistrar"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/storeadapter/workerpool"
 	"github.com/cloudfoundry/yagnats"
@@ -116,32 +114,6 @@ func main() {
 	syslogDrainStore := newSyslogDrainStore(config, logger)
 	agent := deaagent.NewAgent(*instancesJsonFilePath, logger, syslogDrainStore, AppNodeTTLRefreshInterval, DrainStoreRefreshInterval)
 
-	cfc, err := cfcomponent.NewComponent(
-		logger,
-		"LoggregatorDeaAgent",
-		config.Index,
-		&DeaAgentHealthMonitor{},
-		config.VarzPort,
-		[]string{config.VarzUser, config.VarzPass},
-		[]instrumentation.Instrumentable{},
-	)
-
-	if err != nil {
-		panic(err)
-	}
-
-	cr := collectorregistrar.NewCollectorRegistrar(config.MbusClient, logger)
-	err = cr.RegisterWithCollector(cfc)
-	if err != nil {
-		panic(err)
-	}
-
-	go func() {
-		err := cfc.StartMonitoringEndpoints()
-		if err != nil {
-			panic(err)
-		}
-	}()
 	go agent.Start()
 
 	killChan := make(chan os.Signal)

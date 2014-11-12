@@ -32,7 +32,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/auth/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/localip/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/legacycollectorregistrar/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/etcdstoreadapter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/workerpool/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/yagnats/*.go # gosub
