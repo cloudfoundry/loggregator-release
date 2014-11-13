@@ -11,12 +11,11 @@ import (
 type MessageGenerator func(string, string) []byte
 
 func LoggregatorLogMessage(messageString string, appId string) []byte {
-	messageType := logmessage.LogMessage_ERR
 	currentTime := time.Now()
 	logMessage := &logmessage.LogMessage{
 		Message:     []byte(messageString),
 		AppId:       proto.String(appId),
-		MessageType: &messageType,
+		MessageType: logmessage.LogMessage_ERR.Enum(),
 		SourceName:  proto.String("LGR"),
 		Timestamp:   proto.Int64(currentTime.UnixNano()),
 	}
@@ -26,17 +25,17 @@ func LoggregatorLogMessage(messageString string, appId string) []byte {
 }
 
 func DropsondeLogMessage(messageString string, appId string) []byte {
+	currentTime := time.Now()
 	logMessage := &events.LogMessage{
 		Message:     []byte(messageString),
 		MessageType: events.LogMessage_ERR.Enum(),
-		Timestamp:   proto.Int64(0),
+		Timestamp:   proto.Int64(currentTime.UnixNano()),
 		SourceType:  proto.String("DOP"),
 		AppId:       &appId,
 	}
 
 	envelope, _ := emitter.Wrap(logMessage, "doppler")
+
 	msg, _ := proto.Marshal(envelope)
-
 	return msg
-
 }

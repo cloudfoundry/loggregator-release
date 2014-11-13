@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -22,6 +23,7 @@ var _ = Describe("LoggregatorLogMessage", func() {
 
 		Expect(logMessage.GetMessage()).To(BeEquivalentTo("hello"))
 		Expect(logMessage.GetAppId()).To(Equal("abc123"))
+		Expect(time.Unix(0, logMessage.GetTimestamp())).To(BeTemporally("~", time.Now(), time.Second))
 	})
 })
 
@@ -40,5 +42,6 @@ var _ = Describe("DropsondeLogMessage", func() {
 		Expect(logMessage.GetMessage()).To(BeEquivalentTo("hello"))
 		Expect(logMessage.GetSourceType()).To(Equal("DOP"))
 		Expect(logMessage.GetMessageType()).To(Equal(events.LogMessage_ERR))
+		Expect(time.Unix(0, logMessage.GetTimestamp())).To(BeTemporally("~", time.Now(), time.Second))
 	})
 })
