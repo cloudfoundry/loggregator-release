@@ -121,8 +121,6 @@ func main() {
 
 	for {
 		select {
-		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
-			cfcomponent.DumpGoRoutine()
 		case <-killChan:
 			logger.Info("Shutting down")
 			return
