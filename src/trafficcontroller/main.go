@@ -157,8 +157,6 @@ func main() {
 
 	for {
 		select {
-		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
-			cfcomponent.DumpGoRoutine()
 		case <-killChan:
 			rr.UnregisterFromRouter(legacyProxy.IpAddress, config.OutgoingPort, []string{uri})
 			break
