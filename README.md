@@ -234,7 +234,7 @@ ginkgo -r
 ### Debugging
 
 
-Loggregator will dump information about the running goroutines to stdout if sent a `USR1` signal.
+Loggregator will dump information about the running goroutines to stdout if sent a `TRAP` signal.
 
 ```
 goroutine 1 [running]:
