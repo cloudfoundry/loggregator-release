@@ -84,7 +84,7 @@ var _ = Describe("DeaAgent", func() {
 	Describe("instances.json polling", func() {
 		Context("at startup", func() {
 			It("picks up new tasks", func() {
-				go agent.Start()
+				agent.Start()
 
 				task1StdoutConn, _ := task1StdoutListener.Accept()
 				defer task1StdoutConn.Close()
@@ -101,7 +101,7 @@ var _ = Describe("DeaAgent", func() {
 
 		Context("while running", func() {
 			It("picks up new tasks", func() {
-				go agent.Start()
+				agent.Start()
 
 				writeToFile(`{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3, "syslog_drain_urls": ["url1"]},
 								{"state": "RUNNING", "application_id": "3456", "warden_job_id": 59, "warden_container_path":"`+tmpdir+`", "instance_index": 1},
@@ -134,13 +134,14 @@ var _ = Describe("DeaAgent", func() {
 
 				newTaskConnection.Write([]byte(SOCKET_PREFIX + expectedMessage + "\n"))
 
+				// POTENTIAL FLAKY TEST: theory is that after running many times, we run into paging (or something) that slows this down
 				Eventually(fakeLogSender.GetLogs).Should(HaveLen(1))
 				logs := fakeLogSender.GetLogs()
 				Expect(logs[0].AppId).To(Equal("5678"))
 			})
 
 			It("ignores failed new tasks", func() {
-				go agent.Start()
+				agent.Start()
 
 				writeToFile(`{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3, "syslog_drain_urls": ["url1"]},
 								{"state": "RUNNING", "application_id": "3456", "warden_job_id": 59, "warden_container_path":"`+tmpdir+`", "instance_index": 1},
@@ -166,7 +167,7 @@ var _ = Describe("DeaAgent", func() {
 
 	Describe("Refreshing app TTLs", func() {
 		It("periodically refreshes TTLs for app nodes", func() {
-			go agent.Start()
+			agent.Start()
 
 			Eventually(func() int { return fakeSyslogDrainStore.AppNodeCallCount("1234") }).Should(BeNumerically(">", 1))
 			Eventually(func() int { return fakeSyslogDrainStore.AppNodeCallCount("3456") }).Should(BeNumerically(">", 1))

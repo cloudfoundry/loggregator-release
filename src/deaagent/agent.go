@@ -38,6 +38,7 @@ func NewAgent(instancesJsonFilePath string, logger *gosteno.Logger, syslogDrainS
 }
 
 func (agent *Agent) Start() {
+	agent.Add(2)
 	go agent.pollInstancesJson()
 	go agent.runAppNodeRefreshLoop()
 }
@@ -106,7 +107,6 @@ func (agent *Agent) processTasks(currentTasks map[string]domain.Task) func(known
 }
 
 func (agent *Agent) pollInstancesJson() {
-	agent.Add(1)
 	defer agent.Done()
 
 	watcher, err := fsnotify.NewWatcher()
@@ -150,7 +150,6 @@ func (agent *Agent) pollInstancesJson() {
 }
 
 func (agent *Agent) runAppNodeRefreshLoop() {
-	agent.Add(1)
 	defer agent.Done()
 
 	ticker := time.NewTicker(agent.appNodeTTLRefreshInterval)
