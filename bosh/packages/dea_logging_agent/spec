@@ -7,7 +7,6 @@ files:
 - loggregator/src/deaagent/*.go # gosub
 - loggregator/src/deaagent/deaagent/*.go # gosub
 - loggregator/src/deaagent/domain/*.go # gosub
-- loggregator/src/deaagent/loggingstream/*.go # gosub
 - loggregator/src/deaagent/syslog_drain_store/*.go # gosub
 - loggregator/src/code.google.com/p/gogoprotobuf/proto/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/control/*.go # gosub

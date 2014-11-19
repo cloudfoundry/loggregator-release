@@ -127,9 +127,9 @@ var _ = Describe("TaskListener", func() {
 
 				Eventually(connectionChannel).Should(Receive())
 				Eventually(connectionChannel).Should(Receive())
-
 			})
 		})
+
 		Context("Stdout socket unavailable", func() {
 			It("closes both connections", func() {
 				task, _ := setupTask(3)
@@ -149,15 +149,15 @@ var _ = Describe("TaskListener", func() {
 				Expect(taskListener).To(BeNil())
 
 				Consistently(connectionChannel).ShouldNot(Receive())
-
 			})
 		})
+
 		Context("Stderr socket unavailable", func() {
 			It("closes both connections", func() {
 				task, _ := setupTask(3)
 
 				stdoutListener, stderrListener := setupTaskSockets(task)
-					stderrListener.Close()
+				stderrListener.Close()
 
 				connectionChannel := make(chan net.Conn)
 
@@ -170,10 +170,9 @@ var _ = Describe("TaskListener", func() {
 				Expect(err).ToNot(BeNil())
 				Expect(taskListener).To(BeNil())
 				connection := <-connectionChannel
-					var data []byte
+				var data []byte
 				_, err = connection.Read(data)
 				Expect(err).ToNot(BeNil())
-
 			})
 		})
 	})

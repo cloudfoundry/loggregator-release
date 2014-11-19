@@ -2,39 +2,41 @@ package deaagent
 
 import (
 	"deaagent/domain"
-	"deaagent/loggingstream"
+	"errors"
+	"fmt"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/logs"
 	"github.com/cloudfoundry/gosteno"
 	"io"
+	"net"
+	"path/filepath"
 	"strconv"
-	"errors"
-	"fmt"
+	"time"
 )
 
 type TaskListener struct {
 	*gosteno.Logger
-	taskIdentifier                 string
-	stdOutListener, stdErrListener io.ReadCloser
-	task                           domain.Task
-	closeChan                      chan struct{}
+	taskIdentifier             string
+	stdOutReader, stdErrReader io.ReadCloser
+	task                       domain.Task
+	closeChan                  chan struct{}
 }
 
 func NewTaskListener(task domain.Task, logger *gosteno.Logger) (*TaskListener, error) {
-	stdOutListener := loggingstream.NewLoggingStream(&task, logger, events.LogMessage_OUT)
-	if (stdOutListener == nil) {
-		return nil, errors.New(fmt.Sprintf("Connection to stdout %s failed\n", task.Identifier()));
+	stdOutReader, err := dial(task.Identifier(), events.LogMessage_OUT, logger)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Connection to stdout %s failed\n", task.Identifier()))
 	}
-	stdErrListener := loggingstream.NewLoggingStream(&task, logger, events.LogMessage_ERR)
-	if (stdErrListener == nil) {
-		stdOutListener.Close()
-		return nil, errors.New(fmt.Sprintf("Connection to stderr %s failed\n", task.Identifier()));
+	stdErrReader, err := dial(task.Identifier(), events.LogMessage_ERR, logger)
+	if err != nil {
+		stdOutReader.Close()
+		return nil, errors.New(fmt.Sprintf("Connection to stderr %s failed\n", task.Identifier()))
 	}
 	return &TaskListener{
 		Logger:         logger,
 		taskIdentifier: task.Identifier(),
-		stdOutListener: stdOutListener,
-		stdErrListener: stdErrListener,
+		stdOutReader:   stdOutReader,
+		stdErrReader:   stdErrReader,
 		task:           task,
 		closeChan:      make(chan struct{}),
 	}, nil
@@ -47,15 +49,37 @@ func (tl *TaskListener) Task() domain.Task {
 func (tl *TaskListener) StartListening() {
 	tl.Debugf("TaskListener.StartListening: Starting to listen to %v\n", tl.taskIdentifier)
 	tl.Debugf("TaskListener.StartListening: Scanning logs for %s", tl.task.ApplicationId)
-	go logs.ScanLogStream(tl.task.ApplicationId, tl.task.SourceName, strconv.FormatUint(tl.task.Index, 10), tl.stdOutListener, tl.closeChan)
-	go logs.ScanErrorLogStream(tl.task.ApplicationId, tl.task.SourceName, strconv.FormatUint(tl.task.Index, 10), tl.stdErrListener, tl.closeChan)
+	go logs.ScanLogStream(tl.task.ApplicationId, tl.task.SourceName, strconv.FormatUint(tl.task.Index, 10), tl.stdOutReader, tl.closeChan)
+	go logs.ScanErrorLogStream(tl.task.ApplicationId, tl.task.SourceName, strconv.FormatUint(tl.task.Index, 10), tl.stdErrReader, tl.closeChan)
 
 	<-tl.closeChan
 }
 
 func (tl *TaskListener) StopListening() {
-	tl.stdOutListener.Close()
-	tl.stdErrListener.Close()
+	tl.stdOutReader.Close()
+	tl.stdErrReader.Close()
 	tl.Debugf("TaskListener.StopListening: Shutting down logs for %s", tl.task.ApplicationId)
 	close(tl.closeChan)
+}
+
+func dial(taskIdentifier string, messageType events.LogMessage_MessageType, logger *gosteno.Logger) (net.Conn, error) {
+	var err error
+	var connection net.Conn
+	for i := 0; i < 10; i++ {
+		connection, err = net.Dial("unix", filepath.Join(taskIdentifier, socketName(messageType)))
+		if err == nil {
+			logger.Debugf("Opened socket %s, %s", messageType, taskIdentifier)
+			break
+		}
+		logger.Debugf("Could not read from socket %s, %s, retrying: %s", messageType, taskIdentifier, err)
+		time.Sleep(100 * time.Millisecond)
+	}
+	return connection, err
+}
+
+func socketName(messageType events.LogMessage_MessageType) string {
+	if messageType == events.LogMessage_OUT {
+		return "stdout.sock"
+	}
+	return "stderr.sock"
 }
