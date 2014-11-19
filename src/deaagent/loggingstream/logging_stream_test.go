@@ -20,6 +20,7 @@ var _ = Describe("LoggingStream", func() {
 
 	var loggingStream *loggingstream.LoggingStream
 	var socketPath string
+	var listener net.Listener
 
 	BeforeEach(func() {
 		tmpdir, _ := ioutil.TempDir("", "testing")
@@ -35,6 +36,7 @@ var _ = Describe("LoggingStream", func() {
 		os.MkdirAll(value, 0777)
 
 		socketPath = filepath.Join(task.Identifier(), "stdout.sock")
+		listener, _ = net.Listen("unix", socketPath)
 		loggingStream = loggingstream.NewLoggingStream(task, loggertesthelper.Logger(), events.LogMessage_OUT)
 		loggertesthelper.TestLoggerSink.Clear()
 	})
@@ -42,7 +44,6 @@ var _ = Describe("LoggingStream", func() {
 	Describe("Reading from the stream", func() {
 		Context("When the socket is open", func() {
 			BeforeEach(func() {
-				listener, _ := net.Listen("unix", socketPath)
 				go func() {
 					connection, _ := listener.Accept()
 					connection.Write([]byte("Hello World!"))
@@ -71,7 +72,6 @@ var _ = Describe("LoggingStream", func() {
 
 		Context("When the socket is closed by the app", func() {
 			BeforeEach(func() {
-				listener, _ := net.Listen("unix", socketPath)
 				go func() {
 					connection, _ := listener.Accept()
 					defer connection.Close()
@@ -85,35 +85,19 @@ var _ = Describe("LoggingStream", func() {
 
 				Expect(err).To(Equal(io.EOF))
 			})
-
-			It("tries to reconnect after the first connection has closed", func() {
-				p := make([]byte, 1024)
-				_, err := loggingStream.Read(p)
-				Expect(err).To(Equal(io.EOF))
-
-				go func() {
-					listener, _ := net.Listen("unix", socketPath)
-					connection, _ := listener.Accept()
-					connection.Write([]byte("Hello"))
-					defer connection.Close()
-					defer listener.Close()
-				}()
-
-				n, err := loggingStream.Read(p)
-				Expect(n).To(Equal(5))
-				Expect(err).ToNot(HaveOccurred())
-
-				_, err = loggingStream.Read(p)
-				Expect(err).To(Equal(io.EOF))
-			})
 		})
 
 		Context("when socket never opens", func() {
-			It("returns an EOF error and 0 bytes ", func() {
-				p := make([]byte, 1024)
-				count, err := loggingStream.Read(p)
-				Expect(err).To(Equal(io.EOF))
-				Expect(count).To(Equal(0))
+			It("returns a nil value from the constructor", func() {
+				bogusTask := &domain.Task{
+					ApplicationId:       "4567",
+					WardenJobId:         42,
+					WardenContainerPath: "/bogus/path",
+					Index:               1,
+					SourceName:          "App",
+				}
+				ls := loggingstream.NewLoggingStream(bogusTask, loggertesthelper.Logger(), events.LogMessage_OUT)
+				Expect(ls).To(BeNil())
 			})
 		})
 	})
@@ -121,7 +105,6 @@ var _ = Describe("LoggingStream", func() {
 	Describe("Close", func() {
 		Context("after read is called", func() {
 			It("closes the socket connection", func() {
-				listener, _ := net.Listen("unix", socketPath)
 				var connection net.Conn
 				go func() {
 					connection, _ = listener.Accept()
@@ -140,7 +123,6 @@ var _ = Describe("LoggingStream", func() {
 
 		Context("if read is not called", func() {
 			It("does not panic", func() {
-				listener, _ := net.Listen("unix", socketPath)
 				var connection net.Conn
 				go func() {
 					connection, _ = listener.Accept()
@@ -152,7 +134,6 @@ var _ = Describe("LoggingStream", func() {
 
 		Context("while read is listening", func() {
 			It("closes the ongoing read", func(done Done) {
-				listener, _ := net.Listen("unix", socketPath)
 				var connection net.Conn
 				go func() {
 					connection, _ = listener.Accept()
@@ -171,6 +152,21 @@ var _ = Describe("LoggingStream", func() {
 				Eventually(readDone).Should(BeClosed())
 				close(done)
 			}, 2)
+		})
+
+		Context("while socket is available and logging stream is closed", func() {
+			It("read returns an error", func() {
+				var connection net.Conn
+				var data []byte
+				go func() {
+					connection, _ = listener.Accept()
+				}()
+
+				loggingStream.Close()
+				_, err := loggingStream.Read(data)
+
+				Expect(err).To(HaveOccurred())
+			})
 		})
 	})
 })

@@ -56,11 +56,11 @@ var _ = Describe("DeaAgent", func() {
 		task1StdoutListener, task1StderrListener = setupTaskSockets(helperTask1)
 
 		helperTask2 := &domain.Task{
-			ApplicationId:       "5678",
+			ApplicationId:       "3456",
 			SourceName:          "App",
-			WardenJobId:         58,
+			WardenJobId:         59,
 			WardenContainerPath: tmpdir,
-			Index:               0,
+			Index:               1,
 		}
 
 		task2StdoutListener, task2StderrListener = setupTaskSockets(helperTask2)
@@ -104,28 +104,61 @@ var _ = Describe("DeaAgent", func() {
 				go agent.Start()
 
 				writeToFile(`{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3, "syslog_drain_urls": ["url1"]},
-								   {"state": "RUNNING", "application_id": "5678", "warden_job_id": 58, "warden_container_path":"`+tmpdir+`", "instance_index": 0, "syslog_drain_urls": ["url2"]},
-	                               {"state": "RUNNING", "application_id": "1234", "warden_job_id": 57, "warden_container_path":"`+tmpdir+`", "instance_index": 2, "syslog_drain_urls": ["url1"]}
-	                               ]}`, true)
+								{"state": "RUNNING", "application_id": "3456", "warden_job_id": 59, "warden_container_path":"`+tmpdir+`", "instance_index": 1},
+								{"state": "RUNNING", "application_id": "5678", "warden_job_id": 58, "warden_container_path":"`+tmpdir+`", "instance_index": 0, "syslog_drain_urls": ["url2"]}
+							   ]}`, true)
 
 				connectionChannel := make(chan net.Conn)
+
+				newTask := &domain.Task{
+					ApplicationId:       "5678",
+					SourceName:          "App",
+					WardenJobId:         58,
+					WardenContainerPath: tmpdir,
+					Index:               0,
+				}
+
+				newTaskStdoutListener, _ := setupTaskSockets(newTask)
+
 				go func() {
-					task2Connection, _ := task2StdoutListener.Accept()
-					connectionChannel <- task2Connection
+					newTaskConnection, _ := newTaskStdoutListener.Accept()
+					connectionChannel <- newTaskConnection
 				}()
-				var task2Connection net.Conn
+				var newTaskConnection net.Conn
 				select {
-				case task2Connection = <-connectionChannel:
-					defer task2Connection.Close()
+				case newTaskConnection = <-connectionChannel:
+					defer newTaskConnection.Close()
 				case <-time.After(1 * time.Second):
 					Fail("Should have been able to open the socket listener")
 				}
 
-				task2Connection.Write([]byte(SOCKET_PREFIX + expectedMessage + "\n"))
+				newTaskConnection.Write([]byte(SOCKET_PREFIX + expectedMessage + "\n"))
 
 				Eventually(fakeLogSender.GetLogs).Should(HaveLen(1))
 				logs := fakeLogSender.GetLogs()
 				Expect(logs[0].AppId).To(Equal("5678"))
+			})
+
+			It("ignores failed new tasks", func() {
+				go agent.Start()
+
+				writeToFile(`{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3, "syslog_drain_urls": ["url1"]},
+								{"state": "RUNNING", "application_id": "3456", "warden_job_id": 59, "warden_container_path":"`+tmpdir+`", "instance_index": 1},
+								{"state": "RUNNING", "application_id": "5678", "warden_job_id": 58, "warden_container_path":"`+tmpdir+`", "instance_index": 0, "syslog_drain_urls": ["url2"]}
+							   ]}`, true)
+
+				newTask := &domain.Task{
+					ApplicationId:       "5678",
+					SourceName:          "App",
+					WardenJobId:         58,
+					WardenContainerPath: tmpdir,
+					Index:               0,
+				}
+
+				newTaskStdoutListener, _ := setupTaskSockets(newTask)
+				newTaskStdoutListener.Close()
+
+				Consistently(func() int { return fakeSyslogDrainStore.AppNodeCallCount("5678") }).Should(Equal(0))
 			})
 		})
 	})

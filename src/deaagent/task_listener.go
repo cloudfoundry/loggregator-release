@@ -8,6 +8,8 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"io"
 	"strconv"
+	"errors"
+	"fmt"
 )
 
 type TaskListener struct {
@@ -18,15 +20,24 @@ type TaskListener struct {
 	closeChan                      chan struct{}
 }
 
-func NewTaskListener(task domain.Task, logger *gosteno.Logger) *TaskListener {
+func NewTaskListener(task domain.Task, logger *gosteno.Logger) (*TaskListener, error) {
+	stdOutListener := loggingstream.NewLoggingStream(&task, logger, events.LogMessage_OUT)
+	if (stdOutListener == nil) {
+		return nil, errors.New(fmt.Sprintf("Connection to stdout %s failed\n", task.Identifier()));
+	}
+	stdErrListener := loggingstream.NewLoggingStream(&task, logger, events.LogMessage_ERR)
+	if (stdErrListener == nil) {
+		stdOutListener.Close()
+		return nil, errors.New(fmt.Sprintf("Connection to stderr %s failed\n", task.Identifier()));
+	}
 	return &TaskListener{
 		Logger:         logger,
 		taskIdentifier: task.Identifier(),
-		stdOutListener: loggingstream.NewLoggingStream(&task, logger, events.LogMessage_OUT),
-		stdErrListener: loggingstream.NewLoggingStream(&task, logger, events.LogMessage_ERR),
+		stdOutListener: stdOutListener,
+		stdErrListener: stdErrListener,
 		task:           task,
 		closeChan:      make(chan struct{}),
-	}
+	}, nil
 }
 
 func (tl *TaskListener) Task() domain.Task {

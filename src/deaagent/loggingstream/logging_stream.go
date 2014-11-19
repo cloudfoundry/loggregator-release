@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
-	"io"
 	"net"
 	"path/filepath"
 	"sync"
@@ -18,44 +17,27 @@ type LoggingStream struct {
 	task        *domain.Task
 	logger      *gosteno.Logger
 	messageType events.LogMessage_MessageType
-	close       chan struct{}
 	sync.RWMutex
 }
 
 func NewLoggingStream(task *domain.Task, logger *gosteno.Logger, messageType events.LogMessage_MessageType) (ls *LoggingStream) {
-	return &LoggingStream{task: task, logger: logger, messageType: messageType, close: make(chan struct{})}
+	ls = &LoggingStream{task: task, logger: logger, messageType: messageType }
+
+	connection, err := ls.connect()
+	if err != nil {
+		return nil
+	}
+
+	ls.connection = connection
+
+	return ls
 }
 
 func (ls *LoggingStream) Read(p []byte) (n int, err error) {
-	ls.Lock()
-	defer ls.Unlock()
-
-	if ls.connection == nil {
-		connection, err := ls.connect()
-		if err != nil {
-			ls.disconnect()
-			return 0, io.EOF
-		}
-		ls.connection = connection
-	}
-
-	read := make(chan readReturn)
-
-	go func() {
-		n, err := ls.connection.Read(p)
-		read <- readReturn{n: n, err: err}
-	}()
-
-	select {
-	case <-ls.close:
-		err = errors.New("Closed from outside")
-	case readReturnValue := <-read:
-		n = readReturnValue.n
-		err = readReturnValue.err
-	}
+	n, err = ls.connection.Read(p)
 
 	if err != nil {
-		endConnectionError := ls.disconnect()
+		endConnectionError := ls.Close()
 
 		if endConnectionError != nil {
 			err = errors.New(fmt.Sprintf("Error: %v\nClose Error: %v", err, endConnectionError))
@@ -63,23 +45,11 @@ func (ls *LoggingStream) Read(p []byte) (n int, err error) {
 		ls.logger.Debugf("Stopped reading from socket %s", err.Error())
 	}
 
-	return
+	return n, err
 }
 
 func (ls *LoggingStream) Close() error {
-	close(ls.close)
-	ls.RLock()
-	defer ls.RUnlock()
-	return ls.disconnect()
-}
-
-func (ls *LoggingStream) disconnect() error {
-	if ls.connection == nil {
-		return nil
-	}
-
 	err := ls.connection.Close()
-	ls.connection = nil
 	ls.logger.Debugf("Stopped reading from socket %s, %s", ls.messageType, ls.task.Identifier())
 	return err
 }
@@ -104,9 +74,4 @@ func socketName(messageType events.LogMessage_MessageType) string {
 		return "stdout.sock"
 	}
 	return "stderr.sock"
-}
-
-type readReturn struct {
-	n   int
-	err error
 }

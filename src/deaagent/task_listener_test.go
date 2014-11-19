@@ -34,7 +34,7 @@ var _ = Describe("TaskListener", func() {
 
 			stdoutListener, stderrListener = setupTaskSockets(task)
 
-			taskListener = deaagent.NewTaskListener(*task, testLogger)
+			taskListener, _ = deaagent.NewTaskListener(*task, testLogger)
 			go taskListener.StartListening()
 
 			var err error
@@ -101,6 +101,80 @@ var _ = Describe("TaskListener", func() {
 
 			log = fakeLogSender.GetLogs()[1]
 			Expect(log.Message).To(Equal(message2))
+		})
+	})
+
+	Describe("Initilization", func() {
+		Context("Both sockets available", func() {
+			It("keeps both connections open", func() {
+				task, _ := setupTask(3)
+
+				stdoutListener, stderrListener := setupTaskSockets(task)
+
+				connectionChannel := make(chan net.Conn)
+				go func() {
+					connection, _ := stdoutListener.Accept()
+					connectionChannel <- connection
+				}()
+				go func() {
+					connection, _ := stderrListener.Accept()
+					connectionChannel <- connection
+				}()
+
+				taskListener, err := deaagent.NewTaskListener(*task, testLogger)
+				Expect(err).To(BeNil())
+				Expect(taskListener).NotTo(BeNil())
+
+				Eventually(connectionChannel).Should(Receive())
+				Eventually(connectionChannel).Should(Receive())
+
+			})
+		})
+		Context("Stdout socket unavailable", func() {
+			It("closes both connections", func() {
+				task, _ := setupTask(3)
+
+				stdoutListener, stderrListener := setupTaskSockets(task)
+				stdoutListener.Close()
+
+				connectionChannel := make(chan net.Conn)
+
+				go func() {
+					connection, _ := stderrListener.Accept()
+					connectionChannel <- connection
+				}()
+
+				taskListener, err := deaagent.NewTaskListener(*task, testLogger)
+				Expect(err).ToNot(BeNil())
+				Expect(taskListener).To(BeNil())
+
+				Consistently(connectionChannel).ShouldNot(Receive())
+
+			})
+		})
+		Context("Stderr socket unavailable", func() {
+			It("closes both connections", func() {
+				task, _ := setupTask(3)
+
+				stdoutListener, stderrListener := setupTaskSockets(task)
+					stderrListener.Close()
+
+				connectionChannel := make(chan net.Conn)
+
+				go func() {
+					connection, _ := stdoutListener.Accept()
+					connectionChannel <- connection
+				}()
+
+				taskListener, err := deaagent.NewTaskListener(*task, testLogger)
+				Expect(err).ToNot(BeNil())
+				Expect(taskListener).To(BeNil())
+				connection := <-connectionChannel
+					var data []byte
+				_, err = connection.Read(data)
+				Expect(err).ToNot(BeNil())
+
+			})
 		})
 	})
 })

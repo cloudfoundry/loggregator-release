@@ -87,7 +87,10 @@ func (agent *Agent) processTasks(currentTasks map[string]domain.Task) func(known
 			task.DrainUrls = nil
 
 			agent.logger.Debugf("Adding new task %s", task.Identifier())
-			listener := NewTaskListener(task, agent.logger)
+			listener, err := NewTaskListener(task, agent.logger)
+			if err != nil {
+				continue
+			}
 			knownTasks[identifier] = listener
 
 			go func() {
