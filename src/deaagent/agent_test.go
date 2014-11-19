@@ -155,8 +155,9 @@ var _ = Describe("DeaAgent", func() {
 					Index:               0,
 				}
 
-				newTaskStdoutListener, _ := setupTaskSockets(newTask)
+				newTaskStdoutListener, newTaskStderrListener := setupTaskSockets(newTask)
 				newTaskStdoutListener.Close()
+				newTaskStderrListener.Close()
 
 				Consistently(func() int { return fakeSyslogDrainStore.AppNodeCallCount("5678") }).Should(Equal(0))
 			})
