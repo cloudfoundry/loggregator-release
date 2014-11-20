@@ -118,12 +118,15 @@ var _ = Describe("DeaAgent", func() {
 					Index:               0,
 				}
 
-				newTaskStdoutListener, _ := setupTaskSockets(newTask)
+				newTaskStdoutListener, newTaskStderrListener := setupTaskSockets(newTask)
 
 				go func() {
 					newTaskConnection, _ := newTaskStdoutListener.Accept()
 					connectionChannel <- newTaskConnection
 				}()
+
+				go newTaskStderrListener.Accept()
+
 				var newTaskConnection net.Conn
 				select {
 				case newTaskConnection = <-connectionChannel:
@@ -134,7 +137,6 @@ var _ = Describe("DeaAgent", func() {
 
 				newTaskConnection.Write([]byte(SOCKET_PREFIX + expectedMessage + "\n"))
 
-				// POTENTIAL FLAKY TEST: theory is that after running many times, we run into paging (or something) that slows this down
 				Eventually(fakeLogSender.GetLogs).Should(HaveLen(1))
 				logs := fakeLogSender.GetLogs()
 				Expect(logs[0].AppId).To(Equal("5678"))
