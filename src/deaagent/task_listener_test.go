@@ -3,14 +3,13 @@ package deaagent_test
 import (
 	"deaagent"
 	"deaagent/domain"
-	"github.com/cloudfoundry/dropsonde/log_sender/fake"
-	"github.com/cloudfoundry/dropsonde/logs"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"io/ioutil"
 	"net"
 	"os"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var testLogger = loggertesthelper.Logger()
@@ -21,15 +20,12 @@ var _ = Describe("TaskListener", func() {
 		var tmpdir string
 		var stdoutListener, stderrListener net.Listener
 		var stdoutConnection, stderrConnection net.Conn
-		var fakeLogSender *fake.FakeLogSender
 		var message1 = "one"
 		var message2 = "two"
 		var taskListener *deaagent.TaskListener
 
 		BeforeEach(func() {
-			fakeLogSender = fake.NewFakeLogSender()
-			logs.Initialize(fakeLogSender)
-
+			fakeLogSender.Reset()
 			task, tmpdir = setupTask(3)
 
 			stdoutListener, stderrListener = setupTaskSockets(task)
@@ -174,6 +170,81 @@ var _ = Describe("TaskListener", func() {
 				_, err = connection.Read(data)
 				Expect(err).ToNot(BeNil())
 			})
+		})
+	})
+
+	Describe("failure to stream logs", func() {
+		var (
+			stdOutConnectionChannel, stdErrConnectionChannel chan net.Conn
+			doneListening                                    chan struct{}
+		)
+
+		BeforeEach(func() {
+			fakeLogSender.Reset()
+
+			task, _ := setupTask(3)
+
+			stdoutListener, stderrListener := setupTaskSockets(task)
+
+			stdOutConnectionChannel = make(chan net.Conn)
+			stdErrConnectionChannel = make(chan net.Conn)
+
+			go func() {
+				connection, _ := stdoutListener.Accept()
+				stdOutConnectionChannel <- connection
+				for {
+					_, err := connection.Write([]byte("hello stdout\n"))
+					if err != nil {
+						break
+					}
+				}
+			}()
+
+			go func() {
+				connection, _ := stderrListener.Accept()
+				stdErrConnectionChannel <- connection
+				for {
+					_, err := connection.Write([]byte("hello stderr\n"))
+					if err != nil {
+						break
+					}
+				}
+			}()
+
+			taskListener, err := deaagent.NewTaskListener(*task, testLogger)
+			Expect(err).ToNot(HaveOccurred())
+
+			doneListening = make(chan struct{})
+			go func() {
+				taskListener.StartListening()
+				close(doneListening)
+			}()
+		})
+
+		It("closes stderr when stdout fails", func(done Done) {
+			stdOutConnection := <-stdOutConnectionChannel
+			stdOutConnection.Close()
+			stdErrConnection := <-stdErrConnectionChannel
+
+			Eventually(doneListening).Should(BeClosed())
+			p := []byte{}
+			_, err := stdErrConnection.Read(p)
+			Expect(err).To(HaveOccurred())
+
+			close(done)
+		})
+
+		It("closes stdout when stderr fails", func(done Done) {
+			stdErrConnection := <-stdErrConnectionChannel
+			stdErrConnection.Close()
+			stdOutConnection := <-stdOutConnectionChannel
+
+			Eventually(doneListening).Should(BeClosed())
+			p := []byte{}
+			_, err := stdOutConnection.Read(p)
+			Expect(err).To(HaveOccurred())
+
+			close(done)
 		})
 	})
 })

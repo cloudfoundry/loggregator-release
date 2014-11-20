@@ -4,6 +4,8 @@ import (
 	"deaagent/domain"
 	"github.com/cloudfoundry/dropsonde/emitter/logemitter"
 	"github.com/cloudfoundry/dropsonde/events"
+	"github.com/cloudfoundry/dropsonde/log_sender/fake"
+	"github.com/cloudfoundry/dropsonde/logs"
 	"net"
 	"os"
 	"path/filepath"
@@ -15,8 +17,16 @@ import (
 
 func TestDeaagent(t *testing.T) {
 	RegisterFailHandler(Fail)
+
+	BeforeSuite(func() {
+		fakeLogSender = fake.NewFakeLogSender()
+		logs.Initialize(fakeLogSender)
+	})
+
 	RunSpecs(t, "Deaagent Suite")
 }
+
+var fakeLogSender *fake.FakeLogSender
 
 const SOCKET_PREFIX = "\n\n\n\n"
 

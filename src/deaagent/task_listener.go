@@ -11,6 +11,7 @@ import (
 	"net"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -19,7 +20,7 @@ type TaskListener struct {
 	taskIdentifier             string
 	stdOutReader, stdErrReader io.ReadCloser
 	task                       domain.Task
-	closeChan                  chan struct{}
+	sync.WaitGroup
 }
 
 func NewTaskListener(task domain.Task, logger *gosteno.Logger) (*TaskListener, error) {
@@ -38,7 +39,6 @@ func NewTaskListener(task domain.Task, logger *gosteno.Logger) (*TaskListener, e
 		stdOutReader:   stdOutReader,
 		stdErrReader:   stdErrReader,
 		task:           task,
-		closeChan:      make(chan struct{}),
 	}, nil
 }
 
@@ -49,17 +49,26 @@ func (tl *TaskListener) Task() domain.Task {
 func (tl *TaskListener) StartListening() {
 	tl.Debugf("TaskListener.StartListening: Starting to listen to %v\n", tl.taskIdentifier)
 	tl.Debugf("TaskListener.StartListening: Scanning logs for %s", tl.task.ApplicationId)
-	go logs.ScanLogStream(tl.task.ApplicationId, tl.task.SourceName, strconv.FormatUint(tl.task.Index, 10), tl.stdOutReader, tl.closeChan)
-	go logs.ScanErrorLogStream(tl.task.ApplicationId, tl.task.SourceName, strconv.FormatUint(tl.task.Index, 10), tl.stdErrReader, tl.closeChan)
 
-	<-tl.closeChan
+	tl.Add(2)
+	go func() {
+		defer tl.Done()
+		defer tl.StopListening()
+		logs.ScanLogStream(tl.task.ApplicationId, tl.task.SourceName, strconv.FormatUint(tl.task.Index, 10), tl.stdOutReader)
+	}()
+	go func() {
+		defer tl.Done()
+		defer tl.StopListening()
+		logs.ScanErrorLogStream(tl.task.ApplicationId, tl.task.SourceName, strconv.FormatUint(tl.task.Index, 10), tl.stdErrReader)
+	}()
+
+	tl.Wait()
 }
 
 func (tl *TaskListener) StopListening() {
 	tl.stdOutReader.Close()
 	tl.stdErrReader.Close()
 	tl.Debugf("TaskListener.StopListening: Shutting down logs for %s", tl.task.ApplicationId)
-	close(tl.closeChan)
 }
 
 func dial(taskIdentifier string, messageType events.LogMessage_MessageType, logger *gosteno.Logger) (net.Conn, error) {

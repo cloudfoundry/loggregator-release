@@ -3,8 +3,6 @@ package deaagent_test
 import (
 	"deaagent"
 	"deaagent/domain"
-	"github.com/cloudfoundry/dropsonde/log_sender/fake"
-	"github.com/cloudfoundry/dropsonde/logs"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"io/ioutil"
 	"net"
@@ -22,7 +20,6 @@ var (
 )
 
 var _ = Describe("DeaAgent", func() {
-
 	var (
 		task1StdoutListener  net.Listener
 		task1StderrListener  net.Listener
@@ -31,12 +28,10 @@ var _ = Describe("DeaAgent", func() {
 		expectedMessage      = "Some Output"
 		agent                *deaagent.Agent
 		fakeSyslogDrainStore *FakeSyslogDrainStore
-		fakeLogSender        *fake.FakeLogSender
 	)
 
 	BeforeEach(func() {
-		fakeLogSender = fake.NewFakeLogSender()
-		logs.Initialize(fakeLogSender)
+		fakeLogSender.Reset()
 
 		var err error
 		tmpdir, err = ioutil.TempDir("", "testing")
