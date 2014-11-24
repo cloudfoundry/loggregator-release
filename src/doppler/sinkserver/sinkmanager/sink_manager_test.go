@@ -73,12 +73,11 @@ func (c *ChannelSink) Emit() instrumentation.Context {
 var _ = Describe("SinkManager", func() {
 	var blackListManager = blacklist.New([]iprange.IPRange{iprange.IPRange{Start: "10.10.10.10", End: "10.10.10.20"}})
 	var sinkManager *sinkmanager.SinkManager
-	var appServicesChan <-chan appservice.AppServices
 	var sinkManagerDone chan struct{}
 	var newAppServiceChan, deletedAppServiceChan chan appservice.AppService
 
 	BeforeEach(func() {
-		sinkManager, appServicesChan = sinkmanager.NewSinkManager(1, true, blackListManager, loggertesthelper.Logger(), "dropsonde-origin")
+		sinkManager = sinkmanager.NewSinkManager(1, true, blackListManager, loggertesthelper.Logger(), "dropsonde-origin")
 
 		newAppServiceChan = make(chan appservice.AppService)
 		deletedAppServiceChan = make(chan appservice.AppService)

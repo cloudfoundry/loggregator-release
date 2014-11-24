@@ -30,13 +30,11 @@ type SinkManager struct {
 	recentLogCount      uint32
 	Metrics             *metrics.SinkManagerMetrics
 	logger              *gosteno.Logger
-	appStoreUpdateChan  chan<- appservice.AppServices
 	stopped             bool
 	DropsondeOrigin     string
 }
 
-func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger, dropsondeOrigin string) (*SinkManager, <-chan appservice.AppServices) {
-	appStoreUpdateChan := make(chan appservice.AppServices, 10)
+func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger, dropsondeOrigin string) *SinkManager {
 	return &SinkManager{
 		doneChannel:         make(chan struct{}),
 		errorChannel:        make(chan *events.Envelope, 100),
@@ -46,9 +44,8 @@ func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackLis
 		recentLogCount:      maxRetainedLogMessages,
 		Metrics:             metrics.NewSinkManagerMetrics(),
 		logger:              logger,
-		appStoreUpdateChan:  appStoreUpdateChan,
 		DropsondeOrigin:     dropsondeOrigin,
-	}, appStoreUpdateChan
+	}
 }
 
 func (sinkManager *SinkManager) Start(newAppServiceChan, deletedAppServiceChan <-chan appservice.AppService) {
@@ -66,7 +63,6 @@ func (sinkManager *SinkManager) Stop() {
 	default:
 		close(sinkManager.doneChannel)
 		sinkManager.sinks.DeleteAll()
-		close(sinkManager.appStoreUpdateChan)
 	}
 }
 

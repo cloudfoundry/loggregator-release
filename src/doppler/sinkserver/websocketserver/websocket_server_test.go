@@ -21,7 +21,7 @@ import (
 var _ = Describe("WebsocketServer", func() {
 
 	var server *websocketserver.WebsocketServer
-	var sinkManager, _ = sinkmanager.NewSinkManager(1024, false, blacklist.New(nil), loggertesthelper.Logger(), "dropsonde-origin")
+	var sinkManager = sinkmanager.NewSinkManager(1024, false, blacklist.New(nil), loggertesthelper.Logger(), "dropsonde-origin")
 	var appId = "my-app"
 	var wsReceivedChan chan []byte
 	var connectionDropped <-chan struct{}

@@ -60,10 +60,7 @@ func (c *Config) Validate(logger *gosteno.Logger) (err error) {
 
 type Doppler struct {
 	*gosteno.Logger
-	appStore        *store.AppServiceStore
 	appStoreWatcher *store.AppServiceStoreWatcher
-
-	appStoreInputChan <-chan appservice.AppServices
 
 	errChan           chan error
 	dropsondeListener agentlistener.AgentListener
@@ -94,7 +91,6 @@ func New(host string, config *Config, logger *gosteno.Logger, dropsondeOrigin st
 	storeAdapter.Connect()
 	appStoreCache := cache.NewAppServiceCache()
 	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
-	appStore := store.NewAppServiceStore(storeAdapter, appStoreWatcher)
 
 	dropsondeListener, dropsondeBytesChan := agentlistener.NewAgentListener(fmt.Sprintf("%s:%d", host, config.DropsondeIncomingMessagesPort), logger, "dropsondeListener")
 
@@ -102,14 +98,12 @@ func New(host string, config *Config, logger *gosteno.Logger, dropsondeOrigin st
 	dropsondeUnmarshaller := dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger)
 
 	blacklist := blacklist.New(config.BlackListIps)
-	sinkManager, appStoreInputChan := sinkmanager.NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger, dropsondeOrigin)
+	sinkManager := sinkmanager.NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger, dropsondeOrigin)
 
 	return &Doppler{
 		Logger:                     logger,
 		dropsondeListener:          dropsondeListener,
 		sinkManager:                sinkManager,
-		appStoreInputChan:          appStoreInputChan,
-		appStore:                   appStore,
 		messageRouter:              sinkserver.NewMessageRouter(sinkManager, logger),
 		websocketServer:            websocketserver.New(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.WSMessageBufferSize, logger),
 		newAppServiceChan:          newAppServiceChan,
@@ -134,16 +128,11 @@ func (doppler *Doppler) Start() {
 	if err != nil {
 		panic(err)
 	}
-	doppler.Add(8)
+	doppler.Add(7)
 
 	go func() {
 		defer doppler.Done()
 		doppler.appStoreWatcher.Run()
-	}()
-
-	go func() {
-		defer doppler.Done()
-		doppler.appStore.Run(doppler.appStoreInputChan)
 	}()
 
 	go func() {
