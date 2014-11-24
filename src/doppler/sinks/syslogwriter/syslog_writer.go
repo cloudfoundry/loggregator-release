@@ -36,6 +36,7 @@ type writer struct {
 	conn net.Conn
 
 	tlsConfig *tls.Config
+	client    *http.Client
 }
 
 const (
@@ -44,6 +45,8 @@ const (
 
 func NewSyslogWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (w *writer) {
 	tlsConfig := &tls.Config{InsecureSkipVerify: skipCertVerify}
+	tr := &http.Transport{TLSClientConfig: tlsConfig}
+	client := &http.Client{Transport: tr}
 	return &writer{
 		appId:     appId,
 		outputUrl: outputUrl,
@@ -51,6 +54,7 @@ func NewSyslogWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (w *
 		connected: false,
 		scheme:    outputUrl.Scheme,
 		tlsConfig: tlsConfig,
+		client:    client,
 	}
 }
 
@@ -130,9 +134,7 @@ func (w *writer) write(p int, source, sourceId, msg string, timestamp int64) (by
 	if w.conn != nil {
 		byteCount, err = fmt.Fprint(w.conn, finalMsg)
 	} else {
-		tr := &http.Transport{TLSClientConfig: w.tlsConfig}
-		client := &http.Client{Transport: tr}
-		_, err = client.Post(w.outputUrl.String(), "text/plain", strings.NewReader(finalMsg))
+		_, err = w.client.Post(w.outputUrl.String(), "text/plain", strings.NewReader(finalMsg))
 		byteCount = len(finalMsg)
 	}
 	return byteCount, err
