@@ -1,7 +1,7 @@
 ---
 name: loggregator_trafficcontroller
 dependencies:
-- golang
+- golang1.3
 files:
 - loggregator/**/*
 - loggregator/src/trafficcontroller/*.go # gosub

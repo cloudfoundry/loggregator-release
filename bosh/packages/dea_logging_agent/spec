@@ -1,7 +1,7 @@
 ---
 name: dea_logging_agent
 dependencies:
-- golang
+- golang1.3
 files:
 - loggregator/**/*
 - loggregator/src/deaagent/*.go # gosub
