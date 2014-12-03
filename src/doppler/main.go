@@ -23,12 +23,11 @@ import (
 )
 
 var (
-	logFilePath     = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
-	logLevel        = flag.Bool("debug", false, "Debug logging")
-	configFile      = flag.String("config", "config/doppler.json", "Location of the doppler config json file")
-	cpuprofile      = flag.String("cpuprofile", "", "write cpu profile to file")
-	memprofile      = flag.String("memprofile", "", "write memory profile to this file")
-	dropsondeOrigin = flag.String("dropsondeOrigin", "", "origin for messages created by this process")
+	logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
+	logLevel    = flag.Bool("debug", false, "Debug logging")
+	configFile  = flag.String("config", "config/doppler.json", "Location of the doppler config json file")
+	cpuprofile  = flag.String("cpuprofile", "", "write cpu profile to file")
+	memprofile  = flag.String("memprofile", "", "write memory profile to this file")
 )
 
 type DopplerServerHealthMonitor struct {
@@ -96,7 +95,7 @@ func main() {
 		panic(err)
 	}
 
-	doppler := New("0.0.0.0", config, logger, *dropsondeOrigin)
+	doppler := New("0.0.0.0", config, logger, "doppler")
 
 	cfc, err := cfcomponent.NewComponent(
 		logger,
