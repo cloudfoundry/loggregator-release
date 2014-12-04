@@ -36,7 +36,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/auth/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/localip/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/logmessage/*.go # gosub
@@ -52,4 +51,5 @@ files:
 - loggregator/src/github.com/coreos/go-etcd/etcd/*.go # gosub
 - loggregator/src/github.com/gorilla/websocket/*.go # gosub
 - loggregator/src/github.com/nu7hatch/gouuid/*.go # gosub
+- loggregator/src/github.com/pivotal-golang/localip/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/loggertesthelper/*.go # gosub

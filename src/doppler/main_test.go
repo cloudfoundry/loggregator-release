@@ -5,10 +5,10 @@ import (
 	"time"
 
 	"doppler"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/localip"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
+	"github.com/pivotal-golang/localip"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

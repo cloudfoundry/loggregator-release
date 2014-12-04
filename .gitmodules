@@ -58,3 +58,6 @@
 [submodule "src/github.com/apcera/gnatsd"]
 	path = src/github.com/apcera/gnatsd
 	url = https://github.com/apcera/gnatsd
+[submodule "src/github.com/pivotal-golang/localip"]
+	path = src/github.com/pivotal-golang/localip
+	url = https://github.com/pivotal-golang/localip
