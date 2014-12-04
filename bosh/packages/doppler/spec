@@ -33,6 +33,7 @@ files:
 - loggregator/src/github.com/cloudfoundry/dropsonde/signature/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gosteno/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gosteno/syslog/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/gunk/workpool/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/agentlistener/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/appservice/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/*.go # gosub
@@ -44,7 +45,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/store/cache/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/etcdstoreadapter/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/storeadapter/workerpool/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/yagnats/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/yagnats/fakeyagnats/*.go # gosub
 - loggregator/src/github.com/coreos/go-etcd/etcd/*.go # gosub

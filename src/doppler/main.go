@@ -12,11 +12,11 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
-	"github.com/cloudfoundry/storeadapter/workerpool"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	"github.com/pivotal-golang/localip"
@@ -38,9 +38,9 @@ func (hm DopplerServerHealthMonitor) Ok() bool {
 }
 
 var StoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
-	workerPool := workerpool.NewWorkerPool(concurrentRequests)
+	workPool := workpool.NewWorkPool(concurrentRequests)
 
-	return etcdstoreadapter.NewETCDStoreAdapter(urls, workerPool)
+	return etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
 }
 
 const HeartbeatInterval = 10 * time.Second

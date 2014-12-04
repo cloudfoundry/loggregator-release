@@ -14,13 +14,13 @@ import (
 
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar"
 	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
-	"github.com/cloudfoundry/storeadapter/workerpool"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	"trafficcontroller/channel_group_connector"
@@ -32,9 +32,9 @@ import (
 )
 
 var DefaultStoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
-	workerPool := workerpool.NewWorkerPool(concurrentRequests)
+	workPool := workpool.NewWorkPool(concurrentRequests)
 
-	return etcdstoreadapter.NewETCDStoreAdapter(urls, workerPool)
+	return etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
 }
 
 var EtcdQueryInterval = 5 * time.Second

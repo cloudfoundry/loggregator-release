@@ -12,6 +12,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
@@ -20,7 +21,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/store/cache"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
-	"github.com/cloudfoundry/storeadapter/workerpool"
 	"sync"
 	"time"
 )
@@ -86,8 +86,8 @@ func New(host string, config *Config, logger *gosteno.Logger, dropsondeOrigin st
 	cfcomponent.Logger = logger
 	keepAliveInterval := 30 * time.Second
 
-	workerPool := workerpool.NewWorkerPool(config.EtcdMaxConcurrentRequests)
-	storeAdapter := etcdstoreadapter.NewETCDStoreAdapter(config.EtcdUrls, workerPool)
+	workPool := workpool.NewWorkPool(config.EtcdMaxConcurrentRequests)
+	storeAdapter := etcdstoreadapter.NewETCDStoreAdapter(config.EtcdUrls, workPool)
 	storeAdapter.Connect()
 	appStoreCache := cache.NewAppServiceCache()
 	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)

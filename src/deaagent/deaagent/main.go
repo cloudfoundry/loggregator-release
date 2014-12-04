@@ -7,9 +7,9 @@ import (
 	"flag"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
-	"github.com/cloudfoundry/storeadapter/workerpool"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	"os"
@@ -129,8 +129,8 @@ func main() {
 }
 
 func newSyslogDrainStore(config *Config, logger *gosteno.Logger) syslog_drain_store.SyslogDrainStore {
-	workerPool := workerpool.NewWorkerPool(config.EtcdMaxConcurrentRequests)
-	storeAdapter := etcdstoreadapter.NewETCDStoreAdapter(config.EtcdUrls, workerPool)
+	workPool := workpool.NewWorkPool(config.EtcdMaxConcurrentRequests)
+	storeAdapter := etcdstoreadapter.NewETCDStoreAdapter(config.EtcdUrls, workPool)
 	storeAdapter.Connect()
 	return syslog_drain_store.NewSyslogDrainStore(storeAdapter, logger)
 }

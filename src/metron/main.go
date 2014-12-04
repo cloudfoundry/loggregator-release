@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
@@ -16,7 +17,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
-	"github.com/cloudfoundry/storeadapter/workerpool"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	"metron/eventlistener"
@@ -39,9 +39,9 @@ var METRIC_TTL = time.Second * 5
 var PING_SENDER_INTERVAL = time.Second * 1
 
 var StoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
-	workerPool := workerpool.NewWorkerPool(concurrentRequests)
+	workPool := workpool.NewWorkPool(concurrentRequests)
 
-	return etcdstoreadapter.NewETCDStoreAdapter(urls, workerPool)
+	return etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
 }
 
 func main() {

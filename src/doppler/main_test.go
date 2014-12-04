@@ -110,7 +110,7 @@ var _ = Describe("Main", func() {
 
 			It("sends a heartbeat to etcd", func() {
 				main.StartHeartbeats(time.Second, &config, loggertesthelper.Logger())
-				Expect(adapter.MaintainedNodeName).To(Equal("/healthstatus/doppler/z1/doppler_z1/0"))
+				Expect(adapter.GetMaintainedNodeName()).To(Equal("/healthstatus/doppler/z1/doppler_z1/0"))
 				local_ip, _ := localip.LocalIP()
 				Expect(adapter.MaintainedNodeValue).To(Equal([]byte(local_ip)))
 			})
@@ -132,7 +132,7 @@ var _ = Describe("Main", func() {
 				}
 
 				main.StartHeartbeats(time.Second, &config, loggertesthelper.Logger())
-				Expect(adapter.MaintainedNodeName).To(BeEmpty())
+				Expect(adapter.GetMaintainedNodeName()).To(BeEmpty())
 			})
 		})
 	})
