@@ -57,7 +57,7 @@ var _ = Describe("Elector", func() {
 	})
 
 	Describe("RunForElection", func() {
-		var candidate elector.Elector
+		var candidate *elector.Elector
 
 		BeforeEach(func() {
 			candidate = elector.NewElector("name", fakeStore, time.Second, logger)
@@ -116,7 +116,7 @@ var _ = Describe("Elector", func() {
 	})
 
 	Describe("StayAsLeader", func() {
-		var candidate elector.Elector
+		var candidate *elector.Elector
 
 		BeforeEach(func() {
 			fakeStore.Create(storeadapter.StoreNode{

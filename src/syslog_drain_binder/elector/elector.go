@@ -13,7 +13,7 @@ type Elector struct {
 	logger         *gosteno.Logger
 }
 
-func NewElector(instanceName string, adapter storeadapter.StoreAdapter, updateInterval time.Duration, logger *gosteno.Logger) Elector {
+func NewElector(instanceName string, adapter storeadapter.StoreAdapter, updateInterval time.Duration, logger *gosteno.Logger) *Elector {
 
 	for {
 		err := adapter.Connect()
@@ -26,7 +26,7 @@ func NewElector(instanceName string, adapter storeadapter.StoreAdapter, updateIn
 		time.Sleep(updateInterval)
 	}
 
-	return Elector{
+	return &Elector{
 		instanceName:   []byte(instanceName),
 		adapter:        adapter,
 		updateInterval: updateInterval,
