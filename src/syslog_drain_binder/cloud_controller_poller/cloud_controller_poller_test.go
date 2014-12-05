@@ -44,11 +44,22 @@ var _ = Describe("CloudControllerPoller", func() {
 			Expect(fakeCloudController.queryParams).To(HaveKeyWithValue("batch_size", []string{"2"}))
 		})
 
-		It("processes all pages into a single result", func() {
+		It("processes all pages into a single result with batch_size 2", func() {
 			drainUrls, err := cloud_controller_poller.Poll(addr, "user", "pass", 2)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeCloudController.requestCount).To(Equal(6))
+
+			for _, entry := range appDrains {
+				Expect(drainUrls).To(HaveKeyWithValue(entry.appId, entry.urls))
+			}
+		})
+
+		It("processes all pages into a single result with batch_size 3", func() {
+			drainUrls, err := cloud_controller_poller.Poll(addr, "user", "pass", 3)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeCloudController.requestCount).To(Equal(5))
 
 			for _, entry := range appDrains {
 				Expect(drainUrls).To(HaveKeyWithValue(entry.appId, entry.urls))

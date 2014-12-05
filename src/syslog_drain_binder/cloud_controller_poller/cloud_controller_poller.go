@@ -2,15 +2,14 @@ package cloud_controller_poller
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
-	"errors"
 )
 
 type AppId string
 type DrainURL string
-
 
 func Poll(hostname net.Addr, username string, password string, batchSize int) (map[AppId][]DrainURL, error) {
 	drainURLs := make(map[AppId][]DrainURL)
@@ -30,7 +29,6 @@ func Poll(hostname net.Addr, username string, password string, batchSize int) (m
 		if response.StatusCode != http.StatusOK {
 			return drainURLs, errors.New(fmt.Sprintf("Remote server error: %s", http.StatusText(response.StatusCode)))
 		}
-
 
 		decoder := json.NewDecoder(response.Body)
 		var ccResponse cloudControllerResponse
