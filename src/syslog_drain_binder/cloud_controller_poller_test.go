@@ -1,7 +1,7 @@
-package cloud_controller_poller_test
+package main_test
 
 import (
-	"syslog_drain_binder/cloud_controller_poller"
+	syslog_drain_binder "syslog_drain_binder"
 
 	"encoding/base64"
 	"encoding/json"
@@ -37,7 +37,7 @@ var _ = Describe("CloudControllerPoller", func() {
 		})
 
 		It("connects to the correct endpoint with basic authentication and the expected parameters", func() {
-			cloud_controller_poller.Poll(addr, "user", "pass", 2)
+			syslog_drain_binder.Poll(addr, "user", "pass", 2)
 			Expect(fakeCloudController.servedRoute).To(Equal("/v2/syslog_drain_urls"))
 			Expect(fakeCloudController.username).To(Equal("user"))
 			Expect(fakeCloudController.password).To(Equal("pass"))
@@ -46,7 +46,7 @@ var _ = Describe("CloudControllerPoller", func() {
 		})
 
 		It("processes all pages into a single result with batch_size 2", func() {
-			drainUrls, err := cloud_controller_poller.Poll(addr, "user", "pass", 2)
+			drainUrls, err := syslog_drain_binder.Poll(addr, "user", "pass", 2)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeCloudController.requestCount).To(Equal(6))
@@ -57,7 +57,7 @@ var _ = Describe("CloudControllerPoller", func() {
 		})
 
 		It("processes all pages into a single result with batch_size 3", func() {
-			drainUrls, err := cloud_controller_poller.Poll(addr, "user", "pass", 3)
+			drainUrls, err := syslog_drain_binder.Poll(addr, "user", "pass", 3)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeCloudController.requestCount).To(Equal(5))
@@ -73,7 +73,7 @@ var _ = Describe("CloudControllerPoller", func() {
 			})
 
 			It("returns as much data as it has, and an error", func() {
-				drainUrls, err := cloud_controller_poller.Poll(addr, "user", "pass", 2)
+				drainUrls, err := syslog_drain_binder.Poll(addr, "user", "pass", 2)
 				Expect(err).To(HaveOccurred())
 
 				Expect(fakeCloudController.requestCount).To(Equal(4))

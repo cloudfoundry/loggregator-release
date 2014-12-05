@@ -1,4 +1,4 @@
-package cloud_controller_poller
+package main
 
 import (
 	"encoding/json"
