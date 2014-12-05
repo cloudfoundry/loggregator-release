@@ -29,6 +29,7 @@ packages=(
     trafficcontroller
     metron
     doppler
+    syslog_drain_binder
 )
 
 for package in "${packages[@]}"

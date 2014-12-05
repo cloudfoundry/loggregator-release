@@ -6,13 +6,12 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+
+	"syslog_drain_binder/shared_types"
 )
 
-type AppId string
-type DrainURL string
-
-func Poll(hostname net.Addr, username string, password string, batchSize int) (map[AppId][]DrainURL, error) {
-	drainURLs := make(map[AppId][]DrainURL)
+func Poll(hostname net.Addr, username string, password string, batchSize int) (map[shared_types.AppId][]shared_types.DrainURL, error) {
+	drainURLs := make(map[shared_types.AppId][]shared_types.DrainURL)
 
 	nextId := 0
 
@@ -48,8 +47,8 @@ func Poll(hostname net.Addr, username string, password string, batchSize int) (m
 }
 
 type cloudControllerResponse struct {
-	Results map[AppId][]DrainURL `json:"results"`
-	NextId  *int                 `json:"next_id"`
+	Results map[shared_types.AppId][]shared_types.DrainURL `json:"results"`
+	NextId  *int                                           `json:"next_id"`
 }
 
 func buildUrl(baseURL string, batchSize int, nextId int) string {

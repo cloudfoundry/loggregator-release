@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"syslog_drain_binder/shared_types"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -92,21 +93,21 @@ var _ = Describe("CloudControllerPoller", func() {
 })
 
 type appEntry struct {
-	appId cloud_controller_poller.AppId
-	urls  []cloud_controller_poller.DrainURL
+	appId shared_types.AppId
+	urls  []shared_types.DrainURL
 }
 
 var appDrains = []appEntry{
-	{appId: "app0", urls: []cloud_controller_poller.DrainURL{"urlA"}},
-	{appId: "app1", urls: []cloud_controller_poller.DrainURL{"urlB"}},
-	{appId: "app2", urls: []cloud_controller_poller.DrainURL{"urlA", "urlC"}},
-	{appId: "app3", urls: []cloud_controller_poller.DrainURL{"urlA", "urlD", "urlE"}},
-	{appId: "app4", urls: []cloud_controller_poller.DrainURL{"urlA"}},
-	{appId: "app5", urls: []cloud_controller_poller.DrainURL{"urlA"}},
-	{appId: "app6", urls: []cloud_controller_poller.DrainURL{"urlA"}},
-	{appId: "app7", urls: []cloud_controller_poller.DrainURL{"urlA"}},
-	{appId: "app8", urls: []cloud_controller_poller.DrainURL{"urlA"}},
-	{appId: "app9", urls: []cloud_controller_poller.DrainURL{"urlA"}},
+	{appId: "app0", urls: []shared_types.DrainURL{"urlA"}},
+	{appId: "app1", urls: []shared_types.DrainURL{"urlB"}},
+	{appId: "app2", urls: []shared_types.DrainURL{"urlA", "urlC"}},
+	{appId: "app3", urls: []shared_types.DrainURL{"urlA", "urlD", "urlE"}},
+	{appId: "app4", urls: []shared_types.DrainURL{"urlA"}},
+	{appId: "app5", urls: []shared_types.DrainURL{"urlA"}},
+	{appId: "app6", urls: []shared_types.DrainURL{"urlA"}},
+	{appId: "app7", urls: []shared_types.DrainURL{"urlA"}},
+	{appId: "app8", urls: []shared_types.DrainURL{"urlA"}},
+	{appId: "app9", urls: []shared_types.DrainURL{"urlA"}},
 }
 
 type fakeCC struct {
@@ -146,12 +147,12 @@ func buildResponse(start int, end int) []byte {
 	var r jsonResponse
 	if start >= 10 {
 		r = jsonResponse{
-			Results: make(map[cloud_controller_poller.AppId][]cloud_controller_poller.DrainURL),
+			Results: make(map[shared_types.AppId][]shared_types.DrainURL),
 			NextId:  nil,
 		}
 	} else {
 		r = jsonResponse{
-			Results: make(map[cloud_controller_poller.AppId][]cloud_controller_poller.DrainURL),
+			Results: make(map[shared_types.AppId][]shared_types.DrainURL),
 			NextId:  &end,
 		}
 
@@ -165,6 +166,6 @@ func buildResponse(start int, end int) []byte {
 }
 
 type jsonResponse struct {
-	Results map[cloud_controller_poller.AppId][]cloud_controller_poller.DrainURL `json:"results"`
-	NextId  *int                                                                 `json:"next_id"`
+	Results map[shared_types.AppId][]shared_types.DrainURL `json:"results"`
+	NextId  *int                                           `json:"next_id"`
 }
