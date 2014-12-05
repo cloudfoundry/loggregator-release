@@ -182,32 +182,38 @@ properties:
 Before continuing, you should be familiar with the [`uaac` tool](http://docs.cloudfoundry.org/adminguide/uaa-user-management.html).
 
 1. Ensure that doppler is a UAA client. If `uaac client get doppler` returns output like
-   ```
-     scope: uaa.none
-     client_id: doppler
-     resource_ids: none
-     authorized_grant_types: authorization_code refresh_token
-     authorities: uaa.resource
-   ```
-   then you're set.
-   1. If it does not exist, run `uaac client add doppler --scope uaa.none --authorized_grant_types authorization_code,refresh_token --authorities uaa.resource` (and set its secret).
-   1. If it exists but with incorrect properties, run `uaac client update doppler --scope uaa.none --authorized_grant_types "authorization_code refresh_token" --authorities uaa.resource`.
+
+  ```
+    scope: uaa.none
+    client_id: doppler
+    resource_ids: none
+    authorized_grant_types: authorization_code refresh_token
+    authorities: uaa.resource
+  ```
+
+  then you're set.
+
+  1. If it does not exist, run `uaac client add doppler --scope uaa.none --authorized_grant_types authorization_code,refresh_token --authorities uaa.resource` (and set its secret).
+  1. If it exists but with incorrect properties, run `uaac client update doppler --scope uaa.none --authorized_grant_types "authorization_code refresh_token" --authorities uaa.resource`.
 1. Grant firehose access to the `cf` client.
-   1. Check the scopes assigned to `cf` with `uaac client get cf`, e.g.
-   ```
-     scope: cloud_controller.admin cloud_controller.read cloud_controller.write openid password.write scim.read scim.userids scim.write
-     client_id: cf
-     resource_ids: none
-     authorized_grant_types: implicit password refresh_token
-     access_token_validity: 600
-     refresh_token_validity: 2592000
-     authorities: uaa.none
-     autoapprove: true
-   ```
-   1. Copy the existing scope and add `doppler.firehose`, then update the client
-   ```
-   uaac client update cf --scope "cloud_controller.admin cloud_controller.read cloud_controller.write openid password.write scim.read scim.userids scim.write doppler.firehose"
-   ```
+  1. Check the scopes assigned to `cf` with `uaac client get cf`, e.g.
+
+    ```
+      scope: cloud_controller.admin cloud_controller.read cloud_controller.write openid password.write scim.read scim.userids scim.write
+      client_id: cf
+      resource_ids: none
+      authorized_grant_types: implicit password refresh_token
+      access_token_validity: 600
+      refresh_token_validity: 2592000
+      authorities: uaa.none
+      autoapprove: true
+    ```
+
+  1. Copy the existing scope and add `doppler.firehose`, then update the client
+
+    ```
+    uaac client update cf --scope "cloud_controller.admin cloud_controller.read cloud_controller.write openid password.write scim.read scim.userids scim.write doppler.firehose"
+    ```
 
 ### Consuming log and metric data
 
