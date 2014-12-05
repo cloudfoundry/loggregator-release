@@ -208,6 +208,7 @@ Before continuing, you should be familiar with the [`uaac` tool](http://docs.clo
    ```
    uaac client update cf --scope "cloud_controller.admin cloud_controller.read cloud_controller.write openid password.write scim.read scim.userids scim.write doppler.firehose"
    ```
+
 ### Consuming log and metric data
 
 The [NOAA Client](https://github.com/cloudfoundry/noaa) library, written in Golang, can be used by Go applications to consume app log data as well as the log + metrics firehose. If you wish to write your own client application using this library, please refer to the NOAA source and documentation.
