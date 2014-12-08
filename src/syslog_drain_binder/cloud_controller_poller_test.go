@@ -5,7 +5,6 @@ import (
 
 	"encoding/base64"
 	"encoding/json"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -22,14 +21,14 @@ var _ = Describe("CloudControllerPoller", func() {
 		var (
 			testServer          *httptest.Server
 			fakeCloudController fakeCC
-			addr                net.Addr
+			addr                string
 		)
 
 		BeforeEach(func() {
 			fakeCloudController = fakeCC{}
 
 			testServer = httptest.NewServer(http.HandlerFunc(fakeCloudController.ServeHTTP))
-			addr = testServer.Listener.Addr()
+			addr = "http://" + testServer.Listener.Addr().String()
 		})
 
 		AfterEach(func() {

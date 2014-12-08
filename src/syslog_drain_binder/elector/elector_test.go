@@ -46,7 +46,7 @@ var _ = Describe("Elector", func() {
 					messages = append(messages, record.Message)
 				}
 
-				Expect(messages).To(ContainElement("Unable to connect to store: 'connection error'"))
+				Expect(messages).To(ContainElement("Elector: Unable to connect to store: 'connection error'"))
 			})
 
 			It("reconnects on an interval", func() {
@@ -90,7 +90,7 @@ var _ = Describe("Elector", func() {
 
 			Eventually(func() int { return len(testingSink.Records()) }, 3).Should(BeNumerically(">=", 2))
 			for _, record := range testingSink.Records() {
-				Expect(record.Message).To(Equal("Lost election"))
+				Expect(record.Message).To(Equal("Elector: 'name' lost election for cluster leader."))
 			}
 		})
 
