@@ -2,11 +2,12 @@ package elector_test
 
 import (
 	"errors"
+	"syslog_drain_binder/elector"
+	"time"
+
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
-	"syslog_drain_binder/elector"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -73,6 +74,11 @@ var _ = Describe("Elector", func() {
 			Expect(node.TTL).To(Equal(uint64(1)))
 		})
 
+		It("sets the IsLeader flag to true", func() {
+			candidate.RunForElection()
+			Expect(candidate.IsLeader()).To(BeTrue())
+		})
+
 		It("re-attempts on an interval if key already exists", func() {
 			err := fakeStore.Create(storeadapter.StoreNode{
 				Key:   "syslog_drain_binder/leader",
@@ -94,6 +100,7 @@ var _ = Describe("Elector", func() {
 
 			err := candidate.RunForElection()
 			Expect(err).To(Equal(testError))
+			Expect(candidate.IsLeader()).To(BeFalse())
 		})
 
 		It("returns nil when it eventually wins", func() {
@@ -123,7 +130,6 @@ var _ = Describe("Elector", func() {
 				Key:   "syslog_drain_binder/leader",
 				Value: []byte("candidate1"),
 			})
-
 		})
 
 		Context("when already leader", func() {
@@ -136,6 +142,7 @@ var _ = Describe("Elector", func() {
 				node, _ := fakeStore.Get("syslog_drain_binder/leader")
 				Expect(node.Value).To(BeEquivalentTo("candidate1"))
 				Expect(node.TTL).To(Equal(uint64(1)))
+				Expect(candidate.IsLeader()).To(BeTrue())
 			})
 		})
 
@@ -145,6 +152,7 @@ var _ = Describe("Elector", func() {
 
 				err := candidate.StayAsLeader()
 				Expect(err).To(HaveOccurred())
+				Expect(candidate.IsLeader()).To(BeFalse())
 			})
 
 			It("does not replace the existing leader", func() {
@@ -154,6 +162,57 @@ var _ = Describe("Elector", func() {
 
 				node, _ := fakeStore.Get("syslog_drain_binder/leader")
 				Expect(node.Value).To(BeEquivalentTo("candidate1"))
+			})
+		})
+	})
+
+	Describe("Vacate", func() {
+		var candidate *elector.Elector
+
+		BeforeEach(func() {
+			candidate = elector.NewElector("candidate1", fakeStore, time.Second, logger)
+			candidate.RunForElection()
+		})
+
+		It("sets the IsLeader flag to false", func() {
+			candidate.Vacate()
+			Expect(candidate.IsLeader()).To(BeFalse())
+		})
+
+		Context("when leader", func() {
+			It("deletes the node and returns nil", func() {
+				err := candidate.Vacate()
+				Expect(err).NotTo(HaveOccurred())
+
+				node, err := fakeStore.Get("syslog_drain_binder/leader")
+				Expect(node).To(Equal(storeadapter.StoreNode{}))
+				Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
+			})
+		})
+
+		Context("when already not leader", func() {
+			BeforeEach(func() {
+				fakeStore.Delete("syslog_drain_binder/leader")
+				fakeStore.Create(storeadapter.StoreNode{
+					Key:   "syslog_drain_binder/leader",
+					Value: []byte("candidate2"),
+				})
+			})
+
+			It("returns an error", func() {
+				err := candidate.Vacate()
+				Expect(err).To(Equal(storeadapter.ErrorKeyComparisonFailed))
+			})
+
+			It("does not affect the existing leader", func() {
+				candidate.Vacate()
+
+				node, _ := fakeStore.Get("syslog_drain_binder/leader")
+				Expect(node).To(Equal(storeadapter.StoreNode{
+					Key:   "syslog_drain_binder/leader",
+					Value: []byte("candidate2"),
+				}))
+
 			})
 		})
 	})

@@ -1,20 +1,21 @@
 package elector
 
 import (
+	"time"
+
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/storeadapter"
-	"time"
 )
 
 type Elector struct {
 	instanceName   []byte
 	adapter        storeadapter.StoreAdapter
 	updateInterval time.Duration
+	isLeader       bool
 	logger         *gosteno.Logger
 }
 
 func NewElector(instanceName string, adapter storeadapter.StoreAdapter, updateInterval time.Duration, logger *gosteno.Logger) *Elector {
-
 	for {
 		err := adapter.Connect()
 
@@ -38,12 +39,9 @@ func (elector *Elector) RunForElection() error {
 	var err error
 
 	for {
-		err = elector.adapter.Create(storeadapter.StoreNode{
-			Key:   "syslog_drain_binder/leader",
-			Value: elector.instanceName,
-			TTL:   uint64(elector.updateInterval.Seconds()),
-		})
+		err = elector.adapter.Create(elector.generateNode())
 
+		elector.isLeader = (err == nil)
 		if err == nil { // won election
 			return nil
 		}
@@ -59,11 +57,27 @@ func (elector *Elector) RunForElection() error {
 }
 
 func (elector *Elector) StayAsLeader() error {
-	node := storeadapter.StoreNode{
+	node := elector.generateNode()
+
+	err := elector.adapter.CompareAndSwap(node, node)
+
+	elector.isLeader = (err == nil)
+	return err
+}
+
+func (elector *Elector) Vacate() error {
+	elector.isLeader = false
+	return elector.adapter.CompareAndDelete(elector.generateNode())
+}
+
+func (elector Elector) IsLeader() bool {
+	return elector.isLeader
+}
+
+func (elector *Elector) generateNode() storeadapter.StoreNode {
+	return storeadapter.StoreNode{
 		Key:   "syslog_drain_binder/leader",
 		Value: elector.instanceName,
 		TTL:   uint64(elector.updateInterval.Seconds()),
 	}
-
-	return elector.adapter.CompareAndSwap(node, node)
 }

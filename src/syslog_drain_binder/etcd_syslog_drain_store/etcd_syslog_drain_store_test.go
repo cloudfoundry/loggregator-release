@@ -4,12 +4,13 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
+	"syslog_drain_binder/etcd_syslog_drain_store"
+	"syslog_drain_binder/shared_types"
 	"time"
+
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
-	"syslog_drain_binder/etcd_syslog_drain_store"
-	"syslog_drain_binder/shared_types"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -3,12 +3,13 @@ package etcd_syslog_drain_store
 import (
 	"crypto/sha1"
 	"fmt"
-	"time"
 	"strings"
+	"time"
+
+	"syslog_drain_binder/shared_types"
 
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/storeadapter"
-	"syslog_drain_binder/shared_types"
 )
 
 type EtcdSyslogDrainStore struct {
