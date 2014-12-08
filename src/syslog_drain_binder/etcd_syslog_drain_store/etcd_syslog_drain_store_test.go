@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
+	"time"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
@@ -22,7 +23,7 @@ var _ = Describe("EtcdSyslogDrainStore", func() {
 
 	BeforeEach(func() {
 		fakeStoreAdapter = NewFakeStoreAdapter()
-		syslogDrainStore = etcd_syslog_drain_store.NewEtcdSyslogDrainStore(fakeStoreAdapter, loggertesthelper.Logger())
+		syslogDrainStore = etcd_syslog_drain_store.NewEtcdSyslogDrainStore(fakeStoreAdapter, 10*time.Second, loggertesthelper.Logger())
 	})
 
 	Describe("UpdateDrains", func() {
@@ -48,7 +49,7 @@ var _ = Describe("EtcdSyslogDrainStore", func() {
 			}
 			syslogDrainStore.UpdateDrains(appDrainUrlMap)
 			node, _ := fakeStoreAdapter.Get(drainKey("app-id", "url1"))
-			Expect(node.TTL).To(BeEquivalentTo(etcd_syslog_drain_store.APP_NODE_TTL.Seconds()))
+			Expect(node.TTL).To(BeEquivalentTo(10))
 		})
 
 		It("returns an error if adapter.SetMulti fails", func() {
