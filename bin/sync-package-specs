@@ -2,8 +2,11 @@
 
 set -e
 
-# ensure gosub is installed (this will recompile it only if necessary)
-go install github.com/vito/gosub
+if [ ! $(which gosub) ]; then
+    echo "Gosub required to update dependencies in bosh/*/spec files."
+    echo 'Please install with `go get github.com/vito/gosub`'
+    exit 1
+fi
 
 loggregator_root=${GOPATH}
 
