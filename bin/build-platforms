@@ -2,7 +2,7 @@
 
 set -e
 
-COMPONENTS="deaagent/deaagent trafficcontroller metron doppler"
+COMPONENTS="deaagent/deaagent trafficcontroller metron doppler syslog_drain_binder"
 
 function build-architecture {
     COMPONENT=${1}

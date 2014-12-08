@@ -39,3 +39,4 @@ check_for_data_race doppler "./bin/doppler --config=./config/doppler_with_fake_n
 LOGGREGATOR_SHARED_SECRET='asdf' check_for_data_race deaagent "./bin/deaagent --config=./config/dea_logging_agent_with_fake_nats.json"
 check_for_data_race trafficcontroller "./bin/trafficcontroller --config=./config/loggregator_trafficcontroller.json"
 check_for_data_race metron "./bin/metron --configFile=config/metron.json"
+check_for_data_race syslog_drain_binder "./bin/syslog_drain_binder --config=config/syslog_drain_binder.json"
