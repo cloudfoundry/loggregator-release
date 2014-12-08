@@ -4,10 +4,10 @@
     "UpdateIntervalSeconds": 15,
 
     "EtcdConcurrentRequests": 10,
-    "EtcdUrls": ["127.0.0.1:4001"],
+    "EtcdUrls": ["http://127.0.0.1:4001"],
 
-    "CloudControllerAddress": "api.10.244.0.34.xip.io",
-    "BulkApiUsername": "bulk",
-    "BulkApiPassword": "bulk",
+    "CloudControllerAddress": "http://api.10.244.0.34.xip.io",
+    "BulkApiUsername": "bulk_api",
+    "BulkApiPassword": "bulk-password",
     "PollingBatchSize": 100
 }

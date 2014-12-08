@@ -4,19 +4,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 
 	"syslog_drain_binder/shared_types"
 )
 
-func Poll(hostname net.Addr, username string, password string, batchSize int) (map[shared_types.AppId][]shared_types.DrainURL, error) {
+func Poll(hostname string, username string, password string, batchSize int) (map[shared_types.AppId][]shared_types.DrainURL, error) {
 	drainURLs := make(map[shared_types.AppId][]shared_types.DrainURL)
 
 	nextId := 0
 
 	for {
-		url := buildUrl(hostname.String(), batchSize, nextId)
+		url := buildUrl(hostname, batchSize, nextId)
 		request, _ := http.NewRequest("GET", url, nil)
 		request.SetBasicAuth(username, password)
 
@@ -52,8 +51,7 @@ type cloudControllerResponse struct {
 }
 
 func buildUrl(baseURL string, batchSize int, nextId int) string {
-	url := fmt.Sprintf("http://%s/v2/syslog_drain_urls", baseURL)
-	url = fmt.Sprintf("%s?batch_size=%d", url, batchSize)
+	url := fmt.Sprintf("%s/v2/syslog_drain_urls?batch_size=%d", baseURL, batchSize)
 
 	if nextId != 0 {
 		url = fmt.Sprintf("%s&next_id=%d", url, nextId)

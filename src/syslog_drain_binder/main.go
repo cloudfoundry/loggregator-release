@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"net"
 	"syslog_drain_binder/elector"
 	"syslog_drain_binder/etcd_syslog_drain_store"
 	"time"
@@ -33,7 +32,10 @@ func main() {
 	store := etcd_syslog_drain_store.NewEtcdSyslogDrainStore(adapter, drainTTL, logger)
 
 	var err error
+	ticker := time.NewTicker(updateInterval)
 	for {
+		<-ticker.C
+
 		if politician.IsLeader() {
 			err = politician.StayAsLeader()
 			if err != nil {
@@ -45,27 +47,21 @@ func main() {
 			err = politician.RunForElection()
 
 			if err != nil {
-				logger.Errorf("Error when running for leader: %s", err.Error(), config.DrainUrlTtlSeconds)
+				logger.Errorf("Error when running for leader: %s", err.Error())
 				politician.Vacate()
 				continue
 			}
 		}
 
-		addr, err := net.ResolveTCPAddr("tcp", config.CloudControllerAddress)
-
-		if err != nil {
-			logger.Errorf("Error when resolving address '%s' for cloud controller: %s", config.CloudControllerAddress, err.Error())
-			politician.Vacate()
-			continue
-		}
-
-		drainUrls, err := Poll(addr, config.BulkApiUsername, config.BulkApiPassword, config.PollingBatchSize)
+		logger.Debugf("Polling %s for updates", config.CloudControllerAddress)
+		drainUrls, err := Poll(config.CloudControllerAddress, config.BulkApiUsername, config.BulkApiPassword, config.PollingBatchSize)
 		if err != nil {
 			logger.Errorf("Error when polling cloud controller: %s", err.Error())
 			politician.Vacate()
 			continue
 		}
 
+		logger.Debugf("Updating drain URLs for %d application(s)", len(drainUrls))
 		err = store.UpdateDrains(drainUrls)
 		if err != nil {
 			logger.Errorf("Error when updating ETCD: %s", err.Error())

@@ -23,7 +23,7 @@ func NewElector(instanceName string, adapter storeadapter.StoreAdapter, updateIn
 			break
 		}
 
-		logger.Errorf("Unable to connect to store: '%s'", err.Error())
+		logger.Errorf("Elector: Unable to connect to store: '%s'", err.Error())
 		time.Sleep(updateInterval)
 	}
 
@@ -43,20 +43,24 @@ func (elector *Elector) RunForElection() error {
 
 		elector.isLeader = (err == nil)
 		if err == nil { // won election
+			elector.logger.Infof("Elector: '%s' won election for cluster leader.", elector.instanceName)
 			return nil
 		}
 
 		if err != storeadapter.ErrorKeyExists { // weird error with etcd; give up
+			elector.logger.Errorf("Elector: unexpected error from Etcd: %s", err)
 			return err
 		}
 
 		// lost election
-		elector.logger.Info("Lost election")
+		elector.logger.Infof("Elector: '%s' lost election for cluster leader.", elector.instanceName)
 		time.Sleep(elector.updateInterval)
 	}
 }
 
 func (elector *Elector) StayAsLeader() error {
+	elector.logger.Debugf("Elector: '%s' attempting to remain cluster leader…", elector.instanceName)
+
 	node := elector.generateNode()
 
 	err := elector.adapter.CompareAndSwap(node, node)
@@ -66,6 +70,8 @@ func (elector *Elector) StayAsLeader() error {
 }
 
 func (elector *Elector) Vacate() error {
+	elector.logger.Debugf("Elector: '%s' attempting to vacate leadership…", elector.instanceName)
+
 	elector.isLeader = false
 	return elector.adapter.CompareAndDelete(elector.generateNode())
 }
