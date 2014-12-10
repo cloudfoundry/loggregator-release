@@ -2,14 +2,11 @@ package main
 
 import (
 	"deaagent"
-	"deaagent/syslog_drain_store"
 	"errors"
 	"flag"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	"os"
@@ -18,7 +15,6 @@ import (
 	"time"
 )
 
-const AppNodeTTLRefreshInterval = syslog_drain_store.APP_NODE_TTL / 2
 const DrainStoreRefreshInterval = 1 * time.Minute
 
 type Config struct {
@@ -111,8 +107,7 @@ func main() {
 	}
 	// ** END Config Setup
 
-	syslogDrainStore := newSyslogDrainStore(config, logger)
-	agent := deaagent.NewAgent(*instancesJsonFilePath, logger, syslogDrainStore, AppNodeTTLRefreshInterval, DrainStoreRefreshInterval)
+	agent := deaagent.NewAgent(*instancesJsonFilePath, logger)
 
 	go agent.Start()
 
@@ -126,11 +121,4 @@ func main() {
 			return
 		}
 	}
-}
-
-func newSyslogDrainStore(config *Config, logger *gosteno.Logger) syslog_drain_store.SyslogDrainStore {
-	workPool := workpool.NewWorkPool(config.EtcdMaxConcurrentRequests)
-	storeAdapter := etcdstoreadapter.NewETCDStoreAdapter(config.EtcdUrls, workPool)
-	storeAdapter.Connect()
-	return syslog_drain_store.NewSyslogDrainStore(storeAdapter, logger)
 }

@@ -2,7 +2,6 @@ package deaagent
 
 import (
 	"deaagent/domain"
-	"deaagent/syslog_drain_store"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/howeyc/fsnotify"
 	"io/ioutil"
@@ -12,35 +11,27 @@ import (
 )
 
 type Agent struct {
-	InstancesJsonFilePath     string
-	logger                    *gosteno.Logger
-	knownInstancesChan        chan<- func(map[string]*TaskListener)
-	syslogDrainStore          syslog_drain_store.SyslogDrainStore
-	appNodeTTLRefreshInterval time.Duration
-	drainStoreRefreshInterval time.Duration
-	stopChan                  chan struct{}
+	InstancesJsonFilePath string
+	logger                *gosteno.Logger
+	knownInstancesChan    chan<- func(map[string]*TaskListener)
+	stopChan              chan struct{}
 	sync.WaitGroup
 }
 
-func NewAgent(instancesJsonFilePath string, logger *gosteno.Logger, syslogDrainStore syslog_drain_store.SyslogDrainStore,
-	appNodeTTLRefreshInterval, drainStoreRefreshInterval time.Duration) *Agent {
+func NewAgent(instancesJsonFilePath string, logger *gosteno.Logger) *Agent {
 	knownInstancesChan := atomicCacheOperator()
 
 	return &Agent{
-		InstancesJsonFilePath:     instancesJsonFilePath,
-		logger:                    logger,
-		knownInstancesChan:        knownInstancesChan,
-		syslogDrainStore:          syslogDrainStore,
-		appNodeTTLRefreshInterval: appNodeTTLRefreshInterval,
-		drainStoreRefreshInterval: drainStoreRefreshInterval,
-		stopChan:                  make(chan struct{}),
+		InstancesJsonFilePath: instancesJsonFilePath,
+		logger:                logger,
+		knownInstancesChan:    knownInstancesChan,
+		stopChan:              make(chan struct{}),
 	}
 }
 
 func (agent *Agent) Start() {
-	agent.Add(2)
+	agent.Add(1)
 	go agent.pollInstancesJson()
-	go agent.runAppNodeRefreshLoop()
 }
 
 func (agent *Agent) Stop() {
@@ -65,17 +56,9 @@ func (agent *Agent) processTasks(currentTasks map[string]domain.Task) func(known
 		}
 
 		for _, task := range currentTasks {
-			appId := task.ApplicationId
-
 			drainUrls := task.DrainUrls
 			if drainUrls == nil {
 				drainUrls = []string{}
-			}
-
-			agent.logger.Infof("Updating services for %s to %#v", appId, drainUrls)
-			err := agent.syslogDrainStore.UpdateDrains(appId, drainUrls)
-			if err != nil {
-				agent.logger.Errorf("Drains for app %v could not be updated. Drain Urls: %v: %v", appId, drainUrls, err)
 			}
 
 			identifier := task.Identifier()
@@ -127,9 +110,6 @@ func (agent *Agent) pollInstancesJson() {
 	agent.logger.Info("Read initial tasks data")
 	agent.processInstancesJson()
 
-	ticker := time.NewTicker(agent.drainStoreRefreshInterval)
-	defer ticker.Stop()
-
 	for {
 		select {
 		case ev := <-watcher.Event:
@@ -139,39 +119,10 @@ func (agent *Agent) pollInstancesJson() {
 			} else {
 				agent.processInstancesJson()
 			}
-		case <-ticker.C:
-			agent.processInstancesJson()
 		case err := <-watcher.Error:
 			agent.logger.Warnf("Received error from file system notification: %s\n", err)
 		case <-agent.stopChan:
 			return
-		}
-	}
-}
-
-func (agent *Agent) runAppNodeRefreshLoop() {
-	defer agent.Done()
-
-	ticker := time.NewTicker(agent.appNodeTTLRefreshInterval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			agent.knownInstancesChan <- agent.refreshAppNodes
-		case <-agent.stopChan:
-			return
-		}
-	}
-}
-
-func (agent *Agent) refreshAppNodes(currentTasks map[string]*TaskListener) {
-	for _, taskListener := range currentTasks {
-		task := taskListener.Task()
-		agent.logger.Debugf("refreshing drain store app node for app %v", task.ApplicationId)
-		err := agent.syslogDrainStore.RefreshAppNode(task.ApplicationId)
-		if err != nil {
-			agent.logger.Errorf("Failed to refresh drain TTL for app %v: %v", task.ApplicationId, err)
 		}
 	}
 }

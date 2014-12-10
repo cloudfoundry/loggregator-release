@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
-	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -21,13 +20,12 @@ var (
 
 var _ = Describe("DeaAgent", func() {
 	var (
-		task1StdoutListener  net.Listener
-		task1StderrListener  net.Listener
-		task2StdoutListener  net.Listener
-		task2StderrListener  net.Listener
-		expectedMessage      = "Some Output"
-		agent                *deaagent.Agent
-		fakeSyslogDrainStore *FakeSyslogDrainStore
+		task1StdoutListener net.Listener
+		task1StderrListener net.Listener
+		task2StdoutListener net.Listener
+		task2StderrListener net.Listener
+		expectedMessage     = "Some Output"
+		agent               *deaagent.Agent
 	)
 
 	BeforeEach(func() {
@@ -63,9 +61,7 @@ var _ = Describe("DeaAgent", func() {
 		writeToFile(`{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3, "syslog_drain_urls": ["url1"]},
 	                                {"state": "RUNNING", "application_id": "3456", "warden_job_id": 59, "warden_container_path":"`+tmpdir+`", "instance_index": 1}]}`, true)
 
-		fakeSyslogDrainStore = NewFakeSyslogDrainStore()
-		agent = deaagent.NewAgent(filePath, loggertesthelper.Logger(), fakeSyslogDrainStore,
-			10*time.Millisecond, 10*time.Millisecond)
+		agent = deaagent.NewAgent(filePath, loggertesthelper.Logger())
 	})
 
 	AfterEach(func() {
@@ -80,14 +76,11 @@ var _ = Describe("DeaAgent", func() {
 		Context("at startup", func() {
 			It("picks up new tasks", func() {
 				agent.Start()
-
 				task1StdoutConn, _ := task1StdoutListener.Accept()
 				defer task1StdoutConn.Close()
 				task1StderrConn, _ := task1StderrListener.Accept()
 				defer task1StderrConn.Close()
-
 				task1StdoutConn.Write([]byte(SOCKET_PREFIX + expectedMessage + "\n"))
-
 				Eventually(fakeLogSender.GetLogs).Should(HaveLen(1))
 				logs := fakeLogSender.GetLogs()
 				Expect(logs[0].AppId).To(Equal("1234"))
@@ -136,46 +129,6 @@ var _ = Describe("DeaAgent", func() {
 				logs := fakeLogSender.GetLogs()
 				Expect(logs[0].AppId).To(Equal("5678"))
 			})
-
-			It("ignores failed new tasks", func() {
-				agent.Start()
-
-				writeToFile(`{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3, "syslog_drain_urls": ["url1"]},
-								{"state": "RUNNING", "application_id": "3456", "warden_job_id": 59, "warden_container_path":"`+tmpdir+`", "instance_index": 1},
-								{"state": "RUNNING", "application_id": "5678", "warden_job_id": 58, "warden_container_path":"`+tmpdir+`", "instance_index": 0, "syslog_drain_urls": ["url2"]}
-							   ]}`, true)
-
-				newTask := &domain.Task{
-					ApplicationId:       "5678",
-					SourceName:          "App",
-					WardenJobId:         58,
-					WardenContainerPath: tmpdir,
-					Index:               0,
-				}
-
-				newTaskStdoutListener, newTaskStderrListener := setupTaskSockets(newTask)
-				newTaskStdoutListener.Close()
-				newTaskStderrListener.Close()
-
-				Consistently(func() int { return fakeSyslogDrainStore.AppNodeCallCount("5678") }).Should(Equal(0))
-			})
-		})
-	})
-
-	Describe("Refreshing app TTLs", func() {
-		It("periodically refreshes TTLs for app nodes", func() {
-			agent.Start()
-
-			Eventually(func() int { return fakeSyslogDrainStore.AppNodeCallCount("1234") }).Should(BeNumerically(">", 1))
-			Eventually(func() int { return fakeSyslogDrainStore.AppNodeCallCount("3456") }).Should(BeNumerically(">", 1))
-		})
-	})
-
-	Describe("refreshing drain URLs in etcd to recover in case of etcd failure", func() {
-		It("periodically updates the drain store", func() {
-			agent.Start()
-
-			Eventually(func() int { return len(fakeSyslogDrainStore.UpdateDrainCalls()) }).Should(BeNumerically(">", 2))
 		})
 	})
 
@@ -193,17 +146,6 @@ var _ = Describe("DeaAgent", func() {
 		Expect(logs[0].MessageType).To(Equal("OUT"))
 		Expect(logs[0].Message).To(Equal(expectedMessage))
 	})
-
-	It("pushes updates to syslog drain URLs to the syslog drain store", func() {
-		agent.Start()
-
-		expectedUpdates := []updateDrainParams{
-			{appId: "1234", drainUrls: []string{"url1"}},
-			{appId: "3456", drainUrls: []string{}},
-		}
-
-		Eventually(fakeSyslogDrainStore.UpdateDrainCalls).Should(ConsistOf(expectedUpdates))
-	})
 })
 
 func writeToFile(text string, truncate bool) {
@@ -220,46 +162,4 @@ func writeToFile(text string, truncate bool) {
 func createFile() *os.File {
 	file, _ := os.Create(filePath)
 	return file
-}
-
-type FakeSyslogDrainStore struct {
-	updateDrainCalls    []updateDrainParams
-	refreshAppNodeCalls map[string]int
-	sync.Mutex
-}
-
-func NewFakeSyslogDrainStore() *FakeSyslogDrainStore {
-	return &FakeSyslogDrainStore{
-		refreshAppNodeCalls: make(map[string]int),
-	}
-}
-
-type updateDrainParams struct {
-	appId     string
-	drainUrls []string
-}
-
-func (s *FakeSyslogDrainStore) UpdateDrainCalls() []updateDrainParams {
-	s.Lock()
-	defer s.Unlock()
-	return s.updateDrainCalls
-}
-
-func (s *FakeSyslogDrainStore) AppNodeCallCount(appId string) int {
-	s.Lock()
-	defer s.Unlock()
-	return s.refreshAppNodeCalls[appId]
-}
-
-func (s *FakeSyslogDrainStore) UpdateDrains(appId string, drainUrls []string) error {
-	s.Lock()
-	defer s.Unlock()
-	s.updateDrainCalls = append(s.updateDrainCalls, updateDrainParams{appId, drainUrls})
-	return nil
-}
-func (s *FakeSyslogDrainStore) RefreshAppNode(appId string) error {
-	s.Lock()
-	defer s.Unlock()
-	s.refreshAppNodeCalls[appId] += 1
-	return nil
 }
