@@ -22,7 +22,7 @@ func main() {
 	config := parseConfig(*configFile)
 	logger := cfcomponent.NewLogger(*debug, "", "syslog_drain_binder", config.Config)
 
-	workPool := workpool.NewWorkPool(config.EtcdConcurrentRequests)
+	workPool := workpool.NewWorkPool(config.EtcdMaxConcurrentRequests)
 	adapter := etcdstoreadapter.NewETCDStoreAdapter(config.EtcdUrls, workPool)
 
 	updateInterval := time.Duration(config.UpdateIntervalSeconds) * time.Second
@@ -76,8 +76,8 @@ type Config struct {
 	DrainUrlTtlSeconds    int64
 	UpdateIntervalSeconds int64
 
-	EtcdConcurrentRequests int
-	EtcdUrls               []string
+	EtcdMaxConcurrentRequests int
+	EtcdUrls                  []string
 
 	CloudControllerAddress string
 	BulkApiUsername        string

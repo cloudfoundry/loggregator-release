@@ -48,7 +48,7 @@ func (store *EtcdSyslogDrainStore) updateAppDrains(appId shared_types.AppId, dra
 			continue
 		}
 
-		store.logger.Debugf("UpdateDrains: adding drain %v", drainUrl)
+		store.logger.Debugf("UpdateDrains: adding drain %s to app %s", drainUrl, appId)
 		node := storeadapter.StoreNode{
 			Key:   drainKey(appId, drainUrl),
 			Value: []byte(drainUrl),

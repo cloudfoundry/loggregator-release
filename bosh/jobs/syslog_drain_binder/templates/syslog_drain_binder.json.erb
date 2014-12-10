@@ -1,0 +1,13 @@
+{
+    "InstanceName": "<%= name %>.<%= spec.index %>",
+    "DrainUrlTtlSeconds": <%= p("syslog_drain_binder.drain_url_ttl_seconds") %>,
+    "UpdateIntervalSeconds": <%= p("syslog_drain_binder.update_interval_seconds") %>,
+
+    "EtcdMaxConcurrentRequests": <%= p("etcd.maxconcurrentrequests") %>,
+    "EtcdUrls": [<%= p("etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
+
+    "CloudControllerAddress": "http://api.<%= p("system_domain") %>",
+    "BulkApiUsername": "bulk_api",
+    "BulkApiPassword": "<%= p("cc.bulk_api_password") %>",
+    "PollingBatchSize": <%= p("syslog_drain_binder.polling_batch_size") %>
+}

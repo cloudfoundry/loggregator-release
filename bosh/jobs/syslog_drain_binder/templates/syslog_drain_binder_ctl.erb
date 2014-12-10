@@ -1,0 +1,44 @@
+#!/bin/bash -e
+
+RUN_DIR=/var/vcap/sys/run/syslog_drain_binder
+LOG_DIR=/var/vcap/sys/log/syslog_drain_binder
+PIDFILE=$RUN_DIR/syslog_drain_binder.pid
+
+source /var/vcap/packages/common/utils.sh
+
+case $1 in
+
+  start)
+    pid_guard $PIDFILE "Syslog Drain Binder"
+
+    mkdir -p $RUN_DIR
+    mkdir -p $LOG_DIR
+
+    chown vcap:vcap $LOG_DIR
+
+    ulimit -l unlimited
+    ulimit -n 65536
+
+    <% p("syslog_drain_binder.debug") == true ? debug_string = "--debug " : debug_string = "" %>
+
+    exec >>$LOG_DIR/syslog_drain_binder.stdout.log \
+         2>>$LOG_DIR/syslog_drain_binder.stderr.log
+
+    chpst -u vcap:vcap /var/vcap/packages/syslog_drain_binder/syslog_drain_binder <%= debug_string %> \
+         --config /var/vcap/jobs/syslog_drain_binder/config/syslog_drain_binder.json &
+
+    echo $! > $PIDFILE
+
+    ;;
+
+  stop)
+    kill_and_wait $PIDFILE 40
+
+    ;;
+
+  *)
+    echo "Usage: syslog_drain_binder {start|stop}"
+
+    ;;
+
+esac

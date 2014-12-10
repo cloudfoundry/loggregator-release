@@ -1,0 +1,5 @@
+check process syslog_drain_binder
+  with pidfile /var/vcap/sys/run/syslog_drain_binder/syslog_drain_binder.pid
+  start program "/var/vcap/jobs/syslog_drain_binder/bin/syslog_drain_binder_ctl start"
+  stop program "/var/vcap/jobs/syslog_drain_binder/bin/syslog_drain_binder_ctl stop"
+  group vcap
