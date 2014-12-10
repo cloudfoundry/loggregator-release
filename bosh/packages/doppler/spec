@@ -3,7 +3,6 @@ name: doppler
 dependencies:
 - golang1.3
 files:
-- loggregator/**/*
 - loggregator/src/doppler/*.go # gosub
 - loggregator/src/doppler/buffer/*.go # gosub
 - loggregator/src/doppler/buffer/truncatingbuffer/*.go # gosub

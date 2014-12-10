@@ -3,7 +3,6 @@ name: loggregator_trafficcontroller
 dependencies:
 - golang1.3
 files:
-- loggregator/**/*
 - loggregator/src/trafficcontroller/*.go # gosub
 - loggregator/src/trafficcontroller/authorization/*.go # gosub
 - loggregator/src/trafficcontroller/channel_group_connector/*.go # gosub

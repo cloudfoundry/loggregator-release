@@ -3,7 +3,6 @@ name: syslog_drain_binder
 dependencies:
 - golang1.3
 files:
-- loggregator/**/*
 - loggregator/src/syslog_drain_binder/*.go # gosub
 - loggregator/src/syslog_drain_binder/elector/*.go # gosub
 - loggregator/src/syslog_drain_binder/etcd_syslog_drain_store/*.go # gosub
