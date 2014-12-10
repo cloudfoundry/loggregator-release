@@ -3,7 +3,7 @@
 check_for_data_race() {
     name=$1
     command=$2
-    echo "RACE DETECTION for $name"
+    echo "Detecting races for $name..."
     $command > /tmp/tmp.log 2>&1 &
     pid=$!
     sleep 2s
@@ -18,7 +18,7 @@ check_for_data_race() {
     if [[ $found_race == 1 ]]; then
         echo "No race condition detected"
     else
-        echo "Race condition detected"
+        echo "RACE CONDITION DETECTED"
         cat /tmp/tmp.log
         exit 1
     fi
