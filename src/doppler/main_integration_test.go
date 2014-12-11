@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-golang/localip"
 )
 
 var _ = BeforeEach(func() {
@@ -21,9 +22,12 @@ var _ = BeforeEach(func() {
 var _ = Describe("Etcd Integration tests", func() {
 	var config main.Config
 	var stopHeartbeats chan (chan bool)
+	var localIp string
 
 	BeforeEach(func() {
 		stopHeartbeats = nil
+
+		localIp, _ = localip.LocalIP()
 
 		config = main.Config{
 			JobName: "doppler_z1",
@@ -51,7 +55,7 @@ var _ = Describe("Etcd Integration tests", func() {
 				return err
 			}).Should(HaveOccurred())
 
-			stopHeartbeats = main.StartHeartbeats(time.Second, &config, loggertesthelper.Logger())
+			stopHeartbeats = main.StartHeartbeats(localIp, time.Second, &config, loggertesthelper.Logger())
 
 			Eventually(func() error {
 				_, err := adapter.Get("healthstatus/doppler/z1/doppler_z1/0")
@@ -60,7 +64,7 @@ var _ = Describe("Etcd Integration tests", func() {
 		})
 
 		It("has a 10 sec TTL", func() {
-			stopHeartbeats = main.StartHeartbeats(time.Second, &config, loggertesthelper.Logger())
+			stopHeartbeats = main.StartHeartbeats(localIp, time.Second, &config, loggertesthelper.Logger())
 			adapter := etcdRunner.Adapter()
 
 			Eventually(func() uint64 {
@@ -70,7 +74,7 @@ var _ = Describe("Etcd Integration tests", func() {
 		})
 
 		It("updates the value periodically", func() {
-			stopHeartbeats = main.StartHeartbeats(time.Second, &config, loggertesthelper.Logger())
+			stopHeartbeats = main.StartHeartbeats(localIp, time.Second, &config, loggertesthelper.Logger())
 			adapter := etcdRunner.Adapter()
 
 			var indices []uint64

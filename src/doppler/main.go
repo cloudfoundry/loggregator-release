@@ -53,6 +53,11 @@ func main() {
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
+	localIp, err := localip.LocalIP()
+	if err != nil {
+		panic(errors.New("Unable to resolve own IP address: " + err.Error()))
+	}
+
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
 		if err != nil {
@@ -90,12 +95,12 @@ func main() {
 		}
 	}
 
-	err := config.Validate(logger)
+	err = config.Validate(logger)
 	if err != nil {
 		panic(err)
 	}
 
-	doppler := New("0.0.0.0", config, logger, "doppler")
+	doppler := New(localIp, config, logger, "doppler")
 
 	cfc, err := cfcomponent.NewComponent(
 		logger,
@@ -126,7 +131,7 @@ func main() {
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Kill, os.Interrupt)
 
-	StartHeartbeats(HeartbeatInterval, config, logger)
+	StartHeartbeats(localIp, HeartbeatInterval, config, logger)
 
 	for {
 		select {
@@ -151,7 +156,7 @@ func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gos
 	return config, logger
 }
 
-func StartHeartbeats(ttl time.Duration, config *Config, logger *gosteno.Logger) (stopChan chan (chan bool)) {
+func StartHeartbeats(localIp string, ttl time.Duration, config *Config, logger *gosteno.Logger) (stopChan chan (chan bool)) {
 	if len(config.EtcdUrls) == 0 {
 		return
 	}
@@ -159,15 +164,10 @@ func StartHeartbeats(ttl time.Duration, config *Config, logger *gosteno.Logger) 
 	adapter := StoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	adapter.Connect()
 
-	local_ip, err := localip.LocalIP()
-	if err != nil {
-		panic(errors.New("StartHeartbeats: unable to resolve own IP address: " + err.Error()))
-	}
-
 	logger.Debugf("Starting Health Status Updates to Store: /healthstatus/doppler/%s/%s/%d", config.Zone, config.JobName, config.Index)
 	status, stopChan, err := adapter.MaintainNode(storeadapter.StoreNode{
 		Key:   fmt.Sprintf("/healthstatus/doppler/%s/%s/%d", config.Zone, config.JobName, config.Index),
-		Value: []byte(local_ip),
+		Value: []byte(localIp),
 		TTL:   uint64(ttl.Seconds()),
 	})
 

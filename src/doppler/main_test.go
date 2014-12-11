@@ -91,8 +91,10 @@ var _ = Describe("Main", func() {
 
 		Context("with a valid ETCD conig", func() {
 			var config main.Config
+			var localIp string
 
 			BeforeEach(func() {
+				localIp, _ = localip.LocalIP()
 				config = main.Config{
 					JobName: "doppler_z1",
 					Index:   0,
@@ -104,21 +106,21 @@ var _ = Describe("Main", func() {
 			})
 
 			It("connects to etcd", func() {
-				main.StartHeartbeats(time.Second, &config, loggertesthelper.Logger())
+				main.StartHeartbeats(localIp, time.Second, &config, loggertesthelper.Logger())
 				Expect(adapter.DidConnect).To(BeTrue())
 			})
 
 			It("sends a heartbeat to etcd", func() {
-				main.StartHeartbeats(time.Second, &config, loggertesthelper.Logger())
+				main.StartHeartbeats(localIp, time.Second, &config, loggertesthelper.Logger())
 				Expect(adapter.GetMaintainedNodeName()).To(Equal("/healthstatus/doppler/z1/doppler_z1/0"))
-				local_ip, _ := localip.LocalIP()
-				Expect(adapter.MaintainedNodeValue).To(Equal([]byte(local_ip)))
+
+				Expect(adapter.MaintainedNodeValue).To(Equal([]byte(localIp)))
 			})
 
 			Context("when there is an error", func() {
 				It("panics", func() {
 					adapter.MaintainNodeError = errors.New("error")
-					Expect(func() { main.StartHeartbeats(time.Second, &config, loggertesthelper.Logger()) }).To(Panic())
+					Expect(func() { main.StartHeartbeats(localIp, time.Second, &config, loggertesthelper.Logger()) }).To(Panic())
 				})
 			})
 		})
@@ -131,7 +133,8 @@ var _ = Describe("Main", func() {
 					EtcdMaxConcurrentRequests: 10,
 				}
 
-				main.StartHeartbeats(time.Second, &config, loggertesthelper.Logger())
+				localIp, _ := localip.LocalIP()
+				main.StartHeartbeats(localIp, time.Second, &config, loggertesthelper.Logger())
 				Expect(adapter.GetMaintainedNodeName()).To(BeEmpty())
 			})
 		})
