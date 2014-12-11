@@ -1,11 +1,14 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"syslog_drain_binder/elector"
 	"syslog_drain_binder/etcd_syslog_drain_store"
 	"time"
 
+	"github.com/cloudfoundry/dropsonde"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/storeadapter"
@@ -20,6 +23,9 @@ var (
 func main() {
 	flag.Parse()
 	config := parseConfig(*configFile)
+
+	dropsonde.Initialize(config.MetronAddress, "syslog_drain_binder")
+
 	logger := cfcomponent.NewLogger(*debug, "", "syslog_drain_binder", config.Config)
 
 	workPool := workpool.NewWorkPool(config.EtcdMaxConcurrentRequests)
@@ -61,6 +67,15 @@ func main() {
 			continue
 		}
 
+		metrics.IncrementCounter("pollCount")
+
+		var totalDrains int
+		for _, drainList := range drainUrls {
+			totalDrains += len(drainList)
+		}
+
+		metrics.SendValue("totalDrains", float64(totalDrains), "drains")
+
 		logger.Debugf("Updating drain URLs for %d application(s)", len(drainUrls))
 		err = store.UpdateDrains(drainUrls)
 		if err != nil {
@@ -79,6 +94,8 @@ type Config struct {
 	EtcdMaxConcurrentRequests int
 	EtcdUrls                  []string
 
+	MetronAddress string
+
 	CloudControllerAddress string
 	BulkApiUsername        string
 	BulkApiPassword        string
@@ -95,6 +112,11 @@ func parseConfig(configFile string) Config {
 		panic(err)
 	}
 
+	err = config.validate()
+	if err != nil {
+		panic(err)
+	}
+
 	return config
 }
 
@@ -102,4 +124,12 @@ var StoreAdapterProvider = func(urls []string, concurrentRequests int) storeadap
 	workPool := workpool.NewWorkPool(concurrentRequests)
 
 	return etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
+}
+
+func (config Config) validate() error {
+	if config.MetronAddress == "" {
+		return errors.New("Need Metron address (host:port).")
+	}
+
+	return nil
 }

@@ -8,13 +8,22 @@ packages:
 - common
 - syslog_drain_binder
 properties:
+  metron_endpoint.host:
+    description: "The host used to emit messages to the Metron agent"
+    default: "127.0.0.1"
+  metron_endpoint.dropsonde_port:
+    description: "The port used to emit dropsonde messages to the Metron agent"
+    default: 3457
+
   etcd.machines:
     description: "IPs pointing to the ETCD cluster"
   etcd.maxconcurrentrequests:
     description: "Number of concurrent requests to ETCD"
     default: 10
+
   system_domain:
     description: "Domain reserved for CF operator, base URL where the login, uaa, and other non-user apps listen"
+
   syslog_drain_binder.drain_url_ttl_seconds:
     description: "Time to live for drain urls in seconds"
     default: 60
@@ -27,5 +36,6 @@ properties:
   syslog_drain_binder.debug:
     description: boolean value to turn on verbose logging for syslog_drain_binder
     default: false
+
   cc.bulk_api_password:
     description: "password for the bulk api"

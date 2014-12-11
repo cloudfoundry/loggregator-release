@@ -6,6 +6,8 @@
     "EtcdMaxConcurrentRequests": <%= p("etcd.maxconcurrentrequests") %>,
     "EtcdUrls": [<%= p("etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
 
+    "MetronAddress": "<%= p("metron_endpoint.host") %>:<%= p("metron_endpoint.dropsonde_port") %>",
+
     "CloudControllerAddress": "http://api.<%= p("system_domain") %>",
     "BulkApiUsername": "bulk_api",
     "BulkApiPassword": "<%= p("cc.bulk_api_password") %>",
