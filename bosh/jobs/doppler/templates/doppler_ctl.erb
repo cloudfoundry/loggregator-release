@@ -16,19 +16,17 @@ case $1 in
 
     chown vcap:vcap $LOG_DIR
 
+    echo $$ > $PIDFILE
+
     ulimit -l unlimited
     ulimit -n 65536
 
     <% p("doppler.debug") == true ? debug_string = "--debug " : debug_string = "" %>
 
-    exec >>$LOG_DIR/doppler.stdout.log \
+    exec chpst -u vcap:vcap /var/vcap/packages/doppler/doppler <%= debug_string %> \
+         --config /var/vcap/jobs/doppler/config/doppler.json \
+         >>$LOG_DIR/doppler.stdout.log \
          2>>$LOG_DIR/doppler.stderr.log
-
-    chpst -u vcap:vcap /var/vcap/packages/doppler/doppler <%= debug_string %> \
-         --config /var/vcap/jobs/doppler/config/doppler.json &
-
-    echo $! > $PIDFILE
-
     ;;
 
   stop)
