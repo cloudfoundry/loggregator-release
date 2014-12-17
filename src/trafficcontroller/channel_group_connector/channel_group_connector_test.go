@@ -26,7 +26,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 			logger              *gosteno.Logger
 			provider            *serveraddressprovider.FakeServerAddressProvider
 			fakeListeners       []*listener.FakeListener
-			listenerConstructor func(*gosteno.Logger) listener.Listener
+			listenerConstructor func(time.Duration, *gosteno.Logger) listener.Listener
 			messageChan1        chan []byte
 			messageChan2        chan []byte
 			expectedMessage1    = []byte{0}
@@ -46,7 +46,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 
 			i := int32(-1)
 			constructorLock := sync.Mutex{}
-			listenerConstructor = func(logger *gosteno.Logger) listener.Listener {
+			listenerConstructor = func(timeout time.Duration, logger *gosteno.Logger) listener.Listener {
 				constructorLock.Lock()
 				defer constructorLock.Unlock()
 				i++

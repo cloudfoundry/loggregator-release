@@ -246,13 +246,13 @@ func startOutgoingDopplerProxy(host string, proxy http.Handler) {
 	}()
 }
 
-func newDropsondeWebsocketListener(logger *gosteno.Logger) listener.Listener {
+func newDropsondeWebsocketListener(timeout time.Duration, logger *gosteno.Logger) listener.Listener {
 	messageConverter := func(message []byte) ([]byte, error) {
 		return message, nil
 	}
-	return listener.NewWebsocket(marshaller.DropsondeLogMessage, messageConverter, logger)
+	return listener.NewWebsocket(marshaller.DropsondeLogMessage, messageConverter, timeout, logger)
 }
 
-func newLegacyWebsocketListener(logger *gosteno.Logger) listener.Listener {
-	return listener.NewWebsocket(marshaller.LoggregatorLogMessage, marshaller.TranslateDropsondeToLegacyLogMessage, logger)
+func newLegacyWebsocketListener(timeout time.Duration, logger *gosteno.Logger) listener.Listener {
+	return listener.NewWebsocket(marshaller.LoggregatorLogMessage, marshaller.TranslateDropsondeToLegacyLogMessage, timeout, logger)
 }

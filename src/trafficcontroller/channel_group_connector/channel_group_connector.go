@@ -13,7 +13,7 @@ import (
 
 const checkServerAddressesInterval = 100 * time.Millisecond
 
-type ListenerConstructor func(*gosteno.Logger) listener.Listener
+type ListenerConstructor func(time.Duration, *gosteno.Logger) listener.Listener
 
 type ChannelGroupConnector interface {
 	Connect(dopplerConnector doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{})
@@ -80,7 +80,7 @@ loop:
 }
 
 func (connector *channelGroupConnector) connectToServer(serverAddress string, dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{}) {
-	l := connector.listenerConstructor(connector.logger)
+	l := connector.listenerConstructor(dopplerEndpoint.Timeout, connector.logger)
 
 	serverUrl := fmt.Sprintf("ws://%s%s", serverAddress, dopplerEndpoint.GetPath())
 	connector.logger.Debugf("proxy: connecting to doppler at %s", serverUrl)

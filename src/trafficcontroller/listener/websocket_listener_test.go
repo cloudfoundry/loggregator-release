@@ -18,63 +18,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-type fakeHandler struct {
-	messages   chan []byte
-	lastWSConn *websocket.Conn
-	sync.Mutex
-}
-
-func (f *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "HEAD" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", 405)
-		return
-	}
-
-	ws, err := websocket.Upgrade(w, r, nil, 0, 0)
-	if _, ok := err.(websocket.HandshakeError); ok {
-		http.Error(w, "Not a websocket handshake", 400)
-		return
-	} else if err != nil {
-		log.Println(err)
-		return
-	}
-	defer ws.Close()
-	defer ws.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), time.Time{})
-	f.Lock()
-	f.lastWSConn = ws
-	f.Unlock()
-
-	go ws.ReadMessage()
-
-	for msg := range f.messages {
-		if err := ws.WriteMessage(websocket.BinaryMessage, msg); err != nil {
-			return
-		}
-	}
-}
-
-func (f *fakeHandler) Close() {
-	close(f.messages)
-}
-
-func (f *fakeHandler) CloseAbruptly() {
-	Eventually(f.lastConn).ShouldNot(BeNil())
-	f.lastConn().Close()
-}
-
-func (f *fakeHandler) lastConn() *websocket.Conn {
-	f.Lock()
-	defer f.Unlock()
-	return f.lastWSConn
-}
-
 var _ = Describe("WebsocketListener", func() {
-
 	var ts *httptest.Server
 	var messageChan, outputChan chan []byte
 	var stopChan chan struct{}
@@ -87,7 +31,8 @@ var _ = Describe("WebsocketListener", func() {
 		stopChan = make(chan struct{})
 		fh = &fakeHandler{messages: messageChan}
 		ts = httptest.NewUnstartedServer(fh)
-		l = listener.NewWebsocket(marshaller.LoggregatorLogMessage, func(d []byte) ([]byte, error) { return d, nil }, loggertesthelper.Logger())
+		converter := func(d []byte) ([]byte, error) { return d, nil }
+		l = listener.NewWebsocket(marshaller.LoggregatorLogMessage, converter, 500*time.Millisecond, loggertesthelper.Logger())
 	})
 
 	AfterEach(func() {
@@ -198,6 +143,55 @@ var _ = Describe("WebsocketListener", func() {
 		})
 	})
 
+	Context("when the server is slow", func() {
+		BeforeEach(func() {
+			ts.Start()
+			Eventually(func() bool {
+				resp, _ := http.Head(fmt.Sprintf("http://%s", ts.Listener.Addr()))
+				return resp != nil && resp.StatusCode == http.StatusOK
+			}).Should(BeTrue())
+		})
+
+		Context("with a timeout set", func() {
+			It("does not wait forever", func(done Done) {
+				err := l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
+				Expect(err).To(HaveOccurred())
+
+				close(done)
+			})
+
+			It("sends an error message to the channel", func(done Done) {
+				l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
+				var msgData []byte
+				Eventually(outputChan).Should(Receive(&msgData))
+
+				msg, _ := logmessage.ParseMessage(msgData)
+				Expect(msg.GetLogMessage().GetSourceName()).To(Equal("LGR"))
+				Expect(string(msg.GetLogMessage().GetMessage())).To(Equal("WebsocketListener.Start: Timed out listening to ws://" + ts.Listener.Addr().String() + " after 500ms"))
+				close(done)
+			})
+		})
+
+		Context("without a timeout", func() {
+			It("waits for messages to come in", func() {
+				converter := func(d []byte) ([]byte, error) { return d, nil }
+				l = listener.NewWebsocket(marshaller.LoggregatorLogMessage, converter, 0, loggertesthelper.Logger())
+
+				go l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
+
+				go func() {
+					time.Sleep(750 * time.Millisecond)
+					message := []byte("hello world")
+					messageChan <- message
+				}()
+
+				var msgData []byte
+				Eventually(outputChan).Should(Receive(&msgData))
+				Expect(msgData).To(BeEquivalentTo("hello world"))
+			})
+		})
+	})
+
 	Context("when the server has errors", func() {
 		BeforeEach(func() {
 			ts.Start()
@@ -209,8 +203,63 @@ var _ = Describe("WebsocketListener", func() {
 			msgData := <-outputChan
 			msg, _ := logmessage.ParseMessage(msgData)
 			Expect(msg.GetLogMessage().GetSourceName()).To(Equal("LGR"))
-			Expect(string(msg.GetLogMessage().GetMessage())).To(Equal("proxy: error connecting to a loggregator/doppler server"))
+			Expect(string(msg.GetLogMessage().GetMessage())).To(Equal("WebsocketListener.Start: Error connecting to a loggregator/doppler server"))
 			close(done)
 		})
 	})
 })
+
+type fakeHandler struct {
+	messages   chan []byte
+	lastWSConn *websocket.Conn
+	sync.Mutex
+}
+
+func (f *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "HEAD" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", 405)
+		return
+	}
+
+	ws, err := websocket.Upgrade(w, r, nil, 0, 0)
+	if _, ok := err.(websocket.HandshakeError); ok {
+		http.Error(w, "Not a websocket handshake", 400)
+		return
+	} else if err != nil {
+		log.Println(err)
+		return
+	}
+	defer ws.Close()
+	defer ws.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), time.Time{})
+	f.Lock()
+	f.lastWSConn = ws
+	f.Unlock()
+
+	go ws.ReadMessage()
+
+	for msg := range f.messages {
+		if err := ws.WriteMessage(websocket.BinaryMessage, msg); err != nil {
+			return
+		}
+	}
+}
+
+func (f *fakeHandler) Close() {
+	close(f.messages)
+}
+
+func (f *fakeHandler) CloseAbruptly() {
+	Eventually(f.lastConn).ShouldNot(BeNil())
+	f.lastConn().Close()
+}
+
+func (f *fakeHandler) lastConn() *websocket.Conn {
+	f.Lock()
+	defer f.Unlock()
+	return f.lastWSConn
+}

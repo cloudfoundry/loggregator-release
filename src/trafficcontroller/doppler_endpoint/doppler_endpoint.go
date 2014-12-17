@@ -10,10 +10,13 @@ import (
 
 var WebsocketKeepAliveDuration = 30 * time.Second
 
+const HttpRequestTimeout = 5 * time.Second
+
 type DopplerEndpoint struct {
 	Endpoint  string
 	StreamId  string
 	Reconnect bool
+	Timeout   time.Duration
 	HProvider HandlerProvider
 }
 
@@ -24,17 +27,19 @@ func NewDopplerEndpoint(
 ) DopplerEndpoint {
 
 	var hProvider HandlerProvider
+	var timeout time.Duration
 	if endpoint == "recentlogs" {
 		hProvider = HttpHandlerProvider
+		timeout = HttpRequestTimeout
 	} else {
 		hProvider = WebsocketHandlerProvider
-
 	}
 
 	return DopplerEndpoint{
 		Endpoint:  endpoint,
 		StreamId:  streamId,
 		Reconnect: reconnect,
+		Timeout:   timeout,
 		HProvider: hProvider,
 	}
 }

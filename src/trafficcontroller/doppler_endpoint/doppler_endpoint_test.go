@@ -4,22 +4,29 @@ import (
 	"trafficcontroller/doppler_endpoint"
 
 	"github.com/cloudfoundry/loggregatorlib/server/handlers"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("NewDopplerEndpoint", func() {
-	It("when endpoint is 'recentlogs', uses an HTTP handler", func() {
-		dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("recentlogs", "abc123", true)
-		knownHttpHandler := handlers.NewHttpHandler(nil, nil)
-		Expect(dopplerEndpoint.HProvider(nil, nil)).To(BeAssignableToTypeOf(knownHttpHandler))
+	Context("when endpoint is 'recentlogs'", func() {
+		It("uses an HTTP handler", func() {
+			dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("recentlogs", "abc123", true)
+			knownHttpHandler := handlers.NewHttpHandler(nil, nil)
+			Expect(dopplerEndpoint.HProvider(nil, nil)).To(BeAssignableToTypeOf(knownHttpHandler))
+		})
+
+		It("sets a timeout of five seconds", func() {
+			dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("recentlogs", "abc123", true)
+			Expect(dopplerEndpoint.Timeout).To(Equal(5 * time.Second))
+		})
 	})
 
-	It("when endpoint is not 'recentlogs', uses a socket handler", func() {
+	Context("when endpoint is not 'recentlogs'", func() {
 		dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("firehose", "firehose", true)
-		knownWebsocketHandler := handlers.NewWebsocketHandler(nil, 0, nil)
-		Expect(dopplerEndpoint.HProvider(nil, nil)).To(BeAssignableToTypeOf(knownWebsocketHandler))
+		Expect(dopplerEndpoint.Timeout).To(Equal(time.Duration(0)))
 	})
 })
 
