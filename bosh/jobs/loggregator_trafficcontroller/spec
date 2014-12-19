@@ -68,3 +68,6 @@ properties:
     default: false
   cc.srv_api_uri:
     description: "API URI of cloud controller"
+  login.protocol:
+    description: "The protocol that the Login Server uses. http/https"
+    default: "http"
