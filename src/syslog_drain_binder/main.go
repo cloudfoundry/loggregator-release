@@ -40,48 +40,51 @@ func main() {
 	var err error
 	ticker := time.NewTicker(updateInterval)
 	for {
-		<-ticker.C
+		select {
+		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
+			cfcomponent.DumpGoRoutine()
+		case <-ticker.C:
+			if politician.IsLeader() {
+				err = politician.StayAsLeader()
+				if err != nil {
+					logger.Errorf("Error when staying leader: %s", err.Error())
+					politician.Vacate()
+					continue
+				}
+			} else {
+				err = politician.RunForElection()
 
-		if politician.IsLeader() {
-			err = politician.StayAsLeader()
+				if err != nil {
+					logger.Errorf("Error when running for leader: %s", err.Error())
+					politician.Vacate()
+					continue
+				}
+			}
+
+			logger.Debugf("Polling %s for updates", config.CloudControllerAddress)
+			drainUrls, err := Poll(config.CloudControllerAddress, config.BulkApiUsername, config.BulkApiPassword, config.PollingBatchSize)
 			if err != nil {
-				logger.Errorf("Error when staying leader: %s", err.Error())
+				logger.Errorf("Error when polling cloud controller: %s", err.Error())
 				politician.Vacate()
 				continue
 			}
-		} else {
-			err = politician.RunForElection()
 
+			metrics.IncrementCounter("pollCount")
+
+			var totalDrains int
+			for _, drainList := range drainUrls {
+				totalDrains += len(drainList)
+			}
+
+			metrics.SendValue("totalDrains", float64(totalDrains), "drains")
+
+			logger.Debugf("Updating drain URLs for %d application(s)", len(drainUrls))
+			err = store.UpdateDrains(drainUrls)
 			if err != nil {
-				logger.Errorf("Error when running for leader: %s", err.Error())
+				logger.Errorf("Error when updating ETCD: %s", err.Error())
 				politician.Vacate()
 				continue
 			}
-		}
-
-		logger.Debugf("Polling %s for updates", config.CloudControllerAddress)
-		drainUrls, err := Poll(config.CloudControllerAddress, config.BulkApiUsername, config.BulkApiPassword, config.PollingBatchSize)
-		if err != nil {
-			logger.Errorf("Error when polling cloud controller: %s", err.Error())
-			politician.Vacate()
-			continue
-		}
-
-		metrics.IncrementCounter("pollCount")
-
-		var totalDrains int
-		for _, drainList := range drainUrls {
-			totalDrains += len(drainList)
-		}
-
-		metrics.SendValue("totalDrains", float64(totalDrains), "drains")
-
-		logger.Debugf("Updating drain URLs for %d application(s)", len(drainUrls))
-		err = store.UpdateDrains(drainUrls)
-		if err != nil {
-			logger.Errorf("Error when updating ETCD: %s", err.Error())
-			politician.Vacate()
-			continue
 		}
 	}
 }
