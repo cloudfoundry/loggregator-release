@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/factories"
 
 	"doppler/groupedsinks/firehose_group"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -38,7 +39,7 @@ var _ = Describe("FirehoseGroup", func() {
 		sink1 := fakeSink{appId: "firehose-a", sinkId: "sink-a"}
 		sink2 := fakeSink{appId: "firehose-a", sinkId: "sink-b"}
 
-		group := firehose_group.NewFirehoseGroup()
+		group := firehose_group.NewFirehoseGroup(loggertesthelper.Logger())
 
 		group.AddSink(&sink1, receiveChan1)
 		group.AddSink(&sink2, receiveChan2)
@@ -68,7 +69,7 @@ var _ = Describe("FirehoseGroup", func() {
 		sink1 := fakeSink{appId: "firehose-a", sinkId: "sink-a"}
 		sink2 := fakeSink{appId: "firehose-a", sinkId: "sink-b"}
 
-		group := firehose_group.NewFirehoseGroup()
+		group := firehose_group.NewFirehoseGroup(loggertesthelper.Logger())
 
 		group.AddSink(&sink1, receiveChan1)
 		group.AddSink(&sink2, receiveChan2)
@@ -85,12 +86,12 @@ var _ = Describe("FirehoseGroup", func() {
 
 	Describe("IsEmpty", func() {
 		It("is true when the group is empty", func() {
-			group := firehose_group.NewFirehoseGroup()
+			group := firehose_group.NewFirehoseGroup(loggertesthelper.Logger())
 			Expect(group.IsEmpty()).To(BeTrue())
 		})
 
 		It("is false when the group is not empty", func() {
-			group := firehose_group.NewFirehoseGroup()
+			group := firehose_group.NewFirehoseGroup(loggertesthelper.Logger())
 			sink := fakeSink{appId: "firehose-a", sinkId: "sink-a"}
 
 			group.AddSink(&sink, make(chan *events.Envelope, 10))
@@ -101,7 +102,7 @@ var _ = Describe("FirehoseGroup", func() {
 
 	Describe("RemoveSink", func() {
 		It("makes the group empty and returns true when there is one sink to remove", func() {
-			group := firehose_group.NewFirehoseGroup()
+			group := firehose_group.NewFirehoseGroup(loggertesthelper.Logger())
 			sink := fakeSink{appId: "firehose-a", sinkId: "sink-a"}
 
 			group.AddSink(&sink, make(chan *events.Envelope, 10))
@@ -111,7 +112,7 @@ var _ = Describe("FirehoseGroup", func() {
 		})
 
 		It("returns false when the group does not contain the requested sink and does not remove any sinks from the group", func() {
-			group := firehose_group.NewFirehoseGroup()
+			group := firehose_group.NewFirehoseGroup(loggertesthelper.Logger())
 			sink := fakeSink{appId: "firehose-a", sinkId: "sink-a"}
 
 			group.AddSink(&sink, make(chan *events.Envelope, 10))

@@ -100,13 +100,14 @@ var _ = Describe("WebsocketServer", func() {
 		stopKeepAlive2, _ := AddWSSink(firehoseAChan2, fmt.Sprintf("ws://%s/firehose/fire-subscription-x", apiEndpoint))
 
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
-		for i := 0; i < 100; i++ {
+
+		for i := 0; i < 2; i++ {
 			sinkManager.SendTo(appId, lm)
 		}
 
 		Eventually(func() int {
 			return len(firehoseAChan1) + len(firehoseAChan2)
-		}).Should(Equal(100))
+		}).Should(Equal(2))
 
 		Consistently(func() int {
 			return len(firehoseAChan2)

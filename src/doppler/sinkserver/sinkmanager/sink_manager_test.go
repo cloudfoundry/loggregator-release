@@ -185,6 +185,34 @@ var _ = Describe("SinkManager", func() {
 
 			Eventually(sink1.Received).Should(ContainElement(expectedMessage))
 		})
+
+		It("sends single message to app sink registered after the message was sent", func() {
+			sink1 := &ChannelSink{appId: "myApp",
+				identifier: "myAppChan1",
+				done:       make(chan struct{}),
+			}
+
+			expectedMessageString := "Some Data"
+			expectedMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp", "App"), "origin")
+			go sinkManager.SendTo("myApp", expectedMessage)
+
+			sinkManager.RegisterSink(sink1)
+
+			Eventually(sink1.Received).Should(HaveLen(1))
+			Expect(sink1.Received()[0]).To(Equal(expectedMessage))
+		})
+
+		It("sends single message to firehose sink registered after the message was sent", func() {
+			sink1 := &ChannelSink{done: make(chan struct{}), appId: "firehose-a"}
+
+			expectedMessageString := "Some Data"
+			expectedMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp", "App"), "origin")
+			go sinkManager.SendTo("myApp1", expectedMessage)
+
+			sinkManager.RegisterFirehoseSink(sink1)
+
+			Eventually(sink1.Received).Should(ContainElement(expectedMessage))
+		})
 	})
 
 	Describe("Stop", func() {

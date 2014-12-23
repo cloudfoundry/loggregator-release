@@ -21,7 +21,7 @@ var _ = Describe("GroupedSink", func() {
 	var inputChan chan *events.Envelope
 
 	BeforeEach(func() {
-		groupedSinks = groupedsinks.NewGroupedSinks()
+		groupedSinks = groupedsinks.NewGroupedSinks(loggertesthelper.Logger())
 		inputChan = make(chan *events.Envelope)
 	})
 

@@ -39,7 +39,7 @@ func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackLis
 		doneChannel:         make(chan struct{}),
 		errorChannel:        make(chan *events.Envelope, 100),
 		urlBlacklistManager: blackListManager,
-		sinks:               groupedsinks.NewGroupedSinks(),
+		sinks:               groupedsinks.NewGroupedSinks(logger),
 		skipCertVerify:      skipCertVerify,
 		recentLogCount:      maxRetainedLogMessages,
 		Metrics:             metrics.NewSinkManagerMetrics(),
@@ -104,7 +104,7 @@ func (sinkManager *SinkManager) listenForErrorMessages() {
 }
 
 func (sinkManager *SinkManager) RegisterSink(sink sinks.Sink) bool {
-	inputChan := make(chan *events.Envelope)
+	inputChan := make(chan *events.Envelope, 1)
 	ok := sinkManager.sinks.RegisterAppSink(inputChan, sink)
 	if !ok {
 		return false
@@ -138,7 +138,7 @@ func (sinkManager *SinkManager) UnregisterSink(sink sinks.Sink) {
 }
 
 func (sinkManager *SinkManager) RegisterFirehoseSink(sink sinks.Sink) bool {
-	inputChan := make(chan *events.Envelope)
+	inputChan := make(chan *events.Envelope, 1)
 	ok := sinkManager.sinks.RegisterFirehoseSink(inputChan, sink)
 	if !ok {
 		return false

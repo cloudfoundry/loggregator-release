@@ -36,7 +36,7 @@ var _ = Describe("Dumping", func() {
 	)
 
 	BeforeEach(func() {
-		dataReadChannel = make(chan *events.Envelope)
+		dataReadChannel = make(chan *events.Envelope, 2)
 
 		logger := loggertesthelper.Logger()
 		cfcomponent.Logger = logger
@@ -97,12 +97,11 @@ var _ = Describe("Dumping", func() {
 
 		logMessages := dumpAllMessages(receivedChan)
 
-		Expect(logMessages).To(HaveLen(2))
-		marshalledEnvelope := logMessages[1]
+		Expect(logMessages).To(HaveLen(1))
+		marshalledEnvelope := logMessages[0]
 		var envelope events.Envelope
 		proto.Unmarshal(marshalledEnvelope, &envelope)
 		Expect(envelope.GetLogMessage().GetMessage()).To(BeEquivalentTo(expectedMessageString))
-
 		stopKeepAlive <- true
 	})
 

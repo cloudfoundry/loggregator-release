@@ -8,17 +8,20 @@ import (
 	"doppler/sinks/syslog"
 	"doppler/sinks/websocket"
 	"github.com/cloudfoundry/dropsonde/events"
+	"github.com/cloudfoundry/gosteno"
 	"sync"
 )
 
-func NewGroupedSinks() *GroupedSinks {
+func NewGroupedSinks(logger *gosteno.Logger) *GroupedSinks {
 	return &GroupedSinks{
+		logger:    logger,
 		apps:      make(map[string]map[string]*sink_wrapper.SinkWrapper),
 		firehoses: make(map[string]firehose_group.FirehoseGroup),
 	}
 }
 
 type GroupedSinks struct {
+	logger    *gosteno.Logger
 	apps      map[string]map[string]*sink_wrapper.SinkWrapper
 	firehoses map[string]firehose_group.FirehoseGroup
 	sync.RWMutex
@@ -56,7 +59,7 @@ func (group *GroupedSinks) RegisterFirehoseSink(in chan<- *events.Envelope, sink
 
 	fgroup := group.firehoses[subscriptionId]
 	if fgroup == nil {
-		group.firehoses[subscriptionId] = firehose_group.NewFirehoseGroup()
+		group.firehoses[subscriptionId] = firehose_group.NewFirehoseGroup(group.logger)
 		fgroup = group.firehoses[subscriptionId]
 	}
 
@@ -68,11 +71,15 @@ func (group *GroupedSinks) Broadcast(appId string, msg *events.Envelope) {
 	defer group.RUnlock()
 
 	for _, wrapper := range group.apps[appId] {
-		wrapper.InputChan <- msg
+		select {
+		case wrapper.InputChan <- msg:
+		default:
+			// do nothing because there is no consumer
+			group.logger.Debug("Not broadcasting message to sink because no consumer present")
+		}
 	}
 
 	group.BroadcastMessageToFirehoses(msg)
-
 }
 
 func (group *GroupedSinks) BroadcastError(appId string, errorMsg *events.Envelope) {
