@@ -14,5 +14,6 @@
     "VarzPass": "password",
     "VarzPort": 8888,
     "Syslog"  : "",
-    "CollectorRegistrarIntervalMilliseconds": 100
+    "CollectorRegistrarIntervalMilliseconds": 100,
+    "ContainerMetricTTLSeconds": 120
 }

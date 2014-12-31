@@ -44,6 +44,7 @@ var _ = BeforeSuite(func() {
 		SharedSecret:                  "secret",
 		SkipCertVerify:                true,
 		BlackListIps:                  []iprange.IPRange{},
+		ContainerMetricTTLSeconds:     120,
 	}
 	cfcomponent.Logger = loggertesthelper.Logger()
 

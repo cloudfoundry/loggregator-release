@@ -4,6 +4,7 @@ import (
 	"code.google.com/p/gogoprotobuf/proto"
 	"doppler/sinks/containermetric"
 	"github.com/cloudfoundry/dropsonde/events"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -18,7 +19,7 @@ var _ = Describe("Containermetric", func() {
 	BeforeEach(func() {
 		eventChan = make(chan *events.Envelope)
 
-		sink = containermetric.NewContainerMetricSink("myApp")
+		sink = containermetric.NewContainerMetricSink("myApp", 1*time.Second)
 		go sink.Run(eventChan)
 	})
 
@@ -30,8 +31,8 @@ var _ = Describe("Containermetric", func() {
 
 	Describe("Run and GetLatest", func() {
 		It("returns metrics for all instances", func() {
-			m1 := metricFor(1, 1, 1, 1, 1)
-			m2 := metricFor(2, 2, 2, 2, 2)
+			m1 := metricFor(1, time.Now().Add(-1*time.Microsecond), 1, 1, 1)
+			m2 := metricFor(2, time.Now().Add(-1*time.Microsecond), 2, 2, 2)
 			eventChan <- m1
 			eventChan <- m2
 
@@ -42,31 +43,31 @@ var _ = Describe("Containermetric", func() {
 		})
 
 		It("returns latest metric for an instance if it has a newer timestamp", func() {
-			m1 := metricFor(1, 1, 1, 1, 1)
+			m1 := metricFor(1, time.Now().Add(-500*time.Microsecond), 1, 1, 1)
 			eventChan <- m1
 
 			Eventually(sink.GetLatest).Should(ConsistOf(m1))
 
-			m2 := metricFor(1, 2, 2, 2, 2)
+			m2 := metricFor(1, time.Now().Add(-200*time.Microsecond), 2, 2, 2)
 			eventChan <- m2
 
 			Eventually(sink.GetLatest).Should(ConsistOf(m2))
 		})
 
 		It("discards latest metric for an instance if it has an older timestamp", func() {
-			m1 := metricFor(1, 2, 1, 1, 1)
+			m1 := metricFor(1, time.Now().Add(-1*time.Microsecond), 1, 1, 1)
 			eventChan <- m1
 
 			Eventually(sink.GetLatest).Should(ConsistOf(m1))
 
-			m2 := metricFor(1, 1, 2, 2, 2)
+			m2 := metricFor(1, time.Now().Add(-100*time.Microsecond), 2, 2, 2)
 			eventChan <- m2
 
 			Consistently(sink.GetLatest).Should(ConsistOf(m1))
 		})
 
 		It("ignores all other envelope types", func() {
-			m1 := metricFor(1, 1, 1, 1, 1)
+			m1 := metricFor(1, time.Now().Add(-1*time.Microsecond), 1, 1, 1)
 			eventChan <- m1
 
 			Eventually(sink.GetLatest).Should(ConsistOf(m1))
@@ -76,7 +77,14 @@ var _ = Describe("Containermetric", func() {
 			}
 
 			Consistently(sink.GetLatest).Should(ConsistOf(m1))
+		})
 
+		It("removes the outdated container metrics", func() {
+			m1 := metricFor(1, time.Now().Add(-500*time.Millisecond), 1, 1, 1)
+			eventChan <- m1
+
+			Eventually(sink.GetLatest).Should(ConsistOf(m1))
+			Eventually(sink.GetLatest).Should(BeEmpty())
 		})
 	})
 
@@ -94,10 +102,11 @@ var _ = Describe("Containermetric", func() {
 	})
 })
 
-func metricFor(instanceId int32, timestamp int64, cpu float64, mem uint64, disk uint64) *events.Envelope {
+func metricFor(instanceId int32, timestamp time.Time, cpu float64, mem uint64, disk uint64) *events.Envelope {
+	unixTimestamp := timestamp.UnixNano()
 	return &events.Envelope{
 		EventType: events.Envelope_ContainerMetric.Enum(),
-		Timestamp: proto.Int64(timestamp),
+		Timestamp: proto.Int64(unixTimestamp),
 		ContainerMetric: &events.ContainerMetric{
 			ApplicationId: proto.String("myApp"),
 			InstanceIndex: proto.Int32(instanceId),

@@ -3,18 +3,21 @@ package containermetric
 import (
 	"github.com/cloudfoundry/dropsonde/events"
 	"sync"
+	"time"
 )
 
 type ContainerMetricSink struct {
 	applicationId string
+	ttl           time.Duration
 	metrics       map[int32]*events.Envelope
 
 	sync.RWMutex
 }
 
-func NewContainerMetricSink(applicationId string) *ContainerMetricSink {
+func NewContainerMetricSink(applicationId string, ttl time.Duration) *ContainerMetricSink {
 	return &ContainerMetricSink{
 		applicationId: applicationId,
+		ttl:           ttl,
 		metrics:       make(map[int32]*events.Envelope),
 	}
 }
@@ -30,12 +33,21 @@ func (sink *ContainerMetricSink) Run(eventChan <-chan *events.Envelope) {
 }
 
 func (sink *ContainerMetricSink) GetLatest() []*events.Envelope {
-	sink.RLock()
-	defer sink.RUnlock()
+	sink.Lock()
+	defer sink.Unlock()
 
 	envelopes := []*events.Envelope{}
 
-	for _, env := range sink.metrics {
+	earliestLiveTimestamp := time.Now().Add(-sink.ttl)
+
+	for instanceIndex, env := range sink.metrics {
+		metricTimestamp := time.Unix(0, env.GetTimestamp())
+
+		if metricTimestamp.Before(earliestLiveTimestamp) {
+			delete(sink.metrics, instanceIndex)
+			continue
+		}
+
 		envelopes = append(envelopes, env)
 	}
 

@@ -40,6 +40,7 @@ type Config struct {
 	BlackListIps                  []iprange.IPRange
 	JobName                       string
 	Zone                          string
+	ContainerMetricTTLSeconds     int
 }
 
 func (c *Config) Validate(logger *gosteno.Logger) (err error) {
@@ -98,7 +99,8 @@ func New(host string, config *Config, logger *gosteno.Logger, dropsondeOrigin st
 	dropsondeUnmarshaller := dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger)
 
 	blacklist := blacklist.New(config.BlackListIps)
-	sinkManager := sinkmanager.NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger, dropsondeOrigin)
+	metricTTL := time.Duration(config.ContainerMetricTTLSeconds) * time.Second
+	sinkManager := sinkmanager.NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger, dropsondeOrigin, metricTTL)
 
 	return &Doppler{
 		Logger:                     logger,

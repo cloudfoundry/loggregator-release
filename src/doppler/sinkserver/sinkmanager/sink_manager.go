@@ -22,19 +22,22 @@ import (
 )
 
 type SinkManager struct {
-	sync.RWMutex
+	DropsondeOrigin string
+
+	Metrics        *metrics.SinkManagerMetrics
+	recentLogCount uint32
+
 	doneChannel         chan struct{}
 	errorChannel        chan *events.Envelope
 	urlBlacklistManager *blacklist.URLBlacklistManager
 	sinks               *groupedsinks.GroupedSinks
 	skipCertVerify      bool
-	recentLogCount      uint32
-	Metrics             *metrics.SinkManagerMetrics
+	metricTTL           time.Duration
 	logger              *gosteno.Logger
-	DropsondeOrigin     string
+	sync.RWMutex
 }
 
-func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger, dropsondeOrigin string) *SinkManager {
+func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger, dropsondeOrigin string, metricTTL time.Duration) *SinkManager {
 	return &SinkManager{
 		doneChannel:         make(chan struct{}),
 		errorChannel:        make(chan *events.Envelope, 100),
@@ -45,6 +48,7 @@ func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackLis
 		Metrics:             metrics.NewSinkManagerMetrics(),
 		logger:              logger,
 		DropsondeOrigin:     dropsondeOrigin,
+		metricTTL:           metricTTL,
 	}
 }
 
@@ -230,6 +234,6 @@ func (sinkManager *SinkManager) ensureContainerMetricsSinkFor(appId string) {
 		return
 	}
 
-	sink := containermetric.NewContainerMetricSink(appId)
+	sink := containermetric.NewContainerMetricSink(appId, sinkManager.metricTTL)
 	sinkManager.RegisterSink(sink)
 }

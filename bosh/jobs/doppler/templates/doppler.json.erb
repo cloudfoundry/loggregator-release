@@ -13,6 +13,7 @@
   "MaxRetainedLogMessages": <%= p("doppler.maxRetainedLogMessages") %>,
   "CollectorRegistrarIntervalMilliseconds": <%= p("doppler.collector_registrar_interval_milliseconds") %>,
   "SharedSecret": "<%= p("doppler_endpoint.shared_secret") %>",
+  "ContainerMetricTTLSeconds": <%= p("doppler.container_metric_ttl_seconds") %>,
 
   "NatsHosts": <%= p("nats.machines") %>,
   "NatsPort": <%= p("nats.port") %>,

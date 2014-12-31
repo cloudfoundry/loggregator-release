@@ -37,6 +37,9 @@ properties:
     default: 8081
   doppler.blacklisted_syslog_ranges:
     description: "Blacklist for IPs that should not be used as syslog drains, e.g. internal ip addresses."
+  doppler.container_metric_ttl_seconds:
+    description: "TTL (in seconds) for container usage metrics"
+    default: 120
   doppler.collector_registrar_interval_milliseconds:
     description: "Interval for registering with collector"
     default: 60000

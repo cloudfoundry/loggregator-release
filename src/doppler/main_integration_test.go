@@ -35,6 +35,7 @@ var _ = Describe("Etcd Integration tests", func() {
 			EtcdMaxConcurrentRequests: 1,
 			EtcdUrls:                  []string{fmt.Sprintf("http://127.0.0.1:%d", etcdPort)},
 			Zone:                      "z1",
+			ContainerMetricTTLSeconds: 120,
 		}
 	})
 

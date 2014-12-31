@@ -78,7 +78,7 @@ var _ = Describe("SinkManager", func() {
 	var newAppServiceChan, deletedAppServiceChan chan appservice.AppService
 
 	BeforeEach(func() {
-		sinkManager = sinkmanager.NewSinkManager(1, true, blackListManager, loggertesthelper.Logger(), "dropsonde-origin")
+		sinkManager = sinkmanager.NewSinkManager(1, true, blackListManager, loggertesthelper.Logger(), "dropsonde-origin", 1*time.Second)
 
 		newAppServiceChan = make(chan appservice.AppService)
 		deletedAppServiceChan = make(chan appservice.AppService)
@@ -389,7 +389,7 @@ var _ = Describe("SinkManager", func() {
 		It("sends latest container metrics for a given app", func() {
 			env := &events.Envelope{
 				EventType: events.Envelope_ContainerMetric.Enum(),
-				Timestamp: proto.Int64(100),
+				Timestamp: proto.Int64(time.Now().UnixNano()),
 				ContainerMetric: &events.ContainerMetric{
 					ApplicationId: proto.String("myApp"),
 					InstanceIndex: proto.Int32(1),
