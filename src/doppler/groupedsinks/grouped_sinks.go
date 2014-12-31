@@ -4,6 +4,7 @@ import (
 	"doppler/groupedsinks/firehose_group"
 	"doppler/groupedsinks/sink_wrapper"
 	"doppler/sinks"
+	"doppler/sinks/containermetric"
 	"doppler/sinks/dump"
 	"doppler/sinks/syslog"
 	"doppler/sinks/websocket"
@@ -151,6 +152,26 @@ func (group *GroupedSinks) DumpFor(appId string) *dump.DumpSink {
 		return nil
 	}
 	return appCache[appId].Sink.(*dump.DumpSink)
+}
+
+func (group *GroupedSinks) ContainerMetricsFor(appId string) *containermetric.ContainerMetricSink {
+	group.RLock()
+	defer group.RUnlock()
+
+	appCache, ok := group.apps[appId]
+
+	if !ok {
+		group.logger.Debugf("GroupedSinks.ContainerMetricsFor: no sink cache for app id %s", appId)
+		return nil
+	}
+
+	sinkId := "container-metrics-" + appId
+	if _, ok := appCache[sinkId]; !ok {
+		group.logger.Debugf("GroupedSinks.ContainerMetricsFor: no ContainerMetricSink found for app id %s", appId)
+		return nil
+	}
+
+	return appCache[sinkId].Sink.(*containermetric.ContainerMetricSink)
 }
 
 func (group *GroupedSinks) WebsocketSinksFor(appId string) []websocket.WebsocketSink {

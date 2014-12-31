@@ -1,6 +1,7 @@
 package sinkmanager_test
 
 import (
+	"code.google.com/p/gogoprotobuf/proto"
 	"doppler/iprange"
 	"doppler/sinks"
 	"doppler/sinks/dump"
@@ -94,39 +95,6 @@ var _ = Describe("SinkManager", func() {
 		<-sinkManagerDone
 	})
 
-	Describe("SendSyslogErrorToLoggregator", func() {
-		It("listens and broadcasts error messages", func() {
-			sink := &ChannelSink{
-				appId:      "myApp",
-				identifier: "myAppChan1",
-				done:       make(chan struct{}),
-			}
-			sinkManager.RegisterSink(sink)
-			sinkManager.SendSyslogErrorToLoggregator("error msg", "myApp", "drainUrl")
-
-			Eventually(sink.Received).Should(HaveLen(1))
-
-			errorMsg := sink.Received()[0]
-			Expect(string(errorMsg.GetLogMessage().GetMessage())).To(Equal("error msg"))
-		})
-
-		It("counts syslog send failures", func() {
-			sink := &ChannelSink{
-				appId:      "myApp",
-				identifier: "myAppChan1",
-				done:       make(chan struct{}),
-			}
-			sinkManager.RegisterSink(sink)
-			sinkManager.SendSyslogErrorToLoggregator("error msg", "myApp", "drainUrl")
-
-			syslogFailureMetrics := sinkManager.Metrics.Emit().Metrics[4:]
-			Expect(syslogFailureMetrics).To(ConsistOf(
-				instrumentation.Metric{Name: "numberOfSyslogDrainErrors", Value: 1, Tags: map[string]interface{}{"appId": "myApp", "drainUrl": "drainUrl"}},
-			))
-
-		})
-	})
-
 	Describe("SendTo", func() {
 		It("sends to all known sinks", func() {
 			sink1 := &ChannelSink{appId: "myApp",
@@ -215,6 +183,76 @@ var _ = Describe("SinkManager", func() {
 		})
 	})
 
+	Describe("Start", func() {
+		Context("with updates from appstore", func() {
+			var metrics *metrics.SinkManagerMetrics
+			var numSyslogSinks func() int
+
+			BeforeEach(func() {
+				metrics = sinkManager.Metrics
+				numSyslogSinks = func() int {
+					metrics.RLock()
+					defer metrics.RUnlock()
+					return metrics.SyslogSinks
+				}
+			})
+
+			Context("when an add update is received", func() {
+				It("creates a new syslog sink from the newAppServicesChan", func() {
+					initialNumSinks := numSyslogSinks()
+					newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:885"}
+
+					Eventually(numSyslogSinks).Should(Equal(initialNumSinks + 1))
+				})
+
+				Context("with an invalid drain Url", func() {
+					var errorSink *ChannelSink
+
+					BeforeEach(func() {
+						errorSink = &ChannelSink{appId: "aptastic",
+							identifier: "myAppChan1",
+							done:       make(chan struct{}),
+						}
+						sinkManager.RegisterSink(errorSink)
+					})
+
+					It("sends an error message if the drain URL is blacklisted", func() {
+						newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://10.10.10.11:884"}
+						Eventually(errorSink.Received).Should(HaveLen(1))
+						errorMsg := errorSink.Received()[0]
+						Expect(string(errorMsg.GetLogMessage().GetMessage())).To(MatchRegexp("Invalid syslog drain URL"))
+					})
+
+					It("sends an error message if the drain URL is invalid", func() {
+						newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog//invalid"}
+						Eventually(errorSink.Received).Should(HaveLen(1))
+						errorMsg := errorSink.Received()[0]
+						Expect(string(errorMsg.GetLogMessage().GetMessage())).To(MatchRegexp("Invalid syslog drain URL"))
+					})
+				})
+			})
+
+			Context("when a delete update is received", func() {
+				It("deletes the corresponding syslog sink if it exists", func() {
+					initialNumSinks := numSyslogSinks()
+					newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886"}
+
+					Eventually(numSyslogSinks).Should(Equal(initialNumSinks + 1))
+
+					deletedAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886"}
+
+					Eventually(numSyslogSinks).Should(Equal(initialNumSinks))
+				})
+
+				It("handles a delete for a nonexistent sink", func() {
+					initialNumSinks := numSyslogSinks()
+					deletedAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886"}
+					Eventually(numSyslogSinks).Should(Equal(initialNumSinks))
+				})
+			})
+		})
+	})
+
 	Describe("Stop", func() {
 
 		It("stops", func() {
@@ -232,115 +270,6 @@ var _ = Describe("SinkManager", func() {
 			Expect(sink.RunFinished()).To(BeTrue())
 
 			close(done)
-		})
-	})
-
-	Context("with updates from appstore", func() {
-		var metrics *metrics.SinkManagerMetrics
-		var numSyslogSinks func() int
-
-		BeforeEach(func() {
-			metrics = sinkManager.Metrics
-			numSyslogSinks = func() int {
-				metrics.RLock()
-				defer metrics.RUnlock()
-				return metrics.SyslogSinks
-			}
-		})
-
-		Context("when an add update is received", func() {
-			It("creates a new syslog sink from the newAppServicesChan", func() {
-				initialNumSinks := numSyslogSinks()
-				newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:885"}
-
-				Eventually(numSyslogSinks).Should(Equal(initialNumSinks + 1))
-			})
-
-			Context("with an invalid drain Url", func() {
-				var errorSink *ChannelSink
-
-				BeforeEach(func() {
-					errorSink = &ChannelSink{appId: "aptastic",
-						identifier: "myAppChan1",
-						done:       make(chan struct{}),
-					}
-					sinkManager.RegisterSink(errorSink)
-				})
-
-				It("sends an error message if the drain URL is blacklisted", func() {
-					newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://10.10.10.11:884"}
-					Eventually(errorSink.Received).Should(HaveLen(1))
-					errorMsg := errorSink.Received()[0]
-					Expect(string(errorMsg.GetLogMessage().GetMessage())).To(MatchRegexp("Invalid syslog drain URL"))
-				})
-
-				It("sends an error message if the drain URL is invalid", func() {
-					newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog//invalid"}
-					Eventually(errorSink.Received).Should(HaveLen(1))
-					errorMsg := errorSink.Received()[0]
-					Expect(string(errorMsg.GetLogMessage().GetMessage())).To(MatchRegexp("Invalid syslog drain URL"))
-				})
-
-			})
-
-		})
-
-		Context("when a delete update is received", func() {
-			It("deletes the corresponding syslog sink if it exists", func() {
-				initialNumSinks := numSyslogSinks()
-				newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886"}
-
-				Eventually(numSyslogSinks).Should(Equal(initialNumSinks + 1))
-
-				deletedAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886"}
-
-				Eventually(numSyslogSinks).Should(Equal(initialNumSinks))
-			})
-
-			It("handles a delete for a nonexistent sink", func() {
-				initialNumSinks := numSyslogSinks()
-				deletedAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886"}
-				Eventually(numSyslogSinks).Should(Equal(initialNumSinks))
-			})
-
-		})
-
-	})
-
-	Describe("RegisterFirehoseSink", func() {
-		It("runs the sink, updates metrics and returns true for registering a new firehose sink", func() {
-			sink := &ChannelSink{done: make(chan struct{}), appId: "firehose-a"}
-			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
-			Eventually(sink.RunCalled).Should(BeTrue())
-			Expect(sinkManager.Metrics.Emit().Metrics[3].Value).To(Equal(1))
-		})
-
-		It("returns false for a duplicate sink and does not update the sink metrics", func() {
-			sink := &ChannelSink{done: make(chan struct{}), appId: "firehose-a"}
-
-			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
-
-			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeFalse())
-			Expect(sinkManager.Metrics.Emit().Metrics[3].Value).To(Equal(1))
-		})
-	})
-
-	Describe("UnregisterFirehoseSink", func() {
-		It("stops the sink and updates metrics", func() {
-			sink := &ChannelSink{done: make(chan struct{}), appId: "firehose-a"}
-
-			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
-
-			sinkManager.UnregisterFirehoseSink(sink)
-			Eventually(sink.RunFinished).Should(BeTrue())
-			Expect(sinkManager.Metrics.Emit().Metrics[3].Value).To(Equal(0))
-		})
-
-		It("does not update metrics when a sink is not registered", func() {
-			sink := &ChannelSink{done: make(chan struct{})}
-
-			sinkManager.UnregisterFirehoseSink(sink)
-			Expect(sinkManager.Metrics.Emit().Metrics[3].Value).To(Equal(0))
 		})
 	})
 
@@ -406,6 +335,106 @@ var _ = Describe("SinkManager", func() {
 				sinkManager.UnregisterSink(dumpSink)
 				Expect(sinkManager.Metrics.DumpSinks).To(Equal(0))
 			})
+		})
+	})
+
+	Describe("RegisterFirehoseSink", func() {
+		It("runs the sink, updates metrics and returns true for registering a new firehose sink", func() {
+			sink := &ChannelSink{done: make(chan struct{}), appId: "firehose-a"}
+			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
+			Eventually(sink.RunCalled).Should(BeTrue())
+			Expect(sinkManager.Metrics.Emit().Metrics[3].Value).To(Equal(1))
+		})
+
+		It("returns false for a duplicate sink and does not update the sink metrics", func() {
+			sink := &ChannelSink{done: make(chan struct{}), appId: "firehose-a"}
+
+			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
+
+			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeFalse())
+			Expect(sinkManager.Metrics.Emit().Metrics[3].Value).To(Equal(1))
+		})
+	})
+
+	Describe("UnregisterFirehoseSink", func() {
+		It("stops the sink and updates metrics", func() {
+			sink := &ChannelSink{done: make(chan struct{}), appId: "firehose-a"}
+
+			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
+
+			sinkManager.UnregisterFirehoseSink(sink)
+			Eventually(sink.RunFinished).Should(BeTrue())
+			Expect(sinkManager.Metrics.Emit().Metrics[3].Value).To(Equal(0))
+		})
+
+		It("does not update metrics when a sink is not registered", func() {
+			sink := &ChannelSink{done: make(chan struct{})}
+
+			sinkManager.UnregisterFirehoseSink(sink)
+			Expect(sinkManager.Metrics.Emit().Metrics[3].Value).To(Equal(0))
+		})
+	})
+
+	Describe("Latest Container Metrics", func() {
+		var sink *ChannelSink
+		BeforeEach(func() {
+			sink = &ChannelSink{
+				appId:      "myApp",
+				identifier: "myAppChan1",
+				done:       make(chan struct{}),
+			}
+			sinkManager.RegisterSink(sink)
+		})
+
+		It("sends latest container metrics for a given app", func() {
+			env := &events.Envelope{
+				EventType: events.Envelope_ContainerMetric.Enum(),
+				Timestamp: proto.Int64(100),
+				ContainerMetric: &events.ContainerMetric{
+					ApplicationId: proto.String("myApp"),
+					InstanceIndex: proto.Int32(1),
+					CpuPercentage: proto.Float64(73),
+					MemoryBytes:   proto.Uint64(2),
+					DiskBytes:     proto.Uint64(3),
+				},
+			}
+
+			sinkManager.SendTo("myApp", env)
+
+			Eventually(func() []*events.Envelope { return sinkManager.LatestContainerMetrics("myApp") }).Should(ConsistOf(env))
+		})
+	})
+
+	Describe("SendSyslogErrorToLoggregator", func() {
+		It("listens and broadcasts error messages", func() {
+			sink := &ChannelSink{
+				appId:      "myApp",
+				identifier: "myAppChan1",
+				done:       make(chan struct{}),
+			}
+			sinkManager.RegisterSink(sink)
+			sinkManager.SendSyslogErrorToLoggregator("error msg", "myApp", "drainUrl")
+
+			Eventually(sink.Received).Should(HaveLen(1))
+
+			errorMsg := sink.Received()[0]
+			Expect(string(errorMsg.GetLogMessage().GetMessage())).To(Equal("error msg"))
+		})
+
+		It("counts syslog send failures", func() {
+			sink := &ChannelSink{
+				appId:      "myApp",
+				identifier: "myAppChan1",
+				done:       make(chan struct{}),
+			}
+			sinkManager.RegisterSink(sink)
+			sinkManager.SendSyslogErrorToLoggregator("error msg", "myApp", "drainUrl")
+
+			syslogFailureMetrics := sinkManager.Metrics.Emit().Metrics[4:]
+			Expect(syslogFailureMetrics).To(ConsistOf(
+				instrumentation.Metric{Name: "numberOfSyslogDrainErrors", Value: 1, Tags: map[string]interface{}{"appId": "myApp", "drainUrl": "drainUrl"}},
+			))
+
 		})
 	})
 })

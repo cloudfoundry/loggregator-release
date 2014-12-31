@@ -55,7 +55,7 @@ func AddWSSink(receivedChan chan []byte, url string) (chan struct{}, <-chan stru
 	return stopKeepAlive, connectionDropped
 }
 
-func parseLogMessage(actual []byte) (*events.Envelope, error) {
+func parseEnvelope(actual []byte) (*events.Envelope, error) {
 	receivedMessage := &events.Envelope{}
 	err := proto.Unmarshal(actual, receivedMessage)
 	return receivedMessage, err

@@ -111,7 +111,7 @@ func (w *WebsocketServer) firehoseHandler(writer http.ResponseWriter, request *h
 func (w *WebsocketServer) appHandler(writer http.ResponseWriter, request *http.Request) (wsHandler, error) {
 	var handler func(string, *gorilla.Conn)
 
-	validPaths := regexp.MustCompile("^/apps/(.*)/(recentlogs|stream)$")
+	validPaths := regexp.MustCompile("^/apps/(.*)/(recentlogs|stream|containermetrics)$")
 	matches := validPaths.FindStringSubmatch(request.URL.Path)
 	if len(matches) != 3 {
 		writer.Header().Set("WWW-Authenticate", "Basic")
@@ -136,6 +136,8 @@ func (w *WebsocketServer) appHandler(writer http.ResponseWriter, request *http.R
 		handler = w.streamLogs
 	case "recentlogs":
 		handler = w.recentLogs
+	case "containermetrics":
+		handler = w.latestContainerMetrics
 	default:
 		http.Error(writer, "invalid path "+request.URL.Path, 400)
 		return nil, fmt.Errorf("Invalid path (returning 400): invalid path %s", request.URL.Path)
@@ -178,13 +180,18 @@ func (w *WebsocketServer) recentLogs(appId string, websocketConnection *gorilla.
 	sendMessagesToWebsocket(logMessages, websocketConnection, w.logger)
 }
 
+func (w *WebsocketServer) latestContainerMetrics(appId string, websocketConnection *gorilla.Conn) {
+	metrics := w.sinkManager.LatestContainerMetrics(appId)
+	sendMessagesToWebsocket(metrics, websocketConnection, w.logger)
+}
+
 func (w *WebsocketServer) logInvalidApp(address string) {
 	message := fmt.Sprintf("WebsocketServer: Did not accept sink connection with invalid app id: %s.", address)
 	w.logger.Warn(message)
 }
 
-func sendMessagesToWebsocket(logMessages []*events.Envelope, websocketConnection *gorilla.Conn, logger *gosteno.Logger) {
-	for _, messageEnvelope := range logMessages {
+func sendMessagesToWebsocket(envelopes []*events.Envelope, websocketConnection *gorilla.Conn, logger *gosteno.Logger) {
+	for _, messageEnvelope := range envelopes {
 		envelopeBytes, err := proto.Marshal(messageEnvelope)
 
 		if err != nil {

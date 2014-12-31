@@ -24,52 +24,96 @@ import (
 
 var _ = Describe("Doppler Server", func() {
 
-	var receivedChan chan []byte
-	var dontKeepAliveChan chan bool
-	var connectionDroppedChannel <-chan bool
-	var ws *websocket.Conn
+	Describe("Log message streaming", func() {
+		var receivedChan chan []byte
+		var dontKeepAliveChan chan bool
+		var connectionDroppedChannel <-chan bool
+		var ws *websocket.Conn
 
-	BeforeEach(func() {
-		receivedChan = make(chan []byte)
-		ws, dontKeepAliveChan, connectionDroppedChannel = AddWSSink(receivedChan, "8083", "/apps/myApp/stream")
+		BeforeEach(func() {
+			receivedChan = make(chan []byte)
+			ws, dontKeepAliveChan, connectionDroppedChannel = AddWSSink(receivedChan, "8083", "/apps/myApp/stream")
+		})
+
+		AfterEach(func(done Done) {
+			if dontKeepAliveChan != nil {
+				close(dontKeepAliveChan)
+				ws.Close()
+				Eventually(receivedChan).Should(BeClosed())
+				close(done)
+			}
+		})
+
+		It("works from udp socket to websocket client", func() {
+			connection, _ := net.Dial("udp", "127.0.0.1:3457")
+
+			expectedMessageString := "Some Data"
+			unmarshalledLogMessage := factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp", "App")
+			expectedMessage := MarshalEvent(unmarshalledLogMessage, "secret")
+
+			_, err := connection.Write(expectedMessage)
+			Expect(err).To(BeNil())
+
+			receivedMessageBytes := []byte{}
+			Eventually(receivedChan).Should(Receive(&receivedMessageBytes))
+			receivedMessageString := parseProtoBufMessageString(receivedMessageBytes)
+			Expect(expectedMessageString).To(Equal(receivedMessageString))
+		})
+
+		It("drops invalid log envelopes", func() {
+			time.Sleep(50 * time.Millisecond)
+			connection, _ := net.Dial("udp", "127.0.0.1:3457")
+
+			expectedMessageString := "Some Data"
+			unmarshalledLogMessage := factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp", "App")
+			expectedMessage := MarshalEvent(unmarshalledLogMessage, "invalid")
+
+			_, err := connection.Write(expectedMessage)
+			Expect(err).To(BeNil())
+			Expect(receivedChan).To(BeEmpty())
+		})
 	})
 
-	AfterEach(func(done Done) {
-		if dontKeepAliveChan != nil {
+	Describe("Container Metrics", func() {
+		var receivedChan chan []byte
+		var dontKeepAliveChan chan bool
+		var connectionDroppedChannel <-chan bool
+		var ws *websocket.Conn
+
+		var containerMetric *events.ContainerMetric
+
+		BeforeEach(func() {
+			connection, _ := net.Dial("udp", "127.0.0.1:3457")
+
+			containerMetric = factories.NewContainerMetric("myApp", 0, 1, 2, 3)
+			envelope := MarshalEvent(containerMetric, "secret")
+			_, err := connection.Write(envelope)
+			Expect(err).NotTo(HaveOccurred())
+
+		})
+
+		AfterEach(func(done Done) {
 			close(dontKeepAliveChan)
 			ws.Close()
 			Eventually(receivedChan).Should(BeClosed())
 			close(done)
-		}
-	})
+		})
 
-	It("works from udp socket to websocket client", func() {
-		connection, _ := net.Dial("udp", "127.0.0.1:3457")
+		It("works from udp socket to websocket client", func() {
+			receivedChan = make(chan []byte)
+			ws, dontKeepAliveChan, connectionDroppedChannel = AddWSSink(receivedChan, "8083", "/apps/myApp/containermetrics")
 
-		expectedMessageString := "Some Data"
-		unmarshalledLogMessage := factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp", "App")
-		expectedMessage := MarshalledLogEnvelope(unmarshalledLogMessage, "secret")
+			receivedMessageBytes := []byte{}
+			Eventually(receivedChan).Should(Receive(&receivedMessageBytes))
 
-		_, err := connection.Write(expectedMessage)
-		Expect(err).To(BeNil())
+			var receivedEnvelope events.Envelope
+			err := proto.Unmarshal(receivedMessageBytes, &receivedEnvelope)
+			Expect(err).NotTo(HaveOccurred())
 
-		receivedMessageBytes := []byte{}
-		Eventually(receivedChan).Should(Receive(&receivedMessageBytes))
-		receivedMessageString := parseProtoBufMessageString(receivedMessageBytes)
-		Expect(expectedMessageString).To(Equal(receivedMessageString))
-	})
-
-	It("drops invalid log envelopes", func() {
-		time.Sleep(50 * time.Millisecond)
-		connection, _ := net.Dial("udp", "127.0.0.1:3457")
-
-		expectedMessageString := "Some Data"
-		unmarshalledLogMessage := factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp", "App")
-		expectedMessage := MarshalledLogEnvelope(unmarshalledLogMessage, "invalid")
-
-		_, err := connection.Write(expectedMessage)
-		Expect(err).To(BeNil())
-		Expect(receivedChan).To(BeEmpty())
+			Expect(receivedEnvelope.GetEventType()).To(Equal(events.Envelope_ContainerMetric))
+			receivedMetric := receivedEnvelope.GetContainerMetric()
+			Expect(receivedMetric).To(Equal(containerMetric))
+		})
 	})
 
 	Context("metric emission", func() {
@@ -173,8 +217,8 @@ func AddWSSink(receivedChan chan []byte, port string, path string) (*websocket.C
 	return ws, dontKeepAliveChan, connectionDroppedChannel
 }
 
-func MarshalledLogEnvelope(logMessage *events.LogMessage, secret string) []byte {
-	envelope, _ := emitter.Wrap(logMessage, "origin")
+func MarshalEvent(event events.Event, secret string) []byte {
+	envelope, _ := emitter.Wrap(event, "origin")
 	envelopeBytes := marshalProtoBuf(envelope)
 
 	return signature.SignMessage(envelopeBytes, []byte(secret))

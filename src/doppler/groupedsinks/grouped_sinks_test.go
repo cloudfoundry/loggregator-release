@@ -2,14 +2,14 @@ package groupedsinks_test
 
 import (
 	"doppler/groupedsinks"
+	"doppler/sinks/containermetric"
 	"doppler/sinks/dump"
 	"doppler/sinks/syslog"
+	"doppler/sinks/websocket"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-
-	"doppler/sinks/websocket"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -413,6 +413,47 @@ var _ = Describe("GroupedSink", func() {
 		It("returns nil if no sinks exist", func() {
 			Expect(groupedSinks.DumpFor("empty")).To(BeNil())
 		})
+	})
+
+	Describe("ContainerMetricsFor", func() {
+
+		It("returns only container metric sinks", func() {
+			appId := "456"
+
+			sink1 := containermetric.NewContainerMetricSink(appId)
+			sink2 := dump.NewDumpSink(appId, 5, loggertesthelper.Logger(), time.Second)
+
+			groupedSinks.RegisterAppSink(inputChan, sink1)
+			groupedSinks.RegisterAppSink(inputChan, sink2)
+
+			Expect(groupedSinks.ContainerMetricsFor(appId)).To(Equal(sink1))
+		})
+
+		It("returns only container metrics for appId", func() {
+			appId1 := "123"
+			appId2 := "456"
+
+			sink1 := containermetric.NewContainerMetricSink(appId1)
+			sink2 := containermetric.NewContainerMetricSink(appId2)
+
+			groupedSinks.RegisterAppSink(inputChan, sink1)
+			groupedSinks.RegisterAppSink(inputChan, sink2)
+
+			Expect(groupedSinks.ContainerMetricsFor(appId1)).To(Equal(sink1))
+		})
+
+		It("returns nil if no container metrics sinks are registered", func() {
+			appId := "1234"
+			sink2 := dump.NewDumpSink(appId, 5, loggertesthelper.Logger(), time.Second)
+			groupedSinks.RegisterAppSink(inputChan, sink2)
+
+			Expect(groupedSinks.ContainerMetricsFor(appId)).To(BeNil())
+		})
+
+		It("returns nil if no sinks exist", func() {
+			Expect(groupedSinks.ContainerMetricsFor("1234")).To(BeNil())
+		})
+
 	})
 
 	Describe("WebsocketSinksFor", func() {

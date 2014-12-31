@@ -3,6 +3,7 @@ package sinkmanager
 import (
 	"doppler/groupedsinks"
 	"doppler/sinks"
+	"doppler/sinks/containermetric"
 	"doppler/sinks/dump"
 	"doppler/sinks/syslog"
 	"doppler/sinks/syslogwriter"
@@ -30,7 +31,6 @@ type SinkManager struct {
 	recentLogCount      uint32
 	Metrics             *metrics.SinkManagerMetrics
 	logger              *gosteno.Logger
-	stopped             bool
 	DropsondeOrigin     string
 }
 
@@ -49,7 +49,6 @@ func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackLis
 }
 
 func (sinkManager *SinkManager) Start(newAppServiceChan, deletedAppServiceChan <-chan appservice.AppService) {
-	sinkManager.setStopped(false)
 	go sinkManager.listenForNewAppServices(newAppServiceChan)
 	go sinkManager.listenForDeletedAppServices(deletedAppServiceChan)
 
@@ -57,7 +56,6 @@ func (sinkManager *SinkManager) Start(newAppServiceChan, deletedAppServiceChan <
 }
 
 func (sinkManager *SinkManager) Stop() {
-	sinkManager.setStopped(true)
 	select {
 	case <-sinkManager.doneChannel:
 	default:
@@ -68,39 +66,8 @@ func (sinkManager *SinkManager) Stop() {
 
 func (sinkManager *SinkManager) SendTo(appId string, receivedMessage *events.Envelope) {
 	sinkManager.ensureRecentLogsSinkFor(appId)
+	sinkManager.ensureContainerMetricsSinkFor(appId)
 	sinkManager.sinks.Broadcast(appId, receivedMessage)
-}
-
-func (sinkManager *SinkManager) listenForNewAppServices(newAppServiceChan <-chan appservice.AppService) {
-	for appService := range newAppServiceChan {
-		sinkManager.registerNewSyslogSink(appService.AppId, appService.Url)
-	}
-}
-
-func (sinkManager *SinkManager) listenForDeletedAppServices(deletedAppServiceChan <-chan appservice.AppService) {
-	for appService := range deletedAppServiceChan {
-		syslogSink := sinkManager.sinks.DrainFor(appService.AppId, appService.Url)
-		if syslogSink != nil {
-			sinkManager.UnregisterSink(syslogSink)
-		}
-	}
-}
-
-func (sinkManager *SinkManager) listenForErrorMessages() {
-	for {
-		select {
-		case <-sinkManager.doneChannel:
-			return
-		case errorMessage, ok := <-sinkManager.errorChannel:
-			if !ok {
-				return
-			}
-			appId := envelope_extensions.GetAppId(errorMessage)
-			sinkManager.logger.Debugf("SinkManager:ErrorChannel: Searching for sinks with appId [%s].", appId)
-			sinkManager.sinks.BroadcastError(appId, errorMessage)
-			sinkManager.logger.Debugf("SinkManager:ErrorChannel: Done sending error message.")
-		}
-	}
 }
 
 func (sinkManager *SinkManager) RegisterSink(sink sinks.Sink) bool {
@@ -165,29 +132,22 @@ func (sinkManager *SinkManager) UnregisterFirehoseSink(sink sinks.Sink) {
 	sinkManager.logger.Debugf("SinkManager: Firehose Sink with identifier %s requested closing. Closed it.", sink.Identifier())
 }
 
-func (sinkManager *SinkManager) setStopped(v bool) {
-	sinkManager.Lock()
-	defer sinkManager.Unlock()
-	sinkManager.stopped = v
-}
-
-func (sinkManager *SinkManager) isStopped() bool {
-	sinkManager.RLock()
-	defer sinkManager.RUnlock()
-	return sinkManager.stopped
-}
-
-func (sinkManager *SinkManager) registerNewSyslogSink(appId string, syslogSinkUrl string) {
-	parsedSyslogDrainUrl, err := sinkManager.urlBlacklistManager.CheckUrl(syslogSinkUrl)
-	if err != nil {
-		errorMsg := fmt.Sprintf("SinkManager: Invalid syslog drain URL (%s) for application %s. Err: %v", syslogSinkUrl, appId, err)
-		sinkManager.SendSyslogErrorToLoggregator(errorMsg, appId, syslogSinkUrl)
+func (sinkManager *SinkManager) RecentLogsFor(appId string) []*events.Envelope {
+	if sink := sinkManager.sinks.DumpFor(appId); sink != nil {
+		return sink.Dump()
 	} else {
-		syslogWriter := syslogwriter.NewSyslogWriter(parsedSyslogDrainUrl, appId, sinkManager.skipCertVerify)
-		syslogSink := syslog.NewSyslogSink(appId, syslogSinkUrl, sinkManager.logger, syslogWriter, sinkManager.SendSyslogErrorToLoggregator, sinkManager.DropsondeOrigin)
-		sinkManager.RegisterSink(syslogSink)
+		sinkManager.logger.Debugf("SinkManager:DumpReceiverChan: No dump exists for appId [%s].", appId)
+		return []*events.Envelope{}
 	}
+}
 
+func (sinkManager *SinkManager) LatestContainerMetrics(appId string) []*events.Envelope {
+	if sink := sinkManager.sinks.ContainerMetricsFor(appId); sink != nil {
+		return sink.GetLatest()
+	} else {
+		sinkManager.logger.Debugf("SinkManager.LatestContainerMetrics: No container metrics exist for appId [%s].", appId)
+		return []*events.Envelope{}
+	}
 }
 
 func (sinkManager *SinkManager) SendSyslogErrorToLoggregator(errorMsg string, appId string, sinkUrl string) {
@@ -207,33 +167,69 @@ func (sinkManager *SinkManager) SendSyslogErrorToLoggregator(errorMsg string, ap
 	sinkManager.errorChannel <- envelope
 }
 
+func (sinkManager *SinkManager) Emit() instrumentation.Context {
+	return sinkManager.Metrics.Emit()
+}
+
+func (sinkManager *SinkManager) listenForNewAppServices(newAppServiceChan <-chan appservice.AppService) {
+	for appService := range newAppServiceChan {
+		sinkManager.registerNewSyslogSink(appService.AppId, appService.Url)
+	}
+}
+
+func (sinkManager *SinkManager) listenForDeletedAppServices(deletedAppServiceChan <-chan appservice.AppService) {
+	for appService := range deletedAppServiceChan {
+		syslogSink := sinkManager.sinks.DrainFor(appService.AppId, appService.Url)
+		if syslogSink != nil {
+			sinkManager.UnregisterSink(syslogSink)
+		}
+	}
+}
+
+func (sinkManager *SinkManager) listenForErrorMessages() {
+	for {
+		select {
+		case <-sinkManager.doneChannel:
+			return
+		case errorMessage, ok := <-sinkManager.errorChannel:
+			if !ok {
+				return
+			}
+			appId := envelope_extensions.GetAppId(errorMessage)
+			sinkManager.logger.Debugf("SinkManager:ErrorChannel: Searching for sinks with appId [%s].", appId)
+			sinkManager.sinks.BroadcastError(appId, errorMessage)
+			sinkManager.logger.Debugf("SinkManager:ErrorChannel: Done sending error message.")
+		}
+	}
+}
+
+func (sinkManager *SinkManager) registerNewSyslogSink(appId string, syslogSinkUrl string) {
+	parsedSyslogDrainUrl, err := sinkManager.urlBlacklistManager.CheckUrl(syslogSinkUrl)
+	if err != nil {
+		errorMsg := fmt.Sprintf("SinkManager: Invalid syslog drain URL (%s) for application %s. Err: %v", syslogSinkUrl, appId, err)
+		sinkManager.SendSyslogErrorToLoggregator(errorMsg, appId, syslogSinkUrl)
+	} else {
+		syslogWriter := syslogwriter.NewSyslogWriter(parsedSyslogDrainUrl, appId, sinkManager.skipCertVerify)
+		syslogSink := syslog.NewSyslogSink(appId, syslogSinkUrl, sinkManager.logger, syslogWriter, sinkManager.SendSyslogErrorToLoggregator, sinkManager.DropsondeOrigin)
+		sinkManager.RegisterSink(syslogSink)
+	}
+
+}
+
 func (sinkManager *SinkManager) ensureRecentLogsSinkFor(appId string) {
 	if sinkManager.sinks.DumpFor(appId) != nil {
 		return
 	}
 
-	s := dump.NewDumpSink(appId, sinkManager.recentLogCount, sinkManager.logger, time.Hour)
-	sinkManager.RegisterSink(s)
+	sink := dump.NewDumpSink(appId, sinkManager.recentLogCount, sinkManager.logger, time.Hour)
+	sinkManager.RegisterSink(sink)
 }
 
-func (sinkManager *SinkManager) RecentLogsFor(appId string) []*events.Envelope {
-	if sink := sinkManager.sinks.DumpFor(appId); sink != nil {
-		return sink.Dump()
-	} else {
-		sinkManager.logger.Debugf("SinkManager:DumpReceiverChan: No dump exists for appId [%s].", appId)
-		return []*events.Envelope{}
+func (sinkManager *SinkManager) ensureContainerMetricsSinkFor(appId string) {
+	if sinkManager.sinks.ContainerMetricsFor(appId) != nil {
+		return
 	}
-}
 
-func (sinkManager *SinkManager) Emit() instrumentation.Context {
-	return sinkManager.Metrics.Emit()
-}
-
-func contains(valueToFind string, values []string) bool {
-	for _, value := range values {
-		if valueToFind == value {
-			return true
-		}
-	}
-	return false
+	sink := containermetric.NewContainerMetricSink(appId)
+	sinkManager.RegisterSink(sink)
 }

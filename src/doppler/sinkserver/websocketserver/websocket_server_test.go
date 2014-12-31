@@ -62,18 +62,31 @@ var _ = Describe("WebsocketServer", func() {
 
 		AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/recentlogs", apiEndpoint, appId))
 
-		rlm, err := receiveLogMessage(wsReceivedChan)
+		rlm, err := receiveEnvelope(wsReceivedChan)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rlm.GetLogMessage().GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
 		close(done)
 	})
 
-	It("sends data to the websocket client", func(done Done) {
+	It("dumps container metric data to the websocket client with /containermetrics", func(done Done) {
+		cm := factories.NewContainerMetric(appId, 0, 42.42, 1234, 123412341234)
+		envelope, _ := emitter.Wrap(cm, "origin")
+		sinkManager.SendTo(appId, envelope)
+
+		AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/containermetrics", apiEndpoint, appId))
+
+		rcm, err := receiveEnvelope(wsReceivedChan)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rcm.GetContainerMetric()).To(Equal(cm))
+		close(done)
+	})
+
+	It("sends data to the websocket client with /stream", func(done Done) {
 		stopKeepAlive, _ := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 		sinkManager.SendTo(appId, lm)
 
-		rlm, err := receiveLogMessage(wsReceivedChan)
+		rlm, err := receiveEnvelope(wsReceivedChan)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rlm.GetLogMessage().GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
 		close(stopKeepAlive)
@@ -85,7 +98,7 @@ var _ = Describe("WebsocketServer", func() {
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 		sinkManager.SendTo(appId, lm)
 
-		rlm, err := receiveLogMessage(wsReceivedChan)
+		rlm, err := receiveEnvelope(wsReceivedChan)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rlm.GetLogMessage().GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
 		close(stopKeepAlive)
@@ -129,7 +142,7 @@ var _ = Describe("WebsocketServer", func() {
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 		sinkManager.SendTo(appId, lm)
 
-		rlm, err := receiveLogMessage(wsReceivedChan)
+		rlm, err := receiveEnvelope(wsReceivedChan)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rlm).ToNot(BeNil())
 		close(stopKeepAlive)
@@ -144,7 +157,7 @@ var _ = Describe("WebsocketServer", func() {
 	})
 })
 
-func receiveLogMessage(dataChan <-chan []byte) (*events.Envelope, error) {
+func receiveEnvelope(dataChan <-chan []byte) (*events.Envelope, error) {
 	receivedData := <-dataChan
-	return parseLogMessage(receivedData)
+	return parseEnvelope(receivedData)
 }
