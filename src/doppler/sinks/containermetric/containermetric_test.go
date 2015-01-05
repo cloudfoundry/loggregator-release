@@ -19,7 +19,7 @@ var _ = Describe("Containermetric", func() {
 	BeforeEach(func() {
 		eventChan = make(chan *events.Envelope)
 
-		sink = containermetric.NewContainerMetricSink("myApp", 1*time.Second)
+		sink = containermetric.NewContainerMetricSink("myApp", 2*time.Second)
 		go sink.Run(eventChan)
 	})
 
@@ -80,7 +80,7 @@ var _ = Describe("Containermetric", func() {
 		})
 
 		It("removes the outdated container metrics", func() {
-			m1 := metricFor(1, time.Now().Add(-500*time.Millisecond), 1, 1, 1)
+			m1 := metricFor(1, time.Now().Add(-1500*time.Millisecond), 1, 1, 1)
 			eventChan <- m1
 
 			Eventually(sink.GetLatest).Should(ConsistOf(m1))
