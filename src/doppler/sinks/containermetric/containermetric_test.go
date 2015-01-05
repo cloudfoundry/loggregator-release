@@ -60,7 +60,7 @@ var _ = Describe("Containermetric", func() {
 
 			Eventually(sink.GetLatest).Should(ConsistOf(m1))
 
-			m2 := metricFor(1, time.Now().Add(-100*time.Microsecond), 2, 2, 2)
+			m2 := metricFor(1, time.Now().Add(-150*time.Microsecond), 2, 2, 2)
 			eventChan <- m2
 
 			Consistently(sink.GetLatest).Should(ConsistOf(m1))
