@@ -43,24 +43,26 @@ var _ = Describe("Containermetric", func() {
 		})
 
 		It("returns latest metric for an instance if it has a newer timestamp", func() {
-			m1 := metricFor(1, time.Now().Add(-500*time.Microsecond), 1, 1, 1)
+			now := time.Now()
+			m1 := metricFor(1, now.Add(-500*time.Microsecond), 1, 1, 1)
 			eventChan <- m1
 
 			Eventually(sink.GetLatest).Should(ConsistOf(m1))
 
-			m2 := metricFor(1, time.Now().Add(-200*time.Microsecond), 2, 2, 2)
+			m2 := metricFor(1, now.Add(-200*time.Microsecond), 2, 2, 2)
 			eventChan <- m2
 
 			Eventually(sink.GetLatest).Should(ConsistOf(m2))
 		})
 
 		It("discards latest metric for an instance if it has an older timestamp", func() {
-			m1 := metricFor(1, time.Now().Add(-1*time.Microsecond), 1, 1, 1)
+			now := time.Now()
+			m1 := metricFor(1, now.Add(-1*time.Microsecond), 1, 1, 1)
 			eventChan <- m1
 
 			Eventually(sink.GetLatest).Should(ConsistOf(m1))
 
-			m2 := metricFor(1, time.Now().Add(-150*time.Microsecond), 2, 2, 2)
+			m2 := metricFor(1, now.Add(-150*time.Microsecond), 2, 2, 2)
 			eventChan <- m2
 
 			Consistently(sink.GetLatest).Should(ConsistOf(m1))
