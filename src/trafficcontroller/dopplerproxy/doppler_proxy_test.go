@@ -6,8 +6,10 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/server/handlers"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"time"
 	"trafficcontroller/doppler_endpoint"
@@ -15,8 +17,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"io/ioutil"
-	"strings"
 )
 
 var _ = Describe("ServeHTTP", func() {
@@ -153,6 +153,16 @@ var _ = Describe("ServeHTTP", func() {
 		It("connects to doppler servers without reconnecting for recentlogs", func() {
 			close(channelGroupConnector.messages)
 			req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs", nil)
+			req.Header.Add("Authorization", "token")
+
+			proxy.ServeHTTP(recorder, req)
+
+			Eventually(channelGroupConnector.getReconnect).Should(BeFalse())
+		})
+
+		It("connects to doppler servers without reconnecting for containermetrics", func() {
+			close(channelGroupConnector.messages)
+			req, _ := http.NewRequest("GET", "/apps/abc123/containermetrics", nil)
 			req.Header.Add("Authorization", "token")
 
 			proxy.ServeHTTP(recorder, req)

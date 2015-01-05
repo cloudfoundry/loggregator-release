@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/gorilla/websocket"
-	"io"
 	"regexp"
 	"sync"
 	"time"
@@ -51,7 +50,8 @@ func (l *websocketListener) Start(url, appId string, outputChan OutputChannel, s
 		conn.SetReadDeadline(deadline(l.timeout))
 		_, msg, err := conn.ReadMessage()
 
-		if err == io.EOF {
+		// Error message from Gorilla Websocket library is not a constant/variable, so we only can check the contents of the message.
+		if err != nil && err.Error() == "websocket: close 1005 " {
 			close(serverError)
 			break
 		}

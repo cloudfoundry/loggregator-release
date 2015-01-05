@@ -12,10 +12,6 @@ import (
 	"trafficcontroller/integration_test/fake_doppler"
 	"trafficcontroller/integration_test/fake_uaa_server"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
-
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -23,6 +19,10 @@ import (
 	"os/exec"
 	"testing"
 	"time"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
 )
 
 func TestIntegrationTest(t *testing.T) {
@@ -148,6 +148,23 @@ func makeDropsondeMessage(messageString string, appId string, currentTime int64)
 		LogMessage: logMessage,
 		Origin:     proto.String("doppler"),
 		EventType:  events.Envelope_LogMessage.Enum(),
+	}
+	msg, _ := proto.Marshal(envelope)
+
+	return msg
+}
+func makeContainerMetricMessage(appId string, instanceIndex int32, cpu float64, currentTime int64) []byte {
+	containerMetric := &events.ContainerMetric{
+		ApplicationId: proto.String(appId),
+		InstanceIndex: proto.Int32(instanceIndex),
+		CpuPercentage: proto.Float64(cpu),
+	}
+
+	envelope := &events.Envelope{
+		ContainerMetric: containerMetric,
+		Origin:          proto.String("doppler"),
+		EventType:       events.Envelope_ContainerMetric.Enum(),
+		Timestamp:       proto.Int64(currentTime),
 	}
 	msg, _ := proto.Marshal(envelope)
 
