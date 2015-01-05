@@ -85,11 +85,19 @@ var _ = Describe("Doppler Server", func() {
 		BeforeEach(func() {
 			connection, _ := net.Dial("udp", "127.0.0.1:3457")
 
+			// Opening stream websocket to verify receipt of container metric
+			waitChan := make(chan []byte)
+			waitSocket, _, _ := AddWSSink(waitChan, "8083", "/apps/myApp/stream")
+
 			containerMetric = factories.NewContainerMetric("myApp", 0, 1, 2, 3)
 			envelope := MarshalEvent(containerMetric, "secret")
 			_, err := connection.Write(envelope)
 			Expect(err).NotTo(HaveOccurred())
 
+			// Received something in the stream websocket so now we can listen for container metrics.
+			// This ensures that we don't listen for containermetrics before it is processed.
+			Eventually(waitChan).Should(Receive())
+			waitSocket.Close()
 		})
 
 		AfterEach(func(done Done) {
