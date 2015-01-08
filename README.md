@@ -47,8 +47,8 @@ Loggregator is composed of:
 
 * **Sources**: Logging agents that run on the Cloud Foundry components.
 * **Metron**: Metron agents are co-located with sources. They collect logs and forward them to:
-* **Loggregator Server (a.k.a. Doppler)**: Responsible for gathering logs from the **Metron agents**, and storing them in temporary buffers.
-* **Traffic Controller**: Makes the Loggregator Servers horizontally scalable by partitioning incoming log messages and outgoing traffic. Routes incoming log messages and proxies outgoing connections to the CLI and to drains for 3rd party partners.
+* **Loggregator Server (a.k.a. Doppler)**: Responsible for gathering logs from the **Metron agents**, storing them in temporary buffers, and forwarding logs to 3rd party syslog drains.
+* **Traffic Controller**: Handles client requests for logs. Gathers and collates messages from all Doppler servers, and provides external API and message translation (as needed for legacy APIs).
 
 Source agents emit the logging data as [protocol-buffers](https://code.google.com/p/protobuf/), and the data stays in that format throughout the system.
 
@@ -60,11 +60,11 @@ In a redundant CloudFoundry setup, Loggregator can be configured to survive zone
 
 The role of Metron is to take traffic from the various emitter sources (dea, dea-logging-agent router, etc) and route that traffic to one or more loggregator servers. In the current config we route this traffic to the loggregator servers in the same az. The traffic is randomly distributed across loggregator servers.
 
-The role of Traffic Controller is to handle inbound web socket requests for log data. It does this by proxying the request to all loggregator servers (regardless of az). Since an application can be deployed to multiple azs, its logs can potentially end up on loggregator servers in multiple azs. This is why the traffic controller will attempt to connect to loggregator servers in each az and will collate the data into a single stream for the web socket client.
+The role of Traffic Controller is to handle inbound HTTP and WebSocket requests for log data. It does this by proxying the request to all loggregator servers (regardless of AZ). Since an application can be deployed to multiple AZs, its logs can potentially end up on loggregator servers in multiple AZs. This is why the traffic controller will attempt to connect to loggregator servers in each AZ and will collate the data into a single stream for the web socket client.
 
-The traffic controller itself is stateless; a web socket request can be handled by any instance in any az.
+The traffic controller itself is stateless; an incoming request can be handled by any instance in any AZ.
 
-Traffic controllers also exposes a `firehose` web socket endpoint. Connecting to this endpoint establishes connections to all loggregator servers, and streams logs and metrics for all applications and cf components.
+Traffic controllers also exposes a `firehose` web socket endpoint. Connecting to this endpoint establishes connections to all loggregator servers, and streams logs and metrics for all applications and CF components.
 
 ### Emitting Messages from other Cloud Foundry components
 
