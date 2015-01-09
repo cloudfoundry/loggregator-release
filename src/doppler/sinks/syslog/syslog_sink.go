@@ -111,7 +111,12 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 }
 
 func (s *SyslogSink) Disconnect() {
-	close(s.disconnectChannel)
+	select {
+	case <- s.disconnectChannel:
+		s.logger.Debugf("SyslogSink.Disconnect: already disconnected from %s.", s.drainUrl)
+	default:
+		close(s.disconnectChannel)
+	}
 }
 
 func (s *SyslogSink) Identifier() string {
