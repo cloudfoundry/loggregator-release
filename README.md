@@ -177,7 +177,7 @@ properties:
 
 (The `properties.uaa.clients.doppler.id` key should be populated automatically.) These are also set by default in [cf-properties.yml](https://github.com/cloudfoundry/cf-release/blob/master/templates/cf-properties.yml#L304-L307).
 
-#### Adding scope to a running cluster (via `uuac`)
+#### Adding scope to a running cluster (via `uaac`)
 
 Before continuing, you should be familiar with the [`uaac` tool](http://docs.cloudfoundry.org/adminguide/uaa-user-management.html).
 
