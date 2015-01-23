@@ -82,13 +82,16 @@ var _ = Describe("Dumping", func() {
 	})
 
 	It("dumps all messages for an app user", func() {
-		expectedMessageString := "Some data"
+		expectedFirstMessageString := "Some data 1"
+		lm := factories.NewLogMessage(events.LogMessage_OUT, expectedFirstMessageString, "myOtherApp", "APP")
+		env1, _ := emitter.Wrap(lm, "ORIGIN")
 
-		lm := factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myOtherApp", "APP")
-		env, _ := emitter.Wrap(lm, "ORIGIN")
+		expectedSecondMessageString := "Some data 2"
+		lm = factories.NewLogMessage(events.LogMessage_OUT, expectedSecondMessageString, "myOtherApp", "APP")
+		env2, _ := emitter.Wrap(lm, "ORIGIN")
 
-		dataReadChannel <- env
-		dataReadChannel <- env
+		dataReadChannel <- env1
+		dataReadChannel <- env2
 
 		receivedChan := make(chan []byte, 2)
 		_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(GinkgoT(), receivedChan, SERVER_PORT, "/apps/myOtherApp/recentlogs")
@@ -97,11 +100,20 @@ var _ = Describe("Dumping", func() {
 
 		logMessages := dumpAllMessages(receivedChan)
 
-		Expect(logMessages).To(HaveLen(1))
-		marshalledEnvelope := logMessages[0]
-		var envelope events.Envelope
-		proto.Unmarshal(marshalledEnvelope, &envelope)
-		Expect(envelope.GetLogMessage().GetMessage()).To(BeEquivalentTo(expectedMessageString))
+		Expect(logMessages).To(HaveLen(2))
+
+		firstMarshalledEnvelope := logMessages[0]
+		secondMarshalledEnvelope := logMessages[1]
+
+		var envelope1 events.Envelope
+		var envelope2 events.Envelope
+
+		proto.Unmarshal(firstMarshalledEnvelope, &envelope1)
+		proto.Unmarshal(secondMarshalledEnvelope, &envelope2)
+
+		Expect(envelope1.GetLogMessage().GetMessage()).To(BeEquivalentTo(expectedFirstMessageString))
+		Expect(envelope2.GetLogMessage().GetMessage()).To(BeEquivalentTo(expectedSecondMessageString))
+
 		stopKeepAlive <- true
 	})
 

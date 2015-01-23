@@ -75,7 +75,7 @@ func (sinkManager *SinkManager) SendTo(appId string, receivedMessage *events.Env
 }
 
 func (sinkManager *SinkManager) RegisterSink(sink sinks.Sink) bool {
-	inputChan := make(chan *events.Envelope, 1)
+	inputChan := make(chan *events.Envelope, 128)
 	ok := sinkManager.sinks.RegisterAppSink(inputChan, sink)
 	if !ok {
 		return false

@@ -30,10 +30,14 @@ type ChannelSink struct {
 	appId, identifier string
 	received          []*events.Envelope
 	runCalled         bool
+	ready             chan struct{}
 }
 
 func (c *ChannelSink) StreamId() string { return c.appId }
 func (c *ChannelSink) Run(msgChan <-chan *events.Envelope) {
+	if c.ready != nil {
+		<-c.ready
+	}
 	c.Lock()
 	c.runCalled = true
 	c.Unlock()
@@ -180,6 +184,33 @@ var _ = Describe("SinkManager", func() {
 			sinkManager.RegisterFirehoseSink(sink1)
 
 			Eventually(sink1.Received).Should(ContainElement(expectedMessage))
+		})
+
+		Context("When a sync is consuming slowly", func() {
+			It("buffers a reasonable number of messages", func() {
+				ready := make(chan struct{})
+				sink1 := &ChannelSink{appId: "myApp",
+					identifier: "myAppChan1",
+					done:       make(chan struct{}),
+					ready:      ready,
+				}
+
+				sinkManager.RegisterSink(sink1)
+
+				expectedFirstMessageString := "Some Data 1"
+				expectedSecondMessageString := "Some Data 2"
+				expectedFirstMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, expectedFirstMessageString, "myApp", "App"), "origin")
+				expectedSecondMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, expectedSecondMessageString, "myApp", "App"), "origin")
+
+				go sinkManager.SendTo("myApp", expectedFirstMessage)
+				go sinkManager.SendTo("myApp", expectedSecondMessage)
+
+				close(ready)
+
+				Eventually(sink1.Received).Should(HaveLen(2))
+				Expect(sink1.Received()[0]).To(Equal(expectedFirstMessage))
+				Expect(sink1.Received()[1]).To(Equal(expectedSecondMessage))
+			})
 		})
 	})
 
