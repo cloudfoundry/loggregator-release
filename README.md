@@ -1,4 +1,4 @@
-# Loggregator 
+# Loggregator
 
 [![Build Status](https://travis-ci.org/cloudfoundry/loggregator.svg?branch=develop)](https://travis-ci.org/cloudfoundry/loggregator)  [![Coverage Status](https://coveralls.io/repos/cloudfoundry/loggregator/badge.png?branch=develop)](https://coveralls.io/r/cloudfoundry/loggregator?branch=develop)
    
@@ -47,7 +47,7 @@ Loggregator is composed of:
 
 * **Sources**: Logging agents that run on the Cloud Foundry components.
 * **Metron**: Metron agents are co-located with sources. They collect logs and forward them to:
-* **Loggregator Server (a.k.a. Doppler)**: Responsible for gathering logs from the **Metron agents**, storing them in temporary buffers, and forwarding logs to 3rd party syslog drains.
+* **Doppler**: Responsible for gathering logs from the **Metron agents**, storing them in temporary buffers, and forwarding logs to 3rd party syslog drains.
 * **Traffic Controller**: Handles client requests for logs. Gathers and collates messages from all Doppler servers, and provides external API and message translation (as needed for legacy APIs).
 
 Source agents emit the logging data as [protocol-buffers](https://code.google.com/p/protobuf/), and the data stays in that format throughout the system.
@@ -58,21 +58,21 @@ In a redundant CloudFoundry setup, Loggregator can be configured to survive zone
 
 ![Loggregator Diagram](docs/loggregator_multizone.png)
 
-The role of Metron is to take traffic from the various emitter sources (dea, dea-logging-agent router, etc) and route that traffic to one or more loggregator servers. In the current config we route this traffic to the loggregator servers in the same az. The traffic is randomly distributed across loggregator servers.
+The role of Metron is to take traffic from the various emitter sources (dea, dea-logging-agent, router, etc) and route that traffic to one or more dopplers. In the current config we route this traffic to the dopplers in the same az. The traffic is randomly distributed across dopplers.
 
-The role of Traffic Controller is to handle inbound HTTP and WebSocket requests for log data. It does this by proxying the request to all loggregator servers (regardless of AZ). Since an application can be deployed to multiple AZs, its logs can potentially end up on loggregator servers in multiple AZs. This is why the traffic controller will attempt to connect to loggregator servers in each AZ and will collate the data into a single stream for the web socket client.
+The role of Traffic Controller is to handle inbound HTTP and WebSocket requests for log data. It does this by proxying the request to all dopplers (regardless of AZ). Since an application can be deployed to multiple AZs, its logs can potentially end up on dopplers in multiple AZs. This is why the traffic controller will attempt to connect to dopplers in each AZ and will collate the data into a single stream for the web socket client.
 
 The traffic controller itself is stateless; an incoming request can be handled by any instance in any AZ.
 
-Traffic controllers also exposes a `firehose` web socket endpoint. Connecting to this endpoint establishes connections to all loggregator servers, and streams logs and metrics for all applications and CF components.
+Traffic controllers also exposes a `firehose` web socket endpoint. Connecting to this endpoint establishes connections to all dopplers, and streams logs and metrics for all applications and CF components.
 
 ### Emitting Messages from other Cloud Foundry components
 
-Cloud Foundry developers can easily add source clients to new CF components that emit messages to the loggregator server.  Currently, there are libraries for [Go](https://github.com/cloudfoundry/dropsonde/) and [Ruby](https://github.com/cloudfoundry/loggregator_emitter). For usage information, look at their respective READMEs.
+Cloud Foundry developers can easily add source clients to new CF components that emit messages to the doppler.  Currently, there are libraries for [Go](https://github.com/cloudfoundry/dropsonde/) and [Ruby](https://github.com/cloudfoundry/loggregator_emitter). For usage information, look at their respective READMEs.
 
 ### Deploying via BOSH
 
-Below are example snippets for deploying the DEA Logging Agent (source), Loggregator Server, and Loggregator Traffic Controller via BOSH.
+Below are example snippets for deploying the DEA Logging Agent (source), Doppler, and Loggregator Traffic Controller via BOSH.
 
 ```yaml
 jobs:
@@ -291,7 +291,7 @@ ginkgo -r
 ### Debugging
 
 
-Loggregator will dump information about the running goroutines to stdout if sent a `USR1` signal.
+Doppler will dump information about the running goroutines to stdout if sent a `USR1` signal.
 
 ```
 goroutine 1 [running]:
