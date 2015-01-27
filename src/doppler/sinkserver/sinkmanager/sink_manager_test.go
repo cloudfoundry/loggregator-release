@@ -202,8 +202,8 @@ var _ = Describe("SinkManager", func() {
 				expectedFirstMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, expectedFirstMessageString, "myApp", "App"), "origin")
 				expectedSecondMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, expectedSecondMessageString, "myApp", "App"), "origin")
 
-				go sinkManager.SendTo("myApp", expectedFirstMessage)
-				go sinkManager.SendTo("myApp", expectedSecondMessage)
+				sinkManager.SendTo("myApp", expectedFirstMessage)
+				sinkManager.SendTo("myApp", expectedSecondMessage)
 
 				close(ready)
 
