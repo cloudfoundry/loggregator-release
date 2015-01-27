@@ -49,7 +49,11 @@ var _ = Describe("SyslogSink", func() {
 
 			mutex.Lock()
 			defer mutex.Unlock()
-			errorChannel <- envelope
+			select {
+			case errorChannel <- envelope:
+			default:
+			}
+
 		}
 
 		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorHandler, "dropsonde-origin").(*syslog.SyslogSink)
