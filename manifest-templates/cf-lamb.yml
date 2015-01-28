@@ -1,0 +1,59 @@
+lamb_meta:
+  release:
+    name: cf
+
+  loggregator_templates:
+  - name: doppler
+    release: (( lamb_meta.release.name ))
+  - name: syslog_drain_binder
+    release: (( lamb_meta.release.name ))
+  - name: metron_agent
+    release: (( lamb_meta.release.name ))
+
+  loggregator_trafficcontroller_templates:
+  - name: loggregator_trafficcontroller
+    release: (( lamb_meta.release.name ))
+  - name: metron_agent
+    release: (( lamb_meta.release.name ))
+
+jobs:
+- name: loggregator_z1
+  properties:
+    doppler:
+      zone: z1
+    metron_agent:
+      zone: z1
+
+- name: loggregator_z2
+  properties:
+    doppler:
+      zone: z2
+    metron_agent:
+      zone: z2
+
+- name: loggregator_trafficcontroller_z1
+  properties:
+    traffic_controller:
+      zone: z1
+    metron_agent:
+      zone: z1
+
+- name: loggregator_trafficcontroller_z2
+  properties:
+    traffic_controller:
+      zone: z2
+    metron_agent:
+      zone: z2
+
+properties:
+  <<: (( merge ))
+
+  loggregator:
+    maxRetainedLogMessages: 100
+    debug: (( merge || false ))
+    blacklisted_syslog_ranges: ~
+
+  doppler:
+    maxRetainedLogMessages: 100
+    debug: (( merge || false ))
+    blacklisted_syslog_ranges: ~

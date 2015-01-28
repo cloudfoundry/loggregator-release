@@ -278,7 +278,7 @@ go get github.com/vito/gosub
 bin/test
 ```
 
-### Running specific tests
+#### Running specific tests
 
 ```
 export GOPATH=`pwd` #in the root of the project
@@ -288,7 +288,7 @@ cd src/loggregator # or any other component
 ginkgo -r
 ```
 
-### Debugging
+#### Debugging
 
 
 Doppler will dump information about the running goroutines to stdout if sent a `USR1` signal.
@@ -301,3 +301,12 @@ runtime/pprof.writeGoroutine(0xc2000bc3f0, 0xc200000008, 0x2, 0xca74765c960d5c8f
 	/home/travis/.gvm/gos/go1.1.1/src/pkg/runtime/pprof/pprof.go:500 +0x3a
 ....
 ``` 
+
+#### Editing Manifest Templates
+
+Currently the Doppler/Metron manifest configuration lives [here](manifest-templates/cf-lamb.yml).
+Editing this file will make changes in the [manifest templates](https://github.com/cloudfoundry/cf-release/tree/master/templates) in cf-release.
+When making changes to these templates, you should be working out of the loggregator submodule in cf-release.
+After changing this configuration, you will need to run the tests in root directory of cf-release with `bundle exec rspec`.
+These tests will pull values from [lamb-properties](manifest-templates/lamb-properties.rb) in order to populate the fixtures.
+Necessary changes should be made in [lamb-properties](manifest-templates/lamb-properties.rb).
