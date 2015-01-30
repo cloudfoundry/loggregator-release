@@ -59,7 +59,6 @@ loop:
 					return descriptiveError
 				}
 
-				println("----------", err.Error())
 				outputChan <- l.generateLogMessage("WebsocketListener.Start: Error connecting to a loggregator/doppler server", appId)
 				break loop
 			}

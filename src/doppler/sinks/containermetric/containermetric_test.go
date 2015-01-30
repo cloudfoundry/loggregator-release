@@ -86,7 +86,7 @@ var _ = Describe("Containermetric", func() {
 		})
 
 		It("removes the outdated container metrics", func() {
-			m1 := metricFor(1, time.Now().Add(-500*time.Millisecond), 1, 1, 1)
+			m1 := metricFor(1, time.Now().Add(-1500*time.Millisecond), 1, 1, 1)
 			eventChan <- m1
 
 			Eventually(sink.GetLatest).Should(ConsistOf(m1))
