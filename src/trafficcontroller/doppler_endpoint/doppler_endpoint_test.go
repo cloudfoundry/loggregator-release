@@ -25,18 +25,6 @@ var _ = Describe("NewDopplerEndpoint", func() {
 			Expect(dopplerEndpoint.Timeout).To(Equal(5 * time.Second))
 		})
 	})
-	Context("when endpoint is 'containermetrics'", func() {
-		It("uses an HTTP handler", func() {
-			dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("containermetrics", "abc123", true)
-			knownHttpHandler := handlers.NewHttpHandler(nil, nil)
-			Expect(dopplerEndpoint.HProvider(nil, nil)).To(BeAssignableToTypeOf(knownHttpHandler))
-		})
-
-		It("sets a timeout of five seconds", func() {
-			dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("containermetrics", "abc123", true)
-			Expect(dopplerEndpoint.Timeout).To(Equal(5 * time.Second))
-		})
-	})
 
 	Context("when endpoint is 'containermetrics'", func() {
 		It("uses an HTTP Container metrics handler", func() {
@@ -74,7 +62,6 @@ var _ = Describe("GetPath", func() {
 var _ = Describe("ContainerMetricsHandler", func() {
 	It("removes duplicate app container metrics", func() {
 		messagesChan := make(chan []byte, 2)
-		outputChan := make(chan []byte, 2)
 
 		env1, _ := emitter.Wrap(factories.NewContainerMetric("1", 1, 123, 123, 123), "origin")
 		env1.Timestamp = proto.Int64(10000)
@@ -89,10 +76,11 @@ var _ = Describe("ContainerMetricsHandler", func() {
 		messagesChan <- bytes1
 		close(messagesChan)
 
-		doppler_endpoint.DeDupe(messagesChan, outputChan)
+		outputChan := doppler_endpoint.DeDupe(messagesChan)
 
 		Expect(outputChan).To(HaveLen(1))
 		Expect(outputChan).To(Receive(Equal(bytes2)))
+		Expect(outputChan).To(BeClosed())
 	})
 
 })

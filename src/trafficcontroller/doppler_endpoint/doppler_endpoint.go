@@ -28,9 +28,9 @@ func NewDopplerEndpoint(endpoint string,
 
 	var hProvider HandlerProvider
 	var timeout time.Duration
-	if endpoint == "recentlogs" || endpoint == "containermetrics" {
-		hProvider = HttpHandlerProvider
+	if endpoint == "recentlogs" {
 		timeout = HttpRequestTimeout
+		hProvider = HttpHandlerProvider
 	} else if endpoint == "containermetrics" {
 		timeout = HttpRequestTimeout
 		hProvider = ContainerMetricHandlerProvider
@@ -58,9 +58,7 @@ func WebsocketHandlerProvider(messages <-chan []byte, logger *gosteno.Logger) ht
 }
 
 func ContainerMetricHandlerProvider(messages <-chan []byte, logger *gosteno.Logger) http.Handler {
-	outputChan := make(chan []byte, 100)
-	DeDupe(messages, outputChan)
-	close(outputChan)
+	outputChan := DeDupe(messages)
 	return handlers.NewHttpHandler(outputChan, logger)
 }
 
@@ -72,7 +70,7 @@ func (endpoint *DopplerEndpoint) GetPath() string {
 	}
 }
 
-func DeDupe(input <-chan []byte, output chan<- []byte) {
+func DeDupe(input <-chan []byte) <-chan []byte {
 	messages := make(map[int32]*events.Envelope)
 	for message := range input {
 		var envelope events.Envelope
@@ -85,8 +83,12 @@ func DeDupe(input <-chan []byte, output chan<- []byte) {
 		}
 	}
 
+	output := make(chan []byte, len(messages))
+
 	for _, envelope := range messages {
 		bytes, _ := proto.Marshal(envelope)
 		output <- bytes
 	}
+	close(output)
+	return output
 }
