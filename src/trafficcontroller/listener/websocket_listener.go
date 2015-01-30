@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/gorilla/websocket"
+	"io"
 	"regexp"
 	"sync"
 	"time"
@@ -35,50 +36,43 @@ func (l *websocketListener) Start(url, appId string, outputChan OutputChannel, s
 		return err
 	}
 
-	serverError := make(chan struct{})
-	l.Add(1)
-	go func() {
-		defer l.Done()
+loop:
+	for {
 		select {
 		case <-stopChan:
 			conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), time.Time{})
-		case <-serverError:
-		}
-	}()
+			return nil
 
-	for {
-		conn.SetReadDeadline(deadline(l.timeout))
-		_, msg, err := conn.ReadMessage()
+		default:
+			conn.SetReadDeadline(deadline(l.timeout))
+			_, msg, err := conn.ReadMessage()
 
-		// Error message from Gorilla Websocket library is not a constant/variable, so we only can check the contents of the message.
-		if err != nil && err.Error() == "websocket: close 1005 " {
-			close(serverError)
-			break
-		}
-
-		if err != nil {
-			isTimeout, _ := regexp.MatchString(`i/o timeout`, err.Error())
-			if isTimeout {
-				descriptiveError := fmt.Errorf("WebsocketListener.Start: Timed out listening to %s after %s", url, l.timeout.String())
-				outputChan <- l.generateLogMessage(descriptiveError.Error(), appId)
-				close(serverError)
-				l.Wait()
-				return descriptiveError
+			if err == io.EOF {
+				break loop
 			}
 
-			outputChan <- l.generateLogMessage("WebsocketListener.Start: Error connecting to a loggregator/doppler server", appId)
-			close(serverError)
-			break
-		}
-		convertedMessage, err := l.convertLogMessage(msg)
-		if err != nil {
-			l.logger.Errorf("WebsocketListener.Start: Error converting message %v. Message: %v", msg, err)
-		} else {
-			outputChan <- convertedMessage
+			if err != nil {
+				isTimeout, _ := regexp.MatchString(`i/o timeout`, err.Error())
+				if isTimeout {
+					descriptiveError := fmt.Errorf("WebsocketListener.Start: Timed out listening to %s after %s", url, l.timeout.String())
+					outputChan <- l.generateLogMessage(descriptiveError.Error(), appId)
+					return descriptiveError
+				}
+
+				println("----------", err.Error())
+				outputChan <- l.generateLogMessage("WebsocketListener.Start: Error connecting to a loggregator/doppler server", appId)
+				break loop
+			}
+
+			convertedMessage, err := l.convertLogMessage(msg)
+			if err != nil {
+				l.logger.Errorf("WebsocketListener.Start: Error converting message %v. Message: %v", msg, err)
+			} else {
+				outputChan <- convertedMessage
+			}
 		}
 	}
 
-	l.Wait()
 	return nil
 }
 
