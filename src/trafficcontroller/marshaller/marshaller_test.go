@@ -3,10 +3,10 @@ package marshaller_test
 import (
 	"trafficcontroller/marshaller"
 
-	"code.google.com/p/gogoprotobuf/proto"
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"github.com/gogo/protobuf/proto"
 	"time"
 
 	. "github.com/onsi/ginkgo"

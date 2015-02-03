@@ -3,11 +3,11 @@ package channel_group_connector_test
 import (
 	"trafficcontroller/channel_group_connector"
 
-	"code.google.com/p/gogoprotobuf/proto"
 	"errors"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/gogo/protobuf/proto"
 	"sync"
 	"time"
 	"trafficcontroller/doppler_endpoint"

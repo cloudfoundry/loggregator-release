@@ -4,9 +4,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"code.google.com/p/gogoprotobuf/proto"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/websocket"
 	"net/http"
 	"testing"

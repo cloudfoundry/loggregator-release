@@ -1,7 +1,6 @@
 package sinkserver_test
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
 	"doppler/sinkserver"
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/sinkmanager"
@@ -12,6 +11,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/websocket"
 	"net/http"
 	testhelpers "server_testhelpers"
