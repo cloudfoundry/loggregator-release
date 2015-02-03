@@ -1,12 +1,12 @@
 package integration_test
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
 	"github.com/apcera/nats"
 	"github.com/cloudfoundry/noaa/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"github.com/cloudfoundry/yagnats"
+	"github.com/gogo/protobuf/proto"
 	"github.com/pivotal-golang/localip"
 	"trafficcontroller/integration_test/fake_auth_server"
 	"trafficcontroller/integration_test/fake_doppler"

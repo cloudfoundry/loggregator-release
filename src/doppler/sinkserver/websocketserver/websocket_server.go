@@ -1,7 +1,6 @@
 package websocketserver
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
 	"doppler/sinks"
 	"doppler/sinks/websocket"
 	"doppler/sinkserver/sinkmanager"
@@ -10,6 +9,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/server"
+	"github.com/gogo/protobuf/proto"
 	gorilla "github.com/gorilla/websocket"
 	"net"
 	"net/http"

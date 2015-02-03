@@ -1,7 +1,6 @@
 package main_test
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
 	"fmt"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
@@ -9,6 +8,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	instrumentationtesthelpers "github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation/testhelpers"
+	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/websocket"
 	"net"
 	"net/http"

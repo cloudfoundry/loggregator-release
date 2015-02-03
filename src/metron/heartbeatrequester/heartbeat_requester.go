@@ -1,9 +1,9 @@
 package heartbeatrequester
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
 	"github.com/cloudfoundry/dropsonde/control"
 	"github.com/cloudfoundry/dropsonde/factories"
+	"github.com/gogo/protobuf/proto"
 	uuid "github.com/nu7hatch/gouuid"
 	"net"
 	"sync"

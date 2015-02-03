@@ -1,7 +1,6 @@
 package sinkmanager_test
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
 	"doppler/iprange"
 	"doppler/sinks"
 	"doppler/sinks/dump"
@@ -16,6 +15,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/gogo/protobuf/proto"
 	"net/url"
 	"sync"
 	"time"

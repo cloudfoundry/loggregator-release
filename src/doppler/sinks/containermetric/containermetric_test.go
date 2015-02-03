@@ -1,9 +1,9 @@
 package containermetric_test
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
 	"doppler/sinks/containermetric"
 	"github.com/cloudfoundry/dropsonde/events"
+	"github.com/gogo/protobuf/proto"
 	"time"
 
 	. "github.com/onsi/ginkgo"
