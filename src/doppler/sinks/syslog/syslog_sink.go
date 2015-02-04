@@ -80,13 +80,13 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 			return
 		}
 
-		s.logger.Debugf("SyslogSink:Run: Received %s message from %s at %d. Sending data.", messageEnvelope.GetEventType().String(), messageEnvelope.Origin, messageEnvelope.Timestamp)
+		s.logger.Debugf("Syslog Sink:Run: Received %s message from %s at %d. Sending data.", messageEnvelope.GetEventType().String(), messageEnvelope.Origin, messageEnvelope.Timestamp)
 
 		var err error
 
 		_, keepMsg := envelopeTypeWhitelist[messageEnvelope.GetEventType()]
 		if !keepMsg {
-			s.logger.Debugf("Syslog sink %s: Skipping non-log message (type %s)", s.drainUrl, messageEnvelope.GetEventType().String())
+			s.logger.Debugf("Syslog Sink %s: Skipping non-log message (type %s)", s.drainUrl, messageEnvelope.GetEventType().String())
 			continue
 		}
 
@@ -112,8 +112,8 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 
 func (s *SyslogSink) Disconnect() {
 	select {
-	case <- s.disconnectChannel:
-		s.logger.Debugf("SyslogSink.Disconnect: already disconnected from %s.", s.drainUrl)
+	case <-s.disconnectChannel:
+		s.logger.Debugf("Syslog Sink.Disconnect: already disconnected from %s.", s.drainUrl)
 	default:
 		close(s.disconnectChannel)
 	}
