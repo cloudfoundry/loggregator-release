@@ -133,7 +133,7 @@ func (proxy *Proxy) serveAppLogs(writer http.ResponseWriter, request *http.Reque
 	clientAddress := request.RemoteAddr
 	authToken := getAuthToken(request)
 
-	validPaths := regexp.MustCompile("^/apps/(.*)/(recentlogs|stream)$")
+	validPaths := regexp.MustCompile("^/apps/(.*)/(recentlogs|stream|containermetrics)$")
 	matches := validPaths.FindStringSubmatch(request.URL.Path)
 	if len(matches) != 3 {
 		writer.Header().Set("WWW-Authenticate", "Basic")
@@ -163,7 +163,7 @@ func (proxy *Proxy) serveAppLogs(writer http.ResponseWriter, request *http.Reque
 	}
 
 	endpoint_type := matches[2]
-	reconnect := endpoint_type != "recentlogs"
+	reconnect := endpoint_type != "recentlogs" && endpoint_type != "containermetrics"
 
 	dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint(endpoint_type, appId, reconnect)
 

@@ -240,7 +240,15 @@ func (f *fakeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.lastWSConn = ws
 	f.Unlock()
 
-	go ws.ReadMessage()
+	go func() {
+		ws.ReadMessage()
+
+		select {
+		case <-f.messages:
+		default:
+			close(f.messages)
+		}
+	}()
 
 	for msg := range f.messages {
 		if err := ws.WriteMessage(websocket.BinaryMessage, msg); err != nil {

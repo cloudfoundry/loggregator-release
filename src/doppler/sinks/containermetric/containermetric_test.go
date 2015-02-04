@@ -31,8 +31,10 @@ var _ = Describe("Containermetric", func() {
 
 	Describe("Run and GetLatest", func() {
 		It("returns metrics for all instances", func() {
-			m1 := metricFor(1, time.Now().Add(-1*time.Microsecond), 1, 1, 1)
-			m2 := metricFor(2, time.Now().Add(-1*time.Microsecond), 2, 2, 2)
+			now := time.Now()
+
+			m1 := metricFor(1, now.Add(-1*time.Microsecond), 1, 1, 1)
+			m2 := metricFor(2, now.Add(-1*time.Microsecond), 2, 2, 2)
 			eventChan <- m1
 			eventChan <- m2
 
@@ -44,6 +46,7 @@ var _ = Describe("Containermetric", func() {
 
 		It("returns latest metric for an instance if it has a newer timestamp", func() {
 			now := time.Now()
+
 			m1 := metricFor(1, now.Add(-500*time.Microsecond), 1, 1, 1)
 			eventChan <- m1
 
@@ -57,6 +60,7 @@ var _ = Describe("Containermetric", func() {
 
 		It("discards latest metric for an instance if it has an older timestamp", func() {
 			now := time.Now()
+
 			m1 := metricFor(1, now.Add(-1*time.Microsecond), 1, 1, 1)
 			eventChan <- m1
 

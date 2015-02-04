@@ -95,16 +95,47 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 			client := noaa.NewConsumer(dropsondeEndpoint, &tls.Config{}, nil)
 
 			messages, err := client.RecentLogs("1234", "bearer iAmAnAdmin")
+			Expect(err).NotTo(HaveOccurred())
 
 			var request *http.Request
 			Eventually(fakeDoppler.TrafficControllerConnected, 15).Should(Receive(&request))
 			Expect(request.URL.Path).To(Equal("/apps/1234/recentlogs"))
 
-			Expect(err).NotTo(HaveOccurred())
-
 			for i, message := range messages {
 				Expect(message.GetMessage()).To(BeEquivalentTo(strconv.Itoa(i)))
 			}
+			close(done)
+		}, 20)
+	})
+
+	Context("ContainerMetrics", func() {
+		BeforeEach(func() {
+			for i := 0; i < 5; i++ {
+				message := makeContainerMetricMessage("appID", int32(i), float64(i), 100000)
+				fakeDoppler.SendLogMessage(message)
+			}
+
+			oldmessage := makeContainerMetricMessage("appID", 1, 6, 50000)
+			fakeDoppler.SendLogMessage(oldmessage)
+
+			fakeDoppler.CloseLogMessageStream()
+		})
+
+		It("returns a multi-part HTTP response with the most recent message for all instances for a given app", func(done Done) {
+			client := noaa.NewConsumer(dropsondeEndpoint, &tls.Config{}, nil)
+
+			messages, err := client.ContainerMetrics("1234", "bearer iAmAnAdmin")
+			Expect(err).NotTo(HaveOccurred())
+
+			var request *http.Request
+			Eventually(fakeDoppler.TrafficControllerConnected, 15).Should(Receive(&request))
+			Expect(request.URL.Path).To(Equal("/apps/1234/containermetrics"))
+
+			for i, message := range messages {
+				Expect(message.GetInstanceIndex()).To(BeEquivalentTo(i))
+				Expect(message.GetCpuPercentage()).To(BeEquivalentTo(i))
+			}
+
 			close(done)
 		}, 20)
 	})
