@@ -20,6 +20,7 @@ func NewMessageAggregator(logger *gosteno.Logger) MessageAggregator {
 	return &messageAggregator{
 		logger:               logger,
 		startEventsByEventId: make(map[eventId]startEventEntry),
+		counterTotals:        make(map[counterId]uint64),
 	}
 }
 
@@ -27,12 +28,19 @@ type messageAggregator struct {
 	sync.Mutex
 	logger                          *gosteno.Logger
 	startEventsByEventId            map[eventId]startEventEntry
+	counterTotals                   map[counterId]uint64
 	httpStartReceivedCount          uint64
 	httpStopReceivedCount           uint64
 	httpStartStopEmittedCount       uint64
 	uncategorizedEventCount         uint64
 	httpUnmatchedStartReceivedCount uint64
 	httpUnmatchedStopReceivedCount  uint64
+	counterEventReceivedCount       uint64
+}
+
+type counterId struct {
+	origin string
+	name   string
 }
 
 type eventId struct {
@@ -58,6 +66,9 @@ func (m *messageAggregator) Run(inputChan <-chan *events.Envelope, outputChan ch
 			if startStopMessage != nil {
 				outputChan <- startStopMessage
 			}
+		case events.Envelope_CounterEvent:
+			counterEventMessage := m.handleCounter(envelope)
+			outputChan <- counterEventMessage
 		default:
 			m.incrementCounter(&m.uncategorizedEventCount)
 			m.logger.Debugf("passing through message %v", spew.Sprintf("%v", envelope))
@@ -79,8 +90,8 @@ func (m *messageAggregator) handleHttpStart(envelope *events.Envelope) {
 	startEvent := envelope.GetHttpStart()
 
 	requestId := startEvent.RequestId.String()
-	eventId := eventId{requestId: requestId, peerType: startEvent.GetPeerType()}
-	m.startEventsByEventId[eventId] = startEventEntry{startEvent: startEvent, entryTime: time.Now()}
+	event := eventId{requestId: requestId, peerType: startEvent.GetPeerType()}
+	m.startEventsByEventId[event] = startEventEntry{startEvent: startEvent, entryTime: time.Now()}
 }
 
 func (m *messageAggregator) handleHttpStop(envelope *events.Envelope) *events.Envelope {
@@ -90,18 +101,18 @@ func (m *messageAggregator) handleHttpStop(envelope *events.Envelope) *events.En
 	stopEvent := envelope.GetHttpStop()
 
 	requestId := stopEvent.RequestId.String()
-	eventId := eventId{requestId: requestId, peerType: stopEvent.GetPeerType()}
+	event := eventId{requestId: requestId, peerType: stopEvent.GetPeerType()}
 
-	startEventEntry, ok := m.startEventsByEventId[eventId]
+	startEventEntry, ok := m.startEventsByEventId[event]
 	if !ok {
-		m.logger.Warnf("no matching HTTP start message found for %v", eventId)
+		m.logger.Warnf("no matching HTTP start message found for %v", event)
 		m.incrementCounter(&m.httpUnmatchedStopReceivedCount)
 		return nil
 	}
 
 	m.incrementCounter(&m.httpStartStopEmittedCount)
 
-	delete(m.startEventsByEventId, eventId)
+	delete(m.startEventsByEventId, event)
 	startEvent := startEventEntry.startEvent
 
 	return &events.Envelope{
@@ -126,6 +137,21 @@ func (m *messageAggregator) handleHttpStop(envelope *events.Envelope) *events.En
 	}
 }
 
+func (m *messageAggregator) handleCounter(envelope *events.Envelope) *events.Envelope {
+	m.incrementCounter(&m.counterEventReceivedCount)
+	countId := counterId{
+		name:   envelope.GetCounterEvent().GetName(),
+		origin: envelope.GetOrigin(),
+	}
+
+	newVal := m.counterTotals[countId] + envelope.GetCounterEvent().GetDelta()
+	m.counterTotals[countId] = newVal
+
+	envelope.GetCounterEvent().Total = &newVal
+
+	return envelope
+}
+
 func (m *messageAggregator) cleanupOrphanedHttpStart() {
 	currentTime := time.Now()
 	for key, eventEntry := range m.startEventsByEventId {
@@ -147,6 +173,7 @@ func (m *messageAggregator) metrics() []instrumentation.Metric {
 		instrumentation.Metric{Name: "uncategorizedEvents", Value: m.uncategorizedEventCount},
 		instrumentation.Metric{Name: "httpUnmatchedStartReceived", Value: m.httpUnmatchedStartReceivedCount},
 		instrumentation.Metric{Name: "httpUnmatchedStopReceived", Value: m.httpUnmatchedStopReceivedCount},
+		instrumentation.Metric{Name: "counterEventReceived", Value: m.counterEventReceivedCount},
 	}
 }
 

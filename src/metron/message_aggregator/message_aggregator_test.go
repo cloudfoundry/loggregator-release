@@ -57,6 +57,69 @@ var _ = Describe("MessageAggregator", func() {
 		Expect(outputMessage).To(Equal(inputMessage))
 	})
 
+	Describe("counter processing", func() {
+		It("sets the Total field on a CounterEvent ", func() {
+			inputChan <- createCounterMessage("total", "fake-origin-4")
+
+			outputMessage := <-outputChan
+			Expect(outputMessage.GetEventType()).To(Equal(events.Envelope_CounterEvent))
+			assertCorrectCounterNameDeltaAndTotal(outputMessage, "total", 4, 4)
+		})
+
+		It("accumulates Deltas for CounterEvents with the same name and origin", func() {
+			inputChan <- createCounterMessage("total", "fake-origin-4")
+			inputChan <- createCounterMessage("total", "fake-origin-4")
+
+			_ = <-outputChan
+			outputMessage := <-outputChan
+
+			assertCorrectCounterNameDeltaAndTotal(outputMessage, "total", 4, 8)
+		})
+
+		It("accumulates differently-named counters separately", func() {
+			inputChan <- createCounterMessage("total1", "fake-origin-4")
+			inputChan <- createCounterMessage("total2", "fake-origin-4")
+
+			outputMessage := <-outputChan
+			assertCorrectCounterNameDeltaAndTotal(outputMessage, "total1", 4, 4)
+
+			outputMessage = <-outputChan
+			assertCorrectCounterNameDeltaAndTotal(outputMessage, "total2", 4, 4)
+		})
+
+		It("does not accumulate for counters when receiving a non-counter event", func() {
+			inputChan <- createHeartbeatMessage()
+			inputChan <- createCounterMessage("counter1", "fake-origin-4")
+			outputMessage := <-outputChan
+
+			Expect(outputMessage.GetEventType()).To(Equal(events.Envelope_Heartbeat))
+
+			outputMessage = <-outputChan
+			Expect(outputMessage.GetEventType()).To(Equal(events.Envelope_CounterEvent))
+			assertCorrectCounterNameDeltaAndTotal(outputMessage, "counter1", 4, 4)
+		})
+
+		It("accumulates independently for different origins", func() {
+			inputChan <- createCounterMessage("counter1", "fake-origin-4")
+			inputChan <- createCounterMessage("counter1", "fake-origin-5")
+			inputChan <- createCounterMessage("counter1", "fake-origin-4")
+			outputMessage := <-outputChan
+
+			Expect(outputMessage.GetOrigin()).To(Equal("fake-origin-4"))
+			assertCorrectCounterNameDeltaAndTotal(outputMessage, "counter1", 4, 4)
+
+			outputMessage = <-outputChan
+
+			Expect(outputMessage.GetOrigin()).To(Equal("fake-origin-5"))
+			assertCorrectCounterNameDeltaAndTotal(outputMessage, "counter1", 4, 4)
+
+			outputMessage = <-outputChan
+
+			Expect(outputMessage.GetOrigin()).To(Equal("fake-origin-4"))
+			assertCorrectCounterNameDeltaAndTotal(outputMessage, "counter1", 4, 8)
+		})
+	})
+
 	Context("single StartStop message", func() {
 		var outputMessage *events.Envelope
 		BeforeEach(func() {
@@ -142,6 +205,15 @@ var _ = Describe("MessageAggregator", func() {
 		It("emits a counter for unmatched stop events", func() {
 			inputChan <- createStopMessage(123, events.PeerType_Client)
 			eventuallyExpectMetric("httpUnmatchedStopReceived", 1)
+		})
+
+		It("emits a counter for counter events", func() {
+			inputChan <- createCounterMessage("counter1", "fake-origin-1")
+			eventuallyExpectMetric("counterEventReceived", 1)
+
+			// since we're counting counters, let's make sure we're not adding their deltas
+			inputChan <- createCounterMessage("counter1", "fake-origin-1")
+			eventuallyExpectMetric("counterEventReceived", 2)
 		})
 	})
 })
@@ -231,4 +303,21 @@ func createHeartbeatMessage() *events.Envelope {
 		EventType: events.Envelope_Heartbeat.Enum(),
 		Heartbeat: factories.NewHeartbeat(1, 2, 3),
 	}
+}
+
+func createCounterMessage(name string, origin string) *events.Envelope {
+	return &events.Envelope{
+		Origin:    proto.String(origin),
+		EventType: events.Envelope_CounterEvent.Enum(),
+		CounterEvent: &events.CounterEvent{
+			Name:  proto.String(name),
+			Delta: proto.Uint64(4),
+		},
+	}
+}
+
+func assertCorrectCounterNameDeltaAndTotal(outputMessage *events.Envelope, name string, delta uint64, total uint64) {
+	Expect(outputMessage.GetCounterEvent().GetName()).To(Equal(name))
+	Expect(outputMessage.GetCounterEvent().GetDelta()).To(Equal(delta))
+	Expect(outputMessage.GetCounterEvent().GetTotal()).To(Equal(total))
 }
