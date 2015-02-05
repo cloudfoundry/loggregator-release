@@ -302,6 +302,11 @@ var _ = Describe("SinkManager", func() {
 
 			close(done)
 		})
+
+		It("is idempotent", func() {
+			sinkManager.Stop()
+			Expect(sinkManager.Stop).NotTo(Panic())
+		})
 	})
 
 	Describe("UnregisterSink", func() {

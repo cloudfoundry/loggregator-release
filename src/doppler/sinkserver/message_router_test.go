@@ -85,6 +85,10 @@ var _ = Describe("Message Router", func() {
 			Eventually(done).Should(BeClosed())
 		})
 
+		It("is idempotent", func() {
+			messageRouter.Stop()
+			Expect(messageRouter.Stop).NotTo(Panic())
+		})
 	})
 
 })

@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	"sync"
 	"sync/atomic"
 )
 
@@ -14,6 +15,7 @@ type MessageRouter struct {
 	Metrics     *metrics.MessageRouterMetrics
 	logger      *gosteno.Logger
 	done        chan struct{}
+	stopOnce    sync.Once
 }
 
 type sinkManager interface {
@@ -50,12 +52,7 @@ func (r *MessageRouter) Start(incomingLogChan <-chan *events.Envelope) {
 }
 
 func (r *MessageRouter) Stop() {
-	select {
-	case <-r.done:
-		// already stopped
-	default:
-		close(r.done)
-	}
+	r.stopOnce.Do(func() { close(r.done) })
 }
 
 func (r *MessageRouter) Emit() instrumentation.Context {

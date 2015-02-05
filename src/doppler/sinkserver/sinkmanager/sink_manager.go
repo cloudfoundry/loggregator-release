@@ -34,6 +34,7 @@ type SinkManager struct {
 	skipCertVerify      bool
 	metricTTL           time.Duration
 	logger              *gosteno.Logger
+	stopOnce            sync.Once
 	sync.RWMutex
 }
 
@@ -60,12 +61,10 @@ func (sinkManager *SinkManager) Start(newAppServiceChan, deletedAppServiceChan <
 }
 
 func (sinkManager *SinkManager) Stop() {
-	select {
-	case <-sinkManager.doneChannel:
-	default:
+	sinkManager.stopOnce.Do(func() {
 		close(sinkManager.doneChannel)
 		sinkManager.sinks.DeleteAll()
-	}
+	})
 }
 
 func (sinkManager *SinkManager) SendTo(appId string, receivedMessage *events.Envelope) {

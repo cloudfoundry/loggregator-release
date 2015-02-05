@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
+	"sync"
 	"time"
 )
 
@@ -21,6 +22,7 @@ type SyslogSink struct {
 	handleSendError   func(errorMessage, appId, drainUrl string)
 	disconnectChannel chan struct{}
 	dropsondeOrigin   string
+	disconnectOnce    sync.Once
 }
 
 func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.SyslogWriter, errorHandler func(string, string, string), dropsondeOrigin string) sinks.Sink {
@@ -111,12 +113,7 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 }
 
 func (s *SyslogSink) Disconnect() {
-	select {
-	case <-s.disconnectChannel:
-		s.logger.Debugf("Syslog Sink.Disconnect: already disconnected from %s.", s.drainUrl)
-	default:
-		close(s.disconnectChannel)
-	}
+	s.disconnectOnce.Do(func() { close(s.disconnectChannel) })
 }
 
 func (s *SyslogSink) Identifier() string {
