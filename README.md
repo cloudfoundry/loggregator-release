@@ -240,7 +240,7 @@ Follow these steps to make a contribution to any of our open source repositories
 
 Once your commits are approved by Travis CI and reviewed by the core team, they will be merged.
 
-#### OS X prequisites
+#### OS X prerequisites
 
 Use brew and do
 
