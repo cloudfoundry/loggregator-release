@@ -80,7 +80,7 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 			return
 		}
 
-		s.logger.Debugf("SyslogSink:Run: Received %s message from %s at %d. Sending data.", messageEnvelope.GetEventType().String(), messageEnvelope.Origin, messageEnvelope.Timestamp)
+		s.logger.Debugf("SyslogSink:Run: Received %s message from %s at %d. Sending data.", messageEnvelope.GetEventType().String(), messageEnvelope.GetOrigin(), messageEnvelope.Timestamp)
 
 		var err error
 
