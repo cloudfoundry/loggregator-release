@@ -22,7 +22,6 @@ files:
 - loggregator/src/doppler/sinkserver/metrics/*.go # gosub
 - loggregator/src/doppler/sinkserver/sinkmanager/*.go # gosub
 - loggregator/src/doppler/sinkserver/websocketserver/*.go # gosub
-- loggregator/src/code.google.com/p/gogoprotobuf/proto/*.go # gosub
 - loggregator/src/github.com/apcera/nats/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/control/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller/*.go # gosub
@@ -49,6 +48,7 @@ files:
 - loggregator/src/github.com/cloudfoundry/yagnats/fakeyagnats/*.go # gosub
 - loggregator/src/github.com/coreos/go-etcd/etcd/*.go # gosub
 - loggregator/src/github.com/davecgh/go-spew/spew/*.go # gosub
+- loggregator/src/github.com/gogo/protobuf/proto/*.go # gosub
 - loggregator/src/github.com/gorilla/websocket/*.go # gosub
 - loggregator/src/github.com/nu7hatch/gouuid/*.go # gosub
 - loggregator/src/github.com/pivotal-golang/localip/*.go # gosub
