@@ -1,11 +1,11 @@
 package doppler_endpoint
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
 	"fmt"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/server/handlers"
+	"github.com/gogo/protobuf/proto"
 	"net/http"
 	"time"
 )

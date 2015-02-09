@@ -4,9 +4,9 @@
 [submodule "src/github.com/stretchr/testify"]
 	path = src/github.com/stretchr/testify
         url = https://github.com/stretchr/testify
-[submodule "src/code.google.com/p/gogoprotobuf"]
-        path=src/code.google.com/p/gogoprotobuf
-        url = https://code.google.com/p/gogoprotobuf/
+[submodule "src/github.com/gogo/protobuf"]
+	path = src/github.com/gogo/protobuf
+	url = https://github.com/gogo/protobuf
 [submodule "src/github.com/cloudfoundry/yagnats"]
 	path = src/github.com/cloudfoundry/yagnats
 	url = https://github.com/cloudfoundry/yagnats

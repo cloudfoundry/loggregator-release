@@ -1,10 +1,10 @@
 package websocket
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
 	"doppler/sinks"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/gogo/protobuf/proto"
 	gorilla "github.com/gorilla/websocket"
 	"net"
 )

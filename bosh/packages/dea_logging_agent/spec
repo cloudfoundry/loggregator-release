@@ -6,7 +6,6 @@ files:
 - loggregator/src/deaagent/*.go # gosub
 - loggregator/src/deaagent/deaagent/*.go # gosub
 - loggregator/src/deaagent/domain/*.go # gosub
-- loggregator/src/code.google.com/p/gogoprotobuf/proto/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/control/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/events/*.go # gosub
@@ -15,6 +14,7 @@ files:
 - loggregator/src/github.com/cloudfoundry/dropsonde/logs/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gosteno/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gosteno/syslog/*.go # gosub
+- loggregator/src/github.com/gogo/protobuf/proto/*.go # gosub
 - loggregator/src/github.com/howeyc/fsnotify/*.go # gosub
 - loggregator/src/github.com/nu7hatch/gouuid/*.go # gosub
 - loggregator/src/github.com/apcera/nats/*.go # gosub

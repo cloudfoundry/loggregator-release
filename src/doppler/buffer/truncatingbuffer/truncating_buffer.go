@@ -1,12 +1,12 @@
 package truncatingbuffer
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
 	"doppler/buffer"
 	"fmt"
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/gogo/protobuf/proto"
 	"sync"
 	"time"
 )

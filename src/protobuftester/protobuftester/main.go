@@ -1,12 +1,12 @@
 package main
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
 	"flag"
 	"fmt"
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"github.com/gogo/protobuf/proto"
 )
 
 var host = flag.String("host", "0.0.0.0:3456", "The host/port you want to listen on")

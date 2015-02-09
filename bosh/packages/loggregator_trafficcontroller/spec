@@ -16,7 +16,6 @@ files:
 - loggregator/src/trafficcontroller/marshaller/*.go # gosub
 - loggregator/src/trafficcontroller/serveraddressprovider/*.go # gosub
 - loggregator/src/trafficcontroller/uaa_client/*.go # gosub
-- loggregator/src/code.google.com/p/gogoprotobuf/proto/*.go # gosub
 - loggregator/src/github.com/apcera/nats/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/control/*.go # gosub
@@ -48,6 +47,7 @@ files:
 - loggregator/src/github.com/cloudfoundry/yagnats/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/yagnats/fakeyagnats/*.go # gosub
 - loggregator/src/github.com/coreos/go-etcd/etcd/*.go # gosub
+- loggregator/src/github.com/gogo/protobuf/proto/*.go # gosub
 - loggregator/src/github.com/gorilla/websocket/*.go # gosub
 - loggregator/src/github.com/nu7hatch/gouuid/*.go # gosub
 - loggregator/src/github.com/pivotal-golang/localip/*.go # gosub

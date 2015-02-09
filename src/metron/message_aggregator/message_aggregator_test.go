@@ -1,11 +1,11 @@
 package message_aggregator_test
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
 	"fmt"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/gogo/protobuf/proto"
 	"metron/message_aggregator"
 	"time"
 

@@ -7,7 +7,6 @@ files:
 - loggregator/src/syslog_drain_binder/elector/*.go # gosub
 - loggregator/src/syslog_drain_binder/etcd_syslog_drain_store/*.go # gosub
 - loggregator/src/syslog_drain_binder/shared_types/*.go # gosub
-- loggregator/src/code.google.com/p/gogoprotobuf/proto/*.go # gosub
 - loggregator/src/github.com/apcera/nats/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/control/*.go # gosub
@@ -31,5 +30,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/storeadapter/etcdstoreadapter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/yagnats/*.go # gosub
 - loggregator/src/github.com/coreos/go-etcd/etcd/*.go # gosub
+- loggregator/src/github.com/gogo/protobuf/proto/*.go # gosub
 - loggregator/src/github.com/nu7hatch/gouuid/*.go # gosub
 - loggregator/src/github.com/pivotal-golang/localip/*.go # gosub

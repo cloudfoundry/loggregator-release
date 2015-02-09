@@ -1,7 +1,6 @@
 package integration_test
 
 import (
-	"code.google.com/p/gogoprotobuf/proto"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/json"
@@ -12,6 +11,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
+	"github.com/gogo/protobuf/proto"
 	"github.com/pivotal-golang/localip"
 	"io/ioutil"
 	"net"
