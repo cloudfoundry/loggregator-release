@@ -78,7 +78,7 @@ func (w *writer) Connect() error {
 
 // connect makes a connection to the syslog server.
 // It must be called with w.mu held.
-func (w *writer) connect() (err error) {
+func (w *writer) connect() error {
 	if w.conn != nil {
 		// ignore err from close, it makes sense to continue anyway
 		w.conn.Close()
@@ -88,10 +88,10 @@ func (w *writer) connect() (err error) {
 	if err == nil {
 		w.conn = c
 	}
-	return
+	return err
 }
 
-func (w *writer) connectTLS() (err error) {
+func (w *writer) connectTLS() error {
 	if w.conn != nil {
 		// ignore err from close, it makes sense to continue anyway
 		w.conn.Close()
@@ -101,14 +101,14 @@ func (w *writer) connectTLS() (err error) {
 	if err == nil {
 		w.conn = c
 	}
-	return
+	return err
 }
 
-func (w *writer) WriteStdout(b []byte, source, sourceId string, timestamp int64) (int, error) {
+func (w *writer) WriteStdout(b []byte, source string, sourceId string, timestamp int64) (int, error) {
 	return w.write(14, source, sourceId, string(b), timestamp)
 }
 
-func (w *writer) WriteStderr(b []byte, source, sourceId string, timestamp int64) (int, error) {
+func (w *writer) WriteStderr(b []byte, source string, sourceId string, timestamp int64) (int, error) {
 	return w.write(11, source, sourceId, string(b), timestamp)
 }
 
@@ -124,7 +124,7 @@ func (w *writer) Close() error {
 	return nil
 }
 
-func (w *writer) write(p int, source, sourceId, msg string, timestamp int64) (byteCount int, err error) {
+func (w *writer) write(p int, source string, sourceId string, msg string, timestamp int64) (byteCount int, err error) {
 	syslogMsg := w.createMessage(p, source, sourceId, msg, timestamp)
 	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
 	finalMsg := fmt.Sprintf("%d %s", len(syslogMsg), syslogMsg)
@@ -140,7 +140,7 @@ func (w *writer) write(p int, source, sourceId, msg string, timestamp int64) (by
 	return byteCount, err
 }
 
-func (w *writer) createMessage(p int, source, sourceId, msg string, timestamp int64) string {
+func (w *writer) createMessage(p int, source string, sourceId string, msg string, timestamp int64) string {
 	// ensure it ends in a \n
 	nl := ""
 	if !strings.HasSuffix(msg, "\n") {
