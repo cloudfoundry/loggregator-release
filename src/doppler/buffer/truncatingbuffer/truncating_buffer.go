@@ -3,6 +3,7 @@ package truncatingbuffer
 import (
 	"doppler/buffer"
 	"fmt"
+	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
@@ -52,13 +53,13 @@ func (r *truncatingBuffer) Run() {
 			appId := envelope_extensions.GetAppId(msg)
 			lm := generateLogMessage(fmt.Sprintf("Log message output too high. We've dropped %d messages", messageCount), appId)
 
-			env := &events.Envelope{
-				EventType:  events.Envelope_LogMessage.Enum(),
-				LogMessage: lm,
-				Origin:     proto.String(r.dropsondeOrigin),
+			env, err := emitter.Wrap(lm, r.dropsondeOrigin)
+			if err == nil {
+				r.outputChannel <- env
+			} else {
+				r.logger.Warnf("Error marshalling message: %v", err)
 			}
 
-			r.outputChannel <- env
 			r.outputChannel <- msg
 
 			if r.logger != nil {
