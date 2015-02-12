@@ -113,15 +113,6 @@ var _ = Describe("SyslogWriter", func() {
 			Expect(err).To(HaveOccurred())
 		})
 
-		It("returns an error when unable to connect", func() {
-			outputUrl, _ := url.Parse("https://")
-
-			w := syslogwriter.NewSyslogWriter(outputUrl, "appId", true)
-			err := w.Connect()
-			Expect(err).To(HaveOccurred())
-
-		})
-
 		It("should close connections and return an error if status code returned is not 200", func() {
 			outputUrl, _ := url.Parse(server.URL + "/doesnotexist")
 

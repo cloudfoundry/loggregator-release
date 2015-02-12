@@ -7,6 +7,7 @@ package syslogwriter
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -14,7 +15,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"errors"
 )
 
 type SyslogWriter interface {
