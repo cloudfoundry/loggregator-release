@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"runtime"
 	"time"
 )
 
@@ -107,11 +108,48 @@ var _ = Describe("SyslogWriter", func() {
 			outputUrl, _ := url.Parse("https://")
 
 			w := syslogwriter.NewSyslogWriter(outputUrl, "appId", true)
+
+			_, err := w.WriteStdout([]byte("Message"), "just a test", "TEST", time.Now().UnixNano())
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("returns an error when unable to connect", func() {
+			outputUrl, _ := url.Parse("https://")
+
+			w := syslogwriter.NewSyslogWriter(outputUrl, "appId", true)
+			err := w.Connect()
+			Expect(err).To(HaveOccurred())
+
+		})
+
+		It("should close connections and return an error if status code returned is not 200", func() {
+			outputUrl, _ := url.Parse(server.URL + "/doesnotexist")
+
+			w := syslogwriter.NewSyslogWriter(outputUrl, "appId", true)
 			err := w.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
-			_, err = w.WriteStdout([]byte("Message"), "just a test", "TEST", time.Now().UnixNano())
-			Expect(err).To(HaveOccurred())
+			parsedTime, err := time.Parse(time.RFC3339, "2006-01-02T15:04:05Z")
+			for i := 0; i < 10; i++ {
+				_, err := w.WriteStdout([]byte("Message"), "just a test", "TEST", parsedTime.UnixNano())
+				Expect(err).To(HaveOccurred())
+			}
+
+			origNumGoRoutines := runtime.NumGoroutine()
+			Eventually(runtime.NumGoroutine, 6).Should(BeNumerically("<", origNumGoRoutines))
+		})
+
+		It("should not return error for response 200 status codes", func() {
+			outputUrl, _ := url.Parse(server.URL + "/234-bxg-234/")
+
+			w := syslogwriter.NewSyslogWriter(outputUrl, "appId", true)
+			err := w.Connect()
+			Expect(err).ToNot(HaveOccurred())
+
+			parsedTime, err := time.Parse(time.RFC3339, "2006-01-02T15:04:05Z")
+			_, err = w.WriteStdout([]byte("Message"), "just a test", "TEST", parsedTime.UnixNano())
+			Expect(err).ToNot(HaveOccurred())
+
 		})
 	})
 

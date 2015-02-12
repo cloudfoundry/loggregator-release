@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"errors"
 )
 
 type SyslogWriter interface {
@@ -134,7 +135,14 @@ func (w *writer) write(p int, source string, sourceId string, msg string, timest
 	if w.conn != nil {
 		byteCount, err = fmt.Fprint(w.conn, finalMsg)
 	} else {
-		_, err = w.client.Post(w.outputUrl.String(), "text/plain", strings.NewReader(finalMsg))
+		var resp *http.Response
+		resp, err = w.client.Post(w.outputUrl.String(), "text/plain", strings.NewReader(finalMsg))
+		if resp != nil {
+			if resp.StatusCode != 200 {
+				err = errors.New("Syslog Writer: Post responded with a non 200 status code")
+			}
+			resp.Body.Close()
+		}
 		byteCount = len(finalMsg)
 	}
 	return byteCount, err

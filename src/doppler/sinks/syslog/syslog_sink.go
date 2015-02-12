@@ -69,7 +69,6 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 			}
 
 			s.logger.Infof("Syslog Sink %s: successfully connected.", s.drainUrl)
-			s.syslogWriter.SetConnected(true)
 			numberOfTries = 0
 			defer s.syslogWriter.Close()
 		}
