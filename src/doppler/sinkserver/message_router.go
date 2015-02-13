@@ -45,7 +45,7 @@ func (r *MessageRouter) Start(incomingLogChan <-chan *events.Envelope) {
 				r.logger.Debug("MessageRouter:MessageReceived:NotOkay")
 				return
 			}
-			r.logger.Debugf("MessageRouter:outgoingLogChan: Received %s message from %s at %d.", envelope.GetEventType().String(), envelope.Origin, envelope.Timestamp)
+			r.logger.Debugf("MessageRouter:outgoingLogChan: Received %s message from %s at %d.", envelope.GetEventType().String(), envelope.GetOrigin(), envelope.Timestamp)
 			r.send(envelope)
 		}
 	}

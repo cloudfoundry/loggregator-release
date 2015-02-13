@@ -67,7 +67,7 @@ func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
 			continue
 		}
 
-		sink.logger.Debugf("Websocket Sink %s: Received %s message from %s at %d. Sending data.", sink.clientAddress, messageEnvelope.GetEventType().String(), messageEnvelope.Origin, messageEnvelope.Timestamp)
+		sink.logger.Debugf("Websocket Sink %s: Received %s message from %s at %d. Sending data.", sink.clientAddress, messageEnvelope.GetEventType().String(), messageEnvelope.GetOrigin(), messageEnvelope.Timestamp)
 
 		err = sink.ws.WriteMessage(gorilla.BinaryMessage, messageBytes)
 		if err != nil {
