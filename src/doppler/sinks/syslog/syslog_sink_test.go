@@ -180,18 +180,6 @@ var _ = Describe("SyslogSink", func() {
 				close(done)
 			})
 
-			It("does not report error messages when it's disconnected", func(done Done) {
-				syslogSink.Disconnect()
-
-				logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
-				inputChan <- logMessage
-				close(inputChan)
-				<-sysLoggerDoneChan
-
-				Expect(errorChannel).To(BeEmpty())
-				close(done)
-			})
-
 			It("stops sending messages when the disconnect comes in", func(done Done) {
 				logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
 				inputChan <- logMessage
