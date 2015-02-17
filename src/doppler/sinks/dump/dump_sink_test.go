@@ -414,34 +414,34 @@ var _ = Describe("Dump Sink", func() {
 	})
 
 	It("closes after input chan is closed", func() {
-			testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), 2*time.Microsecond)
-			dumpRunnerDone := make(chan struct{})
-			inputChan := make(chan *events.Envelope)
+		testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), 2*time.Microsecond)
+		dumpRunnerDone := make(chan struct{})
+		inputChan := make(chan *events.Envelope)
 
-			go func() {
-				testDump.Run(inputChan)
-				close(dumpRunnerDone)
-			}()
+		go func() {
+			testDump.Run(inputChan)
+			close(dumpRunnerDone)
+		}()
 
-			close(inputChan)
+		close(inputChan)
 
-			Eventually(dumpRunnerDone, 50*time.Millisecond).Should(BeClosed())
-		})
+		Eventually(dumpRunnerDone, 50*time.Millisecond).Should(BeClosed())
+	})
 
 	It("resets the inactivity duration when a metric is received", func() {
-			inactivityDuration := 1 * time.Millisecond
-			testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), inactivityDuration)
-			dumpRunnerDone := make(chan struct{})
-			inputChan := make(chan *events.Envelope)
+		inactivityDuration := 1 * time.Millisecond
+		testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), inactivityDuration)
+		dumpRunnerDone := make(chan struct{})
+		inputChan := make(chan *events.Envelope)
 
-			go func() {
-				testDump.Run(inputChan)
-				close(dumpRunnerDone)
-			}()
+		go func() {
+			testDump.Run(inputChan)
+			close(dumpRunnerDone)
+		}()
 
-			logMessage, _ := emitter.Wrap(&events.LogMessage{}, "origin")
-			continuouslySend(inputChan, logMessage, 2*inactivityDuration)
-			Expect(dumpRunnerDone).ShouldNot(BeClosed())
+		logMessage, _ := emitter.Wrap(&events.LogMessage{}, "origin")
+		continuouslySend(inputChan, logMessage, 2*inactivityDuration)
+		Expect(dumpRunnerDone).ShouldNot(BeClosed())
 	})
 
 	It("only stores log messages", func() {

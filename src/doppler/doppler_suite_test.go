@@ -46,7 +46,7 @@ var _ = BeforeSuite(func() {
 		SkipCertVerify:                true,
 		BlackListIps:                  []iprange.IPRange{},
 		ContainerMetricTTLSeconds:     120,
-	    SinkInactivityTimeoutSeconds:  2,
+		SinkInactivityTimeoutSeconds:  2,
 	}
 	cfcomponent.Logger = loggertesthelper.Logger()
 

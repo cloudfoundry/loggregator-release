@@ -12,8 +12,8 @@ import (
 	"github.com/gorilla/websocket"
 	"net"
 	"net/http"
-	"time"
 	"runtime"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -27,7 +27,7 @@ var _ = Describe("Doppler Server", func() {
 
 	Describe("ity's", func() {
 		It("doesn't leak goroutines when sinks timeout", func() {
-			time.Sleep(time.Duration(dopplerConfig.SinkInactivityTimeoutSeconds) * time.Second)  // let existing application sinks timeout
+			time.Sleep(time.Duration(dopplerConfig.SinkInactivityTimeoutSeconds) * time.Second) // let existing application sinks timeout
 
 			goroutineCount := runtime.NumGoroutine()
 
@@ -39,7 +39,7 @@ var _ = Describe("Doppler Server", func() {
 
 			_, err := connection.Write(expectedMessage)
 			Expect(err).To(BeNil())
-            Eventually(runtime.NumGoroutine).Should(Equal(goroutineCount+2))
+			Eventually(runtime.NumGoroutine).Should(Equal(goroutineCount + 2))
 			time.Sleep(time.Duration(dopplerConfig.SinkInactivityTimeoutSeconds) * time.Second)
 			Expect(runtime.NumGoroutine()).To(Equal(goroutineCount))
 		})
