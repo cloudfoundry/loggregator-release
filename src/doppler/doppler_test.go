@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"time"
+	"runtime"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -23,6 +24,26 @@ import (
 //messageRouter.logger.Errorf("Log message could not be unmarshaled. Dropping it... Error: %v. Data: %v", err, envelopedLog)
 
 var _ = Describe("Doppler Server", func() {
+
+	Describe("ity's", func() {
+		It("doesn't leak goroutines when sinks timeout", func() {
+			time.Sleep(time.Duration(dopplerConfig.SinkInactivityTimeoutSeconds) * time.Second)  // let existing application sinks timeout
+
+			goroutineCount := runtime.NumGoroutine()
+
+			connection, _ := net.Dial("udp", "127.0.0.1:3457")
+
+			expectedMessageString := "Some Data"
+			unmarshalledLogMessage := factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp-unique-for-goroutine-leak-test", "App")
+			expectedMessage := MarshalEvent(unmarshalledLogMessage, "secret")
+
+			_, err := connection.Write(expectedMessage)
+			Expect(err).To(BeNil())
+            Eventually(runtime.NumGoroutine).Should(Equal(goroutineCount+2))
+			time.Sleep(time.Duration(dopplerConfig.SinkInactivityTimeoutSeconds) * time.Second)
+			Expect(runtime.NumGoroutine()).To(Equal(goroutineCount))
+		})
+	})
 
 	Describe("Log message streaming", func() {
 		var receivedChan chan []byte
@@ -111,7 +132,7 @@ var _ = Describe("Doppler Server", func() {
 			receivedChan = make(chan []byte)
 			ws, dontKeepAliveChan, connectionDroppedChannel = AddWSSink(receivedChan, "8083", "/apps/myApp/containermetrics")
 
-			receivedMessageBytes := []byte{}
+			var receivedMessageBytes []byte
 			Eventually(receivedChan).Should(Receive(&receivedMessageBytes))
 
 			var receivedEnvelope events.Envelope

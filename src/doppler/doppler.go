@@ -41,6 +41,7 @@ type Config struct {
 	JobName                       string
 	Zone                          string
 	ContainerMetricTTLSeconds     int
+	SinkInactivityTimeoutSeconds  int
 }
 
 func (c *Config) Validate(logger *gosteno.Logger) (err error) {
@@ -100,7 +101,8 @@ func New(host string, config *Config, logger *gosteno.Logger, dropsondeOrigin st
 
 	blacklist := blacklist.New(config.BlackListIps)
 	metricTTL := time.Duration(config.ContainerMetricTTLSeconds) * time.Second
-	sinkManager := sinkmanager.NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger, dropsondeOrigin, metricTTL)
+	sinkTimeout := time.Duration(config.SinkInactivityTimeoutSeconds) * time.Second
+	sinkManager := sinkmanager.NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger, dropsondeOrigin, sinkTimeout, metricTTL)
 
 	return &Doppler{
 		Logger:                     logger,

@@ -27,18 +27,18 @@ type SinkManager struct {
 	Metrics        *metrics.SinkManagerMetrics
 	recentLogCount uint32
 
-	doneChannel         chan struct{}
-	errorChannel        chan *events.Envelope
-	urlBlacklistManager *blacklist.URLBlacklistManager
-	sinks               *groupedsinks.GroupedSinks
-	skipCertVerify      bool
-	metricTTL           time.Duration
-	logger              *gosteno.Logger
-	stopOnce            sync.Once
+	doneChannel            chan struct{}
+	errorChannel           chan *events.Envelope
+	urlBlacklistManager    *blacklist.URLBlacklistManager
+	sinks                  *groupedsinks.GroupedSinks
+	skipCertVerify         bool
+	sinkTimeout, metricTTL time.Duration
+	logger                 *gosteno.Logger
+	stopOnce               sync.Once
 	sync.RWMutex
 }
 
-func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger, dropsondeOrigin string, metricTTL time.Duration) *SinkManager {
+func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger, dropsondeOrigin string, sinkTimeout, metricTTL time.Duration) *SinkManager {
 	return &SinkManager{
 		doneChannel:         make(chan struct{}),
 		errorChannel:        make(chan *events.Envelope, 100),
@@ -49,6 +49,7 @@ func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackLis
 		Metrics:             metrics.NewSinkManagerMetrics(),
 		logger:              logger,
 		DropsondeOrigin:     dropsondeOrigin,
+		sinkTimeout:         sinkTimeout,
 		metricTTL:           metricTTL,
 	}
 }
@@ -224,7 +225,7 @@ func (sinkManager *SinkManager) ensureRecentLogsSinkFor(appId string) {
 		return
 	}
 
-	sink := dump.NewDumpSink(appId, sinkManager.recentLogCount, sinkManager.logger, time.Hour)
+	sink := dump.NewDumpSink(appId, sinkManager.recentLogCount, sinkManager.logger, sinkManager.sinkTimeout)
 	sinkManager.RegisterSink(sink)
 }
 
@@ -233,6 +234,6 @@ func (sinkManager *SinkManager) ensureContainerMetricsSinkFor(appId string) {
 		return
 	}
 
-	sink := containermetric.NewContainerMetricSink(appId, sinkManager.metricTTL, time.Hour)
+	sink := containermetric.NewContainerMetricSink(appId, sinkManager.metricTTL, sinkManager.sinkTimeout)
 	sinkManager.RegisterSink(sink)
 }

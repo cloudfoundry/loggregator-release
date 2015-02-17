@@ -16,5 +16,6 @@
     "VarzPort": 8888,
     "Syslog"  : "",
     "CollectorRegistrarIntervalMilliseconds": 60000,
-    "ContainerMetricTTLSeconds": 120
+    "ContainerMetricTTLSeconds": 120,
+    "SinkInactivityTimeoutSeconds": 120
 }

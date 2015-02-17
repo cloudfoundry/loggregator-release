@@ -15,6 +15,7 @@ import (
 )
 
 var (
+	dopplerConfig   *doppler.Config
 	dopplerInstance *doppler.Doppler
 	etcdRunner      *etcdstorerunner.ETCDClusterRunner
 	etcdPort        int
@@ -31,7 +32,7 @@ var _ = BeforeSuite(func() {
 	etcdRunner.Start()
 
 	etcdUrl := fmt.Sprintf("http://localhost:%d", etcdPort)
-	dopplerConfig := &doppler.Config{
+	dopplerConfig = &doppler.Config{
 		EtcdUrls:                  []string{etcdUrl},
 		EtcdMaxConcurrentRequests: 10,
 
@@ -45,6 +46,7 @@ var _ = BeforeSuite(func() {
 		SkipCertVerify:                true,
 		BlackListIps:                  []iprange.IPRange{},
 		ContainerMetricTTLSeconds:     120,
+	    SinkInactivityTimeoutSeconds:  2,
 	}
 	cfcomponent.Logger = loggertesthelper.Logger()
 

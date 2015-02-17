@@ -43,6 +43,9 @@ properties:
   doppler.collector_registrar_interval_milliseconds:
     description: "Interval for registering with collector"
     default: 60000
+  doppler.sink_inactivity_timeout_seconds:
+    description: "Interval before removing a sink due to inactivity"
+    default: 3600
   doppler_endpoint.shared_secret:
     description: "Shared secret used to verify cryptographically signed doppler messages"
   etcd.machines:
