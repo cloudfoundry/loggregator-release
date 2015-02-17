@@ -420,7 +420,7 @@ var _ = Describe("GroupedSink", func() {
 		It("returns only container metric sinks", func() {
 			appId := "456"
 
-			sink1 := containermetric.NewContainerMetricSink(appId, 1*time.Second)
+			sink1 := containermetric.NewContainerMetricSink(appId, 1*time.Second, time.Second)
 			sink2 := dump.NewDumpSink(appId, 5, loggertesthelper.Logger(), time.Second)
 
 			groupedSinks.RegisterAppSink(inputChan, sink1)
@@ -433,8 +433,8 @@ var _ = Describe("GroupedSink", func() {
 			appId1 := "123"
 			appId2 := "456"
 
-			sink1 := containermetric.NewContainerMetricSink(appId1, 1*time.Second)
-			sink2 := containermetric.NewContainerMetricSink(appId2, 1*time.Second)
+			sink1 := containermetric.NewContainerMetricSink(appId1, 1*time.Second, time.Second)
+			sink2 := containermetric.NewContainerMetricSink(appId2, 1*time.Second, time.Second)
 
 			groupedSinks.RegisterAppSink(inputChan, sink1)
 			groupedSinks.RegisterAppSink(inputChan, sink2)

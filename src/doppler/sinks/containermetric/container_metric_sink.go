@@ -7,28 +7,43 @@ import (
 )
 
 type ContainerMetricSink struct {
-	applicationId string
-	ttl           time.Duration
-	metrics       map[int32]*events.Envelope
+	applicationId      string
+	ttl                time.Duration
+	metrics            map[int32]*events.Envelope
+	inactivityDuration time.Duration
 
 	sync.RWMutex
 }
 
-func NewContainerMetricSink(applicationId string, ttl time.Duration) *ContainerMetricSink {
+func NewContainerMetricSink(applicationId string, ttl time.Duration, inactivityDuration time.Duration) *ContainerMetricSink {
 	return &ContainerMetricSink{
-		applicationId: applicationId,
-		ttl:           ttl,
-		metrics:       make(map[int32]*events.Envelope),
+		applicationId:      applicationId,
+		ttl:                ttl,
+		inactivityDuration: inactivityDuration,
+		metrics:            make(map[int32]*events.Envelope),
 	}
 }
 
 func (sink *ContainerMetricSink) Run(eventChan <-chan *events.Envelope) {
-	for event := range eventChan {
-		if event.GetEventType() != events.Envelope_ContainerMetric {
-			continue
-		}
 
-		sink.updateMetric(event)
+	timer := time.NewTimer(sink.inactivityDuration)
+	for {
+		timer.Reset(sink.inactivityDuration)
+		select {
+		case event, ok := <-eventChan:
+			if !ok {
+				return
+			}
+
+			if event.GetEventType() != events.Envelope_ContainerMetric {
+				continue
+			}
+
+			sink.updateMetric(event)
+		case <-timer.C:
+			timer.Stop()
+			return
+		}
 	}
 }
 

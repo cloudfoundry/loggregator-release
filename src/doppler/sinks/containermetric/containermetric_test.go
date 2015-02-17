@@ -19,7 +19,7 @@ var _ = Describe("Containermetric", func() {
 	BeforeEach(func() {
 		eventChan = make(chan *events.Envelope)
 
-		sink = containermetric.NewContainerMetricSink("myApp", 2*time.Second)
+		sink = containermetric.NewContainerMetricSink("myApp", 2*time.Second, 2*time.Second)
 		go sink.Run(eventChan)
 	})
 
@@ -106,7 +106,63 @@ var _ = Describe("Containermetric", func() {
 			Expect(sink.ShouldReceiveErrors()).To(BeFalse())
 		})
 	})
+
+	It("closes after a period of inactivity", func() {
+		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, 1*time.Millisecond)
+		containerMetricRunnerDone := make(chan struct{})
+		inputChan := make(chan *events.Envelope)
+
+		go func() {
+			containerMetricSink.Run(inputChan)
+			close(containerMetricRunnerDone)
+		}()
+
+		Eventually(containerMetricRunnerDone, 50*time.Millisecond).Should(BeClosed())
+	})
+
+	It("closes after input chan is closed", func() {
+		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, 10*time.Second)
+		containerMetricRunnerDone := make(chan struct{})
+		inputChan := make(chan *events.Envelope)
+
+		go func() {
+			containerMetricSink.Run(inputChan)
+			close(containerMetricRunnerDone)
+		}()
+
+		close(inputChan)
+
+		Eventually(containerMetricRunnerDone, 50*time.Millisecond).Should(BeClosed())
+	})
+
+	It("resets the inactivity duration when a metric is received", func() {
+		inactivityDuration := 1 * time.Millisecond
+		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, inactivityDuration)
+		containerMetricRunnerDone := make(chan struct{})
+		inputChan := make(chan *events.Envelope)
+
+		go func() {
+			containerMetricSink.Run(inputChan)
+			close(containerMetricRunnerDone)
+		}()
+
+		metric := metricFor(1, time.Now().Add(-1*time.Microsecond), 1, 1, 1)
+		continuouslySend(inputChan, metric, 2*inactivityDuration)
+		Expect(containerMetricRunnerDone).ShouldNot(BeClosed())
+	})
 })
+
+func continuouslySend(inputChan chan<- *events.Envelope, message *events.Envelope, duration time.Duration) {
+	timer := time.NewTimer(duration)
+	defer timer.Stop()
+	for {
+		select {
+		case inputChan <- message:
+		case <-timer.C:
+			return
+		}
+	}
+}
 
 func metricFor(instanceId int32, timestamp time.Time, cpu float64, mem uint64, disk uint64) *events.Envelope {
 	unixTimestamp := timestamp.UnixNano()

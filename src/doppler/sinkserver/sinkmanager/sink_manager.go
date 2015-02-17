@@ -233,6 +233,6 @@ func (sinkManager *SinkManager) ensureContainerMetricsSinkFor(appId string) {
 		return
 	}
 
-	sink := containermetric.NewContainerMetricSink(appId, sinkManager.metricTTL)
+	sink := containermetric.NewContainerMetricSink(appId, sinkManager.metricTTL, time.Hour)
 	sinkManager.RegisterSink(sink)
 }
