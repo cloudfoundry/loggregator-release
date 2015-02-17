@@ -410,12 +410,38 @@ var _ = Describe("Dump Sink", func() {
 			close(dumpRunnerDone)
 		}()
 
-		select {
-		case <-dumpRunnerDone:
+		Eventually(dumpRunnerDone, 200*time.Millisecond).Should(BeClosed())
+	})
 
-		case <-time.After(200 * time.Millisecond):
-			assert.Fail(GinkgoT(), "Should have timed out the dump")
-		}
+	It("closes after input chan is closed", func() {
+			testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), 2*time.Microsecond)
+			dumpRunnerDone := make(chan struct{})
+			inputChan := make(chan *events.Envelope)
+
+			go func() {
+				testDump.Run(inputChan)
+				close(dumpRunnerDone)
+			}()
+
+			close(inputChan)
+
+			Eventually(dumpRunnerDone, 50*time.Millisecond).Should(BeClosed())
+		})
+
+	It("resets the inactivity duration when a metric is received", func() {
+			inactivityDuration := 1 * time.Millisecond
+			testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), inactivityDuration)
+			dumpRunnerDone := make(chan struct{})
+			inputChan := make(chan *events.Envelope)
+
+			go func() {
+				testDump.Run(inputChan)
+				close(dumpRunnerDone)
+			}()
+
+			logMessage, _ := emitter.Wrap(&events.LogMessage{}, "origin")
+			continuouslySend(inputChan, logMessage, 2*inactivityDuration)
+			Expect(dumpRunnerDone).ShouldNot(BeClosed())
 	})
 
 	It("only stores log messages", func() {
@@ -445,3 +471,15 @@ var _ = Describe("Dump Sink", func() {
 		Expect(testDump.Dump()).To(HaveLen(1))
 	})
 })
+
+func continuouslySend(inputChan chan<- *events.Envelope, message *events.Envelope, duration time.Duration) {
+	timer := time.NewTimer(duration)
+	defer timer.Stop()
+	for {
+		select {
+		case inputChan <- message:
+		case <-timer.C:
+			return
+		}
+	}
+}
