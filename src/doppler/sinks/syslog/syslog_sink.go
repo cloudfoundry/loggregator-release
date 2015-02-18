@@ -18,14 +18,14 @@ type SyslogSink struct {
 	sentMessageCount  *uint64
 	sentByteCount     *uint64
 	listenerChannel   chan *events.Envelope
-	syslogWriter      syslogwriter.SyslogWriter
+	syslogWriter      syslogwriter.Writer
 	handleSendError   func(errorMessage, appId, drainUrl string)
 	disconnectChannel chan struct{}
 	dropsondeOrigin   string
 	disconnectOnce    sync.Once
 }
 
-func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.SyslogWriter, errorHandler func(string, string, string), dropsondeOrigin string) sinks.Sink {
+func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.Writer, errorHandler func(string, string, string), dropsondeOrigin string) sinks.Sink {
 	givenLogger.Debugf("Syslog Sink %s: Created for appId [%s]", drainUrl, appId)
 	return &SyslogSink{
 		appId:             appId,

@@ -14,7 +14,7 @@ var _ = Describe("SyslogWriter", func() {
 	var dataChan <-chan []byte
 	var serverStoppedChan <-chan bool
 	var shutdownChan chan bool
-	var sysLogWriter syslogwriter.SyslogWriter
+	var sysLogWriter syslogwriter.Writer
 
 	BeforeEach(func() {
 		shutdownChan = make(chan bool)

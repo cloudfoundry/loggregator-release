@@ -12,7 +12,7 @@ const (
 	rfc5424 = "2006-01-02T15:04:05.999999Z07:00"
 )
 
-type SyslogWriter interface {
+type Writer interface {
 	Connect() error
 	WriteStdout(b []byte, source, sourceId string, timestamp int64) (int, error)
 	WriteStderr(b []byte, source, sourceId string, timestamp int64) (int, error)
