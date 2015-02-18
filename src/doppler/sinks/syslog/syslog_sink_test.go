@@ -122,7 +122,7 @@ var _ = Describe("SyslogSink", func() {
 			inputChan <- envelope
 			data := <-sysLogger.receivedChannel
 
-			expectedSyslogMessage := fmt.Sprintf(`out: test message ts: \d+ src: App srcId: 123`)
+			expectedSyslogMessage := fmt.Sprintf(`<14>1 test message ts: \d+ src: App srcId: 123`)
 			Expect(string(data)).To(MatchRegexp(expectedSyslogMessage))
 			close(done)
 		})
@@ -218,7 +218,7 @@ var _ = Describe("SyslogSink", func() {
 						data := sysLogger.ReceivedMessages()
 						Expect(data).To(HaveLen(6))
 						for i := 0; i < 5; i++ {
-							msg := fmt.Sprintf("out: message no %v", i+100)
+							msg := fmt.Sprintf("<14>1 message no %v", i+100)
 							Expect(data[i+1]).To(MatchRegexp(msg))
 						}
 						close(done)
@@ -227,7 +227,7 @@ var _ = Describe("SyslogSink", func() {
 					It("sends a message about the buffer overflow", func(done Done) {
 						data := sysLogger.ReceivedMessages()
 						Expect(len(data)).To(BeNumerically(">", 1))
-						Expect(data[0]).To(MatchRegexp("err: Log message output too high. We've dropped 100 messages"))
+						Expect(data[0]).To(MatchRegexp("<11>1 Log message output too high. We've dropped 100 messages"))
 						close(done)
 					})
 				})
@@ -271,7 +271,7 @@ func (r *SyslogWriterRecorder) Connect() error {
 	}
 }
 
-func (r *SyslogWriterRecorder) WriteStdout(b []byte, source, sourceId string, timestamp int64) (int, error) {
+func (r *SyslogWriterRecorder) Write(p int, b []byte, source, sourceId string, timestamp int64) (int, error) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -279,21 +279,7 @@ func (r *SyslogWriterRecorder) WriteStdout(b []byte, source, sourceId string, ti
 		return 0, errors.New("Error writing to stdout.")
 	}
 
-	messageString := fmt.Sprintf("out: %s ts: %d src: %s srcId: %s", string(b), timestamp, source, sourceId)
-	r.receivedMessages = append(r.receivedMessages, messageString)
-	r.receivedChannel <- messageString
-	return len(b), nil
-}
-
-func (r *SyslogWriterRecorder) WriteStderr(b []byte, source, sourceId string, timestamp int64) (int, error) {
-	r.Lock()
-	defer r.Unlock()
-
-	if r.down {
-		return 0, errors.New("Error writing to stderr.")
-	}
-
-	messageString := fmt.Sprintf("err: %s ts: %d src: %s srcId: %s", string(b), timestamp, source, sourceId)
+	messageString := fmt.Sprintf("<%d>1 %s ts: %d src: %s srcId: %s", p, string(b), timestamp, source, sourceId)
 	r.receivedMessages = append(r.receivedMessages, messageString)
 	r.receivedChannel <- messageString
 	return len(b), nil

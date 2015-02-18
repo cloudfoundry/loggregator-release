@@ -42,9 +42,6 @@ func (w *syslogWriter) Connect() error {
 	defer w.mu.Unlock()
 
 	err := w.connect()
-	if err == nil {
-		w.SetConnected(true)
-	}
 	return err
 }
 
@@ -63,12 +60,8 @@ func (w *syslogWriter) connect() error {
 	return err
 }
 
-func (w *syslogWriter) WriteStdout(b []byte, source string, sourceId string, timestamp int64) (int, error) {
-	return w.write(14, source, sourceId, string(b), timestamp)
-}
-
-func (w *syslogWriter) WriteStderr(b []byte, source string, sourceId string, timestamp int64) (int, error) {
-	return w.write(11, source, sourceId, string(b), timestamp)
+func (w *syslogWriter) Write(p int, b []byte, source string, sourceId string, timestamp int64) (int, error) {
+	return w.write(p, source, sourceId, string(b), timestamp)
 }
 
 func (w *syslogWriter) Close() error {
@@ -86,20 +79,12 @@ func (w *syslogWriter) Close() error {
 func (w *syslogWriter) write(p int, source string, sourceId string, msg string, timestamp int64) (byteCount int, err error) {
 	syslogMsg := createMessage(p, w.appId, source, sourceId, msg, timestamp)
 	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
-	finalMsg := fmt.Sprintf("%d %s", len(syslogMsg), syslogMsg)
+	finalMsg := []byte(fmt.Sprintf("%d %s", len(syslogMsg), syslogMsg))
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if w.conn != nil {
-		byteCount, err = fmt.Fprint(w.conn, finalMsg)
+		byteCount, err = w.conn.Write(finalMsg)
 	}
 	return byteCount, err
-}
-
-func (w *syslogWriter) IsConnected() bool {
-	return w.connected
-}
-
-func (w *syslogWriter) SetConnected(newValue bool) {
-	w.connected = newValue
 }

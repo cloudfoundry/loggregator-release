@@ -500,15 +500,10 @@ func dummyErrorHandler(_, _, _ string) {}
 type DummySyslogWriter struct{}
 
 func (d DummySyslogWriter) Connect() error { return nil }
-func (d DummySyslogWriter) WriteStdout(b []byte, source, sourceId string, timestamp int64) (int, error) {
+func (d DummySyslogWriter) Write(p int, b []byte, source, sourceId string, timestamp int64) (int, error) {
 	return 0, nil
 }
-func (d DummySyslogWriter) WriteStderr(b []byte, source, sourceId string, timestamp int64) (int, error) {
-	return 0, nil
-}
-func (d DummySyslogWriter) Close() error      { return nil }
-func (d DummySyslogWriter) IsConnected() bool { return false }
-func (d DummySyslogWriter) SetConnected(bool) {}
+func (d DummySyslogWriter) Close() error { return nil }
 
 type fakeSink struct {
 	sinkId string

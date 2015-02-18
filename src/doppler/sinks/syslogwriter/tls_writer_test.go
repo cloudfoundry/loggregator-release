@@ -13,6 +13,7 @@ var _ = Describe("TlsWriter", func() {
 
 	var shutdownChan chan bool
 	var serverStoppedChan <-chan bool
+	standardErrorPriority := 14
 
 	BeforeEach(func() {
 		shutdownChan = make(chan bool)
@@ -29,7 +30,7 @@ var _ = Describe("TlsWriter", func() {
 		w, _ := syslogwriter.NewTlsWriter(outputUrl, "appId", true)
 		err := w.Connect()
 		Expect(err).To(BeNil())
-		_, err = w.WriteStdout([]byte("just a test"), "test", "", time.Now().UnixNano())
+		_, err = w.Write(standardErrorPriority, []byte("just a test"), "test", "", time.Now().UnixNano())
 		Expect(err).To(BeNil())
 		w.Close()
 	})

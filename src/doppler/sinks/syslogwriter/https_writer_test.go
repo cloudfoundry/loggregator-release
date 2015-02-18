@@ -17,6 +17,7 @@ var _ = Describe("HttpsWriter", func() {
 
 		var server *httptest.Server
 		var requestChan chan []byte
+		standardErrorPriority := 14
 
 		BeforeEach(func() {
 			requestChan = make(chan []byte, 1)
@@ -36,7 +37,7 @@ var _ = Describe("HttpsWriter", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			parsedTime, err := time.Parse(time.RFC3339, "2006-01-02T15:04:05Z")
-			byteCount, err := w.WriteStdout([]byte("Message"), "just a test", "TEST", parsedTime.UnixNano())
+			byteCount, err := w.Write(standardErrorPriority, []byte("Message"), "just a test", "TEST", parsedTime.UnixNano())
 			Expect(byteCount).To(Equal(79))
 			Expect(err).ToNot(HaveOccurred())
 
@@ -50,7 +51,7 @@ var _ = Describe("HttpsWriter", func() {
 
 			w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", true)
 
-			_, err := w.WriteStdout([]byte("Message"), "just a test", "TEST", time.Now().UnixNano())
+			_, err := w.Write(standardErrorPriority, []byte("Message"), "just a test", "TEST", time.Now().UnixNano())
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -63,7 +64,7 @@ var _ = Describe("HttpsWriter", func() {
 
 			parsedTime, err := time.Parse(time.RFC3339, "2006-01-02T15:04:05Z")
 			for i := 0; i < 10; i++ {
-				_, err := w.WriteStdout([]byte("Message"), "just a test", "TEST", parsedTime.UnixNano())
+				_, err := w.Write(standardErrorPriority, []byte("Message"), "just a test", "TEST", parsedTime.UnixNano())
 				Expect(err).To(HaveOccurred())
 			}
 
@@ -79,7 +80,7 @@ var _ = Describe("HttpsWriter", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			parsedTime, err := time.Parse(time.RFC3339, "2006-01-02T15:04:05Z")
-			_, err = w.WriteStdout([]byte("Message"), "just a test", "TEST", parsedTime.UnixNano())
+			_, err = w.Write(standardErrorPriority, []byte("Message"), "just a test", "TEST", parsedTime.UnixNano())
 			Expect(err).ToNot(HaveOccurred())
 
 		})

@@ -14,11 +14,8 @@ const (
 
 type Writer interface {
 	Connect() error
-	WriteStdout(b []byte, source, sourceId string, timestamp int64) (int, error)
-	WriteStderr(b []byte, source, sourceId string, timestamp int64) (int, error)
+	Write(p int, b []byte, source, sourceId string, timestamp int64) (int, error)
 	Close() error
-	IsConnected() bool
-	SetConnected(bool)
 }
 
 func NewWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (Writer, error) {

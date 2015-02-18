@@ -15,6 +15,7 @@ var _ = Describe("SyslogWriter", func() {
 	var serverStoppedChan <-chan bool
 	var shutdownChan chan bool
 	var sysLogWriter syslogwriter.Writer
+	standardOutPriority := 14
 
 	BeforeEach(func() {
 		shutdownChan = make(chan bool)
@@ -43,24 +44,8 @@ var _ = Describe("SyslogWriter", func() {
 	})
 
 	Context("Message Format", func() {
-		It("sends messages from stdout with INFO priority", func(done Done) {
-			sysLogWriter.WriteStdout([]byte("just a test"), "test", "", time.Now().UnixNano())
-
-			data := <-dataChan
-			Expect(string(data)).To(MatchRegexp(`\d <14>\d `))
-			close(done)
-		})
-
-		It("sends messages from stderr with ERROR priority", func(done Done) {
-			sysLogWriter.WriteStderr([]byte("just a test"), "test", "", time.Now().UnixNano())
-
-			data := <-dataChan
-			Expect(string(data)).To(MatchRegexp(`\d <11>\d `))
-			close(done)
-		})
-
 		It("sends messages in the proper format", func(done Done) {
-			sysLogWriter.WriteStdout([]byte("just a test"), "App", "2", time.Now().UnixNano())
+			sysLogWriter.Write(standardOutPriority, []byte("just a test"), "App", "2", time.Now().UnixNano())
 
 			data := <-dataChan
 			Expect(string(data)).To(MatchRegexp(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}([-+]\d{2}:\d{2}) loggregator appId \[App/2\] - - just a test\n`))
@@ -68,7 +53,7 @@ var _ = Describe("SyslogWriter", func() {
 		})
 
 		It("strips null termination char from message", func(done Done) {
-			sysLogWriter.WriteStdout([]byte(string(0)+" hi"), "appId", "", time.Now().UnixNano())
+			sysLogWriter.Write(standardOutPriority, []byte(string(0)+" hi"), "appId", "", time.Now().UnixNano())
 
 			data := <-dataChan
 			Expect(string(data)).ToNot(MatchRegexp("\000"))

@@ -48,12 +48,8 @@ func (w *httpsWriter) Connect() error {
 	return nil
 }
 
-func (w *httpsWriter) WriteStdout(b []byte, source string, sourceId string, timestamp int64) (int, error) {
-	return w.write(14, source, sourceId, string(b), timestamp)
-}
-
-func (w *httpsWriter) WriteStderr(b []byte, source string, sourceId string, timestamp int64) (int, error) {
-	return w.write(11, source, sourceId, string(b), timestamp)
+func (w *httpsWriter) Write(p int, b []byte, source string, sourceId string, timestamp int64) (int, error) {
+	return w.write(p, source, sourceId, string(b), timestamp)
 }
 
 func (w *httpsWriter) Close() error {
@@ -78,11 +74,4 @@ func (w *httpsWriter) writeHttp(finalMsg string) (byteCount int, err error) {
 	}
 	byteCount = len(finalMsg)
 	return byteCount, err
-}
-
-func (w *httpsWriter) IsConnected() bool {
-	return true
-}
-
-func (w *httpsWriter) SetConnected(bool) {
 }
