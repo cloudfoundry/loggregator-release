@@ -6,14 +6,16 @@
 package syslogwriter
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
 	"net/url"
+	"strings"
 	"sync"
 )
 
-type syslogWriter struct {
+type tlsWriter struct {
 	appId     string
 	raddr     string
 	scheme    string
@@ -22,56 +24,61 @@ type syslogWriter struct {
 
 	mu   sync.Mutex // guards conn
 	conn net.Conn
+
+	tlsConfig *tls.Config
 }
 
-func NewSyslogWriter(outputUrl *url.URL, appId string) (w *syslogWriter, err error) {
-	if outputUrl.Scheme != "syslog" {
-		return nil, errors.New(fmt.Sprintf("Invalid scheme %s, syslogWriter only supports syslog", outputUrl.Scheme))
+func NewTlsWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (w *tlsWriter, err error) {
+	if outputUrl.Scheme != "syslog-tls" {
+		return nil, errors.New(fmt.Sprintf("Invalid scheme %s, tlsWriter only supports syslog-tls", outputUrl.Scheme))
 	}
-	return &syslogWriter{
+	tlsConfig := &tls.Config{InsecureSkipVerify: skipCertVerify}
+	return &tlsWriter{
 		appId:     appId,
 		outputUrl: outputUrl,
 		raddr:     outputUrl.Host,
 		connected: false,
 		scheme:    outputUrl.Scheme,
+		tlsConfig: tlsConfig,
 	}, nil
 }
 
-func (w *syslogWriter) Connect() error {
+func (w *tlsWriter) Connect() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	err := w.connect()
+	var err error
+	if strings.Contains(w.scheme, "syslog-tls") {
+		err = w.connectTLS()
+	}
 	if err == nil {
 		w.SetConnected(true)
 	}
 	return err
 }
 
-// connect makes a connection to the syslog server.
-// It must be called with w.mu held.
-func (w *syslogWriter) connect() error {
+func (w *tlsWriter) connectTLS() error {
 	if w.conn != nil {
 		// ignore err from close, it makes sense to continue anyway
 		w.conn.Close()
 		w.conn = nil
 	}
-	c, err := net.Dial("tcp", w.raddr)
+	c, err := tls.Dial("tcp", w.raddr, w.tlsConfig)
 	if err == nil {
 		w.conn = c
 	}
 	return err
 }
 
-func (w *syslogWriter) WriteStdout(b []byte, source string, sourceId string, timestamp int64) (int, error) {
+func (w *tlsWriter) WriteStdout(b []byte, source string, sourceId string, timestamp int64) (int, error) {
 	return w.write(14, source, sourceId, string(b), timestamp)
 }
 
-func (w *syslogWriter) WriteStderr(b []byte, source string, sourceId string, timestamp int64) (int, error) {
+func (w *tlsWriter) WriteStderr(b []byte, source string, sourceId string, timestamp int64) (int, error) {
 	return w.write(11, source, sourceId, string(b), timestamp)
 }
 
-func (w *syslogWriter) Close() error {
+func (w *tlsWriter) Close() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -83,7 +90,7 @@ func (w *syslogWriter) Close() error {
 	return nil
 }
 
-func (w *syslogWriter) write(p int, source string, sourceId string, msg string, timestamp int64) (byteCount int, err error) {
+func (w *tlsWriter) write(p int, source string, sourceId string, msg string, timestamp int64) (byteCount int, err error) {
 	syslogMsg := createMessage(p, w.appId, source, sourceId, msg, timestamp)
 	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
 	finalMsg := fmt.Sprintf("%d %s", len(syslogMsg), syslogMsg)
@@ -96,10 +103,10 @@ func (w *syslogWriter) write(p int, source string, sourceId string, msg string, 
 	return byteCount, err
 }
 
-func (w *syslogWriter) IsConnected() bool {
+func (w *tlsWriter) IsConnected() bool {
 	return w.connected
 }
 
-func (w *syslogWriter) SetConnected(newValue bool) {
+func (w *tlsWriter) SetConnected(newValue bool) {
 	w.connected = newValue
 }

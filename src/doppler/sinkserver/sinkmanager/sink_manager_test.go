@@ -229,9 +229,23 @@ var _ = Describe("SinkManager", func() {
 			})
 
 			Context("when an add update is received", func() {
-				It("creates a new syslog sink from the newAppServicesChan", func() {
+				It("creates a new syslog sink with syslog writer from the newAppServicesChan", func() {
 					initialNumSinks := numSyslogSinks()
 					newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:885"}
+
+					Eventually(numSyslogSinks).Should(Equal(initialNumSinks + 1))
+				})
+
+				It("creates a new syslog sink with tlsWriter from the newAppServicesChan", func() {
+					initialNumSinks := numSyslogSinks()
+					newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog-tls://127.0.1.1:885"}
+
+					Eventually(numSyslogSinks).Should(Equal(initialNumSinks + 1))
+				})
+
+				It("creates a new syslog sink with httpsWriter from the newAppServicesChan", func() {
+					initialNumSinks := numSyslogSinks()
+					newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "https://127.0.1.1:885"}
 
 					Eventually(numSyslogSinks).Should(Equal(initialNumSinks + 1))
 				})
@@ -341,7 +355,7 @@ var _ = Describe("SinkManager", func() {
 			BeforeEach(func() {
 				url, err := url.Parse("syslog://localhost:9998")
 				Expect(err).To(BeNil())
-				writer := syslogwriter.NewSyslogWriter(url, "appId", true)
+				writer, _ := syslogwriter.NewSyslogWriter(url, "appId")
 				syslogSink = syslog.NewSyslogSink("appId", "localhost:9999", loggertesthelper.Logger(), writer, func(string, string, string) {}, "dropsonde-origin")
 
 				sinkManager.RegisterSink(syslogSink)
