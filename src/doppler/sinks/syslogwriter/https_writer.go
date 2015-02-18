@@ -15,7 +15,7 @@ import (
 	"sync"
 )
 
-type httpWriter struct {
+type httpsWriter struct {
 	appId     string
 	raddr     string
 	scheme    string
@@ -27,14 +27,14 @@ type httpWriter struct {
 	client    *http.Client
 }
 
-func NewHttpWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (w *httpWriter, err error) {
+func NewHttpsWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (w *httpsWriter, err error) {
 	if outputUrl.Scheme != "https" {
-		return nil, errors.New(fmt.Sprintf("Invalid scheme %s, httpWriter only supports https", outputUrl.Scheme))
+		return nil, errors.New(fmt.Sprintf("Invalid scheme %s, httpsWriter only supports https", outputUrl.Scheme))
 	}
 	tlsConfig := &tls.Config{InsecureSkipVerify: skipCertVerify}
 	tr := &http.Transport{TLSClientConfig: tlsConfig}
 	client := &http.Client{Transport: tr}
-	return &httpWriter{
+	return &httpsWriter{
 		appId:     appId,
 		outputUrl: outputUrl,
 		raddr:     outputUrl.Host,
@@ -44,23 +44,23 @@ func NewHttpWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (w *ht
 	}, nil
 }
 
-func (w *httpWriter) Connect() error {
+func (w *httpsWriter) Connect() error {
 	return nil
 }
 
-func (w *httpWriter) WriteStdout(b []byte, source string, sourceId string, timestamp int64) (int, error) {
+func (w *httpsWriter) WriteStdout(b []byte, source string, sourceId string, timestamp int64) (int, error) {
 	return w.write(14, source, sourceId, string(b), timestamp)
 }
 
-func (w *httpWriter) WriteStderr(b []byte, source string, sourceId string, timestamp int64) (int, error) {
+func (w *httpsWriter) WriteStderr(b []byte, source string, sourceId string, timestamp int64) (int, error) {
 	return w.write(11, source, sourceId, string(b), timestamp)
 }
 
-func (w *httpWriter) Close() error {
+func (w *httpsWriter) Close() error {
 	return nil
 }
 
-func (w *httpWriter) write(p int, source string, sourceId string, msg string, timestamp int64) (byteCount int, err error) {
+func (w *httpsWriter) write(p int, source string, sourceId string, msg string, timestamp int64) (byteCount int, err error) {
 	syslogMsg := createMessage(p, w.appId, source, sourceId, msg, timestamp)
 	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
 	finalMsg := fmt.Sprintf("%d %s", len(syslogMsg), syslogMsg)
@@ -68,7 +68,7 @@ func (w *httpWriter) write(p int, source string, sourceId string, msg string, ti
 	return w.writeHttp(finalMsg)
 }
 
-func (w *httpWriter) writeHttp(finalMsg string) (byteCount int, err error) {
+func (w *httpsWriter) writeHttp(finalMsg string) (byteCount int, err error) {
 	resp, err := w.client.Post(w.outputUrl.String(), "text/plain", strings.NewReader(finalMsg))
 	if resp != nil {
 		if resp.StatusCode != 200 {
@@ -80,9 +80,9 @@ func (w *httpWriter) writeHttp(finalMsg string) (byteCount int, err error) {
 	return byteCount, err
 }
 
-func (w *httpWriter) IsConnected() bool {
+func (w *httpsWriter) IsConnected() bool {
 	return true
 }
 
-func (w *httpWriter) SetConnected(bool) {
+func (w *httpsWriter) SetConnected(bool) {
 }

@@ -32,7 +32,7 @@ var _ = Describe("Writer", func() {
 		w, err := syslogwriter.NewWriter(outputUrl, "appId", false)
 		Expect(err).ToNot(HaveOccurred())
 		writerType := reflect.TypeOf(w).String()
-		Expect(writerType).To(Equal("*syslogwriter.httpWriter"))
+		Expect(writerType).To(Equal("*syslogwriter.httpsWriter"))
 	})
 
 	It("returns an error for invalid scheme", func() {

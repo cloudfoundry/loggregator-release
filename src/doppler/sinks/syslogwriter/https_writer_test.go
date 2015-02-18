@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var _ = Describe("HttpWriter", func() {
+var _ = Describe("HttpsWriter", func() {
 
 	Context("With an HTTPS Connection", func() {
 
@@ -31,7 +31,7 @@ var _ = Describe("HttpWriter", func() {
 		It("HTTP POSTs each log message to the HTTPS syslog endpoint", func() {
 			outputUrl, _ := url.Parse(server.URL + "/234-bxg-234/")
 
-			w, _ := syslogwriter.NewHttpWriter(outputUrl, "appId", true)
+			w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", true)
 			err := w.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
@@ -48,7 +48,7 @@ var _ = Describe("HttpWriter", func() {
 		It("returns an error when unable to HTTP POST the log message", func() {
 			outputUrl, _ := url.Parse("https://")
 
-			w, _ := syslogwriter.NewHttpWriter(outputUrl, "appId", true)
+			w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", true)
 
 			_, err := w.WriteStdout([]byte("Message"), "just a test", "TEST", time.Now().UnixNano())
 			Expect(err).To(HaveOccurred())
@@ -57,7 +57,7 @@ var _ = Describe("HttpWriter", func() {
 		It("should close connections and return an error if status code returned is not 200", func() {
 			outputUrl, _ := url.Parse(server.URL + "/doesnotexist")
 
-			w, _ := syslogwriter.NewHttpWriter(outputUrl, "appId", true)
+			w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", true)
 			err := w.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
@@ -74,7 +74,7 @@ var _ = Describe("HttpWriter", func() {
 		It("should not return error for response 200 status codes", func() {
 			outputUrl, _ := url.Parse(server.URL + "/234-bxg-234/")
 
-			w, _ := syslogwriter.NewHttpWriter(outputUrl, "appId", true)
+			w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", true)
 			err := w.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
@@ -86,13 +86,13 @@ var _ = Describe("HttpWriter", func() {
 
 		It("returns an error for syslog-tls scheme", func() {
 			outputUrl, _ := url.Parse("syslog-tls://localhost:9999")
-			_, err := syslogwriter.NewHttpWriter(outputUrl, "appId", false)
+			_, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", false)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("returns an error for syslog scheme", func() {
 			outputUrl, _ := url.Parse("syslog://localhost:9999")
-			_, err := syslogwriter.NewHttpWriter(outputUrl, "appId", false)
+			_, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", false)
 			Expect(err).To(HaveOccurred())
 		})
 	})

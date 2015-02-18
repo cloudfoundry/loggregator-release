@@ -21,10 +21,10 @@ type SyslogWriter interface {
 	SetConnected(bool)
 }
 
-func NewWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (SyslogWriter, error) {
+func NewWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (Writer, error) {
 	switch outputUrl.Scheme {
 	case "https":
-		return NewHttpWriter(outputUrl, appId, skipCertVerify)
+		return NewHttpsWriter(outputUrl, appId, skipCertVerify)
 	case "syslog":
 		return NewSyslogWriter(outputUrl, appId)
 	case "syslog-tls":
