@@ -89,7 +89,7 @@ func startSyslogServer(shutdownChan <-chan struct{}) (<-chan []byte, <-chan stru
 			return
 		}
 		defer conn.Close()
-		conn.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
+		conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
 		readCount, err := conn.Read(buffer)
 		buffer2 := make([]byte, readCount)
 		copy(buffer2, buffer[:readCount])
