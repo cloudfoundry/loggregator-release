@@ -67,7 +67,7 @@ func startTLSSyslogServer(shutdownChan <-chan struct{}) <-chan struct{} {
 		Certificates: []tls.Certificate{cert},
 	}
 
-	listener, err := tls.Listen("tcp", "localhost:9999", config)
+	listener, err := tls.Listen("tcp", "localhost:9998", config)
 	if err != nil {
 		panic(err)
 	}
@@ -90,7 +90,7 @@ func startTLSSyslogServer(shutdownChan <-chan struct{}) <-chan struct{} {
 			return
 		}
 		defer conn.Close()
-		conn.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
+		conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
 		conn.Read(buffer)
 	}()
 

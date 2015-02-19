@@ -15,9 +15,7 @@ import (
 
 type syslogWriter struct {
 	appId     string
-	raddr     string
-	scheme    string
-	outputUrl *url.URL
+	host      string
 	connected bool
 
 	mu   sync.Mutex // guards conn
@@ -30,10 +28,8 @@ func NewSyslogWriter(outputUrl *url.URL, appId string) (w *syslogWriter, err err
 	}
 	return &syslogWriter{
 		appId:     appId,
-		outputUrl: outputUrl,
-		raddr:     outputUrl.Host,
+		host:      outputUrl.Host,
 		connected: false,
-		scheme:    outputUrl.Scheme,
 	}, nil
 }
 
@@ -46,7 +42,7 @@ func (w *syslogWriter) Connect() error {
 		w.conn.Close()
 		w.conn = nil
 	}
-	c, err := net.Dial("tcp", w.raddr)
+	c, err := net.Dial("tcp", w.host)
 	if err == nil {
 		w.conn = c
 	}

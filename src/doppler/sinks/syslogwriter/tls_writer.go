@@ -16,9 +16,7 @@ import (
 
 type tlsWriter struct {
 	appId     string
-	raddr     string
-	scheme    string
-	outputUrl *url.URL
+	host      string
 	connected bool
 
 	mu   sync.Mutex // guards conn
@@ -34,10 +32,8 @@ func NewTlsWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (w *tls
 	tlsConfig := &tls.Config{InsecureSkipVerify: skipCertVerify}
 	return &tlsWriter{
 		appId:     appId,
-		outputUrl: outputUrl,
-		raddr:     outputUrl.Host,
+		host: outputUrl.Host,
 		connected: false,
-		scheme:    outputUrl.Scheme,
 		tlsConfig: tlsConfig,
 	}, nil
 }
@@ -51,7 +47,7 @@ func (w *tlsWriter) Connect() error {
 		w.conn.Close()
 		w.conn = nil
 	}
-	c, err := tls.Dial("tcp", w.raddr, w.tlsConfig)
+	c, err := tls.Dial("tcp", w.host, w.tlsConfig)
 	if err == nil {
 		w.conn = c
 	}

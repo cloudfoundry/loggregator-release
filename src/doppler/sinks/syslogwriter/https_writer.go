@@ -17,8 +17,6 @@ import (
 
 type httpsWriter struct {
 	appId     string
-	raddr     string
-	scheme    string
 	outputUrl *url.URL
 
 	mu sync.Mutex // guards conn
@@ -37,8 +35,6 @@ func NewHttpsWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (w *h
 	return &httpsWriter{
 		appId:     appId,
 		outputUrl: outputUrl,
-		raddr:     outputUrl.Host,
-		scheme:    outputUrl.Scheme,
 		tlsConfig: tlsConfig,
 		client:    client,
 	}, nil
