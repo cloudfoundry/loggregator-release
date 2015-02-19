@@ -99,7 +99,7 @@ func startTLSSyslogServer(shutdownChan <-chan struct{}) <-chan struct{} {
 				defer connectionsDone.Done()
 				defer conn.Close()
 				buffer := make([]byte, 1024)
-				conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+				conn.SetReadDeadline(time.Now().Add(300 * time.Millisecond))
 				conn.Read(buffer)
 			}()
 		}
