@@ -41,13 +41,6 @@ func (w *syslogWriter) Connect() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	err := w.connect()
-	return err
-}
-
-// connect makes a connection to the syslog server.
-// It must be called with w.mu held.
-func (w *syslogWriter) connect() error {
 	if w.conn != nil {
 		// ignore err from close, it makes sense to continue anyway
 		w.conn.Close()
@@ -60,8 +53,17 @@ func (w *syslogWriter) connect() error {
 	return err
 }
 
-func (w *syslogWriter) Write(p int, b []byte, source string, sourceId string, timestamp int64) (int, error) {
-	return w.write(p, source, sourceId, string(b), timestamp)
+func (w *syslogWriter) Write(p int, b []byte, source string, sourceId string, timestamp int64) (byteCount int, err error) {
+	syslogMsg := createMessage(p, w.appId, source, sourceId, b, timestamp)
+	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
+	finalMsg := []byte(fmt.Sprintf("%d %s", len(syslogMsg), syslogMsg))
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.conn != nil {
+		byteCount, err = w.conn.Write(finalMsg)
+	}
+	return byteCount, err
 }
 
 func (w *syslogWriter) Close() error {
@@ -76,15 +78,3 @@ func (w *syslogWriter) Close() error {
 	return nil
 }
 
-func (w *syslogWriter) write(p int, source string, sourceId string, msg string, timestamp int64) (byteCount int, err error) {
-	syslogMsg := createMessage(p, w.appId, source, sourceId, msg, timestamp)
-	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
-	finalMsg := []byte(fmt.Sprintf("%d %s", len(syslogMsg), syslogMsg))
-
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	if w.conn != nil {
-		byteCount, err = w.conn.Write(finalMsg)
-	}
-	return byteCount, err
-}

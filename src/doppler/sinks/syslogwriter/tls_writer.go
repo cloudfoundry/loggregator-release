@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"strings"
 	"sync"
 )
 
@@ -47,14 +46,6 @@ func (w *tlsWriter) Connect() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	var err error
-	if strings.Contains(w.scheme, "syslog-tls") {
-		err = w.connectTLS()
-	}
-	return err
-}
-
-func (w *tlsWriter) connectTLS() error {
 	if w.conn != nil {
 		// ignore err from close, it makes sense to continue anyway
 		w.conn.Close()
@@ -67,8 +58,17 @@ func (w *tlsWriter) connectTLS() error {
 	return err
 }
 
-func (w *tlsWriter) Write(p int, b []byte, source string, sourceId string, timestamp int64) (int, error) {
-	return w.write(p, source, sourceId, string(b), timestamp)
+func (w *tlsWriter) Write(p int, b []byte, source string, sourceId string, timestamp int64) (byteCount int, err error) {
+	syslogMsg := createMessage(p, w.appId, source, sourceId, b, timestamp)
+	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
+	finalMsg := []byte(fmt.Sprintf("%d %s", len(syslogMsg), syslogMsg))
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.conn != nil {
+		byteCount, err = w.conn.Write(finalMsg)
+	}
+	return byteCount, err
 }
 
 func (w *tlsWriter) Close() error {
@@ -81,17 +81,4 @@ func (w *tlsWriter) Close() error {
 		return err
 	}
 	return nil
-}
-
-func (w *tlsWriter) write(p int, source string, sourceId string, msg string, timestamp int64) (byteCount int, err error) {
-	syslogMsg := createMessage(p, w.appId, source, sourceId, msg, timestamp)
-	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
-	finalMsg := []byte(fmt.Sprintf("%d %s", len(syslogMsg), syslogMsg))
-
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	if w.conn != nil {
-		byteCount, err = w.conn.Write(finalMsg)
-	}
-	return byteCount, err
 }

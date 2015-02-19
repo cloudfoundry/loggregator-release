@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"bytes"
 	"strings"
 	"time"
 )
@@ -11,6 +12,10 @@ import (
 const (
 	rfc5424 = "2006-01-02T15:04:05.999999Z07:00"
 )
+
+var badBytes = []byte("\000")
+var emptyBytes = []byte{}
+var newLine = []byte("\n")
 
 type Writer interface {
 	Connect() error
@@ -31,14 +36,14 @@ func NewWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (Writer, e
 	}
 }
 
-func clean(in string) string {
-	return strings.Replace(in, "\000", "", -1)
+func clean(in []byte) []byte {
+	return bytes.Replace(in, badBytes, emptyBytes, -1)
 }
 
-func createMessage(p int, appId string, source string, sourceId string, msg string, timestamp int64) string {
+func createMessage(p int, appId string, source string, sourceId string, msg []byte, timestamp int64) string {
 	// ensure it ends in a \n
 	nl := ""
-	if !strings.HasSuffix(msg, "\n") {
+	if !bytes.HasSuffix(msg, newLine) {
 		nl = "\n"
 	}
 
