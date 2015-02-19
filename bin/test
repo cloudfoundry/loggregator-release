@@ -1,5 +1,13 @@
 #!/bin/bash
 
+function green {
+    echo -e "$(tput setaf 2)$1$(tput sgr0)"
+}
+
+function red {
+    echo -e "$(tput setaf 1)$1$(tput sgr0)"
+}
+
 check_for_data_race() {
     name=$1
     command=$2
@@ -16,9 +24,9 @@ check_for_data_race() {
     set -e
 
     if [[ $found_race == 1 ]]; then
-        echo "No race condition detected"
+        green "No race condition detected"
     else
-        echo "RACE CONDITION DETECTED"
+        red "RACE CONDITION DETECTED"
         cat /tmp/tmp.log
         exit 1
     fi
