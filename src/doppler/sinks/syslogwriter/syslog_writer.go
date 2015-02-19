@@ -73,4 +73,3 @@ func (w *syslogWriter) Close() error {
 	}
 	return nil
 }
-

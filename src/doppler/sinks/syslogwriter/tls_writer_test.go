@@ -10,17 +10,18 @@ import (
 	"time"
 )
 
+const MAX_ATTEMPTS = 5000
+
 var _ = Describe("TlsWriter", func() {
 
-	var shutdownChan chan struct{}
 	var serverStoppedChan <-chan struct{}
+	shutdownChan := make(chan struct{})
 
-	BeforeEach(func() {
-		shutdownChan = make(chan struct{})
+	BeforeSuite(func() {
 		serverStoppedChan = startTLSSyslogServer(shutdownChan)
 	})
 
-	AfterEach(func() {
+	AfterSuite(func() {
 		close(shutdownChan)
 		<-serverStoppedChan
 	})
@@ -64,8 +65,8 @@ func startTLSSyslogServer(shutdownChan <-chan struct{}) <-chan struct{} {
 		panic(err)
 	}
 	config := &tls.Config{
-		InsecureSkipVerify: true,
-		Certificates: []tls.Certificate{cert},
+		InsecureSkipVerify:     true,
+		Certificates:           []tls.Certificate{cert},
 		SessionTicketsDisabled: true,
 	}
 	listener, err := tls.Listen("tcp", "localhost:9998", config)
@@ -104,14 +105,16 @@ func startTLSSyslogServer(shutdownChan <-chan struct{}) <-chan struct{} {
 		}
 	}()
 
-	for attempts := 0; attempts < 1000; attempts++ {
-
+	for attempts := 0; attempts < MAX_ATTEMPTS; attempts++ {
 		testConn, err := tls.Dial("tcp", "localhost:9998", config)
 		if err == nil {
 			testConn.Close()
 			break
 		}
-		<-time.After(10*time.Millisecond)
+		<-time.After(10 * time.Millisecond)
+		if attempts == MAX_ATTEMPTS-1 {
+			panic("TLS Server didn't start up!")
+		}
 	}
 	return doneChan
 }
