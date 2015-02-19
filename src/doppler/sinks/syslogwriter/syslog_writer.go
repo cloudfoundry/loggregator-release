@@ -16,7 +16,6 @@ import (
 type syslogWriter struct {
 	appId     string
 	host      string
-	connected bool
 
 	mu   sync.Mutex // guards conn
 	conn net.Conn
@@ -29,7 +28,6 @@ func NewSyslogWriter(outputUrl *url.URL, appId string) (w *syslogWriter, err err
 	return &syslogWriter{
 		appId:     appId,
 		host:      outputUrl.Host,
-		connected: false,
 	}, nil
 }
 

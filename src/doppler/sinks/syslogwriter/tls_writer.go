@@ -17,7 +17,6 @@ import (
 type tlsWriter struct {
 	appId     string
 	host      string
-	connected bool
 
 	mu   sync.Mutex // guards conn
 	conn net.Conn
@@ -33,7 +32,6 @@ func NewTlsWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (w *tls
 	return &tlsWriter{
 		appId:     appId,
 		host:      outputUrl.Host,
-		connected: false,
 		tlsConfig: tlsConfig,
 	}, nil
 }
