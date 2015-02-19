@@ -12,33 +12,35 @@ import (
 
 var _ = Describe("TlsWriter", func() {
 
-	var shutdownChan chan bool
-	var serverStoppedChan <-chan bool
+	var shutdownChan chan struct{}
+	var serverStoppedChan <-chan struct{}
 	standardErrorPriority := 14
 
 	BeforeEach(func() {
-		shutdownChan = make(chan bool)
+		shutdownChan = make(chan struct{})
 		serverStoppedChan = startTLSSyslogServer(shutdownChan)
 	})
 
 	AfterEach(func() {
 		close(shutdownChan)
+
 		<-serverStoppedChan
 	})
 
 	It("connects", func() {
 		outputUrl, _ := url.Parse("syslog-tls://localhost:9999")
 		w, _ := syslogwriter.NewTlsWriter(outputUrl, "appId", true)
+		defer w.Close()
 		err := w.Connect()
 		Expect(err).To(BeNil())
 		_, err = w.Write(standardErrorPriority, []byte("just a test"), "test", "", time.Now().UnixNano())
 		Expect(err).To(BeNil())
-		w.Close()
 	})
 
 	It("rejects self-signed certs", func() {
 		outputUrl, _ := url.Parse("syslog-tls://localhost:9999")
 		w, _ := syslogwriter.NewTlsWriter(outputUrl, "appId", false)
+		defer w.Close()
 		err := w.Connect()
 		Expect(err).ToNot(BeNil())
 	})
@@ -56,8 +58,8 @@ var _ = Describe("TlsWriter", func() {
 	})
 })
 
-func startTLSSyslogServer(shutdownChan <-chan bool) <-chan bool {
-	doneChan := make(chan bool)
+func startTLSSyslogServer(shutdownChan <-chan struct{}) <-chan struct{} {
+	doneChan := make(chan struct{})
 	cert, err := tls.X509KeyPair(localhostCert, localhostKey)
 	if err != nil {
 		panic(err)
@@ -67,13 +69,12 @@ func startTLSSyslogServer(shutdownChan <-chan bool) <-chan bool {
 	}
 
 	listener, err := tls.Listen("tcp", "localhost:9999", config)
-
-	var listenerStopped sync.WaitGroup
-	listenerStopped.Add(1)
-
 	if err != nil {
 		panic(err)
 	}
+
+	var listenerStopped sync.WaitGroup
+	listenerStopped.Add(1)
 
 	go func() {
 		<-shutdownChan

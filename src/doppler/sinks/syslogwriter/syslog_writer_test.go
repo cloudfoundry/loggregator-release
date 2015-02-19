@@ -13,13 +13,13 @@ import (
 var _ = Describe("SyslogWriter", func() {
 
 	var dataChan <-chan []byte
-	var serverStoppedChan <-chan bool
-	var shutdownChan chan bool
+	var serverStoppedChan <-chan struct{}
+	var shutdownChan chan struct{}
 	var sysLogWriter syslogwriter.Writer
 	standardOutPriority := 14
 
 	BeforeEach(func() {
-		shutdownChan = make(chan bool)
+		shutdownChan = make(chan struct{})
 		dataChan, serverStoppedChan = startSyslogServer(shutdownChan)
 		outputUrl, _ := url.Parse("syslog://localhost:9999")
 		sysLogWriter, _ = syslogwriter.NewSyslogWriter(outputUrl, "appId")
@@ -63,9 +63,9 @@ var _ = Describe("SyslogWriter", func() {
 	})
 })
 
-func startSyslogServer(shutdownChan <-chan bool) (<-chan []byte, <-chan bool) {
-	dataChan := make(chan []byte)
-	doneChan := make(chan bool)
+func startSyslogServer(shutdownChan <-chan struct{}) (<-chan []byte, <-chan struct{}) {
+	dataChan := make(chan []byte, 1)
+	doneChan := make(chan struct{})
 	listener, err := net.Listen("tcp", "localhost:9999")
 	if err != nil {
 		panic(err)
@@ -88,13 +88,12 @@ func startSyslogServer(shutdownChan <-chan bool) (<-chan []byte, <-chan bool) {
 		if err != nil {
 			return
 		}
-
+		defer conn.Close()
 		conn.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
 		readCount, err := conn.Read(buffer)
 		buffer2 := make([]byte, readCount)
 		copy(buffer2, buffer[:readCount])
 		dataChan <- buffer2
-		conn.Close()
 	}()
 
 	<-time.After(300 * time.Millisecond)
