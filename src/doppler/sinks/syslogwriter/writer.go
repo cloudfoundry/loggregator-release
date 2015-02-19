@@ -1,10 +1,10 @@
 package syslogwriter
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net/url"
-	"bytes"
 	"strings"
 	"time"
 )

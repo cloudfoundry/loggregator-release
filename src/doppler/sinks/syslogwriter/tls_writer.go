@@ -32,7 +32,7 @@ func NewTlsWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (w *tls
 	tlsConfig := &tls.Config{InsecureSkipVerify: skipCertVerify}
 	return &tlsWriter{
 		appId:     appId,
-		host: outputUrl.Host,
+		host:      outputUrl.Host,
 		connected: false,
 		tlsConfig: tlsConfig,
 	}, nil
