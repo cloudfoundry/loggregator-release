@@ -14,8 +14,8 @@ import (
 )
 
 type syslogWriter struct {
-	appId     string
-	host      string
+	appId string
+	host  string
 
 	mu   sync.Mutex // guards conn
 	conn net.Conn
@@ -26,8 +26,8 @@ func NewSyslogWriter(outputUrl *url.URL, appId string) (w *syslogWriter, err err
 		return nil, errors.New(fmt.Sprintf("Invalid scheme %s, syslogWriter only supports syslog", outputUrl.Scheme))
 	}
 	return &syslogWriter{
-		appId:     appId,
-		host:      outputUrl.Host,
+		appId: appId,
+		host:  outputUrl.Host,
 	}, nil
 }
 

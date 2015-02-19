@@ -15,8 +15,8 @@ import (
 )
 
 type tlsWriter struct {
-	appId     string
-	host      string
+	appId string
+	host  string
 
 	mu   sync.Mutex // guards conn
 	conn net.Conn
