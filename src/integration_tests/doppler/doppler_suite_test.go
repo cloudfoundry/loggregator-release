@@ -6,7 +6,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	"github.com/pivotal-golang/localip"
 )
 
 func TestDoppler(t *testing.T) {
@@ -14,19 +16,24 @@ func TestDoppler(t *testing.T) {
 	RunSpecs(t, "Doppler Integration Suite")
 }
 
-var command *exec.Cmd
+var session *gexec.Session
+var localIPAddress string
 
 var _ = BeforeSuite(func() {
 	pathToDopplerExec, err := gexec.Build("doppler")
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
-	command = exec.Command(pathToDopplerExec, "--config=fixtures/doppler.json", "--debug")
-	gexec.Start(command, GinkgoWriter, GinkgoWriter)
+	command := exec.Command(pathToDopplerExec, "--config=fixtures/doppler.json", "--debug")
+	session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
 
+	Eventually(session.Out).Should(gbytes.Say("Setting up the doppler server"))
+
+	localIPAddress, _ = localip.LocalIP()
 })
 
 var _ = AfterSuite(func() {
-	command.Process.Kill()
+	session.Kill()
 
 	gexec.CleanupBuildArtifacts()
 })
