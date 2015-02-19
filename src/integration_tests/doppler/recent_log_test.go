@@ -74,16 +74,17 @@ var _ = Describe("Streaming Logs", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 
-		returnedMessages := make([][]byte, 1)
-		Eventually(func() [][]byte {
-			returnedMessages = retreiveRecentMessages(appID)
-			return returnedMessages
-		}).Should(HaveLen(10))
+		Eventually(func() []string {
+			returnedMessages := retreiveRecentMessages(appID)
+			var messages []string
 
-		for i, messageBytes := range returnedMessages {
-			receivedMessage := decodeProtoBufLogMessage(messageBytes)
-			Expect(string(receivedMessage.GetMessage())).To(Equal(strconv.Itoa(i + 5)))
-		}
+			for _, messageBytes := range returnedMessages {
+				receivedMessage := decodeProtoBufLogMessage(messageBytes)
+				messages = append(messages, string(receivedMessage.GetMessage()))
+			}
+
+			return messages
+		}).Should(Equal([]string{"5", "6", "7", "8", "9", "10", "11", "12", "13", "14"}))
 	})
 })
 
