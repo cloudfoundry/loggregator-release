@@ -14,7 +14,6 @@ var _ = Describe("TlsWriter", func() {
 
 	var shutdownChan chan struct{}
 	var serverStoppedChan <-chan struct{}
-	standardErrorPriority := 14
 
 	BeforeEach(func() {
 		shutdownChan = make(chan struct{})
@@ -32,9 +31,7 @@ var _ = Describe("TlsWriter", func() {
 		w, _ := syslogwriter.NewTlsWriter(outputUrl, "appId", true)
 		defer w.Close()
 		err := w.Connect()
-		Expect(err).To(BeNil())
-		_, err = w.Write(standardErrorPriority, []byte("just a test"), "test", "", time.Now().UnixNano())
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	It("rejects self-signed certs", func() {
@@ -42,7 +39,7 @@ var _ = Describe("TlsWriter", func() {
 		w, _ := syslogwriter.NewTlsWriter(outputUrl, "appId", false)
 		defer w.Close()
 		err := w.Connect()
-		Expect(err).ToNot(BeNil())
+		Expect(err).To(HaveOccurred())
 	})
 
 	It("returns an error for syslog scheme", func() {
@@ -91,7 +88,7 @@ func startTLSSyslogServer(shutdownChan <-chan struct{}) <-chan struct{} {
 			return
 		}
 		defer conn.Close()
-		conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+		conn.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
 		conn.Read(buffer)
 	}()
 
