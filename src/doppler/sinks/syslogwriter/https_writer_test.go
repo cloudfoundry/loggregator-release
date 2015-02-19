@@ -86,13 +86,13 @@ var _ = Describe("HttpsWriter", func() {
 		})
 
 		It("returns an error for syslog-tls scheme", func() {
-			outputUrl, _ := url.Parse("syslog-tls://localhost:9999")
+			outputUrl, _ := url.Parse("syslog-tls://localhost")
 			_, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", false)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("returns an error for syslog scheme", func() {
-			outputUrl, _ := url.Parse("syslog://localhost:9999")
+			outputUrl, _ := url.Parse("syslog://localhost")
 			_, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", false)
 			Expect(err).To(HaveOccurred())
 		})

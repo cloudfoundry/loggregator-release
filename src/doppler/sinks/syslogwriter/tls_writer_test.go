@@ -22,20 +22,22 @@ var _ = Describe("TlsWriter", func() {
 
 	AfterEach(func() {
 		close(shutdownChan)
-
 		<-serverStoppedChan
 	})
 
 	It("connects", func() {
-		outputUrl, _ := url.Parse("syslog-tls://localhost:9999")
+		ts := time.Now().UnixNano()
+		outputUrl, _ := url.Parse("syslog-tls://localhost:9998")
 		w, _ := syslogwriter.NewTlsWriter(outputUrl, "appId", true)
 		defer w.Close()
 		err := w.Connect()
 		Expect(err).ToNot(HaveOccurred())
+		_, err = w.Write(14, []byte("just a test"), "test", "", ts)
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	It("rejects self-signed certs", func() {
-		outputUrl, _ := url.Parse("syslog-tls://localhost:9999")
+		outputUrl, _ := url.Parse("syslog-tls://localhost:9998")
 		w, _ := syslogwriter.NewTlsWriter(outputUrl, "appId", false)
 		defer w.Close()
 		err := w.Connect()
@@ -43,13 +45,13 @@ var _ = Describe("TlsWriter", func() {
 	})
 
 	It("returns an error for syslog scheme", func() {
-		outputUrl, _ := url.Parse("syslog://localhost:9999")
+		outputUrl, _ := url.Parse("syslog://localhost")
 		_, err := syslogwriter.NewTlsWriter(outputUrl, "appId", false)
 		Expect(err).To(HaveOccurred())
 	})
 
 	It("returns an error for https scheme", func() {
-		outputUrl, _ := url.Parse("https://localhost:9999")
+		outputUrl, _ := url.Parse("https://localhost")
 		_, err := syslogwriter.NewTlsWriter(outputUrl, "appId", false)
 		Expect(err).To(HaveOccurred())
 	})
