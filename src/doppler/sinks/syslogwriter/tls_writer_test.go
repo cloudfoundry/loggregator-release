@@ -25,7 +25,7 @@ var _ = Describe("TlsWriter", func() {
 		<-serverStoppedChan
 	})
 
-	It("connects", func() {
+	It("connects and writes", func() {
 		ts := time.Now().UnixNano()
 		outputUrl, _ := url.Parse("syslog-tls://localhost:9998")
 		w, _ := syslogwriter.NewTlsWriter(outputUrl, "appId", true)
@@ -64,9 +64,10 @@ func startTLSSyslogServer(shutdownChan <-chan struct{}) <-chan struct{} {
 		panic(err)
 	}
 	config := &tls.Config{
+		InsecureSkipVerify: true,
 		Certificates: []tls.Certificate{cert},
+		SessionTicketsDisabled: true,
 	}
-
 	listener, err := tls.Listen("tcp", "localhost:9998", config)
 	if err != nil {
 		panic(err)
@@ -83,18 +84,35 @@ func startTLSSyslogServer(shutdownChan <-chan struct{}) <-chan struct{} {
 	}()
 
 	go func() {
+		var connectionsDone sync.WaitGroup
+
 		defer listenerStopped.Done()
-		buffer := make([]byte, 1024)
-		conn, err := listener.Accept()
-		if err != nil {
-			return
+		defer connectionsDone.Wait()
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			connectionsDone.Add(1)
+			go func() {
+				defer connectionsDone.Done()
+				defer conn.Close()
+				buffer := make([]byte, 1024)
+				conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+				conn.Read(buffer)
+			}()
 		}
-		defer conn.Close()
-		conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
-		conn.Read(buffer)
 	}()
 
-	<-time.After(300 * time.Millisecond)
+	for attempts := 0; attempts < 1000; attempts++ {
+
+		testConn, err := tls.Dial("tcp", "localhost:9998", config)
+		if err == nil {
+			testConn.Close()
+			break
+		}
+		<-time.After(10*time.Millisecond)
+	}
 	return doneChan
 }
 
