@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/gomega"
 	"net"
 	"net/url"
+	"sync"
 	"time"
 )
 
@@ -70,19 +71,25 @@ func startSyslogServer(shutdownChan <-chan bool) (<-chan []byte, <-chan bool) {
 		panic(err)
 	}
 
+	var listenerStopped sync.WaitGroup
+	listenerStopped.Add(1)
+
 	go func() {
 		<-shutdownChan
 		listener.Close()
+		listenerStopped.Wait()
 		close(doneChan)
 	}()
 
 	go func() {
+		defer listenerStopped.Done()
 		buffer := make([]byte, 1024)
 		conn, err := listener.Accept()
 		if err != nil {
 			return
 		}
 
+		conn.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
 		readCount, err := conn.Read(buffer)
 		buffer2 := make([]byte, readCount)
 		copy(buffer2, buffer[:readCount])

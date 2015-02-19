@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"net/url"
+	"sync"
 	"time"
 )
 
@@ -67,6 +68,9 @@ func startTLSSyslogServer(shutdownChan <-chan bool) <-chan bool {
 
 	listener, err := tls.Listen("tcp", "localhost:9999", config)
 
+	var listenerStopped sync.WaitGroup
+	listenerStopped.Add(1)
+
 	if err != nil {
 		panic(err)
 	}
@@ -74,18 +78,20 @@ func startTLSSyslogServer(shutdownChan <-chan bool) <-chan bool {
 	go func() {
 		<-shutdownChan
 		listener.Close()
+		listenerStopped.Wait()
 		close(doneChan)
 	}()
 
 	go func() {
+		defer listenerStopped.Done()
 		buffer := make([]byte, 1024)
 		conn, err := listener.Accept()
 		if err != nil {
 			return
 		}
-		_, err = conn.Read(buffer)
-
-		conn.Close()
+		defer conn.Close()
+		conn.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
+		conn.Read(buffer)
 	}()
 
 	<-time.After(300 * time.Millisecond)
