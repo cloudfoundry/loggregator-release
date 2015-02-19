@@ -24,7 +24,11 @@ function red {
     echo -e "$(tput setaf 1)$1$(tput sgr0)"
 }
 
-packages=(
+function bold_blue {
+    echo -e "$(tput setaf 6; tput bold)$1$(tput sgr0)"
+}
+
+unit_testable_packages=(
     deaagent
     trafficcontroller
     metron
@@ -32,10 +36,10 @@ packages=(
     syslog_drain_binder
 )
 
-for package in "${packages[@]}"
+for package in "${unit_testable_packages[@]}"
 do
     local_result=$result
-    echo -e "\n ==================================  Testing $package  =================================="
+    bold_blue "\n ==================================  Unit-Testing $package  =================================="
     go fmt $package/...
     ginkgo -r --race --randomizeAllSpecs --cover $1 src/$package
     let "result += $?"
@@ -45,9 +49,27 @@ do
     let "result += $?"
     echo "Current result: $result"
     if [ $result -gt $local_result ]; then
-        red " Package $package FAILED"
+        red " Package $package FAILED unit tests"
     else
-        green " Package $package PASSED"
+        green " Package $package PASSED unit tests"
+    fi
+done
+
+integration_testable_packages=(
+  doppler
+)
+
+for package in "${integration_testable_packages[@]}"
+do
+    local_result=$result
+    bold_blue "\n ==================================  Integration-Testing $package  =================================="
+    ginkgo -r --race --randomizeAllSpecs --cover $1 src/integration_tests/$package
+    let "result += $?"
+    echo "Current result: $result"
+    if [ $result -gt $local_result ]; then
+        red " Package $package FAILED integration tests"
+    else
+        green " Package $package PASSED integration tests"
     fi
 done
 
@@ -58,4 +80,3 @@ else
 fi
 
 exit $result
-
