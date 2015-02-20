@@ -190,7 +190,8 @@ var _ = Describe("SyslogSink", func() {
 				numErrors := len(errorChannel)
 
 				logMessage, _ = emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message 2", "appId", "App"), "origin")
-				inputChan <- logMessage
+
+				Expect(inputChan).ShouldNot(BeSent(logMessage))
 				close(inputChan)
 
 				Expect(errorChannel).To(HaveLen(numErrors))

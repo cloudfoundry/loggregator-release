@@ -50,8 +50,30 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 
 	backoffStrategy := retrystrategy.NewExponentialRetryStrategy()
 	numberOfTries := 0
+	filteredChan := make(chan *events.Envelope)
 
-	buffer := sinks.RunTruncatingBuffer(inputChan, 100, s.Logger, s.dropsondeOrigin)
+	go func() {
+		defer close(filteredChan)
+
+		for {
+			select {
+			case v,ok := <- inputChan:
+				if !ok {
+					return
+				}
+
+				if v.GetEventType() != events.Envelope_LogMessage {
+					continue
+				}
+
+				filteredChan <- v
+			case <- s.disconnectChannel:
+				return
+			}
+		}
+	}()
+
+	buffer := sinks.RunTruncatingBuffer(filteredChan, 100, s.Logger, s.dropsondeOrigin)
 	timer := time.NewTimer(backoffStrategy(numberOfTries))
 	connected := false
 	defer timer.Stop()
@@ -82,24 +104,22 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 
 		s.Debugf("Syslog Sink %s: Waiting for activity\n", s.drainUrl)
 
-		messageEnvelope, ok := <-buffer.GetOutputChannel()
-		if !ok {
-			s.Debugf("Syslog Sink %s: Closed listener channel detected. Closing.\n", s.drainUrl)
+		select {
+		case <- s.disconnectChannel:
 			return
-		}
+		case messageEnvelope, ok := <-buffer.GetOutputChannel():
+			if !ok {
+				s.Debugf("Syslog Sink %s: Closed listener channel detected. Closing.\n", s.drainUrl)
+				return
+			}
+			s.Debugf("Syslog Sink:Run: Received %s message from %s at %d. Sending data.", messageEnvelope.GetEventType().String(), messageEnvelope.GetOrigin(), messageEnvelope.Timestamp)
 
-		s.Debugf("Syslog Sink:Run: Received %s message from %s at %d. Sending data.", messageEnvelope.GetEventType().String(), messageEnvelope.GetOrigin(), messageEnvelope.Timestamp)
-
-		_, keepMsg := envelopeTypeWhitelist[messageEnvelope.GetEventType()]
-		if !keepMsg {
-			s.Debugf("Syslog Sink %s: Skipping non-log message (type %s)", s.drainUrl, messageEnvelope.GetEventType().String())
-			continue
-		}
-		connected = s.sendMessage(messageEnvelope)
-		if connected {
-			numberOfTries = 0
-		} else {
-			numberOfTries++
+			connected = s.sendMessage(messageEnvelope)
+			if connected {
+				numberOfTries = 0
+			} else {
+				numberOfTries++
+			}
 		}
 	}
 }
@@ -132,10 +152,6 @@ func (s *SyslogSink) sendMessage(messageEnvelope *events.Envelope) bool {
 		s.Debugf("Syslog Sink %s: Successfully sent data\n", s.drainUrl)
 		return true
 	}
-}
-
-var envelopeTypeWhitelist = map[events.Envelope_EventType]struct{}{
-	events.Envelope_LogMessage: struct{}{},
 }
 
 func messagePriorityValue(msg *events.LogMessage) int {
