@@ -46,10 +46,7 @@ func (w *httpsWriter) Connect() error {
 
 func (w *httpsWriter) Write(p int, b []byte, source string, sourceId string, timestamp int64) (int, error) {
 	syslogMsg := createMessage(p, w.appId, source, sourceId, b, timestamp)
-	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
-	finalMsg := fmt.Sprintf("%d %s", len(syslogMsg), syslogMsg)
-
-	return w.writeHttp(finalMsg)
+	return w.writeHttp(syslogMsg)
 }
 
 func (w *httpsWriter) Close() error {

@@ -38,7 +38,7 @@ var _ = Describe("HttpsWriter", func() {
 
 			parsedTime, err := time.Parse(time.RFC3339, "2006-01-02T15:04:05Z")
 			byteCount, err := w.Write(standardErrorPriority, []byte("Message"), "just a test", "TEST", parsedTime.UnixNano())
-			Expect(byteCount).To(Equal(79))
+			Expect(byteCount).To(Equal(76))
 			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(func() string {
