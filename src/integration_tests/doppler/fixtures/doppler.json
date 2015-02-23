@@ -1,7 +1,9 @@
 {
+    "EtcdUrls": ["http://localhost:5555"],
+    "EtcdMaxConcurrentRequests": 10,
     "DropsondeIncomingMessagesPort": 8765,
     "OutgoingPort": 4567,
-    "SkipCertVerify": false,
+    "SkipCertVerify": true,
     "Index": 0,
     "MaxRetainedLogMessages": 10,
     "WSMessageBufferSize": 100,
@@ -11,11 +13,9 @@
     "VarzPass": "password",
     "VarzPort": 8888,
     "Syslog"  : "",
-    "BlackListIps": [
-        {"Start": "127.0.0.0", "end": "127.0.0.2"},
-        {"start": "127.0.1.12", "End": "127.0.1.15"}
-    ],
     "CollectorRegistrarIntervalMilliseconds": 100,
     "ContainerMetricTTLSeconds": 120,
-    "SinkInactivityTimeoutSeconds": 120
+    "SinkInactivityTimeoutSeconds": 120,
+    "JobName": "doppler_z1",
+    "Zone":                      "z1"
 }
