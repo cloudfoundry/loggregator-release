@@ -23,6 +23,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 		appID           string
 		inputConnection net.Conn
 		shutdownChan    chan struct{}
+		syslogPort      = 6666
 	)
 
 	BeforeEach(func() {
@@ -35,6 +36,44 @@ var _ = Describe("Syslog Drain Binding", func() {
 		inputConnection.Close()
 	})
 
+	It("handles invalid schemas", func() {
+		receivedChan := make(chan []byte, 1)
+		ws, _ := addWSSink(receivedChan, "4567", "/apps/"+appID+"/stream")
+		defer ws.Close()
+
+		syslogDrainURL := fmt.Sprintf("syslog-invalid://%s:%d", localIPAddress, syslogPort)
+		key := drainKey(appID, syslogDrainURL)
+		addETCDNode(key, syslogDrainURL)
+
+		receivedMessageBytes := []byte{}
+		Eventually(receivedChan).Should(Receive(&receivedMessageBytes))
+		receivedMessage := decodeProtoBufLogMessage(receivedMessageBytes)
+
+		Expect(receivedMessage.GetAppId()).To(Equal(appID))
+		Expect(string(receivedMessage.GetMessage())).To(ContainSubstring("Err: Invalid scheme type"))
+	})
+
+	It("handles URLs that don't resolve", func() {
+		receivedChan := make(chan []byte, 1)
+		ws, _ := addWSSink(receivedChan, "4567", "/apps/"+appID+"/stream")
+		defer ws.Close()
+
+		badURLs := []string{"syslog://garbage", "syslog-tls://garbage", "https://garbage"}
+
+		for _, badURL := range badURLs {
+			key := drainKey(appID, badURL)
+			addETCDNode(key, badURL)
+
+			receivedMessageBytes := []byte{}
+			Eventually(receivedChan).Should(Receive(&receivedMessageBytes))
+			receivedMessage := decodeProtoBufLogMessage(receivedMessageBytes)
+
+			Expect(receivedMessage.GetAppId()).To(Equal(appID))
+			Expect(string(receivedMessage.GetMessage())).To(ContainSubstring("Err: Resolving host failed"))
+			Expect(string(receivedMessage.GetMessage())).To(ContainSubstring(badURL))
+		}
+	})
+
 	Context("when connecting over TCP", func() {
 		var (
 			syslogDrainAddress string
@@ -43,7 +82,6 @@ var _ = Describe("Syslog Drain Binding", func() {
 		)
 
 		BeforeEach(func() {
-			syslogPort := 6666
 			syslogDrainAddress = fmt.Sprintf("%s:%d", localIPAddress, syslogPort)
 
 			shutdownChan = make(chan struct{})
