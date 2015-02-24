@@ -31,7 +31,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 		inputConnection.Close()
 	})
 
-	It("handles invalid schemas", func() {
+	It("handles invalid schemas", func(done Done) {
 		receivedChan := make(chan []byte, 1)
 		ws, _ := addWSSink(receivedChan, "4567", "/apps/"+appID+"/stream")
 		defer ws.Close()
@@ -46,9 +46,10 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 		Expect(receivedMessage.GetAppId()).To(Equal(appID))
 		Expect(string(receivedMessage.GetMessage())).To(ContainSubstring("Err: Invalid scheme type"))
-	})
+		close(done)
+	}, 10)
 
-	It("handles URLs that don't resolve", func() {
+	It("handles URLs that don't resolve", func(done Done) {
 		receivedChan := make(chan []byte, 1)
 		ws, _ := addWSSink(receivedChan, "4567", "/apps/"+appID+"/stream")
 		defer ws.Close()
@@ -67,7 +68,8 @@ var _ = Describe("Syslog Drain Binding", func() {
 			Expect(string(receivedMessage.GetMessage())).To(ContainSubstring("Err: Resolving host failed"))
 			Expect(string(receivedMessage.GetMessage())).To(ContainSubstring(badURL))
 		}
-	})
+		close(done)
+	}, 10)
 
 	Context("when connecting over TCP", func() {
 		var (
@@ -92,22 +94,23 @@ var _ = Describe("Syslog Drain Binding", func() {
 				dataChan, serverStoppedChan = startSyslogServer(shutdownChan, syslogDrainAddress)
 			})
 
-			It("forwards log messages to a syslog", func() {
+			It("forwards log messages to a syslog", func(done Done) {
 				syslogDrainURL := "syslog://" + syslogDrainAddress
 				key := drainKey(appID, syslogDrainURL)
 				addETCDNode(key, syslogDrainURL)
 
 				Eventually(func() string {
-					sendAppLog(appID, "standard syslog msg", inputConnection)
+					sendAppLog(appID, "syslog-message", inputConnection)
 					select {
 					case message := <-dataChan:
 						return string(message)
 					default:
 						return ""
 					}
+				}, 90, 1).Should(ContainSubstring("syslog-message"))
 
-				}, 90, 1).Should(ContainSubstring("standard syslog msg"))
-			})
+				close(done)
+			}, 100)
 		})
 
 		Context("when forwarding to an encrypted syslog-tls:// endpoint", func() {
@@ -115,7 +118,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 				dataChan, serverStoppedChan = startSyslogTLSServer(shutdownChan, syslogDrainAddress)
 			})
 
-			It("forwards log messages to a syslog-tls", func() {
+			It("forwards log messages to a syslog-tls", func(done Done) {
 				syslogDrainURL := "syslog-tls://" + syslogDrainAddress
 				key := drainKey(appID, syslogDrainURL)
 				addETCDNode(key, syslogDrainURL)
@@ -129,7 +132,8 @@ var _ = Describe("Syslog Drain Binding", func() {
 						return ""
 					}
 				}, 90, 1).Should(ContainSubstring("tls-message"))
-			})
+				close(done)
+			}, 100)
 		})
 
 	})
@@ -150,12 +154,13 @@ var _ = Describe("Syslog Drain Binding", func() {
 			serverSession.Kill()
 		})
 
-		It("forwards log messages to an https endpoint", func() {
+		It("forwards log messages to an https endpoint", func(done Done) {
 			Eventually(func() *gbytes.Buffer {
 				sendAppLog(appID, "http-message", inputConnection)
 				return serverSession.Out
 			}, 10, 1).Should(gbytes.Say(`http-message`))
-		})
+			close(done)
+		}, 15)
 	})
 })
 
