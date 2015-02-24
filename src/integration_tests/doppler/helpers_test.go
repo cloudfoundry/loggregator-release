@@ -260,7 +260,7 @@ func addETCDNode(key string, value string) {
 	node := storeadapter.StoreNode{
 		Key:   key,
 		Value: []byte(value),
-		TTL:   uint64(2),
+		TTL:   uint64(20),
 	}
 	adapter.Create(node)
 	recvNode, err := adapter.Get(key)
