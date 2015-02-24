@@ -99,7 +99,7 @@ func decodeProtoBufLogMessage(actual []byte) *events.LogMessage {
 
 func startSyslogServer(shutdownChan <-chan struct{}, address string) (<-chan []byte, <-chan struct{}) {
 	doneChan := make(chan struct{})
-	dataChan := make(chan []byte)
+	dataChan := make(chan []byte, 100)
 
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
@@ -168,7 +168,7 @@ func startSyslogServer(shutdownChan <-chan struct{}, address string) (<-chan []b
 
 func startSyslogTLSServer(shutdownChan <-chan struct{}, address string) (<-chan []byte, <-chan struct{}) {
 	doneChan := make(chan struct{})
-	dataChan := make(chan []byte)
+	dataChan := make(chan []byte, 100)
 
 	cert, err := tls.X509KeyPair(localhostCert, localhostKey)
 	if err != nil {
