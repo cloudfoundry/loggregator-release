@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
+	"time"
 
 	"github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo"
@@ -161,6 +162,24 @@ var _ = Describe("Syslog Drain Binding", func() {
 			}, 10, 1).Should(gbytes.Say(`http-message`))
 			close(done)
 		}, 15)
+
+		It("reconnects a reappearing https server", func(done Done) {
+			serverSession.Kill()
+			<-time.After(100 * time.Millisecond)
+
+			sendAppLog(appID, "http-message", inputConnection)
+			Eventually(dopplerSession.Out).Should(gbytes.Say(`1234/syslog.*backoff`))
+
+			serverSession = startHTTPSServer()
+
+			Eventually(func() *gbytes.Buffer {
+				sendAppLog(appID, "http-message", inputConnection)
+				return serverSession.Out
+			}, 10, 1).Should(gbytes.Say(`http-message`))
+
+			close(done)
+		}, 15)
+
 	})
 })
 
