@@ -2,13 +2,14 @@ package listener
 
 import (
 	"fmt"
-	"github.com/cloudfoundry/gosteno"
-	"github.com/gorilla/websocket"
 	"io"
 	"regexp"
 	"sync"
 	"time"
 	"trafficcontroller/marshaller"
+
+	"github.com/cloudfoundry/gosteno"
+	"github.com/gorilla/websocket"
 )
 
 type websocketListener struct {
@@ -64,9 +65,7 @@ loop:
 			}
 
 			convertedMessage, err := l.convertLogMessage(msg)
-			if err != nil {
-				l.logger.Errorf("WebsocketListener.Start: Error converting message %v. Message: %v", msg, err)
-			} else {
+			if err == nil {
 				outputChan <- convertedMessage
 			}
 		}
