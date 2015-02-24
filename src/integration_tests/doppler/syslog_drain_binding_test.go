@@ -87,7 +87,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 		AfterEach(func() {
 			close(shutdownChan)
-			<-serverStoppedChan
+			Eventually(serverStoppedChan, 5).Should(BeClosed())
 		})
 
 		Context("when forwarding to an unencrypted syslog:// endpoint", func() {
