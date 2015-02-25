@@ -2,6 +2,11 @@ package main_test
 
 import (
 	"fmt"
+	"net"
+	"net/http"
+	"runtime"
+	"time"
+
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
@@ -10,10 +15,6 @@ import (
 	instrumentationtesthelpers "github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation/testhelpers"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/websocket"
-	"net"
-	"net/http"
-	"runtime"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -42,56 +43,6 @@ var _ = Describe("Doppler Server", func() {
 			Eventually(runtime.NumGoroutine).Should(Equal(goroutineCount + 2))
 			time.Sleep(time.Duration(dopplerConfig.SinkInactivityTimeoutSeconds) * time.Second)
 			Expect(runtime.NumGoroutine()).To(Equal(goroutineCount))
-		})
-	})
-
-	Describe("Log message streaming", func() {
-		var receivedChan chan []byte
-		var dontKeepAliveChan chan bool
-		var connectionDroppedChannel <-chan bool
-		var ws *websocket.Conn
-
-		BeforeEach(func() {
-			receivedChan = make(chan []byte)
-			ws, dontKeepAliveChan, connectionDroppedChannel = AddWSSink(receivedChan, "8083", "/apps/myApp/stream")
-		})
-
-		AfterEach(func(done Done) {
-			if dontKeepAliveChan != nil {
-				close(dontKeepAliveChan)
-				ws.Close()
-				Eventually(receivedChan).Should(BeClosed())
-				close(done)
-			}
-		})
-
-		It("works from udp socket to websocket client", func() {
-			connection, _ := net.Dial("udp", "127.0.0.1:3457")
-
-			expectedMessageString := "Some Data"
-			unmarshalledLogMessage := factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp", "App")
-			expectedMessage := MarshalEvent(unmarshalledLogMessage, "secret")
-
-			_, err := connection.Write(expectedMessage)
-			Expect(err).To(BeNil())
-
-			receivedMessageBytes := []byte{}
-			Eventually(receivedChan).Should(Receive(&receivedMessageBytes))
-			receivedMessageString := parseProtoBufMessageString(receivedMessageBytes)
-			Expect(expectedMessageString).To(Equal(receivedMessageString))
-		})
-
-		It("drops invalid log envelopes", func() {
-			time.Sleep(50 * time.Millisecond)
-			connection, _ := net.Dial("udp", "127.0.0.1:3457")
-
-			expectedMessageString := "Some Data"
-			unmarshalledLogMessage := factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp", "App")
-			expectedMessage := MarshalEvent(unmarshalledLogMessage, "invalid")
-
-			_, err := connection.Write(expectedMessage)
-			Expect(err).To(BeNil())
-			Expect(receivedChan).To(BeEmpty())
 		})
 	})
 
