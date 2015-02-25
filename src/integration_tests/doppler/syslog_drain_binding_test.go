@@ -83,10 +83,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 		Context("when forwarding to an unencrypted syslog:// endpoint", func() {
 			BeforeEach(func() {
-				var err error
-				command := exec.Command(pathToTCPEchoServer, "-address", syslogDrainAddress)
-				drainSession, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
+				drainSession = startUnencryptedTCPServer(syslogDrainAddress)
 			})
 
 			It("forwards log messages to a syslog", func(done Done) {
@@ -105,10 +102,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 		Context("when forwarding to an encrypted syslog-tls:// endpoint", func() {
 			BeforeEach(func() {
-				var err error
-				command := exec.Command(pathToTCPEchoServer, "-address", syslogDrainAddress, "-ssl", "-cert", "fixtures/key.crt", "-key", "fixtures/key.key")
-				drainSession, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
+				drainSession = startEncryptedTCPServer(syslogDrainAddress)
 			})
 
 			It("forwards log messages to a syslog-tls", func(done Done) {
@@ -133,7 +127,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 		BeforeEach(func() {
 			serverSession = startHTTPSServer()
-			httpsURL := "https://localhost:1234/syslog/"
+			httpsURL := fmt.Sprintf("https://%s:1234/syslog/", localIPAddress)
 			key := drainKey(appID, httpsURL)
 			addETCDNode(key, httpsURL)
 		})
@@ -166,7 +160,60 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 			close(done)
 		}, 15)
+	})
 
+	Context("when bound to a blacklisted drain", func() {
+		It("does not forward to a TCP listener", func() {
+			syslogDrainAddress := fmt.Sprintf("localhost:%d", syslogPort)
+			drainSession := startUnencryptedTCPServer(syslogDrainAddress)
+
+			syslogDrainURL := "syslog://" + syslogDrainAddress
+			key := drainKey(appID, syslogDrainURL)
+			addETCDNode(key, syslogDrainURL)
+
+			Consistently(func() *gbytes.Buffer {
+				sendAppLog(appID, "syslog-message", inputConnection)
+				return drainSession.Out
+			}, 5, 1).ShouldNot(gbytes.Say("syslog-message"))
+
+			Eventually(dopplerSession).Should(gbytes.Say(`Invalid syslog drain URL \(syslog://localhost:6666\).*Err: Syslog Drain URL is blacklisted`))
+
+			drainSession.Kill()
+		})
+
+		It("does not forward to a TCP+TLS listener", func() {
+			syslogDrainAddress := fmt.Sprintf("localhost:%d", syslogPort)
+			drainSession := startEncryptedTCPServer(syslogDrainAddress)
+
+			syslogDrainURL := "syslog-tls://" + syslogDrainAddress
+			key := drainKey(appID, syslogDrainURL)
+			addETCDNode(key, syslogDrainURL)
+
+			Consistently(func() *gbytes.Buffer {
+				sendAppLog(appID, "syslog-message", inputConnection)
+				return drainSession.Out
+			}, 5, 1).ShouldNot(gbytes.Say("syslog-message"))
+
+			Eventually(dopplerSession).Should(gbytes.Say(`Invalid syslog drain URL \(syslog-tls://localhost:6666\).*Err: Syslog Drain URL is blacklisted`))
+
+			drainSession.Kill()
+		})
+
+		It("does not forward to an HTTPS listener", func() {
+			serverSession := startHTTPSServer()
+			httpsURL := "https://localhost:1234/syslog/"
+			key := drainKey(appID, httpsURL)
+			addETCDNode(key, httpsURL)
+
+			Consistently(func() *gbytes.Buffer {
+				sendAppLog(appID, "http-message", inputConnection)
+				return serverSession.Out
+			}, 5, 1).ShouldNot(gbytes.Say(`http-message`))
+
+			Eventually(dopplerSession).Should(gbytes.Say(`Invalid syslog drain URL \(https://localhost:1234/syslog/\).*Err: Syslog Drain URL is blacklisted`))
+
+			serverSession.Kill()
+		})
 	})
 })
 
@@ -176,4 +223,20 @@ func startHTTPSServer() *gexec.Session {
 	Expect(err).NotTo(HaveOccurred())
 
 	return session
+}
+
+func startUnencryptedTCPServer(syslogDrainAddress string) *gexec.Session {
+	command := exec.Command(pathToTCPEchoServer, "-address", syslogDrainAddress)
+	drainSession, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+
+	return drainSession
+}
+
+func startEncryptedTCPServer(syslogDrainAddress string) *gexec.Session {
+	command := exec.Command(pathToTCPEchoServer, "-address", syslogDrainAddress, "-ssl", "-cert", "fixtures/key.crt", "-key", "fixtures/key.key")
+	drainSession, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+
+	return drainSession
 }
