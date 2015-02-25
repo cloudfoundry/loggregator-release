@@ -18,11 +18,12 @@ func TestDoppler(t *testing.T) {
 }
 
 var (
-	dopplerSession   *gexec.Session
-	localIPAddress   string
-	etcdPort         int
-	etcdRunner       *etcdstorerunner.ETCDClusterRunner
-	pathToEchoServer string
+	dopplerSession       *gexec.Session
+	localIPAddress       string
+	etcdPort             int
+	etcdRunner           *etcdstorerunner.ETCDClusterRunner
+	pathToHTTPEchoServer string
+	pathToTCPEchoServer  string
 )
 
 var _ = BeforeSuite(func() {
@@ -33,7 +34,10 @@ var _ = BeforeSuite(func() {
 	pathToDopplerExec, err := gexec.Build("doppler")
 	Expect(err).NotTo(HaveOccurred())
 
-	pathToEchoServer, err = gexec.Build("integration_tests/doppler/echoserver")
+	pathToHTTPEchoServer, err = gexec.Build("integration_tests/doppler/httpechoserver")
+	Expect(err).NotTo(HaveOccurred())
+
+	pathToTCPEchoServer, err = gexec.Build("integration_tests/doppler/tcpechoserver")
 	Expect(err).NotTo(HaveOccurred())
 
 	command := exec.Command(pathToDopplerExec, "--config=fixtures/doppler.json", "--debug")
