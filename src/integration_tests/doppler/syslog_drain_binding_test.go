@@ -18,7 +18,6 @@ var _ = Describe("Syslog Drain Binding", func() {
 	var (
 		appID           string
 		inputConnection net.Conn
-		shutdownChan    chan struct{}
 		syslogPort      = 6666
 	)
 
@@ -74,25 +73,20 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 	Context("when connecting over TCP", func() {
 		var (
-			syslogDrainAddress string
-			dataChan           <-chan []byte
-			serverStoppedChan  <-chan struct{}
+			syslogDrainAddress = fmt.Sprintf("%s:%d", localIPAddress, syslogPort)
+			drainSession       *gexec.Session
 		)
 
-		BeforeEach(func() {
-			syslogDrainAddress = fmt.Sprintf("%s:%d", localIPAddress, syslogPort)
-
-			shutdownChan = make(chan struct{})
-		})
-
 		AfterEach(func() {
-			close(shutdownChan)
-			Eventually(serverStoppedChan, 5).Should(BeClosed())
+			drainSession.Kill()
 		})
 
 		Context("when forwarding to an unencrypted syslog:// endpoint", func() {
 			BeforeEach(func() {
-				dataChan, serverStoppedChan = startSyslogServer(shutdownChan, syslogDrainAddress)
+				var err error
+				command := exec.Command(pathToTCPEchoServer, "-address", syslogDrainAddress)
+				drainSession, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("forwards log messages to a syslog", func(done Done) {
@@ -100,15 +94,10 @@ var _ = Describe("Syslog Drain Binding", func() {
 				key := drainKey(appID, syslogDrainURL)
 				addETCDNode(key, syslogDrainURL)
 
-				Eventually(func() string {
+				Eventually(func() *gbytes.Buffer {
 					sendAppLog(appID, "syslog-message", inputConnection)
-					select {
-					case message := <-dataChan:
-						return string(message)
-					default:
-						return ""
-					}
-				}, 90, 1).Should(ContainSubstring("syslog-message"))
+					return drainSession.Out
+				}, 90, 1).Should(gbytes.Say("syslog-message"))
 
 				close(done)
 			}, 100)
@@ -116,7 +105,10 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 		Context("when forwarding to an encrypted syslog-tls:// endpoint", func() {
 			BeforeEach(func() {
-				dataChan, serverStoppedChan = startSyslogTLSServer(shutdownChan, syslogDrainAddress)
+				var err error
+				command := exec.Command(pathToTCPEchoServer, "-address", syslogDrainAddress, "-ssl", "-cert", "fixtures/key.crt", "-key", "fixtures/key.key")
+				drainSession, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("forwards log messages to a syslog-tls", func(done Done) {
@@ -124,15 +116,10 @@ var _ = Describe("Syslog Drain Binding", func() {
 				key := drainKey(appID, syslogDrainURL)
 				addETCDNode(key, syslogDrainURL)
 
-				Eventually(func() string {
-					sendAppLog(appID, "tls-message", inputConnection)
-					select {
-					case message := <-dataChan:
-						return string(message)
-					default:
-						return ""
-					}
-				}, 90, 1).Should(ContainSubstring("tls-message"))
+				Eventually(func() *gbytes.Buffer {
+					sendAppLog(appID, "syslog-message", inputConnection)
+					return drainSession.Out
+				}, 90, 1).Should(gbytes.Say("syslog-message"))
 				close(done)
 			}, 100)
 		})
@@ -184,7 +171,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 })
 
 func startHTTPSServer() *gexec.Session {
-	command := exec.Command(pathToEchoServer, "-cert", "fixtures/key.crt", "-key", "fixtures/key.key")
+	command := exec.Command(pathToHTTPEchoServer, "-cert", "fixtures/key.crt", "-key", "fixtures/key.key")
 	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 
