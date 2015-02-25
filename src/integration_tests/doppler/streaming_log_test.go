@@ -3,6 +3,7 @@ package doppler_test
 import (
 	"net"
 
+	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/gorilla/websocket"
 	"github.com/nu7hatch/gouuid"
@@ -66,6 +67,15 @@ var _ = Describe("Streaming Logs", func() {
 		metricEvent := factories.NewContainerMetric(appID, 0, 10, 10, 10)
 		sendEvent(metricEvent, inputConnection)
 
+		Expect(receivedChan).To(BeEmpty())
+	})
+
+	It("drops invalid log envelopes", func() {
+		unmarshalledLogMessage := factories.NewLogMessage(events.LogMessage_OUT, "Some Data", appID, "App")
+		expectedMessage := marshalEvent(unmarshalledLogMessage, "invalid")
+
+		_, err := inputConnection.Write(expectedMessage)
+		Expect(err).To(BeNil())
 		Expect(receivedChan).To(BeEmpty())
 	})
 })
