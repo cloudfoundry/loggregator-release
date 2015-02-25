@@ -1,0 +1,6 @@
+---
+
+image: docker://cloudfoundry/runtime-ci
+
+run:
+  path: bin/concourse_build.sh
