@@ -56,6 +56,8 @@ func (w *syslogWriter) Write(p int, b []byte, source string, sourceId string, ti
 	defer w.mu.Unlock()
 	if w.conn != nil {
 		byteCount, err = w.conn.Write(finalMsg)
+	} else {
+		return 0, errors.New("Connection to syslog sink lost")
 	}
 	return byteCount, err
 }

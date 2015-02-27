@@ -18,10 +18,12 @@ func TestDoppler(t *testing.T) {
 }
 
 var (
-	dopplerSession       *gexec.Session
-	localIPAddress       string
-	etcdPort             int
-	etcdRunner           *etcdstorerunner.ETCDClusterRunner
+	dopplerSession *gexec.Session
+	localIPAddress string
+	etcdPort       int
+	etcdRunner     *etcdstorerunner.ETCDClusterRunner
+
+	pathToDopplerExec    string
 	pathToHTTPEchoServer string
 	pathToTCPEchoServer  string
 )
@@ -31,14 +33,20 @@ var _ = BeforeSuite(func() {
 	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
 	etcdRunner.Start()
 
-	pathToDopplerExec, err := gexec.Build("doppler")
+	var err error
+	pathToDopplerExec, err = gexec.Build("doppler")
 	Expect(err).NotTo(HaveOccurred())
 
-	pathToHTTPEchoServer, err = gexec.Build("integration_tests/doppler/httpechoserver")
+	pathToHTTPEchoServer, err = gexec.Build("tools/httpechoserver")
 	Expect(err).NotTo(HaveOccurred())
 
-	pathToTCPEchoServer, err = gexec.Build("integration_tests/doppler/tcpechoserver")
+	pathToTCPEchoServer, err = gexec.Build("tools/tcpechoserver")
 	Expect(err).NotTo(HaveOccurred())
+
+})
+
+var _ = BeforeEach(func() {
+	var err error
 
 	command := exec.Command(pathToDopplerExec, "--config=fixtures/doppler.json", "--debug")
 	dopplerSession, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
@@ -53,8 +61,12 @@ var _ = BeforeSuite(func() {
 	}).ShouldNot(HaveOccurred())
 })
 
-var _ = AfterSuite(func() {
+var _ = AfterEach(func() {
 	dopplerSession.Kill()
+
+})
+
+var _ = AfterSuite(func() {
 	etcdRunner.Adapter().Disconnect()
 	etcdRunner.Stop()
 	gexec.CleanupBuildArtifacts()

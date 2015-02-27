@@ -98,6 +98,28 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 				close(done)
 			}, 100)
+
+			It("reconnects to a reappearing syslog server", func(done Done) {
+				syslogDrainURL := "syslog://" + syslogDrainAddress
+				key := drainKey(appID, syslogDrainURL)
+				addETCDNode(key, syslogDrainURL)
+
+				drainSession.Kill()
+
+				Eventually(func() *gbytes.Buffer {
+					sendAppLog(appID, "http-message", inputConnection)
+					return dopplerSession.Out
+				}, 10, 1).Should(gbytes.Say(`syslog://:6666: Error when dialing out. Backing off`))
+
+				drainSession = startUnencryptedTCPServer(syslogDrainAddress)
+
+				Eventually(func() *gbytes.Buffer {
+					sendAppLog(appID, "syslog-message", inputConnection)
+					return drainSession.Out
+				}, 2).Should(gbytes.Say("syslog-message"))
+
+				close(done)
+			}, 15)
 		})
 
 		Context("when forwarding to an encrypted syslog-tls:// endpoint", func() {
@@ -116,6 +138,28 @@ var _ = Describe("Syslog Drain Binding", func() {
 				}, 90, 1).Should(gbytes.Say("syslog-message"))
 				close(done)
 			}, 100)
+
+			It("reconnects to a reappearing tls server", func(done Done) {
+				syslogDrainURL := "syslog-tls://" + syslogDrainAddress
+				key := drainKey(appID, syslogDrainURL)
+				addETCDNode(key, syslogDrainURL)
+
+				drainSession.Kill()
+
+				Eventually(func() *gbytes.Buffer {
+					sendAppLog(appID, "message", inputConnection)
+					return dopplerSession.Out
+				}, 10, 1).Should(gbytes.Say(`syslog-tls://:6666: Error when dialing out. Backing off`))
+
+				drainSession = startEncryptedTCPServer(syslogDrainAddress)
+
+				Eventually(func() *gbytes.Buffer {
+					sendAppLog(appID, "syslogtls-message", inputConnection)
+					return drainSession.Out
+				}, 10, 1).Should(gbytes.Say("syslogtls-message"))
+
+				close(done)
+			}, 15)
 		})
 
 	})
