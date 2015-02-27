@@ -5,10 +5,11 @@ import (
 	"doppler/sinks/retrystrategy"
 	"doppler/sinks/syslogwriter"
 	"fmt"
-	"github.com/cloudfoundry/dropsonde/events"
-	"github.com/cloudfoundry/gosteno"
 	"sync"
 	"time"
+
+	"github.com/cloudfoundry/dropsonde/events"
+	"github.com/cloudfoundry/gosteno"
 )
 
 const (
@@ -57,7 +58,7 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 
 		for {
 			select {
-			case v,ok := <- inputChan:
+			case v, ok := <-inputChan:
 				if !ok {
 					return
 				}
@@ -67,7 +68,7 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 				}
 
 				filteredChan <- v
-			case <- s.disconnectChannel:
+			case <-s.disconnectChannel:
 				return
 			}
 		}
@@ -105,7 +106,7 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 		s.Debugf("Syslog Sink %s: Waiting for activity\n", s.drainUrl)
 
 		select {
-		case <- s.disconnectChannel:
+		case <-s.disconnectChannel:
 			return
 		case messageEnvelope, ok := <-buffer.GetOutputChannel():
 			if !ok {

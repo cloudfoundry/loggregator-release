@@ -2,12 +2,13 @@ package sinkserver
 
 import (
 	"doppler/sinkserver/metrics"
+	"sync"
+	"sync/atomic"
+
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"sync"
-	"sync/atomic"
 )
 
 type MessageRouter struct {
