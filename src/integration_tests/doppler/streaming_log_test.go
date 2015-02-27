@@ -2,6 +2,7 @@ package doppler_test
 
 import (
 	"net"
+	"time"
 
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
@@ -27,6 +28,7 @@ var _ = Describe("Streaming Logs", func() {
 
 		ws, connDropped = addWSSink(receivedChan, "4567", "/apps/"+appID+"/stream")
 		inputConnection, _ = net.Dial("udp", localIPAddress+":8765")
+		time.Sleep(50 * time.Millisecond) // give time for connection to establish
 	})
 
 	AfterEach(func() {
