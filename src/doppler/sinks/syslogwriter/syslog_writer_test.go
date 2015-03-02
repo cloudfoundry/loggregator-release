@@ -22,11 +22,14 @@ var _ = Describe("SyslogWriter", func() {
 		outputURL, _ := url.Parse("syslog://127.0.0.1:9999")
 		syslogServerSession = startSyslogServer("127.0.0.1:9999")
 		sysLogWriter, _ = syslogwriter.NewSyslogWriter(outputURL, "appId")
-		err := sysLogWriter.Connect()
 
-		Expect(err).NotTo(HaveOccurred())
+		Eventually(func() error {
+			err := sysLogWriter.Connect()
+			return err
+		}, 5).ShouldNot(HaveOccurred())
+
 		close(done)
-	}, 5)
+	}, 10)
 
 	AfterEach(func() {
 		sysLogWriter.Close()
