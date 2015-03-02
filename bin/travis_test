@@ -1,5 +1,8 @@
 #!/bin/bash
 
+set -e
+set -x
+
 trap "echo Exited!; exit 1;" SIGINT SIGTERM
 
 BIN_DIR=$( cd "$( dirname "$0" )" && pwd )
