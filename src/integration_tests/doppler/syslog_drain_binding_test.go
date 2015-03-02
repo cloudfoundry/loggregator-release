@@ -41,7 +41,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 		addETCDNode(key, syslogDrainURL)
 
 		receivedMessageBytes := []byte{}
-		Eventually(receivedChan).Should(Receive(&receivedMessageBytes))
+		Eventually(receivedChan, 3).Should(Receive(&receivedMessageBytes))
 		receivedMessage := decodeProtoBufLogMessage(receivedMessageBytes)
 
 		Expect(receivedMessage.GetAppId()).To(Equal(appID))
@@ -61,7 +61,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 			addETCDNode(key, badURL)
 
 			receivedMessageBytes := []byte{}
-			Eventually(receivedChan).Should(Receive(&receivedMessageBytes))
+			Eventually(receivedChan, 3).Should(Receive(&receivedMessageBytes))
 			receivedMessage := decodeProtoBufLogMessage(receivedMessageBytes)
 
 			Expect(receivedMessage.GetAppId()).To(Equal(appID))
@@ -116,10 +116,10 @@ var _ = Describe("Syslog Drain Binding", func() {
 				Eventually(func() *gbytes.Buffer {
 					sendAppLog(appID, "syslog-message", inputConnection)
 					return drainSession.Out
-				}, 2).Should(gbytes.Say("syslog-message"))
+				}, 90, 1).Should(gbytes.Say("syslog-message"))
 
 				close(done)
-			}, 15)
+			}, 115)
 		})
 
 		Context("when forwarding to an encrypted syslog-tls:// endpoint", func() {
