@@ -1,6 +1,6 @@
 ---
 
-image: docker:///cloudfoundry/runtime-ci
+image: docker:///golang
 
 run:
-  path: bin/concourse_build.sh
+  path: loggregator/bin/concourse_build.sh
