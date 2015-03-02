@@ -77,13 +77,13 @@ var _ = Describe("Syslog Drain Binding", func() {
 			drainSession       *gexec.Session
 		)
 
-		AfterEach(func() {
-			drainSession.Kill()
-		})
-
 		Context("when forwarding to an unencrypted syslog:// endpoint", func() {
 			BeforeEach(func() {
 				drainSession = startUnencryptedTCPServer(syslogDrainAddress)
+			})
+
+			AfterEach(func() {
+				drainSession.Kill()
 			})
 
 			It("forwards log messages to a syslog", func(done Done) {
@@ -99,7 +99,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 				close(done)
 			}, 100)
 
-			It("reconnects to a reappearing syslog server", func(done Done) {
+			It("reconnects to a reappearing syslog server after an unexpected close", func(done Done) {
 				syslogDrainURL := "syslog://" + syslogDrainAddress
 				key := drainKey(appID, syslogDrainURL)
 				addETCDNode(key, syslogDrainURL)
@@ -125,6 +125,10 @@ var _ = Describe("Syslog Drain Binding", func() {
 		Context("when forwarding to an encrypted syslog-tls:// endpoint", func() {
 			BeforeEach(func() {
 				drainSession = startEncryptedTCPServer(syslogDrainAddress)
+			})
+
+			AfterEach(func() {
+				drainSession.Kill()
 			})
 
 			It("forwards log messages to a syslog-tls", func(done Done) {

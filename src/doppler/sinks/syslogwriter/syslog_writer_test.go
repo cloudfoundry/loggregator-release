@@ -12,8 +12,6 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var pathToTCPEchoServer string
-
 var _ = Describe("SyslogWriter", func() {
 
 	var sysLogWriter syslogwriter.Writer
