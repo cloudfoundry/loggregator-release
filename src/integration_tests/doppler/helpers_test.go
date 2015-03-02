@@ -61,7 +61,7 @@ func addWSSink(receivedChan chan []byte, port string, path string) (*websocket.C
 		var err error
 		ws, _, err = websocket.DefaultDialer.Dial(fullURL, http.Header{})
 		return err
-	}).ShouldNot(HaveOccurred(), fmt.Sprintf("Unable to connect to server at %s.", fullURL))
+	}, 5, 1).ShouldNot(HaveOccurred(), fmt.Sprintf("Unable to connect to server at %s.", fullURL))
 
 	ws.SetPingHandler(func(message string) error {
 		ws.WriteControl(websocket.PongMessage, []byte(message), time.Time{})
