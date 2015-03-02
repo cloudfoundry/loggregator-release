@@ -52,13 +52,13 @@ var _ = BeforeEach(func() {
 	dopplerSession, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 
-	Eventually(dopplerSession.Out).Should(gbytes.Say("Startup: doppler server started"))
+	Eventually(dopplerSession.Out, 3).Should(gbytes.Say("Startup: doppler server started"))
 	localIPAddress, _ = localip.LocalIP()
 
 	Eventually(func() error {
 		_, err := etcdRunner.Adapter().Get("healthstatus/doppler/z1/doppler_z1/0")
 		return err
-	}).ShouldNot(HaveOccurred())
+	}, 5).ShouldNot(HaveOccurred())
 })
 
 var _ = AfterEach(func() {

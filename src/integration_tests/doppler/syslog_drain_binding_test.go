@@ -160,10 +160,10 @@ var _ = Describe("Syslog Drain Binding", func() {
 				Eventually(func() *gbytes.Buffer {
 					sendAppLog(appID, "syslogtls-message", inputConnection)
 					return drainSession.Out
-				}, 10, 1).Should(gbytes.Say("syslogtls-message"))
+				}, 90, 1).Should(gbytes.Say("syslogtls-message"))
 
 				close(done)
-			}, 15)
+			}, 115)
 		})
 
 	})
@@ -188,9 +188,9 @@ var _ = Describe("Syslog Drain Binding", func() {
 			Eventually(func() *gbytes.Buffer {
 				sendAppLog(appID, "http-message", inputConnection)
 				return serverSession.Out
-			}, 10, 1).Should(gbytes.Say(`http-message`))
+			}, 90, 1).Should(gbytes.Say(`http-message`))
 			close(done)
-		}, 15)
+		}, 100)
 
 		It("reconnects a reappearing https server", func(done Done) {
 			serverSession.Kill()
@@ -204,10 +204,10 @@ var _ = Describe("Syslog Drain Binding", func() {
 			Eventually(func() *gbytes.Buffer {
 				sendAppLog(appID, "http-message", inputConnection)
 				return serverSession.Out
-			}, 10, 1).Should(gbytes.Say(`http-message`))
+			}, 90, 1).Should(gbytes.Say(`http-message`))
 
 			close(done)
-		}, 15)
+		}, 100)
 	})
 
 	Context("when bound to a blacklisted drain", func() {
