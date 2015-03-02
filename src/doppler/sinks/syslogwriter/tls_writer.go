@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/url"
 	"sync"
+	"time"
 )
 
 type tlsWriter struct {
@@ -45,7 +46,9 @@ func (w *tlsWriter) Connect() error {
 		w.conn.Close()
 		w.conn = nil
 	}
-	c, err := tls.Dial("tcp", w.host, w.tlsConfig)
+	dialer := new(net.Dialer)
+	dialer.Timeout = 500 * time.Millisecond
+	c, err := tls.DialWithDialer(dialer, "tcp", w.host, w.tlsConfig)
 	if err == nil {
 		w.conn = c
 	}

@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/url"
 	"sync"
+	"time"
 )
 
 type syslogWriter struct {
@@ -40,7 +41,7 @@ func (w *syslogWriter) Connect() error {
 		w.conn.Close()
 		w.conn = nil
 	}
-	c, err := net.Dial("tcp", w.host)
+	c, err := net.DialTimeout("tcp", w.host, 500*time.Millisecond)
 	if err == nil {
 		w.conn = c
 	}

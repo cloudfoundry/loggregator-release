@@ -26,7 +26,7 @@ var _ = Describe("SyslogWriter", func() {
 		Eventually(func() error {
 			err := sysLogWriter.Connect()
 			return err
-		}, 5).ShouldNot(HaveOccurred())
+		}, 5, 1).ShouldNot(HaveOccurred())
 
 		close(done)
 	}, 10)
