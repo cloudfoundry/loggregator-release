@@ -48,6 +48,8 @@ var _ = BeforeSuite(func() {
 var _ = BeforeEach(func() {
 	var err error
 
+	etcdRunner.Reset()
+
 	command := exec.Command(pathToDopplerExec, "--config=fixtures/doppler.json", "--debug")
 	dopplerSession, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
@@ -58,12 +60,12 @@ var _ = BeforeEach(func() {
 	Eventually(func() error {
 		_, err := etcdRunner.Adapter().Get("healthstatus/doppler/z1/doppler_z1/0")
 		return err
-	}, 5).ShouldNot(HaveOccurred())
+	}, 20).ShouldNot(HaveOccurred())
 })
 
 var _ = AfterEach(func() {
 	dopplerSession.Kill()
-
+	Eventually(dopplerSession).Should(gexec.Exit())
 })
 
 var _ = AfterSuite(func() {

@@ -41,13 +41,13 @@ var _ = Describe("Syslog Drain Binding", func() {
 		addETCDNode(key, syslogDrainURL)
 
 		receivedMessageBytes := []byte{}
-		Eventually(receivedChan, 3).Should(Receive(&receivedMessageBytes))
+		Eventually(receivedChan, 20).Should(Receive(&receivedMessageBytes))
 		receivedMessage := decodeProtoBufLogMessage(receivedMessageBytes)
 
 		Expect(receivedMessage.GetAppId()).To(Equal(appID))
 		Expect(string(receivedMessage.GetMessage())).To(ContainSubstring("Err: Invalid scheme type"))
 		close(done)
-	}, 10)
+	}, 30)
 
 	It("handles URLs that don't resolve", func(done Done) {
 		receivedChan := make(chan []byte, 1)
@@ -61,7 +61,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 			addETCDNode(key, badURL)
 
 			receivedMessageBytes := []byte{}
-			Eventually(receivedChan, 3).Should(Receive(&receivedMessageBytes))
+			Eventually(receivedChan, 20).Should(Receive(&receivedMessageBytes))
 			receivedMessage := decodeProtoBufLogMessage(receivedMessageBytes)
 
 			Expect(receivedMessage.GetAppId()).To(Equal(appID))
@@ -69,7 +69,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 			Expect(string(receivedMessage.GetMessage())).To(ContainSubstring(badURL))
 		}
 		close(done)
-	}, 10)
+	}, 30)
 
 	Context("when connecting over TCP", func() {
 		var (
@@ -224,7 +224,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 				return drainSession.Out
 			}, 5, 1).ShouldNot(gbytes.Say("syslog-message"))
 
-			Eventually(dopplerSession).Should(gbytes.Say(`Invalid syslog drain URL \(syslog://localhost:6666\).*Err: Syslog Drain URL is blacklisted`))
+			Eventually(dopplerSession, 5).Should(gbytes.Say(`Invalid syslog drain URL \(syslog://localhost:6666\).*Err: Syslog Drain URL is blacklisted`))
 
 			drainSession.Kill()
 		})
@@ -242,7 +242,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 				return drainSession.Out
 			}, 5, 1).ShouldNot(gbytes.Say("syslog-message"))
 
-			Eventually(dopplerSession).Should(gbytes.Say(`Invalid syslog drain URL \(syslog-tls://localhost:6666\).*Err: Syslog Drain URL is blacklisted`))
+			Eventually(dopplerSession, 5).Should(gbytes.Say(`Invalid syslog drain URL \(syslog-tls://localhost:6666\).*Err: Syslog Drain URL is blacklisted`))
 
 			drainSession.Kill()
 		})

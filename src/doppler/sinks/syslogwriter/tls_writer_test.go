@@ -35,7 +35,7 @@ var _ = Describe("TLSWriter", func() {
 			Eventually(func() error {
 				err := syslogWriter.Connect()
 				return err
-			}, 5).ShouldNot(HaveOccurred())
+			}, 5, 1).ShouldNot(HaveOccurred())
 
 			_, err := syslogWriter.Write(standardOutPriority, []byte("just a test"), "test", "", ts)
 			Expect(err).ToNot(HaveOccurred())
