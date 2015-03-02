@@ -18,14 +18,15 @@ var _ = Describe("SyslogWriter", func() {
 	standardOutPriority := 14
 
 	var syslogServerSession *gexec.Session
-	BeforeEach(func() {
+	BeforeEach(func(done Done) {
 		outputURL, _ := url.Parse("syslog://127.0.0.1:9999")
 		syslogServerSession = startSyslogServer("127.0.0.1:9999")
 		sysLogWriter, _ = syslogwriter.NewSyslogWriter(outputURL, "appId")
 		err := sysLogWriter.Connect()
 
 		Expect(err).NotTo(HaveOccurred())
-	})
+		close(done)
+	}, 5)
 
 	AfterEach(func() {
 		sysLogWriter.Close()
@@ -36,9 +37,9 @@ var _ = Describe("SyslogWriter", func() {
 		It("sends messages in the proper format", func(done Done) {
 			sysLogWriter.Write(standardOutPriority, []byte("just a test"), "App", "2", time.Now().UnixNano())
 
-			Eventually(syslogServerSession).Should(gbytes.Say(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}([-+]\d{2}:\d{2}) loggregator appId \[App/2\] - - just a test\n`))
+			Eventually(syslogServerSession, 5).Should(gbytes.Say(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}([-+]\d{2}:\d{2}) loggregator appId \[App/2\] - - just a test\n`))
 			close(done)
-		})
+		}, 10)
 
 		It("strips null termination char from message", func(done Done) {
 			sysLogWriter.Write(standardOutPriority, []byte(string(0)+" hi"), "appId", "", time.Now().UnixNano())
@@ -81,9 +82,9 @@ var _ = Describe("SyslogWriter", func() {
 		It("sends messages in the proper format", func(done Done) {
 			sysLogWriter.Write(standardOutPriority, []byte("just a test"), "App", "2", time.Now().UnixNano())
 
-			Eventually(syslogServerSession).Should(gbytes.Say(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}([-+]\d{2}:\d{2}) loggregator appId \[App/2\] - - just a test\n`))
+			Eventually(syslogServerSession, 5).Should(gbytes.Say(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}([-+]\d{2}:\d{2}) loggregator appId \[App/2\] - - just a test\n`))
 			close(done)
-		})
+		}, 10)
 
 		It("strips null termination char from message", func(done Done) {
 			sysLogWriter.Write(standardOutPriority, []byte(string(0)+" hi"), "appId", "", time.Now().UnixNano())

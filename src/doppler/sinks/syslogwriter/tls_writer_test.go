@@ -18,49 +18,64 @@ var _ = Describe("TLSWriter", func() {
 	var standardOutPriority int = 14
 
 	Context("writes and connects to syslog tls drains", func() {
-		BeforeEach(func() {
+		BeforeEach(func(done Done) {
 			syslogServerSession = startEncryptedTCPServer("127.0.0.1:9998")
 			outputURL, _ := url.Parse("syslog-tls://localhost:9998")
 			syslogWriter, _ = syslogwriter.NewTlsWriter(outputURL, "appId", true)
-		})
+			close(done)
+		}, 3)
 
 		AfterEach(func() {
 			syslogServerSession.Kill()
 			syslogWriter.Close()
 		})
 
-		It("connects and writes", func() {
+		It("connects and writes", func(done Done) {
 			ts := time.Now().UnixNano()
-			Eventually(syslogWriter.Connect).ShouldNot(HaveOccurred())
+			Eventually(func() error {
+				err := syslogWriter.Connect()
+				return err
+			}).ShouldNot(HaveOccurred())
 
-			_, err := syslogWriter.Write(14, []byte("just a test"), "test", "", ts)
+			_, err := syslogWriter.Write(standardOutPriority, []byte("just a test"), "test", "", ts)
 			Expect(err).ToNot(HaveOccurred())
 
-			Eventually(syslogServerSession).Should(gbytes.Say("just a test"))
-		})
-
-		It("rejects self-signed certs when skipCertVerify is false", func() {
-			err := syslogWriter.Connect()
-			Expect(err).To(HaveOccurred())
-		})
+			Eventually(syslogServerSession, 3).Should(gbytes.Say("just a test"))
+			close(done)
+		}, 10)
 
 		Context("won't write to invalid syslog drains", func() {
-			It("returns an error when unable to send the log message", func() {
+			It("returns an error when unable to send the log message", func(done Done) {
 				syslogServerSession.Kill().Wait()
 
 				Eventually(func() error {
 					_, err := syslogWriter.Write(standardOutPriority, []byte("just a test"), "App", "2", time.Now().UnixNano())
 					return err
 				}, 5).Should(HaveOccurred())
-			})
+				close(done)
+			}, 10)
 
-			It("returns an error if not connected", func() {
+			It("returns an error if not connected", func(done Done) {
 				syslogWriter.Close()
 				_, err := syslogWriter.Write(standardOutPriority, []byte("just a test"), "App", "2", time.Now().UnixNano())
 				Expect(err).To(HaveOccurred())
-			})
+				close(done)
+			}, 5)
 		})
 	})
+
+	It("rejects self-signed certs when skipCertVerify is false", func(done Done) {
+		syslogServerSession = startEncryptedTCPServer("127.0.0.1:9998")
+		outputURL, _ := url.Parse("syslog-tls://localhost:9998")
+
+		syslogWriter, _ = syslogwriter.NewTlsWriter(outputURL, "appId", false)
+		err := syslogWriter.Connect()
+		Expect(err).To(HaveOccurred())
+
+		syslogServerSession.Kill()
+		syslogWriter.Close()
+		close(done)
+	}, 5)
 
 	It("returns an error for syslog scheme", func() {
 		outputURL, _ := url.Parse("syslog://localhost")
@@ -80,5 +95,6 @@ func startEncryptedTCPServer(syslogDrainAddress string) *gexec.Session {
 	drainSession, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 
+	time.Sleep(1000 * time.Millisecond) // give time for server to come up
 	return drainSession
 }
