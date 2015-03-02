@@ -1,11 +1,12 @@
 package eventlistener
 
 import (
-	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"net"
 	"sync"
 	"sync/atomic"
+
+	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 )
 
 type EventListener interface {
