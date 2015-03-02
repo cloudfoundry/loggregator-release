@@ -13,6 +13,8 @@ func TestSyslogwriter(t *testing.T) {
 	RunSpecs(t, "SyslogWriter Suite")
 }
 
+var pathToTCPEchoServer string
+
 var _ = BeforeSuite(func() {
 	var err error
 	pathToTCPEchoServer, err = gexec.Build("tools/tcpechoserver")
