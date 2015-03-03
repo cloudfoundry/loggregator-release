@@ -31,7 +31,7 @@ import (
 
 var (
 	logFilePath    = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
-	configFilePath = flag.String("configFile", "config/metron.json", "Location of the Metron config json file")
+	configFilePath = flag.String("config", "config/metron.json", "Location of the Metron config json file")
 	debug          = flag.Bool("debug", false, "Debug logging")
 )
 

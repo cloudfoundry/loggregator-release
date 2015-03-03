@@ -37,7 +37,7 @@ var _ = BeforeSuite(func() {
 	pathToMetronExecutable, err := gexec.Build("metron")
 	Expect(err).ShouldNot(HaveOccurred())
 
-	command := exec.Command(pathToMetronExecutable, "--configFile=fixtures/metron.json", "--debug")
+	command := exec.Command(pathToMetronExecutable, "--config=fixtures/metron.json", "--debug")
 
 	session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).ShouldNot(HaveOccurred())
