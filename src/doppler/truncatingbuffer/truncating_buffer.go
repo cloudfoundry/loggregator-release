@@ -1,7 +1,6 @@
 package truncatingbuffer
 
 import (
-	"doppler/buffer"
 	"fmt"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
@@ -12,7 +11,7 @@ import (
 	"time"
 )
 
-type truncatingBuffer struct {
+type TruncatingBuffer struct {
 	inputChannel    <-chan *events.Envelope
 	outputChannel   chan *events.Envelope
 	logger          *gosteno.Logger
@@ -20,9 +19,9 @@ type truncatingBuffer struct {
 	dropsondeOrigin string
 }
 
-func NewTruncatingBuffer(inputChannel <-chan *events.Envelope, bufferSize uint, logger *gosteno.Logger, dropsondeOrigin string) buffer.MessageBuffer {
+func NewTruncatingBuffer(inputChannel <-chan *events.Envelope, bufferSize uint, logger *gosteno.Logger, dropsondeOrigin string) *TruncatingBuffer {
 	outputChannel := make(chan *events.Envelope, bufferSize)
-	return &truncatingBuffer{
+	return &TruncatingBuffer{
 		inputChannel:    inputChannel,
 		outputChannel:   outputChannel,
 		logger:          logger,
@@ -31,18 +30,18 @@ func NewTruncatingBuffer(inputChannel <-chan *events.Envelope, bufferSize uint, 
 	}
 }
 
-func (r *truncatingBuffer) GetOutputChannel() <-chan *events.Envelope {
+func (r *TruncatingBuffer) GetOutputChannel() <-chan *events.Envelope {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
 	return r.outputChannel
 }
 
-func (r *truncatingBuffer) CloseOutputChannel() {
+func (r *TruncatingBuffer) CloseOutputChannel() {
 	close(r.outputChannel)
 }
 
-func (r *truncatingBuffer) Run() {
+func (r *TruncatingBuffer) Run() {
 	for msg := range r.inputChannel {
 		r.lock.Lock()
 		select {
