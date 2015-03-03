@@ -10,6 +10,8 @@ import (
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 	"github.com/pivotal-golang/localip"
+    "doppler/config"
+    "time"
 )
 
 func TestDoppler(t *testing.T) {
@@ -60,7 +62,7 @@ var _ = BeforeEach(func() {
 	Eventually(func() error {
 		_, err := etcdRunner.Adapter().Get("healthstatus/doppler/z1/doppler_z1/0")
 		return err
-	}, 20).ShouldNot(HaveOccurred())
+	}, time.Second + config.HeartbeatInterval).ShouldNot(HaveOccurred())
 })
 
 var _ = AfterEach(func() {

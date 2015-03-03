@@ -2,12 +2,13 @@ package main_test
 
 import (
 	doppler "doppler"
+	"doppler/config"
 	"doppler/iprange"
 	"fmt"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
-	"github.com/onsi/ginkgo/config"
+	gikgoConfig "github.com/onsi/ginkgo/config"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -15,7 +16,7 @@ import (
 )
 
 var (
-	dopplerConfig   *doppler.Config
+	dopplerConfig   *config.Config
 	dopplerInstance *doppler.Doppler
 	etcdRunner      *etcdstorerunner.ETCDClusterRunner
 	etcdPort        int
@@ -27,12 +28,12 @@ func TestDoppler(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	etcdPort = 5500 + (config.GinkgoConfig.ParallelNode-1)*10
+	etcdPort = 5500 + (gikgoConfig.GinkgoConfig.ParallelNode-1)*10
 	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
 	etcdRunner.Start()
 
 	etcdUrl := fmt.Sprintf("http://localhost:%d", etcdPort)
-	dopplerConfig = &doppler.Config{
+	dopplerConfig = &config.Config{
 		EtcdUrls:                  []string{etcdUrl},
 		EtcdMaxConcurrentRequests: 10,
 

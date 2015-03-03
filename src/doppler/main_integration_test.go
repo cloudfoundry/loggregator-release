@@ -7,6 +7,7 @@ import (
 	"doppler"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 
+	"doppler/config"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/localip"
@@ -20,7 +21,7 @@ var _ = BeforeEach(func() {
 })
 
 var _ = Describe("Etcd Integration tests", func() {
-	var config main.Config
+	var conf config.Config
 	var stopHeartbeats chan (chan bool)
 	var localIp string
 
@@ -29,7 +30,7 @@ var _ = Describe("Etcd Integration tests", func() {
 
 		localIp, _ = localip.LocalIP()
 
-		config = main.Config{
+		conf = config.Config{
 			JobName: "doppler_z1",
 			Index:   0,
 			EtcdMaxConcurrentRequests: 1,
@@ -56,7 +57,7 @@ var _ = Describe("Etcd Integration tests", func() {
 				return err
 			}).Should(HaveOccurred())
 
-			stopHeartbeats = main.StartHeartbeats(localIp, time.Second, &config, loggertesthelper.Logger())
+			stopHeartbeats = main.StartHeartbeats(localIp, time.Second, &conf, loggertesthelper.Logger())
 
 			Eventually(func() error {
 				_, err := adapter.Get("healthstatus/doppler/z1/doppler_z1/0")
@@ -65,7 +66,7 @@ var _ = Describe("Etcd Integration tests", func() {
 		})
 
 		It("has a 10 sec TTL", func() {
-			stopHeartbeats = main.StartHeartbeats(localIp, time.Second, &config, loggertesthelper.Logger())
+			stopHeartbeats = main.StartHeartbeats(localIp, time.Second, &conf, loggertesthelper.Logger())
 			adapter := etcdRunner.Adapter()
 
 			Eventually(func() uint64 {
@@ -75,7 +76,7 @@ var _ = Describe("Etcd Integration tests", func() {
 		})
 
 		It("updates the value periodically", func() {
-			stopHeartbeats = main.StartHeartbeats(localIp, time.Second, &config, loggertesthelper.Logger())
+			stopHeartbeats = main.StartHeartbeats(localIp, time.Second, &conf, loggertesthelper.Logger())
 			adapter := etcdRunner.Adapter()
 
 			var indices []uint64

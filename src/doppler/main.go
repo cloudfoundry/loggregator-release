@@ -11,6 +11,7 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"doppler/config"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
@@ -42,8 +43,6 @@ var StoreAdapterProvider = func(urls []string, concurrentRequests int) storeadap
 
 	return etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
 }
-
-const HeartbeatInterval = 10 * time.Second
 
 func main() {
 	seed := time.Now().UnixNano()
@@ -86,29 +85,29 @@ func main() {
 		}()
 	}
 
-	config, logger := ParseConfig(logLevel, configFile, logFilePath)
+	conf, logger := ParseConfig(logLevel, configFile, logFilePath)
 
-	if len(config.NatsHosts) == 0 {
+	if len(conf.NatsHosts) == 0 {
 		logger.Warn("Startup: Did not receive a NATS host - not going to regsiter component")
 		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.NATSConn, error) {
 			return fakeyagnats.Connect(), nil
 		}
 	}
 
-	err = config.Validate(logger)
+	err = conf.Validate(logger)
 	if err != nil {
 		panic(err)
 	}
 
-	doppler := New(localIp, config, logger, "doppler")
+	doppler := New(localIp, conf, logger, "doppler")
 
 	cfc, err := cfcomponent.NewComponent(
 		logger,
 		"DopplerServer",
-		config.Index,
+		conf.Index,
 		&DopplerServerHealthMonitor{},
-		config.VarzPort,
-		[]string{config.VarzUser, config.VarzPass},
+		conf.VarzPort,
+		[]string{conf.VarzUser, conf.VarzPass},
 		doppler.Emitters(),
 	)
 
@@ -116,7 +115,7 @@ func main() {
 		panic(err)
 	}
 
-	go collectorregistrar.NewCollectorRegistrar(cfcomponent.DefaultYagnatsClientProvider, cfc, time.Duration(config.CollectorRegistrarIntervalMilliseconds)*time.Millisecond, &config.Config).Run()
+	go collectorregistrar.NewCollectorRegistrar(cfcomponent.DefaultYagnatsClientProvider, cfc, time.Duration(conf.CollectorRegistrarIntervalMilliseconds)*time.Millisecond, &conf.Config).Run()
 
 	go func() {
 		err := cfc.StartMonitoringEndpoints()
@@ -131,7 +130,7 @@ func main() {
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Kill, os.Interrupt)
 
-	StartHeartbeats(localIp, HeartbeatInterval, config, logger)
+	StartHeartbeats(localIp, config.HeartbeatInterval, conf, logger)
 
 	for {
 		select {
@@ -145,8 +144,8 @@ func main() {
 	}
 }
 
-func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gosteno.Logger) {
-	config := &Config{}
+func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*config.Config, *gosteno.Logger) {
+	config := &config.Config{}
 	err := cfcomponent.ReadConfigInto(config, *configFile)
 	if err != nil {
 		panic(err)
@@ -158,7 +157,7 @@ func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gos
 	return config, logger
 }
 
-func StartHeartbeats(localIp string, ttl time.Duration, config *Config, logger *gosteno.Logger) (stopChan chan (chan bool)) {
+func StartHeartbeats(localIp string, ttl time.Duration, config *config.Config, logger *gosteno.Logger) (stopChan chan (chan bool)) {
 	if len(config.EtcdUrls) == 0 {
 		return
 	}
