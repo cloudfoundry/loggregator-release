@@ -27,7 +27,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-const NATS_PORT = 24484
+const natsPort = 24484
 
 var session *gexec.Session
 var etcdRunner *etcdstorerunner.ETCDClusterRunner
@@ -67,7 +67,7 @@ var _ = AfterSuite(func() {
 var _ = Describe("Metron", func() {
 	Context("collector registration", func() {
 		It("registers itself with the collector", func() {
-			natsRunner := natsrunner.NewNATSRunner(NATS_PORT)
+			natsRunner := natsrunner.NewNATSRunner(natsPort)
 			natsRunner.Start()
 			defer natsRunner.Stop()
 
@@ -371,7 +371,7 @@ func getMetricFromContext(context *instrumentation.Context, name string) *instru
 	return nil
 }
 
-func legacyLogMessage(appId int, message string, timestamp time.Time) []byte {
+func legacyLogMessage(appID int, message string, timestamp time.Time) []byte {
 	envelope := &logmessage.LogEnvelope{
 		RoutingKey: proto.String("fake-routing-key"),
 		Signature:  []byte{1, 2, 3},
@@ -379,7 +379,7 @@ func legacyLogMessage(appId int, message string, timestamp time.Time) []byte {
 			Message:     []byte(message),
 			MessageType: logmessage.LogMessage_OUT.Enum(),
 			Timestamp:   proto.Int64(timestamp.UnixNano()),
-			AppId:       proto.String(string(appId)),
+			AppId:       proto.String(string(appID)),
 			SourceName:  proto.String("fake-source-id"),
 			SourceId:    proto.String("fake-source-id"),
 		},
@@ -389,7 +389,7 @@ func legacyLogMessage(appId int, message string, timestamp time.Time) []byte {
 	return bytes
 }
 
-func eventsLogMessage(appId int, message string, timestamp time.Time) []byte {
+func eventsLogMessage(appID int, message string, timestamp time.Time) []byte {
 	envelope := &events.Envelope{
 		Origin:    proto.String("legacy"),
 		EventType: events.Envelope_LogMessage.Enum(),
@@ -397,7 +397,7 @@ func eventsLogMessage(appId int, message string, timestamp time.Time) []byte {
 			Message:        []byte(message),
 			MessageType:    events.LogMessage_OUT.Enum(),
 			Timestamp:      proto.Int64(timestamp.UnixNano()),
-			AppId:          proto.String(string(appId)),
+			AppId:          proto.String(string(appID)),
 			SourceType:     proto.String("fake-source-id"),
 			SourceInstance: proto.String("fake-source-id"),
 		},

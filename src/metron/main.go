@@ -36,10 +36,10 @@ var (
 	debug          = flag.Bool("debug", false, "Debug logging")
 )
 
-var METRIC_TTL = time.Second * 5
-var PING_SENDER_INTERVAL = time.Second * 1
+var metricTTL = time.Second * 5
+var pingSenderInterval = time.Second * 1
 
-var StoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
+var storeAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
 	workPool := workpool.NewWorkPool(concurrentRequests)
 
 	return etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
@@ -52,7 +52,7 @@ func main() {
 	// TODO: delete next line when "legacy" format goes away
 	legacyMessageListener, legacyMessageChan := agentlistener.NewAgentListener("localhost:"+strconv.Itoa(config.LegacyIncomingMessagesPort), logger, "legacyAgentListener")
 
-	pinger := heartbeatrequester.NewHeartbeatRequester(PING_SENDER_INTERVAL)
+	pinger := heartbeatrequester.NewHeartbeatRequester(pingSenderInterval)
 	dropsondeMessageListener, dropsondeMessageChan := eventlistener.NewEventListener("localhost:"+strconv.Itoa(config.DropsondeIncomingMessagesPort), logger, "dropsondeAgentListener", pinger)
 	dropsondeClientPool, dropsondeServerDiscovery := initializeClientPool(config, logger, config.LoggregatorDropsondePort)
 
@@ -61,7 +61,7 @@ func main() {
 
 	unmarshaller := dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger)
 	marshaller := dropsonde_marshaller.NewDropsondeMarshaller(logger)
-	varzForwarder := varz_forwarder.NewVarzForwarder(config.Job, METRIC_TTL, logger)
+	varzForwarder := varz_forwarder.NewVarzForwarder(config.Job, metricTTL, logger)
 	messageAggregator := message_aggregator.NewMessageAggregator(logger)
 
 	instrumentables := []instrumentation.Instrumentable{
@@ -73,7 +73,7 @@ func main() {
 		marshaller,
 	}
 
-	component := InitializeComponent(config, logger, instrumentables)
+	component := initializeComponent(config, logger, instrumentables)
 
 	go collectorregistrar.NewCollectorRegistrar(cfcomponent.DefaultYagnatsClientProvider, component, time.Duration(config.CollectorRegistrarIntervalMilliseconds)*time.Millisecond, &config.Config).Run()
 
@@ -120,8 +120,8 @@ func startMonitoringEndpoints(component cfcomponent.Component, logger *gosteno.L
 	}
 }
 
-func initializeClientPool(config Config, logger *gosteno.Logger, port int) (*clientpool.LoggregatorClientPool, servicediscovery.ServerAddressList) {
-	adapter := StoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
+func initializeClientPool(config metronConfig, logger *gosteno.Logger, port int) (*clientpool.LoggregatorClientPool, servicediscovery.ServerAddressList) {
+	adapter := storeAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	err := adapter.Connect()
 	if err != nil {
 		logger.Errorf("Error connecting to ETCD: %v", err)
@@ -133,7 +133,7 @@ func initializeClientPool(config Config, logger *gosteno.Logger, port int) (*cli
 	return clientPool, serverAddressDiscovery
 }
 
-type Config struct {
+type metronConfig struct {
 	cfcomponent.Config
 	Zone                          string
 	Index                         uint
@@ -148,13 +148,13 @@ type Config struct {
 	SharedSecret                  string
 }
 
-type MetronHealthMonitor struct{}
+type metronHealthMonitor struct{}
 
-func (*MetronHealthMonitor) Ok() bool {
+func (*metronHealthMonitor) Ok() bool {
 	return true
 }
 
-func InitializeComponent(config Config, logger *gosteno.Logger, instrumentables []instrumentation.Instrumentable) cfcomponent.Component {
+func initializeComponent(config metronConfig, logger *gosteno.Logger, instrumentables []instrumentation.Instrumentable) cfcomponent.Component {
 	if len(config.NatsHosts) == 0 {
 		logger.Warn("Startup: Did not receive a NATS host - not going to register component")
 		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.NATSConn, error) {
@@ -162,7 +162,7 @@ func InitializeComponent(config Config, logger *gosteno.Logger, instrumentables 
 		}
 	}
 
-	component, err := cfcomponent.NewComponent(logger, "MetronAgent", config.Index, &MetronHealthMonitor{}, config.VarzPort, []string{config.VarzUser, config.VarzPass}, instrumentables)
+	component, err := cfcomponent.NewComponent(logger, "MetronAgent", config.Index, &metronHealthMonitor{}, config.VarzPort, []string{config.VarzUser, config.VarzPass}, instrumentables)
 	if err != nil {
 		panic(err)
 	}
@@ -170,8 +170,8 @@ func InitializeComponent(config Config, logger *gosteno.Logger, instrumentables 
 	return component
 }
 
-func parseConfig(debug bool, configFile, logFilePath string) (Config, *gosteno.Logger) {
-	config := Config{}
+func parseConfig(debug bool, configFile, logFilePath string) (metronConfig, *gosteno.Logger) {
+	config := metronConfig{}
 	err := cfcomponent.ReadConfigInto(&config, configFile)
 	if err != nil {
 		panic(err)
