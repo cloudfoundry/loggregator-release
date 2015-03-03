@@ -12,6 +12,7 @@ import (
 	"github.com/pivotal-golang/localip"
     "doppler/config"
     "time"
+    "github.com/cloudfoundry/storeadapter"
 )
 
 func TestDoppler(t *testing.T) {
@@ -24,6 +25,7 @@ var (
 	localIPAddress string
 	etcdPort       int
 	etcdRunner     *etcdstorerunner.ETCDClusterRunner
+    etcdAdapter    storeadapter.StoreAdapter
 
 	pathToDopplerExec    string
 	pathToHTTPEchoServer string
@@ -58,9 +60,9 @@ var _ = BeforeEach(func() {
 
 	Eventually(dopplerSession.Out, 3).Should(gbytes.Say("Startup: doppler server started"))
 	localIPAddress, _ = localip.LocalIP()
-
+    etcdAdapter = etcdRunner.Adapter()
 	Eventually(func() error {
-		_, err := etcdRunner.Adapter().Get("healthstatus/doppler/z1/doppler_z1/0")
+		_, err := etcdAdapter.Get("healthstatus/doppler/z1/doppler_z1/0")
 		return err
 	}, time.Second + config.HeartbeatInterval).ShouldNot(HaveOccurred())
 })
@@ -71,7 +73,7 @@ var _ = AfterEach(func() {
 })
 
 var _ = AfterSuite(func() {
-	etcdRunner.Adapter().Disconnect()
+	etcdAdapter.Disconnect()
 	etcdRunner.Stop()
 	gexec.CleanupBuildArtifacts()
 })
