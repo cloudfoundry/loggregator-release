@@ -104,15 +104,14 @@ func drainKey(appID string, drainURL string) string {
 }
 
 func addETCDNode(key string, value string) {
-	adapter := etcdRunner.Adapter()
 
 	node := storeadapter.StoreNode{
 		Key:   key,
 		Value: []byte(value),
 		TTL:   uint64(20),
 	}
-	adapter.Create(node)
-	recvNode, err := adapter.Get(key)
+	etcdAdapter.Create(node)
+	recvNode, err := etcdAdapter.Get(key)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(string(recvNode.Value)).To(Equal(value))
 }
