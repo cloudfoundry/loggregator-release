@@ -1,7 +1,7 @@
 package truncatingbuffer_test
 
 import (
-	"doppler/buffer/truncatingbuffer"
+	"doppler/truncatingbuffer"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"time"
