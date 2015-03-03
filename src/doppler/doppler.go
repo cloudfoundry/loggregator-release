@@ -1,12 +1,11 @@
 package main
 
 import (
-	"doppler/iprange"
+	"doppler/config"
 	"doppler/sinkserver"
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
-	"errors"
 	"fmt"
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
 	"github.com/cloudfoundry/dropsonde/events"
@@ -24,41 +23,6 @@ import (
 	"sync"
 	"time"
 )
-
-type Config struct {
-	cfcomponent.Config
-	EtcdUrls                      []string
-	EtcdMaxConcurrentRequests     int
-	Index                         uint
-	DropsondeIncomingMessagesPort uint32
-	OutgoingPort                  uint32
-	LogFilePath                   string
-	MaxRetainedLogMessages        uint32
-	WSMessageBufferSize           uint
-	SharedSecret                  string
-	SkipCertVerify                bool
-	BlackListIps                  []iprange.IPRange
-	JobName                       string
-	Zone                          string
-	ContainerMetricTTLSeconds     int
-	SinkInactivityTimeoutSeconds  int
-}
-
-func (c *Config) Validate(logger *gosteno.Logger) (err error) {
-	if c.MaxRetainedLogMessages == 0 {
-		return errors.New("Need max number of log messages to retain per application")
-	}
-
-	if c.BlackListIps != nil {
-		err = iprange.ValidateIpAddresses(c.BlackListIps)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = c.Config.Validate(logger)
-	return
-}
 
 type Doppler struct {
 	*gosteno.Logger
@@ -84,7 +48,7 @@ type Doppler struct {
 	sync.WaitGroup
 }
 
-func New(host string, config *Config, logger *gosteno.Logger, dropsondeOrigin string) *Doppler {
+func New(host string, config *config.Config, logger *gosteno.Logger, dropsondeOrigin string) *Doppler {
 	cfcomponent.Logger = logger
 	keepAliveInterval := 30 * time.Second
 
