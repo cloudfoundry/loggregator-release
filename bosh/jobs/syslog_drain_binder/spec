@@ -32,7 +32,7 @@ properties:
     default: 15
   syslog_drain_binder.polling_batch_size:
     description: "Batch size for the poll from cloud controller"
-    default: 10
+    default: 1000
   syslog_drain_binder.debug:
     description: boolean value to turn on verbose logging for syslog_drain_binder
     default: false
