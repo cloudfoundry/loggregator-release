@@ -11,29 +11,19 @@ import (
     "github.com/cloudfoundry/dropsonde/events"
 )
 
+var receivedChan chan []byte
+var inputConnection net.Conn
+var appID string
+
 var _ = Describe("Container Metrics", func() {
-    var receivedChan chan []byte
-    var inputConnection net.Conn
-    var appID string
-    var containerMetric *events.ContainerMetric
+    var metricsArray []events.ContainerMetric
+
 
     BeforeEach(func() {
         inputConnection, _ = net.Dial("udp", localIPAddress+":8765")
         guid, _ := uuid.NewV4()
         appID = guid.String()
-
-        waitChan := make(chan []byte)
-        waitSocket, _ := addWSSink(waitChan, "4567", "/apps/"+appID+"/stream")
-
-        containerMetric = factories.NewContainerMetric(appID, 0, 1, 2, 3)
-        err := sendEvent(containerMetric, inputConnection)
-        Expect(err).NotTo(HaveOccurred())
-
-        // Received something in the stream websocket so now we can listen for container metrics.
-        // This ensures that we don't listen for containermetrics before it is processed.
-        Eventually(waitChan).Should(Receive())
-        waitSocket.Close()
-
+        metricsArray = make([]events.ContainerMetric, 0)
     })
 
     AfterEach(func() {
@@ -41,6 +31,10 @@ var _ = Describe("Container Metrics", func() {
     })
 
     It("returns container metrics for an app", func(){
+        containerMetric := factories.NewContainerMetric(appID, 0, 1, 2, 3)
+        metricsArray = append(metricsArray, *containerMetric)
+        waitForMessageToGetInDoppler(metricsArray)
+
         receivedChan = make(chan []byte)
         ws, _ := addWSSink(receivedChan, "4567", "/apps/"+appID+"/containermetrics")
         defer ws.Close()
@@ -56,9 +50,12 @@ var _ = Describe("Container Metrics", func() {
     })
 
     It("does not recieve metrics for different appIds", func() {
-        sendEvent(factories.NewContainerMetric(appID+"other", 0, 1, 2, 3), inputConnection)
-        sendEvent(factories.NewContainerMetric(appID, 0, 100, 2, 3), inputConnection)
-        sendEvent(factories.NewContainerMetric(appID+"other", 0, 1, 2, 3), inputConnection)
+        badMetric1 := factories.NewContainerMetric(appID+"other", 0, 1, 2, 3)
+        goodMetric := factories.NewContainerMetric(appID, 0, 100, 2, 3)
+        badMetric2 := factories.NewContainerMetric(appID+"other", 1, 1, 2, 3)
+        metricsArray = append(metricsArray, *badMetric1, *goodMetric, *badMetric2)
+
+        waitForMessageToGetInDoppler(metricsArray)
 
         receivedChan = make(chan []byte)
         ws, _ := addWSSink(receivedChan, "4567", "/apps/"+appID+"/containermetrics")
@@ -75,7 +72,11 @@ var _ = Describe("Container Metrics", func() {
     })
 
     It("returns metrics for all instances of the app", func() {
-        sendEvent(factories.NewContainerMetric(appID, 1, 1, 2, 3), inputConnection)
+        instance1Metric := factories.NewContainerMetric(appID, 0, 1, 2, 3)
+        instance2Metric := factories.NewContainerMetric(appID, 1, 1, 2, 3)
+        metricsArray = append(metricsArray, *instance1Metric, *instance2Metric)
+
+        waitForMessageToGetInDoppler(metricsArray)
 
         receivedChan = make(chan []byte)
         ws, _ := addWSSink(receivedChan, "4567", "/apps/"+appID+"/containermetrics")
@@ -96,8 +97,11 @@ var _ = Describe("Container Metrics", func() {
     })
 
     It("returns only the latest container metric", func() {
-        sendEvent(factories.NewContainerMetric(appID, 0, 10, 2, 3), inputConnection)
-        sendEvent(factories.NewContainerMetric(appID, 0, 20, 2, 3), inputConnection)
+        earlyMetric := factories.NewContainerMetric(appID, 0, 10, 2, 3)
+        laterMetric := factories.NewContainerMetric(appID, 0, 20, 2, 3)
+        metricsArray = append(metricsArray, *earlyMetric, *laterMetric)
+
+        waitForMessageToGetInDoppler(metricsArray)
 
         receivedChan = make(chan []byte)
         ws, _ := addWSSink(receivedChan, "4567", "/apps/"+appID+"/containermetrics")
@@ -108,6 +112,25 @@ var _ = Describe("Container Metrics", func() {
 
         receivedEnvelope := UnmarshalMessage(receivedMessageBytes)
 
-        Expect(int(receivedEnvelope.GetContainerMetric().GetCpuPercentage())).To(Equal(20))
+        Expect(receivedEnvelope.GetContainerMetric()).To(Equal(laterMetric))
     })
 })
+
+func waitForMessageToGetInDoppler(messages []events.ContainerMetric) {
+    waitChan := make(chan []byte, 5)
+    waitSocket, _ := addWSSink(waitChan, "4567", "/firehose/fire-subscription-y")
+
+    for _, containerMetric := range messages {
+        err := sendEvent(&containerMetric, inputConnection)
+        Expect(err).NotTo(HaveOccurred())
+    }
+
+    for i:=0; i < len(messages); i ++ {
+        Eventually(waitChan).Should(Receive())
+    }
+
+    // Received the correct number of metrics in the stream websocket so now we can listen for container metrics.
+    // This ensures that we don't listen for containermetrics before it is processed, as the ws Sink will otherwise
+    // prematurely close
+    waitSocket.Close()
+}
