@@ -115,3 +115,10 @@ func addETCDNode(key string, value string) {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(string(recvNode.Value)).To(Equal(value))
 }
+
+func UnmarshalMessage(messageBytes []byte) events.Envelope {
+    var envelope events.Envelope
+    err := proto.Unmarshal(messageBytes, &envelope)
+    Expect(err).NotTo(HaveOccurred())
+    return envelope
+}
