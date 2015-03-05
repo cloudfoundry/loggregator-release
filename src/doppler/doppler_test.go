@@ -1,9 +1,7 @@
 package main_test
 
 import (
-	"fmt"
 	"net"
-	"net/http"
 	"runtime"
 	"time"
 
@@ -14,7 +12,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	instrumentationtesthelpers "github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation/testhelpers"
 	"github.com/gogo/protobuf/proto"
-	"github.com/gorilla/websocket"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -43,56 +40,6 @@ var _ = Describe("Doppler Server", func() {
 			Eventually(runtime.NumGoroutine).Should(Equal(goroutineCount + 2))
 			time.Sleep(time.Duration(dopplerConfig.SinkInactivityTimeoutSeconds) * time.Second)
 			Expect(runtime.NumGoroutine()).To(Equal(goroutineCount))
-		})
-	})
-
-	Describe("Container Metrics", func() {
-		var receivedChan chan []byte
-		var dontKeepAliveChan chan bool
-		var connectionDroppedChannel <-chan bool
-		var ws *websocket.Conn
-
-		var containerMetric *events.ContainerMetric
-
-		BeforeEach(func() {
-			connection, _ := net.Dial("udp", "127.0.0.1:3457")
-
-			// Opening stream websocket to verify receipt of container metric
-			waitChan := make(chan []byte)
-			waitSocket, _, _ := AddWSSink(waitChan, "8083", "/apps/myApp/stream")
-
-			containerMetric = factories.NewContainerMetric("myApp", 0, 1, 2, 3)
-			envelope := MarshalEvent(containerMetric, "secret")
-			_, err := connection.Write(envelope)
-			Expect(err).NotTo(HaveOccurred())
-
-			// Received something in the stream websocket so now we can listen for container metrics.
-			// This ensures that we don't listen for containermetrics before it is processed.
-			Eventually(waitChan).Should(Receive())
-			waitSocket.Close()
-		})
-
-		AfterEach(func(done Done) {
-			close(dontKeepAliveChan)
-			ws.Close()
-			Eventually(receivedChan).Should(BeClosed())
-			close(done)
-		})
-
-		It("works from udp socket to websocket client", func() {
-			receivedChan = make(chan []byte)
-			ws, dontKeepAliveChan, connectionDroppedChannel = AddWSSink(receivedChan, "8083", "/apps/myApp/containermetrics")
-
-			var receivedMessageBytes []byte
-			Eventually(receivedChan).Should(Receive(&receivedMessageBytes))
-
-			var receivedEnvelope events.Envelope
-			err := proto.Unmarshal(receivedMessageBytes, &receivedEnvelope)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(receivedEnvelope.GetEventType()).To(Equal(events.Envelope_ContainerMetric))
-			receivedMetric := receivedEnvelope.GetContainerMetric()
-			Expect(receivedMetric).To(Equal(containerMetric))
 		})
 	})
 
@@ -147,56 +94,6 @@ var _ = Describe("Doppler Server", func() {
 	})
 })
 
-func AddWSSink(receivedChan chan []byte, port string, path string) (*websocket.Conn, chan bool, <-chan bool) {
-	dontKeepAliveChan := make(chan bool, 1)
-	connectionDroppedChannel := make(chan bool, 1)
-
-	var ws *websocket.Conn
-
-	i := 0
-	for {
-		var err error
-		ws, _, err = websocket.DefaultDialer.Dial("ws://localhost:"+port+path, http.Header{})
-		if err != nil {
-			i++
-			if i > 10 {
-				fmt.Printf("Unable to connect to Server in 100ms, giving up.\n")
-				return nil, nil, nil
-			}
-			<-time.After(10 * time.Millisecond)
-			continue
-		} else {
-			break
-		}
-
-	}
-
-	ws.SetPingHandler(func(message string) error {
-		select {
-		case <-dontKeepAliveChan:
-			// do nothing
-		default:
-			ws.WriteControl(websocket.PongMessage, []byte(message), time.Time{})
-
-		}
-		return nil
-	})
-
-	go func() {
-		for {
-			_, data, err := ws.ReadMessage()
-			if err != nil {
-				close(connectionDroppedChannel)
-				close(receivedChan)
-				return
-			}
-			receivedChan <- data
-		}
-
-	}()
-	return ws, dontKeepAliveChan, connectionDroppedChannel
-}
-
 func MarshalEvent(event events.Event, secret string) []byte {
 	envelope, _ := emitter.Wrap(event, "origin")
 	envelopeBytes := marshalProtoBuf(envelope)
@@ -211,13 +108,4 @@ func marshalProtoBuf(pb proto.Message) []byte {
 	}
 
 	return marshalledProtoBuf
-}
-
-func parseProtoBufMessageString(actual []byte) string {
-	var receivedEnvelope events.Envelope
-	err := proto.Unmarshal(actual, &receivedEnvelope)
-	if err != nil {
-		Fail(err.Error())
-	}
-	return string(receivedEnvelope.GetLogMessage().GetMessage())
 }
