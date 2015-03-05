@@ -20,7 +20,7 @@ var _ = Describe("TLSWriter", func() {
 	Context("writes and connects to syslog tls drains", func() {
 		BeforeEach(func(done Done) {
 			syslogServerSession = startEncryptedTCPServer("127.0.0.1:9998")
-			outputURL, _ := url.Parse("syslog-tls://localhost:9998")
+			outputURL, _ := url.Parse("syslog-tls://127.0.0.1:9998")
 			syslogWriter, _ = syslogwriter.NewTlsWriter(outputURL, "appId", true)
 			close(done)
 		}, 3)
