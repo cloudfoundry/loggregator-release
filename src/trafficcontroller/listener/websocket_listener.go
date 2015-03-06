@@ -31,47 +31,54 @@ func NewWebsocket(logMessageGenerator marshaller.MessageGenerator, messageConver
 	}
 }
 
-func (l *websocketListener) Start(url, appId string, outputChan OutputChannel, stopChan StopChannel) error {
+func (l *websocketListener) Start(url string, appId string, outputChan OutputChannel, stopChan StopChannel) error {
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		return err
 	}
 
-loop:
+	go func() {
+		<-stopChan
+		conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), time.Time{})
+		conn.Close()
+	}()
+
+	return l.listenWithTimeout(l.timeout, url, appId, conn, outputChan)
+}
+
+func (l *websocketListener) listenWithTimeout(timeout time.Duration, url string, appId string, conn *websocket.Conn, outputChan OutputChannel) error {
 	for {
-		select {
-		case <-stopChan:
-			conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), time.Time{})
+		conn.SetReadDeadline(deadline(timeout))
+		_, msg, err := conn.ReadMessage()
+
+		if err == io.EOF {
 			return nil
+		}
 
-		default:
-			conn.SetReadDeadline(deadline(l.timeout))
-			_, msg, err := conn.ReadMessage()
-
-			if err == io.EOF {
-				break loop
+		if err != nil {
+			isTimeout, _ := regexp.MatchString(`i/o timeout`, err.Error())
+			if isTimeout {
+				l.logger.Errorf("WebsocketListener.Start: Timed out listening to %s after %s", url, l.timeout.String())
+				descriptiveError := fmt.Errorf("WebsocketListener.Start: Timed out listening to a doppler server after %s", l.timeout.String())
+				outputChan <- l.generateLogMessage(descriptiveError.Error(), appId)
+				return descriptiveError
 			}
 
-			if err != nil {
-				isTimeout, _ := regexp.MatchString(`i/o timeout`, err.Error())
-				if isTimeout {
-					descriptiveError := fmt.Errorf("WebsocketListener.Start: Timed out listening to %s after %s", url, l.timeout.String())
-					outputChan <- l.generateLogMessage(descriptiveError.Error(), appId)
-					return descriptiveError
-				}
-
-				outputChan <- l.generateLogMessage("WebsocketListener.Start: Error connecting to a loggregator/doppler server", appId)
-				break loop
+			isClosed, _ := regexp.MatchString(`use of closed network connection`, err.Error())
+			if isClosed {
+				return nil
 			}
 
-			convertedMessage, err := l.convertLogMessage(msg)
-			if err == nil {
-				outputChan <- convertedMessage
-			}
+			l.logger.Errorf("WebsocketListener.Start: Error connecting to %s: %s", url, err.Error())
+			outputChan <- l.generateLogMessage("WebsocketListener.Start: Error connecting to a doppler server", appId)
+			return nil
+		}
+
+		convertedMessage, err := l.convertLogMessage(msg)
+		if err == nil {
+			outputChan <- convertedMessage
 		}
 	}
-
-	return nil
 }
 
 func deadline(timeout time.Duration) time.Time {

@@ -49,6 +49,20 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 
 			client.Close()
 		})
+
+		It("closes the upstream websocket connection when done", func() {
+			client := noaa.NewConsumer(dropsondeEndpoint, &tls.Config{}, nil)
+			messages := make(chan *events.Envelope)
+			go client.StreamWithoutReconnect(APP_ID, AUTH_TOKEN, messages)
+
+			var request *http.Request
+			Eventually(fakeDoppler.TrafficControllerConnected, 10).Should(Receive(&request))
+			Eventually(fakeDoppler.ConnectionPresent).Should(BeTrue())
+
+			client.Close()
+
+			Eventually(fakeDoppler.ConnectionPresent).Should(BeFalse())
+		})
 	})
 
 	Context("Firehose", func() {

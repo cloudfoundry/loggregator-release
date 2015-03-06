@@ -17,6 +17,7 @@ type FakeDoppler struct {
 	sendMessageChan            chan []byte
 	Ready                      chan struct{}
 	TrafficControllerConnected chan *http.Request
+	connectionPresent          bool
 	sync.RWMutex
 }
 
@@ -57,7 +58,22 @@ func (fakeDoppler *FakeDoppler) ServeHTTP(writer http.ResponseWriter, request *h
 	default:
 	}
 
+	fakeDoppler.Lock()
+	fakeDoppler.connectionPresent = true
+	fakeDoppler.Unlock()
+
 	handlers.NewWebsocketHandler(fakeDoppler.sendMessageChan, time.Millisecond*100, loggertesthelper.Logger()).ServeHTTP(writer, request)
+
+	fakeDoppler.Lock()
+	fakeDoppler.connectionPresent = false
+	fakeDoppler.Unlock()
+}
+
+func (fakeDoppler *FakeDoppler) ConnectionPresent() bool {
+	fakeDoppler.Lock()
+	defer fakeDoppler.Unlock()
+
+	return fakeDoppler.connectionPresent
 }
 
 func (fakeDoppler *FakeDoppler) SendLogMessage(messageBody []byte) {
