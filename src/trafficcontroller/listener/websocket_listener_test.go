@@ -167,7 +167,7 @@ var _ = Describe("WebsocketListener", func() {
 
 				msg, _ := logmessage.ParseMessage(msgData)
 				Expect(msg.GetLogMessage().GetSourceName()).To(Equal("LGR"))
-				Expect(string(msg.GetLogMessage().GetMessage())).To(Equal("WebsocketListener.Start: Timed out listening to ws://" + ts.Listener.Addr().String() + " after 500ms"))
+				Expect(string(msg.GetLogMessage().GetMessage())).To(Equal("WebsocketListener.Start: Timed out listening to a doppler server after 500ms"))
 				close(done)
 			})
 		})
@@ -189,6 +189,18 @@ var _ = Describe("WebsocketListener", func() {
 				Eventually(outputChan).Should(Receive(&msgData))
 				Expect(msgData).To(BeEquivalentTo("hello world"))
 			})
+
+			It("responds to stopChan closure in a reasonable time", func(done Done) {
+				converter := func(d []byte) ([]byte, error) { return d, nil }
+				l = listener.NewWebsocket(marshaller.LoggregatorLogMessage, converter, 0, loggertesthelper.Logger())
+
+				go func() {
+					l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
+					close(done)
+				}()
+				time.Sleep(10 * time.Millisecond)
+				close(stopChan)
+			})
 		})
 	})
 
@@ -203,7 +215,7 @@ var _ = Describe("WebsocketListener", func() {
 			msgData := <-outputChan
 			msg, _ := logmessage.ParseMessage(msgData)
 			Expect(msg.GetLogMessage().GetSourceName()).To(Equal("LGR"))
-			Expect(string(msg.GetLogMessage().GetMessage())).To(Equal("WebsocketListener.Start: Error connecting to a loggregator/doppler server"))
+			Expect(string(msg.GetLogMessage().GetMessage())).To(Equal("WebsocketListener.Start: Error connecting to a doppler server"))
 			close(done)
 		})
 	})
