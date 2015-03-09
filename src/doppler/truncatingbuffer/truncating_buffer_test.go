@@ -53,4 +53,25 @@ var _ = Describe("Truncating Buffer", func() {
 		readMessage2 := <-buffer.GetOutputChannel()
 		Expect(readMessage2.GetLogMessage().GetMessage()).To(ContainSubstring("message 3"))
 	})
+
+	It("keeps track of dropped messages", func(done Done) {
+		inMessageChan := make(chan *events.Envelope)
+		buffer := truncatingbuffer.NewTruncatingBuffer(inMessageChan, 2, loggertesthelper.Logger(), "dropsonde-origin")
+		Expect(buffer.GetDroppedMessageCount()).To(Equal(int64(0)))
+		go buffer.Run()
+
+		logMessage1, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "message 1", "appId", "App"), "origin")
+		inMessageChan <- logMessage1
+
+		logMessage2, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "message 2", "appId", "App"), "origin")
+		inMessageChan <- logMessage2
+
+		logMessage3, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "message 3", "appId", "App"), "origin")
+		inMessageChan <- logMessage3
+		time.Sleep(5 * time.Millisecond)
+
+		Expect(buffer.GetDroppedMessageCount()).To(Equal(int64(2)))
+
+		close(done)
+	})
 })

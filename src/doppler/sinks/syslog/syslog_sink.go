@@ -10,6 +10,8 @@ import (
 
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	"sync/atomic"
 )
 
 const (
@@ -20,16 +22,17 @@ const (
 
 type SyslogSink struct {
 	*gosteno.Logger
-	appId             string
-	drainUrl          string
-	sentMessageCount  *uint64
-	sentByteCount     *uint64
-	listenerChannel   chan *events.Envelope
-	syslogWriter      syslogwriter.Writer
-	handleSendError   func(errorMessage, appId, drainUrl string)
-	disconnectChannel chan struct{}
-	dropsondeOrigin   string
-	disconnectOnce    sync.Once
+	appId               string
+	drainUrl            string
+	sentMessageCount    *uint64
+	droppedMessageCount int64
+	sentByteCount       *uint64
+	listenerChannel     chan *events.Envelope
+	syslogWriter        syslogwriter.Writer
+	handleSendError     func(errorMessage, appId, drainUrl string)
+	disconnectChannel   chan struct{}
+	dropsondeOrigin     string
+	disconnectOnce      sync.Once
 }
 
 func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.Writer, errorHandler func(string, string, string), dropsondeOrigin string) sinks.Sink {
@@ -109,6 +112,7 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 		case <-s.disconnectChannel:
 			return
 		case messageEnvelope, ok := <-buffer.GetOutputChannel():
+			atomic.AddInt64(&s.droppedMessageCount, buffer.GetDroppedMessageCount())
 			if !ok {
 				s.Debugf("Syslog Sink %s: Closed listener channel detected. Closing.\n", s.drainUrl)
 				return
@@ -164,4 +168,16 @@ func messagePriorityValue(msg *events.LogMessage) int {
 	default:
 		return -1
 	}
+}
+
+func (s *SyslogSink) GetInstrumentationMetric() instrumentation.Metric {
+	count := atomic.LoadInt64(&s.droppedMessageCount)
+	if count != 0 {
+		return instrumentation.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": string(s.appId), "drainUrl": s.drainUrl}, Value: count}
+	}
+	return instrumentation.Metric{}
+}
+
+func (s *SyslogSink) UpdateDroppedMessageCount(messageCount int64) {
+	atomic.AddInt64(&s.droppedMessageCount, messageCount)
 }

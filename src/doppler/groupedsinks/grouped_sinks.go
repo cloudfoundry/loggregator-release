@@ -10,6 +10,7 @@ import (
 	"doppler/sinks/websocket"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"sync"
 )
 
@@ -75,6 +76,9 @@ func (group *GroupedSinks) Broadcast(appId string, msg *events.Envelope) {
 		select {
 		case wrapper.InputChan <- msg:
 		default:
+			if wrapper.InputChan != nil {
+				wrapper.Sink.UpdateDroppedMessageCount(1)
+			}
 			// do nothing because there is no consumer
 			group.logger.Debug("Not broadcasting message to sink because no consumer present")
 		}
@@ -239,4 +243,19 @@ func (group *GroupedSinks) DeleteAll() {
 		fgroup.RemoveAllSinks()
 		delete(group.firehoses, subscriptionId)
 	}
+}
+
+func (group *GroupedSinks) GetAllInstrumentationMetrics() []instrumentation.Metric {
+	group.RLock()
+	defer group.RUnlock()
+	var metrics []instrumentation.Metric
+	for _, appId := range group.apps {
+		for _, wrapper := range appId {
+			metric := wrapper.Sink.GetInstrumentationMetric()
+			if metric.Value != nil {
+				metrics = append(metrics, metric)
+			}
+		}
+	}
+	return metrics
 }

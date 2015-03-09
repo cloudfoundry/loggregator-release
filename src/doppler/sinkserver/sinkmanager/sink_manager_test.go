@@ -74,6 +74,10 @@ func (c *ChannelSink) ShouldReceiveErrors() bool { return true }
 func (c *ChannelSink) Emit() instrumentation.Context {
 	return instrumentation.Context{}
 }
+func (c *ChannelSink) GetInstrumentationMetric() instrumentation.Metric {
+	return instrumentation.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": string(c.appId)}, Value: 25}
+}
+func (c *ChannelSink) UpdateDroppedMessageCount(mc int64) {}
 
 var _ = Describe("SinkManager", func() {
 	var blackListManager = blacklist.New([]iprange.IPRange{iprange.IPRange{Start: "10.10.10.10", End: "10.10.10.20"}})
@@ -485,6 +489,30 @@ var _ = Describe("SinkManager", func() {
 				instrumentation.Metric{Name: "numberOfSyslogDrainErrors", Value: 1, Tags: map[string]interface{}{"appId": "myApp", "drainUrl": "drainUrl"}},
 			))
 
+		})
+	})
+
+	Describe("Emit", func() {
+		It("emits all sink metrics", func() {
+			sink1 := &ChannelSink{
+				appId:      "myApp1",
+				identifier: "myAppChan1",
+				done:       make(chan struct{}),
+			}
+			sink2 := &ChannelSink{
+				appId:      "myApp2",
+				identifier: "myAppChan2",
+				done:       make(chan struct{}),
+			}
+			sinkManager.RegisterSink(sink1)
+			sinkManager.RegisterSink(sink2)
+			sinkManager.Emit()
+			metrics := sinkManager.Metrics.Emit().Metrics
+			appMetric := metrics[len(metrics)-2:]
+			Expect(appMetric).To(ConsistOf(
+				instrumentation.Metric{Name: "numberOfMessagesLost", Value: 25, Tags: map[string]interface{}{"appId": "myApp1"}},
+				instrumentation.Metric{Name: "numberOfMessagesLost", Value: 25, Tags: map[string]interface{}{"appId": "myApp2"}},
+			))
 		})
 	})
 })

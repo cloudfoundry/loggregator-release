@@ -150,6 +150,11 @@ var _ = Describe("Containermetric", func() {
 		continuouslySend(inputChan, metric, 2*inactivityDuration)
 		Expect(containerMetricRunnerDone).ShouldNot(BeClosed())
 	})
+
+	It("returns number of dropped messages on input channel", func() {
+		sink.UpdateDroppedMessageCount(2)
+		Expect(sink.GetInstrumentationMetric().Value).Should(Equal(int64(2)))
+	})
 })
 
 func continuouslySend(inputChan chan<- *events.Envelope, message *events.Envelope, duration time.Duration) {

@@ -111,4 +111,15 @@ var _ = Describe("SinkManagerMetrics", func() {
 			instrumentation.Metric{Name: "numberOfSyslogDrainErrors", Value: 1, Tags: map[string]interface{}{"appId": "app-id-2", "drainUrl": "url-3"}},
 		))
 	})
+
+	It("emits dropped message counts by app id and drain url", func() {
+		var metrics []instrumentation.Metric
+		metrics = append(metrics, instrumentation.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": "myApp"}, Value: 25})
+		sinkManagerMetrics.AddAppDrainMetrics(metrics)
+		allMetrics := sinkManagerMetrics.Emit().Metrics
+		lastAppDrainMetric := allMetrics[len(allMetrics)-1]
+		Expect(lastAppDrainMetric).To(Equal(
+			instrumentation.Metric{Name: "numberOfMessagesLost", Value: 25, Tags: map[string]interface{}{"appId": "myApp"}},
+		))
+	})
 })

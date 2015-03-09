@@ -470,6 +470,14 @@ var _ = Describe("Dump Sink", func() {
 
 		Expect(testDump.Dump()).To(HaveLen(1))
 	})
+
+	It("creates dropped message count metrics", func() {
+		testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), 2*time.Second)
+
+		testDump.UpdateDroppedMessageCount(2)
+		Expect(testDump.GetInstrumentationMetric().Value).Should(Equal(int64(2)))
+
+	})
 })
 
 func continuouslySend(inputChan chan<- *events.Envelope, message *events.Envelope, duration time.Duration) {

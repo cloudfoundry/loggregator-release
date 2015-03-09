@@ -4,9 +4,11 @@ import (
 	"doppler/sinks"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/gogo/protobuf/proto"
 	gorilla "github.com/gorilla/websocket"
 	"net"
+	"sync/atomic"
 )
 
 const FIREHOSE_APP_ID = "firehose"
@@ -23,6 +25,7 @@ type WebsocketSink struct {
 	clientAddress       net.Addr
 	wsMessageBufferSize uint
 	dropsondeOrigin     string
+	droppedMessageCount int64
 }
 
 func NewWebsocketSink(streamId string, givenLogger *gosteno.Logger, ws remoteMessageWriter, wsMessageBufferSize uint, dropsondeOrigin string) *WebsocketSink {
@@ -55,6 +58,7 @@ func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
 	for {
 		sink.logger.Debugf("Websocket Sink %s: Waiting for activity", sink.clientAddress)
 		messageEnvelope, ok := <-buffer.GetOutputChannel()
+		atomic.AddInt64(&sink.droppedMessageCount, buffer.GetDroppedMessageCount())
 		if !ok {
 			sink.logger.Debugf("Websocket Sink %s: Closed listener channel detected. Closing websocket", sink.clientAddress)
 			return
@@ -68,7 +72,6 @@ func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
 		}
 
 		sink.logger.Debugf("Websocket Sink %s: Received %s message from %s at %d. Sending data.", sink.clientAddress, messageEnvelope.GetEventType().String(), messageEnvelope.GetOrigin(), messageEnvelope.Timestamp)
-
 		err = sink.ws.WriteMessage(gorilla.BinaryMessage, messageBytes)
 		if err != nil {
 			sink.logger.Debugf("Websocket Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", sink.clientAddress, err)
@@ -77,4 +80,16 @@ func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
 
 		sink.logger.Debugf("Websocket Sink %s: Successfully sent data", sink.clientAddress)
 	}
+}
+
+func (s *WebsocketSink) GetInstrumentationMetric() instrumentation.Metric {
+	count := atomic.LoadInt64(&s.droppedMessageCount)
+	if count != 0 {
+		return instrumentation.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"streamId": string(s.streamId), "drainUrl": s.clientAddress.String()}, Value: count}
+	}
+	return instrumentation.Metric{}
+}
+
+func (sink *WebsocketSink) UpdateDroppedMessageCount(messageCount int64) {
+	atomic.AddInt64(&sink.droppedMessageCount, messageCount)
 }

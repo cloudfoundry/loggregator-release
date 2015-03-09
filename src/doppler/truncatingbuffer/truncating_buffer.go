@@ -12,21 +12,23 @@ import (
 )
 
 type TruncatingBuffer struct {
-	inputChannel    <-chan *events.Envelope
-	outputChannel   chan *events.Envelope
-	logger          *gosteno.Logger
-	lock            *sync.RWMutex
-	dropsondeOrigin string
+	inputChannel        <-chan *events.Envelope
+	outputChannel       chan *events.Envelope
+	logger              *gosteno.Logger
+	lock                *sync.RWMutex
+	dropsondeOrigin     string
+	droppedMessageCount int64
 }
 
 func NewTruncatingBuffer(inputChannel <-chan *events.Envelope, bufferSize uint, logger *gosteno.Logger, dropsondeOrigin string) *TruncatingBuffer {
 	outputChannel := make(chan *events.Envelope, bufferSize)
 	return &TruncatingBuffer{
-		inputChannel:    inputChannel,
-		outputChannel:   outputChannel,
-		logger:          logger,
-		lock:            &sync.RWMutex{},
-		dropsondeOrigin: dropsondeOrigin,
+		inputChannel:        inputChannel,
+		outputChannel:       outputChannel,
+		logger:              logger,
+		lock:                &sync.RWMutex{},
+		dropsondeOrigin:     dropsondeOrigin,
+		droppedMessageCount: 0,
 	}
 }
 
@@ -48,6 +50,7 @@ func (r *TruncatingBuffer) Run() {
 		case r.outputChannel <- msg:
 		default:
 			messageCount := len(r.outputChannel)
+			r.droppedMessageCount += int64(messageCount)
 			r.outputChannel = make(chan *events.Envelope, cap(r.outputChannel))
 			appId := envelope_extensions.GetAppId(msg)
 			lm := generateLogMessage(fmt.Sprintf("Log message output too high. We've dropped %d messages", messageCount), appId)
@@ -68,6 +71,14 @@ func (r *TruncatingBuffer) Run() {
 		r.lock.Unlock()
 	}
 	close(r.outputChannel)
+}
+
+func (r *TruncatingBuffer) GetDroppedMessageCount() int64 {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	messages := r.droppedMessageCount
+	r.droppedMessageCount = 0
+	return messages
 }
 
 func generateLogMessage(messageString string, appId string) *events.LogMessage {

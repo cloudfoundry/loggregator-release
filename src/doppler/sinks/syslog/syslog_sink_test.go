@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -241,6 +242,43 @@ var _ = Describe("SyslogSink", func() {
 		It("is idempotent", func() {
 			syslogSink.Disconnect()
 			Expect(syslogSink.Disconnect).NotTo(Panic())
+		})
+	})
+
+	Describe("GetInstrumentationMetric", func() {
+		It("emits an emptry metrics if no dropped messages", func() {
+			metrics := syslogSink.GetInstrumentationMetric()
+			Expect(metrics).To(Equal(instrumentation.Metric{}))
+		})
+		It("emits metrics with dropped message count", func() {
+			inputChan = make(chan *events.Envelope)
+
+			go func() {
+				syslogSink.Run(inputChan)
+				closeSysLoggerDoneChan()
+			}()
+
+			for i := 0; i < 105; i++ {
+				msg := fmt.Sprintf("message no %v", i)
+				logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, msg, "appId", "App"), "origin")
+
+				inputChan <- logMessage
+			}
+			close(inputChan)
+
+			<-sysLoggerDoneChan
+
+			sysLogger.ReceivedMessages()
+
+			metric := syslogSink.GetInstrumentationMetric()
+			Expect(metric.Value).To(Equal(int64(100)))
+			Expect(metric.Tags["appId"]).To(Equal("appId"))
+			Expect(metric.Tags["drainUrl"]).To(Equal("syslog://using-fake"))
+
+		})
+		It("updates dropped message count", func() {
+			syslogSink.UpdateDroppedMessageCount(2)
+			Expect(syslogSink.GetInstrumentationMetric().Value).Should(Equal(int64(2)))
 		})
 	})
 })

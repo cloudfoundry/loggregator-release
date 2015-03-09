@@ -15,6 +15,7 @@ type SinkManagerMetrics struct {
 	SyslogSinks            int
 	FirehoseSinks          int
 	SyslogDrainErrorCounts map[string](map[string]int) // appId -> (url -> count)
+	AppDrainMetrics        []instrumentation.Metric
 
 	sync.RWMutex
 }
@@ -79,6 +80,10 @@ func (sinkManagerMetrics *SinkManagerMetrics) ReportSyslogError(appId string, dr
 	errorsByDrainUrl[drainUrl] = errorsByDrainUrl[drainUrl] + 1
 }
 
+func (sinkManagerMetrics *SinkManagerMetrics) AddAppDrainMetrics(metrics []instrumentation.Metric) {
+	sinkManagerMetrics.AppDrainMetrics = metrics
+}
+
 func (sinkManagerMetrics *SinkManagerMetrics) Emit() instrumentation.Context {
 	sinkManagerMetrics.RLock()
 	defer sinkManagerMetrics.RUnlock()
@@ -95,6 +100,8 @@ func (sinkManagerMetrics *SinkManagerMetrics) Emit() instrumentation.Context {
 			data = append(data, instrumentation.Metric{Name: "numberOfSyslogDrainErrors", Value: count, Tags: map[string]interface{}{"appId": appId, "drainUrl": drainUrl}})
 		}
 	}
+
+	data = append(data, sinkManagerMetrics.AppDrainMetrics...)
 
 	return instrumentation.Context{
 		Name:    "messageRouter",

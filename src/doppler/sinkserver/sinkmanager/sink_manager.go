@@ -172,6 +172,7 @@ func (sinkManager *SinkManager) SendSyslogErrorToLoggregator(errorMsg string, ap
 }
 
 func (sinkManager *SinkManager) Emit() instrumentation.Context {
+	sinkManager.Metrics.AddAppDrainMetrics(sinkManager.sinks.GetAllInstrumentationMetrics())
 	return sinkManager.Metrics.Emit()
 }
 

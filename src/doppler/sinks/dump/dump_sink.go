@@ -6,16 +6,18 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 type DumpSink struct {
 	sync.RWMutex
-	appId              string
-	logger             *gosteno.Logger
-	messageRing        *ring.Ring
-	inputChan          chan *events.Envelope
-	inactivityDuration time.Duration
+	appId               string
+	logger              *gosteno.Logger
+	messageRing         *ring.Ring
+	inputChan           chan *events.Envelope
+	inactivityDuration  time.Duration
+	droppedMessageCount int64
 }
 
 func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, inactivityDuration time.Duration) *DumpSink {
@@ -99,4 +101,16 @@ func (d *DumpSink) ShouldReceiveErrors() bool {
 
 var envelopeTypeWhitelist = map[events.Envelope_EventType]struct{}{
 	events.Envelope_LogMessage: struct{}{},
+}
+
+func (d *DumpSink) GetInstrumentationMetric() instrumentation.Metric {
+	count := atomic.LoadInt64(&d.droppedMessageCount)
+	if count != 0 {
+		return instrumentation.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": string(d.appId), "drainUrl": "dumpSink"}, Value: count}
+	}
+	return instrumentation.Metric{}
+}
+
+func (d *DumpSink) UpdateDroppedMessageCount(messageCount int64) {
+	atomic.AddInt64(&d.droppedMessageCount, messageCount)
 }

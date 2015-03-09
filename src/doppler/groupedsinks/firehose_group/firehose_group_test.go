@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/factories"
 
 	"doppler/groupedsinks/firehose_group"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -30,6 +31,12 @@ func (f *fakeSink) Identifier() string {
 func (f *fakeSink) ShouldReceiveErrors() bool {
 	return false
 }
+
+func (f *fakeSink) GetInstrumentationMetric() instrumentation.Metric {
+	return instrumentation.Metric{}
+}
+
+func (f *fakeSink) UpdateDroppedMessageCount(messageCount int64) {}
 
 var _ = Describe("FirehoseGroup", func() {
 	It("sends message to all registered sinks", func() {
