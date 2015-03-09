@@ -104,7 +104,7 @@ var _ = Describe("SinkManagerMetrics", func() {
 
 		sinkManagerMetrics.ReportSyslogError("app-id-2", "url-3")
 
-		drainErrorMetrics := sinkManagerMetrics.Emit().Metrics[4:]
+		drainErrorMetrics := sinkManagerMetrics.Emit().Metrics[4:7]
 		Expect(drainErrorMetrics).To(ConsistOf(
 			instrumentation.Metric{Name: "numberOfSyslogDrainErrors", Value: 1, Tags: map[string]interface{}{"appId": "app-id-1", "drainUrl": "url-1"}},
 			instrumentation.Metric{Name: "numberOfSyslogDrainErrors", Value: 2, Tags: map[string]interface{}{"appId": "app-id-1", "drainUrl": "url-2"}},
@@ -121,5 +121,16 @@ var _ = Describe("SinkManagerMetrics", func() {
 		Expect(lastAppDrainMetric).To(Equal(
 			instrumentation.Metric{Name: "numberOfMessagesLost", Value: 25, Tags: map[string]interface{}{"appId": "myApp"}},
 		))
+	})
+
+	It("emits the total number of message dropped", func() {
+		sinkManagerMetrics.AppDrainMetrics = []instrumentation.Metric{
+			instrumentation.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": "myApp"}, Value: 25},
+			instrumentation.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": "myApp"}, Value: 25},
+		}
+		totalDroppedMessageCountMetric := instrumentation.Metric{Name: "totalDroppedMessages", Value: 50}
+		Expect(sinkManagerMetrics.GetTotalDroppedMessageCount()).Should(Equal(50))
+
+		Expect(sinkManagerMetrics.Emit().Metrics[4]).Should(Equal(totalDroppedMessageCountMetric))
 	})
 })

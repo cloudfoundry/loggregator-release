@@ -484,7 +484,7 @@ var _ = Describe("SinkManager", func() {
 			sinkManager.RegisterSink(sink)
 			sinkManager.SendSyslogErrorToLoggregator("error msg", "myApp", "drainUrl")
 
-			syslogFailureMetrics := sinkManager.Metrics.Emit().Metrics[4:]
+			syslogFailureMetrics := sinkManager.Metrics.Emit().Metrics[4:5]
 			Expect(syslogFailureMetrics).To(ConsistOf(
 				instrumentation.Metric{Name: "numberOfSyslogDrainErrors", Value: 1, Tags: map[string]interface{}{"appId": "myApp", "drainUrl": "drainUrl"}},
 			))

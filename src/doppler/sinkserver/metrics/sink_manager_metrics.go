@@ -101,10 +101,23 @@ func (sinkManagerMetrics *SinkManagerMetrics) Emit() instrumentation.Context {
 		}
 	}
 
+	data = append(data, instrumentation.Metric{Name: "totalDroppedMessages", Value: sinkManagerMetrics.GetTotalDroppedMessageCount()})
 	data = append(data, sinkManagerMetrics.AppDrainMetrics...)
 
 	return instrumentation.Context{
 		Name:    "messageRouter",
 		Metrics: data,
 	}
+}
+
+func (SinkManagerMetrics *SinkManagerMetrics) GetTotalDroppedMessageCount() int {
+	SinkManagerMetrics.RLock()
+	defer SinkManagerMetrics.RUnlock()
+
+	total := 0
+	for _, metric := range SinkManagerMetrics.AppDrainMetrics {
+		total += metric.Value.(int)
+	}
+
+	return total
 }
