@@ -9,11 +9,15 @@ lamb_meta:
     release: (( lamb_meta.release.name ))
   - name: metron_agent
     release: (( lamb_meta.release.name ))
+  - name: ca_truster
+    release: (( lamb_meta.release.name ))
 
   loggregator_trafficcontroller_templates:
   - name: loggregator_trafficcontroller
     release: (( lamb_meta.release.name ))
   - name: metron_agent
+    release: (( lamb_meta.release.name ))
+  - name: ca_truster
     release: (( lamb_meta.release.name ))
 
 jobs:
