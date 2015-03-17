@@ -51,8 +51,6 @@ class LambProperties
       release: cf
     - name: metron_agent
       release: cf
-    - name: ca_truster
-      release: cf
     EOF
     result.chomp
   end
@@ -62,8 +60,6 @@ class LambProperties
     - name: loggregator_trafficcontroller
       release: cf
     - name: metron_agent
-      release: cf
-    - name: ca_truster
       release: cf
     EOF
     result.chomp
