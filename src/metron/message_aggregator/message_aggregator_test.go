@@ -129,12 +129,15 @@ var _ = Describe("MessageAggregator", func() {
 			outputMessage = <-outputChan
 		})
 
-		It("aggregates HTTP start+stop messages", func() {
-			Expect(outputMessage.GetEventType()).To(Equal(events.Envelope_HttpStartStop))
+		It("populates all fields in the StartStop message correctly", func() {
+			Expect(outputMessage.GetHttpStartStop()).To(Equal(createStartStopMessage(123, events.PeerType_Client).GetHttpStartStop()))
+
 		})
 
-		It("populates all fields in the StartStop message correctly", func() {
-			Expect(outputMessage).To(Equal(createStartStopMessage(123, events.PeerType_Client)))
+		It("populates all fields in the Envelope correctly", func() {
+			Expect(outputMessage.GetOrigin()).To(Equal("fake-origin-2"))
+			Expect(outputMessage.GetTimestamp()).ToNot(BeZero())
+			Expect(outputMessage.GetEventType()).To(Equal(events.Envelope_HttpStartStop))
 		})
 	})
 

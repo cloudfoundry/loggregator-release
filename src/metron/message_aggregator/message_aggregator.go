@@ -117,6 +117,7 @@ func (m *messageAggregator) handleHttpStop(envelope *events.Envelope) *events.En
 
 	return &events.Envelope{
 		Origin:    envelope.Origin,
+		Timestamp: stopEvent.Timestamp,
 		EventType: events.Envelope_HttpStartStop.Enum(),
 		HttpStartStop: &events.HttpStartStop{
 			StartTimestamp:  startEvent.Timestamp,
