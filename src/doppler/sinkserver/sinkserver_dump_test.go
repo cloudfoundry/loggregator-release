@@ -46,7 +46,7 @@ var _ = Describe("Dumping", func() {
 
 		emptyBlacklist := blacklist.New(nil)
 		sinkManager = sinkmanager.NewSinkManager(1024, false, emptyBlacklist, logger, "dropsonde-origin",
-			1*time.Second, 1*time.Second)
+			2*time.Second, 1*time.Second)
 
 		services.Add(1)
 		go func() {
@@ -93,6 +93,10 @@ var _ = Describe("Dumping", func() {
 
 		dataReadChannel <- env1
 		dataReadChannel <- env2
+
+        Eventually(func() uint64 {
+            return TestMessageRouter.Metrics.ReceivedMessages
+        }, 3).Should(Equal(uint64(2)))
 
 		receivedChan := make(chan []byte, 2)
 		_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(GinkgoT(), receivedChan, SERVER_PORT, "/apps/myOtherApp/recentlogs")
