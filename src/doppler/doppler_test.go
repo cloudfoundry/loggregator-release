@@ -70,14 +70,7 @@ var _ = Describe("Doppler Server", func() {
 
 			connection, _ := net.Dial("udp", "127.0.0.1:3457")
 
-			envelope := &events.Envelope{
-				Origin:    proto.String("fake-origin-3"),
-				EventType: events.Envelope_Heartbeat.Enum(),
-				Heartbeat: factories.NewHeartbeat(1, 2, 3),
-			}
-			message, _ := proto.Marshal(envelope)
-			signedMessage := signature.SignMessage(message, []byte("secret"))
-			connection.Write(signedMessage)
+			connection.Write(createSignedMessageFromHeartbeatEnvelope())
 
 			instrumentationtesthelpers.EventuallyExpectMetric(emitter, "heartbeatReceived", countBefore+1)
 		})
@@ -90,6 +83,21 @@ var _ = Describe("Doppler Server", func() {
 			connection.Write([]byte{1, 2, 3})
 
 			instrumentationtesthelpers.EventuallyExpectMetric(emitter, "missingSignatureErrors", countBefore+1)
+		})
+
+		It("emits metrics for the message router", func() {
+			emitter := getEmitter("httpServer")
+			countBefore := instrumentationtesthelpers.MetricValue(emitter, "receivedMessages").(uint64)
+
+			connection, _ := net.Dial("udp", "127.0.0.1:3457")
+			connection.Write(createSignedMessageFromHeartbeatEnvelope())
+
+			instrumentationtesthelpers.EventuallyExpectMetric(emitter, "receivedMessages", countBefore+1)
+		})
+
+		It("emits metrics for the sink manager", func() {
+			emitter := getEmitter("messageRouter")
+			Eventually(instrumentationtesthelpers.MetricValue(emitter, "numberOfDumpSinks")).Should(Equal(1))
 		})
 	})
 })
@@ -108,4 +116,14 @@ func marshalProtoBuf(pb proto.Message) []byte {
 	}
 
 	return marshalledProtoBuf
+}
+
+func createSignedMessageFromHeartbeatEnvelope() []byte {
+	envelope := &events.Envelope{
+		Origin:    proto.String("fake-origin-3"),
+		EventType: events.Envelope_Heartbeat.Enum(),
+		Heartbeat: factories.NewHeartbeat(1, 2, 3),
+	}
+	message, _ := proto.Marshal(envelope)
+	return signature.SignMessage(message, []byte("secret"))
 }
