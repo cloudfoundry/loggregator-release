@@ -42,6 +42,22 @@ var _ = Describe("VarzForwarder", func() {
 			Expect(findMetricByName(varz.Metrics, "origin-2.metric")).ToNot(BeNil())
 		})
 
+		It("keeps track of the dea logging agent total message", func() {
+			perform()
+
+			totalLogMessagesSentMetric := metric("dea-logging-agent", "logSenderTotalMessagesRead", 100)
+			app1Metrics := metric("dea-logging-agent", "logSenderTotalMessagesRead.appId1", 40)
+			app2Metrics := metric("dea-logging-agent", "logSenderTotalMessagesRead.appId2", 60)
+
+			metricChan <- totalLogMessagesSentMetric
+			metricChan <- app1Metrics
+			metricChan <- app2Metrics
+
+			var varz instrumentation.Context
+			Eventually(func() []instrumentation.Metric { varz = forwarder.Emit(); return varz.Metrics }).Should(HaveLen(3))
+			Expect(findMetricByName(varz.Metrics, "dea-logging-agent.logSenderTotalMessagesRead").Value).To(Equal(float64(100)))
+		})
+
 		It("includes metrics for each ValueMetric name in a given origin", func() {
 			perform()
 			metricChan <- metric("origin", "metric-1", 1)

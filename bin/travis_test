@@ -57,6 +57,7 @@ done
 
 integration_testable_packages=(
   doppler
+  deaagent
 )
 
 for package in "${integration_testable_packages[@]}"
