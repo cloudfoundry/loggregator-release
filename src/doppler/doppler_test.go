@@ -1,6 +1,8 @@
 package main_test
 
 import (
+	doppler "doppler"
+
 	"net"
 	"runtime"
 	"time"
@@ -11,6 +13,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	instrumentationtesthelpers "github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation/testhelpers"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/gogo/protobuf/proto"
 
 	. "github.com/onsi/ginkgo"
@@ -22,6 +25,17 @@ import (
 //messageRouter.logger.Errorf("Log message could not be unmarshaled. Dropping it... Error: %v. Data: %v", err, envelopedLog)
 
 var _ = Describe("Doppler Server", func() {
+	var dopplerInstance *doppler.Doppler
+
+	BeforeEach(func() {
+		dopplerInstance = doppler.New("127.0.0.1", dopplerConfig, loggertesthelper.Logger(), "dropsondeOrigin")
+		go dopplerInstance.Start()
+		time.Sleep(10 * time.Millisecond)
+	})
+
+	AfterEach(func() {
+		dopplerInstance.Stop()
+	})
 
 	Describe("ity's", func() {
 		It("doesn't leak goroutines when sinks timeout", func() {
@@ -56,49 +70,50 @@ var _ = Describe("Doppler Server", func() {
 
 		It("emits metrics for the dropsonde message listener", func() {
 			emitter := getEmitter("dropsondeListener")
-			countBefore := instrumentationtesthelpers.MetricValue(emitter, "receivedMessageCount").(uint64)
 
 			connection, _ := net.Dial("udp", "127.0.0.1:3457")
 			connection.Write([]byte{1, 2, 3})
 
-			instrumentationtesthelpers.EventuallyExpectMetric(emitter, "receivedMessageCount", countBefore+1)
+			instrumentationtesthelpers.EventuallyExpectMetric(emitter, "receivedMessageCount", 1)
 		})
 
 		It("emits metrics for the dropsonde unmarshaller", func() {
 			emitter := getEmitter("dropsondeUnmarshaller")
-			countBefore := instrumentationtesthelpers.MetricValue(emitter, "heartbeatReceived").(uint64)
 
 			connection, _ := net.Dial("udp", "127.0.0.1:3457")
-
 			connection.Write(createSignedMessageFromHeartbeatEnvelope())
 
-			instrumentationtesthelpers.EventuallyExpectMetric(emitter, "heartbeatReceived", countBefore+1)
+			instrumentationtesthelpers.EventuallyExpectMetric(emitter, "heartbeatReceived", 1)
 		})
 
 		It("emits metrics for the dropsonde signature verifier", func() {
 			emitter := getEmitter("signatureVerifier")
-			countBefore := instrumentationtesthelpers.MetricValue(emitter, "missingSignatureErrors").(uint64)
 
 			connection, _ := net.Dial("udp", "127.0.0.1:3457")
 			connection.Write([]byte{1, 2, 3})
 
-			instrumentationtesthelpers.EventuallyExpectMetric(emitter, "missingSignatureErrors", countBefore+1)
+			instrumentationtesthelpers.EventuallyExpectMetric(emitter, "missingSignatureErrors", 1)
 		})
 
 		It("emits metrics for the message router", func() {
 			emitter := getEmitter("httpServer")
-			countBefore := instrumentationtesthelpers.MetricValue(emitter, "receivedMessages").(uint64)
 
 			connection, _ := net.Dial("udp", "127.0.0.1:3457")
 			connection.Write(createSignedMessageFromHeartbeatEnvelope())
 
-			instrumentationtesthelpers.EventuallyExpectMetric(emitter, "receivedMessages", countBefore+1)
+			instrumentationtesthelpers.EventuallyExpectMetric(emitter, "receivedMessages", 1)
 		})
 
-		// TODO: check for timing issue or bleed over from other tests
-		XIt("emits metrics for the sink manager", func() {
+		It("emits metrics for the sink manager", func() {
 			emitter := getEmitter("messageRouter")
-			Eventually(instrumentationtesthelpers.MetricValue(emitter, "numberOfDumpSinks")).Should(Equal(1))
+
+			connection, _ := net.Dial("udp", "127.0.0.1:3457")
+			connection.Write(createSignedMessageFromHeartbeatEnvelope()) // goes to appID "system"
+
+			unmarshalledLogMessage := factories.NewLogMessage(events.LogMessage_OUT, "message", "myApp-unique-for-goroutine-leak-test", "App")
+			connection.Write(MarshalEvent(unmarshalledLogMessage, "secret"))
+
+			instrumentationtesthelpers.EventuallyExpectMetric(emitter, "numberOfDumpSinks", 2)
 		})
 	})
 })

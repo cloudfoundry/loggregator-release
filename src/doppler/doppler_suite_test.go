@@ -1,7 +1,6 @@
 package main_test
 
 import (
-	doppler "doppler"
 	"doppler/config"
 	"doppler/iprange"
 	"fmt"
@@ -16,10 +15,9 @@ import (
 )
 
 var (
-	dopplerConfig   *config.Config
-	dopplerInstance *doppler.Doppler
-	etcdRunner      *etcdstorerunner.ETCDClusterRunner
-	etcdPort        int
+	dopplerConfig *config.Config
+	etcdRunner    *etcdstorerunner.ETCDClusterRunner
+	etcdPort      int
 )
 
 func TestDoppler(t *testing.T) {
@@ -50,13 +48,9 @@ var _ = BeforeSuite(func() {
 		SinkInactivityTimeoutSeconds:  2,
 	}
 	cfcomponent.Logger = loggertesthelper.Logger()
-
-	dopplerInstance = doppler.New("127.0.0.1", dopplerConfig, loggertesthelper.Logger(), "dropsondeOrigin")
-	go dopplerInstance.Start()
 })
 
 var _ = AfterSuite(func() {
-	dopplerInstance.Stop()
 	etcdRunner.Adapter().Disconnect()
 	etcdRunner.Stop()
 })
