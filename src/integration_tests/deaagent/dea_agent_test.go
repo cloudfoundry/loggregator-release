@@ -31,14 +31,14 @@ const SOCKET_PREFIX = "\n\n\n\n"
 const instancesJsonPath = "fixtures/instances.json"
 const wardenIdentifier = 56
 
-var deaAgentSession *gexec.Session
-var etcdRunner *etcdstorerunner.ETCDClusterRunner
-var etcdPort int
 var (
     task1InputListener net.Listener
     task1StderrListener net.Listener
     newFile *os.File
-
+    etcdPort int
+    etcdRunner *etcdstorerunner.ETCDClusterRunner
+    deaAgentSession *gexec.Session
+    goRoutineSpawned    sync.WaitGroup
 )
 
 type messageHelperInterface interface {
@@ -103,8 +103,9 @@ var _ = Describe("DeaLoggingAgent integration tests", func() {
             m := &messageHolder{}
             conn := makeDeaLoggingAgentOutputConn()
             defer conn.Close()
+            goRoutineSpawned.Add(1)
             go readDeaLoggingAgentOutputConn(conn, m)
-
+            goRoutineSpawned.Wait()
             //Send a message into dea logging agent
             task1StdoutConn, err := task1InputListener.Accept()
             Expect(err).ToNot(HaveOccurred())
@@ -183,6 +184,7 @@ func makeDeaLoggingAgentOutputConn() net.PacketConn {
 
 func readDeaLoggingAgentOutputConn(connection net.PacketConn, m *messageHolder) {
     readBuffer := make([]byte, 65535) //buffer with size = max theoretical UDP size
+    goRoutineSpawned.Done()
     for {
         readCount, _, err := connection.ReadFrom(readBuffer)
         if err != nil {
