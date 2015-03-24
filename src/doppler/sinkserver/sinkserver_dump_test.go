@@ -29,6 +29,7 @@ var _ = Describe("Dumping", func() {
 		TestWebsocketServer *websocketserver.WebsocketServer
 		dataReadChannel     chan *events.Envelope
 		services            sync.WaitGroup
+		goRoutineSpawned    sync.WaitGroup
 	)
 
 	const (
@@ -49,7 +50,9 @@ var _ = Describe("Dumping", func() {
 			2*time.Second, 1*time.Second)
 
 		services.Add(1)
+		goRoutineSpawned.Add(1)
 		go func() {
+			goRoutineSpawned.Done()
 			defer services.Done()
 			sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
 		}()
@@ -57,7 +60,9 @@ var _ = Describe("Dumping", func() {
 		TestMessageRouter = sinkserver.NewMessageRouter(sinkManager, logger)
 
 		services.Add(1)
+		goRoutineSpawned.Add(1)
 		go func() {
+			goRoutineSpawned.Done()
 			defer services.Done()
 			TestMessageRouter.Start(dataReadChannel)
 		}()
@@ -66,12 +71,14 @@ var _ = Describe("Dumping", func() {
 		TestWebsocketServer = websocketserver.New(apiEndpoint, sinkManager, 10*time.Second, 100, loggertesthelper.Logger())
 
 		services.Add(1)
+		goRoutineSpawned.Add(1)
 		go func() {
+			goRoutineSpawned.Done()
 			defer services.Done()
 			TestWebsocketServer.Start()
 		}()
 
-		time.Sleep(5 * time.Millisecond)
+		goRoutineSpawned.Wait()
 	})
 
 	AfterEach(func() {
