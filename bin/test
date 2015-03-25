@@ -1,11 +1,19 @@
 #!/bin/bash
 
 function green {
-    echo -e "$(tput setaf 2)$1$(tput sgr0)"
+    if [[ -n "$TERM" ]]; then
+        echo -e "$(tput setaf 2)$1$(tput sgr0)"
+    else
+        echo ":) $1"
+    fi
 }
 
 function red {
-    echo -e "$(tput setaf 1)$1$(tput sgr0)"
+    if [[ -n "$TERM" ]]; then
+        echo -e "$(tput setaf 1)$1$(tput sgr0)"
+    else
+        echo ":( $1"
+    fi
 }
 
 check_for_data_race() {

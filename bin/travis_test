@@ -17,15 +17,27 @@ rm -rf ./pkg
 result=0
 
 function green {
-    echo -e "$(tput setaf 2)$1$(tput sgr0)"
+    if [[ -n "$TERM" ]]; then
+        echo -e "$(tput setaf 2)$1$(tput sgr0)"
+    else
+        echo ":) $1"
+    fi
 }
 
 function red {
-    echo -e "$(tput setaf 1)$1$(tput sgr0)"
+    if [[ -n "$TERM" ]]; then
+        echo -e "$(tput setaf 1)$1$(tput sgr0)"
+    else
+        echo ":( $1"
+    fi
 }
 
 function bold_blue {
-    echo -e "$(tput setaf 6; tput bold)$1$(tput sgr0)"
+    if [[ -n "$TERM" ]]; then
+        echo -e "$(tput setaf 6; tput bold)$1$(tput sgr0)"
+    else
+        echo "$1"
+    fi
 }
 
 unit_testable_packages=(
@@ -39,7 +51,8 @@ unit_testable_packages=(
 for package in "${unit_testable_packages[@]}"
 do
     local_result=$result
-    bold_blue "\n ==================================  Unit-Testing $package  =================================="
+    echo
+    bold_blue "==================================  Unit-Testing $package  =================================="
     go fmt $package/...
     ginkgo -r --race --randomizeAllSpecs --cover $1 src/$package
     let "result += $?"
@@ -49,9 +62,9 @@ do
     let "result += $?"
     echo "Current result: $result"
     if [ $result -gt $local_result ]; then
-        red " Package $package FAILED unit tests"
+        red "Package $package FAILED unit tests"
     else
-        green " Package $package PASSED unit tests"
+        green "Package $package PASSED unit tests"
     fi
 done
 
