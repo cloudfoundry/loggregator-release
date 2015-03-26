@@ -125,7 +125,7 @@ var _ = Describe("DeaAgent", func() {
 
 				newTaskConnection.Write([]byte(SOCKET_PREFIX + expectedMessage + "\n"))
 
-				Eventually(fakeLogSender.GetLogs).Should(HaveLen(1))
+				Eventually(fakeLogSender.GetLogs, 3).Should(HaveLen(1))
 				logs := fakeLogSender.GetLogs()
 				Expect(logs[0].AppId).To(Equal("5678"))
 			})
