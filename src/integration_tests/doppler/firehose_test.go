@@ -105,12 +105,10 @@ var _ = Describe("Firehose test", func() {
             sendAppLog(appID, "message", inputConnection)
         }
 
-        for j := 0; j < 5; j++ {
-            Eventually(receiveChan1).Should(Receive())
-        }
+        Eventually(func() int {
+            return len(receiveChan1) + len(receiveChan2)
+        }).Should(Equal(10))
 
-        for k := 0; k < 5; k++ {
-            Eventually(receiveChan2).Should(Receive())
-        }
+        Expect(len(receiveChan1) - len(receiveChan2)).To(BeNumerically("~", 0, 2.5))
     })
 })
