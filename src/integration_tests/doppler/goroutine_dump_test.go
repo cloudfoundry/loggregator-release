@@ -11,9 +11,9 @@ import (
 var _ = Describe("Goroutine Dump test", func() {
 	It("emits the list of goroutines to STDOUT with each receipt of the USR1 signal", func() {
         dopplerSession.Signal(syscall.SIGUSR1)
-        Eventually(dopplerSession.Out).Should(gbytes.Say(`goroutine 1 \[running\]`))
+        Eventually(dopplerSession.Out).Should(gbytes.Say(`goroutine \d+ \[running\]`))
 
         dopplerSession.Signal(syscall.SIGUSR1)
-        Eventually(dopplerSession.Out).Should(gbytes.Say(`goroutine 1 \[running\]`))
+        Eventually(dopplerSession.Out).Should(gbytes.Say(`goroutine \d+ \[running\]`))
     })
 })
