@@ -36,7 +36,7 @@ var _ = Describe("CloudControllerPoller", func() {
 		})
 
 		It("connects to the correct endpoint with basic authentication and the expected parameters", func() {
-			syslog_drain_binder.Poll(addr, "user", "pass", 2)
+			syslog_drain_binder.Poll(addr, "user", "pass", 2, false)
 			Expect(fakeCloudController.servedRoute).To(Equal("/v2/syslog_drain_urls"))
 			Expect(fakeCloudController.username).To(Equal("user"))
 			Expect(fakeCloudController.password).To(Equal("pass"))
@@ -45,7 +45,7 @@ var _ = Describe("CloudControllerPoller", func() {
 		})
 
 		It("processes all pages into a single result with batch_size 2", func() {
-			drainUrls, err := syslog_drain_binder.Poll(addr, "user", "pass", 2)
+			drainUrls, err := syslog_drain_binder.Poll(addr, "user", "pass", 2, false)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeCloudController.requestCount).To(Equal(6))
@@ -56,7 +56,7 @@ var _ = Describe("CloudControllerPoller", func() {
 		})
 
 		It("processes all pages into a single result with batch_size 3", func() {
-			drainUrls, err := syslog_drain_binder.Poll(addr, "user", "pass", 3)
+			drainUrls, err := syslog_drain_binder.Poll(addr, "user", "pass", 3, false)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeCloudController.requestCount).To(Equal(5))
@@ -72,7 +72,7 @@ var _ = Describe("CloudControllerPoller", func() {
 			})
 
 			It("returns as much data as it has, and an error", func() {
-				drainUrls, err := syslog_drain_binder.Poll(addr, "user", "pass", 2)
+				drainUrls, err := syslog_drain_binder.Poll(addr, "user", "pass", 2, false)
 				Expect(err).To(HaveOccurred())
 
 				Expect(fakeCloudController.requestCount).To(Equal(4))
@@ -86,6 +86,33 @@ var _ = Describe("CloudControllerPoller", func() {
 					entry := appDrains[i]
 					Expect(drainUrls).NotTo(HaveKeyWithValue(entry.appId, entry.urls))
 				}
+			})
+		})
+
+		Context("when connecting to a secure server with a self-signed certificate", func() {
+			var secureTestServer *httptest.Server
+
+			BeforeEach(func() {
+				secureTestServer = httptest.NewTLSServer(http.HandlerFunc(fakeCloudController.ServeHTTP))
+
+				addr = "https://" + secureTestServer.Listener.Addr().String()
+			})
+
+			It("fails to connect if skipCertVerify is false", func() {
+				secureTestServer = httptest.NewTLSServer(http.HandlerFunc(fakeCloudController.ServeHTTP))
+
+				addr = "https://" + secureTestServer.Listener.Addr().String()
+				_, err := syslog_drain_binder.Poll(addr, "user", "pass", 2, false)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("certificate signed by unknown authority"))
+			})
+
+			It("successfully connects if skipCertVerify is true", func() {
+				secureTestServer := httptest.NewTLSServer(http.HandlerFunc(fakeCloudController.ServeHTTP))
+
+				addr = "https://" + secureTestServer.Listener.Addr().String()
+				_, err := syslog_drain_binder.Poll(addr, "user", "pass", 2, true)
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})

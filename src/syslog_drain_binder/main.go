@@ -62,7 +62,7 @@ func main() {
 			}
 
 			logger.Debugf("Polling %s for updates", config.CloudControllerAddress)
-			drainUrls, err := Poll(config.CloudControllerAddress, config.BulkApiUsername, config.BulkApiPassword, config.PollingBatchSize)
+			drainUrls, err := Poll(config.CloudControllerAddress, config.BulkApiUsername, config.BulkApiPassword, config.PollingBatchSize, config.SkipCertVerify)
 			if err != nil {
 				logger.Errorf("Error when polling cloud controller: %s", err.Error())
 				politician.Vacate()
@@ -103,6 +103,8 @@ type Config struct {
 	BulkApiUsername        string
 	BulkApiPassword        string
 	PollingBatchSize       int
+
+	SkipCertVerify bool
 
 	cfcomponent.Config
 }

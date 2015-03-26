@@ -6,20 +6,26 @@ import (
 	"fmt"
 	"net/http"
 
+	"crypto/tls"
 	"syslog_drain_binder/shared_types"
 )
 
-func Poll(hostname string, username string, password string, batchSize int) (map[shared_types.AppId][]shared_types.DrainURL, error) {
+func Poll(hostname string, username string, password string, batchSize int, skipCertVerify bool) (map[shared_types.AppId][]shared_types.DrainURL, error) {
 	drainURLs := make(map[shared_types.AppId][]shared_types.DrainURL)
 
 	nextId := 0
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: skipCertVerify},
+	}
+	client := &http.Client{Transport: tr}
 
 	for {
 		url := buildUrl(hostname, batchSize, nextId)
 		request, _ := http.NewRequest("GET", url, nil)
 		request.SetBasicAuth(username, password)
 
-		response, err := http.DefaultClient.Do(request)
+		response, err := client.Do(request)
 		if err != nil {
 			return drainURLs, err
 		}

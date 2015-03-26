@@ -41,3 +41,7 @@ properties:
     description: "password for the bulk api"
   cc.srv_api_uri:
     description: "API URI of cloud controller"
+
+  ssl.skip_cert_verify:
+    description: "when connecting over https, ignore bad ssl certificates"
+    default: false

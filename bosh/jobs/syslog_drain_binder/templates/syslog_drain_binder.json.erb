@@ -11,5 +11,7 @@
     "CloudControllerAddress": "<%= p("cc.srv_api_uri") %>",
     "BulkApiUsername": "bulk_api",
     "BulkApiPassword": "<%= p("cc.bulk_api_password") %>",
-    "PollingBatchSize": <%= p("syslog_drain_binder.polling_batch_size") %>
+    "PollingBatchSize": <%= p("syslog_drain_binder.polling_batch_size") %>,
+
+    "SkipCertVerify": <%= p("ssl.skip_cert_verify") %>,
 }
