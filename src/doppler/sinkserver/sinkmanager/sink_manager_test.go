@@ -23,6 +23,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"sync/atomic"
 )
 
 var _ = Describe("SinkManager", func() {
@@ -172,9 +173,7 @@ var _ = Describe("SinkManager", func() {
 			BeforeEach(func() {
 				sinkManagerMetrics = sinkManager.Metrics
 				numSyslogSinks = func() uint64 {
-					sinkManagerMetrics.RLock()
-					defer sinkManagerMetrics.RUnlock()
-					return sinkManagerMetrics.SyslogSinks
+					return atomic.LoadUint64(&sinkManagerMetrics.SyslogSinks)
 				}
 			})
 
@@ -446,13 +445,13 @@ var _ = Describe("SinkManager", func() {
 
 	Describe("Emit", func() {
 		It("emits all sink metrics", func() {
-			sink1 := &ChannelSink{
+			sink1 := &channelSink{
 				appId:                     "myApp1",
 				identifier:                "myAppChan1",
 				UpdateAppDrainMetricsChan: sinkManager.Metrics.AppDrainMetricsReceiverChan,
 				done: make(chan struct{}),
 			}
-			sink2 := &ChannelSink{
+			sink2 := &channelSink{
 				appId:                     "myApp2",
 				identifier:                "myAppChan2",
 				UpdateAppDrainMetricsChan: sinkManager.Metrics.AppDrainMetricsReceiverChan,
@@ -468,9 +467,9 @@ var _ = Describe("SinkManager", func() {
 			Eventually(func() uint64 {
 				metrics = sinkManager.Emit().Metrics
 				return metrics[len(metrics)-1].Value.(uint64)
-			}).Should(Equal(uint64(25)))
+			}).Should(Equal(uint64(75)))
 
-			appMetric := metrics[len(metrics)-2:]
+			appMetric := metrics[len(metrics)-3 : len(metrics)-1]
 			Expect(appMetric).To(ConsistOf(
 				instrumentation.Metric{Name: "numberOfMessagesLost", Value: uint64(50), Tags: map[string]interface{}{"appId": "myApp1", "drainUrl": "myAppChan1"}},
 				instrumentation.Metric{Name: "numberOfMessagesLost", Value: uint64(25), Tags: map[string]interface{}{"appId": "myApp2", "drainUrl": "myAppChan2"}},
@@ -479,7 +478,7 @@ var _ = Describe("SinkManager", func() {
 	})
 })
 
-type ChannelSink struct {
+type channelSink struct {
 	sync.RWMutex
 	done                      chan struct{}
 	appId, identifier         string
@@ -489,8 +488,8 @@ type ChannelSink struct {
 	UpdateAppDrainMetricsChan chan sinks.DrainMetric
 }
 
-func (c *ChannelSink) StreamId() string { return c.appId }
-func (c *ChannelSink) Run(msgChan <-chan *events.Envelope) {
+func (c *channelSink) StreamId() string { return c.appId }
+func (c *channelSink) Run(msgChan <-chan *events.Envelope) {
 	if c.ready != nil {
 		<-c.ready
 	}
@@ -506,18 +505,18 @@ func (c *ChannelSink) Run(msgChan <-chan *events.Envelope) {
 	}
 }
 
-func (c *ChannelSink) RunFinished() bool {
+func (c *channelSink) RunFinished() bool {
 	<-c.done
 	return true
 }
 
-func (c *ChannelSink) RunCalled() bool {
+func (c *channelSink) RunCalled() bool {
 	c.RLock()
 	defer c.RUnlock()
 	return c.runCalled
 }
 
-func (c *ChannelSink) Received() []*events.Envelope {
+func (c *channelSink) Received() []*events.Envelope {
 	c.RLock()
 	defer c.RUnlock()
 	data := make([]*events.Envelope, len(c.received))
@@ -525,12 +524,12 @@ func (c *ChannelSink) Received() []*events.Envelope {
 	return data
 }
 
-func (c *ChannelSink) Identifier() string        { return c.identifier }
-func (c *ChannelSink) ShouldReceiveErrors() bool { return true }
-func (c *ChannelSink) Emit() instrumentation.Context {
+func (c *channelSink) Identifier() string        { return c.identifier }
+func (c *channelSink) ShouldReceiveErrors() bool { return true }
+func (c *channelSink) Emit() instrumentation.Context {
 	return instrumentation.Context{}
 }
-func (c *ChannelSink) GetInstrumentationMetric() instrumentation.Metric {
+func (c *channelSink) GetInstrumentationMetric() instrumentation.Metric {
 	return instrumentation.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": string(c.appId)}, Value: 25}
 }
-func (c *ChannelSink) UpdateDroppedMessageCount(mc uint64) {}
+func (c *channelSink) UpdateDroppedMessageCount(mc uint64) {}

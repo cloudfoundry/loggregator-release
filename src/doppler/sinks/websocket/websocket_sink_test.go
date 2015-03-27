@@ -5,21 +5,14 @@ import (
 	"doppler/sinks/websocket"
 	"net"
 	"sync"
-
-	"net"
-	"sync"
+	"time"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-
-	"doppler/sinks"
-
 	"github.com/gogo/protobuf/proto"
-
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -141,36 +134,4 @@ func retrieveDroppedMsgCountMetric(sink sinks.Sink, updateMetricsChan chan sinks
 	case <-ticker.C:
 	}
 	return recvMetric
-}
-
-type fakeAddr struct{}
-
-func (fake fakeAddr) Network() string {
-	return "RemoteAddressNetwork"
-}
-func (fake fakeAddr) String() string {
-	return "syslog://using-fake"
-}
-
-type fakeMessageWriter struct {
-	messages [][]byte
-	sync.RWMutex
-}
-
-func (fake *fakeMessageWriter) RemoteAddr() net.Addr {
-	return fakeAddr{}
-}
-func (fake *fakeMessageWriter) WriteMessage(messageType int, data []byte) error {
-	fake.Lock()
-	defer fake.Unlock()
-
-	fake.messages = append(fake.messages, data)
-	return nil
-}
-
-func (fake *fakeMessageWriter) ReadMessages() [][]byte {
-	fake.RLock()
-	defer fake.RUnlock()
-
-	return fake.messages
 }

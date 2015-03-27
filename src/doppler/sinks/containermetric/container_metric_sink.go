@@ -7,10 +7,6 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/events"
-
-	"doppler/sinks"
-
-	"github.com/cloudfoundry/dropsonde/events"
 )
 
 type ContainerMetricSink struct {

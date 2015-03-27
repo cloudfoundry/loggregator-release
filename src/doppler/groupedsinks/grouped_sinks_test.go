@@ -7,15 +7,13 @@ import (
 	"doppler/sinks/dump"
 	"doppler/sinks/syslog"
 	"doppler/sinks/websocket"
+	"sync/atomic"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-
-	"doppler/sinks"
-	"sync/atomic"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -142,7 +140,7 @@ var _ = Describe("GroupedSink", func() {
 			go groupedSinks.Broadcast(appId, msg)
 
 			Eventually(func() uint64 {
-				return appSink.DroppedMessageCount
+				return atomic.LoadUint64(&appSink.DroppedMessageCount)
 			}).Should(Equal(uint64(1)))
 		})
 	})
@@ -549,9 +547,6 @@ func (f *fakeSink) Identifier() string {
 
 func (f *fakeSink) ShouldReceiveErrors() bool {
 	return false
-}
-func (f *fakeSink) GetInstrumentationMetric() sinks.Metric {
-	return sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": f.appId}, Value: 5}
 }
 
 func (f *fakeSink) UpdateDroppedMessageCount(messageCount uint64) {

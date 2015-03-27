@@ -10,7 +10,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 
 	"sync"
-	"sync/atomic"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -121,22 +120,19 @@ var _ = Describe("SinkManagerMetrics", func() {
 		))
 	})
 
-	It("emits dropped message counts by app id and drain url", func() {
-		key := metrics.AppDrainMetricKey{AppId: "appId", DrainURL: "myApp"}
-		sinkManagerMetrics.AppDrainMetrics[key] = 25
+	It("emits dropped message counts by app id and drain url with total", func() {
+		key1 := metrics.AppDrainMetricKey{AppId: "appId", DrainURL: "myApp"}
+		sinkManagerMetrics.AppDrainMetrics[key1] = 25
+		key2 := metrics.AppDrainMetricKey{AppId: "otherAppId", DrainURL: "myApp"}
+		sinkManagerMetrics.AppDrainMetrics[key2] = 25
 
-		allMetrics := sinkManagerMetrics.Emit().Metrics
-		lastAppDrainMetric := allMetrics[len(allMetrics)-1]
-		Expect(lastAppDrainMetric).To(Equal(
+		Eventually(func() []instrumentation.Metric {
+			return sinkManagerMetrics.Emit().Metrics[4:7]
+		}).Should(ConsistOf(
 			instrumentation.Metric{Name: "numberOfMessagesLost", Value: uint64(25), Tags: map[string]interface{}{"appId": "appId", "drainUrl": "myApp"}},
+			instrumentation.Metric{Name: "numberOfMessagesLost", Value: uint64(25), Tags: map[string]interface{}{"appId": "otherAppId", "drainUrl": "myApp"}},
+			instrumentation.Metric{Name: "totalDroppedMessages", Value: uint64(50)},
 		))
-	})
-
-	It("emits the total number of message dropped", func() {
-		sinkManagerMetrics.TotalAppDrainMessagesDropped = 50
-		totalDroppedMessageCountMetric := instrumentation.Metric{Name: "totalDroppedMessages", Value: uint64(50)}
-
-		Expect(sinkManagerMetrics.Emit().Metrics[4]).Should(Equal(totalDroppedMessageCountMetric))
 	})
 
 	Context("updates app drain metrics", func() {
@@ -170,17 +166,6 @@ var _ = Describe("SinkManagerMetrics", func() {
 				defer sinkManagerMetrics.RUnlock()
 				return sinkManagerMetrics.AppDrainMetrics[key]
 			}).Should(Equal(uint64(10)))
-		})
-
-		It("update the total dropped message count", func() {
-			sinkManagerMetrics.AppDrainMetricsReceiverChan <- updateMetric
-
-			Eventually(func() uint64 { return atomic.LoadUint64(&sinkManagerMetrics.TotalAppDrainMessagesDropped) }).Should(Equal(uint64(10)))
-
-			updateMetric.DroppedMsgCount = uint64(20)
-			sinkManagerMetrics.AppDrainMetricsReceiverChan <- updateMetric
-
-			Eventually(func() uint64 { return atomic.LoadUint64(&sinkManagerMetrics.TotalAppDrainMessagesDropped) }).Should(Equal(uint64(20)))
 		})
 
 		It("adds to AppDrainMetrics map", func() {
