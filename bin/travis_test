@@ -77,7 +77,7 @@ for package in "${integration_testable_packages[@]}"
 do
     local_result=$result
     bold_blue "\n ==================================  Integration-Testing $package  =================================="
-    ginkgo -r --race --randomizeAllSpecs $1 src/integration_tests/$package
+    ginkgo -r --randomizeAllSpecs $1 src/integration_tests/$package
     let "result += $?"
     echo "Current result: $result"
     if [ $result -gt $local_result ]; then
