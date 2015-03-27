@@ -5,8 +5,9 @@ import (
 	"doppler/sinks/dump"
 	"doppler/sinks/syslog"
 	"doppler/sinks/websocket"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"sync"
+
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 )
 
 type SinkManagerMetrics struct {

@@ -2,13 +2,14 @@ package syslogwriter_test
 
 import (
 	"doppler/sinks/syslogwriter"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"runtime"
 	"time"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("HttpsWriter", func() {

@@ -4,11 +4,12 @@ import (
 	"doppler/config"
 	"doppler/iprange"
 	"fmt"
+	"testing"
+
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	gikgoConfig "github.com/onsi/ginkgo/config"
-	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

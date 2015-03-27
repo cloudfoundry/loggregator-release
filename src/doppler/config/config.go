@@ -3,9 +3,10 @@ package config
 import (
 	"doppler/iprange"
 	"errors"
+	"time"
+
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"time"
 )
 
 const HeartbeatInterval = 10 * time.Second

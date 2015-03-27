@@ -5,6 +5,11 @@ import (
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
+	"net/http"
+	testhelpers "server_testhelpers"
+	"sync"
+	"time"
+
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
@@ -13,10 +18,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/websocket"
-	"net/http"
-	testhelpers "server_testhelpers"
-	"sync"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

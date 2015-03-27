@@ -6,17 +6,18 @@ import (
 	"doppler/sinkserver/sinkmanager"
 	"errors"
 	"fmt"
-	"github.com/cloudfoundry/dropsonde/events"
-	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/server"
-	"github.com/gogo/protobuf/proto"
-	gorilla "github.com/gorilla/websocket"
 	"net"
 	"net/http"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/cloudfoundry/dropsonde/events"
+	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/server"
+	"github.com/gogo/protobuf/proto"
+	gorilla "github.com/gorilla/websocket"
 )
 
 type WebsocketServer struct {

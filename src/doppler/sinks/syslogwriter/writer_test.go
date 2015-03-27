@@ -3,10 +3,11 @@ package syslogwriter_test
 import (
 	"doppler/sinks/syslogwriter"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"net/url"
 	"reflect"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Writer", func() {

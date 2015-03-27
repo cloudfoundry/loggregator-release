@@ -5,9 +5,11 @@ import (
 	"time"
 
 	"doppler"
+
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 
 	"doppler/config"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/localip"

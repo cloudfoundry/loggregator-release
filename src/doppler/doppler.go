@@ -7,6 +7,9 @@ import (
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/signature"
@@ -20,8 +23,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/store/cache"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
-	"sync"
-	"time"
 )
 
 type Doppler struct {

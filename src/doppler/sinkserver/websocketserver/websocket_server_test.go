@@ -5,13 +5,14 @@ import (
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/gorilla/websocket"
-	"net/http"
-	"time"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	. "github.com/onsi/ginkgo"

@@ -1,9 +1,10 @@
 package sinkserver_test
 
 import (
-	"github.com/gorilla/websocket"
 	"net/http"
 	"testing"
+
+	"github.com/gorilla/websocket"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

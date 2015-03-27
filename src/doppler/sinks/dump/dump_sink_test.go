@@ -2,17 +2,19 @@ package dump_test
 
 import (
 	"doppler/sinks/dump"
+	"runtime"
+	"strconv"
+
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/stretchr/testify/assert"
-	"runtime"
-	"strconv"
+
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"time"
 )
 
 var _ = Describe("Dump Sink", func() {

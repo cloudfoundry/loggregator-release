@@ -2,10 +2,11 @@ package retrystrategy_test
 
 import (
 	"doppler/sinks/retrystrategy"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"math/rand"
 	"time"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("RetryStrategy", func() {

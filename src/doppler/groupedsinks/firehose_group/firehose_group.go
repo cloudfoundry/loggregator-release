@@ -3,9 +3,10 @@ package firehose_group
 import (
 	"doppler/groupedsinks/sink_wrapper"
 	"doppler/sinks"
+	"sync"
+
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
-	"sync"
 )
 
 type FirehoseGroup interface {
