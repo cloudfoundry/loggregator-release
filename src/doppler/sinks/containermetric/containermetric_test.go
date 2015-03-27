@@ -7,20 +7,22 @@ import (
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/gogo/protobuf/proto"
 
+	"doppler/sinks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Containermetric", func() {
 	var (
-		sink      *containermetric.ContainerMetricSink
-		eventChan chan *events.Envelope
+		sink              *containermetric.ContainerMetricSink
+		eventChan         chan *events.Envelope
+		updateMetricsChan = make(chan sinks.DrainMetric)
 	)
 
 	BeforeEach(func() {
 		eventChan = make(chan *events.Envelope)
 
-		sink = containermetric.NewContainerMetricSink("myApp", 2*time.Second, 2*time.Second)
+		sink = containermetric.NewContainerMetricSink("myApp", 2*time.Second, 2*time.Second, updateMetricsChan)
 		go sink.Run(eventChan)
 	})
 
@@ -109,7 +111,7 @@ var _ = Describe("Containermetric", func() {
 	})
 
 	It("closes after a period of inactivity", func() {
-		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, 1*time.Millisecond)
+		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, 1*time.Millisecond, updateMetricsChan)
 		containerMetricRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -122,7 +124,7 @@ var _ = Describe("Containermetric", func() {
 	})
 
 	It("closes after input chan is closed", func() {
-		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, 10*time.Second)
+		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, 10*time.Second, updateMetricsChan)
 		containerMetricRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -138,7 +140,7 @@ var _ = Describe("Containermetric", func() {
 
 	It("resets the inactivity duration when a metric is received", func() {
 		inactivityDuration := 1 * time.Millisecond
-		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, inactivityDuration)
+		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, inactivityDuration, updateMetricsChan)
 		containerMetricRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -151,12 +153,32 @@ var _ = Describe("Containermetric", func() {
 		continuouslySend(inputChan, metric, 2*inactivityDuration)
 		Expect(containerMetricRunnerDone).ShouldNot(BeClosed())
 	})
+	Describe("UpdateDroppedMessageCount", func() {
+		It("returns number of dropped messages on metrics channel", func() {
+			drainMetric := sinks.DrainMetric{AppId: "myApp", DrainURL: "containerMetricSink", DroppedMsgCount: uint64(10)}
 
-	It("returns number of dropped messages on input channel", func() {
-		sink.UpdateDroppedMessageCount(2)
-		Expect(sink.GetInstrumentationMetric().Value).Should(Equal(int64(2)))
+			metric := retrieveDroppedMsgCountMetric(sink, updateMetricsChan, 10)
+			Expect(*metric).To(Equal(drainMetric))
+		})
+
+		It("does not send message if droppedMsgCount is 0", func() {
+			Expect(retrieveDroppedMsgCountMetric(sink, updateMetricsChan, 0)).To(BeNil())
+		})
 	})
 })
+
+func retrieveDroppedMsgCountMetric(sink sinks.Sink, updateMetricsChan chan sinks.DrainMetric, messageCount uint64) *sinks.DrainMetric {
+	go sink.UpdateDroppedMessageCount(messageCount)
+
+	var recvMetric *sinks.DrainMetric
+	ticker := time.NewTicker(500 * time.Millisecond)
+	select {
+	case metric := <-updateMetricsChan:
+		recvMetric = &metric
+	case <-ticker.C:
+	}
+	return recvMetric
+}
 
 func continuouslySend(inputChan chan<- *events.Envelope, message *events.Envelope, duration time.Duration) {
 	timer := time.NewTimer(duration)

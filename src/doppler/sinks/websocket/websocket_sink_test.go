@@ -4,7 +4,9 @@ import (
 	"doppler/sinks"
 	"doppler/sinks/websocket"
 	"net"
-	"strings"
+	"sync"
+
+	"net"
 	"sync"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
@@ -12,7 +14,12 @@ import (
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+
+	"doppler/sinks"
+
 	"github.com/gogo/protobuf/proto"
+
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -53,15 +60,16 @@ func (fake *fakeMessageWriter) ReadMessages() [][]byte {
 var _ = Describe("WebsocketSink", func() {
 
 	var (
-		logger        *gosteno.Logger
-		websocketSink *websocket.WebsocketSink
-		fakeWebsocket *fakeMessageWriter
+		logger            *gosteno.Logger
+		websocketSink     *websocket.WebsocketSink
+		fakeWebsocket     *fakeMessageWriter
+		updateMetricsChan = make(chan sinks.DrainMetric)
 	)
 
 	BeforeEach(func() {
 		logger = loggertesthelper.Logger()
 		fakeWebsocket = &fakeMessageWriter{}
-		websocketSink = websocket.NewWebsocketSink("appId", logger, fakeWebsocket, 10, "dropsonde-origin")
+		websocketSink = websocket.NewWebsocketSink("appId", logger, fakeWebsocket, 10, "dropsonde-origin", updateMetricsChan)
 	})
 
 	Describe("Identifier", func() {
@@ -108,45 +116,61 @@ var _ = Describe("WebsocketSink", func() {
 		})
 	})
 
-	Describe("GetInstrumentationMetric", func() {
-		It("emits an emptry metrics if no dropped messages", func() {
-			metrics := websocketSink.GetInstrumentationMetric()
-			Expect(metrics).To(Equal(sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"streamId": "appId", "drainUrl": "client-address"}, Value: 0}))
+	Describe("UpdateDroppedMessageCount", func() {
+		It("updates the dropped message count and sends them to sinkManager metrics", func() {
+			drainMetric := sinks.DrainMetric{AppId: "appId", DrainURL: fakeWebsocket.RemoteAddr().String(), DroppedMsgCount: uint64(10)}
+
+			recvMetric := retrieveDroppedMsgCountMetric(websocketSink, updateMetricsChan, 10)
+			Expect(*recvMetric).To(Equal(drainMetric))
 		})
 
-		It("emits metrics with dropped message count", func() {
-			inputChan := make(chan *events.Envelope, 25)
-
-			go websocketSink.Run(inputChan)
-
-			for i := 0; i < 11; i++ {
-				logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, string(i), "appId", "App"), "origin")
-				inputChan <- logMessage
-			}
-
-			Eventually(func() bool {
-				var receivedEnvelope events.Envelope
-				for _, message := range fakeWebsocket.ReadMessages() {
-					proto.Unmarshal(message, &receivedEnvelope)
-					if strings.Contains(string(receivedEnvelope.GetLogMessage().GetMessage()), "Log message output too high.") {
-						return true
-					}
-				}
-				return false
-			}).Should(BeTrue())
-
-			close(inputChan)
-
-			metric := websocketSink.GetInstrumentationMetric()
-			Expect(metric.Value).To(Equal(int64(10)))
-			Expect(metric.Tags["streamId"]).To(Equal("appId"))
-			Expect(metric.Tags["drainUrl"]).To(Equal("client-address"))
-
-		})
-
-		It("updates dropped message count", func() {
-			websocketSink.UpdateDroppedMessageCount(2)
-			Expect(websocketSink.GetInstrumentationMetric().Value).Should(Equal(int64(2)))
+		It("does not send message if droppedMsgCount is 0", func() {
+			Expect(retrieveDroppedMsgCountMetric(websocketSink, updateMetricsChan, 0)).To(BeNil())
 		})
 	})
 })
+
+func retrieveDroppedMsgCountMetric(sink sinks.Sink, updateMetricsChan chan sinks.DrainMetric, messageCount uint64) *sinks.DrainMetric {
+	go sink.UpdateDroppedMessageCount(messageCount)
+
+	var recvMetric *sinks.DrainMetric
+	ticker := time.NewTicker(500 * time.Millisecond)
+	select {
+	case metric := <-updateMetricsChan:
+		recvMetric = &metric
+	case <-ticker.C:
+	}
+	return recvMetric
+}
+
+type fakeAddr struct{}
+
+func (fake fakeAddr) Network() string {
+	return "RemoteAddressNetwork"
+}
+func (fake fakeAddr) String() string {
+	return "syslog://using-fake"
+}
+
+type fakeMessageWriter struct {
+	messages [][]byte
+	sync.RWMutex
+}
+
+func (fake *fakeMessageWriter) RemoteAddr() net.Addr {
+	return fakeAddr{}
+}
+func (fake *fakeMessageWriter) WriteMessage(messageType int, data []byte) error {
+	fake.Lock()
+	defer fake.Unlock()
+
+	fake.messages = append(fake.messages, data)
+	return nil
+}
+
+func (fake *fakeMessageWriter) ReadMessages() [][]byte {
+	fake.RLock()
+	defer fake.RUnlock()
+
+	return fake.messages
+}
