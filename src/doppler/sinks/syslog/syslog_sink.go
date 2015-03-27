@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
+	"sync/atomic"
+
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"sync/atomic"
 )
 
 const (
@@ -170,12 +170,9 @@ func messagePriorityValue(msg *events.LogMessage) int {
 	}
 }
 
-func (s *SyslogSink) GetInstrumentationMetric() instrumentation.Metric {
+func (s *SyslogSink) GetInstrumentationMetric() sinks.Metric {
 	count := atomic.LoadInt64(&s.droppedMessageCount)
-	if count != 0 {
-		return instrumentation.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": string(s.appId), "drainUrl": s.drainUrl}, Value: count}
-	}
-	return instrumentation.Metric{}
+	return sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": string(s.appId), "drainUrl": s.drainUrl}, Value: count}
 }
 
 func (s *SyslogSink) UpdateDroppedMessageCount(messageCount int64) {

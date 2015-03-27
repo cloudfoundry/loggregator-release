@@ -8,10 +8,10 @@ import (
 	"doppler/sinks/dump"
 	"doppler/sinks/syslog"
 	"doppler/sinks/websocket"
+	"sync"
+
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"sync"
 )
 
 func NewGroupedSinks(logger *gosteno.Logger) *GroupedSinks {
@@ -245,14 +245,14 @@ func (group *GroupedSinks) DeleteAll() {
 	}
 }
 
-func (group *GroupedSinks) GetAllInstrumentationMetrics() []instrumentation.Metric {
+func (group *GroupedSinks) GetAllInstrumentationMetrics() []sinks.Metric {
 	group.RLock()
 	defer group.RUnlock()
-	var metrics []instrumentation.Metric
+	var metrics []sinks.Metric
 	for _, appId := range group.apps {
 		for _, wrapper := range appId {
 			metric := wrapper.Sink.GetInstrumentationMetric()
-			if metric.Value != nil {
+			if metric.Value != 0 {
 				metrics = append(metrics, metric)
 			}
 		}

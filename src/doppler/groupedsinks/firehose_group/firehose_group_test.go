@@ -1,12 +1,13 @@
 package firehose_group_test
 
 import (
+	"doppler/sinks"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 
 	"doppler/groupedsinks/firehose_group"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -32,8 +33,8 @@ func (f *fakeSink) ShouldReceiveErrors() bool {
 	return false
 }
 
-func (f *fakeSink) GetInstrumentationMetric() instrumentation.Metric {
-	return instrumentation.Metric{}
+func (f *fakeSink) GetInstrumentationMetric() sinks.Metric {
+	return sinks.Metric{}
 }
 
 func (f *fakeSink) UpdateDroppedMessageCount(messageCount int64) {}

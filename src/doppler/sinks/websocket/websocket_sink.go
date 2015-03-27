@@ -2,13 +2,13 @@ package websocket
 
 import (
 	"doppler/sinks"
-	"github.com/cloudfoundry/dropsonde/events"
-	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"github.com/gogo/protobuf/proto"
-	gorilla "github.com/gorilla/websocket"
 	"net"
 	"sync/atomic"
+
+	"github.com/cloudfoundry/dropsonde/events"
+	"github.com/cloudfoundry/gosteno"
+	"github.com/gogo/protobuf/proto"
+	gorilla "github.com/gorilla/websocket"
 )
 
 const FIREHOSE_APP_ID = "firehose"
@@ -82,12 +82,9 @@ func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
 	}
 }
 
-func (s *WebsocketSink) GetInstrumentationMetric() instrumentation.Metric {
+func (s *WebsocketSink) GetInstrumentationMetric() sinks.Metric {
 	count := atomic.LoadInt64(&s.droppedMessageCount)
-	if count != 0 {
-		return instrumentation.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"streamId": string(s.streamId), "drainUrl": s.clientAddress.String()}, Value: count}
-	}
-	return instrumentation.Metric{}
+	return sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"streamId": string(s.streamId), "drainUrl": s.clientAddress.String()}, Value: count}
 }
 
 func (sink *WebsocketSink) UpdateDroppedMessageCount(messageCount int64) {

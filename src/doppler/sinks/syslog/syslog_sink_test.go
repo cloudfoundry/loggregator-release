@@ -1,17 +1,18 @@
 package syslog_test
 
 import (
+	"doppler/sinks"
 	"doppler/sinks/syslog"
 	"errors"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	"sync"
-	"time"
 
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -248,8 +249,9 @@ var _ = Describe("SyslogSink", func() {
 	Describe("GetInstrumentationMetric", func() {
 		It("emits an emptry metrics if no dropped messages", func() {
 			metrics := syslogSink.GetInstrumentationMetric()
-			Expect(metrics).To(Equal(instrumentation.Metric{}))
+			Expect(metrics).To(Equal(sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": "appId", "drainUrl": "syslog://using-fake"}, Value: 0}))
 		})
+
 		It("emits metrics with dropped message count", func() {
 			inputChan = make(chan *events.Envelope)
 
@@ -276,6 +278,7 @@ var _ = Describe("SyslogSink", func() {
 			Expect(metric.Tags["drainUrl"]).To(Equal("syslog://using-fake"))
 
 		})
+
 		It("updates dropped message count", func() {
 			syslogSink.UpdateDroppedMessageCount(2)
 			Expect(syslogSink.GetInstrumentationMetric().Value).Should(Equal(int64(2)))

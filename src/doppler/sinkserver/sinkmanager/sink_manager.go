@@ -10,6 +10,9 @@ import (
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/metrics"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/dropsonde/events"
@@ -17,8 +20,6 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"sync"
-	"time"
 )
 
 type SinkManager struct {

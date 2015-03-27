@@ -9,6 +9,10 @@ import (
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/metrics"
 	"doppler/sinkserver/sinkmanager"
+	"net/url"
+	"sync"
+	"time"
+
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
@@ -16,68 +20,10 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/gogo/protobuf/proto"
-	"net/url"
-	"sync"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
-
-type ChannelSink struct {
-	sync.RWMutex
-	done              chan struct{}
-	appId, identifier string
-	received          []*events.Envelope
-	runCalled         bool
-	ready             chan struct{}
-}
-
-func (c *ChannelSink) StreamId() string { return c.appId }
-func (c *ChannelSink) Run(msgChan <-chan *events.Envelope) {
-	if c.ready != nil {
-		<-c.ready
-	}
-	c.Lock()
-	c.runCalled = true
-	c.Unlock()
-
-	defer close(c.done)
-	for msg := range msgChan {
-		c.Lock()
-		c.received = append(c.received, msg)
-		c.Unlock()
-	}
-}
-
-func (c *ChannelSink) RunFinished() bool {
-	<-c.done
-	return true
-}
-
-func (c *ChannelSink) RunCalled() bool {
-	c.RLock()
-	defer c.RUnlock()
-	return c.runCalled
-}
-
-func (c *ChannelSink) Received() []*events.Envelope {
-	c.RLock()
-	defer c.RUnlock()
-	data := make([]*events.Envelope, len(c.received))
-	copy(data, c.received)
-	return data
-}
-
-func (c *ChannelSink) Identifier() string        { return c.identifier }
-func (c *ChannelSink) ShouldReceiveErrors() bool { return true }
-func (c *ChannelSink) Emit() instrumentation.Context {
-	return instrumentation.Context{}
-}
-func (c *ChannelSink) GetInstrumentationMetric() instrumentation.Metric {
-	return instrumentation.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": string(c.appId)}, Value: 25}
-}
-func (c *ChannelSink) UpdateDroppedMessageCount(mc int64) {}
 
 var _ = Describe("SinkManager", func() {
 	var blackListManager = blacklist.New([]iprange.IPRange{iprange.IPRange{Start: "10.10.10.10", End: "10.10.10.20"}})
@@ -105,11 +51,11 @@ var _ = Describe("SinkManager", func() {
 
 	Describe("SendTo", func() {
 		It("sends to all known sinks", func() {
-			sink1 := &ChannelSink{appId: "myApp",
+			sink1 := &channelSink{appId: "myApp",
 				identifier: "myAppChan1",
 				done:       make(chan struct{}),
 			}
-			sink2 := &ChannelSink{appId: "myApp",
+			sink2 := &channelSink{appId: "myApp",
 				identifier: "myAppChan2",
 				done:       make(chan struct{}),
 			}
@@ -128,11 +74,11 @@ var _ = Describe("SinkManager", func() {
 		})
 
 		It("only sends to sinks that match the appID", func(done Done) {
-			sink1 := &ChannelSink{appId: "myApp1",
+			sink1 := &channelSink{appId: "myApp1",
 				identifier: "myAppChan1",
 				done:       make(chan struct{}),
 			}
-			sink2 := &ChannelSink{appId: "myApp2",
+			sink2 := &channelSink{appId: "myApp2",
 				identifier: "myAppChan2",
 				done:       make(chan struct{}),
 			}
@@ -152,7 +98,7 @@ var _ = Describe("SinkManager", func() {
 		})
 
 		It("sends messages to registered firehose sinks", func() {
-			sink1 := &ChannelSink{done: make(chan struct{}), appId: "firehose-a"}
+			sink1 := &channelSink{done: make(chan struct{}), appId: "firehose-a"}
 			sinkManager.RegisterFirehoseSink(sink1)
 
 			expectedMessageString := "Some Data"
@@ -163,7 +109,7 @@ var _ = Describe("SinkManager", func() {
 		})
 
 		It("sends single message to app sink registered after the message was sent", func() {
-			sink1 := &ChannelSink{appId: "myApp",
+			sink1 := &channelSink{appId: "myApp",
 				identifier: "myAppChan1",
 				done:       make(chan struct{}),
 			}
@@ -179,7 +125,7 @@ var _ = Describe("SinkManager", func() {
 		})
 
 		It("sends single message to firehose sink registered after the message was sent", func() {
-			sink1 := &ChannelSink{done: make(chan struct{}), appId: "firehose-a"}
+			sink1 := &channelSink{done: make(chan struct{}), appId: "firehose-a"}
 
 			expectedMessageString := "Some Data"
 			expectedMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp", "App"), "origin")
@@ -193,7 +139,7 @@ var _ = Describe("SinkManager", func() {
 		Context("When a sync is consuming slowly", func() {
 			It("buffers a reasonable number of messages", func() {
 				ready := make(chan struct{})
-				sink1 := &ChannelSink{appId: "myApp",
+				sink1 := &channelSink{appId: "myApp",
 					identifier: "myAppChan1",
 					done:       make(chan struct{}),
 					ready:      ready,
@@ -255,10 +201,10 @@ var _ = Describe("SinkManager", func() {
 				})
 
 				Context("with an invalid drain Url", func() {
-					var errorSink *ChannelSink
+					var errorSink *channelSink
 
 					BeforeEach(func() {
-						errorSink = &ChannelSink{appId: "aptastic",
+						errorSink = &channelSink{appId: "aptastic",
 							identifier: "myAppChan1",
 							done:       make(chan struct{}),
 						}
@@ -310,7 +256,7 @@ var _ = Describe("SinkManager", func() {
 		})
 
 		It("stops all registered sinks", func(done Done) {
-			sink := &ChannelSink{appId: "myApp1",
+			sink := &channelSink{appId: "myApp1",
 				identifier: "myAppChan1",
 				done:       make(chan struct{}),
 			}
@@ -394,14 +340,14 @@ var _ = Describe("SinkManager", func() {
 
 	Describe("RegisterFirehoseSink", func() {
 		It("runs the sink, updates metrics and returns true for registering a new firehose sink", func() {
-			sink := &ChannelSink{done: make(chan struct{}), appId: "firehose-a"}
+			sink := &channelSink{done: make(chan struct{}), appId: "firehose-a"}
 			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
 			Eventually(sink.RunCalled).Should(BeTrue())
 			Expect(sinkManager.Metrics.Emit().Metrics[3].Value).To(Equal(1))
 		})
 
 		It("returns false for a duplicate sink and does not update the sink metrics", func() {
-			sink := &ChannelSink{done: make(chan struct{}), appId: "firehose-a"}
+			sink := &channelSink{done: make(chan struct{}), appId: "firehose-a"}
 
 			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
 
@@ -412,7 +358,7 @@ var _ = Describe("SinkManager", func() {
 
 	Describe("UnregisterFirehoseSink", func() {
 		It("stops the sink and updates metrics", func() {
-			sink := &ChannelSink{done: make(chan struct{}), appId: "firehose-a"}
+			sink := &channelSink{done: make(chan struct{}), appId: "firehose-a"}
 
 			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
 
@@ -422,7 +368,7 @@ var _ = Describe("SinkManager", func() {
 		})
 
 		It("does not update metrics when a sink is not registered", func() {
-			sink := &ChannelSink{done: make(chan struct{})}
+			sink := &channelSink{done: make(chan struct{})}
 
 			sinkManager.UnregisterFirehoseSink(sink)
 			Expect(sinkManager.Metrics.Emit().Metrics[3].Value).To(Equal(0))
@@ -430,9 +376,9 @@ var _ = Describe("SinkManager", func() {
 	})
 
 	Describe("Latest Container Metrics", func() {
-		var sink *ChannelSink
+		var sink *channelSink
 		BeforeEach(func() {
-			sink = &ChannelSink{
+			sink = &channelSink{
 				appId:      "myApp",
 				identifier: "myAppChan1",
 				done:       make(chan struct{}),
@@ -461,7 +407,7 @@ var _ = Describe("SinkManager", func() {
 
 	Describe("SendSyslogErrorToLoggregator", func() {
 		It("listens and broadcasts error messages", func() {
-			sink := &ChannelSink{
+			sink := &channelSink{
 				appId:      "myApp",
 				identifier: "myAppChan1",
 				done:       make(chan struct{}),
@@ -476,7 +422,7 @@ var _ = Describe("SinkManager", func() {
 		})
 
 		It("counts syslog send failures", func() {
-			sink := &ChannelSink{
+			sink := &channelSink{
 				appId:      "myApp",
 				identifier: "myAppChan1",
 				done:       make(chan struct{}),
@@ -494,12 +440,12 @@ var _ = Describe("SinkManager", func() {
 
 	Describe("Emit", func() {
 		It("emits all sink metrics", func() {
-			sink1 := &ChannelSink{
+			sink1 := &channelSink{
 				appId:      "myApp1",
 				identifier: "myAppChan1",
 				done:       make(chan struct{}),
 			}
-			sink2 := &ChannelSink{
+			sink2 := &channelSink{
 				appId:      "myApp2",
 				identifier: "myAppChan2",
 				done:       make(chan struct{}),
@@ -510,9 +456,64 @@ var _ = Describe("SinkManager", func() {
 			metrics := sinkManager.Metrics.Emit().Metrics
 			appMetric := metrics[len(metrics)-2:]
 			Expect(appMetric).To(ConsistOf(
-				instrumentation.Metric{Name: "numberOfMessagesLost", Value: 25, Tags: map[string]interface{}{"appId": "myApp1"}},
-				instrumentation.Metric{Name: "numberOfMessagesLost", Value: 25, Tags: map[string]interface{}{"appId": "myApp2"}},
+				instrumentation.Metric{Name: "numberOfMessagesLost", Value: int64(25), Tags: map[string]interface{}{"appId": "myApp1"}},
+				instrumentation.Metric{Name: "numberOfMessagesLost", Value: int64(25), Tags: map[string]interface{}{"appId": "myApp2"}},
 			))
 		})
 	})
 })
+
+type channelSink struct {
+	sync.RWMutex
+	done              chan struct{}
+	appId, identifier string
+	received          []*events.Envelope
+	runCalled         bool
+	ready             chan struct{}
+}
+
+func (c *channelSink) StreamId() string { return c.appId }
+func (c *channelSink) Run(msgChan <-chan *events.Envelope) {
+	if c.ready != nil {
+		<-c.ready
+	}
+	c.Lock()
+	c.runCalled = true
+	c.Unlock()
+
+	defer close(c.done)
+	for msg := range msgChan {
+		c.Lock()
+		c.received = append(c.received, msg)
+		c.Unlock()
+	}
+}
+
+func (c *channelSink) RunFinished() bool {
+	<-c.done
+	return true
+}
+
+func (c *channelSink) RunCalled() bool {
+	c.RLock()
+	defer c.RUnlock()
+	return c.runCalled
+}
+
+func (c *channelSink) Received() []*events.Envelope {
+	c.RLock()
+	defer c.RUnlock()
+	data := make([]*events.Envelope, len(c.received))
+	copy(data, c.received)
+	return data
+}
+
+func (c *channelSink) Identifier() string        { return c.identifier }
+func (c *channelSink) ShouldReceiveErrors() bool { return true }
+func (c *channelSink) Emit() instrumentation.Context {
+	return instrumentation.Context{}
+}
+func (c *channelSink) GetInstrumentationMetric() sinks.Metric {
+	return sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": string(c.appId)}, Value: 25}
+}
+func (c *channelSink) UpdateDroppedMessageCount(mc int64) {}

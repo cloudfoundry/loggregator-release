@@ -1,11 +1,12 @@
 package containermetric
 
 import (
-	"github.com/cloudfoundry/dropsonde/events"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"doppler/sinks"
+	"github.com/cloudfoundry/dropsonde/events"
 )
 
 type ContainerMetricSink struct {
@@ -96,12 +97,9 @@ func (sink *ContainerMetricSink) updateMetric(event *events.Envelope) {
 	}
 }
 
-func (sink *ContainerMetricSink) GetInstrumentationMetric() instrumentation.Metric {
+func (sink *ContainerMetricSink) GetInstrumentationMetric() sinks.Metric {
 	count := atomic.LoadInt64(&sink.droppedMessageCount)
-	if count != 0 {
-		return instrumentation.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": string(sink.applicationId), "drainUrl": "containerMetricSink"}, Value: count}
-	}
-	return instrumentation.Metric{}
+	return sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": string(sink.applicationId), "drainUrl": "containerMetricSink"}, Value: count}
 }
 
 func (sink *ContainerMetricSink) UpdateDroppedMessageCount(messageCount int64) {

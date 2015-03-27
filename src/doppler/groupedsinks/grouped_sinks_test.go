@@ -2,17 +2,18 @@ package groupedsinks_test
 
 import (
 	"doppler/groupedsinks"
+	"doppler/sinks"
 	"doppler/sinks/containermetric"
 	"doppler/sinks/dump"
 	"doppler/sinks/syslog"
 	"doppler/sinks/websocket"
+	"time"
+
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	"time"
 
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -560,8 +561,8 @@ func (f *fakeSink) Identifier() string {
 func (f *fakeSink) ShouldReceiveErrors() bool {
 	return false
 }
-func (f *fakeSink) GetInstrumentationMetric() instrumentation.Metric {
-	return instrumentation.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": f.appId}, Value: 5}
+func (f *fakeSink) GetInstrumentationMetric() sinks.Metric {
+	return sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": f.appId}, Value: 5}
 }
 
 func (f *fakeSink) UpdateDroppedMessageCount(messageCount int64) {}

@@ -6,6 +6,7 @@ import (
 	"doppler/sinks/syslog"
 	"doppler/sinks/websocket"
 	"doppler/sinkserver/metrics"
+
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 
 	. "github.com/onsi/ginkgo"
@@ -113,23 +114,25 @@ var _ = Describe("SinkManagerMetrics", func() {
 	})
 
 	It("emits dropped message counts by app id and drain url", func() {
-		var metrics []instrumentation.Metric
-		metrics = append(metrics, instrumentation.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": "myApp"}, Value: 25})
+		var metrics []sinks.Metric
+		metrics = append(metrics, sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": "myApp"}, Value: 25})
 		sinkManagerMetrics.AddAppDrainMetrics(metrics)
+
 		allMetrics := sinkManagerMetrics.Emit().Metrics
 		lastAppDrainMetric := allMetrics[len(allMetrics)-1]
 		Expect(lastAppDrainMetric).To(Equal(
-			instrumentation.Metric{Name: "numberOfMessagesLost", Value: 25, Tags: map[string]interface{}{"appId": "myApp"}},
+			instrumentation.Metric{Name: "numberOfMessagesLost", Value: int64(25), Tags: map[string]interface{}{"appId": "myApp"}},
 		))
 	})
 
 	It("emits the total number of message dropped", func() {
-		sinkManagerMetrics.AppDrainMetrics = []instrumentation.Metric{
-			instrumentation.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": "myApp"}, Value: 25},
-			instrumentation.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": "myApp"}, Value: 25},
+		sinkManagerMetrics.AppDrainMetrics = []sinks.Metric{
+			sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": "myApp"}, Value: 25},
+			sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": "myApp"}, Value: 25},
 		}
-		totalDroppedMessageCountMetric := instrumentation.Metric{Name: "totalDroppedMessages", Value: 50}
-		Expect(sinkManagerMetrics.GetTotalDroppedMessageCount()).Should(Equal(50))
+
+		totalDroppedMessageCountMetric := instrumentation.Metric{Name: "totalDroppedMessages", Value: int64(50)}
+		Expect(sinkManagerMetrics.GetTotalDroppedMessageCount()).Should(Equal(int64(50)))
 
 		Expect(sinkManagerMetrics.Emit().Metrics[4]).Should(Equal(totalDroppedMessageCountMetric))
 	})

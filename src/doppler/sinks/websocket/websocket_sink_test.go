@@ -1,20 +1,21 @@
 package websocket_test
 
 import (
+	"doppler/sinks"
 	"doppler/sinks/websocket"
+	"net"
+	"strings"
+	"sync"
+
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	"net"
-	"sync"
-
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/gogo/protobuf/proto"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"strings"
 )
 
 type fakeAddr struct{}
@@ -23,7 +24,7 @@ func (fake fakeAddr) Network() string {
 	return "RemoteAddressNetwork"
 }
 func (fake fakeAddr) String() string {
-	return "syslog://using-fake"
+	return "client-address"
 }
 
 type fakeMessageWriter struct {
@@ -65,7 +66,7 @@ var _ = Describe("WebsocketSink", func() {
 
 	Describe("Identifier", func() {
 		It("returns the remote address", func() {
-			Expect(websocketSink.Identifier()).To(Equal("syslog://using-fake"))
+			Expect(websocketSink.Identifier()).To(Equal("client-address"))
 		})
 	})
 
@@ -110,8 +111,9 @@ var _ = Describe("WebsocketSink", func() {
 	Describe("GetInstrumentationMetric", func() {
 		It("emits an emptry metrics if no dropped messages", func() {
 			metrics := websocketSink.GetInstrumentationMetric()
-			Expect(metrics).To(Equal(instrumentation.Metric{}))
+			Expect(metrics).To(Equal(sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"streamId": "appId", "drainUrl": "client-address"}, Value: 0}))
 		})
+
 		It("emits metrics with dropped message count", func() {
 			inputChan := make(chan *events.Envelope, 25)
 
@@ -136,12 +138,12 @@ var _ = Describe("WebsocketSink", func() {
 			close(inputChan)
 
 			metric := websocketSink.GetInstrumentationMetric()
-			Expect(metric).To(BeAssignableToTypeOf(instrumentation.Metric{}))
 			Expect(metric.Value).To(Equal(int64(10)))
 			Expect(metric.Tags["streamId"]).To(Equal("appId"))
-			Expect(metric.Tags["drainUrl"]).To(Equal("syslog://using-fake"))
+			Expect(metric.Tags["drainUrl"]).To(Equal("client-address"))
 
 		})
+
 		It("updates dropped message count", func() {
 			websocketSink.UpdateDroppedMessageCount(2)
 			Expect(websocketSink.GetInstrumentationMetric().Value).Should(Equal(int64(2)))

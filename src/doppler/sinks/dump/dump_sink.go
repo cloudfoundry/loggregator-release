@@ -2,12 +2,14 @@ package dump
 
 import (
 	"container/ring"
-	"github.com/cloudfoundry/dropsonde/events"
-	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	"doppler/sinks"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/cloudfoundry/dropsonde/events"
+	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 )
 
 type DumpSink struct {
@@ -103,12 +105,9 @@ var envelopeTypeWhitelist = map[events.Envelope_EventType]struct{}{
 	events.Envelope_LogMessage: struct{}{},
 }
 
-func (d *DumpSink) GetInstrumentationMetric() instrumentation.Metric {
+func (d *DumpSink) GetInstrumentationMetric() sinks.Metric {
 	count := atomic.LoadInt64(&d.droppedMessageCount)
-	if count != 0 {
-		return instrumentation.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": string(d.appId), "drainUrl": "dumpSink"}, Value: count}
-	}
-	return instrumentation.Metric{}
+	return sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": string(d.appId), "drainUrl": "dumpSink"}, Value: count}
 }
 
 func (d *DumpSink) UpdateDroppedMessageCount(messageCount int64) {
