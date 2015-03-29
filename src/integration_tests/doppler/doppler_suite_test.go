@@ -4,15 +4,16 @@ import (
 	"os/exec"
 	"testing"
 
+	"doppler/config"
+	"time"
+
+	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 	"github.com/pivotal-golang/localip"
-    "doppler/config"
-    "time"
-    "github.com/cloudfoundry/storeadapter"
 )
 
 func TestDoppler(t *testing.T) {
@@ -25,7 +26,7 @@ var (
 	localIPAddress string
 	etcdPort       int
 	etcdRunner     *etcdstorerunner.ETCDClusterRunner
-    etcdAdapter    storeadapter.StoreAdapter
+	etcdAdapter    storeadapter.StoreAdapter
 
 	pathToDopplerExec    string
 	pathToHTTPEchoServer string
@@ -36,6 +37,7 @@ var _ = BeforeSuite(func() {
 	etcdPort = 5555
 	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
 	etcdRunner.Start()
+	etcdAdapter = etcdRunner.Adapter()
 
 	var err error
 	pathToDopplerExec, err = gexec.Build("doppler")
@@ -60,11 +62,10 @@ var _ = BeforeEach(func() {
 
 	Eventually(dopplerSession.Out, 3).Should(gbytes.Say("Startup: doppler server started"))
 	localIPAddress, _ = localip.LocalIP()
-    etcdAdapter = etcdRunner.Adapter()
 	Eventually(func() error {
 		_, err := etcdAdapter.Get("healthstatus/doppler/z1/doppler_z1/0")
 		return err
-	}, time.Second + config.HeartbeatInterval).ShouldNot(HaveOccurred())
+	}, time.Second+config.HeartbeatInterval).ShouldNot(HaveOccurred())
 })
 
 var _ = AfterEach(func() {
