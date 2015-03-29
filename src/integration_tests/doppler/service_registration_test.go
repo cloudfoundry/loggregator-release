@@ -1,11 +1,11 @@
 package doppler_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-    "github.com/onsi/gomega/gexec"
     "doppler/config"
     "time"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("doppler service registration", func() {
@@ -33,8 +33,7 @@ var _ = Describe("doppler service registration", func() {
 
     Context("when doppler dies", func() {
       BeforeEach(func() {
-          dopplerSession.Kill()
-          Eventually(dopplerSession).Should(gexec.Exit())
+          dopplerSession.Kill().Wait()
       })
 
         It("stops registering itself", func(){

@@ -26,7 +26,7 @@ var _ = Describe("TLSWriter", func() {
 		}, 3)
 
 		AfterEach(func() {
-			syslogServerSession.Kill()
+			syslogServerSession.Kill().Wait()
 			syslogWriter.Close()
 		})
 
@@ -72,7 +72,7 @@ var _ = Describe("TLSWriter", func() {
 		err := syslogWriter.Connect()
 		Expect(err).To(HaveOccurred())
 
-		syslogServerSession.Kill()
+		syslogServerSession.Kill().Wait()
 		syslogWriter.Close()
 		close(done)
 	}, 5)

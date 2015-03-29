@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
-	"time"
 
 	"github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo"
@@ -83,7 +82,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 			})
 
 			AfterEach(func() {
-				drainSession.Kill()
+				drainSession.Kill().Wait()
 			})
 
 			It("forwards log messages to a syslog", func(done Done) {
@@ -104,7 +103,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 				key := drainKey(appID, syslogDrainURL)
 				addETCDNode(key, syslogDrainURL)
 
-				drainSession.Kill()
+				drainSession.Kill().Wait()
 
 				Eventually(func() *gbytes.Buffer {
 					sendAppLog(appID, "http-message", inputConnection)
@@ -128,7 +127,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 			})
 
 			AfterEach(func() {
-				drainSession.Kill()
+				drainSession.Kill().Wait()
 			})
 
 			It("forwards log messages to a syslog-tls", func(done Done) {
@@ -148,7 +147,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 				key := drainKey(appID, syslogDrainURL)
 				addETCDNode(key, syslogDrainURL)
 
-				drainSession.Kill()
+				drainSession.Kill().Wait()
 
 				Eventually(func() *gbytes.Buffer {
 					sendAppLog(appID, "message", inputConnection)
@@ -181,7 +180,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 		})
 
 		AfterEach(func() {
-			serverSession.Kill()
+			serverSession.Kill().Wait()
 		})
 
 		It("forwards log messages to an https endpoint", func(done Done) {
@@ -193,8 +192,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 		}, 100)
 
 		It("reconnects a reappearing https server", func(done Done) {
-			serverSession.Kill()
-			<-time.After(100 * time.Millisecond)
+			serverSession.Kill().Wait()
 
 			sendAppLog(appID, "http-message", inputConnection)
 			Eventually(dopplerSession.Out).Should(gbytes.Say(`1234/syslog.*backoff`))
@@ -226,7 +224,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 			Eventually(dopplerSession, 5).Should(gbytes.Say(`Invalid syslog drain URL \(syslog://localhost:6666\).*Err: Syslog Drain URL is blacklisted`))
 
-			drainSession.Kill()
+			drainSession.Kill().Wait()
 		})
 
 		It("does not forward to a TCP+TLS listener", func() {
@@ -244,7 +242,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 			Eventually(dopplerSession, 5).Should(gbytes.Say(`Invalid syslog drain URL \(syslog-tls://localhost:6666\).*Err: Syslog Drain URL is blacklisted`))
 
-			drainSession.Kill()
+			drainSession.Kill().Wait()
 		})
 
 		It("does not forward to an HTTPS listener", func() {
@@ -260,7 +258,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 			Eventually(dopplerSession).Should(gbytes.Say(`Invalid syslog drain URL \(https://localhost:1234/syslog/\).*Err: Syslog Drain URL is blacklisted`))
 
-			serverSession.Kill()
+			serverSession.Kill().Wait()
 		})
 	})
 })

@@ -33,7 +33,7 @@ var _ = Describe("SyslogWriter", func() {
 
 	AfterEach(func() {
 		sysLogWriter.Close()
-		syslogServerSession.Kill()
+		syslogServerSession.Kill().Wait()
 	})
 
 	Context("Message Format", func() {

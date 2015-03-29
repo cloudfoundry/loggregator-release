@@ -57,7 +57,7 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	session.Command.Process.Kill()
+	session.Kill().Wait()
 	gexec.CleanupBuildArtifacts()
 
 	etcdRunner.Adapter().Disconnect()

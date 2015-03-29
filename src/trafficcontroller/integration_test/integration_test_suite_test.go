@@ -42,17 +42,17 @@ var _ = BeforeSuite(func() {
 
 	gnatsdExec, err := gexec.Build("github.com/apcera/gnatsd")
 	Expect(err).ToNot(HaveOccurred())
-	gnatsdCommand = exec.Command(gnatsdExec, "-p", "4222")
+	gnatsdCommand := exec.Command(gnatsdExec, "-p", "4222")
 
-	gexec.Start(gnatsdCommand, nil, nil)
+	gnatsdSession, _ = gexec.Start(gnatsdCommand, nil, nil)
 
 	StartFakeRouter()
 
 	pathToTrafficControllerExec, err := gexec.Build("trafficcontroller")
 	Expect(err).ToNot(HaveOccurred())
 
-	command = exec.Command(pathToTrafficControllerExec, "--config=fixtures/trafficcontroller.json", "--debug")
-	gexec.Start(command, GinkgoWriter, GinkgoWriter)
+	tcCommand := exec.Command(pathToTrafficControllerExec, "--config=fixtures/trafficcontroller.json", "--debug")
+	trafficControllerSession, _ = gexec.Start(tcCommand, GinkgoWriter, GinkgoWriter)
 
 	localIPAddress, _ = localip.LocalIP()
 
@@ -71,8 +71,8 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	command.Process.Kill()
-	gnatsdCommand.Process.Kill()
+	trafficControllerSession.Kill().Wait()
+	gnatsdSession.Kill().Wait()
 
 	gexec.CleanupBuildArtifacts()
 
@@ -82,13 +82,14 @@ var _ = AfterSuite(func() {
 	fakeDoppler.Stop()
 })
 
-var command *exec.Cmd
-var gnatsdCommand *exec.Cmd
-var routerCommand *exec.Cmd
-var etcdRunner *etcdstorerunner.ETCDClusterRunner
-var etcdPort int
-var localIPAddress string
-var fakeDoppler *fake_doppler.FakeDoppler
+var (
+	trafficControllerSession *gexec.Session
+	gnatsdSession            *gexec.Session
+	etcdRunner               *etcdstorerunner.ETCDClusterRunner
+	etcdPort                 int
+	localIPAddress           string
+	fakeDoppler              *fake_doppler.FakeDoppler
+)
 
 const APP_ID = "1234"
 const AUTH_TOKEN = "bearer iAmAnAdmin"

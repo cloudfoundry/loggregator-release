@@ -69,8 +69,7 @@ var _ = BeforeEach(func() {
 })
 
 var _ = AfterEach(func() {
-	dopplerSession.Kill()
-	Eventually(dopplerSession).Should(gexec.Exit())
+	dopplerSession.Kill().Wait()
 })
 
 var _ = AfterSuite(func() {
