@@ -103,7 +103,7 @@ var _ = Describe("Dumping", func() {
 		dataReadChannel <- env2
 
 		Eventually(func() uint64 {
-			return TestMessageRouter.Metrics.ReceivedMessages
+			return TestMessageRouter.Emit().Metrics[3].Value.(uint64)
 		}, 3).Should(Equal(uint64(2)))
 
 		receivedChan := make(chan []byte, 2)
