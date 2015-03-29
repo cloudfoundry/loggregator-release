@@ -12,8 +12,8 @@ import (
 )
 
 type MessageRouter struct {
-	SinkManager sinkManager
-	Metrics     *metrics.MessageRouterMetrics
+	sinkManager sinkManager
+	metrics     *metrics.MessageRouterMetrics
 	logger      *gosteno.Logger
 	done        chan struct{}
 	stopOnce    sync.Once
@@ -25,8 +25,8 @@ type sinkManager interface {
 
 func NewMessageRouter(sinkManager sinkManager, logger *gosteno.Logger) *MessageRouter {
 	return &MessageRouter{
-		SinkManager: sinkManager,
-		Metrics:     &metrics.MessageRouterMetrics{},
+		sinkManager: sinkManager,
+		metrics:     &metrics.MessageRouterMetrics{},
 		logger:      logger,
 		done:        make(chan struct{}),
 	}
@@ -40,7 +40,7 @@ func (r *MessageRouter) Start(incomingLogChan <-chan *events.Envelope) {
 			r.logger.Debug("MessageRouter:MessageReceived:Done")
 			return
 		case envelope, ok := <-incomingLogChan:
-			atomic.AddUint64(&r.Metrics.ReceivedMessages, 1)
+			atomic.AddUint64(&r.metrics.ReceivedMessages, 1)
 			r.logger.Debug("MessageRouter:MessageReceived")
 			if !ok {
 				r.logger.Debug("MessageRouter:MessageReceived:NotOkay")
@@ -57,13 +57,13 @@ func (r *MessageRouter) Stop() {
 }
 
 func (r *MessageRouter) Emit() instrumentation.Context {
-	return r.Metrics.Emit()
+	return r.metrics.Emit()
 }
 
 func (r *MessageRouter) send(envelope *events.Envelope) {
 	appId := envelope_extensions.GetAppId(envelope)
 
 	r.logger.Debugf("MessageRouter:outgoingLogChan: Searching for sinks with appId [%s].", appId)
-	r.SinkManager.SendTo(appId, envelope)
+	r.sinkManager.SendTo(appId, envelope)
 	r.logger.Debugf("MessageRouter:outgoingLogChan: Done sending message.")
 }
