@@ -153,6 +153,7 @@ var _ = Describe("Metron", func() {
 			Eventually(func() *instrumentation.Context { return getContext("forwarder") }).ShouldNot(BeNil())
 
 			metric := getMetricFromContext(getContext("forwarder"), "fake-origin-2.fake-metric-name")
+			Expect(metric).ToNot(BeNil())
 			Expect(metric.Name).To(Equal("fake-origin-2.fake-metric-name"))
 			Expect(metric.Value).To(BeNumerically("==", 42))
 			Expect(metric.Tags["component"]).To(Equal("test-component"))
