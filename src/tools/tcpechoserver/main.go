@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"time"
 )
@@ -37,6 +38,8 @@ func main() {
 	}
 
 	go listen(listener)
+
+	log.Printf("Startup: tcp echo server listening")
 	blocker := make(chan bool)
 	<-blocker
 }

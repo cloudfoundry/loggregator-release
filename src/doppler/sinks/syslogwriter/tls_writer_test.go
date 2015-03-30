@@ -23,7 +23,7 @@ var _ = Describe("TLSWriter", func() {
 			outputURL, _ := url.Parse("syslog-tls://127.0.0.1:9998")
 			syslogWriter, _ = syslogwriter.NewTlsWriter(outputURL, "appId", true)
 			close(done)
-		}, 3)
+		}, 5)
 
 		AfterEach(func() {
 			syslogServerSession.Kill().Wait()
@@ -94,7 +94,7 @@ func startEncryptedTCPServer(syslogDrainAddress string) *gexec.Session {
 	command := exec.Command(pathToTCPEchoServer, "-address", syslogDrainAddress, "-ssl", "-cert", "fixtures/key.crt", "-key", "fixtures/key.key")
 	drainSession, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
+	Eventually(drainSession.Err, 10).Should(gbytes.Say("Startup: tcp echo server listening"))
 
-	time.Sleep(1000 * time.Millisecond) // give time for server to come up
 	return drainSession
 }
