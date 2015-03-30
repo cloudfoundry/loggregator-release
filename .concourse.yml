@@ -1,6 +1,7 @@
 ---
+platform: linux
 
-image: docker:///golang
+image: docker:///cloudfoundry/lamb-go14
 
 run:
   path: loggregator/bin/concourse_build.sh
