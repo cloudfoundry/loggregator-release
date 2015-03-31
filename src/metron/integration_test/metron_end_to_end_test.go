@@ -239,10 +239,10 @@ var _ = Describe("Metron", func() {
 	})
 
 	Context("Dropsonde message forwarding", func() {
-		var testServer net.PacketConn
+		var testDoppler net.PacketConn
 
 		BeforeEach(func() {
-			testServer, _ = net.ListenPacket("udp", "localhost:3457")
+			testDoppler, _ = net.ListenPacket("udp", "localhost:3457")
 
 			node := storeadapter.StoreNode{
 				Key:   "/healthstatus/doppler/z1/0",
@@ -255,51 +255,74 @@ var _ = Describe("Metron", func() {
 		})
 
 		AfterEach(func() {
-			testServer.Close()
+			testDoppler.Close()
 		})
 
 		It("forwards hmac signed messages to a healthy doppler server", func(done Done) {
+			type signedMessage struct {
+				signature []byte
+				message   []byte
+			}
+
 			defer close(done)
 
 			originalMessage := basicHeartbeatMessage()
 
 			mac := hmac.New(sha256.New, []byte("shared_secret"))
 			mac.Write(originalMessage)
+			signature := mac.Sum(nil)
 
-			connection, _ := net.Dial("udp", "localhost:51161")
+			metronInput, _ := net.Dial("udp", "localhost:51161")
 
-			readBuffer := make([]byte, 65535)
-			messageChan := make(chan []byte, 1000)
+			messageChan := make(chan signedMessage, 1000)
 
-			go func() {
+			stopTheWorld := make(chan struct{})
+			defer close(stopTheWorld)
+
+			readFromDoppler := func() {
+				gotSignedMessage := func(readData []byte) bool {
+					return len(readData) > len(signature)
+				}
+
+				readBuffer := make([]byte, 65535)
+
 				for {
-					readCount, _, _ := testServer.ReadFrom(readBuffer)
+					readCount, _, _ := testDoppler.ReadFrom(readBuffer)
 					readData := make([]byte, readCount)
 					copy(readData, readBuffer[:readCount])
 
-					if len(readData) > 32 {
-						messageChan <- readData[32:]
+					if gotSignedMessage(readData) {
+						messageChan <- signedMessage{signature: readData[:len(signature)], message: readData[len(signature):]}
+					}
+
+					select {
+					case <-stopTheWorld:
+						return
+					default:
 					}
 				}
-			}()
+			}
 
-			stopWrite := make(chan struct{})
-			defer close(stopWrite)
-			go func() {
+			go readFromDoppler()
+
+			writeToMetron := func() {
 				ticker := time.NewTicker(10 * time.Millisecond)
 
 				for {
-					connection.Write(originalMessage)
+					metronInput.Write(originalMessage)
+
 					select {
-					case <-stopWrite:
+					case <-stopTheWorld:
 						ticker.Stop()
 						return
 					case <-ticker.C:
 					}
 				}
-			}()
+			}
 
-			Eventually(messageChan).Should(Receive(Equal(originalMessage)))
+			go writeToMetron()
+
+			Eventually(messageChan).Should(Receive(Equal(signedMessage{signature: signature, message: originalMessage})))
 		})
 	})
 })
