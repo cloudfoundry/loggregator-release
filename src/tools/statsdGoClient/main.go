@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-    client, err := statsd.NewClient("127.0.0.1:8125", "")
+    client, err := statsd.NewClient("127.0.0.1:8125", "testNamespace")
     if err != nil {
         fmt.Printf("Error connecting to statsd server: %v\n", err.Error())
         return

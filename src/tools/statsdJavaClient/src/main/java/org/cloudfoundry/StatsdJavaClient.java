@@ -8,7 +8,7 @@ import java.util.Scanner;
 public class StatsdJavaClient {
 
     public static final void main(String[] args) throws Exception {
-        StatsDClient statsd = new NonBlockingStatsDClient("", "localhost", 8125);
+        StatsDClient statsd = new NonBlockingStatsDClient("testNamespace", "localhost", 8125);
         Scanner scanner = new Scanner(System.in);
         while (scanner.hasNextLine()) {
             String line = scanner.nextLine();
