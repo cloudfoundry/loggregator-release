@@ -61,3 +61,6 @@
 [submodule "src/github.com/pivotal-golang/localip"]
 	path = src/github.com/pivotal-golang/localip
 	url = https://github.com/pivotal-golang/localip
+[submodule "src/github.com/cactus/go-statsd-client"]
+	path = src/github.com/cactus/go-statsd-client
+	url = https://github.com/cactus/go-statsd-client
