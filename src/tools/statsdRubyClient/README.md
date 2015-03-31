@@ -5,8 +5,6 @@ The client reads the standard input or any file passed in as an argument for sta
 valid commands are:
 
 timing <name> <value>
-increment <name>
-decrement <name>
 gauge <name> <value>
 count <name> <value> [sample_rate]
 
