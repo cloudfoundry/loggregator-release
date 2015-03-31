@@ -40,6 +40,8 @@ func main() {
             client.Gauge(name, value, 1.0)
             case "timing":
             client.Timing(name, value, 1.0)
+            default:
+            fmt.Printf("Unsupported operation: %s\n", statsdType)
         }
     }
 }
