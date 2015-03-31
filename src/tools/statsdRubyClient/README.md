@@ -9,3 +9,11 @@ increment <name>
 decrement <name>
 gauge <name> <value>
 count <name> <value> [sample_rate]
+
+# Running
+
+Run `bundle install` to get dependencies and then run:
+
+```
+ruby statsdRubyClient.rb
+```
