@@ -23,6 +23,9 @@ properties:
   metron_agent.dropsonde_incoming_port:
     description: "Incoming port for dropsonde log messages"
     default: 3457
+  metron_agent.statsd_incoming_port:
+    description: "Incoming port for statsd metrics"
+    default: 8125
   metron_agent.debug:
     description: "boolean value to turn on verbose mode"
     default: false

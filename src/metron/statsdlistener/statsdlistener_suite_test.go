@@ -1,4 +1,4 @@
-package integration_test
+package statsdlistener_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestIntegrationTest(t *testing.T) {
+func TestStatsdlistener(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "IntegrationTest Suite")
+	RunSpecs(t, "Statsdlistener Suite")
 }
