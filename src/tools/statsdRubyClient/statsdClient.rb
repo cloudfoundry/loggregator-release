@@ -1,8 +1,11 @@
-require 'statsd'
-# Set up a global Statsd client for a server on localhost:8125
-$statsd = Statsd.new('localhost', 8125).tap{|sd| sd.namespace = 'testNamespace'}
+#!/usr/bin/env ruby
 
-ARGF.each do |line|
+require 'statsd'
+# Set up a global Statsd client for a server on specified port (or 8125 by default)
+port = ARGV[0] || 8125
+$statsd = Statsd.new('localhost', port.to_i).tap{|sd| sd.namespace = 'testNamespace'}
+
+while line = $stdin.gets
   inputs = line.split(' ')
   if (inputs.length < 3)
     puts "Wrong number of inputs, 3 needed at least"

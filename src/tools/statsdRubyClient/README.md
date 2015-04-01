@@ -1,6 +1,6 @@
 #Summary
 
-This is a simple ruby client which can be used to send metrics to a statsd server running locally on port 8125.
+This is a simple ruby client which can be used to send metrics to a statsd server running locally.
 The client reads the standard input or any file passed in as an argument for statsd commands. The
 valid commands are:
 
@@ -15,5 +15,7 @@ count <name> <value> [sample_rate]
 Run `bundle install` to get dependencies and then run:
 
 ```
-ruby statsdRubyClient.rb
+bundle exec ./statsdClient.rb [PORT]
 ```
+
+`PORT` is optional; the client defaults to 8125.
