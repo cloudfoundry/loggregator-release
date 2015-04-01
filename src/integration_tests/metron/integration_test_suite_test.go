@@ -14,6 +14,7 @@ import (
 
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/gomega/gexec"
+	"github.com/onsi/gomega/gbytes"
 )
 
 func TestIntegrationTest(t *testing.T) {
@@ -32,7 +33,7 @@ var _ = BeforeSuite(func() {
 
 	command := exec.Command(pathToMetronExecutable, "--config=fixtures/metron.json", "--debug")
 
-	metronSession, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
+	metronSession, err = gexec.Start(command, gexec.NewPrefixedWriter("[o][metron]", GinkgoWriter), gexec.NewPrefixedWriter("[e][metron]", GinkgoWriter))
 	Expect(err).ShouldNot(HaveOccurred())
 
 	localIPAddress, _ = localip.LocalIP()
@@ -46,6 +47,8 @@ var _ = BeforeSuite(func() {
 	etcdPort = 5800 + (config.GinkgoConfig.ParallelNode-1)*10
 	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
 	etcdRunner.Start()
+
+	Eventually(metronSession).Should(gbytes.Say("Listening for statsd on host localhost:51162"))
 })
 
 var _ = AfterSuite(func() {
