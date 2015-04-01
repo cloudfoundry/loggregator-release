@@ -42,8 +42,10 @@ var _ = Describe("NewDopplerEndpoint", func() {
 	})
 
 	Context("when endpoint is not 'recentlogs'", func() {
-		dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("firehose", "firehose", true)
-		Expect(dopplerEndpoint.Timeout).To(Equal(time.Duration(0)))
+		It("defaults to never timing out", func() {
+			dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("firehose", "firehose", true)
+			Expect(dopplerEndpoint.Timeout).To(Equal(time.Duration(0)))
+		})
 	})
 })
 
