@@ -114,6 +114,8 @@ func parseStat(data string) (*events.Envelope, error) {
 	switch statType {
 	case "ms":
 		unit = "ms"
+	case "c":
+		unit = "counter"
 	default:
 		unit = "gauge"
 	}

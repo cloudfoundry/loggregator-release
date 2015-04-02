@@ -66,13 +66,24 @@ var _ = Describe("Statsd support", func() {
 
 			close(done)
 		}, 5)
+
+		It("outputs counters as signed value metric messages with unit 'counter'", func(done Done) {
+			connection, err := net.Dial("udp", "localhost:51162")
+			Expect(err).ToNot(HaveOccurred())
+			defer connection.Close()
+
+			statsdmsg := []byte("fake-origin.test.counter:42|c")
+			_, err = connection.Write(statsdmsg)
+			Expect(err).ToNot(HaveOccurred())
+
+			checkValueMetric(fakeDoppler, basicValueMetric("test.counter", 42, "counter"), "fake-origin")
+
+			close(done)
+		}, 5)
 	})
 
 	Context("with a Go statsd client", func() {
 		It("forwards gauges as signed value metric messages", func(done Done) {
-			pathToGoStatsdClient, err := gexec.Build("tools/statsdGoClient")
-			Expect(err).NotTo(HaveOccurred())
-
 			clientCommand := exec.Command(pathToGoStatsdClient, "51162")
 
 			clientInput, err := clientCommand.StdinPipe()
@@ -90,6 +101,45 @@ var _ = Describe("Statsd support", func() {
 			clientSession.Kill().Wait()
 			close(done)
 		}, 5)
+
+		It("forwards timings as signed value metric messages", func(done Done) {
+			clientCommand := exec.Command(pathToGoStatsdClient, "51162")
+
+			clientInput, err := clientCommand.StdinPipe()
+			Expect(err).NotTo(HaveOccurred())
+
+			clientSession, err := gexec.Start(clientCommand, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			clientInput.Write([]byte("timing test.timing 23\n"))
+			Eventually(metronSession).Should(gbytes.Say("StatsdListener: Read "))
+
+			checkValueMetric(fakeDoppler, basicValueMetric("test.timing", 23, "ms"), "testNamespace")
+
+			clientInput.Close()
+			clientSession.Kill().Wait()
+			close(done)
+		}, 5)
+
+		It("forwards counters as signed value metric messages", func(done Done) {
+			clientCommand := exec.Command(pathToGoStatsdClient, "51162")
+
+			clientInput, err := clientCommand.StdinPipe()
+			Expect(err).NotTo(HaveOccurred())
+
+			clientSession, err := gexec.Start(clientCommand, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			clientInput.Write([]byte("count test.counter 27\n"))
+			Eventually(metronSession).Should(gbytes.Say("StatsdListener: Read "))
+
+			checkValueMetric(fakeDoppler, basicValueMetric("test.counter", 27, "counter"), "testNamespace")
+
+			clientInput.Close()
+			clientSession.Kill().Wait()
+			close(done)
+		}, 5)
+
 	})
 })
 
@@ -98,7 +148,7 @@ func checkValueMetric(fakeDoppler net.PacketConn, valueMetric *events.ValueMetri
 	readCount, _, _ := fakeDoppler.ReadFrom(readBuffer)
 	readData := make([]byte, readCount)
 	copy(readData, readBuffer[:readCount])
-	Expect(len(readData)).To(BeNumerically(">", 32))
+	Expect(len(readData)).To(BeNumerically(">", 32), "Failed to read enough data to be a message")
 	readData = readData[32:]
 
 	var receivedEnvelope events.Envelope

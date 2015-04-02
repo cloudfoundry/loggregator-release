@@ -27,9 +27,14 @@ var etcdRunner *etcdstorerunner.ETCDClusterRunner
 var etcdPort int
 var localIPAddress string
 
+var pathToGoStatsdClient string
+
 var _ = BeforeSuite(func() {
 	pathToMetronExecutable, err := gexec.Build("metron")
 	Expect(err).ShouldNot(HaveOccurred())
+
+	pathToGoStatsdClient, err = gexec.Build("tools/statsdGoClient")
+	Expect(err).NotTo(HaveOccurred())
 
 	command := exec.Command(pathToMetronExecutable, "--config=fixtures/metron.json", "--debug")
 
