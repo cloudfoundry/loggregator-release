@@ -13,6 +13,16 @@ import (
 )
 
 var _ = Describe("EventListener", func() {
+	Context("without a running listener", func(){
+		It("Emit returns a context with the given name", func() {
+			pinger := fakePingSender{}
+			listener, _ := eventlistener.NewEventListener("127.0.0.1:3456", gosteno.NewLogger("TestLogger"), "secretEventOrange", &pinger)
+			context := listener.Emit()
+
+			Expect(context.Name).To(Equal("secretEventOrange"))
+		})
+	})
+
 	Context("with a listener running", func() {
 		var listener eventlistener.EventListener
 		var dataChannel <-chan []byte
@@ -37,7 +47,7 @@ var _ = Describe("EventListener", func() {
 			fakePinger.Wait()
 		})
 
-		It("should listen to the socket", func(done Done) {
+		It("sends data recieved on UDP socket to the channel", func(done Done) {
 			expectedData := "Some Data"
 			otherData := "More stuff"
 
@@ -55,20 +65,6 @@ var _ = Describe("EventListener", func() {
 			receivedAgain := <-dataChannel
 			Expect(string(receivedAgain)).To(Equal(otherData))
 
-			metrics := listener.Emit().Metrics
-			Expect(metrics).To(HaveLen(3)) //make sure all expected metrics are present
-			for _, metric := range metrics {
-				switch metric.Name {
-				case "currentBufferCount":
-					Expect(metric.Value).To(Equal(0))
-				case "receivedMessageCount":
-					Expect(metric.Value).To(Equal(uint64(2)))
-				case "receivedByteCount":
-					Expect(metric.Value).To(Equal(uint64(19)))
-				default:
-					Fail(fmt.Sprintf("Got an invalid metric name: %s", metric.Name))
-				}
-			}
 			close(done)
 		}, 2)
 
@@ -83,16 +79,38 @@ var _ = Describe("EventListener", func() {
 
 			close(done)
 		})
-	})
 
-	Describe("Emit", func() {
-		It("uses the given name for the context", func() {
-			pinger := fakePingSender{}
-			listener, _ := eventlistener.NewEventListener("127.0.0.1:3456", gosteno.NewLogger("TestLogger"), "secretEventOrange", &pinger)
-			context := listener.Emit()
+		It("emits metrics related to data sent in on udp connection", func(done Done) {
+			expectedData := "Some Data"
+			otherData := "More stuff"
+			connection, err := net.Dial("udp", "localhost:3456")
+			dataByteCount := len(otherData + expectedData)
 
-			Expect(context.Name).To(Equal("secretEventOrange"))
-		})
+			_, err = connection.Write([]byte(expectedData))
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = connection.Write([]byte(otherData))
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(dataChannel).Should(Receive())
+			Eventually(dataChannel).Should(Receive())
+
+			metrics := listener.Emit().Metrics
+			Expect(metrics).To(HaveLen(3))
+			for _, metric := range metrics {
+				switch metric.Name {
+				case "currentBufferCount":
+					Expect(metric.Value).To(Equal(0))
+				case "receivedMessageCount":
+					Expect(metric.Value).To(Equal(uint64(2)))
+				case "receivedByteCount":
+					Expect(metric.Value).To(Equal(uint64(dataByteCount)))
+				default:
+					Fail(fmt.Sprintf("Got an invalid metric name: %s", metric.Name))
+				}
+			}
+			close(done)
+		}, 2)
 	})
 })
 
