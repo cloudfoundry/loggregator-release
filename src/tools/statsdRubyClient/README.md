@@ -1,8 +1,7 @@
 #Summary
 
 This is a simple ruby client which can be used to send metrics to a statsd server running locally.
-The client reads the standard input or any file passed in as an argument for statsd commands. The
-valid commands are:
+The client reads the standard input for statsd commands. The valid commands are:
 
 ```
 timing <name> <value> [sample_rate]
@@ -18,4 +17,4 @@ Run `bundle install` to get dependencies and then run:
 bundle exec ./statsdClient.rb [PORT]
 ```
 
-`PORT` is optional; the client defaults to 8125.
+The optional parameter `PORT` specifies the port of the statsd server. It defaults to 8125.
