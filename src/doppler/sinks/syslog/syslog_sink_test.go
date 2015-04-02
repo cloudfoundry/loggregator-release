@@ -273,6 +273,7 @@ var _ = Describe("SyslogSink", func() {
 			sysLogger.ReceivedMessages()
 
 			metric := syslogSink.GetInstrumentationMetric()
+			Expect(metric.Name).To(Equal("numberOfMessagesLost"))
 			Expect(metric.Value).To(Equal(int64(100)))
 			Expect(metric.Tags["appId"]).To(Equal("appId"))
 			Expect(metric.Tags["drainUrl"]).To(Equal("syslog://using-fake"))
