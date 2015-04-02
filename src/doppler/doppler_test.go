@@ -18,10 +18,6 @@ import (
 	. "github.com/onsi/ginkgo"
 )
 
-// TODO: test error logging and metrics from unmarshaller stage
-// messageRouter.Metrics.UnmarshalErrorsInParseEnvelopes++
-//messageRouter.logger.Errorf("Log message could not be unmarshaled. Dropping it... Error: %v. Data: %v", err, envelopedLog)
-
 var _ = Describe("Doppler Server", func() {
 	var dopplerInstance *doppler.Doppler
 
