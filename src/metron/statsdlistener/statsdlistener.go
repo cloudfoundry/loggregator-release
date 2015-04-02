@@ -45,14 +45,12 @@ func (l *StatsdListener) Run(outputChan chan *events.Envelope) {
 	maxUDPsize := 65535
 	readBytes := make([]byte, maxUDPsize)
 
-	for {
-		select {
-		case <-l.stopChan:
-			connection.Close()
-			return
-		default:
-		}
+	go func() {
+		<-l.stopChan
+		connection.Close()
+	}()
 
+	for {
 		readCount, senderAddr, err := connection.ReadFrom(readBytes)
 		if err != nil {
 			l.Debugf("Error while reading. %s", err)
@@ -65,9 +63,12 @@ func (l *StatsdListener) Run(outputChan chan *events.Envelope) {
 		scanner := bufio.NewScanner(bytes.NewBuffer(trimmedBytes))
 		for scanner.Scan() {
 			line := scanner.Text()
-			envelope := parseStat(line)
-
-			outputChan <- envelope
+			envelope, err := parseStat(line)
+			if err == nil {
+				outputChan <- envelope
+			} else {
+				l.Warnf("Error parsing stat line \"%s\": %s", line, err.Error())
+			}
 		}
 	}
 
@@ -77,7 +78,7 @@ func (l *StatsdListener) Stop() {
 	close(l.stopChan)
 }
 
-func parseStat(data string) *events.Envelope {
+func parseStat(data string) (*events.Envelope, error) {
 	parts := strings.Split(data, ":")
 
 	totalName := parts[0]
@@ -88,9 +89,12 @@ func parseStat(data string) *events.Envelope {
 	totalValue := parts[1]
 	valueParts := strings.Split(totalValue, "|")
 	valueString := valueParts[0]
-	value, _ := strconv.ParseFloat(valueString, 64) // TODO: handle error
+	value, err := strconv.ParseFloat(valueString, 64)
+	if err != nil {
+		return nil, err
+	}
 
-	return &events.Envelope{
+	env := &events.Envelope{
 		Origin:    &origin,
 		Timestamp: proto.Int64(time.Now().UnixNano()),
 		EventType: events.Envelope_ValueMetric.Enum(),
@@ -101,5 +105,7 @@ func parseStat(data string) *events.Envelope {
 			Unit:  proto.String("gauge"),
 		},
 	}
+
+	return env, nil
 
 }
