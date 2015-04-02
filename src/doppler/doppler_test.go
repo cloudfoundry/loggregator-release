@@ -4,7 +4,6 @@ import (
 	doppler "doppler"
 
 	"net"
-	"runtime"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
@@ -17,7 +16,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 // TODO: test error logging and metrics from unmarshaller stage
@@ -35,26 +33,6 @@ var _ = Describe("Doppler Server", func() {
 
 	AfterEach(func() {
 		dopplerInstance.Stop()
-	})
-
-	Describe("ity's", func() {
-		It("doesn't leak goroutines when sinks timeout", func() {
-			time.Sleep(time.Duration(dopplerConfig.SinkInactivityTimeoutSeconds) * time.Second) // let existing application sinks timeout
-
-			goroutineCount := runtime.NumGoroutine()
-
-			connection, _ := net.Dial("udp", "127.0.0.1:3457")
-
-			expectedMessageString := "Some Data"
-			unmarshalledLogMessage := factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp-unique-for-goroutine-leak-test", "App")
-			expectedMessage := MarshalEvent(unmarshalledLogMessage, "secret")
-
-			_, err := connection.Write(expectedMessage)
-			Expect(err).To(BeNil())
-			Eventually(runtime.NumGoroutine).Should(Equal(goroutineCount + 2))
-			time.Sleep(time.Duration(dopplerConfig.SinkInactivityTimeoutSeconds) * time.Second)
-			Expect(runtime.NumGoroutine()).To(Equal(goroutineCount))
-		})
 	})
 
 	Context("metric emission", func() {
