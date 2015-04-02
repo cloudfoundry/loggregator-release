@@ -68,9 +68,12 @@ var _ = Describe("Statsd support", func() {
 		}, 5)
 	})
 
-	Context("with a Ruby statsd client", func() {
+	Context("with a Go statsd client", func() {
 		It("forwards gauges as signed value metric messages", func(done Done) {
-			clientCommand := exec.Command("/bin/sh", "startStatsdRubyClient.sh")
+			pathToGoStatsdClient, err := gexec.Build("tools/statsdGoClient")
+			Expect(err).NotTo(HaveOccurred())
+
+			clientCommand := exec.Command(pathToGoStatsdClient, "51162")
 
 			clientInput, err := clientCommand.StdinPipe()
 			Expect(err).NotTo(HaveOccurred())
@@ -95,6 +98,7 @@ func checkValueMetric(fakeDoppler net.PacketConn, valueMetric *events.ValueMetri
 	readCount, _, _ := fakeDoppler.ReadFrom(readBuffer)
 	readData := make([]byte, readCount)
 	copy(readData, readBuffer[:readCount])
+	Expect(len(readData)).To(BeNumerically(">", 32))
 	readData = readData[32:]
 
 	var receivedEnvelope events.Envelope
