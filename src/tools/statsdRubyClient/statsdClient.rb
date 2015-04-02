@@ -15,14 +15,14 @@ while line = $stdin.gets
   statsd_type = inputs[0]
   name = inputs[1]
   value = inputs[2].to_i
+  sample_rate = inputs.length != 4 ? 1 : inputs[3].to_f
   case statsd_type
     when "count"
-      sample_rate = inputs.length != 4 ? 1 : inputs[3].to_f
       $statsd.count name, value, sample_rate
     when "gauge"
-      $statsd.gauge name, value
+      $statsd.gauge name, value, sample_rate
     when "timing"
-      $statsd.timing name, value
+      $statsd.timing name, value, sample_rate
     else
       puts "Unsupported operation: " + statsd_type
       next

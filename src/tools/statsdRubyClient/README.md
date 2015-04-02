@@ -5,9 +5,9 @@ The client reads the standard input or any file passed in as an argument for sta
 valid commands are:
 
 ```
-timing <name> <value>
-gauge <name> <value>
-count <name> <value> [sample_rate]
+timing <name> <value> [sample_rate]
+gauge <name> <value>  [sample_rate]
+count <name> <value>  [sample_rate]
 ```
 
 # Running
