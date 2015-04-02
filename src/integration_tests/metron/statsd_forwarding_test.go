@@ -97,6 +97,21 @@ var _ = Describe("Statsd support", func() {
 
 			checkValueMetric(fakeDoppler, basicValueMetric("test.gauge", 23, "gauge"), "testNamespace")
 
+			clientInput.Write([]byte("gaugedelta test.gauge 7\n"))
+			Eventually(metronSession).Should(gbytes.Say("StatsdListener: Read "))
+
+			checkValueMetric(fakeDoppler, basicValueMetric("test.gauge", 30, "gauge"), "testNamespace")
+
+			clientInput.Write([]byte("gaugedelta test.gauge -5\n"))
+			Eventually(metronSession).Should(gbytes.Say("StatsdListener: Read "))
+
+			checkValueMetric(fakeDoppler, basicValueMetric("test.gauge", 25, "gauge"), "testNamespace")
+
+			clientInput.Write([]byte("gauge test.gauge 50\n"))
+			Eventually(metronSession).Should(gbytes.Say("StatsdListener: Read "))
+
+			checkValueMetric(fakeDoppler, basicValueMetric("test.gauge", 50, "gauge"), "testNamespace")
+
 			clientInput.Close()
 			clientSession.Kill().Wait()
 			close(done)
@@ -135,11 +150,20 @@ var _ = Describe("Statsd support", func() {
 
 			checkValueMetric(fakeDoppler, basicValueMetric("test.counter", 27, "counter"), "testNamespace")
 
+			clientInput.Write([]byte("count test.counter +3\n"))
+			Eventually(metronSession).Should(gbytes.Say("StatsdListener: Read "))
+
+			checkValueMetric(fakeDoppler, basicValueMetric("test.counter", 30, "counter"), "testNamespace")
+
+			clientInput.Write([]byte("count test.counter -10\n"))
+			Eventually(metronSession).Should(gbytes.Say("StatsdListener: Read "))
+
+			checkValueMetric(fakeDoppler, basicValueMetric("test.counter", 20, "counter"), "testNamespace")
+
 			clientInput.Close()
 			clientSession.Kill().Wait()
 			close(done)
 		}, 5)
-
 	})
 })
 

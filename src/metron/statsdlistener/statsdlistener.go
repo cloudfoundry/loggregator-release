@@ -18,6 +18,9 @@ type StatsdListener struct {
 	host     string
 	stopChan chan struct{}
 
+	gaugeValues   map[string]float64 // key is "origin.name"
+	counterValues map[string]float64 // key is "origin.name"
+
 	*gosteno.Logger
 }
 
@@ -25,6 +28,9 @@ func NewStatsdListener(listenerAddress string, logger *gosteno.Logger, name stri
 	return StatsdListener{
 		host:     listenerAddress,
 		stopChan: make(chan struct{}),
+
+		gaugeValues:   make(map[string]float64),
+		counterValues: make(map[string]float64),
 
 		Logger: logger,
 	}
@@ -64,7 +70,7 @@ func (l *StatsdListener) Run(outputChan chan *events.Envelope) {
 		scanner := bufio.NewScanner(bytes.NewBuffer(trimmedBytes))
 		for scanner.Scan() {
 			line := scanner.Text()
-			envelope, err := parseStat(line)
+			envelope, err := l.parseStat(line)
 			if err == nil {
 				outputChan <- envelope
 			} else {
@@ -81,7 +87,7 @@ func (l *StatsdListener) Stop() {
 
 var statsdRegexp = regexp.MustCompile(`([^.]+)\.([^:]+):([+-]?)(\d+(\.\d+)?)\|(ms|g|c)(\|@(\d+(\.\d+)?))?`)
 
-func parseStat(data string) (*events.Envelope, error) {
+func (l *StatsdListener) parseStat(data string) (*events.Envelope, error) {
 	parts := statsdRegexp.FindStringSubmatch(data)
 
 	if len(parts) == 0 {
@@ -91,7 +97,7 @@ func parseStat(data string) (*events.Envelope, error) {
 	// complete matched string = parts[0]
 	origin := parts[1]
 	name := parts[2]
-	// increment/decrement = parts[3]
+	incrementSign := parts[3]
 	valueString := parts[4]
 	// decimal part of valueString = parts[5]
 	statType := parts[6]
@@ -116,8 +122,10 @@ func parseStat(data string) (*events.Envelope, error) {
 		unit = "ms"
 	case "c":
 		unit = "counter"
+		value = l.counterValue(origin, name, value, incrementSign)
 	default:
 		unit = "gauge"
+		value = l.gaugeValue(origin, name, value, incrementSign)
 	}
 
 	env := &events.Envelope{
@@ -133,4 +141,39 @@ func parseStat(data string) (*events.Envelope, error) {
 	}
 
 	return env, nil
+}
+
+func (l *StatsdListener) counterValue(origin string, name string, value float64, incrementSign string) float64 {
+	key := fmt.Sprintf("%s.%s", origin, name)
+	oldVal := l.counterValues[key]
+	var newVal float64
+
+	switch incrementSign {
+	case "-":
+		newVal = oldVal - value
+	default:
+		newVal = oldVal + value
+	}
+
+	l.counterValues[key] = newVal
+	return newVal
+}
+
+func (l *StatsdListener) gaugeValue(origin string, name string, value float64, incrementSign string) float64 {
+
+	key := fmt.Sprintf("%s.%s", origin, name)
+	oldVal := l.gaugeValues[key]
+	var newVal float64
+
+	switch incrementSign {
+	case "+":
+		newVal = oldVal + value
+	case "-":
+		newVal = oldVal - value
+	default:
+		newVal = value
+	}
+
+	l.gaugeValues[key] = newVal
+	return newVal
 }

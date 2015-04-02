@@ -45,6 +45,8 @@ func main() {
 			client.Inc(name, value, sampleRate)
 		case "gauge":
 			client.Gauge(name, value, sampleRate)
+		case "gaugedelta":
+			client.GaugeDelta(name, value, sampleRate)
 		case "timing":
 			client.Timing(name, value, sampleRate)
 		default:
