@@ -66,7 +66,7 @@ var _ = Describe("EventListener", func() {
 			Expect(string(receivedAgain)).To(Equal(otherData))
 
 			close(done)
-		}, 2)
+		}, 5)
 
 		It("requests a heartbeat from the sender when it receives an event", func(done Done) {
 			connection, err := net.Dial("udp", "localhost:3456")
