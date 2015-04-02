@@ -13,7 +13,7 @@ import (
 )
 
 var _ = Describe("EventListener", func() {
-	Context("without a running listener", func(){
+	Context("without a running listener", func() {
 		It("Emit returns a context with the given name", func() {
 			pinger := fakePingSender{}
 			listener, _ := eventlistener.NewEventListener("127.0.0.1:3456", gosteno.NewLogger("TestLogger"), "secretEventOrange", &pinger)
