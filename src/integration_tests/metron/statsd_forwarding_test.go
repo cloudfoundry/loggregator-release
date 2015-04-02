@@ -42,21 +42,28 @@ var _ = Describe("Statsd support", func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer connection.Close()
 
-			statsdmsg := []byte("fake-origin.test.gauge:23|g")
+			statsdmsg := []byte("fake-origin.test.gauge:23|g\nfake-origin.sampled.gauge:23|g|@0.2")
 			_, err = connection.Write(statsdmsg)
 			Expect(err).ToNot(HaveOccurred())
 
-			readBuffer := make([]byte, 65535)
-			readCount, _, _ := fakeDoppler.ReadFrom(readBuffer)
-			readData := make([]byte, readCount)
-			copy(readData, readBuffer[:readCount])
-			readData = readData[32:]
+			checkValueMetric(fakeDoppler, basicValueMetric("test.gauge", 23, "gauge"), "fake-origin")
+			checkValueMetric(fakeDoppler, basicValueMetric("sampled.gauge", 115, "gauge"), "fake-origin")
 
-			var receivedEnvelope events.Envelope
-			Expect(proto.Unmarshal(readData, &receivedEnvelope)).To(Succeed())
 
-			Expect(receivedEnvelope.GetValueMetric()).To(Equal(basicValueMetric()))
-			Expect(receivedEnvelope.GetOrigin()).To(Equal("fake-origin"))
+			close(done)
+		}, 5)
+
+		It("outputs timings as signed value metric messages with unit 'ms'", func(done Done) {
+			connection, err := net.Dial("udp", "localhost:51162")
+			Expect(err).ToNot(HaveOccurred())
+			defer connection.Close()
+
+			statsdmsg := []byte("fake-origin.test.timing:23.5|ms")
+			_, err = connection.Write(statsdmsg)
+			Expect(err).ToNot(HaveOccurred())
+
+			checkValueMetric(fakeDoppler, basicValueMetric("test.timing", 23.5, "ms"), "fake-origin")
+
 			close(done)
 		}, 5)
 	})
@@ -74,18 +81,7 @@ var _ = Describe("Statsd support", func() {
 			clientInput.Write([]byte("gauge test.gauge 23\n"))
 			Eventually(metronSession).Should(gbytes.Say("StatsdListener: Read "))
 
-			readBuffer := make([]byte, 65535)
-			readCount, _, _ := fakeDoppler.ReadFrom(readBuffer)
-			readData := make([]byte, readCount)
-			copy(readData, readBuffer[:readCount])
-			Expect(len(readData)).To(BeNumerically(">", 32))
-			readData = readData[32:]
-
-			var receivedEnvelope events.Envelope
-			Expect(proto.Unmarshal(readData, &receivedEnvelope)).To(Succeed())
-
-			Expect(receivedEnvelope.GetValueMetric()).To(Equal(basicValueMetric()))
-			Expect(receivedEnvelope.GetOrigin()).To(Equal("testNamespace"))
+			checkValueMetric(fakeDoppler, basicValueMetric("test.gauge", 23, "gauge"), "testNamespace")
 
 			clientInput.Close()
 			clientSession.Kill().Wait()
@@ -93,3 +89,17 @@ var _ = Describe("Statsd support", func() {
 		}, 5)
 	})
 })
+
+func checkValueMetric(fakeDoppler net.PacketConn, valueMetric *events.ValueMetric, origin string) {
+	readBuffer := make([]byte, 65535)
+	readCount, _, _ := fakeDoppler.ReadFrom(readBuffer)
+	readData := make([]byte, readCount)
+	copy(readData, readBuffer[:readCount])
+	readData = readData[32:]
+
+	var receivedEnvelope events.Envelope
+	Expect(proto.Unmarshal(readData, &receivedEnvelope)).To(Succeed())
+
+	Expect(receivedEnvelope.GetValueMetric()).To(Equal(valueMetric))
+	Expect(receivedEnvelope.GetOrigin()).To(Equal(origin))
+}

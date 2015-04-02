@@ -12,11 +12,11 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func basicValueMetric() *events.ValueMetric {
+func basicValueMetric(name string, value float64, unit string) *events.ValueMetric {
 	return &events.ValueMetric{
-		Name:  proto.String("test.gauge"),
-		Value: proto.Float64(23.0),
-		Unit:  proto.String("gauge"),
+		Name:  proto.String(name),
+		Value: proto.Float64(value),
+		Unit:  proto.String(unit),
 	}
 }
 

@@ -3,9 +3,10 @@ package statsdlistener
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"net"
+	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/events"
@@ -78,20 +79,43 @@ func (l *StatsdListener) Stop() {
 	close(l.stopChan)
 }
 
+var statsdRegexp = regexp.MustCompile(`([^.]+)\.([^:]+):([+-]?)(\d+(\.\d+)?)\|(ms|g|c)(\|@(\d+(\.\d+)?))?`)
+
 func parseStat(data string) (*events.Envelope, error) {
-	parts := strings.Split(data, ":")
+	parts := statsdRegexp.FindStringSubmatch(data)
 
-	totalName := parts[0]
-	nameParts := strings.SplitN(totalName, ".", 2)
-	origin := nameParts[0]
-	name := nameParts[1]
+	if len(parts) == 0 {
+		return nil, fmt.Errorf("Input line '%s' was not a valid statsd line.", data)
+	}
 
-	totalValue := parts[1]
-	valueParts := strings.Split(totalValue, "|")
-	valueString := valueParts[0]
-	value, err := strconv.ParseFloat(valueString, 64)
-	if err != nil {
-		return nil, err
+	// complete matched string = parts[0]
+	origin := parts[1]
+	name := parts[2]
+	// increment/decrement = parts[3]
+	valueString := parts[4]
+	// decimal part of valueString = parts[5]
+	statType := parts[6]
+	// full sampling substring = parts[7]
+	sampleRateString := parts[8]
+	// decimal part of sampleRate = parts[9]
+
+	value, _ := strconv.ParseFloat(valueString, 64)
+
+	var sampleRate float64
+	if len(sampleRateString) != 0 {
+		sampleRate, _ = strconv.ParseFloat(sampleRateString, 64)
+	} else {
+		sampleRate = 1
+	}
+
+	value = value / sampleRate
+
+	var unit string
+	switch statType {
+	case "ms":
+		unit = "ms"
+	default:
+		unit = "gauge"
 	}
 
 	env := &events.Envelope{
@@ -102,10 +126,9 @@ func parseStat(data string) (*events.Envelope, error) {
 		ValueMetric: &events.ValueMetric{
 			Name:  &name,
 			Value: &value,
-			Unit:  proto.String("gauge"),
+			Unit:  &unit,
 		},
 	}
 
 	return env, nil
-
 }
