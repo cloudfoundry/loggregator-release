@@ -66,39 +66,5 @@ var _ = Describe("Etcd Integration tests", func() {
 				return err
 			}).ShouldNot(HaveOccurred())
 		})
-
-		It("has a 10 sec TTL", func() {
-			stopHeartbeats = main.StartHeartbeats(localIp, time.Second, &conf, loggertesthelper.Logger())
-			adapter := etcdRunner.Adapter()
-
-			Eventually(func() uint64 {
-				node, _ := adapter.Get("healthstatus/doppler/z1/doppler_z1/0")
-				return node.TTL
-			}).Should(BeNumerically(">", 0))
-		})
-
-		It("updates the value periodically", func() {
-			stopHeartbeats = main.StartHeartbeats(localIp, time.Second, &conf, loggertesthelper.Logger())
-			adapter := etcdRunner.Adapter()
-
-			var indices []uint64
-			var index uint64
-			Eventually(func() uint64 {
-				node, _ := adapter.Get("healthstatus/doppler/z1/doppler_z1/0")
-				index = node.Index
-				return node.Index
-			}).Should(BeNumerically(">", 0))
-			indices = append(indices, index)
-
-			for i := 0; i < 3; i++ {
-				Eventually(func() uint64 {
-					node, _ := adapter.Get("healthstatus/doppler/z1/doppler_z1/0")
-					index = node.Index
-					return node.Index
-				}).Should(BeNumerically(">", indices[i]))
-				indices = append(indices, index)
-
-			}
-		})
 	})
 })
