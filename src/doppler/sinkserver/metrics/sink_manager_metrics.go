@@ -114,14 +114,18 @@ func (sinkManagerMetrics *SinkManagerMetrics) ReportSyslogError(appId string, dr
 func (sinkManagerMetrics *SinkManagerMetrics) CreateAppDrainMetrics() []instrumentation.Metric {
 	var instrumentationMetrics []instrumentation.Metric
 	var totalMessageDropped uint64
+
 	for key, value := range sinkManagerMetrics.AppDrainMetrics {
 		tags := map[string]interface{}{"appId": key.AppId, "drainUrl": key.DrainURL}
 		metric := instrumentation.Metric{Name: "numberOfMessagesLost", Tags: tags, Value: value}
+
 		instrumentationMetrics = append(instrumentationMetrics, metric)
 		totalMessageDropped += value
 	}
+
 	totalMetric := instrumentation.Metric{Name: "totalDroppedMessages", Value: totalMessageDropped}
 	instrumentationMetrics = append(instrumentationMetrics, totalMetric)
+
 	return instrumentationMetrics
 }
 

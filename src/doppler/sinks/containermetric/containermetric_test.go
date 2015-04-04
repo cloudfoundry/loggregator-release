@@ -8,20 +8,22 @@ import (
 	"github.com/gogo/protobuf/proto"
 
 	"doppler/sinks"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Containermetric", func() {
+var _ = Describe("ContainerMetricSink", func() {
 	var (
 		sink              *containermetric.ContainerMetricSink
 		eventChan         chan *events.Envelope
-		updateMetricsChan = make(chan sinks.DrainMetric)
+		updateMetricsChan chan sinks.DrainMetric
 	)
 
 	BeforeEach(func() {
 		eventChan = make(chan *events.Envelope)
 
+		updateMetricsChan = make(chan sinks.DrainMetric, 1)
 		sink = containermetric.NewContainerMetricSink("myApp", 2*time.Second, 2*time.Second, updateMetricsChan)
 		go sink.Run(eventChan)
 	})
@@ -153,6 +155,7 @@ var _ = Describe("Containermetric", func() {
 		continuouslySend(inputChan, metric, 2*inactivityDuration)
 		Expect(containerMetricRunnerDone).ShouldNot(BeClosed())
 	})
+
 	Describe("UpdateDroppedMessageCount", func() {
 		It("returns number of dropped messages on metrics channel", func() {
 			drainMetric := sinks.DrainMetric{AppId: "myApp", DrainURL: "containerMetricSink", DroppedMsgCount: uint64(10)}
@@ -168,15 +171,15 @@ var _ = Describe("Containermetric", func() {
 })
 
 func retrieveDroppedMsgCountMetric(sink sinks.Sink, updateMetricsChan chan sinks.DrainMetric, messageCount uint64) *sinks.DrainMetric {
-	go sink.UpdateDroppedMessageCount(messageCount)
+	sink.UpdateDroppedMessageCount(messageCount)
 
 	var recvMetric *sinks.DrainMetric
-	ticker := time.NewTicker(500 * time.Millisecond)
 	select {
 	case metric := <-updateMetricsChan:
 		recvMetric = &metric
-	case <-ticker.C:
+	default:
 	}
+
 	return recvMetric
 }
 

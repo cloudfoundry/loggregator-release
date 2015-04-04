@@ -14,12 +14,17 @@ import (
 	"time"
 
 	"doppler/sinks"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Dump Sink", func() {
-	var updateMetricsChan = make(chan sinks.DrainMetric)
+	var updateMetricsChan chan sinks.DrainMetric
+
+	BeforeEach(func() {
+		updateMetricsChan = make(chan sinks.DrainMetric, 1)
+	})
 
 	It("works with one message", func() {
 
@@ -491,15 +496,15 @@ var _ = Describe("Dump Sink", func() {
 })
 
 func retrieveDroppedMsgCountMetric(sink sinks.Sink, updateMetricsChan chan sinks.DrainMetric, messageCount uint64) *sinks.DrainMetric {
-	go sink.UpdateDroppedMessageCount(messageCount)
+	sink.UpdateDroppedMessageCount(messageCount)
 
 	var recvMetric *sinks.DrainMetric
-	ticker := time.NewTicker(500 * time.Millisecond)
 	select {
 	case metric := <-updateMetricsChan:
 		recvMetric = &metric
-	case <-ticker.C:
+	default:
 	}
+
 	return recvMetric
 }
 
