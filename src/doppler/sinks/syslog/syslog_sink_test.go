@@ -27,7 +27,7 @@ var _ = Describe("SyslogSink", func() {
 		errorHandler      func(string, string, string)
 		mutex             sync.Mutex
 		inputChan         chan *events.Envelope
-		updateMetricsChan chan sinks.DrainMetric
+		updateMetricsChan = make(chan sinks.DrainMetric)
 	)
 
 	closeSysLoggerDoneChan := func() {
@@ -60,8 +60,6 @@ var _ = Describe("SyslogSink", func() {
 			}
 
 		}
-
-		updateMetricsChan = make(chan sinks.DrainMetric, 1)
 
 		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorHandler, "dropsonde-origin", updateMetricsChan).(*syslog.SyslogSink)
 	})
@@ -266,15 +264,15 @@ var _ = Describe("SyslogSink", func() {
 })
 
 func retrieveDroppedMsgCountMetric(sink sinks.Sink, updateMetricsChan chan sinks.DrainMetric, messageCount uint64) *sinks.DrainMetric {
-	sink.UpdateDroppedMessageCount(messageCount)
+	go sink.UpdateDroppedMessageCount(messageCount)
 
 	var recvMetric *sinks.DrainMetric
+	ticker := time.NewTicker(500 * time.Millisecond)
 	select {
 	case metric := <-updateMetricsChan:
 		recvMetric = &metric
-	default:
+	case <-ticker.C:
 	}
-
 	return recvMetric
 }
 

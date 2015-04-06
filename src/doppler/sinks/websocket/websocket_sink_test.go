@@ -5,6 +5,7 @@ import (
 	"doppler/sinks/websocket"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/events"
@@ -55,14 +56,12 @@ var _ = Describe("WebsocketSink", func() {
 		logger            *gosteno.Logger
 		websocketSink     *websocket.WebsocketSink
 		fakeWebsocket     *fakeMessageWriter
-		updateMetricsChan chan sinks.DrainMetric
+		updateMetricsChan = make(chan sinks.DrainMetric)
 	)
 
 	BeforeEach(func() {
 		logger = loggertesthelper.Logger()
 		fakeWebsocket = &fakeMessageWriter{}
-
-		updateMetricsChan = make(chan sinks.DrainMetric, 1)
 		websocketSink = websocket.NewWebsocketSink("appId", logger, fakeWebsocket, 10, "dropsonde-origin", updateMetricsChan)
 	})
 
@@ -125,14 +124,14 @@ var _ = Describe("WebsocketSink", func() {
 })
 
 func retrieveDroppedMsgCountMetric(sink sinks.Sink, updateMetricsChan chan sinks.DrainMetric, messageCount uint64) *sinks.DrainMetric {
-	sink.UpdateDroppedMessageCount(messageCount)
+	go sink.UpdateDroppedMessageCount(messageCount)
 
 	var recvMetric *sinks.DrainMetric
+	ticker := time.NewTicker(500 * time.Millisecond)
 	select {
 	case metric := <-updateMetricsChan:
 		recvMetric = &metric
-	default:
+	case <-ticker.C:
 	}
-
 	return recvMetric
 }
