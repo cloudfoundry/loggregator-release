@@ -13,17 +13,14 @@ import (
 
 	"time"
 
-	"doppler/sinks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Dump Sink", func() {
-	var updateMetricsChan = make(chan sinks.DrainMetric)
-
 	It("works with one message", func() {
 
-		testDump := dump.NewDumpSink("myApp", 1, loggertesthelper.Logger(), time.Second, updateMetricsChan)
+		testDump := dump.NewDumpSink("myApp", 1, loggertesthelper.Logger(), time.Second)
 
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
@@ -46,7 +43,7 @@ var _ = Describe("Dump Sink", func() {
 
 	It("works with two messages", func() {
 
-		testDump := dump.NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second, updateMetricsChan)
+		testDump := dump.NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second)
 
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
@@ -74,7 +71,7 @@ var _ = Describe("Dump Sink", func() {
 	It("never fills up", func() {
 
 		bufferSize := uint32(3)
-		testDump := dump.NewDumpSink("myApp", bufferSize, loggertesthelper.Logger(), time.Second, updateMetricsChan)
+		testDump := dump.NewDumpSink("myApp", bufferSize, loggertesthelper.Logger(), time.Second)
 
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
@@ -96,7 +93,7 @@ var _ = Describe("Dump Sink", func() {
 
 	It("always returns the newest messages", func() {
 
-		testDump := dump.NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second, updateMetricsChan)
+		testDump := dump.NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second)
 
 		dumpRunnerDone := make(chan struct{})
 
@@ -125,7 +122,7 @@ var _ = Describe("Dump Sink", func() {
 
 	It("returns all recent messages to multiple dump requests", func() {
 
-		testDump := dump.NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second, updateMetricsChan)
+		testDump := dump.NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second)
 
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
@@ -158,7 +155,7 @@ var _ = Describe("Dump Sink", func() {
 
 	It("returns all recent messages to multiple dump requests with messages cloning in in the meantime", func() {
 
-		testDump := dump.NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second, updateMetricsChan)
+		testDump := dump.NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second)
 
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
@@ -205,7 +202,7 @@ var _ = Describe("Dump Sink", func() {
 
 	It("works with lots of messages", func() {
 
-		testDump := dump.NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second, updateMetricsChan)
+		testDump := dump.NewDumpSink("myApp", 2, loggertesthelper.Logger(), time.Second)
 
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
@@ -257,7 +254,7 @@ var _ = Describe("Dump Sink", func() {
 
 	It("works with lots of messages and large buffer", func() {
 
-		testDump := dump.NewDumpSink("myApp", 200, loggertesthelper.Logger(), time.Second, updateMetricsChan)
+		testDump := dump.NewDumpSink("myApp", 200, loggertesthelper.Logger(), time.Second)
 
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
@@ -309,7 +306,7 @@ var _ = Describe("Dump Sink", func() {
 
 	It("works with lots of messages and large buffer2", func() {
 
-		testDump := dump.NewDumpSink("myApp", 200, loggertesthelper.Logger(), time.Second, updateMetricsChan)
+		testDump := dump.NewDumpSink("myApp", 200, loggertesthelper.Logger(), time.Second)
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -376,7 +373,7 @@ var _ = Describe("Dump Sink", func() {
 	It("works with lots of dumps", func() {
 
 		runtime.GOMAXPROCS(runtime.NumCPU())
-		testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), time.Second, updateMetricsChan)
+		testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), time.Second)
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -406,7 +403,7 @@ var _ = Describe("Dump Sink", func() {
 
 	It("closes itself after period of inactivity", func() {
 
-		testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), 2*time.Microsecond, updateMetricsChan)
+		testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), 2*time.Microsecond)
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -419,7 +416,7 @@ var _ = Describe("Dump Sink", func() {
 	})
 
 	It("closes after input chan is closed", func() {
-		testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), 2*time.Microsecond, updateMetricsChan)
+		testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), 2*time.Microsecond)
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -435,7 +432,7 @@ var _ = Describe("Dump Sink", func() {
 
 	It("resets the inactivity duration when a metric is received", func() {
 		inactivityDuration := 1 * time.Millisecond
-		testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), inactivityDuration, updateMetricsChan)
+		testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), inactivityDuration)
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -450,7 +447,7 @@ var _ = Describe("Dump Sink", func() {
 	})
 
 	It("only stores log messages", func() {
-		testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), 2*time.Second, updateMetricsChan)
+		testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), 2*time.Second)
 
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope, 5)
@@ -476,32 +473,14 @@ var _ = Describe("Dump Sink", func() {
 		Expect(testDump.Dump()).To(HaveLen(1))
 	})
 
-	It("returns number of dropped messages on metrics channel", func() {
-		testDump := dump.NewDumpSink("myApp", 1, loggertesthelper.Logger(), 2*time.Second, updateMetricsChan)
-		drainMetric := sinks.DrainMetric{AppId: "myApp", DrainURL: "dumpSink", DroppedMsgCount: uint64(10)}
+	It("creates dropped message count metrics", func() {
+		testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), 2*time.Second)
 
-		metric := retrieveDroppedMsgCountMetric(testDump, updateMetricsChan, 10)
-		Expect(*metric).To(Equal(drainMetric))
-	})
+		testDump.UpdateDroppedMessageCount(2)
+		Expect(testDump.GetInstrumentationMetric().Value).Should(Equal(int64(2)))
 
-	It("does not send message if droppedMsgCount is 0", func() {
-		testDump := dump.NewDumpSink("myApp", 1, loggertesthelper.Logger(), 2*time.Second, updateMetricsChan)
-		Expect(retrieveDroppedMsgCountMetric(testDump, updateMetricsChan, 0)).To(BeNil())
 	})
 })
-
-func retrieveDroppedMsgCountMetric(sink sinks.Sink, updateMetricsChan chan sinks.DrainMetric, messageCount uint64) *sinks.DrainMetric {
-	go sink.UpdateDroppedMessageCount(messageCount)
-
-	var recvMetric *sinks.DrainMetric
-	ticker := time.NewTicker(500 * time.Millisecond)
-	select {
-	case metric := <-updateMetricsChan:
-		recvMetric = &metric
-	case <-ticker.C:
-	}
-	return recvMetric
-}
 
 func continuouslySend(inputChan chan<- *events.Envelope, message *events.Envelope, duration time.Duration) {
 	timer := time.NewTimer(duration)

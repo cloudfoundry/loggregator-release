@@ -19,25 +19,23 @@ type remoteMessageWriter interface {
 }
 
 type WebsocketSink struct {
-	logger                    *gosteno.Logger
-	streamId                  string
-	ws                        remoteMessageWriter
-	clientAddress             net.Addr
-	wsMessageBufferSize       uint
-	dropsondeOrigin           string
-	droppedMessageCount       uint64
-	appDrainMetricsWriterChan chan sinks.DrainMetric
+	logger              *gosteno.Logger
+	streamId            string
+	ws                  remoteMessageWriter
+	clientAddress       net.Addr
+	wsMessageBufferSize uint
+	dropsondeOrigin     string
+	droppedMessageCount int64
 }
 
-func NewWebsocketSink(streamId string, givenLogger *gosteno.Logger, ws remoteMessageWriter, wsMessageBufferSize uint, dropsondeOrigin string, appDrainMetricsWriterChan chan sinks.DrainMetric) *WebsocketSink {
+func NewWebsocketSink(streamId string, givenLogger *gosteno.Logger, ws remoteMessageWriter, wsMessageBufferSize uint, dropsondeOrigin string) *WebsocketSink {
 	return &WebsocketSink{
-		logger:                    givenLogger,
-		streamId:                  streamId,
-		ws:                        ws,
-		clientAddress:             ws.RemoteAddr(),
-		wsMessageBufferSize:       wsMessageBufferSize,
-		dropsondeOrigin:           dropsondeOrigin,
-		appDrainMetricsWriterChan: appDrainMetricsWriterChan,
+		logger:              givenLogger,
+		streamId:            streamId,
+		ws:                  ws,
+		clientAddress:       ws.RemoteAddr(),
+		wsMessageBufferSize: wsMessageBufferSize,
+		dropsondeOrigin:     dropsondeOrigin,
 	}
 }
 
@@ -60,7 +58,7 @@ func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
 	for {
 		sink.logger.Debugf("Websocket Sink %s: Waiting for activity", sink.clientAddress)
 		messageEnvelope, ok := <-buffer.GetOutputChannel()
-		sink.UpdateDroppedMessageCount(buffer.GetDroppedMessageCount())
+		atomic.AddInt64(&sink.droppedMessageCount, buffer.GetDroppedMessageCount())
 		if !ok {
 			sink.logger.Debugf("Websocket Sink %s: Closed listener channel detected. Closing websocket", sink.clientAddress)
 			return
@@ -84,16 +82,11 @@ func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
 	}
 }
 
-func (s *WebsocketSink) UpdateDroppedMessageCount(messageCount uint64) {
-	if messageCount == 0 {
-		return
-	}
-	atomic.AddUint64(&s.droppedMessageCount, messageCount)
+func (s *WebsocketSink) GetInstrumentationMetric() sinks.Metric {
+	count := atomic.LoadInt64(&s.droppedMessageCount)
+	return sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"streamId": string(s.streamId), "drainUrl": s.clientAddress.String()}, Value: count}
+}
 
-	metric := sinks.DrainMetric{AppId: s.streamId, DrainURL: s.clientAddress.String(), DroppedMsgCount: atomic.LoadUint64(&s.droppedMessageCount)}
-
-	select {
-	case s.appDrainMetricsWriterChan <- metric:
-	default:
-	}
+func (sink *WebsocketSink) UpdateDroppedMessageCount(messageCount int64) {
+	atomic.AddInt64(&sink.droppedMessageCount, messageCount)
 }

@@ -10,30 +10,24 @@ import (
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-
-	"github.com/cloudfoundry/dropsonde/events"
-	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 )
 
 type DumpSink struct {
 	sync.RWMutex
-	appId                     string
-	logger                    *gosteno.Logger
-	messageRing               *ring.Ring
-	inputChan                 chan *events.Envelope
-	inactivityDuration        time.Duration
-	droppedMessageCount       uint64
-	appDrainMetricsWriterChan chan sinks.DrainMetric
+	appId               string
+	logger              *gosteno.Logger
+	messageRing         *ring.Ring
+	inputChan           chan *events.Envelope
+	inactivityDuration  time.Duration
+	droppedMessageCount int64
 }
 
-func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, inactivityDuration time.Duration, appDrainMetricsWriterChan chan sinks.DrainMetric) *DumpSink {
+func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, inactivityDuration time.Duration) *DumpSink {
 	dumpSink := &DumpSink{
-		appId:                     appId,
-		logger:                    givenLogger,
-		messageRing:               ring.New(int(bufferSize)),
-		inactivityDuration:        inactivityDuration,
-		appDrainMetricsWriterChan: appDrainMetricsWriterChan,
+		appId:              appId,
+		logger:             givenLogger,
+		messageRing:        ring.New(int(bufferSize)),
+		inactivityDuration: inactivityDuration,
 	}
 	return dumpSink
 }
@@ -111,17 +105,11 @@ var envelopeTypeWhitelist = map[events.Envelope_EventType]struct{}{
 	events.Envelope_LogMessage: struct{}{},
 }
 
-func (d *DumpSink) UpdateDroppedMessageCount(messageCount uint64) {
-	if messageCount == 0 {
-		return
-	}
+func (d *DumpSink) GetInstrumentationMetric() sinks.Metric {
+	count := atomic.LoadInt64(&d.droppedMessageCount)
+	return sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": string(d.appId), "drainUrl": "dumpSink"}, Value: count}
+}
 
-	atomic.AddUint64(&d.droppedMessageCount, messageCount)
-
-	metric := sinks.DrainMetric{AppId: d.appId, DrainURL: "dumpSink", DroppedMsgCount: atomic.LoadUint64(&d.droppedMessageCount)}
-
-	select {
-	case d.appDrainMetricsWriterChan <- metric:
-	default:
-	}
+func (d *DumpSink) UpdateDroppedMessageCount(messageCount int64) {
+	atomic.AddInt64(&d.droppedMessageCount, messageCount)
 }

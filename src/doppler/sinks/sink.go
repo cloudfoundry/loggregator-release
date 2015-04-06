@@ -12,7 +12,8 @@ type Sink interface {
 	Run(<-chan *events.Envelope)
 	Identifier() string
 	ShouldReceiveErrors() bool
-	UpdateDroppedMessageCount(uint64)
+	GetInstrumentationMetric() Metric
+	UpdateDroppedMessageCount(int64)
 }
 
 func RunTruncatingBuffer(inputChan <-chan *events.Envelope, bufferSize uint, logger *gosteno.Logger, dropsondeOrigin string) *truncatingbuffer.TruncatingBuffer {
@@ -21,8 +22,8 @@ func RunTruncatingBuffer(inputChan <-chan *events.Envelope, bufferSize uint, log
 	return b
 }
 
-type DrainMetric struct {
-	AppId           string
-	DrainURL        string
-	DroppedMsgCount uint64
+type Metric struct {
+	Name  string
+	Value int64
+	Tags  map[string]interface{}
 }
