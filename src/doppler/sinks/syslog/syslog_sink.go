@@ -10,6 +10,8 @@ import (
 
 	"sync/atomic"
 
+	"sync/atomic"
+
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 )
