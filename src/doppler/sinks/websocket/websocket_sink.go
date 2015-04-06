@@ -28,7 +28,7 @@ type WebsocketSink struct {
 	sinks.DropCounter
 }
 
-func NewWebsocketSink(streamId string, givenLogger *gosteno.Logger, ws remoteMessageWriter, wsMessageBufferSize uint, dropsondeOrigin string) *WebsocketSink {
+func NewWebsocketSink(streamId string, givenLogger *gosteno.Logger, ws remoteMessageWriter, wsMessageBufferSize uint, dropsondeOrigin string, metricUpdateChan chan<- int64) *WebsocketSink {
 	return &WebsocketSink{
 		logger:              givenLogger,
 		streamId:            streamId,
@@ -36,7 +36,7 @@ func NewWebsocketSink(streamId string, givenLogger *gosteno.Logger, ws remoteMes
 		clientAddress:       ws.RemoteAddr(),
 		wsMessageBufferSize: wsMessageBufferSize,
 		dropsondeOrigin:     dropsondeOrigin,
-		DropCounter: sinks.NewDropCounter(streamId, ws.RemoteAddr().String()),
+		DropCounter:         sinks.NewDropCounter(streamId, ws.RemoteAddr().String(), metricUpdateChan),
 	}
 }
 
@@ -59,7 +59,13 @@ func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
 	for {
 		sink.logger.Debugf("Websocket Sink %s: Waiting for activity", sink.clientAddress)
 		messageEnvelope, ok := <-buffer.GetOutputChannel()
-		sink.UpdateDroppedMessageCount(buffer.GetDroppedMessageCount())
+
+		droppedMessages := buffer.GetDroppedMessageCount()
+		if droppedMessages != 0 {
+			sink.UpdateDroppedMessageCount(droppedMessages)
+
+		}
+
 		if !ok {
 			sink.logger.Debugf("Websocket Sink %s: Closed listener channel detected. Closing websocket", sink.clientAddress)
 			return

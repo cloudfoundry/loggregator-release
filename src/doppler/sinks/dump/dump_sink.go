@@ -12,24 +12,24 @@ import (
 )
 
 type DumpSink struct {
-	appId               string
-	logger              *gosteno.Logger
-	messageRing         *ring.Ring
-	inputChan           chan *events.Envelope
-	inactivityDuration  time.Duration
+	appId              string
+	logger             *gosteno.Logger
+	messageRing        *ring.Ring
+	inputChan          chan *events.Envelope
+	inactivityDuration time.Duration
 
 	sinks.DropCounter
 
 	sync.RWMutex
 }
 
-func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, inactivityDuration time.Duration) *DumpSink {
+func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, inactivityDuration time.Duration, metricUpdateChannel chan<- int64) *DumpSink {
 	dumpSink := &DumpSink{
 		appId:              appId,
 		logger:             givenLogger,
 		messageRing:        ring.New(int(bufferSize)),
 		inactivityDuration: inactivityDuration,
-		DropCounter: sinks.NewDropCounter(appId,"DumpSink"),
+		DropCounter:        sinks.NewDropCounter(appId, "DumpSink", metricUpdateChannel),
 	}
 	return dumpSink
 }

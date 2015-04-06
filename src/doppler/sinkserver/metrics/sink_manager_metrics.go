@@ -16,15 +16,29 @@ type SinkManagerMetrics struct {
 	SyslogSinks            int
 	FirehoseSinks          int
 	SyslogDrainErrorCounts map[string](map[string]int) // appId -> (url -> count)
-	AppDrainMetrics        []sinks.Metric
+	appDrainMetrics        []sinks.Metric
+
+	totalDroppedMessages  int64
+	SinkDropUpdateChannel chan int64
 
 	sync.RWMutex
 }
 
 func NewSinkManagerMetrics() *SinkManagerMetrics {
-	return &SinkManagerMetrics{
+	m := SinkManagerMetrics{
 		SyslogDrainErrorCounts: make(map[string](map[string]int)),
+		SinkDropUpdateChannel:  make(chan int64),
 	}
+
+	go func() {
+		for delta := range m.SinkDropUpdateChannel {
+			m.Lock()
+			m.totalDroppedMessages += delta
+			m.Unlock()
+		}
+	}()
+
+	return &m
 }
 
 func (sinkManagerMetrics *SinkManagerMetrics) Inc(sink sinks.Sink) {
@@ -82,7 +96,9 @@ func (sinkManagerMetrics *SinkManagerMetrics) ReportSyslogError(appId string, dr
 }
 
 func (sinkManagerMetrics *SinkManagerMetrics) AddAppDrainMetrics(metrics []sinks.Metric) {
-	sinkManagerMetrics.AppDrainMetrics = metrics
+	sinkManagerMetrics.Lock()
+	defer sinkManagerMetrics.Unlock()
+	sinkManagerMetrics.appDrainMetrics = metrics
 }
 
 func (sinkManagerMetrics *SinkManagerMetrics) Emit() instrumentation.Context {
@@ -102,9 +118,9 @@ func (sinkManagerMetrics *SinkManagerMetrics) Emit() instrumentation.Context {
 		}
 	}
 
-	data = append(data, instrumentation.Metric{Name: "totalDroppedMessages", Value: sinkManagerMetrics.GetTotalDroppedMessageCount()})
+	data = append(data, instrumentation.Metric{Name: "totalDroppedMessages", Value: sinkManagerMetrics.totalDroppedMessages})
 
-	for _, metric := range sinkManagerMetrics.AppDrainMetrics {
+	for _, metric := range sinkManagerMetrics.appDrainMetrics {
 		data = append(data, instrumentation.Metric{
 			Name:  metric.Name,
 			Value: metric.Value,
@@ -116,16 +132,4 @@ func (sinkManagerMetrics *SinkManagerMetrics) Emit() instrumentation.Context {
 		Name:    "messageRouter",
 		Metrics: data,
 	}
-}
-
-func (SinkManagerMetrics *SinkManagerMetrics) GetTotalDroppedMessageCount() int64 {
-	SinkManagerMetrics.RLock()
-	defer SinkManagerMetrics.RUnlock()
-
-	var total int64
-	for _, metric := range SinkManagerMetrics.AppDrainMetrics {
-		total += metric.Value
-	}
-
-	return total
 }

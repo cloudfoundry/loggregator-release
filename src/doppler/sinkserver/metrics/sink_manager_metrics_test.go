@@ -114,8 +114,7 @@ var _ = Describe("SinkManagerMetrics", func() {
 	})
 
 	It("emits dropped message counts by app id and drain url", func() {
-		var metrics []sinks.Metric
-		metrics = append(metrics, sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": "myApp"}, Value: 25})
+		metrics := []sinks.Metric{sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": "myApp"}, Value: 25}}
 		sinkManagerMetrics.AddAppDrainMetrics(metrics)
 
 		allMetrics := sinkManagerMetrics.Emit().Metrics
@@ -126,14 +125,30 @@ var _ = Describe("SinkManagerMetrics", func() {
 	})
 
 	It("emits the total number of message dropped", func() {
-		sinkManagerMetrics.AppDrainMetrics = []sinks.Metric{
-			sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": "myApp"}, Value: 25},
-			sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": "myApp"}, Value: 25},
-		}
+		sinkManagerMetrics.SinkDropUpdateChannel <- 25
+		sinkManagerMetrics.SinkDropUpdateChannel <- 25
 
 		totalDroppedMessageCountMetric := instrumentation.Metric{Name: "totalDroppedMessages", Value: int64(50)}
-		Expect(sinkManagerMetrics.GetTotalDroppedMessageCount()).Should(Equal(int64(50)))
 
-		Expect(sinkManagerMetrics.Emit().Metrics[4]).Should(Equal(totalDroppedMessageCountMetric))
+		Eventually(func() instrumentation.Metric { return sinkManagerMetrics.Emit().Metrics[4] }).Should(Equal(totalDroppedMessageCountMetric))
+	})
+
+	It("retains total dropped message count independently of current app drain metrics list", func() {
+		sinkManagerMetrics.SinkDropUpdateChannel <- 25
+		sinkManagerMetrics.SinkDropUpdateChannel <- 25
+
+		metrics := []sinks.Metric{sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": "myApp"}, Value: 378}}
+		sinkManagerMetrics.AddAppDrainMetrics(metrics)
+
+		var allMetrics []instrumentation.Metric
+		Eventually(func() int64 {
+			allMetrics = sinkManagerMetrics.Emit().Metrics
+			totalMetric := allMetrics[4]
+
+			return totalMetric.Value.(int64)
+		}).Should(Equal(int64(50)))
+
+		appMetric := allMetrics[5]
+		Expect(appMetric.Value).To(Equal(int64(378)))
 	})
 })

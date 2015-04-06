@@ -19,13 +19,16 @@ import (
 )
 
 var _ = Describe("SyslogSink", func() {
-	var syslogSink *syslog.SyslogSink
-	var sysLogger *SyslogWriterRecorder
-	var sysLoggerDoneChan chan bool
-	var errorChannel chan *events.Envelope
-	var errorHandler func(string, string, string)
-	var mutex sync.Mutex
-	var inputChan chan *events.Envelope
+	var (
+		syslogSink        *syslog.SyslogSink
+		sysLogger         *SyslogWriterRecorder
+		sysLoggerDoneChan chan bool
+		errorChannel      chan *events.Envelope
+		errorHandler      func(string, string, string)
+		mutex             sync.Mutex
+		inputChan         chan *events.Envelope
+		updateMetricChan  chan int64
+	)
 
 	closeSysLoggerDoneChan := func() {
 		mutex.Lock()
@@ -58,7 +61,8 @@ var _ = Describe("SyslogSink", func() {
 
 		}
 
-		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorHandler, "dropsonde-origin").(*syslog.SyslogSink)
+		updateMetricChan = make(chan int64, 1)
+		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorHandler, "dropsonde-origin", updateMetricChan).(*syslog.SyslogSink)
 	})
 
 	AfterEach(func() {
@@ -283,6 +287,7 @@ var _ = Describe("SyslogSink", func() {
 		It("updates dropped message count", func() {
 			syslogSink.UpdateDroppedMessageCount(2)
 			Expect(syslogSink.GetInstrumentationMetric().Value).Should(Equal(int64(2)))
+			Eventually(updateMetricChan).Should(Receive(Equal(int64(2))))
 		})
 	})
 })

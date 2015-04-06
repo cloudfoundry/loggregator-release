@@ -221,7 +221,7 @@ func (sinkManager *SinkManager) registerNewSyslogSink(appId string, syslogSinkUr
 		sinkManager.SendSyslogErrorToLoggregator(invalidSyslogUrlErrorMsg(appId, syslogSinkUrl, err), appId, syslogSinkUrl)
 		return
 	}
-	syslogSink := syslog.NewSyslogSink(appId, syslogSinkUrl, sinkManager.logger, syslogWriter, sinkManager.SendSyslogErrorToLoggregator, sinkManager.DropsondeOrigin)
+	syslogSink := syslog.NewSyslogSink(appId, syslogSinkUrl, sinkManager.logger, syslogWriter, sinkManager.SendSyslogErrorToLoggregator, sinkManager.DropsondeOrigin, sinkManager.Metrics.SinkDropUpdateChannel)
 	sinkManager.RegisterSink(syslogSink)
 
 }
@@ -235,7 +235,7 @@ func (sinkManager *SinkManager) ensureRecentLogsSinkFor(appId string) {
 		return
 	}
 
-	sink := dump.NewDumpSink(appId, sinkManager.recentLogCount, sinkManager.logger, sinkManager.sinkTimeout)
+	sink := dump.NewDumpSink(appId, sinkManager.recentLogCount, sinkManager.logger, sinkManager.sinkTimeout, sinkManager.Metrics.SinkDropUpdateChannel)
 	sinkManager.RegisterSink(sink)
 }
 
@@ -244,6 +244,6 @@ func (sinkManager *SinkManager) ensureContainerMetricsSinkFor(appId string) {
 		return
 	}
 
-	sink := containermetric.NewContainerMetricSink(appId, sinkManager.metricTTL, sinkManager.sinkTimeout)
+	sink := containermetric.NewContainerMetricSink(appId, sinkManager.metricTTL, sinkManager.sinkTimeout, sinkManager.Metrics.SinkDropUpdateChannel)
 	sinkManager.RegisterSink(sink)
 }

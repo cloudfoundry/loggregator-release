@@ -278,7 +278,7 @@ var _ = Describe("SinkManager", func() {
 			var dumpSink *dump.DumpSink
 
 			BeforeEach(func() {
-				dumpSink = dump.NewDumpSink("appId", 1, loggertesthelper.Logger(), time.Hour)
+				dumpSink = dump.NewDumpSink("appId", 1, loggertesthelper.Logger(), time.Hour, make(chan int64))
 				sinkManager.RegisterSink(dumpSink)
 			})
 
@@ -306,7 +306,7 @@ var _ = Describe("SinkManager", func() {
 				url, err := url.Parse("syslog://localhost:9998")
 				Expect(err).To(BeNil())
 				writer, _ := syslogwriter.NewSyslogWriter(url, "appId")
-				syslogSink = syslog.NewSyslogSink("appId", "localhost:9999", loggertesthelper.Logger(), writer, func(string, string, string) {}, "dropsonde-origin")
+				syslogSink = syslog.NewSyslogSink("appId", "localhost:9999", loggertesthelper.Logger(), writer, func(string, string, string) {}, "dropsonde-origin", make(chan int64))
 
 				sinkManager.RegisterSink(syslogSink)
 			})
@@ -324,7 +324,7 @@ var _ = Describe("SinkManager", func() {
 			var dumpSink *dump.DumpSink
 
 			BeforeEach(func() {
-				dumpSink = dump.NewDumpSink("appId", 1, loggertesthelper.Logger(), time.Hour)
+				dumpSink = dump.NewDumpSink("appId", 1, loggertesthelper.Logger(), time.Hour, make(chan int64))
 				sinkManager.RegisterSink(dumpSink)
 			})
 

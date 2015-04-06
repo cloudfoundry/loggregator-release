@@ -80,7 +80,7 @@ func (group *GroupedSinks) Broadcast(appId string, msg *events.Envelope) {
 				wrapper.Sink.UpdateDroppedMessageCount(1)
 			}
 			// do nothing because there is no consumer
-			group.logger.Debug("Not broadcasting message to sink because no consumer present")
+			group.logger.Debugf("Not broadcasting message to sink %s for app %s because no consumer present or ready", wrapper.Sink.Identifier(), appId)
 		}
 	}
 

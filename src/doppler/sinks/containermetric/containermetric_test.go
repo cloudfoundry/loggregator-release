@@ -20,7 +20,7 @@ var _ = Describe("Containermetric", func() {
 	BeforeEach(func() {
 		eventChan = make(chan *events.Envelope)
 
-		sink = containermetric.NewContainerMetricSink("myApp", 2*time.Second, 2*time.Second)
+		sink = containermetric.NewContainerMetricSink("myApp", 2*time.Second, 2*time.Second, make(chan int64))
 		go sink.Run(eventChan)
 	})
 
@@ -109,7 +109,7 @@ var _ = Describe("Containermetric", func() {
 	})
 
 	It("closes after a period of inactivity", func() {
-		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, 1*time.Millisecond)
+		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, 1*time.Millisecond, make(chan int64))
 		containerMetricRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -122,7 +122,7 @@ var _ = Describe("Containermetric", func() {
 	})
 
 	It("closes after input chan is closed", func() {
-		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, 10*time.Second)
+		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, 10*time.Second, make(chan int64))
 		containerMetricRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -138,7 +138,7 @@ var _ = Describe("Containermetric", func() {
 
 	It("resets the inactivity duration when a metric is received", func() {
 		inactivityDuration := 1 * time.Millisecond
-		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, inactivityDuration)
+		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, inactivityDuration, make(chan int64))
 		containerMetricRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -153,8 +153,11 @@ var _ = Describe("Containermetric", func() {
 	})
 
 	It("returns number of dropped messages on input channel", func() {
-		sink.UpdateDroppedMessageCount(2)
-		Expect(sink.GetInstrumentationMetric().Value).Should(Equal(int64(2)))
+		metricUpdateChan := make(chan int64, 1)
+		containerMetricSink := containermetric.NewContainerMetricSink("myApp", 2*time.Second, 2*time.Second, metricUpdateChan)
+		containerMetricSink.UpdateDroppedMessageCount(2)
+		Expect(containerMetricSink.GetInstrumentationMetric().Value).Should(Equal(int64(2)))
+		Eventually(metricUpdateChan).Should(Receive(Equal(int64(2))))
 	})
 })
 

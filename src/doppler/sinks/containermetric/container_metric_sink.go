@@ -9,23 +9,23 @@ import (
 )
 
 type ContainerMetricSink struct {
-	applicationId       string
-	ttl                 time.Duration
-	metrics             map[int32]*events.Envelope
-	inactivityDuration  time.Duration
+	applicationId      string
+	ttl                time.Duration
+	metrics            map[int32]*events.Envelope
+	inactivityDuration time.Duration
 
 	sinks.DropCounter
 
 	sync.RWMutex
 }
 
-func NewContainerMetricSink(applicationId string, ttl time.Duration, inactivityDuration time.Duration) *ContainerMetricSink {
+func NewContainerMetricSink(applicationId string, ttl time.Duration, inactivityDuration time.Duration, metricUpdateChan chan<- int64) *ContainerMetricSink {
 	return &ContainerMetricSink{
 		applicationId:      applicationId,
 		ttl:                ttl,
 		inactivityDuration: inactivityDuration,
 		metrics:            make(map[int32]*events.Envelope),
-		DropCounter: sinks.NewDropCounter(applicationId, "ContainerMetricSink"),
+		DropCounter:        sinks.NewDropCounter(applicationId, "ContainerMetricSink", metricUpdateChan),
 	}
 }
 

@@ -167,6 +167,7 @@ func (w *WebsocketServer) streamWebsocket(appId string, websocketConnection *gor
 		websocketConnection,
 		w.bufferSize,
 		w.dropsondeOrigin,
+		w.sinkManager.Metrics.SinkDropUpdateChannel,
 	)
 
 	register(websocketSink)

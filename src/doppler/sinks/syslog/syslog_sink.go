@@ -20,20 +20,20 @@ const (
 
 type SyslogSink struct {
 	*gosteno.Logger
-	appId               string
-	drainUrl            string
-	sentMessageCount    *uint64
-	sentByteCount       *uint64
-	listenerChannel     chan *events.Envelope
-	syslogWriter        syslogwriter.Writer
-	handleSendError     func(errorMessage, appId, drainUrl string)
-	disconnectChannel   chan struct{}
-	dropsondeOrigin     string
-	disconnectOnce      sync.Once
+	appId             string
+	drainUrl          string
+	sentMessageCount  *uint64
+	sentByteCount     *uint64
+	listenerChannel   chan *events.Envelope
+	syslogWriter      syslogwriter.Writer
+	handleSendError   func(errorMessage, appId, drainUrl string)
+	disconnectChannel chan struct{}
+	dropsondeOrigin   string
+	disconnectOnce    sync.Once
 	sinks.DropCounter
 }
 
-func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.Writer, errorHandler func(string, string, string), dropsondeOrigin string) sinks.Sink {
+func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.Writer, errorHandler func(string, string, string), dropsondeOrigin string, metricUpdateChan chan<- int64) sinks.Sink {
 	givenLogger.Debugf("Syslog Sink %s: Created for appId [%s]", drainUrl, appId)
 	return &SyslogSink{
 		appId:             appId,
@@ -43,7 +43,7 @@ func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, s
 		handleSendError:   errorHandler,
 		disconnectChannel: make(chan struct{}),
 		dropsondeOrigin:   dropsondeOrigin,
-		DropCounter: sinks.NewDropCounter(appId, drainUrl),
+		DropCounter:       sinks.NewDropCounter(appId, drainUrl, metricUpdateChan),
 	}
 }
 
@@ -111,7 +111,12 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 		case <-s.disconnectChannel:
 			return
 		case messageEnvelope, ok := <-buffer.GetOutputChannel():
-			s.UpdateDroppedMessageCount(buffer.GetDroppedMessageCount())
+			droppedMessages := buffer.GetDroppedMessageCount()
+			if droppedMessages != 0 {
+				s.UpdateDroppedMessageCount(droppedMessages)
+
+			}
+
 			if !ok {
 				s.Debugf("Syslog Sink %s: Closed listener channel detected. Closing.\n", s.drainUrl)
 				return
