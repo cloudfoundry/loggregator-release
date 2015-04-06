@@ -3,7 +3,6 @@ package websocket
 import (
 	"doppler/sinks"
 	"net"
-	"sync/atomic"
 
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
@@ -25,7 +24,8 @@ type WebsocketSink struct {
 	clientAddress       net.Addr
 	wsMessageBufferSize uint
 	dropsondeOrigin     string
-	droppedMessageCount int64
+
+	sinks.DropCounter
 }
 
 func NewWebsocketSink(streamId string, givenLogger *gosteno.Logger, ws remoteMessageWriter, wsMessageBufferSize uint, dropsondeOrigin string) *WebsocketSink {
@@ -36,6 +36,7 @@ func NewWebsocketSink(streamId string, givenLogger *gosteno.Logger, ws remoteMes
 		clientAddress:       ws.RemoteAddr(),
 		wsMessageBufferSize: wsMessageBufferSize,
 		dropsondeOrigin:     dropsondeOrigin,
+		DropCounter: sinks.NewDropCounter(streamId, ws.RemoteAddr().String()),
 	}
 }
 
@@ -58,7 +59,7 @@ func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
 	for {
 		sink.logger.Debugf("Websocket Sink %s: Waiting for activity", sink.clientAddress)
 		messageEnvelope, ok := <-buffer.GetOutputChannel()
-		atomic.AddInt64(&sink.droppedMessageCount, buffer.GetDroppedMessageCount())
+		sink.UpdateDroppedMessageCount(buffer.GetDroppedMessageCount())
 		if !ok {
 			sink.logger.Debugf("Websocket Sink %s: Closed listener channel detected. Closing websocket", sink.clientAddress)
 			return
@@ -80,13 +81,4 @@ func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
 
 		sink.logger.Debugf("Websocket Sink %s: Successfully sent data", sink.clientAddress)
 	}
-}
-
-func (s *WebsocketSink) GetInstrumentationMetric() sinks.Metric {
-	count := atomic.LoadInt64(&s.droppedMessageCount)
-	return sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"streamId": string(s.streamId), "drainUrl": s.clientAddress.String()}, Value: count}
-}
-
-func (sink *WebsocketSink) UpdateDroppedMessageCount(messageCount int64) {
-	atomic.AddInt64(&sink.droppedMessageCount, messageCount)
 }

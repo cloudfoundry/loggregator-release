@@ -4,7 +4,6 @@ import (
 	"container/ring"
 	"doppler/sinks"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/events"
@@ -13,13 +12,15 @@ import (
 )
 
 type DumpSink struct {
-	sync.RWMutex
 	appId               string
 	logger              *gosteno.Logger
 	messageRing         *ring.Ring
 	inputChan           chan *events.Envelope
 	inactivityDuration  time.Duration
-	droppedMessageCount int64
+
+	sinks.DropCounter
+
+	sync.RWMutex
 }
 
 func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, inactivityDuration time.Duration) *DumpSink {
@@ -28,6 +29,7 @@ func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, i
 		logger:             givenLogger,
 		messageRing:        ring.New(int(bufferSize)),
 		inactivityDuration: inactivityDuration,
+		DropCounter: sinks.NewDropCounter(appId,"DumpSink"),
 	}
 	return dumpSink
 }
@@ -103,13 +105,4 @@ func (d *DumpSink) ShouldReceiveErrors() bool {
 
 var envelopeTypeWhitelist = map[events.Envelope_EventType]struct{}{
 	events.Envelope_LogMessage: struct{}{},
-}
-
-func (d *DumpSink) GetInstrumentationMetric() sinks.Metric {
-	count := atomic.LoadInt64(&d.droppedMessageCount)
-	return sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": string(d.appId), "drainUrl": "dumpSink"}, Value: count}
-}
-
-func (d *DumpSink) UpdateDroppedMessageCount(messageCount int64) {
-	atomic.AddInt64(&d.droppedMessageCount, messageCount)
 }

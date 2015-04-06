@@ -2,7 +2,6 @@ package containermetric
 
 import (
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"doppler/sinks"
@@ -14,7 +13,9 @@ type ContainerMetricSink struct {
 	ttl                 time.Duration
 	metrics             map[int32]*events.Envelope
 	inactivityDuration  time.Duration
-	droppedMessageCount int64
+
+	sinks.DropCounter
+
 	sync.RWMutex
 }
 
@@ -24,6 +25,7 @@ func NewContainerMetricSink(applicationId string, ttl time.Duration, inactivityD
 		ttl:                ttl,
 		inactivityDuration: inactivityDuration,
 		metrics:            make(map[int32]*events.Envelope),
+		DropCounter: sinks.NewDropCounter(applicationId, "ContainerMetricSink"),
 	}
 }
 
@@ -95,13 +97,4 @@ func (sink *ContainerMetricSink) updateMetric(event *events.Envelope) {
 	if !ok || oldMetric.GetTimestamp() < event.GetTimestamp() {
 		sink.metrics[instance] = event
 	}
-}
-
-func (sink *ContainerMetricSink) GetInstrumentationMetric() sinks.Metric {
-	count := atomic.LoadInt64(&sink.droppedMessageCount)
-	return sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": string(sink.applicationId), "drainUrl": "containerMetricSink"}, Value: count}
-}
-
-func (sink *ContainerMetricSink) UpdateDroppedMessageCount(messageCount int64) {
-	atomic.AddInt64(&sink.droppedMessageCount, messageCount)
 }

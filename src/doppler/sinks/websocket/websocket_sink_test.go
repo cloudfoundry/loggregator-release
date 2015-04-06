@@ -111,7 +111,7 @@ var _ = Describe("WebsocketSink", func() {
 	Describe("GetInstrumentationMetric", func() {
 		It("emits an emptry metrics if no dropped messages", func() {
 			metrics := websocketSink.GetInstrumentationMetric()
-			Expect(metrics).To(Equal(sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"streamId": "appId", "drainUrl": "client-address"}, Value: 0}))
+			Expect(metrics).To(Equal(sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": "appId", "drainUrl": "client-address"}, Value: 0}))
 		})
 
 		It("emits metrics with dropped message count", func() {
@@ -139,7 +139,7 @@ var _ = Describe("WebsocketSink", func() {
 
 			metric := websocketSink.GetInstrumentationMetric()
 			Expect(metric.Value).To(Equal(int64(10)))
-			Expect(metric.Tags["streamId"]).To(Equal("appId"))
+			Expect(metric.Tags["appId"]).To(Equal("appId"))
 			Expect(metric.Tags["drainUrl"]).To(Equal("client-address"))
 
 		})

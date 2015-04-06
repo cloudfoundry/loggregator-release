@@ -8,8 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"sync/atomic"
-
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 )
@@ -25,7 +23,6 @@ type SyslogSink struct {
 	appId               string
 	drainUrl            string
 	sentMessageCount    *uint64
-	droppedMessageCount int64
 	sentByteCount       *uint64
 	listenerChannel     chan *events.Envelope
 	syslogWriter        syslogwriter.Writer
@@ -33,6 +30,7 @@ type SyslogSink struct {
 	disconnectChannel   chan struct{}
 	dropsondeOrigin     string
 	disconnectOnce      sync.Once
+	sinks.DropCounter
 }
 
 func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.Writer, errorHandler func(string, string, string), dropsondeOrigin string) sinks.Sink {
@@ -45,6 +43,7 @@ func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, s
 		handleSendError:   errorHandler,
 		disconnectChannel: make(chan struct{}),
 		dropsondeOrigin:   dropsondeOrigin,
+		DropCounter: sinks.NewDropCounter(appId, drainUrl),
 	}
 }
 
@@ -112,7 +111,7 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 		case <-s.disconnectChannel:
 			return
 		case messageEnvelope, ok := <-buffer.GetOutputChannel():
-			atomic.AddInt64(&s.droppedMessageCount, buffer.GetDroppedMessageCount())
+			s.UpdateDroppedMessageCount(buffer.GetDroppedMessageCount())
 			if !ok {
 				s.Debugf("Syslog Sink %s: Closed listener channel detected. Closing.\n", s.drainUrl)
 				return
@@ -168,13 +167,4 @@ func messagePriorityValue(msg *events.LogMessage) int {
 	default:
 		return -1
 	}
-}
-
-func (s *SyslogSink) GetInstrumentationMetric() sinks.Metric {
-	count := atomic.LoadInt64(&s.droppedMessageCount)
-	return sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": string(s.appId), "drainUrl": s.drainUrl}, Value: count}
-}
-
-func (s *SyslogSink) UpdateDroppedMessageCount(messageCount int64) {
-	atomic.AddInt64(&s.droppedMessageCount, messageCount)
 }
