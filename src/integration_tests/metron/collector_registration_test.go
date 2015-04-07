@@ -23,6 +23,6 @@ var _ = Describe("Collector registration", func() {
 			messageChan <- msg.Data
 		})
 
-		Eventually(messageChan).Should(Receive(MatchRegexp(`^\{"type":"MetronAgent","index":42,"host":"[^:]*:1234","uuid":"42-","credentials":\["admin","admin"\]\}$`)))
+		Eventually(messageChan).Should(Receive(MatchRegexp(`^\{"type":"MetronAgent","index":42,"host":"[^:]*:1234","uuid":"42-[0-9a-f-]{36}","credentials":\["admin","admin"\]\}$`)))
 	})
 })
