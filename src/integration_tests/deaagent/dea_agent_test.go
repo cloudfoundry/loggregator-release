@@ -88,7 +88,7 @@ var _ = BeforeSuite(func() {
 var _ = AfterSuite(func() {
     task1InputListener.Close()
     task1StderrListener.Close()
-    deaAgentSession.Kill().Wait()
+    deaAgentSession.Kill().Wait(5)
     gexec.CleanupBuildArtifacts()
 
     etcdRunner.Adapter().Disconnect()
