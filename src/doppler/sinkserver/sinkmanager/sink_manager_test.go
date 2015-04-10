@@ -7,7 +7,6 @@ import (
 	"doppler/sinks/syslog"
 	"doppler/sinks/syslogwriter"
 	"doppler/sinkserver/blacklist"
-	"doppler/sinkserver/metrics"
 	"doppler/sinkserver/sinkmanager"
 	"net/url"
 	"sync"
@@ -166,15 +165,11 @@ var _ = Describe("SinkManager", func() {
 
 	Describe("Start", func() {
 		Context("with updates from appstore", func() {
-			var metrics *metrics.SinkManagerMetrics
 			var numSyslogSinks func() int
 
 			BeforeEach(func() {
-				metrics = sinkManager.Metrics
 				numSyslogSinks = func() int {
-					metrics.RLock()
-					defer metrics.RUnlock()
-					return metrics.SyslogSinks
+					return metricValue(sinkManager, "numberOfSyslogSinks")
 				}
 			})
 
@@ -312,11 +307,11 @@ var _ = Describe("SinkManager", func() {
 			})
 
 			It("removes the sink", func() {
-				Expect(sinkManager.Metrics.SyslogSinks).To(Equal(1))
+				Expect(metricValue(sinkManager, "numberOfSyslogSinks")).To(Equal(1))
 
 				sinkManager.UnregisterSink(syslogSink)
 
-				Expect(sinkManager.Metrics.SyslogSinks).To(Equal(0))
+				Expect(metricValue(sinkManager, "numberOfSyslogSinks")).To(Equal(0))
 			})
 		})
 
@@ -329,11 +324,11 @@ var _ = Describe("SinkManager", func() {
 			})
 
 			It("decrements the metric only once", func() {
-				Expect(sinkManager.Metrics.DumpSinks).To(Equal(1))
+				Expect(metricValue(sinkManager, "numberOfDumpSinks")).To(Equal(1))
 				sinkManager.UnregisterSink(dumpSink)
-				Expect(sinkManager.Metrics.DumpSinks).To(Equal(0))
+				Expect(metricValue(sinkManager, "numberOfDumpSinks")).To(Equal(0))
 				sinkManager.UnregisterSink(dumpSink)
-				Expect(sinkManager.Metrics.DumpSinks).To(Equal(0))
+				Expect(metricValue(sinkManager, "numberOfDumpSinks")).To(Equal(0))
 			})
 		})
 	})
@@ -343,7 +338,7 @@ var _ = Describe("SinkManager", func() {
 			sink := &channelSink{done: make(chan struct{}), appId: "firehose-a"}
 			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
 			Eventually(sink.RunCalled).Should(BeTrue())
-			Expect(sinkManager.Metrics.Emit().Metrics[3].Value).To(Equal(1))
+			Expect(sinkManager.Emit().Metrics[3].Value).To(Equal(1))
 		})
 
 		It("returns false for a duplicate sink and does not update the sink metrics", func() {
@@ -352,7 +347,7 @@ var _ = Describe("SinkManager", func() {
 			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
 
 			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeFalse())
-			Expect(sinkManager.Metrics.Emit().Metrics[3].Value).To(Equal(1))
+			Expect(sinkManager.Emit().Metrics[3].Value).To(Equal(1))
 		})
 	})
 
@@ -364,14 +359,14 @@ var _ = Describe("SinkManager", func() {
 
 			sinkManager.UnregisterFirehoseSink(sink)
 			Eventually(sink.RunFinished).Should(BeTrue())
-			Expect(sinkManager.Metrics.Emit().Metrics[3].Value).To(Equal(0))
+			Expect(sinkManager.Emit().Metrics[3].Value).To(Equal(0))
 		})
 
 		It("does not update metrics when a sink is not registered", func() {
 			sink := &channelSink{done: make(chan struct{})}
 
 			sinkManager.UnregisterFirehoseSink(sink)
-			Expect(sinkManager.Metrics.Emit().Metrics[3].Value).To(Equal(0))
+			Expect(sinkManager.Emit().Metrics[3].Value).To(Equal(0))
 		})
 	})
 
@@ -430,7 +425,7 @@ var _ = Describe("SinkManager", func() {
 			sinkManager.RegisterSink(sink)
 			sinkManager.SendSyslogErrorToLoggregator("error msg", "myApp", "drainUrl")
 
-			syslogFailureMetrics := sinkManager.Metrics.Emit().Metrics[4:5]
+			syslogFailureMetrics := sinkManager.Emit().Metrics[4:5]
 			Expect(syslogFailureMetrics).To(ConsistOf(
 				instrumentation.Metric{Name: "numberOfSyslogDrainErrors", Value: 1, Tags: map[string]interface{}{"appId": "myApp", "drainUrl": "drainUrl"}},
 			))
@@ -453,7 +448,7 @@ var _ = Describe("SinkManager", func() {
 			sinkManager.RegisterSink(sink1)
 			sinkManager.RegisterSink(sink2)
 			sinkManager.Emit()
-			metrics := sinkManager.Metrics.Emit().Metrics
+			metrics := sinkManager.Emit().Metrics
 			appMetric := metrics[len(metrics)-2:]
 			Expect(appMetric).To(ConsistOf(
 				instrumentation.Metric{Name: "numberOfMessagesLost", Value: int64(25), Tags: map[string]interface{}{"appId": "myApp1"}},
@@ -517,3 +512,15 @@ func (c *channelSink) GetInstrumentationMetric() sinks.Metric {
 	return sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": string(c.appId)}, Value: 25}
 }
 func (c *channelSink) UpdateDroppedMessageCount(mc int64) {}
+
+func metricValue(manager *sinkmanager.SinkManager, metricName string) int {
+	ms := manager.Emit().Metrics
+
+	for _, m := range ms {
+		if m.Name == metricName {
+			return m.Value.(int)
+		}
+	}
+
+	return 0
+}

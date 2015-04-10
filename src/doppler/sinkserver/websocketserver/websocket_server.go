@@ -31,14 +31,14 @@ type WebsocketServer struct {
 	sync.RWMutex
 }
 
-func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, keepAliveInterval time.Duration, wSMessageBufferSize uint, logger *gosteno.Logger) *WebsocketServer {
+func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, keepAliveInterval time.Duration, wSMessageBufferSize uint, dropsondeOrigin string, logger *gosteno.Logger) *WebsocketServer {
 	return &WebsocketServer{
 		apiEndpoint:       apiEndpoint,
 		sinkManager:       sinkManager,
 		keepAliveInterval: keepAliveInterval,
 		bufferSize:        wSMessageBufferSize,
 		logger:            logger,
-		dropsondeOrigin:   sinkManager.DropsondeOrigin,
+		dropsondeOrigin:   dropsondeOrigin,
 	}
 }
 
@@ -167,7 +167,7 @@ func (w *WebsocketServer) streamWebsocket(appId string, websocketConnection *gor
 		websocketConnection,
 		w.bufferSize,
 		w.dropsondeOrigin,
-		w.sinkManager.Metrics.SinkDropUpdateChannel,
+		w.sinkManager.SinkDropUpdateChannel(),
 	)
 
 	register(websocketSink)

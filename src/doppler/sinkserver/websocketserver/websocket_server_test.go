@@ -33,7 +33,7 @@ var _ = Describe("WebsocketServer", func() {
 		cfcomponent.Logger = logger
 		wsReceivedChan = make(chan []byte)
 
-		server = websocketserver.New(apiEndpoint, sinkManager, 100*time.Millisecond, 100, logger)
+		server = websocketserver.New(apiEndpoint, sinkManager, 100*time.Millisecond, 100, "dropsonde-origin", logger)
 		go server.Start()
 		serverUrl := fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId)
 		websocket.DefaultDialer = &websocket.Dialer{HandshakeTimeout: 10 * time.Millisecond}

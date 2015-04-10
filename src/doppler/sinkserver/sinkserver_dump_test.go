@@ -69,7 +69,7 @@ var _ = Describe("Dumping", func() {
 		}()
 
 		apiEndpoint := "localhost:" + SERVER_PORT
-		TestWebsocketServer = websocketserver.New(apiEndpoint, sinkManager, 10*time.Second, 100, loggertesthelper.Logger())
+		TestWebsocketServer = websocketserver.New(apiEndpoint, sinkManager, 10*time.Second, 100, "dropsonde-origin", loggertesthelper.Logger())
 
 		services.Add(1)
 		goRoutineSpawned.Add(1)

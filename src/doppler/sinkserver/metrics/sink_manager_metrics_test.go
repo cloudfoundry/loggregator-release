@@ -17,9 +17,11 @@ var _ = Describe("SinkManagerMetrics", func() {
 
 	var sinkManagerMetrics *metrics.SinkManagerMetrics
 	var sink sinks.Sink
+	var dropUpdateChan chan int64
 
 	BeforeEach(func() {
-		sinkManagerMetrics = metrics.NewSinkManagerMetrics()
+		dropUpdateChan = make(chan int64)
+		sinkManagerMetrics = metrics.NewSinkManagerMetrics(dropUpdateChan)
 	})
 
 	It("emits metrics for dump sinks", func() {
@@ -125,8 +127,8 @@ var _ = Describe("SinkManagerMetrics", func() {
 	})
 
 	It("emits the total number of message dropped", func() {
-		sinkManagerMetrics.SinkDropUpdateChannel <- 25
-		sinkManagerMetrics.SinkDropUpdateChannel <- 25
+		dropUpdateChan <- 25
+		dropUpdateChan <- 25
 
 		totalDroppedMessageCountMetric := instrumentation.Metric{Name: "totalDroppedMessages", Value: int64(50)}
 
@@ -134,8 +136,8 @@ var _ = Describe("SinkManagerMetrics", func() {
 	})
 
 	It("retains total dropped message count independently of current app drain metrics list", func() {
-		sinkManagerMetrics.SinkDropUpdateChannel <- 25
-		sinkManagerMetrics.SinkDropUpdateChannel <- 25
+		dropUpdateChan <- 25
+		dropUpdateChan <- 25
 
 		metrics := []sinks.Metric{sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": "myApp"}, Value: 378}}
 		sinkManagerMetrics.AddAppDrainMetrics(metrics)
