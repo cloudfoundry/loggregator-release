@@ -67,7 +67,7 @@ func New(host string, config *config.Config, logger *gosteno.Logger, dropsondeOr
 	blacklist := blacklist.New(config.BlackListIps)
 	metricTTL := time.Duration(config.ContainerMetricTTLSeconds) * time.Second
 	sinkTimeout := time.Duration(config.SinkInactivityTimeoutSeconds) * time.Second
-	sinkManager := sinkmanager.NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger, dropsondeOrigin, sinkTimeout, metricTTL)
+	sinkManager := sinkmanager.New(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger, dropsondeOrigin, sinkTimeout, metricTTL)
 
 	return &Doppler{
 		Logger:                     logger,

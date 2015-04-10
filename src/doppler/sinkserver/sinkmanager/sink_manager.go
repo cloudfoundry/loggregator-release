@@ -40,7 +40,7 @@ type SinkManager struct {
 	stopOnce sync.Once
 }
 
-func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger, dropsondeOrigin string, sinkTimeout, metricTTL time.Duration) *SinkManager {
+func New(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger, dropsondeOrigin string, sinkTimeout, metricTTL time.Duration) *SinkManager {
 	sinkDropUpdateChannel := make(chan int64)
 
 	return &SinkManager{
