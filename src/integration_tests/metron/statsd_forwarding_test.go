@@ -177,6 +177,7 @@ func checkValueMetric(fakeDoppler net.PacketConn, valueMetric *events.ValueMetri
 
 	var receivedEnvelope events.Envelope
 	Expect(proto.Unmarshal(readData, &receivedEnvelope)).To(Succeed())
+	Expect(receivedEnvelope.GetEventType()).To(Equal(events.Envelope_ValueMetric))
 
 	Expect(receivedEnvelope.GetValueMetric()).To(Equal(valueMetric))
 	Expect(receivedEnvelope.GetOrigin()).To(Equal(origin))
