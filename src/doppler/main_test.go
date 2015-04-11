@@ -7,7 +7,6 @@ import (
 	"doppler"
 
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
 	"github.com/pivotal-golang/localip"
 
@@ -17,7 +16,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-//Test ParseConfig
 var _ = Describe("Main", func() {
 
 	Describe("ParseConfig", func() {
@@ -79,17 +77,39 @@ var _ = Describe("Main", func() {
 
 	Describe("StartHeartbeats", func() {
 		var adapter *fakestoreadapter.FakeStoreAdapter
-		var oldProvider func([]string, int) storeadapter.StoreAdapter
+
 		BeforeEach(func() {
 			adapter = fakestoreadapter.New()
-			oldProvider = main.StoreAdapterProvider
-			main.StoreAdapterProvider = func([]string, int) storeadapter.StoreAdapter {
-				return adapter
-			}
+			main.SetStoreAdapter(adapter)
 		})
 
 		AfterEach(func() {
-			main.StoreAdapterProvider = oldProvider
+			main.SetStoreAdapter(nil)
+		})
+
+		Context("when store adapter is nil", func() {
+			var conf config.Config
+			var localIp string
+
+			BeforeEach(func() {
+				localIp, _ = localip.LocalIP()
+				conf = config.Config{
+					JobName: "doppler_z1",
+					Index:   0,
+					EtcdMaxConcurrentRequests: 10,
+					EtcdUrls:                  []string{"test:123", "test:456"},
+					Zone:                      "z1",
+					DropsondeIncomingMessagesPort: 1234,
+				}
+
+				main.SetStoreAdapter(nil)
+			})
+
+			It("should panic", func() {
+				Expect(func() {
+					main.StartHeartbeats(localIp, time.Second, &conf, loggertesthelper.Logger())
+				}).Should(Panic())
+			})
 		})
 
 		Context("with a valid ETCD conig", func() {
@@ -106,11 +126,6 @@ var _ = Describe("Main", func() {
 					Zone:                      "z1",
 					DropsondeIncomingMessagesPort: 1234,
 				}
-			})
-
-			It("connects to etcd", func() {
-				main.StartHeartbeats(localIp, time.Second, &conf, loggertesthelper.Logger())
-				Expect(adapter.DidConnect).To(BeTrue())
 			})
 
 			It("sends a heartbeat to etcd", func() {

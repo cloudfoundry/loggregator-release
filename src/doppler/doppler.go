@@ -14,7 +14,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
@@ -22,7 +21,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/store"
 	"github.com/cloudfoundry/loggregatorlib/store/cache"
 	"github.com/cloudfoundry/storeadapter"
-	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 )
 
 type Doppler struct {
@@ -49,13 +47,10 @@ type Doppler struct {
 	sync.WaitGroup
 }
 
-func New(host string, config *config.Config, logger *gosteno.Logger, dropsondeOrigin string) *Doppler {
+func New(host string, config *config.Config, logger *gosteno.Logger, storeAdapter storeadapter.StoreAdapter, dropsondeOrigin string) *Doppler {
 	cfcomponent.Logger = logger
 	keepAliveInterval := 30 * time.Second
 
-	workPool := workpool.NewWorkPool(config.EtcdMaxConcurrentRequests)
-	storeAdapter := etcdstoreadapter.NewETCDStoreAdapter(config.EtcdUrls, workPool)
-	storeAdapter.Connect()
 	appStoreCache := cache.NewAppServiceCache()
 	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
 
@@ -93,10 +88,6 @@ func (doppler *Doppler) Start() {
 	doppler.errChan = make(chan error)
 	doppler.Unlock()
 
-	err := doppler.storeAdapter.Connect()
-	if err != nil {
-		panic(err)
-	}
 	doppler.Add(7)
 
 	go func() {
