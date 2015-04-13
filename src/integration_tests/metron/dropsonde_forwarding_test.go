@@ -10,6 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/gogo/protobuf/proto"
 )
 
 var _ = Describe("Dropsonde message forwarding", func() {
@@ -41,9 +42,12 @@ var _ = Describe("Dropsonde message forwarding", func() {
 		defer close(done)
 
 		originalMessage := basicHeartbeatMessage()
+		expectedEnvelope := addDefaultTags(basicHeartbeatEvent())
+		expectedMessage, _ := proto.Marshal(expectedEnvelope)
 
 		mac := hmac.New(sha256.New, []byte("shared_secret"))
-		mac.Write(originalMessage)
+		mac.Write(expectedMessage)
+
 		signature := mac.Sum(nil)
 
 		metronInput, _ := net.Dial("udp", "localhost:51161")
@@ -96,6 +100,10 @@ var _ = Describe("Dropsonde message forwarding", func() {
 
 		go writeToMetron()
 
-		Eventually(messageChan).Should(Receive(Equal(signedMessage{signature: signature, message: originalMessage})))
+		var receivedMessage signedMessage
+		Eventually(messageChan).Should(Receive(&receivedMessage))
+
+		Expect(receivedMessage).To(Equal(signedMessage{signature: signature, message: expectedMessage}))
+
 	})
 })

@@ -21,36 +21,34 @@ func basicValueMetric(name string, value float64, unit string) *events.ValueMetr
 }
 
 func basicHeartbeatMessage() []byte {
-	peerType := events.PeerType_Server
-	message, _ := proto.Marshal(&events.Envelope{
-		Origin:    proto.String("fake-origin-1"),
-		EventType: events.Envelope_Heartbeat.Enum(),
-		HttpStart: &events.HttpStart{
-			Timestamp: proto.Int64(1),
-			RequestId: &events.UUID{
-				Low:  proto.Uint64(0),
-				High: proto.Uint64(1),
-			},
-			PeerType:      &peerType,
-			Method:        events.Method_GET.Enum(),
-			Uri:           proto.String("fake-uri-1"),
-			RemoteAddress: proto.String("fake-remote-addr-1"),
-			UserAgent:     proto.String("fake-user-agent-1"),
-			ParentRequestId: &events.UUID{
-				Low:  proto.Uint64(2),
-				High: proto.Uint64(3),
-			},
-			ApplicationId: &events.UUID{
-				Low:  proto.Uint64(4),
-				High: proto.Uint64(5),
-			},
-			InstanceIndex: proto.Int32(6),
-			InstanceId:    proto.String("fake-instance-id-1"),
-		},
-	})
+	message, _ := proto.Marshal(basicHeartbeatEvent())
 
 	return message
 }
+
+func basicHeartbeatEvent() *events.Envelope {
+	return &events.Envelope{
+		Origin:    proto.String("fake-origin-1"),
+		EventType: events.Envelope_Heartbeat.Enum(),
+		Heartbeat: &events.Heartbeat{
+			SentCount: proto.Uint64(100),
+			ReceivedCount: proto.Uint64(250),
+			ErrorCount: proto.Uint64(50),
+		},
+	}
+}
+
+func addDefaultTags(envelope *events.Envelope) *events.Envelope {
+	envelope.Tags = []*events.Tag{
+		&events.Tag{Key: proto.String("deployment"), Value: proto.String("deployment-name")},
+		&events.Tag{Key: proto.String("job"), Value: proto.String("test-component")},
+		&events.Tag{Key: proto.String("index"), Value: proto.String("42")},
+		&events.Tag{Key: proto.String("ip"), Value: proto.String(localIPAddress)},
+	}
+
+	return envelope
+}
+
 
 func basicValueMessage() []byte {
 	message, _ := proto.Marshal(&events.Envelope{
@@ -106,8 +104,8 @@ func legacyLogMessage(appID int, message string, timestamp time.Time) []byte {
 	return bytes
 }
 
-func eventsLogMessage(appID int, message string, timestamp time.Time) []byte {
-	envelope := &events.Envelope{
+func eventsLogMessage(appID int, message string, timestamp time.Time) *events.Envelope {
+	return &events.Envelope{
 		Origin:    proto.String("legacy"),
 		EventType: events.Envelope_LogMessage.Enum(),
 		LogMessage: &events.LogMessage{
@@ -119,9 +117,6 @@ func eventsLogMessage(appID int, message string, timestamp time.Time) []byte {
 			SourceInstance: proto.String("fake-source-id"),
 		},
 	}
-
-	bytes, _ := proto.Marshal(envelope)
-	return bytes
 }
 
 func eventuallyListensForUDP(address string) net.PacketConn {

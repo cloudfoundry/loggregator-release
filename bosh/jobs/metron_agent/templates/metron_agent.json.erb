@@ -2,6 +2,7 @@
   "Index": <%= spec.index %>,
   "Job": "<%= name %>",
   "Zone": "<%= p("metron_agent.zone") %>",
+  "Deployment": "<%= p("metron_agent.deployment") %>",
 
   "EtcdUrls": [<%= p("etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
   "EtcdMaxConcurrentRequests": <%= p("etcd.maxconcurrentrequests") %>,

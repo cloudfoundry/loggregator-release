@@ -8,6 +8,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/gogo/protobuf/proto"
 )
 
 var _ = Describe("Legacy message forwarding", func() {
@@ -16,7 +17,8 @@ var _ = Describe("Legacy message forwarding", func() {
 
 		currentTime := time.Now()
 		marshalledLegacyMessage := legacyLogMessage(123, "BLAH", currentTime)
-		marshalledEventsMessage := eventsLogMessage(123, "BLAH", currentTime)
+		marshalledEventsEnvelope := addDefaultTags(eventsLogMessage(123, "BLAH", currentTime))
+		marshalledEventsMessage, _ := proto.Marshal(marshalledEventsEnvelope)
 
 		testServer := eventuallyListensForUDP("localhost:3457")
 		defer testServer.Close()

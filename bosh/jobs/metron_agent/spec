@@ -17,6 +17,7 @@ properties:
   syslog_daemon_config.transport:
     description: "Transport to be used when forwarding logs (tcp|udp|relp)."
     default: "tcp"
+
   metron_agent.incoming_port:
     description: "Incoming port for legacy log messages"
     default: 3456
@@ -26,9 +27,11 @@ properties:
   metron_agent.statsd_incoming_port:
     description: "Incoming port for statsd metrics"
     default: 8125
+
   metron_agent.debug:
     description: "boolean value to turn on verbose mode"
     default: false
+
   metron_agent.status.user:
     description: "username used to log into varz endpoint"
     default: ""
@@ -38,14 +41,19 @@ properties:
   metron_agent.status.port:
     description: "port used to run the varz endpoint"
     default: 0
+
   metron_agent.zone:
     description: "Availability zone where this agent is running"
+  metron_agent.deployment:
+    description: "Name of deployment (added as tag on all outgoing metrics)"
+
   metron_agent.etcd_query_interval_milliseconds:
     description: "Interval for querying ETCD for trafficcontroller heartbeats"
     default: 5000
   metron_agent.collector_registrar_interval_milliseconds:
     description: "Interval for registering with collector"
     default: 60000
+
   loggregator.incoming_port:
     description: "Port where loggregator listens for legacy log messages"
     default: 3456
@@ -54,6 +62,7 @@ properties:
     default: 3457
   loggregator_endpoint.shared_secret:
     description: "Shared secret used to verify cryptographically signed loggregator messages"
+
   nats.user:
     description: "Username for cc client to connect to NATS"
   nats.password:
@@ -62,6 +71,7 @@ properties:
     description: "IP addresses of Cloud Foundry NATS servers"
   nats.port:
     description: "IP port of Cloud Foundry NATS server"
+
   etcd.machines:
     description: "IPs pointing to the ETCD cluster"
   etcd.maxconcurrentrequests:

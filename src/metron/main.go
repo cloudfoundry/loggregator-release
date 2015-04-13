@@ -29,6 +29,7 @@ import (
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	"metron/statsdlistener"
+	"metron/tagger"
 )
 
 var (
@@ -66,6 +67,7 @@ func main() {
 	messageAggregator := message_aggregator.NewMessageAggregator(logger)
 	varzForwarder := varz_forwarder.NewVarzForwarder(config.Job, metricTTL, logger)
 	marshaller := dropsonde_marshaller.NewDropsondeMarshaller(logger)
+	messageTagger := tagger.New(config.Deployment, config.Job, config.Index)
 
 	instrumentables := []instrumentation.Instrumentable{
 		legacyMessageListener,
@@ -96,8 +98,11 @@ func main() {
 	aggregatedEventChan := make(chan *events.Envelope)
 	go messageAggregator.Run(dropsondeEventChan, aggregatedEventChan)
 
+	taggedEventChan := make(chan *events.Envelope)
+	go messageTagger.Run(aggregatedEventChan, taggedEventChan)
+
 	forwardedEventChan := make(chan *events.Envelope)
-	go varzForwarder.Run(aggregatedEventChan, forwardedEventChan)
+	go varzForwarder.Run(taggedEventChan, forwardedEventChan)
 
 	reMarshalledMessageChan := make(chan []byte)
 	go marshaller.Run(forwardedEventChan, reMarshalledMessageChan)
@@ -150,6 +155,7 @@ type metronConfig struct {
 	LoggregatorLegacyPort         int
 	LoggregatorDropsondePort      int
 	SharedSecret                  string
+	Deployment                    string
 }
 
 type metronHealthMonitor struct{}
