@@ -1,3 +1,6 @@
+meta:
+  environment: ~
+
 lamb_meta:
   release:
     name: cf
@@ -57,3 +60,6 @@ properties:
     maxRetainedLogMessages: 100
     debug: (( merge || false ))
     blacklisted_syslog_ranges: ~
+
+  metron_agent:
+    deployment: (( meta.environment ))
