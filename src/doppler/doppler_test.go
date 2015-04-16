@@ -22,7 +22,8 @@ var _ = Describe("Doppler Server", func() {
 	var dopplerInstance *doppler.Doppler
 
 	BeforeEach(func() {
-		dopplerInstance = doppler.New("127.0.0.1", dopplerConfig, loggertesthelper.Logger(), "dropsondeOrigin")
+		storeAdapter := doppler.NewStoreAdapter(dopplerConfig.EtcdUrls, dopplerConfig.EtcdMaxConcurrentRequests)
+		dopplerInstance = doppler.New("127.0.0.1", dopplerConfig, loggertesthelper.Logger(), storeAdapter, "dropsondeOrigin")
 		go dopplerInstance.Start()
 		time.Sleep(10 * time.Millisecond)
 	})

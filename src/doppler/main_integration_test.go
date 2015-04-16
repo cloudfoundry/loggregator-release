@@ -40,6 +40,8 @@ var _ = Describe("Etcd Integration tests", func() {
 			Zone:                      "z1",
 			ContainerMetricTTLSeconds: 120,
 		}
+
+		main.SetStoreAdapter(main.NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests))
 	})
 
 	AfterEach(func() {

@@ -30,6 +30,8 @@ var (
 	configFile  = flag.String("config", "config/doppler.json", "Location of the doppler config json file")
 	cpuprofile  = flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile  = flag.String("memprofile", "", "write memory profile to this file")
+
+	storeAdapter storeadapter.StoreAdapter
 )
 
 type DopplerServerHealthMonitor struct {
@@ -39,10 +41,15 @@ func (hm DopplerServerHealthMonitor) Ok() bool {
 	return true
 }
 
-var StoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
-	workPool := workpool.NewWorkPool(concurrentRequests)
+func SetStoreAdapter(adapter storeadapter.StoreAdapter) {
+	storeAdapter = adapter
+}
 
-	return etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
+func NewStoreAdapter(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
+	workPool := workpool.NewWorkPool(concurrentRequests)
+	etcdStoreAdapter := etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
+	etcdStoreAdapter.Connect()
+	return etcdStoreAdapter
 }
 
 func main() {
@@ -100,7 +107,8 @@ func main() {
 		panic(err)
 	}
 
-	doppler := New(localIp, conf, logger, "doppler")
+	storeAdapter = NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
+	doppler := New(localIp, conf, logger, storeAdapter, "doppler")
 
 	cfc, err := cfcomponent.NewComponent(
 		logger,
@@ -163,11 +171,12 @@ func StartHeartbeats(localIp string, ttl time.Duration, config *config.Config, l
 		return
 	}
 
-	adapter := StoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
-	adapter.Connect()
+	if storeAdapter == nil {
+		panic("store adapter is nil")
+	}
 
 	logger.Debugf("Starting Health Status Updates to Store: /healthstatus/doppler/%s/%s/%d", config.Zone, config.JobName, config.Index)
-	status, stopChan, err := adapter.MaintainNode(storeadapter.StoreNode{
+	status, stopChan, err := storeAdapter.MaintainNode(storeadapter.StoreNode{
 		Key:   fmt.Sprintf("/healthstatus/doppler/%s/%s/%d", config.Zone, config.JobName, config.Index),
 		Value: []byte(localIp),
 		TTL:   uint64(ttl.Seconds()),
