@@ -240,6 +240,8 @@ Follow these steps to make a contribution to any of our open source repositories
 1. Make your changes on a topic branch, commit, and push to github and open a pull request against the `develop` branch.
 
 Once your commits are approved by Travis CI and reviewed by the core team, they will be merged.
+#### Go version support
+As of version ca517531f4ef646435365996c791c5031b75fc9d, all Loggregator components are deployed to Cloud Foundry with Go 1.4. As of that revision, support for earlier versions of the language are not guaranteed.
 
 #### OS X prerequisites
 
@@ -264,13 +266,6 @@ Please run `bin/install-git-hooks` before committing for the first time. The pre
 #### Additional go tools
 
 Install go vet and go cover
-
-If Go version is less than Go 1.4 then 
-
-    go get code.google.com/p/go.tools/cmd/vet
-    go get code.google.com/p/go.tools/cmd/cover
-
-else 
 
     go get golang.org/x/tools/cmd/vet
     go get golang.org/x/tools/cmd/cover
