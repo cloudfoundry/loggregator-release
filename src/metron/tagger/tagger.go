@@ -25,23 +25,11 @@ func (t *Tagger) Run(inputChan <-chan *events.Envelope, outputChan chan<- *event
 	ip, _ := localip.LocalIP()
 	for envelope := range inputChan {
 		newEnvelope := *envelope
-		newEnvelope.Tags = []*events.Tag{
-			&events.Tag{
-				Key:   proto.String("deployment"),
-				Value: proto.String(t.deploymentName),
-			},
-			&events.Tag{
-				Key:   proto.String("job"),
-				Value: proto.String(t.job),
-			},
-			&events.Tag{
-				Key:   proto.String("index"),
-				Value: proto.String(strconv.Itoa(int(t.index))),
-			},
-			&events.Tag{
-				Key:   proto.String("ip"),
-				Value: proto.String(ip),
-			}}
+
+		newEnvelope.Deployment = proto.String(t.deploymentName)
+		newEnvelope.Job = proto.String(t.job)
+		newEnvelope.Index = proto.String(strconv.Itoa(int(t.index)))
+		newEnvelope.Ip = proto.String(ip)
 
 		outputChan <- &newEnvelope
 	}

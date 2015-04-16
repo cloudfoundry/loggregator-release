@@ -22,23 +22,6 @@ var _ = Describe("Tagger", func() {
 		expectedEnvelope := basicTaggedHttpStartStopMessage(*envelope)
 		Eventually(outputChan).Should(Receive(Equal(expectedEnvelope)))
 	})
-
-	It("overwrites tags already present on the envelope", func() {
-		t := tagger.New("test-deployment", "test-job", 2)
-		inputChan := make(chan *events.Envelope)
-		outputChan := make(chan *events.Envelope)
-		go t.Run(inputChan, outputChan)
-		envelope := basicHttpStartStopMessage()
-		envelope.Tags = []*events.Tag{
-			&events.Tag{Key: proto.String("foo"), Value: proto.String("bar")},
-			&events.Tag{Key: proto.String("baz"), Value: proto.String("bang")},
-		}
-
-		inputChan <- envelope
-		expectedEnvelope := basicTaggedHttpStartStopMessage(*envelope)
-		Eventually(outputChan).Should(Receive(Equal(expectedEnvelope)))
-	})
-
 })
 
 func basicHttpStartStopMessage() *events.Envelope {
@@ -68,22 +51,11 @@ func basicHttpStartStopMessage() *events.Envelope {
 
 func basicTaggedHttpStartStopMessage(envelope events.Envelope) *events.Envelope {
 	ip, _ := localip.LocalIP()
-	envelope.Tags = []*events.Tag{
-		&events.Tag{
-			Key:   proto.String("deployment"),
-			Value: proto.String("test-deployment"),
-		},
-		&events.Tag{
-			Key:   proto.String("job"),
-			Value: proto.String("test-job"),
-		},
-		&events.Tag{
-			Key:   proto.String("index"),
-			Value: proto.String("2"),
-		},
-		&events.Tag{
-			Key:   proto.String("ip"),
-			Value: proto.String(ip),
-		}}
+
+	envelope.Deployment = proto.String("test-deployment")
+	envelope.Job = proto.String("test-job")
+	envelope.Index = proto.String("2")
+	envelope.Ip = proto.String(ip)
+
 	return &envelope
 }

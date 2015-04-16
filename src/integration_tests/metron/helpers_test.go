@@ -39,13 +39,11 @@ func basicHeartbeatEvent() *events.Envelope {
 }
 
 func addDefaultTags(envelope *events.Envelope) *events.Envelope {
-	envelope.Tags = []*events.Tag{
-		&events.Tag{Key: proto.String("deployment"), Value: proto.String("deployment-name")},
-		&events.Tag{Key: proto.String("job"), Value: proto.String("test-component")},
-		&events.Tag{Key: proto.String("index"), Value: proto.String("42")},
-		&events.Tag{Key: proto.String("ip"), Value: proto.String(localIPAddress)},
-	}
-
+	envelope.Deployment = proto.String("deployment-name")
+	envelope.Job = proto.String("test-component")
+	envelope.Index = proto.String("42")
+	envelope.Ip = proto.String(localIPAddress)
+	
 	return envelope
 }
 
