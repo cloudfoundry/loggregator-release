@@ -3,7 +3,7 @@ platform: linux
 
 image: docker:///cloudfoundry/lamb-go14
 inputs:
-- name: loggregator-develop
+- name: loggregator
 - name: lamb-ci-tools
 
 run:
