@@ -29,6 +29,10 @@ class LambProperties
       zone: z1
     traffic_controller:
       zone: z1
+    consul:
+      agent:
+        services:
+          - loggregator_trafficcontroller
     EOF
     result.chomp
   end
@@ -39,6 +43,10 @@ class LambProperties
       zone: z2
     traffic_controller:
       zone: z2
+    consul:
+      agent:
+        services:
+          - loggregator_trafficcontroller
     EOF
     result.chomp
   end
@@ -60,6 +68,8 @@ class LambProperties
     - name: loggregator_trafficcontroller
       release: cf
     - name: metron_agent
+      release: cf
+    - name: consul_agent
       release: cf
     EOF
     result.chomp
