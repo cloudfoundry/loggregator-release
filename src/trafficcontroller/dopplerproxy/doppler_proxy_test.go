@@ -57,13 +57,12 @@ var _ = Describe("ServeHTTP", func() {
 		})
 
 		Context("if the path does not end with /stream or /recentlogs", func() {
-			It("returns a 404 and sets the WWW-Authenticate to basic", func() {
+			It("returns a 404", func() {
 				req, _ := http.NewRequest("GET", "/apps/abc123/bar", nil)
 
 				proxy.ServeHTTP(recorder, req)
 
 				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
 				Expect(recorder.Body.String()).To(Equal("Resource Not Found. /apps/abc123/bar"))
 			})
 
@@ -78,13 +77,12 @@ var _ = Describe("ServeHTTP", func() {
 		})
 
 		Context("if the app id is missing", func() {
-			It("returns a 404 and sets the WWW-Authenticate to basic", func() {
+			It("returns a 404", func() {
 				req, _ := http.NewRequest("GET", "/apps//stream", nil)
 
 				proxy.ServeHTTP(recorder, req)
 
 				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
 				Expect(recorder.Body.String()).To(Equal("App ID missing. Make request to /apps/APP_ID/stream"))
 			})
 
@@ -226,13 +224,12 @@ var _ = Describe("ServeHTTP", func() {
 		})
 
 		Context("if subscription_id is not provided (no trailing slash)", func() {
-			It("returns a 404 and sets the WWW-Authenticate to basic", func() {
+			It("returns a 404", func() {
 				req, _ := http.NewRequest("GET", "/firehose", nil)
 				req.Header.Add("Authorization", "token")
 
 				proxy.ServeHTTP(recorder, req)
 				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
 				Expect(recorder.Body.String()).To(Equal("Firehose SUBSCRIPTION_ID missing. Make request to /firehose/SUBSCRIPTION_ID"))
 			})
 
@@ -248,13 +245,12 @@ var _ = Describe("ServeHTTP", func() {
 		})
 
 		Context("if subscription_id is not provided (with trailing slash)", func() {
-			It("returns a 404 and sets the WWW-Authenticate to basic", func() {
+			It("returns a 404", func() {
 				req, _ := http.NewRequest("GET", "/firehose/", nil)
 				req.Header.Add("Authorization", "token")
 
 				proxy.ServeHTTP(recorder, req)
 				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
 				Expect(recorder.Body.String()).To(Equal("Firehose SUBSCRIPTION_ID missing. Make request to /firehose/SUBSCRIPTION_ID"))
 			})
 
@@ -270,13 +266,12 @@ var _ = Describe("ServeHTTP", func() {
 		})
 
 		Context("if there is an extra trailing slash after a valid firehose URL", func() {
-			It("returns a 404 and sets the WWW-Authenticate to basic", func() {
+			It("returns a 404", func() {
 				req, _ := http.NewRequest("GET", "/firehose/abc/123", nil)
 				req.Header.Add("Authorization", "token")
 
 				proxy.ServeHTTP(recorder, req)
 				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
 				Expect(recorder.Body.String()).To(Equal("Firehose SUBSCRIPTION_ID missing. Make request to /firehose/SUBSCRIPTION_ID"))
 			})
 
@@ -292,7 +287,7 @@ var _ = Describe("ServeHTTP", func() {
 		})
 
 		Context("if path is invalid but contains the string 'firehose'", func() {
-			It("returns a 404 for a bad firehose endpoint", func() {
+			It("returns a 404", func() {
 				req, _ := http.NewRequest("GET", "/appsfirehosefoo/abc-123", nil)
 				req.Header.Add("Authorization", "token")
 
@@ -325,20 +320,18 @@ var _ = Describe("ServeHTTP", func() {
 	})
 
 	Context("Other invalid paths", func() {
-		It("returns a 404 and sets the WWW-Authenticate to basic for an empty path", func() {
+		It("returns a 404 for an empty path", func() {
 			req, _ := http.NewRequest("GET", "/", nil)
 			proxy.ServeHTTP(recorder, req)
 			Expect(recorder.Code).To(Equal(http.StatusNotFound))
-			Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
 			Expect(recorder.Body.String()).To(Equal("Resource Not Found. /"))
 		})
 	})
 
-	It("returns a 404 and sets the WWW-Authenticate to basic if the path does not start with /apps or /firehose or /set-cookie", func() {
+	It("returns a 404 if the path does not start with /apps or /firehose or /set-cookie", func() {
 		req, _ := http.NewRequest("GET", "/notApps", nil)
 		proxy.ServeHTTP(recorder, req)
 		Expect(recorder.Code).To(Equal(http.StatusNotFound))
-		Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
 		Expect(recorder.Body.String()).To(Equal("Resource Not Found. /notApps"))
 	})
 
