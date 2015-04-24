@@ -8,10 +8,6 @@ files:
 - loggregator/src/trafficcontroller/channel_group_connector/*.go # gosub
 - loggregator/src/trafficcontroller/doppler_endpoint/*.go # gosub
 - loggregator/src/trafficcontroller/dopplerproxy/*.go # gosub
-- loggregator/src/trafficcontroller/integration_test/*.go # gosub
-- loggregator/src/trafficcontroller/integration_test/fake_auth_server/*.go # gosub
-- loggregator/src/trafficcontroller/integration_test/fake_doppler/*.go # gosub
-- loggregator/src/trafficcontroller/integration_test/fake_uaa_server/*.go # gosub
 - loggregator/src/trafficcontroller/listener/*.go # gosub
 - loggregator/src/trafficcontroller/marshaller/*.go # gosub
 - loggregator/src/trafficcontroller/serveraddressprovider/*.go # gosub
@@ -51,4 +47,3 @@ files:
 - loggregator/src/github.com/gorilla/websocket/*.go # gosub
 - loggregator/src/github.com/nu7hatch/gouuid/*.go # gosub
 - loggregator/src/github.com/pivotal-golang/localip/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/loggregatorlib/loggertesthelper/*.go # gosub

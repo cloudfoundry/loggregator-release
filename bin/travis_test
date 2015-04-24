@@ -72,6 +72,7 @@ integration_testable_packages=(
   doppler
   deaagent
   metron
+  trafficcontroller
 )
 
 for package in "${integration_testable_packages[@]}"

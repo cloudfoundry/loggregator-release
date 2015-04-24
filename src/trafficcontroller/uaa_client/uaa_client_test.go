@@ -1,8 +1,8 @@
 package uaa_client_test
 
 import (
+	"integration_tests/trafficcontroller/fake_uaa_server"
 	"net/http/httptest"
-	"trafficcontroller/integration_test/fake_uaa_server"
 	"trafficcontroller/uaa_client"
 
 	. "github.com/onsi/ginkgo"

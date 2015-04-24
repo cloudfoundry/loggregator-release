@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 	"trafficcontroller/doppler_endpoint"
-	testhelpers "trafficcontroller_testhelpers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -21,16 +20,16 @@ import (
 
 var _ = Describe("ServeHTTP", func() {
 	var (
-		auth                  testhelpers.LogAuthorizer
-		adminAuth             testhelpers.AdminAuthorizer
+		auth                  LogAuthorizer
+		adminAuth             AdminAuthorizer
 		proxy                 *dopplerproxy.Proxy
 		recorder              *httptest.ResponseRecorder
 		channelGroupConnector *fakeChannelGroupConnector
 	)
 
 	BeforeEach(func() {
-		auth = testhelpers.LogAuthorizer{Result: testhelpers.AuthorizerResult{Authorized: true}}
-		adminAuth = testhelpers.AdminAuthorizer{Result: testhelpers.AuthorizerResult{Authorized: true}}
+		auth = LogAuthorizer{Result: AuthorizerResult{Authorized: true}}
+		adminAuth = AdminAuthorizer{Result: AuthorizerResult{Authorized: true}}
 
 		channelGroupConnector = &fakeChannelGroupConnector{messages: make(chan []byte, 10)}
 
@@ -98,7 +97,7 @@ var _ = Describe("ServeHTTP", func() {
 
 		Context("if authorization fails", func() {
 			It("returns an unauthorized status and sets the WWW-Authenticate header", func() {
-				auth.Result = testhelpers.AuthorizerResult{Authorized: false, ErrorMessage: "Error: Invalid authorization"}
+				auth.Result = AuthorizerResult{Authorized: false, ErrorMessage: "Error: Invalid authorization"}
 
 				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
 				req.Header.Add("Authorization", "token")
@@ -114,7 +113,7 @@ var _ = Describe("ServeHTTP", func() {
 			})
 
 			It("It does not attempt to connect to doppler", func() {
-				auth.Result = testhelpers.AuthorizerResult{Authorized: false, ErrorMessage: "Authorization Failed"}
+				auth.Result = AuthorizerResult{Authorized: false, ErrorMessage: "Authorization Failed"}
 
 				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
 				req.Header.Add("Authorization", "token")
@@ -127,7 +126,7 @@ var _ = Describe("ServeHTTP", func() {
 		})
 
 		It("can read the authorization information from a cookie", func() {
-			auth.Result = testhelpers.AuthorizerResult{Authorized: false, ErrorMessage: "Authorization Failed"}
+			auth.Result = AuthorizerResult{Authorized: false, ErrorMessage: "Authorization Failed"}
 
 			req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
 
@@ -208,7 +207,7 @@ var _ = Describe("ServeHTTP", func() {
 			})
 
 			It("returns an unauthorized status and sets the WWW-Authenticate header if authorization fails", func() {
-				adminAuth.Result = testhelpers.AuthorizerResult{Authorized: false, ErrorMessage: "Error: Invalid authorization"}
+				adminAuth.Result = AuthorizerResult{Authorized: false, ErrorMessage: "Error: Invalid authorization"}
 
 				req, _ := http.NewRequest("GET", "/firehose/abc-123", nil)
 				req.Header.Add("Authorization", "token")

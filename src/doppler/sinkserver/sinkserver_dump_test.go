@@ -6,7 +6,6 @@ import (
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
 	"net/http"
-	testhelpers "server_testhelpers"
 	"sync"
 	"time"
 
@@ -107,7 +106,7 @@ var _ = Describe("Dumping", func() {
 		}, 3).Should(Equal(uint64(2)))
 
 		receivedChan := make(chan []byte, 2)
-		_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(GinkgoT(), receivedChan, SERVER_PORT, "/apps/myOtherApp/recentlogs")
+		_, stopKeepAlive, droppedChannel := AddWSSink(receivedChan, SERVER_PORT, "/apps/myOtherApp/recentlogs")
 
 		Eventually(droppedChannel).Should(Receive())
 
@@ -132,7 +131,7 @@ var _ = Describe("Dumping", func() {
 
 	It("doesn't hang when there are no messages", func() {
 		receivedChan := make(chan []byte, 1)
-		testhelpers.AddWSSink(GinkgoT(), receivedChan, SERVER_PORT, "/apps/myOtherApp/recentlogs")
+		AddWSSink(receivedChan, SERVER_PORT, "/apps/myOtherApp/recentlogs")
 
 		doneChan := make(chan bool)
 		go func() {

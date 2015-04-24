@@ -8,9 +8,9 @@ import (
 	"github.com/cloudfoundry/yagnats"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pivotal-golang/localip"
-	"trafficcontroller/integration_test/fake_auth_server"
-	"trafficcontroller/integration_test/fake_doppler"
-	"trafficcontroller/integration_test/fake_uaa_server"
+	"integration_tests/trafficcontroller/fake_auth_server"
+	"integration_tests/trafficcontroller/fake_doppler"
+	"integration_tests/trafficcontroller/fake_uaa_server"
 
 	"encoding/json"
 	"fmt"
