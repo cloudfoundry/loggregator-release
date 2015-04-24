@@ -1,8 +1,8 @@
-package message_aggregator_test
+package messageaggregator_test
 
 import (
 	"fmt"
-	"metron/message_aggregator"
+	"metron/messageaggregator"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/events"
@@ -19,7 +19,7 @@ var _ = Describe("MessageAggregator", func() {
 		inputChan         chan *events.Envelope
 		outputChan        chan *events.Envelope
 		runComplete       chan struct{}
-		messageAggregator *message_aggregator.MessageAggregator
+		messageAggregator *messageaggregator.MessageAggregator
 		originalTTL       time.Duration
 	)
 
@@ -27,8 +27,8 @@ var _ = Describe("MessageAggregator", func() {
 		inputChan = make(chan *events.Envelope, 10)
 		outputChan = make(chan *events.Envelope, 10)
 		runComplete = make(chan struct{})
-		messageAggregator = message_aggregator.New(loggertesthelper.Logger())
-		originalTTL = message_aggregator.MaxTTL
+		messageAggregator = messageaggregator.New(loggertesthelper.Logger())
+		originalTTL = messageaggregator.MaxTTL
 
 		go func() {
 			messageAggregator.Run(inputChan, outputChan)
@@ -39,7 +39,7 @@ var _ = Describe("MessageAggregator", func() {
 	AfterEach(func() {
 		close(inputChan)
 		Eventually(runComplete).Should(BeClosed())
-		message_aggregator.MaxTTL = originalTTL
+		messageaggregator.MaxTTL = originalTTL
 	})
 
 	It("passes non-marshallable messages through", func() {
@@ -149,7 +149,7 @@ var _ = Describe("MessageAggregator", func() {
 
 	Context("message expiry", func() {
 		BeforeEach(func() {
-			message_aggregator.MaxTTL = 0
+			messageaggregator.MaxTTL = 0
 		})
 
 		It("does not send a combined event if the stop event doesn't arrive within the TTL", func() {
@@ -199,7 +199,7 @@ var _ = Describe("MessageAggregator", func() {
 		})
 
 		It("emits a counter for unmatched start events", func() {
-			message_aggregator.MaxTTL = 0
+			messageaggregator.MaxTTL = 0
 			inputChan <- createStartMessage(123, events.PeerType_Client)
 			time.Sleep(1)
 			inputChan <- createStartMessage(123, events.PeerType_Client)

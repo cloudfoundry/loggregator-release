@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"metron/eventlistener"
 	"metron/heartbeatrequester"
-	"metron/legacy_message/legacy_message_converter"
-	"metron/legacy_message/legacy_unmarshaller"
-	"metron/message_aggregator"
+	"metron/legacymessage"
+	"metron/messageaggregator"
 	"metron/statsdlistener"
 	"metron/tagger"
-	"metron/varz_forwarder"
+	"metron/varzforwarder"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/dropsonde_marshaller"
@@ -55,8 +54,8 @@ func main() {
 
 	// TODO: delete next three lines when "legacy" format goes away
 	legacyMessageListener, legacyMessageChan := agentlistener.NewAgentListener(fmt.Sprintf("localhost:%d", config.LegacyIncomingMessagesPort), logger, "legacyAgentListener")
-	legacyUnmarshaller := legacy_unmarshaller.New(logger)
-	legacyMessageConverter := legacy_message_converter.New(logger)
+	legacyUnmarshaller := legacymessage.NewUnmarshaller(logger)
+	legacyMessageConverter := legacymessage.NewConverter(logger)
 
 	pinger := heartbeatrequester.New(pingSenderInterval)
 	dropsondeMessageListener, dropsondeMessageChan := eventlistener.New(fmt.Sprintf("localhost:%d", config.DropsondeIncomingMessagesPort), logger, "dropsondeAgentListener", pinger)
@@ -64,8 +63,8 @@ func main() {
 	statsdMessageListener := statsdlistener.New(fmt.Sprintf("localhost:%d", config.StatsdIncomingMessagesPort), logger, "statsdAgentListener")
 
 	unmarshaller := dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger)
-	messageAggregator := message_aggregator.New(logger)
-	varzForwarder := varz_forwarder.New(config.Job, metricTTL, logger)
+	messageAggregator := messageaggregator.New(logger)
+	varzForwarder := varzforwarder.New(config.Job, metricTTL, logger)
 	marshaller := dropsonde_marshaller.NewDropsondeMarshaller(logger)
 	messageTagger := tagger.New(config.Deployment, config.Job, config.Index)
 

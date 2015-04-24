@@ -1,4 +1,4 @@
-package legacy_unmarshaller
+package legacymessage
 
 import (
 	"sync/atomic"
@@ -10,18 +10,18 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-type LegacyUnmarshaller struct {
+type Unmarshaller struct {
 	logger              *gosteno.Logger
 	unmarshalErrorCount uint64
 }
 
-func New(logger *gosteno.Logger) *LegacyUnmarshaller {
-	return &LegacyUnmarshaller{
+func NewUnmarshaller(logger *gosteno.Logger) *Unmarshaller {
+	return &Unmarshaller{
 		logger: logger,
 	}
 }
 
-func (u *LegacyUnmarshaller) Run(inputChan <-chan []byte, outputChan chan<- *logmessage.LogEnvelope) {
+func (u *Unmarshaller) Run(inputChan <-chan []byte, outputChan chan<- *logmessage.LogEnvelope) {
 	for message := range inputChan {
 		envelope, err := u.UnmarshalMessage(message)
 		if err != nil {
@@ -31,7 +31,7 @@ func (u *LegacyUnmarshaller) Run(inputChan <-chan []byte, outputChan chan<- *log
 	}
 }
 
-func (u *LegacyUnmarshaller) UnmarshalMessage(message []byte) (*logmessage.LogEnvelope, error) {
+func (u *Unmarshaller) UnmarshalMessage(message []byte) (*logmessage.LogEnvelope, error) {
 	envelope := &logmessage.LogEnvelope{}
 	err := proto.Unmarshal(message, envelope)
 	if err != nil {
@@ -45,10 +45,10 @@ func (u *LegacyUnmarshaller) UnmarshalMessage(message []byte) (*logmessage.LogEn
 	return envelope, nil
 }
 
-func (m *LegacyUnmarshaller) Emit() instrumentation.Context {
+func (u *Unmarshaller) Emit() instrumentation.Context {
 	return instrumentation.Context{
 		Name:    "legacyUnmarshaller",
-		Metrics: m.metrics(),
+		Metrics: u.metrics(),
 	}
 }
 
@@ -56,12 +56,12 @@ func incrementCount(count *uint64) {
 	atomic.AddUint64(count, 1)
 }
 
-func (m *LegacyUnmarshaller) metrics() []instrumentation.Metric {
+func (u *Unmarshaller) metrics() []instrumentation.Metric {
 	var metrics []instrumentation.Metric
 
 	metrics = append(metrics, instrumentation.Metric{
 		Name:  "unmarshalErrors",
-		Value: atomic.LoadUint64(&m.unmarshalErrorCount),
+		Value: atomic.LoadUint64(&u.unmarshalErrorCount),
 	})
 
 	return metrics

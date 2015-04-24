@@ -1,4 +1,4 @@
-package varz_forwarder
+package varzforwarder
 
 import (
 	"fmt"

@@ -1,7 +1,7 @@
-package legacy_message_converter_test
+package legacymessage_test
 
 import (
-	"metron/legacy_message/legacy_message_converter"
+	"metron/legacymessage"
 
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
@@ -17,7 +17,7 @@ var _ = Describe("LegacyMessageConverter", func() {
 		inputChan        chan *logmessage.LogEnvelope
 		outputChan       chan *events.Envelope
 		runComplete      chan struct{}
-		messageConverter *legacy_message_converter.LegacyMessageConverter
+		messageConverter *legacymessage.Converter
 	)
 
 	Context("Run", func() {
@@ -25,7 +25,7 @@ var _ = Describe("LegacyMessageConverter", func() {
 			inputChan = make(chan *logmessage.LogEnvelope, 10)
 			outputChan = make(chan *events.Envelope, 10)
 			runComplete = make(chan struct{})
-			messageConverter = legacy_message_converter.New(loggertesthelper.Logger())
+			messageConverter = legacymessage.NewConverter(loggertesthelper.Logger())
 
 			go func() {
 				messageConverter.Run(inputChan, outputChan)
@@ -55,7 +55,7 @@ var _ = Describe("LegacyMessageConverter", func() {
 			inputChan <- legacyEnvelope
 
 			Eventually(outputChan).Should(Receive(Equal(&events.Envelope{
-				Origin:    proto.String(legacy_message_converter.LEGACY_DROPSONDE_ORIGIN),
+				Origin:    proto.String(legacymessage.DropsondeOrigin),
 				EventType: events.Envelope_LogMessage.Enum(),
 				LogMessage: &events.LogMessage{
 					Message:        []byte{4, 5, 6},

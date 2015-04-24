@@ -1,4 +1,4 @@
-package varz_forwarder
+package varzforwarder
 
 import (
 	"time"
@@ -18,7 +18,7 @@ func (metrics *metrics) processMetric(metric *events.Envelope) {
 	case events.Envelope_CounterEvent:
 		metrics.processCounterEvent(metric)
 	case events.Envelope_HttpStartStop:
-		metrics.processHttpStartStop(metric)
+		metrics.processHTTPStartStop(metric)
 	}
 }
 
@@ -32,7 +32,7 @@ func (metrics *metrics) processCounterEvent(metric *events.Envelope) {
 	metrics.metricsByName[eventName] = count + float64(metric.GetCounterEvent().GetDelta())
 }
 
-func (metrics *metrics) processHttpStartStop(metric *events.Envelope) {
+func (metrics *metrics) processHTTPStartStop(metric *events.Envelope) {
 	eventName := "requestCount"
 	count := metrics.metricsByName[eventName]
 	metrics.metricsByName[eventName] = count + 1

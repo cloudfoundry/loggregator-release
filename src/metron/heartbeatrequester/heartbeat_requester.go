@@ -11,7 +11,7 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 )
 
-const METRON_ORIGIN = "MET"
+const metronOrigin = "MET"
 
 type HeartbeatRequester struct {
 	pingTargets  map[string]pingTarget
@@ -91,7 +91,7 @@ func newHeartbeatRequest() []byte {
 	id, _ := uuid.NewV4()
 
 	heartbeatRequest := &control.ControlMessage{
-		Origin:      proto.String(METRON_ORIGIN),
+		Origin:      proto.String(metronOrigin),
 		Identifier:  factories.NewControlUUID(id),
 		Timestamp:   proto.Int64(time.Now().UnixNano()),
 		ControlType: control.ControlMessage_HeartbeatRequest.Enum(),

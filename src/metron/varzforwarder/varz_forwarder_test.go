@@ -1,7 +1,7 @@
-package varz_forwarder_test
+package varzforwarder_test
 
 import (
-	"metron/varz_forwarder"
+	"metron/varzforwarder"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/events"
@@ -15,13 +15,13 @@ import (
 
 var _ = Describe("VarzForwarder", func() {
 	var (
-		forwarder  *varz_forwarder.VarzForwarder
+		forwarder  *varzforwarder.VarzForwarder
 		metricChan chan *events.Envelope
 		outputChan chan *events.Envelope
 	)
 
 	BeforeEach(func() {
-		forwarder = varz_forwarder.New("test-component", time.Millisecond*100, loggertesthelper.Logger())
+		forwarder = varzforwarder.New("test-component", time.Millisecond*100, loggertesthelper.Logger())
 		metricChan = make(chan *events.Envelope)
 		outputChan = make(chan *events.Envelope, 1024)
 	})

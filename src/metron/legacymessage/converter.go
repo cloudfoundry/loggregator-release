@@ -1,4 +1,4 @@
-package legacy_message_converter
+package legacymessage
 
 import (
 	"github.com/cloudfoundry/dropsonde/events"
@@ -8,19 +8,19 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-const LEGACY_DROPSONDE_ORIGIN = "legacy"
+const DropsondeOrigin = "legacy"
 
-type LegacyMessageConverter struct {
+type Converter struct {
 	logger *gosteno.Logger
 }
 
-func New(logger *gosteno.Logger) *LegacyMessageConverter {
-	return &LegacyMessageConverter{
+func NewConverter(logger *gosteno.Logger) *Converter {
+	return &Converter{
 		logger: logger,
 	}
 }
 
-func (c *LegacyMessageConverter) Run(inputChan <-chan *logmessage.LogEnvelope, outputChan chan<- *events.Envelope) {
+func (c *Converter) Run(inputChan <-chan *logmessage.LogEnvelope, outputChan chan<- *events.Envelope) {
 	for legacyEnvelope := range inputChan {
 		c.logger.Debugf("legacyMessageConverter: converting message %v", spew.Sprintf("%v", legacyEnvelope))
 
@@ -31,7 +31,7 @@ func (c *LegacyMessageConverter) Run(inputChan <-chan *logmessage.LogEnvelope, o
 func convertMessage(legacyEnvelope *logmessage.LogEnvelope) *events.Envelope {
 	legacyMessage := legacyEnvelope.GetLogMessage()
 	return &events.Envelope{
-		Origin:    proto.String(LEGACY_DROPSONDE_ORIGIN),
+		Origin:    proto.String(DropsondeOrigin),
 		EventType: events.Envelope_LogMessage.Enum(),
 		LogMessage: &events.LogMessage{
 			Message:        legacyMessage.Message,

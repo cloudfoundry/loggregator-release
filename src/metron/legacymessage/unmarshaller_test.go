@@ -1,7 +1,7 @@
-package legacy_unmarshaller_test
+package legacymessage_test
 
 import (
-	"metron/legacy_message/legacy_unmarshaller"
+	"metron/legacymessage"
 
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation/testhelpers"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
@@ -17,12 +17,12 @@ var _ = Describe("LegacyUnmarshaller", func() {
 		inputChan    chan []byte
 		outputChan   chan *logmessage.LogEnvelope
 		runComplete  chan struct{}
-		unmarshaller *legacy_unmarshaller.LegacyUnmarshaller
+		unmarshaller *legacymessage.Unmarshaller
 	)
 
 	Context("Unmarshal", func() {
 		BeforeEach(func() {
-			unmarshaller = legacy_unmarshaller.New(loggertesthelper.Logger())
+			unmarshaller = legacymessage.NewUnmarshaller(loggertesthelper.Logger())
 		})
 		It("unmarshalls bytes", func() {
 			input := &logmessage.LogEnvelope{
@@ -55,7 +55,7 @@ var _ = Describe("LegacyUnmarshaller", func() {
 			inputChan = make(chan []byte, 10)
 			outputChan = make(chan *logmessage.LogEnvelope, 10)
 			runComplete = make(chan struct{})
-			unmarshaller = legacy_unmarshaller.New(loggertesthelper.Logger())
+			unmarshaller = legacymessage.NewUnmarshaller(loggertesthelper.Logger())
 
 			go func() {
 				unmarshaller.Run(inputChan, outputChan)
@@ -97,7 +97,7 @@ var _ = Describe("LegacyUnmarshaller", func() {
 			inputChan = make(chan []byte, 10)
 			outputChan = make(chan *logmessage.LogEnvelope, 10)
 			runComplete = make(chan struct{})
-			unmarshaller = legacy_unmarshaller.New(loggertesthelper.Logger())
+			unmarshaller = legacymessage.NewUnmarshaller(loggertesthelper.Logger())
 
 			go func() {
 				unmarshaller.Run(inputChan, outputChan)

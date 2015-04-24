@@ -7,12 +7,11 @@ files:
 - loggregator/src/metron/*.go # gosub
 - loggregator/src/metron/eventlistener/*.go # gosub
 - loggregator/src/metron/heartbeatrequester/*.go # gosub
-- loggregator/src/metron/legacy_message/legacy_message_converter/*.go # gosub
-- loggregator/src/metron/legacy_message/legacy_unmarshaller/*.go # gosub
-- loggregator/src/metron/message_aggregator/*.go # gosub
+- loggregator/src/metron/legacymessage/*.go # gosub
+- loggregator/src/metron/messageaggregator/*.go # gosub
 - loggregator/src/metron/statsdlistener/*.go # gosub
 - loggregator/src/metron/tagger/*.go # gosub
-- loggregator/src/metron/varz_forwarder/*.go # gosub
+- loggregator/src/metron/varzforwarder/*.go # gosub
 - loggregator/src/github.com/apcera/nats/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/control/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/dropsonde_marshaller/*.go # gosub

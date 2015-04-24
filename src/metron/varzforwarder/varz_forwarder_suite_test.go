@@ -1,4 +1,4 @@
-package varz_forwarder_test
+package varzforwarder_test
 
 import (
 	. "github.com/onsi/ginkgo"

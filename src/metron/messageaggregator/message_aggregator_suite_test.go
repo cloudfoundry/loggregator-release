@@ -1,4 +1,4 @@
-package message_aggregator_test
+package messageaggregator_test
 
 import (
 	. "github.com/onsi/ginkgo"
