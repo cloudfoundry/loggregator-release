@@ -10,14 +10,14 @@ import (
 
 const LEGACY_DROPSONDE_ORIGIN = "legacy"
 
+type LegacyMessageConverter struct {
+	logger *gosteno.Logger
+}
+
 func New(logger *gosteno.Logger) *LegacyMessageConverter {
 	return &LegacyMessageConverter{
 		logger: logger,
 	}
-}
-
-type LegacyMessageConverter struct {
-	logger *gosteno.Logger
 }
 
 func (c *LegacyMessageConverter) Run(inputChan <-chan *logmessage.LogEnvelope, outputChan chan<- *events.Envelope) {

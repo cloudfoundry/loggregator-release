@@ -11,17 +11,7 @@ import (
 
 var MaxTTL = time.Minute
 
-func New(logger *gosteno.Logger) *MessageAggregator {
-	return &MessageAggregator{
-		logger:               logger,
-		startEventsByEventId: make(map[eventId]startEventEntry),
-		counterTotals:        make(map[counterId]uint64),
-	}
-}
-
 type MessageAggregator struct {
-	sync.Mutex
-	logger                          *gosteno.Logger
 	startEventsByEventId            map[eventId]startEventEntry
 	counterTotals                   map[counterId]uint64
 	httpStartReceivedCount          uint64
@@ -31,21 +21,17 @@ type MessageAggregator struct {
 	httpUnmatchedStartReceivedCount uint64
 	httpUnmatchedStopReceivedCount  uint64
 	counterEventReceivedCount       uint64
+
+	lock   sync.Mutex
+	logger *gosteno.Logger
 }
 
-type counterId struct {
-	origin string
-	name   string
-}
-
-type eventId struct {
-	requestId string
-	peerType  events.PeerType
-}
-
-type startEventEntry struct {
-	startEvent *events.HttpStart
-	entryTime  time.Time
+func New(logger *gosteno.Logger) *MessageAggregator {
+	return &MessageAggregator{
+		logger:               logger,
+		startEventsByEventId: make(map[eventId]startEventEntry),
+		counterTotals:        make(map[counterId]uint64),
+	}
 }
 
 func (m *MessageAggregator) Run(inputChan <-chan *events.Envelope, outputChan chan<- *events.Envelope) {
@@ -72,9 +58,16 @@ func (m *MessageAggregator) Run(inputChan <-chan *events.Envelope, outputChan ch
 	}
 }
 
+func (m *MessageAggregator) Emit() instrumentation.Context {
+	return instrumentation.Context{
+		Name:    "MessageAggregator",
+		Metrics: m.metrics(),
+	}
+}
+
 func (m *MessageAggregator) incrementCounter(counter *uint64) {
-	m.Lock()
-	defer m.Unlock()
+	m.lock.Lock()
+	defer m.lock.Unlock()
 	(*counter)++
 }
 
@@ -159,8 +152,8 @@ func (m *MessageAggregator) cleanupOrphanedHttpStart() {
 }
 
 func (m *MessageAggregator) metrics() []instrumentation.Metric {
-	m.Lock()
-	defer m.Unlock()
+	m.lock.Lock()
+	defer m.lock.Unlock()
 
 	return []instrumentation.Metric{
 		instrumentation.Metric{Name: "httpStartReceived", Value: m.httpStartReceivedCount},
@@ -173,9 +166,17 @@ func (m *MessageAggregator) metrics() []instrumentation.Metric {
 	}
 }
 
-func (m *MessageAggregator) Emit() instrumentation.Context {
-	return instrumentation.Context{
-		Name:    "MessageAggregator",
-		Metrics: m.metrics(),
-	}
+type counterId struct {
+	origin string
+	name   string
+}
+
+type eventId struct {
+	requestId string
+	peerType  events.PeerType
+}
+
+type startEventEntry struct {
+	startEvent *events.HttpStart
+	entryTime  time.Time
 }

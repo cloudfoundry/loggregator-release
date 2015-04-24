@@ -16,7 +16,7 @@ type HeartbeatRequester struct {
 	pingTargets  map[string]pingTarget
 	pingInterval time.Duration
 	pingTimeout  time.Duration
-	sync.Mutex
+	lock         sync.Mutex
 }
 
 func New(interval time.Duration) *HeartbeatRequester {
@@ -43,8 +43,8 @@ func (requester *HeartbeatRequester) Start(senderAddr net.Addr, connection net.P
 }
 
 func (requester *HeartbeatRequester) Stop(target net.Addr) {
-	requester.Lock()
-	defer requester.Unlock()
+	requester.lock.Lock()
+	defer requester.lock.Unlock()
 
 	pTarget, ok := requester.pingTargets[target.String()]
 	if ok {
@@ -53,8 +53,8 @@ func (requester *HeartbeatRequester) Stop(target net.Addr) {
 }
 
 func (requester *HeartbeatRequester) register(senderAddr net.Addr) {
-	requester.Lock()
-	defer requester.Unlock()
+	requester.lock.Lock()
+	defer requester.lock.Unlock()
 
 	pTarget := pingTarget{
 		stopChan:        make(chan struct{}),
@@ -66,18 +66,18 @@ func (requester *HeartbeatRequester) register(senderAddr net.Addr) {
 func (requester *HeartbeatRequester) sendPings(senderAddr net.Addr, connection net.PacketConn) {
 	intervalTicker := time.NewTicker(requester.pingInterval)
 
-	requester.Lock()
+	requester.lock.Lock()
 	pTarget, ok := requester.pingTargets[senderAddr.String()]
-	requester.Unlock()
+	requester.lock.Unlock()
 
 	if ok {
 		for {
 			select {
 			case <-pTarget.stopChan:
 				intervalTicker.Stop()
-				requester.Lock()
+				requester.lock.Lock()
 				delete(requester.pingTargets, senderAddr.String())
-				requester.Unlock()
+				requester.lock.Unlock()
 				return
 			case <-intervalTicker.C:
 				connection.WriteTo(newHeartbeatRequest(), senderAddr)
@@ -104,9 +104,9 @@ func newHeartbeatRequest() []byte {
 }
 
 func (requester *HeartbeatRequester) resetTimer(senderAddr net.Addr) {
-	requester.Lock()
+	requester.lock.Lock()
 	pTarget, ok := requester.pingTargets[senderAddr.String()]
-	requester.Unlock()
+	requester.lock.Unlock()
 
 	if ok {
 		pTarget.deregisterTimer.Reset(requester.pingTimeout)
@@ -114,9 +114,9 @@ func (requester *HeartbeatRequester) resetTimer(senderAddr net.Addr) {
 }
 
 func (requester *HeartbeatRequester) senderKnown(senderAddr net.Addr) bool {
-	requester.Lock()
+	requester.lock.Lock()
 	_, ok := requester.pingTargets[senderAddr.String()]
-	requester.Unlock()
+	requester.lock.Unlock()
 
 	return ok
 }

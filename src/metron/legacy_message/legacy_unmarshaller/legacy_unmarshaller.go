@@ -9,15 +9,15 @@ import (
 	"sync/atomic"
 )
 
+type LegacyUnmarshaller struct {
+	logger              *gosteno.Logger
+	unmarshalErrorCount uint64
+}
+
 func New(logger *gosteno.Logger) *LegacyUnmarshaller {
 	return &LegacyUnmarshaller{
 		logger: logger,
 	}
-}
-
-type LegacyUnmarshaller struct {
-	logger              *gosteno.Logger
-	unmarshalErrorCount uint64
 }
 
 func (u *LegacyUnmarshaller) Run(inputChan <-chan []byte, outputChan chan<- *logmessage.LogEnvelope) {
@@ -44,6 +44,13 @@ func (u *LegacyUnmarshaller) UnmarshalMessage(message []byte) (*logmessage.LogEn
 	return envelope, nil
 }
 
+func (m *LegacyUnmarshaller) Emit() instrumentation.Context {
+	return instrumentation.Context{
+		Name:    "legacyUnmarshaller",
+		Metrics: m.metrics(),
+	}
+}
+
 func incrementCount(count *uint64) {
 	atomic.AddUint64(count, 1)
 }
@@ -57,11 +64,4 @@ func (m *LegacyUnmarshaller) metrics() []instrumentation.Metric {
 	})
 
 	return metrics
-}
-
-func (m *LegacyUnmarshaller) Emit() instrumentation.Context {
-	return instrumentation.Context{
-		Name:    "legacyUnmarshaller",
-		Metrics: m.metrics(),
-	}
 }

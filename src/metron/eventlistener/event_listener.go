@@ -23,34 +23,34 @@ type EventListener struct {
 	receivedByteCount    uint64
 	contextName          string
 
-	sync.RWMutex
-	*gosteno.Logger
+	lock   sync.RWMutex
+	logger *gosteno.Logger
 }
 
 func New(host string, givenLogger *gosteno.Logger, name string, requester heartbeatRequester) (*EventListener, <-chan []byte) {
 	byteChan := make(chan []byte, 1024)
-	return &EventListener{Logger: givenLogger, host: host, dataChannel: byteChan, contextName: name, requester: requester}, byteChan
+	return &EventListener{logger: givenLogger, host: host, dataChannel: byteChan, contextName: name, requester: requester}, byteChan
 }
 
 func (eventListener *EventListener) Start() {
 	connection, err := net.ListenPacket("udp", eventListener.host)
 	if err != nil {
-		eventListener.Fatalf("Failed to listen on port. %s", err)
+		eventListener.logger.Fatalf("Failed to listen on port. %s", err)
 	}
-	eventListener.Infof("Listening on port %s", eventListener.host)
-	eventListener.Lock()
+	eventListener.logger.Infof("Listening on port %s", eventListener.host)
+	eventListener.lock.Lock()
 	eventListener.connection = connection
-	eventListener.Unlock()
+	eventListener.lock.Unlock()
 
 	readBuffer := make([]byte, 65535) //buffer with size = max theoretical UDP size
 	defer close(eventListener.dataChannel)
 	for {
 		readCount, senderAddr, err := connection.ReadFrom(readBuffer)
 		if err != nil {
-			eventListener.Debugf("Error while reading. %s", err)
+			eventListener.logger.Debugf("Error while reading. %s", err)
 			return
 		}
-		eventListener.Debugf("EventListener: Read %d bytes from address %s", readCount, senderAddr)
+		eventListener.logger.Debugf("EventListener: Read %d bytes from address %s", readCount, senderAddr)
 		readData := make([]byte, readCount) //pass on buffer in size only of read data
 		copy(readData, readBuffer[:readCount])
 
@@ -63,9 +63,15 @@ func (eventListener *EventListener) Start() {
 }
 
 func (eventListener *EventListener) Stop() {
-	eventListener.Lock()
-	defer eventListener.Unlock()
+	eventListener.lock.Lock()
+	defer eventListener.lock.Unlock()
 	eventListener.connection.Close()
+}
+
+func (eventListener *EventListener) Emit() instrumentation.Context {
+	return instrumentation.Context{Name: eventListener.contextName,
+		Metrics: eventListener.metrics(),
+	}
 }
 
 func (eventListener *EventListener) metrics() []instrumentation.Metric {
@@ -73,11 +79,5 @@ func (eventListener *EventListener) metrics() []instrumentation.Metric {
 		instrumentation.Metric{Name: "currentBufferCount", Value: len(eventListener.dataChannel)},
 		instrumentation.Metric{Name: "receivedMessageCount", Value: atomic.LoadUint64(&eventListener.receivedMessageCount)},
 		instrumentation.Metric{Name: "receivedByteCount", Value: atomic.LoadUint64(&eventListener.receivedByteCount)},
-	}
-}
-
-func (eventListener *EventListener) Emit() instrumentation.Context {
-	return instrumentation.Context{Name: eventListener.contextName,
-		Metrics: eventListener.metrics(),
 	}
 }

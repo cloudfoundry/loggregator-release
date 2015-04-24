@@ -21,7 +21,7 @@ type StatsdListener struct {
 	gaugeValues   map[string]float64 // key is "origin.name"
 	counterValues map[string]float64 // key is "origin.name"
 
-	*gosteno.Logger
+	logger *gosteno.Logger
 }
 
 func New(listenerAddress string, logger *gosteno.Logger, name string) StatsdListener {
@@ -32,21 +32,21 @@ func New(listenerAddress string, logger *gosteno.Logger, name string) StatsdList
 		gaugeValues:   make(map[string]float64),
 		counterValues: make(map[string]float64),
 
-		Logger: logger,
+		logger: logger,
 	}
 }
 
 func (l *StatsdListener) Run(outputChan chan *events.Envelope) {
 	udpAddr, err := net.ResolveUDPAddr("udp", l.host)
 	if err != nil {
-		l.Fatalf("Failed to resolve address %s. %s", l.host, err.Error())
+		l.logger.Fatalf("Failed to resolve address %s. %s", l.host, err.Error())
 	}
 	connection, err := net.ListenUDP("udp", udpAddr)
 	if err != nil {
-		l.Fatalf("Failed to start UDP listener. %s", err.Error())
+		l.logger.Fatalf("Failed to start UDP listener. %s", err.Error())
 	}
 
-	l.Infof("Listening for statsd on host %s", l.host)
+	l.logger.Infof("Listening for statsd on host %s", l.host)
 
 	// Use max UDP size because we don't know how big the message is.
 	maxUDPsize := 65535
@@ -60,10 +60,10 @@ func (l *StatsdListener) Run(outputChan chan *events.Envelope) {
 	for {
 		readCount, senderAddr, err := connection.ReadFrom(readBytes)
 		if err != nil {
-			l.Debugf("Error while reading. %s", err)
+			l.logger.Debugf("Error while reading. %s", err)
 			return
 		}
-		l.Debugf("StatsdListener: Read %d bytes from address %s", readCount, senderAddr)
+		l.logger.Debugf("StatsdListener: Read %d bytes from address %s", readCount, senderAddr)
 		trimmedBytes := make([]byte, readCount)
 		copy(trimmedBytes, readBytes[:readCount])
 
@@ -74,7 +74,7 @@ func (l *StatsdListener) Run(outputChan chan *events.Envelope) {
 			if err == nil {
 				outputChan <- envelope
 			} else {
-				l.Warnf("Error parsing stat line \"%s\": %s", line, err.Error())
+				l.logger.Warnf("Error parsing stat line \"%s\": %s", line, err.Error())
 			}
 		}
 	}
