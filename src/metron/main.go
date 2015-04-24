@@ -51,7 +51,7 @@ func main() {
 	flag.Parse()
 	config, logger := parseConfig(*debug, *configFilePath, *logFilePath)
 
-	dropsondeClientPool, dropsondeServerDiscovery := initializeClientPool(config, logger, config.LoggregatorDropsondePort)
+	dopplerClientPool, dopplerDiscovery := initializeClientPool(config, logger, config.LoggregatorDropsondePort)
 
 	// TODO: delete next three lines when "legacy" format goes away
 	legacyMessageListener, legacyMessageChan := agentlistener.NewAgentListener(fmt.Sprintf("localhost:%d", config.LegacyIncomingMessagesPort), logger, "legacyAgentListener")
@@ -81,38 +81,37 @@ func main() {
 	component := initializeComponent(config, logger, instrumentables)
 
 	go collectorregistrar.NewCollectorRegistrar(cfcomponent.DefaultYagnatsClientProvider, component, time.Duration(config.CollectorRegistrarIntervalMilliseconds)*time.Millisecond, &config.Config).Run()
-
 	go startMonitoringEndpoints(component, logger)
-	dropsondeEventChan := make(chan *events.Envelope)
+	go dopplerDiscovery.Run(time.Duration(config.EtcdQueryIntervalMilliseconds) * time.Millisecond)
 
+	// Produce channels for connecting processing pipeline stages
+	dropsondeEventChan := make(chan *events.Envelope)
 	logEnvelopesChan := make(chan *logmessage.LogEnvelope)
+	aggregatedEventChan := make(chan *events.Envelope)
+	taggedEventChan := make(chan *events.Envelope)
+	forwardedEventChan := make(chan *events.Envelope)
+	reMarshalledMessageChan := make(chan []byte)
+	signedMessageChan := make(chan ([]byte))
+
+	// Listen for legacy-format messages, upconvert, and drop onto dropsondeEventChan
 	go legacyMessageListener.Start()
 	go legacyUnmarshaller.Run(legacyMessageChan, logEnvelopesChan)
 	go legacyMessageConverter.Run(logEnvelopesChan, dropsondeEventChan)
 
+	// Listen for dropsonde messages, and drop onto dropsondeEventChan
 	go dropsondeMessageListener.Start()
 	go unmarshaller.Run(dropsondeMessageChan, dropsondeEventChan)
 
+	// Listen for statsd messages, and drop onto dropsondeEventChan
 	go statsdMessageListener.Run(dropsondeEventChan)
 
-	aggregatedEventChan := make(chan *events.Envelope)
+	// Start the message processing pipeline
 	go messageAggregator.Run(dropsondeEventChan, aggregatedEventChan)
-
-	taggedEventChan := make(chan *events.Envelope)
 	go messageTagger.Run(aggregatedEventChan, taggedEventChan)
-
-	forwardedEventChan := make(chan *events.Envelope)
 	go varzForwarder.Run(taggedEventChan, forwardedEventChan)
-
-	reMarshalledMessageChan := make(chan []byte)
 	go marshaller.Run(forwardedEventChan, reMarshalledMessageChan)
-
-	signedMessageChan := make(chan ([]byte))
 	go signMessages(config.SharedSecret, reMarshalledMessageChan, signedMessageChan)
-
-	go dropsondeServerDiscovery.Run(time.Duration(config.EtcdQueryIntervalMilliseconds) * time.Millisecond)
-
-	forwardMessagesToDoppler(dropsondeClientPool, signedMessageChan, logger)
+	forwardMessagesToDoppler(dopplerClientPool, signedMessageChan, logger)
 }
 
 func signMessages(sharedSecret string, dropsondeMessageChan <-chan ([]byte), signedMessageChan chan<- ([]byte)) {
