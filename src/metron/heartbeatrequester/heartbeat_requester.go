@@ -1,13 +1,14 @@
 package heartbeatrequester
 
 import (
+	"net"
+	"sync"
+	"time"
+
 	"github.com/cloudfoundry/dropsonde/control"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/gogo/protobuf/proto"
 	uuid "github.com/nu7hatch/gouuid"
-	"net"
-	"sync"
-	"time"
 )
 
 const METRON_ORIGIN = "MET"

@@ -2,13 +2,12 @@ package statsdlistener_test
 
 import (
 	"metron/statsdlistener"
-
 	"net"
 	"sync"
 
+	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 
-	"github.com/cloudfoundry/dropsonde/events"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

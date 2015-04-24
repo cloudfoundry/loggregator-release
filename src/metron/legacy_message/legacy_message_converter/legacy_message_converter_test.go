@@ -1,11 +1,12 @@
 package legacy_message_converter_test
 
 import (
+	"metron/legacy_message/legacy_message_converter"
+
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/gogo/protobuf/proto"
-	"metron/legacy_message/legacy_message_converter"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

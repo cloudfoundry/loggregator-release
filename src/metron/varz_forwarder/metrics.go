@@ -1,8 +1,9 @@
 package varz_forwarder
 
 import (
-	"github.com/cloudfoundry/dropsonde/events"
 	"time"
+
+	"github.com/cloudfoundry/dropsonde/events"
 )
 
 type metrics struct {

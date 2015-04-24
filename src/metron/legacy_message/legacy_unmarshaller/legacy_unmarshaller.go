@@ -1,12 +1,13 @@
 package legacy_unmarshaller
 
 import (
+	"sync/atomic"
+
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/gogo/protobuf/proto"
-	"sync/atomic"
 )
 
 type LegacyUnmarshaller struct {

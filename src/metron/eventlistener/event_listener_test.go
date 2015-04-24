@@ -2,14 +2,14 @@ package eventlistener_test
 
 import (
 	"fmt"
+	"metron/eventlistener"
 	"net"
+	"sync"
 
 	"github.com/cloudfoundry/gosteno"
-	"metron/eventlistener"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"sync"
 )
 
 var _ = Describe("EventListener", func() {

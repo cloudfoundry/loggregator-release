@@ -1,12 +1,13 @@
 package message_aggregator
 
 import (
+	"sync"
+	"time"
+
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/davecgh/go-spew/spew"
-	"sync"
-	"time"
 )
 
 var MaxTTL = time.Minute

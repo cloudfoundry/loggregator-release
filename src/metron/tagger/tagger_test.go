@@ -5,9 +5,10 @@ import (
 
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/gogo/protobuf/proto"
+	"github.com/pivotal-golang/localip"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-golang/localip"
 )
 
 var _ = Describe("Tagger", func() {

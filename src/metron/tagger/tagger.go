@@ -1,10 +1,11 @@
 package tagger
 
 import (
+	"strconv"
+
 	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pivotal-golang/localip"
-	"strconv"
 )
 
 type Tagger struct {

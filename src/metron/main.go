@@ -2,15 +2,17 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"metron/eventlistener"
 	"metron/heartbeatrequester"
 	"metron/legacy_message/legacy_message_converter"
 	"metron/legacy_message/legacy_unmarshaller"
 	"metron/message_aggregator"
+	"metron/statsdlistener"
+	"metron/tagger"
 	"metron/varz_forwarder"
 	"time"
 
-	"fmt"
 	"github.com/cloudfoundry/dropsonde/dropsonde_marshaller"
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
 	"github.com/cloudfoundry/dropsonde/events"
@@ -28,8 +30,6 @@ import (
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
-	"metron/statsdlistener"
-	"metron/tagger"
 )
 
 var (

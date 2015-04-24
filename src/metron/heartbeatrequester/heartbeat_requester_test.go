@@ -1,14 +1,16 @@
 package heartbeatrequester_test
 
 import (
-	"github.com/cloudfoundry/dropsonde/control"
-	"github.com/gogo/protobuf/proto"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"metron/heartbeatrequester"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/cloudfoundry/dropsonde/control"
+	"github.com/gogo/protobuf/proto"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("PingSender", func() {
