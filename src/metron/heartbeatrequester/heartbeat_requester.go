@@ -19,7 +19,7 @@ type HeartbeatRequester struct {
 	sync.Mutex
 }
 
-func NewHeartbeatRequester(interval time.Duration) *HeartbeatRequester {
+func New(interval time.Duration) *HeartbeatRequester {
 	return &HeartbeatRequester{
 		pingTargets:  make(map[string]pingTarget),
 		pingInterval: interval,

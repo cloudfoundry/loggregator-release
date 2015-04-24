@@ -11,20 +11,15 @@ import (
 
 var MaxTTL = time.Minute
 
-type MessageAggregator interface {
-	instrumentation.Instrumentable
-	Run(inputChan <-chan *events.Envelope, outputChan chan<- *events.Envelope)
-}
-
-func NewMessageAggregator(logger *gosteno.Logger) MessageAggregator {
-	return &messageAggregator{
+func New(logger *gosteno.Logger) *MessageAggregator {
+	return &MessageAggregator{
 		logger:               logger,
 		startEventsByEventId: make(map[eventId]startEventEntry),
 		counterTotals:        make(map[counterId]uint64),
 	}
 }
 
-type messageAggregator struct {
+type MessageAggregator struct {
 	sync.Mutex
 	logger                          *gosteno.Logger
 	startEventsByEventId            map[eventId]startEventEntry
@@ -53,7 +48,7 @@ type startEventEntry struct {
 	entryTime  time.Time
 }
 
-func (m *messageAggregator) Run(inputChan <-chan *events.Envelope, outputChan chan<- *events.Envelope) {
+func (m *MessageAggregator) Run(inputChan <-chan *events.Envelope, outputChan chan<- *events.Envelope) {
 	for envelope := range inputChan {
 		// TODO: don't call for every message if throughput becomes a problem
 		m.cleanupOrphanedHttpStart()
@@ -77,13 +72,13 @@ func (m *messageAggregator) Run(inputChan <-chan *events.Envelope, outputChan ch
 	}
 }
 
-func (m *messageAggregator) incrementCounter(counter *uint64) {
+func (m *MessageAggregator) incrementCounter(counter *uint64) {
 	m.Lock()
 	defer m.Unlock()
 	(*counter)++
 }
 
-func (m *messageAggregator) handleHttpStart(envelope *events.Envelope) {
+func (m *MessageAggregator) handleHttpStart(envelope *events.Envelope) {
 	m.incrementCounter(&m.httpStartReceivedCount)
 
 	m.logger.Debugf("handling HTTP start message %v", spew.Sprintf("%v", envelope))
@@ -94,7 +89,7 @@ func (m *messageAggregator) handleHttpStart(envelope *events.Envelope) {
 	m.startEventsByEventId[event] = startEventEntry{startEvent: startEvent, entryTime: time.Now()}
 }
 
-func (m *messageAggregator) handleHttpStop(envelope *events.Envelope) *events.Envelope {
+func (m *MessageAggregator) handleHttpStop(envelope *events.Envelope) *events.Envelope {
 	m.incrementCounter(&m.httpStopReceivedCount)
 
 	m.logger.Debugf("handling HTTP stop message %v", spew.Sprintf("%v", envelope))
@@ -138,7 +133,7 @@ func (m *messageAggregator) handleHttpStop(envelope *events.Envelope) *events.En
 	}
 }
 
-func (m *messageAggregator) handleCounter(envelope *events.Envelope) *events.Envelope {
+func (m *MessageAggregator) handleCounter(envelope *events.Envelope) *events.Envelope {
 	m.incrementCounter(&m.counterEventReceivedCount)
 	countId := counterId{
 		name:   envelope.GetCounterEvent().GetName(),
@@ -153,7 +148,7 @@ func (m *messageAggregator) handleCounter(envelope *events.Envelope) *events.Env
 	return envelope
 }
 
-func (m *messageAggregator) cleanupOrphanedHttpStart() {
+func (m *MessageAggregator) cleanupOrphanedHttpStart() {
 	currentTime := time.Now()
 	for key, eventEntry := range m.startEventsByEventId {
 		if currentTime.Sub(eventEntry.entryTime) > MaxTTL {
@@ -163,7 +158,7 @@ func (m *messageAggregator) cleanupOrphanedHttpStart() {
 	}
 }
 
-func (m *messageAggregator) metrics() []instrumentation.Metric {
+func (m *MessageAggregator) metrics() []instrumentation.Metric {
 	m.Lock()
 	defer m.Unlock()
 
@@ -178,7 +173,7 @@ func (m *messageAggregator) metrics() []instrumentation.Metric {
 	}
 }
 
-func (m *messageAggregator) Emit() instrumentation.Context {
+func (m *MessageAggregator) Emit() instrumentation.Context {
 	return instrumentation.Context{
 		Name:    "MessageAggregator",
 		Metrics: m.metrics(),

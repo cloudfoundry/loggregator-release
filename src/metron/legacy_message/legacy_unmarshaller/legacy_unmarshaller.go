@@ -9,24 +9,18 @@ import (
 	"sync/atomic"
 )
 
-type LegacyUnmarshaller interface {
-	instrumentation.Instrumentable
-	Run(inputChan <-chan []byte, outputChan chan<- *logmessage.LogEnvelope)
-	UnmarshalMessage([]byte) (*logmessage.LogEnvelope, error)
-}
-
-func NewLegacyUnmarshaller(logger *gosteno.Logger) LegacyUnmarshaller {
-	return &legacyUnmarshaller{
+func New(logger *gosteno.Logger) *LegacyUnmarshaller {
+	return &LegacyUnmarshaller{
 		logger: logger,
 	}
 }
 
-type legacyUnmarshaller struct {
+type LegacyUnmarshaller struct {
 	logger              *gosteno.Logger
 	unmarshalErrorCount uint64
 }
 
-func (u *legacyUnmarshaller) Run(inputChan <-chan []byte, outputChan chan<- *logmessage.LogEnvelope) {
+func (u *LegacyUnmarshaller) Run(inputChan <-chan []byte, outputChan chan<- *logmessage.LogEnvelope) {
 	for message := range inputChan {
 		envelope, err := u.UnmarshalMessage(message)
 		if err != nil {
@@ -36,7 +30,7 @@ func (u *legacyUnmarshaller) Run(inputChan <-chan []byte, outputChan chan<- *log
 	}
 }
 
-func (u *legacyUnmarshaller) UnmarshalMessage(message []byte) (*logmessage.LogEnvelope, error) {
+func (u *LegacyUnmarshaller) UnmarshalMessage(message []byte) (*logmessage.LogEnvelope, error) {
 	envelope := &logmessage.LogEnvelope{}
 	err := proto.Unmarshal(message, envelope)
 	if err != nil {
@@ -54,7 +48,7 @@ func incrementCount(count *uint64) {
 	atomic.AddUint64(count, 1)
 }
 
-func (m *legacyUnmarshaller) metrics() []instrumentation.Metric {
+func (m *LegacyUnmarshaller) metrics() []instrumentation.Metric {
 	var metrics []instrumentation.Metric
 
 	metrics = append(metrics, instrumentation.Metric{
@@ -65,7 +59,7 @@ func (m *legacyUnmarshaller) metrics() []instrumentation.Metric {
 	return metrics
 }
 
-func (m *legacyUnmarshaller) Emit() instrumentation.Context {
+func (m *LegacyUnmarshaller) Emit() instrumentation.Context {
 	return instrumentation.Context{
 		Name:    "legacyUnmarshaller",
 		Metrics: m.metrics(),

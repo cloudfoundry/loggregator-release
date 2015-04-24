@@ -16,7 +16,7 @@ var _ = Describe("LegacyMessageConverter", func() {
 		inputChan        chan *logmessage.LogEnvelope
 		outputChan       chan *events.Envelope
 		runComplete      chan struct{}
-		messageConverter legacy_message_converter.LegacyMessageConverter
+		messageConverter *legacy_message_converter.LegacyMessageConverter
 	)
 
 	Context("Run", func() {
@@ -24,7 +24,7 @@ var _ = Describe("LegacyMessageConverter", func() {
 			inputChan = make(chan *logmessage.LogEnvelope, 10)
 			outputChan = make(chan *events.Envelope, 10)
 			runComplete = make(chan struct{})
-			messageConverter = legacy_message_converter.NewLegacyMessageConverter(loggertesthelper.Logger())
+			messageConverter = legacy_message_converter.New(loggertesthelper.Logger())
 
 			go func() {
 				messageConverter.Run(inputChan, outputChan)

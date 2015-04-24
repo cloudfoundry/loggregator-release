@@ -20,7 +20,7 @@ var _ = Describe("PingSender", func() {
 	)
 
 	BeforeEach(func() {
-		heartbeatRequester = heartbeatrequester.NewHeartbeatRequester(40 * time.Millisecond)
+		heartbeatRequester = heartbeatrequester.New(40 * time.Millisecond)
 		pingConn, _ = net.ListenPacket("udp4", "")
 		startHeartbeatRequests = func(target net.Addr) {
 			pingers.Add(1)

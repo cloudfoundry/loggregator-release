@@ -18,7 +18,7 @@ var _ = Describe("MessageAggregator", func() {
 		inputChan         chan *events.Envelope
 		outputChan        chan *events.Envelope
 		runComplete       chan struct{}
-		messageAggregator message_aggregator.MessageAggregator
+		messageAggregator *message_aggregator.MessageAggregator
 		originalTTL       time.Duration
 	)
 
@@ -26,7 +26,7 @@ var _ = Describe("MessageAggregator", func() {
 		inputChan = make(chan *events.Envelope, 10)
 		outputChan = make(chan *events.Envelope, 10)
 		runComplete = make(chan struct{})
-		messageAggregator = message_aggregator.NewMessageAggregator(loggertesthelper.Logger())
+		messageAggregator = message_aggregator.New(loggertesthelper.Logger())
 		originalTTL = message_aggregator.MaxTTL
 
 		go func() {

@@ -55,17 +55,17 @@ func main() {
 
 	// TODO: delete next three lines when "legacy" format goes away
 	legacyMessageListener, legacyMessageChan := agentlistener.NewAgentListener(fmt.Sprintf("localhost:%d", config.LegacyIncomingMessagesPort), logger, "legacyAgentListener")
-	legacyUnmarshaller := legacy_unmarshaller.NewLegacyUnmarshaller(logger)
-	legacyMessageConverter := legacy_message_converter.NewLegacyMessageConverter(logger)
+	legacyUnmarshaller := legacy_unmarshaller.New(logger)
+	legacyMessageConverter := legacy_message_converter.New(logger)
 
-	pinger := heartbeatrequester.NewHeartbeatRequester(pingSenderInterval)
-	dropsondeMessageListener, dropsondeMessageChan := eventlistener.NewEventListener(fmt.Sprintf("localhost:%d", config.DropsondeIncomingMessagesPort), logger, "dropsondeAgentListener", pinger)
+	pinger := heartbeatrequester.New(pingSenderInterval)
+	dropsondeMessageListener, dropsondeMessageChan := eventlistener.New(fmt.Sprintf("localhost:%d", config.DropsondeIncomingMessagesPort), logger, "dropsondeAgentListener", pinger)
 
-	statsdMessageListener := statsdlistener.NewStatsdListener(fmt.Sprintf("localhost:%d", config.StatsdIncomingMessagesPort), logger, "statsdAgentListener")
+	statsdMessageListener := statsdlistener.New(fmt.Sprintf("localhost:%d", config.StatsdIncomingMessagesPort), logger, "statsdAgentListener")
 
 	unmarshaller := dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger)
-	messageAggregator := message_aggregator.NewMessageAggregator(logger)
-	varzForwarder := varz_forwarder.NewVarzForwarder(config.Job, metricTTL, logger)
+	messageAggregator := message_aggregator.New(logger)
+	varzForwarder := varz_forwarder.New(config.Job, metricTTL, logger)
 	marshaller := dropsonde_marshaller.NewDropsondeMarshaller(logger)
 	messageTagger := tagger.New(config.Deployment, config.Job, config.Index)
 

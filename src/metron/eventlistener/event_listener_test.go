@@ -16,7 +16,7 @@ var _ = Describe("EventListener", func() {
 	Context("without a running listener", func() {
 		It("Emit returns a context with the given name", func() {
 			pinger := fakePingSender{}
-			listener, _ := eventlistener.NewEventListener("127.0.0.1:3456", gosteno.NewLogger("TestLogger"), "secretEventOrange", &pinger)
+			listener, _ := eventlistener.New("127.0.0.1:3456", gosteno.NewLogger("TestLogger"), "secretEventOrange", &pinger)
 			context := listener.Emit()
 
 			Expect(context.Name).To(Equal("secretEventOrange"))
@@ -24,7 +24,7 @@ var _ = Describe("EventListener", func() {
 	})
 
 	Context("with a listener running", func() {
-		var listener eventlistener.EventListener
+		var listener *eventlistener.EventListener
 		var dataChannel <-chan []byte
 		var fakePinger *fakePingSender
 		var listenerClosed chan struct{}
@@ -33,7 +33,7 @@ var _ = Describe("EventListener", func() {
 			listenerClosed = make(chan struct{})
 
 			fakePinger = &fakePingSender{pingTargets: make(map[string]chan (struct{}))}
-			listener, dataChannel = eventlistener.NewEventListener("127.0.0.1:3456", gosteno.NewLogger("TestLogger"), "eventListener", fakePinger)
+			listener, dataChannel = eventlistener.New("127.0.0.1:3456", gosteno.NewLogger("TestLogger"), "eventListener", fakePinger)
 			go func() {
 				listener.Start()
 				close(listenerClosed)

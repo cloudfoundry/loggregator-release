@@ -10,21 +10,17 @@ import (
 
 const LEGACY_DROPSONDE_ORIGIN = "legacy"
 
-type LegacyMessageConverter interface {
-	Run(inputChan <-chan *logmessage.LogEnvelope, outputChan chan<- *events.Envelope)
-}
-
-func NewLegacyMessageConverter(logger *gosteno.Logger) LegacyMessageConverter {
-	return &legacyMessageConverter{
+func New(logger *gosteno.Logger) *LegacyMessageConverter {
+	return &LegacyMessageConverter{
 		logger: logger,
 	}
 }
 
-type legacyMessageConverter struct {
+type LegacyMessageConverter struct {
 	logger *gosteno.Logger
 }
 
-func (c *legacyMessageConverter) Run(inputChan <-chan *logmessage.LogEnvelope, outputChan chan<- *events.Envelope) {
+func (c *LegacyMessageConverter) Run(inputChan <-chan *logmessage.LogEnvelope, outputChan chan<- *events.Envelope) {
 	for legacyEnvelope := range inputChan {
 		c.logger.Debugf("legacyMessageConverter: converting message %v", spew.Sprintf("%v", legacyEnvelope))
 

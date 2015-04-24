@@ -21,7 +21,7 @@ var _ = Describe("VarzForwarder", func() {
 	)
 
 	BeforeEach(func() {
-		forwarder = varz_forwarder.NewVarzForwarder("test-component", time.Millisecond*100, loggertesthelper.Logger())
+		forwarder = varz_forwarder.New("test-component", time.Millisecond*100, loggertesthelper.Logger())
 		metricChan = make(chan *events.Envelope)
 		outputChan = make(chan *events.Envelope, 1024)
 	})

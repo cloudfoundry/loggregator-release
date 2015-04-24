@@ -18,7 +18,7 @@ type VarzForwarder struct {
 	sync.RWMutex
 }
 
-func NewVarzForwarder(componentName string, ttl time.Duration, logger *gosteno.Logger) *VarzForwarder {
+func New(componentName string, ttl time.Duration, logger *gosteno.Logger) *VarzForwarder {
 	return &VarzForwarder{
 		metricsByOrigin: make(map[string]*metrics),
 		componentName:   componentName,

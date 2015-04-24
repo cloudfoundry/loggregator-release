@@ -24,7 +24,7 @@ type StatsdListener struct {
 	*gosteno.Logger
 }
 
-func NewStatsdListener(listenerAddress string, logger *gosteno.Logger, name string) StatsdListener {
+func New(listenerAddress string, logger *gosteno.Logger, name string) StatsdListener {
 	return StatsdListener{
 		host:     listenerAddress,
 		stopChan: make(chan struct{}),
@@ -94,16 +94,16 @@ func (l *StatsdListener) parseStat(data string) (*events.Envelope, error) {
 		return nil, fmt.Errorf("Input line '%s' was not a valid statsd line.", data)
 	}
 
-	// complete matched string = parts[0]
+	// parts[0] is complete matched string
 	origin := parts[1]
 	name := parts[2]
 	incrementSign := parts[3]
 	valueString := parts[4]
-	// decimal part of valueString = parts[5]
+	// parts[5] is the decimal part of valueString
 	statType := parts[6]
-	// full sampling substring = parts[7]
+	// parts[7] is the full sampling substring
 	sampleRateString := parts[8]
-	// decimal part of sampleRate = parts[9]
+	// parts[9] is decimal part of sampleRate
 
 	value, _ := strconv.ParseFloat(valueString, 64)
 

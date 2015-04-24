@@ -9,17 +9,11 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 )
 
-type EventListener interface {
-	instrumentation.Instrumentable
-	Start()
-	Stop()
-}
-
 type heartbeatRequester interface {
 	Start(net.Addr, net.PacketConn)
 }
 
-type eventListener struct {
+type EventListener struct {
 	host        string
 	dataChannel chan []byte
 	connection  net.PacketConn
@@ -33,12 +27,12 @@ type eventListener struct {
 	*gosteno.Logger
 }
 
-func NewEventListener(host string, givenLogger *gosteno.Logger, name string, requester heartbeatRequester) (EventListener, <-chan []byte) {
+func New(host string, givenLogger *gosteno.Logger, name string, requester heartbeatRequester) (*EventListener, <-chan []byte) {
 	byteChan := make(chan []byte, 1024)
-	return &eventListener{Logger: givenLogger, host: host, dataChannel: byteChan, contextName: name, requester: requester}, byteChan
+	return &EventListener{Logger: givenLogger, host: host, dataChannel: byteChan, contextName: name, requester: requester}, byteChan
 }
 
-func (eventListener *eventListener) Start() {
+func (eventListener *EventListener) Start() {
 	connection, err := net.ListenPacket("udp", eventListener.host)
 	if err != nil {
 		eventListener.Fatalf("Failed to listen on port. %s", err)
@@ -68,13 +62,13 @@ func (eventListener *eventListener) Start() {
 	}
 }
 
-func (eventListener *eventListener) Stop() {
+func (eventListener *EventListener) Stop() {
 	eventListener.Lock()
 	defer eventListener.Unlock()
 	eventListener.connection.Close()
 }
 
-func (eventListener *eventListener) metrics() []instrumentation.Metric {
+func (eventListener *EventListener) metrics() []instrumentation.Metric {
 	return []instrumentation.Metric{
 		instrumentation.Metric{Name: "currentBufferCount", Value: len(eventListener.dataChannel)},
 		instrumentation.Metric{Name: "receivedMessageCount", Value: atomic.LoadUint64(&eventListener.receivedMessageCount)},
@@ -82,7 +76,7 @@ func (eventListener *eventListener) metrics() []instrumentation.Metric {
 	}
 }
 
-func (eventListener *eventListener) Emit() instrumentation.Context {
+func (eventListener *EventListener) Emit() instrumentation.Context {
 	return instrumentation.Context{Name: eventListener.contextName,
 		Metrics: eventListener.metrics(),
 	}
