@@ -17,7 +17,7 @@ var _ = Describe("Legacy message forwarding", func() {
 
 		currentTime := time.Now()
 		marshalledLegacyMessage := legacyLogMessage(123, "BLAH", currentTime)
-		marshalledEventsEnvelope := addDefaultTags(eventsLogMessage(123, "BLAH", currentTime))
+		marshalledEventsEnvelope := eventsLogMessage(123, "BLAH", currentTime)
 		marshalledEventsMessage, _ := proto.Marshal(marshalledEventsEnvelope)
 
 		testServer := eventuallyListensForUDP("localhost:3457")

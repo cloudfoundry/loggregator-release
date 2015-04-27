@@ -31,22 +31,12 @@ func basicHeartbeatEvent() *events.Envelope {
 		Origin:    proto.String("fake-origin-1"),
 		EventType: events.Envelope_Heartbeat.Enum(),
 		Heartbeat: &events.Heartbeat{
-			SentCount: proto.Uint64(100),
+			SentCount:     proto.Uint64(100),
 			ReceivedCount: proto.Uint64(250),
-			ErrorCount: proto.Uint64(50),
+			ErrorCount:    proto.Uint64(50),
 		},
 	}
 }
-
-func addDefaultTags(envelope *events.Envelope) *events.Envelope {
-	envelope.Deployment = proto.String("deployment-name")
-	envelope.Job = proto.String("test-component")
-	envelope.Index = proto.String("42")
-	envelope.Ip = proto.String(localIPAddress)
-	
-	return envelope
-}
-
 
 func basicValueMessage() []byte {
 	message, _ := proto.Marshal(&events.Envelope{
