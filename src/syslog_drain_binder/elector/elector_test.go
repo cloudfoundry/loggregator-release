@@ -40,7 +40,7 @@ var _ = Describe("Elector", func() {
 			It("logs an error", func() {
 				go elector.NewElector("name", fakeStore, 100*time.Millisecond, logger)
 
-				Eventually(testingSink.Records).Should(HaveLen(1))
+				Eventually(func() int { return len(testingSink.Records()) }).Should(BeNumerically(">=", 1))
 				var messages []string
 				for _, record := range testingSink.Records() {
 					messages = append(messages, record.Message)
@@ -52,7 +52,7 @@ var _ = Describe("Elector", func() {
 			It("reconnects on an interval", func() {
 				go elector.NewElector("name", fakeStore, 10*time.Millisecond, logger)
 
-				Eventually(testingSink.Records).Should(HaveLen(2))
+				Eventually(func() int { return len(testingSink.Records()) }).Should(BeNumerically(">=", 2))
 			})
 		})
 	})
