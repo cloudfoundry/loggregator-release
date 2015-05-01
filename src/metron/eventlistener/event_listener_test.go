@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -33,11 +34,14 @@ var _ = Describe("EventListener", func() {
 			listenerClosed = make(chan struct{})
 
 			fakePinger = &fakePingSender{pingTargets: make(map[string]chan (struct{}))}
-			listener, dataChannel = eventlistener.New("127.0.0.1:3456", gosteno.NewLogger("TestLogger"), "eventListener", fakePinger)
+			listener, dataChannel = eventlistener.New("127.0.0.1:3456", loggertesthelper.Logger(), "eventListener", fakePinger)
+
+			loggertesthelper.TestLoggerSink.Clear()
 			go func() {
 				listener.Start()
 				close(listenerClosed)
 			}()
+			Eventually(loggertesthelper.TestLoggerSink.LogContents).Should(ContainSubstring("Listening on port 127.0.0.1:3456"))
 		})
 
 		AfterEach(func() {
