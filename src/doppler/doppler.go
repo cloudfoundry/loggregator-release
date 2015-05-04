@@ -33,12 +33,12 @@ type Doppler struct {
 	messageRouter     *sinkserver.MessageRouter
 	websocketServer   *websocketserver.WebsocketServer
 
-	dropsondeUnmarshallers     []dropsonde_unmarshaller.DropsondeUnmarshaller
-	dropsondeBytesChan         <-chan []byte
-	dropsondeVerifiedBytesChan chan []byte
-	envelopeChan               chan *events.Envelope
-	wrappedEnvelopeChan        chan *events.Envelope
-	signatureVerifier          signature.SignatureVerifier
+	dropsondeUnmarshallerCollection dropsonde_unmarshaller.DropsondeUnmarshallerCollection
+	dropsondeBytesChan              <-chan []byte
+	dropsondeVerifiedBytesChan      chan []byte
+	envelopeChan                    chan *events.Envelope
+	wrappedEnvelopeChan             chan *events.Envelope
+	signatureVerifier               signature.SignatureVerifier
 
 	storeAdapter storeadapter.StoreAdapter
 
@@ -58,10 +58,7 @@ func New(host string, config *config.Config, logger *gosteno.Logger, storeAdapte
 
 	signatureVerifier := signature.NewSignatureVerifier(logger, config.SharedSecret)
 
-	var ums []dropsonde_unmarshaller.DropsondeUnmarshaller
-	for i := 0; i < config.UnmarshallerCount; i++ {
-		ums = append(ums, dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger))
-	}
+	unmarshallerCollection := dropsonde_unmarshaller.NewDropsondeUnmarshallerCollection(logger, config.UnmarshallerCount)
 
 	blacklist := blacklist.New(config.BlackListIps)
 	metricTTL := time.Duration(config.ContainerMetricTTLSeconds) * time.Second
@@ -69,21 +66,21 @@ func New(host string, config *config.Config, logger *gosteno.Logger, storeAdapte
 	sinkManager := sinkmanager.New(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger, dropsondeOrigin, sinkTimeout, metricTTL)
 
 	return &Doppler{
-		Logger:                     logger,
-		dropsondeListener:          dropsondeListener,
-		sinkManager:                sinkManager,
-		messageRouter:              sinkserver.NewMessageRouter(sinkManager, logger),
-		websocketServer:            websocketserver.New(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.WSMessageBufferSize, dropsondeOrigin, logger),
-		newAppServiceChan:          newAppServiceChan,
-		deletedAppServiceChan:      deletedAppServiceChan,
-		appStoreWatcher:            appStoreWatcher,
-		storeAdapter:               storeAdapter,
-		dropsondeBytesChan:         dropsondeBytesChan,
-		dropsondeUnmarshallers:     ums,
-		envelopeChan:               make(chan *events.Envelope),
-		wrappedEnvelopeChan:        make(chan *events.Envelope),
-		signatureVerifier:          signatureVerifier,
-		dropsondeVerifiedBytesChan: make(chan []byte),
+		Logger:                          logger,
+		dropsondeListener:               dropsondeListener,
+		sinkManager:                     sinkManager,
+		messageRouter:                   sinkserver.NewMessageRouter(sinkManager, logger),
+		websocketServer:                 websocketserver.New(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.WSMessageBufferSize, dropsondeOrigin, logger),
+		newAppServiceChan:               newAppServiceChan,
+		deletedAppServiceChan:           deletedAppServiceChan,
+		appStoreWatcher:                 appStoreWatcher,
+		storeAdapter:                    storeAdapter,
+		dropsondeBytesChan:              dropsondeBytesChan,
+		dropsondeUnmarshallerCollection: unmarshallerCollection,
+		envelopeChan:                    make(chan *events.Envelope),
+		wrappedEnvelopeChan:             make(chan *events.Envelope),
+		signatureVerifier:               signatureVerifier,
+		dropsondeVerifiedBytesChan:      make(chan []byte),
 	}
 }
 
@@ -92,7 +89,7 @@ func (doppler *Doppler) Start() {
 	doppler.errChan = make(chan error)
 	doppler.Unlock()
 
-	doppler.Add(6 + len(doppler.dropsondeUnmarshallers))
+	doppler.Add(6 + doppler.dropsondeUnmarshallerCollection.Size())
 
 	go func() {
 		defer doppler.Done()
@@ -104,13 +101,7 @@ func (doppler *Doppler) Start() {
 		doppler.dropsondeListener.Start()
 	}()
 
-	for _, um := range doppler.dropsondeUnmarshallers {
-		go func() {
-			defer doppler.Done()
-			defer close(doppler.envelopeChan)
-			um.Run(doppler.dropsondeVerifiedBytesChan, doppler.envelopeChan)
-		}()
-	}
+	doppler.dropsondeUnmarshallerCollection.Run(doppler.dropsondeVerifiedBytesChan, doppler.envelopeChan, &doppler.WaitGroup)
 
 	go func() {
 		defer doppler.Done()
@@ -125,6 +116,7 @@ func (doppler *Doppler) Start() {
 
 	go func() {
 		defer doppler.Done()
+		defer close(doppler.envelopeChan)
 		doppler.messageRouter.Start(doppler.envelopeChan)
 	}()
 
@@ -152,17 +144,11 @@ func (l *Doppler) Stop() {
 }
 
 func (l *Doppler) Emitters() []instrumentation.Instrumentable {
-	instruments := []instrumentation.Instrumentable{
+	return []instrumentation.Instrumentable{
 		l.dropsondeListener,
 		l.messageRouter,
 		l.sinkManager,
-		//		l.dropsondeUnmarshallers,
+		l.dropsondeUnmarshallerCollection,
 		l.signatureVerifier,
 	}
-
-	for _, um := range l.dropsondeUnmarshallers {
-		instruments = append(instruments, um)
-	}
-
-	return instruments
 }
