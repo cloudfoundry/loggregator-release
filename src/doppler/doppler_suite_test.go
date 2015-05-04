@@ -47,6 +47,7 @@ var _ = BeforeSuite(func() {
 		BlackListIps:                  []iprange.IPRange{},
 		ContainerMetricTTLSeconds:     120,
 		SinkInactivityTimeoutSeconds:  2,
+		UnmarshallerCount:             1,
 	}
 	cfcomponent.Logger = loggertesthelper.Logger()
 })

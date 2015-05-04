@@ -28,6 +28,7 @@ type Config struct {
 	Zone                          string
 	ContainerMetricTTLSeconds     int
 	SinkInactivityTimeoutSeconds  int
+	UnmarshallerCount             int
 }
 
 func (c *Config) Validate(logger *gosteno.Logger) (err error) {
@@ -40,6 +41,10 @@ func (c *Config) Validate(logger *gosteno.Logger) (err error) {
 		if err != nil {
 			return err
 		}
+	}
+
+	if c.UnmarshallerCount == 0 {
+		c.UnmarshallerCount = 1
 	}
 
 	err = c.Config.Validate(logger)

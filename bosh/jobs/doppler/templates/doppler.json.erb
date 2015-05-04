@@ -15,6 +15,7 @@
   "SharedSecret": "<%= p("doppler_endpoint.shared_secret") %>",
   "ContainerMetricTTLSeconds": <%= p("doppler.container_metric_ttl_seconds") %>,
   "SinkInactivityTimeoutSeconds": <%= p("doppler.sink_inactivity_timeout_seconds") %>,
+  "UnmarshallerCount": <%= p("doppler.unmarshaller_count") %>,
 
   "NatsHosts": <%= p("nats.machines") %>,
   "NatsPort": <%= p("nats.port") %>,
