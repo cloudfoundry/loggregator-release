@@ -60,6 +60,7 @@ properties:
     maxRetainedLogMessages: 100
     debug: (( merge || false ))
     blacklisted_syslog_ranges: ~
+    unmarshaller_count: (( merge || 5 ))
 
   metron_agent:
     deployment: (( meta.environment ))
