@@ -26,3 +26,7 @@ func (p *FakeServerAddressProvider) ServerAddresses() []string {
 	p.callCount += 1
 	return p.serverAddresses
 }
+
+func (p *FakeServerAddressProvider) DiscoverAddresses() {
+
+}

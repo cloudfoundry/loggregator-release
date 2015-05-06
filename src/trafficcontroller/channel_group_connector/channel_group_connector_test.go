@@ -133,6 +133,22 @@ var _ = Describe("ChannelGroupConnector", func() {
 					Eventually(receivedMessages).Should(ConsistOf(expectedMessage1, expectedMessage2))
 				})
 			})
+
+			Context("when connected to zero servers", func() {
+				BeforeEach(func() {
+					provider.SetServerAddresses([]string{})
+				})
+
+				It("returns immediately when reconnect is set to false", func(done Done) {
+					channelConnector := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					outputChan := make(chan []byte)
+
+					dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("recentlogs", "abc123", false)
+					channelConnector.Connect(dopplerEndpoint, outputChan, make(chan struct{}))
+
+					close(done)
+				})
+			})
 		})
 
 		Context("when streaming messages", func() {

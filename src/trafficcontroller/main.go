@@ -194,6 +194,7 @@ func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gos
 
 func MakeProvider(adapter storeadapter.StoreAdapter, storeKeyPrefix string, outgoingPort uint32, logger *gosteno.Logger) serveraddressprovider.ServerAddressProvider {
 	loggregatorServerAddressList := servicediscovery.NewServerAddressList(adapter, storeKeyPrefix, logger)
+	loggregatorServerAddressList.DiscoverAddresses()
 	go loggregatorServerAddressList.Run(EtcdQueryInterval)
 
 	return serveraddressprovider.NewDynamicServerAddressProvider(loggregatorServerAddressList, outgoingPort)

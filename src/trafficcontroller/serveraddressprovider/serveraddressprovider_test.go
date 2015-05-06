@@ -28,3 +28,7 @@ func (fake fakeServerAddressList) Stop()             {}
 func (fake fakeServerAddressList) GetAddresses() []string {
 	return fake.addresses
 }
+
+func (fake fakeServerAddressList) DiscoverAddresses() {
+
+}

@@ -62,10 +62,10 @@ loop:
 					connections.removeConnectedServer(addr)
 				}(serverAddress)
 			}
+		}
 
-			if !dopplerEndpoint.Reconnect {
-				break
-			}
+		if !dopplerEndpoint.Reconnect {
+			break
 		}
 
 		select {
