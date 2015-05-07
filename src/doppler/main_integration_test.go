@@ -40,8 +40,6 @@ var _ = Describe("Etcd Integration tests", func() {
 			Zone:                      "z1",
 			ContainerMetricTTLSeconds: 120,
 		}
-
-		main.SetStoreAdapter(main.NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests))
 	})
 
 	AfterEach(func() {
@@ -61,7 +59,8 @@ var _ = Describe("Etcd Integration tests", func() {
 				return err
 			}).Should(HaveOccurred())
 
-			stopHeartbeats = main.StartHeartbeats(localIp, time.Second, &conf, loggertesthelper.Logger())
+			storeAdapter := main.NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
+			stopHeartbeats = main.StartHeartbeats(localIp, time.Second, &conf, storeAdapter, loggertesthelper.Logger())
 
 			Eventually(func() error {
 				_, err := adapter.Get("healthstatus/doppler/z1/doppler_z1/0")

@@ -30,8 +30,6 @@ var (
 	configFile  = flag.String("config", "config/doppler.json", "Location of the doppler config json file")
 	cpuprofile  = flag.String("cpuprofile", "", "write cpu profile to file")
 	memprofile  = flag.String("memprofile", "", "write memory profile to this file")
-
-	storeAdapter storeadapter.StoreAdapter
 )
 
 type DopplerServerHealthMonitor struct {
@@ -39,10 +37,6 @@ type DopplerServerHealthMonitor struct {
 
 func (hm DopplerServerHealthMonitor) Ok() bool {
 	return true
-}
-
-func SetStoreAdapter(adapter storeadapter.StoreAdapter) {
-	storeAdapter = adapter
 }
 
 func NewStoreAdapter(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
@@ -107,7 +101,7 @@ func main() {
 		panic(err)
 	}
 
-	storeAdapter = NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
+	storeAdapter := NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
 	doppler := New(localIp, conf, logger, storeAdapter, "doppler")
 
 	cfc, err := cfcomponent.NewComponent(
@@ -139,7 +133,8 @@ func main() {
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Kill, os.Interrupt)
 
-	StartHeartbeats(localIp, config.HeartbeatInterval, conf, logger)
+	storeAdapter = NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
+	StartHeartbeats(localIp, config.HeartbeatInterval, conf, storeAdapter, logger)
 
 	for {
 		select {
@@ -166,7 +161,7 @@ func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*config.Confi
 	return config, logger
 }
 
-func StartHeartbeats(localIp string, ttl time.Duration, config *config.Config, logger *gosteno.Logger) (stopChan chan (chan bool)) {
+func StartHeartbeats(localIp string, ttl time.Duration, config *config.Config, storeAdapter storeadapter.StoreAdapter, logger *gosteno.Logger) (stopChan chan (chan bool)) {
 	if len(config.EtcdUrls) == 0 {
 		return
 	}

@@ -80,11 +80,6 @@ var _ = Describe("Main", func() {
 
 		BeforeEach(func() {
 			adapter = fakestoreadapter.New()
-			main.SetStoreAdapter(adapter)
-		})
-
-		AfterEach(func() {
-			main.SetStoreAdapter(nil)
 		})
 
 		Context("when store adapter is nil", func() {
@@ -101,13 +96,11 @@ var _ = Describe("Main", func() {
 					Zone:                      "z1",
 					DropsondeIncomingMessagesPort: 1234,
 				}
-
-				main.SetStoreAdapter(nil)
 			})
 
 			It("should panic", func() {
 				Expect(func() {
-					main.StartHeartbeats(localIp, time.Second, &conf, loggertesthelper.Logger())
+					main.StartHeartbeats(localIp, time.Second, &conf, nil, loggertesthelper.Logger())
 				}).Should(Panic())
 			})
 		})
@@ -129,7 +122,7 @@ var _ = Describe("Main", func() {
 			})
 
 			It("sends a heartbeat to etcd", func() {
-				main.StartHeartbeats(localIp, time.Second, &conf, loggertesthelper.Logger())
+				main.StartHeartbeats(localIp, time.Second, &conf, adapter, loggertesthelper.Logger())
 				Expect(adapter.GetMaintainedNodeName()).To(Equal("/healthstatus/doppler/z1/doppler_z1/0"))
 
 				Expect(adapter.MaintainedNodeValue).To(Equal([]byte(localIp)))
@@ -138,7 +131,7 @@ var _ = Describe("Main", func() {
 			Context("when there is an error", func() {
 				It("panics", func() {
 					adapter.MaintainNodeError = errors.New("error")
-					Expect(func() { main.StartHeartbeats(localIp, time.Second, &conf, loggertesthelper.Logger()) }).To(Panic())
+					Expect(func() { main.StartHeartbeats(localIp, time.Second, &conf, adapter, loggertesthelper.Logger()) }).To(Panic())
 				})
 			})
 		})
@@ -152,7 +145,7 @@ var _ = Describe("Main", func() {
 				}
 
 				localIp, _ := localip.LocalIP()
-				main.StartHeartbeats(localIp, time.Second, &conf, loggertesthelper.Logger())
+				main.StartHeartbeats(localIp, time.Second, &conf, adapter, loggertesthelper.Logger())
 				Expect(adapter.GetMaintainedNodeName()).To(BeEmpty())
 			})
 		})
