@@ -65,5 +65,5 @@ var _ = Describe("Legacy message forwarding", func() {
 		}()
 
 		Eventually(messageChan).Should(Receive(Equal(marshalledEventsMessage)))
-	})
+	}, 3)
 })

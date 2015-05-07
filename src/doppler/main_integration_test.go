@@ -65,7 +65,7 @@ var _ = Describe("Etcd Integration tests", func() {
 			Eventually(func() error {
 				_, err := adapter.Get("healthstatus/doppler/z1/doppler_z1/0")
 				return err
-			}).ShouldNot(HaveOccurred())
+			}, 3).ShouldNot(HaveOccurred())
 		})
 	})
 })
