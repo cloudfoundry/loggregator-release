@@ -78,6 +78,7 @@ class LambProperties
     maxRetainedLogMessages: 100
     debug: false
     blacklisted_syslog_ranges: null
+    unmarshaller_count: 5
 
   metron_agent:
     deployment: #{deployment_name}
@@ -98,6 +99,7 @@ class LambProperties
     maxRetainedLogMessages: 100
     debug: false
     blacklisted_syslog_ranges: null
+    unmarshaller_count: 5
 
   metron_agent:
     deployment: #{deployment_name}
