@@ -24,11 +24,10 @@ type WebsocketSink struct {
 	clientAddress       net.Addr
 	wsMessageBufferSize uint
 	dropsondeOrigin     string
-
-	sinks.DropCounter
+	metricUpdateChannel chan<- int64
 }
 
-func NewWebsocketSink(streamId string, givenLogger *gosteno.Logger, ws remoteMessageWriter, wsMessageBufferSize uint, dropsondeOrigin string, metricUpdateChan chan<- int64) *WebsocketSink {
+func NewWebsocketSink(streamId string, givenLogger *gosteno.Logger, ws remoteMessageWriter, wsMessageBufferSize uint, dropsondeOrigin string, metricUpdateChannel chan<- int64) *WebsocketSink {
 	return &WebsocketSink{
 		logger:              givenLogger,
 		streamId:            streamId,
@@ -36,8 +35,12 @@ func NewWebsocketSink(streamId string, givenLogger *gosteno.Logger, ws remoteMes
 		clientAddress:       ws.RemoteAddr(),
 		wsMessageBufferSize: wsMessageBufferSize,
 		dropsondeOrigin:     dropsondeOrigin,
-		DropCounter:         sinks.NewDropCounter(streamId, ws.RemoteAddr().String(), metricUpdateChan),
+		metricUpdateChannel: metricUpdateChannel,
 	}
+}
+
+func (sink *WebsocketSink) UpdateDroppedMessageCount(count int64) {
+	sink.metricUpdateChannel <- count
 }
 
 func (sink *WebsocketSink) Identifier() string {

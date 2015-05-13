@@ -20,31 +20,35 @@ const (
 
 type SyslogSink struct {
 	*gosteno.Logger
-	appId             string
-	drainUrl          string
-	sentMessageCount  *uint64
-	sentByteCount     *uint64
-	listenerChannel   chan *events.Envelope
-	syslogWriter      syslogwriter.Writer
-	handleSendError   func(errorMessage, appId, drainUrl string)
-	disconnectChannel chan struct{}
-	dropsondeOrigin   string
-	disconnectOnce    sync.Once
-	sinks.DropCounter
+	appId               string
+	drainUrl            string
+	sentMessageCount    *uint64
+	sentByteCount       *uint64
+	listenerChannel     chan *events.Envelope
+	syslogWriter        syslogwriter.Writer
+	handleSendError     func(errorMessage, appId, drainUrl string)
+	disconnectChannel   chan struct{}
+	dropsondeOrigin     string
+	disconnectOnce      sync.Once
+	metricUpdateChannel chan<- int64
 }
 
-func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.Writer, errorHandler func(string, string, string), dropsondeOrigin string, metricUpdateChan chan<- int64) sinks.Sink {
+func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.Writer, errorHandler func(string, string, string), dropsondeOrigin string, metricUpdateChannel chan<- int64) *SyslogSink {
 	givenLogger.Debugf("Syslog Sink %s: Created for appId [%s]", drainUrl, appId)
 	return &SyslogSink{
-		appId:             appId,
-		drainUrl:          drainUrl,
-		Logger:            givenLogger,
-		syslogWriter:      syslogWriter,
-		handleSendError:   errorHandler,
-		disconnectChannel: make(chan struct{}),
-		dropsondeOrigin:   dropsondeOrigin,
-		DropCounter:       sinks.NewDropCounter(appId, drainUrl, metricUpdateChan),
+		appId:               appId,
+		drainUrl:            drainUrl,
+		Logger:              givenLogger,
+		syslogWriter:        syslogWriter,
+		handleSendError:     errorHandler,
+		disconnectChannel:   make(chan struct{}),
+		dropsondeOrigin:     dropsondeOrigin,
+		metricUpdateChannel: metricUpdateChannel,
 	}
+}
+
+func (sink *SyslogSink) UpdateDroppedMessageCount(count int64) {
+	sink.metricUpdateChannel <- count
 }
 
 func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {

@@ -12,7 +12,6 @@ type Sink interface {
 	Run(<-chan *events.Envelope)
 	Identifier() string
 	ShouldReceiveErrors() bool
-	GetInstrumentationMetric() Metric
 	UpdateDroppedMessageCount(int64)
 }
 

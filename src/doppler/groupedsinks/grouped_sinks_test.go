@@ -123,20 +123,6 @@ var _ = Describe("GroupedSink", func() {
 			groupedSinks.Broadcast(appId, msg)
 			close(done)
 		})
-
-		It("counts how many messages it drops if input chan is full", func(done Done) {
-			appSink := syslog.NewSyslogSink("123", "url", loggertesthelper.Logger(), DummySyslogWriter{}, dummyErrorHandler, "dropsonde-origin", make(chan int64))
-			appSinkInputChan := make(chan *events.Envelope, 1)
-			groupedSinks.RegisterAppSink(appSinkInputChan, appSink)
-			go appSink.Run(appSinkInputChan)
-
-			msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "123", "App"), "origin")
-			go groupedSinks.Broadcast("123", msg)
-			go groupedSinks.Broadcast("123", msg)
-
-			Eventually(groupedSinks.GetAllInstrumentationMetrics).Should(HaveLen(1))
-			close(done)
-		}, 3)
 	})
 
 	Describe("BroadcastError", func() {
@@ -506,26 +492,6 @@ var _ = Describe("GroupedSink", func() {
 
 		It("returns an empty array if there are no matching sinks", func() {
 			Expect(groupedSinks.WebsocketSinksFor("empty")).To(BeEmpty())
-		})
-	})
-
-	Describe("GetInstrumentationMetrics", func() {
-		It("does not get metrics from sinks with no dropped logs", func() {
-			appSink := syslog.NewSyslogSink("789", "url", loggertesthelper.Logger(), DummySyslogWriter{}, dummyErrorHandler, "dropsonde-origin", make(chan int64))
-			groupedSinks.RegisterAppSink(inputChan, appSink)
-			metrics := groupedSinks.GetAllInstrumentationMetrics()
-			Expect(len(metrics)).To(Equal(0))
-		})
-
-		It("gets the instrumentationMetric from each sink", func() {
-
-			appId := "789"
-			appSink := &fakeSink{sinkId: "sink1", appId: appId}
-			groupedSinks.RegisterAppSink(inputChan, appSink)
-
-			metrics := groupedSinks.GetAllInstrumentationMetrics()
-			Expect(len(metrics)).To(Equal(1))
-			Expect(metrics[0].Tags["appId"]).To(Equal(appId))
 		})
 	})
 })

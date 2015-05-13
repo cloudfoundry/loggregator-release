@@ -2,7 +2,6 @@ package dump
 
 import (
 	"container/ring"
-	"doppler/sinks"
 	"sync"
 	"time"
 
@@ -12,26 +11,28 @@ import (
 )
 
 type DumpSink struct {
-	appId              string
-	logger             *gosteno.Logger
-	messageRing        *ring.Ring
-	inputChan          chan *events.Envelope
-	inactivityDuration time.Duration
-
-	sinks.DropCounter
-
+	appId               string
+	logger              *gosteno.Logger
+	messageRing         *ring.Ring
+	inputChan           chan *events.Envelope
+	inactivityDuration  time.Duration
+	metricUpdateChannel chan<- int64
 	sync.RWMutex
 }
 
 func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, inactivityDuration time.Duration, metricUpdateChannel chan<- int64) *DumpSink {
 	dumpSink := &DumpSink{
-		appId:              appId,
-		logger:             givenLogger,
-		messageRing:        ring.New(int(bufferSize)),
-		inactivityDuration: inactivityDuration,
-		DropCounter:        sinks.NewDropCounter(appId, "DumpSink", metricUpdateChannel),
+		appId:               appId,
+		logger:              givenLogger,
+		messageRing:         ring.New(int(bufferSize)),
+		inactivityDuration:  inactivityDuration,
+		metricUpdateChannel: metricUpdateChannel,
 	}
 	return dumpSink
+}
+
+func (sink *DumpSink) UpdateDroppedMessageCount(count int64) {
+	sink.metricUpdateChannel <- count
 }
 
 func (d *DumpSink) Run(inputChan <-chan *events.Envelope) {

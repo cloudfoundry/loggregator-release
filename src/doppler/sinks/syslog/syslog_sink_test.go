@@ -1,7 +1,6 @@
 package syslog_test
 
 import (
-	"doppler/sinks"
 	"doppler/sinks/syslog"
 	"errors"
 	"fmt"
@@ -62,7 +61,7 @@ var _ = Describe("SyslogSink", func() {
 		}
 
 		updateMetricChan = make(chan int64, 1)
-		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorHandler, "dropsonde-origin", updateMetricChan).(*syslog.SyslogSink)
+		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorHandler, "dropsonde-origin", updateMetricChan)
 	})
 
 	AfterEach(func() {
@@ -250,43 +249,9 @@ var _ = Describe("SyslogSink", func() {
 		})
 	})
 
-	Describe("GetInstrumentationMetric", func() {
-		It("emits an emptry metrics if no dropped messages", func() {
-			metrics := syslogSink.GetInstrumentationMetric()
-			Expect(metrics).To(Equal(sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": "appId", "drainUrl": "syslog://using-fake"}, Value: 0}))
-		})
-
-		It("emits metrics with dropped message count", func() {
-			inputChan = make(chan *events.Envelope)
-
-			go func() {
-				syslogSink.Run(inputChan)
-				closeSysLoggerDoneChan()
-			}()
-
-			for i := 0; i < 105; i++ {
-				msg := fmt.Sprintf("message no %v", i)
-				logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, msg, "appId", "App"), "origin")
-
-				inputChan <- logMessage
-			}
-			close(inputChan)
-
-			<-sysLoggerDoneChan
-
-			sysLogger.ReceivedMessages()
-
-			metric := syslogSink.GetInstrumentationMetric()
-			Expect(metric.Name).To(Equal("numberOfMessagesLost"))
-			Expect(metric.Value).To(Equal(int64(100)))
-			Expect(metric.Tags["appId"]).To(Equal("appId"))
-			Expect(metric.Tags["drainUrl"]).To(Equal("syslog://using-fake"))
-
-		})
-
+	Describe("UpdateDroppedMessageCount", func() {
 		It("updates dropped message count", func() {
 			syslogSink.UpdateDroppedMessageCount(2)
-			Expect(syslogSink.GetInstrumentationMetric().Value).Should(Equal(int64(2)))
 			Eventually(updateMetricChan).Should(Receive(Equal(int64(2))))
 		})
 	})

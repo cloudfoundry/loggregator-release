@@ -468,11 +468,10 @@ var _ = Describe("Dump Sink", func() {
 	})
 
 	It("creates dropped message count metrics", func() {
-		testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), 2*time.Second, make(chan int64, 1))
-
+		updateChan := make(chan int64, 1)
+		testDump := dump.NewDumpSink("myApp", 5, loggertesthelper.Logger(), 2*time.Second, updateChan)
 		testDump.UpdateDroppedMessageCount(2)
-		Expect(testDump.GetInstrumentationMetric().Value).Should(Equal(int64(2)))
-
+		Eventually(updateChan).Should(Receive(Equal(int64(2))))
 	})
 })
 

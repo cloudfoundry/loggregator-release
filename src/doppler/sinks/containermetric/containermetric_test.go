@@ -156,7 +156,6 @@ var _ = Describe("Containermetric", func() {
 		metricUpdateChan := make(chan int64, 1)
 		containerMetricSink := containermetric.NewContainerMetricSink("myApp", 2*time.Second, 2*time.Second, metricUpdateChan)
 		containerMetricSink.UpdateDroppedMessageCount(2)
-		Expect(containerMetricSink.GetInstrumentationMetric().Value).Should(Equal(int64(2)))
 		Eventually(metricUpdateChan).Should(Receive(Equal(int64(2))))
 	})
 })

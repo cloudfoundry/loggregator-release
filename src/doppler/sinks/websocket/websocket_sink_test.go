@@ -1,10 +1,8 @@
 package websocket_test
 
 import (
-	"doppler/sinks"
 	"doppler/sinks/websocket"
 	"net"
-	"strings"
 	"sync"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
@@ -110,45 +108,9 @@ var _ = Describe("WebsocketSink", func() {
 		})
 	})
 
-	Describe("GetInstrumentationMetric", func() {
-		It("emits an emptry metrics if no dropped messages", func() {
-			metrics := websocketSink.GetInstrumentationMetric()
-			Expect(metrics).To(Equal(sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": "appId", "drainUrl": "client-address"}, Value: 0}))
-		})
-
-		It("emits metrics with dropped message count", func() {
-			inputChan := make(chan *events.Envelope, 25)
-
-			go websocketSink.Run(inputChan)
-
-			for i := 0; i < 11; i++ {
-				logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, string(i), "appId", "App"), "origin")
-				inputChan <- logMessage
-			}
-
-			Eventually(func() bool {
-				var receivedEnvelope events.Envelope
-				for _, message := range fakeWebsocket.ReadMessages() {
-					proto.Unmarshal(message, &receivedEnvelope)
-					if strings.Contains(string(receivedEnvelope.GetLogMessage().GetMessage()), "Log message output too high.") {
-						return true
-					}
-				}
-				return false
-			}).Should(BeTrue())
-
-			close(inputChan)
-
-			metric := websocketSink.GetInstrumentationMetric()
-			Expect(metric.Value).To(Equal(int64(10)))
-			Expect(metric.Tags["appId"]).To(Equal("appId"))
-			Expect(metric.Tags["drainUrl"]).To(Equal("client-address"))
-
-		})
-
+	Describe("UpdateDroppedMessageCount", func() {
 		It("updates dropped message count", func() {
 			websocketSink.UpdateDroppedMessageCount(2)
-			Expect(websocketSink.GetInstrumentationMetric().Value).Should(Equal(int64(2)))
 			Eventually(updateMetricChan).Should(Receive(Equal(int64(2))))
 		})
 	})

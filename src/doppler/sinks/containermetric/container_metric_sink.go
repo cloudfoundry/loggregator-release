@@ -1,32 +1,32 @@
 package containermetric
 
 import (
+	"github.com/cloudfoundry/dropsonde/events"
 	"sync"
 	"time"
-
-	"doppler/sinks"
-	"github.com/cloudfoundry/dropsonde/events"
 )
 
 type ContainerMetricSink struct {
-	applicationId      string
-	ttl                time.Duration
-	metrics            map[int32]*events.Envelope
-	inactivityDuration time.Duration
-
-	sinks.DropCounter
-
+	applicationId       string
+	ttl                 time.Duration
+	metrics             map[int32]*events.Envelope
+	inactivityDuration  time.Duration
+	metricUpdateChannel chan<- int64
 	sync.RWMutex
 }
 
-func NewContainerMetricSink(applicationId string, ttl time.Duration, inactivityDuration time.Duration, metricUpdateChan chan<- int64) *ContainerMetricSink {
+func NewContainerMetricSink(applicationId string, ttl time.Duration, inactivityDuration time.Duration, metricUpdateChannel chan<- int64) *ContainerMetricSink {
 	return &ContainerMetricSink{
-		applicationId:      applicationId,
-		ttl:                ttl,
-		inactivityDuration: inactivityDuration,
-		metrics:            make(map[int32]*events.Envelope),
-		DropCounter:        sinks.NewDropCounter(applicationId, "ContainerMetricSink", metricUpdateChan),
+		applicationId:       applicationId,
+		ttl:                 ttl,
+		inactivityDuration:  inactivityDuration,
+		metrics:             make(map[int32]*events.Envelope),
+		metricUpdateChannel: metricUpdateChannel,
 	}
+}
+
+func (sink *ContainerMetricSink) UpdateDroppedMessageCount(count int64) {
+	sink.metricUpdateChannel <- count
 }
 
 func (sink *ContainerMetricSink) Run(eventChan <-chan *events.Envelope) {
