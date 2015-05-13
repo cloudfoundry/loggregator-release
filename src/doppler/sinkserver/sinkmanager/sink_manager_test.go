@@ -415,46 +415,6 @@ var _ = Describe("SinkManager", func() {
 			errorMsg := sink.Received()[0]
 			Expect(string(errorMsg.GetLogMessage().GetMessage())).To(Equal("error msg"))
 		})
-
-		It("counts syslog send failures", func() {
-			sink := &channelSink{
-				appId:      "myApp",
-				identifier: "myAppChan1",
-				done:       make(chan struct{}),
-			}
-			sinkManager.RegisterSink(sink)
-			sinkManager.SendSyslogErrorToLoggregator("error msg", "myApp", "drainUrl")
-
-			syslogFailureMetrics := sinkManager.Emit().Metrics[4:5]
-			Expect(syslogFailureMetrics).To(ConsistOf(
-				instrumentation.Metric{Name: "numberOfSyslogDrainErrors", Value: 1, Tags: map[string]interface{}{"appId": "myApp", "drainUrl": "drainUrl"}},
-			))
-
-		})
-	})
-
-	Describe("Emit", func() {
-		It("emits all sink metrics", func() {
-			sink1 := &channelSink{
-				appId:      "myApp1",
-				identifier: "myAppChan1",
-				done:       make(chan struct{}),
-			}
-			sink2 := &channelSink{
-				appId:      "myApp2",
-				identifier: "myAppChan2",
-				done:       make(chan struct{}),
-			}
-			sinkManager.RegisterSink(sink1)
-			sinkManager.RegisterSink(sink2)
-			sinkManager.Emit()
-			metrics := sinkManager.Emit().Metrics
-			appMetric := metrics[len(metrics)-2:]
-			Expect(appMetric).To(ConsistOf(
-				instrumentation.Metric{Name: "numberOfMessagesLost", Value: int64(25), Tags: map[string]interface{}{"appId": "myApp1"}},
-				instrumentation.Metric{Name: "numberOfMessagesLost", Value: int64(25), Tags: map[string]interface{}{"appId": "myApp2"}},
-			))
-		})
 	})
 })
 
