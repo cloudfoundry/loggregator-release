@@ -16,7 +16,8 @@ func Poll(hostname string, username string, password string, batchSize int, skip
 	nextId := 0
 
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: skipCertVerify},
+		TLSClientConfig:   &tls.Config{InsecureSkipVerify: skipCertVerify},
+		DisableKeepAlives: true,
 	}
 	client := &http.Client{Transport: tr}
 
@@ -25,18 +26,10 @@ func Poll(hostname string, username string, password string, batchSize int, skip
 		request, _ := http.NewRequest("GET", url, nil)
 		request.SetBasicAuth(username, password)
 
-		response, err := client.Do(request)
+		ccResponse, err := pollAndDecode(client, request)
 		if err != nil {
 			return drainURLs, err
 		}
-
-		if response.StatusCode != http.StatusOK {
-			return drainURLs, errors.New(fmt.Sprintf("Remote server error: %s", http.StatusText(response.StatusCode)))
-		}
-
-		decoder := json.NewDecoder(response.Body)
-		var ccResponse cloudControllerResponse
-		decoder.Decode(&ccResponse)
 
 		for appId, urls := range ccResponse.Results {
 			drainURLs[appId] = urls
@@ -49,6 +42,25 @@ func Poll(hostname string, username string, password string, batchSize int, skip
 	}
 
 	return drainURLs, nil
+}
+
+func pollAndDecode(client *http.Client, request *http.Request) (*cloudControllerResponse, error) {
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, err
+	}
+
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return nil, errors.New(fmt.Sprintf("Remote server error: %s", http.StatusText(response.StatusCode)))
+	}
+
+	decoder := json.NewDecoder(response.Body)
+	var ccResponse cloudControllerResponse
+	decoder.Decode(&ccResponse)
+
+	return &ccResponse, nil
 }
 
 type cloudControllerResponse struct {
