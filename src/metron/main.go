@@ -8,6 +8,7 @@ import (
 	"metron/legacymessage"
 	"metron/messageaggregator"
 	"metron/statsdlistener"
+	"metron/tagger"
 	"metron/varzforwarder"
 	"time"
 
@@ -65,6 +66,7 @@ func main() {
 	messageAggregator := messageaggregator.New(logger)
 	varzForwarder := varzforwarder.New(config.Job, metricTTL, logger)
 	marshaller := dropsonde_marshaller.NewDropsondeMarshaller(logger)
+	messageTagger := tagger.New(config.Deployment, config.Job, config.Index)
 
 	instrumentables := []instrumentation.Instrumentable{
 		legacyMessageListener,
@@ -85,6 +87,7 @@ func main() {
 	dropsondeEventChan := make(chan *events.Envelope)
 	logEnvelopesChan := make(chan *logmessage.LogEnvelope)
 	aggregatedEventChan := make(chan *events.Envelope)
+	taggedEventChan := make(chan *events.Envelope)
 	forwardedEventChan := make(chan *events.Envelope)
 	reMarshalledMessageChan := make(chan []byte)
 	signedMessageChan := make(chan ([]byte))
@@ -103,7 +106,8 @@ func main() {
 
 	// Start the message processing pipeline
 	go messageAggregator.Run(dropsondeEventChan, aggregatedEventChan)
-	go varzForwarder.Run(aggregatedEventChan, forwardedEventChan)
+	go messageTagger.Run(aggregatedEventChan, taggedEventChan)
+	go varzForwarder.Run(taggedEventChan, forwardedEventChan)
 	go marshaller.Run(forwardedEventChan, reMarshalledMessageChan)
 	go signMessages(config.SharedSecret, reMarshalledMessageChan, signedMessageChan)
 	forwardMessagesToDoppler(dopplerClientPool, signedMessageChan, logger)
