@@ -31,7 +31,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/auth/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/logmessage/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/server/*.go # gosub

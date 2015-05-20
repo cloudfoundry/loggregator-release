@@ -3,8 +3,6 @@ package dopplerproxy
 import (
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/gogo/protobuf/proto"
 	"net/http"
@@ -26,32 +24,14 @@ type Proxy struct {
 	translate      RequestTranslator
 	cookieDomain   string
 	logger         *gosteno.Logger
-	cfcomponent.Component
 }
 
 type RequestTranslator func(request *http.Request) (*http.Request, error)
 
 type Authorizer func(authToken string, appId string, logger *gosteno.Logger) (bool, error)
 
-func NewDopplerProxy(logAuthorize authorization.LogAccessAuthorizer, adminAuthorizer authorization.AdminAccessAuthorizer, connector channel_group_connector.ChannelGroupConnector, config cfcomponent.Config, translator RequestTranslator, cookieDomain string, logger *gosteno.Logger) *Proxy {
-	var instrumentables []instrumentation.Instrumentable
-
-	cfc, err := cfcomponent.NewComponent(
-		logger,
-		"LoggregatorTrafficcontroller",
-		0,
-		&TrafficControllerMonitor{},
-		config.VarzPort,
-		[]string{config.VarzUser, config.VarzPass},
-		instrumentables,
-	)
-
-	if err != nil {
-		return nil
-	}
-
+func NewDopplerProxy(logAuthorize authorization.LogAccessAuthorizer, adminAuthorizer authorization.AdminAccessAuthorizer, connector channel_group_connector.ChannelGroupConnector, translator RequestTranslator, cookieDomain string, logger *gosteno.Logger) *Proxy {
 	return &Proxy{
-		Component:      cfc,
 		logAuthorize:   logAuthorize,
 		adminAuthorize: adminAuthorizer,
 		connector:      connector,

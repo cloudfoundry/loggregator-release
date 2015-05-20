@@ -3,7 +3,6 @@ package dopplerproxy_test
 import (
 	"trafficcontroller/dopplerproxy"
 
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/server/handlers"
 	"io/ioutil"
@@ -37,7 +36,6 @@ var _ = Describe("ServeHTTP", func() {
 			auth.Authorize,
 			adminAuth.Authorize,
 			channelGroupConnector,
-			cfcomponent.Config{},
 			dopplerproxy.TranslateFromDropsondePath,
 			"cookieDomain",
 			loggertesthelper.Logger(),
