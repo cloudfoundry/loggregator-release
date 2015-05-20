@@ -1,0 +1,13 @@
+---
+name: statsd_injector
+dependencies:
+- golang1.4
+files:
+- loggregator/src/statsdinjector/*.go # gosub
+- loggregator/src/statsdinjector/statsdemitter/*.go # gosub
+- loggregator/src/statsdinjector/statsdlistener/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/events/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/gosteno/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/gosteno/syslog/*.go # gosub
+- loggregator/src/github.com/coreos/etcd/third_party/code.google.com/p/goprotobuf/proto/*.go # gosub
+- loggregator/src/github.com/gogo/protobuf/proto/*.go # gosub
