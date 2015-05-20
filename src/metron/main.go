@@ -50,7 +50,7 @@ func main() {
 	flag.Parse()
 	config, logger := parseConfig(*debug, *configFilePath, *logFilePath)
 
-	dopplerClientPool, dopplerDiscovery := initializeClientPool(config, logger, config.LoggregatorDropsondePort)
+	dopplerClientPool := initializeClientPool(config, logger, config.LoggregatorDropsondePort)
 
 	// TODO: delete next three lines when "legacy" format goes away
 	legacyMessageListener, legacyMessageChan := agentlistener.NewAgentListener(fmt.Sprintf("localhost:%d", config.LegacyIncomingMessagesPort), logger, "legacyAgentListener")
@@ -81,7 +81,6 @@ func main() {
 
 	go collectorregistrar.NewCollectorRegistrar(cfcomponent.DefaultYagnatsClientProvider, component, time.Duration(config.CollectorRegistrarIntervalMilliseconds)*time.Millisecond, &config.Config).Run()
 	go startMonitoringEndpoints(component, logger)
-	go dopplerDiscovery.Run(time.Duration(config.EtcdQueryIntervalMilliseconds) * time.Millisecond)
 
 	// Produce channels for connecting processing pipeline stages
 	dropsondeEventChan := make(chan *events.Envelope)
@@ -126,17 +125,21 @@ func startMonitoringEndpoints(component cfcomponent.Component, logger *gosteno.L
 	}
 }
 
-func initializeClientPool(config metronConfig, logger *gosteno.Logger, port int) (*clientpool.LoggregatorClientPool, servicediscovery.ServerAddressList) {
+func initializeClientPool(config metronConfig, logger *gosteno.Logger, port int) *clientpool.LoggregatorClientPool {
 	adapter := storeAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	err := adapter.Connect()
 	if err != nil {
 		logger.Errorf("Error connecting to ETCD: %v", err)
 	}
 
-	serverAddressDiscovery := servicediscovery.NewServerAddressList(adapter, "/healthstatus/doppler/"+config.Zone, logger)
+	inZoneServerAddressList := servicediscovery.NewServerAddressList(adapter, "/healthstatus/doppler/"+config.Zone, logger)
+	allZoneServerAddressList := servicediscovery.NewServerAddressList(adapter, "/healthstatus/doppler/", logger)
 
-	clientPool := clientpool.NewLoggregatorClientPool(logger, port, serverAddressDiscovery)
-	return clientPool, serverAddressDiscovery
+	go inZoneServerAddressList.Run(time.Duration(config.EtcdQueryIntervalMilliseconds) * time.Millisecond)
+	go allZoneServerAddressList.Run(time.Duration(config.EtcdQueryIntervalMilliseconds) * time.Millisecond)
+
+	clientPool := clientpool.NewLoggregatorClientPool(logger, port, inZoneServerAddressList, allZoneServerAddressList)
+	return clientPool
 }
 
 type metronConfig struct {
