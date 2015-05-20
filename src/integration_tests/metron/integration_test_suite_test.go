@@ -23,6 +23,7 @@ func TestIntegrationTest(t *testing.T) {
 }
 
 var metronSession *gexec.Session
+var statsdInjectorSession *gexec.Session
 var etcdRunner *etcdstorerunner.ETCDClusterRunner
 var etcdPort int
 var localIPAddress string
@@ -41,6 +42,13 @@ var _ = BeforeSuite(func() {
 	metronSession, err = gexec.Start(command, gexec.NewPrefixedWriter("[o][metron]", GinkgoWriter), gexec.NewPrefixedWriter("[e][metron]", GinkgoWriter))
 	Expect(err).ShouldNot(HaveOccurred())
 
+	pathToStatsdInjectorExecutable, err := gexec.Build("statsdinjector")
+	Expect(err).NotTo(HaveOccurred())
+	command = exec.Command(pathToStatsdInjectorExecutable, "-statsdPort=51162", "-logLevel=debug")
+
+	statsdInjectorSession, err = gexec.Start(command, gexec.NewPrefixedWriter("[o][statsdInjector]", GinkgoWriter), gexec.NewPrefixedWriter("[e][statsdInjector]", GinkgoWriter))
+	Expect(err).ShouldNot(HaveOccurred())
+
 	localIPAddress, _ = localip.LocalIP()
 
 	// wait for server to be up
@@ -53,11 +61,12 @@ var _ = BeforeSuite(func() {
 	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
 	etcdRunner.Start()
 
-	Eventually(metronSession).Should(gbytes.Say("Listening for statsd on host localhost:51162"))
+	Eventually(statsdInjectorSession).Should(gbytes.Say("Listening for statsd on host localhost:51162"))
 })
 
 var _ = AfterSuite(func() {
 	metronSession.Kill().Wait()
+	statsdInjectorSession.Kill().Wait()
 	gexec.CleanupBuildArtifacts()
 
 	etcdRunner.Adapter().Disconnect()

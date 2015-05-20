@@ -93,22 +93,22 @@ var _ = Describe("Statsd support", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			clientInput.Write([]byte("gauge test.gauge 23\n"))
-			Eventually(metronSession).Should(gbytes.Say("StatsdListener: Read "))
+			Eventually(statsdInjectorSession).Should(gbytes.Say("StatsdListener: Read "))
 
 			checkValueMetric(fakeDoppler, basicValueMetric("test.gauge", 23, "gauge"), "testNamespace")
 
 			clientInput.Write([]byte("gaugedelta test.gauge 7\n"))
-			Eventually(metronSession).Should(gbytes.Say("StatsdListener: Read "))
+			Eventually(statsdInjectorSession).Should(gbytes.Say("StatsdListener: Read "))
 
 			checkValueMetric(fakeDoppler, basicValueMetric("test.gauge", 30, "gauge"), "testNamespace")
 
 			clientInput.Write([]byte("gaugedelta test.gauge -5\n"))
-			Eventually(metronSession).Should(gbytes.Say("StatsdListener: Read "))
+			Eventually(statsdInjectorSession).Should(gbytes.Say("StatsdListener: Read "))
 
 			checkValueMetric(fakeDoppler, basicValueMetric("test.gauge", 25, "gauge"), "testNamespace")
 
 			clientInput.Write([]byte("gauge test.gauge 50\n"))
-			Eventually(metronSession).Should(gbytes.Say("StatsdListener: Read "))
+			Eventually(statsdInjectorSession).Should(gbytes.Say("StatsdListener: Read "))
 
 			checkValueMetric(fakeDoppler, basicValueMetric("test.gauge", 50, "gauge"), "testNamespace")
 
@@ -127,7 +127,7 @@ var _ = Describe("Statsd support", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			clientInput.Write([]byte("timing test.timing 23\n"))
-			Eventually(metronSession).Should(gbytes.Say("StatsdListener: Read "))
+			Eventually(statsdInjectorSession).Should(gbytes.Say("StatsdListener: Read "))
 
 			checkValueMetric(fakeDoppler, basicValueMetric("test.timing", 23, "ms"), "testNamespace")
 
@@ -146,17 +146,17 @@ var _ = Describe("Statsd support", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			clientInput.Write([]byte("count test.counter 27\n"))
-			Eventually(metronSession).Should(gbytes.Say("StatsdListener: Read "))
+			Eventually(statsdInjectorSession).Should(gbytes.Say("StatsdListener: Read "))
 
 			checkValueMetric(fakeDoppler, basicValueMetric("test.counter", 27, "counter"), "testNamespace")
 
 			clientInput.Write([]byte("count test.counter +3\n"))
-			Eventually(metronSession).Should(gbytes.Say("StatsdListener: Read "))
+			Eventually(statsdInjectorSession).Should(gbytes.Say("StatsdListener: Read "))
 
 			checkValueMetric(fakeDoppler, basicValueMetric("test.counter", 30, "counter"), "testNamespace")
 
 			clientInput.Write([]byte("count test.counter -10\n"))
-			Eventually(metronSession).Should(gbytes.Say("StatsdListener: Read "))
+			Eventually(statsdInjectorSession).Should(gbytes.Say("StatsdListener: Read "))
 
 			checkValueMetric(fakeDoppler, basicValueMetric("test.counter", 20, "counter"), "testNamespace")
 

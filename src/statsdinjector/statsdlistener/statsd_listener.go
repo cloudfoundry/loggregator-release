@@ -24,8 +24,9 @@ type StatsdListener struct {
 	logger *gosteno.Logger
 }
 
-func New(listenerAddress string, logger *gosteno.Logger, name string) StatsdListener {
-	return StatsdListener{
+func New(listenerPort uint, logger *gosteno.Logger) *StatsdListener {
+	listenerAddress := fmt.Sprintf("localhost:%d", listenerPort)
+	return &StatsdListener{
 		host:     listenerAddress,
 		stopChan: make(chan struct{}),
 

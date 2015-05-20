@@ -46,6 +46,7 @@ unit_testable_packages=(
     metron
     doppler
     syslog_drain_binder
+    statsdinjector
 )
 
 for package in "${unit_testable_packages[@]}"

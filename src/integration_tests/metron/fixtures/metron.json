@@ -7,7 +7,6 @@
     "NatsUser": "",
     "LegacyIncomingMessagesPort": 51160,
     "DropsondeIncomingMessagesPort": 51161,
-    "StatsdIncomingMessagesPort": 51162,
     "SharedSecret": "shared_secret",
     "EtcdUrls"    : ["http://127.0.0.1:5800"],
     "EtcdMaxConcurrentRequests": 1,

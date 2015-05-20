@@ -1,8 +1,8 @@
 package statsdlistener_test
 
 import (
-	"metron/statsdlistener"
 	"net"
+	"statsdinjector/statsdlistener"
 	"sync"
 
 	"github.com/cloudfoundry/dropsonde/events"
@@ -20,7 +20,7 @@ var _ = Describe("StatsdListener", func() {
 		})
 
 		It("reads multiple gauges (on different lines) in the same packet", func(done Done) {
-			listener := statsdlistener.New("localhost:51162", loggertesthelper.Logger(), "name")
+			listener := statsdlistener.New(51162, loggertesthelper.Logger())
 
 			envelopeChan := make(chan *events.Envelope)
 
@@ -53,7 +53,7 @@ var _ = Describe("StatsdListener", func() {
 		}, 5)
 
 		It("processes gauge increment/decrement stats", func(done Done) {
-			listener := statsdlistener.New("localhost:51162", loggertesthelper.Logger(), "name")
+			listener := statsdlistener.New(51162, loggertesthelper.Logger())
 
 			envelopeChan := make(chan *events.Envelope)
 
@@ -86,7 +86,7 @@ var _ = Describe("StatsdListener", func() {
 		})
 
 		It("reads multiple timings (on different lines) in the same packet", func(done Done) {
-			listener := statsdlistener.New("localhost:51162", loggertesthelper.Logger(), "name")
+			listener := statsdlistener.New(51162, loggertesthelper.Logger())
 
 			envelopeChan := make(chan *events.Envelope)
 
@@ -119,7 +119,7 @@ var _ = Describe("StatsdListener", func() {
 		}, 5)
 
 		It("reads multiple counters (on different lines) in the same packet", func(done Done) {
-			listener := statsdlistener.New("localhost:51162", loggertesthelper.Logger(), "name")
+			listener := statsdlistener.New(51162, loggertesthelper.Logger())
 
 			envelopeChan := make(chan *events.Envelope)
 
@@ -152,7 +152,7 @@ var _ = Describe("StatsdListener", func() {
 		}, 5)
 
 		It("processes counter increment/decrement stats", func(done Done) {
-			listener := statsdlistener.New("localhost:51162", loggertesthelper.Logger(), "name")
+			listener := statsdlistener.New(51162, loggertesthelper.Logger())
 
 			envelopeChan := make(chan *events.Envelope)
 

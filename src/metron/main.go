@@ -7,7 +7,6 @@ import (
 	"metron/heartbeatrequester"
 	"metron/legacymessage"
 	"metron/messageaggregator"
-	"metron/statsdlistener"
 	"metron/tagger"
 	"metron/varzforwarder"
 	"time"
@@ -60,8 +59,6 @@ func main() {
 	pinger := heartbeatrequester.New(pingSenderInterval)
 	dropsondeMessageListener, dropsondeMessageChan := eventlistener.New(fmt.Sprintf("localhost:%d", config.DropsondeIncomingMessagesPort), logger, "dropsondeAgentListener", pinger)
 
-	statsdMessageListener := statsdlistener.New(fmt.Sprintf("localhost:%d", config.StatsdIncomingMessagesPort), logger, "statsdAgentListener")
-
 	unmarshaller := dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger)
 	messageAggregator := messageaggregator.New(logger)
 	varzForwarder := varzforwarder.New(config.Job, metricTTL, logger)
@@ -99,9 +96,6 @@ func main() {
 	// Listen for dropsonde messages, and drop onto dropsondeEventChan
 	go dropsondeMessageListener.Start()
 	go unmarshaller.Run(dropsondeMessageChan, dropsondeEventChan)
-
-	// Listen for statsd messages, and drop onto dropsondeEventChan
-	go statsdMessageListener.Run(dropsondeEventChan)
 
 	// Start the message processing pipeline
 	go messageAggregator.Run(dropsondeEventChan, aggregatedEventChan)
