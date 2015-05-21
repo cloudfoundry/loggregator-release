@@ -1,8 +1,0 @@
-set -e -x
-
-export GOROOT=$(readlink -nf /var/vcap/packages/golang1.4)
-export PATH=$GOROOT/bin:$PATH
-export GOPATH=$PWD/loggregator
-
-go install statsdinjector
-cp -a $PWD/loggregator/bin/statsdinjector ${BOSH_INSTALL_TARGET}

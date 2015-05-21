@@ -143,7 +143,6 @@ type metronConfig struct {
 	Job                           string
 	LegacyIncomingMessagesPort    int
 	DropsondeIncomingMessagesPort int
-	StatsdIncomingMessagesPort    int
 	EtcdUrls                      []string
 	EtcdMaxConcurrentRequests     int
 	EtcdQueryIntervalMilliseconds int
