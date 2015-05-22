@@ -9,6 +9,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -26,6 +29,7 @@ var _ = Describe("DeaAgent", func() {
 		task2StderrListener net.Listener
 		expectedMessage     = "Some Output"
 		agent               *deaagent.Agent
+		fakeMetricSender    *fake.FakeMetricSender
 	)
 
 	BeforeEach(func() {
@@ -62,6 +66,9 @@ var _ = Describe("DeaAgent", func() {
 	                                {"state": "RUNNING", "application_id": "3456", "warden_job_id": 59, "warden_container_path":"`+tmpdir+`", "instance_index": 1}]}`, true)
 
 		agent = deaagent.NewAgent(filePath, loggertesthelper.Logger())
+
+		fakeMetricSender = fake.NewFakeMetricSender()
+		metrics.Initialize(fakeMetricSender, metricbatcher.New(fakeMetricSender, 10*time.Millisecond))
 	})
 
 	AfterEach(func() {
@@ -88,14 +95,16 @@ var _ = Describe("DeaAgent", func() {
 		})
 
 		Context("while running", func() {
-			It("picks up new tasks", func() {
+			BeforeEach(func() {
 				agent.Start()
 
 				writeToFile(`{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": 56, "warden_container_path":"`+tmpdir+`", "instance_index": 3, "syslog_drain_urls": ["url1"]},
 								{"state": "RUNNING", "application_id": "3456", "warden_job_id": 59, "warden_container_path":"`+tmpdir+`", "instance_index": 1},
 								{"state": "RUNNING", "application_id": "5678", "warden_job_id": 58, "warden_container_path":"`+tmpdir+`", "instance_index": 0, "syslog_drain_urls": ["url2"]}
 							   ]}`, true)
+			})
 
+			It("picks up new tasks", func() {
 				connectionChannel := make(chan net.Conn)
 
 				newTask := &domain.Task{
@@ -129,7 +138,22 @@ var _ = Describe("DeaAgent", func() {
 				logs := fakeLogSender.GetLogs()
 				Expect(logs[0].AppId).To(Equal("5678"))
 			})
+
+			Context("metrics", func() {
+				It("updates totalApps", func() {
+					Eventually(func() float64 {
+						return fakeMetricSender.GetValue("totalApps").Value
+					}).Should(BeEquivalentTo(3))
+
+					deleteFile()
+
+					Eventually(func() float64 {
+						return fakeMetricSender.GetValue("totalApps").Value
+					}, 3).Should(BeEquivalentTo(0))
+				})
+			})
 		})
+
 	})
 
 	It("creates the correct structure on forwarded messages and does not contain drain URLs", func() {
@@ -162,4 +186,8 @@ func writeToFile(text string, truncate bool) {
 func createFile() *os.File {
 	file, _ := os.Create(filePath)
 	return file
+}
+
+func deleteFile() {
+	os.Remove(filePath)
 }
