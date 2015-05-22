@@ -112,6 +112,7 @@ func main() {
 		conf.VarzPort,
 		[]string{conf.VarzUser, conf.VarzPass},
 		doppler.Emitters(),
+		conf.JobName,
 	)
 
 	if err != nil {

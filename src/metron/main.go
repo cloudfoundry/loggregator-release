@@ -166,7 +166,7 @@ func initializeComponent(config metronConfig, logger *gosteno.Logger, instrument
 		}
 	}
 
-	component, err := cfcomponent.NewComponent(logger, "MetronAgent", config.Index, &metronHealthMonitor{}, config.VarzPort, []string{config.VarzUser, config.VarzPass}, instrumentables)
+	component, err := cfcomponent.NewComponent(logger, "MetronAgent", config.Index, &metronHealthMonitor{}, config.VarzPort, []string{config.VarzUser, config.VarzPass}, instrumentables, config.Job)
 	if err != nil {
 		panic(err)
 	}
