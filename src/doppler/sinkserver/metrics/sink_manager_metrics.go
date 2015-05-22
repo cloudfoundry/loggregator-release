@@ -7,7 +7,7 @@ import (
 	"doppler/sinks/websocket"
 	"sync"
 
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	"github.com/cloudfoundry/dropsonde/metrics"
 )
 
 type SinkManagerMetrics struct {
@@ -15,7 +15,6 @@ type SinkManagerMetrics struct {
 	websocketSinks        int
 	syslogSinks           int
 	firehoseSinks         int
-	totalDroppedMessages  int64
 	sinkDropUpdateChannel <-chan int64
 	lock                  sync.RWMutex
 }
@@ -27,9 +26,7 @@ func NewSinkManagerMetrics(sinkDropUpdateChannel <-chan int64) *SinkManagerMetri
 
 	go func() {
 		for delta := range m.sinkDropUpdateChannel {
-			m.lock.Lock()
-			m.totalDroppedMessages += delta
-			m.lock.Unlock()
+			metrics.BatchAddCounter("messageRouter.totalDroppedMessages", uint64(delta))
 		}
 	}()
 
@@ -43,10 +40,15 @@ func (sinkManagerMetrics *SinkManagerMetrics) Inc(sink sinks.Sink) {
 	switch sink.(type) {
 	case *dump.DumpSink:
 		sinkManagerMetrics.dumpSinks++
+		metrics.SendValue("messageRouter.numberOfDumpSinks", float64(sinkManagerMetrics.dumpSinks), "sinks")
+
 	case *syslog.SyslogSink:
 		sinkManagerMetrics.syslogSinks++
+		metrics.SendValue("messageRouter.numberOfSyslogSinks", float64(sinkManagerMetrics.syslogSinks), "sinks")
+
 	case *websocket.WebsocketSink:
 		sinkManagerMetrics.websocketSinks++
+		metrics.SendValue("messageRouter.numberOfWebsocketSinks", float64(sinkManagerMetrics.websocketSinks), "sinks")
 	}
 }
 
@@ -57,10 +59,15 @@ func (sinkManagerMetrics *SinkManagerMetrics) Dec(sink sinks.Sink) {
 	switch sink.(type) {
 	case *dump.DumpSink:
 		sinkManagerMetrics.dumpSinks--
+		metrics.SendValue("messageRouter.numberOfDumpSinks", float64(sinkManagerMetrics.dumpSinks), "sinks")
+
 	case *syslog.SyslogSink:
 		sinkManagerMetrics.syslogSinks--
+		metrics.SendValue("messageRouter.numberOfSyslogSinks", float64(sinkManagerMetrics.syslogSinks), "sinks")
+
 	case *websocket.WebsocketSink:
 		sinkManagerMetrics.websocketSinks--
+		metrics.SendValue("messageRouter.numberOfWebsocketSinks", float64(sinkManagerMetrics.websocketSinks), "sinks")
 	}
 }
 
@@ -68,29 +75,12 @@ func (sinkManagerMetrics *SinkManagerMetrics) IncFirehose() {
 	sinkManagerMetrics.lock.Lock()
 	defer sinkManagerMetrics.lock.Unlock()
 	sinkManagerMetrics.firehoseSinks++
+	metrics.SendValue("messageRouter.numberOfFirehoseSinks", float64(sinkManagerMetrics.firehoseSinks), "sinks")
 }
 
 func (sinkManagerMetrics *SinkManagerMetrics) DecFirehose() {
 	sinkManagerMetrics.lock.Lock()
 	defer sinkManagerMetrics.lock.Unlock()
 	sinkManagerMetrics.firehoseSinks--
-}
-
-func (sinkManagerMetrics *SinkManagerMetrics) Emit() instrumentation.Context {
-	sinkManagerMetrics.lock.RLock()
-	defer sinkManagerMetrics.lock.RUnlock()
-
-	data := []instrumentation.Metric{
-		instrumentation.Metric{Name: "numberOfDumpSinks", Value: sinkManagerMetrics.dumpSinks},
-		instrumentation.Metric{Name: "numberOfSyslogSinks", Value: sinkManagerMetrics.syslogSinks},
-		instrumentation.Metric{Name: "numberOfWebsocketSinks", Value: sinkManagerMetrics.websocketSinks},
-		instrumentation.Metric{Name: "numberOfFirehoseSinks", Value: sinkManagerMetrics.firehoseSinks},
-	}
-
-	data = append(data, instrumentation.Metric{Name: "totalDroppedMessages", Value: sinkManagerMetrics.totalDroppedMessages})
-
-	return instrumentation.Context{
-		Name:    "messageRouter",
-		Metrics: data,
-	}
+	metrics.SendValue("messageRouter.numberOfFirehoseSinks", float64(sinkManagerMetrics.firehoseSinks), "sinks")
 }

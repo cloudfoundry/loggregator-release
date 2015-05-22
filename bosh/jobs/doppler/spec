@@ -53,6 +53,12 @@ properties:
     description: "Shared secret used to verify cryptographically signed doppler messages"
   etcd.machines:
     description: "IPs pointing to the ETCD cluster"
+  metron_endpoint.host:
+    description: "The host used to emit messages to the Metron agent"
+    default: "127.0.0.1"
+  metron_endpoint.dropsonde_port:
+    description: "The port used to emit dropsonde messages to the Metron agent"
+    default: 3457
   nats.user:
     description: "Username for cc client to connect to NATS"
   nats.password:

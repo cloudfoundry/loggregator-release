@@ -17,6 +17,9 @@
   "SinkInactivityTimeoutSeconds": <%= p("doppler.sink_inactivity_timeout_seconds") %>,
   "UnmarshallerCount": <%= p("doppler.unmarshaller_count") %>,
 
+  "MetronAddress": "<%= p("metron_endpoint.host") %>:<%= p("metron_endpoint.dropsonde_port") %>",
+
+
   "NatsHosts": <%= p("nats.machines") %>,
   "NatsPort": <%= p("nats.port") %>,
   "NatsUser": "<%= p("nats.user") %>",

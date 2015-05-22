@@ -3,12 +3,12 @@ package sinkserver_test
 import (
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/gorilla/websocket"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"time"
 )
 
 func TestSinkserver(t *testing.T) {

@@ -19,7 +19,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 )
 
 type SinkManager struct {
@@ -172,10 +171,6 @@ func (sinkManager *SinkManager) SendSyslogErrorToLoggregator(errorMsg string, ap
 	}
 
 	sinkManager.errorChannel <- envelope
-}
-
-func (sinkManager *SinkManager) Emit() instrumentation.Context {
-	return sinkManager.metrics.Emit()
 }
 
 func (sinkManager *SinkManager) SinkDropUpdateChannel() chan<- int64 {

@@ -1,9 +1,10 @@
 package containermetric
 
 import (
-	"github.com/cloudfoundry/dropsonde/events"
 	"sync"
 	"time"
+
+	"github.com/cloudfoundry/dropsonde/events"
 )
 
 type ContainerMetricSink struct {

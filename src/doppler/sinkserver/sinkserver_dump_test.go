@@ -101,10 +101,6 @@ var _ = Describe("Dumping", func() {
 		dataReadChannel <- env1
 		dataReadChannel <- env2
 
-		Eventually(func() uint64 {
-			return TestMessageRouter.Emit().Metrics[3].Value.(uint64)
-		}, 3).Should(Equal(uint64(2)))
-
 		receivedChan := make(chan []byte, 2)
 		_, stopKeepAlive, droppedChannel := AddWSSink(receivedChan, SERVER_PORT, "/apps/myOtherApp/recentlogs")
 

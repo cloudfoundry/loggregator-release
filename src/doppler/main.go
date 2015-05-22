@@ -13,10 +13,10 @@ import (
 
 	"doppler/config"
 
+	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/yagnats"
@@ -89,6 +89,8 @@ func main() {
 
 	conf, logger := ParseConfig(logLevel, configFile, logFilePath)
 
+	dropsonde.Initialize(conf.MetronAddress, conf.JobName, conf.Zone, fmt.Sprintf("%d", conf.Index))
+
 	if len(conf.NatsHosts) == 0 {
 		logger.Warn("Startup: Did not receive a NATS host - not going to regsiter component")
 		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.NATSConn, error) {
@@ -104,28 +106,9 @@ func main() {
 	storeAdapter := NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
 	doppler := New(localIp, conf, logger, storeAdapter, "doppler")
 
-	cfc, err := cfcomponent.NewComponent(
-		logger,
-		"DopplerServer",
-		conf.Index,
-		&DopplerServerHealthMonitor{},
-		conf.VarzPort,
-		[]string{conf.VarzUser, conf.VarzPass},
-		doppler.Emitters(),
-	)
-
 	if err != nil {
 		panic(err)
 	}
-
-	go collectorregistrar.NewCollectorRegistrar(cfcomponent.DefaultYagnatsClientProvider, cfc, time.Duration(conf.CollectorRegistrarIntervalMilliseconds)*time.Millisecond, &conf.Config).Run()
-
-	go func() {
-		err := cfc.StartMonitoringEndpoints()
-		if err != nil {
-			panic(err)
-		}
-	}()
 
 	go doppler.Start()
 	logger.Info("Startup: doppler server started.")

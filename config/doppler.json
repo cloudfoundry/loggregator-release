@@ -21,4 +21,5 @@
     "VarzPass": "password",
     "VarzPort": 8888,
     "UnmarshallerCount": 1,
+    "MetronAddress": "localhost:3457"
 }

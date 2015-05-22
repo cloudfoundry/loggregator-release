@@ -29,6 +29,7 @@ type Config struct {
 	ContainerMetricTTLSeconds     int
 	SinkInactivityTimeoutSeconds  int
 	UnmarshallerCount             int
+	MetronAddress                 string
 }
 
 func (c *Config) Validate(logger *gosteno.Logger) (err error) {

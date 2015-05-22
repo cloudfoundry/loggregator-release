@@ -1,19 +1,16 @@
 package sinkserver
 
 import (
-	"doppler/sinkserver/metrics"
 	"sync"
-	"sync/atomic"
 
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/dropsonde/events"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 )
 
 type MessageRouter struct {
 	sinkManager sinkManager
-	metrics     *metrics.MessageRouterMetrics
 	logger      *gosteno.Logger
 	done        chan struct{}
 	stopOnce    sync.Once
@@ -26,7 +23,6 @@ type sinkManager interface {
 func NewMessageRouter(sinkManager sinkManager, logger *gosteno.Logger) *MessageRouter {
 	return &MessageRouter{
 		sinkManager: sinkManager,
-		metrics:     &metrics.MessageRouterMetrics{},
 		logger:      logger,
 		done:        make(chan struct{}),
 	}
@@ -40,7 +36,7 @@ func (r *MessageRouter) Start(incomingLogChan <-chan *events.Envelope) {
 			r.logger.Debug("MessageRouter:MessageReceived:Done")
 			return
 		case envelope, ok := <-incomingLogChan:
-			atomic.AddUint64(&r.metrics.ReceivedMessages, 1)
+			metrics.BatchIncrementCounter("httpServer.receivedMessages")
 			r.logger.Debug("MessageRouter:MessageReceived")
 			if !ok {
 				r.logger.Debug("MessageRouter:MessageReceived:NotOkay")
@@ -54,10 +50,6 @@ func (r *MessageRouter) Start(incomingLogChan <-chan *events.Envelope) {
 
 func (r *MessageRouter) Stop() {
 	r.stopOnce.Do(func() { close(r.done) })
-}
-
-func (r *MessageRouter) Emit() instrumentation.Context {
-	return r.metrics.Emit()
 }
 
 func (r *MessageRouter) send(envelope *events.Envelope) {

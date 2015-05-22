@@ -1,14 +1,15 @@
 package main
 
 import (
+	"fmt"
+	"sync"
+	"time"
+
 	"doppler/config"
 	"doppler/sinkserver"
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
-	"fmt"
-	"sync"
-	"time"
 
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
 	"github.com/cloudfoundry/dropsonde/events"
@@ -17,7 +18,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/store"
 	"github.com/cloudfoundry/loggregatorlib/store/cache"
 	"github.com/cloudfoundry/storeadapter"
@@ -38,7 +38,7 @@ type Doppler struct {
 	dropsondeVerifiedBytesChan      chan []byte
 	envelopeChan                    chan *events.Envelope
 	wrappedEnvelopeChan             chan *events.Envelope
-	signatureVerifier               signature.SignatureVerifier
+	signatureVerifier               *signature.Verifier
 
 	storeAdapter storeadapter.StoreAdapter
 
@@ -56,7 +56,7 @@ func New(host string, config *config.Config, logger *gosteno.Logger, storeAdapte
 
 	dropsondeListener, dropsondeBytesChan := agentlistener.NewAgentListener(fmt.Sprintf("%s:%d", host, config.DropsondeIncomingMessagesPort), logger, "dropsondeListener")
 
-	signatureVerifier := signature.NewSignatureVerifier(logger, config.SharedSecret)
+	signatureVerifier := signature.NewVerifier(logger, config.SharedSecret)
 
 	unmarshallerCollection := dropsonde_unmarshaller.NewDropsondeUnmarshallerCollection(logger, config.UnmarshallerCount)
 
@@ -141,14 +141,4 @@ func (l *Doppler) Stop() {
 
 	l.Wait()
 	close(l.errChan)
-}
-
-func (l *Doppler) Emitters() []instrumentation.Instrumentable {
-	return []instrumentation.Instrumentable{
-		l.dropsondeListener,
-		l.messageRouter,
-		l.sinkManager,
-		l.dropsondeUnmarshallerCollection,
-		l.signatureVerifier,
-	}
 }
