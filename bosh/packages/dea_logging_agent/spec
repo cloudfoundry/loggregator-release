@@ -22,6 +22,7 @@ files:
 - loggregator/src/github.com/cloudfoundry/dropsonde/instrumented_handler/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/instrumented_round_tripper/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/metricbatcher/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metrics/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/runtime_stats/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/*.go # gosub
