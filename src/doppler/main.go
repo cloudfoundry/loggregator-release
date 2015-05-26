@@ -89,7 +89,7 @@ func main() {
 
 	conf, logger := ParseConfig(logLevel, configFile, logFilePath)
 
-	dropsonde.Initialize(conf.MetronAddress, conf.JobName, conf.Zone, fmt.Sprintf("%d", conf.Index))
+	dropsonde.Initialize(conf.MetronAddress, "DopplerServer")
 
 	if len(conf.NatsHosts) == 0 {
 		logger.Warn("Startup: Did not receive a NATS host - not going to regsiter component")
