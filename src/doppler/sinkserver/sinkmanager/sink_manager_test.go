@@ -463,6 +463,6 @@ func (c *channelSink) Emit() instrumentation.Context {
 	return instrumentation.Context{}
 }
 func (c *channelSink) GetInstrumentationMetric() sinks.Metric {
-	return sinks.Metric{Name: "numberOfMessagesLost", Tags: map[string]interface{}{"appId": string(c.appId)}, Value: 25}
+	return sinks.Metric{Name: "numberOfMessagesLost", Value: 25}
 }
 func (c *channelSink) UpdateDroppedMessageCount(mc int64) {}

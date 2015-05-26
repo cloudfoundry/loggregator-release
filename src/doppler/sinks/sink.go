@@ -24,5 +24,4 @@ func RunTruncatingBuffer(inputChan <-chan *events.Envelope, bufferSize uint, log
 type Metric struct {
 	Name  string
 	Value int64
-	Tags  map[string]interface{}
 }

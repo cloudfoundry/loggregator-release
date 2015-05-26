@@ -114,7 +114,6 @@ var _ = Describe("DeaLoggingAgent integration tests", func() {
 
             Eventually(m.getTotalNumOfOutputMessages, 20, 1).Should(BeNumerically(">", 10))
             Expect(m.getValueOfValueMetric("logSenderTotalMessagesRead")).To(Equal(float64(1)))
-            Expect(m.getValueOfValueMetric("logSenderTotalMessagesRead.1234")).To(Equal(float64(1)))
 
             Expect(m.getFirstLogMessageString()).To(Equal("some message"))
 
