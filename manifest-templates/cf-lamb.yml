@@ -34,6 +34,20 @@ jobs:
     metron_agent:
       zone: z2
 
+- name: doppler_z1
+  properties:
+    doppler:
+      zone: z1
+    metron_agent:
+      zone: z1
+
+- name: doppler_z2
+  properties:
+    doppler:
+      zone: z2
+    metron_agent:
+      zone: z2
+
 - name: loggregator_trafficcontroller_z1
   properties:
     traffic_controller:
