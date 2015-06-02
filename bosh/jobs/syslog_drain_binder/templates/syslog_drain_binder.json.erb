@@ -9,7 +9,7 @@
     "MetronAddress": "<%= p("metron_endpoint.host") %>:<%= p("metron_endpoint.dropsonde_port") %>",
 
     "CloudControllerAddress": "<%= p("cc.srv_api_uri") %>",
-    "BulkApiUsername": "bulk_api",
+    "BulkApiUsername": "<%= p("cc.bulk_api_user", "bulk_api") %>",
     "BulkApiPassword": "<%= p("cc.bulk_api_password") %>",
     "PollingBatchSize": <%= p("syslog_drain_binder.polling_batch_size") %>,
 
