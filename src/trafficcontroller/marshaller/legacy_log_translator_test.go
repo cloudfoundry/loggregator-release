@@ -3,8 +3,8 @@ package marshaller_test
 import (
 	"trafficcontroller/marshaller"
 
-	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
 	. "github.com/onsi/ginkgo"

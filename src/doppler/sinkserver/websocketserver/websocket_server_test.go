@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gorilla/websocket"
 
 	"github.com/cloudfoundry/dropsonde/emitter"

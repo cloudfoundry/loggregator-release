@@ -3,9 +3,9 @@ package deaagent_test
 import (
 	"deaagent/domain"
 	"github.com/cloudfoundry/dropsonde/emitter/logemitter"
-	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/log_sender/fake"
 	"github.com/cloudfoundry/dropsonde/logs"
+	"github.com/cloudfoundry/sonde-go/events"
 	"net"
 	"os"
 	"path/filepath"

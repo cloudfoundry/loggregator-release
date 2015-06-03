@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
-	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/dropsonde/signature"
+	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/websocket"
@@ -117,8 +117,8 @@ func addETCDNode(key string, value string) {
 }
 
 func UnmarshalMessage(messageBytes []byte) events.Envelope {
-    var envelope events.Envelope
-    err := proto.Unmarshal(messageBytes, &envelope)
-    Expect(err).NotTo(HaveOccurred())
-    return envelope
+	var envelope events.Envelope
+	err := proto.Unmarshal(messageBytes, &envelope)
+	Expect(err).NotTo(HaveOccurred())
+	return envelope
 }
