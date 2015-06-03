@@ -4,9 +4,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/davecgh/go-spew/spew"
 )
 

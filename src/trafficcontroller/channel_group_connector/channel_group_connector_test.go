@@ -4,9 +4,9 @@ import (
 	"trafficcontroller/channel_group_connector"
 
 	"errors"
-	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"sync"
 	"time"

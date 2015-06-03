@@ -5,9 +5,9 @@ import (
 	"metron/messageaggregator"
 	"time"
 
-	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
 	. "github.com/onsi/ginkgo"

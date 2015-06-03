@@ -10,8 +10,8 @@ import (
 	"doppler/sinks/websocket"
 	"sync"
 
-	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/sonde-go/events"
 )
 
 func NewGroupedSinks(logger *gosteno.Logger) *GroupedSinks {

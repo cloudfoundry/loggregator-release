@@ -5,8 +5,8 @@ import (
 	"doppler/sinks"
 	"sync"
 
-	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/sonde-go/events"
 )
 
 type FirehoseGroup interface {

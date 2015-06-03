@@ -4,9 +4,9 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
-	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/sonde-go/events"
 )
 
 type MessageRouter struct {

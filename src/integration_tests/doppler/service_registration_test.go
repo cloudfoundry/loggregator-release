@@ -1,8 +1,8 @@
 package doppler_test
 
 import (
-    "doppler/config"
-    "time"
+	"doppler/config"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -23,7 +23,7 @@ var _ = Describe("doppler service registration", func() {
 			Consistently(func() string {
 				registration, _ := etcdAdapter.Get("healthstatus/doppler/z1/doppler_z1/0")
 				return string(registration.Value)
-			}, time.Second + config.HeartbeatInterval).Should(Equal(localIPAddress))
+			}, time.Second+config.HeartbeatInterval).Should(Equal(localIPAddress))
 			registration, err = etcdAdapter.Get("healthstatus/doppler/z1/doppler_z1/0")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(registration.Value)).To(Equal(localIPAddress))
@@ -31,16 +31,16 @@ var _ = Describe("doppler service registration", func() {
 		})
 	})
 
-    Context("when doppler dies", func() {
-      BeforeEach(func() {
-          dopplerSession.Kill().Wait()
-      })
+	Context("when doppler dies", func() {
+		BeforeEach(func() {
+			dopplerSession.Kill().Wait()
+		})
 
-        It("stops registering itself", func(){
-            Eventually(func() error {
-                _, err := etcdAdapter.Get("healthstatus/doppler/z1/doppler_z1/0")
-                return err
-            }, time.Second + config.HeartbeatInterval).Should(HaveOccurred())
-        })
-    })
+		It("stops registering itself", func() {
+			Eventually(func() error {
+				_, err := etcdAdapter.Get("healthstatus/doppler/z1/doppler_z1/0")
+				return err
+			}, time.Second+config.HeartbeatInterval).Should(HaveOccurred())
+		})
+	})
 })

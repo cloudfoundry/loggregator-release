@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cloudfoundry/dropsonde/control"
 	"github.com/cloudfoundry/dropsonde/factories"
+	"github.com/cloudfoundry/sonde-go/control"
 	"github.com/gogo/protobuf/proto"
 	uuid "github.com/nu7hatch/gouuid"
 )

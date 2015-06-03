@@ -6,11 +6,11 @@ import (
 	"net"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/cloudfoundry/storeadapter"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/gogo/protobuf/proto"
 )
 
 var _ = Describe("Dropsonde message forwarding", func() {
