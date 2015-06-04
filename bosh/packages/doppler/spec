@@ -24,11 +24,9 @@ files:
 - loggregator/src/doppler/truncatingbuffer/*.go # gosub
 - loggregator/src/github.com/apcera/nats/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/dropsonde/control/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/envelope_extensions/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/dropsonde/events/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/factories/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/instrumented_handler/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/instrumented_round_tripper/*.go # gosub
@@ -50,6 +48,8 @@ files:
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/server/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/store/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/store/cache/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/sonde-go/control/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/sonde-go/events/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/etcdstoreadapter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/yagnats/*.go # gosub
