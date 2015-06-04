@@ -63,4 +63,4 @@
 	url = https://github.com/pivotal-golang/localip
 [submodule "src/github.com/cloudfoundry/sonde-go"]
 	path = src/github.com/cloudfoundry/sonde-go
-	url = git@github.com:/cloudfoundry/sonde-go
+	url = https://github.com/cloudfoundry/sonde-go
