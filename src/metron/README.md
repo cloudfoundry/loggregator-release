@@ -10,14 +10,16 @@ Metron only listens to local network interfaces and all logs and metrics are imm
 
 ![Loggregator Diagram](../../docs/loggregator.png)
 
+Source agents emit the logging data through the system as [protocol-buffers](https://github.com/google/protobuf) via [dropsonde](https://github.com/cloudfoundry/dropsonde).
+
 ## Usage
 ```metron [--logFile <path to log file>] [--config <path to config file>] [--debug=<true|false>]```
 
-| Flag      | Required                              | Description                                     |
-|-----------|---------------------------------------|-------------------------------------------------|
-| --logFile | No, default: STDOUT                   | The agent log file.                             |
-| --config  | No, default: ```config/metron.json``` | Location of the Metron configuration JSON file. |
-| --debug   | No, default: ```false```              | Debug logging                                   |
+| Flag            | Required                              | Description                                     |
+|-----------------|---------------------------------------|-------------------------------------------------|
+| ```--logFile``` | No, default: STDOUT                   | The agent log file.                             |
+| ```--config```  | No, default: ```config/metron.json``` | Location of the Metron configuration JSON file. |
+| ```--debug```   | No, default: ```false```              | Debug logging                                   |
 
 ## Editing Manifest Templates
 Currently the Doppler/Metron manifest configuration lives [here](../../manifest-templates/cf-lamb.yml). Editing this file will make changes in the [manifest templates](https://github.com/cloudfoundry/cf-release/tree/master/templates) in cf-release. When making changes to these templates, you should be working out of the loggregator submodule in cf-release. After changing this configuration, you will need to run the tests in root directory of cf-release with `bundle exec rspec`. These tests will pull values from [lamb-properties](../../manifest-templates/lamb-properties.rb) in order to populate the fixtures. Necessary changes should be made in [lamb-properties](../../manifest-templates/lamb-properties.rb).
