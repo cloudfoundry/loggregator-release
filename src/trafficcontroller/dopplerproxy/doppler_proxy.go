@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 	"trafficcontroller/authorization"
-	"trafficcontroller/channel_group_connector"
 	"trafficcontroller/doppler_endpoint"
 )
 
@@ -20,7 +19,7 @@ const FIREHOSE_ID = "firehose"
 type Proxy struct {
 	logAuthorize   authorization.LogAccessAuthorizer
 	adminAuthorize authorization.AdminAccessAuthorizer
-	connector      channel_group_connector.ChannelGroupConnector
+	connector      channelGroupConnector
 	translate      RequestTranslator
 	cookieDomain   string
 	logger         *gosteno.Logger
@@ -30,7 +29,11 @@ type RequestTranslator func(request *http.Request) (*http.Request, error)
 
 type Authorizer func(authToken string, appId string, logger *gosteno.Logger) (bool, error)
 
-func NewDopplerProxy(logAuthorize authorization.LogAccessAuthorizer, adminAuthorizer authorization.AdminAccessAuthorizer, connector channel_group_connector.ChannelGroupConnector, translator RequestTranslator, cookieDomain string, logger *gosteno.Logger) *Proxy {
+type channelGroupConnector interface {
+	Connect(dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{})
+}
+
+func NewDopplerProxy(logAuthorize authorization.LogAccessAuthorizer, adminAuthorizer authorization.AdminAccessAuthorizer, connector channelGroupConnector, translator RequestTranslator, cookieDomain string, logger *gosteno.Logger) *Proxy {
 	return &Proxy{
 		logAuthorize:   logAuthorize,
 		adminAuthorize: adminAuthorizer,

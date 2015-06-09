@@ -15,19 +15,15 @@ const checkServerAddressesInterval = 100 * time.Millisecond
 
 type ListenerConstructor func(time.Duration, *gosteno.Logger) listener.Listener
 
-type ChannelGroupConnector interface {
-	Connect(dopplerConnector doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{})
-}
-
-type channelGroupConnector struct {
+type ChannelGroupConnector struct {
 	serverAddressProvider serveraddressprovider.ServerAddressProvider
 	logger                *gosteno.Logger
 	listenerConstructor   ListenerConstructor
 	generateLogMessage    marshaller.MessageGenerator
 }
 
-func NewChannelGroupConnector(provider serveraddressprovider.ServerAddressProvider, listenerConstructor ListenerConstructor, logMessageGenerator marshaller.MessageGenerator, logger *gosteno.Logger) ChannelGroupConnector {
-	return &channelGroupConnector{
+func NewChannelGroupConnector(provider serveraddressprovider.ServerAddressProvider, listenerConstructor ListenerConstructor, logMessageGenerator marshaller.MessageGenerator, logger *gosteno.Logger) *ChannelGroupConnector {
+	return &ChannelGroupConnector{
 		serverAddressProvider: provider,
 		listenerConstructor:   listenerConstructor,
 		generateLogMessage:    logMessageGenerator,
@@ -35,7 +31,7 @@ func NewChannelGroupConnector(provider serveraddressprovider.ServerAddressProvid
 	}
 }
 
-func (connector *channelGroupConnector) Connect(dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{}) {
+func (c *ChannelGroupConnector) Connect(dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{}) {
 	defer close(messagesChan)
 	connections := &serverConnections{
 		connectedAddresses: make(map[string]struct{}),
@@ -46,10 +42,10 @@ func (connector *channelGroupConnector) Connect(dopplerEndpoint doppler_endpoint
 
 loop:
 	for {
-		serverAddresses := connector.serverAddressProvider.ServerAddresses()
+		serverAddresses := c.serverAddressProvider.ServerAddresses()
 
 		if len(serverAddresses) == 0 {
-			connector.logger.Debugf("ChannelGroupConnector.Connect: No doppler servers available. Trying again in %s", checkServerAddressesInterval.String())
+			c.logger.Debugf("ChannelGroupConnector.Connect: No doppler servers available. Trying again in %s", checkServerAddressesInterval.String())
 		} else {
 			for _, serverAddress := range serverAddresses {
 				if connections.connectedToServer(serverAddress) {
@@ -58,7 +54,7 @@ loop:
 				connections.addConnectedServer(serverAddress)
 
 				go func(addr string) {
-					connector.connectToServer(addr, dopplerEndpoint, messagesChan, stopChan)
+					c.connectToServer(addr, dopplerEndpoint, messagesChan, stopChan)
 					connections.removeConnectedServer(addr)
 				}(serverAddress)
 			}
@@ -79,19 +75,19 @@ loop:
 	connections.Wait()
 }
 
-func (connector *channelGroupConnector) connectToServer(serverAddress string, dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{}) {
-	l := connector.listenerConstructor(dopplerEndpoint.Timeout, connector.logger)
+func (c *ChannelGroupConnector) connectToServer(serverAddress string, dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{}) {
+	l := c.listenerConstructor(dopplerEndpoint.Timeout, c.logger)
 
 	serverUrl := fmt.Sprintf("ws://%s%s", serverAddress, dopplerEndpoint.GetPath())
-	connector.logger.Debugf("proxy: connecting to doppler at %s", serverUrl)
+	c.logger.Debugf("proxy: connecting to doppler at %s", serverUrl)
 
 	appId := dopplerEndpoint.StreamId
 	err := l.Start(serverUrl, appId, messagesChan, stopChan)
 
 	if err != nil {
 		errorMsg := fmt.Sprintf("proxy: error connecting to %s: %s", serverAddress, err.Error())
-		messagesChan <- connector.generateLogMessage(errorMsg, appId)
-		connector.logger.Errorf("proxy: error connecting %s %s %s", appId, dopplerEndpoint.Endpoint, err.Error())
+		messagesChan <- c.generateLogMessage(errorMsg, appId)
+		c.logger.Errorf("proxy: error connecting %s %s %s", appId, dopplerEndpoint.Endpoint, err.Error())
 	}
 }
 

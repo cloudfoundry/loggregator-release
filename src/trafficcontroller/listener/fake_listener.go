@@ -16,7 +16,7 @@ type FakeListener struct {
 }
 
 func NewFakeListener(messageChan chan []byte, startError error) *FakeListener {
-	return &FakeListener{messageChan: messageChan, startError: startError}
+	return &FakeListener{messageChan: messageChan, startError: startError, stopped: true}
 }
 
 func (listener *FakeListener) Start(host string, appId string, outChan OutputChannel, stopChan StopChannel) error {
@@ -28,8 +28,14 @@ func (listener *FakeListener) Start(host string, appId string, outChan OutputCha
 
 	listener.startCount += 1
 	listener.host = host
+	listener.stopped = false
 	listener.Unlock()
 
+	defer func() {
+		listener.Lock()
+		listener.stopped = true
+		listener.Unlock()
+	}()
 	for {
 		if listener.readError != nil {
 			err := listener.readError
@@ -39,7 +45,6 @@ func (listener *FakeListener) Start(host string, appId string, outChan OutputCha
 
 		select {
 		case <-stopChan:
-			listener.stopped = true
 			return nil
 		case msg, ok := <-listener.messageChan:
 			if !ok {
