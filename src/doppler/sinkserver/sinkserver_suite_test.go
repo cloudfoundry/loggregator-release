@@ -21,8 +21,12 @@ func AddWSSink(receivedChan chan []byte, port string, path string) (*websocket.C
 	dontKeepAliveChan := make(chan bool, 1)
 	connectionDroppedChannel := make(chan bool, 1)
 
-	ws, _, err := websocket.DefaultDialer.Dial("ws://localhost:"+port+path, http.Header{})
-	Expect(err).NotTo(HaveOccurred())
+	var ws *websocket.Conn
+	var err error
+	Eventually(func() error {
+		ws, _, err = websocket.DefaultDialer.Dial("ws://localhost:"+port+path, http.Header{})
+		return err
+	}).Should(Succeed())
 	Expect(ws).NotTo(BeNil())
 
 	go func() {
