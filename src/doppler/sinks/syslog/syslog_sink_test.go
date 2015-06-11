@@ -19,30 +19,17 @@ import (
 
 var _ = Describe("SyslogSink", func() {
 	var (
-		syslogSink        *syslog.SyslogSink
-		sysLogger         *SyslogWriterRecorder
-		sysLoggerDoneChan chan bool
-		errorChannel      chan *events.Envelope
-		errorHandler      func(string, string, string)
-		mutex             sync.Mutex
-		inputChan         chan *events.Envelope
-		updateMetricChan  chan int64
+		syslogSink            *syslog.SyslogSink
+		sysLogger             *SyslogWriterRecorder
+		syslogSinkRunFinished chan bool
+		errorChannel          chan *events.Envelope
+		errorHandler          func(string, string, string)
+		inputChan             chan *events.Envelope
+		updateMetricChan      chan int64
 	)
 
-	closeSysLoggerDoneChan := func() {
-		mutex.Lock()
-		defer mutex.Unlock()
-		close(sysLoggerDoneChan)
-	}
-
-	newSysLoggerDoneChan := func() {
-		mutex.Lock()
-		defer mutex.Unlock()
-		sysLoggerDoneChan = make(chan bool)
-	}
-
 	BeforeEach(func() {
-		newSysLoggerDoneChan()
+		syslogSinkRunFinished = make(chan bool)
 		sysLogger = NewSyslogWriterRecorder()
 		errorChannel = make(chan *events.Envelope, 10)
 		inputChan = make(chan *events.Envelope)
@@ -51,35 +38,28 @@ var _ = Describe("SyslogSink", func() {
 			logMessage := factories.NewLogMessage(events.LogMessage_ERR, errorMsg, appId, "LGR")
 			envelope, _ := emitter.Wrap(logMessage, "dropsonde-origin")
 
-			mutex.Lock()
-			defer mutex.Unlock()
 			select {
 			case errorChannel <- envelope:
 			default:
 			}
-
 		}
 
 		updateMetricChan = make(chan int64, 1)
 		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorHandler, "dropsonde-origin", updateMetricChan)
 	})
 
-	AfterEach(func() {
-		select {
-		case <-sysLoggerDoneChan:
-		default:
-			closeSysLoggerDoneChan()
-		}
-	})
-
 	Context("when remote syslog server is down", func() {
 		BeforeEach(func() {
-
 			sysLogger.SetDown(true)
 			go func() {
 				syslogSink.Run(inputChan)
-				closeSysLoggerDoneChan()
+				close(syslogSinkRunFinished)
 			}()
+		})
+
+		AfterEach(func() {
+			syslogSink.Disconnect()
+			Eventually(syslogSinkRunFinished).Should(BeClosed())
 		})
 
 		It("still accepts messages without blocking", func(done Done) {
@@ -103,7 +83,7 @@ var _ = Describe("SyslogSink", func() {
 			})
 
 			It("sends all the messages in the buffer", func(done Done) {
-				<-sysLoggerDoneChan
+				Eventually(syslogSinkRunFinished).Should(BeClosed())
 				data := sysLogger.ReceivedMessages()
 				Expect(data).To(HaveLen(5))
 				close(done)
@@ -115,8 +95,13 @@ var _ = Describe("SyslogSink", func() {
 		BeforeEach(func() {
 			go func() {
 				syslogSink.Run(inputChan)
-				closeSysLoggerDoneChan()
+				close(syslogSinkRunFinished)
 			}()
+		})
+
+		AfterEach(func() {
+			syslogSink.Disconnect()
+			Eventually(syslogSinkRunFinished).Should(BeClosed())
 		})
 
 		It("sends input messages to the syslog writer", func(done Done) {
@@ -151,7 +136,7 @@ var _ = Describe("SyslogSink", func() {
 
 			syslogSink.Disconnect()
 
-			Eventually(sysLoggerDoneChan).Should(BeClosed())
+			Eventually(syslogSinkRunFinished).Should(BeClosed())
 
 			close(done)
 		})
@@ -191,7 +176,7 @@ var _ = Describe("SyslogSink", func() {
 
 				Eventually(errorChannel).ShouldNot(BeEmpty())
 				syslogSink.Disconnect()
-				<-sysLoggerDoneChan
+				Eventually(syslogSinkRunFinished).Should(BeClosed())
 				numErrors := len(errorChannel)
 
 				logMessage, _ = emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message 2", "appId", "App"), "origin")
@@ -217,7 +202,7 @@ var _ = Describe("SyslogSink", func() {
 				Context("when the remote syslog server comes back up again", func() {
 					BeforeEach(func() {
 						sysLogger.SetDown(false)
-						<-sysLoggerDoneChan
+						Eventually(syslogSinkRunFinished).Should(BeClosed())
 					})
 
 					It("resumes sending messages", func(done Done) {
