@@ -58,17 +58,6 @@ var _ = Describe("Firehose test", func() {
 			receivedMessage := UnmarshalMessage(receivedMessageBytes)
 			Expect(*receivedMessage.ContainerMetric).To(BeAssignableToTypeOf(events.ContainerMetric{}))
 		})
-
-		It("receives system status logs", func() {
-			sendEvent(factories.NewHeartbeat(10, 6, 4), inputConnection)
-
-			receivedMessageBytes := []byte{}
-			Eventually(receiveChan).Should(Receive(&receivedMessageBytes))
-
-			receivedMessage := UnmarshalMessage(receivedMessageBytes)
-			Expect(*receivedMessage.Heartbeat).To(BeAssignableToTypeOf(events.Heartbeat{}))
-		})
-
 	})
 
 	It("two separate firehose subscriptions receive the same message", func() {

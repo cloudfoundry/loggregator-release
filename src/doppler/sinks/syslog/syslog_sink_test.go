@@ -118,7 +118,7 @@ var _ = Describe("SyslogSink", func() {
 		})
 
 		It("does not send non-log messages to the syslog writer", func(done Done) {
-			nonLogMessage := factories.NewHeartbeat(1, 2, 3)
+			nonLogMessage := factories.NewValueMetric("value-name", 2.0, "value-unit")
 			envelope, _ := emitter.Wrap(nonLogMessage, "origin")
 
 			inputChan <- envelope

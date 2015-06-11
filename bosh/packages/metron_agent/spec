@@ -14,7 +14,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/dropsonde/dropsonde_marshaller/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/dropsonde/factories/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metricbatcher/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metrics/*.go # gosub
@@ -33,7 +32,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/logmessage/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/servicediscovery/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/signature/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/sonde-go/control/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/sonde-go/events/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/etcdstoreadapter/*.go # gosub

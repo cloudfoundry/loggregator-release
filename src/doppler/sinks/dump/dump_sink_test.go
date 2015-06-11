@@ -452,8 +452,6 @@ var _ = Describe("Dump Sink", func() {
 		}()
 
 		var env *events.Envelope
-		env, _ = emitter.Wrap(&events.Heartbeat{}, "origin")
-		inputChan <- env
 		env, _ = emitter.Wrap(&events.LogMessage{}, "origin") // should keep this one
 		inputChan <- env
 		env, _ = emitter.Wrap(&events.HttpStartStop{}, "origin")
