@@ -100,9 +100,13 @@ jobs:
     networks:
       apps: cf1
 
-- name: loggregator
+- name: doppler_z1 # Add "doppler_zX" jobs if you have runners in zX
   templates: 
   - name: doppler
+    release: cf
+  - name: syslog_drain_binder
+    release: cf
+  - name: metron_agent
     release: cf
   instances: 1  # Scale out as neccessary
   resource_pool: common
@@ -114,7 +118,7 @@ jobs:
     networks:
       apps: cf1
 
-- name: loggregator_trafficcontroller
+- name: loggregator_trafficcontroller_z1
   templates: 
   - name: loggregator_trafficcontroller
     release: cf
