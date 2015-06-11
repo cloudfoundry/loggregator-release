@@ -10,7 +10,8 @@ import (
 
 var _ = Describe("Heartbeat", func() {
 
-	It("sends heartbeat requests to clients", func() {
+	It("sends heartbeat requests to clients", func(done Done) {
+		defer close(done)
 		listener, err := NewHeartbeatListener("localhost:51161")
 		Expect(err).ToNot(HaveOccurred())
 		originalMessage := basicValueMessage()
@@ -21,7 +22,7 @@ var _ = Describe("Heartbeat", func() {
 		message, err := listener.ListenForHeartbeatRequest()
 		Expect(err).ToNot(HaveOccurred())
 		Expect(message.GetControlType()).To(Equal(control.ControlMessage_HeartbeatRequest))
-	})
+	}, 2)
 })
 
 type heartbeatListener struct {
