@@ -61,22 +61,6 @@ var _ = Describe("/varz endpoint", func() {
 		}).Should(BeNumerically(">=", expectedValue))
 	})
 
-	It("updates message aggregator metrics when it receives a message", func() {
-		context := getContext("dropsondeUnmarshaller")
-		metric := getMetricFromContext(context, "heartbeatReceived")
-		expectedValue := metric.Value.(float64) + 1
-
-		connection, _ := net.Dial("udp", "localhost:51161")
-
-		message := basicHeartbeatMessage()
-		connection.Write(message)
-
-		Eventually(func() interface{} {
-			context = getContext("dropsondeUnmarshaller")
-			return getMetricFromContext(context, "heartbeatReceived").Value
-		}).Should(BeNumerically(">=", expectedValue), "heartbeatReceived counter did not increment")
-	})
-
 	It("includes value metrics from sources", func() {
 		connection, _ := net.Dial("udp", "localhost:51161")
 		connection.Write(basicValueMessage())

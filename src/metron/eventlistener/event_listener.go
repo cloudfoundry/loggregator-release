@@ -9,15 +9,10 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 )
 
-type heartbeatRequester interface {
-	Start(net.Addr, net.PacketConn)
-}
-
 type EventListener struct {
 	host        string
 	dataChannel chan []byte
 	connection  net.PacketConn
-	requester   heartbeatRequester
 
 	receivedMessageCount uint64
 	receivedByteCount    uint64
@@ -27,9 +22,9 @@ type EventListener struct {
 	logger *gosteno.Logger
 }
 
-func New(host string, givenLogger *gosteno.Logger, name string, requester heartbeatRequester) (*EventListener, <-chan []byte) {
+func New(host string, givenLogger *gosteno.Logger, name string) (*EventListener, <-chan []byte) {
 	byteChan := make(chan []byte, 1024)
-	return &EventListener{logger: givenLogger, host: host, dataChannel: byteChan, contextName: name, requester: requester}, byteChan
+	return &EventListener{logger: givenLogger, host: host, dataChannel: byteChan, contextName: name}, byteChan
 }
 
 func (eventListener *EventListener) Start() {
@@ -57,8 +52,6 @@ func (eventListener *EventListener) Start() {
 		atomic.AddUint64(&eventListener.receivedMessageCount, 1)
 		atomic.AddUint64(&eventListener.receivedByteCount, uint64(readCount))
 		eventListener.dataChannel <- readData
-
-		go eventListener.requester.Start(senderAddr, connection)
 	}
 }
 

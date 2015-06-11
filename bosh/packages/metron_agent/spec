@@ -6,7 +6,6 @@ files:
 - loggregator/src/metron/syslog_daemon_config/*
 - loggregator/src/metron/*.go # gosub
 - loggregator/src/metron/eventlistener/*.go # gosub
-- loggregator/src/metron/heartbeatrequester/*.go # gosub
 - loggregator/src/metron/legacymessage/*.go # gosub
 - loggregator/src/metron/messageaggregator/*.go # gosub
 - loggregator/src/metron/tagger/*.go # gosub

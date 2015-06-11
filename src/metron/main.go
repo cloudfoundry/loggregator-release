@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"metron/eventlistener"
-	"metron/heartbeatrequester"
 	"metron/legacymessage"
 	"metron/messageaggregator"
 	"metron/tagger"
@@ -56,8 +55,7 @@ func main() {
 	legacyUnmarshaller := legacymessage.NewUnmarshaller(logger)
 	legacyMessageConverter := legacymessage.NewConverter(logger)
 
-	pinger := heartbeatrequester.New(pingSenderInterval)
-	dropsondeMessageListener, dropsondeMessageChan := eventlistener.New(fmt.Sprintf("localhost:%d", config.DropsondeIncomingMessagesPort), logger, "dropsondeAgentListener", pinger)
+	dropsondeMessageListener, dropsondeMessageChan := eventlistener.New(fmt.Sprintf("localhost:%d", config.DropsondeIncomingMessagesPort), logger, "dropsondeAgentListener")
 
 	unmarshaller := dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger)
 	messageAggregator := messageaggregator.New(logger)

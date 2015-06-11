@@ -5,7 +5,6 @@ import (
 	"metron/messageaggregator"
 	"time"
 
-	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
@@ -50,8 +49,8 @@ var _ = Describe("MessageAggregator", func() {
 		Expect(outputMessage).To(Equal(inputMessage))
 	})
 
-	It("passes heartbeats through", func() {
-		inputMessage := createHeartbeatMessage()
+	It("passes value messages through", func() {
+		inputMessage := createValueMessage()
 		inputChan <- inputMessage
 
 		outputMessage := <-outputChan
@@ -89,11 +88,11 @@ var _ = Describe("MessageAggregator", func() {
 		})
 
 		It("does not accumulate for counters when receiving a non-counter event", func() {
-			inputChan <- createHeartbeatMessage()
+			inputChan <- createValueMessage()
 			inputChan <- createCounterMessage("counter1", "fake-origin-4")
 			outputMessage := <-outputChan
 
-			Expect(outputMessage.GetEventType()).To(Equal(events.Envelope_Heartbeat))
+			Expect(outputMessage.GetEventType()).To(Equal(events.Envelope_ValueMetric))
 
 			outputMessage = <-outputChan
 			Expect(outputMessage.GetEventType()).To(Equal(events.Envelope_CounterEvent))
@@ -194,7 +193,7 @@ var _ = Describe("MessageAggregator", func() {
 		})
 
 		It("emits a counter for uncategorized events", func() {
-			inputChan <- createHeartbeatMessage()
+			inputChan <- createValueMessage()
 			eventuallyExpectMetric("uncategorizedEvents", 1)
 		})
 
@@ -301,11 +300,15 @@ func createStartStopMessage(requestId uint64, peerType events.PeerType) *events.
 	}
 }
 
-func createHeartbeatMessage() *events.Envelope {
+func createValueMessage() *events.Envelope {
 	return &events.Envelope{
-		Origin:    proto.String("fake-origin-3"),
-		EventType: events.Envelope_Heartbeat.Enum(),
-		Heartbeat: factories.NewHeartbeat(1, 2, 3),
+		Origin:    proto.String("fake-origin-2"),
+		EventType: events.Envelope_ValueMetric.Enum(),
+		ValueMetric: &events.ValueMetric{
+			Name:  proto.String("fake-metric-name"),
+			Value: proto.Float64(42),
+			Unit:  proto.String("fake-unit"),
+		},
 	}
 }
 

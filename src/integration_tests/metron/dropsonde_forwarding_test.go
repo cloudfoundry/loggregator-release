@@ -41,8 +41,8 @@ var _ = Describe("Dropsonde message forwarding", func() {
 
 		defer close(done)
 
-		originalMessage := basicHeartbeatMessage()
-		expectedEnvelope := addDefaultTags(basicHeartbeatEvent())
+		originalMessage := basicValueMessage()
+		expectedEnvelope := addDefaultTags(basicValueMessageEnvelope())
 		expectedMessage, _ := proto.Marshal(expectedEnvelope)
 
 		mac := hmac.New(sha256.New, []byte("shared_secret"))

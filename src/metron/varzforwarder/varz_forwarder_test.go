@@ -136,7 +136,7 @@ var _ = Describe("VarzForwarder", func() {
 			perform()
 
 			metricChan <- metric("origin", "metric-1", 0)
-			metricChan <- heartbeat("origin")
+			metricChan <- logMessage("origin", "Log stuff")
 
 			var varz instrumentation.Context
 			Consistently(func() []instrumentation.Metric { varz = forwarder.Emit(); return varz.Metrics }).Should(HaveLen(1))
@@ -159,19 +159,19 @@ var _ = Describe("VarzForwarder", func() {
 
 			metricChan <- metric("origin", "metric-X", 0)
 
-			stopHeartbeats := make(chan struct{})
-			heartbeatsStopped := make(chan struct{})
+			stopMetrics := make(chan struct{})
+			metricsStopped := make(chan struct{})
 			go func() {
 				ticker := time.NewTicker(10 * time.Millisecond)
 				defer ticker.Stop()
 				for {
 					select {
 					case <-ticker.C:
-					case <-stopHeartbeats:
-						close(heartbeatsStopped)
+					case <-stopMetrics:
+						close(metricsStopped)
 						return
 					}
-					metricChan <- heartbeat("origin")
+					metricChan <- metric("origin", "name", 1.0)
 					<-outputChan
 				}
 			}()
@@ -181,8 +181,8 @@ var _ = Describe("VarzForwarder", func() {
 			time.Sleep(time.Millisecond * 200)
 
 			Expect(forwarder.Emit().Metrics).ToNot(HaveLen(0))
-			close(stopHeartbeats)
-			<-heartbeatsStopped
+			close(stopMetrics)
+			<-metricsStopped
 		})
 	})
 
@@ -190,14 +190,6 @@ var _ = Describe("VarzForwarder", func() {
 		It("passes ValueMetrics through", func() {
 			perform()
 			expectedMetric := metric("origin", "metric", 0)
-			metricChan <- expectedMetric
-
-			Eventually(outputChan).Should(Receive(Equal(expectedMetric)))
-		})
-
-		It("passes other metrics through", func() {
-			perform()
-			expectedMetric := heartbeat("origin")
 			metricChan <- expectedMetric
 
 			Eventually(outputChan).Should(Receive(Equal(expectedMetric)))
@@ -221,19 +213,23 @@ func counterEvent(origin, name string, delta uint64) *events.Envelope {
 	}
 }
 
-func heartbeat(origin string) *events.Envelope {
-	return &events.Envelope{
-		Origin:    &origin,
-		EventType: events.Envelope_Heartbeat.Enum(),
-		Heartbeat: &events.Heartbeat{},
-	}
-}
-
 func httpmetric(origin string, status int32) *events.Envelope {
 	return &events.Envelope{
 		Origin:        &origin,
 		EventType:     events.Envelope_HttpStartStop.Enum(),
 		HttpStartStop: &events.HttpStartStop{StatusCode: &status},
+	}
+}
+
+func logMessage(origin string, message string) *events.Envelope {
+	return &events.Envelope{
+		Origin:    &origin,
+		EventType: events.Envelope_LogMessage.Enum(),
+		LogMessage: &events.LogMessage{
+			Message:     []byte(message),
+			MessageType: events.LogMessage_OUT.Enum(),
+			Timestamp:   proto.Int64(817458917),
+		},
 	}
 }
 

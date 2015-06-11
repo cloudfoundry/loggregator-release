@@ -20,24 +20,6 @@ func basicValueMetric(name string, value float64, unit string) *events.ValueMetr
 	}
 }
 
-func basicHeartbeatMessage() []byte {
-	message, _ := proto.Marshal(basicHeartbeatEvent())
-
-	return message
-}
-
-func basicHeartbeatEvent() *events.Envelope {
-	return &events.Envelope{
-		Origin:    proto.String("fake-origin-1"),
-		EventType: events.Envelope_Heartbeat.Enum(),
-		Heartbeat: &events.Heartbeat{
-			SentCount:     proto.Uint64(100),
-			ReceivedCount: proto.Uint64(250),
-			ErrorCount:    proto.Uint64(50),
-		},
-	}
-}
-
 func addDefaultTags(envelope *events.Envelope) *events.Envelope {
 	envelope.Deployment = proto.String("deployment-name")
 	envelope.Job = proto.String("test-component")
@@ -48,7 +30,12 @@ func addDefaultTags(envelope *events.Envelope) *events.Envelope {
 }
 
 func basicValueMessage() []byte {
-	message, _ := proto.Marshal(&events.Envelope{
+	message, _ := proto.Marshal(basicValueMessageEnvelope())
+	return message
+}
+
+func basicValueMessageEnvelope() *events.Envelope {
+	return &events.Envelope{
 		Origin:    proto.String("fake-origin-2"),
 		EventType: events.Envelope_ValueMetric.Enum(),
 		ValueMetric: &events.ValueMetric{
@@ -56,9 +43,7 @@ func basicValueMessage() []byte {
 			Value: proto.Float64(42),
 			Unit:  proto.String("fake-unit"),
 		},
-	})
-
-	return message
+	}
 }
 
 func basicCounterEventMessage() []byte {
