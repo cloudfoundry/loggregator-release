@@ -26,7 +26,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/auth/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/sonde-go/control/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/yagnats/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/yagnats/fakeyagnats/*.go # gosub
 - loggregator/src/github.com/nu7hatch/gouuid/*.go # gosub

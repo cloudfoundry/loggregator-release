@@ -36,7 +36,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/server/handlers/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/servicediscovery/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/signature/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/sonde-go/control/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/sonde-go/events/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/etcdstoreadapter/*.go # gosub

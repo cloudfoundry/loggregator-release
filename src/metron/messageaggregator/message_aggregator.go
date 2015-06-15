@@ -40,6 +40,10 @@ func (m *MessageAggregator) Run(inputChan <-chan *events.Envelope, outputChan ch
 		// TODO: don't call for every message if throughput becomes a problem
 		m.cleanupOrphanedHTTPStart()
 
+		if envelope.EventType == nil {
+			outputChan <- envelope
+			continue
+		}
 		switch envelope.GetEventType() {
 		case events.Envelope_HttpStart:
 			m.handleHTTPStart(envelope)
