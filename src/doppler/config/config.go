@@ -48,6 +48,10 @@ func (c *Config) Validate(logger *gosteno.Logger) (err error) {
 		c.UnmarshallerCount = 1
 	}
 
+	if c.EtcdMaxConcurrentRequests < 1 {
+		c.EtcdMaxConcurrentRequests = 1
+	}
+
 	err = c.Config.Validate(logger)
 	return
 }

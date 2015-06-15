@@ -7,11 +7,11 @@ import (
 	"syslog_drain_binder/etcd_syslog_drain_store"
 	"time"
 
+	"fmt"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 )
 
@@ -28,7 +28,11 @@ func main() {
 
 	logger := cfcomponent.NewLogger(*debug, "", "syslog_drain_binder", config.Config)
 
-	workPool := workpool.NewWorkPool(config.EtcdMaxConcurrentRequests)
+	workPool, err := workpool.NewWorkPool(config.EtcdMaxConcurrentRequests)
+	if err != nil {
+		panic(err)
+	}
+
 	adapter := etcdstoreadapter.NewETCDStoreAdapter(config.EtcdUrls, workPool)
 
 	updateInterval := time.Duration(config.UpdateIntervalSeconds) * time.Second
@@ -37,7 +41,6 @@ func main() {
 	drainTTL := time.Duration(config.DrainUrlTtlSeconds) * time.Second
 	store := etcd_syslog_drain_store.NewEtcdSyslogDrainStore(adapter, drainTTL, logger)
 
-	var err error
 	ticker := time.NewTicker(updateInterval)
 	for {
 		select {
@@ -125,15 +128,13 @@ func parseConfig(configFile string) Config {
 	return config
 }
 
-var StoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
-	workPool := workpool.NewWorkPool(concurrentRequests)
-
-	return etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
-}
-
 func (config Config) validate() error {
 	if config.MetronAddress == "" {
 		return errors.New("Need Metron address (host:port).")
+	}
+
+	if config.EtcdMaxConcurrentRequests < 1 {
+		return fmt.Errorf("Need EtcdMaxConcurrentRequests ≥ 1, received %d", config.EtcdMaxConcurrentRequests)
 	}
 
 	return nil

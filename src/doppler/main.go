@@ -40,7 +40,10 @@ func (hm DopplerServerHealthMonitor) Ok() bool {
 }
 
 func NewStoreAdapter(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
-	workPool := workpool.NewWorkPool(concurrentRequests)
+	workPool, err := workpool.NewWorkPool(concurrentRequests)
+	if err != nil {
+		panic(err)
+	}
 	etcdStoreAdapter := etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
 	etcdStoreAdapter.Connect()
 	return etcdStoreAdapter

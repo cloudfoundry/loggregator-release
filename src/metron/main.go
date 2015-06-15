@@ -39,7 +39,10 @@ var metricTTL = time.Second * 5
 var pingSenderInterval = time.Second * 1
 
 var storeAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
-	workPool := workpool.NewWorkPool(concurrentRequests)
+	workPool, err := workpool.NewWorkPool(concurrentRequests)
+	if err != nil {
+		panic(err)
+	}
 
 	return etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
 }

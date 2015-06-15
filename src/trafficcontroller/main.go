@@ -32,7 +32,10 @@ import (
 )
 
 var DefaultStoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
-	workPool := workpool.NewWorkPool(concurrentRequests)
+	workPool, err := workpool.NewWorkPool(concurrentRequests)
+	if err != nil {
+		panic(err)
+	}
 
 	return etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
 }
@@ -66,7 +69,7 @@ func (c *Config) setDefaults() {
 		c.JobName = "loggregator_trafficcontroller"
 	}
 
-	if c.EtcdMaxConcurrentRequests == 0 {
+	if c.EtcdMaxConcurrentRequests < 1 {
 		c.EtcdMaxConcurrentRequests = 10
 	}
 }
