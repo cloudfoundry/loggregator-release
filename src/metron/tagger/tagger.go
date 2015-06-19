@@ -6,32 +6,35 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pivotal-golang/localip"
+	"metron/envelopewriter"
 )
 
 type Tagger struct {
 	deploymentName string
 	job            string
 	index          uint
+	ip			   string
+	outputWriter   envelopewriter.EnvelopeWriter
 }
 
-func New(deploymentName string, job string, index uint) *Tagger {
+func New(deploymentName string, job string, index uint, outputWriter envelopewriter.EnvelopeWriter) *Tagger {
+	ip, _ := localip.LocalIP()
 	return &Tagger{
 		deploymentName: deploymentName,
 		job:            job,
 		index:          index,
+		ip: 			ip,
+		outputWriter:   outputWriter,
 	}
 }
 
-func (t *Tagger) Run(inputChan <-chan *events.Envelope, outputChan chan<- *events.Envelope) {
-	ip, _ := localip.LocalIP()
-	for envelope := range inputChan {
-		newEnvelope := *envelope
+func (t *Tagger) Write(envelope *events.Envelope) {
+	newEnvelope := *envelope
 
-		newEnvelope.Deployment = proto.String(t.deploymentName)
-		newEnvelope.Job = proto.String(t.job)
-		newEnvelope.Index = proto.String(strconv.Itoa(int(t.index)))
-		newEnvelope.Ip = proto.String(ip)
+	newEnvelope.Deployment = proto.String(t.deploymentName)
+	newEnvelope.Job = proto.String(t.job)
+	newEnvelope.Index = proto.String(strconv.Itoa(int(t.index)))
+	newEnvelope.Ip = proto.String(t.ip)
 
-		outputChan <- &newEnvelope
-	}
+	t.outputWriter.Write(&newEnvelope)
 }

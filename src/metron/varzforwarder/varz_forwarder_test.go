@@ -11,30 +11,24 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"metron/envelopewriter"
 )
 
 var _ = Describe("VarzForwarder", func() {
 	var (
+		mockWriter *envelopewriter.MockEnvelopeWriter
 		forwarder  *varzforwarder.VarzForwarder
-		metricChan chan *events.Envelope
-		outputChan chan *events.Envelope
 	)
 
 	BeforeEach(func() {
-		forwarder = varzforwarder.New("test-component", time.Millisecond*100, loggertesthelper.Logger())
-		metricChan = make(chan *events.Envelope)
-		outputChan = make(chan *events.Envelope, 1024)
+		mockWriter = &envelopewriter.MockEnvelopeWriter{}
+		forwarder = varzforwarder.New("test-component", time.Millisecond*100, loggertesthelper.Logger(), mockWriter)
 	})
-
-	var perform = func() {
-		go forwarder.Run(metricChan, outputChan)
-	}
 
 	Describe("Emit", func() {
 		It("includes metrics for each ValueMetric sent in", func() {
-			perform()
-			metricChan <- metric("origin-1", "metric", 0)
-			metricChan <- metric("origin-2", "metric", 0)
+			forwarder.Write(metric("origin-1", "metric", 0))
+			forwarder.Write(metric("origin-2", "metric", 0))
 
 			var varz instrumentation.Context
 			Eventually(func() []instrumentation.Metric { varz = forwarder.Emit(); return varz.Metrics }).Should(HaveLen(2))
@@ -43,15 +37,13 @@ var _ = Describe("VarzForwarder", func() {
 		})
 
 		It("keeps track of the dea logging agent total message", func() {
-			perform()
-
 			totalLogMessagesSentMetric := metric("dea-logging-agent", "logSenderTotalMessagesRead", 100)
 			app1Metrics := metric("dea-logging-agent", "logSenderTotalMessagesRead.appId1", 40)
 			app2Metrics := metric("dea-logging-agent", "logSenderTotalMessagesRead.appId2", 60)
 
-			metricChan <- totalLogMessagesSentMetric
-			metricChan <- app1Metrics
-			metricChan <- app2Metrics
+			forwarder.Write(totalLogMessagesSentMetric)
+			forwarder.Write(app1Metrics)
+			forwarder.Write(app2Metrics)
 
 			var varz instrumentation.Context
 			Eventually(func() []instrumentation.Metric { varz = forwarder.Emit(); return varz.Metrics }).Should(HaveLen(3))
@@ -59,9 +51,8 @@ var _ = Describe("VarzForwarder", func() {
 		})
 
 		It("includes metrics for each ValueMetric name in a given origin", func() {
-			perform()
-			metricChan <- metric("origin", "metric-1", 1)
-			metricChan <- metric("origin", "metric-2", 2)
+			forwarder.Write(metric("origin", "metric-1", 1))
+			forwarder.Write(metric("origin", "metric-2", 2))
 
 			var varz instrumentation.Context
 			Eventually(func() []instrumentation.Metric { varz = forwarder.Emit(); return varz.Metrics }).Should(HaveLen(2))
@@ -73,17 +64,16 @@ var _ = Describe("VarzForwarder", func() {
 		})
 
 		It("includes metrics for http request count", func() {
-			perform()
-			metricChan <- httpmetric("origin", 100)
-			metricChan <- httpmetric("origin", 199)
-			metricChan <- httpmetric("origin", 200)
-			metricChan <- httpmetric("origin", 299)
-			metricChan <- httpmetric("origin", 300)
-			metricChan <- httpmetric("origin", 399)
-			metricChan <- httpmetric("origin", 400)
-			metricChan <- httpmetric("origin", 499)
-			metricChan <- httpmetric("origin", 500)
-			metricChan <- httpmetric("origin", 599)
+			forwarder.Write(httpmetric("origin", 100))
+			forwarder.Write(httpmetric("origin", 199))
+			forwarder.Write(httpmetric("origin", 200))
+			forwarder.Write(httpmetric("origin", 299))
+			forwarder.Write(httpmetric("origin", 300))
+			forwarder.Write(httpmetric("origin", 399))
+			forwarder.Write(httpmetric("origin", 400))
+			forwarder.Write(httpmetric("origin", 499))
+			forwarder.Write(httpmetric("origin", 500))
+			forwarder.Write(httpmetric("origin", 599))
 
 			Eventually(func() []instrumentation.Metric { return forwarder.Emit().Metrics }).Should(HaveLen(6))
 			Eventually(func() interface{} { return findMetricByName(forwarder.Emit().Metrics, "origin.requestCount").Value }).Should(BeNumerically("==", 10))
@@ -107,10 +97,9 @@ var _ = Describe("VarzForwarder", func() {
 		})
 
 		It("increments value for each CounterEvent name in a given origin", func() {
-			perform()
-			metricChan <- counterEvent("origin-0", "metric-1", 1)
-			metricChan <- counterEvent("origin-0", "metric-1", 3)
-			metricChan <- counterEvent("origin-1", "metric-1", 1)
+			forwarder.Write(counterEvent("origin-0", "metric-1", 1))
+			forwarder.Write(counterEvent("origin-0", "metric-1", 3))
+			forwarder.Write(counterEvent("origin-1", "metric-1", 1))
 
 			var varz instrumentation.Context
 			Eventually(func() []instrumentation.Metric { varz = forwarder.Emit(); return varz.Metrics }).Should(HaveLen(2))
@@ -123,8 +112,7 @@ var _ = Describe("VarzForwarder", func() {
 		})
 
 		It("includes the VM name as a tag on each metric", func() {
-			perform()
-			metricChan <- metric("origin", "metric", 1)
+			forwarder.Write(metric("origin", "metric", 1))
 
 			var varz instrumentation.Context
 			Eventually(func() []instrumentation.Metric { varz = forwarder.Emit(); return varz.Metrics }).Should(HaveLen(1))
@@ -133,19 +121,15 @@ var _ = Describe("VarzForwarder", func() {
 		})
 
 		It("ignores non-ValueMetric messages", func() {
-			perform()
-
-			metricChan <- metric("origin", "metric-1", 0)
-			metricChan <- logMessage("origin", "Log stuff")
+			forwarder.Write(metric("origin", "metric-1", 0))
+			forwarder.Write(logMessage("origin", "Log stuff"))
 
 			var varz instrumentation.Context
 			Consistently(func() []instrumentation.Metric { varz = forwarder.Emit(); return varz.Metrics }).Should(HaveLen(1))
 		})
 
 		It("no longer emits metrics when the origin TTL expires", func() {
-			perform()
-
-			metricChan <- metric("origin", "metric-X", 0)
+			forwarder.Write(metric("origin", "metric-X", 0))
 
 			Eventually(func() []instrumentation.Metric { return forwarder.Emit().Metrics }).ShouldNot(HaveLen(0))
 
@@ -155,9 +139,7 @@ var _ = Describe("VarzForwarder", func() {
 		})
 
 		It("still emits metrics after origin TTL if new events were received", func() {
-			perform()
-
-			metricChan <- metric("origin", "metric-X", 0)
+			forwarder.Write(metric("origin", "metric-X", 0))
 
 			stopMetrics := make(chan struct{})
 			metricsStopped := make(chan struct{})
@@ -171,8 +153,7 @@ var _ = Describe("VarzForwarder", func() {
 						close(metricsStopped)
 						return
 					}
-					metricChan <- metric("origin", "name", 1.0)
-					<-outputChan
+					forwarder.Write(metric("origin", "name", 1.0))
 				}
 			}()
 
@@ -182,17 +163,17 @@ var _ = Describe("VarzForwarder", func() {
 
 			Expect(forwarder.Emit().Metrics).ToNot(HaveLen(0))
 			close(stopMetrics)
-			<-metricsStopped
+			Eventually(metricsStopped).Should(BeClosed())
 		})
 	})
 
-	Describe("Run", func() {
+	Describe("Write", func() {
 		It("passes ValueMetrics through", func() {
-			perform()
 			expectedMetric := metric("origin", "metric", 0)
-			metricChan <- expectedMetric
+			forwarder.Write(expectedMetric)
 
-			Eventually(outputChan).Should(Receive(Equal(expectedMetric)))
+			Eventually(func() int { return len(mockWriter.Events)}).Should(Equal(1))
+			Expect(mockWriter.Events[0]).To(Equal(expectedMetric))
 		})
 	})
 })

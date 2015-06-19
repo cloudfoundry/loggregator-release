@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/sonde-go/events"
+	"metron/envelopewriter"
 )
 
 type VarzForwarder struct {
@@ -16,25 +17,25 @@ type VarzForwarder struct {
 	ttl             time.Duration
 
 	logger *gosteno.Logger
+	outputWriter envelopewriter.EnvelopeWriter
 	lock   sync.RWMutex
 }
 
-func New(componentName string, ttl time.Duration, logger *gosteno.Logger) *VarzForwarder {
+func New(componentName string, ttl time.Duration, logger *gosteno.Logger, outputWriter envelopewriter.EnvelopeWriter) *VarzForwarder {
 	return &VarzForwarder{
 		metricsByOrigin: make(map[string]*metrics),
 		componentName:   componentName,
 		ttl:             ttl,
 		logger:          logger,
+		outputWriter:	 outputWriter,
 	}
 }
 
-func (vf *VarzForwarder) Run(metricChan <-chan *events.Envelope, outputChan chan<- *events.Envelope) {
-	for metric := range metricChan {
-		vf.addMetric(metric)
-		vf.resetTimer(metric.GetOrigin())
+func (vf *VarzForwarder) Write(envelope *events.Envelope) {
+	vf.addMetric(envelope)
+	vf.resetTimer(envelope.GetOrigin())
 
-		outputChan <- metric
-	}
+	vf.outputWriter.Write(envelope)
 }
 
 func (vf *VarzForwarder) Emit() instrumentation.Context {

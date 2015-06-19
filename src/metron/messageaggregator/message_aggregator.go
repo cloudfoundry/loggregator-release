@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/davecgh/go-spew/spew"
+	"metron/envelopewriter"
 )
 
 var MaxTTL = time.Minute
@@ -24,42 +25,43 @@ type MessageAggregator struct {
 	counterEventReceivedCount       uint64
 
 	lock   sync.Mutex
+
 	logger *gosteno.Logger
+	outputWriter envelopewriter.EnvelopeWriter
 }
 
-func New(logger *gosteno.Logger) *MessageAggregator {
+func New(logger *gosteno.Logger, outputWriter envelopewriter.EnvelopeWriter) *MessageAggregator {
 	return &MessageAggregator{
 		logger:               logger,
+		outputWriter:		  outputWriter,
 		startEventsByEventID: make(map[eventID]startEventEntry),
 		counterTotals:        make(map[counterID]uint64),
 	}
 }
 
-func (m *MessageAggregator) Run(inputChan <-chan *events.Envelope, outputChan chan<- *events.Envelope) {
-	for envelope := range inputChan {
-		// TODO: don't call for every message if throughput becomes a problem
-		m.cleanupOrphanedHTTPStart()
+func (m *MessageAggregator) Write(envelope *events.Envelope) {
+	// TODO: don't call for every message if throughput becomes a problem
+	m.cleanupOrphanedHTTPStart()
 
-		if envelope.EventType == nil {
-			outputChan <- envelope
-			continue
+	if envelope.EventType == nil {
+		m.outputWriter.Write(envelope)
+		return
+	}
+	switch envelope.GetEventType() {
+	case events.Envelope_HttpStart:
+		m.handleHTTPStart(envelope)
+	case events.Envelope_HttpStop:
+		startStopMessage := m.handleHTTPStop(envelope)
+		if startStopMessage != nil {
+			m.outputWriter.Write(startStopMessage)
 		}
-		switch envelope.GetEventType() {
-		case events.Envelope_HttpStart:
-			m.handleHTTPStart(envelope)
-		case events.Envelope_HttpStop:
-			startStopMessage := m.handleHTTPStop(envelope)
-			if startStopMessage != nil {
-				outputChan <- startStopMessage
-			}
-		case events.Envelope_CounterEvent:
-			counterEventMessage := m.handleCounter(envelope)
-			outputChan <- counterEventMessage
-		default:
-			m.incrementCounter(&m.uncategorizedEventCount)
-			m.logger.Debugf("passing through message %v", spew.Sprintf("%v", envelope))
-			outputChan <- envelope
-		}
+	case events.Envelope_CounterEvent:
+		counterEventMessage := m.handleCounter(envelope)
+		m.outputWriter.Write(counterEventMessage)
+	default:
+		m.incrementCounter(&m.uncategorizedEventCount)
+		m.logger.Debugf("passing through message %v", spew.Sprintf("%v", envelope))
+		m.outputWriter.Write(envelope)
 	}
 }
 

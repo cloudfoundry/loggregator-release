@@ -9,19 +9,20 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"metron/envelopewriter"
 )
 
 var _ = Describe("Tagger", func() {
 	It("tags events with the given deployment name, job, index and IP address", func() {
-		t := tagger.New("test-deployment", "test-job", 2)
+		mockWriter := &envelopewriter.MockEnvelopeWriter{}
+		t := tagger.New("test-deployment", "test-job", 2, mockWriter)
 
-		inputChan := make(chan *events.Envelope)
-		outputChan := make(chan *events.Envelope)
-		go t.Run(inputChan, outputChan)
 		envelope := basicHttpStartStopMessage()
-		inputChan <- envelope
+		t.Write(envelope)
+
+		Expect(mockWriter.Events).To(HaveLen(1))
 		expectedEnvelope := basicTaggedHttpStartStopMessage(*envelope)
-		Eventually(outputChan).Should(Receive(Equal(expectedEnvelope)))
+		Eventually(mockWriter.Events[0]).Should(Equal(expectedEnvelope))
 	})
 })
 

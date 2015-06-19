@@ -11,122 +11,106 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"metron/envelopewriter"
 )
 
 var _ = Describe("MessageAggregator", func() {
 	var (
-		inputChan         chan *events.Envelope
-		outputChan        chan *events.Envelope
-		runComplete       chan struct{}
+		mockWriter   *envelopewriter.MockEnvelopeWriter
 		messageAggregator *messageaggregator.MessageAggregator
 		originalTTL       time.Duration
 	)
 
 	BeforeEach(func() {
-		inputChan = make(chan *events.Envelope, 10)
-		outputChan = make(chan *events.Envelope, 10)
-		runComplete = make(chan struct{})
-		messageAggregator = messageaggregator.New(loggertesthelper.Logger())
+		mockWriter = &envelopewriter.MockEnvelopeWriter{}
+		messageAggregator = messageaggregator.New(loggertesthelper.Logger(), mockWriter)
 		originalTTL = messageaggregator.MaxTTL
-
-		go func() {
-			messageAggregator.Run(inputChan, outputChan)
-			close(runComplete)
-		}()
 	})
 
 	AfterEach(func() {
-		close(inputChan)
-		Eventually(runComplete).Should(BeClosed())
 		messageaggregator.MaxTTL = originalTTL
 	})
 
 	It("passes non-marshallable messages through", func() {
 		inputMessage := &events.Envelope{}
-		inputChan <- inputMessage
+		messageAggregator.Write(inputMessage)
 
-		outputMessage := <-outputChan
-		Expect(outputMessage).To(Equal(inputMessage))
+		Expect(mockWriter.Events).To(HaveLen(1))
+		Expect(mockWriter.Events[0]).To(Equal(inputMessage))
 	})
 
 	It("passes value messages through", func() {
 		inputMessage := createValueMessage()
-		inputChan <- inputMessage
+		messageAggregator.Write(inputMessage)
 
-		outputMessage := <-outputChan
-		Expect(outputMessage).To(Equal(inputMessage))
+		Expect(mockWriter.Events).To(HaveLen(1))
+		Expect(mockWriter.Events[0]).To(Equal(inputMessage))
 	})
 
 	Describe("counter processing", func() {
 		It("sets the Total field on a CounterEvent ", func() {
-			inputChan <- createCounterMessage("total", "fake-origin-4")
+			messageAggregator.Write(createCounterMessage("total", "fake-origin-4"))
 
-			outputMessage := <-outputChan
+			Expect(mockWriter.Events).To(HaveLen(1))
+			outputMessage := mockWriter.Events[0]
 			Expect(outputMessage.GetEventType()).To(Equal(events.Envelope_CounterEvent))
-			assertCorrectCounterNameDeltaAndTotal(outputMessage, "total", 4, 4)
+			expectCorrectCounterNameDeltaAndTotal(outputMessage, "total", 4, 4)
 		})
 
 		It("accumulates Deltas for CounterEvents with the same name and origin", func() {
-			inputChan <- createCounterMessage("total", "fake-origin-4")
-			inputChan <- createCounterMessage("total", "fake-origin-4")
+			messageAggregator.Write(createCounterMessage("total", "fake-origin-4"))
+			messageAggregator.Write(createCounterMessage("total", "fake-origin-4"))
 
-			_ = <-outputChan
-			outputMessage := <-outputChan
+			Expect(mockWriter.Events).To(HaveLen(2))
+			outputMessage := mockWriter.Events[1]
 
-			assertCorrectCounterNameDeltaAndTotal(outputMessage, "total", 4, 8)
+			expectCorrectCounterNameDeltaAndTotal(outputMessage, "total", 4, 8)
 		})
 
 		It("accumulates differently-named counters separately", func() {
-			inputChan <- createCounterMessage("total1", "fake-origin-4")
-			inputChan <- createCounterMessage("total2", "fake-origin-4")
+			messageAggregator.Write(createCounterMessage("total1", "fake-origin-4"))
+			messageAggregator.Write(createCounterMessage("total2", "fake-origin-4"))
 
-			outputMessage := <-outputChan
-			assertCorrectCounterNameDeltaAndTotal(outputMessage, "total1", 4, 4)
-
-			outputMessage = <-outputChan
-			assertCorrectCounterNameDeltaAndTotal(outputMessage, "total2", 4, 4)
+			Expect(mockWriter.Events).To(HaveLen(2))
+			expectCorrectCounterNameDeltaAndTotal(mockWriter.Events[0], "total1", 4, 4)
+			expectCorrectCounterNameDeltaAndTotal(mockWriter.Events[1], "total2", 4, 4)
 		})
 
 		It("does not accumulate for counters when receiving a non-counter event", func() {
-			inputChan <- createValueMessage()
-			inputChan <- createCounterMessage("counter1", "fake-origin-4")
-			outputMessage := <-outputChan
+			messageAggregator.Write(createValueMessage())
+			messageAggregator.Write(createCounterMessage("counter1", "fake-origin-4"))
 
-			Expect(outputMessage.GetEventType()).To(Equal(events.Envelope_ValueMetric))
-
-			outputMessage = <-outputChan
-			Expect(outputMessage.GetEventType()).To(Equal(events.Envelope_CounterEvent))
-			assertCorrectCounterNameDeltaAndTotal(outputMessage, "counter1", 4, 4)
+			Expect(mockWriter.Events).To(HaveLen(2))
+			Expect(mockWriter.Events[0].GetEventType()).To(Equal(events.Envelope_ValueMetric))
+			Expect(mockWriter.Events[1].GetEventType()).To(Equal(events.Envelope_CounterEvent))
+			expectCorrectCounterNameDeltaAndTotal(mockWriter.Events[1], "counter1", 4, 4)
 		})
 
 		It("accumulates independently for different origins", func() {
-			inputChan <- createCounterMessage("counter1", "fake-origin-4")
-			inputChan <- createCounterMessage("counter1", "fake-origin-5")
-			inputChan <- createCounterMessage("counter1", "fake-origin-4")
-			outputMessage := <-outputChan
+			messageAggregator.Write(createCounterMessage("counter1", "fake-origin-4"))
+			messageAggregator.Write(createCounterMessage("counter1", "fake-origin-5"))
+			messageAggregator.Write(createCounterMessage("counter1", "fake-origin-4"))
 
-			Expect(outputMessage.GetOrigin()).To(Equal("fake-origin-4"))
-			assertCorrectCounterNameDeltaAndTotal(outputMessage, "counter1", 4, 4)
+			Expect(mockWriter.Events).To(HaveLen(3))
 
-			outputMessage = <-outputChan
+			Expect(mockWriter.Events[0].GetOrigin()).To(Equal("fake-origin-4"))
+			expectCorrectCounterNameDeltaAndTotal(mockWriter.Events[0], "counter1", 4, 4)
 
-			Expect(outputMessage.GetOrigin()).To(Equal("fake-origin-5"))
-			assertCorrectCounterNameDeltaAndTotal(outputMessage, "counter1", 4, 4)
+			Expect(mockWriter.Events[1].GetOrigin()).To(Equal("fake-origin-5"))
+			expectCorrectCounterNameDeltaAndTotal(mockWriter.Events[1], "counter1", 4, 4)
 
-			outputMessage = <-outputChan
-
-			Expect(outputMessage.GetOrigin()).To(Equal("fake-origin-4"))
-			assertCorrectCounterNameDeltaAndTotal(outputMessage, "counter1", 4, 8)
+			Expect(mockWriter.Events[2].GetOrigin()).To(Equal("fake-origin-4"))
+			expectCorrectCounterNameDeltaAndTotal(mockWriter.Events[2], "counter1", 4, 8)
 		})
 	})
 
 	Context("single StartStop message", func() {
 		var outputMessage *events.Envelope
 		BeforeEach(func() {
-			inputChan <- createStartMessage(123, events.PeerType_Client)
-			inputChan <- createStopMessage(123, events.PeerType_Client)
+			messageAggregator.Write(createStartMessage(123, events.PeerType_Client))
+			messageAggregator.Write(createStopMessage(123, events.PeerType_Client))
 
-			outputMessage = <-outputChan
+			outputMessage = mockWriter.Events[0]
 		})
 
 		It("populates all fields in the StartStop message correctly", func() {
@@ -142,8 +126,8 @@ var _ = Describe("MessageAggregator", func() {
 	})
 
 	It("does not send a combined event if there only is a stop event", func() {
-		inputChan <- createStopMessage(123, events.PeerType_Client)
-		Consistently(outputChan).ShouldNot(Receive())
+		messageAggregator.Write(createStopMessage(123, events.PeerType_Client))
+		Consistently(func() int { return len(mockWriter.Events) }).Should(Equal(0))
 	})
 
 	Context("message expiry", func() {
@@ -152,11 +136,11 @@ var _ = Describe("MessageAggregator", func() {
 		})
 
 		It("does not send a combined event if the stop event doesn't arrive within the TTL", func() {
-			inputChan <- createStartMessage(123, events.PeerType_Client)
+			messageAggregator.Write(createStartMessage(123, events.PeerType_Client))
 			time.Sleep(1)
-			inputChan <- createStopMessage(123, events.PeerType_Client)
+			messageAggregator.Write(createStopMessage(123, events.PeerType_Client))
 
-			Consistently(outputChan).ShouldNot(Receive())
+			Consistently(func() int { return len(mockWriter.Events) }).Should(Equal(0))
 		})
 	})
 
@@ -177,45 +161,45 @@ var _ = Describe("MessageAggregator", func() {
 		}
 
 		It("emits a HTTP start counter", func() {
-			inputChan <- createStartMessage(123, events.PeerType_Client)
+			messageAggregator.Write(createStartMessage(123, events.PeerType_Client))
 			eventuallyExpectMetric("httpStartReceived", 1)
 		})
 
 		It("emits a HTTP stop counter", func() {
-			inputChan <- createStopMessage(123, events.PeerType_Client)
+			messageAggregator.Write(createStopMessage(123, events.PeerType_Client))
 			eventuallyExpectMetric("httpStopReceived", 1)
 		})
 
 		It("emits a HTTP StartStop counter", func() {
-			inputChan <- createStartMessage(123, events.PeerType_Client)
-			inputChan <- createStopMessage(123, events.PeerType_Client)
+			messageAggregator.Write(createStartMessage(123, events.PeerType_Client))
+			messageAggregator.Write(createStopMessage(123, events.PeerType_Client))
 			eventuallyExpectMetric("httpStartStopEmitted", 1)
 		})
 
 		It("emits a counter for uncategorized events", func() {
-			inputChan <- createValueMessage()
+			messageAggregator.Write(createValueMessage())
 			eventuallyExpectMetric("uncategorizedEvents", 1)
 		})
 
 		It("emits a counter for unmatched start events", func() {
 			messageaggregator.MaxTTL = 0
-			inputChan <- createStartMessage(123, events.PeerType_Client)
+			messageAggregator.Write(createStartMessage(123, events.PeerType_Client))
 			time.Sleep(1)
-			inputChan <- createStartMessage(123, events.PeerType_Client)
+			messageAggregator.Write(createStartMessage(123, events.PeerType_Client))
 			eventuallyExpectMetric("httpUnmatchedStartReceived", 1)
 		})
 
 		It("emits a counter for unmatched stop events", func() {
-			inputChan <- createStopMessage(123, events.PeerType_Client)
+			messageAggregator.Write(createStopMessage(123, events.PeerType_Client))
 			eventuallyExpectMetric("httpUnmatchedStopReceived", 1)
 		})
 
 		It("emits a counter for counter events", func() {
-			inputChan <- createCounterMessage("counter1", "fake-origin-1")
+			messageAggregator.Write(createCounterMessage("counter1", "fake-origin-1"))
 			eventuallyExpectMetric("counterEventReceived", 1)
 
 			// since we're counting counters, let's make sure we're not adding their deltas
-			inputChan <- createCounterMessage("counter1", "fake-origin-1")
+			messageAggregator.Write(createCounterMessage("counter1", "fake-origin-1"))
 			eventuallyExpectMetric("counterEventReceived", 2)
 		})
 	})
@@ -323,7 +307,7 @@ func createCounterMessage(name string, origin string) *events.Envelope {
 	}
 }
 
-func assertCorrectCounterNameDeltaAndTotal(outputMessage *events.Envelope, name string, delta uint64, total uint64) {
+func expectCorrectCounterNameDeltaAndTotal(outputMessage *events.Envelope, name string, delta uint64, total uint64) {
 	Expect(outputMessage.GetCounterEvent().GetName()).To(Equal(name))
 	Expect(outputMessage.GetCounterEvent().GetDelta()).To(Equal(delta))
 	Expect(outputMessage.GetCounterEvent().GetTotal()).To(Equal(total))
