@@ -3,27 +3,28 @@ package tagger
 import (
 	"strconv"
 
+	"metron/writers"
+
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pivotal-golang/localip"
-	"metron/envelopewriter"
 )
 
 type Tagger struct {
 	deploymentName string
 	job            string
 	index          uint
-	ip			   string
-	outputWriter   envelopewriter.EnvelopeWriter
+	ip             string
+	outputWriter   writers.EnvelopeWriter
 }
 
-func New(deploymentName string, job string, index uint, outputWriter envelopewriter.EnvelopeWriter) *Tagger {
+func New(deploymentName string, job string, index uint, outputWriter writers.EnvelopeWriter) *Tagger {
 	ip, _ := localip.LocalIP()
 	return &Tagger{
 		deploymentName: deploymentName,
 		job:            job,
 		index:          index,
-		ip: 			ip,
+		ip:             ip,
 		outputWriter:   outputWriter,
 	}
 }

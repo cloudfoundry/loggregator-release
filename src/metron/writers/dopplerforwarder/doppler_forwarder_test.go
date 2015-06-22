@@ -1,18 +1,18 @@
-package dopplerwriter_test
+package dopplerforwarder_test
 
 import (
-	"metron/dopplerwriter"
+	"metron/writers/dopplerforwarder"
 
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 )
 
-var _ = Describe("DopplerWriter", func() {
+var _ = Describe("DopplerForwarder", func() {
 	It("sends messages to a random doppler", func() {
 		clientPool := &mockClientPool{}
 		logger := loggertesthelper.Logger()
-		s := dopplerwriter.NewDopplerWriter(clientPool, logger)
+		s := dopplerforwarder.New(clientPool, logger)
 
 		message := []byte("Some message")
 		s.Write(message)
@@ -29,7 +29,7 @@ type mockClientPool struct {
 	randomClient *mockClient
 }
 
-func (m *mockClientPool) RandomClient() (dopplerwriter.Client, error) {
+func (m *mockClientPool) RandomClient() (dopplerforwarder.Client, error) {
 	m.randomClient = &mockClient{}
 	return m.randomClient, nil
 }

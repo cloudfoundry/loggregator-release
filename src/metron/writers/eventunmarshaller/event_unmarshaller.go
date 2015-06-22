@@ -1,11 +1,11 @@
-// Package unmarshallingeventwriter provides a tool for unmarshalling Envelopes
+// Package eventunmarshaller provides a tool for unmarshalling Envelopes
 // from Protocol Buffer messages.
 //
 // Use
 //
 // Instantiate a Marshaller and run it:
 //
-//		unmarshaller := unmarshallingeventwriter.NewUnmarshallingEventWriter(logger)
+//		unmarshaller := eventunmarshaller.New(logger)
 //		inputChan :=  make(chan []byte) // or use a channel provided by some other source
 //		outputChan := make(chan *events.Envelope)
 //		go unmarshaller.Run(inputChan, outputChan)
@@ -13,12 +13,14 @@
 // The unmarshaller self-instruments, counting the number of messages
 // processed and the number of errors. These can be accessed through the Emit
 // function on the unmarshaller.
-package unmarshallingeventwriter
+package eventunmarshaller
 
 import (
 	"sync"
 	"sync/atomic"
 	"unicode"
+
+	"metron/writers"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
@@ -26,30 +28,29 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/gogo/protobuf/proto"
-	"metron/envelopewriter"
 )
 
-// An UnmarshallingEventWriter is an self-instrumenting tool for converting Protocol
+// An EventUnmarshaller is an self-instrumenting tool for converting Protocol
 // Buffer-encoded dropsonde messages to Envelope instances.
-type UnmarshallingEventWriter struct {
+type EventUnmarshaller struct {
 	logger                  *gosteno.Logger
-	outputWriter            envelopewriter.EnvelopeWriter
+	outputWriter            writers.EnvelopeWriter
 	receiveCounts           map[events.Envelope_EventType]*uint64
 	logMessageReceiveCounts map[string]*uint64
 	unmarshalErrorCount     uint64
-	sync.RWMutex
+	lock                    sync.RWMutex
 }
 
-// NewUnmarshallingEventWriter instantiates a UnmarshallingEventWriter and logs to the
+// New instantiates a EventUnmarshaller and logs to the
 // provided logger.
-func NewUnmarshallingEventWriter(logger *gosteno.Logger, outputWriter envelopewriter.EnvelopeWriter) *UnmarshallingEventWriter {
+func New(logger *gosteno.Logger, outputWriter writers.EnvelopeWriter) *EventUnmarshaller {
 	receiveCounts := make(map[events.Envelope_EventType]*uint64)
 	for key := range events.Envelope_EventType_name {
 		var count uint64
 		receiveCounts[events.Envelope_EventType(key)] = &count
 	}
 
-	return &UnmarshallingEventWriter{
+	return &EventUnmarshaller{
 		logger:                  logger,
 		outputWriter:            outputWriter,
 		receiveCounts:           receiveCounts,
@@ -57,7 +58,7 @@ func NewUnmarshallingEventWriter(logger *gosteno.Logger, outputWriter envelopewr
 	}
 }
 
-func (u *UnmarshallingEventWriter) Write(message []byte) (bytesWritten int, err error) {
+func (u *EventUnmarshaller) Write(message []byte) (bytesWritten int, err error) {
 	envelope, err := u.UnmarshallMessage(message)
 	if err != nil {
 		return 0, err
@@ -66,17 +67,17 @@ func (u *UnmarshallingEventWriter) Write(message []byte) (bytesWritten int, err 
 	return len(message), nil
 }
 
-func (u *UnmarshallingEventWriter) UnmarshallMessage(message []byte) (*events.Envelope, error) {
+func (u *EventUnmarshaller) UnmarshallMessage(message []byte) (*events.Envelope, error) {
 	envelope := &events.Envelope{}
 	err := proto.Unmarshal(message, envelope)
 	if err != nil {
-		u.logger.Debugf("unmarshallingEventWriter: unmarshal error %v for message %v", err, message)
-		metrics.BatchIncrementCounter("UnmarshallingEventWriter.unmarshalErrors")
+		u.logger.Debugf("eventUnmarshaller: unmarshal error %v for message %v", err, message)
+		metrics.BatchIncrementCounter("EventUnmarshaller.unmarshalErrors")
 		incrementCount(&u.unmarshalErrorCount)
 		return nil, err
 	}
 
-	u.logger.Debugf("unmarshallingEventWriter: received message %v", spew.Sprintf("%v", envelope))
+	u.logger.Debugf("eventUnmarshaller: received message %v", spew.Sprintf("%v", envelope))
 
 	if envelope.GetEventType() == events.Envelope_LogMessage {
 		u.incrementLogMessageReceiveCount(envelope.GetLogMessage().GetAppId())
@@ -87,21 +88,21 @@ func (u *UnmarshallingEventWriter) UnmarshallMessage(message []byte) (*events.En
 	return envelope, nil
 }
 
-func (u *UnmarshallingEventWriter) incrementLogMessageReceiveCount(appID string) {
-	metrics.BatchIncrementCounter("UnmarshallingEventWriter.logMessageTotal")
+func (u *EventUnmarshaller) incrementLogMessageReceiveCount(appID string) {
+	metrics.BatchIncrementCounter("EventUnmarshaller.logMessageTotal")
 
 	_, ok := u.logMessageReceiveCounts[appID]
 	if ok == false {
 		var count uint64
-		u.Lock()
+		u.lock.Lock()
 		u.logMessageReceiveCounts[appID] = &count
-		u.Unlock()
+		u.lock.Unlock()
 	}
 	incrementCount(u.logMessageReceiveCounts[appID])
 	incrementCount(u.receiveCounts[events.Envelope_LogMessage])
 }
 
-func (u *UnmarshallingEventWriter) incrementReceiveCount(eventType events.Envelope_EventType) {
+func (u *EventUnmarshaller) incrementReceiveCount(eventType events.Envelope_EventType) {
 	name, ok := events.Envelope_EventType_name[int32(eventType)]
 
 	if !ok {
@@ -114,7 +115,7 @@ func (u *UnmarshallingEventWriter) incrementReceiveCount(eventType events.Envelo
 	modifiedEventName[0] = unicode.ToLower(modifiedEventName[0])
 	metricName := string(modifiedEventName) + "Received"
 
-	metrics.BatchIncrementCounter("UnmarshallingEventWriter." + metricName)
+	metrics.BatchIncrementCounter("EventUnmarshaller." + metricName)
 
 	incrementCount(u.receiveCounts[eventType])
 }
@@ -123,15 +124,15 @@ func incrementCount(count *uint64) {
 	atomic.AddUint64(count, 1)
 }
 
-func (u *UnmarshallingEventWriter) metrics() []instrumentation.Metric {
+func (u *EventUnmarshaller) metrics() []instrumentation.Metric {
 	var metrics []instrumentation.Metric
 
-	u.RLock()
+	u.lock.RLock()
 
 	metricValue := atomic.LoadUint64(u.receiveCounts[events.Envelope_LogMessage])
 	metrics = append(metrics, instrumentation.Metric{Name: logMessageTotal, Value: metricValue})
 
-	u.RUnlock()
+	u.lock.RUnlock()
 
 	for eventType, counterPointer := range u.receiveCounts {
 		if eventType == events.Envelope_LogMessage {
@@ -153,9 +154,9 @@ func (u *UnmarshallingEventWriter) metrics() []instrumentation.Metric {
 }
 
 // Emit returns the current metrics the DropsondeMarshaller keeps about itself.
-func (u *UnmarshallingEventWriter) Emit() instrumentation.Context {
+func (u *EventUnmarshaller) Emit() instrumentation.Context {
 	return instrumentation.Context{
-		Name:    "UnmarshallingEventWriter",
+		Name:    "EventUnmarshaller",
 		Metrics: u.metrics(),
 	}
 }

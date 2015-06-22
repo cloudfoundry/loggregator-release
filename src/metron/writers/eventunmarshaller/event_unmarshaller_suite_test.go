@@ -1,4 +1,4 @@
-package unmarshallingeventwriter_test
+package eventunmarshaller_test
 
 import (
 	"time"
@@ -14,9 +14,9 @@ import (
 	"testing"
 )
 
-func TestUnmarshallingEventWriter(t *testing.T) {
+func TestEventUnmarshaller(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Unmarshalling Event Writer Suite")
+	RunSpecs(t, "Event Unmarshaller Suite")
 }
 
 var fakeEventEmitter = fake.NewFakeEventEmitter("doppler")

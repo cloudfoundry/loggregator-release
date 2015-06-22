@@ -1,6 +1,9 @@
-package marshallingeventwriter_test
+package eventmarshaller_test
 
 import (
+	"metron/writers/eventmarshaller"
+	"metron/writers/mocks"
+
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation/testhelpers"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
@@ -8,18 +11,17 @@ import (
 	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"metron/marshallingeventwriter"
 )
 
-var _ = Describe("MarshallingEventWriter", func() {
+var _ = Describe("EventMarshaller", func() {
 	var (
-		marshaller  *marshallingeventwriter.MarshallingEventWriter
-		writer *mockWriter
+		marshaller *eventmarshaller.EventMarshaller
+		writer     *mocks.MockByteArrayWriter
 	)
 
 	BeforeEach(func() {
-		writer = &mockWriter{}
-		marshaller = marshallingeventwriter.NewMarshallingEventWriter(loggertesthelper.Logger(), writer)
+		writer = &mocks.MockByteArrayWriter{}
+		marshaller = eventmarshaller.New(loggertesthelper.Logger(), writer)
 
 	})
 
@@ -33,14 +35,14 @@ var _ = Describe("MarshallingEventWriter", func() {
 
 		marshaller.Write(envelope)
 
-		Expect(writer.data).Should(HaveLen(1))
-		outputMessage := writer.data[0]
+		Expect(writer.Data()).Should(HaveLen(1))
+		outputMessage := writer.Data()[0]
 		Expect(outputMessage).To(Equal(message))
 	})
 
 	Context("metrics", func() {
 		It("emits the correct metrics context", func() {
-			Expect(marshaller.Emit().Name).To(Equal("marshallingEventWriter"))
+			Expect(marshaller.Emit().Name).To(Equal("eventMarshaller"))
 		})
 
 		It("emits a marshal error counter", func() {
@@ -51,12 +53,3 @@ var _ = Describe("MarshallingEventWriter", func() {
 		})
 	})
 })
-
-type mockWriter struct {
-	data [][]byte
-}
-
-func (m *mockWriter) Write(p []byte) (bytesWritten int, err error) {
-	m.data = append(m.data, p)
-	return len(p), nil
-}

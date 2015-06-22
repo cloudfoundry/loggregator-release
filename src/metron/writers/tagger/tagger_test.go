@@ -1,20 +1,21 @@
 package tagger_test
 
 import (
-	"metron/tagger"
+	"metron/writers/tagger"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pivotal-golang/localip"
 
+	"metron/writers/mocks"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"metron/envelopewriter"
 )
 
 var _ = Describe("Tagger", func() {
 	It("tags events with the given deployment name, job, index and IP address", func() {
-		mockWriter := &envelopewriter.MockEnvelopeWriter{}
+		mockWriter := &mocks.MockEnvelopeWriter{}
 		t := tagger.New("test-deployment", "test-job", 2, mockWriter)
 
 		envelope := basicHttpStartStopMessage()

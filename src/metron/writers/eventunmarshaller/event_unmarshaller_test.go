@@ -1,4 +1,4 @@
-package unmarshallingeventwriter_test
+package eventunmarshaller_test
 
 import (
 	"github.com/cloudfoundry/dropsonde/factories"
@@ -8,24 +8,25 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
-	"metron/unmarshallingeventwriter"
+	"metron/writers/eventunmarshaller"
+
+	"metron/writers/mocks"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"metron/envelopewriter"
 )
 
-var _ = Describe("UnmarshallingEventWriter", func() {
+var _ = Describe("EventUnmarshaller", func() {
 	var (
-		mockWriter   *envelopewriter.MockEnvelopeWriter
-		unmarshaller *unmarshallingeventwriter.UnmarshallingEventWriter
+		mockWriter   *mocks.MockEnvelopeWriter
+		unmarshaller *eventunmarshaller.EventUnmarshaller
 		event        *events.Envelope
 		message      []byte
 	)
 
 	BeforeEach(func() {
-		mockWriter = &envelopewriter.MockEnvelopeWriter{}
-		unmarshaller = unmarshallingeventwriter.NewUnmarshallingEventWriter(loggertesthelper.Logger(), mockWriter)
+		mockWriter = &mocks.MockEnvelopeWriter{}
+		unmarshaller = eventunmarshaller.New(loggertesthelper.Logger(), mockWriter)
 		event = &events.Envelope{
 			Origin:      proto.String("fake-origin-3"),
 			EventType:   events.Envelope_ValueMetric.Enum(),
@@ -73,11 +74,11 @@ var _ = Describe("UnmarshallingEventWriter", func() {
 
 	Context("metrics", func() {
 		BeforeEach(func() {
-			unmarshaller = unmarshallingeventwriter.NewUnmarshallingEventWriter(loggertesthelper.Logger(), mockWriter)
+			unmarshaller = eventunmarshaller.New(loggertesthelper.Logger(), mockWriter)
 		})
 
 		It("emits the correct metrics context", func() {
-			Expect(unmarshaller.Emit().Name).To(Equal("UnmarshallingEventWriter"))
+			Expect(unmarshaller.Emit().Name).To(Equal("EventUnmarshaller"))
 		})
 
 		It("emits a value metric counter", func() {
@@ -86,7 +87,7 @@ var _ = Describe("UnmarshallingEventWriter", func() {
 
 			Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(1))
 			Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.CounterEvent)).To(Equal(&events.CounterEvent{
-				Name:  proto.String("UnmarshallingEventWriter.valueMetricReceived"),
+				Name:  proto.String("EventUnmarshaller.valueMetricReceived"),
 				Delta: proto.Uint64(1),
 			}))
 		})
@@ -117,7 +118,7 @@ var _ = Describe("UnmarshallingEventWriter", func() {
 
 			Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(1))
 			Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.CounterEvent)).To(Equal(&events.CounterEvent{
-				Name:  proto.String("UnmarshallingEventWriter.logMessageTotal"),
+				Name:  proto.String("EventUnmarshaller.logMessageTotal"),
 				Delta: proto.Uint64(3),
 			}))
 		})
@@ -128,7 +129,7 @@ var _ = Describe("UnmarshallingEventWriter", func() {
 
 			Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(1))
 			Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.CounterEvent)).To(Equal(&events.CounterEvent{
-				Name:  proto.String("UnmarshallingEventWriter.unmarshalErrors"),
+				Name:  proto.String("EventUnmarshaller.unmarshalErrors"),
 				Delta: proto.Uint64(1),
 			}))
 		})
@@ -147,7 +148,7 @@ var _ = Describe("UnmarshallingEventWriter", func() {
 
 			Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(1))
 			Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.CounterEvent)).To(Equal(&events.CounterEvent{
-				Name:  proto.String("UnmarshallingEventWriter.unknownEventTypeReceived"),
+				Name:  proto.String("EventUnmarshaller.unknownEventTypeReceived"),
 				Delta: proto.Uint64(1),
 			}))
 

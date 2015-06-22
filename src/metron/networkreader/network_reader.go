@@ -1,19 +1,20 @@
 package networkreader
 
 import (
-	"io"
 	"net"
 	"sync"
 	"sync/atomic"
+
+	"metron/writers"
 
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 )
 
 type NetworkReader struct {
-	host        string
-	connection  net.PacketConn
-	writer 		io.Writer
+	host       string
+	connection net.PacketConn
+	writer     writers.ByteArrayWriter
 
 	receivedMessageCount uint64
 	receivedByteCount    uint64
@@ -23,12 +24,12 @@ type NetworkReader struct {
 	logger *gosteno.Logger
 }
 
-func New(host string, givenLogger *gosteno.Logger, name string, writer io.Writer) *NetworkReader {
+func New(host string, givenLogger *gosteno.Logger, name string, writer writers.ByteArrayWriter) *NetworkReader {
 	return &NetworkReader{
-		logger: givenLogger,
-		host: host,
+		logger:      givenLogger,
+		host:        host,
 		contextName: name,
-		writer: writer,
+		writer:      writer,
 	}
 }
 

@@ -1,22 +1,23 @@
 package networkreader_test
 
 import (
+	"fmt"
 	"net"
+
+	"metron/networkreader"
+	"metron/writers/mocks"
 
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"metron/networkreader"
-	"fmt"
-	"sync"
 )
 
 var _ = Describe("NetworkReader", func() {
 	Context("without a running listener", func() {
 		It("Emit returns a context with the given name", func() {
-			reader := networkreader.New("127.0.0.1:3456", gosteno.NewLogger("TestLogger"), "secretEventOrange", &mockWriter{})
+			reader := networkreader.New("127.0.0.1:3456", gosteno.NewLogger("TestLogger"), "secretEventOrange", &mocks.MockByteArrayWriter{})
 			context := reader.Emit()
 
 			Expect(context.Name).To(Equal("secretEventOrange"))
@@ -25,16 +26,15 @@ var _ = Describe("NetworkReader", func() {
 
 	Context("with a reader running", func() {
 		var reader *networkreader.NetworkReader
-		var writer *mockWriter
+		var writer mocks.MockByteArrayWriter
 
 		BeforeEach(func() {
-			writer = &mockWriter{}
-			reader = networkreader.New("127.0.0.1:3456", loggertesthelper.Logger(), "networkReader", writer)
+			writer = mocks.MockByteArrayWriter{}
+			reader = networkreader.New("127.0.0.1:3456", loggertesthelper.Logger(), "networkReader", &writer)
 
 			loggertesthelper.TestLoggerSink.Clear()
-			go func() {
-				reader.Start()
-			}()
+			go reader.Start()
+
 			Eventually(loggertesthelper.TestLoggerSink.LogContents).Should(ContainSubstring("Listening on port 127.0.0.1:3456"))
 		})
 
@@ -51,16 +51,16 @@ var _ = Describe("NetworkReader", func() {
 			_, err = connection.Write([]byte(expectedData))
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(func() int { return writer.getDataLength() }).Should(Equal(1))
-			data := string(writer.getData(0))
+			Eventually(writer.Data).Should(HaveLen(1))
+			data := string(writer.Data()[0])
 			Expect(data).To(Equal(expectedData))
 
 			_, err = connection.Write([]byte(otherData))
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(func() int { return writer.getDataLength() }).Should(Equal(2))
+			Eventually(writer.Data).Should(HaveLen(2))
 
-			data = string(writer.getData(1))
+			data = string(writer.Data()[1])
 			Expect(data).To(Equal(otherData))
 		})
 
@@ -76,7 +76,7 @@ var _ = Describe("NetworkReader", func() {
 			_, err = connection.Write([]byte(otherData))
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(func() int { return writer.getDataLength() }).Should(Equal(2))
+			Eventually(writer.Data).Should(HaveLen(2))
 
 			metrics := reader.Emit().Metrics
 			Expect(metrics).To(HaveLen(2))
@@ -94,32 +94,3 @@ var _ = Describe("NetworkReader", func() {
 		}, 2)
 	})
 })
-
-type mockWriter struct {
-	data [][]byte
-	sync.RWMutex
-}
-
-func (m *mockWriter) Write(p []byte) (bytesWritten int, err error) {
-	m.Lock()
-	defer m.Unlock()
-
-	m.data = append(m.data, p)
-	return len(p), nil
-}
-
-func (m *mockWriter) getDataLength() int {
-	m.RLock()
-	defer m.RUnlock()
-
-	return len(m.data)
-}
-
-func (m *mockWriter) getData(index int) []byte {
-	m.RLock()
-	defer m.RUnlock()
-	
-	var dst []byte
-	copy(dst, m.data[index])
-	return m.data[index]
-}

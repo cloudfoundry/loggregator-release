@@ -1,7 +1,7 @@
 package varzforwarder_test
 
 import (
-	"metron/varzforwarder"
+	"metron/writers/varzforwarder"
 	"time"
 
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
@@ -9,19 +9,20 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
+	"metron/writers/mocks"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"metron/envelopewriter"
 )
 
 var _ = Describe("VarzForwarder", func() {
 	var (
-		mockWriter *envelopewriter.MockEnvelopeWriter
+		mockWriter *mocks.MockEnvelopeWriter
 		forwarder  *varzforwarder.VarzForwarder
 	)
 
 	BeforeEach(func() {
-		mockWriter = &envelopewriter.MockEnvelopeWriter{}
+		mockWriter = &mocks.MockEnvelopeWriter{}
 		forwarder = varzforwarder.New("test-component", time.Millisecond*100, loggertesthelper.Logger(), mockWriter)
 	})
 
@@ -172,7 +173,7 @@ var _ = Describe("VarzForwarder", func() {
 			expectedMetric := metric("origin", "metric", 0)
 			forwarder.Write(expectedMetric)
 
-			Eventually(func() int { return len(mockWriter.Events)}).Should(Equal(1))
+			Eventually(func() int { return len(mockWriter.Events) }).Should(Equal(1))
 			Expect(mockWriter.Events[0]).To(Equal(expectedMetric))
 		})
 	})

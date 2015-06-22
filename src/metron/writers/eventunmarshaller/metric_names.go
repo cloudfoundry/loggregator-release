@@ -1,4 +1,4 @@
-package unmarshallingeventwriter
+package eventunmarshaller
 
 const (
 	logMessageTotal = "logMessageTotal"

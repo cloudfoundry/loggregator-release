@@ -2,27 +2,28 @@ package messageaggregator_test
 
 import (
 	"fmt"
-	"metron/messageaggregator"
+	"metron/writers/messageaggregator"
 	"time"
 
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
+	"metron/writers/mocks"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"metron/envelopewriter"
 )
 
 var _ = Describe("MessageAggregator", func() {
 	var (
-		mockWriter   *envelopewriter.MockEnvelopeWriter
+		mockWriter        *mocks.MockEnvelopeWriter
 		messageAggregator *messageaggregator.MessageAggregator
 		originalTTL       time.Duration
 	)
 
 	BeforeEach(func() {
-		mockWriter = &envelopewriter.MockEnvelopeWriter{}
+		mockWriter = &mocks.MockEnvelopeWriter{}
 		messageAggregator = messageaggregator.New(loggertesthelper.Logger(), mockWriter)
 		originalTTL = messageaggregator.MaxTTL
 	})

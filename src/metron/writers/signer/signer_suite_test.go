@@ -1,4 +1,4 @@
-package signingwriter_test
+package signer_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestSigningWriter(t *testing.T) {
+func TestSigner(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Signing Writer Suite")
+	RunSpecs(t, "Signer Suite")
 }

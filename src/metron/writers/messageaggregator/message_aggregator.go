@@ -4,11 +4,12 @@ import (
 	"sync"
 	"time"
 
+	"metron/writers"
+
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/davecgh/go-spew/spew"
-	"metron/envelopewriter"
 )
 
 var MaxTTL = time.Minute
@@ -24,16 +25,16 @@ type MessageAggregator struct {
 	httpUnmatchedStopReceivedCount  uint64
 	counterEventReceivedCount       uint64
 
-	lock   sync.Mutex
+	lock sync.Mutex
 
-	logger *gosteno.Logger
-	outputWriter envelopewriter.EnvelopeWriter
+	logger       *gosteno.Logger
+	outputWriter writers.EnvelopeWriter
 }
 
-func New(logger *gosteno.Logger, outputWriter envelopewriter.EnvelopeWriter) *MessageAggregator {
+func New(logger *gosteno.Logger, outputWriter writers.EnvelopeWriter) *MessageAggregator {
 	return &MessageAggregator{
 		logger:               logger,
-		outputWriter:		  outputWriter,
+		outputWriter:         outputWriter,
 		startEventsByEventID: make(map[eventID]startEventEntry),
 		counterTotals:        make(map[counterID]uint64),
 	}

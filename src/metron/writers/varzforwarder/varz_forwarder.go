@@ -5,10 +5,11 @@ import (
 	"sync"
 	"time"
 
+	"metron/writers"
+
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/sonde-go/events"
-	"metron/envelopewriter"
 )
 
 type VarzForwarder struct {
@@ -16,18 +17,18 @@ type VarzForwarder struct {
 	componentName   string
 	ttl             time.Duration
 
-	logger *gosteno.Logger
-	outputWriter envelopewriter.EnvelopeWriter
-	lock   sync.RWMutex
+	logger       *gosteno.Logger
+	outputWriter writers.EnvelopeWriter
+	lock         sync.RWMutex
 }
 
-func New(componentName string, ttl time.Duration, logger *gosteno.Logger, outputWriter envelopewriter.EnvelopeWriter) *VarzForwarder {
+func New(componentName string, ttl time.Duration, logger *gosteno.Logger, outputWriter writers.EnvelopeWriter) *VarzForwarder {
 	return &VarzForwarder{
 		metricsByOrigin: make(map[string]*metrics),
 		componentName:   componentName,
 		ttl:             ttl,
 		logger:          logger,
-		outputWriter:	 outputWriter,
+		outputWriter:    outputWriter,
 	}
 }
 

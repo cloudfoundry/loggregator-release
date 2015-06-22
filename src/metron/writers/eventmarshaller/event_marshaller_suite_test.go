@@ -1,4 +1,4 @@
-package dopplerwriter_test
+package eventmarshaller_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestDopplerWriter(t *testing.T) {
+func TestEventMarshaller(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Doppler Writer Suite")
+	RunSpecs(t, "Event Marshaller Suite")
 }
