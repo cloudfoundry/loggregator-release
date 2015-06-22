@@ -13,7 +13,6 @@ import (
 	"metron/writers/messageaggregator"
 	"metron/writers/signer"
 	"metron/writers/tagger"
-	"metron/writers/varzforwarder"
 
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/workpool"
@@ -34,8 +33,6 @@ var (
 	debug          = flag.Bool("debug", false, "Debug logging")
 )
 
-var metricTTL = time.Second * 5
-
 func main() {
 	flag.Parse()
 	config, logger := parseConfig(*debug, *configFilePath, *logFilePath)
@@ -45,8 +42,7 @@ func main() {
 	dopplerForwarder := dopplerforwarder.New(dopplerClientPool, logger)
 	byteSigner := signer.New(config.SharedSecret, dopplerForwarder)
 	marshaller := eventmarshaller.New(byteSigner, logger)
-	varzShim := varzforwarder.New(config.Job, metricTTL, marshaller, logger)
-	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, varzShim)
+	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, marshaller)
 	aggregator := messageaggregator.New(messageTagger, logger)
 
 	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, logger)
@@ -62,7 +58,6 @@ func main() {
 		legacyUnmarshaller,
 		dropsondeUnmarshaller,
 		aggregator,
-		varzShim,
 		marshaller,
 	}
 
