@@ -24,6 +24,5 @@
 
   "EtcdQueryIntervalMilliseconds": 100,
 
-  "LoggregatorLegacyPort": 3456,
   "LoggregatorDropsondePort": 3457
 }

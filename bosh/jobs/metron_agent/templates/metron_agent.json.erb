@@ -24,7 +24,6 @@
 
   "EtcdQueryIntervalMilliseconds": <%= p("metron_agent.etcd_query_interval_milliseconds") %>,
 
-  "LoggregatorLegacyPort": <%= p("loggregator.incoming_port") %>,
   "LoggregatorDropsondePort": <%= p("loggregator.dropsonde_incoming_port") %>
 
   <% if_p("syslog_daemon_config") do |_| %>

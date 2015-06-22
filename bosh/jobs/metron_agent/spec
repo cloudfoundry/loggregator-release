@@ -51,9 +51,6 @@ properties:
     description: "Interval for registering with collector"
     default: 60000
 
-  loggregator.incoming_port:
-    description: "Port where loggregator listens for legacy log messages"
-    default: 3456
   loggregator.dropsonde_incoming_port:
     description: "Port where loggregator listens for dropsonde log messages"
     default: 3457

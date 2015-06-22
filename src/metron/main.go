@@ -146,7 +146,6 @@ type metronConfig struct {
 	EtcdUrls                      []string
 	EtcdMaxConcurrentRequests     int
 	EtcdQueryIntervalMilliseconds int
-	LoggregatorLegacyPort         int
 	LoggregatorDropsondePort      int
 	SharedSecret                  string
 	Deployment                    string
