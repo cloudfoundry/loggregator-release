@@ -1,13 +1,12 @@
 package dopplerforwarder
 
-import "github.com/cloudfoundry/gosteno"
+import (
+	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
+)
 
 type ClientPool interface {
-	RandomClient() (Client, error)
-}
-
-type Client interface {
-	Send([]byte)
+	RandomClient() (loggregatorclient.LoggregatorClient, error)
 }
 
 type DopplerForwarder struct {

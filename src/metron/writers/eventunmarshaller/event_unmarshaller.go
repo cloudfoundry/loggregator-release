@@ -58,13 +58,12 @@ func New(logger *gosteno.Logger, outputWriter writers.EnvelopeWriter) *EventUnma
 	}
 }
 
-func (u *EventUnmarshaller) Write(message []byte) (bytesWritten int, err error) {
+func (u *EventUnmarshaller) Write(message []byte) {
 	envelope, err := u.UnmarshallMessage(message)
 	if err != nil {
-		return 0, err
+		return
 	}
 	u.outputWriter.Write(envelope)
-	return len(message), nil
 }
 
 func (u *EventUnmarshaller) UnmarshallMessage(message []byte) (*events.Envelope, error) {

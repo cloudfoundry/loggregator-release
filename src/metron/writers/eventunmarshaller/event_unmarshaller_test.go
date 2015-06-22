@@ -54,9 +54,7 @@ var _ = Describe("EventUnmarshaller", func() {
 
 	Context("Write", func() {
 		It("unmarshalls byte arrays and writes to an EnvelopeWriter", func() {
-			bytesWritten, err := unmarshaller.Write(message)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(bytesWritten).To(Equal(len(message)))
+			unmarshaller.Write(message)
 
 			Expect(mockWriter.Events).To(HaveLen(1))
 			Expect(mockWriter.Events[0]).To(Equal(event))
@@ -64,9 +62,7 @@ var _ = Describe("EventUnmarshaller", func() {
 
 		It("returns an error when it can't unmarshal", func() {
 			message = []byte("Bad Message")
-			bytesWritten, err := unmarshaller.Write(message)
-			Expect(err).To(HaveOccurred())
-			Expect(bytesWritten).To(Equal(0))
+			unmarshaller.Write(message)
 
 			Expect(mockWriter.Events).To(HaveLen(0))
 		})
