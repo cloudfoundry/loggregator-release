@@ -22,7 +22,7 @@ type VarzForwarder struct {
 	lock         sync.RWMutex
 }
 
-func New(componentName string, ttl time.Duration, logger *gosteno.Logger, outputWriter writers.EnvelopeWriter) *VarzForwarder {
+func New(componentName string, ttl time.Duration, outputWriter writers.EnvelopeWriter, logger *gosteno.Logger) *VarzForwarder {
 	return &VarzForwarder{
 		metricsByOrigin: make(map[string]*metrics),
 		componentName:   componentName,

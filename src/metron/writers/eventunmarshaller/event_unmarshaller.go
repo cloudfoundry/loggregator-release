@@ -1,18 +1,3 @@
-// Package eventunmarshaller provides a tool for unmarshalling Envelopes
-// from Protocol Buffer messages.
-//
-// Use
-//
-// Instantiate a Marshaller and run it:
-//
-//		unmarshaller := eventunmarshaller.New(logger)
-//		inputChan :=  make(chan []byte) // or use a channel provided by some other source
-//		outputChan := make(chan *events.Envelope)
-//		go unmarshaller.Run(inputChan, outputChan)
-//
-// The unmarshaller self-instruments, counting the number of messages
-// processed and the number of errors. These can be accessed through the Emit
-// function on the unmarshaller.
 package eventunmarshaller
 
 import (
@@ -43,7 +28,7 @@ type EventUnmarshaller struct {
 
 // New instantiates a EventUnmarshaller and logs to the
 // provided logger.
-func New(logger *gosteno.Logger, outputWriter writers.EnvelopeWriter) *EventUnmarshaller {
+func New(outputWriter writers.EnvelopeWriter, logger *gosteno.Logger) *EventUnmarshaller {
 	receiveCounts := make(map[events.Envelope_EventType]*uint64)
 	for key := range events.Envelope_EventType_name {
 		var count uint64

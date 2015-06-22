@@ -24,12 +24,12 @@ type NetworkReader struct {
 	logger *gosteno.Logger
 }
 
-func New(host string, givenLogger *gosteno.Logger, name string, writer writers.ByteArrayWriter) *NetworkReader {
+func New(host string, name string, writer writers.ByteArrayWriter, logger *gosteno.Logger) *NetworkReader {
 	return &NetworkReader{
-		logger:      givenLogger,
 		host:        host,
 		contextName: name,
 		writer:      writer,
+		logger:      logger,
 	}
 }
 

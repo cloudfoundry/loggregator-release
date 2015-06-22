@@ -40,21 +40,21 @@ func main() {
 	flag.Parse()
 	config, logger := parseConfig(*debug, *configFilePath, *logFilePath)
 
-	dopplerClientPool := initializeClientPool(config, logger, config.LoggregatorDropsondePort)
+	dopplerClientPool := initializeClientPool(config, logger)
 
 	dopplerForwarder := dopplerforwarder.New(dopplerClientPool, logger)
 	byteSigner := signer.New(config.SharedSecret, dopplerForwarder)
-	marshaller := eventmarshaller.New(logger, byteSigner)
-	varzShim := varzforwarder.New(config.Job, metricTTL, logger, marshaller)
+	marshaller := eventmarshaller.New(byteSigner, logger)
+	varzShim := varzforwarder.New(config.Job, metricTTL, marshaller, logger)
 	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, varzShim)
-	aggregator := messageaggregator.New(logger, messageTagger)
+	aggregator := messageaggregator.New(messageTagger, logger)
 
-	dropsondeUnmarshaller := eventunmarshaller.New(logger, aggregator)
-	dropsondeReader := networkreader.New(fmt.Sprintf("localhost:%d", config.DropsondeIncomingMessagesPort), logger, "dropsondeAgentListener", dropsondeUnmarshaller)
+	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, logger)
+	dropsondeReader := networkreader.New(fmt.Sprintf("localhost:%d", config.DropsondeIncomingMessagesPort), "dropsondeAgentListener", dropsondeUnmarshaller, logger)
 
 	// TODO: remove next two lines when legacy support is removed (or extracted to injector)
 	legacyUnmarshaller := legacyunmarshaller.New(aggregator, logger)
-	legacyReader := networkreader.New(fmt.Sprintf("localhost:%d", config.LegacyIncomingMessagesPort), logger, "legacyAgentListener", legacyUnmarshaller)
+	legacyReader := networkreader.New(fmt.Sprintf("localhost:%d", config.LegacyIncomingMessagesPort), "legacyAgentListener", legacyUnmarshaller, logger)
 
 	instrumentables := []instrumentation.Instrumentable{
 		legacyReader,
@@ -73,7 +73,7 @@ func main() {
 }
 
 func startMonitoringEndpoints(config metronConfig, instrumentables []instrumentation.Instrumentable, logger *gosteno.Logger) {
-	component := initializeComponent(config, logger, instrumentables)
+	component := initializeComponent(config, instrumentables, logger)
 	go collectorregistrar.NewCollectorRegistrar(cfcomponent.DefaultYagnatsClientProvider, component, time.Duration(config.CollectorRegistrarIntervalMilliseconds)*time.Millisecond, &config.Config).Run()
 
 	if err := component.StartMonitoringEndpoints(); err != nil {
@@ -81,7 +81,7 @@ func startMonitoringEndpoints(config metronConfig, instrumentables []instrumenta
 	}
 }
 
-func initializeClientPool(config metronConfig, logger *gosteno.Logger, port int) *clientpool.LoggregatorClientPool {
+func initializeClientPool(config metronConfig, logger *gosteno.Logger) *clientpool.LoggregatorClientPool {
 	adapter := storeAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	err := adapter.Connect()
 	if err != nil {
@@ -94,7 +94,7 @@ func initializeClientPool(config metronConfig, logger *gosteno.Logger, port int)
 	go inZoneServerAddressList.Run(time.Duration(config.EtcdQueryIntervalMilliseconds) * time.Millisecond)
 	go allZoneServerAddressList.Run(time.Duration(config.EtcdQueryIntervalMilliseconds) * time.Millisecond)
 
-	clientPool := clientpool.NewLoggregatorClientPool(logger, port, inZoneServerAddressList, allZoneServerAddressList)
+	clientPool := clientpool.NewLoggregatorClientPool(logger, config.LoggregatorDropsondePort, inZoneServerAddressList, allZoneServerAddressList)
 	return clientPool
 }
 
@@ -107,7 +107,7 @@ func storeAdapterProvider(urls []string, concurrentRequests int) storeadapter.St
 	return etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
 }
 
-func initializeComponent(config metronConfig, logger *gosteno.Logger, instrumentables []instrumentation.Instrumentable) cfcomponent.Component {
+func initializeComponent(config metronConfig, instrumentables []instrumentation.Instrumentable, logger *gosteno.Logger) cfcomponent.Component {
 	if len(config.NatsHosts) == 0 {
 		logger.Warn("Startup: Did not receive a NATS host - not going to register component")
 		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.NATSConn, error) {
@@ -123,7 +123,7 @@ func initializeComponent(config metronConfig, logger *gosteno.Logger, instrument
 	return component
 }
 
-func parseConfig(debug bool, configFile, logFilePath string) (metronConfig, *gosteno.Logger) {
+func parseConfig(debug bool, configFile string, logFilePath string) (metronConfig, *gosteno.Logger) {
 	config := metronConfig{}
 	err := cfcomponent.ReadConfigInto(&config, configFile)
 	if err != nil {

@@ -1,20 +1,3 @@
-// Package eventmarshaller provides a tool for marshalling Envelopes
-// to Protocol Buffer messages.
-//
-// Use
-//
-// Instantiate a Marshaller and run it:
-//
-//		marshaller := eventmarshaller.New(logger)
-//		inputChan := make(chan *events.Envelope) // or use a channel provided by some other source
-//		outputChan := make(chan []byte)
-//		go marshaller.Run(inputChan, outputChan)
-//
-// The marshaller self-instruments, counting the number of messages
-// processed and the number of errors. These can be accessed through the Emit
-// function on the marshaller.
-
-// TODO: Fix above comment block and similar comment block in eventunmarshaller
 package eventmarshaller
 
 import (
@@ -40,7 +23,7 @@ type EventMarshaller struct {
 }
 
 // New instantiates a EventMarshaller and logs to the provided logger.
-func New(logger *gosteno.Logger, outputWriter writers.ByteArrayWriter) *EventMarshaller {
+func New(outputWriter writers.ByteArrayWriter, logger *gosteno.Logger) *EventMarshaller {
 	messageCounts := make(map[events.Envelope_EventType]*uint64)
 	for key := range events.Envelope_EventType_name {
 		var count uint64
@@ -53,22 +36,22 @@ func New(logger *gosteno.Logger, outputWriter writers.ByteArrayWriter) *EventMar
 	}
 }
 
-func (u *EventMarshaller) Write(message *events.Envelope) {
+func (m *EventMarshaller) Write(message *events.Envelope) {
 	messageBytes, err := proto.Marshal(message)
 	if err != nil {
-		u.logger.Errorf("eventMarshaller: marshal error %v for message %v", err, message)
-		incrementCount(&u.marshalErrorCount)
+		m.logger.Errorf("eventMarshaller: marshal error %v for message %v", err, message)
+		incrementCount(&m.marshalErrorCount)
 		return
 	}
 
-	u.logger.Debugf("eventMarshaller: marshalled message %v", spew.Sprintf("%v", message))
+	m.logger.Debugf("eventMarshaller: marshalled message %v", spew.Sprintf("%v", message))
 
-	u.incrementMessageCount(message.GetEventType())
-	u.outputWriter.Write(messageBytes)
+	m.incrementMessageCount(message.GetEventType())
+	m.outputWriter.Write(messageBytes)
 }
 
-func (u *EventMarshaller) incrementMessageCount(eventType events.Envelope_EventType) {
-	incrementCount(u.messageCounts[eventType])
+func (m *EventMarshaller) incrementMessageCount(eventType events.Envelope_EventType) {
+	incrementCount(m.messageCounts[eventType])
 }
 
 func incrementCount(count *uint64) {

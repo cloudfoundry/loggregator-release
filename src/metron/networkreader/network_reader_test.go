@@ -7,7 +7,6 @@ import (
 	"metron/networkreader"
 	"metron/writers/mocks"
 
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 
 	. "github.com/onsi/ginkgo"
@@ -17,7 +16,7 @@ import (
 var _ = Describe("NetworkReader", func() {
 	Context("without a running listener", func() {
 		It("Emit returns a context with the given name", func() {
-			reader := networkreader.New("127.0.0.1:3456", gosteno.NewLogger("TestLogger"), "secretEventOrange", &mocks.MockByteArrayWriter{})
+			reader := networkreader.New("127.0.0.1:3456", "secretEventOrange", &mocks.MockByteArrayWriter{}, loggertesthelper.Logger())
 			context := reader.Emit()
 
 			Expect(context.Name).To(Equal("secretEventOrange"))
@@ -30,7 +29,7 @@ var _ = Describe("NetworkReader", func() {
 
 		BeforeEach(func() {
 			writer = mocks.MockByteArrayWriter{}
-			reader = networkreader.New("127.0.0.1:3456", loggertesthelper.Logger(), "networkReader", &writer)
+			reader = networkreader.New("127.0.0.1:3456", "networkReader", &writer, loggertesthelper.Logger())
 
 			loggertesthelper.TestLoggerSink.Clear()
 			go reader.Start()

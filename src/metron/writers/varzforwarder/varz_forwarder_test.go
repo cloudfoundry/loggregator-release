@@ -23,7 +23,7 @@ var _ = Describe("VarzForwarder", func() {
 
 	BeforeEach(func() {
 		mockWriter = &mocks.MockEnvelopeWriter{}
-		forwarder = varzforwarder.New("test-component", time.Millisecond*100, loggertesthelper.Logger(), mockWriter)
+		forwarder = varzforwarder.New("test-component", 100*time.Millisecond, mockWriter, loggertesthelper.Logger())
 	})
 
 	Describe("Emit", func() {

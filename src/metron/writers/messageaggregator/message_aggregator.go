@@ -31,7 +31,7 @@ type MessageAggregator struct {
 	outputWriter writers.EnvelopeWriter
 }
 
-func New(logger *gosteno.Logger, outputWriter writers.EnvelopeWriter) *MessageAggregator {
+func New(outputWriter writers.EnvelopeWriter, logger *gosteno.Logger) *MessageAggregator {
 	return &MessageAggregator{
 		logger:               logger,
 		outputWriter:         outputWriter,

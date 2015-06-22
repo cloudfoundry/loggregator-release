@@ -15,7 +15,7 @@ import (
 var _ = Describe("EventListener", func() {
 	Context("without a running listener", func() {
 		It("Emit returns a context with the given name", func() {
-			listener, _ := eventlistener.New("127.0.0.1:3456", gosteno.NewLogger("TestLogger"), "secretEventOrange")
+			listener, _ := eventlistener.New("127.0.0.1:3456", "secretEventOrange", gosteno.NewLogger("TestLogger"))
 			context := listener.Emit()
 
 			Expect(context.Name).To(Equal("secretEventOrange"))
@@ -30,7 +30,7 @@ var _ = Describe("EventListener", func() {
 		BeforeEach(func() {
 			listenerClosed = make(chan struct{})
 
-			listener, dataChannel = eventlistener.New("127.0.0.1:3456", loggertesthelper.Logger(), "eventListener")
+			listener, dataChannel = eventlistener.New("127.0.0.1:3456", "eventListener", loggertesthelper.Logger())
 
 			loggertesthelper.TestLoggerSink.Clear()
 			go func() {

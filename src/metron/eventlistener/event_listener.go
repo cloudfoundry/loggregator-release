@@ -22,9 +22,9 @@ type EventListener struct {
 	logger *gosteno.Logger
 }
 
-func New(host string, givenLogger *gosteno.Logger, name string) (*EventListener, <-chan []byte) {
+func New(host string, name string, logger *gosteno.Logger) (*EventListener, <-chan []byte) {
 	byteChan := make(chan []byte, 1024)
-	return &EventListener{logger: givenLogger, host: host, dataChannel: byteChan, contextName: name}, byteChan
+	return &EventListener{host: host, dataChannel: byteChan, contextName: name, logger: logger}, byteChan
 }
 
 func (eventListener *EventListener) Start() {

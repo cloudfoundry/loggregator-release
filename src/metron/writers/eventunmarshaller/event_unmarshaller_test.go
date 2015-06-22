@@ -26,7 +26,7 @@ var _ = Describe("EventUnmarshaller", func() {
 
 	BeforeEach(func() {
 		mockWriter = &mocks.MockEnvelopeWriter{}
-		unmarshaller = eventunmarshaller.New(loggertesthelper.Logger(), mockWriter)
+		unmarshaller = eventunmarshaller.New(mockWriter, loggertesthelper.Logger())
 		event = &events.Envelope{
 			Origin:      proto.String("fake-origin-3"),
 			EventType:   events.Envelope_ValueMetric.Enum(),
@@ -70,7 +70,7 @@ var _ = Describe("EventUnmarshaller", func() {
 
 	Context("metrics", func() {
 		BeforeEach(func() {
-			unmarshaller = eventunmarshaller.New(loggertesthelper.Logger(), mockWriter)
+			unmarshaller = eventunmarshaller.New(mockWriter, loggertesthelper.Logger())
 		})
 
 		It("emits the correct metrics context", func() {
