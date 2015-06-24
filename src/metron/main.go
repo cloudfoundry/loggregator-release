@@ -34,7 +34,7 @@ var (
 	debug          = flag.Bool("debug", false, "Debug logging")
 )
 
-var metricTTL = time.Second * 5
+var metricTTL = time.Hour
 
 func main() {
 	flag.Parse()
