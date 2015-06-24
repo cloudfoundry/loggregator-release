@@ -5,20 +5,18 @@ dependencies:
 files:
 - loggregator/src/metron/syslog_daemon_config/*
 - loggregator/src/metron/*.go # gosub
-- loggregator/src/metron/dopplerwriter/*.go # gosub
-- loggregator/src/metron/envelopewriter/*.go # gosub
-- loggregator/src/metron/eventlistener/*.go # gosub
-- loggregator/src/metron/legacymessage/*.go # gosub
-- loggregator/src/metron/marshallingeventwriter/*.go # gosub
-- loggregator/src/metron/messageaggregator/*.go # gosub
 - loggregator/src/metron/networkreader/*.go # gosub
-- loggregator/src/metron/signingwriter/*.go # gosub
-- loggregator/src/metron/tagger/*.go # gosub
-- loggregator/src/metron/unmarshallingeventwriter/*.go # gosub
-- loggregator/src/metron/varzforwarder/*.go # gosub
+- loggregator/src/metron/writers/*.go # gosub
+- loggregator/src/metron/writers/dopplerforwarder/*.go # gosub
+- loggregator/src/metron/writers/eventmarshaller/*.go # gosub
+- loggregator/src/metron/writers/eventunmarshaller/*.go # gosub
+- loggregator/src/metron/writers/legacyunmarshaller/*.go # gosub
+- loggregator/src/metron/writers/messageaggregator/*.go # gosub
+- loggregator/src/metron/writers/mocks/*.go # gosub
+- loggregator/src/metron/writers/signer/*.go # gosub
+- loggregator/src/metron/writers/tagger/*.go # gosub
+- loggregator/src/metron/writers/varzforwarder/*.go # gosub
 - loggregator/src/github.com/apcera/nats/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/dropsonde/dropsonde_marshaller/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metricbatcher/*.go # gosub
@@ -27,7 +25,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/gosteno/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gosteno/syslog/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gunk/workpool/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/loggregatorlib/agentlistener/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/auth/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/generic_logger/*.go # gosub
