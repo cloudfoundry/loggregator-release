@@ -1,74 +1,61 @@
 package experiment
-
-import (
-	"time"
-	"tools/metronbenchmark/messagereader"
-)
+import "time"
 
 type MessageReader interface {
-	Start()
-	GetRoundResult(roundId uint) *messagereader.RoundResult
+	Read()
 }
 
 type MessageWriter interface {
-	Send(roundId uint, timestamp time.Time)
-	GetSentCount(roundId uint) uint
+	Send()
 }
 
 type Experiment struct {
 	writer   MessageWriter
 	reader   MessageReader
-	newRound RoundFactory
-	rounds   []Round
+	stopChan chan struct{}
+	writeRate int
 }
 
-type RoundFactory func(id uint, rate uint, duration time.Duration) Round
-
-func New(writer MessageWriter, reader MessageReader, newRound RoundFactory) *Experiment {
+func New(writer MessageWriter, reader MessageReader, writeRate int) *Experiment {
 	return &Experiment{
 		writer:   writer,
+		writeRate: writeRate,
 		reader:   reader,
-		newRound: newRound,
+		stopChan: make(chan struct{}),
 	}
 }
 
-func (e *Experiment) Start(stop <-chan struct{}) {
-	e.rounds = []Round{}
-	for roundId := uint(1); ; roundId++ {
+func (e *Experiment) startWriter() {
+	writeInterval := time.Second / time.Duration(e.writeRate)
+	ticker := time.NewTicker(writeInterval)
+	for {
 		select {
-		case <-stop:
+		case <-e.stopChan:
+			return
+		case <- ticker.C:
+			e.writer.Send()
+		default:
+		}
+	}
+}
+
+func (e *Experiment) startReader() {
+	for {
+		select {
+		case <-e.stopChan:
 			return
 		default:
 		}
 
-		rate := (uint(1) << (roundId - 1)) * 100
-
-		round := e.newRound(roundId, rate, 10*time.Second)
-		e.rounds = append(e.rounds, round)
-		round.Perform(e.writer)
+		e.reader.Read()
 	}
 }
 
-func (e *Experiment) Results() Results {
-	results := []Result{}
+func (e *Experiment) Start() {
+	go e.startReader()
+	e.startWriter()
+}
 
-	for _, round := range e.rounds {
-		sent := e.writer.GetSentCount(round.Id())
-		rcvd := uint(0)
-
-		roundResult := e.reader.GetRoundResult(round.Id())
-		if roundResult != nil {
-			rcvd = roundResult.Received
-		}
-
-		lossRate := 100 * (float64(sent-rcvd) / float64(sent))
-		results = append(results, Result{
-			MessageRate:      round.Rate(),
-			MessagesSent:     sent,
-			MessagesReceived: rcvd,
-			LossPercentage:   lossRate,
-		})
-	}
-
-	return results
+func (e *Experiment) Stop() {
+	close(e.stopChan)
 }

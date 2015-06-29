@@ -1,83 +1,66 @@
 package messagereader
 
 import (
-	"strconv"
-	"strings"
-	"sync"
-	"time"
+	"fmt"
+	"net"
 
 	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 )
 
-type RoundResult struct {
-	Received uint
-	Latency  time.Duration
+type receivedMessagesReporter interface {
+	IncrementReceivedMessages()
 }
 
-type LoggregatorReader interface {
-	Read() (*events.LogMessage, bool)
+type MessageReader struct {
+	port       int
+	reporter   receivedMessagesReporter
+	connection *net.UDPConn
 }
 
-type messageReader struct {
-	lr      LoggregatorReader
-	results map[uint]*RoundResult
-	l       sync.RWMutex
-}
-
-func NewMessageReader(lr LoggregatorReader) *messageReader {
-	return &messageReader{
-		lr:      lr,
-		results: make(map[uint]*RoundResult),
-	}
-}
-
-func (mr *messageReader) Start() {
-	msg, ok := mr.lr.Read()
-	for ; ok; msg, ok = mr.lr.Read() {
-		msgTxt := string(msg.Message)
-		values := strings.Split(msgTxt, ":")
-		roundId := parseUint(values[1])
-		sequenceNum := parseUint(values[2])
-		timestamp := time.Unix(0, parseInt(values[3]))
-		mr.add(roundId, sequenceNum, timestamp)
-	}
-}
-
-func (mr *messageReader) GetRoundResult(roundId uint) *RoundResult {
-	mr.l.RLock()
-	defer mr.l.RUnlock()
-
-	return mr.results[roundId]
-}
-
-func (mr *messageReader) add(roundId uint, sequenceNum uint, timestamp time.Time) {
-	mr.l.Lock()
-	defer mr.l.Unlock()
-
-	_, ok := mr.results[roundId]
-	if !ok {
-		mr.results[roundId] = &RoundResult{}
-	}
-	mr.results[roundId].Received++
-
-	latency := time.Now().Sub(timestamp)
-	if latency > mr.results[roundId].Latency {
-		mr.results[roundId].Latency = latency
-	}
-}
-
-func parseUint(v string) uint {
-	r, err := strconv.ParseUint(v, 10, 64)
+func NewMessageReader(port int, reporter receivedMessagesReporter) *MessageReader {
+	udpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		panic(err)
 	}
-	return uint(r)
-}
 
-func parseInt(v string) int64 {
-	r, err := strconv.ParseInt(v, 10, 64)
+	connection, err := net.ListenUDP("udp", udpAddr)
 	if err != nil {
 		panic(err)
 	}
-	return r
+
+	return &MessageReader{
+		port:       port,
+		reporter:   reporter,
+		connection: connection,
+	}
+}
+
+func (reader *MessageReader) Read() {
+	readBuffer := make([]byte, 65535)
+	count, _, err := reader.connection.ReadFrom(readBuffer)
+	if err != nil {
+		fmt.Printf("Error reading from UDP connection\n")
+		return
+	}
+
+	readData := make([]byte, count)
+	copy(readData, readBuffer[:count])
+	var message events.Envelope
+	err = proto.Unmarshal(readData[32:], &message)
+
+	if err != nil {
+		fmt.Printf("Error unmarshalling data \n")
+		return
+	}
+
+	if message.GetValueMetric() != nil {
+		reader.reporter.IncrementReceivedMessages()
+	} else {
+		fmt.Printf("Unknonwn message %v received\n", message.GetEventType())
+	}
+}
+
+func (reader *MessageReader) Close() {
+	reader.connection.Close()
 }

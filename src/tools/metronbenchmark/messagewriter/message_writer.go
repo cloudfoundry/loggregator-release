@@ -2,42 +2,42 @@ package messagewriter
 
 import (
 	"fmt"
-	"io"
 	"net"
-	"time"
-	"github.com/gogo/protobuf/proto"
+
 	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 )
 
 type messageWriter struct {
-	w io.Writer
-	*roundSequencer
+	reporter sentMessagesReporter
 }
 
 var metronInput net.Conn
 
-func NewMessageWriter(w io.Writer) *messageWriter {
+type sentMessagesReporter interface {
+	IncrementSentMessages()
+}
+
+func NewMessageWriter(reporter sentMessagesReporter) *messageWriter {
 
 	var err error
 	metronInput, err = net.Dial("udp", "localhost:51161")
 	if err != nil {
-		fmt.Printf("Error: %s", err.Error())
+		fmt.Printf("DIAL Error: %s\n", err.Error())
 	}
 
 	return &messageWriter{
-		w:              w,
-		roundSequencer: newRoundSequener(),
+		reporter: reporter,
 	}
 }
 
-func (mw *messageWriter) Send(roundId uint, timestamp time.Time) {
-	fmt.Println("Sending Message...")
-//	_, err := metronInput.Write(formatMsg(roundId, mw.nextSequence(roundId), timestamp))
+func (mw *messageWriter) Send() {
 	_, err := metronInput.Write(basicValueMessage())
 	if err != nil {
-		fmt.Printf("Error: %s", err.Error())
+		fmt.Printf("SEND Error: %s\n", err.Error())
+	} else {
+		mw.reporter.IncrementSentMessages()
 	}
-	mw.w.Write(formatMsg(roundId, mw.nextSequence(roundId), timestamp))
 }
 
 func basicValueMessage() []byte {
