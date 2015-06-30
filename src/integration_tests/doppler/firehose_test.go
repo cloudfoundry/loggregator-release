@@ -10,6 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"runtime"
 )
 
 var _ = Describe("Firehose test", func() {
@@ -54,6 +55,23 @@ var _ = Describe("Firehose test", func() {
 
 			receivedMessageBytes := []byte{}
 			Eventually(receiveChan).Should(Receive(&receivedMessageBytes))
+
+			receivedMessage := UnmarshalMessage(receivedMessageBytes)
+			Expect(*receivedMessage.ContainerMetric).To(BeAssignableToTypeOf(events.ContainerMetric{}))
+		})
+
+		It("doesn't loose metrics under load", func() {
+			runtime.GOMAXPROCS(runtime.NumCPU())
+			containerMetric := factories.NewContainerMetric(appID, 0, 10, 2, 3)
+			count := 1000
+			for i:=0; i<count; i++ {
+				go sendEvent(containerMetric, inputConnection)
+			}
+
+			receivedMessageBytes := []byte{}
+			for i:=0; i<count; i++ {
+				Eventually(receiveChan).Should(Receive(&receivedMessageBytes))
+			}
 
 			receivedMessage := UnmarshalMessage(receivedMessageBytes)
 			Expect(*receivedMessage.ContainerMetric).To(BeAssignableToTypeOf(events.ContainerMetric{}))
