@@ -5,7 +5,6 @@ import (
 	"doppler/sinks"
 	"sync"
 
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
@@ -18,15 +17,13 @@ type FirehoseGroup interface {
 }
 
 type firehoseGroup struct {
-	logger            *gosteno.Logger
 	sinkWrappers      []*sink_wrapper.SinkWrapper
 	lastUsedSinkIndex int
 	sync.RWMutex
 }
 
-func NewFirehoseGroup(logger *gosteno.Logger) *firehoseGroup {
+func NewFirehoseGroup() *firehoseGroup {
 	return &firehoseGroup{
-		logger:       logger,
 		sinkWrappers: make([]*sink_wrapper.SinkWrapper, 0),
 	}
 }
@@ -83,13 +80,7 @@ func (group *firehoseGroup) BroadcastMessage(msg *events.Envelope) {
 		group.lastUsedSinkIndex = 0
 	}
 
-	select {
-	case group.sinkWrappers[group.lastUsedSinkIndex].InputChan <- msg:
-	default:
-		// don't add the message because there is no consumer
-		sinkIdentifier := group.sinkWrappers[group.lastUsedSinkIndex].Sink.Identifier()
-		group.logger.Debugf("No firehose consumer, dropping message for sink: %s", sinkIdentifier)
-	}
+	group.sinkWrappers[group.lastUsedSinkIndex].InputChan <- msg
 
 	group.lastUsedSinkIndex += 1
 }

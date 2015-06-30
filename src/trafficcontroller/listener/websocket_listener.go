@@ -75,9 +75,12 @@ func (l *websocketListener) listenWithTimeout(timeout time.Duration, url string,
 		}
 
 		convertedMessage, err := l.convertLogMessage(msg)
-		if err == nil {
-			outputChan <- convertedMessage
+		if err != nil {
+			l.logger.Errorf("WebsocketListener.Start: failed to convert log message %v", err)
+			continue
 		}
+
+		outputChan <- convertedMessage
 	}
 }
 

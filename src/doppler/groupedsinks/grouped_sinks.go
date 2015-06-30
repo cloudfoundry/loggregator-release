@@ -61,7 +61,7 @@ func (group *GroupedSinks) RegisterFirehoseSink(in chan<- *events.Envelope, sink
 
 	fgroup := group.firehoses[subscriptionId]
 	if fgroup == nil {
-		group.firehoses[subscriptionId] = firehose_group.NewFirehoseGroup(group.logger)
+		group.firehoses[subscriptionId] = firehose_group.NewFirehoseGroup()
 		fgroup = group.firehoses[subscriptionId]
 	}
 
@@ -73,15 +73,7 @@ func (group *GroupedSinks) Broadcast(appId string, msg *events.Envelope) {
 	defer group.RUnlock()
 
 	for _, wrapper := range group.apps[appId] {
-		select {
-		case wrapper.InputChan <- msg:
-		default:
-			if wrapper.InputChan != nil {
-				wrapper.Sink.UpdateDroppedMessageCount(1)
-			}
-			// do nothing because there is no consumer
-			group.logger.Debugf("Not broadcasting message to sink %s for app %s because no consumer present or ready", wrapper.Sink.Identifier(), appId)
-		}
+		wrapper.InputChan <- msg
 	}
 
 	group.BroadcastMessageToFirehoses(msg)

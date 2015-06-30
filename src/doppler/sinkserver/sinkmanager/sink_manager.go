@@ -113,7 +113,7 @@ func (sinkManager *SinkManager) UnregisterSink(sink sinks.Sink) {
 }
 
 func (sinkManager *SinkManager) RegisterFirehoseSink(sink sinks.Sink) bool {
-	inputChan := make(chan *events.Envelope, 1)
+	inputChan := make(chan *events.Envelope, 128)
 	ok := sinkManager.sinks.RegisterFirehoseSink(inputChan, sink)
 	if !ok {
 		return false
