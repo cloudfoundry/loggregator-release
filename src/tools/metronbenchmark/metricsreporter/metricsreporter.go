@@ -32,7 +32,7 @@ func (r *MetricsReporter) Start() {
 		case <-ticker.C:
 			// emit the metric for set reportTime, then reset values
 			loss := (float32(r.sent-r.received) / float32(r.sent)) * 100
-			fmt.Fprintf(r.writer, "%v, %v, %v\n", r.received, r.sent, loss)
+			fmt.Fprintf(r.writer, "%v, %v, %v\n", r.sent, r.received, loss)
 			r.reset()
 		case <-r.stopChan:
 			return

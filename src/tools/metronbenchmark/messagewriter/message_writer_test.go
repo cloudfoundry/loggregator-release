@@ -14,7 +14,7 @@ var _ = Describe("MessageWriter", func() {
 	})
 
 	It("should keep track of the total sent messages", func() {
-		msgWriter := messagewriter.NewMessageWriter(reporter)
+		msgWriter := messagewriter.NewMessageWriter(51161, "", reporter)
 		msgWriter.Send()
 		msgWriter.Send()
 		msgWriter.Send()
@@ -28,7 +28,7 @@ var _ = Describe("MessageWriter", func() {
 	})
 
 	It("should not increment total sent messages", func() {
-		messagewriter.NewMessageWriter(reporter)
+		messagewriter.NewMessageWriter(51161, "", reporter)
 		Expect(reporter.totalSent).To(Equal(0))
 	})
 })

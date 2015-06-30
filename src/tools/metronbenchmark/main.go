@@ -39,21 +39,19 @@ func main() {
 	}
 
 	reporter := metricsreporter.New(duration, os.Stdout)
-	writer := messagewriter.NewMessageWriter(reporter)
+	writer := messagewriter.NewMessageWriter(51161, "", reporter)
 	reader := messagereader.NewMessageReader(3457, reporter)
 	exp := experiment.New(writer, reader, *writeRate)
 
 	announceToEtcd()
 
 	go reporter.Start()
-	go func() {
-		timer := time.NewTimer(stopAfterDuration)
-		<- timer.C
-		exp.Stop()
-		reporter.Stop()
-	}()
+	go exp.Start()
 
-	exp.Start()
+	timer := time.NewTimer(stopAfterDuration)
+	<- timer.C
+	exp.Stop()
+	reporter.Stop()
 }
 
 func NewStoreAdapter(urls []string, concurrentRequests int) storeadapter.StoreAdapter {

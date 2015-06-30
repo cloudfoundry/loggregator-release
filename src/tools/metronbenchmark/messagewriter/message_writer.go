@@ -6,38 +6,64 @@ import (
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
+	"metron/writers"
+	"metron/writers/signer"
+	"github.com/pivotal-golang/localip"
 )
 
 type messageWriter struct {
-	reporter sentMessagesReporter
+	writer writers.ByteArrayWriter
 }
-
-var metronInput net.Conn
 
 type sentMessagesReporter interface {
 	IncrementSentMessages()
 }
 
-func NewMessageWriter(reporter sentMessagesReporter) *messageWriter {
+type networkWriter struct {
+	conn     net.Conn
+	reporter sentMessagesReporter
+}
 
-	var err error
-	metronInput, err = net.Dial("udp", "localhost:51161")
+func (nw networkWriter) Write(message []byte) {
+	n, err := nw.conn.Write(message)
+	if err != nil {
+		fmt.Printf("SEND Error: %s\n", err.Error())
+		return
+	}
+	if n < len(message) {
+		fmt.Printf("SEND Warning: Tried to send %d bytes but only sent %d\n", len(message), n)
+		return
+	}
+	nw.reporter.IncrementSentMessages()
+}
+
+func NewMessageWriter(port int, sharedSecret string, reporter sentMessagesReporter) *messageWriter {
+	ip, err := localip.LocalIP()
+	if err != nil {
+		panic(err)
+	}
+	output, err := net.Dial("udp", fmt.Sprintf("%s:%d", ip, port))
 	if err != nil {
 		fmt.Printf("DIAL Error: %s\n", err.Error())
 	}
 
-	return &messageWriter{
+	var writer writers.ByteArrayWriter
+	writer = networkWriter{
 		reporter: reporter,
+		conn:     output,
+	}
+
+	if len(sharedSecret) > 0 {
+		writer = signer.New(sharedSecret, writer)
+	}
+
+	return &messageWriter{
+		writer: writer,
 	}
 }
 
 func (mw *messageWriter) Send() {
-	_, err := metronInput.Write(basicValueMessage())
-	if err != nil {
-		fmt.Printf("SEND Error: %s\n", err.Error())
-	} else {
-		mw.reporter.IncrementSentMessages()
-	}
+	mw.writer.Write(basicValueMessage())
 }
 
 func basicValueMessage() []byte {
