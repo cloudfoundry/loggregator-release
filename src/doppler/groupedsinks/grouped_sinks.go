@@ -68,6 +68,22 @@ func (group *GroupedSinks) RegisterFirehoseSink(in chan<- *events.Envelope, sink
 	return fgroup.AddSink(sink, in)
 }
 
+func (group *GroupedSinks) IsFirehoseRegistered(sink sinks.Sink) bool {
+	group.RLock()
+	defer group.RUnlock()
+	subscriptionId := sink.StreamId()
+	if subscriptionId == "" {
+		return false
+	}
+
+	fgroup := group.firehoses[subscriptionId]
+	if fgroup == nil {
+		return false
+	}
+
+	return fgroup.Exists(sink)
+}
+
 func (group *GroupedSinks) Broadcast(appId string, msg *events.Envelope) {
 	group.RLock()
 	defer group.RUnlock()

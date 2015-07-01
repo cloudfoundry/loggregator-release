@@ -343,9 +343,22 @@ var _ = Describe("SinkManager", func() {
 			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeFalse())
 			Expect(fakeMetricSender.GetValue("messageRouter.numberOfFirehoseSinks").Value).To(Equal(float64(1)))
 		})
+
+		It("calls UnregisterFirehoseSink called once Run() returns", func() {
+			sink := &channelSink{done: make(chan struct{}), appId: "firehose-a", stop: make(chan struct{})}
+			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
+			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeFalse())
+			Eventually(sink.RunCalled).Should(BeTrue())
+
+			close(sink.stop)
+
+			Eventually(func() bool { return sinkManager.IsFirehoseRegistered(sink) }).Should(BeFalse())
+
+		})
 	})
 
 	Describe("UnregisterFirehoseSink", func() {
+
 		It("stops the sink and updates metrics", func() {
 			sink := &channelSink{done: make(chan struct{}), appId: "firehose-a"}
 
@@ -361,6 +374,28 @@ var _ = Describe("SinkManager", func() {
 
 			sinkManager.UnregisterFirehoseSink(sink)
 			Expect(fakeMetricSender.GetValue("messageRouter.numberOfFirehoseSinks").Value).To(Equal(float64(0)))
+		})
+	})
+
+	Describe("IsFirehoseSinkRegistered", func() {
+		It("returns true if sink is registered", func() {
+			sink := &channelSink{done: make(chan struct{}), appId: "firehose-a"}
+
+			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
+			Expect(sinkManager.IsFirehoseRegistered(sink)).To(BeTrue())
+		})
+
+		It("returns false if sink is not registered", func() {
+			sink := &channelSink{done: make(chan struct{}), appId: "firehose-a"}
+
+			Expect(sinkManager.IsFirehoseRegistered(sink)).To(BeFalse())
+		})
+
+		It("returns false if sink is not registered", func() {
+			sink := &channelSink{done: make(chan struct{}), appId: "firehose-a"}
+			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
+			sinkManager.UnregisterFirehoseSink(sink)
+			Expect(sinkManager.IsFirehoseRegistered(sink)).To(BeFalse())
 		})
 	})
 
@@ -419,6 +454,7 @@ type channelSink struct {
 	received          []*events.Envelope
 	runCalled         bool
 	ready             chan struct{}
+	stop              chan struct{}
 }
 
 func (c *channelSink) StreamId() string { return c.appId }
@@ -431,10 +467,18 @@ func (c *channelSink) Run(msgChan <-chan *events.Envelope) {
 	c.Unlock()
 
 	defer close(c.done)
-	for msg := range msgChan {
-		c.Lock()
-		c.received = append(c.received, msg)
-		c.Unlock()
+	for {
+		select {
+		case msg, ok := <-msgChan:
+			if !ok {
+				return
+			}
+			c.Lock()
+			c.received = append(c.received, msg)
+			c.Unlock()
+		case <-c.stop:
+			return
+		}
 	}
 }
 

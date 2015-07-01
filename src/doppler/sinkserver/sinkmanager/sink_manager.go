@@ -112,6 +112,10 @@ func (sinkManager *SinkManager) UnregisterSink(sink sinks.Sink) {
 	sinkManager.logger.Debugf("SinkManager: Sink with identifier %s requested closing. Closed it.", sink.Identifier())
 }
 
+func (sinkManager *SinkManager) IsFirehoseRegistered(sink sinks.Sink) bool {
+	return sinkManager.sinks.IsFirehoseRegistered(sink)
+}
+
 func (sinkManager *SinkManager) RegisterFirehoseSink(sink sinks.Sink) bool {
 	inputChan := make(chan *events.Envelope, 128)
 	ok := sinkManager.sinks.RegisterFirehoseSink(inputChan, sink)
@@ -125,6 +129,7 @@ func (sinkManager *SinkManager) RegisterFirehoseSink(sink sinks.Sink) bool {
 
 	go func() {
 		sink.Run(inputChan)
+		sinkManager.UnregisterFirehoseSink(sink)
 	}()
 
 	return true

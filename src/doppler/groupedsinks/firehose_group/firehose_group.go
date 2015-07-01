@@ -10,6 +10,7 @@ import (
 
 type FirehoseGroup interface {
 	AddSink(sink sinks.Sink, in chan<- *events.Envelope) bool
+	Exists(sink sinks.Sink) bool
 	RemoveSink(fsink sinks.Sink) bool
 	RemoveAllSinks()
 	IsEmpty() bool
@@ -28,11 +29,20 @@ func NewFirehoseGroup() *firehoseGroup {
 	}
 }
 
-func (group *firehoseGroup) AddSink(sink sinks.Sink, in chan<- *events.Envelope) bool {
+func (group *firehoseGroup) Exists(sink sinks.Sink) bool {
+	group.Lock()
+	defer group.Unlock()
 	for _, sinkWrapper := range group.sinkWrappers {
 		if sink.Identifier() == sinkWrapper.Sink.Identifier() {
-			return false
+			return true
 		}
+	}
+	return false
+}
+
+func (group *firehoseGroup) AddSink(sink sinks.Sink, in chan<- *events.Envelope) bool {
+	if group.Exists(sink) {
+		return false
 	}
 
 	group.Lock()
