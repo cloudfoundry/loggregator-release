@@ -36,7 +36,6 @@ var _ = Describe("MessageLossBenchmark", func() {
 
 		messageThroughput, err := strconv.ParseFloat(values[0], 64)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(messageThroughput).To(BeNumerically(">", 130000.0))
 		b.RecordValue("message throughput", messageThroughput)
 	}, 3)
 })
