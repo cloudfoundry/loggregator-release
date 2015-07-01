@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"net/http"
+	"strconv"
+	"math/rand"
+	"time"
 )
 
 type WebsocketMessageReader struct {
@@ -16,7 +19,8 @@ type receivedMessagesReporter interface {
 }
 
 func New(addr string, reporter receivedMessagesReporter) WebsocketMessageReader {
-	fullURL := "ws://" + addr + "/firehose/test"
+	rand.Seed(time.Now().UnixNano())
+	fullURL := "ws://" + addr + "/firehose/test" + strconv.Itoa(rand.Intn(100))
 
 	ws, _, err := websocket.DefaultDialer.Dial(fullURL, http.Header{})
 	if err != nil {
@@ -41,4 +45,8 @@ func (wmr WebsocketMessageReader) ReadAndReturn() []byte {
 func (wmr WebsocketMessageReader) Read() {
 	wmr.ReadAndReturn()
 	wmr.reporter.IncrementReceivedMessages()
+}
+
+func (wmr WebsocketMessageReader) Close() {
+	wmr.websocket.Close()
 }

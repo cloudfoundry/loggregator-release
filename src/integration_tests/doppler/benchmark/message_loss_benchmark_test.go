@@ -1,4 +1,4 @@
-package doppler_test
+package benchmark_test
 
 import (
 	. "github.com/onsi/ginkgo"
