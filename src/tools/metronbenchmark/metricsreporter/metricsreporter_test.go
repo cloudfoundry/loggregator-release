@@ -28,12 +28,12 @@ var _ = Describe("Metricsreporter", func() {
 	It("should increment sent counter", func() {
 		reporter.IncrementSentMessages()
 		reporter.IncrementSentMessages()
-		Eventually(buffer).Should(gbytes.Say("0, 2"))
+		Eventually(buffer).Should(gbytes.Say("2, 0"))
 	})
 
 	It("should increment received counter", func() {
 		reporter.IncrementReceivedMessages()
-		Eventually(buffer).Should(gbytes.Say("1, 0"))
+		Eventually(buffer).Should(gbytes.Say("0, 1"))
 	})
 
 	It("should report metric after reportTime is up", func() {
@@ -41,7 +41,7 @@ var _ = Describe("Metricsreporter", func() {
 		reporter.IncrementSentMessages()
 		reporter.IncrementReceivedMessages()
 
-		Eventually(buffer).Should(gbytes.Say("1, 2"))
+		Eventually(buffer).Should(gbytes.Say("2, 1"))
 		Eventually(buffer).Should(gbytes.Say("0, 0"))
 	})
 })
