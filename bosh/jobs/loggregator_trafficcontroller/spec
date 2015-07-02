@@ -66,6 +66,8 @@ properties:
     description: "IP addresses of Cloud Foundry NATS servers"
   nats.port:
     description: "IP port of Cloud Foundry NATS server"
+    default: 4222
+
   loggregator_endpoint.shared_secret:
     description: "Shared secret used to verify cryptographically signed loggregator messages"
   ssl.skip_cert_verify:
