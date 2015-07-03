@@ -4,9 +4,9 @@ import (
 	"trafficcontroller/channel_group_connector"
 
 	"errors"
-	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"sync"
 	"time"
@@ -71,34 +71,40 @@ var _ = Describe("ChannelGroupConnector", func() {
 					channelConnector := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, marshaller.DropsondeLogMessage, logger)
 					outputChan := make(chan []byte, 10)
 					stopChan := make(chan struct{})
-					defer close(stopChan)
 					dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("recentlogs", "abc123", true)
+
 					go channelConnector.Connect(dopplerEndpoint, outputChan, stopChan)
 
 					Eventually(fakeListeners[0].ConnectedHost).Should(Equal("ws://10.0.0.1:1234/apps/abc123/recentlogs"))
+					close(stopChan)
+					Eventually(outputChan).Should(BeClosed())
 				})
 
 				It("opens a listener with the firehose path", func() {
 					channelConnector := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, marshaller.DropsondeLogMessage, logger)
 					outputChan := make(chan []byte, 10)
 					stopChan := make(chan struct{})
-					defer close(stopChan)
 					dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("firehose", "subscription-123", true)
 					go channelConnector.Connect(dopplerEndpoint, outputChan, stopChan)
 
 					Eventually(fakeListeners[0].ConnectedHost).Should(Equal("ws://10.0.0.1:1234/firehose/subscription-123"))
+					close(stopChan)
+					Eventually(outputChan).Should(BeClosed())
 				})
 
 				It("puts messages on the channel received by the listener", func() {
 					channelConnector := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, marshaller.DropsondeLogMessage, logger)
 					outputChan := make(chan []byte)
+					stopChan := make(chan struct{})
 
 					go func() {
 						dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("recentlogs", "abc123", false)
-						channelConnector.Connect(dopplerEndpoint, outputChan, make(chan struct{}))
+						channelConnector.Connect(dopplerEndpoint, outputChan, stopChan)
 					}()
 
 					Eventually(outputChan).Should(Receive(Equal(expectedMessage1)))
+					close(stopChan)
+					Eventually(outputChan).Should(BeClosed())
 				})
 			})
 
@@ -111,16 +117,16 @@ var _ = Describe("ChannelGroupConnector", func() {
 					close(messageChan2)
 
 					provider.SetServerAddresses([]string{"10.0.0.1:1234", "10.0.0.2:1234"})
-
 				})
 
 				It("puts messages on the channel received by the listener", func(done Done) {
 					channelConnector := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, marshaller.DropsondeLogMessage, logger)
 					outputChan := make(chan []byte)
+					stopChan := make(chan struct{})
 
 					go func() {
 						dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("recentlogs", "abc123", false)
-						channelConnector.Connect(dopplerEndpoint, outputChan, make(chan struct{}))
+						channelConnector.Connect(dopplerEndpoint, outputChan, stopChan)
 						close(done)
 					}()
 
@@ -131,6 +137,27 @@ var _ = Describe("ChannelGroupConnector", func() {
 					}
 
 					Eventually(receivedMessages).Should(ConsistOf(expectedMessage1, expectedMessage2))
+					close(stopChan)
+					Eventually(outputChan).Should(BeClosed())
+				})
+			})
+
+			Context("when connected to zero servers", func() {
+				BeforeEach(func() {
+					provider.SetServerAddresses([]string{})
+				})
+
+				It("returns immediately when reconnect is set to false", func(done Done) {
+					channelConnector := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					outputChan := make(chan []byte)
+					stopChan := make(chan struct{})
+
+					dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("recentlogs", "abc123", false)
+					channelConnector.Connect(dopplerEndpoint, outputChan, stopChan)
+
+					close(stopChan)
+					Eventually(outputChan).Should(BeClosed())
+					close(done)
 				})
 			})
 		})

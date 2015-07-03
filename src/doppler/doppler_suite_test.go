@@ -1,23 +1,24 @@
 package main_test
 
 import (
-	doppler "doppler"
+	"doppler/config"
 	"doppler/iprange"
 	"fmt"
+	"testing"
+
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
-	"github.com/onsi/ginkgo/config"
-	"testing"
+	gikgoConfig "github.com/onsi/ginkgo/config"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var (
-	dopplerInstance *doppler.Doppler
-	etcdRunner      *etcdstorerunner.ETCDClusterRunner
-	etcdPort        int
+	dopplerConfig *config.Config
+	etcdRunner    *etcdstorerunner.ETCDClusterRunner
+	etcdPort      int
 )
 
 func TestDoppler(t *testing.T) {
@@ -26,12 +27,12 @@ func TestDoppler(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	etcdPort = 5500 + (config.GinkgoConfig.ParallelNode-1)*10
+	etcdPort = 5500 + (gikgoConfig.GinkgoConfig.ParallelNode-1)*10
 	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
 	etcdRunner.Start()
 
 	etcdUrl := fmt.Sprintf("http://localhost:%d", etcdPort)
-	dopplerConfig := &doppler.Config{
+	dopplerConfig = &config.Config{
 		EtcdUrls:                  []string{etcdUrl},
 		EtcdMaxConcurrentRequests: 10,
 
@@ -45,15 +46,13 @@ var _ = BeforeSuite(func() {
 		SkipCertVerify:                true,
 		BlackListIps:                  []iprange.IPRange{},
 		ContainerMetricTTLSeconds:     120,
+		SinkInactivityTimeoutSeconds:  2,
+		UnmarshallerCount:             1,
 	}
 	cfcomponent.Logger = loggertesthelper.Logger()
-
-	dopplerInstance = doppler.New("127.0.0.1", dopplerConfig, loggertesthelper.Logger(), "dropsondeOrigin")
-	go dopplerInstance.Start()
 })
 
 var _ = AfterSuite(func() {
-	dopplerInstance.Stop()
 	etcdRunner.Adapter().Disconnect()
 	etcdRunner.Stop()
 })

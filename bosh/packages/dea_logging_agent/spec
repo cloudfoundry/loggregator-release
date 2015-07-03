@@ -1,32 +1,32 @@
 ---
 name: dea_logging_agent
 dependencies:
-- golang1.3
+- golang1.4
 files:
 - loggregator/src/deaagent/*.go # gosub
 - loggregator/src/deaagent/deaagent/*.go # gosub
 - loggregator/src/deaagent/domain/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/dropsonde/control/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/dropsonde/events/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/dropsonde/factories/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/log_sender/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/logs/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/metricbatcher/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/metrics/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gosteno/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gosteno/syslog/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/sonde-go/events/*.go # gosub
 - loggregator/src/github.com/gogo/protobuf/proto/*.go # gosub
 - loggregator/src/github.com/howeyc/fsnotify/*.go # gosub
-- loggregator/src/github.com/nu7hatch/gouuid/*.go # gosub
 - loggregator/src/github.com/apcera/nats/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/factories/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/instrumented_handler/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/instrumented_round_tripper/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/dropsonde/metrics/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/runtime_stats/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/auth/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/yagnats/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/yagnats/fakeyagnats/*.go # gosub
+- loggregator/src/github.com/nu7hatch/gouuid/*.go # gosub
 - loggregator/src/github.com/pivotal-golang/localip/*.go # gosub

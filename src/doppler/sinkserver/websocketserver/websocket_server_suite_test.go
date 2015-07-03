@@ -4,13 +4,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/cloudfoundry/dropsonde/events"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	"github.com/gogo/protobuf/proto"
-	"github.com/gorilla/websocket"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
+	"github.com/gorilla/websocket"
 )
 
 var logger = loggertesthelper.Logger()

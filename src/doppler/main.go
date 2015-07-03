@@ -11,10 +11,12 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"doppler/config"
+
+	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/yagnats"
@@ -37,13 +39,15 @@ func (hm DopplerServerHealthMonitor) Ok() bool {
 	return true
 }
 
-var StoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
-	workPool := workpool.NewWorkPool(concurrentRequests)
-
-	return etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
+func NewStoreAdapter(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
+	workPool, err := workpool.NewWorkPool(concurrentRequests)
+	if err != nil {
+		panic(err)
+	}
+	etcdStoreAdapter := etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
+	etcdStoreAdapter.Connect()
+	return etcdStoreAdapter
 }
-
-const HeartbeatInterval = 10 * time.Second
 
 func main() {
 	seed := time.Now().UnixNano()
@@ -86,44 +90,28 @@ func main() {
 		}()
 	}
 
-	config, logger := ParseConfig(logLevel, configFile, logFilePath)
+	conf, logger := ParseConfig(logLevel, configFile, logFilePath)
 
-	if len(config.NatsHosts) == 0 {
+	dropsonde.Initialize(conf.MetronAddress, "DopplerServer")
+
+	if len(conf.NatsHosts) == 0 {
 		logger.Warn("Startup: Did not receive a NATS host - not going to regsiter component")
 		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.NATSConn, error) {
 			return fakeyagnats.Connect(), nil
 		}
 	}
 
-	err = config.Validate(logger)
+	err = conf.Validate(logger)
 	if err != nil {
 		panic(err)
 	}
 
-	doppler := New(localIp, config, logger, "doppler")
-
-	cfc, err := cfcomponent.NewComponent(
-		logger,
-		"DopplerServer",
-		config.Index,
-		&DopplerServerHealthMonitor{},
-		config.VarzPort,
-		[]string{config.VarzUser, config.VarzPass},
-		doppler.Emitters(),
-	)
+	storeAdapter := NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
+	doppler := New(localIp, conf, logger, storeAdapter, "doppler")
 
 	if err != nil {
 		panic(err)
 	}
-
-	go collectorregistrar.NewCollectorRegistrar(cfcomponent.DefaultYagnatsClientProvider, cfc, time.Duration(config.CollectorRegistrarIntervalMilliseconds)*time.Millisecond, &config.Config).Run()
-
-	go func() {
-		err := cfc.StartMonitoringEndpoints()
-		if err != nil {
-			panic(err)
-		}
-	}()
 
 	go doppler.Start()
 	logger.Info("Startup: doppler server started.")
@@ -131,7 +119,8 @@ func main() {
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Kill, os.Interrupt)
 
-	StartHeartbeats(localIp, HeartbeatInterval, config, logger)
+	storeAdapter = NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
+	StartHeartbeats(localIp, config.HeartbeatInterval, conf, storeAdapter, logger)
 
 	for {
 		select {
@@ -145,8 +134,8 @@ func main() {
 	}
 }
 
-func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gosteno.Logger) {
-	config := &Config{}
+func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*config.Config, *gosteno.Logger) {
+	config := &config.Config{}
 	err := cfcomponent.ReadConfigInto(config, *configFile)
 	if err != nil {
 		panic(err)
@@ -158,16 +147,17 @@ func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gos
 	return config, logger
 }
 
-func StartHeartbeats(localIp string, ttl time.Duration, config *Config, logger *gosteno.Logger) (stopChan chan (chan bool)) {
+func StartHeartbeats(localIp string, ttl time.Duration, config *config.Config, storeAdapter storeadapter.StoreAdapter, logger *gosteno.Logger) (stopChan chan (chan bool)) {
 	if len(config.EtcdUrls) == 0 {
 		return
 	}
 
-	adapter := StoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
-	adapter.Connect()
+	if storeAdapter == nil {
+		panic("store adapter is nil")
+	}
 
 	logger.Debugf("Starting Health Status Updates to Store: /healthstatus/doppler/%s/%s/%d", config.Zone, config.JobName, config.Index)
-	status, stopChan, err := adapter.MaintainNode(storeadapter.StoreNode{
+	status, stopChan, err := storeAdapter.MaintainNode(storeadapter.StoreNode{
 		Key:   fmt.Sprintf("/healthstatus/doppler/%s/%s/%d", config.Zone, config.JobName, config.Index),
 		Value: []byte(localIp),
 		TTL:   uint64(ttl.Seconds()),

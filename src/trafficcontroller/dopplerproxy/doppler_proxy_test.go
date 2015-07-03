@@ -3,7 +3,6 @@ package dopplerproxy_test
 import (
 	"trafficcontroller/dopplerproxy"
 
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/server/handlers"
 	"io/ioutil"
@@ -13,7 +12,6 @@ import (
 	"sync"
 	"time"
 	"trafficcontroller/doppler_endpoint"
-	testhelpers "trafficcontroller_testhelpers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -21,16 +19,16 @@ import (
 
 var _ = Describe("ServeHTTP", func() {
 	var (
-		auth                  testhelpers.LogAuthorizer
-		adminAuth             testhelpers.AdminAuthorizer
+		auth                  LogAuthorizer
+		adminAuth             AdminAuthorizer
 		proxy                 *dopplerproxy.Proxy
 		recorder              *httptest.ResponseRecorder
 		channelGroupConnector *fakeChannelGroupConnector
 	)
 
 	BeforeEach(func() {
-		auth = testhelpers.LogAuthorizer{Result: testhelpers.AuthorizerResult{Authorized: true}}
-		adminAuth = testhelpers.AdminAuthorizer{Result: testhelpers.AuthorizerResult{Authorized: true}}
+		auth = LogAuthorizer{Result: AuthorizerResult{Authorized: true}}
+		adminAuth = AdminAuthorizer{Result: AuthorizerResult{Authorized: true}}
 
 		channelGroupConnector = &fakeChannelGroupConnector{messages: make(chan []byte, 10)}
 
@@ -38,7 +36,6 @@ var _ = Describe("ServeHTTP", func() {
 			auth.Authorize,
 			adminAuth.Authorize,
 			channelGroupConnector,
-			cfcomponent.Config{},
 			dopplerproxy.TranslateFromDropsondePath,
 			"cookieDomain",
 			loggertesthelper.Logger(),
@@ -57,13 +54,12 @@ var _ = Describe("ServeHTTP", func() {
 		})
 
 		Context("if the path does not end with /stream or /recentlogs", func() {
-			It("returns a 404 and sets the WWW-Authenticate to basic", func() {
+			It("returns a 404", func() {
 				req, _ := http.NewRequest("GET", "/apps/abc123/bar", nil)
 
 				proxy.ServeHTTP(recorder, req)
 
 				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
 				Expect(recorder.Body.String()).To(Equal("Resource Not Found. /apps/abc123/bar"))
 			})
 
@@ -78,13 +74,12 @@ var _ = Describe("ServeHTTP", func() {
 		})
 
 		Context("if the app id is missing", func() {
-			It("returns a 404 and sets the WWW-Authenticate to basic", func() {
+			It("returns a 404", func() {
 				req, _ := http.NewRequest("GET", "/apps//stream", nil)
 
 				proxy.ServeHTTP(recorder, req)
 
 				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
 				Expect(recorder.Body.String()).To(Equal("App ID missing. Make request to /apps/APP_ID/stream"))
 			})
 
@@ -100,7 +95,7 @@ var _ = Describe("ServeHTTP", func() {
 
 		Context("if authorization fails", func() {
 			It("returns an unauthorized status and sets the WWW-Authenticate header", func() {
-				auth.Result = testhelpers.AuthorizerResult{Authorized: false, ErrorMessage: "Error: Invalid authorization"}
+				auth.Result = AuthorizerResult{Authorized: false, ErrorMessage: "Error: Invalid authorization"}
 
 				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
 				req.Header.Add("Authorization", "token")
@@ -116,7 +111,7 @@ var _ = Describe("ServeHTTP", func() {
 			})
 
 			It("It does not attempt to connect to doppler", func() {
-				auth.Result = testhelpers.AuthorizerResult{Authorized: false, ErrorMessage: "Authorization Failed"}
+				auth.Result = AuthorizerResult{Authorized: false, ErrorMessage: "Authorization Failed"}
 
 				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
 				req.Header.Add("Authorization", "token")
@@ -129,7 +124,7 @@ var _ = Describe("ServeHTTP", func() {
 		})
 
 		It("can read the authorization information from a cookie", func() {
-			auth.Result = testhelpers.AuthorizerResult{Authorized: false, ErrorMessage: "Authorization Failed"}
+			auth.Result = AuthorizerResult{Authorized: false, ErrorMessage: "Authorization Failed"}
 
 			req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
 
@@ -210,7 +205,7 @@ var _ = Describe("ServeHTTP", func() {
 			})
 
 			It("returns an unauthorized status and sets the WWW-Authenticate header if authorization fails", func() {
-				adminAuth.Result = testhelpers.AuthorizerResult{Authorized: false, ErrorMessage: "Error: Invalid authorization"}
+				adminAuth.Result = AuthorizerResult{Authorized: false, ErrorMessage: "Error: Invalid authorization"}
 
 				req, _ := http.NewRequest("GET", "/firehose/abc-123", nil)
 				req.Header.Add("Authorization", "token")
@@ -226,13 +221,12 @@ var _ = Describe("ServeHTTP", func() {
 		})
 
 		Context("if subscription_id is not provided (no trailing slash)", func() {
-			It("returns a 404 and sets the WWW-Authenticate to basic", func() {
+			It("returns a 404", func() {
 				req, _ := http.NewRequest("GET", "/firehose", nil)
 				req.Header.Add("Authorization", "token")
 
 				proxy.ServeHTTP(recorder, req)
 				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
 				Expect(recorder.Body.String()).To(Equal("Firehose SUBSCRIPTION_ID missing. Make request to /firehose/SUBSCRIPTION_ID"))
 			})
 
@@ -248,13 +242,12 @@ var _ = Describe("ServeHTTP", func() {
 		})
 
 		Context("if subscription_id is not provided (with trailing slash)", func() {
-			It("returns a 404 and sets the WWW-Authenticate to basic", func() {
+			It("returns a 404", func() {
 				req, _ := http.NewRequest("GET", "/firehose/", nil)
 				req.Header.Add("Authorization", "token")
 
 				proxy.ServeHTTP(recorder, req)
 				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
 				Expect(recorder.Body.String()).To(Equal("Firehose SUBSCRIPTION_ID missing. Make request to /firehose/SUBSCRIPTION_ID"))
 			})
 
@@ -270,13 +263,12 @@ var _ = Describe("ServeHTTP", func() {
 		})
 
 		Context("if there is an extra trailing slash after a valid firehose URL", func() {
-			It("returns a 404 and sets the WWW-Authenticate to basic", func() {
+			It("returns a 404", func() {
 				req, _ := http.NewRequest("GET", "/firehose/abc/123", nil)
 				req.Header.Add("Authorization", "token")
 
 				proxy.ServeHTTP(recorder, req)
 				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
 				Expect(recorder.Body.String()).To(Equal("Firehose SUBSCRIPTION_ID missing. Make request to /firehose/SUBSCRIPTION_ID"))
 			})
 
@@ -292,7 +284,7 @@ var _ = Describe("ServeHTTP", func() {
 		})
 
 		Context("if path is invalid but contains the string 'firehose'", func() {
-			It("returns a 404 for a bad firehose endpoint", func() {
+			It("returns a 404", func() {
 				req, _ := http.NewRequest("GET", "/appsfirehosefoo/abc-123", nil)
 				req.Header.Add("Authorization", "token")
 
@@ -325,20 +317,18 @@ var _ = Describe("ServeHTTP", func() {
 	})
 
 	Context("Other invalid paths", func() {
-		It("returns a 404 and sets the WWW-Authenticate to basic for an empty path", func() {
+		It("returns a 404 for an empty path", func() {
 			req, _ := http.NewRequest("GET", "/", nil)
 			proxy.ServeHTTP(recorder, req)
 			Expect(recorder.Code).To(Equal(http.StatusNotFound))
-			Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
 			Expect(recorder.Body.String()).To(Equal("Resource Not Found. /"))
 		})
 	})
 
-	It("returns a 404 and sets the WWW-Authenticate to basic if the path does not start with /apps or /firehose or /set-cookie", func() {
+	It("returns a 404 if the path does not start with /apps or /firehose or /set-cookie", func() {
 		req, _ := http.NewRequest("GET", "/notApps", nil)
 		proxy.ServeHTTP(recorder, req)
 		Expect(recorder.Code).To(Equal(http.StatusNotFound))
-		Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
 		Expect(recorder.Body.String()).To(Equal("Resource Not Found. /notApps"))
 	})
 

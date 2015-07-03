@@ -1,16 +1,28 @@
 {
-    "Index": 0,
-    "VarzPort": 1234,
-    "VarzUser": "admin",
-    "VarzPass": "admin",
-    "NatsUser": "",
-    "LegacyIncomingMessagesPort": 51160,
-    "DropsondeIncomingMessagesPort": 51161,
-    "SharedSecret": "shared_secret",
-    "EtcdUrls"    : ["http://127.0.0.1:5800"],
-    "EtcdMaxConcurrentRequests": 1,
-    "EtcdQueryIntervalMilliseconds": 10,
-    "Zone": "z1",
-    "LoggregatorLegacyPort": 3456,
-    "LoggregatorDropsondePort": 3457
+  "Index": 0,
+  "Job": "job-name",
+  "Zone": "z1",
+  "Deployment": "deployment-name",
+
+  "EtcdUrls"    : ["http://127.0.0.1:4001"],
+  "EtcdMaxConcurrentRequests": 1,
+
+  "SharedSecret": "shared_secret",
+
+  "LegacyIncomingMessagesPort": 51160,
+  "DropsondeIncomingMessagesPort": 51161,
+
+  "VarzUser": "admin",
+  "VarzPass": "admin",
+  "VarzPort": 1234,
+
+  "NatsHosts": ["127.0.0.1"],
+  "NatsPort": 4222,
+  "NatsUser": "",
+  "NatsPass": "",
+  "CollectorRegistrarIntervalMilliseconds": 10000,
+
+  "EtcdQueryIntervalMilliseconds": 100,
+
+  "LoggregatorDropsondePort": 3457
 }

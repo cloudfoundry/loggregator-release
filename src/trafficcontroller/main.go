@@ -16,13 +16,13 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar"
 	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
+	"github.com/pivotal-golang/localip"
 	"trafficcontroller/channel_group_connector"
 	"trafficcontroller/dopplerproxy"
 	"trafficcontroller/listener"
@@ -32,7 +32,10 @@ import (
 )
 
 var DefaultStoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
-	workPool := workpool.NewWorkPool(concurrentRequests)
+	workPool, err := workpool.NewWorkPool(concurrentRequests)
+	if err != nil {
+		panic(err)
+	}
 
 	return etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
 }
@@ -66,7 +69,7 @@ func (c *Config) setDefaults() {
 		c.JobName = "loggregator_trafficcontroller"
 	}
 
-	if c.EtcdMaxConcurrentRequests == 0 {
+	if c.EtcdMaxConcurrentRequests < 1 {
 		c.EtcdMaxConcurrentRequests = 10
 	}
 }
@@ -131,23 +134,26 @@ func main() {
 	adapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	adapter.Connect()
 
+	ipAddress, err := localip.LocalIP()
+	if err != nil {
+		panic(err)
+	}
+
 	dopplerProxy := makeDopplerProxy(adapter, config, logger)
-	startOutgoingDopplerProxy(net.JoinHostPort(dopplerProxy.IpAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dopplerProxy)
+	startOutgoingDopplerProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dopplerProxy)
 
 	legacyProxy := makeLegacyProxy(adapter, config, logger)
-	startOutgoingProxy(net.JoinHostPort(legacyProxy.IpAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), legacyProxy)
-
-	setupMonitoring(legacyProxy, config, logger)
+	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), legacyProxy)
 
 	rr := routerregistrar.NewRouterRegistrar(config.MbusClient, logger)
 	uri := "loggregator." + config.SystemDomain
-	err = rr.RegisterWithRouter(legacyProxy.IpAddress, config.OutgoingPort, []string{uri})
+	err = rr.RegisterWithRouter(ipAddress, config.OutgoingPort, []string{uri})
 	if err != nil {
 		logger.Fatalf("Startup: Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
 	}
 
 	uri = "doppler." + config.SystemDomain
-	err = rr.RegisterWithRouter(legacyProxy.IpAddress, config.OutgoingDropsondePort, []string{uri})
+	err = rr.RegisterWithRouter(ipAddress, config.OutgoingDropsondePort, []string{uri})
 	if err != nil {
 		logger.Fatalf("Startup: Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
 	}
@@ -160,7 +166,7 @@ func main() {
 		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
 			cfcomponent.DumpGoRoutine()
 		case <-killChan:
-			rr.UnregisterFromRouter(legacyProxy.IpAddress, config.OutgoingPort, []string{uri})
+			rr.UnregisterFromRouter(ipAddress, config.OutgoingPort, []string{uri})
 			break
 		}
 	}
@@ -194,6 +200,7 @@ func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gos
 
 func MakeProvider(adapter storeadapter.StoreAdapter, storeKeyPrefix string, outgoingPort uint32, logger *gosteno.Logger) serveraddressprovider.ServerAddressProvider {
 	loggregatorServerAddressList := servicediscovery.NewServerAddressList(adapter, storeKeyPrefix, logger)
+	loggregatorServerAddressList.DiscoverAddresses()
 	go loggregatorServerAddressList.Run(EtcdQueryInterval)
 
 	return serveraddressprovider.NewDynamicServerAddressProvider(loggregatorServerAddressList, outgoingPort)
@@ -202,17 +209,6 @@ func MakeProvider(adapter storeadapter.StoreAdapter, storeKeyPrefix string, outg
 func startOutgoingProxy(host string, proxy http.Handler) {
 	go func() {
 		err := http.ListenAndServe(host, proxy)
-		if err != nil {
-			panic(err)
-		}
-	}()
-}
-
-func setupMonitoring(proxy *dopplerproxy.Proxy, config *Config, logger *gosteno.Logger) {
-	go collectorregistrar.NewCollectorRegistrar(cfcomponent.DefaultYagnatsClientProvider, proxy.Component, time.Duration(config.CollectorRegistrarIntervalMilliseconds)*time.Millisecond, &config.Config).Run()
-
-	go func() {
-		err := proxy.StartMonitoringEndpoints()
 		if err != nil {
 			panic(err)
 		}
@@ -236,7 +232,7 @@ func makeProxy(adapter storeadapter.StoreAdapter, config *Config, logger *gosten
 	provider := MakeProvider(adapter, "/healthstatus/doppler", config.DopplerPort, logger)
 	cgc := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, messageGenerator, logger)
 
-	return dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, cgc, config.Config, translator, cookieDomain, logger)
+	return dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, cgc, translator, cookieDomain, logger)
 }
 
 func startOutgoingDopplerProxy(host string, proxy http.Handler) {

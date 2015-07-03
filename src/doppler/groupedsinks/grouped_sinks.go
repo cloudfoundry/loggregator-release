@@ -8,9 +8,10 @@ import (
 	"doppler/sinks/dump"
 	"doppler/sinks/syslog"
 	"doppler/sinks/websocket"
-	"github.com/cloudfoundry/dropsonde/events"
-	"github.com/cloudfoundry/gosteno"
 	"sync"
+
+	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/sonde-go/events"
 )
 
 func NewGroupedSinks(logger *gosteno.Logger) *GroupedSinks {
@@ -60,11 +61,27 @@ func (group *GroupedSinks) RegisterFirehoseSink(in chan<- *events.Envelope, sink
 
 	fgroup := group.firehoses[subscriptionId]
 	if fgroup == nil {
-		group.firehoses[subscriptionId] = firehose_group.NewFirehoseGroup(group.logger)
+		group.firehoses[subscriptionId] = firehose_group.NewFirehoseGroup()
 		fgroup = group.firehoses[subscriptionId]
 	}
 
 	return fgroup.AddSink(sink, in)
+}
+
+func (group *GroupedSinks) IsFirehoseRegistered(sink sinks.Sink) bool {
+	group.RLock()
+	defer group.RUnlock()
+	subscriptionId := sink.StreamId()
+	if subscriptionId == "" {
+		return false
+	}
+
+	fgroup := group.firehoses[subscriptionId]
+	if fgroup == nil {
+		return false
+	}
+
+	return fgroup.Exists(sink)
 }
 
 func (group *GroupedSinks) Broadcast(appId string, msg *events.Envelope) {
@@ -72,12 +89,7 @@ func (group *GroupedSinks) Broadcast(appId string, msg *events.Envelope) {
 	defer group.RUnlock()
 
 	for _, wrapper := range group.apps[appId] {
-		select {
-		case wrapper.InputChan <- msg:
-		default:
-			// do nothing because there is no consumer
-			group.logger.Debug("Not broadcasting message to sink because no consumer present")
-		}
+		wrapper.InputChan <- msg
 	}
 
 	group.BroadcastMessageToFirehoses(msg)

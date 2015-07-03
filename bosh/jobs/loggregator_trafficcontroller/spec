@@ -43,6 +43,11 @@ properties:
     default: "doppler"
   uaa.clients.doppler.secret:
     description: "Doppler's client secret to connect to UAA"
+  uaa.url:
+    description: URL of UAA
+  uaa.no_ssl:
+    description: Do not use SSL to connect to UAA (used in case uaa.url is not set)
+    default: false
   metron_endpoint.dropsonde_port:
     description: "The port used to emit dropsonde messages to the Metron agent"
     default: 3457

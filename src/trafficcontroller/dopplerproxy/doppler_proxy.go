@@ -3,8 +3,6 @@ package dopplerproxy
 import (
 	"fmt"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/gogo/protobuf/proto"
 	"net/http"
@@ -13,7 +11,6 @@ import (
 	"strings"
 	"time"
 	"trafficcontroller/authorization"
-	"trafficcontroller/channel_group_connector"
 	"trafficcontroller/doppler_endpoint"
 )
 
@@ -22,36 +19,22 @@ const FIREHOSE_ID = "firehose"
 type Proxy struct {
 	logAuthorize   authorization.LogAccessAuthorizer
 	adminAuthorize authorization.AdminAccessAuthorizer
-	connector      channel_group_connector.ChannelGroupConnector
+	connector      channelGroupConnector
 	translate      RequestTranslator
 	cookieDomain   string
 	logger         *gosteno.Logger
-	cfcomponent.Component
 }
 
 type RequestTranslator func(request *http.Request) (*http.Request, error)
 
 type Authorizer func(authToken string, appId string, logger *gosteno.Logger) (bool, error)
 
-func NewDopplerProxy(logAuthorize authorization.LogAccessAuthorizer, adminAuthorizer authorization.AdminAccessAuthorizer, connector channel_group_connector.ChannelGroupConnector, config cfcomponent.Config, translator RequestTranslator, cookieDomain string, logger *gosteno.Logger) *Proxy {
-	var instrumentables []instrumentation.Instrumentable
+type channelGroupConnector interface {
+	Connect(dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{})
+}
 
-	cfc, err := cfcomponent.NewComponent(
-		logger,
-		"LoggregatorTrafficcontroller",
-		0,
-		&TrafficControllerMonitor{},
-		config.VarzPort,
-		[]string{config.VarzUser, config.VarzPass},
-		instrumentables,
-	)
-
-	if err != nil {
-		return nil
-	}
-
+func NewDopplerProxy(logAuthorize authorization.LogAccessAuthorizer, adminAuthorizer authorization.AdminAccessAuthorizer, connector channelGroupConnector, translator RequestTranslator, cookieDomain string, logger *gosteno.Logger) *Proxy {
 	return &Proxy{
-		Component:      cfc,
 		logAuthorize:   logAuthorize,
 		adminAuthorize: adminAuthorizer,
 		connector:      connector,
@@ -87,7 +70,6 @@ func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 	case "set-cookie":
 		proxy.serveSetCookie(writer, translatedRequest, proxy.cookieDomain)
 	default:
-		writer.Header().Set("WWW-Authenticate", "Basic")
 		writer.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(writer, "Resource Not Found. %s", request.URL.Path)
 	}
@@ -105,8 +87,6 @@ func (proxy *Proxy) serveFirehose(writer http.ResponseWriter, request *http.Requ
 	}
 
 	if len(firehoseParams) != 1 || firehoseSubscriptionId == "" {
-		writer.Header().Set("WWW-Authenticate", "Basic")
-
 		writer.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(writer, "Firehose SUBSCRIPTION_ID missing. Make request to /firehose/SUBSCRIPTION_ID")
 		return
@@ -136,7 +116,6 @@ func (proxy *Proxy) serveAppLogs(writer http.ResponseWriter, request *http.Reque
 	validPaths := regexp.MustCompile("^/apps/(.*)/(recentlogs|stream|containermetrics)$")
 	matches := validPaths.FindStringSubmatch(request.URL.Path)
 	if len(matches) != 3 {
-		writer.Header().Set("WWW-Authenticate", "Basic")
 		writer.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(writer, "Resource Not Found. %s", request.URL.Path)
 		return
@@ -144,7 +123,6 @@ func (proxy *Proxy) serveAppLogs(writer http.ResponseWriter, request *http.Reque
 	appId := matches[1]
 
 	if appId == "" {
-		writer.Header().Set("WWW-Authenticate", "Basic")
 		writer.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(writer, "App ID missing. Make request to /apps/APP_ID/%s", matches[2])
 		return

@@ -5,13 +5,14 @@ import (
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
 	"fmt"
-	"github.com/cloudfoundry/dropsonde/events"
+	"net/http"
+	"time"
+
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gorilla/websocket"
-	"net/http"
-	"time"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	. "github.com/onsi/ginkgo"
@@ -21,7 +22,7 @@ import (
 var _ = Describe("WebsocketServer", func() {
 
 	var server *websocketserver.WebsocketServer
-	var sinkManager = sinkmanager.NewSinkManager(1024, false, blacklist.New(nil), loggertesthelper.Logger(), "dropsonde-origin", 1*time.Second)
+	var sinkManager = sinkmanager.New(1024, false, blacklist.New(nil), loggertesthelper.Logger(), "dropsonde-origin", 1*time.Second, 1*time.Second)
 	var appId = "my-app"
 	var wsReceivedChan chan []byte
 	var connectionDropped <-chan struct{}
@@ -32,7 +33,7 @@ var _ = Describe("WebsocketServer", func() {
 		cfcomponent.Logger = logger
 		wsReceivedChan = make(chan []byte)
 
-		server = websocketserver.New(apiEndpoint, sinkManager, 100*time.Millisecond, 100, logger)
+		server = websocketserver.New(apiEndpoint, sinkManager, 100*time.Millisecond, 100, "dropsonde-origin", logger)
 		go server.Start()
 		serverUrl := fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId)
 		websocket.DefaultDialer = &websocket.Dialer{HandshakeTimeout: 10 * time.Millisecond}

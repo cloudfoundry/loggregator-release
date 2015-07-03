@@ -11,5 +11,7 @@
     "CloudControllerAddress": "http://api.10.244.0.34.xip.io",
     "BulkApiUsername": "bulk_api",
     "BulkApiPassword": "bulk-password",
-    "PollingBatchSize": 100
+    "PollingBatchSize": 100,
+
+    "SkipCertVerify": false
 }

@@ -1,34 +1,55 @@
 package containermetric
 
 import (
-	"github.com/cloudfoundry/dropsonde/events"
 	"sync"
 	"time"
+
+	"github.com/cloudfoundry/sonde-go/events"
 )
 
 type ContainerMetricSink struct {
-	applicationId string
-	ttl           time.Duration
-	metrics       map[int32]*events.Envelope
-
+	applicationId       string
+	ttl                 time.Duration
+	metrics             map[int32]*events.Envelope
+	inactivityDuration  time.Duration
+	metricUpdateChannel chan<- int64
 	sync.RWMutex
 }
 
-func NewContainerMetricSink(applicationId string, ttl time.Duration) *ContainerMetricSink {
+func NewContainerMetricSink(applicationId string, ttl time.Duration, inactivityDuration time.Duration, metricUpdateChannel chan<- int64) *ContainerMetricSink {
 	return &ContainerMetricSink{
-		applicationId: applicationId,
-		ttl:           ttl,
-		metrics:       make(map[int32]*events.Envelope),
+		applicationId:       applicationId,
+		ttl:                 ttl,
+		inactivityDuration:  inactivityDuration,
+		metrics:             make(map[int32]*events.Envelope),
+		metricUpdateChannel: metricUpdateChannel,
 	}
 }
 
-func (sink *ContainerMetricSink) Run(eventChan <-chan *events.Envelope) {
-	for event := range eventChan {
-		if event.GetEventType() != events.Envelope_ContainerMetric {
-			continue
-		}
+func (sink *ContainerMetricSink) UpdateDroppedMessageCount(count int64) {
+	sink.metricUpdateChannel <- count
+}
 
-		sink.updateMetric(event)
+func (sink *ContainerMetricSink) Run(eventChan <-chan *events.Envelope) {
+
+	timer := time.NewTimer(sink.inactivityDuration)
+	for {
+		timer.Reset(sink.inactivityDuration)
+		select {
+		case event, ok := <-eventChan:
+			if !ok {
+				return
+			}
+
+			if event.GetEventType() != events.Envelope_ContainerMetric {
+				continue
+			}
+
+			sink.updateMetric(event)
+		case <-timer.C:
+			timer.Stop()
+			return
+		}
 	}
 }
 

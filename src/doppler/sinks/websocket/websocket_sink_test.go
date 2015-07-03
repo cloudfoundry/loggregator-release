@@ -2,15 +2,16 @@ package websocket_test
 
 import (
 	"doppler/sinks/websocket"
-	"github.com/cloudfoundry/dropsonde/emitter"
-	"github.com/cloudfoundry/dropsonde/events"
-	"github.com/cloudfoundry/dropsonde/factories"
-	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"net"
 	"sync"
 
+	"github.com/cloudfoundry/dropsonde/emitter"
+	"github.com/cloudfoundry/dropsonde/factories"
+	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -21,7 +22,7 @@ func (fake fakeAddr) Network() string {
 	return "RemoteAddressNetwork"
 }
 func (fake fakeAddr) String() string {
-	return "RemoteAddressString"
+	return "client-address"
 }
 
 type fakeMessageWriter struct {
@@ -50,20 +51,22 @@ func (fake *fakeMessageWriter) ReadMessages() [][]byte {
 var _ = Describe("WebsocketSink", func() {
 
 	var (
-		logger        *gosteno.Logger
-		websocketSink *websocket.WebsocketSink
-		fakeWebsocket *fakeMessageWriter
+		logger           *gosteno.Logger
+		websocketSink    *websocket.WebsocketSink
+		fakeWebsocket    *fakeMessageWriter
+		updateMetricChan chan int64
 	)
 
 	BeforeEach(func() {
 		logger = loggertesthelper.Logger()
 		fakeWebsocket = &fakeMessageWriter{}
-		websocketSink = websocket.NewWebsocketSink("appId", logger, fakeWebsocket, 10, "dropsonde-origin")
+		updateMetricChan = make(chan int64, 1)
+		websocketSink = websocket.NewWebsocketSink("appId", logger, fakeWebsocket, 10, "dropsonde-origin", updateMetricChan)
 	})
 
 	Describe("Identifier", func() {
 		It("returns the remote address", func() {
-			Expect(websocketSink.Identifier()).To(Equal("RemoteAddressString"))
+			Expect(websocketSink.Identifier()).To(Equal("client-address"))
 		})
 	})
 
@@ -102,6 +105,13 @@ var _ = Describe("WebsocketSink", func() {
 			inputChan <- messageTwo
 			Eventually(fakeWebsocket.ReadMessages).Should(HaveLen(2))
 			Expect(fakeWebsocket.ReadMessages()[1]).To(Equal(messageTwoBytes))
+		})
+	})
+
+	Describe("UpdateDroppedMessageCount", func() {
+		It("updates dropped message count", func() {
+			websocketSink.UpdateDroppedMessageCount(2)
+			Eventually(updateMetricChan).Should(Receive(Equal(int64(2))))
 		})
 	})
 })

@@ -112,7 +112,7 @@ func main() {
 	go agent.Start()
 
 	killChan := make(chan os.Signal)
-	signal.Notify(killChan, os.Kill, os.Interrupt)
+	signal.Notify(killChan, os.Interrupt)
 
 	for {
 		select {

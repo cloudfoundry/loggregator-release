@@ -2,158 +2,112 @@ package main
 
 import (
 	"flag"
-	"github.com/cloudfoundry/dropsonde/dropsonde_marshaller"
-	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
-	"github.com/cloudfoundry/dropsonde/events"
-	"github.com/cloudfoundry/dropsonde/signature"
+	"fmt"
+	"time"
+
+	"metron/networkreader"
+	"metron/writers/dopplerforwarder"
+	"metron/writers/eventmarshaller"
+	"metron/writers/eventunmarshaller"
+	"metron/writers/legacyunmarshaller"
+	"metron/writers/messageaggregator"
+	"metron/writers/signer"
+	"metron/writers/tagger"
+	"metron/writers/varzforwarder"
+
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/workpool"
-	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar"
 	"github.com/cloudfoundry/loggregatorlib/clientpool"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
-	"metron/eventlistener"
-	"metron/heartbeatrequester"
-	"metron/legacy_message/legacy_message_converter"
-	"metron/legacy_message/legacy_unmarshaller"
-	"metron/message_aggregator"
-	"metron/varz_forwarder"
-	"strconv"
-	"time"
 )
 
 var (
 	logFilePath    = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
-	configFilePath = flag.String("configFile", "config/metron.json", "Location of the Metron config json file")
+	configFilePath = flag.String("config", "config/metron.json", "Location of the Metron config json file")
 	debug          = flag.Bool("debug", false, "Debug logging")
 )
 
-var METRIC_TTL = time.Second * 5
-var PING_SENDER_INTERVAL = time.Second * 1
-
-var StoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
-	workPool := workpool.NewWorkPool(concurrentRequests)
-
-	return etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
-}
+var metricTTL = time.Hour
 
 func main() {
 	flag.Parse()
 	config, logger := parseConfig(*debug, *configFilePath, *logFilePath)
 
-	// TODO: delete next line when "legacy" format goes away
-	legacyMessageListener, legacyMessageChan := agentlistener.NewAgentListener("localhost:"+strconv.Itoa(config.LegacyIncomingMessagesPort), logger, "legacyAgentListener")
+	dopplerClientPool := initializeClientPool(config, logger)
 
-	pinger := heartbeatrequester.NewHeartbeatRequester(PING_SENDER_INTERVAL)
-	dropsondeMessageListener, dropsondeMessageChan := eventlistener.NewEventListener("localhost:"+strconv.Itoa(config.DropsondeIncomingMessagesPort), logger, "dropsondeAgentListener", pinger)
-	dropsondeClientPool, dropsondeServerDiscovery := initializeClientPool(config, logger, config.LoggregatorDropsondePort)
+	dopplerForwarder := dopplerforwarder.New(dopplerClientPool, logger)
+	byteSigner := signer.New(config.SharedSecret, dopplerForwarder)
+	marshaller := eventmarshaller.New(byteSigner, logger)
+	varzShim := varzforwarder.New(config.Job, metricTTL, marshaller, logger)
+	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, varzShim)
+	aggregator := messageaggregator.New(messageTagger, logger)
 
-	legacyUnmarshaller := legacy_unmarshaller.NewLegacyUnmarshaller(logger)
-	legacyMessageConverter := legacy_message_converter.NewLegacyMessageConverter(logger)
+	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, logger)
+	dropsondeReader := networkreader.New(fmt.Sprintf("localhost:%d", config.DropsondeIncomingMessagesPort), "dropsondeAgentListener", dropsondeUnmarshaller, logger)
 
-	unmarshaller := dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger)
-	marshaller := dropsonde_marshaller.NewDropsondeMarshaller(logger)
-	varzForwarder := varz_forwarder.NewVarzForwarder(config.Job, METRIC_TTL, logger)
-	messageAggregator := message_aggregator.NewMessageAggregator(logger)
+	// TODO: remove next two lines when legacy support is removed (or extracted to injector)
+	legacyUnmarshaller := legacyunmarshaller.New(aggregator, logger)
+	legacyReader := networkreader.New(fmt.Sprintf("localhost:%d", config.LegacyIncomingMessagesPort), "legacyAgentListener", legacyUnmarshaller, logger)
 
 	instrumentables := []instrumentation.Instrumentable{
-		legacyMessageListener,
-		dropsondeMessageListener,
-		unmarshaller,
-		varzForwarder,
-		messageAggregator,
+		legacyReader,
+		dropsondeReader,
+		legacyUnmarshaller,
+		dropsondeUnmarshaller,
+		aggregator,
+		varzShim,
 		marshaller,
 	}
 
-	component := InitializeComponent(config, logger, instrumentables)
+	go startMonitoringEndpoints(config, instrumentables, logger)
 
+	go legacyReader.Start()
+	dropsondeReader.Start()
+}
+
+func startMonitoringEndpoints(config metronConfig, instrumentables []instrumentation.Instrumentable, logger *gosteno.Logger) {
+	component := initializeComponent(config, instrumentables, logger)
 	go collectorregistrar.NewCollectorRegistrar(cfcomponent.DefaultYagnatsClientProvider, component, time.Duration(config.CollectorRegistrarIntervalMilliseconds)*time.Millisecond, &config.Config).Run()
 
-	go startMonitoringEndpoints(component, logger)
-	dropsondeEventChan := make(chan *events.Envelope)
-
-	go legacyMessageListener.Start()
-
-	logEnvelopesChan := make(chan *logmessage.LogEnvelope)
-	go legacyUnmarshaller.Run(legacyMessageChan, logEnvelopesChan)
-	go legacyMessageConverter.Run(logEnvelopesChan, dropsondeEventChan)
-
-	go dropsondeMessageListener.Start()
-
-	go unmarshaller.Run(dropsondeMessageChan, dropsondeEventChan)
-
-	aggregatedEventChan := make(chan *events.Envelope)
-	go messageAggregator.Run(dropsondeEventChan, aggregatedEventChan)
-
-	forwardedEventChan := make(chan *events.Envelope)
-	go varzForwarder.Run(aggregatedEventChan, forwardedEventChan)
-
-	reMarshalledMessageChan := make(chan []byte)
-	go marshaller.Run(forwardedEventChan, reMarshalledMessageChan)
-
-	signedMessageChan := make(chan ([]byte))
-	go signMessages(config.SharedSecret, reMarshalledMessageChan, signedMessageChan)
-
-	go dropsondeServerDiscovery.Run(time.Duration(config.EtcdQueryIntervalMilliseconds) * time.Millisecond)
-
-	forwardMessagesToDoppler(dropsondeClientPool, signedMessageChan, logger)
-}
-
-func signMessages(sharedSecret string, dropsondeMessageChan <-chan ([]byte), signedMessageChan chan<- ([]byte)) {
-	for message := range dropsondeMessageChan {
-		signedMessage := signature.SignMessage(message, []byte(sharedSecret))
-		signedMessageChan <- signedMessage
-	}
-}
-
-func startMonitoringEndpoints(component cfcomponent.Component, logger *gosteno.Logger) {
 	if err := component.StartMonitoringEndpoints(); err != nil {
 		component.Logger.Error(err.Error())
 	}
 }
 
-func initializeClientPool(config Config, logger *gosteno.Logger, port int) (*clientpool.LoggregatorClientPool, servicediscovery.ServerAddressList) {
-	adapter := StoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
+func initializeClientPool(config metronConfig, logger *gosteno.Logger) *clientpool.LoggregatorClientPool {
+	adapter := storeAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	err := adapter.Connect()
 	if err != nil {
 		logger.Errorf("Error connecting to ETCD: %v", err)
 	}
 
-	serverAddressDiscovery := servicediscovery.NewServerAddressList(adapter, "/healthstatus/doppler/"+config.Zone, logger)
+	inZoneServerAddressList := servicediscovery.NewServerAddressList(adapter, "/healthstatus/doppler/"+config.Zone, logger)
+	allZoneServerAddressList := servicediscovery.NewServerAddressList(adapter, "/healthstatus/doppler/", logger)
 
-	clientPool := clientpool.NewLoggregatorClientPool(logger, port, serverAddressDiscovery)
-	return clientPool, serverAddressDiscovery
+	go inZoneServerAddressList.Run(time.Duration(config.EtcdQueryIntervalMilliseconds) * time.Millisecond)
+	go allZoneServerAddressList.Run(time.Duration(config.EtcdQueryIntervalMilliseconds) * time.Millisecond)
+
+	clientPool := clientpool.NewLoggregatorClientPool(logger, config.LoggregatorDropsondePort, inZoneServerAddressList, allZoneServerAddressList)
+	return clientPool
 }
 
-type Config struct {
-	cfcomponent.Config
-	Zone                          string
-	Index                         uint
-	Job                           string
-	LegacyIncomingMessagesPort    int
-	DropsondeIncomingMessagesPort int
-	EtcdUrls                      []string
-	EtcdMaxConcurrentRequests     int
-	EtcdQueryIntervalMilliseconds int
-	LoggregatorLegacyPort         int
-	LoggregatorDropsondePort      int
-	SharedSecret                  string
+func storeAdapterProvider(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
+	workPool, err := workpool.NewWorkPool(concurrentRequests)
+	if err != nil {
+		panic(err)
+	}
+
+	return etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
 }
 
-type MetronHealthMonitor struct{}
-
-func (*MetronHealthMonitor) Ok() bool {
-	return true
-}
-
-func InitializeComponent(config Config, logger *gosteno.Logger, instrumentables []instrumentation.Instrumentable) cfcomponent.Component {
+func initializeComponent(config metronConfig, instrumentables []instrumentation.Instrumentable, logger *gosteno.Logger) cfcomponent.Component {
 	if len(config.NatsHosts) == 0 {
 		logger.Warn("Startup: Did not receive a NATS host - not going to register component")
 		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.NATSConn, error) {
@@ -161,7 +115,7 @@ func InitializeComponent(config Config, logger *gosteno.Logger, instrumentables 
 		}
 	}
 
-	component, err := cfcomponent.NewComponent(logger, "MetronAgent", config.Index, &MetronHealthMonitor{}, config.VarzPort, []string{config.VarzUser, config.VarzPass}, instrumentables)
+	component, err := cfcomponent.NewComponent(logger, "MetronAgent", config.Index, &metronHealthMonitor{}, config.VarzPort, []string{config.VarzUser, config.VarzPass}, instrumentables)
 	if err != nil {
 		panic(err)
 	}
@@ -169,8 +123,8 @@ func InitializeComponent(config Config, logger *gosteno.Logger, instrumentables 
 	return component
 }
 
-func parseConfig(debug bool, configFile, logFilePath string) (Config, *gosteno.Logger) {
-	config := Config{}
+func parseConfig(debug bool, configFile string, logFilePath string) (metronConfig, *gosteno.Logger) {
+	config := metronConfig{}
 	err := cfcomponent.ReadConfigInto(&config, configFile)
 	if err != nil {
 		panic(err)
@@ -182,13 +136,23 @@ func parseConfig(debug bool, configFile, logFilePath string) (Config, *gosteno.L
 	return config, logger
 }
 
-func forwardMessagesToDoppler(clientPool *clientpool.LoggregatorClientPool, messageChan <-chan []byte, logger *gosteno.Logger) {
-	for message := range messageChan {
-		client, err := clientPool.RandomClient()
-		if err != nil {
-			logger.Errorf("can't forward message: %v", err)
-			continue
-		}
-		client.Send(message)
-	}
+type metronConfig struct {
+	cfcomponent.Config
+	Zone                          string
+	Index                         uint
+	Job                           string
+	LegacyIncomingMessagesPort    int
+	DropsondeIncomingMessagesPort int
+	EtcdUrls                      []string
+	EtcdMaxConcurrentRequests     int
+	EtcdQueryIntervalMilliseconds int
+	LoggregatorDropsondePort      int
+	SharedSecret                  string
+	Deployment                    string
+}
+
+type metronHealthMonitor struct{}
+
+func (*metronHealthMonitor) Ok() bool {
+	return true
 }

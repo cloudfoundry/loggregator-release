@@ -5,7 +5,10 @@ import (
 	"time"
 
 	"doppler"
+
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+
+	"doppler/config"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -20,7 +23,7 @@ var _ = BeforeEach(func() {
 })
 
 var _ = Describe("Etcd Integration tests", func() {
-	var config main.Config
+	var conf config.Config
 	var stopHeartbeats chan (chan bool)
 	var localIp string
 
@@ -29,7 +32,7 @@ var _ = Describe("Etcd Integration tests", func() {
 
 		localIp, _ = localip.LocalIP()
 
-		config = main.Config{
+		conf = config.Config{
 			JobName: "doppler_z1",
 			Index:   0,
 			EtcdMaxConcurrentRequests: 1,
@@ -56,46 +59,13 @@ var _ = Describe("Etcd Integration tests", func() {
 				return err
 			}).Should(HaveOccurred())
 
-			stopHeartbeats = main.StartHeartbeats(localIp, time.Second, &config, loggertesthelper.Logger())
+			storeAdapter := main.NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
+			stopHeartbeats = main.StartHeartbeats(localIp, time.Second, &conf, storeAdapter, loggertesthelper.Logger())
 
 			Eventually(func() error {
 				_, err := adapter.Get("healthstatus/doppler/z1/doppler_z1/0")
 				return err
-			}).ShouldNot(HaveOccurred())
-		})
-
-		It("has a 10 sec TTL", func() {
-			stopHeartbeats = main.StartHeartbeats(localIp, time.Second, &config, loggertesthelper.Logger())
-			adapter := etcdRunner.Adapter()
-
-			Eventually(func() uint64 {
-				node, _ := adapter.Get("healthstatus/doppler/z1/doppler_z1/0")
-				return node.TTL
-			}).Should(BeNumerically(">", 0))
-		})
-
-		It("updates the value periodically", func() {
-			stopHeartbeats = main.StartHeartbeats(localIp, time.Second, &config, loggertesthelper.Logger())
-			adapter := etcdRunner.Adapter()
-
-			var indices []uint64
-			var index uint64
-			Eventually(func() uint64 {
-				node, _ := adapter.Get("healthstatus/doppler/z1/doppler_z1/0")
-				index = node.Index
-				return node.Index
-			}).Should(BeNumerically(">", 0))
-			indices = append(indices, index)
-
-			for i := 0; i < 3; i++ {
-				Eventually(func() uint64 {
-					node, _ := adapter.Get("healthstatus/doppler/z1/doppler_z1/0")
-					index = node.Index
-					return node.Index
-				}).Should(BeNumerically(">", indices[i]))
-				indices = append(indices, index)
-
-			}
+			}, 3).ShouldNot(HaveOccurred())
 		})
 	})
 })

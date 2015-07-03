@@ -10,46 +10,51 @@ import (
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/metrics"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
-	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"sync"
-	"time"
+	"github.com/cloudfoundry/sonde-go/events"
 )
 
 type SinkManager struct {
-	DropsondeOrigin string
+	dropsondeOrigin string
 
-	Metrics        *metrics.SinkManagerMetrics
-	recentLogCount uint32
+	sinkDropUpdateChannel chan int64
+	metrics               *metrics.SinkManagerMetrics
+	recentLogCount        uint32
 
-	doneChannel         chan struct{}
-	errorChannel        chan *events.Envelope
-	urlBlacklistManager *blacklist.URLBlacklistManager
-	sinks               *groupedsinks.GroupedSinks
-	skipCertVerify      bool
-	metricTTL           time.Duration
-	logger              *gosteno.Logger
-	stopOnce            sync.Once
-	sync.RWMutex
+	doneChannel            chan struct{}
+	errorChannel           chan *events.Envelope
+	urlBlacklistManager    *blacklist.URLBlacklistManager
+	sinks                  *groupedsinks.GroupedSinks
+	skipCertVerify         bool
+	sinkTimeout, metricTTL time.Duration
+	logger                 *gosteno.Logger
+
+	stopOnce sync.Once
 }
 
-func NewSinkManager(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger, dropsondeOrigin string, metricTTL time.Duration) *SinkManager {
+func New(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger, dropsondeOrigin string, sinkTimeout, metricTTL time.Duration) *SinkManager {
+	sinkDropUpdateChannel := make(chan int64)
+
 	return &SinkManager{
-		doneChannel:         make(chan struct{}),
-		errorChannel:        make(chan *events.Envelope, 100),
-		urlBlacklistManager: blackListManager,
-		sinks:               groupedsinks.NewGroupedSinks(logger),
-		skipCertVerify:      skipCertVerify,
-		recentLogCount:      maxRetainedLogMessages,
-		Metrics:             metrics.NewSinkManagerMetrics(),
-		logger:              logger,
-		DropsondeOrigin:     dropsondeOrigin,
-		metricTTL:           metricTTL,
+		doneChannel:           make(chan struct{}),
+		errorChannel:          make(chan *events.Envelope, 100),
+		urlBlacklistManager:   blackListManager,
+		sinks:                 groupedsinks.NewGroupedSinks(logger),
+		skipCertVerify:        skipCertVerify,
+		recentLogCount:        maxRetainedLogMessages,
+		metrics:               metrics.NewSinkManagerMetrics(sinkDropUpdateChannel),
+		sinkDropUpdateChannel: sinkDropUpdateChannel,
+		logger:                logger,
+		dropsondeOrigin:       dropsondeOrigin,
+		sinkTimeout:           sinkTimeout,
+		metricTTL:             metricTTL,
 	}
 }
 
@@ -80,7 +85,7 @@ func (sinkManager *SinkManager) RegisterSink(sink sinks.Sink) bool {
 		return false
 	}
 
-	sinkManager.Metrics.Inc(sink)
+	sinkManager.metrics.Inc(sink)
 
 	sinkManager.logger.Debugf("SinkManager: Sink with identifier %v requested. Opened it.", sink.Identifier())
 
@@ -98,7 +103,7 @@ func (sinkManager *SinkManager) UnregisterSink(sink sinks.Sink) {
 	if !ok {
 		return
 	}
-	sinkManager.Metrics.Dec(sink)
+	sinkManager.metrics.Dec(sink)
 
 	if syslogSink, ok := sink.(*syslog.SyslogSink); ok {
 		syslogSink.Disconnect()
@@ -107,19 +112,24 @@ func (sinkManager *SinkManager) UnregisterSink(sink sinks.Sink) {
 	sinkManager.logger.Debugf("SinkManager: Sink with identifier %s requested closing. Closed it.", sink.Identifier())
 }
 
+func (sinkManager *SinkManager) IsFirehoseRegistered(sink sinks.Sink) bool {
+	return sinkManager.sinks.IsFirehoseRegistered(sink)
+}
+
 func (sinkManager *SinkManager) RegisterFirehoseSink(sink sinks.Sink) bool {
-	inputChan := make(chan *events.Envelope, 1)
+	inputChan := make(chan *events.Envelope, 128)
 	ok := sinkManager.sinks.RegisterFirehoseSink(inputChan, sink)
 	if !ok {
 		return false
 	}
 
-	sinkManager.Metrics.IncFirehose()
+	sinkManager.metrics.IncFirehose()
 
 	sinkManager.logger.Debugf("SinkManager: Firehose sink with identifier %v requested. Opened it.", sink.Identifier())
 
 	go func() {
 		sink.Run(inputChan)
+		sinkManager.UnregisterFirehoseSink(sink)
 	}()
 
 	return true
@@ -131,7 +141,7 @@ func (sinkManager *SinkManager) UnregisterFirehoseSink(sink sinks.Sink) {
 		return
 	}
 
-	sinkManager.Metrics.DecFirehose()
+	sinkManager.metrics.DecFirehose()
 	sinkManager.logger.Debugf("SinkManager: Firehose Sink with identifier %s requested closing. Closed it.", sink.Identifier())
 }
 
@@ -154,13 +164,11 @@ func (sinkManager *SinkManager) LatestContainerMetrics(appId string) []*events.E
 }
 
 func (sinkManager *SinkManager) SendSyslogErrorToLoggregator(errorMsg string, appId string, sinkUrl string) {
-	sinkManager.Metrics.ReportSyslogError(appId, sinkUrl)
-
 	sinkManager.logger.Warnf(errorMsg)
 
 	logMessage := factories.NewLogMessage(events.LogMessage_ERR, errorMsg, appId, "LGR")
 
-	envelope, err := emitter.Wrap(logMessage, sinkManager.DropsondeOrigin)
+	envelope, err := emitter.Wrap(logMessage, sinkManager.dropsondeOrigin)
 
 	if err != nil {
 		sinkManager.logger.Warnf("Error marshalling message: %v", err)
@@ -170,8 +178,8 @@ func (sinkManager *SinkManager) SendSyslogErrorToLoggregator(errorMsg string, ap
 	sinkManager.errorChannel <- envelope
 }
 
-func (sinkManager *SinkManager) Emit() instrumentation.Context {
-	return sinkManager.Metrics.Emit()
+func (sinkManager *SinkManager) SinkDropUpdateChannel() chan<- int64 {
+	return sinkManager.sinkDropUpdateChannel
 }
 
 func (sinkManager *SinkManager) listenForNewAppServices(newAppServiceChan <-chan appservice.AppService) {
@@ -209,14 +217,32 @@ func (sinkManager *SinkManager) listenForErrorMessages() {
 func (sinkManager *SinkManager) registerNewSyslogSink(appId string, syslogSinkUrl string) {
 	parsedSyslogDrainUrl, err := sinkManager.urlBlacklistManager.CheckUrl(syslogSinkUrl)
 	if err != nil {
-		errorMsg := fmt.Sprintf("SinkManager: Invalid syslog drain URL (%s) for application %s. Err: %v", syslogSinkUrl, appId, err)
-		sinkManager.SendSyslogErrorToLoggregator(errorMsg, appId, syslogSinkUrl)
-	} else {
-		syslogWriter := syslogwriter.NewSyslogWriter(parsedSyslogDrainUrl, appId, sinkManager.skipCertVerify)
-		syslogSink := syslog.NewSyslogSink(appId, syslogSinkUrl, sinkManager.logger, syslogWriter, sinkManager.SendSyslogErrorToLoggregator, sinkManager.DropsondeOrigin)
-		sinkManager.RegisterSink(syslogSink)
+		sinkManager.SendSyslogErrorToLoggregator(invalidSyslogUrlErrorMsg(appId, syslogSinkUrl, err), appId, syslogSinkUrl)
+		return
 	}
 
+	syslogWriter, err := syslogwriter.NewWriter(parsedSyslogDrainUrl, appId, sinkManager.skipCertVerify)
+	if err != nil {
+		sinkManager.SendSyslogErrorToLoggregator(invalidSyslogUrlErrorMsg(appId, syslogSinkUrl, err), appId, syslogSinkUrl)
+		return
+	}
+
+	syslogSink := syslog.NewSyslogSink(
+		appId,
+		syslogSinkUrl,
+		sinkManager.logger,
+		syslogWriter,
+		sinkManager.SendSyslogErrorToLoggregator,
+		sinkManager.dropsondeOrigin,
+		sinkManager.sinkDropUpdateChannel,
+	)
+
+	sinkManager.RegisterSink(syslogSink)
+
+}
+
+func invalidSyslogUrlErrorMsg(appId string, syslogSinkUrl string, err error) string {
+	return fmt.Sprintf("SinkManager: Invalid syslog drain URL (%s) for application %s. Err: %v", syslogSinkUrl, appId, err)
 }
 
 func (sinkManager *SinkManager) ensureRecentLogsSinkFor(appId string) {
@@ -224,7 +250,14 @@ func (sinkManager *SinkManager) ensureRecentLogsSinkFor(appId string) {
 		return
 	}
 
-	sink := dump.NewDumpSink(appId, sinkManager.recentLogCount, sinkManager.logger, time.Hour)
+	sink := dump.NewDumpSink(
+		appId,
+		sinkManager.recentLogCount,
+		sinkManager.logger,
+		sinkManager.sinkTimeout,
+		sinkManager.sinkDropUpdateChannel,
+	)
+
 	sinkManager.RegisterSink(sink)
 }
 
@@ -233,6 +266,12 @@ func (sinkManager *SinkManager) ensureContainerMetricsSinkFor(appId string) {
 		return
 	}
 
-	sink := containermetric.NewContainerMetricSink(appId, sinkManager.metricTTL)
+	sink := containermetric.NewContainerMetricSink(
+		appId,
+		sinkManager.metricTTL,
+		sinkManager.sinkTimeout,
+		sinkManager.sinkDropUpdateChannel,
+	)
+
 	sinkManager.RegisterSink(sink)
 }

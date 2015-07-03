@@ -2,6 +2,7 @@ package deaagent
 
 import (
 	"deaagent/domain"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/howeyc/fsnotify"
 	"io/ioutil"
@@ -116,6 +117,7 @@ func (agent *Agent) pollInstancesJson() {
 			agent.logger.Debugf("Got Event: %v\n", ev)
 			if ev.IsDelete() {
 				agent.knownInstancesChan <- resetCache
+				metrics.SendValue("totalApps", 0.0, "apps")
 			} else {
 				agent.processInstancesJson()
 			}
@@ -129,6 +131,7 @@ func (agent *Agent) pollInstancesJson() {
 
 func (agent *Agent) processInstancesJson() {
 	currentTasks, err := agent.readInstancesJson()
+	metrics.SendValue("totalApps", float64(len(currentTasks)), "apps")
 	if err != nil {
 		return
 	}

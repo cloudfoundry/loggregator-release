@@ -5,18 +5,18 @@ import (
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
+	"net/http"
+	"sync"
+	"time"
+
 	"github.com/cloudfoundry/dropsonde/emitter"
-	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/websocket"
-	"net/http"
-	testhelpers "server_testhelpers"
-	"sync"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -29,6 +29,7 @@ var _ = Describe("Dumping", func() {
 		TestWebsocketServer *websocketserver.WebsocketServer
 		dataReadChannel     chan *events.Envelope
 		services            sync.WaitGroup
+		goRoutineSpawned    sync.WaitGroup
 	)
 
 	const (
@@ -45,10 +46,13 @@ var _ = Describe("Dumping", func() {
 		deletedAppServiceChan := make(chan appservice.AppService)
 
 		emptyBlacklist := blacklist.New(nil)
-		sinkManager = sinkmanager.NewSinkManager(1024, false, emptyBlacklist, logger, "dropsonde-origin", 1*time.Second)
+		sinkManager = sinkmanager.New(1024, false, emptyBlacklist, logger, "dropsonde-origin",
+			2*time.Second, 1*time.Second)
 
 		services.Add(1)
+		goRoutineSpawned.Add(1)
 		go func() {
+			goRoutineSpawned.Done()
 			defer services.Done()
 			sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
 		}()
@@ -56,21 +60,25 @@ var _ = Describe("Dumping", func() {
 		TestMessageRouter = sinkserver.NewMessageRouter(sinkManager, logger)
 
 		services.Add(1)
+		goRoutineSpawned.Add(1)
 		go func() {
+			goRoutineSpawned.Done()
 			defer services.Done()
 			TestMessageRouter.Start(dataReadChannel)
 		}()
 
 		apiEndpoint := "localhost:" + SERVER_PORT
-		TestWebsocketServer = websocketserver.New(apiEndpoint, sinkManager, 10*time.Second, 100, loggertesthelper.Logger())
+		TestWebsocketServer = websocketserver.New(apiEndpoint, sinkManager, 10*time.Second, 100, "dropsonde-origin", loggertesthelper.Logger())
 
 		services.Add(1)
+		goRoutineSpawned.Add(1)
 		go func() {
+			goRoutineSpawned.Done()
 			defer services.Done()
 			TestWebsocketServer.Start()
 		}()
 
-		time.Sleep(5 * time.Millisecond)
+		goRoutineSpawned.Wait()
 	})
 
 	AfterEach(func() {
@@ -94,7 +102,7 @@ var _ = Describe("Dumping", func() {
 		dataReadChannel <- env2
 
 		receivedChan := make(chan []byte, 2)
-		_, stopKeepAlive, droppedChannel := testhelpers.AddWSSink(GinkgoT(), receivedChan, SERVER_PORT, "/apps/myOtherApp/recentlogs")
+		_, stopKeepAlive, droppedChannel := AddWSSink(receivedChan, SERVER_PORT, "/apps/myOtherApp/recentlogs")
 
 		Eventually(droppedChannel).Should(Receive())
 
@@ -119,7 +127,7 @@ var _ = Describe("Dumping", func() {
 
 	It("doesn't hang when there are no messages", func() {
 		receivedChan := make(chan []byte, 1)
-		testhelpers.AddWSSink(GinkgoT(), receivedChan, SERVER_PORT, "/apps/myOtherApp/recentlogs")
+		AddWSSink(receivedChan, SERVER_PORT, "/apps/myOtherApp/recentlogs")
 
 		doneChan := make(chan bool)
 		go func() {

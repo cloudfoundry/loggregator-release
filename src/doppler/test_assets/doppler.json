@@ -19,5 +19,6 @@
         {"start": "127.0.1.12", "End": "127.0.1.15"}
     ],
     "CollectorRegistrarIntervalMilliseconds": 100,
-    "ContainerMetricTTLSeconds": 120
+    "ContainerMetricTTLSeconds": 120,
+    "SinkInactivityTimeoutSeconds": 120
 }

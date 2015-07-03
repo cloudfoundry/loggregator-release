@@ -65,7 +65,7 @@ class LambProperties
     result.chomp
   end
 
-  def aws_lamb_properties
+  def aws_lamb_properties(deployment_name)
     result = <<-EOF
   loggregator:
     maxRetainedLogMessages: 100
@@ -78,12 +78,16 @@ class LambProperties
     maxRetainedLogMessages: 100
     debug: false
     blacklisted_syslog_ranges: null
+    unmarshaller_count: 5
+
+  metron_agent:
+    deployment: #{deployment_name}
     EOF
     result.chomp
   end
 
-  def lamb_properties
-    return aws_lamb_properties if @infrastructure == 'aws'
+  def lamb_properties(deployment_name)
+    return aws_lamb_properties(deployment_name) if @infrastructure == 'aws'
 
     result = <<-EOF
   loggregator:
@@ -95,6 +99,10 @@ class LambProperties
     maxRetainedLogMessages: 100
     debug: false
     blacklisted_syslog_ranges: null
+    unmarshaller_count: 5
+
+  metron_agent:
+    deployment: #{deployment_name}
     EOF
     result.chomp
   end

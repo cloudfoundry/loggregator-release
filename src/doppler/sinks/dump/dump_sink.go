@@ -1,34 +1,38 @@
 package dump
 
 import (
-	"github.com/cloudfoundry/dropsonde/events"
+	"container/ring"
+	"sync"
+	"time"
+
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
-	"sync"
-	"sync/atomic"
-	"time"
+	"github.com/cloudfoundry/sonde-go/events"
 )
 
 type DumpSink struct {
+	appId               string
+	logger              *gosteno.Logger
+	messageRing         *ring.Ring
+	inputChan           chan *events.Envelope
+	inactivityDuration  time.Duration
+	metricUpdateChannel chan<- int64
 	sync.RWMutex
-	appId              string
-	logger             *gosteno.Logger
-	messageBuffer      []*events.Envelope
-	inputChan          chan *events.Envelope
-	inactivityDuration time.Duration
-	sequence           uint32
-	bufferSize         uint32
 }
 
-func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, inactivityDuration time.Duration) *DumpSink {
+func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, inactivityDuration time.Duration, metricUpdateChannel chan<- int64) *DumpSink {
 	dumpSink := &DumpSink{
-		appId:              appId,
-		logger:             givenLogger,
-		messageBuffer:      make([]*events.Envelope, bufferSize),
-		inactivityDuration: inactivityDuration,
-		bufferSize:         bufferSize,
+		appId:               appId,
+		logger:              givenLogger,
+		messageRing:         ring.New(int(bufferSize)),
+		inactivityDuration:  inactivityDuration,
+		metricUpdateChannel: metricUpdateChannel,
 	}
 	return dumpSink
+}
+
+func (sink *DumpSink) UpdateDroppedMessageCount(count int64) {
+	sink.metricUpdateChannel <- count
 }
 
 func (d *DumpSink) Run(inputChan <-chan *events.Envelope) {
@@ -58,43 +62,26 @@ func (d *DumpSink) Run(inputChan <-chan *events.Envelope) {
 func (d *DumpSink) addMsg(msg *events.Envelope) {
 	d.Lock()
 	defer d.Unlock()
-	position := atomic.AddUint32(&d.sequence, uint32(1)) % d.bufferSize
-	d.messageBuffer[position] = msg
-}
 
-func (d *DumpSink) copyBuffer() (int, []*events.Envelope) {
-	d.RLock()
-	defer d.RUnlock()
-	data := make([]*events.Envelope, d.bufferSize)
-	copyCount := copy(data, d.messageBuffer)
-	return copyCount, data
+	d.messageRing = d.messageRing.Next()
+	d.messageRing.Value = msg
 }
 
 func (d *DumpSink) Dump() []*events.Envelope {
-	sequence := atomic.LoadUint32(&d.sequence)
-	out := make([]*events.Envelope, d.bufferSize)
-	_, buffer := d.copyBuffer()
+	d.RLock()
+	defer d.RUnlock()
 
-	if d.bufferSize == 1 {
-		return buffer
-	}
+	data := make([]*events.Envelope, 0, d.messageRing.Len())
+	d.messageRing.Next().Do(func(value interface{}) {
+		if value == nil {
+			return
+		}
 
-	lapped := d.messageBuffer[0] != nil
-	newestPosition := sequence % d.bufferSize
-	oldestPosition := (sequence + 1) % d.bufferSize
+		msg := value.(*events.Envelope)
+		data = append(data, msg)
+	})
 
-	if !lapped {
-		copyCount := copy(out, buffer[1:newestPosition+1])
-		return out[:copyCount]
-	}
-
-	if oldestPosition == 0 {
-		copy(out, d.messageBuffer)
-	} else {
-		copyCount := copy(out, buffer[oldestPosition:])
-		copy(out[copyCount:], buffer[:newestPosition+1])
-	}
-	return out
+	return data
 }
 
 func (d *DumpSink) StreamId() string {

@@ -6,7 +6,9 @@ import (
 	"doppler/sinks/syslog"
 	"doppler/sinks/websocket"
 	"doppler/sinkserver/metrics"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
+
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,99 +18,105 @@ var _ = Describe("SinkManagerMetrics", func() {
 
 	var sinkManagerMetrics *metrics.SinkManagerMetrics
 	var sink sinks.Sink
+	var dropUpdateChan chan int64
 
 	BeforeEach(func() {
-		sinkManagerMetrics = metrics.NewSinkManagerMetrics()
+		fakeEventEmitter.Reset()
+		dropUpdateChan = make(chan int64)
+		sinkManagerMetrics = metrics.NewSinkManagerMetrics(dropUpdateChan)
 	})
 
 	It("emits metrics for dump sinks", func() {
-
-		Expect(sinkManagerMetrics.Emit().Metrics[0].Name).To(Equal("numberOfDumpSinks"))
-		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(0))
-		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(0))
-		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(0))
+		Expect(fakeEventEmitter.GetMessages()).To(BeEmpty())
 
 		sink = &dump.DumpSink{}
 		sinkManagerMetrics.Inc(sink)
 
-		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(1))
-		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(0))
-		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(0))
+		Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
+			Name:  proto.String("messageRouter.numberOfDumpSinks"),
+			Value: proto.Float64(1),
+			Unit:  proto.String("sinks"),
+		}))
 
 		sinkManagerMetrics.Dec(sink)
 
-		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(0))
-		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(0))
-		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(0))
+		Expect(fakeEventEmitter.GetMessages()[1].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
+			Name:  proto.String("messageRouter.numberOfDumpSinks"),
+			Value: proto.Float64(0),
+			Unit:  proto.String("sinks"),
+		}))
 	})
 
 	It("emits metrics for syslog sinks", func() {
+		Expect(fakeEventEmitter.GetMessages()).To(BeEmpty())
 
-		Expect(sinkManagerMetrics.Emit().Metrics[1].Name).To(Equal("numberOfSyslogSinks"))
-		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(0))
-		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(0))
-		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(0))
-
-		sink := &syslog.SyslogSink{}
+		sink = &syslog.SyslogSink{}
 		sinkManagerMetrics.Inc(sink)
 
-		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(0))
-		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(1))
-		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(0))
+		Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
+			Name:  proto.String("messageRouter.numberOfSyslogSinks"),
+			Value: proto.Float64(1),
+			Unit:  proto.String("sinks"),
+		}))
 
 		sinkManagerMetrics.Dec(sink)
 
-		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(0))
-		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(0))
-		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(0))
+		Expect(fakeEventEmitter.GetMessages()[1].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
+			Name:  proto.String("messageRouter.numberOfSyslogSinks"),
+			Value: proto.Float64(0),
+			Unit:  proto.String("sinks"),
+		}))
 	})
 
 	It("emits metrics for websocket sinks", func() {
+		Expect(fakeEventEmitter.GetMessages()).To(BeEmpty())
 
-		Expect(sinkManagerMetrics.Emit().Metrics[2].Name).To(Equal("numberOfWebsocketSinks"))
-		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(0))
-		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(0))
-		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(0))
-
-		sink := &websocket.WebsocketSink{}
+		sink = &websocket.WebsocketSink{}
 		sinkManagerMetrics.Inc(sink)
 
-		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(0))
-		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(0))
-		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(1))
+		Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
+			Name:  proto.String("messageRouter.numberOfWebsocketSinks"),
+			Value: proto.Float64(1),
+			Unit:  proto.String("sinks"),
+		}))
 
 		sinkManagerMetrics.Dec(sink)
 
-		Expect(sinkManagerMetrics.Emit().Metrics[0].Value).To(Equal(0))
-		Expect(sinkManagerMetrics.Emit().Metrics[1].Value).To(Equal(0))
-		Expect(sinkManagerMetrics.Emit().Metrics[2].Value).To(Equal(0))
+		Expect(fakeEventEmitter.GetMessages()[1].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
+			Name:  proto.String("messageRouter.numberOfWebsocketSinks"),
+			Value: proto.Float64(0),
+			Unit:  proto.String("sinks"),
+		}))
 	})
 
 	It("emits metrics for firehose sinks", func() {
-		Expect(sinkManagerMetrics.Emit().Metrics[3].Name).To(Equal("numberOfFirehoseSinks"))
-		Expect(sinkManagerMetrics.Emit().Metrics[3].Value).To(Equal(0))
+		Expect(fakeEventEmitter.GetMessages()).To(BeEmpty())
 
 		sinkManagerMetrics.IncFirehose()
-		Expect(sinkManagerMetrics.Emit().Metrics[3].Value).To(Equal(1))
+		Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
+			Name:  proto.String("messageRouter.numberOfFirehoseSinks"),
+			Value: proto.Float64(1),
+			Unit:  proto.String("sinks"),
+		}))
 
 		sinkManagerMetrics.DecFirehose()
-		Expect(sinkManagerMetrics.Emit().Metrics[3].Value).To(Equal(0))
-
+		Expect(fakeEventEmitter.GetMessages()[1].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
+			Name:  proto.String("messageRouter.numberOfFirehoseSinks"),
+			Value: proto.Float64(0),
+			Unit:  proto.String("sinks"),
+		}))
 	})
 
-	It("emits error counts for syslog sinks by app ID and drain URL", func() {
-		sinkManagerMetrics.ReportSyslogError("app-id-1", "url-1")
+	It("emits the total number of message dropped", func() {
+		Expect(fakeEventEmitter.GetMessages()).To(BeEmpty())
 
-		sinkManagerMetrics.ReportSyslogError("app-id-1", "url-2")
-		sinkManagerMetrics.ReportSyslogError("app-id-1", "url-2")
+		dropUpdateChan <- 25
+		dropUpdateChan <- 25
 
-		sinkManagerMetrics.ReportSyslogError("app-id-2", "url-3")
-
-		drainErrorMetrics := sinkManagerMetrics.Emit().Metrics[4:]
-		Expect(drainErrorMetrics).To(ConsistOf(
-			instrumentation.Metric{Name: "numberOfSyslogDrainErrors", Value: 1, Tags: map[string]interface{}{"appId": "app-id-1", "drainUrl": "url-1"}},
-			instrumentation.Metric{Name: "numberOfSyslogDrainErrors", Value: 2, Tags: map[string]interface{}{"appId": "app-id-1", "drainUrl": "url-2"}},
-			instrumentation.Metric{Name: "numberOfSyslogDrainErrors", Value: 1, Tags: map[string]interface{}{"appId": "app-id-2", "drainUrl": "url-3"}},
-		))
+		Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(1))
+		Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.CounterEvent)).To(Equal(&events.CounterEvent{
+			Name:  proto.String("messageRouter.totalDroppedMessages"),
+			Delta: proto.Uint64(50),
+		}))
 	})
 })

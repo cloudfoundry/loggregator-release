@@ -1,3 +1,6 @@
+meta:
+  environment: ~
+
 lamb_meta:
   release:
     name: cf
@@ -31,6 +34,20 @@ jobs:
     metron_agent:
       zone: z2
 
+- name: doppler_z1
+  properties:
+    doppler:
+      zone: z1
+    metron_agent:
+      zone: z1
+
+- name: doppler_z2
+  properties:
+    doppler:
+      zone: z2
+    metron_agent:
+      zone: z2
+
 - name: loggregator_trafficcontroller_z1
   properties:
     traffic_controller:
@@ -57,3 +74,7 @@ properties:
     maxRetainedLogMessages: 100
     debug: (( merge || false ))
     blacklisted_syslog_ranges: ~
+    unmarshaller_count: (( merge || 5 ))
+
+  metron_agent:
+    deployment: (( meta.environment ))

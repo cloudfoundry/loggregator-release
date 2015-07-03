@@ -1,5 +1,21 @@
 #!/bin/bash
 
+function green {
+    if [[ -n "$TERM" ]]; then
+        echo -e "$(tput setaf 2)$1$(tput sgr0)"
+    else
+        echo ":) $1"
+    fi
+}
+
+function red {
+    if [[ -n "$TERM" ]]; then
+        echo -e "$(tput setaf 1)$1$(tput sgr0)"
+    else
+        echo ":( $1"
+    fi
+}
+
 check_for_data_race() {
     name=$1
     command=$2
@@ -16,9 +32,9 @@ check_for_data_race() {
     set -e
 
     if [[ $found_race == 1 ]]; then
-        echo "No race condition detected"
+        green "No race condition detected"
     else
-        echo "RACE CONDITION DETECTED"
+        red "RACE CONDITION DETECTED"
         cat /tmp/tmp.log
         exit 1
     fi
@@ -38,5 +54,5 @@ $(dirname $0)/build-platforms
 check_for_data_race doppler "./bin/doppler --config=./config/doppler_with_fake_nats.json"
 LOGGREGATOR_SHARED_SECRET='asdf' check_for_data_race deaagent "./bin/deaagent --config=./config/dea_logging_agent_with_fake_nats.json"
 check_for_data_race trafficcontroller "./bin/trafficcontroller --config=./config/loggregator_trafficcontroller.json"
-check_for_data_race metron "./bin/metron --configFile=config/metron.json"
+check_for_data_race metron "./bin/metron --config=config/metron.json"
 check_for_data_race syslog_drain_binder "./bin/syslog_drain_binder --config=config/syslog_drain_binder.json"

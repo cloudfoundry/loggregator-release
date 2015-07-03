@@ -2,11 +2,12 @@ package websocket
 
 import (
 	"doppler/sinks"
-	"github.com/cloudfoundry/dropsonde/events"
+	"net"
+
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	gorilla "github.com/gorilla/websocket"
-	"net"
 )
 
 const FIREHOSE_APP_ID = "firehose"
@@ -23,9 +24,10 @@ type WebsocketSink struct {
 	clientAddress       net.Addr
 	wsMessageBufferSize uint
 	dropsondeOrigin     string
+	metricUpdateChannel chan<- int64
 }
 
-func NewWebsocketSink(streamId string, givenLogger *gosteno.Logger, ws remoteMessageWriter, wsMessageBufferSize uint, dropsondeOrigin string) *WebsocketSink {
+func NewWebsocketSink(streamId string, givenLogger *gosteno.Logger, ws remoteMessageWriter, wsMessageBufferSize uint, dropsondeOrigin string, metricUpdateChannel chan<- int64) *WebsocketSink {
 	return &WebsocketSink{
 		logger:              givenLogger,
 		streamId:            streamId,
@@ -33,7 +35,12 @@ func NewWebsocketSink(streamId string, givenLogger *gosteno.Logger, ws remoteMes
 		clientAddress:       ws.RemoteAddr(),
 		wsMessageBufferSize: wsMessageBufferSize,
 		dropsondeOrigin:     dropsondeOrigin,
+		metricUpdateChannel: metricUpdateChannel,
 	}
+}
+
+func (sink *WebsocketSink) UpdateDroppedMessageCount(count int64) {
+	sink.metricUpdateChannel <- count
 }
 
 func (sink *WebsocketSink) Identifier() string {
@@ -55,6 +62,13 @@ func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
 	for {
 		sink.logger.Debugf("Websocket Sink %s: Waiting for activity", sink.clientAddress)
 		messageEnvelope, ok := <-buffer.GetOutputChannel()
+
+		droppedMessages := buffer.GetDroppedMessageCount()
+		if droppedMessages != 0 {
+			sink.UpdateDroppedMessageCount(droppedMessages)
+
+		}
+
 		if !ok {
 			sink.logger.Debugf("Websocket Sink %s: Closed listener channel detected. Closing websocket", sink.clientAddress)
 			return
@@ -67,8 +81,7 @@ func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
 			continue
 		}
 
-		sink.logger.Debugf("Websocket Sink %s: Received %s message from %s at %d. Sending data.", sink.clientAddress, messageEnvelope.GetEventType().String(), messageEnvelope.Origin, messageEnvelope.Timestamp)
-
+		sink.logger.Debugf("Websocket Sink %s: Received %s message from %s at %d. Sending data.", sink.clientAddress, messageEnvelope.GetEventType().String(), messageEnvelope.GetOrigin(), messageEnvelope.Timestamp)
 		err = sink.ws.WriteMessage(gorilla.BinaryMessage, messageBytes)
 		if err != nil {
 			sink.logger.Debugf("Websocket Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", sink.clientAddress, err)

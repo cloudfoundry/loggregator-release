@@ -23,6 +23,5 @@
     "VarzUser": "",
     "VarzPass": "",
     "VarzPort": 0,
-    "Syslog": "vcap.trafficcontroller",
     "CollectorRegistrarIntervalMilliseconds": 60000
 }

@@ -6,17 +6,18 @@ import (
 	"doppler/sinkserver/sinkmanager"
 	"errors"
 	"fmt"
-	"github.com/cloudfoundry/dropsonde/events"
-	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/server"
-	"github.com/gogo/protobuf/proto"
-	gorilla "github.com/gorilla/websocket"
 	"net"
 	"net/http"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/server"
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
+	gorilla "github.com/gorilla/websocket"
 )
 
 type WebsocketServer struct {
@@ -30,14 +31,14 @@ type WebsocketServer struct {
 	sync.RWMutex
 }
 
-func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, keepAliveInterval time.Duration, wSMessageBufferSize uint, logger *gosteno.Logger) *WebsocketServer {
+func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, keepAliveInterval time.Duration, wSMessageBufferSize uint, dropsondeOrigin string, logger *gosteno.Logger) *WebsocketServer {
 	return &WebsocketServer{
 		apiEndpoint:       apiEndpoint,
 		sinkManager:       sinkManager,
 		keepAliveInterval: keepAliveInterval,
 		bufferSize:        wSMessageBufferSize,
 		logger:            logger,
-		dropsondeOrigin:   sinkManager.DropsondeOrigin,
+		dropsondeOrigin:   dropsondeOrigin,
 	}
 }
 
@@ -166,6 +167,7 @@ func (w *WebsocketServer) streamWebsocket(appId string, websocketConnection *gor
 		websocketConnection,
 		w.bufferSize,
 		w.dropsondeOrigin,
+		w.sinkManager.SinkDropUpdateChannel(),
 	)
 
 	register(websocketSink)

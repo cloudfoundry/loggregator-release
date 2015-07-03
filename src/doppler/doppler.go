@@ -1,63 +1,27 @@
 package main
 
 import (
-	"doppler/iprange"
+	"fmt"
+	"sync"
+	"time"
+
+	"doppler/config"
 	"doppler/sinkserver"
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
-	"errors"
-	"fmt"
+
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
-	"github.com/cloudfoundry/dropsonde/events"
 	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/store"
 	"github.com/cloudfoundry/loggregatorlib/store/cache"
+	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
-	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
-	"sync"
-	"time"
 )
-
-type Config struct {
-	cfcomponent.Config
-	EtcdUrls                      []string
-	EtcdMaxConcurrentRequests     int
-	Index                         uint
-	DropsondeIncomingMessagesPort uint32
-	OutgoingPort                  uint32
-	LogFilePath                   string
-	MaxRetainedLogMessages        uint32
-	WSMessageBufferSize           uint
-	SharedSecret                  string
-	SkipCertVerify                bool
-	BlackListIps                  []iprange.IPRange
-	JobName                       string
-	Zone                          string
-	ContainerMetricTTLSeconds     int
-}
-
-func (c *Config) Validate(logger *gosteno.Logger) (err error) {
-	if c.MaxRetainedLogMessages == 0 {
-		return errors.New("Need max number of log messages to retain per application")
-	}
-
-	if c.BlackListIps != nil {
-		err = iprange.ValidateIpAddresses(c.BlackListIps)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = c.Config.Validate(logger)
-	return
-}
 
 type Doppler struct {
 	*gosteno.Logger
@@ -69,12 +33,12 @@ type Doppler struct {
 	messageRouter     *sinkserver.MessageRouter
 	websocketServer   *websocketserver.WebsocketServer
 
-	dropsondeUnmarshaller      dropsonde_unmarshaller.DropsondeUnmarshaller
-	dropsondeBytesChan         <-chan []byte
-	dropsondeVerifiedBytesChan chan []byte
-	envelopeChan               chan *events.Envelope
-	wrappedEnvelopeChan        chan *events.Envelope
-	signatureVerifier          signature.SignatureVerifier
+	dropsondeUnmarshallerCollection dropsonde_unmarshaller.DropsondeUnmarshallerCollection
+	dropsondeBytesChan              <-chan []byte
+	dropsondeVerifiedBytesChan      chan []byte
+	envelopeChan                    chan *events.Envelope
+	wrappedEnvelopeChan             chan *events.Envelope
+	signatureVerifier               *signature.Verifier
 
 	storeAdapter storeadapter.StoreAdapter
 
@@ -83,41 +47,40 @@ type Doppler struct {
 	sync.WaitGroup
 }
 
-func New(host string, config *Config, logger *gosteno.Logger, dropsondeOrigin string) *Doppler {
+func New(host string, config *config.Config, logger *gosteno.Logger, storeAdapter storeadapter.StoreAdapter, dropsondeOrigin string) *Doppler {
 	cfcomponent.Logger = logger
 	keepAliveInterval := 30 * time.Second
 
-	workPool := workpool.NewWorkPool(config.EtcdMaxConcurrentRequests)
-	storeAdapter := etcdstoreadapter.NewETCDStoreAdapter(config.EtcdUrls, workPool)
-	storeAdapter.Connect()
 	appStoreCache := cache.NewAppServiceCache()
 	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
 
 	dropsondeListener, dropsondeBytesChan := agentlistener.NewAgentListener(fmt.Sprintf("%s:%d", host, config.DropsondeIncomingMessagesPort), logger, "dropsondeListener")
 
-	signatureVerifier := signature.NewSignatureVerifier(logger, config.SharedSecret)
-	dropsondeUnmarshaller := dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger)
+	signatureVerifier := signature.NewVerifier(logger, config.SharedSecret)
+
+	unmarshallerCollection := dropsonde_unmarshaller.NewDropsondeUnmarshallerCollection(logger, config.UnmarshallerCount)
 
 	blacklist := blacklist.New(config.BlackListIps)
 	metricTTL := time.Duration(config.ContainerMetricTTLSeconds) * time.Second
-	sinkManager := sinkmanager.NewSinkManager(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger, dropsondeOrigin, metricTTL)
+	sinkTimeout := time.Duration(config.SinkInactivityTimeoutSeconds) * time.Second
+	sinkManager := sinkmanager.New(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger, dropsondeOrigin, sinkTimeout, metricTTL)
 
 	return &Doppler{
-		Logger:                     logger,
-		dropsondeListener:          dropsondeListener,
-		sinkManager:                sinkManager,
-		messageRouter:              sinkserver.NewMessageRouter(sinkManager, logger),
-		websocketServer:            websocketserver.New(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.WSMessageBufferSize, logger),
-		newAppServiceChan:          newAppServiceChan,
-		deletedAppServiceChan:      deletedAppServiceChan,
-		appStoreWatcher:            appStoreWatcher,
-		storeAdapter:               storeAdapter,
-		dropsondeBytesChan:         dropsondeBytesChan,
-		dropsondeUnmarshaller:      dropsondeUnmarshaller,
-		envelopeChan:               make(chan *events.Envelope),
-		wrappedEnvelopeChan:        make(chan *events.Envelope),
-		signatureVerifier:          signatureVerifier,
-		dropsondeVerifiedBytesChan: make(chan []byte),
+		Logger:                          logger,
+		dropsondeListener:               dropsondeListener,
+		sinkManager:                     sinkManager,
+		messageRouter:                   sinkserver.NewMessageRouter(sinkManager, logger),
+		websocketServer:                 websocketserver.New(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.WSMessageBufferSize, dropsondeOrigin, logger),
+		newAppServiceChan:               newAppServiceChan,
+		deletedAppServiceChan:           deletedAppServiceChan,
+		appStoreWatcher:                 appStoreWatcher,
+		storeAdapter:                    storeAdapter,
+		dropsondeBytesChan:              dropsondeBytesChan,
+		dropsondeUnmarshallerCollection: unmarshallerCollection,
+		envelopeChan:                    make(chan *events.Envelope),
+		wrappedEnvelopeChan:             make(chan *events.Envelope),
+		signatureVerifier:               signatureVerifier,
+		dropsondeVerifiedBytesChan:      make(chan []byte),
 	}
 }
 
@@ -126,11 +89,7 @@ func (doppler *Doppler) Start() {
 	doppler.errChan = make(chan error)
 	doppler.Unlock()
 
-	err := doppler.storeAdapter.Connect()
-	if err != nil {
-		panic(err)
-	}
-	doppler.Add(7)
+	doppler.Add(6 + doppler.dropsondeUnmarshallerCollection.Size())
 
 	go func() {
 		defer doppler.Done()
@@ -142,11 +101,7 @@ func (doppler *Doppler) Start() {
 		doppler.dropsondeListener.Start()
 	}()
 
-	go func() {
-		defer doppler.Done()
-		defer close(doppler.envelopeChan)
-		doppler.dropsondeUnmarshaller.Run(doppler.dropsondeVerifiedBytesChan, doppler.envelopeChan)
-	}()
+	doppler.dropsondeUnmarshallerCollection.Run(doppler.dropsondeVerifiedBytesChan, doppler.envelopeChan, &doppler.WaitGroup)
 
 	go func() {
 		defer doppler.Done()
@@ -161,6 +116,7 @@ func (doppler *Doppler) Start() {
 
 	go func() {
 		defer doppler.Done()
+		defer close(doppler.envelopeChan)
 		doppler.messageRouter.Start(doppler.envelopeChan)
 	}()
 
@@ -185,14 +141,4 @@ func (l *Doppler) Stop() {
 
 	l.Wait()
 	close(l.errChan)
-}
-
-func (l *Doppler) Emitters() []instrumentation.Instrumentable {
-	return []instrumentation.Instrumentable{
-		l.dropsondeListener,
-		l.messageRouter,
-		l.sinkManager,
-		l.dropsondeUnmarshaller,
-		l.signatureVerifier,
-	}
 }

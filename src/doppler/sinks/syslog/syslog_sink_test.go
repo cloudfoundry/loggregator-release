@@ -4,12 +4,13 @@ import (
 	"doppler/sinks/syslog"
 	"errors"
 	"fmt"
-	"github.com/cloudfoundry/dropsonde/emitter"
-	"github.com/cloudfoundry/dropsonde/events"
-	"github.com/cloudfoundry/dropsonde/factories"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"sync"
 	"time"
+
+	"github.com/cloudfoundry/dropsonde/emitter"
+	"github.com/cloudfoundry/dropsonde/factories"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/sonde-go/events"
 
 	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
@@ -17,28 +18,18 @@ import (
 )
 
 var _ = Describe("SyslogSink", func() {
-	var syslogSink *syslog.SyslogSink
-	var sysLogger *SyslogWriterRecorder
-	var sysLoggerDoneChan chan bool
-	var errorChannel chan *events.Envelope
-	var errorHandler func(string, string, string)
-	var mutex sync.Mutex
-	var inputChan chan *events.Envelope
-
-	closeSysLoggerDoneChan := func() {
-		mutex.Lock()
-		defer mutex.Unlock()
-		close(sysLoggerDoneChan)
-	}
-
-	newSysLoggerDoneChan := func() {
-		mutex.Lock()
-		defer mutex.Unlock()
-		sysLoggerDoneChan = make(chan bool)
-	}
+	var (
+		syslogSink            *syslog.SyslogSink
+		sysLogger             *SyslogWriterRecorder
+		syslogSinkRunFinished chan bool
+		errorChannel          chan *events.Envelope
+		errorHandler          func(string, string, string)
+		inputChan             chan *events.Envelope
+		updateMetricChan      chan int64
+	)
 
 	BeforeEach(func() {
-		newSysLoggerDoneChan()
+		syslogSinkRunFinished = make(chan bool)
 		sysLogger = NewSyslogWriterRecorder()
 		errorChannel = make(chan *events.Envelope, 10)
 		inputChan = make(chan *events.Envelope)
@@ -47,34 +38,28 @@ var _ = Describe("SyslogSink", func() {
 			logMessage := factories.NewLogMessage(events.LogMessage_ERR, errorMsg, appId, "LGR")
 			envelope, _ := emitter.Wrap(logMessage, "dropsonde-origin")
 
-			mutex.Lock()
-			defer mutex.Unlock()
 			select {
 			case errorChannel <- envelope:
 			default:
 			}
-
 		}
 
-		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorHandler, "dropsonde-origin").(*syslog.SyslogSink)
-	})
-
-	AfterEach(func() {
-		select {
-		case <-sysLoggerDoneChan:
-		default:
-			closeSysLoggerDoneChan()
-		}
+		updateMetricChan = make(chan int64, 1)
+		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorHandler, "dropsonde-origin", updateMetricChan)
 	})
 
 	Context("when remote syslog server is down", func() {
 		BeforeEach(func() {
-
 			sysLogger.SetDown(true)
 			go func() {
 				syslogSink.Run(inputChan)
-				closeSysLoggerDoneChan()
+				close(syslogSinkRunFinished)
 			}()
+		})
+
+		AfterEach(func() {
+			syslogSink.Disconnect()
+			Eventually(syslogSinkRunFinished).Should(BeClosed())
 		})
 
 		It("still accepts messages without blocking", func(done Done) {
@@ -98,7 +83,7 @@ var _ = Describe("SyslogSink", func() {
 			})
 
 			It("sends all the messages in the buffer", func(done Done) {
-				<-sysLoggerDoneChan
+				Eventually(syslogSinkRunFinished).Should(BeClosed())
 				data := sysLogger.ReceivedMessages()
 				Expect(data).To(HaveLen(5))
 				close(done)
@@ -110,8 +95,13 @@ var _ = Describe("SyslogSink", func() {
 		BeforeEach(func() {
 			go func() {
 				syslogSink.Run(inputChan)
-				closeSysLoggerDoneChan()
+				close(syslogSinkRunFinished)
 			}()
+		})
+
+		AfterEach(func() {
+			syslogSink.Disconnect()
+			Eventually(syslogSinkRunFinished).Should(BeClosed())
 		})
 
 		It("sends input messages to the syslog writer", func(done Done) {
@@ -122,13 +112,13 @@ var _ = Describe("SyslogSink", func() {
 			inputChan <- envelope
 			data := <-sysLogger.receivedChannel
 
-			expectedSyslogMessage := fmt.Sprintf(`out: test message ts: \d+ src: App srcId: 123`)
+			expectedSyslogMessage := fmt.Sprintf(`<14>1 test message ts: \d+ src: App srcId: 123`)
 			Expect(string(data)).To(MatchRegexp(expectedSyslogMessage))
 			close(done)
 		})
 
 		It("does not send non-log messages to the syslog writer", func(done Done) {
-			nonLogMessage := factories.NewHeartbeat(1, 2, 3)
+			nonLogMessage := factories.NewValueMetric("value-name", 2.0, "value-unit")
 			envelope, _ := emitter.Wrap(nonLogMessage, "origin")
 
 			inputChan <- envelope
@@ -146,7 +136,7 @@ var _ = Describe("SyslogSink", func() {
 
 			syslogSink.Disconnect()
 
-			Eventually(sysLoggerDoneChan).Should(BeClosed())
+			Eventually(syslogSinkRunFinished).Should(BeClosed())
 
 			close(done)
 		})
@@ -180,29 +170,18 @@ var _ = Describe("SyslogSink", func() {
 				close(done)
 			})
 
-			It("does not report error messages when it's disconnected", func(done Done) {
-				syslogSink.Disconnect()
-
-				logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
-				inputChan <- logMessage
-				close(inputChan)
-				<-sysLoggerDoneChan
-
-				Expect(errorChannel).To(BeEmpty())
-				close(done)
-			})
-
 			It("stops sending messages when the disconnect comes in", func(done Done) {
 				logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
 				inputChan <- logMessage
 
 				Eventually(errorChannel).ShouldNot(BeEmpty())
 				syslogSink.Disconnect()
-				<-sysLoggerDoneChan
+				Eventually(syslogSinkRunFinished).Should(BeClosed())
 				numErrors := len(errorChannel)
 
 				logMessage, _ = emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message 2", "appId", "App"), "origin")
-				inputChan <- logMessage
+
+				Expect(inputChan).ShouldNot(BeSent(logMessage))
 				close(inputChan)
 
 				Expect(errorChannel).To(HaveLen(numErrors))
@@ -223,14 +202,14 @@ var _ = Describe("SyslogSink", func() {
 				Context("when the remote syslog server comes back up again", func() {
 					BeforeEach(func() {
 						sysLogger.SetDown(false)
-						<-sysLoggerDoneChan
+						Eventually(syslogSinkRunFinished).Should(BeClosed())
 					})
 
 					It("resumes sending messages", func(done Done) {
 						data := sysLogger.ReceivedMessages()
 						Expect(data).To(HaveLen(6))
 						for i := 0; i < 5; i++ {
-							msg := fmt.Sprintf("out: message no %v", i+100)
+							msg := fmt.Sprintf("<14>1 message no %v", i+100)
 							Expect(data[i+1]).To(MatchRegexp(msg))
 						}
 						close(done)
@@ -239,7 +218,7 @@ var _ = Describe("SyslogSink", func() {
 					It("sends a message about the buffer overflow", func(done Done) {
 						data := sysLogger.ReceivedMessages()
 						Expect(len(data)).To(BeNumerically(">", 1))
-						Expect(data[0]).To(MatchRegexp("err: Log message output too high. We've dropped 100 messages"))
+						Expect(data[0]).To(MatchRegexp("<11>1 Log message output too high. We've dropped 100 messages"))
 						close(done)
 					})
 				})
@@ -252,6 +231,13 @@ var _ = Describe("SyslogSink", func() {
 		It("is idempotent", func() {
 			syslogSink.Disconnect()
 			Expect(syslogSink.Disconnect).NotTo(Panic())
+		})
+	})
+
+	Describe("UpdateDroppedMessageCount", func() {
+		It("updates dropped message count", func() {
+			syslogSink.UpdateDroppedMessageCount(2)
+			Eventually(updateMetricChan).Should(Receive(Equal(int64(2))))
 		})
 	})
 })
@@ -283,7 +269,7 @@ func (r *SyslogWriterRecorder) Connect() error {
 	}
 }
 
-func (r *SyslogWriterRecorder) WriteStdout(b []byte, source, sourceId string, timestamp int64) (int, error) {
+func (r *SyslogWriterRecorder) Write(p int, b []byte, source, sourceId string, timestamp int64) (int, error) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -291,21 +277,7 @@ func (r *SyslogWriterRecorder) WriteStdout(b []byte, source, sourceId string, ti
 		return 0, errors.New("Error writing to stdout.")
 	}
 
-	messageString := fmt.Sprintf("out: %s ts: %d src: %s srcId: %s", string(b), timestamp, source, sourceId)
-	r.receivedMessages = append(r.receivedMessages, messageString)
-	r.receivedChannel <- messageString
-	return len(b), nil
-}
-
-func (r *SyslogWriterRecorder) WriteStderr(b []byte, source, sourceId string, timestamp int64) (int, error) {
-	r.Lock()
-	defer r.Unlock()
-
-	if r.down {
-		return 0, errors.New("Error writing to stderr.")
-	}
-
-	messageString := fmt.Sprintf("err: %s ts: %d src: %s srcId: %s", string(b), timestamp, source, sourceId)
+	messageString := fmt.Sprintf("<%d>1 %s ts: %d src: %s srcId: %s", p, string(b), timestamp, source, sourceId)
 	r.receivedMessages = append(r.receivedMessages, messageString)
 	r.receivedChannel <- messageString
 	return len(b), nil

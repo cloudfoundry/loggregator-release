@@ -1,18 +1,16 @@
 package sinkserver
 
 import (
-	"doppler/sinkserver/metrics"
-	"github.com/cloudfoundry/dropsonde/envelope_extensions"
-	"github.com/cloudfoundry/dropsonde/events"
-	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"sync"
-	"sync/atomic"
+
+	"github.com/cloudfoundry/dropsonde/envelope_extensions"
+	"github.com/cloudfoundry/dropsonde/metrics"
+	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/sonde-go/events"
 )
 
 type MessageRouter struct {
-	SinkManager sinkManager
-	Metrics     *metrics.MessageRouterMetrics
+	sinkManager sinkManager
 	logger      *gosteno.Logger
 	done        chan struct{}
 	stopOnce    sync.Once
@@ -24,8 +22,7 @@ type sinkManager interface {
 
 func NewMessageRouter(sinkManager sinkManager, logger *gosteno.Logger) *MessageRouter {
 	return &MessageRouter{
-		SinkManager: sinkManager,
-		Metrics:     &metrics.MessageRouterMetrics{},
+		sinkManager: sinkManager,
 		logger:      logger,
 		done:        make(chan struct{}),
 	}
@@ -39,13 +36,13 @@ func (r *MessageRouter) Start(incomingLogChan <-chan *events.Envelope) {
 			r.logger.Debug("MessageRouter:MessageReceived:Done")
 			return
 		case envelope, ok := <-incomingLogChan:
-			atomic.AddUint64(&r.Metrics.ReceivedMessages, 1)
+			metrics.BatchIncrementCounter("httpServer.receivedMessages")
 			r.logger.Debug("MessageRouter:MessageReceived")
 			if !ok {
 				r.logger.Debug("MessageRouter:MessageReceived:NotOkay")
 				return
 			}
-			r.logger.Debugf("MessageRouter:outgoingLogChan: Received %s message from %s at %d.", envelope.GetEventType().String(), envelope.Origin, envelope.Timestamp)
+			r.logger.Debugf("MessageRouter:outgoingLogChan: Received %s message from %s at %d.", envelope.GetEventType().String(), envelope.GetOrigin(), envelope.Timestamp)
 			r.send(envelope)
 		}
 	}
@@ -55,14 +52,10 @@ func (r *MessageRouter) Stop() {
 	r.stopOnce.Do(func() { close(r.done) })
 }
 
-func (r *MessageRouter) Emit() instrumentation.Context {
-	return r.Metrics.Emit()
-}
-
 func (r *MessageRouter) send(envelope *events.Envelope) {
 	appId := envelope_extensions.GetAppId(envelope)
 
 	r.logger.Debugf("MessageRouter:outgoingLogChan: Searching for sinks with appId [%s].", appId)
-	r.SinkManager.SendTo(appId, envelope)
+	r.sinkManager.SendTo(appId, envelope)
 	r.logger.Debugf("MessageRouter:outgoingLogChan: Done sending message.")
 }

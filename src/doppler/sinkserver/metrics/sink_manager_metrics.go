@@ -5,99 +5,82 @@ import (
 	"doppler/sinks/dump"
 	"doppler/sinks/syslog"
 	"doppler/sinks/websocket"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"sync"
+
+	"github.com/cloudfoundry/dropsonde/metrics"
 )
 
 type SinkManagerMetrics struct {
-	DumpSinks              int
-	WebsocketSinks         int
-	SyslogSinks            int
-	FirehoseSinks          int
-	SyslogDrainErrorCounts map[string](map[string]int) // appId -> (url -> count)
-
-	sync.RWMutex
+	dumpSinks             int
+	websocketSinks        int
+	syslogSinks           int
+	firehoseSinks         int
+	sinkDropUpdateChannel <-chan int64
+	lock                  sync.RWMutex
 }
 
-func NewSinkManagerMetrics() *SinkManagerMetrics {
-	return &SinkManagerMetrics{
-		SyslogDrainErrorCounts: make(map[string](map[string]int)),
+func NewSinkManagerMetrics(sinkDropUpdateChannel <-chan int64) *SinkManagerMetrics {
+	m := SinkManagerMetrics{
+		sinkDropUpdateChannel: sinkDropUpdateChannel,
 	}
+
+	go func() {
+		for delta := range m.sinkDropUpdateChannel {
+			metrics.BatchAddCounter("messageRouter.totalDroppedMessages", uint64(delta))
+		}
+	}()
+
+	return &m
 }
 
 func (sinkManagerMetrics *SinkManagerMetrics) Inc(sink sinks.Sink) {
-	sinkManagerMetrics.Lock()
-	defer sinkManagerMetrics.Unlock()
+	sinkManagerMetrics.lock.Lock()
+	defer sinkManagerMetrics.lock.Unlock()
 
 	switch sink.(type) {
 	case *dump.DumpSink:
-		sinkManagerMetrics.DumpSinks++
+		sinkManagerMetrics.dumpSinks++
+		metrics.SendValue("messageRouter.numberOfDumpSinks", float64(sinkManagerMetrics.dumpSinks), "sinks")
+
 	case *syslog.SyslogSink:
-		sinkManagerMetrics.SyslogSinks++
+		sinkManagerMetrics.syslogSinks++
+		metrics.SendValue("messageRouter.numberOfSyslogSinks", float64(sinkManagerMetrics.syslogSinks), "sinks")
+
 	case *websocket.WebsocketSink:
-		sinkManagerMetrics.WebsocketSinks++
+		sinkManagerMetrics.websocketSinks++
+		metrics.SendValue("messageRouter.numberOfWebsocketSinks", float64(sinkManagerMetrics.websocketSinks), "sinks")
 	}
 }
 
 func (sinkManagerMetrics *SinkManagerMetrics) Dec(sink sinks.Sink) {
-	sinkManagerMetrics.Lock()
-	defer sinkManagerMetrics.Unlock()
+	sinkManagerMetrics.lock.Lock()
+	defer sinkManagerMetrics.lock.Unlock()
 
 	switch sink.(type) {
 	case *dump.DumpSink:
-		sinkManagerMetrics.DumpSinks--
+		sinkManagerMetrics.dumpSinks--
+		metrics.SendValue("messageRouter.numberOfDumpSinks", float64(sinkManagerMetrics.dumpSinks), "sinks")
+
 	case *syslog.SyslogSink:
-		sinkManagerMetrics.SyslogSinks--
+		sinkManagerMetrics.syslogSinks--
+		metrics.SendValue("messageRouter.numberOfSyslogSinks", float64(sinkManagerMetrics.syslogSinks), "sinks")
+
 	case *websocket.WebsocketSink:
-		sinkManagerMetrics.WebsocketSinks--
+		sinkManagerMetrics.websocketSinks--
+		metrics.SendValue("messageRouter.numberOfWebsocketSinks", float64(sinkManagerMetrics.websocketSinks), "sinks")
 	}
 }
 
 func (sinkManagerMetrics *SinkManagerMetrics) IncFirehose() {
-	sinkManagerMetrics.Lock()
-	defer sinkManagerMetrics.Unlock()
-	sinkManagerMetrics.FirehoseSinks++
+	sinkManagerMetrics.lock.Lock()
+	defer sinkManagerMetrics.lock.Unlock()
+	sinkManagerMetrics.firehoseSinks++
+	metrics.SendValue("messageRouter.numberOfFirehoseSinks", float64(sinkManagerMetrics.firehoseSinks), "sinks")
 }
 
 func (sinkManagerMetrics *SinkManagerMetrics) DecFirehose() {
-	sinkManagerMetrics.Lock()
-	defer sinkManagerMetrics.Unlock()
-	sinkManagerMetrics.FirehoseSinks--
-}
-
-func (sinkManagerMetrics *SinkManagerMetrics) ReportSyslogError(appId string, drainUrl string) {
-	sinkManagerMetrics.Lock()
-	defer sinkManagerMetrics.Unlock()
-
-	errorsByDrainUrl, ok := sinkManagerMetrics.SyslogDrainErrorCounts[appId]
-
-	if !ok {
-		errorsByDrainUrl = make(map[string]int)
-		sinkManagerMetrics.SyslogDrainErrorCounts[appId] = errorsByDrainUrl
-	}
-
-	errorsByDrainUrl[drainUrl] = errorsByDrainUrl[drainUrl] + 1
-}
-
-func (sinkManagerMetrics *SinkManagerMetrics) Emit() instrumentation.Context {
-	sinkManagerMetrics.RLock()
-	defer sinkManagerMetrics.RUnlock()
-
-	data := []instrumentation.Metric{
-		instrumentation.Metric{Name: "numberOfDumpSinks", Value: sinkManagerMetrics.DumpSinks},
-		instrumentation.Metric{Name: "numberOfSyslogSinks", Value: sinkManagerMetrics.SyslogSinks},
-		instrumentation.Metric{Name: "numberOfWebsocketSinks", Value: sinkManagerMetrics.WebsocketSinks},
-		instrumentation.Metric{Name: "numberOfFirehoseSinks", Value: sinkManagerMetrics.FirehoseSinks},
-	}
-
-	for appId, errorsByUrl := range sinkManagerMetrics.SyslogDrainErrorCounts {
-		for drainUrl, count := range errorsByUrl {
-			data = append(data, instrumentation.Metric{Name: "numberOfSyslogDrainErrors", Value: count, Tags: map[string]interface{}{"appId": appId, "drainUrl": drainUrl}})
-		}
-	}
-
-	return instrumentation.Context{
-		Name:    "messageRouter",
-		Metrics: data,
-	}
+	sinkManagerMetrics.lock.Lock()
+	defer sinkManagerMetrics.lock.Unlock()
+	sinkManagerMetrics.firehoseSinks--
+	metrics.SendValue("messageRouter.numberOfFirehoseSinks", float64(sinkManagerMetrics.firehoseSinks), "sinks")
 }

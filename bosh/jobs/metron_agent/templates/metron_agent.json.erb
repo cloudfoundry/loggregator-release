@@ -1,22 +1,29 @@
 {
-  "EtcdUrls": [<%= p("etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
-  "EtcdMaxConcurrentRequests": <%= p("etcd.maxconcurrentrequests") %>,
-  "SharedSecret": "<%= p("loggregator_endpoint.shared_secret") %>",
-  "LegacyIncomingMessagesPort": <%= p("metron_agent.incoming_port") %>,
-  "DropsondeIncomingMessagesPort": <%= p("metron_agent.dropsonde_incoming_port") %>,
   "Index": <%= spec.index %>,
   "Job": "<%= name %>",
+  "Zone": "<%= p("metron_agent.zone") %>",
+  "Deployment": "<%= p("metron_agent.deployment") %>",
+
+  "EtcdUrls": [<%= p("etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
+  "EtcdMaxConcurrentRequests": <%= p("etcd.maxconcurrentrequests") %>,
+
+  "SharedSecret": "<%= p("loggregator_endpoint.shared_secret") %>",
+
+  "LegacyIncomingMessagesPort": <%= p("metron_agent.incoming_port") %>,
+  "DropsondeIncomingMessagesPort": <%= p("metron_agent.dropsonde_incoming_port") %>,
+
   "VarzUser": "<%= p("metron_agent.status.user") %>",
   "VarzPass": "<%= p("metron_agent.status.password") %>",
   "VarzPort": <%= p("metron_agent.status.port") %>,
+
   "NatsHosts": <%= p("nats.machines") %>,
   "NatsPort": <%= p("nats.port") %>,
   "NatsUser": "<%= p("nats.user") %>",
   "NatsPass": "<%= p("nats.password") %>",
   "CollectorRegistrarIntervalMilliseconds": <%= p("metron_agent.collector_registrar_interval_milliseconds") %>,
+
   "EtcdQueryIntervalMilliseconds": <%= p("metron_agent.etcd_query_interval_milliseconds") %>,
-  "Zone": "<%= p("metron_agent.zone") %>",
-  "LoggregatorLegacyPort": <%= p("loggregator.incoming_port") %>,
+
   "LoggregatorDropsondePort": <%= p("loggregator.dropsonde_incoming_port") %>
 
   <% if_p("syslog_daemon_config") do |_| %>
