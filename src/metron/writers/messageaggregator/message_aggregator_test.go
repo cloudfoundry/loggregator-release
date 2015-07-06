@@ -24,7 +24,7 @@ var _ = Describe("MessageAggregator", func() {
 
 	BeforeEach(func() {
 		mockWriter = &mocks.MockEnvelopeWriter{}
-		messageAggregator = messageaggregator.New(mockWriter, loggertesthelper.Logger())
+		messageAggregator = messageaggregator.New(mockWriter, loggertesthelper.Logger(), true)
 		originalTTL = messageaggregator.MaxTTL
 	})
 

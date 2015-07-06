@@ -6,6 +6,7 @@ import (
 
 	"metron/writers"
 
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -24,6 +25,7 @@ type MessageAggregator struct {
 	httpUnmatchedStartReceivedCount uint64
 	httpUnmatchedStopReceivedCount  uint64
 	counterEventReceivedCount       uint64
+	emitMetrics                     bool
 
 	lock sync.Mutex
 
@@ -31,12 +33,13 @@ type MessageAggregator struct {
 	outputWriter writers.EnvelopeWriter
 }
 
-func New(outputWriter writers.EnvelopeWriter, logger *gosteno.Logger) *MessageAggregator {
+func New(outputWriter writers.EnvelopeWriter, logger *gosteno.Logger, emit bool) *MessageAggregator {
 	return &MessageAggregator{
 		logger:               logger,
 		outputWriter:         outputWriter,
 		startEventsByEventID: make(map[eventID]startEventEntry),
 		counterTotals:        make(map[counterID]uint64),
+		emitMetrics:          emit,
 	}
 }
 
@@ -61,6 +64,9 @@ func (m *MessageAggregator) Write(envelope *events.Envelope) {
 		m.outputWriter.Write(counterEventMessage)
 	default:
 		m.incrementCounter(&m.uncategorizedEventCount)
+		if m.emitMetrics {
+			metrics.IncrementCounter("MessageAggregator.uncategorizedEvents")
+		}
 		m.logger.Debugf("passing through message %v", spew.Sprintf("%v", envelope))
 		m.outputWriter.Write(envelope)
 	}
@@ -80,6 +86,9 @@ func (m *MessageAggregator) incrementCounter(counter *uint64) {
 }
 
 func (m *MessageAggregator) handleHTTPStart(envelope *events.Envelope) {
+	if m.emitMetrics {
+		metrics.IncrementCounter("MessageAggregator.httpStartReceived")
+	}
 	m.incrementCounter(&m.httpStartReceivedCount)
 
 	m.logger.Debugf("handling HTTP start message %v", spew.Sprintf("%v", envelope))
@@ -91,6 +100,9 @@ func (m *MessageAggregator) handleHTTPStart(envelope *events.Envelope) {
 }
 
 func (m *MessageAggregator) handleHTTPStop(envelope *events.Envelope) *events.Envelope {
+	if m.emitMetrics {
+		metrics.IncrementCounter("MessageAggregator.httpStopReceived")
+	}
 	m.incrementCounter(&m.httpStopReceivedCount)
 
 	m.logger.Debugf("handling HTTP stop message %v", spew.Sprintf("%v", envelope))
@@ -102,10 +114,16 @@ func (m *MessageAggregator) handleHTTPStop(envelope *events.Envelope) *events.En
 	startEventEntry, ok := m.startEventsByEventID[event]
 	if !ok {
 		m.logger.Warnf("no matching HTTP start message found for %v", event)
+		if m.emitMetrics {
+			metrics.IncrementCounter("MessageAggregator.httpUnmatchedStopReceived")
+		}
 		m.incrementCounter(&m.httpUnmatchedStopReceivedCount)
 		return nil
 	}
 
+	if m.emitMetrics {
+		metrics.IncrementCounter("MessageAggregator.httpStartStopEmitted")
+	}
 	m.incrementCounter(&m.httpStartStopEmittedCount)
 
 	delete(m.startEventsByEventID, event)
@@ -135,6 +153,10 @@ func (m *MessageAggregator) handleHTTPStop(envelope *events.Envelope) *events.En
 }
 
 func (m *MessageAggregator) handleCounter(envelope *events.Envelope) *events.Envelope {
+	if m.emitMetrics {
+		metrics.IncrementCounter("MessageAggregator.counterEventReceived")
+	}
+
 	m.incrementCounter(&m.counterEventReceivedCount)
 	countID := counterID{
 		name:   envelope.GetCounterEvent().GetName(),
@@ -145,7 +167,6 @@ func (m *MessageAggregator) handleCounter(envelope *events.Envelope) *events.Env
 	m.counterTotals[countID] = newVal
 
 	envelope.GetCounterEvent().Total = &newVal
-
 	return envelope
 }
 
@@ -153,6 +174,9 @@ func (m *MessageAggregator) cleanupOrphanedHTTPStart() {
 	currentTime := time.Now()
 	for key, eventEntry := range m.startEventsByEventID {
 		if currentTime.Sub(eventEntry.entryTime) > MaxTTL {
+			if m.emitMetrics {
+				metrics.IncrementCounter("MessageAggregator.httpUnmatchedStartReceived")
+			}
 			m.incrementCounter(&m.httpUnmatchedStartReceivedCount)
 			delete(m.startEventsByEventID, key)
 		}

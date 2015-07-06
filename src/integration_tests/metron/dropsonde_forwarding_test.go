@@ -6,9 +6,10 @@ import (
 	"net"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/cloudfoundry/storeadapter"
+	"github.com/gogo/protobuf/proto"
 
+	"bytes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -34,10 +35,6 @@ var _ = Describe("Dropsonde message forwarding", func() {
 	})
 
 	It("forwards hmac signed messages to a healthy doppler server", func(done Done) {
-		type signedMessage struct {
-			signature []byte
-			message   []byte
-		}
 
 		defer close(done)
 
@@ -100,10 +97,16 @@ var _ = Describe("Dropsonde message forwarding", func() {
 
 		go writeToMetron()
 
-		var receivedMessage signedMessage
-		Eventually(messageChan).Should(Receive(&receivedMessage))
+		expected := signedMessage{signature: signature, message: expectedMessage}
 
-		Expect(receivedMessage).To(Equal(signedMessage{signature: signature, message: expectedMessage}))
-
-	})
+		Eventually(func() bool {
+			msg := <-messageChan
+			return bytes.Equal(msg.signature, expected.signature) && bytes.Equal(msg.message, expected.message)
+		}).Should(BeTrue())
+	}, 2)
 })
+
+type signedMessage struct {
+	signature []byte
+	message   []byte
+}

@@ -1,0 +1,19 @@
+{
+    "Index": 42,
+    "Job": "test-component",
+    "VarzPort": 1234,
+    "VarzUser": "admin",
+    "VarzPass": "admin",
+    "NatsUser": "",
+    "LegacyIncomingMessagesPort": 51160,
+    "DropsondeIncomingMessagesPort": 51161,
+    "SharedSecret": "shared_secret",
+    "EtcdUrls"    : ["http://127.0.0.1:5800"],
+    "EtcdMaxConcurrentRequests": 1,
+    "EtcdQueryIntervalMilliseconds": 10,
+    "Zone": "z1",
+    "Deployment": "deployment-name",
+    "LoggregatorDropsondePort": 3457,
+    "CollectorRegistrarIntervalMilliseconds": 100,
+    "MetricBatchIntervalSeconds": 1
+}

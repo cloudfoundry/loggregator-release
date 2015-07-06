@@ -5,6 +5,7 @@ import (
 
 	"metron/writers"
 
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
@@ -44,6 +45,7 @@ func (u *LegacyUnmarshaller) unmarshalMessage(message []byte) (*logmessage.LogEn
 	if err != nil {
 		u.logger.Debugf("legacyUnmarshaller: unmarshal error %v for message %v", err, message)
 		incrementCount(&u.unmarshalErrorCount)
+		metrics.BatchIncrementCounter("legacyUnmarshaller.unmarshalErrors")
 		return nil, err
 	}
 

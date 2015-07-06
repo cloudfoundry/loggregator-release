@@ -4,8 +4,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/cloudfoundry/storeadapter"
+	"github.com/gogo/protobuf/proto"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

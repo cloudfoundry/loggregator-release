@@ -5,12 +5,16 @@ import (
 	"metron/writers/mocks"
 
 	"github.com/cloudfoundry/dropsonde/factories"
+	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation/testhelpers"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"time"
 )
 
 var _ = Describe("EventMarshaller", func() {
@@ -21,7 +25,7 @@ var _ = Describe("EventMarshaller", func() {
 
 	BeforeEach(func() {
 		writer = &mocks.MockByteArrayWriter{}
-		marshaller = eventmarshaller.New(writer, loggertesthelper.Logger())
+		marshaller = eventmarshaller.New(writer, loggertesthelper.Logger(), true)
 
 	})
 
@@ -50,6 +54,18 @@ var _ = Describe("EventMarshaller", func() {
 
 			marshaller.Write(envelope)
 			testhelpers.EventuallyExpectMetric(marshaller, "marshalErrors", 1)
+		})
+
+		It("emits a dropsonde marshal error counter", func() {
+			fakeMetricSender := fake.NewFakeMetricSender()
+			batcher := metricbatcher.New(fakeMetricSender, 1*time.Millisecond)
+			metrics.Initialize(fakeMetricSender, batcher)
+
+			envelope := &events.Envelope{}
+
+			marshaller.Write(envelope)
+
+			Eventually(func() uint64 { return fakeMetricSender.GetCounter("dropsondeMarshaller.marshalErrors") }).Should(BeEquivalentTo(1))
 		})
 	})
 })

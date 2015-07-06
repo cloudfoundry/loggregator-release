@@ -15,6 +15,9 @@ import (
 	"metron/writers/tagger"
 	"metron/writers/varzforwarder"
 
+	"github.com/cloudfoundry/dropsonde/metric_sender"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
@@ -26,6 +29,7 @@ import (
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
+	"metron/eventwriter"
 )
 
 var (
@@ -44,10 +48,12 @@ func main() {
 
 	dopplerForwarder := dopplerforwarder.New(dopplerClientPool, logger)
 	byteSigner := signer.New(config.SharedSecret, dopplerForwarder)
-	marshaller := eventmarshaller.New(byteSigner, logger)
+	marshaller := eventmarshaller.New(byteSigner, logger, true)
 	varzShim := varzforwarder.New(config.Job, metricTTL, marshaller, logger)
 	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, varzShim)
-	aggregator := messageaggregator.New(messageTagger, logger)
+	aggregator := messageaggregator.New(messageTagger, logger, true)
+
+	initializeMetrics(byteSigner, config, logger)
 
 	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, logger)
 	dropsondeReader := networkreader.New(fmt.Sprintf("localhost:%d", config.DropsondeIncomingMessagesPort), "dropsondeAgentListener", dropsondeUnmarshaller, logger)
@@ -98,6 +104,17 @@ func initializeClientPool(config metronConfig, logger *gosteno.Logger) *clientpo
 	return clientPool
 }
 
+func initializeMetrics(byteSigner *signer.Signer, config metronConfig, logger *gosteno.Logger) {
+	metricsMarshaller := eventmarshaller.New(byteSigner, logger, false)
+	metricsTagger := tagger.New(config.Deployment, config.Job, config.Index, metricsMarshaller)
+	metricsAggregator := messageaggregator.New(metricsTagger, logger, false)
+
+	eventWriter := eventwriter.New("MetronAgent", metricsAggregator)
+	metricSender := metric_sender.NewMetricSender(eventWriter)
+	metricBatcher := metricbatcher.New(metricSender, time.Duration(config.MetricBatchIntervalSeconds)*time.Second)
+	metrics.Initialize(metricSender, metricBatcher)
+}
+
 func storeAdapterProvider(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
 	workPool, err := workpool.NewWorkPool(concurrentRequests)
 	if err != nil {
@@ -130,6 +147,10 @@ func parseConfig(debug bool, configFile string, logFilePath string) (metronConfi
 		panic(err)
 	}
 
+	if config.MetricBatchIntervalSeconds == 0 {
+		config.MetricBatchIntervalSeconds = 15
+	}
+
 	logger := cfcomponent.NewLogger(debug, logFilePath, "metron", config.Config)
 	logger.Info("Startup: Setting up the Metron agent")
 
@@ -138,17 +159,23 @@ func parseConfig(debug bool, configFile string, logFilePath string) (metronConfi
 
 type metronConfig struct {
 	cfcomponent.Config
-	Zone                          string
-	Index                         uint
-	Job                           string
+
+	Deployment string
+	Zone       string
+	Job        string
+	Index      uint
+
 	LegacyIncomingMessagesPort    int
 	DropsondeIncomingMessagesPort int
+
 	EtcdUrls                      []string
 	EtcdMaxConcurrentRequests     int
 	EtcdQueryIntervalMilliseconds int
-	LoggregatorDropsondePort      int
-	SharedSecret                  string
-	Deployment                    string
+
+	LoggregatorDropsondePort int
+	SharedSecret             string
+
+	MetricBatchIntervalSeconds uint
 }
 
 type metronHealthMonitor struct{}

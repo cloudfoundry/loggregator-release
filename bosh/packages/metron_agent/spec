@@ -5,6 +5,7 @@ dependencies:
 files:
 - loggregator/src/metron/syslog_daemon_config/*
 - loggregator/src/metron/*.go # gosub
+- loggregator/src/metron/eventwriter/*.go # gosub
 - loggregator/src/metron/networkreader/*.go # gosub
 - loggregator/src/metron/writers/*.go # gosub
 - loggregator/src/metron/writers/dopplerforwarder/*.go # gosub

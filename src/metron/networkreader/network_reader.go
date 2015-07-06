@@ -7,6 +7,7 @@ import (
 
 	"metron/writers"
 
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 )
@@ -56,6 +57,8 @@ func (nr *NetworkReader) Start() {
 
 		atomic.AddUint64(&nr.receivedMessageCount, 1)
 		atomic.AddUint64(&nr.receivedByteCount, uint64(readCount))
+		metrics.BatchIncrementCounter(nr.contextName + ".receivedMessageCount")
+		metrics.BatchAddCounter(nr.contextName+".receivedByteCount", uint64(readCount))
 		nr.writer.Write(readData)
 	}
 }
