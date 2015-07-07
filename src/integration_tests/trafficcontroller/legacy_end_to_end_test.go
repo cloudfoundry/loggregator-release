@@ -60,10 +60,10 @@ var _ = Describe("TrafficController for legacy messages", func() {
 				expectedMessages[i] = message
 				fakeDoppler.SendLogMessage(message)
 			}
-			fakeDoppler.CloseLogMessageStream()
 		})
 
 		It("returns a multi-part HTTP response with all recent messages", func(done Done) {
+			fakeDoppler.CloseLogMessageStream()
 			client := loggregator_consumer.New(legacyEndpoint, &tls.Config{}, nil)
 
 			messages, err := client.Recent("1234", "bearer iAmAnAdmin")
@@ -79,6 +79,39 @@ var _ = Describe("TrafficController for legacy messages", func() {
 			}
 			close(done)
 		}, 20)
+
+		It("correctly handles when clients go away mid-stream", func() {
+			recentPath := fmt.Sprintf("http://%s:%d/recent?app=1234", localIPAddress, TRAFFIC_CONTROLLER_LEGACY_PORT)
+			client := &http.Client{}
+
+			req, _ := http.NewRequest("GET", recentPath, nil)
+			req.Header.Set("Authorization", "iAmNotAnAdmin")
+
+			// write many messages to make sure the http handler flushes the
+			// response headers which allow client.Do() to return
+			for i := 0; i < 95; i++ {
+				message := makeDropsondeMessage("foo", "1234", 1234)
+				fakeDoppler.SendLogMessage(message)
+			}
+
+			resp, err := client.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+
+			var request *http.Request
+			Eventually(fakeDoppler.TrafficControllerConnected, 15).Should(Receive(&request))
+
+			resp.Body.Close()
+
+			// write many messages to make sure we flush the connection and
+			// cause an error in the http handler
+			for i := 0; i < 100; i++ {
+				message := makeDropsondeMessage("foo", "1234", 1234)
+				fakeDoppler.SendLogMessage(message)
+			}
+			fakeDoppler.CloseLogMessageStream()
+
+			Consistently(trafficControllerSession.Err.Contents).ShouldNot(ContainSubstring("panic serving"))
+		})
 	})
 
 	Context("SetCookie", func() {
