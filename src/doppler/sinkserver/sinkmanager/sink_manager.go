@@ -164,7 +164,7 @@ func (sinkManager *SinkManager) LatestContainerMetrics(appId string) []*events.E
 }
 
 func (sinkManager *SinkManager) SendSyslogErrorToLoggregator(errorMsg string, appId string, sinkUrl string) {
-	sinkManager.logger.Warnf(errorMsg)
+	sinkManager.logger.Warnf("%s", errorMsg)
 
 	logMessage := factories.NewLogMessage(events.LogMessage_ERR, errorMsg, appId, "LGR")
 
