@@ -3,30 +3,31 @@ package main
 import (
 	"errors"
 	"flag"
-	"syslog_drain_binder/elector"
-	"syslog_drain_binder/etcd_syslog_drain_store"
+	"fmt"
 	"time"
 
-	"fmt"
+	"syslog_drain_binder/elector"
+	"syslog_drain_binder/etcd_syslog_drain_store"
+
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/metrics"
+	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 )
 
 var (
-	debug      = flag.Bool("debug", false, "Verbose (debug) logging")
-	configFile = flag.String("config", "config/syslog_drain_binder.json", "Location of the Syslog Drain Binder config json file")
+	logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
+	debug       = flag.Bool("debug", false, "Verbose (debug) logging")
+	configFile  = flag.String("config", "config/syslog_drain_binder.json", "Location of the Syslog Drain Binder config json file")
 )
 
 func main() {
 	flag.Parse()
-	config := parseConfig(*configFile)
+	config, logger := parseConfig(*debug, *configFile, *logFilePath)
 
 	dropsonde.Initialize(config.MetronAddress, "syslog_drain_binder")
-
-	logger := cfcomponent.NewLogger(*debug, "", "syslog_drain_binder", config.Config)
 
 	workPool, err := workpool.NewWorkPool(config.EtcdMaxConcurrentRequests)
 	if err != nil {
@@ -112,9 +113,8 @@ type Config struct {
 	cfcomponent.Config
 }
 
-func parseConfig(configFile string) Config {
+func parseConfig(debug bool, configFile string, logFilePath string) (Config, *gosteno.Logger) {
 	config := Config{}
-
 	err := cfcomponent.ReadConfigInto(&config, configFile)
 	if err != nil {
 		panic(err)
@@ -125,7 +125,9 @@ func parseConfig(configFile string) Config {
 		panic(err)
 	}
 
-	return config
+	logger := cfcomponent.NewLogger(debug, logFilePath, "syslog_drain_binder", config.Config)
+
+	return config, logger
 }
 
 func (config Config) validate() error {
