@@ -95,7 +95,7 @@ var _ = Describe("Self Instrumentation", func() {
 				EventType: events.Envelope_CounterEvent.Enum(),
 				CounterEvent: &events.CounterEvent{
 					Name:  proto.String("MessageAggregator.counterEventReceived"),
-					Delta: proto.Uint64(1),
+					Delta: proto.Uint64(2),
 					Total: proto.Uint64(2),
 				},
 			}

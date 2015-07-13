@@ -65,7 +65,7 @@ func (m *MessageAggregator) Write(envelope *events.Envelope) {
 	default:
 		m.incrementCounter(&m.uncategorizedEventCount)
 		if m.emitMetrics {
-			metrics.IncrementCounter("MessageAggregator.uncategorizedEvents")
+			metrics.BatchIncrementCounter("MessageAggregator.uncategorizedEvents")
 		}
 		m.logger.Debugf("passing through message %v", spew.Sprintf("%v", envelope))
 		m.outputWriter.Write(envelope)
@@ -87,7 +87,7 @@ func (m *MessageAggregator) incrementCounter(counter *uint64) {
 
 func (m *MessageAggregator) handleHTTPStart(envelope *events.Envelope) {
 	if m.emitMetrics {
-		metrics.IncrementCounter("MessageAggregator.httpStartReceived")
+		metrics.BatchIncrementCounter("MessageAggregator.httpStartReceived")
 	}
 	m.incrementCounter(&m.httpStartReceivedCount)
 
@@ -101,7 +101,7 @@ func (m *MessageAggregator) handleHTTPStart(envelope *events.Envelope) {
 
 func (m *MessageAggregator) handleHTTPStop(envelope *events.Envelope) *events.Envelope {
 	if m.emitMetrics {
-		metrics.IncrementCounter("MessageAggregator.httpStopReceived")
+		metrics.BatchIncrementCounter("MessageAggregator.httpStopReceived")
 	}
 	m.incrementCounter(&m.httpStopReceivedCount)
 
@@ -115,14 +115,14 @@ func (m *MessageAggregator) handleHTTPStop(envelope *events.Envelope) *events.En
 	if !ok {
 		m.logger.Warnf("no matching HTTP start message found for %v", event)
 		if m.emitMetrics {
-			metrics.IncrementCounter("MessageAggregator.httpUnmatchedStopReceived")
+			metrics.BatchIncrementCounter("MessageAggregator.httpUnmatchedStopReceived")
 		}
 		m.incrementCounter(&m.httpUnmatchedStopReceivedCount)
 		return nil
 	}
 
 	if m.emitMetrics {
-		metrics.IncrementCounter("MessageAggregator.httpStartStopEmitted")
+		metrics.BatchIncrementCounter("MessageAggregator.httpStartStopEmitted")
 	}
 	m.incrementCounter(&m.httpStartStopEmittedCount)
 
@@ -154,7 +154,7 @@ func (m *MessageAggregator) handleHTTPStop(envelope *events.Envelope) *events.En
 
 func (m *MessageAggregator) handleCounter(envelope *events.Envelope) *events.Envelope {
 	if m.emitMetrics {
-		metrics.IncrementCounter("MessageAggregator.counterEventReceived")
+		metrics.BatchIncrementCounter("MessageAggregator.counterEventReceived")
 	}
 
 	m.incrementCounter(&m.counterEventReceivedCount)
@@ -175,7 +175,7 @@ func (m *MessageAggregator) cleanupOrphanedHTTPStart() {
 	for key, eventEntry := range m.startEventsByEventID {
 		if currentTime.Sub(eventEntry.entryTime) > MaxTTL {
 			if m.emitMetrics {
-				metrics.IncrementCounter("MessageAggregator.httpUnmatchedStartReceived")
+				metrics.BatchIncrementCounter("MessageAggregator.httpUnmatchedStartReceived")
 			}
 			m.incrementCounter(&m.httpUnmatchedStartReceivedCount)
 			delete(m.startEventsByEventID, key)
