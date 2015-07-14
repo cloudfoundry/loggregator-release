@@ -1,7 +1,6 @@
 package messageaggregator
 
 import (
-	"sync"
 	"time"
 
 	"metron/writers"
@@ -11,6 +10,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/davecgh/go-spew/spew"
+	"sync/atomic"
 )
 
 var MaxTTL = time.Minute
@@ -26,8 +26,6 @@ type MessageAggregator struct {
 	httpUnmatchedStopReceivedCount  uint64
 	counterEventReceivedCount       uint64
 	emitMetrics                     bool
-
-	lock sync.Mutex
 
 	logger       *gosteno.Logger
 	outputWriter writers.EnvelopeWriter
@@ -63,7 +61,7 @@ func (m *MessageAggregator) Write(envelope *events.Envelope) {
 		counterEventMessage := m.handleCounter(envelope)
 		m.outputWriter.Write(counterEventMessage)
 	default:
-		m.incrementCounter(&m.uncategorizedEventCount)
+		atomic.AddUint64(&m.uncategorizedEventCount, 1)
 		if m.emitMetrics {
 			metrics.BatchIncrementCounter("MessageAggregator.uncategorizedEvents")
 		}
@@ -79,17 +77,11 @@ func (m *MessageAggregator) Emit() instrumentation.Context {
 	}
 }
 
-func (m *MessageAggregator) incrementCounter(counter *uint64) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	(*counter)++
-}
-
 func (m *MessageAggregator) handleHTTPStart(envelope *events.Envelope) {
 	if m.emitMetrics {
 		metrics.BatchIncrementCounter("MessageAggregator.httpStartReceived")
 	}
-	m.incrementCounter(&m.httpStartReceivedCount)
+	atomic.AddUint64(&m.httpStartReceivedCount, 1)
 
 	m.logger.Debugf("handling HTTP start message %v", spew.Sprintf("%v", envelope))
 	startEvent := envelope.GetHttpStart()
@@ -103,7 +95,7 @@ func (m *MessageAggregator) handleHTTPStop(envelope *events.Envelope) *events.En
 	if m.emitMetrics {
 		metrics.BatchIncrementCounter("MessageAggregator.httpStopReceived")
 	}
-	m.incrementCounter(&m.httpStopReceivedCount)
+	atomic.AddUint64(&m.httpStopReceivedCount, 1)
 
 	m.logger.Debugf("handling HTTP stop message %v", spew.Sprintf("%v", envelope))
 	stopEvent := envelope.GetHttpStop()
@@ -117,14 +109,14 @@ func (m *MessageAggregator) handleHTTPStop(envelope *events.Envelope) *events.En
 		if m.emitMetrics {
 			metrics.BatchIncrementCounter("MessageAggregator.httpUnmatchedStopReceived")
 		}
-		m.incrementCounter(&m.httpUnmatchedStopReceivedCount)
+		atomic.AddUint64(&m.httpUnmatchedStopReceivedCount, 1)
 		return nil
 	}
 
 	if m.emitMetrics {
 		metrics.BatchIncrementCounter("MessageAggregator.httpStartStopEmitted")
 	}
-	m.incrementCounter(&m.httpStartStopEmittedCount)
+	atomic.AddUint64(&m.httpStartStopEmittedCount, 1)
 
 	delete(m.startEventsByEventID, event)
 	startEvent := startEventEntry.startEvent
@@ -157,7 +149,7 @@ func (m *MessageAggregator) handleCounter(envelope *events.Envelope) *events.Env
 		metrics.BatchIncrementCounter("MessageAggregator.counterEventReceived")
 	}
 
-	m.incrementCounter(&m.counterEventReceivedCount)
+	atomic.AddUint64(&m.counterEventReceivedCount, 1)
 	countID := counterID{
 		name:   envelope.GetCounterEvent().GetName(),
 		origin: envelope.GetOrigin(),
@@ -177,24 +169,21 @@ func (m *MessageAggregator) cleanupOrphanedHTTPStart() {
 			if m.emitMetrics {
 				metrics.BatchIncrementCounter("MessageAggregator.httpUnmatchedStartReceived")
 			}
-			m.incrementCounter(&m.httpUnmatchedStartReceivedCount)
+			atomic.AddUint64(&m.httpUnmatchedStartReceivedCount, 1)
 			delete(m.startEventsByEventID, key)
 		}
 	}
 }
 
 func (m *MessageAggregator) metrics() []instrumentation.Metric {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
 	return []instrumentation.Metric{
-		instrumentation.Metric{Name: "httpStartReceived", Value: m.httpStartReceivedCount},
-		instrumentation.Metric{Name: "httpStopReceived", Value: m.httpStopReceivedCount},
-		instrumentation.Metric{Name: "httpStartStopEmitted", Value: m.httpStartStopEmittedCount},
-		instrumentation.Metric{Name: "uncategorizedEvents", Value: m.uncategorizedEventCount},
-		instrumentation.Metric{Name: "httpUnmatchedStartReceived", Value: m.httpUnmatchedStartReceivedCount},
-		instrumentation.Metric{Name: "httpUnmatchedStopReceived", Value: m.httpUnmatchedStopReceivedCount},
-		instrumentation.Metric{Name: "counterEventReceived", Value: m.counterEventReceivedCount},
+		instrumentation.Metric{Name: "httpStartReceived", Value: atomic.LoadUint64(&m.httpStartReceivedCount)},
+		instrumentation.Metric{Name: "httpStopReceived", Value: atomic.LoadUint64(&m.httpStopReceivedCount)},
+		instrumentation.Metric{Name: "httpStartStopEmitted", Value: atomic.LoadUint64(&m.httpStartStopEmittedCount)},
+		instrumentation.Metric{Name: "uncategorizedEvents", Value: atomic.LoadUint64(&m.uncategorizedEventCount)},
+		instrumentation.Metric{Name: "httpUnmatchedStartReceived", Value: atomic.LoadUint64(&m.httpUnmatchedStartReceivedCount)},
+		instrumentation.Metric{Name: "httpUnmatchedStopReceived", Value: atomic.LoadUint64(&m.httpUnmatchedStopReceivedCount)},
+		instrumentation.Metric{Name: "counterEventReceived", Value: atomic.LoadUint64(&m.counterEventReceivedCount)},
 	}
 }
 

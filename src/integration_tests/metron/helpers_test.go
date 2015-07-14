@@ -10,6 +10,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 
 	. "github.com/onsi/gomega"
+	"github.com/nu7hatch/gouuid"
+	"github.com/cloudfoundry/dropsonde/factories"
 )
 
 func basicValueMetric(name string, value float64, unit string) *events.ValueMetric {
@@ -57,6 +59,49 @@ func basicCounterEventMessage() []byte {
 	})
 
 	return message
+}
+
+func basicHTTPStartMessage(requestId string) []byte {
+	message, _ := proto.Marshal(basicHTTPStartMessageEnvelope(requestId))
+	return message
+}
+
+func basicHTTPStartMessageEnvelope(requestId string) *events.Envelope {
+	uuid, _ := uuid.ParseHex(requestId)
+	return &events.Envelope{
+		Origin:    proto.String("fake-origin-2"),
+		EventType: events.Envelope_HttpStart.Enum(),
+		HttpStart: &events.HttpStart{
+			Timestamp:     proto.Int64(12),
+			RequestId:     factories.NewUUID(uuid),
+			PeerType:      events.PeerType_Client.Enum(),
+			Method:        events.Method_GET.Enum(),
+			Uri:           proto.String("some uri"),
+			RemoteAddress: proto.String("some address"),
+			UserAgent:     proto.String("some user agent"),
+		},
+	}
+}
+
+func basicHTTPStopMessage(requestId string) []byte {
+	message, _ := proto.Marshal(basicHTTPStopMessageEnvelope(requestId))
+	return message
+}
+
+func basicHTTPStopMessageEnvelope(requestId string) *events.Envelope {
+	uuid, _ := uuid.ParseHex(requestId)
+	return &events.Envelope{
+		Origin:    proto.String("fake-origin-2"),
+		EventType: events.Envelope_HttpStop.Enum(),
+		HttpStop: &events.HttpStop{
+			Timestamp:     proto.Int64(12),
+			Uri:           proto.String("some uri"),
+			RequestId:     factories.NewUUID(uuid),
+			PeerType:      events.PeerType_Client.Enum(),
+			StatusCode:    proto.Int32(404),
+			ContentLength: proto.Int64(98475189),
+		},
+	}
 }
 
 func getMetricFromContext(context *instrumentation.Context, name string) *instrumentation.Metric {

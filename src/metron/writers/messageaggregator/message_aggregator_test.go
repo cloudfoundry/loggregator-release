@@ -126,6 +126,26 @@ var _ = Describe("MessageAggregator", func() {
 		})
 	})
 
+	Context("multiple StartStop messages", func() {
+		It("creates the right amount of HttpStartStop events", func() {
+			const numEvents = 250
+			var i uint64
+
+			for i = 0; i < numEvents; i++ {
+				messageAggregator.Write(createStartMessage(i, events.PeerType_Client))
+			}
+			time.Sleep(100 * time.Millisecond)
+			for i = 0; i < numEvents; i++ {
+				messageAggregator.Write(createStopMessage(i, events.PeerType_Client))
+			}
+
+			Expect(mockWriter.Events).To(HaveLen(250))
+			for _, event := range mockWriter.Events {
+				Expect(event.GetEventType()).To(Equal(events.Envelope_HttpStartStop))
+			}
+		})
+	})
+
 	It("does not send a combined event if there only is a stop event", func() {
 		messageAggregator.Write(createStopMessage(123, events.PeerType_Client))
 		Consistently(func() int { return len(mockWriter.Events) }).Should(Equal(0))

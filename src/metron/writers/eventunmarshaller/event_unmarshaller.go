@@ -1,7 +1,6 @@
 package eventunmarshaller
 
 import (
-	"sync"
 	"sync/atomic"
 	"unicode"
 
@@ -24,7 +23,6 @@ type EventUnmarshaller struct {
 	receiveCounts         map[events.Envelope_EventType]*uint64
 	unknownEventTypeCount uint64
 	unmarshalErrorCount   uint64
-	lock                  sync.RWMutex
 }
 
 // New instantiates a EventUnmarshaller and logs to the
@@ -112,12 +110,8 @@ func isUnknownEventType(eventType *events.Envelope_EventType) bool {
 func (u *EventUnmarshaller) metrics() []instrumentation.Metric {
 	var metrics []instrumentation.Metric
 
-	u.lock.RLock()
-
 	metricValue := atomic.LoadUint64(u.receiveCounts[events.Envelope_LogMessage])
 	metrics = append(metrics, instrumentation.Metric{Name: logMessageTotal, Value: metricValue})
-
-	u.lock.RUnlock()
 
 	for eventType, counterPointer := range u.receiveCounts {
 		if eventType == events.Envelope_LogMessage {
