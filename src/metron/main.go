@@ -30,6 +30,7 @@ import (
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	"metron/eventwriter"
+	"metron/writers/synchronizedwriter"
 )
 
 var (
@@ -53,13 +54,17 @@ func main() {
 	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, varzShim)
 	aggregator := messageaggregator.New(messageTagger, logger, true)
 
+	// The synchronized writer is shared by both the legacyReader and the dropsondeReader
+	// This is to protect the messageaggregator from race conditions
+	synchronizedWriter := synchronizedwriter.New(aggregator)
+
 	initializeMetrics(byteSigner, config, logger)
 
-	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, logger)
+	dropsondeUnmarshaller := eventunmarshaller.New(synchronizedWriter, logger)
 	dropsondeReader := networkreader.New(fmt.Sprintf("localhost:%d", config.DropsondeIncomingMessagesPort), "dropsondeAgentListener", dropsondeUnmarshaller, logger)
 
 	// TODO: remove next two lines when legacy support is removed (or extracted to injector)
-	legacyUnmarshaller := legacyunmarshaller.New(aggregator, logger)
+	legacyUnmarshaller := legacyunmarshaller.New(synchronizedWriter, logger)
 	legacyReader := networkreader.New(fmt.Sprintf("localhost:%d", config.LegacyIncomingMessagesPort), "legacyAgentListener", legacyUnmarshaller, logger)
 
 	instrumentables := []instrumentation.Instrumentable{
