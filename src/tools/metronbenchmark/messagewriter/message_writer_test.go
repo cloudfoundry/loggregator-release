@@ -14,7 +14,7 @@ var _ = Describe("MessageWriter", func() {
 	})
 
 	It("should keep track of the total sent messages", func() {
-		msgWriter := messagewriter.NewMessageWriter(51161, "", reporter)
+		msgWriter := messagewriter.NewMessageWriter("localhost", 51161, "", reporter)
 		msgWriter.Send()
 		msgWriter.Send()
 		msgWriter.Send()

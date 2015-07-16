@@ -8,7 +8,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"metron/writers"
 	"metron/writers/signer"
-	"github.com/pivotal-golang/localip"
 )
 
 type messageWriter struct {
@@ -37,12 +36,9 @@ func (nw networkWriter) Write(message []byte) {
 	nw.reporter.IncrementSentMessages()
 }
 
-func NewMessageWriter(port int, sharedSecret string, reporter sentMessagesReporter) *messageWriter {
-	ip, err := localip.LocalIP()
-	if err != nil {
-		panic(err)
-	}
-	output, err := net.Dial("udp", fmt.Sprintf("%s:%d", ip, port))
+func NewMessageWriter(host string, port int, sharedSecret string, reporter sentMessagesReporter) *messageWriter {
+
+	output, err := net.Dial("udp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		fmt.Printf("DIAL Error: %s\n", err.Error())
 	}

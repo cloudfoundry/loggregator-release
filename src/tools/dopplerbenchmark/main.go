@@ -36,11 +36,12 @@ func main() {
 	}
 
 	reporter := metricsreporter.New(duration, os.Stdout)
-	writer := messagewriter.NewMessageWriter(*dopplerIncomingDropsondePort, sharedSecret, reporter)
 	ip, err := localip.LocalIP()
 	if err != nil {
 		panic(err)
 	}
+	writer := messagewriter.NewMessageWriter(ip, *dopplerIncomingDropsondePort, sharedSecret, reporter)
+
 	reader := websocketmessagereader.New(fmt.Sprintf("%s:%d", ip, *dopplerOutgoingPort), reporter)
 	defer reader.Close()
 	exp := experiment.New(writer, reader, *writeRate)

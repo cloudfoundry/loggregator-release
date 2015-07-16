@@ -39,7 +39,7 @@ func main() {
 	}
 
 	reporter := metricsreporter.New(duration, os.Stdout)
-	writer := messagewriter.NewMessageWriter(51161, "", reporter)
+	writer := messagewriter.NewMessageWriter("localhost", 51161, "", reporter)
 	reader := messagereader.NewMessageReader(3457, reporter)
 	exp := experiment.New(writer, reader, *writeRate)
 

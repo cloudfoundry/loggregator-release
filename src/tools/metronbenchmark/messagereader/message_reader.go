@@ -56,8 +56,6 @@ func (reader *MessageReader) Read() {
 
 	if message.GetValueMetric() != nil {
 		reader.reporter.IncrementReceivedMessages()
-	} else {
-		fmt.Printf("Unknonwn message %v received\n", message.GetEventType())
 	}
 }
 
