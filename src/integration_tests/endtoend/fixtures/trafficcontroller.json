@@ -1,0 +1,23 @@
+{
+    "JobName": "trafficcontroller",
+    "JobIndex": 3,
+    "EtcdUrls"    : ["http://localhost:49623"],
+    "EtcdMaxConcurrentRequests": 5,
+    "OutgoingDropsondePort": 49629,
+    "DopplerPort": 49627,
+    "IncomingPort": 49631,
+    "OutgoingPort": 49630,
+    "SkipCertVerify": true,
+    "SharedSecret": "SUPER_SECRET",
+    "Zone": "z1",
+    "Host": "0.0.0.0",
+    "ApiHost": "http://localhost:49632",
+    "SystemDomain": "vcap.me",
+
+    "NatsHosts": [],
+    "MetronPort": 49625,
+    "UaaHost": "http://localhost:49628",
+    "UaaClientId": "bob",
+    "UaaClientSecret": "yourUncle",
+    "CollectorRegistrarIntervalMilliseconds": 60000
+}
