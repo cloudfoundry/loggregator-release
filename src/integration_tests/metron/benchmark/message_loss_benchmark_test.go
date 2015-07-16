@@ -17,11 +17,12 @@ var _ = Describe("MessageLossBenchmark", func() {
 
 		command := exec.Command(pathToMetronBenchmarkExec, "-writeRate", "5000", "-interval",
 			"10s", "-stopAfter", "11s")
-		buf := bytes.NewBuffer(nil)
-		benchmarkSession, err := gexec.Start(command, buf, buf)
+		outBuffer := bytes.NewBuffer(nil)
+		errBuffer := bytes.NewBuffer(nil)
+		benchmarkSession, err := gexec.Start(command, outBuffer, errBuffer)
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(benchmarkSession, 15).Should(gexec.Exit())
-		out := buf.String()
+		out := outBuffer.String()
 		Expect(out).To(ContainSubstring("PercentLoss"))
 		lines := strings.Split(out, "\n")
 		Expect(lines).To(HaveLen(3))

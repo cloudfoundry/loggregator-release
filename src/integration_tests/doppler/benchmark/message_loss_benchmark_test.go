@@ -18,11 +18,12 @@ var _ = Describe("MessageLossBenchmark", func() {
 		command := exec.Command(pathToDopplerBenchmarkExec, "-sharedSecret", "secret", "-interval",
 			"10s", "-stopAfter", "11s", "-dopplerOutgoingPort", "4567",
 			"-dopplerIncomingDropsondePort", "8765")
-		buf := bytes.NewBuffer(nil)
-		benchmarkSession, err := gexec.Start(command, buf, buf)
+		outBuffer := bytes.NewBuffer(nil)
+		errBuffer := bytes.NewBuffer(nil)
+		benchmarkSession, err := gexec.Start(command, outBuffer, errBuffer)
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(benchmarkSession, 15).Should(gexec.Exit())
-		out := buf.String()
+		out := outBuffer.String()
 		Expect(out).To(ContainSubstring("PercentLoss"))
 		lines := strings.Split(out, "\n")
 		Expect(lines).To(HaveLen(3))
