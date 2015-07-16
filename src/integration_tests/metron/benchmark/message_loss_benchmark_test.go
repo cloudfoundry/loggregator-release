@@ -15,7 +15,7 @@ var _ = Describe("MessageLossBenchmark", func() {
 		pathToMetronBenchmarkExec, err := gexec.Build("tools/metronbenchmark")
 		Expect(err).NotTo(HaveOccurred())
 
-		command := exec.Command(pathToMetronBenchmarkExec, "-writeRate", "15000", "-interval",
+		command := exec.Command(pathToMetronBenchmarkExec, "-writeRate", "5000", "-interval",
 			"10s", "-stopAfter", "11s")
 		buf := bytes.NewBuffer(nil)
 		benchmarkSession, err := gexec.Start(command, buf, buf)
