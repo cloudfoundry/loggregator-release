@@ -80,11 +80,10 @@ var _ = Describe("Simple test", func() {
 		b.RecordValue("Total message loss percentage (received by metron but not received by the firehose)", percentMessageLossOverEntirePipeline)
 
 		Expect(percentMessageLossBetweenMetronAndDoppler).To(BeNumerically("<", 5.0))
-		Expect(percentMessageLossBetweenDopplerAndFirehose).To(BeNumerically("<", 15.0))
-		Expect(percentMessageLossOverEntirePipeline).To(BeNumerically("<", 50.0))
+		Expect(percentMessageLossBetweenDopplerAndFirehose).To(BeNumerically("<", 5.0))
+		Expect(percentMessageLossOverEntirePipeline).To(BeNumerically("<", 5.0))
 		Expect(float64(metronMessageCount)).To(BeNumerically(">", numMessagesSent))
 	}, 5)
-
 })
 
 func computePercentLost(totalMessages, receivedMessages float64) float64 {
@@ -112,6 +111,7 @@ func sendTestMetricsToMetron(metronInput net.Conn) {
 		bytesOut, err := metronInput.Write(message)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(bytesOut).To(Equal(len(message)))
+		time.Sleep(1 * time.Millisecond)
 	}
 }
 
