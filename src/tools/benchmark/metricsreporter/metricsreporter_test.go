@@ -1,7 +1,7 @@
 package metricsreporter_test
 
 import (
-	"tools/metronbenchmark/metricsreporter"
+	"tools/benchmark/metricsreporter"
 
 	"time"
 

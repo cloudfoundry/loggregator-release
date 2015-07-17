@@ -1,7 +1,7 @@
 package messagewriter_test
 
 import (
-	"tools/metronbenchmark/messagewriter"
+	"tools/benchmark/messagewriter"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -28,7 +28,7 @@ var _ = Describe("MessageWriter", func() {
 	})
 
 	It("should not increment total sent messages", func() {
-		messagewriter.NewMessageWriter(51161, "", reporter)
+		messagewriter.NewMessageWriter("localhost", 51161, "", reporter)
 		Expect(reporter.totalSent).To(Equal(0))
 	})
 })

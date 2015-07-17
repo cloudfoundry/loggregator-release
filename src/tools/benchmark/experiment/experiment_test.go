@@ -1,10 +1,11 @@
 package experiment_test
 
 import (
-	"tools/metronbenchmark/experiment"
+	"tools/benchmark/experiment"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"sync/atomic"
 )
 
 var _ = Describe("Experiment", func() {
@@ -24,8 +25,8 @@ var _ = Describe("Experiment", func() {
 			defer e.Stop()
 			go e.Start()
 
-			Eventually(func() int { return reader.readCount }).Should(BeNumerically(">", 0))
-			Eventually(func() int { return writer.writeCount }).Should(BeNumerically(">", 0))
+			Eventually(func() int32 { return atomic.LoadInt32(&reader.readCount) }).Should(BeNumerically(">", 0))
+			Eventually(func() int32 { return atomic.LoadInt32(&writer.writeCount) }).Should(BeNumerically(">", 0))
 		})
 
 		It("stops when we close the stop channel", func() {
@@ -44,7 +45,7 @@ var _ = Describe("Experiment", func() {
 })
 
 type fakeWriter struct {
-	writeCount int
+	writeCount int32
 	output     chan struct{}
 }
 
@@ -55,12 +56,12 @@ func NewFakeWriter(outputChan chan struct{}) *fakeWriter {
 }
 
 func (writer *fakeWriter) Send() {
-	writer.writeCount++
+	atomic.AddInt32(&writer.writeCount, 1)
 	writer.output <- struct{}{}
 }
 
 type fakeReader struct {
-	readCount int
+	readCount int32
 	input     chan struct{}
 }
 
@@ -72,13 +73,9 @@ func NewFakeReader(inputChan chan struct{}) *fakeReader {
 
 func (reader *fakeReader) Read() {
 	<-reader.input
-	reader.readCount++
+	atomic.AddInt32(&reader.readCount, 1)
 }
 
-type fakeReporter struct {
-	totalSent int
-}
+type fakeReporter struct{}
 
-func (f *fakeReporter) IncrementSentMessages() {
-	f.totalSent++
-}
+func (f *fakeReporter) IncrementSentMessages() {}

@@ -2,13 +2,13 @@ package main
 
 import (
 	"time"
-	"tools/metronbenchmark/experiment"
-	"tools/metronbenchmark/messagewriter"
+	"tools/benchmark/experiment"
+	"tools/benchmark/messagewriter"
 
 	"tools/metronbenchmark/messagereader"
 
 	"os"
-	"tools/metronbenchmark/metricsreporter"
+	"tools/benchmark/metricsreporter"
 
 	"flag"
 	"log"
@@ -30,12 +30,12 @@ func main() {
 
 	duration, err := time.ParseDuration(*interval)
 	if err != nil {
-		log.Fatal("Invalid duration %s\n", *interval)
+		log.Fatalf("Invalid duration %s\n", *interval)
 	}
 
 	stopAfterDuration, err := time.ParseDuration(*stopAfter)
 	if err != nil {
-		log.Fatal("Invalid duration %s\n", *stopAfter)
+		log.Fatalf("Invalid duration %s\n", *stopAfter)
 	}
 
 	reporter := metricsreporter.New(duration, os.Stdout)
@@ -49,7 +49,7 @@ func main() {
 	go exp.Start()
 
 	timer := time.NewTimer(stopAfterDuration)
-	<- timer.C
+	<-timer.C
 	exp.Stop()
 	reporter.Stop()
 }

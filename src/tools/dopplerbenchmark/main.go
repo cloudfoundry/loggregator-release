@@ -1,16 +1,17 @@
 package main
+
 import (
-	"runtime"
 	"flag"
-	"time"
-	"log"
-	"tools/metronbenchmark/experiment"
-	"tools/metronbenchmark/metricsreporter"
-	"os"
-	"tools/metronbenchmark/messagewriter"
-	"tools/dopplerbenchmark/websocketmessagereader"
-	"github.com/pivotal-golang/localip"
 	"fmt"
+	"github.com/pivotal-golang/localip"
+	"log"
+	"os"
+	"runtime"
+	"time"
+	"tools/benchmark/experiment"
+	"tools/benchmark/messagewriter"
+	"tools/benchmark/metricsreporter"
+	"tools/dopplerbenchmark/websocketmessagereader"
 )
 
 func main() {
@@ -27,12 +28,12 @@ func main() {
 
 	duration, err := time.ParseDuration(*interval)
 	if err != nil {
-		log.Fatal("Invalid duration %s\n", *interval)
+		log.Fatalf("Invalid duration %s\n", *interval)
 	}
 
 	stopAfterDuration, err := time.ParseDuration(*stopAfter)
 	if err != nil {
-		log.Fatal("Invalid duration %s\n", *stopAfter)
+		log.Fatalf("Invalid duration %s\n", *stopAfter)
 	}
 
 	reporter := metricsreporter.New(duration, os.Stdout)
@@ -50,7 +51,7 @@ func main() {
 	go exp.Start()
 
 	timer := time.NewTimer(stopAfterDuration)
-	<- timer.C
+	<-timer.C
 	exp.Stop()
 	reporter.Stop()
 

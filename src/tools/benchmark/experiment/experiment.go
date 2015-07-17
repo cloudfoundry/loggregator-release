@@ -1,4 +1,5 @@
 package experiment
+
 import "time"
 
 type MessageReader interface {
@@ -10,18 +11,18 @@ type MessageWriter interface {
 }
 
 type Experiment struct {
-	writer   MessageWriter
-	reader   MessageReader
-	stopChan chan struct{}
+	writer    MessageWriter
+	reader    MessageReader
+	stopChan  chan struct{}
 	writeRate int
 }
 
 func New(writer MessageWriter, reader MessageReader, writeRate int) *Experiment {
 	return &Experiment{
-		writer:   writer,
+		writer:    writer,
 		writeRate: writeRate,
-		reader:   reader,
-		stopChan: make(chan struct{}),
+		reader:    reader,
+		stopChan:  make(chan struct{}),
 	}
 }
 
@@ -32,7 +33,7 @@ func (e *Experiment) startWriter() {
 		select {
 		case <-e.stopChan:
 			return
-		case <- ticker.C:
+		case <-ticker.C:
 			e.writer.Send()
 		default:
 		}

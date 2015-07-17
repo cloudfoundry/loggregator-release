@@ -25,7 +25,7 @@ func main() {
 
 	la, err := net.ResolveUDPAddr("udp", *destination)
 	if err != nil {
-		log.Fatalf("Error resolving loggregator address %s, %s", destination, err)
+		log.Fatalf("Error resolving loggregator address %s, %s", *destination, err)
 	}
 
 	//    connection, err := net.DialUDP("udp", nil, la)

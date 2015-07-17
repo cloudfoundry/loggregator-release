@@ -3,9 +3,9 @@ package websocketmessagereader
 import (
 	"fmt"
 	"github.com/gorilla/websocket"
+	"math/rand"
 	"net/http"
 	"strconv"
-	"math/rand"
 	"time"
 )
 

@@ -3,12 +3,12 @@ package websocketmessagereader_test
 import (
 	"tools/dopplerbenchmark/websocketmessagereader"
 
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/loggregatorlib/server/handlers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/cloudfoundry/loggregatorlib/server/handlers"
-	"time"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"net/http/httptest"
+	"time"
 )
 
 var _ = Describe("Websocketmessagereader", func() {
@@ -23,9 +23,18 @@ var _ = Describe("Websocketmessagereader", func() {
 
 		messages <- []byte(sentMessage)
 
-		reader := websocketmessagereader.New(server.Listener.Addr().String())
+		reporter := &fakeReporter{}
+		reader := websocketmessagereader.New(server.Listener.Addr().String(), reporter)
 
 		Eventually(reader.ReadAndReturn).Should(BeEquivalentTo(sentMessage))
 	})
 
 })
+
+type fakeReporter struct {
+	totalReceived int
+}
+
+func (f *fakeReporter) IncrementReceivedMessages() {
+	f.totalReceived++
+}
