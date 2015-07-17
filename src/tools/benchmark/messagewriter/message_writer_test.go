@@ -15,14 +15,15 @@ var _ = Describe("MessageWriter", func() {
 
 	It("should keep track of the total sent messages", func() {
 		msgWriter := messagewriter.NewMessageWriter("localhost", 51161, "", reporter)
-		msgWriter.Send()
-		msgWriter.Send()
-		msgWriter.Send()
-		msgWriter.Send()
-		msgWriter.Send()
-		msgWriter.Send()
-		msgWriter.Send()
-		msgWriter.Send()
+		message := []byte{}
+		msgWriter.Write(message)
+		msgWriter.Write(message)
+		msgWriter.Write(message)
+		msgWriter.Write(message)
+		msgWriter.Write(message)
+		msgWriter.Write(message)
+		msgWriter.Write(message)
+		msgWriter.Write(message)
 
 		Expect(reporter.totalSent).To(Equal(8))
 	})

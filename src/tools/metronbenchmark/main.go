@@ -18,6 +18,7 @@ import (
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+	"tools/benchmark/messagegenerator"
 )
 
 func main() {
@@ -39,9 +40,10 @@ func main() {
 	}
 
 	reporter := metricsreporter.New(duration, os.Stdout)
+	generator := messagegenerator.NewValueMetricGenerator()
 	writer := messagewriter.NewMessageWriter("localhost", 51161, "", reporter)
 	reader := messagereader.NewMessageReader(3457, reporter)
-	exp := experiment.NewConstantRateExperiment(writer, reader, *writeRate)
+	exp := experiment.NewConstantRateExperiment(generator, writer, reader, *writeRate)
 
 	announceToEtcd()
 

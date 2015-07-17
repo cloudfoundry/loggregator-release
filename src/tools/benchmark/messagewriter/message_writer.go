@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
 	"metron/writers"
 	"metron/writers/signer"
 )
@@ -58,23 +56,6 @@ func NewMessageWriter(host string, port int, sharedSecret string, reporter sentM
 	}
 }
 
-func (mw *messageWriter) Send() {
-	mw.writer.Write(basicValueMessage())
-}
-
-func basicValueMessage() []byte {
-	message, _ := proto.Marshal(basicValueMessageEnvelope())
-	return message
-}
-
-func basicValueMessageEnvelope() *events.Envelope {
-	return &events.Envelope{
-		Origin:    proto.String("fake-origin-2"),
-		EventType: events.Envelope_ValueMetric.Enum(),
-		ValueMetric: &events.ValueMetric{
-			Name:  proto.String("fake-metric-name"),
-			Value: proto.Float64(42),
-			Unit:  proto.String("fake-unit"),
-		},
-	}
+func (m *messageWriter) Write(message []byte) {
+	m.writer.Write(message)
 }

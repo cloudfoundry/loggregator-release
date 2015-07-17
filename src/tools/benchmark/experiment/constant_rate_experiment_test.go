@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"sync/atomic"
+	"tools/benchmark/messagegenerator"
 )
 
 var _ = Describe("Experiment", func() {
@@ -17,7 +18,8 @@ var _ = Describe("Experiment", func() {
 		inOutChan := make(chan struct{})
 		reader = NewFakeReader(inOutChan)
 		writer = NewFakeWriter(inOutChan)
-		e = experiment.NewConstantRateExperiment(writer, reader, 1000)
+		generator := messagegenerator.NewValueMetricGenerator()
+		e = experiment.NewConstantRateExperiment(generator, writer, reader, 1000)
 	})
 
 	Describe("Start", func() {
@@ -55,7 +57,7 @@ func NewFakeWriter(outputChan chan struct{}) *fakeWriter {
 	}
 }
 
-func (writer *fakeWriter) Send() {
+func (writer *fakeWriter) Write(bytes []byte) {
 	atomic.AddInt32(&writer.writeCount, 1)
 	writer.output <- struct{}{}
 }

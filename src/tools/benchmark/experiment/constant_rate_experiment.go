@@ -5,23 +5,29 @@ import (
 	"time"
 )
 
+type MessageGenerator interface {
+	Generate() []byte
+}
+
+type MessageWriter interface {
+	Write([]byte)
+}
+
 type MessageReader interface {
 	Read()
 }
 
-type MessageWriter interface {
-	Send()
-}
-
 type ConstantRateExperiment struct {
+	generator MessageGenerator
 	writer    MessageWriter
 	reader    MessageReader
 	stopChan  chan struct{}
 	writeRate int
 }
 
-func NewConstantRateExperiment(writer MessageWriter, reader MessageReader, writeRate int) *ConstantRateExperiment {
+func NewConstantRateExperiment(generator MessageGenerator, writer MessageWriter, reader MessageReader, writeRate int) *ConstantRateExperiment {
 	return &ConstantRateExperiment{
+		generator: generator,
 		writer:    writer,
 		writeRate: writeRate,
 		reader:    reader,
@@ -37,7 +43,7 @@ func (e *ConstantRateExperiment) startWriter() {
 		case <-e.stopChan:
 			return
 		case <-ticker.C:
-			e.writer.Send()
+			e.writer.Write(e.generator.Generate())
 		}
 	}
 }
