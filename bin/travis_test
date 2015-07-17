@@ -73,6 +73,7 @@ integration_testable_packages=(
   deaagent
   metron
   trafficcontroller
+  endtoend
 )
 
 for package in "${integration_testable_packages[@]}"
