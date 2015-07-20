@@ -25,11 +25,12 @@ var _ = Describe("MessageLossBenchmark", func() {
 		out := outBuffer.String()
 		Expect(out).To(ContainSubstring("PercentLoss"))
 		lines := strings.Split(out, "\n")
-		Expect(lines).To(HaveLen(3))
+		Expect(lines).To(HaveLen(4))
 		values := strings.Split(lines[1], ", ")
 		Expect(values).To(HaveLen(3))
 
-		percentLoss, err := strconv.ParseFloat(values[2], 64)
+		value := strings.Split(values[2], "%")[0]
+		percentLoss, err := strconv.ParseFloat(value, 64)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(percentLoss).To(BeNumerically("<", 1.0))
 		b.RecordValue("message loss (percent)", percentLoss)
