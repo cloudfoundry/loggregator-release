@@ -35,7 +35,6 @@ func (e *Experiment) startWriter() {
 			return
 		case <-ticker.C:
 			e.writer.Send()
-		default:
 		}
 	}
 }
