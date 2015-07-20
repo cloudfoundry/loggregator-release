@@ -1,6 +1,9 @@
 package experiment
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 type MessageReader interface {
 	Read()
@@ -10,15 +13,15 @@ type MessageWriter interface {
 	Send()
 }
 
-type Experiment struct {
+type ConstantRateExperiment struct {
 	writer    MessageWriter
 	reader    MessageReader
 	stopChan  chan struct{}
 	writeRate int
 }
 
-func New(writer MessageWriter, reader MessageReader, writeRate int) *Experiment {
-	return &Experiment{
+func NewConstantRateExperiment(writer MessageWriter, reader MessageReader, writeRate int) *ConstantRateExperiment {
+	return &ConstantRateExperiment{
 		writer:    writer,
 		writeRate: writeRate,
 		reader:    reader,
@@ -26,7 +29,7 @@ func New(writer MessageWriter, reader MessageReader, writeRate int) *Experiment 
 	}
 }
 
-func (e *Experiment) startWriter() {
+func (e *ConstantRateExperiment) startWriter() {
 	writeInterval := time.Second / time.Duration(e.writeRate)
 	ticker := time.NewTicker(writeInterval)
 	for {
@@ -39,23 +42,35 @@ func (e *Experiment) startWriter() {
 	}
 }
 
-func (e *Experiment) startReader() {
+func (e *ConstantRateExperiment) startReader() {
 	for {
 		select {
 		case <-e.stopChan:
 			return
 		default:
+			e.reader.Read()
 		}
-
-		e.reader.Read()
 	}
 }
 
-func (e *Experiment) Start() {
-	go e.startReader()
-	e.startWriter()
+func (e *ConstantRateExperiment) Start() {
+	var wg sync.WaitGroup
+
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		e.startReader()
+	}()
+
+	go func() {
+		defer wg.Done()
+		e.startWriter()
+	}()
+
+	wg.Wait()
 }
 
-func (e *Experiment) Stop() {
+func (e *ConstantRateExperiment) Stop() {
 	close(e.stopChan)
 }

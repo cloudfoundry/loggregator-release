@@ -41,7 +41,7 @@ func main() {
 	reporter := metricsreporter.New(duration, os.Stdout)
 	writer := messagewriter.NewMessageWriter("localhost", 51161, "", reporter)
 	reader := messagereader.NewMessageReader(3457, reporter)
-	exp := experiment.New(writer, reader, *writeRate)
+	exp := experiment.NewConstantRateExperiment(writer, reader, *writeRate)
 
 	announceToEtcd()
 

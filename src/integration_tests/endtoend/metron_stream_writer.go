@@ -1,40 +1,32 @@
 package endtoend
+
 import (
-	"time"
-	"net"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-
-	. "github.com/onsi/gomega"
+	"net"
 )
 
-
-
 type MetronStreamWriter struct {
-	metronConn net.Conn
-	numMessagesToSend int
+	metronConn      net.Conn
 	numMessagesSent int
-	sleepTime time.Duration
 }
 
-func NewMetronStreamWriter(metronConn net.Conn, numMessagesSent int) *MetronStreamWriter{
-	return &MetronStreamWriter{
-		metronConn: metronConn,
-		numMessagesToSend: numMessagesSent,
+func NewMetronStreamWriter() *MetronStreamWriter {
+	metronConn, err := net.Dial("udp", "localhost:49625")
+	if err != nil {
+		panic(err)
 	}
+	return &MetronStreamWriter{metronConn: metronConn}
 }
 
-func(w *MetronStreamWriter) Send(){
-	if w.numMessagesSent >= w.numMessagesToSend {
-		return
-	}
-
+func (w *MetronStreamWriter) Send() {
 	message := basicValueMessage(w.numMessagesSent)
 	w.numMessagesSent += 1
 
-	bytesOut, err := w.metronConn.Write(message)
-	Expect(err).ToNot(HaveOccurred())
-	Expect(bytesOut).To(Equal(len(message)))
+	_, err := w.metronConn.Write(message)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func basicValueMessage(i int) []byte {

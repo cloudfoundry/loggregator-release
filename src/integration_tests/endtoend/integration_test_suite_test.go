@@ -3,15 +3,15 @@ package endtoend_test
 import (
 	"testing"
 
+	"fmt"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-	"os/exec"
-	"fmt"
-	"net/http"
 	"github.com/pivotal-golang/localip"
+	"net/http"
+	"os/exec"
 	"time"
 )
 
@@ -26,8 +26,8 @@ var (
 	etcdRunner  *etcdstorerunner.ETCDClusterRunner
 	etcdAdapter storeadapter.StoreAdapter
 
-	metronExecutablePath string
-	dopplerExecutablePath string
+	metronExecutablePath            string
+	dopplerExecutablePath           string
 	trafficControllerExecutablePath string
 
 	metronSession  *gexec.Session
@@ -49,8 +49,8 @@ var _ = BeforeSuite(func() {
 
 var _ = BeforeEach(func() {
 	const (
-		BLUE = 34
-		PURPLE = 35
+		BLUE       = 34
+		PURPLE     = 35
 		LIGHT_BLUE = 36
 	)
 
@@ -79,7 +79,7 @@ var _ = BeforeEach(func() {
 	time.Sleep(200 * time.Millisecond)
 })
 
-func buildComponent(componentName string) (pathToComponent string){
+func buildComponent(componentName string) (pathToComponent string) {
 	var err error
 	pathToComponent, err = gexec.Build(componentName)
 	Expect(err).ToNot(HaveOccurred())

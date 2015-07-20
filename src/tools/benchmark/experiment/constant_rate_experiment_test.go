@@ -9,7 +9,7 @@ import (
 )
 
 var _ = Describe("Experiment", func() {
-	var e *experiment.Experiment
+	var e *experiment.ConstantRateExperiment
 	var writer *fakeWriter
 	var reader *fakeReader
 
@@ -17,7 +17,7 @@ var _ = Describe("Experiment", func() {
 		inOutChan := make(chan struct{})
 		reader = NewFakeReader(inOutChan)
 		writer = NewFakeWriter(inOutChan)
-		e = experiment.New(writer, reader, 1000)
+		e = experiment.NewConstantRateExperiment(writer, reader, 1000)
 	})
 
 	Describe("Start", func() {
@@ -25,8 +25,8 @@ var _ = Describe("Experiment", func() {
 			defer e.Stop()
 			go e.Start()
 
-			Eventually(func() int32 { return atomic.LoadInt32(&reader.readCount) }).Should(BeNumerically(">", 0))
-			Eventually(func() int32 { return atomic.LoadInt32(&writer.writeCount) }).Should(BeNumerically(">", 0))
+			Eventually(reader.ReadCount).Should(BeNumerically(">", 0))
+			Eventually(writer.WriteCount).Should(BeNumerically(">", 0))
 		})
 
 		It("stops when we close the stop channel", func() {
@@ -60,6 +60,10 @@ func (writer *fakeWriter) Send() {
 	writer.output <- struct{}{}
 }
 
+func (writer *fakeWriter) WriteCount() int32 {
+	return atomic.LoadInt32(&writer.writeCount)
+}
+
 type fakeReader struct {
 	readCount int32
 	input     chan struct{}
@@ -74,6 +78,10 @@ func NewFakeReader(inputChan chan struct{}) *fakeReader {
 func (reader *fakeReader) Read() {
 	<-reader.input
 	atomic.AddInt32(&reader.readCount, 1)
+}
+
+func (reader *fakeReader) ReadCount() int32 {
+	return atomic.LoadInt32(&reader.readCount)
 }
 
 type fakeReporter struct{}

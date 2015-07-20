@@ -45,7 +45,7 @@ func main() {
 
 	reader := websocketmessagereader.New(fmt.Sprintf("%s:%d", ip, *dopplerOutgoingPort), reporter)
 	defer reader.Close()
-	exp := experiment.New(writer, reader, *writeRate)
+	exp := experiment.NewConstantRateExperiment(writer, reader, *writeRate)
 
 	go reporter.Start()
 	go exp.Start()
