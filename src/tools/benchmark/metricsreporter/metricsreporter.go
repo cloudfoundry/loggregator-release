@@ -37,7 +37,6 @@ func (r *MetricsReporter) Start() {
 		case <-ticker.C:
 			sent := atomic.LoadInt32(&r.sent)
 			received := atomic.LoadInt32(&r.received)
-
 			// emit the metric for set reportTime, then reset values
 			loss := (float32(sent-received) / float32(sent)) * 100
 			fmt.Fprintf(r.writer, "%v, %v, %v%%\n", sent, received, loss)
@@ -61,6 +60,14 @@ func (r *MetricsReporter) Stop() {
 
 func (r *MetricsReporter) IncrementSentMessages() {
 	atomic.AddInt32(&r.sent, 1)
+}
+
+func (r *MetricsReporter) getSent() int32 {
+	return atomic.LoadInt32(&r.sent)
+}
+
+func (r *MetricsReporter) getReceived() int32 {
+	return atomic.LoadInt32(&r.received)
 }
 
 func (r *MetricsReporter) IncrementReceivedMessages() {

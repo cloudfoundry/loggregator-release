@@ -10,7 +10,6 @@ import (
 )
 
 const (
-	numMessagesSent = 1000
 	timeoutSeconds  = 15
 )
 
@@ -20,6 +19,7 @@ type Stopper interface {
 
 var _ = Describe("End to end test", func() {
 	Measure("dropsonde metrics being passed from metron to the firehose nozzle", func(b Benchmarker) {
+		const numMessagesSent = 1000
 		metronStreamWriter := endtoend.NewMetronStreamWriter()
 
 		firehoseReader := endtoend.NewFirehoseReader()
@@ -33,7 +33,8 @@ var _ = Describe("End to end test", func() {
 			ex.Start()
 		})
 
-		reportStreamResults(firehoseReader, b)
+		reportResults(firehoseReader, b)
+		Expect(float64(firehoseReader.MetronMessageCount)).To(BeNumerically(">", numMessagesSent))
 	}, 3)
 
 	Measure("dropsonde metrics being passed from metron to the firehose nozzle in burst sequence", func(b Benchmarker) {
@@ -55,11 +56,11 @@ var _ = Describe("End to end test", func() {
 			ex.Start()
 		})
 
-		reportStreamResults(firehoseReader, b)
+		reportResults(firehoseReader, b)
 	}, 1)
 })
 
-func reportStreamResults(r *endtoend.FirehoseReader, benchmarker Benchmarker) {
+func reportResults(r *endtoend.FirehoseReader, benchmarker Benchmarker) {
 	var totalMessagesReceivedByFirehose float64
 	totalMessagesReceivedByFirehose = r.TestMetricCount + r.NonTestMetricCount
 
@@ -79,7 +80,6 @@ func reportStreamResults(r *endtoend.FirehoseReader, benchmarker Benchmarker) {
 	Expect(percentMessageLossBetweenMetronAndDoppler).To(BeNumerically("<", 5.0))
 	Expect(percentMessageLossBetweenDopplerAndFirehose).To(BeNumerically("<", 5.0))
 	Expect(percentMessageLossOverEntirePipeline).To(BeNumerically("<", 5.0))
-	//Expect(float64(r.MetronMessageCount)).To(BeNumerically(">", numMessagesSent))
 }
 
 func computePercentLost(totalMessages, receivedMessages float64) float64 {
