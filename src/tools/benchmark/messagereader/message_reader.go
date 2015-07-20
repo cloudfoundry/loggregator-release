@@ -8,17 +8,12 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-type receivedMessagesReporter interface {
-	IncrementReceivedMessages()
-}
-
 type MessageReader struct {
 	port       int
-	reporter   receivedMessagesReporter
 	connection *net.UDPConn
 }
 
-func NewMessageReader(port int, reporter receivedMessagesReporter) *MessageReader {
+func NewMessageReader(port int) *MessageReader {
 	udpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		panic(err)
@@ -31,17 +26,16 @@ func NewMessageReader(port int, reporter receivedMessagesReporter) *MessageReade
 
 	return &MessageReader{
 		port:       port,
-		reporter:   reporter,
 		connection: connection,
 	}
 }
 
-func (reader *MessageReader) Read() {
+func (reader *MessageReader) Read() *events.Envelope {
 	readBuffer := make([]byte, 65535)
 	count, _, err := reader.connection.ReadFrom(readBuffer)
 	if err != nil {
 		fmt.Printf("Error reading from UDP connection\n")
-		return
+		return nil
 	}
 
 	readData := make([]byte, count)
@@ -51,12 +45,10 @@ func (reader *MessageReader) Read() {
 
 	if err != nil {
 		fmt.Printf("Error unmarshalling data \n")
-		return
+		return nil
 	}
 
-	if message.GetValueMetric() != nil {
-		reader.reporter.IncrementReceivedMessages()
-	}
+	return &message
 }
 
 func (reader *MessageReader) Close() {

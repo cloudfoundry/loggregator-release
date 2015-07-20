@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"time"
 	"tools/benchmark/experiment"
+	"tools/benchmark/messagegenerator"
 	"tools/benchmark/messagewriter"
 	"tools/benchmark/metricsreporter"
 	"tools/dopplerbenchmark/websocketmessagereader"
@@ -41,11 +42,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	writer := messagewriter.NewMessageWriter(ip, *dopplerIncomingDropsondePort, sharedSecret, reporter)
 
+	generator := messagegenerator.NewValueMetricGenerator()
+	writer := messagewriter.NewMessageWriter(ip, *dopplerIncomingDropsondePort, sharedSecret, reporter)
 	reader := websocketmessagereader.New(fmt.Sprintf("%s:%d", ip, *dopplerOutgoingPort), reporter)
 	defer reader.Close()
-	exp := experiment.NewConstantRateExperiment(writer, reader, *writeRate)
+
+	exp := experiment.NewConstantRateExperiment(generator, writer, reader, *writeRate)
 
 	go reporter.Start()
 	go exp.Start()

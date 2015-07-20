@@ -6,6 +6,7 @@ import (
 	"integration_tests/endtoend"
 	"time"
 	"tools/benchmark/experiment"
+	"tools/benchmark/messagegenerator"
 )
 
 const (
@@ -23,7 +24,8 @@ var _ = Describe("End to end test", func() {
 
 		firehoseReader := endtoend.NewFirehoseReader()
 
-		ex := experiment.NewConstantRateExperiment(metronStreamWriter, firehoseReader, numMessagesSent)
+		generator := messagegenerator.NewValueMetricGenerator()
+		ex := experiment.NewConstantRateExperiment(generator, metronStreamWriter, firehoseReader, numMessagesSent)
 
 		go stopExperimentAfterTimeout(ex)
 
@@ -44,7 +46,8 @@ var _ = Describe("End to end test", func() {
 			Frequency: time.Second,
 		}
 
-		ex := experiment.NewBurstExperiment(metronStreamWriter, firehoseReader, params)
+		generator := messagegenerator.NewValueMetricGenerator()
+		ex := experiment.NewBurstExperiment(generator, metronStreamWriter, firehoseReader, params)
 
 		go stopExperimentAfterTimeout(ex)
 

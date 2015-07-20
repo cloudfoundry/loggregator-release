@@ -19,7 +19,7 @@ import (
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"tools/benchmark/messagegenerator"
-	"tools/metronbenchmark/valuemetricreader"
+	"tools/legacymetronbenchmark/logmessagereader"
 )
 
 func main() {
@@ -41,11 +41,11 @@ func main() {
 	}
 
 	reporter := metricsreporter.New(duration, os.Stdout)
-	generator := messagegenerator.NewValueMetricGenerator()
-	writer := messagewriter.NewMessageWriter("localhost", 51161, "", reporter)
+	generator := messagegenerator.NewLegacyLogGenerator()
+	writer := messagewriter.NewMessageWriter("localhost", 51160, "", reporter)
 	reader := messagereader.NewMessageReader(3457)
-	valueMetricReader := valuemetricreader.NewValueMetricReader(reporter, reader)
-	exp := experiment.NewConstantRateExperiment(generator, writer, valueMetricReader, *writeRate)
+	logMessageReader := logmessagereader.NewLogMessageReader(reporter, reader)
+	exp := experiment.New(generator, writer, logMessageReader, *writeRate)
 
 	announceToEtcd()
 

@@ -14,14 +14,16 @@ type BurstParameters struct {
 
 type BurstExperiment struct {
 	parameters BurstParameters
+	generator  MessageGenerator
 	writer     MessageWriter
 	reader     MessageReader
 	stopChan   chan struct{}
 }
 
-func NewBurstExperiment(writer MessageWriter, reader MessageReader, params BurstParameters) *BurstExperiment {
+func NewBurstExperiment(generator MessageGenerator, writer MessageWriter, reader MessageReader, params BurstParameters) *BurstExperiment {
 	return &BurstExperiment{
 		parameters: params,
+		generator:  generator,
 		writer:     writer,
 		reader:     reader,
 		stopChan:   make(chan struct{}),
@@ -59,7 +61,7 @@ func (b *BurstExperiment) startWriter() {
 		case <-ticker.C:
 			burst := random(b.parameters.Minimum, b.parameters.Maximum)
 			for i := 0; i < burst; i++ {
-				b.writer.Send()
+				b.writer.Write(b.generator.Generate())
 			}
 		}
 	}

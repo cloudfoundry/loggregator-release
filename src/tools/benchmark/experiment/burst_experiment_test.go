@@ -5,6 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 	"time"
 	"tools/benchmark/experiment"
+	"tools/benchmark/messagegenerator"
 )
 
 var _ = Describe("BurstExperiment", func() {
@@ -22,7 +23,8 @@ var _ = Describe("BurstExperiment", func() {
 			Maximum:   100,
 			Frequency: 900 * time.Millisecond,
 		}
-		e = experiment.NewBurstExperiment(writer, reader, params)
+		generator := messagegenerator.NewValueMetricGenerator()
+		e = experiment.NewBurstExperiment(generator, writer, reader, params)
 	})
 
 	Describe("start", func() {
