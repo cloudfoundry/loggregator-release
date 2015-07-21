@@ -11,6 +11,7 @@ popd
 mv $BIN_DIR/../src/github.com/coreos/etcd/bin/etcd $BIN_DIR/etcd
 
 export PATH=$PATH:$BIN_DIR
+export GORACE="halt_on_error=1"
 
 rm -rf ./pkg
 
