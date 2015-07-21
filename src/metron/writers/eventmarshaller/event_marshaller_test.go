@@ -25,7 +25,7 @@ var _ = Describe("EventMarshaller", func() {
 
 	BeforeEach(func() {
 		writer = &mocks.MockByteArrayWriter{}
-		marshaller = eventmarshaller.New(writer, loggertesthelper.Logger(), true)
+		marshaller = eventmarshaller.New(writer, loggertesthelper.Logger())
 
 	})
 

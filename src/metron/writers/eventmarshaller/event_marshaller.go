@@ -21,11 +21,10 @@ type EventMarshaller struct {
 	outputWriter      writers.ByteArrayWriter
 	messageCounts     map[events.Envelope_EventType]*uint64
 	marshalErrorCount uint64
-	emitMetrics       bool
 }
 
 // New instantiates a EventMarshaller and logs to the provided logger.
-func New(outputWriter writers.ByteArrayWriter, logger *gosteno.Logger, emit bool) *EventMarshaller {
+func New(outputWriter writers.ByteArrayWriter, logger *gosteno.Logger) *EventMarshaller {
 	messageCounts := make(map[events.Envelope_EventType]*uint64)
 	for key := range events.Envelope_EventType_name {
 		var count uint64
@@ -35,7 +34,6 @@ func New(outputWriter writers.ByteArrayWriter, logger *gosteno.Logger, emit bool
 		logger:        logger,
 		outputWriter:  outputWriter,
 		messageCounts: messageCounts,
-		emitMetrics:   emit,
 	}
 }
 
@@ -44,9 +42,7 @@ func (m *EventMarshaller) Write(message *events.Envelope) {
 	if err != nil {
 		m.logger.Errorf("eventMarshaller: marshal error %v for message %v", err, message)
 		incrementCount(&m.marshalErrorCount)
-		if m.emitMetrics {
-			metrics.BatchIncrementCounter("dropsondeMarshaller.marshalErrors")
-		}
+		metrics.BatchIncrementCounter("dropsondeMarshaller.marshalErrors")
 
 		return
 	}
@@ -59,12 +55,10 @@ func (m *EventMarshaller) Write(message *events.Envelope) {
 
 func (m *EventMarshaller) incrementMessageCount(eventType events.Envelope_EventType) {
 	incrementCount(m.messageCounts[eventType])
-	if m.emitMetrics {
-		modifiedEventName := []rune(eventType.String())
-		modifiedEventName[0] = unicode.ToLower(modifiedEventName[0])
-		metricName := string(modifiedEventName) + "Marshalled"
-		metrics.BatchIncrementCounter("dropsondeMarshaller." + metricName)
-	}
+	modifiedEventName := []rune(eventType.String())
+	modifiedEventName[0] = unicode.ToLower(modifiedEventName[0])
+	metricName := string(modifiedEventName) + "Marshalled"
+	metrics.BatchIncrementCounter("dropsondeMarshaller." + metricName)
 }
 
 func incrementCount(count *uint64) {

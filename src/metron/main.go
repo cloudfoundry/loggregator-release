@@ -48,10 +48,10 @@ func main() {
 
 	dopplerForwarder := dopplerforwarder.New(dopplerClientPool, logger)
 	byteSigner := signer.New(config.SharedSecret, dopplerForwarder)
-	marshaller := eventmarshaller.New(byteSigner, logger, true)
+	marshaller := eventmarshaller.New(byteSigner, logger)
 	varzShim := varzforwarder.New(config.Job, metricTTL, marshaller, logger)
 	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, varzShim)
-	aggregator := messageaggregator.New(messageTagger, logger, true)
+	aggregator := messageaggregator.New(messageTagger, logger)
 
 	initializeMetrics(byteSigner, config, logger)
 
@@ -59,7 +59,7 @@ func main() {
 	dropsondeReader := networkreader.New(fmt.Sprintf("localhost:%d", config.DropsondeIncomingMessagesPort), "dropsondeAgentListener", dropsondeUnmarshaller, logger)
 
 	// TODO: remove next four lines when legacy support is removed (or extracted to injector)
-	legacyMarshaller := eventmarshaller.New(byteSigner, logger, true)
+	legacyMarshaller := eventmarshaller.New(byteSigner, logger)
 	legacyMessageTagger := tagger.New(config.Deployment, config.Job, config.Index, legacyMarshaller)
 	legacyUnmarshaller := legacyunmarshaller.New(legacyMessageTagger, logger)
 	legacyReader := networkreader.New(fmt.Sprintf("localhost:%d", config.LegacyIncomingMessagesPort), "legacyAgentListener", legacyUnmarshaller, logger)
@@ -107,9 +107,9 @@ func initializeClientPool(config metronConfig, logger *gosteno.Logger) *clientpo
 }
 
 func initializeMetrics(byteSigner *signer.Signer, config metronConfig, logger *gosteno.Logger) {
-	metricsMarshaller := eventmarshaller.New(byteSigner, logger, false)
+	metricsMarshaller := eventmarshaller.New(byteSigner, logger)
 	metricsTagger := tagger.New(config.Deployment, config.Job, config.Index, metricsMarshaller)
-	metricsAggregator := messageaggregator.New(metricsTagger, logger, false)
+	metricsAggregator := messageaggregator.New(metricsTagger, logger)
 
 	eventWriter := eventwriter.New("MetronAgent", metricsAggregator)
 	metricSender := metric_sender.NewMetricSender(eventWriter)
