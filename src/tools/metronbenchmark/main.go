@@ -19,6 +19,7 @@ import (
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"tools/benchmark/messagegenerator"
+	"tools/benchmark/writestrategies"
 	"tools/metronbenchmark/valuemetricreader"
 )
 
@@ -45,7 +46,10 @@ func main() {
 	writer := messagewriter.NewMessageWriter("localhost", 51161, "", reporter)
 	reader := messagereader.NewMessageReader(3457)
 	valueMetricReader := valuemetricreader.NewValueMetricReader(reporter, reader)
-	exp := experiment.NewConstantRateExperiment(generator, writer, valueMetricReader, *writeRate)
+
+	stopChan := make(chan struct{})
+	writeStrategy := writestrategies.NewConstantWriteStrategy(generator, writer, *writeRate, stopChan)
+	exp := experiment.NewExperiment(writeStrategy, valueMetricReader, stopChan)
 
 	announceToEtcd()
 

@@ -12,6 +12,7 @@ import (
 	"tools/benchmark/messagegenerator"
 	"tools/benchmark/messagewriter"
 	"tools/benchmark/metricsreporter"
+	"tools/benchmark/writestrategies"
 	"tools/dopplerbenchmark/websocketmessagereader"
 )
 
@@ -48,7 +49,9 @@ func main() {
 	reader := websocketmessagereader.New(fmt.Sprintf("%s:%d", ip, *dopplerOutgoingPort), reporter)
 	defer reader.Close()
 
-	exp := experiment.NewConstantRateExperiment(generator, writer, reader, *writeRate)
+	stopChan := make(chan struct{})
+	writeStrategy := writestrategies.NewConstantWriteStrategy(generator, writer, *writeRate, stopChan)
+	exp := experiment.NewExperiment(writeStrategy, reader, stopChan)
 
 	go reporter.Start()
 	go exp.Start()

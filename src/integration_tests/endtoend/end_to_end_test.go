@@ -7,6 +7,7 @@ import (
 	"time"
 	"tools/benchmark/experiment"
 	"tools/benchmark/messagegenerator"
+	"tools/benchmark/writestrategies"
 )
 
 const (
@@ -25,7 +26,10 @@ var _ = Describe("End to end test", func() {
 		firehoseReader := endtoend.NewFirehoseReader()
 
 		generator := messagegenerator.NewValueMetricGenerator()
-		ex := experiment.NewConstantRateExperiment(generator, metronStreamWriter, firehoseReader, numMessagesSent)
+
+		stopChan := make(chan struct{})
+		writeStrategy := writestrategies.NewConstantWriteStrategy(generator, metronStreamWriter, numMessagesSent, stopChan)
+		ex := experiment.NewExperiment(writeStrategy, firehoseReader, stopChan)
 
 		go stopExperimentAfterTimeout(ex)
 
@@ -41,14 +45,16 @@ var _ = Describe("End to end test", func() {
 		metronStreamWriter := endtoend.NewMetronStreamWriter()
 		firehoseReader := endtoend.NewFirehoseReader()
 
-		params := experiment.BurstParameters{
+		params := writestrategies.BurstParameters{
 			Minimum:   10,
 			Maximum:   100,
 			Frequency: time.Second,
 		}
 
 		generator := messagegenerator.NewValueMetricGenerator()
-		ex := experiment.NewBurstExperiment(generator, metronStreamWriter, firehoseReader, params)
+		stopChan := make(chan struct{})
+		writeStrategy := writestrategies.NewBurstWriteStrategy(generator, metronStreamWriter, params, stopChan)
+		ex := experiment.NewExperiment(writeStrategy, firehoseReader, stopChan)
 
 		go stopExperimentAfterTimeout(ex)
 
