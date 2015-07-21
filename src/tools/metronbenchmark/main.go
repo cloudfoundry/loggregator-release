@@ -49,7 +49,8 @@ func main() {
 
 	stopChan := make(chan struct{})
 	writeStrategy := writestrategies.NewConstantWriteStrategy(generator, writer, *writeRate, stopChan)
-	exp := experiment.NewExperiment(writeStrategy, valueMetricReader, stopChan)
+	exp := experiment.NewExperiment(valueMetricReader, stopChan)
+	exp.AddWriteStrategy(writeStrategy)
 
 	announceToEtcd()
 

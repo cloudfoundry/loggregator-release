@@ -51,7 +51,8 @@ func main() {
 
 	stopChan := make(chan struct{})
 	writeStrategy := writestrategies.NewConstantWriteStrategy(generator, writer, *writeRate, stopChan)
-	exp := experiment.NewExperiment(writeStrategy, reader, stopChan)
+	exp := experiment.NewExperiment(reader, stopChan)
+	exp.AddWriteStrategy(writeStrategy)
 
 	go reporter.Start()
 	go exp.Start()

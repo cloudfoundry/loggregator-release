@@ -13,18 +13,46 @@ type WriteStrategy interface {
 }
 
 type Experiment struct {
-	writeStrategy WriteStrategy
+	writeStrategies []WriteStrategy
 	reader        MessageReader
 	stopChan      chan struct{}
 	writeRate     int
 }
 
-func NewExperiment(writeStrategy WriteStrategy, reader MessageReader, stopChan chan struct{}) *Experiment {
+func NewExperiment(reader MessageReader, stopChan chan struct{}) *Experiment {
 	return &Experiment{
-		writeStrategy: writeStrategy,
 		reader:        reader,
 		stopChan:      stopChan,
 	}
+}
+
+func (e *Experiment) AddWriteStrategy(strategy WriteStrategy) {
+	e.writeStrategies = append(e.writeStrategies, strategy)
+}
+
+func (e *Experiment) Start() {
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		e.startReader()
+	}()
+
+	for _, strategy := range e.writeStrategies {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			strategy.StartWriter()
+		}()
+	}
+
+	wg.Wait()
+}
+
+func (e *Experiment) Stop() {
+	close(e.stopChan)
 }
 
 func (e *Experiment) startReader() {
@@ -36,26 +64,4 @@ func (e *Experiment) startReader() {
 			e.reader.Read()
 		}
 	}
-}
-
-func (e *Experiment) Start() {
-	var wg sync.WaitGroup
-
-	wg.Add(2)
-
-	go func() {
-		defer wg.Done()
-		e.startReader()
-	}()
-
-	go func() {
-		defer wg.Done()
-		e.writeStrategy.StartWriter()
-	}()
-
-	wg.Wait()
-}
-
-func (e *Experiment) Stop() {
-	close(e.stopChan)
 }

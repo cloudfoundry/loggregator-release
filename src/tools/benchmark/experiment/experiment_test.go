@@ -18,7 +18,8 @@ var _ = Describe("Experiment", func() {
 
 		strategy = &fakeWriteStrategy{}
 		stopChan := make(chan struct{})
-		e = experiment.NewExperiment(strategy, reader, stopChan)
+		e = experiment.NewExperiment(reader, stopChan)
+		e.AddWriteStrategy(strategy)
 	})
 
 	Describe("Start", func() {
