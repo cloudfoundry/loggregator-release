@@ -19,9 +19,11 @@ var _ = Describe("TLSWriter", func() {
 
 	Context("writes and connects to syslog tls drains", func() {
 		BeforeEach(func(done Done) {
+			var err error
 			syslogServerSession = startEncryptedTCPServer("127.0.0.1:9998")
 			outputURL, _ := url.Parse("syslog-tls://127.0.0.1:9998")
-			syslogWriter, _ = syslogwriter.NewTlsWriter(outputURL, "appId", true)
+			syslogWriter, err = syslogwriter.NewTlsWriter(outputURL, "appId", true)
+			Expect(err).ToNot(HaveOccurred())
 			close(done)
 		}, 5)
 

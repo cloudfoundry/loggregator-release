@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"runtime"
+	"fmt"
 )
 
 var _ = Describe("Firehose test", func() {
@@ -64,13 +65,14 @@ var _ = Describe("Firehose test", func() {
 			runtime.GOMAXPROCS(runtime.NumCPU())
 			containerMetric := factories.NewContainerMetric(appID, 0, 10, 2, 3)
 			count := 1000
+
 			for i:=0; i<count; i++ {
 				go sendEvent(containerMetric, inputConnection)
 			}
 
 			receivedMessageBytes := []byte{}
-			for i:=0; i<count; i++ {
-				Eventually(receiveChan).Should(Receive(&receivedMessageBytes))
+			for i:=0; i < count; i++ {
+				Eventually(receiveChan).Should(Receive(&receivedMessageBytes), fmt.Sprintf("failed to receive message number %d\n", i))
 			}
 
 			receivedMessage := UnmarshalMessage(receivedMessageBytes)
