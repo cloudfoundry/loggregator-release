@@ -7,30 +7,29 @@ import (
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/gogo/protobuf/proto"
 
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/nu7hatch/gouuid"
-	"github.com/cloudfoundry/sonde-go/events"
 	"integration_tests/metron/matchers"
 	"math/rand"
 )
 
-
-type testServer struct{
-	conn net.PacketConn
+type testServer struct {
+	conn        net.PacketConn
 	messageChan chan *events.Envelope
-	stopChan chan struct{}
+	stopChan    chan struct{}
 }
 
 func newTestServer(messageChan chan *events.Envelope) *testServer {
-	return &testServer {
-		conn: eventuallyListensForUDP("localhost:3457"),
+	return &testServer{
+		conn:        eventuallyListensForUDP("localhost:3457"),
 		messageChan: messageChan,
-		stopChan: make(chan struct{}),
+		stopChan:    make(chan struct{}),
 	}
 }
 
-func (server *testServer) start(){
+func (server *testServer) start() {
 	for {
 		readBuffer := make([]byte, 65535)
 		readCount, _, _ := server.conn.ReadFrom(readBuffer)
@@ -44,26 +43,26 @@ func (server *testServer) start(){
 		}
 
 		select {
-			case <-server.stopChan:
-				return
-			default:
+		case <-server.stopChan:
+			return
+		default:
 		}
 	}
 }
 
-func (server *testServer) stop(){
+func (server *testServer) stop() {
 	close(server.stopChan)
 	server.conn.Close()
 }
 
 var _ = Describe("Legacy message forwarding", func() {
 	var (
-		connection net.Conn
+		connection  net.Conn
 		messageChan chan *events.Envelope
-		testServer *testServer
+		testServer  *testServer
 	)
 
-	BeforeEach(func(){
+	BeforeEach(func() {
 		messageChan = make(chan *events.Envelope, 1000)
 		testServer = newTestServer(messageChan)
 
@@ -78,7 +77,7 @@ var _ = Describe("Legacy message forwarding", func() {
 		go testServer.start()
 	})
 
-	AfterEach(func(){
+	AfterEach(func() {
 		testServer.stop()
 	})
 
@@ -139,9 +138,9 @@ var _ = Describe("Legacy message forwarding", func() {
 			}
 		}()
 
-		unmatchedHttpStop := &events.Envelope {
+		unmatchedHttpStop := &events.Envelope{
 			EventType: events.Envelope_ValueMetric.Enum(),
-			ValueMetric: &events.ValueMetric {
+			ValueMetric: &events.ValueMetric{
 				Name: proto.String("MessageAggregator.httpUnmatchedStartReceived"),
 			},
 		}

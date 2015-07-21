@@ -9,9 +9,9 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
-	. "github.com/onsi/gomega"
-	"github.com/nu7hatch/gouuid"
 	"github.com/cloudfoundry/dropsonde/factories"
+	"github.com/nu7hatch/gouuid"
+	. "github.com/onsi/gomega"
 )
 
 func basicValueMetric(name string, value float64, unit string) *events.ValueMetric {
