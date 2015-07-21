@@ -24,9 +24,7 @@ var _ = Describe("Dropsonde message forwarding", func() {
 	var stopTheWorld chan struct{}
 
 	BeforeEach(func() {
-		var err error
-		testDoppler, err = net.ListenPacket("udp", "localhost:3457")
-		Expect(err).ToNot(HaveOccurred())
+		testDoppler = eventuallyListensForUDP("localhost:3457")
 
 		node := storeadapter.StoreNode{
 			Key:   "/healthstatus/doppler/z1/0",
@@ -48,8 +46,8 @@ var _ = Describe("Dropsonde message forwarding", func() {
 	It("forwards hmac signed messages to a healthy doppler server", func(done Done) {
 
 		defer close(done)
-		defer close(stopTheWorld)
 		defer close(messageChan)
+		defer close(stopTheWorld)
 
 		valueMetricEnvelope := createBasicValueMetricEnvelope()
 		expectedSignedEnvelope := sign(valueMetricEnvelope)
@@ -66,8 +64,8 @@ var _ = Describe("Dropsonde message forwarding", func() {
 	It("forwards multiple messages to metron concurrently", func(done Done) {
 
 		defer close(done)
-		defer close(stopTheWorld)
 		defer close(messageChan)
+		defer close(stopTheWorld)
 
 		numOfMsgs := 100
 
