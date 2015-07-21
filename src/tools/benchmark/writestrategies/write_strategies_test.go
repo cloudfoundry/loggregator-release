@@ -22,11 +22,11 @@ var _ = Describe("WriteStrategies", func() {
 			BeforeEach(func() {
 				writer = mockWriter{}
 				stopChan = make(chan struct{})
-				writeStrategy = writestrategies.NewConstantWriteStrategy(&mockGenerator{}, &writer, 1000, stopChan)
+				writeStrategy = writestrategies.NewConstantWriteStrategy(&mockGenerator{}, &writer, 1000)
 			})
 
 			It("writes messages at a constant rate", func() {
-				go writeStrategy.StartWriter()
+				go writeStrategy.StartWriter(stopChan)
 
 				time.Sleep(time.Millisecond * 50)
 				writes := atomic.LoadUint32(&writer.count)
@@ -42,7 +42,7 @@ var _ = Describe("WriteStrategies", func() {
 			})
 
 			It("stops writing messages when the stopChan is closed", func() {
-				go writeStrategy.StartWriter()
+				go writeStrategy.StartWriter(stopChan)
 
 				time.Sleep(time.Millisecond * 50)
 				writes := atomic.LoadUint32(&writer.count)
@@ -76,11 +76,11 @@ var _ = Describe("WriteStrategies", func() {
 					Maximum:   100,
 					Frequency: 900 * time.Millisecond,
 				}
-				writeStrategy = writestrategies.NewBurstWriteStrategy(&mockGenerator{}, &writer, params, stopChan)
+				writeStrategy = writestrategies.NewBurstWriteStrategy(&mockGenerator{}, &writer, params)
 			})
 
 			It("writes messages in bursts", func() {
-				go writeStrategy.StartWriter()
+				go writeStrategy.StartWriter(stopChan)
 				defer close(stopChan)
 
 				writes := func() uint32 {
@@ -91,7 +91,7 @@ var _ = Describe("WriteStrategies", func() {
 			})
 
 			It("stops writing after the stoChan is closed", func() {
-				go writeStrategy.StartWriter()
+				go writeStrategy.StartWriter(stopChan)
 
 				writes := func() uint32 {
 					return atomic.LoadUint32(&writer.count)

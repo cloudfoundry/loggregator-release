@@ -9,20 +9,20 @@ type MessageReader interface {
 }
 
 type WriteStrategy interface {
-	StartWriter()
+	StartWriter(stopChan chan struct{})
 }
 
 type Experiment struct {
 	writeStrategies []WriteStrategy
-	reader        MessageReader
-	stopChan      chan struct{}
-	writeRate     int
+	reader          MessageReader
+	stopChan        chan struct{}
+	writeRate       int
 }
 
-func NewExperiment(reader MessageReader, stopChan chan struct{}) *Experiment {
+func NewExperiment(reader MessageReader) *Experiment {
 	return &Experiment{
-		reader:        reader,
-		stopChan:      stopChan,
+		reader:   reader,
+		stopChan: make(chan struct{}),
 	}
 }
 
@@ -44,7 +44,7 @@ func (e *Experiment) Start() {
 		wg.Add(1)
 		go func(s WriteStrategy) {
 			defer wg.Done()
-			s.StartWriter()
+			s.StartWriter(e.stopChan)
 		}(strategy)
 	}
 

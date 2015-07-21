@@ -8,7 +8,6 @@ import (
 type ConstantWriteStrategy struct {
 	generator MessageGenerator
 	writer    MessageWriter
-	stopChan  chan struct{}
 	writeRate int
 }
 
@@ -20,21 +19,20 @@ type MessageWriter interface {
 	Write([]byte)
 }
 
-func NewConstantWriteStrategy(generator MessageGenerator, writer MessageWriter, writeRate int, stopChan chan struct{}) *ConstantWriteStrategy {
+func NewConstantWriteStrategy(generator MessageGenerator, writer MessageWriter, writeRate int) *ConstantWriteStrategy {
 	return &ConstantWriteStrategy{
 		generator: generator,
 		writer:    writer,
 		writeRate: writeRate,
-		stopChan:  stopChan,
 	}
 }
 
-func (s *ConstantWriteStrategy) StartWriter() {
+func (s *ConstantWriteStrategy) StartWriter(stopChan chan struct{}) {
 	writeInterval := time.Second / time.Duration(s.writeRate)
 	ticker := time.NewTicker(writeInterval)
 	for {
 		select {
-		case <-s.stopChan:
+		case <-stopChan:
 			return
 		case <-ticker.C:
 			s.writer.Write(s.generator.Generate())
@@ -51,24 +49,22 @@ type BurstParameters struct {
 type BurstWriteStrategy struct {
 	generator  MessageGenerator
 	writer     MessageWriter
-	stopChan   chan struct{}
 	parameters BurstParameters
 }
 
-func NewBurstWriteStrategy(generator MessageGenerator, writer MessageWriter, params BurstParameters, stopChan chan struct{}) *BurstWriteStrategy {
+func NewBurstWriteStrategy(generator MessageGenerator, writer MessageWriter, params BurstParameters) *BurstWriteStrategy {
 	return &BurstWriteStrategy{
 		generator:  generator,
 		writer:     writer,
 		parameters: params,
-		stopChan:   stopChan,
 	}
 }
 
-func (s *BurstWriteStrategy) StartWriter() {
+func (s *BurstWriteStrategy) StartWriter(stopChan chan struct{}) {
 	ticker := time.NewTicker(s.parameters.Frequency)
 	for {
 		select {
-		case <-s.stopChan:
+		case <-stopChan:
 			return
 		case <-ticker.C:
 			burst := random(s.parameters.Minimum, s.parameters.Maximum)

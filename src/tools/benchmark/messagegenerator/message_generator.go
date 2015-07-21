@@ -18,13 +18,13 @@ func (*ValueMetricGenerator) Generate() []byte {
 }
 
 func BasicValueMetric() []byte {
-	message, _ := proto.Marshal(BasicValueMetricEnvelope())
+	message, _ := proto.Marshal(BasicValueMetricEnvelope("test-origin"))
 	return message
 }
 
-func BasicValueMetricEnvelope() *events.Envelope {
+func BasicValueMetricEnvelope(origin string) *events.Envelope {
 	return &events.Envelope{
-		Origin:    proto.String("fake-origin-2"),
+		Origin:    proto.String(origin),
 		EventType: events.Envelope_ValueMetric.Enum(),
 		ValueMetric: &events.ValueMetric{
 			Name:  proto.String("fake-metric-name"),
@@ -45,13 +45,13 @@ func (*LogMessageGenerator) Generate() []byte {
 }
 
 func BasicLogMessage() []byte {
-	message, _ := proto.Marshal(BasicLogMessageEnvelope())
+	message, _ := proto.Marshal(BasicLogMessageEnvelope("test-origin"))
 	return message
 }
 
-func BasicLogMessageEnvelope() *events.Envelope {
+func BasicLogMessageEnvelope(origin string) *events.Envelope {
 	return &events.Envelope{
-		Origin:    proto.String("fake-origin-2"),
+		Origin:    proto.String(origin),
 		EventType: events.Envelope_LogMessage.Enum(),
 		LogMessage: &events.LogMessage{
 			Message:     []byte("test message"),

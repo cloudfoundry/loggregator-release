@@ -47,9 +47,8 @@ func main() {
 	reader := messagereader.NewMessageReader(3457)
 	valueMetricReader := valuemetricreader.NewValueMetricReader(reporter, reader)
 
-	stopChan := make(chan struct{})
-	writeStrategy := writestrategies.NewConstantWriteStrategy(generator, writer, *writeRate, stopChan)
-	exp := experiment.NewExperiment(valueMetricReader, stopChan)
+	writeStrategy := writestrategies.NewConstantWriteStrategy(generator, writer, *writeRate)
+	exp := experiment.NewExperiment(valueMetricReader)
 	exp.AddWriteStrategy(writeStrategy)
 
 	announceToEtcd()

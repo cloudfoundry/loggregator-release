@@ -49,9 +49,8 @@ func main() {
 	reader := websocketmessagereader.New(fmt.Sprintf("%s:%d", ip, *dopplerOutgoingPort), reporter)
 	defer reader.Close()
 
-	stopChan := make(chan struct{})
-	writeStrategy := writestrategies.NewConstantWriteStrategy(generator, writer, *writeRate, stopChan)
-	exp := experiment.NewExperiment(reader, stopChan)
+	writeStrategy := writestrategies.NewConstantWriteStrategy(generator, writer, *writeRate)
+	exp := experiment.NewExperiment(reader)
 	exp.AddWriteStrategy(writeStrategy)
 
 	go reporter.Start()

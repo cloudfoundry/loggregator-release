@@ -19,7 +19,8 @@ import (
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"tools/benchmark/messagegenerator"
-	"tools/legacymetronbenchmark/logmessagereader"
+	"tools/benchmark/writestrategies"
+	"tools/legacymetronbenchmark/legacyreader"
 )
 
 func main() {
@@ -41,11 +42,21 @@ func main() {
 	}
 
 	reporter := metricsreporter.New(duration, os.Stdout)
-	generator := messagegenerator.NewLegacyLogGenerator()
-	writer := messagewriter.NewMessageWriter("localhost", 51160, "", reporter)
+
 	reader := messagereader.NewMessageReader(3457)
-	logMessageReader := logmessagereader.NewLogMessageReader(reporter, reader)
-	exp := experiment.New(generator, writer, logMessageReader, *writeRate)
+	legacyReader := legacyreader.NewLegacyReader(reporter, reader)
+
+	exp := experiment.NewExperiment(legacyReader)
+
+	generator := messagegenerator.NewValueMetricGenerator()
+	writer := messagewriter.NewMessageWriter("localhost", 51161, "", reporter)
+	writeStrategy := writestrategies.NewConstantWriteStrategy(generator, writer, *writeRate)
+	exp.AddWriteStrategy(writeStrategy)
+
+	legacyGenerator := messagegenerator.NewLegacyLogGenerator()
+	legacyWriter := messagewriter.NewMessageWriter("localhost", 51160, "", reporter)
+	legacyWriteStrategy := writestrategies.NewConstantWriteStrategy(legacyGenerator, legacyWriter, *writeRate)
+	exp.AddWriteStrategy(legacyWriteStrategy)
 
 	announceToEtcd()
 

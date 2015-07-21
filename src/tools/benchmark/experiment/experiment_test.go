@@ -17,8 +17,7 @@ var _ = Describe("Experiment", func() {
 		reader = &fakeOtherReader{}
 
 		strategy = &fakeWriteStrategy{}
-		stopChan := make(chan struct{})
-		e = experiment.NewExperiment(reader, stopChan)
+		e = experiment.NewExperiment(reader)
 		e.AddWriteStrategy(strategy)
 	})
 
@@ -50,7 +49,7 @@ type fakeWriteStrategy struct {
 	started int32
 }
 
-func (s *fakeWriteStrategy) StartWriter() {
+func (s *fakeWriteStrategy) StartWriter(chan struct{}) {
 	atomic.StoreInt32(&s.started, 1)
 }
 

@@ -27,9 +27,8 @@ var _ = Describe("End to end test", func() {
 
 		generator := messagegenerator.NewValueMetricGenerator()
 
-		stopChan := make(chan struct{})
-		writeStrategy := writestrategies.NewConstantWriteStrategy(generator, metronStreamWriter, numMessagesSent, stopChan)
-		ex := experiment.NewExperiment(firehoseReader, stopChan)
+		writeStrategy := writestrategies.NewConstantWriteStrategy(generator, metronStreamWriter, numMessagesSent)
+		ex := experiment.NewExperiment(firehoseReader)
 		ex.AddWriteStrategy(writeStrategy)
 
 		go stopExperimentAfterTimeout(ex)
@@ -53,9 +52,8 @@ var _ = Describe("End to end test", func() {
 		}
 
 		generator := messagegenerator.NewValueMetricGenerator()
-		stopChan := make(chan struct{})
-		writeStrategy := writestrategies.NewBurstWriteStrategy(generator, metronStreamWriter, params, stopChan)
-		ex := experiment.NewExperiment(firehoseReader, stopChan)
+		writeStrategy := writestrategies.NewBurstWriteStrategy(generator, metronStreamWriter, params)
+		ex := experiment.NewExperiment(firehoseReader)
 		ex.AddWriteStrategy(writeStrategy)
 
 		go stopExperimentAfterTimeout(ex)

@@ -4,6 +4,8 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
+const TestOrigin = "test-origin"
+
 type MetricsReporter interface {
 	IncrementReceivedMessages()
 }
@@ -27,7 +29,7 @@ func NewValueMetricReader(reporter MetricsReporter, reader MessageReader) *Value
 func (lr *ValueMetricReader) Read() {
 	message := lr.reader.Read()
 
-	if message != nil && message.GetValueMetric() != nil {
+	if message != nil && message.GetValueMetric() != nil && *message.Origin == TestOrigin {
 		lr.reporter.IncrementReceivedMessages()
 	}
 }
