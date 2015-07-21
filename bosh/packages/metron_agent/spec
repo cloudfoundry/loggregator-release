@@ -15,7 +15,6 @@ files:
 - loggregator/src/metron/writers/messageaggregator/*.go # gosub
 - loggregator/src/metron/writers/mocks/*.go # gosub
 - loggregator/src/metron/writers/signer/*.go # gosub
-- loggregator/src/metron/writers/synchronizedwriter/*.go # gosub
 - loggregator/src/metron/writers/tagger/*.go # gosub
 - loggregator/src/metron/writers/varzforwarder/*.go # gosub
 - loggregator/src/github.com/apcera/nats/*.go # gosub
