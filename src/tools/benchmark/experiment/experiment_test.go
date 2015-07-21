@@ -47,15 +47,15 @@ var _ = Describe("Experiment", func() {
 })
 
 type fakeWriteStrategy struct {
-	started bool
+	started int32
 }
 
 func (s *fakeWriteStrategy) StartWriter() {
-	s.started = true
+	atomic.StoreInt32(&s.started, 1)
 }
 
 func (s *fakeWriteStrategy) Started() bool {
-	return s.started
+	return atomic.LoadInt32(&s.started) == 1
 }
 
 type fakeOtherReader struct {
