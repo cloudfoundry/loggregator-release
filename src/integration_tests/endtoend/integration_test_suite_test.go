@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os/exec"
 	"time"
+	"runtime"
 )
 
 func TestIntegrationTest(t *testing.T) {
@@ -36,6 +37,7 @@ var (
 )
 
 var _ = BeforeSuite(func() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	etcdRunner = etcdstorerunner.NewETCDClusterRunner(49623, 1)
 	etcdRunner.Start()
 	etcdAdapter = etcdRunner.Adapter()
@@ -54,7 +56,7 @@ var _ = BeforeEach(func() {
 		LIGHT_BLUE = 36
 	)
 
-	dopplerSession = startComponent(dopplerExecutablePath, "doppler", PURPLE, "--config=fixtures/doppler.json", "--debug")
+	dopplerSession = startComponent(dopplerExecutablePath, "doppler", PURPLE, "--config=fixtures/doppler.json")
 	var err error
 	LocalIPAddress, err = localip.LocalIP()
 	Expect(err).ToNot(HaveOccurred())
@@ -65,12 +67,12 @@ var _ = BeforeEach(func() {
 		return err
 	}, 11).Should(BeNil())
 
-	metronSession = startComponent(metronExecutablePath, "metron", BLUE, "--config=fixtures/metron.json", "--debug")
+	metronSession = startComponent(metronExecutablePath, "metron", BLUE, "--config=fixtures/metron.json")
 
 	// Wait for metron to startup
 	waitOnURL("http://" + LocalIPAddress + ":49633")
 
-	tcSession = startComponent(trafficControllerExecutablePath, "tc", LIGHT_BLUE, "--config=fixtures/trafficcontroller.json", "--debug", "--disableAccessControl")
+	tcSession = startComponent(trafficControllerExecutablePath, "tc", LIGHT_BLUE, "--config=fixtures/trafficcontroller.json", "--disableAccessControl")
 
 	// Wait for traffic controller to startup
 	waitOnURL("http://" + LocalIPAddress + ":49630")

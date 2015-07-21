@@ -18,7 +18,9 @@ var _ = Describe("Dropsonde message forwarding", func() {
 	var testDoppler net.PacketConn
 
 	BeforeEach(func() {
-		testDoppler, _ = net.ListenPacket("udp", "localhost:3457")
+		var err error
+		testDoppler, err = net.ListenPacket("udp", "localhost:3457")
+		Expect(err).ToNot(HaveOccurred())
 
 		node := storeadapter.StoreNode{
 			Key:   "/healthstatus/doppler/z1/0",
@@ -62,18 +64,17 @@ var _ = Describe("Dropsonde message forwarding", func() {
 			readBuffer := make([]byte, 65535)
 
 			for {
-				readCount, _, _ := testDoppler.ReadFrom(readBuffer)
-				readData := make([]byte, readCount)
-				copy(readData, readBuffer[:readCount])
-
-				if gotSignedMessage(readData) {
-					messageChan <- signedMessage{signature: readData[:len(signature)], message: readData[len(signature):]}
-				}
-
 				select {
 				case <-stopTheWorld:
 					return
 				default:
+					readCount, _, _ := testDoppler.ReadFrom(readBuffer)
+					readData := make([]byte, readCount)
+					copy(readData, readBuffer[:readCount])
+
+					if gotSignedMessage(readData) {
+						messageChan <- signedMessage{signature: readData[:len(signature)], message: readData[len(signature):]}
+					}
 				}
 			}
 		}

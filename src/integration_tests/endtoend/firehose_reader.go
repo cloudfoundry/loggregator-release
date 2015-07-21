@@ -66,9 +66,9 @@ func isTestMetric(msg *events.Envelope) bool {
 }
 
 func isMetronMessageCount(msg *events.Envelope) bool {
-	return msg.GetEventType() == events.Envelope_CounterEvent && msg.CounterEvent.GetName() == "dropsondeAgentListener.receivedMessageCount"
+	return msg.GetEventType() == events.Envelope_CounterEvent && msg.CounterEvent.GetName() == "dropsondeAgentListener.receivedMessageCount" && msg.GetOrigin() == "MetronAgent"
 }
 
 func isDopplerMessageCount(msg *events.Envelope) bool {
-	return msg.GetEventType() == events.Envelope_CounterEvent && msg.CounterEvent.GetName() == "dropsondeListener.receivedMessageCount"
+	return msg.GetEventType() == events.Envelope_CounterEvent && msg.CounterEvent.GetName() == "dropsondeListener.receivedMessageCount" && msg.GetOrigin() == "DopplerServer"
 }
