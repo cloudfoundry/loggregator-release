@@ -42,10 +42,10 @@ func (e *Experiment) Start() {
 
 	for _, strategy := range e.writeStrategies {
 		wg.Add(1)
-		go func() {
+		go func(s WriteStrategy) {
 			defer wg.Done()
-			strategy.StartWriter()
-		}()
+			s.StartWriter()
+		}(strategy)
 	}
 
 	wg.Wait()
