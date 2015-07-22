@@ -11,30 +11,37 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"strconv"
 )
 
 var _ = Describe("NetworkReader", func() {
+	var reader *networkreader.NetworkReader
+	var writer mocks.MockByteArrayWriter
+	var port int
+	var address string
+
+	BeforeEach(func() {
+		port = 3456 + GinkgoParallelNode()
+		address = net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+		writer = mocks.MockByteArrayWriter{}
+		reader = networkreader.New(address, "networkReader", &writer, loggertesthelper.Logger())
+	})
+
 	Context("without a running listener", func() {
 		It("Emit returns a context with the given name", func() {
-			reader := networkreader.New("127.0.0.1:3456", "secretEventOrange", &mocks.MockByteArrayWriter{}, loggertesthelper.Logger())
 			context := reader.Emit()
 
-			Expect(context.Name).To(Equal("secretEventOrange"))
+			Expect(context.Name).To(Equal("networkReader"))
 		})
 	})
 
 	Context("with a reader running", func() {
-		var reader *networkreader.NetworkReader
-		var writer mocks.MockByteArrayWriter
-
 		BeforeEach(func() {
-			writer = mocks.MockByteArrayWriter{}
-			reader = networkreader.New("127.0.0.1:3456", "networkReader", &writer, loggertesthelper.Logger())
-
 			loggertesthelper.TestLoggerSink.Clear()
 			go reader.Start()
 
-			Eventually(loggertesthelper.TestLoggerSink.LogContents).Should(ContainSubstring("Listening on port 127.0.0.1:3456"))
+			expectedLog := fmt.Sprintf("Listening on port %s", address)
+			Eventually(loggertesthelper.TestLoggerSink.LogContents).Should(ContainSubstring(expectedLog))
 		})
 
 		AfterEach(func() {
@@ -45,7 +52,7 @@ var _ = Describe("NetworkReader", func() {
 			expectedData := "Some Data"
 			otherData := "More stuff"
 
-			connection, err := net.Dial("udp", "localhost:3456")
+			connection, err := net.Dial("udp", address)
 
 			_, err = connection.Write([]byte(expectedData))
 			Expect(err).NotTo(HaveOccurred())
@@ -66,7 +73,7 @@ var _ = Describe("NetworkReader", func() {
 		It("emits metrics related to data sent in on udp connection", func(done Done) {
 			expectedData := "Some Data"
 			otherData := "More stuff"
-			connection, err := net.Dial("udp", "localhost:3456")
+			connection, err := net.Dial("udp", address)
 			dataByteCount := len(otherData + expectedData)
 
 			_, err = connection.Write([]byte(expectedData))
