@@ -15,11 +15,10 @@ import (
 )
 
 var _ = Describe("Dropsonde message forwarding", func() {
-	var testDoppler net.PacketConn
+	var fakeDoppler *FakeDoppler
+	var stopTheWorld chan struct{}
 
 	BeforeEach(func() {
-		testDoppler = eventuallyListensForUDP("localhost:3457")
-
 		node := storeadapter.StoreNode{
 			Key:   "/healthstatus/doppler/z1/0",
 			Value: []byte("localhost"),
@@ -28,82 +27,115 @@ var _ = Describe("Dropsonde message forwarding", func() {
 		adapter := etcdRunner.Adapter()
 		adapter.Create(node)
 		adapter.Disconnect()
+
+
+		stopTheWorld = make(chan struct{})
+
+		conn := eventuallyListensForUDP("localhost:3457")
+		fakeDoppler = &FakeDoppler{
+			packetConn: conn,
+			stopTheWorld: stopTheWorld,
+		}
 	})
 
 	AfterEach(func() {
-		testDoppler.Close()
+		fakeDoppler.Close()
+		close(stopTheWorld)
 	})
 
 	It("forwards hmac signed messages to a healthy doppler server", func(done Done) {
-
 		defer close(done)
 
 		originalMessage := basicValueMessage()
-		expectedEnvelope := addDefaultTags(basicValueMessageEnvelope())
-		expectedMessage, _ := proto.Marshal(expectedEnvelope)
+		expectedMessage := sign(originalMessage)
 
-		mac := hmac.New(sha256.New, []byte("shared_secret"))
-		mac.Write(expectedMessage)
+		receivedByDoppler := fakeDoppler.ReadIncomingMessages(expectedMessage.signature)
 
-		signature := mac.Sum(nil)
-
-		metronInput, _ := net.Dial("udp", "localhost:51161")
-
-		messageChan := make(chan signedMessage, 1000)
-
-		stopTheWorld := make(chan struct{})
-		defer close(stopTheWorld)
-
-		readFromDoppler := func() {
-			gotSignedMessage := func(readData []byte) bool {
-				return len(readData) > len(signature)
-			}
-
-			readBuffer := make([]byte, 65535)
-
-			for {
-				select {
-				case <-stopTheWorld:
-					return
-				default:
-					readCount, _, _ := testDoppler.ReadFrom(readBuffer)
-					readData := make([]byte, readCount)
-					copy(readData, readBuffer[:readCount])
-
-					if gotSignedMessage(readData) {
-						messageChan <- signedMessage{signature: readData[:len(signature)], message: readData[len(signature):]}
-					}
-				}
-			}
+		metronConn, _ := net.Dial("udp", "localhost:51161")
+		metronInput := &MetronInput{
+			metronConn: metronConn,
+			stopTheWorld: stopTheWorld,
 		}
-
-		go readFromDoppler()
-
-		writeToMetron := func() {
-			ticker := time.NewTicker(10 * time.Millisecond)
-
-			for {
-				metronInput.Write(originalMessage)
-
-				select {
-				case <-stopTheWorld:
-					ticker.Stop()
-					return
-				case <-ticker.C:
-				}
-			}
-		}
-
-		go writeToMetron()
-
-		expected := signedMessage{signature: signature, message: expectedMessage}
+		go metronInput.WriteToMetron(originalMessage)
 
 		Eventually(func() bool {
-			msg := <-messageChan
-			return bytes.Equal(msg.signature, expected.signature) && bytes.Equal(msg.message, expected.message)
+			msg := <-receivedByDoppler
+			return bytes.Equal(msg.signature, expectedMessage.signature) && bytes.Equal(msg.message, expectedMessage.message)
 		}).Should(BeTrue())
 	}, 2)
 })
+
+func sign(message []byte) signedMessage {
+	expectedEnvelope := addDefaultTags(basicValueMessageEnvelope())
+	expectedMessage, _ := proto.Marshal(expectedEnvelope)
+
+	mac := hmac.New(sha256.New, []byte("shared_secret"))
+	mac.Write(expectedMessage)
+
+	signature := mac.Sum(nil)
+	return signedMessage{ signature: signature, message: expectedMessage }
+}
+
+func gotSignedMessage(readData, signature []byte) bool {
+	return len(readData) > len(signature)
+}
+
+type MetronInput struct {
+	metronConn net.Conn
+	stopTheWorld chan struct{}
+}
+
+func(input *MetronInput) WriteToMetron(unsignedMessage []byte) {
+	ticker := time.NewTicker(10 * time.Millisecond)
+
+	for {
+		select {
+		case <-input.stopTheWorld:
+			ticker.Stop()
+			return
+		case <-ticker.C:
+			input.metronConn.Write(unsignedMessage)
+		}
+	}
+}
+
+type FakeDoppler struct {
+	packetConn net.PacketConn
+	stopTheWorld chan struct{}
+}
+
+func(d *FakeDoppler) ReadIncomingMessages(signature []byte) chan signedMessage {
+	messageChan := make(chan signedMessage, 1000)
+
+	go func() {
+		readBuffer := make([]byte, 65535)
+		for {
+			select {
+			case <-d.stopTheWorld:
+				return
+			default:
+				readCount, _, _ := d.packetConn.ReadFrom(readBuffer)
+				readData := make([]byte, readCount)
+				copy(readData, readBuffer[:readCount])
+
+				// Only signed messages get placed on messageChan
+				if gotSignedMessage(readData, signature) {
+					msg := signedMessage{
+						signature: readData[:len(signature)],
+						message:   readData[len(signature):],
+					}
+					messageChan <- msg
+				}
+			}
+		}
+	}()
+
+	return messageChan
+}
+
+func (d *FakeDoppler) Close() {
+	d.packetConn.Close()
+}
 
 type signedMessage struct {
 	signature []byte
