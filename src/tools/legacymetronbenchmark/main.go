@@ -41,10 +41,11 @@ func main() {
 		log.Fatalf("Invalid duration %s\n", *stopAfter)
 	}
 
-	reporter := metricsreporter.New(duration, os.Stdout)
+	internalMetricsCounter := metricsreporter.NewCounter("internal metrics")
+	reporter := metricsreporter.New(duration, os.Stdout, internalMetricsCounter)
 
 	reader := messagereader.NewMessageReader(3457)
-	legacyReader := legacyreader.NewLegacyReader(reporter.GetReceivedCounter(), reader)
+	legacyReader := legacyreader.NewLegacyReader(reporter.GetReceivedCounter(), internalMetricsCounter, reader)
 
 	exp := experiment.NewExperiment(legacyReader)
 

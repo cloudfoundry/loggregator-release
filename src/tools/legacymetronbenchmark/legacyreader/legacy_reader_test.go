@@ -13,15 +13,17 @@ import (
 var _ = Describe("LegacyReader", func() {
 	Context("Read", func() {
 		var (
-			receivedCounter *metricsreporter.Counter
-			reader          fakeReader
-			legacyReader    *legacyreader.LegacyReader
+			receivedCounter        *metricsreporter.Counter
+			internalMetricsCounter *metricsreporter.Counter
+			reader                 fakeReader
+			legacyReader           *legacyreader.LegacyReader
 		)
 
 		BeforeEach(func() {
-			receivedCounter = metricsreporter.NewCounter()
+			receivedCounter = metricsreporter.NewCounter("received")
+			internalMetricsCounter = metricsreporter.NewCounter("internal metrics")
 			reader = fakeReader{}
-			legacyReader = legacyreader.NewLegacyReader(receivedCounter, &reader)
+			legacyReader = legacyreader.NewLegacyReader(receivedCounter, internalMetricsCounter, &reader)
 		})
 
 		It("should report legacy log messages", func() {
@@ -54,6 +56,7 @@ var _ = Describe("LegacyReader", func() {
 			legacyReader.Read()
 
 			Expect(receivedCounter.GetValue()).To(BeEquivalentTo(0))
+			Expect(internalMetricsCounter.GetValue()).To(BeEquivalentTo(1))
 		})
 	})
 })

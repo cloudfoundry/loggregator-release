@@ -2,35 +2,38 @@ package legacyreader
 
 import (
 	"github.com/cloudfoundry/sonde-go/events"
+	"tools/benchmark/metricsreporter"
 	"tools/metronbenchmark/valuemetricreader"
 )
 
 const legacyOrigin = "legacy"
-
-type counter interface {
-	IncrementValue()
-}
 
 type MessageReader interface {
 	Read() *events.Envelope
 }
 
 type LegacyReader struct {
-	receivedCounter counter
-	reader          MessageReader
+	receivedCounter        *metricsreporter.Counter
+	internalMetricsCounter *metricsreporter.Counter
+	reader                 MessageReader
 }
 
-func NewLegacyReader(receivedCounter counter, reader MessageReader) *LegacyReader {
+func NewLegacyReader(receivedCounter *metricsreporter.Counter, internalMetricsCounter *metricsreporter.Counter, reader MessageReader) *LegacyReader {
 	return &LegacyReader{
-		receivedCounter: receivedCounter,
-		reader:          reader,
+		receivedCounter:        receivedCounter,
+		internalMetricsCounter: internalMetricsCounter,
+		reader:                 reader,
 	}
 }
 
 func (lr *LegacyReader) Read() {
 	message := lr.reader.Read()
 
-	if message != nil && (*message.Origin == valuemetricreader.TestOrigin || *message.Origin == legacyOrigin) {
-		lr.receivedCounter.IncrementValue()
+	if message != nil {
+		if *message.Origin == valuemetricreader.TestOrigin || *message.Origin == legacyOrigin {
+			lr.receivedCounter.IncrementValue()
+		} else {
+			lr.internalMetricsCounter.IncrementValue()
+		}
 	}
 }

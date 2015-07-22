@@ -24,7 +24,7 @@ var _ = Describe("Websocketmessagereader", func() {
 
 		messages <- []byte(sentMessage)
 
-		receivedCounter := metricsreporter.NewCounter()
+		receivedCounter := metricsreporter.NewCounter("counter")
 		reader := websocketmessagereader.New(server.Listener.Addr().String(), receivedCounter)
 
 		Eventually(reader.ReadAndReturn).Should(BeEquivalentTo(sentMessage))

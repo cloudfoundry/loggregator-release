@@ -6,13 +6,18 @@ import (
 )
 
 type Counter struct {
+	name  string
 	value uint64
 	total uint64
 	lock  sync.Mutex
 }
 
-func NewCounter() *Counter {
-	return &Counter{}
+func NewCounter(name string) *Counter {
+	return &Counter{name: name}
+}
+
+func (c *Counter) GetName() string {
+	return c.name
 }
 
 func (c *Counter) GetValue() uint64 {

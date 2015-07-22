@@ -6,19 +6,16 @@ import (
 
 	"metron/writers"
 	"metron/writers/signer"
+	"tools/benchmark/metricsreporter"
 )
 
 type messageWriter struct {
 	writer writers.ByteArrayWriter
 }
 
-type counter interface {
-	IncrementValue()
-}
-
 type networkWriter struct {
 	conn        net.Conn
-	sentCounter counter
+	sentCounter *metricsreporter.Counter
 }
 
 func (nw networkWriter) Write(message []byte) {
@@ -34,8 +31,7 @@ func (nw networkWriter) Write(message []byte) {
 	nw.sentCounter.IncrementValue()
 }
 
-func NewMessageWriter(host string, port int, sharedSecret string, sentCounter counter) *messageWriter {
-
+func NewMessageWriter(host string, port int, sharedSecret string, sentCounter *metricsreporter.Counter) *messageWriter {
 	output, err := net.Dial("udp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		fmt.Printf("DIAL Error: %s\n", err.Error())

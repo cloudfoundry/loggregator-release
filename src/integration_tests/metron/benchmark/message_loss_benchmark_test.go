@@ -56,7 +56,7 @@ var _ = Describe("MessageLossBenchmark", func() {
 		lines := strings.Split(out, "\n")
 		Expect(lines).To(HaveLen(4))
 		values := strings.Split(lines[1], ", ")
-		Expect(values).To(HaveLen(3))
+		Expect(values).To(HaveLen(4))
 
 		value := strings.Split(values[2], "%")[0]
 		percentLoss, err := strconv.ParseFloat(value, 64)

@@ -19,7 +19,7 @@ var _ = Describe("ValueMetricReader", func() {
 		)
 
 		BeforeEach(func() {
-			receivedCounter = metricsreporter.NewCounter()
+			receivedCounter = metricsreporter.NewCounter("counter")
 			reader = fakeReader{}
 			valueMetricReader = valuemetricreader.NewValueMetricReader(receivedCounter, &reader)
 		})

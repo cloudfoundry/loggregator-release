@@ -10,7 +10,13 @@ var _ = Describe("Counter", func() {
 	var counter *metricsreporter.Counter
 
 	BeforeEach(func() {
-		counter = metricsreporter.NewCounter()
+		counter = metricsreporter.NewCounter("counter")
+	})
+
+	Context("GetName", func() {
+		It("returns its name", func() {
+			Expect(counter.GetName()).To(Equal("counter"))
+		})
 	})
 
 	Context("GetValue", func() {

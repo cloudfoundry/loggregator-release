@@ -9,9 +9,11 @@ import (
 )
 
 var _ = Describe("MessageWriter", func() {
-	var sentCounter *metricsreporter.Counter
+	var (
+		sentCounter *metricsreporter.Counter
+	)
 	BeforeEach(func() {
-		sentCounter = metricsreporter.NewCounter()
+		sentCounter = metricsreporter.NewCounter("sent")
 	})
 
 	It("should keep track of the total sent messages", func() {
