@@ -6,21 +6,22 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"tools/benchmark/metricsreporter"
 	"tools/metronbenchmark/valuemetricreader"
 )
 
 var _ = Describe("ValueMetricReader", func() {
 	Context("Read", func() {
 		var (
-			reporter          fakeReporter
+			receivedCounter   *metricsreporter.Counter
 			reader            fakeReader
 			valueMetricReader *valuemetricreader.ValueMetricReader
 		)
 
 		BeforeEach(func() {
-			reporter = fakeReporter{}
+			receivedCounter = metricsreporter.NewCounter()
 			reader = fakeReader{}
-			valueMetricReader = valuemetricreader.NewValueMetricReader(&reporter, &reader)
+			valueMetricReader = valuemetricreader.NewValueMetricReader(receivedCounter, &reader)
 		})
 
 		It("should report value metrics", func() {
@@ -28,7 +29,7 @@ var _ = Describe("ValueMetricReader", func() {
 
 			valueMetricReader.Read()
 
-			Expect(reporter.count).To(Equal(1))
+			Expect(receivedCounter.GetValue()).To(BeEquivalentTo(1))
 		})
 
 		It("should not report log messages", func() {
@@ -36,7 +37,7 @@ var _ = Describe("ValueMetricReader", func() {
 
 			valueMetricReader.Read()
 
-			Expect(reporter.count).To(Equal(0))
+			Expect(receivedCounter.GetValue()).To(BeEquivalentTo(0))
 		})
 
 		It("should only report test value metrics", func() {
@@ -44,18 +45,10 @@ var _ = Describe("ValueMetricReader", func() {
 
 			valueMetricReader.Read()
 
-			Expect(reporter.count).To(Equal(0))
+			Expect(receivedCounter.GetValue()).To(BeEquivalentTo(0))
 		})
 	})
 })
-
-type fakeReporter struct {
-	count int
-}
-
-func (f *fakeReporter) IncrementReceivedMessages() {
-	f.count++
-}
 
 type fakeReader struct {
 	event *events.Envelope

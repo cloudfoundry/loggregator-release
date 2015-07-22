@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 	"net/http/httptest"
 	"time"
+	"tools/benchmark/metricsreporter"
 )
 
 var _ = Describe("Websocketmessagereader", func() {
@@ -23,18 +24,10 @@ var _ = Describe("Websocketmessagereader", func() {
 
 		messages <- []byte(sentMessage)
 
-		reporter := &fakeReporter{}
-		reader := websocketmessagereader.New(server.Listener.Addr().String(), reporter)
+		receivedCounter := metricsreporter.NewCounter()
+		reader := websocketmessagereader.New(server.Listener.Addr().String(), receivedCounter)
 
 		Eventually(reader.ReadAndReturn).Should(BeEquivalentTo(sentMessage))
 	})
 
 })
-
-type fakeReporter struct {
-	totalReceived int
-}
-
-func (f *fakeReporter) IncrementReceivedMessages() {
-	f.totalReceived++
-}

@@ -44,17 +44,17 @@ func main() {
 	reporter := metricsreporter.New(duration, os.Stdout)
 
 	reader := messagereader.NewMessageReader(3457)
-	legacyReader := legacyreader.NewLegacyReader(reporter, reader)
+	legacyReader := legacyreader.NewLegacyReader(reporter.GetReceivedCounter(), reader)
 
 	exp := experiment.NewExperiment(legacyReader)
 
 	generator := messagegenerator.NewValueMetricGenerator()
-	writer := messagewriter.NewMessageWriter("localhost", 51161, "", reporter)
+	writer := messagewriter.NewMessageWriter("localhost", 51161, "", reporter.GetSentCounter())
 	writeStrategy := writestrategies.NewConstantWriteStrategy(generator, writer, *writeRate)
 	exp.AddWriteStrategy(writeStrategy)
 
 	legacyGenerator := messagegenerator.NewLegacyLogGenerator()
-	legacyWriter := messagewriter.NewMessageWriter("localhost", 51160, "", reporter)
+	legacyWriter := messagewriter.NewMessageWriter("localhost", 51160, "", reporter.GetSentCounter())
 	legacyWriteStrategy := writestrategies.NewConstantWriteStrategy(legacyGenerator, legacyWriter, *writeRate)
 	exp.AddWriteStrategy(legacyWriteStrategy)
 

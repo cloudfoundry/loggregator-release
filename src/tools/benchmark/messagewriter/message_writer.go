@@ -12,13 +12,13 @@ type messageWriter struct {
 	writer writers.ByteArrayWriter
 }
 
-type sentMessagesReporter interface {
-	IncrementSentMessages()
+type counter interface {
+	IncrementValue()
 }
 
 type networkWriter struct {
-	conn     net.Conn
-	reporter sentMessagesReporter
+	conn        net.Conn
+	sentCounter counter
 }
 
 func (nw networkWriter) Write(message []byte) {
@@ -31,10 +31,10 @@ func (nw networkWriter) Write(message []byte) {
 		fmt.Printf("SEND Warning: Tried to send %d bytes but only sent %d\n", len(message), n)
 		return
 	}
-	nw.reporter.IncrementSentMessages()
+	nw.sentCounter.IncrementValue()
 }
 
-func NewMessageWriter(host string, port int, sharedSecret string, reporter sentMessagesReporter) *messageWriter {
+func NewMessageWriter(host string, port int, sharedSecret string, sentCounter counter) *messageWriter {
 
 	output, err := net.Dial("udp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
@@ -43,8 +43,8 @@ func NewMessageWriter(host string, port int, sharedSecret string, reporter sentM
 
 	var writer writers.ByteArrayWriter
 	writer = networkWriter{
-		reporter: reporter,
-		conn:     output,
+		sentCounter: sentCounter,
+		conn:        output,
 	}
 
 	if len(sharedSecret) > 0 {

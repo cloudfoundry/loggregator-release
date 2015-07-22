@@ -10,15 +10,15 @@ import (
 )
 
 type WebsocketMessageReader struct {
-	websocket *websocket.Conn
-	reporter  receivedMessagesReporter
+	websocket       *websocket.Conn
+	receivedCounter counter
 }
 
-type receivedMessagesReporter interface {
-	IncrementReceivedMessages()
+type counter interface {
+	IncrementValue()
 }
 
-func New(addr string, reporter receivedMessagesReporter) WebsocketMessageReader {
+func New(addr string, receivedCounter counter) WebsocketMessageReader {
 	rand.Seed(time.Now().UnixNano())
 	fullURL := "ws://" + addr + "/firehose/test" + strconv.Itoa(rand.Intn(100))
 
@@ -28,8 +28,8 @@ func New(addr string, reporter receivedMessagesReporter) WebsocketMessageReader 
 	}
 
 	return WebsocketMessageReader{
-		websocket: ws,
-		reporter:  reporter,
+		websocket:       ws,
+		receivedCounter: receivedCounter,
 	}
 }
 
@@ -44,7 +44,7 @@ func (wmr WebsocketMessageReader) ReadAndReturn() []byte {
 
 func (wmr WebsocketMessageReader) Read() {
 	wmr.ReadAndReturn()
-	wmr.reporter.IncrementReceivedMessages()
+	wmr.receivedCounter.IncrementValue()
 }
 
 func (wmr WebsocketMessageReader) Close() {

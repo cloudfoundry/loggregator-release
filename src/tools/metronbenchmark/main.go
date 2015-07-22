@@ -43,9 +43,9 @@ func main() {
 
 	reporter := metricsreporter.New(duration, os.Stdout)
 	generator := messagegenerator.NewValueMetricGenerator()
-	writer := messagewriter.NewMessageWriter("localhost", 51161, "", reporter)
+	writer := messagewriter.NewMessageWriter("localhost", 51161, "", reporter.GetSentCounter())
 	reader := messagereader.NewMessageReader(3457)
-	valueMetricReader := valuemetricreader.NewValueMetricReader(reporter, reader)
+	valueMetricReader := valuemetricreader.NewValueMetricReader(reporter.GetReceivedCounter(), reader)
 
 	writeStrategy := writestrategies.NewConstantWriteStrategy(generator, writer, *writeRate)
 	exp := experiment.NewExperiment(valueMetricReader)

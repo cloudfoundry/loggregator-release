@@ -10,15 +10,13 @@ import (
 )
 
 type MetricsReporter struct {
-	reportTime    time.Duration
-	stopChan      chan struct{}
-	writer        io.Writer
-	sent          int32
-	received      int32
-	totalSent     int32
-	totalReceived int32
-	numTicks      int32
-	lock          sync.Mutex
+	reportTime      time.Duration
+	stopChan        chan struct{}
+	writer          io.Writer
+	sentCounter     Counter
+	receivedCounter Counter
+	numTicks        int32
+	lock            sync.Mutex
 }
 
 func New(reportTime time.Duration, writer io.Writer) *MetricsReporter {
@@ -35,8 +33,8 @@ func (r *MetricsReporter) Start() {
 	for {
 		select {
 		case <-ticker.C:
-			sent := atomic.LoadInt32(&r.sent)
-			received := atomic.LoadInt32(&r.received)
+			sent := r.sentCounter.GetValue()
+			received := r.receivedCounter.GetValue()
 			// emit the metric for set reportTime, then reset values
 			loss := (float32(sent-received) / float32(sent)) * 100
 			fmt.Fprintf(r.writer, "%v, %v, %v%%\n", sent, received, loss)
@@ -52,26 +50,23 @@ func (r *MetricsReporter) Stop() {
 	defer r.lock.Unlock()
 
 	close(r.stopChan)
-	loss := (float32(r.totalSent-r.totalReceived) / float32(r.totalSent)) * 100
-	averageSent := float64(r.totalSent) / float64(r.numTicks)
-	averageReceived := float64(r.totalReceived) / float64(r.numTicks)
+
+	sentTotal := r.sentCounter.GetTotal()
+	receivedTotal := r.receivedCounter.GetTotal()
+
+	averageSent := float64(sentTotal) / float64(r.numTicks)
+	averageReceived := float64(receivedTotal) / float64(r.numTicks)
+	loss := (float32(sentTotal-receivedTotal) / float32(sentTotal)) * 100
+
 	fmt.Fprintf(r.writer, "Averages: %v, %v, %v%%\n", averageSent, averageReceived, loss)
 }
 
-func (r *MetricsReporter) IncrementSentMessages() {
-	atomic.AddInt32(&r.sent, 1)
+func (r *MetricsReporter) GetSentCounter() *Counter {
+	return &r.sentCounter
 }
 
-func (r *MetricsReporter) getSent() int32 {
-	return atomic.LoadInt32(&r.sent)
-}
-
-func (r *MetricsReporter) getReceived() int32 {
-	return atomic.LoadInt32(&r.received)
-}
-
-func (r *MetricsReporter) IncrementReceivedMessages() {
-	atomic.AddInt32(&r.received, 1)
+func (r *MetricsReporter) GetReceivedCounter() *Counter {
+	return &r.receivedCounter
 }
 
 func (r *MetricsReporter) GetNumTicks() int32 {
@@ -82,10 +77,8 @@ func (r *MetricsReporter) reset() {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	r.totalSent += atomic.LoadInt32(&r.sent)
-	r.totalReceived += atomic.LoadInt32(&r.received)
+	r.sentCounter.Reset()
+	r.receivedCounter.Reset()
 
-	atomic.StoreInt32(&r.sent, 0)
-	atomic.StoreInt32(&r.received, 0)
 	atomic.AddInt32(&r.numTicks, 1)
 }

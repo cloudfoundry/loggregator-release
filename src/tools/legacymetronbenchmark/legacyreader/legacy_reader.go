@@ -7,8 +7,8 @@ import (
 
 const legacyOrigin = "legacy"
 
-type MetricsReporter interface {
-	IncrementReceivedMessages()
+type counter interface {
+	IncrementValue()
 }
 
 type MessageReader interface {
@@ -16,14 +16,14 @@ type MessageReader interface {
 }
 
 type LegacyReader struct {
-	reporter MetricsReporter
-	reader   MessageReader
+	receivedCounter counter
+	reader          MessageReader
 }
 
-func NewLegacyReader(reporter MetricsReporter, reader MessageReader) *LegacyReader {
+func NewLegacyReader(receivedCounter counter, reader MessageReader) *LegacyReader {
 	return &LegacyReader{
-		reporter: reporter,
-		reader:   reader,
+		receivedCounter: receivedCounter,
+		reader:          reader,
 	}
 }
 
@@ -31,6 +31,6 @@ func (lr *LegacyReader) Read() {
 	message := lr.reader.Read()
 
 	if message != nil && (*message.Origin == valuemetricreader.TestOrigin || *message.Origin == legacyOrigin) {
-		lr.reporter.IncrementReceivedMessages()
+		lr.receivedCounter.IncrementValue()
 	}
 }

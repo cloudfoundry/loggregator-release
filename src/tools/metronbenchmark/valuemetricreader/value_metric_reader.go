@@ -6,8 +6,8 @@ import (
 
 const TestOrigin = "test-origin"
 
-type MetricsReporter interface {
-	IncrementReceivedMessages()
+type counter interface {
+	IncrementValue()
 }
 
 type MessageReader interface {
@@ -15,14 +15,14 @@ type MessageReader interface {
 }
 
 type ValueMetricReader struct {
-	reporter MetricsReporter
-	reader   MessageReader
+	receivedCounter counter
+	reader          MessageReader
 }
 
-func NewValueMetricReader(reporter MetricsReporter, reader MessageReader) *ValueMetricReader {
+func NewValueMetricReader(receivedCounter counter, reader MessageReader) *ValueMetricReader {
 	return &ValueMetricReader{
-		reporter: reporter,
-		reader:   reader,
+		receivedCounter: receivedCounter,
+		reader:          reader,
 	}
 }
 
@@ -30,6 +30,6 @@ func (lr *ValueMetricReader) Read() {
 	message := lr.reader.Read()
 
 	if message != nil && message.GetValueMetric() != nil && *message.Origin == TestOrigin {
-		lr.reporter.IncrementReceivedMessages()
+		lr.receivedCounter.IncrementValue()
 	}
 }

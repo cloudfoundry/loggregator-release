@@ -45,8 +45,8 @@ func main() {
 	}
 
 	generator := messagegenerator.NewValueMetricGenerator()
-	writer := messagewriter.NewMessageWriter(ip, *dopplerIncomingDropsondePort, sharedSecret, reporter)
-	reader := websocketmessagereader.New(fmt.Sprintf("%s:%d", ip, *dopplerOutgoingPort), reporter)
+	writer := messagewriter.NewMessageWriter(ip, *dopplerIncomingDropsondePort, sharedSecret, reporter.GetSentCounter())
+	reader := websocketmessagereader.New(fmt.Sprintf("%s:%d", ip, *dopplerOutgoingPort), reporter.GetReceivedCounter())
 	defer reader.Close()
 
 	writeStrategy := writestrategies.NewConstantWriteStrategy(generator, writer, *writeRate)

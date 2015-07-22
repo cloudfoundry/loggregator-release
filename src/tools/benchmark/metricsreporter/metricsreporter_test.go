@@ -25,22 +25,22 @@ var _ = Describe("Metricsreporter", func() {
 	})
 
 	It("should increment sent counter", func() {
-		reporter.IncrementSentMessages()
-		reporter.IncrementSentMessages()
+		reporter.GetSentCounter().IncrementValue()
+		reporter.GetSentCounter().IncrementValue()
 		Eventually(buffer).Should(gbytes.Say("2, 0"))
 		reporter.Stop()
 	})
 
 	It("should increment received counter", func() {
-		reporter.IncrementReceivedMessages()
+		reporter.GetReceivedCounter().IncrementValue()
 		Eventually(buffer).Should(gbytes.Say("0, 1"))
 		reporter.Stop()
 	})
 
 	It("should report metric after reportTime is up", func() {
-		reporter.IncrementSentMessages()
-		reporter.IncrementSentMessages()
-		reporter.IncrementReceivedMessages()
+		reporter.GetSentCounter().IncrementValue()
+		reporter.GetSentCounter().IncrementValue()
+		reporter.GetReceivedCounter().IncrementValue()
 
 		Eventually(buffer).Should(gbytes.Say("2, 1"))
 		Eventually(buffer).Should(gbytes.Say("0, 0"))
@@ -48,9 +48,9 @@ var _ = Describe("Metricsreporter", func() {
 	})
 
 	It("should write averages", func() {
-		reporter.IncrementSentMessages()
-		reporter.IncrementSentMessages()
-		reporter.IncrementReceivedMessages()
+		reporter.GetSentCounter().IncrementValue()
+		reporter.GetSentCounter().IncrementValue()
+		reporter.GetReceivedCounter().IncrementValue()
 
 		Eventually(reporter.GetNumTicks, "20ms", "1ms").Should(Equal(int32(1)))
 		reporter.Stop()
