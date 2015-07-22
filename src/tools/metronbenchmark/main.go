@@ -24,11 +24,13 @@ import (
 )
 
 func main() {
-	runtime.GOMAXPROCS(4)
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	var interval = flag.String("interval", "1s", "Interval for reported results")
 	var writeRate = flag.Int("writeRate", 15000, "Number of writes per second to send to metron")
 	var stopAfter = flag.String("stopAfter", "5m", "How long to run the experiment for")
+	var concurrentWriters = flag.Int("concurrentWriters", 1, "Number of concurrent writers")
+
 	flag.Parse()
 
 	duration, err := time.ParseDuration(*interval)
@@ -43,13 +45,15 @@ func main() {
 
 	reporter := metricsreporter.New(duration, os.Stdout)
 	generator := messagegenerator.NewValueMetricGenerator()
-	writer := messagewriter.NewMessageWriter("localhost", 51161, "", reporter.GetSentCounter())
 	reader := messagereader.NewMessageReader(3457)
 	valueMetricReader := valuemetricreader.NewValueMetricReader(reporter.GetReceivedCounter(), reader)
-
-	writeStrategy := writestrategies.NewConstantWriteStrategy(generator, writer, *writeRate)
 	exp := experiment.NewExperiment(valueMetricReader)
-	exp.AddWriteStrategy(writeStrategy)
+
+	for i := 0; i < *concurrentWriters; i++ {
+		writer := messagewriter.NewMessageWriter("localhost", 51161, "", reporter.GetSentCounter())
+		writeStrategy := writestrategies.NewConstantWriteStrategy(generator, writer, *writeRate)
+		exp.AddWriteStrategy(writeStrategy)
+	}
 
 	announceToEtcd()
 
