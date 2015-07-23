@@ -118,20 +118,24 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 			droppedMessages := buffer.GetDroppedMessageCount()
 			if droppedMessages != 0 {
 				s.UpdateDroppedMessageCount(droppedMessages)
-
 			}
 
 			if !ok {
 				s.Debugf("Syslog Sink %s: Closed listener channel detected. Closing.\n", s.drainUrl)
 				return
 			}
-			s.Debugf("Syslog Sink:Run: Received %s message from %s at %d. Sending data.", messageEnvelope.GetEventType().String(), messageEnvelope.GetOrigin(), messageEnvelope.Timestamp)
 
-			connected = s.sendMessage(messageEnvelope)
-			if connected {
-				numberOfTries = 0
-			} else {
-				numberOfTries++
+			// Some metrics will not be filter and can get to here (i.e.: TruncatingBuffer dropped message metrics)
+			if messageEnvelope.GetEventType() == events.Envelope_LogMessage {
+				err := s.sendLogMessage(messageEnvelope.GetLogMessage())
+				if err == nil {
+					numberOfTries = 0
+					connected = true
+				} else {
+					s.Debugf("Syslog Sink %s: Error when trying to send data to sink. Backing off. Err: %v\n", s.drainUrl, err)
+					numberOfTries++
+					connected = false
+				}
 			}
 		}
 	}
@@ -153,18 +157,9 @@ func (s *SyslogSink) ShouldReceiveErrors() bool {
 	return false
 }
 
-func (s *SyslogSink) sendMessage(messageEnvelope *events.Envelope) bool {
-	logMessage := messageEnvelope.GetLogMessage()
-
+func (s *SyslogSink) sendLogMessage(logMessage *events.LogMessage) error {
 	_, err := s.syslogWriter.Write(messagePriorityValue(logMessage), logMessage.GetMessage(), logMessage.GetSourceType(), logMessage.GetSourceInstance(), *logMessage.Timestamp)
-
-	if err != nil {
-		s.Debugf("Syslog Sink %s: Error when trying to send data to sink. Backing off. Err: %v\n", s.drainUrl, err)
-		return false
-	} else {
-		s.Debugf("Syslog Sink %s: Successfully sent data\n", s.drainUrl)
-		return true
-	}
+	return err
 }
 
 func messagePriorityValue(msg *events.LogMessage) int {

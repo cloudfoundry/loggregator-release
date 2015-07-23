@@ -14,19 +14,25 @@ import (
 )
 
 var _ = Describe("Truncating Buffer", func() {
+	It("panics if buffer size is less than 3", func() {
+		inMessageChan := make(chan *events.Envelope)
+		Expect(func() {
+			truncatingbuffer.NewTruncatingBuffer(inMessageChan, 2, loggertesthelper.Logger(), "dropsonde-origin")
+		}).To(Panic())
+	})
+
 	It("works like a channel", func() {
 		inMessageChan := make(chan *events.Envelope)
-		buffer := truncatingbuffer.NewTruncatingBuffer(inMessageChan, 2, loggertesthelper.Logger(), "dropsonde-origin")
+		buffer := truncatingbuffer.NewTruncatingBuffer(inMessageChan, 3, loggertesthelper.Logger(), "dropsonde-origin")
 		go buffer.Run()
 
-		logMessage1, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "message 1", "appId", "App"), "origin")
-		inMessageChan <- logMessage1
+		sendLogMessages("message 1", inMessageChan)
+
 		readMessage := <-buffer.GetOutputChannel()
 		Expect(readMessage.GetLogMessage().GetMessage()).To(ContainSubstring("message 1"))
 
-		logMessage2, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "message 2", "appId", "App"), "origin")
+		sendLogMessages("message 2", inMessageChan)
 
-		inMessageChan <- logMessage2
 		readMessage2 := <-buffer.GetOutputChannel()
 		Expect(readMessage2.GetLogMessage().GetMessage()).To(ContainSubstring("message 2"))
 
@@ -34,45 +40,65 @@ var _ = Describe("Truncating Buffer", func() {
 
 	It("works like a truncating channel", func() {
 		inMessageChan := make(chan *events.Envelope)
-		buffer := truncatingbuffer.NewTruncatingBuffer(inMessageChan, 2, loggertesthelper.Logger(), "dropsonde-origin")
+		buffer := truncatingbuffer.NewTruncatingBuffer(inMessageChan, 3, loggertesthelper.Logger(), "dropsonde-origin")
 		go buffer.Run()
 
-		logMessage1, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "message 1", "appId", "App"), "origin")
+		sendLogMessages("message 1", inMessageChan)
+		sendLogMessages("message 2", inMessageChan)
+		sendLogMessages("message 3", inMessageChan)
+		sendLogMessages("message 4", inMessageChan)
 
-		inMessageChan <- logMessage1
-
-		logMessage2, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "message 2", "appId", "App"), "origin")
-		inMessageChan <- logMessage2
-
-		logMessage3, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "message 3", "appId", "App"), "origin")
-		inMessageChan <- logMessage3
 		time.Sleep(5 * time.Millisecond)
 
-		readMessage := <-buffer.GetOutputChannel()
-		Expect(readMessage.GetLogMessage().GetMessage()).To(ContainSubstring("Log message output too high. We've dropped 2 messages"))
+		logMessageNotification := <-buffer.GetOutputChannel()
+		Expect(logMessageNotification.GetLogMessage().GetMessage()).To(ContainSubstring("Log message output too high. We've dropped 3 messages"))
 
-		readMessage2 := <-buffer.GetOutputChannel()
-		Expect(readMessage2.GetLogMessage().GetMessage()).To(ContainSubstring("message 3"))
+		counterEventNotification := <-buffer.GetOutputChannel()
+		Expect(counterEventNotification.GetEventType()).To(Equal(events.Envelope_CounterEvent))
+		counterEvent := counterEventNotification.GetCounterEvent()
+		Expect(counterEvent.GetName()).To(Equal("TruncatingBuffer.DroppedMessages"))
+		Expect(counterEvent.GetDelta()).To(BeEquivalentTo(3))
+		Expect(counterEvent.GetTotal()).To(BeEquivalentTo(3))
+
+		originalMessage4 := <-buffer.GetOutputChannel()
+		Expect(originalMessage4.GetLogMessage().GetMessage()).To(ContainSubstring("message 4"))
+
+		sendLogMessages("message 5", inMessageChan)
+		sendLogMessages("message 6", inMessageChan)
+		sendLogMessages("message 7", inMessageChan)
+		sendLogMessages("message 8", inMessageChan)
+
+		logMessageNotification = <-buffer.GetOutputChannel()
+		Expect(logMessageNotification.GetEventType()).To(Equal(events.Envelope_LogMessage))
+
+		counterEventNotification = <-buffer.GetOutputChannel()
+		Expect(counterEventNotification.GetEventType()).To(Equal(events.Envelope_CounterEvent))
+		counterEvent = counterEventNotification.GetCounterEvent()
+		Expect(counterEvent.GetName()).To(Equal("TruncatingBuffer.DroppedMessages"))
+		Expect(counterEvent.GetDelta()).To(BeEquivalentTo(3))
+		Expect(counterEvent.GetTotal()).To(BeEquivalentTo(6))
 	})
 
 	It("keeps track of dropped messages", func(done Done) {
 		inMessageChan := make(chan *events.Envelope)
-		buffer := truncatingbuffer.NewTruncatingBuffer(inMessageChan, 2, loggertesthelper.Logger(), "dropsonde-origin")
+		buffer := truncatingbuffer.NewTruncatingBuffer(inMessageChan, 3, loggertesthelper.Logger(), "dropsonde-origin")
 		Expect(buffer.GetDroppedMessageCount()).To(Equal(int64(0)))
 		go buffer.Run()
 
-		logMessage1, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "message 1", "appId", "App"), "origin")
-		inMessageChan <- logMessage1
+		sendLogMessages("message 1", inMessageChan)
+		sendLogMessages("message 2", inMessageChan)
+		sendLogMessages("message 3", inMessageChan)
+		sendLogMessages("message 4", inMessageChan)
 
-		logMessage2, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "message 2", "appId", "App"), "origin")
-		inMessageChan <- logMessage2
-
-		logMessage3, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "message 3", "appId", "App"), "origin")
-		inMessageChan <- logMessage3
 		time.Sleep(5 * time.Millisecond)
 
-		Expect(buffer.GetDroppedMessageCount()).To(Equal(int64(2)))
+		Expect(buffer.GetDroppedMessageCount()).To(Equal(int64(3)))
 
 		close(done)
 	})
 })
+
+func sendLogMessages(message string, inMessageChan chan<- *events.Envelope) {
+	logMessage1, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, message, "appId", "App"), "origin")
+	inMessageChan <- logMessage1
+}

@@ -22,6 +22,9 @@ type TruncatingBuffer struct {
 }
 
 func NewTruncatingBuffer(inputChannel <-chan *events.Envelope, bufferSize uint, logger *gosteno.Logger, dropsondeOrigin string) *TruncatingBuffer {
+	if bufferSize < 3 {
+		panic("bufferSize must be larger than 3 for overflow")
+	}
 	outputChannel := make(chan *events.Envelope, bufferSize)
 	return &TruncatingBuffer{
 		inputChannel:        inputChannel,
@@ -54,14 +57,8 @@ func (r *TruncatingBuffer) Run() {
 			r.droppedMessageCount += int64(messageCount)
 			r.outputChannel = make(chan *events.Envelope, cap(r.outputChannel))
 			appId := envelope_extensions.GetAppId(msg)
-			lm := generateLogMessage(fmt.Sprintf("Log message output too high. We've dropped %d messages", messageCount), appId)
 
-			env, err := emitter.Wrap(lm, r.dropsondeOrigin)
-			if err == nil {
-				r.outputChannel <- env
-			} else {
-				r.logger.Warnf("Error marshalling message: %v", err)
-			}
+			r.notifyMessagesDropped(messageCount, appId)
 
 			r.outputChannel <- msg
 
@@ -82,7 +79,23 @@ func (r *TruncatingBuffer) GetDroppedMessageCount() int64 {
 	return messages
 }
 
-func generateLogMessage(messageString string, appId string) *events.LogMessage {
+func (r *TruncatingBuffer) notifyMessagesDropped(messageCount int, appId string) {
+	r.emitMessage(generateLogMessage(messageCount, appId))
+	r.emitMessage(generateCounterEvent(messageCount, r.droppedMessageCount))
+}
+
+func (r *TruncatingBuffer) emitMessage(event events.Event) {
+	env, err := emitter.Wrap(event, r.dropsondeOrigin)
+	if err == nil {
+		r.outputChannel <- env
+	} else {
+		r.logger.Warnf("Error marshalling message: %v", err)
+	}
+}
+
+func generateLogMessage(messageCount int, appId string) *events.LogMessage {
+	messageString := fmt.Sprintf("Log message output too high. We've dropped %d messages", messageCount)
+
 	messageType := events.LogMessage_ERR
 	currentTime := time.Now()
 	logMessage := &events.LogMessage{
@@ -94,4 +107,12 @@ func generateLogMessage(messageString string, appId string) *events.LogMessage {
 	}
 
 	return logMessage
+}
+
+func generateCounterEvent(messageCount int, total int64) *events.CounterEvent {
+	return &events.CounterEvent{
+		Name:  proto.String("TruncatingBuffer.DroppedMessages"),
+		Delta: proto.Uint64(uint64(messageCount)),
+		Total: proto.Uint64(uint64(total)),
+	}
 }
