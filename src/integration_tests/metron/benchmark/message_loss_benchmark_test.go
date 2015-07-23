@@ -67,6 +67,10 @@ var _ = Describe("MessageLossBenchmark", func() {
 		messageThroughput, err := strconv.ParseFloat(values[0], 64)
 		Expect(err).ToNot(HaveOccurred())
 		b.RecordValue("message throughput", messageThroughput)
+
+		internalMetricsCount, err := strconv.ParseFloat(values[3], 64)
+		Expect(err).ToNot(HaveOccurred())
+		b.RecordValue("internal metrics", internalMetricsCount)
 	}, 3)
 
 	Measure("concurrent message loss and throughput", func(b Benchmarker) {
@@ -100,9 +104,5 @@ var _ = Describe("MessageLossBenchmark", func() {
 		messageThroughput, err := strconv.ParseFloat(values[0], 64)
 		Expect(err).ToNot(HaveOccurred())
 		b.RecordValue("message throughput", messageThroughput)
-
-		internalMetricsCount, err := strconv.ParseFloat(values[3], 64)
-		Expect(err).ToNot(HaveOccurred())
-		b.RecordValue("internal metrics", internalMetricsCount)
 	}, 3)
 })
