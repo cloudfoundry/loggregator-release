@@ -45,12 +45,12 @@ var _ = Describe("MessageLossBenchmark", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		command := exec.Command(pathToMetronBenchmarkExec, "-writeRate", "5000", "-interval",
-			"10s", "-stopAfter", "11s")
+			"15s", "-stopAfter", "16s")
 		outBuffer := bytes.NewBuffer(nil)
 		errBuffer := bytes.NewBuffer(nil)
 		benchmarkSession, err := gexec.Start(command, outBuffer, errBuffer)
 		Expect(err).ToNot(HaveOccurred())
-		Eventually(benchmarkSession, 15).Should(gexec.Exit())
+		Eventually(benchmarkSession, 20).Should(gexec.Exit())
 		out := outBuffer.String()
 		Expect(out).To(ContainSubstring("PercentLoss"))
 		lines := strings.Split(out, "\n")
@@ -100,5 +100,9 @@ var _ = Describe("MessageLossBenchmark", func() {
 		messageThroughput, err := strconv.ParseFloat(values[0], 64)
 		Expect(err).ToNot(HaveOccurred())
 		b.RecordValue("message throughput", messageThroughput)
+
+		internalMetricsCount, err := strconv.ParseFloat(values[3], 64)
+		Expect(err).ToNot(HaveOccurred())
+		b.RecordValue("internal metrics", internalMetricsCount)
 	}, 3)
 })

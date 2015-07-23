@@ -1,6 +1,7 @@
 package dopplerforwarder
 
 import (
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
 )
@@ -28,4 +29,5 @@ func (d *DopplerForwarder) Write(message []byte) {
 		return
 	}
 	client.Send(message)
+	metrics.BatchIncrementCounter("DopplerForwarder.sentMessages")
 }
