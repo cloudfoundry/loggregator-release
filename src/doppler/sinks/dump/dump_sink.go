@@ -11,28 +11,22 @@ import (
 )
 
 type DumpSink struct {
-	appId               string
-	logger              *gosteno.Logger
-	messageRing         *ring.Ring
-	inputChan           chan *events.Envelope
-	inactivityDuration  time.Duration
-	metricUpdateChannel chan<- int64
-	sync.RWMutex
+	appId              string
+	logger             *gosteno.Logger
+	messageRing        *ring.Ring
+	inputChan          chan *events.Envelope
+	inactivityDuration time.Duration
+	lock               sync.RWMutex
 }
 
-func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, inactivityDuration time.Duration, metricUpdateChannel chan<- int64) *DumpSink {
+func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, inactivityDuration time.Duration) *DumpSink {
 	dumpSink := &DumpSink{
-		appId:               appId,
-		logger:              givenLogger,
-		messageRing:         ring.New(int(bufferSize)),
-		inactivityDuration:  inactivityDuration,
-		metricUpdateChannel: metricUpdateChannel,
+		appId:              appId,
+		logger:             givenLogger,
+		messageRing:        ring.New(int(bufferSize)),
+		inactivityDuration: inactivityDuration,
 	}
 	return dumpSink
-}
-
-func (sink *DumpSink) UpdateDroppedMessageCount(count int64) {
-	sink.metricUpdateChannel <- count
 }
 
 func (d *DumpSink) Run(inputChan <-chan *events.Envelope) {
@@ -60,16 +54,16 @@ func (d *DumpSink) Run(inputChan <-chan *events.Envelope) {
 }
 
 func (d *DumpSink) addMsg(msg *events.Envelope) {
-	d.Lock()
-	defer d.Unlock()
+	d.lock.Lock()
+	defer d.lock.Unlock()
 
 	d.messageRing = d.messageRing.Next()
 	d.messageRing.Value = msg
 }
 
 func (d *DumpSink) Dump() []*events.Envelope {
-	d.RLock()
-	defer d.RUnlock()
+	d.lock.RLock()
+	defer d.lock.RUnlock()
 
 	data := make([]*events.Envelope, 0, d.messageRing.Len())
 	d.messageRing.Next().Do(func(value interface{}) {

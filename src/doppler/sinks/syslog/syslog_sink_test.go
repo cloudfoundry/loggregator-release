@@ -25,7 +25,6 @@ var _ = Describe("SyslogSink", func() {
 		errorChannel          chan *events.Envelope
 		errorHandler          func(string, string, string)
 		inputChan             chan *events.Envelope
-		updateMetricChan      chan int64
 	)
 
 	BeforeEach(func() {
@@ -44,8 +43,7 @@ var _ = Describe("SyslogSink", func() {
 			}
 		}
 
-		updateMetricChan = make(chan int64, 1)
-		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorHandler, "dropsonde-origin", updateMetricChan)
+		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorHandler, "dropsonde-origin")
 	})
 
 	Context("when remote syslog server is down", func() {
@@ -231,13 +229,6 @@ var _ = Describe("SyslogSink", func() {
 		It("is idempotent", func() {
 			syslogSink.Disconnect()
 			Expect(syslogSink.Disconnect).NotTo(Panic())
-		})
-	})
-
-	Describe("UpdateDroppedMessageCount", func() {
-		It("updates dropped message count", func() {
-			syslogSink.UpdateDroppedMessageCount(2)
-			Eventually(updateMetricChan).Should(Receive(Equal(int64(2))))
 		})
 	})
 })

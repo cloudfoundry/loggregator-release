@@ -51,17 +51,15 @@ func (fake *fakeMessageWriter) ReadMessages() [][]byte {
 var _ = Describe("WebsocketSink", func() {
 
 	var (
-		logger           *gosteno.Logger
-		websocketSink    *websocket.WebsocketSink
-		fakeWebsocket    *fakeMessageWriter
-		updateMetricChan chan int64
+		logger        *gosteno.Logger
+		websocketSink *websocket.WebsocketSink
+		fakeWebsocket *fakeMessageWriter
 	)
 
 	BeforeEach(func() {
 		logger = loggertesthelper.Logger()
 		fakeWebsocket = &fakeMessageWriter{}
-		updateMetricChan = make(chan int64, 1)
-		websocketSink = websocket.NewWebsocketSink("appId", logger, fakeWebsocket, 10, "dropsonde-origin", updateMetricChan)
+		websocketSink = websocket.NewWebsocketSink("appId", logger, fakeWebsocket, 10, "dropsonde-origin")
 	})
 
 	Describe("Identifier", func() {
@@ -105,13 +103,6 @@ var _ = Describe("WebsocketSink", func() {
 			inputChan <- messageTwo
 			Eventually(fakeWebsocket.ReadMessages).Should(HaveLen(2))
 			Expect(fakeWebsocket.ReadMessages()[1]).To(Equal(messageTwoBytes))
-		})
-	})
-
-	Describe("UpdateDroppedMessageCount", func() {
-		It("updates dropped message count", func() {
-			websocketSink.UpdateDroppedMessageCount(2)
-			Eventually(updateMetricChan).Should(Receive(Equal(int64(2))))
 		})
 	})
 })

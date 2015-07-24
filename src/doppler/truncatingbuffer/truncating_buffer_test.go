@@ -8,12 +8,18 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
+	"github.com/cloudfoundry/dropsonde/emitter/fake"
+	"github.com/cloudfoundry/dropsonde/metric_sender"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Truncating Buffer", func() {
+
 	It("panics if buffer size is less than 3", func() {
 		inMessageChan := make(chan *events.Envelope)
 		Expect(func() {
@@ -96,6 +102,34 @@ var _ = Describe("Truncating Buffer", func() {
 
 		close(done)
 	})
+
+	It("updates totalDroppedMessages", func() {
+		fakeEventEmitter := fake.NewFakeEventEmitter("doppler")
+		sender := metric_sender.NewMetricSender(fakeEventEmitter)
+		batcher := metricbatcher.New(sender, 100*time.Millisecond)
+
+		metrics.Initialize(sender, batcher)
+		fakeEventEmitter.Reset()
+
+		inMessageChan := make(chan *events.Envelope)
+		buffer := truncatingbuffer.NewTruncatingBuffer(inMessageChan, 3, loggertesthelper.Logger(), "dropsonde-origin")
+		Expect(buffer.GetDroppedMessageCount()).To(Equal(int64(0)))
+		go buffer.Run()
+
+		sendLogMessages("message 1", inMessageChan)
+		sendLogMessages("message 2", inMessageChan)
+		sendLogMessages("message 3", inMessageChan)
+		sendLogMessages("message 4", inMessageChan)
+
+		time.Sleep(5 * time.Millisecond)
+
+		Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(1))
+		Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.CounterEvent)).To(Equal(&events.CounterEvent{
+			Name:  proto.String("TruncatingBuffer.totalDroppedMessages"),
+			Delta: proto.Uint64(3),
+		}))
+	})
+
 })
 
 func sendLogMessages(message string, inMessageChan chan<- *events.Envelope) {

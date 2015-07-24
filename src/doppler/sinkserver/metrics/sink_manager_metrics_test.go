@@ -18,12 +18,10 @@ var _ = Describe("SinkManagerMetrics", func() {
 
 	var sinkManagerMetrics *metrics.SinkManagerMetrics
 	var sink sinks.Sink
-	var dropUpdateChan chan int64
 
 	BeforeEach(func() {
 		fakeEventEmitter.Reset()
-		dropUpdateChan = make(chan int64)
-		sinkManagerMetrics = metrics.NewSinkManagerMetrics(dropUpdateChan)
+		sinkManagerMetrics = metrics.NewSinkManagerMetrics()
 	})
 
 	It("emits metrics for dump sinks", func() {
@@ -107,16 +105,15 @@ var _ = Describe("SinkManagerMetrics", func() {
 		}))
 	})
 
-	It("emits the total number of message dropped", func() {
-		Expect(fakeEventEmitter.GetMessages()).To(BeEmpty())
-
-		dropUpdateChan <- 25
-		dropUpdateChan <- 25
+	It("updates dropped message count", func() {
+		var delta int64 = 25
+		sinkManagerMetrics.UpdateDroppedMessageCount(delta)
 
 		Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(1))
 		Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.CounterEvent)).To(Equal(&events.CounterEvent{
 			Name:  proto.String("messageRouter.totalDroppedMessages"),
-			Delta: proto.Uint64(50),
+			Delta: proto.Uint64(25),
 		}))
 	})
+
 })

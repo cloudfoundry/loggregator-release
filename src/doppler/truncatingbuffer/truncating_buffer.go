@@ -7,6 +7,7 @@ import (
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
@@ -80,6 +81,7 @@ func (r *TruncatingBuffer) GetDroppedMessageCount() int64 {
 }
 
 func (r *TruncatingBuffer) notifyMessagesDropped(messageCount int, appId string) {
+	updateDroppedMessageCount(r.droppedMessageCount)
 	r.emitMessage(generateLogMessage(messageCount, appId))
 	r.emitMessage(generateCounterEvent(messageCount, r.droppedMessageCount))
 }
@@ -115,4 +117,8 @@ func generateCounterEvent(messageCount int, total int64) *events.CounterEvent {
 		Delta: proto.Uint64(uint64(messageCount)),
 		Total: proto.Uint64(uint64(total)),
 	}
+}
+
+func updateDroppedMessageCount(delta int64) {
+	metrics.BatchAddCounter("TruncatingBuffer.totalDroppedMessages", uint64(delta))
 }

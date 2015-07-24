@@ -8,26 +8,20 @@ import (
 )
 
 type ContainerMetricSink struct {
-	applicationId       string
-	ttl                 time.Duration
-	metrics             map[int32]*events.Envelope
-	inactivityDuration  time.Duration
-	metricUpdateChannel chan<- int64
-	sync.RWMutex
+	applicationId      string
+	ttl                time.Duration
+	metrics            map[int32]*events.Envelope
+	inactivityDuration time.Duration
+	lock               sync.RWMutex
 }
 
-func NewContainerMetricSink(applicationId string, ttl time.Duration, inactivityDuration time.Duration, metricUpdateChannel chan<- int64) *ContainerMetricSink {
+func NewContainerMetricSink(applicationId string, ttl time.Duration, inactivityDuration time.Duration) *ContainerMetricSink {
 	return &ContainerMetricSink{
-		applicationId:       applicationId,
-		ttl:                 ttl,
-		inactivityDuration:  inactivityDuration,
-		metrics:             make(map[int32]*events.Envelope),
-		metricUpdateChannel: metricUpdateChannel,
+		applicationId:      applicationId,
+		ttl:                ttl,
+		inactivityDuration: inactivityDuration,
+		metrics:            make(map[int32]*events.Envelope),
 	}
-}
-
-func (sink *ContainerMetricSink) UpdateDroppedMessageCount(count int64) {
-	sink.metricUpdateChannel <- count
 }
 
 func (sink *ContainerMetricSink) Run(eventChan <-chan *events.Envelope) {
@@ -36,6 +30,7 @@ func (sink *ContainerMetricSink) Run(eventChan <-chan *events.Envelope) {
 	for {
 		timer.Reset(sink.inactivityDuration)
 		select {
+
 		case event, ok := <-eventChan:
 			if !ok {
 				return
@@ -54,8 +49,8 @@ func (sink *ContainerMetricSink) Run(eventChan <-chan *events.Envelope) {
 }
 
 func (sink *ContainerMetricSink) GetLatest() []*events.Envelope {
-	sink.Lock()
-	defer sink.Unlock()
+	sink.lock.Lock()
+	defer sink.lock.Unlock()
 
 	envelopes := []*events.Envelope{}
 
@@ -88,8 +83,8 @@ func (sink *ContainerMetricSink) ShouldReceiveErrors() bool {
 }
 
 func (sink *ContainerMetricSink) updateMetric(event *events.Envelope) {
-	sink.Lock()
-	defer sink.Unlock()
+	sink.lock.Lock()
+	defer sink.lock.Unlock()
 
 	instance := event.GetContainerMetric().GetInstanceIndex()
 

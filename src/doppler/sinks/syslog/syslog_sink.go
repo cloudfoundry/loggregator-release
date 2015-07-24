@@ -1,13 +1,13 @@
 package syslog
 
 import (
-	"doppler/sinks"
 	"doppler/sinks/retrystrategy"
 	"doppler/sinks/syslogwriter"
 	"fmt"
 	"sync"
 	"time"
 
+	"doppler/sinks"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 )
@@ -20,35 +20,29 @@ const (
 
 type SyslogSink struct {
 	*gosteno.Logger
-	appId               string
-	drainUrl            string
-	sentMessageCount    *uint64
-	sentByteCount       *uint64
-	listenerChannel     chan *events.Envelope
-	syslogWriter        syslogwriter.Writer
-	handleSendError     func(errorMessage, appId, drainUrl string)
-	disconnectChannel   chan struct{}
-	dropsondeOrigin     string
-	disconnectOnce      sync.Once
-	metricUpdateChannel chan<- int64
+	appId             string
+	drainUrl          string
+	sentMessageCount  *uint64
+	sentByteCount     *uint64
+	listenerChannel   chan *events.Envelope
+	syslogWriter      syslogwriter.Writer
+	handleSendError   func(errorMessage, appId, drainUrl string)
+	disconnectChannel chan struct{}
+	dropsondeOrigin   string
+	disconnectOnce    sync.Once
 }
 
-func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.Writer, errorHandler func(string, string, string), dropsondeOrigin string, metricUpdateChannel chan<- int64) *SyslogSink {
+func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.Writer, errorHandler func(string, string, string), dropsondeOrigin string) *SyslogSink {
 	givenLogger.Debugf("Syslog Sink %s: Created for appId [%s]", drainUrl, appId)
 	return &SyslogSink{
-		appId:               appId,
-		drainUrl:            drainUrl,
-		Logger:              givenLogger,
-		syslogWriter:        syslogWriter,
-		handleSendError:     errorHandler,
-		disconnectChannel:   make(chan struct{}),
-		dropsondeOrigin:     dropsondeOrigin,
-		metricUpdateChannel: metricUpdateChannel,
+		appId:             appId,
+		drainUrl:          drainUrl,
+		Logger:            givenLogger,
+		syslogWriter:      syslogWriter,
+		handleSendError:   errorHandler,
+		disconnectChannel: make(chan struct{}),
+		dropsondeOrigin:   dropsondeOrigin,
 	}
-}
-
-func (sink *SyslogSink) UpdateDroppedMessageCount(count int64) {
-	sink.metricUpdateChannel <- count
 }
 
 func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
@@ -115,11 +109,6 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 		case <-s.disconnectChannel:
 			return
 		case messageEnvelope, ok := <-buffer.GetOutputChannel():
-			droppedMessages := buffer.GetDroppedMessageCount()
-			if droppedMessages != 0 {
-				s.UpdateDroppedMessageCount(droppedMessages)
-			}
-
 			if !ok {
 				s.Debugf("Syslog Sink %s: Closed listener channel detected. Closing.\n", s.drainUrl)
 				return

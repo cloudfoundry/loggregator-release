@@ -5,82 +5,64 @@ import (
 	"doppler/sinks/dump"
 	"doppler/sinks/syslog"
 	"doppler/sinks/websocket"
-	"sync"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
+	"sync/atomic"
 )
 
 type SinkManagerMetrics struct {
-	dumpSinks             int
-	websocketSinks        int
-	syslogSinks           int
-	firehoseSinks         int
-	sinkDropUpdateChannel <-chan int64
-	lock                  sync.RWMutex
+	dumpSinks      int32
+	websocketSinks int32
+	syslogSinks    int32
+	firehoseSinks  int32
 }
 
-func NewSinkManagerMetrics(sinkDropUpdateChannel <-chan int64) *SinkManagerMetrics {
-	m := SinkManagerMetrics{
-		sinkDropUpdateChannel: sinkDropUpdateChannel,
-	}
-
-	go func() {
-		for delta := range m.sinkDropUpdateChannel {
-			metrics.BatchAddCounter("messageRouter.totalDroppedMessages", uint64(delta))
-		}
-	}()
-
-	return &m
+func NewSinkManagerMetrics() *SinkManagerMetrics {
+	return &SinkManagerMetrics{}
 }
 
-func (sinkManagerMetrics *SinkManagerMetrics) Inc(sink sinks.Sink) {
-	sinkManagerMetrics.lock.Lock()
-	defer sinkManagerMetrics.lock.Unlock()
+func (s *SinkManagerMetrics) UpdateDroppedMessageCount(delta int64) {
+	metrics.BatchAddCounter("messageRouter.totalDroppedMessages", uint64(delta))
+}
 
+func (s *SinkManagerMetrics) Inc(sink sinks.Sink) {
 	switch sink.(type) {
 	case *dump.DumpSink:
-		sinkManagerMetrics.dumpSinks++
-		metrics.SendValue("messageRouter.numberOfDumpSinks", float64(sinkManagerMetrics.dumpSinks), "sinks")
+		dumpSinks := atomic.AddInt32(&s.dumpSinks, 1)
+		metrics.SendValue("messageRouter.numberOfDumpSinks", float64(dumpSinks), "sinks")
 
 	case *syslog.SyslogSink:
-		sinkManagerMetrics.syslogSinks++
-		metrics.SendValue("messageRouter.numberOfSyslogSinks", float64(sinkManagerMetrics.syslogSinks), "sinks")
+		syslogSinks := atomic.AddInt32(&s.syslogSinks, 1)
+		metrics.SendValue("messageRouter.numberOfSyslogSinks", float64(syslogSinks), "sinks")
 
 	case *websocket.WebsocketSink:
-		sinkManagerMetrics.websocketSinks++
-		metrics.SendValue("messageRouter.numberOfWebsocketSinks", float64(sinkManagerMetrics.websocketSinks), "sinks")
+		websocketSinks := atomic.AddInt32(&s.websocketSinks, 1)
+		metrics.SendValue("messageRouter.numberOfWebsocketSinks", float64(websocketSinks), "sinks")
 	}
 }
 
-func (sinkManagerMetrics *SinkManagerMetrics) Dec(sink sinks.Sink) {
-	sinkManagerMetrics.lock.Lock()
-	defer sinkManagerMetrics.lock.Unlock()
-
+func (s *SinkManagerMetrics) Dec(sink sinks.Sink) {
 	switch sink.(type) {
 	case *dump.DumpSink:
-		sinkManagerMetrics.dumpSinks--
-		metrics.SendValue("messageRouter.numberOfDumpSinks", float64(sinkManagerMetrics.dumpSinks), "sinks")
+		dumpSinks := atomic.AddInt32(&s.dumpSinks, -1)
+		metrics.SendValue("messageRouter.numberOfDumpSinks", float64(dumpSinks), "sinks")
 
 	case *syslog.SyslogSink:
-		sinkManagerMetrics.syslogSinks--
-		metrics.SendValue("messageRouter.numberOfSyslogSinks", float64(sinkManagerMetrics.syslogSinks), "sinks")
+		syslogSinks := atomic.AddInt32(&s.syslogSinks, -1)
+		metrics.SendValue("messageRouter.numberOfSyslogSinks", float64(syslogSinks), "sinks")
 
 	case *websocket.WebsocketSink:
-		sinkManagerMetrics.websocketSinks--
-		metrics.SendValue("messageRouter.numberOfWebsocketSinks", float64(sinkManagerMetrics.websocketSinks), "sinks")
+		websocketSinks := atomic.AddInt32(&s.websocketSinks, -1)
+		metrics.SendValue("messageRouter.numberOfWebsocketSinks", float64(websocketSinks), "sinks")
 	}
 }
 
-func (sinkManagerMetrics *SinkManagerMetrics) IncFirehose() {
-	sinkManagerMetrics.lock.Lock()
-	defer sinkManagerMetrics.lock.Unlock()
-	sinkManagerMetrics.firehoseSinks++
-	metrics.SendValue("messageRouter.numberOfFirehoseSinks", float64(sinkManagerMetrics.firehoseSinks), "sinks")
+func (s *SinkManagerMetrics) IncFirehose() {
+	firehoseSinks := atomic.AddInt32(&s.firehoseSinks, 1)
+	metrics.SendValue("messageRouter.numberOfFirehoseSinks", float64(firehoseSinks), "sinks")
 }
 
-func (sinkManagerMetrics *SinkManagerMetrics) DecFirehose() {
-	sinkManagerMetrics.lock.Lock()
-	defer sinkManagerMetrics.lock.Unlock()
-	sinkManagerMetrics.firehoseSinks--
-	metrics.SendValue("messageRouter.numberOfFirehoseSinks", float64(sinkManagerMetrics.firehoseSinks), "sinks")
+func (s *SinkManagerMetrics) DecFirehose() {
+	firehoseSinks := atomic.AddInt32(&s.firehoseSinks, -1)
+	metrics.SendValue("messageRouter.numberOfFirehoseSinks", float64(firehoseSinks), "sinks")
 }

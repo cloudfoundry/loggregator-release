@@ -24,9 +24,8 @@ import (
 type SinkManager struct {
 	dropsondeOrigin string
 
-	sinkDropUpdateChannel chan int64
-	metrics               *metrics.SinkManagerMetrics
-	recentLogCount        uint32
+	metrics        *metrics.SinkManagerMetrics
+	recentLogCount uint32
 
 	doneChannel            chan struct{}
 	errorChannel           chan *events.Envelope
@@ -40,21 +39,18 @@ type SinkManager struct {
 }
 
 func New(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger, dropsondeOrigin string, sinkTimeout, metricTTL time.Duration) *SinkManager {
-	sinkDropUpdateChannel := make(chan int64)
-
 	return &SinkManager{
-		doneChannel:           make(chan struct{}),
-		errorChannel:          make(chan *events.Envelope, 100),
-		urlBlacklistManager:   blackListManager,
-		sinks:                 groupedsinks.NewGroupedSinks(logger),
-		skipCertVerify:        skipCertVerify,
-		recentLogCount:        maxRetainedLogMessages,
-		metrics:               metrics.NewSinkManagerMetrics(sinkDropUpdateChannel),
-		sinkDropUpdateChannel: sinkDropUpdateChannel,
-		logger:                logger,
-		dropsondeOrigin:       dropsondeOrigin,
-		sinkTimeout:           sinkTimeout,
-		metricTTL:             metricTTL,
+		doneChannel:         make(chan struct{}),
+		errorChannel:        make(chan *events.Envelope, 100),
+		urlBlacklistManager: blackListManager,
+		sinks:               groupedsinks.NewGroupedSinks(logger),
+		skipCertVerify:      skipCertVerify,
+		recentLogCount:      maxRetainedLogMessages,
+		metrics:             metrics.NewSinkManagerMetrics(),
+		logger:              logger,
+		dropsondeOrigin:     dropsondeOrigin,
+		sinkTimeout:         sinkTimeout,
+		metricTTL:           metricTTL,
 	}
 }
 
@@ -178,10 +174,6 @@ func (sinkManager *SinkManager) SendSyslogErrorToLoggregator(errorMsg string, ap
 	sinkManager.errorChannel <- envelope
 }
 
-func (sinkManager *SinkManager) SinkDropUpdateChannel() chan<- int64 {
-	return sinkManager.sinkDropUpdateChannel
-}
-
 func (sinkManager *SinkManager) listenForNewAppServices(newAppServiceChan <-chan appservice.AppService) {
 	for appService := range newAppServiceChan {
 		sinkManager.registerNewSyslogSink(appService.AppId, appService.Url)
@@ -234,7 +226,6 @@ func (sinkManager *SinkManager) registerNewSyslogSink(appId string, syslogSinkUr
 		syslogWriter,
 		sinkManager.SendSyslogErrorToLoggregator,
 		sinkManager.dropsondeOrigin,
-		sinkManager.sinkDropUpdateChannel,
 	)
 
 	sinkManager.RegisterSink(syslogSink)
@@ -255,7 +246,6 @@ func (sinkManager *SinkManager) ensureRecentLogsSinkFor(appId string) {
 		sinkManager.recentLogCount,
 		sinkManager.logger,
 		sinkManager.sinkTimeout,
-		sinkManager.sinkDropUpdateChannel,
 	)
 
 	sinkManager.RegisterSink(sink)
@@ -270,7 +260,6 @@ func (sinkManager *SinkManager) ensureContainerMetricsSinkFor(appId string) {
 		appId,
 		sinkManager.metricTTL,
 		sinkManager.sinkTimeout,
-		sinkManager.sinkDropUpdateChannel,
 	)
 
 	sinkManager.RegisterSink(sink)
