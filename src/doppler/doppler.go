@@ -47,7 +47,7 @@ type Doppler struct {
 	sync.WaitGroup
 }
 
-func New(host string, config *config.Config, logger *gosteno.Logger, storeAdapter storeadapter.StoreAdapter, dropsondeOrigin string) *Doppler {
+func New(host string, config *config.Config, logger *gosteno.Logger, storeAdapter storeadapter.StoreAdapter, messageDrainBufferSize uint, dropsondeOrigin string) *Doppler {
 	cfcomponent.Logger = logger
 	keepAliveInterval := 30 * time.Second
 
@@ -63,7 +63,7 @@ func New(host string, config *config.Config, logger *gosteno.Logger, storeAdapte
 	blacklist := blacklist.New(config.BlackListIps)
 	metricTTL := time.Duration(config.ContainerMetricTTLSeconds) * time.Second
 	sinkTimeout := time.Duration(config.SinkInactivityTimeoutSeconds) * time.Second
-	sinkManager := sinkmanager.New(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger, dropsondeOrigin, sinkTimeout, metricTTL)
+	sinkManager := sinkmanager.New(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger, messageDrainBufferSize, dropsondeOrigin, sinkTimeout, metricTTL)
 
 	return &Doppler{
 		Logger:                          logger,

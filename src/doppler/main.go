@@ -107,7 +107,7 @@ func main() {
 	}
 
 	storeAdapter := NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
-	doppler := New(localIp, conf, logger, storeAdapter, "doppler")
+	doppler := New(localIp, conf, logger, storeAdapter, conf.MessageDrainBufferSize, "doppler")
 
 	if err != nil {
 		panic(err)

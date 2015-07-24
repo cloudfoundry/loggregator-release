@@ -22,7 +22,8 @@ import (
 )
 
 type SinkManager struct {
-	dropsondeOrigin string
+	messageDrainBufferSize uint
+	dropsondeOrigin        string
 
 	metrics        *metrics.SinkManagerMetrics
 	recentLogCount uint32
@@ -38,19 +39,20 @@ type SinkManager struct {
 	stopOnce sync.Once
 }
 
-func New(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger, dropsondeOrigin string, sinkTimeout, metricTTL time.Duration) *SinkManager {
+func New(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger, messageDrainBufferSize uint, dropsondeOrigin string, sinkTimeout, metricTTL time.Duration) *SinkManager {
 	return &SinkManager{
-		doneChannel:         make(chan struct{}),
-		errorChannel:        make(chan *events.Envelope, 100),
-		urlBlacklistManager: blackListManager,
-		sinks:               groupedsinks.NewGroupedSinks(logger),
-		skipCertVerify:      skipCertVerify,
-		recentLogCount:      maxRetainedLogMessages,
-		metrics:             metrics.NewSinkManagerMetrics(),
-		logger:              logger,
-		dropsondeOrigin:     dropsondeOrigin,
-		sinkTimeout:         sinkTimeout,
-		metricTTL:           metricTTL,
+		doneChannel:            make(chan struct{}),
+		errorChannel:           make(chan *events.Envelope, 100),
+		urlBlacklistManager:    blackListManager,
+		sinks:                  groupedsinks.NewGroupedSinks(logger),
+		skipCertVerify:         skipCertVerify,
+		recentLogCount:         maxRetainedLogMessages,
+		metrics:                metrics.NewSinkManagerMetrics(),
+		logger:                 logger,
+		messageDrainBufferSize: messageDrainBufferSize,
+		dropsondeOrigin:        dropsondeOrigin,
+		sinkTimeout:            sinkTimeout,
+		metricTTL:              metricTTL,
 	}
 }
 
@@ -223,6 +225,7 @@ func (sinkManager *SinkManager) registerNewSyslogSink(appId string, syslogSinkUr
 		appId,
 		syslogSinkUrl,
 		sinkManager.logger,
+		sinkManager.messageDrainBufferSize,
 		syslogWriter,
 		sinkManager.SendSyslogErrorToLoggregator,
 		sinkManager.dropsondeOrigin,

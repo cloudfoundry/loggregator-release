@@ -20,28 +20,30 @@ const (
 
 type SyslogSink struct {
 	*gosteno.Logger
-	appId             string
-	drainUrl          string
-	sentMessageCount  *uint64
-	sentByteCount     *uint64
-	listenerChannel   chan *events.Envelope
-	syslogWriter      syslogwriter.Writer
-	handleSendError   func(errorMessage, appId, drainUrl string)
-	disconnectChannel chan struct{}
-	dropsondeOrigin   string
-	disconnectOnce    sync.Once
+	appId                  string
+	drainUrl               string
+	sentMessageCount       *uint64
+	sentByteCount          *uint64
+	messageDrainBufferSize uint
+	listenerChannel        chan *events.Envelope
+	syslogWriter           syslogwriter.Writer
+	handleSendError        func(errorMessage, appId, drainUrl string)
+	disconnectChannel      chan struct{}
+	dropsondeOrigin        string
+	disconnectOnce         sync.Once
 }
 
-func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, syslogWriter syslogwriter.Writer, errorHandler func(string, string, string), dropsondeOrigin string) *SyslogSink {
+func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, messageDrainBufferSize uint, syslogWriter syslogwriter.Writer, errorHandler func(string, string, string), dropsondeOrigin string) *SyslogSink {
 	givenLogger.Debugf("Syslog Sink %s: Created for appId [%s]", drainUrl, appId)
 	return &SyslogSink{
-		appId:             appId,
-		drainUrl:          drainUrl,
-		Logger:            givenLogger,
-		syslogWriter:      syslogWriter,
-		handleSendError:   errorHandler,
-		disconnectChannel: make(chan struct{}),
-		dropsondeOrigin:   dropsondeOrigin,
+		appId:                  appId,
+		drainUrl:               drainUrl,
+		Logger:                 givenLogger,
+		messageDrainBufferSize: messageDrainBufferSize,
+		syslogWriter:           syslogWriter,
+		handleSendError:        errorHandler,
+		disconnectChannel:      make(chan struct{}),
+		dropsondeOrigin:        dropsondeOrigin,
 	}
 }
 
@@ -74,7 +76,7 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 		}
 	}()
 
-	buffer := sinks.RunTruncatingBuffer(filteredChan, 100, s.Logger, s.dropsondeOrigin)
+	buffer := sinks.RunTruncatingBuffer(filteredChan, s.messageDrainBufferSize, s.Logger, s.dropsondeOrigin)
 	timer := time.NewTimer(backoffStrategy(numberOfTries))
 	connected := false
 	defer timer.Stop()

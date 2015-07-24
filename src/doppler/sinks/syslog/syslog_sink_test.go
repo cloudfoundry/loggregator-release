@@ -25,6 +25,7 @@ var _ = Describe("SyslogSink", func() {
 		errorChannel          chan *events.Envelope
 		errorHandler          func(string, string, string)
 		inputChan             chan *events.Envelope
+		bufferSize            uint
 	)
 
 	BeforeEach(func() {
@@ -43,11 +44,15 @@ var _ = Describe("SyslogSink", func() {
 			}
 		}
 
-		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), sysLogger, errorHandler, "dropsonde-origin")
+		bufferSize = 100
+	})
+
+	JustBeforeEach(func() {
+		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), bufferSize, sysLogger, errorHandler, "dropsonde-origin")
 	})
 
 	Context("when remote syslog server is down", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			sysLogger.SetDown(true)
 			go func() {
 				syslogSink.Run(inputChan)
@@ -63,15 +68,21 @@ var _ = Describe("SyslogSink", func() {
 		It("still accepts messages without blocking", func(done Done) {
 			logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
 
-			for i := 0; i < 100; i++ {
+			for i := 0; i < int(bufferSize); i++ {
 				inputChan <- logMessage
 			}
 			close(done)
 		})
 
 		Context("when remote syslog server comes up", func() {
+			var numMessages int
+
 			BeforeEach(func() {
-				for i := 0; i < 5; i++ {
+				numMessages = 5
+			})
+
+			JustBeforeEach(func() {
+				for i := 0; i < numMessages; i++ {
 					message, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, fmt.Sprintf("test message: %d\n", i), "appId", "App"), "origin")
 					inputChan <- message
 				}
@@ -86,11 +97,27 @@ var _ = Describe("SyslogSink", func() {
 				Expect(data).To(HaveLen(5))
 				close(done)
 			})
+
+			Context("and more messages were sent than the could fit in the buffer", func() {
+				BeforeEach(func() {
+					bufferSize = 10
+					numMessages = int(bufferSize) + 1
+				})
+
+				It("sends a message about the buffer overflow", func() {
+					Eventually(syslogSinkRunFinished).Should(BeClosed())
+
+					data := sysLogger.ReceivedMessages()
+					Expect(data).To(HaveLen(2))
+					errorMsg := fmt.Sprintf("<11>1 Log message output too high. We've dropped %d messages", bufferSize)
+					Expect(data[0]).To(MatchRegexp(errorMsg))
+				})
+			})
 		})
 	})
 
 	Context("when remote syslog server is up", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			go func() {
 				syslogSink.Run(inputChan)
 				close(syslogSinkRunFinished)
@@ -187,8 +214,8 @@ var _ = Describe("SyslogSink", func() {
 			})
 
 			Context("when the buffer overflows", func() {
-				BeforeEach(func() {
-					for i := 0; i < 105; i++ {
+				JustBeforeEach(func() {
+					for i := 0; i < int(bufferSize)+5; i++ {
 						msg := fmt.Sprintf("message no %v", i)
 						logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, msg, "appId", "App"), "origin")
 
@@ -198,7 +225,7 @@ var _ = Describe("SyslogSink", func() {
 				})
 
 				Context("when the remote syslog server comes back up again", func() {
-					BeforeEach(func() {
+					JustBeforeEach(func() {
 						sysLogger.SetDown(false)
 						Eventually(syslogSinkRunFinished).Should(BeClosed())
 					})
@@ -207,7 +234,7 @@ var _ = Describe("SyslogSink", func() {
 						data := sysLogger.ReceivedMessages()
 						Expect(data).To(HaveLen(6))
 						for i := 0; i < 5; i++ {
-							msg := fmt.Sprintf("<14>1 message no %v", i+100)
+							msg := fmt.Sprintf("<14>1 message no %v", i+int(bufferSize))
 							Expect(data[i+1]).To(MatchRegexp(msg))
 						}
 						close(done)
