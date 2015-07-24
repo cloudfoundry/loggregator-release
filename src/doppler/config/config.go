@@ -20,7 +20,7 @@ type Config struct {
 	OutgoingPort                  uint32
 	LogFilePath                   string
 	MaxRetainedLogMessages        uint32
-	WSMessageBufferSize           uint
+	MessageDrainBufferSize        uint
 	SharedSecret                  string
 	SkipCertVerify                bool
 	BlackListIps                  []iprange.IPRange

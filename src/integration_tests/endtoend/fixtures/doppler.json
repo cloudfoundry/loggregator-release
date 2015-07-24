@@ -5,7 +5,7 @@
     "DropsondeIncomingMessagesPort": 49626,
     "OutgoingPort": 49627,
     "MaxRetainedLogMessages": 10,
-    "WSMessageBufferSize": 100,
+    "MessageDrainBufferSize": 100,
     "SharedSecret": "end_to_end_secret",
     "SkipCertVerify": true,
     "BlackListIps": [

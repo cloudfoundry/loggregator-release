@@ -31,12 +31,12 @@ type WebsocketServer struct {
 	sync.RWMutex
 }
 
-func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, keepAliveInterval time.Duration, wSMessageBufferSize uint, dropsondeOrigin string, logger *gosteno.Logger) *WebsocketServer {
+func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, keepAliveInterval time.Duration, messageDrainBufferSize uint, dropsondeOrigin string, logger *gosteno.Logger) *WebsocketServer {
 	return &WebsocketServer{
 		apiEndpoint:       apiEndpoint,
 		sinkManager:       sinkManager,
 		keepAliveInterval: keepAliveInterval,
-		bufferSize:        wSMessageBufferSize,
+		bufferSize:        messageDrainBufferSize,
 		logger:            logger,
 		dropsondeOrigin:   dropsondeOrigin,
 	}

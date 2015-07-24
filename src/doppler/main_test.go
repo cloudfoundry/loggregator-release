@@ -42,7 +42,7 @@ var _ = Describe("Main", func() {
 
 				Expect(config.DropsondeIncomingMessagesPort).To(Equal(uint32(3456)))
 				Expect(config.OutgoingPort).To(Equal(uint32(8080)))
-				Expect(config.WSMessageBufferSize).To(Equal(uint(100)))
+				Expect(config.MessageDrainBufferSize).To(Equal(uint(100)))
 			})
 		})
 
@@ -56,7 +56,7 @@ var _ = Describe("Main", func() {
 
 				Expect(config.DropsondeIncomingMessagesPort).To(Equal(uint32(8765)))
 				Expect(config.OutgoingPort).To(Equal(uint32(4567)))
-				Expect(config.WSMessageBufferSize).To(Equal(uint(100)))
+				Expect(config.MessageDrainBufferSize).To(Equal(uint(100)))
 				Expect(config.BlackListIps[0].Start).To(Equal("127.0.0.0"))
 				Expect(config.BlackListIps[0].End).To(Equal("127.0.0.2"))
 				Expect(config.BlackListIps[1].Start).To(Equal("127.0.1.12"))

@@ -18,22 +18,22 @@ type remoteMessageWriter interface {
 }
 
 type WebsocketSink struct {
-	logger              *gosteno.Logger
-	streamId            string
-	ws                  remoteMessageWriter
-	clientAddress       net.Addr
-	wsMessageBufferSize uint
-	dropsondeOrigin     string
+	logger                 *gosteno.Logger
+	streamId               string
+	ws                     remoteMessageWriter
+	clientAddress          net.Addr
+	messageDrainBufferSize uint
+	dropsondeOrigin        string
 }
 
-func NewWebsocketSink(streamId string, givenLogger *gosteno.Logger, ws remoteMessageWriter, wsMessageBufferSize uint, dropsondeOrigin string) *WebsocketSink {
+func NewWebsocketSink(streamId string, givenLogger *gosteno.Logger, ws remoteMessageWriter, messageDrainBufferSize uint, dropsondeOrigin string) *WebsocketSink {
 	return &WebsocketSink{
-		logger:              givenLogger,
-		streamId:            streamId,
-		ws:                  ws,
-		clientAddress:       ws.RemoteAddr(),
-		wsMessageBufferSize: wsMessageBufferSize,
-		dropsondeOrigin:     dropsondeOrigin,
+		logger:                 givenLogger,
+		streamId:               streamId,
+		ws:                     ws,
+		clientAddress:          ws.RemoteAddr(),
+		messageDrainBufferSize: messageDrainBufferSize,
+		dropsondeOrigin:        dropsondeOrigin,
 	}
 }
 
@@ -52,7 +52,7 @@ func (sink *WebsocketSink) ShouldReceiveErrors() bool {
 func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
 	sink.logger.Debugf("Websocket Sink %s: Running for streamId [%s]", sink.clientAddress, sink.streamId)
 
-	buffer := sinks.RunTruncatingBuffer(inputChan, sink.wsMessageBufferSize, sink.logger, sink.dropsondeOrigin)
+	buffer := sinks.RunTruncatingBuffer(inputChan, sink.messageDrainBufferSize, sink.logger, sink.dropsondeOrigin)
 	for {
 		sink.logger.Debugf("Websocket Sink %s: Waiting for activity", sink.clientAddress)
 		messageEnvelope, ok := <-buffer.GetOutputChannel()

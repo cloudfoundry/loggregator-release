@@ -41,7 +41,7 @@ var _ = BeforeSuite(func() {
 		OutgoingPort:                  8083,
 		LogFilePath:                   "",
 		MaxRetainedLogMessages:        100,
-		WSMessageBufferSize:           100,
+		MessageDrainBufferSize:        100,
 		SharedSecret:                  "secret",
 		SkipCertVerify:                true,
 		BlackListIps:                  []iprange.IPRange{},

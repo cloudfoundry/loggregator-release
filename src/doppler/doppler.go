@@ -70,7 +70,7 @@ func New(host string, config *config.Config, logger *gosteno.Logger, storeAdapte
 		dropsondeListener:               dropsondeListener,
 		sinkManager:                     sinkManager,
 		messageRouter:                   sinkserver.NewMessageRouter(sinkManager, logger),
-		websocketServer:                 websocketserver.New(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.WSMessageBufferSize, dropsondeOrigin, logger),
+		websocketServer:                 websocketserver.New(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.MessageDrainBufferSize, dropsondeOrigin, logger),
 		newAppServiceChan:               newAppServiceChan,
 		deletedAppServiceChan:           deletedAppServiceChan,
 		appStoreWatcher:                 appStoreWatcher,

@@ -6,7 +6,7 @@
     "SkipCertVerify": true,
     "Index": 0,
     "MaxRetainedLogMessages": 10,
-    "WSMessageBufferSize": 100,
+    "MessageDrainBufferSize": 100,
     "SharedSecret": "secret",
     "NatsHosts":[],
     "VarzUser": "varz",

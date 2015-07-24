@@ -1,7 +1,7 @@
 {
     "EtcdUrls"    : ["http://127.0.0.1:4001"],
     "EtcdMaxConcurrentRequests" : 10,
-    "WSMessageBufferSize": 100,
+    "MessageDrainBufferSize": 100,
     "LegacyIncomingMessagesPort": 3456,
     "DropsondeIncomingMessagesPort": 3457,
     "OutgoingPort": 8080,
