@@ -141,6 +141,10 @@ func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*config.Confi
 		panic(err)
 	}
 
+	if config.MonitorIntervalSeconds == 0 {
+		config.MonitorIntervalSeconds = 60
+	}
+
 	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "doppler", config.Config)
 	logger.Info("Startup: Setting up the doppler server")
 

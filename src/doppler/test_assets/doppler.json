@@ -20,5 +20,6 @@
     ],
     "CollectorRegistrarIntervalMilliseconds": 100,
     "ContainerMetricTTLSeconds": 120,
-    "SinkInactivityTimeoutSeconds": 120
+    "SinkInactivityTimeoutSeconds": 120,
+    "MonitorIntervalSeconds": 1
 }

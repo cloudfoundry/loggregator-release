@@ -20,5 +20,7 @@
     "Zone": "z1",
     "BlackListIps": [
         {"Start": "127.0.0.0", "End": "127.0.0.2"}
-    ]
+    ],
+    "MetronAddress": "localhost:37474",
+    "MonitorIntervalSeconds": 1
 }

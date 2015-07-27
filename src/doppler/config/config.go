@@ -30,6 +30,7 @@ type Config struct {
 	SinkInactivityTimeoutSeconds  int
 	UnmarshallerCount             int
 	MetronAddress                 string
+	MonitorIntervalSeconds        uint
 }
 
 func (c *Config) Validate(logger *gosteno.Logger) (err error) {

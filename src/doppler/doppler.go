@@ -11,6 +11,7 @@ import (
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
 
+	"common/monitor"
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
 	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/gosteno"
@@ -41,6 +42,8 @@ type Doppler struct {
 	signatureVerifier               *signature.Verifier
 
 	storeAdapter storeadapter.StoreAdapter
+
+	uptimeMonitor monitor.Monitor
 
 	newAppServiceChan, deletedAppServiceChan <-chan appservice.AppService
 	wg                                       sync.WaitGroup
@@ -80,6 +83,7 @@ func New(host string, config *config.Config, logger *gosteno.Logger, storeAdapte
 		wrappedEnvelopeChan:             make(chan *events.Envelope),
 		signatureVerifier:               signatureVerifier,
 		dropsondeVerifiedBytesChan:      make(chan []byte),
+		uptimeMonitor:                   monitor.NewUptimeMonitor(time.Duration(config.MonitorIntervalSeconds) * time.Second),
 	}
 }
 
@@ -122,6 +126,9 @@ func (doppler *Doppler) Start() {
 		doppler.websocketServer.Start()
 	}()
 
+	go doppler.uptimeMonitor.Start()
+
+	// The following runs forever. Put all startup functions above here.
 	for err := range doppler.errChan {
 		doppler.Errorf("Got error %s", err)
 	}
@@ -136,4 +143,5 @@ func (doppler *Doppler) Stop() {
 
 	doppler.wg.Wait()
 	close(doppler.errChan)
+	doppler.uptimeMonitor.Stop()
 }
