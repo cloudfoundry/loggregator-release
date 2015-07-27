@@ -43,8 +43,7 @@ type Doppler struct {
 	storeAdapter storeadapter.StoreAdapter
 
 	newAppServiceChan, deletedAppServiceChan <-chan appservice.AppService
-	sync.Mutex
-	sync.WaitGroup
+	wg                                       sync.WaitGroup
 }
 
 func New(host string, config *config.Config, logger *gosteno.Logger, storeAdapter storeadapter.StoreAdapter, messageDrainBufferSize uint, dropsondeOrigin string) *Doppler {
@@ -85,43 +84,41 @@ func New(host string, config *config.Config, logger *gosteno.Logger, storeAdapte
 }
 
 func (doppler *Doppler) Start() {
-	doppler.Lock()
 	doppler.errChan = make(chan error)
-	doppler.Unlock()
 
-	doppler.Add(6 + doppler.dropsondeUnmarshallerCollection.Size())
+	doppler.wg.Add(6 + doppler.dropsondeUnmarshallerCollection.Size())
 
 	go func() {
-		defer doppler.Done()
+		defer doppler.wg.Done()
 		doppler.appStoreWatcher.Run()
 	}()
 
 	go func() {
-		defer doppler.Done()
+		defer doppler.wg.Done()
 		doppler.dropsondeListener.Start()
 	}()
 
-	doppler.dropsondeUnmarshallerCollection.Run(doppler.dropsondeVerifiedBytesChan, doppler.envelopeChan, &doppler.WaitGroup)
+	doppler.dropsondeUnmarshallerCollection.Run(doppler.dropsondeVerifiedBytesChan, doppler.envelopeChan, &doppler.wg)
 
 	go func() {
-		defer doppler.Done()
+		defer doppler.wg.Done()
 		defer close(doppler.dropsondeVerifiedBytesChan)
 		doppler.signatureVerifier.Run(doppler.dropsondeBytesChan, doppler.dropsondeVerifiedBytesChan)
 	}()
 
 	go func() {
-		defer doppler.Done()
+		defer doppler.wg.Done()
 		doppler.sinkManager.Start(doppler.newAppServiceChan, doppler.deletedAppServiceChan)
 	}()
 
 	go func() {
-		defer doppler.Done()
+		defer doppler.wg.Done()
 		defer close(doppler.envelopeChan)
 		doppler.messageRouter.Start(doppler.envelopeChan)
 	}()
 
 	go func() {
-		defer doppler.Done()
+		defer doppler.wg.Done()
 		doppler.websocketServer.Start()
 	}()
 
@@ -130,15 +127,13 @@ func (doppler *Doppler) Start() {
 	}
 }
 
-func (l *Doppler) Stop() {
-	l.Lock()
-	defer l.Unlock()
-	l.dropsondeListener.Stop()
-	l.sinkManager.Stop()
-	l.messageRouter.Stop()
-	l.websocketServer.Stop()
-	l.storeAdapter.Disconnect()
+func (doppler *Doppler) Stop() {
+	doppler.dropsondeListener.Stop()
+	doppler.sinkManager.Stop()
+	doppler.messageRouter.Stop()
+	doppler.websocketServer.Stop()
+	doppler.storeAdapter.Disconnect()
 
-	l.Wait()
-	close(l.errChan)
+	doppler.wg.Wait()
+	close(doppler.errChan)
 }

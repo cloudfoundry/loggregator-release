@@ -54,17 +54,17 @@ func (r *TruncatingBuffer) Run() {
 		select {
 		case r.outputChannel <- msg:
 		default:
-			messageCount := len(r.outputChannel)
-			r.droppedMessageCount += int64(messageCount)
+			droppedMessageCount := len(r.outputChannel)
+			r.droppedMessageCount += int64(droppedMessageCount)
 			r.outputChannel = make(chan *events.Envelope, cap(r.outputChannel))
 			appId := envelope_extensions.GetAppId(msg)
 
-			r.notifyMessagesDropped(messageCount, appId)
+			r.notifyMessagesDropped(droppedMessageCount, appId)
 
 			r.outputChannel <- msg
 
 			if r.logger != nil {
-				r.logger.Warn(fmt.Sprintf("TB: Output channel too full. Dropped %d messages for app %s.", messageCount, appId))
+				r.logger.Warn(fmt.Sprintf("TB: Output channel too full. Dropped %d messages for app %s.", droppedMessageCount, appId))
 			}
 		}
 		r.lock.Unlock()
@@ -80,10 +80,10 @@ func (r *TruncatingBuffer) GetDroppedMessageCount() int64 {
 	return messages
 }
 
-func (r *TruncatingBuffer) notifyMessagesDropped(messageCount int, appId string) {
-	updateDroppedMessageCount(r.droppedMessageCount)
-	r.emitMessage(generateLogMessage(messageCount, appId))
-	r.emitMessage(generateCounterEvent(messageCount, r.droppedMessageCount))
+func (r *TruncatingBuffer) notifyMessagesDropped(droppedMessageCount int, appId string) {
+	metrics.BatchAddCounter("TruncatingBuffer.totalDroppedMessages", uint64(droppedMessageCount))
+	r.emitMessage(generateLogMessage(droppedMessageCount, appId))
+	r.emitMessage(generateCounterEvent(droppedMessageCount, r.droppedMessageCount))
 }
 
 func (r *TruncatingBuffer) emitMessage(event events.Event) {
@@ -95,8 +95,8 @@ func (r *TruncatingBuffer) emitMessage(event events.Event) {
 	}
 }
 
-func generateLogMessage(messageCount int, appId string) *events.LogMessage {
-	messageString := fmt.Sprintf("Log message output too high. We've dropped %d messages", messageCount)
+func generateLogMessage(droppedMessageCount int, appId string) *events.LogMessage {
+	messageString := fmt.Sprintf("Log message output too high. We've dropped %d messages", droppedMessageCount)
 
 	messageType := events.LogMessage_ERR
 	currentTime := time.Now()
@@ -111,14 +111,10 @@ func generateLogMessage(messageCount int, appId string) *events.LogMessage {
 	return logMessage
 }
 
-func generateCounterEvent(messageCount int, total int64) *events.CounterEvent {
+func generateCounterEvent(droppedMessageCount int, total int64) *events.CounterEvent {
 	return &events.CounterEvent{
 		Name:  proto.String("TruncatingBuffer.DroppedMessages"),
-		Delta: proto.Uint64(uint64(messageCount)),
+		Delta: proto.Uint64(uint64(droppedMessageCount)),
 		Total: proto.Uint64(uint64(total)),
 	}
-}
-
-func updateDroppedMessageCount(delta int64) {
-	metrics.BatchAddCounter("TruncatingBuffer.totalDroppedMessages", uint64(delta))
 }

@@ -96,9 +96,7 @@ var _ = Describe("Truncating Buffer", func() {
 		sendLogMessages("message 3", inMessageChan)
 		sendLogMessages("message 4", inMessageChan)
 
-		time.Sleep(5 * time.Millisecond)
-
-		Expect(buffer.GetDroppedMessageCount()).To(Equal(int64(3)))
+		Eventually(buffer.GetDroppedMessageCount).Should(Equal(int64(3)))
 
 		close(done)
 	})
@@ -120,8 +118,6 @@ var _ = Describe("Truncating Buffer", func() {
 		sendLogMessages("message 2", inMessageChan)
 		sendLogMessages("message 3", inMessageChan)
 		sendLogMessages("message 4", inMessageChan)
-
-		time.Sleep(5 * time.Millisecond)
 
 		Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(1))
 		Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.CounterEvent)).To(Equal(&events.CounterEvent{
