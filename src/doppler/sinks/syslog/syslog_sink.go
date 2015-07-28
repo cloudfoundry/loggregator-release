@@ -12,14 +12,8 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
-const (
-	dial_error_debug_string = "Syslog Sink %s: Error when dialing out. Backing off for %v. Err: %v"
-	dialing_debug_string    = "Syslog Sink %s: Not connected. Trying to connect."
-	starting_loop_debug     = "Syslog Sink %s: Starting loop. Current backoff: %v"
-)
-
 type SyslogSink struct {
-	*gosteno.Logger
+	logger                 *gosteno.Logger
 	appId                  string
 	drainUrl               string
 	sentMessageCount       *uint64
@@ -38,7 +32,7 @@ func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, m
 	return &SyslogSink{
 		appId:                  appId,
 		drainUrl:               drainUrl,
-		Logger:                 givenLogger,
+		logger:                 givenLogger,
 		messageDrainBufferSize: messageDrainBufferSize,
 		syslogWriter:           syslogWriter,
 		handleSendError:        errorHandler,
@@ -48,8 +42,8 @@ func NewSyslogSink(appId string, drainUrl string, givenLogger *gosteno.Logger, m
 }
 
 func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
-	s.Infof("Syslog Sink %s: Running.", s.drainUrl)
-	defer s.Errorf("Syslog Sink %s: Stopped.", s.drainUrl)
+	s.logger.Infof("Syslog Sink %s: Running.", s.drainUrl)
+	defer s.logger.Errorf("Syslog Sink %s: Stopped.", s.drainUrl)
 
 	backoffStrategy := retrystrategy.NewExponentialRetryStrategy()
 	numberOfTries := 0
@@ -76,43 +70,45 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 		}
 	}()
 
-	buffer := sinks.RunTruncatingBuffer(filteredChan, s.messageDrainBufferSize, s.Logger, s.dropsondeOrigin)
+	buffer := sinks.RunTruncatingBuffer(filteredChan, s.messageDrainBufferSize, s.logger, s.dropsondeOrigin)
 	timer := time.NewTimer(backoffStrategy(numberOfTries))
 	connected := false
 	defer timer.Stop()
 	defer s.syslogWriter.Close()
+	s.logger.Debugf("Syslog Sink %s: Starting loop. Current backoff: %v", s.drainUrl, backoffStrategy(numberOfTries))
 	for {
-		s.Debugf(starting_loop_debug, s.drainUrl, backoffStrategy(numberOfTries))
-		timer.Reset(backoffStrategy(numberOfTries))
-		select {
-		case <-s.disconnectChannel:
-			return
-		case <-timer.C:
-		}
-
 		if !connected {
-			s.Debugf(dialing_debug_string, s.drainUrl)
+			s.logger.Debugf("Syslog Sink %s: Not connected. Trying to connect.", s.drainUrl)
 			err := s.syslogWriter.Connect()
 			if err != nil {
-				numberOfTries++
-				errorMsg := fmt.Sprintf(dial_error_debug_string, s.drainUrl, backoffStrategy(numberOfTries), err)
+				sleepDuration := backoffStrategy(numberOfTries)
+				errorMsg := fmt.Sprintf("Syslog Sink %s: Error when dialing out. Backing off for %v. Err: %v", s.drainUrl, sleepDuration, err)
 
 				s.handleSendError(errorMsg, s.appId, s.drainUrl)
+
+				timer.Reset(sleepDuration)
+				select {
+				case <-s.disconnectChannel:
+					return
+				case <-timer.C:
+				}
+
+				numberOfTries++
 				continue
 			}
 
-			s.Infof("Syslog Sink %s: successfully connected.", s.drainUrl)
+			s.logger.Infof("Syslog Sink %s: successfully connected.", s.drainUrl)
 			connected = true
 		}
 
-		s.Debugf("Syslog Sink %s: Waiting for activity\n", s.drainUrl)
+		s.logger.Debugf("Syslog Sink %s: Waiting for activity\n", s.drainUrl)
 
 		select {
 		case <-s.disconnectChannel:
 			return
 		case messageEnvelope, ok := <-buffer.GetOutputChannel():
 			if !ok {
-				s.Debugf("Syslog Sink %s: Closed listener channel detected. Closing.\n", s.drainUrl)
+				s.logger.Debugf("Syslog Sink %s: Closed listener channel detected. Closing.\n", s.drainUrl)
 				return
 			}
 
@@ -123,7 +119,7 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 					numberOfTries = 0
 					connected = true
 				} else {
-					s.Debugf("Syslog Sink %s: Error when trying to send data to sink. Backing off. Err: %v\n", s.drainUrl, err)
+					s.logger.Debugf("Syslog Sink %s: Error when trying to send data to sink. Backing off. Err: %v\n", s.drainUrl, err)
 					numberOfTries++
 					connected = false
 				}
