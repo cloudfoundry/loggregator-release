@@ -32,7 +32,7 @@ func (nw networkWriter) Write(message []byte) {
 }
 
 func NewMessageWriter(host string, port int, sharedSecret string, sentCounter *metricsreporter.Counter) *messageWriter {
-	output, err := net.Dial("udp", fmt.Sprintf("%s:%d", host, port))
+	output, err := net.Dial("udp4", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		fmt.Printf("DIAL Error: %s\n", err.Error())
 	}

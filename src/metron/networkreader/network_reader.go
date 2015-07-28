@@ -35,7 +35,7 @@ func New(host string, name string, writer writers.ByteArrayWriter, logger *goste
 }
 
 func (nr *NetworkReader) Start() {
-	connection, err := net.ListenPacket("udp", nr.host)
+	connection, err := net.ListenPacket("udp4", nr.host)
 	if err != nil {
 		nr.logger.Fatalf("Failed to listen on port. %s", err)
 	}

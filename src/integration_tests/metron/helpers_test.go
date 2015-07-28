@@ -151,7 +151,7 @@ func eventuallyListensForUDP(address string) net.PacketConn {
 
 	Eventually(func() error {
 		var err error
-		testServer, err = net.ListenPacket("udp", address)
+		testServer, err = net.ListenPacket("udp4", address)
 		return err
 	}).Should(Succeed())
 

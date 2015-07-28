@@ -9,7 +9,7 @@ type MetronStreamWriter struct {
 }
 
 func NewMetronStreamWriter() *MetronStreamWriter {
-	metronConn, err := net.Dial("udp", "localhost:49625")
+	metronConn, err := net.Dial("udp4", "localhost:49625")
 	if err != nil {
 		panic(err)
 	}

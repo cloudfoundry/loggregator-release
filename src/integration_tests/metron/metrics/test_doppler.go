@@ -14,7 +14,7 @@ type TestDoppler struct {
 }
 
 func NewTestDoppler() *TestDoppler {
-	c, err := net.ListenPacket("udp", "localhost:3457")
+	c, err := net.ListenPacket("udp4", "localhost:3457")
 	if err != nil {
 		panic(err)
 	}

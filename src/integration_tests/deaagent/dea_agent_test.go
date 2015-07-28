@@ -174,7 +174,7 @@ func createFile(path string) *os.File {
 }
 
 func makeDeaLoggingAgentOutputConn() net.PacketConn {
-	connection, err := net.ListenPacket("udp", "127.0.0.1:51161")
+	connection, err := net.ListenPacket("udp4", "127.0.0.1:51161")
 	Expect(err).ToNot(HaveOccurred())
 	return connection
 }

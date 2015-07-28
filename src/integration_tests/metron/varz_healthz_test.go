@@ -52,7 +52,7 @@ var _ = Describe("/varz endpoint", func() {
 		metric := getMetricFromContext(agentListenerContext, "receivedMessageCount")
 		expectedValue := metric.Value.(float64) + 1
 
-		connection, _ := net.Dial("udp", "localhost:51160")
+		connection, _ := net.Dial("udp4", "localhost:51160")
 		connection.Write([]byte("test-data"))
 
 		Eventually(func() interface{} {
@@ -62,7 +62,7 @@ var _ = Describe("/varz endpoint", func() {
 	})
 
 	It("includes value metrics from sources", func() {
-		connection, _ := net.Dial("udp", "localhost:51161")
+		connection, _ := net.Dial("udp4", "localhost:51161")
 		connection.Write(basicValueMessage())
 
 		Eventually(func() *instrumentation.Context { return getContext("forwarder") }).ShouldNot(BeNil())
@@ -75,7 +75,7 @@ var _ = Describe("/varz endpoint", func() {
 	})
 
 	It("includes counter event metrics from sources", func() {
-		connection, _ := net.Dial("udp", "localhost:51161")
+		connection, _ := net.Dial("udp4", "localhost:51161")
 		connection.Write(basicCounterEventMessage())
 		connection.Write(basicCounterEventMessage())
 

@@ -29,7 +29,7 @@ func main() {
 	}
 
 	//    connection, err := net.DialUDP("udp", nil, la)
-	connection, err := net.ListenPacket("udp", "")
+	connection, err := net.ListenPacket("udp4", "")
 	if err != nil {
 		log.Fatalf("Error opening udp stuff")
 	}

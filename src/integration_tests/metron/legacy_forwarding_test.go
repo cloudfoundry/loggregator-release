@@ -73,7 +73,7 @@ var _ = Describe("Legacy message forwarding", func() {
 		adapter := etcdRunner.Adapter()
 		adapter.Create(node)
 
-		connection, _ = net.Dial("udp", "localhost:51160")
+		connection, _ = net.Dial("udp4", "localhost:51160")
 		go testServer.start()
 	})
 
@@ -113,7 +113,7 @@ var _ = Describe("Legacy message forwarding", func() {
 		currentTime := time.Now()
 		marshalledLegacyMessage := legacyLogMessage(123, "BLAH", currentTime)
 
-		dropsondeConnection, _ := net.Dial("udp", "localhost:51161")
+		dropsondeConnection, _ := net.Dial("udp4", "localhost:51161")
 
 		go func() {
 			for i := 0; i < 1000; i++ {

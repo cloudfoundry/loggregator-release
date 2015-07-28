@@ -51,7 +51,7 @@ var _ = Describe("Dropsonde message forwarding", func() {
 
 		receivedByDoppler := fakeDoppler.ReadIncomingMessages(expectedMessage.signature)
 
-		metronConn, _ := net.Dial("udp", "localhost:51161")
+		metronConn, _ := net.Dial("udp4", "localhost:51161")
 		metronInput := &MetronInput{
 			metronConn: metronConn,
 			stopTheWorld: stopTheWorld,

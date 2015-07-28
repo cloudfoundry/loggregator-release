@@ -36,7 +36,7 @@ var _ = Describe("Self Instrumentation", func() {
 	})
 
 	It("sends metrics about the Dropsonde network reader", func() {
-		metronInput, _ := net.Dial("udp", "localhost:51161")
+		metronInput, _ := net.Dial("udp4", "localhost:51161")
 
 		metronInput.Write(basicValueMessage())
 
@@ -54,7 +54,7 @@ var _ = Describe("Self Instrumentation", func() {
 	})
 
 	It("counts legacy unmarshal errors", func() {
-		metronInput, _ := net.Dial("udp", "localhost:51160")
+		metronInput, _ := net.Dial("udp4", "localhost:51160")
 		metronInput.Write([]byte{1, 2, 3})
 
 		expected := events.Envelope{
@@ -77,7 +77,7 @@ var _ = Describe("Self Instrumentation", func() {
 		)
 
 		BeforeEach(func() {
-			metronInput, _ = net.Dial("udp", "localhost:51161")
+			metronInput, _ = net.Dial("udp4", "localhost:51161")
 			originalTTL = messageaggregator.MaxTTL
 		})
 
@@ -100,7 +100,7 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			Eventually(testDoppler.MessageChan).Should(Receive(MatchSpecifiedContents(&expected)))
+			Eventually(testDoppler.MessageChan, 2).Should(Receive(MatchSpecifiedContents(&expected)))
 
 			expected = events.Envelope{
 				Origin:    proto.String("MetronAgent"),
@@ -203,7 +203,7 @@ var _ = Describe("Self Instrumentation", func() {
 
 	Describe("for Dropsonde unmarshaller", func() {
 		It("counts errors", func() {
-			metronInput, _ := net.Dial("udp", "localhost:51161")
+			metronInput, _ := net.Dial("udp4", "localhost:51161")
 			metronInput.Write([]byte{1, 2, 3})
 
 			expected := events.Envelope{
@@ -220,7 +220,7 @@ var _ = Describe("Self Instrumentation", func() {
 		})
 
 		It("counts unmarshalled Dropsonde messages by type", func() {
-			metronInput, _ := net.Dial("udp", "localhost:51161")
+			metronInput, _ := net.Dial("udp4", "localhost:51161")
 			metronInput.Write(basicValueMessage())
 
 			expected := events.Envelope{
@@ -237,7 +237,7 @@ var _ = Describe("Self Instrumentation", func() {
 		})
 
 		It("counts log messages specially", func() {
-			metronInput, _ := net.Dial("udp", "localhost:51161")
+			metronInput, _ := net.Dial("udp4", "localhost:51161")
 
 			logEnvelope := &events.Envelope{
 				Origin:    proto.String("fake-origin-2"),
@@ -266,7 +266,7 @@ var _ = Describe("Self Instrumentation", func() {
 		})
 
 		It("counts unknown event types", func() {
-			metronInput, _ := net.Dial("udp", "localhost:51161")
+			metronInput, _ := net.Dial("udp4", "localhost:51161")
 			message := basicValueMessageEnvelope()
 			message.EventType = events.Envelope_EventType(2000).Enum()
 			bytes, err := proto.Marshal(message)
@@ -296,7 +296,7 @@ var _ = Describe("Self Instrumentation", func() {
 		})
 
 		It("does not forward unknown events", func() {
-			metronInput, _ := net.Dial("udp", "localhost:51161")
+			metronInput, _ := net.Dial("udp4", "localhost:51161")
 			message := basicValueMessageEnvelope()
 			message.EventType = events.Envelope_EventType(2000).Enum()
 			bytes, err := proto.Marshal(message)
@@ -320,7 +320,7 @@ var _ = Describe("Self Instrumentation", func() {
 
 	Describe("for Dropsonde marshaller", func() {
 		It("counts marshalled Dropsonde messages by type", func() {
-			metronInput, _ := net.Dial("udp", "localhost:51161")
+			metronInput, _ := net.Dial("udp4", "localhost:51161")
 			metronInput.Write(basicValueMessage())
 
 			expected := events.Envelope{
