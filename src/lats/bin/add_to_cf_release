@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# The loggregator-acceptance-tests are not part of cf-release. This script
+# creates the jobs, packages and template changes to run LATS as a bosh-errand
+# within cf-release
+
+set -e
+ 
+CF_RELEASE_DIR=${CF_RELEASE_DIR:-$HOME/workspace/cf-release}
+
+# create symlinks to jobs and packages
+pushd $CF_RELEASE_DIR/jobs
+ln -s ../src/loggregator/bosh/jobs/loggregator-acceptance-tests
+popd
+
+pushd $CF_RELEASE_DIR/packages
+ln -s ../src/loggregator/bosh/packages/loggregator-acceptance-tests
+popd
+
+# add the bosh errand job to the template file
+JOBS_TEMPLATE_FILE=$CF_RELEASE_DIR/templates/cf-jobs.yml
+JOBS_LINE=$(grep -n "jobs:" $JOBS_TEMPLATE_FILE | cut -f1 -d:)
+NEXT_LINE=$((JOBS_LINE+1))
+
+ed $JOBS_TEMPLATE_FILE << END
+${NEXT_LINE}i
+  - name: loggregator-acceptance-tests
+    templates:
+    - name: loggregator-acceptance-tests
+      release: (( meta.release.name ))
+    instances: 1
+    resource_pool: small_errand
+    lifecycle: errand
+    networks:
+      - name: cf1
+.
+w
+q
+END
