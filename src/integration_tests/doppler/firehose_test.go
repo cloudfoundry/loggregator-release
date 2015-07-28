@@ -8,6 +8,7 @@ import (
 	"net"
 	"time"
 
+	. "integration_tests/doppler/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"runtime"
@@ -35,24 +36,24 @@ var _ = Describe("Firehose test", func() {
 		var receiveChan chan []byte
 		BeforeEach(func() {
 			receiveChan = make(chan []byte, 10)
-			ws, _ = addWSSink(receiveChan, "4567", "/firehose/hose-subcription-a")
+			ws, _ = AddWSSink(receiveChan, "4567", "/firehose/hose-subcription-a")
 		})
 		AfterEach(func() {
 			ws.Close()
 		})
 		It("receives log messages", func() {
-			sendAppLog(appID, "message", inputConnection)
+			SendAppLog(appID, "message", inputConnection)
 
 			receivedMessageBytes := []byte{}
 			Eventually(receiveChan).Should(Receive(&receivedMessageBytes))
 
-			receivedMessage := decodeProtoBufLogMessage(receivedMessageBytes)
+			receivedMessage := DecodeProtoBufLogMessage(receivedMessageBytes)
 			Expect(*receivedMessage).To(BeAssignableToTypeOf(events.LogMessage{}))
 		})
 
 		It("receives container metrics", func() {
 			containerMetric := factories.NewContainerMetric(appID, 0, 10, 2, 3)
-			sendEvent(containerMetric, inputConnection)
+			SendEvent(containerMetric, inputConnection)
 
 			receivedMessageBytes := []byte{}
 			Eventually(receiveChan).Should(Receive(&receivedMessageBytes))
@@ -67,7 +68,7 @@ var _ = Describe("Firehose test", func() {
 			count := 1000
 
 			for i:=0; i<count; i++ {
-				go sendEvent(containerMetric, inputConnection)
+				go SendEvent(containerMetric, inputConnection)
 			}
 
 			receivedMessageBytes := []byte{}
@@ -83,12 +84,12 @@ var _ = Describe("Firehose test", func() {
 	It("two separate firehose subscriptions receive the same message", func() {
 		receiveChan1 := make(chan []byte, 10)
 		receiveChan2 := make(chan []byte, 10)
-		firehoseWs1, _ := addWSSink(receiveChan1, "4567", "/firehose/hose-subscription-1")
-		firehoseWs2, _ := addWSSink(receiveChan2, "4567", "/firehose/hose-subscription-2")
+		firehoseWs1, _ := AddWSSink(receiveChan1, "4567", "/firehose/hose-subscription-1")
+		firehoseWs2, _ := AddWSSink(receiveChan2, "4567", "/firehose/hose-subscription-2")
 		defer firehoseWs1.Close()
 		defer firehoseWs2.Close()
 
-		sendAppLog(appID, "message", inputConnection)
+		SendAppLog(appID, "message", inputConnection)
 
 		receivedMessageBytes1 := []byte{}
 		Eventually(receiveChan1).Should(Receive(&receivedMessageBytes1))
@@ -96,23 +97,23 @@ var _ = Describe("Firehose test", func() {
 		receivedMessageBytes2 := []byte{}
 		Eventually(receiveChan2).Should(Receive(&receivedMessageBytes2))
 
-		receivedMessage1 := decodeProtoBufLogMessage(receivedMessageBytes1)
+		receivedMessage1 := DecodeProtoBufLogMessage(receivedMessageBytes1)
 		Expect(string(receivedMessage1.GetMessage())).To(Equal("message"))
 
-		receivedMessage2 := decodeProtoBufLogMessage(receivedMessageBytes2)
+		receivedMessage2 := DecodeProtoBufLogMessage(receivedMessageBytes2)
 		Expect(string(receivedMessage2.GetMessage())).To(Equal("message"))
 	})
 
 	It("firehose subscriptions split message load", func() {
 		receiveChan1 := make(chan []byte, 10)
 		receiveChan2 := make(chan []byte, 10)
-		firehoseWs1, _ := addWSSink(receiveChan1, "4567", "/firehose/hose-subscription-1")
-		firehoseWs2, _ := addWSSink(receiveChan2, "4567", "/firehose/hose-subscription-1")
+		firehoseWs1, _ := AddWSSink(receiveChan1, "4567", "/firehose/hose-subscription-1")
+		firehoseWs2, _ := AddWSSink(receiveChan2, "4567", "/firehose/hose-subscription-1")
 		defer firehoseWs1.Close()
 		defer firehoseWs2.Close()
 
 		for i := 0; i < 10; i++ {
-			sendAppLog(appID, "message", inputConnection)
+			SendAppLog(appID, "message", inputConnection)
 		}
 
 		Eventually(func() int {

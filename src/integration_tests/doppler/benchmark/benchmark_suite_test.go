@@ -26,17 +26,14 @@ func TestBenchmark(t *testing.T) {
 var (
 	dopplerSession *gexec.Session
 	localIPAddress string
-	etcdPort int
 	etcdRunner     *etcdstorerunner.ETCDClusterRunner
 	etcdAdapter storeadapter.StoreAdapter
 
 	pathToDopplerExec string
-	pathToHTTPEchoServer string
-	pathToTCPEchoServer string
 )
 
 var _ = BeforeSuite(func() {
-	etcdPort = 5555
+	etcdPort := 5555
 	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
 	etcdRunner.Start()
 	etcdAdapter = etcdRunner.Adapter()
@@ -44,7 +41,6 @@ var _ = BeforeSuite(func() {
 	var err error
 	pathToDopplerExec, err = gexec.Build("doppler")
 	Expect(err).NotTo(HaveOccurred())
-
 })
 
 var _ = BeforeEach(func() {

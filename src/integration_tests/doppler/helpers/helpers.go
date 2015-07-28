@@ -1,4 +1,4 @@
-package doppler_test
+package helpers
 
 import (
 	"crypto/sha1"
@@ -18,29 +18,31 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
+	"os/exec"
 )
 
-func sendAppLog(appID string, message string, connection net.Conn) error {
+func SendAppLog(appID string, message string, connection net.Conn) error {
 	logMessage := factories.NewLogMessage(events.LogMessage_OUT, message, appID, "APP")
 
-	return sendEvent(logMessage, connection)
+	return SendEvent(logMessage, connection)
 }
 
-func sendEvent(event events.Event, connection net.Conn) error {
-	signedEnvelope := marshalEvent(event, "secret")
+func SendEvent(event events.Event, connection net.Conn) error {
+	signedEnvelope := MarshalEvent(event, "secret")
 
 	_, err := connection.Write(signedEnvelope)
 	return err
 }
 
-func marshalEvent(event events.Event, secret string) []byte {
+func MarshalEvent(event events.Event, secret string) []byte {
 	envelope, _ := emitter.Wrap(event, "origin")
-	envelopeBytes := marshalProtoBuf(envelope)
+	envelopeBytes := MarshalProtoBuf(envelope)
 
 	return signature.SignMessage(envelopeBytes, []byte(secret))
 }
 
-func marshalProtoBuf(pb proto.Message) []byte {
+func MarshalProtoBuf(pb proto.Message) []byte {
 	marshalledProtoBuf, err := proto.Marshal(pb)
 	if err != nil {
 		Fail(err.Error())
@@ -49,7 +51,7 @@ func marshalProtoBuf(pb proto.Message) []byte {
 	return marshalledProtoBuf
 }
 
-func addWSSink(receivedChan chan []byte, port string, path string) (*websocket.Conn, <-chan struct{}) {
+func AddWSSink(receivedChan chan []byte, port string, path string) (*websocket.Conn, <-chan struct{}) {
 	connectionDroppedChannel := make(chan struct{}, 1)
 
 	var ws *websocket.Conn
@@ -85,7 +87,7 @@ func addWSSink(receivedChan chan []byte, port string, path string) (*websocket.C
 	return ws, connectionDroppedChannel
 }
 
-func decodeProtoBufLogMessage(actual []byte) *events.LogMessage {
+func DecodeProtoBufLogMessage(actual []byte) *events.LogMessage {
 	var receivedEnvelope events.Envelope
 	err := proto.Unmarshal(actual, &receivedEnvelope)
 	if err != nil {
@@ -94,17 +96,16 @@ func decodeProtoBufLogMessage(actual []byte) *events.LogMessage {
 	return receivedEnvelope.GetLogMessage()
 }
 
-func appKey(appID string) string {
+func AppKey(appID string) string {
 	return fmt.Sprintf("/loggregator/services/%s", appID)
 }
 
-func drainKey(appID string, drainURL string) string {
+func DrainKey(appID string, drainURL string) string {
 	hash := sha1.Sum([]byte(drainURL))
-	return fmt.Sprintf("%s/%x", appKey(appID), hash)
+	return fmt.Sprintf("%s/%x", AppKey(appID), hash)
 }
 
-func addETCDNode(key string, value string) {
-
+func AddETCDNode(etcdAdapter storeadapter.StoreAdapter, key string, value string) {
 	node := storeadapter.StoreNode{
 		Key:   key,
 		Value: []byte(value),
@@ -121,4 +122,28 @@ func UnmarshalMessage(messageBytes []byte) events.Envelope {
 	err := proto.Unmarshal(messageBytes, &envelope)
 	Expect(err).NotTo(HaveOccurred())
 	return envelope
+}
+
+func StartHTTPSServer(pathToHTTPEchoServer string) *gexec.Session {
+	command := exec.Command(pathToHTTPEchoServer, "-cert", "fixtures/key.crt", "-key", "fixtures/key.key")
+	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+
+	return session
+}
+
+func StartUnencryptedTCPServer(pathToTCPEchoServer string, syslogDrainAddress string) *gexec.Session {
+	command := exec.Command(pathToTCPEchoServer, "-address", syslogDrainAddress)
+	drainSession, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+
+	return drainSession
+}
+
+func StartEncryptedTCPServer(pathToTCPEchoServer string, syslogDrainAddress string) *gexec.Session {
+	command := exec.Command(pathToTCPEchoServer, "-address", syslogDrainAddress, "-ssl", "-cert", "fixtures/key.crt", "-key", "fixtures/key.key")
+	drainSession, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+
+	return drainSession
 }

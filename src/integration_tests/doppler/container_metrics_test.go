@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/sonde-go/events"
 
+	. "integration_tests/doppler/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -32,12 +33,12 @@ var _ = Describe("Container Metrics", func() {
 	It("returns container metrics for an app", func() {
 		containerMetric := factories.NewContainerMetric(appID, 0, 1, 2, 3)
 
-		sendEvent(containerMetric, inputConnection)
+		SendEvent(containerMetric, inputConnection)
 
 		Eventually(dopplerSession).Should(gbytes.Say(`Done sending`))
 
 		receivedChan = make(chan []byte)
-		ws, _ := addWSSink(receivedChan, "4567", "/apps/"+appID+"/containermetrics")
+		ws, _ := AddWSSink(receivedChan, "4567", "/apps/"+appID+"/containermetrics")
 		defer ws.Close()
 
 		var receivedMessageBytes []byte
@@ -51,19 +52,19 @@ var _ = Describe("Container Metrics", func() {
 	})
 
 	It("does not recieve metrics for different appIds", func() {
-		sendEvent(factories.NewContainerMetric(appID+"other", 0, 1, 2, 3), inputConnection)
+		SendEvent(factories.NewContainerMetric(appID+"other", 0, 1, 2, 3), inputConnection)
 
 		goodMetric := factories.NewContainerMetric(appID, 0, 100, 2, 3)
-		sendEvent(goodMetric, inputConnection)
+		SendEvent(goodMetric, inputConnection)
 
-		sendEvent(factories.NewContainerMetric(appID+"other", 1, 1, 2, 3), inputConnection)
+		SendEvent(factories.NewContainerMetric(appID+"other", 1, 1, 2, 3), inputConnection)
 
 		Eventually(dopplerSession).Should(gbytes.Say(`Done sending`))
 		Eventually(dopplerSession).Should(gbytes.Say(`Done sending`))
 		Eventually(dopplerSession).Should(gbytes.Say(`Done sending`))
 
 		receivedChan = make(chan []byte)
-		ws, _ := addWSSink(receivedChan, "4567", "/apps/"+appID+"/containermetrics")
+		ws, _ := AddWSSink(receivedChan, "4567", "/apps/"+appID+"/containermetrics")
 		defer ws.Close()
 
 		var receivedMessageBytes []byte
@@ -77,14 +78,14 @@ var _ = Describe("Container Metrics", func() {
 	})
 
 	It("returns metrics for all instances of the app", func() {
-		sendEvent(factories.NewContainerMetric(appID, 0, 1, 2, 3), inputConnection)
-		sendEvent(factories.NewContainerMetric(appID, 1, 1, 2, 3), inputConnection)
+		SendEvent(factories.NewContainerMetric(appID, 0, 1, 2, 3), inputConnection)
+		SendEvent(factories.NewContainerMetric(appID, 1, 1, 2, 3), inputConnection)
 
 		Eventually(dopplerSession).Should(gbytes.Say(`Done sending`))
 		Eventually(dopplerSession).Should(gbytes.Say(`Done sending`))
 
 		receivedChan = make(chan []byte)
-		ws, _ := addWSSink(receivedChan, "4567", "/apps/"+appID+"/containermetrics")
+		ws, _ := AddWSSink(receivedChan, "4567", "/apps/"+appID+"/containermetrics")
 		defer ws.Close()
 
 		var firstReceivedMessageBytes []byte
@@ -102,16 +103,16 @@ var _ = Describe("Container Metrics", func() {
 	})
 
 	It("returns only the latest container metric", func() {
-		sendEvent(factories.NewContainerMetric(appID, 0, 10, 2, 3), inputConnection)
+		SendEvent(factories.NewContainerMetric(appID, 0, 10, 2, 3), inputConnection)
 
 		laterMetric := factories.NewContainerMetric(appID, 0, 20, 2, 3)
-		sendEvent(laterMetric, inputConnection)
+		SendEvent(laterMetric, inputConnection)
 
 		Eventually(dopplerSession).Should(gbytes.Say(`Done sending`))
 		Eventually(dopplerSession).Should(gbytes.Say(`Done sending`))
 
 		receivedChan = make(chan []byte)
-		ws, _ := addWSSink(receivedChan, "4567", "/apps/"+appID+"/containermetrics")
+		ws, _ := AddWSSink(receivedChan, "4567", "/apps/"+appID+"/containermetrics")
 		defer ws.Close()
 
 		var receivedMessageBytes []byte

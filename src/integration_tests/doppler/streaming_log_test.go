@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/nu7hatch/gouuid"
 
+	. "integration_tests/doppler/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -26,7 +27,7 @@ var _ = Describe("Streaming Logs", func() {
 		guid, _ := uuid.NewV4()
 		appID = guid.String()
 
-		ws, connDropped = addWSSink(receivedChan, "4567", "/apps/"+appID+"/stream")
+		ws, connDropped = AddWSSink(receivedChan, "4567", "/apps/"+appID+"/stream")
 		inputConnection, _ = net.Dial("udp", localIPAddress+":8765")
 		time.Sleep(50 * time.Millisecond) // give time for connection to establish
 	})
@@ -37,12 +38,12 @@ var _ = Describe("Streaming Logs", func() {
 	})
 
 	It("streams logs for an app", func() {
-		err := sendAppLog(appID, "message", inputConnection)
+		err := SendAppLog(appID, "message", inputConnection)
 		Expect(err).NotTo(HaveOccurred())
 
 		receivedMessageBytes := []byte{}
 		Eventually(receivedChan).Should(Receive(&receivedMessageBytes))
-		receivedMessage := decodeProtoBufLogMessage(receivedMessageBytes)
+		receivedMessage := DecodeProtoBufLogMessage(receivedMessageBytes)
 
 		Expect(receivedMessage.GetAppId()).To(Equal(appID))
 		Expect(string(receivedMessage.GetMessage())).To(Equal("message"))
@@ -50,15 +51,15 @@ var _ = Describe("Streaming Logs", func() {
 	})
 
 	It("only recieves messages for the specified appId", func() {
-		err := sendAppLog(appID, "message 1", inputConnection)
+		err := SendAppLog(appID, "message 1", inputConnection)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = sendAppLog("otherAppId", "message 2", inputConnection)
+		err = SendAppLog("otherAppId", "message 2", inputConnection)
 		Expect(err).NotTo(HaveOccurred())
 
 		receivedMessageBytes := []byte{}
 		Eventually(receivedChan).Should(Receive(&receivedMessageBytes))
-		receivedMessage := decodeProtoBufLogMessage(receivedMessageBytes)
+		receivedMessage := DecodeProtoBufLogMessage(receivedMessageBytes)
 
 		Expect(receivedMessage.GetAppId()).To(Equal(appID))
 		Expect(string(receivedMessage.GetMessage())).To(Equal("message 1"))
@@ -67,14 +68,14 @@ var _ = Describe("Streaming Logs", func() {
 
 	It("does not recieve non-log messages", func() {
 		metricEvent := factories.NewContainerMetric(appID, 0, 10, 10, 10)
-		sendEvent(metricEvent, inputConnection)
+		SendEvent(metricEvent, inputConnection)
 
 		Expect(receivedChan).To(BeEmpty())
 	})
 
 	It("drops invalid log envelopes", func() {
 		unmarshalledLogMessage := factories.NewLogMessage(events.LogMessage_OUT, "Some Data", appID, "App")
-		expectedMessage := marshalEvent(unmarshalledLogMessage, "invalid")
+		expectedMessage := MarshalEvent(unmarshalledLogMessage, "invalid")
 
 		_, err := inputConnection.Write(expectedMessage)
 		Expect(err).To(BeNil())

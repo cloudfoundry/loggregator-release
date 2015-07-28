@@ -25,7 +25,6 @@ func TestDoppler(t *testing.T) {
 var (
 	dopplerSession *gexec.Session
 	localIPAddress string
-	etcdPort       int
 	etcdRunner     *etcdstorerunner.ETCDClusterRunner
 	etcdAdapter    storeadapter.StoreAdapter
 
@@ -35,7 +34,7 @@ var (
 )
 
 var _ = BeforeSuite(func() {
-	etcdPort = 5555
+	etcdPort := 5555
 	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
 	etcdRunner.Start()
 	etcdAdapter = etcdRunner.Adapter()

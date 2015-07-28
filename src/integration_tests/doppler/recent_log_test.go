@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/nu7hatch/gouuid"
 
+	. "integration_tests/doppler/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -23,7 +24,7 @@ var _ = Describe("Streaming Logs", func() {
 	})
 
 	It("receives recent log messages", func() {
-		err := sendAppLog(appID, "message 1", inputConnection)
+		err := SendAppLog(appID, "message 1", inputConnection)
 		Expect(err).NotTo(HaveOccurred())
 
 		returnedMessages := make([][]byte, 1)
@@ -32,17 +33,17 @@ var _ = Describe("Streaming Logs", func() {
 			return returnedMessages
 		}).Should(HaveLen(1))
 
-		receivedMessage := decodeProtoBufLogMessage(returnedMessages[0])
+		receivedMessage := DecodeProtoBufLogMessage(returnedMessages[0])
 
 		Expect(receivedMessage.GetAppId()).To(Equal(appID))
 		Expect(string(receivedMessage.GetMessage())).To(Equal("message 1"))
 	})
 
 	It("only recieves messages for the specified appId", func() {
-		err := sendAppLog(appID, "message 1", inputConnection)
+		err := SendAppLog(appID, "message 1", inputConnection)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = sendAppLog("otherAppId", "message 2", inputConnection)
+		err = SendAppLog("otherAppId", "message 2", inputConnection)
 		Expect(err).NotTo(HaveOccurred())
 
 		returnedMessages := make([][]byte, 1)
@@ -51,7 +52,7 @@ var _ = Describe("Streaming Logs", func() {
 			return returnedMessages
 		}).Should(HaveLen(1))
 
-		receivedMessage := decodeProtoBufLogMessage(returnedMessages[0])
+		receivedMessage := DecodeProtoBufLogMessage(returnedMessages[0])
 
 		Expect(receivedMessage.GetAppId()).To(Equal(appID))
 		Expect(string(receivedMessage.GetMessage())).To(Equal("message 1"))
@@ -59,7 +60,7 @@ var _ = Describe("Streaming Logs", func() {
 
 	It("does not recieve non-log messages", func() {
 		metricEvent := factories.NewContainerMetric(appID, 0, 10, 10, 10)
-		sendEvent(metricEvent, inputConnection)
+		SendEvent(metricEvent, inputConnection)
 		returnedMessages := make([][]byte, 1)
 
 		Consistently(func() [][]byte {
@@ -70,7 +71,7 @@ var _ = Describe("Streaming Logs", func() {
 
 	It("only recieves the most recent logs", func() {
 		for i := 0; i < 15; i++ {
-			err := sendAppLog(appID, strconv.Itoa(i), inputConnection)
+			err := SendAppLog(appID, strconv.Itoa(i), inputConnection)
 			Expect(err).NotTo(HaveOccurred())
 		}
 
@@ -79,7 +80,7 @@ var _ = Describe("Streaming Logs", func() {
 			var messages []string
 
 			for _, messageBytes := range returnedMessages {
-				receivedMessage := decodeProtoBufLogMessage(messageBytes)
+				receivedMessage := DecodeProtoBufLogMessage(messageBytes)
 				messages = append(messages, string(receivedMessage.GetMessage()))
 			}
 
@@ -91,7 +92,7 @@ var _ = Describe("Streaming Logs", func() {
 func retreiveRecentMessages(appID string) [][]byte {
 	rChan := make(chan []byte, 10)
 
-	ws, _ := addWSSink(rChan, "4567", "/apps/"+appID+"/recentlogs")
+	ws, _ := AddWSSink(rChan, "4567", "/apps/"+appID+"/recentlogs")
 	defer ws.Close()
 
 	returnedMessages := make([][]byte, 0)
