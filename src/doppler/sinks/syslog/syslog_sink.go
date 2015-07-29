@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"doppler/sinks"
+
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 )
@@ -70,11 +71,12 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 		}
 	}()
 
-	buffer := sinks.RunTruncatingBuffer(filteredChan, s.messageDrainBufferSize, s.logger, s.dropsondeOrigin)
+	buffer := sinks.RunTruncatingBuffer(filteredChan, s.messageDrainBufferSize, s.logger, s.dropsondeOrigin, s.Identifier())
 	timer := time.NewTimer(backoffStrategy(numberOfTries))
 	connected := false
 	defer timer.Stop()
 	defer s.syslogWriter.Close()
+
 	s.logger.Debugf("Syslog Sink %s: Starting loop. Current backoff: %v", s.drainUrl, backoffStrategy(numberOfTries))
 	for {
 		if !connected {
