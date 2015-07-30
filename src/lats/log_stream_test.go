@@ -49,7 +49,7 @@ var _ = Describe("Streaming logs from an app", func() {
 		Consistently(errorChan).ShouldNot(Receive())
 
 		close(done)
-	}, 60)
+	}, 120)
 })
 
 type apiInfo struct {
