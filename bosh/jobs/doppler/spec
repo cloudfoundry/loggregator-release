@@ -67,6 +67,8 @@ properties:
     description: "IP addresses of Cloud Foundry NATS servers"
   nats.port:
     description: "IP port of Cloud Foundry NATS server"
+    default: 4222
+
   ssl.skip_cert_verify:
     description: "when connecting over TLS, don't verify certificates"
     default: false
