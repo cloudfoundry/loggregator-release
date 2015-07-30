@@ -8,13 +8,15 @@ import (
 	"testing"
 )
 
+var config helpers.Config
+
 func TestLats(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	var environment *helpers.Environment
 
 	BeforeSuite(func() {
-		config := helpers.LoadConfig()
+		config = helpers.LoadConfig()
 
 		context := helpers.NewContext(config)
 		environment = helpers.NewEnvironment(context)
