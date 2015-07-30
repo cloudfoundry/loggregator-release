@@ -2,6 +2,7 @@ package syslogwriter_test
 
 import (
 	"doppler/sinks/syslogwriter"
+	"net"
 	"net/url"
 	"os/exec"
 	"time"
@@ -52,6 +53,7 @@ var _ = Describe("SyslogWriter", func() {
 			close(done)
 		})
 	})
+
 	Context("won't write to invalid syslog drains", func() {
 		It("returns an error when unable to send the log message", func() {
 			syslogServerSession.Kill().Wait()
@@ -97,6 +99,7 @@ var _ = Describe("SyslogWriter", func() {
 			close(done)
 		})
 	})
+
 	Context("won't write to invalid syslog drains", func() {
 		It("returns an error when unable to send the log message", func() {
 			syslogServerSession.Kill().Wait()
@@ -113,6 +116,59 @@ var _ = Describe("SyslogWriter", func() {
 			Expect(err).To(HaveOccurred())
 		})
 	})
+
+	Context("when the server connection closes", func() {
+		var listener net.Listener
+		var acceptedConns chan net.Conn
+		var sysLogWriter syslogwriter.Writer
+
+		BeforeEach(func() {
+			var err error
+			listener, err = net.Listen("tcp", "127.0.0.1:0")
+			Expect(err).NotTo(HaveOccurred())
+
+			url, err := url.Parse("syslog://" + listener.Addr().String())
+			Expect(err).NotTo(HaveOccurred())
+
+			sysLogWriter, err = syslogwriter.NewSyslogWriter(url, "appId")
+			Expect(err).NotTo(HaveOccurred())
+
+			acceptedConns = make(chan net.Conn, 1)
+			go startListener(listener, acceptedConns)
+
+			err = sysLogWriter.Connect()
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			listener.Close()
+			sysLogWriter.Close()
+		})
+
+		It("gets detected by watch connection", func() {
+			written, err := sysLogWriter.Write(standardOutPriority, []byte("just a test"), "App", "2", time.Now().UnixNano())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(written).NotTo(Equal(0))
+
+			var conn net.Conn
+			Eventually(acceptedConns).Should(Receive(&conn))
+
+			err = conn.Close()
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() error {
+				_, err := sysLogWriter.Write(standardOutPriority, []byte("just a test"), "App", "2", time.Now().UnixNano())
+				return err
+			}).Should(MatchError("Connection to syslog sink lost"))
+
+			err = sysLogWriter.Connect()
+			Expect(err).NotTo(HaveOccurred())
+
+			written, err = sysLogWriter.Write(standardOutPriority, []byte("just a test"), "App", "2", time.Now().UnixNano())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(written).NotTo(Equal(0))
+		})
+	})
 })
 
 func startSyslogServer(syslogDrainAddress string) *gexec.Session {
@@ -122,4 +178,15 @@ func startSyslogServer(syslogDrainAddress string) *gexec.Session {
 
 	time.Sleep(1000 * time.Millisecond) // give time for server to come up
 	return drainSession
+}
+
+func startListener(listener net.Listener, acceptedConns chan<- net.Conn) {
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			return
+		}
+
+		acceptedConns <- conn
+	}
 }

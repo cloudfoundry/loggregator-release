@@ -41,11 +41,16 @@ func (w *syslogWriter) Connect() error {
 		w.conn.Close()
 		w.conn = nil
 	}
+
 	c, err := net.DialTimeout("tcp", w.host, 500*time.Millisecond)
-	if err == nil {
-		w.conn = c
+	if err != nil {
+		return err
 	}
-	return err
+
+	w.conn = c
+	w.watchConnection()
+
+	return nil
 }
 
 func (w *syslogWriter) Write(p int, b []byte, source string, sourceId string, timestamp int64) (byteCount int, err error) {
@@ -55,12 +60,12 @@ func (w *syslogWriter) Write(p int, b []byte, source string, sourceId string, ti
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	if w.conn != nil {
-		byteCount, err = w.conn.Write(finalMsg)
-	} else {
+
+	if w.conn == nil {
 		return 0, errors.New("Connection to syslog sink lost")
 	}
-	return byteCount, err
+
+	return w.conn.Write(finalMsg)
 }
 
 func (w *syslogWriter) Close() error {
@@ -73,4 +78,19 @@ func (w *syslogWriter) Close() error {
 		return err
 	}
 	return nil
+}
+
+func (w *syslogWriter) watchConnection() {
+	conn := w.conn
+
+	go func() {
+		buffer := make([]byte, 1)
+		for {
+			_, err := conn.Read(buffer)
+			if err != nil {
+				w.Close()
+				return
+			}
+		}
+	}()
 }
