@@ -56,6 +56,18 @@ var _ = Describe("HttpsWriter", func() {
 			Expect(err).To(HaveOccurred())
 		})
 
+		It("holds onto the last error when unable to POST a log message", func() {
+			outputUrl, _ := url.Parse("https://")
+
+			w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", true)
+
+			_, err := w.Write(standardErrorPriority, []byte("Message"), "just a test", "TEST", time.Now().UnixNano())
+
+			conErr := w.Connect()
+			Expect(conErr).To(Equal(err))
+			Expect(w.Connect()).To(BeNil())
+		})
+
 		It("should close connections and return an error if status code returned is not 200", func() {
 			outputUrl, _ := url.Parse(server.URL + "/doesnotexist")
 

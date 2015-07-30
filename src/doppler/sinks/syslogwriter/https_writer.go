@@ -23,6 +23,7 @@ type httpsWriter struct {
 
 	tlsConfig *tls.Config
 	client    *http.Client
+	lastError error
 }
 
 func NewHttpsWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (w *httpsWriter, err error) {
@@ -41,12 +42,19 @@ func NewHttpsWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (w *h
 }
 
 func (w *httpsWriter) Connect() error {
+	if w.lastError != nil {
+		err := w.lastError
+		w.lastError = nil
+		return err
+	}
 	return nil
 }
 
 func (w *httpsWriter) Write(p int, b []byte, source string, sourceId string, timestamp int64) (int, error) {
 	syslogMsg := createMessage(p, w.appId, source, sourceId, b, timestamp)
-	return w.writeHttp(syslogMsg)
+	var bytesWritten int
+	bytesWritten, w.lastError = w.writeHttp(syslogMsg)
+	return bytesWritten, w.lastError
 }
 
 func (w *httpsWriter) Close() error {
