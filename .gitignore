@@ -15,6 +15,5 @@ src/code.google.com/p/go.tools/
 *.coverprofile
 bin/
 *.test
-src/github.com/cloudfoundry-incubator/
 src/github.com/cloudfoundry/gorouter/
 src/github.com/rcrowley/

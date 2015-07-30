@@ -1,0 +1,8 @@
+{
+	"api": "api.10.244.0.34.xip.io",
+	"admin_user": "admin",
+	"admin_password": "admin",
+	"skip_ssl_validation": true,
+	"apps_domain": "10.244.0.34.xip.io",
+	"system_domain": "10.244.0.34.xip.io"
+}
