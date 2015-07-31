@@ -30,6 +30,7 @@ import (
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
 	"metron/eventwriter"
+	"runtime"
 )
 
 var (
@@ -41,6 +42,9 @@ var (
 var metricTTL = time.Hour
 
 func main() {
+	// Metron is intended to be light-weight so we occupy only one core
+	runtime.GOMAXPROCS(1)
+
 	flag.Parse()
 	config, logger := parseConfig(*debug, *configFilePath, *logFilePath)
 
