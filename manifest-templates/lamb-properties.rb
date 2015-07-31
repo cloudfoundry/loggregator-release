@@ -79,6 +79,7 @@ class LambProperties
     debug: false
     blacklisted_syslog_ranges: null
     unmarshaller_count: 5
+    port: 4443
 
   metron_agent:
     deployment: #{deployment_name}
@@ -100,6 +101,7 @@ class LambProperties
     debug: false
     blacklisted_syslog_ranges: null
     unmarshaller_count: 5
+    port: 4443
 
   metron_agent:
     deployment: #{deployment_name}

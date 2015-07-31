@@ -75,6 +75,7 @@ properties:
     debug: (( merge || false ))
     blacklisted_syslog_ranges: ~
     unmarshaller_count: (( merge || 5 ))
+    port: (( merge || 4443 ))
 
   metron_agent:
     deployment: (( meta.environment ))
