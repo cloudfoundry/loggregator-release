@@ -2,7 +2,7 @@
 {
   "EtcdUrls": [<%= p("etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
   "EtcdMaxConcurrentRequests": 10,
-  "MessageDrainBufferSize": 100,
+  "MessageDrainBufferSize": <%= p("doppler.message_drain_buffer_size") %>,
   "LegacyIncomingMessagesPort": <%= p("doppler.incoming_port") %>,
   "DropsondeIncomingMessagesPort": <%= p("doppler.dropsonde_incoming_port") %>,
   "OutgoingPort": <%= p("doppler.outgoing_port") %>,

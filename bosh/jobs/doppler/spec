@@ -51,6 +51,9 @@ properties:
     default: 3600
   doppler_endpoint.shared_secret:
     description: "Shared secret used to verify cryptographically signed doppler messages"
+  doppler.message_drain_buffer_size:
+    description: "Size of the internal buffer used by doppler to store messages. If the buffer gets full doppler will drop the messages."
+    default: 100
   etcd.machines:
     description: "IPs pointing to the ETCD cluster"
   metron_endpoint.host:
