@@ -23,13 +23,13 @@ var _ = Describe("Truncating Buffer", func() {
 	It("panics if buffer size is less than 3", func() {
 		inMessageChan := make(chan *events.Envelope)
 		Expect(func() {
-			truncatingbuffer.NewTruncatingBuffer(inMessageChan, 2, loggertesthelper.Logger(), "dropsonde-origin")
+			truncatingbuffer.NewTruncatingBuffer(inMessageChan, 2, loggertesthelper.Logger(), "dropsonde-origin", "test-sync-name")
 		}).To(Panic())
 	})
 
 	It("works like a channel", func() {
 		inMessageChan := make(chan *events.Envelope)
-		buffer := truncatingbuffer.NewTruncatingBuffer(inMessageChan, 3, loggertesthelper.Logger(), "dropsonde-origin")
+		buffer := truncatingbuffer.NewTruncatingBuffer(inMessageChan, 3, loggertesthelper.Logger(), "dropsonde-origin", "test-sink-name")
 		go buffer.Run()
 
 		sendLogMessages("message 1", inMessageChan)
@@ -46,7 +46,7 @@ var _ = Describe("Truncating Buffer", func() {
 
 	It("works like a truncating channel", func() {
 		inMessageChan := make(chan *events.Envelope)
-		buffer := truncatingbuffer.NewTruncatingBuffer(inMessageChan, 3, loggertesthelper.Logger(), "dropsonde-origin")
+		buffer := truncatingbuffer.NewTruncatingBuffer(inMessageChan, 3, loggertesthelper.Logger(), "dropsonde-origin", "test-sink-name")
 		go buffer.Run()
 
 		sendLogMessages("message 1", inMessageChan)
@@ -57,7 +57,7 @@ var _ = Describe("Truncating Buffer", func() {
 		time.Sleep(5 * time.Millisecond)
 
 		logMessageNotification := <-buffer.GetOutputChannel()
-		Expect(logMessageNotification.GetLogMessage().GetMessage()).To(ContainSubstring("Log message output too high. We've dropped 3 messages"))
+		Expect(logMessageNotification.GetLogMessage().GetMessage()).To(ContainSubstring("Log message output too high. We've dropped 3 messages to test-sink-name."))
 
 		counterEventNotification := <-buffer.GetOutputChannel()
 		Expect(counterEventNotification.GetEventType()).To(Equal(events.Envelope_CounterEvent))
@@ -87,7 +87,7 @@ var _ = Describe("Truncating Buffer", func() {
 
 	It("keeps track of dropped messages", func(done Done) {
 		inMessageChan := make(chan *events.Envelope)
-		buffer := truncatingbuffer.NewTruncatingBuffer(inMessageChan, 3, loggertesthelper.Logger(), "dropsonde-origin")
+		buffer := truncatingbuffer.NewTruncatingBuffer(inMessageChan, 3, loggertesthelper.Logger(), "dropsonde-origin", "test-sync-name")
 		Expect(buffer.GetDroppedMessageCount()).To(Equal(int64(0)))
 		go buffer.Run()
 
@@ -110,7 +110,7 @@ var _ = Describe("Truncating Buffer", func() {
 		fakeEventEmitter.Reset()
 
 		inMessageChan := make(chan *events.Envelope)
-		buffer := truncatingbuffer.NewTruncatingBuffer(inMessageChan, 3, loggertesthelper.Logger(), "dropsonde-origin")
+		buffer := truncatingbuffer.NewTruncatingBuffer(inMessageChan, 3, loggertesthelper.Logger(), "dropsonde-origin", "test-sync-name")
 		Expect(buffer.GetDroppedMessageCount()).To(Equal(int64(0)))
 		go buffer.Run()
 

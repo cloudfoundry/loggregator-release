@@ -20,9 +20,10 @@ type TruncatingBuffer struct {
 	lock                *sync.RWMutex
 	dropsondeOrigin     string
 	droppedMessageCount int64
+	sinkIdentifier      string
 }
 
-func NewTruncatingBuffer(inputChannel <-chan *events.Envelope, bufferSize uint, logger *gosteno.Logger, dropsondeOrigin string) *TruncatingBuffer {
+func NewTruncatingBuffer(inputChannel <-chan *events.Envelope, bufferSize uint, logger *gosteno.Logger, dropsondeOrigin, sinkIdentifier string) *TruncatingBuffer {
 	if bufferSize < 3 {
 		panic("bufferSize must be larger than 3 for overflow")
 	}
@@ -34,6 +35,7 @@ func NewTruncatingBuffer(inputChannel <-chan *events.Envelope, bufferSize uint, 
 		lock:                &sync.RWMutex{},
 		dropsondeOrigin:     dropsondeOrigin,
 		droppedMessageCount: 0,
+		sinkIdentifier:      sinkIdentifier,
 	}
 }
 
@@ -64,7 +66,7 @@ func (r *TruncatingBuffer) Run() {
 			r.outputChannel <- msg
 
 			if r.logger != nil {
-				r.logger.Warn(fmt.Sprintf("TB: Output channel too full. Dropped %d messages for app %s.", droppedMessageCount, appId))
+				r.logger.Warn(fmt.Sprintf("TB: Output channel too full. Dropped %d messages for app %s to %s.", droppedMessageCount, appId, r.sinkIdentifier))
 			}
 		}
 		r.lock.Unlock()
@@ -82,7 +84,7 @@ func (r *TruncatingBuffer) GetDroppedMessageCount() int64 {
 
 func (r *TruncatingBuffer) notifyMessagesDropped(droppedMessageCount int, appId string) {
 	metrics.BatchAddCounter("TruncatingBuffer.totalDroppedMessages", uint64(droppedMessageCount))
-	r.emitMessage(generateLogMessage(droppedMessageCount, appId))
+	r.emitMessage(generateLogMessage(droppedMessageCount, appId, r.sinkIdentifier))
 	r.emitMessage(generateCounterEvent(droppedMessageCount, r.droppedMessageCount))
 }
 
@@ -95,8 +97,8 @@ func (r *TruncatingBuffer) emitMessage(event events.Event) {
 	}
 }
 
-func generateLogMessage(droppedMessageCount int, appId string) *events.LogMessage {
-	messageString := fmt.Sprintf("Log message output too high. We've dropped %d messages", droppedMessageCount)
+func generateLogMessage(droppedMessageCount int, appId, sinkIdentifier string) *events.LogMessage {
+	messageString := fmt.Sprintf("Log message output too high. We've dropped %d messages to %s.", droppedMessageCount, sinkIdentifier)
 
 	messageType := events.LogMessage_ERR
 	currentTime := time.Now()

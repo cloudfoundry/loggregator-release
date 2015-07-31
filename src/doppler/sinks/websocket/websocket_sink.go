@@ -52,7 +52,7 @@ func (sink *WebsocketSink) ShouldReceiveErrors() bool {
 func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
 	sink.logger.Debugf("Websocket Sink %s: Running for streamId [%s]", sink.clientAddress, sink.streamId)
 
-	buffer := sinks.RunTruncatingBuffer(inputChan, sink.messageDrainBufferSize, sink.logger, sink.dropsondeOrigin)
+	buffer := sinks.RunTruncatingBuffer(inputChan, sink.messageDrainBufferSize, sink.logger, sink.dropsondeOrigin, sink.Identifier())
 	for {
 		sink.logger.Debugf("Websocket Sink %s: Waiting for activity", sink.clientAddress)
 		messageEnvelope, ok := <-buffer.GetOutputChannel()
