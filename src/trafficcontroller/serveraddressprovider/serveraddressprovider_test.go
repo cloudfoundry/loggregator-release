@@ -4,31 +4,80 @@ import (
 	"time"
 	"trafficcontroller/serveraddressprovider"
 
+	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"sync"
 )
 
 var _ = Describe("ServerAddressProvider", func() {
-	It("adds the configured port to the list's addresses", func() {
-		list := fakeServerAddressList{addresses: []string{"1.2.3.4", "1.2.3.5"}}
+	Describe("Start", func() {
+		var fakeStoreAdapter *fakestoreadapter.FakeStoreAdapter
 
-		provider := serveraddressprovider.NewDynamicServerAddressProvider(list, uint32(7))
+		BeforeEach(func() {
+			fakeStoreAdapter = fakestoreadapter.New()
+		})
 
-		Expect(provider.ServerAddresses()).To(Equal([]string{"1.2.3.4:7", "1.2.3.5:7"}))
+		It("discovers loggregator addresses upfront, before starting the run loop", func() {
+			addressList := &fakeServerAddressList{
+				addressesToReturn: [][]string{
+					[]string{"1.2.3.4"},
+				},
+			}
+			provider := serveraddressprovider.NewDynamicServerAddressProvider(addressList, uint32(3456), 1*time.Millisecond)
+
+			provider.Start()
+
+			Expect(provider.ServerAddresses()).To(ConsistOf("1.2.3.4:3456"))
+		})
+
+		It("periodically gets loggregator addresses (with port) from the store", func() {
+			addressList := &fakeServerAddressList{
+				addressesToReturn: [][]string{
+					[]string{},
+					[]string{"1.2.3.4"},
+				},
+			}
+			provider := serveraddressprovider.NewDynamicServerAddressProvider(addressList, uint32(3456), 1*time.Millisecond)
+
+			provider.Start()
+
+			Eventually(provider.ServerAddresses).Should(ConsistOf("1.2.3.4:3456"))
+		})
 	})
 })
 
 type fakeServerAddressList struct {
-	addresses []string
+	addresses          []string
+	addressesToReturn  [][]string
+	numCalls           int
+	runCalled          bool
+	getAddressesCalled bool
+	sync.Mutex
 }
 
-func (fake fakeServerAddressList) Run(time.Duration) {}
-func (fake fakeServerAddressList) Stop()             {}
+func (fake *fakeServerAddressList) Run(t time.Duration) {
+	fake.Lock()
+	defer fake.Unlock()
 
-func (fake fakeServerAddressList) GetAddresses() []string {
+	for _, addresses := range fake.addressesToReturn {
+		fake.addresses = addresses
+		time.Sleep(t)
+	}
+}
+
+func (fake *fakeServerAddressList) Stop() {}
+
+func (fake *fakeServerAddressList) GetAddresses() []string {
+	fake.Lock()
+	defer fake.Unlock()
 	return fake.addresses
 }
 
-func (fake fakeServerAddressList) DiscoverAddresses() {
-
+func (fake *fakeServerAddressList) DiscoverAddresses() {
+	if fake.addressesToReturn == nil {
+		return
+	}
+	fake.addresses = fake.addressesToReturn[fake.numCalls]
+	fake.numCalls++
 }

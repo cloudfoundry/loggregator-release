@@ -39,7 +39,7 @@ var DefaultStoreAdapterProvider = func(urls []string, concurrentRequests int) st
 	return etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
 }
 
-var EtcdQueryInterval = 5 * time.Second
+const EtcdQueryInterval = 5 * time.Second
 
 var (
 	logFilePath          = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
@@ -134,14 +134,6 @@ func main() {
 	}
 }
 
-func MakeProvider(adapter storeadapter.StoreAdapter, storeKeyPrefix string, outgoingPort uint32, logger *gosteno.Logger) serveraddressprovider.ServerAddressProvider {
-	loggregatorServerAddressList := servicediscovery.NewServerAddressList(adapter, storeKeyPrefix, logger)
-	loggregatorServerAddressList.DiscoverAddresses()
-	go loggregatorServerAddressList.Run(EtcdQueryInterval)
-
-	return serveraddressprovider.NewDynamicServerAddressProvider(loggregatorServerAddressList, outgoingPort)
-}
-
 func startOutgoingProxy(host string, proxy http.Handler) {
 	go func() {
 		err := http.ListenAndServe(host, proxy)
@@ -165,7 +157,10 @@ func makeProxy(adapter storeadapter.StoreAdapter, config *config.Config, logger 
 	uaaClient := uaa_client.NewUaaClient(config.UaaHost, config.UaaClientId, config.UaaClientSecret, config.SkipCertVerify)
 	adminAuthorizer := authorization.NewAdminAccessAuthorizer(*disableAccessControl, &uaaClient)
 
-	provider := MakeProvider(adapter, "/healthstatus/doppler", config.DopplerPort, logger)
+	loggregatorServerAddressList := servicediscovery.NewServerAddressList(adapter, "/healthstatus/doppler", logger)
+	provider := serveraddressprovider.NewDynamicServerAddressProvider(loggregatorServerAddressList, config.DopplerPort, EtcdQueryInterval)
+	provider.Start()
+
 	cgc := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, messageGenerator, logger)
 
 	return dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, cgc, translator, cookieDomain, logger)

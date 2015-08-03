@@ -30,3 +30,5 @@ func (p *FakeServerAddressProvider) ServerAddresses() []string {
 func (p *FakeServerAddressProvider) DiscoverAddresses() {
 
 }
+
+func (p *FakeServerAddressProvider) Start() {}
