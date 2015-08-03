@@ -10,7 +10,7 @@ Doppler scales horizontally &mdash; as load increases, more instances can be dep
 
 Logging data passes through the system as [protocol-buffers](https://github.com/google/protobuf), using [Dropsonde](https://github.com/cloudfoundry/dropsonde).
 
-In a redundant Cloud Foundry setup, Loggregator can be configured to survive zone failures. Log messages from non-affected zones will still make it to the end user. On AWS, availability zones could be used as redundancy zones. The following is an example of a multi zone setup with two zones.
+In a redundant Cloud Foundry setup, Loggregator can be configured to survive zone failures. Log messages from non-affected zones will still make it to the end user. On AWS, availability zones could be used as redundancy zones.
 
 ## Usage
 ```
