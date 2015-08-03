@@ -6,6 +6,7 @@ files:
 - loggregator/src/trafficcontroller/*.go # gosub
 - loggregator/src/trafficcontroller/authorization/*.go # gosub
 - loggregator/src/trafficcontroller/channel_group_connector/*.go # gosub
+- loggregator/src/trafficcontroller/config/*.go # gosub
 - loggregator/src/trafficcontroller/doppler_endpoint/*.go # gosub
 - loggregator/src/trafficcontroller/dopplerproxy/*.go # gosub
 - loggregator/src/trafficcontroller/listener/*.go # gosub
