@@ -21,9 +21,10 @@
     "VarzUser": "",
     "VarzPass": "",
     "VarzPort": 12350,
-    "MetronPort": 3457,
+    "MetronPort": 37474,
     "UaaHost": "http://localhost:5678",
     "UaaClientId": "bob",
     "UaaClientSecret": "yourUncle",
-    "CollectorRegistrarIntervalMilliseconds": 60000
+    "CollectorRegistrarIntervalMilliseconds": 60000,
+    "MonitorIntervalSeconds": 1
 }

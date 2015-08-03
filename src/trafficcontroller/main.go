@@ -12,6 +12,7 @@ import (
 	"time"
 	"trafficcontroller/authorization"
 
+	"common/monitor"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/workpool"
@@ -50,18 +51,19 @@ type Config struct {
 	JobIndex int
 	Zone     string
 	cfcomponent.Config
-	ApiHost               string
-	Host                  string
-	IncomingPort          uint32
-	DopplerPort           uint32
-	OutgoingPort          uint32
-	OutgoingDropsondePort uint32
-	MetronPort            int
-	SystemDomain          string
-	SkipCertVerify        bool
-	UaaHost               string
-	UaaClientId           string
-	UaaClientSecret       string
+	ApiHost                string
+	Host                   string
+	IncomingPort           uint32
+	DopplerPort            uint32
+	OutgoingPort           uint32
+	OutgoingDropsondePort  uint32
+	MetronPort             int
+	SystemDomain           string
+	SkipCertVerify         bool
+	UaaHost                string
+	UaaClientId            string
+	UaaClientSecret        string
+	MonitorIntervalSeconds uint
 }
 
 func (c *Config) setDefaults() {
@@ -71,6 +73,10 @@ func (c *Config) setDefaults() {
 
 	if c.EtcdMaxConcurrentRequests < 1 {
 		c.EtcdMaxConcurrentRequests = 10
+	}
+
+	if c.MonitorIntervalSeconds == 0 {
+		c.MonitorIntervalSeconds = 60
 	}
 }
 
@@ -128,6 +134,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	uptimeMonitor := monitor.NewUptimeMonitor(time.Duration(config.MonitorIntervalSeconds) * time.Second)
+	go uptimeMonitor.Start()
+	defer uptimeMonitor.Stop()
 
 	dropsonde.Initialize("localhost:"+strconv.Itoa(config.MetronPort), "LoggregatorTrafficController")
 

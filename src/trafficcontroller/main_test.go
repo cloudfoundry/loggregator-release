@@ -83,6 +83,17 @@ var _ = Describe("Main", func() {
 				Expect(config.EtcdUrls).To(ConsistOf([]string{"http://127.0.0.1:4001", "http://127.0.0.1:4002"}))
 			})
 		})
+
+		Context("without MonitorIntervalSeconds", func() {
+			It("defaults MonitorIntervalSeconds to 60 seconds", func() {
+				configFile := "./test_assets/loggregator_trafficcontroller.json"
+
+				var config *main.Config
+
+				config, _, _ = main.ParseConfig(&logLevel, &configFile, &logFilePath)
+				Expect(config.MonitorIntervalSeconds).To(Equal(uint(60)))
+			})
+		})
 	})
 })
 

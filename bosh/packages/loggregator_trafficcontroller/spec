@@ -12,6 +12,7 @@ files:
 - loggregator/src/trafficcontroller/marshaller/*.go # gosub
 - loggregator/src/trafficcontroller/serveraddressprovider/*.go # gosub
 - loggregator/src/trafficcontroller/uaa_client/*.go # gosub
+- loggregator/src/common/monitor/*.go # gosub
 - loggregator/src/github.com/apcera/nats/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
