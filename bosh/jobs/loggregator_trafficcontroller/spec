@@ -3,11 +3,14 @@ name: loggregator_trafficcontroller
 templates:
   loggregator_trafficcontroller_ctl.erb: bin/loggregator_trafficcontroller_ctl
   loggregator_trafficcontroller.json.erb: config/loggregator_trafficcontroller.json
+  dns_health_check.erb: bin/dns_health_check
 
 packages:
 - common
 - loggregator_trafficcontroller
 properties:
+  networks.apps:
+    description: "Network information for the Traffic Controller"
   traffic_controller.zone:
     description: Zone of the loggregator_trafficcontroller
   traffic_controller.host:
