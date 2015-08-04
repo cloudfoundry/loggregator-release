@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"runtime/pprof"
 	"strconv"
 	"time"
 	"trafficcontroller/authorization"
@@ -26,6 +25,7 @@ import (
 	"trafficcontroller/dopplerproxy"
 	"trafficcontroller/listener"
 	"trafficcontroller/marshaller"
+	"trafficcontroller/profiler"
 	"trafficcontroller/serveraddressprovider"
 	"trafficcontroller/uaa_client"
 )
@@ -53,39 +53,14 @@ var (
 func main() {
 	flag.Parse()
 
-	if *cpuprofile != "" {
-		f, err := os.Create(*cpuprofile)
-		if err != nil {
-			panic(err)
-		}
-		pprof.StartCPUProfile(f)
-		defer func() {
-			pprof.StopCPUProfile()
-			f.Close()
-		}()
-	}
-
-	if *memprofile != "" {
-		f, err := os.Create(*memprofile)
-		if err != nil {
-			panic(err)
-		}
-		go func() {
-			defer f.Close()
-			ticker := time.NewTicker(time.Second * 1)
-			defer ticker.Stop()
-			for {
-				<-ticker.C
-				pprof.WriteHeapProfile(f)
-			}
-		}()
-
-	}
-
 	config, logger, err := config.ParseConfig(logLevel, configFile, logFilePath)
 	if err != nil {
 		panic(err)
 	}
+
+	profiler := profiler.NewProfiler(*cpuprofile, *memprofile, 1*time.Second, logger)
+	profiler.Profile()
+	defer profiler.Stop()
 
 	uptimeMonitor := monitor.NewUptimeMonitor(time.Duration(config.MonitorIntervalSeconds) * time.Second)
 	go uptimeMonitor.Start()

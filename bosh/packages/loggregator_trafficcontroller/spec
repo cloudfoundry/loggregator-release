@@ -11,6 +11,7 @@ files:
 - loggregator/src/trafficcontroller/dopplerproxy/*.go # gosub
 - loggregator/src/trafficcontroller/listener/*.go # gosub
 - loggregator/src/trafficcontroller/marshaller/*.go # gosub
+- loggregator/src/trafficcontroller/profiler/*.go # gosub
 - loggregator/src/trafficcontroller/serveraddressprovider/*.go # gosub
 - loggregator/src/trafficcontroller/uaa_client/*.go # gosub
 - loggregator/src/common/monitor/*.go # gosub
