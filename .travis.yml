@@ -41,7 +41,7 @@ before_install:
 
 install: echo "Build later"
 
-script: PATH=$HOME/gopath/bin:$PATH ./bin/test
+script: PATH=$HOME/gopath/bin:$PATH ./bin/test -skipMeasurements
 
 after_success:
 - 'echo "mode: set" > all.coverprofile'
