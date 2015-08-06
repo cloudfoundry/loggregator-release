@@ -9,51 +9,67 @@ import (
 	. "github.com/onsi/gomega"
 	"time"
 	latsHelpers "lats/helpers"
+	"fmt"
 )
 
 var _ = Describe("Streaming logs from an app", func() {
-	var appName string
+	var appName, appGuid string
 	var authToken string
+
+	var doneChan chan struct{}
+	var msgChan chan *events.LogMessage
+	var errorChan chan error
+
+	const expectedMessageCount = 5
 
 	BeforeEach(func() {
 		appName = latsHelpers.PushApp()
+		appGuid = latsHelpers.GetAppGuid(appName)
 		authToken = latsHelpers.FetchOAuthToken()
+
+		doneChan = make(chan struct{})
+		msgChan = make(chan *events.LogMessage, expectedMessageCount)
+		errorChan = make(chan error, 5)
+		consumerErrorsShouldNotOccur(errorChan, doneChan)
 	})
 
 	It("succeeds in sending all log lines", func() {
-		doneChan := make(chan struct{})
-		errorChan := make(chan error, 5)
-		go func() {
-			defer GinkgoRecover()
+		defer close(doneChan)
 
-			select {
-			case err := <-errorChan:
-				Fail(err.Error())
-			case <-doneChan:
-			}
-		}()
-
-		msgChan := make(chan *events.LogMessage)
-		printer := &latsHelpers.TestDebugPrinter{}
-		connection := noaa.NewConsumer(latsHelpers.GetDopplerEndpoint(), &tls.Config{InsecureSkipVerify: config.SkipSSLValidation}, nil)
-		connection.SetDebugPrinter(printer)
+		connection, printer := makeNoaaConsumer()
 		defer connection.Close()
 
-		appGuid := latsHelpers.GetAppGuid(appName)
 		go connection.TailingLogs(appGuid, authToken, msgChan, errorChan)
 
-		// Make sure the websocket connection is ready
-		Eventually(printer.Dump, 5 * time.Second).Should(ContainSubstring("HTTP/1.1 101 Switching Protocols"))
+		waitForWebsocketConnection(printer)
 
-		// Make app log some logs
-		helpers.CurlApp(appName, "/loglines/5/LogStreamTestMarker")
-
-		// Expect all logs to appear in Noaa consumer
-		waitForLogMessages(5, msgChan, appGuid)
-
-		close(doneChan)
+		helpers.CurlApp(appName, fmt.Sprintf("/loglines/%d/LogStreamTestMarker", expectedMessageCount))
+		waitForLogMessages(expectedMessageCount, msgChan, appGuid)
 	})
 })
+
+func makeNoaaConsumer() (*noaa.Consumer, *latsHelpers.TestDebugPrinter) {
+	printer := &latsHelpers.TestDebugPrinter{}
+	connection := noaa.NewConsumer(latsHelpers.GetDopplerEndpoint(), &tls.Config{InsecureSkipVerify: config.SkipSSLValidation}, nil)
+	connection.SetDebugPrinter(printer)
+	return connection, printer
+}
+
+func consumerErrorsShouldNotOccur(errorChan chan error, doneChan chan struct{}) {
+	go func() {
+		defer GinkgoRecover()
+
+		select {
+		case err := <-errorChan:
+			Fail(err.Error())
+		case <-doneChan:
+		}
+	}()
+}
+
+func waitForWebsocketConnection(printer *latsHelpers.TestDebugPrinter) {
+	Eventually(printer.Dump, 5 * time.Second).Should(ContainSubstring("HTTP/1.1 101 Switching Protocols"))
+}
 
 func waitForLogMessages(expectedMessageCount int, msgChan chan *events.LogMessage, appGuid string) {
 	var recvEnvelope *events.LogMessage
