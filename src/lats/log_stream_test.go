@@ -2,18 +2,13 @@ package lats_test
 
 import (
 	"crypto/tls"
-	"encoding/json"
-	"github.com/cloudfoundry-incubator/cf-test-helpers/cf"
-	"github.com/cloudfoundry-incubator/cf-test-helpers/generator"
 	"github.com/cloudfoundry-incubator/cf-test-helpers/helpers"
 	"github.com/cloudfoundry/noaa"
 	"github.com/cloudfoundry/sonde-go/events"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
-	"regexp"
-	"strings"
 	"time"
+	latsHelpers "lats/helpers"
 )
 
 var _ = Describe("Streaming logs from an app", func() {
@@ -21,8 +16,8 @@ var _ = Describe("Streaming logs from an app", func() {
 	var authToken string
 
 	BeforeEach(func() {
-		appName = pushApp()
-		authToken = fetchOAuthToken()
+		appName = latsHelpers.PushApp()
+		authToken = latsHelpers.FetchOAuthToken()
 	})
 
 	It("succeeds in sending all log lines", func() {
@@ -39,12 +34,12 @@ var _ = Describe("Streaming logs from an app", func() {
 		}()
 
 		msgChan := make(chan *events.LogMessage)
-		printer := &testDebugPrinter{}
-		connection := noaa.NewConsumer(getDopplerEndpoint(), &tls.Config{InsecureSkipVerify: config.SkipSSLValidation}, nil)
+		printer := &latsHelpers.TestDebugPrinter{}
+		connection := noaa.NewConsumer(latsHelpers.GetDopplerEndpoint(), &tls.Config{InsecureSkipVerify: config.SkipSSLValidation}, nil)
 		connection.SetDebugPrinter(printer)
 		defer connection.Close()
 
-		appGuid := getAppGuid(appName)
+		appGuid := latsHelpers.GetAppGuid(appName)
 		go connection.TailingLogs(appGuid, authToken, msgChan, errorChan)
 
 		// Make sure the websocket connection is ready
@@ -66,34 +61,6 @@ var _ = Describe("Streaming logs from an app", func() {
 	})
 })
 
-type testDebugPrinter struct {
-	dump string
-}
-
-func (printer *testDebugPrinter) Print(title, dump string) {
-	printer.dump = dump
-}
-
-func (printer * testDebugPrinter) Dump() string {
-	return printer.dump
-}
-
-type apiInfo struct {
-	DopplerLoggingEndpoint string `json:"doppler_logging_endpoint"`
-}
-
-func getDopplerEndpoint() string {
-	info := apiInfo{}
-	ccInfo := cf.Cf("curl", "/v2/info").Wait(5 * time.Second)
-	json.Unmarshal(ccInfo.Out.Contents(), &info)
-	return info.DopplerLoggingEndpoint
-}
-
-func getAppGuid(appName string) string {
-	appGuid := cf.Cf("app", appName, "--guid").Wait(5 * time.Second).Out.Contents()
-	return strings.TrimSpace(string(appGuid))
-}
-
 func waitForLogMessages(maxMessages int, msgChan chan *events.LogMessage) []*events.LogMessage {
 	messages := make([]*events.LogMessage, 0, maxMessages)
 	timeout := time.After(5 * time.Second)
@@ -109,19 +76,4 @@ func waitForLogMessages(maxMessages int, msgChan chan *events.LogMessage) []*eve
 			return messages
 		}
 	}
-}
-
-func pushApp() string {
-	appName := generator.PrefixedRandomName("LATS-App-")
-	appPush := cf.Cf("push", appName, "-p", "assets/dora").Wait(60 * time.Second)
-	Expect(appPush).To(gexec.Exit(0))
-
-	return appName
-}
-
-func fetchOAuthToken() string {
-	reg := regexp.MustCompile(`(bearer.*)`)
-	output := string(cf.Cf("oauth-token").Wait().Out.Contents())
-	authToken := reg.FindString(output)
-	return authToken
 }
