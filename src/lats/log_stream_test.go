@@ -49,31 +49,20 @@ var _ = Describe("Streaming logs from an app", func() {
 		helpers.CurlApp(appName, "/loglines/5/LogStreamTestMarker")
 
 		// Expect all logs to appear in Noaa consumer
-		messages := waitForLogMessages(5, msgChan)
-		Expect(messages).To(HaveLen(5))
-
-		for _, message := range messages {
-			Expect(message.GetAppId()).To(Equal(appGuid))
-			Expect(string(message.GetMessage())).To(ContainSubstring("LogStreamTestMarker"))
-		}
+		waitForLogMessages(5, msgChan, appGuid)
 
 		close(doneChan)
 	})
 })
 
-func waitForLogMessages(maxMessages int, msgChan chan *events.LogMessage) []*events.LogMessage {
-	messages := make([]*events.LogMessage, 0, maxMessages)
-	timeout := time.After(5 * time.Second)
+func waitForLogMessages(expectedMessageCount int, msgChan chan *events.LogMessage, appGuid string) {
+	var recvEnvelope *events.LogMessage
+	count := 0
 
-	for {
-		select {
-		case msg := <-msgChan:
-			messages = append(messages, msg)
-			if len(messages) == maxMessages {
-				return messages
-			}
-		case <-timeout:
-			return messages
-		}
+	for count < expectedMessageCount {
+		Eventually(msgChan).Should(Receive(&recvEnvelope))
+		Expect(recvEnvelope.GetAppId()).To(Equal(appGuid))
+		Expect(string(recvEnvelope.GetMessage())).To(ContainSubstring("LogStreamTestMarker"))
+		count++
 	}
 }
