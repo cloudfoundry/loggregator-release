@@ -1,0 +1,16 @@
+{
+  "LegacyIncomingMessagesPort": 3456,
+  "DropsondeIncomingMessagesPort": 3457,
+  "SharedSecret": "PLACEHOLDER-LOGGREGATOR-SECRET",
+  "EtcdUrls"    : ["http://10.244.0.42:4001"],
+  "LoggregatorDropsondePort": 3457,
+  "Index": 0,
+  "VarzPort": 1234,
+  "VarzUser": "admin",
+  "VarzPass": "admin",
+  "NatsUser": "",
+  "EtcdMaxConcurrentRequests": 1,
+  "EtcdQueryIntervalMilliseconds": 10,
+  "Zone": "z1",
+  "CollectorRegistrarIntervalMilliseconds": 60000
+}

@@ -1,0 +1,9 @@
+{
+	"DopplerEndpoint": "wss://doppler.10.244.0.34.xip.io:4443",
+	"SkipSslVerify": true,
+
+	"LoginRequired": true,
+	"UaaURL": "https://uaa.10.244.0.34.xip.io",
+	"AdminUser": "admin",
+	"AdminPassword": "admin"
+}
