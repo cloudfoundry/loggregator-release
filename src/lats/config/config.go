@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 )
 
-type Config struct{
+type TestConfig struct{
 	DopplerEndpoint string
 	SkipSSLVerify bool
 
 	DropsondePort int
+
+	EtcdUrls []string
+	SharedSecret string
 
 	LoginRequired bool
 	UaaURL string
@@ -16,13 +19,30 @@ type Config struct{
 	AdminPassword string
 }
 
-func Load() *Config {
+type MetronConfig struct {
+	LegacyIncomingMessagesPort int
+	DropsondeIncomingMessagesPort int
+	SharedSecret string
+	EtcdUrls    []string
+	LoggregatorDropsondePort int
+	Index int
+	VarzPort int
+	VarzUser string
+	VarzPass string
+	NatsUser string
+	EtcdMaxConcurrentRequests int
+	EtcdQueryIntervalMilliseconds int
+	Zone string
+	CollectorRegistrarIntervalMilliseconds int
+}
+
+func Load() *TestConfig {
 	configFile, err := os.Open(configPath())
 	if err != nil {
 		panic(err)
 	}
 
-	config := &Config{}
+	config := &TestConfig{}
 	decoder := json.NewDecoder(configFile)
 	err = decoder.Decode(config)
 	if err != nil {
@@ -34,6 +54,39 @@ func Load() *Config {
 	}
 
 	return config
+}
+
+
+func(tc *TestConfig) SaveMetronConfig() {
+	baseMetronConfigFile, err := os.Open("fixtures/bosh_lite_metron.json")
+	if err != nil {
+		panic(err)
+	}
+
+	var metronConfig MetronConfig
+	decoder := json.NewDecoder(baseMetronConfigFile)
+	err = decoder.Decode(&metronConfig)
+	if err != nil {
+		panic(err)
+	}
+
+	metronConfig.DropsondeIncomingMessagesPort = tc.DropsondePort
+	if len(tc.EtcdUrls) != 0 {
+		metronConfig.EtcdUrls = tc.EtcdUrls
+	}
+
+	if tc.SharedSecret != "" {
+		metronConfig.SharedSecret = tc.SharedSecret
+	}
+
+	metronConfigFile, err := os.Create("fixtures/metron.json")
+	bytes, err := json.Marshal(metronConfig)
+	if err != nil {
+		panic(err)
+	}
+
+	metronConfigFile.Write(bytes)
+	metronConfigFile.Close()
 }
 
 func configPath() string {
