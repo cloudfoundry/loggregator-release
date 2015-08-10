@@ -1,20 +1,21 @@
 package lats_test
 
 import (
+	"crypto/tls"
+	"encoding/json"
+	"fmt"
+	"github.com/cloudfoundry/noaa"
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/cloudfoundry/noaa"
-	"crypto/tls"
 	"lats/helpers"
-	"github.com/cloudfoundry/sonde-go/events"
-	"fmt"
-	"net/url"
-	"net/http"
-	"strings"
-	"encoding/json"
-	"github.com/gogo/protobuf/proto"
-	"time"
 	"net"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
 )
 
 const (
@@ -23,26 +24,43 @@ const (
 
 var (
 	counterEvent = &events.CounterEvent{
-		Name: proto.String("LATs-Counter"),
+		Name:  proto.String("LATs-Counter"),
 		Delta: proto.Uint64(5),
 		Total: proto.Uint64(5),
+	}
+	valueMetric = &events.ValueMetric{
+		Name:  proto.String("LATs-Value"),
+		Value: proto.Float64(10),
+		Unit:  proto.String("test-unit"),
 	}
 )
 
 var _ = Describe("Sending metrics through loggregator", func() {
-	Context("When a counter event is emitted to metron", func(){
-		It("Gets delivered to firehose", func(){
-			msgChan := make(chan *events.Envelope)
-			errorChan := make(chan error)
+	var (
+		msgChan   chan *events.Envelope
+		errorChan chan error
+		authToken string
+	)
+	BeforeEach(func() {
+		msgChan = make(chan *events.Envelope)
+		errorChan = make(chan error)
+		authToken = getAuthToken()
 
-			authToken := getAuthToken()
+		connection, printer := setUpConsumer()
+		randomString := strconv.FormatInt(time.Now().UnixNano(), 10)
+		subscriptionId := "firehose-" + randomString[len(randomString)-5:]
+		go connection.Firehose(subscriptionId, authToken, msgChan, errorChan)
 
-			connection, printer := setUpConsumer()
-			go connection.Firehose("firehose-a", authToken, msgChan, errorChan)
+		Consistently(errorChan).ShouldNot(Receive())
+		waitForWebsocketConnection(printer)
+	})
 
-			Consistently(errorChan).ShouldNot(Receive())
-			waitForWebsocketConnection(printer)
+	AfterEach(func() {
+		Expect(errorChan).To(BeEmpty())
+	})
 
+	Context("When a counter event is emitted to metron", func() {
+		It("Gets delivered to firehose", func() {
 			envelope := createCounterEvent()
 			emitToMetron(envelope)
 
@@ -60,9 +78,21 @@ var _ = Describe("Sending metrics through loggregator", func() {
 			receivedCounterEvent = receivedEnvelope.GetCounterEvent()
 			Expect(receivedCounterEvent.GetTotal()).To(Equal(uint64(10)))
 
-			Expect(errorChan).To(BeEmpty())
 		})
 
+	})
+
+	Context("When a value metric is emitted to metron", func() {
+		It("Gets through firehose", func() {
+			envelope := createValueMetric()
+			emitToMetron(envelope)
+
+			receivedEnvelope := findMatchingEnvelope(msgChan)
+			Expect(receivedEnvelope).NotTo(BeNil())
+
+			receivedValueMetric := receivedEnvelope.GetValueMetric()
+			Expect(receivedValueMetric).To(Equal(valueMetric))
+		})
 	})
 })
 
@@ -91,10 +121,19 @@ func waitForWebsocketConnection(printer *helpers.TestDebugPrinter) {
 
 func createCounterEvent() *events.Envelope {
 	return &events.Envelope{
-		Origin: proto.String(ORIGIN_NAME),
-		EventType: events.Envelope_CounterEvent.Enum(),
-		Timestamp: proto.Int64(time.Now().UnixNano()),
+		Origin:       proto.String(ORIGIN_NAME),
+		EventType:    events.Envelope_CounterEvent.Enum(),
+		Timestamp:    proto.Int64(time.Now().UnixNano()),
 		CounterEvent: counterEvent,
+	}
+}
+
+func createValueMetric() *events.Envelope {
+	return &events.Envelope{
+		Origin:      proto.String(ORIGIN_NAME),
+		EventType:   events.Envelope_ValueMetric.Enum(),
+		Timestamp:   proto.Int64(time.Now().UnixNano()),
+		ValueMetric: valueMetric,
 	}
 }
 
@@ -125,11 +164,11 @@ func findMatchingEnvelope(msgChan chan *events.Envelope) *events.Envelope {
 
 func adminLogin() (string, error) {
 	data := url.Values{
-		"username":  { config.AdminUser },
-		"password": { config.AdminPassword},
-		"client_id": {"cf"},
+		"username":   {config.AdminUser},
+		"password":   {config.AdminPassword},
+		"client_id":  {"cf"},
 		"grant_type": {"password"},
-		"scope": {},
+		"scope":      {},
 	}
 
 	request, err := http.NewRequest("POST", fmt.Sprintf("%s/oauth/token", config.UaaURL), strings.NewReader(data.Encode()))
