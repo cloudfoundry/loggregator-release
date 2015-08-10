@@ -17,6 +17,18 @@ import (
 	"net"
 )
 
+const (
+	ORIGIN_NAME = "LATs"
+)
+
+var (
+	counterEvent = &events.CounterEvent{
+		Name: proto.String("LATs-Counter"),
+		Delta: proto.Uint64(5),
+		Total: proto.Uint64(5),
+	}
+)
+
 var _ = Describe("Sending metrics through loggregator", func() {
 	Context("When a counter event is emitted to metron", func(){
 		It("Gets delivered to firehose", func(){
@@ -36,6 +48,19 @@ var _ = Describe("Sending metrics through loggregator", func() {
 
 			receivedEnvelope := findMatchingEnvelope(msgChan)
 			Expect(receivedEnvelope).NotTo(BeNil())
+
+			receivedCounterEvent := receivedEnvelope.GetCounterEvent()
+			Expect(receivedCounterEvent).To(Equal(counterEvent))
+
+			emitToMetron(envelope)
+
+			receivedEnvelope = findMatchingEnvelope(msgChan)
+			Expect(receivedEnvelope).NotTo(BeNil())
+
+			receivedCounterEvent = receivedEnvelope.GetCounterEvent()
+			Expect(receivedCounterEvent.GetTotal()).To(Equal(uint64(10)))
+
+			Expect(errorChan).To(BeEmpty())
 		})
 
 	})
@@ -66,14 +91,10 @@ func waitForWebsocketConnection(printer *helpers.TestDebugPrinter) {
 
 func createCounterEvent() *events.Envelope {
 	return &events.Envelope{
-		Origin: proto.String("LATs"),
+		Origin: proto.String(ORIGIN_NAME),
 		EventType: events.Envelope_CounterEvent.Enum(),
 		Timestamp: proto.Int64(time.Now().UnixNano()),
-		CounterEvent: &events.CounterEvent{
-			Name: proto.String("LATs-Counter"),
-			Delta: proto.Uint64(100),
-			Total: proto.Uint64(100),
-		},
+		CounterEvent: counterEvent,
 	}
 }
 
@@ -93,7 +114,7 @@ func findMatchingEnvelope(msgChan chan *events.Envelope) *events.Envelope {
 	for {
 		select {
 		case receivedEnvelope := <-msgChan:
-			if receivedEnvelope.GetOrigin() == "LATs" {
+			if receivedEnvelope.GetOrigin() == ORIGIN_NAME {
 				return receivedEnvelope
 			}
 		case <-timeout:
