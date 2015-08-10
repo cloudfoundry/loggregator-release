@@ -1,11 +1,12 @@
 {
-	"DopplerEndpoint": "wss://doppler.walnut.cf-app.com:4443",
+	"DopplerEndpoint": "wss://doppler.10.244.0.34.xip.io:4443",
 	"SkipSslVerify": true,
-  	"EtcdUrls": ["http://10.0.16.20:4001", "http://10.0.16.35:4001", "http://10.0.80.19:4001"],
-  	"SharedSecret": "AoOfCirFbzqv8nOt65d5vHZXAa2oK8",
+
+        "EtcdUrls": ["http://10.244.0.42:4001"],
+        "SharedSecret": "PLACEHOLDER-LOGGREGATOR-SECRET",
 
 	"LoginRequired": true,
-	"UaaURL": "https://uaa.walnut.cf-app.com",
+	"UaaURL": "https://uaa.10.244.0.34.xip.io",
 	"AdminUser": "admin",
-	"AdminPassword": "ltHR4teKAfjb"
+	"AdminPassword": "admin"
 }
