@@ -1,10 +1,8 @@
 {
 	"DopplerEndpoint": "wss://doppler.10.244.0.34.xip.io:4443",
 	"SkipSslVerify": true,
-
-        "EtcdUrls": ["http://10.244.0.42:4001"],
-        "SharedSecret": "PLACEHOLDER-LOGGREGATOR-SECRET",
-
+    "EtcdUrls": ["http://10.244.0.42:4001"],
+    "SharedSecret": "PLACEHOLDER-LOGGREGATOR-SECRET",
 	"LoginRequired": true,
 	"UaaURL": "https://uaa.10.244.0.34.xip.io",
 	"AdminUser": "admin",

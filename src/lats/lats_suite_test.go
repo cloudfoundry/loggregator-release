@@ -4,12 +4,13 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"testing"
-	latsConfig "lats/config"
 	"github.com/onsi/gomega/gexec"
-	"os/exec"
 	"github.com/pivotal-golang/localip"
+	latsConfig "lats/config"
+	"lats/helpers"
 	"net/http"
+	"os/exec"
+	"testing"
 )
 
 var config *latsConfig.TestConfig
@@ -22,6 +23,7 @@ func TestLats(t *testing.T) {
 
 	BeforeSuite(func() {
 		config.SaveMetronConfig()
+		helpers.Initialize(config)
 		metronSession = setupMetron()
 	})
 
