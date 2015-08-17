@@ -15,5 +15,6 @@ src/code.google.com/p/go.tools/
 *.coverprofile
 bin/
 *.test
+src/lats/fixtures/metron.json
 src/github.com/cloudfoundry/gorouter/
 src/github.com/rcrowley/
