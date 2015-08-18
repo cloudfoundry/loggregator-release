@@ -12,20 +12,20 @@ import (
 	"net"
 	"net/url"
 	"sync"
-	"time"
 )
 
 type tlsWriter struct {
 	appId string
 	host  string
 
-	mu   sync.Mutex // guards conn
-	conn net.Conn
+	mu     sync.Mutex // guards conn
+	conn   net.Conn
+	dialer *net.Dialer
 
 	tlsConfig *tls.Config
 }
 
-func NewTlsWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (w *tlsWriter, err error) {
+func NewTlsWriter(outputUrl *url.URL, appId string, skipCertVerify bool, dialer *net.Dialer) (w *tlsWriter, err error) {
 	if outputUrl.Scheme != "syslog-tls" {
 		return nil, errors.New(fmt.Sprintf("Invalid scheme %s, tlsWriter only supports syslog-tls", outputUrl.Scheme))
 	}
@@ -34,6 +34,7 @@ func NewTlsWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (w *tls
 		appId:     appId,
 		host:      outputUrl.Host,
 		tlsConfig: tlsConfig,
+		dialer:    dialer,
 	}, nil
 }
 
@@ -46,9 +47,7 @@ func (w *tlsWriter) Connect() error {
 		w.conn.Close()
 		w.conn = nil
 	}
-	dialer := new(net.Dialer)
-	dialer.Timeout = 500 * time.Millisecond
-	c, err := tls.DialWithDialer(dialer, "tcp", w.host, w.tlsConfig)
+	c, err := tls.DialWithDialer(w.dialer, "tcp", w.host, w.tlsConfig)
 	if err == nil {
 		w.conn = c
 	}

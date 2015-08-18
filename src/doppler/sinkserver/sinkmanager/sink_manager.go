@@ -28,18 +28,20 @@ type SinkManager struct {
 	metrics        *metrics.SinkManagerMetrics
 	recentLogCount uint32
 
-	doneChannel            chan struct{}
-	errorChannel           chan *events.Envelope
-	urlBlacklistManager    *blacklist.URLBlacklistManager
-	sinks                  *groupedsinks.GroupedSinks
-	skipCertVerify         bool
-	sinkTimeout, metricTTL time.Duration
-	logger                 *gosteno.Logger
+	doneChannel         chan struct{}
+	errorChannel        chan *events.Envelope
+	urlBlacklistManager *blacklist.URLBlacklistManager
+	sinks               *groupedsinks.GroupedSinks
+	skipCertVerify      bool
+	sinkTimeout         time.Duration
+	metricTTL           time.Duration
+	dialTimeout         time.Duration
+	logger              *gosteno.Logger
 
 	stopOnce sync.Once
 }
 
-func New(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger, messageDrainBufferSize uint, dropsondeOrigin string, sinkTimeout, metricTTL time.Duration) *SinkManager {
+func New(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger, messageDrainBufferSize uint, dropsondeOrigin string, sinkTimeout, metricTTL, dialTimeout time.Duration) *SinkManager {
 	return &SinkManager{
 		doneChannel:            make(chan struct{}),
 		errorChannel:           make(chan *events.Envelope, 100),
@@ -53,6 +55,7 @@ func New(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *b
 		dropsondeOrigin:        dropsondeOrigin,
 		sinkTimeout:            sinkTimeout,
 		metricTTL:              metricTTL,
+		dialTimeout:            dialTimeout,
 	}
 }
 
@@ -215,7 +218,7 @@ func (sinkManager *SinkManager) registerNewSyslogSink(appId string, syslogSinkUr
 		return
 	}
 
-	syslogWriter, err := syslogwriter.NewWriter(parsedSyslogDrainUrl, appId, sinkManager.skipCertVerify)
+	syslogWriter, err := syslogwriter.NewWriter(parsedSyslogDrainUrl, appId, sinkManager.skipCertVerify, sinkManager.dialTimeout)
 	if err != nil {
 		sinkManager.SendSyslogErrorToLoggregator(invalidSyslogUrlErrorMsg(appId, syslogSinkUrl, err), appId, syslogSinkUrl)
 		return

@@ -11,24 +11,25 @@ import (
 	"net"
 	"net/url"
 	"sync"
-	"time"
 )
 
 type syslogWriter struct {
-	appId string
-	host  string
+	appId  string
+	host   string
+	dialer *net.Dialer
 
 	mu   sync.Mutex // guards conn
 	conn net.Conn
 }
 
-func NewSyslogWriter(outputUrl *url.URL, appId string) (w *syslogWriter, err error) {
+func NewSyslogWriter(outputUrl *url.URL, appId string, dialer *net.Dialer) (w *syslogWriter, err error) {
 	if outputUrl.Scheme != "syslog" {
 		return nil, errors.New(fmt.Sprintf("Invalid scheme %s, syslogWriter only supports syslog", outputUrl.Scheme))
 	}
 	return &syslogWriter{
-		appId: appId,
-		host:  outputUrl.Host,
+		appId:  appId,
+		host:   outputUrl.Host,
+		dialer: dialer,
 	}, nil
 }
 
@@ -42,7 +43,7 @@ func (w *syslogWriter) Connect() error {
 		w.conn = nil
 	}
 
-	c, err := net.DialTimeout("tcp", w.host, 500*time.Millisecond)
+	c, err := w.dialer.Dial("tcp", w.host)
 	if err != nil {
 		return err
 	}

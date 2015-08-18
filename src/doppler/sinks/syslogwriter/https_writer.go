@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -26,12 +27,18 @@ type httpsWriter struct {
 	lastError error
 }
 
-func NewHttpsWriter(outputUrl *url.URL, appId string, skipCertVerify bool) (w *httpsWriter, err error) {
+func NewHttpsWriter(outputUrl *url.URL, appId string, skipCertVerify bool, dialer *net.Dialer) (w *httpsWriter, err error) {
 	if outputUrl.Scheme != "https" {
 		return nil, errors.New(fmt.Sprintf("Invalid scheme %s, httpsWriter only supports https", outputUrl.Scheme))
 	}
 	tlsConfig := &tls.Config{InsecureSkipVerify: skipCertVerify}
-	tr := &http.Transport{TLSClientConfig: tlsConfig}
+	tr := &http.Transport{
+		TLSClientConfig:     tlsConfig,
+		TLSHandshakeTimeout: dialer.Timeout * 2,
+		Dial: func(network, addr string) (net.Conn, error) {
+			return dialer.Dial(network, addr)
+		},
+	}
 	client := &http.Client{Transport: tr}
 	return &httpsWriter{
 		appId:     appId,

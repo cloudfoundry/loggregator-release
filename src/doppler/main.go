@@ -107,7 +107,7 @@ func main() {
 	}
 
 	storeAdapter := NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
-	doppler := New(localIp, conf, logger, storeAdapter, conf.MessageDrainBufferSize, "doppler")
+	doppler := New(localIp, conf, logger, storeAdapter, conf.MessageDrainBufferSize, "doppler", time.Duration(conf.SinkDialTimeoutSeconds)*time.Second)
 
 	if err != nil {
 		panic(err)
@@ -143,6 +143,10 @@ func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*config.Confi
 
 	if config.MonitorIntervalSeconds == 0 {
 		config.MonitorIntervalSeconds = 60
+	}
+
+	if config.SinkDialTimeoutSeconds == 0 {
+		config.SinkDialTimeoutSeconds = 1
 	}
 
 	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "doppler", config.Config)
