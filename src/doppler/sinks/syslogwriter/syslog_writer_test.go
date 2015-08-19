@@ -13,11 +13,12 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
+const standardOutPriority = 14
+
 var _ = Describe("SyslogWriter", func() {
 
 	var sysLogWriter syslogwriter.Writer
 	var dialer *net.Dialer
-	standardOutPriority := 14
 
 	var syslogServerSession *gexec.Session
 	BeforeEach(func(done Done) {
