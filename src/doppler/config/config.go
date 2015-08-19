@@ -28,6 +28,7 @@ type Config struct {
 	Zone                          string
 	ContainerMetricTTLSeconds     int
 	SinkInactivityTimeoutSeconds  int
+	SinkIOTimeoutSeconds          int
 	UnmarshallerCount             int
 	MetronAddress                 string
 	MonitorIntervalSeconds        uint

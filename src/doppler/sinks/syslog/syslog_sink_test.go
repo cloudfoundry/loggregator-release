@@ -282,7 +282,7 @@ var _ = Describe("SyslogSink", func() {
 			}))
 			url, _ := url.Parse(server.URL)
 
-			httpsWriter, err := syslogwriter.NewHttpsWriter(url, appId, true, dialer)
+			httpsWriter, err := syslogwriter.NewHttpsWriter(url, appId, true, dialer, 0)
 			Expect(err).ToNot(HaveOccurred())
 
 			errorHandler := func(string, string, string) {}
