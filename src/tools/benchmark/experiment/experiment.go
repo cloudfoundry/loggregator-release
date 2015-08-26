@@ -9,7 +9,8 @@ type MessageReader interface {
 }
 
 type WriteStrategy interface {
-	StartWriter(stopChan chan struct{})
+	StartWriter()
+	Stop()
 }
 
 type Experiment struct {
@@ -44,7 +45,7 @@ func (e *Experiment) Start() {
 		wg.Add(1)
 		go func(s WriteStrategy) {
 			defer wg.Done()
-			s.StartWriter(e.stopChan)
+			s.StartWriter()
 		}(strategy)
 	}
 
@@ -53,6 +54,9 @@ func (e *Experiment) Start() {
 
 func (e *Experiment) Stop() {
 	close(e.stopChan)
+	for _, strategy := range e.writeStrategies {
+		strategy.Stop()
+	}
 }
 
 func (e *Experiment) startReader() {

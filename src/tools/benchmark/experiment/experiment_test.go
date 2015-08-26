@@ -49,8 +49,12 @@ type fakeWriteStrategy struct {
 	started int32
 }
 
-func (s *fakeWriteStrategy) StartWriter(chan struct{}) {
+func (s *fakeWriteStrategy) StartWriter() {
 	atomic.StoreInt32(&s.started, 1)
+}
+
+func (s *fakeWriteStrategy) Stop() {
+
 }
 
 func (s *fakeWriteStrategy) Started() bool {

@@ -15,18 +15,16 @@ var _ = Describe("WriteStrategies", func() {
 		Describe("StartWriter", func() {
 			var (
 				writer        mockWriter
-				stopChan      chan struct{}
 				writeStrategy *writestrategies.ConstantWriteStrategy
 			)
 
 			BeforeEach(func() {
 				writer = mockWriter{}
-				stopChan = make(chan struct{})
 				writeStrategy = writestrategies.NewConstantWriteStrategy(&mockGenerator{}, &writer, 1000)
 			})
 
 			It("writes messages at a constant rate", func() {
-				go writeStrategy.StartWriter(stopChan)
+				go writeStrategy.StartWriter()
 
 				time.Sleep(time.Millisecond * 50)
 				writes := atomic.LoadUint32(&writer.count)
@@ -38,18 +36,18 @@ var _ = Describe("WriteStrategies", func() {
 				Expect(writes).To(BeNumerically(">", 90))
 				Expect(writes).To(BeNumerically("<", 110))
 
-				close(stopChan)
+				writeStrategy.Stop()
 			})
 
 			It("stops writing messages when the stopChan is closed", func() {
-				go writeStrategy.StartWriter(stopChan)
+				go writeStrategy.StartWriter()
 
 				time.Sleep(time.Millisecond * 50)
 				writes := atomic.LoadUint32(&writer.count)
 				Expect(writes).To(BeNumerically(">", 40))
 				Expect(writes).To(BeNumerically("<", 60))
 
-				close(stopChan)
+				writeStrategy.Stop()
 
 				time.Sleep(time.Millisecond * 50)
 				writes = atomic.LoadUint32(&writer.count)
@@ -63,14 +61,12 @@ var _ = Describe("WriteStrategies", func() {
 		Describe("StartWriter", func() {
 			var (
 				writer        mockWriter
-				stopChan      chan struct{}
 				writeStrategy *writestrategies.BurstWriteStrategy
 				params        writestrategies.BurstParameters
 			)
 
 			BeforeEach(func() {
 				writer = mockWriter{}
-				stopChan = make(chan struct{})
 				params = writestrategies.BurstParameters{
 					Minimum:   10,
 					Maximum:   100,
@@ -80,8 +76,8 @@ var _ = Describe("WriteStrategies", func() {
 			})
 
 			It("writes messages in bursts", func() {
-				go writeStrategy.StartWriter(stopChan)
-				defer close(stopChan)
+				go writeStrategy.StartWriter()
+				defer writeStrategy.Stop()
 
 				writes := func() uint32 {
 					return atomic.LoadUint32(&writer.count)
@@ -91,7 +87,7 @@ var _ = Describe("WriteStrategies", func() {
 			})
 
 			It("stops writing after the stoChan is closed", func() {
-				go writeStrategy.StartWriter(stopChan)
+				go writeStrategy.StartWriter()
 
 				writes := func() uint32 {
 					return atomic.LoadUint32(&writer.count)
@@ -99,7 +95,7 @@ var _ = Describe("WriteStrategies", func() {
 				Eventually(writes).Should(BeNumerically(">=", params.Minimum))
 				Eventually(writes).Should(BeNumerically("<=", params.Maximum))
 
-				close(stopChan)
+				writeStrategy.Stop()
 
 				numWrites := writes()
 				Consistently(writes).Should(Equal(numWrites))
