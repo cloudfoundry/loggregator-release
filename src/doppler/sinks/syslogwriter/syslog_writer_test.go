@@ -16,13 +16,17 @@ import (
 var _ = Describe("SyslogWriter", func() {
 
 	var sysLogWriter syslogwriter.Writer
+	var dialer *net.Dialer
 	standardOutPriority := 14
 
 	var syslogServerSession *gexec.Session
 	BeforeEach(func(done Done) {
+		dialer = &net.Dialer{
+			Timeout: 500 * time.Millisecond,
+		}
 		outputURL, _ := url.Parse("syslog://127.0.0.1:9999")
 		syslogServerSession = startSyslogServer("127.0.0.1:9999")
-		sysLogWriter, _ = syslogwriter.NewSyslogWriter(outputURL, "appId")
+		sysLogWriter, _ = syslogwriter.NewSyslogWriter(outputURL, "appId", dialer)
 
 		Eventually(func() error {
 			err := sysLogWriter.Connect()
@@ -73,13 +77,13 @@ var _ = Describe("SyslogWriter", func() {
 
 	It("returns an error for syslog-tls scheme", func() {
 		outputURL, _ := url.Parse("syslog-tls://localhost")
-		_, err := syslogwriter.NewSyslogWriter(outputURL, "appId")
+		_, err := syslogwriter.NewSyslogWriter(outputURL, "appId", dialer)
 		Expect(err).To(HaveOccurred())
 	})
 
 	It("returns an error for https scheme", func() {
 		outputURL, _ := url.Parse("https://localhost")
-		_, err := syslogwriter.NewSyslogWriter(outputURL, "appId")
+		_, err := syslogwriter.NewSyslogWriter(outputURL, "appId", dialer)
 		Expect(err).To(HaveOccurred())
 	})
 
@@ -130,7 +134,7 @@ var _ = Describe("SyslogWriter", func() {
 			url, err := url.Parse("syslog://" + listener.Addr().String())
 			Expect(err).NotTo(HaveOccurred())
 
-			sysLogWriter, err = syslogwriter.NewSyslogWriter(url, "appId")
+			sysLogWriter, err = syslogwriter.NewSyslogWriter(url, "appId", dialer)
 			Expect(err).NotTo(HaveOccurred())
 
 			acceptedConns = make(chan net.Conn, 1)

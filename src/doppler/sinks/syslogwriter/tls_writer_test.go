@@ -2,6 +2,7 @@ package syslogwriter_test
 
 import (
 	"doppler/sinks/syslogwriter"
+	"net"
 	"net/url"
 	"os/exec"
 	"time"
@@ -13,16 +14,20 @@ import (
 )
 
 var _ = Describe("TLSWriter", func() {
+	const standardOutPriority = 14
 	var syslogServerSession *gexec.Session
 	var syslogWriter syslogwriter.Writer
-	var standardOutPriority int = 14
+	var dialer *net.Dialer
 
 	Context("writes and connects to syslog tls drains", func() {
 		BeforeEach(func(done Done) {
+			dialer = &net.Dialer{
+				Timeout: 500 * time.Millisecond,
+			}
 			var err error
 			syslogServerSession = startEncryptedTCPServer("127.0.0.1:9998")
 			outputURL, _ := url.Parse("syslog-tls://127.0.0.1:9998")
-			syslogWriter, err = syslogwriter.NewTlsWriter(outputURL, "appId", true)
+			syslogWriter, err = syslogwriter.NewTlsWriter(outputURL, "appId", true, dialer)
 			Expect(err).ToNot(HaveOccurred())
 			close(done)
 		}, 5)
@@ -70,7 +75,7 @@ var _ = Describe("TLSWriter", func() {
 		syslogServerSession = startEncryptedTCPServer("127.0.0.1:9998")
 		outputURL, _ := url.Parse("syslog-tls://localhost:9998")
 
-		syslogWriter, _ = syslogwriter.NewTlsWriter(outputURL, "appId", false)
+		syslogWriter, _ = syslogwriter.NewTlsWriter(outputURL, "appId", false, dialer)
 		err := syslogWriter.Connect()
 		Expect(err).To(HaveOccurred())
 
@@ -81,13 +86,13 @@ var _ = Describe("TLSWriter", func() {
 
 	It("returns an error for syslog scheme", func() {
 		outputURL, _ := url.Parse("syslog://localhost")
-		_, err := syslogwriter.NewTlsWriter(outputURL, "appId", false)
+		_, err := syslogwriter.NewTlsWriter(outputURL, "appId", false, dialer)
 		Expect(err).To(HaveOccurred())
 	})
 
 	It("returns an error for https scheme", func() {
 		outputURL, _ := url.Parse("https://localhost")
-		_, err := syslogwriter.NewTlsWriter(outputURL, "appId", false)
+		_, err := syslogwriter.NewTlsWriter(outputURL, "appId", false, dialer)
 		Expect(err).To(HaveOccurred())
 	})
 })

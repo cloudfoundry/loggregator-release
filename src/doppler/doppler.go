@@ -12,6 +12,7 @@ import (
 	"doppler/sinkserver/websocketserver"
 
 	"common/monitor"
+
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
 	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/gosteno"
@@ -49,7 +50,7 @@ type Doppler struct {
 	wg                                       sync.WaitGroup
 }
 
-func New(host string, config *config.Config, logger *gosteno.Logger, storeAdapter storeadapter.StoreAdapter, messageDrainBufferSize uint, dropsondeOrigin string) *Doppler {
+func New(host string, config *config.Config, logger *gosteno.Logger, storeAdapter storeadapter.StoreAdapter, messageDrainBufferSize uint, dropsondeOrigin string, dialTimeout time.Duration) *Doppler {
 	cfcomponent.Logger = logger
 	keepAliveInterval := 30 * time.Second
 
@@ -65,7 +66,7 @@ func New(host string, config *config.Config, logger *gosteno.Logger, storeAdapte
 	blacklist := blacklist.New(config.BlackListIps)
 	metricTTL := time.Duration(config.ContainerMetricTTLSeconds) * time.Second
 	sinkTimeout := time.Duration(config.SinkInactivityTimeoutSeconds) * time.Second
-	sinkManager := sinkmanager.New(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger, messageDrainBufferSize, dropsondeOrigin, sinkTimeout, metricTTL)
+	sinkManager := sinkmanager.New(config.MaxRetainedLogMessages, config.SkipCertVerify, blacklist, logger, messageDrainBufferSize, dropsondeOrigin, sinkTimeout, metricTTL, dialTimeout)
 
 	return &Doppler{
 		Logger:                          logger,

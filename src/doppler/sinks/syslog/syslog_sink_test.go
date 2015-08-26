@@ -13,13 +13,15 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 
 	"doppler/sinks/syslogwriter"
-	"github.com/gogo/protobuf/proto"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"sync/atomic"
+
+	"github.com/gogo/protobuf/proto"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("SyslogSink", func() {
@@ -31,6 +33,7 @@ var _ = Describe("SyslogSink", func() {
 		errorHandler          func(string, string, string)
 		inputChan             chan *events.Envelope
 		bufferSize            uint
+		dialer                *net.Dialer
 	)
 
 	BeforeEach(func() {
@@ -38,6 +41,7 @@ var _ = Describe("SyslogSink", func() {
 		sysLogger = NewSyslogWriterRecorder()
 		errorChannel = make(chan *events.Envelope, 10)
 		inputChan = make(chan *events.Envelope)
+		dialer = &net.Dialer{}
 
 		errorHandler = func(errorMsg string, appId string, drainUrl string) {
 			logMessage := factories.NewLogMessage(events.LogMessage_ERR, errorMsg, appId, "LGR")
@@ -278,7 +282,7 @@ var _ = Describe("SyslogSink", func() {
 			}))
 			url, _ := url.Parse(server.URL)
 
-			httpsWriter, err := syslogwriter.NewHttpsWriter(url, appId, true)
+			httpsWriter, err := syslogwriter.NewHttpsWriter(url, appId, true, dialer)
 			Expect(err).ToNot(HaveOccurred())
 
 			errorHandler := func(string, string, string) {}
