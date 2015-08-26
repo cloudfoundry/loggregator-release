@@ -26,6 +26,10 @@ type tlsWriter struct {
 }
 
 func NewTlsWriter(outputUrl *url.URL, appId string, skipCertVerify bool, dialer *net.Dialer) (w *tlsWriter, err error) {
+	if dialer == nil {
+		return nil, errors.New("cannot construct a writer with a nil dialer")
+	}
+
 	if outputUrl.Scheme != "syslog-tls" {
 		return nil, errors.New(fmt.Sprintf("Invalid scheme %s, tlsWriter only supports syslog-tls", outputUrl.Scheme))
 	}

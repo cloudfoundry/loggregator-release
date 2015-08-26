@@ -23,6 +23,10 @@ type syslogWriter struct {
 }
 
 func NewSyslogWriter(outputUrl *url.URL, appId string, dialer *net.Dialer) (w *syslogWriter, err error) {
+	if dialer == nil {
+		return nil, errors.New("cannot construct a writer with a nil dialer")
+	}
+
 	if outputUrl.Scheme != "syslog" {
 		return nil, errors.New(fmt.Sprintf("Invalid scheme %s, syslogWriter only supports syslog", outputUrl.Scheme))
 	}

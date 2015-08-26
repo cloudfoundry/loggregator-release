@@ -14,20 +14,50 @@ import (
 )
 
 var _ = Describe("TLSWriter", func() {
-	const standardOutPriority = 14
-	var syslogServerSession *gexec.Session
-	var syslogWriter syslogwriter.Writer
 	var dialer *net.Dialer
 
-	Context("writes and connects to syslog tls drains", func() {
-		BeforeEach(func(done Done) {
-			dialer = &net.Dialer{
-				Timeout: 500 * time.Millisecond,
-			}
+	BeforeEach(func() {
+		dialer = &net.Dialer{
+			Timeout: 500 * time.Millisecond,
+		}
+	})
+
+	Describe("New", func() {
+		It("returns an error for syslog scheme", func() {
+			outputURL, _ := url.Parse("syslog://localhost")
+			_, err := syslogwriter.NewTlsWriter(outputURL, "appId", false, dialer)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("returns an error for https scheme", func() {
+			outputURL, _ := url.Parse("https://localhost")
+			_, err := syslogwriter.NewTlsWriter(outputURL, "appId", false, dialer)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("returns an error if the provided dialer is nil", func() {
+			outputURL, _ := url.Parse("syslog-tls://localhost")
+			_, err := syslogwriter.NewTlsWriter(outputURL, "appId", false, nil)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("cannot construct a writer with a nil dialer"))
+		})
+	})
+
+	Describe("Write", func() {
+		const standardOutPriority = 14
+		var syslogServerSession *gexec.Session
+		var syslogWriter syslogwriter.Writer
+		var skipCertVerify bool
+
+		BeforeEach(func() {
+			skipCertVerify = true
+		})
+
+		JustBeforeEach(func(done Done) {
 			var err error
 			syslogServerSession = startEncryptedTCPServer("127.0.0.1:9998")
 			outputURL, _ := url.Parse("syslog-tls://127.0.0.1:9998")
-			syslogWriter, err = syslogwriter.NewTlsWriter(outputURL, "appId", true, dialer)
+			syslogWriter, err = syslogwriter.NewTlsWriter(outputURL, "appId", skipCertVerify, dialer)
 			Expect(err).ToNot(HaveOccurred())
 			close(done)
 		}, 5)
@@ -69,31 +99,20 @@ var _ = Describe("TLSWriter", func() {
 				close(done)
 			}, 5)
 		})
-	})
 
-	It("rejects self-signed certs when skipCertVerify is false", func(done Done) {
-		syslogServerSession = startEncryptedTCPServer("127.0.0.1:9998")
-		outputURL, _ := url.Parse("syslog-tls://localhost:9998")
+		Context("when skipCertVerify is false", func() {
+			BeforeEach(func() {
+				skipCertVerify = false
+			})
 
-		syslogWriter, _ = syslogwriter.NewTlsWriter(outputURL, "appId", false, dialer)
-		err := syslogWriter.Connect()
-		Expect(err).To(HaveOccurred())
+			It("rejects self-signed certs", func(done Done) {
+				err := syslogWriter.Connect()
+				Expect(err).To(HaveOccurred())
 
-		syslogServerSession.Kill().Wait()
-		syslogWriter.Close()
-		close(done)
-	}, 5)
+				close(done)
+			}, 5)
+		})
 
-	It("returns an error for syslog scheme", func() {
-		outputURL, _ := url.Parse("syslog://localhost")
-		_, err := syslogwriter.NewTlsWriter(outputURL, "appId", false, dialer)
-		Expect(err).To(HaveOccurred())
-	})
-
-	It("returns an error for https scheme", func() {
-		outputURL, _ := url.Parse("https://localhost")
-		_, err := syslogwriter.NewTlsWriter(outputURL, "appId", false, dialer)
-		Expect(err).To(HaveOccurred())
 	})
 })
 

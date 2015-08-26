@@ -28,6 +28,10 @@ type httpsWriter struct {
 }
 
 func NewHttpsWriter(outputUrl *url.URL, appId string, skipCertVerify bool, dialer *net.Dialer) (w *httpsWriter, err error) {
+	if dialer == nil {
+		return nil, errors.New("cannot construct a writer with a nil dialer")
+	}
+
 	if outputUrl.Scheme != "https" {
 		return nil, errors.New(fmt.Sprintf("Invalid scheme %s, httpsWriter only supports https", outputUrl.Scheme))
 	}

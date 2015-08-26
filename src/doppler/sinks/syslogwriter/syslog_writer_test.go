@@ -75,6 +75,13 @@ var _ = Describe("SyslogWriter", func() {
 		})
 	})
 
+	It("returns an error when the provided dialer is nil", func() {
+		outputURL, _ := url.Parse("syslog://localhost")
+		_, err := syslogwriter.NewSyslogWriter(outputURL, "appId", nil)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("cannot construct a writer with a nil dialer"))
+	})
+
 	It("returns an error for syslog-tls scheme", func() {
 		outputURL, _ := url.Parse("syslog-tls://localhost")
 		_, err := syslogwriter.NewSyslogWriter(outputURL, "appId", dialer)
@@ -173,6 +180,7 @@ var _ = Describe("SyslogWriter", func() {
 			Expect(written).NotTo(Equal(0))
 		})
 	})
+
 })
 
 func startSyslogServer(syslogDrainAddress string) *gexec.Session {

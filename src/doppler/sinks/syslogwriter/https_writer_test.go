@@ -140,6 +140,13 @@ var _ = Describe("HttpsWriter", func() {
 			_, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", false, dialer)
 			Expect(err).To(HaveOccurred())
 		})
+
+		It("returns an error when the provided dialer is nil", func() {
+			outputURL, _ := url.Parse("https://localhost")
+			_, err := syslogwriter.NewHttpsWriter(outputURL, "appId", false, nil)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("cannot construct a writer with a nil dialer"))
+		})
 	})
 })
 
