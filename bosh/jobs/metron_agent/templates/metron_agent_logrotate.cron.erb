@@ -1,0 +1,1 @@
+*/<%= p("metron_agent.logrotate.freq_min") %> * * * * test -x /usr/sbin/logrotate && /usr/sbin/logrotate /var/vcap/jobs/metron_agent/config/logrotate.conf >>/var/vcap/sys/log/metron_agent/metron_agent_logrotate_cron.log 2>&1

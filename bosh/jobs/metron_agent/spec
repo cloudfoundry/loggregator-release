@@ -4,7 +4,8 @@ templates:
   metron_agent_ctl.erb: bin/metron_agent_ctl
   metron_agent.json.erb: config/metron_agent.json
   syslog_forwarder.conf.erb: config/syslog_forwarder.conf
-
+  metron_agent_logrotate.cron.erb: config/metron_agent_logrotate.cron
+  logrotate.conf.erb: config/logrotate.conf
 
 packages:
 - common
@@ -50,6 +51,16 @@ properties:
   metron_agent.collector_registrar_interval_milliseconds:
     description: "Interval for registering with collector"
     default: 60000
+
+  metron_agent.logrotate.freq_min:
+    description: "The frequency in minutes which logrotate will rotate VM logs"
+    default: 5
+  metron_agent.logrotate.rotate:
+    description: "The number of files that logrotate will keep around on the VM"
+    default: 7
+  metron_agent.logrotate.size:
+    description: "The size at which logrotate will decide to rotate the log file"
+    default: 50M
 
   loggregator.dropsonde_incoming_port:
     description: "Port where loggregator listens for dropsonde log messages"

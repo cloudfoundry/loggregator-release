@@ -1,0 +1,8 @@
+/var/vcap/sys/log/metron_agent/*.log {
+  missingok
+  rotate <%= p("metron_agent.logrotate.rotate") %>
+  compress
+  delaycompress
+  copytruncate
+  size=<%= p("metron_agent.logrotate.size") %>
+}
