@@ -61,24 +61,6 @@ var _ = Describe("Firehose test", func() {
 			receivedMessage := UnmarshalMessage(receivedMessageBytes)
 			Expect(*receivedMessage.ContainerMetric).To(BeAssignableToTypeOf(events.ContainerMetric{}))
 		})
-
-		It("doesn't loose metrics under load", func() {
-			runtime.GOMAXPROCS(runtime.NumCPU())
-			containerMetric := factories.NewContainerMetric(appID, 0, 10, 2, 3)
-			count := 1000
-
-			for i:=0; i<count; i++ {
-				go SendEvent(containerMetric, inputConnection)
-			}
-
-			receivedMessageBytes := []byte{}
-			for i:=0; i < count; i++ {
-				Eventually(receiveChan).Should(Receive(&receivedMessageBytes), fmt.Sprintf("failed to receive message number %d\n", i))
-			}
-
-			receivedMessage := UnmarshalMessage(receivedMessageBytes)
-			Expect(*receivedMessage.ContainerMetric).To(BeAssignableToTypeOf(events.ContainerMetric{}))
-		})
 	})
 
 	It("two separate firehose subscriptions receive the same message", func() {
