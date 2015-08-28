@@ -11,8 +11,6 @@ import (
 	. "integration_tests/doppler/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"runtime"
-	"fmt"
 )
 
 var _ = Describe("Firehose test", func() {
