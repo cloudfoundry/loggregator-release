@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 )
 
 type httpsWriter struct {
@@ -27,7 +28,7 @@ type httpsWriter struct {
 	lastError error
 }
 
-func NewHttpsWriter(outputUrl *url.URL, appId string, skipCertVerify bool, dialer *net.Dialer) (w *httpsWriter, err error) {
+func NewHttpsWriter(outputUrl *url.URL, appId string, skipCertVerify bool, dialer *net.Dialer, timeout time.Duration) (w *httpsWriter, err error) {
 	if dialer == nil {
 		return nil, errors.New("cannot construct a writer with a nil dialer")
 	}
@@ -43,7 +44,7 @@ func NewHttpsWriter(outputUrl *url.URL, appId string, skipCertVerify bool, diale
 			return dialer.Dial(network, addr)
 		},
 	}
-	client := &http.Client{Transport: tr}
+	client := &http.Client{Transport: tr, Timeout: timeout}
 	return &httpsWriter{
 		appId:     appId,
 		outputUrl: outputUrl,

@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/url"
 	"sync"
+	"time"
 )
 
 type syslogWriter struct {
@@ -18,11 +19,12 @@ type syslogWriter struct {
 	host   string
 	dialer *net.Dialer
 
-	mu   sync.Mutex // guards conn
-	conn net.Conn
+	mu           sync.Mutex // guards conn
+	conn         *net.TCPConn
+	writeTimeout time.Duration
 }
 
-func NewSyslogWriter(outputUrl *url.URL, appId string, dialer *net.Dialer) (w *syslogWriter, err error) {
+func NewSyslogWriter(outputUrl *url.URL, appId string, dialer *net.Dialer, writeTimeout time.Duration) (w *syslogWriter, err error) {
 	if dialer == nil {
 		return nil, errors.New("cannot construct a writer with a nil dialer")
 	}
@@ -31,9 +33,10 @@ func NewSyslogWriter(outputUrl *url.URL, appId string, dialer *net.Dialer) (w *s
 		return nil, errors.New(fmt.Sprintf("Invalid scheme %s, syslogWriter only supports syslog", outputUrl.Scheme))
 	}
 	return &syslogWriter{
-		appId:  appId,
-		host:   outputUrl.Host,
-		dialer: dialer,
+		appId:        appId,
+		host:         outputUrl.Host,
+		dialer:       dialer,
+		writeTimeout: writeTimeout,
 	}, nil
 }
 
@@ -51,8 +54,11 @@ func (w *syslogWriter) Connect() error {
 	if err != nil {
 		return err
 	}
-
-	w.conn = c
+	tcpConn, ok := c.(*net.TCPConn)
+	if !ok {
+		return errors.New("Not a TCP connection")
+	}
+	w.conn = tcpConn
 	w.watchConnection()
 
 	return nil
@@ -69,7 +75,9 @@ func (w *syslogWriter) Write(p int, b []byte, source string, sourceId string, ti
 	if w.conn == nil {
 		return 0, errors.New("Connection to syslog sink lost")
 	}
-
+	if w.writeTimeout != 0 {
+		w.conn.SetWriteDeadline(time.Now().Add(w.writeTimeout))
+	}
 	return w.conn.Write(finalMsg)
 }
 

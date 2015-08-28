@@ -12,20 +12,22 @@ import (
 	"net"
 	"net/url"
 	"sync"
+	"time"
 )
 
 type tlsWriter struct {
 	appId string
 	host  string
 
-	mu     sync.Mutex // guards conn
-	conn   net.Conn
-	dialer *net.Dialer
+	mu        sync.Mutex // guards conn
+	conn      net.Conn
+	dialer    *net.Dialer
+	ioTimeout time.Duration
 
 	tlsConfig *tls.Config
 }
 
-func NewTlsWriter(outputUrl *url.URL, appId string, skipCertVerify bool, dialer *net.Dialer) (w *tlsWriter, err error) {
+func NewTlsWriter(outputUrl *url.URL, appId string, skipCertVerify bool, dialer *net.Dialer, ioTimeout time.Duration) (w *tlsWriter, err error) {
 	if dialer == nil {
 		return nil, errors.New("cannot construct a writer with a nil dialer")
 	}
@@ -39,6 +41,7 @@ func NewTlsWriter(outputUrl *url.URL, appId string, skipCertVerify bool, dialer 
 		host:      outputUrl.Host,
 		tlsConfig: tlsConfig,
 		dialer:    dialer,
+		ioTimeout: ioTimeout,
 	}, nil
 }
 
@@ -58,21 +61,6 @@ func (w *tlsWriter) Connect() error {
 	return err
 }
 
-func (w *tlsWriter) Write(p int, b []byte, source string, sourceId string, timestamp int64) (byteCount int, err error) {
-	syslogMsg := createMessage(p, w.appId, source, sourceId, b, timestamp)
-	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
-	finalMsg := []byte(fmt.Sprintf("%d %s", len(syslogMsg), syslogMsg))
-
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	if w.conn != nil {
-		byteCount, err = w.conn.Write(finalMsg)
-	} else {
-		return 0, errors.New("Connection to syslog-tls sink lost")
-	}
-	return byteCount, err
-}
-
 func (w *tlsWriter) Close() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -83,4 +71,24 @@ func (w *tlsWriter) Close() error {
 		return err
 	}
 	return nil
+}
+
+func (w *tlsWriter) Write(p int, b []byte, source string, sourceId string, timestamp int64) (byteCount int, err error) {
+	syslogMsg := createMessage(p, w.appId, source, sourceId, b, timestamp)
+	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
+	finalMsg := []byte(fmt.Sprintf("%d %s", len(syslogMsg), syslogMsg))
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if w.conn == nil {
+		return 0, errors.New("Connection to syslog-tls sink lost")
+	}
+
+	if w.ioTimeout != 0 {
+		// set both timeouts to catch handshake reads
+		w.conn.SetDeadline(time.Now().Add(w.ioTimeout))
+	}
+
+	return w.conn.Write(finalMsg)
 }

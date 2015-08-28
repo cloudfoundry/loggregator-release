@@ -15,8 +15,10 @@ import (
 
 var _ = Describe("TLSWriter", func() {
 	var dialer *net.Dialer
+	var ioTimeout time.Duration
 
 	BeforeEach(func() {
+		ioTimeout = 0
 		dialer = &net.Dialer{
 			Timeout: 500 * time.Millisecond,
 		}
@@ -25,19 +27,19 @@ var _ = Describe("TLSWriter", func() {
 	Describe("New", func() {
 		It("returns an error for syslog scheme", func() {
 			outputURL, _ := url.Parse("syslog://localhost")
-			_, err := syslogwriter.NewTlsWriter(outputURL, "appId", false, dialer)
+			_, err := syslogwriter.NewTlsWriter(outputURL, "appId", false, dialer, ioTimeout)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("returns an error for https scheme", func() {
 			outputURL, _ := url.Parse("https://localhost")
-			_, err := syslogwriter.NewTlsWriter(outputURL, "appId", false, dialer)
+			_, err := syslogwriter.NewTlsWriter(outputURL, "appId", false, dialer, ioTimeout)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("returns an error if the provided dialer is nil", func() {
 			outputURL, _ := url.Parse("syslog-tls://localhost")
-			_, err := syslogwriter.NewTlsWriter(outputURL, "appId", false, nil)
+			_, err := syslogwriter.NewTlsWriter(outputURL, "appId", false, nil, ioTimeout)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("cannot construct a writer with a nil dialer"))
 		})
@@ -54,10 +56,14 @@ var _ = Describe("TLSWriter", func() {
 		})
 
 		JustBeforeEach(func(done Done) {
+			dialer = &net.Dialer{
+				Timeout: 500 * time.Millisecond,
+			}
+
 			var err error
 			syslogServerSession = startEncryptedTCPServer("127.0.0.1:9998")
 			outputURL, _ := url.Parse("syslog-tls://127.0.0.1:9998")
-			syslogWriter, err = syslogwriter.NewTlsWriter(outputURL, "appId", skipCertVerify, dialer)
+			syslogWriter, err = syslogwriter.NewTlsWriter(outputURL, "appId", skipCertVerify, dialer, ioTimeout)
 			Expect(err).ToNot(HaveOccurred())
 			close(done)
 		}, 5)
@@ -80,6 +86,23 @@ var _ = Describe("TLSWriter", func() {
 			Eventually(syslogServerSession, 3).Should(gbytes.Say("just a test"))
 			close(done)
 		}, 10)
+
+		Context("when an i/o timeout is set", func() {
+			BeforeEach(func() {
+				// cause an immediate write timeout
+				ioTimeout = -1 * time.Second
+			})
+
+			It("returns a timeout error", func() {
+				err := syslogWriter.Connect()
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = syslogWriter.Write(standardOutPriority, []byte("just a test"), "test", "", time.Now().UnixNano())
+				Expect(err).To(HaveOccurred())
+				netErr := err.(*net.OpError)
+				Expect(netErr.Timeout()).To(BeTrue())
+			})
+		})
 
 		Context("won't write to invalid syslog drains", func() {
 			It("returns an error when unable to send the log message", func(done Done) {
@@ -112,7 +135,6 @@ var _ = Describe("TLSWriter", func() {
 				close(done)
 			}, 5)
 		})
-
 	})
 })
 

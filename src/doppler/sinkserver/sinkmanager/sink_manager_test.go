@@ -33,7 +33,7 @@ var _ = Describe("SinkManager", func() {
 
 	BeforeEach(func() {
 		fakeMetricSender.Reset()
-		sinkManager = sinkmanager.New(1, true, blackListManager, loggertesthelper.Logger(), 100, "dropsonde-origin", 1*time.Second, 1*time.Second, 1*time.Second)
+		sinkManager = sinkmanager.New(1, true, blackListManager, loggertesthelper.Logger(), 100, "dropsonde-origin", 1*time.Second, 0, 1*time.Second, 1*time.Second)
 
 		newAppServiceChan = make(chan appservice.AppService)
 		deletedAppServiceChan = make(chan appservice.AppService)
@@ -294,7 +294,7 @@ var _ = Describe("SinkManager", func() {
 			BeforeEach(func() {
 				url, err := url.Parse("syslog://localhost:9998")
 				Expect(err).To(BeNil())
-				writer, _ := syslogwriter.NewSyslogWriter(url, "appId", &net.Dialer{Timeout: 500 * time.Millisecond})
+				writer, _ := syslogwriter.NewSyslogWriter(url, "appId", &net.Dialer{Timeout: 500 * time.Millisecond}, 0)
 				syslogSink = syslog.NewSyslogSink("appId", "localhost:9999", loggertesthelper.Logger(), 100, writer, func(string, string, string) {}, "dropsonde-origin")
 
 				sinkManager.RegisterSink(syslogSink)

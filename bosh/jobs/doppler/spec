@@ -52,6 +52,9 @@ properties:
   doppler.sink_dial_timeout_seconds:
     description: "Dial timeout for sinks"
     default: 1
+  doppler.sink_io_timeout_seconds:
+    description: "I/O Timeout on sinks"
+    default: 0
   doppler_endpoint.shared_secret:
     description: "Shared secret used to verify cryptographically signed doppler messages"
   doppler.message_drain_buffer_size:
