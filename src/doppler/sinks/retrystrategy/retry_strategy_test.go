@@ -37,8 +37,8 @@ var _ = Describe("RetryStrategy", func() {
 			strategy := retrystrategy.NewExponentialRetryStrategy()
 			otherStrategy := retrystrategy.NewExponentialRetryStrategy()
 
-			Expect(strategy(0).String()).To(Equal("1ms"))
-			Expect(otherStrategy(0).String()).To(Equal("1ms"))
+			Expect(strategy(0).String()).To(Equal("0"))
+			Expect(otherStrategy(0).String()).To(Equal("0"))
 
 			var backoff time.Duration
 			var oldBackoff time.Duration
