@@ -9,31 +9,27 @@ packages:
 - loggregator_trafficcontroller
 properties:
   traffic_controller.zone:
-    description: Zone of the loggregator_trafficcontroller
-  traffic_controller.host:
-    description: The host the loggregator_trafficcontroller should listen on
-    default: 0.0.0.0
+    description: "Zone of the loggregator_trafficcontroller"
   traffic_controller.debug:
-    description: boolean value to turn on verbose logging for loggregator system (dea agent & loggregator server)
+    description: "boolean value to turn on verbose logging for loggregator system (dea agent & loggregator server)"
     default: false
   loggregator.outgoing_dropsonde_port:
-    description: Port for outgoing dropsonde messages
+    description: "Port for outgoing dropsonde messages"
     default: 8081
   loggregator.doppler_port:
-    description: Port for outgoing doppler messages
+    description: "Port for outgoing doppler messages"
     default: 8081
-  traffic_controller.incoming_port:
-    default: 3456
   traffic_controller.outgoing_port:
+    description:  "Port on which the traffic controller listens to for requests"
     default: 8080
   traffic_controller.status.user:
-    description: username used to log into varz endpoint
+    description: "username used to log into varz endpoint"
     default: ""
   traffic_controller.status.password:
-    description: password used to log into varz endpoint
+    description: "password used to log into varz endpoint"
     default: ""
   traffic_controller.status.port:
-    description: port used to run the varz endpoint
+    description: "port used to run the varz endpoint"
     default: 0
   traffic_controller.collector_registrar_interval_milliseconds:
     description: "Interval for registering with collector"
@@ -44,9 +40,9 @@ properties:
   uaa.clients.doppler.secret:
     description: "Doppler's client secret to connect to UAA"
   uaa.url:
-    description: URL of UAA
+    description: "URL of UAA"
   uaa.no_ssl:
-    description: Do not use SSL to connect to UAA (used in case uaa.url is not set)
+    description: "Do not use SSL to connect to UAA (used in case uaa.url is not set)"
     default: false
   metron_endpoint.dropsonde_port:
     description: "The port used to emit dropsonde messages to the Metron agent"

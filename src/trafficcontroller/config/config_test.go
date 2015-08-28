@@ -31,7 +31,6 @@ var _ = Describe("Config", func() {
 
 				c, _, _ = config.ParseConfig(&logLevel, &configFile, &logFilePath)
 
-				Expect(c.IncomingPort).To(Equal(uint32(8765)))
 				Expect(c.OutgoingPort).To(Equal(uint32(4567)))
 			})
 		})
@@ -44,7 +43,6 @@ var _ = Describe("Config", func() {
 
 				c, _, _ = config.ParseConfig(&logLevel, &configFile, &logFilePath)
 
-				Expect(c.IncomingPort).To(Equal(uint32(8765)))
 				Expect(c.OutgoingPort).To(Equal(uint32(4567)))
 			})
 		})

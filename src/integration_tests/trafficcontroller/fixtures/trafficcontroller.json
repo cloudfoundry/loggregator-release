@@ -5,12 +5,10 @@
     "EtcdMaxConcurrentRequests": 5,
     "OutgoingDropsondePort": 4566,
     "DopplerPort": 1235,
-    "IncomingPort": 8765,
     "OutgoingPort": 4567,
     "SkipCertVerify": true,
     "SharedSecret": "SUPER_SECRET",
     "Zone": "z1",
-    "Host": "0.0.0.0",
     "ApiHost": "http://127.0.0.1:42123",
     "SystemDomain": "vcap.me",
 

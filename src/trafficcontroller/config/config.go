@@ -6,8 +6,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
-	"net"
-	"strconv"
 )
 
 type Config struct {
@@ -19,8 +17,6 @@ type Config struct {
 	Zone     string
 	cfcomponent.Config
 	ApiHost                string
-	Host                   string
-	IncomingPort           uint32
 	DopplerPort            uint32
 	OutgoingPort           uint32
 	OutgoingDropsondePort  uint32
@@ -41,7 +37,6 @@ func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gos
 	}
 
 	config.setDefaults()
-	config.Host = net.JoinHostPort(config.Host, strconv.FormatUint(uint64(config.IncomingPort), 10))
 	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller", config.Config)
 	logger.Info("Startup: Setting up the loggregator traffic controller")
 
