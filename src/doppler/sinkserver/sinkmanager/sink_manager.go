@@ -34,6 +34,7 @@ type SinkManager struct {
 	sinks               *groupedsinks.GroupedSinks
 	skipCertVerify      bool
 	sinkTimeout         time.Duration
+	sinkIOTimeout       time.Duration
 	metricTTL           time.Duration
 	dialTimeout         time.Duration
 	logger              *gosteno.Logger
@@ -41,7 +42,7 @@ type SinkManager struct {
 	stopOnce sync.Once
 }
 
-func New(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger, messageDrainBufferSize uint, dropsondeOrigin string, sinkTimeout, metricTTL, dialTimeout time.Duration) *SinkManager {
+func New(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *blacklist.URLBlacklistManager, logger *gosteno.Logger, messageDrainBufferSize uint, dropsondeOrigin string, sinkTimeout, sinkIOTimeout, metricTTL, dialTimeout time.Duration) *SinkManager {
 	return &SinkManager{
 		doneChannel:            make(chan struct{}),
 		errorChannel:           make(chan *events.Envelope, 100),
@@ -54,6 +55,7 @@ func New(maxRetainedLogMessages uint32, skipCertVerify bool, blackListManager *b
 		messageDrainBufferSize: messageDrainBufferSize,
 		dropsondeOrigin:        dropsondeOrigin,
 		sinkTimeout:            sinkTimeout,
+		sinkIOTimeout:          sinkIOTimeout,
 		metricTTL:              metricTTL,
 		dialTimeout:            dialTimeout,
 	}
@@ -218,7 +220,7 @@ func (sinkManager *SinkManager) registerNewSyslogSink(appId string, syslogSinkUr
 		return
 	}
 
-	syslogWriter, err := syslogwriter.NewWriter(parsedSyslogDrainUrl, appId, sinkManager.skipCertVerify, sinkManager.dialTimeout)
+	syslogWriter, err := syslogwriter.NewWriter(parsedSyslogDrainUrl, appId, sinkManager.skipCertVerify, sinkManager.dialTimeout, sinkManager.sinkIOTimeout)
 	if err != nil {
 		sinkManager.SendSyslogErrorToLoggregator(invalidSyslogUrlErrorMsg(appId, syslogSinkUrl, err), appId, syslogSinkUrl)
 		return
