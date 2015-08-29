@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"runtime"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -19,25 +20,31 @@ var _ = Describe("HttpsWriter", func() {
 
 	Context("With an HTTPS Sink", func() {
 		var server *httptest.Server
+		var listener *historyListener
+		var serveMux *http.ServeMux
 		var requestChan chan []byte
 		var dialer *net.Dialer
 		var timeout time.Duration
 		var queuedRequests int
 
 		BeforeEach(func() {
+			listener = newHistoryListener("tcp", "127.0.0.1:0")
+			serveMux = http.NewServeMux()
+			server = httptest.NewUnstartedServer(serveMux)
+			dialer = &net.Dialer{Timeout: 1 * time.Second}
 			timeout = 0
 			queuedRequests = 1
 		})
 
 		JustBeforeEach(func() {
 			requestChan = make(chan []byte, queuedRequests)
-			server = ServeHTTP(requestChan)
-			dialer = &net.Dialer{Timeout: 1 * time.Second}
+			serveMux.HandleFunc("/234-bxg-234/", syslogHandler(requestChan))
+			server.Listener = listener
+			server.StartTLS()
 		})
 
 		AfterEach(func() {
 			server.Close()
-			http.DefaultServeMux = http.NewServeMux()
 		})
 
 		It("HTTP POSTs each log message to the HTTPS syslog endpoint", func() {
@@ -161,6 +168,30 @@ var _ = Describe("HttpsWriter", func() {
 			})
 		})
 
+		Context("when requests complete", func() {
+			var requester *concurrentWriteRequestSimulator
+
+			BeforeEach(func() {
+				requester = &concurrentWriteRequestSimulator{}
+				serveMux.Handle("/pause/", requester)
+			})
+
+			It("only keeps one idle connection", func() {
+				outputUrl, _ := url.Parse(server.URL + "/pause/")
+				w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", true, dialer, timeout)
+				err := w.Connect()
+				Expect(err).ToNot(HaveOccurred())
+
+				// one connection per request
+				requester.concurrentWriteRequests(2, w)
+				Expect(listener.history).To(HaveLen(2))
+
+				// one pooled connection, one new connection
+				requester.concurrentWriteRequests(2, w)
+				Expect(listener.history).To(HaveLen(3))
+			})
+		})
+
 		It("returns an error for syslog-tls scheme", func() {
 			outputUrl, _ := url.Parse("syslog-tls://localhost")
 			_, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", false, dialer, timeout)
@@ -182,16 +213,58 @@ var _ = Describe("HttpsWriter", func() {
 	})
 })
 
-func ServeHTTP(requestChan chan []byte) *httptest.Server {
-	handler := func(_ http.ResponseWriter, r *http.Request) {
+func syslogHandler(requestChan chan []byte) http.HandlerFunc {
+	return func(_ http.ResponseWriter, r *http.Request) {
 		bytes := make([]byte, 1024)
 		byteCount, _ := r.Body.Read(bytes)
 		r.Body.Close()
 		requestChan <- bytes[:byteCount]
 	}
+}
 
-	http.HandleFunc("/234-bxg-234/", handler)
+type historyListener struct {
+	net.Listener
+	sync.Mutex
+	history []net.Conn
+}
 
-	server := httptest.NewTLSServer(http.DefaultServeMux)
-	return server
+func newHistoryListener(network, address string) *historyListener {
+	l, err := net.Listen(network, address)
+	Expect(err).NotTo(HaveOccurred())
+
+	return &historyListener{Listener: l}
+}
+
+func (h *historyListener) Accept() (net.Conn, error) {
+	c, err := h.Listener.Accept()
+	if err == nil {
+		h.Mutex.Lock()
+		h.history = append(h.history, c)
+		h.Mutex.Unlock()
+	}
+	return c, err
+}
+
+type concurrentWriteRequestSimulator struct {
+	serverWG *sync.WaitGroup
+}
+
+func (c *concurrentWriteRequestSimulator) ServeHTTP(_ http.ResponseWriter, r *http.Request) {
+	c.serverWG.Done()
+	c.serverWG.Wait()
+	r.Body.Close()
+}
+
+func (c *concurrentWriteRequestSimulator) concurrentWriteRequests(count int, writer syslogwriter.Writer) {
+	c.serverWG = &sync.WaitGroup{}
+	wg := &sync.WaitGroup{}
+	for i := 0; i < count; i++ {
+		c.serverWG.Add(1)
+		wg.Add(1)
+		go func() {
+			writer.Write(standardErrorPriority, []byte("Message"), "just a test", "TEST", time.Now().UnixNano())
+			wg.Done()
+		}()
+	}
+	wg.Wait()
 }
