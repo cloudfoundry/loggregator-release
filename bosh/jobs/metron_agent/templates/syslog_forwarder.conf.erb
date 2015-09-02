@@ -62,6 +62,25 @@ $ModLoad omrelp
 
 <% end  %>
 
+<% if p("syslog_daemon_config.fallback_addresses").length > 0 %>
+$ActionExecOnlyWhenPreviousIsSuspended on
+<% p("syslog_daemon_config.fallback_addresses", []).each do |fallback_address| %>
+<%
+   transport = fallback_address["transport"]
+   address = fallback_address["address"]
+   port = fallback_address["port"]
+%>
+<% if transport == "relp" %>
+& :omrelp:<%= address %>:<%= port %>;CfLogTemplate
+<% elsif transport == "tcp" %>
+& @@<%= address %>:<%= port %>;CfLogTemplate
+<% else %>
+# only RELP and TCP are supported
+<% end %>
+<% end %>
+$ActionExecOnlyWhenPreviousIsSuspended off
+<% end %>
+
 # Log vcap messages locally, too
 #$template VcapComponentLogFile, "/var/log/%programname:6:$%/%programname:6:$%.log"
 #$template VcapComponentLogFormat, "%timegenerated% %syslogseverity-text% -- %msg%\n"

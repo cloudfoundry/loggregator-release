@@ -18,6 +18,9 @@ properties:
   syslog_daemon_config.transport:
     description: "Transport to be used when forwarding logs (tcp|udp|relp)."
     default: "tcp"
+  syslog_daemon_config.fallback_addresses:
+    description: "Addresses of fallback servers to be used if the primary syslog server is down. Only tcp or relp are supported. Each list entry should consist of \"address\", \"transport\" and \"port\" keys. "
+    default: []
 
   metron_agent.incoming_port:
     description: "Incoming port for legacy log messages"
