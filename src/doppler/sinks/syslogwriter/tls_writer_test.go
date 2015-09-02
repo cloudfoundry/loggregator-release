@@ -94,10 +94,12 @@ var _ = Describe("TLSWriter", func() {
 			})
 
 			It("returns a timeout error", func() {
-				err := syslogWriter.Connect()
-				Expect(err).NotTo(HaveOccurred())
+				Eventually(func() error {
+					err := syslogWriter.Connect()
+					return err
+				}, 5, 1).ShouldNot(HaveOccurred())
 
-				_, err = syslogWriter.Write(standardOutPriority, []byte("just a test"), "test", "", time.Now().UnixNano())
+				_, err := syslogWriter.Write(standardOutPriority, []byte("just a test"), "test", "", time.Now().UnixNano())
 				Expect(err).To(HaveOccurred())
 				netErr := err.(*net.OpError)
 				Expect(netErr.Timeout()).To(BeTrue())
