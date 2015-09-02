@@ -57,7 +57,7 @@ var _ = Describe("TLSWriter", func() {
 
 		JustBeforeEach(func(done Done) {
 			dialer = &net.Dialer{
-				Timeout: 500 * time.Millisecond,
+				Timeout: time.Second,
 			}
 
 			var err error
