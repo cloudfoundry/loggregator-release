@@ -119,7 +119,7 @@ var _ = Describe("LogAccessAuthorizer", func() {
 type handler struct{}
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	re := regexp.MustCompile("^/v2/apps/([^/?]+)$")
+	re := regexp.MustCompile("^/internal/log_access/([^/?]+)$")
 	result := re.FindStringSubmatch(r.URL.Path)
 	if len(result) != 2 {
 		w.WriteHeader(500)

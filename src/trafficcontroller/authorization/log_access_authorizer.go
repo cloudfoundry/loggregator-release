@@ -34,7 +34,7 @@ func NewLogAccessAuthorizer(disableAccessControl bool, apiHost string, skipCertV
 		}
 		client := &http.Client{Transport: tr}
 
-		req, _ := http.NewRequest("GET", apiHost+"/v2/apps/"+target, nil)
+		req, _ := http.NewRequest("GET", apiHost+"/internal/log_access/"+target, nil)
 		req.Header.Set("Authorization", authToken)
 		res, err := client.Do(req)
 		if err != nil {
