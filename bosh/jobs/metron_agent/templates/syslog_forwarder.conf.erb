@@ -47,6 +47,8 @@ template(name="CfLogTemplate" type="list") {
         property(name="msg")
 }
 
+<%= p('syslog_daemon_config.custom_rule') %>
+
 <% if_p("syslog_daemon_config.address", "syslog_daemon_config.port", "syslog_daemon_config.transport") do |address, port, transport| %>
 
 <% if transport == "relp" %>
