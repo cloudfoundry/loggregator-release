@@ -12,7 +12,6 @@ func ReadTasks(data []byte) (map[string]Task, error) {
 		Warden_container_path string
 		Instance_index        uint64
 		State                 string
-		Syslog_drain_urls     []string
 	}
 
 	type stagingMessageJson struct {
@@ -23,7 +22,6 @@ func ReadTasks(data []byte) (map[string]Task, error) {
 		Staging_message       stagingMessageJson
 		Warden_job_id         uint64
 		Warden_container_path string
-		Syslog_drain_urls     []string
 	}
 
 	type instancesJson struct {
@@ -53,7 +51,7 @@ func ReadTasks(data []byte) (map[string]Task, error) {
 				WardenContainerPath: jsonInstance.Warden_container_path,
 				WardenJobId:         jsonInstance.Warden_job_id,
 				Index:               jsonInstance.Instance_index,
-				DrainUrls:           jsonInstance.Syslog_drain_urls}
+			}
 			tasks[task.Identifier()] = task
 		}
 	}
@@ -67,7 +65,7 @@ func ReadTasks(data []byte) (map[string]Task, error) {
 			SourceName:          "STG",
 			WardenContainerPath: jsonStagingTask.Warden_container_path,
 			WardenJobId:         jsonStagingTask.Warden_job_id,
-			DrainUrls:           jsonStagingTask.Syslog_drain_urls}
+		}
 		tasks[task.Identifier()] = task
 	}
 

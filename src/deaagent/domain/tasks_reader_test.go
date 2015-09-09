@@ -2,11 +2,12 @@ package domain_test
 
 import (
 	"deaagent/domain"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"io/ioutil"
 	"path"
 	"runtime"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 func getJsonFromSampleFilePath(filename string) []byte {
@@ -29,14 +30,14 @@ var _ = Describe("ReadTasks", func() {
 			WardenJobId:         272,
 			WardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo1",
 			SourceName:          "App",
-			DrainUrls:           []string{}}
+		}
 
 		expectedStagingTask := domain.Task{
 			ApplicationId:       "23489sd0-f985-fjga-nsd1-sdg5lhd9nskh",
 			WardenJobId:         355,
 			WardenContainerPath: "/var/vcap/data/warden/depot/16vbs06ibo2",
 			SourceName:          "STG",
-			DrainUrls:           []string{}}
+		}
 
 		Expect(tasks["/var/vcap/data/warden/depot/16vbs06ibo1/jobs/272"]).To(Equal(expectedInstanceTask))
 		Expect(tasks["/var/vcap/data/warden/depot/16vbs06ibo2/jobs/355"]).To(Equal(expectedStagingTask))
@@ -73,17 +74,8 @@ var _ = Describe("ReadTasks", func() {
 	})
 
 	It("reads multiple tasks with drain urls", func() {
-		tasks, err := domain.ReadTasks(getJsonFromSampleFilePath("multi_instances.json"))
-
+		_, err := domain.ReadTasks(getJsonFromSampleFilePath("multi_instances.json"))
 		Expect(err).NotTo(HaveOccurred())
-
-		Expect(tasks["/var/vcap/data/warden/depot/170os7ali6q/jobs/15"].DrainUrls).To(BeNil())
-		Expect(tasks["/var/vcap/data/warden/depot/123ajkljfa/jobs/13"].DrainUrls).To(BeEmpty())
-		Expect(tasks["/var/vcap/data/warden/depot/345asndhaena/jobs/12"].DrainUrls).To(ConsistOf("syslog://10.20.30.40:8050"))
-
-		Expect(tasks["/var/vcap/data/warden/depot/17fsdo7qpeq/jobs/46"].DrainUrls).To(BeNil())
-		Expect(tasks["/var/vcap/data/warden/depot/17fsdo7qper/jobs/49"].DrainUrls).To(BeEmpty())
-		Expect(tasks["/var/vcap/data/warden/depot/17fsdo7qpes/jobs/56"].DrainUrls).To(ConsistOf("syslog://10.20.30.40:8050"))
 	})
 
 	It("reads starting tasks", func() {

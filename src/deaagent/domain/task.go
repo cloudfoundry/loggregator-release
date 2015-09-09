@@ -7,7 +7,6 @@ import (
 
 type Task struct {
 	ApplicationId       string
-	DrainUrls           []string
 	Index               uint64
 	WardenJobId         uint64
 	WardenContainerPath string

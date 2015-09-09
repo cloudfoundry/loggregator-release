@@ -3,10 +3,11 @@ package deaagent_test
 import (
 	"deaagent"
 	"deaagent/domain"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"io/ioutil"
 	"net"
 	"os"
+
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -259,7 +260,7 @@ func setupTask(index uint64) (appTask *domain.Task, tmpdir string) {
 		WardenContainerPath: tmpdir,
 		Index:               index,
 		SourceName:          "App",
-		DrainUrls:           []string{"syslog://10.20.30.40:8050"}}
+	}
 
 	os.MkdirAll(appTask.Identifier(), 0777)
 
