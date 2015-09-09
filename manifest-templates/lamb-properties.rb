@@ -29,6 +29,16 @@ class LambProperties
       zone: z1
     traffic_controller:
       zone: z1
+    route_registrar:
+      routes:
+      - name: doppler
+        port: 8081
+        uris:
+        - doppler.#{system_domain}
+      - name: loggregator
+        port: 8080
+        uris:
+        - loggregator.#{system_domain}
     EOF
     result.chomp
   end
@@ -39,6 +49,16 @@ class LambProperties
       zone: z2
     traffic_controller:
       zone: z2
+    route_registrar:
+      routes:
+      - name: doppler
+        port: 8081
+        uris:
+        - doppler.#{system_domain}
+      - name: loggregator
+        port: 8080
+        uris:
+        - loggregator.#{system_domain}
     EOF
     result.chomp
   end
@@ -60,6 +80,8 @@ class LambProperties
     - name: loggregator_trafficcontroller
       release: cf
     - name: metron_agent
+      release: cf
+    - name: route_registrar
       release: cf
     EOF
     result.chomp
@@ -107,6 +129,17 @@ class LambProperties
     deployment: #{deployment_name}
     EOF
     result.chomp
+  end
+
+  def system_domain
+    case @infrastructure
+      when "vsphere"
+        "0.0.0.3.xip.io"
+      when "warden"
+        "10.244.0.34.xip.io"
+      else
+        "example.com"
+    end
   end
 
   def get_binding
