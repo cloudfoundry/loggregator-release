@@ -59,11 +59,11 @@ jobs:
     route_registrar:
       routes:
       - name: doppler
-        port: 8081
+        port: (( .properties.loggregator.outgoing_dropsonde_port ))
         uris:
         - (( "doppler." .properties.domain ))
       - name: loggregator
-        port: 8080
+        port: (( .properties.traffic_controller.outgoing_port ))
         uris:
         - (( "loggregator." .properties.domain ))
 
@@ -76,11 +76,11 @@ jobs:
     route_registrar:
       routes:
       - name: doppler
-        port: 8081
+        port: (( .properties.loggregator.outgoing_dropsonde_port ))
         uris:
         - (( "doppler." .properties.domain ))
       - name: loggregator
-        port: 8080
+        port: (( .properties.traffic_controller.outgoing_port ))
         uris:
         - (( "loggregator." .properties.domain ))
 
@@ -91,6 +91,7 @@ properties:
     maxRetainedLogMessages: 100
     debug: (( merge || false ))
     blacklisted_syslog_ranges: ~
+    outgoing_dropsonde_port: 8081
 
   doppler:
     maxRetainedLogMessages: 100
@@ -101,3 +102,6 @@ properties:
 
   metron_agent:
     deployment: (( meta.environment ))
+
+  traffic_controller:
+    outgoing_port: 8080

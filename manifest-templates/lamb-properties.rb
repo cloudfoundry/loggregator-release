@@ -95,6 +95,7 @@ class LambProperties
     blacklisted_syslog_ranges:
     - start: 10.10.0.0
       end: 10.10.255.255
+    outgoing_dropsonde_port: 8081
 
   doppler:
     maxRetainedLogMessages: 100
@@ -105,6 +106,9 @@ class LambProperties
 
   metron_agent:
     deployment: #{deployment_name}
+
+  traffic_controller:
+    outgoing_port: 8080
     EOF
     result.chomp
   end
@@ -117,6 +121,7 @@ class LambProperties
     maxRetainedLogMessages: 100
     debug: false
     blacklisted_syslog_ranges: null
+    outgoing_dropsonde_port: 8081
 
   doppler:
     maxRetainedLogMessages: 100
@@ -127,6 +132,9 @@ class LambProperties
 
   metron_agent:
     deployment: #{deployment_name}
+
+  traffic_controller:
+    outgoing_port: 8080
     EOF
     result.chomp
   end
