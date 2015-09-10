@@ -34,7 +34,6 @@ func NewConstantWriteStrategy(generator MessageGenerator, writer MessageWriter, 
 func (s *ConstantWriteStrategy) StartWriter() {
 	writeInterval := time.Second / time.Duration(s.writeRate)
 	ticker := time.NewTicker(writeInterval)
-	s.wg.Add(1)
 	for {
 		select {
 		case <-s.stopChan:
@@ -47,6 +46,7 @@ func (s *ConstantWriteStrategy) StartWriter() {
 }
 
 func (s *ConstantWriteStrategy) Stop() {
+	s.wg.Add(1)
 	close(s.stopChan)
 	s.wg.Wait()
 }
@@ -76,7 +76,6 @@ func NewBurstWriteStrategy(generator MessageGenerator, writer MessageWriter, par
 
 func (s *BurstWriteStrategy) StartWriter() {
 	ticker := time.NewTicker(s.parameters.Frequency)
-	s.wg.Add(1)
 	for {
 		select {
 		case <-s.stopChan:
@@ -92,6 +91,7 @@ func (s *BurstWriteStrategy) StartWriter() {
 }
 
 func (s *BurstWriteStrategy) Stop() {
+	s.wg.Add(1)
 	close(s.stopChan)
 	s.wg.Wait()
 }

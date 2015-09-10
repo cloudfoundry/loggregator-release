@@ -24,7 +24,7 @@ var _ = Describe("Messagegenerator", func() {
 
 	Context("The LogGenerator", func() {
 		It("generates a log message envelope", func() {
-			generator := messagegenerator.NewLogMessageGenerator()
+			generator := messagegenerator.NewLogMessageGenerator("appID")
 			bytes := generator.Generate()
 			var envelope events.Envelope
 			err := proto.Unmarshal(bytes, &envelope)

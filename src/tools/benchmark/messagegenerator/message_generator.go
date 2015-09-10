@@ -34,22 +34,22 @@ func BasicValueMetricEnvelope(origin string) *events.Envelope {
 	}
 }
 
-type LogMessageGenerator struct{}
-
-func NewLogMessageGenerator() *LogMessageGenerator {
-	return &LogMessageGenerator{}
+type LogMessageGenerator struct {
+	appID string
 }
 
-func (*LogMessageGenerator) Generate() []byte {
-	return BasicLogMessage()
+func NewLogMessageGenerator(appID string) *LogMessageGenerator {
+	return &LogMessageGenerator{
+		appID: appID,
+	}
 }
 
-func BasicLogMessage() []byte {
-	message, _ := proto.Marshal(BasicLogMessageEnvelope("test-origin"))
+func (l *LogMessageGenerator) Generate() []byte {
+	message, _ := proto.Marshal(BasicLogMessageEnvelope("test-origin", l.appID))
 	return message
 }
 
-func BasicLogMessageEnvelope(origin string) *events.Envelope {
+func BasicLogMessageEnvelope(origin string, appID string) *events.Envelope {
 	return &events.Envelope{
 		Origin:    proto.String(origin),
 		EventType: events.Envelope_LogMessage.Enum(),
@@ -57,6 +57,7 @@ func BasicLogMessageEnvelope(origin string) *events.Envelope {
 			Message:     []byte("test message"),
 			MessageType: events.LogMessage_OUT.Enum(),
 			Timestamp:   proto.Int64(time.Now().UnixNano()),
+			AppId:       proto.String(appID),
 		},
 	}
 }

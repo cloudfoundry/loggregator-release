@@ -8,9 +8,7 @@
     "MessageDrainBufferSize": 100,
     "SharedSecret": "end_to_end_secret",
     "SkipCertVerify": true,
-    "BlackListIps": [
-        {"Start": "127.0.0.0", "End": "127.0.0.2"}
-    ],
+    "BlackListIps": [],
     "JobName": "doppler_z1",
     "Zone": "z1",
     "ContainerMetricTTLSeconds": 120,

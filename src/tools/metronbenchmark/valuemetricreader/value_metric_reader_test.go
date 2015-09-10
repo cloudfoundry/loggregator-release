@@ -33,7 +33,7 @@ var _ = Describe("ValueMetricReader", func() {
 		})
 
 		It("should not report log messages", func() {
-			reader.event = messagegenerator.BasicLogMessageEnvelope(valuemetricreader.TestOrigin)
+			reader.event = messagegenerator.BasicLogMessageEnvelope(valuemetricreader.TestOrigin, "appID")
 
 			valueMetricReader.Read()
 

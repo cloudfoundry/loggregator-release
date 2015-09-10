@@ -27,7 +27,7 @@ var _ = Describe("LegacyReader", func() {
 		})
 
 		It("should report legacy log messages", func() {
-			reader.event = messagegenerator.BasicLogMessageEnvelope("legacy")
+			reader.event = messagegenerator.BasicLogMessageEnvelope("legacy", "appID")
 
 			legacyReader.Read()
 
@@ -43,7 +43,7 @@ var _ = Describe("LegacyReader", func() {
 		})
 
 		It("should only count test log messages", func() {
-			reader.event = messagegenerator.BasicLogMessageEnvelope("non-test-origin")
+			reader.event = messagegenerator.BasicLogMessageEnvelope("non-test-origin", "appID")
 
 			legacyReader.Read()
 
