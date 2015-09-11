@@ -5,6 +5,7 @@ import (
 	"net"
 	"sync/atomic"
 	"fmt"
+	"sync"
 )
 
 
@@ -13,6 +14,7 @@ type SyslogTCPServer struct {
 	count int64
 	listener net.Listener
 	lastLogTimestamp int64
+	lock sync.Mutex
 }
 
 func NewSyslogTCPServer(host string, port int) *SyslogTCPServer {
@@ -24,7 +26,10 @@ func NewSyslogTCPServer(host string, port int) *SyslogTCPServer {
 
 func (s *SyslogTCPServer) Start() {
 	var err error
+	s.lock.Lock()
 	s.listener, err = net.Listen("tcp", s.address)
+	s.lock.Unlock()
+
 	if err != nil {
 		panic(err)
 	}
@@ -32,7 +37,9 @@ func (s *SyslogTCPServer) Start() {
 }
 
 func (s *SyslogTCPServer) Stop() {
+	s.lock.Lock()
 	s.listener.Close()
+	s.lock.Unlock()
 }
 
 func (s *SyslogTCPServer) Counter() int64 {
