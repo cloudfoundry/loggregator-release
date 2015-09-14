@@ -18,6 +18,8 @@ lamb_meta:
     release: (( lamb_meta.release.name ))
   - name: metron_agent
     release: (( lamb_meta.release.name ))
+  - name: route_registrar
+    release: (( lamb_meta.release.name ))
 
 jobs:
 - name: loggregator_z1
@@ -54,6 +56,16 @@ jobs:
       zone: z1
     metron_agent:
       zone: z1
+    route_registrar:
+      routes:
+      - name: doppler
+        port: (( .properties.loggregator.outgoing_dropsonde_port ))
+        uris:
+        - (( "doppler." .properties.domain ))
+      - name: loggregator
+        port: (( .properties.traffic_controller.outgoing_port ))
+        uris:
+        - (( "loggregator." .properties.domain ))
 
 - name: loggregator_trafficcontroller_z2
   properties:
@@ -61,6 +73,16 @@ jobs:
       zone: z2
     metron_agent:
       zone: z2
+    route_registrar:
+      routes:
+      - name: doppler
+        port: (( .properties.loggregator.outgoing_dropsonde_port ))
+        uris:
+        - (( "doppler." .properties.domain ))
+      - name: loggregator
+        port: (( .properties.traffic_controller.outgoing_port ))
+        uris:
+        - (( "loggregator." .properties.domain ))
 
 properties:
   <<: (( merge ))
@@ -69,6 +91,7 @@ properties:
     maxRetainedLogMessages: 100
     debug: (( merge || false ))
     blacklisted_syslog_ranges: ~
+    outgoing_dropsonde_port: 8081
 
   doppler:
     maxRetainedLogMessages: 100
@@ -79,3 +102,6 @@ properties:
 
   metron_agent:
     deployment: (( meta.environment ))
+
+  traffic_controller:
+    outgoing_port: 8080
