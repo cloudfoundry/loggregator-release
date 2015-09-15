@@ -106,7 +106,7 @@ var _ = Describe("App to Syslog Test", func() {
 
 				receivedLogs := syslogServer.Counter()
 				percentLoss := computePercentLost(float64(sentLogs), float64(receivedLogs))
-				Expect(percentLoss).To(BeNumerically("<", 5))
+				Expect(percentLoss).To(BeNumerically("<", 6))
 				b.RecordValue("Sent logs", float64(sentLogs))
 				b.RecordValue("Percent Loss",  percentLoss)
 			}
