@@ -144,7 +144,7 @@ class LambProperties
       when "vsphere"
         "0.0.0.3.xip.io"
       when "warden"
-        "10.244.0.34.xip.io"
+        "bosh-lite.com"
       else
         "example.com"
     end
