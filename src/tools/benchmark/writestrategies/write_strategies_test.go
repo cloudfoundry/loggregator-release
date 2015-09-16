@@ -23,7 +23,7 @@ var _ = Describe("WriteStrategies", func() {
 				writeStrategy = writestrategies.NewConstantWriteStrategy(&mockGenerator{}, &writer, 1000)
 			})
 
-			It("writes messages at a constant rate", func() {
+			Measure("writes messages at a constant rate", func(b Benchmarker) {
 				go writeStrategy.StartWriter()
 
 				time.Sleep(time.Millisecond * 50)
@@ -37,9 +37,9 @@ var _ = Describe("WriteStrategies", func() {
 				Expect(writes).To(BeNumerically("<", 110))
 
 				writeStrategy.Stop()
-			})
+			}, 1)
 
-			It("stops writing messages when the stopChan is closed", func() {
+			Measure("stops writing messages when the stopChan is closed", func(b Benchmarker) {
 				go writeStrategy.StartWriter()
 
 				time.Sleep(time.Millisecond * 50)
@@ -53,7 +53,7 @@ var _ = Describe("WriteStrategies", func() {
 				writes = atomic.LoadUint32(&writer.count)
 				Expect(writes).To(BeNumerically(">", 40))
 				Expect(writes).To(BeNumerically("<", 60))
-			})
+			}, 1)
 		})
 	})
 
