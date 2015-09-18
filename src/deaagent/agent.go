@@ -2,13 +2,14 @@ package deaagent
 
 import (
 	"deaagent/domain"
-	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/gosteno"
-	"github.com/howeyc/fsnotify"
 	"io/ioutil"
 	"path"
 	"sync"
 	"time"
+
+	"github.com/cloudfoundry/dropsonde/metrics"
+	"github.com/cloudfoundry/gosteno"
+	"github.com/howeyc/fsnotify"
 )
 
 type Agent struct {
@@ -57,19 +58,12 @@ func (agent *Agent) processTasks(currentTasks map[string]domain.Task) func(known
 		}
 
 		for _, task := range currentTasks {
-			drainUrls := task.DrainUrls
-			if drainUrls == nil {
-				drainUrls = []string{}
-			}
-
 			identifier := task.Identifier()
 			_, present := knownTasks[identifier]
 
 			if present {
 				continue
 			}
-
-			task.DrainUrls = nil
 
 			agent.logger.Debugf("Adding new task %s", task.Identifier())
 			listener, err := NewTaskListener(task, agent.logger)
