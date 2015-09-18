@@ -60,32 +60,6 @@ var _ = Describe("/varz endpoint", func() {
 			return getMetricFromContext(agentListenerContext, "receivedMessageCount").Value
 		}).Should(BeNumerically(">=", expectedValue))
 	})
-
-	It("includes value metrics from sources", func() {
-		connection, _ := net.Dial("udp4", "localhost:51161")
-		connection.Write(basicValueMessage())
-
-		Eventually(func() *instrumentation.Context { return getContext("forwarder") }).ShouldNot(BeNil())
-
-		metric := getMetricFromContext(getContext("forwarder"), "fake-origin-2.fake-metric-name")
-		Expect(metric).ToNot(BeNil())
-		Expect(metric.Name).To(Equal("fake-origin-2.fake-metric-name"))
-		Expect(metric.Value).To(BeNumerically("==", 42))
-		Expect(metric.Tags["component"]).To(Equal("test-component"))
-	})
-
-	It("includes counter event metrics from sources", func() {
-		connection, _ := net.Dial("udp4", "localhost:51161")
-		connection.Write(basicCounterEventMessage())
-		connection.Write(basicCounterEventMessage())
-
-		Eventually(func() *instrumentation.Context { return getContext("forwarder") }).ShouldNot(BeNil())
-
-		metric := getMetricFromContext(getContext("forwarder"), "fake-origin-2.fake-counter-event-name")
-		Expect(metric.Name).To(Equal("fake-origin-2.fake-counter-event-name"))
-		Expect(metric.Value).To(BeNumerically("==", 2))
-		Expect(metric.Tags["component"]).To(Equal("test-component"))
-	})
 })
 
 var _ = Describe("/healthz", func() {
