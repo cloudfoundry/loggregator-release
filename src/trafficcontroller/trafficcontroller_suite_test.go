@@ -1,11 +1,7 @@
 package main_test
 
 import (
-	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
-	"github.com/cloudfoundry/yagnats"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
@@ -28,9 +24,6 @@ var _ = AfterSuite(func() {
 })
 
 func TestTrafficcontroller(t *testing.T) {
-	cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.NATSConn, error) {
-		return nil, nil
-	}
 	RegisterFailHandler(Fail)
 
 	RunSpecs(t, "Trafficcontroller Suite")

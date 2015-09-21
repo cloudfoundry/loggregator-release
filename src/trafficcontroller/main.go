@@ -15,7 +15,6 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/routerregistrar"
 	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
@@ -82,19 +81,6 @@ func main() {
 	legacyProxy := makeLegacyProxy(adapter, config, logger)
 	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), legacyProxy)
 
-	rr := routerregistrar.NewRouterRegistrar(config.MbusClient, logger)
-	uri := "loggregator." + config.SystemDomain
-	err = rr.RegisterWithRouter(ipAddress, config.OutgoingPort, []string{uri})
-	if err != nil {
-		logger.Fatalf("Startup: Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
-	}
-
-	uri = "doppler." + config.SystemDomain
-	err = rr.RegisterWithRouter(ipAddress, config.OutgoingDropsondePort, []string{uri})
-	if err != nil {
-		logger.Fatalf("Startup: Did not get response from router when greeting. Using default keep-alive for now. Err: %v.", err)
-	}
-
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Kill, os.Interrupt)
 
@@ -103,7 +89,6 @@ func main() {
 		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
 			cfcomponent.DumpGoRoutine()
 		case <-killChan:
-			rr.UnregisterFromRouter(ipAddress, config.OutgoingPort, []string{uri})
 			break
 		}
 	}

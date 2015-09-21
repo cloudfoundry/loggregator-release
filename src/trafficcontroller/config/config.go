@@ -4,8 +4,6 @@ import (
 	"errors"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/yagnats"
-	"github.com/cloudfoundry/yagnats/fakeyagnats"
 )
 
 type Config struct {
@@ -40,13 +38,6 @@ func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gos
 	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller", config.Config)
 	logger.Info("Startup: Setting up the loggregator traffic controller")
 
-	if len(config.NatsHosts) == 0 {
-		logger.Warn("Startup: Did not receive a NATS host - not going to register component")
-		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.NATSConn, error) {
-			return fakeyagnats.Connect(), nil
-		}
-	}
-
 	err = config.validate(logger)
 	if err != nil {
 		return nil, nil, err
@@ -68,11 +59,9 @@ func (c *Config) setDefaults() {
 	}
 }
 
-func (c *Config) validate(logger *gosteno.Logger) (err error) {
+func (c *Config) validate(logger *gosteno.Logger) error {
 	if c.SystemDomain == "" {
-		return errors.New("Need system domain to register with NATS")
+		return errors.New("Need system domain in order to create the proxies")
 	}
-
-	err = c.Validate(logger)
-	return
+	return nil
 }
