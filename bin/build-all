@@ -5,4 +5,4 @@ set -e
 rm -rf $(dirname $0)/../release
 mkdir -p $(dirname $0)/../release
 
-PLATFORMS="darwin/amd64 linux/amd64" $(dirname $0)/build-platforms
+$(dirname $0)/build-platforms
