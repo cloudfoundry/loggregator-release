@@ -16,6 +16,7 @@ import (
 
 var _ = Describe("NetworkReader", func() {
 	var reader *networkreader.NetworkReader
+	var readerStopped chan struct{}
 	var writer mocks.MockByteArrayWriter
 	var port int
 	var address string
@@ -25,6 +26,7 @@ var _ = Describe("NetworkReader", func() {
 		address = net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
 		writer = mocks.MockByteArrayWriter{}
 		reader = networkreader.New(address, "networkReader", &writer, loggertesthelper.Logger())
+		readerStopped = make(chan struct{})
 	})
 
 	Context("without a running listener", func() {
@@ -38,7 +40,10 @@ var _ = Describe("NetworkReader", func() {
 	Context("with a reader running", func() {
 		BeforeEach(func() {
 			loggertesthelper.TestLoggerSink.Clear()
-			go reader.Start()
+			go func () {
+				reader.Start()
+				close(readerStopped)
+			}()
 
 			expectedLog := fmt.Sprintf("Listening on port %s", address)
 			Eventually(loggertesthelper.TestLoggerSink.LogContents).Should(ContainSubstring(expectedLog))
@@ -46,6 +51,7 @@ var _ = Describe("NetworkReader", func() {
 
 		AfterEach(func() {
 			reader.Stop()
+			<- readerStopped
 		})
 
 		It("sends data recieved on UDP socket to its writer", func() {
