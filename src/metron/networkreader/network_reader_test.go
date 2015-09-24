@@ -40,7 +40,7 @@ var _ = Describe("NetworkReader", func() {
 	Context("with a reader running", func() {
 		BeforeEach(func() {
 			loggertesthelper.TestLoggerSink.Clear()
-			go func () {
+			go func() {
 				reader.Start()
 				close(readerStopped)
 			}()
@@ -51,7 +51,7 @@ var _ = Describe("NetworkReader", func() {
 
 		AfterEach(func() {
 			reader.Stop()
-			<- readerStopped
+			<-readerStopped
 		})
 
 		It("sends data recieved on UDP socket to its writer", func() {
