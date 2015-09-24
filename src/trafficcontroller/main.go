@@ -67,18 +67,21 @@ func main() {
 
 	dropsonde.Initialize("localhost:"+strconv.Itoa(config.MetronPort), "LoggregatorTrafficController")
 
-	adapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
-	adapter.Connect()
+	dopplerAdapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
+	dopplerAdapter.Connect()
+
+	legacyAdapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
+	legacyAdapter.Connect()
 
 	ipAddress, err := localip.LocalIP()
 	if err != nil {
 		panic(err)
 	}
 
-	dopplerProxy := makeDopplerProxy(adapter, config, logger)
+	dopplerProxy := makeDopplerProxy(dopplerAdapter, config, logger)
 	startOutgoingDopplerProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dopplerProxy)
 
-	legacyProxy := makeLegacyProxy(adapter, config, logger)
+	legacyProxy := makeLegacyProxy(legacyAdapter, config, logger)
 	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), legacyProxy)
 
 	killChan := make(chan os.Signal)
