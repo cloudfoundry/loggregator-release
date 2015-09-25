@@ -32,4 +32,4 @@ doppler [--logFile <path to log file>] [--config <path to config file>] \
 Cloud Foundry developers can easily add source clients to new CF components that emit messages to Doppler.  Currently, there are libraries for [Go](https://github.com/cloudfoundry/dropsonde/). For usage information, look at its README.
 
 ## Editing Manifest Templates
-The up-to-date Doppler configuration can be found [in the doppler spec file](../../bosh/jobs/doppler/spec). You can see a list of available configurable properties, their defaults and descriptions in that file. 
+The up-to-date Doppler configuration can be found [in the doppler spec file](../../jobs/doppler/spec). You can see a list of available configurable properties, their defaults and descriptions in that file. 

@@ -18,3 +18,11 @@ bin/
 src/lats/fixtures/metron.json
 src/github.com/cloudfoundry/gorouter/
 src/github.com/rcrowley/
+config/dev.yml
+releases/*.tgz
+releases/**/*.tgz
+.blobs
+blobs
+dev_releases
+.dev_builds
+

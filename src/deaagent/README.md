@@ -20,4 +20,4 @@ deaagent [--logFile <path to log file>] [--config <path to config file>] \
 | ```--instancesFile```| No, default: ```/var/vcap/data/dea_next/db/instances.json``` | The DEA instances JSON file |
 
 ## Editing Manifest Templates
-The up-to-date DEA logging agent configuration can be found [in the dea_logging_agent spec file](../../bosh/jobs/dea_logging_agent/spec). You can see a list of available configurable properties, their defaults and descriptions in that file. 
+The up-to-date DEA logging agent configuration can be found [in the dea_logging_agent spec file](../../jobs/dea_logging_agent/spec). You can see a list of available configurable properties, their defaults and descriptions in that file. 

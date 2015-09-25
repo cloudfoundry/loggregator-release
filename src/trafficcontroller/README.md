@@ -32,4 +32,4 @@ trafficcontoller [--logFile <path to log file>] [--config <path to config file>]
 | ```--disableAccessControl``` | No, default: ```false```     | All clients' access to app logs                 |
 
 ## Editing Manifest Templates
-The up-to-date Traffic-Controller configuration can be found [in the Traffic-Controller spec file](../../bosh/jobs/loggregator_trafficcontroller/spec). You can see a list of available configurable properties, their defaults and descriptions in that file. 
+The up-to-date Traffic-Controller configuration can be found [in the Traffic-Controller spec file](../../jobs/loggregator_trafficcontroller/spec). You can see a list of available configurable properties, their defaults and descriptions in that file. 

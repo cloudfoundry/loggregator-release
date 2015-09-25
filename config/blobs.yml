@@ -1,0 +1,9 @@
+--- 
+golang/go1.4.2.linux-amd64.tar.gz:
+  object_id: bfaf73b1-de68-4c94-9a02-555245b2eb8d
+  sha: 5020af94b52b65cc9b6f11d50a67e4bae07b0aff
+  size: 62442704
+cli/cf-linux-amd64.tgz:
+  object_id: d491f12d-a877-4d6f-b304-9c93adcd9ff1
+  sha: 1c3cdd94c23c2d72a40d8964167e07216679de0f
+  size: 5080879

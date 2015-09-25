@@ -16,4 +16,4 @@ Multiple instances of Syslog Drain Binder can and should be deployed, but only o
 | ```--logFile```| No, default: STDOUT                   | The agent log file.                             |
 
 ## Editing Manifest Templates
-The up-to-date Syslog Drain Binder configuration can be found [in the syslog_drain_binder spec file](../../bosh/jobs/syslog_drain_binder/spec). You can see a list of available configurable properties, their defaults and descriptions in that file. 
+The up-to-date Syslog Drain Binder configuration can be found [in the syslog_drain_binder spec file](../../jobs/syslog_drain_binder/spec). You can see a list of available configurable properties, their defaults and descriptions in that file. 

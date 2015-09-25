@@ -1,0 +1,4 @@
+---
+name: cli
+files:
+  - cli/cf-linux-amd64.tgz

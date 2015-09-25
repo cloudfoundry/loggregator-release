@@ -22,7 +22,7 @@ Source agents emit the logging data through the system as [protocol-buffers](htt
 | ```--debug```   | No, default: ```false```              | Debug logging                                   |
 
 ## Editing Manifest Templates
-The up-to-date Metron configuration can be found [in the metron spec file](../../bosh/jobs/metron_agent/spec). You can see a list of available configurable properties, their defaults and descriptions in that file. 
+The up-to-date Metron configuration can be found [in the metron spec file](../../jobs/metron_agent/spec). You can see a list of available configurable properties, their defaults and descriptions in that file. 
 
 ## Benchmark tests
 

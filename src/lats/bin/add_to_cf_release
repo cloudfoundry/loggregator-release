@@ -10,11 +10,11 @@ CF_RELEASE_DIR=${CF_RELEASE_DIR:-$HOME/workspace/cf-release}
 
 # create symlinks to jobs and packages
 pushd $CF_RELEASE_DIR/jobs
-ln -s ../src/loggregator/bosh/jobs/loggregator-acceptance-tests
+ln -s ../src/loggregator/jobs/loggregator-acceptance-tests
 popd
 
 pushd $CF_RELEASE_DIR/packages
-ln -s ../src/loggregator/bosh/packages/loggregator-acceptance-tests
+ln -s ../src/loggregator/packages/loggregator-acceptance-tests
 popd
 
 # add the bosh errand job to the template file
