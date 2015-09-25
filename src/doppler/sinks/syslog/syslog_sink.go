@@ -47,7 +47,6 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 	defer s.logger.Errorf("Syslog Sink %s: Stopped.", s.drainUrl)
 
 	backoffStrategy := retrystrategy.NewExponentialRetryStrategy()
-	numberOfTries := 0
 	filteredChan := make(chan *events.Envelope)
 
 	go func() {
@@ -72,37 +71,13 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 	}()
 
 	buffer := sinks.RunTruncatingBuffer(filteredChan, s.messageDrainBufferSize, s.logger, s.dropsondeOrigin, s.Identifier())
-	timer := time.NewTimer(backoffStrategy(numberOfTries))
+	timer := time.NewTimer(backoffStrategy(0))
 	connected := false
 	defer timer.Stop()
 	defer s.syslogWriter.Close()
 
-	s.logger.Debugf("Syslog Sink %s: Starting loop. Current backoff: %v", s.drainUrl, backoffStrategy(numberOfTries))
+	s.logger.Debugf("Syslog Sink %s: Starting loop. Current backoff: %v", s.drainUrl, backoffStrategy(0))
 	for {
-		if !connected {
-			s.logger.Debugf("Syslog Sink %s: Not connected. Trying to connect.", s.drainUrl)
-			err := s.syslogWriter.Connect()
-			if err != nil {
-				sleepDuration := backoffStrategy(numberOfTries)
-				errorMsg := fmt.Sprintf("Syslog Sink %s: Error when dialing out. Backing off for %v. Err: %v", s.drainUrl, sleepDuration, err)
-
-				s.handleSendError(errorMsg, s.appId, s.drainUrl)
-
-				timer.Reset(sleepDuration)
-				select {
-				case <-s.disconnectChannel:
-					return
-				case <-timer.C:
-				}
-
-				numberOfTries++
-				continue
-			}
-
-			s.logger.Infof("Syslog Sink %s: successfully connected.", s.drainUrl)
-			connected = true
-		}
-
 		s.logger.Debugf("Syslog Sink %s: Waiting for activity\n", s.drainUrl)
 
 		select {
@@ -116,14 +91,41 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 
 			// Some metrics will not be filter and can get to here (i.e.: TruncatingBuffer dropped message metrics)
 			if messageEnvelope.GetEventType() == events.Envelope_LogMessage {
-				err := s.sendLogMessage(messageEnvelope.GetLogMessage())
-				if err == nil {
-					numberOfTries = 0
-					connected = true
-				} else {
+				numberOfTries := 0
+				for {
+					for !connected {
+						s.logger.Debugf("Syslog Sink %s: Not connected. Trying to connect.", s.drainUrl)
+						err := s.syslogWriter.Connect()
+						if err == nil {
+							s.logger.Infof("Syslog Sink %s: successfully connected.", s.drainUrl)
+							connected = true
+							break
+						}
+
+						sleepDuration := backoffStrategy(numberOfTries)
+						errorMsg := fmt.Sprintf("Syslog Sink %s: Error when dialing out. Backing off for %v. Err: %v", s.drainUrl, sleepDuration, err)
+
+						s.handleSendError(errorMsg, s.appId, s.drainUrl)
+
+						timer.Reset(sleepDuration)
+						select {
+						case <-s.disconnectChannel:
+							return
+						case <-timer.C:
+						}
+
+						numberOfTries++
+					}
+
+					err := s.sendLogMessage(messageEnvelope.GetLogMessage())
+					if err == nil {
+						connected = true
+						break
+					}
+
 					s.logger.Debugf("Syslog Sink %s: Error when trying to send data to sink. Backing off. Err: %v\n", s.drainUrl, err)
-					numberOfTries++
 					connected = false
+					numberOfTries++
 				}
 			}
 		}

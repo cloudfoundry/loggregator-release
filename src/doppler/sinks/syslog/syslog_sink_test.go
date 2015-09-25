@@ -12,11 +12,7 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 
-	"doppler/sinks/syslogwriter"
 	"net"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
 	"sync/atomic"
 
 	"github.com/gogo/protobuf/proto"
@@ -74,13 +70,12 @@ var _ = Describe("SyslogSink", func() {
 			Eventually(syslogSinkRunFinished).Should(BeClosed())
 		})
 
-		It("still accepts messages without blocking", func(done Done) {
+		It("still accepts messages without blocking", func() {
 			logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
 
 			for i := 0; i < int(bufferSize); i++ {
-				inputChan <- logMessage
+				Eventually(inputChan).Should(BeSent(logMessage))
 			}
-			close(done)
 		})
 
 		Context("when remote syslog server comes up", func() {
@@ -100,27 +95,10 @@ var _ = Describe("SyslogSink", func() {
 				sysLogger.SetDown(false)
 			})
 
-			It("sends all the messages in the buffer", func(done Done) {
+			It("sends all the messages in the buffer", func() {
 				Eventually(syslogSinkRunFinished).Should(BeClosed())
 				data := sysLogger.ReceivedMessages()
 				Expect(data).To(HaveLen(5))
-				close(done)
-			})
-
-			Context("and more messages were sent than the could fit in the buffer", func() {
-				BeforeEach(func() {
-					bufferSize = 10
-					numMessages = int(bufferSize) + 1
-				})
-
-				It("sends a message about the buffer overflow", func() {
-					Eventually(syslogSinkRunFinished).Should(BeClosed())
-
-					data := sysLogger.ReceivedMessages()
-					Expect(data).To(HaveLen(2))
-					errorMsg := fmt.Sprintf("<11>1 Log message output too high. We've dropped %d messages", bufferSize)
-					Expect(data[0]).To(MatchRegexp(errorMsg))
-				})
 			})
 		})
 	})
@@ -193,18 +171,16 @@ var _ = Describe("SyslogSink", func() {
 				sysLogger.SetDown(true)
 			})
 
-			It("reports error messages when it's connected", func(done Done) {
+			It("reports error messages when it's connected", func() {
 				logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
 				inputChan <- logMessage
 				errorLog := <-errorChannel
 				errorMsg := string(errorLog.GetLogMessage().GetMessage())
 				Expect(errorMsg).To(MatchRegexp(`Syslog Sink syslog://using-fake: Error when dialing out. Backing off for (\d+(\.\d+)?(m|u|µ)s). Err: Error connecting.`))
 				Expect(errorLog.GetLogMessage().GetSourceType()).To(Equal("LGR"))
-
-				close(done)
 			})
 
-			It("stops sending messages when the disconnect comes in", func(done Done) {
+			It("stops sending messages when the disconnect comes in", func() {
 				logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
 				inputChan <- logMessage
 
@@ -219,7 +195,6 @@ var _ = Describe("SyslogSink", func() {
 				close(inputChan)
 
 				Expect(errorChannel).To(HaveLen(numErrors))
-				close(done)
 			})
 
 			Context("when the buffer overflows", func() {
@@ -239,25 +214,24 @@ var _ = Describe("SyslogSink", func() {
 						Eventually(syslogSinkRunFinished).Should(BeClosed())
 					})
 
-					It("resumes sending messages", func(done Done) {
+					It("resumes sending messages", func() {
 						data := sysLogger.ReceivedMessages()
 						Expect(data).To(HaveLen(6))
-						for i := 0; i < 5; i++ {
-							msg := fmt.Sprintf("<14>1 message no %v", i+int(bufferSize))
-							Expect(data[i+1]).To(MatchRegexp(msg))
+						Expect(data[0]).To(ContainSubstring(fmt.Sprintf("<14>1 message no 0")))
+
+						for i := 2; i < 6; i++ {
+							msg := fmt.Sprintf("<14>1 message no %v", i-1+int(bufferSize))
+							Expect(data[i]).To(ContainSubstring(msg))
 						}
-						close(done)
 					})
 
-					It("sends a message about the buffer overflow", func(done Done) {
+					It("sends a message about the buffer overflow", func() {
 						data := sysLogger.ReceivedMessages()
-						Expect(len(data)).To(BeNumerically(">", 1))
-						Expect(data[0]).To(MatchRegexp("<11>1 Log message output too high. We've dropped 100 messages"))
-						close(done)
+						Expect(len(data)).To(BeNumerically(">", 2))
+						Expect(data[1]).To(MatchRegexp("<11>1 Log message output too high. We've dropped 100 messages"))
 					})
 				})
 			})
-
 		})
 	})
 
@@ -269,44 +243,47 @@ var _ = Describe("SyslogSink", func() {
 	})
 
 	Describe("Exponentially backs off", func() {
-		It("for https writer", func() {
-			bufferSize = 6
-			appId := "appId"
-			var timestampsInMillis []int64
-			var requests int64
+		var timestamps []time.Time
+		var errors int64
 
-			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(400)
-				timestampsInMillis = append(timestampsInMillis, time.Now().UnixNano()/1e6)
-				atomic.AddInt64(&requests, 1)
-			}))
-			url, _ := url.Parse(server.URL)
-
-			httpsWriter, err := syslogwriter.NewHttpsWriter(url, appId, true, dialer, 0)
-			Expect(err).ToNot(HaveOccurred())
-
-			errorHandler := func(string, string, string) {}
-			syslogSink = syslog.NewSyslogSink(appId, server.URL, loggertesthelper.Logger(), bufferSize, httpsWriter, errorHandler, "dropsonde-origin")
-			go syslogSink.Run(inputChan)
-
-			for i := 0; i < int(bufferSize); i++ {
-				msg := fmt.Sprintf("message number %v", i)
-				logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, msg, appId, "App"), "origin")
-
-				inputChan <- logMessage
+		BeforeEach(func() {
+			errors = 0
+			timestamps = []time.Time{}
+			errorHandler = func(errorMsg string, appId string, drainUrl string) {
+				timestamps = append(timestamps, time.Now())
+				atomic.AddInt64(&errors, 1)
 			}
+		})
+
+		JustBeforeEach(func() {
+			sysLogger.SetDown(true)
+			go func() {
+				syslogSink.Run(inputChan)
+				close(syslogSinkRunFinished)
+			}()
+		})
+
+		AfterEach(func() {
+			syslogSink.Disconnect()
+			Eventually(syslogSinkRunFinished).Should(BeClosed())
+		})
+
+		It("backsoff when retrying", func() {
+			logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "a message", "appId", "App"), "origin")
+			inputChan <- logMessage
+
 			close(inputChan)
 
 			Eventually(func() int64 {
-				return atomic.LoadInt64(&requests)
-			}).Should(BeEquivalentTo(bufferSize))
+				return atomic.LoadInt64(&errors)
+			}).Should(BeNumerically(">", 5))
 
 			// We ignore the difference in timestamps for the 0th iteration because our exponential backoff
 			// strategy starts of with a difference of 1 ms
 			var diff, prevDiff int64
-			for i := 1; i < len(timestampsInMillis)-1; i++ {
-				diff = timestampsInMillis[i+1] - timestampsInMillis[i]
-				Expect(diff).To(BeNumerically(">", 2*prevDiff))
+			for i := 1; i < 5; i++ {
+				delta := timestamps[i+1].Sub(timestamps[i])
+				Expect(delta).To(BeNumerically(">", 2*prevDiff))
 				prevDiff = diff
 			}
 		})
