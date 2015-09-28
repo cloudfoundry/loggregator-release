@@ -29,7 +29,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/auth/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/generic_logger/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/registrars/collectorregistrar/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/clientpool/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/loggregatorclient/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/logmessage/*.go # gosub
@@ -39,7 +38,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/storeadapter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/etcdstoreadapter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/yagnats/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/yagnats/fakeyagnats/*.go # gosub
 - loggregator/src/github.com/coreos/go-etcd/etcd/*.go # gosub
 - loggregator/src/github.com/davecgh/go-spew/spew/*.go # gosub
 - loggregator/src/github.com/gogo/protobuf/proto/*.go # gosub

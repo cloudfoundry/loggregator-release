@@ -4,7 +4,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"net/http"
 	"os/exec"
 	"testing"
 
@@ -15,13 +14,11 @@ import (
 	"github.com/nu7hatch/gouuid"
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/gomega/gexec"
-	"github.com/pivotal-golang/localip"
 )
 
 var metronSession *gexec.Session
 var etcdRunner *etcdstorerunner.ETCDClusterRunner
 var etcdPort int
-var localIPAddress string
 var pathToMetronExecutable string
 
 func TestMetrics(t *testing.T) {
@@ -34,8 +31,6 @@ var _ = BeforeSuite(func() {
 	pathToMetronExecutable, err = gexec.Build("metron")
 	Expect(err).ShouldNot(HaveOccurred())
 
-	localIPAddress, _ = localip.LocalIP()
-
 	etcdPort = 5800 + (config.GinkgoConfig.ParallelNode-1)*10
 	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
 	etcdRunner.Start()
@@ -46,12 +41,6 @@ var _ = BeforeEach(func() {
 	command := exec.Command(pathToMetronExecutable, "--config=fixtures/metron.json", "--debug")
 	metronSession, err = gexec.Start(command, gexec.NewPrefixedWriter("[o][metron]", GinkgoWriter), gexec.NewPrefixedWriter("[e][metron]", GinkgoWriter))
 	Expect(err).ShouldNot(HaveOccurred())
-
-	// wait for server to be up
-	Eventually(func() error {
-		_, err := http.Get("http://" + localIPAddress + ":1234")
-		return err
-	}, 3).ShouldNot(HaveOccurred())
 })
 
 var _ = AfterEach(func() {

@@ -69,9 +69,6 @@ var _ = BeforeEach(func() {
 
 	metronSession = startComponent(metronExecutablePath, "metron", BLUE, "--config=fixtures/metron.json")
 
-	// Wait for metron to startup
-	waitOnURL("http://" + LocalIPAddress + ":49633")
-
 	tcSession = startComponent(trafficControllerExecutablePath, "tc", LIGHT_BLUE, "--config=fixtures/trafficcontroller.json", "--disableAccessControl")
 
 	// Wait for traffic controller to startup
