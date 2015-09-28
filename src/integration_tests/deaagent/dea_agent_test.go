@@ -2,20 +2,22 @@ package integration_test
 
 import (
 	"deaagent/domain"
+	"testing"
+
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"github.com/onsi/gomega/gexec"
-	"testing"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/onsi/ginkgo/config"
 
 	"fmt"
-	"github.com/gogo/protobuf/proto"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
+
+	"github.com/gogo/protobuf/proto"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -112,7 +114,7 @@ var _ = Describe("DeaLoggingAgent integration tests", func() {
 			task1StdoutConn.Write([]byte(SOCKET_PREFIX + "some message" + "\n"))
 
 			Eventually(m.getTotalNumOfOutputMessages, 20, 1).Should(BeNumerically(">", 10))
-			Expect(m.getValueOfValueMetric("logSenderTotalMessagesRead")).To(Equal(float64(1)))
+			Expect(m.getDeltaOfCounterEvent("logSenderTotalMessagesRead")).To(Equal(uint64(1)))
 
 			Expect(m.getFirstLogMessageString()).To(Equal("some message"))
 
@@ -128,16 +130,16 @@ func (m *messageHolder) getTotalNumOfOutputMessages() int {
 	return len(m.messages)
 }
 
-func (m *messageHolder) getValueOfValueMetric(metricName string) float64 {
+func (m *messageHolder) getDeltaOfCounterEvent(metricName string) uint64 {
 	m.RLock()
 	defer m.RUnlock()
 	for _, metric := range m.messages {
-		if *metric.EventType == events.Envelope_ValueMetric && metric.ValueMetric.GetName() == metricName {
-			return metric.ValueMetric.GetValue()
+		if *metric.EventType == events.Envelope_CounterEvent && metric.CounterEvent.GetName() == metricName {
+			return metric.CounterEvent.GetDelta()
 		}
 	}
 
-	return -1
+	return 0
 }
 
 func (m *messageHolder) getFirstLogMessageString() string {
