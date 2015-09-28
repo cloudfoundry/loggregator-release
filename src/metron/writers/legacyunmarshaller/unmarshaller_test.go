@@ -4,20 +4,24 @@ import (
 	"metron/writers/legacyunmarshaller"
 	"metron/writers/mocks"
 
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation/testhelpers"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
+	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"time"
 )
 
 var _ = Describe("LegacyUnmarshaller", func() {
 	var (
 		unmarshaller *legacyunmarshaller.LegacyUnmarshaller
 		writer       mocks.MockEnvelopeWriter
+		fakeSender   *fake.FakeMetricSender
 	)
 
 	Context("Run", func() {
@@ -61,15 +65,14 @@ var _ = Describe("LegacyUnmarshaller", func() {
 	Context("metrics", func() {
 		BeforeEach(func() {
 			unmarshaller = legacyunmarshaller.New(&writer, loggertesthelper.Logger())
-		})
-
-		It("emits the correct metrics context", func() {
-			Expect(unmarshaller.Emit().Name).To(Equal("legacyUnmarshaller"))
+			fakeSender = fake.NewFakeMetricSender()
+			batcher := metricbatcher.New(fakeSender, time.Millisecond)
+			metrics.Initialize(fakeSender, batcher)
 		})
 
 		It("emits an unmarshal error counter", func() {
 			unmarshaller.Write([]byte{1, 2, 3})
-			testhelpers.EventuallyExpectMetric(unmarshaller, "unmarshalErrors", 1)
+			Eventually(func() uint64 { return fakeSender.GetCounter("legacyUnmarshaller.unmarshalErrors") }).Should(BeEquivalentTo(1))
 		})
 	})
 })

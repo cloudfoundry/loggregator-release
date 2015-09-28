@@ -3,13 +3,11 @@ package networkreader
 import (
 	"net"
 	"sync"
-	"sync/atomic"
 
 	"metron/writers"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 )
 
 type NetworkReader struct {
@@ -17,9 +15,7 @@ type NetworkReader struct {
 	connection net.PacketConn
 	writer     writers.ByteArrayWriter
 
-	receivedMessageCount uint64
-	receivedByteCount    uint64
-	contextName          string
+	contextName string
 
 	lock   sync.RWMutex
 	logger *gosteno.Logger
@@ -55,8 +51,6 @@ func (nr *NetworkReader) Start() {
 		readData := make([]byte, readCount) //pass on buffer in size only of read data
 		copy(readData, readBuffer[:readCount])
 
-		atomic.AddUint64(&nr.receivedMessageCount, 1)
-		atomic.AddUint64(&nr.receivedByteCount, uint64(readCount))
 		metrics.BatchIncrementCounter(nr.contextName + ".receivedMessageCount")
 		metrics.BatchAddCounter(nr.contextName+".receivedByteCount", uint64(readCount))
 		nr.writer.Write(readData)
@@ -67,17 +61,4 @@ func (nr *NetworkReader) Stop() {
 	nr.lock.Lock()
 	defer nr.lock.Unlock()
 	nr.connection.Close()
-}
-
-func (nr *NetworkReader) Emit() instrumentation.Context {
-	return instrumentation.Context{Name: nr.contextName,
-		Metrics: nr.metrics(),
-	}
-}
-
-func (nr *NetworkReader) metrics() []instrumentation.Metric {
-	return []instrumentation.Metric{
-		instrumentation.Metric{Name: "receivedMessageCount", Value: atomic.LoadUint64(&nr.receivedMessageCount)},
-		instrumentation.Metric{Name: "receivedByteCount", Value: atomic.LoadUint64(&nr.receivedByteCount)},
-	}
 }

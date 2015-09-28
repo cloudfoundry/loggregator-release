@@ -11,6 +11,9 @@ import (
 
 	"metron/writers/mocks"
 
+	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -165,19 +168,18 @@ var _ = Describe("MessageAggregator", func() {
 		})
 	})
 
-	var metricValue = func(name string) interface{} {
-		for _, metric := range messageAggregator.Emit().Metrics {
-			if metric.Name == name {
-				return metric.Value
-			}
-		}
-		return nil
-	}
-
 	Context("metrics", func() {
+		var fakeSender *fake.FakeMetricSender
+
+		BeforeEach(func() {
+			fakeSender = fake.NewFakeMetricSender()
+			batcher := metricbatcher.New(fakeSender, time.Millisecond)
+			metrics.Initialize(fakeSender, batcher)
+		})
+
 		var eventuallyExpectMetric = func(name string, value uint64) {
-			Eventually(func() interface{} {
-				return metricValue(name)
+			Eventually(func() uint64 {
+				return fakeSender.GetCounter("MessageAggregator." + name)
 			}).Should(Equal(value), fmt.Sprintf("Metric %s was incorrect", name))
 		}
 

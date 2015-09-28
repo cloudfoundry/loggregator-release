@@ -3,7 +3,6 @@ package dopplerforwarder_test
 import (
 	"metron/writers/dopplerforwarder"
 
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"time"

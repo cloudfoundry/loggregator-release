@@ -7,11 +7,15 @@ import (
 	"metron/networkreader"
 	"metron/writers/mocks"
 
+	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"strconv"
+	"time"
 )
 
 var _ = Describe("NetworkReader", func() {
@@ -20,6 +24,7 @@ var _ = Describe("NetworkReader", func() {
 	var writer mocks.MockByteArrayWriter
 	var port int
 	var address string
+	var fakeMetricSender *fake.FakeMetricSender
 
 	BeforeEach(func() {
 		port = 3456 + GinkgoParallelNode()
@@ -29,17 +34,13 @@ var _ = Describe("NetworkReader", func() {
 		readerStopped = make(chan struct{})
 	})
 
-	Context("without a running listener", func() {
-		It("Emit returns a context with the given name", func() {
-			context := reader.Emit()
-
-			Expect(context.Name).To(Equal("networkReader"))
-		})
-	})
-
 	Context("with a reader running", func() {
 		BeforeEach(func() {
 			loggertesthelper.TestLoggerSink.Clear()
+			fakeMetricSender = fake.NewFakeMetricSender()
+			metricBatcher := metricbatcher.New(fakeMetricSender, time.Millisecond)
+			metrics.Initialize(fakeMetricSender, metricBatcher)
+
 			go func() {
 				reader.Start()
 				close(readerStopped)
@@ -90,18 +91,9 @@ var _ = Describe("NetworkReader", func() {
 
 			Eventually(writer.Data).Should(HaveLen(2))
 
-			metrics := reader.Emit().Metrics
-			Expect(metrics).To(HaveLen(2))
-			for _, metric := range metrics {
-				switch metric.Name {
-				case "receivedMessageCount":
-					Expect(metric.Value).To(Equal(uint64(2)))
-				case "receivedByteCount":
-					Expect(metric.Value).To(Equal(uint64(dataByteCount)))
-				default:
-					Fail(fmt.Sprintf("Got an invalid metric name: %s", metric.Name))
-				}
-			}
+			Eventually(func() uint64 { return fakeMetricSender.GetCounter("networkReader.receivedMessageCount") }).Should(BeEquivalentTo(2))
+			Eventually(func() uint64 { return fakeMetricSender.GetCounter("networkReader.receivedByteCount") }).Should(BeEquivalentTo(dataByteCount))
+
 			close(done)
 		}, 2)
 	})

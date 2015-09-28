@@ -1,13 +1,10 @@
 package legacyunmarshaller
 
 import (
-	"sync/atomic"
-
 	"metron/writers"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/davecgh/go-spew/spew"
@@ -17,9 +14,8 @@ import (
 const legacyDropsondeOrigin = "legacy"
 
 type LegacyUnmarshaller struct {
-	unmarshalErrorCount uint64
-	outputWriter        writers.EnvelopeWriter
-	logger              *gosteno.Logger
+	outputWriter writers.EnvelopeWriter
+	logger       *gosteno.Logger
 }
 
 func New(outputWriter writers.EnvelopeWriter, logger *gosteno.Logger) *LegacyUnmarshaller {
@@ -44,7 +40,6 @@ func (u *LegacyUnmarshaller) unmarshalMessage(message []byte) (*logmessage.LogEn
 	err := proto.Unmarshal(message, envelope)
 	if err != nil {
 		u.logger.Debugf("legacyUnmarshaller: unmarshal error %v for message %v", err, message)
-		incrementCount(&u.unmarshalErrorCount)
 		metrics.BatchIncrementCounter("legacyUnmarshaller.unmarshalErrors")
 		return nil, err
 	}
@@ -68,26 +63,4 @@ func convertMessage(legacyEnvelope *logmessage.LogEnvelope) *events.Envelope {
 			SourceInstance: legacyMessage.SourceId,
 		},
 	}
-}
-
-func (u *LegacyUnmarshaller) Emit() instrumentation.Context {
-	return instrumentation.Context{
-		Name:    "legacyUnmarshaller",
-		Metrics: u.metrics(),
-	}
-}
-
-func incrementCount(count *uint64) {
-	atomic.AddUint64(count, 1)
-}
-
-func (u *LegacyUnmarshaller) metrics() []instrumentation.Metric {
-	var metrics []instrumentation.Metric
-
-	metrics = append(metrics, instrumentation.Metric{
-		Name:  "unmarshalErrors",
-		Value: atomic.LoadUint64(&u.unmarshalErrorCount),
-	})
-
-	return metrics
 }
