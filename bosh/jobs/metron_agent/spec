@@ -84,6 +84,8 @@ properties:
     description: "IP port of Cloud Foundry NATS server"
     default: 4222
 
+  metron_agent.etcd.machines:
+    description: "IPs pointing to the ETCD cluster"
   etcd.machines:
     description: "IPs pointing to the ETCD cluster"
   etcd.maxconcurrentrequests:
