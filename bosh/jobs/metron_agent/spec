@@ -36,16 +36,6 @@ properties:
     description: "boolean value to turn on verbose mode"
     default: false
 
-  metron_agent.status.user:
-    description: "username used to log into varz endpoint"
-    default: ""
-  metron_agent.status.password:
-    description: "password used to log into varz endpoint"
-    default: ""
-  metron_agent.status.port:
-    description: "port used to run the varz endpoint"
-    default: 0
-
   metron_agent.zone:
     description: "Availability zone where this agent is running"
   metron_agent.deployment:
@@ -54,9 +44,6 @@ properties:
   metron_agent.etcd_query_interval_milliseconds:
     description: "Interval for querying ETCD for trafficcontroller heartbeats"
     default: 5000
-  metron_agent.collector_registrar_interval_milliseconds:
-    description: "Interval for registering with collector"
-    default: 60000
 
   metron_agent.logrotate.freq_min:
     description: "The frequency in minutes which logrotate will rotate VM logs"
@@ -73,16 +60,6 @@ properties:
     default: 3457
   loggregator_endpoint.shared_secret:
     description: "Shared secret used to verify cryptographically signed loggregator messages"
-
-  nats.user:
-    description: "Username for cc client to connect to NATS"
-  nats.password:
-    description: "Password for cc client to connect to NATS"
-  nats.machines:
-    description: "IP addresses of Cloud Foundry NATS servers"
-  nats.port:
-    description: "IP port of Cloud Foundry NATS server"
-    default: 4222
 
   etcd.machines:
     description: "IPs pointing to the ETCD cluster"

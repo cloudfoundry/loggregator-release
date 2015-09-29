@@ -12,16 +12,6 @@
   "LegacyIncomingMessagesPort": 51160,
   "DropsondeIncomingMessagesPort": 51161,
 
-  "VarzUser": "admin",
-  "VarzPass": "admin",
-  "VarzPort": 1234,
-
-  "NatsHosts": ["127.0.0.1"],
-  "NatsPort": 4222,
-  "NatsUser": "",
-  "NatsPass": "",
-  "CollectorRegistrarIntervalMilliseconds": 10000,
-
   "EtcdQueryIntervalMilliseconds": 100,
 
   "LoggregatorDropsondePort": 3457

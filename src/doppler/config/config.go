@@ -55,6 +55,5 @@ func (c *Config) Validate(logger *gosteno.Logger) (err error) {
 		c.EtcdMaxConcurrentRequests = 1
 	}
 
-	err = c.Config.Validate(logger)
-	return
+	return err
 }

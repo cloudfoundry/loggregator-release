@@ -26,14 +26,9 @@ type MetronConfig struct {
 	EtcdUrls    []string
 	LoggregatorDropsondePort int
 	Index int
-	VarzPort int
-	VarzUser string
-	VarzPass string
-	NatsUser string
 	EtcdMaxConcurrentRequests int
 	EtcdQueryIntervalMilliseconds int
 	Zone string
-	CollectorRegistrarIntervalMilliseconds int
 }
 
 func Load() *TestConfig {

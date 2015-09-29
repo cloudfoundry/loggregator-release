@@ -12,16 +12,6 @@
   "LegacyIncomingMessagesPort": <%= p("metron_agent.incoming_port") %>,
   "DropsondeIncomingMessagesPort": <%= p("metron_agent.dropsonde_incoming_port") %>,
 
-  "VarzUser": "<%= p("metron_agent.status.user") %>",
-  "VarzPass": "<%= p("metron_agent.status.password") %>",
-  "VarzPort": <%= p("metron_agent.status.port") %>,
-
-  "NatsHosts": <%= p("nats.machines") %>,
-  "NatsPort": <%= p("nats.port") %>,
-  "NatsUser": "<%= p("nats.user") %>",
-  "NatsPass": "<%= p("nats.password") %>",
-  "CollectorRegistrarIntervalMilliseconds": <%= p("metron_agent.collector_registrar_interval_milliseconds") %>,
-
   "EtcdQueryIntervalMilliseconds": <%= p("metron_agent.etcd_query_interval_milliseconds") %>,
 
   "LoggregatorDropsondePort": <%= p("loggregator.dropsonde_incoming_port") %>

@@ -11,18 +11,9 @@
     "Zone": "z1",
     "ApiHost": "http://127.0.0.1:42123",
     "SystemDomain": "vcap.me",
-
-    "NatsHosts": ["localhost"],
-    "NatsPort": 4222,
-    "NatsUser": "",
-    "NatsPass": "",
-    "VarzUser": "",
-    "VarzPass": "",
-    "VarzPort": 12350,
     "MetronPort": 37474,
     "UaaHost": "http://localhost:5678",
     "UaaClientId": "bob",
     "UaaClientSecret": "yourUncle",
-    "CollectorRegistrarIntervalMilliseconds": 60000,
     "MonitorIntervalSeconds": 1
 }

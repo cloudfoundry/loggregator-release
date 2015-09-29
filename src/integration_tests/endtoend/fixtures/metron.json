@@ -1,10 +1,6 @@
 {
     "Index": 42,
     "Job": "test-component",
-    "VarzPort": 49633,
-    "VarzUser": "admin",
-    "VarzPass": "admin",
-    "NatsUser": "",
     "LegacyIncomingMessagesPort": 49624,
     "DropsondeIncomingMessagesPort": 49625,
     "SharedSecret": "end_to_end_secret",
@@ -13,7 +9,5 @@
     "EtcdQueryIntervalMilliseconds": 100,
     "Zone": "z1",
     "Deployment": "deployment-name",
-    "LoggregatorDropsondePort": 49626,
-    "CollectorRegistrarIntervalMilliseconds": 100,
-    "NatsHosts": []
+    "LoggregatorDropsondePort": 49626
 }

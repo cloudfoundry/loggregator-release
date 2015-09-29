@@ -1,9 +1,5 @@
 {
     "Index": 0,
-    "VarzPort": 1234,
-    "VarzUser": "admin",
-    "VarzPass": "admin",
-    "NatsUser": "",
     "LegacyIncomingMessagesPort": 51160,
     "DropsondeIncomingMessagesPort": 51161,
     "SharedSecret": "shared_secret",
@@ -11,6 +7,5 @@
     "EtcdMaxConcurrentRequests": 1,
     "EtcdQueryIntervalMilliseconds": 10,
     "Zone": "z1",
-    "LoggregatorDropsondePort": 3457,
-    "CollectorRegistrarIntervalMilliseconds": 60000
+    "LoggregatorDropsondePort": 3457
 }

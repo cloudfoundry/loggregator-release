@@ -1,10 +1,6 @@
 {
     "Index": 42,
     "Job": "test-component",
-    "VarzPort": 1234,
-    "VarzUser": "admin",
-    "VarzPass": "admin",
-    "NatsUser": "",
     "LegacyIncomingMessagesPort": 51160,
     "DropsondeIncomingMessagesPort": 51161,
     "SharedSecret": "shared_secret",
@@ -13,10 +9,5 @@
     "EtcdQueryIntervalMilliseconds": 100,
     "Zone": "z1",
     "Deployment": "deployment-name",
-    "LoggregatorDropsondePort": 3457,
-    "CollectorRegistrarIntervalMilliseconds": 100,
-    "NatsHosts": ["127.0.0.1"],
-    "NatsPort": 24484,
-    "NatsUser": "nats",
-    "NatsPass": "nats"
+    "LoggregatorDropsondePort": 3457
 }

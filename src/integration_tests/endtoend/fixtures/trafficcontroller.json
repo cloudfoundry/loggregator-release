@@ -14,10 +14,8 @@
     "ApiHost": "http://localhost:49632",
     "SystemDomain": "vcap.me",
 
-    "NatsHosts": [],
     "MetronPort": 49625,
     "UaaHost": "http://localhost:49628",
     "UaaClientId": "bob",
-    "UaaClientSecret": "yourUncle",
-    "CollectorRegistrarIntervalMilliseconds": 60000
+    "UaaClientSecret": "yourUncle"
 }

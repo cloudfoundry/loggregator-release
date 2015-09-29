@@ -40,9 +40,6 @@ properties:
   doppler.container_metric_ttl_seconds:
     description: "TTL (in seconds) for container usage metrics"
     default: 120
-  doppler.collector_registrar_interval_milliseconds:
-    description: "Interval for registering with collector"
-    default: 60000
   doppler.unmarshaller_count:
     description: "Number of parallel unmarshallers to run within Doppler"
     default: 5
@@ -68,16 +65,6 @@ properties:
   metron_endpoint.dropsonde_port:
     description: "The port used to emit dropsonde messages to the Metron agent"
     default: 3457
-  nats.user:
-    description: "Username for cc client to connect to NATS"
-  nats.password:
-    description: "Password for cc client to connect to NATS"
-  nats.machines:
-    description: "IP addresses of Cloud Foundry NATS servers"
-  nats.port:
-    description: "IP port of Cloud Foundry NATS server"
-    default: 4222
-
   ssl.skip_cert_verify:
     description: "when connecting over TLS, don't verify certificates"
     default: false

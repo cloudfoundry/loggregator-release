@@ -21,14 +21,6 @@
 
   "MetronAddress": "<%= p("metron_endpoint.host") %>:<%= p("metron_endpoint.dropsonde_port") %>",
 
-
-  "NatsHosts": <%= p("nats.machines") %>,
-  "NatsPort": <%= p("nats.port") %>,
-  "NatsUser": "<%= p("nats.user") %>",
-  "NatsPass": "<%= p("nats.password") %>",
-  "VarzUser": "<%= p("doppler.status.user") %>",
-  "VarzPass": "<%= p("doppler.status.password") %>",
-  "VarzPort": <%= p("doppler.status.port") %>
     <% if_p("syslog_daemon_config") do |_| %>
     , "Syslog": "vcap.doppler"
     <% end %>

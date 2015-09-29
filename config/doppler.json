@@ -13,13 +13,6 @@
     "SharedSecret": "secret",
     "ContainerMetricTTLSeconds": 120,
     "SinkInactivityTimeoutSeconds": 120,
-    "NatsHosts": ["localhost"],
-    "NatsPort": 4222,
-    "NatsUser": "nats",
-    "NatsPass": "password",
-    "VarzUser": "varz",
-    "VarzPass": "password",
-    "VarzPort": 8888,
     "UnmarshallerCount": 1,
     "MetronAddress": "localhost:3457"
 }
