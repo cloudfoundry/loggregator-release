@@ -8,15 +8,28 @@ import (
 	"metron/writers/mocks"
 
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"strconv"
 	"time"
 )
+
+func randomPort() int {
+	addr, err := net.ResolveUDPAddr("udp", "1.2.3.4:1")
+	Expect(err).NotTo(HaveOccurred())
+	conn, err := net.DialUDP("udp", nil, addr)
+	Expect(err).NotTo(HaveOccurred())
+	defer conn.Close()
+	_, addrPort, err := net.SplitHostPort(conn.LocalAddr().String())
+	Expect(err).NotTo(HaveOccurred())
+	port, err := strconv.Atoi(addrPort)
+	Expect(err).NotTo(HaveOccurred())
+	return port
+}
 
 var _ = Describe("NetworkReader", func() {
 	var reader *networkreader.NetworkReader
@@ -27,7 +40,7 @@ var _ = Describe("NetworkReader", func() {
 	var fakeMetricSender *fake.FakeMetricSender
 
 	BeforeEach(func() {
-		port = 3456 + GinkgoParallelNode()
+		port = randomPort() + GinkgoParallelNode()
 		address = net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
 		writer = mocks.MockByteArrayWriter{}
 		reader = networkreader.New(address, "networkReader", &writer, loggertesthelper.Logger())
