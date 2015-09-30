@@ -11,7 +11,6 @@
   "JobName": "<%= name %>",
   "Index": <%= spec.index %>,
   "MaxRetainedLogMessages": <%= p("doppler.maxRetainedLogMessages") %>,
-  "CollectorRegistrarIntervalMilliseconds": <%= p("doppler.collector_registrar_interval_milliseconds") %>,
   "SharedSecret": "<%= p("doppler_endpoint.shared_secret") %>",
   "ContainerMetricTTLSeconds": <%= p("doppler.container_metric_ttl_seconds") %>,
   "SinkInactivityTimeoutSeconds": <%= p("doppler.sink_inactivity_timeout_seconds") %>,
@@ -19,7 +18,7 @@
   "SinkIOTimeoutSeconds": <%= p("doppler.sink_io_timeout_seconds") %>,
   "UnmarshallerCount": <%= p("doppler.unmarshaller_count") %>,
 
-  "MetronAddress": "<%= p("metron_endpoint.host") %>:<%= p("metron_endpoint.dropsonde_port") %>",
+  "MetronAddress": "<%= p("metron_endpoint.host") %>:<%= p("metron_endpoint.dropsonde_port") %>"
 
     <% if_p("syslog_daemon_config") do |_| %>
     , "Syslog": "vcap.doppler"
