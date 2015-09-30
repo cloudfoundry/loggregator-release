@@ -5,7 +5,6 @@ description: "The loggregator acceptance tests."
 
 packages:
   - golang1.4
-  - cli
   - loggregator-acceptance-tests
 
 templates:
