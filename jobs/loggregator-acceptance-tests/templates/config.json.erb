@@ -5,7 +5,7 @@
     "DopplerEndpoint" => "wss://doppler." + properties.system_domain + ":4443",
     "SkipSSLVerify" => properties.ssl.skip_cert_verify,
     "DropsondePort" => properties.metron_agent.dropsonde_incoming_port,
-    "EtcdUrls" => properties.loggregator.etcd.machines.map {|ip| "http://#{ip}:4001"},
+    "EtcdUrls" => properties.etcd.machines.map {|ip| "http://#{ip}:4001"},
     "SharedSecret" => properties.loggregator_endpoint.shared_secret,
     "LoginRequired" => properties.loggregator_acceptance_tests.login_required,
     "UaaURL" => "https://uaa." + properties.system_domain,

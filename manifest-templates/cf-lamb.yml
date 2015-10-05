@@ -92,6 +92,7 @@ properties:
     debug: (( merge || false ))
     blacklisted_syslog_ranges: ~
     outgoing_dropsonde_port: 8081
+    etcd: (( merge || ~ ))
 
   doppler:
     maxRetainedLogMessages: 100

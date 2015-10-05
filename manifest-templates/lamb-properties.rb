@@ -96,6 +96,11 @@ class LambProperties
     - start: 10.10.0.0
       end: 10.10.255.255
     outgoing_dropsonde_port: 8081
+    etcd:
+      machines:
+      - 0.0.0.10
+      - 0.0.0.25
+      - 0.0.1.9
 
   doppler:
     maxRetainedLogMessages: 100
@@ -116,12 +121,20 @@ class LambProperties
   def lamb_properties(deployment_name)
     return aws_lamb_properties(deployment_name) if @infrastructure == 'aws'
 
+    etcd_machines = {
+      'vsphere' => "['0.0.0.14', '0.0.0.15', '0.0.1.13']",
+      'openstack' => "['0.0.0.8']",
+      'warden' => "['10.244.0.42']",
+    }
+
     result = <<-EOF
   loggregator:
     maxRetainedLogMessages: 100
     debug: false
     blacklisted_syslog_ranges: null
     outgoing_dropsonde_port: 8081
+    etcd:
+      machines: #{etcd_machines[@infrastructure]}
 
   doppler:
     maxRetainedLogMessages: 100
