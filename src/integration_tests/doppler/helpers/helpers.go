@@ -96,6 +96,15 @@ func DecodeProtoBufLogMessage(actual []byte) *events.LogMessage {
 	return receivedEnvelope.GetLogMessage()
 }
 
+func DecodeProtoBufCounterEvent(actual []byte) *events.CounterEvent {
+	var receivedEnvelope events.Envelope
+	err := proto.Unmarshal(actual, &receivedEnvelope)
+	if err != nil {
+		Fail(err.Error())
+	}
+	return receivedEnvelope.GetCounterEvent()
+}
+
 func AppKey(appID string) string {
 	return fmt.Sprintf("/loggregator/services/%s", appID)
 }

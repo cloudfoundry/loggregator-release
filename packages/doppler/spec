@@ -9,6 +9,8 @@ files:
 - loggregator/src/doppler/groupedsinks/firehose_group/*.go # gosub
 - loggregator/src/doppler/groupedsinks/sink_wrapper/*.go # gosub
 - loggregator/src/doppler/iprange/*.go # gosub
+- loggregator/src/doppler/listeners/agentlistener/*.go # gosub
+- loggregator/src/doppler/listeners/tlslistener/*.go # gosub
 - loggregator/src/doppler/sinks/*.go # gosub
 - loggregator/src/doppler/sinks/containermetric/*.go # gosub
 - loggregator/src/doppler/sinks/dump/*.go # gosub
@@ -41,7 +43,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/gosteno/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gosteno/syslog/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gunk/workpool/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/loggregatorlib/agentlistener/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/appservice/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/cfcomponent/auth/*.go # gosub

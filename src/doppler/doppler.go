@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"doppler/config"
+	"doppler/listeners/agentlistener"
 	"doppler/sinkserver"
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/sinkmanager"
@@ -13,10 +14,11 @@ import (
 
 	"common/monitor"
 
+	"crypto/tls"
+	"doppler/listeners/tlslistener"
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
 	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/store"
@@ -29,11 +31,12 @@ type Doppler struct {
 	*gosteno.Logger
 	appStoreWatcher *store.AppServiceStoreWatcher
 
-	errChan           chan error
-	dropsondeListener agentlistener.AgentListener
-	sinkManager       *sinkmanager.SinkManager
-	messageRouter     *sinkserver.MessageRouter
-	websocketServer   *websocketserver.WebsocketServer
+	errChan              chan error
+	dropsondeUDPListener agentlistener.Listener
+	dropsondeTLSListener agentlistener.Listener
+	sinkManager          *sinkmanager.SinkManager
+	messageRouter        *sinkserver.MessageRouter
+	websocketServer      *websocketserver.WebsocketServer
 
 	dropsondeUnmarshallerCollection dropsonde_unmarshaller.DropsondeUnmarshallerCollection
 	dropsondeBytesChan              <-chan []byte
@@ -57,7 +60,19 @@ func New(host string, config *config.Config, logger *gosteno.Logger, storeAdapte
 	appStoreCache := cache.NewAppServiceCache()
 	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
 
-	dropsondeListener, dropsondeBytesChan := agentlistener.NewAgentListener(fmt.Sprintf("%s:%d", host, config.DropsondeIncomingMessagesPort), logger, "dropsondeListener")
+	var dropsondeUDPListener agentlistener.Listener
+	var dropsondeTLSListener agentlistener.Listener
+	var dropsondeBytesChan <-chan []byte
+	listenerEnvelopeChan := make(chan *events.Envelope)
+	if config.EnableTLSTransport {
+		tlsConfig := &tls.Config{
+			Certificates:       []tls.Certificate{config.TLSListenerConfig.Cert},
+			InsecureSkipVerify: config.TLSListenerConfig.InsecureSkipVerify,
+		}
+		dropsondeTLSListener = tlslistener.New(fmt.Sprintf("%s:%d", host, config.TLSListenerConfig.Port), tlsConfig, listenerEnvelopeChan, logger)
+	}
+
+	dropsondeUDPListener, dropsondeBytesChan = agentlistener.NewAgentListener(fmt.Sprintf("%s:%d", host, config.DropsondeIncomingMessagesPort), logger, "dropsondeListener")
 
 	signatureVerifier := signature.NewVerifier(logger, config.SharedSecret)
 
@@ -71,7 +86,8 @@ func New(host string, config *config.Config, logger *gosteno.Logger, storeAdapte
 
 	return &Doppler{
 		Logger:                          logger,
-		dropsondeListener:               dropsondeListener,
+		dropsondeUDPListener:            dropsondeUDPListener,
+		dropsondeTLSListener:            dropsondeTLSListener,
 		sinkManager:                     sinkManager,
 		messageRouter:                   sinkserver.NewMessageRouter(sinkManager, logger),
 		websocketServer:                 websocketserver.New(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.MessageDrainBufferSize, dropsondeOrigin, logger),
@@ -81,7 +97,7 @@ func New(host string, config *config.Config, logger *gosteno.Logger, storeAdapte
 		storeAdapter:                    storeAdapter,
 		dropsondeBytesChan:              dropsondeBytesChan,
 		dropsondeUnmarshallerCollection: unmarshallerCollection,
-		envelopeChan:                    make(chan *events.Envelope),
+		envelopeChan:                    listenerEnvelopeChan,
 		wrappedEnvelopeChan:             make(chan *events.Envelope),
 		signatureVerifier:               signatureVerifier,
 		dropsondeVerifiedBytesChan:      make(chan []byte),
@@ -101,8 +117,16 @@ func (doppler *Doppler) Start() {
 
 	go func() {
 		defer doppler.wg.Done()
-		doppler.dropsondeListener.Start()
+		doppler.dropsondeUDPListener.Start()
 	}()
+
+	if doppler.dropsondeTLSListener != nil {
+		doppler.wg.Add(1)
+		go func() {
+			defer doppler.wg.Done()
+			doppler.dropsondeTLSListener.Start()
+		}()
+	}
 
 	doppler.dropsondeUnmarshallerCollection.Run(doppler.dropsondeVerifiedBytesChan, doppler.envelopeChan, &doppler.wg)
 
@@ -137,7 +161,8 @@ func (doppler *Doppler) Start() {
 }
 
 func (doppler *Doppler) Stop() {
-	doppler.dropsondeListener.Stop()
+	doppler.dropsondeUDPListener.Stop()
+	doppler.dropsondeTLSListener.Stop()
 	doppler.sinkManager.Stop()
 	doppler.messageRouter.Stop()
 	doppler.websocketServer.Stop()

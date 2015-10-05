@@ -3,6 +3,8 @@ name: doppler
 templates:
   doppler_ctl.erb: bin/doppler_ctl
   doppler.json.erb: config/doppler.json
+  tls_listener.crt.erb: config/certs/tls_listener.crt
+  tls_listener.key.erb: config/certs/tls_listener.key
 
 packages:
 - common
@@ -57,6 +59,16 @@ properties:
   doppler.message_drain_buffer_size:
     description: "Size of the internal buffer used by doppler to store messages. If the buffer gets full doppler will drop the messages."
     default: 100
+  doppler.enable_tls_transport:
+    description: "Enable TLS listener on doppler so that it can receive dropsonde envelopes over TLS transport. If enabled, Cert and Key files must be specified."
+    default: false
+  doppler.tls_listener.port:
+    description: "Port for incoming messages in the dropsonde format over tls listener"
+    default: 3458
+  doppler.tls_listener.cert:
+    description: "Cert required for generating tls listener x509 certificate"
+  doppler.tls_listener.key:
+    description: "Key required for generating tls listener x509 certificate"
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"
   metron_endpoint.host:

@@ -17,6 +17,15 @@
   "SinkDialTimeoutSeconds": <%= p("doppler.sink_dial_timeout_seconds") %>,
   "SinkIOTimeoutSeconds": <%= p("doppler.sink_io_timeout_seconds") %>,
   "UnmarshallerCount": <%= p("doppler.unmarshaller_count") %>,
+  "EnableTLSTransport": <%= p("doppler.enable_tls_transport") %>,
+  <% if_p("doppler.enable_tls_transport") do |_| %>
+  "TLSListenerConfig": {
+      "InsecureSkipVerify": <%= p("ssl.skip_cert_verify") %>,
+      "Port": <%= p("doppler.tls_listener.port") %>,
+      "KeyFile": "/var/vcap/jobs/doppler/config/certs/tls_listener.key",
+      "CrtFile": "/var/vcap/jobs/doppler/config/certs/tls_listener.crt"
+  },
+  <% end %>
 
   "MetronAddress": "<%= p("metron_endpoint.host") %>:<%= p("metron_endpoint.dropsonde_port") %>"
 

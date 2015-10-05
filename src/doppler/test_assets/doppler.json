@@ -13,5 +13,12 @@
     ],
     "ContainerMetricTTLSeconds": 120,
     "SinkInactivityTimeoutSeconds": 120,
-    "MonitorIntervalSeconds": 1
+    "MonitorIntervalSeconds": 1,
+    "EnableTLSTransport": true,
+    "TLSListenerConfig": {
+        "InsecureSkipVerify": true,
+        "Port": 8766,
+        "KeyFile": "./test_assets/key.key",
+        "CrtFile": "./test_assets/key.crt"
+    }
 }

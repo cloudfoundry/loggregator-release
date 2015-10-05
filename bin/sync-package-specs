@@ -18,7 +18,7 @@ function sync_package() {
   (
     set -e
 
-    cd bosh/packages/${bosh_pkg}
+    cd packages/${bosh_pkg}
 
     {
       cat spec | grep -v '# gosub'
@@ -38,4 +38,4 @@ sync_package syslog_drain_binder           -app  syslog_drain_binder/... &
 
 wait
 
-git diff --name-only bosh/packages/*/spec
+git diff --name-only packages/*/spec

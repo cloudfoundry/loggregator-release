@@ -13,6 +13,7 @@ import (
 
 	"doppler/config"
 
+	"crypto/tls"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/workpool"
@@ -147,6 +148,14 @@ func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*config.Confi
 
 	if config.SinkDialTimeoutSeconds == 0 {
 		config.SinkDialTimeoutSeconds = 1
+	}
+
+	if config.EnableTLSTransport {
+		cert, err := tls.LoadX509KeyPair(config.TLSListenerConfig.CrtFile, config.TLSListenerConfig.KeyFile)
+		if err != nil {
+			panic(err)
+		}
+		config.TLSListenerConfig.Cert = cert
 	}
 
 	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "doppler", config.Config)
