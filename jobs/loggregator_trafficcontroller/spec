@@ -44,6 +44,8 @@ properties:
   metron_endpoint.dropsonde_port:
     description: "The port used to emit dropsonde messages to the Metron agent"
     default: 3457
+  loggregator.etcd.machines:
+    description: "IPs pointing to the ETCD cluster"
   etcd.machines:
     description: "IPs pointing to the ETCD cluster"
   etcd.maxconcurrentrequests:

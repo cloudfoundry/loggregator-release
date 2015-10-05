@@ -4,26 +4,25 @@ import (
 	"deaagent"
 	"errors"
 	"flag"
+	"os"
+	"os/signal"
+	"runtime/pprof"
+	"time"
+
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/cloudfoundry/yagnats/fakeyagnats"
-	"os"
-	"os/signal"
-	"runtime/pprof"
-	"time"
 )
 
 const DrainStoreRefreshInterval = 1 * time.Minute
 
 type Config struct {
 	cfcomponent.Config
-	Index                     uint
-	MetronAddress             string
-	SharedSecret              string
-	EtcdUrls                  []string
-	EtcdMaxConcurrentRequests int
+	Index         uint
+	MetronAddress string
+	SharedSecret  string
 }
 
 func (c *Config) validate(logger *gosteno.Logger) (err error) {

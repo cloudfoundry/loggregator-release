@@ -1,6 +1,4 @@
 {
-  "EtcdUrls": [<%= p("etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
-  "EtcdMaxConcurrentRequests" : 10,
   "Index": <%= spec.index %>,
   "MetronAddress": "<%= p("metron_endpoint.host") %>:<%= p("metron_endpoint.dropsonde_port") %>",
   "SharedSecret": "<%= p("metron_endpoint.shared_secret") %>",

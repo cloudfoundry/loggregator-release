@@ -57,6 +57,8 @@ properties:
   doppler.message_drain_buffer_size:
     description: "Size of the internal buffer used by doppler to store messages. If the buffer gets full doppler will drop the messages."
     default: 100
+  loggregator.etcd.machines:
+    description: "IPs pointing to the ETCD cluster"
   etcd.machines:
     description: "IPs pointing to the ETCD cluster"
   metron_endpoint.host:

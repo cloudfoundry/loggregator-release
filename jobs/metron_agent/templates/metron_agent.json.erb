@@ -1,10 +1,20 @@
+<%
+  etcd_machines = []
+  if_p("etcd.machines") do |machines|
+    etcd_machines = machines
+  end
+
+  if_p("loggregator.etcd.machines") do |machines|
+    etcd_machines = machines
+  end
+%>
 {
   "Index": <%= spec.index %>,
   "Job": "<%= name %>",
   "Zone": "<%= p("metron_agent.zone") %>",
   "Deployment": "<%= p("metron_agent.deployment") %>",
 
-  "EtcdUrls": [<%= p("etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
+  "EtcdUrls": [<%= etcd_machines.map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
   "EtcdMaxConcurrentRequests": <%= p("etcd.maxconcurrentrequests") %>,
 
   "SharedSecret": "<%= p("loggregator_endpoint.shared_secret") %>",

@@ -1,10 +1,20 @@
+<%
+  etcd_machines = []
+  if_p("etcd.machines") do |machines|
+    etcd_machines = machines
+  end
+
+  if_p("loggregator.etcd.machines") do |machines|
+    etcd_machines = machines
+  end
+%>
 {
     "InstanceName": "<%= name %>.<%= spec.index %>",
     "DrainUrlTtlSeconds": <%= p("syslog_drain_binder.drain_url_ttl_seconds") %>,
     "UpdateIntervalSeconds": <%= p("syslog_drain_binder.update_interval_seconds") %>,
 
     "EtcdMaxConcurrentRequests": <%= p("etcd.maxconcurrentrequests") %>,
-    "EtcdUrls": [<%= p("etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
+    "EtcdUrls": [<%= etcd_machines.map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
 
     "MetronAddress": "<%= p("metron_endpoint.host") %>:<%= p("metron_endpoint.dropsonde_port") %>",
 

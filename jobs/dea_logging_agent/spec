@@ -38,6 +38,3 @@ properties:
   nats.port:
     description: "IP port of Cloud Foundry NATS server"
     default: 4222
-
-  etcd.machines:
-    description: "IPs pointing to the ETCD cluster"
