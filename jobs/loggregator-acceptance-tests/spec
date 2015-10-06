@@ -12,6 +12,8 @@ templates:
   config.json.erb: bin/config.json
 
 properties:
+  etcd.machines:
+    description: "IPs pointing to the ETCD cluster"
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"
   system_domain:
