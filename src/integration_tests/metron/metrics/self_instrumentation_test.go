@@ -127,7 +127,7 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			Eventually(testDoppler.MessageChan).Should(Receive(MatchSpecifiedContents(&expected)))
+			Eventually(testDoppler.MessageChan, 2).Should(Receive(MatchSpecifiedContents(&expected)))
 		})
 
 		It("emits metrics for http stop", func() {
@@ -143,7 +143,7 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			Eventually(testDoppler.MessageChan).Should(Receive(MatchSpecifiedContents(&expected)))
+			Eventually(testDoppler.MessageChan, 2).Should(Receive(MatchSpecifiedContents(&expected)))
 		})
 
 		It("emits metrics for unmatched http stop", func() {
@@ -159,7 +159,7 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			Eventually(testDoppler.MessageChan).Should(Receive(MatchSpecifiedContents(&expected)))
+			Eventually(testDoppler.MessageChan, 2).Should(Receive(MatchSpecifiedContents(&expected)))
 		})
 
 		It("emits metrics for http start stop", func() {
@@ -216,7 +216,7 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			Eventually(testDoppler.MessageChan).Should(Receive(MatchSpecifiedContents(&expected)))
+			Eventually(testDoppler.MessageChan, 2).Should(Receive(MatchSpecifiedContents(&expected)))
 		})
 
 		It("counts unmarshalled Dropsonde messages by type", func() {
@@ -233,7 +233,7 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			Eventually(testDoppler.MessageChan).Should(Receive(MatchSpecifiedContents(&expected)))
+			Eventually(testDoppler.MessageChan, 2).Should(Receive(MatchSpecifiedContents(&expected)))
 		})
 
 		It("counts log messages specially", func() {
@@ -262,7 +262,7 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			Eventually(testDoppler.MessageChan).Should(Receive(MatchSpecifiedContents(&expected)))
+			Eventually(testDoppler.MessageChan, 2).Should(Receive(MatchSpecifiedContents(&expected)))
 		})
 
 		It("counts unknown event types", func() {
@@ -292,7 +292,7 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			Eventually(testDoppler.MessageChan).Should(Receive(MatchSpecifiedContents(&expected)))
+			Eventually(testDoppler.MessageChan, 2).Should(Receive(MatchSpecifiedContents(&expected)))
 		})
 
 		It("does not forward unknown events", func() {
