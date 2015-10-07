@@ -59,8 +59,6 @@ properties:
     default: 100
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"
-  etcd.machines:
-    description: "IPs pointing to the ETCD cluster"
   metron_endpoint.host:
     description: "The host used to emit messages to the Metron agent"
     default: "127.0.0.1"

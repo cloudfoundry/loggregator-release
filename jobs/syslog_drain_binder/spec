@@ -17,9 +17,7 @@ properties:
 
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"
-  etcd.machines:
-    description: "IPs pointing to the ETCD cluster"
-  etcd.maxconcurrentrequests:
+  loggregator.etcd.maxconcurrentrequests:
     description: "Number of concurrent requests to ETCD"
     default: 10
 
