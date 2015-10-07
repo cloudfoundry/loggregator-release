@@ -10,7 +10,6 @@
 
   "SharedSecret": "shared_secret",
 
-  "LegacyIncomingMessagesPort": 51160,
   "DropsondeIncomingMessagesPort": 51161,
   "LoggregatorDropsondePort": 3457,
   "Syslog": "syslog.namespace"

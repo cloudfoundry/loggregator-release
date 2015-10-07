@@ -21,13 +21,13 @@ type TestConfig struct {
 }
 
 type MetronConfig struct {
-	LegacyIncomingMessagesPort    int
 	DropsondeIncomingMessagesPort int
 	SharedSecret                  string
 	EtcdUrls                      []string
 	LoggregatorDropsondePort      int
 	Index                         int
 	EtcdMaxConcurrentRequests     int
+	EtcdQueryIntervalMilliseconds int
 	Zone                          string
 }
 

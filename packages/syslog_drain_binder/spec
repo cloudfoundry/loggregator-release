@@ -3,10 +3,6 @@ name: syslog_drain_binder
 dependencies:
 - golang1.4
 files:
-- loggregator/src/syslog_drain_binder/*.go # gosub
-- loggregator/src/syslog_drain_binder/elector/*.go # gosub
-- loggregator/src/syslog_drain_binder/etcd_syslog_drain_store/*.go # gosub
-- loggregator/src/syslog_drain_binder/shared_types/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/factories/*.go # gosub
@@ -29,3 +25,7 @@ files:
 - loggregator/src/github.com/nu7hatch/gouuid/*.go # gosub
 - loggregator/src/github.com/ugorji/go/codec/*.go # gosub
 - loggregator/src/logger/*.go # gosub
+- loggregator/src/syslog_drain_binder/*.go # gosub
+- loggregator/src/syslog_drain_binder/elector/*.go # gosub
+- loggregator/src/syslog_drain_binder/etcd_syslog_drain_store/*.go # gosub
+- loggregator/src/syslog_drain_binder/shared_types/*.go # gosub

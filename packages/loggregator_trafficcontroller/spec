@@ -3,17 +3,6 @@ name: loggregator_trafficcontroller
 dependencies:
 - golang1.4
 files:
-- loggregator/src/trafficcontroller/*.go # gosub
-- loggregator/src/trafficcontroller/authorization/*.go # gosub
-- loggregator/src/trafficcontroller/channel_group_connector/*.go # gosub
-- loggregator/src/trafficcontroller/config/*.go # gosub
-- loggregator/src/trafficcontroller/doppler_endpoint/*.go # gosub
-- loggregator/src/trafficcontroller/dopplerproxy/*.go # gosub
-- loggregator/src/trafficcontroller/listener/*.go # gosub
-- loggregator/src/trafficcontroller/marshaller/*.go # gosub
-- loggregator/src/trafficcontroller/profiler/*.go # gosub
-- loggregator/src/trafficcontroller/serveraddressprovider/*.go # gosub
-- loggregator/src/trafficcontroller/uaa_client/*.go # gosub
 - loggregator/src/common/monitor/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
@@ -44,3 +33,14 @@ files:
 - loggregator/src/github.com/pivotal-golang/localip/*.go # gosub
 - loggregator/src/github.com/ugorji/go/codec/*.go # gosub
 - loggregator/src/logger/*.go # gosub
+- loggregator/src/trafficcontroller/*.go # gosub
+- loggregator/src/trafficcontroller/authorization/*.go # gosub
+- loggregator/src/trafficcontroller/channel_group_connector/*.go # gosub
+- loggregator/src/trafficcontroller/config/*.go # gosub
+- loggregator/src/trafficcontroller/doppler_endpoint/*.go # gosub
+- loggregator/src/trafficcontroller/dopplerproxy/*.go # gosub
+- loggregator/src/trafficcontroller/listener/*.go # gosub
+- loggregator/src/trafficcontroller/marshaller/*.go # gosub
+- loggregator/src/trafficcontroller/profiler/*.go # gosub
+- loggregator/src/trafficcontroller/serveraddressprovider/*.go # gosub
+- loggregator/src/trafficcontroller/uaa_client/*.go # gosub

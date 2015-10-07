@@ -28,9 +28,6 @@ properties:
     description: maximum message size to be sent
     default: 4k
 
-  metron_agent.incoming_port:
-    description: "Incoming port for legacy log messages"
-    default: 3456
   metron_agent.dropsonde_incoming_port:
     description: "Incoming port for dropsonde log messages"
     default: 3457

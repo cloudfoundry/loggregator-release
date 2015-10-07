@@ -12,7 +12,6 @@ type Config struct {
 	Job        string
 	Index      uint
 
-	LegacyIncomingMessagesPort    int
 	DropsondeIncomingMessagesPort int
 
 	EtcdUrls                      []string

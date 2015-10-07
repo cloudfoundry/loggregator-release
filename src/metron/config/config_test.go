@@ -42,7 +42,6 @@ var _ = Describe("Config", func() {
 
 			Expect(config.SharedSecret).To(Equal("shared_secret"))
 
-			Expect(config.LegacyIncomingMessagesPort).To(Equal(51160))
 			Expect(config.DropsondeIncomingMessagesPort).To(Equal(51161))
 			Expect(config.LoggregatorDropsondePort).To(Equal(3457))
 

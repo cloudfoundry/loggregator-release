@@ -9,7 +9,6 @@ import (
 	"metron/writers/dopplerforwarder"
 	"metron/writers/eventmarshaller"
 	"metron/writers/eventunmarshaller"
-	"metron/writers/legacyunmarshaller"
 	"metron/writers/messageaggregator"
 	"metron/writers/signer"
 	"metron/writers/tagger"
@@ -63,13 +62,6 @@ func main() {
 	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, log)
 	dropsondeReader := networkreader.New(fmt.Sprintf("localhost:%d", config.DropsondeIncomingMessagesPort), "dropsondeAgentListener", dropsondeUnmarshaller, log)
 
-	// TODO: remove next four lines when legacy support is removed (or extracted to injector)
-	legacyMarshaller := eventmarshaller.New(byteSigner, log)
-	legacyMessageTagger := tagger.New(config.Deployment, config.Job, config.Index, legacyMarshaller)
-	legacyUnmarshaller := legacyunmarshaller.New(legacyMessageTagger, log)
-	legacyReader := networkreader.New(fmt.Sprintf("localhost:%d", config.LegacyIncomingMessagesPort), "legacyAgentListener", legacyUnmarshaller, log)
-
-	go legacyReader.Start()
 	dropsondeReader.Start()
 }
 
@@ -114,6 +106,7 @@ func storeAdapterProvider(urls []string, concurrentRequests int) storeadapter.St
 	if err != nil {
 		panic(err)
 	}
+
 	return etcdAdapter
 }
 

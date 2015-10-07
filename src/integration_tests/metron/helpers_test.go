@@ -4,7 +4,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
@@ -101,24 +100,6 @@ func basicHTTPStopMessageEnvelope(requestId string) *events.Envelope {
 			ContentLength: proto.Int64(98475189),
 		},
 	}
-}
-
-func legacyLogMessage(appID int, message string, timestamp time.Time) []byte {
-	envelope := &logmessage.LogEnvelope{
-		RoutingKey: proto.String("fake-routing-key"),
-		Signature:  []byte{1, 2, 3},
-		LogMessage: &logmessage.LogMessage{
-			Message:     []byte(message),
-			MessageType: logmessage.LogMessage_OUT.Enum(),
-			Timestamp:   proto.Int64(timestamp.UnixNano()),
-			AppId:       proto.String(string(appID)),
-			SourceName:  proto.String("fake-source-id"),
-			SourceId:    proto.String("fake-source-id"),
-		},
-	}
-
-	bytes, _ := proto.Marshal(envelope)
-	return bytes
 }
 
 func eventsLogMessage(appID int, message string, timestamp time.Time) *events.Envelope {
