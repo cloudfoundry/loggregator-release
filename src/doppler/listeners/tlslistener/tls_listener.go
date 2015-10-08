@@ -79,6 +79,7 @@ func (t *TLSListener) handleConnection(conn net.Conn) {
 	for {
 		var envelope events.Envelope
 		err := decoder.Decode(&envelope)
+		t.logger.Debugf("Received envelope: %#v", envelope)
 		if err != nil {
 			t.logger.Debugf("Error while decoding: %v", err)
 			conn.Close()
