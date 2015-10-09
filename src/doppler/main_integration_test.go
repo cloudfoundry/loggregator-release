@@ -10,6 +10,7 @@ import (
 
 	"doppler/config"
 
+	"github.com/cloudfoundry/storeadapter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/localip"
@@ -42,30 +43,93 @@ var _ = Describe("Etcd Integration tests", func() {
 		}
 	})
 
-	AfterEach(func() {
-		if stopHeartbeats != nil {
-			heartbeatsStopped := make(chan bool)
-			stopHeartbeats <- heartbeatsStopped
-			<-heartbeatsStopped
-		}
-	})
-
 	Describe("Heartbeats", func() {
+		AfterEach(func() {
+			if stopHeartbeats != nil {
+				heartbeatsStopped := make(chan bool)
+				stopHeartbeats <- heartbeatsStopped
+				<-heartbeatsStopped
+			}
+		})
+
 		It("arrives safely in etcd", func() {
-			adapter := etcdRunner.Adapter()
+			storeAdapter := setupAdapter("healthstatus/doppler/z1/doppler_z1/0", conf)
 
-			Consistently(func() error {
-				_, err := adapter.Get("healthstatus/doppler/z1/doppler_z1/0")
-				return err
-			}).Should(HaveOccurred())
-
-			storeAdapter := main.NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
 			stopHeartbeats = main.StartHeartbeats(localIp, time.Second, &conf, storeAdapter, loggertesthelper.Logger())
 
 			Eventually(func() error {
-				_, err := adapter.Get("healthstatus/doppler/z1/doppler_z1/0")
+				_, err := storeAdapter.Get("healthstatus/doppler/z1/doppler_z1/0")
 				return err
 			}, 3).ShouldNot(HaveOccurred())
 		})
 	})
+
+	Describe("Store Transport", func() {
+		Context("With EnableTlsTransport set to true", func() {
+			It("stores udp and tcp transport in etcd", func() {
+				conf.EnableTLSTransport = true
+				storeAdapter := setupAdapter("/doppler/dropsonde-transport/z1/doppler_z1/0", conf)
+
+				main.StoreTransport(&conf, storeAdapter, loggertesthelper.Logger())
+
+				Eventually(func() []byte {
+					node, err := storeAdapter.Get("/doppler/dropsonde-transport/z1/doppler_z1/0")
+					Expect(err).ToNot(HaveOccurred())
+					return node.Value
+				}, 3).Should(Equal([]byte("udp,tcp")))
+			})
+		})
+
+		Context("With EnableTlsTransport set to false", func() {
+			It("only stores udp transport in etcd", func() {
+
+				conf.EnableTLSTransport = false
+				storeAdapter := setupAdapter("/doppler/dropsonde-transport/z1/doppler_z1/0", conf)
+
+				main.StoreTransport(&conf, storeAdapter, loggertesthelper.Logger())
+
+				Eventually(func() []byte {
+					node, err := storeAdapter.Get("/doppler/dropsonde-transport/z1/doppler_z1/0")
+					Expect(err).ToNot(HaveOccurred())
+					return node.Value
+				}, 3).Should(Equal([]byte("udp")))
+			})
+		})
+
+		It("updates key if it already exists in etcd", func() {
+			conf.EnableTLSTransport = true
+			storeAdapter := setupAdapter("/doppler/dropsonde-transport/z1/doppler_z1/0", conf)
+
+			main.StoreTransport(&conf, storeAdapter, loggertesthelper.Logger())
+
+			Eventually(func() []byte {
+				node, err := storeAdapter.Get("/doppler/dropsonde-transport/z1/doppler_z1/0")
+				Expect(err).ToNot(HaveOccurred())
+				return node.Value
+			}, 3).Should(Equal([]byte("udp,tcp")))
+
+			conf.EnableTLSTransport = false
+
+			main.StoreTransport(&conf, storeAdapter, loggertesthelper.Logger())
+
+			Eventually(func() []byte {
+				node, err := storeAdapter.Get("/doppler/dropsonde-transport/z1/doppler_z1/0")
+				Expect(err).ToNot(HaveOccurred())
+				return node.Value
+			}, 3).Should(Equal([]byte("udp")))
+		})
+
+	})
 })
+
+func setupAdapter(key string, conf config.Config) storeadapter.StoreAdapter {
+
+	adapter := etcdRunner.Adapter()
+
+	Consistently(func() error {
+		_, err := adapter.Get(key)
+		return err
+	}).Should(HaveOccurred())
+
+	return main.NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
+}

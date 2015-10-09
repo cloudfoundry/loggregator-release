@@ -12,6 +12,7 @@ import (
 
 	"doppler/config"
 
+	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -91,6 +92,55 @@ var _ = Describe("Main", func() {
 				Expect(logger.Level().String()).To(Equal("debug"))
 			})
 		})
+	})
+
+	Describe("StoreTransport", func() {
+		var adapter *fakestoreadapter.FakeStoreAdapter
+		var conf config.Config
+		var key string
+
+		BeforeEach(func() {
+			adapter = fakestoreadapter.New()
+			conf = config.Config{
+				JobName: "doppler_z1",
+				Index:   0,
+				EtcdMaxConcurrentRequests: 10,
+				EtcdUrls:                  []string{"test:123", "test:456"},
+				Zone:                      "z1",
+				DropsondeIncomingMessagesPort: 1234,
+			}
+			key = fmt.Sprintf("/doppler/dropsonde-transport/%s/%s/%d", conf.Zone, conf.JobName, conf.Index)
+		})
+
+		It("Panics if can not store transport", func() {
+			error := errors.New("Could not create node")
+			adapter.SetErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector(key, error)
+			Expect(func() {
+				main.StoreTransport(&conf, adapter, loggertesthelper.Logger())
+			}).To(Panic())
+		})
+
+		Context("when tls transport is enabled", func() {
+			It("has udp and tcp value", func() {
+				conf.EnableTLSTransport = true
+				main.StoreTransport(&conf, adapter, loggertesthelper.Logger())
+				node, err := adapter.Get(key)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(node.Value).To(Equal([]byte("udp,tcp")))
+
+			})
+		})
+
+		Context("when tls transport is disabled", func() {
+			It("has only udp value", func() {
+				conf.EnableTLSTransport = false
+				main.StoreTransport(&conf, adapter, loggertesthelper.Logger())
+				node, err := adapter.Get(key)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(node.Value).To(Equal([]byte("udp")))
+			})
+		})
+
 	})
 
 	Describe("StartHeartbeats", func() {
