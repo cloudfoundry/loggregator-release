@@ -50,14 +50,9 @@ go install github.com/apcera/gnatsd
 $(dirname $0)/travis_test $1
 $(dirname $0)/build-platforms
 
-echo "Starting etcd"
-./bin/etcd > /tmp/tmp.log 2>&1 &
-etcd_pid=$!
 
 check_for_data_race doppler "./bin/doppler --config=./config/doppler_with_fake_nats.json"
 LOGGREGATOR_SHARED_SECRET='asdf' check_for_data_race deaagent "./bin/deaagent --config=./config/dea_logging_agent_with_fake_nats.json"
 check_for_data_race trafficcontroller "./bin/trafficcontroller --config=./config/loggregator_trafficcontroller.json"
 check_for_data_race metron "./bin/metron --config=config/metron.json"
 check_for_data_race syslog_drain_binder "./bin/syslog_drain_binder --config=config/syslog_drain_binder.json"
-
-kill $etcd_pid 2>/dev/null
