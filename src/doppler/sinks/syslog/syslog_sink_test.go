@@ -228,7 +228,7 @@ var _ = Describe("SyslogSink", func() {
 					It("sends a message about the buffer overflow", func() {
 						data := sysLogger.ReceivedMessages()
 						Expect(len(data)).To(BeNumerically(">", 2))
-						Expect(data[1]).To(MatchRegexp("<11>1 Log message output too high. We've dropped 100 messages"))
+						Expect(data[1]).To(MatchRegexp("<11>1 Log message output is too high. 100 messages dropped"))
 					})
 				})
 			})

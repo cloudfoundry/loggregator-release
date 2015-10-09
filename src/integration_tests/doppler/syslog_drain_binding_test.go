@@ -7,6 +7,7 @@ import (
 	"github.com/nu7hatch/gouuid"
 
 	. "integration_tests/doppler/helpers"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -184,15 +185,14 @@ var _ = Describe("Syslog Drain Binding", func() {
 			serverSession.Kill().Wait()
 		})
 
-		It("forwards log messages to an https endpoint", func(done Done) {
+		It("forwards log messages to an https endpoint", func() {
 			Eventually(func() *gbytes.Buffer {
 				SendAppLog(appID, "http-message", inputConnection)
 				return serverSession.Out
 			}, 90, 1).Should(gbytes.Say(`http-message`))
-			close(done)
-		}, 100)
+		})
 
-		It("reconnects a reappearing https server", func(done Done) {
+		It("reconnects a reappearing https server", func() {
 			serverSession.Kill().Wait()
 
 			SendAppLog(appID, "http-message", inputConnection)
@@ -204,9 +204,48 @@ var _ = Describe("Syslog Drain Binding", func() {
 				SendAppLog(appID, "http-message", inputConnection)
 				return serverSession.Out
 			}, 90, 1).Should(gbytes.Say(`http-message`))
+		})
 
-			close(done)
-		}, 100)
+		It("logs the number of dropped messages", func() {
+			Eventually(func() *gbytes.Buffer {
+				SendAppLog(appID, "http-message", inputConnection)
+				return serverSession.Out
+			}, 90, 1).Should(gbytes.Say(`http-message`))
+
+			serverSession.Kill().Wait()
+
+			for i := 0; i < 100; i++ {
+				SendAppLog(appID, "overflow", inputConnection)
+			}
+			Eventually(func() *gbytes.Buffer {
+				SendAppLog(appID, "overflow", inputConnection)
+				return dopplerSession.Out
+			}, 30, 1).Should(gbytes.Say(`TB: Output channel too full`))
+
+			By("starting the endpoint (1st time)")
+			serverSession = StartHTTPSServer(pathToHTTPEchoServer)
+			Eventually(serverSession.Out, 10, 1).Should(gbytes.Say(`Log message output is too high. 100 messages dropped \(Total 100 messages dropped\)`))
+			Eventually(serverSession.Out, 10, 1).Should(gbytes.Say(`overflow`))
+
+			serverSession.Kill().Wait()
+
+			for i := 0; i < 215; i++ {
+				SendAppLog(appID, "overflow2", inputConnection)
+			}
+			Eventually(func() *gbytes.Buffer {
+				SendAppLog(appID, "overflow2", inputConnection)
+				return dopplerSession.Out
+			}, 30, 1).Should(gbytes.Say(`TB: Output channel too full`))
+
+			Eventually(func() *gbytes.Buffer {
+				SendAppLog(appID, "overflow2", inputConnection)
+				return dopplerSession.Out
+			}, 30, 1).Should(gbytes.Say(`TB: Output channel too full`))
+
+			By("starting the endpoint (2nd time)")
+			serverSession = StartHTTPSServer(pathToHTTPEchoServer)
+			Eventually(serverSession.Out, 10, 1).Should(gbytes.Say(`Log message output is too high. 99 messages dropped \(Total 299 messages dropped\)`))
+		})
 	})
 
 	Context("when bound to a blacklisted drain", func() {

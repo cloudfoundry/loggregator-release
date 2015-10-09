@@ -2,6 +2,7 @@ package truncatingbuffer_test
 
 import (
 	"doppler/truncatingbuffer"
+	"fmt"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/factories"
@@ -90,75 +91,100 @@ var _ = Describe("Truncating Buffer", func() {
 
 		})
 
-		It("works like a truncating channel", func() {
+		Context("tracking dropped messages", func() {
+			var fakeEventEmitter *fake.FakeEventEmitter
 
-			sendLogMessages("message 1", inMessageChan)
-			sendLogMessages("message 2", inMessageChan)
-			sendLogMessages("message 3", inMessageChan)
-			sendLogMessages("message 4", inMessageChan)
+			BeforeEach(func() {
+				fakeEventEmitter = fake.NewFakeEventEmitter("doppler")
+				sender := metric_sender.NewMetricSender(fakeEventEmitter)
+				batcher := metricbatcher.New(sender, 100*time.Millisecond)
 
-			time.Sleep(5 * time.Millisecond)
+				metrics.Initialize(sender, batcher)
+				fakeEventEmitter.Reset()
+			})
 
-			logMessageNotification := <-buffer.GetOutputChannel()
-			Expect(logMessageNotification.GetLogMessage().GetMessage()).To(ContainSubstring("Log message output too high. We've dropped 3 messages to test-sink-name."))
+			tracksDroppedMessages := func(delta, total int) {
+				It("logs the dropped messages", func() {
+					logMessageNotification := <-buffer.GetOutputChannel()
+					Expect(logMessageNotification.GetEventType()).To(Equal(events.Envelope_LogMessage))
+					Expect(logMessageNotification.GetLogMessage().GetMessage()).To(ContainSubstring(fmt.Sprintf("Log message output is too high. %d messages dropped (Total %d messages dropped) to test-sink-name.", delta, total)))
 
-			counterEventNotification := <-buffer.GetOutputChannel()
-			Expect(counterEventNotification.GetEventType()).To(Equal(events.Envelope_CounterEvent))
-			counterEvent := counterEventNotification.GetCounterEvent()
-			Expect(counterEvent.GetName()).To(Equal("TruncatingBuffer.DroppedMessages"))
-			Expect(counterEvent.GetDelta()).To(BeEquivalentTo(3))
-			Expect(counterEvent.GetTotal()).To(BeEquivalentTo(3))
+					counterEventNotification := <-buffer.GetOutputChannel()
+					Expect(counterEventNotification.GetEventType()).To(Equal(events.Envelope_CounterEvent))
+					counterEvent := counterEventNotification.GetCounterEvent()
+					Expect(counterEvent.GetName()).To(Equal("TruncatingBuffer.DroppedMessages"))
+					Expect(counterEvent.GetDelta()).To(BeEquivalentTo(delta))
+					Expect(counterEvent.GetTotal()).To(BeEquivalentTo(total))
+				})
 
-			originalMessage4 := <-buffer.GetOutputChannel()
-			Expect(originalMessage4.GetLogMessage().GetMessage()).To(ContainSubstring("message 4"))
+				It("keeps track of dropped messages", func() {
+					Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(1))
+					Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.CounterEvent)).To(Equal(&events.CounterEvent{
+						Name:  proto.String("TruncatingBuffer.totalDroppedMessages"),
+						Delta: proto.Uint64(uint64(total)),
+					}))
+				})
+			}
 
-			sendLogMessages("message 5", inMessageChan)
-			sendLogMessages("message 6", inMessageChan)
-			sendLogMessages("message 7", inMessageChan)
-			sendLogMessages("message 8", inMessageChan)
+			Context("when the buffer fills once", func() {
+				JustBeforeEach(func() {
+					Expect(buffer.GetDroppedMessageCount()).To(BeZero())
 
-			logMessageNotification = <-buffer.GetOutputChannel()
-			Expect(logMessageNotification.GetEventType()).To(Equal(events.Envelope_LogMessage))
+					firstBuffer := buffer.GetOutputChannel()
+					sendLogMessages("message 1", inMessageChan)
+					sendLogMessages("message 2", inMessageChan)
+					sendLogMessages("message 3", inMessageChan)
+					sendLogMessages("message 4", inMessageChan)
 
-			counterEventNotification = <-buffer.GetOutputChannel()
-			Expect(counterEventNotification.GetEventType()).To(Equal(events.Envelope_CounterEvent))
-			counterEvent = counterEventNotification.GetCounterEvent()
-			Expect(counterEvent.GetName()).To(Equal("TruncatingBuffer.DroppedMessages"))
-			Expect(counterEvent.GetDelta()).To(BeEquivalentTo(3))
-			Expect(counterEvent.GetTotal()).To(BeEquivalentTo(6))
-		})
+					Eventually(buffer.GetOutputChannel).ShouldNot(Equal(firstBuffer))
+				})
 
-		It("keeps track of dropped messages", func() {
-			Expect(buffer.GetDroppedMessageCount()).To(Equal(int64(0)))
+				tracksDroppedMessages(3, 3)
 
-			sendLogMessages("message 1", inMessageChan)
-			sendLogMessages("message 2", inMessageChan)
-			sendLogMessages("message 3", inMessageChan)
-			sendLogMessages("message 4", inMessageChan)
+				Context("when the buffer fills multiple times", func() {
+					var receiveEvents int
+					var sendLog int
 
-			Eventually(buffer.GetDroppedMessageCount).Should(Equal(int64(3)))
-		})
+					BeforeEach(func() {
+						receiveEvents = 0
+						sendLog = 2
+					})
 
-		It("updates totalDroppedMessages", func() {
-			fakeEventEmitter := fake.NewFakeEventEmitter("doppler")
-			sender := metric_sender.NewMetricSender(fakeEventEmitter)
-			batcher := metricbatcher.New(sender, 100*time.Millisecond)
+					JustBeforeEach(func() {
+						outputChannel := buffer.GetOutputChannel()
 
-			metrics.Initialize(sender, batcher)
-			fakeEventEmitter.Reset()
+						for i := 0; i < receiveEvents; i++ {
+							Eventually(outputChannel).Should(Receive())
+						}
 
-			Expect(buffer.GetDroppedMessageCount()).To(Equal(int64(0)))
+						for i := 0; i < sendLog; i++ {
+							sendLogMessages("message X", inMessageChan)
+						}
 
-			sendLogMessages("message 1", inMessageChan)
-			sendLogMessages("message 2", inMessageChan)
-			sendLogMessages("message 3", inMessageChan)
-			sendLogMessages("message 4", inMessageChan)
+						Eventually(buffer.GetOutputChannel).ShouldNot(Equal(outputChannel))
+					})
 
-			Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(1))
-			Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.CounterEvent)).To(Equal(&events.CounterEvent{
-				Name:  proto.String("TruncatingBuffer.totalDroppedMessages"),
-				Delta: proto.Uint64(3),
-			}))
+					tracksDroppedMessages(1, 5)
+
+					Context("and the TB log event is read", func() {
+						BeforeEach(func() {
+							receiveEvents = 1
+							sendLog = 2
+						})
+
+						tracksDroppedMessages(2, 5)
+					})
+
+					Context("and the TB log and counter event is read", func() {
+						BeforeEach(func() {
+							receiveEvents = 2
+							sendLog = 3
+						})
+
+						tracksDroppedMessages(3, 6)
+					})
+				})
+			})
 		})
 
 		Context("when a filter is provided", func() {

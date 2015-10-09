@@ -13,6 +13,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
+var lgrSource = proto.String("LGR")
+
 type TruncatingBuffer struct {
 	inputChannel        <-chan *events.Envelope
 	filterEvent         func(events.Envelope_EventType) bool
@@ -20,7 +22,7 @@ type TruncatingBuffer struct {
 	logger              *gosteno.Logger
 	lock                *sync.RWMutex
 	dropsondeOrigin     string
-	droppedMessageCount int64
+	droppedMessageCount uint64
 	sinkIdentifier      string
 	stopChannel         chan struct{}
 }
@@ -50,7 +52,7 @@ func (r *TruncatingBuffer) GetOutputChannel() <-chan *events.Envelope {
 	return r.outputChannel
 }
 
-func (r *TruncatingBuffer) CloseOutputChannel() {
+func (r *TruncatingBuffer) closeOutputChannel() {
 	close(r.outputChannel)
 }
 
@@ -59,7 +61,15 @@ func (r *TruncatingBuffer) eventAllowed(eventType events.Envelope_EventType) boo
 }
 
 func (r *TruncatingBuffer) Run() {
-	defer r.CloseOutputChannel()
+	defer r.closeOutputChannel()
+
+	outputCapacity := cap(r.outputChannel)
+	msgsSent := 0
+	adjustDropped := 0
+	totalDropped := uint64(0)
+	r.lock.Lock()
+	outputChannel := r.outputChannel
+	r.lock.Unlock()
 
 	for {
 		select {
@@ -70,30 +80,44 @@ func (r *TruncatingBuffer) Run() {
 				return
 			}
 			if r.eventAllowed(msg.GetEventType()) {
-				r.lock.Lock()
 				select {
-				case r.outputChannel <- msg:
+				case outputChannel <- msg:
+					if msgsSent < outputCapacity {
+						msgsSent++
+						if adjustDropped > 0 && (adjustDropped+msgsSent) > outputCapacity {
+							adjustDropped--
+						}
+					}
 				default:
-					droppedMessageCount := len(r.outputChannel)
-					r.droppedMessageCount += int64(droppedMessageCount)
-					r.outputChannel = make(chan *events.Envelope, cap(r.outputChannel))
+					deltaDropped := uint64(len(outputChannel) - adjustDropped)
+					totalDropped += uint64(deltaDropped)
+					outputChannel = make(chan *events.Envelope, cap(outputChannel))
 					appId := envelope_extensions.GetAppId(msg)
 
-					r.notifyMessagesDropped(droppedMessageCount, appId)
+					r.notifyMessagesDropped(outputChannel, deltaDropped, totalDropped, appId)
+					adjustDropped = len(outputChannel)
+					outputChannel <- msg
+					msgsSent = 1
 
-					r.outputChannel <- msg
+					r.lock.Lock()
+					r.outputChannel = outputChannel
+					r.droppedMessageCount = totalDropped
+					r.lock.Unlock()
 
 					if r.logger != nil {
-						r.logger.Warn(fmt.Sprintf("TB: Output channel too full. Dropped %d messages for app %s to %s.", droppedMessageCount, appId, r.sinkIdentifier))
+						r.logger.Warnd(map[string]interface{}{
+							"dropped": deltaDropped, "total_dropped": totalDropped,
+							"appId": appId, "sinkId": r.sinkIdentifier,
+						},
+							"TB: Output channel too full")
 					}
 				}
-				r.lock.Unlock()
 			}
 		}
 	}
 }
 
-func (r *TruncatingBuffer) GetDroppedMessageCount() int64 {
+func (r *TruncatingBuffer) GetDroppedMessageCount() uint64 {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 	messages := r.droppedMessageCount
@@ -101,27 +125,27 @@ func (r *TruncatingBuffer) GetDroppedMessageCount() int64 {
 	return messages
 }
 
-func (r *TruncatingBuffer) notifyMessagesDropped(droppedMessageCount int, appId string) {
-	metrics.BatchAddCounter("TruncatingBuffer.totalDroppedMessages", uint64(droppedMessageCount))
+func (r *TruncatingBuffer) notifyMessagesDropped(outputChannel chan *events.Envelope, deltaDropped, totalDropped uint64, appId string) {
+	metrics.BatchAddCounter("TruncatingBuffer.totalDroppedMessages", deltaDropped)
 	if r.eventAllowed(events.Envelope_LogMessage) {
-		r.emitMessage(generateLogMessage(droppedMessageCount, appId, r.sinkIdentifier))
+		r.emitMessage(outputChannel, generateLogMessage(deltaDropped, totalDropped, appId, r.sinkIdentifier))
 	}
 	if r.eventAllowed(events.Envelope_CounterEvent) {
-		r.emitMessage(generateCounterEvent(droppedMessageCount, r.droppedMessageCount))
+		r.emitMessage(outputChannel, generateCounterEvent(deltaDropped, totalDropped))
 	}
 }
 
-func (r *TruncatingBuffer) emitMessage(event events.Event) {
+func (r *TruncatingBuffer) emitMessage(outputChannel chan *events.Envelope, event events.Event) {
 	env, err := emitter.Wrap(event, r.dropsondeOrigin)
 	if err == nil {
-		r.outputChannel <- env
+		outputChannel <- env
 	} else {
 		r.logger.Warnf("Error marshalling message: %v", err)
 	}
 }
 
-func generateLogMessage(droppedMessageCount int, appId, sinkIdentifier string) *events.LogMessage {
-	messageString := fmt.Sprintf("Log message output too high. We've dropped %d messages to %s.", droppedMessageCount, sinkIdentifier)
+func generateLogMessage(deltaDropped, totalDropped uint64, appId, sinkIdentifier string) *events.LogMessage {
+	messageString := fmt.Sprintf("Log message output is too high. %d messages dropped (Total %d messages dropped) to %s.", deltaDropped, totalDropped, sinkIdentifier)
 
 	messageType := events.LogMessage_ERR
 	currentTime := time.Now()
@@ -129,17 +153,17 @@ func generateLogMessage(droppedMessageCount int, appId, sinkIdentifier string) *
 		Message:     []byte(messageString),
 		AppId:       &appId,
 		MessageType: &messageType,
-		SourceType:  proto.String("LGR"),
+		SourceType:  lgrSource,
 		Timestamp:   proto.Int64(currentTime.UnixNano()),
 	}
 
 	return logMessage
 }
 
-func generateCounterEvent(droppedMessageCount int, total int64) *events.CounterEvent {
+func generateCounterEvent(delta, total uint64) *events.CounterEvent {
 	return &events.CounterEvent{
 		Name:  proto.String("TruncatingBuffer.DroppedMessages"),
-		Delta: proto.Uint64(uint64(droppedMessageCount)),
-		Total: proto.Uint64(uint64(total)),
+		Delta: proto.Uint64(delta),
+		Total: proto.Uint64(total),
 	}
 }
