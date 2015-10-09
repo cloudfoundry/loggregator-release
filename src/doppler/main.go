@@ -120,8 +120,9 @@ func main() {
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Kill, os.Interrupt)
 
+	storeAdapter = NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
 	StartHeartbeats(localIp, config.HeartbeatInterval, conf, storeAdapter, logger)
-	StoreTransport(conf, storeAdapter, logger)
+
 	for {
 		select {
 		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
@@ -168,10 +169,13 @@ func StartHeartbeats(localIp string, ttl time.Duration, config *config.Config, s
 		return
 	}
 
-	key := fmt.Sprintf("/healthstatus/doppler/%s/%s/%d", config.Zone, config.JobName, config.Index)
-	logger.Debugf("Starting Health Status Updates to Store: %s", key)
+	if storeAdapter == nil {
+		panic("store adapter is nil")
+	}
+
+	logger.Debugf("Starting Health Status Updates to Store: /healthstatus/doppler/%s/%s/%d", config.Zone, config.JobName, config.Index)
 	status, stopChan, err := storeAdapter.MaintainNode(storeadapter.StoreNode{
-		Key:   key,
+		Key:   fmt.Sprintf("/healthstatus/doppler/%s/%s/%d", config.Zone, config.JobName, config.Index),
 		Value: []byte(localIp),
 		TTL:   uint64(ttl.Seconds()),
 	})
@@ -187,28 +191,4 @@ func StartHeartbeats(localIp string, ttl time.Duration, config *config.Config, s
 	}()
 
 	return stopChan
-}
-
-func StoreTransport(config *config.Config, storeAdapter storeadapter.StoreAdapter, logger *gosteno.Logger) {
-
-	var value []byte
-	if config.EnableTLSTransport {
-		value = []byte("udp,tcp")
-	} else {
-		value = []byte("udp")
-	}
-
-	key := fmt.Sprintf("/doppler/dropsonde-transport/%s/%s/%d", config.Zone, config.JobName, config.Index)
-
-	err := storeAdapter.SetMulti([]storeadapter.StoreNode{
-		storeadapter.StoreNode{
-			Key:   key,
-			Value: value,
-		},
-	})
-
-	if err != nil {
-		panic(err)
-	}
-	logger.Debugf("Dropsonde Transport Stored: %s", key)
 }
