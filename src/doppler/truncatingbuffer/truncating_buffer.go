@@ -15,27 +15,31 @@ import (
 
 type TruncatingBuffer struct {
 	inputChannel        <-chan *events.Envelope
+	filterEvent         func(events.Envelope_EventType) bool
 	outputChannel       chan *events.Envelope
 	logger              *gosteno.Logger
 	lock                *sync.RWMutex
 	dropsondeOrigin     string
 	droppedMessageCount int64
 	sinkIdentifier      string
+	stopChannel         chan struct{}
 }
 
-func NewTruncatingBuffer(inputChannel <-chan *events.Envelope, bufferSize uint, logger *gosteno.Logger, dropsondeOrigin, sinkIdentifier string) *TruncatingBuffer {
+func NewTruncatingBuffer(inputChannel <-chan *events.Envelope, filterEvent func(events.Envelope_EventType) bool, bufferSize uint, logger *gosteno.Logger, dropsondeOrigin, sinkIdentifier string, stopChannel chan struct{}) *TruncatingBuffer {
 	if bufferSize < 3 {
 		panic("bufferSize must be larger than 3 for overflow")
 	}
 	outputChannel := make(chan *events.Envelope, bufferSize)
 	return &TruncatingBuffer{
 		inputChannel:        inputChannel,
+		filterEvent:         filterEvent,
 		outputChannel:       outputChannel,
 		logger:              logger,
 		lock:                &sync.RWMutex{},
 		dropsondeOrigin:     dropsondeOrigin,
 		droppedMessageCount: 0,
 		sinkIdentifier:      sinkIdentifier,
+		stopChannel:         stopChannel,
 	}
 }
 
@@ -50,28 +54,43 @@ func (r *TruncatingBuffer) CloseOutputChannel() {
 	close(r.outputChannel)
 }
 
+func (r *TruncatingBuffer) eventAllowed(eventType events.Envelope_EventType) bool {
+	return r.filterEvent == nil || !r.filterEvent(eventType)
+}
+
 func (r *TruncatingBuffer) Run() {
-	for msg := range r.inputChannel {
-		r.lock.Lock()
+	defer r.CloseOutputChannel()
+
+	for {
 		select {
-		case r.outputChannel <- msg:
-		default:
-			droppedMessageCount := len(r.outputChannel)
-			r.droppedMessageCount += int64(droppedMessageCount)
-			r.outputChannel = make(chan *events.Envelope, cap(r.outputChannel))
-			appId := envelope_extensions.GetAppId(msg)
+		case <-r.stopChannel:
+			return
+		case msg, ok := <-r.inputChannel:
+			if !ok {
+				return
+			}
+			if r.eventAllowed(msg.GetEventType()) {
+				r.lock.Lock()
+				select {
+				case r.outputChannel <- msg:
+				default:
+					droppedMessageCount := len(r.outputChannel)
+					r.droppedMessageCount += int64(droppedMessageCount)
+					r.outputChannel = make(chan *events.Envelope, cap(r.outputChannel))
+					appId := envelope_extensions.GetAppId(msg)
 
-			r.notifyMessagesDropped(droppedMessageCount, appId)
+					r.notifyMessagesDropped(droppedMessageCount, appId)
 
-			r.outputChannel <- msg
+					r.outputChannel <- msg
 
-			if r.logger != nil {
-				r.logger.Warn(fmt.Sprintf("TB: Output channel too full. Dropped %d messages for app %s to %s.", droppedMessageCount, appId, r.sinkIdentifier))
+					if r.logger != nil {
+						r.logger.Warn(fmt.Sprintf("TB: Output channel too full. Dropped %d messages for app %s to %s.", droppedMessageCount, appId, r.sinkIdentifier))
+					}
+				}
+				r.lock.Unlock()
 			}
 		}
-		r.lock.Unlock()
 	}
-	close(r.outputChannel)
 }
 
 func (r *TruncatingBuffer) GetDroppedMessageCount() int64 {
@@ -84,8 +103,12 @@ func (r *TruncatingBuffer) GetDroppedMessageCount() int64 {
 
 func (r *TruncatingBuffer) notifyMessagesDropped(droppedMessageCount int, appId string) {
 	metrics.BatchAddCounter("TruncatingBuffer.totalDroppedMessages", uint64(droppedMessageCount))
-	r.emitMessage(generateLogMessage(droppedMessageCount, appId, r.sinkIdentifier))
-	r.emitMessage(generateCounterEvent(droppedMessageCount, r.droppedMessageCount))
+	if r.eventAllowed(events.Envelope_LogMessage) {
+		r.emitMessage(generateLogMessage(droppedMessageCount, appId, r.sinkIdentifier))
+	}
+	if r.eventAllowed(events.Envelope_CounterEvent) {
+		r.emitMessage(generateCounterEvent(droppedMessageCount, r.droppedMessageCount))
+	}
 }
 
 func (r *TruncatingBuffer) emitMessage(event events.Event) {
