@@ -2,6 +2,7 @@ package eventmarshaller
 
 import (
 	"unicode"
+	"unicode/utf8"
 
 	"metron/writers"
 
@@ -11,6 +12,18 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/gogo/protobuf/proto"
 )
+
+var metricNames map[events.Envelope_EventType]string
+
+func init() {
+	metricNames = make(map[events.Envelope_EventType]string)
+	for eventType, eventName := range events.Envelope_EventType_name {
+		r, n := utf8.DecodeRuneInString(eventName)
+		modifiedName := string(unicode.ToLower(r)) + eventName[n:]
+		metricName := "dropsondeMarshaller." + modifiedName + "Marshalled"
+		metricNames[events.Envelope_EventType(eventType)] = metricName
+	}
+}
 
 // A EventMarshaller is an self-instrumenting tool for converting dropsonde
 // Envelopes to binary (Protocol Buffer) messages.
@@ -41,8 +54,6 @@ func (m *EventMarshaller) Write(message *events.Envelope) {
 }
 
 func (m *EventMarshaller) incrementMessageCount(eventType events.Envelope_EventType) {
-	modifiedEventName := []rune(eventType.String())
-	modifiedEventName[0] = unicode.ToLower(modifiedEventName[0])
-	metricName := string(modifiedEventName) + "Marshalled"
-	metrics.BatchIncrementCounter("dropsondeMarshaller." + metricName)
+	metricName := metricNames[eventType]
+	metrics.BatchIncrementCounter(metricName)
 }
