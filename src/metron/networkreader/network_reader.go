@@ -2,7 +2,6 @@ package networkreader
 
 import (
 	"net"
-	"sync"
 
 	"metron/writers"
 
@@ -17,7 +16,6 @@ type NetworkReader struct {
 
 	contextName string
 
-	lock   sync.RWMutex
 	logger *gosteno.Logger
 }
 
@@ -36,9 +34,7 @@ func (nr *NetworkReader) Start() {
 		nr.logger.Fatalf("Failed to listen on port. %s", err)
 	}
 	nr.logger.Infof("Listening on port %s", nr.host)
-	nr.lock.Lock()
 	nr.connection = connection
-	nr.lock.Unlock()
 
 	readBuffer := make([]byte, 65535) //buffer with size = max theoretical UDP size
 	for {
@@ -58,7 +54,5 @@ func (nr *NetworkReader) Start() {
 }
 
 func (nr *NetworkReader) Stop() {
-	nr.lock.Lock()
-	defer nr.lock.Unlock()
 	nr.connection.Close()
 }
