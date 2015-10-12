@@ -10,14 +10,15 @@ import (
 	"doppler/listeners/tlslistener"
 	"encoding/gob"
 	"fmt"
+	"net"
+	"net/http"
+	"time"
+
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/gogo/protobuf/proto"
 	"github.com/nu7hatch/gouuid"
-	"net"
-	"net/http"
-	"time"
 )
 
 const address = "127.0.0.1:4567"
