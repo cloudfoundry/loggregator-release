@@ -67,8 +67,10 @@ properties:
     default: 3458
   doppler.tls_listener.cert:
     description: "Cert required for generating tls listener x509 certificate"
+    default: ""
   doppler.tls_listener.key:
     description: "Key required for generating tls listener x509 certificate"
+    default: ""
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"
   metron_endpoint.host:
