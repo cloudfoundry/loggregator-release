@@ -13,7 +13,7 @@ import (
 type Tagger struct {
 	deploymentName string
 	job            string
-	index          uint
+	index          string
 	ip             string
 	outputWriter   writers.EnvelopeWriter
 }
@@ -23,7 +23,7 @@ func New(deploymentName string, job string, index uint, outputWriter writers.Env
 	return &Tagger{
 		deploymentName: deploymentName,
 		job:            job,
-		index:          index,
+		index:          strconv.Itoa(int(index)),
 		ip:             ip,
 		outputWriter:   outputWriter,
 	}
@@ -34,7 +34,7 @@ func (t *Tagger) Write(envelope *events.Envelope) {
 
 	newEnvelope.Deployment = proto.String(t.deploymentName)
 	newEnvelope.Job = proto.String(t.job)
-	newEnvelope.Index = proto.String(strconv.Itoa(int(t.index)))
+	newEnvelope.Index = proto.String(t.index)
 	newEnvelope.Ip = proto.String(t.ip)
 
 	t.outputWriter.Write(&newEnvelope)
