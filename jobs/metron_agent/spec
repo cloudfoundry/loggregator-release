@@ -24,6 +24,9 @@ properties:
   syslog_daemon_config.custom_rule:
     description: "Custom rule for syslog forward daemon"
     default: ""
+  syslog_daemon_config.max_message_size:
+    description: maximum message size to be sent
+    default: 4k
 
   metron_agent.incoming_port:
     description: "Incoming port for legacy log messages"
