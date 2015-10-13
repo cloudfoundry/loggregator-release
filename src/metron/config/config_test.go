@@ -12,18 +12,17 @@ var _ = Describe("Config", func() {
 	Context("Parse config", func() {
 		var (
 			configFile string
-			logLevel   = false
 		)
 
 		It("returns error for invalid config file path", func() {
 			configFile = "./fixtures/IDoNotExist.json"
-			_, err := config.ParseConfig(&logLevel, &configFile)
+			_, err := config.ParseConfig(&configFile)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("returns proper config", func() {
 			configFile = "./fixtures/metron.json"
-			config, err := config.ParseConfig(&logLevel, &configFile)
+			config, err := config.ParseConfig(&configFile)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(config.Index).To(Equal(uint(0)))
