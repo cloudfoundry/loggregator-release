@@ -27,12 +27,15 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+
+	"metron/config"
 )
 
 var (
 	logFilePath    = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 	configFilePath = flag.String("config", "config/metron.json", "Location of the Metron config json file")
 	debug          = flag.Bool("debug", false, "Debug logging")
+	logger         *gosteno.Logger
 )
 
 func main() {
@@ -40,9 +43,15 @@ func main() {
 	runtime.GOMAXPROCS(1)
 
 	flag.Parse()
-	config, logger := parseConfig(*debug, *configFilePath, *logFilePath)
+	config, err := config.ParseConfig(configFilePath)
+	if err != nil {
+		panic(err)
+	}
 
-	dopplerClientPool := initializeClientPool(config, logger)
+	logger = cfcomponent.NewLogger(*debug, *logFilePath, "metron", config.Config)
+	logger.Info("Startup: Setting up the Metron agent")
+
+	dopplerClientPool := initializeClientPool(config)
 
 	dopplerForwarder := dopplerforwarder.New(dopplerClientPool, logger)
 	byteSigner := signer.New(config.SharedSecret, dopplerForwarder)
@@ -50,7 +59,7 @@ func main() {
 	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, marshaller)
 	aggregator := messageaggregator.New(messageTagger, logger)
 
-	initializeMetrics(byteSigner, config, logger)
+	initializeMetrics(byteSigner, config)
 
 	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, logger)
 	dropsondeReader := networkreader.New(fmt.Sprintf("localhost:%d", config.DropsondeIncomingMessagesPort), "dropsondeAgentListener", dropsondeUnmarshaller, logger)
@@ -65,7 +74,7 @@ func main() {
 	dropsondeReader.Start()
 }
 
-func initializeClientPool(config metronConfig, logger *gosteno.Logger) *clientpool.LoggregatorClientPool {
+func initializeClientPool(config *config.Config) *clientpool.LoggregatorClientPool {
 	adapter := storeAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	err := adapter.Connect()
 	if err != nil {
@@ -82,7 +91,7 @@ func initializeClientPool(config metronConfig, logger *gosteno.Logger) *clientpo
 	return clientPool
 }
 
-func initializeMetrics(byteSigner *signer.Signer, config metronConfig, logger *gosteno.Logger) {
+func initializeMetrics(byteSigner *signer.Signer, config *config.Config) {
 	metricsMarshaller := eventmarshaller.New(byteSigner, logger)
 	metricsTagger := tagger.New(config.Deployment, config.Job, config.Index, metricsMarshaller)
 	metricsAggregator := messageaggregator.New(metricsTagger, logger)
@@ -100,43 +109,6 @@ func storeAdapterProvider(urls []string, concurrentRequests int) storeadapter.St
 	}
 
 	return etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
-}
-
-func parseConfig(debug bool, configFile string, logFilePath string) (metronConfig, *gosteno.Logger) {
-	config := metronConfig{}
-	err := cfcomponent.ReadConfigInto(&config, configFile)
-	if err != nil {
-		panic(err)
-	}
-
-	if config.MetricBatchIntervalSeconds == 0 {
-		config.MetricBatchIntervalSeconds = 15
-	}
-
-	logger := cfcomponent.NewLogger(debug, logFilePath, "metron", config.Config)
-	logger.Info("Startup: Setting up the Metron agent")
-
-	return config, logger
-}
-
-type metronConfig struct {
-	cfcomponent.Config
-
-	Deployment string
-	Zone       string
-	Job        string
-	Index      uint
-
-	LegacyIncomingMessagesPort    int
-	DropsondeIncomingMessagesPort int
-
-	EtcdUrls                  []string
-	EtcdMaxConcurrentRequests int
-
-	LoggregatorDropsondePort int
-	SharedSecret             string
-
-	MetricBatchIntervalSeconds uint
 }
 
 type metronHealthMonitor struct{}
