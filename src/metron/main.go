@@ -17,8 +17,6 @@ import (
 	"metron/eventwriter"
 	"runtime"
 
-	"metron/config"
-
 	"github.com/cloudfoundry/dropsonde/metric_sender"
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
@@ -29,6 +27,8 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+
+	"metron/config"
 )
 
 var (
