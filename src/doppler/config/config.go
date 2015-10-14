@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"crypto/tls"
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 )
 
@@ -43,10 +42,10 @@ type Config struct {
 	MonitorIntervalSeconds        uint
 	SinkDialTimeoutSeconds        int
 	EnableTLSTransport            bool
-	TLSListenerConfig             *TLSListenerConfig
+	TLSListenerConfig             TLSListenerConfig
 }
 
-func (c *Config) Validate(logger *gosteno.Logger) (err error) {
+func (c *Config) validate() (err error) {
 	if c.MaxRetainedLogMessages == 0 {
 		return errors.New("Need max number of log messages to retain per application")
 	}
@@ -58,13 +57,50 @@ func (c *Config) Validate(logger *gosteno.Logger) (err error) {
 		}
 	}
 
-	if c.UnmarshallerCount == 0 {
-		c.UnmarshallerCount = 1
-	}
-
-	if c.EtcdMaxConcurrentRequests < 1 {
-		c.EtcdMaxConcurrentRequests = 1
+	if c.EnableTLSTransport {
+		if c.TLSListenerConfig.CrtFile == "" || c.TLSListenerConfig.KeyFile == "" || c.TLSListenerConfig.Port == 0 {
+			return errors.New("invalid TLS listener configuration")
+		}
 	}
 
 	return err
+}
+
+func ParseConfig(configFile *string) (*Config, error) {
+	config := &Config{}
+	err := cfcomponent.ReadConfigInto(config, *configFile)
+	if err != nil {
+		return nil, err
+	}
+
+	err = config.validate()
+	if err != nil {
+		return nil, err
+	}
+
+	if config.MonitorIntervalSeconds == 0 {
+		config.MonitorIntervalSeconds = 60
+	}
+
+	if config.SinkDialTimeoutSeconds == 0 {
+		config.SinkDialTimeoutSeconds = 1
+	}
+
+	if config.UnmarshallerCount == 0 {
+		config.UnmarshallerCount = 1
+	}
+
+	if config.EtcdMaxConcurrentRequests < 1 {
+		config.EtcdMaxConcurrentRequests = 1
+	}
+
+	if config.EnableTLSTransport {
+		cert, err := tls.LoadX509KeyPair(config.TLSListenerConfig.CrtFile, config.TLSListenerConfig.KeyFile)
+		if err != nil {
+			return nil, err
+		}
+		config.TLSListenerConfig.Cert = cert
+	}
+
+	return config, nil
 }
