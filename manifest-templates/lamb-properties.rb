@@ -98,9 +98,9 @@ class LambProperties
     outgoing_dropsonde_port: 8081
     etcd:
       machines:
-      - 0.0.0.10
-      - 0.0.0.25
-      - 0.0.1.9
+      - 10.10.16.20
+      - 10.10.16.35
+      - 10.10.80.19
 
   doppler:
     maxRetainedLogMessages: 100
@@ -108,6 +108,11 @@ class LambProperties
     blacklisted_syslog_ranges: null
     unmarshaller_count: 5
     port: 4443
+    tls_listener:
+      cert: null
+      key: null
+      port: null
+    enable_tls_transport: null
 
   metron_agent:
     deployment: #{deployment_name}
@@ -142,6 +147,11 @@ class LambProperties
     blacklisted_syslog_ranges: null
     unmarshaller_count: 5
     port: 4443
+    tls_listener:
+      cert: null
+      key: null
+      port: null
+    enable_tls_transport: null
 
   metron_agent:
     deployment: #{deployment_name}
@@ -159,7 +169,7 @@ class LambProperties
       when "warden"
         "bosh-lite.com"
       else
-        "example.com"
+        "DOMAIN"
     end
   end
 
