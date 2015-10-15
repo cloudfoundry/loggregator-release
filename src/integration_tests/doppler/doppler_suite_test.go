@@ -40,7 +40,7 @@ var _ = BeforeSuite(func() {
 	etcdAdapter = etcdRunner.Adapter()
 
 	var err error
-	pathToDopplerExec, err = gexec.Build("doppler")
+	pathToDopplerExec, err = gexec.Build("doppler", "-race")
 	Expect(err).NotTo(HaveOccurred())
 
 	pathToHTTPEchoServer, err = gexec.Build("tools/httpechoserver")

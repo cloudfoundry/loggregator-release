@@ -32,7 +32,7 @@ var (
 
 func TestDeaagent(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Deaagent Suite")
+	RunSpecs(t, "Deaagent Integration Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -53,13 +53,13 @@ var _ = BeforeSuite(func() {
 
 	task1InputListener, task1StderrListener = setupTaskSockets(helperTask1)
 
-	pathToDeaAgentExecutable, err := gexec.Build("deaagent/deaagent")
+	pathToDeaAgentExecutable, err := gexec.Build("deaagent/deaagent", "-race")
 	Expect(err).ShouldNot(HaveOccurred())
 
 	deaagentCommand := exec.Command(pathToDeaAgentExecutable, "--config=fixtures/deaagent.json", "--debug", "-instancesFile", instancesJson.Name())
 
 	deaAgentSession, err = gexec.Start(deaagentCommand, GinkgoWriter, GinkgoWriter)
-	Expect(err).ShouldNot(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	etcdPort = 5800 + (config.GinkgoConfig.ParallelNode-1)*10
 	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
