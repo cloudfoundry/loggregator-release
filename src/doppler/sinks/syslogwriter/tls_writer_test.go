@@ -72,7 +72,7 @@ var _ = Describe("TLSWriter", func() {
 		}, 5)
 
 		AfterEach(func() {
-			syslogServerSession.Kill().Wait()
+			syslogServerSession.Terminate().Wait()
 			syslogWriter.Close()
 		})
 
