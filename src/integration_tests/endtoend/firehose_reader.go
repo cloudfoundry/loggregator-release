@@ -2,6 +2,7 @@ package endtoend
 
 import (
 	"crypto/tls"
+
 	"github.com/cloudfoundry/noaa"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/pivotal-golang/localip"
@@ -70,5 +71,5 @@ func isMetronMessageCount(msg *events.Envelope) bool {
 }
 
 func isDopplerMessageCount(msg *events.Envelope) bool {
-	return msg.GetEventType() == events.Envelope_CounterEvent && msg.CounterEvent.GetName() == "dropsondeListener.receivedMessageCount" && msg.GetOrigin() == "DopplerServer"
+	return msg.GetEventType() == events.Envelope_CounterEvent && msg.CounterEvent.GetName() == "dropsondeListener.receivedMessageCount" && msg.GetOrigin() == "doppler"
 }

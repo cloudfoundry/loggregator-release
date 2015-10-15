@@ -1,17 +1,18 @@
 package endtoend_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"integration_tests/endtoend"
 	"time"
 	"tools/benchmark/experiment"
 	"tools/benchmark/messagegenerator"
 	"tools/benchmark/writestrategies"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 const (
-	timeoutSeconds  = 15
+	timeoutSeconds = 15
 )
 
 type Stopper interface {

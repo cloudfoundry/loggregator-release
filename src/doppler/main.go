@@ -22,6 +22,8 @@ import (
 	"github.com/pivotal-golang/localip"
 )
 
+const DOPPLER_ORIGIN = "doppler"
+
 var (
 	logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 	logLevel    = flag.Bool("debug", false, "Debug logging")
@@ -96,11 +98,11 @@ func main() {
 	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "doppler", conf.Config)
 	logger.Info("Startup: Setting up the doppler server")
 
-	dropsonde.Initialize(conf.MetronAddress, "DopplerServer")
+	dropsonde.Initialize(conf.MetronAddress, DOPPLER_ORIGIN)
 	dopplerStoreAdapter := NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
 	legacyStoreAdapter := NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
 
-	doppler := New(localIp, conf, logger, dopplerStoreAdapter, conf.MessageDrainBufferSize, "doppler", time.Duration(conf.SinkDialTimeoutSeconds)*time.Second)
+	doppler := New(localIp, conf, logger, dopplerStoreAdapter, conf.MessageDrainBufferSize, DOPPLER_ORIGIN, time.Duration(conf.SinkDialTimeoutSeconds)*time.Second)
 
 	if err != nil {
 		panic(err)
