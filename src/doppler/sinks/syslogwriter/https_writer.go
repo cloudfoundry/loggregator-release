@@ -9,6 +9,8 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -80,10 +82,11 @@ func (w *httpsWriter) Close() error {
 
 func (w *httpsWriter) writeHttp(finalMsg string) (byteCount int, err error) {
 	resp, err := w.client.Post(w.outputUrl.String(), "text/plain", strings.NewReader(finalMsg))
-	if resp != nil {
+	if err == nil {
 		if resp.StatusCode != 200 {
 			err = errors.New("Syslog Writer: Post responded with a non 200 status code")
 		}
+		io.Copy(ioutil.Discard, resp.Body)
 		resp.Body.Close()
 	}
 	byteCount = len(finalMsg)

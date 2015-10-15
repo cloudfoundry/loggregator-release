@@ -184,11 +184,11 @@ var _ = Describe("HttpsWriter", func() {
 
 				// one connection per request
 				requester.concurrentWriteRequests(2, w)
-				Eventually(listener.GetHistoryLength).Should(Equal(2))
+				Expect(listener.GetHistoryLength()).To(Equal(2))
 
 				// one pooled connection, one new connection
 				requester.concurrentWriteRequests(2, w)
-				Eventually(listener.GetHistoryLength).Should(Equal(3))
+				Expect(listener.GetHistoryLength()).To(Equal(3))
 			})
 		})
 
@@ -252,25 +252,22 @@ func (h *historyListener) Accept() (net.Conn, error) {
 }
 
 type concurrentWriteRequestSimulator struct {
-	serverWG *sync.WaitGroup
 }
 
 func (c *concurrentWriteRequestSimulator) ServeHTTP(_ http.ResponseWriter, r *http.Request) {
-	c.serverWG.Done()
-	c.serverWG.Wait()
-	r.Body.Close()
+
 }
 
 func (c *concurrentWriteRequestSimulator) concurrentWriteRequests(count int, writer syslogwriter.Writer) {
-	c.serverWG = &sync.WaitGroup{}
 	wg := &sync.WaitGroup{}
+	wg.Add(count)
+
 	for i := 0; i < count; i++ {
-		c.serverWG.Add(1)
-		wg.Add(1)
 		go func() {
 			writer.Write(standardErrorPriority, []byte("Message"), "just a test", "TEST", time.Now().UnixNano())
 			wg.Done()
 		}()
 	}
+
 	wg.Wait()
 }
