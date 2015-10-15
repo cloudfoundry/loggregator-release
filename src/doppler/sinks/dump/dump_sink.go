@@ -32,10 +32,10 @@ func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, i
 func (d *DumpSink) Run(inputChan <-chan *events.Envelope) {
 	timer := time.NewTimer(d.inactivityDuration)
 	for {
-		timer.Reset(d.inactivityDuration)
 		select {
 		case msg, ok := <-inputChan:
 			if !ok {
+				timer.Stop()
 				return
 			}
 
@@ -46,8 +46,8 @@ func (d *DumpSink) Run(inputChan <-chan *events.Envelope) {
 			}
 
 			d.addMsg(msg)
+			timer = time.NewTimer(d.inactivityDuration)
 		case <-timer.C:
-			timer.Stop()
 			return
 		}
 	}
