@@ -12,8 +12,6 @@
   "LegacyIncomingMessagesPort": <%= p("metron_agent.incoming_port") %>,
   "DropsondeIncomingMessagesPort": <%= p("metron_agent.dropsonde_incoming_port") %>,
 
-  "EtcdQueryIntervalMilliseconds": <%= p("metron_agent.etcd_query_interval_milliseconds") %>,
-
   "LoggregatorDropsondePort": <%= p("loggregator.dropsonde_incoming_port") %>
 
   <% if_p("syslog_daemon_config") do |_| %>

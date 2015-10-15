@@ -6,7 +6,6 @@
   "LoggregatorDropsondePort": 3457,
   "Index": 0,
   "EtcdMaxConcurrentRequests": 1,
-  "EtcdQueryIntervalMilliseconds": 10,
   "Zone": "z1",
   "CollectorRegistrarIntervalMilliseconds": 60000
 }

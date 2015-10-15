@@ -2,7 +2,6 @@ package listener
 
 import (
 	"fmt"
-	"io"
 	"regexp"
 	"sync"
 	"time"
@@ -51,8 +50,10 @@ func (l *websocketListener) listenWithTimeout(timeout time.Duration, url string,
 		conn.SetReadDeadline(deadline(timeout))
 		_, msg, err := conn.ReadMessage()
 
-		if err == io.EOF {
-			return nil
+		if wsErr, ok := err.(*websocket.CloseError); ok {
+			if wsErr.Code == websocket.CloseNormalClosure {
+				return nil
+			}
 		}
 
 		if err != nil {

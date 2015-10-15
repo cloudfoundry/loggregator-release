@@ -1,13 +1,13 @@
 package serveraddressprovider_test
 
 import (
-	"time"
 	"trafficcontroller/serveraddressprovider"
+
+	"sync"
 
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"sync"
 )
 
 var _ = Describe("ServerAddressProvider", func() {
@@ -24,7 +24,7 @@ var _ = Describe("ServerAddressProvider", func() {
 					[]string{"1.2.3.4"},
 				},
 			}
-			provider := serveraddressprovider.NewDynamicServerAddressProvider(addressList, uint32(3456), 1*time.Millisecond)
+			provider := serveraddressprovider.NewDynamicServerAddressProvider(addressList, uint32(3456))
 
 			provider.Start()
 
@@ -38,7 +38,7 @@ var _ = Describe("ServerAddressProvider", func() {
 					[]string{"1.2.3.4"},
 				},
 			}
-			provider := serveraddressprovider.NewDynamicServerAddressProvider(addressList, uint32(3456), 1*time.Millisecond)
+			provider := serveraddressprovider.NewDynamicServerAddressProvider(addressList, uint32(3456))
 
 			provider.Start()
 
@@ -56,13 +56,12 @@ type fakeServerAddressList struct {
 	sync.Mutex
 }
 
-func (fake *fakeServerAddressList) Run(t time.Duration) {
+func (fake *fakeServerAddressList) Run() {
 	fake.Lock()
 	defer fake.Unlock()
 
 	for _, addresses := range fake.addressesToReturn {
 		fake.addresses = addresses
-		time.Sleep(t)
 	}
 }
 

@@ -4,14 +4,15 @@ import (
 	"trafficcontroller/listener"
 
 	"fmt"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"time"
 	"trafficcontroller/marshaller"
+
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"github.com/gorilla/websocket"
 
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	. "github.com/onsi/ginkgo"
@@ -75,7 +76,7 @@ var _ = Describe("WebsocketListener", func() {
 			close(done)
 		})
 
-		It("should output messages recieved from the server", func(done Done) {
+		It("should output messages recieved from the server", func() {
 			go l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
 
 			message := []byte("hello world")
@@ -84,8 +85,6 @@ var _ = Describe("WebsocketListener", func() {
 			var receivedMessage []byte
 			Eventually(outputChan).Should(Receive(&receivedMessage))
 			Expect(receivedMessage).To(Equal(message))
-
-			close(done)
 		})
 
 		It("should not send errors when client requests close without issue", func() {
@@ -96,6 +95,7 @@ var _ = Describe("WebsocketListener", func() {
 			}()
 			close(stopChan)
 			Eventually(doneWaiting).Should(BeClosed())
+
 			Consistently(outputChan).Should(BeEmpty())
 		})
 
@@ -106,6 +106,7 @@ var _ = Describe("WebsocketListener", func() {
 				close(doneWaiting)
 			}()
 			close(messageChan)
+
 			Eventually(doneWaiting).Should(BeClosed())
 			Consistently(outputChan).Should(BeEmpty())
 		})

@@ -33,3 +33,4 @@ files:
 - loggregator/src/github.com/gogo/protobuf/proto/*.go # gosub
 - loggregator/src/github.com/nu7hatch/gouuid/*.go # gosub
 - loggregator/src/github.com/pivotal-golang/localip/*.go # gosub
+- loggregator/src/github.com/ugorji/go/codec/*.go # gosub

@@ -44,10 +44,6 @@ properties:
   metron_agent.deployment:
     description: "Name of deployment (added as tag on all outgoing metrics)"
 
-  metron_agent.etcd_query_interval_milliseconds:
-    description: "Interval for querying ETCD for trafficcontroller heartbeats"
-    default: 5000
-
   metron_agent.logrotate.freq_min:
     description: "The frequency in minutes which logrotate will rotate VM logs"
     default: 5

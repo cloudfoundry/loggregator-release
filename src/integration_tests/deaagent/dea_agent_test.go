@@ -1,19 +1,12 @@
-package integration_test
+package deaagent_test
 
 import (
 	"deaagent/domain"
-	"testing"
-
-	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
-	"github.com/onsi/gomega/gexec"
 
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/onsi/ginkgo/config"
 
-	"fmt"
 	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sync"
 
@@ -23,24 +16,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestIntegration(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Integration Suite")
-}
-
-const natsPort = 24484
 const SOCKET_PREFIX = "\n\n\n\n"
-const instancesJsonPath = "fixtures/instances.json"
-const wardenIdentifier = 56
 
 var (
-	task1InputListener  net.Listener
-	task1StderrListener net.Listener
-	newFile             *os.File
-	etcdPort            int
-	etcdRunner          *etcdstorerunner.ETCDClusterRunner
-	deaAgentSession     *gexec.Session
-	goRoutineSpawned    sync.WaitGroup
+	goRoutineSpawned sync.WaitGroup
 )
 
 type messageHelperInterface interface {
@@ -54,80 +33,55 @@ type messageHolder struct {
 	sync.RWMutex
 }
 
-var _ = BeforeSuite(func() {
-	newFile = createFile(instancesJsonPath)
-	fileContent := fmt.Sprintf(`{"instances": [{"state": "RUNNING", "application_id": "1234", "warden_job_id": %d, "warden_container_path":"fixtures", "instance_index": 3, "syslog_drain_urls": ["url1"]}]}`, wardenIdentifier)
-	writeToFile(newFile, fileContent, true)
-
-	helperTask1 := &domain.Task{
-		ApplicationId:       "1234",
-		SourceName:          "App",
-		WardenJobId:         wardenIdentifier,
-		WardenContainerPath: "fixtures",
-		Index:               3,
-	}
-
-	task1InputListener, task1StderrListener = setupTaskSockets(helperTask1)
-
-	pathToDeaAgentExecutable, err := gexec.Build("deaagent/deaagent")
-	Expect(err).ShouldNot(HaveOccurred())
-
-	deaagentCommand := exec.Command(pathToDeaAgentExecutable, "--config=fixtures/deaagent.json", "--debug", "-instancesFile", "fixtures/instances.json")
-
-	deaAgentSession, err = gexec.Start(deaagentCommand, GinkgoWriter, GinkgoWriter)
-	Expect(err).ShouldNot(HaveOccurred())
-	newFile, err = os.OpenFile("fixtures/instances.json", os.O_APPEND|os.O_WRONLY, 0600)
-	if err != nil {
-		println(err.Error())
-	}
-
-	etcdPort = 5800 + (config.GinkgoConfig.ParallelNode-1)*10
-	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
-	etcdRunner.Start()
-})
-
-var _ = AfterSuite(func() {
-	task1InputListener.Close()
-	task1StderrListener.Close()
-	deaAgentSession.Kill().Wait(5)
-	gexec.CleanupBuildArtifacts()
-
-	etcdRunner.Adapter().Disconnect()
-	etcdRunner.Stop()
-	os.Remove(instancesJsonPath)
-	os.RemoveAll("fixtures/jobs")
-})
-
 var _ = Describe("DeaLoggingAgent integration tests", func() {
 	Context("It sends messages from the input file out to metron", func() {
-		It("gets sent messages and internally emitted metrics", func(done Done) {
+		It("gets sent messages and internally emitted metrics", func() {
 			m := &messageHolder{}
 			conn := makeDeaLoggingAgentOutputConn()
 			defer conn.Close()
 			goRoutineSpawned.Add(1)
 			go readDeaLoggingAgentOutputConn(conn, m)
 			goRoutineSpawned.Wait()
-			//Send a message into dea logging agent
-			task1StdoutConn, err := task1InputListener.Accept()
-			Expect(err).ToNot(HaveOccurred())
-			defer task1StdoutConn.Close()
-			task1StdoutConn.Write([]byte(SOCKET_PREFIX + "some message" + "\n"))
 
-			Eventually(m.getTotalNumOfOutputMessages, 20, 1).Should(BeNumerically(">", 10))
+			stdoutChannel := make(chan net.Conn)
+			//Send a message into dea logging agent
+			go func() {
+				defer GinkgoRecover()
+				stdoutConn, err := task1InputListener.Accept()
+				Expect(err).NotTo(HaveOccurred())
+				stdoutChannel <- stdoutConn
+			}()
+			var task1StdoutConn net.Conn
+			Eventually(stdoutChannel).Should(Receive(&task1StdoutConn))
+			defer task1StdoutConn.Close()
+
+			Eventually(m.getMessagesCount, 10, 1).Should(BeNumerically(">", 5))
+			task1StdoutConn.Write([]byte(SOCKET_PREFIX + "some message" + "\n"))
+			Eventually(m.getCounterCount, 10, 1).Should(BeNumerically(">", 0))
+
 			Expect(m.getDeltaOfCounterEvent("logSenderTotalMessagesRead")).To(Equal(uint64(1)))
 
 			Expect(m.getFirstLogMessageString()).To(Equal("some message"))
-
-			newFile.Close()
-			close(done)
-		}, 30)
+		}, 25)
 	})
 })
 
-func (m *messageHolder) getTotalNumOfOutputMessages() int {
+func (m *messageHolder) getMessagesCount() int {
+	defer m.RUnlock()
+	m.RLock()
+	return len(m.messages)
+}
+
+func (m *messageHolder) getCounterCount() int {
+	count := 0
 	m.RLock()
 	defer m.RUnlock()
-	return len(m.messages)
+	for _, metric := range m.messages {
+		if *metric.EventType == events.Envelope_CounterEvent {
+			count++
+		}
+	}
+	return count
 }
 
 func (m *messageHolder) getDeltaOfCounterEvent(metricName string) uint64 {
@@ -154,14 +108,19 @@ func (m *messageHolder) getFirstLogMessageString() string {
 }
 
 func setupTaskSockets(task *domain.Task) (stdout net.Listener, stderr net.Listener) {
-	os.MkdirAll(task.Identifier(), 0777)
+	err := os.MkdirAll(task.Identifier(), 0777)
+	Expect(err).NotTo(HaveOccurred())
 	stdoutSocketPath := filepath.Join(task.Identifier(), "stdout.sock")
-	os.Remove(stdoutSocketPath)
-	stdoutListener, _ := net.Listen("unix", stdoutSocketPath)
+	_ = os.Remove(stdoutSocketPath)
+
+	stdoutListener, err := net.Listen("unix", stdoutSocketPath)
+	Expect(err).NotTo(HaveOccurred())
 
 	stderrSocketPath := filepath.Join(task.Identifier(), "stderr.sock")
-	os.Remove(stderrSocketPath)
-	stderrListener, _ := net.Listen("unix", stderrSocketPath)
+	_ = os.Remove(stderrSocketPath)
+	stderrListener, err := net.Listen("unix", stderrSocketPath)
+	Expect(err).NotTo(HaveOccurred())
+
 	return stdoutListener, stderrListener
 }
 

@@ -2,8 +2,9 @@ package serveraddressprovider
 
 import (
 	"fmt"
-	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
 	"time"
+
+	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
 )
 
 type ServerAddressProvider interface {
@@ -11,11 +12,10 @@ type ServerAddressProvider interface {
 	Start()
 }
 
-func NewDynamicServerAddressProvider(serverAddressList servicediscovery.ServerAddressList, port uint32, interval time.Duration) ServerAddressProvider {
+func NewDynamicServerAddressProvider(serverAddressList servicediscovery.ServerAddressList, port uint32) ServerAddressProvider {
 	return &dynamicServerAddressProvider{
 		serverAddressList: serverAddressList,
 		port:              port,
-		interval:          interval,
 	}
 }
 
@@ -27,7 +27,7 @@ type dynamicServerAddressProvider struct {
 
 func (provider *dynamicServerAddressProvider) Start() {
 	provider.serverAddressList.DiscoverAddresses()
-	go provider.serverAddressList.Run(provider.interval)
+	go provider.serverAddressList.Run()
 }
 
 func (provider *dynamicServerAddressProvider) ServerAddresses() []string {

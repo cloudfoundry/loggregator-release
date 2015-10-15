@@ -10,6 +10,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 
 	"bytes"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -28,12 +29,11 @@ var _ = Describe("Dropsonde message forwarding", func() {
 		adapter.Create(node)
 		adapter.Disconnect()
 
-
 		stopTheWorld = make(chan struct{})
 
 		conn := eventuallyListensForUDP("localhost:3457")
 		fakeDoppler = &FakeDoppler{
-			packetConn: conn,
+			packetConn:   conn,
 			stopTheWorld: stopTheWorld,
 		}
 	})
@@ -43,9 +43,7 @@ var _ = Describe("Dropsonde message forwarding", func() {
 		close(stopTheWorld)
 	})
 
-	It("forwards hmac signed messages to a healthy doppler server", func(done Done) {
-		defer close(done)
-
+	It("forwards hmac signed messages to a healthy doppler server", func() {
 		originalMessage := basicValueMessage()
 		expectedMessage := sign(originalMessage)
 
@@ -53,7 +51,7 @@ var _ = Describe("Dropsonde message forwarding", func() {
 
 		metronConn, _ := net.Dial("udp4", "localhost:51161")
 		metronInput := &MetronInput{
-			metronConn: metronConn,
+			metronConn:   metronConn,
 			stopTheWorld: stopTheWorld,
 		}
 		go metronInput.WriteToMetron(originalMessage)
@@ -73,7 +71,7 @@ func sign(message []byte) signedMessage {
 	mac.Write(expectedMessage)
 
 	signature := mac.Sum(nil)
-	return signedMessage{ signature: signature, message: expectedMessage }
+	return signedMessage{signature: signature, message: expectedMessage}
 }
 
 func gotSignedMessage(readData, signature []byte) bool {
@@ -81,11 +79,11 @@ func gotSignedMessage(readData, signature []byte) bool {
 }
 
 type MetronInput struct {
-	metronConn net.Conn
+	metronConn   net.Conn
 	stopTheWorld chan struct{}
 }
 
-func(input *MetronInput) WriteToMetron(unsignedMessage []byte) {
+func (input *MetronInput) WriteToMetron(unsignedMessage []byte) {
 	ticker := time.NewTicker(10 * time.Millisecond)
 
 	for {
@@ -100,11 +98,11 @@ func(input *MetronInput) WriteToMetron(unsignedMessage []byte) {
 }
 
 type FakeDoppler struct {
-	packetConn net.PacketConn
+	packetConn   net.PacketConn
 	stopTheWorld chan struct{}
 }
 
-func(d *FakeDoppler) ReadIncomingMessages(signature []byte) chan signedMessage {
+func (d *FakeDoppler) ReadIncomingMessages(signature []byte) chan signedMessage {
 	messageChan := make(chan signedMessage, 1000)
 
 	go func() {

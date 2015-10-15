@@ -1,34 +1,34 @@
 package config
+
 import (
-	"os"
 	"encoding/json"
+	"os"
 )
 
-type TestConfig struct{
+type TestConfig struct {
 	DopplerEndpoint string
-	SkipSSLVerify bool
+	SkipSSLVerify   bool
 
 	DropsondePort int
 
-	EtcdUrls []string
+	EtcdUrls     []string
 	SharedSecret string
 
 	LoginRequired bool
-	UaaURL string
-	AdminUser string
+	UaaURL        string
+	AdminUser     string
 	AdminPassword string
 }
 
 type MetronConfig struct {
-	LegacyIncomingMessagesPort int
+	LegacyIncomingMessagesPort    int
 	DropsondeIncomingMessagesPort int
-	SharedSecret string
-	EtcdUrls    []string
-	LoggregatorDropsondePort int
-	Index int
-	EtcdMaxConcurrentRequests int
-	EtcdQueryIntervalMilliseconds int
-	Zone string
+	SharedSecret                  string
+	EtcdUrls                      []string
+	LoggregatorDropsondePort      int
+	Index                         int
+	EtcdMaxConcurrentRequests     int
+	Zone                          string
 }
 
 func Load() *TestConfig {
@@ -51,8 +51,7 @@ func Load() *TestConfig {
 	return config
 }
 
-
-func(tc *TestConfig) SaveMetronConfig() {
+func (tc *TestConfig) SaveMetronConfig() {
 	baseMetronConfigFile, err := os.Open("fixtures/bosh_lite_metron.json")
 	if err != nil {
 		panic(err)

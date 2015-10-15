@@ -14,6 +14,9 @@ import (
 	"metron/writers/signer"
 	"metron/writers/tagger"
 
+	"metron/eventwriter"
+	"runtime"
+
 	"github.com/cloudfoundry/dropsonde/metric_sender"
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
@@ -24,8 +27,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
-	"metron/eventwriter"
-	"runtime"
 )
 
 var (
@@ -74,8 +75,8 @@ func initializeClientPool(config metronConfig, logger *gosteno.Logger) *clientpo
 	inZoneServerAddressList := servicediscovery.NewServerAddressList(adapter, "/healthstatus/doppler/"+config.Zone, logger)
 	allZoneServerAddressList := servicediscovery.NewServerAddressList(adapter, "/healthstatus/doppler/", logger)
 
-	go inZoneServerAddressList.Run(time.Duration(config.EtcdQueryIntervalMilliseconds) * time.Millisecond)
-	go allZoneServerAddressList.Run(time.Duration(config.EtcdQueryIntervalMilliseconds) * time.Millisecond)
+	go inZoneServerAddressList.Run()
+	go allZoneServerAddressList.Run()
 
 	clientPool := clientpool.NewLoggregatorClientPool(logger, config.LoggregatorDropsondePort, inZoneServerAddressList, allZoneServerAddressList)
 	return clientPool
@@ -129,9 +130,8 @@ type metronConfig struct {
 	LegacyIncomingMessagesPort    int
 	DropsondeIncomingMessagesPort int
 
-	EtcdUrls                      []string
-	EtcdMaxConcurrentRequests     int
-	EtcdQueryIntervalMilliseconds int
+	EtcdUrls                  []string
+	EtcdMaxConcurrentRequests int
 
 	LoggregatorDropsondePort int
 	SharedSecret             string

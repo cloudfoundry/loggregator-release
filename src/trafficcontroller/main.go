@@ -11,14 +11,6 @@ import (
 	"trafficcontroller/authorization"
 
 	"common/monitor"
-	"github.com/cloudfoundry/dropsonde"
-	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/gunk/workpool"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
-	"github.com/cloudfoundry/storeadapter"
-	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
-	"github.com/pivotal-golang/localip"
 	"trafficcontroller/channel_group_connector"
 	"trafficcontroller/config"
 	"trafficcontroller/dopplerproxy"
@@ -27,6 +19,15 @@ import (
 	"trafficcontroller/profiler"
 	"trafficcontroller/serveraddressprovider"
 	"trafficcontroller/uaa_client"
+
+	"github.com/cloudfoundry/dropsonde"
+	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/gunk/workpool"
+	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
+	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
+	"github.com/cloudfoundry/storeadapter"
+	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+	"github.com/pivotal-golang/localip"
 )
 
 var DefaultStoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
@@ -37,8 +38,6 @@ var DefaultStoreAdapterProvider = func(urls []string, concurrentRequests int) st
 
 	return etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
 }
-
-const EtcdQueryInterval = 5 * time.Second
 
 var (
 	logFilePath          = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
@@ -121,7 +120,7 @@ func makeProxy(adapter storeadapter.StoreAdapter, config *config.Config, logger 
 	adminAuthorizer := authorization.NewAdminAccessAuthorizer(*disableAccessControl, &uaaClient)
 
 	loggregatorServerAddressList := servicediscovery.NewServerAddressList(adapter, "/healthstatus/doppler", logger)
-	provider := serveraddressprovider.NewDynamicServerAddressProvider(loggregatorServerAddressList, config.DopplerPort, EtcdQueryInterval)
+	provider := serveraddressprovider.NewDynamicServerAddressProvider(loggregatorServerAddressList, config.DopplerPort)
 	provider.Start()
 
 	cgc := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, messageGenerator, logger)

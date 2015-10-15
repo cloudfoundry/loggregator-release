@@ -7,12 +7,13 @@ import (
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/gogo/protobuf/proto"
 
+	"integration_tests/metron/matchers"
+	"math/rand"
+
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"integration_tests/metron/matchers"
-	"math/rand"
 )
 
 type testServer struct {
@@ -81,9 +82,7 @@ var _ = Describe("Legacy message forwarding", func() {
 		testServer.stop()
 	})
 
-	It("converts to events message format and forwards to doppler", func(done Done) {
-		defer close(done)
-
+	It("converts to events message format and forwards to doppler", func() {
 		currentTime := time.Now()
 		marshalledLegacyMessage := legacyLogMessage(123, "BLAH", currentTime)
 		marshalledEventsEnvelope := addDefaultTags(eventsLogMessage(123, "BLAH", currentTime))

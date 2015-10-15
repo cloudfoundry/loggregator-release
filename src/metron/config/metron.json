@@ -12,7 +12,5 @@
   "LegacyIncomingMessagesPort": 51160,
   "DropsondeIncomingMessagesPort": 51161,
 
-  "EtcdQueryIntervalMilliseconds": 100,
-
   "LoggregatorDropsondePort": 3457
 }
