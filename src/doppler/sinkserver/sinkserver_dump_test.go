@@ -6,6 +6,7 @@ import (
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 )
 
@@ -30,13 +32,12 @@ var _ = Describe("Dumping", func() {
 		dataReadChannel     chan *events.Envelope
 		services            sync.WaitGroup
 		goRoutineSpawned    sync.WaitGroup
-	)
-
-	const (
-		SERVER_PORT = "9081"
+		serverPort          string
 	)
 
 	BeforeEach(func() {
+		port := 9081 + config.GinkgoConfig.ParallelNode
+		serverPort = strconv.Itoa(port)
 		dataReadChannel = make(chan *events.Envelope, 2)
 
 		logger := loggertesthelper.Logger()
@@ -67,7 +68,7 @@ var _ = Describe("Dumping", func() {
 			TestMessageRouter.Start(dataReadChannel)
 		}()
 
-		apiEndpoint := "localhost:" + SERVER_PORT
+		apiEndpoint := "localhost:" + serverPort
 		TestWebsocketServer = websocketserver.New(apiEndpoint, sinkManager, 10*time.Second, 100, "dropsonde-origin", loggertesthelper.Logger())
 
 		services.Add(1)
@@ -102,16 +103,13 @@ var _ = Describe("Dumping", func() {
 		dataReadChannel <- env2
 
 		receivedChan := make(chan []byte, 2)
-		_, stopKeepAlive, droppedChannel := AddWSSink(receivedChan, SERVER_PORT, "/apps/myOtherApp/recentlogs")
+		_, stopKeepAlive, droppedChannel := AddWSSink(receivedChan, serverPort, "/apps/myOtherApp/recentlogs")
 
 		Eventually(droppedChannel).Should(Receive())
 
-		logMessages := dumpAllMessages(receivedChan)
-
-		Expect(logMessages).To(HaveLen(2))
-
-		firstMarshalledEnvelope := logMessages[0]
-		secondMarshalledEnvelope := logMessages[1]
+		var firstMarshalledEnvelope, secondMarshalledEnvelope []byte
+		Eventually(receivedChan).Should(Receive(&firstMarshalledEnvelope))
+		Eventually(receivedChan).Should(Receive(&secondMarshalledEnvelope))
 
 		var envelope1 events.Envelope
 		var envelope2 events.Envelope
@@ -127,7 +125,7 @@ var _ = Describe("Dumping", func() {
 
 	It("doesn't hang when there are no messages", func() {
 		receivedChan := make(chan []byte, 1)
-		AddWSSink(receivedChan, SERVER_PORT, "/apps/myOtherApp/recentlogs")
+		AddWSSink(receivedChan, serverPort, "/apps/myOtherApp/recentlogs")
 
 		doneChan := make(chan bool)
 		go func() {
@@ -140,7 +138,7 @@ var _ = Describe("Dumping", func() {
 
 	It("errors when log target is invalid", func() {
 		path := "/dump/?something=invalidtarget"
-		_, _, err := websocket.DefaultDialer.Dial("ws://localhost:"+SERVER_PORT+path, http.Header{})
+		_, _, err := websocket.DefaultDialer.Dial("ws://localhost:"+serverPort+path, http.Header{})
 		Expect(err).To(HaveOccurred())
 	})
 })
