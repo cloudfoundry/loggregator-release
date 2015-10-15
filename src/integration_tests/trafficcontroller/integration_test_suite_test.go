@@ -1,6 +1,10 @@
 package integration_test
 
 import (
+	"integration_tests/trafficcontroller/fake_auth_server"
+	"integration_tests/trafficcontroller/fake_doppler"
+	"integration_tests/trafficcontroller/fake_uaa_server"
+
 	"github.com/apcera/nats"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
@@ -8,9 +12,6 @@ import (
 	"github.com/cloudfoundry/yagnats"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pivotal-golang/localip"
-	"integration_tests/trafficcontroller/fake_auth_server"
-	"integration_tests/trafficcontroller/fake_doppler"
-	"integration_tests/trafficcontroller/fake_uaa_server"
 
 	"encoding/json"
 	"fmt"
@@ -63,8 +64,8 @@ var _ = BeforeSuite(func() {
 	}).ShouldNot(HaveOccurred())
 	<-fakeDoppler.TrafficControllerConnected
 
+	trafficControllerDropsondeEndpoint := fmt.Sprintf("http://%s:%d", localIPAddress, 4566)
 	Eventually(func() error {
-		trafficControllerDropsondeEndpoint := fmt.Sprintf("http://%s:%d", localIPAddress, 4566)
 		_, err := http.Get(trafficControllerDropsondeEndpoint)
 		return err
 	}).ShouldNot(HaveOccurred())

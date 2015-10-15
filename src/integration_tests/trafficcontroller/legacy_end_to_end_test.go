@@ -3,12 +3,13 @@ package integration_test
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/cloudfoundry/loggregator_consumer"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
+
+	"github.com/cloudfoundry/loggregator_consumer"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -22,6 +23,11 @@ var _ = Describe("TrafficController for legacy messages", func() {
 	BeforeEach(func() {
 		legacyEndpoint = fmt.Sprintf("ws://%s:%d", localIPAddress, TRAFFIC_CONTROLLER_LEGACY_PORT)
 		fakeDoppler.ResetMessageChan()
+
+		Eventually(func() error {
+			_, err := http.Get(fmt.Sprintf("http://%s:%d", localIPAddress, TRAFFIC_CONTROLLER_LEGACY_PORT))
+			return err
+		}).ShouldNot(HaveOccurred())
 	})
 
 	Context("Streaming", func() {
