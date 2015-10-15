@@ -184,11 +184,11 @@ var _ = Describe("HttpsWriter", func() {
 
 				// one connection per request
 				requester.concurrentWriteRequests(2, w)
-				Expect(listener.GetHistoryLength()).To(Equal(2))
+				Eventually(listener.GetHistoryLength).Should(Equal(2))
 
 				// one pooled connection, one new connection
 				requester.concurrentWriteRequests(2, w)
-				Expect(listener.GetHistoryLength()).To(Equal(3))
+				Eventually(listener.GetHistoryLength).Should(Equal(3))
 			})
 		})
 
