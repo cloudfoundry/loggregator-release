@@ -50,7 +50,13 @@ var _ = Describe("Self Instrumentation", func() {
 			},
 		}
 
-		Eventually(testDoppler.MessageChan, 2).Should(Receive(MatchSpecifiedContents(&expected)))
+		matcher := MatchSpecifiedContents(&expected)
+		Eventually(func() bool {
+			var env *events.Envelope
+			Eventually(testDoppler.MessageChan).Should(Receive(&env))
+			b, _ := matcher.Match(env)
+			return b
+		}, 2).Should(BeTrue())
 	})
 
 	It("counts legacy unmarshal errors", func() {
@@ -67,7 +73,12 @@ var _ = Describe("Self Instrumentation", func() {
 			},
 		}
 
-		Eventually(testDoppler.MessageChan).Should(Receive(MatchSpecifiedContents(&expected)))
+		matcher := MatchSpecifiedContents(&expected)
+		Eventually(func() (bool, error) {
+			var env *events.Envelope
+			Eventually(testDoppler.MessageChan).Should(Receive(&env))
+			return matcher.Match(env)
+		}).Should(BeTrue())
 	})
 
 	Describe("for Message Aggregator", func() {
@@ -100,7 +111,12 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			Eventually(testDoppler.MessageChan, 2).Should(Receive(MatchSpecifiedContents(&expected)))
+			matcher := MatchSpecifiedContents(&expected)
+			Eventually(func() (bool, error) {
+				var env *events.Envelope
+				Eventually(testDoppler.MessageChan).Should(Receive(&env))
+				return matcher.Match(env)
+			}, 2).Should(BeTrue())
 
 			expected = events.Envelope{
 				Origin:    proto.String("MetronAgent"),
@@ -111,7 +127,12 @@ var _ = Describe("Self Instrumentation", func() {
 					Total: proto.Uint64(3),
 				},
 			}
-			Consistently(testDoppler.MessageChan).ShouldNot(Receive(MatchSpecifiedContents(&expected)))
+
+			Consistently(func() bool {
+				var env *events.Envelope
+				Eventually(testDoppler.MessageChan).Should(Receive(&env))
+				return env.EventType == expected.EventType && env.GetCounterEvent().Name == expected.GetCounterEvent().Name
+			}, 2).Should(BeFalse())
 		})
 
 		It("emits metrics for http start", func() {
@@ -127,7 +148,12 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			Eventually(testDoppler.MessageChan, 2).Should(Receive(MatchSpecifiedContents(&expected)))
+			matcher := MatchSpecifiedContents(&expected)
+			Eventually(func() (bool, error) {
+				var env *events.Envelope
+				Eventually(testDoppler.MessageChan).Should(Receive(&env))
+				return matcher.Match(env)
+			}, 2).Should(BeTrue())
 		})
 
 		It("emits metrics for http stop", func() {
@@ -143,7 +169,12 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			Eventually(testDoppler.MessageChan, 2).Should(Receive(MatchSpecifiedContents(&expected)))
+			matcher := MatchSpecifiedContents(&expected)
+			Eventually(func() (bool, error) {
+				var env *events.Envelope
+				Eventually(testDoppler.MessageChan).Should(Receive(&env))
+				return matcher.Match(env)
+			}, 2).Should(BeTrue())
 		})
 
 		It("emits metrics for unmatched http stop", func() {
@@ -159,7 +190,12 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			Eventually(testDoppler.MessageChan, 2).Should(Receive(MatchSpecifiedContents(&expected)))
+			matcher := MatchSpecifiedContents(&expected)
+			Eventually(func() (bool, error) {
+				var env *events.Envelope
+				Eventually(testDoppler.MessageChan).Should(Receive(&env))
+				return matcher.Match(env)
+			}, 2).Should(BeTrue())
 		})
 
 		It("emits metrics for http start stop", func() {
@@ -176,7 +212,12 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			Eventually(testDoppler.MessageChan, 2).Should(Receive(MatchSpecifiedContents(&expected)))
+			matcher := MatchSpecifiedContents(&expected)
+			Eventually(func() (bool, error) {
+				var env *events.Envelope
+				Eventually(testDoppler.MessageChan).Should(Receive(&env))
+				return matcher.Match(env)
+			}, 2).Should(BeTrue())
 		})
 
 		It("emits metrics for uncategorized events", func() {
@@ -197,7 +238,12 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			Eventually(testDoppler.MessageChan, 2).Should(Receive(MatchSpecifiedContents(&expected)))
+			matcher := MatchSpecifiedContents(&expected)
+			Eventually(func() (bool, error) {
+				var env *events.Envelope
+				Eventually(testDoppler.MessageChan).Should(Receive(&env))
+				return matcher.Match(env)
+			}, 2).Should(BeTrue())
 		})
 	})
 
@@ -216,7 +262,12 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			Eventually(testDoppler.MessageChan, 2).Should(Receive(MatchSpecifiedContents(&expected)))
+			matcher := MatchSpecifiedContents(&expected)
+			Eventually(func() (bool, error) {
+				var env *events.Envelope
+				Eventually(testDoppler.MessageChan).Should(Receive(&env))
+				return matcher.Match(env)
+			}, 2).Should(BeTrue())
 		})
 
 		It("counts unmarshalled Dropsonde messages by type", func() {
@@ -233,7 +284,12 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			Eventually(testDoppler.MessageChan, 2).Should(Receive(MatchSpecifiedContents(&expected)))
+			matcher := MatchSpecifiedContents(&expected)
+			Eventually(func() (bool, error) {
+				var env *events.Envelope
+				Eventually(testDoppler.MessageChan).Should(Receive(&env))
+				return matcher.Match(env)
+			}, 2).Should(BeTrue())
 		})
 
 		It("counts log messages specially", func() {
@@ -262,7 +318,12 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			Eventually(testDoppler.MessageChan, 2).Should(Receive(MatchSpecifiedContents(&expected)))
+			matcher := MatchSpecifiedContents(&expected)
+			Eventually(func() (bool, error) {
+				var env *events.Envelope
+				Eventually(testDoppler.MessageChan).Should(Receive(&env))
+				return matcher.Match(env)
+			}, 2).Should(BeTrue())
 		})
 
 		It("counts unknown event types", func() {
@@ -294,7 +355,12 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			Eventually(testDoppler.MessageChan, 2).Should(Receive(MatchSpecifiedContents(&expected)))
+			matcher := MatchSpecifiedContents(&expected)
+			Eventually(func() (bool, error) {
+				var env *events.Envelope
+				Eventually(testDoppler.MessageChan).Should(Receive(&env))
+				return matcher.Match(env)
+			}, 2).Should(BeTrue())
 		})
 
 		It("does not forward unknown events", func() {
@@ -306,7 +372,13 @@ var _ = Describe("Self Instrumentation", func() {
 
 			metronInput.Write(bytes)
 
-			Eventually(testDoppler.MessageChan).ShouldNot(Receive(MatchSpecifiedContents(&message)))
+			matcher := MatchSpecifiedContents(&message)
+			Eventually(func() bool {
+				var env *events.Envelope
+				Eventually(testDoppler.MessageChan).Should(Receive(&env))
+				b, _ := matcher.Match(env)
+				return b
+			}).Should(BeFalse())
 
 			message = basicValueMessageEnvelope()
 			badEventType := events.Envelope_EventType(1000)
@@ -316,7 +388,13 @@ var _ = Describe("Self Instrumentation", func() {
 
 			metronInput.Write(bytes)
 
-			Consistently(testDoppler.MessageChan).ShouldNot(Receive(MatchSpecifiedContents(&message)))
+			matcher = MatchSpecifiedContents(&message)
+			Consistently(func() bool {
+				var env *events.Envelope
+				Eventually(testDoppler.MessageChan).Should(Receive(&env))
+				b, _ := matcher.Match(env)
+				return b
+			}).Should(BeFalse())
 		})
 	})
 
@@ -335,7 +413,12 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			Eventually(testDoppler.MessageChan, 2).Should(Receive(MatchSpecifiedContents(&expected)))
+			matcher := MatchSpecifiedContents(&expected)
+			Eventually(func() (bool, error) {
+				var env *events.Envelope
+				Eventually(testDoppler.MessageChan).Should(Receive(&env))
+				return matcher.Match(env)
+			}, 2).Should(BeTrue())
 		})
 	})
 })
