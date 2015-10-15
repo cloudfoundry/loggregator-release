@@ -143,6 +143,13 @@ func startEncryptedTCPServer(syslogDrainAddress string) *gexec.Session {
 	drainSession, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(drainSession.Err, 10).Should(gbytes.Say("Startup: tcp echo server listening"))
+	Eventually(func() error {
+		c, err := net.Dial("tcp", syslogDrainAddress)
+		if err == nil {
+			c.Close()
+		}
+		return err
+	}).ShouldNot(HaveOccurred())
 
 	return drainSession
 }
