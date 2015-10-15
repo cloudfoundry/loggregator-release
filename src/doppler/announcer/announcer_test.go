@@ -61,16 +61,6 @@ var _ = Describe("Announcer", func() {
 				Expect(adapter.MaintainedNodeValue).To(MatchJSON(dopplerMeta))
 			})
 		})
-
-		It("sends a heartbeat to etcd", func() {
-			dopplerMeta := fmt.Sprintf(`{"version": 1, "ip":"%s","transports":[{"protocol":"udp","port":1234}]}`, localIP)
-
-			announcer.Announce(localIP, time.Second, &conf, adapter, loggertesthelper.Logger())
-			Expect(adapter.GetMaintainedNodeName()).To(Equal(dopplerKey))
-
-			Expect(adapter.MaintainedNodeValue).To(MatchJSON(dopplerMeta))
-		})
-
 	})
 
 	Context("without a valid ETCD config", func() {

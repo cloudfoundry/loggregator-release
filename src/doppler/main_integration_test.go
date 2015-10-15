@@ -18,13 +18,6 @@ import (
 	"github.com/pivotal-golang/localip"
 )
 
-var _ = BeforeEach(func() {
-	adapter := etcdRunner.Adapter()
-	adapter.Disconnect()
-	etcdRunner.Reset()
-	adapter.Connect()
-})
-
 const legacyETCDKey = "/healthstatus/doppler/z1/doppler_z1/0"
 const dopplerETCDKey = "/doppler/meta/z1/doppler_z1/0"
 
@@ -35,7 +28,6 @@ var _ = Describe("Etcd Integration tests", func() {
 	)
 	BeforeEach(func() {
 		localIp, _ = localip.LocalIP()
-
 		conf = config.Config{
 			JobName: "doppler_z1",
 			Index:   0,
@@ -51,7 +43,8 @@ var _ = Describe("Etcd Integration tests", func() {
 		It("arrives safely in etcd", func() {
 			storeAdapter := setupAdapter(legacyETCDKey, conf)
 
-			announcer.AnnounceLegacy(localIp, time.Second, &conf, storeAdapter, loggertesthelper.Logger())
+			legacyReleaseChan := announcer.AnnounceLegacy(localIp, time.Second, &conf, storeAdapter, loggertesthelper.Logger())
+			defer close(legacyReleaseChan)
 
 			Eventually(func() error {
 				_, err := storeAdapter.Get(legacyETCDKey)
@@ -69,7 +62,8 @@ var _ = Describe("Etcd Integration tests", func() {
 				}
 				storeAdapter := setupAdapter(dopplerETCDKey, conf)
 
-				announcer.Announce(localIp, time.Second, &conf, storeAdapter, loggertesthelper.Logger())
+				stopChan := announcer.Announce(localIp, time.Second, &conf, storeAdapter, loggertesthelper.Logger())
+				defer close(stopChan)
 
 				dopplerMeta := createDopplerMeta(localIp, conf)
 
@@ -86,7 +80,8 @@ var _ = Describe("Etcd Integration tests", func() {
 				conf.EnableTLSTransport = false
 				storeAdapter := setupAdapter(dopplerETCDKey, conf)
 
-				announcer.Announce(localIp, time.Second, &conf, storeAdapter, loggertesthelper.Logger())
+				stopChan := announcer.Announce(localIp, time.Second, &conf, storeAdapter, loggertesthelper.Logger())
+				defer close(stopChan)
 
 				Eventually(func() []byte {
 					node, _ := storeAdapter.Get(dopplerETCDKey)
