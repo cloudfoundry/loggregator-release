@@ -272,7 +272,8 @@ var _ = Describe("Self Instrumentation", func() {
 			bytes, err := proto.Marshal(message)
 			Expect(err).ToNot(HaveOccurred())
 
-			metronInput.Write(bytes)
+			_, err = metronInput.Write(bytes)
+			Expect(err).NotTo(HaveOccurred())
 
 			message = basicValueMessageEnvelope()
 			badEventType := events.Envelope_EventType(1000)
@@ -280,7 +281,8 @@ var _ = Describe("Self Instrumentation", func() {
 			bytes, err = proto.Marshal(message)
 			Expect(err).ToNot(HaveOccurred())
 
-			metronInput.Write(bytes)
+			_, err = metronInput.Write(bytes)
+			Expect(err).NotTo(HaveOccurred())
 
 			expected := events.Envelope{
 				Origin:    proto.String("MetronAgent"),

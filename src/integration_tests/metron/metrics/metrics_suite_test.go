@@ -28,7 +28,7 @@ func TestMetrics(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	var err error
-	pathToMetronExecutable, err = gexec.Build("metron")
+	pathToMetronExecutable, err = gexec.Build("metron", "-race")
 	Expect(err).ShouldNot(HaveOccurred())
 
 	etcdPort = 5800 + (config.GinkgoConfig.ParallelNode-1)*10
@@ -37,6 +37,8 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = BeforeEach(func() {
+	etcdRunner.Reset()
+
 	var err error
 	command := exec.Command(pathToMetronExecutable, "--config=fixtures/metron.json", "--debug")
 	metronSession, err = gexec.Start(command, gexec.NewPrefixedWriter("[o][metron]", GinkgoWriter), gexec.NewPrefixedWriter("[e][metron]", GinkgoWriter))

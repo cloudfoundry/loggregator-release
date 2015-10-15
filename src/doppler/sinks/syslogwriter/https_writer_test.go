@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"runtime"
 	"sync"
 	"time"
 
@@ -95,9 +94,6 @@ var _ = Describe("HttpsWriter", func() {
 				_, err := w.Write(standardErrorPriority, []byte("Message"), "just a test", "TEST", parsedTime.UnixNano())
 				Expect(err).To(HaveOccurred())
 			}
-
-			origNumGoRoutines := runtime.NumGoroutine()
-			Eventually(runtime.NumGoroutine, 6).Should(BeNumerically("<", origNumGoRoutines))
 		})
 
 		It("should not return error for response 200 status codes", func() {
