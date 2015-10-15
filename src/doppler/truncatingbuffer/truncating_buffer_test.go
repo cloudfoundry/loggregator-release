@@ -81,13 +81,15 @@ var _ = Describe("Truncating Buffer", func() {
 
 			sendLogMessages("message 1", inMessageChan)
 
-			readMessage := <-buffer.GetOutputChannel()
+			var readMessage *events.Envelope
+			Eventually(buffer.GetOutputChannel).Should(Receive(&readMessage))
+
 			Expect(readMessage.GetLogMessage().GetMessage()).To(ContainSubstring("message 1"))
 
 			sendLogMessages("message 2", inMessageChan)
 
-			readMessage2 := <-buffer.GetOutputChannel()
-			Expect(readMessage2.GetLogMessage().GetMessage()).To(ContainSubstring("message 2"))
+			Eventually(buffer.GetOutputChannel).Should(Receive(&readMessage))
+			Expect(readMessage.GetLogMessage().GetMessage()).To(ContainSubstring("message 2"))
 
 		})
 
@@ -103,13 +105,16 @@ var _ = Describe("Truncating Buffer", func() {
 				fakeEventEmitter.Reset()
 			})
 
-			tracksDroppedMessages := func(delta, total int) {
-				It("logs the dropped messages", func() {
-					logMessageNotification := <-buffer.GetOutputChannel()
+			tracksDroppedMessages := func(itMsg string, delta, total int) {
+				It(itMsg, func() {
+					var logMessageNotification *events.Envelope
+
+					Eventually(buffer.GetOutputChannel).Should(Receive(&logMessageNotification))
 					Expect(logMessageNotification.GetEventType()).To(Equal(events.Envelope_LogMessage))
 					Expect(logMessageNotification.GetLogMessage().GetMessage()).To(ContainSubstring(fmt.Sprintf("Log message output is too high. %d messages dropped (Total %d messages dropped) to test-sink-name.", delta, total)))
 
-					counterEventNotification := <-buffer.GetOutputChannel()
+					var counterEventNotification *events.Envelope
+					Eventually(buffer.GetOutputChannel).Should(Receive(&counterEventNotification))
 					Expect(counterEventNotification.GetEventType()).To(Equal(events.Envelope_CounterEvent))
 					counterEvent := counterEventNotification.GetCounterEvent()
 					Expect(counterEvent.GetName()).To(Equal("TruncatingBuffer.DroppedMessages"))
@@ -139,16 +144,11 @@ var _ = Describe("Truncating Buffer", func() {
 					Eventually(buffer.GetOutputChannel).ShouldNot(Equal(firstBuffer))
 				})
 
-				tracksDroppedMessages(3, 3)
+				tracksDroppedMessages("drops all the messages", 3, 3)
 
 				Context("when the buffer fills multiple times", func() {
 					var receiveEvents int
 					var sendLog int
-
-					BeforeEach(func() {
-						receiveEvents = 0
-						sendLog = 2
-					})
 
 					JustBeforeEach(func() {
 						outputChannel := buffer.GetOutputChannel()
@@ -164,7 +164,14 @@ var _ = Describe("Truncating Buffer", func() {
 						Eventually(buffer.GetOutputChannel).ShouldNot(Equal(outputChannel))
 					})
 
-					tracksDroppedMessages(1, 5)
+					Context("no event is read", func() {
+						BeforeEach(func() {
+							receiveEvents = 0
+							sendLog = 1
+						})
+
+						tracksDroppedMessages("drops immediately", 1, 4)
+					})
 
 					Context("and the TB log event is read", func() {
 						BeforeEach(func() {
@@ -172,7 +179,7 @@ var _ = Describe("Truncating Buffer", func() {
 							sendLog = 2
 						})
 
-						tracksDroppedMessages(2, 5)
+						tracksDroppedMessages("has 1 slot filled", 2, 5)
 					})
 
 					Context("and the TB log and counter event is read", func() {
@@ -181,7 +188,7 @@ var _ = Describe("Truncating Buffer", func() {
 							sendLog = 3
 						})
 
-						tracksDroppedMessages(3, 6)
+						tracksDroppedMessages("has an empty buffer", 3, 6)
 					})
 				})
 			})
@@ -228,7 +235,6 @@ var _ = Describe("Truncating Buffer", func() {
 				})
 
 				It("filters truncation events", func() {
-
 					sendLogMessages("message 1", inMessageChan)
 					sendLogMessages("message 2", inMessageChan)
 					sendLogMessages("message 3", inMessageChan)
