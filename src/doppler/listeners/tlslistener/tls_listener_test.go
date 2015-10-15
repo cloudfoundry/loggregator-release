@@ -82,10 +82,20 @@ var _ = Describe("Tcplistener", func() {
 		BeforeEach(func() {
 			envelopeChan = make(chan *events.Envelope)
 			tlsListener = tlslistener.New(address, config, envelopeChan, loggertesthelper.Logger())
+			go tlsListener.Start()
+		})
+
+		AfterEach(func() {
+			tlsListener.Stop()
+		})
+
+		It("panics if you start again", func() {
+			openTLSConnection()
+
+			Expect(tlsListener.Start).Should(Panic())
 		})
 
 		It("fails to send message after listener has been stopped", func() {
-			go tlsListener.Start()
 			logMessage := factories.NewLogMessage(events.LogMessage_OUT, "some message", "appId", "source")
 			envelope, _ := emitter.Wrap(logMessage, "origin")
 			conn := openTLSConnection()
@@ -95,13 +105,12 @@ var _ = Describe("Tcplistener", func() {
 
 			tlsListener.Stop()
 
-			err = writeGob(conn, envelope)
-			Expect(err).To(HaveOccurred())
+			Eventually(func() error {
+				return writeGob(conn, envelope)
+			}).Should(HaveOccurred())
 		})
 
 		It("can start again after being stopped", func() {
-			//defer close(done)
-			go tlsListener.Start()
 			openTLSConnection()
 			tlsListener.Stop()
 
@@ -110,7 +119,6 @@ var _ = Describe("Tcplistener", func() {
 				openTLSConnection()
 			}
 			Expect(start).ShouldNot(Panic())
-			tlsListener.Stop()
 		})
 	})
 })
@@ -125,7 +133,6 @@ func readMessages(envelopeChan chan *events.Envelope, n int) []*events.Envelope 
 }
 
 func openTLSConnection() net.Conn {
-
 	var conn net.Conn
 	var err error
 	Eventually(func() error {

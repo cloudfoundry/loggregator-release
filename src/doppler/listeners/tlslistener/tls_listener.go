@@ -36,16 +36,17 @@ func (t *TLSListener) Start() {
 	var err error
 	listenerClosed := make(chan struct{})
 
+	listener, err := tls.Listen("tcp", t.address, t.config)
+	if err != nil {
+		t.logger.Fatalf("Failed to start TCP listener. %s", err)
+	}
+
 	t.lock.Lock()
 	t.connections = make(map[net.Conn]struct{})
 	t.stopped = make(chan struct{})
 	t.listenerClosed = listenerClosed
-	t.listener, err = tls.Listen("tcp", t.address, t.config)
+	t.listener = listener
 	t.lock.Unlock()
-
-	if err != nil {
-		t.logger.Fatalf("Failed to start TCP listener. %s", err)
-	}
 
 	t.logger.Infof("TCP listener listening on %s", t.address)
 	for {
@@ -69,6 +70,7 @@ func (t *TLSListener) Stop() {
 
 	close(t.stopped)
 	t.listener.Close()
+	t.listener = nil
 
 	for conn, _ := range t.connections {
 		conn.Close()
