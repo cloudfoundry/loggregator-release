@@ -2,6 +2,7 @@ package agentlistener_test
 
 import (
 	"net"
+	"strconv"
 
 	"github.com/cloudfoundry/loggregatorlib/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
@@ -9,6 +10,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 )
 
@@ -16,44 +18,47 @@ var _ = Describe("AgentListener", func() {
 	var listener agentlistener.AgentListener
 	var dataChannel <-chan []byte
 	var listenerStopped chan struct{}
+	var address string
 
 	BeforeEach(func() {
 		listenerStopped = make(chan struct{})
 		loggertesthelper.TestLoggerSink.Clear()
 
-		listener, dataChannel = agentlistener.NewAgentListener("127.0.0.1:3456", loggertesthelper.Logger(), "agentListener")
+		port := 3456 + config.GinkgoConfig.ParallelNode
+		address = net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+		listener, dataChannel = agentlistener.NewAgentListener(address, loggertesthelper.Logger(), "agentListener")
 		go func() {
 			listener.Start()
 			close(listenerStopped)
 		}()
 
-		Eventually(loggertesthelper.TestLoggerSink.LogContents).Should(ContainSubstring("Listening on port 127.0.0.1:3456"))
+		Eventually(loggertesthelper.TestLoggerSink.LogContents).Should(ContainSubstring("Listening on port " + address))
 	})
 
 	AfterEach(func() {
 		listener.Stop()
-		<-listenerStopped
+		Eventually(listenerStopped).Should(BeClosed())
 	})
 
 	Context("with a listner running", func() {
-		It("listens to the socket and forwards log lines", func(done Done) {
+		It("listens to the socket and forwards log lines", func() {
 			expectedData := "Some Data"
 			otherData := "More stuff"
 
-			connection, err := net.Dial("udp", "localhost:3456")
+			connection, err := net.Dial("udp", address)
 
 			_, err = connection.Write([]byte(expectedData))
 			Expect(err).To(BeNil())
 
-			received := <-dataChannel
+			var received []byte
+			Eventually(dataChannel).Should(Receive(&received))
 			Expect(string(received)).To(Equal(expectedData))
 
 			_, err = connection.Write([]byte(otherData))
 			Expect(err).To(BeNil())
 
-			receivedAgain := <-dataChannel
-			Expect(string(receivedAgain)).To(Equal(otherData))
-			close(done)
+			Eventually(dataChannel).Should(Receive(&received))
+			Expect(string(received)).To(Equal(otherData))
 		}, 2)
 	})
 
@@ -63,19 +68,19 @@ var _ = Describe("AgentListener", func() {
 			metricBatcher.Reset()
 		})
 
-		It("issues intended metrics", func(done Done) {
+		It("issues intended metrics", func() {
 			expectedData := "Some Data"
 			otherData := "More stuff"
 
-			connection, err := net.Dial("udp", "localhost:3456")
+			connection, err := net.Dial("udp", address)
 
 			_, err = connection.Write([]byte(expectedData))
 			Expect(err).To(BeNil())
-			<-dataChannel
+			Eventually(dataChannel).Should(Receive())
 
 			_, err = connection.Write([]byte(otherData))
 			Expect(err).To(BeNil())
-			<-dataChannel
+			Eventually(dataChannel).Should(Receive())
 
 			Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(2))
 
@@ -95,8 +100,6 @@ var _ = Describe("AgentListener", func() {
 					Delta: proto.Uint64(19),
 				},
 			))
-
-			close(done)
 		})
 	})
 })
