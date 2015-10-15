@@ -1,28 +1,28 @@
 package endtoend_test
 
 import (
+	"fmt"
+	"integration_tests/helpers"
+	"runtime"
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"integration_tests/helpers"
-	"time"
-	"fmt"
-	"runtime"
 )
 
 var _ = Describe("App to Syslog Test", func() {
 
-	var(
+	var (
 		appSyslogMap map[*helpers.FakeApp]*helpers.SyslogTCPServer
-		registrar *helpers.SyslogRegistrar
-		appCount int
-		logRate int
+		registrar    *helpers.SyslogRegistrar
+		appCount     int
+		logRate      int
 		testDuration time.Duration
 	)
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-
-	JustBeforeEach(func(){
+	JustBeforeEach(func() {
 		syslogServerPort := 4550
 		appCount = 5
 		testDuration = 5 * time.Second
@@ -31,12 +31,11 @@ var _ = Describe("App to Syslog Test", func() {
 
 		registrar = helpers.NewSyslogRegistrar(etcdAdapter)
 
-		for i:=0; i < appCount; i++ {
-			syslogServer := helpers.NewSyslogTCPServer("localhost", syslogServerPort + i)
+		for i := 0; i < appCount; i++ {
+			syslogServer := helpers.NewSyslogTCPServer("localhost", syslogServerPort+i)
 			go syslogServer.Start()
 
-
-			appID := fmt.Sprintf("app-%d",i)
+			appID := fmt.Sprintf("app-%d", i)
 			app := helpers.NewFakeApp(appID, logRate)
 			go app.Start()
 
@@ -54,7 +53,6 @@ var _ = Describe("App to Syslog Test", func() {
 	})
 
 	Context("low logRate", func() {
-
 		BeforeEach(func() {
 			logRate = 100
 		})
@@ -65,8 +63,12 @@ var _ = Describe("App to Syslog Test", func() {
 				app.Stop()
 				sentLogs := app.SentLogs()
 				Eventually(syslogServer.ReceivedLogsRecently, 2).Should(BeFalse())
-				Expect(syslogServer.Counter()).To(BeEquivalentTo(sentLogs))
+
+				receivedLogs := syslogServer.Counter()
+				percentLoss := computePercentLost(float64(sentLogs), float64(receivedLogs))
+				Expect(percentLoss).To(BeNumerically("<", 0.3))
 				b.RecordValue("Sent logs", float64(sentLogs))
+				b.RecordValue("Percent Loss", percentLoss)
 			}
 		}, 1)
 	})
@@ -87,7 +89,7 @@ var _ = Describe("App to Syslog Test", func() {
 				percentLoss := computePercentLost(float64(sentLogs), float64(receivedLogs))
 				Expect(percentLoss).To(BeNumerically("<", 0.5))
 				b.RecordValue("Sent logs", float64(sentLogs))
-				b.RecordValue("Percent Loss",  percentLoss)
+				b.RecordValue("Percent Loss", percentLoss)
 			}
 		}, 1)
 	})
@@ -108,7 +110,7 @@ var _ = Describe("App to Syslog Test", func() {
 				percentLoss := computePercentLost(float64(sentLogs), float64(receivedLogs))
 				Expect(percentLoss).To(BeNumerically("<", 6))
 				b.RecordValue("Sent logs", float64(sentLogs))
-				b.RecordValue("Percent Loss",  percentLoss)
+				b.RecordValue("Percent Loss", percentLoss)
 			}
 		}, 1)
 	})
