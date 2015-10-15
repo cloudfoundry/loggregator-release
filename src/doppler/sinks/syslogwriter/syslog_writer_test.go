@@ -5,9 +5,11 @@ import (
 	"net"
 	"net/url"
 	"os/exec"
+	"strconv"
 	"time"
 
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
@@ -21,20 +23,22 @@ var _ = Describe("SyslogWriter", func() {
 	var dialer *net.Dialer
 	var syslogServerSession *gexec.Session
 
-	BeforeEach(func(done Done) {
+	BeforeEach(func() {
 		dialer = &net.Dialer{
 			Timeout: 500 * time.Millisecond,
 		}
-		outputURL, _ := url.Parse("syslog://127.0.0.1:9999")
-		syslogServerSession = startSyslogServer("127.0.0.1:9999")
+
+		port := 9800 + config.GinkgoConfig.ParallelNode
+		address := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+
+		outputURL := &url.URL{Scheme: "syslog", Host: address}
+		syslogServerSession = startSyslogServer(address)
 		sysLogWriter, _ = syslogwriter.NewSyslogWriter(outputURL, "appId", dialer, 0)
 
 		Eventually(func() error {
 			err := sysLogWriter.Connect()
 			return err
 		}, 5, 1).ShouldNot(HaveOccurred())
-
-		close(done)
 	}, 10)
 
 	AfterEach(func() {
@@ -43,19 +47,16 @@ var _ = Describe("SyslogWriter", func() {
 	})
 
 	Context("Message Format", func() {
-		It("sends messages in the proper format", func(done Done) {
+		It("sends messages in the proper format", func() {
 			sysLogWriter.Write(standardOutPriority, []byte("just a test"), "App", "2", time.Now().UnixNano())
 
 			Eventually(syslogServerSession, 5).Should(gbytes.Say(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}([-+]\d{2}:\d{2}) loggregator appId \[App/2\] - - just a test\n`))
-			close(done)
 		}, 10)
 
-		It("strips null termination char from message", func(done Done) {
+		It("strips null termination char from message", func() {
 			sysLogWriter.Write(standardOutPriority, []byte(string(0)+" hi"), "appId", "", time.Now().UnixNano())
 
 			Expect(syslogServerSession).ToNot(gbytes.Say("\000"))
-
-			close(done)
 		})
 	})
 
@@ -96,19 +97,16 @@ var _ = Describe("SyslogWriter", func() {
 	})
 
 	Context("Message Format", func() {
-		It("sends messages in the proper format", func(done Done) {
+		It("sends messages in the proper format", func() {
 			sysLogWriter.Write(standardOutPriority, []byte("just a test"), "App", "2", time.Now().UnixNano())
 
 			Eventually(syslogServerSession, 5).Should(gbytes.Say(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}([-+]\d{2}:\d{2}) loggregator appId \[App/2\] - - just a test\n`))
-			close(done)
 		}, 10)
 
-		It("strips null termination char from message", func(done Done) {
+		It("strips null termination char from message", func() {
 			sysLogWriter.Write(standardOutPriority, []byte(string(0)+" hi"), "appId", "", time.Now().UnixNano())
 
 			Expect(syslogServerSession).ToNot(gbytes.Say("\000"))
-
-			close(done)
 		})
 	})
 

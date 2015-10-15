@@ -184,11 +184,11 @@ var _ = Describe("HttpsWriter", func() {
 
 				// one connection per request
 				requester.concurrentWriteRequests(2, w)
-				Expect(listener.history).To(HaveLen(2))
+				Expect(listener.GetHistoryLength()).To(Equal(2))
 
 				// one pooled connection, one new connection
 				requester.concurrentWriteRequests(2, w)
-				Expect(listener.history).To(HaveLen(3))
+				Expect(listener.GetHistoryLength()).To(Equal(3))
 			})
 		})
 
@@ -233,6 +233,12 @@ func newHistoryListener(network, address string) *historyListener {
 	Expect(err).NotTo(HaveOccurred())
 
 	return &historyListener{Listener: l}
+}
+
+func (h *historyListener) GetHistoryLength() int {
+	defer h.Unlock()
+	h.Lock()
+	return len(h.history)
 }
 
 func (h *historyListener) Accept() (net.Conn, error) {

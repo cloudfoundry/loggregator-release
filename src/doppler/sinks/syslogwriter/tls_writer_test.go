@@ -5,9 +5,11 @@ import (
 	"net"
 	"net/url"
 	"os/exec"
+	"strconv"
 	"time"
 
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
@@ -55,17 +57,18 @@ var _ = Describe("TLSWriter", func() {
 			skipCertVerify = true
 		})
 
-		JustBeforeEach(func(done Done) {
+		JustBeforeEach(func() {
 			dialer = &net.Dialer{
 				Timeout: time.Second,
 			}
 
 			var err error
-			syslogServerSession = startEncryptedTCPServer("127.0.0.1:9998")
-			outputURL, _ := url.Parse("syslog-tls://127.0.0.1:9998")
+			port := 9900 + config.GinkgoConfig.ParallelNode
+			address := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+			syslogServerSession = startEncryptedTCPServer(address)
+			outputURL := &url.URL{Scheme: "syslog-tls", Host: address}
 			syslogWriter, err = syslogwriter.NewTlsWriter(outputURL, "appId", skipCertVerify, dialer, ioTimeout)
 			Expect(err).ToNot(HaveOccurred())
-			close(done)
 		}, 5)
 
 		AfterEach(func() {
@@ -73,7 +76,7 @@ var _ = Describe("TLSWriter", func() {
 			syslogWriter.Close()
 		})
 
-		It("connects and writes", func(done Done) {
+		It("connects and writes", func() {
 			ts := time.Now().UnixNano()
 			Eventually(func() error {
 				err := syslogWriter.Connect()
@@ -84,7 +87,6 @@ var _ = Describe("TLSWriter", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(syslogServerSession, 3).Should(gbytes.Say("just a test"))
-			close(done)
 		}, 10)
 
 		Context("when an i/o timeout is set", func() {
@@ -107,21 +109,19 @@ var _ = Describe("TLSWriter", func() {
 		})
 
 		Context("won't write to invalid syslog drains", func() {
-			It("returns an error when unable to send the log message", func(done Done) {
+			It("returns an error when unable to send the log message", func() {
 				syslogServerSession.Kill().Wait()
 
 				Eventually(func() error {
 					_, err := syslogWriter.Write(standardOutPriority, []byte("just a test"), "App", "2", time.Now().UnixNano())
 					return err
 				}, 5).Should(HaveOccurred())
-				close(done)
 			}, 10)
 
-			It("returns an error if not connected", func(done Done) {
+			It("returns an error if not connected", func() {
 				syslogWriter.Close()
 				_, err := syslogWriter.Write(standardOutPriority, []byte("just a test"), "App", "2", time.Now().UnixNano())
 				Expect(err).To(HaveOccurred())
-				close(done)
 			}, 5)
 		})
 
@@ -130,11 +130,9 @@ var _ = Describe("TLSWriter", func() {
 				skipCertVerify = false
 			})
 
-			It("rejects self-signed certs", func(done Done) {
+			It("rejects self-signed certs", func() {
 				err := syslogWriter.Connect()
 				Expect(err).To(HaveOccurred())
-
-				close(done)
 			}, 5)
 		})
 	})
