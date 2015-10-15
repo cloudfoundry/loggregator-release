@@ -71,5 +71,5 @@ func isMetronMessageCount(msg *events.Envelope) bool {
 }
 
 func isDopplerMessageCount(msg *events.Envelope) bool {
-	return msg.GetEventType() == events.Envelope_CounterEvent && msg.CounterEvent.GetName() == "dropsondeListener.receivedMessageCount" && msg.GetOrigin() == "doppler"
+	return msg.GetEventType() == events.Envelope_CounterEvent && msg.CounterEvent.GetName() == "dropsondeListener.receivedMessageCount" && msg.GetOrigin() == "DopplerServer"
 }

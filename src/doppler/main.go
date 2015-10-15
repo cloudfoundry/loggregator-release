@@ -22,7 +22,7 @@ import (
 	"github.com/pivotal-golang/localip"
 )
 
-const DOPPLER_ORIGIN = "doppler"
+const DOPPLER_ORIGIN = "DopplerServer"
 
 var (
 	logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
