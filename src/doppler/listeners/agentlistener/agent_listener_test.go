@@ -4,7 +4,7 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/cloudfoundry/loggregatorlib/agentlistener"
+	"doppler/listeners/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
@@ -15,7 +15,7 @@ import (
 )
 
 var _ = Describe("AgentListener", func() {
-	var listener agentlistener.AgentListener
+	var listener agentlistener.Listener
 	var dataChannel <-chan []byte
 	var listenerStopped chan struct{}
 	var address string
