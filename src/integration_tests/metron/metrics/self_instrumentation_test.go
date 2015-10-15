@@ -78,7 +78,7 @@ var _ = Describe("Self Instrumentation", func() {
 			var env *events.Envelope
 			Eventually(testDoppler.MessageChan).Should(Receive(&env))
 			return matcher.Match(env)
-		}).Should(BeTrue())
+		}, 2).Should(BeTrue())
 	})
 
 	Describe("for Message Aggregator", func() {
@@ -394,7 +394,7 @@ var _ = Describe("Self Instrumentation", func() {
 				Eventually(testDoppler.MessageChan).Should(Receive(&env))
 				b, _ := matcher.Match(env)
 				return b
-			}).Should(BeFalse())
+			}, 1, 100*time.Millisecond).Should(BeFalse())
 		})
 	})
 
