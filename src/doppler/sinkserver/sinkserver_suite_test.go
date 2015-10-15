@@ -52,7 +52,7 @@ func AddWSSink(receivedChan chan []byte, port string, path string) (*websocket.C
 			select {
 			case <-dontKeepAliveChan:
 				return
-			case <-time.After(4 * time.Millisecond):
+			case <-time.After(10 * time.Millisecond):
 				// keep-alive
 			}
 		}

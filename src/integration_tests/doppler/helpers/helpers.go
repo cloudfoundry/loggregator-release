@@ -16,10 +16,11 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/pivotal-golang/localip"
 
+	"os/exec"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-	"os/exec"
 )
 
 func SendAppLog(appID string, message string, connection net.Conn) error {
@@ -44,9 +45,7 @@ func MarshalEvent(event events.Event, secret string) []byte {
 
 func MarshalProtoBuf(pb proto.Message) []byte {
 	marshalledProtoBuf, err := proto.Marshal(pb)
-	if err != nil {
-		Fail(err.Error())
-	}
+	Expect(err).NotTo(HaveOccurred())
 
 	return marshalledProtoBuf
 }
@@ -87,21 +86,20 @@ func AddWSSink(receivedChan chan []byte, port string, path string) (*websocket.C
 	return ws, connectionDroppedChannel
 }
 
-func DecodeProtoBufLogMessage(actual []byte) *events.LogMessage {
+func DecodeProtoBufEnvelope(actual []byte) *events.Envelope {
 	var receivedEnvelope events.Envelope
 	err := proto.Unmarshal(actual, &receivedEnvelope)
-	if err != nil {
-		Fail(err.Error())
-	}
+	Expect(err).NotTo(HaveOccurred())
+	return &receivedEnvelope
+}
+
+func DecodeProtoBufLogMessage(actual []byte) *events.LogMessage {
+	receivedEnvelope := DecodeProtoBufEnvelope(actual)
 	return receivedEnvelope.GetLogMessage()
 }
 
 func DecodeProtoBufCounterEvent(actual []byte) *events.CounterEvent {
-	var receivedEnvelope events.Envelope
-	err := proto.Unmarshal(actual, &receivedEnvelope)
-	if err != nil {
-		Fail(err.Error())
-	}
+	receivedEnvelope := DecodeProtoBufEnvelope(actual)
 	return receivedEnvelope.GetCounterEvent()
 }
 

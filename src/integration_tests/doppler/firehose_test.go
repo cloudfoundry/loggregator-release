@@ -1,14 +1,16 @@
 package doppler_test
 
 import (
+	"net"
+	"time"
+
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gorilla/websocket"
 	"github.com/nu7hatch/gouuid"
-	"net"
-	"time"
 
 	. "integration_tests/doppler/helpers"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -18,7 +20,6 @@ var _ = Describe("Firehose test", func() {
 	var appID string
 
 	BeforeEach(func() {
-
 		guid, _ := uuid.NewV4()
 		appID = guid.String()
 
@@ -29,35 +30,58 @@ var _ = Describe("Firehose test", func() {
 	AfterEach(func() {
 		inputConnection.Close()
 	})
+
 	Context("a single firehose gets all types of logs", func() {
 		var ws *websocket.Conn
 		var receiveChan chan []byte
+
 		BeforeEach(func() {
 			receiveChan = make(chan []byte, 10)
 			ws, _ = AddWSSink(receiveChan, "4567", "/firehose/hose-subcription-a")
 		})
+
 		AfterEach(func() {
 			ws.Close()
 		})
+
 		It("receives log messages", func() {
-			SendAppLog(appID, "message", inputConnection)
+			done := make(chan struct{})
+			go func() {
+				for {
+					SendAppLog(appID, "message", inputConnection)
+					select {
+					case <-time.After(500 * time.Millisecond):
+					case <-done:
+						return
+					}
+				}
+			}()
 
-			receivedMessageBytes := []byte{}
+			var receivedMessageBytes []byte
 			Eventually(receiveChan).Should(Receive(&receivedMessageBytes))
+			close(done)
 
-			receivedMessage := DecodeProtoBufLogMessage(receivedMessageBytes)
-			Expect(*receivedMessage).To(BeAssignableToTypeOf(events.LogMessage{}))
+			Expect(DecodeProtoBufEnvelope(receivedMessageBytes).GetEventType()).To(Equal(events.Envelope_LogMessage))
 		})
 
 		It("receives container metrics", func() {
+			done := make(chan struct{})
 			containerMetric := factories.NewContainerMetric(appID, 0, 10, 2, 3)
-			SendEvent(containerMetric, inputConnection)
+			go func() {
+				for {
+					SendEvent(containerMetric, inputConnection)
+					select {
+					case <-time.After(500 * time.Millisecond):
+					case <-done:
+						return
+					}
+				}
+			}()
 
-			receivedMessageBytes := []byte{}
+			var receivedMessageBytes []byte
 			Eventually(receiveChan).Should(Receive(&receivedMessageBytes))
-
-			receivedMessage := UnmarshalMessage(receivedMessageBytes)
-			Expect(*receivedMessage.ContainerMetric).To(BeAssignableToTypeOf(events.ContainerMetric{}))
+			close(done)
+			Expect(DecodeProtoBufEnvelope(receivedMessageBytes).GetEventType()).To(Equal(events.Envelope_ContainerMetric))
 		})
 	})
 
