@@ -1,19 +1,19 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
-	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
+	"os"
 )
 
 type Config struct {
 	EtcdUrls                  []string
 	EtcdMaxConcurrentRequests int
 
-	JobName  string
-	JobIndex int
-	Zone     string
-	cfcomponent.Config
+	JobName                string
+	JobIndex               int
+	Zone                   string
+	Syslog                 string
 	ApiHost                string
 	DopplerPort            uint32
 	OutgoingPort           uint32
@@ -27,22 +27,27 @@ type Config struct {
 	MonitorIntervalSeconds uint
 }
 
-func ParseConfig(logLevel *bool, configFile, logFilePath *string) (*Config, *gosteno.Logger, error) {
-	config := &Config{OutgoingPort: 8080}
-	err := cfcomponent.ReadConfigInto(config, *configFile)
+func ParseConfig(logLevel bool, configFile, logFilePath string) (*Config, error) {
+	config := &Config{}
+
+	file, err := os.Open(configFile)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
+	}
+	defer file.Close()
+
+	err = json.NewDecoder(file).Decode(config)
+	if err != nil {
+		return nil, err
 	}
 
 	config.setDefaults()
-	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller", config.Config)
-	logger.Info("Startup: Setting up the loggregator traffic controller")
 
-	err = config.validate(logger)
+	err = config.validate()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return config, logger, nil
+	return config, nil
 }
 
 func (c *Config) setDefaults() {
@@ -57,9 +62,13 @@ func (c *Config) setDefaults() {
 	if c.MonitorIntervalSeconds == 0 {
 		c.MonitorIntervalSeconds = 60
 	}
+
+	if c.OutgoingPort == 0 {
+		c.OutgoingPort = 8080
+	}
 }
 
-func (c *Config) validate(logger *gosteno.Logger) error {
+func (c *Config) validate() error {
 	if c.SystemDomain == "" {
 		return errors.New("Need system domain in order to create the proxies")
 	}

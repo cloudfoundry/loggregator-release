@@ -16,10 +16,11 @@ import (
 
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gunk/workpool"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/pivotal-golang/localip"
+	"logger"
+	"syscall"
 )
 
 const DOPPLER_ORIGIN = "DopplerServer"
@@ -96,43 +97,52 @@ func main() {
 		}()
 	}
 
-	conf, err := config.ParseConfig(configFile)
+	conf, err := config.ParseConfig(*configFile)
 	if err != nil {
 		panic(err)
 	}
 
-	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "doppler", conf.Config)
-	logger.Info("Startup: Setting up the doppler server")
+	log := logger.NewLogger(*logLevel, *logFilePath, "doppler", conf.Syslog)
+	log.Info("Startup: Setting up the doppler server")
 
 	dropsonde.Initialize(conf.MetronAddress, DOPPLER_ORIGIN)
 	dopplerStoreAdapter := NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
 	legacyStoreAdapter := NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
 
-	doppler := New(localIp, conf, logger, dopplerStoreAdapter, conf.MessageDrainBufferSize, DOPPLER_ORIGIN, time.Duration(conf.SinkDialTimeoutSeconds)*time.Second)
+	doppler := New(localIp, conf, log, dopplerStoreAdapter, conf.MessageDrainBufferSize, DOPPLER_ORIGIN, time.Duration(conf.SinkDialTimeoutSeconds)*time.Second)
 
 	if err != nil {
 		panic(err)
 	}
 
 	go doppler.Start()
-	logger.Info("Startup: doppler server started.")
+	log.Info("Startup: doppler server started.")
 
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Kill, os.Interrupt)
 
-	releaseNodeChan := announcer.Announce(localIp, config.HeartbeatInterval, conf, dopplerStoreAdapter, logger)
-	legacyReleaseNodeChan := announcer.AnnounceLegacy(localIp, config.HeartbeatInterval, conf, legacyStoreAdapter, logger)
+	dumpChan := registerGoRoutineDumpSignalChannel()
+
+	releaseNodeChan := announcer.Announce(localIp, config.HeartbeatInterval, conf, dopplerStoreAdapter, log)
+	legacyReleaseNodeChan := announcer.AnnounceLegacy(localIp, config.HeartbeatInterval, conf, legacyStoreAdapter, log)
 
 	for {
 		select {
-		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
-			cfcomponent.DumpGoRoutine()
+		case <-dumpChan:
+			logger.DumpGoRoutine()
 		case <-killChan:
-			logger.Info("Shutting down")
+			log.Info("Shutting down")
 			doppler.Stop()
 			close(releaseNodeChan)
 			close(legacyReleaseNodeChan)
 			return
 		}
 	}
+}
+
+func registerGoRoutineDumpSignalChannel() chan os.Signal {
+	threadDumpChan := make(chan os.Signal)
+	signal.Notify(threadDumpChan, syscall.SIGUSR1)
+
+	return threadDumpChan
 }

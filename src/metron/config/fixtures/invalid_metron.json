@@ -5,7 +5,7 @@
   "Deployment": "deployment-name",
 
   "EtcdUrls"    : ["http://127.0.0.1:4001"],
-  "EtcdMaxConcurrentRequests": 1,
+  "EtcdMaxConcurrentRequests": 1
   "EtcdQueryIntervalMilliseconds": 100,
 
   "SharedSecret": "shared_secret",

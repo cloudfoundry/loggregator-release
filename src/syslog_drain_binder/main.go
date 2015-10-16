@@ -1,9 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"logger"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"syslog_drain_binder/elector"
@@ -11,9 +16,7 @@ import (
 
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/workpool"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 )
 
@@ -25,7 +28,11 @@ var (
 
 func main() {
 	flag.Parse()
-	config, logger := parseConfig(*debug, *configFile, *logFilePath)
+	config, err := parseConfig(*debug, *configFile, *logFilePath)
+	if err != nil {
+		panic(err)
+	}
+	log := logger.NewLogger(*debug, *logFilePath, "syslog_drain_binder", config.Syslog)
 
 	dropsonde.Initialize(config.MetronAddress, "syslog_drain_binder")
 
@@ -43,21 +50,22 @@ func main() {
 	}
 
 	updateInterval := time.Duration(config.UpdateIntervalSeconds) * time.Second
-	politician := elector.NewElector(config.InstanceName, adapter, updateInterval, logger)
+	politician := elector.NewElector(config.InstanceName, adapter, updateInterval, log)
 
 	drainTTL := time.Duration(config.DrainUrlTtlSeconds) * time.Second
-	store := etcd_syslog_drain_store.NewEtcdSyslogDrainStore(adapter, drainTTL, logger)
+	store := etcd_syslog_drain_store.NewEtcdSyslogDrainStore(adapter, drainTTL, log)
 
+	dumpChan := registerGoRoutineDumpSignalChannel()
 	ticker := time.NewTicker(updateInterval)
 	for {
 		select {
-		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
-			cfcomponent.DumpGoRoutine()
+		case <-dumpChan:
+			logger.DumpGoRoutine()
 		case <-ticker.C:
 			if politician.IsLeader() {
 				err = politician.StayAsLeader()
 				if err != nil {
-					logger.Errorf("Error when staying leader: %s", err.Error())
+					log.Errorf("Error when staying leader: %s", err.Error())
 					politician.Vacate()
 					continue
 				}
@@ -65,16 +73,16 @@ func main() {
 				err = politician.RunForElection()
 
 				if err != nil {
-					logger.Errorf("Error when running for leader: %s", err.Error())
+					log.Errorf("Error when running for leader: %s", err.Error())
 					politician.Vacate()
 					continue
 				}
 			}
 
-			logger.Debugf("Polling %s for updates", config.CloudControllerAddress)
+			log.Debugf("Polling %s for updates", config.CloudControllerAddress)
 			drainUrls, err := Poll(config.CloudControllerAddress, config.BulkApiUsername, config.BulkApiPassword, config.PollingBatchSize, config.SkipCertVerify)
 			if err != nil {
-				logger.Errorf("Error when polling cloud controller: %s", err.Error())
+				log.Errorf("Error when polling cloud controller: %s", err.Error())
 				politician.Vacate()
 				continue
 			}
@@ -88,10 +96,10 @@ func main() {
 
 			metrics.SendValue("totalDrains", float64(totalDrains), "drains")
 
-			logger.Debugf("Updating drain URLs for %d application(s)", len(drainUrls))
+			log.Debugf("Updating drain URLs for %d application(s)", len(drainUrls))
 			err = store.UpdateDrains(drainUrls)
 			if err != nil {
-				logger.Errorf("Error when updating ETCD: %s", err.Error())
+				log.Errorf("Error when updating ETCD: %s", err.Error())
 				politician.Vacate()
 				continue
 			}
@@ -116,24 +124,29 @@ type Config struct {
 
 	SkipCertVerify bool
 
-	cfcomponent.Config
+	Syslog string
 }
 
-func parseConfig(debug bool, configFile string, logFilePath string) (Config, *gosteno.Logger) {
+func parseConfig(debug bool, configFile string, logFilePath string) (*Config, error) {
 	config := Config{}
-	err := cfcomponent.ReadConfigInto(&config, configFile)
+
+	file, err := os.Open(configFile)
 	if err != nil {
-		panic(err)
+		return nil, err
+	}
+	defer file.Close()
+
+	err = json.NewDecoder(file).Decode(&config)
+	if err != nil {
+		return nil, err
 	}
 
 	err = config.validate()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	logger := cfcomponent.NewLogger(debug, logFilePath, "syslog_drain_binder", config.Config)
-
-	return config, logger
+	return &config, nil
 }
 
 func (config Config) validate() error {
@@ -146,4 +159,11 @@ func (config Config) validate() error {
 	}
 
 	return nil
+}
+
+func registerGoRoutineDumpSignalChannel() chan os.Signal {
+	threadDumpChan := make(chan os.Signal)
+	signal.Notify(threadDumpChan, syscall.SIGUSR1)
+
+	return threadDumpChan
 }

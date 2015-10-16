@@ -2,17 +2,18 @@ package deaagent_test
 
 import (
 	"deaagent/domain"
-	"github.com/cloudfoundry/dropsonde/emitter/logemitter"
-	"github.com/cloudfoundry/dropsonde/log_sender/fake"
-	"github.com/cloudfoundry/dropsonde/logs"
-	"github.com/cloudfoundry/sonde-go/events"
 	"net"
 	"os"
 	"path/filepath"
 
+	"github.com/cloudfoundry/dropsonde/log_sender/fake"
+	"github.com/cloudfoundry/dropsonde/logs"
+	"github.com/cloudfoundry/sonde-go/events"
+
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"testing"
 )
 
 func TestDeaagent(t *testing.T) {
@@ -44,12 +45,6 @@ func (m MockLoggregatorEmitter) EmitError(a, b string) {
 
 func (m MockLoggregatorEmitter) EmitLogMessage(message *events.LogMessage) {
 	m.received <- message
-}
-
-func setupEmitter() (logemitter.Emitter, chan *events.LogMessage) {
-	mockLoggregatorEmitter := new(MockLoggregatorEmitter)
-	mockLoggregatorEmitter.received = make(chan *events.LogMessage)
-	return mockLoggregatorEmitter, mockLoggregatorEmitter.received
 }
 
 func setupTaskSockets(task *domain.Task) (stdout net.Listener, stderr net.Listener) {

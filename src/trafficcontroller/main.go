@@ -23,11 +23,12 @@ import (
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/workpool"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/pivotal-golang/localip"
+	"logger"
+	"syscall"
 )
 
 var DefaultStoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
@@ -57,12 +58,15 @@ var (
 func main() {
 	flag.Parse()
 
-	config, logger, err := config.ParseConfig(logLevel, configFile, logFilePath)
+	config, err := config.ParseConfig(*logLevel, *configFile, *logFilePath)
 	if err != nil {
 		panic(err)
 	}
 
-	profiler := profiler.NewProfiler(*cpuprofile, *memprofile, 1*time.Second, logger)
+	log := logger.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller", config.Syslog)
+	log.Info("Startup: Setting up the loggregator traffic controller")
+
+	profiler := profiler.NewProfiler(*cpuprofile, *memprofile, 1*time.Second, log)
 	profiler.Profile()
 	defer profiler.Stop()
 
@@ -83,19 +87,21 @@ func main() {
 		panic(err)
 	}
 
-	dopplerProxy := makeDopplerProxy(dopplerAdapter, config, logger)
+	dopplerProxy := makeDopplerProxy(dopplerAdapter, config, log)
 	startOutgoingDopplerProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dopplerProxy)
 
-	legacyProxy := makeLegacyProxy(legacyAdapter, config, logger)
+	legacyProxy := makeLegacyProxy(legacyAdapter, config, log)
 	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), legacyProxy)
 
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Kill, os.Interrupt)
 
+	dumpChan := registerGoRoutineDumpSignalChannel()
+
 	for {
 		select {
-		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
-			cfcomponent.DumpGoRoutine()
+		case <-dumpChan:
+			logger.DumpGoRoutine()
 		case <-killChan:
 			break
 		}
@@ -152,4 +158,11 @@ func newDropsondeWebsocketListener(timeout time.Duration, logger *gosteno.Logger
 
 func newLegacyWebsocketListener(timeout time.Duration, logger *gosteno.Logger) listener.Listener {
 	return listener.NewWebsocket(marshaller.LoggregatorLogMessage, marshaller.TranslateDropsondeToLegacyLogMessage, timeout, logger)
+}
+
+func registerGoRoutineDumpSignalChannel() chan os.Signal {
+	threadDumpChan := make(chan os.Signal)
+	signal.Notify(threadDumpChan, syscall.SIGUSR1)
+
+	return threadDumpChan
 }

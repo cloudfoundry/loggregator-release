@@ -10,7 +10,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"time"
@@ -66,10 +65,6 @@ type mockClient struct {
 
 func (m *mockClient) Send(p []byte) {
 	m.data = append(m.data, p)
-}
-
-func (m *mockClient) Emit() instrumentation.Context {
-	return instrumentation.Context{}
 }
 
 func (m *mockClient) Stop() {

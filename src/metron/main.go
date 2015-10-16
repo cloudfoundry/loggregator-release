@@ -14,6 +14,7 @@ import (
 	"metron/writers/signer"
 	"metron/writers/tagger"
 
+	"logger"
 	"metron/eventwriter"
 	"runtime"
 
@@ -22,7 +23,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/workpool"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/clientpool"
 	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
 	"github.com/cloudfoundry/storeadapter"
@@ -35,7 +35,6 @@ var (
 	logFilePath    = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 	configFilePath = flag.String("config", "config/metron.json", "Location of the Metron config json file")
 	debug          = flag.Bool("debug", false, "Debug logging")
-	logger         *gosteno.Logger
 )
 
 func main() {
@@ -43,38 +42,38 @@ func main() {
 	runtime.GOMAXPROCS(1)
 
 	flag.Parse()
-	config, err := config.ParseConfig(configFilePath)
+	config, err := config.ParseConfig(*configFilePath)
 	if err != nil {
 		panic(err)
 	}
 
-	logger = cfcomponent.NewLogger(*debug, *logFilePath, "metron", config.Config)
-	logger.Info("Startup: Setting up the Metron agent")
+	log := logger.NewLogger(*debug, *logFilePath, "metron", config.Syslog)
+	log.Info("Startup: Setting up the Metron agent")
 
-	dopplerClientPool := initializeClientPool(config)
+	dopplerClientPool := initializeClientPool(config, log)
 
-	dopplerForwarder := dopplerforwarder.New(dopplerClientPool, logger)
+	dopplerForwarder := dopplerforwarder.New(dopplerClientPool, log)
 	byteSigner := signer.New(config.SharedSecret, dopplerForwarder)
-	marshaller := eventmarshaller.New(byteSigner, logger)
+	marshaller := eventmarshaller.New(byteSigner, log)
 	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, marshaller)
-	aggregator := messageaggregator.New(messageTagger, logger)
+	aggregator := messageaggregator.New(messageTagger, log)
 
-	initializeMetrics(byteSigner, config)
+	initializeMetrics(byteSigner, config, log)
 
-	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, logger)
-	dropsondeReader := networkreader.New(fmt.Sprintf("localhost:%d", config.DropsondeIncomingMessagesPort), "dropsondeAgentListener", dropsondeUnmarshaller, logger)
+	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, log)
+	dropsondeReader := networkreader.New(fmt.Sprintf("localhost:%d", config.DropsondeIncomingMessagesPort), "dropsondeAgentListener", dropsondeUnmarshaller, log)
 
 	// TODO: remove next four lines when legacy support is removed (or extracted to injector)
-	legacyMarshaller := eventmarshaller.New(byteSigner, logger)
+	legacyMarshaller := eventmarshaller.New(byteSigner, log)
 	legacyMessageTagger := tagger.New(config.Deployment, config.Job, config.Index, legacyMarshaller)
-	legacyUnmarshaller := legacyunmarshaller.New(legacyMessageTagger, logger)
-	legacyReader := networkreader.New(fmt.Sprintf("localhost:%d", config.LegacyIncomingMessagesPort), "legacyAgentListener", legacyUnmarshaller, logger)
+	legacyUnmarshaller := legacyunmarshaller.New(legacyMessageTagger, log)
+	legacyReader := networkreader.New(fmt.Sprintf("localhost:%d", config.LegacyIncomingMessagesPort), "legacyAgentListener", legacyUnmarshaller, log)
 
 	go legacyReader.Start()
 	dropsondeReader.Start()
 }
 
-func initializeClientPool(config *config.Config) *clientpool.LoggregatorClientPool {
+func initializeClientPool(config *config.Config, logger *gosteno.Logger) *clientpool.LoggregatorClientPool {
 	adapter := storeAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	err := adapter.Connect()
 	if err != nil {
@@ -91,7 +90,7 @@ func initializeClientPool(config *config.Config) *clientpool.LoggregatorClientPo
 	return clientPool
 }
 
-func initializeMetrics(byteSigner *signer.Signer, config *config.Config) {
+func initializeMetrics(byteSigner *signer.Signer, config *config.Config, logger *gosteno.Logger) {
 	metricsMarshaller := eventmarshaller.New(byteSigner, logger)
 	metricsTagger := tagger.New(config.Deployment, config.Job, config.Index, metricsMarshaller)
 	metricsAggregator := messageaggregator.New(metricsTagger, logger)

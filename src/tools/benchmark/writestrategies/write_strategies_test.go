@@ -28,13 +28,11 @@ var _ = Describe("WriteStrategies", func() {
 
 				time.Sleep(time.Millisecond * 50)
 				writes := atomic.LoadUint32(&writer.count)
-				Expect(writes).To(BeNumerically(">", 40))
-				Expect(writes).To(BeNumerically("<", 60))
+				Expect(writes).To(BeNumerically("~", 50, 10))
 
 				time.Sleep(time.Millisecond * 50)
 				writes = atomic.LoadUint32(&writer.count)
-				Expect(writes).To(BeNumerically(">", 90))
-				Expect(writes).To(BeNumerically("<", 110))
+				Expect(writes).To(BeNumerically("~", 100, 10))
 
 				writeStrategy.Stop()
 			}, 1)

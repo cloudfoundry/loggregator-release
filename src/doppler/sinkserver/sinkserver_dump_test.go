@@ -13,7 +13,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
@@ -41,7 +40,6 @@ var _ = Describe("Dumping", func() {
 		dataReadChannel = make(chan *events.Envelope, 2)
 
 		logger := loggertesthelper.Logger()
-		cfcomponent.Logger = logger
 
 		newAppServiceChan := make(chan appservice.AppService)
 		deletedAppServiceChan := make(chan appservice.AppService)
@@ -69,7 +67,7 @@ var _ = Describe("Dumping", func() {
 		}()
 
 		apiEndpoint := "localhost:" + serverPort
-		TestWebsocketServer = websocketserver.New(apiEndpoint, sinkManager, 10*time.Second, 100, "dropsonde-origin", loggertesthelper.Logger())
+		TestWebsocketServer = websocketserver.New(apiEndpoint, sinkManager, 10*time.Second, 100, "dropsonde-origin", logger)
 
 		services.Add(1)
 		goRoutineSpawned.Add(1)

@@ -18,7 +18,7 @@ var _ = Describe("Config", func() {
 
 			var c *config.Config
 
-			c, _, _ = config.ParseConfig(&logLevel, &configFile, &logFilePath)
+			c, _ = config.ParseConfig(logLevel, configFile, logFilePath)
 
 			Expect(c.OutgoingDropsondePort).To(Equal(uint32(4566)))
 		})
@@ -29,7 +29,7 @@ var _ = Describe("Config", func() {
 
 				var c *config.Config
 
-				c, _, _ = config.ParseConfig(&logLevel, &configFile, &logFilePath)
+				c, _ = config.ParseConfig(logLevel, configFile, logFilePath)
 
 				Expect(c.OutgoingPort).To(Equal(uint32(4567)))
 			})
@@ -41,7 +41,7 @@ var _ = Describe("Config", func() {
 
 				var c *config.Config
 
-				c, _, _ = config.ParseConfig(&logLevel, &configFile, &logFilePath)
+				c, _ = config.ParseConfig(logLevel, configFile, logFilePath)
 
 				Expect(c.OutgoingPort).To(Equal(uint32(4567)))
 			})
@@ -53,7 +53,7 @@ var _ = Describe("Config", func() {
 
 				var c *config.Config
 
-				c, _, _ = config.ParseConfig(&logLevel, &configFile, &logFilePath)
+				c, _ = config.ParseConfig(logLevel, configFile, logFilePath)
 
 				Expect(c.JobName).To(Equal("loggregator_trafficcontroller"))
 				Expect(c.JobIndex).To(Equal(0))
@@ -67,7 +67,7 @@ var _ = Describe("Config", func() {
 
 				var c *config.Config
 
-				c, _, _ = config.ParseConfig(&logLevel, &configFile, &logFilePath)
+				c, _ = config.ParseConfig(logLevel, configFile, logFilePath)
 
 				Expect(c.JobName).To(Equal("trafficcontroller"))
 				Expect(c.JobIndex).To(Equal(3))
@@ -82,7 +82,7 @@ var _ = Describe("Config", func() {
 
 				var c *config.Config
 
-				c, _, _ = config.ParseConfig(&logLevel, &configFile, &logFilePath)
+				c, _ = config.ParseConfig(logLevel, configFile, logFilePath)
 				Expect(c.MonitorIntervalSeconds).To(Equal(uint(60)))
 			})
 		})

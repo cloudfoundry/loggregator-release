@@ -18,13 +18,13 @@ var _ = Describe("Config", func() {
 		})
 
 		It("defaults to empty blacklist", func() {
-			config, _ := config.ParseConfig(&configFile)
+			config, _ := config.ParseConfig(configFile)
 
 			Expect(config.BlackListIps).To(BeNil())
 		})
 
 		It("returns proper config", func() {
-			config, err := config.ParseConfig(&configFile)
+			config, err := config.ParseConfig(configFile)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(config.DropsondeIncomingMessagesPort).To(Equal(uint32(3456)))
 			Expect(config.OutgoingPort).To(Equal(uint32(8080)))
@@ -37,7 +37,7 @@ var _ = Describe("Config", func() {
 	Context("With EnableTLSTransport", func() {
 		It("generates the cert for the tls config", func() {
 			configFile = "./fixtures/doppler.json"
-			config, err := config.ParseConfig(&configFile)
+			config, err := config.ParseConfig(configFile)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(config.EnableTLSTransport).To(BeTrue())
 			Expect(config.TLSListenerConfig.Cert.Certificate).ToNot(HaveLen(0))
@@ -45,7 +45,7 @@ var _ = Describe("Config", func() {
 
 		It("errors out if no cert or key files is provided", func() {
 			configFile = "./fixtures/dopplerNoTLSConfig.json"
-			_, err := config.ParseConfig(&configFile)
+			_, err := config.ParseConfig(configFile)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("invalid TLS listener configuration"))
 
@@ -59,7 +59,7 @@ var _ = Describe("Config", func() {
 		})
 
 		It("returns proper config", func() {
-			config, err := config.ParseConfig(&configFile)
+			config, err := config.ParseConfig(configFile)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(config.DropsondeIncomingMessagesPort).To(Equal(uint32(8765)))
 			Expect(config.OutgoingPort).To(Equal(uint32(4567)))

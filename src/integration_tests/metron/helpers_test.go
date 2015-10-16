@@ -4,7 +4,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
@@ -102,15 +101,6 @@ func basicHTTPStopMessageEnvelope(requestId string) *events.Envelope {
 			ContentLength: proto.Int64(98475189),
 		},
 	}
-}
-
-func getMetricFromContext(context *instrumentation.Context, name string) *instrumentation.Metric {
-	for _, metric := range context.Metrics {
-		if metric.Name == name {
-			return &metric
-		}
-	}
-	return nil
 }
 
 func legacyLogMessage(appID int, message string, timestamp time.Time) []byte {

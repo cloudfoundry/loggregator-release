@@ -3,8 +3,6 @@ package main_test
 import (
 	"testing"
 
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	gikgoConfig "github.com/onsi/ginkgo/config"
 
@@ -26,8 +24,6 @@ var _ = BeforeSuite(func() {
 	etcdPort = 5500 + (gikgoConfig.GinkgoConfig.ParallelNode-1)*10
 	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1, nil)
 	etcdRunner.Start()
-
-	cfcomponent.Logger = loggertesthelper.Logger()
 })
 
 var _ = AfterSuite(func() {

@@ -2,36 +2,34 @@ package main
 
 import (
 	"deaagent"
+	"encoding/json"
 	"errors"
 	"flag"
+	"logger"
 	"os"
 	"os/signal"
 	"runtime/pprof"
+	"syscall"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde"
-	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
-	"github.com/cloudfoundry/yagnats"
-	"github.com/cloudfoundry/yagnats/fakeyagnats"
 )
 
 const DrainStoreRefreshInterval = 1 * time.Minute
 
 type Config struct {
-	cfcomponent.Config
+	Syslog        string
 	Index         uint
 	MetronAddress string
 	SharedSecret  string
 }
 
-func (c *Config) validate(logger *gosteno.Logger) (err error) {
+func (c *Config) validate() error {
 	if c.MetronAddress == "" {
 		return errors.New("Need Metron address (host:port).")
 	}
 
-	err = c.Validate(logger)
-	return
+	return nil
 }
 
 var (
@@ -54,8 +52,7 @@ func main() {
 	flag.Parse()
 
 	// ** Config Setup
-	config := &Config{}
-	err := cfcomponent.ReadConfigInto(config, *configFile)
+	config, err := readConfig(*configFile)
 	if err != nil {
 		panic(err)
 	}
@@ -90,36 +87,49 @@ func main() {
 		}()
 	}
 
-	logger := cfcomponent.NewLogger(*logLevel, *logFilePath, "deaagent", config.Config)
-	logger.Info("Startup: Setting up the loggregator dea logging agent")
-
-	if len(config.NatsHosts) == 0 {
-		logger.Warn("Startup: Did not receive a NATS host - not going to register component")
-		cfcomponent.DefaultYagnatsClientProvider = func(logger *gosteno.Logger, c *cfcomponent.Config) (yagnats.NATSConn, error) {
-			return fakeyagnats.Connect(), nil
-		}
-	}
-
-	err = config.validate(logger)
-	if err != nil {
-		panic(err)
-	}
+	log := logger.NewLogger(*logLevel, *logFilePath, "deaagent", config.Syslog)
+	log.Info("Startup: Setting up the loggregator dea logging agent")
 	// ** END Config Setup
 
-	agent := deaagent.NewAgent(*instancesJsonFilePath, logger)
+	agent := deaagent.NewAgent(*instancesJsonFilePath, log)
 
 	go agent.Start()
 
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Interrupt)
 
+	dumpChan := registerGoRoutineDumpSignalChannel()
+
 	for {
 		select {
-		case <-cfcomponent.RegisterGoRoutineDumpSignalChannel():
-			cfcomponent.DumpGoRoutine()
+		case <-dumpChan:
+			logger.DumpGoRoutine()
 		case <-killChan:
-			logger.Info("Shutting down")
+			log.Info("Shutting down")
 			return
 		}
 	}
+}
+
+func readConfig(configFile string) (*Config, error) {
+	file, err := os.Open(configFile)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	config := &Config{}
+	err = json.NewDecoder(file).Decode(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return config, config.validate()
+}
+
+func registerGoRoutineDumpSignalChannel() chan os.Signal {
+	threadDumpChan := make(chan os.Signal)
+	signal.Notify(threadDumpChan, syscall.SIGUSR1)
+
+	return threadDumpChan
 }

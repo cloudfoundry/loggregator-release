@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
@@ -88,10 +87,6 @@ func (d *DumpSink) Logger() *gosteno.Logger {
 
 func (d *DumpSink) Identifier() string {
 	return d.appId
-}
-
-func (d *DumpSink) Emit() instrumentation.Context {
-	return instrumentation.Context{}
 }
 
 func (d *DumpSink) ShouldReceiveErrors() bool {

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/factories"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gorilla/websocket"
@@ -30,7 +29,6 @@ var _ = Describe("WebsocketServer", func() {
 
 	BeforeEach(func() {
 		logger := loggertesthelper.Logger()
-		cfcomponent.Logger = logger
 		wsReceivedChan = make(chan []byte)
 
 		server = websocketserver.New(apiEndpoint, sinkManager, 100*time.Millisecond, 100, "dropsonde-origin", logger)

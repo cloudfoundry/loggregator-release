@@ -16,7 +16,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent/instrumentation"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
@@ -504,9 +503,7 @@ func (c *channelSink) Received() []*events.Envelope {
 
 func (c *channelSink) Identifier() string        { return c.identifier }
 func (c *channelSink) ShouldReceiveErrors() bool { return true }
-func (c *channelSink) Emit() instrumentation.Context {
-	return instrumentation.Context{}
-}
+
 func (c *channelSink) GetInstrumentationMetric() sinks.Metric {
 	return sinks.Metric{Name: "numberOfMessagesLost", Value: 25}
 }

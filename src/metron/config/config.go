@@ -1,10 +1,12 @@
 package config
 
-import "github.com/cloudfoundry/loggregatorlib/cfcomponent"
+import (
+	"encoding/json"
+	"os"
+)
 
 type Config struct {
-	cfcomponent.Config
-
+	Syslog     string
 	Deployment string
 	Zone       string
 	Job        string
@@ -23,11 +25,17 @@ type Config struct {
 	MetricBatchIntervalSeconds uint
 }
 
-func ParseConfig(configFile *string) (*Config, error) {
+func ParseConfig(configFile string) (*Config, error) {
 	config := &Config{}
-	err := cfcomponent.ReadConfigInto(config, *configFile)
+	file, err := os.Open(configFile)
 	if err != nil {
-		return config, err
+		return nil, err
+	}
+	defer file.Close()
+
+	err = json.NewDecoder(file).Decode(config)
+	if err != nil {
+		return nil, err
 	}
 
 	if config.MetricBatchIntervalSeconds == 0 {

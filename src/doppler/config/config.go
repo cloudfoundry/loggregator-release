@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"crypto/tls"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
+	"encoding/json"
+	"os"
 )
 
 const HeartbeatInterval = 10 * time.Second
@@ -20,7 +21,7 @@ type TLSListenerConfig struct {
 }
 
 type Config struct {
-	cfcomponent.Config
+	Syslog                        string
 	EtcdUrls                      []string
 	EtcdMaxConcurrentRequests     int
 	Index                         uint
@@ -66,9 +67,16 @@ func (c *Config) validate() (err error) {
 	return err
 }
 
-func ParseConfig(configFile *string) (*Config, error) {
+func ParseConfig(configFile string) (*Config, error) {
 	config := &Config{}
-	err := cfcomponent.ReadConfigInto(config, *configFile)
+
+	file, err := os.Open(configFile)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	err = json.NewDecoder(file).Decode(config)
 	if err != nil {
 		return nil, err
 	}

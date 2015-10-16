@@ -16,11 +16,11 @@ import (
 
 	"crypto/tls"
 	"doppler/listeners/tlslistener"
+
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
 	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
-	"github.com/cloudfoundry/loggregatorlib/cfcomponent"
 	"github.com/cloudfoundry/loggregatorlib/store"
 	"github.com/cloudfoundry/loggregatorlib/store/cache"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -54,11 +54,10 @@ type Doppler struct {
 }
 
 func New(host string, config *config.Config, logger *gosteno.Logger, storeAdapter storeadapter.StoreAdapter, messageDrainBufferSize uint, dropsondeOrigin string, dialTimeout time.Duration) *Doppler {
-	cfcomponent.Logger = logger
 	keepAliveInterval := 30 * time.Second
 
 	appStoreCache := cache.NewAppServiceCache()
-	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
+	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache, logger)
 
 	var dropsondeUDPListener agentlistener.Listener
 	var dropsondeTLSListener agentlistener.Listener

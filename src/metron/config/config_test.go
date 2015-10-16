@@ -16,13 +16,19 @@ var _ = Describe("Config", func() {
 
 		It("returns error for invalid config file path", func() {
 			configFile = "./fixtures/IDoNotExist.json"
-			_, err := config.ParseConfig(&configFile)
+			_, err := config.ParseConfig(configFile)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("returns error for invalid json", func() {
+			configFile = "./fixtures/invalid_metron.json"
+			_, err := config.ParseConfig(configFile)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("returns proper config", func() {
 			configFile = "./fixtures/metron.json"
-			config, err := config.ParseConfig(&configFile)
+			config, err := config.ParseConfig(configFile)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(config.Index).To(Equal(uint(0)))
@@ -41,6 +47,7 @@ var _ = Describe("Config", func() {
 			Expect(config.LoggregatorDropsondePort).To(Equal(3457))
 
 			Expect(config.MetricBatchIntervalSeconds).To(BeEquivalentTo(15))
+			Expect(config.Syslog).To(Equal("syslog.namespace"))
 		})
 	})
 })
