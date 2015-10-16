@@ -37,7 +37,7 @@ var _ = BeforeSuite(func() {
 	localIPAddress, _ = localip.LocalIP()
 
 	etcdPort = 5800 + (config.GinkgoConfig.ParallelNode-1)*10
-	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
+	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1, nil)
 	etcdRunner.Start()
 })
 
@@ -45,6 +45,6 @@ var _ = AfterSuite(func() {
 	metronSession.Kill().Wait()
 	gexec.CleanupBuildArtifacts()
 
-	etcdRunner.Adapter().Disconnect()
+	etcdRunner.Adapter(nil).Disconnect()
 	etcdRunner.Stop()
 })

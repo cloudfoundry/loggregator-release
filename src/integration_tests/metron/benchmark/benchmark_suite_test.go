@@ -32,7 +32,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).ShouldNot(HaveOccurred())
 
 	etcdPort = 4001
-	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
+	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1, nil)
 	etcdRunner.Start()
 })
 
@@ -40,6 +40,6 @@ var _ = AfterSuite(func() {
 	metronSession.Kill().Wait()
 	gexec.CleanupBuildArtifacts()
 
-	etcdRunner.Adapter().Disconnect()
+	etcdRunner.Adapter(nil).Disconnect()
 	etcdRunner.Stop()
 })

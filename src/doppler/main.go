@@ -44,7 +44,13 @@ func NewStoreAdapter(urls []string, concurrentRequests int) storeadapter.StoreAd
 	if err != nil {
 		panic(err)
 	}
-	etcdStoreAdapter := etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
+	options := &etcdstoreadapter.ETCDOptions{
+		ClusterUrls: urls,
+	}
+	etcdStoreAdapter, err := etcdstoreadapter.New(options, workPool)
+	if err != nil {
+		panic(err)
+	}
 	etcdStoreAdapter.Connect()
 	return etcdStoreAdapter
 }

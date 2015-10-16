@@ -77,7 +77,7 @@ var _ = AfterSuite(func() {
 
 	gexec.CleanupBuildArtifacts()
 
-	etcdRunner.Adapter().Disconnect()
+	etcdRunner.Adapter(nil).Disconnect()
 	etcdRunner.Stop()
 
 	fakeDoppler.Stop()
@@ -104,7 +104,7 @@ var setupFakeDoppler = func() {
 
 func setupEtcdAdapter() {
 	etcdPort = 4001
-	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
+	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1, nil)
 	etcdRunner.Start()
 }
 
@@ -113,7 +113,7 @@ func setupDopplerInEtcd() {
 		Key:   "/healthstatus/doppler/z1/doppler/0",
 		Value: []byte("localhost"),
 	}
-	adapter := etcdRunner.Adapter()
+	adapter := etcdRunner.Adapter(nil)
 	adapter.Create(node)
 }
 

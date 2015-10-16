@@ -32,7 +32,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).ShouldNot(HaveOccurred())
 
 	etcdPort = 5800 + (config.GinkgoConfig.ParallelNode-1)*10
-	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
+	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1, nil)
 	etcdRunner.Start()
 })
 
@@ -52,7 +52,7 @@ var _ = AfterEach(func() {
 var _ = AfterSuite(func() {
 	gexec.CleanupBuildArtifacts()
 
-	etcdRunner.Adapter().Disconnect()
+	etcdRunner.Adapter(nil).Disconnect()
 	etcdRunner.Stop()
 })
 

@@ -25,7 +25,7 @@ var _ = Describe("Dropsonde message forwarding", func() {
 			Value: []byte("localhost"),
 		}
 
-		adapter := etcdRunner.Adapter()
+		adapter := etcdRunner.Adapter(nil)
 		adapter.Create(node)
 		adapter.Disconnect()
 

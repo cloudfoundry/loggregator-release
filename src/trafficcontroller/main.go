@@ -35,8 +35,14 @@ var DefaultStoreAdapterProvider = func(urls []string, concurrentRequests int) st
 	if err != nil {
 		panic(err)
 	}
-
-	return etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
+	options := &etcdstoreadapter.ETCDOptions{
+		ClusterUrls: urls,
+	}
+	etcdStoreAdapter, err := etcdstoreadapter.New(options, workPool)
+	if err != nil {
+		panic(err)
+	}
+	return etcdStoreAdapter
 }
 
 var (

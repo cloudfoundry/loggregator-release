@@ -38,9 +38,9 @@ var (
 
 var _ = BeforeSuite(func() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	etcdRunner = etcdstorerunner.NewETCDClusterRunner(49623, 1)
+	etcdRunner = etcdstorerunner.NewETCDClusterRunner(49623, 1, nil)
 	etcdRunner.Start()
-	etcdAdapter = etcdRunner.Adapter()
+	etcdAdapter = etcdRunner.Adapter(nil)
 	metronExecutablePath = buildComponent("metron")
 	dopplerExecutablePath = buildComponent("doppler")
 	trafficControllerExecutablePath = buildComponent("trafficcontroller")

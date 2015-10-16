@@ -34,12 +34,12 @@ var (
 )
 
 var _ = BeforeSuite(func() {
-	etcdPort := 5555
-	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
-	etcdRunner.Start()
-	etcdAdapter = etcdRunner.Adapter()
-
 	var err error
+	etcdPort := 5555
+	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1, nil)
+	etcdRunner.Start()
+	etcdAdapter = etcdRunner.Adapter(nil)
+
 	pathToDopplerExec, err = gexec.Build("doppler", "-race")
 	Expect(err).NotTo(HaveOccurred())
 

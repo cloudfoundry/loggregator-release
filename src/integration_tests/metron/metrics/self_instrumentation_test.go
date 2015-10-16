@@ -429,7 +429,7 @@ func announceToEtcd() {
 		Value: []byte("localhost"),
 	}
 
-	adapter := etcdRunner.Adapter()
+	adapter := etcdRunner.Adapter(nil)
 	adapter.Create(node)
 	adapter.Disconnect()
 	time.Sleep(50 * time.Millisecond)

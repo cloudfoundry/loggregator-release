@@ -152,7 +152,7 @@ var _ = Describe("Etcd Integration tests", func() {
 
 func setupAdapter(key string, conf config.Config) storeadapter.StoreAdapter {
 
-	adapter := etcdRunner.Adapter()
+	adapter := etcdRunner.Adapter(nil)
 
 	Consistently(func() error {
 		_, err := adapter.Get(key)

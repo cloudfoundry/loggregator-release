@@ -108,7 +108,14 @@ func storeAdapterProvider(urls []string, concurrentRequests int) storeadapter.St
 		panic(err)
 	}
 
-	return etcdstoreadapter.NewETCDStoreAdapter(urls, workPool)
+	options := &etcdstoreadapter.ETCDOptions{
+		ClusterUrls: urls,
+	}
+	etcdAdapter, err := etcdstoreadapter.New(options, workPool)
+	if err != nil {
+		panic(err)
+	}
+	return etcdAdapter
 }
 
 type metronHealthMonitor struct{}

@@ -24,13 +24,13 @@ func TestDoppler(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	etcdPort = 5500 + (gikgoConfig.GinkgoConfig.ParallelNode-1)*10
-	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
+	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1, nil)
 	etcdRunner.Start()
 
 	cfcomponent.Logger = loggertesthelper.Logger()
 })
 
 var _ = AfterSuite(func() {
-	etcdRunner.Adapter().Disconnect()
+	etcdRunner.Adapter(nil).Disconnect()
 	etcdRunner.Stop()
 })

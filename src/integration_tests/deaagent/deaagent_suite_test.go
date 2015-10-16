@@ -8,10 +8,8 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 
 	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 
@@ -26,8 +24,6 @@ var (
 	task1InputListener  net.Listener
 	task1StderrListener net.Listener
 	deaAgentSession     *gexec.Session
-	etcdPort            int
-	etcdRunner          *etcdstorerunner.ETCDClusterRunner
 )
 
 func TestDeaagent(t *testing.T) {
@@ -61,9 +57,6 @@ var _ = BeforeSuite(func() {
 	deaAgentSession, err = gexec.Start(deaagentCommand, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 
-	etcdPort = 5800 + (config.GinkgoConfig.ParallelNode-1)*10
-	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1)
-	etcdRunner.Start()
 })
 
 var _ = AfterSuite(func() {
@@ -72,7 +65,5 @@ var _ = AfterSuite(func() {
 	deaAgentSession.Kill().Wait(5)
 	gexec.CleanupBuildArtifacts()
 
-	etcdRunner.Adapter().Disconnect()
-	etcdRunner.Stop()
 	os.RemoveAll(tmpdir)
 })

@@ -71,7 +71,7 @@ var _ = Describe("Legacy message forwarding", func() {
 			Key:   "/healthstatus/doppler/z1/0",
 			Value: []byte("localhost"),
 		}
-		adapter := etcdRunner.Adapter()
+		adapter := etcdRunner.Adapter(nil)
 		adapter.Create(node)
 
 		connection, _ = net.Dial("udp4", "localhost:51160")

@@ -34,7 +34,13 @@ func main() {
 		panic(err)
 	}
 
-	adapter := etcdstoreadapter.NewETCDStoreAdapter(config.EtcdUrls, workPool)
+	options := &etcdstoreadapter.ETCDOptions{
+		ClusterUrls: config.EtcdUrls,
+	}
+	adapter, err := etcdstoreadapter.New(options, workPool)
+	if err != nil {
+		panic(err)
+	}
 
 	updateInterval := time.Duration(config.UpdateIntervalSeconds) * time.Second
 	politician := elector.NewElector(config.InstanceName, adapter, updateInterval, logger)
