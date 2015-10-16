@@ -223,7 +223,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 			serverSession.Kill().Wait()
 
-			for i := 0; i < 215; i++ {
+			for i := 0; i < 315; i++ {
 				SendAppLog(appID, "overflow2", inputConnection)
 			}
 			Eventually(func() *gbytes.Buffer {
@@ -238,7 +238,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 			By("starting the endpoint (2nd time)")
 			serverSession = StartHTTPSServer(pathToHTTPEchoServer)
-			Eventually(serverSession.Out, 10, 1).Should(gbytes.Say(`Log message output is too high. 99 messages dropped \(Total 299 messages dropped\)`))
+			Eventually(serverSession.Out, 10, 1).Should(gbytes.Say(`Log message output is too high. 99 messages dropped \(Total 398 messages dropped\)`))
 		})
 	})
 
