@@ -1,9 +1,0 @@
----
-platform: linux
-
-image: docker:///cloudfoundry/lamb-go14
-inputs:
-- name: loggregator
-
-run:
-  path: loggregator/bin/concourse_build.sh
