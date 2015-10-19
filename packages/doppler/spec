@@ -5,8 +5,9 @@ dependencies:
 files:
 - loggregator/src/common/monitor/*.go # gosub
 - loggregator/src/doppler/*.go # gosub
-- loggregator/src/doppler/announcer/*.go # gosub
 - loggregator/src/doppler/config/*.go # gosub
+- loggregator/src/doppler/dopplerservice/*.go # gosub
+- loggregator/src/doppler/dopplerservice/fakes/*.go # gosub
 - loggregator/src/doppler/groupedsinks/*.go # gosub
 - loggregator/src/doppler/groupedsinks/firehose_group/*.go # gosub
 - loggregator/src/doppler/groupedsinks/sink_wrapper/*.go # gosub

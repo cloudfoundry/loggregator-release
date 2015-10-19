@@ -20,18 +20,18 @@ var _ = Describe("Dropsonde message forwarding", func() {
 	var stopTheWorld chan struct{}
 
 	BeforeEach(func() {
+		startMetron("tls")
+
 		node := storeadapter.StoreNode{
 			Key:   "/healthstatus/doppler/z1/0",
-			Value: []byte("localhost"),
+			Value: []byte("127.0.0.1"),
 		}
 
-		adapter := etcdRunner.Adapter(nil)
-		adapter.Create(node)
-		adapter.Disconnect()
+		etcdAdapter.Create(node)
 
 		stopTheWorld = make(chan struct{})
 
-		conn := eventuallyListensForUDP("localhost:3457")
+		conn := eventuallyListensForUDP(dropsondeAddress())
 		fakeDoppler = &FakeDoppler{
 			packetConn:   conn,
 			stopTheWorld: stopTheWorld,
@@ -41,6 +41,8 @@ var _ = Describe("Dropsonde message forwarding", func() {
 	AfterEach(func() {
 		fakeDoppler.Close()
 		close(stopTheWorld)
+
+		stopMetron()
 	})
 
 	It("forwards hmac signed messages to a healthy doppler server", func() {
@@ -49,7 +51,7 @@ var _ = Describe("Dropsonde message forwarding", func() {
 
 		receivedByDoppler := fakeDoppler.ReadIncomingMessages(expectedMessage.signature)
 
-		metronConn, _ := net.Dial("udp4", "localhost:51161")
+		metronConn, _ := net.Dial("udp4", metronAddress())
 		metronInput := &MetronInput{
 			metronConn:   metronConn,
 			stopTheWorld: stopTheWorld,
@@ -57,7 +59,8 @@ var _ = Describe("Dropsonde message forwarding", func() {
 		go metronInput.WriteToMetron(originalMessage)
 
 		Eventually(func() bool {
-			msg := <-receivedByDoppler
+			var msg signedMessage
+			Eventually(receivedByDoppler).Should(Receive(&msg))
 			return bytes.Equal(msg.signature, expectedMessage.signature) && bytes.Equal(msg.message, expectedMessage.message)
 		}).Should(BeTrue())
 	}, 2)

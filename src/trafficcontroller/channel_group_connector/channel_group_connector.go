@@ -1,14 +1,16 @@
 package channel_group_connector
 
 import (
+	"doppler/dopplerservice"
 	"fmt"
-	"github.com/cloudfoundry/gosteno"
+	"strings"
 	"sync"
 	"time"
 	"trafficcontroller/doppler_endpoint"
 	"trafficcontroller/listener"
 	"trafficcontroller/marshaller"
-	"trafficcontroller/serveraddressprovider"
+
+	"github.com/cloudfoundry/gosteno"
 )
 
 const checkServerAddressesInterval = 100 * time.Millisecond
@@ -16,18 +18,18 @@ const checkServerAddressesInterval = 100 * time.Millisecond
 type ListenerConstructor func(time.Duration, *gosteno.Logger) listener.Listener
 
 type ChannelGroupConnector struct {
-	serverAddressProvider serveraddressprovider.ServerAddressProvider
-	logger                *gosteno.Logger
-	listenerConstructor   ListenerConstructor
-	generateLogMessage    marshaller.MessageGenerator
+	finder              dopplerservice.Finder
+	logger              *gosteno.Logger
+	listenerConstructor ListenerConstructor
+	generateLogMessage  marshaller.MessageGenerator
 }
 
-func NewChannelGroupConnector(provider serveraddressprovider.ServerAddressProvider, listenerConstructor ListenerConstructor, logMessageGenerator marshaller.MessageGenerator, logger *gosteno.Logger) *ChannelGroupConnector {
+func NewChannelGroupConnector(finder dopplerservice.Finder, listenerConstructor ListenerConstructor, logMessageGenerator marshaller.MessageGenerator, logger *gosteno.Logger) *ChannelGroupConnector {
 	return &ChannelGroupConnector{
-		serverAddressProvider: provider,
-		listenerConstructor:   listenerConstructor,
-		generateLogMessage:    logMessageGenerator,
-		logger:                logger,
+		finder:              finder,
+		listenerConstructor: listenerConstructor,
+		generateLogMessage:  logMessageGenerator,
+		logger:              logger,
 	}
 }
 
@@ -42,21 +44,24 @@ func (c *ChannelGroupConnector) Connect(dopplerEndpoint doppler_endpoint.Doppler
 
 loop:
 	for {
-		serverAddresses := c.serverAddressProvider.ServerAddresses()
+		serverURLs := c.finder.AllServers()
 
-		if len(serverAddresses) == 0 {
+		if len(serverURLs) == 0 {
 			c.logger.Debugf("ChannelGroupConnector.Connect: No doppler servers available. Trying again in %s", checkServerAddressesInterval.String())
 		} else {
-			for _, serverAddress := range serverAddresses {
-				if connections.connectedToServer(serverAddress) {
-					continue
-				}
-				connections.addConnectedServer(serverAddress)
+			for _, url := range serverURLs {
+				if index := strings.Index(url, "://"); index != -1 {
+					serverAddress := url[index+3:]
+					if connections.connectedToServer(serverAddress) {
+						continue
+					}
+					connections.addConnectedServer(serverAddress)
 
-				go func(addr string) {
-					c.connectToServer(addr, dopplerEndpoint, messagesChan, stopChan)
-					connections.removeConnectedServer(addr)
-				}(serverAddress)
+					go func(addr string) {
+						c.connectToServer(addr, dopplerEndpoint, messagesChan, stopChan)
+						connections.removeConnectedServer(addr)
+					}(serverAddress)
+				}
 			}
 		}
 

@@ -2,33 +2,33 @@ package main
 
 import (
 	"flag"
+	"logger"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
-	"trafficcontroller/authorization"
 
 	"common/monitor"
+	"doppler/dopplerservice"
+	"trafficcontroller/authorization"
 	"trafficcontroller/channel_group_connector"
 	"trafficcontroller/config"
 	"trafficcontroller/dopplerproxy"
 	"trafficcontroller/listener"
 	"trafficcontroller/marshaller"
 	"trafficcontroller/profiler"
-	"trafficcontroller/serveraddressprovider"
 	"trafficcontroller/uaa_client"
 
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/workpool"
-	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
+
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/pivotal-golang/localip"
-	"logger"
-	"syscall"
 )
 
 var DefaultStoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
@@ -131,11 +131,11 @@ func makeProxy(adapter storeadapter.StoreAdapter, config *config.Config, logger 
 	uaaClient := uaa_client.NewUaaClient(config.UaaHost, config.UaaClientId, config.UaaClientSecret, config.SkipCertVerify)
 	adminAuthorizer := authorization.NewAdminAccessAuthorizer(*disableAccessControl, &uaaClient)
 
-	loggregatorServerAddressList := servicediscovery.NewServerAddressList(adapter, "/healthstatus/doppler", logger)
-	provider := serveraddressprovider.NewDynamicServerAddressProvider(loggregatorServerAddressList, config.DopplerPort)
-	provider.Start()
+	preferredServers := func(string) bool { return false }
+	finder := dopplerservice.NewLegacyFinder(adapter, int(config.DopplerPort), preferredServers, nil, logger)
+	finder.Start()
 
-	cgc := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, messageGenerator, logger)
+	cgc := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, messageGenerator, logger)
 
 	return dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, cgc, translator, cookieDomain, logger)
 }

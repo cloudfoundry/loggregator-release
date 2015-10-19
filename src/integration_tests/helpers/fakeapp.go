@@ -1,17 +1,18 @@
 package helpers
+
 import (
+	"tools/benchmark/experiment"
 	"tools/benchmark/messagegenerator"
 	"tools/benchmark/messagewriter"
 	"tools/benchmark/metricsreporter"
 	"tools/benchmark/writestrategies"
-	"tools/benchmark/experiment"
 )
 
-type FakeApp struct{
-	appID string
-	logRate int
+type FakeApp struct {
+	appID         string
+	logRate       int
 	writeStrategy experiment.WriteStrategy
-	logCounter *metricsreporter.Counter
+	logCounter    *metricsreporter.Counter
 }
 
 func NewFakeApp(appID string, logRate int) *FakeApp {
@@ -23,15 +24,16 @@ func NewFakeApp(appID string, logRate int) *FakeApp {
 
 	writeStrategy := writestrategies.NewConstantWriteStrategy(generator, writer, logRate)
 
-	return &FakeApp {
-		appID: appID,
-		logRate: logRate,
+	return &FakeApp{
+		appID:         appID,
+		logRate:       logRate,
 		writeStrategy: writeStrategy,
-		logCounter: counter,
+		logCounter:    counter,
 	}
 }
 
-func (f *FakeApp) Start() {
+func (f *FakeApp) Start(start chan struct{}) {
+	<-start
 	f.writeStrategy.StartWriter()
 }
 

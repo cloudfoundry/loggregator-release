@@ -1,10 +1,14 @@
 package main
 
 import (
+	"doppler/dopplerservice"
 	"flag"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
+	"metron/clientpool"
 	"metron/networkreader"
 	"metron/writers/dopplerforwarder"
 	"metron/writers/eventmarshaller"
@@ -22,8 +26,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/workpool"
-	"github.com/cloudfoundry/loggregatorlib/clientpool"
-	"github.com/cloudfoundry/loggregatorlib/servicediscovery"
+	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 
@@ -49,7 +52,11 @@ func main() {
 	log := logger.NewLogger(*debug, *logFilePath, "metron", config.Syslog)
 	log.Info("Startup: Setting up the Metron agent")
 
-	dopplerClientPool := initializeClientPool(config, log)
+	dopplerClientPool, err := initializeClientPool(config, log)
+	if err != nil {
+		log.Errorf("Error while initializing client pool: %s", err.Error())
+		os.Exit(-1)
+	}
 
 	dopplerForwarder := dopplerforwarder.New(dopplerClientPool, log)
 	byteSigner := signer.New(config.SharedSecret, dopplerForwarder)
@@ -62,24 +69,50 @@ func main() {
 	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, log)
 	dropsondeReader := networkreader.New(fmt.Sprintf("localhost:%d", config.DropsondeIncomingMessagesPort), "dropsondeAgentListener", dropsondeUnmarshaller, log)
 
+	log.Info("metron started")
+
 	dropsondeReader.Start()
 }
 
-func initializeClientPool(config *config.Config, logger *gosteno.Logger) *clientpool.LoggregatorClientPool {
+func initializeClientPool(config *config.Config, logger *gosteno.Logger) (*clientpool.DopplerPool, error) {
 	adapter := storeAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	err := adapter.Connect()
 	if err != nil {
-		logger.Errorf("Error connecting to ETCD: %v", err)
+		return nil, err
 	}
 
-	inZoneServerAddressList := servicediscovery.NewServerAddressList(adapter, "/healthstatus/doppler/"+config.Zone, logger)
-	allZoneServerAddressList := servicediscovery.NewServerAddressList(adapter, "/healthstatus/doppler/", logger)
+	preferInZone := func(relativePath string) bool {
+		return strings.HasPrefix(relativePath, "/"+config.Zone+"/")
+	}
 
-	go inZoneServerAddressList.Run()
-	go allZoneServerAddressList.Run()
+	clientPool := clientpool.NewDopplerPool(logger, func(logger *gosteno.Logger, url string) (loggregatorclient.Client, error) {
+		client, err := clientpool.NewClient(logger, url)
+		if err == nil && client.Scheme() != config.PreferredProtocol {
+			logger.Warnd(map[string]interface{}{
+				"url": url,
+			}, "Doppler advertising UDP only")
+		}
+		return client, err
+	})
 
-	clientPool := clientpool.NewLoggregatorClientPool(logger, config.LoggregatorDropsondePort, inZoneServerAddressList, allZoneServerAddressList)
-	return clientPool
+	onUpdate := func(all map[string]string, preferred map[string]string) {
+		clientPool.Set(all, preferred)
+	}
+
+	dopplers, err := dopplerservice.NewFinder(adapter, config.PreferredProtocol, preferInZone, onUpdate, logger)
+	if err != nil {
+		return nil, err
+	}
+	dopplers.Start()
+
+	onLegacyUpdate := func(all map[string]string, preferred map[string]string) {
+		clientPool.SetLegacy(all, preferred)
+	}
+
+	legacyDopplers := dopplerservice.NewLegacyFinder(adapter, config.LoggregatorDropsondePort, preferInZone, onLegacyUpdate, logger)
+	legacyDopplers.Start()
+
+	return clientPool, nil
 }
 
 func initializeMetrics(byteSigner *signer.Signer, config *config.Config, logger *gosteno.Logger) {

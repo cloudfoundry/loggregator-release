@@ -12,5 +12,7 @@
 
   "DropsondeIncomingMessagesPort": 51161,
   "LoggregatorDropsondePort": 3457,
-  "Syslog": "syslog.namespace"
+  "Syslog": "syslog.namespace",
+  "MetricBatchIntervalSeconds": 20,
+  "PreferredProtocol": "udp"
 }

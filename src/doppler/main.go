@@ -12,15 +12,16 @@ import (
 
 	"doppler/config"
 
-	"doppler/announcer"
+	"doppler/dopplerservice"
+
+	"logger"
+	"syscall"
 
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/pivotal-golang/localip"
-	"logger"
-	"syscall"
 )
 
 const DOPPLER_ORIGIN = "DopplerServer"
@@ -106,10 +107,9 @@ func main() {
 	log.Info("Startup: Setting up the doppler server")
 
 	dropsonde.Initialize(conf.MetronAddress, DOPPLER_ORIGIN)
-	dopplerStoreAdapter := NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
-	legacyStoreAdapter := NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
+	storeAdapter := NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
 
-	doppler := New(localIp, conf, log, dopplerStoreAdapter, conf.MessageDrainBufferSize, DOPPLER_ORIGIN, time.Duration(conf.SinkDialTimeoutSeconds)*time.Second)
+	doppler := New(localIp, conf, log, storeAdapter, conf.MessageDrainBufferSize, DOPPLER_ORIGIN, time.Duration(conf.SinkDialTimeoutSeconds)*time.Second)
 
 	if err != nil {
 		panic(err)
@@ -123,8 +123,8 @@ func main() {
 
 	dumpChan := registerGoRoutineDumpSignalChannel()
 
-	releaseNodeChan := announcer.Announce(localIp, config.HeartbeatInterval, conf, dopplerStoreAdapter, log)
-	legacyReleaseNodeChan := announcer.AnnounceLegacy(localIp, config.HeartbeatInterval, conf, legacyStoreAdapter, log)
+	releaseNodeChan := dopplerservice.Announce(localIp, config.HeartbeatInterval, conf, storeAdapter, log)
+	legacyReleaseNodeChan := dopplerservice.AnnounceLegacy(localIp, config.HeartbeatInterval, conf, storeAdapter, log)
 
 	for {
 		select {

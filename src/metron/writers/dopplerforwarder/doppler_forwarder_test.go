@@ -6,13 +6,14 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
 
+	"time"
+
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"time"
 )
 
 var _ = Describe("DopplerForwarder", func() {
@@ -54,13 +55,21 @@ type mockClientPool struct {
 	randomClient *mockClient
 }
 
-func (m *mockClientPool) RandomClient() (loggregatorclient.LoggregatorClient, error) {
+func (m *mockClientPool) RandomClient() (loggregatorclient.Client, error) {
 	m.randomClient = &mockClient{}
 	return m.randomClient, nil
 }
 
 type mockClient struct {
 	data [][]byte
+}
+
+func (m *mockClient) Scheme() string {
+	return "mock"
+}
+
+func (m *mockClient) Address() string {
+	return ""
 }
 
 func (m *mockClient) Send(p []byte) {

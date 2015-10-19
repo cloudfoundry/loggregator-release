@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"metron/config"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -45,8 +46,20 @@ var _ = Describe("Config", func() {
 			Expect(config.DropsondeIncomingMessagesPort).To(Equal(51161))
 			Expect(config.LoggregatorDropsondePort).To(Equal(3457))
 
-			Expect(config.MetricBatchIntervalSeconds).To(BeEquivalentTo(15))
+			Expect(config.MetricBatchIntervalSeconds).To(BeEquivalentTo(20))
 			Expect(config.Syslog).To(Equal("syslog.namespace"))
+
+			Expect(config.PreferredProtocol).To(Equal("udp"))
+		})
+
+		It("sets defaults", func() {
+			cfg, err := config.Parse(strings.NewReader("{}"))
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(cfg).To(Equal(&config.Config{
+				MetricBatchIntervalSeconds: 15,
+				PreferredProtocol:          "tls",
+			}))
 		})
 	})
 })

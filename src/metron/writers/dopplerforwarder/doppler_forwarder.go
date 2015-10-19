@@ -7,7 +7,7 @@ import (
 )
 
 type ClientPool interface {
-	RandomClient() (loggregatorclient.LoggregatorClient, error)
+	RandomClient() (loggregatorclient.Client, error)
 }
 
 type DopplerForwarder struct {

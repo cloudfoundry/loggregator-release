@@ -4,16 +4,17 @@ import (
 	"testing"
 
 	"fmt"
+	"net/http"
+	"os/exec"
+	"runtime"
+
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 	"github.com/pivotal-golang/localip"
-	"net/http"
-	"os/exec"
-	"time"
-	"runtime"
 )
 
 func TestIntegrationTest(t *testing.T) {
@@ -46,7 +47,7 @@ var _ = BeforeSuite(func() {
 	trafficControllerExecutablePath = buildComponent("trafficcontroller")
 
 	// Wait for etcd to startup
-	waitOnURL("http://localhost:49623")
+	waitOnURL("http://127.0.0.1:49623")
 })
 
 var _ = BeforeEach(func() {
@@ -75,7 +76,7 @@ var _ = BeforeEach(func() {
 	waitOnURL("http://" + LocalIPAddress + ":49630")
 
 	// Metron will report that it is up when it really isn't (at least according to the /varz endpoint)
-	time.Sleep(200 * time.Millisecond)
+	Eventually(metronSession.Out).Should(gbytes.Say("Doppler advertising UDP"))
 })
 
 func buildComponent(componentName string) (pathToComponent string) {

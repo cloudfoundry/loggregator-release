@@ -1,19 +1,20 @@
 package channel_group_connector_test
 
 import (
+	"doppler/dopplerservice/fakes"
 	"trafficcontroller/channel_group_connector"
 
 	"errors"
-	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
 	"sync"
 	"time"
 	"trafficcontroller/doppler_endpoint"
 	"trafficcontroller/listener"
 	"trafficcontroller/marshaller"
-	"trafficcontroller/serveraddressprovider"
+
+	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	. "github.com/onsi/ginkgo"
@@ -24,7 +25,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 	Describe("Connect", func() {
 		var (
 			logger              *gosteno.Logger
-			provider            *serveraddressprovider.FakeServerAddressProvider
+			finder              *fakes.FakeFinder
 			fakeListeners       []*listener.FakeListener
 			listenerConstructor func(time.Duration, *gosteno.Logger) listener.Listener
 			messageChan1        chan []byte
@@ -35,7 +36,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 
 		BeforeEach(func() {
 			logger = loggertesthelper.Logger()
-			provider = &serveraddressprovider.FakeServerAddressProvider{}
+			finder = &fakes.FakeFinder{}
 
 			messageChan1 = make(chan []byte, 1)
 			messageChan2 = make(chan []byte, 1)
@@ -60,7 +61,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 					messageChan1 <- expectedMessage1
 					close(messageChan1)
 
-					provider.SetServerAddresses([]string{"10.0.0.1:1234"})
+					finder.AllServersReturns(map[string]string{"a": "udp://10.0.0.1:1234"})
 				})
 
 				AfterEach(func() {
@@ -68,7 +69,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				})
 
 				It("opens a listener with the correct app path", func() {
-					channelConnector := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
 					outputChan := make(chan []byte, 10)
 					stopChan := make(chan struct{})
 					dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("recentlogs", "abc123", true)
@@ -81,7 +82,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				})
 
 				It("opens a listener with the firehose path", func() {
-					channelConnector := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
 					outputChan := make(chan []byte, 10)
 					stopChan := make(chan struct{})
 					dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("firehose", "subscription-123", true)
@@ -93,7 +94,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				})
 
 				It("puts messages on the channel received by the listener", func() {
-					channelConnector := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
 					outputChan := make(chan []byte)
 					stopChan := make(chan struct{})
 
@@ -116,11 +117,11 @@ var _ = Describe("ChannelGroupConnector", func() {
 					messageChan2 <- expectedMessage2
 					close(messageChan2)
 
-					provider.SetServerAddresses([]string{"10.0.0.1:1234", "10.0.0.2:1234"})
+					finder.AllServersReturns(map[string]string{"a": "udp://10.0.0.1:1234", "b": "udp://10.0.0.2:1234"})
 				})
 
 				It("puts messages on the channel received by the listener", func(done Done) {
-					channelConnector := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
 					outputChan := make(chan []byte)
 					stopChan := make(chan struct{})
 
@@ -144,11 +145,11 @@ var _ = Describe("ChannelGroupConnector", func() {
 
 			Context("when connected to zero servers", func() {
 				BeforeEach(func() {
-					provider.SetServerAddresses([]string{})
+					finder.AllServersReturns(map[string]string{})
 				})
 
 				It("returns immediately when reconnect is set to false", func(done Done) {
-					channelConnector := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
 					outputChan := make(chan []byte)
 					stopChan := make(chan struct{})
 
@@ -177,8 +178,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				BeforeEach(func() {
 					stopChan = make(chan struct{})
 					go sendMessages(messageChan1, expectedMessage1, stopChan)
-					provider.SetServerAddresses([]string{"10.0.0.1:1234"})
-
+					finder.AllServersReturns(map[string]string{"a": "udp://10.0.0.1:1234"})
 				})
 
 				AfterEach(func() {
@@ -187,7 +187,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				})
 
 				It("receives multiple messages on the channel", func() {
-					channelConnector := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
 					outputChan := make(chan []byte, 10)
 
 					stopChan := make(chan struct{})
@@ -199,7 +199,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				})
 
 				It("opens a listener with the correct path", func() {
-					channelConnector := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
 					outputChan := make(chan []byte, 10)
 					stopChan := make(chan struct{})
 					defer close(stopChan)
@@ -210,7 +210,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				})
 
 				It("closes listeners and returns when stopChan is closed", func(done Done) {
-					channelConnector := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
 
 					outputChan := make(chan []byte, 10)
 					stopChan := make(chan struct{})
@@ -240,7 +240,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 					go sendMessages(messageChan1, expectedMessage1, stopChan1)
 					go sendMessages(messageChan2, expectedMessage2, stopChan2)
 
-					provider.SetServerAddresses([]string{"10.0.0.1:1234", "10.0.0.2:1234"})
+					finder.AllServersReturns(map[string]string{"a": "udp://10.0.0.1:1234", "b": "udp://10.0.0.2:1234"})
 				})
 
 				AfterEach(func() {
@@ -251,7 +251,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				})
 
 				It("receives multiple messages from each sender", func() {
-					channelConnector := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
 					outputChan := make(chan []byte)
 
 					stopChan := make(chan struct{})
@@ -275,7 +275,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				})
 
 				It("closes listeners and returns when stopChan is closed", func() {
-					channelConnector := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
 
 					outputChan := make(chan []byte, 10)
 					stopChan := make(chan struct{})
@@ -301,8 +301,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				messageChan := make(chan []byte, 10)
 				fakeListeners[0] = listener.NewFakeListener(messageChan, errors.New("failure"))
 
-				provider.SetServerAddresses([]string{"10.0.0.1:1234"})
-
+				finder.AllServersReturns(map[string]string{"a": "udp://10.0.0.1:1234"})
 			})
 
 			AfterEach(func() {
@@ -312,7 +311,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 			})
 
 			It("puts an error on the message channel when reading messages", func() {
-				channelConnector := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+				channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
 
 				stopChan := make(chan struct{})
 				defer close(stopChan)
@@ -336,8 +335,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 
 				fakeListeners[0].SetReadError(errors.New("boom"))
 
-				provider.SetServerAddresses([]string{"10.0.0.1:1234"})
-
+				finder.AllServersReturns(map[string]string{"a": "udp://10.0.0.1:1234"})
 			})
 
 			AfterEach(func() {
@@ -347,7 +345,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 			})
 
 			It("puts a message about the error on the channel ", func() {
-				channelConnector := channel_group_connector.NewChannelGroupConnector(provider, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+				channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
 				outputChan := make(chan []byte)
 
 				stopChan := make(chan struct{})

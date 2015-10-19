@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 )
 
@@ -22,23 +23,33 @@ type Config struct {
 	SharedSecret             string
 
 	MetricBatchIntervalSeconds uint
+
+	PreferredProtocol string
 }
 
 func ParseConfig(configFile string) (*Config, error) {
-	config := &Config{}
 	file, err := os.Open(configFile)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	err = json.NewDecoder(file).Decode(config)
+	return Parse(file)
+}
+
+func Parse(reader io.Reader) (*Config, error) {
+	config := &Config{}
+	err := json.NewDecoder(reader).Decode(config)
 	if err != nil {
 		return nil, err
 	}
 
 	if config.MetricBatchIntervalSeconds == 0 {
 		config.MetricBatchIntervalSeconds = 15
+	}
+
+	if config.PreferredProtocol == "" {
+		config.PreferredProtocol = "tls"
 	}
 
 	return config, nil

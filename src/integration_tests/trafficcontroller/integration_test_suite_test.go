@@ -49,7 +49,7 @@ var _ = BeforeSuite(func() {
 
 	StartFakeRouter()
 
-	pathToTrafficControllerExec, err := gexec.Build("trafficcontroller")
+	pathToTrafficControllerExec, err := gexec.Build("trafficcontroller", "-race")
 	Expect(err).ToNot(HaveOccurred())
 
 	tcCommand := exec.Command(pathToTrafficControllerExec, "--config=fixtures/trafficcontroller.json", "--debug")

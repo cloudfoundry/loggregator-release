@@ -26,14 +26,14 @@ var _ = BeforeSuite(func() {
 	pathToMetronExecutable, err := gexec.Build("metron")
 	Expect(err).ShouldNot(HaveOccurred())
 
+	etcdPort = 4001
+	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1, nil)
+	etcdRunner.Start()
+
 	command := exec.Command(pathToMetronExecutable, "--config=fixtures/metron.json")
 
 	metronSession, err = gexec.Start(command, gexec.NewPrefixedWriter("[o][metron]", GinkgoWriter), gexec.NewPrefixedWriter("[e][metron]", GinkgoWriter))
 	Expect(err).ShouldNot(HaveOccurred())
-
-	etcdPort = 4001
-	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1, nil)
-	etcdRunner.Start()
 })
 
 var _ = AfterSuite(func() {
