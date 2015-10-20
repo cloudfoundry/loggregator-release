@@ -153,7 +153,7 @@ properties:
 
 ### Configuring the Firehose
 
-The firehose feature includes the combined stream of logs from all apps, plus metrics data from CF components, and is intended to be used by operators and adminstrators.
+The firehose feature includes the combined stream of logs from all apps, plus metrics data from CF components, and is intended to be used by operators and administrators.
 
 Access to the firehose requires a user with the `doppler.firehose` scope.
 
