@@ -132,9 +132,10 @@ func main() {
 			logger.DumpGoRoutine()
 		case <-killChan:
 			log.Info("Shutting down")
-			doppler.Stop()
 			close(releaseNodeChan)
 			close(legacyReleaseNodeChan)
+			time.Sleep(config.HeartbeatInterval)
+			doppler.Stop()
 			return
 		}
 	}
