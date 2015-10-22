@@ -78,9 +78,9 @@ func (pool *DopplerPool) RandomClient() (loggregatorclient.Client, error) {
 	return list[rand.Intn(len(list))], nil
 }
 
-func (pool *DopplerPool) getClient(url string) loggregatorclient.Client {
+func (pool *DopplerPool) getClient(key, url string) loggregatorclient.Client {
 	var client loggregatorclient.Client
-	if client = pool.clients[url]; client == nil {
+	if client = pool.clients[key]; client == nil {
 		return nil
 	}
 
@@ -97,7 +97,7 @@ func (pool *DopplerPool) merge() {
 	newClients := map[string]loggregatorclient.Client{}
 
 	for key, u := range pool.nonLegacyServers {
-		client := pool.getClient(u)
+		client := pool.getClient(key, u)
 		if client == nil {
 			var err error
 			client, err = pool.clientFactory(pool.logger, u)
@@ -113,7 +113,7 @@ func (pool *DopplerPool) merge() {
 
 	for key, u := range pool.legacyServers {
 		if _, ok := newClients[key]; !ok {
-			client := pool.getClient(u)
+			client := pool.getClient(key, u)
 			if client == nil {
 				var err error
 				client, err = pool.clientFactory(pool.logger, u)

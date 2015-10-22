@@ -170,22 +170,29 @@ var _ = Describe("DopplerPool", func() {
 		})
 
 		Context("with identical server data", func() {
+			var clientFactoryCallCount int
+
+			BeforeEach(func() {
+				clientFactoryCallCount = 0
+				clientFactory = func(logger *steno.Logger, url string) (loggregatorclient.Client, error) {
+					clientFactoryCallCount++
+					return fakeClientFactory(logger, url)
+				}
+			})
+
 			It("reuses the Client", func() {
 				aServers := map[string]string{
 					"a": "a://b:c",
 				}
 				pool.Set(aServers, nil)
-				clientsA := pool.Clients()
-				Expect(clientsA).To(HaveLen(1))
+				Expect(clientFactoryCallCount).To(Equal(1))
 
 				mixedServers := map[string]string{
 					"a": "a://b:c",
 					"c": "d://e:f",
 				}
 				pool.Set(mixedServers, nil)
-				clientsB := pool.Clients()
-				Expect(clientsB).To(HaveLen(2))
-				Expect(clientsB).To(ContainElement(clientsA[0]))
+				Expect(clientFactoryCallCount).To(Equal(2))
 			})
 		})
 	})
