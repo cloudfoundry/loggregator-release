@@ -11,7 +11,9 @@
 
   "DropsondeIncomingMessagesPort": <%= p("metron_agent.dropsonde_incoming_port") %>,
 
-  "LoggregatorDropsondePort": <%= p("loggregator.dropsonde_incoming_port") %>
+  "LoggregatorDropsondePort": <%= p("loggregator.dropsonde_incoming_port") %>,
+
+  "PreferredProtocol": "udp"
 
   <% if_p("syslog_daemon_config") do |_| %>
   , "Syslog": "vcap.metron_agent"
