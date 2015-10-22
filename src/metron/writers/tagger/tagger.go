@@ -30,12 +30,22 @@ func New(deploymentName string, job string, index uint, outputWriter writers.Env
 }
 
 func (t *Tagger) Write(envelope *events.Envelope) {
-	newEnvelope := *envelope
+	newEnvelope := envelope
+	t.setDefaultTags(newEnvelope)
+	t.outputWriter.Write(newEnvelope)
+}
 
-	newEnvelope.Deployment = proto.String(t.deploymentName)
-	newEnvelope.Job = proto.String(t.job)
-	newEnvelope.Index = proto.String(t.index)
-	newEnvelope.Ip = proto.String(t.ip)
-
-	t.outputWriter.Write(&newEnvelope)
+func (t *Tagger) setDefaultTags(envelope *events.Envelope) {
+	if envelope.Deployment == nil {
+		envelope.Deployment = proto.String(t.deploymentName)
+	}
+	if envelope.Job == nil {
+		envelope.Job = proto.String(t.job)
+	}
+	if envelope.Index == nil {
+		envelope.Index = proto.String(t.index)
+	}
+	if envelope.Ip == nil {
+		envelope.Ip = proto.String(t.ip)
+	}
 }

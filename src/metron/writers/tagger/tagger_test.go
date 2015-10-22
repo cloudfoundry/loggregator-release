@@ -18,41 +18,77 @@ var _ = Describe("Tagger", func() {
 		mockWriter := &mocks.MockEnvelopeWriter{}
 		t := tagger.New("test-deployment", "test-job", 2, mockWriter)
 
-		envelope := basicHttpStartStopMessage()
+		envelope := basicMessage()
 		t.Write(envelope)
 
 		Expect(mockWriter.Events).To(HaveLen(1))
-		expectedEnvelope := basicTaggedHttpStartStopMessage(*envelope)
+		expectedEnvelope := basicTaggedMessage(*envelope)
+
 		Eventually(mockWriter.Events[0]).Should(Equal(expectedEnvelope))
+	})
+
+	Context("doesn't overwrite", func() {
+		var mockWriter *mocks.MockEnvelopeWriter
+		var t *tagger.Tagger
+		var envelope *events.Envelope
+
+		BeforeEach(func() {
+			mockWriter = &mocks.MockEnvelopeWriter{}
+			t = tagger.New("test-deployment", "test-job", 2, mockWriter)
+
+			envelope = basicMessage()
+		})
+
+		It("when deployment is already set", func() {
+			envelope.Deployment = proto.String("another-deployment")
+			t.Write(envelope)
+
+			Expect(mockWriter.Events).To(HaveLen(1))
+			writtenEnvelope := mockWriter.Events[0]
+			Eventually(*writtenEnvelope.Deployment).Should(Equal("another-deployment"))
+		})
+
+		It("when job is already set", func() {
+			envelope.Job = proto.String("another-job")
+			t.Write(envelope)
+
+			Expect(mockWriter.Events).To(HaveLen(1))
+			writtenEnvelope := mockWriter.Events[0]
+			Eventually(*writtenEnvelope.Job).Should(Equal("another-job"))
+		})
+
+		It("when index is already set", func() {
+			envelope.Index = proto.String("3")
+			t.Write(envelope)
+
+			Expect(mockWriter.Events).To(HaveLen(1))
+			writtenEnvelope := mockWriter.Events[0]
+			Eventually(*writtenEnvelope.Index).Should(Equal("3"))
+		})
+
+		It("when ip is already set", func() {
+			envelope.Ip = proto.String("1.1.1.1")
+			t.Write(envelope)
+
+			Expect(mockWriter.Events).To(HaveLen(1))
+			writtenEnvelope := mockWriter.Events[0]
+			Eventually(*writtenEnvelope.Ip).Should(Equal("1.1.1.1"))
+		})
 	})
 })
 
-func basicHttpStartStopMessage() *events.Envelope {
+func basicMessage() *events.Envelope {
 	return &events.Envelope{
 		EventType: events.Envelope_HttpStartStop.Enum(),
-		HttpStartStop: &events.HttpStartStop{
-			StartTimestamp: proto.Int64(1234),
-			StopTimestamp:  proto.Int64(5555),
-			RequestId: &events.UUID{
-				Low:  proto.Uint64(11),
-				High: proto.Uint64(12),
-			},
-			PeerType:      events.PeerType_Server.Enum(),
-			Method:        events.Method_GET.Enum(),
-			Uri:           proto.String("http://test.example.com"),
-			RemoteAddress: proto.String("http://test.example.com"),
-			UserAgent:     proto.String("test"),
-			StatusCode:    proto.Int32(1234),
-			ContentLength: proto.Int64(5678),
-			ApplicationId: &events.UUID{
-				Low:  proto.Uint64(11),
-				High: proto.Uint64(12),
-			},
+		ValueMetric: &events.ValueMetric{
+			Name:  proto.String("metricName"),
+			Value: proto.Float64(2.0),
+			Unit:  proto.String("seconds"),
 		},
 	}
 }
 
-func basicTaggedHttpStartStopMessage(envelope events.Envelope) *events.Envelope {
+func basicTaggedMessage(envelope events.Envelope) *events.Envelope {
 	ip, _ := localip.LocalIP()
 
 	envelope.Deployment = proto.String("test-deployment")
