@@ -66,6 +66,8 @@ func main() {
 	log := logger.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller", config.Syslog)
 	log.Info("Startup: Setting up the loggregator traffic controller")
 
+	dropsonde.Initialize("localhost:"+strconv.Itoa(config.MetronPort), "LoggregatorTrafficController")
+
 	profiler := profiler.NewProfiler(*cpuprofile, *memprofile, 1*time.Second, log)
 	profiler.Profile()
 	defer profiler.Stop()
@@ -73,8 +75,6 @@ func main() {
 	uptimeMonitor := monitor.NewUptimeMonitor(time.Duration(config.MonitorIntervalSeconds) * time.Second)
 	go uptimeMonitor.Start()
 	defer uptimeMonitor.Stop()
-
-	dropsonde.Initialize("localhost:"+strconv.Itoa(config.MetronPort), "LoggregatorTrafficController")
 
 	dopplerAdapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	dopplerAdapter.Connect()

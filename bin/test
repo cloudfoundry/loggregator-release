@@ -1,46 +1,4 @@
 #!/bin/bash
-
-function green {
-    if [[ -n "$TERM" ]]; then
-        echo -e "$(tput setaf 2)$1$(tput sgr0)"
-    else
-        echo ":) $1"
-    fi
-}
-
-function red {
-    if [[ -n "$TERM" ]]; then
-        echo -e "$(tput setaf 1)$1$(tput sgr0)"
-    else
-        echo ":( $1"
-    fi
-}
-
-check_for_data_race() {
-    name=$1
-    command=$2
-    echo "Detecting races for $name..."
-    $command > /tmp/tmp.log 2>&1 &
-    pid=$!
-    sleep 2s
-    kill $pid || sh -c 'cat /tmp/tmp.log && false'
-    sleep 2s
-
-    set +e
-    grep "WARNING: DATA RACE" /tmp/tmp.log > /dev/null 2>&1
-    found_race=$?
-    set -e
-
-    if [[ $found_race == 1 ]]; then
-        green "No race condition detected"
-    else
-        red "RACE CONDITION DETECTED"
-        cat /tmp/tmp.log
-        exit 1
-    fi
-
-}
-
 set -e
 
 trap "echo Exited!; exit 1;" SIGINT SIGTERM
@@ -49,10 +7,3 @@ go install github.com/apcera/gnatsd
 
 $(dirname $0)/travis_test $1
 $(dirname $0)/build-platforms
-
-
-check_for_data_race doppler "./bin/doppler --config=./config/doppler_with_fake_nats.json"
-LOGGREGATOR_SHARED_SECRET='asdf' check_for_data_race deaagent "./bin/deaagent --config=./config/dea_logging_agent_with_fake_nats.json"
-check_for_data_race trafficcontroller "./bin/trafficcontroller --config=./config/loggregator_trafficcontroller.json"
-check_for_data_race metron "./bin/metron --config=config/metron.json"
-check_for_data_race syslog_drain_binder "./bin/syslog_drain_binder --config=config/syslog_drain_binder.json"

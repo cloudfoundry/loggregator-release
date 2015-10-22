@@ -48,33 +48,36 @@ var _ = Describe("Dumping", func() {
 		sinkManager = sinkmanager.New(1024, false, emptyBlacklist, logger, 100, "dropsonde-origin",
 			2*time.Second, 0, 1*time.Second, 500*time.Millisecond)
 
+		tempSink := sinkManager
 		services.Add(1)
 		goRoutineSpawned.Add(1)
 		go func() {
 			goRoutineSpawned.Done()
 			defer services.Done()
-			sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
+			tempSink.Start(newAppServiceChan, deletedAppServiceChan)
 		}()
 
 		TestMessageRouter = sinkserver.NewMessageRouter(sinkManager, logger)
+		tempMessageRouter := TestMessageRouter
 
 		services.Add(1)
 		goRoutineSpawned.Add(1)
 		go func() {
 			goRoutineSpawned.Done()
 			defer services.Done()
-			TestMessageRouter.Start(dataReadChannel)
+			tempMessageRouter.Start(dataReadChannel)
 		}()
 
 		apiEndpoint := "localhost:" + serverPort
 		TestWebsocketServer = websocketserver.New(apiEndpoint, sinkManager, 10*time.Second, 100, "dropsonde-origin", logger)
+		tempWebsocketServer := TestWebsocketServer
 
 		services.Add(1)
 		goRoutineSpawned.Add(1)
 		go func() {
 			goRoutineSpawned.Done()
 			defer services.Done()
-			TestWebsocketServer.Start()
+			tempWebsocketServer.Start()
 		}()
 
 		goRoutineSpawned.Wait()
