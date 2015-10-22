@@ -175,8 +175,8 @@ func (f *finder) handleEvent(event *storeadapter.WatchEvent) {
 		}
 	}
 
-	if dirty && f.onUpdate != nil {
-		f.onUpdate(f.addressMap, f.preferredMap)
+	if dirty {
+		f.notify()
 	}
 	f.Unlock()
 
@@ -225,10 +225,25 @@ func (f *finder) discoverAddresses() {
 	f.addressMap = addressMap
 	f.preferredMap = preferredMap
 
-	if f.onUpdate != nil {
-		f.onUpdate(f.addressMap, f.preferredMap)
-	}
+	f.notify()
+
 	f.Unlock()
+}
+
+func (f *finder) notify() {
+	if f.onUpdate != nil {
+		all := map[string]string{}
+		for k, v := range f.addressMap {
+			all[k] = v
+		}
+
+		preferred := map[string]string{}
+		for k, v := range f.preferredMap {
+			preferred[k] = v
+		}
+
+		f.onUpdate(all, preferred)
+	}
 }
 
 func (f *finder) preferredUrl(urls []string) (string, bool) {
