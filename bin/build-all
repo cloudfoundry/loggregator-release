@@ -1,8 +1,0 @@
-#!/bin/bash
-
-set -e
-
-rm -rf $(dirname $0)/../release
-mkdir -p $(dirname $0)/../release
-
-$(dirname $0)/build-platforms
