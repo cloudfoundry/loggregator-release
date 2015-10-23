@@ -16,8 +16,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/gosteno/syslog/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gunk/workpool/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/loggregatorclient/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/loggregatorlib/logmessage/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/loggregatorlib/signature/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/sonde-go/events/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/etcdstoreadapter/*.go # gosub
@@ -38,7 +36,6 @@ files:
 - loggregator/src/metron/writers/dopplerforwarder/*.go # gosub
 - loggregator/src/metron/writers/eventmarshaller/*.go # gosub
 - loggregator/src/metron/writers/eventunmarshaller/*.go # gosub
-- loggregator/src/metron/writers/legacyunmarshaller/*.go # gosub
 - loggregator/src/metron/writers/messageaggregator/*.go # gosub
 - loggregator/src/metron/writers/mocks/*.go # gosub
 - loggregator/src/metron/writers/signer/*.go # gosub
