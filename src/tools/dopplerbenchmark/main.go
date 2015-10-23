@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/pivotal-golang/localip"
 	"log"
 	"os"
 	"runtime"
@@ -14,6 +13,8 @@ import (
 	"tools/benchmark/metricsreporter"
 	"tools/benchmark/writestrategies"
 	"tools/dopplerbenchmark/websocketmessagereader"
+
+	"github.com/pivotal-golang/localip"
 )
 
 func main() {
@@ -53,6 +54,7 @@ func main() {
 	exp := experiment.NewExperiment(reader)
 	exp.AddWriteStrategy(writeStrategy)
 
+	exp.Warmup()
 	go reporter.Start()
 	go exp.Start()
 
@@ -60,5 +62,4 @@ func main() {
 	<-timer.C
 	exp.Stop()
 	reporter.Stop()
-
 }

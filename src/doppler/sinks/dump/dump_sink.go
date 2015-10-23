@@ -44,6 +44,7 @@ func (d *DumpSink) Run(inputChan <-chan *events.Envelope) {
 				continue
 			}
 
+			timer.Stop()
 			d.addMsg(msg)
 			timer = time.NewTimer(d.inactivityDuration)
 		case <-timer.C:

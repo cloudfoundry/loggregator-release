@@ -1,5 +1,5 @@
 {
-    "EtcdUrls": ["http://localhost:49623"],
+    "EtcdUrls": ["http://127.0.0.1:49623"],
     "EtcdMaxConcurrentRequests": 10,
     "Index": 0,
     "DropsondeIncomingMessagesPort": 49626,
@@ -15,5 +15,11 @@
     "SinkInactivityTimeoutSeconds": 120,
     "MetronAddress": "127.0.0.1:49625",
     "Syslog"  : "",
-    "CollectorRegistrarIntervalMilliseconds": 100
+    "CollectorRegistrarIntervalMilliseconds": 100,
+    "EnableTLSTransport": true,
+    "TLSListenerConfig": {
+        "Port": 8766,
+        "KeyFile": "../fixtures/key.key",
+        "CrtFile": "../fixtures/key.crt"
+    }
 }

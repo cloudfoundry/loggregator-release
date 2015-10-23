@@ -13,8 +13,8 @@ type TestDoppler struct {
 	MessageChan chan *events.Envelope
 }
 
-func NewTestDoppler() *TestDoppler {
-	c, err := net.ListenPacket("udp4", "localhost:3457")
+func NewTestDoppler(address string) *TestDoppler {
+	c, err := net.ListenPacket("udp4", address)
 	if err != nil {
 		panic(err)
 	}
@@ -29,7 +29,11 @@ func (d *TestDoppler) Start() {
 	readBuffer := make([]byte, 65535)
 
 	for {
-		readCount, _, _ := d.conn.ReadFrom(readBuffer)
+		readCount, _, err := d.conn.ReadFrom(readBuffer)
+		if err != nil {
+			return
+		}
+
 		if readCount > 0 {
 			readData := make([]byte, readCount)
 			copy(readData, readBuffer[:readCount])
@@ -40,7 +44,6 @@ func (d *TestDoppler) Start() {
 			if err != nil {
 				panic(err)
 			}
-
 			d.MessageChan <- &envelope
 
 			select {

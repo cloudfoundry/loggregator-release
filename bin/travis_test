@@ -57,7 +57,7 @@ do
     bold_blue "==================================  Unit-Testing $package  =================================="
     go fmt $package/...
     ginkgo -r --race --randomizeAllSpecs --cover $1 src/$package
-    let "result += $?"
+    result=$((result + $?))
     echo "Current result: $result"
     echo -e "\n Vetting $package"
     go vet $package/...
@@ -83,7 +83,7 @@ do
     local_result=$result
     bold_blue "\n ==================================  Integration-Testing $package  =================================="
     ginkgo -r --race --randomizeAllSpecs $1 src/integration_tests/$package
-    let "result += $?"
+    result=$((result + $?))
     echo "Current result: $result"
     if [ $result -gt $local_result ]; then
         red " Package $package FAILED integration tests"

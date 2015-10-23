@@ -3,19 +3,18 @@ package clientpool_test
 import (
 	"errors"
 	"metron/clientpool"
-	"metron/clientpool/fakes"
 	"strings"
 
 	steno "github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
+	"github.com/cloudfoundry/loggregatorlib/loggregatorclient/fakeclient"
 
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 )
 
-//go:generate counterfeiter -o fakess/client.go ../../github.com/cloudfoundry/loggregatorlib/loggregatorclient Client
 var _ = Describe("DopplerPool", func() {
 	var (
 		pool          *clientpool.DopplerPool
@@ -148,7 +147,7 @@ var _ = Describe("DopplerPool", func() {
 		})
 
 		Context("when a server no longer exists", func() {
-			var fakeClient *fakes.FakeClient
+			var fakeClient *fakeclient.FakeClient
 
 			BeforeEach(func() {
 				fakeClient = newFakeClient("udp", "host:port")
@@ -163,9 +162,9 @@ var _ = Describe("DopplerPool", func() {
 				}
 
 				pool.Set(s, nil)
-				Expect(fakeClient.StopCallCount()).To(Equal(0))
+				Expect(fakeClient.CloseCallCount()).To(Equal(0))
 				pool.Set(nil, nil)
-				Expect(fakeClient.StopCallCount()).To(Equal(1))
+				Expect(fakeClient.CloseCallCount()).To(Equal(1))
 			})
 		})
 
@@ -259,8 +258,8 @@ func fakeClientFactory(logger *steno.Logger, u string) (loggregatorclient.Client
 	return newFakeClient(u[:i], u[i+3:]), nil
 }
 
-func newFakeClient(proto, addr string) *fakes.FakeClient {
-	c := fakes.FakeClient{}
+func newFakeClient(proto, addr string) *fakeclient.FakeClient {
+	c := fakeclient.FakeClient{}
 	c.SchemeReturns(proto)
 	c.AddressReturns(addr)
 	return &c

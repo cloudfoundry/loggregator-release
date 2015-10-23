@@ -12,7 +12,7 @@
     "ApiHost": "http://127.0.0.1:42123",
     "SystemDomain": "vcap.me",
     "MetronPort": 37474,
-    "UaaHost": "http://localhost:5678",
+    "UaaHost": "http://127.0.0.1:5678",
     "UaaClientId": "bob",
     "UaaClientSecret": "yourUncle",
     "MonitorIntervalSeconds": 1

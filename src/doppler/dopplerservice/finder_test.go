@@ -61,6 +61,9 @@ var _ = Describe("Finder", func() {
 
 		Context("Start", func() {
 			BeforeEach(func() {
+				order := order
+				errChan := errChan
+				stopChan := stopChan
 				fakeAdapter.WatchStub = func(key string) (events <-chan storeadapter.WatchEvent, stop chan<- bool, errors <-chan error) {
 					Expect(key).To(Equal(dopplerservice.META_ROOT))
 					order <- "watch"
@@ -81,10 +84,9 @@ var _ = Describe("Finder", func() {
 
 				Expect(errChan).To(BeSent(errors.New("an error")))
 
-				Eventually(order).Should(Receive(Equal("watch")))
+				Eventually(order, 2).Should(Receive(Equal("watch")))
 				Eventually(order).Should(Receive(Equal("finder")))
 			})
-
 		})
 
 		It("Stop", func() {

@@ -55,66 +55,85 @@ var _ = Describe("App to Syslog Test", func() {
 		}
 	})
 
-	Context("low logRate", func() {
-		BeforeEach(func() {
-			logRate = 100
+	benchmark := func() {
+		Context("low logRate", func() {
+			BeforeEach(func() {
+				logRate = 100
+			})
+
+			Measure("sends the same number of messages for multiple apps to their respective syslog endpoint", func(b Benchmarker) {
+				time.Sleep(testDuration)
+				for app, syslogServer := range appSyslogMap {
+					app.Stop()
+					sentLogs := app.SentLogs()
+					Eventually(syslogServer.ReceivedLogsRecently, 2).Should(BeFalse())
+
+					receivedLogs := syslogServer.Counter()
+					percentLoss := computePercentLost(float64(sentLogs), float64(receivedLogs))
+					Expect(percentLoss).To(BeNumerically("<", 0.3))
+					b.RecordValue("Sent logs", float64(sentLogs))
+					b.RecordValue("Percent Loss", percentLoss)
+				}
+			}, 1)
 		})
 
-		Measure("sends the same number of messages for multiple apps to their respective syslog endpoint", func(b Benchmarker) {
-			time.Sleep(testDuration)
-			for app, syslogServer := range appSyslogMap {
-				app.Stop()
-				sentLogs := app.SentLogs()
-				Eventually(syslogServer.ReceivedLogsRecently, 2).Should(BeFalse())
+		Context("medium logRate", func() {
+			BeforeEach(func() {
+				logRate = 500
+			})
 
-				receivedLogs := syslogServer.Counter()
-				percentLoss := computePercentLost(float64(sentLogs), float64(receivedLogs))
-				Expect(percentLoss).To(BeNumerically("<", 0.3))
-				b.RecordValue("Sent logs", float64(sentLogs))
-				b.RecordValue("Percent Loss", percentLoss)
-			}
-		}, 1)
-	})
+			Measure("message loss for multiple apps logging to respective syslog endpoint", func(b Benchmarker) {
+				time.Sleep(testDuration)
+				for app, syslogServer := range appSyslogMap {
+					app.Stop()
+					sentLogs := app.SentLogs()
+					Eventually(syslogServer.ReceivedLogsRecently, 2).Should(BeFalse())
 
-	Context("medium logRate", func() {
-		BeforeEach(func() {
-			logRate = 500
+					receivedLogs := syslogServer.Counter()
+					percentLoss := computePercentLost(float64(sentLogs), float64(receivedLogs))
+					Expect(percentLoss).To(BeNumerically("<", 0.5))
+					b.RecordValue("Sent logs", float64(sentLogs))
+					b.RecordValue("Percent Loss", percentLoss)
+				}
+			}, 1)
 		})
 
-		Measure("message loss for multiple apps logging to respective syslog endpoint", func(b Benchmarker) {
-			time.Sleep(testDuration)
-			for app, syslogServer := range appSyslogMap {
-				app.Stop()
-				sentLogs := app.SentLogs()
-				Eventually(syslogServer.ReceivedLogsRecently, 2).Should(BeFalse())
+		Context("high logRate", func() {
+			BeforeEach(func() {
+				logRate = 2000
+			})
 
-				receivedLogs := syslogServer.Counter()
-				percentLoss := computePercentLost(float64(sentLogs), float64(receivedLogs))
-				Expect(percentLoss).To(BeNumerically("<", 0.5))
-				b.RecordValue("Sent logs", float64(sentLogs))
-				b.RecordValue("Percent Loss", percentLoss)
-			}
-		}, 1)
-	})
+			Measure("message loss for multiple apps logging to respective syslog endpoint", func(b Benchmarker) {
+				time.Sleep(testDuration)
+				for app, syslogServer := range appSyslogMap {
+					app.Stop()
+					sentLogs := app.SentLogs()
+					Eventually(syslogServer.ReceivedLogsRecently, 2).Should(BeFalse())
 
-	Context("high logRate", func() {
+					receivedLogs := syslogServer.Counter()
+					percentLoss := computePercentLost(float64(sentLogs), float64(receivedLogs))
+					Expect(percentLoss).To(BeNumerically("<", 6))
+					b.RecordValue("Sent logs", float64(sentLogs))
+					b.RecordValue("Percent Loss", percentLoss)
+				}
+			}, 1)
+		})
+	}
+
+	Context("UDP", func() {
 		BeforeEach(func() {
-			logRate = 2000
+			dopplerConfig = "dopplerudp"
 		})
 
-		Measure("message loss for multiple apps logging to respective syslog endpoint", func(b Benchmarker) {
-			time.Sleep(testDuration)
-			for app, syslogServer := range appSyslogMap {
-				app.Stop()
-				sentLogs := app.SentLogs()
-				Eventually(syslogServer.ReceivedLogsRecently, 2).Should(BeFalse())
-
-				receivedLogs := syslogServer.Counter()
-				percentLoss := computePercentLost(float64(sentLogs), float64(receivedLogs))
-				Expect(percentLoss).To(BeNumerically("<", 6))
-				b.RecordValue("Sent logs", float64(sentLogs))
-				b.RecordValue("Percent Loss", percentLoss)
-			}
-		}, 1)
+		benchmark()
 	})
+
+	Context("TLS", func() {
+		BeforeEach(func() {
+			dopplerConfig = "dopplertls"
+		})
+
+		benchmark()
+	})
+
 })

@@ -1,35 +1,32 @@
 package doppler_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	. "integration_tests/doppler/helpers"
 
-	"github.com/cloudfoundry/dropsonde/factories"
-	"github.com/cloudfoundry/dropsonde/emitter"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"fmt"
 	"net"
-	"crypto/tls"
-	"encoding/gob"
+
+	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gorilla/websocket"
 	"github.com/nu7hatch/gouuid"
 	"github.com/pivotal-golang/localip"
-	"fmt"
-"github.com/gorilla/websocket"
 )
 
-
 var _ = Describe("Listener test", func() {
-
 	Context("with TLS Listener config specified", func() {
 		var address string
-		var encoder *gob.Encoder
 		var ws *websocket.Conn
+		var conn net.Conn
 		var receiveChan chan []byte
-		BeforeEach(func(){
+
+		BeforeEach(func() {
 			ip, _ := localip.LocalIP()
 			address = fmt.Sprintf("%s:%d", ip, 8766)
-			conn := openTLSConnection(address)
-			encoder = gob.NewEncoder(conn)
+			conn = openTLSConnection(address)
 
 			receiveChan = make(chan []byte, 10)
 			ws, _ = AddWSSink(receiveChan, "4567", "/firehose/hose-subcription-a")
@@ -41,15 +38,12 @@ var _ = Describe("Listener test", func() {
 		})
 
 		It("listens for dropsonde log message on TLS port", func() {
-
 			message := "my-random-tls-message"
 			guid, _ := uuid.NewV4()
 			appID := guid.String()
 
 			logMessage := factories.NewLogMessage(events.LogMessage_OUT, message, appID, "APP")
-			envelope, _ := emitter.Wrap(logMessage, "origin")
-
-			encoder.Encode(envelope)
+			SendEventTLS(logMessage, conn)
 
 			receivedMessageBytes := []byte{}
 			Eventually(receiveChan).Should(Receive(&receivedMessageBytes))
@@ -57,15 +51,11 @@ var _ = Describe("Listener test", func() {
 			receivedMessage := DecodeProtoBufLogMessage(receivedMessageBytes)
 			Expect(receivedMessage.GetAppId()).To(Equal(appID))
 			Expect(string(receivedMessage.GetMessage())).To(Equal(message))
-
 		})
 
 		It("listens for dropsonde counter event on TLS port", func() {
-
 			counterEvent := factories.NewCounterEvent("my-counter", 1)
-			envelope, _ := emitter.Wrap(counterEvent, "origin")
-
-			encoder.Encode(envelope)
+			SendEventTLS(counterEvent, conn)
 
 			receivedEventBytes := []byte{}
 			Eventually(receiveChan).Should(Receive(&receivedEventBytes))
@@ -73,9 +63,7 @@ var _ = Describe("Listener test", func() {
 			receivedEvent := DecodeProtoBufCounterEvent(receivedEventBytes)
 			Expect(receivedEvent.GetName()).To(Equal("my-counter"))
 			Expect(receivedEvent.GetDelta()).To(Equal(uint64(1)))
-
 		})
-
 	})
 })
 
@@ -84,9 +72,7 @@ func openTLSConnection(address string) net.Conn {
 	var conn net.Conn
 	var err error
 	Eventually(func() error {
-		conn, err = tls.Dial("tcp", address, &tls.Config{
-			InsecureSkipVerify: true,
-		})
+		conn, err = net.Dial("tcp", address)
 		return err
 	}).ShouldNot(HaveOccurred())
 

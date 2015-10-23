@@ -2,11 +2,12 @@ package websocketmessagereader
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
 	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 type WebsocketMessageReader struct {
@@ -18,7 +19,7 @@ type counter interface {
 	IncrementValue()
 }
 
-func New(addr string, receivedCounter counter) WebsocketMessageReader {
+func New(addr string, receivedCounter counter) *WebsocketMessageReader {
 	rand.Seed(time.Now().UnixNano())
 	fullURL := "ws://" + addr + "/firehose/test" + strconv.Itoa(rand.Intn(100))
 
@@ -27,26 +28,19 @@ func New(addr string, receivedCounter counter) WebsocketMessageReader {
 		panic(fmt.Sprintf("WebsocketMessageReader:New: %v", err))
 	}
 
-	return WebsocketMessageReader{
+	return &WebsocketMessageReader{
 		websocket:       ws,
 		receivedCounter: receivedCounter,
 	}
 }
 
-func (wmr WebsocketMessageReader) ReadAndReturn() []byte {
-	_, message, err := wmr.websocket.ReadMessage()
-	if err != nil {
-		panic(fmt.Sprintf("WebsocketMessageReader:Read: %v", err))
+func (wmr *WebsocketMessageReader) Read() {
+	_, _, err := wmr.websocket.ReadMessage()
+	if err == nil {
+		wmr.receivedCounter.IncrementValue()
 	}
-
-	return message
 }
 
-func (wmr WebsocketMessageReader) Read() {
-	wmr.ReadAndReturn()
-	wmr.receivedCounter.IncrementValue()
-}
-
-func (wmr WebsocketMessageReader) Close() {
+func (wmr *WebsocketMessageReader) Close() {
 	wmr.websocket.Close()
 }

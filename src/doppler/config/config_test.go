@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"doppler/config"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -70,7 +71,6 @@ var _ = Describe("Config", func() {
 			Expect(config.BlackListIps[1].End).To(Equal("127.0.1.15"))
 			Expect(config.MonitorIntervalSeconds).To(BeEquivalentTo(1))
 			Expect(config.TLSListenerConfig).ToNot(BeNil())
-			Expect(config.TLSListenerConfig.InsecureSkipVerify).To(BeTrue())
 		})
 
 	})

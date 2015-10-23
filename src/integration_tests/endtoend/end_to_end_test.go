@@ -20,51 +20,71 @@ type Stopper interface {
 }
 
 var _ = Describe("End to end test", func() {
-	Measure("dropsonde metrics being passed from metron to the firehose nozzle", func(b Benchmarker) {
-		const numMessagesSent = 1000
-		metronStreamWriter := endtoend.NewMetronStreamWriter()
+	benchmarkEndToEnd := func() {
+		Measure("dropsonde metrics being passed from metron to the firehose nozzle", func(b Benchmarker) {
+			const numMessagesSent = 1000
+			metronStreamWriter := endtoend.NewMetronStreamWriter()
 
-		firehoseReader := endtoend.NewFirehoseReader()
+			firehoseReader := endtoend.NewFirehoseReader()
 
-		generator := messagegenerator.NewValueMetricGenerator()
+			generator := messagegenerator.NewValueMetricGenerator()
 
-		writeStrategy := writestrategies.NewConstantWriteStrategy(generator, metronStreamWriter, numMessagesSent)
-		ex := experiment.NewExperiment(firehoseReader)
-		ex.AddWriteStrategy(writeStrategy)
+			writeStrategy := writestrategies.NewConstantWriteStrategy(generator, metronStreamWriter, numMessagesSent)
+			ex := experiment.NewExperiment(firehoseReader)
+			ex.AddWriteStrategy(writeStrategy)
 
-		go stopExperimentAfterTimeout(ex)
+			ex.Warmup()
 
-		b.Time("runtime", func() {
-			ex.Start()
+			go stopExperimentAfterTimeout(ex)
+			b.Time("runtime", func() {
+				ex.Start()
+			})
+
+			reportResults(firehoseReader, b)
+			Expect(float64(firehoseReader.MetronMessageCount)).To(BeNumerically(">", numMessagesSent))
+		}, 3)
+
+		Measure("dropsonde metrics being passed from metron to the firehose nozzle in burst sequence", func(b Benchmarker) {
+			metronStreamWriter := endtoend.NewMetronStreamWriter()
+			firehoseReader := endtoend.NewFirehoseReader()
+
+			params := writestrategies.BurstParameters{
+				Minimum:   10,
+				Maximum:   100,
+				Frequency: time.Second,
+			}
+
+			generator := messagegenerator.NewValueMetricGenerator()
+			writeStrategy := writestrategies.NewBurstWriteStrategy(generator, metronStreamWriter, params)
+			ex := experiment.NewExperiment(firehoseReader)
+			ex.AddWriteStrategy(writeStrategy)
+
+			ex.Warmup()
+
+			go stopExperimentAfterTimeout(ex)
+			b.Time("runtime", func() {
+				ex.Start()
+			})
+
+			reportResults(firehoseReader, b)
+		}, 1)
+	}
+
+	Context("UDP", func() {
+		BeforeEach(func() {
+			dopplerConfig = "dopplerudp"
 		})
 
-		reportResults(firehoseReader, b)
-		Expect(float64(firehoseReader.MetronMessageCount)).To(BeNumerically(">", numMessagesSent))
-	}, 3)
+		benchmarkEndToEnd()
+	})
 
-	Measure("dropsonde metrics being passed from metron to the firehose nozzle in burst sequence", func(b Benchmarker) {
-		metronStreamWriter := endtoend.NewMetronStreamWriter()
-		firehoseReader := endtoend.NewFirehoseReader()
-
-		params := writestrategies.BurstParameters{
-			Minimum:   10,
-			Maximum:   100,
-			Frequency: time.Second,
-		}
-
-		generator := messagegenerator.NewValueMetricGenerator()
-		writeStrategy := writestrategies.NewBurstWriteStrategy(generator, metronStreamWriter, params)
-		ex := experiment.NewExperiment(firehoseReader)
-		ex.AddWriteStrategy(writeStrategy)
-
-		go stopExperimentAfterTimeout(ex)
-
-		b.Time("runtime", func() {
-			ex.Start()
+	Context("TLS", func() {
+		BeforeEach(func() {
+			dopplerConfig = "dopplertls"
 		})
 
-		reportResults(firehoseReader, b)
-	}, 1)
+		benchmarkEndToEnd()
+	})
 })
 
 func reportResults(r *endtoend.FirehoseReader, benchmarker Benchmarker) {

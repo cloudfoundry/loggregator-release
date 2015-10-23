@@ -4,16 +4,15 @@ import (
 	"net"
 	"time"
 
-	"github.com/cloudfoundry/storeadapter"
-	"github.com/gogo/protobuf/proto"
-
+	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 
 	. "integration_tests/metron/matchers"
 
+	dopplerconfig "doppler/config"
+	"doppler/dopplerservice"
 	"integration_tests/metron/metrics"
-
-	"metron/writers/messageaggregator"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -21,23 +20,90 @@ import (
 
 var _ = Describe("Self Instrumentation", func() {
 	var (
-		testDoppler *metrics.TestDoppler
+		testDoppler  *metrics.TestDoppler
+		stopAnnounce chan chan bool
+		metronInput  net.Conn
 	)
 
 	BeforeEach(func() {
-		testDoppler = metrics.NewTestDoppler()
+		testDoppler = metrics.NewTestDoppler(metronRunner.DropsondeAddress())
 		go testDoppler.Start()
 
-		announceToEtcd()
+		dopplerConfig := &dopplerconfig.Config{
+			Index:   0,
+			JobName: "job",
+			Zone:    "z9",
+			DropsondeIncomingMessagesPort: uint32(metronRunner.DropsondePort),
+		}
+
+		stopAnnounce = dopplerservice.Announce("127.0.0.1", time.Minute, dopplerConfig, etcdAdapter, gosteno.NewLogger("test"))
+
+		metronRunner.Protocol = "tls"
+		metronRunner.Start()
+
+		env := basicValueMessageEnvelope()
+		env.Origin = proto.String("foobar")
+		bytes, err := proto.Marshal(env)
+		Expect(err).ToNot(HaveOccurred())
+
+		metronInput, _ = net.Dial("udp4", metronRunner.MetronAddress())
+		Eventually(func() bool {
+			metronInput.Write(bytes)
+			select {
+			case <-testDoppler.MessageChan:
+				return true
+			default:
+			}
+			return false
+		}, 2).Should(BeTrue())
 	})
 
 	AfterEach(func() {
+		metronInput.Close()
 		testDoppler.Stop()
+		close(stopAnnounce)
+		metronRunner.Stop()
 	})
 
-	It("sends metrics about the Dropsonde network reader", func() {
-		metronInput, _ := net.Dial("udp4", "localhost:51161")
+	drainAndEval := func(ch chan *events.Envelope, f func(*events.Envelope) bool) bool {
+		for {
+			select {
+			case env := <-ch:
+				b := f(env)
+				if b {
+					return true
+				}
+			default:
+				return false
+			}
+		}
+	}
 
+	waitForEvent := func(sendBytes []byte, match func(expected, actual *events.Envelope) bool, expected *events.Envelope) {
+		Eventually(func() bool {
+			if sendBytes != nil {
+				metronInput.Write(sendBytes)
+			}
+
+			return drainAndEval(testDoppler.MessageChan, func(env *events.Envelope) bool {
+				return match(expected, env)
+			})
+		}, 2, 100*time.Millisecond).Should(BeTrue())
+	}
+
+	eventNeverOccurs := func(sendBytes []byte, match func(expected, actual *events.Envelope) bool, expected *events.Envelope) {
+		Consistently(func() bool {
+			if sendBytes != nil {
+				metronInput.Write(sendBytes)
+			}
+
+			return drainAndEval(testDoppler.MessageChan, func(env *events.Envelope) bool {
+				return match(expected, env)
+			})
+		}, 1, 100*time.Millisecond).Should(BeFalse())
+	}
+
+	It("sends metrics about the Dropsonde network reader", func() {
 		metronInput.Write(basicValueMessage())
 
 		expected := events.Envelope{
@@ -50,31 +116,10 @@ var _ = Describe("Self Instrumentation", func() {
 			},
 		}
 
-		matcher := MatchSpecifiedContents(&expected)
-		Eventually(func() bool {
-			var env *events.Envelope
-			Eventually(testDoppler.MessageChan).Should(Receive(&env))
-			b, _ := matcher.Match(env)
-			return b
-		}, 2).Should(BeTrue())
+		waitForEvent(basicValueMessage(), matchCounter, &expected)
 	})
 
 	Describe("for Message Aggregator", func() {
-		var (
-			metronInput net.Conn
-			originalTTL time.Duration
-		)
-
-		BeforeEach(func() {
-			metronInput, _ = net.Dial("udp4", "localhost:51161")
-			originalTTL = messageaggregator.MaxTTL
-		})
-
-		AfterEach(func() {
-			metronInput.Close()
-			messageaggregator.MaxTTL = originalTTL
-		})
-
 		It("emits metrics for counter events", func() {
 			metronInput.Write(basicCounterEvent())
 			metronInput.Write(basicCounterEvent())
@@ -90,10 +135,11 @@ var _ = Describe("Self Instrumentation", func() {
 			}
 
 			matcher := MatchSpecifiedContents(&expected)
-			Eventually(func() (bool, error) {
-				var env *events.Envelope
-				Eventually(testDoppler.MessageChan).Should(Receive(&env))
-				return matcher.Match(env)
+			Eventually(func() bool {
+				return drainAndEval(testDoppler.MessageChan, func(env *events.Envelope) bool {
+					b, _ := matcher.Match(env)
+					return b
+				})
 			}, 2).Should(BeTrue())
 
 			expected = events.Envelope{
@@ -107,9 +153,9 @@ var _ = Describe("Self Instrumentation", func() {
 			}
 
 			Consistently(func() bool {
-				var env *events.Envelope
-				Eventually(testDoppler.MessageChan).Should(Receive(&env))
-				return env.EventType == expected.EventType && env.GetCounterEvent().Name == expected.GetCounterEvent().Name
+				return drainAndEval(testDoppler.MessageChan, func(env *events.Envelope) bool {
+					return env.EventType == expected.EventType && env.GetCounterEvent().Name == expected.GetCounterEvent().Name
+				})
 			}, 2).Should(BeFalse())
 		})
 
@@ -126,12 +172,7 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			matcher := MatchSpecifiedContents(&expected)
-			Eventually(func() (bool, error) {
-				var env *events.Envelope
-				Eventually(testDoppler.MessageChan).Should(Receive(&env))
-				return matcher.Match(env)
-			}, 2).Should(BeTrue())
+			waitForEvent(basicHTTPStartEvent(), matchCounter, &expected)
 		})
 
 		It("emits metrics for http stop", func() {
@@ -147,12 +188,7 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			matcher := MatchSpecifiedContents(&expected)
-			Eventually(func() (bool, error) {
-				var env *events.Envelope
-				Eventually(testDoppler.MessageChan).Should(Receive(&env))
-				return matcher.Match(env)
-			}, 2).Should(BeTrue())
+			waitForEvent(basicHTTPStopEvent(), matchCounter, &expected)
 		})
 
 		It("emits metrics for unmatched http stop", func() {
@@ -168,12 +204,7 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			matcher := MatchSpecifiedContents(&expected)
-			Eventually(func() (bool, error) {
-				var env *events.Envelope
-				Eventually(testDoppler.MessageChan).Should(Receive(&env))
-				return matcher.Match(env)
-			}, 2).Should(BeTrue())
+			waitForEvent(basicHTTPStopEvent(), matchCounter, &expected)
 		})
 
 		It("emits metrics for http start stop", func() {
@@ -191,10 +222,11 @@ var _ = Describe("Self Instrumentation", func() {
 			}
 
 			matcher := MatchSpecifiedContents(&expected)
-			Eventually(func() (bool, error) {
-				var env *events.Envelope
-				Eventually(testDoppler.MessageChan).Should(Receive(&env))
-				return matcher.Match(env)
+			Eventually(func() bool {
+				return drainAndEval(testDoppler.MessageChan, func(env *events.Envelope) bool {
+					b, _ := matcher.Match(env)
+					return b
+				})
 			}, 2).Should(BeTrue())
 		})
 
@@ -216,18 +248,12 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			matcher := MatchSpecifiedContents(&expected)
-			Eventually(func() (bool, error) {
-				var env *events.Envelope
-				Eventually(testDoppler.MessageChan).Should(Receive(&env))
-				return matcher.Match(env)
-			}, 2).Should(BeTrue())
+			waitForEvent(bytes, matchCounter, &expected)
 		})
 	})
 
 	Describe("for Dropsonde unmarshaller", func() {
 		It("counts errors", func() {
-			metronInput, _ := net.Dial("udp4", "localhost:51161")
 			metronInput.Write([]byte{1, 2, 3})
 
 			expected := events.Envelope{
@@ -240,16 +266,10 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			matcher := MatchSpecifiedContents(&expected)
-			Eventually(func() (bool, error) {
-				var env *events.Envelope
-				Eventually(testDoppler.MessageChan).Should(Receive(&env))
-				return matcher.Match(env)
-			}, 2).Should(BeTrue())
+			waitForEvent([]byte{1, 2, 3}, matchCounter, &expected)
 		})
 
 		It("counts unmarshalled Dropsonde messages by type", func() {
-			metronInput, _ := net.Dial("udp4", "localhost:51161")
 			metronInput.Write(basicValueMessage())
 
 			expected := events.Envelope{
@@ -262,17 +282,10 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			matcher := MatchSpecifiedContents(&expected)
-			Eventually(func() (bool, error) {
-				var env *events.Envelope
-				Eventually(testDoppler.MessageChan).Should(Receive(&env))
-				return matcher.Match(env)
-			}, 2).Should(BeTrue())
+			waitForEvent(basicValueMessage(), matchCounter, &expected)
 		})
 
 		It("counts log messages specially", func() {
-			metronInput, _ := net.Dial("udp4", "localhost:51161")
-
 			logEnvelope := &events.Envelope{
 				Origin:    proto.String("fake-origin-2"),
 				EventType: events.Envelope_LogMessage.Enum(),
@@ -296,16 +309,10 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			matcher := MatchSpecifiedContents(&expected)
-			Eventually(func() (bool, error) {
-				var env *events.Envelope
-				Eventually(testDoppler.MessageChan).Should(Receive(&env))
-				return matcher.Match(env)
-			}, 2).Should(BeTrue())
+			waitForEvent(logBytes, matchCounter, &expected)
 		})
 
 		It("counts unknown event types", func() {
-			metronInput, _ := net.Dial("udp4", "localhost:51161")
 			message := basicValueMessageEnvelope()
 			message.EventType = events.Envelope_EventType(2000).Enum()
 			bytes, err := proto.Marshal(message)
@@ -333,16 +340,10 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			matcher := MatchSpecifiedContents(&expected)
-			Eventually(func() (bool, error) {
-				var env *events.Envelope
-				Eventually(testDoppler.MessageChan).Should(Receive(&env))
-				return matcher.Match(env)
-			}, 2).Should(BeTrue())
+			waitForEvent(bytes, matchCounter, &expected)
 		})
 
 		It("does not forward unknown events", func() {
-			metronInput, _ := net.Dial("udp4", "localhost:51161")
 			message := basicValueMessageEnvelope()
 			message.EventType = events.Envelope_EventType(2000).Enum()
 			bytes, err := proto.Marshal(message)
@@ -352,10 +353,10 @@ var _ = Describe("Self Instrumentation", func() {
 
 			matcher := MatchSpecifiedContents(&message)
 			Eventually(func() bool {
-				var env *events.Envelope
-				Eventually(testDoppler.MessageChan).Should(Receive(&env))
-				b, _ := matcher.Match(env)
-				return b
+				return drainAndEval(testDoppler.MessageChan, func(env *events.Envelope) bool {
+					b, _ := matcher.Match(env)
+					return b
+				})
 			}).Should(BeFalse())
 
 			message = basicValueMessageEnvelope()
@@ -366,21 +367,12 @@ var _ = Describe("Self Instrumentation", func() {
 
 			metronInput.Write(bytes)
 
-			matcher = MatchSpecifiedContents(&message)
-			Consistently(func() bool {
-				var env *events.Envelope
-				Eventually(testDoppler.MessageChan).Should(Receive(&env))
-				b, _ := matcher.Match(env)
-				return b
-			}, 1, 100*time.Millisecond).Should(BeFalse())
+			eventNeverOccurs(bytes, matchCounter, message)
 		})
 	})
 
 	Describe("for Dropsonde marshaller", func() {
 		It("counts marshalled Dropsonde messages by type", func() {
-			metronInput, _ := net.Dial("udp4", "localhost:51161")
-			metronInput.Write(basicValueMessage())
-
 			expected := events.Envelope{
 				Origin:    proto.String("MetronAgent"),
 				EventType: events.Envelope_CounterEvent.Enum(),
@@ -391,24 +383,14 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			matcher := MatchSpecifiedContents(&expected)
-			Eventually(func() (bool, error) {
-				var env *events.Envelope
-				Eventually(testDoppler.MessageChan).Should(Receive(&env))
-				return matcher.Match(env)
-			}, 2).Should(BeTrue())
+			waitForEvent(basicValueMessage(), matchCounter, &expected)
 		})
 	})
 })
 
-func announceToEtcd() {
-	node := storeadapter.StoreNode{
-		Key:   "/healthstatus/doppler/z1/0",
-		Value: []byte("localhost"),
-	}
-
-	adapter := etcdRunner.Adapter(nil)
-	adapter.Create(node)
-	adapter.Disconnect()
-	time.Sleep(50 * time.Millisecond)
+func matchCounter(expected, actual *events.Envelope) bool {
+	return expected.GetOrigin() == actual.GetOrigin() &&
+		expected.GetEventType() == actual.GetEventType() &&
+		expected.GetCounterEvent().GetName() == actual.GetCounterEvent().GetName() &&
+		actual.GetCounterEvent().GetTotal() > 0
 }

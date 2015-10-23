@@ -1,13 +1,14 @@
 package fake_doppler
 
 import (
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	"github.com/cloudfoundry/loggregatorlib/server/handlers"
-	gorilla "github.com/gorilla/websocket"
 	"net"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/loggregatorlib/server/handlers"
+	gorilla "github.com/gorilla/websocket"
 )
 
 type FakeDoppler struct {

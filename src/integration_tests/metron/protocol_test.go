@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"bytes"
+	"fmt"
 	"net"
 	"time"
 
@@ -30,33 +31,33 @@ var _ = Describe("Protocol", func() {
 			Index:   0,
 			JobName: "job",
 			Zone:    "z9",
-			DropsondeIncomingMessagesPort: uint32(dropsondePort),
+			DropsondeIncomingMessagesPort: uint32(metronRunner.DropsondePort),
 			TLSListenerConfig:             dopplerconfig.TLSListenerConfig{Port: uint32(port + 5)},
 		}
 		stopTheWorld = make(chan struct{})
 	})
 
 	JustBeforeEach(func() {
-		startMetron(preferredProtocol)
+		metronRunner.Protocol = preferredProtocol
+		metronRunner.Start()
 	})
 
 	AfterEach(func() {
 		close(stopTheWorld)
 		close(stopAnnounce)
 
-		stopMetron()
+		metronRunner.Stop()
 	})
 
 	Context("Doppler over UDP", func() {
 		var fakeDoppler *FakeDoppler
 
 		BeforeEach(func() {
-			conn := eventuallyListensForUDP(dropsondeAddress())
+			conn := eventuallyListensForUDP(metronRunner.DropsondeAddress())
 			fakeDoppler = &FakeDoppler{
 				packetConn:   conn,
 				stopTheWorld: stopTheWorld,
 			}
-
 		})
 
 		AfterEach(func() {
@@ -70,7 +71,7 @@ var _ = Describe("Protocol", func() {
 
 				receivedByDoppler := fakeDoppler.ReadIncomingMessages(expectedMessage.signature)
 
-				metronConn, _ := net.Dial("udp4", metronAddress())
+				metronConn, _ := net.Dial("udp4", metronRunner.MetronAddress())
 				metronInput := &MetronInput{
 					metronConn:   metronConn,
 					stopTheWorld: stopTheWorld,
@@ -78,9 +79,12 @@ var _ = Describe("Protocol", func() {
 				go metronInput.WriteToMetron(originalMessage)
 
 				Eventually(func() bool {
-					var msg signedMessage
-					Eventually(receivedByDoppler).Should(Receive(&msg))
-					return bytes.Equal(msg.signature, expectedMessage.signature) && bytes.Equal(msg.message, expectedMessage.message)
+					select {
+					case msg := <-receivedByDoppler:
+						return bytes.Equal(msg.signature, expectedMessage.signature) && bytes.Equal(msg.message, expectedMessage.message)
+					default:
+					}
+					return false
 				}).Should(BeTrue())
 
 				for _, f := range additional {
@@ -131,7 +135,7 @@ var _ = Describe("Protocol", func() {
 				})
 
 				itReceives(func() {
-					Expect(metronRunner.Buffer()).To(Say("Doppler advertising UDP only"))
+					Expect(metronRunner.Runner.Buffer()).To(Say("Doppler advertising UDP only"))
 				})
 			})
 
@@ -141,7 +145,7 @@ var _ = Describe("Protocol", func() {
 				})
 
 				itReceives(func() {
-					Expect(metronRunner.Buffer()).To(Say("Doppler advertising UDP only"))
+					Expect(metronRunner.Runner.Buffer()).To(Say("Doppler advertising UDP only"))
 				})
 			})
 		})
@@ -154,12 +158,38 @@ var _ = Describe("Protocol", func() {
 		})
 
 		Context("Metron prefers TLS", func() {
+			var tlsListener net.Listener
+			var connChan chan net.Conn
+
 			BeforeEach(func() {
 				preferredProtocol = "tls"
+				address := fmt.Sprintf("127.0.0.1:%d", dopplerConfig.TLSListenerConfig.Port)
+				tlsListener = eventuallyListensForTLS(address)
+
+				connChan = make(chan net.Conn, 1)
+
+				tlsListener := tlsListener
+				connChan := connChan
+				go func() {
+					defer GinkgoRecover()
+					for {
+						conn, err := tlsListener.Accept()
+						if err != nil {
+							return
+						}
+						if conn != nil {
+							connChan <- conn
+						}
+					}
+				}()
+			})
+
+			AfterEach(func() {
+				tlsListener.Close()
 			})
 
 			It("logs a sent message", func() {
-				metronConn, _ := net.Dial("udp4", metronAddress())
+				metronConn, _ := net.Dial("udp4", metronRunner.MetronAddress())
 				metronInput := &MetronInput{
 					metronConn:   metronConn,
 					stopTheWorld: stopTheWorld,
@@ -167,7 +197,14 @@ var _ = Describe("Protocol", func() {
 				originalMessage := basicValueMessage()
 				go metronInput.WriteToMetron(originalMessage)
 
-				Eventually(metronRunner.Buffer()).Should(Say("Sending over TLS"))
+				var conn net.Conn
+				Eventually(connChan).Should(Receive(&conn))
+				buffer := make([]byte, 10)
+				n, err := conn.Read(buffer)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(BeNumerically(">", 0))
+
+				conn.Close()
 			})
 		})
 	})

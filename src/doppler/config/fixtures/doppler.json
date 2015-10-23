@@ -19,7 +19,6 @@
     "MonitorIntervalSeconds": 1,
     "EnableTLSTransport": true,
     "TLSListenerConfig": {
-        "InsecureSkipVerify": true,
         "Port": 8766,
         "KeyFile": "./fixtures/key.key",
         "CrtFile": "./fixtures/key.crt"

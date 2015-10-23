@@ -11,10 +11,8 @@ import (
 	"metron/clientpool"
 	"metron/networkreader"
 	"metron/writers/dopplerforwarder"
-	"metron/writers/eventmarshaller"
 	"metron/writers/eventunmarshaller"
 	"metron/writers/messageaggregator"
-	"metron/writers/signer"
 	"metron/writers/tagger"
 
 	"logger"
@@ -52,33 +50,41 @@ func main() {
 	log := logger.NewLogger(*debug, *logFilePath, "metron", config.Syslog)
 	log.Info("Startup: Setting up the Metron agent")
 
-	dopplerClientPool, err := initializeClientPool(config, log)
+	dopplerClientPool, err := initializeDopplerPool(config, log)
 	if err != nil {
-		log.Errorf("Error while initializing client pool: %s", err.Error())
+		log.Errorf("Failed to initialize the doppler pool: %s", err.Error())
 		os.Exit(-1)
 	}
 
-	dopplerForwarder := dopplerforwarder.New(dopplerClientPool, log)
-	byteSigner := signer.New(config.SharedSecret, dopplerForwarder)
-	marshaller := eventmarshaller.New(byteSigner, log)
-	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, marshaller)
+	dopplerForwarder := dopplerforwarder.New(dopplerClientPool, []byte(config.SharedSecret), log)
+	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, dopplerForwarder)
 	aggregator := messageaggregator.New(messageTagger, log)
 
-	initializeMetrics(byteSigner, config, log)
+	initializeMetrics(messageTagger, config, log)
 
 	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, log)
-	dropsondeReader := networkreader.New(fmt.Sprintf("localhost:%d", config.DropsondeIncomingMessagesPort), "dropsondeAgentListener", dropsondeUnmarshaller, log)
+	metronAddress := fmt.Sprintf("127.0.0.1:%d", config.DropsondeIncomingMessagesPort)
+	dropsondeReader, err := networkreader.New(metronAddress, "dropsondeAgentListener", dropsondeUnmarshaller, log)
+	if err != nil {
+		log.Errorf("Failed to listen on %s: %s", metronAddress, err)
+		os.Exit(1)
+	}
 
 	log.Info("metron started")
 
 	dropsondeReader.Start()
 }
 
-func initializeClientPool(config *config.Config, logger *gosteno.Logger) (*clientpool.DopplerPool, error) {
-	adapter := storeAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
-	err := adapter.Connect()
+func initializeDopplerPool(config *config.Config, logger *gosteno.Logger) (*clientpool.DopplerPool, error) {
+	adapter, err := storeAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	if err != nil {
 		return nil, err
+	}
+	err = adapter.Connect()
+	if err != nil {
+		logger.Warnd(map[string]interface{}{
+			"error": err.Error(),
+		}, "Failed to connect to etcd")
 	}
 
 	preferInZone := func(relativePath string) bool {
@@ -115,10 +121,8 @@ func initializeClientPool(config *config.Config, logger *gosteno.Logger) (*clien
 	return clientPool, nil
 }
 
-func initializeMetrics(byteSigner *signer.Signer, config *config.Config, logger *gosteno.Logger) {
-	metricsMarshaller := eventmarshaller.New(byteSigner, logger)
-	metricsTagger := tagger.New(config.Deployment, config.Job, config.Index, metricsMarshaller)
-	metricsAggregator := messageaggregator.New(metricsTagger, logger)
+func initializeMetrics(messageTagger *tagger.Tagger, config *config.Config, logger *gosteno.Logger) {
+	metricsAggregator := messageaggregator.New(messageTagger, logger)
 
 	eventWriter := eventwriter.New("MetronAgent", metricsAggregator)
 	metricSender := metric_sender.NewMetricSender(eventWriter)
@@ -126,10 +130,10 @@ func initializeMetrics(byteSigner *signer.Signer, config *config.Config, logger 
 	metrics.Initialize(metricSender, metricBatcher)
 }
 
-func storeAdapterProvider(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
+func storeAdapterProvider(urls []string, concurrentRequests int) (storeadapter.StoreAdapter, error) {
 	workPool, err := workpool.NewWorkPool(concurrentRequests)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	options := &etcdstoreadapter.ETCDOptions{
@@ -137,10 +141,10 @@ func storeAdapterProvider(urls []string, concurrentRequests int) storeadapter.St
 	}
 	etcdAdapter, err := etcdstoreadapter.New(options, workPool)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return etcdAdapter
+	return etcdAdapter, nil
 }
 
 type metronHealthMonitor struct{}

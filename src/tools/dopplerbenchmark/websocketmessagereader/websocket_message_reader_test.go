@@ -3,13 +3,14 @@ package websocketmessagereader_test
 import (
 	"tools/dopplerbenchmark/websocketmessagereader"
 
+	"net/http/httptest"
+	"time"
+	"tools/benchmark/metricsreporter"
+
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/server/handlers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"net/http/httptest"
-	"time"
-	"tools/benchmark/metricsreporter"
 )
 
 var _ = Describe("Websocketmessagereader", func() {
@@ -26,8 +27,8 @@ var _ = Describe("Websocketmessagereader", func() {
 
 		receivedCounter := metricsreporter.NewCounter("counter")
 		reader := websocketmessagereader.New(server.Listener.Addr().String(), receivedCounter)
+		reader.Read()
 
-		Eventually(reader.ReadAndReturn).Should(BeEquivalentTo(sentMessage))
+		Eventually(receivedCounter.GetValue).Should(BeEquivalentTo(1))
 	})
-
 })

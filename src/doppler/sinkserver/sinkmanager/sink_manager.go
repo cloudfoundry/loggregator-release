@@ -182,16 +182,26 @@ func (sinkManager *SinkManager) SendSyslogErrorToLoggregator(errorMsg string, ap
 }
 
 func (sinkManager *SinkManager) listenForNewAppServices(newAppServiceChan <-chan appservice.AppService) {
-	for appService := range newAppServiceChan {
-		sinkManager.registerNewSyslogSink(appService.AppId, appService.Url)
+	for {
+		select {
+		case <-sinkManager.doneChannel:
+			return
+		case appService := <-newAppServiceChan:
+			sinkManager.registerNewSyslogSink(appService.AppId, appService.Url)
+		}
 	}
 }
 
 func (sinkManager *SinkManager) listenForDeletedAppServices(deletedAppServiceChan <-chan appservice.AppService) {
-	for appService := range deletedAppServiceChan {
-		syslogSink := sinkManager.sinks.DrainFor(appService.AppId, appService.Url)
-		if syslogSink != nil {
-			sinkManager.UnregisterSink(syslogSink)
+	for {
+		select {
+		case <-sinkManager.doneChannel:
+			return
+		case appService := <-deletedAppServiceChan:
+			syslogSink := sinkManager.sinks.DrainFor(appService.AppId, appService.Url)
+			if syslogSink != nil {
+				sinkManager.UnregisterSink(syslogSink)
+			}
 		}
 	}
 }

@@ -1,14 +1,18 @@
 package metrics_test
 
 import (
+	"integration_tests/runners"
+	"io/ioutil"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"os/exec"
+	"os"
 	"testing"
 
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"github.com/gogo/protobuf/proto"
 	"github.com/nu7hatch/gouuid"
@@ -16,44 +20,56 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var metronSession *gexec.Session
+var tmpdir string
 var etcdRunner *etcdstorerunner.ETCDClusterRunner
-var etcdPort int
+var etcdAdapter storeadapter.StoreAdapter
+var port int
 var pathToMetronExecutable string
+var metronRunner *runners.MetronRunner
 
 func TestMetrics(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Metrics Suite")
 }
 
-var _ = BeforeSuite(func() {
+var _ = SynchronizedBeforeSuite(func() []byte {
+	metronPath, err := gexec.Build("metron", "-race")
+	Expect(err).ShouldNot(HaveOccurred())
+	return []byte(metronPath)
+}, func(path []byte) {
+	metronPath := string(path)
+
 	var err error
-	pathToMetronExecutable, err = gexec.Build("metron", "-race")
+	tmpdir, err = ioutil.TempDir("", "metronmetrics")
 	Expect(err).ShouldNot(HaveOccurred())
 
-	etcdPort = 5800 + (config.GinkgoConfig.ParallelNode-1)*10
+	etcdPort := 5800 + (config.GinkgoConfig.ParallelNode)*10
 	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1, nil)
 	etcdRunner.Start()
+	etcdAdapter = etcdRunner.Adapter(nil)
+
+	port := 51000 + config.GinkgoConfig.ParallelNode*10
+	metronRunner = &runners.MetronRunner{
+		Path:          metronPath,
+		TempDir:       tmpdir,
+		LegacyPort:    port,
+		MetronPort:    port + 1,
+		DropsondePort: 3457 + config.GinkgoConfig.ParallelNode*10,
+		EtcdRunner:    etcdRunner,
+	}
+})
+
+var _ = SynchronizedAfterSuite(func() {
+	if etcdRunner != nil {
+		etcdRunner.Stop()
+	}
+	os.RemoveAll(tmpdir)
+}, func() {
+	gexec.CleanupBuildArtifacts()
 })
 
 var _ = BeforeEach(func() {
 	etcdRunner.Reset()
-
-	var err error
-	command := exec.Command(pathToMetronExecutable, "--config=fixtures/metron.json", "--debug")
-	metronSession, err = gexec.Start(command, gexec.NewPrefixedWriter("[o][metron]", GinkgoWriter), gexec.NewPrefixedWriter("[e][metron]", GinkgoWriter))
-	Expect(err).ShouldNot(HaveOccurred())
-})
-
-var _ = AfterEach(func() {
-	metronSession.Kill().Wait()
-})
-
-var _ = AfterSuite(func() {
-	gexec.CleanupBuildArtifacts()
-
-	etcdRunner.Adapter(nil).Disconnect()
-	etcdRunner.Stop()
 })
 
 func basicValueMessage() []byte {

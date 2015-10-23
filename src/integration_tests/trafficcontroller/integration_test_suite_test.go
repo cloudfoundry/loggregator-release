@@ -28,7 +28,7 @@ import (
 
 func TestIntegrationTest(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "IntegrationTest Suite")
+	RunSpecs(t, "Traffic Controller Integration Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -53,20 +53,25 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	tcCommand := exec.Command(pathToTrafficControllerExec, "--config=fixtures/trafficcontroller.json", "--debug")
-	trafficControllerSession, _ = gexec.Start(tcCommand, GinkgoWriter, GinkgoWriter)
+	trafficControllerSession, err = gexec.Start(tcCommand, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
 
 	localIPAddress, _ = localip.LocalIP()
 
-	// wait for servers to be up
+	// wait for fake doppler to be up
 	Eventually(func() error {
 		_, err := http.Get("http://" + localIPAddress + ":1235")
 		return err
 	}).ShouldNot(HaveOccurred())
-	<-fakeDoppler.TrafficControllerConnected
+	Eventually(fakeDoppler.TrafficControllerConnected).Should(Receive())
 
+	// wait for TC
 	trafficControllerDropsondeEndpoint := fmt.Sprintf("http://%s:%d", localIPAddress, 4566)
 	Eventually(func() error {
-		_, err := http.Get(trafficControllerDropsondeEndpoint)
+		resp, err := http.Get(trafficControllerDropsondeEndpoint)
+		if err == nil {
+			resp.Body.Close()
+		}
 		return err
 	}).ShouldNot(HaveOccurred())
 })
@@ -76,8 +81,6 @@ var _ = AfterSuite(func() {
 	gnatsdSession.Kill().Wait()
 
 	gexec.CleanupBuildArtifacts()
-
-	etcdRunner.Adapter(nil).Disconnect()
 	etcdRunner.Stop()
 
 	fakeDoppler.Stop()
@@ -188,7 +191,7 @@ func StartFakeRouter() {
 	uri := url.URL{
 		Scheme: "nats",
 		User:   url.UserPassword("", ""),
-		Host:   "localhost:4222",
+		Host:   "127.0.0.1:4222",
 	}
 	natsMembers = append(natsMembers, uri.String())
 

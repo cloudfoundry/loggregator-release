@@ -8,9 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/cloudfoundry/gosteno"
@@ -21,49 +19,46 @@ import (
 )
 
 type WebsocketServer struct {
-	apiEndpoint       string
 	sinkManager       *sinkmanager.SinkManager
 	keepAliveInterval time.Duration
 	bufferSize        uint
 	logger            *gosteno.Logger
 	listener          net.Listener
 	dropsondeOrigin   string
-	sync.RWMutex
+
+	done chan struct{}
 }
 
-func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, keepAliveInterval time.Duration, messageDrainBufferSize uint, dropsondeOrigin string, logger *gosteno.Logger) *WebsocketServer {
+func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, keepAliveInterval time.Duration, messageDrainBufferSize uint, dropsondeOrigin string, logger *gosteno.Logger) (*WebsocketServer, error) {
+	logger.Infof("WebsocketServer: Listening for sinks at %s", apiEndpoint)
+
+	listener, e := net.Listen("tcp", apiEndpoint)
+	if e != nil {
+		return nil, e
+	}
+
 	return &WebsocketServer{
-		apiEndpoint:       apiEndpoint,
+		listener:          listener,
 		sinkManager:       sinkManager,
 		keepAliveInterval: keepAliveInterval,
 		bufferSize:        messageDrainBufferSize,
 		logger:            logger,
 		dropsondeOrigin:   dropsondeOrigin,
-	}
+		done:              make(chan struct{}),
+	}, nil
 }
 
 func (w *WebsocketServer) Start() {
-	w.logger.Infof("WebsocketServer: Listening for sinks at %s", w.apiEndpoint)
-
-	listener, e := net.Listen("tcp", w.apiEndpoint)
-	if e != nil {
-		panic(e)
-	}
-
-	w.Lock()
-	w.listener = listener
-	w.Unlock()
-
-	s := &http.Server{Addr: w.apiEndpoint, Handler: w}
+	s := &http.Server{Handler: w}
 	err := s.Serve(w.listener)
-	w.logger.Debugf("serve ended with %v", err)
+	w.logger.Debugf("serve ended with %v", err.Error())
+	close(w.done)
 }
 
 func (w *WebsocketServer) Stop() {
-	w.Lock()
-	defer w.Unlock()
 	w.logger.Debug("stopping websocket server")
 	w.listener.Close()
+	<-w.done
 }
 
 type wsHandler func(*gorilla.Conn)
@@ -73,12 +68,13 @@ func (w *WebsocketServer) ServeHTTP(writer http.ResponseWriter, request *http.Re
 	var handler wsHandler
 	var err error
 
-	endpointName := strings.Split(request.URL.Path, "/")[1]
+	paths := strings.Split(request.URL.Path, "/")
+	endpointName := paths[1]
 
 	if endpointName == "firehose" {
-		handler, err = w.firehoseHandler(writer, request)
+		handler, err = w.firehoseHandler(paths, writer, request)
 	} else {
-		handler, err = w.appHandler(writer, request)
+		handler, err = w.appHandler(paths, writer, request)
 	}
 
 	if err != nil {
@@ -93,44 +89,43 @@ func (w *WebsocketServer) ServeHTTP(writer http.ResponseWriter, request *http.Re
 		return
 	}
 
-	defer ws.Close()
-	defer ws.WriteControl(gorilla.CloseMessage, gorilla.FormatCloseMessage(gorilla.CloseNormalClosure, ""), time.Time{})
+	defer func() {
+		ws.WriteControl(gorilla.CloseMessage, gorilla.FormatCloseMessage(gorilla.CloseNormalClosure, ""), time.Time{})
+		ws.Close()
+	}()
 
 	handler(ws)
 }
 
-func (w *WebsocketServer) firehoseHandler(writer http.ResponseWriter, request *http.Request) (wsHandler, error) {
-	firehoseSubscriptionId := strings.Split(request.URL.Path, "/")[2]
-
+func (w *WebsocketServer) firehoseHandler(paths []string, writer http.ResponseWriter, request *http.Request) (wsHandler, error) {
+	firehoseSubscriptionId := paths[2]
 	f := func(ws *gorilla.Conn) {
 		w.streamFirehose(firehoseSubscriptionId, ws)
 	}
 	return f, nil
-
 }
 
-func (w *WebsocketServer) appHandler(writer http.ResponseWriter, request *http.Request) (wsHandler, error) {
+// ^/apps/(.*)/(recentlogs|stream|containermetrics)$")
+func (w *WebsocketServer) appHandler(paths []string, writer http.ResponseWriter, request *http.Request) (wsHandler, error) {
 	var handler func(string, *gorilla.Conn)
 
-	validPaths := regexp.MustCompile("^/apps/(.*)/(recentlogs|stream|containermetrics)$")
-	matches := validPaths.FindStringSubmatch(request.URL.Path)
-	if len(matches) != 3 {
+	if len(paths) != 4 || paths[1] != "apps" {
 		writer.Header().Set("WWW-Authenticate", "Basic")
 		writer.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(writer, "Resource Not Found. %s", request.URL.Path)
 		return nil, fmt.Errorf("Resource Not Found. %s", request.URL.Path)
 	}
-	appId := matches[1]
+	appId := paths[2]
 
 	if appId == "" {
 		writer.Header().Set("WWW-Authenticate", "Basic")
 		writer.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(writer, "App ID missing. Make request to /apps/APP_ID/%s", matches[2])
+		fmt.Fprintf(writer, "App ID missing. Make request to /apps/APP_ID/%s", paths[3])
 
 		w.logInvalidApp(request.RemoteAddr)
 		return nil, errors.New("Validation error (returning 400): No AppId")
 	}
-	endpoint := matches[2]
+	endpoint := paths[3]
 
 	switch endpoint {
 	case "stream":
@@ -194,9 +189,9 @@ func (w *WebsocketServer) logInvalidApp(address string) {
 func sendMessagesToWebsocket(envelopes []*events.Envelope, websocketConnection *gorilla.Conn, logger *gosteno.Logger) {
 	for _, messageEnvelope := range envelopes {
 		envelopeBytes, err := proto.Marshal(messageEnvelope)
-
 		if err != nil {
 			logger.Errorf("Websocket Server %s: Error marshalling %s envelope from origin %s: %s", websocketConnection.RemoteAddr(), messageEnvelope.GetEventType().String(), messageEnvelope.GetOrigin(), err.Error())
+			continue
 		}
 
 		err = websocketConnection.WriteMessage(gorilla.BinaryMessage, envelopeBytes)

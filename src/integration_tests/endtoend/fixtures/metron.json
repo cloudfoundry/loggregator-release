@@ -3,9 +3,10 @@
     "Job": "test-component",
     "DropsondeIncomingMessagesPort": 49625,
     "SharedSecret": "end_to_end_secret",
-    "EtcdUrls"    : ["http://localhost:49623"],
+    "EtcdUrls"    : ["http://127.0.0.1:49623"],
     "EtcdMaxConcurrentRequests": 1,
     "Zone": "z1",
     "Deployment": "deployment-name",
-    "LoggregatorDropsondePort": 49626
+    "LoggregatorDropsondePort": 49626,
+    "PreferredProtocol": "tls"
 }

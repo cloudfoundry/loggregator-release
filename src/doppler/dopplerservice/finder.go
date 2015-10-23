@@ -3,6 +3,7 @@ package dopplerservice
 import (
 	"strings"
 	"sync"
+	"time"
 
 	"bytes"
 	"encoding/json"
@@ -96,18 +97,24 @@ func (f *finder) run(stopChan chan struct{}) {
 	events, stopWatch, errors := f.storeAdapter.Watch(f.storeKeyPrefix)
 	f.discoverAddresses()
 
+	var tick <-chan time.Time
 	for {
 		select {
 		case <-stopChan:
 			close(stopWatch)
 			return
 		case event := <-events:
+			tick = nil
 			f.handleEvent(&event)
 		case err := <-errors:
 			f.logger.Errord(map[string]interface{}{
-				"error": err,
-			},
-				"ServerAddressList.Run: Watch failed")
+				"error": err.Error(),
+			}, "Finder: Watch failed")
+			tick = time.NewTimer(time.Second).C
+			events = nil
+			errors = nil
+		case <-tick:
+			tick = nil
 			events, stopWatch, errors = f.storeAdapter.Watch(f.storeKeyPrefix)
 			f.discoverAddresses()
 		}
@@ -182,21 +189,24 @@ func (f *finder) handleEvent(event *storeadapter.WatchEvent) {
 
 }
 
-func (f *finder) discoverAddresses() {
+func (f *finder) discoverAddresses() error {
 	node, err := f.storeAdapter.ListRecursively(f.storeKeyPrefix)
 
 	if err == storeadapter.ErrorKeyNotFound {
-		f.logger.Debugf("ServerAddressList.Run: Unable to recursively find keys with prefix %s", f.storeKeyPrefix)
-		return
+		f.logger.Debugf("Finder: Unable to recursively find keys with prefix %s", f.storeKeyPrefix)
+		return err
 	}
 
 	if err == storeadapter.ErrorTimeout {
-		f.logger.Debug("ServerAddressList.Run: Timed out talking to store; will try again soon.")
-		return
+		f.logger.Debug("Finder: Timed out talking to store; will try again soon.")
+		return err
 	}
 
 	if err != nil {
-		panic(err) //FIXME: understand error modes and recovery cases better
+		f.logger.Warnd(map[string]interface{}{
+			"error": err.Error(),
+		}, "Finder: Error during ListRecursively")
+		return err
 	}
 
 	leaves := leafNodes(node)
@@ -228,6 +238,7 @@ func (f *finder) discoverAddresses() {
 	f.notify()
 
 	f.Unlock()
+	return nil
 }
 
 func (f *finder) notify() {

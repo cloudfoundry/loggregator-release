@@ -36,12 +36,12 @@ func (r *MessageRouter) Start(incomingLogChan <-chan *events.Envelope) {
 			r.logger.Debug("MessageRouter:MessageReceived:Done")
 			return
 		case envelope, ok := <-incomingLogChan:
-			metrics.BatchIncrementCounter("httpServer.receivedMessages")
-			r.logger.Debug("MessageRouter:MessageReceived")
 			if !ok {
-				r.logger.Debug("MessageRouter:MessageReceived:NotOkay")
+				r.logger.Debug("MessageRouter closed")
 				return
 			}
+			r.logger.Debug("MessageRouter:MessageReceived")
+			metrics.BatchIncrementCounter("httpServer.receivedMessages")
 			r.logger.Debugf("MessageRouter:outgoingLogChan: Received %s message from %s at %d.", envelope.GetEventType().String(), envelope.GetOrigin(), envelope.Timestamp)
 			r.send(envelope)
 		}

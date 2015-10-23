@@ -68,7 +68,7 @@ var _ = Describe("TrafficController for legacy messages", func() {
 			}
 		})
 
-		It("returns a multi-part HTTP response with all recent messages", func(done Done) {
+		It("returns a multi-part HTTP response with all recent messages", func() {
 			fakeDoppler.CloseLogMessageStream()
 			client := loggregator_consumer.New(legacyEndpoint, &tls.Config{}, nil)
 
@@ -83,8 +83,7 @@ var _ = Describe("TrafficController for legacy messages", func() {
 			for i, message := range messages {
 				Expect(message.GetMessage()).To(BeEquivalentTo(strconv.Itoa(i)))
 			}
-			close(done)
-		}, 20)
+		})
 
 		It("correctly handles when clients go away mid-stream", func() {
 			recentPath := fmt.Sprintf("http://%s:%d/recent?app=1234", localIPAddress, TRAFFIC_CONTROLLER_LEGACY_PORT)
@@ -95,18 +94,30 @@ var _ = Describe("TrafficController for legacy messages", func() {
 
 			// write many messages to make sure the http handler flushes the
 			// response headers which allow client.Do() to return
-			for i := 0; i < 95; i++ {
-				message := makeDropsondeMessage("foo", "1234", 1234)
+			message := makeDropsondeMessage("foo", "1234", 1234)
+			for i := 0; i < 50; i++ {
 				fakeDoppler.SendLogMessage(message)
 			}
 
-			resp, err := client.Do(req)
-			Expect(err).NotTo(HaveOccurred())
+			stopConnecting := make(chan struct{})
+			go func() {
+				defer GinkgoRecover()
+				for {
+					resp, err := client.Do(req)
+					Expect(err).NotTo(HaveOccurred())
+
+					resp.Body.Close()
+					select {
+					case <-stopConnecting:
+						return
+					case <-time.After(100 * time.Millisecond):
+					}
+				}
+			}()
 
 			var request *http.Request
-			Eventually(fakeDoppler.TrafficControllerConnected, 15).Should(Receive(&request))
-
-			resp.Body.Close()
+			Eventually(fakeDoppler.TrafficControllerConnected, 5).Should(Receive(&request))
+			close(stopConnecting)
 
 			// write many messages to make sure we flush the connection and
 			// cause an error in the http handler

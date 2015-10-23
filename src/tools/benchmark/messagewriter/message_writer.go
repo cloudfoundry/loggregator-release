@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/cloudfoundry/dropsonde/signature"
+
 	"metron/writers"
-	"metron/writers/signer"
 	"tools/benchmark/metricsreporter"
 )
 
@@ -16,6 +17,12 @@ type messageWriter struct {
 type networkWriter struct {
 	conn        net.Conn
 	sentCounter *metricsreporter.Counter
+}
+
+type MessageWriterFunc func(message []byte)
+
+func (f MessageWriterFunc) Write(message []byte) {
+	f(message)
 }
 
 func (nw networkWriter) Write(message []byte) {
@@ -44,7 +51,14 @@ func NewMessageWriter(host string, port int, sharedSecret string, sentCounter *m
 	}
 
 	if len(sharedSecret) > 0 {
-		writer = signer.New(sharedSecret, writer)
+		secret := []byte(sharedSecret)
+		nested := writer
+		signedWriter := func(message []byte) {
+			signedMessage := signature.SignMessage(message, secret)
+			nested.Write(signedMessage)
+		}
+
+		writer = MessageWriterFunc(signedWriter)
 	}
 
 	return &messageWriter{

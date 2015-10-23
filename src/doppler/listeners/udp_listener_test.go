@@ -1,10 +1,10 @@
-package agentlistener_test
+package listeners_test
 
 import (
+	"doppler/listeners"
 	"net"
 	"strconv"
 
-	"doppler/listeners/agentlistener"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
@@ -15,7 +15,7 @@ import (
 )
 
 var _ = Describe("AgentListener", func() {
-	var listener agentlistener.Listener
+	var listener listeners.Listener
 	var dataChannel <-chan []byte
 	var listenerStopped chan struct{}
 	var address string
@@ -26,7 +26,7 @@ var _ = Describe("AgentListener", func() {
 
 		port := 3456 + config.GinkgoConfig.ParallelNode
 		address = net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
-		listener, dataChannel = agentlistener.NewAgentListener(address, loggertesthelper.Logger(), "agentListener")
+		listener, dataChannel = listeners.NewAgentListener(address, loggertesthelper.Logger(), "agentListener")
 		go func() {
 			listener.Start()
 			close(listenerStopped)
@@ -59,7 +59,7 @@ var _ = Describe("AgentListener", func() {
 
 			Eventually(dataChannel).Should(Receive(&received))
 			Expect(string(received)).To(Equal(otherData))
-		}, 2)
+		})
 	})
 
 	Context("dropsonde metric emission", func() {
@@ -75,11 +75,11 @@ var _ = Describe("AgentListener", func() {
 			connection, err := net.Dial("udp", address)
 
 			_, err = connection.Write([]byte(expectedData))
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Eventually(dataChannel).Should(Receive())
 
 			_, err = connection.Write([]byte(otherData))
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Eventually(dataChannel).Should(Receive())
 
 			Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(2))

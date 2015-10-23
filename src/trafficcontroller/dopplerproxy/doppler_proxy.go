@@ -2,16 +2,16 @@ package dopplerproxy
 
 import (
 	"fmt"
-	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"github.com/gogo/protobuf/proto"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 	"time"
 	"trafficcontroller/authorization"
 	"trafficcontroller/doppler_endpoint"
+
+	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"github.com/gogo/protobuf/proto"
 )
 
 const FIREHOSE_ID = "firehose"
@@ -60,13 +60,14 @@ func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	endpointName := strings.Split(translatedRequest.URL.Path, "/")[1]
+	paths := strings.Split(translatedRequest.URL.Path, "/")
 
+	endpointName := paths[1]
 	switch endpointName {
 	case "firehose":
-		proxy.serveFirehose(writer, translatedRequest)
+		proxy.serveFirehose(paths, writer, translatedRequest)
 	case "apps":
-		proxy.serveAppLogs(writer, translatedRequest)
+		proxy.serveAppLogs(paths, writer, translatedRequest)
 	case "set-cookie":
 		proxy.serveSetCookie(writer, translatedRequest, proxy.cookieDomain)
 	default:
@@ -75,11 +76,11 @@ func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 	}
 }
 
-func (proxy *Proxy) serveFirehose(writer http.ResponseWriter, request *http.Request) {
+func (proxy *Proxy) serveFirehose(paths []string, writer http.ResponseWriter, request *http.Request) {
 	clientAddress := request.RemoteAddr
 	authToken := getAuthToken(request)
 
-	firehoseParams := strings.Split(request.URL.Path, "/")[2:]
+	firehoseParams := paths[2:]
 
 	var firehoseSubscriptionId string
 	if len(firehoseParams) == 1 {
@@ -109,22 +110,30 @@ func (proxy *Proxy) serveFirehose(writer http.ResponseWriter, request *http.Requ
 	proxy.serveWithDoppler(writer, request, dopplerEndpoint)
 }
 
-func (proxy *Proxy) serveAppLogs(writer http.ResponseWriter, request *http.Request) {
-	clientAddress := request.RemoteAddr
-	authToken := getAuthToken(request)
+// "^/apps/(.*)/(recentlogs|stream|containermetrics)$"
+func (proxy *Proxy) serveAppLogs(paths []string, writer http.ResponseWriter, request *http.Request) {
+	badRequest := len(paths) != 4
+	if !badRequest {
+		switch paths[3] {
+		case "recentlogs", "stream", "containermetrics":
+		default:
+			badRequest = true
+		}
+	}
 
-	validPaths := regexp.MustCompile("^/apps/(.*)/(recentlogs|stream|containermetrics)$")
-	matches := validPaths.FindStringSubmatch(request.URL.Path)
-	if len(matches) != 3 {
+	if badRequest {
 		writer.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(writer, "Resource Not Found. %s", request.URL.Path)
 		return
 	}
-	appId := matches[1]
 
+	clientAddress := request.RemoteAddr
+	authToken := getAuthToken(request)
+
+	appId := paths[2]
 	if appId == "" {
 		writer.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(writer, "App ID missing. Make request to /apps/APP_ID/%s", matches[2])
+		fmt.Fprintf(writer, "App ID missing. Make request to /apps/APP_ID/%s", paths[3])
 		return
 	}
 
@@ -140,7 +149,7 @@ func (proxy *Proxy) serveAppLogs(writer http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	endpoint_type := matches[2]
+	endpoint_type := paths[3]
 	reconnect := endpoint_type != "recentlogs" && endpoint_type != "containermetrics"
 
 	dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint(endpoint_type, appId, reconnect)

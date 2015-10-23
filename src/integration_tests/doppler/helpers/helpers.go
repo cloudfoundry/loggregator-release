@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"crypto/sha1"
+	"encoding/binary"
 	"fmt"
 	"net"
 	"net/http"
@@ -27,6 +28,32 @@ func SendAppLog(appID string, message string, connection net.Conn) error {
 	logMessage := factories.NewLogMessage(events.LogMessage_OUT, message, appID, "APP")
 
 	return SendEvent(logMessage, connection)
+}
+
+func SendAppLogTLS(appID string, message string, connection net.Conn) error {
+	logMessage := factories.NewLogMessage(events.LogMessage_OUT, message, appID, "APP")
+
+	return SendEventTLS(logMessage, connection)
+}
+
+func SendEventTLS(event events.Event, conn net.Conn) error {
+	envelope, err := emitter.Wrap(event, "origin")
+	Expect(err).NotTo(HaveOccurred())
+
+	bytes, err := proto.Marshal(envelope)
+	if err != nil {
+		return err
+	}
+
+	var n uint16
+	n = uint16(len(bytes))
+	err = binary.Write(conn, binary.LittleEndian, n)
+	if err != nil {
+		return err
+	}
+
+	_, err = conn.Write(bytes)
+	return err
 }
 
 func SendEvent(event events.Event, connection net.Conn) error {
@@ -132,7 +159,7 @@ func UnmarshalMessage(messageBytes []byte) events.Envelope {
 }
 
 func StartHTTPSServer(pathToHTTPEchoServer string) *gexec.Session {
-	command := exec.Command(pathToHTTPEchoServer, "-cert", "fixtures/key.crt", "-key", "fixtures/key.key")
+	command := exec.Command(pathToHTTPEchoServer, "-cert", "../fixtures/key.crt", "-key", "../fixtures/key.key")
 	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -148,7 +175,7 @@ func StartUnencryptedTCPServer(pathToTCPEchoServer string, syslogDrainAddress st
 }
 
 func StartEncryptedTCPServer(pathToTCPEchoServer string, syslogDrainAddress string) *gexec.Session {
-	command := exec.Command(pathToTCPEchoServer, "-address", syslogDrainAddress, "-ssl", "-cert", "fixtures/key.crt", "-key", "fixtures/key.key")
+	command := exec.Command(pathToTCPEchoServer, "-address", syslogDrainAddress, "-ssl", "-cert", "../fixtures/key.crt", "-key", "../fixtures/key.key")
 	drainSession, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 

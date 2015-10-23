@@ -1,9 +1,10 @@
 package eventwriter
 
 import (
+	"metron/writers"
+
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/sonde-go/events"
-	"metron/writers"
 )
 
 type EventWriter struct {

@@ -9,7 +9,9 @@ import (
 )
 
 type FirehoseReader struct {
-	msgChan chan *events.Envelope
+	consumer *noaa.Consumer
+	msgChan  chan *events.Envelope
+	stopChan chan struct{}
 
 	MetronMessageCountMetricReceived  bool
 	DopplerMessageCountMetricReceived bool
@@ -21,8 +23,11 @@ type FirehoseReader struct {
 }
 
 func NewFirehoseReader() *FirehoseReader {
+	consumer, msgChan := initiateFirehoseConnection()
 	return &FirehoseReader{
-		msgChan:             initiateFirehoseConnection(),
+		consumer:            consumer,
+		msgChan:             msgChan,
+		stopChan:            make(chan struct{}),
 		TestMetricCount:     0,
 		NonTestMetricCount:  0,
 		MetronMessageCount:  0,
@@ -32,6 +37,8 @@ func NewFirehoseReader() *FirehoseReader {
 
 func (r *FirehoseReader) Read() {
 	select {
+	case <-r.stopChan:
+		return
 	case msg := <-r.msgChan:
 		if isTestMetric(msg) {
 			r.TestMetricCount += 1
@@ -48,18 +55,21 @@ func (r *FirehoseReader) Read() {
 			r.DopplerMessageCountMetricReceived = true
 			r.DopplerMessageCount = float64(msg.CounterEvent.GetTotal())
 		}
-	default:
-		return
 	}
 }
 
-func initiateFirehoseConnection() chan *events.Envelope {
+func (r *FirehoseReader) Close() {
+	close(r.stopChan)
+	r.consumer.Close()
+}
+
+func initiateFirehoseConnection() (*noaa.Consumer, chan *events.Envelope) {
 	localIP, _ := localip.LocalIP()
 	firehoseConnection := noaa.NewConsumer("ws://"+localIP+":49629", &tls.Config{InsecureSkipVerify: true}, nil)
 	msgChan := make(chan *events.Envelope, 2000)
 	errorChan := make(chan error)
 	go firehoseConnection.Firehose("uniqueId", "", msgChan, errorChan)
-	return msgChan
+	return firehoseConnection, msgChan
 }
 
 func isTestMetric(msg *events.Envelope) bool {

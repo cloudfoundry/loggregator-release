@@ -1,6 +1,7 @@
 package main
 
 import (
+	"doppler/dopplerservice"
 	"flag"
 	"logger"
 	"net"
@@ -12,7 +13,6 @@ import (
 	"time"
 
 	"common/monitor"
-	"doppler/dopplerservice"
 	"trafficcontroller/authorization"
 	"trafficcontroller/channel_group_connector"
 	"trafficcontroller/config"
@@ -66,7 +66,7 @@ func main() {
 	log := logger.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller", config.Syslog)
 	log.Info("Startup: Setting up the loggregator traffic controller")
 
-	dropsonde.Initialize("localhost:"+strconv.Itoa(config.MetronPort), "LoggregatorTrafficController")
+	dropsonde.Initialize("127.0.0.1:"+strconv.Itoa(config.MetronPort), "LoggregatorTrafficController")
 
 	profiler := profiler.NewProfiler(*cpuprofile, *memprofile, 1*time.Second, log)
 	profiler.Profile()
@@ -76,21 +76,33 @@ func main() {
 	go uptimeMonitor.Start()
 	defer uptimeMonitor.Stop()
 
-	dopplerAdapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
-	dopplerAdapter.Connect()
-
-	legacyAdapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
-	legacyAdapter.Connect()
+	etcdAdapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
+	err = etcdAdapter.Connect()
+	if err != nil {
+		log.Errorf("Cannot connect to ETCD: %s", err.Error())
+		os.Exit(-1)
+	}
 
 	ipAddress, err := localip.LocalIP()
 	if err != nil {
 		panic(err)
 	}
 
-	dopplerProxy := makeDopplerProxy(dopplerAdapter, config, log)
+	logAuthorizer := authorization.NewLogAccessAuthorizer(*disableAccessControl, config.ApiHost, config.SkipCertVerify)
+
+	uaaClient := uaa_client.NewUaaClient(config.UaaHost, config.UaaClientId, config.UaaClientSecret, config.SkipCertVerify)
+	adminAuthorizer := authorization.NewAdminAccessAuthorizer(*disableAccessControl, &uaaClient)
+
+	preferredServers := func(string) bool { return false }
+	finder := dopplerservice.NewLegacyFinder(etcdAdapter, int(config.DopplerPort), preferredServers, nil, log)
+	finder.Start()
+
+	dopplerProxy := makeProxy(etcdAdapter, config, log, marshaller.DropsondeLogMessage, dopplerproxy.TranslateFromDropsondePath,
+		newDropsondeWebsocketListener, finder, logAuthorizer, adminAuthorizer, "doppler."+config.SystemDomain)
 	startOutgoingDopplerProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dopplerProxy)
 
-	legacyProxy := makeLegacyProxy(legacyAdapter, config, log)
+	legacyProxy := makeProxy(etcdAdapter, config, log, marshaller.LoggregatorLogMessage, dopplerproxy.TranslateFromLegacyPath,
+		newLegacyWebsocketListener, finder, logAuthorizer, adminAuthorizer, "loggregator."+config.SystemDomain)
 	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), legacyProxy)
 
 	killChan := make(chan os.Signal)
@@ -117,26 +129,17 @@ func startOutgoingProxy(host string, proxy http.Handler) {
 	}()
 }
 
-func makeDopplerProxy(adapter storeadapter.StoreAdapter, config *config.Config, logger *gosteno.Logger) *dopplerproxy.Proxy {
-	return makeProxy(adapter, config, logger, marshaller.DropsondeLogMessage, dopplerproxy.TranslateFromDropsondePath, newDropsondeWebsocketListener, "doppler."+config.SystemDomain)
-}
-
-func makeLegacyProxy(adapter storeadapter.StoreAdapter, config *config.Config, logger *gosteno.Logger) *dopplerproxy.Proxy {
-	return makeProxy(adapter, config, logger, marshaller.LoggregatorLogMessage, dopplerproxy.TranslateFromLegacyPath, newLegacyWebsocketListener, "loggregator."+config.SystemDomain)
-}
-
-func makeProxy(adapter storeadapter.StoreAdapter, config *config.Config, logger *gosteno.Logger, messageGenerator marshaller.MessageGenerator, translator dopplerproxy.RequestTranslator, listenerConstructor channel_group_connector.ListenerConstructor, cookieDomain string) *dopplerproxy.Proxy {
-	logAuthorizer := authorization.NewLogAccessAuthorizer(*disableAccessControl, config.ApiHost, config.SkipCertVerify)
-
-	uaaClient := uaa_client.NewUaaClient(config.UaaHost, config.UaaClientId, config.UaaClientSecret, config.SkipCertVerify)
-	adminAuthorizer := authorization.NewAdminAccessAuthorizer(*disableAccessControl, &uaaClient)
-
-	preferredServers := func(string) bool { return false }
-	finder := dopplerservice.NewLegacyFinder(adapter, int(config.DopplerPort), preferredServers, nil, logger)
-	finder.Start()
+func makeProxy(adapter storeadapter.StoreAdapter,
+	config *config.Config, logger *gosteno.Logger,
+	messageGenerator marshaller.MessageGenerator,
+	translator dopplerproxy.RequestTranslator,
+	listenerConstructor channel_group_connector.ListenerConstructor,
+	finder dopplerservice.Finder,
+	logAuthorizer authorization.LogAccessAuthorizer,
+	adminAuthorizer authorization.AdminAccessAuthorizer,
+	cookieDomain string) *dopplerproxy.Proxy {
 
 	cgc := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, messageGenerator, logger)
-
 	return dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, cgc, translator, cookieDomain, logger)
 }
 

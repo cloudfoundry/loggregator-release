@@ -1,13 +1,15 @@
 package valuemetricreader_test
 
 import (
-	"github.com/cloudfoundry/sonde-go/events"
 	"tools/benchmark/messagegenerator"
+
+	"github.com/cloudfoundry/sonde-go/events"
+
+	"tools/benchmark/metricsreporter"
+	"tools/metronbenchmark/valuemetricreader"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"tools/benchmark/metricsreporter"
-	"tools/metronbenchmark/valuemetricreader"
 )
 
 var _ = Describe("ValueMetricReader", func() {
@@ -56,4 +58,7 @@ type fakeReader struct {
 
 func (f *fakeReader) Read() *events.Envelope {
 	return f.event
+}
+
+func (f *fakeReader) Close() {
 }

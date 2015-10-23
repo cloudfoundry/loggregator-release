@@ -1,4 +1,4 @@
-package agentlistener
+package listeners
 
 import (
 	"net"
@@ -9,6 +9,7 @@ import (
 )
 
 type Listener interface {
+	Address() string
 	Start()
 	Stop()
 }
@@ -34,36 +35,42 @@ func NewAgentListener(host string, givenLogger *gosteno.Logger, name string) (Li
 	return listener, byteChan
 }
 
-func (agentListener *agentListener) Start() {
-	connection, err := net.ListenPacket("udp", agentListener.host)
+func (agentListener *agentListener) Address() string {
+	return agentListener.connection.LocalAddr().String()
+}
+
+func (agent *agentListener) Start() {
+	connection, err := net.ListenPacket("udp", agent.host)
 	if err != nil {
-		agentListener.Fatalf("Failed to listen on port. %s", err)
+		agent.Fatalf("Failed to listen on port. %s", err)
 	}
 
-	agentListener.Infof("Listening on port %s", agentListener.host)
-	agentListener.Lock()
-	agentListener.connection = connection
-	agentListener.Unlock()
+	agent.Infof("Listening on port %s", agent.host)
+	agent.Lock()
+	agent.connection = connection
+	agent.Unlock()
+
+	messageCountMetricName := agent.contextName + ".receivedMessageCount"
+	receivedByteCountMetricName := agent.contextName + ".receivedByteCount"
 
 	readBuffer := make([]byte, 65535) //buffer with size = max theoretical UDP size
-	defer close(agentListener.dataChannel)
+	defer close(agent.dataChannel)
 	for {
 		readCount, senderAddr, err := connection.ReadFrom(readBuffer)
 		if err != nil {
-			agentListener.Debugf("Error while reading. %s", err)
+			agent.Debugf("Error while reading. %s", err)
 			return
 		}
-		agentListener.Debugf("AgentListener: Read %d bytes from address %s", readCount, senderAddr)
+		agent.Debugf("AgentListener: Read %d bytes from address %s", readCount, senderAddr)
 
 		readData := make([]byte, readCount) //pass on buffer in size only of read data
 		copy(readData, readBuffer[:readCount])
 
-		metrics.BatchIncrementCounter(agentListener.contextName + ".receivedMessageCount")
-		metrics.BatchAddCounter(agentListener.contextName+".receivedByteCount", uint64(readCount))
+		metrics.BatchIncrementCounter(messageCountMetricName)
+		metrics.BatchAddCounter(receivedByteCountMetricName, uint64(readCount))
 
-		agentListener.dataChannel <- readData
+		agent.dataChannel <- readData
 	}
-
 }
 
 func (agentListener *agentListener) Stop() {

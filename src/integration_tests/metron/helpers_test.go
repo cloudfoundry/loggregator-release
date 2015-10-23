@@ -1,6 +1,8 @@
 package integration_test
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"net"
 	"time"
 
@@ -127,4 +129,93 @@ func eventuallyListensForUDP(address string) net.PacketConn {
 	}).Should(Succeed())
 
 	return testServer
+}
+
+func eventuallyListensForTLS(address string) net.Listener {
+	var listener net.Listener
+
+	Eventually(func() error {
+		var err error
+		listener, err = net.Listen("tcp", address)
+		return err
+	}).Should(Succeed())
+
+	return listener
+}
+
+type MetronInput struct {
+	metronConn   net.Conn
+	stopTheWorld chan struct{}
+}
+
+func (input *MetronInput) WriteToMetron(unsignedMessage []byte) {
+	ticker := time.NewTicker(10 * time.Millisecond)
+
+	for {
+		select {
+		case <-input.stopTheWorld:
+			ticker.Stop()
+			return
+		case <-ticker.C:
+			input.metronConn.Write(unsignedMessage)
+		}
+	}
+}
+
+type FakeDoppler struct {
+	packetConn   net.PacketConn
+	stopTheWorld chan struct{}
+}
+
+func (d *FakeDoppler) ReadIncomingMessages(signature []byte) chan signedMessage {
+	messageChan := make(chan signedMessage, 1000)
+
+	go func() {
+		readBuffer := make([]byte, 65535)
+		for {
+			select {
+			case <-d.stopTheWorld:
+				return
+			default:
+				readCount, _, _ := d.packetConn.ReadFrom(readBuffer)
+				readData := make([]byte, readCount)
+				copy(readData, readBuffer[:readCount])
+
+				// Only signed messages get placed on messageChan
+				if gotSignedMessage(readData, signature) {
+					msg := signedMessage{
+						signature: readData[:len(signature)],
+						message:   readData[len(signature):],
+					}
+					messageChan <- msg
+				}
+			}
+		}
+	}()
+
+	return messageChan
+}
+
+func (d *FakeDoppler) Close() {
+	d.packetConn.Close()
+}
+
+type signedMessage struct {
+	signature []byte
+	message   []byte
+}
+
+func sign(message []byte) signedMessage {
+	expectedEnvelope := addDefaultTags(basicValueMessageEnvelope())
+	expectedMessage, _ := proto.Marshal(expectedEnvelope)
+
+	mac := hmac.New(sha256.New, []byte("shared_secret"))
+	mac.Write(expectedMessage)
+
+	signature := mac.Sum(nil)
+	return signedMessage{signature: signature, message: expectedMessage}
+}
+
+func gotSignedMessage(readData, signature []byte) bool {
+	return len(readData) > len(signature)
 }

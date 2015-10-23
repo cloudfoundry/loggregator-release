@@ -24,7 +24,7 @@ func AddWSSink(receivedChan chan []byte, port string, path string) (*websocket.C
 	var ws *websocket.Conn
 	var err error
 	Eventually(func() error {
-		ws, _, err = websocket.DefaultDialer.Dial("ws://localhost:"+port+path, http.Header{})
+		ws, _, err = websocket.DefaultDialer.Dial("ws://127.0.0.1:"+port+path, http.Header{})
 		return err
 	}).Should(Succeed())
 	Expect(ws).NotTo(BeNil())
@@ -32,7 +32,6 @@ func AddWSSink(receivedChan chan []byte, port string, path string) (*websocket.C
 	go func() {
 		for {
 			_, data, err := ws.ReadMessage()
-
 			if err != nil {
 				connectionDroppedChannel <- true
 				close(receivedChan)
@@ -40,7 +39,6 @@ func AddWSSink(receivedChan chan []byte, port string, path string) (*websocket.C
 			}
 			receivedChan <- data
 		}
-
 	}()
 
 	go func() {

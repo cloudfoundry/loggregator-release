@@ -1,14 +1,16 @@
 package valuemetricreader
 
 import (
-	"github.com/cloudfoundry/sonde-go/events"
 	"tools/benchmark/metricsreporter"
+
+	"github.com/cloudfoundry/sonde-go/events"
 )
 
 const TestOrigin = "test-origin"
 
 type MessageReader interface {
 	Read() *events.Envelope
+	Close()
 }
 
 type ValueMetricReader struct {
@@ -29,4 +31,8 @@ func (lr *ValueMetricReader) Read() {
 	if message != nil && message.GetValueMetric() != nil && *message.Origin == TestOrigin {
 		lr.receivedCounter.IncrementValue()
 	}
+}
+
+func (lr *ValueMetricReader) Close() {
+	lr.reader.Close()
 }

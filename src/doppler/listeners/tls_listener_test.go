@@ -1,14 +1,14 @@
-package tlslistener_test
+package listeners_test
 
 import (
+	"encoding/binary"
+	"strings"
+
 	"github.com/cloudfoundry/sonde-go/events"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"crypto/tls"
-	"doppler/listeners/agentlistener"
-	"doppler/listeners/tlslistener"
-	"encoding/gob"
+	"doppler/listeners"
 	"fmt"
 	"net"
 	"net/http"
@@ -21,30 +21,34 @@ import (
 	"github.com/nu7hatch/gouuid"
 )
 
-const address = "127.0.0.1:4567"
-
 var _ = Describe("Tcplistener", func() {
+	var envelopeChan chan *events.Envelope
+	var tlsListener listeners.Listener
+
+	BeforeEach(func() {
+		envelopeChan = make(chan *events.Envelope)
+		var err error
+		tlsListener, err = listeners.NewTLSListener("aname", "127.0.0.1:0", tlsconfig, envelopeChan, loggertesthelper.Logger())
+		Expect(err).NotTo(HaveOccurred())
+		go tlsListener.Start()
+	})
+
+	AfterEach(func() {
+		tlsListener.Stop()
+	})
 
 	Context("dropsonde metric emission", func() {
-		var envelopeChan chan *events.Envelope
-		var tlsListener agentlistener.Listener
-
 		BeforeEach(func() {
-			envelopeChan = make(chan *events.Envelope)
-			tlsListener = tlslistener.New(address, config, envelopeChan, loggertesthelper.Logger())
-			go tlsListener.Start()
+			fakeEventEmitter.Reset()
+			metricBatcher.Reset()
 		})
 
-		AfterEach(func() {
-			tlsListener.Stop()
-		})
-
-		It("sends all types of messages as a gob", func() {
+		It("sends all types of messages as a protobuf", func() {
 			for name, eventType := range events.Envelope_EventType_value {
 				envelope := createEnvelope(events.Envelope_EventType(eventType))
-				conn := openTLSConnection()
+				conn := openTLSConnection(tlsListener.Address())
 
-				err := writeGob(conn, envelope)
+				err := send(conn, envelope)
 				Expect(err).ToNot(HaveOccurred())
 
 				Eventually(envelopeChan).Should(Receive(Equal(envelope)), fmt.Sprintf("did not receive expected event: %s", name))
@@ -55,14 +59,14 @@ var _ = Describe("Tcplistener", func() {
 		It("sends all types of messages over multiple connections", func() {
 			for _, eventType := range events.Envelope_EventType_value {
 				envelope1 := createEnvelope(events.Envelope_EventType(eventType))
-				conn1 := openTLSConnection()
+				conn1 := openTLSConnection(tlsListener.Address())
 
 				envelope2 := createEnvelope(events.Envelope_EventType(eventType))
-				conn2 := openTLSConnection()
+				conn2 := openTLSConnection(tlsListener.Address())
 
-				err := writeGob(conn1, envelope1)
+				err := send(conn1, envelope1)
 				Expect(err).ToNot(HaveOccurred())
-				err = writeGob(conn2, envelope2)
+				err = send(conn2, envelope2)
 				Expect(err).ToNot(HaveOccurred())
 
 				envelopes := readMessages(envelopeChan, 2)
@@ -73,52 +77,73 @@ var _ = Describe("Tcplistener", func() {
 				conn2.Close()
 			}
 		})
+
+		It("issues intended metrics", func() {
+			envelope := createEnvelope(events.Envelope_LogMessage)
+			conn := openTLSConnection(tlsListener.Address())
+
+			err := send(conn, envelope)
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(envelopeChan).Should(Receive())
+
+			Eventually(func() int {
+				return len(fakeEventEmitter.GetMessages())
+			}).Should(BeNumerically(">", 2))
+
+			var counterEvents []*events.CounterEvent
+			for _, e := range fakeEventEmitter.GetMessages() {
+				if ce, ok := e.Event.(*events.CounterEvent); ok {
+					if strings.HasPrefix(ce.GetName(), "aname.") {
+						counterEvents = append(counterEvents, ce)
+					}
+				}
+			}
+
+			Expect(counterEvents).To(ConsistOf(
+				&events.CounterEvent{
+					Name:  proto.String("aname.receivedMessageCount"),
+					Delta: proto.Uint64(1),
+				},
+				&events.CounterEvent{
+					Name:  proto.String("aname.receivedByteCount"),
+					Delta: proto.Uint64(65),
+				},
+			))
+		})
 	})
 
 	Context("Start Stop", func() {
-		var envelopeChan chan *events.Envelope
-		var tlsListener agentlistener.Listener
-
-		BeforeEach(func() {
-			envelopeChan = make(chan *events.Envelope)
-			tlsListener = tlslistener.New(address, config, envelopeChan, loggertesthelper.Logger())
-			go tlsListener.Start()
-		})
-
-		AfterEach(func() {
-			tlsListener.Stop()
-		})
-
 		It("panics if you start again", func() {
-			openTLSConnection()
+			conn := openTLSConnection(tlsListener.Address())
+			defer conn.Close()
 
+			Expect(tlsListener.Start).Should(Panic())
+		})
+
+		It("panics if you start after a stop", func() {
+			conn := openTLSConnection(tlsListener.Address())
+			defer conn.Close()
+
+			tlsListener.Stop()
 			Expect(tlsListener.Start).Should(Panic())
 		})
 
 		It("fails to send message after listener has been stopped", func() {
 			logMessage := factories.NewLogMessage(events.LogMessage_OUT, "some message", "appId", "source")
 			envelope, _ := emitter.Wrap(logMessage, "origin")
-			conn := openTLSConnection()
+			conn := openTLSConnection(tlsListener.Address())
 
-			err := writeGob(conn, envelope)
+			err := send(conn, envelope)
 			Expect(err).ToNot(HaveOccurred())
 
 			tlsListener.Stop()
 
 			Eventually(func() error {
-				return writeGob(conn, envelope)
+				return send(conn, envelope)
 			}).Should(HaveOccurred())
-		})
 
-		It("can start again after being stopped", func() {
-			openTLSConnection()
-			tlsListener.Stop()
-
-			start := func() {
-				go tlsListener.Start()
-				openTLSConnection()
-			}
-			Expect(start).ShouldNot(Panic())
+			conn.Close()
 		})
 	})
 })
@@ -126,33 +151,44 @@ var _ = Describe("Tcplistener", func() {
 func readMessages(envelopeChan chan *events.Envelope, n int) []*events.Envelope {
 	var envelopes []*events.Envelope
 	for i := 0; i < n; i++ {
-		envelope := <-envelopeChan
+		var envelope *events.Envelope
+		Eventually(envelopeChan).Should(Receive(&envelope))
 		envelopes = append(envelopes, envelope)
 	}
 	return envelopes
 }
 
-func openTLSConnection() net.Conn {
+func openTLSConnection(address string) net.Conn {
 	var conn net.Conn
 	var err error
 	Eventually(func() error {
-		conn, err = tls.Dial("tcp", address, &tls.Config{
-			InsecureSkipVerify: true,
-		})
+		conn, err = net.Dial("tcp", address)
 		return err
 	}).ShouldNot(HaveOccurred())
 
 	return conn
 }
 
-func writeGob(conn net.Conn, envelope *events.Envelope) error {
-	encoder := gob.NewEncoder(conn)
-	return encoder.Encode(envelope)
+func send(conn net.Conn, envelope *events.Envelope) error {
+	bytes, err := proto.Marshal(envelope)
+	if err != nil {
+		return err
+	}
+
+	var n uint16
+	n = uint16(len(bytes))
+	err = binary.Write(conn, binary.LittleEndian, n)
+	if err != nil {
+		return err
+	}
+
+	_, err = conn.Write(bytes)
+	return err
 }
 
 func createEnvelope(eventType events.Envelope_EventType) *events.Envelope {
 
-	envelope := &events.Envelope{Origin: proto.String("origin"), Timestamp: proto.Int64(time.Now().UnixNano())}
+	envelope := &events.Envelope{Origin: proto.String("origin"), EventType: &eventType, Timestamp: proto.Int64(time.Now().UnixNano())}
 
 	switch eventType {
 	case events.Envelope_HttpStart:

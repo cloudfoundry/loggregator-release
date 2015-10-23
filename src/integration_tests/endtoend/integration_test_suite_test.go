@@ -12,7 +12,6 @@ import (
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 	"github.com/pivotal-golang/localip"
 )
@@ -35,6 +34,8 @@ var (
 	metronSession  *gexec.Session
 	dopplerSession *gexec.Session
 	tcSession      *gexec.Session
+
+	dopplerConfig string
 )
 
 var _ = BeforeSuite(func() {
@@ -51,22 +52,22 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = BeforeEach(func() {
+	etcdRunner.Reset()
+
+	dopplerConfig = "dopplerudp"
+})
+
+var _ = JustBeforeEach(func() {
 	const (
 		BLUE       = 34
 		PURPLE     = 35
 		LIGHT_BLUE = 36
 	)
 
-	dopplerSession = startComponent(dopplerExecutablePath, "doppler", PURPLE, "--config=fixtures/doppler.json")
+	dopplerSession = startComponent(dopplerExecutablePath, "doppler", PURPLE, "--config=fixtures/"+dopplerConfig+".json")
 	var err error
 	LocalIPAddress, err = localip.LocalIP()
 	Expect(err).ToNot(HaveOccurred())
-
-	// Wait for doppler to startup
-	Eventually(func() error {
-		_, err := etcdAdapter.Get("healthstatus/doppler/z1/doppler_z1/0")
-		return err
-	}, 11).Should(BeNil())
 
 	metronSession = startComponent(metronExecutablePath, "metron", BLUE, "--config=fixtures/metron.json")
 
@@ -74,9 +75,6 @@ var _ = BeforeEach(func() {
 
 	// Wait for traffic controller to startup
 	waitOnURL("http://" + LocalIPAddress + ":49630")
-
-	// Metron will report that it is up when it really isn't (at least according to the /varz endpoint)
-	Eventually(metronSession.Out).Should(gbytes.Say("Doppler advertising UDP"))
 })
 
 func buildComponent(componentName string) (pathToComponent string) {

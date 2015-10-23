@@ -10,7 +10,6 @@ import (
 )
 
 type NetworkReader struct {
-	host       string
 	connection net.PacketConn
 	writer     writers.ByteArrayWriter
 
@@ -19,26 +18,25 @@ type NetworkReader struct {
 	logger *gosteno.Logger
 }
 
-func New(host string, name string, writer writers.ByteArrayWriter, logger *gosteno.Logger) *NetworkReader {
+func New(address string, name string, writer writers.ByteArrayWriter, logger *gosteno.Logger) (*NetworkReader, error) {
+	connection, err := net.ListenPacket("udp4", address)
+	if err != nil {
+		return nil, err
+	}
+	logger.Infof("Listening on %s", address)
+
 	return &NetworkReader{
-		host:        host,
+		connection:  connection,
 		contextName: name,
 		writer:      writer,
 		logger:      logger,
-	}
+	}, nil
 }
 
 func (nr *NetworkReader) Start() {
-	connection, err := net.ListenPacket("udp4", nr.host)
-	if err != nil {
-		nr.logger.Fatalf("Failed to listen on port. %s", err)
-	}
-	nr.logger.Infof("Listening on port %s", nr.host)
-	nr.connection = connection
-
 	readBuffer := make([]byte, 65535) //buffer with size = max theoretical UDP size
 	for {
-		readCount, senderAddr, err := connection.ReadFrom(readBuffer)
+		readCount, senderAddr, err := nr.connection.ReadFrom(readBuffer)
 		if err != nil {
 			nr.logger.Debugf("Error while reading. %s", err)
 			return

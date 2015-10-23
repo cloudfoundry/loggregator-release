@@ -47,7 +47,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 		Expect(receivedMessage.GetAppId()).To(Equal(appID))
 		Expect(string(receivedMessage.GetMessage())).To(ContainSubstring("Err: Invalid scheme type"))
-	}, 30)
+	})
 
 	It("handles URLs that don't resolve", func() {
 		receivedChan := make(chan []byte, 1)
@@ -68,7 +68,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 			Expect(string(receivedMessage.GetMessage())).To(ContainSubstring("Err: Resolving host failed"))
 			Expect(string(receivedMessage.GetMessage())).To(ContainSubstring(badURL))
 		}
-	}, 30)
+	})
 
 	Context("when connecting over TCP", func() {
 		var (
@@ -93,9 +93,9 @@ var _ = Describe("Syslog Drain Binding", func() {
 				Eventually(func() *gbytes.Buffer {
 					SendAppLog(appID, "syslog-message", inputConnection)
 					return drainSession.Out
-				}, 90, 1).Should(gbytes.Say("syslog-message"))
+				}, 20, 1).Should(gbytes.Say("syslog-message"))
 
-			}, 100)
+			})
 
 			It("reconnects to a reappearing syslog server after an unexpected close", func() {
 				syslogDrainURL := "syslog://" + syslogDrainAddress
@@ -114,9 +114,9 @@ var _ = Describe("Syslog Drain Binding", func() {
 				Eventually(func() *gbytes.Buffer {
 					SendAppLog(appID, "syslog-message", inputConnection)
 					return drainSession.Out
-				}, 90, 1).Should(gbytes.Say("syslog-message"))
+				}, 20, 1).Should(gbytes.Say("syslog-message"))
 
-			}, 115)
+			})
 		})
 
 		Context("when forwarding to an encrypted syslog-tls:// endpoint", func() {
@@ -136,9 +136,8 @@ var _ = Describe("Syslog Drain Binding", func() {
 				Eventually(func() *gbytes.Buffer {
 					SendAppLog(appID, "syslog-message", inputConnection)
 					return drainSession.Out
-				}, 90, 1).Should(gbytes.Say("syslog-message"))
-
-			}, 100)
+				}, 20, 1).Should(gbytes.Say("syslog-message"))
+			})
 
 			It("reconnects to a reappearing tls server", func() {
 				syslogDrainURL := "syslog-tls://" + syslogDrainAddress
@@ -157,9 +156,8 @@ var _ = Describe("Syslog Drain Binding", func() {
 				Eventually(func() *gbytes.Buffer {
 					SendAppLog(appID, "syslogtls-message", inputConnection)
 					return drainSession.Out
-				}, 90, 1).Should(gbytes.Say("syslogtls-message"))
-
-			}, 115)
+				}, 20, 1).Should(gbytes.Say("syslogtls-message"))
+			})
 		})
 	})
 
@@ -183,7 +181,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 			Eventually(func() *gbytes.Buffer {
 				SendAppLog(appID, "http-message", inputConnection)
 				return serverSession.Out
-			}, 90, 1).Should(gbytes.Say(`http-message`))
+			}, 20, 1).Should(gbytes.Say(`http-message`))
 		})
 
 		It("reconnects a reappearing https server", func() {
@@ -197,14 +195,14 @@ var _ = Describe("Syslog Drain Binding", func() {
 			Eventually(func() *gbytes.Buffer {
 				SendAppLog(appID, "http-message", inputConnection)
 				return serverSession.Out
-			}, 90, 1).Should(gbytes.Say(`http-message`))
+			}, 20, 1).Should(gbytes.Say(`http-message`))
 		})
 
 		It("logs the number of dropped messages", func() {
 			Eventually(func() *gbytes.Buffer {
 				SendAppLog(appID, "http-message", inputConnection)
 				return serverSession.Out
-			}, 90, 1).Should(gbytes.Say(`http-message`))
+			}, 20, 1).Should(gbytes.Say(`http-message`))
 
 			serverSession.Kill().Wait()
 
@@ -214,7 +212,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 			Eventually(func() *gbytes.Buffer {
 				SendAppLog(appID, "overflow", inputConnection)
 				return dopplerSession.Out
-			}, 30, 1).Should(gbytes.Say(`TB: Output channel too full`))
+			}, 20, 1).Should(gbytes.Say(`TB: Output channel too full`))
 
 			By("starting the endpoint (1st time)")
 			serverSession = StartHTTPSServer(pathToHTTPEchoServer)
@@ -229,12 +227,12 @@ var _ = Describe("Syslog Drain Binding", func() {
 			Eventually(func() *gbytes.Buffer {
 				SendAppLog(appID, "overflow2", inputConnection)
 				return dopplerSession.Out
-			}, 30, 1).Should(gbytes.Say(`TB: Output channel too full`))
+			}, 20, 1).Should(gbytes.Say(`TB: Output channel too full`))
 
 			Eventually(func() *gbytes.Buffer {
 				SendAppLog(appID, "overflow2", inputConnection)
 				return dopplerSession.Out
-			}, 30, 1).Should(gbytes.Say(`TB: Output channel too full`))
+			}, 20, 1).Should(gbytes.Say(`TB: Output channel too full`))
 
 			By("starting the endpoint (2nd time)")
 			serverSession = StartHTTPSServer(pathToHTTPEchoServer)

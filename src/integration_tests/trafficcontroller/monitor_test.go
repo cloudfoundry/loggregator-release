@@ -1,13 +1,14 @@
 package integration_test
 
 import (
+	"metron/networkreader"
+	"metron/writers/eventunmarshaller"
+	"sync/atomic"
+
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"metron/networkreader"
-	"metron/writers/eventunmarshaller"
-	"sync/atomic"
 )
 
 var _ = Describe("Monitor", func() {
@@ -15,7 +16,8 @@ var _ = Describe("Monitor", func() {
 		logger := loggertesthelper.Logger()
 		writer := &fakeWriter{}
 		dropsondeUnmarshaller := eventunmarshaller.New(writer, logger)
-		dropsondeReader := networkreader.New("localhost:37474", "dropsondeAgentListener", dropsondeUnmarshaller, logger)
+		dropsondeReader, err := networkreader.New("127.0.0.1:37474", "dropsondeAgentListener", dropsondeUnmarshaller, logger)
+		Expect(err).NotTo(HaveOccurred())
 
 		go dropsondeReader.Start()
 		defer dropsondeReader.Stop()

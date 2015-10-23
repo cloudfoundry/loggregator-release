@@ -5,7 +5,9 @@ import (
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
 	"fmt"
+	"net"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/factories"
@@ -15,6 +17,7 @@ import (
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 )
 
@@ -25,13 +28,16 @@ var _ = Describe("WebsocketServer", func() {
 	var appId = "my-app"
 	var wsReceivedChan chan []byte
 	var connectionDropped <-chan struct{}
-	var apiEndpoint = "127.0.0.1:9091"
+	var apiEndpoint string
 
 	BeforeEach(func() {
 		logger := loggertesthelper.Logger()
 		wsReceivedChan = make(chan []byte)
 
-		server = websocketserver.New(apiEndpoint, sinkManager, 100*time.Millisecond, 100, "dropsonde-origin", logger)
+		apiEndpoint = net.JoinHostPort("127.0.0.1", strconv.Itoa(9091+config.GinkgoConfig.ParallelNode*10))
+		var err error
+		server, err = websocketserver.New(apiEndpoint, sinkManager, 100*time.Millisecond, 100, "dropsonde-origin", logger)
+		Expect(err).NotTo(HaveOccurred())
 		go server.Start()
 		serverUrl := fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId)
 		websocket.DefaultDialer = &websocket.Dialer{HandshakeTimeout: 10 * time.Millisecond}
@@ -55,7 +61,7 @@ var _ = Describe("WebsocketServer", func() {
 		})
 	})
 
-	It("dumps buffer data to the websocket client with /recentlogs", func(done Done) {
+	It("dumps buffer data to the websocket client with /recentlogs", func() {
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 		sinkManager.SendTo(appId, lm)
 
@@ -64,10 +70,9 @@ var _ = Describe("WebsocketServer", func() {
 		rlm, err := receiveEnvelope(wsReceivedChan)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rlm.GetLogMessage().GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
-		close(done)
 	})
 
-	It("dumps container metric data to the websocket client with /containermetrics", func(done Done) {
+	It("dumps container metric data to the websocket client with /containermetrics", func() {
 		cm := factories.NewContainerMetric(appId, 0, 42.42, 1234, 123412341234)
 		envelope, _ := emitter.Wrap(cm, "origin")
 		sinkManager.SendTo(appId, envelope)
@@ -77,10 +82,19 @@ var _ = Describe("WebsocketServer", func() {
 		rcm, err := receiveEnvelope(wsReceivedChan)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rcm.GetContainerMetric()).To(Equal(cm))
-		close(done)
 	})
 
-	It("sends data to the websocket client with /stream", func(done Done) {
+	It("skips sending data to the websocket client with a marshal error", func() {
+		cm := factories.NewContainerMetric(appId, 0, 42.42, 1234, 123412341234)
+		cm.InstanceIndex = nil
+		envelope, _ := emitter.Wrap(cm, "origin")
+		sinkManager.SendTo(appId, envelope)
+
+		AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/containermetrics", apiEndpoint, appId))
+		Consistently(wsReceivedChan).ShouldNot(Receive())
+	})
+
+	It("sends data to the websocket client with /stream", func() {
 		stopKeepAlive, _ := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 		sinkManager.SendTo(appId, lm)
@@ -89,10 +103,9 @@ var _ = Describe("WebsocketServer", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rlm.GetLogMessage().GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
 		close(stopKeepAlive)
-		close(done)
 	})
 
-	It("sends data to the websocket firehose client", func(done Done) {
+	It("sends data to the websocket firehose client", func() {
 		stopKeepAlive, _ := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/firehose/fire-subscription-a", apiEndpoint))
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 		sinkManager.SendTo(appId, lm)
@@ -101,10 +114,9 @@ var _ = Describe("WebsocketServer", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rlm.GetLogMessage().GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
 		close(stopKeepAlive)
-		close(done)
 	})
 
-	It("sends each message to only one of many firehoses with the same subscription id", func(done Done) {
+	It("sends each message to only one of many firehoses with the same subscription id", func() {
 		firehoseAChan1 := make(chan []byte, 100)
 		stopKeepAlive1, _ := AddWSSink(firehoseAChan1, fmt.Sprintf("ws://%s/firehose/fire-subscription-x", apiEndpoint))
 
@@ -131,10 +143,9 @@ var _ = Describe("WebsocketServer", func() {
 
 		close(stopKeepAlive1)
 		close(stopKeepAlive2)
-		close(done)
 	}, 2)
 
-	It("still sends to 'live' sinks", func(done Done) {
+	It("still sends to 'live' sinks", func() {
 		stopKeepAlive, connectionDropped := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
 		Consistently(connectionDropped, 0.2).ShouldNot(BeClosed())
 
@@ -145,7 +156,6 @@ var _ = Describe("WebsocketServer", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rlm).ToNot(BeNil())
 		close(stopKeepAlive)
-		close(done)
 	})
 
 	It("closes the client when the keep-alive stops", func() {
@@ -157,6 +167,7 @@ var _ = Describe("WebsocketServer", func() {
 })
 
 func receiveEnvelope(dataChan <-chan []byte) (*events.Envelope, error) {
-	receivedData := <-dataChan
-	return parseEnvelope(receivedData)
+	var data []byte
+	Eventually(dataChan).Should(Receive(&data))
+	return parseEnvelope(data)
 }

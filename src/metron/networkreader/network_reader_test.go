@@ -40,16 +40,19 @@ var _ = Describe("NetworkReader", func() {
 	var fakeMetricSender *fake.FakeMetricSender
 
 	BeforeEach(func() {
+		loggertesthelper.TestLoggerSink.Clear()
+
 		port = randomPort() + GinkgoParallelNode()
 		address = net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
 		writer = mocks.MockByteArrayWriter{}
-		reader = networkreader.New(address, "networkReader", &writer, loggertesthelper.Logger())
+		var err error
+		reader, err = networkreader.New(address, "networkReader", &writer, loggertesthelper.Logger())
+		Expect(err).NotTo(HaveOccurred())
 		readerStopped = make(chan struct{})
 	})
 
 	Context("with a reader running", func() {
 		BeforeEach(func() {
-			loggertesthelper.TestLoggerSink.Clear()
 			fakeMetricSender = fake.NewFakeMetricSender()
 			metricBatcher := metricbatcher.New(fakeMetricSender, time.Millisecond)
 			metrics.Initialize(fakeMetricSender, metricBatcher)
@@ -59,7 +62,7 @@ var _ = Describe("NetworkReader", func() {
 				close(readerStopped)
 			}()
 
-			expectedLog := fmt.Sprintf("Listening on port %s", address)
+			expectedLog := fmt.Sprintf("Listening on %s", address)
 			Eventually(loggertesthelper.TestLoggerSink.LogContents).Should(ContainSubstring(expectedLog))
 		})
 

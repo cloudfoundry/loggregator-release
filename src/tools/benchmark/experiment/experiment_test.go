@@ -3,9 +3,10 @@ package experiment_test
 import (
 	"tools/benchmark/experiment"
 
+	"sync/atomic"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"sync/atomic"
 )
 
 var _ = Describe("Experiment", func() {
@@ -21,9 +22,10 @@ var _ = Describe("Experiment", func() {
 		e.AddWriteStrategy(strategy)
 	})
 
-	Describe("Start", func() {
+	Describe("Warmup & Start", func() {
 		It("sends and receives messages", func() {
 			defer e.Stop()
+			e.Warmup()
 			go e.Start()
 
 			Eventually(strategy.Started).Should(BeTrue())
@@ -33,6 +35,7 @@ var _ = Describe("Experiment", func() {
 		It("stops when we close the stop channel", func() {
 			doneChan := make(chan struct{})
 
+			e.Warmup()
 			go func() {
 				e.Start()
 				close(doneChan)
@@ -67,6 +70,9 @@ type fakeOtherReader struct {
 
 func (reader *fakeOtherReader) Read() {
 	atomic.AddInt32(&reader.readCount, 1)
+}
+
+func (reader *fakeOtherReader) Close() {
 }
 
 func (reader *fakeOtherReader) ReadCount() int32 {

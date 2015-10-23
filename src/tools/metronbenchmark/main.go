@@ -15,12 +15,13 @@ import (
 
 	"runtime"
 
-	"github.com/cloudfoundry/gunk/workpool"
-	"github.com/cloudfoundry/storeadapter"
-	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"tools/benchmark/messagegenerator"
 	"tools/benchmark/writestrategies"
 	"tools/metronbenchmark/valuemetricreader"
+
+	"github.com/cloudfoundry/gunk/workpool"
+	"github.com/cloudfoundry/storeadapter"
+	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 )
 
 func main() {
@@ -57,6 +58,7 @@ func main() {
 
 	announceToEtcd()
 
+	exp.Warmup()
 	go reporter.Start()
 	go exp.Start()
 

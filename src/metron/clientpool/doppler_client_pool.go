@@ -130,7 +130,7 @@ func (pool *DopplerPool) merge() {
 
 	for address, client := range pool.clients {
 		if _, ok := newClients[address]; !ok {
-			client.Stop()
+			client.Close()
 		}
 	}
 

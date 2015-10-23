@@ -109,7 +109,7 @@ func main() {
 	dropsonde.Initialize(conf.MetronAddress, DOPPLER_ORIGIN)
 	storeAdapter := NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
 
-	doppler := New(localIp, conf, log, storeAdapter, conf.MessageDrainBufferSize, DOPPLER_ORIGIN, time.Duration(conf.SinkDialTimeoutSeconds)*time.Second)
+	doppler := New(log, localIp, conf, storeAdapter, conf.MessageDrainBufferSize, DOPPLER_ORIGIN, time.Duration(conf.SinkDialTimeoutSeconds)*time.Second)
 
 	if err != nil {
 		panic(err)
@@ -132,10 +132,18 @@ func main() {
 			logger.DumpGoRoutine()
 		case <-killChan:
 			log.Info("Shutting down")
+
+			stopped := make(chan bool)
+			legacyStopped := make(chan bool)
+			releaseNodeChan <- stopped
+			legacyReleaseNodeChan <- legacyStopped
+
 			doppler.Stop()
-			close(releaseNodeChan)
-			close(legacyReleaseNodeChan)
-			return
+
+			<-stopped
+			<-legacyStopped
+
+			os.Exit(0)
 		}
 	}
 }

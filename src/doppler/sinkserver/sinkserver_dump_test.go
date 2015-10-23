@@ -30,7 +30,6 @@ var _ = Describe("Dumping", func() {
 		TestWebsocketServer *websocketserver.WebsocketServer
 		dataReadChannel     chan *events.Envelope
 		services            sync.WaitGroup
-		goRoutineSpawned    sync.WaitGroup
 		serverPort          string
 	)
 
@@ -50,9 +49,7 @@ var _ = Describe("Dumping", func() {
 
 		tempSink := sinkManager
 		services.Add(1)
-		goRoutineSpawned.Add(1)
 		go func() {
-			goRoutineSpawned.Done()
 			defer services.Done()
 			tempSink.Start(newAppServiceChan, deletedAppServiceChan)
 		}()
@@ -61,26 +58,22 @@ var _ = Describe("Dumping", func() {
 		tempMessageRouter := TestMessageRouter
 
 		services.Add(1)
-		goRoutineSpawned.Add(1)
 		go func() {
-			goRoutineSpawned.Done()
 			defer services.Done()
 			tempMessageRouter.Start(dataReadChannel)
 		}()
 
 		apiEndpoint := "localhost:" + serverPort
-		TestWebsocketServer = websocketserver.New(apiEndpoint, sinkManager, 10*time.Second, 100, "dropsonde-origin", logger)
+		var err error
+		TestWebsocketServer, err = websocketserver.New(apiEndpoint, sinkManager, 10*time.Second, 100, "dropsonde-origin", logger)
+		Expect(err).NotTo(HaveOccurred())
 		tempWebsocketServer := TestWebsocketServer
 
 		services.Add(1)
-		goRoutineSpawned.Add(1)
 		go func() {
-			goRoutineSpawned.Done()
 			defer services.Done()
 			tempWebsocketServer.Start()
 		}()
-
-		goRoutineSpawned.Wait()
 	})
 
 	AfterEach(func() {
@@ -103,10 +96,14 @@ var _ = Describe("Dumping", func() {
 		dataReadChannel <- env1
 		dataReadChannel <- env2
 
-		receivedChan := make(chan []byte, 2)
-		_, stopKeepAlive, droppedChannel := AddWSSink(receivedChan, serverPort, "/apps/myOtherApp/recentlogs")
-
-		Eventually(droppedChannel).Should(Receive())
+		var receivedChan chan []byte
+		Eventually(func() int {
+			receivedChan = make(chan []byte, 2)
+			_, stopKeepAlive, droppedChannel := AddWSSink(receivedChan, serverPort, "/apps/myOtherApp/recentlogs")
+			stopKeepAlive <- true
+			Eventually(droppedChannel).Should(Receive())
+			return len(receivedChan)
+		}).Should(Equal(2))
 
 		var firstMarshalledEnvelope, secondMarshalledEnvelope []byte
 		Eventually(receivedChan).Should(Receive(&firstMarshalledEnvelope))
@@ -120,8 +117,6 @@ var _ = Describe("Dumping", func() {
 
 		Expect(envelope1.GetLogMessage().GetMessage()).To(BeEquivalentTo(expectedFirstMessageString))
 		Expect(envelope2.GetLogMessage().GetMessage()).To(BeEquivalentTo(expectedSecondMessageString))
-
-		stopKeepAlive <- true
 	})
 
 	It("doesn't hang when there are no messages", func() {
