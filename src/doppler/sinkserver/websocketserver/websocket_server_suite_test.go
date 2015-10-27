@@ -21,15 +21,13 @@ func TestWebsocketServer(t *testing.T) {
 	RunSpecs(t, "WebsocketServer Suite")
 }
 
-func AddWSSink(receivedChan chan []byte, url string) (chan struct{}, <-chan struct{}) {
+func AddWSSink(receivedChan chan []byte, url string) (chan struct{}, <-chan struct{}, error) {
 	stopKeepAlive := make(chan struct{})
 	connectionDropped := make(chan struct{})
 
 	ws, _, err := websocket.DefaultDialer.Dial(url, http.Header{})
 	if err != nil {
-		close(stopKeepAlive)
-		close(connectionDropped)
-		return stopKeepAlive, connectionDropped
+		return nil, nil, err
 	}
 
 	ws.SetPingHandler(func(message string) error {
@@ -53,7 +51,7 @@ func AddWSSink(receivedChan chan []byte, url string) (chan struct{}, <-chan stru
 		}
 	}()
 
-	return stopKeepAlive, connectionDropped
+	return stopKeepAlive, connectionDropped, nil
 }
 
 func parseEnvelope(actual []byte) (*events.Envelope, error) {

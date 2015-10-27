@@ -27,7 +27,6 @@ var _ = Describe("WebsocketServer", func() {
 	var sinkManager = sinkmanager.New(1024, false, blacklist.New(nil), loggertesthelper.Logger(), 100, "dropsonde-origin", 1*time.Second, 0, 1*time.Second, 500*time.Millisecond)
 	var appId = "my-app"
 	var wsReceivedChan chan []byte
-	var connectionDropped <-chan struct{}
 	var apiEndpoint string
 
 	BeforeEach(func() {
@@ -51,13 +50,13 @@ var _ = Describe("WebsocketServer", func() {
 
 	Describe("failed connections", func() {
 		It("fails without an appId", func() {
-			_, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps//stream", apiEndpoint))
-			Expect(connectionDropped).To(BeClosed())
+			_, _, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps//stream", apiEndpoint))
+			Expect(err).To(HaveOccurred())
 		})
 
 		It("fails with bad path", func() {
-			_, connectionDropped = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/my-app/junk", apiEndpoint))
-			Expect(connectionDropped).To(BeClosed())
+			_, _, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/my-app/junk", apiEndpoint))
+			Expect(err).To(HaveOccurred())
 		})
 	})
 
@@ -65,7 +64,8 @@ var _ = Describe("WebsocketServer", func() {
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 		sinkManager.SendTo(appId, lm)
 
-		AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/recentlogs", apiEndpoint, appId))
+		_, _, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/recentlogs", apiEndpoint, appId))
+		Expect(err).NotTo(HaveOccurred())
 
 		rlm, err := receiveEnvelope(wsReceivedChan)
 		Expect(err).NotTo(HaveOccurred())
@@ -77,7 +77,8 @@ var _ = Describe("WebsocketServer", func() {
 		envelope, _ := emitter.Wrap(cm, "origin")
 		sinkManager.SendTo(appId, envelope)
 
-		AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/containermetrics", apiEndpoint, appId))
+		_, _, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/containermetrics", apiEndpoint, appId))
+		Expect(err).NotTo(HaveOccurred())
 
 		rcm, err := receiveEnvelope(wsReceivedChan)
 		Expect(err).NotTo(HaveOccurred())
@@ -90,12 +91,14 @@ var _ = Describe("WebsocketServer", func() {
 		envelope, _ := emitter.Wrap(cm, "origin")
 		sinkManager.SendTo(appId, envelope)
 
-		AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/containermetrics", apiEndpoint, appId))
+		_, _, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/containermetrics", apiEndpoint, appId))
+		Expect(err).NotTo(HaveOccurred())
 		Consistently(wsReceivedChan).ShouldNot(Receive())
 	})
 
 	It("sends data to the websocket client with /stream", func() {
-		stopKeepAlive, _ := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
+		stopKeepAlive, _, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
+		Expect(err).NotTo(HaveOccurred())
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 		sinkManager.SendTo(appId, lm)
 
@@ -106,7 +109,8 @@ var _ = Describe("WebsocketServer", func() {
 	})
 
 	It("sends data to the websocket firehose client", func() {
-		stopKeepAlive, _ := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/firehose/fire-subscription-a", apiEndpoint))
+		stopKeepAlive, _, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/firehose/fire-subscription-a", apiEndpoint))
+		Expect(err).NotTo(HaveOccurred())
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 		sinkManager.SendTo(appId, lm)
 
@@ -118,10 +122,12 @@ var _ = Describe("WebsocketServer", func() {
 
 	It("sends each message to only one of many firehoses with the same subscription id", func() {
 		firehoseAChan1 := make(chan []byte, 100)
-		stopKeepAlive1, _ := AddWSSink(firehoseAChan1, fmt.Sprintf("ws://%s/firehose/fire-subscription-x", apiEndpoint))
+		stopKeepAlive1, _, err := AddWSSink(firehoseAChan1, fmt.Sprintf("ws://%s/firehose/fire-subscription-x", apiEndpoint))
+		Expect(err).NotTo(HaveOccurred())
 
 		firehoseAChan2 := make(chan []byte, 100)
-		stopKeepAlive2, _ := AddWSSink(firehoseAChan2, fmt.Sprintf("ws://%s/firehose/fire-subscription-x", apiEndpoint))
+		stopKeepAlive2, _, err := AddWSSink(firehoseAChan2, fmt.Sprintf("ws://%s/firehose/fire-subscription-x", apiEndpoint))
+		Expect(err).NotTo(HaveOccurred())
 
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 
@@ -146,7 +152,8 @@ var _ = Describe("WebsocketServer", func() {
 	}, 2)
 
 	It("still sends to 'live' sinks", func() {
-		stopKeepAlive, connectionDropped := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
+		stopKeepAlive, connectionDropped, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
+		Expect(err).NotTo(HaveOccurred())
 		Consistently(connectionDropped, 0.2).ShouldNot(BeClosed())
 
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
@@ -159,7 +166,8 @@ var _ = Describe("WebsocketServer", func() {
 	})
 
 	It("closes the client when the keep-alive stops", func() {
-		stopKeepAlive, connectionDropped := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
+		stopKeepAlive, connectionDropped, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
+		Expect(err).NotTo(HaveOccurred())
 		Expect(stopKeepAlive).ToNot(Receive())
 		close(stopKeepAlive)
 		Eventually(connectionDropped).Should(BeClosed())
