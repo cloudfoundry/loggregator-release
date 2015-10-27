@@ -107,7 +107,7 @@ var _ = Describe("Tcplistener", func() {
 				},
 				&events.CounterEvent{
 					Name:  proto.String("aname.receivedByteCount"),
-					Delta: proto.Uint64(65),
+					Delta: proto.Uint64(67),
 				},
 			))
 		})
@@ -175,8 +175,8 @@ func send(conn net.Conn, envelope *events.Envelope) error {
 		return err
 	}
 
-	var n uint16
-	n = uint16(len(bytes))
+	var n uint32
+	n = uint32(len(bytes))
 	err = binary.Write(conn, binary.LittleEndian, n)
 	if err != nil {
 		return err

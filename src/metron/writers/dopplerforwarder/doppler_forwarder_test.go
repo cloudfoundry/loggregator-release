@@ -115,7 +115,7 @@ var _ = Describe("DopplerForwarder", func() {
 			bytes, err := proto.Marshal(envelope)
 			Expect(err).NotTo(HaveOccurred())
 
-			n := uint16(len(bytes))
+			n := uint32(len(bytes))
 			err = binary.Write(&buffer, binary.LittleEndian, n)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -161,10 +161,6 @@ var _ = Describe("DopplerForwarder", func() {
 
 			It("closes the client", func() {
 				Expect(client.CloseCallCount()).To(Equal(1))
-			})
-
-			It("increments the marshallErrors metric", func() {
-				Eventually(func() uint64 { return sender.GetCounter("dropsondeMarshaller.marshalErrors") }).Should(BeEquivalentTo(1))
 			})
 
 			It("does not increment message count or sentMessages", func() {

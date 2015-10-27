@@ -45,9 +45,7 @@ func SendEventTLS(event events.Event, conn net.Conn) error {
 		return err
 	}
 
-	var n uint16
-	n = uint16(len(bytes))
-	err = binary.Write(conn, binary.LittleEndian, n)
+	err = binary.Write(conn, binary.LittleEndian, uint32(len(bytes)))
 	if err != nil {
 		return err
 	}

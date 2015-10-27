@@ -2,7 +2,6 @@ package dopplerforwarder
 
 import (
 	"encoding/binary"
-	"net"
 	"unicode"
 	"unicode/utf8"
 
@@ -73,7 +72,7 @@ func (d *DopplerForwarder) Write(message *events.Envelope) {
 			return
 		}
 	case "tls":
-		err = binary.Write(client, binary.LittleEndian, uint16(len(messageBytes)))
+		err = binary.Write(client, binary.LittleEndian, uint32(len(messageBytes)))
 		if err == nil {
 			_, err = client.Write(messageBytes)
 		}
@@ -85,10 +84,6 @@ func (d *DopplerForwarder) Write(message *events.Envelope) {
 				"address": client.Address(),
 				"error":   err.Error(),
 			}, "DopplerForwarder: streaming error")
-
-			if _, ok := err.(net.Error); !ok {
-				metrics.BatchIncrementCounter("dropsondeMarshaller.marshalErrors")
-			}
 			return
 		}
 	default:

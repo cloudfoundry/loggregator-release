@@ -14,7 +14,7 @@ type Listener interface {
 	Stop()
 }
 
-type agentListener struct {
+type udpListener struct {
 	*gosteno.Logger
 	host        string
 	dataChannel chan []byte
@@ -23,9 +23,9 @@ type agentListener struct {
 	sync.RWMutex
 }
 
-func NewAgentListener(host string, givenLogger *gosteno.Logger, name string) (Listener, <-chan []byte) {
+func NewUDPListener(host string, givenLogger *gosteno.Logger, name string) (Listener, <-chan []byte) {
 	byteChan := make(chan []byte, 1024)
-	listener := &agentListener{
+	listener := &udpListener{
 		Logger:      givenLogger,
 		host:        host,
 		dataChannel: byteChan,
@@ -35,33 +35,33 @@ func NewAgentListener(host string, givenLogger *gosteno.Logger, name string) (Li
 	return listener, byteChan
 }
 
-func (agentListener *agentListener) Address() string {
-	return agentListener.connection.LocalAddr().String()
+func (udp *udpListener) Address() string {
+	return udp.connection.LocalAddr().String()
 }
 
-func (agent *agentListener) Start() {
-	connection, err := net.ListenPacket("udp", agent.host)
+func (udp *udpListener) Start() {
+	connection, err := net.ListenPacket("udp", udp.host)
 	if err != nil {
-		agent.Fatalf("Failed to listen on port. %s", err)
+		udp.Fatalf("Failed to listen on port. %s", err)
 	}
 
-	agent.Infof("Listening on port %s", agent.host)
-	agent.Lock()
-	agent.connection = connection
-	agent.Unlock()
+	udp.Infof("Listening on port %s", udp.host)
+	udp.Lock()
+	udp.connection = connection
+	udp.Unlock()
 
-	messageCountMetricName := agent.contextName + ".receivedMessageCount"
-	receivedByteCountMetricName := agent.contextName + ".receivedByteCount"
+	messageCountMetricName := udp.contextName + ".receivedMessageCount"
+	receivedByteCountMetricName := udp.contextName + ".receivedByteCount"
 
 	readBuffer := make([]byte, 65535) //buffer with size = max theoretical UDP size
-	defer close(agent.dataChannel)
+	defer close(udp.dataChannel)
 	for {
 		readCount, senderAddr, err := connection.ReadFrom(readBuffer)
 		if err != nil {
-			agent.Debugf("Error while reading. %s", err)
+			udp.Debugf("Error while reading. %s", err)
 			return
 		}
-		agent.Debugf("AgentListener: Read %d bytes from address %s", readCount, senderAddr)
+		udp.Debugf("AgentListener: Read %d bytes from address %s", readCount, senderAddr)
 
 		readData := make([]byte, readCount) //pass on buffer in size only of read data
 		copy(readData, readBuffer[:readCount])
@@ -69,12 +69,12 @@ func (agent *agentListener) Start() {
 		metrics.BatchIncrementCounter(messageCountMetricName)
 		metrics.BatchAddCounter(receivedByteCountMetricName, uint64(readCount))
 
-		agent.dataChannel <- readData
+		udp.dataChannel <- readData
 	}
 }
 
-func (agentListener *agentListener) Stop() {
-	agentListener.Lock()
-	defer agentListener.Unlock()
-	agentListener.connection.Close()
+func (udpListener *udpListener) Stop() {
+	udpListener.Lock()
+	defer udpListener.Unlock()
+	udpListener.connection.Close()
 }

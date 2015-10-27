@@ -26,7 +26,7 @@ var _ = Describe("AgentListener", func() {
 
 		port := 3456 + config.GinkgoConfig.ParallelNode
 		address = net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
-		listener, dataChannel = listeners.NewAgentListener(address, loggertesthelper.Logger(), "agentListener")
+		listener, dataChannel = listeners.NewUDPListener(address, loggertesthelper.Logger(), "udpListener")
 		go func() {
 			listener.Start()
 			close(listenerStopped)
@@ -92,11 +92,11 @@ var _ = Describe("AgentListener", func() {
 
 			Expect(counterEvents).To(ConsistOf(
 				&events.CounterEvent{
-					Name:  proto.String("agentListener.receivedMessageCount"),
+					Name:  proto.String("udpListener.receivedMessageCount"),
 					Delta: proto.Uint64(2),
 				},
 				&events.CounterEvent{
-					Name:  proto.String("agentListener.receivedByteCount"),
+					Name:  proto.String("udpListener.receivedByteCount"),
 					Delta: proto.Uint64(19),
 				},
 			))

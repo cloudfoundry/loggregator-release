@@ -115,7 +115,7 @@ func (t *TLSListener) removeConnection(conn net.Conn) {
 }
 
 func (t *TLSListener) handleConnection(conn net.Conn) {
-	var n uint16
+	var n uint32
 	var bytes []byte
 	var err error
 
@@ -142,7 +142,7 @@ func (t *TLSListener) handleConnection(conn net.Conn) {
 		}
 
 		metrics.BatchIncrementCounter(t.messageCountMetricName)
-		metrics.BatchAddCounter(t.receivedByteCountMetricName, uint64(n+2))
+		metrics.BatchAddCounter(t.receivedByteCountMetricName, uint64(n+4))
 
 		t.logger.Debugf("Received envelope: %#v", envelope)
 		select {
