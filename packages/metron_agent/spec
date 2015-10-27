@@ -28,15 +28,13 @@ files:
 - loggregator/src/logger/*.go # gosub
 - loggregator/src/metron/*.go # gosub
 - loggregator/src/metron/clientpool/*.go # gosub
-- loggregator/src/metron/clientpool/fakes/*.go # gosub
 - loggregator/src/metron/config/*.go # gosub
 - loggregator/src/metron/eventwriter/*.go # gosub
 - loggregator/src/metron/networkreader/*.go # gosub
 - loggregator/src/metron/writers/*.go # gosub
 - loggregator/src/metron/writers/dopplerforwarder/*.go # gosub
-- loggregator/src/metron/writers/eventmarshaller/*.go # gosub
+- loggregator/src/metron/writers/dopplerforwarder/fakes/*.go # gosub
 - loggregator/src/metron/writers/eventunmarshaller/*.go # gosub
 - loggregator/src/metron/writers/messageaggregator/*.go # gosub
 - loggregator/src/metron/writers/mocks/*.go # gosub
-- loggregator/src/metron/writers/signer/*.go # gosub
 - loggregator/src/metron/writers/tagger/*.go # gosub

@@ -32,6 +32,10 @@ properties:
     description: "Incoming port for dropsonde log messages"
     default: 3457
 
+  metron_agent.preferred_protocol:
+    description: "Preferred protocol to droppler (udp|tls)"
+    default: udp
+
   metron_agent.debug:
     description: "boolean value to turn on verbose mode"
     default: false

@@ -12,8 +12,7 @@ files:
 - loggregator/src/doppler/groupedsinks/firehose_group/*.go # gosub
 - loggregator/src/doppler/groupedsinks/sink_wrapper/*.go # gosub
 - loggregator/src/doppler/iprange/*.go # gosub
-- loggregator/src/doppler/listeners/agentlistener/*.go # gosub
-- loggregator/src/doppler/listeners/tlslistener/*.go # gosub
+- loggregator/src/doppler/listeners/*.go # gosub
 - loggregator/src/doppler/sinks/*.go # gosub
 - loggregator/src/doppler/sinks/containermetric/*.go # gosub
 - loggregator/src/doppler/sinks/dump/*.go # gosub

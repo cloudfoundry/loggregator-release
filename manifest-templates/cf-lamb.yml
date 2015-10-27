@@ -106,10 +106,9 @@ properties:
       cert: ~
       key: ~
 
-
-
   metron_agent:
     deployment: (( meta.environment ))
+    preferred_protocol: ~
 
   traffic_controller:
     outgoing_port: 8080
