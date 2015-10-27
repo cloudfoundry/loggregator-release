@@ -108,16 +108,20 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 		It("returns a multi-part HTTP response with all recent messages", func() {
 			client := noaa.NewConsumer(dropsondeEndpoint, &tls.Config{}, nil)
 
-			messages, err := client.RecentLogs("1234", "bearer iAmAnAdmin")
-			Expect(err).NotTo(HaveOccurred())
-
-			var request *http.Request
-			Eventually(fakeDoppler.TrafficControllerConnected, 15).Should(Receive(&request))
-			Expect(request.URL.Path).To(Equal("/apps/1234/recentlogs"))
-
-			for i, message := range messages {
-				Expect(message.GetMessage()).To(BeEquivalentTo(strconv.Itoa(i)))
-			}
+			Eventually(func() bool {
+				messages, err := client.RecentLogs("1234", "bearer iAmAnAdmin")
+				Expect(err).NotTo(HaveOccurred())
+				select {
+				case request := <-fakeDoppler.TrafficControllerConnected:
+					Expect(request.URL.Path).To(Equal("/apps/1234/recentlogs"))
+					for i, message := range messages {
+						Expect(message.GetMessage()).To(BeEquivalentTo(strconv.Itoa(i)))
+					}
+					return true
+				default:
+					return false
+				}
+			}, 5).Should(BeTrue())
 		})
 	})
 
@@ -137,17 +141,22 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 		It("returns a multi-part HTTP response with the most recent message for all instances for a given app", func() {
 			client := noaa.NewConsumer(dropsondeEndpoint, &tls.Config{}, nil)
 
-			messages, err := client.ContainerMetrics("1234", "bearer iAmAnAdmin")
-			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() bool {
+				messages, err := client.ContainerMetrics("1234", "bearer iAmAnAdmin")
+				Expect(err).NotTo(HaveOccurred())
 
-			var request *http.Request
-			Eventually(fakeDoppler.TrafficControllerConnected, 15).Should(Receive(&request))
-			Expect(request.URL.Path).To(Equal("/apps/1234/containermetrics"))
-
-			for i, message := range messages {
-				Expect(message.GetInstanceIndex()).To(BeEquivalentTo(i))
-				Expect(message.GetCpuPercentage()).To(BeEquivalentTo(i))
-			}
+				select {
+				case request := <-fakeDoppler.TrafficControllerConnected:
+					Expect(request.URL.Path).To(Equal("/apps/1234/containermetrics"))
+					for i, message := range messages {
+						Expect(message.GetInstanceIndex()).To(BeEquivalentTo(i))
+						Expect(message.GetCpuPercentage()).To(BeEquivalentTo(i))
+					}
+					return true
+				default:
+					return false
+				}
+			}, 5).Should(BeTrue())
 		})
 	})
 
