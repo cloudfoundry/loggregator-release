@@ -28,7 +28,7 @@ func NewLogger(verbose bool, logFilePath, name string, syslogNamespace string) *
 	}
 
 	if syslogNamespace != "" {
-		loggingConfig.Sinks = append(loggingConfig.Sinks, gosteno.NewSyslogSink(syslogNamespace))
+		loggingConfig.Sinks = append(loggingConfig.Sinks, GetNewSyslogSink(syslogNamespace))
 	}
 
 	gosteno.Init(loggingConfig)
