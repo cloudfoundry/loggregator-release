@@ -5,6 +5,8 @@ dependencies:
 files:
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/envelope_sender/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/envelopes/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/factories/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/instrumented_handler/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/instrumented_round_tripper/*.go # gosub

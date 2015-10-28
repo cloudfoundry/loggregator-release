@@ -29,4 +29,8 @@ func (e *EventWriter) Emit(event events.Event) error {
 	return nil
 }
 
+func (e *EventWriter) EmitEnvelope(envelope *events.Envelope) error {
+	return nil // Unused
+}
+
 func (e *EventWriter) Close() {}
