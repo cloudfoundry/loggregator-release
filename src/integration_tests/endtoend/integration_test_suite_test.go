@@ -1,6 +1,7 @@
 package endtoend_test
 
 import (
+	"doppler/dopplerservice"
 	"testing"
 
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 	"github.com/pivotal-golang/localip"
 )
@@ -75,6 +77,16 @@ var _ = JustBeforeEach(func() {
 
 	// Wait for traffic controller to startup
 	waitOnURL("http://" + LocalIPAddress + ":49630")
+
+	// Wait for metron
+	Eventually(metronSession.Buffer).Should(gbytes.Say("metron started"))
+
+	// wait for doppler to register
+	key := fmt.Sprintf("%s/z1/doppler_z1/0", dopplerservice.LEGACY_ROOT)
+	Eventually(func() bool {
+		_, err := etcdAdapter.Get(key)
+		return err == nil
+	}, 1).Should(BeTrue())
 })
 
 func buildComponent(componentName string) (pathToComponent string) {

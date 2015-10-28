@@ -1,59 +1,50 @@
 package helpers
+
 import (
+	"fmt"
 	"io"
-	"time"
 	"net"
 	"sync/atomic"
-	"fmt"
-	"sync"
+	"time"
 )
 
-
 type SyslogTCPServer struct {
-	address string
-	count int64
-	listener net.Listener
+	count            int64
+	listener         net.Listener
 	lastLogTimestamp int64
-	lock sync.Mutex
 }
 
-func NewSyslogTCPServer(host string, port int) *SyslogTCPServer {
-	syslogAddr := fmt.Sprintf("%s:%d", host, port)
-	return &SyslogTCPServer{
-		address: syslogAddr,
+func NewSyslogTCPServer(host string, port int) (*SyslogTCPServer, error) {
+	address := fmt.Sprintf("%s:%d", host, port)
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
+		return nil, err
 	}
+
+	return &SyslogTCPServer{
+		listener: listener,
+	}, nil
 }
 
 func (s *SyslogTCPServer) Start() {
-	var err error
-	s.lock.Lock()
-	s.listener, err = net.Listen("tcp", s.address)
-	s.lock.Unlock()
-
-	if err != nil {
-		panic(err)
-	}
 	s.listen()
 }
 
 func (s *SyslogTCPServer) Stop() {
-	s.lock.Lock()
 	s.listener.Close()
-	s.lock.Unlock()
 }
 
 func (s *SyslogTCPServer) Counter() int64 {
 	return atomic.LoadInt64(&s.count)
 }
 
-
 func (s *SyslogTCPServer) URL() string {
-	return fmt.Sprintf("syslog://%s", s.address)
+	return fmt.Sprintf("syslog://%s", s.listener.Addr().String())
 }
 
 func (s *SyslogTCPServer) ReceivedLogsRecently() bool {
 	diff := time.Now().UnixNano() - atomic.LoadInt64(&s.lastLogTimestamp)
-	return diff  < int64(time.Second)
+	return diff < int64(time.Second)
 }
 
 func (s *SyslogTCPServer) incrementCounter() {
@@ -64,7 +55,6 @@ func (s *SyslogTCPServer) recordTimestamp() {
 	ts := time.Now().UnixNano()
 	atomic.StoreInt64(&s.lastLogTimestamp, ts)
 }
-
 
 func (s *SyslogTCPServer) listen() {
 	for {

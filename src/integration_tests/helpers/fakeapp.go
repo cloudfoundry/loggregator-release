@@ -9,31 +9,39 @@ import (
 )
 
 type FakeApp struct {
-	appID         string
-	logRate       int
-	writeStrategy experiment.WriteStrategy
-	logCounter    *metricsreporter.Counter
+	appID          string
+	logRate        int
+	writeStrategy  experiment.WriteStrategy
+	warmupStrategy experiment.WriteStrategy
+	logCounter     *metricsreporter.Counter
 }
 
-func NewFakeApp(appID string, logRate int) *FakeApp {
-
+func NewFakeApp(appID string, warmupRate int, logRate int) *FakeApp {
 	generator := messagegenerator.NewLogMessageGenerator(appID)
 	counter := metricsreporter.NewCounter("sentLogs")
 	// 49625 is the DropsondeIncomingMessagesPort for the metron that will be spun up.
 	writer := messagewriter.NewMessageWriter("localhost", 49625, "", counter)
 
 	writeStrategy := writestrategies.NewConstantWriteStrategy(generator, writer, logRate)
+	warmupStrategy := writestrategies.NewConstantWriteStrategy(generator, writer, warmupRate)
 
 	return &FakeApp{
-		appID:         appID,
-		logRate:       logRate,
-		writeStrategy: writeStrategy,
-		logCounter:    counter,
+		appID:          appID,
+		logRate:        logRate,
+		writeStrategy:  writeStrategy,
+		warmupStrategy: warmupStrategy,
+		logCounter:     counter,
 	}
 }
 
-func (f *FakeApp) Start(start chan struct{}) {
-	<-start
+func (f *FakeApp) Warmup() {
+	f.warmupStrategy.StartWriter()
+}
+
+func (f *FakeApp) Start() {
+	f.warmupStrategy.Stop()
+	f.logCounter.Reset()
+
 	f.writeStrategy.StartWriter()
 }
 

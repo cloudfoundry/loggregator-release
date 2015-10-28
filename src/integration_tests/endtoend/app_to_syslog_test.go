@@ -31,21 +31,27 @@ var _ = Describe("App to Syslog Test", func() {
 
 		registrar = helpers.NewSyslogRegistrar(etcdAdapter)
 
-		start := make(chan struct{})
 		for i := 0; i < appCount; i++ {
-			syslogServer := helpers.NewSyslogTCPServer("127.0.0.1", syslogServerPort+i)
+			syslogServer, err := helpers.NewSyslogTCPServer("127.0.0.1", syslogServerPort+i)
+			Expect(err).NotTo(HaveOccurred())
 			go syslogServer.Start()
 
 			appID := fmt.Sprintf("app-%d", i)
-			app := helpers.NewFakeApp(appID, logRate)
-			go app.Start(start)
+			app := helpers.NewFakeApp(appID, 10, logRate)
 
 			appSyslogMap[app] = syslogServer
-
 			registrar.Register(appID, syslogServer.URL())
+
+			go app.Warmup()
 		}
 
-		close(start)
+		for app, _ := range appSyslogMap {
+			Eventually(app.SentLogs).ShouldNot(BeZero())
+		}
+
+		for app, _ := range appSyslogMap {
+			go app.Start()
+		}
 	})
 
 	AfterEach(func() {
