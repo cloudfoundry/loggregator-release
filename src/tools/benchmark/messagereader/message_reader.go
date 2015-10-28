@@ -34,7 +34,7 @@ func (reader *MessageReader) Read() *events.Envelope {
 	readBuffer := make([]byte, 65535)
 	count, _, err := reader.connection.ReadFrom(readBuffer)
 	if err != nil {
-		fmt.Printf("Error reading from UDP connection\n")
+		fmt.Printf("Error reading from UDP connection: %s", err.Error())
 		return nil
 	}
 
@@ -44,7 +44,7 @@ func (reader *MessageReader) Read() *events.Envelope {
 	err = proto.Unmarshal(readData[32:], &message)
 
 	if err != nil {
-		fmt.Printf("Error unmarshalling data \n")
+		fmt.Printf("Error unmarshalling data: %s \n", err.Error())
 		return nil
 	}
 

@@ -68,7 +68,6 @@ func (e *Experiment) Start() {
 
 func (e *Experiment) Stop() {
 	close(e.stopChan)
-	e.reader.Close()
 	for _, strategy := range e.writeStrategies {
 		strategy.Stop()
 	}
@@ -78,6 +77,7 @@ func (e *Experiment) startReader(reading chan struct{}) {
 	for {
 		select {
 		case <-e.stopChan:
+			e.reader.Close()
 			return
 		default:
 			e.reader.Read()
