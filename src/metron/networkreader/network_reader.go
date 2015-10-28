@@ -34,6 +34,9 @@ func New(address string, name string, writer writers.ByteArrayWriter, logger *go
 }
 
 func (nr *NetworkReader) Start() {
+	receivedMessageCountName := nr.contextName + ".receivedMessageCount"
+	receivedByteCountName := nr.contextName + ".receivedByteCount"
+
 	readBuffer := make([]byte, 65535) //buffer with size = max theoretical UDP size
 	for {
 		readCount, senderAddr, err := nr.connection.ReadFrom(readBuffer)
@@ -45,8 +48,8 @@ func (nr *NetworkReader) Start() {
 		readData := make([]byte, readCount) //pass on buffer in size only of read data
 		copy(readData, readBuffer[:readCount])
 
-		metrics.BatchIncrementCounter(nr.contextName + ".receivedMessageCount")
-		metrics.BatchAddCounter(nr.contextName+".receivedByteCount", uint64(readCount))
+		metrics.BatchIncrementCounter(receivedMessageCountName)
+		metrics.BatchAddCounter(receivedByteCountName, uint64(readCount))
 		nr.writer.Write(readData)
 	}
 }
