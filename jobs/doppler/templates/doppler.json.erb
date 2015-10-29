@@ -21,8 +21,9 @@
   <% if_p("doppler.enable_tls_transport") do |_| %>
   "TLSListenerConfig": {
       "Port": <%= p("doppler.tls_listener.port") %>,
-      "KeyFile": "/var/vcap/jobs/doppler/config/certs/tls_listener.key",
-      "CrtFile": "/var/vcap/jobs/doppler/config/certs/tls_listener.crt"
+      "KeyFile": "/var/vcap/jobs/doppler/config/certs/doppler.key",
+      "CrtFile": "/var/vcap/jobs/doppler/config/certs/doppler.crt",
+      "CAFile": "/var/vcap/jobs/doppler/config/certs/loggregator-CA.crt"
   },
   <% end %>
 

@@ -57,6 +57,10 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 		MetronPort:    port + 1,
 		DropsondePort: 3457 + config.GinkgoConfig.ParallelNode*10,
 		EtcdRunner:    etcdRunner,
+
+		CertFile: "../fixtures/client.crt",
+		KeyFile:  "../fixtures/client.key",
+		CAFile:   "../fixtures/loggregator-ca.crt",
 	}
 })
 

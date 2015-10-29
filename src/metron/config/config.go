@@ -6,6 +6,12 @@ import (
 	"os"
 )
 
+type TLSConfig struct {
+	CertFile string
+	KeyFile  string
+	CAFile   string
+}
+
 type Config struct {
 	Syslog     string
 	Deployment string
@@ -25,6 +31,7 @@ type Config struct {
 	MetricBatchIntervalSeconds uint
 
 	PreferredProtocol string
+	TLSConfig         TLSConfig
 }
 
 func ParseConfig(configFile string) (*Config, error) {

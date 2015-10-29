@@ -97,7 +97,9 @@ var _ = Describe("Streaming Logs", func() {
 
 	Context("TLS", func() {
 		BeforeEach(func() {
-			inputConnection, _ = net.Dial("tcp", localIPAddress+":8766")
+			var err error
+			inputConnection, err = DialTLS(localIPAddress+":8766", "../fixtures/client.crt", "../fixtures/client.key", "../fixtures/loggregator-ca.crt")
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterEach(func() {

@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"metron/clientpool/fakeclient"
 	"metron/writers/dopplerforwarder"
 	"metron/writers/dopplerforwarder/fakes"
 	"net"
 
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	"github.com/cloudfoundry/loggregatorlib/loggregatorclient/fakeclient"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 

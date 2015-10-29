@@ -7,6 +7,8 @@ files:
 - loggregator/src/doppler/config/*.go # gosub
 - loggregator/src/doppler/dopplerservice/*.go # gosub
 - loggregator/src/doppler/iprange/*.go # gosub
+- loggregator/src/doppler/listeners/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metricbatcher/*.go # gosub
@@ -15,7 +17,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/gosteno/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gosteno/syslog/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gunk/workpool/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/loggregatorlib/loggregatorclient/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/sonde-go/events/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/etcdstoreadapter/*.go # gosub
@@ -28,6 +29,7 @@ files:
 - loggregator/src/logger/*.go # gosub
 - loggregator/src/metron/*.go # gosub
 - loggregator/src/metron/clientpool/*.go # gosub
+- loggregator/src/metron/clientpool/fakeclient/*.go # gosub
 - loggregator/src/metron/config/*.go # gosub
 - loggregator/src/metron/eventwriter/*.go # gosub
 - loggregator/src/metron/networkreader/*.go # gosub

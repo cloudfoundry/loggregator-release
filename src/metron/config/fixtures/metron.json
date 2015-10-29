@@ -14,5 +14,10 @@
   "LoggregatorDropsondePort": 3457,
   "Syslog": "syslog.namespace",
   "MetricBatchIntervalSeconds": 20,
-  "PreferredProtocol": "udp"
+  "PreferredProtocol": "udp",
+  "TLSConfig": {
+    "KeyFile": "./fixtures/client.key",
+    "CertFile": "./fixtures/client.crt",
+    "CAFile": "./fixtures/ca.crt"
+  }
 }

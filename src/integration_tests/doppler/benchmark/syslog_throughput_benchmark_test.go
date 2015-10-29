@@ -1,14 +1,14 @@
 package benchmark_test
 
 import (
-	. "integration_tests/doppler/helpers"
+	"github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"net"
 	"github.com/pivotal-golang/localip"
-	"github.com/nu7hatch/gouuid"
 	"integration_tests/doppler/helpers"
+	. "integration_tests/doppler/helpers"
 	"io"
+	"net"
 	"time"
 	"tools/benchmark/metricsreporter"
 )
@@ -64,7 +64,7 @@ var _ = Describe("MessageLossBenchmark", func() {
 			}
 		}
 
-		Eventually(counter.GetValue).Should(BeNumerically(">", float64(messagesSent) * tolerance))
+		Eventually(counter.GetValue).Should(BeNumerically(">", float64(messagesSent)*tolerance))
 		b.RecordValue("messages received", float64(counter.GetValue()))
 
 		listener.Close()

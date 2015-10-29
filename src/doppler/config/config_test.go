@@ -38,10 +38,15 @@ var _ = Describe("Config", func() {
 	Context("With EnableTLSTransport", func() {
 		It("generates the cert for the tls config", func() {
 			configFile = "./fixtures/doppler.json"
-			config, err := config.ParseConfig(configFile)
+			cfg, err := config.ParseConfig(configFile)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(config.EnableTLSTransport).To(BeTrue())
-			Expect(config.TLSListenerConfig.Cert.Certificate).ToNot(HaveLen(0))
+			Expect(cfg.EnableTLSTransport).To(BeTrue())
+			Expect(cfg.TLSListenerConfig).To(Equal(config.TLSListenerConfig{
+				Port:     8766,
+				CertFile: "./fixtures/server.crt",
+				KeyFile:  "./fixtures/server.key",
+				CAFile:   "./fixtures/loggregator-ca.crt",
+			}))
 		})
 
 		It("errors out if no cert or key files is provided", func() {
@@ -49,9 +54,7 @@ var _ = Describe("Config", func() {
 			_, err := config.ParseConfig(configFile)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("invalid TLS listener configuration"))
-
 		})
-
 	})
 
 	Context("with full config", func() {

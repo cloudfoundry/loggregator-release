@@ -1,6 +1,7 @@
 package clientpool
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -8,24 +9,23 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
 )
 
 var ErrorEmptyClientPool = errors.New("loggregator client pool is empty")
 
 type DopplerPool struct {
 	logger        *gosteno.Logger
-	clientFactory func(logger *gosteno.Logger, url string) (loggregatorclient.Client, error)
+	clientFactory func(logger *gosteno.Logger, url string) (Client, error)
 
 	sync.RWMutex
-	clients    map[string]loggregatorclient.Client
-	clientList []loggregatorclient.Client
+	clients    map[string]Client
+	clientList []Client
 
 	nonLegacyServers map[string]string
 	legacyServers    map[string]string
 }
 
-func NewDopplerPool(logger *gosteno.Logger, clientFactory func(logger *gosteno.Logger, url string) (loggregatorclient.Client, error)) *DopplerPool {
+func NewDopplerPool(logger *gosteno.Logger, clientFactory func(logger *gosteno.Logger, url string) (Client, error)) *DopplerPool {
 	return &DopplerPool{
 		logger:        logger,
 		clientFactory: clientFactory,
@@ -62,13 +62,13 @@ func (pool *DopplerPool) SetLegacy(all map[string]string, preferred map[string]s
 	pool.Unlock()
 }
 
-func (pool *DopplerPool) Clients() []loggregatorclient.Client {
+func (pool *DopplerPool) Clients() []Client {
 	defer pool.RUnlock()
 	pool.RLock()
 	return pool.clientList
 }
 
-func (pool *DopplerPool) RandomClient() (loggregatorclient.Client, error) {
+func (pool *DopplerPool) RandomClient() (Client, error) {
 	list := pool.Clients()
 
 	if len(list) == 0 {
@@ -78,8 +78,8 @@ func (pool *DopplerPool) RandomClient() (loggregatorclient.Client, error) {
 	return list[rand.Intn(len(list))], nil
 }
 
-func (pool *DopplerPool) getClient(key, url string) loggregatorclient.Client {
-	var client loggregatorclient.Client
+func (pool *DopplerPool) getClient(key, url string) Client {
+	var client Client
 	if client = pool.clients[key]; client == nil {
 		return nil
 	}
@@ -94,7 +94,7 @@ func (pool *DopplerPool) getClient(key, url string) loggregatorclient.Client {
 }
 
 func (pool *DopplerPool) merge() {
-	newClients := map[string]loggregatorclient.Client{}
+	newClients := map[string]Client{}
 
 	for key, u := range pool.nonLegacyServers {
 		client := pool.getClient(key, u)
@@ -134,7 +134,7 @@ func (pool *DopplerPool) merge() {
 		}
 	}
 
-	newList := make([]loggregatorclient.Client, 0, len(newClients))
+	newList := make([]Client, 0, len(newClients))
 	for _, client := range newClients {
 		newList = append(newList, client)
 	}
@@ -143,13 +143,13 @@ func (pool *DopplerPool) merge() {
 	pool.clientList = newList
 }
 
-func NewClient(logger *gosteno.Logger, url string) (loggregatorclient.Client, error) {
+func NewClient(logger *gosteno.Logger, url string, tlsConfig *tls.Config) (Client, error) {
 	if index := strings.Index(url, "://"); index > 0 {
 		switch url[:index] {
 		case "udp":
-			return loggregatorclient.NewUDPClient(logger, url[index+3:], loggregatorclient.DefaultBufferSize)
+			return NewUDPClient(logger, url[index+3:], DefaultBufferSize)
 		case "tls":
-			return loggregatorclient.NewTLSClient(logger, url[index+3:])
+			return NewTLSClient(logger, url[index+3:], tlsConfig)
 		}
 	}
 

@@ -68,11 +68,10 @@ var _ = Describe("Listener test", func() {
 })
 
 func openTLSConnection(address string) net.Conn {
-
 	var conn net.Conn
 	var err error
 	Eventually(func() error {
-		conn, err = net.Dial("tcp", address)
+		conn, err = DialTLS(address, "../fixtures/client.crt", "../fixtures/client.key", "../fixtures/loggregator-ca.crt")
 		return err
 	}).ShouldNot(HaveOccurred())
 

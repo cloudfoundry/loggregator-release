@@ -29,27 +29,33 @@ var _ = Describe("Config", func() {
 
 		It("returns proper config", func() {
 			configFile = "./fixtures/metron.json"
-			config, err := config.ParseConfig(configFile)
-
+			cfg, err := config.ParseConfig(configFile)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(config.Index).To(Equal(uint(0)))
-			Expect(config.Job).To(Equal("job-name"))
-			Expect(config.Zone).To(Equal("z1"))
-			Expect(config.Deployment).To(Equal("deployment-name"))
 
-			Expect(config.EtcdUrls).To(HaveLen(1))
-			Expect(config.EtcdMaxConcurrentRequests).To(Equal(1))
-			Expect(config.EtcdQueryIntervalMilliseconds).To(Equal(100))
+			Expect(cfg.Index).To(Equal(uint(0)))
+			Expect(cfg.Job).To(Equal("job-name"))
+			Expect(cfg.Zone).To(Equal("z1"))
+			Expect(cfg.Deployment).To(Equal("deployment-name"))
 
-			Expect(config.SharedSecret).To(Equal("shared_secret"))
+			Expect(cfg.EtcdUrls).To(HaveLen(1))
+			Expect(cfg.EtcdMaxConcurrentRequests).To(Equal(1))
+			Expect(cfg.EtcdQueryIntervalMilliseconds).To(Equal(100))
 
-			Expect(config.DropsondeIncomingMessagesPort).To(Equal(51161))
-			Expect(config.LoggregatorDropsondePort).To(Equal(3457))
+			Expect(cfg.SharedSecret).To(Equal("shared_secret"))
 
-			Expect(config.MetricBatchIntervalSeconds).To(BeEquivalentTo(20))
-			Expect(config.Syslog).To(Equal("syslog.namespace"))
+			Expect(cfg.DropsondeIncomingMessagesPort).To(Equal(51161))
+			Expect(cfg.LoggregatorDropsondePort).To(Equal(3457))
 
-			Expect(config.PreferredProtocol).To(Equal("udp"))
+			Expect(cfg.MetricBatchIntervalSeconds).To(BeEquivalentTo(20))
+			Expect(cfg.Syslog).To(Equal("syslog.namespace"))
+
+			Expect(cfg.PreferredProtocol).To(Equal("udp"))
+
+			Expect(cfg.TLSConfig).To(Equal(config.TLSConfig{
+				CertFile: "./fixtures/client.crt",
+				KeyFile:  "./fixtures/client.key",
+				CAFile:   "./fixtures/ca.crt",
+			}))
 		})
 
 		It("sets defaults", func() {

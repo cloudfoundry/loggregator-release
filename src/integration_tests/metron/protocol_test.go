@@ -32,7 +32,12 @@ var _ = Describe("Protocol", func() {
 			JobName: "job",
 			Zone:    "z9",
 			DropsondeIncomingMessagesPort: uint32(metronRunner.DropsondePort),
-			TLSListenerConfig:             dopplerconfig.TLSListenerConfig{Port: uint32(port + 5)},
+			TLSListenerConfig: dopplerconfig.TLSListenerConfig{
+				Port:     uint32(port + 5),
+				CertFile: "../fixtures/server.crt",
+				KeyFile:  "../fixtures/server.key",
+				CAFile:   "../fixtures/loggregator-ca.crt",
+			},
 		}
 		stopTheWorld = make(chan struct{})
 	})

@@ -13,7 +13,6 @@ import (
 
 	"common/monitor"
 
-	"crypto/tls"
 	"doppler/listeners"
 
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
@@ -57,7 +56,7 @@ func New(logger *gosteno.Logger,
 	storeAdapter storeadapter.StoreAdapter,
 	messageDrainBufferSize uint,
 	dropsondeOrigin string,
-	dialTimeout time.Duration) *Doppler {
+	dialTimeout time.Duration) (*Doppler, error) {
 
 	keepAliveInterval := 30 * time.Second
 
@@ -67,15 +66,13 @@ func New(logger *gosteno.Logger,
 	var udpListener listeners.Listener
 	var tlsListener listeners.Listener
 	var dropsondeBytesChan <-chan []byte
+	var err error
 	listenerEnvelopeChan := make(chan *events.Envelope)
+
 	if config.EnableTLSTransport {
-		tlsConfig := &tls.Config{
-			Certificates: []tls.Certificate{config.TLSListenerConfig.Cert},
-		}
-		var err error
-		tlsListener, err = listeners.NewTLSListener("dropsondeListener", fmt.Sprintf("%s:%d", host, config.TLSListenerConfig.Port), tlsConfig, listenerEnvelopeChan, logger)
+		tlsListener, err = listeners.NewTLSListener("dropsondeListener", fmt.Sprintf("%s:%d", host, config.TLSListenerConfig.Port), config.TLSListenerConfig, listenerEnvelopeChan, logger)
 		if err != nil {
-			logger.Fatalf("Failed to create a TLS Listener: %s", err)
+			return nil, err
 		}
 	}
 
@@ -93,7 +90,7 @@ func New(logger *gosteno.Logger,
 
 	websocketServer, err := websocketserver.New(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.MessageDrainBufferSize, dropsondeOrigin, logger)
 	if err != nil {
-		logger.Fatalf("Failed to create the websocket server: %s", err)
+		return nil, fmt.Errorf("Failed to create the websocket server: %s", err.Error())
 	}
 
 	return &Doppler{
@@ -113,7 +110,7 @@ func New(logger *gosteno.Logger,
 		signatureVerifier:               signatureVerifier,
 		dropsondeVerifiedBytesChan:      make(chan []byte),
 		uptimeMonitor:                   monitor.NewUptimeMonitor(time.Duration(config.MonitorIntervalSeconds) * time.Second),
-	}
+	}, nil
 }
 
 func (doppler *Doppler) Start() {

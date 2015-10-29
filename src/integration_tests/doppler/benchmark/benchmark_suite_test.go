@@ -1,6 +1,5 @@
 package benchmark_test
 
-
 import (
 	"os/exec"
 	"testing"
@@ -27,7 +26,7 @@ var (
 	dopplerSession *gexec.Session
 	localIPAddress string
 	etcdRunner     *etcdstorerunner.ETCDClusterRunner
-	etcdAdapter storeadapter.StoreAdapter
+	etcdAdapter    storeadapter.StoreAdapter
 
 	pathToDopplerExec string
 )

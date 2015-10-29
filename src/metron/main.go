@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/tls"
 	"doppler/dopplerservice"
+	"doppler/listeners"
 	"flag"
 	"fmt"
 	"os"
@@ -24,7 +26,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/workpool"
-	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 
@@ -91,8 +92,18 @@ func initializeDopplerPool(config *config.Config, logger *gosteno.Logger) (*clie
 		return strings.HasPrefix(relativePath, "/"+config.Zone+"/")
 	}
 
-	clientPool := clientpool.NewDopplerPool(logger, func(logger *gosteno.Logger, url string) (loggregatorclient.Client, error) {
-		client, err := clientpool.NewClient(logger, url)
+	var tlsConfig *tls.Config
+	if config.PreferredProtocol == "tls" {
+		c := config.TLSConfig
+		tlsConfig, err = listeners.NewTLSConfig(c.CertFile, c.KeyFile, c.CAFile)
+		if err != nil {
+			return nil, err
+		}
+		tlsConfig.ServerName = "doppler"
+	}
+
+	clientPool := clientpool.NewDopplerPool(logger, func(logger *gosteno.Logger, url string) (clientpool.Client, error) {
+		client, err := clientpool.NewClient(logger, url, tlsConfig)
 		if err == nil && client.Scheme() != config.PreferredProtocol {
 			logger.Warnd(map[string]interface{}{
 				"url": url,

@@ -109,10 +109,11 @@ func main() {
 	dropsonde.Initialize(conf.MetronAddress, DOPPLER_ORIGIN)
 	storeAdapter := NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
 
-	doppler := New(log, localIp, conf, storeAdapter, conf.MessageDrainBufferSize, DOPPLER_ORIGIN, time.Duration(conf.SinkDialTimeoutSeconds)*time.Second)
+	doppler, err := New(log, localIp, conf, storeAdapter, conf.MessageDrainBufferSize, DOPPLER_ORIGIN, time.Duration(conf.SinkDialTimeoutSeconds)*time.Second)
 
 	if err != nil {
-		panic(err)
+		log.Errorf("Failed to create doppler: %s", err.Error())
+		os.Exit(-1)
 	}
 
 	go doppler.Start()

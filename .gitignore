@@ -25,4 +25,4 @@ releases/**/*.tgz
 blobs
 dev_releases
 .dev_builds
-
+loggregator-certs

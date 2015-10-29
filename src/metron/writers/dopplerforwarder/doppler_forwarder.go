@@ -5,10 +5,11 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"metron/clientpool"
+
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )
@@ -27,7 +28,7 @@ func init() {
 
 //go:generate counterfeiter -o fakes/fake_clientpool.go . ClientPool
 type ClientPool interface {
-	RandomClient() (loggregatorclient.Client, error)
+	RandomClient() (clientpool.Client, error)
 }
 
 type DopplerForwarder struct {

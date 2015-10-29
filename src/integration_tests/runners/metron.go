@@ -23,6 +23,10 @@ type MetronRunner struct {
 	DropsondePort int
 	EtcdRunner    *etcdstorerunner.ETCDClusterRunner
 
+	CertFile string
+	KeyFile  string
+	CAFile   string
+
 	Runner  *ginkgomon.Runner
 	Process ifrit.Process
 }
@@ -43,7 +47,12 @@ func (m *MetronRunner) Configure() *ginkgomon.Runner {
     "Deployment": "deployment-name",
     "LoggregatorDropsondePort": ` + strconv.Itoa(m.DropsondePort) + `,
     "PreferredProtocol": "` + m.Protocol + `",
-    "MetricBatchIntervalSeconds": 1
+    "MetricBatchIntervalSeconds": 1,
+    "TLSConfig": {
+      "CertFile": "` + m.CertFile + `",
+      "KeyFile": "` + m.KeyFile + `",
+      "CAFile": "` + m.CAFile + `"
+    }
 }`)
 	Expect(err).NotTo(HaveOccurred())
 	cfgFile.Close()

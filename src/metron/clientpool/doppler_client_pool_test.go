@@ -3,12 +3,11 @@ package clientpool_test
 import (
 	"errors"
 	"metron/clientpool"
+	"metron/clientpool/fakeclient"
 	"strings"
 
 	steno "github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
-	"github.com/cloudfoundry/loggregatorlib/loggregatorclient/fakeclient"
 
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
@@ -18,7 +17,7 @@ import (
 var _ = Describe("DopplerPool", func() {
 	var (
 		pool          *clientpool.DopplerPool
-		clientFactory func(logger *steno.Logger, u string) (loggregatorclient.Client, error)
+		clientFactory func(logger *steno.Logger, u string) (clientpool.Client, error)
 		logger        *steno.Logger
 
 		port int
@@ -81,7 +80,7 @@ var _ = Describe("DopplerPool", func() {
 					logger = loggertesthelper.Logger()
 					loggertesthelper.TestLoggerSink.Clear()
 
-					clientFactory = func(_ *steno.Logger, _ string) (loggregatorclient.Client, error) {
+					clientFactory = func(_ *steno.Logger, _ string) (clientpool.Client, error) {
 						return nil, errors.New("boom")
 					}
 				})
@@ -132,7 +131,7 @@ var _ = Describe("DopplerPool", func() {
 						logger = loggertesthelper.Logger()
 						loggertesthelper.TestLoggerSink.Clear()
 
-						clientFactory = func(_ *steno.Logger, _ string) (loggregatorclient.Client, error) {
+						clientFactory = func(_ *steno.Logger, _ string) (clientpool.Client, error) {
 							return nil, errors.New("boom")
 						}
 					})
@@ -151,7 +150,7 @@ var _ = Describe("DopplerPool", func() {
 
 			BeforeEach(func() {
 				fakeClient = newFakeClient("udp", "host:port")
-				clientFactory = func(_ *steno.Logger, _ string) (loggregatorclient.Client, error) {
+				clientFactory = func(_ *steno.Logger, _ string) (clientpool.Client, error) {
 					return fakeClient, nil
 				}
 			})
@@ -173,7 +172,7 @@ var _ = Describe("DopplerPool", func() {
 
 			BeforeEach(func() {
 				clientFactoryCallCount = 0
-				clientFactory = func(logger *steno.Logger, url string) (loggregatorclient.Client, error) {
+				clientFactory = func(logger *steno.Logger, url string) (clientpool.Client, error) {
 					clientFactoryCallCount++
 					return fakeClientFactory(logger, url)
 				}
@@ -216,7 +215,7 @@ var _ = Describe("DopplerPool", func() {
 				}
 
 				pool.Set(s, nil)
-				counts := make(map[loggregatorclient.Client]int)
+				counts := make(map[clientpool.Client]int)
 				for i := 0; i < 100000; i++ {
 					pick, _ := pool.RandomClient()
 					counts[pick]++
@@ -237,7 +236,7 @@ var _ = Describe("DopplerPool", func() {
 	})
 })
 
-func urls(clients []loggregatorclient.Client) []string {
+func urls(clients []clientpool.Client) []string {
 	result := make([]string, 0, len(clients))
 	for _, c := range clients {
 		result = append(result, c.Scheme()+"://"+c.Address())
@@ -253,7 +252,7 @@ func values(m map[string]string) []string {
 	return result
 }
 
-func fakeClientFactory(logger *steno.Logger, u string) (loggregatorclient.Client, error) {
+func fakeClientFactory(logger *steno.Logger, u string) (clientpool.Client, error) {
 	i := strings.Index(u, "://")
 	return newFakeClient(u[:i], u[i+3:]), nil
 }

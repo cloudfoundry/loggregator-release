@@ -2,8 +2,13 @@ package listeners
 
 import (
 	"crypto/tls"
+	"crypto/x509"
+	"doppler/config"
 	"encoding/binary"
+	"errors"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"sync"
 
@@ -16,7 +21,6 @@ import (
 type TLSListener struct {
 	envelopeChan   chan *events.Envelope
 	logger         *gosteno.Logger
-	config         *tls.Config
 	listener       net.Listener
 	connections    map[net.Conn]struct{}
 	unmarshaller   dropsonde_unmarshaller.DropsondeUnmarshaller
@@ -29,8 +33,43 @@ type TLSListener struct {
 	receivedByteCountMetricName string
 }
 
-func NewTLSListener(contextName string, address string, config *tls.Config, envelopeChan chan *events.Envelope, logger *gosteno.Logger) (Listener, error) {
-	listener, err := net.Listen("tcp", address)
+func NewTLSConfig(certFile, keyFile, caCertFile string) (*tls.Config, error) {
+	tlsCert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load keypair: %s", err.Error())
+	}
+
+	tlsConfig := &tls.Config{
+		Certificates:       []tls.Certificate{tlsCert},
+		InsecureSkipVerify: false,
+		ClientAuth:         tls.RequireAndVerifyClientCert,
+		MinVersion:         tls.VersionTLS12,
+	}
+
+	if caCertFile != "" {
+		certBytes, err := ioutil.ReadFile(caCertFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed read ca cert file: %s", err.Error())
+		}
+
+		caCertPool := x509.NewCertPool()
+		if ok := caCertPool.AppendCertsFromPEM(certBytes); !ok {
+			return nil, errors.New("Unable to load caCert")
+		}
+		tlsConfig.RootCAs = caCertPool
+		tlsConfig.ClientCAs = caCertPool
+	}
+
+	return tlsConfig, nil
+}
+
+func NewTLSListener(contextName string, address string, tlsListenerConfig config.TLSListenerConfig, envelopeChan chan *events.Envelope, logger *gosteno.Logger) (Listener, error) {
+	tlsConfig, err := NewTLSConfig(tlsListenerConfig.CertFile, tlsListenerConfig.KeyFile, tlsListenerConfig.CAFile)
+	if err != nil {
+		return nil, err
+	}
+
+	listener, err := tls.Listen("tcp", address, tlsConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +78,6 @@ func NewTLSListener(contextName string, address string, config *tls.Config, enve
 		listener:       listener,
 		envelopeChan:   envelopeChan,
 		logger:         logger,
-		config:         config,
 		connections:    make(map[net.Conn]struct{}),
 		unmarshaller:   dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger),
 		stopped:        make(chan struct{}),
@@ -115,6 +153,16 @@ func (t *TLSListener) removeConnection(conn net.Conn) {
 }
 
 func (t *TLSListener) handleConnection(conn net.Conn) {
+	if tlsConn, ok := conn.(*tls.Conn); ok {
+		if err := tlsConn.Handshake(); err != nil {
+			t.logger.Warnd(map[string]interface{}{
+				"error":   err.Error(),
+				"address": conn.RemoteAddr().String(),
+			}, "TLS handshake error")
+			return
+		}
+	}
+
 	var n uint32
 	var bytes []byte
 	var err error

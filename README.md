@@ -71,6 +71,80 @@ Traffic controllers also exposes a `firehose` web socket endpoint. Connecting to
 
 Cloud Foundry developers can easily add source clients to new CF components that emit messages to the doppler.  Currently, there are libraries for [Go](https://github.com/cloudfoundry/dropsonde/) and [Ruby](https://github.com/cloudfoundry/loggregator_emitter). For usage information, look at their respective READMEs.
 
+### Generating TLS Certificates
+
+For generating TLS certificates, we recommend
+[certstrap](https://github.com/square/certstrap).  An operator can follow the
+following steps to successfully generate the required certificates.
+
+> Most of these commands can be found in
+> [bin/generate-loggregator-certs](bin/generate-loggregator-certs)
+
+
+1. Get certstrap
+   ```
+   go get github.com/square/certstrap
+   cd $GOPATH/src/github.com/square/certstrap
+   ./build
+   cd bin
+   ```
+
+2. Initialize a new certificate authority.
+   ```
+   $ ./certstrap init --common-name "loggregatorCA"
+   Enter passphrase (empty for no passphrase): <hit enter for no password>
+
+   Enter same passphrase again: <hit enter for no password>
+
+   Created out/loggregatorCA.key
+   Created out/loggregatorCA.crt
+   ```
+
+3. Create and sign a certificate for the Doppler server.
+   ```
+   $ ./certstrap request-cert --common-name "doppler"
+   Enter passphrase (empty for no passphrase): <hit enter for no password>
+
+   Enter same passphrase again: <hit enter for no password>
+
+   Created out/doppler.key
+   Created out/doppler.csr
+
+   $ ./certstrap sign doppler --CA loggregatorCA
+   Created out/doppler.crt from out/doppler.csr signed by out/loggregatorCA.key
+   ```
+
+   The manifest property `properties.doppler.server_cert` should be set to the certificate in `out/doppler.crt`.
+   The manifest property `properties.doppler.server_key` should be set to the certificate in `out/doppler.key`.
+   The manifest property `properties.doppler.ca_cert` should be set to the certificate in `out/loggregatorCA.crt`.
+
+4. Create and sign a certificate for metron agents.
+   ```
+   $ ./certstrap request-cert --common-name "clientName"
+   Enter passphrase (empty for no passphrase): <hit enter for no password>
+
+   Enter same passphrase again: <hit enter for no password>
+
+   Created out/clientName.key
+   Created out/clientName.csr
+
+   $ ./certstrap sign clientName --CA loggregatorCA
+   Created out/clientName.crt from out/clientName.csr signed by out/loggregatorCA.key
+   ```
+
+   The manifest property `properties.metron_agent.doppler.client_cert` should be set to the certificate in `out/clientName.crt`,
+   and the manifest property `properties.metron_agent.doppler.client_key` should be set to the certificate in `out/clientName.key`   
+   The manifest property `properties.doppler.ca_cert` should be set to the certificate in `out/loggregatorCA.crt`.
+
+### Custom TLS Certificate Generation
+
+If you already have a CA, or wish to use your own names for clients and
+servers, please note that the common-names "loggregatorCA" and "clientName" are
+placeholders and can be renamed.
+
+The server certificate must have the common name `doppler`.
+
+
 ### Deploying via BOSH
 
 Below are example snippets for deploying the DEA Logging Agent (source), Doppler, and Loggregator Traffic Controller via BOSH.

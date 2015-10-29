@@ -19,7 +19,8 @@
     "EnableTLSTransport": true,
     "TLSListenerConfig": {
         "Port": 8766,
-        "KeyFile": "../fixtures/key.key",
-        "CrtFile": "../fixtures/key.crt"
+        "KeyFile": "../fixtures/server.key",
+        "CertFile": "../fixtures/server.crt",
+        "CAFile": "../fixtures/loggregator-ca.crt"
     }
 }

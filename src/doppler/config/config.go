@@ -5,7 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"crypto/tls"
 	"encoding/json"
 	"os"
 )
@@ -13,10 +12,10 @@ import (
 const HeartbeatInterval = 10 * time.Second
 
 type TLSListenerConfig struct {
-	Port    uint32
-	CrtFile string
-	KeyFile string
-	Cert    tls.Certificate
+	Port     uint32
+	CertFile string
+	KeyFile  string
+	CAFile   string
 }
 
 type Config struct {
@@ -58,7 +57,7 @@ func (c *Config) validate() (err error) {
 	}
 
 	if c.EnableTLSTransport {
-		if c.TLSListenerConfig.CrtFile == "" || c.TLSListenerConfig.KeyFile == "" || c.TLSListenerConfig.Port == 0 {
+		if c.TLSListenerConfig.CertFile == "" || c.TLSListenerConfig.KeyFile == "" || c.TLSListenerConfig.Port == 0 {
 			return errors.New("invalid TLS listener configuration")
 		}
 	}
@@ -99,14 +98,6 @@ func ParseConfig(configFile string) (*Config, error) {
 
 	if config.EtcdMaxConcurrentRequests < 1 {
 		config.EtcdMaxConcurrentRequests = 1
-	}
-
-	if config.EnableTLSTransport {
-		cert, err := tls.LoadX509KeyPair(config.TLSListenerConfig.CrtFile, config.TLSListenerConfig.KeyFile)
-		if err != nil {
-			return nil, err
-		}
-		config.TLSListenerConfig.Cert = cert
 	}
 
 	return config, nil

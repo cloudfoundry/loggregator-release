@@ -1,6 +1,7 @@
 package listeners_test
 
 import (
+	"crypto/tls"
 	"encoding/binary"
 	"strings"
 
@@ -8,6 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"doppler/config"
 	"doppler/listeners"
 	"fmt"
 	"net"
@@ -21,20 +23,62 @@ import (
 	"github.com/nu7hatch/gouuid"
 )
 
-var _ = Describe("Tcplistener", func() {
+var _ = Describe("TLSlistener", func() {
 	var envelopeChan chan *events.Envelope
 	var tlsListener listeners.Listener
+	var tlsListenerConfig config.TLSListenerConfig
+	var tlsClientConfig *tls.Config
 
 	BeforeEach(func() {
-		envelopeChan = make(chan *events.Envelope)
+		tlsListenerConfig = config.TLSListenerConfig{
+			CertFile: "fixtures/server.crt",
+			KeyFile:  "fixtures/server.key",
+			CAFile:   "fixtures/loggregator-ca.crt",
+		}
+
 		var err error
-		tlsListener, err = listeners.NewTLSListener("aname", "127.0.0.1:0", tlsconfig, envelopeChan, loggertesthelper.Logger())
+		tlsClientConfig, err = listeners.NewTLSConfig("fixtures/client.crt", "fixtures/client.key", "fixtures/loggregator-ca.crt")
+		Expect(err).NotTo(HaveOccurred())
+		tlsClientConfig.ServerName = "doppler"
+
+		envelopeChan = make(chan *events.Envelope)
+	})
+
+	JustBeforeEach(func() {
+		var err error
+		tlsListener, err = listeners.NewTLSListener("aname", "127.0.0.1:0", tlsListenerConfig, envelopeChan, loggertesthelper.Logger())
 		Expect(err).NotTo(HaveOccurred())
 		go tlsListener.Start()
 	})
 
 	AfterEach(func() {
 		tlsListener.Stop()
+	})
+
+	Context("With invalid client configuration", func() {
+		JustBeforeEach(func() {
+			conn := openTLSConnection(tlsListener.Address(), tlsClientConfig)
+			conn.Close()
+		})
+
+		Context("without a CA file", func() {
+			It("fails", func() {
+				tlsClientConfig, err := listeners.NewTLSConfig("fixtures/client.crt", "fixtures/client.key", "")
+				Expect(err).NotTo(HaveOccurred())
+				tlsClientConfig.ServerName = "doppler"
+
+				_, err = tls.Dial("tcp", tlsListener.Address(), tlsClientConfig)
+				Expect(err).To(MatchError("x509: certificate signed by unknown authority"))
+			})
+		})
+
+		Context("without a server name", func() {
+			It("fails", func() {
+				tlsClientConfig.ServerName = ""
+				_, err := tls.Dial("tcp", tlsListener.Address(), tlsClientConfig)
+				Expect(err).To(MatchError("x509: cannot validate certificate for 127.0.0.1 because it doesn't contain any IP SANs"))
+			})
+		})
 	})
 
 	Context("dropsonde metric emission", func() {
@@ -46,7 +90,7 @@ var _ = Describe("Tcplistener", func() {
 		It("sends all types of messages as a protobuf", func() {
 			for name, eventType := range events.Envelope_EventType_value {
 				envelope := createEnvelope(events.Envelope_EventType(eventType))
-				conn := openTLSConnection(tlsListener.Address())
+				conn := openTLSConnection(tlsListener.Address(), tlsClientConfig)
 
 				err := send(conn, envelope)
 				Expect(err).ToNot(HaveOccurred())
@@ -59,10 +103,10 @@ var _ = Describe("Tcplistener", func() {
 		It("sends all types of messages over multiple connections", func() {
 			for _, eventType := range events.Envelope_EventType_value {
 				envelope1 := createEnvelope(events.Envelope_EventType(eventType))
-				conn1 := openTLSConnection(tlsListener.Address())
+				conn1 := openTLSConnection(tlsListener.Address(), tlsClientConfig)
 
 				envelope2 := createEnvelope(events.Envelope_EventType(eventType))
-				conn2 := openTLSConnection(tlsListener.Address())
+				conn2 := openTLSConnection(tlsListener.Address(), tlsClientConfig)
 
 				err := send(conn1, envelope1)
 				Expect(err).ToNot(HaveOccurred())
@@ -80,7 +124,7 @@ var _ = Describe("Tcplistener", func() {
 
 		It("issues intended metrics", func() {
 			envelope := createEnvelope(events.Envelope_LogMessage)
-			conn := openTLSConnection(tlsListener.Address())
+			conn := openTLSConnection(tlsListener.Address(), tlsClientConfig)
 
 			err := send(conn, envelope)
 			Expect(err).ToNot(HaveOccurred())
@@ -115,14 +159,14 @@ var _ = Describe("Tcplistener", func() {
 
 	Context("Start Stop", func() {
 		It("panics if you start again", func() {
-			conn := openTLSConnection(tlsListener.Address())
+			conn := openTLSConnection(tlsListener.Address(), tlsClientConfig)
 			defer conn.Close()
 
 			Expect(tlsListener.Start).Should(Panic())
 		})
 
 		It("panics if you start after a stop", func() {
-			conn := openTLSConnection(tlsListener.Address())
+			conn := openTLSConnection(tlsListener.Address(), tlsClientConfig)
 			defer conn.Close()
 
 			tlsListener.Stop()
@@ -132,7 +176,7 @@ var _ = Describe("Tcplistener", func() {
 		It("fails to send message after listener has been stopped", func() {
 			logMessage := factories.NewLogMessage(events.LogMessage_OUT, "some message", "appId", "source")
 			envelope, _ := emitter.Wrap(logMessage, "origin")
-			conn := openTLSConnection(tlsListener.Address())
+			conn := openTLSConnection(tlsListener.Address(), tlsClientConfig)
 
 			err := send(conn, envelope)
 			Expect(err).ToNot(HaveOccurred())
@@ -158,11 +202,11 @@ func readMessages(envelopeChan chan *events.Envelope, n int) []*events.Envelope 
 	return envelopes
 }
 
-func openTLSConnection(address string) net.Conn {
+func openTLSConnection(address string, tlsConfig *tls.Config) net.Conn {
 	var conn net.Conn
 	var err error
 	Eventually(func() error {
-		conn, err = net.Dial("tcp", address)
+		conn, err = tls.Dial("tcp", address, tlsConfig)
 		return err
 	}).ShouldNot(HaveOccurred())
 

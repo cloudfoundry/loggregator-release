@@ -2,23 +2,22 @@
 package fakes
 
 import (
+	"metron/clientpool"
 	"metron/writers/dopplerforwarder"
 	"sync"
-
-	"github.com/cloudfoundry/loggregatorlib/loggregatorclient"
 )
 
 type FakeClientPool struct {
-	RandomClientStub        func() (loggregatorclient.Client, error)
+	RandomClientStub        func() (clientpool.Client, error)
 	randomClientMutex       sync.RWMutex
 	randomClientArgsForCall []struct{}
 	randomClientReturns     struct {
-		result1 loggregatorclient.Client
+		result1 clientpool.Client
 		result2 error
 	}
 }
 
-func (fake *FakeClientPool) RandomClient() (loggregatorclient.Client, error) {
+func (fake *FakeClientPool) RandomClient() (clientpool.Client, error) {
 	fake.randomClientMutex.Lock()
 	fake.randomClientArgsForCall = append(fake.randomClientArgsForCall, struct{}{})
 	fake.randomClientMutex.Unlock()
@@ -35,10 +34,10 @@ func (fake *FakeClientPool) RandomClientCallCount() int {
 	return len(fake.randomClientArgsForCall)
 }
 
-func (fake *FakeClientPool) RandomClientReturns(result1 loggregatorclient.Client, result2 error) {
+func (fake *FakeClientPool) RandomClientReturns(result1 clientpool.Client, result2 error) {
 	fake.RandomClientStub = nil
 	fake.randomClientReturns = struct {
-		result1 loggregatorclient.Client
+		result1 clientpool.Client
 		result2 error
 	}{result1, result2}
 }

@@ -7,5 +7,10 @@
     "EtcdMaxConcurrentRequests": 1,
     "Zone": "z1",
     "Deployment": "deployment-name",
-    "LoggregatorDropsondePort": 3457
+    "LoggregatorDropsondePort": 3457,
+    "TLSConfig": {
+        "CertFile": "../../fixtures/client.crt",
+        "KeyFile": "../../fixtures/client.key",
+        "CAFile": "../../fixtures/loggregator-ca.crt"
+    }
 }
