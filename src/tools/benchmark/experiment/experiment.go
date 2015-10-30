@@ -57,7 +57,7 @@ func (e *Experiment) Warmup() {
 	select {
 	case <-reading:
 		return
-	case <-time.After(time.Second):
+	case <-time.After(2 * time.Second):
 		panic("Failed to start reading")
 	}
 }

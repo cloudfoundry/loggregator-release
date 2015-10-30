@@ -13,6 +13,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"integration_tests/trafficcontroller/fake_doppler"
 )
 
 var legacyEndpoint string
@@ -21,13 +22,19 @@ const TRAFFIC_CONTROLLER_LEGACY_PORT = 4567
 
 var _ = Describe("TrafficController for legacy messages", func() {
 	BeforeEach(func() {
+		fakeDoppler = fake_doppler.New()
+		go fakeDoppler.Start()
 		legacyEndpoint = fmt.Sprintf("ws://%s:%d", localIPAddress, TRAFFIC_CONTROLLER_LEGACY_PORT)
-		fakeDoppler.ResetMessageChan()
 
 		Eventually(func() error {
 			_, err := http.Get(fmt.Sprintf("http://%s:%d", localIPAddress, TRAFFIC_CONTROLLER_LEGACY_PORT))
 			return err
 		}).ShouldNot(HaveOccurred())
+
+	})
+
+	AfterEach(func() {
+		fakeDoppler.Stop()
 	})
 
 	Context("Streaming", func() {
@@ -35,9 +42,9 @@ var _ = Describe("TrafficController for legacy messages", func() {
 			legacy_consumer := loggregator_consumer.New(legacyEndpoint, &tls.Config{}, nil)
 			messages, err := legacy_consumer.Tail(APP_ID, AUTH_TOKEN)
 			Expect(err).NotTo(HaveOccurred())
-
 			var request *http.Request
 			Eventually(fakeDoppler.TrafficControllerConnected, 10).Should(Receive(&request))
+
 			Expect(request.URL.Path).To(Equal("/apps/1234/stream"))
 
 			currentTime := time.Now().UnixNano()
@@ -56,33 +63,36 @@ var _ = Describe("TrafficController for legacy messages", func() {
 	})
 
 	Context("Recent", func() {
-		var expectedMessages [][]byte
+		It("returns a multi-part HTTP response with all recent messages", func() {
+			const messageLength = 5
+			expectedMessages := make([][]byte, messageLength)
 
-		BeforeEach(func() {
-			expectedMessages = make([][]byte, 5)
-
-			for i := 0; i < 5; i++ {
+			for i := 0; i < messageLength; i++ {
 				message := makeDropsondeMessage(strconv.Itoa(i), "1234", 1234)
 				expectedMessages[i] = message
 				fakeDoppler.SendLogMessage(message)
 			}
-		})
 
-		It("returns a multi-part HTTP response with all recent messages", func() {
 			fakeDoppler.CloseLogMessageStream()
-			client := loggregator_consumer.New(legacyEndpoint, &tls.Config{}, nil)
+			Eventually(func() bool {
+				client := loggregator_consumer.New(legacyEndpoint, &tls.Config{}, nil)
 
-			messages, err := client.Recent("1234", "bearer iAmAnAdmin")
+				messages, err := client.Recent(APP_ID, AUTH_TOKEN)
+				Expect(err).NotTo(HaveOccurred())
 
-			var request *http.Request
-			Eventually(fakeDoppler.TrafficControllerConnected, 15).Should(Receive(&request))
-			Expect(request.URL.Path).To(Equal("/apps/1234/recentlogs"))
+				select {
+				case request := <-fakeDoppler.TrafficControllerConnected:
+					Expect(request.URL.Path).To(Equal("/apps/1234/recentlogs"))
 
-			Expect(err).NotTo(HaveOccurred())
-
-			for i, message := range messages {
-				Expect(message.GetMessage()).To(BeEquivalentTo(strconv.Itoa(i)))
-			}
+					Expect(messages).To(HaveLen(messageLength))
+					for i, message := range messages {
+						Expect(message.GetMessage()).To(BeEquivalentTo(strconv.Itoa(i)))
+					}
+					return true
+				default:
+					return false
+				}
+			}, 5).Should(BeTrue())
 		})
 
 		It("correctly handles when clients go away mid-stream", func() {
@@ -145,4 +155,5 @@ var _ = Describe("TrafficController for legacy messages", func() {
 			Expect(cookie.Secure).To(BeTrue())
 		})
 	})
+
 })

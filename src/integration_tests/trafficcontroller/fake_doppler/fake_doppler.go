@@ -16,41 +16,34 @@ type FakeDoppler struct {
 	connectionListener         net.Listener
 	websocket                  *gorilla.Conn
 	sendMessageChan            chan []byte
-	Ready                      chan struct{}
 	TrafficControllerConnected chan *http.Request
 	connectionPresent          bool
+	done chan struct{}
 	sync.RWMutex
 }
 
-func (fakeDoppler *FakeDoppler) Start() {
-	fakeDoppler.Lock()
-	defer fakeDoppler.Unlock()
-
-	connectionListener, e := net.Listen("tcp", fakeDoppler.ApiEndpoint)
-	if e != nil {
-		panic(e)
+func New() *FakeDoppler {
+	return &FakeDoppler{
+		ApiEndpoint:                "127.0.0.1:1235",
+		TrafficControllerConnected: make(chan *http.Request, 1),
+		sendMessageChan:            make(chan []byte, 100),
+		done: make(chan struct{}),
 	}
-
-	fakeDoppler.connectionListener = connectionListener
-	fakeDoppler.ResetMessageChan()
-	fakeDoppler.Ready = make(chan struct{})
-	fakeDoppler.TrafficControllerConnected = make(chan *http.Request, 1)
-
-	go func() {
-		s := &http.Server{Addr: fakeDoppler.ApiEndpoint, Handler: fakeDoppler}
-		fakeDoppler.Ready <- struct{}{}
-		s.Serve(fakeDoppler.connectionListener)
-	}()
 }
 
-func (fakeDoppler *FakeDoppler) Stop() {
+func (fakeDoppler *FakeDoppler) Start() error {
+	var err error
 	fakeDoppler.Lock()
-	defer fakeDoppler.Unlock()
-	fakeDoppler.connectionListener.Close()
-}
+	fakeDoppler.connectionListener, err = net.Listen("tcp", fakeDoppler.ApiEndpoint)
+	fakeDoppler.Unlock()
+	if err != nil {
+		return err
+	}
+	s := &http.Server{Addr: fakeDoppler.ApiEndpoint, Handler: fakeDoppler}
 
-func (fakeDoppler *FakeDoppler) ResetMessageChan() {
-	fakeDoppler.sendMessageChan = make(chan []byte, 100)
+	err = s.Serve(fakeDoppler.connectionListener)
+	close(fakeDoppler.done)
+	return err
 }
 
 func (fakeDoppler *FakeDoppler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -68,6 +61,15 @@ func (fakeDoppler *FakeDoppler) ServeHTTP(writer http.ResponseWriter, request *h
 	fakeDoppler.Lock()
 	fakeDoppler.connectionPresent = false
 	fakeDoppler.Unlock()
+}
+
+func (fakeDoppler *FakeDoppler) Stop() {
+	fakeDoppler.Lock()
+	if fakeDoppler.connectionListener != nil {
+		fakeDoppler.connectionListener.Close()
+	}
+	fakeDoppler.Unlock()
+	<- fakeDoppler.done
 }
 
 func (fakeDoppler *FakeDoppler) ConnectionPresent() bool {
