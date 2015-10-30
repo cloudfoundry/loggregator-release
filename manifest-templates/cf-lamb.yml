@@ -101,6 +101,7 @@ properties:
     unmarshaller_count: (( merge || 5 ))
     port: (( merge || 4443 ))
     enable_tls_transport: ~
+    zone: (( merge || nil ))
     tls_listener:
       port: ~
       cert: ~
@@ -112,3 +113,4 @@ properties:
 
   traffic_controller:
     outgoing_port: 8080
+    zone: (( merge || nil ))
