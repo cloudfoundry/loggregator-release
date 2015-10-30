@@ -15,6 +15,13 @@
 
   "PreferredProtocol": "<%= p("metron_agent.preferred_protocol") %>"
 
+  <% if p("metron_agent.preferred_protocol") == "tls" %>
+  , "TLSConfig": {
+    "KeyFile": "/var/vcap/jobs/metron_agent/config/certs/metron_agent.key",
+    "CertFile": "/var/vcap/jobs/metron_agent/config/certs/metron_agent.crt",
+    "CAFile": "/var/vcap/jobs/metron_agent/config/certs/loggregator_ca.crt"
+  },
+  <% end %>
   <% if_p("syslog_daemon_config") do |_| %>
   , "Syslog": "vcap.metron_agent"
   <% end %>

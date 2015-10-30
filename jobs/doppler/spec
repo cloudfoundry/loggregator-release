@@ -3,8 +3,9 @@ name: doppler
 templates:
   doppler_ctl.erb: bin/doppler_ctl
   doppler.json.erb: config/doppler.json
-  tls_listener.crt.erb: config/certs/tls_listener.crt
-  tls_listener.key.erb: config/certs/tls_listener.key
+  doppler.crt.erb: config/certs/doppler.crt
+  doppler.key.erb: config/certs/doppler.key
+  loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
 
 packages:
 - common
@@ -62,17 +63,17 @@ properties:
   doppler.enable_tls_transport:
     description: "Enable TLS listener on doppler so that it can receive dropsonde envelopes over TLS transport. If enabled, Cert and Key files must be specified."
     default: false
-  doppler.tls_listener.port:
+  doppler.tls_server.port:
     description: "Port for incoming messages in the dropsonde format over tls listener"
     default: 3458
-  doppler.tls_listener.cert:
-    description: "Cert required for generating tls listener x509 certificate"
+  doppler.tls_server.cert:
+    description: "TLS server certificate"
     default: ""
-  doppler.tls_listener.key:
-    description: "Key required for generating tls listener x509 certificate"
+  doppler.tls_server.key:
+    description: "TLS server key"
     default: ""
-  doppler.tls_listener.ca:
-    description: "CA root certificate to generate key and crt file"
+  loggregator.tls.ca:
+    description: "CA root required for key/cert verification"
     default: ""
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"

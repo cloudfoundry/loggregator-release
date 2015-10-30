@@ -6,6 +6,9 @@ templates:
   syslog_forwarder.conf.erb: config/syslog_forwarder.conf
   metron_agent_logrotate.cron.erb: config/metron_agent_logrotate.cron
   logrotate.conf.erb: config/logrotate.conf
+  metron_agent.crt.erb: config/certs/metron_agent.crt
+  metron_agent.key.erb: config/certs/metron_agent.key
+  loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
 
 packages:
 - common
@@ -34,7 +37,16 @@ properties:
 
   metron_agent.preferred_protocol:
     description: "Preferred protocol to droppler (udp|tls)"
-    default: udp
+    default: "udp"
+  metron_agent.tls_client.cert:
+    description: "TLS client certificate"
+    default: ""
+  metron_agent.tls_client.key:
+    description: "TLS client key"
+    default: ""
+  loggregator.tls.ca:
+    description: "CA root required for key/cert verification"
+    default: ""
 
   metron_agent.debug:
     description: "boolean value to turn on verbose mode"
