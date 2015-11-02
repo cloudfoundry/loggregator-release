@@ -5,7 +5,7 @@ import (
 )
 
 type MetronStreamWriter struct {
-	metronConn      net.Conn
+	metronConn net.Conn
 }
 
 func NewMetronStreamWriter() *MetronStreamWriter {

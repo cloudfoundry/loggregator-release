@@ -1,11 +1,12 @@
 package helpers
+
 import (
-	"github.com/cloudfoundry/storeadapter"
-	"fmt"
 	"crypto/sha1"
+	"fmt"
+	"github.com/cloudfoundry/storeadapter"
 )
 
-type SyslogRegistrar struct{
+type SyslogRegistrar struct {
 	etcdStoreAdapter storeadapter.StoreAdapter
 }
 

@@ -18,7 +18,7 @@ type FakeDoppler struct {
 	sendMessageChan            chan []byte
 	TrafficControllerConnected chan *http.Request
 	connectionPresent          bool
-	done chan struct{}
+	done                       chan struct{}
 	sync.RWMutex
 }
 
@@ -27,7 +27,7 @@ func New() *FakeDoppler {
 		ApiEndpoint:                "127.0.0.1:1235",
 		TrafficControllerConnected: make(chan *http.Request, 1),
 		sendMessageChan:            make(chan []byte, 100),
-		done: make(chan struct{}),
+		done:                       make(chan struct{}),
 	}
 }
 
@@ -69,7 +69,7 @@ func (fakeDoppler *FakeDoppler) Stop() {
 		fakeDoppler.connectionListener.Close()
 	}
 	fakeDoppler.Unlock()
-	<- fakeDoppler.done
+	<-fakeDoppler.done
 }
 
 func (fakeDoppler *FakeDoppler) ConnectionPresent() bool {
