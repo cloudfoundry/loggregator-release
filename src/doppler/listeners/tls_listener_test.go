@@ -128,6 +128,7 @@ var _ = Describe("TLSlistener", func() {
 
 			err := send(conn, envelope)
 			Expect(err).ToNot(HaveOccurred())
+			conn.Close()
 
 			Eventually(envelopeChan).Should(Receive())
 
@@ -154,6 +155,51 @@ var _ = Describe("TLSlistener", func() {
 					Delta: proto.Uint64(67),
 				},
 			))
+		})
+
+		Context("receiveErrors count", func() {
+			expectReceiveErrorCount := func() {
+				Eventually(func() int {
+					return len(fakeEventEmitter.GetMessages())
+				}).Should(Equal(1))
+				errorEvents := fakeEventEmitter.GetEvents()
+				Expect(errorEvents).To(ConsistOf(
+					&events.CounterEvent{
+						Name:  proto.String("aname.receiveErrorCount"),
+						Delta: proto.Uint64(1),
+					},
+				))
+			}
+
+			It("does not increment error count for a valid message", func() {
+				envelope := createEnvelope(events.Envelope_LogMessage)
+				conn := openTLSConnection(tlsListener.Address(), tlsClientConfig)
+
+				err := send(conn, envelope)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("increments when tls handshake fails", func() {
+				tlsConfig, err := listeners.NewTLSConfig("fixtures/bad_client.crt", "fixtures/bad_client.key", "fixtures/badCA.crt")
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = tls.Dial("tcp", tlsListener.Address(), tlsConfig)
+				Expect(err).To(HaveOccurred())
+				expectReceiveErrorCount()
+			})
+
+			It("increments when size is greater than payload", func() {
+				conn := openTLSConnection(tlsListener.Address(), tlsClientConfig)
+				bytes := []byte("invalid payload")
+				var n uint32
+				n = 1000
+				err := binary.Write(conn, binary.LittleEndian, n)
+				Expect(err).ToNot(HaveOccurred())
+				_, err = conn.Write(bytes)
+				Expect(err).ToNot(HaveOccurred())
+				conn.Close()
+				expectReceiveErrorCount()
+			})
 		})
 	})
 

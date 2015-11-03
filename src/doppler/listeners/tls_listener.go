@@ -29,8 +29,9 @@ type TLSListener struct {
 	listenerClosed chan struct{}
 	started        bool
 
-	messageCountMetricName      string
-	receivedByteCountMetricName string
+	receivedMessageCountMetricName string
+	receivedByteCountMetricName    string
+	receiveErrorCountMetricName    string
 }
 
 func NewTLSConfig(certFile, keyFile, caCertFile string) (*tls.Config, error) {
@@ -83,8 +84,9 @@ func NewTLSListener(contextName string, address string, tlsListenerConfig config
 		stopped:        make(chan struct{}),
 		listenerClosed: make(chan struct{}),
 
-		messageCountMetricName:      contextName + ".receivedMessageCount",
-		receivedByteCountMetricName: contextName + ".receivedByteCount",
+		receivedMessageCountMetricName: contextName + ".receivedMessageCount",
+		receivedByteCountMetricName:    contextName + ".receivedByteCount",
+		receiveErrorCountMetricName:    contextName + ".receiveErrorCount",
 	}, nil
 }
 
@@ -159,6 +161,7 @@ func (t *TLSListener) handleConnection(conn net.Conn) {
 				"error":   err.Error(),
 				"address": conn.RemoteAddr().String(),
 			}, "TLS handshake error")
+			metrics.BatchIncrementCounter(t.receiveErrorCountMetricName)
 			return
 		}
 	}
@@ -170,6 +173,9 @@ func (t *TLSListener) handleConnection(conn net.Conn) {
 	for {
 		err = binary.Read(conn, binary.LittleEndian, &n)
 		if err != nil {
+			if err != io.EOF {
+				metrics.BatchIncrementCounter(t.receiveErrorCountMetricName)
+			}
 			break
 		}
 
@@ -181,6 +187,7 @@ func (t *TLSListener) handleConnection(conn net.Conn) {
 
 		_, err = io.ReadFull(conn, read)
 		if err != nil {
+			metrics.BatchIncrementCounter(t.receiveErrorCountMetricName)
 			break
 		}
 
@@ -188,8 +195,7 @@ func (t *TLSListener) handleConnection(conn net.Conn) {
 		if err != nil {
 			continue
 		}
-
-		metrics.BatchIncrementCounter(t.messageCountMetricName)
+		metrics.BatchIncrementCounter(t.receivedMessageCountMetricName)
 		metrics.BatchAddCounter(t.receivedByteCountMetricName, uint64(n+4))
 
 		t.logger.Debugf("Received envelope: %#v", envelope)
@@ -200,7 +206,7 @@ func (t *TLSListener) handleConnection(conn net.Conn) {
 		}
 	}
 
-	t.logger.Debugf("Error while decoding: %v", err)
+	t.logger.Errorf("Error while decoding: %v", err)
 	conn.Close()
 	t.removeConnection(conn)
 }

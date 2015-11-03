@@ -70,7 +70,7 @@ func New(logger *gosteno.Logger,
 	listenerEnvelopeChan := make(chan *events.Envelope)
 
 	if config.EnableTLSTransport {
-		tlsListener, err = listeners.NewTLSListener("dropsondeListener", fmt.Sprintf("%s:%d", host, config.TLSListenerConfig.Port), config.TLSListenerConfig, listenerEnvelopeChan, logger)
+		tlsListener, err = listeners.NewTLSListener("tlsListener", fmt.Sprintf("%s:%d", host, config.TLSListenerConfig.Port), config.TLSListenerConfig, listenerEnvelopeChan, logger)
 		if err != nil {
 			return nil, err
 		}
