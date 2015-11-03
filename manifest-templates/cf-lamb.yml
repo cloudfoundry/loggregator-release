@@ -93,6 +93,8 @@ properties:
     blacklisted_syslog_ranges: ~
     outgoing_dropsonde_port: 8081
     etcd: (( merge || ~ ))
+    tls:
+      ca: ~
 
   doppler:
     maxRetainedLogMessages: 100
@@ -101,14 +103,18 @@ properties:
     unmarshaller_count: (( merge || 5 ))
     port: (( merge || 4443 ))
     enable_tls_transport: ~
-    tls_listener:
-      port: ~
+    tls_server:
       cert: ~
+      port: ~
       key: ~
+
 
   metron_agent:
     deployment: (( meta.environment ))
     preferred_protocol: ~
+    tls_client:
+      cert: ~
+      key: ~
 
   traffic_controller:
     outgoing_port: 8080

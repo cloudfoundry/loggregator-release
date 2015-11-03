@@ -101,6 +101,8 @@ class LambProperties
       - 10.10.16.20
       - 10.10.16.35
       - 10.10.80.19
+    tls:
+      ca: null
 
   doppler:
     maxRetainedLogMessages: 100
@@ -108,14 +110,19 @@ class LambProperties
     blacklisted_syslog_ranges: null
     unmarshaller_count: 5
     port: 4443
-    tls_listener:
+    tls_server:
       cert: null
       key: null
       port: null
     enable_tls_transport: null
 
   metron_agent:
-    deployment: #{deployment_name}
+    deployment: ENVIRONMENT
+    preferred_protocol: null
+    tls_client:
+      key: null
+      cert: null
+
 
   traffic_controller:
     outgoing_port: 8080
@@ -140,6 +147,8 @@ class LambProperties
     outgoing_dropsonde_port: 8081
     etcd:
       machines: #{etcd_machines[@infrastructure]}
+    tls:
+      ca: null
 
   doppler:
     maxRetainedLogMessages: 100
@@ -147,7 +156,7 @@ class LambProperties
     blacklisted_syslog_ranges: null
     unmarshaller_count: 5
     port: 4443
-    tls_listener:
+    tls_server:
       cert: null
       key: null
       port: null
@@ -155,6 +164,10 @@ class LambProperties
 
   metron_agent:
     deployment: #{deployment_name}
+    preferred_protocol: null
+    tls_client:
+      key: null
+      cert: null
 
   traffic_controller:
     outgoing_port: 8080
