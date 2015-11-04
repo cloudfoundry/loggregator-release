@@ -5,7 +5,7 @@
     "LegacyIncomingMessagesPort": 3456,
     "DropsondeIncomingMessagesPort": 3457,
     "OutgoingPort": 8080,
-    "SkipCertVerify": false,
+    "SinkSkipCertVerify": false,
     "JobName": "loggregator_z1",
     "Index": 0,
     "MaxRetainedLogMessages": 10,

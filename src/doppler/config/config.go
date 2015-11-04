@@ -29,7 +29,7 @@ type Config struct {
 	MaxRetainedLogMessages        uint32
 	MessageDrainBufferSize        uint
 	SharedSecret                  string
-	SkipCertVerify                bool
+	SinkSkipCertVerify            bool
 	BlackListIps                  []iprange.IPRange
 	JobName                       string
 	Zone                          string

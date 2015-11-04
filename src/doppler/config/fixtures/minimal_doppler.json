@@ -2,7 +2,7 @@
     "DropsondeIncomingMessagesPort": 3456,
     "OutgoingPort": 8080,
     "MessageDrainBufferSize": 100,
-    "SkipCertVerify": false,
+    "SinkSkipCertVerify": false,
     "Index": 0,
     "MaxRetainedLogMessages": 10,
     "SharedSecret": "mysecret",

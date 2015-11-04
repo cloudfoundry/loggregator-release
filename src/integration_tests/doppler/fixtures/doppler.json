@@ -3,7 +3,7 @@
     "EtcdMaxConcurrentRequests": 10,
     "DropsondeIncomingMessagesPort": 8765,
     "OutgoingPort": 4567,
-    "SkipCertVerify": true,
+    "SinkSkipCertVerify": true,
     "Index": 0,
     "MaxRetainedLogMessages": 10,
     "MessageDrainBufferSize": 100,

@@ -1,7 +1,7 @@
 {
     "DropsondeIncomingMessagesPort": 8765,
     "OutgoingPort": 4567,
-    "SkipCertVerify": false,
+    "SinkSkipCertVerify": false,
     "Index": 0,
     "MaxRetainedLogMessages": 10,
     "MessageDrainBufferSize": 100,
