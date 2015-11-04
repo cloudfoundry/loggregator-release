@@ -79,6 +79,61 @@ var _ = Describe("DopplerForwarder", func() {
 			client.SchemeReturns("udp")
 		})
 
+		It("counts the number of bytes sent", func() {
+			var buffer bytes.Buffer
+			bytes, err := proto.Marshal(envelope)
+			Expect(err).NotTo(HaveOccurred())
+
+			client.WriteReturns(len(bytes), nil)
+
+			n := uint32(len(bytes))
+			err = binary.Write(&buffer, binary.LittleEndian, n)
+			Expect(err).NotTo(HaveOccurred())
+
+			forwarder.Write(envelope)
+
+			Eventually(func() uint64 {
+				return sender.GetCounter("udp.sentByteCount")
+			}).Should(BeEquivalentTo(n))
+		})
+
+		It("counts the number of messages sent", func() {
+			var buffer bytes.Buffer
+			bytes, err := proto.Marshal(envelope)
+			Expect(err).NotTo(HaveOccurred())
+
+			client.WriteReturns(len(bytes), nil)
+
+			n := uint32(len(bytes))
+			err = binary.Write(&buffer, binary.LittleEndian, n)
+			Expect(err).NotTo(HaveOccurred())
+
+			forwarder.Write(envelope)
+
+			Eventually(func() uint64 {
+				return sender.GetCounter("udp.sentMessageCount")
+			}).Should(BeEquivalentTo(1))
+		})
+
+		It("increments transmitErrorCount if client write fails", func() {
+			var buffer bytes.Buffer
+			bytes, err := proto.Marshal(envelope)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = errors.New("Client Write Failed")
+			client.WriteReturns(0, err)
+
+			n := uint32(len(bytes))
+			err = binary.Write(&buffer, binary.LittleEndian, n)
+			Expect(err).NotTo(HaveOccurred())
+
+			forwarder.Write(envelope)
+
+			Eventually(func() uint64 {
+				return sender.GetCounter("udp.sendErrorCount")
+			}).Should(BeEquivalentTo(1))
+		})
+
 		It("marshals, signs, writes and emits metrics", func() {
 			bytes, err := proto.Marshal(envelope)
 			Expect(err).NotTo(HaveOccurred())
@@ -108,6 +163,61 @@ var _ = Describe("DopplerForwarder", func() {
 	Context("tls client", func() {
 		BeforeEach(func() {
 			client.SchemeReturns("tls")
+		})
+
+		It("counts the number of bytes sent", func() {
+			var buffer bytes.Buffer
+			bytes, err := proto.Marshal(envelope)
+			Expect(err).NotTo(HaveOccurred())
+
+			client.WriteReturns(len(bytes), nil)
+
+			n := uint32(len(bytes))
+			err = binary.Write(&buffer, binary.LittleEndian, n)
+			Expect(err).NotTo(HaveOccurred())
+
+			forwarder.Write(envelope)
+
+			Eventually(func() uint64 {
+				return sender.GetCounter("tls.sentByteCount")
+			}).Should(BeEquivalentTo(n + 4))
+		})
+
+		It("counts the number of messages sent", func() {
+			var buffer bytes.Buffer
+			bytes, err := proto.Marshal(envelope)
+			Expect(err).NotTo(HaveOccurred())
+
+			client.WriteReturns(len(bytes), nil)
+
+			n := uint32(len(bytes))
+			err = binary.Write(&buffer, binary.LittleEndian, n)
+			Expect(err).NotTo(HaveOccurred())
+
+			forwarder.Write(envelope)
+
+			Eventually(func() uint64 {
+				return sender.GetCounter("tls.sentMessageCount")
+			}).Should(BeEquivalentTo(1))
+		})
+
+		It("increments transmitErrorCount if client write fails", func() {
+			var buffer bytes.Buffer
+			bytes, err := proto.Marshal(envelope)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = errors.New("Client Write Failed")
+			client.WriteReturns(0, err)
+
+			n := uint32(len(bytes))
+			err = binary.Write(&buffer, binary.LittleEndian, n)
+			Expect(err).NotTo(HaveOccurred())
+
+			forwarder.Write(envelope)
+
+			Eventually(func() uint64 {
+				return sender.GetCounter("tls.sendErrorCount")
+			}).Should(BeEquivalentTo(1))
 		})
 
 		It("stream and emits metrics", func() {

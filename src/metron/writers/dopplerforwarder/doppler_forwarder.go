@@ -65,19 +65,25 @@ func (d *DopplerForwarder) Write(message *events.Envelope) {
 	case "udp":
 		signedMessage := signature.SignMessage(messageBytes, d.sharedSecret)
 
-		if _, err := client.Write(signedMessage); err != nil {
+		bytesWritten, err := client.Write(signedMessage)
+		if err != nil {
+			metrics.BatchIncrementCounter("udp.sendErrorCount")
 			d.logger.Debugd(map[string]interface{}{
 				"scheme":  client.Scheme(),
 				"address": client.Address(),
 			}, "Error writing legacy message")
 			return
 		}
+		metrics.BatchIncrementCounter("udp.sentMessageCount")
+		metrics.BatchAddCounter("udp.sentByteCount", uint64(bytesWritten))
 	case "tls":
+		var bytesWritten int
 		err = binary.Write(client, binary.LittleEndian, uint32(len(messageBytes)))
 		if err == nil {
-			_, err = client.Write(messageBytes)
+			bytesWritten, err = client.Write(messageBytes)
 		}
 		if err != nil {
+			metrics.BatchIncrementCounter("tls.sendErrorCount")
 			client.Close()
 
 			d.logger.Errord(map[string]interface{}{
@@ -87,6 +93,8 @@ func (d *DopplerForwarder) Write(message *events.Envelope) {
 			}, "DopplerForwarder: streaming error")
 			return
 		}
+		metrics.BatchIncrementCounter("tls.sentMessageCount")
+		metrics.BatchAddCounter("tls.sentByteCount", uint64(bytesWritten+4))
 	default:
 		d.logger.Errorf("DopplerForwarder: unknown protocol, %s for %s", client.Scheme(), client.Address())
 		return
