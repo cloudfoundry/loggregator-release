@@ -88,7 +88,7 @@ var _ = Describe("Self Instrumentation", func() {
 			return drainAndEval(testDoppler.MessageChan, func(env *events.Envelope) bool {
 				return match(expected, env)
 			})
-		}, 2, 100*time.Millisecond).Should(BeTrue())
+		}, 3, 100*time.Millisecond).Should(BeTrue())
 	}
 
 	eventNeverOccurs := func(sendBytes []byte, match func(expected, actual *events.Envelope) bool, expected *events.Envelope) {
