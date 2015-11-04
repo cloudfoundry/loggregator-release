@@ -64,7 +64,7 @@ var _ = Describe("Config", func() {
 
 			Expect(cfg).To(Equal(&config.Config{
 				MetricBatchIntervalSeconds: 15,
-				PreferredProtocol:          "tls",
+				PreferredProtocol:          "udp",
 			}))
 		})
 	})

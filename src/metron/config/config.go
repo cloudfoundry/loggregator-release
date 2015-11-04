@@ -56,7 +56,7 @@ func Parse(reader io.Reader) (*Config, error) {
 	}
 
 	if config.PreferredProtocol == "" {
-		config.PreferredProtocol = "tls"
+		config.PreferredProtocol = "udp"
 	}
 
 	return config, nil
