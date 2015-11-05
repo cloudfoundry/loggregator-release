@@ -97,12 +97,12 @@ func main() {
 	finder := dopplerservice.NewLegacyFinder(etcdAdapter, int(config.DopplerPort), preferredServers, nil, log)
 	finder.Start()
 
-	dopplerProxy := makeProxy(etcdAdapter, config, log, marshaller.DropsondeLogMessage, dopplerproxy.TranslateFromDropsondePath,
-		newDropsondeWebsocketListener, finder, logAuthorizer, adminAuthorizer, "doppler."+config.SystemDomain)
+	dopplerCgc := channel_group_connector.NewChannelGroupConnector(finder, newDropsondeWebsocketListener, marshaller.DropsondeLogMessage, log)
+	dopplerProxy := dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, dopplerCgc, dopplerproxy.TranslateFromDropsondePath, "doppler."+config.SystemDomain, log)
 	startOutgoingDopplerProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dopplerProxy)
 
-	legacyProxy := makeProxy(etcdAdapter, config, log, marshaller.LoggregatorLogMessage, dopplerproxy.TranslateFromLegacyPath,
-		newLegacyWebsocketListener, finder, logAuthorizer, adminAuthorizer, "loggregator."+config.SystemDomain)
+	legacyCgc := channel_group_connector.NewChannelGroupConnector(finder, newLegacyWebsocketListener, marshaller.LoggregatorLogMessage, log)
+	legacyProxy := dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, legacyCgc, dopplerproxy.TranslateFromLegacyPath, "loggregator."+config.SystemDomain, log)
 	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), legacyProxy)
 
 	killChan := make(chan os.Signal)
@@ -127,20 +127,6 @@ func startOutgoingProxy(host string, proxy http.Handler) {
 			panic(err)
 		}
 	}()
-}
-
-func makeProxy(adapter storeadapter.StoreAdapter,
-	config *config.Config, logger *gosteno.Logger,
-	messageGenerator marshaller.MessageGenerator,
-	translator dopplerproxy.RequestTranslator,
-	listenerConstructor channel_group_connector.ListenerConstructor,
-	finder dopplerservice.Finder,
-	logAuthorizer authorization.LogAccessAuthorizer,
-	adminAuthorizer authorization.AdminAccessAuthorizer,
-	cookieDomain string) *dopplerproxy.Proxy {
-
-	cgc := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, messageGenerator, logger)
-	return dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, cgc, translator, cookieDomain, logger)
 }
 
 func startOutgoingDopplerProxy(host string, proxy http.Handler) {

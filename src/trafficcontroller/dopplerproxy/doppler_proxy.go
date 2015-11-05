@@ -5,13 +5,10 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 	"trafficcontroller/authorization"
 	"trafficcontroller/doppler_endpoint"
 
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"github.com/gogo/protobuf/proto"
 )
 
 const FIREHOSE_ID = "firehose"
@@ -26,8 +23,6 @@ type Proxy struct {
 }
 
 type RequestTranslator func(request *http.Request) (*http.Request, error)
-
-type Authorizer func(authToken string, appId string, logger *gosteno.Logger) (bool, error)
 
 type channelGroupConnector interface {
 	Connect(dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{})
@@ -77,7 +72,6 @@ func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 }
 
 func (proxy *Proxy) serveFirehose(paths []string, writer http.ResponseWriter, request *http.Request) {
-	clientAddress := request.RemoteAddr
 	authToken := getAuthToken(request)
 
 	firehoseParams := paths[2:]
@@ -95,15 +89,12 @@ func (proxy *Proxy) serveFirehose(paths []string, writer http.ResponseWriter, re
 
 	dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint(FIREHOSE_ID, firehoseSubscriptionId, true)
 
-	authorizer := func(authToken string, appId string, logger *gosteno.Logger) (bool, error) {
-		return proxy.adminAuthorize(authToken, logger)
-	}
-
-	authorized, errorMessage := proxy.isAuthorized(authorizer, FIREHOSE_ID, authToken, clientAddress)
+	authorized, err := proxy.adminAuthorize(authToken, proxy.logger)
 	if !authorized {
 		writer.Header().Set("WWW-Authenticate", "Basic")
 		writer.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprintf(writer, "You are not authorized. %s", errorMessage.GetMessage())
+		fmt.Fprintf(writer, "You are not authorized. %s", err.Error())
+		proxy.logger.Warnf("auth token not authorized to access appId [%s].", FIREHOSE_ID)
 		return
 	}
 
@@ -127,7 +118,6 @@ func (proxy *Proxy) serveAppLogs(paths []string, writer http.ResponseWriter, req
 		return
 	}
 
-	clientAddress := request.RemoteAddr
 	authToken := getAuthToken(request)
 
 	appId := paths[2]
@@ -137,15 +127,13 @@ func (proxy *Proxy) serveAppLogs(paths []string, writer http.ResponseWriter, req
 		return
 	}
 
-	authorizer := func(authToken string, appId string, logger *gosteno.Logger) (bool, error) {
-		return proxy.logAuthorize(authToken, appId, logger)
-	}
+	authorized, err := proxy.logAuthorize(authToken, appId, proxy.logger)
 
-	authorized, errorMessage := proxy.isAuthorized(authorizer, appId, authToken, clientAddress)
 	if !authorized {
 		writer.Header().Set("WWW-Authenticate", "Basic")
 		writer.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprintf(writer, "You are not authorized. %s", errorMessage.GetMessage())
+		fmt.Fprintf(writer, "You are not authorized. %s", err.Error())
+		proxy.logger.Warnf("auth token not authorized to access appId [%s].", appId)
 		return
 	}
 
@@ -166,28 +154,6 @@ func (proxy *Proxy) serveWithDoppler(writer http.ResponseWriter, request *http.R
 
 	handler := dopplerEndpoint.HProvider(messagesChan, proxy.logger)
 	handler.ServeHTTP(writer, request)
-}
-
-func (proxy *Proxy) isAuthorized(authorizer Authorizer, appId, authToken string, clientAddress string) (bool, *logmessage.LogMessage) {
-	newLogMessage := func(message []byte) *logmessage.LogMessage {
-		currentTime := time.Now()
-		messageType := logmessage.LogMessage_ERR
-
-		return &logmessage.LogMessage{
-			Message:     message,
-			AppId:       proto.String(appId),
-			MessageType: &messageType,
-			SourceName:  proto.String("LGR"),
-			Timestamp:   proto.Int64(currentTime.UnixNano()),
-		}
-	}
-	if authorized, err := authorizer(authToken, appId, proxy.logger); !authorized {
-		message := fmt.Sprintf("HttpServer: Auth token [%s] not authorized to access appId [%s].", authToken, appId)
-		proxy.logger.Warn(message)
-		return false, newLogMessage([]byte(err.Error()))
-	}
-
-	return true, nil
 }
 
 func getAuthToken(req *http.Request) string {
