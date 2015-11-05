@@ -1,6 +1,7 @@
 package eventunmarshaller
 
 import (
+	"errors"
 	"unicode"
 	"unicode/utf8"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
+var invalidEnvelope = errors.New("Invalid Envelope")
 var metricNames map[events.Envelope_EventType]string
 
 func init() {
@@ -60,6 +62,12 @@ func (u *EventUnmarshaller) UnmarshallMessage(message []byte) (*events.Envelope,
 		return nil, err
 	}
 
+	if !valid(envelope) {
+		u.logger.Debugf("eventUnmarshaller: validation failed for message %v", message)
+		metrics.BatchIncrementCounter("dropsondeUnmarshaller.unmarshalErrors")
+		return nil, invalidEnvelope
+	}
+
 	u.logger.Debugf("eventUnmarshaller: received message %v", spew.Sprintf("%v", envelope))
 
 	if err := u.incrementReceiveCount(envelope.GetEventType()); err != nil {
@@ -87,4 +95,26 @@ func (u *EventUnmarshaller) incrementReceiveCount(eventType events.Envelope_Even
 	}
 
 	return err
+}
+
+func valid(env *events.Envelope) bool {
+	switch env.GetEventType() {
+	case events.Envelope_HttpStart:
+		return env.GetHttpStart() != nil
+	case events.Envelope_HttpStop:
+		return env.GetHttpStop() != nil
+	case events.Envelope_HttpStartStop:
+		return env.GetHttpStartStop() != nil
+	case events.Envelope_LogMessage:
+		return env.GetLogMessage() != nil
+	case events.Envelope_ValueMetric:
+		return env.GetValueMetric() != nil
+	case events.Envelope_CounterEvent:
+		return env.GetCounterEvent() != nil
+	case events.Envelope_Error:
+		return env.GetError() != nil
+	case events.Envelope_ContainerMetric:
+		return env.GetContainerMetric() != nil
+	}
+	return true
 }

@@ -10,14 +10,15 @@ import (
 
 	"metron/writers/mocks"
 
+	"net/http"
+	"time"
+
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"net/http"
-	"time"
 )
 
 var _ = Describe("EventUnmarshaller", func() {
@@ -205,6 +206,28 @@ var _ = Describe("EventUnmarshaller", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(func() uint64 { return fakeSender.GetCounter("dropsondeUnmarshaller.valueMetricReceived") }).Should(BeEquivalentTo(1))
 			})
+		})
+
+		Context("Validation", func() {
+			validateIt := func(name string, val int32) {
+				It("emits an unmarshalError for an incomplete "+name, func() {
+					incompleteEvent := &events.Envelope{
+						Origin:    proto.String("fake-origin-2"),
+						EventType: events.Envelope_EventType(val).Enum(),
+					}
+					message, err := proto.Marshal(incompleteEvent)
+					Expect(err).ToNot(HaveOccurred())
+
+					_, err = unmarshaller.UnmarshallMessage(message)
+					Expect(err).To(HaveOccurred())
+
+					Eventually(func() uint64 { return fakeSender.GetCounter("dropsondeUnmarshaller.unmarshalErrors") }).Should(BeEquivalentTo(1))
+				})
+			}
+
+			for name, val := range events.Envelope_EventType_value {
+				validateIt(name, val)
+			}
 		})
 	})
 })
