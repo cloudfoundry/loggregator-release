@@ -18,23 +18,3 @@ properties:
   metron_endpoint.dropsonde_port:
     description: "The port used to emit dropsonde messages to the Metron agent"
     default: 3457
-  metron_endpoint.shared_secret:
-    description: "The key used to sign log messages"
-  dea_logging_agent.status.user:
-    description: username used to log into varz endpoint
-    default: ""
-  dea_logging_agent.status.password:
-    description: password used to log into varz endpoint
-    default: ""
-  dea_logging_agent.status.port:
-    description: port used to run the varz endpoint
-    default: 0
-  nats.user:
-    description: "Username for cc client to connect to NATS"
-  nats.password:
-    description: "Password for cc client to connect to NATS"
-  nats.machines:
-    description: "IP addresses of Cloud Foundry NATS servers"
-  nats.port:
-    description: "IP port of Cloud Foundry NATS server"
-    default: 4222

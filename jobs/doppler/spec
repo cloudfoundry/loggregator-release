@@ -17,15 +17,6 @@ properties:
   doppler.debug:
     description: boolean value to turn on verbose logging for doppler system (dea agent & doppler server)
     default: false
-  doppler.status.user:
-    description: username used to log into varz endpoint
-    default: ""
-  doppler.status.password:
-    description: password used to log into varz endpoint
-    default: ""
-  doppler.status.port:
-    description: port used to run the varz endpoint
-    default: 0
   doppler.maxRetainedLogMessages:
     description: number of log messages to retain per application
     default: 100
@@ -55,8 +46,8 @@ properties:
   doppler.sink_io_timeout_seconds:
     description: "I/O Timeout on sinks"
     default: 0
-  doppler_endpoint.shared_secret:
-    description: "Shared secret used to verify cryptographically signed doppler messages"
+  doppler.shared_secret:
+    description: "Shared secret used to verify cryptographically signed dropsonde messages"
   doppler.message_drain_buffer_size:
     description: "Size of the internal buffer used by doppler to store messages. If the buffer gets full doppler will drop the messages."
     default: 100
@@ -86,4 +77,3 @@ properties:
   metron_endpoint.dropsonde_port:
     description: "The port used to emit dropsonde messages to the Metron agent"
     default: 3457
-

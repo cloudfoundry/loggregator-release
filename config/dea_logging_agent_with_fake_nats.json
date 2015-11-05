@@ -1,9 +1,0 @@
-{
-    "Index": 0,
-    "MetronAddress": "localhost:3457",
-    "SharedSecret": "secret",
-    "VarzUser": "varz",
-    "VarzPass": "password",
-    "VarzPort": 8888,
-    "Syslog"  : ""
-}

@@ -7,7 +7,6 @@
     "DopplerPort": 1235,
     "OutgoingPort": 4567,
     "SkipCertVerify": true,
-    "SharedSecret": "SUPER_SECRET",
     "Zone": "z1",
     "ApiHost": "http://127.0.0.1:42123",
     "SystemDomain": "vcap.me",

@@ -34,6 +34,8 @@ properties:
   metron_agent.dropsonde_incoming_port:
     description: "Incoming port for dropsonde log messages"
     default: 3457
+  metron_agent.shared_secret:
+      description: "Shared secret used to verify cryptographically signed dropsonde messages"
 
   metron_agent.preferred_protocol:
     description: "Preferred protocol to droppler (udp|tls)"
@@ -70,8 +72,6 @@ properties:
   loggregator.dropsonde_incoming_port:
     description: "Port where loggregator listens for dropsonde log messages"
     default: 3457
-  loggregator_endpoint.shared_secret:
-    description: "Shared secret used to verify cryptographically signed loggregator messages"
 
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"

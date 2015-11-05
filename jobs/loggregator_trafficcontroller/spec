@@ -22,15 +22,6 @@ properties:
   traffic_controller.outgoing_port:
     description:  "Port on which the traffic controller listens to for requests"
     default: 8080
-  traffic_controller.status.user:
-    description: "username used to log into varz endpoint"
-    default: ""
-  traffic_controller.status.password:
-    description: "password used to log into varz endpoint"
-    default: ""
-  traffic_controller.status.port:
-    description: "port used to run the varz endpoint"
-    default: 0
   doppler.uaa_client_id:
     description: "Doppler's client id to connect to UAA"
     default: "doppler"
@@ -51,18 +42,7 @@ properties:
     default: 10
   system_domain:
     description: "Domain reserved for CF operator, base URL where the login, uaa, and other non-user apps listen"
-  nats.user:
-    description: "Username for cc client to connect to NATS"
-  nats.password:
-    description: "Password for cc client to connect to NATS"
-  nats.machines:
-    description: "IP addresses of Cloud Foundry NATS servers"
-  nats.port:
-    description: "IP port of Cloud Foundry NATS server"
-    default: 4222
 
-  loggregator_endpoint.shared_secret:
-    description: "Shared secret used to verify cryptographically signed loggregator messages"
   ssl.skip_cert_verify:
     description: "when connecting over https, ignore bad ssl certificates"
     default: false

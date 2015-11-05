@@ -8,7 +8,6 @@
     "IncomingPort": 49631,
     "OutgoingPort": 49630,
     "SkipCertVerify": true,
-    "SharedSecret": "SUPER_SECRET",
     "Zone": "z1",
     "Host": "0.0.0.0",
     "ApiHost": "http://127.0.0.1:49632",

@@ -21,7 +21,6 @@ type Config struct {
 	Syslog        string
 	Index         uint
 	MetronAddress string
-	SharedSecret  string
 }
 
 func (c *Config) validate() error {

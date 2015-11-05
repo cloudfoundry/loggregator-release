@@ -1,15 +1,7 @@
 {
   "Index": <%= spec.index %>,
-  "MetronAddress": "<%= p("metron_endpoint.host") %>:<%= p("metron_endpoint.dropsonde_port") %>",
-  "SharedSecret": "<%= p("metron_endpoint.shared_secret") %>",
-  "NatsHosts": <%= p("nats.machines") %>,
-  "NatsPort": <%= p("nats.port") %>,
-  "NatsUser": "<%= p("nats.user") %>",
-  "NatsPass": "<%= p("nats.password") %>",
-  "VarzUser": "<%= p("dea_logging_agent.status.user") %>",
-  "VarzPass": "<%= p("dea_logging_agent.status.password") %>",
-  "VarzPort": <%= p("dea_logging_agent.status.port") %>
+  "MetronAddress": "<%= p("metron_endpoint.host") %>:<%= p("metron_endpoint.dropsonde_port") %>"
   <% if_p("syslog_daemon_config") do |_| %>
   , "Syslog": "vcap.dea_logging_agent"
   <% end %>
-}  
+}

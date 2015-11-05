@@ -9,17 +9,9 @@
     "LoggregatorIncomingPort": 8766,
     "LoggregatorOutgoingPort": 4568,
     "SkipCertVerify": true,
-    "SharedSecret": "SUPER_SECRET",
     "Zone": "z1",
     "ApiHost": "https://vcap.me",
     "SystemDomain": "vcap.me",
 
-    "NatsHosts": [],
-    "NatsPort": 4222,
-    "NatsUser": "nats",
-    "NatsPass": "nats",
-    "VarzUser": "",
-    "VarzPass": "",
-    "VarzPort": 0,
     "CollectorRegistrarIntervalMilliseconds": 60000
 }
