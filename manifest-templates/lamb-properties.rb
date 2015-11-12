@@ -105,6 +105,7 @@ class LambProperties
       ca: null
 
   doppler:
+    shared_secret: LOGGREGATOR_ENDPOINT_SHARED_SECRET
     maxRetainedLogMessages: 100
     debug: false
     blacklisted_syslog_ranges: null
@@ -117,6 +118,7 @@ class LambProperties
     enable_tls_transport: null
 
   metron_agent:
+    shared_secret: LOGGREGATOR_ENDPOINT_SHARED_SECRET
     deployment: ENVIRONMENT
     preferred_protocol: null
     tls_client:
@@ -135,7 +137,7 @@ class LambProperties
 
     etcd_machines = {
       'vsphere' => "['0.0.0.14', '0.0.0.15', '0.0.1.13']",
-      'openstack' => "['0.0.0.8']",
+      'openstack' => "['10.10.0.133']",
       'warden' => "['10.244.0.42']",
     }
 
@@ -151,6 +153,7 @@ class LambProperties
       ca: null
 
   doppler:
+    shared_secret: LOGGREGATOR_ENDPOINT_SHARED_SECRET
     maxRetainedLogMessages: 100
     debug: false
     blacklisted_syslog_ranges: null
@@ -163,6 +166,7 @@ class LambProperties
     enable_tls_transport: null
 
   metron_agent:
+    shared_secret: LOGGREGATOR_ENDPOINT_SHARED_SECRET
     deployment: #{deployment_name}
     preferred_protocol: null
     tls_client:
