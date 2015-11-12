@@ -135,7 +135,7 @@ class LambProperties
 
     etcd_machines = {
       'vsphere' => "['0.0.0.14', '0.0.0.15', '0.0.1.13']",
-      'openstack' => "['0.0.0.8']",
+      'openstack' => "['10.10.0.133']",
       'warden' => "['10.244.0.42']",
     }
 
