@@ -10,7 +10,7 @@
   "JobName": "<%= name %>",
   "Index": <%= spec.index %>,
   "MaxRetainedLogMessages": <%= p("doppler.maxRetainedLogMessages") %>,
-  "SharedSecret": "<%= p("doppler.shared_secret") %>",
+  "SharedSecret": "<%= p("doppler_endpoint.shared_secret") %>",
   "ContainerMetricTTLSeconds": <%= p("doppler.container_metric_ttl_seconds") %>,
   "SinkSkipCertVerify": <%= p("doppler.syslog_skip_cert_verify") %>,
   "SinkInactivityTimeoutSeconds": <%= p("doppler.sink_inactivity_timeout_seconds") %>,

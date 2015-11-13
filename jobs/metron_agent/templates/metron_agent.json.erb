@@ -7,7 +7,7 @@
   "EtcdUrls": [<%= p("loggregator.etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
   "EtcdMaxConcurrentRequests": <%= p("loggregator.etcd.maxconcurrentrequests") %>,
 
-  "SharedSecret": "<%= p("metron_agent.shared_secret") %>",
+  "SharedSecret": "<%= p("metron_endpoint.shared_secret") %>",
 
   "DropsondeIncomingMessagesPort": <%= p("metron_agent.dropsonde_incoming_port") %>,
 

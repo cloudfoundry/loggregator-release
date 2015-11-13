@@ -87,9 +87,6 @@ jobs:
 properties:
   <<: (( merge ))
 
-  loggregator_endpoint:
-    shared_secret: (( merge ))
-
   loggregator:
     maxRetainedLogMessages: 100
     debug: (( merge || false ))
@@ -99,7 +96,6 @@ properties:
       ca: ~
 
   doppler:
-    shared_secret: (( .properties.loggregator_endpoint.shared_secret ))
     maxRetainedLogMessages: 100
     debug: (( merge || false ))
     blacklisted_syslog_ranges: ~
@@ -114,7 +110,6 @@ properties:
 
   metron_agent:
     deployment: (( meta.environment ))
-    shared_secret: (( .properties.loggregator_endpoint.shared_secret ))
     preferred_protocol: ~
     tls_client:
       cert: ~

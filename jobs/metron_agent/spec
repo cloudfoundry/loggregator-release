@@ -34,7 +34,7 @@ properties:
   metron_agent.dropsonde_incoming_port:
     description: "Incoming port for dropsonde log messages"
     default: 3457
-  metron_agent.shared_secret:
+  metron_endpoint.shared_secret:
       description: "Shared secret used to verify cryptographically signed dropsonde messages"
 
   metron_agent.preferred_protocol:
