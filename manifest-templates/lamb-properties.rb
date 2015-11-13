@@ -105,7 +105,6 @@ class LambProperties
       ca: null
 
   doppler:
-    shared_secret: LOGGREGATOR_ENDPOINT_SHARED_SECRET
     maxRetainedLogMessages: 100
     debug: false
     blacklisted_syslog_ranges: null
@@ -118,7 +117,6 @@ class LambProperties
     enable_tls_transport: null
 
   metron_agent:
-    shared_secret: LOGGREGATOR_ENDPOINT_SHARED_SECRET
     deployment: ENVIRONMENT
     preferred_protocol: null
     tls_client:
@@ -153,7 +151,6 @@ class LambProperties
       ca: null
 
   doppler:
-    shared_secret: LOGGREGATOR_ENDPOINT_SHARED_SECRET
     maxRetainedLogMessages: 100
     debug: false
     blacklisted_syslog_ranges: null
@@ -166,7 +163,6 @@ class LambProperties
     enable_tls_transport: null
 
   metron_agent:
-    shared_secret: LOGGREGATOR_ENDPOINT_SHARED_SECRET
     deployment: #{deployment_name}
     preferred_protocol: null
     tls_client:
