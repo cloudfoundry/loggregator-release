@@ -11,6 +11,7 @@ import (
 
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
+	"truncatingbuffer"
 )
 
 type SyslogSink struct {
@@ -48,11 +49,8 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 
 	backoffStrategy := retrystrategy.NewExponentialRetryStrategy()
 
-	allowLogMessages := func(eventType events.Envelope_EventType) bool {
-		return eventType != events.Envelope_LogMessage
-	}
-
-	buffer := sinks.RunTruncatingBuffer(inputChan, allowLogMessages, s.messageDrainBufferSize, s.logger, s.dropsondeOrigin, s.Identifier(), s.disconnectChannel)
+	context := truncatingbuffer.NewLogAllowedContext(s.dropsondeOrigin, s.Identifier())
+	buffer := sinks.RunTruncatingBuffer(inputChan, s.messageDrainBufferSize, context, s.logger, s.disconnectChannel)
 	timer := time.NewTimer(backoffStrategy(0))
 	connected := false
 	defer timer.Stop()

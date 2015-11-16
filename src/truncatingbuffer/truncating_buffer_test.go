@@ -19,20 +19,70 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+type FakeContext struct {}
+
+func(FakeContext) EventAllowed(events.Envelope_EventType) bool {
+	return true
+}
+
+func(FakeContext) Identifier() string {
+	return "test-sink-name"
+}
+
+func(FakeContext) DropsondeOrigin() string {
+	return "doppler"
+}
+
+type FilteredContext struct {
+	filterChan chan events.Envelope_EventType
+	FakeContext
+}
+
+func NewFilteredContext(filterChan chan events.Envelope_EventType) *FilteredContext {
+	return &FilteredContext{filterChan: filterChan}
+}
+
+func (f *FilteredContext) EventAllowed(eventType events.Envelope_EventType) bool {
+	f.filterChan <- eventType
+	return true
+}
+
+type LogFilteredContext struct {
+	logMsgCount int
+	truncateChan chan struct {}
+	FakeContext
+}
+
+func NewLogFilteredContext(truncateChan chan struct {}) *LogFilteredContext {
+	return &LogFilteredContext{logMsgCount: 0, truncateChan: truncateChan}
+}
+
+func (f *LogFilteredContext) EventAllowed(eventType events.Envelope_EventType) bool {
+	if eventType == events.Envelope_LogMessage {
+		f.logMsgCount++
+		if f.logMsgCount == 4+1 {
+			f.truncateChan <- struct{}{}
+		}
+	} else if eventType == events.Envelope_CounterEvent {
+		f.truncateChan <- struct{}{}
+	}
+
+	return true
+}
 var _ = Describe("Truncating Buffer", func() {
 	var inMessageChan chan *events.Envelope
 	var stopChannel chan struct{}
-	var filter func(eventType events.Envelope_EventType) bool
 	var buffer *truncatingbuffer.TruncatingBuffer
+	var context truncatingbuffer.BufferContext
 
 	BeforeEach(func() {
-		filter = nil
 		inMessageChan = make(chan *events.Envelope)
 		stopChannel = make(chan struct{})
+		context = &FakeContext{}
 	})
 
 	JustBeforeEach(func() {
-		buffer = truncatingbuffer.NewTruncatingBuffer(inMessageChan, filter, 3, loggertesthelper.Logger(), "dropsonde-origin", "test-sink-name", stopChannel)
+		buffer = truncatingbuffer.NewTruncatingBuffer(inMessageChan, 3, context, loggertesthelper.Logger(), stopChannel)
 	})
 
 	AfterEach(func() {
@@ -43,9 +93,16 @@ var _ = Describe("Truncating Buffer", func() {
 
 	It("panics if buffer size is less than 3", func() {
 		Expect(func() {
-			truncatingbuffer.NewTruncatingBuffer(inMessageChan, nil, 2, loggertesthelper.Logger(), "dropsonde-origin", "test-sync-name", nil)
+			truncatingbuffer.NewTruncatingBuffer(inMessageChan, 2,context, loggertesthelper.Logger(), nil)
 		}).To(Panic())
 	})
+
+	It("panics if context is nil", func() {
+		Expect(func() {
+			truncatingbuffer.NewTruncatingBuffer(inMessageChan, 3, nil, loggertesthelper.Logger(), nil)
+		}).To(Panic())
+	})
+
 
 	Describe("Run", func() {
 		It("exits when the input channel is closed", func() {
@@ -140,7 +197,6 @@ var _ = Describe("Truncating Buffer", func() {
 					sendLogMessages("message 2", inMessageChan)
 					sendLogMessages("message 3", inMessageChan)
 					sendLogMessages("message 4", inMessageChan)
-
 					Eventually(buffer.GetOutputChannel).ShouldNot(Equal(firstBuffer))
 				})
 
@@ -199,10 +255,7 @@ var _ = Describe("Truncating Buffer", func() {
 
 			BeforeEach(func() {
 				filterChan = make(chan events.Envelope_EventType)
-				filter = func(eventType events.Envelope_EventType) bool {
-					filterChan <- eventType
-					return false
-				}
+				context = NewFilteredContext(filterChan)
 			})
 
 			It("filters are invoked per event", func() {
@@ -219,19 +272,7 @@ var _ = Describe("Truncating Buffer", func() {
 
 				BeforeEach(func() {
 					truncateChan = make(chan struct{})
-					logMsgCount := 0
-					filter = func(eventType events.Envelope_EventType) bool {
-						if eventType == events.Envelope_LogMessage {
-							logMsgCount++
-							if logMsgCount == 4+1 {
-								truncateChan <- struct{}{}
-							}
-						} else if eventType == events.Envelope_CounterEvent {
-							truncateChan <- struct{}{}
-						}
-
-						return false
-					}
+					context = NewLogFilteredContext(truncateChan)
 				})
 
 				It("filters truncation events", func() {
