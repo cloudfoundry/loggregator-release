@@ -34,9 +34,10 @@ func (m *MessageAggregator) Write(envelope *events.Envelope) {
 	m.cleanupOrphanedHTTPStart()
 
 	if envelope.EventType == nil {
-		m.outputWriter.Write(envelope)
+		metrics.BatchIncrementCounter("MessageAggregator.uncategorizedEvents")
 		return
 	}
+
 	switch envelope.GetEventType() {
 	case events.Envelope_HttpStart:
 		m.handleHTTPStart(envelope)

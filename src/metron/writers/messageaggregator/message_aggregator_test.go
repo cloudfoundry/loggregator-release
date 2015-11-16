@@ -35,12 +35,11 @@ var _ = Describe("MessageAggregator", func() {
 		messageaggregator.MaxTTL = originalTTL
 	})
 
-	It("passes non-marshallable messages through", func() {
+	It("does not pass messages with no event type through", func() {
 		inputMessage := &events.Envelope{}
 		messageAggregator.Write(inputMessage)
 
-		Expect(mockWriter.Events).To(HaveLen(1))
-		Expect(mockWriter.Events[0]).To(Equal(inputMessage))
+		Expect(mockWriter.Events).To(HaveLen(0))
 	})
 
 	It("passes value messages through", func() {
@@ -201,6 +200,12 @@ var _ = Describe("MessageAggregator", func() {
 
 		It("emits a counter for uncategorized events", func() {
 			messageAggregator.Write(createValueMessage())
+			eventuallyExpectMetric("uncategorizedEvents", 1)
+		})
+
+		It("emits an uncategorized event counter for messages with nil event type", func() {
+			inputMessage := &events.Envelope{}
+			messageAggregator.Write(inputMessage)
 			eventuallyExpectMetric("uncategorizedEvents", 1)
 		})
 
