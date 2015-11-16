@@ -25,7 +25,6 @@ files:
 - loggregator/src/doppler/sinkserver/metrics/*.go # gosub
 - loggregator/src/doppler/sinkserver/sinkmanager/*.go # gosub
 - loggregator/src/doppler/sinkserver/websocketserver/*.go # gosub
-- loggregator/src/doppler/truncatingbuffer/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
@@ -60,3 +59,4 @@ files:
 - loggregator/src/github.com/pivotal-golang/localip/*.go # gosub
 - loggregator/src/github.com/ugorji/go/codec/*.go # gosub
 - loggregator/src/logger/*.go # gosub
+- loggregator/src/truncatingbuffer/*.go # gosub

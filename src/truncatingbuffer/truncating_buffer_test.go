@@ -1,7 +1,7 @@
 package truncatingbuffer_test
 
 import (
-	"doppler/truncatingbuffer"
+	"truncatingbuffer"
 	"fmt"
 	"time"
 

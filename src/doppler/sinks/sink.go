@@ -1,7 +1,7 @@
 package sinks
 
 import (
-	"doppler/truncatingbuffer"
+	"truncatingbuffer"
 
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
