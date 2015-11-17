@@ -12,6 +12,7 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
+	"truncatingbuffer"
 )
 
 var metricNames map[events.Envelope_EventType]string
@@ -32,16 +33,26 @@ type ClientPool interface {
 }
 
 type DopplerForwarder struct {
-	clientPool   ClientPool
-	sharedSecret []byte
-	logger       *gosteno.Logger
+	clientPool       ClientPool
+	sharedSecret     []byte
+	logger           *gosteno.Logger
+	truncatingBuffer *truncatingbuffer.TruncatingBuffer
 }
 
-func New(clientPool ClientPool, sharedSecret []byte, logger *gosteno.Logger) *DopplerForwarder {
+func New(clientPool ClientPool, sharedSecret []byte, truncatingBuffer *truncatingbuffer.TruncatingBuffer, logger *gosteno.Logger) *DopplerForwarder {
 	return &DopplerForwarder{
-		clientPool:   clientPool,
-		sharedSecret: sharedSecret,
-		logger:       logger,
+		clientPool:       clientPool,
+		sharedSecret:     sharedSecret,
+		truncatingBuffer: truncatingBuffer,
+		logger:           logger,
+	}
+}
+
+func (d *DopplerForwarder) Run() {
+	go d.truncatingBuffer.Run()
+	envelope, ok := <-d.truncatingBuffer.GetOutputChannel()
+	if ok && envelope != nil {
+		d.Write(envelope)
 	}
 }
 

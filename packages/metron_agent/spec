@@ -10,6 +10,7 @@ files:
 - loggregator/src/doppler/listeners/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/envelope_extensions/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metricbatcher/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metrics/*.go # gosub
@@ -40,3 +41,4 @@ files:
 - loggregator/src/metron/writers/messageaggregator/*.go # gosub
 - loggregator/src/metron/writers/mocks/*.go # gosub
 - loggregator/src/metron/writers/tagger/*.go # gosub
+- loggregator/src/truncatingbuffer/*.go # gosub
