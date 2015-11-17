@@ -65,7 +65,7 @@ var _ = Describe("Dumping", func() {
 
 		apiEndpoint := "localhost:" + serverPort
 		var err error
-		TestWebsocketServer, err = websocketserver.New(apiEndpoint, sinkManager, 10*time.Second, 100, "dropsonde-origin", logger)
+		TestWebsocketServer, err = websocketserver.New(apiEndpoint, sinkManager, time.Second, 10*time.Second, 100, "dropsonde-origin", logger)
 		Expect(err).NotTo(HaveOccurred())
 		tempWebsocketServer := TestWebsocketServer
 

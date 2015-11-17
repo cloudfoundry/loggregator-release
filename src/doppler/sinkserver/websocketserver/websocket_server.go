@@ -20,6 +20,7 @@ import (
 
 type WebsocketServer struct {
 	sinkManager       *sinkmanager.SinkManager
+	writeTimeout      time.Duration
 	keepAliveInterval time.Duration
 	bufferSize        uint
 	logger            *gosteno.Logger
@@ -29,7 +30,7 @@ type WebsocketServer struct {
 	done chan struct{}
 }
 
-func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, keepAliveInterval time.Duration, messageDrainBufferSize uint, dropsondeOrigin string, logger *gosteno.Logger) (*WebsocketServer, error) {
+func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, writeTimeout time.Duration, keepAliveInterval time.Duration, messageDrainBufferSize uint, dropsondeOrigin string, logger *gosteno.Logger) (*WebsocketServer, error) {
 	logger.Infof("WebsocketServer: Listening for sinks at %s", apiEndpoint)
 
 	listener, e := net.Listen("tcp", apiEndpoint)
@@ -40,6 +41,7 @@ func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, keepAliveInte
 	return &WebsocketServer{
 		listener:          listener,
 		sinkManager:       sinkManager,
+		writeTimeout:      writeTimeout,
 		keepAliveInterval: keepAliveInterval,
 		bufferSize:        messageDrainBufferSize,
 		logger:            logger,
@@ -161,6 +163,7 @@ func (w *WebsocketServer) streamWebsocket(appId string, websocketConnection *gor
 		w.logger,
 		websocketConnection,
 		w.bufferSize,
+		w.writeTimeout,
 		w.dropsondeOrigin,
 	)
 

@@ -40,6 +40,9 @@ properties:
   doppler.sink_inactivity_timeout_seconds:
     description: "Interval before removing a sink due to inactivity"
     default: 3600
+  doppler.websocket_write_timeout_seconds:
+    description: "Interval before a websocket write is aborted if it does not succeed"
+    default: 60
   doppler.sink_dial_timeout_seconds:
     description: "Dial timeout for sinks"
     default: 1

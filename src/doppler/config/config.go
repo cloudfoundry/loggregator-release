@@ -40,6 +40,7 @@ type Config struct {
 	MetronAddress                 string
 	MonitorIntervalSeconds        uint
 	SinkDialTimeoutSeconds        int
+	WebsocketWriteTimeoutSeconds  int
 	EnableTLSTransport            bool
 	TLSListenerConfig             TLSListenerConfig
 }
@@ -90,6 +91,10 @@ func ParseConfig(configFile string) (*Config, error) {
 
 	if config.SinkDialTimeoutSeconds == 0 {
 		config.SinkDialTimeoutSeconds = 1
+	}
+
+	if config.WebsocketWriteTimeoutSeconds == 0 {
+		config.WebsocketWriteTimeoutSeconds = 30
 	}
 
 	if config.UnmarshallerCount == 0 {

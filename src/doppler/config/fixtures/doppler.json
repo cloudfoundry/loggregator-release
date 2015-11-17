@@ -15,6 +15,7 @@
         {"start": "127.0.1.12", "End": "127.0.1.15"}
     ],
     "ContainerMetricTTLSeconds": 120,
+    "WebsocketWriteTimeoutSeconds": 60,
     "SinkInactivityTimeoutSeconds": 120,
     "MonitorIntervalSeconds": 1,
     "EnableTLSTransport": true,

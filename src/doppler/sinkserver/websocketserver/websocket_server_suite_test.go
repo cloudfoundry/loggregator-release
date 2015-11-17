@@ -4,6 +4,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"io/ioutil"
 	"net/http"
 	"testing"
 	"time"
@@ -19,6 +20,28 @@ var logger = loggertesthelper.Logger()
 func TestWebsocketServer(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "WebsocketServer Suite")
+}
+
+func AddSlowWSSink(receivedChan chan []byte, errChan chan error, timeout time.Duration, url string) {
+	ws, _, err := websocket.DefaultDialer.Dial(url, http.Header{})
+	if err != nil {
+		panic(err)
+	}
+	go func() {
+		time.Sleep(timeout)
+		_, reader, err := ws.NextReader()
+		if err != nil {
+			errChan <- err
+			return
+		}
+		received, err := ioutil.ReadAll(reader)
+		if err != nil {
+			errChan <- err
+			return
+		} else {
+			receivedChan <- received
+		}
+	}()
 }
 
 func AddWSSink(receivedChan chan []byte, url string) (chan struct{}, <-chan struct{}, error) {

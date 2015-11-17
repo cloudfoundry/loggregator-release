@@ -4,6 +4,7 @@ import (
 	"doppler/sinks/websocket"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
@@ -26,7 +27,8 @@ func (fake fakeAddr) String() string {
 }
 
 type fakeMessageWriter struct {
-	messages [][]byte
+	messages      [][]byte
+	writeDeadline time.Time
 	sync.RWMutex
 }
 
@@ -41,11 +43,24 @@ func (fake *fakeMessageWriter) WriteMessage(messageType int, data []byte) error 
 	return nil
 }
 
+func (fake *fakeMessageWriter) SetWriteDeadline(t time.Time) error {
+	fake.Lock()
+	defer fake.Unlock()
+	fake.writeDeadline = t
+	return nil
+}
+
 func (fake *fakeMessageWriter) ReadMessages() [][]byte {
 	fake.RLock()
 	defer fake.RUnlock()
 
 	return fake.messages
+}
+
+func (fake *fakeMessageWriter) WriteDeadline() time.Time {
+	fake.RLock()
+	defer fake.RUnlock()
+	return fake.writeDeadline
 }
 
 var _ = Describe("WebsocketSink", func() {
@@ -54,12 +69,14 @@ var _ = Describe("WebsocketSink", func() {
 		logger        *gosteno.Logger
 		websocketSink *websocket.WebsocketSink
 		fakeWebsocket *fakeMessageWriter
+		writeTimeout  time.Duration
 	)
 
 	BeforeEach(func() {
 		logger = loggertesthelper.Logger()
 		fakeWebsocket = &fakeMessageWriter{}
-		websocketSink = websocket.NewWebsocketSink("appId", logger, fakeWebsocket, 10, "dropsonde-origin")
+		writeTimeout = 5 * time.Second
+		websocketSink = websocket.NewWebsocketSink("appId", logger, fakeWebsocket, 10, writeTimeout, "dropsonde-origin")
 	})
 
 	Describe("Identifier", func() {
@@ -103,6 +120,13 @@ var _ = Describe("WebsocketSink", func() {
 			inputChan <- messageTwo
 			Eventually(fakeWebsocket.ReadMessages).Should(HaveLen(2))
 			Expect(fakeWebsocket.ReadMessages()[1]).To(Equal(messageTwoBytes))
+		})
+
+		It("sets write deadline", func() {
+			go websocketSink.Run(inputChan)
+			message, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "hello world", "appId", "App"), "origin")
+			inputChan <- message
+			Eventually(fakeWebsocket.WriteDeadline).Should(BeTemporally("~", time.Now().Add(writeTimeout)))
 		})
 	})
 })

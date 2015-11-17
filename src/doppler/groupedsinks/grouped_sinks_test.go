@@ -463,8 +463,8 @@ var _ = Describe("GroupedSink", func() {
 			fakeWriter2 := fakeMessageWriter{RemoteAddress: "2"}
 
 			sink1 := syslog.NewSyslogSink(appId, "url1", loggertesthelper.Logger(), 100, DummySyslogWriter{}, dummyErrorHandler, "dropsonde-origin")
-			sink2 := websocket.NewWebsocketSink(appId, loggertesthelper.Logger(), &fakeWriter1, 100, "origin")
-			sink3 := websocket.NewWebsocketSink(appId, loggertesthelper.Logger(), &fakeWriter2, 100, "origin")
+			sink2 := websocket.NewWebsocketSink(appId, loggertesthelper.Logger(), &fakeWriter1, 100, time.Second, "origin")
+			sink3 := websocket.NewWebsocketSink(appId, loggertesthelper.Logger(), &fakeWriter2, 100, time.Second, "origin")
 
 			groupedSinks.RegisterAppSink(inputChan, sink1)
 			groupedSinks.RegisterAppSink(inputChan, sink2)
@@ -479,8 +479,8 @@ var _ = Describe("GroupedSink", func() {
 
 			fakeWriter := fakeMessageWriter{RemoteAddress: "1"}
 
-			sink1 := websocket.NewWebsocketSink(appId, loggertesthelper.Logger(), &fakeWriter, 100, "origin")
-			sink2 := websocket.NewWebsocketSink(otherAppId, loggertesthelper.Logger(), &fakeWriter, 100, "origin")
+			sink1 := websocket.NewWebsocketSink(appId, loggertesthelper.Logger(), &fakeWriter, 100, time.Second, "origin")
+			sink2 := websocket.NewWebsocketSink(otherAppId, loggertesthelper.Logger(), &fakeWriter, 100, time.Second, "origin")
 
 			groupedSinks.RegisterAppSink(inputChan, sink1)
 			groupedSinks.RegisterAppSink(inputChan, sink2)

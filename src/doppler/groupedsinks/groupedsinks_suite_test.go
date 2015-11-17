@@ -3,9 +3,9 @@ package groupedsinks_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	"net"
 	"testing"
+	"time"
 )
 
 func TestGroupedsinks(t *testing.T) {
@@ -22,6 +22,10 @@ func (fake *fakeMessageWriter) RemoteAddr() net.Addr {
 }
 
 func (fake *fakeMessageWriter) WriteMessage(messageType int, data []byte) error {
+	return nil
+}
+
+func (fake *fakeMessageWriter) SetWriteDeadline(t time.Time) error {
 	return nil
 }
 

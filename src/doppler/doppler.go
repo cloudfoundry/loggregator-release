@@ -56,6 +56,7 @@ func New(logger *gosteno.Logger,
 	storeAdapter storeadapter.StoreAdapter,
 	messageDrainBufferSize uint,
 	dropsondeOrigin string,
+	websocketWriteTimeout time.Duration,
 	dialTimeout time.Duration) (*Doppler, error) {
 
 	keepAliveInterval := 30 * time.Second
@@ -88,7 +89,7 @@ func New(logger *gosteno.Logger,
 	sinkIOTimeout := time.Duration(config.SinkIOTimeoutSeconds) * time.Second
 	sinkManager := sinkmanager.New(config.MaxRetainedLogMessages, config.SinkSkipCertVerify, blacklist, logger, messageDrainBufferSize, dropsondeOrigin, sinkTimeout, sinkIOTimeout, metricTTL, dialTimeout)
 
-	websocketServer, err := websocketserver.New(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, keepAliveInterval, config.MessageDrainBufferSize, dropsondeOrigin, logger)
+	websocketServer, err := websocketserver.New(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, websocketWriteTimeout, keepAliveInterval, config.MessageDrainBufferSize, dropsondeOrigin, logger)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create the websocket server: %s", err.Error())
 	}

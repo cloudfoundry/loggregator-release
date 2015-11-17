@@ -35,7 +35,7 @@ var _ = Describe("WebsocketServer", func() {
 
 		apiEndpoint = net.JoinHostPort("127.0.0.1", strconv.Itoa(9091+config.GinkgoConfig.ParallelNode*10))
 		var err error
-		server, err = websocketserver.New(apiEndpoint, sinkManager, 100*time.Millisecond, 100, "dropsonde-origin", logger)
+		server, err = websocketserver.New(apiEndpoint, sinkManager, 100*time.Millisecond, 100*time.Millisecond, 100, "dropsonde-origin", logger)
 		Expect(err).NotTo(HaveOccurred())
 		go server.Start()
 		serverUrl := fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId)
@@ -171,6 +171,15 @@ var _ = Describe("WebsocketServer", func() {
 		Expect(stopKeepAlive).ToNot(Receive())
 		close(stopKeepAlive)
 		Eventually(connectionDropped).Should(BeClosed())
+	})
+
+	It("times out slow connections", func() {
+		errChan := make(chan error)
+		url := fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId)
+		AddSlowWSSink(wsReceivedChan, errChan, 2*time.Second, url)
+		var err error
+		Eventually(errChan, 5).Should(Receive(&err))
+		Expect(err).To(HaveOccurred())
 	})
 })
 
