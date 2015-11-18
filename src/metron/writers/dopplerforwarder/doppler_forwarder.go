@@ -35,28 +35,53 @@ type ClientPool interface {
 type DopplerForwarder struct {
 	clientPool       ClientPool
 	sharedSecret     []byte
-	logger           *gosteno.Logger
 	truncatingBuffer *truncatingbuffer.TruncatingBuffer
+	inputChan        chan<- *events.Envelope
+	logger           *gosteno.Logger
+	stopChan         chan struct{}
 }
 
-func New(clientPool ClientPool, sharedSecret []byte, truncatingBuffer *truncatingbuffer.TruncatingBuffer, logger *gosteno.Logger) *DopplerForwarder {
+func New(clientPool ClientPool, sharedSecret []byte, bufferSize uint, logger *gosteno.Logger) *DopplerForwarder {
+
+	inputChan := make(chan *events.Envelope)
+	stopChan := make(chan struct{})
+	bufferContext := truncatingbuffer.NewDefaultContext("MetronAgent", "MetronAgent")
+	truncatingBuffer := truncatingbuffer.NewTruncatingBuffer(inputChan, bufferSize, bufferContext, logger, stopChan)
+
 	return &DopplerForwarder{
 		clientPool:       clientPool,
 		sharedSecret:     sharedSecret,
 		truncatingBuffer: truncatingBuffer,
+		inputChan:        inputChan,
 		logger:           logger,
+		stopChan:         stopChan,
 	}
 }
 
 func (d *DopplerForwarder) Run() {
 	go d.truncatingBuffer.Run()
-	envelope, ok := <-d.truncatingBuffer.GetOutputChannel()
-	if ok && envelope != nil {
-		d.Write(envelope)
+	for {
+		select {
+		case envelope, ok := <-d.truncatingBuffer.GetOutputChannel():
+			if ok && envelope != nil {
+				d.networkWrite(envelope)
+			}
+		case <-d.stopChan:
+			return
+		}
+
 	}
 }
 
+func (d *DopplerForwarder) Stop() {
+	close(d.stopChan)
+}
+
 func (d *DopplerForwarder) Write(message *events.Envelope) {
+	d.inputChan <- message
+}
+
+func (d *DopplerForwarder) networkWrite(message *events.Envelope) {
 	client, err := d.clientPool.RandomClient()
 	if err != nil {
 		d.logger.Errord(map[string]interface{}{
@@ -75,7 +100,6 @@ func (d *DopplerForwarder) Write(message *events.Envelope) {
 	switch client.Scheme() {
 	case "udp":
 		signedMessage := signature.SignMessage(messageBytes, d.sharedSecret)
-
 		bytesWritten, err := client.Write(signedMessage)
 		if err != nil {
 			metrics.BatchIncrementCounter("udp.sendErrorCount")

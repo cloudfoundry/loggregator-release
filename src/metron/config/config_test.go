@@ -50,6 +50,7 @@ var _ = Describe("Config", func() {
 			Expect(cfg.Syslog).To(Equal("syslog.namespace"))
 
 			Expect(cfg.PreferredProtocol).To(Equal("udp"))
+			Expect(cfg.BufferSize).To(Equal(100))
 
 			Expect(cfg.TLSConfig).To(Equal(config.TLSConfig{
 				CertFile: "./fixtures/client.crt",
@@ -65,6 +66,7 @@ var _ = Describe("Config", func() {
 			Expect(cfg).To(Equal(&config.Config{
 				MetricBatchIntervalSeconds: 15,
 				PreferredProtocol:          "udp",
+				BufferSize:                 100,
 			}))
 		})
 	})

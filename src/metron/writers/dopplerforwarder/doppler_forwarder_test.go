@@ -23,23 +23,20 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"truncatingbuffer"
 )
 
 var sharedSecret = []byte("secret")
 
 var _ = Describe("DopplerForwarder", func() {
 	var (
-		sender           *fake.FakeMetricSender
-		clientPool       *fakes.FakeClientPool
-		client           *fakeclient.FakeClient
-		logger           *gosteno.Logger
-		forwarder        *dopplerforwarder.DopplerForwarder
-		envelope         *events.Envelope
-		inputChannel     chan *events.Envelope
-		stopChan         chan struct{}
-		truncatingBuffer *truncatingbuffer.TruncatingBuffer
-		doneChan chan struct {}
+		sender     *fake.FakeMetricSender
+		clientPool *fakes.FakeClientPool
+		client     *fakeclient.FakeClient
+		logger     *gosteno.Logger
+		forwarder  *dopplerforwarder.DopplerForwarder
+		envelope   *events.Envelope
+		doneChan   chan struct{}
+		bufferSize uint
 	)
 
 	BeforeEach(func() {
@@ -53,15 +50,12 @@ var _ = Describe("DopplerForwarder", func() {
 		logger = loggertesthelper.Logger()
 		loggertesthelper.TestLoggerSink.Clear()
 
-		context := truncatingbuffer.NewDefaultContext("origin", "id")
-		inputChannel = make(chan *events.Envelope)
-		stopChan = make(chan struct{})
-		truncatingBuffer = truncatingbuffer.NewTruncatingBuffer(inputChannel, 100, context, loggertesthelper.Logger(), stopChan)
-		forwarder = dopplerforwarder.New(clientPool, sharedSecret, truncatingBuffer, logger)
-		doneChan = make(chan struct {})
-		go func(){
+		bufferSize = 10
+		forwarder = dopplerforwarder.New(clientPool, sharedSecret, bufferSize, logger)
+		doneChan = make(chan struct{})
+		go func() {
 			forwarder.Run()
-			doneChan <- struct {}{}
+			close(doneChan)
 		}()
 		envelope = &events.Envelope{
 			Origin:     proto.String("fake-origin-1"),
@@ -71,31 +65,20 @@ var _ = Describe("DopplerForwarder", func() {
 	})
 
 	AfterEach(func() {
-		<- doneChan
-		close(stopChan)
-	})
-
-	Context("With TruncatingBuffer", func() {
-		BeforeEach(func() {
-			client.SchemeReturns("udp")
-		})
-		It("Should read from truncatingBuffer", func() {
-			inputChannel <- envelope
-			Eventually(client.WriteCallCount).Should(Equal(1))
-			//Expect(client.WriteArgsForCall(0)).To(Equal())
-		})
+		forwarder.Stop()
+		<-doneChan
 	})
 
 	Context("client selection", func() {
 		It("selects a random client", func() {
-			inputChannel <- envelope
-			Eventually(func() int{return clientPool.RandomClientCallCount()}).Should(Equal(1))
+			forwarder.Write(envelope)
+			Eventually(func() int { return clientPool.RandomClientCallCount() }).Should(Equal(1))
 		})
 
 		Context("when selecting a client errors", func() {
 			It("an error is logged and returns", func() {
 				clientPool.RandomClientReturns(nil, errors.New("boom"))
-				inputChannel <- envelope
+				forwarder.Write(envelope)
 
 				Eventually(loggertesthelper.TestLoggerSink.LogContents).Should(ContainSubstring("can't forward message"))
 				Eventually(client.SchemeCallCount).Should(Equal(0))
@@ -116,7 +99,7 @@ var _ = Describe("DopplerForwarder", func() {
 
 			n := uint32(len(bytes))
 
-			inputChannel <- envelope
+			forwarder.Write(envelope)
 
 			Eventually(func() uint64 {
 				return sender.GetCounter("udp.sentByteCount")
@@ -124,7 +107,7 @@ var _ = Describe("DopplerForwarder", func() {
 		})
 
 		It("counts the number of messages sent", func() {
-			inputChannel <- envelope
+			forwarder.Write(envelope)
 
 			Eventually(func() uint64 {
 				return sender.GetCounter("udp.sentMessageCount")
@@ -135,7 +118,7 @@ var _ = Describe("DopplerForwarder", func() {
 			err := errors.New("Client Write Failed")
 			client.WriteReturns(0, err)
 
-			inputChannel <- envelope
+			forwarder.Write(envelope)
 
 			Eventually(func() uint64 {
 				return sender.GetCounter("udp.sendErrorCount")
@@ -147,7 +130,7 @@ var _ = Describe("DopplerForwarder", func() {
 			Expect(err).NotTo(HaveOccurred())
 			bytes = signature.SignMessage(bytes, sharedSecret)
 
-			inputChannel <- envelope
+			forwarder.Write(envelope)
 
 			Eventually(client.WriteCallCount).Should(Equal(1))
 			Eventually(func() []byte { return client.WriteArgsForCall(0) }).Should(Equal(bytes))
@@ -161,7 +144,7 @@ var _ = Describe("DopplerForwarder", func() {
 			})
 
 			It("does not increment message count or sentMessages", func() {
-				inputChannel <- envelope
+				forwarder.Write(envelope)
 
 				Consistently(func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }).Should(BeZero())
 				Eventually(func() uint64 { return sender.GetCounter("dropsondeMarshaller.logMessageMarshalled") }).Should(BeZero())
@@ -185,7 +168,7 @@ var _ = Describe("DopplerForwarder", func() {
 			err = binary.Write(&buffer, binary.LittleEndian, n)
 			Expect(err).NotTo(HaveOccurred())
 
-			inputChannel <- envelope
+			forwarder.Write(envelope)
 
 			Eventually(func() uint64 {
 				return sender.GetCounter("tls.sentByteCount")
@@ -193,7 +176,7 @@ var _ = Describe("DopplerForwarder", func() {
 		})
 
 		It("counts the number of messages sent", func() {
-			inputChannel <- envelope
+			forwarder.Write(envelope)
 
 			Eventually(func() uint64 {
 				return sender.GetCounter("tls.sentMessageCount")
@@ -204,7 +187,7 @@ var _ = Describe("DopplerForwarder", func() {
 			err := errors.New("Client Write Failed")
 			client.WriteReturns(0, err)
 
-			inputChannel <- envelope
+			forwarder.Write(envelope)
 
 			Eventually(func() uint64 {
 				return sender.GetCounter("tls.sendErrorCount")
@@ -220,7 +203,7 @@ var _ = Describe("DopplerForwarder", func() {
 			err = binary.Write(&buffer, binary.LittleEndian, n)
 			Expect(err).NotTo(HaveOccurred())
 
-			inputChannel <- envelope
+			forwarder.Write(envelope)
 
 			Eventually(func() int { return client.WriteCallCount() }).Should(Equal(2))
 			Eventually(func() []byte { return client.WriteArgsForCall(0) }).Should(Equal(buffer.Bytes()))
@@ -234,7 +217,7 @@ var _ = Describe("DopplerForwarder", func() {
 			BeforeEach(func() {
 				client.WriteReturns(0, &net.OpError{Op: "dial", Err: errors.New("boom")})
 
-				inputChannel <- envelope
+				forwarder.Write(envelope)
 			})
 
 			It("closes the client", func() {
@@ -246,7 +229,7 @@ var _ = Describe("DopplerForwarder", func() {
 			})
 
 			It("does not increment message count or sentMessages", func() {
-				inputChannel <- envelope
+				forwarder.Write(envelope)
 
 				Consistently(func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }).Should(BeZero())
 				Eventually(func() uint64 { return sender.GetCounter("dropsondeMarshaller.LogMessageMarshalled") }).Should(BeZero())
@@ -257,7 +240,7 @@ var _ = Describe("DopplerForwarder", func() {
 			BeforeEach(func() {
 				client.WriteReturns(0, errors.New("boom"))
 
-				inputChannel <- envelope
+				forwarder.Write(envelope)
 			})
 
 			It("closes the client", func() {
@@ -265,7 +248,7 @@ var _ = Describe("DopplerForwarder", func() {
 			})
 
 			It("does not increment message count or sentMessages", func() {
-				inputChannel <- envelope
+				forwarder.Write(envelope)
 
 				Consistently(func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }).Should(BeZero())
 				Eventually(func() uint64 { return sender.GetCounter("dropsondeMarshaller.LogMessageMarshalled") }).Should(BeZero())
@@ -279,9 +262,9 @@ var _ = Describe("DopplerForwarder", func() {
 		})
 
 		It("logs an error and returns", func() {
-			inputChannel <- envelope
+			forwarder.Write(envelope)
 
-			Eventually(func() string{return loggertesthelper.TestLoggerSink.LogContents()}).Should(ContainSubstring("unknown protocol"))
+			Eventually(func() string { return loggertesthelper.TestLoggerSink.LogContents() }).Should(ContainSubstring("unknown protocol"))
 			Consistently(func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }).Should(BeZero())
 		})
 	})

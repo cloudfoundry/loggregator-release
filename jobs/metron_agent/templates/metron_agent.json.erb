@@ -13,7 +13,9 @@
 
   "LoggregatorDropsondePort": <%= p("loggregator.dropsonde_incoming_port") %>,
 
-  "PreferredProtocol": "<%= p("metron_agent.preferred_protocol") %>"
+  "PreferredProtocol": "<%= p("metron_agent.preferred_protocol") %>",
+
+  "BufferSize": "<%= p("metron_agent.buffer_size") %>"
 
   <% if p("metron_agent.preferred_protocol") == "tls" %>
   , "TLSConfig": {

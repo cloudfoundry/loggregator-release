@@ -29,9 +29,7 @@ import (
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 
-	"github.com/cloudfoundry/sonde-go/events"
 	"metron/config"
-	"truncatingbuffer"
 )
 
 var (
@@ -59,11 +57,7 @@ func main() {
 		os.Exit(-1)
 	}
 
-	inputChan := make(<-chan *events.Envelope)
-	stopChan := make(chan struct{})
-	bufferContext := truncatingbuffer.NewDefaultContext("metron", "")
-	truncatingBuffer := truncatingbuffer.NewTruncatingBuffer(inputChan, 100, bufferContext, log, stopChan)
-	dopplerForwarder := dopplerforwarder.New(dopplerClientPool, []byte(config.SharedSecret), truncatingBuffer, log)
+	dopplerForwarder := dopplerforwarder.New(dopplerClientPool, []byte(config.SharedSecret), uint(config.BufferSize), log)
 	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, dopplerForwarder)
 	aggregator := messageaggregator.New(messageTagger, log)
 
@@ -78,8 +72,9 @@ func main() {
 	}
 
 	log.Info("metron started")
-
+	go dopplerForwarder.Run()
 	dropsondeReader.Start()
+	dopplerForwarder.Stop()
 }
 
 func initializeDopplerPool(config *config.Config, logger *gosteno.Logger) (*clientpool.DopplerPool, error) {

@@ -32,6 +32,7 @@ type Config struct {
 
 	PreferredProtocol string
 	TLSConfig         TLSConfig
+	BufferSize        int
 }
 
 func ParseConfig(configFile string) (*Config, error) {
@@ -57,6 +58,10 @@ func Parse(reader io.Reader) (*Config, error) {
 
 	if config.PreferredProtocol == "" {
 		config.PreferredProtocol = "udp"
+	}
+
+	if config.BufferSize < 3 {
+		config.BufferSize = 100
 	}
 
 	return config, nil

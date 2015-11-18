@@ -68,6 +68,9 @@ properties:
   metron_agent.logrotate.size:
     description: "The size at which logrotate will decide to rotate the log file"
     default: 50M
+  metron_agent.buffer_size:
+    description: "The size of the internal buffer used by metron before sending to Doppler"
+    default: 100
 
   loggregator.dropsonde_incoming_port:
     description: "Port where loggregator listens for dropsonde log messages"

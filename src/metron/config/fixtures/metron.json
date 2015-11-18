@@ -19,5 +19,6 @@
     "KeyFile": "./fixtures/client.key",
     "CertFile": "./fixtures/client.crt",
     "CAFile": "./fixtures/ca.crt"
-  }
+  },
+  "BufferSize": 100
 }
