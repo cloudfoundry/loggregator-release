@@ -8,7 +8,9 @@ import (
 	"trafficcontroller/authorization"
 	"trafficcontroller/doppler_endpoint"
 
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
+	"time"
 )
 
 const FIREHOSE_ID = "firehose"
@@ -40,6 +42,7 @@ func NewDopplerProxy(logAuthorize authorization.LogAccessAuthorizer, adminAuthor
 }
 
 func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	requestStartTime := time.Now()
 	proxy.logger.Debugf("doppler proxy: ServeHTTP entered with request %v", request)
 	defer proxy.logger.Debugf("doppler proxy: ServeHTTP exited")
 
@@ -63,6 +66,12 @@ func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 		proxy.serveFirehose(paths, writer, translatedRequest)
 	case "apps":
 		proxy.serveAppLogs(paths, writer, translatedRequest)
+		if len(paths) > 3 {
+			endpoint := paths[3]
+			if endpoint != "" && (endpoint == "recentlogs" || endpoint == "containermetrics") {
+				sendMetric(endpoint, requestStartTime)
+			}
+		}
 	case "set-cookie":
 		proxy.serveSetCookie(writer, translatedRequest, proxy.cookieDomain)
 	default:
@@ -154,6 +163,11 @@ func (proxy *Proxy) serveWithDoppler(writer http.ResponseWriter, request *http.R
 
 	handler := dopplerEndpoint.HProvider(messagesChan, proxy.logger)
 	handler.ServeHTTP(writer, request)
+}
+
+func sendMetric(metricName string, startTime time.Time) {
+	elapsedMillisecond := float64(time.Since(startTime)) / float64(time.Millisecond)
+	metrics.SendValue(fmt.Sprintf("dopplerProxy.%sLatency", metricName), elapsedMillisecond, "ms")
 }
 
 func getAuthToken(req *http.Request) string {

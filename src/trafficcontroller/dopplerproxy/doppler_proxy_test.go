@@ -13,6 +13,9 @@ import (
 	"time"
 	"trafficcontroller/doppler_endpoint"
 
+	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -51,6 +54,48 @@ var _ = Describe("ServeHTTP", func() {
 			proxy.ServeHTTP(recorder, req)
 
 			Expect(recorder.Code).To(Equal(http.StatusOK))
+		})
+
+		Context("metrices", func() {
+			var fakeMetricSender *fake.FakeMetricSender
+
+			BeforeEach(func() {
+				fakeMetricSender = fake.NewFakeMetricSender()
+				metricBatcher := metricbatcher.New(fakeMetricSender, time.Millisecond)
+				metrics.Initialize(fakeMetricSender, metricBatcher)
+			})
+
+			requestAndAssert := func(req *http.Request, metricName string) {
+				requestStart := time.Now()
+				proxy.ServeHTTP(recorder, req)
+				metric := fakeMetricSender.GetValue(metricName)
+				elapsed := float64(time.Since(requestStart)) / float64(time.Millisecond)
+
+				Expect(metric.Unit).To(Equal("ms"))
+				Expect(metric.Value).To(BeNumerically("<", elapsed))
+
+			}
+			It("Should emit value metric for recentlogs request", func() {
+				close(channelGroupConnector.messages)
+				req, _ := http.NewRequest("GET", "/apps/appID123/recentlogs", nil)
+				requestAndAssert(req, "dopplerProxy.recentlogsLatency")
+			})
+
+			It("Should emit value metric for containermetrics request", func() {
+				close(channelGroupConnector.messages)
+				req, _ := http.NewRequest("GET", "/apps/appID123/containermetrics", nil)
+				requestAndAssert(req, "dopplerProxy.containermetricsLatency")
+			})
+
+			It("Should Not emit any metrics for stream request", func() {
+				close(channelGroupConnector.messages)
+				req, _ := http.NewRequest("GET", "/apps/appID123/stream", nil)
+				proxy.ServeHTTP(recorder, req)
+				metric := fakeMetricSender.GetValue("dopplerProxy.streamLatency")
+
+				Expect(metric.Unit).To(BeEmpty())
+				Expect(metric.Value).To(BeZero())
+			})
 		})
 
 		Context("if the path does not end with /stream or /recentlogs", func() {
