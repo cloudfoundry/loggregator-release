@@ -8,7 +8,7 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
-	. "integration_tests/metron/matchers"
+	. "matchers"
 
 	dopplerconfig "doppler/config"
 	"doppler/dopplerservice"
