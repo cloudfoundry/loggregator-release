@@ -7,7 +7,6 @@ import (
 	"metron/clientpool/fakeclient"
 	"metron/writers/dopplerforwarder"
 	"metron/writers/dopplerforwarder/fakes"
-	"net"
 
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -146,7 +145,9 @@ var _ = Describe("DopplerForwarder", func() {
 			It("does not increment message count or sentMessages", func() {
 				forwarder.Write(envelope)
 
-				Consistently(func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }).Should(BeZero())
+				Eventually(func() uint64 { return sender.GetCounter("udp.sentMessageCount") }).Should(BeZero())
+				Eventually(func() uint64 { return sender.GetCounter("udp.sentByteCount") }).Should(BeZero())
+				Eventually(func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }).Should(BeZero())
 				Eventually(func() uint64 { return sender.GetCounter("dropsondeMarshaller.logMessageMarshalled") }).Should(BeZero())
 			})
 		})
@@ -183,17 +184,6 @@ var _ = Describe("DopplerForwarder", func() {
 			}).Should(BeEquivalentTo(1))
 		})
 
-		It("increments transmitErrorCount if client write fails", func() {
-			err := errors.New("Client Write Failed")
-			client.WriteReturns(0, err)
-
-			forwarder.Write(envelope)
-
-			Eventually(func() uint64 {
-				return sender.GetCounter("tls.sendErrorCount")
-			}).Should(BeEquivalentTo(1))
-		})
-
 		It("stream and emits metrics", func() {
 			var buffer bytes.Buffer
 			bytes, err := proto.Marshal(envelope)
@@ -213,10 +203,16 @@ var _ = Describe("DopplerForwarder", func() {
 			Eventually(func() uint64 { return sender.GetCounter("dropsondeMarshaller.logMessageMarshalled") }).Should(BeEquivalentTo(1))
 		})
 
-		Context("with a network error", func() {
+		Context("write returns an error", func() {
 			BeforeEach(func() {
-				client.WriteReturns(0, &net.OpError{Op: "dial", Err: errors.New("boom")})
-
+				client.WriteStub = func([]byte) (int, error) {
+					switch client.WriteCallCount() {
+					case 2:
+						return 0, errors.New("write failure")
+					default:
+						return 0, nil
+					}
+				}
 				forwarder.Write(envelope)
 			})
 
@@ -224,34 +220,32 @@ var _ = Describe("DopplerForwarder", func() {
 				Eventually(func() int { return client.CloseCallCount() }).Should(Equal(1))
 			})
 
-			It("increments the marshallErrors metric", func() {
+			It("does not increment the marshallErrors metric", func() {
 				Consistently(func() uint64 { return sender.GetCounter("dropsondeMarshaller.marshalErrors") }).Should(BeZero())
 			})
 
-			It("does not increment message count or sentMessages", func() {
-				forwarder.Write(envelope)
-
-				Consistently(func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }).Should(BeZero())
+			It("only increments retryCount metric and not other metrics", func() {
+				Eventually(func() uint64 { return sender.GetCounter("tls.sentMessageCount") }).Should(BeZero())
+				Eventually(func() uint64 { return sender.GetCounter("tls.sentByteCount") }).Should(BeZero())
+				Eventually(func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }).Should(BeZero())
 				Eventually(func() uint64 { return sender.GetCounter("dropsondeMarshaller.LogMessageMarshalled") }).Should(BeZero())
-			})
-		})
-
-		Context("with a non-network error", func() {
-			BeforeEach(func() {
-				client.WriteReturns(0, errors.New("boom"))
-
-				forwarder.Write(envelope)
+				Eventually(func() uint64 { return sender.GetCounter("tls.retryCount") }).Should(BeEquivalentTo(1))
 			})
 
-			It("closes the client", func() {
-				Eventually(func() int { return client.CloseCallCount() }).Should(Equal(1))
-			})
+			It("resends the same message upon retry", func() {
+				var buffer bytes.Buffer
+				messageBytes, err := proto.Marshal(envelope)
+				Expect(err).NotTo(HaveOccurred())
 
-			It("does not increment message count or sentMessages", func() {
-				forwarder.Write(envelope)
+				err = binary.Write(&buffer, binary.LittleEndian, uint32(len(messageBytes)))
+				binaryBytes := buffer.Bytes()
+				Expect(err).NotTo(HaveOccurred())
 
-				Consistently(func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }).Should(BeZero())
-				Eventually(func() uint64 { return sender.GetCounter("dropsondeMarshaller.LogMessageMarshalled") }).Should(BeZero())
+				// Call count is 4 because, binary and client Write is called on both runs.
+				Eventually(func() int { return client.WriteCallCount() }).Should(Equal(4))
+				Eventually(func() []byte { return client.WriteArgsForCall(0) }).Should(Equal(binaryBytes)) // Binary bytes
+				Eventually(func() []byte { return client.WriteArgsForCall(1) }).Should(Equal(messageBytes))
+				Eventually(func() uint64 { return sender.GetCounter("tls.retryCount") }).Should(BeEquivalentTo(1))
 			})
 		})
 	})

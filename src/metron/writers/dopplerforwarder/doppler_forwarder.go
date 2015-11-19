@@ -120,9 +120,10 @@ func (d *DopplerForwarder) networkWrite(message *events.Envelope) {
 		if err == nil {
 			bytesWritten, err = client.Write(messageBytes)
 		}
-		if err != nil {
 
-			metrics.BatchIncrementCounter("tls.sendErrorCount")
+		if err != nil {
+			metrics.BatchIncrementCounter("tls.retryCount")
+			d.inputChan <- message
 			client.Close()
 
 			d.logger.Errord(map[string]interface{}{
