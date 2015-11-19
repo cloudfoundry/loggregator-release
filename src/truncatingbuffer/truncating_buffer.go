@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
-	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -91,7 +90,7 @@ func (r *TruncatingBuffer) Run() {
 					deltaDropped := uint64(len(outputChannel) - adjustDropped)
 					totalDropped += uint64(deltaDropped)
 					outputChannel = make(chan *events.Envelope, cap(outputChannel))
-					appId := envelope_extensions.GetAppId(msg)
+					appId := r.context.AppID(msg)
 
 					r.notifyMessagesDropped(outputChannel, deltaDropped, totalDropped, appId)
 					adjustDropped = len(outputChannel)

@@ -45,7 +45,10 @@ func New(clientPool ClientPool, sharedSecret []byte, bufferSize uint, logger *go
 
 	inputChan := make(chan *events.Envelope)
 	stopChan := make(chan struct{})
-	bufferContext := truncatingbuffer.NewDefaultContext("MetronAgent", "MetronAgent")
+	// We set the sink identifier to be "Doppler" since the truncating buffer is between
+	// Metron and Doppler. So in case of lost messages the dropped message event
+	// will say "Lost messages ... to Doppler"
+	bufferContext := truncatingbuffer.NewSystemContext("MetronAgent", "Doppler")
 	truncatingBuffer := truncatingbuffer.NewTruncatingBuffer(inputChan, bufferSize, bufferContext, logger, stopChan)
 
 	return &DopplerForwarder{
@@ -118,6 +121,7 @@ func (d *DopplerForwarder) networkWrite(message *events.Envelope) {
 			bytesWritten, err = client.Write(messageBytes)
 		}
 		if err != nil {
+
 			metrics.BatchIncrementCounter("tls.sendErrorCount")
 			client.Close()
 

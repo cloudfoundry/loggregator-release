@@ -33,6 +33,10 @@ func(FakeContext) DropsondeOrigin() string {
 	return "doppler"
 }
 
+func(FakeContext) AppID(*events.Envelope) string {
+	return "fake-app-id"
+}
+
 type FilteredContext struct {
 	filterChan chan events.Envelope_EventType
 	FakeContext
@@ -168,6 +172,7 @@ var _ = Describe("Truncating Buffer", func() {
 
 					Eventually(buffer.GetOutputChannel).Should(Receive(&logMessageNotification))
 					Expect(logMessageNotification.GetEventType()).To(Equal(events.Envelope_LogMessage))
+					Expect(logMessageNotification.GetLogMessage().GetAppId()).To(Equal("fake-app-id"))
 					Expect(logMessageNotification.GetLogMessage().GetMessage()).To(ContainSubstring(fmt.Sprintf("Log message output is too high. %d messages dropped (Total %d messages dropped) to test-sink-name.", delta, total)))
 
 					var counterEventNotification *events.Envelope
