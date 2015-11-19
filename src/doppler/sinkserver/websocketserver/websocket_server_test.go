@@ -5,6 +5,7 @@ import (
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
@@ -150,6 +151,15 @@ var _ = Describe("WebsocketServer", func() {
 		close(stopKeepAlive1)
 		close(stopKeepAlive2)
 	}, 2)
+
+	It("works with malformed firehose path", func() {
+		resp, err := http.Get(fmt.Sprintf("http://%s/firehose", apiEndpoint))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+		bytes, err := ioutil.ReadAll(resp.Body)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(bytes).To(ContainSubstring("missing subscription id in firehose request"))
+	})
 
 	It("still sends to 'live' sinks", func() {
 		stopKeepAlive, connectionDropped, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
