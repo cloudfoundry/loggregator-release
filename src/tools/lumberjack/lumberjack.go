@@ -14,6 +14,7 @@ func main() {
 	var i uint64
 	s := time.Now()
 
+	log.Print("Starting lumberjack")
 	go func() {
 		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port),
 			http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
