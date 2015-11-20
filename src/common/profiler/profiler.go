@@ -20,7 +20,7 @@ type Profiler struct {
 	wg               sync.WaitGroup
 }
 
-func NewProfiler(cpuProfile, memProfile string, interval time.Duration, logger *gosteno.Logger) *Profiler {
+func New(cpuProfile, memProfile string, interval time.Duration, logger *gosteno.Logger) *Profiler {
 	return &Profiler{
 		cpuProfile: cpuProfile,
 		memProfile: memProfile,

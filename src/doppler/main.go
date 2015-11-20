@@ -5,18 +5,16 @@ import (
 	"flag"
 	"math/rand"
 	"os"
-	"os/signal"
 	"runtime"
-	"runtime/pprof"
 	"time"
 
 	"doppler/config"
-
 	"doppler/dopplerservice"
 
 	"logger"
-	"syscall"
 
+	"common/profiler"
+	"common/signalmanager"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/storeadapter"
@@ -70,34 +68,6 @@ func main() {
 		panic(errors.New("Unable to resolve own IP address: " + err.Error()))
 	}
 
-	if *cpuprofile != "" {
-		f, err := os.Create(*cpuprofile)
-		if err != nil {
-			panic(err)
-		}
-		pprof.StartCPUProfile(f)
-		defer func() {
-			pprof.StopCPUProfile()
-			f.Close()
-		}()
-	}
-
-	if *memprofile != "" {
-		f, err := os.Create(*memprofile)
-		if err != nil {
-			panic(err)
-		}
-		go func() {
-			defer f.Close()
-			ticker := time.NewTicker(time.Second * 1)
-			defer ticker.Stop()
-			for {
-				<-ticker.C
-				pprof.WriteHeapProfile(f)
-			}
-		}()
-	}
-
 	conf, err := config.ParseConfig(*configFile)
 	if err != nil {
 		panic(err)
@@ -105,6 +75,10 @@ func main() {
 
 	log := logger.NewLogger(*logLevel, *logFilePath, "doppler", conf.Syslog)
 	log.Info("Startup: Setting up the doppler server")
+
+	profiler := profiler.New(*cpuprofile, *memprofile, 1*time.Second, log)
+	profiler.Profile()
+	defer profiler.Stop()
 
 	dropsonde.Initialize(conf.MetronAddress, DOPPLER_ORIGIN)
 	storeAdapter := NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
@@ -119,10 +93,8 @@ func main() {
 	go doppler.Start()
 	log.Info("Startup: doppler server started.")
 
-	killChan := make(chan os.Signal)
-	signal.Notify(killChan, os.Kill, os.Interrupt)
-
-	dumpChan := registerGoRoutineDumpSignalChannel()
+	killChan := signalmanager.RegisterKillSignalChannel()
+	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
 
 	releaseNodeChan := dopplerservice.Announce(localIp, config.HeartbeatInterval, conf, storeAdapter, log)
 	legacyReleaseNodeChan := dopplerservice.AnnounceLegacy(localIp, config.HeartbeatInterval, conf, storeAdapter, log)
@@ -130,7 +102,7 @@ func main() {
 	for {
 		select {
 		case <-dumpChan:
-			logger.DumpGoRoutine()
+			signalmanager.DumpGoRoutine()
 		case <-killChan:
 			log.Info("Shutting down")
 
@@ -147,11 +119,4 @@ func main() {
 			os.Exit(0)
 		}
 	}
-}
-
-func registerGoRoutineDumpSignalChannel() chan os.Signal {
-	threadDumpChan := make(chan os.Signal)
-	signal.Notify(threadDumpChan, syscall.SIGUSR1)
-
-	return threadDumpChan
 }

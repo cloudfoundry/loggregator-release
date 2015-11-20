@@ -29,6 +29,7 @@ import (
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 
+	"common/signalmanager"
 	"metron/config"
 )
 
@@ -73,8 +74,21 @@ func main() {
 
 	log.Info("metron started")
 	go dopplerForwarder.Run()
-	dropsondeReader.Start()
-	dopplerForwarder.Stop()
+	go dropsondeReader.Start()
+
+	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
+	killChan := signalmanager.RegisterKillSignalChannel()
+
+	for {
+		select {
+		case <-dumpChan:
+			signalmanager.DumpGoRoutine()
+		case <-killChan:
+			log.Info("Shutting down")
+			dopplerForwarder.Stop()
+			os.Exit(0)
+		}
+	}
 }
 
 func initializeDopplerPool(config *config.Config, logger *gosteno.Logger) (*clientpool.DopplerPool, error) {

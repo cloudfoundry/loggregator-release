@@ -1,25 +1,23 @@
 package main
 
 import (
+	"common/monitor"
+	"common/profiler"
+	"common/signalmanager"
 	"doppler/dopplerservice"
 	"flag"
 	"logger"
 	"net"
 	"net/http"
 	"os"
-	"os/signal"
 	"strconv"
-	"syscall"
 	"time"
-
-	"common/monitor"
 	"trafficcontroller/authorization"
 	"trafficcontroller/channel_group_connector"
 	"trafficcontroller/config"
 	"trafficcontroller/dopplerproxy"
 	"trafficcontroller/listener"
 	"trafficcontroller/marshaller"
-	"trafficcontroller/profiler"
 	"trafficcontroller/uaa_client"
 
 	"github.com/cloudfoundry/dropsonde"
@@ -68,7 +66,7 @@ func main() {
 
 	dropsonde.Initialize("127.0.0.1:"+strconv.Itoa(config.MetronPort), "LoggregatorTrafficController")
 
-	profiler := profiler.NewProfiler(*cpuprofile, *memprofile, 1*time.Second, log)
+	profiler := profiler.New(*cpuprofile, *memprofile, 1*time.Second, log)
 	profiler.Profile()
 	defer profiler.Stop()
 
@@ -99,37 +97,27 @@ func main() {
 
 	dopplerCgc := channel_group_connector.NewChannelGroupConnector(finder, newDropsondeWebsocketListener, marshaller.DropsondeLogMessage, log)
 	dopplerProxy := dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, dopplerCgc, dopplerproxy.TranslateFromDropsondePath, "doppler."+config.SystemDomain, log)
-	startOutgoingDopplerProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dopplerProxy)
+	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dopplerProxy)
 
 	legacyCgc := channel_group_connector.NewChannelGroupConnector(finder, newLegacyWebsocketListener, marshaller.LoggregatorLogMessage, log)
 	legacyProxy := dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, legacyCgc, dopplerproxy.TranslateFromLegacyPath, "loggregator."+config.SystemDomain, log)
 	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), legacyProxy)
 
-	killChan := make(chan os.Signal)
-	signal.Notify(killChan, os.Kill, os.Interrupt)
-
-	dumpChan := registerGoRoutineDumpSignalChannel()
+	killChan := signalmanager.RegisterKillSignalChannel()
+	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
 
 	for {
 		select {
 		case <-dumpChan:
-			logger.DumpGoRoutine()
+			signalmanager.DumpGoRoutine()
 		case <-killChan:
-			break
+			log.Info("Shutting down")
+			os.Exit(0)
 		}
 	}
 }
 
 func startOutgoingProxy(host string, proxy http.Handler) {
-	go func() {
-		err := http.ListenAndServe(host, proxy)
-		if err != nil {
-			panic(err)
-		}
-	}()
-}
-
-func startOutgoingDopplerProxy(host string, proxy http.Handler) {
 	go func() {
 		err := http.ListenAndServe(host, proxy)
 		if err != nil {
@@ -147,11 +135,4 @@ func newDropsondeWebsocketListener(timeout time.Duration, logger *gosteno.Logger
 
 func newLegacyWebsocketListener(timeout time.Duration, logger *gosteno.Logger) listener.Listener {
 	return listener.NewWebsocket(marshaller.LoggregatorLogMessage, marshaller.TranslateDropsondeToLegacyLogMessage, timeout, logger)
-}
-
-func registerGoRoutineDumpSignalChannel() chan os.Signal {
-	threadDumpChan := make(chan os.Signal)
-	signal.Notify(threadDumpChan, syscall.SIGUSR1)
-
-	return threadDumpChan
 }

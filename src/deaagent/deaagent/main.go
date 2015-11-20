@@ -7,11 +7,9 @@ import (
 	"flag"
 	"logger"
 	"os"
-	"os/signal"
-	"runtime/pprof"
-	"syscall"
 	"time"
 
+	"common/signalmanager"
 	"github.com/cloudfoundry/dropsonde"
 )
 
@@ -58,34 +56,6 @@ func main() {
 
 	dropsonde.Initialize(config.MetronAddress, "dea_logging_agent")
 
-	if *cpuprofile != "" {
-		f, err := os.Create(*cpuprofile)
-		if err != nil {
-			panic(err)
-		}
-		pprof.StartCPUProfile(f)
-		defer func() {
-			pprof.StopCPUProfile()
-			f.Close()
-		}()
-	}
-
-	if *memprofile != "" {
-		f, err := os.Create(*memprofile)
-		if err != nil {
-			panic(err)
-		}
-		go func() {
-			defer f.Close()
-			ticker := time.NewTicker(time.Second * 1)
-			defer ticker.Stop()
-			for {
-				<-ticker.C
-				pprof.WriteHeapProfile(f)
-			}
-		}()
-	}
-
 	log := logger.NewLogger(*logLevel, *logFilePath, "deaagent", config.Syslog)
 	log.Info("Startup: Setting up the loggregator dea logging agent")
 	// ** END Config Setup
@@ -94,17 +64,16 @@ func main() {
 
 	go agent.Start()
 
-	killChan := make(chan os.Signal)
-	signal.Notify(killChan, os.Interrupt)
-
-	dumpChan := registerGoRoutineDumpSignalChannel()
+	killChan := signalmanager.RegisterKillSignalChannel()
+	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
 
 	for {
 		select {
 		case <-dumpChan:
-			logger.DumpGoRoutine()
+			signalmanager.DumpGoRoutine()
 		case <-killChan:
 			log.Info("Shutting down")
+			os.Exit(0)
 			return
 		}
 	}
@@ -124,11 +93,4 @@ func readConfig(configFile string) (*Config, error) {
 	}
 
 	return config, config.validate()
-}
-
-func registerGoRoutineDumpSignalChannel() chan os.Signal {
-	threadDumpChan := make(chan os.Signal)
-	signal.Notify(threadDumpChan, syscall.SIGUSR1)
-
-	return threadDumpChan
 }

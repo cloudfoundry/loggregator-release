@@ -14,6 +14,7 @@ import (
 	"syslog_drain_binder/elector"
 	"syslog_drain_binder/etcd_syslog_drain_store"
 
+	"common/signalmanager"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gunk/workpool"
@@ -60,7 +61,7 @@ func main() {
 	for {
 		select {
 		case <-dumpChan:
-			logger.DumpGoRoutine()
+			signalmanager.DumpGoRoutine()
 		case <-ticker.C:
 			if politician.IsLeader() {
 				err = politician.StayAsLeader()

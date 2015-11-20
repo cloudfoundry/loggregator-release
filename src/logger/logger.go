@@ -2,7 +2,6 @@ package logger
 
 import (
 	"os"
-	"runtime/pprof"
 	"strings"
 
 	"github.com/cloudfoundry/gosteno"
@@ -36,9 +35,4 @@ func NewLogger(verbose bool, logFilePath, name string, syslogNamespace string) *
 	logger.Debugf("Component %s in debug mode!", name)
 
 	return logger
-}
-
-func DumpGoRoutine() {
-	goRoutineProfiles := pprof.Lookup("goroutine")
-	goRoutineProfiles.WriteTo(os.Stdout, 2)
 }
