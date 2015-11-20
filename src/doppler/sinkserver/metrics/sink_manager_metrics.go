@@ -6,15 +6,17 @@ import (
 	"doppler/sinks/syslog"
 	"doppler/sinks/websocket"
 
+	"doppler/sinks/containermetric"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"sync/atomic"
 )
 
 type SinkManagerMetrics struct {
-	dumpSinks      int32
-	websocketSinks int32
-	syslogSinks    int32
-	firehoseSinks  int32
+	dumpSinks        int32
+	websocketSinks   int32
+	syslogSinks      int32
+	firehoseSinks    int32
+	containerMetrics int32
 }
 
 func NewSinkManagerMetrics() *SinkManagerMetrics {
@@ -38,6 +40,10 @@ func (s *SinkManagerMetrics) Inc(sink sinks.Sink) {
 	case *websocket.WebsocketSink:
 		websocketSinks := atomic.AddInt32(&s.websocketSinks, 1)
 		metrics.SendValue("messageRouter.numberOfWebsocketSinks", float64(websocketSinks), "sinks")
+
+	case *containermetric.ContainerMetricSink:
+		containerMetricSinks := atomic.AddInt32(&s.containerMetrics, 1)
+		metrics.SendValue("messageRouter.numberOfContainerMetricSinks", float64(containerMetricSinks), "sinks")
 	}
 }
 
@@ -54,6 +60,10 @@ func (s *SinkManagerMetrics) Dec(sink sinks.Sink) {
 	case *websocket.WebsocketSink:
 		websocketSinks := atomic.AddInt32(&s.websocketSinks, -1)
 		metrics.SendValue("messageRouter.numberOfWebsocketSinks", float64(websocketSinks), "sinks")
+
+	case *containermetric.ContainerMetricSink:
+		containerMetricSinks := atomic.AddInt32(&s.containerMetrics, -1)
+		metrics.SendValue("messageRouter.numberOfContainerMetricSinks", float64(containerMetricSinks), "sinks")
 	}
 }
 

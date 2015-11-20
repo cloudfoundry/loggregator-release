@@ -2,6 +2,7 @@ package metrics_test
 
 import (
 	"doppler/sinks"
+	"doppler/sinks/containermetric"
 	"doppler/sinks/dump"
 	"doppler/sinks/syslog"
 	"doppler/sinks/websocket"
@@ -100,6 +101,27 @@ var _ = Describe("SinkManagerMetrics", func() {
 		sinkManagerMetrics.DecFirehose()
 		Expect(fakeEventEmitter.GetMessages()[1].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
 			Name:  proto.String("messageRouter.numberOfFirehoseSinks"),
+			Value: proto.Float64(0),
+			Unit:  proto.String("sinks"),
+		}))
+	})
+
+	It("emits metrics for container metric sinks", func() {
+		Expect(fakeEventEmitter.GetMessages()).To(BeEmpty())
+
+		sink = &containermetric.ContainerMetricSink{}
+		sinkManagerMetrics.Inc(sink)
+
+		Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
+			Name:  proto.String("messageRouter.numberOfContainerMetricSinks"),
+			Value: proto.Float64(1),
+			Unit:  proto.String("sinks"),
+		}))
+
+		sinkManagerMetrics.Dec(sink)
+
+		Expect(fakeEventEmitter.GetMessages()[1].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
+			Name:  proto.String("messageRouter.numberOfContainerMetricSinks"),
 			Value: proto.Float64(0),
 			Unit:  proto.String("sinks"),
 		}))
