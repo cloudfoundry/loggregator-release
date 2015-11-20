@@ -155,6 +155,9 @@ func (t *TLSListener) removeConnection(conn net.Conn) {
 }
 
 func (t *TLSListener) handleConnection(conn net.Conn) {
+	defer conn.Close()
+	defer t.removeConnection(conn)
+
 	if tlsConn, ok := conn.(*tls.Conn); ok {
 		if err := tlsConn.Handshake(); err != nil {
 			t.logger.Warnd(map[string]interface{}{
@@ -176,6 +179,7 @@ func (t *TLSListener) handleConnection(conn net.Conn) {
 			if err != io.EOF {
 				metrics.BatchIncrementCounter(t.receiveErrorCountMetricName)
 			}
+			t.logger.Errorf("Error while decoding: %v", err)
 			break
 		}
 
@@ -188,6 +192,7 @@ func (t *TLSListener) handleConnection(conn net.Conn) {
 		_, err = io.ReadFull(conn, read)
 		if err != nil {
 			metrics.BatchIncrementCounter(t.receiveErrorCountMetricName)
+			t.logger.Errorf("Error during i/o read: %v", err)
 			break
 		}
 
@@ -206,7 +211,4 @@ func (t *TLSListener) handleConnection(conn net.Conn) {
 		}
 	}
 
-	t.logger.Errorf("Error while decoding: %v", err)
-	conn.Close()
-	t.removeConnection(conn)
 }
