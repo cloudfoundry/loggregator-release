@@ -65,7 +65,9 @@ func (pool *DopplerPool) SetLegacy(all map[string]string, preferred map[string]s
 func (pool *DopplerPool) Clients() []Client {
 	defer pool.RUnlock()
 	pool.RLock()
-	return pool.clientList
+	clientList := make([]Client, len(pool.clientList))
+	copy(clientList, pool.clientList)
+	return clientList
 }
 
 func (pool *DopplerPool) RandomClient() (Client, error) {
