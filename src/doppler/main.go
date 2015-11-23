@@ -13,13 +13,13 @@ import (
 
 	"logger"
 
-	"common/profiler"
-	"common/signalmanager"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/pivotal-golang/localip"
+	"profiler"
+	"signalmanager"
 )
 
 const DOPPLER_ORIGIN = "DopplerServer"

@@ -3,9 +3,6 @@ name: doppler
 dependencies:
 - golang1.4
 files:
-- loggregator/src/common/monitor/*.go # gosub
-- loggregator/src/common/profiler/*.go # gosub
-- loggregator/src/common/signalmanager/*.go # gosub
 - loggregator/src/doppler/*.go # gosub
 - loggregator/src/doppler/config/*.go # gosub
 - loggregator/src/doppler/dopplerservice/*.go # gosub
@@ -61,4 +58,7 @@ files:
 - loggregator/src/github.com/pivotal-golang/localip/*.go # gosub
 - loggregator/src/github.com/ugorji/go/codec/*.go # gosub
 - loggregator/src/logger/*.go # gosub
+- loggregator/src/monitor/*.go # gosub
+- loggregator/src/profiler/*.go # gosub
+- loggregator/src/signalmanager/*.go # gosub
 - loggregator/src/truncatingbuffer/*.go # gosub

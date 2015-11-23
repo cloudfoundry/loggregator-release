@@ -29,8 +29,8 @@ import (
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 
-	"common/signalmanager"
 	"metron/config"
+	"signalmanager"
 )
 
 var (

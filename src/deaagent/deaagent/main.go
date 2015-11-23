@@ -9,8 +9,8 @@ import (
 	"os"
 	"time"
 
-	"common/signalmanager"
 	"github.com/cloudfoundry/dropsonde"
+	"signalmanager"
 )
 
 const DrainStoreRefreshInterval = 1 * time.Minute
@@ -34,8 +34,6 @@ var (
 	logLevel              = flag.Bool("debug", false, "Debug logging")
 	configFile            = flag.String("config", "config/dea_logging_agent.json", "Location of the DEA loggregator agent config json file")
 	instancesJsonFilePath = flag.String("instancesFile", "/var/vcap/data/dea_next/db/instances.json", "The DEA instances JSON file")
-	cpuprofile            = flag.String("cpuprofile", "", "write cpu profile to file")
-	memprofile            = flag.String("memprofile", "", "write memory profile to this file")
 )
 
 type DeaAgentHealthMonitor struct {

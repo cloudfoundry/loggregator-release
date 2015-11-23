@@ -3,7 +3,6 @@ name: dea_logging_agent
 dependencies:
 - golang1.4
 files:
-- loggregator/src/common/signalmanager/*.go # gosub
 - loggregator/src/deaagent/*.go # gosub
 - loggregator/src/deaagent/deaagent/*.go # gosub
 - loggregator/src/deaagent/domain/*.go # gosub
@@ -27,3 +26,4 @@ files:
 - loggregator/src/github.com/howeyc/fsnotify/*.go # gosub
 - loggregator/src/github.com/nu7hatch/gouuid/*.go # gosub
 - loggregator/src/logger/*.go # gosub
+- loggregator/src/signalmanager/*.go # gosub

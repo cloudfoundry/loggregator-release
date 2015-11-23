@@ -78,7 +78,7 @@ func (m *MetronRunner) Start() ifrit.Process {
 }
 
 func (m *MetronRunner) Stop() {
-	ginkgomon.Interrupt(m.Process)
+	ginkgomon.Interrupt(m.Process, 2)
 }
 
 func (m *MetronRunner) MetronAddress() string {

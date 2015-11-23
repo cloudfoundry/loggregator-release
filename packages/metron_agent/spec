@@ -4,7 +4,6 @@ dependencies:
 - golang1.4
 files:
 - loggregator/src/metron/syslog_daemon_config/*
-- loggregator/src/common/signalmanager/*.go # gosub
 - loggregator/src/doppler/config/*.go # gosub
 - loggregator/src/doppler/dopplerservice/*.go # gosub
 - loggregator/src/doppler/iprange/*.go # gosub
@@ -42,4 +41,5 @@ files:
 - loggregator/src/metron/writers/messageaggregator/*.go # gosub
 - loggregator/src/metron/writers/mocks/*.go # gosub
 - loggregator/src/metron/writers/tagger/*.go # gosub
+- loggregator/src/signalmanager/*.go # gosub
 - loggregator/src/truncatingbuffer/*.go # gosub

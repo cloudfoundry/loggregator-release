@@ -1,15 +1,15 @@
 package main
 
 import (
-	"common/monitor"
-	"common/profiler"
-	"common/signalmanager"
 	"doppler/dopplerservice"
 	"flag"
 	"logger"
+	"monitor"
 	"net"
 	"net/http"
 	"os"
+	"profiler"
+	"signalmanager"
 	"strconv"
 	"time"
 	"trafficcontroller/authorization"

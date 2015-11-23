@@ -14,11 +14,11 @@ import (
 	"syslog_drain_binder/elector"
 	"syslog_drain_binder/etcd_syslog_drain_store"
 
-	"common/signalmanager"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+	"signalmanager"
 )
 
 var (

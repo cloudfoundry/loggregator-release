@@ -11,9 +11,8 @@ import (
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
 
-	"common/monitor"
-
 	"doppler/listeners"
+	"monitor"
 
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
 	"github.com/cloudfoundry/dropsonde/signature"

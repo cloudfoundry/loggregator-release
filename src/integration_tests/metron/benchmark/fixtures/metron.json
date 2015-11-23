@@ -12,5 +12,6 @@
         "CertFile": "../../fixtures/client.crt",
         "KeyFile": "../../fixtures/client.key",
         "CAFile": "../../fixtures/loggregator-ca.crt"
-    }
+    },
+    "BufferSize": 5000
 }
