@@ -7,20 +7,20 @@ import (
 
 type BufferContext interface {
 	EventAllowed(events.Envelope_EventType) bool
-	Identifier() string
-	DropsondeOrigin() string
+	Destination() string
+	Origin() string
 	AppID(*events.Envelope) string
 }
 
 type DefaultContext struct {
-	identifier string
-	dropsondeOrigin string
+	destination string
+	origin      string
 }
 
-func NewDefaultContext(origin string, identifier string) *DefaultContext{
+func NewDefaultContext(origin string, destination string) *DefaultContext{
 	return &DefaultContext {
-		identifier: identifier,
-		dropsondeOrigin: origin,
+		destination: destination,
+		origin: origin,
 	}
 }
 
@@ -28,12 +28,12 @@ func(d *DefaultContext) EventAllowed(events.Envelope_EventType) bool{
 	return true
 }
 
-func(d *DefaultContext) Identifier() string {
-	return d.identifier
+func(d *DefaultContext) Destination() string {
+	return d.destination
 }
 
-func (d *DefaultContext) DropsondeOrigin() string {
-	return d.dropsondeOrigin
+func (d *DefaultContext) Origin() string {
+	return d.origin
 }
 
 func (d *DefaultContext) AppID(envelope *events.Envelope) string {
@@ -44,11 +44,11 @@ type LogAllowedContext struct {
 	DefaultContext
 }
 
-func NewLogAllowedContext(origin string, identifier string) *LogAllowedContext {
+func NewLogAllowedContext(origin string, destination string) *LogAllowedContext {
 	return &LogAllowedContext{
 		DefaultContext {
-			identifier: identifier,
-			dropsondeOrigin: origin,
+			destination: destination,
+			origin: origin,
 		},
 	}
 }
@@ -61,11 +61,11 @@ type SystemContext struct {
 	DefaultContext
 }
 
-func NewSystemContext(origin string, identifier string) *SystemContext {
+func NewSystemContext(origin string, destination string) *SystemContext {
 	return &SystemContext{
 		DefaultContext {
-			identifier: identifier,
-			dropsondeOrigin: origin,
+			destination: destination,
+			origin: origin,
 		},
 	}
 }

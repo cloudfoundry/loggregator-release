@@ -105,7 +105,7 @@ func (r *TruncatingBuffer) Run() {
 					if r.logger != nil {
 						r.logger.Warnd(map[string]interface{}{
 							"dropped": deltaDropped, "total_dropped": totalDropped,
-							"appId": appId, "sinkId": r.context.Identifier(),
+							"appId": appId, "destination": r.context.Destination(),
 						},
 							"TB: Output channel too full")
 					}
@@ -126,7 +126,7 @@ func (r *TruncatingBuffer) GetDroppedMessageCount() uint64 {
 func (r *TruncatingBuffer) notifyMessagesDropped(outputChannel chan *events.Envelope, deltaDropped, totalDropped uint64, appId string) {
 	metrics.BatchAddCounter("TruncatingBuffer.totalDroppedMessages", deltaDropped)
 	if r.eventAllowed(events.Envelope_LogMessage) {
-		r.emitMessage(outputChannel, generateLogMessage(deltaDropped, totalDropped, appId, r.context.Identifier()))
+		r.emitMessage(outputChannel, generateLogMessage(deltaDropped, totalDropped, appId, r.context.Origin(), r.context.Destination()))
 	}
 	if r.eventAllowed(events.Envelope_CounterEvent) {
 		r.emitMessage(outputChannel, generateCounterEvent(deltaDropped, totalDropped))
@@ -134,7 +134,7 @@ func (r *TruncatingBuffer) notifyMessagesDropped(outputChannel chan *events.Enve
 }
 
 func (r *TruncatingBuffer) emitMessage(outputChannel chan *events.Envelope, event events.Event) {
-	env, err := emitter.Wrap(event, r.context.DropsondeOrigin())
+	env, err := emitter.Wrap(event, r.context.Origin())
 	if err == nil {
 		outputChannel <- env
 	} else {
@@ -142,8 +142,8 @@ func (r *TruncatingBuffer) emitMessage(outputChannel chan *events.Envelope, even
 	}
 }
 
-func generateLogMessage(deltaDropped, totalDropped uint64, appId, sinkIdentifier string) *events.LogMessage {
-	messageString := fmt.Sprintf("Log message output is too high. %d messages dropped (Total %d messages dropped) to %s.", deltaDropped, totalDropped, sinkIdentifier)
+func generateLogMessage(deltaDropped, totalDropped uint64, appId, source, destination string) *events.LogMessage {
+	messageString := fmt.Sprintf("Log message output is too high. %d messages dropped (Total %d messages dropped) from %s to %s.", deltaDropped, totalDropped, source, destination)
 
 	messageType := events.LogMessage_ERR
 	currentTime := time.Now()

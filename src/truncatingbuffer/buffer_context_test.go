@@ -20,8 +20,8 @@ var _ = Describe("BufferContext", func() {
 		})
 
 		It("Should return a valid properties", func(){
-			Expect(defaultContext.DropsondeOrigin()).To(Equal("origin"))
-			Expect(defaultContext.Identifier()).To(Equal("testIdentifier"))
+			Expect(defaultContext.Origin()).To(Equal("origin"))
+			Expect(defaultContext.Destination()).To(Equal("testIdentifier"))
 			for _, event := range events.Envelope_EventType_value {
 				Expect(defaultContext.EventAllowed(events.Envelope_EventType(event))).To(BeTrue())
 			}
@@ -44,8 +44,8 @@ var _ = Describe("BufferContext", func() {
 		})
 
 		It("Should return a valid properties", func(){
-			Expect(logAllowedContext.DropsondeOrigin()).To(Equal("origin"))
-			Expect(logAllowedContext.Identifier()).To(Equal("testIdentifier"))
+			Expect(logAllowedContext.Origin()).To(Equal("origin"))
+			Expect(logAllowedContext.Destination()).To(Equal("testIdentifier"))
 			for _, e := range events.Envelope_EventType_value {
 				event := events.Envelope_EventType(e)
 				allowed := logAllowedContext.EventAllowed(event)
@@ -67,8 +67,8 @@ var _ = Describe("BufferContext", func() {
 		})
 
 		It("Should return a valid properties", func(){
-			Expect(systemContext.DropsondeOrigin()).To(Equal("origin"))
-			Expect(systemContext.Identifier()).To(Equal("testIdentifier"))
+			Expect(systemContext.Origin()).To(Equal("origin"))
+			Expect(systemContext.Destination()).To(Equal("testIdentifier"))
 			for _, event := range events.Envelope_EventType_value {
 				Expect(systemContext.EventAllowed(events.Envelope_EventType(event))).To(BeTrue())
 			}
