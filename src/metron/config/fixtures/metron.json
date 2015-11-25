@@ -20,5 +20,6 @@
     "CertFile": "./fixtures/client.crt",
     "CAFile": "./fixtures/ca.crt"
   },
-  "BufferSize": 100
+  "BufferSize": 100,
+  "EnableBuffer": true
 }

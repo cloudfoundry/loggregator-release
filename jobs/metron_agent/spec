@@ -71,6 +71,9 @@ properties:
   metron_agent.buffer_size:
     description: "The size of the internal buffer used by metron before sending to Doppler"
     default: 100
+  metron_agent.enable_buffer:
+    description: "boolean value to turn on buffering"
+    default: true
 
   loggregator.dropsonde_incoming_port:
     description: "Port where loggregator listens for dropsonde log messages"

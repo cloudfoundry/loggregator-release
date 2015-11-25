@@ -58,7 +58,7 @@ func main() {
 		os.Exit(-1)
 	}
 
-	dopplerForwarder := dopplerforwarder.New(dopplerClientPool, []byte(config.SharedSecret), uint(config.BufferSize), log)
+	dopplerForwarder := dopplerforwarder.New(dopplerClientPool, []byte(config.SharedSecret), uint(config.BufferSize), config.EnableBuffer, log)
 	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, dopplerForwarder)
 	aggregator := messageaggregator.New(messageTagger, log)
 

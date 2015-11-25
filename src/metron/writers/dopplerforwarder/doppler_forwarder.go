@@ -39,9 +39,10 @@ type DopplerForwarder struct {
 	inputChan        chan<- *events.Envelope
 	logger           *gosteno.Logger
 	stopChan         chan struct{}
+	enableBuffer     bool
 }
 
-func New(clientPool ClientPool, sharedSecret []byte, bufferSize uint, logger *gosteno.Logger) *DopplerForwarder {
+func New(clientPool ClientPool, sharedSecret []byte, bufferSize uint, enableBuffer bool, logger *gosteno.Logger) *DopplerForwarder {
 
 	inputChan := make(chan *events.Envelope)
 	stopChan := make(chan struct{})
@@ -58,10 +59,14 @@ func New(clientPool ClientPool, sharedSecret []byte, bufferSize uint, logger *go
 		inputChan:        inputChan,
 		logger:           logger,
 		stopChan:         stopChan,
+		enableBuffer:     enableBuffer,
 	}
 }
 
 func (d *DopplerForwarder) Run() {
+	if !d.enableBuffer {
+		return
+	}
 	go d.truncatingBuffer.Run()
 	for {
 		select {
@@ -81,7 +86,12 @@ func (d *DopplerForwarder) Stop() {
 }
 
 func (d *DopplerForwarder) Write(message *events.Envelope) {
-	d.inputChan <- message
+	if d.enableBuffer {
+		d.inputChan <- message
+	} else {
+		d.networkWrite(message)
+	}
+
 }
 
 func (d *DopplerForwarder) networkWrite(message *events.Envelope) {

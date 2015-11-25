@@ -50,7 +50,8 @@ var _ = Describe("DopplerForwarder", func() {
 		loggertesthelper.TestLoggerSink.Clear()
 
 		bufferSize = 10
-		forwarder = dopplerforwarder.New(clientPool, sharedSecret, bufferSize, logger)
+		enableBuffer := true
+		forwarder = dopplerforwarder.New(clientPool, sharedSecret, bufferSize, enableBuffer, logger)
 		doneChan = make(chan struct{})
 		go func() {
 			forwarder.Run()
