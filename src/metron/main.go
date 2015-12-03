@@ -30,6 +30,7 @@ import (
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 
 	"metron/config"
+	"profiler"
 	"signalmanager"
 )
 
@@ -37,6 +38,8 @@ var (
 	logFilePath    = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 	configFilePath = flag.String("config", "config/metron.json", "Location of the Metron config json file")
 	debug          = flag.Bool("debug", false, "Debug logging")
+	cpuprofile     = flag.String("cpuprofile", "", "write cpu profile to file")
+	memprofile     = flag.String("memprofile", "", "write memory profile to this file")
 )
 
 func main() {
@@ -51,6 +54,10 @@ func main() {
 
 	log := logger.NewLogger(*debug, *logFilePath, "metron", config.Syslog)
 	log.Info("Startup: Setting up the Metron agent")
+
+	profiler := profiler.New(*cpuprofile, *memprofile, 1*time.Second, log)
+	profiler.Profile()
+	defer profiler.Stop()
 
 	dopplerClientPool, err := initializeDopplerPool(config, log)
 	if err != nil {
