@@ -43,6 +43,13 @@ var (
 )
 
 func main() {
+	// Put os.Exit in a deferred statement so that other defers get executed prior to
+	// the os.Exit call.
+	exitCode := 0
+	defer func() {
+		os.Exit(exitCode)
+	}()
+
 	// Metron is intended to be light-weight so we occupy only one core
 	runtime.GOMAXPROCS(1)
 
@@ -76,7 +83,8 @@ func main() {
 	dropsondeReader, err := networkreader.New(metronAddress, "dropsondeAgentListener", dropsondeUnmarshaller, log)
 	if err != nil {
 		log.Errorf("Failed to listen on %s: %s", metronAddress, err)
-		os.Exit(1)
+		exitCode = 1
+		return
 	}
 
 	log.Info("metron started")
@@ -93,7 +101,7 @@ func main() {
 		case <-killChan:
 			log.Info("Shutting down")
 			dopplerForwarder.Stop()
-			os.Exit(0)
+			return
 		}
 	}
 }
