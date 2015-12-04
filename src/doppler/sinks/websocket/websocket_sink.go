@@ -5,11 +5,12 @@ import (
 	"net"
 	"time"
 
+	"truncatingbuffer"
+
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	gorilla "github.com/gorilla/websocket"
-	"truncatingbuffer"
 )
 
 type remoteMessageWriter interface {

@@ -9,9 +9,10 @@ import (
 
 	"doppler/sinks"
 
+	"truncatingbuffer"
+
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
-	"truncatingbuffer"
 )
 
 type SyslogSink struct {

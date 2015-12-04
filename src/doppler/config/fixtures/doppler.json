@@ -24,5 +24,6 @@
         "KeyFile": "./fixtures/server.key",
         "CertFile": "./fixtures/server.crt",
         "CAFile": "./fixtures/loggregator-ca.crt"
-    }
+    },
+    "MetricBatchIntervalMilliseconds": 15000
 }

@@ -19,30 +19,31 @@ type TLSListenerConfig struct {
 }
 
 type Config struct {
-	Syslog                        string
-	EtcdUrls                      []string
-	EtcdMaxConcurrentRequests     int
-	Index                         uint
-	DropsondeIncomingMessagesPort uint32
-	OutgoingPort                  uint32
-	LogFilePath                   string
-	MaxRetainedLogMessages        uint32
-	MessageDrainBufferSize        uint
-	SharedSecret                  string
-	SinkSkipCertVerify            bool
-	BlackListIps                  []iprange.IPRange
-	JobName                       string
-	Zone                          string
-	ContainerMetricTTLSeconds     int
-	SinkInactivityTimeoutSeconds  int
-	SinkIOTimeoutSeconds          int
-	UnmarshallerCount             int
-	MetronAddress                 string
-	MonitorIntervalSeconds        uint
-	SinkDialTimeoutSeconds        int
-	WebsocketWriteTimeoutSeconds  int
-	EnableTLSTransport            bool
-	TLSListenerConfig             TLSListenerConfig
+	BlackListIps                    []iprange.IPRange
+	ContainerMetricTTLSeconds       int
+	DropsondeIncomingMessagesPort   uint32
+	EnableTLSTransport              bool
+	EtcdMaxConcurrentRequests       int
+	EtcdUrls                        []string
+	Index                           uint
+	JobName                         string
+	LogFilePath                     string
+	MaxRetainedLogMessages          uint32
+	MessageDrainBufferSize          uint
+	MetricBatchIntervalMilliseconds uint
+	MetronAddress                   string
+	MonitorIntervalSeconds          uint
+	OutgoingPort                    uint32
+	SharedSecret                    string
+	SinkDialTimeoutSeconds          int
+	SinkIOTimeoutSeconds            int
+	SinkInactivityTimeoutSeconds    int
+	SinkSkipCertVerify              bool
+	Syslog                          string
+	TLSListenerConfig               TLSListenerConfig
+	UnmarshallerCount               int
+	WebsocketWriteTimeoutSeconds    int
+	Zone                            string
 }
 
 func (c *Config) validate() (err error) {
@@ -83,6 +84,10 @@ func ParseConfig(configFile string) (*Config, error) {
 	err = config.validate()
 	if err != nil {
 		return nil, err
+	}
+
+	if config.MetricBatchIntervalMilliseconds == 0 {
+		config.MetricBatchIntervalMilliseconds = 5000
 	}
 
 	if config.MonitorIntervalSeconds == 0 {

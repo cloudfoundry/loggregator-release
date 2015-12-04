@@ -32,6 +32,7 @@ var _ = Describe("Config", func() {
 			Expect(config.MessageDrainBufferSize).To(Equal(uint(100)))
 			Expect(config.MonitorIntervalSeconds).To(BeEquivalentTo(60))
 			Expect(config.EnableTLSTransport).To(BeFalse())
+			Expect(config.MetricBatchIntervalMilliseconds).To(BeEquivalentTo(5000))
 		})
 	})
 
@@ -75,6 +76,7 @@ var _ = Describe("Config", func() {
 			Expect(config.MonitorIntervalSeconds).To(BeEquivalentTo(1))
 			Expect(config.TLSListenerConfig).ToNot(BeNil())
 			Expect(config.WebsocketWriteTimeoutSeconds).To(Equal(60))
+			Expect(config.MetricBatchIntervalMilliseconds).To(BeEquivalentTo(15000))
 		})
 
 	})

@@ -1,11 +1,12 @@
 package groupedsinks_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"net"
 	"testing"
 	"time"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 func TestGroupedsinks(t *testing.T) {

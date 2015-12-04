@@ -14,7 +14,11 @@ import (
 	"doppler/listeners"
 	"monitor"
 
+	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
+	"github.com/cloudfoundry/dropsonde/metric_sender"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
@@ -92,6 +96,8 @@ func New(logger *gosteno.Logger,
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create the websocket server: %s", err.Error())
 	}
+
+	initializeMetrics(config.MetricBatchIntervalMilliseconds)
 
 	return &Doppler{
 		Logger:                          logger,
@@ -184,4 +190,11 @@ func (doppler *Doppler) Stop() {
 	doppler.storeAdapter.Disconnect()
 	close(doppler.errChan)
 	doppler.uptimeMonitor.Stop()
+}
+
+func initializeMetrics(batchIntervalMilliseconds uint) {
+	eventEmitter := dropsonde.AutowiredEmitter()
+	metricSender := metric_sender.NewMetricSender(eventEmitter)
+	metricBatcher := metricbatcher.New(metricSender, time.Duration(batchIntervalMilliseconds)*time.Millisecond)
+	metrics.Initialize(metricSender, metricBatcher)
 }
