@@ -11,12 +11,27 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/server"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	gorilla "github.com/gorilla/websocket"
 )
+
+type firehoseCounter struct {
+	subscriptionID string
+}
+
+func newFirehoseCounter(subscriptionID string) *firehoseCounter {
+	return &firehoseCounter{
+		subscriptionID: subscriptionID,
+	}
+}
+
+func (f *firehoseCounter) Increment() {
+	metrics.BatchIncrementCounter(fmt.Sprintf("sentMessagesFirehose.%s", f.subscriptionID))
+}
 
 type WebsocketServer struct {
 	sinkManager       *sinkmanager.SinkManager
@@ -153,15 +168,6 @@ func (w *WebsocketServer) appHandler(paths []string, writer http.ResponseWriter,
 
 func (w *WebsocketServer) streamLogs(appId string, websocketConnection *gorilla.Conn) {
 	w.logger.Debugf("WebsocketServer: Requesting a wss sink for app %s", appId)
-	w.streamWebsocket(appId, websocketConnection, w.sinkManager.RegisterSink, w.sinkManager.UnregisterSink)
-}
-
-func (w *WebsocketServer) streamFirehose(subscriptionId string, websocketConnection *gorilla.Conn) {
-	w.logger.Debugf("WebsocketServer: Requesting firehose wss sink")
-	w.streamWebsocket(subscriptionId, websocketConnection, w.sinkManager.RegisterFirehoseSink, w.sinkManager.UnregisterFirehoseSink)
-}
-
-func (w *WebsocketServer) streamWebsocket(appId string, websocketConnection *gorilla.Conn, register func(sinks.Sink) bool, unregister func(sinks.Sink)) {
 	websocketSink := websocket.NewWebsocketSink(
 		appId,
 		w.logger,
@@ -171,6 +177,27 @@ func (w *WebsocketServer) streamWebsocket(appId string, websocketConnection *gor
 		w.dropsondeOrigin,
 	)
 
+	w.streamWebsocket(websocketSink, websocketConnection, w.sinkManager.RegisterSink, w.sinkManager.UnregisterSink)
+}
+
+func (w *WebsocketServer) streamFirehose(subscriptionId string, websocketConnection *gorilla.Conn) {
+	w.logger.Debugf("WebsocketServer: Requesting firehose wss sink")
+	websocketSink := websocket.NewWebsocketSink(
+		subscriptionId,
+		w.logger,
+		websocketConnection,
+		w.bufferSize,
+		w.writeTimeout,
+		w.dropsondeOrigin,
+	)
+
+	firehoseCounter := newFirehoseCounter(subscriptionId)
+	websocketSink.SetCounter(firehoseCounter)
+
+	w.streamWebsocket(websocketSink, websocketConnection, w.sinkManager.RegisterFirehoseSink, w.sinkManager.UnregisterFirehoseSink)
+}
+
+func (w *WebsocketServer) streamWebsocket(websocketSink *websocket.WebsocketSink, websocketConnection *gorilla.Conn, register func(sinks.Sink) bool, unregister func(sinks.Sink)) {
 	register(websocketSink)
 	defer unregister(websocketSink)
 

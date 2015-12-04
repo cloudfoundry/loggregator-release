@@ -7,8 +7,9 @@ import (
 	"doppler/sinks/websocket"
 
 	"doppler/sinks/containermetric"
-	"github.com/cloudfoundry/dropsonde/metrics"
 	"sync/atomic"
+
+	"github.com/cloudfoundry/dropsonde/metrics"
 )
 
 type SinkManagerMetrics struct {

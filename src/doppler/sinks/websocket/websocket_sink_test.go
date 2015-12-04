@@ -63,6 +63,14 @@ func (fake *fakeMessageWriter) WriteDeadline() time.Time {
 	return fake.writeDeadline
 }
 
+type fakeCounter struct {
+	incrementCalls chan struct{}
+}
+
+func (f *fakeCounter) Increment() {
+	f.incrementCalls <- struct{}{}
+}
+
 var _ = Describe("WebsocketSink", func() {
 
 	var (
@@ -127,6 +135,25 @@ var _ = Describe("WebsocketSink", func() {
 			message, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "hello world", "appId", "App"), "origin")
 			inputChan <- message
 			Eventually(fakeWebsocket.WriteDeadline).Should(BeTemporally("~", time.Now().Add(writeTimeout), time.Millisecond * 5))
+		})
+
+		Describe("SetCounter", func() {
+			var counter *fakeCounter
+
+			BeforeEach(func() {
+				counter = &fakeCounter{
+					incrementCalls: make(chan struct{}),
+				}
+				websocketSink.SetCounter(counter)
+			})
+
+			It("uses the passed in counter", func() {
+				go websocketSink.Run(inputChan)
+				message, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "hello world", "appId", "App"), "origin")
+				inputChan <- message
+				Eventually(counter.incrementCalls).Should(Receive())
+				Consistently(counter.incrementCalls).ShouldNot(Receive())
+			})
 		})
 	})
 })

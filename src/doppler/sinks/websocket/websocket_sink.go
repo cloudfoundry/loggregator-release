@@ -19,6 +19,14 @@ type remoteMessageWriter interface {
 	WriteMessage(messageType int, data []byte) error
 }
 
+type Counter interface {
+	Increment()
+}
+
+type noopCounter struct{}
+
+func (noopCounter) Increment() {}
+
 type WebsocketSink struct {
 	logger                 *gosteno.Logger
 	streamId               string
@@ -27,6 +35,7 @@ type WebsocketSink struct {
 	messageDrainBufferSize uint
 	writeTimeout           time.Duration
 	dropsondeOrigin        string
+	counter                Counter
 }
 
 func NewWebsocketSink(streamId string, givenLogger *gosteno.Logger, ws remoteMessageWriter, messageDrainBufferSize uint, writeTimeout time.Duration, dropsondeOrigin string) *WebsocketSink {
@@ -38,7 +47,12 @@ func NewWebsocketSink(streamId string, givenLogger *gosteno.Logger, ws remoteMes
 		messageDrainBufferSize: messageDrainBufferSize,
 		writeTimeout:           writeTimeout,
 		dropsondeOrigin:        dropsondeOrigin,
+		counter:                noopCounter{},
 	}
+}
+
+func (sink *WebsocketSink) SetCounter(counter Counter) {
+	sink.counter = counter
 }
 
 func (sink *WebsocketSink) Identifier() string {
@@ -67,6 +81,7 @@ func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
 			close(stopChan)
 			return
 		}
+		sink.counter.Increment()
 		messageBytes, err := proto.Marshal(messageEnvelope)
 
 		if err != nil {

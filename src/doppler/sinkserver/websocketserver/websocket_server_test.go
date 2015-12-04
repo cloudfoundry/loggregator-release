@@ -17,6 +17,9 @@ import (
 	"github.com/gorilla/websocket"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
+	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
@@ -109,16 +112,46 @@ var _ = Describe("WebsocketServer", func() {
 		close(stopKeepAlive)
 	})
 
-	It("sends data to the websocket firehose client", func() {
-		stopKeepAlive, _, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/firehose/fire-subscription-a", apiEndpoint))
-		Expect(err).NotTo(HaveOccurred())
-		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
-		sinkManager.SendTo(appId, lm)
+	Context("websocket firehose client", func() {
+		var (
+			stopKeepAlive    chan struct{}
+			lm               *events.Envelope
+			fakeMetricSender *fake.FakeMetricSender
+		)
 
-		rlm, err := receiveEnvelope(wsReceivedChan)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(rlm.GetLogMessage().GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
-		close(stopKeepAlive)
+		const subscriptionID = "firehose-subscription-a"
+
+		BeforeEach(func() {
+			fakeMetricSender = fake.NewFakeMetricSender()
+			metrics.Initialize(fakeMetricSender, metricbatcher.New(fakeMetricSender, 10*time.Millisecond))
+
+			var err error
+			stopKeepAlive, _, err = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/firehose/%s", apiEndpoint, subscriptionID))
+			Expect(err).NotTo(HaveOccurred())
+
+			lm, _ = emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
+		})
+
+		AfterEach(func() {
+			close(stopKeepAlive)
+		})
+
+		It("sends data to the websocket firehose client", func() {
+			sinkManager.SendTo(appId, lm)
+
+			rlm, err := receiveEnvelope(wsReceivedChan)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rlm.GetLogMessage().GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
+		})
+
+		It("emits counter metrics when data is sent to the websocket firehose client", func() {
+			sinkManager.SendTo(appId, lm)
+
+			checkCounter := func() uint64 {
+				return fakeMetricSender.GetCounter(fmt.Sprintf("sentMessagesFirehose.%s", subscriptionID))
+			}
+			Eventually(checkCounter).Should(BeEquivalentTo(1))
+		})
 	})
 
 	It("sends each message to only one of many firehoses with the same subscription id", func() {
