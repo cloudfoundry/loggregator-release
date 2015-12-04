@@ -32,10 +32,14 @@ var _ = Describe("WebsocketServer", func() {
 	var appId = "my-app"
 	var wsReceivedChan chan []byte
 	var apiEndpoint string
+	var fakeMetricSender *fake.FakeMetricSender
 
 	BeforeEach(func() {
 		logger := loggertesthelper.Logger()
 		wsReceivedChan = make(chan []byte)
+
+		fakeMetricSender = fake.NewFakeMetricSender()
+		metrics.Initialize(fakeMetricSender, metricbatcher.New(fakeMetricSender, 10*time.Millisecond))
 
 		apiEndpoint = net.JoinHostPort("127.0.0.1", strconv.Itoa(9091+config.GinkgoConfig.ParallelNode*10))
 		var err error
@@ -114,16 +118,13 @@ var _ = Describe("WebsocketServer", func() {
 
 	Context("websocket firehose client", func() {
 		var (
-			stopKeepAlive    chan struct{}
-			lm               *events.Envelope
-			fakeMetricSender *fake.FakeMetricSender
+			stopKeepAlive chan struct{}
+			lm            *events.Envelope
 		)
 
 		const subscriptionID = "firehose-subscription-a"
 
 		BeforeEach(func() {
-			fakeMetricSender = fake.NewFakeMetricSender()
-			metrics.Initialize(fakeMetricSender, metricbatcher.New(fakeMetricSender, 10*time.Millisecond))
 
 			var err error
 			stopKeepAlive, _, err = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/firehose/%s", apiEndpoint, subscriptionID))
