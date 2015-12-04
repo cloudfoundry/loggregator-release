@@ -67,10 +67,12 @@ func (e *Experiment) Start() {
 }
 
 func (e *Experiment) Stop() {
-	close(e.stopChan)
 	for _, strategy := range e.writeStrategies {
 		strategy.Stop()
 	}
+	// We cool down for a few seconds to drain all the final messages written by the writers
+	time.Sleep(time.Second)
+	close(e.stopChan)
 }
 
 func (e *Experiment) startReader(reading chan struct{}) {

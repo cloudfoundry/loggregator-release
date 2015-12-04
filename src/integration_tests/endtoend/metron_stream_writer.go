@@ -6,6 +6,7 @@ import (
 
 type MetronStreamWriter struct {
 	metronConn net.Conn
+	Writes int
 }
 
 func NewMetronStreamWriter() *MetronStreamWriter {
@@ -17,6 +18,7 @@ func NewMetronStreamWriter() *MetronStreamWriter {
 }
 
 func (w *MetronStreamWriter) Write(b []byte) {
+	w.Writes++
 	_, err := w.metronConn.Write(b)
 	if err != nil {
 		panic(err)

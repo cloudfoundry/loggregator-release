@@ -11,6 +11,7 @@
     "BlackListIps": [],
     "JobName": "doppler_z1",
     "Zone": "z1",
+    "MetricBatchIntervalMilliseconds": 10,
     "ContainerMetricTTLSeconds": 120,
     "SinkInactivityTimeoutSeconds": 120,
     "MetronAddress": "127.0.0.1:49625",

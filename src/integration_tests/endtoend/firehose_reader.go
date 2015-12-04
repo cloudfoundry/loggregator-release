@@ -2,36 +2,35 @@ package endtoend
 
 import (
 	"crypto/tls"
-
+	"strings"
 	"github.com/cloudfoundry/noaa"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/pivotal-golang/localip"
 )
+
 
 type FirehoseReader struct {
 	consumer *noaa.Consumer
 	msgChan  chan *events.Envelope
 	stopChan chan struct{}
 
-	MetronMessageCountMetricReceived  bool
-	DopplerMessageCountMetricReceived bool
-
-	TestMetricCount     float64
-	NonTestMetricCount  float64
-	MetronMessageCount  float64
-	DopplerMessageCount float64
+	TestMetricCount             float64
+	NonTestMetricCount          float64
+	MetronSentMessageCount      float64
+	DopplerReceivedMessageCount float64
+	DopplerSentMessageCount     float64
 }
 
 func NewFirehoseReader() *FirehoseReader {
 	consumer, msgChan := initiateFirehoseConnection()
 	return &FirehoseReader{
-		consumer:            consumer,
-		msgChan:             msgChan,
-		stopChan:            make(chan struct{}),
-		TestMetricCount:     0,
-		NonTestMetricCount:  0,
-		MetronMessageCount:  0,
-		DopplerMessageCount: 0,
+		consumer:                    consumer,
+		msgChan:                     msgChan,
+		stopChan:                    make(chan struct{}),
+		TestMetricCount:             0,
+		NonTestMetricCount:          0,
+		MetronSentMessageCount:      0,
+		DopplerReceivedMessageCount: 0,
 	}
 }
 
@@ -40,20 +39,22 @@ func (r *FirehoseReader) Read() {
 	case <-r.stopChan:
 		return
 	case msg := <-r.msgChan:
-		if isTestMetric(msg) {
+		if testMetric(msg) {
 			r.TestMetricCount += 1
 		} else {
 			r.NonTestMetricCount += 1
 		}
 
-		if isMetronMessageCount(msg) {
-			r.MetronMessageCountMetricReceived = true
-			r.MetronMessageCount = float64(msg.CounterEvent.GetTotal())
+		if metronSentMessageCount(msg) {
+			r.MetronSentMessageCount = float64(msg.CounterEvent.GetTotal())
 		}
 
-		if isDopplerMessageCount(msg) {
-			r.DopplerMessageCountMetricReceived = true
-			r.DopplerMessageCount = float64(msg.CounterEvent.GetTotal())
+		if dopplerReceivedMessageCount(msg) {
+			r.DopplerReceivedMessageCount = float64(msg.CounterEvent.GetTotal())
+		}
+
+		if dopplerSentMessageCount(msg) {
+			r.DopplerSentMessageCount = float64(msg.CounterEvent.GetTotal())
 		}
 	}
 }
@@ -72,15 +73,18 @@ func initiateFirehoseConnection() (*noaa.Consumer, chan *events.Envelope) {
 	return firehoseConnection, msgChan
 }
 
-func isTestMetric(msg *events.Envelope) bool {
+func testMetric(msg *events.Envelope) bool {
 	return msg.GetEventType() == events.Envelope_ValueMetric && msg.ValueMetric.GetName() == "fake-metric-name"
 }
 
-func isMetronMessageCount(msg *events.Envelope) bool {
-	return msg.GetEventType() == events.Envelope_CounterEvent && msg.CounterEvent.GetName() == "dropsondeAgentListener.receivedMessageCount" && msg.GetOrigin() == "MetronAgent"
+func metronSentMessageCount(msg *events.Envelope) bool {
+	return msg.GetEventType() == events.Envelope_CounterEvent && msg.CounterEvent.GetName() == "DopplerForwarder.sentMessages" && msg.GetOrigin() == "MetronAgent"
 }
 
-func isDopplerMessageCount(msg *events.Envelope) bool {
-	return msg.GetEventType() == events.Envelope_CounterEvent && (msg.CounterEvent.GetName() == "dropsondeListener.receivedMessageCount" || msg.CounterEvent.GetName() == "tlsListener.receivedMessageCount" ) && msg.GetOrigin() == "DopplerServer"
+func dopplerReceivedMessageCount(msg *events.Envelope) bool {
+	return msg.GetEventType() == events.Envelope_CounterEvent && (msg.CounterEvent.GetName() == "dropsondeListener.receivedMessageCount" || msg.CounterEvent.GetName() == "tlsListener.receivedMessageCount") && msg.GetOrigin() == "DopplerServer"
 }
 
+func dopplerSentMessageCount(msg *events.Envelope) bool {
+	return msg.GetEventType() == events.Envelope_CounterEvent && strings.HasPrefix(msg.CounterEvent.GetName(), "sentMessagesFirehose") && msg.GetOrigin() == "DopplerServer"
+}
