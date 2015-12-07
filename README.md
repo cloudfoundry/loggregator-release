@@ -113,28 +113,62 @@ following steps to successfully generate the required certificates.
    $ ./certstrap sign doppler --CA loggregatorCA
    Created out/doppler.crt from out/doppler.csr signed by out/loggregatorCA.key
    ```
-
-   The manifest property `properties.doppler.server_cert` should be set to the certificate in `out/doppler.crt`.
-   The manifest property `properties.doppler.server_key` should be set to the certificate in `out/doppler.key`.
-   The manifest property `properties.doppler.ca_cert` should be set to the certificate in `out/loggregatorCA.crt`.
+   The manifest property `properties.doppler.enable_tls_transport` should be set to `true`.
+   The manifest property `properties.doppler.tls_server.cert` should be set to the certificate in `out/doppler.crt`.
+   The manifest property `properties.doppler.tls_server.key` should be set to the certificate in `out/doppler.key`.
+   The manifest property `properties.loggregator.tls.ca` should be set to the certificate in `out/loggregatorCA.crt`.
 
 4. Create and sign a certificate for metron agents.
    ```
-   $ ./certstrap request-cert --common-name "clientName"
+   $ ./certstrap request-cert --common-name "metron_agent"
    Enter passphrase (empty for no passphrase): <hit enter for no password>
 
    Enter same passphrase again: <hit enter for no password>
 
-   Created out/clientName.key
-   Created out/clientName.csr
+   Created out/metron_agent.key
+   Created out/metron_agent.csr
 
-   $ ./certstrap sign clientName --CA loggregatorCA
-   Created out/clientName.crt from out/clientName.csr signed by out/loggregatorCA.key
+   $ ./certstrap sign metron_agent --CA loggregatorCA
+   Created out/metron_agent.crt from out/metron_agent.csr signed by out/loggregatorCA.key
    ```
+   The manifest property `properties.metron_agent.preferred_protocol` should be set to `tls`.
+   The manifest property `properties.metron_agent.buffer_size`(truncating buffer) by default is set to `100`, but can be increased e.g `100000`
+   The manifest property `properties.metron_agent.tls_client.cert` should be set to the certificate in `out/metron_agent.crt`,
+   and the manifest property `properties.metron_agent.tls_client.key` should be set to the certificate in `out/metron_agent.key`
 
-   The manifest property `properties.metron_agent.doppler.client_cert` should be set to the certificate in `out/clientName.crt`,
-   and the manifest property `properties.metron_agent.doppler.client_key` should be set to the certificate in `out/clientName.key`   
-   The manifest property `properties.doppler.ca_cert` should be set to the certificate in `out/loggregatorCA.crt`.
+```
+  loggregator:
+    tls:
+      ca: |
+        -----BEGIN CERTIFICATE-----
+        LOGGREGATOR CA CERTIFICATE
+        -----END CERTIFICATE-----
+
+  metron_agent:
+    preferred_protocol: tls
+    buffer_size: 100000
+    tls_client:
+      cert: |
+        -----BEGIN CERTIFICATE-----
+        METRON AGENT CERTIFICATE
+        -----END CERTIFICATE-----
+      key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        METRON AGENT KEY
+        -----END RSA PRIVATE KEY-----
+
+  doppler:
+    enable_tls_transport: true
+    tls_server:
+      cert: |
+        -----BEGIN CERTIFICATE-----
+        DOPPLER CERTIFICATE
+        -----END CERTIFICATE-----
+      key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        DOPPLER KEY
+        -----END RSA PRIVATE KEY-----
+```
 
 ### Custom TLS Certificate Generation
 
