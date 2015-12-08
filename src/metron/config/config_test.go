@@ -47,6 +47,7 @@ var _ = Describe("Config", func() {
 			Expect(cfg.LoggregatorDropsondePort).To(Equal(3457))
 
 			Expect(cfg.MetricBatchIntervalMilliseconds).To(BeEquivalentTo(20))
+			Expect(cfg.RuntimeStatsIntervalMilliseconds).To(BeEquivalentTo(15))
 			Expect(cfg.Syslog).To(Equal("syslog.namespace"))
 
 			Expect(cfg.PreferredProtocol).To(Equal("udp"))
@@ -66,9 +67,10 @@ var _ = Describe("Config", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(cfg).To(Equal(&config.Config{
-				MetricBatchIntervalMilliseconds: 5000,
-				PreferredProtocol:               "udp",
-				BufferSize:                      100,
+				MetricBatchIntervalMilliseconds:  5000,
+				RuntimeStatsIntervalMilliseconds: 15000,
+				PreferredProtocol:                "udp",
+				BufferSize:                       100,
 			}))
 		})
 	})

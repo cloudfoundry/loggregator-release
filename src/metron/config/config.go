@@ -28,7 +28,8 @@ type Config struct {
 	LoggregatorDropsondePort int
 	SharedSecret             string
 
-	MetricBatchIntervalMilliseconds uint
+	MetricBatchIntervalMilliseconds  uint
+	RuntimeStatsIntervalMilliseconds uint
 
 	PreferredProtocol string
 	TLSConfig         TLSConfig
@@ -55,6 +56,10 @@ func Parse(reader io.Reader) (*Config, error) {
 
 	if config.MetricBatchIntervalMilliseconds == 0 {
 		config.MetricBatchIntervalMilliseconds = 5000
+	}
+
+	if config.RuntimeStatsIntervalMilliseconds == 0 {
+		config.RuntimeStatsIntervalMilliseconds = 15000
 	}
 
 	if config.PreferredProtocol == "" {

@@ -119,6 +119,28 @@ var _ = Describe("Self Instrumentation", func() {
 		waitForEvent(basicValueMessage(), matchCounter, &expected)
 	})
 
+	It("sends runtime metrics about metron_agent", func() {
+		expected := events.Envelope {
+			Origin: proto.String("MetronAgent"),
+			EventType: events.Envelope_ValueMetric.Enum(),
+			ValueMetric: &events.ValueMetric{
+				Name: proto.String("numCPUS"),
+			},
+		}
+		Eventually(testDoppler.MessageChan).Should(Receive(MatchSpecifiedContents(&expected)))
+	})
+
+	It("sends memory metrics about metron_agent", func() {
+		expected := events.Envelope {
+			Origin: proto.String("MetronAgent"),
+			EventType: events.Envelope_ValueMetric.Enum(),
+			ValueMetric: &events.ValueMetric{
+				Name: proto.String("memoryStats.numBytesAllocatedHeap"),
+			},
+		}
+		Eventually(testDoppler.MessageChan).Should(Receive(MatchSpecifiedContents(&expected)))
+	})
+
 	Describe("for Message Aggregator", func() {
 		It("emits metrics for counter events", func() {
 			metronInput.Write(basicCounterEvent())

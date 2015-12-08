@@ -24,6 +24,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/metric_sender"
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
+	"github.com/cloudfoundry/dropsonde/runtime_stats"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/storeadapter"
@@ -76,7 +77,8 @@ func main() {
 	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, dopplerForwarder)
 	aggregator := messageaggregator.New(messageTagger, log)
 
-	initializeMetrics(messageTagger, config, log)
+	statsStopChan := make(chan struct{})
+	initializeMetrics(messageTagger, config, statsStopChan, log)
 
 	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, log)
 	metronAddress := fmt.Sprintf("127.0.0.1:%d", config.DropsondeIncomingMessagesPort)
@@ -101,6 +103,7 @@ func main() {
 		case <-killChan:
 			log.Info("Shutting down")
 			dopplerForwarder.Stop()
+			close(statsStopChan)
 			return
 		}
 	}
@@ -162,13 +165,16 @@ func initializeDopplerPool(config *config.Config, logger *gosteno.Logger) (*clie
 	return clientPool, nil
 }
 
-func initializeMetrics(messageTagger *tagger.Tagger, config *config.Config, logger *gosteno.Logger) {
+func initializeMetrics(messageTagger *tagger.Tagger, config *config.Config, stopChan chan struct{}, logger *gosteno.Logger) {
 	metricsAggregator := messageaggregator.New(messageTagger, logger)
 
 	eventWriter := eventwriter.New("MetronAgent", metricsAggregator)
 	metricSender := metric_sender.NewMetricSender(eventWriter)
 	metricBatcher := metricbatcher.New(metricSender, time.Duration(config.MetricBatchIntervalMilliseconds)*time.Millisecond)
 	metrics.Initialize(metricSender, metricBatcher)
+
+	stats := runtime_stats.NewRuntimeStats(eventWriter, time.Duration(config.RuntimeStatsIntervalMilliseconds)*time.Millisecond)
+	go stats.Run(stopChan)
 }
 
 func storeAdapterProvider(urls []string, concurrentRequests int) (storeadapter.StoreAdapter, error) {

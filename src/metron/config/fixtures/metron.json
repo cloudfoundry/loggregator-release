@@ -14,6 +14,7 @@
   "LoggregatorDropsondePort": 3457,
   "Syslog": "syslog.namespace",
   "MetricBatchIntervalMilliseconds": 20,
+  "RuntimeStatsIntervalMilliseconds": 15,
   "PreferredProtocol": "udp",
   "TLSConfig": {
     "KeyFile": "./fixtures/client.key",
