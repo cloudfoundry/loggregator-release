@@ -60,6 +60,13 @@ func main() {
 	seed := time.Now().UnixNano()
 	rand.Seed(seed)
 
+	// Put os.Exit in a deferred statement so that other defers get executed prior to
+	// the os.Exit call.
+	exitCode := 0
+	defer func() {
+		os.Exit(exitCode)
+	}()
+
 	flag.Parse()
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -88,7 +95,8 @@ func main() {
 
 	if err != nil {
 		log.Errorf("Failed to create doppler: %s", err.Error())
-		os.Exit(-1)
+		exitCode = -1
+		return
 	}
 
 	go doppler.Start()
@@ -117,7 +125,7 @@ func main() {
 			<-stopped
 			<-legacyStopped
 
-			os.Exit(0)
+			return
 		}
 	}
 }

@@ -54,6 +54,13 @@ var (
 )
 
 func main() {
+	// Put os.Exit in a deferred statement so that other defers get executed prior to
+	// the os.Exit call.
+	exitCode := 0
+	defer func() {
+		os.Exit(exitCode)
+	}()
+
 	flag.Parse()
 
 	config, err := config.ParseConfig(*logLevel, *configFile, *logFilePath)
@@ -78,7 +85,8 @@ func main() {
 	err = etcdAdapter.Connect()
 	if err != nil {
 		log.Errorf("Cannot connect to ETCD: %s", err.Error())
-		os.Exit(-1)
+		exitCode = -1
+		return
 	}
 
 	ipAddress, err := localip.LocalIP()
@@ -112,7 +120,7 @@ func main() {
 			signalmanager.DumpGoRoutine()
 		case <-killChan:
 			log.Info("Shutting down")
-			os.Exit(0)
+			return
 		}
 	}
 }
