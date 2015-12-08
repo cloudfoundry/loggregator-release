@@ -47,7 +47,7 @@ func (m *MetronRunner) Configure() *ginkgomon.Runner {
     "Deployment": "deployment-name",
     "LoggregatorDropsondePort": ` + strconv.Itoa(m.DropsondePort) + `,
     "PreferredProtocol": "` + m.Protocol + `",
-    "MetricBatchIntervalSeconds": 1,
+    "MetricBatchIntervalMilliseconds": 1000,
     "TLSConfig": {
       "CertFile": "` + m.CertFile + `",
       "KeyFile": "` + m.KeyFile + `",

@@ -15,5 +15,5 @@
         "CAFile": "../fixtures/loggregator-ca.crt"
     },
     "BufferSize": 5000,
-    "MetricBatchIntervalSeconds": 1
+    "MetricBatchIntervalMilliseconds": 10
 }

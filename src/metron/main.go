@@ -167,7 +167,7 @@ func initializeMetrics(messageTagger *tagger.Tagger, config *config.Config, logg
 
 	eventWriter := eventwriter.New("MetronAgent", metricsAggregator)
 	metricSender := metric_sender.NewMetricSender(eventWriter)
-	metricBatcher := metricbatcher.New(metricSender, time.Duration(config.MetricBatchIntervalSeconds)*time.Second)
+	metricBatcher := metricbatcher.New(metricSender, time.Duration(config.MetricBatchIntervalMilliseconds)*time.Millisecond)
 	metrics.Initialize(metricSender, metricBatcher)
 }
 
