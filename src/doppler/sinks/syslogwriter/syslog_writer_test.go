@@ -50,7 +50,13 @@ var _ = Describe("SyslogWriter", func() {
 		It("sends messages in the proper format", func() {
 			sysLogWriter.Write(standardOutPriority, []byte("just a test"), "App", "2", time.Now().UnixNano())
 
-			Eventually(syslogServerSession, 5).Should(gbytes.Say(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}([-+]\d{2}:\d{2}) loggregator appId \[App/2\] - - just a test\n`))
+			Eventually(syslogServerSession, 5).Should(gbytes.Say(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}([-+]\d{2}:\d{2}) loggregator appId \[APP/2\] - - just a test\n`))
+		}, 10)
+
+		It("sends messages in the proper format with source type APP", func() {
+			sysLogWriter.Write(standardOutPriority, []byte("just a test"), "APP", "2", time.Now().UnixNano())
+
+			Eventually(syslogServerSession, 5).Should(gbytes.Say(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}([-+]\d{2}:\d{2}) loggregator appId \[APP/2\] - - just a test\n`))
 		}, 10)
 
 		It("strips null termination char from message", func() {
@@ -94,20 +100,6 @@ var _ = Describe("SyslogWriter", func() {
 		outputURL, _ := url.Parse("https://localhost")
 		_, err := syslogwriter.NewSyslogWriter(outputURL, "appId", dialer, 0)
 		Expect(err).To(HaveOccurred())
-	})
-
-	Context("Message Format", func() {
-		It("sends messages in the proper format", func() {
-			sysLogWriter.Write(standardOutPriority, []byte("just a test"), "App", "2", time.Now().UnixNano())
-
-			Eventually(syslogServerSession, 5).Should(gbytes.Say(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}([-+]\d{2}:\d{2}) loggregator appId \[App/2\] - - just a test\n`))
-		}, 10)
-
-		It("strips null termination char from message", func() {
-			sysLogWriter.Write(standardOutPriority, []byte(string(0)+" hi"), "appId", "", time.Now().UnixNano())
-
-			Expect(syslogServerSession).ToNot(gbytes.Say("\000"))
-		})
 	})
 
 	Context("won't write to invalid syslog drains", func() {

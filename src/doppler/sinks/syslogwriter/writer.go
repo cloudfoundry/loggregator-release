@@ -54,7 +54,8 @@ func createMessage(p int, appId string, source string, sourceId string, msg []by
 	timeString = strings.Replace(timeString, "Z", "+00:00", 1)
 
 	var formattedSource string
-	if source == "App" {
+	source = strings.ToUpper(source)
+	if source == "APP" {
 		formattedSource = fmt.Sprintf("[%s/%s]", source, sourceId)
 	} else {
 		formattedSource = fmt.Sprintf("[%s]", source)

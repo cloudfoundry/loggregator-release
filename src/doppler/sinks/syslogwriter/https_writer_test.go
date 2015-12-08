@@ -54,20 +54,16 @@ var _ = Describe("HttpsWriter", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			parsedTime, err := time.Parse(time.RFC3339, "2006-01-02T15:04:05Z")
-			byteCount, err := w.Write(standardErrorPriority, []byte("Message"), "just a test", "TEST", parsedTime.UnixNano())
-			Expect(byteCount).To(Equal(76))
+			_, err = w.Write(standardErrorPriority, []byte("Message"), "test", "TEST", parsedTime.UnixNano())
 			Expect(err).ToNot(HaveOccurred())
-
-			Eventually(func() string {
-				return string(<-requestChan)
-			}).Should(ContainSubstring("loggregator appId [just a test] - - Message"))
+			Eventually(requestChan).Should(Receive(ContainSubstring("loggregator appId [TEST] - - Message")))
 		})
 
 		It("returns an error when unable to HTTP POST the log message", func() {
 			outputUrl, _ := url.Parse("https://")
 
 			w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", true, dialer, timeout)
-			_, err := w.Write(standardErrorPriority, []byte("Message"), "just a test", "TEST", time.Now().UnixNano())
+			_, err := w.Write(standardErrorPriority, []byte("Message"), "test", "TEST", time.Now().UnixNano())
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -75,7 +71,7 @@ var _ = Describe("HttpsWriter", func() {
 			outputUrl, _ := url.Parse("https://")
 
 			w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", true, dialer, timeout)
-			_, err := w.Write(standardErrorPriority, []byte("Message"), "just a test", "TEST", time.Now().UnixNano())
+			_, err := w.Write(standardErrorPriority, []byte("Message"), "test", "TEST", time.Now().UnixNano())
 
 			conErr := w.Connect()
 			Expect(conErr).To(Equal(err))
@@ -91,7 +87,7 @@ var _ = Describe("HttpsWriter", func() {
 
 			parsedTime, err := time.Parse(time.RFC3339, "2006-01-02T15:04:05Z")
 			for i := 0; i < 10; i++ {
-				_, err := w.Write(standardErrorPriority, []byte("Message"), "just a test", "TEST", parsedTime.UnixNano())
+				_, err := w.Write(standardErrorPriority, []byte("Message"), "test", "TEST", parsedTime.UnixNano())
 				Expect(err).To(HaveOccurred())
 			}
 		})
@@ -104,7 +100,7 @@ var _ = Describe("HttpsWriter", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			parsedTime, err := time.Parse(time.RFC3339, "2006-01-02T15:04:05Z")
-			_, err = w.Write(standardErrorPriority, []byte("Message"), "just a test", "TEST", parsedTime.UnixNano())
+			_, err = w.Write(standardErrorPriority, []byte("Message"), "test", "TEST", parsedTime.UnixNano())
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -130,7 +126,7 @@ var _ = Describe("HttpsWriter", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				parsedTime, err := time.Parse(time.RFC3339, "2006-01-02T15:04:05Z")
-				_, err = w.Write(standardErrorPriority, []byte("Message"), "just a test", "TEST", parsedTime.UnixNano())
+				_, err = w.Write(standardErrorPriority, []byte("Message"), "test", "TEST", parsedTime.UnixNano())
 				Expect(err).To(BeAssignableToTypeOf(&url.Error{}))
 				urlErr := err.(*url.Error)
 				Expect(urlErr.Err).To(MatchError("net/http: TLS handshake timeout"))
@@ -159,7 +155,7 @@ var _ = Describe("HttpsWriter", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				parsedTime, err := time.Parse(time.RFC3339, "2006-01-02T15:04:05Z")
-				_, err = w.Write(standardErrorPriority, []byte("Message"), "just a test", "TEST", parsedTime.UnixNano())
+				_, err = w.Write(standardErrorPriority, []byte("Message"), "test", "TEST", parsedTime.UnixNano())
 				Expect(err).To(HaveOccurred())
 			})
 		})
@@ -260,7 +256,7 @@ func (c *concurrentWriteRequestSimulator) concurrentWriteRequests(count int, wri
 
 	for i := 0; i < count; i++ {
 		go func() {
-			writer.Write(standardErrorPriority, []byte("Message"), "just a test", "TEST", time.Now().UnixNano())
+			writer.Write(standardErrorPriority, []byte("Message"), "test", "TEST", time.Now().UnixNano())
 			wg.Done()
 		}()
 	}
