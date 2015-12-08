@@ -17,9 +17,6 @@ import (
 	"github.com/gorilla/websocket"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
-	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
-	"github.com/cloudfoundry/dropsonde/metricbatcher"
-	"github.com/cloudfoundry/dropsonde/metrics"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
@@ -32,14 +29,10 @@ var _ = Describe("WebsocketServer", func() {
 	var appId = "my-app"
 	var wsReceivedChan chan []byte
 	var apiEndpoint string
-	var fakeMetricSender *fake.FakeMetricSender
 
 	BeforeEach(func() {
 		logger := loggertesthelper.Logger()
 		wsReceivedChan = make(chan []byte)
-
-		fakeMetricSender = fake.NewFakeMetricSender()
-		metrics.Initialize(fakeMetricSender, metricbatcher.New(fakeMetricSender, 10*time.Millisecond))
 
 		apiEndpoint = net.JoinHostPort("127.0.0.1", strconv.Itoa(9091+config.GinkgoConfig.ParallelNode*10))
 		var err error
@@ -53,7 +46,7 @@ var _ = Describe("WebsocketServer", func() {
 
 	AfterEach(func() {
 		server.Stop()
-		time.Sleep(time.Millisecond * 10)
+		fakeMetricSender.Reset()
 	})
 
 	Describe("failed connections", func() {

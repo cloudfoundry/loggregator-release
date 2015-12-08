@@ -9,18 +9,26 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/websocket"
 )
 
-var logger = loggertesthelper.Logger()
-
 func TestWebsocketServer(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "WebsocketServer Suite")
 }
+
+var fakeMetricSender *fake.FakeMetricSender
+
+var _ = BeforeSuite(func() {
+	fakeMetricSender = fake.NewFakeMetricSender()
+	metrics.Initialize(fakeMetricSender, metricbatcher.New(fakeMetricSender, 10*time.Millisecond))
+
+})
 
 func AddSlowWSSink(receivedChan chan []byte, errChan chan error, timeout time.Duration, url string) {
 	ws, _, err := websocket.DefaultDialer.Dial(url, http.Header{})
