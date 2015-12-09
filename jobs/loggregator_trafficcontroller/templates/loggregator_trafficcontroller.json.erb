@@ -11,7 +11,7 @@
     "ApiHost": "<%= p("cc.srv_api_uri") %>",
     "SystemDomain": "<%= p("system_domain") %>",
     "MetronPort": <%= p("metron_endpoint.dropsonde_port") %>,
-    <% scheme = p("uaa.no_ssl") ? "http" : "https"
+    <% scheme = p("login.protocol")
         domain = p("system_domain") %>
     "UaaHost": "<%= p("uaa.url", "#{scheme}://uaa.#{domain}") %>",
     "UaaClientId": "<%= p("doppler.uaa_client_id") %>",
