@@ -1,0 +1,13 @@
+version: 0.{build}
+skip_tags: true
+cache: C:\Users\appveyor\AppData\Local\NuGet\Cache
+build_script:
+- git submodule update --init --recursive
+- set PATH=C:\go14\bin;%PATH%
+- set GOROOT=C:\go14
+- bin\test.bat
+test: off
+clone_folder: c:\loggregator
+branches:
+  only:
+  - master
