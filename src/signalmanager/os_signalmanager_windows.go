@@ -2,10 +2,8 @@
 
 package signalmanager
 import (
-	"syscall"
 	"os/signal"
 	"os"
-	"runtime/pprof"
 )
 
 func RegisterKillSignalChannel() chan os.Signal {
