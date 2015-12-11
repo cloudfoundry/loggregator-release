@@ -6,6 +6,20 @@
   
 Loggregator is the user application logging subsystem of Cloud Foundry.
 
+### Table of Contents
+* [Features](#features)
+* [Usage](#usage)
+* [Constraints](#constraints)
+* [Architecture](#architecture)
+* [Emitting Messages from other Cloud Foundry components](#emitting-messages-from-other-cloud-foundry-components)
+* [Enabling TLS between Metron and Doppler](#enabling-tls-between-metron-and-doppler)
+  * [Generating TLS Certificates](#generating-tls-certificates)
+  * [Custom TLS Certificate Generation](#custom-tls-certificate-generation)
+* [Deploying via BOSH](#deploying-via-bosh)
+* [Configuring the Firehose](#configuring-the-firehose)
+* [Consuming Log and Metric Data](#consuming-log-and-metric-data)
+* [Development](#development)
+
 ### Features
 
 Loggregator allows users to:
@@ -71,7 +85,69 @@ Traffic controllers also exposes a `firehose` web socket endpoint. Connecting to
 
 Cloud Foundry developers can easily add source clients to new CF components that emit messages to the doppler.  Currently, there are libraries for [Go](https://github.com/cloudfoundry/dropsonde/) and [Ruby](https://github.com/cloudfoundry/loggregator_emitter). For usage information, look at their respective READMEs.
 
-### Generating TLS Certificates
+### Enabling TLS between Metron and Doppler
+
+The default transport between Metron and Doppler is UDP. We have recently added support for TLS since it is a reliable protocol and also
+has in-built support to ensure integrity, encryption and authentication.
+
+**NOTE: TLS support is currently experimental. Enable it at your own discretion. The properties discussed below as well as their behavior might change in the future.**
+
+
+| Property        | Required                              | Description                                     |
+|-----------------|---------------------------------------|-------------------------------------------------|
+| `metron_agent.preferred_protocol` | No<br> Default: `udp`                   | Metron prefers this protocol to communicate with Doppler. Options are `udp` and `tls`. `metron_agent.tls_client` properties are required when this is set to `tls`                             |
+| `metron_agent.buffer_size`  | No <br>Default: `100` | Size of the buffer between Metron and Doppler when the `metron_agent.preferred_protocol` is `tls`.  |
+| `metron_agent.tls_client.cert`   | Yes if `metron_agent.preferred_protocol: tls` <br>Default: `""`              | Signed client certificate used by Metron when communicating with Doppler over TLS            |
+| `metron_agent.tls_client.key`   | Yes if `metron_agent.preferred_protocol: tls` <br>Default: `""`              | Client key used by Metron when communicating with Doppler over TLS            |
+| `loggregator.tls.ca`   | Yes if `metron_agent.preferred_protocol: tls` <br>Default: `""`              | Certificate Authority used to sign the certificate            |
+
+
+| Property        | Required                              | Description                                     |
+|-----------------|---------------------------------------|-------------------------------------------------|
+| `doppler.enable_tls_transport` | No <br>Default: `false`                   | Enable TLS communication with Metron. If enabled, `doppler.tls_server` properties are required.|
+| `doppler.tls_server.cert`   | Yes if `doppler.enable_tls_transport: true` <br>Default: `""`              | Signed server certificate used by Doppler when communicating with Doppler over TLS            |
+| `doppler.tls_server.key`   | Yes if `doppler.enable_tls_transport: true` <br>Default: `""`              | Server key used by Doppler when communicating with Metron over TLS            |
+| `loggregator.tls.ca`   | Yes if `doppler.enable_tls_transport: true` <br>Default: `""`              | Certificate Authority used to sign the certificate            |
+
+
+An example manifest is given below:
+
+```yaml
+  loggregator:
+    tls:
+      ca: |
+        -----BEGIN CERTIFICATE-----
+        LOGGREGATOR CA CERTIFICATE
+        -----END CERTIFICATE-----
+
+  metron_agent:
+    preferred_protocol: tls
+    buffer_size: 1000
+    tls_client:
+      cert: |
+        -----BEGIN CERTIFICATE-----
+        METRON AGENT CERTIFICATE
+        -----END CERTIFICATE-----
+      key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        METRON AGENT KEY
+        -----END RSA PRIVATE KEY-----
+
+  doppler:
+    enable_tls_transport: true
+    tls_server:
+      cert: |
+        -----BEGIN CERTIFICATE-----
+        DOPPLER CERTIFICATE
+        -----END CERTIFICATE-----
+      key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        DOPPLER KEY
+        -----END RSA PRIVATE KEY-----
+```
+
+
+#### Generating TLS Certificates
 
 For generating TLS certificates, we recommend
 [certstrap](https://github.com/square/certstrap).  An operator can follow the
@@ -136,44 +212,11 @@ following steps to successfully generate the required certificates.
    The manifest property `properties.metron_agent.tls_client.cert` should be set to the certificate in `out/metron_agent.crt`,
    and the manifest property `properties.metron_agent.tls_client.key` should be set to the certificate in `out/metron_agent.key`
 
-```
-  loggregator:
-    tls:
-      ca: |
-        -----BEGIN CERTIFICATE-----
-        LOGGREGATOR CA CERTIFICATE
-        -----END CERTIFICATE-----
 
-  metron_agent:
-    preferred_protocol: tls
-    buffer_size: 100000
-    tls_client:
-      cert: |
-        -----BEGIN CERTIFICATE-----
-        METRON AGENT CERTIFICATE
-        -----END CERTIFICATE-----
-      key: |
-        -----BEGIN RSA PRIVATE KEY-----
-        METRON AGENT KEY
-        -----END RSA PRIVATE KEY-----
-
-  doppler:
-    enable_tls_transport: true
-    tls_server:
-      cert: |
-        -----BEGIN CERTIFICATE-----
-        DOPPLER CERTIFICATE
-        -----END CERTIFICATE-----
-      key: |
-        -----BEGIN RSA PRIVATE KEY-----
-        DOPPLER KEY
-        -----END RSA PRIVATE KEY-----
-```
-
-### Custom TLS Certificate Generation
+#### Custom TLS Certificate Generation
 
 If you already have a CA, or wish to use your own names for clients and
-servers, please note that the common-names "loggregatorCA" and "clientName" are
+servers, please note that the common-names "loggregatorCA" and "metron_agent" are
 placeholders and can be renamed.
 
 The server certificate must have the common name `doppler`.
