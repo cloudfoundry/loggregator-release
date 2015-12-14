@@ -45,8 +45,9 @@ var _ = Describe("App to Syslog Test", func() {
 			go app.Warmup()
 		}
 
-		for app, _ := range appSyslogMap {
+		for app, syslogServer := range appSyslogMap {
 			Eventually(app.SentLogs).ShouldNot(BeZero())
+			Eventually(syslogServer.ReceivedLogsRecently).Should(BeTrue())
 		}
 
 		for app, _ := range appSyslogMap {
