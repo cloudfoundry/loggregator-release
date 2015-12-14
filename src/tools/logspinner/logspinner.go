@@ -31,7 +31,7 @@ func rootResponse(res http.ResponseWriter, req *http.Request) {
 	}
 
 	delayMS, err := strconv.Atoi(req.FormValue("delay"))
-	if delayMS == 0 || err != nil {
+	if err != nil {
 		delayMS = 1000
 	}
 
