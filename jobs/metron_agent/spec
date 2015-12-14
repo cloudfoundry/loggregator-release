@@ -73,7 +73,7 @@ properties:
     default: 100
   metron_agent.enable_buffer:
     description: "boolean value to turn on buffering"
-    default: true
+    default: false
 
   loggregator.dropsonde_incoming_port:
     description: "Port where loggregator listens for dropsonde log messages"
