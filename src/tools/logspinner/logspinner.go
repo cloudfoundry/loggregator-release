@@ -1,8 +1,8 @@
 // tool for generating log load
 
-// usage: curl <endpoint>?cycles=100&delay=1000&text=time2
-// delay is ms
-// defaults: 10 cycles, 1/sec, "LogSpinner Log Message"
+// usage: curl <endpoint>?cycles=100&delay=1ms&text=time2
+// delay is duration format (https://golang.org/pkg/time/#ParseDuration)
+// defaults: 10 cycles, 1 second, "LogSpinner Log Message"
 
 package main
 
@@ -30,9 +30,9 @@ func rootResponse(res http.ResponseWriter, req *http.Request) {
 		cycleCount = 10
 	}
 
-	delayMS, err := strconv.Atoi(req.FormValue("delay"))
+	delay, err := time.ParseDuration(req.FormValue("delay"))
 	if err != nil {
-		delayMS = 1000
+		delay = 1000 * time.Millisecond
 	}
 
 	logText := (req.FormValue("text"))
@@ -40,15 +40,15 @@ func rootResponse(res http.ResponseWriter, req *http.Request) {
 		logText = "LogSpinner Log Message"
 	}
 
-	go outputLog(cycleCount, delayMS, logText)
+	go outputLog(cycleCount, delay, logText)
 
-	fmt.Fprintf(res, "cycles %d, delay %d, text %s\n", cycleCount, delayMS, logText)
+	fmt.Fprintf(res, "cycles %d, delay %s, text %s\n", cycleCount, delay, logText)
 }
 
-func outputLog(cycleCount int, delayMS int, logText string) {
+func outputLog(cycleCount int, delay time.Duration, logText string) {
 	for i := 0; i < cycleCount; i++ {
 		fmt.Printf("msg %d %s\n", i+1, logText)
-		time.Sleep(time.Duration(delayMS) * time.Millisecond)
+		time.Sleep(delay)
 	}
 
 }
