@@ -7,33 +7,11 @@ import (
 	"net"
 	"net/url"
 	"strings"
-	"time"
 )
-
-type IPResolver interface {
-	ResolveIPAddr(net, addr string) (*net.IPAddr, error)
-}
-
-type IPResolverFunc func(net, addr string) (*net.IPAddr, error)
-
-func (f IPResolverFunc) ResolveIPAddr(net, addr string) (*net.IPAddr, error) {
-	return f(net, addr)
-}
 
 type IPRange struct {
 	Start string
 	End   string
-}
-
-func retryResolve(resolver func() (*net.IPAddr, error), backoffs ...time.Duration) (*net.IPAddr, error) {
-	for _, delay := range backoffs {
-		ipAddr, err := resolver()
-		if err == nil {
-			return ipAddr, nil
-		}
-		time.Sleep(delay)
-	}
-	return resolver()
 }
 
 func ValidateIpAddresses(ranges []IPRange) error {
@@ -53,7 +31,7 @@ func ValidateIpAddresses(ranges []IPRange) error {
 	return nil
 }
 
-func IpOutsideOfRanges(testURL url.URL, ranges []IPRange, resolver IPResolver, backoffs ...time.Duration) (bool, error) {
+func IpOutsideOfRanges(testURL url.URL, ranges []IPRange) (bool, error) {
 	if len(testURL.Host) == 0 {
 		return false, errors.New(fmt.Sprintf("Incomplete URL %s. "+
 			"This could be caused by an URL without slashes or protocol.", testURL))
@@ -62,10 +40,9 @@ func IpOutsideOfRanges(testURL url.URL, ranges []IPRange, resolver IPResolver, b
 	host := strings.Split(testURL.Host, ":")[0]
 	ipAddress := net.ParseIP(host)
 	if ipAddress == nil {
-		resolvFunc := func() (*net.IPAddr, error) { return resolver.ResolveIPAddr("ip", host) }
-		ipAddr, err := retryResolve(resolvFunc, backoffs...)
+		ipAddr, err := net.ResolveIPAddr("ip", host)
 		if err != nil {
-			return false, fmt.Errorf("Resolving host failed: %s", err)
+			return false, errors.New(fmt.Sprintf("Resolving host failed: %s", err))
 		}
 		ipAddress = net.ParseIP(ipAddr.String())
 	}

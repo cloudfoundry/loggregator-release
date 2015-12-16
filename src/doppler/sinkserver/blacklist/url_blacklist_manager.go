@@ -3,17 +3,8 @@ package blacklist
 import (
 	"doppler/iprange"
 	"errors"
-	"net"
 	"net/url"
-	"time"
 )
-
-var blacklistBackoffDelays = []time.Duration{
-	time.Second,
-	2 * time.Second,
-	4 * time.Second,
-	8 * time.Second,
-}
 
 type URLBlacklistManager struct {
 	blacklistIPs    []iprange.IPRange
@@ -30,8 +21,7 @@ func (blacklistManager *URLBlacklistManager) CheckUrl(rawUrl string) (outputURL 
 		return nil, err
 	}
 
-	resolver := iprange.IPResolverFunc(net.ResolveIPAddr)
-	ipNotBlacklisted, err := iprange.IpOutsideOfRanges(*outputURL, blacklistManager.blacklistIPs, resolver, blacklistBackoffDelays...)
+	ipNotBlacklisted, err := iprange.IpOutsideOfRanges(*outputURL, blacklistManager.blacklistIPs)
 	if err != nil {
 		return nil, err
 	}

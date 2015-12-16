@@ -2,11 +2,8 @@ package iprange_test
 
 import (
 	"doppler/iprange"
-	"errors"
 	"fmt"
-	"net"
 	"net/url"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -56,18 +53,12 @@ var _ = Describe("IPRange", func() {
 	})
 
 	Describe("IpOutsideOfRanges", func() {
-		var mockIPResolver *mockIPResolver
-
-		BeforeEach(func() {
-			mockIPResolver = newMockIPResolver()
-		})
-
 		It("parses the IP address properly", func() {
 			ranges := []iprange.IPRange{iprange.IPRange{Start: "127.0.1.2", End: "127.0.3.4"}}
 
 			for _, ipTest := range ipTests {
 				parsedURL, _ := url.Parse(ipTest.url)
-				outOfRange, err := iprange.IpOutsideOfRanges(*parsedURL, ranges, mockIPResolver)
+				outOfRange, err := iprange.IpOutsideOfRanges(*parsedURL, ranges)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(outOfRange).To(Equal(ipTest.output), fmt.Sprintf("Wrong output for url: %s", ipTest.url))
 			}
@@ -78,76 +69,44 @@ var _ = Describe("IPRange", func() {
 
 			for _, testUrl := range malformattedURLs {
 				parsedURL, _ := url.Parse(testUrl.url)
-				_, err := iprange.IpOutsideOfRanges(*parsedURL, ranges, mockIPResolver)
+				_, err := iprange.IpOutsideOfRanges(*parsedURL, ranges)
 				if err == nil {
 					GinkgoT().Fatal(fmt.Sprintf("There should be an error about malformatted URL for %s", testUrl))
 				}
 			}
 		})
 
-		It("always returns true when IP ranges is nil or empty", func() {
+		It("always returns true when ip ranges is nil or empty", func() {
 			ranges := []iprange.IPRange{}
 
-			close(mockIPResolver.ResolveIPAddrOutput.ret1)
-
 			parsedURL, _ := url.Parse("https://127.0.0.1")
-			mockIPResolver.ResolveIPAddrOutput.ret0 <- &net.IPAddr{IP: net.ParseIP("127.0.0.1")}
-			outSideOfRange, err := iprange.IpOutsideOfRanges(*parsedURL, ranges, mockIPResolver)
+			outSideOfRange, err := iprange.IpOutsideOfRanges(*parsedURL, ranges)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(outSideOfRange).To(BeTrue())
 
 			ranges = nil
-			mockIPResolver.ResolveIPAddrOutput.ret0 <- &net.IPAddr{IP: net.ParseIP("127.0.0.1")}
-			outSideOfRange, err = iprange.IpOutsideOfRanges(*parsedURL, ranges, mockIPResolver)
+			outSideOfRange, err = iprange.IpOutsideOfRanges(*parsedURL, ranges)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(outSideOfRange).To(BeTrue())
 		})
 
-		It("resolves IP addresses", func() {
+		It("resolves ip addresses", func() {
 			ranges := []iprange.IPRange{iprange.IPRange{Start: "127.0.0.0", End: "127.0.0.4"}}
 
 			parsedURL, _ := url.Parse("syslog://vcap.me:3000?app=great")
-			mockIPResolver.ResolveIPAddrOutput.ret0 <- &net.IPAddr{IP: net.ParseIP("127.0.0.1")}
-			mockIPResolver.ResolveIPAddrOutput.ret1 <- nil
-			outSideOfRange, err := iprange.IpOutsideOfRanges(*parsedURL, ranges, mockIPResolver)
+			outSideOfRange, err := iprange.IpOutsideOfRanges(*parsedURL, ranges)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(outSideOfRange).To(BeFalse())
 
 			parsedURL, _ = url.Parse("syslog://localhost:3000?app=great")
-			mockIPResolver.ResolveIPAddrOutput.ret0 <- &net.IPAddr{IP: net.ParseIP("127.0.0.1")}
-			mockIPResolver.ResolveIPAddrOutput.ret1 <- nil
-			outSideOfRange, err = iprange.IpOutsideOfRanges(*parsedURL, ranges, mockIPResolver)
+			outSideOfRange, err = iprange.IpOutsideOfRanges(*parsedURL, ranges)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(outSideOfRange).To(BeFalse())
 
 			parsedURL, _ = url.Parse("syslog://doesNotExist.local:3000?app=great")
-			mockIPResolver.ResolveIPAddrOutput.ret0 <- nil
-			mockIPResolver.ResolveIPAddrOutput.ret1 <- errors.New("Resolving host failed: foo")
-			outSideOfRange, err = iprange.IpOutsideOfRanges(*parsedURL, ranges, mockIPResolver)
+			outSideOfRange, err = iprange.IpOutsideOfRanges(*parsedURL, ranges)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("Resolving host failed: "))
-		})
-
-		It("resolves IP addresses with backoff retries", func() {
-			ranges := []iprange.IPRange{{Start: "127.0.0.0", End: "127.0.0.4"}}
-
-			parsedURL, err := url.Parse("syslog://willExistSoon.local:3000?app=great")
-			Expect(err).NotTo(HaveOccurred())
-
-			for i := 0; i < 2; i++ {
-				mockIPResolver.ResolveIPAddrOutput.ret0 <- nil
-				mockIPResolver.ResolveIPAddrOutput.ret1 <- errors.New("Resolving host failed: foo")
-			}
-			mockIPResolver.ResolveIPAddrOutput.ret0 <- &net.IPAddr{IP: net.ParseIP("127.0.0.1")}
-			mockIPResolver.ResolveIPAddrOutput.ret1 <- nil
-
-			backoffs := []time.Duration{time.Millisecond, time.Millisecond, time.Millisecond}
-			outSideOfRange, err := iprange.IpOutsideOfRanges(*parsedURL, ranges, mockIPResolver, backoffs...)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(outSideOfRange).To(BeFalse())
-			Eventually(mockIPResolver.ResolveIPAddrOutput.ret0).Should(BeEmpty())
-			Eventually(mockIPResolver.ResolveIPAddrOutput.ret1).Should(BeEmpty())
-			Expect(mockIPResolver.ResolveIPAddrCalled).To(HaveLen(3))
 		})
 	})
 
