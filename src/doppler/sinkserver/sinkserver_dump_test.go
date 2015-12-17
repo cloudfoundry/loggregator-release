@@ -43,7 +43,7 @@ var _ = Describe("Dumping", func() {
 		newAppServiceChan := make(chan appservice.AppService)
 		deletedAppServiceChan := make(chan appservice.AppService)
 
-		emptyBlacklist := blacklist.New(nil)
+		emptyBlacklist := blacklist.New(nil, logger)
 		sinkManager = sinkmanager.New(1024, false, emptyBlacklist, logger, 100, "dropsonde-origin",
 			2*time.Second, 0, 1*time.Second, 500*time.Millisecond)
 

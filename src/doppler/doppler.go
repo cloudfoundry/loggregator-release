@@ -86,7 +86,7 @@ func New(logger *gosteno.Logger,
 
 	unmarshallerCollection := dropsonde_unmarshaller.NewDropsondeUnmarshallerCollection(logger, config.UnmarshallerCount)
 
-	blacklist := blacklist.New(config.BlackListIps)
+	blacklist := blacklist.New(config.BlackListIps, logger)
 	metricTTL := time.Duration(config.ContainerMetricTTLSeconds) * time.Second
 	sinkTimeout := time.Duration(config.SinkInactivityTimeoutSeconds) * time.Second
 	sinkIOTimeout := time.Duration(config.SinkIOTimeoutSeconds) * time.Second

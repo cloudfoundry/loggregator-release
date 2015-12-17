@@ -24,14 +24,16 @@ import (
 
 var _ = Describe("WebsocketServer", func() {
 
-	var server *websocketserver.WebsocketServer
-	var sinkManager = sinkmanager.New(1024, false, blacklist.New(nil), loggertesthelper.Logger(), 100, "dropsonde-origin", 1*time.Second, 0, 1*time.Second, 500*time.Millisecond)
-	var appId = "my-app"
-	var wsReceivedChan chan []byte
-	var apiEndpoint string
+	var (
+		logger         = loggertesthelper.Logger()
+		server         *websocketserver.WebsocketServer
+		sinkManager    = sinkmanager.New(1024, false, blacklist.New(nil, logger), logger, 100, "dropsonde-origin", 1*time.Second, 0, 1*time.Second, 500*time.Millisecond)
+		appId          = "my-app"
+		wsReceivedChan chan []byte
+		apiEndpoint    string
+	)
 
 	BeforeEach(func() {
-		logger := loggertesthelper.Logger()
 		wsReceivedChan = make(chan []byte)
 
 		apiEndpoint = net.JoinHostPort("127.0.0.1", strconv.Itoa(9091+config.GinkgoConfig.ParallelNode*10))

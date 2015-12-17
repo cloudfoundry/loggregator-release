@@ -9,6 +9,12 @@ import (
 	"strings"
 )
 
+type ResolutionFailure string
+
+func (err ResolutionFailure) Error() string {
+	return fmt.Sprintf("Resolving host failed: %s", string(err))
+}
+
 type IPRange struct {
 	Start string
 	End   string
@@ -42,7 +48,7 @@ func IpOutsideOfRanges(testURL url.URL, ranges []IPRange) (bool, error) {
 	if ipAddress == nil {
 		ipAddr, err := net.ResolveIPAddr("ip", host)
 		if err != nil {
-			return false, errors.New(fmt.Sprintf("Resolving host failed: %s", err))
+			return false, ResolutionFailure(err.Error())
 		}
 		ipAddress = net.ParseIP(ipAddr.String())
 	}

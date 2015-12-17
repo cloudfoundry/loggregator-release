@@ -49,27 +49,6 @@ var _ = Describe("Syslog Drain Binding", func() {
 		Expect(string(receivedMessage.GetMessage())).To(ContainSubstring("Err: Invalid scheme type"))
 	})
 
-	It("handles URLs that don't resolve", func() {
-		receivedChan := make(chan []byte, 1)
-		ws, _ := AddWSSink(receivedChan, "4567", "/apps/"+appID+"/stream")
-		defer ws.Close()
-
-		badURLs := []string{"syslog://garbage", "syslog-tls://garbage", "https://garbage"}
-
-		for _, badURL := range badURLs {
-			key := DrainKey(appID, badURL)
-			AddETCDNode(etcdAdapter, key, badURL)
-
-			receivedMessageBytes := []byte{}
-			Eventually(receivedChan, 20).Should(Receive(&receivedMessageBytes))
-			receivedMessage := DecodeProtoBufLogMessage(receivedMessageBytes)
-
-			Expect(receivedMessage.GetAppId()).To(Equal(appID))
-			Expect(string(receivedMessage.GetMessage())).To(ContainSubstring("Err: Resolving host failed"))
-			Expect(string(receivedMessage.GetMessage())).To(ContainSubstring(badURL))
-		}
-	})
-
 	Context("when connecting over TCP", func() {
 		var (
 			syslogDrainAddress = fmt.Sprintf("%s:%d", localIPAddress, syslogPort)

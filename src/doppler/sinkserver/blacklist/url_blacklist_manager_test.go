@@ -5,6 +5,7 @@ import (
 	"doppler/sinkserver/blacklist"
 	"net/url"
 
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -13,16 +14,26 @@ var _ = Describe("UrlBlacklistManager", func() {
 	var urlBlacklistManager *blacklist.URLBlacklistManager
 
 	BeforeEach(func() {
-		urlBlacklistManager = blacklist.New([]iprange.IPRange{iprange.IPRange{Start: "14.15.16.17", End: "14.15.16.20"}})
+		urlBlacklistManager = blacklist.New([]iprange.IPRange{iprange.IPRange{Start: "14.15.16.17", End: "14.15.16.20"}}, loggertesthelper.Logger())
 	})
 
 	Describe("CheckUrl", func() {
 		It("returns the URL and no error if the URL is valid and not blacklisted", func() {
 			outputURL, err := urlBlacklistManager.CheckUrl("http://10.10.10.10")
-			url, _ := url.ParseRequestURI("http://10.10.10.10")
+			Expect(err).NotTo(HaveOccurred())
+			url, err := url.ParseRequestURI("http://10.10.10.10")
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(outputURL).To(Equal(url))
-			Expect(err).To(BeNil())
+		})
+
+		It("returns the URL and no error if the domain can't be resolved", func() {
+			outputURL, err := urlBlacklistManager.CheckUrl("http://some.invalid.host")
+			Expect(err).NotTo(HaveOccurred())
+			url, err := url.ParseRequestURI("http://some.invalid.host")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(outputURL).To(Equal(url))
 		})
 
 		It("returns blacklist error if the URL is blacklisted", func() {
