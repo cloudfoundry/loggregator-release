@@ -5,7 +5,7 @@ templates:
   dea_logging_agent.json.erb: config/dea_logging_agent.json
 
 packages:
-- common
+- loggregator_common
 - dea_logging_agent
 
 properties:

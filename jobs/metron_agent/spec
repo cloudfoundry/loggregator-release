@@ -11,7 +11,7 @@ templates:
   loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
 
 packages:
-- common
+- loggregator_common
 - metron_agent
 properties:
   syslog_daemon_config.address:

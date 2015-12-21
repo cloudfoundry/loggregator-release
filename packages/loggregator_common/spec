@@ -1,4 +1,4 @@
 ---
-name: common
+name: loggregator_common
 files:
 - common/utils.sh

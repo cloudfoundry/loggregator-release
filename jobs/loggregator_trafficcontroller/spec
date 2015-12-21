@@ -5,7 +5,7 @@ templates:
   loggregator_trafficcontroller.json.erb: config/loggregator_trafficcontroller.json
 
 packages:
-- common
+- loggregator_common
 - loggregator_trafficcontroller
 properties:
   traffic_controller.zone:

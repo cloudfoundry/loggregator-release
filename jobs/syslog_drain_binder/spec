@@ -5,7 +5,7 @@ templates:
   syslog_drain_binder.json.erb: config/syslog_drain_binder.json
 
 packages:
-- common
+- loggregator_common
 - syslog_drain_binder
 properties:
   metron_endpoint.host:
