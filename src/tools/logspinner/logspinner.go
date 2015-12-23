@@ -46,9 +46,16 @@ func rootResponse(res http.ResponseWriter, req *http.Request) {
 }
 
 func outputLog(cycleCount int, delay time.Duration, logText string) {
+
+	now := time.Now()
 	for i := 0; i < cycleCount; i++ {
 		fmt.Printf("msg %d %s\n", i+1, logText)
 		time.Sleep(delay)
 	}
+	done := time.Now()
+	diff := done.Sub(now)
+
+	rate := float64(cycleCount) / diff.Seconds()
+	fmt.Printf("Duration %s TotalSent %d Rate %f \n", diff.String(), cycleCount, rate)
 
 }
