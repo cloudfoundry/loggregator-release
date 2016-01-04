@@ -62,5 +62,3 @@ properties:
   team via cf-loggregator@cloudfoundry.org about this. If appropriate we would like to add language-specific dropsonde-protocol implementations
   to our CI tests.
 
-
-For other languages...
