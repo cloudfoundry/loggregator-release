@@ -23,9 +23,6 @@ Manifest changes:
 ```diff
 +  - name: metron_agent
 +    release: loggregator
-   instances: 1
-   resource_pool: services-small
-   persistent_disk: 4096
 ```
 
 - Insert the overall metron properties into the manifest. 
@@ -59,6 +56,6 @@ properties:
   includes changing to the client->Metron interface to TCP. This is a breaking change for an implementation based 
   directly on protobuf. The Loggregator team encourages anyone who wants to use a different language to write an 
   abstraction library, similar to dropsonde, and create a github repository. Please feel free to connect with the loggregator
-  team via cf-loggregator@cloudfoundry.org about this. If appropriate we would like to add language-specific dropsonde-protocol implementations
+  team via cf-loggregator@pivotal.io about this. If appropriate we would like to add language-specific dropsonde-protocol implementations
   to our CI tests.
 
