@@ -35,7 +35,7 @@ func main() {
 	}
 	delay := os.Args[2]
 	var message string
-	if len(os.Args) > 2 {
+	if len(os.Args) > 3 {
 		message = os.Args[3]
 	}
 	callLogSpinner(logCount, delay, message)
