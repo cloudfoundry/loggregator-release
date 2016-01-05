@@ -50,6 +50,8 @@ loop:
 				totalReceived = totalReceived + msg.GetCounterEvent().GetDelta()
 
 				fmt.Printf("Received %d\n", totalReceived)
+				fmt.Printf("CounterEvent %v\n", msg.GetCounterEvent())
+
 				if int(totalReceived) == logCount+1 {
 					break loop
 				}
