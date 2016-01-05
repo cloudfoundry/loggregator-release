@@ -34,8 +34,11 @@ func main() {
 		panic(err)
 	}
 	delay := os.Args[2]
-
-	callLogSpinner(logCount, delay)
+	var message string
+	if len(os.Args) > 2 {
+		message = os.Args[3]
+	}
+	callLogSpinner(logCount, delay, message)
 
 	var totalReceived uint64
 	timer := time.NewTimer(40 * time.Second)
@@ -72,8 +75,8 @@ loop:
 
 }
 
-func callLogSpinner(logCount int, delay string) {
-	url := fmt.Sprintf("http://logspinner.pecan.cf-app.com?cycles=%d&delay=%s", logCount, delay)
+func callLogSpinner(logCount int, delay string, message string) {
+	url := fmt.Sprintf("http://logspinner.pecan.cf-app.com?cycles=%d&delay=%s&text=%s", logCount, delay, message)
 	resp, err := http.Get(url)
 	if err != nil {
 		panic(err)
