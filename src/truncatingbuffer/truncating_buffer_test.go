@@ -1,9 +1,10 @@
 package truncatingbuffer_test
 
 import (
-	"truncatingbuffer"
 	"fmt"
+	"strings"
 	"time"
+	"truncatingbuffer"
 
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -19,21 +20,21 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-type FakeContext struct {}
+type FakeContext struct{}
 
-func(FakeContext) EventAllowed(events.Envelope_EventType) bool {
+func (FakeContext) EventAllowed(events.Envelope_EventType) bool {
 	return true
 }
 
-func(FakeContext) Destination() string {
+func (FakeContext) Destination() string {
 	return "test-sink-name"
 }
 
-func(FakeContext) Origin() string {
+func (FakeContext) Origin() string {
 	return "doppler"
 }
 
-func(FakeContext) AppID(*events.Envelope) string {
+func (FakeContext) AppID(*events.Envelope) string {
 	return "fake-app-id"
 }
 
@@ -52,12 +53,12 @@ func (f *FilteredContext) EventAllowed(eventType events.Envelope_EventType) bool
 }
 
 type LogFilteredContext struct {
-	logMsgCount int
-	truncateChan chan struct {}
+	logMsgCount  int
+	truncateChan chan struct{}
 	FakeContext
 }
 
-func NewLogFilteredContext(truncateChan chan struct {}) *LogFilteredContext {
+func NewLogFilteredContext(truncateChan chan struct{}) *LogFilteredContext {
 	return &LogFilteredContext{logMsgCount: 0, truncateChan: truncateChan}
 }
 
@@ -73,9 +74,11 @@ func (f *LogFilteredContext) EventAllowed(eventType events.Envelope_EventType) b
 
 	return true
 }
+
 var _ = Describe("Truncating Buffer", func() {
 	var inMessageChan chan *events.Envelope
 	var stopChannel chan struct{}
+	var bufferSize uint
 	var buffer *truncatingbuffer.TruncatingBuffer
 	var context truncatingbuffer.BufferContext
 
@@ -83,10 +86,11 @@ var _ = Describe("Truncating Buffer", func() {
 		inMessageChan = make(chan *events.Envelope)
 		stopChannel = make(chan struct{})
 		context = &FakeContext{}
+		bufferSize = 3
 	})
 
 	JustBeforeEach(func() {
-		buffer = truncatingbuffer.NewTruncatingBuffer(inMessageChan, 3, context, loggertesthelper.Logger(), stopChannel)
+		buffer = truncatingbuffer.NewTruncatingBuffer(inMessageChan, bufferSize, context, loggertesthelper.Logger(), stopChannel)
 	})
 
 	AfterEach(func() {
@@ -97,7 +101,7 @@ var _ = Describe("Truncating Buffer", func() {
 
 	It("panics if buffer size is less than 3", func() {
 		Expect(func() {
-			truncatingbuffer.NewTruncatingBuffer(inMessageChan, 2,context, loggertesthelper.Logger(), nil)
+			truncatingbuffer.NewTruncatingBuffer(inMessageChan, 2, context, loggertesthelper.Logger(), nil)
 		}).To(Panic())
 	})
 
@@ -106,7 +110,6 @@ var _ = Describe("Truncating Buffer", func() {
 			truncatingbuffer.NewTruncatingBuffer(inMessageChan, 3, nil, loggertesthelper.Logger(), nil)
 		}).To(Panic())
 	})
-
 
 	Describe("Run", func() {
 		It("exits when the input channel is closed", func() {
@@ -290,6 +293,124 @@ var _ = Describe("Truncating Buffer", func() {
 					Eventually(truncateChan).Should(Receive())
 				})
 			})
+		})
+	})
+
+	Describe("benchmarks", func() {
+		const runCount = 10000
+		var done chan struct{}
+
+		BeforeEach(func() {
+			done = make(chan struct{})
+		})
+
+		JustBeforeEach(func() {
+			go func() {
+				buffer.Run()
+				close(done)
+			}()
+		})
+
+		AfterEach(func() {
+			close(stopChannel)
+			<-done
+		})
+
+		Context("lossless", func() {
+
+			BeforeEach(func() {
+				bufferSize = runCount
+			})
+
+			Measure("time for 10000 messages to flow through the buffer", func(b Benchmarker) {
+
+				b.Time("truncating buffer throughput", func() {
+					readDone := make(chan struct{})
+					go func() {
+						for i := 0; i < runCount; i++ {
+							<-buffer.GetOutputChannel()
+						}
+						close(readDone)
+					}()
+
+					for i := 0; i < runCount; i++ {
+						sendLogMessages(fmt.Sprintf("message %d", i), inMessageChan)
+					}
+					<-readDone
+				})
+			}, 100)
+		})
+
+		Context("lossy", func() {
+
+			BeforeEach(func() {
+				bufferSize = 100
+			})
+
+			var send = func(count int, delay time.Duration) {
+				msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "message", "appId", "App"), "origin")
+				for i := 0; i < count; i++ {
+					inMessageChan <- msg
+					time.Sleep(delay)
+				}
+			}
+
+			var receive = func(count int, delay time.Duration) (totalLost uint64) {
+				timeout := time.NewTimer(time.Millisecond)
+				for i := 0; i < count; i++ {
+					msgs := buffer.GetOutputChannel()
+					var msg *events.Envelope
+					timeout.Reset(time.Millisecond)
+					select {
+					case msg = <-msgs:
+					case <-timeout.C:
+						return totalLost
+					}
+					if msg.GetEventType() == events.Envelope_LogMessage && strings.HasPrefix(string(msg.GetLogMessage().GetMessage()), "Log message output is too high") {
+						msg = <-msgs
+					}
+					if msg.GetEventType() == events.Envelope_CounterEvent && msg.GetCounterEvent().GetName() == "TruncatingBuffer.DroppedMessages" {
+						totalLost = msg.GetCounterEvent().GetTotal()
+					}
+					time.Sleep(delay)
+				}
+				return totalLost
+			}
+
+			Measure("delay before message loss", func(b Benchmarker) {
+				lostMessages := make(chan uint64)
+				recvDelays := make(chan time.Duration)
+				go func() {
+					for recvDelay := range recvDelays {
+						lost := receive(runCount, recvDelay)
+						if lost > 0 {
+							lostMessages <- lost
+							return
+						}
+					}
+				}()
+
+				recvDelay := time.Duration(0)
+				for sendDelay := time.Microsecond; ; sendDelay /= 2 {
+					select {
+					case lost := <-lostMessages:
+						b.RecordValue("messages lost", float64(lost))
+						b.RecordValue("delay when sending to buffer input (ns)", float64(sendDelay))
+						b.RecordValue("delay when receiving from buffer output (ns)", float64(recvDelay))
+						b.RecordValue("difference between receiving vs sending (receiving delay - sending delay)", float64(recvDelay-sendDelay))
+						return
+					case recvDelays <- recvDelay:
+						send(runCount, sendDelay)
+						if sendDelay == 0 {
+							if recvDelay == 0 {
+								recvDelay = time.Nanosecond
+							} else {
+								recvDelay *= 2
+							}
+						}
+					}
+				}
+			}, 50)
 		})
 	})
 })

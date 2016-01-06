@@ -39,7 +39,7 @@ func NewTruncatingBuffer(inputChannel <-chan *events.Envelope, bufferSize uint, 
 		lock:                &sync.RWMutex{},
 		droppedMessageCount: 0,
 		stopChannel:         stopChannel,
-		context: context,
+		context:             context,
 	}
 }
 
