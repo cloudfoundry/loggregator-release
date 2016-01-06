@@ -54,7 +54,7 @@ var _ = Describe("UptimeMonitor", func() {
 			}))
 		})
 
-		It("reports increasing uptime value", func() {
+		PIt("reports increasing uptime value", func() {
 			Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(1))
 			Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
 				Name:  proto.String("Uptime"),
