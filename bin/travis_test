@@ -41,54 +41,28 @@ function bold_blue {
     fi
 }
 
-unit_testable_packages=(
-    deaagent
-    trafficcontroller
-    metron
-    doppler
-    syslog_drain_binder
-    tools
-)
+not_unit_tests="github.com,integration_tests,lats"
 
-for package in "${unit_testable_packages[@]}"
+bold_blue "==================================  Running Unit Tests  =================================="
+ginkgo -r --race --randomizeAllSpecs --cover --skipPackage="${not_unit_tests}" src
+result=$?
+
+echo
+bold_blue "==================================  Running Integration Tests  =================================="
+ginkgo -r --race --randomizeAllSpecs --cover src/integration_tests
+result=$((result + $?))
+
+fmtable_dirs=$(ls -1 src | grep -v "github.com")
+
+for dir in "${fmtable_dirs}"
 do
-    local_result=$result
-    echo
-    bold_blue "==================================  Unit-Testing $package  =================================="
-    go fmt $package/...
-    ginkgo -r --race --randomizeAllSpecs --cover $1 src/$package
-    result=$((result + $?))
-    echo "Current result: $result"
-    echo -e "\n Vetting $package"
-    go vet $package/...
-    let "result += $?"
-    echo "Current result: $result"
-    if [ $result -gt $local_result ]; then
-        red "Package $package FAILED unit tests"
-    else
-        green "Package $package PASSED unit tests"
-    fi
-done
-
-integration_testable_packages=(
-  doppler
-  deaagent
-  metron
-  trafficcontroller
-  endtoend
-)
-
-for package in "${integration_testable_packages[@]}"
-do
-    local_result=$result
-    bold_blue "\n ==================================  Integration-Testing $package  =================================="
-    ginkgo -r --race --randomizeAllSpecs $1 src/integration_tests/$package
-    result=$((result + $?))
-    echo "Current result: $result"
-    if [ $result -gt $local_result ]; then
-        red " Package $package FAILED integration tests"
-    else
-        green " Package $package PASSED integration tests"
+    if go list $dir > /dev/null 2>&1
+    then
+        echo -e "\n Fmting $package"
+        go fmt $dir/...
+        echo -e "\n Vetting $package"
+        go vet $dir/...
+        result=$((result + $?))
     fi
 done
 
