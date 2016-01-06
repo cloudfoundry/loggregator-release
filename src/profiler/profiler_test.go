@@ -1,14 +1,15 @@
 package profiler_test
 
 import (
+	"io/ioutil"
+	"os"
+	"profiler"
+	"time"
+
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/remyoudompheng/go-misc/pprof/parser"
-	"io/ioutil"
-	"os"
-	"time"
-	"trafficcontroller/profiler"
 )
 
 var _ = Describe("Profiler", func() {
@@ -28,7 +29,7 @@ var _ = Describe("Profiler", func() {
 
 	Describe("cpu profiling", func() {
 		It("profiles cpu usage", func() {
-			profiler := profiler.NewProfiler(cpuProfilePath, "", 1*time.Millisecond, logger)
+			profiler := profiler.New(cpuProfilePath, "", 1*time.Millisecond, logger)
 			profiler.Profile()
 
 			profiler.Stop()
@@ -45,14 +46,14 @@ var _ = Describe("Profiler", func() {
 
 		It("panics when there is an error", func() {
 			filePath := "/tmp/asdf/asdf.pprof"
-			profiler := profiler.NewProfiler(filePath, "", 1*time.Millisecond, logger)
+			profiler := profiler.New(filePath, "", 1*time.Millisecond, logger)
 			Expect(profiler.Profile).To(Panic())
 		})
 	})
 
 	Describe("memory profiling", func() {
 		It("profiles memory usage", func() {
-			profiler := profiler.NewProfiler("", memProfilePath, 1*time.Millisecond, logger)
+			profiler := profiler.New("", memProfilePath, 1*time.Millisecond, logger)
 			profiler.Profile()
 			time.Sleep(2 * time.Millisecond)
 
@@ -67,14 +68,14 @@ var _ = Describe("Profiler", func() {
 
 		It("panics when there is an error", func() {
 			filePath := "/tmp/asdf/asdf.pprof"
-			profiler := profiler.NewProfiler("", filePath, 1*time.Millisecond, logger)
+			profiler := profiler.New("", filePath, 1*time.Millisecond, logger)
 			Expect(profiler.Profile).To(Panic())
 		})
 	})
 
 	Describe("Stop", func() {
 		It("closes the both profile file handles", func() {
-			profiler := profiler.NewProfiler(cpuProfilePath, memProfilePath, 1*time.Millisecond, logger)
+			profiler := profiler.New(cpuProfilePath, memProfilePath, 1*time.Millisecond, logger)
 			profiler.Profile()
 
 			time.Sleep(2 * time.Millisecond)
@@ -96,7 +97,7 @@ var _ = Describe("Profiler", func() {
 		})
 
 		It("stops mem profiling before closing the file handles", func() {
-			profiler := profiler.NewProfiler("", memProfilePath, 1*time.Millisecond, logger)
+			profiler := profiler.New("", memProfilePath, 1*time.Millisecond, logger)
 			profiler.Profile()
 			time.Sleep(2 * time.Millisecond)
 

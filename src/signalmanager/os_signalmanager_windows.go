@@ -1,9 +1,10 @@
 // +build windows
 
 package signalmanager
+
 import (
-	"os/signal"
 	"os"
+	"os/signal"
 )
 
 func RegisterKillSignalChannel() chan os.Signal {
@@ -21,4 +22,3 @@ func RegisterGoRoutineDumpSignalChannel() chan os.Signal {
 func DumpGoRoutine() {
 	// no op
 }
-

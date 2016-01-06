@@ -1,8 +1,8 @@
 package truncatingbuffer
 
 import (
-	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
+	"github.com/cloudfoundry/sonde-go/events"
 )
 
 type BufferContext interface {
@@ -17,18 +17,18 @@ type DefaultContext struct {
 	origin      string
 }
 
-func NewDefaultContext(origin string, destination string) *DefaultContext{
-	return &DefaultContext {
+func NewDefaultContext(origin string, destination string) *DefaultContext {
+	return &DefaultContext{
 		destination: destination,
-		origin: origin,
+		origin:      origin,
 	}
 }
 
-func(d *DefaultContext) EventAllowed(events.Envelope_EventType) bool{
+func (d *DefaultContext) EventAllowed(events.Envelope_EventType) bool {
 	return true
 }
 
-func(d *DefaultContext) Destination() string {
+func (d *DefaultContext) Destination() string {
 	return d.destination
 }
 
@@ -46,9 +46,9 @@ type LogAllowedContext struct {
 
 func NewLogAllowedContext(origin string, destination string) *LogAllowedContext {
 	return &LogAllowedContext{
-		DefaultContext {
+		DefaultContext{
 			destination: destination,
-			origin: origin,
+			origin:      origin,
 		},
 	}
 }
@@ -63,9 +63,9 @@ type SystemContext struct {
 
 func NewSystemContext(origin string, destination string) *SystemContext {
 	return &SystemContext{
-		DefaultContext {
+		DefaultContext{
 			destination: destination,
-			origin: origin,
+			origin:      origin,
 		},
 	}
 }

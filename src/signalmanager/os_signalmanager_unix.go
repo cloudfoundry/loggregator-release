@@ -3,10 +3,10 @@
 package signalmanager
 
 import (
-	"syscall"
-	"os/signal"
 	"os"
+	"os/signal"
 	"runtime/pprof"
+	"syscall"
 )
 
 func RegisterKillSignalChannel() chan os.Signal {
@@ -27,4 +27,3 @@ func DumpGoRoutine() {
 	goRoutineProfiles := pprof.Lookup("goroutine")
 	goRoutineProfiles.WriteTo(os.Stdout, 2)
 }
-

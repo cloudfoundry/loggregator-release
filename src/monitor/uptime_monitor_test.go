@@ -1,7 +1,8 @@
 package monitor_test
 
 import (
-	"common/monitor"
+	"monitor"
+	"time"
 
 	"github.com/cloudfoundry/dropsonde/emitter/fake"
 	"github.com/cloudfoundry/dropsonde/metric_sender"
@@ -11,7 +12,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"time"
 )
 
 var (
