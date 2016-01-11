@@ -1,10 +1,11 @@
 package eventwriter_test
 
 import (
-	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
 	"metron/eventwriter"
 	"metron/writers/mocks"
+
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	. "github.com/onsi/ginkgo"

@@ -7,12 +7,13 @@ import (
 
 	"metron/clientpool"
 
+	"truncatingbuffer"
+
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-	"truncatingbuffer"
 )
 
 var metricNames map[events.Envelope_EventType]string

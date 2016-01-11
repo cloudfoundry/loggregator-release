@@ -9,10 +9,10 @@ import (
 
 	"fmt"
 
+	"github.com/cloudfoundry/dropsonde/logging"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -57,18 +57,18 @@ func (u *EventUnmarshaller) UnmarshallMessage(message []byte) (*events.Envelope,
 	envelope := &events.Envelope{}
 	err := proto.Unmarshal(message, envelope)
 	if err != nil {
-		u.logger.Debugf("eventUnmarshaller: unmarshal error %v for message %v", err, message)
+		logging.Debugf(u.logger, "eventUnmarshaller: unmarshal error %v for message %v", err, message)
 		metrics.BatchIncrementCounter("dropsondeUnmarshaller.unmarshalErrors")
 		return nil, err
 	}
 
 	if !valid(envelope) {
-		u.logger.Debugf("eventUnmarshaller: validation failed for message %v", message)
+		logging.Debugf(u.logger, "eventUnmarshaller: validation failed for message %v", message)
 		metrics.BatchIncrementCounter("dropsondeUnmarshaller.unmarshalErrors")
 		return nil, invalidEnvelope
 	}
 
-	u.logger.Debugf("eventUnmarshaller: received message %v", spew.Sprintf("%v", envelope))
+	logging.Debugf(u.logger, "eventUnmarshaller: received message %v", envelope)
 
 	if err := u.incrementReceiveCount(envelope.GetEventType()); err != nil {
 		u.logger.Debug(err.Error())

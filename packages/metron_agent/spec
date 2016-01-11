@@ -13,6 +13,7 @@ files:
 - loggregator/src/github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/envelope_extensions/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/logging/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metricbatcher/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metrics/*.go # gosub
@@ -25,7 +26,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/storeadapter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/etcdstoreadapter/*.go # gosub
 - loggregator/src/github.com/coreos/go-etcd/etcd/*.go # gosub
-- loggregator/src/github.com/davecgh/go-spew/spew/*.go # gosub
 - loggregator/src/github.com/gogo/protobuf/proto/*.go # gosub
 - loggregator/src/github.com/nu7hatch/gouuid/*.go # gosub
 - loggregator/src/github.com/pivotal-golang/localip/*.go # gosub

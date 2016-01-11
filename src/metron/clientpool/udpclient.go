@@ -3,6 +3,7 @@ package clientpool
 import (
 	"net"
 
+	"github.com/cloudfoundry/dropsonde/logging"
 	"github.com/cloudfoundry/gosteno"
 )
 
@@ -63,7 +64,7 @@ func (c *udpClient) Write(data []byte) (int, error) {
 		c.logger.Errorf("Writing to loggregator %s failed %s", c.Address(), err)
 		return writeCount, err
 	}
-	c.logger.Debugf("Wrote %d bytes to %s", writeCount, c.Address())
+	logging.Debugf(c.logger, "Wrote %d bytes to %s", writeCount, c.Address())
 
 	return writeCount, err
 }

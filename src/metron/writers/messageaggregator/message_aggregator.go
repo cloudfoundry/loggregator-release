@@ -5,10 +5,10 @@ import (
 
 	"metron/writers"
 
+	"github.com/cloudfoundry/dropsonde/logging"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/davecgh/go-spew/spew"
 )
 
 var MaxTTL = time.Minute
@@ -51,7 +51,7 @@ func (m *MessageAggregator) Write(envelope *events.Envelope) {
 		m.outputWriter.Write(counterEventMessage)
 	default:
 		metrics.BatchIncrementCounter("MessageAggregator.uncategorizedEvents")
-		m.logger.Debugf("passing through message %v", spew.Sprintf("%v", envelope))
+		logging.Debugf(m.logger, "passing through message %v", envelope)
 		m.outputWriter.Write(envelope)
 	}
 }
@@ -59,7 +59,7 @@ func (m *MessageAggregator) Write(envelope *events.Envelope) {
 func (m *MessageAggregator) handleHTTPStart(envelope *events.Envelope) {
 	metrics.BatchIncrementCounter("MessageAggregator.httpStartReceived")
 
-	m.logger.Debugf("handling HTTP start message %v", spew.Sprintf("%v", envelope))
+	logging.Debugf(m.logger, "handling HTTP start message %v", envelope)
 	startEvent := envelope.GetHttpStart()
 
 	requestID := startEvent.RequestId.String()
@@ -70,7 +70,7 @@ func (m *MessageAggregator) handleHTTPStart(envelope *events.Envelope) {
 func (m *MessageAggregator) handleHTTPStop(envelope *events.Envelope) *events.Envelope {
 	metrics.BatchIncrementCounter("MessageAggregator.httpStopReceived")
 
-	m.logger.Debugf("handling HTTP stop message %v", spew.Sprintf("%v", envelope))
+	logging.Debugf(m.logger, "handling HTTP stop message %v", envelope)
 	stopEvent := envelope.GetHttpStop()
 
 	requestID := stopEvent.RequestId.String()

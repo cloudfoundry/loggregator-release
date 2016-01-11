@@ -5,6 +5,7 @@ import (
 
 	"metron/writers"
 
+	"github.com/cloudfoundry/dropsonde/logging"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 )
@@ -41,10 +42,10 @@ func (nr *NetworkReader) Start() {
 	for {
 		readCount, senderAddr, err := nr.connection.ReadFrom(readBuffer)
 		if err != nil {
-			nr.logger.Debugf("Error while reading. %s", err)
+			logging.Debugf(nr.logger, "Error while reading. %s", err)
 			return
 		}
-		nr.logger.Debugf("NetworkReader: Read %d bytes from address %s", readCount, senderAddr)
+		logging.Debugf(nr.logger, "NetworkReader: Read %d bytes from address %s", readCount, senderAddr)
 		readData := make([]byte, readCount) //pass on buffer in size only of read data
 		copy(readData, readBuffer[:readCount])
 

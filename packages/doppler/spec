@@ -36,6 +36,7 @@ files:
 - loggregator/src/github.com/cloudfoundry/dropsonde/instrumented_handler/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/instrumented_round_tripper/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/log_sender/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/logging/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/logs/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metricbatcher/*.go # gosub
@@ -53,7 +54,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/storeadapter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/etcdstoreadapter/*.go # gosub
 - loggregator/src/github.com/coreos/go-etcd/etcd/*.go # gosub
-- loggregator/src/github.com/davecgh/go-spew/spew/*.go # gosub
 - loggregator/src/github.com/gogo/protobuf/proto/*.go # gosub
 - loggregator/src/github.com/gorilla/websocket/*.go # gosub
 - loggregator/src/github.com/nu7hatch/gouuid/*.go # gosub
