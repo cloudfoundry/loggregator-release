@@ -1,3 +1,7 @@
+# Summary
+
+You can emit logs and metrics into the Loggregator subsystem from a service or other BOSH deployment that is separate from the CF deployment. This allows your logs and metrics to be available via the same firehose as all of the CF logs and metrics. You add the Metron agent (point of entry to the Loggregator subsystem) to your deployment and configure it to point at the Dopplers in your CF deployment. Then you send dropsonde messages (library support for some languages, see below) to Metron.
+
 #Prerequisites
 
 You need a CF deployment. From that deployment you need the following:
