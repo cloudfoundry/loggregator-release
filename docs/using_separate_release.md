@@ -7,7 +7,7 @@ You can emit logs and metrics into the Loggregator subsystem from a service or o
 You need a CF deployment. From that deployment you need the following:
 - ETCD IPs to use to retrieve doppler IPs
 
-You need a service being deployed by bosh. You will modify the deployment manifest to pull in the loggregator bosh release, 
+You need a service being deployed by bosh. You will modify the deployment manifest to pull in the Loggregator bosh release, 
 and then deploy the Metron agent from that release in your service deployment. 
 
 #Steps
