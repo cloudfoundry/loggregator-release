@@ -13,7 +13,7 @@ and then deploy the Metron agent from that release in your service deployment.
 #Steps
 
 - Get the latest loggregator release from bosh.io
-- Make manifest changes in your deployment to include the loggregator release and get the metron_agent job from loggregator
+- Make manifest changes in your deployment to include the loggregator release and get the metron_agent job from Loggregator
 
 Manifest changes:
 - Add the loggregator release into the manifest
