@@ -17,7 +17,7 @@ import (
 var _ = Describe("DopplerPool", func() {
 	var (
 		pool          *clientpool.DopplerPool
-		clientFactory func(logger *steno.Logger, u string) (clientpool.Client, error)
+		clientFactory *fakeClientFactory
 		logger        *steno.Logger
 
 		port int
@@ -34,7 +34,7 @@ var _ = Describe("DopplerPool", func() {
 
 		port = 5000 + config.GinkgoConfig.ParallelNode*100
 
-		clientFactory = fakeClientFactory
+		clientFactory = newFakeClientFactory()
 
 		preferredServers = map[string]string{
 			"a": "udp://pahost:paport",
@@ -80,7 +80,7 @@ var _ = Describe("DopplerPool", func() {
 					logger = loggertesthelper.Logger()
 					loggertesthelper.TestLoggerSink.Clear()
 
-					clientFactory = func(_ *steno.Logger, _ string) (clientpool.Client, error) {
+					clientFactory.newClient = func(string) (clientpool.Client, error) {
 						return nil, errors.New("boom")
 					}
 				})
@@ -131,7 +131,7 @@ var _ = Describe("DopplerPool", func() {
 						logger = loggertesthelper.Logger()
 						loggertesthelper.TestLoggerSink.Clear()
 
-						clientFactory = func(_ *steno.Logger, _ string) (clientpool.Client, error) {
+						clientFactory.newClient = func(string) (clientpool.Client, error) {
 							return nil, errors.New("boom")
 						}
 					})
@@ -150,7 +150,7 @@ var _ = Describe("DopplerPool", func() {
 
 			BeforeEach(func() {
 				fakeClient = newFakeClient("udp", "host:port")
-				clientFactory = func(_ *steno.Logger, _ string) (clientpool.Client, error) {
+				clientFactory.newClient = func(string) (clientpool.Client, error) {
 					return fakeClient, nil
 				}
 			})
@@ -172,9 +172,10 @@ var _ = Describe("DopplerPool", func() {
 
 			BeforeEach(func() {
 				clientFactoryCallCount = 0
-				clientFactory = func(logger *steno.Logger, url string) (clientpool.Client, error) {
+				defaultNewClient := clientFactory.newClient
+				clientFactory.newClient = func(url string) (clientpool.Client, error) {
 					clientFactoryCallCount++
-					return fakeClientFactory(logger, url)
+					return defaultNewClient(url)
 				}
 			})
 
@@ -252,9 +253,21 @@ func values(m map[string]string) []string {
 	return result
 }
 
-func fakeClientFactory(logger *steno.Logger, u string) (clientpool.Client, error) {
-	i := strings.Index(u, "://")
-	return newFakeClient(u[:i], u[i+3:]), nil
+type fakeClientFactory struct {
+	newClient func(u string) (clientpool.Client, error)
+}
+
+func newFakeClientFactory() *fakeClientFactory {
+	return &fakeClientFactory{
+		newClient: func(u string) (clientpool.Client, error) {
+			i := strings.Index(u, "://")
+			return newFakeClient(u[:i], u[i+3:]), nil
+		},
+	}
+}
+
+func (f *fakeClientFactory) NewClient(u string) (clientpool.Client, error) {
+	return f.newClient(u)
 }
 
 func newFakeClient(proto, addr string) *fakeclient.FakeClient {

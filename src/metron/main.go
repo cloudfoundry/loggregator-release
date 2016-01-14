@@ -135,15 +135,7 @@ func initializeDopplerPool(config *config.Config, logger *gosteno.Logger) (*clie
 		tlsConfig.ServerName = "doppler"
 	}
 
-	clientPool := clientpool.NewDopplerPool(logger, func(logger *gosteno.Logger, url string) (clientpool.Client, error) {
-		client, err := clientpool.NewClient(logger, url, tlsConfig)
-		if err == nil && client.Scheme() != config.PreferredProtocol {
-			logger.Warnd(map[string]interface{}{
-				"url": url,
-			}, "Doppler advertising UDP only")
-		}
-		return client, err
-	})
+	clientPool := clientpool.NewDopplerPool(logger, clientpool.NewDefaultClientFactory(logger, tlsConfig, config.PreferredProtocol))
 
 	onUpdate := func(all map[string]string, preferred map[string]string) {
 		clientPool.Set(all, preferred)

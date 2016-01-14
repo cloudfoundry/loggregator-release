@@ -90,17 +90,16 @@ func NewLegacyFinder(storeAdapter storeadapter.StoreAdapter, port int, preferred
 }
 
 func (f *finder) Start() {
-	go f.run(f.stopChan)
-}
-
-func (f *finder) run(stopChan chan struct{}) {
 	events, stopWatch, errors := f.storeAdapter.Watch(f.storeKeyPrefix)
 	f.discoverAddresses()
+	go f.run(events, stopWatch, errors)
+}
 
+func (f *finder) run(events <-chan storeadapter.WatchEvent, stopWatch chan<- bool, errors <-chan error) {
 	var tick <-chan time.Time
 	for {
 		select {
-		case <-stopChan:
+		case <-f.stopChan:
 			close(stopWatch)
 			return
 		case event := <-events:
@@ -140,7 +139,7 @@ func (f *finder) handleEvent(event *storeadapter.WatchEvent) {
 	f.Lock()
 	switch event.Type {
 	case storeadapter.CreateEvent:
-		url, ok := f.preferredUrl(f.unmarshal(value))
+		url, ok := f.preferredURL(f.unmarshal(value))
 		if !ok {
 			f.logger.Errord(map[string]interface{}{
 				"key":   event.Node.Key,
@@ -163,7 +162,7 @@ func (f *finder) handleEvent(event *storeadapter.WatchEvent) {
 	case storeadapter.UpdateEvent:
 		prevValue := event.PrevNode.Value
 		if !bytes.Equal(value, prevValue) {
-			url, ok := f.preferredUrl(f.unmarshal(value))
+			url, ok := f.preferredURL(f.unmarshal(value))
 			if !ok {
 				f.logger.Errord(map[string]interface{}{
 					"key":   event.Node.Key,
@@ -215,7 +214,7 @@ func (f *finder) discoverAddresses() error {
 	preferredMap := map[string]string{}
 
 	for _, leaf := range leaves {
-		url, ok := f.preferredUrl(f.unmarshal(leaf.Value))
+		url, ok := f.preferredURL(f.unmarshal(leaf.Value))
 		if !ok {
 			f.logger.Errord(map[string]interface{}{
 				"key":   leaf.Key,
@@ -257,23 +256,12 @@ func (f *finder) notify() {
 	}
 }
 
-func (f *finder) preferredUrl(urls []string) (string, bool) {
-	switch len(urls) {
-	case 0:
-		//
-	case 1:
-		if strings.HasPrefix(urls[0], "udp://") {
-			return urls[0], true
-		}
-	default:
-		u, ok := findWithProtocol(f.protocolPrefix, urls)
-		if !ok {
-			u, ok = findWithProtocol("udp://", urls)
-		}
-		return u, ok
+func (f *finder) preferredURL(urls []string) (string, bool) {
+	u, ok := findWithProtocol(f.protocolPrefix, urls)
+	if !ok {
+		u, ok = findWithProtocol("udp://", urls)
 	}
-
-	return "", false
+	return u, ok
 }
 
 func findWithProtocol(protocol string, urls []string) (string, bool) {
@@ -286,10 +274,7 @@ func findWithProtocol(protocol string, urls []string) (string, bool) {
 }
 
 func (f *finder) Stop() {
-	if f.stopChan != nil {
-		close(f.stopChan)
-		f.stopChan = nil
-	}
+	close(f.stopChan)
 }
 
 func (f *finder) AllServers() map[string]string {

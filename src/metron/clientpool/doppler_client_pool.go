@@ -1,9 +1,7 @@
 package clientpool
 
 import (
-	"crypto/tls"
 	"errors"
-	"fmt"
 	"math/rand"
 	"strings"
 	"sync"
@@ -13,9 +11,13 @@ import (
 
 var ErrorEmptyClientPool = errors.New("loggregator client pool is empty")
 
+type ClientFactory interface {
+	NewClient(url string) (Client, error)
+}
+
 type DopplerPool struct {
 	logger        *gosteno.Logger
-	clientFactory func(logger *gosteno.Logger, url string) (Client, error)
+	clientFactory ClientFactory
 
 	sync.RWMutex
 	clients    map[string]Client
@@ -25,7 +27,7 @@ type DopplerPool struct {
 	legacyServers    map[string]string
 }
 
-func NewDopplerPool(logger *gosteno.Logger, clientFactory func(logger *gosteno.Logger, url string) (Client, error)) *DopplerPool {
+func NewDopplerPool(logger *gosteno.Logger, clientFactory ClientFactory) *DopplerPool {
 	return &DopplerPool{
 		logger:        logger,
 		clientFactory: clientFactory,
@@ -102,7 +104,7 @@ func (pool *DopplerPool) merge() {
 		client := pool.getClient(key, u)
 		if client == nil {
 			var err error
-			client, err = pool.clientFactory(pool.logger, u)
+			client, err = pool.clientFactory.NewClient(u)
 			if err != nil {
 				pool.logger.Errord(map[string]interface{}{
 					"doppler": key, "url": u, "error": err,
@@ -118,7 +120,7 @@ func (pool *DopplerPool) merge() {
 			client := pool.getClient(key, u)
 			if client == nil {
 				var err error
-				client, err = pool.clientFactory(pool.logger, u)
+				client, err = pool.clientFactory.NewClient(u)
 				if err != nil {
 					pool.logger.Errord(map[string]interface{}{
 						"doppler": key, "url": u, "error": err,
@@ -143,17 +145,4 @@ func (pool *DopplerPool) merge() {
 
 	pool.clients = newClients
 	pool.clientList = newList
-}
-
-func NewClient(logger *gosteno.Logger, url string, tlsConfig *tls.Config) (Client, error) {
-	if index := strings.Index(url, "://"); index > 0 {
-		switch url[:index] {
-		case "udp":
-			return NewUDPClient(logger, url[index+3:], DefaultBufferSize)
-		case "tls":
-			return NewTLSClient(logger, url[index+3:], tlsConfig)
-		}
-	}
-
-	return nil, fmt.Errorf("Unknown scheme for %s", url)
 }

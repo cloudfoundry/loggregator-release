@@ -55,10 +55,6 @@ var _ = Describe("Finder", func() {
 			finder.Start()
 		})
 
-		AfterEach(func() {
-			finder.Stop()
-		})
-
 		Context("Start", func() {
 			BeforeEach(func() {
 				order := order
@@ -76,6 +72,10 @@ var _ = Describe("Finder", func() {
 				}
 			})
 
+			AfterEach(func() {
+				finder.Stop()
+			})
+
 			It("watches and finders nodes recursively", func() {
 				Eventually(order).Should(Receive(Equal("watch")))
 				Eventually(order).Should(Receive(Equal("finder")))
@@ -89,7 +89,7 @@ var _ = Describe("Finder", func() {
 			})
 		})
 
-		It("Stop", func() {
+		It("Stops", func() {
 			finder.Stop()
 			Eventually(stopChan).Should(BeClosed())
 		})
@@ -358,10 +358,6 @@ var _ = Describe("Finder", func() {
 				finder, err = dopplerservice.NewFinder(storeAdapter, "udp", preferredCallback, updateCallback, loggertesthelper.Logger())
 				Expect(err).NotTo(HaveOccurred())
 				finder.Start()
-			})
-
-			AfterEach(func() {
-				finder.Stop()
 			})
 
 			It("filters", func() {
