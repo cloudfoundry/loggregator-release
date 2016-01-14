@@ -25,6 +25,7 @@ var _ = Describe("WebsocketListener", func() {
 	var stopChan chan struct{}
 	var l listener.Listener
 	var fh *fakeHandler
+	var converter func([]byte) ([]byte, error)
 
 	BeforeEach(func() {
 		messageChan = make(chan []byte)
@@ -32,7 +33,10 @@ var _ = Describe("WebsocketListener", func() {
 		stopChan = make(chan struct{})
 		fh = &fakeHandler{messages: messageChan}
 		ts = httptest.NewUnstartedServer(fh)
-		converter := func(d []byte) ([]byte, error) { return d, nil }
+		converter = func(d []byte) ([]byte, error) { return d, nil }
+	})
+
+	JustBeforeEach(func() {
 		l = listener.NewWebsocket(marshaller.LoggregatorLogMessage, converter, 500*time.Millisecond, loggertesthelper.Logger())
 	})
 
@@ -54,8 +58,30 @@ var _ = Describe("WebsocketListener", func() {
 		}, 2)
 	})
 
-	Context("when the server is running", func() {
+	Context("when the converter returns nil messages", func() {
 		BeforeEach(func() {
+			converter = func([]byte) ([]byte, error) { return nil, nil }
+		})
+
+		JustBeforeEach(func() {
+			ts.Start()
+			Eventually(func() bool {
+				resp, _ := http.Head(fmt.Sprintf("http://%s", ts.Listener.Addr()))
+				return resp != nil && resp.StatusCode == http.StatusOK
+			}).Should(BeTrue())
+		})
+
+		It("should ignore nil messages received from the server", func() {
+			go l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
+
+			messageChan <- []byte("ignored")
+
+			Consistently(outputChan).ShouldNot(Receive())
+		})
+	})
+
+	Context("when the server is running", func() {
+		JustBeforeEach(func() {
 			ts.Start()
 			Eventually(func() bool {
 				resp, _ := http.Head(fmt.Sprintf("http://%s", ts.Listener.Addr()))
@@ -145,7 +171,7 @@ var _ = Describe("WebsocketListener", func() {
 	})
 
 	Context("when the server is slow", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			ts.Start()
 			Eventually(func() bool {
 				resp, _ := http.Head(fmt.Sprintf("http://%s", ts.Listener.Addr()))
@@ -206,7 +232,7 @@ var _ = Describe("WebsocketListener", func() {
 	})
 
 	Context("when the server has errors", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			ts.Start()
 			go l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
 			fh.CloseAbruptly()

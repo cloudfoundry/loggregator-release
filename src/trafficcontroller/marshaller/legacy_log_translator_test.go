@@ -50,7 +50,7 @@ var _ = Describe("TranslateDropsondeToLegacyLogMessage", func() {
 		Expect(err.Error()).To(ContainSubstring("Unable to unmarshal"))
 	})
 
-	It("returns an error if the envelope is of type other than LogMessage", func() {
+	It("returns a nil message if the envelope is of type other than LogMessage", func() {
 		envelope := &events.Envelope{
 			Origin:    proto.String("origin"),
 			EventType: events.Envelope_CounterEvent.Enum(),
@@ -59,8 +59,8 @@ var _ = Describe("TranslateDropsondeToLegacyLogMessage", func() {
 
 		msg, err := marshaller.TranslateDropsondeToLegacyLogMessage(bytes)
 
+		Expect(err).ToNot(HaveOccurred())
 		Expect(msg).To(BeNil())
-		Expect(err.Error()).To(ContainSubstring("Envelope contained CounterEvent"))
 	})
 
 	It("returns an error if the envelope doesn't contain a LogMessage", func() {

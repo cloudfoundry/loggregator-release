@@ -15,7 +15,7 @@ func TranslateDropsondeToLegacyLogMessage(message []byte) ([]byte, error) {
 	}
 
 	if receivedEnvelope.GetEventType() != events.Envelope_LogMessage {
-		return nil, fmt.Errorf("TranslateDropsondeToLegacyLogMessage: Envelope contained %s instead of LogMessage", receivedEnvelope.GetEventType().String())
+		return nil, nil
 	}
 
 	logMessage := receivedEnvelope.GetLogMessage()
