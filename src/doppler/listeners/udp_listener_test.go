@@ -68,7 +68,7 @@ var _ = Describe("AgentListener", func() {
 			metricBatcher.Reset()
 		})
 
-		It("issues intended metrics", func() {
+		PIt("issues intended metrics", func() {
 			expectedData := "Some Data"
 			otherData := "More stuff"
 
