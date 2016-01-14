@@ -45,7 +45,7 @@ var _ = Describe("UptimeMonitor", func() {
 			uptimeMonitor.Stop()
 		})
 
-		It("returns a value metric containing uptime after specified time", func() {
+		PIt("returns a value metric containing uptime after specified time", func() {
 			Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(1))
 			Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
 				Name:  proto.String("Uptime"),
