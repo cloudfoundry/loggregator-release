@@ -26,7 +26,7 @@ var _ = Describe("Containermetric", func() {
 
 	Describe("StreamId", func() {
 		It("returns the application ID", func() {
-			Expect(sink.StreamId()).To(Equal("myApp"))
+			Expect(sink.AppID()).To(Equal("myApp"))
 		})
 	})
 

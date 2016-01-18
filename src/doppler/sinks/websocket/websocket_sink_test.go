@@ -95,7 +95,7 @@ var _ = Describe("WebsocketSink", func() {
 
 	Describe("StreamId", func() {
 		It("returns the application id", func() {
-			Expect(websocketSink.StreamId()).To(Equal("appId"))
+			Expect(websocketSink.AppID()).To(Equal("appId"))
 		})
 	})
 

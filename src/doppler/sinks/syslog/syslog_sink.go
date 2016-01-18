@@ -118,7 +118,7 @@ func (s *SyslogSink) Identifier() string {
 	return s.drainUrl
 }
 
-func (s *SyslogSink) StreamId() string {
+func (s *SyslogSink) AppID() string {
 	return s.appId
 }
 

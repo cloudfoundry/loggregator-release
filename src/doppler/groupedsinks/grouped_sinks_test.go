@@ -509,7 +509,7 @@ type fakeSink struct {
 	appId  string
 }
 
-func (f *fakeSink) StreamId() string {
+func (f *fakeSink) AppID() string {
 	return f.appId
 }
 

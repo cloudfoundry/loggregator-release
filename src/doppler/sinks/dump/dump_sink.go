@@ -77,7 +77,7 @@ func (d *DumpSink) Dump() []*events.Envelope {
 	return data
 }
 
-func (d *DumpSink) StreamId() string {
+func (d *DumpSink) AppID() string {
 	return d.appId
 }
 

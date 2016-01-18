@@ -458,7 +458,7 @@ type channelSink struct {
 	stop              chan struct{}
 }
 
-func (c *channelSink) StreamId() string { return c.appId }
+func (c *channelSink) AppID() string { return c.appId }
 func (c *channelSink) Run(msgChan <-chan *events.Envelope) {
 	if c.ready != nil {
 		<-c.ready

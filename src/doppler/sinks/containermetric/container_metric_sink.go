@@ -8,16 +8,16 @@ import (
 )
 
 type ContainerMetricSink struct {
-	applicationId      string
+	appID              string
 	ttl                time.Duration
 	metrics            map[int32]*events.Envelope
 	inactivityDuration time.Duration
 	lock               sync.RWMutex
 }
 
-func NewContainerMetricSink(applicationId string, ttl time.Duration, inactivityDuration time.Duration) *ContainerMetricSink {
+func NewContainerMetricSink(appID string, ttl time.Duration, inactivityDuration time.Duration) *ContainerMetricSink {
 	return &ContainerMetricSink{
-		applicationId:      applicationId,
+		appID:              appID,
 		ttl:                ttl,
 		inactivityDuration: inactivityDuration,
 		metrics:            make(map[int32]*events.Envelope),
@@ -70,12 +70,12 @@ func (sink *ContainerMetricSink) GetLatest() []*events.Envelope {
 	return envelopes
 }
 
-func (sink *ContainerMetricSink) StreamId() string {
-	return sink.applicationId
+func (sink *ContainerMetricSink) AppID() string {
+	return sink.appID
 }
 
 func (sink *ContainerMetricSink) Identifier() string {
-	return "container-metrics-" + sink.applicationId
+	return "container-metrics-" + sink.appID
 }
 
 func (sink *ContainerMetricSink) ShouldReceiveErrors() bool {

@@ -29,7 +29,7 @@ func (noopCounter) Increment() {}
 
 type WebsocketSink struct {
 	logger                 *gosteno.Logger
-	streamId               string
+	appID                  string
 	ws                     remoteMessageWriter
 	clientAddress          net.Addr
 	messageDrainBufferSize uint
@@ -38,10 +38,10 @@ type WebsocketSink struct {
 	counter                Counter
 }
 
-func NewWebsocketSink(streamId string, givenLogger *gosteno.Logger, ws remoteMessageWriter, messageDrainBufferSize uint, writeTimeout time.Duration, dropsondeOrigin string) *WebsocketSink {
+func NewWebsocketSink(appID string, givenLogger *gosteno.Logger, ws remoteMessageWriter, messageDrainBufferSize uint, writeTimeout time.Duration, dropsondeOrigin string) *WebsocketSink {
 	return &WebsocketSink{
 		logger:                 givenLogger,
-		streamId:               streamId,
+		appID:                  appID,
 		ws:                     ws,
 		clientAddress:          ws.RemoteAddr(),
 		messageDrainBufferSize: messageDrainBufferSize,
@@ -59,8 +59,8 @@ func (sink *WebsocketSink) Identifier() string {
 	return sink.ws.RemoteAddr().String()
 }
 
-func (sink *WebsocketSink) StreamId() string {
-	return sink.streamId
+func (sink *WebsocketSink) AppID() string {
+	return sink.appID
 }
 
 func (sink *WebsocketSink) ShouldReceiveErrors() bool {
@@ -69,7 +69,7 @@ func (sink *WebsocketSink) ShouldReceiveErrors() bool {
 
 func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
 	stopChan := make(chan struct{})
-	sink.logger.Debugf("Websocket Sink %s: Running for streamId [%s]", sink.clientAddress, sink.streamId)
+	sink.logger.Debugf("Websocket Sink %s: Running for streamId [%s]", sink.clientAddress, sink.appID)
 	context := truncatingbuffer.NewDefaultContext(sink.dropsondeOrigin, sink.Identifier())
 	buffer := sinks.RunTruncatingBuffer(inputChan, sink.messageDrainBufferSize, context, sink.logger, stopChan)
 	for {

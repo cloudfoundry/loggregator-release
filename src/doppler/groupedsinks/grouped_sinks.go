@@ -33,7 +33,7 @@ func (group *GroupedSinks) RegisterAppSink(in chan<- *events.Envelope, sink sink
 	group.Lock()
 	defer group.Unlock()
 
-	appId := sink.StreamId()
+	appId := sink.AppID()
 	if appId == "" || sink.Identifier() == "" {
 		return false
 	}
@@ -54,7 +54,7 @@ func (group *GroupedSinks) RegisterFirehoseSink(in chan<- *events.Envelope, sink
 	group.Lock()
 	defer group.Unlock()
 
-	subscriptionId := sink.StreamId()
+	subscriptionId := sink.AppID()
 	if subscriptionId == "" {
 		return false
 	}
@@ -71,7 +71,7 @@ func (group *GroupedSinks) RegisterFirehoseSink(in chan<- *events.Envelope, sink
 func (group *GroupedSinks) IsFirehoseRegistered(sink sinks.Sink) bool {
 	group.RLock()
 	defer group.RUnlock()
-	subscriptionId := sink.StreamId()
+	subscriptionId := sink.AppID()
 	if subscriptionId == "" {
 		return false
 	}
@@ -206,7 +206,7 @@ func (group *GroupedSinks) CloseAndDelete(sink sinks.Sink) bool {
 	group.Lock()
 	defer group.Unlock()
 
-	appId := sink.StreamId()
+	appId := sink.AppID()
 	wrapper, ok := group.apps[appId][sink.Identifier()]
 	if ok {
 		close(wrapper.InputChan)
@@ -219,7 +219,7 @@ func (group *GroupedSinks) CloseAndDelete(sink sinks.Sink) bool {
 func (group *GroupedSinks) CloseAndDeleteFirehose(sink sinks.Sink) bool {
 	group.Lock()
 	defer group.Unlock()
-	firehoseSubscriptionId := sink.StreamId()
+	firehoseSubscriptionId := sink.AppID()
 	fgroup, ok := group.firehoses[firehoseSubscriptionId]
 	if !ok {
 		return false
