@@ -42,7 +42,7 @@ func (nr *NetworkReader) Start() {
 	for {
 		readCount, senderAddr, err := nr.connection.ReadFrom(readBuffer)
 		if err != nil {
-			logging.Debugf(nr.logger, "Error while reading. %s", err)
+			nr.logger.Errorf("Error while reading. %s", err)
 			return
 		}
 		logging.Debugf(nr.logger, "NetworkReader: Read %d bytes from address %s", readCount, senderAddr)

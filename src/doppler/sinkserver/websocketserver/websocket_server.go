@@ -68,7 +68,7 @@ func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, writeTimeout 
 func (w *WebsocketServer) Start() {
 	s := &http.Server{Handler: w}
 	err := s.Serve(w.listener)
-	w.logger.Debugf("serve ended with %v", err.Error())
+	w.logger.Errorf("serve ended with %v", err.Error())
 	close(w.done)
 }
 
@@ -101,7 +101,7 @@ func (w *WebsocketServer) ServeHTTP(writer http.ResponseWriter, request *http.Re
 
 	ws, err := gorilla.Upgrade(writer, request, nil, 1024, 1024)
 	if err != nil {
-		w.logger.Debugf("WebsocketServer.ServeHTTP: Upgrade error (returning 400): %s", err.Error())
+		w.logger.Errorf("WebsocketServer.ServeHTTP: Upgrade error (returning 400): %s", err.Error())
 		http.Error(writer, err.Error(), 400)
 		return
 	}
@@ -230,7 +230,7 @@ func sendMessagesToWebsocket(envelopes []*events.Envelope, websocketConnection *
 
 		err = websocketConnection.WriteMessage(gorilla.BinaryMessage, envelopeBytes)
 		if err != nil {
-			logger.Debugf("Websocket Server %s: Error when trying to send data to sink %s. Requesting close. Err: %v", websocketConnection.RemoteAddr(), err)
+			logger.Errorf("Websocket Server %s: Error when trying to send data to sink %s. Err: %v", websocketConnection.RemoteAddr(), err)
 		} else {
 			logger.Debugf("Websocket Server %s: Successfully sent data", websocketConnection.RemoteAddr())
 		}

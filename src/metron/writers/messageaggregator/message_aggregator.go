@@ -51,7 +51,6 @@ func (m *MessageAggregator) Write(envelope *events.Envelope) {
 		m.outputWriter.Write(counterEventMessage)
 	default:
 		metrics.BatchIncrementCounter("MessageAggregator.uncategorizedEvents")
-		logging.Debugf(m.logger, "passing through message %v", envelope)
 		m.outputWriter.Write(envelope)
 	}
 }
@@ -59,7 +58,7 @@ func (m *MessageAggregator) Write(envelope *events.Envelope) {
 func (m *MessageAggregator) handleHTTPStart(envelope *events.Envelope) {
 	metrics.BatchIncrementCounter("MessageAggregator.httpStartReceived")
 
-	logging.Debugf(m.logger, "handling HTTP start message %v", envelope)
+	logging.Debugf(m.logger, "handling HTTP start message for appID: %v", envelope.GetHttpStart().GetApplicationId())
 	startEvent := envelope.GetHttpStart()
 
 	requestID := startEvent.RequestId.String()
@@ -70,7 +69,7 @@ func (m *MessageAggregator) handleHTTPStart(envelope *events.Envelope) {
 func (m *MessageAggregator) handleHTTPStop(envelope *events.Envelope) *events.Envelope {
 	metrics.BatchIncrementCounter("MessageAggregator.httpStopReceived")
 
-	logging.Debugf(m.logger, "handling HTTP stop message %v", envelope)
+	logging.Debugf(m.logger, "handling HTTP stop message for appID: %v", envelope.GetHttpStop().GetApplicationId())
 	stopEvent := envelope.GetHttpStop()
 
 	requestID := stopEvent.RequestId.String()

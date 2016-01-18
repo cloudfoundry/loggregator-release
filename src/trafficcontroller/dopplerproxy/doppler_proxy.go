@@ -43,7 +43,7 @@ func NewDopplerProxy(logAuthorize authorization.LogAccessAuthorizer, adminAuthor
 
 func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	requestStartTime := time.Now()
-	proxy.logger.Debugf("doppler proxy: ServeHTTP entered with request %v", request)
+	proxy.logger.Debugf("doppler proxy: ServeHTTP entered with request %v", request.URL)
 	defer proxy.logger.Debugf("doppler proxy: ServeHTTP exited")
 
 	translatedRequest, err := proxy.translate(request)

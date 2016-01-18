@@ -57,18 +57,16 @@ func (u *EventUnmarshaller) UnmarshallMessage(message []byte) (*events.Envelope,
 	envelope := &events.Envelope{}
 	err := proto.Unmarshal(message, envelope)
 	if err != nil {
-		logging.Debugf(u.logger, "eventUnmarshaller: unmarshal error %v for message %v", err, message)
+		u.logger.Errorf("eventUnmarshaller: unmarshal error %v", err)
 		metrics.BatchIncrementCounter("dropsondeUnmarshaller.unmarshalErrors")
 		return nil, err
 	}
 
 	if !valid(envelope) {
-		logging.Debugf(u.logger, "eventUnmarshaller: validation failed for message %v", message)
+		logging.Debugf(u.logger, "eventUnmarshaller: validation failed for message %v", envelope.GetEventType())
 		metrics.BatchIncrementCounter("dropsondeUnmarshaller.unmarshalErrors")
 		return nil, invalidEnvelope
 	}
-
-	logging.Debugf(u.logger, "eventUnmarshaller: received message %v", envelope)
 
 	if err := u.incrementReceiveCount(envelope.GetEventType()); err != nil {
 		u.logger.Debug(err.Error())

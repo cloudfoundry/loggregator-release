@@ -203,7 +203,6 @@ func (t *TLSListener) handleConnection(conn net.Conn) {
 		metrics.BatchIncrementCounter(t.receivedMessageCountMetricName)
 		metrics.BatchAddCounter(t.receivedByteCountMetricName, uint64(n+4))
 
-		t.logger.Debugf("Received envelope: %#v", envelope)
 		select {
 		case t.envelopeChan <- envelope:
 		case <-t.stopped:

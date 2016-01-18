@@ -58,7 +58,7 @@ func (udp *udpListener) Start() {
 	for {
 		readCount, senderAddr, err := connection.ReadFrom(readBuffer)
 		if err != nil {
-			udp.Debugf("Error while reading. %s", err)
+			udp.Debugf("Error while reading: %s", err)
 			return
 		}
 		udp.Debugf("AgentListener: Read %d bytes from address %s", readCount, senderAddr)
