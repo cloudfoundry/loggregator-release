@@ -142,7 +142,7 @@ func (agent *Agent) readInstancesJson() (map[string]domain.Task, error) {
 
 	currentTasks, err := domain.ReadTasks(json)
 	if err != nil {
-		agent.logger.Warnf("Failed parsing json %s: %v Trying again...\n", err, string(json))
+		agent.logger.Errorf("Failed parsing json %s \n", err)
 		return nil, err
 	}
 

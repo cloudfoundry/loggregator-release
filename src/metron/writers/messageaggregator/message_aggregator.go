@@ -77,7 +77,7 @@ func (m *MessageAggregator) handleHTTPStop(envelope *events.Envelope) *events.En
 
 	startEventEntry, ok := m.startEventsByEventID[event]
 	if !ok {
-		m.logger.Warnf("no matching HTTP start message found for %v", event)
+		m.logger.Warnf("no matching HTTP start message found for appID: %v", envelope.GetHttpStop().GetApplicationId())
 		metrics.BatchIncrementCounter("MessageAggregator.httpUnmatchedStopReceived")
 		return nil
 	}

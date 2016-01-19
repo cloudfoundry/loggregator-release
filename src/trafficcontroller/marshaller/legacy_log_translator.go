@@ -20,7 +20,7 @@ func TranslateDropsondeToLegacyLogMessage(message []byte) ([]byte, error) {
 
 	logMessage := receivedEnvelope.GetLogMessage()
 	if logMessage == nil {
-		return nil, fmt.Errorf("TranslateDropsondeToLegacyLogMessage: Envelope's LogMessage was nil: %v", receivedEnvelope)
+		return nil, fmt.Errorf("TranslateDropsondeToLegacyLogMessage: Envelope's LogMessage was nil with eventType: %v and origin: %v", receivedEnvelope.GetEventType(), receivedEnvelope.GetOrigin())
 	}
 
 	messageBytes, err := proto.Marshal(
