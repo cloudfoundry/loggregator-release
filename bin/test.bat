@@ -1,5 +1,5 @@
 @echo on
-
+go version
 SET PATH=%GOROOT%;%PATH%;%DEVENV_PATH%
 
 SET GOBIN=%CD%\bin
