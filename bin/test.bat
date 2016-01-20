@@ -1,7 +1,5 @@
 @echo on
 
-rmdir /S /Q output
-mkdir output
 SET PATH=%GOROOT%;%PATH%;%DEVENV_PATH%
 
 SET GOBIN=%CD%\bin
