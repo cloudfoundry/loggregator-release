@@ -1,7 +1,7 @@
 ---
 name: dea_logging_agent
 dependencies:
-- golang1.4
+- golang1.5
 files:
 - loggregator/src/deaagent/LICENSE
 - loggregator/src/deaagent/NOTICE

@@ -1,7 +1,7 @@
 ---
 name: syslog_drain_binder
 dependencies:
-- golang1.4
+- golang1.5
 files:
 - loggregator/src/syslog_drain_binder/LICENSE
 - loggregator/src/syslog_drain_binder/NOTICE
