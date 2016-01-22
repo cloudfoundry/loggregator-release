@@ -10,7 +10,7 @@ You need a CF deployment. From that deployment you need the following:
 You need a service being deployed by bosh. You will modify the deployment manifest to pull in the Loggregator bosh release, 
 and then deploy the Metron agent from that release in your service deployment. 
 
-#Steps
+#Steps to Deploy
 
 - Get the latest loggregator release from bosh.io
 - Make manifest changes in your deployment to include the loggregator release and get the metron_agent job from Loggregator
@@ -50,6 +50,8 @@ properties:
 +      - 10.244.0.42
 ```
 
+#Use
+
 - Modify your service app to create metrics or logging messages by using the dropsonde protocol. 
  - Golang: use the dropsonde library. See the examples [here](https://github.com/cloudfoundry/dropsonde). 
  - Ruby: use [loggregator_emitter](https://github.com/cloudfoundry/loggregator_emitter) to emit log messages. It 
@@ -63,3 +65,19 @@ properties:
   team via cf-loggregator@pivotal.io about this. If appropriate we would like to add language-specific dropsonde-protocol implementations
   to our CI tests.
 
+#Backward and Forward Compatibility
+
+Deploying Metron into a service, separate from a Cloud Foundry deploy, means that you will have a Metron of one version talking to a Doppler of another version. This means that changes in the dropsonde protocol as the Loggregator system evolves could result in different versions of the protocol being used by communicating Metrons and Dopplers. In order to allow developer and operators to understand the possible ramifications of a difference in protocol, here is the behavior "contract" between Doppler and Metron:
+
+## Situation 1: Metron uses an older version of dropsonde than Doppler and there are differences
+
+- Doppler implements a new field of functionality that Metron does not support
+ - Metron has a missed opportunity to use a newer feature, but nothing breaks.
+- Metron emits a field that Doppler no longer supports
+ - Doppler drops the field on the floor, and logs an error message
+ 
+##Situation 2: Metron uses a newer version of dropsonde than Doppler and there are differences
+
+- Metron emits a field that Doppler does not yet support
+ - Doppler drops the field on the floor, and logs an error message
+ 
