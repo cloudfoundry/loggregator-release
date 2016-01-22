@@ -74,10 +74,10 @@ Deploying Metron into a service, separate from a Cloud Foundry deploy, means tha
 - Doppler implements a new field of functionality that Metron does not support
  - Metron has a missed opportunity to use a newer feature, but nothing breaks.
 - Metron emits a field that Doppler no longer supports
- - Doppler drops the field on the floor, and logs an error message
+ - Doppler drops the dropsonde message, and logs an error message
  
 ##Situation 2: Metron uses a newer version of dropsonde than Doppler and there are differences
 
 - Metron emits a field that Doppler does not yet support
- - Doppler drops the field on the floor, and logs an error message
+ - Doppler drops the dropsonde message, and logs an error message
  
