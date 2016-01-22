@@ -1,161 +1,71 @@
 package dopplerforwarder
 
 import (
-	"encoding/binary"
-	"unicode"
-	"unicode/utf8"
-
-	"metron/clientpool"
-
-	"truncatingbuffer"
-
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
 )
 
-var metricNames map[events.Envelope_EventType]string
+//go:generate hel --type Retrier --output mock_retrier_test.go
 
-func init() {
-	metricNames = make(map[events.Envelope_EventType]string)
-	for eventType, eventName := range events.Envelope_EventType_name {
-		r, n := utf8.DecodeRuneInString(eventName)
-		modifiedName := string(unicode.ToLower(r)) + eventName[n:]
-		metricName := "dropsondeMarshaller." + modifiedName + "Marshalled"
-		metricNames[events.Envelope_EventType(eventType)] = metricName
-	}
+type Retrier interface {
+	Retry(message []byte) error
 }
 
-//go:generate counterfeiter -o fakes/fake_clientpool.go . ClientPool
+//go:generate hel --type NetworkWrapper --output mock_network_wrapper_test.go
+
+type NetworkWrapper interface {
+	Write(client Client, message []byte) error
+}
+
+//go:generate hel --type ClientPool --output mock_client_pool_test.go
+
 type ClientPool interface {
-	RandomClient() (clientpool.Client, error)
+	RandomClient() (client Client, err error)
 }
 
 type DopplerForwarder struct {
-	clientPool       ClientPool
-	sharedSecret     []byte
-	truncatingBuffer *truncatingbuffer.TruncatingBuffer
-	inputChan        chan<- *events.Envelope
-	logger           *gosteno.Logger
-	stopChan         chan struct{}
-	enableBuffer     bool
+	networkWrapper NetworkWrapper
+	clientPool     ClientPool
+	retrier        Retrier
+	logger         *gosteno.Logger
 }
 
-func New(clientPool ClientPool, sharedSecret []byte, bufferSize uint, enableBuffer bool, logger *gosteno.Logger) *DopplerForwarder {
-
-	inputChan := make(chan *events.Envelope)
-	stopChan := make(chan struct{})
-	// We set the sink identifier to be "Doppler" since the truncating buffer is between
-	// Metron and Doppler. So in case of lost messages the dropped message event
-	// will say "Lost messages ... to Doppler"
-	bufferContext := truncatingbuffer.NewSystemContext("MetronAgent", "Doppler")
-	truncatingBuffer := truncatingbuffer.NewTruncatingBuffer(inputChan, bufferSize, bufferContext, logger, stopChan)
-
+func New(wrapper NetworkWrapper, clientPool ClientPool, retrier Retrier, logger *gosteno.Logger) *DopplerForwarder {
 	return &DopplerForwarder{
-		clientPool:       clientPool,
-		sharedSecret:     sharedSecret,
-		truncatingBuffer: truncatingBuffer,
-		inputChan:        inputChan,
-		logger:           logger,
-		stopChan:         stopChan,
-		enableBuffer:     enableBuffer,
+		networkWrapper: wrapper,
+		clientPool:     clientPool,
+		retrier:        retrier,
+		logger:         logger,
 	}
 }
 
-func (d *DopplerForwarder) Run() {
-	if !d.enableBuffer {
+func (d *DopplerForwarder) retry(message []byte) {
+	if err := d.retrier.Retry(message); err != nil {
+		d.logger.Errord(map[string]interface{}{
+			"error": err.Error(),
+		}, "DopplerForwarder: failed to retry message")
 		return
 	}
-	go d.truncatingBuffer.Run()
-	for {
-		select {
-		case envelope, ok := <-d.truncatingBuffer.GetOutputChannel():
-			if ok && envelope != nil {
-				d.networkWrite(envelope)
-			}
-		case <-d.stopChan:
-			return
-		}
-
-	}
+	metrics.BatchIncrementCounter("dopplerForwarder.retryCount")
 }
 
-func (d *DopplerForwarder) Stop() {
-	close(d.stopChan)
-}
-
-func (d *DopplerForwarder) Write(message *events.Envelope) {
-	if d.enableBuffer {
-		d.inputChan <- message
-	} else {
-		d.networkWrite(message)
-	}
-
-}
-
-func (d *DopplerForwarder) networkWrite(message *events.Envelope) {
+func (d *DopplerForwarder) Write(message []byte) {
 	client, err := d.clientPool.RandomClient()
 	if err != nil {
 		d.logger.Errord(map[string]interface{}{
 			"error": err.Error(),
-		}, "DopplerForwarder: can't forward message")
+		}, "DopplerForwarder: failed to pick a client")
 		return
 	}
 
-	messageBytes, err := proto.Marshal(message)
+	err = d.networkWrapper.Write(client, message)
 	if err != nil {
-		d.logger.Errorf("DopplerForwarder: marshal error %v", err)
-		metrics.BatchIncrementCounter("dropsondeMarshaller.marshalErrors")
-		return
+		d.logger.Errord(map[string]interface{}{
+			"error": err.Error(),
+		}, "DopplerForwarder: failed to write message")
+
+		if d.retrier != nil {
+			d.retry(message)
+		}
 	}
-
-	switch client.Scheme() {
-	case "udp":
-		signedMessage := signature.SignMessage(messageBytes, d.sharedSecret)
-		bytesWritten, err := client.Write(signedMessage)
-		if err != nil {
-			metrics.BatchIncrementCounter("udp.sendErrorCount")
-			d.logger.Debugd(map[string]interface{}{
-				"scheme":  client.Scheme(),
-				"address": client.Address(),
-			}, "Error writing legacy message")
-			return
-		}
-		metrics.BatchIncrementCounter("udp.sentMessageCount")
-		metrics.BatchAddCounter("udp.sentByteCount", uint64(bytesWritten))
-	case "tls":
-		var bytesWritten int
-		err = binary.Write(client, binary.LittleEndian, uint32(len(messageBytes)))
-		if err == nil {
-			bytesWritten, err = client.Write(messageBytes)
-		}
-
-		if err != nil {
-			metrics.BatchIncrementCounter("tls.retryCount")
-			d.inputChan <- message
-			client.Close()
-
-			d.logger.Errord(map[string]interface{}{
-				"scheme":  client.Scheme(),
-				"address": client.Address(),
-				"error":   err.Error(),
-			}, "DopplerForwarder: streaming error")
-			return
-		}
-		metrics.BatchIncrementCounter("tls.sentMessageCount")
-		metrics.BatchAddCounter("tls.sentByteCount", uint64(bytesWritten+4))
-	default:
-		d.logger.Errorf("DopplerForwarder: unknown protocol, %s for %s", client.Scheme(), client.Address())
-		return
-	}
-
-	d.incrementMessageCount(message.GetEventType())
-	metrics.BatchIncrementCounter("DopplerForwarder.sentMessages")
-}
-
-func (d *DopplerForwarder) incrementMessageCount(eventType events.Envelope_EventType) {
-	metricName := metricNames[eventType]
-	metrics.BatchIncrementCounter(metricName)
 }

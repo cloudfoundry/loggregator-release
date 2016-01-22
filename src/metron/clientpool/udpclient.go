@@ -62,6 +62,12 @@ func (c *udpClient) Write(data []byte) (int, error) {
 	writeCount, err := c.conn.WriteTo(data, c.addr)
 	if err != nil {
 		c.logger.Errorf("Writing to loggregator %s failed %s", c.Address(), err)
+
+		// Log message pulled in from legacy dopplerforwarder code.
+		c.logger.Debugd(map[string]interface{}{
+			"scheme":  c.Scheme(),
+			"address": c.Address(),
+		}, "UDPClient: Error writing legacy message")
 		return writeCount, err
 	}
 	logging.Debugf(c.logger, "Wrote %d bytes to %s", writeCount, c.Address())

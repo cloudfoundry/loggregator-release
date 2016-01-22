@@ -58,6 +58,14 @@ func (c *tlsClient) Close() error {
 	return err
 }
 
+func (c *tlsClient) logError(err error) {
+	c.logger.Errord(map[string]interface{}{
+		"scheme":  c.Scheme(),
+		"address": c.Address(),
+		"error":   err.Error(),
+	}, "TLSClient: streaming error")
+}
+
 func (c *tlsClient) Write(data []byte) (int, error) {
 	if len(data) == 0 {
 		return 0, nil
@@ -67,13 +75,18 @@ func (c *tlsClient) Write(data []byte) (int, error) {
 	if c.conn == nil {
 		if err := c.connect(); err != nil {
 			c.lock.Unlock()
+			c.logError(err)
 			return 0, err
 		}
 	}
 	conn := c.conn
 	c.lock.Unlock()
 
-	return conn.Write(data)
+	written, err := conn.Write(data)
+	if err != nil {
+		c.logError(err)
+	}
+	return written, err
 }
 
 func (c *tlsClient) connect() error {
