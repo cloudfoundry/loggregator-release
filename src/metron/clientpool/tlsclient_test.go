@@ -19,7 +19,8 @@ var _ = Describe("TLS Client", func() {
 		tlsListener net.Listener
 		connChan    chan net.Conn
 
-		client clientpool.Client
+		client          *clientpool.TLSClient
+		tlsClientConfig *tls.Config
 	)
 
 	BeforeEach(func() {
@@ -28,36 +29,16 @@ var _ = Describe("TLS Client", func() {
 		var err error
 		tlsServerConfig, err := listeners.NewTLSConfig("fixtures/server.crt", "fixtures/server.key", "fixtures/loggregator-ca.crt")
 		Expect(err).NotTo(HaveOccurred())
+
 		tlsListener, err = tls.Listen("tcp", "127.0.0.1:0", tlsServerConfig)
 		Expect(err).NotTo(HaveOccurred())
 
-		connChan = make(chan net.Conn, 1)
-
-		tlsListener := tlsListener
-		connChan := connChan
-		go func() {
-			defer GinkgoRecover()
-			for {
-				conn, err := tlsListener.Accept()
-				if err != nil {
-					return
-				}
-
-				err = conn.(*tls.Conn).Handshake()
-				if err == nil {
-					connChan <- conn
-				}
-			}
-		}()
-	})
-
-	JustBeforeEach(func() {
-		tlsClientConfig, err := listeners.NewTLSConfig("fixtures/client.crt", "fixtures/client.key", "fixtures/loggregator-ca.crt")
+		tlsClientConfig, err = listeners.NewTLSConfig("fixtures/client.crt", "fixtures/client.key", "fixtures/loggregator-ca.crt")
 		Expect(err).NotTo(HaveOccurred())
 		tlsClientConfig.ServerName = "doppler"
 
-		client, err = clientpool.NewTLSClient(logger, tlsListener.Addr().String(), tlsClientConfig)
-		Expect(err).NotTo(HaveOccurred())
+		client = clientpool.NewTLSClient(logger, tlsListener.Addr().String(), tlsClientConfig)
+		Expect(client).ToNot(BeNil())
 	})
 
 	AfterEach(func() {
@@ -67,19 +48,28 @@ var _ = Describe("TLS Client", func() {
 		}
 	})
 
-	Describe("NewTLSClient", func() {
-		It("attempts to connect", func() {
-			Expect(client).NotTo(BeNil())
-			Eventually(connChan).Should(Receive())
+	Describe("Connect", func() {
+		var connErr error
+
+		JustBeforeEach(func() {
+			connChan = acceptConnections(tlsListener)
+			connErr = client.Connect()
 		})
 
-		Context("when the connect fails", func() {
+		Context("with a valid TLSListener", func() {
+			It("returns a connection without error", func() {
+				Expect(connErr).NotTo(HaveOccurred())
+				Eventually(connChan).Should(Receive())
+			})
+		})
+
+		Context("without a TLSListener", func() {
 			BeforeEach(func() {
-				tlsListener.Close()
+				Expect(tlsListener.Close()).ToNot(HaveOccurred())
 			})
 
-			It("returns a client", func() {
-				Expect(client).NotTo(BeNil())
+			It("returns an error", func() {
+				Expect(connErr).To(HaveOccurred())
 				Consistently(connChan).ShouldNot(Receive())
 			})
 		})
@@ -97,12 +87,13 @@ var _ = Describe("TLS Client", func() {
 		})
 	})
 
-	Describe("Writing data", func() {
+	Describe("Write", func() {
 		var conn net.Conn
 
-		JustBeforeEach(func() {
-			Eventually(connChan).Should(Receive(&conn))
-			Expect(conn).NotTo(BeNil())
+		BeforeEach(func() {
+			connChan = acceptConnections(tlsListener)
+			Expect(client.Connect()).ToNot(HaveOccurred())
+			conn = <-connChan
 		})
 
 		It("sends data", func() {
@@ -114,14 +105,19 @@ var _ = Describe("TLS Client", func() {
 			Expect(bytes[:n]).To(Equal([]byte("abc")))
 		})
 
-		Context("when there is no data", func() {
+		Context("when write is called with an empty byte slice", func() {
+			var writeErr error
+
+			JustBeforeEach(func() {
+				_, writeErr = client.Write([]byte{})
+			})
+
 			It("does not send", func() {
-				_, err := client.Write([]byte(""))
-				Expect(err).NotTo(HaveOccurred())
+				Expect(writeErr).NotTo(HaveOccurred())
 
 				bytes := make([]byte, 10)
 				conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
-				_, err = conn.Read(bytes)
+				_, err := conn.Read(bytes)
 				Expect(err).To(HaveOccurred())
 				opErr := err.(*net.OpError)
 				Expect(opErr.Timeout()).To(BeTrue())
@@ -129,8 +125,12 @@ var _ = Describe("TLS Client", func() {
 		})
 
 		Context("when the connection is closed", func() {
+
+			BeforeEach(func() {
+				Expect(client.Close()).ToNot(HaveOccurred())
+			})
+
 			It("reconnects and sends", func() {
-				client.Close()
 				_, err := client.Write([]byte("abc"))
 				Expect(err).NotTo(HaveOccurred())
 
@@ -156,3 +156,21 @@ var _ = Describe("TLS Client", func() {
 		})
 	})
 })
+
+func acceptConnections(listener net.Listener) chan net.Conn {
+	connChan := make(chan net.Conn, 1)
+	go func() {
+		defer GinkgoRecover()
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			err = conn.(*tls.Conn).Handshake()
+			if err == nil {
+				connChan <- conn
+			}
+		}
+	}()
+	return connChan
+}

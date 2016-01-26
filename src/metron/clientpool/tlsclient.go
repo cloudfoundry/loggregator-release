@@ -11,7 +11,15 @@ import (
 
 const timeout = 1 * time.Second
 
-type tlsClient struct {
+type tlsHandshakeTimeoutError struct{}
+
+func (tlsHandshakeTimeoutError) Timeout() bool { return true }
+
+func (tlsHandshakeTimeoutError) Temporary() bool { return true }
+
+func (tlsHandshakeTimeoutError) Error() string { return "TLS handshake timeout" }
+
+type TLSClient struct {
 	address   string
 	tlsConfig *tls.Config
 	logger    *gosteno.Logger
@@ -20,32 +28,36 @@ type tlsClient struct {
 	conn net.Conn
 }
 
-type tlsHandshakeTimeoutError struct{}
-
-func (tlsHandshakeTimeoutError) Timeout() bool   { return true }
-func (tlsHandshakeTimeoutError) Temporary() bool { return true }
-func (tlsHandshakeTimeoutError) Error() string   { return "TLS handshake timeout" }
-
-func NewTLSClient(logger *gosteno.Logger, address string, tlsConfig *tls.Config) (Client, error) {
-	c := &tlsClient{
+func NewTLSClient(logger *gosteno.Logger, address string, tlsConfig *tls.Config) *TLSClient {
+	return &TLSClient{
 		address:   address,
 		tlsConfig: tlsConfig,
 		logger:    logger,
 	}
-
-	_ = c.connect()
-	return c, nil
 }
 
-func (c *tlsClient) Scheme() string {
+func (c *TLSClient) Connect() error {
+	conn, err := tls.DialWithDialer(&net.Dialer{Timeout: timeout}, "tcp", c.address, c.tlsConfig)
+	if err != nil {
+		c.logger.Warnd(map[string]interface{}{
+			"error":   err,
+			"address": c.address,
+		}, "Failed to connect over TLS")
+		return err
+	}
+	c.conn = conn
+	return nil
+}
+
+func (c *TLSClient) Scheme() string {
 	return "tls"
 }
 
-func (c *tlsClient) Address() string {
+func (c *TLSClient) Address() string {
 	return c.address
 }
 
-func (c *tlsClient) Close() error {
+func (c *TLSClient) Close() error {
 	var err error
 	c.lock.Lock()
 
@@ -58,7 +70,7 @@ func (c *tlsClient) Close() error {
 	return err
 }
 
-func (c *tlsClient) logError(err error) {
+func (c *TLSClient) logError(err error) {
 	c.logger.Errord(map[string]interface{}{
 		"scheme":  c.Scheme(),
 		"address": c.Address(),
@@ -66,14 +78,14 @@ func (c *tlsClient) logError(err error) {
 	}, "TLSClient: streaming error")
 }
 
-func (c *tlsClient) Write(data []byte) (int, error) {
+func (c *TLSClient) Write(data []byte) (int, error) {
 	if len(data) == 0 {
 		return 0, nil
 	}
 
 	c.lock.Lock()
 	if c.conn == nil {
-		if err := c.connect(); err != nil {
+		if err := c.Connect(); err != nil {
 			c.lock.Unlock()
 			c.logError(err)
 			return 0, err
@@ -87,17 +99,4 @@ func (c *tlsClient) Write(data []byte) (int, error) {
 		c.logError(err)
 	}
 	return written, err
-}
-
-func (c *tlsClient) connect() error {
-	conn, err := tls.DialWithDialer(&net.Dialer{Timeout: timeout}, "tcp", c.address, c.tlsConfig)
-	if err != nil {
-		c.logger.Warnd(map[string]interface{}{
-			"error":   err,
-			"address": c.address,
-		}, "Failed to connect over TLS")
-	} else {
-		c.conn = conn
-	}
-	return err
 }
