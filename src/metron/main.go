@@ -1,13 +1,11 @@
 package main
 
 import (
-	"crypto/tls"
 	"doppler/dopplerservice"
 	"doppler/listeners"
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"metron/clientpool"
@@ -31,6 +29,7 @@ import (
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 
 	"metron/config"
+	"metron/writers/picker"
 	"profiler"
 	"signalmanager"
 )
@@ -67,14 +66,13 @@ func main() {
 	profiler.Profile()
 	defer profiler.Stop()
 
-	dopplerClientPool, err := initializeDopplerPool(config, log)
+	picker, err := initializeDopplerPool(config, log)
 	if err != nil {
-		log.Errorf("Failed to initialize the doppler pool: %s", err.Error())
-		os.Exit(-1)
+		log.Errorf("Could not initialize doppler connection pool: %s", err)
+		exitCode = -1
+		return
 	}
-
-	dopplerForwarder := dopplerforwarder.New(dopplerClientPool, []byte(config.SharedSecret), uint(config.BufferSize), config.EnableBuffer, log)
-	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, dopplerForwarder)
+	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, picker)
 	aggregator := messageaggregator.New(messageTagger, log)
 
 	statsStopChan := make(chan struct{})
@@ -90,7 +88,6 @@ func main() {
 	}
 
 	log.Info("metron started")
-	go dopplerForwarder.Run()
 	go dropsondeReader.Start()
 
 	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
@@ -102,15 +99,14 @@ func main() {
 			signalmanager.DumpGoRoutine()
 		case <-killChan:
 			log.Info("Shutting down")
-			dopplerForwarder.Stop()
 			close(statsStopChan)
 			return
 		}
 	}
 }
 
-func initializeDopplerPool(config *config.Config, logger *gosteno.Logger) (*clientpool.DopplerPool, error) {
-	adapter, err := storeAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
+func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*picker.Picker, error) {
+	adapter, err := storeAdapterProvider(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
 	if err != nil {
 		return nil, err
 	}
@@ -121,40 +117,48 @@ func initializeDopplerPool(config *config.Config, logger *gosteno.Logger) (*clie
 		}, "Failed to connect to etcd")
 	}
 
-	preferInZone := func(relativePath string) bool {
-		return strings.HasPrefix(relativePath, "/"+config.Zone+"/")
-	}
+	udpCreator := clientpool.NewUDPClientCreator(logger)
+	udpWrapper := dopplerforwarder.NewUDPWrapper([]byte(conf.SharedSecret))
+	udpPool := clientpool.NewDopplerPool(logger, udpCreator)
+	udpForwarder := dopplerforwarder.New(udpWrapper, udpPool, nil, logger)
+	defaultWriter := udpForwarder
+	writers := []picker.WeightedByteWriter{udpForwarder}
 
-	var tlsConfig *tls.Config
-	if config.PreferredProtocol == "tls" {
-		c := config.TLSConfig
-		tlsConfig, err = listeners.NewTLSConfig(c.CertFile, c.KeyFile, c.CAFile)
+	var tlsPool *clientpool.DopplerPool
+	if conf.PreferredProtocol == "tls" {
+		c := conf.TLSConfig
+		tlsConfig, err := listeners.NewTLSConfig(c.CertFile, c.KeyFile, c.CAFile)
 		if err != nil {
 			return nil, err
 		}
 		tlsConfig.ServerName = "doppler"
+		tlsCreator := clientpool.NewTLSClientCreator(logger, tlsConfig)
+		tlsWrapper := dopplerforwarder.NewTLSWrapper()
+		tlsPool = clientpool.NewDopplerPool(logger, tlsCreator)
+		tlsForwarder := dopplerforwarder.New(tlsWrapper, tlsPool, nil, logger)
+		defaultWriter = tlsForwarder
+		writers = append(writers, tlsForwarder)
 	}
 
-	clientPool := clientpool.NewDopplerPool(logger, clientpool.NewDefaultClientFactory(logger, tlsConfig, string(config.PreferredProtocol)))
-
-	onUpdate := func(all map[string]string, preferred map[string]string) {
-		clientPool.Set(all, preferred)
-	}
-
-	dopplers, err := dopplerservice.NewFinder(adapter, string(config.PreferredProtocol), preferInZone, onUpdate, logger)
+	picker, err := picker.New(logger, defaultWriter, writers...)
 	if err != nil {
+		return nil, fmt.Errorf("Failed to initialize the doppler picker: %s", err)
+	}
+
+	finder := dopplerservice.NewFinder(adapter, conf.LoggregatorDropsondePort, string(conf.PreferredProtocol), conf.Zone, logger)
+	if err := finder.Start(); err != nil {
 		return nil, err
 	}
-	dopplers.Start()
-
-	onLegacyUpdate := func(all map[string]string, preferred map[string]string) {
-		clientPool.SetLegacy(all, preferred)
-	}
-
-	legacyDopplers := dopplerservice.NewLegacyFinder(adapter, config.LoggregatorDropsondePort, preferInZone, onLegacyUpdate, logger)
-	legacyDopplers.Start()
-
-	return clientPool, nil
+	go func() {
+		for {
+			event := finder.Next()
+			udpPool.SetAddresses(event.UDPDopplers)
+			if tlsPool != nil {
+				tlsPool.SetAddresses(event.TLSDopplers)
+			}
+		}
+	}()
+	return picker, nil
 }
 
 func initializeMetrics(messageTagger *tagger.Tagger, config *config.Config, stopChan chan struct{}, logger *gosteno.Logger) {

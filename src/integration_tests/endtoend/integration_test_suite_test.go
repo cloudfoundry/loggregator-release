@@ -87,6 +87,13 @@ var _ = JustBeforeEach(func() {
 		_, err := etcdAdapter.Get(key)
 		return err == nil
 	}, 1).Should(BeTrue())
+
+	key = fmt.Sprintf("%s/z1/doppler_z1/0", dopplerservice.META_ROOT)
+	Eventually(func() bool {
+		_, err := etcdAdapter.Get(key)
+		return err == nil
+	}, 1).Should(BeTrue())
+
 })
 
 func buildComponent(componentName string) (pathToComponent string) {

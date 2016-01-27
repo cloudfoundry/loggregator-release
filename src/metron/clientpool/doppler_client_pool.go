@@ -49,6 +49,7 @@ func NewDopplerPool(logger *gosteno.Logger, clientCreator ClientCreator) *Dopple
 }
 
 func (pool *DopplerPool) SetAddresses(addresses []string) {
+	// todo: add write lock
 	pool.clients = make([]Client, 0, len(addresses))
 	for _, address := range addresses {
 		client, err := pool.clientCreator.CreateClient(address)
@@ -78,4 +79,10 @@ func (pool *DopplerPool) RandomClient() (dopplerforwarder.Client, error) {
 	}
 
 	return list[rand.Intn(len(list))], nil
+}
+
+func (pool *DopplerPool) Size() int {
+	pool.RLock()
+	defer pool.RUnlock()
+	return len(pool.clients)
 }

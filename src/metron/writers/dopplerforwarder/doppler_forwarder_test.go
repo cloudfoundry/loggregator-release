@@ -115,7 +115,7 @@ var _ = Describe("DopplerForwarder", func() {
 
 				Eventually(mockRetrier.RetryCalled).Should(Receive())
 				Eventually(loggertesthelper.TestLoggerSink.LogContents).Should(ContainSubstring("failed to retry message"))
-				Consistently(func() uint64 { return sender.GetCounter("dopplerForwarder.retryCount") }).Should(BeZero())
+				Consistently(func() uint64 { return sender.GetCounter("DopplerForwarder.retryCount") }).Should(BeZero())
 			})
 
 			It("increments retryCount", func() {
@@ -123,8 +123,26 @@ var _ = Describe("DopplerForwarder", func() {
 				fakeWrapper.WriteOutput.ret0 <- errors.New("boom")
 				forwarder.Write(message)
 
-				Eventually(func() uint64 { return sender.GetCounter("dopplerForwarder.retryCount") }).Should(BeEquivalentTo(1))
+				Eventually(func() uint64 { return sender.GetCounter("DopplerForwarder.retryCount") }).Should(BeEquivalentTo(1))
 			})
 		})
+		
+		Context("metrics", func() {
+			It("emits the sentMessages metric", func() {
+				forwarder.Write(message)
+				Eventually(fakeWrapper.WriteInput.message).Should(Receive(Equal(message)))
+				Eventually(func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }).Should(BeEquivalentTo(1))
+			})
+		})
+	})
+
+	Describe("Weight", func(){
+		BeforeEach(func() {
+			clientPool = newMockClientPool()
+			clientPool.SizeOutput.ret0 <- 10
+		})
+	    It("returns the size of the client pool", func() {
+			Expect(forwarder.Weight()).To(Equal(10))
+	    })
 	})
 })

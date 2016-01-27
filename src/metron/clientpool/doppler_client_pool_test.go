@@ -116,4 +116,34 @@ var _ = Describe("DopplerPool", func() {
 			})
 		})
 	})
+
+	Describe("Size", func() {
+		BeforeEach(func() {
+			close(mockClientCreator.CreateClientOutput.err)
+			mockClientCreator.CreateClientOutput.client <- newMockClient()
+			mockClientCreator.CreateClientOutput.client <- newMockClient()
+		})
+
+		Context("with non-empty client pool", func() {
+
+			JustBeforeEach(func() {
+				pool.SetAddresses(addresses)
+			})
+
+			It("if non-empty returns the correct size", func() {
+				Expect(pool.Size()).To(Equal(len(addresses)))
+			})
+
+		})
+
+		Context("with empty client pool", func(){
+			JustBeforeEach(func() {
+				pool.SetAddresses([]string{})
+			})
+
+			It("if empty returns zero", func() {
+				Expect(pool.Size()).To(Equal(0))
+			})
+		})
+	})
 })

@@ -64,22 +64,14 @@ func ParseConfig(configFile string) (*Config, error) {
 }
 
 func Parse(reader io.Reader) (*Config, error) {
-	config := &Config{}
+	config := &Config{
+		MetricBatchIntervalMilliseconds: 5000,
+		RuntimeStatsIntervalMilliseconds: 15000,
+		PreferredProtocol: "udp",
+	}
 	err := json.NewDecoder(reader).Decode(config)
 	if err != nil {
 		return nil, err
-	}
-
-	if config.MetricBatchIntervalMilliseconds == 0 {
-		config.MetricBatchIntervalMilliseconds = 5000
-	}
-
-	if config.RuntimeStatsIntervalMilliseconds == 0 {
-		config.RuntimeStatsIntervalMilliseconds = 15000
-	}
-
-	if config.PreferredProtocol == "" {
-		config.PreferredProtocol = "udp"
 	}
 
 	if config.BufferSize < 3 {

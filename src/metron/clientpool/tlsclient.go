@@ -58,16 +58,20 @@ func (c *TLSClient) Address() string {
 }
 
 func (c *TLSClient) Close() error {
-	var err error
 	c.lock.Lock()
-
-	if c.conn != nil {
-		err = c.conn.Close()
-		c.conn = nil
+	defer c.lock.Unlock()
+	if c.conn == nil {
+		return nil
 	}
-	c.lock.Unlock()
 
-	return err
+	conn := c.conn
+	c.conn = nil
+	if err := conn.Close(); err != nil {
+		c.logger.Warnf("Error closing TLS connection: %v", err)
+		return err
+	}
+
+	return nil
 }
 
 func (c *TLSClient) logError(err error) {

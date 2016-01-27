@@ -52,7 +52,9 @@ func NewStoreAdapter(urls []string, concurrentRequests int) storeadapter.StoreAd
 	if err != nil {
 		panic(err)
 	}
-	etcdStoreAdapter.Connect()
+	if err = etcdStoreAdapter.Connect(); err != nil {
+		panic(err)
+	}
 	return etcdStoreAdapter
 }
 

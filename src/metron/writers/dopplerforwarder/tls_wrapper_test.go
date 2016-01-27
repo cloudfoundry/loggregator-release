@@ -1,6 +1,7 @@
 package dopplerforwarder_test
 
 import (
+	"errors"
 	"metron/writers/dopplerforwarder"
 	"time"
 
@@ -10,8 +11,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-
-	"errors"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -85,6 +84,7 @@ var _ = Describe("TLSWrapper", func() {
 		BeforeEach(func() {
 			client.WriteOutput.err <- errors.New("failure")
 			client.WriteOutput.sentLength <- 0
+			client.CloseOutput.ret0 <- nil
 		})
 
 		It("returns an error and *only* increments sendErrorCount", func() {

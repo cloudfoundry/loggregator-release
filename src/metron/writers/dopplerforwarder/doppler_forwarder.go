@@ -21,6 +21,7 @@ type NetworkWrapper interface {
 
 type ClientPool interface {
 	RandomClient() (client Client, err error)
+	Size() int
 }
 
 type DopplerForwarder struct {
@@ -46,7 +47,7 @@ func (d *DopplerForwarder) retry(message []byte) {
 		}, "DopplerForwarder: failed to retry message")
 		return
 	}
-	metrics.BatchIncrementCounter("dopplerForwarder.retryCount")
+	metrics.BatchIncrementCounter("DopplerForwarder.retryCount")
 }
 
 func (d *DopplerForwarder) Write(message []byte) {
@@ -57,7 +58,6 @@ func (d *DopplerForwarder) Write(message []byte) {
 		}, "DopplerForwarder: failed to pick a client")
 		return
 	}
-
 	err = d.networkWrapper.Write(client, message)
 	if err != nil {
 		d.logger.Errord(map[string]interface{}{
@@ -67,5 +67,11 @@ func (d *DopplerForwarder) Write(message []byte) {
 		if d.retrier != nil {
 			d.retry(message)
 		}
+	} else {
+		metrics.BatchIncrementCounter("DopplerForwarder.sentMessages")
 	}
+}
+
+func (d *DopplerForwarder) Weight() int {
+	return d.clientPool.Size()
 }
