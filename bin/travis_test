@@ -63,6 +63,8 @@ do
         echo -e "\n Vetting $package"
         go vet $dir/...
         result=$((result + $?))
+        echo -e "\n Checking that $package compiles"
+        go install $dir
     fi
 done
 
