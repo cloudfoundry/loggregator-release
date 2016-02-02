@@ -4,18 +4,19 @@ import (
 	"doppler/sinks/syslog"
 	"errors"
 	"fmt"
+	"net"
+	"net/url"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
+	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
-
-	"net"
-	"sync/atomic"
-
 	"github.com/gogo/protobuf/proto"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -26,10 +27,12 @@ var _ = Describe("SyslogSink", func() {
 		sysLogger             *SyslogWriterRecorder
 		syslogSinkRunFinished chan bool
 		errorChannel          chan *events.Envelope
-		errorHandler          func(string, string, string)
+		errorHandler          func(string, string)
 		inputChan             chan *events.Envelope
 		bufferSize            uint
 		dialer                *net.Dialer
+		logger                *gosteno.Logger
+		drainURL              string
 	)
 
 	BeforeEach(func() {
@@ -38,8 +41,10 @@ var _ = Describe("SyslogSink", func() {
 		errorChannel = make(chan *events.Envelope, 10)
 		inputChan = make(chan *events.Envelope)
 		dialer = &net.Dialer{}
+		logger = loggertesthelper.Logger()
+		drainURL = "syslog://using-fake"
 
-		errorHandler = func(errorMsg string, appId string, drainUrl string) {
+		errorHandler = func(errorMsg, appId string) {
 			logMessage := factories.NewLogMessage(events.LogMessage_ERR, errorMsg, appId, "LGR")
 			envelope, _ := emitter.Wrap(logMessage, "dropsonde-origin")
 
@@ -53,7 +58,88 @@ var _ = Describe("SyslogSink", func() {
 	})
 
 	JustBeforeEach(func() {
-		syslogSink = syslog.NewSyslogSink("appId", "syslog://using-fake", loggertesthelper.Logger(), bufferSize, sysLogger, errorHandler, "dropsonde-origin")
+		drainURL, err := url.Parse(drainURL)
+		Expect(err).ToNot(HaveOccurred())
+		syslogSink = syslog.NewSyslogSink("appId", drainURL, logger, bufferSize, sysLogger, errorHandler, "dropsonde-origin")
+	})
+
+	Describe("Identifier", func() {
+		Context("with an empty drain URL", func() {
+			BeforeEach(func() {
+				drainURL = ""
+			})
+
+			It("returns an empty string", func() {
+				Expect(syslogSink.Identifier()).To(BeEmpty())
+			})
+		})
+	})
+
+	Context("hides sensitive info", func() {
+
+		Context("https", func() {
+			BeforeEach(func() {
+				drainURL = "https://testuser:testpass@syslog-host/some/location?user=testuser&password=testpass"
+			})
+
+			It("displays only the drain URL host and path", func() {
+				Expect(loggertesthelper.TestLoggerSink.LogContents()).ToNot(ContainSubstring("testpass"))
+				Expect(loggertesthelper.TestLoggerSink.LogContents()).To(ContainSubstring("Syslog Sink https://syslog-host/some/location: Created for appId [appId]"))
+			})
+
+			It("returns an identifier without a user or password", func() {
+				identifier := syslogSink.Identifier()
+				Expect(identifier).NotTo(ContainSubstring("testuser"))
+				Expect(identifier).NotTo(ContainSubstring("testpass"))
+			})
+		})
+
+		Context("syslog", func() {
+			BeforeEach(func() {
+				drainURL = "syslog://syslog-host?user=testuser&password=testpass"
+			})
+
+			It("displays only the drain URL host and path", func() {
+				Expect(loggertesthelper.TestLoggerSink.LogContents()).ToNot(ContainSubstring("testpass"))
+				Expect(loggertesthelper.TestLoggerSink.LogContents()).To(ContainSubstring("Syslog Sink syslog://syslog-host: Created for appId [appId]"))
+			})
+
+			It("returns an identifier without a user or password", func() {
+				identifier := syslogSink.Identifier()
+				Expect(identifier).NotTo(ContainSubstring("testuser"))
+				Expect(identifier).NotTo(ContainSubstring("testpass"))
+			})
+		})
+
+		Context("when running a syslog sink", func() {
+			BeforeEach(func() {
+				drainURL = "https://testuser:testpass@syslog-host/some/location?user=testuser&password=testpass"
+			})
+
+			JustBeforeEach(func() {
+				go func() {
+					syslogSink.Run(inputChan)
+					close(syslogSinkRunFinished)
+				}()
+			})
+
+			AfterEach(func() {
+				syslogSink.Disconnect()
+				Eventually(syslogSinkRunFinished).Should(BeClosed())
+			})
+
+			It("displays only the drainURL host and path", func() {
+				logMessage := factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App")
+				logMessage.SourceInstance = proto.String("123")
+
+				envelope, _ := emitter.Wrap(logMessage, "origin")
+				inputChan <- envelope
+
+				Expect(loggertesthelper.TestLoggerSink.LogContents()).ToNot(ContainSubstring("testpass"))
+				Expect(loggertesthelper.TestLoggerSink.LogContents()).To(ContainSubstring("Syslog Sink https://syslog-host/some/location"))
+			})
+
+		})
 	})
 
 	Context("when remote syslog server is down", func() {
@@ -249,7 +335,7 @@ var _ = Describe("SyslogSink", func() {
 		BeforeEach(func() {
 			errors = 0
 			timestamps = []time.Time{}
-			errorHandler = func(errorMsg string, appId string, drainUrl string) {
+			errorHandler = func(errorMsg, appId string) {
 				timestamps = append(timestamps, time.Now())
 				atomic.AddInt64(&errors, 1)
 			}

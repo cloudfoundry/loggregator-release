@@ -292,10 +292,9 @@ var _ = Describe("SinkManager", func() {
 			var syslogSink sinks.Sink
 
 			BeforeEach(func() {
-				url, err := url.Parse("syslog://localhost:9998")
-				Expect(err).To(BeNil())
+				url := &url.URL{Scheme: "syslog", Host: "localhost:9998"}
 				writer, _ := syslogwriter.NewSyslogWriter(url, "appId", &net.Dialer{Timeout: 500 * time.Millisecond}, 0)
-				syslogSink = syslog.NewSyslogSink("appId", "localhost:9999", loggertesthelper.Logger(), 100, writer, func(string, string, string) {}, "dropsonde-origin")
+				syslogSink = syslog.NewSyslogSink("appId", url, loggertesthelper.Logger(), 100, writer, func(string, string) {}, "dropsonde-origin")
 
 				sinkManager.RegisterSink(syslogSink)
 			})
@@ -438,7 +437,7 @@ var _ = Describe("SinkManager", func() {
 				done:       make(chan struct{}),
 			}
 			sinkManager.RegisterSink(sink)
-			sinkManager.SendSyslogErrorToLoggregator("error msg", "myApp", "drainUrl")
+			sinkManager.SendSyslogErrorToLoggregator("error msg", "myApp")
 
 			Eventually(sink.Received).Should(HaveLen(1))
 

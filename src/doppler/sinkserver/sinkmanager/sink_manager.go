@@ -166,13 +166,11 @@ func (sinkManager *SinkManager) LatestContainerMetrics(appId string) []*events.E
 	}
 }
 
-func (sinkManager *SinkManager) SendSyslogErrorToLoggregator(errorMsg string, appId string, sinkUrl string) {
-	sinkManager.logger.Warnf("%s", errorMsg)
+func (sinkManager *SinkManager) SendSyslogErrorToLoggregator(errorMsg string, appId string) {
+	sinkManager.logger.Warn(errorMsg)
 
 	logMessage := factories.NewLogMessage(events.LogMessage_ERR, errorMsg, appId, "LGR")
-
 	envelope, err := emitter.Wrap(logMessage, sinkManager.dropsondeOrigin)
-
 	if err != nil {
 		sinkManager.logger.Warnf("Error marshalling message: %v", err)
 		return
@@ -223,22 +221,23 @@ func (sinkManager *SinkManager) listenForErrorMessages() {
 	}
 }
 
-func (sinkManager *SinkManager) registerNewSyslogSink(appId string, syslogSinkUrl string) {
-	parsedSyslogDrainUrl, err := sinkManager.urlBlacklistManager.CheckUrl(syslogSinkUrl)
+func (sinkManager *SinkManager) registerNewSyslogSink(appId string, syslogSinkURL string) {
+	parsedSyslogDrainURL, err := sinkManager.urlBlacklistManager.CheckUrl(syslogSinkURL)
 	if err != nil {
-		sinkManager.SendSyslogErrorToLoggregator(invalidSyslogUrlErrorMsg(appId, syslogSinkUrl, err), appId, syslogSinkUrl)
+		sinkManager.SendSyslogErrorToLoggregator(invalidSyslogURLErrorMsg(appId, syslogSinkURL, err), appId)
 		return
 	}
 
-	syslogWriter, err := syslogwriter.NewWriter(parsedSyslogDrainUrl, appId, sinkManager.skipCertVerify, sinkManager.dialTimeout, sinkManager.sinkIOTimeout)
+	syslogWriter, err := syslogwriter.NewWriter(parsedSyslogDrainURL, appId, sinkManager.skipCertVerify, sinkManager.dialTimeout, sinkManager.sinkIOTimeout)
 	if err != nil {
-		sinkManager.SendSyslogErrorToLoggregator(invalidSyslogUrlErrorMsg(appId, syslogSinkUrl, err), appId, syslogSinkUrl)
+		logURL := fmt.Sprintf("%s://%s%s", parsedSyslogDrainURL.Scheme, parsedSyslogDrainURL.Host, parsedSyslogDrainURL.Path)
+		sinkManager.SendSyslogErrorToLoggregator(invalidSyslogURLErrorMsg(appId, logURL, err), appId)
 		return
 	}
 
 	syslogSink := syslog.NewSyslogSink(
 		appId,
-		syslogSinkUrl,
+		parsedSyslogDrainURL,
 		sinkManager.logger,
 		sinkManager.messageDrainBufferSize,
 		syslogWriter,
@@ -250,8 +249,8 @@ func (sinkManager *SinkManager) registerNewSyslogSink(appId string, syslogSinkUr
 
 }
 
-func invalidSyslogUrlErrorMsg(appId string, syslogSinkUrl string, err error) string {
-	return fmt.Sprintf("SinkManager: Invalid syslog drain URL (%s) for application %s. Err: %v", syslogSinkUrl, appId, err)
+func invalidSyslogURLErrorMsg(appId string, syslogSinkURL string, err error) string {
+	return fmt.Sprintf("SinkManager: Invalid syslog drain URL (%s) for application %s. Err: %v", syslogSinkURL, appId, err)
 }
 
 func (sinkManager *SinkManager) ensureRecentLogsSinkFor(appId string) {
