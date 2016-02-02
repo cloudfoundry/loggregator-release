@@ -18,10 +18,10 @@
   "WebsocketWriteTimeoutSeconds": <%= p("doppler.websocket_write_timeout_seconds") %>,
   "SinkIOTimeoutSeconds": <%= p("doppler.sink_io_timeout_seconds") %>,
   "UnmarshallerCount": <%= p("doppler.unmarshaller_count") %>,
-  "EnableTLSTransport": <%= p("doppler.enable_tls_transport") %>,
-  <% if_p("doppler.enable_tls_transport") do |_| %>
+  "EnableTLSTransport": <%= p("doppler.tls.enable") %>,
+  <% if_p("doppler.tls.enable") do |_| %>
   "TLSListenerConfig": {
-      "Port": <%= p("doppler.tls_server.port") %>,
+      "Port": <%= p("doppler.tls.port") %>,
       "KeyFile": "/var/vcap/jobs/doppler/config/certs/doppler.key",
       "CertFile": "/var/vcap/jobs/doppler/config/certs/doppler.crt",
       "CAFile": "/var/vcap/jobs/doppler/config/certs/loggregator_ca.crt"

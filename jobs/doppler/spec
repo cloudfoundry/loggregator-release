@@ -54,22 +54,22 @@ properties:
   doppler.message_drain_buffer_size:
     description: "Size of the internal buffer used by doppler to store messages. If the buffer gets full doppler will drop the messages."
     default: 100
-  doppler.enable_tls_transport:
+  doppler.tls.enable:
     description: "Enable TLS listener on doppler so that it can receive dropsonde envelopes over TLS transport. If enabled, Cert and Key files must be specified."
     default: false
-  doppler.tls_server.port:
+  doppler.tls.port:
     description: "Port for incoming messages in the dropsonde format over tls listener"
     default: 3458
-  doppler.tls_server.cert:
+  doppler.tls.server_cert:
     description: "TLS server certificate"
     default: ""
-  doppler.tls_server.key:
+  doppler.tls.server_key:
     description: "TLS server key"
     default: ""
   doppler.syslog_skip_cert_verify:
     description: "When connecting over TLS, don't verify certificates for syslog sink"
     default: true
-  loggregator.tls.ca:
+  loggregator.tls.ca_cert:
     description: "CA root required for key/cert verification"
     default: ""
   loggregator.etcd.machines:

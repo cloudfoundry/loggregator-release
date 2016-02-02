@@ -40,13 +40,13 @@ properties:
   metron_agent.preferred_protocol:
     description: "Preferred protocol to droppler (udp|tls)"
     default: "udp"
-  metron_agent.tls_client.cert:
+  metron_agent.tls.client_cert:
     description: "TLS client certificate"
     default: ""
-  metron_agent.tls_client.key:
+  metron_agent.tls.client_key:
     description: "TLS client key"
     default: ""
-  loggregator.tls.ca:
+  loggregator.tls.ca_cert:
     description: "CA root required for key/cert verification"
     default: ""
 
