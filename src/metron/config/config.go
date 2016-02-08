@@ -1,10 +1,26 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 )
+
+type Protocol string
+
+func (p *Protocol) UnmarshalJSON(value []byte) error {
+	value = bytes.Trim(value, `"`)
+	valueStr := string(value)
+	switch valueStr {
+	case "udp", "tls":
+		*p = Protocol(value)
+	default:
+		return fmt.Errorf("Invalid protocol: %s", valueStr)
+	}
+	return nil
+}
 
 type TLSConfig struct {
 	CertFile string
@@ -31,7 +47,7 @@ type Config struct {
 	MetricBatchIntervalMilliseconds  uint
 	RuntimeStatsIntervalMilliseconds uint
 
-	PreferredProtocol string
+	PreferredProtocol Protocol
 	TLSConfig         TLSConfig
 	BufferSize        int
 	EnableBuffer      bool

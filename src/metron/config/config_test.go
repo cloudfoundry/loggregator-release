@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"bytes"
 	"metron/config"
 	"strings"
 
@@ -50,7 +51,7 @@ var _ = Describe("Config", func() {
 			Expect(cfg.RuntimeStatsIntervalMilliseconds).To(BeEquivalentTo(15))
 			Expect(cfg.Syslog).To(Equal("syslog.namespace"))
 
-			Expect(cfg.PreferredProtocol).To(Equal("udp"))
+			Expect(cfg.PreferredProtocol).To(BeEquivalentTo("udp"))
 			Expect(cfg.BufferSize).To(Equal(100))
 
 			Expect(cfg.TLSConfig).To(Equal(config.TLSConfig{
@@ -72,6 +73,16 @@ var _ = Describe("Config", func() {
 				PreferredProtocol:                "udp",
 				BufferSize:                       100,
 			}))
+		})
+
+		Context("returns error", func() {
+			It("for invalid preferred protocol", func() {
+				_, err := config.Parse(bytes.NewBufferString(`
+				{"PreferredProtocol": "NOT A REAL PROTOCOL"}
+				`))
+
+				Expect(err).To(HaveOccurred())
+			})
 		})
 	})
 })

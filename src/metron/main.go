@@ -135,13 +135,13 @@ func initializeDopplerPool(config *config.Config, logger *gosteno.Logger) (*clie
 		tlsConfig.ServerName = "doppler"
 	}
 
-	clientPool := clientpool.NewDopplerPool(logger, clientpool.NewDefaultClientFactory(logger, tlsConfig, config.PreferredProtocol))
+	clientPool := clientpool.NewDopplerPool(logger, clientpool.NewDefaultClientFactory(logger, tlsConfig, string(config.PreferredProtocol)))
 
 	onUpdate := func(all map[string]string, preferred map[string]string) {
 		clientPool.Set(all, preferred)
 	}
 
-	dopplers, err := dopplerservice.NewFinder(adapter, config.PreferredProtocol, preferInZone, onUpdate, logger)
+	dopplers, err := dopplerservice.NewFinder(adapter, string(config.PreferredProtocol), preferInZone, onUpdate, logger)
 	if err != nil {
 		return nil, err
 	}
