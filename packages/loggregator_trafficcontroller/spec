@@ -32,7 +32,9 @@ files:
 - loggregator/src/github.com/cloudfoundry/storeadapter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/etcdstoreadapter/*.go # gosub
 - loggregator/src/github.com/coreos/go-etcd/etcd/*.go # gosub
+- loggregator/src/github.com/gogo/protobuf/gogoproto/*.go # gosub
 - loggregator/src/github.com/gogo/protobuf/proto/*.go # gosub
+- loggregator/src/github.com/gogo/protobuf/protoc-gen-gogo/descriptor/*.go # gosub
 - loggregator/src/github.com/gorilla/websocket/*.go # gosub
 - loggregator/src/github.com/nu7hatch/gouuid/*.go # gosub
 - loggregator/src/github.com/pivotal-golang/localip/*.go # gosub
