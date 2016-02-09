@@ -3,13 +3,19 @@ package dopplerservice
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/storeadapter"
-	"net/url"
 )
+
+var supportedProtocols = []string{
+	"udp",
+	"tls",
+}
 
 //go:generate hel --type StoreAdapter --output mock_store_adapter_test.go
 
@@ -33,8 +39,8 @@ type Finder struct {
 	legacyEndpoints      map[string]string
 	legacyLock           sync.RWMutex
 
-	events               chan Event
-	logger               *gosteno.Logger
+	events chan Event
+	logger *gosteno.Logger
 }
 
 func NewFinder(adapter StoreAdapter, legacyPort int, preferredProtocol string, preferredDopplerZone string, logger *gosteno.Logger) *Finder {
@@ -63,21 +69,18 @@ func (f *Finder) WebsocketServers() []string {
 	return wsServers
 }
 
-func (f *Finder) Start() error {
+func (f *Finder) Start() {
 	events, stop, errs := f.adapter.Watch(META_ROOT)
-	if err := f.read(META_ROOT, f.parseMetaValue); err != nil {
-		return err
-	}
-	go f.run(events, errs, stop, f.parseMetaValue)
+	f.read(META_ROOT, f.parseMetaValue)
+
+	go f.run(META_ROOT, events, errs, stop, f.parseMetaValue)
 
 	events, stop, errs = f.adapter.Watch(LEGACY_ROOT)
-	if err := f.read(LEGACY_ROOT, f.parseLegacyValue); err != nil {
-		return err
-	}
-	go f.run(events, errs, stop, f.parseLegacyValue)
+	f.read(LEGACY_ROOT, f.parseLegacyValue)
+
+	go f.run(LEGACY_ROOT, events, errs, stop, f.parseLegacyValue)
 
 	f.sendEvent()
-	return nil
 }
 
 func (f *Finder) handleEvent(event *storeadapter.WatchEvent, parser func([]byte) (interface{}, error)) {
@@ -93,14 +96,17 @@ func (f *Finder) handleEvent(event *storeadapter.WatchEvent, parser func([]byte)
 	f.sendEvent()
 }
 
-func (f *Finder) run(events <-chan storeadapter.WatchEvent, errs <-chan error, stop chan<- bool, parser func([]byte) (interface{}, error)) {
+func (f *Finder) run(etcdRoot string, events <-chan storeadapter.WatchEvent, errs <-chan error, stop chan<- bool, parser func([]byte) (interface{}, error)) {
 	for {
 		select {
 		case event := <-events:
 			f.handleEvent(&event, parser)
 		case err := <-errs:
 			f.logger.Errord(map[string]interface{}{
-				"error": err.Error()}, "Finder: Watch failed")
+				"error": err.Error()}, "Finder: Watch sent an error")
+			time.Sleep(time.Second)
+			events, stop, errs = f.adapter.Watch(etcdRoot)
+			f.read(etcdRoot, parser)
 		}
 	}
 }
@@ -193,35 +199,45 @@ func (f *Finder) eventWithPrefix(dopplerPrefix string) Event {
 	return event
 }
 
-func (f *Finder) chooseAddrs() map[string]string {
+func (f *Finder) chooseMetaAddrs() map[string]string {
 	chosen := make(map[string]string)
-
-	//TODO: Explicitly set default UDP address as opposed to the last one
-	// TODO: Break up into separate functions
-	func() {
-		f.metaLock.RLock()
-		defer f.metaLock.RUnlock()
-		for doppler, addrs := range f.metaEndpoints {
-			var addr string
-			for _, addr = range addrs {
-				if strings.HasPrefix(addr, f.preferredProtocol) {
-					break
-				}
-			}
-			chosen[doppler] = addr
-		}
-	}()
-
-	func() {
-		f.legacyLock.RLock()
-		defer f.legacyLock.RUnlock()
-		for doppler, addr := range f.legacyEndpoints {
-			if _, ok := chosen[doppler]; ok && f.preferredProtocol != "udp" {
+	f.metaLock.RLock()
+	defer f.metaLock.RUnlock()
+	for doppler, addrs := range f.metaEndpoints {
+		var chosenAddr string
+		for _, addr := range addrs {
+			if !supported(addr) {
 				continue
 			}
-			chosen[doppler] = addr
+			chosenAddr = addr
+			if strings.HasPrefix(chosenAddr, f.preferredProtocol) {
+				break
+			}
 		}
-	}()
+		if chosenAddr != "" {
+			chosen[doppler] = chosenAddr
+		}
+	}
+	return chosen
+}
+
+func (f *Finder) addLegacyAddrs(addrs map[string]string) {
+	f.legacyLock.RLock()
+	defer f.legacyLock.RUnlock()
+	for doppler, addr := range f.legacyEndpoints {
+		chosenAddr, ok := addrs[doppler]
+		if ok {
+			if f.preferredProtocol != "udp" || strings.HasPrefix(chosenAddr, "udp") {
+				continue
+			}
+		}
+		addrs[doppler] = addr
+	}
+}
+
+func (f *Finder) chooseAddrs() map[string]string {
+	chosen := f.chooseMetaAddrs()
+	f.addLegacyAddrs(chosen)
 	return chosen
 }
 
@@ -258,4 +274,13 @@ func findLeafs(root storeadapter.StoreNode) []storeadapter.StoreNode {
 		leaves = append(leaves, findLeafs(node)...)
 	}
 	return leaves
+}
+
+func supported(addr string) bool {
+	for _, protocol := range supportedProtocols {
+		if strings.HasPrefix(addr, protocol) {
+			return true
+		}
+	}
+	return false
 }

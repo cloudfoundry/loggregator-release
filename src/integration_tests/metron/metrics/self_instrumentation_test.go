@@ -392,22 +392,6 @@ var _ = Describe("Self Instrumentation", func() {
 			eventNeverOccurs(bytes, matchCounter, message)
 		})
 	})
-
-	Describe("for Dropsonde marshaller", func() {
-		It("counts marshalled Dropsonde messages by type", func() {
-			expected := events.Envelope{
-				Origin:    proto.String("MetronAgent"),
-				EventType: events.Envelope_CounterEvent.Enum(),
-				CounterEvent: &events.CounterEvent{
-					Name:  proto.String("dropsondeMarshaller.valueMetricMarshalled"),
-					Delta: proto.Uint64(1),
-					Total: proto.Uint64(1),
-				},
-			}
-
-			waitForEvent(basicValueMessage(), matchCounter, &expected)
-		})
-	})
 })
 
 func matchCounter(expected, actual *events.Envelope) bool {

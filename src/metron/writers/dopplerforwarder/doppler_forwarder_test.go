@@ -30,6 +30,9 @@ var _ = Describe("DopplerForwarder", func() {
 	)
 
 	BeforeEach(func() {
+		mockRetrier = nil
+		retrier = nil
+
 		message = []byte("I am a message!")
 
 		sender = fake.NewFakeMetricSender()
@@ -44,7 +47,6 @@ var _ = Describe("DopplerForwarder", func() {
 		loggertesthelper.TestLoggerSink.Clear()
 
 		fakeWrapper = newMockNetworkWrapper()
-		close(fakeWrapper.WriteOutput.ret0)
 	})
 
 	JustBeforeEach(func() {
@@ -56,6 +58,7 @@ var _ = Describe("DopplerForwarder", func() {
 
 	Context("client selection", func() {
 		It("selects a random client", func() {
+			close(fakeWrapper.WriteOutput.ret0)
 			forwarder.Write(message)
 			Eventually(fakeWrapper.WriteInput.client).Should(Receive(Equal(client)))
 			Eventually(fakeWrapper.WriteInput.message).Should(Receive(Equal(message)))
@@ -63,6 +66,7 @@ var _ = Describe("DopplerForwarder", func() {
 
 		Context("when selecting a client errors", func() {
 			It("logs an error and returns", func() {
+				close(fakeWrapper.WriteOutput.ret0)
 				clientPool.RandomClientOutput.err = make(chan error, 1)
 				clientPool.RandomClientOutput.err <- errors.New("boom")
 				forwarder.Write(message)
@@ -74,7 +78,6 @@ var _ = Describe("DopplerForwarder", func() {
 
 		Context("when networkWrapper write fails", func() {
 			It("logs an error and returns", func() {
-				fakeWrapper.WriteOutput.ret0 = make(chan error, 1)
 				fakeWrapper.WriteOutput.ret0 <- errors.New("boom")
 				forwarder.Write(message)
 
@@ -84,6 +87,7 @@ var _ = Describe("DopplerForwarder", func() {
 
 		Context("with a retrier", func() {
 			BeforeEach(func() {
+				close(fakeWrapper.WriteOutput.ret0)
 				mockRetrier = newMockRetrier()
 				close(mockRetrier.RetryOutput.ret0)
 			})
@@ -126,9 +130,10 @@ var _ = Describe("DopplerForwarder", func() {
 				Eventually(func() uint64 { return sender.GetCounter("DopplerForwarder.retryCount") }).Should(BeEquivalentTo(1))
 			})
 		})
-		
+
 		Context("metrics", func() {
 			It("emits the sentMessages metric", func() {
+				close(fakeWrapper.WriteOutput.ret0)
 				forwarder.Write(message)
 				Eventually(fakeWrapper.WriteInput.message).Should(Receive(Equal(message)))
 				Eventually(func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }).Should(BeEquivalentTo(1))
@@ -136,13 +141,14 @@ var _ = Describe("DopplerForwarder", func() {
 		})
 	})
 
-	Describe("Weight", func(){
+	Describe("Weight", func() {
 		BeforeEach(func() {
+			close(fakeWrapper.WriteOutput.ret0)
 			clientPool = newMockClientPool()
 			clientPool.SizeOutput.ret0 <- 10
 		})
-	    It("returns the size of the client pool", func() {
+		It("returns the size of the client pool", func() {
 			Expect(forwarder.Weight()).To(Equal(10))
-	    })
+		})
 	})
 })

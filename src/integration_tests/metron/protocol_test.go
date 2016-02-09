@@ -12,7 +12,6 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gbytes"
 )
 
 var _ = Describe("Protocol", func() {
@@ -69,7 +68,7 @@ var _ = Describe("Protocol", func() {
 			fakeDoppler.Close()
 		})
 
-		itReceives := func(additional ...func()) {
+		itReceives := func() {
 			It("forwards hmac signed messages to a healthy doppler server", func() {
 				originalMessage := basicValueMessage()
 				expectedMessage := sign(originalMessage)
@@ -91,10 +90,6 @@ var _ = Describe("Protocol", func() {
 					}
 					return false
 				}).Should(BeTrue())
-
-				for _, f := range additional {
-					f()
-				}
 			}, 2)
 		}
 
@@ -139,9 +134,7 @@ var _ = Describe("Protocol", func() {
 					stopAnnounce = dopplerservice.AnnounceLegacy("127.0.0.1", time.Minute, dopplerConfig, etcdAdapter, logger)
 				})
 
-				itReceives(func() {
-					Expect(metronRunner.Runner.Buffer()).To(Say("Doppler advertising UDP only"))
-				})
+				itReceives()
 			})
 
 			Context("Doppler over UDP", func() {
@@ -149,9 +142,7 @@ var _ = Describe("Protocol", func() {
 					stopAnnounce = dopplerservice.Announce("127.0.0.1", time.Minute, dopplerConfig, etcdAdapter, logger)
 				})
 
-				itReceives(func() {
-					Expect(metronRunner.Runner.Buffer()).To(Say("Doppler advertising UDP only"))
-				})
+				itReceives()
 			})
 		})
 	})

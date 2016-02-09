@@ -2,25 +2,25 @@ package dopplerservice_test
 
 import (
 	"doppler/dopplerservice"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path"
 
-	"encoding/json"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/storeadapter"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Finder", func() {
 
 	var (
 		testLogger           *gosteno.Logger
-		preferredProtocol string
+		preferredProtocol    string
 		mockStoreAdapter     *mockStoreAdapter
-		port int
+		port                 int
 		preferredDopplerZone string
 
 		finder *dopplerservice.Finder
@@ -28,6 +28,7 @@ var _ = Describe("Finder", func() {
 
 	BeforeEach(func() {
 		preferredDopplerZone = ""
+		preferredProtocol = "tls"
 		mockStoreAdapter = newMockStoreAdapter()
 		port = 1234
 		testLogger = gosteno.NewLogger("TestLogger")
@@ -41,8 +42,8 @@ var _ = Describe("Finder", func() {
 	Describe("WebsocketServers", func() {
 		var (
 			metaNode, legacyNode storeadapter.StoreNode
-			metaServers map[string][]string
-			legacyServers map[string]string
+			metaServers          map[string][]string
+			legacyServers        map[string]string
 			expectedServers      []string
 		)
 
@@ -77,7 +78,7 @@ var _ = Describe("Finder", func() {
 			metaNode, legacyNode = etcdNodes(metaServers, legacyServers)
 			mockStoreAdapter.ListRecursivelyOutput.ret0 <- metaNode
 			mockStoreAdapter.ListRecursivelyOutput.ret0 <- legacyNode
-			Expect(finder.Start()).ToNot(HaveOccurred())
+			finder.Start()
 		})
 
 		Context("valid server urls", func() {
@@ -108,80 +109,29 @@ var _ = Describe("Finder", func() {
 
 	Describe("Start", func() {
 
-		var startErr error
-
 		JustBeforeEach(func() {
 			close(mockStoreAdapter.WatchOutput.errors)
 			close(mockStoreAdapter.WatchOutput.events)
 			close(mockStoreAdapter.WatchOutput.stop)
+			close(mockStoreAdapter.ListRecursivelyOutput.ret0)
+			close(mockStoreAdapter.ListRecursivelyOutput.ret1)
 
-			startErr = finder.Start()
+			finder.Start()
 		})
 
-		Context("ListRecursively(META_ROOT) returns an error", func() {
-			var listErr error
-
-			BeforeEach(func() {
-				listErr = errors.New("Failed to list")
-				mockStoreAdapter.ListRecursivelyOutput.ret0 <- storeadapter.StoreNode{}
-				mockStoreAdapter.ListRecursivelyOutput.ret1 <- listErr
-			})
-
-			It("watches META_ROOT first", func() {
-				Eventually(mockStoreAdapter.WatchInput.key).Should(Receive(Equal(dopplerservice.META_ROOT)))
-				Consistently(mockStoreAdapter.WatchCalled).Should(HaveLen(1))
-				Expect(startErr).To(HaveOccurred())
-			})
-
-			It("returns the error", func() {
-				Expect(startErr).To(Equal(listErr))
-				Expect(mockStoreAdapter.ListRecursivelyInput.key).To(Receive(Equal(dopplerservice.META_ROOT)))
-				Consistently(mockStoreAdapter.ListRecursivelyCalled).Should(HaveLen(1))
-			})
-		})
-
-		Context("ListRecursively(LEGACY_ROOT) returns an error", func() {
-			var listErr error
-
-			BeforeEach(func() {
-				// Return a success for the META_ROOT
-				mockStoreAdapter.ListRecursivelyOutput.ret0 <- storeadapter.StoreNode{}
-				mockStoreAdapter.ListRecursivelyOutput.ret1 <- nil
-
-				listErr = errors.New("Failed to list")
-				mockStoreAdapter.ListRecursivelyOutput.ret0 <- storeadapter.StoreNode{}
-				mockStoreAdapter.ListRecursivelyOutput.ret1 <- listErr
-			})
-
-			It("watches both roots first", func() {
-				Eventually(mockStoreAdapter.WatchInput.key).Should(Receive(Equal(dopplerservice.META_ROOT)))
-				Eventually(mockStoreAdapter.WatchInput.key).Should(Receive(Equal(dopplerservice.LEGACY_ROOT)))
-				Expect(startErr).To(HaveOccurred())
-			})
-
-			It("returns the error", func() {
-				Expect(startErr).To(Equal(listErr))
-				Expect(mockStoreAdapter.ListRecursivelyInput.key).To(Receive(Equal(dopplerservice.META_ROOT)))
-				Expect(mockStoreAdapter.ListRecursivelyInput.key).To(Receive(Equal(dopplerservice.LEGACY_ROOT)))
-			})
-		})
-
-		Context("ListRecursively succeeds for both roots", func() {
-			BeforeEach(func() {
-				close(mockStoreAdapter.ListRecursivelyOutput.ret0)
-				close(mockStoreAdapter.ListRecursivelyOutput.ret1)
-			})
-
-			It("watches the doppler endpoints", func() {
-				Expect(startErr).ToNot(HaveOccurred())
-			})
+		It("watches and lists both roots", func() {
+			Eventually(mockStoreAdapter.ListRecursivelyInput.key).Should(Receive(Equal(dopplerservice.META_ROOT)))
+			Eventually(mockStoreAdapter.WatchInput.key).Should(Receive(Equal(dopplerservice.META_ROOT)))
+			Eventually(mockStoreAdapter.ListRecursivelyInput.key).Should(Receive(Equal(dopplerservice.LEGACY_ROOT)))
+			Eventually(mockStoreAdapter.WatchInput.key).Should(Receive(Equal(dopplerservice.LEGACY_ROOT)))
+			Consistently(mockStoreAdapter.WatchCalled).Should(HaveLen(2))
 		})
 	})
 
 	Describe("Next (initialization)", func() {
 
 		var (
-			metaNode storeadapter.StoreNode
+			metaNode   storeadapter.StoreNode
 			legacyNode storeadapter.StoreNode
 		)
 
@@ -196,7 +146,7 @@ var _ = Describe("Finder", func() {
 		JustBeforeEach(func() {
 			mockStoreAdapter.ListRecursivelyOutput.ret0 <- metaNode
 			mockStoreAdapter.ListRecursivelyOutput.ret0 <- legacyNode
-			Expect(finder.Start()).ToNot(HaveOccurred())
+			finder.Start()
 		})
 
 		Context("invalid protocol", func() {
@@ -354,7 +304,7 @@ var _ = Describe("Finder", func() {
 	Describe("Next (async)", func() {
 
 		var (
-			metaNode storeadapter.StoreNode
+			metaNode   storeadapter.StoreNode
 			legacyNode storeadapter.StoreNode
 
 			metaErrs   chan error
@@ -392,10 +342,28 @@ var _ = Describe("Finder", func() {
 		JustBeforeEach(func() {
 			mockStoreAdapter.ListRecursivelyOutput.ret0 <- metaNode
 			mockStoreAdapter.ListRecursivelyOutput.ret0 <- legacyNode
-			Expect(finder.Start()).ToNot(HaveOccurred())
+			finder.Start()
 
 			// ignore the initial data
 			_ = finder.Next()
+		})
+
+		It("reconnects when the meta watch errors receives an error", func() {
+			// reset the watch input because we don't care about any previous watch calls
+			mockStoreAdapter.WatchInput.key = make(chan string, 100)
+
+			metaErrs <- errors.New("disconnected")
+			Eventually(mockStoreAdapter.WatchInput.key, 2).Should(Receive(Equal(dopplerservice.META_ROOT)))
+			Eventually(mockStoreAdapter.ListRecursivelyInput.key).Should(Receive(Equal(dopplerservice.META_ROOT)))
+		})
+
+		It("reconnects when the legacy watch errors receives an error", func() {
+			// reset the watch input because we don't care about any previous watch calls
+			mockStoreAdapter.WatchInput.key = make(chan string, 100)
+
+			legacyErrs <- errors.New("disconnected")
+			Eventually(mockStoreAdapter.WatchInput.key, 2).Should(Receive(Equal(dopplerservice.LEGACY_ROOT)))
+			Eventually(mockStoreAdapter.ListRecursivelyInput.key).Should(Receive(Equal(dopplerservice.META_ROOT)))
 		})
 
 		Context("meta endpoints", func() {
@@ -601,15 +569,15 @@ var _ = Describe("Finder", func() {
 		})
 	})
 
-	Context("TLS Preferred Protocol on Metron", func(){
+	Context("TLS Preferred Protocol on Metron", func() {
 
 		var (
 			metaNode, legacyNode storeadapter.StoreNode
-			metaServers map[string][]string
-			legacyServers map[string]string
+			metaServers          map[string][]string
+			legacyServers        map[string]string
 		)
 
-		BeforeEach(func(){
+		BeforeEach(func() {
 			port = 9999
 			preferredProtocol = "tls"
 
@@ -623,12 +591,12 @@ var _ = Describe("Finder", func() {
 			metaNode, legacyNode = etcdNodes(metaServers, legacyServers)
 			mockStoreAdapter.ListRecursivelyOutput.ret0 <- metaNode
 			mockStoreAdapter.ListRecursivelyOutput.ret0 <- legacyNode
-			Expect(finder.Start()).ToNot(HaveOccurred())
+			finder.Start()
 		})
 
-		Context("Dopplers advertise on legacy root only", func(){
+		Context("Dopplers advertise on legacy root only", func() {
 
-			BeforeEach(func(){
+			BeforeEach(func() {
 				metaServers = map[string][]string{}
 				legacyServers = map[string]string{
 					"z1/doppler_z1/2": "11.21.31.41",
@@ -646,7 +614,7 @@ var _ = Describe("Finder", func() {
 
 		Context("Dopplers advertise UDP on meta and legacy root", func() {
 
-			BeforeEach(func(){
+			BeforeEach(func() {
 				metaServers = map[string][]string{
 					"z1/doppler_z1/0": []string{"udp://9.8.7.6:3457"},
 				}
@@ -656,7 +624,7 @@ var _ = Describe("Finder", func() {
 				}
 			})
 
-			It("return udp dopplers from meta endpoint", func() {
+			It("returns udp dopplers from meta endpoint", func() {
 				event := finder.Next()
 				Expect(event.UDPDopplers).To(HaveLen(2))
 				Expect(event.UDPDopplers).To(ContainElement("9.8.7.6:3457"))
@@ -664,9 +632,9 @@ var _ = Describe("Finder", func() {
 			})
 		})
 
-		Context("Dopplers advertises TLS/UDP on meta and legacy root", func() {
+		Context("Dopplers advertise TLS/UDP on meta and legacy root", func() {
 
-			BeforeEach(func(){
+			BeforeEach(func() {
 				metaServers = map[string][]string{
 					"z1/doppler_z1/0": []string{"udp://9.8.7.6:3457", "tls://9.8.7.6:3458"},
 				}
@@ -676,7 +644,7 @@ var _ = Describe("Finder", func() {
 				}
 			})
 
-			It("return udp dopplers from meta endpoint", func() {
+			It("returns udp dopplers from meta endpoint", func() {
 				event := finder.Next()
 				Expect(event.UDPDopplers).To(HaveLen(1))
 				Expect(event.UDPDopplers).To(ContainElement("21.22.23.24:9999"))
@@ -684,19 +652,78 @@ var _ = Describe("Finder", func() {
 				Expect(event.TLSDopplers).To(ContainElement("9.8.7.6:3458"))
 			})
 		})
+
+		Context("Dopplers advertise UDP and an unsupported protocol", func() {
+			BeforeEach(func() {
+				metaServers = map[string][]string{
+					"z1/doppler_z1/0": []string{"https://1.2.3.4/foo", "udp://1.2.3.4:5678", "wss://1.2.3.4/bar"},
+				}
+				legacyServers = map[string]string{}
+			})
+
+			It("returns the supported address for that doppler", func() {
+				event := finder.Next()
+				Expect(event.UDPDopplers).To(ConsistOf("1.2.3.4:5678"))
+			})
+		})
 	})
 
+	Context("UDP Preferred Protocol on Metron", func() {
+		var (
+			metaServers   map[string][]string
+			legacyServers map[string]string
+		)
 
-	PContext("UDP Preferred Protocol on Metron", func(){
-		Context("only legacy endpoints available", func(){
+		BeforeEach(func() {
+			port = 9999
+			preferredProtocol = "udp"
+
+			close(mockStoreAdapter.WatchOutput.errors)
+			close(mockStoreAdapter.WatchOutput.events)
+			close(mockStoreAdapter.WatchOutput.stop)
+			close(mockStoreAdapter.ListRecursivelyOutput.ret1)
+		})
+
+		JustBeforeEach(func() {
+			metaNode, legacyNode := etcdNodes(metaServers, legacyServers)
+			mockStoreAdapter.ListRecursivelyOutput.ret0 <- metaNode
+			mockStoreAdapter.ListRecursivelyOutput.ret0 <- legacyNode
+			finder.Start()
+		})
+
+		Context("only legacy endpoints available", func() {
+			BeforeEach(func() {
+				metaServers = map[string][]string{}
+				legacyServers = map[string]string{
+					"z1/doppler_z1/2": "11.21.31.41",
+					"z1/doppler_z1/3": "21.22.23.24",
+				}
+			})
+
 			It("returns udp dopplers from legacy endpoint", func() {
-
+				event := finder.Next()
+				Expect(event.UDPDopplers).To(HaveLen(2))
+				Expect(event.UDPDopplers).To(ContainElement(fmt.Sprintf("11.21.31.41:%d", port)))
+				Expect(event.UDPDopplers).To(ContainElement(fmt.Sprintf("21.22.23.24:%d", port)))
 			})
 		})
 
 		Context("legacy and meta endpoints available", func() {
-			It("return udp dopplers from meta and legacy endpoints", func() {
+			BeforeEach(func() {
+				metaServers = map[string][]string{
+					"z1/doppler_z1/0": []string{"udp://9.8.7.6:3457", "tls://9.8.7.6:3458"},
+				}
+				legacyServers = map[string]string{
+					"z1/doppler_z1/0": "9.8.7.6",
+					"z1/doppler_z1/1": "21.22.23.24",
+				}
+			})
 
+			It("return udp dopplers from meta and legacy endpoints", func() {
+				event := finder.Next()
+				Expect(event.UDPDopplers).To(HaveLen(2))
+				Expect(event.UDPDopplers).To(ConsistOf("9.8.7.6:3457", fmt.Sprintf("21.22.23.24:%d", port)))
+				Expect(event.TLSDopplers).To(HaveLen(0))
 			})
 		})
 	})

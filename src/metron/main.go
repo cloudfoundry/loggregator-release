@@ -146,9 +146,7 @@ func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*picker
 	}
 
 	finder := dopplerservice.NewFinder(adapter, conf.LoggregatorDropsondePort, string(conf.PreferredProtocol), conf.Zone, logger)
-	if err := finder.Start(); err != nil {
-		return nil, err
-	}
+	finder.Start()
 	go func() {
 		for {
 			event := finder.Next()
