@@ -18,7 +18,7 @@ import (
 var _ = Describe("Picker", func() {
 	var (
 		writerPicker   *picker.Picker
-		envWriters     [] picker.WeightedByteWriter
+		envWriters     []picker.WeightedByteWriter
 		constructorErr error
 		sender         *fake.FakeMetricSender
 		defaultWriter  picker.WeightedByteWriter

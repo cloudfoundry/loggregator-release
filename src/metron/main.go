@@ -118,7 +118,7 @@ func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*picker
 	}
 
 	udpCreator := clientpool.NewUDPClientCreator(logger)
-	udpWrapper := dopplerforwarder.NewUDPWrapper([]byte(conf.SharedSecret))
+	udpWrapper := dopplerforwarder.NewUDPWrapper([]byte(conf.SharedSecret), logger)
 	udpPool := clientpool.NewDopplerPool(logger, udpCreator)
 	udpForwarder := dopplerforwarder.New(udpWrapper, udpPool, nil, logger)
 	defaultWriter := udpForwarder
@@ -133,7 +133,7 @@ func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*picker
 		}
 		tlsConfig.ServerName = "doppler"
 		tlsCreator := clientpool.NewTLSClientCreator(logger, tlsConfig)
-		tlsWrapper := dopplerforwarder.NewTLSWrapper()
+		tlsWrapper := dopplerforwarder.NewTLSWrapper(logger)
 		tlsPool = clientpool.NewDopplerPool(logger, tlsCreator)
 		tlsForwarder := dopplerforwarder.New(tlsWrapper, tlsPool, nil, logger)
 		defaultWriter = tlsForwarder

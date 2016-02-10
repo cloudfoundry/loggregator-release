@@ -3,14 +3,19 @@ package dopplerforwarder
 import (
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/dropsonde/signature"
+	"github.com/cloudfoundry/gosteno"
 )
 
 type UDPWrapper struct {
 	sharedSecret []byte
+	logger       *gosteno.Logger
 }
 
-func NewUDPWrapper(sharedSecret []byte) *UDPWrapper {
-	return &UDPWrapper{sharedSecret: sharedSecret}
+func NewUDPWrapper(sharedSecret []byte, logger *gosteno.Logger) *UDPWrapper {
+	return &UDPWrapper{
+		sharedSecret: sharedSecret,
+		logger:       logger,
+	}
 }
 
 func (u *UDPWrapper) Write(client Client, message []byte) error {
@@ -18,6 +23,7 @@ func (u *UDPWrapper) Write(client Client, message []byte) error {
 
 	sentLength, err := client.Write(signedMessage)
 	if err != nil {
+		u.logger.Errorf("Error writing to UDP client %v\n", err)
 		metrics.BatchIncrementCounter("udp.sendErrorCount")
 		return err
 	}

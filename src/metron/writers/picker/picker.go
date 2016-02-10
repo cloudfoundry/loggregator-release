@@ -28,8 +28,8 @@ func New(logger *gosteno.Logger, defaultWriter WeightedByteWriter, byteWriters .
 	}
 
 	return &Picker{
-		logger:  logger,
-		writers: byteWriters,
+		logger:        logger,
+		writers:       byteWriters,
 		defaultWriter: defaultWriter,
 	}, nil
 }

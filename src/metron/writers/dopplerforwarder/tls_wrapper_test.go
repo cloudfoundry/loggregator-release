@@ -12,6 +12,10 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
+	"bytes"
+	"encoding/binary"
+	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -23,6 +27,7 @@ var _ = Describe("TLSWrapper", func() {
 		envelope   *events.Envelope
 		tlsWrapper *dopplerforwarder.TLSWrapper
 		message    []byte
+		logger     *gosteno.Logger
 	)
 
 	BeforeEach(func() {
@@ -34,7 +39,8 @@ var _ = Describe("TLSWrapper", func() {
 			EventType:  events.Envelope_LogMessage.Enum(),
 			LogMessage: factories.NewLogMessage(events.LogMessage_OUT, "message", "appid", "sourceType"),
 		}
-		tlsWrapper = dopplerforwarder.NewTLSWrapper()
+		logger = loggertesthelper.Logger()
+		tlsWrapper = dopplerforwarder.NewTLSWrapper(logger)
 
 		var err error
 		message, err = proto.Marshal(envelope)
@@ -45,6 +51,9 @@ var _ = Describe("TLSWrapper", func() {
 	It("counts the number of bytes sent", func() {
 
 		sentLength := len(message) - 3
+		client.WriteOutput.sentLength <- 4
+		client.WriteOutput.err <- nil
+
 		client.WriteOutput.sentLength <- sentLength
 		client.WriteOutput.err <- nil
 
@@ -53,10 +62,66 @@ var _ = Describe("TLSWrapper", func() {
 
 		Eventually(func() uint64 {
 			return sender.GetCounter("tls.sentByteCount")
-		}).Should(BeEquivalentTo(sentLength))
+		}).Should(BeEquivalentTo(sentLength + 4))
+	})
+
+	It("length prefixes the message bytes for single message", func() {
+		client.WriteOutput.sentLength <- 4
+		client.WriteOutput.err <- nil
+
+		client.WriteOutput.sentLength <- len(message)
+		client.WriteOutput.err <- nil
+
+		err := tlsWrapper.Write(client, message)
+		Expect(err).NotTo(HaveOccurred())
+
+		expected := new(bytes.Buffer)
+		binary.Write(expected, binary.LittleEndian, uint32(len(message)))
+
+		Eventually(client.WriteInput.message).Should(Receive(Equal(expected.Bytes())))
+		Eventually(client.WriteInput.message).Should(Receive(Equal(message)))
+	})
+
+	It("length prefixes the message bytes for multiple messages", func() {
+		client.WriteOutput.sentLength <- 4
+		client.WriteOutput.err <- nil
+
+		client.WriteOutput.sentLength <- len(message)
+		client.WriteOutput.err <- nil
+
+		err := tlsWrapper.Write(client, message)
+		Expect(err).NotTo(HaveOccurred())
+		expected := new(bytes.Buffer)
+		binary.Write(expected, binary.LittleEndian, uint32(len(message)))
+
+		Eventually(client.WriteInput.message).Should(Receive(Equal(expected.Bytes())))
+		Eventually(client.WriteInput.message).Should(Receive(Equal(message)))
+
+		counterEnvelope := factories.NewCounterEvent("counter", 34)
+		secondMessage, protoErr := proto.Marshal(counterEnvelope)
+		Expect(protoErr).NotTo(HaveOccurred())
+
+		client.WriteOutput.sentLength <- 4
+		client.WriteOutput.err <- nil
+
+		client.WriteOutput.sentLength <- len(secondMessage)
+		client.WriteOutput.err <- nil
+
+		secondWriteErr := tlsWrapper.Write(client, secondMessage)
+		Expect(secondWriteErr).NotTo(HaveOccurred())
+
+		secondExpectedMessage := new(bytes.Buffer)
+		binary.Write(secondExpectedMessage, binary.LittleEndian, uint32(len(secondMessage)))
+
+		Eventually(client.WriteInput.message).Should(Receive(Equal(secondExpectedMessage.Bytes())))
+		Eventually(client.WriteInput.message).Should(Receive(Equal(secondMessage)))
+
 	})
 
 	It("counts the number of messages sent", func() {
+		client.WriteOutput.sentLength <- 4
+		client.WriteOutput.err <- nil
+
 		client.WriteOutput.sentLength <- len(message)
 		client.WriteOutput.err <- nil
 
@@ -66,18 +131,6 @@ var _ = Describe("TLSWrapper", func() {
 		Eventually(func() uint64 {
 			return sender.GetCounter("tls.sentMessageCount")
 		}).Should(BeEquivalentTo(1))
-	})
-
-	It("writes a message", func() {
-		client.WriteOutput.sentLength <- len(message)
-		client.WriteOutput.err <- nil
-
-		err := tlsWrapper.Write(client, message)
-		Expect(err).NotTo(HaveOccurred())
-
-		Eventually(client.WriteCalled).Should(HaveLen(1))
-		Eventually(client.WriteInput.message).Should(Receive(Equal(message)))
-		Consistently(client.CloseCalled).ShouldNot(Receive())
 	})
 
 	Context("write returns an error", func() {

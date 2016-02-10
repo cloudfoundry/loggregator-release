@@ -58,6 +58,7 @@ func (d *DopplerForwarder) Write(message []byte) {
 		}, "DopplerForwarder: failed to pick a client")
 		return
 	}
+	d.logger.Debugf("Writing %d bytes\n", len(message))
 	err = d.networkWrapper.Write(client, message)
 	if err != nil {
 		d.logger.Errord(map[string]interface{}{

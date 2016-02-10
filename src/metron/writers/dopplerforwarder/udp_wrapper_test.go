@@ -13,6 +13,8 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
+	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -23,6 +25,7 @@ var _ = Describe("UDPWrapper", func() {
 		client       *mockClient
 		envelope     *events.Envelope
 		udpWrapper   *dopplerforwarder.UDPWrapper
+		logger       *gosteno.Logger
 		message      []byte
 		sharedSecret []byte
 	)
@@ -37,7 +40,8 @@ var _ = Describe("UDPWrapper", func() {
 			EventType:  events.Envelope_LogMessage.Enum(),
 			LogMessage: factories.NewLogMessage(events.LogMessage_OUT, "message", "appid", "sourceType"),
 		}
-		udpWrapper = dopplerforwarder.NewUDPWrapper(sharedSecret)
+		logger = loggertesthelper.Logger()
+		udpWrapper = dopplerforwarder.NewUDPWrapper(sharedSecret, logger)
 
 		var err error
 		message, err = proto.Marshal(envelope)

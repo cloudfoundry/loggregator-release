@@ -5,8 +5,6 @@ import (
 	"metron/config"
 	"strings"
 
-	"bytes"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
