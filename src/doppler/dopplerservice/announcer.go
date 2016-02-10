@@ -71,9 +71,11 @@ func AnnounceLegacy(localIP string, ttl time.Duration, config *config.Config, st
 }
 
 func buildDopplerMeta(localIp string, config *config.Config) ([]byte, error) {
+	udpAddr := fmt.Sprintf("udp://%s:%d", localIp, config.IncomingUDPPort)
+	tcpAddr := fmt.Sprintf("tcp://%s:%d", localIp, config.IncomingTCPPort)
 	dopplerMeta := DopplerMeta{
 		Version:   dopplerMetaVersion,
-		Endpoints: []string{fmt.Sprintf("udp://%s:%d", localIp, config.DropsondeIncomingMessagesPort)},
+		Endpoints: []string{udpAddr, tcpAddr},
 	}
 
 	if config.EnableTLSTransport {

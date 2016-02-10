@@ -52,12 +52,12 @@ var _ = Describe("Announcer", func() {
 			})
 
 			Context("when tls transport is enabled", func() {
-				It("announces udp and tcp value", func() {
-					dopplerMeta := fmt.Sprintf(`{"version": 1, "endpoints":["udp://%s:1234", "tls://%s:4567"]}`, localIP, localIP)
+				It("announces udp, tcp, and tls values", func() {
+					dopplerMeta := fmt.Sprintf(`{"version": 1, "endpoints":["udp://%s:1234", "tcp://%s:5678", "tls://%s:9012"]}`, localIP, localIP, localIP)
 
 					conf.EnableTLSTransport = true
 					conf.TLSListenerConfig = config.TLSListenerConfig{
-						Port: 4567,
+						Port: 9012,
 					}
 					stopChan = dopplerservice.Announce(localIP, time.Second, &conf, etcdAdapter, loggertesthelper.Logger())
 
@@ -72,8 +72,8 @@ var _ = Describe("Announcer", func() {
 			})
 
 			Context("when tls transport is disabled", func() {
-				It("announces only udp value", func() {
-					dopplerMeta := fmt.Sprintf(`{"version": 1, "endpoints":["udp://%s:1234"]}`, localIP)
+				It("announces only udp and tcp values", func() {
+					dopplerMeta := fmt.Sprintf(`{"version": 1, "endpoints":["udp://%s:1234", "tcp://%s:5678"]}`, localIP, localIP)
 
 					conf.EnableTLSTransport = false
 					stopChan = dopplerservice.Announce(localIP, time.Second, &conf, etcdAdapter, loggertesthelper.Logger())

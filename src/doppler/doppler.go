@@ -80,7 +80,7 @@ func New(logger *gosteno.Logger,
 		}
 	}
 
-	udpListener, dropsondeBytesChan = listeners.NewUDPListener(fmt.Sprintf("%s:%d", host, config.DropsondeIncomingMessagesPort), logger, "dropsondeListener")
+	udpListener, dropsondeBytesChan = listeners.NewUDPListener(fmt.Sprintf("%s:%d", host, config.IncomingUDPPort), logger, "dropsondeListener")
 
 	signatureVerifier := signature.NewVerifier(logger, config.SharedSecret)
 

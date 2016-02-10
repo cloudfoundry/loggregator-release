@@ -10,7 +10,7 @@
 
   "SharedSecret": "shared_secret",
 
-  "DropsondeIncomingMessagesPort": 51161,
+  "IncomingUDPPort": 51161,
   "LoggregatorDropsondePort": 3457,
   "Syslog": "syslog.namespace"
 }

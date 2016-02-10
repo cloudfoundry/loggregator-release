@@ -21,8 +21,10 @@ type TLSListenerConfig struct {
 type Config struct {
 	BlackListIps                    []iprange.IPRange
 	ContainerMetricTTLSeconds       int
-	DropsondeIncomingMessagesPort   uint32
+	IncomingUDPPort                 uint32
+	IncomingTCPPort                 uint32
 	EnableTLSTransport              bool
+	TLSListenerConfig               TLSListenerConfig
 	EtcdMaxConcurrentRequests       int
 	EtcdUrls                        []string
 	Index                           uint
@@ -40,7 +42,6 @@ type Config struct {
 	SinkInactivityTimeoutSeconds    int
 	SinkSkipCertVerify              bool
 	Syslog                          string
-	TLSListenerConfig               TLSListenerConfig
 	UnmarshallerCount               int
 	WebsocketWriteTimeoutSeconds    int
 	Zone                            string

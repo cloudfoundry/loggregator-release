@@ -20,15 +20,40 @@ properties:
   doppler.maxRetainedLogMessages:
     description: number of log messages to retain per application
     default: 100
+
   doppler.incoming_port:
     description: Port for incoming log messages in the legacy format
     default: 3456
   doppler.dropsonde_incoming_port:
-    description: Port for incoming messages in the dropsonde format
+    description: Port for incoming udp messages
     default: 3457
+  doppler.incoming_tcp_port:
+    description: Port for incoming tcp messages
+    default: 3458
+
+  doppler.tls.enable:
+    description: "Enable TLS listener on doppler so that it can receive dropsonde envelopes over TLS transport. If enabled, Cert and Key files must be specified."
+    default: false
+  doppler.tls.port:
+    description: "Port for incoming messages in the dropsonde format over tls listener"
+    default: 3459
+  doppler.tls.server_cert:
+    description: "TLS server certificate"
+    default: ""
+  doppler.tls.server_key:
+    description: "TLS server key"
+    default: ""
+  loggregator.tls.ca_cert:
+    description: "CA root required for key/cert verification"
+    default: ""
+
   doppler.outgoing_port:
     description: Port for outgoing log messages
     default: 8081
+  doppler.websocket_write_timeout_seconds:
+    description: "Interval before a websocket write is aborted if it does not succeed"
+    default: 60
+
   doppler.blacklisted_syslog_ranges:
     description: "Blacklist for IPs that should not be used as syslog drains, e.g. internal ip addresses."
   doppler.container_metric_ttl_seconds:
@@ -37,43 +62,30 @@ properties:
   doppler.unmarshaller_count:
     description: "Number of parallel unmarshallers to run within Doppler"
     default: 5
+
   doppler.sink_inactivity_timeout_seconds:
     description: "Interval before removing a sink due to inactivity"
     default: 3600
-  doppler.websocket_write_timeout_seconds:
-    description: "Interval before a websocket write is aborted if it does not succeed"
-    default: 60
   doppler.sink_dial_timeout_seconds:
     description: "Dial timeout for sinks"
     default: 1
   doppler.sink_io_timeout_seconds:
     description: "I/O Timeout on sinks"
     default: 0
+
   doppler_endpoint.shared_secret:
     description: "Shared secret used to verify cryptographically signed dropsonde messages"
   doppler.message_drain_buffer_size:
     description: "Size of the internal buffer used by doppler to store messages. If the buffer gets full doppler will drop the messages."
     default: 100
-  doppler.tls.enable:
-    description: "Enable TLS listener on doppler so that it can receive dropsonde envelopes over TLS transport. If enabled, Cert and Key files must be specified."
-    default: false
-  doppler.tls.port:
-    description: "Port for incoming messages in the dropsonde format over tls listener"
-    default: 3458
-  doppler.tls.server_cert:
-    description: "TLS server certificate"
-    default: ""
-  doppler.tls.server_key:
-    description: "TLS server key"
-    default: ""
+
   doppler.syslog_skip_cert_verify:
     description: "When connecting over TLS, don't verify certificates for syslog sink"
     default: true
-  loggregator.tls.ca_cert:
-    description: "CA root required for key/cert verification"
-    default: ""
+
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"
+
   metron_endpoint.host:
     description: "The host used to emit messages to the Metron agent"
     default: "127.0.0.1"

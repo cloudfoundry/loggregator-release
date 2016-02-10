@@ -1,5 +1,13 @@
 {
-    "DropsondeIncomingMessagesPort": 8765,
+    "IncomingUDPPort": 8765,
+    "EnableTLSTransport": true,
+    "TLSListenerConfig": {
+        "Port": 8766,
+        "KeyFile": "./fixtures/server.key",
+        "CertFile": "./fixtures/server.crt",
+        "CAFile": "./fixtures/loggregator-ca.crt"
+    },
+    "IncomingTCPPort": 8767,
     "OutgoingPort": 4567,
     "SinkSkipCertVerify": false,
     "Job": "doppler_z1",
@@ -18,12 +26,5 @@
     "WebsocketWriteTimeoutSeconds": 60,
     "SinkInactivityTimeoutSeconds": 120,
     "MonitorIntervalSeconds": 1,
-    "EnableTLSTransport": true,
-    "TLSListenerConfig": {
-        "Port": 8766,
-        "KeyFile": "./fixtures/server.key",
-        "CertFile": "./fixtures/server.crt",
-        "CAFile": "./fixtures/loggregator-ca.crt"
-    },
     "MetricBatchIntervalMilliseconds": 15000
 }

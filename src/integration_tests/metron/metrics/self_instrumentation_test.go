@@ -33,7 +33,7 @@ var _ = Describe("Self Instrumentation", func() {
 			Index:   0,
 			JobName: "job",
 			Zone:    "z9",
-			DropsondeIncomingMessagesPort: uint32(metronRunner.DropsondePort),
+			IncomingUDPPort: uint32(metronRunner.DropsondePort),
 		}
 
 		stopAnnounce = dopplerservice.Announce("127.0.0.1", time.Minute, dopplerConfig, etcdAdapter, gosteno.NewLogger("test"))

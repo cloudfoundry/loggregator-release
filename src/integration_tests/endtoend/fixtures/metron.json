@@ -1,7 +1,7 @@
 {
     "Index": 42,
     "Job": "test-component",
-    "DropsondeIncomingMessagesPort": 49625,
+    "IncomingUDPPort": 49625,
     "SharedSecret": "end_to_end_secret",
     "EtcdUrls"    : ["http://127.0.0.1:49623"],
     "EtcdMaxConcurrentRequests": 1,

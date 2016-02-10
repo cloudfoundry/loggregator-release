@@ -40,7 +40,8 @@ var _ = BeforeSuite(func() {
 		EtcdMaxConcurrentRequests: 10,
 		EtcdUrls:                  etcdRunner.NodeURLS(),
 		Zone:                      "z1",
-		DropsondeIncomingMessagesPort: 1234,
+		IncomingUDPPort:           1234,
+		IncomingTCPPort:           5678,
 	}
 })
 

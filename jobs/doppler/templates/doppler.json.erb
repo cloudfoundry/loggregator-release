@@ -4,7 +4,16 @@
   "EtcdMaxConcurrentRequests": 10,
   "MessageDrainBufferSize": <%= p("doppler.message_drain_buffer_size") %>,
   "LegacyIncomingMessagesPort": <%= p("doppler.incoming_port") %>,
-  "DropsondeIncomingMessagesPort": <%= p("doppler.dropsonde_incoming_port") %>,
+  "IncomingUDPPort": <%= p("doppler.dropsonde_incoming_port") %>,
+  "IncomingTCPPort": <%= p("doppler.incoming_tcp_port") %>,
+  <% if_p("doppler.tls.enable") do |_| %>
+  "TLSListenerConfig": {
+      "Port": <%= p("doppler.tls.port") %>,
+      "KeyFile": "/var/vcap/jobs/doppler/config/certs/doppler.key",
+      "CertFile": "/var/vcap/jobs/doppler/config/certs/doppler.crt",
+      "CAFile": "/var/vcap/jobs/doppler/config/certs/loggregator_ca.crt"
+  },
+  <% end %>
   "OutgoingPort": <%= p("doppler.outgoing_port") %>,
   "Zone": "<%= p("doppler.zone") %>",
   "JobName": "<%= name %>",
@@ -19,14 +28,6 @@
   "SinkIOTimeoutSeconds": <%= p("doppler.sink_io_timeout_seconds") %>,
   "UnmarshallerCount": <%= p("doppler.unmarshaller_count") %>,
   "EnableTLSTransport": <%= p("doppler.tls.enable") %>,
-  <% if_p("doppler.tls.enable") do |_| %>
-  "TLSListenerConfig": {
-      "Port": <%= p("doppler.tls.port") %>,
-      "KeyFile": "/var/vcap/jobs/doppler/config/certs/doppler.key",
-      "CertFile": "/var/vcap/jobs/doppler/config/certs/doppler.crt",
-      "CAFile": "/var/vcap/jobs/doppler/config/certs/loggregator_ca.crt"
-  },
-  <% end %>
 
   "MetronAddress": "<%= p("metron_endpoint.host") %>:<%= p("metron_endpoint.dropsonde_port") %>"
 

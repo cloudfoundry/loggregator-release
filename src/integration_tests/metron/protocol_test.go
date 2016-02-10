@@ -30,7 +30,7 @@ var _ = Describe("Protocol", func() {
 			Index:   0,
 			JobName: "job",
 			Zone:    "z9",
-			DropsondeIncomingMessagesPort: uint32(metronRunner.DropsondePort),
+			IncomingUDPPort: uint32(metronRunner.DropsondePort),
 			TLSListenerConfig: dopplerconfig.TLSListenerConfig{
 				Port:     uint32(port + 5),
 				CertFile: "../fixtures/server.crt",

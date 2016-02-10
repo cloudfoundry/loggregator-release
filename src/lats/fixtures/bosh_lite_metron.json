@@ -1,5 +1,5 @@
 {
-  "DropsondeIncomingMessagesPort": 3457,
+  "IncomingUDPPort": 3457,
   "SharedSecret": "PLACEHOLDER-LOGGREGATOR-SECRET",
   "EtcdUrls"    : ["http://10.244.0.42:4001"],
   "LoggregatorDropsondePort": 3457,

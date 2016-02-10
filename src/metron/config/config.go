@@ -35,7 +35,7 @@ type Config struct {
 	Job        string
 	Index      uint
 
-	DropsondeIncomingMessagesPort int
+	IncomingUDPPort int
 
 	EtcdUrls                      []string
 	EtcdMaxConcurrentRequests     int
