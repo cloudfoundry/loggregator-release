@@ -1,0 +1,7 @@
+---
+name: statsd-injector
+dependencies:
+    - golang1.4
+files:
+- statsd-injector/**/*.go
+- statsd-injector/LICENSE

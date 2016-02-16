@@ -1,0 +1,10 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    statsd-ruby (1.2.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  statsd-ruby

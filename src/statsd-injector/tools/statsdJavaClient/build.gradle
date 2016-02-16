@@ -1,0 +1,20 @@
+apply plugin: 'idea'
+apply plugin: 'java'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile "com.timgroup:java-statsd-client:3.1.0"
+}
+
+jar {
+    baseName="statsdJavaClient"
+    version="0.0.1"
+    manifest.attributes("Main-Class": "org.cloudfoundry.StatsdJavaClient")
+
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}

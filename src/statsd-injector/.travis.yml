@@ -1,0 +1,40 @@
+notifications:
+  email:
+  - cf-lamb@pivotallabs.com
+
+language: go
+
+go:
+- 1.4
+- tip
+
+matrix:
+  allow_failures:
+  - go: tip
+
+before_install:
+- cd $HOME
+- git clone https://github.com/cloudfoundry/loggregator.git
+- pushd loggregator
+- git submodule update --init --recursive
+- popd
+- export GOPATH=$HOME/gopath
+- export BINDIR=$GOPATH/bin
+- mkdir -p $BINDIR
+- export PATH=$PATH:$BINDIR
+- go get -d github.com/coreos/etcd
+- pushd $GOPATH/src/github.com/coreos/etcd
+- ./build
+- mv bin/etcd $BINDIR
+- popd
+- cd $GOPATH/src/github.com/cloudfoundry/statsd-injector
+- go get -u github.com/golang/lint/golint
+- go get -v github.com/onsi/ginkgo
+- go get -v github.com/onsi/gomega
+- go install -v github.com/onsi/ginkgo/ginkgo
+- export GOPATH=$HOME/loggregator:$GOPATH
+
+install:
+- go get -d -v -t ./...
+
+script: PATH=$HOME/gopath/bin:$PATH bin/test
