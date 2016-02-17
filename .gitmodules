@@ -78,4 +78,4 @@
 	url = https://github.com/remyoudompheng/go-misc
 [submodule "src/github.com/cactus/go-statsd-client"]
 	path = src/github.com/cactus/go-statsd-client
-	url = git@github.com:cactus/go-statsd-client.git
+	url = https://github.com/cactus/go-statsd-client.git
