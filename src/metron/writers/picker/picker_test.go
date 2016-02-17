@@ -48,7 +48,7 @@ var _ = Describe("Picker", func() {
 		Context("with one or more forwarders", func() {
 			BeforeEach(func() {
 				envWriters = []picker.WeightedByteWriter{
-					newMockByteArrayWriter(),
+					newMockWeightedByteWriter(),
 				}
 			})
 
@@ -72,8 +72,10 @@ var _ = Describe("Picker", func() {
 		Context("with an invalid envelope", func() {
 			BeforeEach(func() {
 				envelope = &events.Envelope{}
-				mockWriter := newMockByteArrayWriter()
+				mockWriter := newMockWeightedByteWriter()
 				mockWriter.WeightOutput.ret0 <- 1
+				close(mockWriter.WriteOutput.sentLength)
+				close(mockWriter.WriteOutput.err)
 				envWriters = []picker.WeightedByteWriter{
 					mockWriter,
 				}
@@ -86,14 +88,16 @@ var _ = Describe("Picker", func() {
 		})
 
 		Context("with one writer", func() {
-			var writer *mockByteArrayWriter
+			var writer *mockWeightedByteWriter
 
 			BeforeEach(func() {
-				writer = newMockByteArrayWriter()
+				writer = newMockWeightedByteWriter()
 				writer.WeightOutput.ret0 <- 1
 				envWriters = []picker.WeightedByteWriter{
 					writer,
 				}
+				close(writer.WriteOutput.sentLength)
+				close(writer.WriteOutput.err)
 			})
 
 			It("writes messages to the writer", func() {
@@ -106,15 +110,19 @@ var _ = Describe("Picker", func() {
 		})
 
 		Context("with multiple writers", func() {
-			var firstMockWriter, secondMockWriter *mockByteArrayWriter
+			var firstMockWriter, secondMockWriter *mockWeightedByteWriter
 
 			BeforeEach(func() {
-				firstMockWriter = newMockByteArrayWriter()
-				secondMockWriter = newMockByteArrayWriter()
+				firstMockWriter = newMockWeightedByteWriter()
+				secondMockWriter = newMockWeightedByteWriter()
 				envWriters = []picker.WeightedByteWriter{
 					firstMockWriter,
 					secondMockWriter,
 				}
+				close(firstMockWriter.WriteOutput.sentLength)
+				close(firstMockWriter.WriteOutput.err)
+				close(secondMockWriter.WriteOutput.sentLength)
+				close(secondMockWriter.WriteOutput.err)
 			})
 
 			It("only writes each message once", func(done Done) {

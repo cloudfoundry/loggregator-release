@@ -8,6 +8,12 @@ import (
 	"os"
 )
 
+const (
+	kilobyte               = 1024
+	defaultBatchSize       = 10 * kilobyte
+	defaultBatchIntervalMS = 100
+)
+
 type Protocol string
 
 func (p *Protocol) UnmarshalJSON(value []byte) error {
@@ -47,6 +53,9 @@ type Config struct {
 	MetricBatchIntervalMilliseconds  uint
 	RuntimeStatsIntervalMilliseconds uint
 
+	TCPBatchSizeBytes            uint64
+	TCPBatchIntervalMilliseconds uint
+
 	PreferredProtocol Protocol
 	TLSConfig         TLSConfig
 	BufferSize        int
@@ -65,9 +74,11 @@ func ParseConfig(configFile string) (*Config, error) {
 
 func Parse(reader io.Reader) (*Config, error) {
 	config := &Config{
-		MetricBatchIntervalMilliseconds: 5000,
+		TCPBatchSizeBytes:                defaultBatchSize,
+		TCPBatchIntervalMilliseconds:     defaultBatchIntervalMS,
+		MetricBatchIntervalMilliseconds:  5000,
 		RuntimeStatsIntervalMilliseconds: 15000,
-		PreferredProtocol: "udp",
+		PreferredProtocol:                "udp",
 	}
 	err := json.NewDecoder(reader).Decode(config)
 	if err != nil {

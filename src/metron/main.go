@@ -10,6 +10,7 @@ import (
 
 	"metron/clientpool"
 	"metron/networkreader"
+	"metron/writers/batch"
 	"metron/writers/dopplerforwarder"
 	"metron/writers/eventunmarshaller"
 	"metron/writers/messageaggregator"
@@ -121,8 +122,8 @@ func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*picker
 	udpWrapper := dopplerforwarder.NewUDPWrapper([]byte(conf.SharedSecret), logger)
 	udpPool := clientpool.NewDopplerPool(logger, udpCreator)
 	udpForwarder := dopplerforwarder.New(udpWrapper, udpPool, nil, logger)
-	defaultWriter := udpForwarder
 	writers := []picker.WeightedByteWriter{udpForwarder}
+	defaultWriter := writers[0]
 
 	var tlsPool *clientpool.DopplerPool
 	if conf.PreferredProtocol == "tls" {
@@ -136,8 +137,13 @@ func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*picker
 		tlsWrapper := dopplerforwarder.NewTLSWrapper(logger)
 		tlsPool = clientpool.NewDopplerPool(logger, tlsCreator)
 		tlsForwarder := dopplerforwarder.New(tlsWrapper, tlsPool, nil, logger)
-		defaultWriter = tlsForwarder
-		writers = append(writers, tlsForwarder)
+		tcpBatchInterval := time.Duration(conf.TCPBatchIntervalMilliseconds) * time.Millisecond
+		batchWriter, err := batch.NewWriter(tlsForwarder, conf.TCPBatchSizeBytes, tcpBatchInterval, logger)
+		if err != nil {
+			return nil, err
+		}
+		defaultWriter = batchWriter
+		writers = append(writers, batchWriter)
 	}
 
 	picker, err := picker.New(logger, defaultWriter, writers...)

@@ -59,7 +59,8 @@ var _ = Describe("DopplerForwarder", func() {
 	Context("client selection", func() {
 		It("selects a random client", func() {
 			close(fakeWrapper.WriteOutput.ret0)
-			forwarder.Write(message)
+			_, err := forwarder.Write(message)
+			Expect(err).ToNot(HaveOccurred())
 			Eventually(fakeWrapper.WriteInput.client).Should(Receive(Equal(client)))
 			Eventually(fakeWrapper.WriteInput.message).Should(Receive(Equal(message)))
 		})
@@ -69,8 +70,8 @@ var _ = Describe("DopplerForwarder", func() {
 				close(fakeWrapper.WriteOutput.ret0)
 				clientPool.RandomClientOutput.err = make(chan error, 1)
 				clientPool.RandomClientOutput.err <- errors.New("boom")
-				forwarder.Write(message)
-
+				_, err := forwarder.Write(message)
+				Expect(err).To(HaveOccurred())
 				Eventually(loggertesthelper.TestLoggerSink.LogContents).Should(ContainSubstring("failed to pick a client"))
 				Consistently(fakeWrapper.WriteCalled).ShouldNot(Receive())
 			})
@@ -79,62 +80,27 @@ var _ = Describe("DopplerForwarder", func() {
 		Context("when networkWrapper write fails", func() {
 			It("logs an error and returns", func() {
 				fakeWrapper.WriteOutput.ret0 <- errors.New("boom")
-				forwarder.Write(message)
-
+				_, err := forwarder.Write(message)
+				Expect(err).To(HaveOccurred())
 				Eventually(loggertesthelper.TestLoggerSink.LogContents).Should(ContainSubstring("failed to write message"))
 			})
 		})
 
-		Context("with a retrier", func() {
-			BeforeEach(func() {
-				close(fakeWrapper.WriteOutput.ret0)
-				mockRetrier = newMockRetrier()
-				close(mockRetrier.RetryOutput.ret0)
-			})
-
-			It("does not retry if a client cannot be found", func() {
-				clientPool.RandomClientOutput.err = make(chan error, 1)
-				clientPool.RandomClientOutput.err <- errors.New("boom")
-				forwarder.Write(message)
-
-				Consistently(mockRetrier.RetryCalled).ShouldNot(Receive())
-			})
-
-			It("retries if a client write errors", func() {
-				fakeWrapper.WriteOutput.ret0 = make(chan error, 1)
+		Context("when it errors with a nil retrier", func() {
+			It("returns and error, and a zero byte count", func() {
 				fakeWrapper.WriteOutput.ret0 <- errors.New("boom")
-				forwarder.Write(message)
-
-				Eventually(mockRetrier.RetryCalled).Should(Receive())
-				Expect(mockRetrier.RetryInput.message).To(Receive(Equal(message)))
-			})
-
-			It("logs an error if the retrier errors", func() {
-				fakeWrapper.WriteOutput.ret0 = make(chan error, 1)
-				fakeWrapper.WriteOutput.ret0 <- errors.New("boom")
-
-				mockRetrier.RetryOutput.ret0 = make(chan error, 1)
-				mockRetrier.RetryOutput.ret0 <- errors.New("boom")
-				forwarder.Write(message)
-
-				Eventually(mockRetrier.RetryCalled).Should(Receive())
-				Eventually(loggertesthelper.TestLoggerSink.LogContents).Should(ContainSubstring("failed to retry message"))
-				Consistently(func() uint64 { return sender.GetCounter("DopplerForwarder.retryCount") }).Should(BeZero())
-			})
-
-			It("increments retryCount", func() {
-				fakeWrapper.WriteOutput.ret0 = make(chan error, 1)
-				fakeWrapper.WriteOutput.ret0 <- errors.New("boom")
-				forwarder.Write(message)
-
-				Eventually(func() uint64 { return sender.GetCounter("DopplerForwarder.retryCount") }).Should(BeEquivalentTo(1))
+				n, err := forwarder.Write(message)
+				Expect(err).To(HaveOccurred())
+				Expect(n).To(Equal(0))
 			})
 		})
 
 		Context("metrics", func() {
 			It("emits the sentMessages metric", func() {
 				close(fakeWrapper.WriteOutput.ret0)
-				forwarder.Write(message)
+				_, err := forwarder.Write(message)
+				Expect(err).NotTo(HaveOccurred())
+
 				Eventually(fakeWrapper.WriteInput.message).Should(Receive(Equal(message)))
 				Eventually(func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }).Should(BeEquivalentTo(1))
 			})

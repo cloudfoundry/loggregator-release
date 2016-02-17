@@ -12,8 +12,6 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
-	"bytes"
-	"encoding/binary"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	. "github.com/onsi/ginkgo"
@@ -51,9 +49,6 @@ var _ = Describe("TLSWrapper", func() {
 	It("counts the number of bytes sent", func() {
 
 		sentLength := len(message) - 3
-		client.WriteOutput.sentLength <- 4
-		client.WriteOutput.err <- nil
-
 		client.WriteOutput.sentLength <- sentLength
 		client.WriteOutput.err <- nil
 
@@ -62,66 +57,10 @@ var _ = Describe("TLSWrapper", func() {
 
 		Eventually(func() uint64 {
 			return sender.GetCounter("tls.sentByteCount")
-		}).Should(BeEquivalentTo(sentLength + 4))
-	})
-
-	It("length prefixes the message bytes for single message", func() {
-		client.WriteOutput.sentLength <- 4
-		client.WriteOutput.err <- nil
-
-		client.WriteOutput.sentLength <- len(message)
-		client.WriteOutput.err <- nil
-
-		err := tlsWrapper.Write(client, message)
-		Expect(err).NotTo(HaveOccurred())
-
-		expected := new(bytes.Buffer)
-		binary.Write(expected, binary.LittleEndian, uint32(len(message)))
-
-		Eventually(client.WriteInput.message).Should(Receive(Equal(expected.Bytes())))
-		Eventually(client.WriteInput.message).Should(Receive(Equal(message)))
-	})
-
-	It("length prefixes the message bytes for multiple messages", func() {
-		client.WriteOutput.sentLength <- 4
-		client.WriteOutput.err <- nil
-
-		client.WriteOutput.sentLength <- len(message)
-		client.WriteOutput.err <- nil
-
-		err := tlsWrapper.Write(client, message)
-		Expect(err).NotTo(HaveOccurred())
-		expected := new(bytes.Buffer)
-		binary.Write(expected, binary.LittleEndian, uint32(len(message)))
-
-		Eventually(client.WriteInput.message).Should(Receive(Equal(expected.Bytes())))
-		Eventually(client.WriteInput.message).Should(Receive(Equal(message)))
-
-		counterEnvelope := factories.NewCounterEvent("counter", 34)
-		secondMessage, protoErr := proto.Marshal(counterEnvelope)
-		Expect(protoErr).NotTo(HaveOccurred())
-
-		client.WriteOutput.sentLength <- 4
-		client.WriteOutput.err <- nil
-
-		client.WriteOutput.sentLength <- len(secondMessage)
-		client.WriteOutput.err <- nil
-
-		secondWriteErr := tlsWrapper.Write(client, secondMessage)
-		Expect(secondWriteErr).NotTo(HaveOccurred())
-
-		secondExpectedMessage := new(bytes.Buffer)
-		binary.Write(secondExpectedMessage, binary.LittleEndian, uint32(len(secondMessage)))
-
-		Eventually(client.WriteInput.message).Should(Receive(Equal(secondExpectedMessage.Bytes())))
-		Eventually(client.WriteInput.message).Should(Receive(Equal(secondMessage)))
-
+		}).Should(BeEquivalentTo(sentLength))
 	})
 
 	It("counts the number of messages sent", func() {
-		client.WriteOutput.sentLength <- 4
-		client.WriteOutput.err <- nil
-
 		client.WriteOutput.sentLength <- len(message)
 		client.WriteOutput.err <- nil
 

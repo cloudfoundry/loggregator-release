@@ -2,17 +2,19 @@ package picker
 
 import (
 	"errors"
-	"metron/writers"
+
+	"math/rand"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-	"math/rand"
 )
 
+//go:generate hel --type WeightedByteWriter --output mock_weighted_writer_test.go
+
 type WeightedByteWriter interface {
-	writers.ByteArrayWriter
+	Write(message []byte) (sentLength int, err error)
 	Weight() int
 }
 

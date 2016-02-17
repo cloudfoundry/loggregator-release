@@ -54,6 +54,9 @@ var _ = Describe("Config", func() {
 				Expect(cfg.RuntimeStatsIntervalMilliseconds).To(BeEquivalentTo(15))
 				Expect(cfg.Syslog).To(Equal("syslog.namespace"))
 
+				Expect(cfg.TCPBatchSizeBytes).To(BeEquivalentTo(1024))
+				Expect(cfg.TCPBatchIntervalMilliseconds).To(BeEquivalentTo(10))
+
 				Expect(cfg.PreferredProtocol).To(BeEquivalentTo("udp"))
 				Expect(cfg.BufferSize).To(Equal(100))
 
@@ -75,6 +78,8 @@ var _ = Describe("Config", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(cfg).To(Equal(&config.Config{
+					TCPBatchIntervalMilliseconds:     100,
+					TCPBatchSizeBytes:                10240,
 					MetricBatchIntervalMilliseconds:  5000,
 					RuntimeStatsIntervalMilliseconds: 15000,
 					PreferredProtocol:                "udp",

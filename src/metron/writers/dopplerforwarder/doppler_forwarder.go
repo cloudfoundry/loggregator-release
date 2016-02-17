@@ -50,13 +50,13 @@ func (d *DopplerForwarder) retry(message []byte) {
 	metrics.BatchIncrementCounter("DopplerForwarder.retryCount")
 }
 
-func (d *DopplerForwarder) Write(message []byte) {
+func (d *DopplerForwarder) Write(message []byte) (int, error) {
 	client, err := d.clientPool.RandomClient()
 	if err != nil {
 		d.logger.Errord(map[string]interface{}{
 			"error": err.Error(),
 		}, "DopplerForwarder: failed to pick a client")
-		return
+		return 0, err
 	}
 	d.logger.Debugf("Writing %d bytes\n", len(message))
 	err = d.networkWrapper.Write(client, message)
@@ -67,10 +67,13 @@ func (d *DopplerForwarder) Write(message []byte) {
 
 		if d.retrier != nil {
 			d.retry(message)
+		} else {
+			return 0, err
 		}
 	} else {
 		metrics.BatchIncrementCounter("DopplerForwarder.sentMessages")
 	}
+	return len(message), nil
 }
 
 func (d *DopplerForwarder) Weight() int {
