@@ -59,7 +59,6 @@ type Config struct {
 	PreferredProtocol Protocol
 	TLSConfig         TLSConfig
 	BufferSize        int
-	EnableBuffer      bool
 }
 
 func ParseConfig(configFile string) (*Config, error) {

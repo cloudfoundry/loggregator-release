@@ -15,9 +15,7 @@
 
   "PreferredProtocol": "<%= p("metron_agent.preferred_protocol") %>",
 
-  "BufferSize": <%= p("metron_agent.buffer_size") %>,
-
-  "EnableBuffer": <%= p("metron_agent.enable_buffer") %>
+  "BufferSize": <%= p("metron_agent.buffer_size") %>
 
   <% if p("metron_agent.preferred_protocol") == "tls" %>
   , "TLSConfig": {

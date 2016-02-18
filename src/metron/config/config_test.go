@@ -65,8 +65,6 @@ var _ = Describe("Config", func() {
 					KeyFile:  "./fixtures/client.key",
 					CAFile:   "./fixtures/ca.crt",
 				}))
-
-				Expect(cfg.EnableBuffer).To(BeTrue())
 			})
 
 		})
