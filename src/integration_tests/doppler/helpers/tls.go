@@ -21,13 +21,13 @@ func DialTLS(address, cert, key, ca string) (*tls.Conn, error) {
 	return tls.Dial("tcp", address, tlsConfig)
 }
 
-func SendAppLogTLS(appID string, message string, connection net.Conn) error {
+func SendAppLogTCP(appID string, message string, connection net.Conn) error {
 	logMessage := factories.NewLogMessage(events.LogMessage_OUT, message, appID, "APP")
 
-	return SendEventTLS(logMessage, connection)
+	return SendEventTCP(logMessage, connection)
 }
 
-func SendEventTLS(event events.Event, conn net.Conn) error {
+func SendEventTCP(event events.Event, conn net.Conn) error {
 	envelope, err := emitter.Wrap(event, "origin")
 	Expect(err).NotTo(HaveOccurred())
 

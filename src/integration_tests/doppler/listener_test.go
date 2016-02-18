@@ -17,12 +17,15 @@ import (
 )
 
 var _ = Describe("Listener test", func() {
-	Context("with TLS Listener config specified", func() {
-		var address string
-		var ws *websocket.Conn
-		var conn net.Conn
-		var receiveChan chan []byte
+	var (
+		address     string
+		ws          *websocket.Conn
+		conn        net.Conn
+		receiveChan chan []byte
+		err         error
+	)
 
+	Context("with TLS Listener config specified", func() {
 		BeforeEach(func() {
 			ip, _ := localip.LocalIP()
 			address = fmt.Sprintf("%s:%d", ip, 8766)
@@ -39,11 +42,12 @@ var _ = Describe("Listener test", func() {
 
 		It("listens for dropsonde log message on TLS port", func() {
 			message := "my-random-tls-message"
-			guid, _ := uuid.NewV4()
+			guid, err := uuid.NewV4()
+			Expect(err).NotTo(HaveOccurred())
 			appID := guid.String()
 
 			logMessage := factories.NewLogMessage(events.LogMessage_OUT, message, appID, "APP")
-			SendEventTLS(logMessage, conn)
+			SendEventTCP(logMessage, conn)
 
 			receivedMessageBytes := []byte{}
 			Eventually(receiveChan).Should(Receive(&receivedMessageBytes))
@@ -55,7 +59,7 @@ var _ = Describe("Listener test", func() {
 
 		It("listens for dropsonde counter event on TLS port", func() {
 			counterEvent := factories.NewCounterEvent("my-counter", 1)
-			SendEventTLS(counterEvent, conn)
+			SendEventTCP(counterEvent, conn)
 
 			receivedEventBytes := []byte{}
 			Eventually(receiveChan).Should(Receive(&receivedEventBytes))
@@ -64,6 +68,55 @@ var _ = Describe("Listener test", func() {
 			Expect(receivedEvent.GetName()).To(Equal("my-counter"))
 			Expect(receivedEvent.GetDelta()).To(Equal(uint64(1)))
 		})
+	})
+
+	Context("without TLS Listener config", func() {
+		BeforeEach(func() {
+			ip, _ := localip.LocalIP()
+			Expect(err).NotTo(HaveOccurred())
+
+			address = fmt.Sprintf("%s:%d", ip, 4321)
+			conn, err = net.Dial("tcp", address)
+			Expect(err).NotTo(HaveOccurred())
+
+			receiveChan = make(chan []byte, 10)
+			ws, _ = AddWSSink(receiveChan, "4567", "/firehose/hose-subcription-a")
+		})
+
+		AfterEach(func() {
+			receiveChan = nil
+			ws.Close()
+		})
+
+		It("listens for dropsonde log message on TCP port", func() {
+			message := "my-random-tls-message"
+			guid, err := uuid.NewV4()
+			Expect(err).NotTo(HaveOccurred())
+			appID := guid.String()
+
+			logMessage := factories.NewLogMessage(events.LogMessage_OUT, message, appID, "APP")
+			SendEventTCP(logMessage, conn)
+
+			receivedMessageBytes := []byte{}
+			Eventually(receiveChan).Should(Receive(&receivedMessageBytes))
+
+			receivedMessage := DecodeProtoBufLogMessage(receivedMessageBytes)
+			Expect(receivedMessage.GetAppId()).To(Equal(appID))
+			Expect(string(receivedMessage.GetMessage())).To(Equal(message))
+		})
+
+		It("listens for dropsonde counter event on TCP port", func() {
+			counterEvent := factories.NewCounterEvent("my-counter", 1)
+			SendEventTCP(counterEvent, conn)
+
+			receivedEventBytes := []byte{}
+			Eventually(receiveChan).Should(Receive(&receivedEventBytes))
+
+			receivedEvent := DecodeProtoBufCounterEvent(receivedEventBytes)
+			Expect(receivedEvent.GetName()).To(Equal("my-counter"))
+			Expect(receivedEvent.GetDelta()).To(Equal(uint64(1)))
+		})
+
 	})
 })
 

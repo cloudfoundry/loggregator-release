@@ -18,7 +18,7 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
-type TLSListener struct {
+type TCPListener struct {
 	envelopeChan   chan *events.Envelope
 	logger         *gosteno.Logger
 	listener       net.Listener
@@ -64,18 +64,21 @@ func NewTLSConfig(certFile, keyFile, caCertFile string) (*tls.Config, error) {
 	return tlsConfig, nil
 }
 
-func NewTLSListener(contextName string, address string, tlsListenerConfig config.TLSListenerConfig, envelopeChan chan *events.Envelope, logger *gosteno.Logger) (Listener, error) {
-	tlsConfig, err := NewTLSConfig(tlsListenerConfig.CertFile, tlsListenerConfig.KeyFile, tlsListenerConfig.CAFile)
+func NewTCPListener(contextName string, address string, tlsListenerConfig *config.TLSListenerConfig, envelopeChan chan *events.Envelope, logger *gosteno.Logger) (Listener, error) {
+	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		return nil, err
 	}
 
-	listener, err := tls.Listen("tcp", address, tlsConfig)
-	if err != nil {
-		return nil, err
+	if tlsListenerConfig != nil {
+		tlsConfig, err := NewTLSConfig(tlsListenerConfig.CertFile, tlsListenerConfig.KeyFile, tlsListenerConfig.CAFile)
+		if err != nil {
+			return nil, err
+		}
+		listener = tls.NewListener(listener, tlsConfig)
 	}
 
-	return &TLSListener{
+	return &TCPListener{
 		listener:       listener,
 		envelopeChan:   envelopeChan,
 		logger:         logger,
@@ -90,7 +93,7 @@ func NewTLSListener(contextName string, address string, tlsListenerConfig config
 	}, nil
 }
 
-func (t *TLSListener) Address() string {
+func (t *TCPListener) Address() string {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	if t.listener != nil {
@@ -99,11 +102,11 @@ func (t *TLSListener) Address() string {
 	return ""
 }
 
-func (t *TLSListener) Start() {
+func (t *TCPListener) Start() {
 	t.lock.Lock()
 	if t.started {
 		t.lock.Unlock()
-		t.logger.Fatal("TLSListener has already been started")
+		t.logger.Fatal("TCPListener has already been started")
 	}
 	t.started = true
 	listener := t.listener
@@ -122,7 +125,7 @@ func (t *TLSListener) Start() {
 	}
 }
 
-func (t *TLSListener) Stop() {
+func (t *TCPListener) Stop() {
 	t.lock.Lock()
 	if t.listener == nil {
 		t.lock.Unlock()
@@ -142,19 +145,19 @@ func (t *TLSListener) Stop() {
 	<-done
 }
 
-func (t *TLSListener) addConnection(conn net.Conn) {
+func (t *TCPListener) addConnection(conn net.Conn) {
 	t.lock.Lock()
 	t.connections[conn] = struct{}{}
 	t.lock.Unlock()
 }
 
-func (t *TLSListener) removeConnection(conn net.Conn) {
+func (t *TCPListener) removeConnection(conn net.Conn) {
 	t.lock.Lock()
 	delete(t.connections, conn)
 	t.lock.Unlock()
 }
 
-func (t *TLSListener) handleConnection(conn net.Conn) {
+func (t *TCPListener) handleConnection(conn net.Conn) {
 	defer conn.Close()
 	defer t.removeConnection(conn)
 

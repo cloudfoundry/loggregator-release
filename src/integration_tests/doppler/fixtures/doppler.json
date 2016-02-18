@@ -2,6 +2,7 @@
     "EtcdUrls": ["http://localhost:5555"],
     "EtcdMaxConcurrentRequests": 10,
     "IncomingUDPPort": 8765,
+    "IncomingTCPPort": 4321,
     "OutgoingPort": 4567,
     "SinkSkipCertVerify": true,
     "Index": 0,
