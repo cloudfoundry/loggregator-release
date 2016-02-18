@@ -29,5 +29,9 @@ func (u *UDPWrapper) Write(client Client, message []byte) error {
 	}
 	metrics.BatchIncrementCounter("udp.sentMessageCount")
 	metrics.BatchAddCounter("udp.sentByteCount", uint64(sentLength))
+
+	// The TLS side writes this metric in the batch.Writer.  For UDP,
+	// it needs to be done here.
+	metrics.BatchIncrementCounter("DopplerForwarder.sentMessages")
 	return nil
 }

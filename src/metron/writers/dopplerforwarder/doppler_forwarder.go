@@ -1,15 +1,6 @@
 package dopplerforwarder
 
-import (
-	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/gosteno"
-)
-
-//go:generate hel --type Retrier --output mock_retrier_test.go
-
-type Retrier interface {
-	Retry(message []byte) error
-}
+import "github.com/cloudfoundry/gosteno"
 
 //go:generate hel --type NetworkWrapper --output mock_network_wrapper_test.go
 
@@ -27,27 +18,15 @@ type ClientPool interface {
 type DopplerForwarder struct {
 	networkWrapper NetworkWrapper
 	clientPool     ClientPool
-	retrier        Retrier
 	logger         *gosteno.Logger
 }
 
-func New(wrapper NetworkWrapper, clientPool ClientPool, retrier Retrier, logger *gosteno.Logger) *DopplerForwarder {
+func New(wrapper NetworkWrapper, clientPool ClientPool, logger *gosteno.Logger) *DopplerForwarder {
 	return &DopplerForwarder{
 		networkWrapper: wrapper,
 		clientPool:     clientPool,
-		retrier:        retrier,
 		logger:         logger,
 	}
-}
-
-func (d *DopplerForwarder) retry(message []byte) {
-	if err := d.retrier.Retry(message); err != nil {
-		d.logger.Errord(map[string]interface{}{
-			"error": err.Error(),
-		}, "DopplerForwarder: failed to retry message")
-		return
-	}
-	metrics.BatchIncrementCounter("DopplerForwarder.retryCount")
 }
 
 func (d *DopplerForwarder) Write(message []byte) (int, error) {
@@ -65,13 +44,7 @@ func (d *DopplerForwarder) Write(message []byte) (int, error) {
 			"error": err.Error(),
 		}, "DopplerForwarder: failed to write message")
 
-		if d.retrier != nil {
-			d.retry(message)
-		} else {
-			return 0, err
-		}
-	} else {
-		metrics.BatchIncrementCounter("DopplerForwarder.sentMessages")
+		return 0, err
 	}
 	return len(message), nil
 }

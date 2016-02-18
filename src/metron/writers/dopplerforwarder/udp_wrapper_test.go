@@ -72,6 +72,9 @@ var _ = Describe("UDPWrapper", func() {
 		Eventually(func() uint64 {
 			return sender.GetCounter("udp.sentMessageCount")
 		}).Should(BeEquivalentTo(1))
+		Eventually(func() uint64 {
+			return sender.GetCounter("DopplerForwarder.sentMessages")
+		}).Should(BeEquivalentTo(1))
 	})
 
 	It("increments transmitErrorCount *only* if client write fails", func() {

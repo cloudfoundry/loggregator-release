@@ -24,15 +24,10 @@ var _ = Describe("DopplerForwarder", func() {
 		logger      *gosteno.Logger
 		forwarder   *dopplerforwarder.DopplerForwarder
 		fakeWrapper *mockNetworkWrapper
-		mockRetrier *mockRetrier
-		retrier     dopplerforwarder.Retrier
 		message     []byte
 	)
 
 	BeforeEach(func() {
-		mockRetrier = nil
-		retrier = nil
-
 		message = []byte("I am a message!")
 
 		sender = fake.NewFakeMetricSender()
@@ -50,10 +45,7 @@ var _ = Describe("DopplerForwarder", func() {
 	})
 
 	JustBeforeEach(func() {
-		if mockRetrier != nil {
-			retrier = mockRetrier
-		}
-		forwarder = dopplerforwarder.New(fakeWrapper, clientPool, retrier, logger)
+		forwarder = dopplerforwarder.New(fakeWrapper, clientPool, logger)
 	})
 
 	Context("client selection", func() {
@@ -86,23 +78,12 @@ var _ = Describe("DopplerForwarder", func() {
 			})
 		})
 
-		Context("when it errors with a nil retrier", func() {
-			It("returns and error, and a zero byte count", func() {
+		Context("when it errors", func() {
+			It("returns an error and a zero byte count", func() {
 				fakeWrapper.WriteOutput.ret0 <- errors.New("boom")
 				n, err := forwarder.Write(message)
 				Expect(err).To(HaveOccurred())
 				Expect(n).To(Equal(0))
-			})
-		})
-
-		Context("metrics", func() {
-			It("emits the sentMessages metric", func() {
-				close(fakeWrapper.WriteOutput.ret0)
-				_, err := forwarder.Write(message)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(fakeWrapper.WriteInput.message).Should(Receive(Equal(message)))
-				Eventually(func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }).Should(BeEquivalentTo(1))
 			})
 		})
 	})

@@ -121,7 +121,7 @@ func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*picker
 	udpCreator := clientpool.NewUDPClientCreator(logger)
 	udpWrapper := dopplerforwarder.NewUDPWrapper([]byte(conf.SharedSecret), logger)
 	udpPool := clientpool.NewDopplerPool(logger, udpCreator)
-	udpForwarder := dopplerforwarder.New(udpWrapper, udpPool, nil, logger)
+	udpForwarder := dopplerforwarder.New(udpWrapper, udpPool, logger)
 	writers := []picker.WeightedByteWriter{udpForwarder}
 	defaultWriter := writers[0]
 
@@ -136,7 +136,7 @@ func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*picker
 		tlsCreator := clientpool.NewTLSClientCreator(logger, tlsConfig)
 		tlsWrapper := dopplerforwarder.NewTLSWrapper(logger)
 		tlsPool = clientpool.NewDopplerPool(logger, tlsCreator)
-		tlsForwarder := dopplerforwarder.New(tlsWrapper, tlsPool, nil, logger)
+		tlsForwarder := dopplerforwarder.New(tlsWrapper, tlsPool, logger)
 		tcpBatchInterval := time.Duration(conf.TCPBatchIntervalMilliseconds) * time.Millisecond
 		batchWriter, err := batch.NewWriter(tlsForwarder, conf.TCPBatchSizeBytes, tcpBatchInterval, logger)
 		if err != nil {
