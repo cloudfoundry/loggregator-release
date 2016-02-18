@@ -21,7 +21,6 @@ env:
 language: go
 
 go:
-- 1.4.3
 - 1.5.3
 - tip
 
