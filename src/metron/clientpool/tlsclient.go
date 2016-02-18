@@ -11,14 +11,6 @@ import (
 
 const timeout = 1 * time.Second
 
-type tlsHandshakeTimeoutError struct{}
-
-func (tlsHandshakeTimeoutError) Timeout() bool { return true }
-
-func (tlsHandshakeTimeoutError) Temporary() bool { return true }
-
-func (tlsHandshakeTimeoutError) Error() string { return "TLS handshake timeout" }
-
 type TLSClient struct {
 	address   string
 	tlsConfig *tls.Config
