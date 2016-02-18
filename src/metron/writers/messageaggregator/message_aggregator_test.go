@@ -248,10 +248,6 @@ func createStartMessage(requestId uint64, peerType events.PeerType) *events.Enve
 			Uri:           proto.String("fake-uri-1"),
 			RemoteAddress: proto.String("fake-remote-addr-1"),
 			UserAgent:     proto.String("fake-user-agent-1"),
-			ParentRequestId: &events.UUID{
-				Low:  proto.Uint64(2),
-				High: proto.Uint64(3),
-			},
 			InstanceIndex: proto.Int32(6),
 			InstanceId:    proto.String("fake-instance-id-1"),
 		},
@@ -298,10 +294,6 @@ func createStartStopMessage(requestId uint64, peerType events.PeerType) *events.
 			UserAgent:     proto.String("fake-user-agent-1"),
 			StatusCode:    proto.Int32(103),
 			ContentLength: proto.Int64(104),
-			ParentRequestId: &events.UUID{
-				Low:  proto.Uint64(2),
-				High: proto.Uint64(3),
-			},
 			ApplicationId: &events.UUID{
 				Low:  proto.Uint64(105),
 				High: proto.Uint64(106),
