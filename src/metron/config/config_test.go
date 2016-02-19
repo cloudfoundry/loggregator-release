@@ -58,7 +58,6 @@ var _ = Describe("Config", func() {
 				Expect(cfg.TCPBatchIntervalMilliseconds).To(BeEquivalentTo(10))
 
 				Expect(cfg.PreferredProtocol).To(BeEquivalentTo("udp"))
-				Expect(cfg.BufferSize).To(Equal(100))
 
 				Expect(cfg.TLSConfig).To(Equal(config.TLSConfig{
 					CertFile: "./fixtures/client.crt",
@@ -81,7 +80,6 @@ var _ = Describe("Config", func() {
 					MetricBatchIntervalMilliseconds:  5000,
 					RuntimeStatsIntervalMilliseconds: 15000,
 					PreferredProtocol:                "udp",
-					BufferSize:                       100,
 				}))
 			})
 

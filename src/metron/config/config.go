@@ -58,7 +58,6 @@ type Config struct {
 
 	PreferredProtocol Protocol
 	TLSConfig         TLSConfig
-	BufferSize        int
 }
 
 func ParseConfig(configFile string) (*Config, error) {
@@ -82,10 +81,6 @@ func Parse(reader io.Reader) (*Config, error) {
 	err := json.NewDecoder(reader).Decode(config)
 	if err != nil {
 		return nil, err
-	}
-
-	if config.BufferSize < 3 {
-		config.BufferSize = 100
 	}
 
 	return config, nil
