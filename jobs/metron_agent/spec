@@ -59,10 +59,10 @@ properties:
   metron_agent.deployment:
     description: "Name of deployment (added as tag on all outgoing metrics)"
 
-  metron_agent.tcp.batching_buffer_bytes
+  metron_agent.tcp.batching_buffer_bytes:
     description: "The number of bytes which can be buffered prior to TCP writes (applies to TLS over TCP)"
     default: 10240
-  metron_agent.tcp.batching_buffer_flush_interval_milliseconds
+  metron_agent.tcp.batching_buffer_flush_interval_milliseconds:
     description: "The maximum time that a message can stay in the batching buffer before being flushed"
     default: 100
 
