@@ -18,7 +18,7 @@ chown -R vcap:vcap $LOG_DIR
 
 echo $$ > $PIDFILE
 
-exec chpst -u vcap:vcap /var/vcap/packages/statsd-injector/bin/statsd-injector \
+exec chpst -u vcap:vcap /var/vcap/packages/statsd-injector/statsd-injector \
     -statsdPort=<%= p("statsd_injector.statsd_port") %> \
     -metronPort=<%= p("statsd_injector.metron_port") %> \
     -logLevel=<%= p("statsd_injector.log_level") %> \
