@@ -17,7 +17,9 @@
 
   "BufferSize": <%= p("metron_agent.buffer_size") %>,
 
-  "TCPBatchSizeBytes": <%= p("metron_agent.batching_buffer_bytes") %>
+  "TCPBatchSizeBytes": <%= p("metron_agent.tcp.batching_buffer_bytes") %>,
+
+  "TCPBatchIntervalMilliseconds": <%= p("metron_agent.tcp.batching_buffer_flush_interval_milliseconds") %>
 
   <% if p("metron_agent.preferred_protocol") == "tls" %>
   , "TLSConfig": {
