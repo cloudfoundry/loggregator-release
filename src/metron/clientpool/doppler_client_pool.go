@@ -77,13 +77,14 @@ func (pool *DopplerPool) Clients() []Client {
 
 // RandomClient implements dopplerforwarder.DopplerPool
 func (pool *DopplerPool) RandomClient() (dopplerforwarder.Client, error) {
-	list := pool.Clients()
+	pool.lock.RLock()
+	defer pool.lock.RUnlock()
 
-	if len(list) == 0 {
+	if len(pool.clients) == 0 {
 		return nil, ErrorEmptyClientPool
 	}
 
-	return list[rand.Intn(len(list))], nil
+	return pool.clients[rand.Intn(len(pool.clients))], nil
 }
 
 func (pool *DopplerPool) Size() int {
