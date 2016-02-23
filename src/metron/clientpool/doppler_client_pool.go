@@ -49,17 +49,18 @@ func NewDopplerPool(logger *gosteno.Logger, clientCreator ClientCreator) *Dopple
 }
 
 func (pool *DopplerPool) SetAddresses(addresses []string) int {
-	pool.lock.Lock()
-	defer pool.lock.Unlock()
-	pool.clients = make([]Client, 0, len(addresses))
+	clients := make([]Client, 0, len(addresses))
 	for _, address := range addresses {
 		client, err := pool.clientCreator.CreateClient(address)
 		if err != nil {
 			pool.logger.Errorf("Failed to connect to client at %s: %v", address, err)
 			continue
 		}
-		pool.clients = append(pool.clients, client)
+		clients = append(clients, client)
 	}
+	pool.lock.Lock()
+	defer pool.lock.Unlock()
+	pool.clients = clients
 	return len(pool.clients)
 }
 
