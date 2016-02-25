@@ -1,24 +1,19 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"log"
+	"os"
+	"runtime"
 	"time"
 	"tools/benchmark/experiment"
-	"tools/benchmark/messagewriter"
-	"tools/metronbenchmark/eventtypereader"
-
-	"tools/benchmark/messagereader"
-
-	"os"
-	"tools/benchmark/metricsreporter"
-
-	"flag"
-	"log"
-
-	"runtime"
-
 	"tools/benchmark/messagegenerator"
+	"tools/benchmark/messagereader"
+	"tools/benchmark/messagewriter"
+	"tools/benchmark/metricsreporter"
 	"tools/benchmark/writestrategies"
+	"tools/metronbenchmark/eventtypereader"
 
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/sonde-go/events"

@@ -13,8 +13,10 @@ This is a command line tool that will emit X amount of messages over Y units of 
 
 ## Command line options
 
-| Flag | Default | Description |
-|-------|--------|-------------|
-|`-interval` | 1s | Interval for reported results |
-| `-writeRate` | 15000 | Number of writes per second to send to metron |
-| `-stopAfter` | 5m | How long to run the experiment for |
+|         Flag         |   Default   |             Description                       |
+|----------------------|-------------|-----------------------------------------------|
+| `-interval`          |    1s       | Interval for reported results                 |
+| `-writeRate`         | 15000       | Number of writes per second to send to metron |
+| `-stopAfter`         |    5m       | How long to run the experiment for            |
+| `-eventType`         | ValueMetric | The event type to use for the experiment      |
+| `-concurrentWriters` |     1       | The number of writers to run concurrently     |

@@ -1,10 +1,9 @@
 package experiment
 
 import (
+	"log"
 	"sync"
 	"time"
-
-	. "github.com/onsi/ginkgo"
 )
 
 type MessageReader interface {
@@ -60,7 +59,7 @@ func (e *Experiment) Warmup() {
 	case <-reading:
 		return
 	case <-time.After(2 * time.Second):
-		Fail("Failed to start reading")
+		log.Fatalf("Failed to start reading")
 	}
 }
 
