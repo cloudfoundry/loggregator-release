@@ -17,7 +17,7 @@ var _ = Describe("UdpMessageReader", func() {
 
 	BeforeEach(func() {
 		port = 3457
-		reader = messagereader.NewMessageReader(port)
+		reader = messagereader.New(port)
 	})
 
 	AfterEach(func() {

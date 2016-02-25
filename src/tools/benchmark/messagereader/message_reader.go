@@ -13,7 +13,7 @@ type MessageReader struct {
 	connection *net.UDPConn
 }
 
-func NewMessageReader(port int) *MessageReader {
+func New(port int) *MessageReader {
 	udpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		panic(err)

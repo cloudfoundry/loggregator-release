@@ -1,10 +1,11 @@
 package messagegenerator
 
 import (
+	"time"
+
 	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-	"time"
 )
 
 type ValueMetricGenerator struct{}
@@ -47,6 +48,18 @@ func NewLogMessageGenerator(appID string) *LogMessageGenerator {
 func (l *LogMessageGenerator) Generate() []byte {
 	message, _ := proto.Marshal(BasicLogMessageEnvelope("test-origin", l.appID))
 	return message
+}
+
+func BasicCounterEvent(origin string) *events.Envelope {
+	return &events.Envelope{
+		Origin:    proto.String(origin),
+		EventType: events.Envelope_CounterEvent.Enum(),
+		CounterEvent: &events.CounterEvent{
+			Name:  proto.String("fake-counter-event"),
+			Delta: proto.Uint64(1),
+			Total: proto.Uint64(2),
+		},
+	}
 }
 
 func BasicLogMessageEnvelope(origin string, appID string) *events.Envelope {
