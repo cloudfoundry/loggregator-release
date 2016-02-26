@@ -8,9 +8,10 @@ import (
 	"trafficcontroller/authorization"
 	"trafficcontroller/doppler_endpoint"
 
+	"time"
+
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
-	"time"
 )
 
 const FIREHOSE_ID = "firehose"
@@ -103,7 +104,7 @@ func (proxy *Proxy) serveFirehose(paths []string, writer http.ResponseWriter, re
 		writer.Header().Set("WWW-Authenticate", "Basic")
 		writer.WriteHeader(http.StatusUnauthorized)
 		fmt.Fprintf(writer, "You are not authorized. %s", err.Error())
-		proxy.logger.Warnf("auth token not authorized to access appId [%s].", FIREHOSE_ID)
+		proxy.logger.Warnf("auth token not authorized to access firehose")
 		return
 	}
 
