@@ -4,7 +4,6 @@ set -e
 trap "echo Exited!; exit 1;" SIGINT SIGTERM
 
 go install github.com/apcera/gnatsd
-echo "Syncing Package Specs..."
-$(dirname $0)/sync-package-specs
+
 echo "Running Tests..."
 $(dirname $0)/travis_test $1
