@@ -20,9 +20,9 @@ This is a command line tool that will emit X amount of messages over Y units of 
 | `-stopAfter`         |    5m                                               | How long to run the experiment for                      |
 | `-eventType`         | ValueMetric                                         | The event type to use for the experiment                |
 | `-concurrentWriters` |     1                                               | The number of writers to run concurrently               |
-| `protocol`           |   udp                                               | The output protocol to benchmark                        |
-| `serverCert`         | ../../integration_tests/fixtures/server.crt         | The certificate to serve TLS connections to metron with |
-| `serverKey`          | ../../integration_tests/fixtures/server.key         | The key to serve TLS connections to metron with         |
-| `caCert`             | ../../integration_tests/fixtures/loggregator-ca.crt | The CA cert to serve TLS connections to metron with     |
+| `-protocol`          |   udp                                               | The output protocol to benchmark                        |
+| `-serverCert`        | ../../integration_tests/fixtures/server.crt         | The certificate to serve TLS connections to metron with |
+| `-serverKey`         | ../../integration_tests/fixtures/server.key         | The key to serve TLS connections to metron with         |
+| `-caCert`            | ../../integration_tests/fixtures/loggregator-ca.crt | The CA cert to serve TLS connections to metron with     |
 
 
