@@ -11,13 +11,15 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("UdpMessageReader", func() {
-	var port int
-	var reader *messagereader.MessageReader
+var _ = Describe("UDPReader", func() {
+	var (
+		port   int
+		reader *messagereader.UDPReader
+	)
 
 	BeforeEach(func() {
 		port = 3457
-		reader = messagereader.New(port)
+		reader = messagereader.NewUDP(port)
 	})
 
 	AfterEach(func() {
@@ -25,14 +27,14 @@ var _ = Describe("UdpMessageReader", func() {
 	})
 
 	It("should receive message on specified port", func() {
-		writeValueMessage(port)
-		writeValueMessage(port)
+		udpWriteValueMessage(port)
+		udpWriteValueMessage(port)
 		Eventually(reader.Read()).ShouldNot(BeNil())
 		Eventually(reader.Read()).ShouldNot(BeNil())
 	})
 })
 
-func writeValueMessage(port int) {
+func udpWriteValueMessage(port int) {
 	conn, err := net.Dial("udp", fmt.Sprintf("localhost:%d", port))
 	Expect(err).ToNot(HaveOccurred())
 

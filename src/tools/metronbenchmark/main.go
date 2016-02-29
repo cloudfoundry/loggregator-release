@@ -1,6 +1,8 @@
 package main
 
 import (
+	"doppler/listeners"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -30,12 +32,20 @@ func main() {
 		stopAfter         time.Duration
 		concurrentWriters int
 		eventType         events.Envelope_EventType
+		protocol          string
+		serverCert        string
+		serverKey         string
+		caCert            string
 	)
 	flag.Var(newDurationValue(&interval, time.Second), "interval", "Interval for reported results")
 	flag.IntVar(&writeRate, "writeRate", 15000, "Number of writes per second to send to metron")
 	flag.Var(newDurationValue(&stopAfter, 5*time.Minute), "stopAfter", "How long to run the experiment for")
 	flag.IntVar(&concurrentWriters, "concurrentWriters", 1, "Number of concurrent writers")
 	flag.Var(newEventTypeValue(&eventType, events.Envelope_ValueMetric), "eventType", "The event type to test")
+	flag.StringVar(&protocol, "protocol", "udp", "The protocol to configure metron to send messages over")
+	flag.StringVar(&serverCert, "serverCert", "../../integration_tests/fixtures/server.crt", "The server cert file (for TLS connections)")
+	flag.StringVar(&serverKey, "serverKey", "../../integration_tests/fixtures/server.key", "The server key file (for TLS connections)")
+	flag.StringVar(&caCert, "caCert", "../../integration_tests/fixtures/loggregator-ca.crt", "The certificate authority cert file (for TLS connections)")
 
 	flag.Parse()
 
@@ -49,7 +59,28 @@ func main() {
 	default:
 		log.Fatalf("Unsupported envelope type: %v", eventType)
 	}
-	reader := messagereader.New(3457)
+	var dopplerURLs []string
+	var reader eventtypereader.MessageReader
+	switch protocol {
+	case "udp":
+		reader = messagereader.NewUDP(3457)
+		dopplerURLs = []string{"udp://127.0.0.1:3457"}
+	case "tls":
+		tlsConfig, err := listeners.NewTLSConfig(
+			serverCert,
+			serverKey,
+			caCert,
+		)
+		if err != nil {
+			log.Printf("Error: failed to load TLS config: %s", err)
+			os.Exit(1)
+		}
+		tlsConfig.InsecureSkipVerify = true
+		reader = messagereader.NewTLS(3458, tlsConfig)
+		dopplerURLs = []string{"tls://127.0.0.1:3458"}
+	default:
+		panic(fmt.Errorf("Unknown protocol %s", protocol))
+	}
 	valueMetricReader := eventtypereader.New(reporter.GetReceivedCounter(), reader, eventType, "test-origin")
 	exp := experiment.NewExperiment(valueMetricReader)
 
@@ -59,7 +90,7 @@ func main() {
 		exp.AddWriteStrategy(writeStrategy)
 	}
 
-	announceToEtcd()
+	announceToEtcd(stopAfter, dopplerURLs...)
 
 	exp.Warmup()
 	go reporter.Start()
@@ -87,15 +118,26 @@ func NewStoreAdapter(urls []string, concurrentRequests int) storeadapter.StoreAd
 	return etcdStoreAdapter
 }
 
-func announceToEtcd() {
+func announceToEtcd(timeout time.Duration, addresses ...string) {
 	etcdUrls := []string{"http://localhost:4001"}
 	etcdMaxConcurrentRequests := 10
 	storeAdapter := NewStoreAdapter(etcdUrls, etcdMaxConcurrentRequests)
-	node := storeadapter.StoreNode{
-		Key:   "/healthstatus/doppler/z1/0",
-		Value: []byte("localhost"),
+	addressJSON, err := json.Marshal(map[string]interface{}{
+		"endpoints": addresses,
+	})
+	println(string(addressJSON))
+	if err != nil {
+		panic(err)
 	}
-	storeAdapter.Create(node)
+	node := storeadapter.StoreNode{
+		Key:   "/doppler/meta/z1/doppler_z1/0",
+		Value: addressJSON,
+		TTL:   uint64((timeout + time.Second) / time.Second),
+	}
+	err = storeAdapter.Create(node)
+	if err != nil {
+		panic(err)
+	}
 	storeAdapter.Disconnect()
 	time.Sleep(50 * time.Millisecond)
 }

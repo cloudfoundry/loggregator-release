@@ -5,6 +5,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/metric_sender"
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 

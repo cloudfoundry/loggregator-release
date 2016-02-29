@@ -8,12 +8,12 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-type MessageReader struct {
+type UDPReader struct {
 	port       int
 	connection *net.UDPConn
 }
 
-func New(port int) *MessageReader {
+func NewUDP(port int) *UDPReader {
 	udpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		panic(err)
@@ -24,13 +24,13 @@ func New(port int) *MessageReader {
 		panic(err)
 	}
 
-	return &MessageReader{
+	return &UDPReader{
 		port:       port,
 		connection: connection,
 	}
 }
 
-func (reader *MessageReader) Read() *events.Envelope {
+func (reader *UDPReader) Read() *events.Envelope {
 	readBuffer := make([]byte, 65535)
 	count, _, err := reader.connection.ReadFrom(readBuffer)
 	if err != nil {
@@ -51,6 +51,6 @@ func (reader *MessageReader) Read() *events.Envelope {
 	return &message
 }
 
-func (reader *MessageReader) Close() {
+func (reader *UDPReader) Close() {
 	reader.connection.Close()
 }

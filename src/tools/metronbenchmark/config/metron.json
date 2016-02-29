@@ -8,9 +8,10 @@
     "Zone": "z1",
     "Deployment": "deployment-name",
     "LoggregatorDropsondePort": 3457,
+    "PreferredProtocol": "tls",
     "TLSConfig": {
-        "CertFile": "../../fixtures/client.crt",
-        "KeyFile": "../../fixtures/client.key",
-        "CAFile": "../../fixtures/loggregator-ca.crt"
+        "CertFile": "../../integration_tests/fixtures/client.crt",
+        "KeyFile": "../../integration_tests/fixtures/client.key",
+        "CAFile": "../../integration_tests/fixtures/loggregator-ca.crt"
     }
 }
