@@ -23,6 +23,8 @@ import (
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 )
 
+const nodeKey = "/doppler/meta/z1/doppler_z1/0"
+
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
@@ -90,7 +92,16 @@ func main() {
 		exp.AddWriteStrategy(writeStrategy)
 	}
 
-	announceToEtcd(stopAfter, dopplerURLs...)
+	adapter := announceToEtcd(dopplerURLs...)
+	defer func() {
+		exp.Stop()
+		reporter.Stop()
+		err := adapter.Delete(nodeKey)
+		if err != nil {
+			log.Printf("Warning: Failed to delete etcd key %s: %s", nodeKey, err)
+		}
+		adapter.Disconnect()
+	}()
 
 	exp.Warmup()
 	go reporter.Start()
@@ -98,8 +109,6 @@ func main() {
 
 	timer := time.NewTimer(stopAfter)
 	<-timer.C
-	exp.Stop()
-	reporter.Stop()
 }
 
 func NewStoreAdapter(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
@@ -118,7 +127,7 @@ func NewStoreAdapter(urls []string, concurrentRequests int) storeadapter.StoreAd
 	return etcdStoreAdapter
 }
 
-func announceToEtcd(timeout time.Duration, addresses ...string) {
+func announceToEtcd(addresses ...string) storeadapter.StoreAdapter {
 	etcdUrls := []string{"http://localhost:4001"}
 	etcdMaxConcurrentRequests := 10
 	storeAdapter := NewStoreAdapter(etcdUrls, etcdMaxConcurrentRequests)
@@ -130,16 +139,15 @@ func announceToEtcd(timeout time.Duration, addresses ...string) {
 		panic(err)
 	}
 	node := storeadapter.StoreNode{
-		Key:   "/doppler/meta/z1/doppler_z1/0",
+		Key:   nodeKey,
 		Value: addressJSON,
-		TTL:   uint64((timeout + time.Second) / time.Second),
 	}
 	err = storeAdapter.Create(node)
 	if err != nil {
 		panic(err)
 	}
-	storeAdapter.Disconnect()
 	time.Sleep(50 * time.Millisecond)
+	return storeAdapter
 }
 
 // durationValue is a flag.Value for a time.Duration type

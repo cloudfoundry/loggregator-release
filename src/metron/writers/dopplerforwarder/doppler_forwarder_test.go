@@ -87,15 +87,4 @@ var _ = Describe("DopplerForwarder", func() {
 			})
 		})
 	})
-
-	Describe("Weight", func() {
-		BeforeEach(func() {
-			close(fakeWrapper.WriteOutput.ret0)
-			clientPool = newMockClientPool()
-			clientPool.SizeOutput.ret0 <- 10
-		})
-		It("returns the size of the client pool", func() {
-			Expect(forwarder.Weight()).To(Equal(10))
-		})
-	})
 })

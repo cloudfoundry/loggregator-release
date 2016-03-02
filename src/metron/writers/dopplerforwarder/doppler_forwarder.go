@@ -48,7 +48,3 @@ func (d *DopplerForwarder) Write(message []byte) (int, error) {
 	}
 	return len(message), nil
 }
-
-func (d *DopplerForwarder) Weight() int {
-	return d.clientPool.Size()
-}

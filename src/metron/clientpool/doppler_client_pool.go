@@ -35,7 +35,7 @@ type ClientCreator interface {
 type DopplerPool struct {
 	logger *gosteno.Logger
 
-	lock sync.RWMutex
+	lock    sync.RWMutex
 	clients []Client
 
 	clientCreator ClientCreator
@@ -48,7 +48,7 @@ func NewDopplerPool(logger *gosteno.Logger, clientCreator ClientCreator) *Dopple
 	}
 }
 
-func (pool *DopplerPool) SetAddresses(addresses []string) {
+func (pool *DopplerPool) SetAddresses(addresses []string) int {
 	pool.lock.Lock()
 	defer pool.lock.Unlock()
 	pool.clients = make([]Client, 0, len(addresses))
@@ -60,6 +60,7 @@ func (pool *DopplerPool) SetAddresses(addresses []string) {
 		}
 		pool.clients = append(pool.clients, client)
 	}
+	return len(pool.clients)
 }
 
 func (pool *DopplerPool) Clients() []Client {

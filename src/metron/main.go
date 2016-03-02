@@ -9,9 +9,11 @@ import (
 	"time"
 
 	"metron/clientpool"
+	"metron/clientreader"
 	"metron/networkreader"
 	"metron/writers/batch"
 	"metron/writers/dopplerforwarder"
+	"metron/writers/eventmarshaller"
 	"metron/writers/eventunmarshaller"
 	"metron/writers/messageaggregator"
 	"metron/writers/tagger"
@@ -30,7 +32,6 @@ import (
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 
 	"metron/config"
-	"metron/writers/picker"
 	"profiler"
 	"signalmanager"
 )
@@ -67,13 +68,13 @@ func main() {
 	profiler.Profile()
 	defer profiler.Stop()
 
-	picker, err := initializeDopplerPool(config, log)
+	marshaller, err := initializeDopplerPool(config, log)
 	if err != nil {
 		log.Errorf("Could not initialize doppler connection pool: %s", err)
 		exitCode = -1
 		return
 	}
-	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, picker)
+	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, marshaller)
 	aggregator := messageaggregator.New(messageTagger, log)
 
 	statsStopChan := make(chan struct{})
@@ -106,7 +107,7 @@ func main() {
 	}
 }
 
-func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*picker.Picker, error) {
+func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*eventmarshaller.EventMarshaller, error) {
 	adapter, err := storeAdapterProvider(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
 	if err != nil {
 		return nil, err
@@ -120,12 +121,11 @@ func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*picker
 
 	udpCreator := clientpool.NewUDPClientCreator(logger)
 	udpWrapper := dopplerforwarder.NewUDPWrapper([]byte(conf.SharedSecret), logger)
-	udpPool := clientpool.NewDopplerPool(logger, udpCreator)
-	udpForwarder := dopplerforwarder.New(udpWrapper, udpPool, logger)
-	writers := []picker.WeightedByteWriter{udpForwarder}
-	defaultWriter := writers[0]
+	clientPool := clientpool.NewDopplerPool(logger, udpCreator)
+	udpForwarder := dopplerforwarder.New(udpWrapper, clientPool, logger)
 
-	var tlsPool *clientpool.DopplerPool
+	var writer eventmarshaller.ByteWriter = udpForwarder
+
 	if conf.PreferredProtocol == "tls" {
 		c := conf.TLSConfig
 		tlsConfig, err := listeners.NewTLSConfig(c.CertFile, c.KeyFile, c.CAFile)
@@ -135,34 +135,24 @@ func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*picker
 		tlsConfig.ServerName = "doppler"
 		tlsCreator := clientpool.NewTLSClientCreator(logger, tlsConfig)
 		tlsWrapper := dopplerforwarder.NewTLSWrapper(logger)
-		tlsPool = clientpool.NewDopplerPool(logger, tlsCreator)
-		tlsForwarder := dopplerforwarder.New(tlsWrapper, tlsPool, logger)
+		clientPool = clientpool.NewDopplerPool(logger, tlsCreator)
+		tlsForwarder := dopplerforwarder.New(tlsWrapper, clientPool, logger)
 		tcpBatchInterval := time.Duration(conf.TCPBatchIntervalMilliseconds) * time.Millisecond
 		batchWriter, err := batch.NewWriter(tlsForwarder, conf.TCPBatchSizeBytes, tcpBatchInterval, logger)
 		if err != nil {
 			return nil, err
 		}
-		defaultWriter = batchWriter
-		writers = append(writers, batchWriter)
-	}
-
-	picker, err := picker.New(logger, defaultWriter, writers...)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to initialize the doppler picker: %s", err)
+		writer = batchWriter
 	}
 
 	finder := dopplerservice.NewFinder(adapter, conf.LoggregatorDropsondePort, string(conf.PreferredProtocol), conf.Zone, logger)
 	finder.Start()
 	go func() {
 		for {
-			event := finder.Next()
-			udpPool.SetAddresses(event.UDPDopplers)
-			if tlsPool != nil {
-				tlsPool.SetAddresses(event.TLSDopplers)
-			}
+			clientreader.Read(clientPool, string(conf.PreferredProtocol), finder.Next())
 		}
 	}()
-	return picker, nil
+	return eventmarshaller.New(logger, writer), nil
 }
 
 func initializeMetrics(messageTagger *tagger.Tagger, config *config.Config, stopChan chan struct{}, logger *gosteno.Logger) {

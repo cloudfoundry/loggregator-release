@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cloudfoundry/dropsonde/logging"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/storeadapter"
 )
@@ -80,7 +81,18 @@ func (f *Finder) Start() {
 
 	go f.run(LEGACY_ROOT, events, errs, stop, f.parseLegacyValue)
 
+	if !f.hasAddrs() {
+		return
+	}
 	f.sendEvent()
+}
+
+func (f *Finder) hasAddrs() bool {
+	f.legacyLock.Lock()
+	f.metaLock.Lock()
+	defer f.legacyLock.Unlock()
+	defer f.metaLock.Unlock()
+	return len(f.legacyEndpoints) > 0 || len(f.metaEndpoints) > 0
 }
 
 func (f *Finder) handleEvent(event *storeadapter.WatchEvent, parser func([]byte) (interface{}, error)) {
@@ -89,8 +101,10 @@ func (f *Finder) handleEvent(event *storeadapter.WatchEvent, parser func([]byte)
 		f.logger.Errorf("Received invalid event: %+v", event)
 		return
 	case storeadapter.CreateEvent, storeadapter.UpdateEvent:
+		logging.Debugf(f.logger, "Received create/update event: %+v", event.Type)
 		f.saveEndpoints(f.parseNode(*event.Node, parser))
 	case storeadapter.DeleteEvent, storeadapter.ExpireEvent:
+		logging.Debugf(f.logger, "Received delete/expire event: %+v", event.Type)
 		f.deleteEndpoints(f.parseNode(*event.PrevNode, parser))
 	}
 	f.sendEvent()

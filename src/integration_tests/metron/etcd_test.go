@@ -30,11 +30,10 @@ var _ = Describe("Etcd dependency", func() {
 
 			logger = gosteno.NewLogger("test")
 			dopplerConfig := &dopplerconfig.Config{
-				Index:   0,
-				JobName: "job",
-				Zone:    "z9",
+				Index:           0,
+				JobName:         "job",
+				Zone:            "z9",
 				IncomingUDPPort: uint32(metronRunner.DropsondePort),
-				TLSListenerConfig:             dopplerconfig.TLSListenerConfig{Port: uint32(port + 5)},
 			}
 			stopTheWorld = make(chan struct{})
 
@@ -56,7 +55,7 @@ var _ = Describe("Etcd dependency", func() {
 		})
 
 		It("starts", func() {
-			metronRunner.Protocol = "tls"
+			metronRunner.Protocol = "udp"
 			metronRunner.Start()
 
 			Consistently(metronRunner.Process.Wait).ShouldNot(Receive())

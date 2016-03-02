@@ -136,6 +136,9 @@ var _ = Describe("Finder", func() {
 		)
 
 		BeforeEach(func() {
+			metaNode = storeadapter.StoreNode{}
+			legacyNode = storeadapter.StoreNode{}
+
 			close(mockStoreAdapter.WatchOutput.errors)
 			close(mockStoreAdapter.WatchOutput.events)
 			close(mockStoreAdapter.WatchOutput.stop)
@@ -147,6 +150,38 @@ var _ = Describe("Finder", func() {
 			mockStoreAdapter.ListRecursivelyOutput.ret0 <- metaNode
 			mockStoreAdapter.ListRecursivelyOutput.ret0 <- legacyNode
 			finder.Start()
+		})
+
+		Context("no available dopplers", func() {
+			var (
+				metaEvents chan storeadapter.WatchEvent
+				done       chan struct{}
+			)
+
+			BeforeEach(func() {
+				done = make(chan struct{})
+				metaEvents = make(chan storeadapter.WatchEvent)
+				mockStoreAdapter.WatchOutput.events = make(chan (<-chan storeadapter.WatchEvent), 1)
+				mockStoreAdapter.WatchOutput.events <- metaEvents
+				close(mockStoreAdapter.WatchOutput.events)
+			})
+
+			AfterEach(func() {
+				node := makeMetaNode("z1/doppler_z1/0", []string{"tls://1.2.3.4:567"})
+				metaEvents <- storeadapter.WatchEvent{
+					Type: storeadapter.CreateEvent,
+					Node: &node,
+				}
+				Eventually(done).Should(BeClosed())
+			})
+
+			It("doesn't send an event", func() {
+				go func() {
+					finder.Next()
+					close(done)
+				}()
+				Consistently(done).ShouldNot(BeClosed())
+			})
 		})
 
 		Context("invalid protocol", func() {
@@ -343,9 +378,6 @@ var _ = Describe("Finder", func() {
 			mockStoreAdapter.ListRecursivelyOutput.ret0 <- metaNode
 			mockStoreAdapter.ListRecursivelyOutput.ret0 <- legacyNode
 			finder.Start()
-
-			// ignore the initial data
-			_ = finder.Next()
 		})
 
 		It("reconnects when the meta watch errors receives an error", func() {
@@ -395,6 +427,11 @@ var _ = Describe("Finder", func() {
 					}
 				})
 
+				JustBeforeEach(func() {
+					// Ignore the startup event
+					_ = finder.Next()
+				})
+
 				It("returns the updated endpoints", func() {
 					event := finder.Next()
 					Expect(event.TLSDopplers).To(Equal([]string{"1.2.3.4:555"}))
@@ -411,6 +448,11 @@ var _ = Describe("Finder", func() {
 					}
 				})
 
+				JustBeforeEach(func() {
+					// Ignore the startup event
+					_ = finder.Next()
+				})
+
 				It("removes the entry from metaEndpoints", func() {
 					event := finder.Next()
 					Expect(event.TLSDopplers).To(BeEmpty())
@@ -424,6 +466,11 @@ var _ = Describe("Finder", func() {
 						Type:     storeadapter.ExpireEvent,
 						PrevNode: &metaNode,
 					}
+				})
+
+				JustBeforeEach(func() {
+					// Ignore the startup event
+					_ = finder.Next()
 				})
 
 				It("removes the entry from metaEndpoints", func() {
@@ -497,6 +544,11 @@ var _ = Describe("Finder", func() {
 					}
 				})
 
+				JustBeforeEach(func() {
+					// Ignore the startup event
+					_ = finder.Next()
+				})
+
 				It("returns the updated endpoint", func() {
 					event := finder.Next()
 					Expect(event.TLSDopplers).To(BeEmpty())
@@ -516,6 +568,11 @@ var _ = Describe("Finder", func() {
 					}
 				})
 
+				JustBeforeEach(func() {
+					// Ignore the startup event
+					_ = finder.Next()
+				})
+
 				It("removes the entry from legacyEndpoints", func() {
 					event := finder.Next()
 					Expect(event.UDPDopplers).To(BeEmpty())
@@ -532,6 +589,11 @@ var _ = Describe("Finder", func() {
 						Type:     storeadapter.ExpireEvent,
 						PrevNode: &legacyNode,
 					}
+				})
+
+				JustBeforeEach(func() {
+					// Ignore the startup event
+					_ = finder.Next()
 				})
 
 				It("removes the entry from legacyEndpoints", func() {

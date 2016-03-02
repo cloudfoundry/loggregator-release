@@ -70,21 +70,33 @@ var _ = Describe("End to end test", func() {
 		}, 1)
 	}
 
-	Context("UDP", func() {
+	Context("Metron UDP, Doppler UDP", func() {
 		BeforeEach(func() {
 			dopplerConfig = "dopplerudp"
+			metronConfig = "metronudp"
 		})
 
 		benchmarkEndToEnd()
 	})
 
-	Context("TLS", func() {
+	Context("Metron TLS, Doppler TLS", func() {
 		BeforeEach(func() {
 			dopplerConfig = "dopplertls"
+			metronConfig = "metrontls"
 		})
 
 		benchmarkEndToEnd()
 	})
+
+	Context("Metron UDP, Doppler TLS", func() {
+		BeforeEach(func() {
+			dopplerConfig = "dopplertls"
+			metronConfig = "metronudp"
+		})
+
+		benchmarkEndToEnd()
+	})
+
 })
 
 func reportResults(r *endtoend.FirehoseReader, written int, benchmarker Benchmarker) {

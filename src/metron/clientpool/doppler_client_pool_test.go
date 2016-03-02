@@ -53,7 +53,8 @@ var _ = Describe("DopplerPool", func() {
 			It("creates a client for each address", func() {
 				Expect(pool.Clients()).To(HaveLen(0))
 
-				pool.SetAddresses(addresses)
+				clients := pool.SetAddresses(addresses)
+				Expect(clients).To(Equal(2))
 
 				Eventually(mockClientCreator.CreateClientInput.url).Should(Receive(Equal(addresses[0])))
 				Eventually(mockClientCreator.CreateClientInput.url).Should(Receive(Equal(addresses[1])))
@@ -75,7 +76,8 @@ var _ = Describe("DopplerPool", func() {
 			})
 
 			It("doesn't include the failed client", func() {
-				pool.SetAddresses(addresses)
+				clients := pool.SetAddresses(addresses)
+				Expect(clients).To(Equal(1))
 
 				Expect(pool.Clients()).To(HaveLen(1))
 			})
@@ -136,7 +138,7 @@ var _ = Describe("DopplerPool", func() {
 
 		})
 
-		Context("with empty client pool", func(){
+		Context("with empty client pool", func() {
 			JustBeforeEach(func() {
 				pool.SetAddresses([]string{})
 			})

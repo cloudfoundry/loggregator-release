@@ -44,7 +44,7 @@ func (b *messageBuffer) Reset() {
 
 type Writer struct {
 	flushDuration time.Duration
-	outWriter     WeightedWriter
+	outWriter     ByteWriter
 	writerLock    sync.Mutex
 	msgBuffer     *messageBuffer
 	msgBufferLock sync.Mutex
@@ -52,14 +52,13 @@ type Writer struct {
 	logger        *gosteno.Logger
 }
 
-//go:generate hel --type WeightedWriter --output mock_weighted_writer_test.go
+//go:generate hel --type ByteWriter --output mock_byte_writer_test.go
 
-type WeightedWriter interface {
-	Write(bytes []byte) (sentLength int, err error)
-	Weight() int
+type ByteWriter interface {
+	Write(message []byte) (sentLength int, err error)
 }
 
-func NewWriter(writer WeightedWriter, bufferCapacity uint64, flushDuration time.Duration, logger *gosteno.Logger) (*Writer, error) {
+func NewWriter(writer ByteWriter, bufferCapacity uint64, flushDuration time.Duration, logger *gosteno.Logger) (*Writer, error) {
 	if bufferCapacity < minBufferCapacity {
 		return nil, fmt.Errorf("batch.Writer requires a buffer of at least %d bytes", minBufferCapacity)
 	}
@@ -164,10 +163,6 @@ func (w *Writer) flushBuffer() {
 		metrics.BatchIncrementCounter("DopplerForwarder.retryCount")
 		w.timer.Reset(w.flushDuration)
 	}
-}
-
-func (w *Writer) Weight() int {
-	return w.outWriter.Weight()
 }
 
 func (w *Writer) retryWrites(message []byte) (sent int, err error) {
