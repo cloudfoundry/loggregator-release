@@ -15,13 +15,16 @@ import (
 var lgrSource = proto.String("LGR")
 
 type TruncatingBuffer struct {
-	inputChannel        <-chan *events.Envelope
-	context             BufferContext
-	outputChannel       chan *events.Envelope
-	logger              *gosteno.Logger
-	lock                *sync.RWMutex
-	droppedMessageCount uint64
-	stopChannel         chan struct{}
+	inputChannel               <-chan *events.Envelope
+	context                    BufferContext
+	outputChannel              chan *events.Envelope
+	logger                     *gosteno.Logger
+	lock                       *sync.RWMutex
+	bufferSize                 uint64
+	sentMessageCount           uint64
+	queuedInternalMessageCount uint64
+	droppedMessageCount        uint64
+	stopChannel                chan struct{}
 }
 
 func NewTruncatingBuffer(inputChannel <-chan *events.Envelope, bufferSize uint, context BufferContext, logger *gosteno.Logger, stopChannel chan struct{}) *TruncatingBuffer {
@@ -31,22 +34,21 @@ func NewTruncatingBuffer(inputChannel <-chan *events.Envelope, bufferSize uint, 
 	if context == nil {
 		panic("context should not be nil")
 	}
-	outputChannel := make(chan *events.Envelope, bufferSize)
 	return &TruncatingBuffer{
-		inputChannel:        inputChannel,
-		outputChannel:       outputChannel,
-		logger:              logger,
-		lock:                &sync.RWMutex{},
-		droppedMessageCount: 0,
-		stopChannel:         stopChannel,
-		context:             context,
+		inputChannel:               inputChannel,
+		outputChannel:              make(chan *events.Envelope, bufferSize),
+		logger:                     logger,
+		lock:                       &sync.RWMutex{},
+		bufferSize:                 uint64(bufferSize),
+		sentMessageCount:           0,
+		queuedInternalMessageCount: 0,
+		droppedMessageCount:        0,
+		stopChannel:                stopChannel,
+		context:                    context,
 	}
 }
 
 func (r *TruncatingBuffer) GetOutputChannel() <-chan *events.Envelope {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
 	return r.outputChannel
 }
 
@@ -60,15 +62,6 @@ func (r *TruncatingBuffer) eventAllowed(eventType events.Envelope_EventType) boo
 
 func (r *TruncatingBuffer) Run() {
 	defer r.closeOutputChannel()
-
-	outputCapacity := cap(r.outputChannel)
-	msgsSent := 0
-	adjustDropped := 0
-	totalDropped := uint64(0)
-	r.lock.Lock()
-	outputChannel := r.outputChannel
-	r.lock.Unlock()
-
 	for {
 		select {
 		case <-r.stopChannel:
@@ -78,39 +71,57 @@ func (r *TruncatingBuffer) Run() {
 				return
 			}
 			if r.eventAllowed(msg.GetEventType()) {
-				select {
-				case outputChannel <- msg:
-					if msgsSent < outputCapacity {
-						msgsSent++
-						if adjustDropped > 0 && (adjustDropped+msgsSent) > outputCapacity {
-							adjustDropped--
-						}
-					}
-				default:
-					deltaDropped := uint64(len(outputChannel) - adjustDropped)
-					totalDropped += uint64(deltaDropped)
-					outputChannel = make(chan *events.Envelope, cap(outputChannel))
-					appId := r.context.AppID(msg)
-
-					r.notifyMessagesDropped(outputChannel, deltaDropped, totalDropped, appId)
-					adjustDropped = len(outputChannel)
-					outputChannel <- msg
-					msgsSent = 1
-
-					r.lock.Lock()
-					r.outputChannel = outputChannel
-					r.droppedMessageCount = totalDropped
-					r.lock.Unlock()
-
-					if r.logger != nil {
-						r.logger.Warnd(map[string]interface{}{
-							"dropped": deltaDropped, "total_dropped": totalDropped,
-							"appId": appId, "destination": r.context.Destination(),
-						},
-							"TB: Output channel too full")
-					}
-				}
+				r.forwardMessage(msg)
 			}
+		}
+	}
+}
+
+func (r *TruncatingBuffer) forwardMessage(msg *events.Envelope) {
+	select {
+	case r.outputChannel <- msg:
+		r.sentMessageCount++
+		queuedInternalMessageWasSent := (r.sentMessageCount+r.queuedInternalMessageCount > r.bufferSize)
+		if r.queuedInternalMessageCount > 0 && queuedInternalMessageWasSent {
+			r.queuedInternalMessageCount--
+		}
+
+	default:
+		deltaDropped := (r.dropMessages() - r.queuedInternalMessageCount)
+		r.queuedInternalMessageCount = 0
+
+		r.lock.Lock()
+		r.droppedMessageCount += deltaDropped
+		appId := r.context.AppID(msg)
+		r.notifyMessagesDropped(r.outputChannel, deltaDropped, r.droppedMessageCount, appId)
+		totalDropped := r.droppedMessageCount
+		r.lock.Unlock()
+
+		r.outputChannel <- msg
+		r.sentMessageCount = 1
+
+		if r.logger != nil {
+			r.logger.Warnd(map[string]interface{}{
+				"dropped":       deltaDropped,
+				"total_dropped": totalDropped,
+				"appId":         appId,
+				"destination":   r.context.Destination(),
+			}, "TB: Output channel too full")
+		}
+	}
+}
+
+func (r *TruncatingBuffer) dropMessages() uint64 {
+	dropped := uint64(0)
+	for {
+		select {
+		case _, ok := <-r.outputChannel:
+			if !ok {
+				return dropped
+			}
+			dropped++
+		default:
+			return dropped
 		}
 	}
 }
@@ -121,6 +132,12 @@ func (r *TruncatingBuffer) GetDroppedMessageCount() uint64 {
 	messages := r.droppedMessageCount
 	r.droppedMessageCount = 0
 	return messages
+}
+
+func (r *TruncatingBuffer) PeekDroppedMessageCount() uint64 {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	return r.droppedMessageCount
 }
 
 func (r *TruncatingBuffer) notifyMessagesDropped(outputChannel chan *events.Envelope, deltaDropped, totalDropped uint64, appId string) {
@@ -137,6 +154,7 @@ func (r *TruncatingBuffer) emitMessage(outputChannel chan *events.Envelope, even
 	env, err := emitter.Wrap(event, r.context.Origin())
 	if err == nil {
 		outputChannel <- env
+		r.queuedInternalMessageCount++
 	} else {
 		r.logger.Warnf("Error marshalling message: %v", err)
 	}
