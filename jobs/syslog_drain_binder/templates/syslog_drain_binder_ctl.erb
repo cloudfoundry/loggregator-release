@@ -21,13 +21,13 @@ case $1 in
 
     <% p("syslog_drain_binder.debug") == true ? debug_string = "--debug " : debug_string = "" %>
 
-    exec >>$LOG_DIR/syslog_drain_binder.stdout.log \
-         2>>$LOG_DIR/syslog_drain_binder.stderr.log
-
     chpst -u vcap:vcap /var/vcap/packages/syslog_drain_binder/syslog_drain_binder <%= debug_string %> \
          --config /var/vcap/jobs/syslog_drain_binder/config/syslog_drain_binder.json &
 
     echo $! > $PIDFILE
+
+    exec >>$LOG_DIR/syslog_drain_binder.stdout.log \
+         2>>$LOG_DIR/syslog_drain_binder.stderr.log
 
     ;;
 
