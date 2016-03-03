@@ -6,4 +6,4 @@ trap "echo Exited!; exit 1;" SIGINT SIGTERM
 go install github.com/apcera/gnatsd
 
 echo "Running Tests..."
-$(dirname $0)/travis_test $1
+$(dirname $0)/ci_test $1
