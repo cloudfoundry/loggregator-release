@@ -16,7 +16,7 @@ case $1 in
 
     <% p("dea_logging_agent.debug") == true ? debug_string = "--debug " : debug_string = "" %>
 
-    chpst -u vcap:vcap /var/vcap/packages/dea_logging_agent/deaagent <%= debug_string %> \
+    /var/vcap/packages/dea_logging_agent/deaagent <%= debug_string %> \
          --config /var/vcap/jobs/dea_logging_agent/config/dea_logging_agent.json &
 
     echo $! > $PIDFILE
