@@ -13,6 +13,12 @@ mv $BIN_DIR/../src/github.com/coreos/etcd/bin/etcd $BIN_DIR/etcd
 export PATH=$PATH:$BIN_DIR
 export GORACE="halt_on_error=1"
 
+goveralls=$(which goveralls)
+if [[ -e "${BIN_DIR}/goveralls" ]]
+then
+    goveralls="${BIN_DIR}/goveralls"
+fi
+
 rm -rf ./pkg
 
 result=0
@@ -70,7 +76,7 @@ done
 
 if [ $result -eq 0 ]; then
     green "\nSUITE SUCCESS"
-    if [[ $(which goveralls) && ! -z "$COVERALLS_TOKEN" ]]
+    if [[ ! -z "$goveralls" && ! -z "$COVERALLS_TOKEN" ]]
     then
         green "\nWriting cover profile to coveralls.io"
         echo "mode: set" > all.coverprofile
