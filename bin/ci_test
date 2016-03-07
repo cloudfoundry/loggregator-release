@@ -69,9 +69,16 @@ do
 done
 
 if [ $result -eq 0 ]; then
-	green "\nSUITE SUCCESS"
+    green "\nSUITE SUCCESS"
+    if [[ $(which goveralls) && ! -z "$COVERALLS_TOKEN" ]]
+    then
+        green "\nWriting cover profile to coveralls.io"
+        echo "mode: set" > all.coverprofile
+        find . -iname "*.coverprofile" -exec grep -v mode: {} >> all.coverprofile \;
+        goveralls -coverprofile=all.coverprofile -repotoken=$COVERALLS_TOKEN
+    fi
 else
-	red "\nSUITE FAILURE"
+    red "\nSUITE FAILURE"
 fi
 
 exit $result
