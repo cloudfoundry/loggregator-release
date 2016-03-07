@@ -7,8 +7,8 @@ import (
 	"monitor"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
-	"profiler"
 	"signalmanager"
 	"strconv"
 	"time"
@@ -49,8 +49,6 @@ var (
 	logLevel             = flag.Bool("debug", false, "Debug logging")
 	disableAccessControl = flag.Bool("disableAccessControl", false, "always all access to app logs")
 	configFile           = flag.String("config", "config/loggregator_trafficcontroller.json", "Location of the loggregator trafficcontroller config json file")
-	cpuprofile           = flag.String("cpuprofile", "", "write cpu profile to file")
-	memprofile           = flag.String("memprofile", "", "write memory profile to this file")
 )
 
 func main() {
@@ -68,14 +66,22 @@ func main() {
 		panic(err)
 	}
 
+	ipAddress, err := localip.LocalIP()
+	if err != nil {
+		panic(err)
+	}
+
 	log := logger.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller", config.Syslog)
 	log.Info("Startup: Setting up the loggregator traffic controller")
 
 	dropsonde.Initialize("127.0.0.1:"+strconv.Itoa(config.MetronPort), "LoggregatorTrafficController")
 
-	profiler := profiler.New(*cpuprofile, *memprofile, 1*time.Second, log)
-	profiler.Profile()
-	defer profiler.Stop()
+	go func() {
+		err := http.ListenAndServe(net.JoinHostPort(ipAddress, "6060"), nil)
+		if err != nil {
+			log.Errorf("Error starting pprof server: %s", err.Error())
+		}
+	}()
 
 	uptimeMonitor := monitor.NewUptimeMonitor(time.Duration(config.MonitorIntervalSeconds) * time.Second)
 	go uptimeMonitor.Start()
@@ -87,11 +93,6 @@ func main() {
 		log.Errorf("Cannot connect to ETCD: %s", err.Error())
 		exitCode = -1
 		return
-	}
-
-	ipAddress, err := localip.LocalIP()
-	if err != nil {
-		panic(err)
 	}
 
 	logAuthorizer := authorization.NewLogAccessAuthorizer(*disableAccessControl, config.ApiHost, config.SkipCertVerify)

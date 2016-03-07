@@ -3,8 +3,12 @@ package main
 import (
 	"doppler/dopplerservice"
 	"doppler/listeners"
+	"errors"
 	"flag"
 	"fmt"
+	"net"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"time"
 
@@ -30,9 +34,9 @@ import (
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+	"github.com/pivotal-golang/localip"
 
 	"metron/config"
-	"profiler"
 	"signalmanager"
 )
 
@@ -40,8 +44,6 @@ var (
 	logFilePath    = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 	configFilePath = flag.String("config", "config/metron.json", "Location of the Metron config json file")
 	debug          = flag.Bool("debug", false, "Debug logging")
-	cpuprofile     = flag.String("cpuprofile", "", "write cpu profile to file")
-	memprofile     = flag.String("memprofile", "", "write memory profile to this file")
 )
 
 func main() {
@@ -61,13 +63,21 @@ func main() {
 		panic(err)
 	}
 
+	localIp, err := localip.LocalIP()
+	if err != nil {
+		panic(errors.New("Unable to resolve own IP address: " + err.Error()))
+	}
+
 	log := logger.NewLogger(*debug, *logFilePath, "metron", config.Syslog)
+
+	go func() {
+		err := http.ListenAndServe(net.JoinHostPort(localIp, "6060"), nil)
+		if err != nil {
+			log.Errorf("Error starting pprof server: %s", err.Error())
+		}
+	}()
+
 	log.Info("Startup: Setting up the Metron agent")
-
-	profiler := profiler.New(*cpuprofile, *memprofile, 1*time.Second, log)
-	profiler.Profile()
-	defer profiler.Stop()
-
 	marshaller, err := initializeDopplerPool(config, log)
 	if err != nil {
 		log.Errorf("Could not initialize doppler connection pool: %s", err)
