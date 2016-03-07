@@ -400,7 +400,7 @@ var _ = Describe("Finder", func() {
 
 		Context("meta endpoints", func() {
 			Context("when a new node is created", func() {
-				BeforeEach(func() {
+				JustBeforeEach(func() {
 					node := makeMetaNode("z1/doppler_z1/0", []string{"tls://1.2.3.4:567"})
 					metaEvents <- storeadapter.WatchEvent{
 						Type: storeadapter.CreateEvent,
@@ -419,17 +419,18 @@ var _ = Describe("Finder", func() {
 				BeforeEach(func() {
 					preferredProtocol = "tls"
 					metaNode = makeMetaNode("z1/doppler_z1/0", []string{"udp://1.2.3.4:567"})
+				})
+
+				JustBeforeEach(func() {
+					// Ignore the startup event
+					_ = finder.Next()
+
 					updateNode := makeMetaNode("z1/doppler_z1/0", []string{"tls://1.2.3.4:555", "udp://1.2.3.4:567"})
 					metaEvents <- storeadapter.WatchEvent{
 						Type:     storeadapter.UpdateEvent,
 						Node:     &updateNode,
 						PrevNode: &metaNode,
 					}
-				})
-
-				JustBeforeEach(func() {
-					// Ignore the startup event
-					_ = finder.Next()
 				})
 
 				It("returns the updated endpoints", func() {
@@ -442,15 +443,16 @@ var _ = Describe("Finder", func() {
 			Context("when a node is deleted", func() {
 				BeforeEach(func() {
 					metaNode = makeMetaNode("z1/doppler_z1/0", []string{"tls://1.2.3.4:567"})
-					metaEvents <- storeadapter.WatchEvent{
-						Type:     storeadapter.DeleteEvent,
-						PrevNode: &metaNode,
-					}
 				})
 
 				JustBeforeEach(func() {
 					// Ignore the startup event
 					_ = finder.Next()
+
+					metaEvents <- storeadapter.WatchEvent{
+						Type:     storeadapter.DeleteEvent,
+						PrevNode: &metaNode,
+					}
 				})
 
 				It("removes the entry from metaEndpoints", func() {
@@ -462,15 +464,16 @@ var _ = Describe("Finder", func() {
 			Context("when a node is expired", func() {
 				BeforeEach(func() {
 					metaNode = makeMetaNode("z1/doppler_z1/0", []string{"tls://1.2.3.4:567"})
-					metaEvents <- storeadapter.WatchEvent{
-						Type:     storeadapter.ExpireEvent,
-						PrevNode: &metaNode,
-					}
 				})
 
 				JustBeforeEach(func() {
 					// Ignore the startup event
 					_ = finder.Next()
+
+					metaEvents <- storeadapter.WatchEvent{
+						Type:     storeadapter.ExpireEvent,
+						PrevNode: &metaNode,
+					}
 				})
 
 				It("removes the entry from metaEndpoints", func() {
@@ -480,7 +483,7 @@ var _ = Describe("Finder", func() {
 			})
 
 			Context("when invalid event is received", func() {
-				BeforeEach(func() {
+				JustBeforeEach(func() {
 					metaEvents <- storeadapter.WatchEvent{
 						Type: storeadapter.InvalidEvent,
 					}
@@ -509,7 +512,7 @@ var _ = Describe("Finder", func() {
 		Context("legacy endpoints", func() {
 
 			Context("when a new node is created", func() {
-				BeforeEach(func() {
+				JustBeforeEach(func() {
 					node := storeadapter.StoreNode{
 						Key:   path.Join(dopplerservice.LEGACY_ROOT, "z1/doppler_z1/0"),
 						Value: []byte("1.2.3.4"),
@@ -533,6 +536,12 @@ var _ = Describe("Finder", func() {
 						Key:   path.Join(dopplerservice.LEGACY_ROOT, "z1/doppler_z1/0"),
 						Value: []byte("1.2.3.4"),
 					}
+				})
+
+				JustBeforeEach(func() {
+					// Ignore the startup event
+					_ = finder.Next()
+
 					updateNode := storeadapter.StoreNode{
 						Key:   legacyNode.Key,
 						Value: []byte("5.6.7.8"),
@@ -542,11 +551,6 @@ var _ = Describe("Finder", func() {
 						Node:     &updateNode,
 						PrevNode: &legacyNode,
 					}
-				})
-
-				JustBeforeEach(func() {
-					// Ignore the startup event
-					_ = finder.Next()
 				})
 
 				It("returns the updated endpoint", func() {
@@ -562,15 +566,16 @@ var _ = Describe("Finder", func() {
 						Key:   path.Join(dopplerservice.LEGACY_ROOT, "z1/doppler_z1/0"),
 						Value: []byte("1.2.3.4"),
 					}
-					legacyEvents <- storeadapter.WatchEvent{
-						Type:     storeadapter.DeleteEvent,
-						PrevNode: &legacyNode,
-					}
 				})
 
 				JustBeforeEach(func() {
 					// Ignore the startup event
 					_ = finder.Next()
+
+					legacyEvents <- storeadapter.WatchEvent{
+						Type:     storeadapter.DeleteEvent,
+						PrevNode: &legacyNode,
+					}
 				})
 
 				It("removes the entry from legacyEndpoints", func() {
@@ -585,15 +590,16 @@ var _ = Describe("Finder", func() {
 						Key:   path.Join(dopplerservice.LEGACY_ROOT, "z1/doppler_z1/0"),
 						Value: []byte("1.2.3.4"),
 					}
-					legacyEvents <- storeadapter.WatchEvent{
-						Type:     storeadapter.ExpireEvent,
-						PrevNode: &legacyNode,
-					}
 				})
 
 				JustBeforeEach(func() {
 					// Ignore the startup event
 					_ = finder.Next()
+
+					legacyEvents <- storeadapter.WatchEvent{
+						Type:     storeadapter.ExpireEvent,
+						PrevNode: &legacyNode,
+					}
 				})
 
 				It("removes the entry from legacyEndpoints", func() {
@@ -603,7 +609,7 @@ var _ = Describe("Finder", func() {
 			})
 
 			Context("when invalid event is received", func() {
-				BeforeEach(func() {
+				JustBeforeEach(func() {
 					legacyEvents <- storeadapter.WatchEvent{
 						Type: storeadapter.InvalidEvent,
 					}
@@ -627,7 +633,6 @@ var _ = Describe("Finder", func() {
 					Eventually(done).Should(BeClosed())
 				})
 			})
-
 		})
 	})
 
