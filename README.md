@@ -3,9 +3,9 @@
 [![Coverage Status](https://coveralls.io/repos/cloudfoundry/loggregator/badge.png?branch=develop)](https://coveralls.io/r/cloudfoundry/loggregator?branch=develop)
 
 [Concourse Build](https://loggregator.ci.cf-app.com)
- 
+
 ### Logging in the Clouds   
-  
+
 Loggregator is the user application logging subsystem of Cloud Foundry.
 
 ### Table of Contents
@@ -386,7 +386,6 @@ Multiple subscribers may connect to the firehose endpoint, each with a unique su
 The Cloud Foundry team uses GitHub and accepts contributions via [pull request](https://help.github.com/articles/using-pull-requests).
 
 Follow these steps to make a contribution to any of our open source repositories:
-2442ffe751d4440f534607d046fe0ebfedbc4a6f
 1. Complete our CLA Agreement for [individuals](http://www.cloudfoundry.org/individualcontribution.pdf) or [corporations](http://www.cloudfoundry.org/corpcontribution.pdf)
 1. Set your name and email
 
