@@ -1,6 +1,9 @@
 package clientreader
 
-import "doppler/dopplerservice"
+import (
+	"doppler/dopplerservice"
+	"fmt"
+)
 
 //go:generate hel --type ClientPool --output mock_client_pool_test.go
 
@@ -19,6 +22,6 @@ func Read(clientPool ClientPool, preferredProtocol string, event dopplerservice.
 	}
 
 	if clients == 0 {
-		panic("No available dopplers")
+		panic(fmt.Sprintf("No %s enabled dopplers available, check your manifest to make sure you have dopplers listening for %[1]s", preferredProtocol))
 	}
 }
