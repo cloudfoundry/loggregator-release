@@ -181,8 +181,8 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 		if err != nil {
 			if err != io.EOF {
 				metrics.BatchIncrementCounter(t.receiveErrorCountMetricName)
+				t.logger.Errorf("Error while decoding: %v", err)
 			}
-			t.logger.Errorf("Error while decoding: %v", err)
 			break
 		}
 
