@@ -206,12 +206,17 @@ var _ = Describe("Syslog Drain Binding", func() {
 			Eventually(func() *gbytes.Buffer {
 				SendAppLog(appID, "overflow2", inputConnection)
 				return dopplerSession.Out
-			}, 20, 1).Should(gbytes.Say(`TB: Output channel too full`))
+			}, 50, 0.5).Should(gbytes.Say(`TB: Output channel too full`))
 
 			Eventually(func() *gbytes.Buffer {
 				SendAppLog(appID, "overflow2", inputConnection)
 				return dopplerSession.Out
-			}, 20, 1).Should(gbytes.Say(`TB: Output channel too full`))
+			}, 50, 0.5).Should(gbytes.Say(`TB: Output channel too full`))
+
+			Eventually(func() *gbytes.Buffer {
+				SendAppLog(appID, "overflow2", inputConnection)
+				return dopplerSession.Out
+			}, 50, 0.5).Should(gbytes.Say(`TB: Output channel too full`))
 
 			By("starting the endpoint (2nd time)")
 			serverSession = StartHTTPSServer(pathToHTTPEchoServer)
