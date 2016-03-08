@@ -25,7 +25,10 @@ import (
 	"github.com/pivotal-golang/localip"
 )
 
-const DOPPLER_ORIGIN = "DopplerServer"
+const (
+	DOPPLER_ORIGIN = "DopplerServer"
+	pprofPort      = "6060"
+)
 
 var (
 	logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
@@ -84,15 +87,15 @@ func main() {
 	}
 
 	log := logger.NewLogger(*logLevel, *logFilePath, "doppler", conf.Syslog)
-	log.Info("Startup: Setting up the doppler server")
 
 	go func() {
-		err := http.ListenAndServe(net.JoinHostPort(localIp, "6060"), nil)
+		err := http.ListenAndServe(net.JoinHostPort(localIp, pprofPort), nil)
 		if err != nil {
 			log.Errorf("Error starting pprof server: %s", err.Error())
 		}
 	}()
 
+	log.Info("Startup: Setting up the doppler server")
 	dropsonde.Initialize(conf.MetronAddress, DOPPLER_ORIGIN)
 	storeAdapter := NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
 

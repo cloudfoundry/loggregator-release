@@ -29,20 +29,7 @@ import (
 	"github.com/pivotal-golang/localip"
 )
 
-var DefaultStoreAdapterProvider = func(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
-	workPool, err := workpool.NewWorkPool(concurrentRequests)
-	if err != nil {
-		panic(err)
-	}
-	options := &etcdstoreadapter.ETCDOptions{
-		ClusterUrls: urls,
-	}
-	etcdStoreAdapter, err := etcdstoreadapter.New(options, workPool)
-	if err != nil {
-		panic(err)
-	}
-	return etcdStoreAdapter
-}
+const pprofPort = "6060"
 
 var (
 	logFilePath          = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
@@ -77,7 +64,7 @@ func main() {
 	dropsonde.Initialize("127.0.0.1:"+strconv.Itoa(config.MetronPort), "LoggregatorTrafficController")
 
 	go func() {
-		err := http.ListenAndServe(net.JoinHostPort(ipAddress, "6060"), nil)
+		err := http.ListenAndServe(net.JoinHostPort(ipAddress, pprofPort), nil)
 		if err != nil {
 			log.Errorf("Error starting pprof server: %s", err.Error())
 		}
@@ -87,7 +74,7 @@ func main() {
 	go uptimeMonitor.Start()
 	defer uptimeMonitor.Stop()
 
-	etcdAdapter := DefaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
+	etcdAdapter := defaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	err = etcdAdapter.Connect()
 	if err != nil {
 		log.Errorf("Cannot connect to ETCD: %s", err.Error())
@@ -125,6 +112,21 @@ func main() {
 			return
 		}
 	}
+}
+
+func defaultStoreAdapterProvider(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
+	workPool, err := workpool.NewWorkPool(concurrentRequests)
+	if err != nil {
+		panic(err)
+	}
+	options := &etcdstoreadapter.ETCDOptions{
+		ClusterUrls: urls,
+	}
+	etcdStoreAdapter, err := etcdstoreadapter.New(options, workPool)
+	if err != nil {
+		panic(err)
+	}
+	return etcdStoreAdapter
 }
 
 func startOutgoingProxy(host string, proxy http.Handler) {

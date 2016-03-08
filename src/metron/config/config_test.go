@@ -65,7 +65,6 @@ var _ = Describe("Config", func() {
 					CAFile:   "./fixtures/ca.crt",
 				}))
 			})
-
 		})
 
 		Describe("Parse", func() {
@@ -86,24 +85,13 @@ var _ = Describe("Config", func() {
 			Context("returns error", func() {
 				It("for invalid preferred protocol", func() {
 					_, err := config.Parse(bytes.NewBufferString(`
-				{
-				  "PreferredProtocol": "NOT A REAL PROTOCOL",
-				}
-				`))
-
+						{
+							"PreferredProtocol": "NOT A REAL PROTOCOL"
+						}
+					`))
 					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(Equal("Invalid protocol: NOT A REAL PROTOCOL"))
 				})
-			})
-
-		})
-
-		Context("returns error", func() {
-			It("for invalid preferred protocol", func() {
-				_, err := config.Parse(bytes.NewBufferString(`
-				{"PreferredProtocol": "NOT A REAL PROTOCOL"}
-				`))
-
-				Expect(err).To(HaveOccurred())
 			})
 		})
 	})

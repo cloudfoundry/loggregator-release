@@ -80,6 +80,5 @@ var _ = Describe("Config", func() {
 			Expect(config.WebsocketWriteTimeoutSeconds).To(Equal(60))
 			Expect(config.MetricBatchIntervalMilliseconds).To(BeEquivalentTo(15000))
 		})
-
 	})
 })

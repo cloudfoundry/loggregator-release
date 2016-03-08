@@ -40,6 +40,10 @@ import (
 	"signalmanager"
 )
 
+// This is 6061 to not conflict with any other jobs that might have pprof
+// running on 6060
+const pprofPort = "6061"
+
 var (
 	logFilePath    = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 	configFilePath = flag.String("config", "config/metron.json", "Location of the Metron config json file")
@@ -71,7 +75,7 @@ func main() {
 	log := logger.NewLogger(*debug, *logFilePath, "metron", config.Syslog)
 
 	go func() {
-		err := http.ListenAndServe(net.JoinHostPort(localIp, "6060"), nil)
+		err := http.ListenAndServe(net.JoinHostPort(localIp, pprofPort), nil)
 		if err != nil {
 			log.Errorf("Error starting pprof server: %s", err.Error())
 		}
