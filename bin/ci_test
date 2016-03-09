@@ -81,7 +81,7 @@ if [ $result -eq 0 ]; then
         green "\nWriting cover profile to coveralls.io"
         echo "mode: set" > all.coverprofile
         find . -iname "*.coverprofile" -exec grep -v mode: {} >> all.coverprofile \;
-        $goveralls -coverprofile=all.coverprofile -repotoken=$COVERALLS_TOKEN
+        $goveralls -coverprofile=all.coverprofile -repotoken=$COVERALLS_TOKEN -service=concourse
     fi
 else
     red "\nSUITE FAILURE"
