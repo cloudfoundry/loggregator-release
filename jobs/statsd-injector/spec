@@ -4,7 +4,7 @@ templates:
   statsd-injector-ctl.erb: bin/statsd-injector-ctl
 
 packages:
-- common
+- loggregator_common
 - statsd-injector
 properties:
   statsd_injector.metron_port:
