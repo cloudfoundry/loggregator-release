@@ -172,7 +172,6 @@ var _ = Describe("Truncating Buffer", func() {
 			tracksDroppedMessages := func(itMsg string, delta, total int) {
 				It(itMsg, func() {
 					var logMessageNotification *events.Envelope
-
 					Eventually(buffer.GetOutputChannel).Should(Receive(&logMessageNotification))
 					Expect(logMessageNotification.GetEventType()).To(Equal(events.Envelope_LogMessage))
 					Expect(logMessageNotification.GetLogMessage().GetAppId()).To(Equal("fake-app-id"))
@@ -200,12 +199,16 @@ var _ = Describe("Truncating Buffer", func() {
 				JustBeforeEach(func() {
 					Expect(buffer.GetDroppedMessageCount()).To(BeZero())
 
-					firstBuffer := buffer.GetOutputChannel()
 					sendLogMessages("message 1", inMessageChan)
 					sendLogMessages("message 2", inMessageChan)
 					sendLogMessages("message 3", inMessageChan)
 					sendLogMessages("message 4", inMessageChan)
-					Eventually(buffer.GetOutputChannel).ShouldNot(Equal(firstBuffer))
+
+					// This is a fake synchornization mechanism, as otherwise
+					// it is impossible to know for certain whether message 4 processing
+					// happens before message read below (which could happen to be
+					// either message 1 or message TB)
+					Eventually(buffer.PeekDroppedMessageCount).Should(Equal(uint64(3)))
 				})
 
 				tracksDroppedMessages("drops all the messages", 3, 3)
@@ -224,23 +227,42 @@ var _ = Describe("Truncating Buffer", func() {
 						for i := 0; i < sendLog; i++ {
 							sendLogMessages("message X", inMessageChan)
 						}
-
-						Eventually(buffer.GetOutputChannel).ShouldNot(Equal(outputChannel))
 					})
 
-					Context("no event is read", func() {
+					Context("no event is read and buffer fills a second time", func() {
 						BeforeEach(func() {
 							receiveEvents = 0
 							sendLog = 1
 						})
 
+						JustBeforeEach(func() {
+							Eventually(buffer.PeekDroppedMessageCount).Should(Equal(uint64(4)))
+						})
+
 						tracksDroppedMessages("drops immediately", 1, 4)
+					})
+
+					Context("no event is read and buffer fills a third time", func() {
+						BeforeEach(func() {
+							receiveEvents = 0
+							sendLog = 2
+						})
+
+						JustBeforeEach(func() {
+							Eventually(buffer.PeekDroppedMessageCount).Should(Equal(uint64(5)))
+						})
+
+						tracksDroppedMessages("drops immediately", 1, 5)
 					})
 
 					Context("and the TB log event is read", func() {
 						BeforeEach(func() {
 							receiveEvents = 1
 							sendLog = 2
+						})
+
+						JustBeforeEach(func() {
+							Eventually(buffer.PeekDroppedMessageCount).Should(Equal(uint64(5)))
 						})
 
 						tracksDroppedMessages("has 1 slot filled", 2, 5)
@@ -250,6 +272,10 @@ var _ = Describe("Truncating Buffer", func() {
 						BeforeEach(func() {
 							receiveEvents = 2
 							sendLog = 3
+						})
+
+						JustBeforeEach(func() {
+							Eventually(buffer.PeekDroppedMessageCount).Should(Equal(uint64(6)))
 						})
 
 						tracksDroppedMessages("has an empty buffer", 3, 6)
