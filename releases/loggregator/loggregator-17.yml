@@ -1,0 +1,96 @@
+---
+packages:
+- name: syslog_drain_binder
+  version: 1b77306dcffb38a00a8227d4ab489e81cbf92b5a
+  fingerprint: 1b77306dcffb38a00a8227d4ab489e81cbf92b5a
+  sha1: 09c4695a13895be16c059239701339107761dff0
+  dependencies:
+  - golang1.5
+- name: loggregator-acceptance-tests
+  version: 1313e1d822b205a83bb567fe0fe248b203d4afb7
+  fingerprint: 1313e1d822b205a83bb567fe0fe248b203d4afb7
+  sha1: 4be082f0623cd8d7cc21157d68286cb0909f56fb
+  dependencies:
+  - golang1.5
+- name: golang1.4
+  version: 714698bc352d2a1dbe321376f0676037568147bb
+  fingerprint: 714698bc352d2a1dbe321376f0676037568147bb
+  sha1: 40c8d26c51a4252f0f9b3abd1557a3f596f14936
+  dependencies: []
+- name: golang1.5
+  version: 709db3f73064ae59e757b086b7d7e6db392424bb
+  fingerprint: 709db3f73064ae59e757b086b7d7e6db392424bb
+  sha1: e466e9979cc6c9fa44d3dbfd2a718a083377eb91
+  dependencies: []
+- name: loggregator_common
+  version: e401816a4748292163679fafcbd8f818ed8154a5
+  fingerprint: e401816a4748292163679fafcbd8f818ed8154a5
+  sha1: bfa5cf8e65816dd74e3e1fd391de4a99566a9bef
+  dependencies: []
+- name: dea_logging_agent
+  version: dcdb43aa03ce12e8bbe9ea6f4cf65b55bb017a7b
+  fingerprint: dcdb43aa03ce12e8bbe9ea6f4cf65b55bb017a7b
+  sha1: a07bffa01e71033ffc8aa811a085ae2cdaf8452d
+  dependencies:
+  - golang1.5
+- name: doppler
+  version: 664ab240be750c00bb325c097c79df65fb03c52b
+  fingerprint: 664ab240be750c00bb325c097c79df65fb03c52b
+  sha1: fd6c31b918e43d3911557133a3e4fe5ab5fde602
+  dependencies:
+  - golang1.5
+- name: statsd-injector
+  version: e8e54509908a65ede9328b95e9915c1226d412e5
+  fingerprint: e8e54509908a65ede9328b95e9915c1226d412e5
+  sha1: a84b7be3647b1ff0581f73e13767c058cde051f5
+  dependencies:
+  - golang1.5
+- name: metron_agent
+  version: b3d9124b4701a59172d269a0c0a5967b1504444b
+  fingerprint: b3d9124b4701a59172d269a0c0a5967b1504444b
+  sha1: e1b281f999036234a7ea0d9bd893c9d18baa90f2
+  dependencies:
+  - golang1.5
+- name: loggregator_trafficcontroller
+  version: 9414e2fbd5da8c1c76c03395870406c2a0cc961c
+  fingerprint: 9414e2fbd5da8c1c76c03395870406c2a0cc961c
+  sha1: b9e1e3545f784168e6a4ee6d46d8383b92721017
+  dependencies:
+  - golang1.5
+jobs:
+- name: syslog_drain_binder
+  version: 3e2374913e2a33b4ce9782028c413e8771ef2150
+  fingerprint: 3e2374913e2a33b4ce9782028c413e8771ef2150
+  sha1: 93ea41d8f1ce3a0989f7a1f6b5e56869907e2062
+- name: loggregator-acceptance-tests
+  version: d2054c696b5650967ea70ccda541188d20c024f3
+  fingerprint: d2054c696b5650967ea70ccda541188d20c024f3
+  sha1: 7a50155612a7612fecccd7e264cd9a9a8e148960
+- name: dea_logging_agent
+  version: 17396d5c649bd4a3c4979b846b00a91b81d3d68c
+  fingerprint: 17396d5c649bd4a3c4979b846b00a91b81d3d68c
+  sha1: 246f49eedaacca8eb6016430c78e965fd976e84c
+- name: doppler
+  version: 27db46496d0b1f1b1a912b68b31d3c1e7bba9441
+  fingerprint: 27db46496d0b1f1b1a912b68b31d3c1e7bba9441
+  sha1: 2a27af8ffdf21735d56818804432f8dabad22941
+- name: statsd-injector
+  version: b0ebb495fc9376b9df7ae70d916897d5cbcc3105
+  fingerprint: b0ebb495fc9376b9df7ae70d916897d5cbcc3105
+  sha1: 5e144611bc6cf1610c9c2b4e59232a43ca9240cb
+- name: metron_agent
+  version: 4e14604d3dee7d61f31e8df420f64142426e2ece
+  fingerprint: 4e14604d3dee7d61f31e8df420f64142426e2ece
+  sha1: 6355f99a7860acdb2b6a05d0dffe9c3b294a7ab2
+- name: loggregator_trafficcontroller
+  version: 36062f5532f1ba79a99b45b35da75e1320653cc0
+  fingerprint: 36062f5532f1ba79a99b45b35da75e1320653cc0
+  sha1: 228615f533c2acadea4f0d0d415dc9bc16e73827
+license:
+  version: 29f14304ab1dc334aa64268c1a5c57bbc1fb0673
+  fingerprint: 29f14304ab1dc334aa64268c1a5c57bbc1fb0673
+  sha1: 70557eb603cf8c7771e38a9c79dd51db9f982c44
+commit_hash: e48fe851
+uncommitted_changes: true
+name: loggregator
+version: '17'
