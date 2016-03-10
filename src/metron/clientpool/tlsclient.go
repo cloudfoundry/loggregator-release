@@ -11,7 +11,7 @@ import (
 
 const timeout = 1 * time.Second
 
-type tlsClient struct {
+type TLSClient struct {
 	address   string
 	tlsConfig *tls.Config
 	logger    *gosteno.Logger
@@ -20,71 +20,79 @@ type tlsClient struct {
 	conn net.Conn
 }
 
-type tlsHandshakeTimeoutError struct{}
-
-func (tlsHandshakeTimeoutError) Timeout() bool   { return true }
-func (tlsHandshakeTimeoutError) Temporary() bool { return true }
-func (tlsHandshakeTimeoutError) Error() string   { return "TLS handshake timeout" }
-
-func NewTLSClient(logger *gosteno.Logger, address string, tlsConfig *tls.Config) (Client, error) {
-	c := &tlsClient{
+func NewTLSClient(logger *gosteno.Logger, address string, tlsConfig *tls.Config) *TLSClient {
+	return &TLSClient{
 		address:   address,
 		tlsConfig: tlsConfig,
 		logger:    logger,
 	}
-
-	_ = c.connect()
-	return c, nil
 }
 
-func (c *tlsClient) Scheme() string {
-	return "tls"
-}
-
-func (c *tlsClient) Address() string {
-	return c.address
-}
-
-func (c *tlsClient) Close() error {
-	var err error
-	c.lock.Lock()
-
-	if c.conn != nil {
-		err = c.conn.Close()
-		c.conn = nil
-	}
-	c.lock.Unlock()
-
-	return err
-}
-
-func (c *tlsClient) Write(data []byte) (int, error) {
-	if len(data) == 0 {
-		return 0, nil
-	}
-
-	c.lock.Lock()
-	if c.conn == nil {
-		if err := c.connect(); err != nil {
-			c.lock.Unlock()
-			return 0, err
-		}
-	}
-	conn := c.conn
-	c.lock.Unlock()
-
-	return conn.Write(data)
-}
-
-func (c *tlsClient) connect() error {
+func (c *TLSClient) Connect() error {
 	conn, err := tls.DialWithDialer(&net.Dialer{Timeout: timeout}, "tcp", c.address, c.tlsConfig)
 	if err != nil {
 		c.logger.Warnd(map[string]interface{}{
 			"error":   err,
 			"address": c.address,
 		}, "Failed to connect over TLS")
-	} else {
-		c.conn = conn
+		return err
 	}
-	return err
+	c.conn = conn
+	return nil
+}
+
+func (c *TLSClient) Scheme() string {
+	return "tls"
+}
+
+func (c *TLSClient) Address() string {
+	return c.address
+}
+
+func (c *TLSClient) Close() error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	if c.conn == nil {
+		return nil
+	}
+
+	conn := c.conn
+	c.conn = nil
+	if err := conn.Close(); err != nil {
+		c.logger.Warnf("Error closing TLS connection: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func (c *TLSClient) logError(err error) {
+	c.logger.Errord(map[string]interface{}{
+		"scheme":  c.Scheme(),
+		"address": c.Address(),
+		"error":   err.Error(),
+	}, "TLSClient: streaming error")
+}
+
+func (c *TLSClient) Write(data []byte) (int, error) {
+	if len(data) == 0 {
+		return 0, nil
+	}
+
+	c.lock.Lock()
+	if c.conn == nil {
+		if err := c.Connect(); err != nil {
+			c.lock.Unlock()
+			c.logError(err)
+			return 0, err
+		}
+	}
+	conn := c.conn
+	c.lock.Unlock()
+
+	written, err := conn.Write(data)
+	if err != nil {
+		c.logError(err)
+	}
+	return written, err
 }

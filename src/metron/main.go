@@ -1,18 +1,23 @@
 package main
 
 import (
-	"crypto/tls"
 	"doppler/dopplerservice"
 	"doppler/listeners"
+	"errors"
 	"flag"
 	"fmt"
+	"net"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
-	"strings"
 	"time"
 
 	"metron/clientpool"
+	"metron/clientreader"
 	"metron/networkreader"
+	"metron/writers/batch"
 	"metron/writers/dopplerforwarder"
+	"metron/writers/eventmarshaller"
 	"metron/writers/eventunmarshaller"
 	"metron/writers/messageaggregator"
 	"metron/writers/tagger"
@@ -29,18 +34,20 @@ import (
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+	"github.com/pivotal-golang/localip"
 
 	"metron/config"
-	"profiler"
 	"signalmanager"
 )
+
+// This is 6061 to not conflict with any other jobs that might have pprof
+// running on 6060
+const pprofPort = "6061"
 
 var (
 	logFilePath    = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 	configFilePath = flag.String("config", "config/metron.json", "Location of the Metron config json file")
 	debug          = flag.Bool("debug", false, "Debug logging")
-	cpuprofile     = flag.String("cpuprofile", "", "write cpu profile to file")
-	memprofile     = flag.String("memprofile", "", "write memory profile to this file")
 )
 
 func main() {
@@ -60,28 +67,35 @@ func main() {
 		panic(err)
 	}
 
-	log := logger.NewLogger(*debug, *logFilePath, "metron", config.Syslog)
-	log.Info("Startup: Setting up the Metron agent")
-
-	profiler := profiler.New(*cpuprofile, *memprofile, 1*time.Second, log)
-	profiler.Profile()
-	defer profiler.Stop()
-
-	dopplerClientPool, err := initializeDopplerPool(config, log)
+	localIp, err := localip.LocalIP()
 	if err != nil {
-		log.Errorf("Failed to initialize the doppler pool: %s", err.Error())
-		os.Exit(-1)
+		panic(errors.New("Unable to resolve own IP address: " + err.Error()))
 	}
 
-	dopplerForwarder := dopplerforwarder.New(dopplerClientPool, []byte(config.SharedSecret), uint(config.BufferSize), config.EnableBuffer, log)
-	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, dopplerForwarder)
+	log := logger.NewLogger(*debug, *logFilePath, "metron", config.Syslog)
+
+	go func() {
+		err := http.ListenAndServe(net.JoinHostPort(localIp, pprofPort), nil)
+		if err != nil {
+			log.Errorf("Error starting pprof server: %s", err.Error())
+		}
+	}()
+
+	log.Info("Startup: Setting up the Metron agent")
+	marshaller, err := initializeDopplerPool(config, log)
+	if err != nil {
+		log.Errorf("Could not initialize doppler connection pool: %s", err)
+		exitCode = -1
+		return
+	}
+	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, marshaller)
 	aggregator := messageaggregator.New(messageTagger, log)
 
 	statsStopChan := make(chan struct{})
 	initializeMetrics(messageTagger, config, statsStopChan, log)
 
 	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, log)
-	metronAddress := fmt.Sprintf("127.0.0.1:%d", config.DropsondeIncomingMessagesPort)
+	metronAddress := fmt.Sprintf("127.0.0.1:%d", config.IncomingUDPPort)
 	dropsondeReader, err := networkreader.New(metronAddress, "dropsondeAgentListener", dropsondeUnmarshaller, log)
 	if err != nil {
 		log.Errorf("Failed to listen on %s: %s", metronAddress, err)
@@ -90,7 +104,6 @@ func main() {
 	}
 
 	log.Info("metron started")
-	go dopplerForwarder.Run()
 	go dropsondeReader.Start()
 
 	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
@@ -102,15 +115,14 @@ func main() {
 			signalmanager.DumpGoRoutine()
 		case <-killChan:
 			log.Info("Shutting down")
-			dopplerForwarder.Stop()
 			close(statsStopChan)
 			return
 		}
 	}
 }
 
-func initializeDopplerPool(config *config.Config, logger *gosteno.Logger) (*clientpool.DopplerPool, error) {
-	adapter, err := storeAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
+func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*eventmarshaller.EventMarshaller, error) {
+	adapter, err := storeAdapterProvider(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
 	if err != nil {
 		return nil, err
 	}
@@ -121,40 +133,40 @@ func initializeDopplerPool(config *config.Config, logger *gosteno.Logger) (*clie
 		}, "Failed to connect to etcd")
 	}
 
-	preferInZone := func(relativePath string) bool {
-		return strings.HasPrefix(relativePath, "/"+config.Zone+"/")
-	}
+	udpCreator := clientpool.NewUDPClientCreator(logger)
+	udpWrapper := dopplerforwarder.NewUDPWrapper([]byte(conf.SharedSecret), logger)
+	clientPool := clientpool.NewDopplerPool(logger, udpCreator)
+	udpForwarder := dopplerforwarder.New(udpWrapper, clientPool, logger)
 
-	var tlsConfig *tls.Config
-	if config.PreferredProtocol == "tls" {
-		c := config.TLSConfig
-		tlsConfig, err = listeners.NewTLSConfig(c.CertFile, c.KeyFile, c.CAFile)
+	var writer eventmarshaller.ByteWriter = udpForwarder
+
+	if conf.PreferredProtocol == "tls" {
+		c := conf.TLSConfig
+		tlsConfig, err := listeners.NewTLSConfig(c.CertFile, c.KeyFile, c.CAFile)
 		if err != nil {
 			return nil, err
 		}
 		tlsConfig.ServerName = "doppler"
+		tlsCreator := clientpool.NewTLSClientCreator(logger, tlsConfig)
+		tlsWrapper := dopplerforwarder.NewTLSWrapper(logger)
+		clientPool = clientpool.NewDopplerPool(logger, tlsCreator)
+		tlsForwarder := dopplerforwarder.New(tlsWrapper, clientPool, logger)
+		tcpBatchInterval := time.Duration(conf.TCPBatchIntervalMilliseconds) * time.Millisecond
+		batchWriter, err := batch.NewWriter(tlsForwarder, conf.TCPBatchSizeBytes, tcpBatchInterval, logger)
+		if err != nil {
+			return nil, err
+		}
+		writer = batchWriter
 	}
 
-	clientPool := clientpool.NewDopplerPool(logger, clientpool.NewDefaultClientFactory(logger, tlsConfig, string(config.PreferredProtocol)))
-
-	onUpdate := func(all map[string]string, preferred map[string]string) {
-		clientPool.Set(all, preferred)
-	}
-
-	dopplers, err := dopplerservice.NewFinder(adapter, string(config.PreferredProtocol), preferInZone, onUpdate, logger)
-	if err != nil {
-		return nil, err
-	}
-	dopplers.Start()
-
-	onLegacyUpdate := func(all map[string]string, preferred map[string]string) {
-		clientPool.SetLegacy(all, preferred)
-	}
-
-	legacyDopplers := dopplerservice.NewLegacyFinder(adapter, config.LoggregatorDropsondePort, preferInZone, onLegacyUpdate, logger)
-	legacyDopplers.Start()
-
-	return clientPool, nil
+	finder := dopplerservice.NewFinder(adapter, conf.LoggregatorDropsondePort, string(conf.PreferredProtocol), conf.Zone, logger)
+	finder.Start()
+	go func() {
+		for {
+			clientreader.Read(clientPool, string(conf.PreferredProtocol), finder.Next())
+		}
+	}()
+	return eventmarshaller.New(logger, writer), nil
 }
 
 func initializeMetrics(messageTagger *tagger.Tagger, config *config.Config, stopChan chan struct{}, logger *gosteno.Logger) {

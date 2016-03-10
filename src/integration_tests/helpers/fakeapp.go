@@ -19,7 +19,7 @@ type FakeApp struct {
 func NewFakeApp(appID string, warmupRate int, logRate int) *FakeApp {
 	generator := messagegenerator.NewLogMessageGenerator(appID)
 	counter := metricsreporter.NewCounter("sentLogs")
-	// 49625 is the DropsondeIncomingMessagesPort for the metron that will be spun up.
+	// 49625 is the IncomingUDPPort for the metron that will be spun up.
 	writer := messagewriter.NewMessageWriter("localhost", 49625, "", counter)
 
 	writeStrategy := writestrategies.NewConstantWriteStrategy(generator, writer, logRate)

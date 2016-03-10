@@ -106,7 +106,7 @@ var _ = Describe("Streaming Logs", func() {
 			inputConnection.Close()
 		})
 
-		itStreams(SendEventTLS)
+		itStreams(SendEventTCP)
 	})
 
 	Context("UDP", func() {

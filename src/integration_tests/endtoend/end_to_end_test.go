@@ -70,21 +70,33 @@ var _ = Describe("End to end test", func() {
 		}, 1)
 	}
 
-	Context("UDP", func() {
+	Context("Metron UDP, Doppler UDP", func() {
 		BeforeEach(func() {
 			dopplerConfig = "dopplerudp"
+			metronConfig = "metronudp"
 		})
 
 		benchmarkEndToEnd()
 	})
 
-	Context("TLS", func() {
+	Context("Metron TLS, Doppler TLS", func() {
 		BeforeEach(func() {
 			dopplerConfig = "dopplertls"
+			metronConfig = "metrontls"
 		})
 
 		benchmarkEndToEnd()
 	})
+
+	Context("Metron UDP, Doppler TLS", func() {
+		BeforeEach(func() {
+			dopplerConfig = "dopplertls"
+			metronConfig = "metronudp"
+		})
+
+		benchmarkEndToEnd()
+	})
+
 })
 
 func reportResults(r *endtoend.FirehoseReader, written int, benchmarker Benchmarker) {
@@ -95,9 +107,9 @@ func reportResults(r *endtoend.FirehoseReader, written int, benchmarker Benchmar
 	percentMessageLossBetweenDopplerAndFirehose := computePercentLost(r.DopplerSentMessageCount, totalMessagesReceivedByFirehose)
 	percentMessageLossOverEntirePipeline := computePercentLost(float64(written), r.TestMetricCount)
 
-	benchmarker.RecordValue("Messages lost between metron and doppler", r.MetronSentMessageCount - r.DopplerReceivedMessageCount)
-	benchmarker.RecordValue("Messages lost between doppler and firehose", r.DopplerSentMessageCount - totalMessagesReceivedByFirehose)
-	benchmarker.RecordValue("Total message loss over entire pipeline", float64(written) - r.TestMetricCount)
+	benchmarker.RecordValue("Messages lost between metron and doppler", r.MetronSentMessageCount-r.DopplerReceivedMessageCount)
+	benchmarker.RecordValue("Messages lost between doppler and firehose", r.DopplerSentMessageCount-totalMessagesReceivedByFirehose)
+	benchmarker.RecordValue("Total message loss over entire pipeline", float64(written)-r.TestMetricCount)
 	benchmarker.RecordValue("Message Loss percentage between Metron and Doppler ", percentMessageLossBetweenMetronAndDoppler)
 	benchmarker.RecordValue("Message Loss percentage between Doppler and Firehose nozzle", percentMessageLossBetweenDopplerAndFirehose)
 	benchmarker.RecordValue("Total message loss percentage (received by metron but not received by the firehose)", percentMessageLossOverEntirePipeline)

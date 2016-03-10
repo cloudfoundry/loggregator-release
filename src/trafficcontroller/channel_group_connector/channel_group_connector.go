@@ -1,9 +1,7 @@
 package channel_group_connector
 
 import (
-	"doppler/dopplerservice"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 	"trafficcontroller/doppler_endpoint"
@@ -17,14 +15,20 @@ const checkServerAddressesInterval = 100 * time.Millisecond
 
 type ListenerConstructor func(time.Duration, *gosteno.Logger) listener.Listener
 
+//go:generate hel --type Finder --output mock_finder_test.go
+
+type Finder interface {
+	WebsocketServers() []string
+}
+
 type ChannelGroupConnector struct {
-	finder              dopplerservice.Finder
+	finder              Finder
 	logger              *gosteno.Logger
 	listenerConstructor ListenerConstructor
 	generateLogMessage  marshaller.MessageGenerator
 }
 
-func NewChannelGroupConnector(finder dopplerservice.Finder, listenerConstructor ListenerConstructor, logMessageGenerator marshaller.MessageGenerator, logger *gosteno.Logger) *ChannelGroupConnector {
+func NewChannelGroupConnector(finder Finder, listenerConstructor ListenerConstructor, logMessageGenerator marshaller.MessageGenerator, logger *gosteno.Logger) *ChannelGroupConnector {
 	return &ChannelGroupConnector{
 		finder:              finder,
 		listenerConstructor: listenerConstructor,
@@ -33,7 +37,7 @@ func NewChannelGroupConnector(finder dopplerservice.Finder, listenerConstructor 
 	}
 }
 
-func (c *ChannelGroupConnector) Connect(dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{}) {
+func (c *ChannelGroupConnector) Connect(dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan <- []byte, stopChan <-chan struct{}) {
 	defer close(messagesChan)
 	connections := &serverConnections{
 		connectedAddresses: make(map[string]struct{}),
@@ -41,27 +45,22 @@ func (c *ChannelGroupConnector) Connect(dopplerEndpoint doppler_endpoint.Doppler
 
 	checkLoggregatorServersTicker := time.NewTicker(checkServerAddressesInterval)
 	defer checkLoggregatorServersTicker.Stop()
-
-loop:
+	loop:
 	for {
-		serverURLs := c.finder.AllServers()
-
+		serverURLs := c.finder.WebsocketServers()
 		if len(serverURLs) == 0 {
 			c.logger.Debugf("ChannelGroupConnector.Connect: No doppler servers available. Trying again in %s", checkServerAddressesInterval.String())
 		} else {
-			for _, url := range serverURLs {
-				if index := strings.Index(url, "://"); index != -1 {
-					serverAddress := url[index+3:]
-					if connections.connectedToServer(serverAddress) {
-						continue
-					}
-					connections.addConnectedServer(serverAddress)
-
-					go func(addr string) {
-						c.connectToServer(addr, dopplerEndpoint, messagesChan, stopChan)
-						connections.removeConnectedServer(addr)
-					}(serverAddress)
+			for _, serverURL := range serverURLs {
+				if connections.connectedToServer(serverURL) {
+					continue
 				}
+				connections.addConnectedServer(serverURL)
+
+				go func(addr string) {
+					c.connectToServer(addr, dopplerEndpoint, messagesChan, stopChan)
+					connections.removeConnectedServer(addr)
+				}(serverURL)
 			}
 		}
 
@@ -80,11 +79,10 @@ loop:
 	connections.Wait()
 }
 
-func (c *ChannelGroupConnector) connectToServer(serverAddress string, dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{}) {
+func (c *ChannelGroupConnector) connectToServer(serverAddress string, dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan <- []byte, stopChan <-chan struct{}) {
 	l := c.listenerConstructor(dopplerEndpoint.Timeout, c.logger)
-
 	serverUrl := fmt.Sprintf("ws://%s%s", serverAddress, dopplerEndpoint.GetPath())
-	c.logger.Debugf("proxy: connecting to doppler at %s", serverUrl)
+	c.logger.Infof("proxy: connecting to doppler at %s", serverUrl)
 
 	appId := dopplerEndpoint.StreamId
 	err := l.Start(serverUrl, appId, messagesChan, stopChan)

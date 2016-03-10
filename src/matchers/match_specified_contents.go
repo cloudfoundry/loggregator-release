@@ -67,7 +67,12 @@ func (matcher *specifiedContentsMatcher) Match(actual interface{}) (success bool
 		matcher.failureReason = "HttpStartStop did not match"
 		return false, nil
 	}
-	if expectedEnvelope.LogMessage != nil && reflect.DeepEqual(actualEnvelope.GetLogMessage(), expectedEnvelope.GetLogMessage()) {
+	if actualEnvelope.LogMessage != nil {
+		// Until our specifiedContentsMatcher can match specified contents of
+		// nested fields, we need to empty the timestamp prior to comparison.
+		actualEnvelope.LogMessage.Timestamp = nil
+	}
+	if expectedEnvelope.LogMessage != nil && !reflect.DeepEqual(actualEnvelope.GetLogMessage(), expectedEnvelope.GetLogMessage()) {
 		matcher.failureReason = "LogMessage did not match"
 		return false, nil
 	}

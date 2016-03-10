@@ -2,12 +2,11 @@ package endtoend
 
 import (
 	"crypto/tls"
-	"strings"
 	"github.com/cloudfoundry/noaa"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/pivotal-golang/localip"
+	"strings"
 )
-
 
 type FirehoseReader struct {
 	consumer *noaa.Consumer

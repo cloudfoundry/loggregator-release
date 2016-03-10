@@ -2,77 +2,78 @@ package clientpool
 
 import (
 	"errors"
-	"math/rand"
-	"strings"
 	"sync"
+
+	"metron/writers/dopplerforwarder"
+
+	"math/rand"
 
 	"github.com/cloudfoundry/gosteno"
 )
 
 var ErrorEmptyClientPool = errors.New("loggregator client pool is empty")
 
-type ClientFactory interface {
-	NewClient(url string) (Client, error)
+//go:generate hel --type Client --output mock_client_test.go
+
+type Client interface {
+	Scheme() string
+	Address() string
+
+	// Write implements dopplerforwarder.Client
+	Write(message []byte) (bytesSent int, err error)
+
+	// Close implements dopplerforwarder.Client
+	Close() error
+}
+
+//go:generate hel --type ClientCreator --output mock_client_creator_test.go
+
+type ClientCreator interface {
+	CreateClient(url string) (client Client, err error)
 }
 
 type DopplerPool struct {
-	logger        *gosteno.Logger
-	clientFactory ClientFactory
+	logger *gosteno.Logger
 
-	sync.RWMutex
-	clients    map[string]Client
-	clientList []Client
+	lock    sync.RWMutex
+	clients []Client
 
-	nonLegacyServers map[string]string
-	legacyServers    map[string]string
+	clientCreator ClientCreator
 }
 
-func NewDopplerPool(logger *gosteno.Logger, clientFactory ClientFactory) *DopplerPool {
+func NewDopplerPool(logger *gosteno.Logger, clientCreator ClientCreator) *DopplerPool {
 	return &DopplerPool{
 		logger:        logger,
-		clientFactory: clientFactory,
+		clientCreator: clientCreator,
 	}
 }
 
-func (pool *DopplerPool) Set(all map[string]string, preferred map[string]string) {
-	pool.Lock()
-
-	if len(preferred) > 0 {
-		pool.nonLegacyServers = preferred
-	} else if len(all) > 0 {
-		pool.nonLegacyServers = all
-	} else {
-		pool.nonLegacyServers = nil
+func (pool *DopplerPool) SetAddresses(addresses []string) int {
+	pool.lock.Lock()
+	defer pool.lock.Unlock()
+	pool.clients = make([]Client, 0, len(addresses))
+	for _, address := range addresses {
+		client, err := pool.clientCreator.CreateClient(address)
+		if err != nil {
+			pool.logger.Errorf("Failed to connect to client at %s: %v", address, err)
+			continue
+		}
+		pool.clients = append(pool.clients, client)
 	}
-
-	pool.merge()
-	pool.Unlock()
-}
-
-func (pool *DopplerPool) SetLegacy(all map[string]string, preferred map[string]string) {
-	pool.Lock()
-
-	if len(preferred) > 0 {
-		pool.legacyServers = preferred
-	} else if len(all) > 0 {
-		pool.legacyServers = all
-	} else {
-		pool.legacyServers = nil
-	}
-
-	pool.merge()
-	pool.Unlock()
+	return len(pool.clients)
 }
 
 func (pool *DopplerPool) Clients() []Client {
-	defer pool.RUnlock()
-	pool.RLock()
-	clientList := make([]Client, len(pool.clientList))
-	copy(clientList, pool.clientList)
+	pool.lock.RLock()
+	defer pool.lock.RUnlock()
+
+	clientList := make([]Client, len(pool.clients))
+	copy(clientList, pool.clients)
 	return clientList
 }
 
-func (pool *DopplerPool) RandomClient() (Client, error) {
+// RandomClient implements dopplerforwarder.DopplerPool
+func (pool *DopplerPool) RandomClient() (dopplerforwarder.Client, error) {
 	list := pool.Clients()
 
 	if len(list) == 0 {
@@ -82,67 +83,8 @@ func (pool *DopplerPool) RandomClient() (Client, error) {
 	return list[rand.Intn(len(list))], nil
 }
 
-func (pool *DopplerPool) getClient(key, url string) Client {
-	var client Client
-	if client = pool.clients[key]; client == nil {
-		return nil
-	}
-
-	// scheme://address
-	if !((len(url) == len(client.Scheme())+3+len(client.Address())) &&
-		strings.HasPrefix(url, client.Scheme()) && strings.HasSuffix(url, client.Address())) {
-		return nil
-	}
-
-	return client
-}
-
-func (pool *DopplerPool) merge() {
-	newClients := map[string]Client{}
-
-	for key, u := range pool.nonLegacyServers {
-		client := pool.getClient(key, u)
-		if client == nil {
-			var err error
-			client, err = pool.clientFactory.NewClient(u)
-			if err != nil {
-				pool.logger.Errord(map[string]interface{}{
-					"doppler": key, "url": u, "error": err,
-				}, "Invalid url")
-				continue
-			}
-		}
-		newClients[key] = client
-	}
-
-	for key, u := range pool.legacyServers {
-		if _, ok := newClients[key]; !ok {
-			client := pool.getClient(key, u)
-			if client == nil {
-				var err error
-				client, err = pool.clientFactory.NewClient(u)
-				if err != nil {
-					pool.logger.Errord(map[string]interface{}{
-						"doppler": key, "url": u, "error": err,
-					}, "Invalid url")
-					continue
-				}
-			}
-			newClients[key] = client
-		}
-	}
-
-	for address, client := range pool.clients {
-		if _, ok := newClients[address]; !ok {
-			client.Close()
-		}
-	}
-
-	newList := make([]Client, 0, len(newClients))
-	for _, client := range newClients {
-		newList = append(newList, client)
-	}
-
-	pool.clients = newClients
-	pool.clientList = newList
+func (pool *DopplerPool) Size() int {
+	pool.lock.RLock()
+	defer pool.lock.RUnlock()
+	return len(pool.clients)
 }

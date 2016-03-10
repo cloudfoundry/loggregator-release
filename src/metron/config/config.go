@@ -8,6 +8,12 @@ import (
 	"os"
 )
 
+const (
+	kilobyte               = 1024
+	defaultBatchSize       = 10 * kilobyte
+	defaultBatchIntervalMS = 100
+)
+
 type Protocol string
 
 func (p *Protocol) UnmarshalJSON(value []byte) error {
@@ -35,7 +41,7 @@ type Config struct {
 	Job        string
 	Index      uint
 
-	DropsondeIncomingMessagesPort int
+	IncomingUDPPort int
 
 	EtcdUrls                      []string
 	EtcdMaxConcurrentRequests     int
@@ -47,10 +53,11 @@ type Config struct {
 	MetricBatchIntervalMilliseconds  uint
 	RuntimeStatsIntervalMilliseconds uint
 
+	TCPBatchSizeBytes            uint64
+	TCPBatchIntervalMilliseconds uint
+
 	PreferredProtocol Protocol
 	TLSConfig         TLSConfig
-	BufferSize        int
-	EnableBuffer      bool
 }
 
 func ParseConfig(configFile string) (*Config, error) {
@@ -64,26 +71,16 @@ func ParseConfig(configFile string) (*Config, error) {
 }
 
 func Parse(reader io.Reader) (*Config, error) {
-	config := &Config{}
+	config := &Config{
+		TCPBatchSizeBytes:                defaultBatchSize,
+		TCPBatchIntervalMilliseconds:     defaultBatchIntervalMS,
+		MetricBatchIntervalMilliseconds:  5000,
+		RuntimeStatsIntervalMilliseconds: 15000,
+		PreferredProtocol:                "udp",
+	}
 	err := json.NewDecoder(reader).Decode(config)
 	if err != nil {
 		return nil, err
-	}
-
-	if config.MetricBatchIntervalMilliseconds == 0 {
-		config.MetricBatchIntervalMilliseconds = 5000
-	}
-
-	if config.RuntimeStatsIntervalMilliseconds == 0 {
-		config.RuntimeStatsIntervalMilliseconds = 15000
-	}
-
-	if config.PreferredProtocol == "" {
-		config.PreferredProtocol = "udp"
-	}
-
-	if config.BufferSize < 3 {
-		config.BufferSize = 100
 	}
 
 	return config, nil

@@ -1,12 +1,10 @@
 package channel_group_connector_test
 
 import (
-	"doppler/dopplerservice/fakes"
-	"trafficcontroller/channel_group_connector"
-
 	"errors"
 	"sync"
 	"time"
+	"trafficcontroller/channel_group_connector"
 	"trafficcontroller/doppler_endpoint"
 	"trafficcontroller/listener"
 	"trafficcontroller/marshaller"
@@ -25,7 +23,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 	Describe("Connect", func() {
 		var (
 			logger              *gosteno.Logger
-			finder              *fakes.FakeFinder
+			finder              *mockFinder
 			fakeListeners       []*listener.FakeListener
 			listenerConstructor func(time.Duration, *gosteno.Logger) listener.Listener
 			messageChan1        chan []byte
@@ -36,7 +34,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 
 		BeforeEach(func() {
 			logger = loggertesthelper.Logger()
-			finder = &fakes.FakeFinder{}
+			finder = newMockFinder()
 
 			messageChan1 = make(chan []byte, 1)
 			messageChan2 = make(chan []byte, 1)
@@ -61,7 +59,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 					messageChan1 <- expectedMessage1
 					close(messageChan1)
 
-					finder.AllServersReturns(map[string]string{"a": "udp://10.0.0.1:1234"})
+					finder.WebsocketServersOutput.ret0 <- []string{"10.0.0.1:1234"}
 				})
 
 				AfterEach(func() {
@@ -117,7 +115,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 					messageChan2 <- expectedMessage2
 					close(messageChan2)
 
-					finder.AllServersReturns(map[string]string{"a": "udp://10.0.0.1:1234", "b": "udp://10.0.0.2:1234"})
+					finder.WebsocketServersOutput.ret0 <- []string{"10.0.0.1:1234", "10.0.0.2:1234"}
 				})
 
 				It("puts messages on the channel received by the listener", func(done Done) {
@@ -145,7 +143,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 
 			Context("when connected to zero servers", func() {
 				BeforeEach(func() {
-					finder.AllServersReturns(map[string]string{})
+					finder.WebsocketServersOutput.ret0 <- []string{}
 				})
 
 				It("returns immediately when reconnect is set to false", func(done Done) {
@@ -178,7 +176,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				BeforeEach(func() {
 					stopChan = make(chan struct{})
 					go sendMessages(messageChan1, expectedMessage1, stopChan)
-					finder.AllServersReturns(map[string]string{"a": "udp://10.0.0.1:1234"})
+					finder.WebsocketServersOutput.ret0 <- []string{"10.0.0.1:1234"}
 				})
 
 				AfterEach(func() {
@@ -240,7 +238,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 					go sendMessages(messageChan1, expectedMessage1, stopChan1)
 					go sendMessages(messageChan2, expectedMessage2, stopChan2)
 
-					finder.AllServersReturns(map[string]string{"a": "udp://10.0.0.1:1234", "b": "udp://10.0.0.2:1234"})
+					finder.WebsocketServersOutput.ret0 <- []string{"10.0.0.1:1234", "10.0.0.2:1234"}
 				})
 
 				AfterEach(func() {
@@ -301,7 +299,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				messageChan := make(chan []byte, 10)
 				fakeListeners[0] = listener.NewFakeListener(messageChan, errors.New("failure"))
 
-				finder.AllServersReturns(map[string]string{"a": "udp://10.0.0.1:1234"})
+				finder.WebsocketServersOutput.ret0 <- []string{"10.0.0.1:1234"}
 			})
 
 			AfterEach(func() {
@@ -335,7 +333,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 
 				fakeListeners[0].SetReadError(errors.New("boom"))
 
-				finder.AllServersReturns(map[string]string{"a": "udp://10.0.0.1:1234"})
+				finder.WebsocketServersOutput.ret0 <- []string{"10.0.0.1:1234"}
 			})
 
 			AfterEach(func() {

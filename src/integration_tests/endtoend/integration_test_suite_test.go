@@ -38,6 +38,7 @@ var (
 	tcSession      *gexec.Session
 
 	dopplerConfig string
+	metronConfig string
 )
 
 var _ = BeforeSuite(func() {
@@ -57,6 +58,7 @@ var _ = BeforeEach(func() {
 	etcdRunner.Reset()
 
 	dopplerConfig = "dopplerudp"
+	metronConfig = "metronudp"
 })
 
 var _ = JustBeforeEach(func() {
@@ -71,7 +73,7 @@ var _ = JustBeforeEach(func() {
 	LocalIPAddress, err = localip.LocalIP()
 	Expect(err).ToNot(HaveOccurred())
 
-	metronSession = startComponent(metronExecutablePath, "metron", BLUE, "--config=fixtures/metron.json")
+	metronSession = startComponent(metronExecutablePath, "metron", BLUE, "--config=fixtures/"+metronConfig+".json")
 
 	tcSession = startComponent(trafficControllerExecutablePath, "tc", LIGHT_BLUE, "--config=fixtures/trafficcontroller.json", "--disableAccessControl")
 
@@ -87,6 +89,13 @@ var _ = JustBeforeEach(func() {
 		_, err := etcdAdapter.Get(key)
 		return err == nil
 	}, 1).Should(BeTrue())
+
+	key = fmt.Sprintf("%s/z1/doppler_z1/0", dopplerservice.META_ROOT)
+	Eventually(func() bool {
+		_, err := etcdAdapter.Get(key)
+		return err == nil
+	}, 1).Should(BeTrue())
+
 })
 
 func buildComponent(componentName string) (pathToComponent string) {

@@ -10,17 +10,17 @@
 
   "SharedSecret": "shared_secret",
 
-  "DropsondeIncomingMessagesPort": 51161,
+  "IncomingUDPPort": 51161,
   "LoggregatorDropsondePort": 3457,
   "Syslog": "syslog.namespace",
   "MetricBatchIntervalMilliseconds": 20,
   "RuntimeStatsIntervalMilliseconds": 15,
+  "TCPBatchSizeBytes": 1024,
+  "TCPBatchIntervalMilliseconds": 10,
   "PreferredProtocol": "udp",
   "TLSConfig": {
     "KeyFile": "./fixtures/client.key",
     "CertFile": "./fixtures/client.crt",
     "CAFile": "./fixtures/ca.crt"
-  },
-  "BufferSize": 100,
-  "EnableBuffer": true
+  }
 }

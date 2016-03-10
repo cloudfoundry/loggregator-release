@@ -95,7 +95,7 @@ func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
 		}
 		err = sink.ws.WriteMessage(gorilla.BinaryMessage, messageBytes)
 		if err != nil {
-			sink.logger.Debugf("Websocket Sink %s: Error when trying to send data to sink %s. Requesting close. Err: %v", sink.clientAddress, err)
+			sink.logger.Debugf("Websocket Sink %s: Error when trying to send data to sink. Requesting close. Err: %v", sink.clientAddress, err)
 			close(stopChan)
 			return
 		}

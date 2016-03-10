@@ -14,14 +14,15 @@ case $1 in
     mkdir -p $RUN_DIR
     mkdir -p $LOG_DIR
 
-    echo $$ > $PIDFILE
-
     <% p("dea_logging_agent.debug") == true ? debug_string = "--debug " : debug_string = "" %>
 
-    exec /var/vcap/packages/dea_logging_agent/deaagent <%= debug_string %> \
-         --config /var/vcap/jobs/dea_logging_agent/config/dea_logging_agent.json \
-         >>$LOG_DIR/dea_logging_agent.stdout.log \
-         2>>$LOG_DIR/dea_logging_agent.stderr.log
+    /var/vcap/packages/dea_logging_agent/deaagent <%= debug_string %> \
+         --config /var/vcap/jobs/dea_logging_agent/config/dea_logging_agent.json &
+
+    echo $! > $PIDFILE
+
+    exec  >>$LOG_DIR/dea_logging_agent.stdout.log  \
+          2>>$LOG_DIR/dea_logging_agent.stderr.log
 
     ;;
 

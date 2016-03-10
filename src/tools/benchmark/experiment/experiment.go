@@ -1,6 +1,7 @@
 package experiment
 
 import (
+	"log"
 	"sync"
 	"time"
 )
@@ -58,7 +59,7 @@ func (e *Experiment) Warmup() {
 	case <-reading:
 		return
 	case <-time.After(2 * time.Second):
-		panic("Failed to start reading")
+		log.Fatalf("Failed to start reading")
 	}
 }
 

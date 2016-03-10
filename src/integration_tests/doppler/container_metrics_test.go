@@ -129,7 +129,7 @@ var _ = Describe("Container Metrics", func() {
 			inputConnection.Close()
 		})
 
-		itDoesContainerMetrics(SendEventTLS)
+		itDoesContainerMetrics(SendEventTCP)
 	})
 
 	Context("UDP", func() {

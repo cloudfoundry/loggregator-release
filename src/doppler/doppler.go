@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"doppler/config"
+	doppler_config "doppler/config"
 	"doppler/sinkserver"
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/sinkmanager"
@@ -34,6 +34,7 @@ type Doppler struct {
 
 	errChan         chan error
 	udpListener     listeners.Listener
+	tcpListener     listeners.Listener
 	tlsListener     listeners.Listener
 	sinkManager     *sinkmanager.SinkManager
 	messageRouter   *sinkserver.MessageRouter
@@ -55,7 +56,7 @@ type Doppler struct {
 
 func New(logger *gosteno.Logger,
 	host string,
-	config *config.Config,
+	config *doppler_config.Config,
 	storeAdapter storeadapter.StoreAdapter,
 	messageDrainBufferSize uint,
 	dropsondeOrigin string,
@@ -69,18 +70,31 @@ func New(logger *gosteno.Logger,
 
 	var udpListener listeners.Listener
 	var tlsListener listeners.Listener
+	var tcpListener listeners.Listener
 	var dropsondeBytesChan <-chan []byte
 	var err error
 	listenerEnvelopeChan := make(chan *events.Envelope)
 
+	udpListener, dropsondeBytesChan = listeners.NewUDPListener(fmt.Sprintf("%s:%d", host, config.IncomingUDPPort), logger, "dropsondeListener")
+
+	var addr string
+	var tlsConfig *doppler_config.TLSListenerConfig
+	var contextName string
+
 	if config.EnableTLSTransport {
-		tlsListener, err = listeners.NewTLSListener("tlsListener", fmt.Sprintf("%s:%d", host, config.TLSListenerConfig.Port), config.TLSListenerConfig, listenerEnvelopeChan, logger)
+		tlsConfig = &config.TLSListenerConfig
+		addr = fmt.Sprintf("%s:%d", host, tlsConfig.Port)
+		contextName = "tlsListener"
+		tlsListener, err = listeners.NewTCPListener(contextName, addr, tlsConfig, listenerEnvelopeChan, logger)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	udpListener, dropsondeBytesChan = listeners.NewUDPListener(fmt.Sprintf("%s:%d", host, config.DropsondeIncomingMessagesPort), logger, "dropsondeListener")
+	tlsConfig = nil
+	addr = fmt.Sprintf("%s:%d", host, config.IncomingTCPPort)
+	contextName = "tcpListener"
+	tcpListener, err = listeners.NewTCPListener(contextName, addr, tlsConfig, listenerEnvelopeChan, logger)
 
 	signatureVerifier := signature.NewVerifier(logger, config.SharedSecret)
 
@@ -102,6 +116,7 @@ func New(logger *gosteno.Logger,
 	return &Doppler{
 		Logger:                          logger,
 		udpListener:                     udpListener,
+		tcpListener:                     tcpListener,
 		tlsListener:                     tlsListener,
 		sinkManager:                     sinkManager,
 		messageRouter:                   sinkserver.NewMessageRouter(sinkManager, logger),
@@ -122,7 +137,7 @@ func New(logger *gosteno.Logger,
 func (doppler *Doppler) Start() {
 	doppler.errChan = make(chan error)
 
-	doppler.wg.Add(6 + doppler.dropsondeUnmarshallerCollection.Size())
+	doppler.wg.Add(7 + doppler.dropsondeUnmarshallerCollection.Size())
 
 	go func() {
 		defer doppler.wg.Done()
@@ -134,9 +149,14 @@ func (doppler *Doppler) Start() {
 		doppler.udpListener.Start()
 	}()
 
+	go func() {
+		defer doppler.wg.Done()
+		doppler.tcpListener.Start()
+	}()
+
 	if doppler.tlsListener != nil {
-		doppler.wg.Add(1)
 		go func() {
+			doppler.wg.Add(1)
 			defer doppler.wg.Done()
 			doppler.tlsListener.Start()
 		}()
@@ -180,6 +200,7 @@ func (doppler *Doppler) Start() {
 
 func (doppler *Doppler) Stop() {
 	go doppler.udpListener.Stop()
+	go doppler.tcpListener.Stop()
 	go doppler.tlsListener.Stop()
 	go doppler.sinkManager.Stop()
 	go doppler.messageRouter.Stop()

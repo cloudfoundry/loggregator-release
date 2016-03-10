@@ -8,15 +8,52 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/storeadapter"
+	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
+	ginkgoConfig "github.com/onsi/ginkgo/config"
+	"github.com/pivotal-golang/localip"
 )
 
 var _ = Describe("Announcer", func() {
+	var (
+		localIP     string
+		conf        config.Config
+		etcdRunner  *etcdstorerunner.ETCDClusterRunner
+		etcdAdapter storeadapter.StoreAdapter
+	)
+
+	BeforeSuite(func() {
+		localIP, _ = localip.LocalIP()
+
+		etcdPort := 5500 + ginkgoConfig.GinkgoConfig.ParallelNode*10
+		etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1, nil)
+		etcdRunner.Start()
+
+		etcdAdapter = etcdRunner.Adapter(nil)
+
+		conf = config.Config{
+			JobName: "doppler_z1",
+			Index:   0,
+			EtcdMaxConcurrentRequests: 10,
+			EtcdUrls:                  etcdRunner.NodeURLS(),
+			Zone:                      "z1",
+			IncomingUDPPort:           1234,
+			IncomingTCPPort:           5678,
+		}
+	})
+
+	AfterSuite(func() {
+		etcdAdapter.Disconnect()
+		etcdRunner.Stop()
+	})
 	var stopChan chan chan bool
 
 	BeforeEach(func() {
+		etcdRunner.Reset()
 		stopChan = nil
 	})
 
@@ -52,12 +89,12 @@ var _ = Describe("Announcer", func() {
 			})
 
 			Context("when tls transport is enabled", func() {
-				It("announces udp and tcp value", func() {
-					dopplerMeta := fmt.Sprintf(`{"version": 1, "endpoints":["udp://%s:1234", "tls://%s:4567"]}`, localIP, localIP)
+				It("announces udp, tcp, and tls values", func() {
+					dopplerMeta := fmt.Sprintf(`{"version": 1, "endpoints":["udp://%s:1234", "tcp://%s:5678", "tls://%s:9012"]}`, localIP, localIP, localIP)
 
 					conf.EnableTLSTransport = true
 					conf.TLSListenerConfig = config.TLSListenerConfig{
-						Port: 4567,
+						Port: 9012,
 					}
 					stopChan = dopplerservice.Announce(localIP, time.Second, &conf, etcdAdapter, loggertesthelper.Logger())
 
@@ -72,8 +109,8 @@ var _ = Describe("Announcer", func() {
 			})
 
 			Context("when tls transport is disabled", func() {
-				It("announces only udp value", func() {
-					dopplerMeta := fmt.Sprintf(`{"version": 1, "endpoints":["udp://%s:1234"]}`, localIP)
+				It("announces only udp and tcp values", func() {
+					dopplerMeta := fmt.Sprintf(`{"version": 1, "endpoints":["udp://%s:1234", "tcp://%s:5678"]}`, localIP, localIP)
 
 					conf.EnableTLSTransport = false
 					stopChan = dopplerservice.Announce(localIP, time.Second, &conf, etcdAdapter, loggertesthelper.Logger())

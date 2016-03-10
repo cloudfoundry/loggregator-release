@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -12,6 +13,22 @@ import (
 )
 
 var _ = Describe("MessageLossBenchmark", func() {
+	BeforeEach(func() {
+		pathToMetronExecutable, err := gexec.Build("metron")
+		Expect(err).ShouldNot(HaveOccurred())
+
+		command := exec.Command(pathToMetronExecutable, "--config=fixtures/metron.json")
+		metronSession, err = gexec.Start(command, gexec.NewPrefixedWriter("[o][metron]", GinkgoWriter), gexec.NewPrefixedWriter("[e][metron]", GinkgoWriter))
+		Expect(err).ToNot(HaveOccurred())
+
+		// TODO: figure out a better way to let metron finish starting up.
+		time.Sleep(500 * time.Millisecond)
+	})
+
+	AfterEach(func() {
+		metronSession.Kill().Wait()
+	})
+
 	Measure("message loss and throughput", func(b Benchmarker) {
 		pathToMetronBenchmarkExec, err := gexec.Build("tools/metronbenchmark")
 		Expect(err).NotTo(HaveOccurred())

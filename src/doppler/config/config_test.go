@@ -27,7 +27,8 @@ var _ = Describe("Config", func() {
 		It("returns proper config", func() {
 			config, err := config.ParseConfig(configFile)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(config.DropsondeIncomingMessagesPort).To(Equal(uint32(3456)))
+			Expect(config.IncomingUDPPort).To(Equal(uint32(3456)))
+			Expect(config.IncomingTCPPort).To(Equal(uint32(3457)))
 			Expect(config.OutgoingPort).To(Equal(uint32(8080)))
 			Expect(config.MessageDrainBufferSize).To(Equal(uint(100)))
 			Expect(config.MonitorIntervalSeconds).To(BeEquivalentTo(60))
@@ -66,7 +67,8 @@ var _ = Describe("Config", func() {
 		It("returns proper config", func() {
 			config, err := config.ParseConfig(configFile)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(config.DropsondeIncomingMessagesPort).To(Equal(uint32(8765)))
+			Expect(config.IncomingUDPPort).To(Equal(uint32(8765)))
+			Expect(config.IncomingTCPPort).To(Equal(uint32(8767)))
 			Expect(config.OutgoingPort).To(Equal(uint32(4567)))
 			Expect(config.MessageDrainBufferSize).To(Equal(uint(100)))
 			Expect(config.BlackListIps[0].Start).To(Equal("127.0.0.0"))
@@ -78,6 +80,5 @@ var _ = Describe("Config", func() {
 			Expect(config.WebsocketWriteTimeoutSeconds).To(Equal(60))
 			Expect(config.MetricBatchIntervalMilliseconds).To(BeEquivalentTo(15000))
 		})
-
 	})
 })

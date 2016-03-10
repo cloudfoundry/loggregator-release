@@ -39,7 +39,7 @@ func (m *MetronRunner) Configure() *ginkgomon.Runner {
     "Index": 42,
     "Job": "test-component",
     "LegacyIncomingMessagesPort": ` + strconv.Itoa(m.LegacyPort) + `,
-    "DropsondeIncomingMessagesPort": ` + strconv.Itoa(m.MetronPort) + `,
+    "IncomingUDPPort": ` + strconv.Itoa(m.MetronPort) + `,
     "SharedSecret": "shared_secret",
     "EtcdUrls"    : ["` + m.EtcdRunner.NodeURLS()[0] + `"],
     "EtcdMaxConcurrentRequests": 1,

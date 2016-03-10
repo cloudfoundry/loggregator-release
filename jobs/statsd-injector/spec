@@ -1,0 +1,18 @@
+---
+name: statsd-injector
+templates:
+  statsd-injector-ctl.erb: bin/statsd-injector-ctl
+
+packages:
+- loggregator_common
+- statsd-injector
+properties:
+  statsd_injector.metron_port:
+    description: "The port on which metron is running"
+    default: 3457
+  statsd_injector.statsd_port:
+    description: "The port on which the injector should listen for statsd messages"
+    default: 8125
+  statsd_injector.log_level:
+    description: "The log level for the statsd injector"
+    default: "info"

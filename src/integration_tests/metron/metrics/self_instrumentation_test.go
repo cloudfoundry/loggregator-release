@@ -30,15 +30,15 @@ var _ = Describe("Self Instrumentation", func() {
 		go testDoppler.Start()
 
 		dopplerConfig := &dopplerconfig.Config{
-			Index:   0,
-			JobName: "job",
-			Zone:    "z9",
-			DropsondeIncomingMessagesPort: uint32(metronRunner.DropsondePort),
+			Index:           0,
+			JobName:         "job",
+			Zone:            "z9",
+			IncomingUDPPort: uint32(metronRunner.DropsondePort),
 		}
 
 		stopAnnounce = dopplerservice.Announce("127.0.0.1", time.Minute, dopplerConfig, etcdAdapter, gosteno.NewLogger("test"))
 
-		metronRunner.Protocol = "tls"
+		metronRunner.Protocol = "udp"
 		metronRunner.Start()
 
 		env := basicValueMessageEnvelope()
@@ -46,7 +46,9 @@ var _ = Describe("Self Instrumentation", func() {
 		bytes, err := proto.Marshal(env)
 		Expect(err).ToNot(HaveOccurred())
 
-		metronInput, _ = net.Dial("udp4", metronRunner.MetronAddress())
+		metronInput, err = net.Dial("udp4", metronRunner.MetronAddress())
+		Expect(err).ToNot(HaveOccurred())
+
 		Eventually(func() bool {
 			metronInput.Write(bytes)
 			select {
@@ -120,8 +122,8 @@ var _ = Describe("Self Instrumentation", func() {
 	})
 
 	It("sends runtime metrics about metron_agent", func() {
-		expected := events.Envelope {
-			Origin: proto.String("MetronAgent"),
+		expected := events.Envelope{
+			Origin:    proto.String("MetronAgent"),
 			EventType: events.Envelope_ValueMetric.Enum(),
 			ValueMetric: &events.ValueMetric{
 				Name: proto.String("numCPUS"),
@@ -131,8 +133,8 @@ var _ = Describe("Self Instrumentation", func() {
 	})
 
 	It("sends memory metrics about metron_agent", func() {
-		expected := events.Envelope {
-			Origin: proto.String("MetronAgent"),
+		expected := events.Envelope{
+			Origin:    proto.String("MetronAgent"),
 			EventType: events.Envelope_ValueMetric.Enum(),
 			ValueMetric: &events.ValueMetric{
 				Name: proto.String("memoryStats.numBytesAllocatedHeap"),
@@ -390,22 +392,6 @@ var _ = Describe("Self Instrumentation", func() {
 			metronInput.Write(bytes)
 
 			eventNeverOccurs(bytes, matchCounter, message)
-		})
-	})
-
-	Describe("for Dropsonde marshaller", func() {
-		It("counts marshalled Dropsonde messages by type", func() {
-			expected := events.Envelope{
-				Origin:    proto.String("MetronAgent"),
-				EventType: events.Envelope_CounterEvent.Enum(),
-				CounterEvent: &events.CounterEvent{
-					Name:  proto.String("dropsondeMarshaller.valueMetricMarshalled"),
-					Delta: proto.Uint64(1),
-					Total: proto.Uint64(1),
-				},
-			}
-
-			waitForEvent(basicValueMessage(), matchCounter, &expected)
 		})
 	})
 })

@@ -12,7 +12,7 @@ import (
 
 var _ = Describe("UDP Client", func() {
 	var (
-		client      clientpool.Client
+		client      *clientpool.UDPClient
 		udpListener *net.UDPConn
 	)
 
@@ -22,7 +22,7 @@ var _ = Describe("UDP Client", func() {
 		udpListener, err = net.ListenUDP("udp", udpAddr)
 		Expect(err).NotTo(HaveOccurred())
 
-		client, err = clientpool.NewUDPClient(gosteno.NewLogger("TestLogger"), udpListener.LocalAddr().String(), 0)
+		client, err = clientpool.NewUDPClient(gosteno.NewLogger("TestLogger"), udpListener.LocalAddr().String())
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -34,56 +34,86 @@ var _ = Describe("UDP Client", func() {
 	Describe("NewUDPClient", func() {
 		Context("when the address is invalid", func() {
 			It("returns an error", func() {
-				_, err := clientpool.NewUDPClient(gosteno.NewLogger("TestLogger"), "127.0.0.1:abc", 0)
+				_, err := clientpool.NewUDPClient(gosteno.NewLogger("TestLogger"), "127.0.0.1:abc")
 				Expect(err).To(HaveOccurred())
 			})
 		})
 	})
 
-	Describe("udpClient", func() {
-		Describe("Scheme", func() {
-			It("returns tls", func() {
-				Expect(client.Scheme()).To(Equal("udp"))
-			})
+	Describe("Scheme", func() {
+		It("returns udp", func() {
+			Expect(client.Scheme()).To(Equal("udp"))
+		})
+	})
+
+	Describe("Address", func() {
+		It("returns the address", func() {
+			Expect(client.Address()).To(Equal(udpListener.LocalAddr().String()))
+		})
+	})
+
+	Describe("Connect", func() {
+		var connErr error
+
+		JustBeforeEach(func() {
+			connErr = client.Connect()
 		})
 
-		Describe("Address", func() {
-			It("returns the address", func() {
-				Expect(client.Address()).To(Equal(udpListener.LocalAddr().String()))
+		Context("with a valid UDP address", func() {
+			It("returns a nil error", func() {
+				Expect(connErr).ToNot(HaveOccurred())
 			})
 		})
 	})
 
-	It("sends log messages to loggregator", func() {
-		expectedOutput := []byte("Important Testmessage")
+	Describe("Write", func() {
 
-		_, err := client.Write(expectedOutput)
-		Expect(err).NotTo(HaveOccurred())
+		Context("with a valid connection", func() {
 
-		buffer := make([]byte, 4096)
-		readCount, _, err := udpListener.ReadFromUDP(buffer)
-		Expect(err).NotTo(HaveOccurred())
+			BeforeEach(func() {
+				Expect(client.Connect()).ToNot(HaveOccurred())
+			})
 
-		received := string(buffer[:readCount])
-		Expect(received).To(Equal(string(expectedOutput)))
-	})
+			It("sends log messages to loggregator", func() {
+				expectedOutput := []byte("Important Testmessage")
 
-	It("doesn't send empty data", func() {
-		bufferSize := 4096
-		firstMessage := []byte("")
-		secondMessage := []byte("hi")
+				_, err := client.Write(expectedOutput)
+				Expect(err).NotTo(HaveOccurred())
 
-		_, err := client.Write(firstMessage)
-		Expect(err).NotTo(HaveOccurred())
-		_, err = client.Write(secondMessage)
-		Expect(err).NotTo(HaveOccurred())
+				buffer := make([]byte, 4096)
+				readCount, _, err := udpListener.ReadFromUDP(buffer)
+				Expect(err).NotTo(HaveOccurred())
 
-		buffer := make([]byte, bufferSize)
-		readCount, _, err := udpListener.ReadFromUDP(buffer)
-		Expect(err).NotTo(HaveOccurred())
+				received := string(buffer[:readCount])
+				Expect(received).To(Equal(string(expectedOutput)))
+			})
 
-		received := string(buffer[:readCount])
-		Expect(received).To(Equal(string(secondMessage)))
+			It("doesn't send empty data", func() {
+				bufferSize := 4096
+				firstMessage := []byte("")
+				secondMessage := []byte("hi")
+
+				_, err := client.Write(firstMessage)
+				Expect(err).NotTo(HaveOccurred())
+				_, err = client.Write(secondMessage)
+				Expect(err).NotTo(HaveOccurred())
+
+				buffer := make([]byte, bufferSize)
+				readCount, _, err := udpListener.ReadFromUDP(buffer)
+				Expect(err).NotTo(HaveOccurred())
+
+				received := string(buffer[:readCount])
+				Expect(received).To(Equal(string(secondMessage)))
+			})
+		})
+
+		Context("with a nil connection", func() {
+			It("returns an error and zero bytes written", func() {
+				bytesWritten, err := client.Write([]byte("some message"))
+				Expect(err).To(HaveOccurred())
+				Expect(bytesWritten).To(BeEquivalentTo(0))
+			})
+		})
 	})
 
 	Describe("Close", func() {

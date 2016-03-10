@@ -21,7 +21,7 @@ type TestConfig struct {
 }
 
 type MetronConfig struct {
-	DropsondeIncomingMessagesPort int
+	IncomingUDPPort int
 	SharedSecret                  string
 	EtcdUrls                      []string
 	LoggregatorDropsondePort      int
@@ -64,7 +64,7 @@ func (tc *TestConfig) SaveMetronConfig() {
 		panic(err)
 	}
 
-	metronConfig.DropsondeIncomingMessagesPort = tc.DropsondePort
+	metronConfig.IncomingUDPPort = tc.DropsondePort
 	if len(tc.EtcdUrls) != 0 {
 		metronConfig.EtcdUrls = tc.EtcdUrls
 	}

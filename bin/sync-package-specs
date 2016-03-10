@@ -1,6 +1,7 @@
 #!/bin/bash
-
 set -e
+
+go get github.com/vito/gosub
 
 if [ ! $(which gosub) ]; then
     echo "Gosub required to update dependencies in bosh/*/spec files."
@@ -35,6 +36,7 @@ sync_package dea_logging_agent             -app  deaagent/... &
 sync_package doppler                       -app  doppler/... &
 sync_package loggregator_trafficcontroller -app  trafficcontroller/... &
 sync_package syslog_drain_binder           -app  syslog_drain_binder/... &
+sync_package statsd-injector               -app  statsd-injector/... &
 
 wait
 

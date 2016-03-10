@@ -1,7 +1,7 @@
 {
     "EtcdUrls": ["http://localhost:5555"],
     "EtcdMaxConcurrentRequests": 10,
-    "DropsondeIncomingMessagesPort": 8765,
+    "IncomingUDPPort": 8765,
     "OutgoingPort": 4567,
     "SinkSkipCertVerify": true,
     "Index": 0,

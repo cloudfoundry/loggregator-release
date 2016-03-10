@@ -18,3 +18,7 @@ func (m *MockByteArrayWriter) Data() [][]byte {
 	defer m.lock.RUnlock()
 	return m.data
 }
+
+func (m *MockByteArrayWriter) Weight() int {
+	return 0
+}

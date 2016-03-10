@@ -1,314 +1,300 @@
 package dopplerservice
 
 import (
+	"encoding/json"
+	"fmt"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
 
-	"bytes"
-	"encoding/json"
-	"errors"
-	"fmt"
-
+	"github.com/cloudfoundry/dropsonde/logging"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/storeadapter"
 )
 
-//go:generate counterfeiter -o fakes/fakefinder.go . Finder
-type Finder interface {
-	Start()
-	Stop()
-
-	// returns a map of doppler id to url (scheme://host:port)
-	AllServers() map[string]string
-	PreferredServers() map[string]string
+var supportedProtocols = []string{
+	"udp",
+	"tls",
 }
 
-type finder struct {
-	storeAdapter   storeadapter.StoreAdapter
-	protocolPrefix string
-	stopChan       chan struct{}
-	storeKeyPrefix string
-	onUpdate       func(all map[string]string, preferred map[string]string)
-	preferred      func(relativeKey string) bool
+//go:generate hel --type StoreAdapter --output mock_store_adapter_test.go
 
-	sync.RWMutex
-	addressMap   map[string]string
-	preferredMap map[string]string
-
-	unmarshal func(value []byte) []string
-	logger    *gosteno.Logger
+type StoreAdapter interface {
+	Watch(key string) (events <-chan storeadapter.WatchEvent, stop chan<- bool, errors <-chan error)
+	ListRecursively(key string) (storeadapter.StoreNode, error)
 }
 
-func NewFinder(storeAdapter storeadapter.StoreAdapter, preferredProtocol string, preferred func(key string) bool, onUpdate func(all map[string]string, preferred map[string]string), logger *gosteno.Logger) (Finder, error) {
-	if preferredProtocol != "tls" && preferredProtocol != "udp" {
-		return nil, errors.New("Invalid protocol")
-	}
-
-	return &finder{
-		storeAdapter:   storeAdapter,
-		protocolPrefix: preferredProtocol + "://",
-		addressMap:     map[string]string{},
-		preferredMap:   map[string]string{},
-
-		stopChan:       make(chan struct{}),
-		storeKeyPrefix: META_ROOT,
-		unmarshal: func(value []byte) []string {
-			if value != nil {
-				var meta DopplerMeta
-				if err := json.Unmarshal(value, &meta); err == nil {
-					return meta.Endpoints
-				}
-			}
-			return nil
-		},
-		onUpdate:  onUpdate,
-		preferred: preferred,
-		logger:    logger,
-	}, nil
+type Event struct {
+	UDPDopplers []string
+	TLSDopplers []string
 }
 
-func NewLegacyFinder(storeAdapter storeadapter.StoreAdapter, port int, preferred func(key string) bool, onUpdate func(all map[string]string, preferred map[string]string), logger *gosteno.Logger) Finder {
-	return &finder{
-		storeAdapter:   storeAdapter,
-		protocolPrefix: "udp://",
-		addressMap:     map[string]string{},
-		preferredMap:   map[string]string{},
+type Finder struct {
+	adapter              StoreAdapter
+	legacyPort           int
+	preferredProtocol    string
+	preferredDopplerZone string
+	metaEndpoints        map[string][]string
+	metaLock             sync.RWMutex
+	legacyEndpoints      map[string]string
+	legacyLock           sync.RWMutex
 
-		stopChan:       make(chan struct{}),
-		storeKeyPrefix: LEGACY_ROOT,
-		unmarshal: func(value []byte) []string {
-			if value == nil {
-				return nil
-			}
-			return []string{fmt.Sprintf("udp://%s:%d", value, port)}
-		},
-		onUpdate:  onUpdate,
-		preferred: preferred,
-		logger:    logger,
+	events chan Event
+	logger *gosteno.Logger
+}
+
+func NewFinder(adapter StoreAdapter, legacyPort int, preferredProtocol string, preferredDopplerZone string, logger *gosteno.Logger) *Finder {
+	return &Finder{
+		metaEndpoints:        make(map[string][]string),
+		legacyEndpoints:      make(map[string]string),
+		adapter:              adapter,
+		preferredProtocol:    preferredProtocol,
+		preferredDopplerZone: preferredDopplerZone,
+		legacyPort:           legacyPort,
+		events:               make(chan Event, 10),
+		logger:               logger,
 	}
 }
 
-func (f *finder) Start() {
-	events, stopWatch, errors := f.storeAdapter.Watch(f.storeKeyPrefix)
-	f.discoverAddresses()
-	go f.run(events, stopWatch, errors)
+func (f *Finder) WebsocketServers() []string {
+	f.legacyLock.RLock()
+	defer f.legacyLock.RUnlock()
+	wsServers := make([]string, 0, len(f.legacyEndpoints))
+	for _, server := range f.legacyEndpoints {
+		serverURL, err := url.Parse(server)
+		if err == nil {
+			wsServers = append(wsServers, serverURL.Host)
+		}
+	}
+	return wsServers
 }
 
-func (f *finder) run(events <-chan storeadapter.WatchEvent, stopWatch chan<- bool, errors <-chan error) {
-	var tick <-chan time.Time
+func (f *Finder) Start() {
+	events, stop, errs := f.adapter.Watch(META_ROOT)
+	f.read(META_ROOT, f.parseMetaValue)
+
+	go f.run(META_ROOT, events, errs, stop, f.parseMetaValue)
+
+	events, stop, errs = f.adapter.Watch(LEGACY_ROOT)
+	f.read(LEGACY_ROOT, f.parseLegacyValue)
+
+	go f.run(LEGACY_ROOT, events, errs, stop, f.parseLegacyValue)
+
+	if !f.hasAddrs() {
+		return
+	}
+	f.sendEvent()
+}
+
+func (f *Finder) hasAddrs() bool {
+	f.legacyLock.Lock()
+	f.metaLock.Lock()
+	defer f.legacyLock.Unlock()
+	defer f.metaLock.Unlock()
+	return len(f.legacyEndpoints) > 0 || len(f.metaEndpoints) > 0
+}
+
+func (f *Finder) handleEvent(event *storeadapter.WatchEvent, parser func([]byte) (interface{}, error)) {
+	switch event.Type {
+	case storeadapter.InvalidEvent:
+		f.logger.Errorf("Received invalid event: %+v", event)
+		return
+	case storeadapter.CreateEvent, storeadapter.UpdateEvent:
+		logging.Debugf(f.logger, "Received create/update event: %+v", event.Type)
+		f.saveEndpoints(f.parseNode(*event.Node, parser))
+	case storeadapter.DeleteEvent, storeadapter.ExpireEvent:
+		logging.Debugf(f.logger, "Received delete/expire event: %+v", event.Type)
+		f.deleteEndpoints(f.parseNode(*event.PrevNode, parser))
+	}
+	f.sendEvent()
+}
+
+func (f *Finder) run(etcdRoot string, events <-chan storeadapter.WatchEvent, errs <-chan error, stop chan<- bool, parser func([]byte) (interface{}, error)) {
 	for {
 		select {
-		case <-f.stopChan:
-			close(stopWatch)
-			return
 		case event := <-events:
-			tick = nil
-			f.handleEvent(&event)
-		case err := <-errors:
+			f.handleEvent(&event, parser)
+		case err := <-errs:
 			f.logger.Errord(map[string]interface{}{
-				"error": err.Error(),
-			}, "Finder: Watch failed")
-			tick = time.NewTimer(time.Second).C
-			events = nil
-			errors = nil
-		case <-tick:
-			tick = nil
-			events, stopWatch, errors = f.storeAdapter.Watch(f.storeKeyPrefix)
-			f.discoverAddresses()
+				"error": err.Error()}, "Finder: Watch sent an error")
+			time.Sleep(time.Second)
+			events, stop, errs = f.adapter.Watch(etcdRoot)
+			f.read(etcdRoot, parser)
 		}
 	}
 }
 
-func (f *finder) handleEvent(event *storeadapter.WatchEvent) {
-	var value []byte
-	dirty := true
-
-	if event.Node != nil {
-		if len(event.Node.Key) <= len(f.storeKeyPrefix) {
-			return
-		}
-		value = event.Node.Value
-	}
-	if event.PrevNode != nil {
-		if len(event.PrevNode.Key) <= len(f.storeKeyPrefix) {
-			return
-		}
-	}
-
-	f.Lock()
-	switch event.Type {
-	case storeadapter.CreateEvent:
-		url, ok := f.preferredURL(f.unmarshal(value))
-		if !ok {
-			f.logger.Errord(map[string]interface{}{
-				"key":   event.Node.Key,
-				"value": event.Node.Value,
-			}, "Invalid data")
-			return
-		}
-
-		rPath := event.Node.Key[len(f.storeKeyPrefix):]
-		f.addressMap[rPath] = url
-		if f.preferred(rPath) {
-			f.preferredMap[rPath] = url
-		}
-	case storeadapter.DeleteEvent:
-		fallthrough
-	case storeadapter.ExpireEvent:
-		rPath := event.PrevNode.Key[len(f.storeKeyPrefix):]
-		delete(f.addressMap, rPath)
-		delete(f.preferredMap, rPath)
-	case storeadapter.UpdateEvent:
-		prevValue := event.PrevNode.Value
-		if !bytes.Equal(value, prevValue) {
-			url, ok := f.preferredURL(f.unmarshal(value))
-			if !ok {
-				f.logger.Errord(map[string]interface{}{
-					"key":   event.Node.Key,
-					"value": event.Node.Value,
-				}, "Invalid data")
-				return
-			}
-
-			rPath := event.PrevNode.Key[len(f.storeKeyPrefix):]
-			f.addressMap[rPath] = url
-			if f.preferred(rPath) {
-				f.preferredMap[rPath] = url
-			}
-		} else {
-			dirty = false
-		}
-	}
-
-	if dirty {
-		f.notify()
-	}
-	f.Unlock()
-
-}
-
-func (f *finder) discoverAddresses() error {
-	node, err := f.storeAdapter.ListRecursively(f.storeKeyPrefix)
-
-	if err == storeadapter.ErrorKeyNotFound {
-		f.logger.Debugf("Finder: Unable to recursively find keys with prefix %s", f.storeKeyPrefix)
-		return err
-	}
-
-	if err == storeadapter.ErrorTimeout {
-		f.logger.Debug("Finder: Timed out talking to store; will try again soon.")
-		return err
-	}
-
+func (f *Finder) read(root string, parser func([]byte) (interface{}, error)) error {
+	node, err := f.adapter.ListRecursively(root)
 	if err != nil {
-		f.logger.Warnd(map[string]interface{}{
-			"error": err.Error(),
-		}, "Finder: Error during ListRecursively")
 		return err
 	}
-
-	leaves := leafNodes(node)
-
-	addressMap := map[string]string{}
-	preferredMap := map[string]string{}
-
-	for _, leaf := range leaves {
-		url, ok := f.preferredURL(f.unmarshal(leaf.Value))
-		if !ok {
-			f.logger.Errord(map[string]interface{}{
-				"key":   leaf.Key,
-				"value": leaf.Value,
-			}, "Invalid data")
-			continue
-		}
-
-		rPath := leaf.Key[len(f.storeKeyPrefix):]
-		addressMap[rPath] = url
-		if f.preferred(rPath) {
-			preferredMap[rPath] = url
-		}
+	for _, node := range findLeafs(node) {
+		doppler, endpoints := f.parseNode(node, parser)
+		f.saveEndpoints(doppler, endpoints)
 	}
-
-	f.Lock()
-	f.addressMap = addressMap
-	f.preferredMap = preferredMap
-
-	f.notify()
-
-	f.Unlock()
 	return nil
 }
 
-func (f *finder) notify() {
-	if f.onUpdate != nil {
-		all := map[string]string{}
-		for k, v := range f.addressMap {
-			all[k] = v
+func (f *Finder) deleteEndpoints(key string, value interface{}) {
+	switch value.(type) {
+	case []string:
+		f.metaLock.Lock()
+		defer f.metaLock.Unlock()
+		delete(f.metaEndpoints, key)
+	case string:
+		f.legacyLock.Lock()
+		defer f.legacyLock.Unlock()
+		delete(f.legacyEndpoints, key)
+	}
+}
+
+func (f *Finder) saveEndpoints(key string, value interface{}) {
+	switch src := value.(type) {
+	case []string:
+		f.metaLock.Lock()
+		defer f.metaLock.Unlock()
+		f.metaEndpoints[key] = src
+	case string:
+		f.legacyLock.Lock()
+		defer f.legacyLock.Unlock()
+		f.legacyEndpoints[key] = src
+	}
+}
+
+func (f *Finder) parseNode(node storeadapter.StoreNode, parser func([]byte) (interface{}, error)) (dopplerKey string, value interface{}) {
+	nodeValue, err := parser(node.Value)
+	if err != nil {
+		f.logger.Errorf("could not parse etcd node %s: %v", string(node.Value), err)
+		return "", nil
+	}
+
+	switch nodeValue.(type) {
+	case []string:
+		dopplerKey = strings.TrimPrefix(node.Key, META_ROOT)
+	case string:
+		dopplerKey = strings.TrimPrefix(node.Key, LEGACY_ROOT)
+	}
+	dopplerKey = strings.TrimPrefix(dopplerKey, "/")
+	return dopplerKey, nodeValue
+}
+
+func (f *Finder) Next() Event {
+	return <-f.events
+}
+
+func (f *Finder) sendEvent() {
+	event := f.eventWithPrefix(f.preferredDopplerZone)
+	if len(event.TLSDopplers) == 0 && len(event.UDPDopplers) == 0 {
+		event = f.eventWithPrefix("")
+	}
+
+	f.events <- event
+}
+
+func (f *Finder) eventWithPrefix(dopplerPrefix string) Event {
+	chosenAddrs := f.chooseAddrs()
+
+	var event Event
+	for doppler, addr := range chosenAddrs {
+		if !strings.HasPrefix(doppler, dopplerPrefix) {
+			continue
 		}
-
-		preferred := map[string]string{}
-		for k, v := range f.preferredMap {
-			preferred[k] = v
-		}
-
-		f.onUpdate(all, preferred)
-	}
-}
-
-func (f *finder) preferredURL(urls []string) (string, bool) {
-	u, ok := findWithProtocol(f.protocolPrefix, urls)
-	if !ok {
-		u, ok = findWithProtocol("udp://", urls)
-	}
-	return u, ok
-}
-
-func findWithProtocol(protocol string, urls []string) (string, bool) {
-	for _, u := range urls {
-		if strings.HasPrefix(u, protocol) {
-			return u, true
+		switch {
+		case strings.HasPrefix(addr, "tls"):
+			event.TLSDopplers = append(event.TLSDopplers, strings.TrimPrefix(addr, "tls://"))
+		case strings.HasPrefix(addr, "udp"):
+			event.UDPDopplers = append(event.UDPDopplers, strings.TrimPrefix(addr, "udp://"))
+		default:
+			f.logger.Errorf("Unexpected address for doppler %s (invalid protocol): %s", doppler, addr)
 		}
 	}
-	return "", false
+	return event
 }
 
-func (f *finder) Stop() {
-	close(f.stopChan)
-}
-
-func (f *finder) AllServers() map[string]string {
-	result := map[string]string{}
-	f.RLock()
-	defer f.RUnlock()
-	for k, v := range f.addressMap {
-		result[k] = v
+func (f *Finder) chooseMetaAddrs() map[string]string {
+	chosen := make(map[string]string)
+	f.metaLock.RLock()
+	defer f.metaLock.RUnlock()
+	for doppler, addrs := range f.metaEndpoints {
+		var chosenAddr string
+		for _, addr := range addrs {
+			if !supported(addr) {
+				continue
+			}
+			chosenAddr = addr
+			if strings.HasPrefix(chosenAddr, f.preferredProtocol) {
+				break
+			}
+		}
+		if chosenAddr != "" {
+			chosen[doppler] = chosenAddr
+		}
 	}
-	return result
+	return chosen
 }
 
-func (f *finder) PreferredServers() map[string]string {
-	result := map[string]string{}
-	f.RLock()
-	defer f.RUnlock()
-	for k, v := range f.preferredMap {
-		result[k] = v
+func (f *Finder) addLegacyAddrs(addrs map[string]string) {
+	f.legacyLock.RLock()
+	defer f.legacyLock.RUnlock()
+	for doppler, addr := range f.legacyEndpoints {
+		chosenAddr, ok := addrs[doppler]
+		if ok {
+			if f.preferredProtocol != "udp" || strings.HasPrefix(chosenAddr, "udp") {
+				continue
+			}
+		}
+		addrs[doppler] = addr
 	}
-	return result
 }
 
-func leafNodes(root storeadapter.StoreNode) []storeadapter.StoreNode {
+func (f *Finder) chooseAddrs() map[string]string {
+	chosen := f.chooseMetaAddrs()
+	f.addLegacyAddrs(chosen)
+	return chosen
+}
+
+func (f *Finder) parseMetaValue(leafValue []byte) (interface{}, error) {
+	var data map[string]interface{}
+	if err := json.Unmarshal(leafValue, &data); err != nil {
+		return nil, err
+	}
+
+	// json.Unmarshal always unmarshals to a []interface{}, so copy to a []string.
+	endpointSlice := data["endpoints"].([]interface{})
+	endpoints := make([]string, 0, len(endpointSlice))
+	for _, endpoint := range endpointSlice {
+		endpoints = append(endpoints, endpoint.(string))
+	}
+	return endpoints, nil
+}
+
+func (f *Finder) parseLegacyValue(leafValue []byte) (interface{}, error) {
+	return fmt.Sprintf("udp://%s:%d", string(leafValue), f.legacyPort), nil
+}
+
+// leafNodes is here to make it invisible to us how deeply nested our values are.
+func findLeafs(root storeadapter.StoreNode) []storeadapter.StoreNode {
 	if !root.Dir {
 		if len(root.Value) == 0 {
 			return []storeadapter.StoreNode{}
-		} else {
-			return []storeadapter.StoreNode{root}
 		}
+		return []storeadapter.StoreNode{root}
 	}
 
 	leaves := []storeadapter.StoreNode{}
 	for _, node := range root.ChildNodes {
-		leaves = append(leaves, leafNodes(node)...)
+		leaves = append(leaves, findLeafs(node)...)
 	}
 	return leaves
+}
+
+func supported(addr string) bool {
+	for _, protocol := range supportedProtocols {
+		if strings.HasPrefix(addr, protocol) {
+			return true
+		}
+	}
+	return false
 }

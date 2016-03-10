@@ -1,9 +1,11 @@
 # Loggregator
 
-[![Build Status](https://travis-ci.org/cloudfoundry/loggregator.svg?branch=develop)](https://travis-ci.org/cloudfoundry/loggregator)  [![Coverage Status](https://coveralls.io/repos/cloudfoundry/loggregator/badge.png?branch=develop)](https://coveralls.io/r/cloudfoundry/loggregator?branch=develop)
-   
+[![Coverage Status](https://coveralls.io/repos/cloudfoundry/loggregator/badge.png?branch=develop)](https://coveralls.io/r/cloudfoundry/loggregator?branch=develop)
+
+[Concourse Build](https://loggregator.ci.cf-app.com)
+
 ### Logging in the Clouds   
-  
+
 Loggregator is the user application logging subsystem of Cloud Foundry.
 
 ### Table of Contents
@@ -98,19 +100,19 @@ has in-built support to ensure integrity, encryption and authentication.
 
 | Property        | Required                              | Description                                     |
 |-----------------|---------------------------------------|-------------------------------------------------|
-| `metron_agent.preferred_protocol` | No<br> Default: `udp`                   | Metron prefers this protocol to communicate with Doppler. Options are `udp` and `tls`. `metron_agent.tls_client` properties are required when this is set to `tls`                             |
-| `metron_agent.buffer_size`  | No <br>Default: `100` | Size of the buffer between Metron and Doppler when the `metron_agent.preferred_protocol` is `tls`.  |
-| `metron_agent.tls_client.cert`   | Yes if `metron_agent.preferred_protocol: tls` <br>Default: `""`              | Signed client certificate used by Metron when communicating with Doppler over TLS            |
-| `metron_agent.tls_client.key`   | Yes if `metron_agent.preferred_protocol: tls` <br>Default: `""`              | Client key used by Metron when communicating with Doppler over TLS            |
-| `loggregator.tls.ca`   | Yes if `metron_agent.preferred_protocol: tls` <br>Default: `""`              | Certificate Authority used to sign the certificate            |
+| `metron_agent.preferred_protocol` | No<br> Default: `udp`                   | Metron prefers this protocol to communicate with Doppler. Options are `udp` and `tls`. `metron_agent.tls.*` properties are required when this is set to `tls`                             |
+| `metron_agent.buffer_size`  | No <br>Default: `10000` | Size of the buffer between Metron and Doppler when the `metron_agent.preferred_protocol` is `tls`.  |
+| `metron_agent.tls.client_cert`   | Yes if `metron_agent.preferred_protocol: tls` <br>Default: `""`              | Signed client certificate used by Metron when communicating with Doppler over TLS            |
+| `metron_agent.tls.client_key`   | Yes if `metron_agent.preferred_protocol: tls` <br>Default: `""`              | Client key used by Metron when communicating with Doppler over TLS            |
+| `loggregator.tls.ca_cert`   | Yes if `metron_agent.preferred_protocol: tls` <br>Default: `""`              | Certificate Authority used to sign the certificate            |
 
 
 | Property        | Required                              | Description                                     |
 |-----------------|---------------------------------------|-------------------------------------------------|
-| `doppler.enable_tls_transport` | No <br>Default: `false`                   | Enable TLS communication with Metron. If enabled, `doppler.tls_server` properties are required.|
-| `doppler.tls_server.cert`   | Yes if `doppler.enable_tls_transport: true` <br>Default: `""`              | Signed server certificate used by Doppler when communicating with Doppler over TLS            |
-| `doppler.tls_server.key`   | Yes if `doppler.enable_tls_transport: true` <br>Default: `""`              | Server key used by Doppler when communicating with Metron over TLS            |
-| `loggregator.tls.ca`   | Yes if `doppler.enable_tls_transport: true` <br>Default: `""`              | Certificate Authority used to sign the certificate            |
+| `doppler.tls.enable` | No <br>Default: `false`                   | Enable TLS communication with Metron. If enabled, `doppler.tls.*` properties are required.|
+| `doppler.tls.server_cert`   | Yes if `doppler.tls.enable: true` <br>Default: `""`              | Signed server certificate used by Doppler when communicating with Doppler over TLS            |
+| `doppler.tls.server_key`   | Yes if `doppler.tls.enable: true` <br>Default: `""`              | Server key used by Doppler when communicating with Metron over TLS            |
+| `loggregator.tls.ca_cert`   | Yes if `doppler.tls.enable: true` <br>Default: `""`              | Certificate Authority used to sign the certificate            |
 
 
 An example manifest is given below:
@@ -118,7 +120,7 @@ An example manifest is given below:
 ```yaml
   loggregator:
     tls:
-      ca: |
+      ca_cert: |
         -----BEGIN CERTIFICATE-----
         LOGGREGATOR CA CERTIFICATE
         -----END CERTIFICATE-----
@@ -126,24 +128,24 @@ An example manifest is given below:
   metron_agent:
     preferred_protocol: tls
     buffer_size: 1000
-    tls_client:
-      cert: |
+    tls:
+      client_cert: |
         -----BEGIN CERTIFICATE-----
         METRON AGENT CERTIFICATE
         -----END CERTIFICATE-----
-      key: |
+      client_key: |
         -----BEGIN RSA PRIVATE KEY-----
         METRON AGENT KEY
         -----END RSA PRIVATE KEY-----
 
   doppler:
-    enable_tls_transport: true
-    tls_server:
-      cert: |
+    tls:
+      enable: true
+      server_cert: |
         -----BEGIN CERTIFICATE-----
         DOPPLER CERTIFICATE
         -----END CERTIFICATE-----
-      key: |
+      server_key: |
         -----BEGIN RSA PRIVATE KEY-----
         DOPPLER KEY
         -----END RSA PRIVATE KEY-----
@@ -155,9 +157,6 @@ An example manifest is given below:
 For generating TLS certificates, we recommend
 [certstrap](https://github.com/square/certstrap).  An operator can follow the
 following steps to successfully generate the required certificates.
-
-> Most of these commands can be found in
-> [bin/generate-loggregator-certs](bin/generate-loggregator-certs)
 
 
 1. Get certstrap
@@ -192,10 +191,11 @@ following steps to successfully generate the required certificates.
    $ ./certstrap sign doppler --CA loggregatorCA
    Created out/doppler.crt from out/doppler.csr signed by out/loggregatorCA.key
    ```
-   The manifest property `properties.doppler.enable_tls_transport` should be set to `true`.
-   The manifest property `properties.doppler.tls_server.cert` should be set to the certificate in `out/doppler.crt`.
-   The manifest property `properties.doppler.tls_server.key` should be set to the certificate in `out/doppler.key`.
-   The manifest property `properties.loggregator.tls.ca` should be set to the certificate in `out/loggregatorCA.crt`.
+
+   - The manifest property `properties.doppler.tls.enable` should be set to `true`.
+   - The manifest property `properties.doppler.tls.server_cert` should be set to the certificate in `out/doppler.crt`.
+   - The manifest property `properties.doppler.tls.server_key` should be set to the certificate in `out/doppler.key`.
+   - The manifest property `properties.loggregator.tls.ca_cert` should be set to the certificate in `out/loggregatorCA.crt`.
 
 4. Create and sign a certificate for metron agents.
    ```
@@ -210,10 +210,11 @@ following steps to successfully generate the required certificates.
    $ ./certstrap sign metron_agent --CA loggregatorCA
    Created out/metron_agent.crt from out/metron_agent.csr signed by out/loggregatorCA.key
    ```
-   The manifest property `properties.metron_agent.preferred_protocol` should be set to `tls`.
-   The manifest property `properties.metron_agent.buffer_size`(truncating buffer) by default is set to `100`, but can be increased e.g `100000`
-   The manifest property `properties.metron_agent.tls_client.cert` should be set to the certificate in `out/metron_agent.crt`,
-   and the manifest property `properties.metron_agent.tls_client.key` should be set to the certificate in `out/metron_agent.key`
+
+   - The manifest property `properties.metron_agent.preferred_protocol` should be set to `tls`.
+   - The manifest property `properties.metron_agent.buffer_size`(truncating buffer) by default is set to `100`, but can be increased e.g `100000`
+   - The manifest property `properties.metron_agent.tls.client_cert` should be set to the certificate in `out/metron_agent.crt`,
+   - The manifest property `properties.metron_agent.tls.client_key` should be set to the certificate in `out/metron_agent.key`
 
 
 #### Custom TLS Certificate Generation
@@ -385,7 +386,6 @@ Multiple subscribers may connect to the firehose endpoint, each with a unique su
 The Cloud Foundry team uses GitHub and accepts contributions via [pull request](https://help.github.com/articles/using-pull-requests).
 
 Follow these steps to make a contribution to any of our open source repositories:
-
 1. Complete our CLA Agreement for [individuals](http://www.cloudfoundry.org/individualcontribution.pdf) or [corporations](http://www.cloudfoundry.org/corpcontribution.pdf)
 1. Set your name and email
 

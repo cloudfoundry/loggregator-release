@@ -1,6 +1,7 @@
 package clientpool
 
 import (
+	"errors"
 	"net"
 
 	"github.com/cloudfoundry/dropsonde/logging"
@@ -9,59 +10,66 @@ import (
 
 const DefaultBufferSize = 4096
 
-//go:generate counterfeiter -o fakeclient/fake_client.go . Client
-type Client interface {
-	Scheme() string
-	Address() string
-	Write([]byte) (int, error)
-	Close() error
-}
-
-type udpClient struct {
+type UDPClient struct {
 	addr   *net.UDPAddr
-	conn   net.PacketConn
+	conn   *net.UDPConn
 	logger *gosteno.Logger
 }
 
-func NewUDPClient(logger *gosteno.Logger, address string, bufferSize int) (Client, error) {
+func NewUDPClient(logger *gosteno.Logger, address string) (*UDPClient, error) {
 	la, err := net.ResolveUDPAddr("udp", address)
 	if err != nil {
 		return nil, err
 	}
 
-	connection, err := net.ListenPacket("udp", "")
-	if err != nil {
-		return nil, err
-	}
-
-	loggregatorClient := &udpClient{
+	loggregatorClient := &UDPClient{
 		addr:   la,
-		conn:   connection,
 		logger: logger,
 	}
 	return loggregatorClient, nil
 }
 
-func (c *udpClient) Scheme() string {
+func (c *UDPClient) Connect() error {
+	conn, err := net.DialUDP("udp", nil, c.addr)
+	if err != nil {
+		return err
+	}
+	c.conn = conn
+	return nil
+}
+
+func (c *UDPClient) Scheme() string {
 	return "udp"
 }
 
-func (c *udpClient) Address() string {
+func (c *UDPClient) Address() string {
 	return c.addr.String()
 }
 
-func (c *udpClient) Close() error {
-	return c.conn.Close()
+func (c *UDPClient) Close() error {
+	if c.conn != nil {
+		return c.conn.Close()
+	}
+	return nil
 }
 
-func (c *udpClient) Write(data []byte) (int, error) {
+func (c *UDPClient) Write(data []byte) (int, error) {
 	if len(data) == 0 {
 		return 0, nil
 	}
+	if c.conn == nil {
+		return 0, errors.New("No connection present.")
+	}
 
-	writeCount, err := c.conn.WriteTo(data, c.addr)
+	writeCount, err := c.conn.Write(data)
 	if err != nil {
 		c.logger.Errorf("Writing to loggregator %s failed %s", c.Address(), err)
+
+		// Log message pulled in from legacy dopplerforwarder code.
+		c.logger.Debugd(map[string]interface{}{
+			"scheme":  c.Scheme(),
+			"address": c.Address(),
+		}, "UDPClient: Error writing legacy message")
 		return writeCount, err
 	}
 	logging.Debugf(c.logger, "Wrote %d bytes to %s", writeCount, c.Address())

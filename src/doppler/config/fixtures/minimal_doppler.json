@@ -1,5 +1,6 @@
 {
-    "DropsondeIncomingMessagesPort": 3456,
+    "IncomingUDPPort": 3456,
+    "IncomingTCPPort": 3457,
     "OutgoingPort": 8080,
     "MessageDrainBufferSize": 100,
     "SinkSkipCertVerify": false,

@@ -1,5 +1,5 @@
 {
-    "DropsondeIncomingMessagesPort": 8765,
+    "IncomingUDPPort": 8765,
     "OutgoingPort": 4567,
     "SinkSkipCertVerify": false,
     "Index": 0,

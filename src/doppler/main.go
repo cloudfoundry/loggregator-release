@@ -4,6 +4,9 @@ import (
 	"errors"
 	"flag"
 	"math/rand"
+	"net"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"runtime"
 	"time"
@@ -13,7 +16,6 @@ import (
 
 	"logger"
 
-	"profiler"
 	"signalmanager"
 
 	"github.com/cloudfoundry/dropsonde"
@@ -23,14 +25,15 @@ import (
 	"github.com/pivotal-golang/localip"
 )
 
-const DOPPLER_ORIGIN = "DopplerServer"
+const (
+	DOPPLER_ORIGIN = "DopplerServer"
+	pprofPort      = "6060"
+)
 
 var (
 	logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 	logLevel    = flag.Bool("debug", false, "Debug logging")
 	configFile  = flag.String("config", "config/doppler.json", "Location of the doppler config json file")
-	cpuprofile  = flag.String("cpuprofile", "", "write cpu profile to file")
-	memprofile  = flag.String("memprofile", "", "write memory profile to this file")
 )
 
 type DopplerServerHealthMonitor struct {
@@ -52,7 +55,9 @@ func NewStoreAdapter(urls []string, concurrentRequests int) storeadapter.StoreAd
 	if err != nil {
 		panic(err)
 	}
-	etcdStoreAdapter.Connect()
+	if err = etcdStoreAdapter.Connect(); err != nil {
+		panic(err)
+	}
 	return etcdStoreAdapter
 }
 
@@ -82,12 +87,15 @@ func main() {
 	}
 
 	log := logger.NewLogger(*logLevel, *logFilePath, "doppler", conf.Syslog)
+
+	go func() {
+		err := http.ListenAndServe(net.JoinHostPort(localIp, pprofPort), nil)
+		if err != nil {
+			log.Errorf("Error starting pprof server: %s", err.Error())
+		}
+	}()
+
 	log.Info("Startup: Setting up the doppler server")
-
-	profiler := profiler.New(*cpuprofile, *memprofile, 1*time.Second, log)
-	profiler.Profile()
-	defer profiler.Stop()
-
 	dropsonde.Initialize(conf.MetronAddress, DOPPLER_ORIGIN)
 	storeAdapter := NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
 

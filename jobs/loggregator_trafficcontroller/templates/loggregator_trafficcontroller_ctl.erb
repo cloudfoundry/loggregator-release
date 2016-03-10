@@ -16,7 +16,6 @@ case $1 in
 
     chown vcap:vcap $LOG_DIR
 
-    echo $$ > $PIDFILE
 
     ulimit -l unlimited
     ulimit -n 65536
@@ -24,11 +23,15 @@ case $1 in
     <% p("traffic_controller.debug") == true ? debug_string = "--debug " : debug_string = "" %>
     <% p("traffic_controller.disable_access_control") == true ? disable_access_control_string = "--disableAccessControl" : disable_access_control_string = "" %>
 
-    exec chpst -u vcap:vcap /var/vcap/packages/loggregator_trafficcontroller/trafficcontroller <%= debug_string %> <%= disable_access_control_string %> \
-         --config /var/vcap/jobs/loggregator_trafficcontroller/config/loggregator_trafficcontroller.json \
-         >>$LOG_DIR/loggregator_trafficcontroller.stdout.log \
-         2>>$LOG_DIR/loggregator_trafficcontroller.stderr.log
-    ;;
+    chpst -u vcap:vcap /var/vcap/packages/loggregator_trafficcontroller/trafficcontroller <%= debug_string %> <%= disable_access_control_string %> \
+         --config /var/vcap/jobs/loggregator_trafficcontroller/config/loggregator_trafficcontroller.json &
+
+    echo $! > $PIDFILE
+
+    exec >>$LOG_DIR/loggregator_trafficcontroller.stdout.log \
+        2>>$LOG_DIR/loggregator_trafficcontroller.stderr.log
+
+	  ;;
 
   stop)
     kill_and_wait $PIDFILE 40
