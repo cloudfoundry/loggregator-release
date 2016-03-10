@@ -126,23 +126,7 @@ func (r *TruncatingBuffer) dropMessages() uint64 {
 	}
 }
 
-func (r *TruncatingBuffer) GetDroppedMessageCount() uint64 {
-	r.lock.RLock()
-	defer r.lock.RUnlock()
-	messages := r.droppedMessageCount
-	r.droppedMessageCount = 0
-	return messages
-}
-
-func (r *TruncatingBuffer) PeekDroppedMessageCount() uint64 {
-	r.lock.RLock()
-	defer r.lock.RUnlock()
-	return r.droppedMessageCount
-}
-
 func (r *TruncatingBuffer) notifyMessagesDropped(outputChannel chan *events.Envelope, deltaDropped, totalDropped uint64, appId string) {
-	println("deltaDropped", deltaDropped)
-	println("totalDropped", totalDropped)
 	metrics.BatchAddCounter("TruncatingBuffer.totalDroppedMessages", deltaDropped)
 	if r.eventAllowed(events.Envelope_LogMessage) {
 		r.emitMessage(outputChannel, generateLogMessage(deltaDropped, totalDropped, appId, r.context.Origin(), r.context.Destination()))

@@ -160,17 +160,19 @@ var _ = Describe("Truncating Buffer", func() {
 		Context("tracking dropped messages", func() {
 			var fakeEventEmitter *fake.FakeEventEmitter
 
-			BeforeEach(func() {
-				fakeEventEmitter = fake.NewFakeEventEmitter("doppler")
-				sender := metric_sender.NewMetricSender(fakeEventEmitter)
-				batcher := metricbatcher.New(sender, 100*time.Millisecond)
+			receiveDroppedMessages := func() uint64 {
+				var t uint64
+				for i, _ := range fakeEventEmitter.GetMessages() {
+					e := fakeEventEmitter.GetMessages()[i].Event.(*events.CounterEvent)
 
-				metrics.Initialize(sender, batcher)
-				fakeEventEmitter.Reset()
-			})
+					t += e.GetDelta()
+				}
 
-			tracksDroppedMessages := func(itMsg string, delta, total int) {
-				XIt(itMsg, func() {
+				return t
+			}
+
+			tracksDroppedMessagesAnd := func(itMsg string, delta, total int) {
+				It(itMsg, func() {
 					var logMessageNotification *events.Envelope
 					Eventually(buffer.GetOutputChannel).Should(Receive(&logMessageNotification))
 					Expect(logMessageNotification.GetEventType()).To(Equal(events.Envelope_LogMessage))
@@ -184,21 +186,22 @@ var _ = Describe("Truncating Buffer", func() {
 					Expect(counterEvent.GetName()).To(Equal("TruncatingBuffer.DroppedMessages"))
 					Expect(counterEvent.GetDelta()).To(BeEquivalentTo(delta))
 					Expect(counterEvent.GetTotal()).To(BeEquivalentTo(total))
+
+					Eventually(func() uint64 { return receiveDroppedMessages() }).Should(BeEquivalentTo(total))
 				})
 
 			}
 
-			receiveDroppedMessages := func(msgsReceived int, totals ...int) {
-				It("keeps track of total dropped messages", func() {
-					Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(msgsReceived))
-					for i, total := range totals {
-						Expect(fakeEventEmitter.GetMessages()[i].Event.(*events.CounterEvent)).To(Equal(&events.CounterEvent{
-							Name:  proto.String("TruncatingBuffer.totalDroppedMessages"),
-							Delta: proto.Uint64(uint64(total)),
-						}))
-					}
-				})
-			}
+			BeforeEach(func() {
+				fakeEventEmitter = fake.NewFakeEventEmitter("doppler")
+				sender := metric_sender.NewMetricSender(fakeEventEmitter)
+				batcher := metricbatcher.New(sender, time.Millisecond)
+
+				metrics.Initialize(sender, batcher)
+
+				fakeEventEmitter.Reset()
+			})
+
 			JustBeforeEach(func() {
 				Expect(fakeEventEmitter.GetMessages()).To(HaveLen(0))
 
@@ -207,10 +210,6 @@ var _ = Describe("Truncating Buffer", func() {
 				sendLogMessages("message 3", inMessageChan)
 				sendLogMessages("message 4", inMessageChan)
 
-				// This is a fake synchornization mechanism, as otherwise
-				// it is impossible to know for certain whether message 4 processing
-				// happens before message read below (which could happen to be
-				// either message 1 or message TB)
 				Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(1))
 				Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.CounterEvent)).To(Equal(&events.CounterEvent{
 					Name:  proto.String("TruncatingBuffer.totalDroppedMessages"),
@@ -219,11 +218,10 @@ var _ = Describe("Truncating Buffer", func() {
 			})
 
 			Context("when the buffer fills once", func() {
-				tracksDroppedMessages("drops all the messages", 3, 3)
-				receiveDroppedMessages(1, 3)
+				tracksDroppedMessagesAnd("drops all the messages", 3, 3)
 			})
 
-			Context("when the buffer fills multiple times", func() {
+			Context("when the buffer fills multiple times ", func() {
 				var receiveEvents int
 				var sendLog int
 
@@ -239,18 +237,17 @@ var _ = Describe("Truncating Buffer", func() {
 					}
 				})
 
-				FContext("no event is read and buffer fills a second time", func() {
+				Context("no event is read and buffer fills a second time", func() {
 					BeforeEach(func() {
 						receiveEvents = 0
 						sendLog = 1
 					})
 
 					JustBeforeEach(func() {
-						Eventually(buffer.PeekDroppedMessageCount).Should(Equal(uint64(4)))
+						Eventually(func() uint64 { return receiveDroppedMessages() }).Should(BeEquivalentTo(4))
 					})
 
-					tracksDroppedMessages("drops immediately", 1, 4)
-					receiveDroppedMessages(2, 3, 1)
+					tracksDroppedMessagesAnd("drops immediately", 1, 4)
 				})
 
 				Context("no event is read and buffer fills a third time", func() {
@@ -260,10 +257,11 @@ var _ = Describe("Truncating Buffer", func() {
 					})
 
 					JustBeforeEach(func() {
-						Eventually(buffer.PeekDroppedMessageCount).Should(Equal(uint64(5)))
+						Eventually(func() uint64 { return receiveDroppedMessages() }).Should(BeEquivalentTo(5))
+
 					})
 
-					tracksDroppedMessages("drops immediately", 1, 5)
+					tracksDroppedMessagesAnd("drops immediately", 1, 5)
 				})
 
 				Context("and the TB log event is read", func() {
@@ -273,10 +271,11 @@ var _ = Describe("Truncating Buffer", func() {
 					})
 
 					JustBeforeEach(func() {
-						Eventually(buffer.PeekDroppedMessageCount).Should(Equal(uint64(5)))
+						Eventually(func() uint64 { return receiveDroppedMessages() }).Should(BeEquivalentTo(5))
+
 					})
 
-					tracksDroppedMessages("has 1 slot filled", 2, 5)
+					tracksDroppedMessagesAnd("has 1 slot filled", 2, 5)
 				})
 
 				Context("and the TB log and counter event is read", func() {
@@ -286,11 +285,13 @@ var _ = Describe("Truncating Buffer", func() {
 					})
 
 					JustBeforeEach(func() {
-						Eventually(buffer.PeekDroppedMessageCount).Should(Equal(uint64(6)))
+						Eventually(func() uint64 { return receiveDroppedMessages() }).Should(BeEquivalentTo(6))
+
 					})
 
-					tracksDroppedMessages("has an empty buffer", 3, 6)
+					tracksDroppedMessagesAnd("has an empty buffer", 3, 6)
 				})
+
 			})
 
 		})
