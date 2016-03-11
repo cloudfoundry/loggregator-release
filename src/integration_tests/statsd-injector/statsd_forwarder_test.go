@@ -1,9 +1,9 @@
 package integration_test
 
 import (
+	"io"
 	"net"
 	"os/exec"
-	"time"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
@@ -41,7 +41,6 @@ var _ = Describe("Statsd support", func() {
 		adapter := etcdRunner.Adapter(nil)
 		adapter.Create(node)
 		adapter.Disconnect()
-		time.Sleep(200 * time.Millisecond) // FIXME: wait for metron to discover the fake doppler ... better ideas welcome
 	})
 
 	AfterEach(func() {
@@ -98,14 +97,30 @@ var _ = Describe("Statsd support", func() {
 	})
 
 	Context("with a Go statsd client", func() {
-		It("forwards gauges as signed value metric messages", func(done Done) {
+		var (
+			clientInput   io.WriteCloser
+			clientSession *gexec.Session
+			err           error
+		)
+
+		BeforeEach(func() {
 			clientCommand := exec.Command(pathToGoStatsdClient, "51162")
 
-			clientInput, err := clientCommand.StdinPipe()
+			clientInput, err = clientCommand.StdinPipe()
 			Expect(err).NotTo(HaveOccurred())
 
-			clientSession, err := gexec.Start(clientCommand, GinkgoWriter, GinkgoWriter)
+			clientSession, err = gexec.Start(clientCommand, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
+
+		})
+
+		AfterEach(func() {
+			clientInput.Close()
+			clientSession.Kill().Wait()
+
+		})
+
+		It("forwards gauges as signed value metric messages", func(done Done) {
 
 			clientInput.Write([]byte("gauge test.gauge 23\n"))
 			Eventually(statsdInjectorSession).Should(gbytes.Say("StatsdListener: Read "))
@@ -131,19 +146,10 @@ var _ = Describe("Statsd support", func() {
 			expected = basicValueMetric("test.gauge", 50, "gauge")
 			Eventually(getValueMetric).Should(Equal(expected))
 
-			clientInput.Close()
-			clientSession.Kill().Wait()
 			close(done)
 		}, 5)
 
 		It("forwards timings as signed value metric messages", func(done Done) {
-			clientCommand := exec.Command(pathToGoStatsdClient, "51162")
-
-			clientInput, err := clientCommand.StdinPipe()
-			Expect(err).NotTo(HaveOccurred())
-
-			clientSession, err := gexec.Start(clientCommand, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
 
 			clientInput.Write([]byte("timing test.timing 23\n"))
 			Eventually(statsdInjectorSession).Should(gbytes.Say("StatsdListener: Read "))
@@ -151,19 +157,10 @@ var _ = Describe("Statsd support", func() {
 			expected := basicValueMetric("test.timing", 23, "ms")
 			Eventually(getValueMetric).Should(Equal(expected))
 
-			clientInput.Close()
-			clientSession.Kill().Wait()
 			close(done)
 		}, 5)
 
 		It("forwards counters as signed value metric messages", func(done Done) {
-			clientCommand := exec.Command(pathToGoStatsdClient, "51162")
-
-			clientInput, err := clientCommand.StdinPipe()
-			Expect(err).NotTo(HaveOccurred())
-
-			clientSession, err := gexec.Start(clientCommand, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
 
 			clientInput.Write([]byte("count test.counter 27\n"))
 			Eventually(statsdInjectorSession).Should(gbytes.Say("StatsdListener: Read "))
@@ -183,8 +180,6 @@ var _ = Describe("Statsd support", func() {
 			expected = basicValueMetric("test.counter", 20, "counter")
 			Eventually(getValueMetric).Should(Equal(expected))
 
-			clientInput.Close()
-			clientSession.Kill().Wait()
 			close(done)
 		}, 5)
 	})

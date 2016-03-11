@@ -54,6 +54,7 @@ var _ = BeforeSuite(func() {
 	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1, nil)
 	etcdRunner.Start()
 
+	Eventually(metronSession, 1).Should(gbytes.Say("metron started"))
 	Eventually(statsdInjectorSession).Should(gbytes.Say("Listening for statsd on host :51162"))
 })
 
