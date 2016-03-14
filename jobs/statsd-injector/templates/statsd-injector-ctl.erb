@@ -14,16 +14,17 @@ pid_guard $PIDFILE "Statsd Injector"
 mkdir -p $RUN_DIR
 mkdir -p $LOG_DIR
 
+exec >>$LOG_DIR/statsd_injector.stdout.log \
+    2>>$LOG_DIR/statsd_injector.stderr.log
+
 chown -R vcap:vcap $LOG_DIR
 
-echo $$ > $PIDFILE
-
-exec chpst -u vcap:vcap /var/vcap/packages/statsd-injector/statsd-injector \
+chpst -u vcap:vcap /var/vcap/packages/statsd-injector/statsd-injector \
     -statsdPort=<%= p("statsd_injector.statsd_port") %> \
     -metronPort=<%= p("statsd_injector.metron_port") %> \
-    -logLevel=<%= p("statsd_injector.log_level") %> \
-    >>$LOG_DIR/statsd_injector.stdout.log \
-    2>>$LOG_DIR/statsd_injector.stderr.log
+    -logLevel=<%= p("statsd_injector.log_level") %> &
+
+echo $! > $PIDFILE
 
 ;;
 

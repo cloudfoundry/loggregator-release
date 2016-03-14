@@ -14,20 +14,20 @@ case $1 in
     mkdir -p $RUN_DIR
     mkdir -p $LOG_DIR
 
-    chown vcap:vcap $LOG_DIR
-
     ulimit -l unlimited
     ulimit -n 65536
 
     <% p("syslog_drain_binder.debug") == true ? debug_string = "--debug " : debug_string = "" %>
 
+    exec >>$LOG_DIR/syslog_drain_binder.stdout.log \
+         2>>$LOG_DIR/syslog_drain_binder.stderr.log
+
+    chown -R vcap:vcap $LOG_DIR
+
     chpst -u vcap:vcap /var/vcap/packages/syslog_drain_binder/syslog_drain_binder <%= debug_string %> \
          --config /var/vcap/jobs/syslog_drain_binder/config/syslog_drain_binder.json &
 
     echo $! > $PIDFILE
-
-    exec >>$LOG_DIR/syslog_drain_binder.stdout.log \
-         2>>$LOG_DIR/syslog_drain_binder.stderr.log
 
     ;;
 
