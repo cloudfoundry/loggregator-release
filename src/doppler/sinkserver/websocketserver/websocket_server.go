@@ -133,7 +133,7 @@ func (w *WebsocketServer) appHandler(paths []string, writer http.ResponseWriter,
 	if len(paths) != 4 || paths[1] != "apps" {
 		writer.Header().Set("WWW-Authenticate", "Basic")
 		writer.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(writer, "Resource Not Found. %s", request.URL.Path)
+		fmt.Fprint(writer, "Resource Not Found.")
 		return nil, fmt.Errorf("Resource Not Found. %s", request.URL.Path)
 	}
 	appId := paths[2]
@@ -156,7 +156,7 @@ func (w *WebsocketServer) appHandler(paths []string, writer http.ResponseWriter,
 	case "containermetrics":
 		handler = w.latestContainerMetrics
 	default:
-		http.Error(writer, "invalid path "+request.URL.Path, 400)
+		http.Error(writer, "Invalid path", 400)
 		return nil, fmt.Errorf("Invalid path (returning 400): invalid path %s", request.URL.Path)
 	}
 

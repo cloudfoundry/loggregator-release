@@ -51,7 +51,7 @@ func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 	if err != nil {
 		proxy.logger.Errorf("DopplerProxy.ServeHTTP: unable to translate request: %s", err.Error())
 		writer.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(writer, "Resource Not Found.")
+		fmt.Fprint(writer, "Resource Not Found.")
 		return
 	}
 
@@ -77,7 +77,7 @@ func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 		proxy.serveSetCookie(writer, translatedRequest, proxy.cookieDomain)
 	default:
 		writer.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(writer, "Resource Not Found.")
+		fmt.Fprint(writer, "Resource Not Found.")
 	}
 }
 
