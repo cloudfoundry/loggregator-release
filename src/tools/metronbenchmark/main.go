@@ -83,11 +83,11 @@ func main() {
 	default:
 		panic(fmt.Errorf("Unknown protocol %s", protocol))
 	}
-	valueMetricReader := eventtypereader.New(reporter.GetReceivedCounter(), reader, eventType, "test-origin")
+	valueMetricReader := eventtypereader.New(reporter.ReceivedCounter(), reader, eventType, "test-origin")
 	exp := experiment.NewExperiment(valueMetricReader)
 
 	for i := 0; i < concurrentWriters; i++ {
-		writer := messagewriter.NewMessageWriter("localhost", 51161, "", reporter.GetSentCounter())
+		writer := messagewriter.NewMessageWriter("localhost", 51161, "", reporter.SentCounter())
 		writeStrategy := writestrategies.NewConstantWriteStrategy(generator, writer, writeRate)
 		exp.AddWriteStrategy(writeStrategy)
 	}
@@ -134,7 +134,6 @@ func announceToEtcd(addresses ...string) storeadapter.StoreAdapter {
 	addressJSON, err := json.Marshal(map[string]interface{}{
 		"endpoints": addresses,
 	})
-	println(string(addressJSON))
 	if err != nil {
 		panic(err)
 	}

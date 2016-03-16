@@ -1,9 +1,10 @@
 package metricsreporter_test
 
 import (
+	"tools/benchmark/metricsreporter"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"tools/benchmark/metricsreporter"
 )
 
 var _ = Describe("Counter", func() {

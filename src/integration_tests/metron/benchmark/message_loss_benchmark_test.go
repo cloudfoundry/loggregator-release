@@ -45,15 +45,15 @@ var _ = Describe("MessageLossBenchmark", func() {
 		lines := strings.Split(out, "\n")
 		Expect(lines).To(HaveLen(4))
 		values := strings.Split(lines[1], ", ")
-		Expect(values).To(HaveLen(3))
+		Expect(values).To(HaveLen(5))
 
-		value := strings.Split(values[2], "%")[0]
+		value := strings.Split(values[4], "%")[0]
 		percentLoss, err := strconv.ParseFloat(value, 64)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(percentLoss).To(BeNumerically("<", 1.0))
 		b.RecordValue("message loss (percent)", percentLoss)
 
-		messageThroughput, err := strconv.ParseFloat(values[0], 64)
+		messageThroughput, err := strconv.ParseFloat(values[1], 64)
 		Expect(err).ToNot(HaveOccurred())
 		b.RecordValue("message throughput", messageThroughput)
 	}, 3)
@@ -77,16 +77,16 @@ var _ = Describe("MessageLossBenchmark", func() {
 		Expect(lines).To(HaveLen(4))
 
 		values := strings.Split(lines[1], ", ")
-		Expect(values).To(HaveLen(3))
+		Expect(values).To(HaveLen(5))
 
-		value := strings.Split(values[2], "%")[0]
+		value := strings.Split(values[4], "%")[0]
 		percentLoss, err := strconv.ParseFloat(value, 64)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(percentLoss).To(BeNumerically("<", 1.0))
 
 		b.RecordValue("message loss (percent)", percentLoss)
 
-		messageThroughput, err := strconv.ParseFloat(values[0], 64)
+		messageThroughput, err := strconv.ParseFloat(values[1], 64)
 		Expect(err).ToNot(HaveOccurred())
 		b.RecordValue("message throughput", messageThroughput)
 	}, 3)

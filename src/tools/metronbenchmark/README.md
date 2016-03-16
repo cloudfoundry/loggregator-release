@@ -7,9 +7,15 @@ Will measure messages per second, per minute, and per hour.
 ## How it Works
 
 This is a command line tool that will emit X amount of messages over Y units of time.
+
 * run etcd `etcd` (assuming it is installed)
-* run metron `bin/metron` (from loggregator root, make sure it's the latest binary')
+* run metron `bin/metron -config=src/tools/metronbenchmark` (from loggregator
+  root, make sure it's the latest binary')
 * run metronbenchmark `go run main.go` in loggregator/src/tools/metronbenchmark
+
+If you get in a bad state you might need to delete the doppler keys from etcd:
+
+`curl -X DELETE http://localhost:4001/v2/keys/doppler?recursive=true`
 
 ## Command line options
 
@@ -24,5 +30,3 @@ This is a command line tool that will emit X amount of messages over Y units of 
 | `-serverCert`        | ../../integration_tests/fixtures/server.crt         | The certificate to serve TLS connections to metron with |
 | `-serverKey`         | ../../integration_tests/fixtures/server.key         | The key to serve TLS connections to metron with         |
 | `-caCert`            | ../../integration_tests/fixtures/loggregator-ca.crt | The CA cert to serve TLS connections to metron with     |
-
-

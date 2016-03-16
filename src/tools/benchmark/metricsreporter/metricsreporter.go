@@ -10,28 +10,38 @@ import (
 )
 
 type MetricsReporter struct {
-	reportTime      time.Duration
-	stopChan        chan struct{}
+	reportInterval  time.Duration
+	stop            chan struct{}
 	writer          io.Writer
 	counters        []*Counter
 	sentCounter     Counter
 	receivedCounter Counter
 	numTicks        int32
 	lock            sync.Mutex
+
+	timeLock   sync.Mutex
+	start, end time.Time
 }
 
 func New(reportTime time.Duration, writer io.Writer, counters ...*Counter) *MetricsReporter {
 	return &MetricsReporter{
-		reportTime: reportTime,
-		writer:     writer,
-		counters:   counters,
-		stopChan:   make(chan struct{}),
+		reportInterval: reportTime,
+		writer:         writer,
+		counters:       counters,
+		stop:           make(chan struct{}),
 	}
 }
 
 func (r *MetricsReporter) Start() {
-	ticker := time.NewTicker(r.reportTime)
-	fmt.Fprintf(r.writer, "Sent, Received, PercentLoss%s\n", r.getCounterNames())
+	ticker := time.NewTicker(r.reportInterval)
+	fmt.Fprintf(r.writer, "Runtime, Sent, Received, Rate, PercentLoss%s\n", r.counterNames())
+
+	r.timeLock.Lock()
+	r.start = time.Now()
+	r.end = r.start
+	r.timeLock.Unlock()
+	defer r.syncEnd()
+
 	for {
 		select {
 		case <-ticker.C:
@@ -39,10 +49,12 @@ func (r *MetricsReporter) Start() {
 			received := r.receivedCounter.GetValue()
 			// emit the metric for set reportTime, then reset values
 			loss := (float32(sent-received) / float32(sent)) * 100
-			counterOut := r.getCounterValues()
-			fmt.Fprintf(r.writer, "%v, %v, %v%%%s\n", sent, received, loss, counterOut)
+			counterOut := r.counterValues()
+			r.syncEnd()
+
+			fmt.Fprintf(r.writer, "%s, %v, %v, %.2f/s, %v%%%s\n", r.Duration(), sent, received, r.Rate(), loss, counterOut)
 			r.reset()
-		case <-r.stopChan:
+		case <-r.stop:
 			return
 		}
 	}
@@ -52,7 +64,7 @@ func (r *MetricsReporter) Stop() {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	close(r.stopChan)
+	close(r.stop)
 
 	sentTotal := r.sentCounter.GetTotal()
 	receivedTotal := r.receivedCounter.GetTotal()
@@ -61,24 +73,40 @@ func (r *MetricsReporter) Stop() {
 	averageReceived := float64(receivedTotal) / float64(r.numTicks)
 	loss := (float32(sentTotal-receivedTotal) / float32(sentTotal)) * 100
 
-	counterOut := r.getCounterAverages()
+	counterOut := r.counterAverages()
 
-	fmt.Fprintf(r.writer, "Averages: %v, %v, %v%%%s\n", averageSent, averageReceived, loss, counterOut)
+	fmt.Fprintf(r.writer, "Averages: %s, %v, %v, %.2f/s, %v%%%s\n", r.Duration(), averageSent, averageReceived, r.Rate(), loss, counterOut)
 }
 
-func (r *MetricsReporter) GetSentCounter() *Counter {
+func (r *MetricsReporter) Duration() time.Duration {
+	r.timeLock.Lock()
+	defer r.timeLock.Unlock()
+	return r.end.Sub(r.start)
+}
+
+func (r *MetricsReporter) Rate() float64 {
+	return float64(r.receivedCounter.GetTotal()) / r.Duration().Seconds()
+}
+
+func (r *MetricsReporter) SentCounter() *Counter {
 	return &r.sentCounter
 }
 
-func (r *MetricsReporter) GetReceivedCounter() *Counter {
+func (r *MetricsReporter) ReceivedCounter() *Counter {
 	return &r.receivedCounter
 }
 
-func (r *MetricsReporter) GetNumTicks() int32 {
+func (r *MetricsReporter) NumTicks() int32 {
 	return atomic.LoadInt32(&r.numTicks)
 }
 
-func (r *MetricsReporter) getCounterValues() string {
+func (r *MetricsReporter) syncEnd() {
+	r.timeLock.Lock()
+	defer r.timeLock.Unlock()
+	r.end = time.Now()
+}
+
+func (r *MetricsReporter) counterValues() string {
 	var values string
 	for _, counter := range r.counters {
 		values = fmt.Sprintf("%s, %v", values, counter.GetValue())
@@ -86,7 +114,7 @@ func (r *MetricsReporter) getCounterValues() string {
 	return values
 }
 
-func (r *MetricsReporter) getCounterNames() string {
+func (r *MetricsReporter) counterNames() string {
 	var values string
 	for _, counter := range r.counters {
 		values = fmt.Sprintf("%s, %v", values, counter.GetName())
@@ -94,7 +122,7 @@ func (r *MetricsReporter) getCounterNames() string {
 	return values
 }
 
-func (r *MetricsReporter) getCounterAverages() string {
+func (r *MetricsReporter) counterAverages() string {
 	var values string
 	for _, counter := range r.counters {
 		average := float64(counter.GetTotal()) / float64(r.numTicks)

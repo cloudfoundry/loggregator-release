@@ -29,13 +29,13 @@ func (c *Counter) GetTotal() uint64 {
 }
 
 func (c *Counter) IncrementValue() {
-	atomic.AddUint64(&c.value, 1)
-}
-
-func (c *Counter) Reset() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	atomic.AddUint64(&c.total, atomic.LoadUint64(&c.value))
+	atomic.AddUint64(&c.value, 1)
+	atomic.AddUint64(&c.total, 1)
+}
+
+func (c *Counter) Reset() {
 	atomic.StoreUint64(&c.value, 0)
 }
