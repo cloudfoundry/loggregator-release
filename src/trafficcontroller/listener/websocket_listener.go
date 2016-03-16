@@ -31,7 +31,10 @@ func NewWebsocket(logMessageGenerator marshaller.MessageGenerator, messageConver
 }
 
 func (l *websocketListener) Start(url string, appId string, outputChan OutputChannel, stopChan StopChannel) error {
-	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
+	dialer := &websocket.Dialer{
+		HandshakeTimeout: l.timeout,
+	}
+	conn, _, err := dialer.Dial(url, nil)
 	if err != nil {
 		return err
 	}

@@ -37,7 +37,7 @@ func NewChannelGroupConnector(finder Finder, listenerConstructor ListenerConstru
 	}
 }
 
-func (c *ChannelGroupConnector) Connect(dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan <- []byte, stopChan <-chan struct{}) {
+func (c *ChannelGroupConnector) Connect(dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{}) {
 	defer close(messagesChan)
 	connections := &serverConnections{
 		connectedAddresses: make(map[string]struct{}),
@@ -45,7 +45,7 @@ func (c *ChannelGroupConnector) Connect(dopplerEndpoint doppler_endpoint.Doppler
 
 	checkLoggregatorServersTicker := time.NewTicker(checkServerAddressesInterval)
 	defer checkLoggregatorServersTicker.Stop()
-	loop:
+loop:
 	for {
 		serverURLs := c.finder.WebsocketServers()
 		if len(serverURLs) == 0 {
@@ -79,7 +79,7 @@ func (c *ChannelGroupConnector) Connect(dopplerEndpoint doppler_endpoint.Doppler
 	connections.Wait()
 }
 
-func (c *ChannelGroupConnector) connectToServer(serverAddress string, dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan <- []byte, stopChan <-chan struct{}) {
+func (c *ChannelGroupConnector) connectToServer(serverAddress string, dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{}) {
 	l := c.listenerConstructor(dopplerEndpoint.Timeout, c.logger)
 	serverUrl := fmt.Sprintf("ws://%s%s", serverAddress, dopplerEndpoint.GetPath())
 	c.logger.Infof("proxy: connecting to doppler at %s", serverUrl)

@@ -1,6 +1,7 @@
 package listener_test
 
 import (
+	"net"
 	"trafficcontroller/listener"
 
 	"fmt"
@@ -20,12 +21,14 @@ import (
 )
 
 var _ = Describe("WebsocketListener", func() {
-	var ts *httptest.Server
-	var messageChan, outputChan chan []byte
-	var stopChan chan struct{}
-	var l listener.Listener
-	var fh *fakeHandler
-	var converter func([]byte) ([]byte, error)
+	var (
+		ts                      *httptest.Server
+		messageChan, outputChan chan []byte
+		stopChan                chan struct{}
+		l                       listener.Listener
+		fh                      *fakeHandler
+		converter               func([]byte) ([]byte, error)
+	)
 
 	BeforeEach(func() {
 		messageChan = make(chan []byte)
@@ -244,6 +247,23 @@ var _ = Describe("WebsocketListener", func() {
 			Expect(msg.GetLogMessage().GetSourceName()).To(Equal("LGR"))
 			Expect(string(msg.GetLogMessage().GetMessage())).To(Equal("WebsocketListener.Start: Error connecting to a doppler server"))
 			close(done)
+		})
+	})
+
+	Context("with a sever that is listening but doesn't accept the connection", func() {
+		var deadServer net.Listener
+
+		BeforeEach(func() {
+			var err error
+			deadServer, err = net.Listen("tcp", ":12345")
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("returns a timeout error", func(done Done) {
+			defer close(done)
+			err := l.Start(fmt.Sprintf("ws://%s", "localhost:12345"), "myApp", outputChan, stopChan)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("i/o timeout"))
 		})
 	})
 })
