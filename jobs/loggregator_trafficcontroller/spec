@@ -16,6 +16,9 @@ properties:
   traffic_controller.disable_access_control:
     description: "Traffic controller bypasses authentication with the UAA and CC"
     default: false
+  traffic_controller.locked_memory_limit:
+    description: "Size (KB) of shell's locked memory limit. Set to -1 to use the kernel's default."
+    default: "unlimited"
   loggregator.outgoing_dropsonde_port:
     description: "Port for outgoing dropsonde messages"
     default: 8081

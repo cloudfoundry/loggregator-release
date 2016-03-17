@@ -14,7 +14,9 @@ case $1 in
     mkdir -p $RUN_DIR
     mkdir -p $LOG_DIR
 
-    ulimit -l unlimited
+    <% if p("doppler.locked_memory_limit") != -1 %>
+    ulimit -l <%= p("doppler.locked_memory_limit") %>
+    <% end %>
     ulimit -n 65536
 
     <% p("doppler.debug") == true ? debug_string = "--debug " : debug_string = "" %>

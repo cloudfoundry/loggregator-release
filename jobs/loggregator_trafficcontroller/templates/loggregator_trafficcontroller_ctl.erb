@@ -14,7 +14,9 @@ case $1 in
     mkdir -p $RUN_DIR
     mkdir -p $LOG_DIR
 
-    ulimit -l unlimited
+    <% if p("traffic_controller.locked_memory_limit") != -1 %>
+    ulimit -l <%= p("traffic_controller.locked_memory_limit") %>
+    <% end %>
     ulimit -n 65536
 
     <% p("traffic_controller.debug") == true ? debug_string = "--debug " : debug_string = "" %>
