@@ -15,7 +15,7 @@ import (
 var _ = Describe("MessageLossBenchmark", func() {
 	BeforeEach(func() {
 		pathToMetronExecutable, err := gexec.Build("metron")
-		Expect(err).ShouldNot(HaveOccurred())
+		Expect(err).ToNot(HaveOccurred())
 
 		command := exec.Command(pathToMetronExecutable, "--config=fixtures/metron.json")
 		metronSession, err = gexec.Start(command, gexec.NewPrefixedWriter("[o][metron]", GinkgoWriter), gexec.NewPrefixedWriter("[e][metron]", GinkgoWriter))
