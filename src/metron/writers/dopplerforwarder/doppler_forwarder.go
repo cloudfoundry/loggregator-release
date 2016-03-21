@@ -19,6 +19,7 @@ type DopplerForwarder struct {
 	networkWrapper NetworkWrapper
 	clientPool     ClientPool
 	logger         *gosteno.Logger
+	tryLock        chan struct{}
 }
 
 func New(wrapper NetworkWrapper, clientPool ClientPool, logger *gosteno.Logger) *DopplerForwarder {
@@ -26,10 +27,18 @@ func New(wrapper NetworkWrapper, clientPool ClientPool, logger *gosteno.Logger) 
 		networkWrapper: wrapper,
 		clientPool:     clientPool,
 		logger:         logger,
+		tryLock:        make(chan struct{}, 1),
 	}
 }
 
 func (d *DopplerForwarder) Write(message []byte) (int, error) {
+	select {
+		d.tryLock <- struct{}:
+	default:
+		//return err
+	}
+	defer func () { <-d.tryLock }()
+
 	client, err := d.clientPool.RandomClient()
 	if err != nil {
 		d.logger.Errord(map[string]interface{}{
