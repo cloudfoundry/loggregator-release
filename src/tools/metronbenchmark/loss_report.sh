@@ -3,16 +3,16 @@
 set -ex
 
 function cleanup {
-  pkill -f metron -signal 15 &
+  pkill -f metron --signal 15 &
   curl -X DELETE http://localhost:4001/v2/keys/doppler?recursive=true
-	pkill -f etcd -signal 15 &
+  pkill -f etcd --signal 15 
 }
 
 trap "cleanup" EXIT
 
 RATE_INCREASE="${RATE_INCREASE:=1000}"
 START_RATE="${START_RATE:=100000}"
-LOSS_PERCENT="${LOSS_PERCENT:=0}"
+LOSS_PERCENT=0
 
 go build github.com/coreos/etcd
 go build metron
