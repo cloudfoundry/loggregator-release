@@ -48,11 +48,11 @@ func (r *MetricsReporter) Start() {
 			sent := r.sentCounter.GetValue()
 			received := r.receivedCounter.GetValue()
 			// emit the metric for set reportTime, then reset values
-			loss := (float32(sent-received) / float32(sent)) * 100
+			loss := percentLoss(sent, received)
 			counterOut := r.counterValues()
 			r.syncEnd()
 
-			fmt.Fprintf(r.writer, "%s, %v, %v, %.2f/s, %v%%%s\n", r.Duration(), sent, received, r.Rate(), loss, counterOut)
+			fmt.Fprintf(r.writer, "%s, %v, %v, %.2f/s, %.2f%%%s\n", r.Duration(), sent, received, r.Rate(), loss, counterOut)
 			r.reset()
 		case <-r.stop:
 			return
@@ -71,11 +71,11 @@ func (r *MetricsReporter) Stop() {
 
 	averageSent := float64(sentTotal) / float64(r.numTicks)
 	averageReceived := float64(receivedTotal) / float64(r.numTicks)
-	loss := (float32(sentTotal-receivedTotal) / float32(sentTotal)) * 100
+	loss := percentLoss(sentTotal, receivedTotal)
 
 	counterOut := r.counterAverages()
 
-	fmt.Fprintf(r.writer, "Averages: %s, %v, %v, %.2f/s, %v%%%s\n", r.Duration(), averageSent, averageReceived, r.Rate(), loss, counterOut)
+	fmt.Fprintf(r.writer, "Averages: %s, %.2f, %.2f, %.2f/s, %.2f%%%s\n", r.Duration(), averageSent, averageReceived, r.Rate(), loss, counterOut)
 }
 
 func (r *MetricsReporter) Duration() time.Duration {
@@ -85,7 +85,7 @@ func (r *MetricsReporter) Duration() time.Duration {
 }
 
 func (r *MetricsReporter) Rate() float64 {
-	return float64(r.receivedCounter.GetTotal()) / r.Duration().Seconds()
+	return float64(r.sentCounter.GetTotal()) / r.Duration().Seconds()
 }
 
 func (r *MetricsReporter) SentCounter() *Counter {
@@ -143,4 +143,8 @@ func (r *MetricsReporter) reset() {
 	r.receivedCounter.Reset()
 
 	atomic.AddInt32(&r.numTicks, 1)
+}
+
+func percentLoss(sent, received uint64) float32 {
+	return (float32(sent) - float32(received)) / float32(sent) * 100
 }
