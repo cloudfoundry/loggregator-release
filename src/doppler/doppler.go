@@ -48,7 +48,8 @@ type Doppler struct {
 
 	storeAdapter storeadapter.StoreAdapter
 
-	uptimeMonitor monitor.Monitor
+	uptimeMonitor   monitor.Monitor
+	openFileMonitor monitor.Monitor
 
 	newAppServiceChan, deletedAppServiceChan <-chan appservice.AppService
 	wg                                       sync.WaitGroup
@@ -112,6 +113,8 @@ func New(logger *gosteno.Logger,
 	}
 
 	initializeMetrics(config.MetricBatchIntervalMilliseconds)
+	monitorInterval := time.Duration(config.MonitorIntervalSeconds) * time.Second
+	openFileMonitor := monitor.NewOpenFileDescriptor("doppler", monitorInterval, logger)
 
 	return &Doppler{
 		Logger:                          logger,
@@ -130,7 +133,8 @@ func New(logger *gosteno.Logger,
 		envelopeChan:                    listenerEnvelopeChan,
 		signatureVerifier:               signatureVerifier,
 		dropsondeVerifiedBytesChan:      make(chan []byte),
-		uptimeMonitor:                   monitor.NewUptimeMonitor(time.Duration(config.MonitorIntervalSeconds) * time.Second),
+		uptimeMonitor:                   monitor.NewUptimeMonitor(monitorInterval),
+		openFileMonitor:                 openFileMonitor,
 	}, nil
 }
 
@@ -191,6 +195,7 @@ func (doppler *Doppler) Start() {
 	}()
 
 	go doppler.uptimeMonitor.Start()
+	go doppler.openFileMonitor.Start()
 
 	// The following runs forever. Put all startup functions above here.
 	for err := range doppler.errChan {
@@ -211,6 +216,7 @@ func (doppler *Doppler) Stop() {
 	doppler.storeAdapter.Disconnect()
 	close(doppler.errChan)
 	doppler.uptimeMonitor.Stop()
+	doppler.openFileMonitor.Stop()
 }
 
 func initializeMetrics(batchIntervalMilliseconds uint) {

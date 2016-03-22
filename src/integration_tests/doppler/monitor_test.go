@@ -12,25 +12,53 @@ import (
 )
 
 var _ = Describe("Monitor", func() {
-	It("sends uptime metrics", func() {
-		logger := loggertesthelper.Logger()
-		writer := &fakeWriter{}
-		dropsondeUnmarshaller := eventunmarshaller.New(writer, logger)
-		dropsondeReader, err := networkreader.New("127.0.0.1:37474", "dropsondeAgentListener", dropsondeUnmarshaller, logger)
-		Expect(err).NotTo(HaveOccurred())
-		defer dropsondeReader.Stop()
-		go dropsondeReader.Start()
 
-		Eventually(func() uint64 { return atomic.LoadUint64(&writer.lastUptime) }, 3).Should(BeNumerically(">", 1))
+	var (
+		writer          *fakeWriter
+		dropsondeReader *networkreader.NetworkReader
+	)
+
+	BeforeEach(func() {
+		logger := loggertesthelper.Logger()
+		writer = &fakeWriter{}
+		var err error
+		dropsondeUnmarshaller := eventunmarshaller.New(writer, logger)
+		dropsondeReader, err = networkreader.New("127.0.0.1:37474", "dropsondeAgentListener", dropsondeUnmarshaller, logger)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	Context("Uptime", func() {
+		It("sends uptime metrics", func() {
+			defer dropsondeReader.Stop()
+			go dropsondeReader.Start()
+
+			Eventually(func() uint64 { return atomic.LoadUint64(&writer.lastUptime) }, 3).Should(BeNumerically(">", 1))
+		})
+	})
+
+	Context("OpenFileDescriptors", func() {
+		It("sends openfile metrics", func() {
+			defer dropsondeReader.Stop()
+			go dropsondeReader.Start()
+
+			Eventually(func() uint63 { return atomic.LoadUint64(&writer.openFileDescriptors) }, 3).Should(BeNumerically(">", 3))
+		})
 	})
 })
 
 type fakeWriter struct {
-	lastUptime uint64
+	openFileDescriptors uint64
+	lastUptime          uint64
 }
 
 func (f *fakeWriter) Write(message *events.Envelope) {
-	if message.GetEventType() == events.Envelope_ValueMetric && message.GetValueMetric().GetName() == "Uptime" {
-		atomic.StoreUint64(&f.lastUptime, uint64(message.GetValueMetric().GetValue()))
+	if message.GetEventType() == events.Envelope_ValueMetric {
+
+		switch message.GetValueMetric().GetName() {
+		case "Uptime":
+			atomic.StoreUint64(&f.lastUptime, uint64(message.GetValueMetric().GetValue()))
+		case "OpenFileDescriptor":
+			atomic.StoreUint64(&f.openFileDescriptors, uint64(message.GetValueMetric().GetValue()))
+		}
 	}
 }
