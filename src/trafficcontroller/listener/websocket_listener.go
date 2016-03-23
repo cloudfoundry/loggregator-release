@@ -15,24 +15,26 @@ type websocketListener struct {
 	sync.WaitGroup
 	generateLogMessage marshaller.MessageGenerator
 	convertLogMessage  MessageConverter
-	timeout            time.Duration
+	readTimeout        time.Duration
+	handshakeTimeout   time.Duration
 	logger             *gosteno.Logger
 }
 
 type MessageConverter func([]byte) ([]byte, error)
 
-func NewWebsocket(logMessageGenerator marshaller.MessageGenerator, messageConverter MessageConverter, timeout time.Duration, logger *gosteno.Logger) *websocketListener {
+func NewWebsocket(logMessageGenerator marshaller.MessageGenerator, messageConverter MessageConverter, readTimeout, handshakeTimeout time.Duration, logger *gosteno.Logger) *websocketListener {
 	return &websocketListener{
 		generateLogMessage: logMessageGenerator,
 		convertLogMessage:  messageConverter,
-		timeout:            timeout,
+		readTimeout:        readTimeout,
+		handshakeTimeout:   handshakeTimeout,
 		logger:             logger,
 	}
 }
 
 func (l *websocketListener) Start(url string, appId string, outputChan OutputChannel, stopChan StopChannel) error {
 	dialer := &websocket.Dialer{
-		HandshakeTimeout: l.timeout,
+		HandshakeTimeout: l.handshakeTimeout,
 	}
 	conn, _, err := dialer.Dial(url, nil)
 	if err != nil {
@@ -45,12 +47,12 @@ func (l *websocketListener) Start(url string, appId string, outputChan OutputCha
 		conn.Close()
 	}()
 
-	return l.listenWithTimeout(l.timeout, url, appId, conn, outputChan)
+	return l.listenWithTimeout(l.readTimeout, url, appId, conn, outputChan)
 }
 
-func (l *websocketListener) listenWithTimeout(timeout time.Duration, url string, appId string, conn *websocket.Conn, outputChan OutputChannel) error {
+func (l *websocketListener) listenWithTimeout(readTimeout time.Duration, url string, appId string, conn *websocket.Conn, outputChan OutputChannel) error {
 	for {
-		conn.SetReadDeadline(deadline(timeout))
+		conn.SetReadDeadline(deadline(readTimeout))
 		_, msg, err := conn.ReadMessage()
 
 		if wsErr, ok := err.(*websocket.CloseError); ok {
@@ -62,8 +64,8 @@ func (l *websocketListener) listenWithTimeout(timeout time.Duration, url string,
 		if err != nil {
 			isTimeout, _ := regexp.MatchString(`i/o timeout`, err.Error())
 			if isTimeout {
-				l.logger.Errorf("WebsocketListener.Start: Timed out listening to %s after %s", url, l.timeout.String())
-				descriptiveError := fmt.Errorf("WebsocketListener.Start: Timed out listening to a doppler server after %s", l.timeout.String())
+				l.logger.Errorf("WebsocketListener.Start: Timed out listening to %s after %s", url, l.readTimeout.String())
+				descriptiveError := fmt.Errorf("WebsocketListener.Start: Timed out listening to a doppler server after %s", l.readTimeout.String())
 				outputChan <- l.generateLogMessage(descriptiveError.Error(), appId)
 				return descriptiveError
 			}

@@ -2,12 +2,13 @@ package doppler_endpoint
 
 import (
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/server/handlers"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-	"net/http"
-	"time"
 )
 
 var WebsocketKeepAliveDuration = 30 * time.Second
