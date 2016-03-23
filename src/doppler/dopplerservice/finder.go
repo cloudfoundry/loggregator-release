@@ -1,6 +1,7 @@
 package dopplerservice
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -100,7 +101,12 @@ func (f *Finder) handleEvent(event *storeadapter.WatchEvent, parser func([]byte)
 	case storeadapter.InvalidEvent:
 		f.logger.Errorf("Received invalid event: %+v", event)
 		return
-	case storeadapter.CreateEvent, storeadapter.UpdateEvent:
+	case storeadapter.UpdateEvent:
+		if bytes.Equal(event.PrevNode.Value, event.Node.Value) {
+			return
+		}
+		fallthrough
+	case storeadapter.CreateEvent:
 		logging.Debugf(f.logger, "Received create/update event: %+v", event.Type)
 		f.saveEndpoints(f.parseNode(*event.Node, parser))
 	case storeadapter.DeleteEvent, storeadapter.ExpireEvent:

@@ -440,6 +440,50 @@ var _ = Describe("Finder", func() {
 				})
 			})
 
+			Context("when a node's TTL is updated without a value change", func() {
+				var done chan struct{}
+
+				BeforeEach(func() {
+					preferredProtocol = "tls"
+					metaNode = makeMetaNode("z1/doppler_z1/0", []string{"udp://1.2.3.4:567"})
+					metaNode.TTL = 30
+				})
+
+				JustBeforeEach(func() {
+					// Ignore the startup event
+					_ = finder.Next()
+
+					// Pretend it's been 20 seconds
+					updateNode := metaNode
+					metaNode.TTL = 10
+					metaEvents <- storeadapter.WatchEvent{
+						Type:     storeadapter.UpdateEvent,
+						Node:     &updateNode,
+						PrevNode: &metaNode,
+					}
+
+					done = make(chan struct{})
+				})
+
+				AfterEach(func() {
+					node := makeMetaNode("z1/doppler_z1/0", []string{"tls://1.2.3.4:567"})
+					metaEvents <- storeadapter.WatchEvent{
+						Type: storeadapter.CreateEvent,
+						Node: &node,
+					}
+					Eventually(done).Should(BeClosed())
+				})
+
+				It("doesn't send an event", func() {
+					go func() {
+						finder.Next()
+						close(done)
+					}()
+					Consistently(done).ShouldNot(BeClosed())
+				})
+
+			})
+
 			Context("when a node is deleted", func() {
 				BeforeEach(func() {
 					metaNode = makeMetaNode("z1/doppler_z1/0", []string{"tls://1.2.3.4:567"})
@@ -500,9 +544,9 @@ var _ = Describe("Finder", func() {
 					// Get the goroutine to end
 					node := makeMetaNode("z1/doppler_z1/0", []string{"tls://1.2.3.4:567"})
 					metaEvents <- storeadapter.WatchEvent{
-						Type:     storeadapter.UpdateEvent,
+						Type:     storeadapter.CreateEvent,
 						Node:     &node,
-						PrevNode: &node,
+						PrevNode: nil,
 					}
 					Eventually(done).Should(BeClosed())
 				})
@@ -626,9 +670,9 @@ var _ = Describe("Finder", func() {
 					// Get the goroutine to end
 					node := makeMetaNode("z1/doppler_z1/0", []string{"tls://1.2.3.4:567"})
 					metaEvents <- storeadapter.WatchEvent{
-						Type:     storeadapter.UpdateEvent,
+						Type:     storeadapter.CreateEvent,
 						Node:     &node,
-						PrevNode: &node,
+						PrevNode: nil,
 					}
 					Eventually(done).Should(BeClosed())
 				})

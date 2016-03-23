@@ -51,7 +51,7 @@ func main() {
 
 	flag.Parse()
 
-	reporter := metricsreporter.New(stopAfter, os.Stdout)
+	reporter := metricsreporter.New(interval, os.Stdout)
 	var generator writestrategies.MessageGenerator
 	switch eventType {
 	case events.Envelope_ValueMetric:

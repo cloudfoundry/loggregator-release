@@ -60,6 +60,7 @@ var _ = Describe("DopplerPool", func() {
 				Eventually(mockClientCreator.CreateClientInput.url).Should(Receive(Equal(addresses[1])))
 				Expect(pool.Clients()).To(HaveLen(2))
 			})
+
 		})
 
 		Context("with failed client creation", func() {
@@ -80,6 +81,41 @@ var _ = Describe("DopplerPool", func() {
 				Expect(clients).To(Equal(1))
 
 				Expect(pool.Clients()).To(HaveLen(1))
+			})
+		})
+
+		Context("with new addresses to fill pool", func() {
+			var (
+				clients []clientpool.Client
+				client1 *mockClient
+				client2 *mockClient
+			)
+
+			BeforeEach(func() {
+				client1 = newMockClient()
+				client2 = newMockClient()
+				clients = []clientpool.Client{client1, client2}
+				close(mockClientCreator.CreateClientOutput.err)
+				mockClientCreator.CreateClientOutput.client <- clients[0]
+				mockClientCreator.CreateClientOutput.client <- clients[1]
+				client1.AddressOutput.ret0 <- "pahost:paport"
+				client2.AddressOutput.ret0 <- "pbhost:pbport"
+				close(client1.CloseOutput.ret0)
+				close(client2.CloseOutput.ret0)
+			})
+
+			It("closes previous client connections", func() {
+				Expect(pool.Clients()).To(HaveLen(0))
+
+				pool.SetAddresses(addresses)
+				Expect(pool.Clients()).To(HaveLen(2))
+
+				newClient := newMockClient()
+				mockClientCreator.CreateClientOutput.client <- newClient
+				pool.SetAddresses([]string{"pchost:pcport"})
+				Expect(pool.Clients()).To(HaveLen(1))
+				Eventually(client1.CloseCalled).Should(Receive(BeTrue()))
+				Eventually(client2.CloseCalled).Should(Receive(BeTrue()))
 			})
 		})
 	})

@@ -399,7 +399,8 @@ Follow these steps to make a contribution to any of our open source repositories
 
 Once your commits are approved by Travis CI and reviewed by the core team, they will be merged.
 #### Go version support
-As of version ca517531f4ef646435365996c791c5031b75fc9d, all Loggregator components are deployed to Cloud Foundry with Go 1.4. As of that revision, support for earlier versions of the language are not guaranteed.
+As of version d974c6dbd64d3c99b0f16c1ab0d2a8ffd40d9588, all Loggregator components are deployed to Cloud Foundry with Go 1.5.3.
+As of that revision, support for earlier versions of the language are not guaranteed.
 
 #### OS X prerequisites
 
