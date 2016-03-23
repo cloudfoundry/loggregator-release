@@ -29,7 +29,10 @@ import (
 	"github.com/pivotal-golang/localip"
 )
 
-const pprofPort = "6060"
+const (
+	pprofPort        = "6060"
+	handshakeTimeout = 5 * time.Second
+)
 
 var (
 	logFilePath          = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
@@ -142,9 +145,9 @@ func newDropsondeWebsocketListener(timeout time.Duration, logger *gosteno.Logger
 	messageConverter := func(message []byte) ([]byte, error) {
 		return message, nil
 	}
-	return listener.NewWebsocket(marshaller.DropsondeLogMessage, messageConverter, timeout, logger)
+	return listener.NewWebsocket(marshaller.DropsondeLogMessage, messageConverter, timeout, handshakeTimeout, logger)
 }
 
 func newLegacyWebsocketListener(timeout time.Duration, logger *gosteno.Logger) listener.Listener {
-	return listener.NewWebsocket(marshaller.LoggregatorLogMessage, marshaller.TranslateDropsondeToLegacyLogMessage, timeout, logger)
+	return listener.NewWebsocket(marshaller.LoggregatorLogMessage, marshaller.TranslateDropsondeToLegacyLogMessage, timeout, handshakeTimeout, logger)
 }

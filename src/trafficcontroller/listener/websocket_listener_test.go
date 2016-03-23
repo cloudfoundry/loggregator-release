@@ -29,6 +29,10 @@ var _ = Describe("WebsocketListener", func() {
 		fh                      *fakeHandler
 		converter               func([]byte) ([]byte, error)
 	)
+	const (
+		readTimeout      = 500 * time.Millisecond
+		handshakeTimeout = 500 * time.Millisecond
+	)
 
 	BeforeEach(func() {
 		messageChan = make(chan []byte)
@@ -40,7 +44,13 @@ var _ = Describe("WebsocketListener", func() {
 	})
 
 	JustBeforeEach(func() {
-		l = listener.NewWebsocket(marshaller.LoggregatorLogMessage, converter, 500*time.Millisecond, loggertesthelper.Logger())
+		l = listener.NewWebsocket(
+			marshaller.LoggregatorLogMessage,
+			converter,
+			readTimeout,
+			handshakeTimeout,
+			loggertesthelper.Logger(),
+		)
 	})
 
 	AfterEach(func() {
@@ -182,7 +192,7 @@ var _ = Describe("WebsocketListener", func() {
 			}).Should(BeTrue())
 		})
 
-		Context("with a timeout set", func() {
+		Context("with a read timeout set", func() {
 			It("does not wait forever", func(done Done) {
 				err := l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
 				Expect(err).To(HaveOccurred())
@@ -202,10 +212,10 @@ var _ = Describe("WebsocketListener", func() {
 			})
 		})
 
-		Context("without a timeout", func() {
+		Context("without a read timeout", func() {
 			It("waits for messages to come in", func() {
 				converter := func(d []byte) ([]byte, error) { return d, nil }
-				l = listener.NewWebsocket(marshaller.LoggregatorLogMessage, converter, 0, loggertesthelper.Logger())
+				l = listener.NewWebsocket(marshaller.LoggregatorLogMessage, converter, 0, handshakeTimeout, loggertesthelper.Logger())
 
 				go l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
 
@@ -222,7 +232,7 @@ var _ = Describe("WebsocketListener", func() {
 
 			It("responds to stopChan closure in a reasonable time", func(done Done) {
 				converter := func(d []byte) ([]byte, error) { return d, nil }
-				l = listener.NewWebsocket(marshaller.LoggregatorLogMessage, converter, 0, loggertesthelper.Logger())
+				l = listener.NewWebsocket(marshaller.LoggregatorLogMessage, converter, 0, handshakeTimeout, loggertesthelper.Logger())
 
 				go func() {
 					l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
@@ -259,11 +269,41 @@ var _ = Describe("WebsocketListener", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		It("returns a timeout error", func(done Done) {
+		AfterEach(func() {
+			deadServer.Close()
+		})
+
+		It("returns a io timeout error", func(done Done) {
 			defer close(done)
 			err := l.Start(fmt.Sprintf("ws://%s", "localhost:12345"), "myApp", outputChan, stopChan)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("i/o timeout"))
+		})
+
+		Context("without a handshake timeout", func() {
+			var localListener listener.Listener
+
+			BeforeEach(func() {
+				// we needed to create a local listerer to avoid a data race since this
+				// go routine can not be cleaned up
+				localListener = listener.NewWebsocket(
+					marshaller.LoggregatorLogMessage,
+					converter,
+					readTimeout,
+					0,
+					loggertesthelper.Logger(),
+				)
+			})
+
+			It("doesn't return a timeout error", func() {
+				errCh := make(chan error)
+
+				go func() {
+					errCh <- localListener.Start(fmt.Sprintf("ws://%s", "localhost:12345"), "myApp", nil, nil)
+				}()
+
+				Consistently(errCh).ShouldNot(Receive())
+			})
 		})
 	})
 })
