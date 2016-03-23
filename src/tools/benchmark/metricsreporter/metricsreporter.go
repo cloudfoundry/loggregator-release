@@ -11,7 +11,7 @@ import (
 
 type MetricsReporter struct {
 	reportInterval  time.Duration
-	stop            chan struct{}
+	stop, done      chan struct{}
 	writer          io.Writer
 	counters        []*Counter
 	sentCounter     Counter
@@ -29,6 +29,7 @@ func New(reportTime time.Duration, writer io.Writer, counters ...*Counter) *Metr
 		writer:         writer,
 		counters:       counters,
 		stop:           make(chan struct{}),
+		done:           make(chan struct{}),
 	}
 }
 
@@ -40,7 +41,11 @@ func (r *MetricsReporter) Start() {
 	r.start = time.Now()
 	r.end = r.start
 	r.timeLock.Unlock()
-	defer r.syncEnd()
+
+	defer func() {
+		r.syncEnd()
+		close(r.done)
+	}()
 
 	for {
 		select {
@@ -61,10 +66,11 @@ func (r *MetricsReporter) Start() {
 }
 
 func (r *MetricsReporter) Stop() {
+	close(r.stop)
+	<-r.done
+
 	r.lock.Lock()
 	defer r.lock.Unlock()
-
-	close(r.stop)
 
 	sentTotal := r.sentCounter.GetTotal()
 	receivedTotal := r.receivedCounter.GetTotal()

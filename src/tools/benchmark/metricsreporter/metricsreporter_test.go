@@ -99,9 +99,8 @@ var _ = Describe("MetricsReporter", func() {
 				reporter.ReceivedCounter().IncrementValue()
 
 				Eventually(reporter.NumTicks, "20ms", "1ms").Should(BeEquivalentTo(1))
-				rate := reporter.Rate()
-				duration := reporter.Duration()
 				reporter.Stop()
+				duration, rate := reporter.Duration(), reporter.Rate()
 				Expect(reporter.NumTicks()).To(BeEquivalentTo(1), "The reporter is writing too quickly")
 
 				Eventually(buffer).Should(gbytes.Say(fmt.Sprintf("Averages: %s, 2.00, 1.00, %.2f/s, 50.00%%", duration, rate)))
@@ -118,7 +117,7 @@ var _ = Describe("MetricsReporter", func() {
 
 				Expect(reporter.NumTicks()).To(BeEquivalentTo(1), "The reporter is writing too quickly")
 
-				Eventually(buffer).Should(gbytes.Say(fmt.Sprintf("%s, 1.00, 1.00, %.2f/s, 0.00%%", duration, rate)))
+				Eventually(buffer).Should(gbytes.Say(fmt.Sprintf("%s, 1, 1, %.2f/s, 0.00%%", duration, rate)))
 			})
 		})
 
