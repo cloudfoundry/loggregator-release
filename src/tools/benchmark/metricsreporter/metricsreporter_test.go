@@ -44,13 +44,13 @@ var _ = Describe("MetricsReporter", func() {
 
 	Describe("Rate", func() {
 		It("reports rate", func() {
-			reporter.ReceivedCounter().IncrementValue()
+			reporter.SentCounter().IncrementValue()
 			time.Sleep(time.Second)
 
 			reporter.Stop()
 			end := time.Now()
 
-			expectedRate := float64(reporter.ReceivedCounter().GetTotal()) / end.Sub(start).Seconds()
+			expectedRate := float64(reporter.SentCounter().GetTotal()) / end.Sub(start).Seconds()
 			Eventually(reporter.Rate()).Should(BeNumerically("~", expectedRate, 0.1))
 		})
 	})
@@ -148,7 +148,7 @@ var _ = Describe("MetricsReporter", func() {
 
 				Eventually(reporter.NumTicks, "20ms", "1ms").Should(BeEquivalentTo(1))
 
-				Eventually(buffer).Should(gbytes.Say(fmt.Sprintf("%s, 1.00, 1.00, %.2f/s, 0.00%%, 1, 2", reporter.Duration(), reporter.Rate())))
+				Eventually(buffer, 10).Should(gbytes.Say(fmt.Sprintf("%s, 1, 1, %.2f/s, 0.00%%, 1, 2", reporter.Duration(), reporter.Rate())))
 			})
 
 			It("reports individual counter average", func() {

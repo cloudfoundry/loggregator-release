@@ -52,7 +52,7 @@ func (r *MetricsReporter) Start() {
 			counterOut := r.counterValues()
 			r.syncEnd()
 
-			fmt.Fprintf(r.writer, "%s, %v, %v, %.2f/s, %.2f%%%s\n", r.Duration(), sent, received, r.Rate(), loss, counterOut)
+			fmt.Fprintf(r.writer, "%s, %d, %d, %.2f/s, %.2f%%%s\n", r.Duration(), sent, received, r.Rate(), loss, counterOut)
 			r.reset()
 		case <-r.stop:
 			return
