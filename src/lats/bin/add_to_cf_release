@@ -19,7 +19,7 @@ popd
 
 # add the bosh errand job to the template file
 JOBS_TEMPLATE_FILE=$CF_RELEASE_DIR/templates/cf.yml
-JOBS_LINE=$(grep -n "jobs:" $JOBS_TEMPLATE_FILE | cut -f1 -d:)
+JOBS_LINE=$(grep -nE "^jobs:" $JOBS_TEMPLATE_FILE | cut -f1 -d:)
 NEXT_LINE=$((JOBS_LINE+1))
 
 
