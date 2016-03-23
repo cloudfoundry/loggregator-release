@@ -1,6 +1,10 @@
 package dopplerforwarder
 
-import "github.com/cloudfoundry/gosteno"
+import (
+	"errors"
+
+	"github.com/cloudfoundry/gosteno"
+)
 
 //go:generate hel --type NetworkWrapper --output mock_network_wrapper_test.go
 
@@ -15,11 +19,33 @@ type ClientPool interface {
 	Size() int
 }
 
+// tryLock is a type of lock that returns an error if it is already in use.
+// It is named tryLock at the recommendation of Rob Pike:
+// https://github.com/golang/go/issues/6123#issuecomment-66083838
+type tryLock chan struct{}
+
+func newTryLock() tryLock {
+	return make(tryLock, 1)
+}
+
+func (t tryLock) Lock() error {
+	select {
+	case t <- struct{}{}:
+		return nil
+	default:
+		return errors.New("tryLock: lock already acquired")
+	}
+}
+
+func (t tryLock) Unlock() {
+	<-t
+}
+
 type DopplerForwarder struct {
 	networkWrapper NetworkWrapper
 	clientPool     ClientPool
 	logger         *gosteno.Logger
-	tryLock        chan struct{}
+	tryLock        tryLock
 }
 
 func New(wrapper NetworkWrapper, clientPool ClientPool, logger *gosteno.Logger) *DopplerForwarder {
@@ -27,17 +53,15 @@ func New(wrapper NetworkWrapper, clientPool ClientPool, logger *gosteno.Logger) 
 		networkWrapper: wrapper,
 		clientPool:     clientPool,
 		logger:         logger,
-		tryLock:        make(chan struct{}, 1),
+		tryLock:        newTryLock(),
 	}
 }
 
 func (d *DopplerForwarder) Write(message []byte) (int, error) {
-	select {
-		d.tryLock <- struct{}:
-	default:
-		//return err
+	if err := d.tryLock.Lock(); err != nil {
+		return 0, errors.New("DopplerForwarder: Write called while write was in progress")
 	}
-	defer func () { <-d.tryLock }()
+	defer d.tryLock.Unlock()
 
 	client, err := d.clientPool.RandomClient()
 	if err != nil {

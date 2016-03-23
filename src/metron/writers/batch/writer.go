@@ -10,10 +10,6 @@ import (
 	"github.com/cloudfoundry/gosteno"
 )
 
-// TODO: move write lock into dopplerForwarder
-//	w.writerLock.Lock()
-//	defer w.writerLock.Unlock()
-
 const (
 	maxOverflowTries  = 5
 	minBufferCapacity = 1024
@@ -41,20 +37,20 @@ func (b *messageBuffer) Reset() {
 	b.Buffer.Reset()
 }
 
+//go:generate hel --type ByteWriter --output mock_writer_test.go
+
+type ByteWriter interface {
+	Write(p []byte) (n int, err error)
+}
+
 type Writer struct {
 	flushDuration time.Duration
-	asyncWriter   AsyncRetryWriter
+	asyncWriter   *AsyncRetryWriter
 	msgBuffer     *messageBuffer
 	msgBufferLock sync.Mutex
 	timer         *time.Timer
 	timerLock     sync.Mutex
 	logger        *gosteno.Logger
-}
-
-//go:generate hel --type ByteWriter --output mock_writer_test.go
-
-type ByteWriter interface {
-	Write(p []byte) (n int, err error)
 }
 
 func NewWriter(writer ByteWriter, bufferCapacity uint64, flushDuration time.Duration, logger *gosteno.Logger) (*Writer, error) {

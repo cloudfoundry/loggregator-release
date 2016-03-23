@@ -48,6 +48,25 @@ var _ = Describe("DopplerForwarder", func() {
 		forwarder = dopplerforwarder.New(fakeWrapper, clientPool, logger)
 	})
 
+	Context("with a write in progress", func() {
+		It("returns an error if it's already being written to", func() {
+			done := make(chan struct{})
+			go func() {
+				defer GinkgoRecover()
+				_, err := forwarder.Write(message)
+				Expect(err).ToNot(HaveOccurred())
+				close(done)
+			}()
+			Consistently(done).ShouldNot(BeClosed())
+			_, err := forwarder.Write(message)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("DopplerForwarder: Write called while write was in progress"))
+
+			close(fakeWrapper.WriteOutput.ret0)
+			Eventually(done).Should(BeClosed())
+		})
+	})
+
 	Context("client selection", func() {
 		It("selects a random client", func() {
 			close(fakeWrapper.WriteOutput.ret0)

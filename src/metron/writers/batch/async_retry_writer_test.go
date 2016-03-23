@@ -2,9 +2,11 @@ package batch_test
 
 import (
 	"errors"
+	"metron/writers/batch"
 	"time"
 
-	. "metron/writers/batch"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
@@ -14,16 +16,14 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("asyncRetryWriter", func() {
+var _ = Describe("AsyncRetryWriter", func() {
 	var (
 		mockWriter, mockErrWriter *mockWriter
 		logger                    *gosteno.Logger
 
-		asyncWriter AsyncRetryWriter
+		asyncWriter *batch.AsyncRetryWriter
 
 		message      []byte
 		retryCount   int
@@ -37,7 +37,7 @@ var _ = Describe("asyncRetryWriter", func() {
 		mockErrWriter = newMockWriter()
 		logger = loggertesthelper.Logger()
 
-		asyncWriter = NewAsyncRetryWriter(mockWriter, mockErrWriter, logger)
+		asyncWriter = batch.NewAsyncRetryWriter(mockWriter, mockErrWriter, logger)
 
 		message = []byte("hello world")
 		retryCount = 0
