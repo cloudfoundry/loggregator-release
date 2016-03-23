@@ -70,6 +70,10 @@ var _ = Describe("WriteStrategies", func() {
 					Maximum:   100,
 					Frequency: 900 * time.Millisecond,
 				}
+
+			})
+
+			JustBeforeEach(func() {
 				writeStrategy = writestrategies.NewBurstWriteStrategy(&mockGenerator{}, &writer, params)
 			})
 
@@ -97,6 +101,23 @@ var _ = Describe("WriteStrategies", func() {
 
 				numWrites := writes()
 				Consistently(writes).Should(Equal(numWrites))
+			})
+
+			Context("with an equal minimum and maximum", func() {
+				BeforeEach(func() {
+					params.Minimum = 100
+					params.Maximum = 100
+				})
+
+				It("uses a constant burst number", func() {
+					go writeStrategy.StartWriter()
+					defer writeStrategy.Stop()
+
+					writes := func() uint32 {
+						return atomic.LoadUint32(&writer.count)
+					}
+					Eventually(writes).Should(BeEquivalentTo(100))
+				})
 			})
 		})
 	})

@@ -8,7 +8,7 @@
     "Zone": "z1",
     "Deployment": "deployment-name",
     "LoggregatorDropsondePort": 3457,
-    "PreferredProtocol": "udp",
+    "PreferredProtocol": "tls",
     "TLSConfig": {
         "CertFile": "../../integration_tests/fixtures/client.crt",
         "KeyFile": "../../integration_tests/fixtures/client.key",

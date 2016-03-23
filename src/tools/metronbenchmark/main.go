@@ -38,7 +38,9 @@ func main() {
 		serverCert        string
 		serverKey         string
 		caCert            string
+		burstDelay        time.Duration
 	)
+
 	flag.Var(newDurationValue(&interval, time.Second), "interval", "Interval for reported results")
 	flag.IntVar(&writeRate, "writeRate", 15000, "Number of writes per second to send to metron")
 	flag.Var(newDurationValue(&stopAfter, 5*time.Minute), "stopAfter", "How long to run the experiment for")
@@ -48,6 +50,7 @@ func main() {
 	flag.StringVar(&serverCert, "serverCert", "../../integration_tests/fixtures/server.crt", "The server cert file (for TLS connections)")
 	flag.StringVar(&serverKey, "serverKey", "../../integration_tests/fixtures/server.key", "The server key file (for TLS connections)")
 	flag.StringVar(&caCert, "caCert", "../../integration_tests/fixtures/loggregator-ca.crt", "The certificate authority cert file (for TLS connections)")
+	flag.Var(newDurationValue(&burstDelay, 0), "burstDelay", "The delay between burst sequences.  If this is non-zero then writeRate is used as the number of messages to send each burst.")
 
 	flag.Parse()
 
@@ -88,7 +91,7 @@ func main() {
 
 	for i := 0; i < concurrentWriters; i++ {
 		writer := messagewriter.NewMessageWriter("localhost", 51161, "", reporter.SentCounter())
-		writeStrategy := writestrategies.NewConstantWriteStrategy(generator, writer, writeRate)
+		writeStrategy := chooseStrategy(generator, writer, writeRate, burstDelay)
 		exp.AddWriteStrategy(writeStrategy)
 	}
 
@@ -109,6 +112,18 @@ func main() {
 
 	timer := time.NewTimer(stopAfter)
 	<-timer.C
+}
+
+func chooseStrategy(generator writestrategies.MessageGenerator, writer writestrategies.MessageWriter, writeRate int, burstDelay time.Duration) experiment.WriteStrategy {
+	if burstDelay > 0 {
+		params := writestrategies.BurstParameters{
+			Minimum:   writeRate,
+			Maximum:   writeRate,
+			Frequency: burstDelay,
+		}
+		return writestrategies.NewBurstWriteStrategy(generator, writer, params)
+	}
+	return writestrategies.NewConstantWriteStrategy(generator, writer, writeRate)
 }
 
 func NewStoreAdapter(urls []string, concurrentRequests int) storeadapter.StoreAdapter {

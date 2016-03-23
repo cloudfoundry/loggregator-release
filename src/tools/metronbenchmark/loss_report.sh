@@ -25,11 +25,15 @@ metron automatically prior to running the benchmark.  Each
 iteration is run for 30 seconds.
 
 options:
+  -b, --burst-delay, BURST_DELAY
+        Delay between burst sequences.
+        If this is set to zero, the constant rate is used.
   -i, --rate-increment, RATE_INCREMENT
         How much to increase the write rate by each iteration.
   -r, --start-rate, START_RATE
         On the first iteration, how many messages per second
-        each writer should write.
+        (or per burst, if burst-delay is set) each writer
+        should write.
   -m, --max-write-rate, MAX_WRITE_RATE
         The upper bound for each writer's write rate.  When this
         number is hit, the iteration will opt to increase the
@@ -46,6 +50,7 @@ EOF
 }
 
 function parse_argc {
+  BURST_DELAY="${BURST_DELAY:=0}"
   RATE_INCREMENT="${RATE_INCREMENT:=1000}"
   START_RATE="${START_RATE:=5000}"
   MAX_WRITE_RATE="${MAX_WRITE_RATE:=10000}"
@@ -55,6 +60,10 @@ function parse_argc {
   while [[ $# -gt 0 ]]
   do
     case "$1" in
+      -b|--burst-delay)
+        shift
+        BURST_DELAY=$1
+        ;;
       -i|--rate-increment)
         shift
         RATE_INCREMENT=$1
@@ -115,7 +124,7 @@ do
 
   ./metron 2>> ./metron.err.log >> ./metron.log &
   sleep 1
-  result="$(./metronbenchmark -concurrentWriters $writers -writeRate $rate -stopAfter 30s -protocol tls | grep -v "SEND Error")"
+  result="$(./metronbenchmark -concurrentWriters $writers -writeRate $rate -stopAfter 30s -protocol tls -burstDelay $BURST_DELAY | grep -v "SEND Error")"
   header="$(echo "$result" | head -1)"
   averages="$(echo "$result" | grep "Averages")"
   if ! "$header_written"
