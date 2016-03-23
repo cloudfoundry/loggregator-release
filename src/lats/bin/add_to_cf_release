@@ -18,12 +18,12 @@ ln -s ../src/loggregator/packages/loggregator-acceptance-tests
 popd
 
 # add the bosh errand job to the template file
-JOBS_TEMPLATE_FILE=$CF_RELEASE_DIR/templates/cf-jobs.yml
+JOBS_TEMPLATE_FILE=$CF_RELEASE_DIR/templates/cf.yml
 JOBS_LINE=$(grep -n "jobs:" $JOBS_TEMPLATE_FILE | cut -f1 -d:)
 NEXT_LINE=$((JOBS_LINE+1))
 
 
 awk -v next_line="$NEXT_LINE" -v job="  - name: loggregator-acceptance-tests\n    templates:\n    - name: loggregator-acceptance-tests\n      release: (( meta.release.name ))\n    instances: 1\n    resource_pool: small_errand\n    lifecycle: errand\n    networks:\n      - name: cf1"\
-    'NR == next_line {print job} {print}' $JOBS_TEMPLATE_FILE > /tmp/cf-jobs.yml
+    'NR == next_line {print job} {print}' $JOBS_TEMPLATE_FILE > /tmp/cf.yml
 
-mv /tmp/cf-jobs.yml $JOBS_TEMPLATE_FILE
+mv /tmp/cf.yml $JOBS_TEMPLATE_FILE
