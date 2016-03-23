@@ -114,6 +114,7 @@ do
   done;
 
   ./metron 2>> ./metron.err.log >> ./metron.log &
+  sleep 1
   result="$(./metronbenchmark -concurrentWriters $writers -writeRate $rate -stopAfter 30s -protocol tls | grep -v "SEND Error")"
   header="$(echo "$result" | head -1)"
   averages="$(echo "$result" | grep "Averages")"
