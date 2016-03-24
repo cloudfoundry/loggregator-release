@@ -94,6 +94,12 @@ func main() {
 	// Eventually we'll have a separate websocket client pool
 	finder := dopplerservice.NewFinder(etcdAdapter, int(config.DopplerPort), "udp", "", log)
 	finder.Start()
+	// Draining the finder's events channel in order to not block the finder from handling etcd events.
+	go func() {
+		for {
+			finder.Next()
+		}
+	}()
 
 	dopplerCgc := channel_group_connector.NewChannelGroupConnector(finder, newDropsondeWebsocketListener, marshaller.DropsondeLogMessage, log)
 	dopplerProxy := dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, dopplerCgc, dopplerproxy.TranslateFromDropsondePath, "doppler."+config.SystemDomain, log)
