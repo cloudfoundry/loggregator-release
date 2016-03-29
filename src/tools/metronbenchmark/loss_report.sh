@@ -5,10 +5,8 @@ set -e
 function cleanup {
   pkill -f metron --signal 15 &
   delete_doppler_key
-  pkill -f etcd --signal 15 
+  pkill -f etcd --signal 15
 }
-
-trap "cleanup" EXIT
 
 function delete_doppler_key {
   curl -X DELETE http://localhost:4001/v2/keys/doppler?recursive=true > /dev/null 2>&1
@@ -26,8 +24,13 @@ iteration is run for 30 seconds.
 
 options:
   -b, --burst-delay, BURST_DELAY
-        Delay between burst sequences.
-        If this is set to zero, the constant rate is used.
+        With this set messages will be sent as fast as possible and
+        then sleep for the burst delay. If this is set to zero the
+        constant rate is used.
+        Examples:
+          10us = 10 microseconds
+          1ms  = 1 millisecond
+          3s   = 3 seconds
   -i, --rate-increment, RATE_INCREMENT
         How much to increase the write rate by each iteration.
   -r, --start-rate, START_RATE
@@ -35,15 +38,17 @@ options:
         (or per burst, if burst-delay is set) each writer
         should write.
   -m, --max-write-rate, MAX_WRITE_RATE
-        The upper bound for each writer's write rate.  When this
-        number is hit, the iteration will opt to increase the
-        number of writers to continue increasing the overall
-        write rate.
-  -c, --concurrent-writers, STARTING_CONCURRENT_WRITERS
-        On the first iteration, how many writers the benchmark
-        should start.
+        The upper bound for each writer's write rate.
+  -c, --concurrent-writers, CONCURRENT_WRITERS
+        How many writers the benchmark should start.
   -l, --loss-percent, MAX_MESSAGE_LOSS_PERCENT
-        The percentage of message loss to stop the report at.
+        The percentage of message loss to stop the report at. If this
+        is set then more concurrent writers will be used after we hit
+        max write rate.
+  -p, --protocol, PROTOCOL
+        The protocol used to communicate between metron and it's sink.
+        Note: You will need to set the 'PreferredProtocol' key in
+        config/metron.json as well.
   -h, --help
         Print this usage message.
 EOF
@@ -54,8 +59,9 @@ function parse_argc {
   RATE_INCREMENT="${RATE_INCREMENT:=1000}"
   START_RATE="${START_RATE:=5000}"
   MAX_WRITE_RATE="${MAX_WRITE_RATE:=10000}"
-  STARTING_CONCURRENT_WRITERS="${STARTING_CONCURRENT_WRITERS:=1}"
-  MAX_MESSAGE_LOSS_PERCENT="${MAX_MESSAGE_LOSS_PERCENT:=5}"
+  CONCURRENT_WRITERS="${CONCURRENT_WRITERS:=1}"
+  MAX_MESSAGE_LOSS_PERCENT="${MAX_MESSAGE_LOSS_PERCENT:=-1}"
+  PROTOCOL="${PROTOCOL:=tls}"
 
   while [[ $# -gt 0 ]]
   do
@@ -78,11 +84,15 @@ function parse_argc {
         ;;
       -c|--concurrent-writers)
         shift
-        STARTING_CONCURRENT_WRITERS=$1
+        CONCURRENT_WRITERS=$1
         ;;
       -l|--loss-percent)
         shift
         MAX_MESSAGE_LOSS_PERCENT=$1
+        ;;
+      -p|--protocol)
+        shift
+        PROTOCOL=$1
         ;;
       -h|--help)
         usage
@@ -97,48 +107,82 @@ function parse_argc {
   done
 }
 
-parse_argc $@
+function build_bins {
+  go build github.com/coreos/etcd
+  go build metron
+  go build tools/metronbenchmark
+}
 
-go build github.com/coreos/etcd
-go build metron
-go build tools/metronbenchmark
+function start_etcd {
+  ./etcd 2>> ./etcd.err.log >> ./etcd.log &
+  sleep 1 # allow etcd to come up
+  # sanity check to make sure key got deleted from the last run
+  delete_doppler_key
+}
 
-./etcd 2>> ./etcd.err.log >> ./etcd.log &
+function run_benchmark {
+  local loss_percent=0
+  local header_written=false
+  local writers="$CONCURRENT_WRITERS"
+  local rate=$START_RATE
+  local totalRate="$(($rate * $writers))"
 
-sleep 1 # allow etcd to come up
+  while true ; do
+    # break if we exceeded the max message loss percent and it was set
+    if [ "$loss_percent" -gt "$MAX_MESSAGE_LOSS_PERCENT" ] && [ "$MAX_MESSAGE_LOSS_PERCENT" -gt "-1" ] ; then
+      break
+    fi
 
-# sanity check to make sure key got deleted from the last run
-delete_doppler_key
+    # break if max write rate was hit and no max message loss percent was set
+    if [ "$rate" -gt "$MAX_WRITE_RATE" ] && [ "$MAX_MESSAGE_LOSS_PERCENT" -eq "-1" ] ; then
+      break
+    fi
 
-loss_percent=0
-writers="$STARTING_CONCURRENT_WRITERS"
-header_written=false
-for (( rate=$START_RATE; $loss_percent < $MAX_MESSAGE_LOSS_PERCENT; rate += $RATE_INCREMENT ))
-do
-  while [ "$rate" -gt "$MAX_WRITE_RATE" ]
-  do
-    totalRate="$(($rate * $writers))"
-    writers="$(($writers + 1))"
-    rate="$(($totalRate / $writers))"
-  done;
+    # increase concurrent writers
+    while [ "$rate" -gt "$MAX_WRITE_RATE" ] ; do
+      totalRate="$(($rate * $writers))"
+      writers="$(($writers + 1))"
+      rate="$(($totalRate / $writers))"
+    done
 
-  ./metron 2>> ./metron.err.log >> ./metron.log &
-  sleep 1
-  result="$(./metronbenchmark -concurrentWriters $writers -writeRate $rate -stopAfter 30s -protocol tls -burstDelay $BURST_DELAY | grep -v "SEND Error")"
-  header="$(echo "$result" | head -1)"
-  averages="$(echo "$result" | grep "Averages")"
-  if ! "$header_written"
-  then
-    header_written=true
-    echo "Averages Value Order: $header"
-    echo
-  fi
+    # spawn metron in the background
+    ./metron 2>> ./metron.err.log >> ./metron.log &
+    sleep 1
 
-  echo "Results for $writers writers at $rate messages/s each:"
-  loss_percent=$(echo $averages | awk ' { split($NF, a, ".") ; print a[1] } ')
-  echo "$averages"
-done
-rate="$(($rate - $RATE_INCREMENT))"
+    # spawn metronbenchmark and collect results
+    result="$(./metronbenchmark -concurrentWriters $writers -writeRate $rate -stopAfter 30s -protocol $PROTOCOL -burstDelay $BURST_DELAY | grep -v "SEND Error")"
+    header="$(echo "$result" | head -1)"
+    averages="$(echo "$result" | grep "Averages")"
 
-echo "Finished at $writers writers at $rate messages per second, with a $loss_percent% message loss"
+    # output header
+    if ! "$header_written" ; then
+      header_written=true
+      echo "Averages Value Order: $header"
+      echo
+    fi
 
+    # output results for this run
+    echo "Results for $writers writers at $rate messages/s each:"
+    echo "$averages"
+
+    # compute loss percentage
+    loss_percent=$(echo $averages | awk ' { split($NF, a, ".") ; print a[1] } ')
+
+    # increment rate
+    rate="$(( rate + $RATE_INCREMENT ))"
+  done
+
+  # need to subtract rate increment here as last iteration will increase it
+  final_rate="$(($rate - $RATE_INCREMENT))"
+
+  echo "Finished at $writers writers at $final_rate messages per second, with a $loss_percent% message loss"
+}
+
+function main {
+  trap "cleanup" EXIT
+  parse_argc $@
+  build_bins
+  start_etcd
+  run_benchmark
+}
+main $@
