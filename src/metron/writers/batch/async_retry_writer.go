@@ -46,6 +46,7 @@ func (aw *AsyncRetryWriter) write(bytes []byte, retry int, messageCount uint64) 
 
 	metrics.BatchAddCounter("MessageBuffer.droppedMessageCount", messageCount)
 	aw.logger.Warnf("Received error while trying to flush TCP bytes: %s", err)
+	aw.logger.Warnf("AsyncRetryWriter: Dropped %d messages", messageCount)
 	_, err = aw.errWriter.Write(aw.droppedLogMessage(messageCount))
 	if err != nil {
 		aw.logger.Warnf("Unable to write droppedLogMessage into batch writer: %s", err)
