@@ -23,29 +23,29 @@ metron automatically prior to running the benchmark.  Each
 iteration is run for 30 seconds.
 
 options:
-  -b, --burst-delay, BURST_DELAY
-        With this set messages will be sent as fast as possible and
+  -b, --burst-delay, BURST_DELAY (default: 0)
+        With this set, messages will be sent as fast as possible and
         then sleep for the burst delay. If this is set to zero the
         constant rate is used.
         Examples:
           10us = 10 microseconds
           1ms  = 1 millisecond
           3s   = 3 seconds
-  -i, --rate-increment, RATE_INCREMENT
+  -i, --rate-increment, RATE_INCREMENT (default: 1000)
         How much to increase the write rate by each iteration.
-  -r, --start-rate, START_RATE
+  -r, --start-rate, START_RATE (default: 5000)
         On the first iteration, how many messages per second
         (or per burst, if burst-delay is set) each writer
         should write.
-  -m, --max-write-rate, MAX_WRITE_RATE
+  -m, --max-write-rate, MAX_WRITE_RATE (default: 10000)
         The upper bound for each writer's write rate.
-  -c, --concurrent-writers, CONCURRENT_WRITERS
+  -c, --concurrent-writers, CONCURRENT_WRITERS (default: 1)
         How many writers the benchmark should start.
-  -l, --loss-percent, MAX_MESSAGE_LOSS_PERCENT
+  -l, --loss-percent, MAX_MESSAGE_LOSS_PERCENT (default: -1)
         The percentage of message loss to stop the report at. If this
-        is set then more concurrent writers will be used after we hit
+        is set, then more concurrent writers will be used after we hit
         max write rate.
-  -p, --protocol, PROTOCOL
+  -p, --protocol, PROTOCOL (default: tls)
         The protocol used to communicate between metron and it's sink.
         Note: You will need to set the 'PreferredProtocol' key in
         config/metron.json as well.
