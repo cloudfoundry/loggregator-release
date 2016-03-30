@@ -55,7 +55,7 @@ func (r *TLSReader) readFromConn(conn net.Conn) {
 		if len(buffer) < int(size) {
 			buffer = make([]byte, size)
 		}
-		count, err := tlsConn.Read(buffer[:size])
+		count, err := io.ReadFull(tlsConn, buffer[:size])
 		if err != nil {
 			panic(err)
 		}
