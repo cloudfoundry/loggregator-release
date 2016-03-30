@@ -7,7 +7,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cloudfoundry/dropsonde/emitter"
+	"github.com/cloudfoundry/dropsonde/envelope_extensions"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 )
 
 const (
@@ -37,20 +42,20 @@ func (b *messageBuffer) Reset() {
 	b.Buffer.Reset()
 }
 
-//go:generate hel --type ByteWriter --output mock_writer_test.go
-
-type ByteWriter interface {
-	Write(p []byte) (n int, err error)
-}
-
 type Writer struct {
 	flushDuration time.Duration
-	asyncWriter   *AsyncRetryWriter
+	outWriter     ByteWriter
+	writerLock    sync.Mutex
 	msgBuffer     *messageBuffer
 	msgBufferLock sync.Mutex
 	timer         *time.Timer
-	timerLock     sync.Mutex
 	logger        *gosteno.Logger
+}
+
+//go:generate hel --type ByteWriter --output mock_byte_writer_test.go
+
+type ByteWriter interface {
+	Write(message []byte) (sentLength int, err error)
 }
 
 func NewWriter(writer ByteWriter, bufferCapacity uint64, flushDuration time.Duration, logger *gosteno.Logger) (*Writer, error) {
@@ -65,42 +70,64 @@ func NewWriter(writer ByteWriter, bufferCapacity uint64, flushDuration time.Dura
 	batchTimer.Stop()
 	batchWriter := &Writer{
 		flushDuration: flushDuration,
+		outWriter:     writer,
 		msgBuffer:     newMessageBuffer(make([]byte, 0, bufferCapacity)),
 		timer:         batchTimer,
 		logger:        logger,
 	}
-
-	batchWriter.asyncWriter = NewAsyncRetryWriter(writer, batchWriter, logger)
 	go batchWriter.flushOnTimer()
 	return batchWriter, nil
 }
 
 func (w *Writer) Write(msgBytes []byte) (int, error) {
-	prefixedMessage := w.prefixMessage(msgBytes)
-
 	w.msgBufferLock.Lock()
 	defer w.msgBufferLock.Unlock()
 
-	// msgBuffer is full we need to flush
-	if w.msgBuffer.Len()+len(prefixedMessage) > w.msgBuffer.Cap() {
-		w.flushWrite(prefixedMessage)
-		return len(prefixedMessage), nil
+	buffer := bytes.NewBuffer(make([]byte, 0, len(msgBytes)*2))
+	err := binary.Write(buffer, binary.LittleEndian, uint32(len(msgBytes)))
+	if err != nil {
+		w.logger.Errorf("Error encoding message length: %v\n", err)
+		metrics.BatchIncrementCounter("tls.sendErrorCount")
+		return 0, err
 	}
+	_, err = buffer.Write(msgBytes)
+	if err != nil {
+		return 0, err
+	}
+	switch {
+	case w.msgBuffer.Len()+buffer.Len() > w.msgBuffer.Cap():
+		sent, err := w.retryWrites(buffer.Bytes())
+		if err != nil {
+			dropped := w.msgBuffer.messages + 1
+			metrics.BatchAddCounter("MessageBuffer.droppedMessageCount", dropped)
+			w.msgBuffer.Reset()
+			logMsg, marshalErr := proto.Marshal(w.droppedLogMessage(dropped))
+			if marshalErr != nil {
+				w.logger.Fatalf("Failed to marshal generated log message: %s", logMsg)
+			}
 
-	if w.msgBuffer.Len() == 0 {
-		w.timerLock.Lock()
-		w.timer.Reset(w.flushDuration)
-		w.timerLock.Unlock()
+			// w.Write has to be called in a goroutine to allow the defer
+			// statement to unlock the mutex lock
+			go w.Write(logMsg)
+			return 0, err
+		}
+		return sent, nil
+	default:
+		if w.msgBuffer.Len() == 0 {
+			w.timer.Reset(w.flushDuration)
+		}
+		return w.msgBuffer.Write(buffer.Bytes())
 	}
-	return w.msgBuffer.Write(prefixedMessage)
 }
 
 func (w *Writer) Stop() {
 	w.timer.Stop()
 }
 
-// when calling flushWrite you must have the msgBufferLock acquired
-func (w *Writer) flushWrite(bytes []byte) {
+func (w *Writer) flushWrite(bytes []byte) (int, error) {
+	w.writerLock.Lock()
+	defer w.writerLock.Unlock()
+
 	toWrite := make([]byte, 0, w.msgBuffer.Len()+len(bytes))
 	toWrite = append(toWrite, w.msgBuffer.Bytes()...)
 	toWrite = append(toWrite, bytes...)
@@ -109,14 +136,18 @@ func (w *Writer) flushWrite(bytes []byte) {
 	if len(bytes) > 0 {
 		bufferMessageCount++
 	}
-	w.asyncWriter.AsyncWrite(toWrite, maxOverflowTries, bufferMessageCount)
+	sent, err := w.outWriter.Write(toWrite)
+	if err != nil {
+		w.logger.Warnf("Received error while trying to flush TCP bytes: %s", err)
+		return 0, err
+	}
+
+	metrics.BatchAddCounter("DopplerForwarder.sentMessages", bufferMessageCount)
 	w.msgBuffer.Reset()
+	return sent, nil
 }
 
 func (w *Writer) flushOnTimer() {
-	w.timerLock.Lock()
-	w.timer.Reset(w.flushDuration)
-	w.timerLock.Unlock()
 	for range w.timer.C {
 		w.flushBuffer()
 	}
@@ -125,22 +156,38 @@ func (w *Writer) flushOnTimer() {
 func (w *Writer) flushBuffer() {
 	w.msgBufferLock.Lock()
 	defer w.msgBufferLock.Unlock()
-
 	if w.msgBuffer.messages == 0 {
 		return
 	}
-	w.flushWrite(nil)
+	if _, err := w.flushWrite(nil); err != nil {
+		metrics.BatchIncrementCounter("DopplerForwarder.retryCount")
+		w.timer.Reset(w.flushDuration)
+	}
 }
 
-func (w *Writer) prefixMessage(message []byte) []byte {
-	tmpBuffer := bytes.NewBuffer(make([]byte, 0, len(message)*2))
-	err := binary.Write(tmpBuffer, binary.LittleEndian, uint32(len(message)))
-	if err != nil {
-		w.logger.Fatalf("Error writing message prefix into temp buffer: %s\n", err)
+func (w *Writer) retryWrites(message []byte) (sent int, err error) {
+	for i := 0; i < maxOverflowTries; i++ {
+		if i > 0 {
+			metrics.BatchIncrementCounter("DopplerForwarder.retryCount")
+		}
+		sent, err = w.flushWrite(message)
+		if err == nil {
+			return sent, nil
+		}
 	}
-	_, err = tmpBuffer.Write(message)
-	if err != nil {
-		w.logger.Fatalf("Error writing message into temp buffer: %s\n", err)
+	return 0, err
+}
+
+func (w *Writer) droppedLogMessage(droppedMessages uint64) *events.Envelope {
+	logMessage := &events.LogMessage{
+		Message:     []byte(fmt.Sprintf("Dropped %d message(s) from MetronAgent to Doppler", droppedMessages)),
+		MessageType: events.LogMessage_ERR.Enum(),
+		AppId:       proto.String(envelope_extensions.SystemAppId),
+		Timestamp:   proto.Int64(time.Now().UnixNano()),
 	}
-	return tmpBuffer.Bytes()
+	env, err := emitter.Wrap(logMessage, "MetronAgent")
+	if err != nil {
+		w.logger.Fatalf("Failed to emitter.Wrap a log message: %s", err)
+	}
+	return env
 }
