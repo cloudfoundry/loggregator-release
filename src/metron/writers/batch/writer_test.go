@@ -97,7 +97,7 @@ var _ = Describe("Batch Writer", func() {
 			byteWriter.WriteOutput.sentLength <- len(prefixedMessage)
 			bytesWritten, err := batcher.Write(messageBytes)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(bytesWritten).To(Equal(len(messageBytes) + 4))
+			Expect(bytesWritten).To(Equal(len(messageBytes)))
 			Expect(byteWriter.WriteInput.message).To(Receive(Equal(prefixedMessage)))
 		})
 
@@ -125,7 +125,7 @@ var _ = Describe("Batch Writer", func() {
 			It("retries", func() {
 				bytesWritten, err := batcher.Write(messageBytes)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(bytesWritten).To(BeEquivalentTo(len(prefixedMessage)))
+				Expect(bytesWritten).To(BeEquivalentTo(len(messageBytes)))
 
 				Eventually(byteWriter.WriteInput.message).Should(Receive(Equal(prefixedMessage)))
 				Eventually(byteWriter.WriteInput.message).Should(Receive(Equal(prefixedMessage)))
@@ -135,7 +135,7 @@ var _ = Describe("Batch Writer", func() {
 			It("increments a retryCount metric", func() {
 				bytesWritten, err := batcher.Write(messageBytes)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(bytesWritten).To(BeEquivalentTo(len(prefixedMessage)))
+				Expect(bytesWritten).To(BeEquivalentTo(len(messageBytes)))
 
 				Eventually(func() uint64 { return sender.GetCounter("DopplerForwarder.retryCount") }).Should(BeEquivalentTo(1))
 			})
@@ -197,7 +197,7 @@ var _ = Describe("Batch Writer", func() {
 		It("batches multiple messages within buffer without flushing", func() {
 			bytesWritten, err := batcher.Write(messageBytes)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(bytesWritten).To(Equal(len(messageBytes) + 4))
+			Expect(bytesWritten).To(Equal(len(messageBytes)))
 			Expect(byteWriter.WriteCalled).To(HaveLen(0))
 		})
 
@@ -238,7 +238,7 @@ var _ = Describe("Batch Writer", func() {
 			It("retries", func() {
 				bytesWritten, err := batcher.Write(messageBytes)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(bytesWritten).To(BeEquivalentTo(len(prefixedMessage)))
+				Expect(bytesWritten).To(BeEquivalentTo(len(messageBytes)))
 
 				Eventually(byteWriter.WriteInput.message).Should(Receive(Equal(prefixedMessage)))
 				Consistently(byteWriter.WriteInput.message, 0.4).ShouldNot(Receive())
@@ -249,7 +249,7 @@ var _ = Describe("Batch Writer", func() {
 			It("increments a retryCount metric", func() {
 				bytesWritten, err := batcher.Write(messageBytes)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(bytesWritten).To(BeEquivalentTo(len(prefixedMessage)))
+				Expect(bytesWritten).To(BeEquivalentTo(len(messageBytes)))
 
 				Eventually(func() uint64 { return sender.GetCounter("DopplerForwarder.retryCount") }, 2).Should(BeEquivalentTo(1))
 			})

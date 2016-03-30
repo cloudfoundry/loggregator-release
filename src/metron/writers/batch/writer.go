@@ -96,7 +96,7 @@ func (w *Writer) Write(msgBytes []byte) (int, error) {
 	}
 	switch {
 	case w.msgBuffer.Len()+buffer.Len() > w.msgBuffer.Cap():
-		sent, err := w.retryWrites(buffer.Bytes())
+		_, err := w.retryWrites(buffer.Bytes())
 		if err != nil {
 			dropped := w.msgBuffer.messages + 1
 			metrics.BatchAddCounter("MessageBuffer.droppedMessageCount", dropped)
@@ -111,12 +111,13 @@ func (w *Writer) Write(msgBytes []byte) (int, error) {
 			go w.Write(logMsg)
 			return 0, err
 		}
-		return sent, nil
+		return len(msgBytes), nil
 	default:
 		if w.msgBuffer.Len() == 0 {
 			w.timer.Reset(w.flushDuration)
 		}
-		return w.msgBuffer.Write(buffer.Bytes())
+		_, err := w.msgBuffer.Write(buffer.Bytes())
+		return len(msgBytes), err
 	}
 }
 
