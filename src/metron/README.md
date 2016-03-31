@@ -26,4 +26,4 @@ The up-to-date Metron configuration can be found [in the metron spec file](../..
 
 ## Benchmark tests
 
-https://gist.github.com/jmtuley/7a376e2d5ecd9569d1d1
+[loggregator/src/tools/metronbenchmark](https://github.com/cloudfoundry/loggregator/tree/develop/src/tools/metronbenchmark)

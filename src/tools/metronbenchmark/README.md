@@ -4,6 +4,8 @@ Measure the performance of Metron
 
 Will measure messages per second, per minute, and per hour.
 
+### Note there is a script loss_report.sh which does the following housekeeping for you
+
 ## How it Works
 
 This is a command line tool that will emit X amount of messages over Y units of time.

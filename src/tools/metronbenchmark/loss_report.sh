@@ -162,7 +162,12 @@ function run_benchmark {
     fi
 
     # output results for this run
-    echo "Results for $writers writers at $rate messages/s each:"
+    if [ "$BURST_DELAY" = "0" ]; then
+      echo "Results for $writers writers at $rate messages/s each:"
+    else
+      echo "Results for $writers writers at $rate messages every $BURST_DELAY each:"
+    fi
+    
     echo "$averages"
 
     # compute loss percentage
