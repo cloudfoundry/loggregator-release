@@ -135,7 +135,10 @@ var _ = Describe("DopplerPool", func() {
 			})
 
 			It("returns a random client", func() {
-				Expect(pool.RandomClient()).ToNot(BeNil())
+				client, err := pool.RandomClient()
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(client).ToNot(BeNil())
 			})
 
 		})
