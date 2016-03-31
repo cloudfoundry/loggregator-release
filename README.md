@@ -52,6 +52,7 @@ Oct 3 15:09:26 private-app App/0 This message is on stdout at 2013-10-03 22:09:2
 Oct 3 15:09:26 private-app App/0 STDERR This message is on stderr at 2013-10-03 22:09:26 +0000 for private-app instance 0
 ^C
 ```
+Testing the pull request resource
 
 ### Constraints
 
