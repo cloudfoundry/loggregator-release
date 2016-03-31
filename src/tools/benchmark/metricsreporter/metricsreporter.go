@@ -81,7 +81,7 @@ func (r *MetricsReporter) Stop() {
 
 	counterOut := r.counterAverages()
 
-	fmt.Fprintf(r.writer, "Averages: %.f, %.f, %.f, %.f/s, %.2f%%%s\n", r.Duration.Seconds(), averageSent, averageReceived, r.Rate(), loss, counterOut)
+	fmt.Fprintf(r.writer, "Averages: %.f, %.f, %.f, %.f/s, %.2f%%%s\n", r.Duration().Seconds(), averageSent, averageReceived, r.Rate(), loss, counterOut)
 }
 
 func (r *MetricsReporter) Duration() time.Duration {
