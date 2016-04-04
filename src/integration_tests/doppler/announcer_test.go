@@ -54,7 +54,7 @@ var _ = Describe("Doppler Announcer", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			expectedJSON := fmt.Sprintf(
-				`{"version": 1, "endpoints":["udp://%[1]s:8865", "tcp://%[1]s:4421", "ws://%[1]s:4667"]}`,
+				`{"version": 1, "endpoints":["udp://%[1]s:47654", "tcp://%[1]s:43210", "ws://%[1]s:45678"]}`,
 				localIPAddress)
 
 			Expect(node.Value).To(MatchJSON(expectedJSON))
