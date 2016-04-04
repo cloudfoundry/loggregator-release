@@ -175,7 +175,7 @@ var _ = Describe("Batch Writer", func() {
 						Message:     []byte("Dropped 1 message(s) from MetronAgent to Doppler"),
 					},
 				}
-				Eventually(byteWriter.WriteInput.message, 2).Should(ReceiveEnvelope(MatchSpecifiedContents(expected)))
+				Eventually(byteWriter.WriteInput.message, 2).Should(ReceivePrefixedEnvelope(MatchSpecifiedContents(expected)))
 				Consistently(byteWriter.WriteInput.message).ShouldNot(Receive())
 			})
 		})
@@ -274,7 +274,7 @@ var _ = Describe("Batch Writer", func() {
 
 				droppedCount := func() uint64 { return sender.GetCounter("MessageBuffer.droppedMessageCount") }
 				Eventually(droppedCount).Should(BeEquivalentTo(2))
-				Eventually(func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }).Should(BeEquivalentTo(0))
+				Consistently(func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }).Should(BeEquivalentTo(0))
 
 				// The buffer should have been reset, so the next write will save
 				// to the buffer.
@@ -284,9 +284,9 @@ var _ = Describe("Batch Writer", func() {
 			})
 
 			It("writes a log containing dropped message count", func() {
-				bytesWritten, err := batcher.Write(messageBytes)
+				_, err := batcher.Write(messageBytes)
 				Expect(err).ToNot(HaveOccurred())
-				bytesWritten, err = batcher.Write(messageBytes)
+				bytesWritten, err := batcher.Write(messageBytes)
 				Expect(err).To(HaveOccurred())
 				Expect(bytesWritten).To(BeEquivalentTo(0))
 
@@ -300,6 +300,79 @@ var _ = Describe("Batch Writer", func() {
 				}
 				Eventually(byteWriter.WriteInput.message, 2).Should(ReceiveEnvelope(MatchSpecifiedContents(expected)))
 				Consistently(byteWriter.WriteInput.message).ShouldNot(Receive())
+			})
+
+			It("adds the dropped message counts before accepting any more messages", func() {
+				bufferFiller := make([]byte, bufferSize-10)
+				_, err := batcher.Write(messageBytes)
+				Expect(err).ToNot(HaveOccurred())
+				bytesWritten, err := batcher.Write(messageBytes)
+				Expect(err).To(HaveOccurred())
+				Expect(bytesWritten).To(BeEquivalentTo(0))
+
+				// If the message about dropped messages was already added, the bufferFiller
+				// will cause a flush and error.
+				_, err = batcher.Write(bufferFiller)
+				Expect(err).To(HaveOccurred())
+
+				expected := &events.Envelope{
+					EventType: events.Envelope_LogMessage.Enum(),
+					LogMessage: &events.LogMessage{
+						MessageType: events.LogMessage_ERR.Enum(),
+						AppId:       proto.String(envelope_extensions.SystemAppId),
+						Message:     []byte("Dropped 3 message(s) from MetronAgent to Doppler"),
+					},
+				}
+				Eventually(byteWriter.WriteInput.message, 2).Should(ReceiveEnvelope(MatchSpecifiedContents(expected)))
+				Consistently(byteWriter.WriteInput.message).ShouldNot(Receive())
+			})
+
+			Context("after the byte writer resumes normal function", func() {
+				JustBeforeEach(func() {
+					// Overflowing buffer to get it to drop messages
+					_, err := batcher.Write(messageBytes)
+					Expect(err).ToNot(HaveOccurred())
+					_, err = batcher.Write(messageBytes)
+					Expect(err).To(HaveOccurred())
+					Eventually(func() uint64 { return sender.GetCounter("MessageBuffer.droppedMessageCount") }).Should(BeEquivalentTo(2))
+
+					byteWriter.WriteOutput.err = make(chan error, 100)
+					byteWriter.WriteOutput.sentLength = make(chan int, 100)
+				})
+
+				It("resets the dropped count after a successful flush", func() {
+					byteWriter.WriteOutput.err <- nil
+					byteWriter.WriteOutput.sentLength <- len(prefixedMessage)
+
+					_, err := batcher.Write(messageBytes)
+					Expect(err).ToNot(HaveOccurred())
+					_, err = batcher.Write(messageBytes)
+					Expect(err).ToNot(HaveOccurred())
+
+					Eventually(func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }).Should(BeEquivalentTo(2))
+
+					close(byteWriter.WriteOutput.sentLength)
+					infinity := 50
+					for i := 0; i < infinity; i++ {
+						byteWriter.WriteOutput.err <- errors.New("To INFINITY (but not beyond)")
+					}
+
+					_, err = batcher.Write(messageBytes)
+					Expect(err).ToNot(HaveOccurred())
+					_, err = batcher.Write(messageBytes)
+					Expect(err).To(HaveOccurred())
+
+					expected := &events.Envelope{
+						EventType: events.Envelope_LogMessage.Enum(),
+						LogMessage: &events.LogMessage{
+							MessageType: events.LogMessage_ERR.Enum(),
+							AppId:       proto.String(envelope_extensions.SystemAppId),
+							Message:     []byte("Dropped 2 message(s) from MetronAgent to Doppler"),
+						},
+					}
+					Eventually(byteWriter.WriteInput.message, 2).Should(ReceiveEnvelope(MatchSpecifiedContents(expected)))
+					Consistently(byteWriter.WriteInput.message).ShouldNot(Receive())
+				})
 			})
 		})
 	})
