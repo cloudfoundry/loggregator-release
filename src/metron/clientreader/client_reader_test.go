@@ -35,7 +35,7 @@ var _ = Describe("clientreader", func() {
 				Eventually(mockPool.SetAddressesCalled).Should(Receive())
 			})
 
-			It("panics if there no tls dopplers", func() {
+			It("panics if there are no tls dopplers", func() {
 				event = dopplerservice.Event{
 					UDPDopplers: []string{"1.1.1.1.", "2.2.2.2"},
 					TLSDopplers: []string{},
@@ -66,5 +66,36 @@ var _ = Describe("clientreader", func() {
 
 		})
 
+		Context("TCP PreferredProtocol", func() {
+			BeforeEach(func() {
+				preferredProtocol = "tcp"
+			})
+
+			It("doesn't panic if there are tcp dopplers", func() {
+				event = dopplerservice.Event{
+					UDPDopplers: []string{},
+					TLSDopplers: []string{"10.0.0.1"},
+					TCPDopplers: []string{"10.0.0.1"},
+				}
+
+				l := len(event.TCPDopplers)
+				mockPool.SetAddressesOutput.ret0 <- l
+				Expect(func() { clientreader.Read(mockPool, preferredProtocol, event) }).ToNot(Panic())
+				Eventually(mockPool.SetAddressesCalled).Should(Receive())
+			})
+
+			It("panics if there are no tcp dopplers", func() {
+				event = dopplerservice.Event{
+					UDPDopplers: []string{},
+					TLSDopplers: []string{"10.0.0.1"},
+				}
+
+				l := len(event.TCPDopplers)
+				mockPool.SetAddressesOutput.ret0 <- l
+				Expect(func() { clientreader.Read(mockPool, preferredProtocol, event) }).To(Panic())
+				Eventually(mockPool.SetAddressesCalled).Should(Receive())
+
+			})
+		})
 	})
 })

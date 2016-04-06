@@ -15,10 +15,12 @@ func Read(clientPool ClientPool, preferredProtocol string, event dopplerservice.
 
 	clients := 0
 	switch preferredProtocol {
-	case "tls":
-		clients = clientPool.SetAddresses(event.TLSDopplers)
 	case "udp":
 		clients = clientPool.SetAddresses(event.UDPDopplers)
+	case "tcp":
+		clients = clientPool.SetAddresses(event.TCPDopplers)
+	case "tls":
+		clients = clientPool.SetAddresses(event.TLSDopplers)
 	}
 
 	if clients == 0 {
