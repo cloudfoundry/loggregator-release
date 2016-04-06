@@ -2,10 +2,12 @@ package config_test
 
 import (
 	"bytes"
+	"fmt"
 	"metron/config"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
@@ -80,6 +82,21 @@ var _ = Describe("Config", func() {
 					RuntimeStatsIntervalMilliseconds: 15000,
 					PreferredProtocol:                "udp",
 				}))
+			})
+
+			Context("with valid protocols", func() {
+				DescribeTable("doesn't return error", func(proto string) {
+					_, err := config.Parse(bytes.NewBufferString(fmt.Sprintf(`
+						{
+							"PreferredProtocol": "%s"
+						}
+					`, proto)))
+					Expect(err).ToNot(HaveOccurred())
+				},
+					Entry("udp", "udp"),
+					Entry("tcp", "tcp"),
+					Entry("tls", "tls"),
+				)
 			})
 
 			Context("returns error", func() {

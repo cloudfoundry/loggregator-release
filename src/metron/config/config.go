@@ -20,7 +20,7 @@ func (p *Protocol) UnmarshalJSON(value []byte) error {
 	value = bytes.Trim(value, `"`)
 	valueStr := string(value)
 	switch valueStr {
-	case "udp", "tls":
+	case "udp", "tls", "tcp":
 		*p = Protocol(value)
 	default:
 		return fmt.Errorf("Invalid protocol: %s", valueStr)
