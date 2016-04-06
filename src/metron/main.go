@@ -140,17 +140,32 @@ func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*eventm
 
 	var writer eventmarshaller.ByteWriter = udpForwarder
 
-	if conf.PreferredProtocol == "tls" {
+	switch conf.PreferredProtocol {
+	case "tcp":
+		tcpCreator := clientpool.NewTCPClientCreator(logger, nil)
+		tcpWrapper := dopplerforwarder.NewWrapper(logger, string(conf.PreferredProtocol))
+		clientPool = clientpool.NewDopplerPool(logger, tcpCreator)
+		tcpForwarder := dopplerforwarder.New(tcpWrapper, clientPool, logger)
+
+		tcpBatchInterval := time.Duration(conf.TCPBatchIntervalMilliseconds) * time.Millisecond
+		batchWriter, err := batch.NewWriter(tcpForwarder, conf.TCPBatchSizeBytes, tcpBatchInterval, logger)
+		if err != nil {
+			return nil, err
+		}
+		writer = batchWriter
+
+	case "tls":
 		c := conf.TLSConfig
 		tlsConfig, err := listeners.NewTLSConfig(c.CertFile, c.KeyFile, c.CAFile)
 		if err != nil {
 			return nil, err
 		}
 		tlsConfig.ServerName = "doppler"
-		tlsCreator := clientpool.NewTLSClientCreator(logger, tlsConfig)
-		tlsWrapper := dopplerforwarder.NewTLSWrapper(logger)
+		tlsCreator := clientpool.NewTCPClientCreator(logger, tlsConfig)
+		tlsWrapper := dopplerforwarder.NewWrapper(logger, string(conf.PreferredProtocol))
 		clientPool = clientpool.NewDopplerPool(logger, tlsCreator)
 		tlsForwarder := dopplerforwarder.New(tlsWrapper, clientPool, logger)
+
 		tcpBatchInterval := time.Duration(conf.TCPBatchIntervalMilliseconds) * time.Millisecond
 		batchWriter, err := batch.NewWriter(tlsForwarder, conf.TCPBatchSizeBytes, tcpBatchInterval, logger)
 		if err != nil {

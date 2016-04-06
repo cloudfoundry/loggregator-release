@@ -38,7 +38,7 @@ var (
 	tcSession      *gexec.Session
 
 	dopplerConfig string
-	metronConfig string
+	metronConfig  string
 )
 
 var _ = BeforeSuite(func() {
@@ -73,7 +73,20 @@ var _ = JustBeforeEach(func() {
 	LocalIPAddress, err = localip.LocalIP()
 	Expect(err).ToNot(HaveOccurred())
 
-	metronSession = startComponent(metronExecutablePath, "metron", BLUE, "--config=fixtures/"+metronConfig+".json")
+	// wait for doppler to register
+	key := fmt.Sprintf("%s/z1/doppler_z1/0", dopplerservice.LEGACY_ROOT)
+	Eventually(func() bool {
+		_, err := etcdAdapter.Get(key)
+		return err == nil
+	}, 5).Should(BeTrue())
+
+	key = fmt.Sprintf("%s/z1/doppler_z1/0", dopplerservice.META_ROOT)
+	Eventually(func() bool {
+		_, err := etcdAdapter.Get(key)
+		return err == nil
+	}, 1).Should(BeTrue())
+
+	metronSession = startComponent(metronExecutablePath, "metron", BLUE, "--config=fixtures/"+metronConfig+".json", "--debug")
 
 	tcSession = startComponent(trafficControllerExecutablePath, "tc", LIGHT_BLUE, "--config=fixtures/trafficcontroller.json", "--disableAccessControl")
 
@@ -82,19 +95,6 @@ var _ = JustBeforeEach(func() {
 
 	// Wait for metron
 	Eventually(metronSession.Buffer).Should(gbytes.Say("metron started"))
-
-	// wait for doppler to register
-	key := fmt.Sprintf("%s/z1/doppler_z1/0", dopplerservice.LEGACY_ROOT)
-	Eventually(func() bool {
-		_, err := etcdAdapter.Get(key)
-		return err == nil
-	}, 1).Should(BeTrue())
-
-	key = fmt.Sprintf("%s/z1/doppler_z1/0", dopplerservice.META_ROOT)
-	Eventually(func() bool {
-		_, err := etcdAdapter.Get(key)
-		return err == nil
-	}, 1).Should(BeTrue())
 
 })
 

@@ -19,7 +19,7 @@ type Stopper interface {
 	Stop()
 }
 
-var _ = Describe("End to end test", func() {
+var _ = Describe("End to end benchmarks", func() {
 	benchmarkEndToEnd := func() {
 		Measure("dropsonde metrics being passed from metron to the firehose nozzle", func(b Benchmarker) {
 			const writeRatePerSecond = 1000
@@ -96,7 +96,6 @@ var _ = Describe("End to end test", func() {
 
 		benchmarkEndToEnd()
 	})
-
 })
 
 func reportResults(r *endtoend.FirehoseReader, written int, benchmarker Benchmarker) {

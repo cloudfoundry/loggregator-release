@@ -77,6 +77,7 @@ var _ = Describe("Protocol", func() {
 				})
 			})
 		})
+
 		Context("Metron prefers TCP", func() {
 
 			BeforeEach(func() {
