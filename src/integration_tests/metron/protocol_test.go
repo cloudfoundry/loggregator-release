@@ -76,9 +76,21 @@ var _ = Describe("Protocol", func() {
 					Eventually(metronRunner.Process.Wait()).Should(Receive())
 				})
 			})
-
 		})
+		Context("Metron prefers TCP", func() {
 
+			BeforeEach(func() {
+				preferredProtocol = "tcp"
+				dopplerConfig.EnableTLSTransport = false
+			})
+
+			Context("Doppler advertises only on legacy endpoint", func() {
+				It("panics", func() {
+					stopAnnounce = dopplerservice.AnnounceLegacy("127.0.0.1", time.Minute, dopplerConfig, etcdAdapter, logger)
+					Eventually(metronRunner.Process.Wait()).Should(Receive())
+				})
+			})
+		})
 	})
 
 	Describe("Metron doesn't panic", func() {

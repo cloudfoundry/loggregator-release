@@ -412,13 +412,14 @@ var _ = Describe("Finder", func() {
 					event := finder.Next()
 					Expect(event.TLSDopplers).To(Equal([]string{"1.2.3.4:567"}))
 					Expect(event.UDPDopplers).To(BeEmpty())
+					Expect(event.TCPDopplers).To(BeEmpty())
 				})
 			})
 
 			Context("when a node is updated", func() {
 				BeforeEach(func() {
 					preferredProtocol = "tls"
-					metaNode = makeMetaNode("z1/doppler_z1/0", []string{"udp://1.2.3.4:567"})
+					metaNode = makeMetaNode("z1/doppler_z1/0", []string{"udp://1.2.3.4:567", "tcp://1.2.3.4:789"})
 				})
 
 				JustBeforeEach(func() {
@@ -437,6 +438,7 @@ var _ = Describe("Finder", func() {
 					event := finder.Next()
 					Expect(event.TLSDopplers).To(Equal([]string{"1.2.3.4:555"}))
 					Expect(event.UDPDopplers).To(BeEmpty())
+					Expect(event.TCPDopplers).To(BeEmpty())
 				})
 			})
 
@@ -680,6 +682,116 @@ var _ = Describe("Finder", func() {
 		})
 	})
 
+	Context("TCP Preferred Protocol on Metron", func() {
+
+		var (
+			metaNode, legacyNode storeadapter.StoreNode
+			metaServers          map[string][]string
+			legacyServers        map[string]string
+		)
+
+		BeforeEach(func() {
+			port = 9999
+			preferredProtocol = "tcp"
+
+			close(mockStoreAdapter.WatchOutput.errors)
+			close(mockStoreAdapter.WatchOutput.events)
+			close(mockStoreAdapter.WatchOutput.stop)
+			close(mockStoreAdapter.ListRecursivelyOutput.ret1)
+		})
+
+		JustBeforeEach(func() {
+			metaNode, legacyNode = etcdNodes(metaServers, legacyServers)
+			mockStoreAdapter.ListRecursivelyOutput.ret0 <- metaNode
+			mockStoreAdapter.ListRecursivelyOutput.ret0 <- legacyNode
+			finder.Start()
+		})
+
+		Context("Dopplers advertise on legacy root only", func() {
+
+			BeforeEach(func() {
+				metaServers = map[string][]string{}
+				legacyServers = map[string]string{
+					"z1/doppler_z1/2": "11.21.31.41",
+					"z1/doppler_z1/3": "21.22.23.24",
+				}
+			})
+
+			It("returns UDP/TLS dopplers from legacy endpoint", func() {
+				event := finder.Next()
+				Expect(event.UDPDopplers).To(HaveLen(2))
+				Expect(event.UDPDopplers).To(ContainElement("11.21.31.41:9999"))
+				Expect(event.UDPDopplers).To(ContainElement("21.22.23.24:9999"))
+				Expect(event.TLSDopplers).To(BeEmpty())
+				Expect(event.TCPDopplers).To(BeEmpty())
+			})
+		})
+
+		Context("Dopplers advertise UDP on meta and legacy root", func() {
+
+			BeforeEach(func() {
+				metaServers = map[string][]string{
+					"z1/doppler_z1/0": []string{"udp://9.8.7.6:3457"},
+				}
+				legacyServers = map[string]string{
+					"z1/doppler_z1/0": "9.8.7.6",
+					"z1/doppler_z1/1": "21.22.23.24",
+				}
+			})
+
+			It("returns udp dopplers from meta endpoint", func() {
+				event := finder.Next()
+				Expect(event.UDPDopplers).To(HaveLen(2))
+				Expect(event.UDPDopplers).To(ContainElement("9.8.7.6:3457"))
+				Expect(event.UDPDopplers).To(ContainElement("21.22.23.24:9999"))
+				Expect(event.TLSDopplers).To(BeEmpty())
+				Expect(event.TCPDopplers).To(BeEmpty())
+			})
+		})
+
+		Context("Dopplers advertise UDP/TCP/TLS on meta and legacy root", func() {
+
+			BeforeEach(func() {
+				metaServers = map[string][]string{
+					"z1/doppler_z1/0": []string{"udp://9.8.7.6:3457", "tcp://9.8.7.6:3459", "tls://9.8.7.6:3458"},
+					"z1/doppler_z1/2": []string{"udp://9.8.7.7:3457", "tls://9.8.7.7:3458"},
+				}
+				legacyServers = map[string]string{
+					"z1/doppler_z1/0": "9.8.7.6",
+					"z1/doppler_z1/1": "21.22.23.24",
+				}
+			})
+
+			It("returns dopplers from meta endpoint", func() {
+				event := finder.Next()
+
+				Expect(event.UDPDopplers).To(HaveLen(1))
+				Expect(event.UDPDopplers).To(ContainElement("21.22.23.24:9999"))
+				Expect(event.TLSDopplers).To(HaveLen(1))
+				Expect(event.TLSDopplers).To(ContainElement("9.8.7.7:3458"))
+				Expect(event.TCPDopplers).To(HaveLen(1))
+				Expect(event.TCPDopplers).To(ContainElement("9.8.7.6:3459"))
+			})
+		})
+
+		Context("Dopplers advertise UDP and an unsupported protocol", func() {
+			BeforeEach(func() {
+				metaServers = map[string][]string{
+					"z1/doppler_z1/0": []string{"https://1.2.3.4/foo", "udp://1.2.3.4:5678"},
+				}
+				legacyServers = map[string]string{}
+			})
+
+			It("returns the supported address for that doppler", func() {
+				event := finder.Next()
+				Expect(event.UDPDopplers).To(ConsistOf("1.2.3.4:5678"))
+				Expect(event.TCPDopplers).To(BeEmpty())
+				Expect(event.TLSDopplers).To(BeEmpty())
+			})
+		})
+
+	})
+
 	Context("TLS Preferred Protocol on Metron", func() {
 
 		var (
@@ -720,6 +832,8 @@ var _ = Describe("Finder", func() {
 				Expect(event.UDPDopplers).To(HaveLen(2))
 				Expect(event.UDPDopplers).To(ContainElement("11.21.31.41:9999"))
 				Expect(event.UDPDopplers).To(ContainElement("21.22.23.24:9999"))
+				Expect(event.TLSDopplers).To(BeEmpty())
+				Expect(event.TCPDopplers).To(BeEmpty())
 			})
 		})
 
@@ -740,6 +854,8 @@ var _ = Describe("Finder", func() {
 				Expect(event.UDPDopplers).To(HaveLen(2))
 				Expect(event.UDPDopplers).To(ContainElement("9.8.7.6:3457"))
 				Expect(event.UDPDopplers).To(ContainElement("21.22.23.24:9999"))
+				Expect(event.TLSDopplers).To(BeEmpty())
+				Expect(event.TCPDopplers).To(BeEmpty())
 			})
 		})
 
@@ -747,7 +863,7 @@ var _ = Describe("Finder", func() {
 
 			BeforeEach(func() {
 				metaServers = map[string][]string{
-					"z1/doppler_z1/0": []string{"udp://9.8.7.6:3457", "tls://9.8.7.6:3458"},
+					"z1/doppler_z1/0": []string{"udp://9.8.7.6:3457", "tcp://9.8.7.6:3459", "tls://9.8.7.6:3458"},
 				}
 				legacyServers = map[string]string{
 					"z1/doppler_z1/0": "9.8.7.6",
@@ -755,12 +871,13 @@ var _ = Describe("Finder", func() {
 				}
 			})
 
-			It("returns udp dopplers from meta endpoint", func() {
+			It("returns dopplers from meta endpoint", func() {
 				event := finder.Next()
 				Expect(event.UDPDopplers).To(HaveLen(1))
 				Expect(event.UDPDopplers).To(ContainElement("21.22.23.24:9999"))
 				Expect(event.TLSDopplers).To(HaveLen(1))
 				Expect(event.TLSDopplers).To(ContainElement("9.8.7.6:3458"))
+				Expect(event.TCPDopplers).To(BeEmpty())
 			})
 		})
 
@@ -775,6 +892,8 @@ var _ = Describe("Finder", func() {
 			It("returns the supported address for that doppler", func() {
 				event := finder.Next()
 				Expect(event.UDPDopplers).To(ConsistOf("1.2.3.4:5678"))
+				Expect(event.TCPDopplers).To(BeEmpty())
+				Expect(event.TLSDopplers).To(BeEmpty())
 			})
 		})
 	})
@@ -816,6 +935,8 @@ var _ = Describe("Finder", func() {
 				Expect(event.UDPDopplers).To(HaveLen(2))
 				Expect(event.UDPDopplers).To(ContainElement(fmt.Sprintf("11.21.31.41:%d", port)))
 				Expect(event.UDPDopplers).To(ContainElement(fmt.Sprintf("21.22.23.24:%d", port)))
+				Expect(event.TCPDopplers).To(BeEmpty())
+				Expect(event.TLSDopplers).To(BeEmpty())
 			})
 		})
 
@@ -834,7 +955,8 @@ var _ = Describe("Finder", func() {
 				event := finder.Next()
 				Expect(event.UDPDopplers).To(HaveLen(2))
 				Expect(event.UDPDopplers).To(ConsistOf("9.8.7.6:3457", fmt.Sprintf("21.22.23.24:%d", port)))
-				Expect(event.TLSDopplers).To(HaveLen(0))
+				Expect(event.TLSDopplers).To(BeEmpty())
+				Expect(event.TCPDopplers).To(BeEmpty())
 			})
 		})
 	})

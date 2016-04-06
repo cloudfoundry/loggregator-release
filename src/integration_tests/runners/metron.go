@@ -10,7 +10,9 @@ import (
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 
+	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
 )
 
 type MetronRunner struct {
@@ -58,15 +60,14 @@ func (m *MetronRunner) Configure() *ginkgomon.Runner {
 	Expect(err).NotTo(HaveOccurred())
 	cfgFile.Close()
 
+	command := exec.Command(m.Path, "--config", cfgFile.Name(), "--debug")
+	command.Stdout = gexec.NewPrefixedWriter("[o][metron]", GinkgoWriter)
+	command.Stderr = gexec.NewPrefixedWriter("[e][metron]", GinkgoWriter)
 	m.Runner = ginkgomon.New(ginkgomon.Config{
 		Name:          "metron",
 		AnsiColorCode: "97m",
 		StartCheck:    "metron started",
-		Command: exec.Command(
-			m.Path,
-			"--config", cfgFile.Name(),
-			"--debug",
-		),
+		Command:       command,
 	})
 
 	return m.Runner

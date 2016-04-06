@@ -16,6 +16,7 @@ import (
 
 var supportedProtocols = []string{
 	"udp",
+	"tcp",
 	"tls",
 }
 
@@ -29,6 +30,7 @@ type StoreAdapter interface {
 type Event struct {
 	UDPDopplers []string
 	TLSDopplers []string
+	TCPDopplers []string
 }
 
 type Finder struct {
@@ -208,14 +210,17 @@ func (f *Finder) eventWithPrefix(dopplerPrefix string) Event {
 			continue
 		}
 		switch {
-		case strings.HasPrefix(addr, "tls"):
-			event.TLSDopplers = append(event.TLSDopplers, strings.TrimPrefix(addr, "tls://"))
 		case strings.HasPrefix(addr, "udp"):
 			event.UDPDopplers = append(event.UDPDopplers, strings.TrimPrefix(addr, "udp://"))
+		case strings.HasPrefix(addr, "tcp"):
+			event.TCPDopplers = append(event.TCPDopplers, strings.TrimPrefix(addr, "tcp://"))
+		case strings.HasPrefix(addr, "tls"):
+			event.TLSDopplers = append(event.TLSDopplers, strings.TrimPrefix(addr, "tls://"))
 		default:
 			f.logger.Errorf("Unexpected address for doppler %s (invalid protocol): %s", doppler, addr)
 		}
 	}
+
 	return event
 }
 
