@@ -13,10 +13,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("TLSClientCreator", func() {
-
+var _ = Describe("TCPClientCreator", func() {
 	var (
-		tlsClientCreator *clientpool.TLSClientCreator
+		tlsClientCreator clientpool.ClientCreator
 		logger           *gosteno.Logger
 		tlsClientConfig  *tls.Config
 		tlsListener      net.Listener
@@ -40,7 +39,7 @@ var _ = Describe("TLSClientCreator", func() {
 		address = tlsListener.Addr().String()
 		conns = acceptConnections(tlsListener)
 
-		tlsClientCreator = clientpool.NewTLSClientCreator(logger, tlsClientConfig)
+		tlsClientCreator = clientpool.NewTCPClientCreator(logger, tlsClientConfig)
 	})
 
 	Describe("CreateClient", func() {
@@ -51,7 +50,7 @@ var _ = Describe("TLSClientCreator", func() {
 			Expect(client.Scheme()).To(Equal("tls"))
 		})
 
-		Context("with a working TLSListener", func() {
+		Context("with a working listener", func() {
 			It("connects", func() {
 				_, err := tlsClientCreator.CreateClient(address)
 				Expect(err).ToNot(HaveOccurred())
@@ -59,7 +58,7 @@ var _ = Describe("TLSClientCreator", func() {
 			})
 		})
 
-		Context("without a TLSListener", func() {
+		Context("without a listener", func() {
 			BeforeEach(func() {
 				Expect(tlsListener.Close()).ToNot(HaveOccurred())
 			})
