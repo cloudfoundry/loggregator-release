@@ -2,7 +2,9 @@ package monitor
 
 import (
 	"bytes"
+	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -15,15 +17,13 @@ import (
 // TODO: exclude windows build
 
 type OpenFileDescriptor struct {
-	name     string
 	interval time.Duration
 	done     chan chan struct{}
 	logger   *gosteno.Logger
 }
 
-func NewOpenFileDescriptor(name string, interval time.Duration, logger *gosteno.Logger) Monitor {
+func NewOpenFileDescriptor(interval time.Duration, logger *gosteno.Logger) Monitor {
 	return &OpenFileDescriptor{
-		name:     name,
 		interval: interval,
 		done:     make(chan chan struct{}),
 		logger:   logger,
@@ -31,13 +31,16 @@ func NewOpenFileDescriptor(name string, interval time.Duration, logger *gosteno.
 }
 
 func (ofd *OpenFileDescriptor) Start() {
-	ticker := time.NewTicker(ofd.interval)
+	ofd.logger.Info("Starting Open File Descriptor Monitor...")
+
 	var err error
-	lsofCmd := exec.Command("lsof", "-c", ofd.name)
+	ticker := time.NewTicker(ofd.interval)
+	path := fmt.Sprintf("/proc/%s/fd", os.Getpid())
+	findCmd := exec.Command("find", path)
 	wcCmd := exec.Command("wc", "-l")
 
 	r, w := io.Pipe()
-	lsofCmd.Stdout = w
+	findCmd.Stdout = w
 	wcCmd.Stdin = r
 
 	var buf bytes.Buffer
@@ -46,17 +49,17 @@ func (ofd *OpenFileDescriptor) Start() {
 		select {
 		case <-ticker.C:
 			// run the command and send metric
-			err = lsofCmd.Start()
+			err = findCmd.Start()
 			if err != nil {
-				ofd.logger.Errorf("Unable to start lsof command: %s", err)
+				ofd.logger.Errorf("Unable to start find command: %s", err)
 			}
 			err = wcCmd.Start()
 			if err != nil {
 				ofd.logger.Errorf("Unable to start wc command: %s", err)
 			}
-			err = lsofCmd.Wait()
+			err = findCmd.Wait()
 			if err != nil {
-				ofd.logger.Errorf("Failed to run lsof command: %s", err)
+				ofd.logger.Errorf("Failed to run find command: %s", err)
 			}
 			w.Close()
 			wcCmd.Wait()
