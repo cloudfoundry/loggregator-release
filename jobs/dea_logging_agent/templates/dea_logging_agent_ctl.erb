@@ -4,15 +4,18 @@ RUN_DIR=/var/vcap/sys/run/dea_logging_agent
 LOG_DIR=/var/vcap/sys/log/dea_logging_agent
 PIDFILE=$RUN_DIR/dea_logging_agent.pid
 
-source /var/vcap/packages/loggregator_common/utils.sh
+mkdir -p $RUN_DIR
+mkdir -p $LOG_DIR
+
+source /var/vcap/packages/loggregator_common/pid_utils.sh
+source /var/vcap/packages/loggregator_common/syslog_utils.sh
+
+tee_output_to_sys_log "$LOG_DIR"
 
 case $1 in
 
   start)
     pid_guard $PIDFILE "DeaLoggingAgent"
-
-    mkdir -p $RUN_DIR
-    mkdir -p $LOG_DIR
 
     <% p("dea_logging_agent.debug") == true ? debug_string = "--debug " : debug_string = "" %>
 
