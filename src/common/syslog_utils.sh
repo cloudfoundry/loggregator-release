@@ -5,6 +5,14 @@
 function tee_output_to_sys_log() {
   declare log_dir="$1"
 
+  if [ "$log_dir" = "" ] ; then
+    return 1
+  fi
+
+  if [ ! -e "$log_dir" ] ; then
+    return 2
+  fi
+
   local log_basename
   log_basename="$(basename "$0")"
 
