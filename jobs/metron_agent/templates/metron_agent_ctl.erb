@@ -10,7 +10,7 @@ mkdir -p $LOG_DIR
 source /var/vcap/packages/loggregator_common/pid_utils.sh
 source /var/vcap/packages/loggregator_common/syslog_utils.sh
 
-tee_output_to_sys_log "$LOGDIR"
+tee_output_to_sys_log "$LOG_DIR"
 
 case $1 in
 
