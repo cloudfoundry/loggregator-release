@@ -12,10 +12,12 @@ import (
 	"signalmanager"
 	"strconv"
 	"time"
+	"trafficcontroller/accesslogger"
 	"trafficcontroller/authorization"
 	"trafficcontroller/channel_group_connector"
 	"trafficcontroller/config"
 	"trafficcontroller/dopplerproxy"
+	"trafficcontroller/handlers"
 	"trafficcontroller/listener"
 	"trafficcontroller/marshaller"
 	"trafficcontroller/uaa_client"
@@ -36,6 +38,7 @@ const (
 
 var (
 	logFilePath          = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
+	accessLogPath        = flag.String("accessLogFile", "", "The location to log public API access to, defaults to STDOUT")
 	logLevel             = flag.Bool("debug", false, "Debug logging")
 	disableAccessControl = flag.Bool("disableAccessControl", false, "always all access to app logs")
 	configFile           = flag.String("config", "config/loggregator_trafficcontroller.json", "Location of the loggregator trafficcontroller config json file")
@@ -101,13 +104,30 @@ func main() {
 		}
 	}()
 
+	accessLog := os.Stdout
+	if *accessLogPath != "" {
+		accessLog, err = os.OpenFile(*accessLogPath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+		if err != nil {
+			log.Errorf("Cannot open access log: %s", err)
+			exitCode = -1
+			return
+		}
+		defer func() {
+			accessLog.Sync()
+			accessLog.Close()
+		}()
+	}
+	accessLogger := accesslogger.New(accessLog)
+
 	dopplerCgc := channel_group_connector.NewChannelGroupConnector(finder, newDropsondeWebsocketListener, marshaller.DropsondeLogMessage, log)
 	dopplerProxy := dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, dopplerCgc, dopplerproxy.TranslateFromDropsondePath, "doppler."+config.SystemDomain, log)
-	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dopplerProxy)
+	dopplerHandler := handlers.NewAccess(dopplerProxy, accessLogger, log)
+	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dopplerHandler)
 
 	legacyCgc := channel_group_connector.NewChannelGroupConnector(finder, newLegacyWebsocketListener, marshaller.LoggregatorLogMessage, log)
 	legacyProxy := dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, legacyCgc, dopplerproxy.TranslateFromLegacyPath, "loggregator."+config.SystemDomain, log)
-	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), legacyProxy)
+	legacyHandler := handlers.NewAccess(legacyProxy, accessLogger, log)
+	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), legacyHandler)
 
 	killChan := signalmanager.RegisterKillSignalChannel()
 	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()

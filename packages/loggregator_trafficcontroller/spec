@@ -44,11 +44,13 @@ files:
 - loggregator/src/monitor/*.go # gosub
 - loggregator/src/signalmanager/*.go # gosub
 - loggregator/src/trafficcontroller/*.go # gosub
+- loggregator/src/trafficcontroller/accesslogger/*.go # gosub
 - loggregator/src/trafficcontroller/authorization/*.go # gosub
 - loggregator/src/trafficcontroller/channel_group_connector/*.go # gosub
 - loggregator/src/trafficcontroller/config/*.go # gosub
 - loggregator/src/trafficcontroller/doppler_endpoint/*.go # gosub
 - loggregator/src/trafficcontroller/dopplerproxy/*.go # gosub
+- loggregator/src/trafficcontroller/handlers/*.go # gosub
 - loggregator/src/trafficcontroller/listener/*.go # gosub
 - loggregator/src/trafficcontroller/marshaller/*.go # gosub
 - loggregator/src/trafficcontroller/uaa_client/*.go # gosub
