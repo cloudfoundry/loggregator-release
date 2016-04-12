@@ -53,7 +53,7 @@ func (pool *DopplerPool) SetAddresses(addresses []string) int {
 	for _, address := range addresses {
 		client, err := pool.clientCreator.CreateClient(address)
 		if err != nil {
-			pool.logger.Errorf("Failed to connect to client at %s: %v", address, err)
+			pool.logger.Errorf("Failed to connect to client at %s: %s", address, err)
 			continue
 		}
 		clients = append(clients, client)
@@ -61,7 +61,9 @@ func (pool *DopplerPool) SetAddresses(addresses []string) int {
 	oldPool := pool.setClients(clients)
 	for _, client := range oldPool {
 		err := client.Close()
-		pool.logger.Errorf("Error closing previous doppler connection for %s: %v", client.Address(), err)
+		if err != nil {
+			pool.logger.Errorf("Error closing previous doppler connection for %s: %s", client.Address(), err)
+		}
 	}
 	return len(clients)
 }
