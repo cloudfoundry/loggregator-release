@@ -3,6 +3,7 @@ package main
 import (
 	"doppler/dopplerservice"
 	"flag"
+	"fmt"
 	"logger"
 	"monitor"
 	"net"
@@ -45,23 +46,16 @@ var (
 )
 
 func main() {
-	// Put os.Exit in a deferred statement so that other defers get executed prior to
-	// the os.Exit call.
-	exitCode := 0
-	defer func() {
-		os.Exit(exitCode)
-	}()
-
 	flag.Parse()
 
 	config, err := config.ParseConfig(*logLevel, *configFile, *logFilePath)
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("Unable to parse config: %s", err))
 	}
 
 	ipAddress, err := localip.LocalIP()
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("Unable to resolve own IP address: %s", err))
 	}
 
 	log := logger.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller", config.Syslog)
@@ -83,9 +77,7 @@ func main() {
 	etcdAdapter := defaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	err = etcdAdapter.Connect()
 	if err != nil {
-		log.Errorf("Cannot connect to ETCD: %s", err.Error())
-		exitCode = -1
-		return
+		panic(fmt.Errorf("Unable to connect to ETCD: %s", err))
 	}
 
 	logAuthorizer := authorization.NewLogAccessAuthorizer(*disableAccessControl, config.ApiHost, config.SkipCertVerify)
@@ -108,9 +100,7 @@ func main() {
 	if *accessLogPath != "" {
 		accessLog, err = os.OpenFile(*accessLogPath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 		if err != nil {
-			log.Errorf("Cannot open access log: %s", err)
-			exitCode = -1
-			return
+			panic(fmt.Errorf("Unable to open access log: %s", err))
 		}
 		defer func() {
 			accessLog.Sync()

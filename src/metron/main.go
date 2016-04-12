@@ -3,13 +3,11 @@ package main
 import (
 	"doppler/dopplerservice"
 	"doppler/listeners"
-	"errors"
 	"flag"
 	"fmt"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
-	"os"
 	"time"
 
 	"metron/clientpool"
@@ -51,25 +49,18 @@ var (
 )
 
 func main() {
-	// Put os.Exit in a deferred statement so that other defers get executed prior to
-	// the os.Exit call.
-	exitCode := 0
-	defer func() {
-		os.Exit(exitCode)
-	}()
-
 	// Metron is intended to be light-weight so we occupy only one core
 	runtime.GOMAXPROCS(1)
 
 	flag.Parse()
 	config, err := config.ParseConfig(*configFilePath)
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("Unable to parse config: %s", err))
 	}
 
 	localIp, err := localip.LocalIP()
 	if err != nil {
-		panic(errors.New("Unable to resolve own IP address: " + err.Error()))
+		panic(fmt.Errorf("Unable to resolve own IP address: %s", err))
 	}
 
 	log := logger.NewLogger(*debug, *logFilePath, "metron", config.Syslog)
@@ -84,9 +75,7 @@ func main() {
 	log.Info("Startup: Setting up the Metron agent")
 	marshaller, err := initializeDopplerPool(config, log)
 	if err != nil {
-		log.Errorf("Could not initialize doppler connection pool: %s", err)
-		exitCode = -1
-		return
+		panic(fmt.Errorf("Could not initialize doppler connection pool: %s", err))
 	}
 	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, marshaller)
 	aggregator := messageaggregator.New(messageTagger, log)
@@ -98,9 +87,7 @@ func main() {
 	metronAddress := fmt.Sprintf("127.0.0.1:%d", config.IncomingUDPPort)
 	dropsondeReader, err := networkreader.New(metronAddress, "dropsondeAgentListener", dropsondeUnmarshaller, log)
 	if err != nil {
-		log.Errorf("Failed to listen on %s: %s", metronAddress, err)
-		exitCode = 1
-		return
+		panic(fmt.Errorf("Failed to listen on %s: %s", metronAddress, err))
 	}
 
 	log.Info("metron started")
