@@ -8,12 +8,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cloudfoundry/noaa"
-	"github.com/cloudfoundry/sonde-go/events"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"integration_tests/trafficcontroller/fake_doppler"
+
+	"github.com/cloudfoundry/noaa"
+	"github.com/cloudfoundry/sonde-go/events"
 )
 
 var dropsondeEndpoint string
