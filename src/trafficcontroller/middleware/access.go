@@ -1,4 +1,4 @@
-package handlers
+package middleware
 
 import (
 	"net/http"
@@ -24,11 +24,13 @@ type AccessHandler struct {
 	logger       *gosteno.Logger
 }
 
-func NewAccess(handler HttpHandler, accessLogger AccessLogger, logger *gosteno.Logger) *AccessHandler {
-	return &AccessHandler{
-		handler:      handler,
-		accessLogger: accessLogger,
-		logger:       logger,
+func Access(accessLogger AccessLogger, logger *gosteno.Logger) func(HttpHandler) *AccessHandler {
+	return func(handler HttpHandler) *AccessHandler {
+		return &AccessHandler{
+			handler:      handler,
+			accessLogger: accessLogger,
+			logger:       logger,
+		}
 	}
 }
 

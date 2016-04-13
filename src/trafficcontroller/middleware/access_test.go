@@ -1,4 +1,4 @@
-package handlers_test
+package middleware_test
 
 import (
 	"crypto/tls"
@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"trafficcontroller/handlers"
+	"trafficcontroller/middleware"
 
 	. "github.com/apoydence/eachers"
 	. "github.com/onsi/ginkgo"
@@ -15,9 +15,9 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 )
 
-var _ = Describe("Handler", func() {
+var _ = Describe("AccessHandler", func() {
 	var (
-		handler          *handlers.AccessHandler
+		accessHandler    *middleware.AccessHandler
 		mockHandler      *mockHttpHandler
 		mockAccessLogger *mockAccessLogger
 	)
@@ -26,8 +26,10 @@ var _ = Describe("Handler", func() {
 		gostLogger := loggertesthelper.Logger()
 		mockHandler = newMockHttpHandler()
 		mockAccessLogger = newMockAccessLogger()
-		handler = handlers.NewAccess(mockHandler, mockAccessLogger, gostLogger)
-		var _ http.Handler = handler
+		accessMiddleware := middleware.Access(mockAccessLogger, gostLogger)
+		accessHandler = accessMiddleware(mockHandler)
+
+		var _ http.Handler = accessHandler
 	})
 
 	Describe("ServeHTTP", func() {
@@ -36,7 +38,7 @@ var _ = Describe("Handler", func() {
 			req, err := newServerRequest("GET", "https://foo.bar/baz", nil)
 			Expect(err).ToNot(HaveOccurred())
 			resp := httptest.NewRecorder()
-			handler.ServeHTTP(resp, req)
+			accessHandler.ServeHTTP(resp, req)
 
 			Eventually(mockHandler.ServeHTTPInput).Should(BeCalled(With(resp, req)))
 			Expect(mockAccessLogger.LogAccessCalled).To(HaveLen(1))

@@ -18,9 +18,9 @@ import (
 	"trafficcontroller/channel_group_connector"
 	"trafficcontroller/config"
 	"trafficcontroller/dopplerproxy"
-	"trafficcontroller/handlers"
 	"trafficcontroller/listener"
 	"trafficcontroller/marshaller"
+	"trafficcontroller/middleware"
 	"trafficcontroller/uaa_client"
 
 	"github.com/cloudfoundry/dropsonde"
@@ -108,15 +108,16 @@ func main() {
 		}()
 	}
 	accessLogger := accesslogger.New(accessLog)
+	accessMiddleware := middleware.Access(accessLogger, log)
 
 	dopplerCgc := channel_group_connector.NewChannelGroupConnector(finder, newDropsondeWebsocketListener, marshaller.DropsondeLogMessage, log)
 	dopplerProxy := dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, dopplerCgc, dopplerproxy.TranslateFromDropsondePath, "doppler."+config.SystemDomain, log)
-	dopplerHandler := handlers.NewAccess(dopplerProxy, accessLogger, log)
+	dopplerHandler := accessMiddleware(dopplerProxy)
 	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dopplerHandler)
 
 	legacyCgc := channel_group_connector.NewChannelGroupConnector(finder, newLegacyWebsocketListener, marshaller.LoggregatorLogMessage, log)
 	legacyProxy := dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, legacyCgc, dopplerproxy.TranslateFromLegacyPath, "loggregator."+config.SystemDomain, log)
-	legacyHandler := handlers.NewAccess(legacyProxy, accessLogger, log)
+	legacyHandler := accessMiddleware(legacyProxy)
 	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), legacyHandler)
 
 	killChan := signalmanager.RegisterKillSignalChannel()

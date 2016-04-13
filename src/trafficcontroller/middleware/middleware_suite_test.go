@@ -1,4 +1,4 @@
-package handlers_test
+package middleware_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestHandlers(t *testing.T) {
+func TestMiddleware(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Handlers Suite")
+	RunSpecs(t, "Middleware Suite")
 }

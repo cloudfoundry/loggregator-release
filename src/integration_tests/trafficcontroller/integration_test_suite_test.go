@@ -66,6 +66,8 @@ var _ = BeforeSuite(func() {
 
 	trafficControllerExecPath, err = gexec.Build("trafficcontroller", "-race")
 	Expect(err).ToNot(HaveOccurred())
+
+	localIPAddress, _ = localip.LocalIP()
 })
 
 var _ = BeforeEach(func() {
@@ -81,8 +83,6 @@ var _ = JustBeforeEach(func() {
 	trafficControllerSession, err = gexec.Start(trafficControllerCommand, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 
-	localIPAddress, _ = localip.LocalIP()
-
 	// wait for TC
 	trafficControllerDropsondeEndpoint := fmt.Sprintf("http://%s:%d", localIPAddress, 4566)
 	Eventually(func() error {
@@ -91,7 +91,7 @@ var _ = JustBeforeEach(func() {
 			resp.Body.Close()
 		}
 		return err
-	}).ShouldNot(HaveOccurred())
+	}).Should(Succeed())
 })
 
 var _ = AfterEach(func() {

@@ -33,11 +33,18 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 	})
 
 	Context("Streaming", func() {
-		It("passes messages through", func() {
-			client := noaa.NewConsumer(dropsondeEndpoint, &tls.Config{}, nil)
-			messages := make(chan *events.Envelope)
-			go client.StreamWithoutReconnect(APP_ID, AUTH_TOKEN, messages)
+		var (
+			client   *noaa.Consumer
+			messages chan *events.Envelope
+		)
 
+		JustBeforeEach(func() {
+			client = noaa.NewConsumer(dropsondeEndpoint, &tls.Config{}, nil)
+			messages = make(chan *events.Envelope)
+			go client.StreamWithoutReconnect(APP_ID, AUTH_TOKEN, messages)
+		})
+
+		It("passes messages through", func() {
 			var request *http.Request
 			Eventually(fakeDoppler.TrafficControllerConnected, 10).Should(Receive(&request))
 			Expect(request.URL.Path).To(Equal("/apps/1234/stream"))
@@ -58,10 +65,6 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 		})
 
 		It("closes the upstream websocket connection when done", func() {
-			client := noaa.NewConsumer(dropsondeEndpoint, &tls.Config{}, nil)
-			messages := make(chan *events.Envelope)
-			go client.StreamWithoutReconnect(APP_ID, AUTH_TOKEN, messages)
-
 			var request *http.Request
 			Eventually(fakeDoppler.TrafficControllerConnected, 10).Should(Receive(&request))
 			Eventually(fakeDoppler.ConnectionPresent).Should(BeTrue())
