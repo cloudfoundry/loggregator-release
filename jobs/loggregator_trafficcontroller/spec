@@ -23,8 +23,11 @@ properties:
     description: "Port for outgoing doppler messages"
     default: 8081
   traffic_controller.outgoing_port:
-    description:  "Port on which the traffic controller listens to for requests"
+    description: "Port on which the traffic controller listens to for requests"
     default: 8080
+  traffic_controller.security_event_logging.enabled:
+    description: "Enable logging of all requests made to the Traffic Controller in CEF format"
+    default: false
   doppler.uaa_client_id:
     description: "Doppler's client id to connect to UAA"
     default: "doppler"

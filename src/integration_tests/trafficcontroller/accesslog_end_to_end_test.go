@@ -13,15 +13,18 @@ import (
 	"github.com/cloudfoundry/noaa/consumer"
 )
 
+const accessLogFile = "/tmp/access.log"
+
 var _ = Describe("TrafficController's access logs", func() {
 	var (
 		testContents func() string
 	)
 
 	BeforeEach(func() {
-		testFile, err := ioutil.TempFile(os.TempDir(), "access_test_")
+		configFile = "fixtures/trafficcontroller_access_log.json"
+
+		testFile, err := os.Create(accessLogFile)
 		Expect(err).ToNot(HaveOccurred())
-		accessLogFile = testFile.Name()
 		Expect(testFile.Close()).To(Succeed())
 
 		testContents = func() string {

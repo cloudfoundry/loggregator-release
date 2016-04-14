@@ -25,6 +25,7 @@ type Config struct {
 	UaaClientId            string
 	UaaClientSecret        string
 	MonitorIntervalSeconds uint
+	SecurityEventLog       string
 }
 
 func ParseConfig(logLevel bool, configFile, logFilePath string) (*Config, error) {

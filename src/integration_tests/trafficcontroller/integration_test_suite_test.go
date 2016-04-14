@@ -40,7 +40,7 @@ var (
 	etcdPort                  int
 	localIPAddress            string
 	fakeDoppler               *fake_doppler.FakeDoppler
-	accessLogFile             string
+	configFile                string
 )
 
 func TestIntegrationTest(t *testing.T) {
@@ -71,14 +71,12 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = BeforeEach(func() {
-	accessLogFile = ""
+	configFile = "fixtures/trafficcontroller.json"
 })
 
 var _ = JustBeforeEach(func() {
-	trafficControllerCommand := exec.Command(trafficControllerExecPath, "--config=fixtures/trafficcontroller.json", "--debug")
-	if accessLogFile != "" {
-		trafficControllerCommand.Args = append(trafficControllerCommand.Args, "--accessLogFile", accessLogFile)
-	}
+	trafficControllerCommand := exec.Command(trafficControllerExecPath, "--config", configFile, "--debug")
+
 	var err error
 	trafficControllerSession, err = gexec.Start(trafficControllerCommand, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())

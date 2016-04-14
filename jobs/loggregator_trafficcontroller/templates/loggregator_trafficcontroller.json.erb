@@ -19,4 +19,7 @@
     <% if_p("syslog_daemon_config") do |_| %>
     , "Syslog": "vcap.trafficcontroller"
     <% end %>
+    <% if p("traffic_controller.security_event_logging.enabled") %>
+    , "SecurityEventLog": "/var/vcap/sys/log/loggregator_trafficcontroller/loggregator_trafficcontroller_security_events.log"
+    <% end %>
 }

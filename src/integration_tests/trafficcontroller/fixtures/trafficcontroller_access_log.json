@@ -14,5 +14,6 @@
     "UaaHost": "http://127.0.0.1:5678",
     "UaaClientId": "bob",
     "UaaClientSecret": "yourUncle",
-    "MonitorIntervalSeconds": 1
+    "MonitorIntervalSeconds": 1,
+    "SecurityEventLog": "/tmp/access.log"
 }
