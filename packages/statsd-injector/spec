@@ -1,7 +1,7 @@
 ---
 name: statsd-injector
 dependencies:
-    - golang1.5
+    - golang1.6
 files:
 - loggregator/src/statsd-injector/LICENSE
 - loggregator/src/github.com/cactus/go-statsd-client/statsd/*.go # gosub
