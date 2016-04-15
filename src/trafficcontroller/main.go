@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"doppler/dopplerservice"
 	"flag"
 	"fmt"
@@ -52,6 +53,9 @@ func main() {
 		panic(fmt.Errorf("Unable to parse config: %s", err))
 	}
 
+	transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: config.SkipCertVerify}}
+	http.DefaultClient.Transport = transport
+
 	ipAddress, err := localip.LocalIP()
 	if err != nil {
 		panic(fmt.Errorf("Unable to resolve own IP address: %s", err))
@@ -79,9 +83,9 @@ func main() {
 		panic(fmt.Errorf("Unable to connect to ETCD: %s", err))
 	}
 
-	logAuthorizer := authorization.NewLogAccessAuthorizer(*disableAccessControl, config.ApiHost, config.SkipCertVerify)
+	logAuthorizer := authorization.NewLogAccessAuthorizer(*disableAccessControl, config.ApiHost)
 
-	uaaClient := uaa_client.NewUaaClient(config.UaaHost, config.UaaClientId, config.UaaClientSecret, config.SkipCertVerify)
+	uaaClient := uaa_client.NewUaaClient(config.UaaHost, config.UaaClientId, config.UaaClientSecret)
 	adminAuthorizer := authorization.NewAdminAccessAuthorizer(*disableAccessControl, &uaaClient)
 
 	// TODO: The preferredProtocol of udp tells the finder to pull out the Doppler URLs from the legacy ETCD endpoint.

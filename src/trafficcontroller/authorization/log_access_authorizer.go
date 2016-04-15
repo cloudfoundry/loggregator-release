@@ -1,10 +1,10 @@
 package authorization
 
 import (
-	"crypto/tls"
 	"errors"
-	"github.com/cloudfoundry/gosteno"
 	"net/http"
+
+	"github.com/cloudfoundry/gosteno"
 )
 
 const (
@@ -18,7 +18,7 @@ func disableLogAccessControlAuthorizer(_, _ string, _ *gosteno.Logger) (bool, er
 	return true, nil
 }
 
-func NewLogAccessAuthorizer(disableAccessControl bool, apiHost string, skipCertVerify bool) LogAccessAuthorizer {
+func NewLogAccessAuthorizer(disableAccessControl bool, apiHost string) LogAccessAuthorizer {
 
 	if disableAccessControl {
 		return LogAccessAuthorizer(disableLogAccessControlAuthorizer)
@@ -29,14 +29,9 @@ func NewLogAccessAuthorizer(disableAccessControl bool, apiHost string, skipCertV
 			return false, errors.New(NO_AUTH_TOKEN_PROVIDED_ERROR_MESSAGE)
 		}
 
-		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: skipCertVerify},
-		}
-		client := &http.Client{Transport: tr}
-
 		req, _ := http.NewRequest("GET", apiHost+"/internal/log_access/"+target, nil)
 		req.Header.Set("Authorization", authToken)
-		res, err := client.Do(req)
+		res, err := http.DefaultClient.Do(req)
 		if err != nil {
 			logger.Errorf("Could not get app information: [%s]", err)
 			return false, errors.New(INVALID_AUTH_TOKEN_ERROR_MESSAGE)
