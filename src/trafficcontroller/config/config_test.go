@@ -10,17 +10,14 @@ import (
 var _ = Describe("Config", func() {
 	Describe("ParseConfig", func() {
 		var (
-			logLevel    = false
-			logFilePath = "../test_assets/stdout.log"
+			logLevel = false
 		)
 
 		It("reads the outgoing dropsonde port from config", func() {
-			configFile := "../test_assets/minimal_loggregator_trafficcontroller.json"
+			configFile := "./fixtures/minimal_loggregator_trafficcontroller.json"
 
-			var c *config.Config
-
-			c, _ = config.ParseConfig(logLevel, configFile, logFilePath)
-
+			c, err := config.ParseConfig(logLevel, configFile)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(c.OutgoingDropsondePort).To(Equal(uint32(4566)))
 		})
 
@@ -50,12 +47,10 @@ var _ = Describe("Config", func() {
 
 		Context("without ETCD/heartbeat specific configuration", func() {
 			It("uses defaults", func() {
-				configFile := "../test_assets/minimal_loggregator_trafficcontroller.json"
+				configFile := "./fixtures/minimal_loggregator_trafficcontroller.json"
 
-				var c *config.Config
-
-				c, _ = config.ParseConfig(logLevel, configFile, logFilePath)
-
+				c, err := config.ParseConfig(logLevel, configFile)
+				Expect(err).ToNot(HaveOccurred())
 				Expect(c.JobName).To(Equal("loggregator_trafficcontroller"))
 				Expect(c.JobIndex).To(Equal(0))
 				Expect(c.EtcdMaxConcurrentRequests).To(Equal(10))
@@ -64,12 +59,10 @@ var _ = Describe("Config", func() {
 
 		Context("with ETCD/heartbeat specific configuration", func() {
 			It("uses specified properties", func() {
-				configFile := "../test_assets/loggregator_trafficcontroller.json"
+				configFile := "./fixtures/loggregator_trafficcontroller.json"
 
-				var c *config.Config
-
-				c, _ = config.ParseConfig(logLevel, configFile, logFilePath)
-
+				c, err := config.ParseConfig(logLevel, configFile)
+				Expect(err).ToNot(HaveOccurred())
 				Expect(c.JobName).To(Equal("trafficcontroller"))
 				Expect(c.JobIndex).To(Equal(3))
 				Expect(c.EtcdMaxConcurrentRequests).To(Equal(5))
@@ -79,20 +72,19 @@ var _ = Describe("Config", func() {
 
 		Context("without MonitorIntervalSeconds", func() {
 			It("defaults MonitorIntervalSeconds to 60 seconds", func() {
-				configFile := "../test_assets/loggregator_trafficcontroller.json"
+				configFile := "./fixtures/loggregator_trafficcontroller.json"
 
-				var c *config.Config
-
-				c, _ = config.ParseConfig(logLevel, configFile, logFilePath)
+				c, err := config.ParseConfig(logLevel, configFile)
+				Expect(err).ToNot(HaveOccurred())
 				Expect(c.MonitorIntervalSeconds).To(Equal(uint(60)))
 			})
 		})
 
 		Context("without SecurityEventLog", func() {
 			It("defaults SecurityEventLog to empty string", func() {
-				configFile := "../test_assets/minimal_loggregator_trafficcontroller.json"
+				configFile := "./fixtures/minimal_loggregator_trafficcontroller.json"
 
-				c, err := config.ParseConfig(logLevel, configFile, logFilePath)
+				c, err := config.ParseConfig(logLevel, configFile)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(c.SecurityEventLog).To(Equal(""))
 			})
@@ -100,10 +92,10 @@ var _ = Describe("Config", func() {
 
 		Context("with SecurityEventLog", func() {
 			It("uses specified properties", func() {
-				configFile := "../test_assets/loggregator_trafficcontroller.json"
+				configFile := "./fixtures/loggregator_trafficcontroller.json"
 
-				c, err := config.ParseConfig(logLevel, configFile, logFilePath)
-				Expect(err).To(Succeed())
+				c, err := config.ParseConfig(logLevel, configFile)
+				Expect(err).ToNot(HaveOccurred())
 				Expect(c.SecurityEventLog).To(Equal("access.log"))
 			})
 		})

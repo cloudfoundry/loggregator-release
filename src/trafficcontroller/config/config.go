@@ -28,7 +28,7 @@ type Config struct {
 	SecurityEventLog       string
 }
 
-func ParseConfig(logLevel bool, configFile, logFilePath string) (*Config, error) {
+func ParseConfig(logLevel bool, configFile string) (*Config, error) {
 	config := &Config{}
 
 	file, err := os.Open(configFile)
