@@ -53,29 +53,29 @@ var _ = Describe("TrafficController's access logs", func() {
 		It("logs stream access", func() {
 			noaaConsumer.Stream(APP_ID, AUTH_TOKEN)
 
-			expectedSuffix := fmt.Sprintf("GET: http://%s:%d/apps/%s/stream\n", localIPAddress, TRAFFIC_CONTROLLER_DROPSONDE_PORT, APP_ID)
-			Eventually(testContents).Should(HaveSuffix(expectedSuffix))
+			expected := fmt.Sprintf("CEF:0|cloud_foundry|loggregator_trafficcontroller|1.0|GET /apps/%s/stream|GET /apps/%[1]s/stream|0|", APP_ID)
+			Eventually(testContents).Should(ContainSubstring(expected))
 		})
 
 		It("logs recent access", func() {
 			noaaConsumer.RecentLogs(APP_ID, AUTH_TOKEN)
 
-			expectedSuffix := fmt.Sprintf("GET: http://%s:%d/apps/%s/recentlogs\n", localIPAddress, TRAFFIC_CONTROLLER_DROPSONDE_PORT, APP_ID)
-			Eventually(testContents).Should(HaveSuffix(expectedSuffix))
+			expected := fmt.Sprintf("CEF:0|cloud_foundry|loggregator_trafficcontroller|1.0|GET /apps/%s/recentlogs|GET /apps/%[1]s/recentlogs|0|", APP_ID)
+			Eventually(testContents).Should(ContainSubstring(expected))
 		})
 
 		It("logs container metrics access", func() {
 			noaaConsumer.ContainerMetrics(APP_ID, AUTH_TOKEN)
 
-			expectedSuffix := fmt.Sprintf("GET: http://%s:%d/apps/%s/containermetrics\n", localIPAddress, TRAFFIC_CONTROLLER_DROPSONDE_PORT, APP_ID)
-			Eventually(testContents).Should(HaveSuffix(expectedSuffix))
+			expected := fmt.Sprintf("CEF:0|cloud_foundry|loggregator_trafficcontroller|1.0|GET /apps/%s/containermetrics|GET /apps/%[1]s/containermetrics|0|", APP_ID)
+			Eventually(testContents).Should(ContainSubstring(expected))
 		})
 
 		It("logs firehose access", func() {
 			noaaConsumer.Firehose("foo", AUTH_TOKEN)
 
-			expectedSuffix := fmt.Sprintf("GET: http://%s:%d/firehose/foo\n", localIPAddress, TRAFFIC_CONTROLLER_DROPSONDE_PORT)
-			Eventually(testContents).Should(HaveSuffix(expectedSuffix))
+			expected := "CEF:0|cloud_foundry|loggregator_trafficcontroller|1.0|GET /firehose/foo|GET /firehose/foo|0|"
+			Eventually(testContents).Should(ContainSubstring(expected))
 		})
 	})
 
@@ -94,15 +94,15 @@ var _ = Describe("TrafficController's access logs", func() {
 		It("logs tail access", func() {
 			legacyConsumer.Tail(APP_ID, AUTH_TOKEN)
 
-			expectedSuffix := fmt.Sprintf("GET: http://%s:%d/tail/\n", localIPAddress, TRAFFIC_CONTROLLER_LEGACY_PORT)
-			Eventually(testContents).Should(HaveSuffix(expectedSuffix))
+			expected := fmt.Sprintf("CEF:0|cloud_foundry|loggregator_trafficcontroller|1.0|GET /tail/?app=%s|GET /tail/?app=%[1]s|0|", APP_ID)
+			Eventually(testContents).Should(ContainSubstring(expected))
 		})
 
 		It("logs recent access", func() {
 			legacyConsumer.Recent(APP_ID, AUTH_TOKEN)
 
-			expectedSuffix := fmt.Sprintf("GET: http://%s:%d/recent\n", localIPAddress, TRAFFIC_CONTROLLER_LEGACY_PORT)
-			Eventually(testContents).Should(HaveSuffix(expectedSuffix))
+			expected := fmt.Sprintf("CEF:0|cloud_foundry|loggregator_trafficcontroller|1.0|GET /recent?app=%s|GET /recent?app=%[1]s|0|", APP_ID)
+			Eventually(testContents).Should(ContainSubstring(expected))
 		})
 	})
 })

@@ -99,7 +99,7 @@ func main() {
 		}
 	}()
 
-	var accessMiddleware func(middleware.HttpHandler) *middleware.AccessHandler
+	var accessMiddleware, legacyAccessMiddleware func(middleware.HttpHandler) *middleware.AccessHandler
 	if config.SecurityEventLog != "" {
 		accessLog, err := os.OpenFile(config.SecurityEventLog, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 		if err != nil {
@@ -109,8 +109,9 @@ func main() {
 			accessLog.Sync()
 			accessLog.Close()
 		}()
-		accessLogger := accesslogger.New(accessLog)
-		accessMiddleware = middleware.Access(accessLogger, log)
+		accessLogger := accesslogger.New(accessLog, log)
+		accessMiddleware = middleware.Access(accessLogger, ipAddress, config.OutgoingDropsondePort, log)
+		legacyAccessMiddleware = middleware.Access(accessLogger, ipAddress, config.OutgoingPort, log)
 	}
 
 	dopplerCgc := channel_group_connector.NewChannelGroupConnector(finder, newDropsondeWebsocketListener, marshaller.DropsondeLogMessage, log)
@@ -122,8 +123,8 @@ func main() {
 
 	legacyCgc := channel_group_connector.NewChannelGroupConnector(finder, newLegacyWebsocketListener, marshaller.LoggregatorLogMessage, log)
 	legacyHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, legacyCgc, dopplerproxy.TranslateFromLegacyPath, "loggregator."+config.SystemDomain, log))
-	if accessMiddleware != nil {
-		legacyHandler = accessMiddleware(legacyHandler)
+	if legacyAccessMiddleware != nil {
+		legacyHandler = legacyAccessMiddleware(legacyHandler)
 	}
 	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), legacyHandler)
 

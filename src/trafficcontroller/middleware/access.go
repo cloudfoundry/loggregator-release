@@ -15,27 +15,31 @@ type HttpHandler interface {
 //go:generate hel --type AccessLogger --output mock_access_logger_test.go
 
 type AccessLogger interface {
-	LogAccess(req *http.Request) error
+	LogAccess(req *http.Request, host string, port uint32) error
 }
 
 type AccessHandler struct {
 	handler      HttpHandler
 	accessLogger AccessLogger
 	logger       *gosteno.Logger
+	host         string
+	port         uint32
 }
 
-func Access(accessLogger AccessLogger, logger *gosteno.Logger) func(HttpHandler) *AccessHandler {
+func Access(accessLogger AccessLogger, host string, port uint32, logger *gosteno.Logger) func(HttpHandler) *AccessHandler {
 	return func(handler HttpHandler) *AccessHandler {
 		return &AccessHandler{
 			handler:      handler,
 			accessLogger: accessLogger,
 			logger:       logger,
+			host:         host,
+			port:         port,
 		}
 	}
 }
 
 func (h *AccessHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if err := h.accessLogger.LogAccess(req); err != nil {
+	if err := h.accessLogger.LogAccess(req, h.host, h.port); err != nil {
 		h.logger.Errorf("access handler : %s", err)
 	}
 
