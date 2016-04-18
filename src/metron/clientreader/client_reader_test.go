@@ -12,12 +12,20 @@ var (
 	preferredProtocol string
 	mockPool          *mockClientPool
 	event             dopplerservice.Event
+	clientPool        map[string]clientreader.ClientPool
 )
 
 var _ = Describe("clientreader", func() {
+
+	JustBeforeEach(func() {
+		clientPool[preferredProtocol] = mockPool
+	})
+
 	BeforeEach(func() {
 		mockPool = newMockClientPool()
+		clientPool = make(map[string]clientreader.ClientPool)
 	})
+
 	Describe("Read", func() {
 		Context("TLS PreferredProtocol", func() {
 			BeforeEach(func() {
@@ -31,7 +39,10 @@ var _ = Describe("clientreader", func() {
 
 				l := len(event.TLSDopplers)
 				mockPool.SetAddressesOutput.ret0 <- l
-				Expect(func() { clientreader.Read(mockPool, preferredProtocol, event) }).ToNot(Panic())
+				clientPool := map[string]clientreader.ClientPool{"tls": mockPool}
+				Expect(func() {
+					clientreader.Read(clientPool, []string{preferredProtocol}, event)
+				}).ToNot(Panic())
 				Eventually(mockPool.SetAddressesCalled).Should(Receive())
 			})
 
@@ -43,7 +54,7 @@ var _ = Describe("clientreader", func() {
 				l := len(event.TLSDopplers)
 				mockPool.SetAddressesOutput.ret0 <- l
 
-				Expect(func() { clientreader.Read(mockPool, preferredProtocol, event) }).To(Panic())
+				Expect(func() { clientreader.Read(clientPool, []string{preferredProtocol}, event) }).To(Panic())
 				Eventually(mockPool.SetAddressesCalled).Should(Receive())
 			})
 
@@ -60,7 +71,7 @@ var _ = Describe("clientreader", func() {
 				l := len(event.UDPDopplers)
 				mockPool.SetAddressesOutput.ret0 <- l
 
-				Expect(func() { clientreader.Read(mockPool, preferredProtocol, event) }).ToNot(Panic())
+				Expect(func() { clientreader.Read(clientPool, []string{preferredProtocol}, event) }).ToNot(Panic())
 				Eventually(mockPool.SetAddressesCalled).Should(Receive())
 			})
 
@@ -80,7 +91,7 @@ var _ = Describe("clientreader", func() {
 
 				l := len(event.TCPDopplers)
 				mockPool.SetAddressesOutput.ret0 <- l
-				Expect(func() { clientreader.Read(mockPool, preferredProtocol, event) }).ToNot(Panic())
+				Expect(func() { clientreader.Read(clientPool, []string{preferredProtocol}, event) }).ToNot(Panic())
 				Eventually(mockPool.SetAddressesCalled).Should(Receive())
 			})
 
@@ -92,7 +103,7 @@ var _ = Describe("clientreader", func() {
 
 				l := len(event.TCPDopplers)
 				mockPool.SetAddressesOutput.ret0 <- l
-				Expect(func() { clientreader.Read(mockPool, preferredProtocol, event) }).To(Panic())
+				Expect(func() { clientreader.Read(clientPool, []string{preferredProtocol}, event) }).To(Panic())
 				Eventually(mockPool.SetAddressesCalled).Should(Receive())
 
 			})
