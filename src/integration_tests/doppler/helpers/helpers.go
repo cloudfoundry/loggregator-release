@@ -14,7 +14,6 @@ import (
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/websocket"
-	"github.com/pivotal-golang/localip"
 
 	"os/exec"
 
@@ -55,7 +54,7 @@ func AddWSSink(receivedChan chan []byte, port string, path string) (*websocket.C
 
 	var ws *websocket.Conn
 
-	ip, _ := localip.LocalIP()
+	ip := "127.0.0.1"
 	fullURL := "ws://" + ip + ":" + port + path
 
 	Eventually(func() error {
