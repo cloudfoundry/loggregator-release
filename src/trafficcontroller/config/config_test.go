@@ -23,24 +23,20 @@ var _ = Describe("Config", func() {
 
 		Context("with empty Loggregator ports", func() {
 			It("uses defaults", func() {
-				configFile := "../test_assets/minimal_loggregator_trafficcontroller.json"
+				configFile := "./fixtures/minimal_loggregator_trafficcontroller.json"
 
-				var c *config.Config
-
-				c, _ = config.ParseConfig(logLevel, configFile, logFilePath)
-
+				c, err := config.ParseConfig(logLevel, configFile)
+				Expect(err).ToNot(HaveOccurred())
 				Expect(c.OutgoingPort).To(Equal(uint32(4567)))
 			})
 		})
 
 		Context("with specified Loggregator ports", func() {
 			It("uses specified ports", func() {
-				configFile := "../test_assets/loggregator_trafficcontroller.json"
+				configFile := "./fixtures/loggregator_trafficcontroller.json"
 
-				var c *config.Config
-
-				c, _ = config.ParseConfig(logLevel, configFile, logFilePath)
-
+				c, err := config.ParseConfig(logLevel, configFile)
+				Expect(err).ToNot(HaveOccurred())
 				Expect(c.OutgoingPort).To(Equal(uint32(4567)))
 			})
 		})

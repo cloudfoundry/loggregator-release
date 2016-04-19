@@ -48,7 +48,7 @@ var (
 func main() {
 	flag.Parse()
 
-	config, err := config.ParseConfig(*logLevel, *configFile, *logFilePath)
+	config, err := config.ParseConfig(*logLevel, *configFile)
 	if err != nil {
 		panic(fmt.Errorf("Unable to parse config: %s", err))
 	}
