@@ -8,42 +8,48 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var (
-	preferredProtocol string
-	mockPool          *mockClientPool
-	event             dopplerservice.Event
-	clientPool        map[string]clientreader.ClientPool
-)
-
 var _ = Describe("clientreader", func() {
-
-	JustBeforeEach(func() {
-		clientPool[preferredProtocol] = mockPool
-	})
+	var (
+		protocols  []string
+		poolMocks  map[string]*mockClientPool
+		event      dopplerservice.Event
+		clientPool map[string]clientreader.ClientPool
+	)
 
 	BeforeEach(func() {
-		mockPool = newMockClientPool()
+		protocols = nil
+		poolMocks = make(map[string]*mockClientPool)
+		poolMocks["udp"] = newMockClientPool()
+		poolMocks["tcp"] = newMockClientPool()
+		poolMocks["tls"] = newMockClientPool()
+		event = dopplerservice.Event{}
 		clientPool = make(map[string]clientreader.ClientPool)
+	})
+
+	JustBeforeEach(func() {
+		for _, proto := range protocols {
+			clientPool[proto] = poolMocks[proto]
+		}
 	})
 
 	Describe("Read", func() {
 		Context("TLS PreferredProtocol", func() {
 			BeforeEach(func() {
-				preferredProtocol = "tls"
+				protocols = []string{"tls"}
 			})
 
 			It("doesn't panic if there are tls dopplers", func() {
 				event = dopplerservice.Event{
 					UDPDopplers: []string{},
-					TLSDopplers: []string{"10.0.0.1"}}
+					TLSDopplers: []string{"10.0.0.1"},
+				}
 
 				l := len(event.TLSDopplers)
-				mockPool.SetAddressesOutput.ret0 <- l
-				clientPool := map[string]clientreader.ClientPool{"tls": mockPool}
+				poolMocks["tls"].SetAddressesOutput.ret0 <- l
 				Expect(func() {
-					clientreader.Read(clientPool, []string{preferredProtocol}, event)
+					clientreader.Read(clientPool, protocols, event)
 				}).ToNot(Panic())
-				Eventually(mockPool.SetAddressesCalled).Should(Receive())
+				Eventually(poolMocks["tls"].SetAddressesCalled).Should(Receive())
 			})
 
 			It("panics if there are no tls dopplers", func() {
@@ -52,34 +58,35 @@ var _ = Describe("clientreader", func() {
 					TLSDopplers: []string{},
 				}
 				l := len(event.TLSDopplers)
-				mockPool.SetAddressesOutput.ret0 <- l
+				poolMocks["tls"].SetAddressesOutput.ret0 <- l
 
-				Expect(func() { clientreader.Read(clientPool, []string{preferredProtocol}, event) }).To(Panic())
-				Eventually(mockPool.SetAddressesCalled).Should(Receive())
+				Expect(func() { clientreader.Read(clientPool, protocols, event) }).To(Panic())
+				Eventually(poolMocks["tls"].SetAddressesCalled).Should(Receive())
 			})
-
 		})
+
 		Context("UDP PreferredProtocol", func() {
 			BeforeEach(func() {
-				preferredProtocol = "udp"
+				protocols = []string{"udp"}
 			})
+
 			It("doesn't panic for udp only dopplers", func() {
 				event := dopplerservice.Event{
 					UDPDopplers: []string{"10.0.0.1"},
 					TLSDopplers: []string{},
 				}
 				l := len(event.UDPDopplers)
-				mockPool.SetAddressesOutput.ret0 <- l
+				poolMocks["udp"].SetAddressesOutput.ret0 <- l
 
-				Expect(func() { clientreader.Read(clientPool, []string{preferredProtocol}, event) }).ToNot(Panic())
-				Eventually(mockPool.SetAddressesCalled).Should(Receive())
+				Expect(func() { clientreader.Read(clientPool, protocols, event) }).ToNot(Panic())
+				Eventually(poolMocks["udp"].SetAddressesCalled).Should(Receive())
 			})
 
 		})
 
 		Context("TCP PreferredProtocol", func() {
 			BeforeEach(func() {
-				preferredProtocol = "tcp"
+				protocols = []string{"tcp"}
 			})
 
 			It("doesn't panic if there are tcp dopplers", func() {
@@ -90,9 +97,9 @@ var _ = Describe("clientreader", func() {
 				}
 
 				l := len(event.TCPDopplers)
-				mockPool.SetAddressesOutput.ret0 <- l
-				Expect(func() { clientreader.Read(clientPool, []string{preferredProtocol}, event) }).ToNot(Panic())
-				Eventually(mockPool.SetAddressesCalled).Should(Receive())
+				poolMocks["tcp"].SetAddressesOutput.ret0 <- l
+				Expect(func() { clientreader.Read(clientPool, protocols, event) }).ToNot(Panic())
+				Eventually(poolMocks["tcp"].SetAddressesCalled).Should(Receive())
 			})
 
 			It("panics if there are no tcp dopplers", func() {
@@ -102,10 +109,33 @@ var _ = Describe("clientreader", func() {
 				}
 
 				l := len(event.TCPDopplers)
-				mockPool.SetAddressesOutput.ret0 <- l
-				Expect(func() { clientreader.Read(clientPool, []string{preferredProtocol}, event) }).To(Panic())
-				Eventually(mockPool.SetAddressesCalled).Should(Receive())
+				poolMocks["tcp"].SetAddressesOutput.ret0 <- l
+				Expect(func() { clientreader.Read(clientPool, protocols, event) }).To(Panic())
+				Eventually(poolMocks["tcp"].SetAddressesCalled).Should(Receive())
+			})
+		})
 
+		Context("with multiple protocols", func() {
+			BeforeEach(func() {
+				protocols = []string{"tls", "tcp", "udp"}
+			})
+
+			It("calls SetAddresses on the first protocol only", func() {
+				event = dopplerservice.Event{
+					UDPDopplers: []string{"10.0.0.1"},
+					TLSDopplers: []string{"10.0.0.2"},
+					TCPDopplers: []string{"10.0.0.3"},
+				}
+				poolMocks["udp"].SetAddressesOutput.ret0 <- 1
+				poolMocks["tls"].SetAddressesOutput.ret0 <- 1
+				poolMocks["tcp"].SetAddressesOutput.ret0 <- 1
+				Expect(func() { clientreader.Read(clientPool, protocols, event) }).ToNot(Panic())
+				Eventually(poolMocks["tls"].SetAddressesCalled).Should(Receive())
+				Eventually(poolMocks["tls"].SetAddressesInput.addresses).Should(Receive(Equal([]string{
+					"10.0.0.2",
+				})))
+				Consistently(poolMocks["udp"].SetAddressesCalled).ShouldNot(Receive())
+				Consistently(poolMocks["tcp"].SetAddressesCalled).ShouldNot(Receive())
 			})
 		})
 	})

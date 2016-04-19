@@ -12,20 +12,23 @@ type ClientPool interface {
 }
 
 func Read(clientPool map[string]ClientPool, protocols []string, event dopplerservice.Event) {
-
 	var (
 		servers  []string
 		protocol string
 	)
 
+loop:
 	for _, protocol = range protocols {
 		switch protocol {
 		case "udp":
 			servers = event.UDPDopplers
+			break loop
 		case "tcp":
 			servers = event.TCPDopplers
+			break loop
 		case "tls":
 			servers = event.TLSDopplers
+			break loop
 		}
 	}
 
