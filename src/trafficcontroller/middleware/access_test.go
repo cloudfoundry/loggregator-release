@@ -16,6 +16,10 @@ import (
 )
 
 var _ = Describe("AccessHandler", func() {
+	const (
+		host = "1.2.3.4"
+		port = 1234
+	)
 	var (
 		accessHandler    *middleware.AccessHandler
 		mockHandler      *mockHttpHandler
@@ -26,7 +30,7 @@ var _ = Describe("AccessHandler", func() {
 		gostLogger := loggertesthelper.Logger()
 		mockHandler = newMockHttpHandler()
 		mockAccessLogger = newMockAccessLogger()
-		accessMiddleware := middleware.Access(mockAccessLogger, gostLogger)
+		accessMiddleware := middleware.Access(mockAccessLogger, host, port, gostLogger)
 		accessHandler = accessMiddleware(mockHandler)
 
 		var _ http.Handler = accessHandler
@@ -43,6 +47,8 @@ var _ = Describe("AccessHandler", func() {
 			Eventually(mockHandler.ServeHTTPInput).Should(BeCalled(With(resp, req)))
 			Expect(mockAccessLogger.LogAccessCalled).To(HaveLen(1))
 			Expect(mockAccessLogger.LogAccessInput.Req).To(BeCalled(With(req)))
+			Expect(mockAccessLogger.LogAccessInput.Host).To(BeCalled(With(host)))
+			Expect(mockAccessLogger.LogAccessInput.Port).To(BeCalled(With(uint32(port))))
 		})
 	})
 })

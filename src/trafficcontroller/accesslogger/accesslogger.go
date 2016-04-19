@@ -1,9 +1,11 @@
 package accesslogger
 
 import (
-	"fmt"
 	"io"
 	"net/http"
+	"time"
+
+	"github.com/cloudfoundry/gosteno"
 )
 
 //go:generate hel --type Writer --output mock_writer_test.go
@@ -14,22 +16,18 @@ type Writer interface {
 
 type AccessLogger struct {
 	writer io.Writer
+	logger *gosteno.Logger
 }
 
-func New(writer io.Writer) *AccessLogger {
-	return &AccessLogger{writer: writer}
+func New(writer io.Writer, logger *gosteno.Logger) *AccessLogger {
+	return &AccessLogger{
+		writer: writer,
+		logger: logger,
+	}
 }
 
-func (a *AccessLogger) LogAccess(req *http.Request) error {
-	remoteAddr := req.Header.Get("X-Forwarded-For")
-	if remoteAddr == "" {
-		remoteAddr = req.RemoteAddr
-	}
-	scheme := "http"
-	if req.TLS != nil {
-		scheme += "s"
-	}
-	requestSource := fmt.Sprintf("%s %s: %s://%s%s\n", remoteAddr, req.Method, scheme, req.Host, req.URL.Path)
-	_, err := a.writer.Write([]byte(requestSource))
+func (a *AccessLogger) LogAccess(req *http.Request, host string, port uint32) error {
+	al := NewAccessLog(req, time.Now(), host, port, a.logger)
+	_, err := a.writer.Write([]byte(al.String() + "\n"))
 	return err
 }

@@ -1,19 +1,15 @@
 package accesslogger_test
 
 import (
-	"crypto/tls"
 	"errors"
-	"io"
-	"net/http"
-	"net/url"
 	"trafficcontroller/accesslogger"
 
-	. "github.com/apoydence/eachers"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Accesslogger", func() {
+var _ = Describe("AccessLogger", func() {
 	var (
 		writer *mockWriter
 		logger *accesslogger.AccessLogger
@@ -21,7 +17,8 @@ var _ = Describe("Accesslogger", func() {
 
 	BeforeEach(func() {
 		writer = newMockWriter()
-		logger = accesslogger.New(writer)
+		loggie := loggertesthelper.Logger()
+		logger = accesslogger.New(writer, loggie)
 	})
 
 	Describe("LogAccess", func() {
@@ -35,9 +32,9 @@ var _ = Describe("Accesslogger", func() {
 				req, err := newServerRequest("GET", "some.url.com/foo", nil)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(logger.LogAccess(req)).To(Succeed())
-
-				Expect(writer.WriteInput.Message).To(Receive())
+				Expect(logger.LogAccess(req, "1.1.1.1", 1)).To(Succeed())
+				prefix := "CEF:0|cloud_foundry|loggregator_trafficcontroller|1.0|GET some.url.com/foo|GET some.url.com/foo|0|"
+				Expect(writer.WriteInput.Message).To(Receive(HavePrefix(prefix)))
 			})
 
 			It("Includes details about the access", func() {
@@ -45,10 +42,8 @@ var _ = Describe("Accesslogger", func() {
 				Expect(err).ToNot(HaveOccurred())
 				req.RemoteAddr = "127.0.0.1:4567"
 
-				Expect(logger.LogAccess(req)).To(Succeed())
-
-				expected := "127.0.0.1:4567 GET: http://some.url.com/foo\n"
-				Expect(writer.WriteInput.Message).To(Receive(BeEquivalentTo(expected)))
+				Expect(logger.LogAccess(req, "1.1.1.1", 1)).To(Succeed())
+				Expect(writer.WriteInput.Message).To(Receive(ContainSubstring("src=127.0.0.1 spt=4567")))
 			})
 
 			It("Uses X-Forwarded-For if it exists", func() {
@@ -57,10 +52,8 @@ var _ = Describe("Accesslogger", func() {
 				req.RemoteAddr = "127.0.0.1:4567"
 				req.Header.Set("X-Forwarded-For", "50.60.70.80:1234")
 
-				Expect(logger.LogAccess(req)).To(Succeed())
-
-				expected := "50.60.70.80:1234 GET: http://some.url.com/foo\n"
-				Expect(writer.WriteInput.Message).To(Receive(BeEquivalentTo(expected)))
+				Expect(logger.LogAccess(req, "1.1.1.1", 1)).To(Succeed())
+				Expect(writer.WriteInput.Message).To(Receive(ContainSubstring("src=50.60.70.80 spt=1234")))
 			})
 
 			It("Writes multiple log lines", func() {
@@ -68,19 +61,25 @@ var _ = Describe("Accesslogger", func() {
 				Expect(err).ToNot(HaveOccurred())
 				req.RemoteAddr = "127.0.0.1:4567"
 
-				Expect(logger.LogAccess(req)).To(Succeed())
+				Expect(logger.LogAccess(req, "1.1.1.1", 1)).To(Succeed())
 
 				writer.WriteOutput.Err <- nil
 				writer.WriteOutput.Sent <- 0
 				req.Header.Set("X-Forwarded-For", "50.60.70.80:1234")
-				Expect(logger.LogAccess(req)).To(Succeed())
+				Expect(logger.LogAccess(req, "1.1.1.1", 1)).To(Succeed())
 
-				first := "127.0.0.1:4567 GET: http://some.url.com/foo\n"
-				second := "50.60.70.80:1234 GET: http://some.url.com/foo\n"
-				Expect(writer.WriteInput.Message).To(BeEquivalentToEach(
-					first,
-					second,
-				))
+				var (
+					log      []byte
+					expected string
+				)
+				expected = "src=127.0.0.1 spt=4567"
+				Expect(writer.WriteInput.Message).To(Receive(&log))
+				Expect(log).To(ContainSubstring(expected))
+				Expect(log).To(HaveSuffix("\n"))
+				expected = "src=50.60.70.80 spt=1234"
+				Expect(writer.WriteInput.Message).To(Receive(&log))
+				Expect(log).To(ContainSubstring(expected))
+				Expect(log).To(HaveSuffix("\n"))
 			})
 		})
 
@@ -94,24 +93,8 @@ var _ = Describe("Accesslogger", func() {
 				req, err := newServerRequest("GET", "http://some.url.com/foo", nil)
 				Expect(err).ToNot(HaveOccurred())
 				req.RemoteAddr = "127.0.0.1:4567"
-				Expect(logger.LogAccess(req)).ToNot(Succeed())
+				Expect(logger.LogAccess(req, "1.1.1.1", 1)).ToNot(Succeed())
 			})
 		})
 	})
 })
-
-func newServerRequest(method, path string, body io.Reader) (*http.Request, error) {
-	req, err := http.NewRequest(method, path, body)
-	if err != nil {
-		return nil, err
-	}
-	req.Host = req.URL.Host
-	if req.URL.Scheme == "https" {
-		req.TLS = &tls.ConnectionState{}
-	}
-	req.URL = &url.URL{
-		Path:     req.URL.Path,
-		RawQuery: req.URL.RawQuery,
-	}
-	return req, nil
-}

@@ -168,7 +168,9 @@ func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*eventm
 			clientreader.Read(clientPool, string(conf.PreferredProtocol), finder.Next())
 		}
 	}()
-	return eventmarshaller.New(logger, writer), nil
+	marshaller := eventmarshaller.New(logger)
+	marshaller.SetWriter(writer)
+	return marshaller, nil
 }
 
 func initializeMetrics(messageTagger *tagger.Tagger, config *config.Config, stopChan chan struct{}, logger *gosteno.Logger) {
