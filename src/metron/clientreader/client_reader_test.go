@@ -118,17 +118,18 @@ var _ = Describe("clientreader", func() {
 		Context("with multiple protocols", func() {
 			BeforeEach(func() {
 				protocols = []string{"tls", "tcp", "udp"}
-			})
-
-			It("calls SetAddresses on the first protocol only", func() {
 				event = dopplerservice.Event{
 					UDPDopplers: []string{"10.0.0.1"},
 					TLSDopplers: []string{"10.0.0.2"},
 					TCPDopplers: []string{"10.0.0.3"},
 				}
+
 				poolMocks["udp"].SetAddressesOutput.ret0 <- 1
 				poolMocks["tls"].SetAddressesOutput.ret0 <- 1
 				poolMocks["tcp"].SetAddressesOutput.ret0 <- 1
+			})
+
+			It("calls SetAddresses on the first protocol only", func() {
 				Expect(func() { clientreader.Read(clientPool, protocols, event) }).ToNot(Panic())
 				Eventually(poolMocks["tls"].SetAddressesCalled).Should(Receive())
 				Eventually(poolMocks["tls"].SetAddressesInput.addresses).Should(Receive(Equal([]string{
@@ -136,6 +137,24 @@ var _ = Describe("clientreader", func() {
 				})))
 				Consistently(poolMocks["udp"].SetAddressesCalled).ShouldNot(Receive())
 				Consistently(poolMocks["tcp"].SetAddressesCalled).ShouldNot(Receive())
+			})
+
+			Context("with etcd containing only udp dopplers", func() {
+				BeforeEach(func() {
+					event = dopplerservice.Event{
+						UDPDopplers: []string{"10.0.0.1"},
+					}
+				})
+
+				It("skips tls and tcp", func() {
+					Expect(func() { clientreader.Read(clientPool, protocols, event) }).ToNot(Panic())
+					Eventually(poolMocks["udp"].SetAddressesCalled).Should(Receive())
+					Eventually(poolMocks["udp"].SetAddressesInput.addresses).Should(Receive(Equal([]string{
+						"10.0.0.1",
+					})))
+					Consistently(poolMocks["tls"].SetAddressesCalled).ShouldNot(Receive())
+					Consistently(poolMocks["tcp"].SetAddressesCalled).ShouldNot(Receive())
+				})
 			})
 		})
 	})

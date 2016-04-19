@@ -22,13 +22,19 @@ loop:
 		switch protocol {
 		case "udp":
 			servers = event.UDPDopplers
-			break loop
+			if len(servers) > 0 {
+				break loop
+			}
 		case "tcp":
 			servers = event.TCPDopplers
-			break loop
+			if len(servers) > 0 {
+				break loop
+			}
 		case "tls":
 			servers = event.TLSDopplers
-			break loop
+			if len(servers) > 0 {
+				break loop
+			}
 		}
 	}
 
