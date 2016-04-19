@@ -55,6 +55,9 @@ func main() {
 	// the os.Exit call.
 	exitCode := 0
 	defer func() {
+		if e := recover(); e != nil {
+			panic(e)
+		}
 		os.Exit(exitCode)
 	}()
 
