@@ -1,0 +1,5 @@
+---
+name: metron_agent_windows
+
+files:
+  - metron_agent_windows/metron.zip

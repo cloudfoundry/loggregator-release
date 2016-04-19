@@ -1,0 +1,9 @@
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+function Unzip
+{
+    param([string]$zipfile, [string]$outpath)
+
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($zipfile, $outpath)
+}
+
+Unzip "metron_agent_windows/metron.zip" $Env:BOSH_INSTALL_TARGET
