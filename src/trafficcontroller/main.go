@@ -90,7 +90,7 @@ func main() {
 
 	// TODO: The preferredProtocol of udp tells the finder to pull out the Doppler URLs from the legacy ETCD endpoint.
 	// Eventually we'll have a separate websocket client pool
-	finder := dopplerservice.NewFinder(etcdAdapter, int(config.DopplerPort), "udp", "", log)
+	finder := dopplerservice.NewFinder(etcdAdapter, int(config.DopplerPort), []string{"udp"}, "", log)
 	finder.Start()
 	// Draining the finder's events channel in order to not block the finder from handling etcd events.
 	go func() {

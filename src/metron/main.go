@@ -164,7 +164,7 @@ func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*eventm
 		clientPool["tls"] = tlsPool
 	}
 
-	finder := dopplerservice.NewFinder(adapter, conf.LoggregatorDropsondePort, string(conf.PreferredProtocol), conf.Zone, logger)
+	finder := dopplerservice.NewFinder(adapter, conf.LoggregatorDropsondePort, []string{string(conf.PreferredProtocol)}, conf.Zone, logger)
 	finder.Start()
 	go func() {
 		for {

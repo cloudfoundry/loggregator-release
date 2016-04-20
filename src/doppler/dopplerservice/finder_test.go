@@ -6,8 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"reflect"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry/gosteno"
@@ -15,10 +18,9 @@ import (
 )
 
 var _ = Describe("Finder", func() {
-
 	var (
 		testLogger           *gosteno.Logger
-		preferredProtocol    string
+		protocols            []string
 		mockStoreAdapter     *mockStoreAdapter
 		port                 int
 		preferredDopplerZone string
@@ -28,14 +30,14 @@ var _ = Describe("Finder", func() {
 
 	BeforeEach(func() {
 		preferredDopplerZone = ""
-		preferredProtocol = "tls"
+		protocols = nil
 		mockStoreAdapter = newMockStoreAdapter()
 		port = 1234
 		testLogger = gosteno.NewLogger("TestLogger")
 	})
 
 	JustBeforeEach(func() {
-		finder = dopplerservice.NewFinder(mockStoreAdapter, port, preferredProtocol, preferredDopplerZone, testLogger)
+		finder = dopplerservice.NewFinder(mockStoreAdapter, port, protocols, preferredDopplerZone, testLogger)
 		Expect(finder).ToNot(BeNil())
 	})
 
@@ -49,7 +51,7 @@ var _ = Describe("Finder", func() {
 
 		BeforeEach(func() {
 			port = 8081
-			preferredProtocol = "udp"
+			protocols = []string{"udp"}
 			preferredDopplerZone = ""
 			expectedServers = []string{
 				"11.21.31.41:8081",
@@ -58,9 +60,18 @@ var _ = Describe("Finder", func() {
 
 			metaServers = map[string][]string{
 				"z1/doppler_z1/0": []string{"udp://1.2.3.4:3457"},
-				"z1/doppler_z1/1": []string{"udp://9.8.7.6:3457", "tls://9.8.7.6:3458"},
-				"z1/doppler_z1/2": []string{"udp://11.21.31.41:3457", "tls://11.21.31.41:3458"},
-				"z1/doppler_z1/4": []string{"udp://31.32.33.34:3457", "tls://31.32.33.34:3458"},
+				"z1/doppler_z1/1": []string{
+					"udp://9.8.7.6:3457",
+					"tls://9.8.7.6:3458",
+				},
+				"z1/doppler_z1/2": []string{
+					"udp://11.21.31.41:3457",
+					"tls://11.21.31.41:3458",
+				},
+				"z1/doppler_z1/4": []string{
+					"udp://31.32.33.34:3457",
+					"tls://31.32.33.34:3458",
+				},
 			}
 
 			legacyServers = map[string]string{
@@ -92,7 +103,6 @@ var _ = Describe("Finder", func() {
 		})
 
 		Context("invalid server urls", func() {
-
 			BeforeEach(func() {
 				legacyServers["z1/doppler_z1/5"] = "%"
 			})
@@ -108,7 +118,6 @@ var _ = Describe("Finder", func() {
 	})
 
 	Describe("Start", func() {
-
 		JustBeforeEach(func() {
 			close(mockStoreAdapter.WatchOutput.errors)
 			close(mockStoreAdapter.WatchOutput.events)
@@ -129,7 +138,6 @@ var _ = Describe("Finder", func() {
 	})
 
 	Describe("Next (initialization)", func() {
-
 		var (
 			metaNode   storeadapter.StoreNode
 			legacyNode storeadapter.StoreNode
@@ -186,6 +194,7 @@ var _ = Describe("Finder", func() {
 
 		Context("invalid protocol", func() {
 			BeforeEach(func() {
+				protocols = []string{"udp", "tls"}
 				metaNode, legacyNode = etcdNodes(map[string][]string{
 					"z1/doppler_z1/0": []string{"udp://1.2.3.4:567"},
 					"z1/doppler_z1/1": []string{"tls://9.8.7.6:555"},
@@ -204,6 +213,7 @@ var _ = Describe("Finder", func() {
 
 		Context("with invalid JSON", func() {
 			BeforeEach(func() {
+				protocols = []string{"udp"}
 				metaNode, legacyNode = etcdNodes(map[string][]string{
 					"z1/doppler_z1/0": []string{"udp://1.2.3.4:567"},
 				}, nil)
@@ -221,13 +231,13 @@ var _ = Describe("Finder", func() {
 			})
 		})
 
-		//TODO: test map with empty slice of addresses
 		Context("with data in the meta node", func() {
 			BeforeEach(func() {
-				preferredProtocol = "tls"
+				protocols = []string{"tls", "udp"}
 				metaNode, legacyNode = etcdNodes(map[string][]string{
 					"z1/doppler_z1/0": []string{"udp://1.2.3.4:567"},
 					"z1/doppler_z1/1": []string{"udp://9.8.7.6:543", "tls://9.8.7.6:555"},
+					"z1/doppler_z1/2": []string{},
 				}, nil)
 			})
 
@@ -238,8 +248,9 @@ var _ = Describe("Finder", func() {
 			})
 		})
 
-		Context("with data in the legacy node", func() {
+		Context("with data in the legacy node and udp in protocols", func() {
 			BeforeEach(func() {
+				protocols = []string{"udp"}
 				metaNode, legacyNode = etcdNodes(nil, map[string]string{
 					"z1/doppler_z1/0": "1.2.3.4",
 					"z1/doppler_z1/1": "5.6.7.8",
@@ -257,7 +268,7 @@ var _ = Describe("Finder", func() {
 
 		Context("with data in both nodes", func() {
 			BeforeEach(func() {
-				preferredProtocol = "udp"
+				protocols = []string{"udp", "tls"}
 				metaNode, legacyNode = etcdNodes(map[string][]string{
 					"z1/doppler_z1/0": []string{"udp://1.2.3.4:567"},
 					"z1/doppler_z1/1": []string{"udp://9.8.7.6:543", "tls://9.8.7.6:555"},
@@ -287,13 +298,15 @@ var _ = Describe("Finder", func() {
 
 		Context("with preferred dopplers in the pool", func() {
 			BeforeEach(func() {
-				preferredDopplerZone = "z3"
+				protocols = []string{"udp", "tls"}
+				preferredDopplerZone = "z2"
 				metaNode, legacyNode = etcdNodes(map[string][]string{
 					"z1/doppler_z1/0": []string{"udp://1.2.3.4:567"},
-					"z3/doppler_z3/2": []string{"tls://11.21.31.41:1234"},
+					"z2/doppler_z3/1": []string{"tls://11.21.31.41:1234"},
+					"z2/doppler_z3/2": []string{"tls://11.21.31.42:1234"},
 				}, map[string]string{
-					"z2/doppler_z2/2": "11.21.31.41",
-					"z3/doppler_z3/3": "21.22.23.24",
+					"z1/doppler_z2/0": "11.21.31.41",
+					"z2/doppler_z3/2": "21.22.23.24",
 				})
 			})
 
@@ -305,12 +318,12 @@ var _ = Describe("Finder", func() {
 				Expect(event.UDPDopplers).To(Equal(expectedUDP))
 				Expect(event.TLSDopplers).To(Equal(expectedTLS))
 			})
-
 		})
 
 		Context("without any preferred dopplers in the pool", func() {
 			BeforeEach(func() {
 				preferredDopplerZone = "z4"
+				protocols = []string{"udp", "tls"}
 				metaNode, legacyNode = etcdNodes(map[string][]string{
 					"z1/doppler_z1/0": []string{"udp://1.2.3.4:567"},
 					"z3/doppler_z3/2": []string{"tls://11.21.31.41:1234"},
@@ -337,7 +350,6 @@ var _ = Describe("Finder", func() {
 	})
 
 	Describe("Next (async)", func() {
-
 		var (
 			metaNode   storeadapter.StoreNode
 			legacyNode storeadapter.StoreNode
@@ -399,6 +411,10 @@ var _ = Describe("Finder", func() {
 		})
 
 		Context("meta endpoints", func() {
+			BeforeEach(func() {
+				protocols = []string{"tls"}
+			})
+
 			Context("when a new node is created", func() {
 				JustBeforeEach(func() {
 					node := makeMetaNode("z1/doppler_z1/0", []string{"tls://1.2.3.4:567"})
@@ -418,15 +434,20 @@ var _ = Describe("Finder", func() {
 
 			Context("when a node is updated", func() {
 				BeforeEach(func() {
-					preferredProtocol = "tls"
-					metaNode = makeMetaNode("z1/doppler_z1/0", []string{"udp://1.2.3.4:567", "tcp://1.2.3.4:789"})
+					metaNode = makeMetaNode("z1/doppler_z1/0", []string{
+						"udp://1.2.3.4:567",
+						"tcp://1.2.3.4:789",
+					})
 				})
 
 				JustBeforeEach(func() {
 					// Ignore the startup event
 					_ = finder.Next()
 
-					updateNode := makeMetaNode("z1/doppler_z1/0", []string{"tls://1.2.3.4:555", "udp://1.2.3.4:567"})
+					updateNode := makeMetaNode("z1/doppler_z1/0", []string{
+						"tls://1.2.3.4:555",
+						"udp://1.2.3.4:567",
+					})
 					metaEvents <- storeadapter.WatchEvent{
 						Type:     storeadapter.UpdateEvent,
 						Node:     &updateNode,
@@ -446,7 +467,6 @@ var _ = Describe("Finder", func() {
 				var done chan struct{}
 
 				BeforeEach(func() {
-					preferredProtocol = "tls"
 					metaNode = makeMetaNode("z1/doppler_z1/0", []string{"udp://1.2.3.4:567"})
 					metaNode.TTL = 30
 				})
@@ -483,7 +503,6 @@ var _ = Describe("Finder", func() {
 					}()
 					Consistently(done).ShouldNot(BeClosed())
 				})
-
 			})
 
 			Context("when a node is deleted", func() {
@@ -556,6 +575,9 @@ var _ = Describe("Finder", func() {
 		})
 
 		Context("legacy endpoints", func() {
+			BeforeEach(func() {
+				protocols = []string{"udp"}
+			})
 
 			Context("when a new node is created", func() {
 				JustBeforeEach(func() {
@@ -680,10 +702,50 @@ var _ = Describe("Finder", func() {
 				})
 			})
 		})
+
+		Context("with a preferred zone", func() {
+			BeforeEach(func() {
+				metaNode, legacyNode = storeadapter.StoreNode{}, storeadapter.StoreNode{}
+				protocols = []string{"tcp", "tls", "udp"}
+				preferredDopplerZone = "z2"
+			})
+
+			DescribeTable("preferred zones override other zones", func(protocol string) {
+				By("falling back to z1")
+				z1Node := makeMetaNode("z1/doppler_z1/0", []string{protocol + "://1.2.3.4:567"})
+				metaEvents <- storeadapter.WatchEvent{
+					Node: &z1Node,
+					Type: storeadapter.CreateEvent,
+				}
+				event := finder.Next()
+				Expect(protocolField(event, protocol)).To(ConsistOf("1.2.3.4:567"))
+
+				By("overriding z1 with z2")
+				z2Node := makeMetaNode("z2/doppler_z2/0", []string{protocol + "://11.21.31.41:1234"})
+				metaEvents <- storeadapter.WatchEvent{
+					Node: &z2Node,
+					Type: storeadapter.CreateEvent,
+				}
+				event = finder.Next()
+				Expect(protocolField(event, protocol)).To(ConsistOf("11.21.31.41:1234"))
+
+				By("ignoring updates to z3 when z2 still has dopplers")
+				z3Node := makeMetaNode("z3/doppler_z3/0", []string{protocol + "://4.3.2.1:4321"})
+				metaEvents <- storeadapter.WatchEvent{
+					Node: &z3Node,
+					Type: storeadapter.CreateEvent,
+				}
+				event = finder.Next()
+				Expect(protocolField(event, protocol)).To(ConsistOf("11.21.31.41:1234"))
+			},
+				Entry("udp", "udp"),
+				Entry("tcp", "tcp"),
+				Entry("tls", "tls"),
+			)
+		})
 	})
 
-	Context("TCP Preferred Protocol on Metron", func() {
-
+	Context("with TCP preferred over UDP", func() {
 		var (
 			metaNode, legacyNode storeadapter.StoreNode
 			metaServers          map[string][]string
@@ -692,7 +754,7 @@ var _ = Describe("Finder", func() {
 
 		BeforeEach(func() {
 			port = 9999
-			preferredProtocol = "tcp"
+			protocols = []string{"tcp", "udp"}
 
 			close(mockStoreAdapter.WatchOutput.errors)
 			close(mockStoreAdapter.WatchOutput.events)
@@ -707,8 +769,7 @@ var _ = Describe("Finder", func() {
 			finder.Start()
 		})
 
-		Context("Dopplers advertise on legacy root only", func() {
-
+		Context("with dopplers advertising on legacy root only", func() {
 			BeforeEach(func() {
 				metaServers = map[string][]string{}
 				legacyServers = map[string]string{
@@ -719,16 +780,16 @@ var _ = Describe("Finder", func() {
 
 			It("returns UDP/TLS dopplers from legacy endpoint", func() {
 				event := finder.Next()
-				Expect(event.UDPDopplers).To(HaveLen(2))
-				Expect(event.UDPDopplers).To(ContainElement("11.21.31.41:9999"))
-				Expect(event.UDPDopplers).To(ContainElement("21.22.23.24:9999"))
+				Expect(event.UDPDopplers).To(ConsistOf(
+					fmt.Sprintf("%s:%d", legacyServers["z1/doppler_z1/2"], port),
+					fmt.Sprintf("%s:%d", legacyServers["z1/doppler_z1/3"], port),
+				))
 				Expect(event.TLSDopplers).To(BeEmpty())
 				Expect(event.TCPDopplers).To(BeEmpty())
 			})
 		})
 
-		Context("Dopplers advertise UDP on meta and legacy root", func() {
-
+		Context("with dopplers advertising UDP on meta and legacy root", func() {
 			BeforeEach(func() {
 				metaServers = map[string][]string{
 					"z1/doppler_z1/0": []string{"udp://9.8.7.6:3457"},
@@ -741,20 +802,27 @@ var _ = Describe("Finder", func() {
 
 			It("returns udp dopplers from meta endpoint", func() {
 				event := finder.Next()
-				Expect(event.UDPDopplers).To(HaveLen(2))
-				Expect(event.UDPDopplers).To(ContainElement("9.8.7.6:3457"))
-				Expect(event.UDPDopplers).To(ContainElement("21.22.23.24:9999"))
+				Expect(event.UDPDopplers).To(ConsistOf(
+					"9.8.7.6:3457",
+					fmt.Sprintf("%s:%d", legacyServers["z1/doppler_z1/1"], port),
+				))
 				Expect(event.TLSDopplers).To(BeEmpty())
 				Expect(event.TCPDopplers).To(BeEmpty())
 			})
 		})
 
-		Context("Dopplers advertise UDP/TCP/TLS on meta and legacy root", func() {
-
+		Context("with dopplers advertising UDP, TCP, and TLS on meta and legacy root", func() {
 			BeforeEach(func() {
 				metaServers = map[string][]string{
-					"z1/doppler_z1/0": []string{"udp://9.8.7.6:3457", "tcp://9.8.7.6:3459", "tls://9.8.7.6:3458"},
-					"z1/doppler_z1/2": []string{"udp://9.8.7.7:3457", "tls://9.8.7.7:3458"},
+					"z1/doppler_z1/0": []string{
+						"udp://9.8.7.6:3457",
+						"tcp://9.8.7.6:3459",
+						"tls://9.8.7.6:3458",
+					},
+					"z1/doppler_z1/2": []string{
+						"udp://9.8.7.7:3457",
+						"tls://9.8.7.7:3458",
+					},
 				}
 				legacyServers = map[string]string{
 					"z1/doppler_z1/0": "9.8.7.6",
@@ -764,20 +832,22 @@ var _ = Describe("Finder", func() {
 
 			It("returns dopplers from meta endpoint", func() {
 				event := finder.Next()
-
-				Expect(event.UDPDopplers).To(HaveLen(1))
-				Expect(event.UDPDopplers).To(ContainElement("21.22.23.24:9999"))
-				Expect(event.TLSDopplers).To(HaveLen(1))
-				Expect(event.TLSDopplers).To(ContainElement("9.8.7.7:3458"))
-				Expect(event.TCPDopplers).To(HaveLen(1))
-				Expect(event.TCPDopplers).To(ContainElement("9.8.7.6:3459"))
+				Expect(event.UDPDopplers).To(ConsistOf(
+					"9.8.7.7:3457",
+					fmt.Sprintf("%s:%d", legacyServers["z1/doppler_z1/1"], port),
+				))
+				Expect(event.TLSDopplers).To(BeEmpty())
+				Expect(event.TCPDopplers).To(ConsistOf("9.8.7.6:3459"))
 			})
 		})
 
-		Context("Dopplers advertise UDP and an unsupported protocol", func() {
+		Context("with dopplers advertising UDP and an unsupported protocol", func() {
 			BeforeEach(func() {
 				metaServers = map[string][]string{
-					"z1/doppler_z1/0": []string{"https://1.2.3.4/foo", "udp://1.2.3.4:5678"},
+					"z1/doppler_z1/0": []string{
+						"https://1.2.3.4/foo",
+						"udp://1.2.3.4:5678",
+					},
 				}
 				legacyServers = map[string]string{}
 			})
@@ -789,11 +859,9 @@ var _ = Describe("Finder", func() {
 				Expect(event.TLSDopplers).To(BeEmpty())
 			})
 		})
-
 	})
 
-	Context("TLS Preferred Protocol on Metron", func() {
-
+	Context("with TLS Preferred over UDP", func() {
 		var (
 			metaNode, legacyNode storeadapter.StoreNode
 			metaServers          map[string][]string
@@ -802,7 +870,7 @@ var _ = Describe("Finder", func() {
 
 		BeforeEach(func() {
 			port = 9999
-			preferredProtocol = "tls"
+			protocols = []string{"tls", "udp"}
 
 			close(mockStoreAdapter.WatchOutput.errors)
 			close(mockStoreAdapter.WatchOutput.events)
@@ -817,8 +885,7 @@ var _ = Describe("Finder", func() {
 			finder.Start()
 		})
 
-		Context("Dopplers advertise on legacy root only", func() {
-
+		Context("with dopplers advertising on legacy root only", func() {
 			BeforeEach(func() {
 				metaServers = map[string][]string{}
 				legacyServers = map[string]string{
@@ -829,16 +896,16 @@ var _ = Describe("Finder", func() {
 
 			It("returns udp dopplers from legacy endpoint", func() {
 				event := finder.Next()
-				Expect(event.UDPDopplers).To(HaveLen(2))
-				Expect(event.UDPDopplers).To(ContainElement("11.21.31.41:9999"))
-				Expect(event.UDPDopplers).To(ContainElement("21.22.23.24:9999"))
+				Expect(event.UDPDopplers).To(ConsistOf(
+					fmt.Sprintf("11.21.31.41:%d", port),
+					fmt.Sprintf("21.22.23.24:%d", port),
+				))
 				Expect(event.TLSDopplers).To(BeEmpty())
 				Expect(event.TCPDopplers).To(BeEmpty())
 			})
 		})
 
-		Context("Dopplers advertise UDP on meta and legacy root", func() {
-
+		Context("with dopplers advertising UDP on meta and legacy root", func() {
 			BeforeEach(func() {
 				metaServers = map[string][]string{
 					"z1/doppler_z1/0": []string{"udp://9.8.7.6:3457"},
@@ -851,19 +918,23 @@ var _ = Describe("Finder", func() {
 
 			It("returns udp dopplers from meta endpoint", func() {
 				event := finder.Next()
-				Expect(event.UDPDopplers).To(HaveLen(2))
-				Expect(event.UDPDopplers).To(ContainElement("9.8.7.6:3457"))
-				Expect(event.UDPDopplers).To(ContainElement("21.22.23.24:9999"))
+				Expect(event.UDPDopplers).To(ConsistOf(
+					"9.8.7.6:3457",
+					fmt.Sprintf("21.22.23.24:%d", port),
+				))
 				Expect(event.TLSDopplers).To(BeEmpty())
 				Expect(event.TCPDopplers).To(BeEmpty())
 			})
 		})
 
-		Context("Dopplers advertise TLS/UDP on meta and legacy root", func() {
-
+		Context("with dopplers advertising TLS, TCP, and UDP on meta and legacy root", func() {
 			BeforeEach(func() {
 				metaServers = map[string][]string{
-					"z1/doppler_z1/0": []string{"udp://9.8.7.6:3457", "tcp://9.8.7.6:3459", "tls://9.8.7.6:3458"},
+					"z1/doppler_z1/0": []string{
+						"udp://9.8.7.6:3457",
+						"tcp://9.8.7.6:3459",
+						"tls://9.8.7.6:3458",
+					},
 				}
 				legacyServers = map[string]string{
 					"z1/doppler_z1/0": "9.8.7.6",
@@ -873,18 +944,22 @@ var _ = Describe("Finder", func() {
 
 			It("returns dopplers from meta endpoint", func() {
 				event := finder.Next()
-				Expect(event.UDPDopplers).To(HaveLen(1))
-				Expect(event.UDPDopplers).To(ContainElement("21.22.23.24:9999"))
-				Expect(event.TLSDopplers).To(HaveLen(1))
-				Expect(event.TLSDopplers).To(ContainElement("9.8.7.6:3458"))
+				Expect(event.UDPDopplers).To(ConsistOf(
+					fmt.Sprintf("21.22.23.24:%d", port),
+				))
 				Expect(event.TCPDopplers).To(BeEmpty())
+				Expect(event.TLSDopplers).To(ConsistOf("9.8.7.6:3458"))
 			})
 		})
 
-		Context("Dopplers advertise UDP and an unsupported protocol", func() {
+		Context("with dopplers advertising UDP and unsupported protocols", func() {
 			BeforeEach(func() {
 				metaServers = map[string][]string{
-					"z1/doppler_z1/0": []string{"https://1.2.3.4/foo", "udp://1.2.3.4:5678", "wss://1.2.3.4/bar"},
+					"z1/doppler_z1/0": []string{
+						"https://1.2.3.4/foo",
+						"udp://1.2.3.4:5678",
+						"wss://1.2.3.4/bar",
+					},
 				}
 				legacyServers = map[string]string{}
 			})
@@ -895,6 +970,45 @@ var _ = Describe("Finder", func() {
 				Expect(event.TCPDopplers).To(BeEmpty())
 				Expect(event.TLSDopplers).To(BeEmpty())
 			})
+		})
+	})
+
+	Context("with multiple protocols", func() {
+		BeforeEach(func() {
+			port = 9999
+			protocols = []string{"tcp", "udp", "tls"}
+
+			close(mockStoreAdapter.WatchOutput.errors)
+			close(mockStoreAdapter.WatchOutput.events)
+			close(mockStoreAdapter.WatchOutput.stop)
+			close(mockStoreAdapter.ListRecursivelyOutput.ret1)
+		})
+
+		JustBeforeEach(func() {
+			metaServers := map[string][]string{
+				"z1/doppler_z1/0": []string{
+					"udp://9.8.7.6:3457",
+					"tls://9.8.7.6:3458",
+					"tcp://9.8.7.6:3459",
+				},
+				"z1/doppler_z1/1": []string{
+					"udp://9.8.7.7:3457",
+					"tls://9.8.7.7:3458",
+				},
+			}
+			metaNode, legacyNode := etcdNodes(metaServers, nil)
+			mockStoreAdapter.ListRecursivelyOutput.ret0 <- metaNode
+			mockStoreAdapter.ListRecursivelyOutput.ret0 <- legacyNode
+			finder.Start()
+		})
+
+		It("returns only the addrs for the highest priority dopplers", func() {
+			event := finder.Next()
+			Expect(event.TLSDopplers).To(HaveLen(0))
+			Expect(event.UDPDopplers).To(HaveLen(1))
+			Expect(event.UDPDopplers).To(ConsistOf("9.8.7.7:3457"))
+			Expect(event.TCPDopplers).To(HaveLen(1))
+			Expect(event.TCPDopplers).To(ConsistOf("9.8.7.6:3459"))
 		})
 	})
 
@@ -906,7 +1020,7 @@ var _ = Describe("Finder", func() {
 
 		BeforeEach(func() {
 			port = 9999
-			preferredProtocol = "udp"
+			protocols = []string{"udp"}
 
 			close(mockStoreAdapter.WatchOutput.errors)
 			close(mockStoreAdapter.WatchOutput.events)
@@ -932,9 +1046,10 @@ var _ = Describe("Finder", func() {
 
 			It("returns udp dopplers from legacy endpoint", func() {
 				event := finder.Next()
-				Expect(event.UDPDopplers).To(HaveLen(2))
-				Expect(event.UDPDopplers).To(ContainElement(fmt.Sprintf("11.21.31.41:%d", port)))
-				Expect(event.UDPDopplers).To(ContainElement(fmt.Sprintf("21.22.23.24:%d", port)))
+				Expect(event.UDPDopplers).To(ConsistOf(
+					fmt.Sprintf("11.21.31.41:%d", port),
+					fmt.Sprintf("21.22.23.24:%d", port),
+				))
 				Expect(event.TCPDopplers).To(BeEmpty())
 				Expect(event.TLSDopplers).To(BeEmpty())
 			})
@@ -995,4 +1110,13 @@ func makeMetaNode(doppler string, addresses []string) storeadapter.StoreNode {
 		Key:   path.Join(dopplerservice.META_ROOT, doppler),
 		Value: []byte(fmt.Sprintf(metaFmt, string(endpoints))),
 	}
+}
+
+func protocolField(event dopplerservice.Event, protocol string) []string {
+	protocol = strings.ToUpper(protocol)
+	addrs, ok := reflect.ValueOf(event).FieldByName(protocol + "Dopplers").Interface().([]string)
+	if !ok {
+		return nil
+	}
+	return addrs
 }
