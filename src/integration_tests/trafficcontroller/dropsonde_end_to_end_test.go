@@ -17,11 +17,9 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
-var dropsondeEndpoint string
-
-const TRAFFIC_CONTROLLER_DROPSONDE_PORT = 4566
-
 var _ = Describe("TrafficController for dropsonde messages", func() {
+	var dropsondeEndpoint string
+
 	BeforeEach(func() {
 		fakeDoppler = fake_doppler.New()
 		go fakeDoppler.Start()
@@ -55,7 +53,7 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 
 			var receivedEnvelope *events.Envelope
 			Eventually(messages).Should(Receive(&receivedEnvelope))
-			Eventually(errors).ShouldNot(Receive())
+			Consistently(errors).ShouldNot(Receive())
 
 			receivedMessage := receivedEnvelope.GetLogMessage()
 			Expect(receivedMessage.GetMessage()).To(BeEquivalentTo("Hello through NOAA"))
@@ -77,7 +75,6 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 	})
 
 	Context("Firehose", func() {
-
 		var (
 			messages <-chan *events.Envelope
 			errors   <-chan error
@@ -97,7 +94,7 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 
 			var receivedEnvelope *events.Envelope
 			Eventually(messages).Should(Receive(&receivedEnvelope))
-			Eventually(errors).ShouldNot(Receive())
+			Consistently(errors).ShouldNot(Receive())
 
 			receivedMessage := receivedEnvelope.GetLogMessage()
 			Expect(receivedMessage.GetMessage()).To(BeEquivalentTo("Hello through NOAA"))
