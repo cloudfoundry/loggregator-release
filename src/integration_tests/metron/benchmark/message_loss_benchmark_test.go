@@ -5,24 +5,21 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("MessageLossBenchmark", func() {
 	BeforeEach(func() {
-		pathToMetronExecutable, err := gexec.Build("metron")
-		Expect(err).ToNot(HaveOccurred())
-
 		command := exec.Command(pathToMetronExecutable, "--config=fixtures/metron.json")
+		var err error
 		metronSession, err = gexec.Start(command, gexec.NewPrefixedWriter("[o][metron]", GinkgoWriter), gexec.NewPrefixedWriter("[e][metron]", GinkgoWriter))
 		Expect(err).ToNot(HaveOccurred())
 
-		// TODO: figure out a better way to let metron finish starting up.
-		time.Sleep(500 * time.Millisecond)
+		Eventually(metronSession.Buffer).Should(gbytes.Say("metron started"))
 	})
 
 	AfterEach(func() {
@@ -30,16 +27,15 @@ var _ = Describe("MessageLossBenchmark", func() {
 	})
 
 	Measure("message loss and throughput", func(b Benchmarker) {
-		pathToMetronBenchmarkExec, err := gexec.Build("tools/metronbenchmark")
-		Expect(err).NotTo(HaveOccurred())
-
 		command := exec.Command(pathToMetronBenchmarkExec, "-writeRate", "5000", "-interval",
 			"10s", "-stopAfter", "11s")
+
 		outBuffer := bytes.NewBuffer(nil)
 		errBuffer := bytes.NewBuffer(nil)
 		benchmarkSession, err := gexec.Start(command, outBuffer, errBuffer)
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(benchmarkSession, 15).Should(gexec.Exit())
+
 		out := outBuffer.String()
 		Expect(out).To(ContainSubstring("PercentLoss"))
 		lines := strings.Split(out, "\n")
@@ -59,9 +55,6 @@ var _ = Describe("MessageLossBenchmark", func() {
 	}, 3)
 
 	Measure("concurrent message loss and throughput", func(b Benchmarker) {
-		pathToMetronBenchmarkExec, err := gexec.Build("tools/metronbenchmark")
-		Expect(err).NotTo(HaveOccurred())
-
 		command := exec.Command(pathToMetronBenchmarkExec, "-writeRate", "500", "-interval",
 			"10s", "-stopAfter", "15s", "-concurrentWriters", "10")
 		outBuffer := bytes.NewBuffer(nil)
