@@ -13,5 +13,7 @@
     "Host": "0.0.0.0",
     "ApiHost": "https://vcap.me",
     "SystemDomain": "vcap.me",
-    "SecurityEventLog": "access.log"
+    "SecurityEventLog": "access.log",
+    "MetronHost": "foo.bar",
+    "MetronPort": 7543
 }

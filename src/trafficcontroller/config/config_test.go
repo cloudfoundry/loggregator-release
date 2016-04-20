@@ -95,5 +95,28 @@ var _ = Describe("Config", func() {
 				Expect(c.SecurityEventLog).To(Equal("access.log"))
 			})
 		})
+
+		Context("without Metron host and port", func() {
+			It("uses defaults", func() {
+				configFile := "./fixtures/minimal_loggregator_trafficcontroller.json"
+
+				c, err := config.ParseConfig(logLevel, configFile)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(c.MetronHost).To(Equal("127.0.0.1"))
+				Expect(c.MetronPort).To(Equal(3457))
+			})
+		})
+
+		Context("with Metron host and port", func() {
+			It("uses specified properties", func() {
+				configFile := "./fixtures/loggregator_trafficcontroller.json"
+
+				c, err := config.ParseConfig(logLevel, configFile)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(c.MetronHost).To(Equal("foo.bar"))
+				Expect(c.MetronPort).To(Equal(7543))
+			})
+		})
+
 	})
 })

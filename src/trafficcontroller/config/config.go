@@ -18,6 +18,7 @@ type Config struct {
 	DopplerPort            uint32
 	OutgoingPort           uint32
 	OutgoingDropsondePort  uint32
+	MetronHost             string
 	MetronPort             int
 	SystemDomain           string
 	SkipCertVerify         bool
@@ -66,6 +67,14 @@ func (c *Config) setDefaults() {
 
 	if c.OutgoingPort == 0 {
 		c.OutgoingPort = 8080
+	}
+
+	if c.MetronHost == "" {
+		c.MetronHost = "127.0.0.1"
+	}
+
+	if c.MetronPort == 0 {
+		c.MetronPort = 3457
 	}
 }
 

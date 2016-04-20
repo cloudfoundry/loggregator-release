@@ -64,7 +64,7 @@ func main() {
 	log := logger.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller", config.Syslog)
 	log.Info("Startup: Setting up the loggregator traffic controller")
 
-	dropsonde.Initialize("127.0.0.1:"+strconv.Itoa(config.MetronPort), "LoggregatorTrafficController")
+	dropsonde.Initialize(net.JoinHostPort(config.MetronHost, config.MetronPort), "LoggregatorTrafficController")
 
 	go func() {
 		err := http.ListenAndServe(net.JoinHostPort(ipAddress, pprofPort), nil)
