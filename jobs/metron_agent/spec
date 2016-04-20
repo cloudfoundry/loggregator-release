@@ -37,9 +37,6 @@ properties:
   metron_endpoint.shared_secret:
       description: "Shared secret used to verify cryptographically signed dropsonde messages"
 
-  metron_agent.preferred_protocol:
-    description: "Preferred protocol to droppler (udp|tls)"
-    default: "udp"
   metron_agent.tls.client_cert:
     description: "TLS client certificate"
     default: ""
@@ -91,3 +88,6 @@ properties:
   loggregator.dropsonde_incoming_port:
     description: "DEPRECATED"
     default: 3457
+  metron_agent.preferred_protocol:
+    description: "DEPRECATED"
+    default: "udp"
