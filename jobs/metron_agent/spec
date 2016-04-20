@@ -75,19 +75,19 @@ properties:
   metron_agent.logrotate.size:
     description: "The size at which logrotate will decide to rotate the log file"
     default: 50M
-  metron_agent.buffer_size:
-    description: "DEPRECATED"
-    default: 10000
-  metron_agent.enable_buffer:
-    description: "DEPRECATED"
-    default: false
-
-  loggregator.dropsonde_incoming_port:
-    description: "Port where loggregator listens for dropsonde log messages"
-    default: 3457
 
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"
   loggregator.etcd.maxconcurrentrequests:
     description: "Number of concurrent requests to ETCD"
     default: 10
+
+  metron_agent.buffer_size:
+    description: "DEPRECATED"
+    default: 10000
+  metron_agent.enable_buffer:
+    description: "DEPRECATED"
+    default: false
+  loggregator.dropsonde_incoming_port:
+    description: "DEPRECATED"
+    default: 3457

@@ -19,12 +19,6 @@ properties:
   loggregator.outgoing_dropsonde_port:
     description: "Port for outgoing dropsonde messages"
     default: 8081
-  loggregator.doppler_port:
-    description: "Port for outgoing doppler messages"
-    default: 8081
-  traffic_controller.outgoing_port:
-    description: "Port on which the traffic controller listens to for requests"
-    default: 8080
   traffic_controller.security_event_logging.enabled:
     description: "Enable logging of all requests made to the Traffic Controller in CEF format"
     default: false
@@ -38,9 +32,14 @@ properties:
   login.protocol:
     description: "Protocol to use to connect to UAA (used in case uaa.url is not set)"
     default: https
+
+  metron_endpoint.host:
+    description: "The host used to emit messages to the Metron agent"
+    default: "127.0.0.1"
   metron_endpoint.dropsonde_port:
     description: "The port used to emit dropsonde messages to the Metron agent"
     default: 3457
+
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"
   loggregator.etcd.maxconcurrentrequests:
@@ -54,3 +53,10 @@ properties:
     default: false
   cc.srv_api_uri:
     description: "API URI of cloud controller"
+
+  traffic_controller.outgoing_port:
+    description: "DEPRECATED"
+    default: 8080
+  loggregator.doppler_port:
+    description: "DEPRECATED"
+    default: 8081

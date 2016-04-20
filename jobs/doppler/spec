@@ -21,9 +21,6 @@ properties:
     description: number of log messages to retain per application
     default: 100
 
-  doppler.incoming_port:
-    description: Port for incoming log messages in the legacy format
-    default: 3456
   doppler.dropsonde_incoming_port:
     description: Port for incoming udp messages
     default: 3457
@@ -92,3 +89,7 @@ properties:
   metron_endpoint.dropsonde_port:
     description: "The port used to emit dropsonde messages to the Metron agent"
     default: 3457
+
+  doppler.incoming_port:
+    description: DEPRECATED
+    default: 3456
