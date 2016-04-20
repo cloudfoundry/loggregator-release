@@ -27,7 +27,7 @@ var _ = Describe("Config", func() {
 
 				c, err := config.ParseConfig(logLevel, configFile)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(c.OutgoingPort).To(Equal(uint32(4567)))
+				Expect(c.OutgoingPort).To(Equal(uint32(8080)))
 			})
 		})
 
