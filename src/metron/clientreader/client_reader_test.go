@@ -46,9 +46,7 @@ var _ = Describe("clientreader", func() {
 
 				l := len(event.TLSDopplers)
 				poolMocks["tls"].SetAddressesOutput.ret0 <- l
-				Expect(func() {
-					clientreader.Read(clientPool, protocols, event)
-				}).ToNot(Panic())
+				Expect(clientreader.Read(clientPool, protocols, event)).To(Equal("tls"))
 				Eventually(poolMocks["tls"].SetAddressesCalled).Should(Receive())
 			})
 
@@ -60,8 +58,21 @@ var _ = Describe("clientreader", func() {
 				l := len(event.TLSDopplers)
 				poolMocks["tls"].SetAddressesOutput.ret0 <- l
 
-				Expect(func() { clientreader.Read(clientPool, protocols, event) }).To(Panic())
-				Eventually(poolMocks["tls"].SetAddressesCalled).Should(Receive())
+				Expect(func() {
+					clientreader.Read(clientPool, protocols, event)
+				}).To(Panic())
+			})
+
+			It("panics if none of the dopplers can be connected to", func() {
+				event = dopplerservice.Event{
+					UDPDopplers: []string{},
+					TLSDopplers: []string{"10.0.0.1"},
+				}
+
+				poolMocks["tls"].SetAddressesOutput.ret0 <- 0
+				Expect(func() {
+					clientreader.Read(clientPool, protocols, event)
+				}).To(Panic())
 			})
 		})
 
@@ -78,10 +89,9 @@ var _ = Describe("clientreader", func() {
 				l := len(event.UDPDopplers)
 				poolMocks["udp"].SetAddressesOutput.ret0 <- l
 
-				Expect(func() { clientreader.Read(clientPool, protocols, event) }).ToNot(Panic())
+				Expect(clientreader.Read(clientPool, protocols, event)).To(Equal("udp"))
 				Eventually(poolMocks["udp"].SetAddressesCalled).Should(Receive())
 			})
-
 		})
 
 		Context("TCP PreferredProtocol", func() {
@@ -98,7 +108,7 @@ var _ = Describe("clientreader", func() {
 
 				l := len(event.TCPDopplers)
 				poolMocks["tcp"].SetAddressesOutput.ret0 <- l
-				Expect(func() { clientreader.Read(clientPool, protocols, event) }).ToNot(Panic())
+				Expect(clientreader.Read(clientPool, protocols, event)).To(Equal("tcp"))
 				Eventually(poolMocks["tcp"].SetAddressesCalled).Should(Receive())
 			})
 
@@ -110,8 +120,9 @@ var _ = Describe("clientreader", func() {
 
 				l := len(event.TCPDopplers)
 				poolMocks["tcp"].SetAddressesOutput.ret0 <- l
-				Expect(func() { clientreader.Read(clientPool, protocols, event) }).To(Panic())
-				Eventually(poolMocks["tcp"].SetAddressesCalled).Should(Receive())
+				Expect(func() {
+					clientreader.Read(clientPool, protocols, event)
+				}).To(Panic())
 			})
 		})
 
@@ -130,7 +141,7 @@ var _ = Describe("clientreader", func() {
 			})
 
 			It("calls SetAddresses on the first protocol only", func() {
-				Expect(func() { clientreader.Read(clientPool, protocols, event) }).ToNot(Panic())
+				Expect(clientreader.Read(clientPool, protocols, event)).To(Equal("tls"))
 				Eventually(poolMocks["tls"].SetAddressesCalled).Should(Receive())
 				Eventually(poolMocks["tls"].SetAddressesInput.addresses).Should(Receive(Equal([]string{
 					"10.0.0.2",
@@ -147,7 +158,7 @@ var _ = Describe("clientreader", func() {
 				})
 
 				It("skips tls and tcp", func() {
-					Expect(func() { clientreader.Read(clientPool, protocols, event) }).ToNot(Panic())
+					Expect(clientreader.Read(clientPool, protocols, event)).To(Equal("udp"))
 					Eventually(poolMocks["udp"].SetAddressesCalled).Should(Receive())
 					Eventually(poolMocks["udp"].SetAddressesInput.addresses).Should(Receive(Equal([]string{
 						"10.0.0.1",

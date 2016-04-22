@@ -11,36 +11,32 @@ type ClientPool interface {
 	SetAddresses(addresses []string) int
 }
 
-func Read(clientPool map[string]ClientPool, protocols []string, event dopplerservice.Event) {
-	var (
-		servers  []string
-		protocol string
-	)
+func Read(clientPool map[string]ClientPool, protocols []string, event dopplerservice.Event) string {
+	protocol, servers := chooseProtocol(protocols, event)
+	if protocol == "" {
+		panic(fmt.Sprintf("No dopplers listening on %v", protocols))
+	}
+	clients := clientPool[protocol].SetAddresses(servers)
+	if clients == 0 {
+		panic(fmt.Sprintf("Unable to connect to dopplers running on %s", protocol))
+	}
+	return protocol
+}
 
-loop:
-	for _, protocol = range protocols {
+func chooseProtocol(protocols []string, event dopplerservice.Event) (string, []string) {
+	for _, protocol := range protocols {
+		var dopplers []string
 		switch protocol {
 		case "udp":
-			servers = event.UDPDopplers
-			if len(servers) > 0 {
-				break loop
-			}
+			dopplers = event.UDPDopplers
 		case "tcp":
-			servers = event.TCPDopplers
-			if len(servers) > 0 {
-				break loop
-			}
+			dopplers = event.TCPDopplers
 		case "tls":
-			servers = event.TLSDopplers
-			if len(servers) > 0 {
-				break loop
-			}
+			dopplers = event.TLSDopplers
+		}
+		if len(dopplers) > 0 {
+			return protocol, dopplers
 		}
 	}
-
-	clients := clientPool[protocol].SetAddresses(servers)
-
-	if clients == 0 {
-		panic(fmt.Sprintf("No enabled dopplers available, check your manifest to make sure you have dopplers listening for the following protocols %v", protocols))
-	}
+	return "", nil
 }
