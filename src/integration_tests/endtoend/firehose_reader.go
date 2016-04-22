@@ -5,14 +5,14 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/cloudfoundry/noaa"
+	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/pivotal-golang/localip"
 )
 
 type FirehoseReader struct {
-	consumer *noaa.Consumer
-	msgChan  chan *events.Envelope
+	consumer *consumer.Consumer
+	msgChan  <-chan *events.Envelope
 	stopChan chan struct{}
 
 	TestMetricCount             float64
@@ -81,12 +81,10 @@ func (r *FirehoseReader) LastLogMessage() *events.Envelope {
 	return r.lastLogMessage
 }
 
-func initiateFirehoseConnection() (*noaa.Consumer, chan *events.Envelope) {
+func initiateFirehoseConnection() (*consumer.Consumer, <-chan *events.Envelope) {
 	localIP, _ := localip.LocalIP()
-	firehoseConnection := noaa.NewConsumer("ws://"+localIP+":49629", &tls.Config{InsecureSkipVerify: true}, nil)
-	msgChan := make(chan *events.Envelope, 2000)
-	errorChan := make(chan error)
-	go firehoseConnection.Firehose("uniqueId", "", msgChan, errorChan)
+	firehoseConnection := consumer.New("ws://"+localIP+":49629", &tls.Config{InsecureSkipVerify: true}, nil)
+	msgChan, _ := firehoseConnection.Firehose("uniqueId", "")
 	return firehoseConnection, msgChan
 }
 
