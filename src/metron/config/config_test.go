@@ -59,7 +59,7 @@ var _ = Describe("Config", func() {
 				Expect(cfg.TCPBatchSizeBytes).To(BeEquivalentTo(1024))
 				Expect(cfg.TCPBatchIntervalMilliseconds).To(BeEquivalentTo(10))
 
-				Expect(cfg.PreferredProtocol).To(BeEquivalentTo("udp"))
+				Expect(cfg.Protocols).To(Equal([]config.Protocol{"tls", "udp"}))
 
 				Expect(cfg.TLSConfig).To(Equal(config.TLSConfig{
 					CertFile: "./fixtures/client.crt",
@@ -70,7 +70,6 @@ var _ = Describe("Config", func() {
 		})
 
 		Describe("Parse", func() {
-
 			It("sets defaults", func() {
 				cfg, err := config.Parse(strings.NewReader("{}"))
 				Expect(err).ToNot(HaveOccurred())
@@ -80,7 +79,7 @@ var _ = Describe("Config", func() {
 					TCPBatchSizeBytes:                10240,
 					MetricBatchIntervalMilliseconds:  5000,
 					RuntimeStatsIntervalMilliseconds: 15000,
-					PreferredProtocol:                "udp",
+					Protocols:                        []config.Protocol{"tcp", "udp"},
 				}))
 			})
 
@@ -88,7 +87,7 @@ var _ = Describe("Config", func() {
 				DescribeTable("doesn't return error", func(proto string) {
 					_, err := config.Parse(bytes.NewBufferString(fmt.Sprintf(`
 						{
-							"PreferredProtocol": "%s"
+							"Protocols": ["%s"]
 						}
 					`, proto)))
 					Expect(err).ToNot(HaveOccurred())
@@ -99,15 +98,37 @@ var _ = Describe("Config", func() {
 				)
 			})
 
-			Context("returns error", func() {
-				It("for invalid preferred protocol", func() {
-					_, err := config.Parse(bytes.NewBufferString(`
+			Context("with invalid PreferredProtocol", func() {
+				var err error
+
+				BeforeEach(func() {
+					_, err = config.Parse(bytes.NewBufferString(`
 						{
-							"PreferredProtocol": "NOT A REAL PROTOCOL"
+							"Protocols": ["NOT A REAL PROTOCOL"]
 						}
 					`))
+				})
+
+				It("returns error", func() {
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(Equal("Invalid protocol: NOT A REAL PROTOCOL"))
+				})
+			})
+
+			Context("with empty Protocols", func() {
+				var err error
+
+				BeforeEach(func() {
+					_, err = config.Parse(bytes.NewBufferString(`
+						{
+							"Protocols": []
+						}
+					`))
+				})
+
+				It("returns error", func() {
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(Equal("Metron cannot start without protocols"))
 				})
 			})
 		})
