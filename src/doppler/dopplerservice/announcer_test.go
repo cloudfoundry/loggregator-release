@@ -74,9 +74,10 @@ var _ = Describe("Announcer", func() {
 				dopplerKey = fmt.Sprintf("/doppler/meta/%s/%s/%d", conf.Zone, conf.JobName, conf.Index)
 			})
 
-			It("maintains the node", func() {
+			It("creates, then maintains the node", func() {
 				fakeadapter := &fakes.FakeStoreAdapter{}
 				dopplerservice.Announce(localIP, time.Second, &conf, fakeadapter, loggertesthelper.Logger())
+				Expect(fakeadapter.CreateCallCount()).To(Equal(1))
 				Expect(fakeadapter.MaintainNodeCallCount()).To(Equal(1))
 			})
 

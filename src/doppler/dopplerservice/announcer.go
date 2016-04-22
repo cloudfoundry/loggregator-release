@@ -28,11 +28,14 @@ func Announce(localIP string, ttl time.Duration, config *config.Config, storeAda
 	key := fmt.Sprintf("%s/%s/%s/%d", META_ROOT, config.Zone, config.JobName, config.Index)
 	logger.Debugf("Starting Health Status Updates to Store: %s", key)
 
-	status, stopChan, err := storeAdapter.MaintainNode(storeadapter.StoreNode{
+	node := storeadapter.StoreNode{
 		Key:   key,
 		Value: dopplerMetaBytes,
 		TTL:   uint64(ttl.Seconds()),
-	})
+	}
+	// Call to create to make sure node is created before we return
+	storeAdapter.Create(node)
+	status, stopChan, err := storeAdapter.MaintainNode(node)
 
 	if err != nil {
 		panic(err)
