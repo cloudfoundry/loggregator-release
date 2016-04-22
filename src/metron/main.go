@@ -178,6 +178,7 @@ func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*eventm
 	go func() {
 		for {
 			protocol := clientreader.Read(clientPool, protocols, finder.Next())
+			logger.Infof("Chose protocol %s from last etcd event, updating writer...", protocol)
 			marshaller.SetWriter(writers[protocol])
 		}
 	}()
