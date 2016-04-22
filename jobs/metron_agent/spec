@@ -45,7 +45,7 @@ properties:
     default: false
   metron_agent.protocols:
     description: "A priority list of protocols for metron to connect to doppler over.  Metron will refuse to connect to doppler over any protocol not in this list."
-    default: ["tcp", "udp"]
+    default: ["udp"]
 
   metron_agent.tls.client_cert:
     description: "TLS client certificate"
@@ -95,5 +95,5 @@ properties:
     description: "DEPRECATED"
     default: 3457
   metron_agent.preferred_protocol:
-    description: "DEPRECATED"
+    description: "DEPRECATED - replaced with metron_agent.protocols"
     default: "udp"
