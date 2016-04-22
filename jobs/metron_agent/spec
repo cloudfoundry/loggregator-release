@@ -37,6 +37,13 @@ properties:
   metron_endpoint.shared_secret:
       description: "Shared secret used to verify cryptographically signed dropsonde messages"
 
+  metron_agent.debug:
+    description: "boolean value to turn on verbose mode"
+    default: false
+  metron_agent.protocols:
+    description: "A priority list of protocols for metron to connect to doppler over.  Metron will refuse to connect to doppler over any protocol not in this list."
+    default: ["tcp", "udp"]
+
   metron_agent.tls.client_cert:
     description: "TLS client certificate"
     default: ""
@@ -46,10 +53,6 @@ properties:
   loggregator.tls.ca_cert:
     description: "CA root required for key/cert verification"
     default: ""
-
-  metron_agent.debug:
-    description: "boolean value to turn on verbose mode"
-    default: false
 
   metron_agent.zone:
     description: "Availability zone where this agent is running"
