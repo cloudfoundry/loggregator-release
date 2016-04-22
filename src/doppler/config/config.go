@@ -69,7 +69,10 @@ func (c *Config) validate() (err error) {
 }
 
 func ParseConfig(configFile string) (*Config, error) {
-	config := &Config{}
+	config := &Config{
+		IncomingUDPPort: 3456,
+		IncomingTCPPort: 3457,
+	}
 
 	file, err := os.Open(configFile)
 	if err != nil {
@@ -87,6 +90,9 @@ func ParseConfig(configFile string) (*Config, error) {
 		return nil, err
 	}
 
+	// TODO: These probably belong in the Config literal, above.
+	// However, in the interests of not breaking things, we're
+	// leaving them for further team discussion.
 	if config.MetricBatchIntervalMilliseconds == 0 {
 		config.MetricBatchIntervalMilliseconds = 5000
 	}
