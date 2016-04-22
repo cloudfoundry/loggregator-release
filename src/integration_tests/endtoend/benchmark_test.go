@@ -11,9 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const (
-	timeoutSeconds = 15
-)
+const timeout = 15 * time.Second
 
 type Stopper interface {
 	Stop()
@@ -126,6 +124,6 @@ func computePercentLost(totalMessages, receivedMessages float64) float64 {
 }
 
 func stopExperimentAfterTimeout(ex Stopper) {
-	time.Sleep(time.Duration(timeoutSeconds) * time.Second)
+	time.Sleep(timeout)
 	ex.Stop()
 }

@@ -98,7 +98,7 @@ var _ = Describe("Config", func() {
 				)
 			})
 
-			Context("with invalid PreferredProtocol", func() {
+			Context("with invalid protocol in Protocols", func() {
 				var err error
 
 				BeforeEach(func() {

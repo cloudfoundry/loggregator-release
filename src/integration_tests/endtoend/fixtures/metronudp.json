@@ -8,7 +8,7 @@
     "Zone": "z1",
     "Deployment": "deployment-name",
     "LoggregatorDropsondePort": 49626,
-    "PreferredProtocol": "udp",
+    "Protocols": ["udp"],
     "EnableTLSTransport": false,
     "BufferSize": 5000,
     "MetricBatchIntervalMilliseconds": 10,

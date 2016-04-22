@@ -33,7 +33,7 @@ var _ = Describe("clientreader", func() {
 	})
 
 	Describe("Read", func() {
-		Context("TLS PreferredProtocol", func() {
+		Context("with TLS as the only protocol", func() {
 			BeforeEach(func() {
 				protocols = []string{"tls"}
 			})
@@ -76,7 +76,7 @@ var _ = Describe("clientreader", func() {
 			})
 		})
 
-		Context("UDP PreferredProtocol", func() {
+		Context("with UDP as the only protocol", func() {
 			BeforeEach(func() {
 				protocols = []string{"udp"}
 			})
@@ -94,7 +94,7 @@ var _ = Describe("clientreader", func() {
 			})
 		})
 
-		Context("TCP PreferredProtocol", func() {
+		Context("with TCP as the only protocol", func() {
 			BeforeEach(func() {
 				protocols = []string{"tcp"}
 			})

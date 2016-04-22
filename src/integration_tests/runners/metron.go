@@ -1,7 +1,9 @@
 package runners
 
 import (
+	"encoding/json"
 	"io/ioutil"
+	"metron/config"
 	"net"
 	"os/exec"
 	"strconv"
@@ -19,7 +21,7 @@ type MetronRunner struct {
 	Path    string
 	TempDir string
 
-	Protocol      string
+	Protocols     []config.Protocol
 	LegacyPort    int
 	MetronPort    int
 	DropsondePort int
@@ -36,27 +38,28 @@ type MetronRunner struct {
 func (m *MetronRunner) Configure() *ginkgomon.Runner {
 	cfgFile, err := ioutil.TempFile(m.TempDir, "metron")
 	Expect(err).NotTo(HaveOccurred())
-	_, err = cfgFile.WriteString(`
-{
-    "Index": 42,
-    "Job": "test-component",
-    "LegacyIncomingMessagesPort": ` + strconv.Itoa(m.LegacyPort) + `,
-    "IncomingUDPPort": ` + strconv.Itoa(m.MetronPort) + `,
-    "SharedSecret": "shared_secret",
-    "EtcdUrls"    : ["` + m.EtcdRunner.NodeURLS()[0] + `"],
-    "EtcdMaxConcurrentRequests": 1,
-    "Zone": "z1",
-    "Deployment": "deployment-name",
-    "LoggregatorDropsondePort": ` + strconv.Itoa(m.DropsondePort) + `,
-    "PreferredProtocol": "` + m.Protocol + `",
-    "MetricBatchIntervalMilliseconds": 50,
-    "RuntimeStatsIntervalMilliseconds": 500,
-    "TLSConfig": {
-      "CertFile": "` + m.CertFile + `",
-      "KeyFile": "` + m.KeyFile + `",
-      "CAFile": "` + m.CAFile + `"
-    }
-}`)
+	config := config.Config{
+		Index:                     42,
+		Job:                       "test-component",
+		IncomingUDPPort:           m.MetronPort,
+		SharedSecret:              "shared_secret",
+		EtcdUrls:                  m.EtcdRunner.NodeURLS(),
+		EtcdMaxConcurrentRequests: 1,
+		Zone:                             "z1",
+		Deployment:                       "deployment-name",
+		LoggregatorDropsondePort:         m.DropsondePort,
+		Protocols:                        m.Protocols,
+		MetricBatchIntervalMilliseconds:  50,
+		RuntimeStatsIntervalMilliseconds: 500,
+		TCPBatchSizeBytes:                1024,
+		TLSConfig: config.TLSConfig{
+			CertFile: m.CertFile,
+			KeyFile:  m.KeyFile,
+			CAFile:   m.CAFile,
+		},
+	}
+	configBytes, err := json.Marshal(config)
+	_, err = cfgFile.Write(configBytes)
 	Expect(err).NotTo(HaveOccurred())
 	cfgFile.Close()
 

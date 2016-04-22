@@ -46,9 +46,10 @@ options:
         is set, then more concurrent writers will be used after we hit
         max write rate.
   -p, --protocol, PROTOCOL (default: tls)
-        The protocol used to communicate between metron and it's sink.
-        Note: You will need to set the 'PreferredProtocol' key in
-        config/metron.json as well.
+        The protocol used to communicate between metron and its sink.
+        Only this protocol will be advertised by the fake doppler, so
+        metron should correctly fall back to this protocol using the
+        default config.
   -h, --help
         Print this usage message.
 EOF

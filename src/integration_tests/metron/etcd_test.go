@@ -3,6 +3,7 @@ package integration_test
 import (
 	dopplerconfig "doppler/config"
 	"doppler/dopplerservice"
+	"metron/config"
 
 	"bytes"
 	"net"
@@ -55,7 +56,7 @@ var _ = Describe("Etcd dependency", func() {
 		})
 
 		It("starts", func() {
-			metronRunner.Protocol = "udp"
+			metronRunner.Protocols = []config.Protocol{"udp"}
 			metronRunner.Start()
 
 			Consistently(metronRunner.Process.Wait).ShouldNot(Receive())

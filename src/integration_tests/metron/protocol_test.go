@@ -3,6 +3,7 @@ package integration_test
 import (
 	"bytes"
 	"fmt"
+	"metron/config"
 	"net"
 	"time"
 
@@ -16,16 +17,16 @@ import (
 
 var _ = Describe("Protocol", func() {
 	var (
-		preferredProtocol string
-		logger            *gosteno.Logger
-		dopplerConfig     *dopplerconfig.Config
+		protocols     []config.Protocol
+		logger        *gosteno.Logger
+		dopplerConfig *dopplerconfig.Config
 
 		stopTheWorld chan struct{}
 		stopAnnounce chan chan bool
 	)
 
 	BeforeEach(func() {
-		preferredProtocol = ""
+		protocols = nil
 		logger = gosteno.NewLogger("test")
 		dopplerConfig = &dopplerconfig.Config{
 			Index:           0,
@@ -44,7 +45,7 @@ var _ = Describe("Protocol", func() {
 	})
 
 	JustBeforeEach(func() {
-		metronRunner.Protocol = preferredProtocol
+		metronRunner.Protocols = protocols
 		metronRunner.Start()
 	})
 
@@ -56,38 +57,22 @@ var _ = Describe("Protocol", func() {
 	})
 
 	Describe("Metron panics", func() {
-		Context("Metron requires TLS", func() {
-
+		Context("with Metron configured to requires TLS, and TLS disabled on Doppler", func() {
 			BeforeEach(func() {
-				preferredProtocol = "tls"
+				protocols = []config.Protocol{"tls"}
 				dopplerConfig.EnableTLSTransport = false
 			})
 
-			Context("Doppler advertises only on legacy endpoint", func() {
+			Context("with Doppler advertising only on legacy endpoint", func() {
 				It("panics", func() {
 					stopAnnounce = dopplerservice.AnnounceLegacy("127.0.0.1", time.Minute, dopplerConfig, etcdAdapter, logger)
 					Eventually(metronRunner.Process.Wait()).Should(Receive())
 				})
 			})
 
-			Context("Doppler advertises UDP on meta endpoint", func() {
+			Context("with Doppler advertising UDP on meta endpoint", func() {
 				It("panics", func() {
 					stopAnnounce = dopplerservice.Announce("127.0.0.1", time.Minute, dopplerConfig, etcdAdapter, logger)
-					Eventually(metronRunner.Process.Wait()).Should(Receive())
-				})
-			})
-		})
-
-		Context("Metron prefers TCP", func() {
-
-			BeforeEach(func() {
-				preferredProtocol = "tcp"
-				dopplerConfig.EnableTLSTransport = false
-			})
-
-			Context("Doppler advertises only on legacy endpoint", func() {
-				It("panics", func() {
-					stopAnnounce = dopplerservice.AnnounceLegacy("127.0.0.1", time.Minute, dopplerConfig, etcdAdapter, logger)
 					Eventually(metronRunner.Process.Wait()).Should(Receive())
 				})
 			})
@@ -95,7 +80,7 @@ var _ = Describe("Protocol", func() {
 	})
 
 	Describe("Metron doesn't panic", func() {
-		Context("Doppler over UDP", func() {
+		Context("with Doppler advertising over UDP and TCP", func() {
 			var fakeDoppler *FakeDoppler
 
 			BeforeEach(func() {
@@ -135,12 +120,12 @@ var _ = Describe("Protocol", func() {
 				}, 2)
 			}
 
-			Context("Metron prefers UDP", func() {
+			Context("with metron configured to communicate over UDP", func() {
 				BeforeEach(func() {
-					preferredProtocol = "udp"
+					protocols = []config.Protocol{"udp"}
 				})
 
-				Context("Doppler advertises over legacy endpoint", func() {
+				Context("with Doppler advertising over legacy endpoint", func() {
 					BeforeEach(func() {
 						stopAnnounce = dopplerservice.AnnounceLegacy("127.0.0.1", time.Minute, dopplerConfig, etcdAdapter, logger)
 					})
@@ -148,10 +133,8 @@ var _ = Describe("Protocol", func() {
 					itReceives()
 				})
 
-				Context("META endpoint", func() {
-
-					Context("Doppler advertises UDP", func() {
-
+				Context("with Doppler advertising over META endpoint", func() {
+					Context("with Doppler advertising UDP", func() {
 						BeforeEach(func() {
 							stopAnnounce = dopplerservice.Announce("127.0.0.1", time.Minute, dopplerConfig, etcdAdapter, logger)
 						})
@@ -159,7 +142,7 @@ var _ = Describe("Protocol", func() {
 						itReceives()
 					})
 
-					Context("Doppler advertises TLS", func() {
+					Context("with Doppler advertising TLS", func() {
 						BeforeEach(func() {
 							dopplerConfig.EnableTLSTransport = true
 							stopAnnounce = dopplerservice.Announce("127.0.0.1", time.Minute, dopplerConfig, etcdAdapter, logger)
@@ -167,23 +150,33 @@ var _ = Describe("Protocol", func() {
 
 						itReceives()
 					})
-
 				})
+			})
+
+			Context("with metron configured for to prefer TLS", func() {
+				BeforeEach(func() {
+					protocols = []config.Protocol{"tls", "udp"}
+					stopAnnounce = dopplerservice.Announce("127.0.0.1", time.Minute, dopplerConfig, etcdAdapter, logger)
+				})
+
+				itReceives()
 			})
 		})
 
-		Context("Doppler over TLS", func() {
+		Context("with Doppler advertising over TLS, UDP, and TCP", func() {
 			BeforeEach(func() {
 				dopplerConfig.EnableTLSTransport = true
 				stopAnnounce = dopplerservice.Announce("127.0.0.1", time.Minute, dopplerConfig, etcdAdapter, logger)
 			})
 
-			Context("Metron prefers TLS", func() {
-				var tlsListener net.Listener
-				var connChan chan net.Conn
+			Context("with Metron configured to communicate over TLS", func() {
+				var (
+					tlsListener net.Listener
+					connChan    chan net.Conn
+				)
 
 				BeforeEach(func() {
-					preferredProtocol = "tls"
+					protocols = []config.Protocol{"tls"}
 					address := fmt.Sprintf("127.0.0.1:%d", dopplerConfig.TLSListenerConfig.Port)
 					tlsListener = eventuallyListensForTLS(address)
 

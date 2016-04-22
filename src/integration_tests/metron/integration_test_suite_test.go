@@ -20,15 +20,17 @@ import (
 
 func TestIntegrationTest(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "IntegrationTest Suite")
+	RunSpecs(t, "Metron Integration Suite")
 }
 
-var tmpdir string
-var port int
-var metronRunner *runners.MetronRunner
-var etcdRunner *etcdstorerunner.ETCDClusterRunner
-var etcdAdapter storeadapter.StoreAdapter
-var localIPAddress string
+var (
+	tmpdir         string
+	port           int
+	metronRunner   *runners.MetronRunner
+	etcdRunner     *etcdstorerunner.ETCDClusterRunner
+	etcdAdapter    storeadapter.StoreAdapter
+	localIPAddress string
+)
 
 var _ = SynchronizedBeforeSuite(func() []byte {
 	metronPath, err := gexec.Build("metron", "-race")

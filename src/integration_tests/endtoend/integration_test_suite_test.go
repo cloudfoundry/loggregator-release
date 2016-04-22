@@ -63,12 +63,28 @@ var _ = BeforeEach(func() {
 
 var _ = JustBeforeEach(func() {
 	const (
-		BLUE       = 34
-		PURPLE     = 35
-		LIGHT_BLUE = 36
+		BLUE = 34 + iota
+		PURPLE
+		LIGHT_BLUE
 	)
 
-	dopplerSession = startComponent(dopplerExecutablePath, "doppler", PURPLE, "--config=fixtures/"+dopplerConfig+".json")
+	metronSession = startComponent(
+		metronExecutablePath,
+		"metron",
+		BLUE,
+		"--config=fixtures/"+metronConfig+".json",
+		"--debug",
+	)
+
+	// Wait for metron
+	Eventually(metronSession.Buffer).Should(gbytes.Say("metron started"))
+
+	dopplerSession = startComponent(
+		dopplerExecutablePath,
+		"doppler",
+		PURPLE,
+		"--config=fixtures/"+dopplerConfig+".json",
+	)
 	var err error
 	LocalIPAddress, err = localip.LocalIP()
 	Expect(err).ToNot(HaveOccurred())
@@ -86,16 +102,16 @@ var _ = JustBeforeEach(func() {
 		return err == nil
 	}, 1).Should(BeTrue())
 
-	metronSession = startComponent(metronExecutablePath, "metron", BLUE, "--config=fixtures/"+metronConfig+".json", "--debug")
-
-	tcSession = startComponent(trafficControllerExecutablePath, "tc", LIGHT_BLUE, "--config=fixtures/trafficcontroller.json", "--disableAccessControl")
+	tcSession = startComponent(
+		trafficControllerExecutablePath,
+		"tc",
+		LIGHT_BLUE,
+		"--config=fixtures/trafficcontroller.json",
+		"--disableAccessControl",
+	)
 
 	// Wait for traffic controller to startup
 	waitOnURL("http://" + LocalIPAddress + ":49630")
-
-	// Wait for metron
-	Eventually(metronSession.Buffer).Should(gbytes.Say("metron started"))
-
 })
 
 func buildComponent(componentName string) (pathToComponent string) {
