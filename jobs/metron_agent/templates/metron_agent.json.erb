@@ -1,6 +1,6 @@
 <%
     protocols = p("metron_agent.protocols")
-    if p("metron_agent.preferred_protocol") == "tls"
+    if protocols == ["udp"] and p("metron_agent.preferred_protocol") == "tls"
       protocols = ["tls"]
     end
 
@@ -26,10 +26,10 @@
 
   "TCPBatchSizeBytes": <%= p("metron_agent.tcp.batching_buffer_bytes") %>,
 
-  "TCPBatchIntervalMilliseconds": <%= p("metron_agent.tcp.batching_buffer_flush_interval_milliseconds") %>,
+  "TCPBatchIntervalMilliseconds": <%= p("metron_agent.tcp.batching_buffer_flush_interval_milliseconds") %>
 
-  <% if useTLS do |_| %>
-  "TLSConfig": {
+  <% if useTLS %>
+  , "TLSConfig": {
     "KeyFile": "/var/vcap/jobs/metron_agent/config/certs/metron_agent.key",
     "CertFile": "/var/vcap/jobs/metron_agent/config/certs/metron_agent.crt",
     "CAFile": "/var/vcap/jobs/metron_agent/config/certs/loggregator_ca.crt"
