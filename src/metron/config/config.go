@@ -80,7 +80,7 @@ func Parse(reader io.Reader) (*Config, error) {
 		TCPBatchIntervalMilliseconds:     defaultBatchIntervalMS,
 		MetricBatchIntervalMilliseconds:  5000,
 		RuntimeStatsIntervalMilliseconds: 15000,
-		Protocols:                        []Protocol{"tcp", "udp"},
+		Protocols:                        []Protocol{"udp"},
 	}
 	err := json.NewDecoder(reader).Decode(config)
 	if err != nil {

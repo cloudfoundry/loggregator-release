@@ -79,7 +79,7 @@ var _ = Describe("Config", func() {
 					TCPBatchSizeBytes:                10240,
 					MetricBatchIntervalMilliseconds:  5000,
 					RuntimeStatsIntervalMilliseconds: 15000,
-					Protocols:                        []config.Protocol{"tcp", "udp"},
+					Protocols:                        []config.Protocol{"udp"},
 				}))
 			})
 
