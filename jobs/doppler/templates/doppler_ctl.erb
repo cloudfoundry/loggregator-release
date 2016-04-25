@@ -17,7 +17,9 @@ case $1 in
   start)
     pid_guard $PIDFILE "Loggregator"
 
-    ulimit -l unlimited
+    <% if p("doppler.locked_memory_limit") != -1 %>
+    ulimit -l <%= p("doppler.locked_memory_limit") %>
+    <% end %>
     ulimit -n 65536
 
     <% p("doppler.debug") == true ? debug_string = "--debug " : debug_string = "" %>

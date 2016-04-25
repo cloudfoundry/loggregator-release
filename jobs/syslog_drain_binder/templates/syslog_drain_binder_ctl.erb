@@ -17,7 +17,9 @@ case $1 in
   start)
     pid_guard $PIDFILE "Syslog Drain Binder"
 
-    ulimit -l unlimited
+    <% if p("syslog_drain_binder.locked_memory_limit") != -1 %>
+    ulimit -l <%= p("syslog_drain_binder.locked_memory_limit") %>
+    <% end %>
     ulimit -n 65536
 
     <% p("syslog_drain_binder.debug") == true ? debug_string = "--debug " : debug_string = "" %>

@@ -80,6 +80,10 @@ properties:
     description: "When connecting over TLS, don't verify certificates for syslog sink"
     default: true
 
+  doppler.locked_memory_limit:
+    description: "Size (KB) of shell's locked memory limit. Set to -1 to use the kernel's default."
+    default: "unlimited"
+
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"
 
