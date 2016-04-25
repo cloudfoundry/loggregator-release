@@ -1,5 +1,12 @@
 #!/bin/bash -e
 
+<%
+    lockedMem = p("doppler.locked_memory_limit")
+    if (!lockedMem.is_a? Numeric) && (!["kernel", "soft", "hard", "unlimited"].include? lockedMem) then
+        raise lockedMem + ": invalid locked_memory_limit"
+    end
+%>
+
 RUN_DIR=/var/vcap/sys/run/doppler
 LOG_DIR=/var/vcap/sys/log/doppler
 PIDFILE=$RUN_DIR/doppler.pid
@@ -17,7 +24,7 @@ case $1 in
   start)
     pid_guard $PIDFILE "Loggregator"
 
-    <% if p("doppler.locked_memory_limit") != -1 %>
+    <% if p("doppler.locked_memory_limit") != "kernel" %>
     ulimit -l <%= p("doppler.locked_memory_limit") %>
     <% end %>
     ulimit -n 65536
