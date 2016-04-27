@@ -73,8 +73,8 @@ properties:
   doppler_endpoint.shared_secret:
     description: "Shared secret used to verify cryptographically signed dropsonde messages"
   doppler.message_drain_buffer_size:
-    description: "Size of the internal buffer used by doppler to store messages. If the buffer gets full doppler will drop the messages."
-    default: 100
+    description: "Size of the internal buffer used by doppler to store messages for output to firehose or 'cf logs'. If the buffer gets full doppler will drop the messages."
+    default: 10000
 
   doppler.syslog_skip_cert_verify:
     description: "When connecting over TLS, don't verify certificates for syslog sink"
