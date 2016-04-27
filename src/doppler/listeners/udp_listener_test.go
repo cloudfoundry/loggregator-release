@@ -1,24 +1,26 @@
 package listeners_test
 
 import (
-	"doppler/listeners"
 	"net"
 	"strconv"
 
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
+
+	"doppler/listeners"
 )
 
 var _ = Describe("AgentListener", func() {
-	var listener listeners.Listener
-	var dataChannel <-chan []byte
-	var listenerStopped chan struct{}
-	var address string
+	var (
+		listener        listeners.Listener
+		dataChannel     <-chan []byte
+		listenerStopped chan struct{}
+		address         string
+	)
 
 	BeforeEach(func() {
 		listenerStopped = make(chan struct{})
@@ -82,7 +84,7 @@ var _ = Describe("AgentListener", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(dataChannel).Should(Receive())
 
-			Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(2))
+			Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(3))
 
 			var counterEvents []*events.CounterEvent
 
@@ -93,6 +95,10 @@ var _ = Describe("AgentListener", func() {
 			Expect(counterEvents).To(ConsistOf(
 				&events.CounterEvent{
 					Name:  proto.String("udpListener.receivedMessageCount"),
+					Delta: proto.Uint64(2),
+				},
+				&events.CounterEvent{
+					Name:  proto.String("listeners.totalReceivedMessageCount"),
 					Delta: proto.Uint64(2),
 				},
 				&events.CounterEvent{

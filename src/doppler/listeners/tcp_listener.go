@@ -30,6 +30,7 @@ type TCPListener struct {
 	listenerClosed chan struct{}
 	started        bool
 
+	listenerTotalMetricName        string
 	receivedMessageCountMetricName string
 	receivedByteCountMetricName    string
 	receiveErrorCountMetricName    string
@@ -91,6 +92,7 @@ func NewTCPListener(contextName string, address string, tlsListenerConfig *confi
 		stopped:        make(chan struct{}),
 		listenerClosed: make(chan struct{}),
 
+		listenerTotalMetricName:        "listeners.totalReceivedMessageCount",
 		receivedMessageCountMetricName: contextName + ".receivedMessageCount",
 		receivedByteCountMetricName:    contextName + ".receivedByteCount",
 		receiveErrorCountMetricName:    contextName + ".receiveErrorCount",
@@ -176,9 +178,11 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 		}
 	}
 
-	var n uint32
-	var bytes []byte
-	var err error
+	var (
+		n     uint32
+		bytes []byte
+		err   error
+	)
 
 	for {
 		err = binary.Read(conn, binary.LittleEndian, &n)
@@ -207,6 +211,7 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 		if err != nil {
 			continue
 		}
+		metrics.BatchIncrementCounter(t.listenerTotalMetricName)
 		metrics.BatchIncrementCounter(t.receivedMessageCountMetricName)
 		metrics.BatchAddCounter(t.receivedByteCountMetricName, uint64(n+4))
 
@@ -216,5 +221,4 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 			return
 		}
 	}
-
 }

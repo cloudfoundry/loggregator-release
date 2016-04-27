@@ -51,6 +51,7 @@ func (udp *udpListener) Start() {
 	udp.Unlock()
 
 	messageCountMetricName := udp.contextName + ".receivedMessageCount"
+	listenerTotalMetricName := "listeners.totalReceivedMessageCount"
 	receivedByteCountMetricName := udp.contextName + ".receivedByteCount"
 
 	readBuffer := make([]byte, 65535) //buffer with size = max theoretical UDP size
@@ -67,6 +68,7 @@ func (udp *udpListener) Start() {
 		copy(readData, readBuffer[:readCount])
 
 		metrics.BatchIncrementCounter(messageCountMetricName)
+		metrics.BatchIncrementCounter(listenerTotalMetricName)
 		metrics.BatchAddCounter(receivedByteCountMetricName, uint64(readCount))
 
 		udp.dataChannel <- readData
