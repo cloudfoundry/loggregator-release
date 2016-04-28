@@ -99,16 +99,19 @@ Cloud Foundry developers can easily add source clients to new CF components that
 The default transport between Metron and Doppler is UDP. We have recently added support for TLS since it is a reliable protocol and also
 has in-built support to ensure integrity, encryption and authentication.
 
+Metron agents can take a list of protocols of which it will fall back to in case the first protocol fails. For example, for `metron_agent.protocols: ["tls", "udp"]`
+Metrons will try and connect to Dopplers over TLS. If there aren't any available TLS enabled Dopplers, it will then try to connect to Dopplers
+over UDP.
+
 **NOTE: TLS support is currently experimental. Enable it at your own discretion. The properties discussed below as well as their behavior might change in the future.**
 
 
 | Property        | Required                              | Description                                     |
 |-----------------|---------------------------------------|-------------------------------------------------|
-| `metron_agent.preferred_protocol` | No<br> Default: `udp`                   | Metron prefers this protocol to communicate with Doppler. Options are `udp` and `tls`. `metron_agent.tls.*` properties are required when this is set to `tls`                             |
-| `metron_agent.buffer_size`  | No <br>Default: `10000` | Size of the buffer between Metron and Doppler when the `metron_agent.preferred_protocol` is `tls`.  |
-| `metron_agent.tls.client_cert`   | Yes if `metron_agent.preferred_protocol: tls` <br>Default: `""`              | Signed client certificate used by Metron when communicating with Doppler over TLS            |
-| `metron_agent.tls.client_key`   | Yes if `metron_agent.preferred_protocol: tls` <br>Default: `""`              | Client key used by Metron when communicating with Doppler over TLS            |
-| `loggregator.tls.ca_cert`   | Yes if `metron_agent.preferred_protocol: tls` <br>Default: `""`              | Certificate Authority used to sign the certificate            |
+| `metron_agent.protocols` | No<br> Default: `["udp"]`                   | Metron prefers this protocol to communicate with Doppler. Options are `udp`, `tcp` and `tls`. `metron_agent.tls.*` properties are required when this is set to `tls`                             |
+| `metron_agent.tls.client_cert`   | Yes if `metron_agent.protocols` includes "tls" <br>Default: `""`              | Signed client certificate used by Metron when communicating with Doppler over TLS            |
+| `metron_agent.tls.client_key`   | Yes if `metron_agent.protocols` includes "tls" <br>Default: `""`              | Client key used by Metron when communicating with Doppler over TLS            |
+| `loggregator.tls.ca_cert`   | Yes if `metron_agent.protocols` include "tls" <br>Default: `""`              | Certificate Authority used to sign the certificate            |
 
 
 | Property        | Required                              | Description                                     |
@@ -130,8 +133,7 @@ An example manifest is given below:
         -----END CERTIFICATE-----
 
   metron_agent:
-    preferred_protocol: tls
-    buffer_size: 1000
+    protocols: ["tls", "udp"]
     tls:
       client_cert: |
         -----BEGIN CERTIFICATE-----
@@ -215,8 +217,7 @@ following steps to successfully generate the required certificates.
    Created out/metron_agent.crt from out/metron_agent.csr signed by out/loggregatorCA.key
    ```
 
-   - The manifest property `properties.metron_agent.preferred_protocol` should be set to `tls`.
-   - The manifest property `properties.metron_agent.buffer_size`(truncating buffer) by default is set to `100`, but can be increased e.g `100000`
+   - The manifest property `properties.metron_agent.protocols` should include "tls". For example, ["tls", "udp"] 
    - The manifest property `properties.metron_agent.tls.client_cert` should be set to the certificate in `out/metron_agent.crt`,
    - The manifest property `properties.metron_agent.tls.client_key` should be set to the certificate in `out/metron_agent.key`
 
