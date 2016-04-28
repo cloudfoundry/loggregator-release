@@ -12,7 +12,7 @@ type UptimeMonitor struct {
 	doneChan chan chan struct{}
 }
 
-func NewUptimeMonitor(interval time.Duration) Monitor {
+func NewUptimeMonitor(interval time.Duration) *UptimeMonitor {
 	return &UptimeMonitor{
 		interval: interval,
 		started:  time.Now().Unix(),

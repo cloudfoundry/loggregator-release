@@ -4,19 +4,15 @@ import (
 	"monitor"
 	"time"
 
-	"github.com/cloudfoundry/dropsonde/emitter/fake"
-	"github.com/cloudfoundry/dropsonde/metric_sender"
-	"github.com/cloudfoundry/dropsonde/metricbatcher"
-	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 )
 
 var (
-	fakeEventEmitter *fake.FakeEventEmitter
-	uptimeMonitor    monitor.Monitor
+	uptimeMonitor monitor.Monitor
 )
 
 const (
@@ -25,18 +21,9 @@ const (
 
 var _ = Describe("UptimeMonitor", func() {
 	BeforeEach(func() {
-		fakeEventEmitter = fake.NewFakeEventEmitter("MonitorTest")
-		sender := metric_sender.NewMetricSender(fakeEventEmitter)
-		batcher := metricbatcher.New(sender, 100*time.Millisecond)
-
-		metrics.Initialize(sender, batcher)
-
+		fakeEventEmitter.Reset()
 		uptimeMonitor = monitor.NewUptimeMonitor(interval)
 		go uptimeMonitor.Start()
-	})
-
-	AfterEach(func() {
-		fakeEventEmitter.Close()
 	})
 
 	Context("stops automatically", func() {
@@ -67,7 +54,7 @@ var _ = Describe("UptimeMonitor", func() {
 	})
 
 	It("stops the monitor and respective ticker", func() {
-		Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(1))
+		Eventually(func() int { return len(fakeEventEmitter.GetMessages()) }).Should(BeNumerically(">=", 1))
 
 		uptimeMonitor.Stop()
 
