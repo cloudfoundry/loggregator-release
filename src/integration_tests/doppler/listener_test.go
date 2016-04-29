@@ -70,7 +70,7 @@ var _ = Describe("Listener test", func() {
 		})
 	})
 
-	Context("without TLS Listener config", func() {
+	Context("Connecting over TCP", func() {
 		BeforeEach(func() {
 			ip, _ := localip.LocalIP()
 			Expect(err).NotTo(HaveOccurred())

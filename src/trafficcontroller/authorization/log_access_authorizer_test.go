@@ -1,6 +1,7 @@
 package authorization_test
 
 import (
+	"crypto/tls"
 	"trafficcontroller/authorization"
 
 	"bytes"
@@ -19,13 +20,23 @@ import (
 var _ = Describe("LogAccessAuthorizer", func() {
 
 	var (
-		logger *gosteno.Logger = loggertesthelper.Logger()
-		server *httptest.Server
+		transport *http.Transport
+		logger    *gosteno.Logger = loggertesthelper.Logger()
+		server    *httptest.Server
 	)
+
+	BeforeEach(func() {
+		transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+		http.DefaultClient.Transport = transport
+	})
 
 	Context("Disable Access Control", func() {
 		It("returns true", func() {
-			authorizer := authorization.NewLogAccessAuthorizer(true, "http://cloudcontroller.example.com", true)
+			authorizer := authorization.NewLogAccessAuthorizer(true, "http://cloudcontroller.example.com")
 			Expect(authorizer("bearer anything", "myAppId", logger)).To(Equal(true))
 
 		})
@@ -42,7 +53,7 @@ var _ = Describe("LogAccessAuthorizer", func() {
 		})
 
 		It("does not allow access for requests with empty AuthTokens", func() {
-			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL, true)
+			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL)
 
 			authorized, err := authorizer("", "myAppId", logger)
 			Expect(authorized).To(Equal(false))
@@ -50,7 +61,7 @@ var _ = Describe("LogAccessAuthorizer", func() {
 		})
 
 		It("allows access when the api returns 200, and otherwise denies access", func() {
-			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL, true)
+			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL)
 
 			authorized, err := authorizer("bearer something", "myAppId", logger)
 			Expect(authorized).To(Equal(true))
@@ -66,7 +77,7 @@ var _ = Describe("LogAccessAuthorizer", func() {
 		})
 
 		It("has no leaking go routines", func() {
-			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL, true)
+			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL)
 			authorizer("bearer something", "myAppId", logger)
 
 			otherGoRoutines := func() bool {
@@ -100,14 +111,15 @@ var _ = Describe("LogAccessAuthorizer", func() {
 		})
 
 		It("does allow access when cert verification is skipped", func() {
-			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL, true)
+			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL)
 			authorized, err := authorizer("bearer something", "myAppId", logger)
 			Expect(authorized).To(Equal(true))
 			Expect(err).To(BeNil())
 		})
 
 		It("does not allow access when cert verifcation is not skipped", func() {
-			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL, false)
+			transport.TLSClientConfig.InsecureSkipVerify = false
+			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL)
 			authorized, err := authorizer("bearer something", "myAppId", logger)
 			Expect(authorized).To(Equal(false))
 			Expect(err).To(Equal(errors.New(authorization.INVALID_AUTH_TOKEN_ERROR_MESSAGE)))

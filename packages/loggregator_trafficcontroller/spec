@@ -1,7 +1,7 @@
 ---
 name: loggregator_trafficcontroller
 dependencies:
-- golang1.5
+- golang1.6
 files:
 - loggregator/src/trafficcontroller/LICENSE
 - loggregator/src/trafficcontroller/NOTICE
@@ -44,6 +44,7 @@ files:
 - loggregator/src/monitor/*.go # gosub
 - loggregator/src/signalmanager/*.go # gosub
 - loggregator/src/trafficcontroller/*.go # gosub
+- loggregator/src/trafficcontroller/accesslogger/*.go # gosub
 - loggregator/src/trafficcontroller/authorization/*.go # gosub
 - loggregator/src/trafficcontroller/channel_group_connector/*.go # gosub
 - loggregator/src/trafficcontroller/config/*.go # gosub
@@ -51,4 +52,5 @@ files:
 - loggregator/src/trafficcontroller/dopplerproxy/*.go # gosub
 - loggregator/src/trafficcontroller/listener/*.go # gosub
 - loggregator/src/trafficcontroller/marshaller/*.go # gosub
+- loggregator/src/trafficcontroller/middleware/*.go # gosub
 - loggregator/src/trafficcontroller/uaa_client/*.go # gosub

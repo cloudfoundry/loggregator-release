@@ -79,3 +79,6 @@
 [submodule "src/github.com/cactus/go-statsd-client"]
 	path = src/github.com/cactus/go-statsd-client
 	url = https://github.com/cactus/go-statsd-client.git
+[submodule "src/github.com/apoydence/eachers"]
+	path = src/github.com/apoydence/eachers
+	url = https://github.com/apoydence/eachers

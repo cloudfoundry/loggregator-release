@@ -8,12 +8,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cloudfoundry/loggregator_consumer"
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"integration_tests/trafficcontroller/fake_doppler"
+
+	"github.com/cloudfoundry/loggregator_consumer"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
 )
 
 var legacyEndpoint string
@@ -21,7 +22,7 @@ var legacyEndpoint string
 const TRAFFIC_CONTROLLER_LEGACY_PORT = 4567
 
 var _ = Describe("TrafficController for legacy messages", func() {
-	BeforeEach(func() {
+	JustBeforeEach(func() {
 		fakeDoppler = fake_doppler.New()
 		go fakeDoppler.Start()
 		legacyEndpoint = fmt.Sprintf("ws://%s:%d", localIPAddress, TRAFFIC_CONTROLLER_LEGACY_PORT)

@@ -2,15 +2,17 @@ package endtoend
 
 import (
 	"crypto/tls"
-	"github.com/cloudfoundry/noaa"
+	"strings"
+	"sync"
+
+	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/pivotal-golang/localip"
-	"strings"
 )
 
 type FirehoseReader struct {
-	consumer *noaa.Consumer
-	msgChan  chan *events.Envelope
+	consumer *consumer.Consumer
+	msgChan  <-chan *events.Envelope
 	stopChan chan struct{}
 
 	TestMetricCount             float64
@@ -18,14 +20,18 @@ type FirehoseReader struct {
 	MetronSentMessageCount      float64
 	DopplerReceivedMessageCount float64
 	DopplerSentMessageCount     float64
+
+	logMessageMu   sync.Mutex
+	lastLogMessage *events.Envelope
 }
 
 func NewFirehoseReader() *FirehoseReader {
 	consumer, msgChan := initiateFirehoseConnection()
 	return &FirehoseReader{
-		consumer:                    consumer,
-		msgChan:                     msgChan,
-		stopChan:                    make(chan struct{}),
+		consumer: consumer,
+		msgChan:  msgChan,
+		stopChan: make(chan struct{}),
+
 		TestMetricCount:             0,
 		NonTestMetricCount:          0,
 		MetronSentMessageCount:      0,
@@ -55,6 +61,12 @@ func (r *FirehoseReader) Read() {
 		if dopplerSentMessageCount(msg) {
 			r.DopplerSentMessageCount = float64(msg.CounterEvent.GetTotal())
 		}
+
+		if isLogMessage(msg) {
+			r.logMessageMu.Lock()
+			r.lastLogMessage = msg
+			r.logMessageMu.Unlock()
+		}
 	}
 }
 
@@ -63,12 +75,16 @@ func (r *FirehoseReader) Close() {
 	r.consumer.Close()
 }
 
-func initiateFirehoseConnection() (*noaa.Consumer, chan *events.Envelope) {
+func (r *FirehoseReader) LastLogMessage() *events.Envelope {
+	r.logMessageMu.Lock()
+	defer r.logMessageMu.Unlock()
+	return r.lastLogMessage
+}
+
+func initiateFirehoseConnection() (*consumer.Consumer, <-chan *events.Envelope) {
 	localIP, _ := localip.LocalIP()
-	firehoseConnection := noaa.NewConsumer("ws://"+localIP+":49629", &tls.Config{InsecureSkipVerify: true}, nil)
-	msgChan := make(chan *events.Envelope, 2000)
-	errorChan := make(chan error)
-	go firehoseConnection.Firehose("uniqueId", "", msgChan, errorChan)
+	firehoseConnection := consumer.New("ws://"+localIP+":49629", &tls.Config{InsecureSkipVerify: true}, nil)
+	msgChan, _ := firehoseConnection.Firehose("uniqueId", "")
 	return firehoseConnection, msgChan
 }
 
@@ -81,9 +97,17 @@ func metronSentMessageCount(msg *events.Envelope) bool {
 }
 
 func dopplerReceivedMessageCount(msg *events.Envelope) bool {
-	return msg.GetEventType() == events.Envelope_CounterEvent && (msg.CounterEvent.GetName() == "dropsondeListener.receivedMessageCount" || msg.CounterEvent.GetName() == "tlsListener.receivedMessageCount") && msg.GetOrigin() == "DopplerServer"
+	return msg.GetEventType() == events.Envelope_CounterEvent &&
+		(msg.CounterEvent.GetName() == "udpListener.receivedMessageCount" ||
+			msg.CounterEvent.GetName() == "tcpListener.receivedMessageCount" ||
+			msg.CounterEvent.GetName() == "tlsListener.receivedMessageCount") &&
+		msg.GetOrigin() == "DopplerServer"
 }
 
 func dopplerSentMessageCount(msg *events.Envelope) bool {
 	return msg.GetEventType() == events.Envelope_CounterEvent && strings.HasPrefix(msg.CounterEvent.GetName(), "sentMessagesFirehose") && msg.GetOrigin() == "DopplerServer"
+}
+
+func isLogMessage(msg *events.Envelope) bool {
+	return msg.GetEventType() == events.Envelope_LogMessage
 }

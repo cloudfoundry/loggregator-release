@@ -11,17 +11,32 @@ type ClientPool interface {
 	SetAddresses(addresses []string) int
 }
 
-func Read(clientPool ClientPool, preferredProtocol string, event dopplerservice.Event) {
-
-	clients := 0
-	switch preferredProtocol {
-	case "tls":
-		clients = clientPool.SetAddresses(event.TLSDopplers)
-	case "udp":
-		clients = clientPool.SetAddresses(event.UDPDopplers)
+func Read(clientPool map[string]ClientPool, protocols []string, event dopplerservice.Event) string {
+	protocol, servers := chooseProtocol(protocols, event)
+	if protocol == "" {
+		panic(fmt.Sprintf("No dopplers listening on %v", protocols))
 	}
-
+	clients := clientPool[protocol].SetAddresses(servers)
 	if clients == 0 {
-		panic(fmt.Sprintf("No %s enabled dopplers available, check your manifest to make sure you have dopplers listening for %[1]s", preferredProtocol))
+		panic(fmt.Sprintf("Unable to connect to dopplers running on %s", protocol))
 	}
+	return protocol
+}
+
+func chooseProtocol(protocols []string, event dopplerservice.Event) (string, []string) {
+	for _, protocol := range protocols {
+		var dopplers []string
+		switch protocol {
+		case "udp":
+			dopplers = event.UDPDopplers
+		case "tcp":
+			dopplers = event.TCPDopplers
+		case "tls":
+			dopplers = event.TLSDopplers
+		}
+		if len(dopplers) > 0 {
+			return protocol, dopplers
+		}
+	}
+	return "", nil
 }

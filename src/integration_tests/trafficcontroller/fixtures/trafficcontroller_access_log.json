@@ -1,0 +1,19 @@
+{
+    "JobName": "trafficcontroller",
+    "JobIndex": 3,
+    "EtcdUrls": ["http://127.0.0.1:4001"],
+    "EtcdMaxConcurrentRequests": 5,
+    "OutgoingDropsondePort": 4566,
+    "DopplerPort": 1235,
+    "OutgoingPort": 4567,
+    "SkipCertVerify": true,
+    "Zone": "z1",
+    "ApiHost": "http://127.0.0.1:42123",
+    "SystemDomain": "vcap.me",
+    "MetronPort": 37474,
+    "UaaHost": "http://127.0.0.1:5678",
+    "UaaClientId": "bob",
+    "UaaClientSecret": "yourUncle",
+    "MonitorIntervalSeconds": 1,
+    "SecurityEventLog": "/tmp/access.log"
+}

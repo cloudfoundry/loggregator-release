@@ -5,6 +5,7 @@ import (
 	"doppler/listeners"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"net"
 	"tools/benchmark/messagereader"
 
@@ -17,14 +18,13 @@ import (
 
 var _ = Describe("TLSReader", func() {
 	var (
-		port         int
+		port         int = 3457
 		reader       *messagereader.TLSReader
 		serverConfig *tls.Config
 		clientConfig *tls.Config
 	)
 
 	BeforeEach(func() {
-		port = 3457
 		var err error
 		serverConfig, err = listeners.NewTLSConfig(
 			"fixtures/server.crt",
@@ -44,18 +44,46 @@ var _ = Describe("TLSReader", func() {
 	})
 
 	AfterEach(func() {
+		port += 1
 		reader.Close()
 	})
 
-	It("should receive message on specified port", func() {
-		tlsWriteValueMessage(port, clientConfig)
-		tlsWriteValueMessage(port, clientConfig)
+	It("receives a message on the specified port", func() {
+		tlsWriteMessage(port, clientConfig)
+		tlsWriteMessage(port, clientConfig)
+		Eventually(reader.Read()).ShouldNot(BeNil())
+		Eventually(reader.Read()).ShouldNot(BeNil())
+	})
+
+	It("doesn't panic when message size is smaller than it's prefixed length", func() {
+		tlsWriteMessageInParts(port, clientConfig)
+		tlsWriteMessageInParts(port, clientConfig)
 		Eventually(reader.Read()).ShouldNot(BeNil())
 		Eventually(reader.Read()).ShouldNot(BeNil())
 	})
 })
 
-func tlsWriteValueMessage(port int, config *tls.Config) {
+func tlsWriteMessage(port int, config *tls.Config) {
+	messageBytes, tlsClient := createMessage(port, config)
+
+	err := binary.Write(tlsClient, binary.LittleEndian, uint32(len(messageBytes)))
+	Expect(err).ToNot(HaveOccurred())
+	_, err = tlsClient.Write(messageBytes)
+	Expect(err).ToNot(HaveOccurred())
+}
+
+func tlsWriteMessageInParts(port int, config *tls.Config) {
+	messageBytes, tlsClient := createMessage(port, config)
+
+	err := binary.Write(tlsClient, binary.LittleEndian, uint32(len(messageBytes)))
+	Expect(err).ToNot(HaveOccurred())
+	_, err = tlsClient.Write(messageBytes[:len(messageBytes)-4])
+	Expect(err).ToNot(HaveOccurred())
+	_, err = tlsClient.Write(messageBytes[len(messageBytes)-4:])
+	Expect(err).ToNot(HaveOccurred())
+}
+
+func createMessage(port int, config *tls.Config) ([]byte, io.Writer) {
 	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", port))
 	Expect(err).ToNot(HaveOccurred())
 	tlsClient := tls.Client(conn, config)
@@ -73,9 +101,5 @@ func tlsWriteValueMessage(port int, config *tls.Config) {
 
 	messageBytes, err := proto.Marshal(message)
 	Expect(err).ToNot(HaveOccurred())
-
-	err = binary.Write(tlsClient, binary.LittleEndian, uint32(len(messageBytes)))
-	Expect(err).ToNot(HaveOccurred())
-	_, err = tlsClient.Write(messageBytes)
-	Expect(err).ToNot(HaveOccurred())
+	return messageBytes, tlsClient
 }

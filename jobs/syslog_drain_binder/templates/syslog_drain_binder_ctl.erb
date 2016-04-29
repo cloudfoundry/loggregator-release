@@ -1,20 +1,32 @@
 #!/bin/bash -e
 
+<%
+    lockedMem = p("syslog_drain_binder.locked_memory_limit")
+    if (!lockedMem.is_a? Numeric) && (!["kernel", "soft", "hard", "unlimited"].include? lockedMem) then
+        raise lockedMem + ": invalid locked_memory_limit"
+    end
+%>
+
 RUN_DIR=/var/vcap/sys/run/syslog_drain_binder
 LOG_DIR=/var/vcap/sys/log/syslog_drain_binder
 PIDFILE=$RUN_DIR/syslog_drain_binder.pid
 
-source /var/vcap/packages/loggregator_common/utils.sh
+mkdir -p $RUN_DIR
+mkdir -p $LOG_DIR
+
+source /var/vcap/packages/loggregator_common/pid_utils.sh
+source /var/vcap/packages/loggregator_common/syslog_utils.sh
+
+tee_output_to_sys_log "$LOG_DIR"
 
 case $1 in
 
   start)
     pid_guard $PIDFILE "Syslog Drain Binder"
 
-    mkdir -p $RUN_DIR
-    mkdir -p $LOG_DIR
-
-    ulimit -l unlimited
+    <% if p("syslog_drain_binder.locked_memory_limit") != "kernel" %>
+    ulimit -l <%= p("syslog_drain_binder.locked_memory_limit") %>
+    <% end %>
     ulimit -n 65536
 
     <% p("syslog_drain_binder.debug") == true ? debug_string = "--debug " : debug_string = "" %>

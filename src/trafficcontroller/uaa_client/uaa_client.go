@@ -1,7 +1,6 @@
 package uaa_client
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -15,19 +14,17 @@ type UaaClient interface {
 }
 
 type uaaClient struct {
-	address        string
-	id             string
-	secret         string
-	skipCertVerify bool
+	address string
+	id      string
+	secret  string
 }
 
-func NewUaaClient(address, id, secret string, skipCertVerify bool) uaaClient {
+func NewUaaClient(address, id, secret string) uaaClient {
 
 	return uaaClient{
-		address:        address,
-		id:             id,
-		secret:         secret,
-		skipCertVerify: skipCertVerify,
+		address: address,
+		id:      id,
+		secret:  secret,
 	}
 }
 
@@ -38,16 +35,11 @@ func (client *uaaClient) GetAuthData(token string) (*AuthData, error) {
 	req.SetBasicAuth(client.id, client.secret)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: client.skipCertVerify},
-	}
-
-	httpClient := &http.Client{Transport: tr}
-	response, err := httpClient.Do(req)
-
+	response, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
+	defer response.Body.Close()
 
 	if response.StatusCode == http.StatusUnauthorized {
 		return nil, errors.New("Invalid username/password")

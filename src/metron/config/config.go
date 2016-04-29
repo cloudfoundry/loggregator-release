@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -20,7 +21,7 @@ func (p *Protocol) UnmarshalJSON(value []byte) error {
 	value = bytes.Trim(value, `"`)
 	valueStr := string(value)
 	switch valueStr {
-	case "udp", "tls":
+	case "udp", "tls", "tcp":
 		*p = Protocol(value)
 	default:
 		return fmt.Errorf("Invalid protocol: %s", valueStr)
@@ -56,8 +57,11 @@ type Config struct {
 	TCPBatchSizeBytes            uint64
 	TCPBatchIntervalMilliseconds uint
 
-	PreferredProtocol Protocol
-	TLSConfig         TLSConfig
+	Protocols []Protocol
+	TLSConfig TLSConfig
+
+	// DEPRECATED
+	PreferredProtocol string
 }
 
 func ParseConfig(configFile string) (*Config, error) {
@@ -76,11 +80,14 @@ func Parse(reader io.Reader) (*Config, error) {
 		TCPBatchIntervalMilliseconds:     defaultBatchIntervalMS,
 		MetricBatchIntervalMilliseconds:  5000,
 		RuntimeStatsIntervalMilliseconds: 15000,
-		PreferredProtocol:                "udp",
+		Protocols:                        []Protocol{"udp"},
 	}
 	err := json.NewDecoder(reader).Decode(config)
 	if err != nil {
 		return nil, err
+	}
+	if len(config.Protocols) == 0 {
+		return nil, errors.New("Metron cannot start without protocols")
 	}
 
 	return config, nil

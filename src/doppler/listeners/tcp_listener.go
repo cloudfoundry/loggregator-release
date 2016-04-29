@@ -22,6 +22,7 @@ type TCPListener struct {
 	envelopeChan   chan *events.Envelope
 	logger         *gosteno.Logger
 	listener       net.Listener
+	protocol       string
 	connections    map[net.Conn]struct{}
 	unmarshaller   dropsonde_unmarshaller.DropsondeUnmarshaller
 	stopped        chan struct{}
@@ -29,6 +30,7 @@ type TCPListener struct {
 	listenerClosed chan struct{}
 	started        bool
 
+	listenerTotalMetricName        string
 	receivedMessageCountMetricName string
 	receivedByteCountMetricName    string
 	receiveErrorCountMetricName    string
@@ -65,12 +67,14 @@ func NewTLSConfig(certFile, keyFile, caCertFile string) (*tls.Config, error) {
 }
 
 func NewTCPListener(contextName string, address string, tlsListenerConfig *config.TLSListenerConfig, envelopeChan chan *events.Envelope, logger *gosteno.Logger) (Listener, error) {
+	protocol := "TCP"
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		return nil, err
 	}
 
 	if tlsListenerConfig != nil {
+		protocol = "TLS"
 		tlsConfig, err := NewTLSConfig(tlsListenerConfig.CertFile, tlsListenerConfig.KeyFile, tlsListenerConfig.CAFile)
 		if err != nil {
 			return nil, err
@@ -80,6 +84,7 @@ func NewTCPListener(contextName string, address string, tlsListenerConfig *confi
 
 	return &TCPListener{
 		listener:       listener,
+		protocol:       protocol,
 		envelopeChan:   envelopeChan,
 		logger:         logger,
 		connections:    make(map[net.Conn]struct{}),
@@ -87,6 +92,7 @@ func NewTCPListener(contextName string, address string, tlsListenerConfig *confi
 		stopped:        make(chan struct{}),
 		listenerClosed: make(chan struct{}),
 
+		listenerTotalMetricName:        "listeners.totalReceivedMessageCount",
 		receivedMessageCountMetricName: contextName + ".receivedMessageCount",
 		receivedByteCountMetricName:    contextName + ".receivedByteCount",
 		receiveErrorCountMetricName:    contextName + ".receiveErrorCount",
@@ -106,13 +112,13 @@ func (t *TCPListener) Start() {
 	t.lock.Lock()
 	if t.started {
 		t.lock.Unlock()
-		t.logger.Fatal("TCPListener has already been started")
+		t.logger.Fatalf("%s listener has already been started", t.protocol)
 	}
 	t.started = true
 	listener := t.listener
 	t.lock.Unlock()
 
-	t.logger.Infof("TCP listener listening on %s", t.Address())
+	t.logger.Infof("%s listener listening on %s", t.protocol, t.Address())
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -172,9 +178,11 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 		}
 	}
 
-	var n uint32
-	var bytes []byte
-	var err error
+	var (
+		n     uint32
+		bytes []byte
+		err   error
+	)
 
 	for {
 		err = binary.Read(conn, binary.LittleEndian, &n)
@@ -203,6 +211,7 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 		if err != nil {
 			continue
 		}
+		metrics.BatchIncrementCounter(t.listenerTotalMetricName)
 		metrics.BatchIncrementCounter(t.receivedMessageCountMetricName)
 		metrics.BatchAddCounter(t.receivedByteCountMetricName, uint64(n+4))
 
@@ -212,5 +221,4 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 			return
 		}
 	}
-
 }

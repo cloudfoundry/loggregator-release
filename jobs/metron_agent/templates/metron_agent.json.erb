@@ -1,3 +1,12 @@
+<%
+    protocols = p("metron_agent.protocols")
+    if protocols == ["udp"] and p("metron_agent.preferred_protocol") == "tls"
+      protocols = ["tls"]
+    end
+
+    useTLS = protocols.include? "tls"
+%>
+
 {
   "Index": <%= spec.index %>,
   "Job": "<%= name %>",
@@ -13,21 +22,20 @@
 
   "LoggregatorDropsondePort": <%= p("loggregator.dropsonde_incoming_port") %>,
 
-  "PreferredProtocol": "<%= p("metron_agent.preferred_protocol") %>",
-
-  "BufferSize": <%= p("metron_agent.buffer_size") %>,
+  "Protocols": <%= protocols %>,
 
   "TCPBatchSizeBytes": <%= p("metron_agent.tcp.batching_buffer_bytes") %>,
 
   "TCPBatchIntervalMilliseconds": <%= p("metron_agent.tcp.batching_buffer_flush_interval_milliseconds") %>
 
-  <% if p("metron_agent.preferred_protocol") == "tls" %>
+  <% if useTLS %>
   , "TLSConfig": {
     "KeyFile": "/var/vcap/jobs/metron_agent/config/certs/metron_agent.key",
     "CertFile": "/var/vcap/jobs/metron_agent/config/certs/metron_agent.crt",
     "CAFile": "/var/vcap/jobs/metron_agent/config/certs/loggregator_ca.crt"
   }
   <% end %>
+
   <% if_p("syslog_daemon_config") do |_| %>
   , "Syslog": "vcap.metron_agent"
   <% end %>

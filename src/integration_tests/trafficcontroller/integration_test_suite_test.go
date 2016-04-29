@@ -26,6 +26,24 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
+const (
+	APP_ID                            = "1234"
+	AUTH_TOKEN                        = "bearer iAmAnAdmin"
+	SUBSCRIPTION_ID                   = "firehose-subscription-1"
+	TRAFFIC_CONTROLLER_DROPSONDE_PORT = 4566
+)
+
+var (
+	trafficControllerExecPath string
+	trafficControllerSession  *gexec.Session
+	gnatsdSession             *gexec.Session
+	etcdRunner                *etcdstorerunner.ETCDClusterRunner
+	etcdPort                  int
+	localIPAddress            string
+	fakeDoppler               *fake_doppler.FakeDoppler
+	configFile                string
+)
+
 func TestIntegrationTest(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Traffic Controller Integration Suite")
@@ -47,14 +65,22 @@ var _ = BeforeSuite(func() {
 
 	StartFakeRouter()
 
-	pathToTrafficControllerExec, err := gexec.Build("trafficcontroller", "-race")
+	trafficControllerExecPath, err = gexec.Build("trafficcontroller", "-race")
 	Expect(err).ToNot(HaveOccurred())
 
-	tcCommand := exec.Command(pathToTrafficControllerExec, "--config=fixtures/trafficcontroller.json", "--debug")
-	trafficControllerSession, err = gexec.Start(tcCommand, GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-
 	localIPAddress, _ = localip.LocalIP()
+})
+
+var _ = BeforeEach(func() {
+	configFile = "fixtures/trafficcontroller.json"
+})
+
+var _ = JustBeforeEach(func() {
+	trafficControllerCommand := exec.Command(trafficControllerExecPath, "--config", configFile, "--debug")
+
+	var err error
+	trafficControllerSession, err = gexec.Start(trafficControllerCommand, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
 
 	// wait for TC
 	trafficControllerDropsondeEndpoint := fmt.Sprintf("http://%s:%d", localIPAddress, 4566)
@@ -64,28 +90,18 @@ var _ = BeforeSuite(func() {
 			resp.Body.Close()
 		}
 		return err
-	}).ShouldNot(HaveOccurred())
+	}).Should(Succeed())
+})
+
+var _ = AfterEach(func() {
+	trafficControllerSession.Kill().Wait()
 })
 
 var _ = AfterSuite(func() {
-	trafficControllerSession.Kill().Wait()
 	gnatsdSession.Kill().Wait()
 	gexec.CleanupBuildArtifacts()
 	etcdRunner.Stop()
 })
-
-var (
-	trafficControllerSession *gexec.Session
-	gnatsdSession            *gexec.Session
-	etcdRunner               *etcdstorerunner.ETCDClusterRunner
-	etcdPort                 int
-	localIPAddress           string
-	fakeDoppler              *fake_doppler.FakeDoppler
-)
-
-const APP_ID = "1234"
-const AUTH_TOKEN = "bearer iAmAnAdmin"
-const SUBSCRIPTION_ID = "firehose-subscription-1"
 
 func setupEtcdAdapter() {
 	etcdPort = 4001

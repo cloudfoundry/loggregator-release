@@ -1,20 +1,35 @@
 #!/bin/bash -e
 
+<%
+    lockedMem = p("traffic_controller.locked_memory_limit")
+    if (!lockedMem.is_a? Numeric) && (!["kernel", "soft", "hard", "unlimited"].include? lockedMem) then
+        raise lockedMem + ": invalid locked_memory_limit"
+    end
+%>
+
 RUN_DIR=/var/vcap/sys/run/loggregator_trafficcontroller
 LOG_DIR=/var/vcap/sys/log/loggregator_trafficcontroller
 PIDFILE=$RUN_DIR/loggregator_trafficcontroller.pid
 
-source /var/vcap/packages/loggregator_common/utils.sh
+mkdir -p $RUN_DIR
+mkdir -p $LOG_DIR
+<% if p("traffic_controller.security_event_logging.enabled") %>
+touch $LOG_DIR/loggregator_trafficcontroller_security_events.log
+<% end %>
+
+source /var/vcap/packages/loggregator_common/pid_utils.sh
+source /var/vcap/packages/loggregator_common/syslog_utils.sh
+
+tee_output_to_sys_log "$LOG_DIR"
 
 case $1 in
 
   start)
     pid_guard $PIDFILE "LoggregatorTrafficController"
 
-    mkdir -p $RUN_DIR
-    mkdir -p $LOG_DIR
-
-    ulimit -l unlimited
+    <% if p("traffic_controller.locked_memory_limit") != "kernel" %>
+    ulimit -l <%= p("traffic_controller.locked_memory_limit") %>
+    <% end %>
     ulimit -n 65536
 
     <% p("traffic_controller.debug") == true ? debug_string = "--debug " : debug_string = "" %>
@@ -26,7 +41,7 @@ case $1 in
     chown -R vcap:vcap $LOG_DIR
 
     chpst -u vcap:vcap /var/vcap/packages/loggregator_trafficcontroller/trafficcontroller <%= debug_string %> <%= disable_access_control_string %> \
-         --config /var/vcap/jobs/loggregator_trafficcontroller/config/loggregator_trafficcontroller.json &
+        --config /var/vcap/jobs/loggregator_trafficcontroller/config/loggregator_trafficcontroller.json &
 
     echo $! > $PIDFILE
 

@@ -17,15 +17,21 @@ func TestBenchmark(t *testing.T) {
 }
 
 var (
-	metronSession *gexec.Session
-	etcdRunner    *etcdstorerunner.ETCDClusterRunner
-	etcdPort      int
+	pathToMetronBenchmarkExec string
+	pathToMetronExecutable    string
+	metronSession             *gexec.Session
+	etcdRunner                *etcdstorerunner.ETCDClusterRunner
 )
 
 var _ = BeforeSuite(func() {
-	etcdPort = 4001
-	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1, nil)
+	etcdRunner = etcdstorerunner.NewETCDClusterRunner(4001, 1, nil)
 	etcdRunner.Start()
+
+	var err error
+	pathToMetronExecutable, err = gexec.Build("metron")
+	Expect(err).ToNot(HaveOccurred())
+	pathToMetronBenchmarkExec, err = gexec.Build("tools/metronbenchmark")
+	Expect(err).NotTo(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {

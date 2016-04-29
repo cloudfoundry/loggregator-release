@@ -38,7 +38,7 @@ var (
 	tcSession      *gexec.Session
 
 	dopplerConfig string
-	metronConfig string
+	metronConfig  string
 )
 
 var _ = BeforeSuite(func() {
@@ -63,32 +63,38 @@ var _ = BeforeEach(func() {
 
 var _ = JustBeforeEach(func() {
 	const (
-		BLUE       = 34
-		PURPLE     = 35
-		LIGHT_BLUE = 36
+		BLUE = 34 + iota
+		PURPLE
+		LIGHT_BLUE
 	)
 
-	dopplerSession = startComponent(dopplerExecutablePath, "doppler", PURPLE, "--config=fixtures/"+dopplerConfig+".json")
-	var err error
-	LocalIPAddress, err = localip.LocalIP()
-	Expect(err).ToNot(HaveOccurred())
-
-	metronSession = startComponent(metronExecutablePath, "metron", BLUE, "--config=fixtures/"+metronConfig+".json")
-
-	tcSession = startComponent(trafficControllerExecutablePath, "tc", LIGHT_BLUE, "--config=fixtures/trafficcontroller.json", "--disableAccessControl")
-
-	// Wait for traffic controller to startup
-	waitOnURL("http://" + LocalIPAddress + ":49630")
+	metronSession = startComponent(
+		metronExecutablePath,
+		"metron",
+		BLUE,
+		"--config=fixtures/"+metronConfig+".json",
+		"--debug",
+	)
 
 	// Wait for metron
 	Eventually(metronSession.Buffer).Should(gbytes.Say("metron started"))
+
+	dopplerSession = startComponent(
+		dopplerExecutablePath,
+		"doppler",
+		PURPLE,
+		"--config=fixtures/"+dopplerConfig+".json",
+	)
+	var err error
+	LocalIPAddress, err = localip.LocalIP()
+	Expect(err).ToNot(HaveOccurred())
 
 	// wait for doppler to register
 	key := fmt.Sprintf("%s/z1/doppler_z1/0", dopplerservice.LEGACY_ROOT)
 	Eventually(func() bool {
 		_, err := etcdAdapter.Get(key)
 		return err == nil
-	}, 1).Should(BeTrue())
+	}, 5).Should(BeTrue())
 
 	key = fmt.Sprintf("%s/z1/doppler_z1/0", dopplerservice.META_ROOT)
 	Eventually(func() bool {
@@ -96,6 +102,16 @@ var _ = JustBeforeEach(func() {
 		return err == nil
 	}, 1).Should(BeTrue())
 
+	tcSession = startComponent(
+		trafficControllerExecutablePath,
+		"tc",
+		LIGHT_BLUE,
+		"--config=fixtures/trafficcontroller.json",
+		"--disableAccessControl",
+	)
+
+	// Wait for traffic controller to startup
+	waitOnURL("http://" + LocalIPAddress + ":49630")
 })
 
 func buildComponent(componentName string) (pathToComponent string) {

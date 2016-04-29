@@ -1,5 +1,0 @@
----
-name: golang1.5
-
-files:
-    - golang/go1.5.3.linux-amd64.tar.gz

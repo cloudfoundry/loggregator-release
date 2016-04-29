@@ -17,7 +17,7 @@
   "RuntimeStatsIntervalMilliseconds": 15,
   "TCPBatchSizeBytes": 1024,
   "TCPBatchIntervalMilliseconds": 10,
-  "PreferredProtocol": "udp",
+  "Protocols": ["tls", "udp"],
   "TLSConfig": {
     "KeyFile": "./fixtures/client.key",
     "CertFile": "./fixtures/client.crt",

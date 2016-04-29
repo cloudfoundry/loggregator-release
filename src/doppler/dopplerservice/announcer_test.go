@@ -43,6 +43,7 @@ var _ = Describe("Announcer", func() {
 			Zone:                      "z1",
 			IncomingUDPPort:           1234,
 			IncomingTCPPort:           5678,
+			OutgoingPort:              8888,
 		}
 	})
 
@@ -73,9 +74,10 @@ var _ = Describe("Announcer", func() {
 				dopplerKey = fmt.Sprintf("/doppler/meta/%s/%s/%d", conf.Zone, conf.JobName, conf.Index)
 			})
 
-			It("maintains the node", func() {
+			It("creates, then maintains the node", func() {
 				fakeadapter := &fakes.FakeStoreAdapter{}
 				dopplerservice.Announce(localIP, time.Second, &conf, fakeadapter, loggertesthelper.Logger())
+				Expect(fakeadapter.CreateCallCount()).To(Equal(1))
 				Expect(fakeadapter.MaintainNodeCallCount()).To(Equal(1))
 			})
 
@@ -90,7 +92,7 @@ var _ = Describe("Announcer", func() {
 
 			Context("when tls transport is enabled", func() {
 				It("announces udp, tcp, and tls values", func() {
-					dopplerMeta := fmt.Sprintf(`{"version": 1, "endpoints":["udp://%s:1234", "tcp://%s:5678", "tls://%s:9012"]}`, localIP, localIP, localIP)
+					dopplerMeta := fmt.Sprintf(`{"version": 1, "endpoints":["udp://%[1]s:1234", "tcp://%[1]s:5678", "ws://%[1]s:8888", "tls://%[1]s:9012"]}`, localIP)
 
 					conf.EnableTLSTransport = true
 					conf.TLSListenerConfig = config.TLSListenerConfig{
@@ -110,7 +112,7 @@ var _ = Describe("Announcer", func() {
 
 			Context("when tls transport is disabled", func() {
 				It("announces only udp and tcp values", func() {
-					dopplerMeta := fmt.Sprintf(`{"version": 1, "endpoints":["udp://%s:1234", "tcp://%s:5678"]}`, localIP, localIP)
+					dopplerMeta := fmt.Sprintf(`{"version": 1, "endpoints":["udp://%[1]s:1234", "tcp://%[1]s:5678", "ws://%[1]s:8888" ]}`, localIP)
 
 					conf.EnableTLSTransport = false
 					stopChan = dopplerservice.Announce(localIP, time.Second, &conf, etcdAdapter, loggertesthelper.Logger())

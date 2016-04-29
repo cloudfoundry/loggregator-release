@@ -8,19 +8,18 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cloudfoundry/noaa"
-	"github.com/cloudfoundry/sonde-go/events"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"integration_tests/trafficcontroller/fake_doppler"
+
+	"github.com/cloudfoundry/noaa/consumer"
+	"github.com/cloudfoundry/sonde-go/events"
 )
 
-var dropsondeEndpoint string
-
-const TRAFFIC_CONTROLLER_DROPSONDE_PORT = 4566
-
 var _ = Describe("TrafficController for dropsonde messages", func() {
+	var dropsondeEndpoint string
+
 	BeforeEach(func() {
 		fakeDoppler = fake_doppler.New()
 		go fakeDoppler.Start()
@@ -32,11 +31,18 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 	})
 
 	Context("Streaming", func() {
-		It("passes messages through", func() {
-			client := noaa.NewConsumer(dropsondeEndpoint, &tls.Config{}, nil)
-			messages := make(chan *events.Envelope)
-			go client.StreamWithoutReconnect(APP_ID, AUTH_TOKEN, messages)
+		var (
+			client   *consumer.Consumer
+			messages <-chan *events.Envelope
+			errors   <-chan error
+		)
 
+		JustBeforeEach(func() {
+			client = consumer.New(dropsondeEndpoint, &tls.Config{}, nil)
+			messages, errors = client.StreamWithoutReconnect(APP_ID, AUTH_TOKEN)
+		})
+
+		It("passes messages through", func() {
 			var request *http.Request
 			Eventually(fakeDoppler.TrafficControllerConnected, 10).Should(Receive(&request))
 			Expect(request.URL.Path).To(Equal("/apps/1234/stream"))
@@ -47,6 +53,7 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 
 			var receivedEnvelope *events.Envelope
 			Eventually(messages).Should(Receive(&receivedEnvelope))
+			Consistently(errors).ShouldNot(Receive())
 
 			receivedMessage := receivedEnvelope.GetLogMessage()
 			Expect(receivedMessage.GetMessage()).To(BeEquivalentTo("Hello through NOAA"))
@@ -57,10 +64,6 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 		})
 
 		It("closes the upstream websocket connection when done", func() {
-			client := noaa.NewConsumer(dropsondeEndpoint, &tls.Config{}, nil)
-			messages := make(chan *events.Envelope)
-			go client.StreamWithoutReconnect(APP_ID, AUTH_TOKEN, messages)
-
 			var request *http.Request
 			Eventually(fakeDoppler.TrafficControllerConnected, 10).Should(Receive(&request))
 			Eventually(fakeDoppler.ConnectionPresent).Should(BeTrue())
@@ -72,10 +75,14 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 	})
 
 	Context("Firehose", func() {
+		var (
+			messages <-chan *events.Envelope
+			errors   <-chan error
+		)
+
 		It("passes messages through for every app for uaa admins", func() {
-			client := noaa.NewConsumer(dropsondeEndpoint, &tls.Config{}, nil)
-			messages := make(chan *events.Envelope)
-			go client.FirehoseWithoutReconnect(SUBSCRIPTION_ID, AUTH_TOKEN, messages)
+			client := consumer.New(dropsondeEndpoint, &tls.Config{}, nil)
+			messages, errors = client.FirehoseWithoutReconnect(SUBSCRIPTION_ID, AUTH_TOKEN)
 
 			var request *http.Request
 			Eventually(fakeDoppler.TrafficControllerConnected, 10).Should(Receive(&request))
@@ -87,6 +94,7 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 
 			var receivedEnvelope *events.Envelope
 			Eventually(messages).Should(Receive(&receivedEnvelope))
+			Consistently(errors).ShouldNot(Receive())
 
 			receivedMessage := receivedEnvelope.GetLogMessage()
 			Expect(receivedMessage.GetMessage()).To(BeEquivalentTo("Hello through NOAA"))
@@ -112,7 +120,7 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 		})
 
 		It("returns a multi-part HTTP response with all recent messages", func() {
-			client := noaa.NewConsumer(dropsondeEndpoint, &tls.Config{}, nil)
+			client := consumer.New(dropsondeEndpoint, &tls.Config{}, nil)
 
 			Eventually(func() bool {
 				messages, err := client.RecentLogs("1234", "bearer iAmAnAdmin")
@@ -145,7 +153,7 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 		})
 
 		It("returns a multi-part HTTP response with the most recent message for all instances for a given app", func() {
-			client := noaa.NewConsumer(dropsondeEndpoint, &tls.Config{}, nil)
+			client := consumer.New(dropsondeEndpoint, &tls.Config{}, nil)
 
 			Eventually(func() bool {
 				messages, err := client.ContainerMetrics("1234", "bearer iAmAnAdmin")

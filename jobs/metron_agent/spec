@@ -14,6 +14,9 @@ packages:
 - loggregator_common
 - metron_agent
 properties:
+  syslog_daemon_config.enable:
+    description: "Enable or disable rsyslog configuration for forwarding syslog messages into metron"
+    default: true
   syslog_daemon_config.address:
     description: "IP address for syslog aggregator"
   syslog_daemon_config.port:
@@ -37,9 +40,13 @@ properties:
   metron_endpoint.shared_secret:
       description: "Shared secret used to verify cryptographically signed dropsonde messages"
 
-  metron_agent.preferred_protocol:
-    description: "Preferred protocol to droppler (udp|tls)"
-    default: "udp"
+  metron_agent.debug:
+    description: "boolean value to turn on verbose mode"
+    default: false
+  metron_agent.protocols:
+    description: "A priority list of protocols for metron to connect to doppler over.  Metron will refuse to connect to doppler over any protocol not in this list."
+    default: ["udp"]
+
   metron_agent.tls.client_cert:
     description: "TLS client certificate"
     default: ""
@@ -49,10 +56,6 @@ properties:
   loggregator.tls.ca_cert:
     description: "CA root required for key/cert verification"
     default: ""
-
-  metron_agent.debug:
-    description: "boolean value to turn on verbose mode"
-    default: false
 
   metron_agent.zone:
     description: "Availability zone where this agent is running"
@@ -75,19 +78,22 @@ properties:
   metron_agent.logrotate.size:
     description: "The size at which logrotate will decide to rotate the log file"
     default: 50M
-  metron_agent.buffer_size:
-    description: "DEPRECATED"
-    default: 10000
-  metron_agent.enable_buffer:
-    description: "DEPRECATED"
-    default: false
-
-  loggregator.dropsonde_incoming_port:
-    description: "Port where loggregator listens for dropsonde log messages"
-    default: 3457
 
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"
   loggregator.etcd.maxconcurrentrequests:
     description: "Number of concurrent requests to ETCD"
     default: 10
+
+  metron_agent.buffer_size:
+    description: "DEPRECATED"
+    default: 10000
+  metron_agent.enable_buffer:
+    description: "DEPRECATED"
+    default: false
+  loggregator.dropsonde_incoming_port:
+    description: "DEPRECATED"
+    default: 3457
+  metron_agent.preferred_protocol:
+    description: "DEPRECATED - replaced with metron_agent.protocols"
+    default: "udp"

@@ -16,6 +16,7 @@ import (
 
 var supportedProtocols = []string{
 	"udp",
+	"tcp",
 	"tls",
 }
 
@@ -29,12 +30,19 @@ type StoreAdapter interface {
 type Event struct {
 	UDPDopplers []string
 	TLSDopplers []string
+	TCPDopplers []string
+}
+
+func (e Event) empty() bool {
+	return len(e.UDPDopplers) == 0 &&
+		len(e.TCPDopplers) == 0 &&
+		len(e.TLSDopplers) == 0
 }
 
 type Finder struct {
 	adapter              StoreAdapter
 	legacyPort           int
-	preferredProtocol    string
+	protocols            []string
 	preferredDopplerZone string
 	metaEndpoints        map[string][]string
 	metaLock             sync.RWMutex
@@ -45,12 +53,12 @@ type Finder struct {
 	logger *gosteno.Logger
 }
 
-func NewFinder(adapter StoreAdapter, legacyPort int, preferredProtocol string, preferredDopplerZone string, logger *gosteno.Logger) *Finder {
+func NewFinder(adapter StoreAdapter, legacyPort int, protocols []string, preferredDopplerZone string, logger *gosteno.Logger) *Finder {
 	return &Finder{
 		metaEndpoints:        make(map[string][]string),
 		legacyEndpoints:      make(map[string]string),
 		adapter:              adapter,
-		preferredProtocol:    preferredProtocol,
+		protocols:            protocols,
 		preferredDopplerZone: preferredDopplerZone,
 		legacyPort:           legacyPort,
 		events:               make(chan Event, 10),
@@ -86,6 +94,10 @@ func (f *Finder) Start() {
 		return
 	}
 	f.sendEvent()
+}
+
+func (f *Finder) Next() Event {
+	return <-f.events
 }
 
 func (f *Finder) hasAddrs() bool {
@@ -186,13 +198,9 @@ func (f *Finder) parseNode(node storeadapter.StoreNode, parser func([]byte) (int
 	return dopplerKey, nodeValue
 }
 
-func (f *Finder) Next() Event {
-	return <-f.events
-}
-
 func (f *Finder) sendEvent() {
 	event := f.eventWithPrefix(f.preferredDopplerZone)
-	if len(event.TLSDopplers) == 0 && len(event.UDPDopplers) == 0 {
+	if event.empty() {
 		event = f.eventWithPrefix("")
 	}
 
@@ -208,15 +216,24 @@ func (f *Finder) eventWithPrefix(dopplerPrefix string) Event {
 			continue
 		}
 		switch {
-		case strings.HasPrefix(addr, "tls"):
-			event.TLSDopplers = append(event.TLSDopplers, strings.TrimPrefix(addr, "tls://"))
 		case strings.HasPrefix(addr, "udp"):
 			event.UDPDopplers = append(event.UDPDopplers, strings.TrimPrefix(addr, "udp://"))
+		case strings.HasPrefix(addr, "tcp"):
+			event.TCPDopplers = append(event.TCPDopplers, strings.TrimPrefix(addr, "tcp://"))
+		case strings.HasPrefix(addr, "tls"):
+			event.TLSDopplers = append(event.TLSDopplers, strings.TrimPrefix(addr, "tls://"))
 		default:
 			f.logger.Errorf("Unexpected address for doppler %s (invalid protocol): %s", doppler, addr)
 		}
 	}
+
 	return event
+}
+
+func (f *Finder) chooseAddrs() map[string]string {
+	chosen := f.chooseMetaAddrs()
+	f.addLegacyAddrs(chosen)
+	return chosen
 }
 
 func (f *Finder) chooseMetaAddrs() map[string]string {
@@ -224,18 +241,17 @@ func (f *Finder) chooseMetaAddrs() map[string]string {
 	f.metaLock.RLock()
 	defer f.metaLock.RUnlock()
 	for doppler, addrs := range f.metaEndpoints {
-		var chosenAddr string
+		// Set currentIndex to one greater than any possible index of f.protocols
+		var currentIndex int = len(f.protocols)
 		for _, addr := range addrs {
-			if !supported(addr) {
+			if addr == "" || !supported(addr) {
 				continue
 			}
-			chosenAddr = addr
-			if strings.HasPrefix(chosenAddr, f.preferredProtocol) {
-				break
+			index, err := f.protocolIndex(addr)
+			if err == nil && index < currentIndex {
+				currentIndex = index
+				chosen[doppler] = addr
 			}
-		}
-		if chosenAddr != "" {
-			chosen[doppler] = chosenAddr
 		}
 	}
 	return chosen
@@ -244,21 +260,31 @@ func (f *Finder) chooseMetaAddrs() map[string]string {
 func (f *Finder) addLegacyAddrs(addrs map[string]string) {
 	f.legacyLock.RLock()
 	defer f.legacyLock.RUnlock()
-	for doppler, addr := range f.legacyEndpoints {
+	udpIdx, err := f.protocolIndex("udp")
+	if err != nil {
+		return
+	}
+	for doppler, legacyAddr := range f.legacyEndpoints {
 		chosenAddr, ok := addrs[doppler]
 		if ok {
-			if f.preferredProtocol != "udp" || strings.HasPrefix(chosenAddr, "udp") {
+			idx, err := f.protocolIndex(chosenAddr)
+			if err != nil {
+				// If chosen addr is not supported (should never happen)
+				msg := fmt.Sprintf("Somehow chosenAddr %s (for doppler %s) is "+
+					"not in this finder's protocol list %v",
+					chosenAddr,
+					doppler,
+					f.protocols,
+				)
+				panic(msg)
+			}
+			if strings.HasPrefix(chosenAddr, "udp") || idx < udpIdx {
+				// We already have an address we prefer over the legacy address
 				continue
 			}
 		}
-		addrs[doppler] = addr
+		addrs[doppler] = legacyAddr
 	}
-}
-
-func (f *Finder) chooseAddrs() map[string]string {
-	chosen := f.chooseMetaAddrs()
-	f.addLegacyAddrs(chosen)
-	return chosen
 }
 
 func (f *Finder) parseMetaValue(leafValue []byte) (interface{}, error) {
@@ -278,6 +304,15 @@ func (f *Finder) parseMetaValue(leafValue []byte) (interface{}, error) {
 
 func (f *Finder) parseLegacyValue(leafValue []byte) (interface{}, error) {
 	return fmt.Sprintf("udp://%s:%d", string(leafValue), f.legacyPort), nil
+}
+
+func (f *Finder) protocolIndex(addr string) (int, error) {
+	for i, protocol := range f.protocols {
+		if strings.HasPrefix(addr, protocol) {
+			return i, nil
+		}
+	}
+	return 0, fmt.Errorf("Protocol %s is not present", addr)
 }
 
 // leafNodes is here to make it invisible to us how deeply nested our values are.

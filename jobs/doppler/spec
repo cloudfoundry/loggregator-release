@@ -21,9 +21,6 @@ properties:
     description: number of log messages to retain per application
     default: 100
 
-  doppler.incoming_port:
-    description: Port for incoming log messages in the legacy format
-    default: 3456
   doppler.dropsonde_incoming_port:
     description: Port for incoming udp messages
     default: 3457
@@ -76,12 +73,16 @@ properties:
   doppler_endpoint.shared_secret:
     description: "Shared secret used to verify cryptographically signed dropsonde messages"
   doppler.message_drain_buffer_size:
-    description: "Size of the internal buffer used by doppler to store messages. If the buffer gets full doppler will drop the messages."
-    default: 100
+    description: "Size of the internal buffer used by doppler to store messages for output to firehose or 'cf logs'. If the buffer gets full doppler will drop the messages."
+    default: 10000
 
   doppler.syslog_skip_cert_verify:
     description: "When connecting over TLS, don't verify certificates for syslog sink"
     default: true
+
+  doppler.locked_memory_limit:
+    description: "Size (KB) of shell's locked memory limit. Set to 'kernel' to use the kernel's default. Non-numeric values other than 'kernel', 'soft', 'hard', and 'unlimited' will result in an error."
+    default: "unlimited"
 
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"
@@ -92,3 +93,7 @@ properties:
   metron_endpoint.dropsonde_port:
     description: "The port used to emit dropsonde messages to the Metron agent"
     default: 3457
+
+  doppler.incoming_port:
+    description: DEPRECATED
+    default: 3456

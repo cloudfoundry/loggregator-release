@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
@@ -32,8 +33,15 @@ func newMessageBuffer(bufferBytes []byte) *messageBuffer {
 	}
 }
 
+// Write writes msg to b and increments b.messages.
 func (b *messageBuffer) Write(msg []byte) (int, error) {
 	b.messages++
+	return b.Buffer.Write(msg)
+}
+
+// writeNonMessage is provided as a method to write bytes without
+// incrementing b.messages.
+func (b *messageBuffer) writeNonMessage(msg []byte) (int, error) {
 	return b.Buffer.Write(msg)
 }
 
@@ -42,20 +50,21 @@ func (b *messageBuffer) Reset() {
 	b.Buffer.Reset()
 }
 
-type Writer struct {
-	flushDuration time.Duration
-	outWriter     ByteWriter
-	writerLock    sync.Mutex
-	msgBuffer     *messageBuffer
-	msgBufferLock sync.Mutex
-	timer         *time.Timer
-	logger        *gosteno.Logger
-}
-
 //go:generate hel --type ByteWriter --output mock_byte_writer_test.go
 
 type ByteWriter interface {
 	Write(message []byte) (sentLength int, err error)
+}
+
+type Writer struct {
+	flushDuration   time.Duration
+	outWriter       ByteWriter
+	writerLock      sync.Mutex
+	msgBuffer       *messageBuffer
+	msgBufferLock   sync.Mutex
+	timer           *time.Timer
+	logger          *gosteno.Logger
+	droppedMessages uint64
 }
 
 func NewWriter(writer ByteWriter, bufferCapacity uint64, flushDuration time.Duration, logger *gosteno.Logger) (*Writer, error) {
@@ -83,45 +92,47 @@ func (w *Writer) Write(msgBytes []byte) (int, error) {
 	w.msgBufferLock.Lock()
 	defer w.msgBufferLock.Unlock()
 
-	buffer := bytes.NewBuffer(make([]byte, 0, len(msgBytes)*2))
-	err := binary.Write(buffer, binary.LittleEndian, uint32(len(msgBytes)))
+	prefixedBytes, err := w.prefixMessage(msgBytes)
 	if err != nil {
 		w.logger.Errorf("Error encoding message length: %v\n", err)
 		metrics.BatchIncrementCounter("tls.sendErrorCount")
 		return 0, err
 	}
-	_, err = buffer.Write(msgBytes)
-	if err != nil {
-		return 0, err
-	}
 	switch {
-	case w.msgBuffer.Len()+buffer.Len() > w.msgBuffer.Cap():
-		sent, err := w.retryWrites(buffer.Bytes())
+	case w.msgBuffer.Len()+len(prefixedBytes) > w.msgBuffer.Cap():
+		_, err := w.retryWrites(prefixedBytes)
 		if err != nil {
 			dropped := w.msgBuffer.messages + 1
+			atomic.AddUint64(&w.droppedMessages, dropped)
 			metrics.BatchAddCounter("MessageBuffer.droppedMessageCount", dropped)
 			w.msgBuffer.Reset()
-			logMsg, marshalErr := proto.Marshal(w.droppedLogMessage(dropped))
-			if marshalErr != nil {
-				w.logger.Fatalf("Failed to marshal generated log message: %s", logMsg)
-			}
 
-			// w.Write has to be called in a goroutine to allow the defer
-			// statement to unlock the mutex lock
-			go w.Write(logMsg)
+			w.msgBuffer.writeNonMessage(w.droppedLogMessage())
+			w.timer.Reset(w.flushDuration)
 			return 0, err
 		}
-		return sent, nil
+		return len(msgBytes), nil
 	default:
 		if w.msgBuffer.Len() == 0 {
 			w.timer.Reset(w.flushDuration)
 		}
-		return w.msgBuffer.Write(buffer.Bytes())
+		_, err := w.msgBuffer.Write(prefixedBytes)
+		return len(msgBytes), err
 	}
 }
 
 func (w *Writer) Stop() {
 	w.timer.Stop()
+}
+
+func (w *Writer) prefixMessage(msgBytes []byte) ([]byte, error) {
+	buffer := bytes.NewBuffer(make([]byte, 0, len(msgBytes)*2))
+	err := binary.Write(buffer, binary.LittleEndian, uint32(len(msgBytes)))
+	if err != nil {
+		return nil, err
+	}
+	_, err = buffer.Write(msgBytes)
+	return buffer.Bytes(), err
 }
 
 func (w *Writer) flushWrite(bytes []byte) (int, error) {
@@ -143,6 +154,7 @@ func (w *Writer) flushWrite(bytes []byte) (int, error) {
 	}
 
 	metrics.BatchAddCounter("DopplerForwarder.sentMessages", bufferMessageCount)
+	atomic.StoreUint64(&w.droppedMessages, 0)
 	w.msgBuffer.Reset()
 	return sent, nil
 }
@@ -156,7 +168,7 @@ func (w *Writer) flushOnTimer() {
 func (w *Writer) flushBuffer() {
 	w.msgBufferLock.Lock()
 	defer w.msgBufferLock.Unlock()
-	if w.msgBuffer.messages == 0 {
+	if w.msgBuffer.Len() == 0 {
 		return
 	}
 	if _, err := w.flushWrite(nil); err != nil {
@@ -178,7 +190,8 @@ func (w *Writer) retryWrites(message []byte) (sent int, err error) {
 	return 0, err
 }
 
-func (w *Writer) droppedLogMessage(droppedMessages uint64) *events.Envelope {
+func (w *Writer) droppedLogMessage() []byte {
+	droppedMessages := atomic.LoadUint64(&w.droppedMessages)
 	logMessage := &events.LogMessage{
 		Message:     []byte(fmt.Sprintf("Dropped %d message(s) from MetronAgent to Doppler", droppedMessages)),
 		MessageType: events.LogMessage_ERR.Enum(),
@@ -189,5 +202,14 @@ func (w *Writer) droppedLogMessage(droppedMessages uint64) *events.Envelope {
 	if err != nil {
 		w.logger.Fatalf("Failed to emitter.Wrap a log message: %s", err)
 	}
-	return env
+	marshaled, err := proto.Marshal(env)
+	if err != nil {
+		w.logger.Fatalf("Failed to marshal generated dropped log message: %s", err)
+	}
+	prefixedBytes, err := w.prefixMessage(marshaled)
+	if err != nil {
+		w.logger.Fatalf("Failed to prefix dropped log message: %s", err)
+	}
+
+	return prefixedBytes
 }

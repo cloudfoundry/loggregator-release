@@ -76,7 +76,7 @@ func New(logger *gosteno.Logger,
 	var err error
 	listenerEnvelopeChan := make(chan *events.Envelope)
 
-	udpListener, dropsondeBytesChan = listeners.NewUDPListener(fmt.Sprintf("%s:%d", host, config.IncomingUDPPort), logger, "dropsondeListener")
+	udpListener, dropsondeBytesChan = listeners.NewUDPListener(fmt.Sprintf("%s:%d", host, config.IncomingUDPPort), logger, "udpListener")
 
 	var addr string
 	var tlsConfig *doppler_config.TLSListenerConfig
@@ -107,7 +107,7 @@ func New(logger *gosteno.Logger,
 	sinkIOTimeout := time.Duration(config.SinkIOTimeoutSeconds) * time.Second
 	sinkManager := sinkmanager.New(config.MaxRetainedLogMessages, config.SinkSkipCertVerify, blacklist, logger, messageDrainBufferSize, dropsondeOrigin, sinkTimeout, sinkIOTimeout, metricTTL, dialTimeout)
 
-	websocketServer, err := websocketserver.New(fmt.Sprintf("%s:%d", host, config.OutgoingPort), sinkManager, websocketWriteTimeout, keepAliveInterval, config.MessageDrainBufferSize, dropsondeOrigin, logger)
+	websocketServer, err := websocketserver.New(fmt.Sprintf(":%d", config.OutgoingPort), sinkManager, websocketWriteTimeout, keepAliveInterval, config.MessageDrainBufferSize, dropsondeOrigin, logger)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create the websocket server: %s", err.Error())
 	}

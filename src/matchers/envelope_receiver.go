@@ -9,15 +9,27 @@ import (
 )
 
 type envelopeReceiver struct {
-	matcher       types.GomegaMatcher
-	foundEnvelope *events.Envelope
+	matcher        types.GomegaMatcher
+	foundEnvelope  *events.Envelope
+	mustHavePrefix bool
+	hadPrefix      bool
+}
+
+func ReceivePrefixedEnvelope(matchers ...types.GomegaMatcher) types.GomegaMatcher {
+	return receiveEnvelope(true, matchers...)
 }
 
 func ReceiveEnvelope(matchers ...types.GomegaMatcher) types.GomegaMatcher {
+	return receiveEnvelope(false, matchers...)
+}
+
+func receiveEnvelope(mustHavePrefix bool, matchers ...types.GomegaMatcher) *envelopeReceiver {
 	if len(matchers) > 1 {
 		panic("ReceiveEnvelope: expected 0 or 1 matchers")
 	}
-	receiver := &envelopeReceiver{}
+	receiver := &envelopeReceiver{
+		mustHavePrefix: mustHavePrefix,
+	}
 	if len(matchers) == 1 {
 		receiver.matcher = matchers[0]
 	}
@@ -42,6 +54,10 @@ func (e *envelopeReceiver) Match(actual interface{}) (success bool, err error) {
 		if err := proto.Unmarshal(msgBytes[4:], envelope); err != nil {
 			return false, nil
 		}
+		e.hadPrefix = true
+	}
+	if e.mustHavePrefix && !e.hadPrefix {
+		return false, nil
 	}
 	e.foundEnvelope = envelope
 	if e.matcher != nil {
@@ -54,12 +70,18 @@ func (e *envelopeReceiver) FailureMessage(actual interface{}) (message string) {
 	if e.foundEnvelope != nil {
 		return e.matcher.FailureMessage(e.foundEnvelope)
 	}
+	if e.mustHavePrefix && !e.hadPrefix {
+		return "Expected to receive a size-prefixed []byte"
+	}
 	return "Expected to receive a []byte which successfully unmarshals to *events.Envelope"
 }
 
 func (e *envelopeReceiver) NegatedFailureMessage(actual interface{}) (message string) {
 	if e.foundEnvelope != nil {
 		return e.matcher.NegatedFailureMessage(e.foundEnvelope)
+	}
+	if e.mustHavePrefix && e.hadPrefix {
+		return "Expected not to receive a size-prefixed []byte"
 	}
 	return "Expected not to receive a []byte which successfully unmarshals to *events.Envelope"
 }
