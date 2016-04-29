@@ -17,7 +17,7 @@ func (f *fakeWriter) Write(message *events.Envelope) {
 		switch message.GetValueMetric().GetName() {
 		case "Uptime":
 			atomic.StoreUint64(&f.lastUptime, uint64(message.GetValueMetric().GetValue()))
-		case "OpenFileDescriptor":
+		case "LinuxFileDescriptor":
 			atomic.StoreUint64(&f.openFileDescriptors, uint64(message.GetValueMetric().GetValue()))
 		}
 	}

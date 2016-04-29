@@ -17,7 +17,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-const initialFDs = 5
+const initialFDs = 4
 
 var _ = Describe("OpenFD", func() {
 	var (

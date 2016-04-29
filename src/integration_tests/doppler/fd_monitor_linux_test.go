@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = FDescribe("Monitor", func() {
+var _ = Describe("Monitor", func() {
 
 	var (
 		writer          *fakeWriter

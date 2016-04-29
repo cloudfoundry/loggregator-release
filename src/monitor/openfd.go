@@ -30,6 +30,7 @@ func (l *LinuxFileDescriptor) Start() {
 	l.logger.Info("Starting Open File Descriptor Monitor...")
 
 	ticker := time.NewTicker(l.interval)
+	l.logger.Infof("Starting FD monitor with pid %d", os.Getpid())
 	path := fmt.Sprintf("/proc/%d/fd", os.Getpid())
 
 	for {
