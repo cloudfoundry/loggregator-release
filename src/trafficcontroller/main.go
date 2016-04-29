@@ -73,7 +73,7 @@ func main() {
 		}
 	}()
 
-	uptimeMonitor := monitor.NewUptimeMonitor(time.Duration(config.MonitorIntervalSeconds) * time.Second)
+	uptimeMonitor := monitor.NewUptime(time.Duration(config.MonitorIntervalSeconds) * time.Second)
 	go uptimeMonitor.Start()
 	defer uptimeMonitor.Stop()
 
