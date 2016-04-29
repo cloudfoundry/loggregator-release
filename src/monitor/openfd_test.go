@@ -21,7 +21,7 @@ const initialFDs = 5
 
 var _ = Describe("OpenFD", func() {
 	var (
-		openFDMonitor *monitor.OpenFileDescriptor
+		openFDMonitor *monitor.LinuxFileDescriptor
 		logger        *gosteno.Logger
 	)
 
@@ -30,7 +30,7 @@ var _ = Describe("OpenFD", func() {
 		interval := 100 * time.Millisecond
 		logger = loggertesthelper.Logger()
 
-		openFDMonitor = monitor.NewOpenFD(interval, logger)
+		openFDMonitor = monitor.NewLinuxFD(interval, logger)
 		go openFDMonitor.Start()
 	})
 
@@ -41,7 +41,7 @@ var _ = Describe("OpenFD", func() {
 	It("emits a metric with the number of open file handles", func() {
 		Eventually(func() int { return len(fakeEventEmitter.GetMessages()) }).Should(BeNumerically(">", 0))
 		Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
-			Name:  proto.String("OpenFileDescriptor"),
+			Name:  proto.String("LinuxFileDescriptor"),
 			Value: proto.Float64(initialFDs),
 			Unit:  proto.String("File"),
 		}))
@@ -54,7 +54,7 @@ var _ = Describe("OpenFD", func() {
 			fake.Message{
 				Origin: "MonitorTest",
 				Event: &events.ValueMetric{
-					Name:  proto.String("OpenFileDescriptor"),
+					Name:  proto.String("LinuxFileDescriptor"),
 					Value: proto.Float64(initialFDs + 2),
 					Unit:  proto.String("File"),
 				},

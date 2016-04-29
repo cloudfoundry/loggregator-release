@@ -48,8 +48,8 @@ type Doppler struct {
 
 	storeAdapter storeadapter.StoreAdapter
 
-	uptimeMonitor   monitor.Monitor
-	openFileMonitor monitor.Monitor
+	uptimeMonitor   *monitor.Uptime
+	openFileMonitor *monitor.LinuxFileDescriptor
 
 	newAppServiceChan, deletedAppServiceChan <-chan appservice.AppService
 	wg                                       sync.WaitGroup
@@ -114,7 +114,7 @@ func New(logger *gosteno.Logger,
 
 	initializeMetrics(config.MetricBatchIntervalMilliseconds)
 	monitorInterval := time.Duration(config.MonitorIntervalSeconds) * time.Second
-	openFileMonitor := monitor.NewOpenFileDescriptor("doppler", monitorInterval, logger)
+	openFileMonitor := monitor.NewLinuxFD(monitorInterval, logger)
 
 	return &Doppler{
 		Logger:                          logger,
@@ -133,7 +133,7 @@ func New(logger *gosteno.Logger,
 		envelopeChan:                    listenerEnvelopeChan,
 		signatureVerifier:               signatureVerifier,
 		dropsondeVerifiedBytesChan:      make(chan []byte),
-		uptimeMonitor:                   monitor.NewUptimeMonitor(monitorInterval),
+		uptimeMonitor:                   monitor.NewUptime(monitorInterval),
 		openFileMonitor:                 openFileMonitor,
 	}, nil
 }

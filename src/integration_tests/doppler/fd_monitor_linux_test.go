@@ -1,3 +1,5 @@
+// +build linux
+
 package doppler_test
 
 import (
@@ -10,7 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Uptime Monitor", func() {
+var _ = FDescribe("Monitor", func() {
 
 	var (
 		writer          *fakeWriter
@@ -26,12 +28,12 @@ var _ = Describe("Uptime Monitor", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	Context("Uptime", func() {
-		It("sends uptime metrics", func() {
+	Context("LinuxFileDescriptor", func() {
+		It("sends open file descriptor metrics", func() {
 			defer dropsondeReader.Stop()
 			go dropsondeReader.Start()
 
-			Eventually(func() uint64 { return atomic.LoadUint64(&writer.lastUptime) }, 3).Should(BeNumerically(">", 1))
+			Eventually(func() uint64 { return atomic.LoadUint64(&writer.openFileDescriptors) }, 3).Should(BeNumerically("~", 15, 3))
 		})
 	})
 })

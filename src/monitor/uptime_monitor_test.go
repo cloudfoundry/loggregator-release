@@ -11,25 +11,25 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-var (
-	uptimeMonitor monitor.Monitor
-)
-
 const (
 	interval = 100 * time.Millisecond
 )
 
-var _ = Describe("UptimeMonitor", func() {
+var _ = Describe("Uptime", func() {
+	var (
+		uptime *monitor.Uptime
+	)
+
 	BeforeEach(func() {
 		fakeEventEmitter.Reset()
-		uptimeMonitor = monitor.NewUptimeMonitor(interval)
-		go uptimeMonitor.Start()
+		uptime = monitor.NewUptime(interval)
+		go uptime.Start()
 	})
 
 	Context("stops automatically", func() {
 
 		AfterEach(func() {
-			uptimeMonitor.Stop()
+			uptime.Stop()
 		})
 
 		PIt("returns a value metric containing uptime after specified time", func() {
@@ -56,7 +56,7 @@ var _ = Describe("UptimeMonitor", func() {
 	It("stops the monitor and respective ticker", func() {
 		Eventually(func() int { return len(fakeEventEmitter.GetMessages()) }).Should(BeNumerically(">=", 1))
 
-		uptimeMonitor.Stop()
+		uptime.Stop()
 
 		current := getLatestUptime()
 		Consistently(getLatestUptime, 2).Should(Equal(current))

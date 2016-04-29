@@ -12,26 +12,24 @@ import (
 	"github.com/cloudfoundry/gosteno"
 )
 
-// TODO: exclude windows build
-
-type OpenFileDescriptor struct {
+type LinuxFileDescriptor struct {
 	interval time.Duration
 	done     chan chan struct{}
 	logger   *gosteno.Logger
 }
 
-func NewOpenFD(interval time.Duration, logger *gosteno.Logger) *OpenFileDescriptor {
-	return &OpenFileDescriptor{
+func NewLinuxFD(interval time.Duration, logger *gosteno.Logger) *LinuxFileDescriptor {
+	return &LinuxFileDescriptor{
 		interval: interval,
 		done:     make(chan chan struct{}),
 		logger:   logger,
 	}
 }
 
-func (o *OpenFileDescriptor) Start() {
-	o.logger.Info("Starting Open File Descriptor Monitor...")
+func (l *LinuxFileDescriptor) Start() {
+	l.logger.Info("Starting Open File Descriptor Monitor...")
 
-	ticker := time.NewTicker(o.interval)
+	ticker := time.NewTicker(l.interval)
 	path := fmt.Sprintf("/proc/%d/fd", os.Getpid())
 
 	for {
@@ -39,12 +37,12 @@ func (o *OpenFileDescriptor) Start() {
 		case <-ticker.C:
 			finfos, err := ioutil.ReadDir(path)
 			if err != nil {
-				o.logger.Errorf("Could not read pid dir %s: %s", path, err)
+				l.logger.Errorf("Could not read pid dir %s: %s", path, err)
 				break
 			}
 
-			metrics.SendValue("OpenFileDescriptor", float64(symlinks(finfos)), "File")
-		case stopped := <-o.done:
+			metrics.SendValue("LinuxFileDescriptor", float64(symlinks(finfos)), "File")
+		case stopped := <-l.done:
 			ticker.Stop()
 			close(stopped)
 			return
@@ -52,9 +50,9 @@ func (o *OpenFileDescriptor) Start() {
 	}
 }
 
-func (o *OpenFileDescriptor) Stop() {
+func (l *LinuxFileDescriptor) Stop() {
 	stopped := make(chan struct{})
-	o.done <- stopped
+	l.done <- stopped
 	<-stopped
 }
 

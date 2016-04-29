@@ -6,21 +6,21 @@ import (
 	"github.com/cloudfoundry/dropsonde/metrics"
 )
 
-type UptimeMonitor struct {
+type Uptime struct {
 	interval time.Duration
 	started  int64
 	doneChan chan chan struct{}
 }
 
-func NewUptimeMonitor(interval time.Duration) *UptimeMonitor {
-	return &UptimeMonitor{
+func NewUptime(interval time.Duration) *Uptime {
+	return &Uptime{
 		interval: interval,
 		started:  time.Now().Unix(),
 		doneChan: make(chan chan struct{}),
 	}
 }
 
-func (u *UptimeMonitor) Start() {
+func (u *Uptime) Start() {
 	ticker := time.NewTicker(u.interval)
 
 	for {
@@ -35,7 +35,7 @@ func (u *UptimeMonitor) Start() {
 	}
 }
 
-func (u *UptimeMonitor) Stop() {
+func (u *Uptime) Stop() {
 	stopped := make(chan struct{})
 	u.doneChan <- stopped
 	<-stopped
