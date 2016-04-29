@@ -51,9 +51,9 @@ var _ = Describe("MetronBenchmark tool", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(rate).To(BeNumerically("~", messagesPerSecond, threshold))
 		},
-		Entry("4000 messages per second", 500, 25),
-		Entry("7000 messages per second", 1000, 50),
-		Entry("10000 messages per second", 3000, 150),
-		Entry("13000 messages per second", 5000, 250),
+		Entry("500 messages per second", 500, 25),
+		Entry("1000 messages per second", 1000, 50),
+		Entry("3000 messages per second", 3000, 150),
+		Entry("5000 messages per second", 5000, 250),
 	)
 })
