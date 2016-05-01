@@ -73,9 +73,14 @@ func main() {
 		}
 	}()
 
-	uptimeMonitor := monitor.NewUptime(time.Duration(config.MonitorIntervalSeconds) * time.Second)
+	monitorInterval := time.Duration(config.MonitorIntervalSeconds) * time.Second
+	uptimeMonitor := monitor.NewUptime(monitorInterval)
 	go uptimeMonitor.Start()
 	defer uptimeMonitor.Stop()
+	
+	openFileMonitor := monitor.NewLinuxFD(monitorInterval, log)
+	go openFileMonitor.Start()
+	defer openFileMonitor.Stop()	
 
 	etcdAdapter := defaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	err = etcdAdapter.Connect()
