@@ -1,9 +1,17 @@
-Add-Type -AssemblyName System.IO.Compression.FileSystem
-function Unzip
-{
-    param([string]$zipfile, [string]$outpath)
+$pkg_name="metron"
+$env:GOROOT="C:\var\vcap\packages\golang1.5-windows\go"
+$env:GOPATH="${PWD}\loggregator"
+$env:PATH="${env:GOROOT}\bin;${env:PATH}"
 
-    [System.IO.Compression.ZipFile]::ExtractToDirectory($zipfile, $outpath)
+try
+{
+	$BOSH_INSTALL_TARGET = Resolve-Path $env:BOSH_INSTALL_TARGET
+	go build -o "${BOSH_INSTALL_TARGET}\${pkg_name}.exe" "${pkg_name}"
+}
+catch
+{
+	$Host.UI.WriteErrorLine($_.Exception.Message)
+	Exit 1
 }
 
-Unzip "metron_agent_windows/metron.zip" $Env:BOSH_INSTALL_TARGET
+Exit 0
