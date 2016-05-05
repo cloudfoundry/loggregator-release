@@ -97,7 +97,11 @@ func metronSentMessageCount(msg *events.Envelope) bool {
 }
 
 func dopplerReceivedMessageCount(msg *events.Envelope) bool {
-	return msg.GetEventType() == events.Envelope_CounterEvent && (msg.CounterEvent.GetName() == "dropsondeListener.receivedMessageCount" || msg.CounterEvent.GetName() == "tlsListener.receivedMessageCount") && msg.GetOrigin() == "DopplerServer"
+	return msg.GetEventType() == events.Envelope_CounterEvent &&
+		(msg.CounterEvent.GetName() == "udpListener.receivedMessageCount" ||
+			msg.CounterEvent.GetName() == "tcpListener.receivedMessageCount" ||
+			msg.CounterEvent.GetName() == "tlsListener.receivedMessageCount") &&
+		msg.GetOrigin() == "DopplerServer"
 }
 
 func dopplerSentMessageCount(msg *events.Envelope) bool {

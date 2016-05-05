@@ -18,8 +18,10 @@ func TestTcplistener(t *testing.T) {
 	RunSpecs(t, "Listeners Suite")
 }
 
-var fakeEventEmitter = fake.NewFakeEventEmitter("doppler")
-var metricBatcher *metricbatcher.MetricBatcher
+var (
+	fakeEventEmitter = fake.NewFakeEventEmitter("doppler")
+	metricBatcher    *metricbatcher.MetricBatcher
+)
 
 var _ = BeforeSuite(func() {
 	sender := metric_sender.NewMetricSender(fakeEventEmitter)

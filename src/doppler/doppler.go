@@ -75,7 +75,7 @@ func New(logger *gosteno.Logger,
 	var err error
 	listenerEnvelopeChan := make(chan *events.Envelope)
 
-	udpListener, dropsondeBytesChan = listeners.NewUDPListener(fmt.Sprintf("%s:%d", host, config.IncomingUDPPort), logger, "dropsondeListener")
+	udpListener, dropsondeBytesChan = listeners.NewUDPListener(fmt.Sprintf("%s:%d", host, config.IncomingUDPPort), logger, "udpListener")
 
 	var addr string
 	var tlsConfig *doppler_config.TLSListenerConfig

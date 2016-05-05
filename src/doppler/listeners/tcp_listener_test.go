@@ -3,30 +3,29 @@ package listeners_test
 import (
 	"crypto/tls"
 	"encoding/binary"
-	"strings"
-
-	"github.com/cloudfoundry/sonde-go/events"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"doppler/config"
-	"doppler/listeners"
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/nu7hatch/gouuid"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"doppler/config"
+	"doppler/listeners"
 )
 
 var _ = Describe("TCPlistener", func() {
 	var (
-		envelopeChan      chan *events.Envelope
 		listener          listeners.Listener
+		envelopeChan      chan *events.Envelope
 		tlsListenerConfig *config.TLSListenerConfig
 		tlsClientConfig   *tls.Config
 	)
@@ -39,7 +38,11 @@ var _ = Describe("TCPlistener", func() {
 		}
 
 		var err error
-		tlsClientConfig, err = listeners.NewTLSConfig("fixtures/client.crt", "fixtures/client.key", "fixtures/loggregator-ca.crt")
+		tlsClientConfig, err = listeners.NewTLSConfig(
+			"fixtures/client.crt",
+			"fixtures/client.key",
+			"fixtures/loggregator-ca.crt",
+		)
 		Expect(err).NotTo(HaveOccurred())
 		tlsClientConfig.ServerName = "doppler"
 
@@ -48,9 +51,16 @@ var _ = Describe("TCPlistener", func() {
 
 	JustBeforeEach(func() {
 		var err error
-		listener, err = listeners.NewTCPListener("aname", "127.0.0.1:1234", tlsListenerConfig, envelopeChan, loggertesthelper.Logger())
+		listener, err = listeners.NewTCPListener(
+			"aname",
+			"127.0.0.1:1234",
+			tlsListenerConfig,
+			envelopeChan,
+			loggertesthelper.Logger(),
+		)
 		Expect(err).NotTo(HaveOccurred())
 		go listener.Start()
+
 		// wait for the listener to start up
 		openTCPConnection("127.0.0.1:1234", tlsClientConfig).Close()
 	})
@@ -59,13 +69,14 @@ var _ = Describe("TCPlistener", func() {
 		listener.Stop()
 	})
 
-	Context("With an nil TLSListenerConfig", func() {
+	Context("with TLS disabled", func() {
 		BeforeEach(func() {
 			tlsListenerConfig = nil
 			tlsClientConfig = nil
 			fakeEventEmitter.Reset()
 			metricBatcher.Reset()
 		})
+
 		It("sends all types of messages as a protobuf", func() {
 			for name, eventType := range events.Envelope_EventType_value {
 				envelope := createEnvelope(events.Envelope_EventType(eventType))
@@ -74,14 +85,15 @@ var _ = Describe("TCPlistener", func() {
 				err := send(conn, envelope)
 				Expect(err).ToNot(HaveOccurred())
 
-				Eventually(envelopeChan).Should(Receive(Equal(envelope)), fmt.Sprintf("did not receive expected event: %s", name))
+				why := "did not receive expected event:" + name
+				Eventually(envelopeChan).Should(Receive(Equal(envelope)), why)
 				conn.Close()
 			}
 		})
 	})
 
-	Context("when TLS is enabled", func() {
-		Context("With invalid client configuration", func() {
+	Context("with TLS is enabled", func() {
+		Context("with invalid client configuration", func() {
 			JustBeforeEach(func() {
 				conn := openTCPConnection(listener.Address(), tlsClientConfig)
 				conn.Close()
@@ -165,15 +177,19 @@ var _ = Describe("TCPlistener", func() {
 				var counterEvents []*events.CounterEvent
 				for _, e := range fakeEventEmitter.GetMessages() {
 					if ce, ok := e.Event.(*events.CounterEvent); ok {
-						if strings.HasPrefix(ce.GetName(), "aname.") {
+						if strings.HasPrefix(ce.GetName(), "aname.") ||
+							strings.HasPrefix(ce.GetName(), "listeners.") {
 							counterEvents = append(counterEvents, ce)
 						}
 					}
 				}
-
 				Expect(counterEvents).To(ConsistOf(
 					&events.CounterEvent{
 						Name:  proto.String("aname.receivedMessageCount"),
+						Delta: proto.Uint64(1),
+					},
+					&events.CounterEvent{
+						Name:  proto.String("listeners.totalReceivedMessageCount"),
 						Delta: proto.Uint64(1),
 					},
 					&events.CounterEvent{
@@ -310,7 +326,6 @@ func send(conn net.Conn, envelope *events.Envelope) error {
 }
 
 func createEnvelope(eventType events.Envelope_EventType) *events.Envelope {
-
 	envelope := &events.Envelope{Origin: proto.String("origin"), EventType: &eventType, Timestamp: proto.Int64(time.Now().UnixNano())}
 
 	switch eventType {
