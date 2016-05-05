@@ -11,7 +11,6 @@ Loggregator is the user application logging subsystem of Cloud Foundry.
 If you would to see our plans for future development, check out the [Loggregator Roadmap](https://docs.google.com/spreadsheets/d/1QOCUIlTkhGzVwfRji7Q14vczqkBbFGkiDWrJSKdRLRg/edit?usp=sharing)
 
 
-
 ### Table of Contents
 * [Features](#features)
 * [Usage](#usage)
@@ -455,7 +454,6 @@ ginkgo -r
 ```
 
 #### Debugging
-
 
 Doppler will dump information about the running goroutines to stdout if sent a `USR1` signal.
 
