@@ -10,7 +10,6 @@ Loggregator is the user application logging subsystem of Cloud Foundry.
 
 If you would to see our plans for future development, check out the [Loggregator Roadmap](https://docs.google.com/spreadsheets/d/1QOCUIlTkhGzVwfRji7Q14vczqkBbFGkiDWrJSKdRLRg/edit?usp=sharing)
 
-
 ### Table of Contents
 * [Features](#features)
 * [Usage](#usage)
@@ -100,7 +99,6 @@ has in-built support to ensure integrity, encryption and authentication.
 
 **NOTE: TLS support is currently experimental. Enable it at your own discretion. The properties discussed below as well as their behavior might change in the future.**
 
-
 | Property        | Required                              | Description                                     |
 |-----------------|---------------------------------------|-------------------------------------------------|
 | `metron_agent.preferred_protocol` | No<br> Default: `udp`                   | Metron prefers this protocol to communicate with Doppler. Options are `udp` and `tls`. `metron_agent.tls.*` properties are required when this is set to `tls`                             |
@@ -109,14 +107,12 @@ has in-built support to ensure integrity, encryption and authentication.
 | `metron_agent.tls.client_key`   | Yes if `metron_agent.preferred_protocol: tls` <br>Default: `""`              | Client key used by Metron when communicating with Doppler over TLS            |
 | `loggregator.tls.ca_cert`   | Yes if `metron_agent.preferred_protocol: tls` <br>Default: `""`              | Certificate Authority used to sign the certificate            |
 
-
 | Property        | Required                              | Description                                     |
 |-----------------|---------------------------------------|-------------------------------------------------|
 | `doppler.tls.enable` | No <br>Default: `false`                   | Enable TLS communication with Metron. If enabled, `doppler.tls.*` properties are required.|
 | `doppler.tls.server_cert`   | Yes if `doppler.tls.enable: true` <br>Default: `""`              | Signed server certificate used by Doppler when communicating with Doppler over TLS            |
 | `doppler.tls.server_key`   | Yes if `doppler.tls.enable: true` <br>Default: `""`              | Server key used by Doppler when communicating with Metron over TLS            |
 | `loggregator.tls.ca_cert`   | Yes if `doppler.tls.enable: true` <br>Default: `""`              | Certificate Authority used to sign the certificate            |
-
 
 An example manifest is given below:
 
@@ -154,13 +150,11 @@ An example manifest is given below:
         -----END RSA PRIVATE KEY-----
 ```
 
-
 #### Generating TLS Certificates
 
 For generating TLS certificates, we recommend
 [certstrap](https://github.com/square/certstrap).  An operator can follow the
 following steps to successfully generate the required certificates.
-
 
 1. Get certstrap
    ```
@@ -219,7 +213,6 @@ following steps to successfully generate the required certificates.
    - The manifest property `properties.metron_agent.tls.client_cert` should be set to the certificate in `out/metron_agent.crt`,
    - The manifest property `properties.metron_agent.tls.client_key` should be set to the certificate in `out/metron_agent.key`
 
-
 #### Custom TLS Certificate Generation
 
 If you already have a CA, or wish to use your own names for clients and
@@ -227,7 +220,6 @@ servers, please note that the common-names "loggregatorCA" and "metron_agent" ar
 placeholders and can be renamed.
 
 The server certificate must have the common name `doppler`.
-
 
 ### Deploying via BOSH
 
@@ -293,7 +285,6 @@ jobs:
       zone: z1
     networks:
       apps: cf1
-
 
 properties:
   loggregator:
