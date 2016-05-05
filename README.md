@@ -10,8 +10,6 @@ Loggregator is the user application logging subsystem of Cloud Foundry.
 
 If you would to see our plans for future development, check out the [Loggregator Roadmap](https://docs.google.com/spreadsheets/d/1QOCUIlTkhGzVwfRji7Q14vczqkBbFGkiDWrJSKdRLRg/edit?usp=sharing)
 
-
-
 ### Table of Contents
 * [Features](#features)
 * [Usage](#usage)
@@ -105,7 +103,6 @@ over UDP.
 
 **NOTE: TLS support is currently experimental. Enable it at your own discretion. The properties discussed below as well as their behavior might change in the future.**
 
-
 | Property        | Required                              | Description                                     |
 |-----------------|---------------------------------------|-------------------------------------------------|
 | `metron_agent.protocols` | No<br> Default: `["udp"]`                   | Metron prefers this protocol to communicate with Doppler. Options are `udp`, `tcp` and `tls`. `metron_agent.tls.*` properties are required when this is set to `tls`                             |
@@ -113,14 +110,12 @@ over UDP.
 | `metron_agent.tls.client_key`   | Yes if `metron_agent.protocols` includes "tls" <br>Default: `""`              | Client key used by Metron when communicating with Doppler over TLS            |
 | `loggregator.tls.ca_cert`   | Yes if `metron_agent.protocols` include "tls" <br>Default: `""`              | Certificate Authority used to sign the certificate            |
 
-
 | Property        | Required                              | Description                                     |
 |-----------------|---------------------------------------|-------------------------------------------------|
 | `doppler.tls.enable` | No <br>Default: `false`                   | Enable TLS communication with Metron. If enabled, `doppler.tls.*` properties are required.|
 | `doppler.tls.server_cert`   | Yes if `doppler.tls.enable: true` <br>Default: `""`              | Signed server certificate used by Doppler when communicating with Doppler over TLS            |
 | `doppler.tls.server_key`   | Yes if `doppler.tls.enable: true` <br>Default: `""`              | Server key used by Doppler when communicating with Metron over TLS            |
 | `loggregator.tls.ca_cert`   | Yes if `doppler.tls.enable: true` <br>Default: `""`              | Certificate Authority used to sign the certificate            |
-
 
 An example manifest is given below:
 
@@ -157,13 +152,11 @@ An example manifest is given below:
         -----END RSA PRIVATE KEY-----
 ```
 
-
 #### Generating TLS Certificates
 
 For generating TLS certificates, we recommend
 [certstrap](https://github.com/square/certstrap).  An operator can follow the
 following steps to successfully generate the required certificates.
-
 
 1. Get certstrap
    ```
@@ -221,7 +214,6 @@ following steps to successfully generate the required certificates.
    - The manifest property `properties.metron_agent.tls.client_cert` should be set to the certificate in `out/metron_agent.crt`,
    - The manifest property `properties.metron_agent.tls.client_key` should be set to the certificate in `out/metron_agent.key`
 
-
 #### Custom TLS Certificate Generation
 
 If you already have a CA, or wish to use your own names for clients and
@@ -229,7 +221,6 @@ servers, please note that the common-names "loggregatorCA" and "metron_agent" ar
 placeholders and can be renamed.
 
 The server certificate must have the common name `doppler`.
-
 
 ### Deploying via BOSH
 
@@ -295,7 +286,6 @@ jobs:
       zone: z1
     networks:
       apps: cf1
-
 
 properties:
   loggregator:
@@ -456,7 +446,6 @@ ginkgo -r
 
 #### Debugging
 
-
 Doppler will dump information about the running goroutines to stdout if sent a `USR1` signal.
 
 ```
@@ -467,15 +456,6 @@ runtime/pprof.writeGoroutine(0xc2000bc3f0, 0xc200000008, 0x2, 0xca74765c960d5c8f
 	/home/travis/.gvm/gos/go1.1.1/src/pkg/runtime/pprof/pprof.go:500 +0x3a
 ....
 ``` 
-
-#### Editing Manifest Templates
-
-Currently the Doppler/Metron manifest configuration lives [here](manifest-templates/cf-lamb.yml).
-Editing this file will make changes in the [manifest templates](https://github.com/cloudfoundry/cf-release/tree/master/templates) in cf-release.
-When making changes to these templates, you should be working out of the loggregator submodule in cf-release.
-After changing this configuration, you will need to run the tests in root directory of cf-release with `bundle exec rspec`.
-These tests will pull values from [lamb-properties](manifest-templates/lamb-properties.rb) in order to populate the fixtures.
-Necessary changes should be made in [lamb-properties](manifest-templates/lamb-properties.rb).
 
 ### Loggregator as a separate release
 There are cases when releases outside of Cloud Foundry would like to emit logs and metrics to the Loggregator system. In such cases we have instructions on using Loggregator as a separate release [here](docs/using_separate_release.md).

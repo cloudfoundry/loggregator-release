@@ -78,4 +78,14 @@ builds:
     version: '38'
   3a4a3f88-a416-47db-91de-28c6e07f0743:
     version: '39'
+  86e7d81a-1681-443c-9e5b-56881a125b99:
+    version: '40'
+  08c3d164-8a65-4b89-96c7-81d3a124e685:
+    version: '41'
+  672ee994-ef3b-4420-be47-e581b5542f29:
+    version: '42'
+  cce12a9d-f87f-4531-8b46-5d74ee1127bb:
+    version: '43'
+  cc49103b-9164-4529-8376-5748f6326968:
+    version: '44'
 format-version: '2'
