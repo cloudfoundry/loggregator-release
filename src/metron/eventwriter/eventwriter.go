@@ -33,4 +33,6 @@ func (e *EventWriter) EmitEnvelope(envelope *events.Envelope) error {
 	return nil // Unused
 }
 
-func (e *EventWriter) Close() {}
+func (e *EventWriter) Origin() string {
+	return e.origin
+}

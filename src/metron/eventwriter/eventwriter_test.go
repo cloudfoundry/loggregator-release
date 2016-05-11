@@ -4,10 +4,10 @@ import (
 	"metron/eventwriter"
 	"metron/writers/mocks"
 
+	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
-	"github.com/cloudfoundry/dropsonde/emitter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -31,7 +31,7 @@ var _ = Describe("EventWriter", func() {
 	})
 
 	It("satisfies the dropsonde/emitter/EventEmitter interface", func() {
-		var ee emitter.EventEmitter
+		var ee dropsonde.EventEmitter
 		ee = eventwriter.New("Africa", &mocks.MockEnvelopeWriter{})
 		Expect(ee).NotTo(BeNil())
 	})
