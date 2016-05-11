@@ -53,6 +53,9 @@ func (udp *udpListener) Start() {
 	messageCountMetricName := udp.contextName + ".receivedMessageCount"
 	listenerTotalMetricName := "listeners.totalReceivedMessageCount"
 	receivedByteCountMetricName := udp.contextName + ".receivedByteCount"
+	// TODO: will be deprecated
+	dropsondeMessageCountMetricName := "dropsondeListener.receivedMessageCount"
+	dropsondeReceivedByteCountMetricName := "dropsondeListener.receivedByteCount"
 
 	readBuffer := make([]byte, 65535) //buffer with size = max theoretical UDP size
 	defer close(udp.dataChannel)
@@ -66,6 +69,10 @@ func (udp *udpListener) Start() {
 
 		readData := make([]byte, readCount) //pass on buffer in size only of read data
 		copy(readData, readBuffer[:readCount])
+
+		//TODO: will be deprecated
+		metrics.BatchIncrementCounter(dropsondeMessageCountMetricName)
+		metrics.BatchAddCounter(dropsondeReceivedByteCountMetricName, uint64(readCount))
 
 		metrics.BatchIncrementCounter(messageCountMetricName)
 		metrics.BatchIncrementCounter(listenerTotalMetricName)
