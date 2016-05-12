@@ -40,7 +40,7 @@ type Doppler struct {
 	messageRouter   *sinkserver.MessageRouter
 	websocketServer *websocketserver.WebsocketServer
 
-	dropsondeUnmarshallerCollection dropsonde_unmarshaller.DropsondeUnmarshallerCollection
+	dropsondeUnmarshallerCollection *dropsonde_unmarshaller.DropsondeUnmarshallerCollection
 	dropsondeBytesChan              <-chan []byte
 	dropsondeVerifiedBytesChan      chan []byte
 	envelopeChan                    chan *events.Envelope

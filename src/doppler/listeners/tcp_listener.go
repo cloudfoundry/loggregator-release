@@ -24,7 +24,7 @@ type TCPListener struct {
 	listener       net.Listener
 	protocol       string
 	connections    map[net.Conn]struct{}
-	unmarshaller   dropsonde_unmarshaller.DropsondeUnmarshaller
+	unmarshaller   *dropsonde_unmarshaller.DropsondeUnmarshaller
 	stopped        chan struct{}
 	lock           sync.Mutex
 	listenerClosed chan struct{}
