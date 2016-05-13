@@ -56,6 +56,14 @@ var _ = BeforeSuite(func() {
 
 	Eventually(metronSession, 1).Should(gbytes.Say("metron started"))
 	Eventually(statsdInjectorSession).Should(gbytes.Say("Listening for statsd on host :51162"))
+
+	// Put a key in etcd so that metron doesn't block on getting an event from
+	// finder service.
+	exec.Command(
+		"curl", "-v", "-X", "PUT",
+		"localhost:4002/v2/keys/healthstatus/doppler/z1/deployment-name/42",
+		"-d", "value=127.0.0.1",
+	).Run()
 })
 
 var _ = AfterSuite(func() {
