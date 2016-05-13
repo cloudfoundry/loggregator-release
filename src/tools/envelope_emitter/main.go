@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/dropsonde"
+	"github.com/cloudfoundry/dropsonde/metric_sender"
 	"github.com/cloudfoundry/dropsonde/metrics"
 )
 
@@ -38,19 +39,37 @@ func main() {
 		//case "HttpStartStop":
 		//case "HttpStart":
 		//case "HttpStop":
-		//case "CounterEvent":
 		//case "Error":
 
+		case "CounterEvent":
+			sendCounterEvent()
 		case "ValueMetric":
 			sendValueMetric()
 		case "ContainerMetric":
 			sendContainerMetric()
 		default:
+			sendCounterEvent()
 			sendValueMetric()
 			sendContainerMetric()
 		}
 
 		time.Sleep(delay)
+	}
+}
+
+var counter metric_sender.CounterChainer
+
+func sendCounterEvent() {
+	if counter == nil {
+		counter = metrics.Counter("requests").SetTag("protocol", "http")
+	}
+	err := counter.Increment()
+	if err != nil {
+		panic(err)
+	}
+	err = counter.Add(3)
+	if err != nil {
+		panic(err)
 	}
 }
 
