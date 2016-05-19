@@ -81,9 +81,9 @@ func main() {
 	aggregator := messageaggregator.New(messageTagger, log)
 
 	statsStopChan := make(chan struct{})
-	initializeMetrics(messageTagger, config, statsStopChan, log)
+	batcher := initializeMetrics(messageTagger, config, statsStopChan, log)
 
-	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, log)
+	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, batcher, log)
 	metronAddress := fmt.Sprintf("127.0.0.1:%d", config.IncomingUDPPort)
 	dropsondeReader, err := networkreader.New(metronAddress, "dropsondeAgentListener", dropsondeUnmarshaller, log)
 	if err != nil {
@@ -185,7 +185,7 @@ func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*eventm
 	return marshaller, nil
 }
 
-func initializeMetrics(messageTagger *tagger.Tagger, config *config.Config, stopChan chan struct{}, logger *gosteno.Logger) {
+func initializeMetrics(messageTagger *tagger.Tagger, config *config.Config, stopChan chan struct{}, logger *gosteno.Logger) *metricbatcher.MetricBatcher {
 	metricsAggregator := messageaggregator.New(messageTagger, logger)
 
 	eventWriter := eventwriter.New("MetronAgent", metricsAggregator)
@@ -195,6 +195,7 @@ func initializeMetrics(messageTagger *tagger.Tagger, config *config.Config, stop
 
 	stats := runtime_stats.NewRuntimeStats(eventWriter, time.Duration(config.RuntimeStatsIntervalMilliseconds)*time.Millisecond)
 	go stats.Run(stopChan)
+	return metricBatcher
 }
 
 func storeAdapterProvider(urls []string, concurrentRequests int) (storeadapter.StoreAdapter, error) {

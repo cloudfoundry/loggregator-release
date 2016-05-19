@@ -6,12 +6,11 @@ import (
 	"net/http"
 
 	. "github.com/apoydence/eachers"
+	"github.com/apoydence/eachers/testhelpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry/dropsonde/factories"
-	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
-	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
@@ -24,13 +23,18 @@ var _ = Describe("EventUnmarshaller", func() {
 		unmarshaller *eventunmarshaller.EventUnmarshaller
 		event        *events.Envelope
 		message      []byte
-		fakeSender   *fake.FakeMetricSender
-		mockBatcher  *mockMetricBatcher
+		mockBatcher  *mockEventBatcher
+		mockChainer  *mockBatchCounterChainer
 	)
 
 	BeforeEach(func() {
 		mockWriter = &mocks.MockEnvelopeWriter{}
-		unmarshaller = eventunmarshaller.New(mockWriter, loggertesthelper.Logger())
+		mockBatcher = newMockEventBatcher()
+		mockChainer = newMockBatchCounterChainer()
+		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
+		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
+
+		unmarshaller = eventunmarshaller.New(mockWriter, mockBatcher, loggertesthelper.Logger())
 		event = &events.Envelope{
 			Origin:      proto.String("fake-origin-3"),
 			EventType:   events.Envelope_ValueMetric.Enum(),
@@ -38,9 +42,6 @@ var _ = Describe("EventUnmarshaller", func() {
 		}
 		message, _ = proto.Marshal(event)
 
-		fakeSender = fake.NewFakeMetricSender()
-		mockBatcher = newMockMetricBatcher()
-		metrics.Initialize(fakeSender, mockBatcher)
 	})
 
 	Context("UnmarshallMessage", func() {
@@ -98,6 +99,30 @@ var _ = Describe("EventUnmarshaller", func() {
 			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
 				With("dropsondeUnmarshaller.unmarshalErrors"),
 			))
+		})
+
+		It("emits envelope counters tagged with event type and protocol", func() {
+			logMessage := &events.Envelope{
+				Origin:    proto.String("origin"),
+				EventType: events.Envelope_LogMessage.Enum(),
+				LogMessage: &events.LogMessage{
+					Message:     []byte("some log message"),
+					MessageType: events.LogMessage_OUT.Enum(),
+					Timestamp:   proto.Int64(1234),
+				},
+			}
+			message, err := proto.Marshal(logMessage)
+			Expect(err).ToNot(HaveOccurred())
+			_, err = unmarshaller.UnmarshallMessage(message)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(mockBatcher.BatchCounterInput).Should(BeCalled(
+				With("dropsondeUnmarshaller.receivedEnvelopes"),
+			))
+			Eventually(mockChainer.SetTagInput).Should(BeCalled(
+				With("protocol", "udp"),
+				With("event_type", "LogMessage"),
+			))
+			Eventually(mockChainer.IncrementCalled).Should(BeCalled())
 		})
 
 		It("emits unknown event types", func() {

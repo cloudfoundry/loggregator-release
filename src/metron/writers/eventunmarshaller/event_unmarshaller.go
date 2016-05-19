@@ -10,14 +10,16 @@ import (
 	"fmt"
 
 	"github.com/cloudfoundry/dropsonde/logging"
-	"github.com/cloudfoundry/dropsonde/metrics"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )
 
-var invalidEnvelope = errors.New("Invalid Envelope")
-var metricNames map[events.Envelope_EventType]string
+var (
+	invalidEnvelope = errors.New("Invalid Envelope")
+	metricNames     map[events.Envelope_EventType]string
+)
 
 func init() {
 	metricNames = make(map[events.Envelope_EventType]string)
@@ -29,19 +31,28 @@ func init() {
 	}
 }
 
+//go:generate hel --type EventBatcher --output mock_event_batcher_test.go
+
+type EventBatcher interface {
+	BatchCounter(name string) (chainer metricbatcher.BatchCounterChainer)
+	BatchIncrementCounter(name string)
+}
+
 // An EventUnmarshaller is an self-instrumenting tool for converting Protocol
 // Buffer-encoded dropsonde messages to Envelope instances.
 type EventUnmarshaller struct {
 	logger       *gosteno.Logger
 	outputWriter writers.EnvelopeWriter
+	batcher      EventBatcher
 }
 
 // New instantiates a EventUnmarshaller and logs to the
 // provided logger.
-func New(outputWriter writers.EnvelopeWriter, logger *gosteno.Logger) *EventUnmarshaller {
+func New(outputWriter writers.EnvelopeWriter, batcher EventBatcher, logger *gosteno.Logger) *EventUnmarshaller {
 	return &EventUnmarshaller{
 		logger:       logger,
 		outputWriter: outputWriter,
+		batcher:      batcher,
 	}
 }
 
@@ -58,13 +69,13 @@ func (u *EventUnmarshaller) UnmarshallMessage(message []byte) (*events.Envelope,
 	err := proto.Unmarshal(message, envelope)
 	if err != nil {
 		u.logger.Errorf("eventUnmarshaller: unmarshal error %v", err)
-		metrics.BatchIncrementCounter("dropsondeUnmarshaller.unmarshalErrors")
+		u.batcher.BatchIncrementCounter("dropsondeUnmarshaller.unmarshalErrors")
 		return nil, err
 	}
 
 	if !valid(envelope) {
 		logging.Debugf(u.logger, "eventUnmarshaller: validation failed for message %v", envelope.GetEventType())
-		metrics.BatchIncrementCounter("dropsondeUnmarshaller.unmarshalErrors")
+		u.batcher.BatchIncrementCounter("dropsondeUnmarshaller.unmarshalErrors")
 		return nil, invalidEnvelope
 	}
 
@@ -82,15 +93,20 @@ func (u *EventUnmarshaller) incrementReceiveCount(eventType events.Envelope_Even
 	case events.Envelope_LogMessage:
 		// LogMessage is a special case. `logMessageReceived` used to be broken out by app ID, and
 		// `logMessageTotal` was the sum of all of those.
-		metrics.BatchIncrementCounter("dropsondeUnmarshaller.logMessageTotal")
+		u.batcher.BatchIncrementCounter("dropsondeUnmarshaller.logMessageTotal")
 	default:
 		metricName := metricNames[eventType]
 		if metricName == "" {
 			metricName = "dropsondeUnmarshaller.unknownEventTypeReceived"
 			err = fmt.Errorf("eventUnmarshaller: received unknown event type %#v", eventType)
 		}
-		metrics.BatchIncrementCounter(metricName)
+		u.batcher.BatchIncrementCounter(metricName)
 	}
+
+	u.batcher.BatchCounter("dropsondeUnmarshaller.receivedEnvelopes").
+		SetTag("protocol", "udp").
+		SetTag("event_type", eventType.String()).
+		Increment()
 
 	return err
 }
