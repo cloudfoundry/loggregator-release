@@ -6,18 +6,17 @@ import (
 	"time"
 	"truncatingbuffer"
 
-	"github.com/cloudfoundry/dropsonde/factories"
-	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
+	. "github.com/apoydence/eachers"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/emitter/fake"
+	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/dropsonde/metric_sender"
-	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/cloudfoundry/sonde-go/events"
 )
 
 type FakeContext struct{}
@@ -83,6 +82,7 @@ var _ = Describe("Truncating Buffer", func() {
 	var context truncatingbuffer.BufferContext
 
 	BeforeEach(func() {
+		metrics.Initialize(nil, nil)
 		inMessageChan = make(chan *events.Envelope)
 		stopChannel = make(chan struct{})
 		context = &FakeContext{}
@@ -158,18 +158,10 @@ var _ = Describe("Truncating Buffer", func() {
 		})
 
 		Context("tracking dropped messages", func() {
-			var fakeEventEmitter *fake.FakeEventEmitter
-
-			receiveDroppedMessages := func() uint64 {
-				var t uint64
-				for i, _ := range fakeEventEmitter.GetMessages() {
-					e := fakeEventEmitter.GetMessages()[i].Event.(*events.CounterEvent)
-
-					t += e.GetDelta()
-				}
-
-				return t
-			}
+			var (
+				fakeEventEmitter *fake.FakeEventEmitter
+				mockBatcher      *mockMetricBatcher
+			)
 
 			tracksDroppedMessagesAnd := func(itMsg string, delta, total int) {
 				It(itMsg, func() {
@@ -186,8 +178,6 @@ var _ = Describe("Truncating Buffer", func() {
 					Expect(counterEvent.GetName()).To(Equal("TruncatingBuffer.DroppedMessages"))
 					Expect(counterEvent.GetDelta()).To(BeEquivalentTo(delta))
 					Expect(counterEvent.GetTotal()).To(BeEquivalentTo(total))
-
-					Eventually(func() uint64 { return receiveDroppedMessages() }).Should(BeEquivalentTo(total))
 				})
 
 			}
@@ -195,26 +185,22 @@ var _ = Describe("Truncating Buffer", func() {
 			BeforeEach(func() {
 				fakeEventEmitter = fake.NewFakeEventEmitter("doppler")
 				sender := metric_sender.NewMetricSender(fakeEventEmitter)
-				batcher := metricbatcher.New(sender, time.Millisecond)
+				mockBatcher = newMockMetricBatcher()
 
-				metrics.Initialize(sender, batcher)
+				metrics.Initialize(sender, mockBatcher)
 
 				fakeEventEmitter.Reset()
 			})
 
 			JustBeforeEach(func() {
-				Expect(fakeEventEmitter.GetMessages()).To(HaveLen(0))
-
 				sendLogMessages("message 1", inMessageChan)
 				sendLogMessages("message 2", inMessageChan)
 				sendLogMessages("message 3", inMessageChan)
 				sendLogMessages("message 4", inMessageChan)
 
-				Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(1))
-				Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.CounterEvent)).To(Equal(&events.CounterEvent{
-					Name:  proto.String("TruncatingBuffer.totalDroppedMessages"),
-					Delta: proto.Uint64(uint64(3)),
-				}))
+				Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
+					With("TruncatingBuffer.totalDroppedMessages", uint64(3)),
+				))
 			})
 
 			Context("when the buffer fills once", func() {
@@ -244,7 +230,9 @@ var _ = Describe("Truncating Buffer", func() {
 					})
 
 					JustBeforeEach(func() {
-						Eventually(func() uint64 { return receiveDroppedMessages() }).Should(BeEquivalentTo(4))
+						Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
+							With("TruncatingBuffer.totalDroppedMessages"),
+						))
 					})
 
 					tracksDroppedMessagesAnd("drops immediately", 1, 4)
@@ -257,8 +245,9 @@ var _ = Describe("Truncating Buffer", func() {
 					})
 
 					JustBeforeEach(func() {
-						Eventually(func() uint64 { return receiveDroppedMessages() }).Should(BeEquivalentTo(5))
-
+						Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
+							With("TruncatingBuffer.totalDroppedMessages"),
+						))
 					})
 
 					tracksDroppedMessagesAnd("drops immediately", 1, 5)
@@ -271,8 +260,9 @@ var _ = Describe("Truncating Buffer", func() {
 					})
 
 					JustBeforeEach(func() {
-						Eventually(func() uint64 { return receiveDroppedMessages() }).Should(BeEquivalentTo(5))
-
+						Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
+							With("TruncatingBuffer.totalDroppedMessages"),
+						))
 					})
 
 					tracksDroppedMessagesAnd("has 1 slot filled", 2, 5)
@@ -285,8 +275,9 @@ var _ = Describe("Truncating Buffer", func() {
 					})
 
 					JustBeforeEach(func() {
-						Eventually(func() uint64 { return receiveDroppedMessages() }).Should(BeEquivalentTo(6))
-
+						Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
+							With("TruncatingBuffer.totalDroppedMessages"),
+						))
 					})
 
 					tracksDroppedMessagesAnd("has an empty buffer", 3, 6)

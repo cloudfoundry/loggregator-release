@@ -9,5 +9,5 @@ import (
 
 func TestEventMarshaller(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "EventMarhsaller Suite")
+	RunSpecs(t, "EventMarshaller Suite")
 }

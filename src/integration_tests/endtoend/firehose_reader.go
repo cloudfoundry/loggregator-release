@@ -31,11 +31,6 @@ func NewFirehoseReader() *FirehoseReader {
 		consumer: consumer,
 		msgChan:  msgChan,
 		stopChan: make(chan struct{}),
-
-		TestMetricCount:             0,
-		NonTestMetricCount:          0,
-		MetronSentMessageCount:      0,
-		DopplerReceivedMessageCount: 0,
 	}
 }
 

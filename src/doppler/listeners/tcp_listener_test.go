@@ -171,12 +171,13 @@ var _ = Describe("TCPlistener", func() {
 				Eventually(envelopeChan).Should(Receive())
 
 				Eventually(func() int {
-					return len(fakeEventEmitter.GetMessages())
+					return len(fakeEventEmitter.GetEnvelopes())
 				}).Should(BeNumerically(">", 2))
 
 				var counterEvents []*events.CounterEvent
-				for _, e := range fakeEventEmitter.GetMessages() {
-					if ce, ok := e.Event.(*events.CounterEvent); ok {
+				for _, e := range fakeEventEmitter.GetEnvelopes() {
+					ce := e.CounterEvent
+					if ce != nil {
 						if strings.HasPrefix(ce.GetName(), "aname.") ||
 							strings.HasPrefix(ce.GetName(), "listeners.") {
 							counterEvents = append(counterEvents, ce)
@@ -202,10 +203,10 @@ var _ = Describe("TCPlistener", func() {
 			Context("receiveErrors count", func() {
 				expectReceiveErrorCount := func() {
 					Eventually(func() int {
-						return len(fakeEventEmitter.GetMessages())
+						return len(fakeEventEmitter.GetEnvelopes())
 					}).Should(Equal(1))
-					errorEvents := fakeEventEmitter.GetEvents()
-					Expect(errorEvents).To(ConsistOf(
+					errorEvents := fakeEventEmitter.GetEnvelopes()
+					Expect(errorEvents[0].CounterEvent).To(Equal(
 						&events.CounterEvent{
 							Name:  proto.String("aname.receiveErrorCount"),
 							Delta: proto.Uint64(1),
@@ -292,10 +293,11 @@ func readMessages(envelopeChan chan *events.Envelope, n int) []*events.Envelope 
 }
 
 func openTCPConnection(address string, tlsConfig *tls.Config) net.Conn {
-	var conn net.Conn
-	var err error
+	var (
+		conn net.Conn
+		err  error
+	)
 	Eventually(func() error {
-
 		if tlsConfig == nil {
 			conn, err = net.Dial("tcp", address)
 			return err

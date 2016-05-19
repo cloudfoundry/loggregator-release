@@ -89,7 +89,7 @@ var _ = JustBeforeEach(func() {
 	LocalIPAddress, err = localip.LocalIP()
 	Expect(err).ToNot(HaveOccurred())
 
-	// wait for doppler to register
+	// Wait for doppler to register
 	key := fmt.Sprintf("%s/z1/doppler_z1/0", dopplerservice.LEGACY_ROOT)
 	Eventually(func() bool {
 		_, err := etcdAdapter.Get(key)

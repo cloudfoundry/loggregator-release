@@ -2,31 +2,31 @@ package eventmarshaller_test
 
 import (
 	"metron/writers/eventmarshaller"
-	"time"
 
 	. "github.com/apoydence/eachers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
-	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )
 
-var _ = Describe("EventMarhsaller", func() {
+var _ = Describe("EventMarshaller", func() {
 	var (
-		marshaller *eventmarshaller.EventMarshaller
-		sender     *fake.FakeMetricSender
-		writer     *mockByteWriter
+		marshaller  *eventmarshaller.EventMarshaller
+		sender      *fake.FakeMetricSender
+		mockBatcher *mockMetricBatcher
+		writer      *mockByteWriter
 	)
 
 	BeforeEach(func() {
 		writer = newMockByteWriter()
 		sender = fake.NewFakeMetricSender()
-		metrics.Initialize(sender, metricbatcher.New(sender, time.Millisecond*10))
+		mockBatcher = newMockMetricBatcher()
+		metrics.Initialize(sender, mockBatcher)
 	})
 
 	JustBeforeEach(func() {
@@ -58,7 +58,9 @@ var _ = Describe("EventMarhsaller", func() {
 
 			It("counts messages written while byteWriter was nil", func() {
 				marshaller.Write(envelope)
-				Eventually(func() uint64 { return sender.GetCounter("dropsondeMarshaller.nilByteWriterWrites") }).Should(BeEquivalentTo(1))
+				Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+					With("dropsondeMarshaller.nilByteWriterWrites"),
+				))
 			})
 		})
 
@@ -71,7 +73,9 @@ var _ = Describe("EventMarhsaller", func() {
 
 			It("counts marshal errors", func() {
 				marshaller.Write(envelope)
-				Eventually(func() uint64 { return sender.GetCounter("dropsondeMarshaller.marshalErrors") }).Should(BeEquivalentTo(1))
+				Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+					With("dropsondeMarshaller.marshalErrors"),
+				))
 			})
 
 			It("doesn't write the bytes", func() {

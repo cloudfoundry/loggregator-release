@@ -25,12 +25,12 @@ func (e *EventWriter) Emit(event events.Event) error {
 		return err
 	}
 
-	e.writer.Write(envelope)
-	return nil
+	return e.EmitEnvelope(envelope)
 }
 
 func (e *EventWriter) EmitEnvelope(envelope *events.Envelope) error {
-	return nil // Unused
+	e.writer.Write(envelope)
+	return nil
 }
 
 func (e *EventWriter) Origin() string {

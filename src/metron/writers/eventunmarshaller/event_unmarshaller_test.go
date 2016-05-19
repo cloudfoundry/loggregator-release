@@ -1,24 +1,21 @@
 package eventunmarshaller_test
 
 import (
+	"metron/writers/eventunmarshaller"
+	"metron/writers/mocks"
+	"net/http"
+
+	. "github.com/apoydence/eachers"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"github.com/cloudfoundry/dropsonde/factories"
+	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-
-	"metron/writers/eventunmarshaller"
-
-	"metron/writers/mocks"
-
-	"net/http"
-	"time"
-
-	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
-	"github.com/cloudfoundry/dropsonde/metricbatcher"
-	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/nu7hatch/gouuid"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("EventUnmarshaller", func() {
@@ -28,6 +25,7 @@ var _ = Describe("EventUnmarshaller", func() {
 		event        *events.Envelope
 		message      []byte
 		fakeSender   *fake.FakeMetricSender
+		mockBatcher  *mockMetricBatcher
 	)
 
 	BeforeEach(func() {
@@ -41,8 +39,8 @@ var _ = Describe("EventUnmarshaller", func() {
 		message, _ = proto.Marshal(event)
 
 		fakeSender = fake.NewFakeMetricSender()
-		metricBatcher := metricbatcher.New(fakeSender, time.Millisecond)
-		metrics.Initialize(fakeSender, metricBatcher)
+		mockBatcher = newMockMetricBatcher()
+		metrics.Initialize(fakeSender, mockBatcher)
 	})
 
 	Context("UnmarshallMessage", func() {
@@ -97,7 +95,9 @@ var _ = Describe("EventUnmarshaller", func() {
 		It("emits unmarshal errors", func() {
 			_, err := unmarshaller.UnmarshallMessage([]byte("illegal envelope"))
 			Expect(err).To(HaveOccurred())
-			Eventually(func() uint64 { return fakeSender.GetCounter("dropsondeUnmarshaller.unmarshalErrors") }).Should(BeEquivalentTo(1))
+			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+				With("dropsondeUnmarshaller.unmarshalErrors"),
+			))
 		})
 
 		It("emits unknown event types", func() {
@@ -115,7 +115,9 @@ var _ = Describe("EventUnmarshaller", func() {
 
 			_, err = unmarshaller.UnmarshallMessage(message)
 			Expect(err).To(HaveOccurred())
-			Eventually(func() uint64 { return fakeSender.GetCounter("dropsondeUnmarshaller.unknownEventTypeReceived") }).Should(BeEquivalentTo(1))
+			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+				With("dropsondeUnmarshaller.unknownEventTypeReceived"),
+			))
 		})
 
 		It("emits logMessageTotal", func() {
@@ -133,7 +135,9 @@ var _ = Describe("EventUnmarshaller", func() {
 			Expect(err).ToNot(HaveOccurred())
 			_, err = unmarshaller.UnmarshallMessage(message)
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(func() uint64 { return fakeSender.GetCounter("dropsondeUnmarshaller.logMessageTotal") }).Should(BeEquivalentTo(1))
+			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+				With("dropsondeUnmarshaller.logMessageTotal"),
+			))
 		})
 
 		Describe("emits counters for", func() {
@@ -147,8 +151,9 @@ var _ = Describe("EventUnmarshaller", func() {
 				Expect(err).ToNot(HaveOccurred())
 				_, err = unmarshaller.UnmarshallMessage(message)
 				Expect(err).ToNot(HaveOccurred())
-				Eventually(func() uint64 { return fakeSender.GetCounter("dropsondeUnmarshaller.containerMetricReceived") }).Should(BeEquivalentTo(1))
-
+				Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+					With("dropsondeUnmarshaller.containerMetricReceived"),
+				))
 			})
 
 			It("HTTP start event", func() {
@@ -163,7 +168,9 @@ var _ = Describe("EventUnmarshaller", func() {
 				Expect(err).ToNot(HaveOccurred())
 				_, err = unmarshaller.UnmarshallMessage(message)
 				Expect(err).ToNot(HaveOccurred())
-				Eventually(func() uint64 { return fakeSender.GetCounter("dropsondeUnmarshaller.httpStartReceived") }).Should(BeEquivalentTo(1))
+				Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+					With("dropsondeUnmarshaller.httpStartReceived"),
+				))
 			})
 
 			It("HTTP stop event", func() {
@@ -178,7 +185,9 @@ var _ = Describe("EventUnmarshaller", func() {
 				Expect(err).ToNot(HaveOccurred())
 				_, err = unmarshaller.UnmarshallMessage(message)
 				Expect(err).ToNot(HaveOccurred())
-				Eventually(func() uint64 { return fakeSender.GetCounter("dropsondeUnmarshaller.httpStopReceived") }).Should(BeEquivalentTo(1))
+				Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+					With("dropsondeUnmarshaller.httpStopReceived"),
+				))
 			})
 
 			It("CounterEvent", func() {
@@ -191,7 +200,9 @@ var _ = Describe("EventUnmarshaller", func() {
 				Expect(err).ToNot(HaveOccurred())
 				_, err = unmarshaller.UnmarshallMessage(message)
 				Expect(err).ToNot(HaveOccurred())
-				Eventually(func() uint64 { return fakeSender.GetCounter("dropsondeUnmarshaller.counterEventReceived") }).Should(BeEquivalentTo(1))
+				Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+					With("dropsondeUnmarshaller.counterEventReceived"),
+				))
 			})
 
 			It("ValueMetric", func() {
@@ -204,7 +215,9 @@ var _ = Describe("EventUnmarshaller", func() {
 				Expect(err).ToNot(HaveOccurred())
 				_, err = unmarshaller.UnmarshallMessage(message)
 				Expect(err).ToNot(HaveOccurred())
-				Eventually(func() uint64 { return fakeSender.GetCounter("dropsondeUnmarshaller.valueMetricReceived") }).Should(BeEquivalentTo(1))
+				Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+					With("dropsondeUnmarshaller.valueMetricReceived"),
+				))
 			})
 		})
 
@@ -221,7 +234,9 @@ var _ = Describe("EventUnmarshaller", func() {
 					_, err = unmarshaller.UnmarshallMessage(message)
 					Expect(err).To(HaveOccurred())
 
-					Eventually(func() uint64 { return fakeSender.GetCounter("dropsondeUnmarshaller.unmarshalErrors") }).Should(BeEquivalentTo(1))
+					Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+						With("dropsondeUnmarshaller.unmarshalErrors"),
+					))
 				})
 			}
 

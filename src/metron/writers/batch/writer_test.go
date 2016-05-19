@@ -1,25 +1,25 @@
 package batch_test
 
 import (
+	. "matchers"
+
 	"bytes"
 	"encoding/binary"
 	"errors"
 	"metron/writers/batch"
 	"time"
 
-	. "matchers"
-
-	"github.com/gogo/protobuf/proto"
+	. "github.com/apoydence/eachers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
-	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 )
 
 var bufferSize uint64
@@ -34,12 +34,14 @@ var _ = Describe("Batch Writer", func() {
 		timeout         time.Duration
 		logger          *gosteno.Logger
 		sender          *fake.FakeMetricSender
+		mockBatcher     *mockMetricBatcher
 		constructorErr  error
 	)
 
 	BeforeEach(func() {
 		sender = fake.NewFakeMetricSender()
-		metrics.Initialize(sender, metricbatcher.New(sender, time.Millisecond*10))
+		mockBatcher = newMockMetricBatcher()
+		metrics.Initialize(sender, mockBatcher)
 		byteWriter = newMockByteWriter()
 		close(byteWriter.WriteOutput.err)
 		messageBytes = []byte("this is a log message")
@@ -107,7 +109,9 @@ var _ = Describe("Batch Writer", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(byteWriter.WriteInput.message).Should(Receive(Equal(prefixedMessage)))
-			Eventually(func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }).Should(BeEquivalentTo(1))
+			Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
+				With("DopplerForwarder.sentMessages"),
+			))
 		})
 
 		Context("the weighted writer errors once", func() {
@@ -137,7 +141,9 @@ var _ = Describe("Batch Writer", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(bytesWritten).To(BeEquivalentTo(len(messageBytes)))
 
-				Eventually(func() uint64 { return sender.GetCounter("DopplerForwarder.retryCount") }).Should(BeEquivalentTo(1))
+				Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+					With("DopplerForwarder.retryCount"),
+				))
 			})
 		})
 
@@ -158,7 +164,9 @@ var _ = Describe("Batch Writer", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(bytesWritten).To(BeEquivalentTo(0))
 
-				Eventually(func() uint64 { return sender.GetCounter("MessageBuffer.droppedMessageCount") }).Should(BeEquivalentTo(1))
+				Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
+					With("MessageBuffer.droppedMessageCount"),
+				))
 				Consistently(func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }).Should(BeEquivalentTo(0))
 			})
 
@@ -251,7 +259,9 @@ var _ = Describe("Batch Writer", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(bytesWritten).To(BeEquivalentTo(len(messageBytes)))
 
-				Eventually(func() uint64 { return sender.GetCounter("DopplerForwarder.retryCount") }, 2).Should(BeEquivalentTo(1))
+				Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+					With("DopplerForwarder.retryCount"),
+				))
 			})
 		})
 
@@ -272,15 +282,18 @@ var _ = Describe("Batch Writer", func() {
 				_, err = batcher.Write(messageBytes)
 				Expect(err).To(HaveOccurred())
 
-				droppedCount := func() uint64 { return sender.GetCounter("MessageBuffer.droppedMessageCount") }
-				Eventually(droppedCount).Should(BeEquivalentTo(2))
-				Consistently(func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }).Should(BeEquivalentTo(0))
+				Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
+					With("MessageBuffer.droppedMessageCount", uint64(2)),
+				))
+				Consistently(mockBatcher.BatchAddCounterInput).ShouldNot(BeCalled(
+					With("DopplerForwarder.sentMessages"),
+				))
 
 				// The buffer should have been reset, so the next write will save
 				// to the buffer.
 				_, err = batcher.Write(messageBytes)
 				Expect(err).ToNot(HaveOccurred())
-				Consistently(droppedCount).Should(BeEquivalentTo(2))
+				Consistently(mockBatcher.BatchAddCounterInput).ShouldNot(BeCalled())
 			})
 
 			It("writes a log containing dropped message count", func() {
@@ -334,7 +347,9 @@ var _ = Describe("Batch Writer", func() {
 					Expect(err).ToNot(HaveOccurred())
 					_, err = batcher.Write(messageBytes)
 					Expect(err).To(HaveOccurred())
-					Eventually(func() uint64 { return sender.GetCounter("MessageBuffer.droppedMessageCount") }).Should(BeEquivalentTo(2))
+					Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
+						With("MessageBuffer.droppedMessageCount", uint64(2)),
+					))
 
 					byteWriter.WriteOutput.err = make(chan error, 100)
 					byteWriter.WriteOutput.sentLength = make(chan int, 100)
@@ -349,7 +364,9 @@ var _ = Describe("Batch Writer", func() {
 					_, err = batcher.Write(messageBytes)
 					Expect(err).ToNot(HaveOccurred())
 
-					Eventually(func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }).Should(BeEquivalentTo(2))
+					Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
+						With("DopplerForwarder.sentMessages", uint64(2)),
+					))
 
 					close(byteWriter.WriteOutput.sentLength)
 					infinity := 50
@@ -411,6 +428,7 @@ var _ = Describe("Batch Writer", func() {
 			}()
 
 			Eventually(byteWriter.WriteInput.message).Should(Receive())
+			close(byteWriter.WriteOutput.sentLength)
 		})
 
 		It("sends a sentMessages metric on flush", func() {
@@ -419,11 +437,14 @@ var _ = Describe("Batch Writer", func() {
 				_, err := batcher.Write(messageBytes)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			sentMessages := func() uint64 { return sender.GetCounter("DopplerForwarder.sentMessages") }
-			Consistently(sentMessages, 90*time.Millisecond).Should(BeEquivalentTo(0))
+			Consistently(mockBatcher.BatchAddCounterInput).ShouldNot(BeCalled(
+				With("DopplerForwarder.sentMessages"),
+			))
 
 			Eventually(byteWriter.WriteInput.message).Should(Receive())
-			Eventually(sentMessages).Should(BeEquivalentTo(3))
+			Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
+				With("DopplerForwarder.sentMessages", uint64(3)),
+			))
 		})
 	})
 })

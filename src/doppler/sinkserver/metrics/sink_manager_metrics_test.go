@@ -131,8 +131,8 @@ var _ = Describe("SinkManagerMetrics", func() {
 		var delta int64 = 25
 		sinkManagerMetrics.UpdateDroppedMessageCount(delta)
 
-		Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(1))
-		Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.CounterEvent)).To(Equal(&events.CounterEvent{
+		Eventually(fakeEventEmitter.GetEnvelopes).Should(HaveLen(1))
+		Expect(fakeEventEmitter.GetEnvelopes()[0].CounterEvent).To(Equal(&events.CounterEvent{
 			Name:  proto.String("messageRouter.totalDroppedMessages"),
 			Delta: proto.Uint64(25),
 		}))

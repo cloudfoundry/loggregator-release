@@ -2,20 +2,18 @@ package networkreader_test
 
 import (
 	"fmt"
-	"net"
-
 	"metron/networkreader"
 	"metron/writers/mocks"
+	"net"
+	"strconv"
 
-	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
-	"github.com/cloudfoundry/dropsonde/metricbatcher"
-	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	. "github.com/apoydence/eachers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"strconv"
-	"time"
+	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
+	"github.com/cloudfoundry/dropsonde/metrics"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 )
 
 func randomPort() int {
@@ -32,12 +30,14 @@ func randomPort() int {
 }
 
 var _ = Describe("NetworkReader", func() {
-	var reader *networkreader.NetworkReader
-	var readerStopped chan struct{}
-	var writer mocks.MockByteArrayWriter
-	var port int
-	var address string
-	var fakeMetricSender *fake.FakeMetricSender
+	var (
+		reader           *networkreader.NetworkReader
+		readerStopped    chan struct{}
+		writer           mocks.MockByteArrayWriter
+		port             int
+		address          string
+		fakeMetricSender *fake.FakeMetricSender
+	)
 
 	BeforeEach(func() {
 		loggertesthelper.TestLoggerSink.Clear()
@@ -52,10 +52,12 @@ var _ = Describe("NetworkReader", func() {
 	})
 
 	Context("with a reader running", func() {
+		var mockBatcher *mockMetricBatcher
+
 		BeforeEach(func() {
 			fakeMetricSender = fake.NewFakeMetricSender()
-			metricBatcher := metricbatcher.New(fakeMetricSender, time.Millisecond)
-			metrics.Initialize(fakeMetricSender, metricBatcher)
+			mockBatcher = newMockMetricBatcher()
+			metrics.Initialize(fakeMetricSender, mockBatcher)
 
 			go func() {
 				reader.Start()
@@ -97,7 +99,6 @@ var _ = Describe("NetworkReader", func() {
 			expectedData := "Some Data"
 			otherData := "More stuff"
 			connection, err := net.Dial("udp", address)
-			dataByteCount := len(otherData + expectedData)
 
 			_, err = connection.Write([]byte(expectedData))
 			Expect(err).NotTo(HaveOccurred())
@@ -107,8 +108,13 @@ var _ = Describe("NetworkReader", func() {
 
 			Eventually(writer.Data).Should(HaveLen(2))
 
-			Eventually(func() uint64 { return fakeMetricSender.GetCounter("networkReader.receivedMessageCount") }).Should(BeEquivalentTo(2))
-			Eventually(func() uint64 { return fakeMetricSender.GetCounter("networkReader.receivedByteCount") }).Should(BeEquivalentTo(dataByteCount))
+			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+				With("networkReader.receivedMessageCount"),
+			))
+			Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
+				With("networkReader.receivedByteCount", uint64(len(expectedData))),
+				With("networkReader.receivedByteCount", uint64(len(otherData))),
+			))
 
 			close(done)
 		}, 2)

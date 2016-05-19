@@ -6,10 +6,7 @@ import (
 
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 
-	"time"
-
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
-	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	. "github.com/onsi/ginkgo"
@@ -19,6 +16,7 @@ import (
 var _ = Describe("DopplerForwarder", func() {
 	var (
 		sender      *fake.FakeMetricSender
+		mockBatcher *mockMetricBatcher
 		clientPool  *mockClientPool
 		client      *mockClient
 		logger      *gosteno.Logger
@@ -31,7 +29,8 @@ var _ = Describe("DopplerForwarder", func() {
 		message = []byte("I am a message!")
 
 		sender = fake.NewFakeMetricSender()
-		metrics.Initialize(sender, metricbatcher.New(sender, time.Millisecond*10))
+		mockBatcher = newMockMetricBatcher()
+		metrics.Initialize(sender, mockBatcher)
 
 		client = newMockClient()
 		clientPool = newMockClientPool()

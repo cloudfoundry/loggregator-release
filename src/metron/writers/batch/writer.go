@@ -122,6 +122,8 @@ func (w *Writer) Write(msgBytes []byte) (int, error) {
 }
 
 func (w *Writer) Stop() {
+	w.msgBufferLock.Lock()
+	defer w.msgBufferLock.Unlock()
 	w.timer.Stop()
 }
 

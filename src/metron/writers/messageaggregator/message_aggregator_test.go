@@ -1,21 +1,19 @@
 package messageaggregator_test
 
 import (
-	"fmt"
 	"metron/writers/messageaggregator"
+	"metron/writers/mocks"
 	"time"
 
+	. "github.com/apoydence/eachers"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-
-	"metron/writers/mocks"
-
-	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
-	"github.com/cloudfoundry/dropsonde/metricbatcher"
-	"github.com/cloudfoundry/dropsonde/metrics"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("MessageAggregator", func() {
@@ -130,7 +128,7 @@ var _ = Describe("MessageAggregator", func() {
 
 	Context("multiple StartStop messages", func() {
 		It("creates the right amount of HttpStartStop events", func() {
-			const numEvents = 250
+			const numEvents = 20
 			var i uint64
 
 			for i = 0; i < numEvents; i++ {
@@ -141,7 +139,7 @@ var _ = Describe("MessageAggregator", func() {
 				messageAggregator.Write(createStopMessage(i, events.PeerType_Client))
 			}
 
-			Expect(mockWriter.Events).To(HaveLen(250))
+			Expect(mockWriter.Events).To(HaveLen(numEvents))
 			for _, event := range mockWriter.Events {
 				Expect(event.GetEventType()).To(Equal(events.Envelope_HttpStartStop))
 			}
@@ -168,45 +166,52 @@ var _ = Describe("MessageAggregator", func() {
 	})
 
 	Context("metrics", func() {
-		var fakeSender *fake.FakeMetricSender
+		var (
+			fakeSender  *fake.FakeMetricSender
+			mockBatcher *mockMetricBatcher
+		)
 
 		BeforeEach(func() {
 			fakeSender = fake.NewFakeMetricSender()
-			batcher := metricbatcher.New(fakeSender, time.Millisecond)
-			metrics.Initialize(fakeSender, batcher)
+			mockBatcher = newMockMetricBatcher()
+			metrics.Initialize(fakeSender, mockBatcher)
 		})
-
-		var eventuallyExpectMetric = func(name string, value uint64) {
-			Eventually(func() uint64 {
-				return fakeSender.GetCounter("MessageAggregator." + name)
-			}).Should(Equal(value), fmt.Sprintf("Metric %s was incorrect", name))
-		}
 
 		It("emits a HTTP start counter", func() {
 			messageAggregator.Write(createStartMessage(123, events.PeerType_Client))
-			eventuallyExpectMetric("httpStartReceived", 1)
+			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+				With("MessageAggregator.httpStartReceived"),
+			))
 		})
 
 		It("emits a HTTP stop counter", func() {
 			messageAggregator.Write(createStopMessage(123, events.PeerType_Client))
-			eventuallyExpectMetric("httpStopReceived", 1)
+			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+				With("MessageAggregator.httpStopReceived"),
+			))
 		})
 
 		It("emits a HTTP StartStop counter", func() {
 			messageAggregator.Write(createStartMessage(123, events.PeerType_Client))
 			messageAggregator.Write(createStopMessage(123, events.PeerType_Client))
-			eventuallyExpectMetric("httpStartStopEmitted", 1)
+			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+				With("MessageAggregator.httpStartStopEmitted"),
+			))
 		})
 
 		It("emits a counter for uncategorized events", func() {
 			messageAggregator.Write(createValueMessage())
-			eventuallyExpectMetric("uncategorizedEvents", 1)
+			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+				With("MessageAggregator.uncategorizedEvents"),
+			))
 		})
 
 		It("emits an uncategorized event counter for messages with nil event type", func() {
 			inputMessage := &events.Envelope{}
 			messageAggregator.Write(inputMessage)
-			eventuallyExpectMetric("uncategorizedEvents", 1)
+			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+				With("MessageAggregator.uncategorizedEvents"),
+			))
 		})
 
 		It("emits a counter for unmatched start events", func() {
@@ -214,21 +219,29 @@ var _ = Describe("MessageAggregator", func() {
 			messageAggregator.Write(createStartMessage(123, events.PeerType_Client))
 			time.Sleep(1)
 			messageAggregator.Write(createStartMessage(123, events.PeerType_Client))
-			eventuallyExpectMetric("httpUnmatchedStartReceived", 1)
+			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+				With("MessageAggregator.httpUnmatchedStartReceived"),
+			))
 		})
 
 		It("emits a counter for unmatched stop events", func() {
 			messageAggregator.Write(createStopMessage(123, events.PeerType_Client))
-			eventuallyExpectMetric("httpUnmatchedStopReceived", 1)
+			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+				With("MessageAggregator.httpUnmatchedStopReceived"),
+			))
 		})
 
 		It("emits a counter for counter events", func() {
 			messageAggregator.Write(createCounterMessage("counter1", "fake-origin-1"))
-			eventuallyExpectMetric("counterEventReceived", 1)
+			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+				With("MessageAggregator.counterEventReceived"),
+			))
 
 			// since we're counting counters, let's make sure we're not adding their deltas
 			messageAggregator.Write(createCounterMessage("counter1", "fake-origin-1"))
-			eventuallyExpectMetric("counterEventReceived", 2)
+			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+				With("MessageAggregator.counterEventReceived"),
+			))
 		})
 	})
 })

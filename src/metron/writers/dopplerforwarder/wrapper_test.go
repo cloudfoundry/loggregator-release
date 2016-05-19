@@ -3,25 +3,25 @@ package dopplerforwarder_test
 import (
 	"errors"
 	"metron/writers/dopplerforwarder"
-	"time"
+
+	. "github.com/apoydence/eachers"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
-	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
-
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 )
 
 var _ = Describe("Wrapper", func() {
 	var (
-		logger *gosteno.Logger
-		sender *fake.FakeMetricSender
+		logger      *gosteno.Logger
+		sender      *fake.FakeMetricSender
+		mockBatcher *mockMetricBatcher
 
 		client  *mockClient
 		message []byte
@@ -33,7 +33,8 @@ var _ = Describe("Wrapper", func() {
 	BeforeEach(func() {
 		logger = loggertesthelper.Logger()
 		sender = fake.NewFakeMetricSender()
-		metrics.Initialize(sender, metricbatcher.New(sender, time.Millisecond*10))
+		mockBatcher = newMockMetricBatcher()
+		metrics.Initialize(sender, mockBatcher)
 
 		client = newMockClient()
 		envelope := &events.Envelope{
@@ -68,9 +69,9 @@ var _ = Describe("Wrapper", func() {
 			err := wrapper.Write(client, message)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(func() uint64 {
-				return sender.GetCounter("tcp.sentByteCount")
-			}).Should(BeEquivalentTo(sentLength))
+			Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
+				With("tcp.sentByteCount", uint64(sentLength)),
+			))
 		})
 
 		It("counts the number of messages sent", func() {
@@ -79,18 +80,18 @@ var _ = Describe("Wrapper", func() {
 			err := wrapper.Write(client, message)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(func() uint64 {
-				return sender.GetCounter("tcp.sentMessageCount")
-			}).Should(BeEquivalentTo(1))
+			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+				With("tcp.sentMessageCount"),
+			))
 
 			client.WriteOutput.sentLength <- len(message)
 			client.WriteOutput.err <- nil
 			err = wrapper.Write(client, message)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(func() uint64 {
-				return sender.GetCounter("tcp.sentMessageCount")
-			}).Should(BeEquivalentTo(2))
+			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+				With("tcp.sentMessageCount"),
+			))
 		})
 
 		Context("with a client that returns an error", func() {
@@ -104,13 +105,10 @@ var _ = Describe("Wrapper", func() {
 				err := wrapper.Write(client, message)
 				Expect(err).To(HaveOccurred())
 
-				Consistently(func() uint64 {
-					return sender.GetCounter("tcp.sentMessageCount") +
-						sender.GetCounter("tcp.sentByteCount")
-				}).Should(BeZero())
-				Eventually(func() uint64 {
-					return sender.GetCounter("tcp.sendErrorCount")
-				}).Should(BeEquivalentTo(1))
+				var name string
+				Eventually(mockBatcher.BatchIncrementCounterInput.Name).Should(Receive(&name))
+				Expect(name).To(Equal("tcp.sendErrorCount"))
+				Consistently(mockBatcher.BatchIncrementCounterInput).ShouldNot(BeCalled())
 			})
 
 			It("closes the client", func() {
@@ -133,12 +131,12 @@ var _ = Describe("Wrapper", func() {
 			err := wrapper.Write(client, message)
 			Expect(err).ToNot(HaveOccurred())
 
-			Eventually(func() uint64 {
-				return sender.GetCounter("tls.sentMessageCount")
-			}).Should(BeEquivalentTo(1))
-			Eventually(func() uint64 {
-				return sender.GetCounter("tls.sentByteCount")
-			}).Should(BeEquivalentTo(len(message)))
+			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+				With("tls.sentMessageCount"),
+			))
+			Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
+				With("tls.sentByteCount", uint64(len(message))),
+			))
 
 			client.WriteOutput.sentLength <- 0
 			client.WriteOutput.err <- errors.New("failure")
@@ -146,9 +144,9 @@ var _ = Describe("Wrapper", func() {
 			err = wrapper.Write(client, message)
 			Expect(err).To(HaveOccurred())
 
-			Eventually(func() uint64 {
-				return sender.GetCounter("tls.sendErrorCount")
-			}).Should(BeEquivalentTo(1))
+			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+				With("tls.sendErrorCount"),
+			))
 		})
 	})
 })

@@ -11,15 +11,16 @@ import (
 	"strconv"
 	"time"
 
+	. "github.com/apoydence/eachers"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gorilla/websocket"
-
-	"github.com/cloudfoundry/dropsonde/emitter"
-	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("WebsocketServer", func() {
@@ -143,10 +144,9 @@ var _ = Describe("WebsocketServer", func() {
 		It("emits counter metrics when data is sent to the websocket firehose client", func() {
 			sinkManager.SendTo(appId, lm)
 
-			checkCounter := func() uint64 {
-				return fakeMetricSender.GetCounter(fmt.Sprintf("sentMessagesFirehose.%s", subscriptionID))
-			}
-			Eventually(checkCounter).Should(BeEquivalentTo(1))
+			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+				With(fmt.Sprintf("sentMessagesFirehose.%s", subscriptionID)),
+			))
 		})
 	})
 
