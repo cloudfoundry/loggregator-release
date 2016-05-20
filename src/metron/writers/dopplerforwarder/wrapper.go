@@ -1,6 +1,7 @@
 package dopplerforwarder
 
 import (
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 )
@@ -22,7 +23,7 @@ func NewWrapper(logger *gosteno.Logger, protocol string) *Wrapper {
 	}
 }
 
-func (w *Wrapper) Write(client Client, message []byte) error {
+func (w *Wrapper) Write(client Client, message []byte, chainers ...metricbatcher.BatchCounterChainer) error {
 	sentBytes, err := client.Write(message)
 
 	if err != nil {
@@ -34,6 +35,9 @@ func (w *Wrapper) Write(client Client, message []byte) error {
 
 	metrics.BatchAddCounter(w.protocol+".sentByteCount", uint64(sentBytes))
 	metrics.BatchIncrementCounter(w.protocol + ".sentMessageCount")
+	for _, chainer := range chainers {
+		chainer.SetTag("protocol", w.protocol).Increment()
+	}
 
 	return nil
 }

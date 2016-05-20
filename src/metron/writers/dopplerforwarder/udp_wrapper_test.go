@@ -5,11 +5,11 @@ import (
 	"metron/writers/dopplerforwarder"
 
 	. "github.com/apoydence/eachers"
+	"github.com/apoydence/eachers/testhelpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry/dropsonde/factories"
-	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/gosteno"
@@ -20,7 +20,6 @@ import (
 
 var _ = Describe("UDPWrapper", func() {
 	var (
-		sender       *fake.FakeMetricSender
 		client       *mockClient
 		envelope     *events.Envelope
 		udpWrapper   *dopplerforwarder.UDPWrapper
@@ -32,9 +31,9 @@ var _ = Describe("UDPWrapper", func() {
 
 	BeforeEach(func() {
 		sharedSecret = []byte("secret")
-		sender = fake.NewFakeMetricSender()
 		mockBatcher = newMockMetricBatcher()
-		metrics.Initialize(sender, mockBatcher)
+		metrics.Initialize(nil, mockBatcher)
+
 		client = newMockClient()
 		envelope = &events.Envelope{
 			Origin:     proto.String("fake-origin-1"),
@@ -54,8 +53,8 @@ var _ = Describe("UDPWrapper", func() {
 		// Make sure the counter counts the sent byte count,
 		// instead of len(message)
 		sentLength := len(message) - 3
-		client.WriteOutput.sentLength <- sentLength
-		client.WriteOutput.err <- nil
+		client.WriteOutput.SentLength <- sentLength
+		client.WriteOutput.Err <- nil
 
 		err := udpWrapper.Write(client, message)
 		Expect(err).NotTo(HaveOccurred())
@@ -65,10 +64,12 @@ var _ = Describe("UDPWrapper", func() {
 	})
 
 	It("counts the number of messages sent", func() {
-		client.WriteOutput.sentLength <- len(message)
-		client.WriteOutput.err <- nil
+		client.WriteOutput.SentLength <- len(message)
+		client.WriteOutput.Err <- nil
+		mockChainer := newMockBatchCounterChainer()
+		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
 
-		err := udpWrapper.Write(client, message)
+		err := udpWrapper.Write(client, message, mockChainer)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
 			With("udp.sentMessageCount"),
@@ -76,21 +77,25 @@ var _ = Describe("UDPWrapper", func() {
 		Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
 			With("DopplerForwarder.sentMessages"),
 		))
+		Eventually(mockChainer.SetTagInput).Should(BeCalled(
+			With("protocol", "udp"),
+		))
+		Eventually(mockChainer.IncrementCalled).Should(BeCalled())
 	})
 
 	It("increments transmitErrorCount *only* if client write fails", func() {
-		client.WriteOutput.sentLength <- len(message)
-		client.WriteOutput.err <- nil
+		client.WriteOutput.SentLength <- len(message)
+		client.WriteOutput.Err <- nil
 
 		err := udpWrapper.Write(client, message)
 		Expect(err).NotTo(HaveOccurred())
-		Consistently(func() uint64 {
-			return sender.GetCounter("udp.sendErrorCount")
-		}).Should(BeEquivalentTo(0))
+		Consistently(mockBatcher.BatchIncrementCounterInput).ShouldNot(BeCalled(
+			With("udp.sendErrorCount"),
+		))
 
 		err = errors.New("Client Write Failed")
-		client.WriteOutput.sentLength <- 0
-		client.WriteOutput.err <- err
+		client.WriteOutput.SentLength <- 0
+		client.WriteOutput.Err <- err
 
 		err = udpWrapper.Write(client, message)
 		Expect(err).To(HaveOccurred())
@@ -102,20 +107,20 @@ var _ = Describe("UDPWrapper", func() {
 	It("signs and writes a message", func() {
 		signedMessage := signature.SignMessage(message, sharedSecret)
 
-		client.WriteOutput.sentLength <- len(signedMessage)
-		client.WriteOutput.err <- nil
+		client.WriteOutput.SentLength <- len(signedMessage)
+		client.WriteOutput.Err <- nil
 
 		udpWrapper.Write(client, message)
 
 		Eventually(client.WriteCalled).Should(HaveLen(1))
-		Eventually(client.WriteInput.message).Should(Receive(Equal(signedMessage)))
+		Eventually(client.WriteInput.Message).Should(Receive(Equal(signedMessage)))
 		Consistently(client.CloseCalled).ShouldNot(Receive())
 	})
 
 	Context("when client write fail", func() {
 		BeforeEach(func() {
-			client.WriteOutput.sentLength <- 0
-			client.WriteOutput.err <- errors.New("failed")
+			client.WriteOutput.SentLength <- 0
+			client.WriteOutput.Err <- errors.New("failed")
 		})
 
 		It("returns an error", func() {
@@ -129,6 +134,8 @@ var _ = Describe("UDPWrapper", func() {
 			var name string
 			Eventually(mockBatcher.BatchIncrementCounterInput.Name).Should(Receive(&name))
 			Expect(name).To(Equal("udp.sendErrorCount"))
+			Consistently(mockBatcher.BatchIncrementCounterInput).ShouldNot(BeCalled())
+
 			Consistently(mockBatcher.BatchIncrementCounterInput).ShouldNot(BeCalled())
 		})
 

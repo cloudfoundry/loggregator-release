@@ -63,34 +63,36 @@ func main() {
 		panic(fmt.Errorf("Unable to resolve own IP address: %s", err))
 	}
 
-	log := logger.NewLogger(*debug, *logFilePath, "metron", config.Syslog)
+	logger := logger.NewLogger(*debug, *logFilePath, "metron", config.Syslog)
+
+	statsStopChan := make(chan struct{})
+	batcher, eventWriter := initializeMetrics(config, statsStopChan, logger)
 
 	go func() {
 		err := http.ListenAndServe(net.JoinHostPort(localIp, pprofPort), nil)
 		if err != nil {
-			log.Errorf("Error starting pprof server: %s", err.Error())
+			logger.Errorf("Error starting pprof server: %s", err.Error())
 		}
 	}()
 
-	log.Info("Startup: Setting up the Metron agent")
-	marshaller, err := initializeDopplerPool(config, log)
+	logger.Info("Startup: Setting up the Metron agent")
+	marshaller, err := initializeDopplerPool(config, batcher, logger)
 	if err != nil {
 		panic(fmt.Errorf("Could not initialize doppler connection pool: %s", err))
 	}
+
 	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, marshaller)
-	aggregator := messageaggregator.New(messageTagger, log)
+	aggregator := messageaggregator.New(messageTagger, logger)
+	eventWriter.SetWriter(aggregator)
 
-	statsStopChan := make(chan struct{})
-	batcher := initializeMetrics(messageTagger, config, statsStopChan, log)
-
-	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, batcher, log)
+	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, batcher, logger)
 	metronAddress := fmt.Sprintf("127.0.0.1:%d", config.IncomingUDPPort)
-	dropsondeReader, err := networkreader.New(metronAddress, "dropsondeAgentListener", dropsondeUnmarshaller, log)
+	dropsondeReader, err := networkreader.New(metronAddress, "dropsondeAgentListener", dropsondeUnmarshaller, logger)
 	if err != nil {
 		panic(fmt.Errorf("Failed to listen on %s: %s", metronAddress, err))
 	}
 
-	log.Info("metron started")
+	logger.Info("metron started")
 	go dropsondeReader.Start()
 
 	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
@@ -101,14 +103,14 @@ func main() {
 		case <-dumpChan:
 			signalmanager.DumpGoRoutine()
 		case <-killChan:
-			log.Info("Shutting down")
+			logger.Info("Shutting down")
 			close(statsStopChan)
 			return
 		}
 	}
 }
 
-func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*eventmarshaller.EventMarshaller, error) {
+func adapter(conf *config.Config, logger *gosteno.Logger) (storeadapter.StoreAdapter, error) {
 	adapter, err := storeAdapterProvider(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
 	if err != nil {
 		return nil, err
@@ -119,11 +121,17 @@ func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*eventm
 			"error": err.Error(),
 		}, "Failed to connect to etcd")
 	}
+	return adapter, nil
+}
 
+func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBatcher, logger *gosteno.Logger) (*eventmarshaller.EventMarshaller, error) {
+	adapter, err := adapter(conf, logger)
+	if err != nil {
+		return nil, err
+	}
 	var protocols []string
-
 	clientPool := make(map[string]clientreader.ClientPool)
-	writers := make(map[string]eventmarshaller.ByteWriter)
+	writers := make(map[string]eventmarshaller.BatchChainByteWriter)
 
 	for _, protocol := range conf.Protocols {
 		proto := string(protocol)
@@ -171,31 +179,31 @@ func initializeDopplerPool(conf *config.Config, logger *gosteno.Logger) (*eventm
 		}
 	}
 
-	finder := dopplerservice.NewFinder(adapter, conf.LoggregatorDropsondePort, protocols, conf.Zone, logger)
-	marshaller := eventmarshaller.New(logger)
+	finder := dopplerservice.NewFinder(adapter, conf.LoggregatorDropsondePort, conf.Protocols.Strings(), conf.Zone, logger)
 	finder.Start()
+
+	marshaller := eventmarshaller.New(batcher, logger)
 
 	go func() {
 		for {
-			protocol := clientreader.Read(clientPool, protocols, finder.Next())
+			protocol := clientreader.Read(clientPool, conf.Protocols.Strings(), finder.Next())
 			logger.Infof("Chose protocol %s from last etcd event, updating writer...", protocol)
 			marshaller.SetWriter(writers[protocol])
 		}
 	}()
+
 	return marshaller, nil
 }
 
-func initializeMetrics(messageTagger *tagger.Tagger, config *config.Config, stopChan chan struct{}, logger *gosteno.Logger) *metricbatcher.MetricBatcher {
-	metricsAggregator := messageaggregator.New(messageTagger, logger)
-
-	eventWriter := eventwriter.New("MetronAgent", metricsAggregator)
+func initializeMetrics(config *config.Config, stopChan chan struct{}, logger *gosteno.Logger) (*metricbatcher.MetricBatcher, *eventwriter.EventWriter) {
+	eventWriter := eventwriter.New("MetronAgent")
 	metricSender := metric_sender.NewMetricSender(eventWriter)
 	metricBatcher := metricbatcher.New(metricSender, time.Duration(config.MetricBatchIntervalMilliseconds)*time.Millisecond)
 	metrics.Initialize(metricSender, metricBatcher)
 
 	stats := runtime_stats.NewRuntimeStats(eventWriter, time.Duration(config.RuntimeStatsIntervalMilliseconds)*time.Millisecond)
 	go stats.Run(stopChan)
-	return metricBatcher
+	return metricBatcher, eventWriter
 }
 
 func storeAdapterProvider(urls []string, concurrentRequests int) (storeadapter.StoreAdapter, error) {

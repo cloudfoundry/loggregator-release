@@ -1,26 +1,31 @@
 package batch_test
 
-type mockByteWriter struct {
+import "github.com/cloudfoundry/dropsonde/metricbatcher"
+
+type mockBatchChainByteWriter struct {
 	WriteCalled chan bool
 	WriteInput  struct {
-		message chan []byte
+		Message  chan []byte
+		Chainers chan []metricbatcher.BatchCounterChainer
 	}
 	WriteOutput struct {
-		sentLength chan int
-		err        chan error
+		SentLength chan int
+		Err        chan error
 	}
 }
 
-func newMockByteWriter() *mockByteWriter {
-	m := &mockByteWriter{}
+func newMockBatchChainByteWriter() *mockBatchChainByteWriter {
+	m := &mockBatchChainByteWriter{}
 	m.WriteCalled = make(chan bool, 100)
-	m.WriteInput.message = make(chan []byte, 100)
-	m.WriteOutput.sentLength = make(chan int, 100)
-	m.WriteOutput.err = make(chan error, 100)
+	m.WriteInput.Message = make(chan []byte, 100)
+	m.WriteInput.Chainers = make(chan []metricbatcher.BatchCounterChainer, 100)
+	m.WriteOutput.SentLength = make(chan int, 100)
+	m.WriteOutput.Err = make(chan error, 100)
 	return m
 }
-func (m *mockByteWriter) Write(message []byte) (sentLength int, err error) {
+func (m *mockBatchChainByteWriter) Write(message []byte, chainers ...metricbatcher.BatchCounterChainer) (sentLength int, err error) {
 	m.WriteCalled <- true
-	m.WriteInput.message <- message
-	return <-m.WriteOutput.sentLength, <-m.WriteOutput.err
+	m.WriteInput.Message <- message
+	m.WriteInput.Chainers <- chainers
+	return <-m.WriteOutput.SentLength, <-m.WriteOutput.Err
 }

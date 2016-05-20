@@ -5,6 +5,7 @@ import (
 	"metron/writers/dopplerforwarder"
 
 	. "github.com/apoydence/eachers"
+	"github.com/apoydence/eachers/testhelpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -63,8 +64,8 @@ var _ = Describe("Wrapper", func() {
 			// we report the bytes sent by the client, not just the len of the
 			// message given to it
 			sentLength := len(message) - 3
-			client.WriteOutput.sentLength <- sentLength
-			client.WriteOutput.err <- nil
+			client.WriteOutput.SentLength <- sentLength
+			client.WriteOutput.Err <- nil
 
 			err := wrapper.Write(client, message)
 			Expect(err).NotTo(HaveOccurred())
@@ -75,17 +76,25 @@ var _ = Describe("Wrapper", func() {
 		})
 
 		It("counts the number of messages sent", func() {
-			client.WriteOutput.sentLength <- len(message)
-			client.WriteOutput.err <- nil
-			err := wrapper.Write(client, message)
+			client.WriteOutput.SentLength <- len(message)
+			client.WriteOutput.Err <- nil
+			mockChainer := newMockBatchCounterChainer()
+			testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
+
+			err := wrapper.Write(client, message, mockChainer)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
 				With("tcp.sentMessageCount"),
 			))
 
-			client.WriteOutput.sentLength <- len(message)
-			client.WriteOutput.err <- nil
+			Eventually(mockChainer.SetTagInput).Should(BeCalled(
+				With("protocol", "tcp"),
+			))
+			Eventually(mockChainer.IncrementCalled).Should(BeCalled())
+
+			client.WriteOutput.SentLength <- len(message)
+			client.WriteOutput.Err <- nil
 			err = wrapper.Write(client, message)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -96,9 +105,9 @@ var _ = Describe("Wrapper", func() {
 
 		Context("with a client that returns an error", func() {
 			BeforeEach(func() {
-				client.WriteOutput.err <- errors.New("failure")
-				client.WriteOutput.sentLength <- 0
-				client.CloseOutput.ret0 <- nil
+				client.WriteOutput.Err <- errors.New("failure")
+				client.WriteOutput.SentLength <- 0
+				client.CloseOutput.Ret0 <- nil
 			})
 
 			It("returns an error and *only* increments sendErrorCount", func() {
@@ -126,8 +135,8 @@ var _ = Describe("Wrapper", func() {
 		})
 
 		It("emits metrics with tcp prefix", func() {
-			client.WriteOutput.sentLength <- len(message)
-			client.WriteOutput.err <- nil
+			client.WriteOutput.SentLength <- len(message)
+			client.WriteOutput.Err <- nil
 			err := wrapper.Write(client, message)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -138,9 +147,9 @@ var _ = Describe("Wrapper", func() {
 				With("tls.sentByteCount", uint64(len(message))),
 			))
 
-			client.WriteOutput.sentLength <- 0
-			client.WriteOutput.err <- errors.New("failure")
-			client.CloseOutput.ret0 <- nil
+			client.WriteOutput.SentLength <- 0
+			client.WriteOutput.Err <- errors.New("failure")
+			client.CloseOutput.Ret0 <- nil
 			err = wrapper.Write(client, message)
 			Expect(err).To(HaveOccurred())
 

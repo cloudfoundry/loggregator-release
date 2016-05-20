@@ -59,7 +59,7 @@ var _ = Describe("Config", func() {
 				Expect(cfg.TCPBatchSizeBytes).To(BeEquivalentTo(1024))
 				Expect(cfg.TCPBatchIntervalMilliseconds).To(BeEquivalentTo(10))
 
-				Expect(cfg.Protocols).To(Equal([]config.Protocol{"tls", "udp"}))
+				Expect(cfg.Protocols).To(Equal(config.Protocols{"tls", "udp"}))
 
 				Expect(cfg.TLSConfig).To(Equal(config.TLSConfig{
 					CertFile: "./fixtures/client.crt",

@@ -48,6 +48,21 @@ var _ = Describe("MessageAggregator", func() {
 		Expect(mockWriter.Events[0]).To(Equal(inputMessage))
 	})
 
+	It("handles concurrent writes without data race", func() {
+		inputMessage := createStartMessage(1, events.PeerType_Client)
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			for i := 0; i < 100; i++ {
+				messageAggregator.Write(inputMessage)
+			}
+		}()
+		for i := 0; i < 100; i++ {
+			messageAggregator.Write(inputMessage)
+		}
+		<-done
+	})
+
 	Describe("counter processing", func() {
 		It("sets the Total field on a CounterEvent ", func() {
 			messageAggregator.Write(createCounterMessage("total", "fake-origin-4"))
@@ -107,6 +122,7 @@ var _ = Describe("MessageAggregator", func() {
 
 	Context("single StartStop message", func() {
 		var outputMessage *events.Envelope
+
 		BeforeEach(func() {
 			messageAggregator.Write(createStartMessage(123, events.PeerType_Client))
 			messageAggregator.Write(createStopMessage(123, events.PeerType_Client))
@@ -116,7 +132,6 @@ var _ = Describe("MessageAggregator", func() {
 
 		It("populates all fields in the StartStop message correctly", func() {
 			Expect(outputMessage.GetHttpStartStop()).To(Equal(createStartStopMessage(123, events.PeerType_Client).GetHttpStartStop()))
-
 		})
 
 		It("populates all fields in the Envelope correctly", func() {

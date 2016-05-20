@@ -15,12 +15,12 @@ type mockMetricBatcher struct {
 
 func newMockMetricBatcher() *mockMetricBatcher {
 	m := &mockMetricBatcher{}
-	m.BatchIncrementCounterCalled = make(chan bool, 100)
-	m.BatchIncrementCounterInput.Name = make(chan string, 100)
-	m.BatchAddCounterCalled = make(chan bool, 100)
-	m.BatchAddCounterInput.Name = make(chan string, 100)
-	m.BatchAddCounterInput.Delta = make(chan uint64, 100)
-	m.CloseCalled = make(chan bool, 100)
+	m.BatchIncrementCounterCalled = make(chan bool, 500)
+	m.BatchIncrementCounterInput.Name = make(chan string, 500)
+	m.BatchAddCounterCalled = make(chan bool, 500)
+	m.BatchAddCounterInput.Name = make(chan string, 500)
+	m.BatchAddCounterInput.Delta = make(chan uint64, 500)
+	m.CloseCalled = make(chan bool, 500)
 	return m
 }
 func (m *mockMetricBatcher) BatchIncrementCounter(name string) {

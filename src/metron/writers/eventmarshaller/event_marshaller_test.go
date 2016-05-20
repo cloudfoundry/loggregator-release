@@ -4,11 +4,11 @@ import (
 	"metron/writers/eventmarshaller"
 
 	. "github.com/apoydence/eachers"
+	"github.com/apoydence/eachers/testhelpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
-	"github.com/cloudfoundry/dropsonde/metrics"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
@@ -16,23 +16,24 @@ import (
 
 var _ = Describe("EventMarshaller", func() {
 	var (
-		marshaller  *eventmarshaller.EventMarshaller
-		sender      *fake.FakeMetricSender
-		mockBatcher *mockMetricBatcher
-		writer      *mockByteWriter
+		marshaller      *eventmarshaller.EventMarshaller
+		mockBatcher     *mockEventBatcher
+		mockChainWriter *mockBatchChainByteWriter
+		mockChainer     *mockBatchCounterChainer
 	)
 
 	BeforeEach(func() {
-		writer = newMockByteWriter()
-		sender = fake.NewFakeMetricSender()
-		mockBatcher = newMockMetricBatcher()
-		metrics.Initialize(sender, mockBatcher)
+		mockBatcher = newMockEventBatcher()
+		mockChainWriter = newMockBatchChainByteWriter()
+		mockChainer = newMockBatchCounterChainer()
+		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
+		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
 	})
 
 	JustBeforeEach(func() {
 		logger := gosteno.NewLogger("TestLogger")
-		marshaller = eventmarshaller.New(logger)
-		marshaller.SetWriter(writer)
+		marshaller = eventmarshaller.New(mockBatcher, logger)
+		marshaller.SetWriter(mockChainWriter)
 	})
 
 	Describe("Write", func() {
@@ -67,8 +68,8 @@ var _ = Describe("EventMarshaller", func() {
 		Context("with an invalid envelope", func() {
 			BeforeEach(func() {
 				envelope = &events.Envelope{}
-				close(writer.WriteOutput.SentLength)
-				close(writer.WriteOutput.Err)
+				close(mockChainWriter.WriteOutput.SentLength)
+				close(mockChainWriter.WriteOutput.Err)
 			})
 
 			It("counts marshal errors", func() {
@@ -80,14 +81,14 @@ var _ = Describe("EventMarshaller", func() {
 
 			It("doesn't write the bytes", func() {
 				marshaller.Write(envelope)
-				Consistently(writer.WriteCalled).ShouldNot(Receive())
+				Consistently(mockChainWriter.WriteCalled).ShouldNot(Receive())
 			})
 		})
 
 		Context("with writer", func() {
 			BeforeEach(func() {
-				close(writer.WriteOutput.SentLength)
-				close(writer.WriteOutput.Err)
+				close(mockChainWriter.WriteOutput.SentLength)
+				close(mockChainWriter.WriteOutput.Err)
 				envelope = &events.Envelope{
 					Origin:    proto.String("The Negative Zone"),
 					EventType: events.Envelope_LogMessage.Enum(),
@@ -98,15 +99,22 @@ var _ = Describe("EventMarshaller", func() {
 				marshaller.Write(envelope)
 				expected, err := proto.Marshal(envelope)
 				Expect(err).ToNot(HaveOccurred())
-				Eventually(writer.WriteInput).Should(BeCalled(With(expected)))
-				Consistently(func() uint64 { return sender.GetCounter("dropsondeMarshaller.marshalErrors") }).Should(BeEquivalentTo(0))
+				Eventually(mockBatcher.BatchCounterInput).Should(BeCalled(
+					With("dropsondeMarshaller.sentEnvelopes"),
+				))
+				Eventually(mockChainer.SetTagInput).Should(BeCalled(
+					With("event_type", "LogMessage"),
+				))
+				Eventually(mockChainWriter.WriteInput).Should(BeCalled(
+					With(expected, []metricbatcher.BatchCounterChainer{mockChainer}),
+				))
 			})
 		})
 	})
 
 	Describe("SetWriter", func() {
 		It("writes to the new writer", func() {
-			newWriter := newMockByteWriter()
+			newWriter := newMockBatchChainByteWriter()
 			close(newWriter.WriteOutput.Err)
 			close(newWriter.WriteOutput.SentLength)
 			marshaller.SetWriter(newWriter)
@@ -119,7 +127,7 @@ var _ = Describe("EventMarshaller", func() {
 
 			expected, err := proto.Marshal(envelope)
 			Expect(err).ToNot(HaveOccurred())
-			Consistently(writer.WriteInput).ShouldNot(BeCalled())
+			Consistently(mockChainWriter.WriteInput).ShouldNot(BeCalled())
 			Eventually(newWriter.WriteInput).Should(BeCalled(With(expected)))
 		})
 	})

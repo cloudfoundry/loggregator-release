@@ -1,6 +1,6 @@
 // +build linux
 
-package integration_test
+package trafficcontroller_test
 
 import (
 	"metron/networkreader"

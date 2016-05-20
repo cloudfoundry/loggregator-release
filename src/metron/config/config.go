@@ -29,6 +29,16 @@ func (p *Protocol) UnmarshalJSON(value []byte) error {
 	return nil
 }
 
+type Protocols []Protocol
+
+func (p Protocols) Strings() []string {
+	protocols := make([]string, 0, len(p))
+	for _, protocol := range p {
+		protocols = append(protocols, string(protocol))
+	}
+	return protocols
+}
+
 type TLSConfig struct {
 	CertFile string
 	KeyFile  string
@@ -57,7 +67,7 @@ type Config struct {
 	TCPBatchSizeBytes            uint64
 	TCPBatchIntervalMilliseconds uint
 
-	Protocols []Protocol
+	Protocols Protocols
 	TLSConfig TLSConfig
 
 	// DEPRECATED

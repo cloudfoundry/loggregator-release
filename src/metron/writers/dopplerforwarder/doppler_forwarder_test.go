@@ -4,19 +4,17 @@ import (
 	"errors"
 	"metron/writers/dopplerforwarder"
 
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-
-	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
-	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/gosteno"
+	. "github.com/apoydence/eachers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 )
 
 var _ = Describe("DopplerForwarder", func() {
 	var (
-		sender      *fake.FakeMetricSender
-		mockBatcher *mockMetricBatcher
 		clientPool  *mockClientPool
 		client      *mockClient
 		logger      *gosteno.Logger
@@ -28,14 +26,10 @@ var _ = Describe("DopplerForwarder", func() {
 	BeforeEach(func() {
 		message = []byte("I am a message!")
 
-		sender = fake.NewFakeMetricSender()
-		mockBatcher = newMockMetricBatcher()
-		metrics.Initialize(sender, mockBatcher)
-
 		client = newMockClient()
 		clientPool = newMockClientPool()
-		clientPool.RandomClientOutput.client <- client
-		close(clientPool.RandomClientOutput.err)
+		clientPool.RandomClientOutput.Client <- client
+		close(clientPool.RandomClientOutput.Err)
 
 		logger = loggertesthelper.Logger()
 		loggertesthelper.TestLoggerSink.Clear()
@@ -49,18 +43,31 @@ var _ = Describe("DopplerForwarder", func() {
 
 	Context("client selection", func() {
 		It("selects a random client", func() {
-			close(fakeWrapper.WriteOutput.ret0)
+			close(fakeWrapper.WriteOutput.Ret0)
 			_, err := forwarder.Write(message)
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(fakeWrapper.WriteInput.client).Should(Receive(Equal(client)))
-			Eventually(fakeWrapper.WriteInput.message).Should(Receive(Equal(message)))
+			Eventually(fakeWrapper.WriteInput.Client).Should(Receive(Equal(client)))
+			Eventually(fakeWrapper.WriteInput.Message).Should(Receive(Equal(message)))
+		})
+
+		It("passes any chainers to the wrapper", func() {
+			chainers := []metricbatcher.BatchCounterChainer{
+				newMockBatchCounterChainer(),
+				newMockBatchCounterChainer(),
+			}
+			close(fakeWrapper.WriteOutput.Ret0)
+			_, err := forwarder.Write(message, chainers...)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(fakeWrapper.WriteInput).Should(BeCalled(
+				With(client, message, chainers),
+			))
 		})
 
 		Context("when selecting a client errors", func() {
 			It("logs an error and returns", func() {
-				close(fakeWrapper.WriteOutput.ret0)
-				clientPool.RandomClientOutput.err = make(chan error, 1)
-				clientPool.RandomClientOutput.err <- errors.New("boom")
+				close(fakeWrapper.WriteOutput.Ret0)
+				clientPool.RandomClientOutput.Err = make(chan error, 1)
+				clientPool.RandomClientOutput.Err <- errors.New("boom")
 				_, err := forwarder.Write(message)
 				Expect(err).To(HaveOccurred())
 				Eventually(loggertesthelper.TestLoggerSink.LogContents).Should(ContainSubstring("failed to pick a client"))
@@ -70,7 +77,7 @@ var _ = Describe("DopplerForwarder", func() {
 
 		Context("when networkWrapper write fails", func() {
 			It("logs an error and returns", func() {
-				fakeWrapper.WriteOutput.ret0 <- errors.New("boom")
+				fakeWrapper.WriteOutput.Ret0 <- errors.New("boom")
 				_, err := forwarder.Write(message)
 				Expect(err).To(HaveOccurred())
 				Eventually(loggertesthelper.TestLoggerSink.LogContents).Should(ContainSubstring("failed to write message"))
@@ -79,7 +86,7 @@ var _ = Describe("DopplerForwarder", func() {
 
 		Context("when it errors", func() {
 			It("returns an error and a zero byte count", func() {
-				fakeWrapper.WriteOutput.ret0 <- errors.New("boom")
+				fakeWrapper.WriteOutput.Ret0 <- errors.New("boom")
 				n, err := forwarder.Write(message)
 				Expect(err).To(HaveOccurred())
 				Expect(n).To(Equal(0))

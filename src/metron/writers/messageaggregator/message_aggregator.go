@@ -1,6 +1,7 @@
 package messageaggregator
 
 import (
+	"sync"
 	"time"
 
 	"metron/writers"
@@ -18,6 +19,7 @@ type MessageAggregator struct {
 	counterTotals        map[counterID]uint64
 	logger               *gosteno.Logger
 	outputWriter         writers.EnvelopeWriter
+	startEventLock       sync.RWMutex
 }
 
 func New(outputWriter writers.EnvelopeWriter, logger *gosteno.Logger) *MessageAggregator {
@@ -55,6 +57,19 @@ func (m *MessageAggregator) Write(envelope *events.Envelope) {
 	}
 }
 
+func (m *MessageAggregator) updateStartEvent(id eventID, entry startEventEntry) {
+	m.startEventLock.Lock()
+	defer m.startEventLock.Unlock()
+	m.startEventsByEventID[id] = entry
+}
+
+func (m *MessageAggregator) startEvent(id eventID) (startEventEntry, bool) {
+	m.startEventLock.RLock()
+	defer m.startEventLock.RUnlock()
+	entry, ok := m.startEventsByEventID[id]
+	return entry, ok
+}
+
 func (m *MessageAggregator) handleHTTPStart(envelope *events.Envelope) {
 	metrics.BatchIncrementCounter("MessageAggregator.httpStartReceived")
 
@@ -62,8 +77,8 @@ func (m *MessageAggregator) handleHTTPStart(envelope *events.Envelope) {
 	startEvent := envelope.GetHttpStart()
 
 	requestID := startEvent.RequestId.String()
-	event := eventID{requestID: requestID, peerType: startEvent.GetPeerType()}
-	m.startEventsByEventID[event] = startEventEntry{startEvent: startEvent, entryTime: time.Now()}
+	eventID := eventID{requestID: requestID, peerType: startEvent.GetPeerType()}
+	m.updateStartEvent(eventID, startEventEntry{startEvent: startEvent, entryTime: time.Now()})
 }
 
 func (m *MessageAggregator) handleHTTPStop(envelope *events.Envelope) *events.Envelope {
@@ -75,7 +90,7 @@ func (m *MessageAggregator) handleHTTPStop(envelope *events.Envelope) *events.En
 	requestID := stopEvent.RequestId.String()
 	event := eventID{requestID: requestID, peerType: stopEvent.GetPeerType()}
 
-	startEventEntry, ok := m.startEventsByEventID[event]
+	startEventEntry, ok := m.startEvent(event)
 	if !ok {
 		m.logger.Warnf("no matching HTTP start message found for appID: %v", envelope.GetHttpStop().GetApplicationId())
 		metrics.BatchIncrementCounter("MessageAggregator.httpUnmatchedStopReceived")
@@ -125,6 +140,8 @@ func (m *MessageAggregator) handleCounter(envelope *events.Envelope) *events.Env
 }
 
 func (m *MessageAggregator) cleanupOrphanedHTTPStart() {
+	m.startEventLock.Lock()
+	defer m.startEventLock.Unlock()
 	currentTime := time.Now()
 	for key, eventEntry := range m.startEventsByEventID {
 		if currentTime.Sub(eventEntry.entryTime) > MaxTTL {

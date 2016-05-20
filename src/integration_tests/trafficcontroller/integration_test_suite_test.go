@@ -1,4 +1,4 @@
-package integration_test
+package trafficcontroller_test
 
 import (
 	"integration_tests/trafficcontroller/fake_auth_server"

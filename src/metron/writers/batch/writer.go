@@ -10,6 +10,7 @@ import (
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -50,24 +51,25 @@ func (b *messageBuffer) Reset() {
 	b.Buffer.Reset()
 }
 
-//go:generate hel --type ByteWriter --output mock_byte_writer_test.go
+//go:generate hel --type BatchChainByteWriter --output mock_byte_writer_test.go
 
-type ByteWriter interface {
-	Write(message []byte) (sentLength int, err error)
+type BatchChainByteWriter interface {
+	Write(message []byte, chainers ...metricbatcher.BatchCounterChainer) (sentLength int, err error)
 }
 
 type Writer struct {
 	flushDuration   time.Duration
-	outWriter       ByteWriter
+	outWriter       BatchChainByteWriter
 	writerLock      sync.Mutex
 	msgBuffer       *messageBuffer
 	msgBufferLock   sync.Mutex
 	timer           *time.Timer
 	logger          *gosteno.Logger
 	droppedMessages uint64
+	chainers        []metricbatcher.BatchCounterChainer
 }
 
-func NewWriter(writer ByteWriter, bufferCapacity uint64, flushDuration time.Duration, logger *gosteno.Logger) (*Writer, error) {
+func NewWriter(writer BatchChainByteWriter, bufferCapacity uint64, flushDuration time.Duration, logger *gosteno.Logger) (*Writer, error) {
 	if bufferCapacity < minBufferCapacity {
 		return nil, fmt.Errorf("batch.Writer requires a buffer of at least %d bytes", minBufferCapacity)
 	}
@@ -88,9 +90,11 @@ func NewWriter(writer ByteWriter, bufferCapacity uint64, flushDuration time.Dura
 	return batchWriter, nil
 }
 
-func (w *Writer) Write(msgBytes []byte) (int, error) {
+func (w *Writer) Write(msgBytes []byte, chainers ...metricbatcher.BatchCounterChainer) (int, error) {
 	w.msgBufferLock.Lock()
 	defer w.msgBufferLock.Unlock()
+
+	w.chainers = append(w.chainers, chainers...)
 
 	prefixedBytes, err := w.prefixMessage(msgBytes)
 	if err != nil {
@@ -149,7 +153,7 @@ func (w *Writer) flushWrite(bytes []byte) (int, error) {
 	if len(bytes) > 0 {
 		bufferMessageCount++
 	}
-	sent, err := w.outWriter.Write(toWrite)
+	sent, err := w.outWriter.Write(toWrite, w.chainers...)
 	if err != nil {
 		w.logger.Warnf("Received error while trying to flush TCP bytes: %s", err)
 		return 0, err
@@ -158,6 +162,7 @@ func (w *Writer) flushWrite(bytes []byte) (int, error) {
 	metrics.BatchAddCounter("DopplerForwarder.sentMessages", bufferMessageCount)
 	atomic.StoreUint64(&w.droppedMessages, 0)
 	w.msgBuffer.Reset()
+	w.chainers = nil
 	return sent, nil
 }
 

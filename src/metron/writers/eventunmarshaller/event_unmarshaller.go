@@ -59,6 +59,7 @@ func New(outputWriter writers.EnvelopeWriter, batcher EventBatcher, logger *gost
 func (u *EventUnmarshaller) Write(message []byte) {
 	envelope, err := u.UnmarshallMessage(message)
 	if err != nil {
+		u.logger.Errorf("Error unmarshalling: %s", err)
 		return
 	}
 	u.outputWriter.Write(envelope)

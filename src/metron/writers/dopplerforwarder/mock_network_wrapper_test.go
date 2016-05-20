@@ -1,29 +1,36 @@
 package dopplerforwarder_test
 
-import "metron/writers/dopplerforwarder"
+import (
+	"metron/writers/dopplerforwarder"
+
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+)
 
 type mockNetworkWrapper struct {
 	WriteCalled chan bool
 	WriteInput  struct {
-		client  chan dopplerforwarder.Client
-		message chan []byte
+		Client   chan dopplerforwarder.Client
+		Message  chan []byte
+		Chainers chan []metricbatcher.BatchCounterChainer
 	}
 	WriteOutput struct {
-		ret0 chan error
+		Ret0 chan error
 	}
 }
 
 func newMockNetworkWrapper() *mockNetworkWrapper {
 	m := &mockNetworkWrapper{}
 	m.WriteCalled = make(chan bool, 100)
-	m.WriteInput.client = make(chan dopplerforwarder.Client, 100)
-	m.WriteInput.message = make(chan []byte, 100)
-	m.WriteOutput.ret0 = make(chan error, 100)
+	m.WriteInput.Client = make(chan dopplerforwarder.Client, 100)
+	m.WriteInput.Message = make(chan []byte, 100)
+	m.WriteInput.Chainers = make(chan []metricbatcher.BatchCounterChainer, 100)
+	m.WriteOutput.Ret0 = make(chan error, 100)
 	return m
 }
-func (m *mockNetworkWrapper) Write(client dopplerforwarder.Client, message []byte) error {
+func (m *mockNetworkWrapper) Write(client dopplerforwarder.Client, message []byte, chainers ...metricbatcher.BatchCounterChainer) error {
 	m.WriteCalled <- true
-	m.WriteInput.client <- client
-	m.WriteInput.message <- message
-	return <-m.WriteOutput.ret0
+	m.WriteInput.Client <- client
+	m.WriteInput.Message <- message
+	m.WriteInput.Chainers <- chainers
+	return <-m.WriteOutput.Ret0
 }

@@ -1,4 +1,4 @@
-package integration_test
+package trafficcontroller_test
 
 import (
 	"crypto/tls"
