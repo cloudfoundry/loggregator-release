@@ -34,7 +34,6 @@ func (w *Wrapper) Write(client Client, message []byte, chainers ...metricbatcher
 	}
 
 	metrics.BatchAddCounter(w.protocol+".sentByteCount", uint64(sentBytes))
-	metrics.BatchIncrementCounter(w.protocol + ".sentMessageCount")
 	for _, chainer := range chainers {
 		chainer.SetTag("protocol", w.protocol).Increment()
 	}

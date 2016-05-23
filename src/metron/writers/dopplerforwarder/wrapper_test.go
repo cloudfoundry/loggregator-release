@@ -75,7 +75,7 @@ var _ = Describe("Wrapper", func() {
 			))
 		})
 
-		It("counts the number of messages sent", func() {
+		It("does not count the number of messages sent", func() {
 			client.WriteOutput.SentLength <- len(message)
 			client.WriteOutput.Err <- nil
 			mockChainer := newMockBatchCounterChainer()
@@ -84,21 +84,7 @@ var _ = Describe("Wrapper", func() {
 			err := wrapper.Write(client, message, mockChainer)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
-				With("tcp.sentMessageCount"),
-			))
-
-			Eventually(mockChainer.SetTagInput).Should(BeCalled(
-				With("protocol", "tcp"),
-			))
-			Eventually(mockChainer.IncrementCalled).Should(BeCalled())
-
-			client.WriteOutput.SentLength <- len(message)
-			client.WriteOutput.Err <- nil
-			err = wrapper.Write(client, message)
-			Expect(err).NotTo(HaveOccurred())
-
-			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+			Consistently(mockBatcher.BatchIncrementCounterInput).ShouldNot(BeCalled(
 				With("tcp.sentMessageCount"),
 			))
 		})
@@ -134,27 +120,37 @@ var _ = Describe("Wrapper", func() {
 			protocol = "tls"
 		})
 
-		It("emits metrics with tcp prefix", func() {
+		It("emits sentByteCount metric", func() {
 			client.WriteOutput.SentLength <- len(message)
 			client.WriteOutput.Err <- nil
 			err := wrapper.Write(client, message)
 			Expect(err).ToNot(HaveOccurred())
 
-			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
-				With("tls.sentMessageCount"),
-			))
 			Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
 				With("tls.sentByteCount", uint64(len(message))),
 			))
+		})
 
+		It("emits sendErrorCount", func() {
 			client.WriteOutput.SentLength <- 0
 			client.WriteOutput.Err <- errors.New("failure")
 			client.CloseOutput.Ret0 <- nil
-			err = wrapper.Write(client, message)
+			err := wrapper.Write(client, message)
 			Expect(err).To(HaveOccurred())
 
 			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
 				With("tls.sendErrorCount"),
+			))
+		})
+
+		It("does not emit sentMessageCount metric", func() {
+			client.WriteOutput.SentLength <- len(message)
+			client.WriteOutput.Err <- nil
+			err := wrapper.Write(client, message)
+			Expect(err).ToNot(HaveOccurred())
+
+			Consistently(mockBatcher.BatchIncrementCounterInput).ShouldNot(BeCalled(
+				With("tls.sentMessageCount"),
 			))
 		})
 	})

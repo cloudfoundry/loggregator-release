@@ -151,7 +151,7 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 			tcpForwarder := dopplerforwarder.New(tcpWrapper, tcpPool, logger)
 
 			tcpBatchInterval := time.Duration(conf.TCPBatchIntervalMilliseconds) * time.Millisecond
-			batchWriter, err := batch.NewWriter(tcpForwarder, conf.TCPBatchSizeBytes, tcpBatchInterval, logger)
+			batchWriter, err := batch.NewWriter("tcp", tcpForwarder, conf.TCPBatchSizeBytes, tcpBatchInterval, logger)
 			if err != nil {
 				return nil, err
 			}
@@ -170,7 +170,7 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 			tlsForwarder := dopplerforwarder.New(tlsWrapper, tlsPool, logger)
 
 			tcpBatchInterval := time.Duration(conf.TCPBatchIntervalMilliseconds) * time.Millisecond
-			batchWriter, err := batch.NewWriter(tlsForwarder, conf.TCPBatchSizeBytes, tcpBatchInterval, logger)
+			batchWriter, err := batch.NewWriter("tls", tlsForwarder, conf.TCPBatchSizeBytes, tcpBatchInterval, logger)
 			if err != nil {
 				return nil, err
 			}

@@ -58,7 +58,7 @@ var _ = Describe("Batch Writer", func() {
 
 	JustBeforeEach(func() {
 		prefixedMessage = prefixWithLength(messageBytes)
-		batcher, constructorErr = batch.NewWriter(byteWriter, bufferSize, timeout, logger)
+		batcher, constructorErr = batch.NewWriter("foo", byteWriter, bufferSize, timeout, logger)
 	})
 
 	AfterEach(func() {
@@ -89,7 +89,6 @@ var _ = Describe("Batch Writer", func() {
 	})
 
 	Context("messages larger than buffer size", func() {
-
 		BeforeEach(func() {
 			for uint64(len(messageBytes)) < bufferSize {
 				messageBytes = append(messageBytes, messageBytes...)
@@ -435,7 +434,6 @@ var _ = Describe("Batch Writer", func() {
 	})
 
 	Context("with timeout", func() {
-
 		BeforeEach(func() {
 			// Use a buffer size large enough that no flush happens
 			// due to a full buffer.
@@ -484,6 +482,22 @@ var _ = Describe("Batch Writer", func() {
 			Eventually(byteWriter.WriteInput.Message).Should(Receive())
 			Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
 				With("DopplerForwarder.sentMessages", uint64(3)),
+			))
+		})
+
+		It("sends a protocol sentMessageCount metric on flush", func() {
+			close(byteWriter.WriteOutput.SentLength)
+			for i := 0; i < 3; i++ {
+				_, err := batcher.Write(messageBytes)
+				Expect(err).ToNot(HaveOccurred())
+			}
+			Consistently(mockBatcher.BatchAddCounterInput).ShouldNot(BeCalled(
+				With("foo.sentMessageCount"),
+			))
+
+			Eventually(byteWriter.WriteInput.Message).Should(Receive())
+			Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
+				With("foo.sentMessageCount", uint64(3)),
 			))
 		})
 	})

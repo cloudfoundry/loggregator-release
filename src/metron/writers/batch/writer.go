@@ -67,9 +67,10 @@ type Writer struct {
 	logger          *gosteno.Logger
 	droppedMessages uint64
 	chainers        []metricbatcher.BatchCounterChainer
+	protocol        string
 }
 
-func NewWriter(writer BatchChainByteWriter, bufferCapacity uint64, flushDuration time.Duration, logger *gosteno.Logger) (*Writer, error) {
+func NewWriter(protocol string, writer BatchChainByteWriter, bufferCapacity uint64, flushDuration time.Duration, logger *gosteno.Logger) (*Writer, error) {
 	if bufferCapacity < minBufferCapacity {
 		return nil, fmt.Errorf("batch.Writer requires a buffer of at least %d bytes", minBufferCapacity)
 	}
@@ -85,6 +86,7 @@ func NewWriter(writer BatchChainByteWriter, bufferCapacity uint64, flushDuration
 		msgBuffer:     newMessageBuffer(make([]byte, 0, bufferCapacity)),
 		timer:         batchTimer,
 		logger:        logger,
+		protocol:      protocol,
 	}
 	go batchWriter.flushOnTimer()
 	return batchWriter, nil
@@ -160,6 +162,7 @@ func (w *Writer) flushWrite(bytes []byte) (int, error) {
 	}
 
 	metrics.BatchAddCounter("DopplerForwarder.sentMessages", bufferMessageCount)
+	metrics.BatchAddCounter(w.protocol+".sentMessageCount", bufferMessageCount)
 	atomic.StoreUint64(&w.droppedMessages, 0)
 	w.msgBuffer.Reset()
 	w.chainers = nil
