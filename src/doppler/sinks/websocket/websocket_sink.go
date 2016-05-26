@@ -20,12 +20,12 @@ type remoteMessageWriter interface {
 }
 
 type Counter interface {
-	Increment()
+	Increment(events.Envelope_EventType)
 }
 
 type noopCounter struct{}
 
-func (noopCounter) Increment() {}
+func (noopCounter) Increment(events.Envelope_EventType) {}
 
 type WebsocketSink struct {
 	logger                 *gosteno.Logger
@@ -81,7 +81,7 @@ func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
 			close(stopChan)
 			return
 		}
-		sink.counter.Increment()
+		sink.counter.Increment(messageEnvelope.GetEventType())
 		messageBytes, err := proto.Marshal(messageEnvelope)
 
 		if err != nil {

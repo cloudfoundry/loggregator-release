@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/apoydence/eachers/testhelpers"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
@@ -24,7 +25,6 @@ import (
 )
 
 var _ = Describe("WebsocketServer", func() {
-
 	var (
 		logger         = loggertesthelper.Logger()
 		server         *websocketserver.WebsocketServer
@@ -32,24 +32,37 @@ var _ = Describe("WebsocketServer", func() {
 		appId          = "my-app"
 		wsReceivedChan chan []byte
 		apiEndpoint    string
+		mockBatcher    *mockBatcher
+		mockChainer    *mockBatchCounterChainer
 	)
 
 	BeforeEach(func() {
+		mockBatcher = newMockBatcher()
+		mockChainer = newMockBatchCounterChainer()
+		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
+		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
+
 		wsReceivedChan = make(chan []byte)
 
 		apiEndpoint = net.JoinHostPort("127.0.0.1", strconv.Itoa(9091+config.GinkgoConfig.ParallelNode*10))
 		var err error
-		server, err = websocketserver.New(apiEndpoint, sinkManager, 100*time.Millisecond, 100*time.Millisecond, 100, "dropsonde-origin", logger)
+		server, err = websocketserver.New(
+			apiEndpoint,
+			sinkManager,
+			100*time.Millisecond,
+			100*time.Millisecond,
+			100,
+			"dropsonde-origin",
+			mockBatcher,
+			logger,
+		)
 		Expect(err).NotTo(HaveOccurred())
 		go server.Start()
-		serverUrl := fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId)
 		websocket.DefaultDialer = &websocket.Dialer{HandshakeTimeout: 10 * time.Millisecond}
-		Eventually(func() error { _, _, err := websocket.DefaultDialer.Dial(serverUrl, http.Header{}); return err }, 1).ShouldNot(HaveOccurred())
 	})
 
 	AfterEach(func() {
 		server.Stop()
-		fakeMetricSender.Reset()
 	})
 
 	Describe("failed connections", func() {
@@ -76,6 +89,24 @@ var _ = Describe("WebsocketServer", func() {
 		Expect(rlm.GetLogMessage().GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
 	})
 
+	It("sends sentEnvelopes metrics for /recentlogs", func() {
+		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
+		sinkManager.SendTo(appId, lm)
+
+		_, _, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/recentlogs", apiEndpoint, appId))
+		Expect(err).NotTo(HaveOccurred())
+
+		Eventually(mockBatcher.BatchCounterInput).Should(BeCalled(
+			With("sentEnvelopes"),
+		))
+		Eventually(mockChainer.SetTagInput).Should(BeCalled(
+			With("protocol", "ws"),
+			With("event_type", "LogMessage"),
+			With("endpoint", "recentlogs"),
+		))
+		Eventually(mockChainer.IncrementCalled).Should(BeCalled())
+	})
+
 	It("dumps container metric data to the websocket client with /containermetrics", func() {
 		cm := factories.NewContainerMetric(appId, 0, 42.42, 1234, 123412341234)
 		envelope, _ := emitter.Wrap(cm, "origin")
@@ -87,6 +118,25 @@ var _ = Describe("WebsocketServer", func() {
 		rcm, err := receiveEnvelope(wsReceivedChan)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rcm.GetContainerMetric()).To(Equal(cm))
+	})
+
+	It("sends sentEnvelopes metrics for /containermetrics", func() {
+		cm := factories.NewContainerMetric(appId, 0, 42.42, 1234, 123412341234)
+		envelope, _ := emitter.Wrap(cm, "origin")
+		sinkManager.SendTo(appId, envelope)
+
+		_, _, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/containermetrics", apiEndpoint, appId))
+		Expect(err).NotTo(HaveOccurred())
+
+		Eventually(mockBatcher.BatchCounterInput).Should(BeCalled(
+			With("sentEnvelopes"),
+		))
+		Eventually(mockChainer.SetTagInput).Should(BeCalled(
+			With("protocol", "ws"),
+			With("event_type", "ContainerMetric"),
+			With("endpoint", "containermetrics"),
+		))
+		Eventually(mockChainer.IncrementCalled).Should(BeCalled())
 	})
 
 	It("skips sending data to the websocket client with a marshal error", func() {
@@ -110,6 +160,24 @@ var _ = Describe("WebsocketServer", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rlm.GetLogMessage().GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
 		close(stopKeepAlive)
+	})
+
+	It("sends sentEnvelopes metrics for /stream", func() {
+		stopKeepAlive, _, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
+		defer close(stopKeepAlive)
+		Expect(err).NotTo(HaveOccurred())
+		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
+		sinkManager.SendTo(appId, lm)
+
+		Eventually(mockBatcher.BatchCounterInput).Should(BeCalled(
+			With("sentEnvelopes"),
+		))
+		Eventually(mockChainer.SetTagInput).Should(BeCalled(
+			With("protocol", "ws"),
+			With("event_type", "LogMessage"),
+			With("endpoint", "stream"),
+		))
+		Eventually(mockChainer.IncrementCalled).Should(BeCalled())
 	})
 
 	Context("websocket firehose client", func() {
@@ -147,6 +215,15 @@ var _ = Describe("WebsocketServer", func() {
 			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
 				With(fmt.Sprintf("sentMessagesFirehose.%s", subscriptionID)),
 			))
+			Eventually(mockBatcher.BatchCounterInput).Should(BeCalled(
+				With("sentEnvelopes"),
+			))
+			Eventually(mockChainer.SetTagInput).Should(BeCalled(
+				With("protocol", "ws"), // TODO: consider adding wss?
+				With("event_type", "LogMessage"),
+				With("endpoint", "firehose"),
+			))
+			Eventually(mockChainer.IncrementCalled).Should(BeCalled())
 		})
 	})
 

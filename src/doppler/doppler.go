@@ -126,7 +126,16 @@ func New(
 	)
 	doppler.messageRouter = sinkserver.NewMessageRouter(doppler.sinkManager, logger)
 
-	doppler.websocketServer, err = websocketserver.New(fmt.Sprintf(":%d", config.OutgoingPort), doppler.sinkManager, websocketWriteTimeout, keepAliveInterval, config.MessageDrainBufferSize, dropsondeOrigin, logger)
+	doppler.websocketServer, err = websocketserver.New(
+		fmt.Sprintf(":%d", config.OutgoingPort),
+		doppler.sinkManager,
+		websocketWriteTimeout,
+		keepAliveInterval,
+		config.MessageDrainBufferSize,
+		dropsondeOrigin,
+		doppler.batcher,
+		logger,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create the websocket server: %s", err.Error())
 	}

@@ -2,8 +2,6 @@ package websocket_test
 
 import (
 	"doppler/sinks/websocket"
-	"net"
-	"sync"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
@@ -17,62 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-type fakeAddr struct{}
-
-func (fake fakeAddr) Network() string {
-	return "RemoteAddressNetwork"
-}
-func (fake fakeAddr) String() string {
-	return "client-address"
-}
-
-type fakeMessageWriter struct {
-	messages      [][]byte
-	writeDeadline time.Time
-	sync.RWMutex
-}
-
-func (fake *fakeMessageWriter) RemoteAddr() net.Addr {
-	return fakeAddr{}
-}
-func (fake *fakeMessageWriter) WriteMessage(messageType int, data []byte) error {
-	fake.Lock()
-	defer fake.Unlock()
-
-	fake.messages = append(fake.messages, data)
-	return nil
-}
-
-func (fake *fakeMessageWriter) SetWriteDeadline(t time.Time) error {
-	fake.Lock()
-	defer fake.Unlock()
-	fake.writeDeadline = t
-	return nil
-}
-
-func (fake *fakeMessageWriter) ReadMessages() [][]byte {
-	fake.RLock()
-	defer fake.RUnlock()
-
-	return fake.messages
-}
-
-func (fake *fakeMessageWriter) WriteDeadline() time.Time {
-	fake.RLock()
-	defer fake.RUnlock()
-	return fake.writeDeadline
-}
-
-type fakeCounter struct {
-	incrementCalls chan struct{}
-}
-
-func (f *fakeCounter) Increment() {
-	f.incrementCalls <- struct{}{}
-}
-
 var _ = Describe("WebsocketSink", func() {
-
 	var (
 		logger        *gosteno.Logger
 		websocketSink *websocket.WebsocketSink
@@ -142,7 +85,7 @@ var _ = Describe("WebsocketSink", func() {
 
 			BeforeEach(func() {
 				counter = &fakeCounter{
-					incrementCalls: make(chan struct{}),
+					incrementCalls: make(chan events.Envelope_EventType),
 				}
 				websocketSink.SetCounter(counter)
 			})
@@ -151,7 +94,9 @@ var _ = Describe("WebsocketSink", func() {
 				go websocketSink.Run(inputChan)
 				message, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "hello world", "appId", "App"), "origin")
 				inputChan <- message
-				Eventually(counter.incrementCalls).Should(Receive())
+				Eventually(counter.incrementCalls).Should(Receive(
+					Equal(events.Envelope_LogMessage),
+				))
 				Consistently(counter.incrementCalls).ShouldNot(Receive())
 			})
 		})

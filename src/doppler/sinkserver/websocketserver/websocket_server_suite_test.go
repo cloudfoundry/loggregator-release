@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
-	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/websocket"
@@ -20,21 +18,6 @@ func TestWebsocketServer(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "WebsocketServer Suite")
 }
-
-var (
-	fakeMetricSender *fake.FakeMetricSender
-	mockBatcher      *mockMetricBatcher
-)
-
-var _ = BeforeSuite(func() {
-	fakeMetricSender = fake.NewFakeMetricSender()
-
-	// This mock batcher is only initialized once for this whole suite, which
-	// means that it will stop responding after 100 method calls.  If/when tests
-	// start hanging, we will need to move it to a BeforeEach.
-	mockBatcher = newMockMetricBatcher()
-	metrics.Initialize(fakeMetricSender, mockBatcher)
-})
 
 func AddSlowWSSink(receivedChan chan []byte, errChan chan error, timeout time.Duration, url string) {
 	ws, _, err := websocket.DefaultDialer.Dial(url, http.Header{})

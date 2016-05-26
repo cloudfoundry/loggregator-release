@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudfoundry/dropsonde/metrics"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/server"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -19,18 +19,49 @@ import (
 	gorilla "github.com/gorilla/websocket"
 )
 
-type firehoseCounter struct {
-	subscriptionID string
+//go:generate hel --type Batcher --output mock_batcher_test.go
+
+type Batcher interface {
+	BatchIncrementCounter(name string)
+	BatchCounter(name string) metricbatcher.BatchCounterChainer
 }
 
-func newFirehoseCounter(subscriptionID string) *firehoseCounter {
-	return &firehoseCounter{
-		subscriptionID: subscriptionID,
+type envelopeCounter struct {
+	endpoint string
+	batcher  Batcher
+}
+
+func (c *envelopeCounter) Increment(typ events.Envelope_EventType) {
+	c.batcher.BatchCounter("sentEnvelopes").
+		SetTag("protocol", "ws").
+		SetTag("event_type", typ.String()).
+		SetTag("endpoint", c.endpoint).
+		Increment()
+}
+
+func newStreamCounter(batcher Batcher) *envelopeCounter {
+	return &envelopeCounter{
+		endpoint: "stream",
+		batcher:  batcher,
 	}
 }
 
-func (f *firehoseCounter) Increment() {
-	metrics.BatchIncrementCounter(fmt.Sprintf("sentMessagesFirehose.%s", f.subscriptionID))
+type firehoseCounter struct {
+	envelopeCounter
+	subscriptionID string
+}
+
+func newFirehoseCounter(subscriptionID string, batcher Batcher) *firehoseCounter {
+	counter := &firehoseCounter{}
+	counter.endpoint = "firehose"
+	counter.subscriptionID = subscriptionID
+	counter.batcher = batcher
+	return counter
+}
+
+func (f *firehoseCounter) Increment(typ events.Envelope_EventType) {
+	f.batcher.BatchIncrementCounter(fmt.Sprintf("sentMessagesFirehose.%s", f.subscriptionID))
+	f.envelopeCounter.Increment(typ)
 }
 
 type WebsocketServer struct {
@@ -38,6 +69,7 @@ type WebsocketServer struct {
 	writeTimeout      time.Duration
 	keepAliveInterval time.Duration
 	bufferSize        uint
+	batcher           Batcher
 	logger            *gosteno.Logger
 	listener          net.Listener
 	dropsondeOrigin   string
@@ -45,7 +77,7 @@ type WebsocketServer struct {
 	done chan struct{}
 }
 
-func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, writeTimeout time.Duration, keepAliveInterval time.Duration, messageDrainBufferSize uint, dropsondeOrigin string, logger *gosteno.Logger) (*WebsocketServer, error) {
+func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, writeTimeout time.Duration, keepAliveInterval time.Duration, messageDrainBufferSize uint, dropsondeOrigin string, batcher Batcher, logger *gosteno.Logger) (*WebsocketServer, error) {
 	logger.Infof("WebsocketServer: Listening for sinks at %s", apiEndpoint)
 
 	listener, e := net.Listen("tcp", apiEndpoint)
@@ -59,6 +91,7 @@ func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, writeTimeout 
 		writeTimeout:      writeTimeout,
 		keepAliveInterval: keepAliveInterval,
 		bufferSize:        messageDrainBufferSize,
+		batcher:           batcher,
 		logger:            logger,
 		dropsondeOrigin:   dropsondeOrigin,
 		done:              make(chan struct{}),
@@ -177,6 +210,8 @@ func (w *WebsocketServer) streamLogs(appId string, websocketConnection *gorilla.
 		w.dropsondeOrigin,
 	)
 
+	websocketSink.SetCounter(newStreamCounter(w.batcher))
+
 	w.streamWebsocket(websocketSink, websocketConnection, w.sinkManager.RegisterSink, w.sinkManager.UnregisterSink)
 }
 
@@ -191,7 +226,7 @@ func (w *WebsocketServer) streamFirehose(subscriptionId string, websocketConnect
 		w.dropsondeOrigin,
 	)
 
-	firehoseCounter := newFirehoseCounter(subscriptionId)
+	firehoseCounter := newFirehoseCounter(subscriptionId, w.batcher)
 	websocketSink.SetCounter(firehoseCounter)
 
 	w.streamWebsocket(websocketSink, websocketConnection, w.sinkManager.RegisterFirehoseSink, w.sinkManager.UnregisterFirehoseSink)
@@ -207,12 +242,12 @@ func (w *WebsocketServer) streamWebsocket(websocketSink *websocket.WebsocketSink
 
 func (w *WebsocketServer) recentLogs(appId string, websocketConnection *gorilla.Conn) {
 	logMessages := w.sinkManager.RecentLogsFor(appId)
-	sendMessagesToWebsocket(logMessages, websocketConnection, w.logger)
+	sendMessagesToWebsocket("recentlogs", logMessages, websocketConnection, w.batcher, w.logger)
 }
 
 func (w *WebsocketServer) latestContainerMetrics(appId string, websocketConnection *gorilla.Conn) {
 	metrics := w.sinkManager.LatestContainerMetrics(appId)
-	sendMessagesToWebsocket(metrics, websocketConnection, w.logger)
+	sendMessagesToWebsocket("containermetrics", metrics, websocketConnection, w.batcher, w.logger)
 }
 
 func (w *WebsocketServer) logInvalidApp(address string) {
@@ -220,7 +255,7 @@ func (w *WebsocketServer) logInvalidApp(address string) {
 	w.logger.Warn(message)
 }
 
-func sendMessagesToWebsocket(envelopes []*events.Envelope, websocketConnection *gorilla.Conn, logger *gosteno.Logger) {
+func sendMessagesToWebsocket(endpoint string, envelopes []*events.Envelope, websocketConnection *gorilla.Conn, batcher Batcher, logger *gosteno.Logger) {
 	for _, messageEnvelope := range envelopes {
 		envelopeBytes, err := proto.Marshal(messageEnvelope)
 		if err != nil {
@@ -231,8 +266,14 @@ func sendMessagesToWebsocket(envelopes []*events.Envelope, websocketConnection *
 		err = websocketConnection.WriteMessage(gorilla.BinaryMessage, envelopeBytes)
 		if err != nil {
 			logger.Errorf("Websocket Server %s: Error when trying to send data to sink %s. Err: %v", websocketConnection.RemoteAddr(), err)
-		} else {
-			logger.Debugf("Websocket Server %s: Successfully sent data", websocketConnection.RemoteAddr())
+			continue
 		}
+		batcher.BatchCounter("sentEnvelopes").
+			SetTag("protocol", "ws").
+			SetTag("event_type", messageEnvelope.GetEventType().String()).
+			SetTag("endpoint", endpoint).
+			Increment()
+
+		logger.Debugf("Websocket Server %s: Successfully sent data", websocketConnection.RemoteAddr())
 	}
 }

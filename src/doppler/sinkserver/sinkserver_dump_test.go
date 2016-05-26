@@ -10,6 +10,10 @@ import (
 	"sync"
 	"time"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"github.com/apoydence/eachers/testhelpers"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
@@ -17,10 +21,7 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/websocket"
-
-	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Dumping", func() {
@@ -31,9 +32,16 @@ var _ = Describe("Dumping", func() {
 		dataReadChannel     chan *events.Envelope
 		services            sync.WaitGroup
 		serverPort          string
+		mockBatcher         *mockBatcher
+		mockChainer         *mockBatchCounterChainer
 	)
 
 	BeforeEach(func() {
+		mockBatcher = newMockBatcher()
+		mockChainer = newMockBatchCounterChainer()
+		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
+		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
+
 		port := 9081 + config.GinkgoConfig.ParallelNode
 		serverPort = strconv.Itoa(port)
 		dataReadChannel = make(chan *events.Envelope, 2)
@@ -65,7 +73,16 @@ var _ = Describe("Dumping", func() {
 
 		apiEndpoint := "localhost:" + serverPort
 		var err error
-		TestWebsocketServer, err = websocketserver.New(apiEndpoint, sinkManager, time.Second, 10*time.Second, 100, "dropsonde-origin", logger)
+		TestWebsocketServer, err = websocketserver.New(
+			apiEndpoint,
+			sinkManager,
+			time.Second,
+			10*time.Second,
+			100,
+			"dropsonde-origin",
+			mockBatcher,
+			logger,
+		)
 		Expect(err).NotTo(HaveOccurred())
 		tempWebsocketServer := TestWebsocketServer
 
