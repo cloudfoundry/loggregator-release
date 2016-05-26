@@ -10,10 +10,10 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
+	"strings"
 	"sync"
 
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
-	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 )
@@ -21,6 +21,7 @@ import (
 type TCPListener struct {
 	envelopeChan   chan *events.Envelope
 	logger         *gosteno.Logger
+	batcher        Batcher
 	listener       net.Listener
 	protocol       string
 	connections    map[net.Conn]struct{}
@@ -66,7 +67,13 @@ func NewTLSConfig(certFile, keyFile, caCertFile string) (*tls.Config, error) {
 	return tlsConfig, nil
 }
 
-func NewTCPListener(contextName string, address string, tlsListenerConfig *config.TLSListenerConfig, envelopeChan chan *events.Envelope, logger *gosteno.Logger) (Listener, error) {
+func NewTCPListener(
+	contextName, address string,
+	tlsListenerConfig *config.TLSListenerConfig,
+	envelopeChan chan *events.Envelope,
+	batcher Batcher,
+	logger *gosteno.Logger,
+) (*TCPListener, error) {
 	protocol := "TCP"
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
@@ -83,10 +90,12 @@ func NewTCPListener(contextName string, address string, tlsListenerConfig *confi
 	}
 
 	return &TCPListener{
-		listener:       listener,
-		protocol:       protocol,
-		envelopeChan:   envelopeChan,
-		logger:         logger,
+		listener:     listener,
+		protocol:     protocol,
+		envelopeChan: envelopeChan,
+		logger:       logger,
+		batcher:      batcher,
+
 		connections:    make(map[net.Conn]struct{}),
 		unmarshaller:   dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger),
 		stopped:        make(chan struct{}),
@@ -173,7 +182,7 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 				"error":   err.Error(),
 				"address": conn.RemoteAddr().String(),
 			}, "TLS handshake error")
-			metrics.BatchIncrementCounter(t.receiveErrorCountMetricName)
+			t.batcher.BatchIncrementCounter(t.receiveErrorCountMetricName)
 			return
 		}
 	}
@@ -188,7 +197,7 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 		err = binary.Read(conn, binary.LittleEndian, &n)
 		if err != nil {
 			if err != io.EOF {
-				metrics.BatchIncrementCounter(t.receiveErrorCountMetricName)
+				t.batcher.BatchIncrementCounter(t.receiveErrorCountMetricName)
 				t.logger.Errorf("Error while decoding: %v", err)
 			}
 			break
@@ -202,7 +211,7 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 
 		_, err = io.ReadFull(conn, read)
 		if err != nil {
-			metrics.BatchIncrementCounter(t.receiveErrorCountMetricName)
+			t.batcher.BatchIncrementCounter(t.receiveErrorCountMetricName)
 			t.logger.Errorf("Error during i/o read: %v", err)
 			break
 		}
@@ -211,9 +220,13 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 		if err != nil {
 			continue
 		}
-		metrics.BatchIncrementCounter(t.listenerTotalMetricName)
-		metrics.BatchIncrementCounter(t.receivedMessageCountMetricName)
-		metrics.BatchAddCounter(t.receivedByteCountMetricName, uint64(n+4))
+		t.batcher.BatchCounter("listeners.receivedEnvelopes").
+			SetTag("protocol", strings.ToLower(t.protocol)).
+			SetTag("event_type", envelope.EventType.String()).
+			Increment()
+		t.batcher.BatchIncrementCounter(t.listenerTotalMetricName)
+		t.batcher.BatchIncrementCounter(t.receivedMessageCountMetricName)
+		t.batcher.BatchAddCounter(t.receivedByteCountMetricName, uint64(n+4))
 
 		select {
 		case t.envelopeChan <- envelope:

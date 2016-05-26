@@ -4,51 +4,46 @@ import (
 	"net"
 	"sync"
 
-	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 )
 
-type Listener interface {
-	Address() string
-	Start()
-	Stop()
-}
-
-type udpListener struct {
-	*gosteno.Logger
+type UDPListener struct {
+	batcher     Batcher
+	logger      *gosteno.Logger
 	host        string
 	dataChannel chan []byte
 	connection  net.PacketConn
 	contextName string
-	sync.RWMutex
+	lock        sync.RWMutex
 }
 
-func NewUDPListener(host string, givenLogger *gosteno.Logger, name string) (Listener, <-chan []byte) {
+func NewUDPListener(host string, batcher Batcher, logger *gosteno.Logger, contextName string) (*UDPListener, <-chan []byte) {
 	byteChan := make(chan []byte, 1024)
-	listener := &udpListener{
-		Logger:      givenLogger,
+	listener := &UDPListener{
+		logger:      logger,
+		batcher:     batcher,
 		host:        host,
 		dataChannel: byteChan,
-		contextName: name,
+		contextName: contextName,
 	}
 
 	return listener, byteChan
 }
 
-func (udp *udpListener) Address() string {
+func (udp *UDPListener) Address() string {
 	return udp.connection.LocalAddr().String()
 }
 
-func (udp *udpListener) Start() {
+func (udp *UDPListener) Start() {
 	connection, err := net.ListenPacket("udp", udp.host)
 	if err != nil {
-		udp.Fatalf("Failed to listen on port. %s", err)
+		udp.logger.Fatalf("Failed to listen on port. %s", err)
 	}
 
-	udp.Infof("Listening on port %s", udp.host)
-	udp.Lock()
+	udp.logger.Infof("Listening on port %s", udp.host)
+	udp.lock.Lock()
 	udp.connection = connection
-	udp.Unlock()
+	udp.lock.Unlock()
 
 	messageCountMetricName := udp.contextName + ".receivedMessageCount"
 	listenerTotalMetricName := "listeners.totalReceivedMessageCount"
@@ -62,28 +57,28 @@ func (udp *udpListener) Start() {
 	for {
 		readCount, senderAddr, err := connection.ReadFrom(readBuffer)
 		if err != nil {
-			udp.Debugf("Error while reading: %s", err)
+			udp.logger.Debugf("Error while reading: %s", err)
 			return
 		}
-		udp.Debugf("AgentListener: Read %d bytes from address %s", readCount, senderAddr)
+		udp.logger.Debugf("AgentListener: Read %d bytes from address %s", readCount, senderAddr)
 
 		readData := make([]byte, readCount) //pass on buffer in size only of read data
 		copy(readData, readBuffer[:readCount])
 
 		//TODO: will be deprecated
-		metrics.BatchIncrementCounter(dropsondeMessageCountMetricName)
-		metrics.BatchAddCounter(dropsondeReceivedByteCountMetricName, uint64(readCount))
+		udp.batcher.BatchIncrementCounter(dropsondeMessageCountMetricName)
+		udp.batcher.BatchAddCounter(dropsondeReceivedByteCountMetricName, uint64(readCount))
 
-		metrics.BatchIncrementCounter(messageCountMetricName)
-		metrics.BatchIncrementCounter(listenerTotalMetricName)
-		metrics.BatchAddCounter(receivedByteCountMetricName, uint64(readCount))
+		udp.batcher.BatchIncrementCounter(messageCountMetricName)
+		udp.batcher.BatchIncrementCounter(listenerTotalMetricName)
+		udp.batcher.BatchAddCounter(receivedByteCountMetricName, uint64(readCount))
 
 		udp.dataChannel <- readData
 	}
 }
 
-func (udpListener *udpListener) Stop() {
-	udpListener.Lock()
-	defer udpListener.Unlock()
-	udpListener.connection.Close()
+func (udp *UDPListener) Stop() {
+	udp.lock.Lock()
+	defer udp.lock.Unlock()
+	udp.connection.Close()
 }

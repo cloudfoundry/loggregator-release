@@ -1,34 +1,46 @@
 package listeners_test
 
 import (
+	"doppler/listeners"
 	"net"
 	"strconv"
 
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
+	. "github.com/apoydence/eachers"
+	"github.com/apoydence/eachers/testhelpers"
 	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 
-	"doppler/listeners"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/onsi/ginkgo/config"
 )
 
 var _ = Describe("AgentListener", func() {
 	var (
-		listener        listeners.Listener
+		listener        *listeners.UDPListener
 		dataChannel     <-chan []byte
 		listenerStopped chan struct{}
 		address         string
+		mockBatcher     *mockBatcher
+		mockChainer     *mockBatchCounterChainer
 	)
 
 	BeforeEach(func() {
+		mockBatcher = newMockBatcher()
+		mockChainer = newMockBatchCounterChainer()
+		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
+		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
+
 		listenerStopped = make(chan struct{})
 		loggertesthelper.TestLoggerSink.Clear()
 
 		port := 3456 + config.GinkgoConfig.ParallelNode
 		address = net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
-		listener, dataChannel = listeners.NewUDPListener(address, loggertesthelper.Logger(), "udpListener")
+		listener, dataChannel = listeners.NewUDPListener(
+			address,
+			mockBatcher,
+			loggertesthelper.Logger(),
+			"udpListener",
+		)
 		go func() {
 			listener.Start()
 			close(listenerStopped)
@@ -65,46 +77,22 @@ var _ = Describe("AgentListener", func() {
 	})
 
 	Context("dropsonde metric emission", func() {
-		BeforeEach(func() {
-			fakeEventEmitter.Reset()
-			metricBatcher.Reset()
-		})
-
-		PIt("issues intended metrics", func() {
+		It("issues intended metrics", func() {
 			expectedData := "Some Data"
-			otherData := "More stuff"
 
 			connection, err := net.Dial("udp", address)
-
 			_, err = connection.Write([]byte(expectedData))
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(dataChannel).Should(Receive())
 
-			_, err = connection.Write([]byte(otherData))
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(dataChannel).Should(Receive())
-
-			Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(3))
-
-			var counterEvents []*events.CounterEvent
-
-			for _, miniEnvelope := range fakeEventEmitter.GetMessages() {
-				counterEvents = append(counterEvents, miniEnvelope.Event.(*events.CounterEvent))
-			}
-
-			Expect(counterEvents).To(ConsistOf(
-				&events.CounterEvent{
-					Name:  proto.String("udpListener.receivedMessageCount"),
-					Delta: proto.Uint64(2),
-				},
-				&events.CounterEvent{
-					Name:  proto.String("listeners.totalReceivedMessageCount"),
-					Delta: proto.Uint64(2),
-				},
-				&events.CounterEvent{
-					Name:  proto.String("udpListener.receivedByteCount"),
-					Delta: proto.Uint64(19),
-				},
+			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+				With("dropsondeListener.receivedMessageCount"),
+				With("udpListener.receivedMessageCount"),
+				With("listeners.totalReceivedMessageCount"),
+			))
+			Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
+				With("dropsondeListener.receivedByteCount", uint64(len(expectedData))),
+				With("udpListener.receivedByteCount", uint64(len(expectedData))),
 			))
 		})
 	})

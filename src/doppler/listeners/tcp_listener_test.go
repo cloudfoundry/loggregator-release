@@ -2,35 +2,43 @@ package listeners_test
 
 import (
 	"crypto/tls"
+	"doppler/config"
+	"doppler/listeners"
 	"encoding/binary"
 	"fmt"
 	"net"
 	"net/http"
-	"strings"
 	"time"
 
+	. "github.com/apoydence/eachers"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"github.com/apoydence/eachers/testhelpers"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/nu7hatch/gouuid"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"doppler/config"
-	"doppler/listeners"
 )
 
 var _ = Describe("TCPlistener", func() {
 	var (
-		listener          listeners.Listener
+		listener          *listeners.TCPListener
 		envelopeChan      chan *events.Envelope
 		tlsListenerConfig *config.TLSListenerConfig
 		tlsClientConfig   *tls.Config
+		mockBatcher       *mockBatcher
+		mockChainer       *mockBatchCounterChainer
 	)
 
 	BeforeEach(func() {
+		mockBatcher = newMockBatcher()
+		mockChainer = newMockBatchCounterChainer()
+		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
+		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
+
 		tlsListenerConfig = &config.TLSListenerConfig{
 			CertFile: "fixtures/server.crt",
 			KeyFile:  "fixtures/server.key",
@@ -56,6 +64,7 @@ var _ = Describe("TCPlistener", func() {
 			"127.0.0.1:1234",
 			tlsListenerConfig,
 			envelopeChan,
+			mockBatcher,
 			loggertesthelper.Logger(),
 		)
 		Expect(err).NotTo(HaveOccurred())
@@ -73,8 +82,6 @@ var _ = Describe("TCPlistener", func() {
 		BeforeEach(func() {
 			tlsListenerConfig = nil
 			tlsClientConfig = nil
-			fakeEventEmitter.Reset()
-			metricBatcher.Reset()
 		})
 
 		It("sends all types of messages as a protobuf", func() {
@@ -120,11 +127,6 @@ var _ = Describe("TCPlistener", func() {
 		})
 
 		Context("dropsonde metric emission", func() {
-			BeforeEach(func() {
-				fakeEventEmitter.Reset()
-				metricBatcher.Reset()
-			})
-
 			It("sends all types of messages as a protobuf", func() {
 				for name, eventType := range events.Envelope_EventType_value {
 					envelope := createEnvelope(events.Envelope_EventType(eventType))
@@ -168,52 +170,24 @@ var _ = Describe("TCPlistener", func() {
 				Expect(err).ToNot(HaveOccurred())
 				conn.Close()
 
-				Eventually(envelopeChan).Should(Receive())
-
-				Eventually(func() int {
-					return len(fakeEventEmitter.GetEnvelopes())
-				}).Should(BeNumerically(">", 2))
-
-				var counterEvents []*events.CounterEvent
-				for _, e := range fakeEventEmitter.GetEnvelopes() {
-					ce := e.CounterEvent
-					if ce != nil {
-						if strings.HasPrefix(ce.GetName(), "aname.") ||
-							strings.HasPrefix(ce.GetName(), "listeners.") {
-							counterEvents = append(counterEvents, ce)
-						}
-					}
-				}
-				Expect(counterEvents).To(ConsistOf(
-					&events.CounterEvent{
-						Name:  proto.String("aname.receivedMessageCount"),
-						Delta: proto.Uint64(1),
-					},
-					&events.CounterEvent{
-						Name:  proto.String("listeners.totalReceivedMessageCount"),
-						Delta: proto.Uint64(1),
-					},
-					&events.CounterEvent{
-						Name:  proto.String("aname.receivedByteCount"),
-						Delta: proto.Uint64(67),
-					},
+				Eventually(mockBatcher.BatchCounterInput).Should(BeCalled(With("listeners.receivedEnvelopes")))
+				Eventually(mockChainer.SetTagInput).Should(BeCalled(
+					With("protocol", "tls"),
+					With("event_type", "LogMessage"),
 				))
+				Eventually(mockChainer.IncrementCalled).Should(BeCalled())
+				Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+					With("listeners.totalReceivedMessageCount"),
+					With("aname.receivedMessageCount"),
+				))
+				Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
+					With("aname.receivedByteCount", uint64(67)),
+				))
+
+				Eventually(envelopeChan).Should(Receive())
 			})
 
 			Context("receiveErrors count", func() {
-				expectReceiveErrorCount := func() {
-					Eventually(func() int {
-						return len(fakeEventEmitter.GetEnvelopes())
-					}).Should(Equal(1))
-					errorEvents := fakeEventEmitter.GetEnvelopes()
-					Expect(errorEvents[0].CounterEvent).To(Equal(
-						&events.CounterEvent{
-							Name:  proto.String("aname.receiveErrorCount"),
-							Delta: proto.Uint64(1),
-						},
-					))
-				}
-
 				It("does not increment error count for a valid message", func() {
 					envelope := createEnvelope(events.Envelope_LogMessage)
 					conn := openTCPConnection(listener.Address(), tlsClientConfig)
@@ -228,7 +202,9 @@ var _ = Describe("TCPlistener", func() {
 
 					_, err = tls.Dial("tcp", listener.Address(), tlsConfig)
 					Expect(err).To(HaveOccurred())
-					expectReceiveErrorCount()
+					Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+						With("aname.receiveErrorCount"),
+					))
 				})
 
 				It("increments when size is greater than payload", func() {
@@ -241,7 +217,9 @@ var _ = Describe("TCPlistener", func() {
 					_, err = conn.Write(bytes)
 					Expect(err).ToNot(HaveOccurred())
 					conn.Close()
-					expectReceiveErrorCount()
+					Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
+						With("aname.receiveErrorCount"),
+					))
 				})
 			})
 		})

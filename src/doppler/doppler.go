@@ -30,12 +30,14 @@ import (
 
 type Doppler struct {
 	*gosteno.Logger
+	batcher *metricbatcher.MetricBatcher
+
 	appStoreWatcher *store.AppServiceStoreWatcher
 
 	errChan         chan error
-	udpListener     listeners.Listener
-	tcpListener     listeners.Listener
-	tlsListener     listeners.Listener
+	udpListener     *listeners.UDPListener
+	tcpListener     *listeners.TCPListener
+	tlsListener     *listeners.TCPListener
 	sinkManager     *sinkmanager.SinkManager
 	messageRouter   *sinkserver.MessageRouter
 	websocketServer *websocketserver.WebsocketServer
@@ -55,87 +57,85 @@ type Doppler struct {
 	wg                                       sync.WaitGroup
 }
 
-func New(logger *gosteno.Logger,
+func New(
+	logger *gosteno.Logger,
 	host string,
 	config *doppler_config.Config,
 	storeAdapter storeadapter.StoreAdapter,
 	messageDrainBufferSize uint,
 	dropsondeOrigin string,
 	websocketWriteTimeout time.Duration,
-	dialTimeout time.Duration) (*Doppler, error) {
+	dialTimeout time.Duration,
+) (*Doppler, error) {
+	doppler := &Doppler{
+		Logger:                     logger,
+		storeAdapter:               storeAdapter,
+		dropsondeVerifiedBytesChan: make(chan []byte),
+	}
 
 	keepAliveInterval := 30 * time.Second
 
 	appStoreCache := cache.NewAppServiceCache()
-	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache, logger)
+	doppler.appStoreWatcher, doppler.newAppServiceChan, doppler.deletedAppServiceChan = store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache, logger)
 
-	var udpListener listeners.Listener
-	var tlsListener listeners.Listener
-	var tcpListener listeners.Listener
-	var dropsondeBytesChan <-chan []byte
+	doppler.batcher = initializeMetrics(config.MetricBatchIntervalMilliseconds)
+
+	doppler.envelopeChan = make(chan *events.Envelope)
+
+	doppler.udpListener, doppler.dropsondeBytesChan = listeners.NewUDPListener(
+		fmt.Sprintf("%s:%d", host, config.IncomingUDPPort),
+		doppler.batcher,
+		logger,
+		"udpListener",
+	)
+
 	var err error
-	listenerEnvelopeChan := make(chan *events.Envelope)
-
-	udpListener, dropsondeBytesChan = listeners.NewUDPListener(fmt.Sprintf("%s:%d", host, config.IncomingUDPPort), logger, "udpListener")
-
-	var addr string
-	var tlsConfig *doppler_config.TLSListenerConfig
-	var contextName string
-
 	if config.EnableTLSTransport {
-		tlsConfig = &config.TLSListenerConfig
-		addr = fmt.Sprintf("%s:%d", host, tlsConfig.Port)
-		contextName = "tlsListener"
-		tlsListener, err = listeners.NewTCPListener(contextName, addr, tlsConfig, listenerEnvelopeChan, logger)
+		tlsConfig := &config.TLSListenerConfig
+		addr := fmt.Sprintf("%s:%d", host, tlsConfig.Port)
+		contextName := "tlsListener"
+		doppler.tlsListener, err = listeners.NewTCPListener(contextName, addr, tlsConfig, doppler.envelopeChan, doppler.batcher, logger)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	tlsConfig = nil
-	addr = fmt.Sprintf("%s:%d", host, config.IncomingTCPPort)
-	contextName = "tcpListener"
-	tcpListener, err = listeners.NewTCPListener(contextName, addr, tlsConfig, listenerEnvelopeChan, logger)
+	addr := fmt.Sprintf("%s:%d", host, config.IncomingTCPPort)
+	contextName := "tcpListener"
+	doppler.tcpListener, err = listeners.NewTCPListener(contextName, addr, nil, doppler.envelopeChan, doppler.batcher, logger)
 
-	signatureVerifier := signature.NewVerifier(logger, config.SharedSecret)
+	doppler.signatureVerifier = signature.NewVerifier(logger, config.SharedSecret)
 
-	unmarshallerCollection := dropsonde_unmarshaller.NewDropsondeUnmarshallerCollection(logger, config.UnmarshallerCount)
+	doppler.dropsondeUnmarshallerCollection = dropsonde_unmarshaller.NewDropsondeUnmarshallerCollection(logger, config.UnmarshallerCount)
 
 	blacklist := blacklist.New(config.BlackListIps, logger)
 	metricTTL := time.Duration(config.ContainerMetricTTLSeconds) * time.Second
 	sinkTimeout := time.Duration(config.SinkInactivityTimeoutSeconds) * time.Second
 	sinkIOTimeout := time.Duration(config.SinkIOTimeoutSeconds) * time.Second
-	sinkManager := sinkmanager.New(config.MaxRetainedLogMessages, config.SinkSkipCertVerify, blacklist, logger, messageDrainBufferSize, dropsondeOrigin, sinkTimeout, sinkIOTimeout, metricTTL, dialTimeout)
+	doppler.sinkManager = sinkmanager.New(
+		config.MaxRetainedLogMessages,
+		config.SinkSkipCertVerify,
+		blacklist,
+		logger,
+		messageDrainBufferSize,
+		dropsondeOrigin,
+		sinkTimeout,
+		sinkIOTimeout,
+		metricTTL,
+		dialTimeout,
+	)
+	doppler.messageRouter = sinkserver.NewMessageRouter(doppler.sinkManager, logger)
 
-	websocketServer, err := websocketserver.New(fmt.Sprintf(":%d", config.OutgoingPort), sinkManager, websocketWriteTimeout, keepAliveInterval, config.MessageDrainBufferSize, dropsondeOrigin, logger)
+	doppler.websocketServer, err = websocketserver.New(fmt.Sprintf(":%d", config.OutgoingPort), doppler.sinkManager, websocketWriteTimeout, keepAliveInterval, config.MessageDrainBufferSize, dropsondeOrigin, logger)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create the websocket server: %s", err.Error())
 	}
 
-	initializeMetrics(config.MetricBatchIntervalMilliseconds)
 	monitorInterval := time.Duration(config.MonitorIntervalSeconds) * time.Second
-	openFileMonitor := monitor.NewLinuxFD(monitorInterval, logger)
+	doppler.openFileMonitor = monitor.NewLinuxFD(monitorInterval, logger)
+	doppler.uptimeMonitor = monitor.NewUptime(monitorInterval)
 
-	return &Doppler{
-		Logger:                          logger,
-		udpListener:                     udpListener,
-		tcpListener:                     tcpListener,
-		tlsListener:                     tlsListener,
-		sinkManager:                     sinkManager,
-		messageRouter:                   sinkserver.NewMessageRouter(sinkManager, logger),
-		websocketServer:                 websocketServer,
-		newAppServiceChan:               newAppServiceChan,
-		deletedAppServiceChan:           deletedAppServiceChan,
-		appStoreWatcher:                 appStoreWatcher,
-		storeAdapter:                    storeAdapter,
-		dropsondeBytesChan:              dropsondeBytesChan,
-		dropsondeUnmarshallerCollection: unmarshallerCollection,
-		envelopeChan:                    listenerEnvelopeChan,
-		signatureVerifier:               signatureVerifier,
-		dropsondeVerifiedBytesChan:      make(chan []byte),
-		uptimeMonitor:                   monitor.NewUptime(monitorInterval),
-		openFileMonitor:                 openFileMonitor,
-	}, nil
+	return doppler, nil
 }
 
 func (doppler *Doppler) Start() {
@@ -166,7 +166,18 @@ func (doppler *Doppler) Start() {
 		}()
 	}
 
-	doppler.dropsondeUnmarshallerCollection.Run(doppler.dropsondeVerifiedBytesChan, doppler.envelopeChan, &doppler.wg)
+	udpEnvelopes := make(chan *events.Envelope)
+	doppler.dropsondeUnmarshallerCollection.Run(doppler.dropsondeVerifiedBytesChan, udpEnvelopes, &doppler.wg)
+	go func() {
+		for {
+			env := <-udpEnvelopes
+			doppler.batcher.BatchCounter("listeners.receivedEnvelopes").
+				SetTag("protocol", "udp").
+				SetTag("event_type", env.GetEventType().String()).
+				Increment()
+			doppler.envelopeChan <- env
+		}
+	}()
 
 	go func() {
 		defer func() {
@@ -219,9 +230,10 @@ func (doppler *Doppler) Stop() {
 	doppler.openFileMonitor.Stop()
 }
 
-func initializeMetrics(batchIntervalMilliseconds uint) {
+func initializeMetrics(batchIntervalMilliseconds uint) *metricbatcher.MetricBatcher {
 	eventEmitter := dropsonde.AutowiredEmitter()
 	metricSender := metric_sender.NewMetricSender(eventEmitter)
 	metricBatcher := metricbatcher.New(metricSender, time.Duration(batchIntervalMilliseconds)*time.Millisecond)
 	metrics.Initialize(metricSender, metricBatcher)
+	return metricBatcher
 }
