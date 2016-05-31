@@ -7,32 +7,48 @@ import (
 	"time"
 	"trafficcontroller/marshaller"
 
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/gorilla/websocket"
 )
 
-type websocketListener struct {
+//go:generate hel --type Batcher --output mock_batcher_test.go
+
+type Batcher interface {
+	BatchCounter(name string) metricbatcher.BatchCounterChainer
+}
+
+type WebsocketListener struct {
 	sync.WaitGroup
 	generateLogMessage marshaller.MessageGenerator
 	convertLogMessage  MessageConverter
 	readTimeout        time.Duration
 	handshakeTimeout   time.Duration
+	batcher            Batcher
 	logger             *gosteno.Logger
 }
 
 type MessageConverter func([]byte) ([]byte, error)
 
-func NewWebsocket(logMessageGenerator marshaller.MessageGenerator, messageConverter MessageConverter, readTimeout, handshakeTimeout time.Duration, logger *gosteno.Logger) *websocketListener {
-	return &websocketListener{
+func NewWebsocket(
+	logMessageGenerator marshaller.MessageGenerator,
+	messageConverter MessageConverter,
+	readTimeout time.Duration,
+	handshakeTimeout time.Duration,
+	batcher Batcher,
+	logger *gosteno.Logger,
+) *WebsocketListener {
+	return &WebsocketListener{
 		generateLogMessage: logMessageGenerator,
 		convertLogMessage:  messageConverter,
 		readTimeout:        readTimeout,
 		handshakeTimeout:   handshakeTimeout,
+		batcher:            batcher,
 		logger:             logger,
 	}
 }
 
-func (l *websocketListener) Start(url string, appId string, outputChan OutputChannel, stopChan StopChannel) error {
+func (l *WebsocketListener) Start(url string, appId string, outputChan OutputChannel, stopChan StopChannel) error {
 	dialer := &websocket.Dialer{
 		HandshakeTimeout: l.handshakeTimeout,
 	}
@@ -50,7 +66,7 @@ func (l *websocketListener) Start(url string, appId string, outputChan OutputCha
 	return l.listenWithTimeout(l.readTimeout, url, appId, conn, outputChan)
 }
 
-func (l *websocketListener) listenWithTimeout(readTimeout time.Duration, url string, appId string, conn *websocket.Conn, outputChan OutputChannel) error {
+func (l *WebsocketListener) listenWithTimeout(readTimeout time.Duration, url string, appId string, conn *websocket.Conn, outputChan OutputChannel) error {
 	for {
 		conn.SetReadDeadline(deadline(readTimeout))
 		_, msg, err := conn.ReadMessage()
@@ -86,6 +102,9 @@ func (l *websocketListener) listenWithTimeout(readTimeout time.Duration, url str
 			continue
 		}
 		if convertedMessage != nil {
+			l.batcher.BatchCounter("listeners.receivedEnvelopes").
+				SetTag("protocol", "ws").
+				Increment()
 			outputChan <- convertedMessage
 		}
 	}

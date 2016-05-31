@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"doppler/dopplerservice"
+	"errors"
 	"flag"
 	"fmt"
 	"logger"
@@ -25,6 +26,15 @@ import (
 	"trafficcontroller/uaa_client"
 
 	"github.com/cloudfoundry/dropsonde"
+	"github.com/cloudfoundry/dropsonde/emitter"
+	"github.com/cloudfoundry/dropsonde/envelope_sender"
+	"github.com/cloudfoundry/dropsonde/envelopes"
+	"github.com/cloudfoundry/dropsonde/log_sender"
+	"github.com/cloudfoundry/dropsonde/logs"
+	"github.com/cloudfoundry/dropsonde/metric_sender"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/dropsonde/metrics"
+	"github.com/cloudfoundry/dropsonde/runtime_stats"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/gunk/workpool"
 
@@ -34,8 +44,10 @@ import (
 )
 
 const (
-	pprofPort        = "6060"
-	handshakeTimeout = 5 * time.Second
+	pprofPort            = "6060"
+	handshakeTimeout     = 5 * time.Second
+	defaultBatchInterval = 5 * time.Second
+	statsInterval        = 10 * time.Second
 )
 
 var (
@@ -64,7 +76,10 @@ func main() {
 	log := logger.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller", config.Syslog)
 	log.Info("Startup: Setting up the loggregator traffic controller")
 
-	dropsonde.Initialize(net.JoinHostPort(config.MetronHost, strconv.Itoa(config.MetronPort)), "LoggregatorTrafficController")
+	batcher, err := initializeMetrics("LoggregatorTrafficController", net.JoinHostPort(config.MetronHost, strconv.Itoa(config.MetronPort)))
+	if err != nil {
+		log.Errorf("Error initializing dropsonde: %s", err)
+	}
 
 	go func() {
 		err := http.ListenAndServe(net.JoinHostPort(ipAddress, pprofPort), nil)
@@ -77,10 +92,10 @@ func main() {
 	uptimeMonitor := monitor.NewUptime(monitorInterval)
 	go uptimeMonitor.Start()
 	defer uptimeMonitor.Stop()
-	
+
 	openFileMonitor := monitor.NewLinuxFD(monitorInterval, log)
 	go openFileMonitor.Start()
-	defer openFileMonitor.Stop()	
+	defer openFileMonitor.Stop()
 
 	etcdAdapter := defaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
 	err = etcdAdapter.Connect()
@@ -119,14 +134,14 @@ func main() {
 		legacyAccessMiddleware = middleware.Access(accessLogger, ipAddress, config.OutgoingPort, log)
 	}
 
-	dopplerCgc := channel_group_connector.NewChannelGroupConnector(finder, newDropsondeWebsocketListener, marshaller.DropsondeLogMessage, log)
+	dopplerCgc := channel_group_connector.NewChannelGroupConnector(finder, newDropsondeWebsocketListener, marshaller.DropsondeLogMessage, batcher, log)
 	dopplerHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, dopplerCgc, dopplerproxy.TranslateFromDropsondePath, "doppler."+config.SystemDomain, log))
 	if accessMiddleware != nil {
 		dopplerHandler = accessMiddleware(dopplerHandler)
 	}
 	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dopplerHandler)
 
-	legacyCgc := channel_group_connector.NewChannelGroupConnector(finder, newLegacyWebsocketListener, marshaller.LoggregatorLogMessage, log)
+	legacyCgc := channel_group_connector.NewChannelGroupConnector(finder, newLegacyWebsocketListener, marshaller.LoggregatorLogMessage, batcher, log)
 	legacyHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, legacyCgc, dopplerproxy.TranslateFromLegacyPath, "loggregator."+config.SystemDomain, log))
 	if legacyAccessMiddleware != nil {
 		legacyHandler = legacyAccessMiddleware(legacyHandler)
@@ -145,6 +160,45 @@ func main() {
 			return
 		}
 	}
+}
+
+func setupDefaultEmitter(origin, destination string) error {
+	if origin == "" {
+		return errors.New("Cannot initialize metrics with an empty origin")
+	}
+
+	if destination == "" {
+		return errors.New("Cannot initialize metrics with an empty destination")
+	}
+
+	udpEmitter, err := emitter.NewUdpEmitter(destination)
+	if err != nil {
+		return fmt.Errorf("Failed to initialize dropsonde: %v", err.Error())
+	}
+
+	dropsonde.DefaultEmitter = emitter.NewEventEmitter(udpEmitter, origin)
+	return nil
+}
+
+func initializeMetrics(origin, destination string) (*metricbatcher.MetricBatcher, error) {
+	err := setupDefaultEmitter(origin, destination)
+	if err != nil {
+		// Legacy holdover.  We would prefer to panic, rather than just throwing our metrics
+		// away and pretending we're running fine, but for now, we just don't want to break
+		// anything.
+		dropsonde.DefaultEmitter = &dropsonde.NullEventEmitter{}
+	}
+
+	// Copied from dropsonde.initialize(), since we stopped using dropsonde.Initialize
+	// but needed it to continue operating the same.
+	sender := metric_sender.NewMetricSender(dropsonde.DefaultEmitter)
+	batcher := metricbatcher.New(sender, defaultBatchInterval)
+	metrics.Initialize(sender, batcher)
+	logs.Initialize(log_sender.NewLogSender(dropsonde.DefaultEmitter, gosteno.NewLogger("dropsonde/logs")))
+	envelopes.Initialize(envelope_sender.NewEnvelopeSender(dropsonde.DefaultEmitter))
+	go runtime_stats.NewRuntimeStats(dropsonde.DefaultEmitter, statsInterval).Run(nil)
+	http.DefaultTransport = dropsonde.InstrumentedRoundTripper(http.DefaultTransport)
+	return batcher, err
 }
 
 func defaultStoreAdapterProvider(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
@@ -171,13 +225,13 @@ func startOutgoingProxy(host string, proxy http.Handler) {
 	}()
 }
 
-func newDropsondeWebsocketListener(timeout time.Duration, logger *gosteno.Logger) listener.Listener {
+func newDropsondeWebsocketListener(timeout time.Duration, batcher listener.Batcher, logger *gosteno.Logger) listener.Listener {
 	messageConverter := func(message []byte) ([]byte, error) {
 		return message, nil
 	}
-	return listener.NewWebsocket(marshaller.DropsondeLogMessage, messageConverter, timeout, handshakeTimeout, logger)
+	return listener.NewWebsocket(marshaller.DropsondeLogMessage, messageConverter, timeout, handshakeTimeout, batcher, logger)
 }
 
-func newLegacyWebsocketListener(timeout time.Duration, logger *gosteno.Logger) listener.Listener {
-	return listener.NewWebsocket(marshaller.LoggregatorLogMessage, marshaller.TranslateDropsondeToLegacyLogMessage, timeout, handshakeTimeout, logger)
+func newLegacyWebsocketListener(timeout time.Duration, batcher listener.Batcher, logger *gosteno.Logger) listener.Listener {
+	return listener.NewWebsocket(marshaller.LoggregatorLogMessage, marshaller.TranslateDropsondeToLegacyLogMessage, timeout, handshakeTimeout, batcher, logger)
 }

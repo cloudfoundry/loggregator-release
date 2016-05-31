@@ -25,7 +25,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 			logger              *gosteno.Logger
 			finder              *mockFinder
 			fakeListeners       []*listener.FakeListener
-			listenerConstructor func(time.Duration, *gosteno.Logger) listener.Listener
+			listenerConstructor func(time.Duration, listener.Batcher, *gosteno.Logger) listener.Listener
 			messageChan1        chan []byte
 			messageChan2        chan []byte
 			expectedMessage1    = []byte{0}
@@ -45,7 +45,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 
 			i := int32(-1)
 			constructorLock := sync.Mutex{}
-			listenerConstructor = func(timeout time.Duration, logger *gosteno.Logger) listener.Listener {
+			listenerConstructor = func(timeout time.Duration, batcher listener.Batcher, logger *gosteno.Logger) listener.Listener {
 				constructorLock.Lock()
 				defer constructorLock.Unlock()
 				i++
@@ -67,7 +67,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				})
 
 				It("opens a listener with the correct app path", func() {
-					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, nil, logger)
 					outputChan := make(chan []byte, 10)
 					stopChan := make(chan struct{})
 					dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("recentlogs", "abc123", true)
@@ -80,7 +80,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				})
 
 				It("opens a listener with the firehose path", func() {
-					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, nil, logger)
 					outputChan := make(chan []byte, 10)
 					stopChan := make(chan struct{})
 					dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("firehose", "subscription-123", true)
@@ -92,7 +92,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				})
 
 				It("puts messages on the channel received by the listener", func() {
-					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, nil, logger)
 					outputChan := make(chan []byte)
 					stopChan := make(chan struct{})
 
@@ -119,7 +119,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				})
 
 				It("puts messages on the channel received by the listener", func(done Done) {
-					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, nil, logger)
 					outputChan := make(chan []byte)
 					stopChan := make(chan struct{})
 
@@ -147,7 +147,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				})
 
 				It("returns immediately when reconnect is set to false", func(done Done) {
-					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, nil, logger)
 					outputChan := make(chan []byte)
 					stopChan := make(chan struct{})
 
@@ -185,7 +185,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				})
 
 				It("receives multiple messages on the channel", func() {
-					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, nil, logger)
 					outputChan := make(chan []byte, 10)
 
 					stopChan := make(chan struct{})
@@ -197,7 +197,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				})
 
 				It("opens a listener with the correct path", func() {
-					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, nil, logger)
 					outputChan := make(chan []byte, 10)
 					stopChan := make(chan struct{})
 					defer close(stopChan)
@@ -208,7 +208,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				})
 
 				It("closes listeners and returns when stopChan is closed", func(done Done) {
-					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, nil, logger)
 
 					outputChan := make(chan []byte, 10)
 					stopChan := make(chan struct{})
@@ -249,7 +249,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				})
 
 				It("receives multiple messages from each sender", func() {
-					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, nil, logger)
 					outputChan := make(chan []byte)
 
 					stopChan := make(chan struct{})
@@ -273,7 +273,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 				})
 
 				It("closes listeners and returns when stopChan is closed", func() {
-					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+					channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, nil, logger)
 
 					outputChan := make(chan []byte, 10)
 					stopChan := make(chan struct{})
@@ -309,7 +309,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 			})
 
 			It("puts an error on the message channel when reading messages", func() {
-				channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+				channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, nil, logger)
 
 				stopChan := make(chan struct{})
 				defer close(stopChan)
@@ -343,7 +343,7 @@ var _ = Describe("ChannelGroupConnector", func() {
 			})
 
 			It("puts a message about the error on the channel ", func() {
-				channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, logger)
+				channelConnector := channel_group_connector.NewChannelGroupConnector(finder, listenerConstructor, marshaller.DropsondeLogMessage, nil, logger)
 				outputChan := make(chan []byte)
 
 				stopChan := make(chan struct{})

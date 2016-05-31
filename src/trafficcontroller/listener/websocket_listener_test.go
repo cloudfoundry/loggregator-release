@@ -1,23 +1,24 @@
 package listener_test
 
 import (
-	"net"
-	"trafficcontroller/listener"
-
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"time"
+	"trafficcontroller/listener"
 	"trafficcontroller/marshaller"
 
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
-	"github.com/gorilla/websocket"
-
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	. "github.com/apoydence/eachers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/apoydence/eachers/testhelpers"
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+	"github.com/cloudfoundry/loggregatorlib/logmessage"
+	"github.com/gorilla/websocket"
 )
 
 var _ = Describe("WebsocketListener", func() {
@@ -28,6 +29,8 @@ var _ = Describe("WebsocketListener", func() {
 		l                       listener.Listener
 		fh                      *fakeHandler
 		converter               func([]byte) ([]byte, error)
+		mockBatcher             *mockBatcher
+		mockChainer             *mockBatchCounterChainer
 	)
 	const (
 		readTimeout      = 500 * time.Millisecond
@@ -35,6 +38,11 @@ var _ = Describe("WebsocketListener", func() {
 	)
 
 	BeforeEach(func() {
+		mockBatcher = newMockBatcher()
+		mockChainer = newMockBatchCounterChainer()
+		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
+		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
+
 		messageChan = make(chan []byte)
 		outputChan = make(chan []byte, 10)
 		stopChan = make(chan struct{})
@@ -49,6 +57,7 @@ var _ = Describe("WebsocketListener", func() {
 			converter,
 			readTimeout,
 			handshakeTimeout,
+			mockBatcher,
 			loggertesthelper.Logger(),
 		)
 	})
@@ -64,7 +73,7 @@ var _ = Describe("WebsocketListener", func() {
 	})
 
 	Context("when the server is not running", func() {
-		It("should error when connecting", func(done Done) {
+		It("errors when connecting", func(done Done) {
 			err := l.Start("ws://localhost:1234", "myApp", outputChan, stopChan)
 			Expect(err).To(HaveOccurred())
 			close(done)
@@ -84,12 +93,13 @@ var _ = Describe("WebsocketListener", func() {
 			}).Should(BeTrue())
 		})
 
-		It("should ignore nil messages received from the server", func() {
+		It("ignores nil messages received from the server", func() {
 			go l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
 
 			messageChan <- []byte("ignored")
 
 			Consistently(outputChan).ShouldNot(Receive())
+			Consistently(mockBatcher.BatchCounterInput).ShouldNot(BeCalled())
 		})
 	})
 
@@ -102,7 +112,7 @@ var _ = Describe("WebsocketListener", func() {
 			}).Should(BeTrue())
 		})
 
-		It("should connect to a websocket", func(done Done) {
+		It("connects to a websocket", func(done Done) {
 			doneWaiting := make(chan struct{})
 			go func() {
 				defer GinkgoRecover()
@@ -115,7 +125,7 @@ var _ = Describe("WebsocketListener", func() {
 			close(done)
 		})
 
-		It("should output messages recieved from the server", func() {
+		It("outputs messages recieved from the server", func() {
 			go l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
 
 			message := []byte("hello world")
@@ -126,7 +136,20 @@ var _ = Describe("WebsocketListener", func() {
 			Expect(receivedMessage).To(Equal(message))
 		})
 
-		It("should not send errors when client requests close without issue", func() {
+		It("increments receivedEnvelopes", func() {
+			go l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
+
+			message := []byte("hello world")
+			messageChan <- message
+
+			Eventually(mockBatcher.BatchCounterInput).Should(BeCalled(With("listeners.receivedEnvelopes")))
+			Eventually(mockChainer.SetTagInput).Should(BeCalled(
+				With("protocol", "ws"),
+			))
+			Eventually(mockChainer.IncrementCalled).Should(BeCalled())
+		})
+
+		It("does not send errors when client requests close without issue", func() {
 			doneWaiting := make(chan struct{})
 			go func() {
 				l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
@@ -138,7 +161,7 @@ var _ = Describe("WebsocketListener", func() {
 			Consistently(outputChan).Should(BeEmpty())
 		})
 
-		It("should not send errors when server closes connection without issue", func() {
+		It("does not send errors when server closes connection without issue", func() {
 			doneWaiting := make(chan struct{})
 			go func() {
 				l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
@@ -150,7 +173,7 @@ var _ = Describe("WebsocketListener", func() {
 			Consistently(outputChan).Should(BeEmpty())
 		})
 
-		It("should stop all goroutines when done", func() {
+		It("stops all goroutines when done", func() {
 			doneWaiting := make(chan struct{})
 			go func() {
 				l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
@@ -161,7 +184,7 @@ var _ = Describe("WebsocketListener", func() {
 			Eventually(doneWaiting).Should(BeClosed())
 		})
 
-		It("should stop all goroutines when server returns an error", func(done Done) {
+		It("stops all goroutines when server returns an error", func(done Done) {
 			doneWaiting := make(chan struct{})
 			go func() {
 				l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
@@ -215,7 +238,7 @@ var _ = Describe("WebsocketListener", func() {
 		Context("without a read timeout", func() {
 			It("waits for messages to come in", func() {
 				converter := func(d []byte) ([]byte, error) { return d, nil }
-				l = listener.NewWebsocket(marshaller.LoggregatorLogMessage, converter, 0, handshakeTimeout, loggertesthelper.Logger())
+				l = listener.NewWebsocket(marshaller.LoggregatorLogMessage, converter, 0, handshakeTimeout, mockBatcher, loggertesthelper.Logger())
 
 				go l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
 
@@ -232,7 +255,7 @@ var _ = Describe("WebsocketListener", func() {
 
 			It("responds to stopChan closure in a reasonable time", func(done Done) {
 				converter := func(d []byte) ([]byte, error) { return d, nil }
-				l = listener.NewWebsocket(marshaller.LoggregatorLogMessage, converter, 0, handshakeTimeout, loggertesthelper.Logger())
+				l = listener.NewWebsocket(marshaller.LoggregatorLogMessage, converter, 0, handshakeTimeout, mockBatcher, loggertesthelper.Logger())
 
 				go func() {
 					l.Start(fmt.Sprintf("ws://%s", ts.Listener.Addr()), "myApp", outputChan, stopChan)
@@ -251,7 +274,7 @@ var _ = Describe("WebsocketListener", func() {
 			fh.CloseAbruptly()
 		})
 
-		It("should send an error message to the channel", func(done Done) {
+		It("sends an error message to the channel", func(done Done) {
 			msgData := <-outputChan
 			msg, _ := logmessage.ParseMessage(msgData)
 			Expect(msg.GetLogMessage().GetSourceName()).To(Equal("LGR"))
@@ -291,6 +314,7 @@ var _ = Describe("WebsocketListener", func() {
 					converter,
 					readTimeout,
 					0,
+					mockBatcher,
 					loggertesthelper.Logger(),
 				)
 			})
