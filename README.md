@@ -14,6 +14,7 @@ If you need to contact us, you can [join our Slack channel](https://cloudfoundry
 If you have feedback on Loggregator features that you use, or want, feel free to contact the Loggregator Product Manager [Jim Campbell](mailto:jcampbell@pivotal.io).
 
 ### Table of Contents
+
 * [Features](#features)
 * [Usage](#usage)
 * [Constraints](#constraints)

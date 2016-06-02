@@ -13,7 +13,7 @@ import (
 
 const checkServerAddressesInterval = 100 * time.Millisecond
 
-type ListenerConstructor func(time.Duration, *gosteno.Logger) listener.Listener
+type ListenerConstructor func(time.Duration, listener.Batcher, *gosteno.Logger) listener.Listener
 
 //go:generate hel --type Finder --output mock_finder_test.go
 
@@ -23,16 +23,18 @@ type Finder interface {
 
 type ChannelGroupConnector struct {
 	finder              Finder
+	batcher             listener.Batcher
 	logger              *gosteno.Logger
 	listenerConstructor ListenerConstructor
 	generateLogMessage  marshaller.MessageGenerator
 }
 
-func NewChannelGroupConnector(finder Finder, listenerConstructor ListenerConstructor, logMessageGenerator marshaller.MessageGenerator, logger *gosteno.Logger) *ChannelGroupConnector {
+func NewChannelGroupConnector(finder Finder, listenerConstructor ListenerConstructor, logMessageGenerator marshaller.MessageGenerator, batcher listener.Batcher, logger *gosteno.Logger) *ChannelGroupConnector {
 	return &ChannelGroupConnector{
 		finder:              finder,
 		listenerConstructor: listenerConstructor,
 		generateLogMessage:  logMessageGenerator,
+		batcher:             batcher,
 		logger:              logger,
 	}
 }
@@ -80,7 +82,7 @@ loop:
 }
 
 func (c *ChannelGroupConnector) connectToServer(serverAddress string, dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{}) {
-	l := c.listenerConstructor(dopplerEndpoint.Timeout, c.logger)
+	l := c.listenerConstructor(dopplerEndpoint.Timeout, c.batcher, c.logger)
 	serverUrl := fmt.Sprintf("ws://%s%s", serverAddress, dopplerEndpoint.GetPath())
 	c.logger.Infof("proxy: connecting to doppler at %s", serverUrl)
 
