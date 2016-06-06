@@ -50,6 +50,7 @@ files:
 - loggregator/src/trafficcontroller/config/*.go # gosub
 - loggregator/src/trafficcontroller/doppler_endpoint/*.go # gosub
 - loggregator/src/trafficcontroller/dopplerproxy/*.go # gosub
+- loggregator/src/trafficcontroller/httpsetup/*.go # gosub
 - loggregator/src/trafficcontroller/listener/*.go # gosub
 - loggregator/src/trafficcontroller/marshaller/*.go # gosub
 - loggregator/src/trafficcontroller/middleware/*.go # gosub
