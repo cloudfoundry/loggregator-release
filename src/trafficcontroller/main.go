@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/tls"
 	"doppler/dopplerservice"
 	"errors"
 	"flag"
@@ -20,6 +19,7 @@ import (
 	"trafficcontroller/channel_group_connector"
 	"trafficcontroller/config"
 	"trafficcontroller/dopplerproxy"
+	"trafficcontroller/httpsetup"
 	"trafficcontroller/listener"
 	"trafficcontroller/marshaller"
 	"trafficcontroller/middleware"
@@ -65,8 +65,7 @@ func main() {
 		panic(fmt.Errorf("Unable to parse config: %s", err))
 	}
 
-	transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: config.SkipCertVerify}}
-	http.DefaultClient.Transport = transport
+	httpsetup.SetInsecureSkipVerify(config.SkipCertVerify)
 
 	ipAddress, err := localip.LocalIP()
 	if err != nil {
