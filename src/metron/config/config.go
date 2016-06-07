@@ -39,6 +39,12 @@ func (p Protocols) Strings() []string {
 	return protocols
 }
 
+type EtcdTLSClientConfig struct {
+	CertFile string
+	KeyFile  string
+	CAFile   string
+}
+
 type TLSConfig struct {
 	CertFile string
 	KeyFile  string
@@ -57,6 +63,8 @@ type Config struct {
 	EtcdUrls                      []string
 	EtcdMaxConcurrentRequests     int
 	EtcdQueryIntervalMilliseconds int
+	EtcdRequireTLS                bool
+	EtcdTLSClientConfig           EtcdTLSClientConfig
 
 	LoggregatorDropsondePort int
 	SharedSecret             string
@@ -98,6 +106,11 @@ func Parse(reader io.Reader) (*Config, error) {
 	}
 	if len(config.Protocols) == 0 {
 		return nil, errors.New("Metron cannot start without protocols")
+	}
+	if config.EtcdRequireTLS {
+		if config.EtcdTLSClientConfig.CertFile == "" || config.EtcdTLSClientConfig.KeyFile == "" || config.EtcdTLSClientConfig.CAFile == "" {
+			return nil, errors.New("invalid etcd TLS client configuration")
+		}
 	}
 
 	return config, nil

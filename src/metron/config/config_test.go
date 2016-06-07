@@ -12,13 +12,10 @@ import (
 )
 
 var _ = Describe("Config", func() {
-
 	Describe("ParseConfig", func() {
-		var (
-			configFile string
-		)
-		Context("returns an error", func() {
+		var configFile string
 
+		Context("returns an error", func() {
 			It("returns error for invalid config file path", func() {
 				configFile = "./fixtures/IDoNotExist.json"
 				_, err := config.ParseConfig(configFile)
@@ -66,6 +63,15 @@ var _ = Describe("Config", func() {
 					KeyFile:  "./fixtures/client.key",
 					CAFile:   "./fixtures/ca.crt",
 				}))
+			})
+		})
+
+		Context("with a bad etcd tls config", func() {
+			It("errors out", func() {
+				configFile = "./fixtures/bad_etcd_tls.json"
+				_, err := config.ParseConfig(configFile)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("invalid etcd TLS client configuration"))
 			})
 		})
 

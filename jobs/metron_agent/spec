@@ -9,10 +9,14 @@ templates:
   metron_agent.crt.erb: config/certs/metron_agent.crt
   metron_agent.key.erb: config/certs/metron_agent.key
   loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
+  etcd-client.crt.erb: config/certs/etcd-client.crt
+  etcd-client.key.erb: config/certs/etcd-client.key
+  etcd-ca.crt.erb: config/certs/etcd-ca.crt
 
 packages:
 - loggregator_common
 - metron_agent
+
 properties:
   syslog_daemon_config.enable:
     description: "Enable or disable rsyslog configuration for forwarding syslog messages into metron"
@@ -84,6 +88,15 @@ properties:
   loggregator.etcd.maxconcurrentrequests:
     description: "Number of concurrent requests to ETCD"
     default: 10
+  loggregator.etcd.ca_cert:
+    description: "PEM-encoded CA certificate"
+  etcd.require_ssl:
+    description: "enable ssl for all communication with etcd"
+    default: true
+  metron_agent.etcd.client_cert:
+    description: "PEM-encoded client certificate"
+  metron_agent.etcd.client_key:
+    description: "PEM-encoded client key"
 
   metron_agent.buffer_size:
     description: "DEPRECATED"

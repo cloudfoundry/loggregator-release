@@ -15,6 +15,14 @@
 
   "EtcdUrls": [<%= p("loggregator.etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
   "EtcdMaxConcurrentRequests": <%= p("loggregator.etcd.maxconcurrentrequests") %>,
+  "EtcdRequireTLS": <%= p("etcd.require_ssl") %>,
+  <% if_p("etcd.require_ssl") do |_| %>
+  "EtcdTLSClientConfig": {
+      "KeyFile": "/var/vcap/jobs/metron_agent/config/certs/etcd-client.key",
+      "CertFile": "/var/vcap/jobs/metron_agent/config/certs/etcd-client.crt",
+      "CAFile": "/var/vcap/jobs/metron_agent/config/certs/etcd-ca.crt"
+  },
+  <% end %>
 
   "SharedSecret": "<%= p("metron_endpoint.shared_secret") %>",
 

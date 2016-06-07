@@ -111,7 +111,7 @@ func main() {
 }
 
 func adapter(conf *config.Config, logger *gosteno.Logger) (storeadapter.StoreAdapter, error) {
-	adapter, err := storeAdapterProvider(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
+	adapter, err := storeAdapterProvider(conf)
 	if err != nil {
 		return nil, err
 	}
@@ -206,14 +206,20 @@ func initializeMetrics(config *config.Config, stopChan chan struct{}, logger *go
 	return metricBatcher, eventWriter
 }
 
-func storeAdapterProvider(urls []string, concurrentRequests int) (storeadapter.StoreAdapter, error) {
-	workPool, err := workpool.NewWorkPool(concurrentRequests)
+func storeAdapterProvider(conf *config.Config) (storeadapter.StoreAdapter, error) {
+	workPool, err := workpool.NewWorkPool(conf.EtcdMaxConcurrentRequests)
 	if err != nil {
 		return nil, err
 	}
 
 	options := &etcdstoreadapter.ETCDOptions{
-		ClusterUrls: urls,
+		ClusterUrls: conf.EtcdUrls,
+	}
+	if conf.EtcdRequireTLS {
+		options.IsSSL = true
+		options.CertFile = conf.EtcdTLSClientConfig.CertFile
+		options.KeyFile = conf.EtcdTLSClientConfig.KeyFile
+		options.CAFile = conf.EtcdTLSClientConfig.CAFile
 	}
 	etcdAdapter, err := etcdstoreadapter.New(options, workPool)
 	if err != nil {
