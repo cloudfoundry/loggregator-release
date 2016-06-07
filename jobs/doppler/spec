@@ -50,7 +50,7 @@ properties:
   etcd.require_ssl:
     description: "enable ssl for all communication with etcd"
     default: true
-  etcd.ca_cert:
+  loggregator.etcd.ca_cert:
     description: "PEM-encoded CA certificate"
   doppler.etcd.client_cert:
     description: "PEM-encoded client certificate"
