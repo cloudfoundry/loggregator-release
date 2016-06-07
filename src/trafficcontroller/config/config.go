@@ -6,9 +6,17 @@ import (
 	"os"
 )
 
+type EtcdTLSClientConfig struct {
+	CertFile string
+	KeyFile  string
+	CAFile   string
+}
+
 type Config struct {
 	EtcdUrls                  []string
 	EtcdMaxConcurrentRequests int
+	EtcdRequireTLS            bool
+	EtcdTLSClientConfig       EtcdTLSClientConfig
 
 	JobName                string
 	JobIndex               int
@@ -82,5 +90,12 @@ func (c *Config) validate() error {
 	if c.SystemDomain == "" {
 		return errors.New("Need system domain in order to create the proxies")
 	}
+
+	if c.EtcdRequireTLS {
+		if c.EtcdTLSClientConfig.CertFile == "" || c.EtcdTLSClientConfig.KeyFile == "" || c.EtcdTLSClientConfig.CAFile == "" {
+			return errors.New("invalid etcd TLS client configuration")
+		}
+	}
+
 	return nil
 }

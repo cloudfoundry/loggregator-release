@@ -3,6 +3,15 @@
     "JobIndex": <%= spec.index %>,
     "EtcdUrls": [<%= p("loggregator.etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
     "EtcdMaxConcurrentRequests": <%= p("loggregator.etcd.maxconcurrentrequests") %>,
+    "EtcdRequireTLS": <%= p("etcd.require_ssl") %>,
+    <% if_p("etcd.require_ssl") do |_| %>
+    "EtcdTLSClientConfig": {
+        "KeyFile": "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-client.key",
+        "CertFile": "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-client.crt",
+        "CAFile": "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-ca.crt"
+    },
+    <% end %>
+
     "OutgoingDropsondePort": <%= p("loggregator.outgoing_dropsonde_port") %>,
     "DopplerPort": <%= p("loggregator.doppler_port") %>,
     "OutgoingPort": <%= p("traffic_controller.outgoing_port") %>,

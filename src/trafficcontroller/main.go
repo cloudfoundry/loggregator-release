@@ -96,7 +96,7 @@ func main() {
 	go openFileMonitor.Start()
 	defer openFileMonitor.Stop()
 
-	etcdAdapter := defaultStoreAdapterProvider(config.EtcdUrls, config.EtcdMaxConcurrentRequests)
+	etcdAdapter := defaultStoreAdapterProvider(config)
 	err = etcdAdapter.Connect()
 	if err != nil {
 		panic(fmt.Errorf("Unable to connect to ETCD: %s", err))
@@ -200,13 +200,19 @@ func initializeMetrics(origin, destination string) (*metricbatcher.MetricBatcher
 	return batcher, err
 }
 
-func defaultStoreAdapterProvider(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
-	workPool, err := workpool.NewWorkPool(concurrentRequests)
+func defaultStoreAdapterProvider(conf *config.Config) storeadapter.StoreAdapter {
+	workPool, err := workpool.NewWorkPool(conf.EtcdMaxConcurrentRequests)
 	if err != nil {
 		panic(err)
 	}
 	options := &etcdstoreadapter.ETCDOptions{
-		ClusterUrls: urls,
+		ClusterUrls: conf.EtcdUrls,
+	}
+	if conf.EtcdRequireTLS {
+		options.IsSSL = true
+		options.CertFile = conf.EtcdTLSClientConfig.CertFile
+		options.KeyFile = conf.EtcdTLSClientConfig.KeyFile
+		options.CAFile = conf.EtcdTLSClientConfig.CAFile
 	}
 	etcdStoreAdapter, err := etcdstoreadapter.New(options, workPool)
 	if err != nil {

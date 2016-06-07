@@ -66,6 +66,16 @@ var _ = Describe("Config", func() {
 			})
 		})
 
+		Context("with ETCD TLS enabled", func() {
+			It("errors when TLS is required but cert/key files are not provided", func() {
+				configFile := "./fixtures/bad_etcd_tls.json"
+
+				_, err := config.ParseConfig(logLevel, configFile)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("invalid etcd TLS client configuration"))
+			})
+		})
+
 		Context("without MonitorIntervalSeconds", func() {
 			It("defaults MonitorIntervalSeconds to 60 seconds", func() {
 				configFile := "./fixtures/loggregator_trafficcontroller.json"

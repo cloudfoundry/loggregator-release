@@ -3,10 +3,14 @@ name: loggregator_trafficcontroller
 templates:
   loggregator_trafficcontroller_ctl.erb: bin/loggregator_trafficcontroller_ctl
   loggregator_trafficcontroller.json.erb: config/loggregator_trafficcontroller.json
+  etcd-client.crt.erb: config/certs/etcd-client.crt
+  etcd-client.key.erb: config/certs/etcd-client.key
+  etcd-ca.crt.erb: config/certs/etcd-ca.crt
 
 packages:
 - loggregator_common
 - loggregator_trafficcontroller
+
 properties:
   traffic_controller.zone:
     description: "Zone of the loggregator_trafficcontroller"
@@ -48,6 +52,16 @@ properties:
   loggregator.etcd.maxconcurrentrequests:
     description: "Number of concurrent requests to ETCD"
     default: 10
+  loggregator.etcd.ca_cert:
+    description: "PEM-encoded CA certificate"
+  etcd.require_ssl:
+    description: "enable ssl for all communication with etcd"
+    default: true
+  traffic_controller.etcd.client_cert:
+    description: "PEM-encoded client certificate"
+  traffic_controller.etcd.client_key:
+    description: "PEM-encoded client key"
+
   system_domain:
     description: "Domain reserved for CF operator, base URL where the login, uaa, and other non-user apps listen"
 
