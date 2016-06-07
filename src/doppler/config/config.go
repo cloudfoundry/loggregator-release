@@ -11,6 +11,12 @@ import (
 
 const HeartbeatInterval = 10 * time.Second
 
+type EtcdTLSClientConfig struct {
+	CertFile string
+	KeyFile  string
+	CAFile   string
+}
+
 type TLSListenerConfig struct {
 	Port     uint32
 	CertFile string
@@ -27,6 +33,8 @@ type Config struct {
 	TLSListenerConfig               TLSListenerConfig
 	EtcdMaxConcurrentRequests       int
 	EtcdUrls                        []string
+	EtcdRequireTLS                  bool
+	EtcdTLSClientConfig             EtcdTLSClientConfig
 	Index                           uint
 	JobName                         string
 	LogFilePath                     string
@@ -62,6 +70,12 @@ func (c *Config) validate() (err error) {
 	if c.EnableTLSTransport {
 		if c.TLSListenerConfig.CertFile == "" || c.TLSListenerConfig.KeyFile == "" || c.TLSListenerConfig.Port == 0 {
 			return errors.New("invalid TLS listener configuration")
+		}
+	}
+
+	if c.EtcdRequireTLS {
+		if c.EtcdTLSClientConfig.CertFile == "" || c.EtcdTLSClientConfig.KeyFile == "" || c.EtcdTLSClientConfig.CAFile == "" {
+			return errors.New("invalid etcd TLS client configuration")
 		}
 	}
 

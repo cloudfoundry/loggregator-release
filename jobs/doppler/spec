@@ -6,6 +6,9 @@ templates:
   doppler.crt.erb: config/certs/doppler.crt
   doppler.key.erb: config/certs/doppler.key
   loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
+  etcd-client.crt.erb: config/certs/etcd-client.crt
+  etcd-client.key.erb: config/certs/etcd-client.key
+  etcd-ca.crt.erb: config/certs/etcd-ca.crt
 
 packages:
 - loggregator_common
@@ -43,6 +46,16 @@ properties:
   loggregator.tls.ca_cert:
     description: "CA root required for key/cert verification"
     default: ""
+
+  etcd.require_ssl:
+    description: "enable ssl for all communication with etcd"
+    default: true
+  etcd.ca_cert:
+    description: "PEM-encoded CA certificate"
+  doppler.etcd.client_cert:
+    description: "PEM-encoded client certificate"
+  doppler.etcd.client_key:
+    description: "PEM-encoded client key"
 
   doppler.outgoing_port:
     description: Port for outgoing log messages

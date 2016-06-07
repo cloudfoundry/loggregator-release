@@ -1,5 +1,11 @@
 {
     "IncomingUDPPort": 8765,
+    "EtcdRequireTLS": true,
+    "EtcdTLSClientConfig": {
+        "KeyFile": "./fixtures/etcd-client.key",
+        "CertFile": "./fixtures/etcd-client.crt",
+        "CAFile": "./fixtures/etcd-ca.crt"
+    },
     "EnableTLSTransport": true,
     "TLSListenerConfig": {
         "Port": 8766,

@@ -42,13 +42,19 @@ func (hm DopplerServerHealthMonitor) Ok() bool {
 	return true
 }
 
-func NewStoreAdapter(urls []string, concurrentRequests int) storeadapter.StoreAdapter {
-	workPool, err := workpool.NewWorkPool(concurrentRequests)
+func NewStoreAdapter(conf *config.Config) storeadapter.StoreAdapter {
+	workPool, err := workpool.NewWorkPool(conf.EtcdMaxConcurrentRequests)
 	if err != nil {
 		panic(err)
 	}
 	options := &etcdstoreadapter.ETCDOptions{
-		ClusterUrls: urls,
+		ClusterUrls: conf.EtcdUrls,
+	}
+	if conf.EtcdRequireTLS {
+		options.IsSSL = true
+		options.CertFile = conf.EtcdTLSClientConfig.CertFile
+		options.KeyFile = conf.EtcdTLSClientConfig.KeyFile
+		options.CAFile = conf.EtcdTLSClientConfig.CAFile
 	}
 	etcdStoreAdapter, err := etcdstoreadapter.New(options, workPool)
 	if err != nil {
@@ -89,7 +95,7 @@ func main() {
 
 	log.Info("Startup: Setting up the doppler server")
 	dropsonde.Initialize(conf.MetronAddress, DOPPLER_ORIGIN)
-	storeAdapter := NewStoreAdapter(conf.EtcdUrls, conf.EtcdMaxConcurrentRequests)
+	storeAdapter := NewStoreAdapter(conf)
 
 	doppler, err := New(log, localIp, conf, storeAdapter, conf.MessageDrainBufferSize, DOPPLER_ORIGIN, time.Duration(conf.WebsocketWriteTimeoutSeconds)*time.Second, time.Duration(conf.SinkDialTimeoutSeconds)*time.Second)
 

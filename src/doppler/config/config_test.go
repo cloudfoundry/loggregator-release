@@ -8,7 +8,6 @@ import (
 )
 
 var _ = Describe("Config", func() {
-
 	var (
 		configFile string
 	)
@@ -33,11 +32,12 @@ var _ = Describe("Config", func() {
 			Expect(config.MessageDrainBufferSize).To(Equal(uint(100)))
 			Expect(config.MonitorIntervalSeconds).To(BeEquivalentTo(60))
 			Expect(config.EnableTLSTransport).To(BeFalse())
+			Expect(config.EtcdRequireTLS).To(BeFalse())
 			Expect(config.MetricBatchIntervalMilliseconds).To(BeEquivalentTo(5000))
 		})
 	})
 
-	Context("With EnableTLSTransport", func() {
+	Context("with EnableTLSTransport", func() {
 		It("generates the cert for the tls config", func() {
 			configFile = "./fixtures/doppler.json"
 			cfg, err := config.ParseConfig(configFile)
@@ -56,6 +56,27 @@ var _ = Describe("Config", func() {
 			_, err := config.ParseConfig(configFile)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("invalid TLS listener configuration"))
+		})
+	})
+
+	Context("with EtcdRequireTLS", func() {
+		It("generates the cert for the tls config", func() {
+			configFile = "./fixtures/doppler.json"
+			cfg, err := config.ParseConfig(configFile)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(cfg.EtcdRequireTLS).To(BeTrue())
+			Expect(cfg.EtcdTLSClientConfig).To(Equal(config.EtcdTLSClientConfig{
+				CertFile: "./fixtures/etcd-client.crt",
+				KeyFile:  "./fixtures/etcd-client.key",
+				CAFile:   "./fixtures/etcd-ca.crt",
+			}))
+		})
+
+		It("errors out if no cert or key files is provided", func() {
+			configFile = "./fixtures/dopplerNoEtcdTLSConfig.json"
+			_, err := config.ParseConfig(configFile)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("invalid etcd TLS client configuration"))
 		})
 	})
 
