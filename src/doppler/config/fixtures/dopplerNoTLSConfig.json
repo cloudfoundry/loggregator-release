@@ -2,7 +2,7 @@
     "IncomingUDPPort": 8765,
     "OutgoingPort": 4567,
     "SinkSkipCertVerify": false,
-    "Index": 0,
+    "Index": "0",
     "MaxRetainedLogMessages": 10,
     "MessageDrainBufferSize": 100,
     "SharedSecret": "mysecret",

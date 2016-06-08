@@ -1,17 +1,20 @@
-<% 
-
+<%
     # try and set these properties from a BOSH 2.0 spec object
-    job_name = spec.job
+    job_name = spec.job.name
+    instance_id = spec.id
     instance_zone = spec.az
+
     if job_name.nil?
       job_name = name
     end
 
+    if instance_id.nil?
+      instance_id = spec.index
+    end
 
     if instance_zone.nil?
       instance_zone = p("doppler.zone")
     end
-
 %>
 {
   "EtcdUrls": [<%= p("loggregator.etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",") %>],
@@ -29,9 +32,9 @@
   },
   <% end %>
   "OutgoingPort": <%= p("doppler.outgoing_port") %>,
-  "Index": <%= spec.index %>,
   "Zone": "<%= instance_zone %>",
   "JobName": "<%= job_name %>",
+  "Index": "<%= instance_id %>",
   "MaxRetainedLogMessages": <%= p("doppler.maxRetainedLogMessages") %>,
   "SharedSecret": "<%= p("doppler_endpoint.shared_secret") %>",
   "ContainerMetricTTLSeconds": <%= p("doppler.container_metric_ttl_seconds") %>,

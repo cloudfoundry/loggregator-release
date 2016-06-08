@@ -1,6 +1,6 @@
 {
     "JobName": "<%= name %>",
-    "JobIndex": <%= spec.index %>,
+    "Index": "<%= spec.index %>",
     "EtcdUrls": [<%= p("loggregator.etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
     "EtcdMaxConcurrentRequests": <%= p("loggregator.etcd.maxconcurrentrequests") %>,
     "OutgoingDropsondePort": <%= p("loggregator.outgoing_dropsonde_port") %>,

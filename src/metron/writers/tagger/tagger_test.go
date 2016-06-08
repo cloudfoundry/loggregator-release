@@ -16,7 +16,7 @@ import (
 var _ = Describe("Tagger", func() {
 	It("tags events with the given deployment name, job, index and IP address", func() {
 		mockWriter := &mocks.MockEnvelopeWriter{}
-		t := tagger.New("test-deployment", "test-job", 2, mockWriter)
+		t := tagger.New("test-deployment", "test-job", "2", mockWriter)
 
 		envelope := basicMessage()
 		t.Write(envelope)
@@ -34,7 +34,7 @@ var _ = Describe("Tagger", func() {
 
 		BeforeEach(func() {
 			mockWriter = &mocks.MockEnvelopeWriter{}
-			t = tagger.New("test-deployment", "test-job", 2, mockWriter)
+			t = tagger.New("test-deployment", "test-job", "2", mockWriter)
 
 			envelope = basicMessage()
 		})

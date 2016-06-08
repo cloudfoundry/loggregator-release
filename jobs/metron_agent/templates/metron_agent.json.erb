@@ -6,20 +6,26 @@
 
     useTLS = protocols.include? "tls"
 
-
     # try and set these properties from a BOSH 2.0 spec object
-    job_name = spec.job
+    job_name = spec.job.name
+    instance_id = spec.id
     instance_zone = spec.az
+
     if job_name.nil?
       job_name = name
     end
+
+    if instance_id.nil?
+      instance_id = spec.index
+    end
+
     if instance_zone.nil?
       instance_zone = p("metron_agent.zone")
     end
 %>
 
 {
-  "Index": <%= spec.index %>,
+  "Index": "<%= instance_id %>",
   "Job": "<%= job_name %>",
   "Zone": "<%= instance_zone %>",
   "Deployment": "<%= p("metron_agent.deployment") %>",

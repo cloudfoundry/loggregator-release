@@ -2,7 +2,7 @@
     "OutgoingPort": 8080,
     "MessageDrainBufferSize": 100,
     "SinkSkipCertVerify": false,
-    "Index": 0,
+    "Index": "0",
     "MaxRetainedLogMessages": 10,
     "SharedSecret": "mysecret",
     "Syslog"  : "",

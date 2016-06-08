@@ -39,7 +39,7 @@ func (m *MetronRunner) Configure() *ginkgomon.Runner {
 	cfgFile, err := ioutil.TempFile(m.TempDir, "metron")
 	Expect(err).NotTo(HaveOccurred())
 	config := config.Config{
-		Index:                     42,
+		Index:                     "42",
 		Job:                       "test-component",
 		IncomingUDPPort:           m.MetronPort,
 		SharedSecret:              "shared_secret",

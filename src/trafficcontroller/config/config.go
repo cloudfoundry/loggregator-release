@@ -11,7 +11,7 @@ type Config struct {
 	EtcdMaxConcurrentRequests int
 
 	JobName                string
-	JobIndex               int
+	Index                  string
 	Zone                   string
 	Syslog                 string
 	ApiHost                string

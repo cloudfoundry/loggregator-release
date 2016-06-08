@@ -27,7 +27,7 @@ type Config struct {
 	TLSListenerConfig               TLSListenerConfig
 	EtcdMaxConcurrentRequests       int
 	EtcdUrls                        []string
-	Index                           uint
+	Index                           string
 	JobName                         string
 	LogFilePath                     string
 	MaxRetainedLogMessages          uint32

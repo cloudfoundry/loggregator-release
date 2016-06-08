@@ -7,7 +7,7 @@
     "OutgoingPort": 8080,
     "SinkSkipCertVerify": false,
     "JobName": "loggregator_z1",
-    "Index": 0,
+    "Index": "0",
     "MaxRetainedLogMessages": 10,
     "CollectorRegistrarIntervalMilliseconds": 60000,
     "SharedSecret": "secret",
