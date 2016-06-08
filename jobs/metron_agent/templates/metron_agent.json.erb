@@ -5,12 +5,23 @@
     end
 
     useTLS = protocols.include? "tls"
+
+
+    # try and set these properties from a BOSH 2.0 spec object
+    job_name = spec.job
+    instance_zone = spec.az
+    if job_name.nil?
+      job_name = name
+    end
+    if instance_zone.nil?
+      instance_zone = p("metron_agent.zone")
+    end
 %>
 
 {
   "Index": <%= spec.index %>,
-  "Job": "<%= name %>",
-  "Zone": "<%= p("metron_agent.zone") %>",
+  "Job": "<%= job_name %>",
+  "Zone": "<%= instance_zone %>",
   "Deployment": "<%= p("metron_agent.deployment") %>",
 
   "EtcdUrls": [<%= p("loggregator.etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
