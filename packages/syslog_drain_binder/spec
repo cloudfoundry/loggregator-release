@@ -33,6 +33,7 @@ files:
 - loggregator/src/logger/*.go # gosub
 - loggregator/src/signalmanager/*.go # gosub
 - loggregator/src/syslog_drain_binder/*.go # gosub
+- loggregator/src/syslog_drain_binder/config/*.go # gosub
 - loggregator/src/syslog_drain_binder/elector/*.go # gosub
 - loggregator/src/syslog_drain_binder/etcd_syslog_drain_store/*.go # gosub
 - loggregator/src/syslog_drain_binder/shared_types/*.go # gosub

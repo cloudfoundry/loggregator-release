@@ -1,24 +1,23 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
 	"flag"
-	"fmt"
 	"logger"
 	"os"
 	"os/signal"
 	"syscall"
+	"syslog_drain_binder/config"
 	"time"
 
 	"syslog_drain_binder/elector"
 	"syslog_drain_binder/etcd_syslog_drain_store"
 
+	"signalmanager"
+
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
-	"signalmanager"
 )
 
 var (
@@ -29,31 +28,37 @@ var (
 
 func main() {
 	flag.Parse()
-	config, err := parseConfig(*debug, *configFile, *logFilePath)
+	conf, err := config.ParseConfig(*configFile)
 	if err != nil {
 		panic(err)
 	}
-	log := logger.NewLogger(*debug, *logFilePath, "syslog_drain_binder", config.Syslog)
+	log := logger.NewLogger(*debug, *logFilePath, "syslog_drain_binder", conf.Syslog)
 
-	dropsonde.Initialize(config.MetronAddress, "syslog_drain_binder")
+	dropsonde.Initialize(conf.MetronAddress, "syslog_drain_binder")
 
-	workPool, err := workpool.NewWorkPool(config.EtcdMaxConcurrentRequests)
+	workPool, err := workpool.NewWorkPool(conf.EtcdMaxConcurrentRequests)
 	if err != nil {
 		panic(err)
 	}
 
 	options := &etcdstoreadapter.ETCDOptions{
-		ClusterUrls: config.EtcdUrls,
+		ClusterUrls: conf.EtcdUrls,
+	}
+	if conf.EtcdRequireTLS {
+		options.IsSSL = true
+		options.CertFile = conf.EtcdTLSClientConfig.CertFile
+		options.KeyFile = conf.EtcdTLSClientConfig.KeyFile
+		options.CAFile = conf.EtcdTLSClientConfig.CAFile
 	}
 	adapter, err := etcdstoreadapter.New(options, workPool)
 	if err != nil {
 		panic(err)
 	}
 
-	updateInterval := time.Duration(config.UpdateIntervalSeconds) * time.Second
-	politician := elector.NewElector(config.InstanceName, adapter, updateInterval, log)
+	updateInterval := time.Duration(conf.UpdateIntervalSeconds) * time.Second
+	politician := elector.NewElector(conf.InstanceName, adapter, updateInterval, log)
 
-	drainTTL := time.Duration(config.DrainUrlTtlSeconds) * time.Second
+	drainTTL := time.Duration(conf.DrainUrlTtlSeconds) * time.Second
 	store := etcd_syslog_drain_store.NewEtcdSyslogDrainStore(adapter, drainTTL, log)
 
 	dumpChan := registerGoRoutineDumpSignalChannel()
@@ -80,8 +85,8 @@ func main() {
 				}
 			}
 
-			log.Debugf("Polling %s for updates", config.CloudControllerAddress)
-			drainUrls, err := Poll(config.CloudControllerAddress, config.BulkApiUsername, config.BulkApiPassword, config.PollingBatchSize, config.SkipCertVerify)
+			log.Debugf("Polling %s for updates", conf.CloudControllerAddress)
+			drainUrls, err := Poll(conf.CloudControllerAddress, conf.BulkApiUsername, conf.BulkApiPassword, conf.PollingBatchSize, conf.SkipCertVerify)
 			if err != nil {
 				log.Errorf("Error when polling cloud controller: %s", err.Error())
 				politician.Vacate()
@@ -106,60 +111,6 @@ func main() {
 			}
 		}
 	}
-}
-
-type Config struct {
-	InstanceName          string
-	DrainUrlTtlSeconds    int64
-	UpdateIntervalSeconds int64
-
-	EtcdMaxConcurrentRequests int
-	EtcdUrls                  []string
-
-	MetronAddress string
-
-	CloudControllerAddress string
-	BulkApiUsername        string
-	BulkApiPassword        string
-	PollingBatchSize       int
-
-	SkipCertVerify bool
-
-	Syslog string
-}
-
-func parseConfig(debug bool, configFile string, logFilePath string) (*Config, error) {
-	config := Config{}
-
-	file, err := os.Open(configFile)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	err = json.NewDecoder(file).Decode(&config)
-	if err != nil {
-		return nil, err
-	}
-
-	err = config.validate()
-	if err != nil {
-		return nil, err
-	}
-
-	return &config, nil
-}
-
-func (config Config) validate() error {
-	if config.MetronAddress == "" {
-		return errors.New("Need Metron address (host:port).")
-	}
-
-	if config.EtcdMaxConcurrentRequests < 1 {
-		return fmt.Errorf("Need EtcdMaxConcurrentRequests ≥ 1, received %d", config.EtcdMaxConcurrentRequests)
-	}
-
-	return nil
 }
 
 func registerGoRoutineDumpSignalChannel() chan os.Signal {

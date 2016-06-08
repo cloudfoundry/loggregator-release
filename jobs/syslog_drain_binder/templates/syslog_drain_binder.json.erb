@@ -5,6 +5,14 @@
 
     "EtcdMaxConcurrentRequests": <%= p("loggregator.etcd.maxconcurrentrequests") %>,
     "EtcdUrls": [<%= p("loggregator.etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
+    "EtcdRequireTLS": <%= p("etcd.require_ssl") %>,
+    <% if_p("etcd.require_ssl") do |_| %>
+    "EtcdTLSClientConfig": {
+      "KeyFile": "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-client.key",
+      "CertFile": "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-client.crt",
+      "CAFile": "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-ca.crt"
+    },
+    <% end %>
 
     "MetronAddress": "<%= p("metron_endpoint.host") %>:<%= p("metron_endpoint.dropsonde_port") %>",
 
