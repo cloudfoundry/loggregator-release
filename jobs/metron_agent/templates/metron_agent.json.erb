@@ -30,10 +30,10 @@
   "Zone": "<%= instance_zone %>",
   "Deployment": "<%= p("metron_agent.deployment") %>",
 
-  "EtcdUrls": [<%= p("loggregator.etcd.machines").map{|addr| "\"#{p("etcd.require_ssl") ? "https" : "http"}://#{addr}:4001\""}.join(",") %>],
+  "EtcdUrls": [<%= p("loggregator.etcd.machines").map{|addr| "\"#{p("loggregator.etcd.require_ssl") ? "https" : "http"}://#{addr}:4001\""}.join(",") %>],
   "EtcdMaxConcurrentRequests": <%= p("loggregator.etcd.maxconcurrentrequests") %>,
-  "EtcdRequireTLS": <%= p("etcd.require_ssl") %>,
-  <% if_p("etcd.require_ssl") do |_| %>
+  "EtcdRequireTLS": <%= p("loggregator.etcd.require_ssl") %>,
+  <% if_p("loggregator.etcd.require_ssl") do |_| %>
   "EtcdTLSClientConfig": {
       "KeyFile": "/var/vcap/jobs/metron_agent/config/certs/etcd-client.key",
       "CertFile": "/var/vcap/jobs/metron_agent/config/certs/etcd-client.crt",

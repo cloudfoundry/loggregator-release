@@ -83,6 +83,9 @@ properties:
     description: "The size at which logrotate will decide to rotate the log file"
     default: 50M
 
+  loggregator.etcd.require_ssl:
+    description: "Enable ssl for all communication with etcd"
+    default: false
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"
   loggregator.etcd.maxconcurrentrequests:
@@ -90,9 +93,6 @@ properties:
     default: 10
   loggregator.etcd.ca_cert:
     description: "PEM-encoded CA certificate"
-  etcd.require_ssl:
-    description: "enable ssl for all communication with etcd"
-    default: true
   metron_agent.etcd.client_cert:
     description: "PEM-encoded client certificate"
   metron_agent.etcd.client_key:
