@@ -47,9 +47,9 @@ properties:
     description: "CA root required for key/cert verification"
     default: ""
 
-  etcd.require_ssl:
-    description: "enable ssl for all communication with etcd"
-    default: true
+  loggregator.etcd.require_ssl:
+    description: "Enable ssl for all communication with etcd"
+    default: false
   loggregator.etcd.ca_cert:
     description: "PEM-encoded CA certificate"
   doppler.etcd.client_cert:
