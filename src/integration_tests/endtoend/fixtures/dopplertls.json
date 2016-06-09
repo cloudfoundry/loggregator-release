@@ -1,7 +1,7 @@
 {
     "EtcdUrls": ["http://127.0.0.1:49623"],
     "EtcdMaxConcurrentRequests": 10,
-    "Index": 0,
+    "Index": "0",
     "IncomingUDPPort": 49626,
     "OutgoingPort": 49627,
     "MaxRetainedLogMessages": 10,

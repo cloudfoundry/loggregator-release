@@ -1,5 +1,5 @@
 {
-    "Index": 42,
+    "Index": "42",
     "Job": "test-component",
     "IncomingUDPPort": 51161,
     "SharedSecret": "shared_secret",

@@ -19,7 +19,7 @@ type Config struct {
 	EtcdTLSClientConfig       EtcdTLSClientConfig
 
 	JobName                string
-	JobIndex               int
+	Index                  string
 	Zone                   string
 	Syslog                 string
 	ApiHost                string

@@ -25,7 +25,7 @@ func Announce(localIP string, ttl time.Duration, config *config.Config, storeAda
 		panic(err)
 	}
 
-	key := fmt.Sprintf("%s/%s/%s/%d", META_ROOT, config.Zone, config.JobName, config.Index)
+	key := fmt.Sprintf("%s/%s/%s/%s", META_ROOT, config.Zone, config.JobName, config.Index)
 	logger.Debugf("Starting Health Status Updates to Store: %s", key)
 
 	node := storeadapter.StoreNode{
@@ -52,7 +52,7 @@ func Announce(localIP string, ttl time.Duration, config *config.Config, storeAda
 }
 
 func AnnounceLegacy(localIP string, ttl time.Duration, config *config.Config, storeAdapter storeadapter.StoreAdapter, logger *gosteno.Logger) chan (chan bool) {
-	key := fmt.Sprintf("%s/%s/%s/%d", LEGACY_ROOT, config.Zone, config.JobName, config.Index)
+	key := fmt.Sprintf("%s/%s/%s/%s", LEGACY_ROOT, config.Zone, config.JobName, config.Index)
 	status, stopChan, err := storeAdapter.MaintainNode(storeadapter.StoreNode{
 		Key:   key,
 		Value: []byte(localIP),

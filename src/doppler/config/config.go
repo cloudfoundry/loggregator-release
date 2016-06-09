@@ -35,7 +35,7 @@ type Config struct {
 	EtcdUrls                        []string
 	EtcdRequireTLS                  bool
 	EtcdTLSClientConfig             EtcdTLSClientConfig
-	Index                           uint
+	Index                           string
 	JobName                         string
 	LogFilePath                     string
 	MaxRetainedLogMessages          uint32

@@ -35,7 +35,7 @@ var _ = Describe("Config", func() {
 				cfg, err := config.ParseConfig(configFile)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(cfg.Index).To(Equal(uint(0)))
+				Expect(cfg.Index).To(Equal("0"))
 				Expect(cfg.Job).To(Equal("job-name"))
 				Expect(cfg.Zone).To(Equal("z1"))
 				Expect(cfg.Deployment).To(Equal("deployment-name"))

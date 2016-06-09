@@ -18,7 +18,7 @@
     "SinkSkipCertVerify": false,
     "Job": "doppler_z1",
     "Zone": "z1",
-    "Index": 0,
+    "Index": "0",
     "EtcdUrls": ["http://localhost:4001"],
     "MaxRetainedLogMessages": 10,
     "MessageDrainBufferSize": 100,

@@ -56,7 +56,7 @@ type Config struct {
 	Deployment string
 	Zone       string
 	Job        string
-	Index      uint
+	Index      string
 
 	IncomingUDPPort int
 

@@ -1,5 +1,5 @@
 {
-    "Index": 0,
+    "Index": "0",
     "DropsondeIncomingMessagesPort": 51161,
     "SharedSecret": "shared_secret",
     "EtcdUrls"    : ["http://127.0.0.1:5800"],

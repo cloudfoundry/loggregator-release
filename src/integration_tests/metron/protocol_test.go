@@ -29,7 +29,7 @@ var _ = Describe("Protocol", func() {
 		protocols = nil
 		logger = gosteno.NewLogger("test")
 		dopplerConfig = &dopplerconfig.Config{
-			Index:           0,
+			Index:           "0",
 			JobName:         "job",
 			Zone:            "z9",
 			IncomingUDPPort: uint32(metronRunner.DropsondePort),

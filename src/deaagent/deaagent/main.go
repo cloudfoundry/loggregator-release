@@ -9,15 +9,16 @@ import (
 	"os"
 	"time"
 
-	"github.com/cloudfoundry/dropsonde"
 	"signalmanager"
+
+	"github.com/cloudfoundry/dropsonde"
 )
 
 const DrainStoreRefreshInterval = 1 * time.Minute
 
 type Config struct {
 	Syslog        string
-	Index         uint
+	Index         string
 	MetronAddress string
 }
 

@@ -1,8 +1,6 @@
 package tagger
 
 import (
-	"strconv"
-
 	"metron/writers"
 
 	"github.com/cloudfoundry/sonde-go/events"
@@ -18,12 +16,12 @@ type Tagger struct {
 	outputWriter   writers.EnvelopeWriter
 }
 
-func New(deploymentName string, job string, index uint, outputWriter writers.EnvelopeWriter) *Tagger {
+func New(deploymentName string, job string, index string, outputWriter writers.EnvelopeWriter) *Tagger {
 	ip, _ := localip.LocalIP()
 	return &Tagger{
 		deploymentName: deploymentName,
 		job:            job,
-		index:          strconv.Itoa(int(index)),
+		index:          index,
 		ip:             ip,
 		outputWriter:   outputWriter,
 	}

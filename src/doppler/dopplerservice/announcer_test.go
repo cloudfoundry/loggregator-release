@@ -37,7 +37,7 @@ var _ = Describe("Announcer", func() {
 
 		conf = config.Config{
 			JobName: "doppler_z1",
-			Index:   0,
+			Index:   "0",
 			EtcdMaxConcurrentRequests: 10,
 			EtcdUrls:                  etcdRunner.NodeURLS(),
 			Zone:                      "z1",
@@ -71,7 +71,7 @@ var _ = Describe("Announcer", func() {
 			var dopplerKey string
 
 			BeforeEach(func() {
-				dopplerKey = fmt.Sprintf("/doppler/meta/%s/%s/%d", conf.Zone, conf.JobName, conf.Index)
+				dopplerKey = fmt.Sprintf("/doppler/meta/%s/%s/%s", conf.Zone, conf.JobName, conf.Index)
 			})
 
 			It("creates, then maintains the node", func() {
@@ -133,7 +133,7 @@ var _ = Describe("Announcer", func() {
 		var legacyKey string
 
 		BeforeEach(func() {
-			legacyKey = fmt.Sprintf("/healthstatus/doppler/%s/%s/%d", conf.Zone, conf.JobName, conf.Index)
+			legacyKey = fmt.Sprintf("/healthstatus/doppler/%s/%s/%s", conf.Zone, conf.JobName, conf.Index)
 		})
 
 		It("maintains the node", func() {

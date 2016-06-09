@@ -1,6 +1,6 @@
 {
     "JobName": "<%= name %>",
-    "JobIndex": <%= spec.index %>,
+    "Index": <%= spec.index %>,
     "EtcdUrls": [<%= p("loggregator.etcd.machines").map{|addr| "\"#{p("etcd.require_ssl") ? "https" : "http"}://#{addr}:4001\""}.join(",") %>],
     "EtcdMaxConcurrentRequests": <%= p("loggregator.etcd.maxconcurrentrequests") %>,
     "EtcdRequireTLS": <%= p("etcd.require_ssl") %>,

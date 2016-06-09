@@ -1,6 +1,6 @@
 {
     "JobName": "trafficcontroller",
-    "JobIndex": 3,
+    "Index": "3",
     "EtcdUrls": ["http://127.0.0.1:4001"],
     "EtcdMaxConcurrentRequests": 5,
     "OutgoingDropsondePort": 4566,

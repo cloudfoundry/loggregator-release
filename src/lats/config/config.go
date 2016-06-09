@@ -21,11 +21,11 @@ type TestConfig struct {
 }
 
 type MetronConfig struct {
-	IncomingUDPPort int
+	IncomingUDPPort               int
 	SharedSecret                  string
 	EtcdUrls                      []string
 	LoggregatorDropsondePort      int
-	Index                         int
+	Index                         string
 	EtcdMaxConcurrentRequests     int
 	EtcdQueryIntervalMilliseconds int
 	Zone                          string
