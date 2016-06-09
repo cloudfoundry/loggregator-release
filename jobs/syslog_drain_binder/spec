@@ -19,6 +19,9 @@ properties:
     description: "The port used to emit dropsonde messages to the Metron agent"
     default: 3457
 
+  loggregator.etcd.require_ssl:
+    description: "Enable ssl for all communication with etcd"
+    default: false
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"
   loggregator.etcd.maxconcurrentrequests:
@@ -26,9 +29,6 @@ properties:
     default: 10
   loggregator.etcd.ca_cert:
     description: "PEM-encoded CA certificate"
-  etcd.require_ssl:
-    description: "Enable ssl for all communication with etcd"
-    default: true
   syslog_drain_binder.etcd.client_cert:
     description: "PEM-encoded client certificate"
   syslog_drain_binder.etcd.client_key:

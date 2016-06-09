@@ -4,9 +4,9 @@
     "UpdateIntervalSeconds": <%= p("syslog_drain_binder.update_interval_seconds") %>,
 
     "EtcdMaxConcurrentRequests": <%= p("loggregator.etcd.maxconcurrentrequests") %>,
-    "EtcdUrls": [<%= p("loggregator.etcd.machines").map{|addr| "\"#{p("etcd.require_ssl") ? "https" : "http"}://#{addr}:4001\""}.join(",") %>],
-    "EtcdRequireTLS": <%= p("etcd.require_ssl") %>,
-    <% if_p("etcd.require_ssl") do |_| %>
+    "EtcdUrls": [<%= p("loggregator.etcd.machines").map{|addr| "\"#{p("loggregator.etcd.require_ssl") ? "https" : "http"}://#{addr}:4001\""}.join(",") %>],
+    "EtcdRequireTLS": <%= p("loggregator.etcd.require_ssl") %>,
+    <% if_p("loggregator.etcd.require_ssl") do |_| %>
     "EtcdTLSClientConfig": {
       "KeyFile": "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-client.key",
       "CertFile": "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-client.crt",
