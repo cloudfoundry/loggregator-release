@@ -47,7 +47,6 @@ var _ = Describe("Config", func() {
 				Expect(cfg.SharedSecret).To(Equal("shared_secret"))
 
 				Expect(cfg.IncomingUDPPort).To(Equal(51161))
-				Expect(cfg.LoggregatorDropsondePort).To(Equal(3457))
 
 				Expect(cfg.MetricBatchIntervalMilliseconds).To(BeEquivalentTo(20))
 				Expect(cfg.RuntimeStatsIntervalMilliseconds).To(BeEquivalentTo(15))

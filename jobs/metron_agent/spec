@@ -1,5 +1,13 @@
 ---
 name: metron_agent
+
+provides:
+- name: metron_agent
+  type: metron_agent
+  properties:
+  - metron_agent.listening_address
+  - metron_agent.listening_port
+
 templates:
   metron_agent_ctl.erb: bin/metron_agent_ctl
   metron_agent.json.erb: config/metron_agent.json
@@ -38,25 +46,28 @@ properties:
     description: maximum message size to be sent
     default: 4k
 
-  metron_agent.dropsonde_incoming_port:
-    description: "Incoming port for dropsonde log messages"
-    default: 3457
   metron_endpoint.shared_secret:
       description: "Shared secret used to verify cryptographically signed dropsonde messages"
 
+  metron_agent.listening_port:
+    description: "Port the metron agent is listening on to receive dropsonde log messages"
+    default: 3457
+  metron_agent.listening_address:
+    description: "Address the metron agent is listening on to receive dropsonde log messages provided for BOSH links and should not be overwritten"
+    default: "127.0.0.1"
   metron_agent.debug:
     description: "boolean value to turn on verbose mode"
     default: false
   metron_agent.protocols:
     description: "A priority list of protocols for metron to connect to doppler over.  Metron will refuse to connect to doppler over any protocol not in this list."
     default: ["udp"]
-
   metron_agent.tls.client_cert:
     description: "TLS client certificate"
     default: ""
   metron_agent.tls.client_key:
     description: "TLS client key"
     default: ""
+
   loggregator.tls.ca_cert:
     description: "CA root required for key/cert verification"
     default: ""
@@ -107,9 +118,11 @@ properties:
   metron_agent.enable_buffer:
     description: "DEPRECATED"
     default: false
-  loggregator.dropsonde_incoming_port:
-    description: "DEPRECATED"
-    default: 3457
   metron_agent.preferred_protocol:
     description: "DEPRECATED - replaced with metron_agent.protocols"
     default: "udp"
+
+  metron_agent.dropsonde_incoming_port:
+    description: "DEPRECATED - replaced by metron_agent.listening_port"
+    default: 3457
+

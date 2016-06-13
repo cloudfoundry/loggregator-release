@@ -66,8 +66,7 @@ type Config struct {
 	EtcdRequireTLS                bool
 	EtcdTLSClientConfig           EtcdTLSClientConfig
 
-	LoggregatorDropsondePort int
-	SharedSecret             string
+	SharedSecret string
 
 	MetricBatchIntervalMilliseconds  uint
 	RuntimeStatsIntervalMilliseconds uint
