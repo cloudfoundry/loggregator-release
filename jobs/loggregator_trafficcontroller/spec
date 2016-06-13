@@ -47,7 +47,7 @@ properties:
     description: "The port used to emit dropsonde messages to the Metron agent"
     default: 3457
 
-  loggregaotr.etcd.require_ssl:
+  loggregator.etcd.require_ssl:
     description: "Enable ssl for all communication with etcd"
     default: false
   loggregator.etcd.machines:
