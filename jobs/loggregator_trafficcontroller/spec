@@ -60,10 +60,13 @@ properties:
     default: true
   loggregator.etcd.ca_cert:
     description: "PEM-encoded CA certificate"
+    default: ""
   traffic_controller.etcd.client_cert:
     description: "PEM-encoded client certificate"
+    default: ""
   traffic_controller.etcd.client_key:
     description: "PEM-encoded client key"
+    default: ""
 
   system_domain:
     description: "Domain reserved for CF operator, base URL where the login, uaa, and other non-user apps listen"

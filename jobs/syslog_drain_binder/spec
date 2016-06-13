@@ -29,10 +29,13 @@ properties:
     default: 10
   loggregator.etcd.ca_cert:
     description: "PEM-encoded CA certificate"
+    default: ""
   syslog_drain_binder.etcd.client_cert:
     description: "PEM-encoded client certificate"
+    default: ""
   syslog_drain_binder.etcd.client_key:
     description: "PEM-encoded client key"
+    default: ""
 
   system_domain:
     description: "Domain reserved for CF operator, base URL where the login, uaa, and other non-user apps listen"

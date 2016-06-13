@@ -93,10 +93,13 @@ properties:
     default: 10
   loggregator.etcd.ca_cert:
     description: "PEM-encoded CA certificate"
+    default: ""
   metron_agent.etcd.client_cert:
     description: "PEM-encoded client certificate"
+    default: ""
   metron_agent.etcd.client_key:
     description: "PEM-encoded client key"
+    default: ""
 
   metron_agent.buffer_size:
     description: "DEPRECATED"

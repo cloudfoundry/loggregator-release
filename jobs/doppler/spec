@@ -52,10 +52,13 @@ properties:
     default: false
   loggregator.etcd.ca_cert:
     description: "PEM-encoded CA certificate"
+    default: ""
   doppler.etcd.client_cert:
     description: "PEM-encoded client certificate"
+    default: ""
   doppler.etcd.client_key:
     description: "PEM-encoded client key"
+    default: ""
 
   doppler.outgoing_port:
     description: Port for outgoing log messages
