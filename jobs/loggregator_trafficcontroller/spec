@@ -55,9 +55,6 @@ properties:
   loggregator.etcd.maxconcurrentrequests:
     description: "Number of concurrent requests to ETCD"
     default: 10
-  loggregator.etcd.require_ssl:
-    description: "Enable ssl for all communication with etcd"
-    default: true
   loggregator.etcd.ca_cert:
     description: "PEM-encoded CA certificate"
     default: ""
