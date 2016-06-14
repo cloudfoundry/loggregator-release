@@ -47,7 +47,7 @@ func (m *MetronRunner) Configure() *ginkgomon.Runner {
 		EtcdMaxConcurrentRequests: 1,
 		Zone:                             "z1",
 		Deployment:                       "deployment-name",
-		LoggregatorDropsondePort:         m.DropsondePort,
+		IncomingUDPPort:                  m.DropsondePort,
 		Protocols:                        m.Protocols,
 		MetricBatchIntervalMilliseconds:  50,
 		RuntimeStatsIntervalMilliseconds: 500,
