@@ -11,12 +11,15 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
-	"regexp"
 	"strconv"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -29,25 +32,39 @@ var (
 	uaaAddress     = os.Getenv("UAA_ADDR")
 	clientID       = os.Getenv("CLIENT_ID")
 	clientSecret   = os.Getenv("CLIENT_SECRET")
-	username       = os.Getenv("USERNAME")
-	password       = os.Getenv("PASSWORD")
+	username       = os.Getenv("CF_USERNAME")
+	password       = os.Getenv("CF_PASSWORD")
+	messagePrefix  = os.Getenv("MESSAGE_PREFIX")
 
-	messageFilter  = os.Getenv("MESSAGE_FILTER")
-	messagesPerApp = os.Getenv("MESSAGES_PER_APP")
-
-	maxMessage             int
-	counters               = make(map[string]map[int]bool)
-	re                     = regexp.MustCompile(`msg (\d+) \w*`)
-	guid, _                = uuid.NewV4()
-	firehoseSubscriptionId = guid.String()
-	authToken              string
+	counterWg              sync.WaitGroup
+	counterLock            sync.Mutex
+	counters               = make(map[Identity]map[string]bool)
+	firehoseSubscriptionId = func() string {
+		guid, err := uuid.NewV4()
+		if err != nil {
+			log.Fatal(err)
+		}
+		return guid.String()
+	}()
+	prefixEnd = len(messagePrefix + " guid: ")
+	guidEnd   = prefixEnd + len("376ce05d-e4a7-46b2-6df4-663bd001b807")
+	sepEnd    = guidEnd + len(" msg: ")
 )
 
-func main() {
-	var err error
-	defer dumpReport()
+type Identity struct {
+	appID string
+	runID string
+}
 
-	maxMessage, _ = strconv.Atoi(messagesPerApp)
+func main() {
+	start := time.Now()
+	fmt.Println("start time:", start)
+	defer func() {
+		end := time.Now()
+		fmt.Println("\n\nend time:", end)
+		fmt.Println("duration:", end.Sub(start))
+		dumpReport()
+	}()
 
 	consumer := consumer.New(dopplerAddress, &tls.Config{InsecureSkipVerify: true}, nil)
 
@@ -58,28 +75,38 @@ func main() {
 	signal.Notify(terminate, os.Interrupt)
 
 	for {
-		authToken, err = getAuthToken()
+		authToken, err := getAuthToken()
 		if err != nil || authToken == "" {
 			fmt.Fprintf(os.Stderr, "error getting token %s\n", err)
 			continue
 		}
 		fmt.Println("got new oauth token")
 		msgChan, errorChan := consumer.Firehose(firehoseSubscriptionId, authToken)
-		stop := make(chan struct{})
 
-		go handleErrors(errorChan, stop)
-		cont := handleMessages(msgChan, stop, terminate)
-		if !cont {
+		go handleMessages(msgChan)
+		done := handleErrors(errorChan, terminate, consumer)
+		if done {
 			return
 		}
 	}
 }
 
-func getAppName(guid string) string {
+func getAppName(guid, authToken string) string {
+	if authToken == "" {
+		return guid
+	}
 	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/v2/apps/%s", apiAddress, guid), nil)
 	req.Header.Set("Authorization", fmt.Sprintf("bearer %s", authToken))
-	resp, _ := http.DefaultClient.Do(req)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Printf("Error getting app name: %s", err)
+		return guid
+	}
 	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		log.Printf("Got status %s while getting app name", resp.Status)
+		return guid
+	}
 	body, _ := ioutil.ReadAll(resp.Body)
 	type Entity struct {
 		Name string `json:"name"`
@@ -131,75 +158,81 @@ func getAuthToken() (string, error) {
 	return um.AccessToken, nil
 }
 
-func handleErrors(errorChan <-chan error, stop chan struct{}) {
-	for err := range errorChan {
+func handleErrors(errorChan <-chan error, terminate chan os.Signal, consumer *consumer.Consumer) bool {
+	defer consumer.Close()
+	select {
+	case err := <-errorChan:
 		fmt.Fprintf(os.Stderr, "%s\n", err)
-		close(stop)
-		return
+		return false
+	case <-terminate:
+		return true
 	}
 }
 
-func handleMessages(msgChan <-chan *events.Envelope, stop chan struct{}, terminate chan os.Signal) bool {
-	for {
-		select {
-		case msg := <-msgChan:
-			processEnvelope(msg)
-		case <-stop:
-			return true
-		case <-terminate:
-			return false
+func handleMessages(msgChan <-chan *events.Envelope) {
+	i := 0
+	for msg := range msgChan {
+		i++
+		if i%1000 == 0 {
+			go fmt.Printf(".")
 		}
+		go processEnvelope(msg)
 	}
 }
 
 func processEnvelope(env *events.Envelope) {
-	// filter out non log messages
 	if env.GetEventType() != events.Envelope_LogMessage {
 		return
 	}
 	logMsg := env.GetLogMessage()
 
-	fmt.Printf(".")
-
-	// filter out log messages that don't match our filter string
-	if !bytes.Contains(logMsg.GetMessage(), []byte(messageFilter)) {
-		fmt.Printf("log message: %s did not match filter: %s\n", string(logMsg.GetMessage()), messageFilter)
+	msg := string(logMsg.GetMessage())
+	if !strings.HasPrefix(msg, messagePrefix) {
+		fmt.Printf("log message: %s did not match prefix: %s\n", string(logMsg.GetMessage()), string(messagePrefix))
 		return
 	}
 
-	// regex out the message id
-	match := re.FindStringSubmatch(string(logMsg.GetMessage()))
-	if match == nil {
-		fmt.Printf("regex didn't match: %s\n", string(logMsg.GetMessage()))
-		return
-	}
-	msgId := match[1]
-	id, err := strconv.Atoi(msgId)
-	if err != nil {
-		fmt.Printf("bad message id\n")
+	if len(msg) < sepEnd {
+		fmt.Printf("Cannot parse message %s\n", msg)
 		return
 	}
 
-	// insert message id into the set
-	if counters[*logMsg.AppId] == nil {
-		counters[*logMsg.AppId] = make(map[int]bool)
+	id := Identity{
+		appID: logMsg.GetAppId(),
+		runID: msg[prefixEnd:guidEnd],
 	}
-	counters[*logMsg.AppId][id] = true
+
+	counterLock.Lock()
+	defer counterLock.Unlock()
+	counter, ok := counters[id]
+	if !ok {
+		counter = make(map[string]bool)
+		counters[id] = counter
+	}
+	counter[msg[sepEnd:]] = true
 }
 
 func dumpReport() {
-	fmt.Println("\n\nReport:")
-	for appId, messages := range counters {
+	counterLock.Lock()
+	defer counterLock.Unlock()
+	authToken, err := getAuthToken()
+	if err != nil {
+		authToken = ""
+	}
+	fmt.Println("\nReport:")
+	for id, messages := range counters {
 		var total, max int
 		for msgId, _ := range messages {
-			if msgId >= maxMessage {
+			msgMax, err := strconv.Atoi(msgId)
+			if err != nil {
+				fmt.Printf("Cannot parse message ID %s\n", msgId)
 				continue
 			}
-			if msgId >= max {
-				max = msgId
+			if msgMax > max {
+				max = msgMax
 			}
 			total++
 		}
-		fmt.Printf("guid: %s  app: %s total: %d max: %d\n", appId, getAppName(appId), total, max)
+		fmt.Printf("guid: %s app: %s total: %d max: %d\n", id.runID, getAppName(id.appID, authToken), total, max+1)
 	}
 }
