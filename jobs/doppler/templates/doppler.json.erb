@@ -29,7 +29,6 @@
   <% end %>
 
   "MessageDrainBufferSize": <%= p("doppler.message_drain_buffer_size") %>,
-  "LegacyIncomingMessagesPort": <%= p("doppler.incoming_port") %>,
   "IncomingUDPPort": <%= p("doppler.dropsonde_incoming_port") %>,
   "IncomingTCPPort": <%= p("doppler.incoming_tcp_port") %>,
   <% if_p("doppler.tls.enable") do |_| %>
@@ -60,7 +59,7 @@
     <% if_p("syslog_daemon_config") do |_| %>
     , "Syslog": "vcap.doppler"
     <% end %>
-    <% if_p("doppler.blacklisted_syslog_ranges") do |_| %>
-    , "BlackListIPs": <%= p("doppler.blacklisted_syslog_ranges").to_json %>
+    <% if_p("doppler.blacklisted_syslog_ranges") do |blacklisted_ranges| %>
+    , "BlackListIPs": blacklisted_ranges.to_json
     <% end %>
 }

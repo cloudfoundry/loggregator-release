@@ -1,5 +1,6 @@
 ---
 name: doppler
+
 templates:
   doppler_ctl.erb: bin/doppler_ctl
   doppler.json.erb: config/doppler.json
@@ -109,7 +110,3 @@ properties:
   metron_endpoint.dropsonde_port:
     description: "The port used to emit dropsonde messages to the Metron agent"
     default: 3457
-
-  doppler.incoming_port:
-    description: DEPRECATED
-    default: 3456
