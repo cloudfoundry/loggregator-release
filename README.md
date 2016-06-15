@@ -23,6 +23,7 @@ If you have feedback on Loggregator features that you use, or want, feel free to
 * [Enabling TLS between Metron and Doppler](#enabling-tls-between-metron-and-doppler)
   * [Generating TLS Certificates](#generating-tls-certificates)
   * [Custom TLS Certificate Generation](#custom-tls-certificate-generation)
+* [Enabling TLS communication with etcd](#enabling-tls-between-loggregator-and-etcd)
 * [Deploying via BOSH](#deploying-via-bosh)
 * [Configuring the Firehose](#configuring-the-firehose)
 * [Consuming Log and Metric Data](#consuming-log-and-metric-data)
@@ -228,6 +229,110 @@ servers, please note that the common-names "loggregatorCA" and "metron_agent" ar
 placeholders and can be renamed.
 
 The server certificate must have the common name `doppler`.
+
+### Enabling TLS between Loggregator and etcd
+
+By default, metron, doppler, syslog_drain_binder, and loggregator_trafficcontroller all communicate with etcd over
+http.  To enable TLS mutual auth to etcd, you'll need to generate certificates and update your manifest
+
+**NOTE: Communicating with etcd over TLS is currently experimental, and will have an impact on other components within CloudFoundry. Enable it at your own discretion. The properties discussed below as well as their behavior might change in the future.**
+
+#### etcd
+
+Refer to [etcd-release's guide on Encrypting Traffic](https://github.com/cloudfoundry-incubator/etcd-release#encryption) for etcd's properties.
+
+#### Metron Agent
+
+| Property        | Required                              | Description                                     |
+|-----------------|---------------------------------------|-------------------------------------------------|
+| `loggregator.etcd.require_ssl` | No<br> Default: `false`                   | Enable ssl for all communcation with etcd |
+| `loggregator.etcd.ca_cert`   | Yes if `loggregator.etcd.require_ssl` is set to `true` <br>Default: `""`              | PEM-encoded CA certificate            |
+| `metron_agent.etcd.client_cert`   | Yes if `loggregator.etcd.require_ssl` is set to `true` <br>Default: `""`              | PEM-encoded client certificate            |
+| `metron_agent.etcd.client_key`   | Yes if `loggregator.etcd.require_ssl` is set to `true` <br>Default: `""`              | PEM-encoded client key            |
+
+#### Doppler
+
+| Property        | Required                              | Description                                     |
+|-----------------|---------------------------------------|-------------------------------------------------|
+| `loggregator.etcd.require_ssl` | No<br> Default: `false`                   | Enable ssl for all communcation with etcd |
+| `loggregator.etcd.ca_cert`   | Yes if `loggregator.etcd.require_ssl` is set to `true` <br>Default: `""`              | PEM-encoded CA certificate            |
+| `doppler.etcd.client_cert`   | Yes if `loggregator.etcd.require_ssl` is set to `true` <br>Default: `""`              | PEM-encoded client certificate            |
+| `doppler.etcd.client_key`   | Yes if `loggregator.etcd.require_ssl` is set to `true` <br>Default: `""`              | PEM-encoded client key            |
+
+#### Traffic Controller
+
+| Property        | Required                              | Description                                     |
+|-----------------|---------------------------------------|-------------------------------------------------|
+| `loggregator.etcd.require_ssl` | No<br> Default: `false`                   | Enable ssl for all communcation with etcd |
+| `loggregator.etcd.ca_cert`   | Yes if `loggregator.etcd.require_ssl` is set to `true` <br>Default: `""`              | PEM-encoded CA certificate            |
+| `traffic_controller.etcd.client_cert`   | Yes if `loggregator.etcd.require_ssl` is set to `true` <br>Default: `""`              | PEM-encoded client certificate            |
+| `traffic_controller.etcd.client_key`   | Yes if `loggregator.etcd.require_ssl` is set to `true` <br>Default: `""`              | PEM-encoded client key            |
+
+#### Syslog Drain Binder
+
+| Property        | Required                              | Description                                     |
+|-----------------|---------------------------------------|-------------------------------------------------|
+| `loggregator.etcd.require_ssl` | No<br> Default: `false`                   | Enable ssl for all communcation with etcd |
+| `loggregator.etcd.ca_cert`   | Yes if `loggregator.etcd.require_ssl` is set to `true` <br>Default: `""`              | PEM-encoded CA certificate            |
+| `syslog_drain_binder.etcd.client_cert`   | Yes if `loggregator.etcd.require_ssl` is set to `true` <br>Default: `""`              | PEM-encoded client certificate            |
+| `syslog_drain_binder.etcd.client_key`   | Yes if `loggregator.etcd.require_ssl` is set to `true` <br>Default: `""`              | PEM-encoded client key            |
+
+An example manifest is given below:
+
+```yaml
+  loggregator:
+    etcd:
+      require_ssl: true
+      ca_cert: |
+        -----BEGIN CERTIFICATE-----
+        ETCD CA CERTIFICATE
+        -----END CERTIFICATE-----
+      
+
+  metron_agent:
+    etcd:
+      client_cert: |
+        -----BEGIN CERTIFICATE-----
+        METRON AGENT CERTIFICATE
+        -----END CERTIFICATE-----
+      client_key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        METRON AGENT KEY
+        -----END RSA PRIVATE KEY-----
+
+  doppler:
+    etcd:
+      client_cert: |
+        -----BEGIN CERTIFICATE-----
+        DOPPLER CERTIFICATE
+        -----END CERTIFICATE-----
+      client_key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        DOPPLER KEY
+        -----END RSA PRIVATE KEY-----
+
+  traffic_controller:
+    etcd:
+      client_cert: |
+        -----BEGIN CERTIFICATE-----
+        TRAFFIC CONTROLLER CERTIFICATE
+        -----END CERTIFICATE-----
+      client_key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        TRAFFIC CONTROLLER KEY
+        -----END RSA PRIVATE KEY-----
+
+  syslog_drain_binder:
+    etcd:
+      client_cert: |
+        -----BEGIN CERTIFICATE-----
+        SYSLOG DRAIN BINDER CERTIFICATE
+        -----END CERTIFICATE-----
+      client_key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        SYSLOG DRAIN BINDER KEY
+        -----END RSA PRIVATE KEY-----
+```
 
 ### Deploying via BOSH
 
