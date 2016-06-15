@@ -36,7 +36,7 @@ var (
 	password       = os.Getenv("CF_PASSWORD")
 	messagePrefix  = os.Getenv("MESSAGE_PREFIX")
 
-	counterWg              sync.WaitGroup
+	counterWG              sync.WaitGroup
 	counterLock            sync.Mutex
 	counters               = make(map[Identity]map[string]bool)
 	firehoseSubscriptionId = func() string {
@@ -60,8 +60,11 @@ func main() {
 	start := time.Now()
 	fmt.Println("start time:", start)
 	defer func() {
+		fmt.Println("\n\nJoining remaining goroutines")
+		counterWG.Wait()
+		fmt.Println("Done Joining")
 		end := time.Now()
-		fmt.Println("\n\nend time:", end)
+		fmt.Println("end time:", end)
 		fmt.Println("duration:", end.Sub(start))
 		dumpReport()
 	}()
@@ -81,10 +84,10 @@ func main() {
 			continue
 		}
 		fmt.Println("got new oauth token")
-		msgChan, errorChan := consumer.Firehose(firehoseSubscriptionId, authToken)
+		msgs, errors := consumer.FirehoseWithoutReconnect(firehoseSubscriptionId, authToken)
 
-		go handleMessages(msgChan)
-		done := handleErrors(errorChan, terminate, consumer)
+		go handleMessages(msgs)
+		done := handleErrors(errors, terminate, consumer)
 		if done {
 			return
 		}
@@ -158,10 +161,10 @@ func getAuthToken() (string, error) {
 	return um.AccessToken, nil
 }
 
-func handleErrors(errorChan <-chan error, terminate chan os.Signal, consumer *consumer.Consumer) bool {
+func handleErrors(errors <-chan error, terminate chan os.Signal, consumer *consumer.Consumer) bool {
 	defer consumer.Close()
 	select {
-	case err := <-errorChan:
+	case err := <-errors:
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		return false
 	case <-terminate:
@@ -169,18 +172,20 @@ func handleErrors(errorChan <-chan error, terminate chan os.Signal, consumer *co
 	}
 }
 
-func handleMessages(msgChan <-chan *events.Envelope) {
+func handleMessages(msgs <-chan *events.Envelope) {
 	i := 0
-	for msg := range msgChan {
+	for msg := range msgs {
 		i++
 		if i%1000 == 0 {
 			go fmt.Printf(".")
 		}
+		counterWG.Add(1)
 		go processEnvelope(msg)
 	}
 }
 
 func processEnvelope(env *events.Envelope) {
+	defer counterWG.Done()
 	if env.GetEventType() != events.Envelope_LogMessage {
 		return
 	}
@@ -222,10 +227,10 @@ func dumpReport() {
 	fmt.Println("\nReport:")
 	for id, messages := range counters {
 		var total, max int
-		for msgId, _ := range messages {
-			msgMax, err := strconv.Atoi(msgId)
+		for msgID := range messages {
+			msgMax, err := strconv.Atoi(msgID)
 			if err != nil {
-				fmt.Printf("Cannot parse message ID %s\n", msgId)
+				fmt.Printf("Cannot parse message ID %s\n", msgID)
 				continue
 			}
 			if msgMax > max {

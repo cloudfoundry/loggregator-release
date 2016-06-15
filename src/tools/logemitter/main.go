@@ -6,12 +6,13 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/nu7hatch/gouuid"
 )
 
 const delay = time.Millisecond
 
 func main() {
-	// create listener so cf know's it's running
 	go func() {
 		http.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
 			rw.WriteHeader(200)
@@ -22,14 +23,12 @@ func main() {
 		}
 	}()
 
-	// generate guid
 	uuid, err := uuid.NewV4()
 	if err != nil {
 		log.Fatal(err)
 	}
 	guid := uuid.String()
 
-	// emit logs with guid and count
 	for i := 0; ; i++ {
 		fmt.Printf("logemitter guid: %s msg: %d\n", guid, i)
 		time.Sleep(delay)

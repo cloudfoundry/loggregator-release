@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 
 export API_ADDR="http://api.pecan.cf-app.com"
 export DOPPLER_ADDR=`cf curl /v2/info | jq --raw-output '.doppler_logging_endpoint'`
