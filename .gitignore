@@ -27,3 +27,23 @@ dev_releases
 .dev_builds
 loggregator-certs
 config/private.yml
+
+# atom golang dependecies
+src/github.com/nsf/
+src/github.com/alecthomas/
+src/github.com/client9/
+src/github.com/golang/
+src/github.com/google/
+src/github.com/gordonklaus/
+src/github.com/jgautheron/
+src/github.com/kisielk/
+src/github.com/mdempsky/
+src/github.com/mibk/
+src/github.com/mvdan/
+src/github.com/opennota/
+src/github.com/rogpeppe/
+src/github.com/tsenart/
+src/github.com/walle/
+src/golang.org/
+src/gopkg.in/
+src/honnef.co/
