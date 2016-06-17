@@ -5,49 +5,76 @@ You can emit logs and metrics into the Loggregator subsystem from a service or o
 #Prerequisites
 
 You need a CF deployment. From that deployment you need the following:
-- ETCD IPs to use to retrieve doppler IPs
+- ETCD IPs to use to retrieve Doppler addresses
 
 You need a service being deployed by bosh. You will modify the deployment manifest to pull in the Loggregator bosh release, 
 and then deploy the Metron agent from that release in your service deployment. 
 
 #Steps to Deploy
 
-- Get the latest loggregator release from bosh.io
+- Get the latest [loggregator release from bosh.io](http://bosh.io/releases/github.com/cloudfoundry/loggregator)
 - Make manifest changes in your deployment to include the loggregator release and get the metron_agent job from Loggregator
 
 Manifest changes:
 - Add the loggregator release into the manifest
-```diff
-+- name: loggregator
-+  version: latest
+```yaml
+ - name: loggregator
+   version: latest
 ```
 
 - For **each job** that will emit logs or metrics, embed the metron_agent section into the manifest
 
-```diff
-+  - name: metron_agent
-+    release: loggregator
+```yaml
+ - name: metron_agent
+   release: loggregator
 ```
 
 - Insert the overall metron properties into the manifest. 
- - Note that setting ```prefered_protocol``` to ```null``` will cause the transport layer to use UDP. 
+ - Note that setting ```protocols``` to ```null``` will cause the transport layer to use UDP. 
  This is not recommended because of the possibility for log and metric loss. It is recommended to 
- set ```preferred_protocol``` to TLS, adding appropriate certificates, using the instructions found [here](fill in)
+ set ```protocols``` to TLS, adding appropriate certificates. Follow [these instructions](https://github.com/cloudfoundry/loggregator#enabling-tls-between-metron-and-doppler).
  
-```diff
+```yaml
 properties:
-+  metron_agent:
-+    zone: z1
-+    deployment: redis
-+    preferred_protocol: null
-+    shared_secret: "loggregator-secret"
-+    tls_client:
-+      cert: null
-+      key: null
-+  loggregator:
-+    etcd:
-+      machines:
-+      - 10.244.0.42
+ metron_agent:
+   zone: z1
+   deployment: redis
+   preferred_protocol: null
+   shared_secret: "loggregator-secret"
+   tls_client:
+     cert: null
+     key: null
+ loggregator:
+   etcd:
+     machines:
+     - 10.244.0.42
+
+```
+
+## CF etcd in TLS mode
+If CF's etcd cluster is running in TLS mode, the following properties need to be added to the manifest in order for the Metron Agent to communicate with the CF etcd. The properties above should ideally be pulled in from the CF manifest.
+
+**NOTE: TLS support is currently experimental. Enable it at your own discretion. The properties discussed below as well as their behavior might change in the future.**
+
+```yaml
+properties:
+ metron_agent:
+   etcd:
+     client_cert: |
+        -----BEGIN CERTIFICATE-----
+        METRON AGENT CERTIFICATE
+        -----END CERTIFICATE-----
+     client_key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        METRON AGENT KEY
+        -----END RSA PRIVATE KEY-----
+ loggregator:
+   etcd:
+     require_ssl: true
+     ca_cert: |
+      -----BEGIN CERTIFICATE-----
+      ETCD CA CERTIFICATE
+      -----END CERTIFICATE----
 ```
 
 #Use
