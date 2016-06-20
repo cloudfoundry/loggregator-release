@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -137,6 +138,8 @@ func getAuthToken() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	basicAuthToken := base64.StdEncoding.EncodeToString([]byte(clientID + ":" + clientSecret))
+	r.Header.Set("Authorization", "Basic "+basicAuthToken)
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := http.DefaultClient.Do(r)
