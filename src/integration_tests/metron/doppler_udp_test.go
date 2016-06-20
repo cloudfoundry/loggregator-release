@@ -28,7 +28,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("communicating with doppler over UDP", func() {
+var _ = XDescribe("communicating with doppler over UDP", func() {
 	const (
 		sharedSecret     = "very secret"
 		availabilityZone = "some availability zone"

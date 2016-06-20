@@ -78,7 +78,8 @@ type Config struct {
 	TLSConfig TLSConfig
 
 	// DEPRECATED
-	PreferredProtocol string
+	LoggregatorDropsondePort int
+	PreferredProtocol        string
 }
 
 func ParseConfig(configFile string) (*Config, error) {
