@@ -10,7 +10,15 @@ import (
 	"github.com/nu7hatch/gouuid"
 )
 
-const delay = time.Millisecond
+var delay time.Duration
+
+func init() {
+	var err error
+	delay, err = time.ParseDuration(os.Getenv("DELAY"))
+	if err != nil {
+		delay = time.Millisecond
+	}
+}
 
 func main() {
 	go func() {
