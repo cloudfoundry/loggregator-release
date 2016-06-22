@@ -20,7 +20,6 @@ type Config struct {
 
 	JobName                string
 	Index                  string
-	Zone                   string
 	Syslog                 string
 	ApiHost                string
 	DopplerPort            uint32

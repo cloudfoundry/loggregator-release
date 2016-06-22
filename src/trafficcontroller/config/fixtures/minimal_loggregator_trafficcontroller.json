@@ -2,7 +2,6 @@
     "OutgoingDropsondePort": 4566,
     "IncomingPort": 8765,
     "SkipCertVerify": true,
-    "Zone": "z1",
     "Host": "0.0.0.0",
     "ApiHost": "https://vcap.me",
     "SystemDomain": "vcap.me"
