@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"integration_tests/runners"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -30,14 +32,19 @@ var (
 	etcdRunner     *etcdstorerunner.ETCDClusterRunner
 	etcdAdapter    storeadapter.StoreAdapter
 	localIPAddress string
+
+	etcdPath    string
+	dopplerPath string
+	metronPath  string
 )
 
 var _ = SynchronizedBeforeSuite(func() []byte {
-	metronPath, err := gexec.Build("metron", "-race")
+	// TODO: rip this out
+	metronPathOld, err := gexec.Build("metron", "-race")
 	Expect(err).ShouldNot(HaveOccurred())
-	return []byte(metronPath)
+	return []byte(metronPathOld)
 }, func(path []byte) {
-	metronPath := string(path)
+	metronPathOld := string(path)
 
 	var err error
 	tmpdir, err = ioutil.TempDir("", "metronintg")
@@ -54,7 +61,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	waitOnURL(fmt.Sprintf("http://127.0.0.1:%d", etcdPort))
 	port = 51000 + config.GinkgoConfig.ParallelNode*10
 	metronRunner = &runners.MetronRunner{
-		Path:          metronPath,
+		Path:          metronPathOld,
 		TempDir:       tmpdir,
 		LegacyPort:    port,
 		MetronPort:    port + 1,
@@ -65,6 +72,21 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 		KeyFile:  "../fixtures/client.key",
 		CAFile:   "../fixtures/loggregator-ca.crt",
 	}
+
+	{
+		var err error
+
+		rand.Seed(time.Now().UnixNano())
+
+		metronPath, err = gexec.Build("metron", "-race")
+		Expect(err).ToNot(HaveOccurred())
+
+		dopplerPath, err = gexec.Build("doppler", "-race")
+		Expect(err).ToNot(HaveOccurred())
+
+		etcdPath, err = gexec.Build("github.com/coreos/etcd", "-race")
+		Expect(err).ToNot(HaveOccurred())
+	}
 })
 
 var _ = SynchronizedAfterSuite(func() {
@@ -74,6 +96,12 @@ var _ = SynchronizedAfterSuite(func() {
 	os.RemoveAll(tmpdir)
 }, func() {
 	gexec.CleanupBuildArtifacts()
+
+	{
+		os.Remove(etcdPath)
+		os.Remove(dopplerPath)
+		os.Remove(metronPath)
+	}
 })
 
 var _ = BeforeEach(func() {
