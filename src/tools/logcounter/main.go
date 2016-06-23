@@ -36,6 +36,7 @@ var (
 	username       = os.Getenv("CF_USERNAME")
 	password       = os.Getenv("CF_PASSWORD")
 	messagePrefix  = os.Getenv("MESSAGE_PREFIX")
+	subscriptionId = os.Getenv("SUBSCRIPTION_ID")
 
 	counterWG              sync.WaitGroup
 	counterLock            sync.Mutex
@@ -85,6 +86,9 @@ func main() {
 			continue
 		}
 		fmt.Println("got new oauth token")
+		if subscriptionId != "" {
+			firehoseSubscriptionId = subscriptionId
+		}
 		msgs, errors := consumer.FirehoseWithoutReconnect(firehoseSubscriptionId, authToken)
 
 		go handleMessages(msgs)

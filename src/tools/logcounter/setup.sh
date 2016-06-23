@@ -14,5 +14,7 @@ read CF_USERNAME
 echo -n "CF Password: "
 read -s CF_PASSWORD
 echo
-export CF_USERNAME CF_PASSWORD
+echo -n "Subscription Id: "
+read SUBSCRIPTION_ID
+export CF_USERNAME CF_PASSWORD SUBSCRIPTION_ID
 export MESSAGE_PREFIX="logemitter"
