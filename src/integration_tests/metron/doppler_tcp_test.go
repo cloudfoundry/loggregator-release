@@ -26,7 +26,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("communicating with doppler over UDP", func() {
+var _ = Describe("communicating with doppler over TCP", func() {
 	const (
 		sharedSecret     = "very secret"
 		availabilityZone = "some availability zone"
@@ -93,7 +93,7 @@ var _ = Describe("communicating with doppler over UDP", func() {
 		dopplerOutgoingPort := rand.Intn(55536) + 10000
 		Expect(err).ToNot(HaveOccurred())
 		dopplerConf := dopplerConfig.Config{
-			IncomingUDPPort:              uint32(dopplerPort),
+			IncomingTCPPort:              uint32(dopplerPort),
 			OutgoingPort:                 uint32(dopplerOutgoingPort),
 			EtcdUrls:                     []string{etcdClientURL},
 			MaxRetainedLogMessages:       10,
@@ -146,10 +146,12 @@ var _ = Describe("communicating with doppler over UDP", func() {
 			IncomingUDPPort:                  metronPort,
 			EtcdUrls:                         []string{etcdClientURL},
 			SharedSecret:                     sharedSecret,
-			Protocols:                        metronConfig.Protocols([]metronConfig.Protocol{"udp"}),
+			Protocols:                        metronConfig.Protocols([]metronConfig.Protocol{"tcp"}),
 			MetricBatchIntervalMilliseconds:  10,
 			RuntimeStatsIntervalMilliseconds: 10,
 			EtcdMaxConcurrentRequests:        10,
+			TCPBatchIntervalMilliseconds:     100,
+			TCPBatchSizeBytes:                10240,
 		}
 
 		metronCfgFile, err := ioutil.TempFile("", "metron-config")
@@ -161,7 +163,7 @@ var _ = Describe("communicating with doppler over UDP", func() {
 		err = metronCfgFile.Close()
 		Expect(err).ToNot(HaveOccurred())
 
-		metronCommand := exec.Command(metronPath, "--config", metronCfgFile.Name())
+		metronCommand := exec.Command(metronPath, "--debug", "--config", metronCfgFile.Name())
 		metronCommand.Stdout = gexec.NewPrefixedWriter("[o][metron]", GinkgoWriter)
 		metronCommand.Stderr = gexec.NewPrefixedWriter("[e][metron]", GinkgoWriter)
 		metronSession, err := gexec.Start(metronCommand, GinkgoWriter, GinkgoWriter)
@@ -186,7 +188,7 @@ var _ = Describe("communicating with doppler over UDP", func() {
 		go func() {
 			err = dropsonde.Initialize(fmt.Sprintf("localhost:%d", metronPort), "test-origin")
 			Expect(err).NotTo(HaveOccurred())
-			// since UDP is fire and forget we need to send many messages in the hope that at least one makes it through the system
+
 			for i := 0; i < 100; i++ {
 				err = logs.SendAppLog("test-app-id", "An event happened!", "test-app-id", "0")
 				Expect(err).NotTo(HaveOccurred())
