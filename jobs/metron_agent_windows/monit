@@ -1,0 +1,10 @@
+{
+  "processes": [
+    {
+      "name": "metron_agent",
+      "executable": "powershell",
+      "args": ["C:\\var\\vcap\\jobs\\metron_agent_windows\\bin\\metron_agent_ctl.ps1"]
+    }
+  ]
+}
+
