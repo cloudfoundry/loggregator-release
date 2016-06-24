@@ -31,8 +31,8 @@ var _ = Describe("ServeHTTP", func() {
 	)
 
 	BeforeEach(func() {
-		auth = LogAuthorizer{Result: AuthorizerResult{Authorized: true}}
-		adminAuth = AdminAuthorizer{Result: AuthorizerResult{Authorized: true}}
+		auth = LogAuthorizer{Result: AuthorizerResult{Status: http.StatusOK}}
+		adminAuth = AdminAuthorizer{Result: AuthorizerResult{Status: http.StatusOK}}
 
 		channelGroupConnector = &fakeChannelGroupConnector{messages: make(chan []byte, 10)}
 
@@ -139,9 +139,51 @@ var _ = Describe("ServeHTTP", func() {
 			})
 		})
 
+		Context("if the app id is forbidden", func() {
+			It("returns a not found status", func() {
+				auth.Result = AuthorizerResult{Status: http.StatusForbidden, ErrorMessage: http.StatusText(http.StatusForbidden)}
+
+				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
+				req.Header.Add("Authorization", "token")
+
+				proxy.ServeHTTP(recorder, req)
+
+				Expect(recorder.Code).To(Equal(http.StatusNotFound))
+				Expect(recorder.Body.String()).To(Equal(http.StatusText(http.StatusNotFound)))
+			})
+		})
+
+		Context("if the app id is not found", func() {
+			It("returns a not found status", func() {
+				auth.Result = AuthorizerResult{Status: http.StatusNotFound, ErrorMessage: http.StatusText(http.StatusNotFound)}
+
+				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
+				req.Header.Add("Authorization", "token")
+
+				proxy.ServeHTTP(recorder, req)
+
+				Expect(recorder.Code).To(Equal(http.StatusNotFound))
+				Expect(recorder.Body.String()).To(Equal(http.StatusText(http.StatusNotFound)))
+			})
+		})
+
+		Context("if any other error occurs", func() {
+			It("returns an Internal Server Error", func() {
+				auth.Result = AuthorizerResult{Status: http.StatusInternalServerError, ErrorMessage: "some bad error"}
+
+				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
+				req.Header.Add("Authorization", "token")
+
+				proxy.ServeHTTP(recorder, req)
+
+				Expect(recorder.Code).To(Equal(http.StatusInternalServerError))
+				Expect(recorder.Body.String()).To(Equal(http.StatusText(http.StatusInternalServerError)))
+			})
+		})
+
 		Context("if authorization fails", func() {
 			It("returns an unauthorized status and sets the WWW-Authenticate header", func() {
-				auth.Result = AuthorizerResult{Authorized: false, ErrorMessage: "Error: Invalid authorization"}
+				auth.Result = AuthorizerResult{Status: http.StatusUnauthorized, ErrorMessage: "Error: Invalid authorization"}
 
 				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
 				req.Header.Add("Authorization", "token")
@@ -153,11 +195,11 @@ var _ = Describe("ServeHTTP", func() {
 
 				Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
 				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
-				Expect(recorder.Body.String()).To(Equal("You are not authorized. Error: Invalid authorization"))
+				Expect(recorder.Body.String()).To(Equal(http.StatusText(http.StatusUnauthorized)))
 			})
 
 			It("It does not attempt to connect to doppler", func() {
-				auth.Result = AuthorizerResult{Authorized: false, ErrorMessage: "Authorization Failed"}
+				auth.Result = AuthorizerResult{Status: http.StatusUnauthorized, ErrorMessage: "Authorization Failed"}
 
 				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
 				req.Header.Add("Authorization", "token")
@@ -170,7 +212,7 @@ var _ = Describe("ServeHTTP", func() {
 		})
 
 		It("can read the authorization information from a cookie", func() {
-			auth.Result = AuthorizerResult{Authorized: false, ErrorMessage: "Authorization Failed"}
+			auth.Result = AuthorizerResult{Status: http.StatusUnauthorized, ErrorMessage: "Authorization Failed"}
 
 			req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
 
@@ -251,7 +293,7 @@ var _ = Describe("ServeHTTP", func() {
 			})
 
 			It("returns an unauthorized status and sets the WWW-Authenticate header if authorization fails", func() {
-				adminAuth.Result = AuthorizerResult{Authorized: false, ErrorMessage: "Error: Invalid authorization"}
+				adminAuth.Result = AuthorizerResult{Status: http.StatusUnauthorized, ErrorMessage: "Error: Invalid authorization"}
 
 				req, _ := http.NewRequest("GET", "/firehose/abc-123", nil)
 				req.Header.Add("Authorization", "token")

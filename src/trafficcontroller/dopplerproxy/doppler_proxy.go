@@ -137,13 +137,25 @@ func (proxy *Proxy) serveAppLogs(paths []string, writer http.ResponseWriter, req
 		return
 	}
 
-	authorized, err := proxy.logAuthorize(authToken, appId, proxy.logger)
+	status, err := proxy.logAuthorize(authToken, appId, proxy.logger)
+	if status != http.StatusOK {
+		proxy.logger.Warndf(map[string]interface{}{
+			"status": status,
+			"err":    err,
+		}, "auth token not authorized to access appId [%s].", appId)
+		switch status {
+		case http.StatusUnauthorized:
+			writer.WriteHeader(status)
+			writer.Header().Set("WWW-Authenticate", "Basic")
+		case http.StatusForbidden, http.StatusNotFound:
+			status = http.StatusNotFound
+		default:
+			status = http.StatusInternalServerError
+		}
 
-	if !authorized {
-		writer.Header().Set("WWW-Authenticate", "Basic")
-		writer.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprintf(writer, "You are not authorized. %s", err.Error())
-		proxy.logger.Warnf("auth token not authorized to access appId [%s].", appId)
+		writer.WriteHeader(status)
+		writer.Write([]byte(http.StatusText(status)))
+
 		return
 	}
 
