@@ -1,7 +1,6 @@
 package metron_test
 
 import (
-	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -33,29 +32,47 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	wg.Add(3)
 
 	go func() {
+		// TODO: waiting on pull request with gomega to get gexec.Build to not
+		// data race: https://github.com/onsi/gomega/pull/159. Once the PR is
+		// accepted delete these two lines and uncomment the ones below.
+		mu.Lock()
+		defer mu.Unlock()
+
 		defer wg.Done()
 		metronPath, err := gexec.Build("metron", "-race")
 		Expect(err).ToNot(HaveOccurred())
-		mu.Lock()
-		defer mu.Unlock()
+		//mu.Lock()
+		//defer mu.Unlock()
 		buildPaths[0] = metronPath
 	}()
 
 	go func() {
+		// TODO: waiting on pull request with gomega to get gexec.Build to not
+		// data race: https://github.com/onsi/gomega/pull/159. Once the PR is
+		// accepted delete these two lines and uncomment the ones below.
+		mu.Lock()
+		defer mu.Unlock()
+
 		defer wg.Done()
 		dopplerPath, err := gexec.Build("doppler", "-race")
 		Expect(err).ToNot(HaveOccurred())
-		mu.Lock()
-		defer mu.Unlock()
+		//mu.Lock()
+		//defer mu.Unlock()
 		buildPaths[1] = dopplerPath
 	}()
 
 	go func() {
+		// TODO: waiting on pull request with gomega to get gexec.Build to not
+		// data race: https://github.com/onsi/gomega/pull/159. Once the PR is
+		// accepted delete these two lines and uncomment the ones below.
+		mu.Lock()
+		defer mu.Unlock()
+
 		defer wg.Done()
 		etcdPath, err := gexec.Build("github.com/coreos/etcd", "-race")
 		Expect(err).ToNot(HaveOccurred())
-		mu.Lock()
-		defer mu.Unlock()
+		//mu.Lock()
+		//defer mu.Unlock()
 		buildPaths[2] = etcdPath
 	}()
 
@@ -69,7 +86,5 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 })
 
 var _ = SynchronizedAfterSuite(func() {}, func() {
-	os.Remove(etcdPath)
-	os.Remove(dopplerPath)
-	os.Remove(metronPath)
+	gexec.CleanupBuildArtifacts()
 })
