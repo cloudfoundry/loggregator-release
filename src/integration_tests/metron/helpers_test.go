@@ -1,4 +1,4 @@
-package integration_test
+package metron_test
 
 import (
 	"crypto/hmac"
@@ -30,9 +30,9 @@ import (
 )
 
 const (
-	sharedSecret     = "very secret"
-	availabilityZone = "some availability zone"
-	jobName          = "integration test"
+	sharedSecret     = "test-shared-secret"
+	availabilityZone = "test-availability-zone"
+	jobName          = "test-job-name"
 	jobIndex         = "42"
 )
 

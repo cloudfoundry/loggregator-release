@@ -1,4 +1,4 @@
-package integration_test
+package metron_test
 
 import (
 	dopplerconfig "doppler/config"

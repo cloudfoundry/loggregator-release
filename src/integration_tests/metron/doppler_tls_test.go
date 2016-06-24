@@ -1,4 +1,4 @@
-package integration_test
+package metron_test
 
 import (
 	"fmt"
@@ -11,13 +11,6 @@ import (
 )
 
 var _ = Describe("communicating with doppler over TLS", func() {
-	const (
-		sharedSecret     = "very secret"
-		availabilityZone = "some availability zone"
-		jobName          = "integration test"
-		jobIndex         = "42"
-	)
-
 	It("forwards messages", func() {
 		etcdCleanup, etcdClientURL := setupEtcd()
 		defer etcdCleanup()
