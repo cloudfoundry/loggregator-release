@@ -1,9 +1,9 @@
 ---
-blob/golang/go1.6.1.linux-amd64.tar.gz:
-  object_id: 1a67b0f1-01f4-4f8b-b4af-31111f02b0ba
-  sha: c73492474dcc7a233772d27e948b74468d9f1849
-  size: 84824395
 golang/go1.5.4.windows-amd64.zip:
   object_id: 4782f458-288d-4606-8498-cc2efaff8d70
   sha: 3cf7b469e08a68246e69a107e3ddbb5571b0919b
   size: 86769706
+golang/go1.6.1.linux-amd64.tar.gz:
+  object_id: 43b5b355-b0a3-49c7-8e31-4a17aaeb60e5
+  sha: c73492474dcc7a233772d27e948b74468d9f1849
+  size: 84824395
