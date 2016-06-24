@@ -1,5 +1,5 @@
 ---
-name: golang1.5-windows
+name: golang1.6-windows
 
 dependencies: []
 
