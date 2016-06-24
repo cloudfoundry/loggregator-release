@@ -22,18 +22,16 @@ var _ = Describe("communicating with doppler over TLS", func() {
 		err := dropsonde.Initialize(fmt.Sprintf("localhost:%d", metronPort), "test-origin")
 		Expect(err).NotTo(HaveOccurred())
 
-		By("sending messages into metron")
+		By("sending a message into metron")
 		sent := make(chan struct{})
 		go func() {
 			defer close(sent)
-			for i := 0; i < 100; i++ {
-				err := logs.SendAppLog("test-app-id", "An event happened!", "test-app-id", "0")
-				Expect(err).NotTo(HaveOccurred())
-			}
+			err := logs.SendAppLog("test-app-id", "An event happened!", "test-app-id", "0")
+			Expect(err).NotTo(HaveOccurred())
 		}()
 		<-sent
 
-		By("reading messages from doppler")
+		By("reading a message from doppler")
 		Eventually(func() ([]byte, error) {
 			c, _, err := websocket.DefaultDialer.Dial(fmt.Sprintf("ws://localhost:%d/apps/test-app-id/recentlogs", dopplerOutgoingPort), nil)
 			if err != nil {
