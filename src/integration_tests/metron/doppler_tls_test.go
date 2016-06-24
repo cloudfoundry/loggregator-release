@@ -6,18 +6,17 @@ import (
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/logs"
 	"github.com/gorilla/websocket"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("communicating with doppler over UDP", func() {
+var _ = Describe("communicating with doppler over TLS", func() {
 	It("forwards messages", func() {
 		etcdCleanup, etcdClientURL := setupEtcd()
 		defer etcdCleanup()
 		dopplerCleanup, dopplerOutgoingPort := setupDoppler(etcdClientURL)
 		defer dopplerCleanup()
-		metronCleanup, metronPort := setupMetron(etcdClientURL, "udp")
+		metronCleanup, metronPort := setupMetron(etcdClientURL, "tls")
 		defer metronCleanup()
 
 		err := dropsonde.Initialize(fmt.Sprintf("localhost:%d", metronPort), "test-origin")
@@ -34,11 +33,11 @@ var _ = Describe("communicating with doppler over UDP", func() {
 
 		By("reading a message from doppler")
 		Eventually(func() ([]byte, error) {
-			wsURL := fmt.Sprintf("ws://localhost:%d/apps/test-app-id/recentlogs", dopplerOutgoingPort)
-			c, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+			c, _, err := websocket.DefaultDialer.Dial(fmt.Sprintf("ws://localhost:%d/apps/test-app-id/recentlogs", dopplerOutgoingPort), nil)
 			if err != nil {
 				return []byte{}, err
 			}
+
 			_, message, err := c.ReadMessage()
 			if err != nil {
 				return []byte{}, err
