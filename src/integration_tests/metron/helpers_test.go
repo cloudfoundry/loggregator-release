@@ -5,18 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"strings"
-	"time"
 
 	dopplerConfig "doppler/config"
 	metronConfig "metron/config"
 
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
@@ -27,16 +26,28 @@ const (
 	availabilityZone = "test-availability-zone"
 	jobName          = "test-job-name"
 	jobIndex         = "42"
+
+	portRangeStart       = 55000
+	portRangeCoefficient = 100
+	etcdPortOffset       = iota
+	etcdPeerPortOffset
+	dopplerUDPPortOffset
+	dopplerTCPPortOffset
+	dopplerTLSPortOffset
+	dopplerOutgoingPortOffset
+	metronPortOffset
 )
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
+func getPort(offset int) int {
+	return config.GinkgoConfig.ParallelNode*portRangeCoefficient + portRangeStart + offset
 }
 
 func setupEtcd() (func(), string) {
 	By("starting etcd")
-	etcdPort := rand.Intn(55536) + 10000
+	etcdPort := getPort(etcdPortOffset)
+	etcdPeerPort := getPort(etcdPeerPortOffset)
 	etcdClientURL := fmt.Sprintf("http://localhost:%d", etcdPort)
+	etcdPeerURL := fmt.Sprintf("http://localhost:%d", etcdPeerPort)
 	etcdDataDir, err := ioutil.TempDir("", "etcd-data")
 	Expect(err).ToNot(HaveOccurred())
 
@@ -44,6 +55,7 @@ func setupEtcd() (func(), string) {
 		etcdPath,
 		"--data-dir", etcdDataDir,
 		"--listen-client-urls", etcdClientURL,
+		"--listen-peer-urls", etcdPeerURL,
 		"--advertise-client-urls", etcdClientURL,
 	)
 	etcdSession, err := gexec.Start(
@@ -78,10 +90,10 @@ func setupEtcd() (func(), string) {
 
 func setupDoppler(etcdClientURL string) (func(), int) {
 	By("starting doppler")
-	dopplerUDPPort := rand.Intn(55536) + 10000
-	dopplerTCPPort := rand.Intn(55536) + 10000
-	dopplerTlsPort := rand.Intn(55536) + 10000
-	dopplerOutgoingPort := rand.Intn(55536) + 10000
+	dopplerUDPPort := getPort(dopplerUDPPortOffset)
+	dopplerTCPPort := getPort(dopplerTCPPortOffset)
+	dopplerTLSPort := getPort(dopplerTLSPortOffset)
+	dopplerOutgoingPort := getPort(dopplerOutgoingPortOffset)
 
 	dopplerConf := dopplerConfig.Config{
 		IncomingUDPPort:    uint32(dopplerUDPPort),
@@ -90,7 +102,7 @@ func setupDoppler(etcdClientURL string) (func(), int) {
 		EtcdUrls:           []string{etcdClientURL},
 		EnableTLSTransport: true,
 		TLSListenerConfig: dopplerConfig.TLSListenerConfig{
-			Port:     uint32(dopplerTlsPort),
+			Port:     uint32(dopplerTLSPort),
 			CertFile: "../fixtures/server.crt",
 			KeyFile:  "../fixtures/server.key",
 			CAFile:   "../fixtures/loggregator-ca.crt",
@@ -144,7 +156,7 @@ func setupDoppler(etcdClientURL string) (func(), int) {
 func setupMetron(etcdClientURL, proto string) (func(), int) {
 	By("starting metron")
 	protocols := []metronConfig.Protocol{metronConfig.Protocol(proto)}
-	metronPort := rand.Intn(55536) + 10000
+	metronPort := getPort(metronPortOffset)
 	metronConf := metronConfig.Config{
 		Deployment:                       "deployment",
 		Zone:                             availabilityZone,
