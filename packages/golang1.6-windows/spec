@@ -4,4 +4,4 @@ name: golang1.5-windows
 dependencies: []
 
 files:
-- golang/go1.5.4.windows-amd64.zip
+- golang/go1.6.2.windows-amd64.zip
