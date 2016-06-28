@@ -1,0 +1,8 @@
+{
+  "incomingPort":1234,
+  "infoPort": 65433,
+  "debugPort": 65434,
+  "metronPort":4321,
+  "logLevel": "DEBUG",
+  "syslog": "vcap.boshhmforwarder"
+}
