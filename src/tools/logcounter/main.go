@@ -151,6 +151,8 @@ func getAuthToken() (string, error) {
 		return "", err
 	}
 	if resp.StatusCode != http.StatusOK {
+		errout, _ := ioutil.ReadAll(resp.Body)
+		fmt.Printf("StatuCode: %d\n Error: %s\n", resp.StatusCode, errout)
 		return "", errors.New("response not 200")
 	}
 
