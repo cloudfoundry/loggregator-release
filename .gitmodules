@@ -82,3 +82,6 @@
 [submodule "src/github.com/apoydence/eachers"]
 	path = src/github.com/apoydence/eachers
 	url = https://github.com/apoydence/eachers
+[submodule "src/gopkg.in/yaml.v2"]
+	path = src/gopkg.in/yaml.v2
+	url = https://gopkg.in/yaml.v2
