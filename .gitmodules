@@ -85,3 +85,6 @@
 [submodule "src/gopkg.in/yaml.v2"]
 	path = src/gopkg.in/yaml.v2
 	url = https://gopkg.in/yaml.v2
+[submodule "src/gopkg.in/check.v1"]
+	path = src/gopkg.in/check.v1
+	url = https://gopkg.in/check.v1
