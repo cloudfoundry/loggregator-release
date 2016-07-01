@@ -82,6 +82,15 @@
 [submodule "src/github.com/apoydence/eachers"]
 	path = src/github.com/apoydence/eachers
 	url = https://github.com/apoydence/eachers
+[submodule "src/github.com/gorilla/mux"]
+	path = src/github.com/gorilla/mux
+	url = http://github.com/gorilla/mux
+[submodule "src/github.com/gorilla/context"]
+	path = src/github.com/gorilla/context
+	url = http://github.com/gorilla/context
+[submodule "src/github.com/op/go-logging"]
+	path = src/github.com/op/go-logging
+	url = https://github.com/op/go-logging
 [submodule "src/gopkg.in/yaml.v2"]
 	path = src/gopkg.in/yaml.v2
 	url = https://gopkg.in/yaml.v2
