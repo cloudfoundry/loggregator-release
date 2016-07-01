@@ -1,4 +1,4 @@
 {
-  "metronPort":4321,
-  "logLevel": "INFO"
+  "MetronPort":4321,
+  "LogLevel": "INFO"
 }

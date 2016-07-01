@@ -28,12 +28,6 @@ var _ = Describe("Config", func() {
 			conf := config.Configuration("./assets/without_loglevel.json")
 			Expect(conf.LogLevel).To(Equal(logging.INFO))
 		})
-
-		It("reads a config that will default the Debug Port", func() {
-			conf := config.Configuration("./assets/without_debug_port.json")
-			Expect(conf.DebugPort).To(Equal(-1))
-		})
-
 	})
 
 	It("panics if the file doesn't exist", func() {

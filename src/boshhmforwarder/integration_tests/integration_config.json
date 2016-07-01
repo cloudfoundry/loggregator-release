@@ -1,7 +1,7 @@
 {
-  "incomingPort":4002,
-  "infoPort": 4003,
-  "debugPort": -1,
-  "metronPort": 10001,
-  "logLevel": "DEBUG"
+  "IncomingPort":4002,
+  "InfoPort": 4003,
+  "DebugPort": -1,
+  "MetronPort": 10001,
+  "LogLevel": "DEBUG"
 }

@@ -9,12 +9,12 @@ import (
 )
 
 type Config struct {
-	IncomingPort int `json:"incomingPort"`
-	InfoPort     int `json:"infoPort"`
-	MetronPort   int `json:"metronPort"`
+	IncomingPort int
+	InfoPort     int
+	MetronPort   int
 	LogLevel     logging.LogLevel
-	DebugPort    int    `json:"debugPort"`
-	Syslog       string `json:"syslog"`
+	DebugPort    int
+	Syslog       string
 }
 
 func Configuration(configFilePath string) *Config {
@@ -28,8 +28,7 @@ func Configuration(configFilePath string) *Config {
 	}
 
 	config := &Config{
-		LogLevel:  logging.INFO,
-		DebugPort: -1,
+		LogLevel: logging.INFO,
 	}
 
 	if err := json.Unmarshal(configFileBytes, config); err != nil {

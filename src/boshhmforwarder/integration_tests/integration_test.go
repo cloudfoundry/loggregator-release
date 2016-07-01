@@ -48,7 +48,7 @@ var _ = Describe("Bosh HealthMonitor Forwarder - IntegrationTests", func() {
 	It("Health Monitor messages are forwarded", func(done Done) {
 		defer close(done)
 
-		healthMonitorMessage := "put system.healthy 1445463675 1 deployment=metrix-bosh-lite index=2 job=etcd role=unknown"
+		healthMonitorMessage := "put system.healthy 1445463675 1 deployment=bosh-lite index=2 job=etcd role=unknown"
 
 		var conn net.Conn
 		var err error
@@ -81,7 +81,7 @@ var _ = Describe("Bosh HealthMonitor Forwarder - IntegrationTests", func() {
 		Expect(envelope.Origin).To(Equal(proto.String(valuemetricsender.ForwarderOrigin)))
 		Expect(envelope.EventType).To(Equal(events.Envelope_ValueMetric.Enum()))
 		Expect(envelope.Timestamp).To(Equal(proto.Int64(1445463675000000000)))
-		Expect(envelope.Deployment).To(Equal(proto.String("metrix-bosh-lite")))
+		Expect(envelope.Deployment).To(Equal(proto.String("bosh-lite")))
 		Expect(envelope.Job).To(Equal(proto.String("etcd")))
 		Expect(envelope.Index).To(Equal(proto.String("2")))
 		Expect(envelope.ValueMetric.Name).To(Equal(proto.String("system.healthy")))

@@ -1,4 +1,4 @@
 {
-  "incomingPort":1234,
-  "metronPort":4321
+  "IncomingPort":1234,
+  "MetronPort":4321
 }

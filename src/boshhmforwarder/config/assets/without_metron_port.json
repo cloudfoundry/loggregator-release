@@ -1,4 +1,4 @@
 {
-  "incomingPort":1234,
-  "logLevel": "INFO"
+  "IncomingPort":1234,
+  "LogLevel": "INFO"
 }

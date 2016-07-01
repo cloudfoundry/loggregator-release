@@ -50,7 +50,7 @@ func main() {
 	router := mux.NewRouter()
 	router.Handle("/info", infoHandler).Methods("GET")
 
-	if conf.DebugPort > -1 {
+	if conf.DebugPort > 0 {
 		go pprofServer(conf.DebugPort)
 	}
 
