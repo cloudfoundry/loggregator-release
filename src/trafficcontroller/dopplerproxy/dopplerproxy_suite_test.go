@@ -2,10 +2,12 @@ package dopplerproxy_test
 
 import (
 	"errors"
+	"net/http"
+	"testing"
+
 	"github.com/cloudfoundry/gosteno"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"testing"
 )
 
 func TestDopplerProxy(t *testing.T) {
@@ -14,7 +16,7 @@ func TestDopplerProxy(t *testing.T) {
 }
 
 type AuthorizerResult struct {
-	Authorized   bool
+	Status       int
 	ErrorMessage string
 }
 
@@ -24,11 +26,11 @@ type LogAuthorizer struct {
 	Result     AuthorizerResult
 }
 
-func (a *LogAuthorizer) Authorize(authToken string, target string, l *gosteno.Logger) (bool, error) {
+func (a *LogAuthorizer) Authorize(authToken string, target string, l *gosteno.Logger) (int, error) {
 	a.TokenParam = authToken
 	a.Target = target
 
-	return a.Result.Authorized, errors.New(a.Result.ErrorMessage)
+	return a.Result.Status, errors.New(a.Result.ErrorMessage)
 }
 
 type AdminAuthorizer struct {
@@ -39,5 +41,5 @@ type AdminAuthorizer struct {
 func (a *AdminAuthorizer) Authorize(authToken string, l *gosteno.Logger) (bool, error) {
 	a.TokenParam = authToken
 
-	return a.Result.Authorized, errors.New(a.Result.ErrorMessage)
+	return a.Result.Status == http.StatusOK, errors.New(a.Result.ErrorMessage)
 }
