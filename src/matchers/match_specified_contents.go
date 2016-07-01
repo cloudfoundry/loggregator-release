@@ -9,91 +9,22 @@ import (
 	"github.com/onsi/gomega/types"
 )
 
-func MatchSpecifiedContents(expected interface{}) types.GomegaMatcher {
+func MatchSpecifiedContents(expected *events.Envelope) types.GomegaMatcher {
 	return &specifiedContentsMatcher{
 		expected: expected,
 	}
 }
 
 type specifiedContentsMatcher struct {
-	expected      interface{}
+	expected      *events.Envelope
 	failureReason string
 }
 
-func (matcher *specifiedContentsMatcher) Match(actual interface{}) (success bool, err error) {
-	actualEnvelope, ok := actual.(*events.Envelope)
-	if !ok {
-		return false, fmt.Errorf("MatchEnvelopeUpToTimestamp matcher expects actual to be an *events.Envelope")
+func (matcher *specifiedContentsMatcher) Match(actual interface{}) (bool, error) {
+	if _, ok := actual.(*events.Envelope); !ok {
+		return false, fmt.Errorf("MatchSpecifiedContents matcher expects actual to be an *events.Envelope")
 	}
-
-	expectedEnvelope, ok := matcher.expected.(*events.Envelope)
-	if !ok {
-		return false, fmt.Errorf("MatchEnvelopeUpToTimestamp matcher expects expected to be an *events.Envelope")
-	}
-
-	if expectedEnvelope.Origin != nil && actualEnvelope.GetOrigin() != expectedEnvelope.GetOrigin() {
-		matcher.failureReason = "Origin did not match"
-		return false, nil
-	}
-	if expectedEnvelope.EventType != nil && actualEnvelope.GetEventType() != expectedEnvelope.GetEventType() {
-		matcher.failureReason = "EventType did not match"
-		return false, nil
-	}
-	if expectedEnvelope.Deployment != nil && actualEnvelope.GetDeployment() != expectedEnvelope.GetDeployment() {
-		matcher.failureReason = "Deployment did not match"
-		return false, nil
-	}
-	if expectedEnvelope.Job != nil && actualEnvelope.GetJob() != expectedEnvelope.GetJob() {
-		matcher.failureReason = "Job did not match"
-		return false, nil
-	}
-	if expectedEnvelope.Index != nil && actualEnvelope.GetIndex() != expectedEnvelope.GetIndex() {
-		matcher.failureReason = "Index did not match"
-		return false, nil
-	}
-	if expectedEnvelope.Ip != nil && actualEnvelope.GetIp() != expectedEnvelope.GetIp() {
-		matcher.failureReason = "Ip did not match"
-		return false, nil
-	}
-	if expectedEnvelope.HttpStart != nil && reflect.DeepEqual(actualEnvelope.GetHttpStart(), expectedEnvelope.GetHttpStart()) {
-		matcher.failureReason = "HttpStart did not match"
-		return false, nil
-	}
-	if expectedEnvelope.HttpStop != nil && reflect.DeepEqual(actualEnvelope.GetHttpStop(), expectedEnvelope.GetHttpStop()) {
-		matcher.failureReason = "HttpStop did not match"
-		return false, nil
-	}
-	if expectedEnvelope.HttpStartStop != nil && reflect.DeepEqual(actualEnvelope.GetHttpStartStop(), expectedEnvelope.GetHttpStartStop()) {
-		matcher.failureReason = "HttpStartStop did not match"
-		return false, nil
-	}
-	if actualEnvelope.LogMessage != nil {
-		// Until our specifiedContentsMatcher can match specified contents of
-		// nested fields, we need to empty the timestamp prior to comparison.
-		actualEnvelope.LogMessage.Timestamp = nil
-	}
-	if expectedEnvelope.LogMessage != nil && !reflect.DeepEqual(actualEnvelope.GetLogMessage(), expectedEnvelope.GetLogMessage()) {
-		matcher.failureReason = "LogMessage did not match"
-		return false, nil
-	}
-	if expectedEnvelope.ValueMetric != nil && reflect.DeepEqual(actualEnvelope.GetValueMetric(), expectedEnvelope.GetValueMetric()) {
-		matcher.failureReason = "ValueMetric did not match"
-		return false, nil
-	}
-	if expectedEnvelope.CounterEvent != nil && !reflect.DeepEqual(actualEnvelope.GetCounterEvent(), expectedEnvelope.GetCounterEvent()) {
-		matcher.failureReason = "CounterEvent did not match"
-		return false, nil
-	}
-	if expectedEnvelope.Error != nil && reflect.DeepEqual(actualEnvelope.GetError(), expectedEnvelope.GetError()) {
-		matcher.failureReason = "Error did not match"
-		return false, nil
-	}
-	if expectedEnvelope.ContainerMetric != nil && reflect.DeepEqual(actualEnvelope.GetContainerMetric(), expectedEnvelope.GetContainerMetric()) {
-		matcher.failureReason = "ContainerMetric did not match"
-		return false, nil
-	}
-
-	return true, nil
+	return matcher.matchSpecifiedContents(actual, matcher.expected)
 }
 
 func (matcher *specifiedContentsMatcher) FailureMessage(actual interface{}) string {
@@ -102,4 +33,30 @@ func (matcher *specifiedContentsMatcher) FailureMessage(actual interface{}) stri
 
 func (matcher *specifiedContentsMatcher) NegatedFailureMessage(actual interface{}) string {
 	return fmt.Sprintf("Expected\n\t%#s not to equal non-nil contents of\n\t%#s\n", format.Object(actual, 1), format.Object(matcher.expected, 1))
+}
+
+func (matcher *specifiedContentsMatcher) matchSpecifiedContents(actualInter, expectedInter interface{}) (bool, error) {
+	actual := reflect.ValueOf(actualInter)
+	expected := reflect.ValueOf(expectedInter)
+	switch expected.Kind() {
+	case reflect.Ptr:
+		if expected.IsNil() {
+			return true, nil
+		}
+		return matcher.matchSpecifiedContents(actual.Elem().Interface(), expected.Elem().Interface())
+	case reflect.Struct:
+		for i := 0; i < expected.NumField(); i++ {
+			success, err := matcher.matchSpecifiedContents(actual.Field(i).Interface(), expected.Field(i).Interface())
+			if !success || err != nil {
+				return success, err
+			}
+		}
+		return true, nil
+	default:
+		if !reflect.DeepEqual(actualInter, expectedInter) {
+			matcher.failureReason = fmt.Sprintf("%#v != %#v", actualInter, expectedInter)
+			return false, nil
+		}
+		return true, nil
+	}
 }
