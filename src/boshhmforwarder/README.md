@@ -1,9 +1,28 @@
 # Bosh HM metrics Forwarder
+
+## Purpose
+
+The purpose of the Bosh HM Forwarder is to forward bosh health metrics into
+Loggregator thus making them available in the firehose.
+
+Bosh Health Metrics are currently emitted as `bosh.healthmonitor.system.*`
+
+## Architecture
+
+Currently the Bosh Director is capable of emitting metrics via its [plugin
+architecture](http://bosh.io/docs/monitoring.html). The Bosh HM Forwarder acts
+as an OpenTSDB listener which reads off the metrics forwarded by the
+Bosh Health Monitor. 
+
+The Bosh HM Forwarder must be colocated with a fully functioning Metron Agent.
+It then forwards the metrics to Dopplers via the Metron Agent as ValueMetric
+type.
+
 ## Setup with Bosh Lite
 
 ### Start local Metron Agent
-1. `cd ~/workspace/lamb/src/github.com/cloudfoundry/loggregator/src/metron`
-1. use router_z1 on the cf_warden deployment to get the metron_agent configuration
+1. `cd ~/workspace/loggregator/src/metron`
+1. Use router_z1 on the cf_warden deployment to get the metron_agent configuration
    copy that information to /tmp/metron_config.json
    For Example:
 
@@ -32,12 +51,12 @@
 1. `go run main.go -config /tmp/metron_config.json`
 
 ### Start local Bosh-Hm-Forwarder
-1. `cd ~/workspace/metrix-release/src/metrix/mars/boshhmforwarder`
-1. create the /tmp/bosh-forwarder.json file
+1. `cd ~/workspace/loggregator/src/boshhmforwarder`
+1. Create the /tmp/bosh-forwarder.json file
     ```
     {
-      "port":4001,
-      "metronPort": 3457
+      "IncomingPort":4001,
+      "MetronPort": 3457
     }
     ```
 1. `go run main.go --configPath /tmp/bosh-forwarder.json`
