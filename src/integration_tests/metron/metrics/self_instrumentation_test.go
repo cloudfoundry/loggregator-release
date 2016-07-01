@@ -94,21 +94,7 @@ var _ = Describe("Self Instrumentation", func() {
 		}, 3, 100*time.Millisecond).Should(BeTrue())
 	}
 
-	eventNeverOccurs := func(sendBytes []byte, match func(expected, actual *events.Envelope) bool, expected *events.Envelope) {
-		Consistently(func() bool {
-			if sendBytes != nil {
-				metronInput.Write(sendBytes)
-			}
-
-			return drainAndEval(testDoppler.MessageChan, func(env *events.Envelope) bool {
-				return match(expected, env)
-			})
-		}, 1, 100*time.Millisecond).Should(BeFalse())
-	}
-
 	It("sends metrics about the Dropsonde network reader", func() {
-		metronInput.Write(basicValueMessage())
-
 		expected := events.Envelope{
 			Origin:    proto.String("MetronAgent"),
 			EventType: events.Envelope_CounterEvent.Enum(),
@@ -185,8 +171,6 @@ var _ = Describe("Self Instrumentation", func() {
 		})
 
 		It("emits metrics for http start", func() {
-			metronInput.Write(basicHTTPStartEvent())
-
 			expected := events.Envelope{
 				Origin:    proto.String("MetronAgent"),
 				EventType: events.Envelope_CounterEvent.Enum(),
@@ -201,8 +185,6 @@ var _ = Describe("Self Instrumentation", func() {
 		})
 
 		It("emits metrics for http stop", func() {
-			metronInput.Write(basicHTTPStopEvent())
-
 			expected := events.Envelope{
 				Origin:    proto.String("MetronAgent"),
 				EventType: events.Envelope_CounterEvent.Enum(),
@@ -217,8 +199,6 @@ var _ = Describe("Self Instrumentation", func() {
 		})
 
 		It("emits metrics for unmatched http stop", func() {
-			metronInput.Write(basicHTTPStopEvent())
-
 			expected := events.Envelope{
 				Origin:    proto.String("MetronAgent"),
 				EventType: events.Envelope_CounterEvent.Enum(),
@@ -261,8 +241,6 @@ var _ = Describe("Self Instrumentation", func() {
 			bytes, err := proto.Marshal(message)
 			Expect(err).ToNot(HaveOccurred())
 
-			metronInput.Write(bytes)
-
 			expected := events.Envelope{
 				Origin:    proto.String("MetronAgent"),
 				EventType: events.Envelope_CounterEvent.Enum(),
@@ -290,13 +268,10 @@ var _ = Describe("Self Instrumentation", func() {
 					Total: proto.Uint64(1),
 				},
 			}
-
-			waitForEvent([]byte{1, 2, 3}, matchCounter, &expected)
+			Eventually(testDoppler.MessageChan).Should(Receive(MatchSpecifiedContents(&expected)))
 		})
 
 		It("counts unmarshalled Dropsonde messages by type", func() {
-			metronInput.Write(basicValueMessage())
-
 			expected := events.Envelope{
 				Origin:    proto.String("MetronAgent"),
 				EventType: events.Envelope_CounterEvent.Enum(),
@@ -334,7 +309,7 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			waitForEvent(logBytes, matchCounter, &expected)
+			Eventually(testDoppler.MessageChan).Should(Receive(MatchSpecifiedContents(&expected)))
 		})
 
 		It("counts unknown event types", func() {
@@ -365,7 +340,7 @@ var _ = Describe("Self Instrumentation", func() {
 				},
 			}
 
-			waitForEvent(bytes, matchCounter, &expected)
+			Eventually(testDoppler.MessageChan).Should(Receive(MatchSpecifiedContents(&expected)))
 		})
 
 		It("does not forward unknown events", func() {
@@ -376,13 +351,7 @@ var _ = Describe("Self Instrumentation", func() {
 
 			metronInput.Write(bytes)
 
-			matcher := MatchSpecifiedContents(&message)
-			Eventually(func() bool {
-				return drainAndEval(testDoppler.MessageChan, func(env *events.Envelope) bool {
-					b, _ := matcher.Match(env)
-					return b
-				})
-			}).Should(BeFalse())
+			Consistently(testDoppler.MessageChan).ShouldNot(Receive(MatchSpecifiedContents(message)))
 
 			message = basicValueMessageEnvelope()
 			badEventType := events.Envelope_EventType(1000)
@@ -392,7 +361,7 @@ var _ = Describe("Self Instrumentation", func() {
 
 			metronInput.Write(bytes)
 
-			eventNeverOccurs(bytes, matchCounter, message)
+			Consistently(testDoppler.MessageChan).ShouldNot(Receive(MatchSpecifiedContents(message)))
 		})
 	})
 })
