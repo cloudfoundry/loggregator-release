@@ -19,11 +19,12 @@ import (
 var MaxTTL = time.Minute
 
 type MessageAggregator struct {
+	rwmu                 sync.RWMutex
 	startEventsByEventID map[eventID]startEventEntry
+	mu                   sync.Mutex
 	counterTotals        map[counterID]uint64
 	logger               *gosteno.Logger
 	outputWriter         writers.EnvelopeWriter
-	startEventLock       sync.RWMutex
 }
 
 func New(outputWriter writers.EnvelopeWriter, logger *gosteno.Logger) *MessageAggregator {
@@ -62,14 +63,14 @@ func (m *MessageAggregator) Write(envelope *events.Envelope) {
 }
 
 func (m *MessageAggregator) updateStartEvent(id eventID, entry startEventEntry) {
-	m.startEventLock.Lock()
-	defer m.startEventLock.Unlock()
+	m.rwmu.Lock()
+	defer m.rwmu.Unlock()
 	m.startEventsByEventID[id] = entry
 }
 
 func (m *MessageAggregator) startEvent(id eventID) (startEventEntry, bool) {
-	m.startEventLock.RLock()
-	defer m.startEventLock.RUnlock()
+	m.rwmu.RLock()
+	defer m.rwmu.RUnlock()
 	entry, ok := m.startEventsByEventID[id]
 	return entry, ok
 }
@@ -137,6 +138,8 @@ func (m *MessageAggregator) handleCounter(envelope *events.Envelope) *events.Env
 		tagsHash: hashTags(envelope.Tags),
 	}
 
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	newVal := m.counterTotals[countID] + envelope.GetCounterEvent().GetDelta()
 	m.counterTotals[countID] = newVal
 
@@ -161,8 +164,8 @@ func hashTags(tags map[string]string) string {
 }
 
 func (m *MessageAggregator) cleanupOrphanedHTTPStart() {
-	m.startEventLock.Lock()
-	defer m.startEventLock.Unlock()
+	m.rwmu.Lock()
+	defer m.rwmu.Unlock()
 	currentTime := time.Now()
 	for key, eventEntry := range m.startEventsByEventID {
 		if currentTime.Sub(eventEntry.entryTime) > MaxTTL {
