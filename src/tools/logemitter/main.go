@@ -17,6 +17,7 @@ func init() {
 	var err error
 	delay, err = time.ParseDuration(os.Getenv("DELAY"))
 	if err != nil {
+		fmt.Println("Unable to parse DELAY. Setting delay to 1ms.")
 		delay = time.Millisecond
 	}
 }
@@ -30,13 +31,14 @@ func main() {
 
 	max, err := strconv.Atoi(os.Getenv("MAX"))
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Unable to parse MAX. Running forever.")
 	}
 
 	go func() {
-		for i := 0; i < max; i++ {
-			fmt.Printf("logemitter guid: %s msg: %d\n", guid, i)
-			time.Sleep(delay)
+		if max == 0 {
+			printForever(guid)
+		} else {
+			printUntil(guid, max)
 		}
 	}()
 
@@ -46,5 +48,19 @@ func main() {
 	err = http.ListenAndServe(":"+os.Getenv("PORT"), nil)
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func printForever(guid string) {
+	for i := 0; ; i++ {
+		fmt.Printf("logemitter guid: %s msg: %d\n", guid, i)
+		time.Sleep(delay)
+	}
+}
+
+func printUntil(guid string, max int) {
+	for i := 0; i < max; i++ {
+		fmt.Printf("logemitter guid: %s msg: %d\n", guid, i)
+		time.Sleep(delay)
 	}
 }
