@@ -12,7 +12,7 @@ Bosh Health Metrics are currently emitted as `bosh.healthmonitor.system.*`
 Currently the Bosh Director is capable of emitting metrics via its [plugin
 architecture](http://bosh.io/docs/monitoring.html). The Bosh HM Forwarder acts
 as an OpenTSDB listener which reads off the metrics forwarded by the
-Bosh Health Monitor. 
+Bosh Health Monitor.
 
 The Bosh HM Forwarder must be colocated with a fully functioning Metron Agent.
 It then forwards the metrics to Dopplers via the Metron Agent as ValueMetric
@@ -78,9 +78,9 @@ type.
          host: <your HostIP>
          port: 4001
    ```
-   
+
    or (in case of JSON config)
-   
+
    ```
    "plugins": [{
 		"name": "tsdb",
@@ -92,7 +92,8 @@ type.
 	}, {
 		"name": "logger",
 		"events": ["alert"]
-	}, {
+	}, { ... }
+	]
    ```
 
    to find <your HostIP> use `ifconfig` and look for:
@@ -117,3 +118,24 @@ type.
    ```
 
    <your HostIP> is the inet entry above like 10.35.33.57
+1. `monit restart health_monitor`
+
+## Setup With Loggregator as a Separate Release
+
+1. Add the loggregator release to the manifest
+
+  ```yaml
+  - name: loggregator
+    release: latest
+  ```
+
+1. Add the boshhmforwarder to the instance group/job
+
+  ```yaml
+  - name: boshhmforwarder
+    release: loggregator
+  ```
+
+  NOTE: Ideally, the Bosh HM Forwarder should be located on a **single** instance
+  that has a Metron Agent on it. As such, it can be deployed on a separate vm
+  with the Metron Agent colocated on it.

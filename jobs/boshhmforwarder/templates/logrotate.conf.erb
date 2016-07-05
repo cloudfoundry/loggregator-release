@@ -1,0 +1,8 @@
+var/vcap/sys/log/boshhmforwarder/*.log {
+  missingok
+  rotate 7
+  compress
+  delaycompress
+  copytruncate
+  size=50M
+}

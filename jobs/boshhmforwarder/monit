@@ -1,0 +1,7 @@
+set logfile syslog
+
+check process boshhmforwarder
+  with pidfile /var/vcap/sys/run/boshhmforwarder/boshhmforwarder.pid
+  start program "/var/vcap/jobs/boshhmforwarder/bin/boshhmforwarder_ctl start"
+  stop program "/var/vcap/jobs/boshhmforwarder/bin/boshhmforwarder_ctl stop" with timeout 60 seconds
+  group vcap

@@ -1,0 +1,42 @@
+#!/bin/bash
+
+RUN_DIR=/var/vcap/sys/run/boshhmforwarder
+LOG_DIR=/var/vcap/sys/log/boshhmforwarder
+PIDFILE=${RUN_DIR}/boshhmforwarder.pid
+JOB_DIR=/var/vcap/jobs/boshhmforwarder
+CONFIG_FILE=${JOB_DIR}/config/boshhmforwarder_config.json
+VERSION_FILE=${JOB_DIR}/config/version
+
+PACKAGE_DIR=/var/vcap/packages/boshhmforwarder
+
+case $1 in
+
+start)
+mkdir -p $RUN_DIR $LOG_DIR
+chown -R vcap:vcap $RUN_DIR $LOG_DIR
+
+(crontab -l | sed /boshhmforwarder.*logrotate/d; cat /var/vcap/jobs/boshhmforwarder/config/boshhmforwarder_logrotate.cron) | sed /^$/d | crontab
+
+cd $PACKAGE_DIR
+
+ulimit -n 8192
+
+echo $$ > $PIDFILE
+exec chpst -u vcap:vcap ./boshhmforwarder \
+--configPath ${CONFIG_FILE}  \
+&>> ${LOG_DIR}/boshhmforwarder.log
+
+;;
+
+stop)
+
+kill `cat $PIDFILE`
+
+rm -f $PIDFILE
+
+;;
+
+*)
+echo "Usage: ctl {start|stop}" ;;
+
+esac
