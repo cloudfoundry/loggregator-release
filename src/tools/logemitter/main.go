@@ -11,15 +11,24 @@ import (
 	"github.com/nu7hatch/gouuid"
 )
 
-var delay time.Duration
+var (
+	max   int
+	delay time.Duration
+)
 
 func init() {
-	var err error
-	delay, err = time.ParseDuration(os.Getenv("DELAY"))
+	rate, err := strconv.ParseFloat(os.Getenv("RATE"), 64)
 	if err != nil {
-		fmt.Println("Unable to parse DELAY. Setting delay to 1ms.")
-		delay = time.Millisecond
+		rate = 1000
 	}
+
+	t, err := time.ParseDuration(os.Getenv("TIME"))
+	if err != nil {
+		t = 5 * time.Minute
+	}
+
+	max = int(float64(rate) * t.Seconds())
+	delay = time.Duration(1 / rate * float64(time.Second))
 }
 
 func main() {
@@ -29,17 +38,11 @@ func main() {
 	}
 	guid := uuid.String()
 
-	max, err := strconv.Atoi(os.Getenv("MAX"))
-	if err != nil {
-		fmt.Println("Unable to parse MAX. Running forever.")
-	}
-
 	go func() {
 		if max == 0 {
 			printForever(guid)
-		} else {
-			printUntil(guid, max)
 		}
+		printUntil(guid, max)
 	}()
 
 	http.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
