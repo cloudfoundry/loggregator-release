@@ -100,20 +100,9 @@ type.
 
    ```
    en0: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
-    options=10b<RXCSUM,TXCSUM,VLAN_HWTAGGING,AV>
-    ether ac:87:a3:2e:88:0a
-    inet6 fe80::ae87:a3ff:fe2e:880a%en0 prefixlen 64 scopeid 0x4
-    inet6 2001:559:803e:2:ae87:a3ff:fe2e:880a prefixlen 64 autoconf
+    ...
     inet 10.35.33.57 netmask 0xffffff00 broadcast 10.35.33.255
-    inet6 2001:559:803e:2:6580:79a:7a5d:5fa8 prefixlen 64 deprecated autoconf temporary
-    inet6 2001:559:803e:2:1919:a6c9:fabb:4600 prefixlen 64 deprecated autoconf temporary
-    inet6 2001:559:803e:2:419a:e9b7:203f:63e1 prefixlen 64 deprecated autoconf temporary
-    inet6 2001:559:803e:2:d968:8500:3fa2:c759 prefixlen 64 deprecated autoconf temporary
-    inet6 2001:559:803e:2:c10c:3f20:1804:886b prefixlen 64 deprecated autoconf temporary
-    inet6 2001:559:803e:2:65a9:66d5:f1fe:408b prefixlen 64 deprecated autoconf temporary
-    inet6 2001:559:803e:2:35f9:2678:f0aa:7c32 prefixlen 64 autoconf temporary
-    nd6 options=1<PERFORMNUD>
-    media: autoselect (1000baseT <full-duplex,flow-control>)
+    ...
     status: active
    ```
 
