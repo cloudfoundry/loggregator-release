@@ -28,9 +28,9 @@ import (
 )
 
 var (
-	apiAddress     = os.Getenv("API_ADDR")
-	dopplerAddress = os.Getenv("DOPPLER_ADDR")
-	uaaAddress     = os.Getenv("UAA_ADDR")
+	apiAddress     = os.Getenv("API_URL")
+	dopplerAddress = os.Getenv("DOPPLER_URL")
+	uaaAddress     = os.Getenv("UAA_URL")
 	clientID       = os.Getenv("CLIENT_ID")
 	clientSecret   = os.Getenv("CLIENT_SECRET")
 	username       = os.Getenv("CF_USERNAME")
@@ -69,6 +69,16 @@ func main() {
 		fmt.Println("end time:", end)
 		fmt.Println("duration:", end.Sub(start))
 		dumpReport()
+	}()
+
+	go func() {
+		http.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
+			rw.WriteHeader(200)
+		})
+		err := http.ListenAndServe(":"+os.Getenv("PORT"), nil)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}()
 
 	consumer := consumer.New(dopplerAddress, &tls.Config{InsecureSkipVerify: true}, nil)

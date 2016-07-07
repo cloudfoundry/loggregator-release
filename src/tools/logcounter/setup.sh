@@ -1,9 +1,9 @@
 #!/bin/bash -e
 
 export MESSAGE_PREFIX="logemitter"
-export API_ADDR=`cf api | awk '{print $3}'`
-export DOPPLER_ADDR=`cf curl /v2/info | jq --raw-output '.doppler_logging_endpoint'`
-export UAA_ADDR=`cf curl /v2/info | jq --raw-output '.authorization_endpoint'`
+export API_URL=`cf api | awk '{print $3}'`
+export DOPPLER_URL=`cf curl /v2/info | jq --raw-output '.doppler_logging_endpoint'`
+export UAA_URL=`cf curl /v2/info | jq --raw-output '.authorization_endpoint'`
 echo -n "CF Client ID: "
 read CLIENT_ID
 echo -n "CF Client Secret: "
