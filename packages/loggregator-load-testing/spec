@@ -1,6 +1,6 @@
 ---
 name: loggregator-load-testing
 dependencies:
-  - golang1.6
+- golang1.6
 files:
-- loggregator/**/*
+- ./**/*

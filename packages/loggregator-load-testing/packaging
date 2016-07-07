@@ -1,7 +1,14 @@
 set -ex
 
-export GOROOT=$(readlink -nf /var/vcap/packages/golang1.6)
-export PATH=${GOROOT}/bin:${PATH}
+mkdir ${BOSH_INSTALL_TARGET}/src
+rsync -avzci $PWD/ ${BOSH_INSTALL_TARGET}/src/
 
-cp -r $PWD/loggregator/src ${BOSH_INSTALL_TARGET}/
-export GOPATH=$BOSH_INSTALL_TARGET
+mkdir cli_build
+pushd cli_build
+  wget -O cf-cli_linux_x86-64.tgz "https://cli.run.pivotal.io/stable?release=linux64-binary"
+  tar xzf cf-cli_linux_x86-64.tgz
+
+  BIN_DIR=${BOSH_INSTALL_TARGET}/bin
+  mkdir -p ${BIN_DIR}
+  cp cf ${BIN_DIR}/cf
+popd
