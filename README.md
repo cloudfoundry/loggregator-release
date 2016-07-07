@@ -521,7 +521,7 @@ Use brew and do
     brew install direnv
     
 Make sure you add the proper entry to load direnv into your shell. See `brew info direnv`
-for details. To be safe, close the terminal window that you are using to make sure the 
+for details. To be safe, close the terminal window that you are using to make sure the
 changes to your shell are applied.
     
 #### Checkout
