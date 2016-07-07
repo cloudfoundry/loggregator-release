@@ -364,7 +364,7 @@ jobs:
       apps: cf1
 
 - name: doppler_z1 # Add "doppler_zX" jobs if you have runners in zX
-  templates: 
+  templates:
   - name: doppler
     release: cf
   - name: syslog_drain_binder
@@ -382,7 +382,7 @@ jobs:
       apps: cf1
 
 - name: loggregator_trafficcontroller_z1
-  templates: 
+  templates:
   - name: loggregator_trafficcontroller
     release: cf
   - name: metron_agent
@@ -406,9 +406,9 @@ properties:
       - 10.10.16.14
     incoming_port: 3456
     outgoing_port: 8080
-    
+
   loggregator_endpoint: # The end point sources will connect to
-    shared_secret: loggregatorEndPointSharedSecret  
+    shared_secret: loggregatorEndPointSharedSecret
     host: 10.10.16.16
     port: 3456
 ```
@@ -424,6 +424,7 @@ The configuration of the `uaa` job in Cloud Foundry [adds this scope by default]
 However, if your Cloud Foundry instance overrides the `properties.uaa.clients.cf` property in a stub, you need to add `doppler.firehose` to the scope list in the `properties.uaa.clients.cf.scope` property.
 
 #### Configuring at deployment time (via deployment manifest)
+
 In your deployment manifest, add
 
 ```yaml
@@ -506,8 +507,10 @@ Follow these steps to make a contribution to any of our open source repositories
 1. Make your changes on a topic branch, commit, and push to github and open a pull request against the `develop` branch.
 
 Once your commits are approved by Travis CI and reviewed by the core team, they will be merged.
+
 #### Go version support
-As of version d974c6dbd64d3c99b0f16c1ab0d2a8ffd40d9588, all Loggregator components are deployed to Cloud Foundry with Go 1.5.3.
+
+As of version 43a6dd94d06cf1e2e1b64ffba19566ab4b74755e, all Loggregator components are deployed to Cloud Foundry with Go 1.6.1.
 As of that revision, support for earlier versions of the language are not guaranteed.
 
 #### OS X prerequisites
