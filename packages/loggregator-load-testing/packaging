@@ -1,7 +1,6 @@
 set -ex
 
-mkdir ${BOSH_INSTALL_TARGET}/src
-rsync -avzci $PWD/ ${BOSH_INSTALL_TARGET}/src/
+rsync -avzci $PWD/loggregator/ ${BOSH_INSTALL_TARGET}/
 
 mkdir cli_build
 pushd cli_build

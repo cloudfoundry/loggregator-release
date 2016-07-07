@@ -51,12 +51,9 @@ push() {
 
 for i in $(seq "$INSTANCES"); do
   push &
-  pids[$i]=$!
 done
 
-for pid in "${pids[@]}"; do
-  wait $pid
-done
+wait
 
 # run logemitter app
 
