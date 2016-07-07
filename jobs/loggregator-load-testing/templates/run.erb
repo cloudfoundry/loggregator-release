@@ -1,0 +1,65 @@
+#!/bin/bash -l
+
+set -e
+
+# config values
+
+export RATE="<%= p('loggregator_load_testing.rate') %>"
+export TIME="<%= p('loggregator_load_testing.time') %>"
+export INSTANCES="<%= p('loggregator_load_testing.instances') %>"
+
+export ORG="<%= p('loggregator_load_testing.org') %>"
+export SPACE="<%= p('loggregator_load_testing.space') %>"
+
+export API_URL="<%= p('loggregator_load_testing.api_url') %>"
+export DOPPLER_URL="<%= p('loggregator_load_testing.doppler_url') %>"
+export UAA_URL="<%= p('loggregator_load_testing.uaa_url') %>"
+
+export CLIENT_ID="<%= p('loggregator_load_testing.client_id') %>"
+export CLIENT_SECRET="<%= p('loggregator_load_testing.client_secret') %>"
+
+export USERNAME="<%= p('loggregator_load_testing.username') %>"
+export PASSWORD="<%= p('loggregator_load_testing.password') %>"
+
+export SKIP_CERT_VERIFY="<%= p('ssl.skip_cert_verify') %>"
+
+# setup paths
+
+export GOROOT=$(readlink -nf /var/vcap/packages/golang1.6)
+export PACKAGES_DIR=/var/vcap/packages/loggregator-load-testing
+export GOPATH=$PACKAGES_DIR
+export PATH=${PACKAGES_DIR}/bin:${GOROOT}/bin:${PATH}
+
+# setup cf cli
+
+if [ "$SKIP_CERT_VERIFY" = "true" ]; then
+  skip_ssl="--skip-ssl-validation"
+fi
+cd $PACKAGES_DIR/src/tools/logemitter/build
+cf login -a "$API_URL" -u "$USERNAME" -p "$PASSWORD" -o "$ORG" -s "$SPACE" "$skip_ssl"
+
+# build and push
+
+./build.sh
+
+push() {
+  cf push logemitter$i -b binary_buildpack
+  cf stop logemitter$i
+  cf set-env logemitter$i RATE $RATE
+  cf set-env logemitter$i TIME $TIME
+}
+
+for i in $(seq "$INSTANCES"); do
+  push &
+  pids[$i]=$!
+done
+
+for pid in "${pids[@]}"; do
+  wait $pid
+done
+
+# run logemitter app
+
+for i in $(seq "$INSTANCES"); do
+  cf start logemitter$i
+done
