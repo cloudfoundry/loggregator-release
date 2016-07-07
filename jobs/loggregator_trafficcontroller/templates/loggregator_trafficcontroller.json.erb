@@ -2,7 +2,6 @@
     # try and set these properties from a BOSH 2.0 spec object
     job_name = spec.job.name
     instance_id = spec.id
-    instance_zone = spec.az
 
     if job_name.nil?
       job_name = name
@@ -12,9 +11,6 @@
       instance_id = spec.index
     end
 
-    if instance_zone.nil?
-      instance_zone = p("traffic_controller.zone")
-    end
 %>
 {
     "JobName": "<%= job_name %>",
@@ -34,7 +30,6 @@
     "DopplerPort": <%= p("loggregator.doppler_port") %>,
     "OutgoingPort": <%= p("traffic_controller.outgoing_port") %>,
     "SkipCertVerify": <%= p("ssl.skip_cert_verify") %>,
-    "Zone": "<%= instance_zone %>",
     "ApiHost": "<%= p("cc.srv_api_uri") %>",
     "SystemDomain": "<%= p("system_domain") %>",
     "MetronPort": <%= p("metron_endpoint.dropsonde_port") %>,

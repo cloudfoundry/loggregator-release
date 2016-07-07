@@ -11,13 +11,13 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("communicating with doppler over UDP", func() {
+var _ = Describe("communicating with doppler over TCP", func() {
 	It("forwards messages", func() {
 		etcdCleanup, etcdClientURL := setupEtcd()
 		defer etcdCleanup()
 		dopplerCleanup, dopplerOutgoingPort := setupDoppler(etcdClientURL)
 		defer dopplerCleanup()
-		metronCleanup, metronPort := setupMetron(etcdClientURL, "udp")
+		metronCleanup, metronPort := setupMetron(etcdClientURL, "tcp")
 		defer metronCleanup()
 
 		err := dropsonde.Initialize(fmt.Sprintf("localhost:%d", metronPort), "test-origin")
@@ -27,7 +27,7 @@ var _ = Describe("communicating with doppler over UDP", func() {
 		sent := make(chan struct{})
 		go func() {
 			defer close(sent)
-			err := logs.SendAppLog("test-app-id", "An event happened!", "test-app-id", "0")
+			err = logs.SendAppLog("test-app-id", "An event happened!", "test-app-id", "0")
 			Expect(err).NotTo(HaveOccurred())
 		}()
 		<-sent

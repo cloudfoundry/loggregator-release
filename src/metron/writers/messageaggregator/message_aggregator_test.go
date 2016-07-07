@@ -25,7 +25,10 @@ var _ = Describe("MessageAggregator", func() {
 
 	BeforeEach(func() {
 		mockWriter = &mocks.MockEnvelopeWriter{}
-		messageAggregator = messageaggregator.New(mockWriter, loggertesthelper.Logger())
+		messageAggregator = messageaggregator.New(
+			mockWriter,
+			loggertesthelper.Logger(),
+		)
 		originalTTL = messageaggregator.MaxTTL
 	})
 
@@ -65,7 +68,7 @@ var _ = Describe("MessageAggregator", func() {
 
 	Describe("counter processing", func() {
 		It("sets the Total field on a CounterEvent ", func() {
-			messageAggregator.Write(createCounterMessage("total", "fake-origin-4"))
+			messageAggregator.Write(createCounterMessage("total", "fake-origin-4", nil))
 
 			Expect(mockWriter.Events).To(HaveLen(1))
 			outputMessage := mockWriter.Events[0]
@@ -73,28 +76,87 @@ var _ = Describe("MessageAggregator", func() {
 			expectCorrectCounterNameDeltaAndTotal(outputMessage, "total", 4, 4)
 		})
 
-		It("accumulates Deltas for CounterEvents with the same name and origin", func() {
-			messageAggregator.Write(createCounterMessage("total", "fake-origin-4"))
-			messageAggregator.Write(createCounterMessage("total", "fake-origin-4"))
+		It("accumulates Deltas for CounterEvents with the same name, origin, and tags", func() {
+			messageAggregator.Write(createCounterMessage(
+				"total",
+				"fake-origin-4",
+				map[string]string{
+					"protocol": "tcp",
+				},
+			))
+			messageAggregator.Write(createCounterMessage(
+				"total",
+				"fake-origin-4",
+				map[string]string{
+					"protocol": "tcp",
+				},
+			))
+			messageAggregator.Write(createCounterMessage(
+				"total",
+				"fake-origin-4",
+				map[string]string{
+					"protocol": "tcp",
+				},
+			))
 
-			Expect(mockWriter.Events).To(HaveLen(2))
-			outputMessage := mockWriter.Events[1]
-
-			expectCorrectCounterNameDeltaAndTotal(outputMessage, "total", 4, 8)
+			Expect(mockWriter.Events).To(HaveLen(3))
+			expectCorrectCounterNameDeltaAndTotal(mockWriter.Events[0], "total", 4, 4)
+			expectCorrectCounterNameDeltaAndTotal(mockWriter.Events[1], "total", 4, 8)
+			expectCorrectCounterNameDeltaAndTotal(mockWriter.Events[2], "total", 4, 12)
 		})
 
 		It("accumulates differently-named counters separately", func() {
-			messageAggregator.Write(createCounterMessage("total1", "fake-origin-4"))
-			messageAggregator.Write(createCounterMessage("total2", "fake-origin-4"))
+			messageAggregator.Write(createCounterMessage("total1", "fake-origin-4", nil))
+			messageAggregator.Write(createCounterMessage("total2", "fake-origin-4", nil))
 
 			Expect(mockWriter.Events).To(HaveLen(2))
 			expectCorrectCounterNameDeltaAndTotal(mockWriter.Events[0], "total1", 4, 4)
 			expectCorrectCounterNameDeltaAndTotal(mockWriter.Events[1], "total2", 4, 4)
 		})
 
+		It("accumulates differently-tagged counters separately", func() {
+			By("writing protocol tagged counters")
+			messageAggregator.Write(createCounterMessage(
+				"total",
+				"fake-origin-4",
+				map[string]string{
+					"protocol": "udp",
+				},
+			))
+			messageAggregator.Write(createCounterMessage(
+				"total",
+				"fake-origin-4",
+				map[string]string{
+					"protocol": "tcp",
+				},
+			))
+			messageAggregator.Write(createCounterMessage(
+				"total",
+				"fake-origin-4",
+				map[string]string{
+					"protocol": "udp",
+				},
+			))
+
+			By("writing counters tagged with key/value strings split differently")
+			messageAggregator.Write(createCounterMessage(
+				"total",
+				"fake-origin-4",
+				map[string]string{
+					"proto": "coludp",
+				},
+			))
+
+			Expect(mockWriter.Events).To(HaveLen(4))
+			expectCorrectCounterNameDeltaAndTotal(mockWriter.Events[0], "total", 4, 4)
+			expectCorrectCounterNameDeltaAndTotal(mockWriter.Events[1], "total", 4, 4)
+			expectCorrectCounterNameDeltaAndTotal(mockWriter.Events[2], "total", 4, 8)
+			expectCorrectCounterNameDeltaAndTotal(mockWriter.Events[3], "total", 4, 4)
+		})
+
 		It("does not accumulate for counters when receiving a non-counter event", func() {
 			messageAggregator.Write(createValueMessage())
-			messageAggregator.Write(createCounterMessage("counter1", "fake-origin-4"))
+			messageAggregator.Write(createCounterMessage("counter1", "fake-origin-4", nil))
 
 			Expect(mockWriter.Events).To(HaveLen(2))
 			Expect(mockWriter.Events[0].GetEventType()).To(Equal(events.Envelope_ValueMetric))
@@ -103,9 +165,9 @@ var _ = Describe("MessageAggregator", func() {
 		})
 
 		It("accumulates independently for different origins", func() {
-			messageAggregator.Write(createCounterMessage("counter1", "fake-origin-4"))
-			messageAggregator.Write(createCounterMessage("counter1", "fake-origin-5"))
-			messageAggregator.Write(createCounterMessage("counter1", "fake-origin-4"))
+			messageAggregator.Write(createCounterMessage("counter1", "fake-origin-4", nil))
+			messageAggregator.Write(createCounterMessage("counter1", "fake-origin-5", nil))
+			messageAggregator.Write(createCounterMessage("counter1", "fake-origin-4", nil))
 
 			Expect(mockWriter.Events).To(HaveLen(3))
 
@@ -247,13 +309,13 @@ var _ = Describe("MessageAggregator", func() {
 		})
 
 		It("emits a counter for counter events", func() {
-			messageAggregator.Write(createCounterMessage("counter1", "fake-origin-1"))
+			messageAggregator.Write(createCounterMessage("counter1", "fake-origin-1", nil))
 			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
 				With("MessageAggregator.counterEventReceived"),
 			))
 
 			// since we're counting counters, let's make sure we're not adding their deltas
-			messageAggregator.Write(createCounterMessage("counter1", "fake-origin-1"))
+			messageAggregator.Write(createCounterMessage("counter1", "fake-origin-1", nil))
 			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
 				With("MessageAggregator.counterEventReceived"),
 			))
@@ -344,7 +406,7 @@ func createValueMessage() *events.Envelope {
 	}
 }
 
-func createCounterMessage(name string, origin string) *events.Envelope {
+func createCounterMessage(name, origin string, tags map[string]string) *events.Envelope {
 	return &events.Envelope{
 		Origin:    proto.String(origin),
 		EventType: events.Envelope_CounterEvent.Enum(),
@@ -352,6 +414,7 @@ func createCounterMessage(name string, origin string) *events.Envelope {
 			Name:  proto.String(name),
 			Delta: proto.Uint64(4),
 		},
+		Tags: tags,
 	}
 }
 

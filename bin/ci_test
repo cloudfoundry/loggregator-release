@@ -47,7 +47,7 @@ function bold_blue {
     fi
 }
 
-not_unit_tests="github.com,golang.org,integration_tests,lats"
+not_unit_tests="github.com,golang.org,gopkg.in,integration_tests,lats"
 
 bold_blue "==================================  Running Unit Tests  =================================="
 ginkgo -r --race --randomizeAllSpecs --cover --skipPackage="${not_unit_tests}" $1 src

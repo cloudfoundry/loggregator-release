@@ -1,6 +1,10 @@
 package messageaggregator
 
 import (
+	"crypto/sha1"
+	"fmt"
+	"io"
+	"sort"
 	"sync"
 	"time"
 
@@ -15,11 +19,12 @@ import (
 var MaxTTL = time.Minute
 
 type MessageAggregator struct {
+	rwmu                 sync.RWMutex
 	startEventsByEventID map[eventID]startEventEntry
+	mu                   sync.Mutex
 	counterTotals        map[counterID]uint64
 	logger               *gosteno.Logger
 	outputWriter         writers.EnvelopeWriter
-	startEventLock       sync.RWMutex
 }
 
 func New(outputWriter writers.EnvelopeWriter, logger *gosteno.Logger) *MessageAggregator {
@@ -58,14 +63,14 @@ func (m *MessageAggregator) Write(envelope *events.Envelope) {
 }
 
 func (m *MessageAggregator) updateStartEvent(id eventID, entry startEventEntry) {
-	m.startEventLock.Lock()
-	defer m.startEventLock.Unlock()
+	m.rwmu.Lock()
+	defer m.rwmu.Unlock()
 	m.startEventsByEventID[id] = entry
 }
 
 func (m *MessageAggregator) startEvent(id eventID) (startEventEntry, bool) {
-	m.startEventLock.RLock()
-	defer m.startEventLock.RUnlock()
+	m.rwmu.RLock()
+	defer m.rwmu.RUnlock()
 	entry, ok := m.startEventsByEventID[id]
 	return entry, ok
 }
@@ -128,10 +133,13 @@ func (m *MessageAggregator) handleCounter(envelope *events.Envelope) *events.Env
 	metrics.BatchIncrementCounter("MessageAggregator.counterEventReceived")
 
 	countID := counterID{
-		name:   envelope.GetCounterEvent().GetName(),
-		origin: envelope.GetOrigin(),
+		name:     envelope.GetCounterEvent().GetName(),
+		origin:   envelope.GetOrigin(),
+		tagsHash: hashTags(envelope.Tags),
 	}
 
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	newVal := m.counterTotals[countID] + envelope.GetCounterEvent().GetDelta()
 	m.counterTotals[countID] = newVal
 
@@ -139,9 +147,25 @@ func (m *MessageAggregator) handleCounter(envelope *events.Envelope) *events.Env
 	return envelope
 }
 
+func hashTags(tags map[string]string) string {
+	hash := ""
+	elements := []mapElement{}
+	for k, v := range tags {
+		elements = append(elements, mapElement{k, v})
+	}
+	sort.Sort(byKey(elements))
+	for _, element := range elements {
+		kHash, vHash := sha1.New(), sha1.New()
+		io.WriteString(kHash, element.k)
+		io.WriteString(vHash, element.v)
+		hash += fmt.Sprintf("%x%x", kHash.Sum(nil), vHash.Sum(nil))
+	}
+	return hash
+}
+
 func (m *MessageAggregator) cleanupOrphanedHTTPStart() {
-	m.startEventLock.Lock()
-	defer m.startEventLock.Unlock()
+	m.rwmu.Lock()
+	defer m.rwmu.Unlock()
 	currentTime := time.Now()
 	for key, eventEntry := range m.startEventsByEventID {
 		if currentTime.Sub(eventEntry.entryTime) > MaxTTL {
@@ -151,9 +175,20 @@ func (m *MessageAggregator) cleanupOrphanedHTTPStart() {
 	}
 }
 
+type byKey []mapElement
+
+func (a byKey) Len() int           { return len(a) }
+func (a byKey) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a byKey) Less(i, j int) bool { return a[i].k < a[j].k }
+
+type mapElement struct {
+	k, v string
+}
+
 type counterID struct {
-	origin string
-	name   string
+	origin   string
+	name     string
+	tagsHash string
 }
 
 type eventID struct {

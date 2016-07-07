@@ -36,6 +36,7 @@ var (
 	username       = os.Getenv("CF_USERNAME")
 	password       = os.Getenv("CF_PASSWORD")
 	messagePrefix  = os.Getenv("MESSAGE_PREFIX")
+	subscriptionId = os.Getenv("SUBSCRIPTION_ID")
 
 	counterWG              sync.WaitGroup
 	counterLock            sync.Mutex
@@ -85,6 +86,9 @@ func main() {
 			continue
 		}
 		fmt.Println("got new oauth token")
+		if subscriptionId != "" {
+			firehoseSubscriptionId = subscriptionId
+		}
 		msgs, errors := consumer.FirehoseWithoutReconnect(firehoseSubscriptionId, authToken)
 
 		go handleMessages(msgs)
@@ -147,6 +151,8 @@ func getAuthToken() (string, error) {
 		return "", err
 	}
 	if resp.StatusCode != http.StatusOK {
+		errout, _ := ioutil.ReadAll(resp.Body)
+		fmt.Printf("StatuCode: %d\n Error: %s\n", resp.StatusCode, errout)
 		return "", errors.New("response not 200")
 	}
 
