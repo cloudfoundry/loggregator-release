@@ -60,6 +60,6 @@
     , "Syslog": "vcap.doppler"
     <% end %>
     <% if_p("doppler.blacklisted_syslog_ranges") do |blacklisted_ranges| %>
-    , "BlackListIPs": blacklisted_ranges.to_json
+    , "BlackListIPs": <%= blacklisted_ranges.to_json %>
     <% end %>
 }
