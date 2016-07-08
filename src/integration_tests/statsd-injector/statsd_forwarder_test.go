@@ -15,7 +15,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var _ = PDescribe("Statsd support", func() {
+var _ = Describe("Statsd support", func() {
 	var fakeDoppler net.PacketConn
 	var getValueMetric = func() *events.ValueMetric {
 		readBuffer := make([]byte, 65535)
