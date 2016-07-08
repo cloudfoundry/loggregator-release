@@ -70,6 +70,8 @@ cf set-env logcounter CLIENT_ID "$CLIENT_ID"
 cf set-env logcounter CLIENT_SECRET "$CLIENT_SECRET"
 cf set-env logcounter CF_USERNAME "$CF_USERNAME"
 cf set-env logcounter CF_PASSWORD "$CF_PASSWORD"
+cf set-env logcounter MESSAGE_PREFIX "logemitter"
+cf set-env logcounter SUBSCRIPTION_ID "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)"
 
 cf start logcounter
 
@@ -78,3 +80,7 @@ cf start logcounter
 for i in $(seq "$INSTANCES"); do
   cf start logemitter$i
 done
+
+sleep $TIME
+
+curl $(cf app logcounter | grep urls | sed 's|^[^ ]* \([^,]*\).*$|\1|')?report

@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -58,6 +59,16 @@ type Identity struct {
 	runID string
 }
 
+func init() {
+	http.DefaultClient.Timeout = 10 * time.Second
+	http.DefaultClient.Transport = &http.Transport{
+		TLSHandshakeTimeout: time.Second,
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
+}
+
 func main() {
 	start := time.Now()
 	fmt.Println("start time:", start)
@@ -67,13 +78,21 @@ func main() {
 		fmt.Println("Done Joining")
 		end := time.Now()
 		fmt.Println("end time:", end)
-		fmt.Println("duration:", end.Sub(start))
-		dumpReport()
+		fmt.Println("duration:", end.Sub(start), "\n")
+		if err := dumpReport(os.Stdout); err != nil {
+			log.Printf("Error dumping final report: %s", err)
+		}
 	}()
 
 	go func() {
 		http.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
 			rw.WriteHeader(200)
+			r.ParseForm()
+			if _, ok := r.Form["report"]; ok {
+				if err := dumpReport(rw); err != nil {
+					log.Printf("Error dumping report: %s", err)
+				}
+			}
 		})
 		err := http.ListenAndServe(":"+os.Getenv("PORT"), nil)
 		if err != nil {
@@ -211,8 +230,11 @@ func processEnvelope(env *events.Envelope) {
 	logMsg := env.GetLogMessage()
 
 	msg := string(logMsg.GetMessage())
+	if strings.HasPrefix(msg, "mismatched prefix") {
+		return
+	}
 	if !strings.HasPrefix(msg, messagePrefix) {
-		fmt.Printf("log message: %s did not match prefix: %s\n", string(logMsg.GetMessage()), string(messagePrefix))
+		fmt.Printf("mismatched prefix: log message %s did not match prefix: %s\n", string(logMsg.GetMessage()), string(messagePrefix))
 		return
 	}
 
@@ -236,20 +258,28 @@ func processEnvelope(env *events.Envelope) {
 	counter[msg[sepEnd:]] = true
 }
 
-func dumpReport() {
+func dumpReport(w io.Writer) error {
 	counterLock.Lock()
 	defer counterLock.Unlock()
 	authToken, err := getAuthToken()
 	if err != nil {
 		authToken = ""
 	}
-	fmt.Println("\nReport:")
+	if _, err := io.WriteString(w, "Report:\n"); err != nil {
+		return err
+	}
+	if len(counters) == 0 {
+		_, err := io.WriteString(w, "No messages received")
+		return err
+	}
 	for id, messages := range counters {
 		var total, max int
 		for msgID := range messages {
 			msgMax, err := strconv.Atoi(msgID)
 			if err != nil {
-				fmt.Printf("Cannot parse message ID %s\n", msgID)
+				if _, err := io.WriteString(w, fmt.Sprintf("Cannot parse message ID %s\n", msgID)); err != nil {
+					return err
+				}
 				continue
 			}
 			if msgMax > max {
@@ -257,6 +287,10 @@ func dumpReport() {
 			}
 			total++
 		}
-		fmt.Printf("guid: %s app: %s total: %d max: %d\n", id.runID, getAppName(id.appID, authToken), total, max+1)
+		msg := fmt.Sprintf("guid: %s app: %s total: %d max: %d\n", id.runID, getAppName(id.appID, authToken), total, max+1)
+		if _, err := io.WriteString(w, msg); err != nil {
+			return err
+		}
 	}
+	return nil
 }
