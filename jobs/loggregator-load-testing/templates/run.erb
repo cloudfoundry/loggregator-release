@@ -4,20 +4,11 @@ set -e
 
 # config values
 
-export RATE="<%= p('loggregator_load_testing.rate') %>"
 export TIME="<%= p('loggregator_load_testing.time') %>"
-export INSTANCES="<%= p('loggregator_load_testing.instances') %>"
-
 export ORG="<%= p('loggregator_load_testing.org') %>"
 export SPACE="<%= p('loggregator_load_testing.space') %>"
 
 export API_URL="<%= p('loggregator_load_testing.api_url') %>"
-export DOPPLER_URL="<%= p('loggregator_load_testing.doppler_url') %>"
-export UAA_URL="<%= p('loggregator_load_testing.uaa_url') %>"
-
-export CLIENT_ID="<%= p('loggregator_load_testing.client_id') %>"
-export CLIENT_SECRET="<%= p('loggregator_load_testing.client_secret') %>"
-
 export CF_USERNAME="<%= p('loggregator_load_testing.username') %>"
 export CF_PASSWORD="<%= p('loggregator_load_testing.password') %>"
 
@@ -35,51 +26,17 @@ export PATH=${PACKAGES_DIR}/bin:${GOROOT}/bin:${PATH}
 if [ "$SKIP_CERT_VERIFY" = "true" ]; then
   skip_ssl="--skip-ssl-validation"
 fi
-cd $PACKAGES_DIR/src/tools/logemitter/build
-cf login -a "$API_URL" -u "$CF_USERNAME" -p "$CF_PASSWORD" -o "$ORG" -s "$SPACE" "$skip_ssl"
-
-# build and push
-
-./build.sh
-
-push() {
-  cf push logemitter$1 -b binary_buildpack
-  cf stop logemitter$1
-  cf set-env logemitter$1 RATE $RATE
-  cf set-env logemitter$1 TIME $TIME
-}
-
-for i in $(seq "$INSTANCES"); do
-  push $i &
-done
-
-wait
 
 cd $PACKAGES_DIR/src/tools/logcounter/build
-
 ./build.sh
 
-env
+cd $PACKAGES_DIR/src/tools/logemitter/build
+./build.sh
+
+cd /var/vcap/jobs/loggregator-load-testing/config
 cf login -a "$API_URL" -u "$CF_USERNAME" -p "$CF_PASSWORD" -o "$ORG" -s "$SPACE" "$skip_ssl"
-cf push logcounter -b binary_buildpack
-cf stop logcounter
-cf set-env logcounter API_URL "$API_URL"
-cf set-env logcounter DOPPLER_URL "$DOPPLER_URL"
-cf set-env logcounter UAA_URL "$UAA_URL"
-cf set-env logcounter CLIENT_ID "$CLIENT_ID"
-cf set-env logcounter CLIENT_SECRET "$CLIENT_SECRET"
-cf set-env logcounter CF_USERNAME "$CF_USERNAME"
-cf set-env logcounter CF_PASSWORD "$CF_PASSWORD"
-cf set-env logcounter MESSAGE_PREFIX "logemitter"
-cf set-env logcounter SUBSCRIPTION_ID "$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)"
-
-cf start logcounter
-
-# run logemitter app
-
-for i in $(seq "$INSTANCES"); do
-  cf start logemitter$i
-done
+cf push logcounter
+cf push logemitter
 
 sleep $TIME
 

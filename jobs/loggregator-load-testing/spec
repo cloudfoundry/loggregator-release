@@ -3,6 +3,7 @@ name: loggregator-load-testing
 description: "Run load tests for loggregator."
 
 templates:
+  manifest.yml.erb: config/manifest.yml
   run.erb: bin/run
 
 packages:

@@ -1,0 +1,29 @@
+---
+applications:
+- name: logemitter
+  instances: <%= p('loggregator_load_testing.instances') %>
+  buildpack: binary_buildpack
+  command: ./logemitter
+  path: /var/vcap/packages/loggregator-load-testing/src/tools/logemitter/build/
+  host: logemitter
+  env:
+    RATE: "<%= p('loggregator_load_testing.rate') %>"
+    TIME: "<%= p('loggregator_load_testing.time') %>"
+- name: logcounter
+  instances: 1
+  buildpack: binary_buildpack
+  command: ./logcounter
+  path: /var/vcap/packages/loggregator-load-testing/src/tools/logcounter/build/
+  env:
+    API_URL: "<%= p('loggregator_load_testing.api_url') %>"
+    DOPPLER_URL: "<%= p('loggregator_load_testing.doppler_url') %>"
+    UAA_URL: "<%= p('loggregator_load_testing.uaa_url') %>"
+
+    CLIENT_ID: "<%= p('loggregator_load_testing.client_id') %>"
+    CLIENT_SECRET: "<%= p('loggregator_load_testing.client_secret') %>"
+
+    CF_USERNAME: "<%= p('loggregator_load_testing.username') %>"
+    CF_PASSWORD: "<%= p('loggregator_load_testing.password') %>"
+
+    MESSAGE_PREFIX: "logemitter"
+    SUBSCRIPTION_ID: "<%= Time.new.nsec %>"
