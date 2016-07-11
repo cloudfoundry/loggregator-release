@@ -66,7 +66,7 @@ Oct 3 15:09:26 private-app App/0 STDERR This message is on stderr at 2013-10-03 
 ### Constraints
 
 1. Loggregator collects STDOUT & STDERR from applications.  This may require configuration on the developer's side.
-  * **Warning**: the DEA logging agent expects an application to have open connections on **both** STDOUT and STDERR. Closing either of these (for example, by redirecting output to `/dev/null`) will be read by the logging agent as a misbehaving application, and it will disconnect from **all** sockets for that app.
+  * **Warning**: The DEA logging agent expects an application to have open connections on **both** STDOUT and STDERR. Closing either of these (for example, by redirecting output to `/dev/null`) will be read by the logging agent as a misbehaving application, and it will disconnect from **all** sockets for that app.
 1. A Loggregator outage must not affect the running application.
 1. Loggregator gathers and stores logs in a best-effort manner.  While undesirable, losing the current buffer of application logs is acceptable.
 1. The 3rd party drain API should mimic Heroku's in order to reduce integration effort for our partners.  The Heroku drain API is simply remote syslog over TCP.
