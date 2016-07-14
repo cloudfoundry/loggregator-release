@@ -3,6 +3,8 @@
 trap "echo Exited!; exit 1;" SIGINT SIGTERM
 
 BIN_DIR=$( cd "$( dirname "$0" )" && pwd )
+TEST_TYPE=${1-everything}
+echo "Running Test Type: $TEST_TYPE"
 
 pushd $BIN_DIR/../src/github.com/coreos/etcd
 ./build
@@ -49,14 +51,19 @@ function bold_blue {
 
 not_unit_tests="github.com,golang.org,gopkg.in,integration_tests,lats"
 
-bold_blue "==================================  Running Unit Tests  =================================="
-ginkgo -r --race --randomizeAllSpecs --cover --skipPackage="${not_unit_tests}" $1 src
-result=$?
+if [ $TEST_TYPE != "integration" ]
+then
+  bold_blue "==================================  Running Unit Tests  =================================="
+  ginkgo -r --race --randomizeAllSpecs --cover --skipPackage="${not_unit_tests}" $1 src
+  result=$?
+fi
 
-echo
-bold_blue "==================================  Running Integration Tests  =================================="
-ginkgo -r --race --randomizeAllSpecs --cover -skipPackage="integration_tests/statsd-injector" $1 src/integration_tests
-result=$((result + $?))
+if [ $TEST_TYPE != "unit" ]
+then
+  bold_blue "==================================  Running Integration Tests  =================================="
+  ginkgo -r --race --randomizeAllSpecs --cover -skipPackage="integration_tests/statsd-injector" $1 src/integration_tests
+  result=$((result + $?))
+fi
 
 fmtable_dirs=$(ls -1 src | grep -v "github.com")
 
