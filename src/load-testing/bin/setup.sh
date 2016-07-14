@@ -1,0 +1,1 @@
+../../tools/logcounter/setup.sh

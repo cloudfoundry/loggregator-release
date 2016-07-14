@@ -3,7 +3,6 @@ out/
 */**/test_assets/stdout.log
 release/
 */bin
-*/**/bin
 .DS_Store
 .idea
 *.iml
@@ -13,7 +12,7 @@ src/code.google.com/p/go.tools/
 *.prof
 *.mprof
 *.coverprofile
-bin/
+/bin/
 *.test
 src/lats/fixtures/metron.json
 src/github.com/cloudfoundry/gorouter/
