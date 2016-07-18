@@ -288,7 +288,6 @@ var _ = Describe("Batch Writer", func() {
 				Expect(bytesWritten).To(BeEquivalentTo(len(messageBytes)))
 
 				Eventually(byteWriter.WriteInput.Message).Should(Receive(Equal(prefixedMessage)))
-				Consistently(byteWriter.WriteInput.Message, 0.4).ShouldNot(Receive())
 				Eventually(byteWriter.WriteInput.Message).Should(Receive(Equal(prefixedMessage)))
 				Consistently(byteWriter.WriteInput.Message).ShouldNot(Receive())
 			})
@@ -470,15 +469,15 @@ var _ = Describe("Batch Writer", func() {
 		})
 
 		It("sends a sentMessages metric on flush", func() {
-			close(byteWriter.WriteOutput.SentLength)
+
+			By("loading batcher up with some messages")
 			for i := 0; i < 3; i++ {
 				_, err := batcher.Write(messageBytes)
 				Expect(err).ToNot(HaveOccurred())
 			}
-			Consistently(mockBatcher.BatchAddCounterInput).ShouldNot(BeCalled(
-				With("DopplerForwarder.sentMessages"),
-			))
 
+			By("not blocking durring writes")
+			close(byteWriter.WriteOutput.SentLength)
 			Eventually(byteWriter.WriteInput.Message).Should(Receive())
 			Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
 				With("DopplerForwarder.sentMessages", uint64(3)),
