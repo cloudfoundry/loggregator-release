@@ -35,13 +35,6 @@ var (
 	configFile  = flag.String("config", "config/doppler.json", "Location of the doppler config json file")
 )
 
-type DopplerServerHealthMonitor struct {
-}
-
-func (hm DopplerServerHealthMonitor) Ok() bool {
-	return true
-}
-
 func NewStoreAdapter(conf *config.Config) storeadapter.StoreAdapter {
 	workPool, err := workpool.NewWorkPool(conf.EtcdMaxConcurrentRequests)
 	if err != nil {
