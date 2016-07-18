@@ -41,3 +41,6 @@ cf push logemitter
 sleep $TIME
 
 curl $(cf app logcounter | grep urls | sed 's|^[^ ]* \([^,]*\).*$|\1|')?report
+
+cf delete -f logemitter
+cf delete -f logcounter

@@ -5,15 +5,23 @@
 # within cf-release
 
 set -e
- 
+
 CF_RELEASE_DIR=${CF_RELEASE_DIR:-$HOME/workspace/cf-release}
 
 # create symlinks to jobs and packages
 pushd $CF_RELEASE_DIR/jobs
+if [ -e loggregator-load-testing ]
+then
+  rm -rf loggregator-load-testing
+fi
 ln -s ../src/loggregator/jobs/loggregator-load-testing
 popd
 
 pushd $CF_RELEASE_DIR/packages
+if [ -e loggregator-load-testing ]
+then
+  rm -rf loggregator-load-testing
+fi
 ln -s ../src/loggregator/packages/loggregator-load-testing
 popd
 
