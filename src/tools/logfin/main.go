@@ -14,20 +14,15 @@ var (
 )
 
 func main() {
-	var err error
-	var inst int
-	inst, err = strconv.Atoi(os.Getenv("INSTANCES"))
-
+	inst, err := strconv.Atoi(os.Getenv("INSTANCES"))
 	instances = uint64(inst)
 	if instances == 0 || err != nil {
 		log.Fatalf("No instances specified: %s", err)
 	}
 
-	countHandler := &Counter{}
-	statusHandler := &Status{}
-
-	http.Handle("/count", countHandler)
-	http.Handle("/status", statusHandler)
+	http.HandleFunc("/", HealthCheckHandler)
+	http.HandleFunc("/count", CountHandler)
+	http.HandleFunc("/status", StatusHandler)
 
 	err = http.ListenAndServe(":"+os.Getenv("PORT"), nil)
 	if err != nil {
@@ -35,27 +30,22 @@ func main() {
 	}
 }
 
-type Counter struct {
+func HealthCheckHandler(rw http.ResponseWriter, r *http.Request) {
+	rw.WriteHeader(200)
 }
 
-func (c *Counter) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func CountHandler(rw http.ResponseWriter, r *http.Request) {
 	atomic.AddUint64(&count, 1)
 	log.Printf("Incremented Counter to: %d", count)
-	return
 }
 
-type Status struct {
-}
-
-func (c *Status) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-
+func StatusHandler(rw http.ResponseWriter, r *http.Request) {
 	if atomic.LoadUint64(&count) >= instances {
 		log.Print("Yay! Heard from all apps")
 		rw.WriteHeader(http.StatusOK)
 		return
 	}
+
 	log.Print("Haven't heard from all apps yet")
 	rw.WriteHeader(http.StatusPreconditionFailed)
-	return
-
 }

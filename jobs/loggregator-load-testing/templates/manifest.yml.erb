@@ -1,5 +1,13 @@
 ---
 applications:
+- name: logfin
+  instances: 1
+  buildpack: binary_buildpack
+  command: ./logfin
+  path: /var/vcap/packages/loggregator-load-testing/src/tools/logfin/build/
+  host: logfin
+  env:
+    INSTANCES: "<%= p('loggregator_load_testing.instances') %>"
 - name: logemitter
   instances: <%= p('loggregator_load_testing.instances') %>
   buildpack: binary_buildpack

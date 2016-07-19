@@ -43,6 +43,10 @@ func main() {
 			printForever(guid)
 		}
 		printUntil(guid, max)
+		_, err := http.Get("http://" + os.Getenv("FIN") + "/count")
+		if err != nil {
+			log.Fatalf("Couldn't send done message to logfin: %s", err)
+		}
 	}()
 
 	http.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {

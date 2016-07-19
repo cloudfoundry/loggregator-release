@@ -22,6 +22,6 @@ echo -n "Instances: "
 read INSTANCES
 echo -n "Org: "
 read ORG
-echo -n "SPACE: "
+echo -n "Space: "
 read SPACE
 export CF_USERNAME CF_PASSWORD RATE TIME INSTANCES ORG SPACE
