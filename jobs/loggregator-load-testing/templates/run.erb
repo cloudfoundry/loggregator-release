@@ -2,45 +2,75 @@
 
 set -e
 
-# config values
-
 export TIME="<%= p('loggregator_load_testing.time') %>"
 export ORG="<%= p('loggregator_load_testing.org') %>"
 export SPACE="<%= p('loggregator_load_testing.space') %>"
-
 export API_URL="<%= p('loggregator_load_testing.api_url') %>"
 export CF_USERNAME="<%= p('loggregator_load_testing.username') %>"
 export CF_PASSWORD="<%= p('loggregator_load_testing.password') %>"
-
 export SKIP_CERT_VERIFY="<%= p('ssl.skip_cert_verify') %>"
-
-# setup paths
 
 export GOROOT=$(readlink -nf /var/vcap/packages/golang1.6)
 export PACKAGES_DIR=/var/vcap/packages/loggregator-load-testing
 export GOPATH=$PACKAGES_DIR
 export PATH=${PACKAGES_DIR}/bin:${GOROOT}/bin:${PATH}
 
-# setup cf cli
+build() {
+  local apps=(logcounter logemitter logfin)
 
-if [ "$SKIP_CERT_VERIFY" = "true" ]; then
-  skip_ssl="--skip-ssl-validation"
-fi
+  for app in ${apps[@]}; do
+    pushd "$PACKAGES_DIR/src/tools/$app/build"
+      ./build.sh
+    popd
+  done
+}
 
-cd $PACKAGES_DIR/src/tools/logcounter/build
-./build.sh
+cli_setup() {
+  cd /var/vcap/jobs/loggregator-load-testing/config
 
-cd $PACKAGES_DIR/src/tools/logemitter/build
-./build.sh
+  if [ "$SKIP_CERT_VERIFY" = "true" ]; then
+    skip_ssl="--skip-ssl-validation"
+  fi
+  cf login -a "$API_URL" -u "$CF_USERNAME" -p "$CF_PASSWORD" -o "$ORG" -s "$SPACE" "$skip_ssl"
+}
 
-cd /var/vcap/jobs/loggregator-load-testing/config
-cf login -a "$API_URL" -u "$CF_USERNAME" -p "$CF_PASSWORD" -o "$ORG" -s "$SPACE" "$skip_ssl"
-cf push logcounter
-cf push logemitter
+start() {
+  cf push logfin
+  LOGFIN_URL=$(cf app logfin | grep urls | awk '{print $2}')
+  cf push logcounter
+  cf push logemitter --no-start
+  cf set-env logemitter FIN $LOGFIN_URL
+  cf start logemitter
+}
 
-sleep $TIME
+block_until_done() {
+  # Wait the minimum time before checking to see if everything is ready
+  sleep $TIME
 
-curl $(cf app logcounter | grep urls | sed 's|^[^ ]* \([^,]*\).*$|\1|')?report
+  while true; do
+    echo checking status of test...
+    status=`curl -s -o /dev/null -w "%{http_code}" $LOGFIN_URL/status`
+    if [ "$status" = "200" ]; then
+      break
+    fi
+    sleep 10s
+  done
+  echo test complete
+}
 
-cf delete -f logemitter
-cf delete -f logcounter
+report() {
+  curl $(cf app logcounter | grep urls | sed 's|^[^ ]* \([^,]*\).*$|\1|')?report
+}
+
+teardown() {
+  cf delete -f logemitter
+  cf delete -f logcounter
+  cf delete -f logfin
+}
+
+build
+cli_setup
+start
+block_until_done
+report
+teardown
