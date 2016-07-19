@@ -45,6 +45,9 @@ func (e *envelopeReceiver) Match(actual interface{}) (success bool, err error) {
 	var msgBytes []byte
 	select {
 	case msgBytes = <-input:
+		if len(msgBytes) == 0 {
+			return false, nil
+		}
 	default:
 		return false, nil
 	}

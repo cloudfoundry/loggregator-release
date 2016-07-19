@@ -92,5 +92,23 @@ var _ = Describe("DopplerForwarder", func() {
 				Expect(n).To(Equal(0))
 			})
 		})
+
+		Context("when it is already writing", func() {
+			It("returns an error rather than blocking", func() {
+				go forwarder.Write(message)
+				Eventually(fakeWrapper.WriteCalled).Should(BeCalled())
+
+				var err error
+				done := make(chan struct{})
+				go func() {
+					defer close(done)
+					_, err = forwarder.Write(message)
+				}()
+				Eventually(done).Should(BeClosed())
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("DopplerForwarder: Write already in use"))
+				fakeWrapper.WriteOutput.Ret0 <- nil
+			})
+		})
 	})
 })

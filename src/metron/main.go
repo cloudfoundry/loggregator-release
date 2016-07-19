@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	_ "net/http/pprof"
+	"runtime"
 	"time"
 
 	"metron/clientpool"
@@ -22,7 +23,6 @@ import (
 
 	"logger"
 	"metron/eventwriter"
-	"runtime"
 
 	"github.com/cloudfoundry/dropsonde/metric_sender"
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
@@ -38,9 +38,12 @@ import (
 	"signalmanager"
 )
 
-// This is 6061 to not conflict with any other jobs that might have pprof
-// running on 6060
-const pprofPort = "6061"
+const (
+	// This is 6061 to not conflict with any other jobs that might have pprof
+	// running on 6060
+	pprofPort = "6061"
+	origin    = "MetronAgent"
+)
 
 var (
 	logFilePath    = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
@@ -151,7 +154,16 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 			tcpForwarder := dopplerforwarder.New(tcpWrapper, tcpPool, logger)
 
 			tcpBatchInterval := time.Duration(conf.TCPBatchIntervalMilliseconds) * time.Millisecond
-			batchWriter, err := batch.NewWriter("tcp", tcpForwarder, conf.TCPBatchSizeBytes, tcpBatchInterval, logger)
+
+			dropCounter := batch.NewDroppedCounter(tcpForwarder, batcher, origin)
+			batchWriter, err := batch.NewWriter(
+				"tcp",
+				tcpForwarder,
+				dropCounter,
+				conf.TCPBatchSizeBytes,
+				tcpBatchInterval,
+				logger,
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -168,9 +180,17 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 			tlsWrapper := dopplerforwarder.NewWrapper(logger, proto)
 			tlsPool := clientpool.NewDopplerPool(logger, tlsCreator)
 			tlsForwarder := dopplerforwarder.New(tlsWrapper, tlsPool, logger)
-
 			tcpBatchInterval := time.Duration(conf.TCPBatchIntervalMilliseconds) * time.Millisecond
-			batchWriter, err := batch.NewWriter("tls", tlsForwarder, conf.TCPBatchSizeBytes, tcpBatchInterval, logger)
+
+			dropCounter := batch.NewDroppedCounter(tlsForwarder, batcher, origin)
+			batchWriter, err := batch.NewWriter(
+				"tls",
+				tlsForwarder,
+				dropCounter,
+				conf.TCPBatchSizeBytes,
+				tcpBatchInterval,
+				logger,
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -196,7 +216,7 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 }
 
 func initializeMetrics(config *config.Config, stopChan chan struct{}, logger *gosteno.Logger) (*metricbatcher.MetricBatcher, *eventwriter.EventWriter) {
-	eventWriter := eventwriter.New("MetronAgent")
+	eventWriter := eventwriter.New(origin)
 	metricSender := metric_sender.NewMetricSender(eventWriter)
 	metricBatcher := metricbatcher.New(metricSender, time.Duration(config.MetricBatchIntervalMilliseconds)*time.Millisecond)
 	metrics.Initialize(metricSender, metricBatcher)
