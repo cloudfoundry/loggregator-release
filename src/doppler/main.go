@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	_ "net/http/pprof"
-	"runtime"
 	"time"
 
 	"doppler/config"
@@ -65,16 +64,14 @@ func main() {
 
 	flag.Parse()
 
-	runtime.GOMAXPROCS(runtime.NumCPU())
-
 	localIp, err := localip.LocalIP()
 	if err != nil {
-		panic(fmt.Errorf("Unable to resolve own IP address: %s", err))
+		fatal("Unable to resolve own IP address: %s", err)
 	}
 
 	conf, err := config.ParseConfig(*configFile)
 	if err != nil {
-		panic(fmt.Errorf("Unable to parse config: %s", err))
+		fatal("Unable to parse config: %s", err)
 	}
 
 	log := logger.NewLogger(*logLevel, *logFilePath, "doppler", conf.Syslog)
@@ -93,7 +90,7 @@ func main() {
 	doppler, err := New(log, localIp, conf, storeAdapter, conf.MessageDrainBufferSize, DOPPLER_ORIGIN, time.Duration(conf.WebsocketWriteTimeoutSeconds)*time.Second, time.Duration(conf.SinkDialTimeoutSeconds)*time.Second)
 
 	if err != nil {
-		panic(fmt.Errorf("Failed to create doppler: %s", err))
+		fatal("Failed to create doppler: %s", err)
 	}
 
 	go doppler.Start()
@@ -125,4 +122,8 @@ func main() {
 			return
 		}
 	}
+}
+
+func fatal(format string, args ...interface{}) {
+	panic(fmt.Sprintf(format, args...))
 }
