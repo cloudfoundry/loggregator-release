@@ -8,6 +8,7 @@ export SPACE="<%= p('loggregator_load_testing.space') %>"
 export API_URL="<%= p('loggregator_load_testing.api_url') %>"
 export CF_USERNAME="<%= p('loggregator_load_testing.username') %>"
 export CF_PASSWORD="<%= p('loggregator_load_testing.password') %>"
+export ROUTE_SCHEME="<%= p('loggregator_load_testing.route_scheme') %>"
 export SKIP_CERT_VERIFY="<%= p('ssl.skip_cert_verify') %>"
 
 export GOROOT=$(readlink -nf /var/vcap/packages/golang1.6)
@@ -36,10 +37,10 @@ cli_setup() {
 
 start() {
   cf push logfin
-  LOGFIN_URL=$(cf app logfin | grep urls | awk '{print $2}')
+  LOGFIN_URL=$ROUTE_SCHEME://$(cf app logfin | grep urls | awk '{print $2}')
   cf push logcounter
   cf push logemitter --no-start
-  cf set-env logemitter FIN $LOGFIN_URL
+  cf set-env logemitter LOGFIN_URL $LOGFIN_URL
   cf start logemitter
 }
 
@@ -59,7 +60,7 @@ block_until_done() {
 }
 
 report() {
-  curl $(cf app logcounter | grep urls | sed 's|^[^ ]* \([^,]*\).*$|\1|')?report
+  curl $ROUTE_SCHEME://$(cf app logcounter | grep urls | sed 's|^[^ ]* \([^,]*\).*$|\1|')?report
 }
 
 teardown() {

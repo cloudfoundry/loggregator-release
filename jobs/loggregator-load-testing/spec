@@ -45,6 +45,10 @@ properties:
   loggregator_load_testing.password:
     description: "The CF password used to push the apps and connect to the firehose."
 
+  loggregator_load_testing.route_scheme:
+    description: "The scheme used to communicate with the cf apps."
+    default: "https"
+
   ssl.skip_cert_verify:
     description: "Specifies that the job is allowed to skip SSL verification."
     default: false

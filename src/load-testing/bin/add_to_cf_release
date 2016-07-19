@@ -54,6 +54,7 @@ job=$(awk 1 ORS='\\n' <<EOF
         client_secret: $CLIENT_SECRET
         time: $TIME
         rate: $RATE
+        route_scheme: $SCHEME
 EOF
 )
 

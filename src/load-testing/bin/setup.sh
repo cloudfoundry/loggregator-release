@@ -24,4 +24,6 @@ echo -n "Org: "
 read ORG
 echo -n "Space: "
 read SPACE
-export CF_USERNAME CF_PASSWORD RATE TIME INSTANCES ORG SPACE
+echo -n "Scheme: "
+read SCHEME
+export CF_USERNAME CF_PASSWORD RATE TIME INSTANCES ORG SPACE SCHEME
