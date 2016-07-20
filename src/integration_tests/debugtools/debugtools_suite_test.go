@@ -1,7 +1,6 @@
-package endtoend_test
+package debugtools_test
 
 import (
-	"doppler/dopplerservice"
 	"testing"
 
 	"fmt"
@@ -12,32 +11,21 @@ import (
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	"github.com/pivotal-golang/localip"
 )
 
-func TestIntegrationTest(t *testing.T) {
+func TestDebugTools(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "End-to-end Integration Test Suite")
 }
 
 var (
-	LocalIPAddress string
-
 	etcdRunner  *etcdstorerunner.ETCDClusterRunner
 	etcdAdapter storeadapter.StoreAdapter
 
 	metronExecutablePath            string
 	dopplerExecutablePath           string
 	trafficControllerExecutablePath string
-
-	metronSession  *gexec.Session
-	dopplerSession *gexec.Session
-	tcSession      *gexec.Session
-
-	dopplerConfig string
-	metronConfig  string
 )
 
 var _ = BeforeSuite(func() {
@@ -54,62 +42,6 @@ var _ = BeforeSuite(func() {
 
 var _ = BeforeEach(func() {
 	etcdRunner.Reset()
-
-	dopplerConfig = "dopplerudp"
-	metronConfig = "metronudp"
-})
-
-var _ = JustBeforeEach(func() {
-	const (
-		BLUE = 34 + iota
-		PURPLE
-		LIGHT_BLUE
-	)
-
-	metronSession = startComponent(
-		metronExecutablePath,
-		"metron",
-		BLUE,
-		"--config=fixtures/"+metronConfig+".json",
-		"--debug",
-	)
-
-	dopplerSession = startComponent(
-		dopplerExecutablePath,
-		"doppler",
-		PURPLE,
-		"--config=fixtures/"+dopplerConfig+".json",
-	)
-	var err error
-	LocalIPAddress, err = localip.LocalIP()
-	Expect(err).ToNot(HaveOccurred())
-
-	// Wait for doppler to register
-	key := fmt.Sprintf("%s/z1/doppler_z1/0", dopplerservice.LEGACY_ROOT)
-	Eventually(func() bool {
-		_, err := etcdAdapter.Get(key)
-		return err == nil
-	}, 5).Should(BeTrue())
-
-	key = fmt.Sprintf("%s/z1/doppler_z1/0", dopplerservice.META_ROOT)
-	Eventually(func() bool {
-		_, err := etcdAdapter.Get(key)
-		return err == nil
-	}, 1).Should(BeTrue())
-
-	// Wait for metron
-	Eventually(metronSession.Buffer, 10).Should(gbytes.Say(" from last etcd event, updating writer..."))
-
-	tcSession = startComponent(
-		trafficControllerExecutablePath,
-		"tc",
-		LIGHT_BLUE,
-		"--config=fixtures/trafficcontroller.json",
-		"--disableAccessControl",
-	)
-
-	// Wait for traffic controller to startup
-	waitOnURL("http://" + LocalIPAddress + ":49630")
 })
 
 func buildComponent(componentName string) (pathToComponent string) {
@@ -137,12 +69,6 @@ func waitOnURL(url string) {
 		return err
 	}, 3).ShouldNot(HaveOccurred())
 }
-
-var _ = AfterEach(func() {
-	metronSession.Kill().Wait()
-	dopplerSession.Kill().Wait()
-	tcSession.Kill().Wait()
-})
 
 var _ = AfterSuite(func() {
 	etcdAdapter.Disconnect()

@@ -81,7 +81,7 @@ func main() {
 	}
 
 	go func() {
-		err := http.ListenAndServe(net.JoinHostPort(ipAddress, pprofPort), nil)
+		err := http.ListenAndServe(net.JoinHostPort("localhost", pprofPort), nil)
 		if err != nil {
 			log.Errorf("Error starting pprof server: %s", err.Error())
 		}
