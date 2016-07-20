@@ -76,9 +76,6 @@ var _ = JustBeforeEach(func() {
 		"--debug",
 	)
 
-	// Wait for metron
-	Eventually(metronSession.Buffer).Should(gbytes.Say("metron started"))
-
 	dopplerSession = startComponent(
 		dopplerExecutablePath,
 		"doppler",
@@ -101,6 +98,9 @@ var _ = JustBeforeEach(func() {
 		_, err := etcdAdapter.Get(key)
 		return err == nil
 	}, 1).Should(BeTrue())
+
+	// Wait for metron
+	Eventually(metronSession.Buffer, 10).Should(gbytes.Say(" from last etcd event, updating writer..."))
 
 	tcSession = startComponent(
 		trafficControllerExecutablePath,

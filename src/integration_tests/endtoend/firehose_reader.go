@@ -3,7 +3,6 @@ package endtoend
 import (
 	"crypto/tls"
 	"strings"
-	"sync"
 
 	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -21,16 +20,16 @@ type FirehoseReader struct {
 	DopplerReceivedMessageCount float64
 	DopplerSentMessageCount     float64
 
-	logMessageMu   sync.Mutex
-	lastLogMessage *events.Envelope
+	LogMessages chan *events.Envelope
 }
 
 func NewFirehoseReader() *FirehoseReader {
 	consumer, msgChan := initiateFirehoseConnection()
 	return &FirehoseReader{
-		consumer: consumer,
-		msgChan:  msgChan,
-		stopChan: make(chan struct{}),
+		consumer:    consumer,
+		msgChan:     msgChan,
+		LogMessages: make(chan *events.Envelope, 100),
+		stopChan:    make(chan struct{}),
 	}
 }
 
@@ -57,10 +56,11 @@ func (r *FirehoseReader) Read() {
 			r.DopplerSentMessageCount = float64(msg.CounterEvent.GetTotal())
 		}
 
-		if isLogMessage(msg) {
-			r.logMessageMu.Lock()
-			r.lastLogMessage = msg
-			r.logMessageMu.Unlock()
+		if msg.GetEventType() == events.Envelope_LogMessage {
+			select {
+			case r.LogMessages <- msg:
+			default:
+			}
 		}
 	}
 }
@@ -68,12 +68,6 @@ func (r *FirehoseReader) Read() {
 func (r *FirehoseReader) Close() {
 	close(r.stopChan)
 	r.consumer.Close()
-}
-
-func (r *FirehoseReader) LastLogMessage() *events.Envelope {
-	r.logMessageMu.Lock()
-	defer r.logMessageMu.Unlock()
-	return r.lastLogMessage
 }
 
 func initiateFirehoseConnection() (*consumer.Consumer, <-chan *events.Envelope) {
@@ -101,8 +95,4 @@ func dopplerReceivedMessageCount(msg *events.Envelope) bool {
 
 func dopplerSentMessageCount(msg *events.Envelope) bool {
 	return msg.GetEventType() == events.Envelope_CounterEvent && strings.HasPrefix(msg.CounterEvent.GetName(), "sentMessagesFirehose") && msg.GetOrigin() == "DopplerServer"
-}
-
-func isLogMessage(msg *events.Envelope) bool {
-	return msg.GetEventType() == events.Envelope_LogMessage
 }

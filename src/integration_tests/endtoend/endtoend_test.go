@@ -22,7 +22,7 @@ var _ = Describe("End to end tests", func() {
 			})
 
 			It("can send a message", func() {
-				const writeRatePerSecond = 1000
+				const writeRatePerSecond = 10
 				metronStreamWriter := endtoend.NewMetronStreamWriter()
 				firehoseReader := endtoend.NewFirehoseReader()
 				generator := messagegenerator.NewLogMessageGenerator("custom-app-id")
@@ -36,7 +36,7 @@ var _ = Describe("End to end tests", func() {
 				go stopExperimentAfterTimeout(ex)
 				ex.Start()
 
-				Eventually(firehoseReader.LastLogMessage()).Should(ContainSubstring("custom-app-id"))
+				Eventually(firehoseReader.LogMessages).Should(Receive(ContainSubstring("custom-app-id")))
 			}, 10)
 		})
 	})
