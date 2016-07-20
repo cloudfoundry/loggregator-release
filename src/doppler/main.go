@@ -77,7 +77,7 @@ func main() {
 	log := logger.NewLogger(*logLevel, *logFilePath, "doppler", conf.Syslog)
 
 	go func() {
-		err := http.ListenAndServe(net.JoinHostPort(localIp, pprofPort), nil)
+		err := http.ListenAndServe(net.JoinHostPort("localhost", pprofPort), nil)
 		if err != nil {
 			log.Errorf("Error starting pprof server: %s", err.Error())
 		}

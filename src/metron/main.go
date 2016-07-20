@@ -32,7 +32,6 @@ import (
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
-	"github.com/pivotal-golang/localip"
 
 	"metron/config"
 	"signalmanager"
@@ -61,18 +60,13 @@ func main() {
 		panic(fmt.Errorf("Unable to parse config: %s", err))
 	}
 
-	localIp, err := localip.LocalIP()
-	if err != nil {
-		panic(fmt.Errorf("Unable to resolve own IP address: %s", err))
-	}
-
 	logger := logger.NewLogger(*debug, *logFilePath, "metron", config.Syslog)
 
 	statsStopChan := make(chan struct{})
 	batcher, eventWriter := initializeMetrics(config, statsStopChan, logger)
 
 	go func() {
-		err := http.ListenAndServe(net.JoinHostPort(localIp, pprofPort), nil)
+		err := http.ListenAndServe(net.JoinHostPort("localhost", pprofPort), nil)
 		if err != nil {
 			logger.Errorf("Error starting pprof server: %s", err.Error())
 		}
