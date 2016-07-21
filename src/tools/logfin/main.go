@@ -31,12 +31,13 @@ func main() {
 }
 
 func HealthCheckHandler(rw http.ResponseWriter, r *http.Request) {
-	rw.WriteHeader(200)
+	rw.WriteHeader(http.StatusOK)
 }
 
 func CountHandler(rw http.ResponseWriter, r *http.Request) {
 	atomic.AddUint64(&count, 1)
 	log.Printf("Incremented Counter to: %d", count)
+	rw.WriteHeader(http.StatusOK)
 }
 
 func StatusHandler(rw http.ResponseWriter, r *http.Request) {
