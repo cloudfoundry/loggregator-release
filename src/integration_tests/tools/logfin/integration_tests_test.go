@@ -1,19 +1,18 @@
 package integration_tests_test
 
 import (
+	"integration_tests/tools/helpers"
 	"net/http"
-	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("IntegrationTests", func() {
 	Describe("Web requests", func() {
 		Describe("/", func() {
 			It("returns 200 for healthchecks", func() {
-				session, port := startLogfin()
+				session, port := helpers.StartLogfin()
 
 				Eventually(func() bool { return checkReady(port) }).Should(Equal(true))
 
@@ -23,7 +22,7 @@ var _ = Describe("IntegrationTests", func() {
 
 		Describe("/count", func() {
 			It("increments the count, and returns 200", func() {
-				session, port := startLogfin()
+				session, port := helpers.StartLogfin()
 
 				Eventually(func() bool { return checkReady(port) }).Should(Equal(true))
 				resp, err := http.Get("http://localhost:" + port + "/count")
@@ -36,7 +35,7 @@ var _ = Describe("IntegrationTests", func() {
 
 		Describe("/status", func() {
 			It("reports the current status of the emitters", func() {
-				session, port := startLogfin()
+				session, port := helpers.StartLogfin()
 
 				Eventually(func() bool { return checkReady(port) }).Should(Equal(true))
 
@@ -59,18 +58,6 @@ var _ = Describe("IntegrationTests", func() {
 		})
 	})
 })
-
-func startLogfin() (*gexec.Session, string) {
-	port := "8080"
-	os.Setenv("PORT", port)
-	os.Setenv("INSTANCES", "1")
-	//PORT
-	return startComponent(
-		logfinExecutablePath,
-		"logfin",
-		34,
-	), port
-}
 
 func checkReady(port string) bool {
 	resp, _ := http.Get("http://localhost:" + port + "/")

@@ -12,12 +12,14 @@ import (
 
 func TestIntegrationTests(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Logfin Suite")
+	RunSpecs(t, "Logemitter Suite")
 }
 
 var _ = BeforeSuite(func() {
 	helpers.BuildLogfin()
+	helpers.BuildLogemitter()
 })
+
 var _ = AfterSuite(func() {
 	gexec.CleanupBuildArtifacts()
 })
