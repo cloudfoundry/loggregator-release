@@ -2,6 +2,7 @@ package metron_test
 
 import (
 	"fmt"
+	"integration_tests"
 
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/logs"
@@ -12,11 +13,11 @@ import (
 
 var _ = Describe("communicating with doppler over TLS", func() {
 	It("forwards messages", func() {
-		etcdCleanup, etcdClientURL := setupEtcd()
+		etcdCleanup, etcdClientURL := integration_tests.SetupEtcd()
 		defer etcdCleanup()
-		dopplerCleanup, dopplerOutgoingPort := setupDoppler(etcdClientURL)
+		dopplerCleanup, dopplerOutgoingPort := integration_tests.SetupDoppler(etcdClientURL)
 		defer dopplerCleanup()
-		metronCleanup, metronPort := setupMetron(etcdClientURL, "tls")
+		metronCleanup, metronPort := integration_tests.SetupMetron(etcdClientURL, "tls")
 		defer metronCleanup()
 
 		err := dropsonde.Initialize(fmt.Sprintf("localhost:%d", metronPort), "test-origin")

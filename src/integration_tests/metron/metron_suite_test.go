@@ -1,14 +1,11 @@
 package metron_test
 
 import (
-	"strings"
-	"sync"
+	"integration_tests/binaries"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/onsi/gomega/gexec"
 )
 
 func TestMetron(t *testing.T) {
@@ -16,57 +13,21 @@ func TestMetron(t *testing.T) {
 	RunSpecs(t, "Metron Integration Test Suite")
 }
 
-var (
-	metronPath  string
-	dopplerPath string
-	etcdPath    string
-)
-
 var _ = SynchronizedBeforeSuite(func() []byte {
-	// Note: There was discussion about building binaries globally for all test
-	// packages. For now we are doing this in parallel once for all the tests in
-	// this package.
-	var mu sync.Mutex
-	buildPaths := make([]string, 3)
-	var wg sync.WaitGroup
-	wg.Add(3)
-
-	go func() {
-		defer wg.Done()
-		metronPath, err := gexec.Build("metron", "-race")
+	bp, errors := binaries.Build()
+	for err := range errors {
 		Expect(err).ToNot(HaveOccurred())
-		mu.Lock()
-		defer mu.Unlock()
-		buildPaths[0] = metronPath
-	}()
-
-	go func() {
-		defer wg.Done()
-		dopplerPath, err := gexec.Build("doppler", "-race")
-		Expect(err).ToNot(HaveOccurred())
-		mu.Lock()
-		defer mu.Unlock()
-		buildPaths[1] = dopplerPath
-	}()
-
-	go func() {
-		defer wg.Done()
-		etcdPath, err := gexec.Build("github.com/coreos/etcd", "-race")
-		Expect(err).ToNot(HaveOccurred())
-		mu.Lock()
-		defer mu.Unlock()
-		buildPaths[2] = etcdPath
-	}()
-
-	wg.Wait()
-	return []byte(strings.Join(buildPaths, ":"))
-}, func(buildPaths []byte) {
-	paths := strings.Split(string(buildPaths), ":")
-	metronPath = paths[0]
-	dopplerPath = paths[1]
-	etcdPath = paths[2]
+	}
+	text, err := bp.Marshal()
+	Expect(err).ToNot(HaveOccurred())
+	return text
+}, func(bpText []byte) {
+	var bp binaries.BuildPaths
+	err := bp.Unmarshal(bpText)
+	Expect(err).ToNot(HaveOccurred())
+	bp.SetEnv()
 })
 
 var _ = SynchronizedAfterSuite(func() {}, func() {
-	gexec.CleanupBuildArtifacts()
+	binaries.Cleanup()
 })

@@ -1,4 +1,4 @@
-package metron_test
+package integration_tests
 
 import (
 	"encoding/json"
@@ -13,12 +13,14 @@ import (
 
 	dopplerConfig "doppler/config"
 	metronConfig "metron/config"
+	trafficcontrollerConfig "trafficcontroller/config"
 
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	"github.com/pivotal-golang/localip"
 )
 
 const (
@@ -36,13 +38,28 @@ const (
 	dopplerTLSPortOffset
 	dopplerOutgoingPortOffset
 	metronPortOffset
+	trafficcontrollerPortOffset
+)
+
+// TODO: Add color to writers
+const (
+	yellow = 33 + iota
+	blue
+	magenta
+	cyan
+	stdOut = "\x1b[32m[o]\x1b[%dm[%s]\x1b[0m "
+	stdErr = "\x1b[32m[e]\x1b[%dm[%s]\x1b[0m "
 )
 
 func getPort(offset int) int {
 	return config.GinkgoConfig.ParallelNode*portRangeCoefficient + portRangeStart + offset
 }
 
-func setupEtcd() (func(), string) {
+func SetupEtcd() (func(), string) {
+	By("making sure etcd was build")
+	etcdPath := os.Getenv("ETCD_BUILD_PATH")
+	Expect(etcdPath).ToNot(BeEmpty())
+
 	By("starting etcd")
 	etcdPort := getPort(etcdPortOffset)
 	etcdPeerPort := getPort(etcdPeerPortOffset)
@@ -84,11 +101,15 @@ func setupEtcd() (func(), string) {
 
 	return func() {
 		os.RemoveAll(etcdDataDir)
-		etcdSession.Kill()
+		etcdSession.Kill().Wait()
 	}, etcdClientURL
 }
 
-func setupDoppler(etcdClientURL string) (func(), int) {
+func SetupDoppler(etcdClientURL string) (func(), int) {
+	By("making sure doppler was build")
+	dopplerPath := os.Getenv("DOPPLER_BUILD_PATH")
+	Expect(dopplerPath).ToNot(BeEmpty())
+
 	By("starting doppler")
 	dopplerUDPPort := getPort(dopplerUDPPortOffset)
 	dopplerTCPPort := getPort(dopplerTCPPortOffset)
@@ -102,7 +123,8 @@ func setupDoppler(etcdClientURL string) (func(), int) {
 		EtcdUrls:           []string{etcdClientURL},
 		EnableTLSTransport: true,
 		TLSListenerConfig: dopplerConfig.TLSListenerConfig{
-			Port:     uint32(dopplerTLSPort),
+			Port: uint32(dopplerTLSPort),
+			// TODO: move these files as source code and write them to tmp files
 			CertFile: "../fixtures/server.crt",
 			KeyFile:  "../fixtures/server.key",
 			CAFile:   "../fixtures/loggregator-ca.crt",
@@ -149,11 +171,15 @@ func setupDoppler(etcdClientURL string) (func(), int) {
 
 	return func() {
 		os.Remove(dopplerCfgFile.Name())
-		dopplerSession.Kill()
+		dopplerSession.Kill().Wait()
 	}, dopplerOutgoingPort
 }
 
-func setupMetron(etcdClientURL, proto string) (func(), int) {
+func SetupMetron(etcdClientURL, proto string) (func(), int) {
+	By("making sure metron was build")
+	metronPath := os.Getenv("METRON_BUILD_PATH")
+	Expect(metronPath).ToNot(BeEmpty())
+
 	By("starting metron")
 	protocols := []metronConfig.Protocol{metronConfig.Protocol(proto)}
 	metronPort := getPort(metronPortOffset)
@@ -214,6 +240,59 @@ func setupMetron(etcdClientURL, proto string) (func(), int) {
 
 	return func() {
 		os.Remove(metronCfgFile.Name())
-		metronSession.Kill()
+		metronSession.Kill().Wait()
 	}, metronPort
+}
+
+func SetupTrafficcontroller(etcdClientURL string, dopplerPort, metronPort int) (func(), int) {
+	By("making sure trafficcontroller was build")
+	tcPath := os.Getenv("TRAFFIC_CONTROLLER_BUILD_PATH")
+	Expect(tcPath).ToNot(BeEmpty())
+
+	By("starting trafficcontroller")
+	tcPort := getPort(trafficcontrollerPortOffset)
+	tcConfig := trafficcontrollerConfig.Config{
+		EtcdUrls:                  []string{etcdClientURL},
+		EtcdMaxConcurrentRequests: 10,
+		JobName:                   jobName,
+		Index:                     jobIndex,
+		DopplerPort:               uint32(dopplerPort),
+		OutgoingDropsondePort:     uint32(tcPort),
+		MetronHost:                "localhost",
+		MetronPort:                metronPort,
+		SystemDomain:              "vcap.me",
+		SkipCertVerify:            true,
+	}
+
+	tcCfgFile, err := ioutil.TempFile("", "trafficcontroller-config")
+	Expect(err).ToNot(HaveOccurred())
+
+	err = json.NewEncoder(tcCfgFile).Encode(tcConfig)
+	Expect(err).ToNot(HaveOccurred())
+	err = tcCfgFile.Close()
+	Expect(err).ToNot(HaveOccurred())
+
+	tcCommand := exec.Command(tcPath, "--debug", "--disableAccessControl", "--config", tcCfgFile.Name())
+	tcSession, err := gexec.Start(
+		tcCommand,
+		gexec.NewPrefixedWriter("[o][tc]", GinkgoWriter),
+		gexec.NewPrefixedWriter("[e][tc]", GinkgoWriter),
+	)
+	Expect(err).ToNot(HaveOccurred())
+
+	By("waiting for trafficcontroller to listen")
+	ip, err := localip.LocalIP()
+	Expect(err).ToNot(HaveOccurred())
+	Eventually(func() error {
+		c, reqErr := net.Dial("tcp", fmt.Sprintf("%s:%d", ip, tcPort))
+		if reqErr == nil {
+			c.Close()
+		}
+		return reqErr
+	}, 3).Should(Succeed())
+
+	return func() {
+		os.Remove(tcCfgFile.Name())
+		tcSession.Kill().Wait()
+	}, tcPort
 }
