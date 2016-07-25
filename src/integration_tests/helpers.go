@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	dopplerConfig "doppler/config"
+	"doppler/iprange"
 	metronConfig "metron/config"
 	trafficcontrollerConfig "trafficcontroller/config"
 
@@ -117,10 +118,19 @@ func SetupDoppler(etcdClientURL string) (func(), int) {
 	dopplerOutgoingPort := getPort(dopplerOutgoingPortOffset)
 
 	dopplerConf := dopplerConfig.Config{
-		IncomingUDPPort:    uint32(dopplerUDPPort),
-		IncomingTCPPort:    uint32(dopplerTCPPort),
-		OutgoingPort:       uint32(dopplerOutgoingPort),
-		EtcdUrls:           []string{etcdClientURL},
+		Index:        jobIndex,
+		JobName:      jobName,
+		Zone:         availabilityZone,
+		SharedSecret: sharedSecret,
+
+		IncomingUDPPort: uint32(dopplerUDPPort),
+		IncomingTCPPort: uint32(dopplerTCPPort),
+		OutgoingPort:    uint32(dopplerOutgoingPort),
+
+		EtcdUrls:                  []string{etcdClientURL},
+		EtcdMaxConcurrentRequests: 10,
+		MetronAddress:             fmt.Sprintf("127.0.0.1:%d", metronPort),
+
 		EnableTLSTransport: true,
 		TLSListenerConfig: dopplerConfig.TLSListenerConfig{
 			Port: uint32(dopplerTLSPort),
@@ -129,16 +139,18 @@ func SetupDoppler(etcdClientURL string) (func(), int) {
 			KeyFile:  "../fixtures/server.key",
 			CAFile:   "../fixtures/loggregator-ca.crt",
 		},
-		MaxRetainedLogMessages:       10,
-		MessageDrainBufferSize:       100,
-		SinkDialTimeoutSeconds:       10,
-		SinkIOTimeoutSeconds:         10,
-		SinkInactivityTimeoutSeconds: 10,
-		UnmarshallerCount:            5,
-		Index:                        jobIndex,
-		JobName:                      jobName,
-		SharedSecret:                 sharedSecret,
-		Zone:                         availabilityZone,
+
+		MetricBatchIntervalMilliseconds: 10,
+		ContainerMetricTTLSeconds:       120,
+		MaxRetainedLogMessages:          10,
+		MessageDrainBufferSize:          100,
+		SinkDialTimeoutSeconds:          10,
+		SinkIOTimeoutSeconds:            10,
+		SinkInactivityTimeoutSeconds:    120,
+		SinkSkipCertVerify:              true,
+		UnmarshallerCount:               5,
+		BlackListIps:                    make([]iprange.IPRange, 0),
+		Syslog:                          "",
 	}
 
 	dopplerCfgFile, err := ioutil.TempFile("", "doppler-config")
@@ -184,17 +196,22 @@ func SetupMetron(etcdClientURL, proto string) (func(), int) {
 	protocols := []metronConfig.Protocol{metronConfig.Protocol(proto)}
 	metronPort := getPort(metronPortOffset)
 	metronConf := metronConfig.Config{
-		Deployment:                       "deployment",
-		Zone:                             availabilityZone,
-		Job:                              jobName,
-		Index:                            jobIndex,
-		IncomingUDPPort:                  metronPort,
-		EtcdUrls:                         []string{etcdClientURL},
-		SharedSecret:                     sharedSecret,
+		Index:        jobIndex,
+		Job:          jobName,
+		Zone:         availabilityZone,
+		SharedSecret: sharedSecret,
+
+		Protocols:       metronConfig.Protocols(protocols),
+		IncomingUDPPort: metronPort,
+		Deployment:      "deployment",
+
+		EtcdUrls:                  []string{etcdClientURL},
+		EtcdMaxConcurrentRequests: 1,
+
 		MetricBatchIntervalMilliseconds:  10,
 		RuntimeStatsIntervalMilliseconds: 10,
-		EtcdMaxConcurrentRequests:        10,
-		Protocols:                        metronConfig.Protocols(protocols),
+		TCPBatchSizeBytes:                1024,
+		TCPBatchIntervalMilliseconds:     10,
 	}
 
 	switch proto {
@@ -252,16 +269,24 @@ func SetupTrafficcontroller(etcdClientURL string, dopplerPort, metronPort int) (
 	By("starting trafficcontroller")
 	tcPort := getPort(trafficcontrollerPortOffset)
 	tcConfig := trafficcontrollerConfig.Config{
+		Index:   jobIndex,
+		JobName: jobName,
+
+		DopplerPort:           uint32(dopplerPort),
+		OutgoingDropsondePort: uint32(tcPort),
+		MetronHost:            "localhost",
+		MetronPort:            metronPort,
+
 		EtcdUrls:                  []string{etcdClientURL},
-		EtcdMaxConcurrentRequests: 10,
-		JobName:                   jobName,
-		Index:                     jobIndex,
-		DopplerPort:               uint32(dopplerPort),
-		OutgoingDropsondePort:     uint32(tcPort),
-		MetronHost:                "localhost",
-		MetronPort:                metronPort,
-		SystemDomain:              "vcap.me",
-		SkipCertVerify:            true,
+		EtcdMaxConcurrentRequests: 5,
+
+		SystemDomain:   "vcap.me",
+		SkipCertVerify: true,
+
+		ApiHost:         "http://127.0.0.1:65530",
+		UaaHost:         "http://127.0.0.1:65531",
+		UaaClientId:     "bob",
+		UaaClientSecret: "yourUncle",
 	}
 
 	tcCfgFile, err := ioutil.TempFile("", "trafficcontroller-config")
