@@ -48,7 +48,7 @@ const (
 	magenta
 	cyan
 	stdOut = "\x1b[32m[o]\x1b[%dm[%s]\x1b[0m "
-	stdErr = "\x1b[32m[e]\x1b[%dm[%s]\x1b[0m "
+	stdErr = "\x1b[31m[e]\x1b[%dm[%s]\x1b[0m "
 )
 
 func getPort(offset int) int {
@@ -77,8 +77,8 @@ func SetupEtcd() (func(), string) {
 	)
 	etcdSession, err := gexec.Start(
 		etcdCommand,
-		gexec.NewPrefixedWriter("[o][etcd]", GinkgoWriter),
-		gexec.NewPrefixedWriter("[e][etcd]", GinkgoWriter),
+		gexec.NewPrefixedWriter(fmt.Sprintf(stdOut, yellow, "etcd"), GinkgoWriter),
+		gexec.NewPrefixedWriter(fmt.Sprintf(stdErr, yellow, "etcd"), GinkgoWriter),
 	)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -152,8 +152,8 @@ func SetupDoppler(etcdClientURL string) (func(), int) {
 	dopplerCommand := exec.Command(dopplerPath, "--config", dopplerCfgFile.Name())
 	dopplerSession, err := gexec.Start(
 		dopplerCommand,
-		gexec.NewPrefixedWriter("[o][doppler]", GinkgoWriter),
-		gexec.NewPrefixedWriter("[e][doppler]", GinkgoWriter),
+		gexec.NewPrefixedWriter(fmt.Sprintf(stdOut, blue, "doppler"), GinkgoWriter),
+		gexec.NewPrefixedWriter(fmt.Sprintf(stdErr, blue, "doppler"), GinkgoWriter),
 	)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -222,8 +222,8 @@ func SetupMetron(etcdClientURL, proto string) (func(), int) {
 	metronCommand := exec.Command(metronPath, "--debug", "--config", metronCfgFile.Name())
 	metronSession, err := gexec.Start(
 		metronCommand,
-		gexec.NewPrefixedWriter("[o][metron]", GinkgoWriter),
-		gexec.NewPrefixedWriter("[e][metron]", GinkgoWriter),
+		gexec.NewPrefixedWriter(fmt.Sprintf(stdOut, magenta, "metron"), GinkgoWriter),
+		gexec.NewPrefixedWriter(fmt.Sprintf(stdErr, magenta, "metron"), GinkgoWriter),
 	)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -275,8 +275,8 @@ func SetupTrafficcontroller(etcdClientURL string, dopplerPort, metronPort int) (
 	tcCommand := exec.Command(tcPath, "--debug", "--disableAccessControl", "--config", tcCfgFile.Name())
 	tcSession, err := gexec.Start(
 		tcCommand,
-		gexec.NewPrefixedWriter("[o][tc]", GinkgoWriter),
-		gexec.NewPrefixedWriter("[e][tc]", GinkgoWriter),
+		gexec.NewPrefixedWriter(fmt.Sprintf(stdOut, cyan, "tc"), GinkgoWriter),
+		gexec.NewPrefixedWriter(fmt.Sprintf(stdErr, cyan, "tc"), GinkgoWriter),
 	)
 	Expect(err).ToNot(HaveOccurred())
 
