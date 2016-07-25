@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 
@@ -13,6 +14,7 @@ import (
 var (
 	logemitterExecutablePath string
 	logfinExecutablePath     string
+	logcounterExecutablePath string
 )
 
 func BuildLogfin() {
@@ -21,6 +23,10 @@ func BuildLogfin() {
 
 func BuildLogemitter() {
 	logemitterExecutablePath = buildComponent("tools/logemitter")
+}
+
+func BuildLogcounter() {
+	logemitterExecutablePath = buildComponent("tools/logcounter")
 }
 
 func StartLogemitter(logfinPort string) (*gexec.Session, string) {
@@ -49,6 +55,18 @@ func StartLogfin() (*gexec.Session, string) {
 	), port
 }
 
+func StartLogcounter(uaaPort string) (*gexec.Session, string) {
+	port := "8083"
+	os.Setenv("PORT", port)
+	os.Setenv("DOPPLER_URL", "127.0.0.1:1235") // this is a hardcoded address in fake_doppler
+	//PORT
+	return startComponent(
+		logemitterExecutablePath,
+		"logemitter",
+		34,
+	), port
+}
+
 func buildComponent(componentName string) (pathToComponent string) {
 	var err error
 	pathToComponent, err = gexec.Build(componentName)
@@ -66,4 +84,13 @@ func startComponent(path string, shortName string, colorCode uint64, arg ...stri
 		gexec.NewPrefixedWriter(fmt.Sprintf("\x1b[91m[e]\x1b[%dm[%s]\x1b[0m ", colorCode, shortName), GinkgoWriter))
 	Expect(err).ToNot(HaveOccurred())
 	return session
+}
+
+func CheckEndpoint(port, endpoint string) bool {
+	resp, _ := http.Get("http://localhost:" + port + "/" + endpoint)
+	if resp != nil {
+		return resp.StatusCode == http.StatusOK
+	}
+
+	return false
 }
