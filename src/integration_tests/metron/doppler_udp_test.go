@@ -16,10 +16,11 @@ var _ = Describe("communicating with doppler over UDP", func() {
 	It("forwards messages", func() {
 		etcdCleanup, etcdClientURL := integration_tests.SetupEtcd()
 		defer etcdCleanup()
-		dopplerCleanup, dopplerOutgoingPort := integration_tests.SetupDoppler(etcdClientURL)
-		defer dopplerCleanup()
-		metronCleanup, metronPort := integration_tests.SetupMetron(etcdClientURL, "udp")
+		metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(etcdClientURL, "udp")
 		defer metronCleanup()
+		dopplerCleanup, dopplerOutgoingPort := integration_tests.SetupDoppler(etcdClientURL, metronPort)
+		defer dopplerCleanup()
+		metronReady()
 
 		err := dropsonde.Initialize(fmt.Sprintf("localhost:%d", metronPort), "test-origin")
 		Expect(err).NotTo(HaveOccurred())

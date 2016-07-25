@@ -106,7 +106,7 @@ func SetupEtcd() (func(), string) {
 	}, etcdClientURL
 }
 
-func SetupDoppler(etcdClientURL string) (func(), int) {
+func SetupDoppler(etcdClientURL string, metronPort int) (func(), int) {
 	By("making sure doppler was build")
 	dopplerPath := os.Getenv("DOPPLER_BUILD_PATH")
 	Expect(dopplerPath).ToNot(BeEmpty())
@@ -187,7 +187,7 @@ func SetupDoppler(etcdClientURL string) (func(), int) {
 	}, dopplerOutgoingPort
 }
 
-func SetupMetron(etcdClientURL, proto string) (func(), int) {
+func SetupMetron(etcdClientURL, proto string) (func(), int, func()) {
 	By("making sure metron was build")
 	metronPath := os.Getenv("METRON_BUILD_PATH")
 	Expect(metronPath).ToNot(BeEmpty())
@@ -244,7 +244,7 @@ func SetupMetron(etcdClientURL, proto string) (func(), int) {
 	)
 	Expect(err).ToNot(HaveOccurred())
 
-	Eventually(metronSession.Buffer).Should(gbytes.Say(" from last etcd event, updating writer..."))
+	Eventually(metronSession.Buffer).Should(gbytes.Say("metron started"))
 
 	By("waiting for metron to listen")
 	Eventually(func() error {
@@ -256,9 +256,11 @@ func SetupMetron(etcdClientURL, proto string) (func(), int) {
 	}, 3).Should(Succeed())
 
 	return func() {
-		os.Remove(metronCfgFile.Name())
-		metronSession.Kill().Wait()
-	}, metronPort
+			os.Remove(metronCfgFile.Name())
+			metronSession.Kill().Wait()
+		}, metronPort, func() {
+			Eventually(metronSession.Buffer).Should(gbytes.Say(" from last etcd event, updating writer..."))
+		}
 }
 
 func SetupTrafficcontroller(etcdClientURL string, dopplerPort, metronPort int) (func(), int) {
@@ -309,11 +311,12 @@ func SetupTrafficcontroller(etcdClientURL string, dopplerPort, metronPort int) (
 	ip, err := localip.LocalIP()
 	Expect(err).ToNot(HaveOccurred())
 	Eventually(func() error {
-		c, reqErr := net.Dial("tcp", fmt.Sprintf("%s:%d", ip, tcPort))
-		if reqErr == nil {
-			c.Close()
+		url := fmt.Sprintf("http://%s:%d", ip, tcPort)
+		resp, err := http.Get(url)
+		if err == nil {
+			resp.Body.Close()
 		}
-		return reqErr
+		return err
 	}, 3).Should(Succeed())
 
 	return func() {
