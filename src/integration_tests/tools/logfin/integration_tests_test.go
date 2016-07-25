@@ -14,7 +14,7 @@ var _ = Describe("IntegrationTests", func() {
 			It("returns 200 for healthchecks", func() {
 				session, port := helpers.StartLogfin()
 
-				Eventually(func() bool { return checkReady(port) }).Should(Equal(true))
+				Eventually(func() bool { return helpers.CheckEndpoint(port, "") }).Should(Equal(true))
 
 				session.Kill().Wait()
 			})
@@ -24,7 +24,7 @@ var _ = Describe("IntegrationTests", func() {
 			It("increments the count, and returns 200", func() {
 				session, port := helpers.StartLogfin()
 
-				Eventually(func() bool { return checkReady(port) }).Should(Equal(true))
+				Eventually(func() bool { return helpers.CheckEndpoint(port, "") }).Should(Equal(true))
 				resp, err := http.Get("http://localhost:" + port + "/count")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
@@ -37,7 +37,7 @@ var _ = Describe("IntegrationTests", func() {
 			It("reports the current status of the emitters", func() {
 				session, port := helpers.StartLogfin()
 
-				Eventually(func() bool { return checkReady(port) }).Should(Equal(true))
+				Eventually(func() bool { return helpers.CheckEndpoint(port, "") }).Should(Equal(true))
 
 				By("returning non-200 when emitters are not done emitting")
 				resp, err := http.Get("http://localhost:" + port + "/status")
@@ -58,12 +58,3 @@ var _ = Describe("IntegrationTests", func() {
 		})
 	})
 })
-
-func checkReady(port string) bool {
-	resp, _ := http.Get("http://localhost:" + port + "/")
-	if resp != nil {
-		return resp.StatusCode == http.StatusOK
-	}
-
-	return false
-}
