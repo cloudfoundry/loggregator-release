@@ -29,7 +29,7 @@ var _ = Describe("Debug", func() {
 		handlers.CreateDebugEndpoints(router, "admin", "password")
 	})
 
-	Context("with propert authorization", func() {
+	Context("with proper authorization", func() {
 		DescribeTable("debug endpoints should return 200 response code", func(endpoint string) {
 			req, err = http.NewRequest("GET", fmt.Sprintf("/debug/pprof%s", endpoint), nil)
 			Expect(err).ToNot(HaveOccurred())
