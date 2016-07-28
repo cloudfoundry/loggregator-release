@@ -1,0 +1,34 @@
+{
+  "Index": <%= spec.index %>,
+  "Job": "<%= name %>",
+  "Zone": "<%= p("metron_agent.zone") %>",
+  "Deployment": "<%= p("metron_agent.deployment") %>",
+
+  "EtcdUrls": [<%= p("loggregator.etcd.machines").map{|addr| "\"http://#{addr}:4001\""}.join(",")%>],
+  "EtcdMaxConcurrentRequests": <%= p("loggregator.etcd.maxconcurrentrequests") %>,
+
+  "SharedSecret": "<%= p("metron_endpoint.shared_secret") %>",
+
+  "IncomingUDPPort": <%= p("metron_agent.dropsonde_incoming_port") %>,
+
+  "LoggregatorDropsondePort": <%= p("loggregator.dropsonde_incoming_port") %>,
+
+  "PreferredProtocol": "<%= p("metron_agent.preferred_protocol") %>",
+
+  "BufferSize": <%= p("metron_agent.buffer_size") %>,
+
+  "TCPBatchSizeBytes": <%= p("metron_agent.tcp.batching_buffer_bytes") %>,
+
+  "TCPBatchIntervalMilliseconds": <%= p("metron_agent.tcp.batching_buffer_flush_interval_milliseconds") %>
+
+  <% if p("metron_agent.preferred_protocol") == "tls" %>
+  , "TLSConfig": {
+    "KeyFile": "/var/vcap/jobs/metron_agent_windows/config/certs/metron_agent.key",
+    "CertFile": "/var/vcap/jobs/metron_agent_windows/config/certs/metron_agent.crt",
+    "CAFile": "/var/vcap/jobs/metron_agent_windows/config/certs/loggregator_ca.crt"
+  }
+  <% end %>
+  <% if_p("syslog_daemon_config") do |_| %>
+  , "Syslog": "vcap.metron_agent"
+  <% end %>
+}

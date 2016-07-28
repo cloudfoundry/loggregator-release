@@ -1,0 +1,17 @@
+$pkg_name="metron"
+$env:GOROOT="C:\var\vcap\packages\golang1.6-windows\go"
+$env:GOPATH="${PWD}\loggregator"
+$env:PATH="${env:GOROOT}\bin;${env:PATH}"
+
+try
+{
+	$BOSH_INSTALL_TARGET = Resolve-Path $env:BOSH_INSTALL_TARGET
+	go build -o "${BOSH_INSTALL_TARGET}\${pkg_name}.exe" "${pkg_name}"
+}
+catch
+{
+	$Host.UI.WriteErrorLine($_.Exception.Message)
+	Exit 1
+}
+
+Exit 0
