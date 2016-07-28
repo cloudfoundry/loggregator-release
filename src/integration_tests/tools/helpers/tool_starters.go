@@ -2,9 +2,11 @@ package helpers
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -25,12 +27,8 @@ func BuildLogemitter() {
 	logemitterExecutablePath = buildComponent("tools/logemitter")
 }
 
-func BuildLogcounter() {
-	logemitterExecutablePath = buildComponent("tools/logcounter")
-}
-
 func StartLogemitter(logfinPort string) (*gexec.Session, string) {
-	port := "8080"
+	port := testPort()
 	os.Setenv("PORT", port)
 	os.Setenv("RATE", "100")
 	os.Setenv("TIME", ".5s")
@@ -44,25 +42,13 @@ func StartLogemitter(logfinPort string) (*gexec.Session, string) {
 }
 
 func StartLogfin() (*gexec.Session, string) {
-	port := "8082"
+	port := testPort()
 	os.Setenv("PORT", port)
-	os.Setenv("INSTANCES", "1")
+	os.Setenv("EMITTER_INSTANCES", "1")
 	//PORT
 	return startComponent(
 		logfinExecutablePath,
 		"logfin",
-		34,
-	), port
-}
-
-func StartLogcounter(uaaPort string) (*gexec.Session, string) {
-	port := "8083"
-	os.Setenv("PORT", port)
-	os.Setenv("DOPPLER_URL", "127.0.0.1:1235") // this is a hardcoded address in fake_doppler
-	//PORT
-	return startComponent(
-		logemitterExecutablePath,
-		"logemitter",
 		34,
 	), port
 }
@@ -93,4 +79,12 @@ func CheckEndpoint(port, endpoint string) bool {
 	}
 
 	return false
+}
+
+func testPort() string {
+	add, _ := net.ResolveTCPAddr("tcp", ":0")
+	l, _ := net.ListenTCP("tcp", add)
+	defer l.Close()
+	port := strconv.Itoa(l.Addr().(*net.TCPAddr).Port)
+	return port
 }

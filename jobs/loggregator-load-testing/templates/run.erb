@@ -17,7 +17,7 @@ export GOPATH=$PACKAGES_DIR
 export PATH=${PACKAGES_DIR}/bin:${GOROOT}/bin:${PATH}
 
 build() {
-  local apps=(logcounter logemitter logfin)
+  local apps=(logcounterapp logemitter logfin)
 
   for app in ${apps[@]}; do
     pushd "$PACKAGES_DIR/src/tools/$app/build"

@@ -20,8 +20,8 @@ applications:
 - name: logcounter
   instances: 1
   buildpack: binary_buildpack
-  command: ./logcounter
-  path: /var/vcap/packages/loggregator-load-testing/src/tools/logcounter/build/
+  command: ./logcounterapp
+  path: /var/vcap/packages/loggregator-load-testing/src/tools/logcounterapp/build/
   env:
     API_URL: "<%= p('loggregator_load_testing.api_url') %>"
     DOPPLER_URL: "<%= p('loggregator_load_testing.doppler_url') %>"
