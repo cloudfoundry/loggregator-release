@@ -2,8 +2,11 @@ package helpers
 
 import (
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -13,6 +16,7 @@ import (
 var (
 	logemitterExecutablePath string
 	logfinExecutablePath     string
+	logcounterExecutablePath string
 )
 
 func BuildLogfin() {
@@ -24,7 +28,7 @@ func BuildLogemitter() {
 }
 
 func StartLogemitter(logfinPort string) (*gexec.Session, string) {
-	port := "8080"
+	port := testPort()
 	os.Setenv("PORT", port)
 	os.Setenv("RATE", "100")
 	os.Setenv("TIME", ".5s")
@@ -38,9 +42,9 @@ func StartLogemitter(logfinPort string) (*gexec.Session, string) {
 }
 
 func StartLogfin() (*gexec.Session, string) {
-	port := "8082"
+	port := testPort()
 	os.Setenv("PORT", port)
-	os.Setenv("INSTANCES", "1")
+	os.Setenv("EMITTER_INSTANCES", "1")
 	//PORT
 	return startComponent(
 		logfinExecutablePath,
@@ -66,4 +70,21 @@ func startComponent(path string, shortName string, colorCode uint64, arg ...stri
 		gexec.NewPrefixedWriter(fmt.Sprintf("\x1b[91m[e]\x1b[%dm[%s]\x1b[0m ", colorCode, shortName), GinkgoWriter))
 	Expect(err).ToNot(HaveOccurred())
 	return session
+}
+
+func CheckEndpoint(port, endpoint string) bool {
+	resp, _ := http.Get("http://localhost:" + port + "/" + endpoint)
+	if resp != nil {
+		return resp.StatusCode == http.StatusOK
+	}
+
+	return false
+}
+
+func testPort() string {
+	add, _ := net.ResolveTCPAddr("tcp", ":0")
+	l, _ := net.ListenTCP("tcp", add)
+	defer l.Close()
+	port := strconv.Itoa(l.Addr().(*net.TCPAddr).Port)
+	return port
 }

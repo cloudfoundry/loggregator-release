@@ -14,7 +14,7 @@ var (
 )
 
 func main() {
-	inst, err := strconv.Atoi(os.Getenv("INSTANCES"))
+	inst, err := strconv.Atoi(os.Getenv("EMITTER_INSTANCES"))
 	instances = uint64(inst)
 	if instances == 0 || err != nil {
 		log.Fatalf("No instances specified: %s", err)
