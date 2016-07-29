@@ -1,0 +1,126 @@
+---
+name: metron_agent_windows
+
+provides:
+- name: metron_agent_windows
+  type: metron_agent
+  properties:
+  - metron_agent.listening_address
+  - metron_agent.listening_port
+
+templates:
+  metron_agent_ctl.ps1.erb: bin/metron_agent_ctl.ps1
+  metron_agent.json.erb: config/metron_agent.json
+  metron_agent_logrotate.cron.erb: config/metron_agent_logrotate.cron
+  logrotate.conf.erb: config/logrotate.conf
+  metron_agent.crt.erb: config/certs/metron_agent.crt
+  metron_agent.key.erb: config/certs/metron_agent.key
+  loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
+  etcd-client.crt.erb: config/certs/etcd-client.crt
+  etcd-client.key.erb: config/certs/etcd-client.key
+  etcd-ca.crt.erb: config/certs/etcd-ca.crt
+
+packages:
+- metron_agent_windows
+
+properties:
+  syslog_daemon_config.enable:
+    description: "Enable or disable rsyslog configuration for forwarding syslog messages into metron"
+    default: true
+  syslog_daemon_config.address:
+    description: "IP address for syslog aggregator"
+  syslog_daemon_config.port:
+    description: "TCP port of syslog aggregator"
+  syslog_daemon_config.transport:
+    description: "Transport to be used when forwarding logs (tcp|udp|relp)."
+    default: "tcp"
+  syslog_daemon_config.fallback_addresses:
+    description: "Addresses of fallback servers to be used if the primary syslog server is down. Only tcp or relp are supported. Each list entry should consist of \"address\", \"transport\" and \"port\" keys. "
+    default: []
+  syslog_daemon_config.custom_rule:
+    description: "Custom rule for syslog forward daemon"
+    default: ""
+  syslog_daemon_config.max_message_size:
+    description: maximum message size to be sent
+    default: 4k
+
+  metron_endpoint.shared_secret:
+      description: "Shared secret used to verify cryptographically signed dropsonde messages"
+
+  metron_agent.listening_port:
+    description: "Port the metron agent is listening on to receive dropsonde log messages"
+    default: 3457
+  metron_agent.listening_address:
+    description: "Address the metron agent is listening on to receive dropsonde log messages provided for BOSH links and should not be overwritten"
+    default: "127.0.0.1"
+  metron_agent.debug:
+    description: "boolean value to turn on verbose mode"
+    default: false
+  metron_agent.protocols:
+    description: "A priority list of protocols for metron to connect to doppler over.  Metron will refuse to connect to doppler over any protocol not in this list."
+    default: ["udp"]
+  metron_agent.tls.client_cert:
+    description: "TLS client certificate"
+    default: ""
+  metron_agent.tls.client_key:
+    description: "TLS client key"
+    default: ""
+
+  loggregator.tls.ca_cert:
+    description: "CA root required for key/cert verification"
+    default: ""
+
+  metron_agent.zone:
+    description: "Availability zone where this agent is running"
+  metron_agent.deployment:
+    description: "Name of deployment (added as tag on all outgoing metrics)"
+
+  metron_agent.tcp.batching_buffer_bytes:
+    description: "The number of bytes which can be buffered prior to TCP writes (applies to TLS over TCP)"
+    default: 10240
+  metron_agent.tcp.batching_buffer_flush_interval_milliseconds:
+    description: "The maximum time that a message can stay in the batching buffer before being flushed"
+    default: 100
+
+  metron_agent.logrotate.freq_min:
+    description: "The frequency in minutes which logrotate will rotate VM logs"
+    default: 5
+  metron_agent.logrotate.rotate:
+    description: "The number of files that logrotate will keep around on the VM"
+    default: 7
+  metron_agent.logrotate.size:
+    description: "The size at which logrotate will decide to rotate the log file"
+    default: 50M
+
+  loggregator.etcd.require_ssl:
+    description: "Enable ssl for all communication with etcd"
+    default: false
+  loggregator.etcd.machines:
+    description: "IPs pointing to the ETCD cluster"
+  loggregator.etcd.maxconcurrentrequests:
+    description: "Number of concurrent requests to ETCD"
+    default: 10
+  loggregator.etcd.ca_cert:
+    description: "PEM-encoded CA certificate"
+    default: ""
+  metron_agent.etcd.client_cert:
+    description: "PEM-encoded client certificate"
+    default: ""
+  metron_agent.etcd.client_key:
+    description: "PEM-encoded client key"
+    default: ""
+
+  metron_agent.buffer_size:
+    description: "DEPRECATED"
+    default: 10000
+  metron_agent.enable_buffer:
+    description: "DEPRECATED"
+    default: false
+  metron_agent.preferred_protocol:
+    description: "DEPRECATED - replaced with metron_agent.protocols"
+    default: "udp"
+
+  metron_agent.dropsonde_incoming_port:
+    description: "DEPRECATED - replaced by metron_agent.listening_port"
+    default: 3457
+

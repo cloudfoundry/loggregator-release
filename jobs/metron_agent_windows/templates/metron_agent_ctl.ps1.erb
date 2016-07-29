@@ -1,0 +1,17 @@
+<%=
+  RUN_DIR="/var/vcap/sys/run/metron_agent_windows"
+  CONF_DIR="/var/vcap/jobs/metron_agent_windows/config"
+  LOG_DIR="/var/vcap/sys/log/metron_agent_windows"
+  if p("metron_agent.debug") == true
+    debug_string = "--debug "
+  else
+    debug_string = ""
+  end
+<<-POWERSHELL
+MkDir -erroraction ignore #{RUN_DIR}
+MkDir -erroraction ignore #{LOG_DIR}
+/var/vcap/packages/metron_agent_windows/metron.exe  \
+  #{debug_string} \
+  --config #{CONF_DIR}/metron_agent.json
+POWERSHELL
+ %>
