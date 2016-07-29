@@ -1,5 +1,13 @@
 ---
 name: metron_agent_windows
+
+provides:
+- name: metron_agent_windows
+  type: metron_agent
+  properties:
+  - metron_agent.listening_address
+  - metron_agent.listening_port
+
 templates:
   metron_agent_ctl.ps1.erb: bin/metron_agent_ctl.ps1
   metron_agent.json.erb: config/metron_agent.json
@@ -112,8 +120,7 @@ properties:
     description: "DEPRECATED - replaced with metron_agent.protocols"
     default: "udp"
 
-  loggregator.dropsonde_incoming_port:
+  metron_agent.dropsonde_incoming_port:
     description: "DEPRECATED - replaced by metron_agent.listening_port"
     default: 3457
-
 
