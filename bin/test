@@ -3,7 +3,18 @@ set -e
 
 trap "echo Exited!; exit 1;" SIGINT SIGTERM
 
+base=$(dirname $0)
+hooks=git-hooks/*
+
+for f in $hooks; do
+    file="${f##*/}"
+    if [ ! -f .git/hooks/$file ]; then
+        echo "Installing Git Hooks..."
+        $base/install-git-hooks
+    fi
+done
+
 go install github.com/apcera/gnatsd
 
 echo "Running Tests..."
-$(dirname $0)/ci_test $1
+$base/ci_test $1
