@@ -1,10 +1,12 @@
 package logcounter_test
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -197,6 +199,55 @@ var _ = Describe("logCounter", func() {
 
 			go lc.HandleMessages(msgs)
 			Eventually(func() bool { return checkMessageBody(port, "?report", "No messages received") }).Should(BeTrue())
+			lc.Stop()
+		})
+
+		It("correctly counts the number of 1008 and other errors", func() {
+			port := testPort()
+
+			cc := newMockCC()
+			uaa := newMockUAA()
+			cfg := &config.Config{
+				ApiURL:         "api.test.com",
+				DopplerURL:     "doppler.test.com",
+				UaaURL:         "uaa.test.com",
+				ClientID:       "testID",
+				ClientSecret:   "clientSecret",
+				Username:       "testUserName",
+				Password:       "testPassword",
+				MessagePrefix:  "testPrefix",
+				SubscriptionID: "testSubID",
+				Port:           port,
+			}
+
+			lc := logcounter.New(uaa, cc, cfg)
+			go func() {
+				err := lc.Start()
+				Expect(err).ToNot(HaveOccurred())
+			}()
+
+			Eventually(func() bool { return checkEndpoint(port, "?report", http.StatusOK) }).Should(BeTrue())
+
+			terminate := make(chan os.Signal, 1)
+			errs := make(chan error, 11)
+			testErr := errors.New("Some Error")
+			testWebsocketErr := errors.New("websocket: close 1008 Client did not respond to ping before keep-alive timeout expired.")
+
+			closer := newMockCloser()
+			close(closer.CloseOutput.Ret0)
+
+			for i := 0; i < 2; i++ {
+				errs <- testErr
+				lc.HandleErrors(errs, terminate, closer)
+			}
+
+			for i := 0; i < 11; i++ {
+				errs <- testWebsocketErr
+				lc.HandleErrors(errs, terminate, closer)
+			}
+
+			Eventually(func() bool { return checkMessageBody(port, "?report", "1008 errors: 11") }).Should(BeTrue())
+			Eventually(func() bool { return checkMessageBody(port, "?report", "Other errors: 2") }).Should(BeTrue())
 			lc.Stop()
 		})
 	})

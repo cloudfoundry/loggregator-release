@@ -6,9 +6,11 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 	"tools/logcounterapp/cflib"
 	"tools/logcounterapp/config"
@@ -30,13 +32,15 @@ type Identity struct {
 }
 
 type logCounter struct {
-	uaa         cflib.UAA
-	cc          cflib.CC
-	cfg         *config.Config
-	server      *http.Server
-	listener    net.Listener
-	counterLock sync.Mutex
-	counters    map[Identity]map[string]bool
+	websocketErrCount uint64
+	otherErrCount     uint64
+	uaa               cflib.UAA
+	cc                cflib.CC
+	cfg               *config.Config
+	server            *http.Server
+	listener          net.Listener
+	counterLock       sync.Mutex
+	counters          map[Identity]map[string]bool
 }
 
 //go:generate hel --type UAA --output mock_uaa_test.go
@@ -49,6 +53,12 @@ type UAA interface {
 
 type CC interface {
 	GetAppName(guid, authToken string) string
+}
+
+//go:generate hel --type Closer --output mock_closer_test.go
+
+type Closer interface {
+	Close() error
 }
 
 func New(uaa UAA, cc CC, cfg *config.Config) *logCounter {
@@ -131,6 +141,14 @@ func (l *logCounter) dumpReport(w io.Writer) error {
 	if _, err := io.WriteString(w, "Report:\n"); err != nil {
 		return err
 	}
+	msg := fmt.Sprintf("1008 errors: %d\n", atomic.LoadUint64(&l.websocketErrCount))
+	if _, err := io.WriteString(w, msg); err != nil {
+		return err
+	}
+	msg = fmt.Sprintf("Other errors: %d\n", atomic.LoadUint64(&l.otherErrCount))
+	if _, err := io.WriteString(w, msg); err != nil {
+		return err
+	}
 	if len(l.counters) == 0 {
 		_, err := io.WriteString(w, "No messages received")
 		return err
@@ -191,4 +209,20 @@ func (l *logCounter) processEnvelope(env *events.Envelope) {
 		l.counters[id] = counter
 	}
 	counter[msg[sepEnd:]] = true
+}
+
+func (l *logCounter) HandleErrors(errors <-chan error, terminate chan os.Signal, closer Closer) bool {
+	defer closer.Close()
+	select {
+	case err := <-errors:
+		if strings.Contains(err.Error(), "1008") {
+			atomic.AddUint64(&l.websocketErrCount, 1)
+		} else {
+			atomic.AddUint64(&l.otherErrCount, 1)
+		}
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return false
+	case <-terminate:
+		return true
+	}
 }
