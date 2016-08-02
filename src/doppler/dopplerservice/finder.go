@@ -1,7 +1,6 @@
 package dopplerservice
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -25,6 +24,35 @@ var supportedProtocols = []string{
 type StoreAdapter interface {
 	Watch(key string) (events <-chan storeadapter.WatchEvent, stop chan<- bool, errors <-chan error)
 	ListRecursively(key string) (storeadapter.StoreNode, error)
+}
+
+type set map[string]struct{}
+
+func (s set) add(value string) {
+	s[value] = struct{}{}
+}
+
+func (s set) contains(value string) bool {
+	_, ok := s[value]
+	return ok
+}
+
+func (s *set) UnmarshalJSON(value []byte) error {
+	m := make(set)
+	var src []string
+	if err := json.Unmarshal(value, &src); err != nil {
+		return err
+	}
+	for _, v := range src {
+		m[v] = struct{}{}
+	}
+	*s = m
+	return nil
+}
+
+type DopplerEvent struct {
+	Version   int `json:"version"`
+	Endpoints set `json:"endpoints"`
 }
 
 type Event struct {
@@ -114,7 +142,7 @@ func (f *Finder) handleEvent(event *storeadapter.WatchEvent, parser func([]byte)
 		f.logger.Errorf("Received invalid event: %+v", event)
 		return
 	case storeadapter.UpdateEvent:
-		if bytes.Equal(event.PrevNode.Value, event.Node.Value) {
+		if f.equal(event.PrevNode.Value, event.Node.Value) {
 			return
 		}
 		fallthrough
@@ -126,6 +154,29 @@ func (f *Finder) handleEvent(event *storeadapter.WatchEvent, parser func([]byte)
 		f.deleteEndpoints(f.parseNode(*event.PrevNode, parser))
 	}
 	f.sendEvent()
+}
+
+func (f *Finder) equal(node, nodeToCompare []byte) bool {
+	var val, valToCompare DopplerEvent
+	err := json.Unmarshal(node, &val)
+	if err != nil {
+		f.logger.Errorf("Unmarshaling: %v", err)
+		return false
+	}
+	err = json.Unmarshal(nodeToCompare, &valToCompare)
+	if err != nil {
+		f.logger.Errorf("Unmarshaling: %v", err)
+		return false
+	}
+	if len(val.Endpoints) != len(valToCompare.Endpoints) {
+		return false
+	}
+	for v := range val.Endpoints {
+		if !valToCompare.Endpoints.contains(v) {
+			return false
+		}
+	}
+	return true
 }
 
 func (f *Finder) run(etcdRoot string, events <-chan storeadapter.WatchEvent, errs <-chan error, stop chan<- bool, parser func([]byte) (interface{}, error)) {
