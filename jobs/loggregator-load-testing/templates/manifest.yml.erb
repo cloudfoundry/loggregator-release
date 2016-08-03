@@ -22,6 +22,7 @@ applications:
   buildpack: binary_buildpack
   command: ./logcounterapp
   path: /var/vcap/packages/loggregator-load-testing/src/tools/logcounterapp/build/
+  memory: 4G
   env:
     API_URL: "<%= p('loggregator_load_testing.api_url') %>"
     DOPPLER_URL: "<%= p('loggregator_load_testing.doppler_url') %>"
