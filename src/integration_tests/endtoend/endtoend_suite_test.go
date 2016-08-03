@@ -1,4 +1,4 @@
-package metron_test
+package endtoend_test
 
 import (
 	"integration_tests/binaries"
@@ -8,9 +8,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestMetron(t *testing.T) {
+func TestIntegrationTest(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Metron Integration Test Suite")
+	RunSpecs(t, "End to end Integration Test Suite")
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {

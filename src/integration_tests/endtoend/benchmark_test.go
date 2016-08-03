@@ -1,6 +1,7 @@
 package endtoend_test
 
 import (
+	"integration_tests"
 	"integration_tests/endtoend"
 	"time"
 	"tools/benchmark/experiment"
@@ -8,22 +9,26 @@ import (
 	"tools/benchmark/writestrategies"
 
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
-const timeout = 15 * time.Second
-
-type Stopper interface {
-	Stop()
-}
+const benchDuration = 15 * time.Second
 
 var _ = Describe("End to end benchmarks", func() {
-	benchmarkEndToEnd := func() {
-		Measure("dropsonde metrics being passed from metron to the firehose nozzle", func(b Benchmarker) {
-			const writeRatePerSecond = 1000
-			metronStreamWriter := endtoend.NewMetronStreamWriter()
+	Context("with metron->doppler in UDP", func() {
+		Measure("constant load", func(b Benchmarker) {
+			etcdCleanup, etcdClientURL := integration_tests.SetupEtcd()
+			defer etcdCleanup()
+			metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(etcdClientURL, "udp")
+			defer metronCleanup()
+			dopplerCleanup, dopplerOutgoingPort := integration_tests.SetupDoppler(etcdClientURL, metronPort)
+			defer dopplerCleanup()
+			trafficcontrollerCleanup, tcPort := integration_tests.SetupTrafficcontroller(etcdClientURL, dopplerOutgoingPort, metronPort)
+			defer trafficcontrollerCleanup()
+			metronReady()
 
-			firehoseReader := endtoend.NewFirehoseReader()
+			const writeRatePerSecond = 1000
+			metronStreamWriter := endtoend.NewMetronStreamWriter(metronPort)
+			firehoseReader := endtoend.NewFirehoseReader(tcPort)
 
 			generator := messagegenerator.NewValueMetricGenerator()
 
@@ -33,18 +38,30 @@ var _ = Describe("End to end benchmarks", func() {
 
 			ex.Warmup()
 
-			go stopExperimentAfterTimeout(ex)
+			go func() {
+				time.Sleep(benchDuration)
+				ex.Stop()
+			}()
 			b.Time("runtime", func() {
 				ex.Start()
 			})
 
 			reportResults(firehoseReader, metronStreamWriter.Writes, b)
-			Expect(float64(firehoseReader.MetronSentMessageCount)).To(BeNumerically(">", writeRatePerSecond))
 		}, 1)
 
-		Measure("dropsonde metrics being passed from metron to the firehose nozzle in burst sequence", func(b Benchmarker) {
-			metronStreamWriter := endtoend.NewMetronStreamWriter()
-			firehoseReader := endtoend.NewFirehoseReader()
+		Measure("load that is bursting", func(b Benchmarker) {
+			etcdCleanup, etcdClientURL := integration_tests.SetupEtcd()
+			defer etcdCleanup()
+			metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(etcdClientURL, "udp")
+			defer metronCleanup()
+			dopplerCleanup, dopplerOutgoingPort := integration_tests.SetupDoppler(etcdClientURL, metronPort)
+			defer dopplerCleanup()
+			trafficcontrollerCleanup, tcPort := integration_tests.SetupTrafficcontroller(etcdClientURL, dopplerOutgoingPort, metronPort)
+			defer trafficcontrollerCleanup()
+			metronReady()
+
+			metronStreamWriter := endtoend.NewMetronStreamWriter(metronPort)
+			firehoseReader := endtoend.NewFirehoseReader(tcPort)
 
 			params := writestrategies.BurstParameters{
 				Minimum:   10,
@@ -53,46 +70,173 @@ var _ = Describe("End to end benchmarks", func() {
 			}
 
 			generator := messagegenerator.NewValueMetricGenerator()
+
 			writeStrategy := writestrategies.NewBurstWriteStrategy(generator, metronStreamWriter, params)
 			ex := experiment.NewExperiment(firehoseReader)
 			ex.AddWriteStrategy(writeStrategy)
 
 			ex.Warmup()
 
-			go stopExperimentAfterTimeout(ex)
+			go func() {
+				time.Sleep(benchDuration)
+				ex.Stop()
+			}()
 			b.Time("runtime", func() {
 				ex.Start()
 			})
 
 			reportResults(firehoseReader, metronStreamWriter.Writes, b)
 		}, 1)
-	}
-
-	Context("Metron UDP, Doppler UDP", func() {
-		BeforeEach(func() {
-			dopplerConfig = "dopplerudp"
-			metronConfig = "metronudp"
-		})
-
-		benchmarkEndToEnd()
 	})
 
-	Context("Metron TLS, Doppler TLS", func() {
-		BeforeEach(func() {
-			dopplerConfig = "dopplertls"
-			metronConfig = "metrontls"
-		})
+	Context("with metron->doppler in TCP", func() {
+		Measure("constant load", func(b Benchmarker) {
+			etcdCleanup, etcdClientURL := integration_tests.SetupEtcd()
+			defer etcdCleanup()
+			metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(etcdClientURL, "tcp")
+			defer metronCleanup()
+			dopplerCleanup, dopplerOutgoingPort := integration_tests.SetupDoppler(etcdClientURL, metronPort)
+			defer dopplerCleanup()
+			trafficcontrollerCleanup, tcPort := integration_tests.SetupTrafficcontroller(etcdClientURL, dopplerOutgoingPort, metronPort)
+			defer trafficcontrollerCleanup()
+			metronReady()
 
-		benchmarkEndToEnd()
+			const writeRatePerSecond = 1000
+			metronStreamWriter := endtoend.NewMetronStreamWriter(metronPort)
+			firehoseReader := endtoend.NewFirehoseReader(tcPort)
+
+			generator := messagegenerator.NewValueMetricGenerator()
+
+			writeStrategy := writestrategies.NewConstantWriteStrategy(generator, metronStreamWriter, writeRatePerSecond)
+			ex := experiment.NewExperiment(firehoseReader)
+			ex.AddWriteStrategy(writeStrategy)
+
+			ex.Warmup()
+
+			go func() {
+				time.Sleep(benchDuration)
+				ex.Stop()
+			}()
+			b.Time("runtime", func() {
+				ex.Start()
+			})
+
+			reportResults(firehoseReader, metronStreamWriter.Writes, b)
+		}, 1)
+
+		Measure("load that is bursting", func(b Benchmarker) {
+			etcdCleanup, etcdClientURL := integration_tests.SetupEtcd()
+			defer etcdCleanup()
+			metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(etcdClientURL, "tcp")
+			defer metronCleanup()
+			dopplerCleanup, dopplerOutgoingPort := integration_tests.SetupDoppler(etcdClientURL, metronPort)
+			defer dopplerCleanup()
+			trafficcontrollerCleanup, tcPort := integration_tests.SetupTrafficcontroller(etcdClientURL, dopplerOutgoingPort, metronPort)
+			defer trafficcontrollerCleanup()
+			metronReady()
+
+			metronStreamWriter := endtoend.NewMetronStreamWriter(metronPort)
+			firehoseReader := endtoend.NewFirehoseReader(tcPort)
+
+			params := writestrategies.BurstParameters{
+				Minimum:   10,
+				Maximum:   100,
+				Frequency: time.Second,
+			}
+
+			generator := messagegenerator.NewValueMetricGenerator()
+
+			writeStrategy := writestrategies.NewBurstWriteStrategy(generator, metronStreamWriter, params)
+			ex := experiment.NewExperiment(firehoseReader)
+			ex.AddWriteStrategy(writeStrategy)
+
+			ex.Warmup()
+
+			go func() {
+				time.Sleep(benchDuration)
+				ex.Stop()
+			}()
+			b.Time("runtime", func() {
+				ex.Start()
+			})
+
+			reportResults(firehoseReader, metronStreamWriter.Writes, b)
+		}, 1)
 	})
 
-	Context("Metron UDP, Doppler TLS", func() {
-		BeforeEach(func() {
-			dopplerConfig = "dopplertls"
-			metronConfig = "metronudp"
-		})
+	Context("with metron->doppler in TLS", func() {
+		Measure("constant load", func(b Benchmarker) {
+			etcdCleanup, etcdClientURL := integration_tests.SetupEtcd()
+			defer etcdCleanup()
+			metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(etcdClientURL, "tls")
+			defer metronCleanup()
+			dopplerCleanup, dopplerOutgoingPort := integration_tests.SetupDoppler(etcdClientURL, metronPort)
+			defer dopplerCleanup()
+			trafficcontrollerCleanup, tcPort := integration_tests.SetupTrafficcontroller(etcdClientURL, dopplerOutgoingPort, metronPort)
+			defer trafficcontrollerCleanup()
+			metronReady()
 
-		benchmarkEndToEnd()
+			const writeRatePerSecond = 1000
+			metronStreamWriter := endtoend.NewMetronStreamWriter(metronPort)
+			firehoseReader := endtoend.NewFirehoseReader(tcPort)
+
+			generator := messagegenerator.NewValueMetricGenerator()
+
+			writeStrategy := writestrategies.NewConstantWriteStrategy(generator, metronStreamWriter, writeRatePerSecond)
+			ex := experiment.NewExperiment(firehoseReader)
+			ex.AddWriteStrategy(writeStrategy)
+
+			ex.Warmup()
+
+			go func() {
+				time.Sleep(benchDuration)
+				ex.Stop()
+			}()
+			b.Time("runtime", func() {
+				ex.Start()
+			})
+
+			reportResults(firehoseReader, metronStreamWriter.Writes, b)
+		}, 1)
+
+		Measure("load that is bursting", func(b Benchmarker) {
+			etcdCleanup, etcdClientURL := integration_tests.SetupEtcd()
+			defer etcdCleanup()
+			metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(etcdClientURL, "tls")
+			defer metronCleanup()
+			dopplerCleanup, dopplerOutgoingPort := integration_tests.SetupDoppler(etcdClientURL, metronPort)
+			defer dopplerCleanup()
+			trafficcontrollerCleanup, tcPort := integration_tests.SetupTrafficcontroller(etcdClientURL, dopplerOutgoingPort, metronPort)
+			defer trafficcontrollerCleanup()
+			metronReady()
+
+			metronStreamWriter := endtoend.NewMetronStreamWriter(metronPort)
+			firehoseReader := endtoend.NewFirehoseReader(tcPort)
+
+			params := writestrategies.BurstParameters{
+				Minimum:   10,
+				Maximum:   100,
+				Frequency: time.Second,
+			}
+
+			generator := messagegenerator.NewValueMetricGenerator()
+
+			writeStrategy := writestrategies.NewBurstWriteStrategy(generator, metronStreamWriter, params)
+			ex := experiment.NewExperiment(firehoseReader)
+			ex.AddWriteStrategy(writeStrategy)
+
+			ex.Warmup()
+
+			go func() {
+				time.Sleep(benchDuration)
+				ex.Stop()
+			}()
+			b.Time("runtime", func() {
+				ex.Start()
+			})
+
+			reportResults(firehoseReader, metronStreamWriter.Writes, b)
+		}, 1)
 	})
 })
 
@@ -110,20 +254,8 @@ func reportResults(r *endtoend.FirehoseReader, written int, benchmarker Benchmar
 	benchmarker.RecordValue("Message Loss percentage between Metron and Doppler ", percentMessageLossBetweenMetronAndDoppler)
 	benchmarker.RecordValue("Message Loss percentage between Doppler and Firehose nozzle", percentMessageLossBetweenDopplerAndFirehose)
 	benchmarker.RecordValue("Total message loss percentage (received by metron but not received by the firehose)", percentMessageLossOverEntirePipeline)
-
-	Expect(percentMessageLossBetweenMetronAndDoppler).To(BeNumerically("<", 5.0))
-	Expect(percentMessageLossBetweenMetronAndDoppler).To(BeNumerically(">", -1.0))
-	Expect(percentMessageLossBetweenDopplerAndFirehose).To(BeNumerically("<", 5.0))
-	Expect(percentMessageLossBetweenDopplerAndFirehose).To(BeNumerically(">", -1.0))
-	Expect(percentMessageLossOverEntirePipeline).To(BeNumerically("<", 5.0))
-	Expect(percentMessageLossOverEntirePipeline).To(BeNumerically(">", -1.0))
 }
 
 func computePercentLost(totalMessages, receivedMessages float64) float64 {
 	return ((totalMessages - receivedMessages) / totalMessages) * 100
-}
-
-func stopExperimentAfterTimeout(ex Stopper) {
-	time.Sleep(timeout)
-	ex.Stop()
 }

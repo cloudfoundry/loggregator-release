@@ -1,6 +1,9 @@
 package endtoend_test
 
 import (
+	"time"
+
+	"integration_tests"
 	"integration_tests/endtoend"
 	"tools/benchmark/experiment"
 	"tools/benchmark/messagegenerator"
@@ -11,33 +14,35 @@ import (
 )
 
 var _ = Describe("End to end tests", func() {
-	Context("with metron sending on tcp", func() {
-		BeforeEach(func() {
-			metronConfig = "metrontcp"
-		})
+	Context("with metron and doppler in tcp mode", func() {
+		It("messages flow through loggregator", func() {
+			etcdCleanup, etcdClientURL := integration_tests.SetupEtcd()
+			defer etcdCleanup()
+			metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(etcdClientURL, "udp")
+			defer metronCleanup()
+			dopplerCleanup, dopplerOutgoingPort := integration_tests.SetupDoppler(etcdClientURL, metronPort)
+			defer dopplerCleanup()
+			trafficcontrollerCleanup, tcPort := integration_tests.SetupTrafficcontroller(etcdClientURL, dopplerOutgoingPort, metronPort)
+			defer trafficcontrollerCleanup()
+			metronReady()
 
-		Context("with doppler reading on tcp", func() {
-			BeforeEach(func() {
-				dopplerConfig = "dopplertcp"
-			})
+			const writeRatePerSecond = 10
+			metronStreamWriter := endtoend.NewMetronStreamWriter(metronPort)
+			generator := messagegenerator.NewLogMessageGenerator("custom-app-id")
+			writeStrategy := writestrategies.NewConstantWriteStrategy(generator, metronStreamWriter, writeRatePerSecond)
 
-			It("can send a message", func() {
-				const writeRatePerSecond = 10
-				metronStreamWriter := endtoend.NewMetronStreamWriter()
-				firehoseReader := endtoend.NewFirehoseReader()
-				generator := messagegenerator.NewLogMessageGenerator("custom-app-id")
+			firehoseReader := endtoend.NewFirehoseReader(tcPort)
+			ex := experiment.NewExperiment(firehoseReader)
+			ex.AddWriteStrategy(writeStrategy)
 
-				writeStrategy := writestrategies.NewConstantWriteStrategy(generator, metronStreamWriter, writeRatePerSecond)
-				ex := experiment.NewExperiment(firehoseReader)
-				ex.AddWriteStrategy(writeStrategy)
+			ex.Warmup()
+			go func() {
+				defer ex.Stop()
+				time.Sleep(2 * time.Second)
+			}()
+			ex.Start()
 
-				ex.Warmup()
-
-				go stopExperimentAfterTimeout(ex)
-				ex.Start()
-
-				Eventually(firehoseReader.LogMessages).Should(Receive(ContainSubstring("custom-app-id")))
-			}, 10)
-		})
+			Eventually(firehoseReader.LogMessages).Should(Receive(ContainSubstring("custom-app-id")))
+		}, 10)
 	})
 })
