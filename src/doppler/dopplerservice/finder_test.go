@@ -463,6 +463,46 @@ var _ = Describe("Finder", func() {
 				})
 			})
 
+			Context("when a node's value order is changed", func() {
+				var done chan struct{}
+
+				BeforeEach(func() {
+					metaNode = makeMetaNode("z1/doppler_z1/0", []string{"udp://1.2.3.4:567", "tcp://1.2.3.4:578"})
+				})
+
+				JustBeforeEach(func() {
+					// Ignore the startup event
+					_ = finder.Next()
+
+					updateNode := makeMetaNode("z1/doppler_z1/0", []string{"tcp://1.2.3.4:578", "udp://1.2.3.4:567"})
+
+					metaEvents <- storeadapter.WatchEvent{
+						Type:     storeadapter.UpdateEvent,
+						Node:     &updateNode,
+						PrevNode: &metaNode,
+					}
+
+					done = make(chan struct{})
+				})
+
+				AfterEach(func() {
+					node := makeMetaNode("z1/doppler_z1/0", []string{"tls://1.2.3.4:567"})
+					metaEvents <- storeadapter.WatchEvent{
+						Type: storeadapter.CreateEvent,
+						Node: &node,
+					}
+					Eventually(done).Should(BeClosed())
+				})
+
+				It("doesn't send an event", func() {
+					go func() {
+						finder.Next()
+						close(done)
+					}()
+					Consistently(done).ShouldNot(BeClosed())
+				})
+			})
+
 			Context("when a node's TTL is updated without a value change", func() {
 				var done chan struct{}
 
