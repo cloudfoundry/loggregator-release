@@ -42,14 +42,14 @@ const (
 	trafficcontrollerPortOffset
 )
 
-// TODO: Add color to writers
 const (
-	yellow = 33 + iota
+	red = 31 + iota
+	green
+	yellow
 	blue
 	magenta
 	cyan
-	stdOut = "\x1b[32m[o]\x1b[%dm[%s]\x1b[0m "
-	stdErr = "\x1b[31m[e]\x1b[%dm[%s]\x1b[0m "
+	colorFmt = "\x1b[%dm[%s]\x1b[%dm[%s]\x1b[0m "
 )
 
 func getPort(offset int) int {
@@ -78,8 +78,8 @@ func SetupEtcd() (func(), string) {
 	)
 	etcdSession, err := gexec.Start(
 		etcdCommand,
-		gexec.NewPrefixedWriter(fmt.Sprintf(stdOut, yellow, "etcd"), GinkgoWriter),
-		gexec.NewPrefixedWriter(fmt.Sprintf(stdErr, yellow, "etcd"), GinkgoWriter),
+		gexec.NewPrefixedWriter(color("o", "etcd", green, yellow), GinkgoWriter),
+		gexec.NewPrefixedWriter(color("e", "etcd", red, yellow), GinkgoWriter),
 	)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -164,8 +164,8 @@ func SetupDoppler(etcdClientURL string, metronPort int) (func(), int) {
 	dopplerCommand := exec.Command(dopplerPath, "--config", dopplerCfgFile.Name())
 	dopplerSession, err := gexec.Start(
 		dopplerCommand,
-		gexec.NewPrefixedWriter(fmt.Sprintf(stdOut, blue, "doppler"), GinkgoWriter),
-		gexec.NewPrefixedWriter(fmt.Sprintf(stdErr, blue, "doppler"), GinkgoWriter),
+		gexec.NewPrefixedWriter(color("o", "doppler", green, blue), GinkgoWriter),
+		gexec.NewPrefixedWriter(color("e", "doppler", red, blue), GinkgoWriter),
 	)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -239,8 +239,8 @@ func SetupMetron(etcdClientURL, proto string) (func(), int, func()) {
 	metronCommand := exec.Command(metronPath, "--debug", "--config", metronCfgFile.Name())
 	metronSession, err := gexec.Start(
 		metronCommand,
-		gexec.NewPrefixedWriter(fmt.Sprintf(stdOut, magenta, "metron"), GinkgoWriter),
-		gexec.NewPrefixedWriter(fmt.Sprintf(stdErr, magenta, "metron"), GinkgoWriter),
+		gexec.NewPrefixedWriter(color("o", "metron", green, magenta), GinkgoWriter),
+		gexec.NewPrefixedWriter(color("e", "metron", red, magenta), GinkgoWriter),
 	)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -302,8 +302,8 @@ func SetupTrafficcontroller(etcdClientURL string, dopplerPort, metronPort int) (
 	tcCommand := exec.Command(tcPath, "--debug", "--disableAccessControl", "--config", tcCfgFile.Name())
 	tcSession, err := gexec.Start(
 		tcCommand,
-		gexec.NewPrefixedWriter(fmt.Sprintf(stdOut, cyan, "tc"), GinkgoWriter),
-		gexec.NewPrefixedWriter(fmt.Sprintf(stdErr, cyan, "tc"), GinkgoWriter),
+		gexec.NewPrefixedWriter(color("o", "tc", green, cyan), GinkgoWriter),
+		gexec.NewPrefixedWriter(color("e", "tc", red, cyan), GinkgoWriter),
 	)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -323,4 +323,12 @@ func SetupTrafficcontroller(etcdClientURL string, dopplerPort, metronPort int) (
 		os.Remove(tcCfgFile.Name())
 		tcSession.Kill().Wait()
 	}, tcPort
+}
+
+func color(oe, proc string, oeColor, procColor int) string {
+	if config.DefaultReporterConfig.NoColor {
+		oeColor = 0
+		procColor = 0
+	}
+	return fmt.Sprintf(colorFmt, oeColor, oe, procColor, proc)
 }
