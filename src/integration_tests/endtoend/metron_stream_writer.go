@@ -1,6 +1,7 @@
 package endtoend
 
 import (
+	"fmt"
 	"net"
 )
 
@@ -9,8 +10,8 @@ type MetronStreamWriter struct {
 	Writes     int
 }
 
-func NewMetronStreamWriter() *MetronStreamWriter {
-	metronConn, err := net.Dial("udp4", "127.0.0.1:49625")
+func NewMetronStreamWriter(metronPort int) *MetronStreamWriter {
+	metronConn, err := net.Dial("udp4", fmt.Sprintf("127.0.0.1:%d", metronPort))
 	if err != nil {
 		panic(err)
 	}

@@ -2,6 +2,7 @@ package endtoend
 
 import (
 	"crypto/tls"
+	"fmt"
 	"strings"
 
 	"github.com/cloudfoundry/noaa/consumer"
@@ -23,8 +24,8 @@ type FirehoseReader struct {
 	LogMessages chan *events.Envelope
 }
 
-func NewFirehoseReader() *FirehoseReader {
-	consumer, msgChan := initiateFirehoseConnection()
+func NewFirehoseReader(tcPort int) *FirehoseReader {
+	consumer, msgChan := initiateFirehoseConnection(tcPort)
 	return &FirehoseReader{
 		consumer:    consumer,
 		msgChan:     msgChan,
@@ -70,9 +71,10 @@ func (r *FirehoseReader) Close() {
 	r.consumer.Close()
 }
 
-func initiateFirehoseConnection() (*consumer.Consumer, <-chan *events.Envelope) {
+func initiateFirehoseConnection(tcPort int) (*consumer.Consumer, <-chan *events.Envelope) {
 	localIP, _ := localip.LocalIP()
-	firehoseConnection := consumer.New("ws://"+localIP+":49629", &tls.Config{InsecureSkipVerify: true}, nil)
+	url := fmt.Sprintf("ws://%s:%d", localIP, tcPort)
+	firehoseConnection := consumer.New(url, &tls.Config{InsecureSkipVerify: true}, nil)
 	msgChan, _ := firehoseConnection.Firehose("uniqueId", "")
 	return firehoseConnection, msgChan
 }
