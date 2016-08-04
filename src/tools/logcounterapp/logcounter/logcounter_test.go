@@ -41,10 +41,12 @@ var _ = Describe("logCounter", func() {
 			}
 			testServer := httptest.NewServer(http.HandlerFunc(handler))
 			defer func() {
-				defer GinkgoRecover()
 				Eventually(func() string {
 					mu.Lock()
 					defer mu.Unlock()
+					if request == nil {
+						return ""
+					}
 					return request.URL.Path
 				}).Should(Equal("/report"))
 				testServer.Close()
@@ -84,10 +86,12 @@ var _ = Describe("logCounter", func() {
 			}
 			testServer := httptest.NewServer(http.HandlerFunc(handler))
 			defer func() {
-				defer GinkgoRecover()
 				Eventually(func() string {
 					mu.Lock()
 					defer mu.Unlock()
+					if request == nil {
+						return ""
+					}
 					return request.URL.Path
 				}).Should(Equal("/report"))
 				testServer.Close()
@@ -130,10 +134,12 @@ var _ = Describe("logCounter", func() {
 			}
 			testServer := httptest.NewServer(http.HandlerFunc(handler))
 			defer func() {
-				defer GinkgoRecover()
 				Eventually(func() string {
 					mu.Lock()
 					defer mu.Unlock()
+					if request == nil {
+						return ""
+					}
 					return request.URL.Path
 				}).Should(Equal("/report"))
 				testServer.Close()
@@ -177,10 +183,12 @@ var _ = Describe("logCounter", func() {
 			}
 			testServer := httptest.NewServer(http.HandlerFunc(handler))
 			defer func() {
-				defer GinkgoRecover()
 				Eventually(func() string {
 					mu.Lock()
 					defer mu.Unlock()
+					if request == nil {
+						return ""
+					}
 					return request.URL.Path
 				}).Should(Equal("/report"))
 				testServer.Close()
@@ -238,10 +246,12 @@ var _ = Describe("logCounter", func() {
 			}
 			testServer := httptest.NewServer(http.HandlerFunc(handler))
 			defer func() {
-				defer GinkgoRecover()
 				Eventually(func() string {
 					mu.Lock()
 					defer mu.Unlock()
+					if request == nil {
+						return ""
+					}
 					return request.URL.Path
 				}).Should(Equal("/report"))
 				testServer.Close()
@@ -297,10 +307,12 @@ var _ = Describe("logCounter", func() {
 			}
 			testServer := httptest.NewServer(http.HandlerFunc(handler))
 			defer func() {
-				defer GinkgoRecover()
 				Eventually(func() string {
 					mu.Lock()
 					defer mu.Unlock()
+					if request == nil {
+						return ""
+					}
 					return request.URL.Path
 				}).Should(Equal("/report"))
 				testServer.Close()
@@ -370,10 +382,12 @@ var _ = Describe("logCounter", func() {
 			}
 			testServer := httptest.NewServer(http.HandlerFunc(handler))
 			defer func() {
-				defer GinkgoRecover()
 				Eventually(func() string {
 					mu.Lock()
 					defer mu.Unlock()
+					if request == nil {
+						return ""
+					}
 					return request.URL.Path
 				}).Should(Equal("/report"))
 				testServer.Close()
