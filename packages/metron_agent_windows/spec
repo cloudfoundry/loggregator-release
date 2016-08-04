@@ -1,0 +1,50 @@
+---
+name: metron_agent_windows
+dependencies:
+- golang1.6-windows
+files:
+- loggregator/src/metron/LICENSE
+- loggregator/src/metron/NOTICE
+- loggregator/src/metron/syslog_daemon_config/*
+- loggregator/src/doppler/config/*.go # gosub
+- loggregator/src/doppler/dopplerservice/*.go # gosub
+- loggregator/src/doppler/iprange/*.go # gosub
+- loggregator/src/doppler/listeners/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/envelope_extensions/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/logging/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/metricbatcher/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/metrics/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/runtime_stats/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/dropsonde/signature/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/gosteno/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/gosteno/syslog/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/gunk/workpool/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/sonde-go/events/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/storeadapter/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/storeadapter/etcdstoreadapter/*.go # gosub
+- loggregator/src/github.com/coreos/go-etcd/etcd/*.go # gosub
+- loggregator/src/github.com/gogo/protobuf/gogoproto/*.go # gosub
+- loggregator/src/github.com/gogo/protobuf/proto/*.go # gosub
+- loggregator/src/github.com/gogo/protobuf/protoc-gen-gogo/descriptor/*.go # gosub
+- loggregator/src/github.com/nu7hatch/gouuid/*.go # gosub
+- loggregator/src/github.com/pivotal-golang/localip/*.go # gosub
+- loggregator/src/github.com/ugorji/go/codec/*.go # gosub
+- loggregator/src/logger/*.go # gosub
+- loggregator/src/metron/*.go # gosub
+- loggregator/src/metron/clientpool/*.go # gosub
+- loggregator/src/metron/clientreader/*.go # gosub
+- loggregator/src/metron/config/*.go # gosub
+- loggregator/src/metron/eventwriter/*.go # gosub
+- loggregator/src/metron/networkreader/*.go # gosub
+- loggregator/src/metron/writers/*.go # gosub
+- loggregator/src/metron/writers/batch/*.go # gosub
+- loggregator/src/metron/writers/dopplerforwarder/*.go # gosub
+- loggregator/src/metron/writers/eventmarshaller/*.go # gosub
+- loggregator/src/metron/writers/eventunmarshaller/*.go # gosub
+- loggregator/src/metron/writers/messageaggregator/*.go # gosub
+- loggregator/src/metron/writers/mocks/*.go # gosub
+- loggregator/src/metron/writers/tagger/*.go # gosub
+- loggregator/src/signalmanager/*.go # gosub

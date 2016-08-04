@@ -1,0 +1,76 @@
+<%
+    protocols = p("metron_agent.protocols")
+    if protocols == ["udp"] and p("metron_agent.preferred_protocol") == "tls"
+      protocols = ["tls"]
+    end
+
+    useTLS = protocols.include? "tls"
+
+    # try and set these properties from a BOSH 2.0 spec object
+    job_name = spec.job.name
+    instance_id = spec.id
+    instance_zone = spec.az
+
+    if job_name.nil?
+      job_name = name
+    end
+
+    if instance_id.nil?
+      instance_id = spec.index
+    end
+
+    if instance_zone.nil?
+      instance_zone = p("metron_agent.zone")
+    end
+
+    incoming_udp_port = nil
+    if_p("metron_agent.listening_port") do |port|
+      incoming_udp_port = port
+    end
+
+    # We're not expecting `metron_agent.dropsonde_incoming_port` to have been set
+    # but prefer this deprecated value if set
+    if_p("metron_agent.dropsonde_incoming_port") do |port|
+      incoming_udp_port = port
+    end
+%>
+
+{
+  "Index": "<%= instance_id %>",
+  "Job": "<%= job_name %>",
+  "Zone": "<%= instance_zone %>",
+  "Deployment": "<%= p("metron_agent.deployment") %>",
+
+  "EtcdUrls": [<%= p("loggregator.etcd.machines").map{|addr| "\"#{p("loggregator.etcd.require_ssl") ? "https" : "http"}://#{addr}:4001\""}.join(",") %>],
+  "EtcdMaxConcurrentRequests": <%= p("loggregator.etcd.maxconcurrentrequests") %>,
+  "EtcdRequireTLS": <%= p("loggregator.etcd.require_ssl") %>,
+  <% if_p("loggregator.etcd.require_ssl") do |_| %>
+  "EtcdTLSClientConfig": {
+      "KeyFile": "/var/vcap/jobs/metron_agent_windows/config/certs/etcd-client.key",
+      "CertFile": "/var/vcap/jobs/metron_agent_windows/config/certs/etcd-client.crt",
+      "CAFile": "/var/vcap/jobs/metron_agent_windows/config/certs/etcd-ca.crt"
+  },
+  <% end %>
+
+  "SharedSecret": "<%= p("metron_endpoint.shared_secret")  %>",
+
+  "IncomingUDPPort": <%= incoming_udp_port %>,
+
+  "Protocols": <%= protocols %>,
+
+  "TCPBatchSizeBytes": <%= p("metron_agent.tcp.batching_buffer_bytes") %>,
+
+  "TCPBatchIntervalMilliseconds": <%= p("metron_agent.tcp.batching_buffer_flush_interval_milliseconds") %>
+
+  <% if useTLS %>
+  , "TLSConfig": {
+    "KeyFile": "/var/vcap/jobs/metron_agent_windows/config/certs/metron_agent.key",
+    "CertFile": "/var/vcap/jobs/metron_agent_windows/config/certs/metron_agent.crt",
+    "CAFile": "/var/vcap/jobs/metron_agent_windows/config/certs/loggregator_ca.crt"
+  }
+  <% end %>
+
+  <% if_p("syslog_daemon_config") do |_| %>
+  , "Syslog": "vcap.metron_agent"
+  <% end %>
+}

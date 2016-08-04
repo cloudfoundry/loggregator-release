@@ -1,7 +1,0 @@
-{
-  "IncomingPort":4002,
-  "InfoPort": 4003,
-  "DebugPort": -1,
-  "MetronPort": 10001,
-  "LogLevel": "DEBUG"
-}
