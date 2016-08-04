@@ -45,6 +45,9 @@ func StartLogfin() (*gexec.Session, string) {
 	port := testPort()
 	os.Setenv("PORT", port)
 	os.Setenv("EMITTER_INSTANCES", "1")
+	if os.Getenv("COUNTER_INSTANCES") == "" {
+		os.Setenv("COUNTER_INSTANCES", "1")
+	}
 	//PORT
 	return startComponent(
 		logfinExecutablePath,
@@ -72,10 +75,10 @@ func startComponent(path string, shortName string, colorCode uint64, arg ...stri
 	return session
 }
 
-func CheckEndpoint(port, endpoint string) bool {
+func CheckEndpoint(port, endpoint string, status int) bool {
 	resp, _ := http.Get("http://localhost:" + port + "/" + endpoint)
 	if resp != nil {
-		return resp.StatusCode == http.StatusOK
+		return resp.StatusCode == status
 	}
 
 	return false

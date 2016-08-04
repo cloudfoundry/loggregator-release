@@ -49,7 +49,8 @@ job=$(awk 1 ORS='\\n' <<EOF
         uaa_url: $UAA_URL
         username: $CF_USERNAME
         password: $CF_PASSWORD
-        instances: $INSTANCES
+        emitter_instances: $EMITTER_INSTANCES
+        counter_instances: $COUNTER_INSTANCES
         client_id: $CLIENT_ID
         client_secret: $CLIENT_SECRET
         time: $TIME

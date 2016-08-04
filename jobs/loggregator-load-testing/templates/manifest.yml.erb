@@ -7,9 +7,10 @@ applications:
   path: /var/vcap/packages/loggregator-load-testing/src/tools/logfin/build/
   host: logfin
   env:
-    EMITTER_INSTANCES: "<%= p('loggregator_load_testing.instances') %>"
+    EMITTER_INSTANCES: "<%= p('loggregator_load_testing.emitter_instances') %>"
+    COUNTER_INSTANCES: "<%= p('loggregator_load_testing.counter_instances') %>"
 - name: logemitter
-  instances: <%= p('loggregator_load_testing.instances') %>
+  instances: <%= p('loggregator_load_testing.emitter_instances') %>
   buildpack: binary_buildpack
   command: ./logemitter
   path: /var/vcap/packages/loggregator-load-testing/src/tools/logemitter/build/
@@ -18,7 +19,7 @@ applications:
     RATE: "<%= p('loggregator_load_testing.rate') %>"
     TIME: "<%= p('loggregator_load_testing.time') %>"
 - name: logcounter
-  instances: 1
+  instances: <%= p('loggregator_load_testing.counter_instances') %>
   buildpack: binary_buildpack
   command: ./logcounterapp
   path: /var/vcap/packages/loggregator-load-testing/src/tools/logcounterapp/build/

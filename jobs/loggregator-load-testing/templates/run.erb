@@ -50,7 +50,7 @@ block_until_done() {
 
   while true; do
     echo checking status of test...
-    status=`curl -s -o /dev/null -w "%{http_code}" $LOGFIN_URL/status`
+    status=`curl -s -o /dev/null -w "%{http_code}" $LOGFIN_URL/report`
     if [ "$status" = "200" ]; then
       break
     fi
@@ -60,7 +60,7 @@ block_until_done() {
 }
 
 report() {
-  curl $ROUTE_SCHEME://$(cf app logcounter | grep urls | sed 's|^[^ ]* \([^,]*\).*$|\1|')?report
+  curl $LOGFIN_URL/report
 }
 
 teardown() {

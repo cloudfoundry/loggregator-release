@@ -18,12 +18,14 @@ echo -n "Rate: "
 read RATE
 echo -n "Time: "
 read TIME
-echo -n "Instances: "
-read INSTANCES
+echo -n "Emitter Instances: "
+read EMITTER_INSTANCES
+echo -n "Counter Instances: "
+read COUNTER_INSTANCES
 echo -n "Org: "
 read ORG
 echo -n "Space: "
 read SPACE
 echo -n "Scheme: "
 read SCHEME
-export CF_USERNAME CF_PASSWORD RATE TIME INSTANCES ORG SPACE SCHEME
+export CF_USERNAME CF_PASSWORD RATE TIME EMITTER_INSTANCES COUNTER_INSTANCES ORG SPACE SCHEME
