@@ -13,6 +13,7 @@ import (
 
 	. "github.com/apoydence/eachers"
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 
 	"github.com/apoydence/eachers/testhelpers"
@@ -21,7 +22,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gorilla/websocket"
-	"github.com/onsi/ginkgo/config"
 )
 
 var _ = Describe("WebsocketServer", func() {
@@ -44,19 +44,30 @@ var _ = Describe("WebsocketServer", func() {
 
 		wsReceivedChan = make(chan []byte)
 
-		apiEndpoint = net.JoinHostPort("127.0.0.1", strconv.Itoa(9091+config.GinkgoConfig.ParallelNode*10))
-		var err error
-		server, err = websocketserver.New(
-			apiEndpoint,
-			sinkManager,
-			100*time.Millisecond,
-			100*time.Millisecond,
-			100,
-			"dropsonde-origin",
-			mockBatcher,
-			logger,
-		)
-		Expect(err).NotTo(HaveOccurred())
+		// TODO: This is a poor solution that we need to remove ASAP. Ideally,
+		// we can rely on the kernel to give us an open port and pass the
+		// listener directly to websocket.New call.
+		retries := 5
+		for ; retries > 0; retries-- {
+			apiEndpoint = net.JoinHostPort("127.0.0.1", strconv.Itoa(getPort()+(config.GinkgoConfig.ParallelNode*10)))
+			var err error
+			server, err = websocketserver.New(
+				apiEndpoint,
+				sinkManager,
+				100*time.Millisecond,
+				100*time.Millisecond,
+				100,
+				"dropsonde-origin",
+				mockBatcher,
+				logger,
+			)
+
+			if err == nil {
+				break
+			}
+		}
+		Expect(retries).To(BeNumerically(">", 0))
+
 		go server.Start()
 		websocket.DefaultDialer = &websocket.Dialer{HandshakeTimeout: 10 * time.Millisecond}
 	})
@@ -303,4 +314,11 @@ func receiveEnvelope(dataChan <-chan []byte) (*events.Envelope, error) {
 	var data []byte
 	Eventually(dataChan).Should(Receive(&data))
 	return parseEnvelope(data)
+}
+
+func getPort() int {
+	portRangeStart := 55000
+	portRangeCoefficient := 100
+	offset := 5
+	return config.GinkgoConfig.ParallelNode*portRangeCoefficient + portRangeStart + offset
 }
