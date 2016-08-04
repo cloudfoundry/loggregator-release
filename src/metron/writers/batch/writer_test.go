@@ -370,6 +370,9 @@ var _ = Describe("Batch Writer", func() {
 				wg.Wait()
 			}()
 
+			// this prevents changing of the batcher pointer by other tests
+			batcher := batcher
+
 			go func() {
 				defer wg.Done()
 				for {
