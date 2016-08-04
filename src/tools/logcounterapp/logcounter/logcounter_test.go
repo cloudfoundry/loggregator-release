@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"tools/logcounterapp/config"
 	"tools/logcounterapp/logcounter"
@@ -25,6 +26,7 @@ var _ = Describe("logCounter", func() {
 	Describe("Start", func() {
 		It("returns 200 status for dumpReport", func() {
 			var (
+				mu       sync.Mutex
 				request  *http.Request
 				statuses = make(chan int, 2)
 			)
@@ -33,11 +35,18 @@ var _ = Describe("logCounter", func() {
 
 			handler := func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(<-statuses)
+				mu.Lock()
+				defer mu.Unlock()
 				request = r
 			}
 			testServer := httptest.NewServer(http.HandlerFunc(handler))
 			defer func() {
-				Eventually(func() string { return request.URL.Path }).Should(Equal("/report"))
+				defer GinkgoRecover()
+				Eventually(func() string {
+					mu.Lock()
+					defer mu.Unlock()
+					return request.URL.Path
+				}).Should(Equal("/report"))
 				testServer.Close()
 			}()
 
@@ -60,6 +69,7 @@ var _ = Describe("logCounter", func() {
 
 		It("returns 404 status for unknown routes", func() {
 			var (
+				mu       sync.Mutex
 				request  *http.Request
 				statuses = make(chan int, 2)
 			)
@@ -68,12 +78,18 @@ var _ = Describe("logCounter", func() {
 
 			handler := func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(<-statuses)
+				mu.Lock()
+				defer mu.Unlock()
 				request = r
 			}
 			testServer := httptest.NewServer(http.HandlerFunc(handler))
 			defer func() {
 				defer GinkgoRecover()
-				Eventually(func() string { return request.URL.Path }).Should(Equal("/report"))
+				Eventually(func() string {
+					mu.Lock()
+					defer mu.Unlock()
+					return request.URL.Path
+				}).Should(Equal("/report"))
 				testServer.Close()
 			}()
 
@@ -99,6 +115,7 @@ var _ = Describe("logCounter", func() {
 	Describe("Stop", func() {
 		It("stops accepting requests", func() {
 			var (
+				mu       sync.Mutex
 				request  *http.Request
 				statuses = make(chan int, 2)
 			)
@@ -107,11 +124,18 @@ var _ = Describe("logCounter", func() {
 
 			handler := func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(<-statuses)
+				mu.Lock()
+				defer mu.Unlock()
 				request = r
 			}
 			testServer := httptest.NewServer(http.HandlerFunc(handler))
 			defer func() {
-				Eventually(func() string { return request.URL.Path }).Should(Equal("/report"))
+				defer GinkgoRecover()
+				Eventually(func() string {
+					mu.Lock()
+					defer mu.Unlock()
+					return request.URL.Path
+				}).Should(Equal("/report"))
 				testServer.Close()
 			}()
 
@@ -138,6 +162,7 @@ var _ = Describe("logCounter", func() {
 	Describe("HandleMessages", func() {
 		It("results in a correct report when envelopes are passed to it", func() {
 			var (
+				mu       sync.Mutex
 				request  *http.Request
 				statuses = make(chan int, 2)
 			)
@@ -146,11 +171,18 @@ var _ = Describe("logCounter", func() {
 
 			handler := func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(<-statuses)
+				mu.Lock()
+				defer mu.Unlock()
 				request = r
 			}
 			testServer := httptest.NewServer(http.HandlerFunc(handler))
 			defer func() {
-				Eventually(func() string { return request.URL.Path }).Should(Equal("/report"))
+				defer GinkgoRecover()
+				Eventually(func() string {
+					mu.Lock()
+					defer mu.Unlock()
+					return request.URL.Path
+				}).Should(Equal("/report"))
 				testServer.Close()
 			}()
 
@@ -191,6 +223,7 @@ var _ = Describe("logCounter", func() {
 
 		It("doesn't process events that aren't logMessages", func() {
 			var (
+				mu       sync.Mutex
 				request  *http.Request
 				statuses = make(chan int, 2)
 			)
@@ -199,11 +232,18 @@ var _ = Describe("logCounter", func() {
 
 			handler := func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(<-statuses)
+				mu.Lock()
+				defer mu.Unlock()
 				request = r
 			}
 			testServer := httptest.NewServer(http.HandlerFunc(handler))
 			defer func() {
-				Eventually(func() string { return request.URL.Path }).Should(Equal("/report"))
+				defer GinkgoRecover()
+				Eventually(func() string {
+					mu.Lock()
+					defer mu.Unlock()
+					return request.URL.Path
+				}).Should(Equal("/report"))
 				testServer.Close()
 			}()
 
@@ -242,6 +282,7 @@ var _ = Describe("logCounter", func() {
 
 		It("correctly counts the number of 1008 and other errors", func() {
 			var (
+				mu       sync.Mutex
 				request  *http.Request
 				statuses = make(chan int, 2)
 			)
@@ -250,11 +291,18 @@ var _ = Describe("logCounter", func() {
 
 			handler := func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(<-statuses)
+				mu.Lock()
+				defer mu.Unlock()
 				request = r
 			}
 			testServer := httptest.NewServer(http.HandlerFunc(handler))
 			defer func() {
-				Eventually(func() string { return request.URL.Path }).Should(Equal("/report"))
+				defer GinkgoRecover()
+				Eventually(func() string {
+					mu.Lock()
+					defer mu.Unlock()
+					return request.URL.Path
+				}).Should(Equal("/report"))
 				testServer.Close()
 			}()
 
@@ -273,6 +321,13 @@ var _ = Describe("logCounter", func() {
 
 			Eventually(func() bool { return checkEndpoint(port, "?report", http.StatusOK) }).Should(BeTrue())
 
+			devNull, err := os.Open("/dev/null")
+			Expect(err).ToNot(HaveOccurred())
+			oldStderr := os.Stderr
+			os.Stderr = devNull
+			defer func() {
+				os.Stderr = oldStderr
+			}()
 			terminate := make(chan os.Signal, 1)
 			errs := make(chan error, 11)
 			testErr := errors.New("Some Error")
@@ -298,6 +353,7 @@ var _ = Describe("logCounter", func() {
 
 		It("posts the report to logfin with the correct data", func() {
 			var (
+				mu       sync.Mutex
 				request  *http.Request
 				body     []byte
 				statuses = make(chan int, 2)
@@ -307,12 +363,19 @@ var _ = Describe("logCounter", func() {
 
 			handler := func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(<-statuses)
+				mu.Lock()
+				defer mu.Unlock()
 				request = r
 				body, _ = ioutil.ReadAll(r.Body)
 			}
 			testServer := httptest.NewServer(http.HandlerFunc(handler))
 			defer func() {
-				Eventually(func() string { return request.URL.Path }).Should(Equal("/report"))
+				defer GinkgoRecover()
+				Eventually(func() string {
+					mu.Lock()
+					defer mu.Unlock()
+					return request.URL.Path
+				}).Should(Equal("/report"))
 				testServer.Close()
 			}()
 
@@ -346,6 +409,13 @@ var _ = Describe("logCounter", func() {
 			go lc.HandleMessages(msgs)
 			Eventually(func() bool { return checkMessageBody(port, "?report", "total: 1") }).Should(BeTrue())
 
+			devNull, err := os.Open("/dev/null")
+			Expect(err).ToNot(HaveOccurred())
+			oldStderr := os.Stderr
+			os.Stderr = devNull
+			defer func() {
+				os.Stderr = oldStderr
+			}()
 			terminate := make(chan os.Signal, 1)
 			errs := make(chan error, 2)
 
@@ -379,6 +449,9 @@ var _ = Describe("logCounter", func() {
 			}
 
 			var jsBody map[string]map[string]interface{}
+
+			mu.Lock()
+			defer mu.Unlock()
 			Expect(request.Method).To(Equal("POST"))
 			Expect(request.URL.Path).To(Equal("/report"))
 			Expect(json.Unmarshal(body, &jsBody)).To(Succeed())
