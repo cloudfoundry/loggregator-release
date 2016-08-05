@@ -430,14 +430,15 @@ var _ = Describe("Dump Sink", func() {
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
+		logMessage, _ := emitter.Wrap(&events.LogMessage{}, "origin")
+		continuouslySend(inputChan, logMessage, 2*inactivityDuration)
+
 		go func() {
 			testDump.Run(inputChan)
 			close(dumpRunnerDone)
 		}()
 
-		logMessage, _ := emitter.Wrap(&events.LogMessage{}, "origin")
-		continuouslySend(inputChan, logMessage, 2*inactivityDuration)
-		Expect(dumpRunnerDone).ShouldNot(BeClosed())
+		Consistently(dumpRunnerDone, 2*inactivityDuration).ShouldNot(BeClosed())
 	})
 
 	It("only stores log messages", func() {
