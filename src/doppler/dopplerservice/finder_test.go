@@ -668,6 +668,54 @@ var _ = Describe("Finder", func() {
 				})
 			})
 
+			Context("when a node's TTL is updated", func() {
+				var done chan struct{}
+
+				BeforeEach(func() {
+					done = make(chan struct{})
+
+					legacyNode = storeadapter.StoreNode{
+						Key:   path.Join(dopplerservice.LEGACY_ROOT, "z1/doppler_z1/0"),
+						Value: []byte("1.2.3.4"),
+						TTL:   30,
+					}
+				})
+
+				JustBeforeEach(func() {
+					// Ignore the startup event
+					_ = finder.Next()
+
+					updateNode := legacyNode
+					legacyNode.TTL = 10
+					legacyEvents <- storeadapter.WatchEvent{
+						Type:     storeadapter.UpdateEvent,
+						Node:     &updateNode,
+						PrevNode: &legacyNode,
+					}
+				})
+
+				AfterEach(func() {
+					node := storeadapter.StoreNode{
+						Key:   path.Join(dopplerservice.LEGACY_ROOT, "z1/doppler_z1/1"),
+						Value: []byte("1.2.3.5"),
+						TTL:   30,
+					}
+					legacyEvents <- storeadapter.WatchEvent{
+						Type: storeadapter.CreateEvent,
+						Node: &node,
+					}
+					Eventually(done).Should(BeClosed())
+				})
+
+				It("doesn't send an event", func() {
+					go func() {
+						finder.Next()
+						close(done)
+					}()
+					Consistently(done).ShouldNot(BeClosed())
+				})
+			})
+
 			Context("when a node is deleted", func() {
 				BeforeEach(func() {
 					legacyNode = storeadapter.StoreNode{

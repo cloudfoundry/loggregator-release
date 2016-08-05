@@ -1,6 +1,7 @@
 package dopplerservice
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -142,7 +143,7 @@ func (f *Finder) handleEvent(event *storeadapter.WatchEvent, parser func([]byte)
 		f.logger.Errorf("Received invalid event: %+v", event)
 		return
 	case storeadapter.UpdateEvent:
-		if f.equal(event.PrevNode.Value, event.Node.Value) {
+		if f.equal(event.PrevNode, event.Node) {
 			return
 		}
 		fallthrough
@@ -156,23 +157,31 @@ func (f *Finder) handleEvent(event *storeadapter.WatchEvent, parser func([]byte)
 	f.sendEvent()
 }
 
-func (f *Finder) equal(node, nodeToCompare []byte) bool {
-	var val, valToCompare DopplerEvent
-	err := json.Unmarshal(node, &val)
+func (f *Finder) equalLegacy(prev, next *storeadapter.StoreNode) bool {
+	return bytes.Equal(prev.Value, next.Value)
+}
+
+func (f *Finder) equal(prev, next *storeadapter.StoreNode) bool {
+	if strings.HasPrefix(prev.Key, LEGACY_ROOT) {
+		return f.equalLegacy(prev, next)
+	}
+
+	var prevEvent, nextEvent DopplerEvent
+	err := json.Unmarshal(prev.Value, &prevEvent)
 	if err != nil {
 		f.logger.Errorf("Unmarshaling: %v", err)
 		return false
 	}
-	err = json.Unmarshal(nodeToCompare, &valToCompare)
+	err = json.Unmarshal(next.Value, &nextEvent)
 	if err != nil {
 		f.logger.Errorf("Unmarshaling: %v", err)
 		return false
 	}
-	if len(val.Endpoints) != len(valToCompare.Endpoints) {
+	if len(prevEvent.Endpoints) != len(nextEvent.Endpoints) {
 		return false
 	}
-	for v := range val.Endpoints {
-		if !valToCompare.Endpoints.contains(v) {
+	for v := range prevEvent.Endpoints {
+		if !nextEvent.Endpoints.contains(v) {
 			return false
 		}
 	}
