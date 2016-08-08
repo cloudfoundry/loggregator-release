@@ -7,6 +7,7 @@ files:
 - loggregator/src/tools/logemitter/build/*
 - loggregator/src/tools/logcounterapp/build/*
 - loggregator/src/tools/logfin/build/*
+- loggregator/src/github.com/bradylove/envstruct/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/noaa/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/noaa/consumer/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/noaa/consumer/internal/*.go # gosub

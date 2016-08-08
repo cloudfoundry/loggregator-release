@@ -1,37 +1,44 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"strconv"
+	"net/url"
 	"time"
 
+	"github.com/bradylove/envstruct"
 	"github.com/nu7hatch/gouuid"
 )
 
-var (
-	max   int
-	delay time.Duration
-)
+type Config struct {
+	Rate           float64       `env:"rate"`
+	Time           time.Duration `env:"time"`
+	LogFinURL      *url.URL      `env:"logfin_url,required"`
+	Port           uint16        `env:"port,required"`
+	SkipCertVerify bool          `env:"skip_cert_verify"`
+}
 
-func init() {
-	rate, err := strconv.ParseFloat(os.Getenv("RATE"), 64)
-	if err != nil {
-		rate = 1000
-	}
+func (c Config) Max() int {
+	return int(float64(c.Rate) * c.Time.Seconds())
+}
 
-	t, err := time.ParseDuration(os.Getenv("TIME"))
-	if err != nil {
-		t = 5 * time.Minute
-	}
-
-	max = int(float64(rate) * t.Seconds())
-	delay = time.Duration(1 / rate * float64(time.Second))
+func (c Config) Delay() time.Duration {
+	return time.Duration(1 / c.Rate * float64(time.Second))
 }
 
 func main() {
+	conf := Config{
+		Rate: 1000,
+		Time: 5 * time.Minute,
+	}
+
+	err := envstruct.Load(&conf)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	uuid, err := uuid.NewV4()
 	if err != nil {
 		log.Fatal(err)
@@ -39,11 +46,17 @@ func main() {
 	guid := uuid.String()
 
 	go func() {
-		if max == 0 {
-			printForever(guid)
+		if conf.Max() == 0 {
+			printForever(guid, conf.Delay())
 		}
-		printUntil(guid, max)
-		_, err := http.Get(os.Getenv("LOGFIN_URL") + "/count")
+		printUntil(guid, conf.Delay(), conf.Max())
+		http.DefaultClient.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: conf.SkipCertVerify,
+				ServerName:         "127.0.0.1",
+			},
+		}
+		_, err := http.Get(conf.LogFinURL.String() + "/count")
 		if err != nil {
 			log.Fatalf("Couldn't send done message to logfin: %s", err)
 		}
@@ -52,20 +65,20 @@ func main() {
 	http.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
 		rw.WriteHeader(200)
 	})
-	err = http.ListenAndServe(":"+os.Getenv("PORT"), nil)
+	err = http.ListenAndServe(fmt.Sprintf(":%d", conf.Port), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func printForever(guid string) {
+func printForever(guid string, delay time.Duration) {
 	for i := 0; ; i++ {
 		fmt.Printf("logemitter guid: %s msg: %d\n", guid, i)
 		time.Sleep(delay)
 	}
 }
 
-func printUntil(guid string, max int) {
+func printUntil(guid string, delay time.Duration, max int) {
 	for i := 0; i < max; i++ {
 		fmt.Printf("logemitter guid: %s msg: %d\n", guid, i)
 		time.Sleep(delay)
