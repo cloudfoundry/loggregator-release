@@ -27,6 +27,35 @@ type StoreAdapter interface {
 	ListRecursively(key string) (storeadapter.StoreNode, error)
 }
 
+type set map[string]struct{}
+
+func (s set) add(value string) {
+	s[value] = struct{}{}
+}
+
+func (s set) contains(value string) bool {
+	_, ok := s[value]
+	return ok
+}
+
+func (s *set) UnmarshalJSON(value []byte) error {
+	m := make(set)
+	var src []string
+	if err := json.Unmarshal(value, &src); err != nil {
+		return err
+	}
+	for _, v := range src {
+		m[v] = struct{}{}
+	}
+	*s = m
+	return nil
+}
+
+type DopplerEvent struct {
+	Version   int `json:"version"`
+	Endpoints set `json:"endpoints"`
+}
+
 type Event struct {
 	UDPDopplers []string
 	TLSDopplers []string
@@ -114,7 +143,7 @@ func (f *Finder) handleEvent(event *storeadapter.WatchEvent, parser func([]byte)
 		f.logger.Errorf("Received invalid event: %+v", event)
 		return
 	case storeadapter.UpdateEvent:
-		if bytes.Equal(event.PrevNode.Value, event.Node.Value) {
+		if f.equal(event.PrevNode, event.Node) {
 			return
 		}
 		fallthrough
@@ -126,6 +155,37 @@ func (f *Finder) handleEvent(event *storeadapter.WatchEvent, parser func([]byte)
 		f.deleteEndpoints(f.parseNode(*event.PrevNode, parser))
 	}
 	f.sendEvent()
+}
+
+func (f *Finder) equalLegacy(prev, next *storeadapter.StoreNode) bool {
+	return bytes.Equal(prev.Value, next.Value)
+}
+
+func (f *Finder) equal(prev, next *storeadapter.StoreNode) bool {
+	if strings.HasPrefix(prev.Key, LEGACY_ROOT) {
+		return f.equalLegacy(prev, next)
+	}
+
+	var prevEvent, nextEvent DopplerEvent
+	err := json.Unmarshal(prev.Value, &prevEvent)
+	if err != nil {
+		f.logger.Errorf("Unmarshaling: %v", err)
+		return false
+	}
+	err = json.Unmarshal(next.Value, &nextEvent)
+	if err != nil {
+		f.logger.Errorf("Unmarshaling: %v", err)
+		return false
+	}
+	if len(prevEvent.Endpoints) != len(nextEvent.Endpoints) {
+		return false
+	}
+	for v := range prevEvent.Endpoints {
+		if !nextEvent.Endpoints.contains(v) {
+			return false
+		}
+	}
+	return true
 }
 
 func (f *Finder) run(etcdRoot string, events <-chan storeadapter.WatchEvent, errs <-chan error, stop chan<- bool, parser func([]byte) (interface{}, error)) {

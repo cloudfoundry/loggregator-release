@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"os"
+	"time"
 	"tools/logcounterapp/config"
 
 	. "github.com/onsi/ginkgo"
@@ -25,7 +26,17 @@ var _ = Describe("Config", func() {
 			Expect(cfg.ApiURL).To(Equal("api.test.com"))
 			Expect(cfg.UaaURL).To(Equal("uaa.test.com"))
 			Expect(cfg.Port).To(Equal("12345"))
+			Expect(cfg.LogfinURL).To(Equal("logfin.test.com"))
+			Expect(cfg.Runtime).To(Equal(time.Second))
+		})
 
+		It("returns an error for an invalid runtime duration", func() {
+			setAllEnvsExcept("RUNTIME")
+			os.Setenv("RUNTIME", "foo")
+
+			cfg, err := config.ParseEnv()
+			Expect(cfg).To(BeNil())
+			Expect(err).To(HaveOccurred())
 		})
 
 		DescribeTable("returns error for missing required properties", func(property string) {
@@ -39,6 +50,8 @@ var _ = Describe("Config", func() {
 			Entry("uaaAddress", "UAA_URL"),
 			Entry("clientID", "CLIENT_ID"),
 			Entry("logcounter port", "PORT"),
+			Entry("logfinAddress", "LOGFIN_URL"),
+			Entry("runtime", "RUNTIME"),
 		)
 
 		It("generates a random SubscriptionID if none is provided", func() {
@@ -63,6 +76,8 @@ func setAllEnvsExcept(remove string) error {
 		"MESSAGE_PREFIX":  "testPrefix",
 		"SUBSCRIPTION_ID": "testSubID",
 		"PORT":            "12345",
+		"LOGFIN_URL":      "logfin.test.com",
+		"RUNTIME":         "1s",
 	}
 	for k, v := range allEnvs {
 		if k == remove {

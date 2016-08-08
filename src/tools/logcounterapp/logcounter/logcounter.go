@@ -1,17 +1,23 @@
 package logcounter
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 	"tools/logcounterapp/cflib"
 	"tools/logcounterapp/config"
+	"tools/reports"
 
 	"github.com/cloudfoundry/sonde-go/events"
 )
@@ -30,13 +36,16 @@ type Identity struct {
 }
 
 type logCounter struct {
-	uaa         cflib.UAA
-	cc          cflib.CC
-	cfg         *config.Config
-	server      *http.Server
-	listener    net.Listener
-	counterLock sync.Mutex
-	counters    map[Identity]map[string]bool
+	websocketErrCount uint64
+	otherErrCount     uint64
+	uaa               cflib.UAA
+	cc                cflib.CC
+	cfg               *config.Config
+	server            *http.Server
+	listener          net.Listener
+	counterLock       sync.Mutex
+	counters          map[Identity]map[string]bool
+	timeout           <-chan time.Time
 }
 
 //go:generate hel --type UAA --output mock_uaa_test.go
@@ -49,6 +58,12 @@ type UAA interface {
 
 type CC interface {
 	GetAppName(guid, authToken string) string
+}
+
+//go:generate hel --type Closer --output mock_closer_test.go
+
+type Closer interface {
+	Close() error
 }
 
 func New(uaa UAA, cc CC, cfg *config.Config) *logCounter {
@@ -69,11 +84,15 @@ func New(uaa UAA, cc CC, cfg *config.Config) *logCounter {
 }
 
 func (l *logCounter) Start() error {
+	l.timeout = time.After(l.cfg.Runtime)
 	var err error
 	l.listener, err = net.Listen("tcp", ":"+l.cfg.Port)
 	if err != nil {
 		return err
 	}
+
+	go l.waitUntilDone()
+
 	// this retry is to make sure the previous server session is terminated gracefully
 	for retry := 0; retry < TOTAL_RETRY; retry++ {
 		err = l.server.Serve(l.listener)
@@ -84,6 +103,23 @@ func (l *logCounter) Start() error {
 	}
 
 	return err
+}
+
+func (l *logCounter) waitUntilDone() {
+	for {
+		<-l.timeout
+		resp, err := http.Get(l.cfg.LogfinURL + "/status")
+		if err != nil {
+			panic(err)
+		}
+
+		if resp.StatusCode == http.StatusOK {
+			break
+		}
+		l.timeout = time.After(time.Second / 2)
+	}
+
+	l.SendReport()
 }
 
 func (l *logCounter) Stop() error {
@@ -103,6 +139,54 @@ func (l *logCounter) HandleMessages(msgs <-chan *events.Envelope) {
 		}
 		// do we need to spin up a go routine per msg
 		go l.processEnvelope(msg)
+	}
+}
+
+func (l *logCounter) SendReport() {
+	l.counterLock.Lock()
+	defer l.counterLock.Unlock()
+
+	authToken, err := l.uaa.GetAuthToken()
+	if err != nil {
+		authToken = ""
+	}
+	report := &reports.LogCount{
+		Errors: reports.Errors{
+			OneThousandEight: int(atomic.LoadUint64(&l.websocketErrCount)),
+			Misc:             int(atomic.LoadUint64(&l.otherErrCount)),
+		},
+		Messages: make(map[string]*reports.MessageCount),
+	}
+	for id, messages := range l.counters {
+		var total, max int
+		for msgID := range messages {
+			msgMax, err := strconv.Atoi(msgID)
+			if err != nil {
+				panic(err)
+			}
+			if msgMax > max {
+				max = msgMax
+			}
+			total++
+		}
+		report.Messages[id.runID] = &reports.MessageCount{
+			App:   l.cc.GetAppName(id.appID, authToken),
+			Max:   max + 1,
+			Total: total,
+		}
+	}
+	body := &bytes.Buffer{}
+	encoder := json.NewEncoder(body)
+	err = encoder.Encode(report)
+	if err != nil {
+		panic(err)
+	}
+	resp, err := http.Post(l.cfg.LogfinURL+"/report", "application/json", body)
+	if err != nil {
+		panic(err)
+	}
+	if resp.StatusCode != http.StatusCreated {
+		panic(errors.New("Got bad status from logfin: " + resp.Status))
 	}
 }
 
@@ -129,6 +213,14 @@ func (l *logCounter) dumpReport(w io.Writer) error {
 		authToken = ""
 	}
 	if _, err := io.WriteString(w, "Report:\n"); err != nil {
+		return err
+	}
+	msg := fmt.Sprintf("1008 errors: %d\n", atomic.LoadUint64(&l.websocketErrCount))
+	if _, err := io.WriteString(w, msg); err != nil {
+		return err
+	}
+	msg = fmt.Sprintf("Other errors: %d\n", atomic.LoadUint64(&l.otherErrCount))
+	if _, err := io.WriteString(w, msg); err != nil {
 		return err
 	}
 	if len(l.counters) == 0 {
@@ -191,4 +283,20 @@ func (l *logCounter) processEnvelope(env *events.Envelope) {
 		l.counters[id] = counter
 	}
 	counter[msg[sepEnd:]] = true
+}
+
+func (l *logCounter) HandleErrors(errors <-chan error, terminate chan os.Signal, closer Closer) bool {
+	defer closer.Close()
+	select {
+	case err := <-errors:
+		if strings.Contains(err.Error(), "1008") {
+			atomic.AddUint64(&l.websocketErrCount, 1)
+		} else {
+			atomic.AddUint64(&l.otherErrCount, 1)
+		}
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return false
+	case <-terminate:
+		return true
+	}
 }

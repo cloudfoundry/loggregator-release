@@ -21,6 +21,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+const bufferSize = 100
+
 var _ = Describe("SyslogSink", func() {
 	var (
 		syslogSink            *syslog.SyslogSink
@@ -29,7 +31,6 @@ var _ = Describe("SyslogSink", func() {
 		errorChannel          chan *events.Envelope
 		errorHandler          func(string, string)
 		inputChan             chan *events.Envelope
-		bufferSize            uint
 		dialer                *net.Dialer
 		logger                *gosteno.Logger
 		drainURL              string
@@ -53,8 +54,6 @@ var _ = Describe("SyslogSink", func() {
 			default:
 			}
 		}
-
-		bufferSize = 100
 	})
 
 	JustBeforeEach(func() {
@@ -159,7 +158,7 @@ var _ = Describe("SyslogSink", func() {
 		It("still accepts messages without blocking", func() {
 			logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "appId", "App"), "origin")
 
-			for i := 0; i < int(bufferSize); i++ {
+			for i := 0; i < bufferSize; i++ {
 				Eventually(inputChan).Should(BeSent(logMessage))
 			}
 		})
@@ -191,10 +190,10 @@ var _ = Describe("SyslogSink", func() {
 
 	Context("when remote syslog server is up", func() {
 		JustBeforeEach(func() {
-			go func() {
+			go func(*syslog.SyslogSink, chan bool) {
 				syslogSink.Run(inputChan)
 				close(syslogSinkRunFinished)
-			}()
+			}(syslogSink, syslogSinkRunFinished)
 		})
 
 		AfterEach(func() {
@@ -285,7 +284,7 @@ var _ = Describe("SyslogSink", func() {
 
 			Context("when the buffer overflows", func() {
 				JustBeforeEach(func() {
-					for i := 0; i < int(bufferSize)+5; i++ {
+					for i := 0; i < bufferSize+5; i++ {
 						msg := fmt.Sprintf("message no %v", i)
 						logMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, msg, "appId", "App"), "origin")
 
@@ -306,7 +305,7 @@ var _ = Describe("SyslogSink", func() {
 						Expect(data[0]).To(ContainSubstring(fmt.Sprintf("<14>1 message no 0")))
 
 						for i := 2; i < 6; i++ {
-							msg := fmt.Sprintf("<14>1 message no %v", i-1+int(bufferSize))
+							msg := fmt.Sprintf("<14>1 message no %v", i-1+bufferSize)
 							Expect(data[i]).To(ContainSubstring(msg))
 						}
 					})

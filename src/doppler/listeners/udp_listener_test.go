@@ -46,7 +46,7 @@ var _ = Describe("AgentListener", func() {
 			close(listenerStopped)
 		}()
 
-		Eventually(loggertesthelper.TestLoggerSink.LogContents).Should(ContainSubstring("Listening on port " + address))
+		Eventually(loggertesthelper.TestLoggerSink.LogContents).Should(ContainSubstring("UDP listener listening on port " + address))
 	})
 
 	AfterEach(func() {

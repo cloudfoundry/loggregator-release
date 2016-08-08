@@ -75,20 +75,9 @@ func main() {
 		msgs, errors := consumer.FirehoseWithoutReconnect(cfg.SubscriptionID, authToken)
 
 		go logcounter.HandleMessages(msgs)
-		done := handleErrors(errors, terminate, consumer)
+		done := logcounter.HandleErrors(errors, terminate, consumer)
 		if done {
 			return
 		}
-	}
-}
-
-func handleErrors(errors <-chan error, terminate chan os.Signal, consumer *consumer.Consumer) bool {
-	defer consumer.Close()
-	select {
-	case err := <-errors:
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		return false
-	case <-terminate:
-		return true
 	}
 }

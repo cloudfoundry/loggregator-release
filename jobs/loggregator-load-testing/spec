@@ -17,8 +17,11 @@ properties:
   loggregator_load_testing.time:
     description: "The time that the errand should run for (format: https://golang.org/pkg/time/#ParseDuration)."
     default: 5m
-  loggregator_load_testing.instances:
+  loggregator_load_testing.emitter_instances:
     description: "The number of instances that concurrently emit messages."
+    default: 1
+  loggregator_load_testing.counter_instances:
+    description: "The number of instances that concurrently receive messages."
     default: 1
 
   loggregator_load_testing.org:

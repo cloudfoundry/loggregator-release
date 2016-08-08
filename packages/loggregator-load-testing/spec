@@ -23,3 +23,4 @@ files:
 - loggregator/src/tools/logcounterapp/logcounter/*.go # gosub
 - loggregator/src/tools/logemitter/*.go # gosub
 - loggregator/src/tools/logfin/*.go # gosub
+- loggregator/src/tools/reports/*.go # gosub

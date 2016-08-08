@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"metron/writers/batch"
+	"sync"
 	"time"
 
 	. "github.com/apoydence/eachers"
@@ -16,6 +16,8 @@ import (
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+
+	"metron/writers/batch"
 )
 
 var bufferSize uint64
@@ -353,12 +355,33 @@ var _ = Describe("Batch Writer", func() {
 		})
 
 		It("doesn't reset the timer every write during consistent low load", func() {
-			// Ensure that write is called more frequently than the timeout
+			// this might be a bit confusing but we need to make sure that by the
+			// end of this test the goroutine has finished running so it doesn't
+			// continue to do writes to the next tests's batcher
+
 			ticker := time.NewTicker(75 * time.Millisecond)
-			defer ticker.Stop()
+			packItUp := make(chan struct{})
+			var wg sync.WaitGroup
+			wg.Add(1)
+
+			defer func() {
+				ticker.Stop()
+				close(packItUp)
+				wg.Wait()
+			}()
+
+			// this prevents changing of the batcher pointer by other tests
+			batcher := batcher
+
 			go func() {
-				for range ticker.C {
-					batcher.Write([]byte("a"))
+				defer wg.Done()
+				for {
+					select {
+					case <-ticker.C:
+						batcher.Write([]byte("a"))
+					case <-packItUp:
+						return
+					}
 				}
 			}()
 
@@ -374,7 +397,7 @@ var _ = Describe("Batch Writer", func() {
 				Expect(err).ToNot(HaveOccurred())
 			}
 
-			By("not blocking durring writes")
+			By("not blocking during writes")
 			close(byteWriter.WriteOutput.SentLength)
 			Eventually(byteWriter.WriteInput.Message).Should(Receive())
 			Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(

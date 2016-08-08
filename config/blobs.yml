@@ -7,3 +7,7 @@ cli/cf-cli_6.20.0_linux_x86-64.tgz:
   object_id: 826fe29c-9ad3-4dc1-b136-837dd8fc8fc7
   sha: 6abdf962082329939008b77176b8a57d3ae4f884
   size: 6461018
+golang/go1.6.2.windows-amd64.zip:
+  object_id: f3e06e3e-165f-424e-b0a0-fdd5a1761f5f
+  sha: 9fc1628ce5e4f4fc65817fa938fa5f95b99612e1
+  size: 91785149

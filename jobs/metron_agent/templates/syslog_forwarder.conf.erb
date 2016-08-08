@@ -36,12 +36,19 @@ $UDPServerRun 514
    end
    ip = discover_external_ip
 %>
+
 template(name="CfLogTemplate" type="list") {
         constant(value="<")
         property(name="pri")
         constant(value=">")
         property(name="timestamp" dateFormat="rfc3339")
-        constant(value=" <%= ip.strip %> ")
+        <% if !ip.nil? %>
+          constant(value=" <%= ip.strip %> ")
+        <% else %>
+          constant(value=" ")
+          property(name="fromhost-ip")
+          constant(value=" ")
+        <% end %>
         property(name="programname")
         constant(value=" [job=<%= name %> index=<%= spec.index.to_i %>] ")
         property(name="msg")

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/nu7hatch/gouuid"
 )
@@ -19,9 +20,11 @@ type Config struct {
 	MessagePrefix  string
 	SubscriptionID string
 	Port           string
+	LogfinURL      string
+	Runtime        time.Duration
 }
 
-var envVars = [5]string{"DOPPLER_URL", "API_URL", "UAA_URL", "CLIENT_ID", "PORT"}
+var envVars = [7]string{"DOPPLER_URL", "API_URL", "UAA_URL", "CLIENT_ID", "PORT", "LOGFIN_URL", "RUNTIME"}
 
 func ParseEnv() (*Config, error) {
 	for _, env := range envVars {
@@ -36,6 +39,11 @@ func ParseEnv() (*Config, error) {
 		subscriptionID = generateSubscriptionID()
 	}
 
+	runtime, err := time.ParseDuration(os.Getenv("RUNTIME"))
+	if err != nil {
+		return nil, err
+	}
+
 	cfg := &Config{
 		ApiURL:         os.Getenv("API_URL"),
 		DopplerURL:     os.Getenv("DOPPLER_URL"),
@@ -47,6 +55,8 @@ func ParseEnv() (*Config, error) {
 		MessagePrefix:  os.Getenv("MESSAGE_PREFIX"),
 		SubscriptionID: subscriptionID,
 		Port:           os.Getenv("PORT"),
+		LogfinURL:      os.Getenv("LOGFIN_URL"),
+		Runtime:        runtime,
 	}
 
 	return cfg, nil

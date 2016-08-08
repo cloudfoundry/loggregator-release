@@ -40,7 +40,7 @@ func (udp *UDPListener) Start() {
 		udp.logger.Fatalf("Failed to listen on port. %s", err)
 	}
 
-	udp.logger.Infof("Listening on port %s", udp.host)
+	udp.logger.Infof("UDP listener listening on port %s", udp.host)
 	udp.lock.Lock()
 	udp.connection = connection
 	udp.lock.Unlock()

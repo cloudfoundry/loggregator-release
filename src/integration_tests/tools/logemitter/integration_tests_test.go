@@ -2,6 +2,7 @@ package integration_tests_test
 
 import (
 	"integration_tests/tools/helpers"
+	"net/http"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -14,7 +15,7 @@ var _ = Describe("IntegrationTests", func() {
 			logfinSession, port := helpers.StartLogfin()
 			logemitterSession, _ := helpers.StartLogemitter(port)
 
-			Eventually(func() bool { return helpers.CheckEndpoint(port, "") }).Should(Equal(true))
+			Eventually(func() bool { return helpers.CheckEndpoint(port, "", http.StatusOK) }).Should(Equal(true))
 
 			logfinSession.Kill().Wait()
 			logemitterSession.Kill().Wait()
@@ -38,10 +39,10 @@ var _ = Describe("IntegrationTests", func() {
 			logfinSession, port := helpers.StartLogfin()
 			logemitterSession, _ := helpers.StartLogemitter(port)
 
-			Eventually(func() bool { return helpers.CheckEndpoint(port, "") }).Should(Equal(true))
+			Eventually(func() bool { return helpers.CheckEndpoint(port, "", http.StatusOK) }).Should(Equal(true))
 
 			By("getting a 200 status from logfin after sending completion status")
-			Eventually(func() bool { return helpers.CheckEndpoint(port, "status") }).Should(Equal(true))
+			Eventually(func() bool { return helpers.CheckEndpoint(port, "status", http.StatusOK) }).Should(Equal(true))
 
 			logfinSession.Kill().Wait()
 			logemitterSession.Kill().Wait()
