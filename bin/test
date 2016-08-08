@@ -6,9 +6,6 @@ trap "echo Exited!; exit 1;" SIGINT SIGTERM
 base=$(dirname $0)
 
 echo "Installing Git Hooks..."
-if [ "$(ls -A .git/hooks)" ]; then
-    rm .git/hooks/*
-fi
 $base/install-git-hooks
 
 go install github.com/apcera/gnatsd
