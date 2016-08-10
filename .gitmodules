@@ -99,4 +99,4 @@
 	url = https://gopkg.in/check.v1
 [submodule "src/github.com/bradylove/envstruct"]
 	path = src/github.com/bradylove/envstruct
-	url = git@github.com:bradylove/envstruct.git
+	url = https://github.com/bradylove/envstruct.git
