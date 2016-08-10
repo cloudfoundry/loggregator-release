@@ -60,7 +60,10 @@ func newFirehoseCounter(subscriptionID string, batcher Batcher) *firehoseCounter
 }
 
 func (f *firehoseCounter) Increment(typ events.Envelope_EventType) {
-	f.batcher.BatchIncrementCounter(fmt.Sprintf("sentMessagesFirehose.%s", f.subscriptionID))
+	f.batcher.BatchCounter("sentMessagesFirehose").
+		SetTag("subscription_id", f.subscriptionID).
+		Increment()
+
 	f.envelopeCounter.Increment(typ)
 }
 
