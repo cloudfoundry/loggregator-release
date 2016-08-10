@@ -220,21 +220,33 @@ var _ = Describe("WebsocketServer", func() {
 			Expect(rlm.GetLogMessage().GetMessage()).To(Equal(lm.GetLogMessage().GetMessage()))
 		})
 
-		It("emits counter metrics when data is sent to the websocket firehose client", func() {
-			sinkManager.SendTo(appId, lm)
+		Context("when data is sent to the websocket firehose client", func() {
+			JustBeforeEach(func() {
+				sinkManager.SendTo(appId, lm)
+			})
 
-			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
-				With(fmt.Sprintf("sentMessagesFirehose.%s", subscriptionID)),
-			))
-			Eventually(mockBatcher.BatchCounterInput).Should(BeCalled(
-				With("sentEnvelopes"),
-			))
-			Eventually(mockChainer.SetTagInput).Should(BeCalled(
-				With("protocol", "ws"), // TODO: consider adding wss?
-				With("event_type", "LogMessage"),
-				With("endpoint", "firehose"),
-			))
-			Eventually(mockChainer.IncrementCalled).Should(BeCalled())
+			It("emits counter metric sentMessagesFirehose", func() {
+				Eventually(mockBatcher.BatchCounterInput).Should(BeCalled(
+					With("sentMessagesFirehose"),
+				))
+
+				Eventually(mockChainer.SetTagInput).Should(BeCalled(
+					With("subscription_id", subscriptionID),
+				))
+			})
+
+			It("emits counter metric sentEnvelopes", func() {
+				Eventually(mockBatcher.BatchCounterInput).Should(BeCalled(
+					With("sentEnvelopes"),
+				))
+
+				Eventually(mockChainer.SetTagInput).Should(BeCalled(
+					With("protocol", "ws"), // TODO: consider adding wss?
+					With("event_type", "LogMessage"),
+					With("endpoint", "firehose"),
+				))
+				Eventually(mockChainer.IncrementCalled).Should(BeCalled())
+			})
 		})
 	})
 
