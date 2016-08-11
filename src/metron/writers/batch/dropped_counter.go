@@ -2,6 +2,7 @@ package batch
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -20,12 +21,14 @@ type BatchCounterIncrementer interface {
 }
 
 type DroppedCounter struct {
-	origin         string
-	totalDropped   int64
-	writer         BatchChainByteWriter
-	incrementer    BatchCounterIncrementer
-	timer          *time.Timer
-	timerResetLock sync.Mutex
+	origin               string
+	totalDropped         int64
+	writer               BatchChainByteWriter
+	incrementer          BatchCounterIncrementer
+	timer                *time.Timer
+	timerResetLock       sync.Mutex
+	congestedDopplerLock sync.Mutex
+	congestedDopplers    []string
 }
 
 func NewDroppedCounter(byteWriter BatchChainByteWriter, incrementer BatchCounterIncrementer, origin string) *DroppedCounter {
@@ -47,6 +50,16 @@ func (d *DroppedCounter) Drop(n uint32) {
 		d.timer.Reset(time.Millisecond)
 	}()
 	atomic.AddInt64(&d.totalDropped, int64(n))
+}
+
+func (d *DroppedCounter) DropCongested(n uint32, congestedDoppler string) {
+	if n == 0 {
+		return
+	}
+	d.congestedDopplerLock.Lock()
+	defer d.congestedDopplerLock.Unlock()
+	d.Drop(n)
+	d.congestedDopplers = append(d.congestedDopplers, congestedDoppler)
 }
 
 func (d *DroppedCounter) Dropped() int64 {
@@ -98,6 +111,17 @@ func (d *DroppedCounter) droppedCounterBytes(droppedCount int64) []byte {
 }
 
 func (d *DroppedCounter) droppedLogBytes(droppedCount int64) []byte {
+	var dopplerIPs []string
+
+	d.congestedDopplerLock.Lock()
+	dopplerIPs = d.congestedDopplers
+	d.congestedDopplerLock.Unlock()
+
+	logContent := fmt.Sprintf("Dropped %d message(s) from MetronAgent to Doppler", droppedCount)
+	if len(dopplerIPs) != 0 {
+		logContent = fmt.Sprintf("Dropped %d message(s) from MetronAgent to Doppler.  Congested dopplers: %s", droppedCount, strings.Join(dopplerIPs, ", "))
+	}
+
 	message := &events.Envelope{
 		Origin:    proto.String(d.origin),
 		EventType: events.Envelope_LogMessage.Enum(),
@@ -105,7 +129,7 @@ func (d *DroppedCounter) droppedLogBytes(droppedCount int64) []byte {
 			MessageType: events.LogMessage_ERR.Enum(),
 			Timestamp:   proto.Int64(time.Now().UnixNano()),
 			AppId:       proto.String(envelope_extensions.SystemAppId),
-			Message:     []byte(fmt.Sprintf("Dropped %d message(s) from MetronAgent to Doppler", droppedCount)),
+			Message:     []byte(logContent),
 			SourceType:  metSourceType,
 		},
 	}
