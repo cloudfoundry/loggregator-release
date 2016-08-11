@@ -21,6 +21,7 @@ type BatchCounterIncrementer interface {
 
 type DroppedCounter struct {
 	origin         string
+	deltaDropped   int64
 	totalDropped   int64
 	writer         BatchChainByteWriter
 	incrementer    BatchCounterIncrementer
@@ -46,11 +47,13 @@ func (d *DroppedCounter) Drop(n uint32) {
 		defer d.timerResetLock.Unlock()
 		d.timer.Reset(time.Millisecond)
 	}()
+
+	atomic.AddInt64(&d.deltaDropped, int64(n))
 	atomic.AddInt64(&d.totalDropped, int64(n))
 }
 
 func (d *DroppedCounter) Dropped() int64 {
-	return atomic.LoadInt64(&d.totalDropped)
+	return atomic.LoadInt64(&d.deltaDropped)
 }
 
 func (d *DroppedCounter) run() {
@@ -65,7 +68,9 @@ func (d *DroppedCounter) sendDroppedMessages() {
 		return
 	}
 
-	bytes := append(d.droppedCounterBytes(droppedCount), d.droppedLogBytes(droppedCount)...)
+	totalDropped := atomic.LoadInt64(&d.totalDropped)
+
+	bytes := append(d.encodeCounterEvent(droppedCount, totalDropped), d.encodeLogMessage(droppedCount)...)
 	if _, err := d.writer.Write(bytes); err != nil {
 		d.incrementer.BatchIncrementCounter("droppedCounter.sendErrors")
 		d.timerResetLock.Lock()
@@ -74,16 +79,17 @@ func (d *DroppedCounter) sendDroppedMessages() {
 		return
 	}
 
-	atomic.AddInt64(&d.totalDropped, -droppedCount)
+	atomic.AddInt64(&d.deltaDropped, -droppedCount)
 }
 
-func (d *DroppedCounter) droppedCounterBytes(droppedCount int64) []byte {
+func (d *DroppedCounter) encodeCounterEvent(droppedCount, totalDropped int64) []byte {
 	message := &events.Envelope{
 		Origin:    proto.String(d.origin),
 		EventType: events.Envelope_CounterEvent.Enum(),
 		CounterEvent: &events.CounterEvent{
 			Name:  proto.String("DroppedCounter.droppedMessageCount"),
 			Delta: proto.Uint64(uint64(droppedCount)),
+			Total: proto.Uint64(uint64(totalDropped)),
 		},
 	}
 
@@ -97,7 +103,7 @@ func (d *DroppedCounter) droppedCounterBytes(droppedCount int64) []byte {
 	return prefixMessage(bytes)
 }
 
-func (d *DroppedCounter) droppedLogBytes(droppedCount int64) []byte {
+func (d *DroppedCounter) encodeLogMessage(droppedCount int64) []byte {
 	message := &events.Envelope{
 		Origin:    proto.String(d.origin),
 		EventType: events.Envelope_LogMessage.Enum(),

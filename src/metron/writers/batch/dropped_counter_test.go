@@ -67,6 +67,26 @@ var _ = Describe("DroppedCounter", func() {
 		Eventually(counter.Dropped).Should(BeZero())
 	})
 
+	It("maintains the total as a sum", func() {
+		counter, byteWriter := newCounterAndMockWriter()
+		counter.Drop(10)
+		var sent []byte
+		Eventually(byteWriter.WriteInput.Message).Should(Receive(&sent))
+
+		byteWriter.WriteOutput.SentLength <- len(sent)
+		byteWriter.WriteOutput.Err <- nil
+
+		counter.Drop(10)
+		Eventually(byteWriter.WriteInput.Message).Should(Receive(&sent))
+
+		actualEnvelopes, err := unmarshalMessages(sent)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(actualEnvelopes).To(HaveLen(2))
+
+		Expect(actualEnvelopes[0].CounterEvent.GetTotal()).To(BeNumerically("==", 20))
+		Expect(actualEnvelopes[0].CounterEvent.GetDelta()).To(BeNumerically("==", 10))
+	})
+
 	It("does not overwrite dropped counts added while flushing a message", func() {
 		By("queuing up a message about previously dropped messages")
 		counter, byteWriter := newCounterAndMockWriter()
