@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"metron/config"
 	"metron/writers/batch"
 
 	"github.com/cloudfoundry/sonde-go/events"
@@ -47,6 +48,10 @@ var _ = Describe("DroppedCounter", func() {
 		Expect(actualCounter.CounterEvent.GetName()).To(ContainSubstring("DroppedCounter.droppedMessageCount"))
 		Expect(actualCounter.CounterEvent.GetDelta()).To(BeNumerically("==", 10))
 		Expect(actualCounter.GetTimestamp()).ToNot(BeZero())
+		Expect(actualCounter.GetIp()).ToNot(BeEmpty())
+		Expect(actualCounter.GetDeployment()).ToNot(BeEmpty())
+		Expect(actualCounter.GetJob()).ToNot(BeEmpty())
+		Expect(actualCounter.GetIndex()).ToNot(BeEmpty())
 
 		actualLog := actualEnvelopes[1]
 		Expect(actualLog.GetOrigin()).To(Equal(origin))
@@ -55,6 +60,10 @@ var _ = Describe("DroppedCounter", func() {
 		Expect(actualLog.LogMessage.GetSourceType()).To(Equal("MET"))
 		Expect(actualLog.GetTimestamp()).ToNot(BeZero())
 		Expect(actualLog.LogMessage.GetTimestamp()).ToNot(BeZero())
+		Expect(actualLog.GetIp()).ToNot(BeEmpty())
+		Expect(actualLog.GetDeployment()).ToNot(BeEmpty())
+		Expect(actualLog.GetJob()).ToNot(BeEmpty())
+		Expect(actualLog.GetIndex()).ToNot(BeEmpty())
 	})
 
 	It("resets the counter after it sends the dropped message count message", func() {
@@ -130,7 +139,7 @@ var _ = Describe("DroppedCounter", func() {
 	It("retries sending messages when sending errors", func() {
 		incrementer := newMockBatchCounterIncrementer()
 		byteWriter := newMockBatchChainByteWriter()
-		counter := batch.NewDroppedCounter(byteWriter, incrementer, origin)
+		counter := batch.NewDroppedCounter(byteWriter, incrementer, origin, "some-ip", new(config.Config))
 
 		byteWriter.WriteOutput.SentLength <- 0
 		byteWriter.WriteOutput.Err <- errors.New("boom")
@@ -163,7 +172,12 @@ var _ = Describe("DroppedCounter", func() {
 
 func newCounterAndMockWriter() (*batch.DroppedCounter, *mockBatchChainByteWriter) {
 	byteWriter := newMockBatchChainByteWriter()
-	counter := batch.NewDroppedCounter(byteWriter, newMockBatchCounterIncrementer(), origin)
+	conf := &config.Config{
+		Deployment: "some-deployment",
+		Job:        "some-job",
+		Index:      "some-index",
+	}
+	counter := batch.NewDroppedCounter(byteWriter, newMockBatchCounterIncrementer(), origin, "some-ip", conf)
 
 	return counter, byteWriter
 }

@@ -32,6 +32,7 @@ import (
 	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+	"github.com/pivotal-golang/localip"
 
 	"metron/config"
 	"signalmanager"
@@ -130,6 +131,11 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 	clientPool := make(map[string]clientreader.ClientPool)
 	writers := make(map[string]eventmarshaller.BatchChainByteWriter)
 
+	ip, err := localip.LocalIP()
+	if err != nil {
+		return nil, err
+	}
+
 	for _, protocol := range conf.Protocols {
 		proto := string(protocol)
 		protocols = append(protocols, proto)
@@ -149,7 +155,7 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 
 			tcpBatchInterval := time.Duration(conf.TCPBatchIntervalMilliseconds) * time.Millisecond
 
-			dropCounter := batch.NewDroppedCounter(tcpForwarder, batcher, origin)
+			dropCounter := batch.NewDroppedCounter(tcpForwarder, batcher, origin, ip, conf)
 			batchWriter, err := batch.NewWriter(
 				"tcp",
 				tcpForwarder,
@@ -176,7 +182,7 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 			tlsForwarder := dopplerforwarder.New(tlsWrapper, tlsPool, logger)
 			tcpBatchInterval := time.Duration(conf.TCPBatchIntervalMilliseconds) * time.Millisecond
 
-			dropCounter := batch.NewDroppedCounter(tlsForwarder, batcher, origin)
+			dropCounter := batch.NewDroppedCounter(tlsForwarder, batcher, origin, ip, conf)
 			batchWriter, err := batch.NewWriter(
 				"tls",
 				tlsForwarder,

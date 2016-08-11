@@ -2,6 +2,7 @@ package batch
 
 import (
 	"fmt"
+	"metron/config"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -20,7 +21,9 @@ type BatchCounterIncrementer interface {
 }
 
 type DroppedCounter struct {
+	conf           *config.Config
 	origin         string
+	ip             string
 	deltaDropped   int64
 	totalDropped   int64
 	writer         BatchChainByteWriter
@@ -29,9 +32,11 @@ type DroppedCounter struct {
 	timerResetLock sync.Mutex
 }
 
-func NewDroppedCounter(byteWriter BatchChainByteWriter, incrementer BatchCounterIncrementer, origin string) *DroppedCounter {
+func NewDroppedCounter(byteWriter BatchChainByteWriter, incrementer BatchCounterIncrementer, origin, ip string, conf *config.Config) *DroppedCounter {
 	counter := &DroppedCounter{
 		origin:      origin,
+		ip:          ip,
+		conf:        conf,
 		writer:      byteWriter,
 		incrementer: incrementer,
 		timer:       time.NewTimer(time.Second),
@@ -84,9 +89,13 @@ func (d *DroppedCounter) sendDroppedMessages() {
 
 func (d *DroppedCounter) encodeCounterEvent(droppedCount, totalDropped int64) []byte {
 	message := &events.Envelope{
-		Origin:    proto.String(d.origin),
-		Timestamp: proto.Int64(time.Now().UnixNano()),
-		EventType: events.Envelope_CounterEvent.Enum(),
+		Origin:     proto.String(d.origin),
+		Timestamp:  proto.Int64(time.Now().UnixNano()),
+		Ip:         proto.String(d.ip),
+		Deployment: proto.String(d.conf.Deployment),
+		Index:      proto.String(d.conf.Index),
+		Job:        proto.String(d.conf.Job),
+		EventType:  events.Envelope_CounterEvent.Enum(),
 		CounterEvent: &events.CounterEvent{
 			Name:  proto.String("DroppedCounter.droppedMessageCount"),
 			Delta: proto.Uint64(uint64(droppedCount)),
@@ -107,9 +116,13 @@ func (d *DroppedCounter) encodeCounterEvent(droppedCount, totalDropped int64) []
 func (d *DroppedCounter) encodeLogMessage(droppedCount int64) []byte {
 	now := time.Now()
 	message := &events.Envelope{
-		Origin:    proto.String(d.origin),
-		Timestamp: proto.Int64(now.UnixNano()),
-		EventType: events.Envelope_LogMessage.Enum(),
+		Origin:     proto.String(d.origin),
+		Timestamp:  proto.Int64(now.UnixNano()),
+		Ip:         proto.String(d.ip),
+		Deployment: proto.String(d.conf.Deployment),
+		Index:      proto.String(d.conf.Index),
+		Job:        proto.String(d.conf.Job),
+		EventType:  events.Envelope_LogMessage.Enum(),
 		LogMessage: &events.LogMessage{
 			MessageType: events.LogMessage_ERR.Enum(),
 			Timestamp:   proto.Int64(now.UnixNano()),
