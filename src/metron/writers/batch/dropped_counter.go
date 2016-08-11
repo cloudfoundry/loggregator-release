@@ -11,6 +11,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
+var metSourceType = proto.String("MET")
+
 //go:generate hel --type BatchCounterIncrementer --output mock_batch_counter_incrementer_test.go
 
 type BatchCounterIncrementer interface {
@@ -104,6 +106,7 @@ func (d *DroppedCounter) droppedLogBytes(droppedCount int64) []byte {
 			Timestamp:   proto.Int64(time.Now().UnixNano()),
 			AppId:       proto.String(envelope_extensions.SystemAppId),
 			Message:     []byte(fmt.Sprintf("Dropped %d message(s) from MetronAgent to Doppler", droppedCount)),
+			SourceType:  metSourceType,
 		},
 	}
 

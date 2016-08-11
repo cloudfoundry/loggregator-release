@@ -51,6 +51,7 @@ var _ = Describe("DroppedCounter", func() {
 		Expect(actualLog.GetOrigin()).To(Equal(origin))
 		Expect(actualLog.EventType).To(Equal(events.Envelope_LogMessage.Enum()))
 		Expect(actualLog.LogMessage.Message).To(ContainSubstring("Dropped 10 message(s) from MetronAgent to Doppler"))
+		Expect(actualLog.LogMessage.GetSourceType()).To(Equal("MET"))
 	})
 
 	It("resets the counter after it sends the dropped message count message", func() {
