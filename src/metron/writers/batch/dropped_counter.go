@@ -85,6 +85,7 @@ func (d *DroppedCounter) sendDroppedMessages() {
 func (d *DroppedCounter) encodeCounterEvent(droppedCount, totalDropped int64) []byte {
 	message := &events.Envelope{
 		Origin:    proto.String(d.origin),
+		Timestamp: proto.Int64(time.Now().UnixNano()),
 		EventType: events.Envelope_CounterEvent.Enum(),
 		CounterEvent: &events.CounterEvent{
 			Name:  proto.String("DroppedCounter.droppedMessageCount"),
@@ -104,12 +105,14 @@ func (d *DroppedCounter) encodeCounterEvent(droppedCount, totalDropped int64) []
 }
 
 func (d *DroppedCounter) encodeLogMessage(droppedCount int64) []byte {
+	now := time.Now()
 	message := &events.Envelope{
 		Origin:    proto.String(d.origin),
+		Timestamp: proto.Int64(now.UnixNano()),
 		EventType: events.Envelope_LogMessage.Enum(),
 		LogMessage: &events.LogMessage{
 			MessageType: events.LogMessage_ERR.Enum(),
-			Timestamp:   proto.Int64(time.Now().UnixNano()),
+			Timestamp:   proto.Int64(now.UnixNano()),
 			AppId:       proto.String(envelope_extensions.SystemAppId),
 			Message:     []byte(fmt.Sprintf("Dropped %d message(s) from MetronAgent to Doppler", droppedCount)),
 			SourceType:  metSourceType,
