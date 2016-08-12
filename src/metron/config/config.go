@@ -58,7 +58,8 @@ type Config struct {
 	Job        string
 	Index      string
 
-	IncomingUDPPort int
+	IncomingUDPPort  int
+	ListeningAddress string
 
 	EtcdUrls                      []string
 	EtcdMaxConcurrentRequests     int
@@ -99,6 +100,7 @@ func Parse(reader io.Reader) (*Config, error) {
 		MetricBatchIntervalMilliseconds:  5000,
 		RuntimeStatsIntervalMilliseconds: 15000,
 		Protocols:                        []Protocol{"udp"},
+		ListeningAddress:                 "127.0.0.1",
 	}
 	err := json.NewDecoder(reader).Decode(config)
 	if err != nil {

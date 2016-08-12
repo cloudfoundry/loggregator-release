@@ -84,7 +84,7 @@ func main() {
 	eventWriter.SetWriter(aggregator)
 
 	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, batcher, logger)
-	metronAddress := fmt.Sprintf("127.0.0.1:%d", config.IncomingUDPPort)
+	metronAddress := fmt.Sprintf("%s:%d", config.ListeningAddress, config.IncomingUDPPort)
 	dropsondeReader, err := networkreader.New(metronAddress, "dropsondeAgentListener", dropsondeUnmarshaller, logger)
 	if err != nil {
 		panic(fmt.Errorf("Failed to listen on %s: %s", metronAddress, err))

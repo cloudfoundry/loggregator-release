@@ -11,6 +11,7 @@
   "SharedSecret": "shared_secret",
 
   "IncomingUDPPort": 51161,
+  "ListeningAddress": "1.3.3.7",
   "LoggregatorDropsondePort": 3457,
   "Syslog": "syslog.namespace",
   "MetricBatchIntervalMilliseconds": 20,
