@@ -104,6 +104,36 @@ var _ = Describe("DroppedCounter", func() {
 		Expect(actualLog.LogMessage.Message).To(ContainSubstring("Congested dopplers: testDoppler, anotherTestDoppler"))
 	})
 
+	It("clears congested doppler IPs after creating a log message", func() {
+		counter, byteWriter := newCounterAndMockWriter()
+		counter.DropCongested(10, "testDoppler")
+		var messages []byte
+		Eventually(byteWriter.WriteInput.Message).Should(Receive(&messages))
+
+		actualEnvelopes, err := unmarshalMessages(messages)
+		Expect(err).ToNot(HaveOccurred())
+
+		actualLog := actualEnvelopes[1]
+		Expect(actualLog.EventType).To(Equal(events.Envelope_LogMessage.Enum()))
+		Expect(actualLog.LogMessage.Message).To(ContainSubstring("Congested dopplers: testDoppler"))
+
+		By("flushing the previous message")
+		byteWriter.WriteOutput.SentLength <- 0
+		byteWriter.WriteOutput.Err <- nil
+
+		counter.DropCongested(10, "testDoppler2")
+		Eventually(byteWriter.WriteInput.Message).Should(Receive(&messages))
+
+		actualEnvelopes, err = unmarshalMessages(messages)
+		Expect(err).ToNot(HaveOccurred())
+
+		actualLog = actualEnvelopes[1]
+		Expect(actualLog.EventType).To(Equal(events.Envelope_LogMessage.Enum()))
+
+		Expect(actualLog.LogMessage.Message).To(ContainSubstring("Congested dopplers: testDoppler2"))
+
+	})
+
 	It("resets the counter after it sends the dropped message count message", func() {
 		counter, byteWriter := newCounterAndMockWriter()
 		counter.Drop(10)

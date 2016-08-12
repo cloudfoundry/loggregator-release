@@ -27,6 +27,8 @@ var _ = Describe("DopplerForwarder", func() {
 		message = []byte("I am a message!")
 
 		client = newMockClient()
+		close(client.AddressOutput.Ret0)
+
 		clientPool = newMockClientPool()
 		clientPool.RandomClientOutput.Client <- client
 		close(clientPool.RandomClientOutput.Err)
@@ -39,6 +41,15 @@ var _ = Describe("DopplerForwarder", func() {
 
 	JustBeforeEach(func() {
 		forwarder = dopplerforwarder.New(fakeWrapper, clientPool, logger)
+	})
+
+	Context("keeps track of congested doppler addresses", func() {
+		It("get client address when write is called", func() {
+			close(fakeWrapper.WriteOutput.Ret0)
+			_, err := forwarder.Write(message)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(client.AddressCalled).Should(Receive())
+		})
 	})
 
 	Context("client selection", func() {
@@ -93,7 +104,7 @@ var _ = Describe("DopplerForwarder", func() {
 			})
 		})
 
-		Context("when it is already writing", func() {
+		FContext("when it is already writing", func() {
 			It("returns an error rather than blocking", func() {
 				go forwarder.Write(message)
 				Eventually(fakeWrapper.WriteCalled).Should(BeCalled())
@@ -106,8 +117,21 @@ var _ = Describe("DopplerForwarder", func() {
 				}()
 				Eventually(done).Should(BeClosed())
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal("DopplerForwarder: Write already in use"))
+				Expect(err.Error()).To(ContainSubstring("DopplerForwarder: Write already in use"))
 				fakeWrapper.WriteOutput.Ret0 <- nil
+			})
+
+			It("returns a ForwarderError with congestedDoppler's IP", func() {
+				fakeWrapper.WriteOutput.Ret0 <- errors.New("write failed")
+				_, err := forwarder.Write(message)
+
+				Eventually(fakeWrapper.WriteCalled).Should(BeCalled())
+
+				Expect(err).To(HaveOccurred())
+				forwardErr, ok := err.(*dopplerforwarder.ForwarderError)
+				Expect(ok).Should(BeTrue())
+				Expect(forwardErr.Error()).To(ContainSubstring("Failed to forward logs: write failed"))
+				Expect(writeErr.DopplerIP()).NotTo(BeEmpty())
 			})
 		})
 	})

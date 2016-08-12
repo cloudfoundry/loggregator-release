@@ -2,6 +2,8 @@ package dopplerforwarder
 
 import (
 	"errors"
+	"fmt"
+	"sync"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/gosteno"
@@ -21,10 +23,12 @@ type ClientPool interface {
 }
 
 type DopplerForwarder struct {
-	networkWrapper NetworkWrapper
-	clientPool     ClientPool
-	tryLock        tryLock
-	logger         *gosteno.Logger
+	networkWrapper       NetworkWrapper
+	clientPool           ClientPool
+	tryLock              tryLock
+	congestedDopplerLock sync.Mutex
+	congestedDopplers    []string
+	logger               *gosteno.Logger
 }
 
 func New(wrapper NetworkWrapper, clientPool ClientPool, logger *gosteno.Logger) *DopplerForwarder {
@@ -38,7 +42,7 @@ func New(wrapper NetworkWrapper, clientPool ClientPool, logger *gosteno.Logger) 
 
 func (d *DopplerForwarder) Write(message []byte, chainers ...metricbatcher.BatchCounterChainer) (int, error) {
 	if err := d.tryLock.Lock(); err != nil {
-		return 0, errors.New("DopplerForwarder: Write already in use")
+		return 0, err
 	}
 	defer d.tryLock.Unlock()
 
@@ -49,6 +53,13 @@ func (d *DopplerForwarder) Write(message []byte, chainers ...metricbatcher.Batch
 		}, "DopplerForwarder: failed to pick a client")
 		return 0, err
 	}
+
+	var dopplers []string
+	d.congestedDopplerLock.Lock()
+	d.congestedDopplers = append(d.congestedDopplers, client.Address())
+	dopplers = d.congestedDopplers
+	d.congestedDopplerLock.Unlock()
+
 	d.logger.Debugf("Writing %d bytes\n", len(message))
 	err = d.networkWrapper.Write(client, message, chainers...)
 	if err != nil {
@@ -56,9 +67,22 @@ func (d *DopplerForwarder) Write(message []byte, chainers ...metricbatcher.Batch
 			"error": err.Error(),
 		}, "DopplerForwarder: failed to write message")
 
-		return 0, err
+		return 0, &ForwarderError{Reason: err.Error()}
 	}
 	return len(message), nil
+}
+
+type ForwarderError struct {
+	Reason           string
+	CongestedDoppler string
+}
+
+func (f ForwarderError) Error() string {
+	return fmt.Sprintf("Failed to forward logs: %s", f.Reason)
+}
+
+func (w *ForwarderError) DopplerIP() []string {
+	return nil
 }
 
 type tryLock chan struct{}
@@ -72,7 +96,7 @@ func (t tryLock) Lock() error {
 	case t <- struct{}{}:
 		return nil
 	default:
-		return errors.New("Lock in use")
+		return errors.New("DopplerForwarder: Write already in use")
 	}
 }
 

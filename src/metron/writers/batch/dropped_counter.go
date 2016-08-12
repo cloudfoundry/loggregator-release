@@ -120,6 +120,7 @@ func (d *DroppedCounter) droppedLogBytes(droppedCount int64) []byte {
 	logContent := fmt.Sprintf("Dropped %d message(s) from MetronAgent to Doppler", droppedCount)
 	if len(dopplerIPs) != 0 {
 		logContent = fmt.Sprintf("Dropped %d message(s) from MetronAgent to Doppler.  Congested dopplers: %s", droppedCount, strings.Join(dopplerIPs, ", "))
+		d.clearCongestedDopplers()
 	}
 
 	message := &events.Envelope{
@@ -142,4 +143,10 @@ func (d *DroppedCounter) droppedLogBytes(droppedCount int64) []byte {
 	}
 
 	return prefixMessage(bytes)
+}
+
+func (d *DroppedCounter) clearCongestedDopplers() {
+	d.congestedDopplerLock.Lock()
+	d.congestedDopplerLock.Unlock()
+	d.congestedDopplers = d.congestedDopplers[:0]
 }
