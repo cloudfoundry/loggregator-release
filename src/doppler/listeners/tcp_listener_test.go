@@ -12,6 +12,7 @@ import (
 
 	. "github.com/apoydence/eachers"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	"github.com/apoydence/eachers/testhelpers"
@@ -84,19 +85,23 @@ var _ = Describe("TCPlistener", func() {
 			tlsClientConfig = nil
 		})
 
-		It("sends all types of messages as a protobuf", func() {
-			for name, eventType := range events.Envelope_EventType_value {
-				envelope := createEnvelope(events.Envelope_EventType(eventType))
-				conn := openTCPConnection(listener.Address(), tlsClientConfig)
+		DescribeTable("supported message types", func(eventType events.Envelope_EventType) {
+			envelope := createEnvelope(events.Envelope_EventType(eventType))
+			conn := openTCPConnection(listener.Address(), tlsClientConfig)
 
-				err := send(conn, envelope)
-				Expect(err).ToNot(HaveOccurred())
+			err := send(conn, envelope)
+			Expect(err).ToNot(HaveOccurred())
 
-				why := "did not receive expected event:" + name
-				Eventually(envelopeChan).Should(Receive(Equal(envelope)), why)
-				conn.Close()
-			}
-		})
+			Eventually(envelopeChan).Should(Receive(Equal(envelope)))
+			conn.Close()
+		},
+			Entry(events.Envelope_LogMessage.String(), events.Envelope_LogMessage),
+			Entry(events.Envelope_HttpStartStop.String(), events.Envelope_HttpStartStop),
+			Entry(events.Envelope_Error.String(), events.Envelope_Error),
+			Entry(events.Envelope_CounterEvent.String(), events.Envelope_CounterEvent),
+			Entry(events.Envelope_ValueMetric.String(), events.Envelope_ValueMetric),
+			Entry(events.Envelope_ContainerMetric.String(), events.Envelope_ContainerMetric),
+		)
 	})
 
 	Context("with TLS is enabled", func() {
@@ -127,40 +132,32 @@ var _ = Describe("TCPlistener", func() {
 		})
 
 		Context("dropsonde metric emission", func() {
-			It("sends all types of messages as a protobuf", func() {
-				for name, eventType := range events.Envelope_EventType_value {
-					envelope := createEnvelope(events.Envelope_EventType(eventType))
-					conn := openTCPConnection(listener.Address(), tlsClientConfig)
+			DescribeTable("supported message types across multiple connections", func(eventType events.Envelope_EventType) {
+				envelope1 := createEnvelope(events.Envelope_EventType(eventType))
+				conn1 := openTCPConnection(listener.Address(), tlsClientConfig)
 
-					err := send(conn, envelope)
-					Expect(err).ToNot(HaveOccurred())
+				envelope2 := createEnvelope(events.Envelope_EventType(eventType))
+				conn2 := openTCPConnection(listener.Address(), tlsClientConfig)
 
-					Eventually(envelopeChan).Should(Receive(Equal(envelope)), fmt.Sprintf("did not receive expected event: %s", name))
-					conn.Close()
-				}
-			})
+				err := send(conn1, envelope1)
+				Expect(err).ToNot(HaveOccurred())
+				err = send(conn2, envelope2)
+				Expect(err).ToNot(HaveOccurred())
 
-			It("sends all types of messages over multiple connections", func() {
-				for _, eventType := range events.Envelope_EventType_value {
-					envelope1 := createEnvelope(events.Envelope_EventType(eventType))
-					conn1 := openTCPConnection(listener.Address(), tlsClientConfig)
+				envelopes := readMessages(envelopeChan, 2)
+				Expect(envelopes).To(ContainElement(envelope1))
+				Expect(envelopes).To(ContainElement(envelope2))
 
-					envelope2 := createEnvelope(events.Envelope_EventType(eventType))
-					conn2 := openTCPConnection(listener.Address(), tlsClientConfig)
-
-					err := send(conn1, envelope1)
-					Expect(err).ToNot(HaveOccurred())
-					err = send(conn2, envelope2)
-					Expect(err).ToNot(HaveOccurred())
-
-					envelopes := readMessages(envelopeChan, 2)
-					Expect(envelopes).To(ContainElement(envelope1))
-					Expect(envelopes).To(ContainElement(envelope2))
-
-					conn1.Close()
-					conn2.Close()
-				}
-			})
+				conn1.Close()
+				conn2.Close()
+			},
+				Entry(events.Envelope_LogMessage.String(), events.Envelope_LogMessage),
+				Entry(events.Envelope_HttpStartStop.String(), events.Envelope_HttpStartStop),
+				Entry(events.Envelope_Error.String(), events.Envelope_Error),
+				Entry(events.Envelope_CounterEvent.String(), events.Envelope_CounterEvent),
+				Entry(events.Envelope_ValueMetric.String(), events.Envelope_ValueMetric),
+				Entry(events.Envelope_ContainerMetric.String(), events.Envelope_ContainerMetric),
+			)
 
 			It("issues intended metrics", func() {
 				envelope := createEnvelope(events.Envelope_LogMessage)
@@ -309,16 +306,6 @@ func createEnvelope(eventType events.Envelope_EventType) *events.Envelope {
 	envelope := &events.Envelope{Origin: proto.String("origin"), EventType: &eventType, Timestamp: proto.Int64(time.Now().UnixNano())}
 
 	switch eventType {
-	case events.Envelope_HttpStart:
-		req, _ := http.NewRequest("GET", "http://www.example.com", nil)
-		req.RemoteAddr = "www.example.com"
-		req.Header.Add("User-Agent", "user-agent")
-		uuid, _ := uuid.NewV4()
-		envelope.HttpStart = factories.NewHttpStart(req, events.PeerType_Client, uuid)
-	case events.Envelope_HttpStop:
-		req, _ := http.NewRequest("GET", "http://www.example.com", nil)
-		uuid, _ := uuid.NewV4()
-		envelope.HttpStop = factories.NewHttpStop(req, http.StatusOK, 128, events.PeerType_Client, uuid)
 	case events.Envelope_HttpStartStop:
 		req, _ := http.NewRequest("GET", "http://www.example.com", nil)
 		req.RemoteAddr = "www.example.com"
@@ -336,8 +323,7 @@ func createEnvelope(eventType events.Envelope_EventType) *events.Envelope {
 	case events.Envelope_Error:
 		envelope.Error = factories.NewError("source", 123, "message")
 	default:
-		fmt.Printf("Unknown event %v\n", eventType)
-		return nil
+		panic(fmt.Sprintf("Unknown event %v\n", eventType))
 	}
 
 	return envelope

@@ -3,7 +3,6 @@ package eventunmarshaller_test
 import (
 	"metron/writers/eventunmarshaller"
 	"metron/writers/mocks"
-	"net/http"
 
 	. "github.com/apoydence/eachers"
 	"github.com/apoydence/eachers/testhelpers"
@@ -14,7 +13,6 @@ import (
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-	"github.com/nu7hatch/gouuid"
 )
 
 var _ = Describe("EventUnmarshaller", func() {
@@ -178,40 +176,6 @@ var _ = Describe("EventUnmarshaller", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
 					With("dropsondeUnmarshaller.containerMetricReceived"),
-				))
-			})
-
-			It("HTTP start event", func() {
-				uuid, _ := uuid.NewV4()
-				request, _ := http.NewRequest("GET", "https://example.com", nil)
-				httpStart := &events.Envelope{
-					Origin:    proto.String("origin"),
-					EventType: events.Envelope_HttpStart.Enum(),
-					HttpStart: factories.NewHttpStart(request, events.PeerType_Client, uuid),
-				}
-				message, err := proto.Marshal(httpStart)
-				Expect(err).ToNot(HaveOccurred())
-				_, err = unmarshaller.UnmarshallMessage(message)
-				Expect(err).ToNot(HaveOccurred())
-				Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
-					With("dropsondeUnmarshaller.httpStartReceived"),
-				))
-			})
-
-			It("HTTP stop event", func() {
-				uuid, _ := uuid.NewV4()
-				request, _ := http.NewRequest("GET", "https://example.com", nil)
-				httpStop := &events.Envelope{
-					Origin:    proto.String("origin"),
-					EventType: events.Envelope_HttpStop.Enum(),
-					HttpStop:  factories.NewHttpStop(request, 200, 567, events.PeerType_Client, uuid),
-				}
-				message, err := proto.Marshal(httpStop)
-				Expect(err).ToNot(HaveOccurred())
-				_, err = unmarshaller.UnmarshallMessage(message)
-				Expect(err).ToNot(HaveOccurred())
-				Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
-					With("dropsondeUnmarshaller.httpStopReceived"),
 				))
 			})
 
