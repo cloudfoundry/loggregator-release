@@ -3,6 +3,7 @@ package batch
 import (
 	"fmt"
 	"metron/config"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -21,15 +22,17 @@ type BatchCounterIncrementer interface {
 }
 
 type DroppedCounter struct {
-	conf           *config.Config
-	origin         string
-	ip             string
-	deltaDropped   int64
-	totalDropped   int64
-	writer         BatchChainByteWriter
-	incrementer    BatchCounterIncrementer
-	timer          *time.Timer
-	timerResetLock sync.Mutex
+	conf                 *config.Config
+	origin               string
+	ip                   string
+	deltaDropped         int64
+	totalDropped         int64
+	writer               BatchChainByteWriter
+	incrementer          BatchCounterIncrementer
+	timer                *time.Timer
+	timerResetLock       sync.Mutex
+	congestedDopplerLock sync.Mutex
+	congestedDopplers    []string
 }
 
 func NewDroppedCounter(byteWriter BatchChainByteWriter, incrementer BatchCounterIncrementer, origin, ip string, conf *config.Config) *DroppedCounter {
@@ -55,6 +58,16 @@ func (d *DroppedCounter) Drop(n uint32) {
 
 	atomic.AddInt64(&d.deltaDropped, int64(n))
 	atomic.AddInt64(&d.totalDropped, int64(n))
+}
+
+func (d *DroppedCounter) DropCongested(n uint32, congestedDoppler string) {
+	if n == 0 {
+		return
+	}
+	d.congestedDopplerLock.Lock()
+	defer d.congestedDopplerLock.Unlock()
+	d.Drop(n)
+	d.congestedDopplers = append(d.congestedDopplers, congestedDoppler)
 }
 
 func (d *DroppedCounter) Dropped() int64 {
@@ -115,6 +128,18 @@ func (d *DroppedCounter) encodeCounterEvent(droppedCount, totalDropped int64) []
 
 func (d *DroppedCounter) encodeLogMessage(droppedCount int64) []byte {
 	now := time.Now()
+	var dopplerIPs []string
+
+	d.congestedDopplerLock.Lock()
+	dopplerIPs = d.congestedDopplers
+	d.congestedDopplerLock.Unlock()
+
+	logContent := fmt.Sprintf("Dropped %d message(s) from MetronAgent to Doppler", droppedCount)
+	if len(dopplerIPs) != 0 {
+		logContent = fmt.Sprintf("Dropped %d message(s) from MetronAgent to Doppler.  Congested dopplers: %s", droppedCount, strings.Join(dopplerIPs, ", "))
+		d.clearCongestedDopplers()
+	}
+
 	message := &events.Envelope{
 		Origin:     proto.String(d.origin),
 		Timestamp:  proto.Int64(now.UnixNano()),
@@ -127,7 +152,7 @@ func (d *DroppedCounter) encodeLogMessage(droppedCount int64) []byte {
 			MessageType: events.LogMessage_ERR.Enum(),
 			Timestamp:   proto.Int64(now.UnixNano()),
 			AppId:       proto.String(envelope_extensions.SystemAppId),
-			Message:     []byte(fmt.Sprintf("Dropped %d message(s) from MetronAgent to Doppler", droppedCount)),
+			Message:     []byte(logContent),
 			SourceType:  metSourceType,
 		},
 	}
@@ -140,4 +165,10 @@ func (d *DroppedCounter) encodeLogMessage(droppedCount int64) []byte {
 	}
 
 	return prefixMessage(bytes)
+}
+
+func (d *DroppedCounter) clearCongestedDopplers() {
+	d.congestedDopplerLock.Lock()
+	d.congestedDopplerLock.Unlock()
+	d.congestedDopplers = d.congestedDopplers[:0]
 }

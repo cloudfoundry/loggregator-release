@@ -137,7 +137,7 @@ var _ = Describe("Batch Writer", func() {
 			))
 		})
 
-		Context("the weighted writer errors once", func() {
+		Context("the byte writer errors once", func() {
 			BeforeEach(func() {
 				byteWriter.WriteOutput.SentLength <- 0
 				byteWriter.WriteOutput.Err = make(chan error, 1)
@@ -170,7 +170,7 @@ var _ = Describe("Batch Writer", func() {
 			})
 		})
 
-		Context("the weighted writer repeatedly errors", func() {
+		Context("the byte writer repeatedly errors", func() {
 			BeforeEach(func() {
 				close(byteWriter.WriteOutput.SentLength)
 
@@ -274,7 +274,7 @@ var _ = Describe("Batch Writer", func() {
 			Consistently(byteWriter.WriteInput.Message).Should(HaveLen(0))
 		})
 
-		Context("the weighted writer errors once", func() {
+		Context("the byte writer errors once", func() {
 			BeforeEach(func() {
 				byteWriter.WriteOutput.SentLength <- 0
 				byteWriter.WriteOutput.Err = make(chan error, 10)
@@ -304,7 +304,7 @@ var _ = Describe("Batch Writer", func() {
 			})
 		})
 
-		Context("the weighted writer repeatedly errors", func() {
+		Context("the byte writer repeatedly errors", func() {
 			BeforeEach(func() {
 				close(byteWriter.WriteOutput.SentLength)
 				byteWriter.WriteOutput.Err = make(chan error, 100)
@@ -328,6 +328,33 @@ var _ = Describe("Batch Writer", func() {
 				_, err = batcher.Write(messageBytes)
 				Expect(err).ToNot(HaveOccurred())
 				Consistently(droppedCounter.DropInput.Count).ShouldNot(BeCalled())
+			})
+		})
+
+		Context("the byte writer errors with dopplerforwarder.ForwarderError types", func() {
+			var congestionErr mockCongestionError
+
+			BeforeEach(func() {
+				congestionErr = mockCongestionError{
+					message: "foo",
+					doppler: "bar.baz",
+				}
+				close(byteWriter.WriteOutput.SentLength)
+				byteWriter.WriteOutput.Err = make(chan error, 100)
+				// Close enough.
+				infinity := 50
+				for i := 0; i < infinity; i++ {
+					byteWriter.WriteOutput.Err <- congestionErr
+				}
+			})
+
+			It("uses the dropped message counter to track dropped messages", func() {
+				_, err := batcher.Write(messageBytes)
+				Expect(err).ToNot(HaveOccurred())
+				_, err = batcher.Write(messageBytes)
+				Expect(err).ToNot(HaveOccurred())
+
+				Eventually(droppedCounter.DropCongestedInput).Should(BeCalled(With(uint32(2), congestionErr.doppler)))
 			})
 		})
 	})
