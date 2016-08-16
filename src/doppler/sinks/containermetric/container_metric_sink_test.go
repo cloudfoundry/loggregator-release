@@ -2,6 +2,7 @@ package containermetric_test
 
 import (
 	"doppler/sinks/containermetric"
+	"sync"
 	"time"
 
 	"github.com/cloudfoundry/sonde-go/events"
@@ -136,8 +137,8 @@ var _ = Describe("Containermetric", func() {
 		Eventually(containerMetricRunnerDone, 50*time.Millisecond).Should(BeClosed())
 	})
 
-	It("resets the inactivity duration when a metric is received", func() {
-		inactivityDuration := 1 * time.Millisecond
+	It("won't return while it is still receiving data", func() {
+		inactivityDuration := 100 * time.Millisecond
 		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, inactivityDuration)
 		containerMetricRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
@@ -148,21 +149,29 @@ var _ = Describe("Containermetric", func() {
 		}()
 
 		metric := metricFor(1, time.Now().Add(-1*time.Microsecond), 1, 1, 1)
-		continuouslySend(inputChan, metric, 2*inactivityDuration)
-		Expect(containerMetricRunnerDone).ShouldNot(BeClosed())
+		wg, done := continuouslySend(inputChan, metric)
+		defer wg.Wait()
+		defer close(done)
+		Consistently(containerMetricRunnerDone, 1).ShouldNot(BeClosed())
 	})
 })
 
-func continuouslySend(inputChan chan<- *events.Envelope, message *events.Envelope, duration time.Duration) {
-	timer := time.NewTimer(duration)
-	defer timer.Stop()
-	for {
-		select {
-		case inputChan <- message:
-		case <-timer.C:
-			return
+func continuouslySend(inputChan chan<- *events.Envelope, message *events.Envelope) (*sync.WaitGroup, chan<- struct{}) {
+	done := make(chan struct{})
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			time.Sleep(time.Millisecond)
+			select {
+			case <-done:
+				return
+			case inputChan <- message:
+			}
 		}
-	}
+	}()
+	return &wg, done
 }
 
 func metricFor(instanceId int32, timestamp time.Time, cpu float64, mem uint64, disk uint64) *events.Envelope {
