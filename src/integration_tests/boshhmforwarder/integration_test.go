@@ -110,10 +110,10 @@ var _ = Describe("Bosh HealthMonitor Forwarder - IntegrationTests", func() {
 })
 
 func readUdpToCH(connection *net.UDPConn, output chan []byte) {
-	buf := make([]byte, 1024)
 	defer close(output)
 
 	for {
+		buf := make([]byte, 1024)
 		n, _, err := connection.ReadFromUDP(buf)
 		msg := buf[:n]
 		if err != nil {
