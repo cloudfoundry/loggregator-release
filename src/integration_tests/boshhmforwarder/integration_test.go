@@ -91,8 +91,12 @@ var _ = Describe("Bosh HealthMonitor Forwarder - IntegrationTests", func() {
 	}, 7)
 
 	It("responds to Info requests", func() {
-		resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/info", conf.InfoPort))
-		Expect(err).ToNot(HaveOccurred())
+		var resp *http.Response
+		Eventually(func() error {
+			var err error
+			resp, err = http.Get(fmt.Sprintf("http://127.0.0.1:%d/info", conf.InfoPort))
+			return err
+		}, 5).ShouldNot(HaveOccurred())
 
 		var bodyContents map[string]string
 
