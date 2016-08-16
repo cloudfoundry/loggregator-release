@@ -91,8 +91,12 @@ var _ = Describe("Bosh HealthMonitor Forwarder - IntegrationTests", func() {
 	}, 7)
 
 	It("responds to Info requests", func() {
-		resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/info", conf.InfoPort))
-		Expect(err).ToNot(HaveOccurred())
+		var resp *http.Response
+		Eventually(func() error {
+			var err error
+			resp, err = http.Get(fmt.Sprintf("http://127.0.0.1:%d/info", conf.InfoPort))
+			return err
+		}, 5).ShouldNot(HaveOccurred())
 
 		var bodyContents map[string]string
 
@@ -110,10 +114,10 @@ var _ = Describe("Bosh HealthMonitor Forwarder - IntegrationTests", func() {
 })
 
 func readUdpToCH(connection *net.UDPConn, output chan []byte) {
-	buf := make([]byte, 1024)
 	defer close(output)
 
 	for {
+		buf := make([]byte, 1024)
 		n, _, err := connection.ReadFromUDP(buf)
 		msg := buf[:n]
 		if err != nil {
