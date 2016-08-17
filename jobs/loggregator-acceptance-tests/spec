@@ -12,7 +12,7 @@ templates:
   config.json.erb: bin/config.json
 
 properties:
-  loggregator.etcd.machines:
+  etcd.machines:
     description: "IPs pointing to the ETCD cluster"
   system_domain:
     description: "for computing the Traffic Controller URL"
