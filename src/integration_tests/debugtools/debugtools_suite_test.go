@@ -37,7 +37,7 @@ var _ = BeforeSuite(func() {
 	trafficControllerExecutablePath = buildComponent("trafficcontroller")
 
 	// Wait for etcd to startup
-	waitOnURL("http://127.0.0.1:49623")
+	Eventually(func() bool { return checkEndpoint("49623", "v2/keys", http.StatusOK) }, 5).Should(Equal(true))
 })
 
 var _ = BeforeEach(func() {
@@ -63,11 +63,13 @@ func startComponent(path string, shortName string, colorCode uint64, arg ...stri
 	return session
 }
 
-func waitOnURL(url string) {
-	Eventually(func() error {
-		_, err := http.Get(url)
-		return err
-	}, 3).ShouldNot(HaveOccurred())
+func checkEndpoint(port, endpoint string, status int) bool {
+	resp, _ := http.Get("http://localhost:" + port + "/" + endpoint)
+	if resp != nil {
+		return resp.StatusCode == status
+	}
+
+	return false
 }
 
 var _ = AfterSuite(func() {
