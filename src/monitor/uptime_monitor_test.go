@@ -2,6 +2,7 @@ package monitor_test
 
 import (
 	"monitor"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -18,21 +19,27 @@ const (
 var _ = Describe("Uptime", func() {
 	var (
 		uptime *monitor.Uptime
+		wg     sync.WaitGroup
 	)
 
 	BeforeEach(func() {
 		fakeEventEmitter.Reset()
 		uptime = monitor.NewUptime(interval)
-		go uptime.Start()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			uptime.Start()
+		}()
 	})
 
 	Context("stops automatically", func() {
 
 		AfterEach(func() {
 			uptime.Stop()
+			wg.Wait()
 		})
 
-		PIt("returns a value metric containing uptime after specified time", func() {
+		It("returns a value metric containing uptime after specified time", func() {
 			Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(1))
 			Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
 				Name:  proto.String("Uptime"),
@@ -41,7 +48,7 @@ var _ = Describe("Uptime", func() {
 			}))
 		})
 
-		PIt("reports increasing uptime value", func() {
+		It("reports increasing uptime value", func() {
 			Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(1))
 			Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
 				Name:  proto.String("Uptime"),

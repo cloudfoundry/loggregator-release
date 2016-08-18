@@ -25,12 +25,12 @@ func (u *Uptime) Start() {
 
 	for {
 		select {
-		case <-ticker.C:
-			metrics.SendValue("Uptime", float64(time.Now().Unix()-u.started), "seconds")
 		case stopped := <-u.doneChan:
 			ticker.Stop()
 			close(stopped)
 			return
+		case <-ticker.C:
+			metrics.SendValue("Uptime", float64(time.Now().Unix()-u.started), "seconds")
 		}
 	}
 }
