@@ -15,7 +15,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var _ = PDescribe("Statsd support", func() {
+var _ = Describe("Statsd support", func() {
 	var fakeDoppler net.PacketConn
 	var getValueMetric = func() *events.ValueMetric {
 		readBuffer := make([]byte, 65535)
@@ -62,10 +62,10 @@ var _ = PDescribe("Statsd support", func() {
 
 			expected = basicValueMetric("sampled.gauge", 115, "gauge")
 			Eventually(getValueMetric).Should(Equal(expected))
-
 		})
 
 		It("outputs timings as signed value metric messages with unit 'ms'", func(done Done) {
+			defer close(done)
 			connection, err := net.Dial("udp", ":51162")
 			Expect(err).ToNot(HaveOccurred())
 			defer connection.Close()
@@ -76,11 +76,10 @@ var _ = PDescribe("Statsd support", func() {
 
 			expected := basicValueMetric("test.timing", 23.5, "ms")
 			Eventually(getValueMetric).Should(Equal(expected))
-
-			close(done)
 		}, 5)
 
 		It("outputs counters as signed value metric messages with unit 'counter'", func(done Done) {
+			defer close(done)
 			connection, err := net.Dial("udp", ":51162")
 			Expect(err).ToNot(HaveOccurred())
 			defer connection.Close()
@@ -91,8 +90,6 @@ var _ = PDescribe("Statsd support", func() {
 
 			expected := basicValueMetric("test.counter", 42, "counter")
 			Eventually(getValueMetric).Should(Equal(expected))
-
-			close(done)
 		}, 5)
 	})
 
@@ -111,17 +108,15 @@ var _ = PDescribe("Statsd support", func() {
 
 			clientSession, err = gexec.Start(clientCommand, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
-
 		})
 
 		AfterEach(func() {
 			clientInput.Close()
 			clientSession.Kill().Wait()
-
 		})
 
 		It("forwards gauges as signed value metric messages", func(done Done) {
-
+			defer close(done)
 			clientInput.Write([]byte("gauge test.gauge 23\n"))
 			Eventually(statsdInjectorSession).Should(gbytes.Say("StatsdListener: Read "))
 
@@ -145,23 +140,19 @@ var _ = PDescribe("Statsd support", func() {
 
 			expected = basicValueMetric("test.gauge", 50, "gauge")
 			Eventually(getValueMetric).Should(Equal(expected))
-
-			close(done)
 		}, 5)
 
 		It("forwards timings as signed value metric messages", func(done Done) {
-
+			defer close(done)
 			clientInput.Write([]byte("timing test.timing 23\n"))
 			Eventually(statsdInjectorSession).Should(gbytes.Say("StatsdListener: Read "))
 
 			expected := basicValueMetric("test.timing", 23, "ms")
 			Eventually(getValueMetric).Should(Equal(expected))
-
-			close(done)
 		}, 5)
 
 		It("forwards counters as signed value metric messages", func(done Done) {
-
+			defer close(done)
 			clientInput.Write([]byte("count test.counter 27\n"))
 			Eventually(statsdInjectorSession).Should(gbytes.Say("StatsdListener: Read "))
 
@@ -179,8 +170,6 @@ var _ = PDescribe("Statsd support", func() {
 
 			expected = basicValueMetric("test.counter", 20, "counter")
 			Eventually(getValueMetric).Should(Equal(expected))
-
-			close(done)
 		}, 5)
 	})
 })
