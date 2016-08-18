@@ -77,7 +77,7 @@ var _ = Describe("WebsocketSink", func() {
 			go websocketSink.Run(inputChan)
 			message, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "hello world", "appId", "App"), "origin")
 			inputChan <- message
-			Eventually(fakeWebsocket.WriteDeadline).Should(BeTemporally("~", time.Now().Add(writeTimeout), time.Millisecond*5))
+			Eventually(fakeWebsocket.WriteDeadline).Should(BeTemporally("~", time.Now().Add(writeTimeout), time.Millisecond*50))
 		})
 
 		Describe("SetCounter", func() {
