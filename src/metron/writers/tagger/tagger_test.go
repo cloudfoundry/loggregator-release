@@ -79,7 +79,7 @@ var _ = Describe("Tagger", func() {
 
 func basicMessage() *events.Envelope {
 	return &events.Envelope{
-		EventType: events.Envelope_HttpStartStop.Enum(),
+		EventType: events.Envelope_ValueMetric.Enum(),
 		ValueMetric: &events.ValueMetric{
 			Name:  proto.String("metricName"),
 			Value: proto.Float64(2.0),

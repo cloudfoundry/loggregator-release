@@ -10,12 +10,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"github.com/gogo/protobuf/proto"
-	"github.com/nu7hatch/gouuid"
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/gomega/gexec"
 )
@@ -109,55 +107,6 @@ func basicCounterEventEnvelope() *events.Envelope {
 			Name:  proto.String("fake-metric-name"),
 			Delta: proto.Uint64(3),
 			Total: proto.Uint64(3),
-		},
-	}
-}
-
-func basicHTTPStartEvent() []byte {
-	message, err := proto.Marshal(basicHTTPStartEventEnvelope())
-	if err != nil {
-		panic(err)
-	}
-	return message
-}
-
-func basicHTTPStartEventEnvelope() *events.Envelope {
-	uuid, _ := uuid.ParseHex("9f45fa9d-dbf8-463e-425f-a79d30e1b56f")
-	return &events.Envelope{
-		Origin:    proto.String("fake-origin-2"),
-		EventType: events.Envelope_HttpStart.Enum(),
-		HttpStart: &events.HttpStart{
-			Timestamp:     proto.Int64(12),
-			RequestId:     factories.NewUUID(uuid),
-			PeerType:      events.PeerType_Client.Enum(),
-			Method:        events.Method_GET.Enum(),
-			Uri:           proto.String("some uri"),
-			RemoteAddress: proto.String("some address"),
-			UserAgent:     proto.String("some user agent"),
-		},
-	}
-}
-
-func basicHTTPStopEvent() []byte {
-	message, err := proto.Marshal(basicHTTPStopEventEnvelope())
-	if err != nil {
-		panic(err)
-	}
-	return message
-}
-
-func basicHTTPStopEventEnvelope() *events.Envelope {
-	uuid, _ := uuid.ParseHex("9f45fa9d-dbf8-463e-425f-a79d30e1b56f")
-	return &events.Envelope{
-		Origin:    proto.String("fake-origin-2"),
-		EventType: events.Envelope_HttpStop.Enum(),
-		HttpStop: &events.HttpStop{
-			Timestamp:     proto.Int64(12),
-			Uri:           proto.String("some uri"),
-			RequestId:     factories.NewUUID(uuid),
-			PeerType:      events.PeerType_Client.Enum(),
-			StatusCode:    proto.Int32(404),
-			ContentLength: proto.Int64(98475189),
 		},
 	}
 }
