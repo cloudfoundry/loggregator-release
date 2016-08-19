@@ -36,13 +36,6 @@ var _ = Describe("MessageAggregator", func() {
 		messageaggregator.MaxTTL = originalTTL
 	})
 
-	It("does not pass messages with no event type through", func() {
-		inputMessage := &events.Envelope{}
-		messageAggregator.Write(inputMessage)
-
-		Expect(mockWriter.Events).To(HaveLen(0))
-	})
-
 	It("passes value messages through", func() {
 		inputMessage := createValueMessage()
 		messageAggregator.Write(inputMessage)
@@ -52,7 +45,7 @@ var _ = Describe("MessageAggregator", func() {
 	})
 
 	It("handles concurrent writes without data race", func() {
-		inputMessage := createStartMessage(1, events.PeerType_Client)
+		inputMessage := createValueMessage()
 		done := make(chan struct{})
 		go func() {
 			defer close(done)
@@ -182,66 +175,6 @@ var _ = Describe("MessageAggregator", func() {
 		})
 	})
 
-	Context("single StartStop message", func() {
-		var outputMessage *events.Envelope
-
-		BeforeEach(func() {
-			messageAggregator.Write(createStartMessage(123, events.PeerType_Client))
-			messageAggregator.Write(createStopMessage(123, events.PeerType_Client))
-
-			outputMessage = mockWriter.Events[0]
-		})
-
-		It("populates all fields in the StartStop message correctly", func() {
-			Expect(outputMessage.GetHttpStartStop()).To(Equal(createStartStopMessage(123, events.PeerType_Client).GetHttpStartStop()))
-		})
-
-		It("populates all fields in the Envelope correctly", func() {
-			Expect(outputMessage.GetOrigin()).To(Equal("fake-origin-2"))
-			Expect(outputMessage.GetTimestamp()).ToNot(BeZero())
-			Expect(outputMessage.GetEventType()).To(Equal(events.Envelope_HttpStartStop))
-		})
-	})
-
-	Context("multiple StartStop messages", func() {
-		It("creates the right amount of HttpStartStop events", func() {
-			const numEvents = 20
-			var i uint64
-
-			for i = 0; i < numEvents; i++ {
-				messageAggregator.Write(createStartMessage(i, events.PeerType_Client))
-			}
-			time.Sleep(100 * time.Millisecond)
-			for i = 0; i < numEvents; i++ {
-				messageAggregator.Write(createStopMessage(i, events.PeerType_Client))
-			}
-
-			Expect(mockWriter.Events).To(HaveLen(numEvents))
-			for _, event := range mockWriter.Events {
-				Expect(event.GetEventType()).To(Equal(events.Envelope_HttpStartStop))
-			}
-		})
-	})
-
-	It("does not send a combined event if there only is a stop event", func() {
-		messageAggregator.Write(createStopMessage(123, events.PeerType_Client))
-		Consistently(func() int { return len(mockWriter.Events) }).Should(Equal(0))
-	})
-
-	Context("message expiry", func() {
-		BeforeEach(func() {
-			messageaggregator.MaxTTL = 0
-		})
-
-		It("does not send a combined event if the stop event doesn't arrive within the TTL", func() {
-			messageAggregator.Write(createStartMessage(123, events.PeerType_Client))
-			time.Sleep(1)
-			messageAggregator.Write(createStopMessage(123, events.PeerType_Client))
-
-			Consistently(func() int { return len(mockWriter.Events) }).Should(Equal(0))
-		})
-	})
-
 	Context("metrics", func() {
 		var (
 			fakeSender  *fake.FakeMetricSender
@@ -252,60 +185,6 @@ var _ = Describe("MessageAggregator", func() {
 			fakeSender = fake.NewFakeMetricSender()
 			mockBatcher = newMockMetricBatcher()
 			metrics.Initialize(fakeSender, mockBatcher)
-		})
-
-		It("emits a HTTP start counter", func() {
-			messageAggregator.Write(createStartMessage(123, events.PeerType_Client))
-			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
-				With("MessageAggregator.httpStartReceived"),
-			))
-		})
-
-		It("emits a HTTP stop counter", func() {
-			messageAggregator.Write(createStopMessage(123, events.PeerType_Client))
-			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
-				With("MessageAggregator.httpStopReceived"),
-			))
-		})
-
-		It("emits a HTTP StartStop counter", func() {
-			messageAggregator.Write(createStartMessage(123, events.PeerType_Client))
-			messageAggregator.Write(createStopMessage(123, events.PeerType_Client))
-			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
-				With("MessageAggregator.httpStartStopEmitted"),
-			))
-		})
-
-		It("emits a counter for uncategorized events", func() {
-			messageAggregator.Write(createValueMessage())
-			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
-				With("MessageAggregator.uncategorizedEvents"),
-			))
-		})
-
-		It("emits an uncategorized event counter for messages with nil event type", func() {
-			inputMessage := &events.Envelope{}
-			messageAggregator.Write(inputMessage)
-			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
-				With("MessageAggregator.uncategorizedEvents"),
-			))
-		})
-
-		It("emits a counter for unmatched start events", func() {
-			messageaggregator.MaxTTL = 0
-			messageAggregator.Write(createStartMessage(123, events.PeerType_Client))
-			time.Sleep(1)
-			messageAggregator.Write(createStartMessage(123, events.PeerType_Client))
-			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
-				With("MessageAggregator.httpUnmatchedStartReceived"),
-			))
-		})
-
-		It("emits a counter for unmatched stop events", func() {
-			messageAggregator.Write(createStopMessage(123, events.PeerType_Client))
-			Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
-				With("MessageAggregator.httpUnmatchedStopReceived"),
-			))
 		})
 
 		It("emits a counter for counter events", func() {
@@ -322,77 +201,6 @@ var _ = Describe("MessageAggregator", func() {
 		})
 	})
 })
-
-func createStartMessage(requestId uint64, peerType events.PeerType) *events.Envelope {
-	return &events.Envelope{
-		Origin:    proto.String("fake-origin-1"),
-		EventType: events.Envelope_HttpStart.Enum(),
-		HttpStart: &events.HttpStart{
-			Timestamp: proto.Int64(1),
-			RequestId: &events.UUID{
-				Low:  proto.Uint64(requestId),
-				High: proto.Uint64(requestId + 1),
-			},
-			PeerType:      &peerType,
-			Method:        events.Method_GET.Enum(),
-			Uri:           proto.String("fake-uri-1"),
-			RemoteAddress: proto.String("fake-remote-addr-1"),
-			UserAgent:     proto.String("fake-user-agent-1"),
-			InstanceIndex: proto.Int32(6),
-			InstanceId:    proto.String("fake-instance-id-1"),
-		},
-	}
-}
-
-func createStopMessage(requestId uint64, peerType events.PeerType) *events.Envelope {
-	return &events.Envelope{
-		Origin:    proto.String("fake-origin-2"),
-		EventType: events.Envelope_HttpStop.Enum(),
-		HttpStop: &events.HttpStop{
-			Timestamp: proto.Int64(100),
-			Uri:       proto.String("fake-uri-2"),
-			RequestId: &events.UUID{
-				Low:  proto.Uint64(requestId),
-				High: proto.Uint64(requestId + 1),
-			},
-			PeerType:      &peerType,
-			StatusCode:    proto.Int32(103),
-			ContentLength: proto.Int64(104),
-			ApplicationId: &events.UUID{
-				Low:  proto.Uint64(105),
-				High: proto.Uint64(106),
-			},
-		},
-	}
-}
-
-func createStartStopMessage(requestId uint64, peerType events.PeerType) *events.Envelope {
-	return &events.Envelope{
-		Origin:    proto.String("fake-origin-2"),
-		EventType: events.Envelope_HttpStartStop.Enum(),
-		HttpStartStop: &events.HttpStartStop{
-			StartTimestamp: proto.Int64(1),
-			StopTimestamp:  proto.Int64(100),
-			RequestId: &events.UUID{
-				Low:  proto.Uint64(requestId),
-				High: proto.Uint64(requestId + 1),
-			},
-			PeerType:      &peerType,
-			Method:        events.Method_GET.Enum(),
-			Uri:           proto.String("fake-uri-1"),
-			RemoteAddress: proto.String("fake-remote-addr-1"),
-			UserAgent:     proto.String("fake-user-agent-1"),
-			StatusCode:    proto.Int32(103),
-			ContentLength: proto.Int64(104),
-			ApplicationId: &events.UUID{
-				Low:  proto.Uint64(105),
-				High: proto.Uint64(106),
-			},
-			InstanceIndex: proto.Int32(6),
-			InstanceId:    proto.String("fake-instance-id-1"),
-		},
-	}
-}
 
 func createValueMessage() *events.Envelope {
 	return &events.Envelope{
