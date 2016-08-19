@@ -30,11 +30,7 @@ type TCPListener struct {
 	lock           sync.Mutex
 	listenerClosed chan struct{}
 	started        bool
-
-	listenerTotalMetricName        string
-	receivedMessageCountMetricName string
-	receivedByteCountMetricName    string
-	receiveErrorCountMetricName    string
+	metricProto    string
 }
 
 func NewTLSConfig(certFile, keyFile, caCertFile string) (*tls.Config, error) {
@@ -68,7 +64,7 @@ func NewTLSConfig(certFile, keyFile, caCertFile string) (*tls.Config, error) {
 }
 
 func NewTCPListener(
-	contextName, address string,
+	metricProto, address string,
 	tlsListenerConfig *config.TLSListenerConfig,
 	envelopeChan chan *events.Envelope,
 	batcher Batcher,
@@ -95,16 +91,12 @@ func NewTCPListener(
 		envelopeChan: envelopeChan,
 		logger:       logger,
 		batcher:      batcher,
+		metricProto:  metricProto,
 
 		connections:    make(map[net.Conn]struct{}),
 		unmarshaller:   dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger),
 		stopped:        make(chan struct{}),
 		listenerClosed: make(chan struct{}),
-
-		listenerTotalMetricName:        "listeners.totalReceivedMessageCount",
-		receivedMessageCountMetricName: contextName + ".receivedMessageCount",
-		receivedByteCountMetricName:    contextName + ".receivedByteCount",
-		receiveErrorCountMetricName:    contextName + ".receiveErrorCount",
 	}, nil
 }
 
@@ -176,13 +168,15 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 	defer conn.Close()
 	defer t.removeConnection(conn)
 
+	errCountMetric := t.metricProto + ".receiveErrorCount"
+
 	if tlsConn, ok := conn.(*tls.Conn); ok {
 		if err := tlsConn.Handshake(); err != nil {
 			t.logger.Warnd(map[string]interface{}{
 				"error":   err.Error(),
 				"address": conn.RemoteAddr().String(),
 			}, "TLS handshake error")
-			t.batcher.BatchIncrementCounter(t.receiveErrorCountMetricName)
+			t.batcher.BatchIncrementCounter(errCountMetric)
 			return
 		}
 	}
@@ -197,7 +191,7 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 		err = binary.Read(conn, binary.LittleEndian, &n)
 		if err != nil {
 			if err != io.EOF {
-				t.batcher.BatchIncrementCounter(t.receiveErrorCountMetricName)
+				t.batcher.BatchIncrementCounter(errCountMetric)
 				t.logger.Errorf("Error while decoding: %v", err)
 			}
 			break
@@ -211,7 +205,7 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 
 		_, err = io.ReadFull(conn, read)
 		if err != nil {
-			t.batcher.BatchIncrementCounter(t.receiveErrorCountMetricName)
+			t.batcher.BatchIncrementCounter(errCountMetric)
 			t.logger.Errorf("Error during i/o read: %v", err)
 			break
 		}
@@ -224,9 +218,10 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 			SetTag("protocol", strings.ToLower(t.protocol)).
 			SetTag("event_type", envelope.EventType.String()).
 			Increment()
-		t.batcher.BatchIncrementCounter(t.listenerTotalMetricName)
-		t.batcher.BatchIncrementCounter(t.receivedMessageCountMetricName)
-		t.batcher.BatchAddCounter(t.receivedByteCountMetricName, uint64(n+4))
+		t.batcher.BatchIncrementCounter("listeners.totalReceivedMessageCount")
+		t.batcher.BatchIncrementCounter(t.metricProto + ".receivedMessageCount")
+		t.batcher.BatchAddCounter(t.metricProto+".receivedByteCount", uint64(n+4))
+		t.batcher.BatchAddCounter("listeners.totalReceivedByteCount", uint64(n+4))
 
 		select {
 		case t.envelopeChan <- envelope:
