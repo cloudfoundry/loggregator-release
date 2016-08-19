@@ -16,7 +16,7 @@ func TestExperiment(t *testing.T) {
 var fakeMetron net.PacketConn
 var _ = BeforeSuite(func() {
 	var err error
-	fakeMetron, err = net.ListenPacket("udp4", ":51161")
+	fakeMetron, err = net.ListenPacket("udp4", ":0")
 	if err != nil {
 		panic(err)
 	}
