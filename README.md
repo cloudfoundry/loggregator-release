@@ -614,3 +614,7 @@ With the Java Logback library you do this by adding `%replace(%xException){'\n',
     }
 ```
 to replace the token with a regular newline again so it displays "properly" in Kibana.
+
+### Log Message Size Constraints
+
+Logs are emitted via UDP messages from Diego/DEA to Metron. Therefore, the maximum log message size from a DEA is ~60KiB (assuming overhead for the transporting envelope). Diego chunks longer log messages into multiple envelopes to mitigate this constraint.

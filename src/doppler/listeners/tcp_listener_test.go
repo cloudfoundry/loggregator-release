@@ -179,6 +179,7 @@ var _ = Describe("TCPlistener", func() {
 				))
 				Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
 					With("aname.receivedByteCount", uint64(67)),
+					With("listeners.totalReceivedByteCount", uint64(67)),
 				))
 
 				Eventually(envelopeChan).Should(Receive())
