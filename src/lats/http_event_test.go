@@ -1,55 +1,17 @@
 package lats_test
 
 import (
+	"fmt"
+	"lats/helpers"
+	"net/http"
+	"net/http/httptest"
+	"time"
+
+	"github.com/cloudfoundry/dropsonde/emitter"
+	"github.com/cloudfoundry/dropsonde/instrumented_handler"
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"lats/helpers"
-	"time"
-)
-
-var (
-	startTimeStamp = int64(1439589912)
-	stopTimeStamp  = int64(1439589916)
-	requestId      = &events.UUID{Low: proto.Uint64(1001), High: proto.Uint64(1005)}
-	uri            = "http://test.lats"
-	remoteAddress  = "127.0.0.1"
-	userAgent      = "WebKit"
-	statusCode     = int32(200)
-	contentLength  = int64(2001)
-
-	httpStart = &events.HttpStart{
-		Timestamp:     proto.Int64(startTimeStamp),
-		RequestId:     requestId,
-		PeerType:      events.PeerType_Client.Enum(),
-		Method:        events.Method_GET.Enum(),
-		Uri:           proto.String(uri),
-		RemoteAddress: proto.String(remoteAddress),
-		UserAgent:     proto.String(userAgent),
-	}
-
-	httpStop = &events.HttpStop{
-		Timestamp:     proto.Int64(stopTimeStamp),
-		RequestId:     requestId,
-		PeerType:      events.PeerType_Client.Enum(),
-		Uri:           proto.String(uri),
-		StatusCode:    proto.Int32(statusCode),
-		ContentLength: proto.Int64(contentLength),
-	}
-
-	httpStartStop = &events.HttpStartStop{
-		StartTimestamp: proto.Int64(startTimeStamp),
-		StopTimestamp:  proto.Int64(stopTimeStamp),
-		RequestId:      requestId,
-		PeerType:       events.PeerType_Client.Enum(),
-		Method:         events.Method_GET.Enum(),
-		Uri:            proto.String(uri),
-		RemoteAddress:  proto.String(remoteAddress),
-		UserAgent:      proto.String(userAgent),
-		StatusCode:     proto.Int32(statusCode),
-		ContentLength:  proto.Int64(contentLength),
-	}
 )
 
 var _ = Describe("Sending Http events through loggregator", func() {
@@ -66,50 +28,34 @@ var _ = Describe("Sending Http events through loggregator", func() {
 		Expect(errorChan).To(BeEmpty())
 	})
 
-	Context("When a Http start/stop event emited into metron", func() {
-		It("should expect HttpStartStop metric out of firehose", func() {
-			startEnvelope := createHttpStartEvent()
-			helpers.EmitToMetron(startEnvelope)
+	Context("When the instrumented handler receives a request", func() {
+		It("should emit an HttpStartStop through the firehose", func() {
+			udpEmitter, err := emitter.NewUdpEmitter(fmt.Sprintf("localhost:%d", config.DropsondePort))
+			Expect(err).ToNot(HaveOccurred())
+			emitter := emitter.NewEventEmitter(udpEmitter, helpers.ORIGIN_NAME)
+			done := make(chan struct{})
+			handler := instrumented_handler.InstrumentedHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				time.Sleep(100 * time.Millisecond)
+				w.WriteHeader(http.StatusTeapot)
+				close(done)
+			}), emitter)
+			r, err := http.NewRequest("HEAD", "/", nil)
+			Expect(err).ToNot(HaveOccurred())
+			r.Header.Add("User-Agent", "Spider-Man")
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, r)
+			Eventually(done).Should(BeClosed())
 
-			stopEnvelope := createHttpStopEvent()
-			helpers.EmitToMetron(stopEnvelope)
+			receivedEnvelope := helpers.FindMatchingEnvelope(msgChan)
+			Expect(receivedEnvelope).NotTo(BeNil())
+			Expect(receivedEnvelope.GetEventType()).To(Equal(events.Envelope_HttpStartStop))
 
-			receivedEnvelop := helpers.FindMatchingEnvelope(msgChan)
-			Expect(receivedEnvelop).NotTo(BeNil())
-
-			receivedHttpStartStopEvent := receivedEnvelop.GetHttpStartStop()
-
-			// not too sure if this deep equal would mach both objects
-			Expect(receivedHttpStartStopEvent).To(Equal(httpStartStop))
-
-			Expect(receivedHttpStartStopEvent.GetRequestId()).To(Equal(requestId))
-			Expect(receivedHttpStartStopEvent.GetPeerType().String()).To(Equal(events.PeerType_Client.Enum().String()))
-			Expect(receivedHttpStartStopEvent.GetMethod().String()).To(Equal(events.Method_GET.Enum().String()))
-			Expect(receivedHttpStartStopEvent.GetStartTimestamp()).To(Equal(startTimeStamp))
-			Expect(receivedHttpStartStopEvent.GetStopTimestamp()).To(Equal(stopTimeStamp))
-			Expect(receivedHttpStartStopEvent.GetUri()).To(Equal(uri))
-			Expect(receivedHttpStartStopEvent.GetRemoteAddress()).To(Equal(remoteAddress))
-			Expect(receivedHttpStartStopEvent.GetUserAgent()).To(Equal(userAgent))
-			Expect(receivedHttpStartStopEvent.GetStatusCode()).To(Equal(statusCode))
-			Expect(receivedHttpStartStopEvent.GetContentLength()).To(Equal(contentLength))
+			event := receivedEnvelope.GetHttpStartStop()
+			Expect(event.GetPeerType().String()).To(Equal(events.PeerType_Server.Enum().String()))
+			Expect(event.GetMethod().String()).To(Equal(events.Method_HEAD.Enum().String()))
+			Expect(event.GetStopTimestamp() - event.GetStartTimestamp()).To(BeNumerically("~", 100*time.Millisecond, time.Millisecond/2))
+			Expect(event.GetUserAgent()).To(Equal("Spider-Man"))
+			Expect(event.GetStatusCode()).To(BeEquivalentTo(http.StatusTeapot))
 		})
 	})
 })
-
-func createHttpStartEvent() *events.Envelope {
-	return &events.Envelope{
-		Origin:    proto.String(helpers.ORIGIN_NAME),
-		EventType: events.Envelope_HttpStart.Enum(),
-		Timestamp: proto.Int64(time.Now().UnixNano()),
-		HttpStart: httpStart,
-	}
-}
-
-func createHttpStopEvent() *events.Envelope {
-	return &events.Envelope{
-		Origin:    proto.String(helpers.ORIGIN_NAME),
-		EventType: events.Envelope_HttpStop.Enum(),
-		Timestamp: proto.Int64(time.Now().UnixNano()),
-		HttpStop:  httpStop,
-	}
-}
