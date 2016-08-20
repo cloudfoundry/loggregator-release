@@ -2,30 +2,32 @@ package helpers
 
 import (
 	"crypto/tls"
+
 	. "github.com/onsi/gomega"
 
+	"encoding/json"
+	"fmt"
+	. "lats/config"
+	"net"
 	"net/http"
 	"net/url"
-	"strings"
-	"fmt"
-	"encoding/json"
-	"github.com/cloudfoundry/sonde-go/events"
-	"net"
-	. "lats/config"
-	"github.com/cloudfoundry/noaa"
-	"time"
 	"strconv"
+	"strings"
+	"time"
+
+	"github.com/cloudfoundry/noaa"
+	"github.com/cloudfoundry/sonde-go/events"
 )
 
 const ORIGIN_NAME = "LATs"
 
 var config *TestConfig
 
-func Initialize(testConfig *TestConfig){
+func Initialize(testConfig *TestConfig) {
 	config = testConfig
 }
 
-func ConnectToFirehose() (chan *events.Envelope, chan error){
+func ConnectToFirehose() (chan *events.Envelope, chan error) {
 	msgChan := make(chan *events.Envelope)
 	errorChan := make(chan error)
 	authToken := GetAuthToken()
@@ -62,9 +64,8 @@ func GetAuthToken() string {
 }
 
 func WaitForWebsocketConnection(printer *TestDebugPrinter) {
-	Eventually(printer.Dump, 2* time.Second).Should(ContainSubstring("101 Switching Protocols"))
+	Eventually(printer.Dump, 2*time.Second).Should(ContainSubstring("101 Switching Protocols"))
 }
-
 
 func EmitToMetron(envelope *events.Envelope) {
 	metronConn, err := net.Dial("udp4", fmt.Sprintf("localhost:%d", config.DropsondePort))
