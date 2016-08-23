@@ -18,7 +18,7 @@ const (
 
 type messageBuffer struct {
 	buffer   []byte
-	messages uint32
+	messages uint64
 }
 
 func newMessageBuffer(bufferBytes []byte) *messageBuffer {
@@ -48,12 +48,6 @@ type BatchChainByteWriter interface {
 
 type DroppedMessageCounter interface {
 	Drop(count uint32)
-	DropCongested(count uint32, doppler string)
-}
-
-type CongestionError interface {
-	Error() string
-	CongestedDoppler() string
 }
 
 type Writer struct {
@@ -113,7 +107,12 @@ func (w *Writer) Write(msgBytes []byte, chainers ...metricbatcher.BatchCounterCh
 		// The batch writer should not block the calling context during a flush -
 		// it should continue to accept messages into its newly-empty buffer, so
 		// kick off the flush in a goroutine
-		go w.flushAll(allMsgs, count, chainers...)
+		go func() {
+			_, retryErr := w.retryWrites(allMsgs, count, chainers...)
+			if retryErr != nil {
+				w.droppedCounter.Drop(uint32(count))
+			}
+		}()
 		return len(msgBytes), nil
 	default:
 		if w.msgBuffer.messages == 0 {
@@ -131,27 +130,15 @@ func (w *Writer) Stop() {
 	w.flushing.Wait()
 }
 
-func (w *Writer) flushAll(allMsgs []byte, msgCount uint32, chainers ...metricbatcher.BatchCounterChainer) {
-	_, retryErr := w.retryWrites(allMsgs, msgCount, chainers...)
-	if retryErr == nil {
-		return
-	}
-	if congestedErr, ok := retryErr.(CongestionError); ok {
-		w.droppedCounter.DropCongested(msgCount, congestedErr.CongestedDoppler())
-		return
-	}
-	w.droppedCounter.Drop(msgCount)
-}
-
-func (w *Writer) flushWrite(toWrite []byte, messageCount uint32, chainers ...metricbatcher.BatchCounterChainer) (int, error) {
+func (w *Writer) flushWrite(toWrite []byte, messageCount uint64, chainers ...metricbatcher.BatchCounterChainer) (int, error) {
 	sent, err := w.outWriter.Write(toWrite, chainers...)
 	if err != nil {
 		w.logger.Warnf("Received error while trying to flush TCP bytes: %s", err)
 		return 0, err
 	}
 
-	metrics.BatchAddCounter("DopplerForwarder.sentMessages", uint64(messageCount))
-	metrics.BatchAddCounter(w.protocol+".sentMessageCount", uint64(messageCount))
+	metrics.BatchAddCounter("DopplerForwarder.sentMessages", messageCount)
+	metrics.BatchAddCounter(w.protocol+".sentMessageCount", messageCount)
 	return sent, nil
 }
 
@@ -181,7 +168,7 @@ func (w *Writer) flushBuffer() {
 	w.chainers = nil
 }
 
-func (w *Writer) retryWrites(message []byte, messageCount uint32, chainers ...metricbatcher.BatchCounterChainer) (sent int, err error) {
+func (w *Writer) retryWrites(message []byte, messageCount uint64, chainers ...metricbatcher.BatchCounterChainer) (sent int, err error) {
 	w.flushing.Add(1)
 	defer w.flushing.Done()
 	for i := 0; i < maxOverflowTries; i++ {

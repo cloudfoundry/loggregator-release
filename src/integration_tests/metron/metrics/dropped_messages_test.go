@@ -65,7 +65,7 @@ var _ = Describe("DroppedMessages", func() {
 		counter, log := findDroppedCounterAndLog(testDoppler.MessageChan, 10*time.Second)
 		Expect(counter).ToNot(BeNil())
 		Expect(log).ToNot(BeNil())
-		Expect(log.Message).To(ContainSubstring(fmt.Sprintf("Dropped %d message(s) from MetronAgent to Doppler", counter.GetDelta())))
+		Expect(log.Message).To(BeEquivalentTo(fmt.Sprintf("Dropped %d message(s) from MetronAgent to Doppler", counter.GetDelta())))
 	})
 })
 

@@ -27,8 +27,6 @@ var _ = Describe("DopplerForwarder", func() {
 		message = []byte("I am a message!")
 
 		client = newMockClient()
-		close(client.AddressOutput.Ret0)
-
 		clientPool = newMockClientPool()
 		clientPool.RandomClientOutput.Client <- client
 		close(clientPool.RandomClientOutput.Err)
@@ -41,15 +39,6 @@ var _ = Describe("DopplerForwarder", func() {
 
 	JustBeforeEach(func() {
 		forwarder = dopplerforwarder.New(fakeWrapper, clientPool, logger)
-	})
-
-	Context("keeps track of congested doppler addresses", func() {
-		It("get client address when write is called", func() {
-			close(fakeWrapper.WriteOutput.Ret0)
-			_, err := forwarder.Write(message)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(client.AddressCalled).Should(Receive())
-		})
 	})
 
 	Context("client selection", func() {
@@ -84,23 +73,6 @@ var _ = Describe("DopplerForwarder", func() {
 				Eventually(loggertesthelper.TestLoggerSink.LogContents).Should(ContainSubstring("failed to pick a client"))
 				Consistently(fakeWrapper.WriteCalled).ShouldNot(Receive())
 			})
-
-			It("releases its locks and allows more calls to Write", func() {
-				close(fakeWrapper.WriteOutput.Ret0)
-				clientPool.RandomClientOutput.Err = make(chan error, 1)
-				clientPool.RandomClientOutput.Err <- errors.New("boom")
-				_, err := forwarder.Write(message)
-				Expect(err).To(HaveOccurred())
-
-				close(clientPool.RandomClientOutput.Err)
-				clientPool.RandomClientOutput.Client <- client
-				done := make(chan struct{})
-				go func() {
-					defer close(done)
-					forwarder.Write(message)
-				}()
-				Eventually(done).Should(BeClosed())
-			})
 		})
 
 		Context("when networkWrapper write fails", func() {
@@ -122,58 +94,20 @@ var _ = Describe("DopplerForwarder", func() {
 		})
 
 		Context("when it is already writing", func() {
-			It("returns a ForwarderError rather than blocking", func() {
-				doppler := "foo.bar"
-				client.AddressOutput.Ret0 = make(chan string, 100)
-				client.AddressOutput.Ret0 <- doppler
-
+			It("returns an error rather than blocking", func() {
 				go forwarder.Write(message)
+				Eventually(fakeWrapper.WriteCalled).Should(BeCalled())
 
 				var err error
 				done := make(chan struct{})
-
-				Eventually(client.AddressCalled).Should(BeCalled())
 				go func() {
 					defer close(done)
 					_, err = forwarder.Write(message)
 				}()
 				Eventually(done).Should(BeClosed())
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("DopplerForwarder: Write already in use"))
-
-				forwarderErr, ok := err.(dopplerforwarder.ForwarderError)
-				Expect(ok).To(BeTrue())
-				Expect(forwarderErr.CongestedDoppler()).To(Equal(doppler))
-
+				Expect(err.Error()).To(Equal("DopplerForwarder: Write already in use"))
 				fakeWrapper.WriteOutput.Ret0 <- nil
-			})
-
-			It("returns a normal error if no client address is set", func() {
-				client.AddressOutput.Ret0 = make(chan string, 100)
-				client.AddressOutput.Ret0 <- "i.am.a.doppler"
-				close(fakeWrapper.WriteOutput.Ret0)
-				_, err := forwarder.Write(message)
-				Eventually(clientPool.RandomClientCalled).Should(BeCalled())
-				Expect(err).ToNot(HaveOccurred())
-
-				close(clientPool.RandomClientOutput.Client)
-				clientPool.RandomClientOutput.Err = make(chan error, 100)
-
-				go forwarder.Write(message)
-				Eventually(clientPool.RandomClientCalled).Should(BeCalled())
-
-				done := make(chan struct{})
-				go func() {
-					defer close(done)
-					_, err = forwarder.Write(message)
-				}()
-
-				Eventually(done).Should(BeClosed())
-				Expect(err).To(HaveOccurred())
-
-				_, isForwarderErr := err.(dopplerforwarder.ForwarderError)
-				Expect(isForwarderErr).NotTo(BeTrue())
-				Expect(err.Error()).To(Equal("DopplerForwarder: Write selecting doppler"))
 			})
 		})
 	})
