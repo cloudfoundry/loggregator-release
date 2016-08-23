@@ -47,6 +47,7 @@ var _ = Describe("Config", func() {
 				Expect(cfg.SharedSecret).To(Equal("shared_secret"))
 
 				Expect(cfg.IncomingUDPPort).To(Equal(51161))
+				Expect(cfg.ListeningAddress).To(Equal("1.3.3.7"))
 
 				Expect(cfg.MetricBatchIntervalMilliseconds).To(BeEquivalentTo(20))
 				Expect(cfg.RuntimeStatsIntervalMilliseconds).To(BeEquivalentTo(15))
@@ -85,6 +86,7 @@ var _ = Describe("Config", func() {
 					MetricBatchIntervalMilliseconds:  5000,
 					RuntimeStatsIntervalMilliseconds: 15000,
 					Protocols:                        []config.Protocol{"udp"},
+					ListeningAddress:                 "127.0.0.1",
 				}))
 			})
 

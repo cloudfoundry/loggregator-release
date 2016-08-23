@@ -53,7 +53,7 @@ properties:
     description: "Port the metron agent is listening on to receive dropsonde log messages"
     default: 3457
   metron_agent.listening_address:
-    description: "Address the metron agent is listening on to receive dropsonde log messages provided for BOSH links and should not be overwritten"
+    description: "Address the metron agent is listening on to receive dropsonde log messages provided for BOSH links"
     default: "127.0.0.1"
   metron_agent.debug:
     description: "boolean value to turn on verbose mode"
