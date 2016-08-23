@@ -19,11 +19,10 @@ func TestWebsocketServer(t *testing.T) {
 	RunSpecs(t, "WebsocketServer Suite")
 }
 
-func AddSlowWSSink(receivedChan chan []byte, errChan chan error, timeout time.Duration, url string) {
+func addSlowWSSink(receivedChan chan []byte, errChan chan error, timeout time.Duration, url string) {
 	ws, _, err := websocket.DefaultDialer.Dial(url, http.Header{})
-	if err != nil {
-		panic(err)
-	}
+	Expect(err).ToNot(HaveOccurred())
+
 	go func() {
 		time.Sleep(timeout)
 		_, reader, err := ws.NextReader()
@@ -35,19 +34,18 @@ func AddSlowWSSink(receivedChan chan []byte, errChan chan error, timeout time.Du
 		if err != nil {
 			errChan <- err
 			return
-		} else {
-			receivedChan <- received
 		}
+		receivedChan <- received
 	}()
 }
 
-func AddWSSink(receivedChan chan []byte, url string) (chan struct{}, <-chan struct{}, error) {
+func addWSSink(receivedChan chan []byte, url string) (chan struct{}, <-chan struct{}, func(), error) {
 	stopKeepAlive := make(chan struct{})
 	connectionDropped := make(chan struct{})
 
 	ws, _, err := websocket.DefaultDialer.Dial(url, http.Header{})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, func() {}, err
 	}
 
 	ws.SetPingHandler(func(message string) error {
@@ -66,12 +64,13 @@ func AddWSSink(receivedChan chan []byte, url string) (chan struct{}, <-chan stru
 			if err != nil {
 				return
 			}
-
 			receivedChan <- data
 		}
 	}()
 
-	return stopKeepAlive, connectionDropped, nil
+	return stopKeepAlive, connectionDropped, func() {
+		ws.Close()
+	}, nil
 }
 
 func parseEnvelope(actual []byte) (*events.Envelope, error) {

@@ -19,8 +19,6 @@ import (
 	gorilla "github.com/gorilla/websocket"
 )
 
-//go:generate hel --type Batcher --output mock_batcher_test.go
-
 type Batcher interface {
 	BatchIncrementCounter(name string)
 	BatchCounter(name string) metricbatcher.BatchCounterChainer

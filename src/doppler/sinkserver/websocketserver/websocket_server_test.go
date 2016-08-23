@@ -42,7 +42,7 @@ var _ = Describe("WebsocketServer", func() {
 		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
 		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
 
-		wsReceivedChan = make(chan []byte)
+		wsReceivedChan = make(chan []byte, 100)
 
 		// TODO: This is a poor solution that we need to remove ASAP. Ideally,
 		// we can rely on the kernel to give us an open port and pass the
@@ -78,12 +78,14 @@ var _ = Describe("WebsocketServer", func() {
 
 	Describe("failed connections", func() {
 		It("fails without an appId", func() {
-			_, _, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps//stream", apiEndpoint))
+			_, _, cleanup, err := addWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps//stream", apiEndpoint))
+			defer cleanup()
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("fails with bad path", func() {
-			_, _, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/my-app/junk", apiEndpoint))
+			_, _, cleanup, err := addWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/my-app/junk", apiEndpoint))
+			defer cleanup()
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -92,7 +94,8 @@ var _ = Describe("WebsocketServer", func() {
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 		sinkManager.SendTo(appId, lm)
 
-		_, _, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/recentlogs", apiEndpoint, appId))
+		_, _, cleanup, err := addWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/recentlogs", apiEndpoint, appId))
+		defer cleanup()
 		Expect(err).NotTo(HaveOccurred())
 
 		rlm, err := receiveEnvelope(wsReceivedChan)
@@ -104,7 +107,8 @@ var _ = Describe("WebsocketServer", func() {
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 		sinkManager.SendTo(appId, lm)
 
-		_, _, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/recentlogs", apiEndpoint, appId))
+		_, _, cleanup, err := addWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/recentlogs", apiEndpoint, appId))
+		defer cleanup()
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(mockBatcher.BatchCounterInput).Should(BeCalled(
@@ -123,7 +127,8 @@ var _ = Describe("WebsocketServer", func() {
 		envelope, _ := emitter.Wrap(cm, "origin")
 		sinkManager.SendTo(appId, envelope)
 
-		_, _, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/containermetrics", apiEndpoint, appId))
+		_, _, cleanup, err := addWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/containermetrics", apiEndpoint, appId))
+		defer cleanup()
 		Expect(err).NotTo(HaveOccurred())
 
 		rcm, err := receiveEnvelope(wsReceivedChan)
@@ -136,7 +141,8 @@ var _ = Describe("WebsocketServer", func() {
 		envelope, _ := emitter.Wrap(cm, "origin")
 		sinkManager.SendTo(appId, envelope)
 
-		_, _, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/containermetrics", apiEndpoint, appId))
+		_, _, cleanup, err := addWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/containermetrics", apiEndpoint, appId))
+		defer cleanup()
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(mockBatcher.BatchCounterInput).Should(BeCalled(
@@ -156,13 +162,15 @@ var _ = Describe("WebsocketServer", func() {
 		envelope, _ := emitter.Wrap(cm, "origin")
 		sinkManager.SendTo(appId, envelope)
 
-		_, _, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/containermetrics", apiEndpoint, appId))
+		_, _, cleanup, err := addWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/containermetrics", apiEndpoint, appId))
+		defer cleanup()
 		Expect(err).NotTo(HaveOccurred())
 		Consistently(wsReceivedChan).ShouldNot(Receive())
 	})
 
 	It("sends data to the websocket client with /stream", func() {
-		stopKeepAlive, _, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
+		stopKeepAlive, _, cleanup, err := addWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
+		defer cleanup()
 		Expect(err).NotTo(HaveOccurred())
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 		sinkManager.SendTo(appId, lm)
@@ -174,7 +182,8 @@ var _ = Describe("WebsocketServer", func() {
 	})
 
 	It("sends sentEnvelopes metrics for /stream", func() {
-		stopKeepAlive, _, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
+		stopKeepAlive, _, cleanup, err := addWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
+		defer cleanup()
 		defer close(stopKeepAlive)
 		Expect(err).NotTo(HaveOccurred())
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
@@ -193,16 +202,17 @@ var _ = Describe("WebsocketServer", func() {
 
 	Context("websocket firehose client", func() {
 		var (
-			stopKeepAlive chan struct{}
-			lm            *events.Envelope
+			stopKeepAlive     chan struct{}
+			connectionDropped <-chan struct{}
+			lm                *events.Envelope
+			cleanup           func()
 		)
 
 		const subscriptionID = "firehose-subscription-a"
 
 		BeforeEach(func() {
-
 			var err error
-			stopKeepAlive, _, err = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/firehose/%s", apiEndpoint, subscriptionID))
+			stopKeepAlive, connectionDropped, cleanup, err = addWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/firehose/%s", apiEndpoint, subscriptionID))
 			Expect(err).NotTo(HaveOccurred())
 
 			lm, _ = emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
@@ -210,6 +220,8 @@ var _ = Describe("WebsocketServer", func() {
 
 		AfterEach(func() {
 			close(stopKeepAlive)
+			<-connectionDropped
+			cleanup()
 		})
 
 		It("sends data to the websocket firehose client", func() {
@@ -252,11 +264,13 @@ var _ = Describe("WebsocketServer", func() {
 
 	It("sends each message to only one of many firehoses with the same subscription id", func() {
 		firehoseAChan1 := make(chan []byte, 100)
-		stopKeepAlive1, _, err := AddWSSink(firehoseAChan1, fmt.Sprintf("ws://%s/firehose/fire-subscription-x", apiEndpoint))
+		stopKeepAlive1, _, cleanup, err := addWSSink(firehoseAChan1, fmt.Sprintf("ws://%s/firehose/fire-subscription-x", apiEndpoint))
+		defer cleanup()
 		Expect(err).NotTo(HaveOccurred())
 
 		firehoseAChan2 := make(chan []byte, 100)
-		stopKeepAlive2, _, err := AddWSSink(firehoseAChan2, fmt.Sprintf("ws://%s/firehose/fire-subscription-x", apiEndpoint))
+		stopKeepAlive2, _, cleanup, err := addWSSink(firehoseAChan2, fmt.Sprintf("ws://%s/firehose/fire-subscription-x", apiEndpoint))
+		defer cleanup()
 		Expect(err).NotTo(HaveOccurred())
 
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
@@ -291,7 +305,8 @@ var _ = Describe("WebsocketServer", func() {
 	})
 
 	It("still sends to 'live' sinks", func() {
-		stopKeepAlive, connectionDropped, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
+		stopKeepAlive, connectionDropped, cleanup, err := addWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
+		defer cleanup()
 		Expect(err).NotTo(HaveOccurred())
 		Consistently(connectionDropped, 0.2).ShouldNot(BeClosed())
 
@@ -305,7 +320,8 @@ var _ = Describe("WebsocketServer", func() {
 	})
 
 	It("closes the client when the keep-alive stops", func() {
-		stopKeepAlive, connectionDropped, err := AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
+		stopKeepAlive, connectionDropped, cleanup, err := addWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
+		defer cleanup()
 		Expect(err).NotTo(HaveOccurred())
 		Expect(stopKeepAlive).ToNot(Receive())
 		close(stopKeepAlive)
@@ -315,7 +331,7 @@ var _ = Describe("WebsocketServer", func() {
 	It("times out slow connections", func() {
 		errChan := make(chan error)
 		url := fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId)
-		AddSlowWSSink(wsReceivedChan, errChan, 2*time.Second, url)
+		addSlowWSSink(wsReceivedChan, errChan, 2*time.Second, url)
 		var err error
 		Eventually(errChan, 5).Should(Receive(&err))
 		Expect(err).To(HaveOccurred())
