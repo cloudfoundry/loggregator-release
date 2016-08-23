@@ -167,7 +167,7 @@ var _ = Describe("TaskListener", func() {
 				Expect(err).ToNot(BeNil())
 				Expect(taskListener).To(BeNil())
 				connection := <-connectionChannel
-				var data []byte
+				data := make([]byte, 1024)
 				_, err = connection.Read(data)
 				Expect(err).ToNot(BeNil())
 			})
@@ -228,7 +228,7 @@ var _ = Describe("TaskListener", func() {
 			stdErrConnection := <-stdErrConnectionChannel
 
 			Eventually(doneListening).Should(BeClosed())
-			p := []byte{}
+			p := make([]byte, 1024)
 			_, err := stdErrConnection.Read(p)
 			Expect(err).To(HaveOccurred())
 
@@ -241,7 +241,7 @@ var _ = Describe("TaskListener", func() {
 			stdOutConnection := <-stdOutConnectionChannel
 
 			Eventually(doneListening).Should(BeClosed())
-			p := []byte{}
+			p := make([]byte, 1024)
 			_, err := stdOutConnection.Read(p)
 			Expect(err).To(HaveOccurred())
 

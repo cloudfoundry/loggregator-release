@@ -4,7 +4,7 @@ name: loggregator-acceptance-tests
 description: "The loggregator acceptance tests."
 
 packages:
-  - golang1.6
+  - golang1.7
   - loggregator-acceptance-tests
 
 templates:

@@ -1,7 +1,7 @@
 ---
 name: metron_agent_windows
 dependencies:
-- golang1.6-windows
+- golang1.7-windows
 files:
 - loggregator/src/metron/LICENSE
 - loggregator/src/metron/NOTICE

@@ -11,7 +11,7 @@ export CF_PASSWORD="<%= p('loggregator_load_testing.password') %>"
 export ROUTE_SCHEME="<%= p('loggregator_load_testing.route_scheme') %>"
 export SKIP_CERT_VERIFY="<%= p('ssl.skip_cert_verify') %>"
 
-export GOROOT=$(readlink -nf /var/vcap/packages/golang1.6)
+export GOROOT=$(readlink -nf /var/vcap/packages/golang1.7)
 export PACKAGES_DIR=/var/vcap/packages/loggregator-load-testing
 export GOPATH=$PACKAGES_DIR
 export PATH=${PACKAGES_DIR}/bin:${GOROOT}/bin:${PATH}
