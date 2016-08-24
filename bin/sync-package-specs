@@ -32,7 +32,6 @@ function sync_package() {
 }
 
 sync_package metron_agent                  -app  metron/... &
-sync_package dea_logging_agent             -app  deaagent/... &
 sync_package doppler                       -app  doppler/... &
 sync_package loggregator_trafficcontroller -app  trafficcontroller/... &
 sync_package syslog_drain_binder           -app  syslog_drain_binder/... &

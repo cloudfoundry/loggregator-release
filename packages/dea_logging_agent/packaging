@@ -1,8 +1,0 @@
-set -e -x
-
-export GOROOT=$(readlink -nf /var/vcap/packages/golang1.6)
-export PATH=$GOROOT/bin:$PATH
-export GOPATH=$PWD/loggregator
-
-go install deaagent/deaagent
-cp -a $PWD/loggregator/bin/deaagent ${BOSH_INSTALL_TARGET}
