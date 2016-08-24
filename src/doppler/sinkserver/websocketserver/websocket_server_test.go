@@ -76,18 +76,16 @@ var _ = Describe("WebsocketServer", func() {
 		server.Stop()
 	})
 
-	Describe("failed connections", func() {
-		It("fails without an appId", func() {
-			_, _, cleanup, err := addWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps//stream", apiEndpoint))
-			defer cleanup()
-			Expect(err).To(HaveOccurred())
-		})
+	It("fails without an appId", func() {
+		_, _, cleanup, err := addWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps//stream", apiEndpoint))
+		defer cleanup()
+		Expect(err).To(HaveOccurred())
+	})
 
-		It("fails with bad path", func() {
-			_, _, cleanup, err := addWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/my-app/junk", apiEndpoint))
-			defer cleanup()
-			Expect(err).To(HaveOccurred())
-		})
+	It("fails with bad path", func() {
+		_, _, cleanup, err := addWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/my-app/junk", apiEndpoint))
+		defer cleanup()
+		Expect(err).To(HaveOccurred())
 	})
 
 	It("dumps buffer data to the websocket client with /recentlogs", func() {
@@ -340,7 +338,7 @@ var _ = Describe("WebsocketServer", func() {
 
 func receiveEnvelope(dataChan <-chan []byte) (*events.Envelope, error) {
 	var data []byte
-	Eventually(dataChan).Should(Receive(&data))
+	Eventually(dataChan, "2s").Should(Receive(&data))
 	return parseEnvelope(data)
 }
 
