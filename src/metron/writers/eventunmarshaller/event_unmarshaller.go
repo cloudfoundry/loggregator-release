@@ -114,10 +114,6 @@ func (u *EventUnmarshaller) incrementReceiveCount(eventType events.Envelope_Even
 
 func valid(env *events.Envelope) bool {
 	switch env.GetEventType() {
-	case events.Envelope_HttpStart:
-		return env.GetHttpStart() != nil
-	case events.Envelope_HttpStop:
-		return env.GetHttpStop() != nil
 	case events.Envelope_HttpStartStop:
 		return env.GetHttpStartStop() != nil
 	case events.Envelope_LogMessage:
