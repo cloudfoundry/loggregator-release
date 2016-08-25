@@ -22,7 +22,6 @@ var (
 var _ = BeforeSuite(func() {
 	fakeEventEmitter = fake.NewFakeEventEmitter("MonitorTest")
 	sender := metric_sender.NewMetricSender(fakeEventEmitter)
-	//batcher := metricbatcher.New(sender, 100*time.Millisecond)
 
 	metrics.Initialize(sender, nil)
 })
