@@ -136,7 +136,7 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 		return nil, err
 	}
 
-	for _, protocol := range conf.Protocols {
+	for protocol := range conf.Protocols {
 		proto := string(protocol)
 		protocols = append(protocols, proto)
 		switch proto {

@@ -29,11 +29,28 @@ func (p *Protocol) UnmarshalJSON(value []byte) error {
 	return nil
 }
 
-type Protocols []Protocol
+type Protocols map[Protocol]struct{}
+
+func (p *Protocols) UnmarshalJSON(value []byte) error {
+	var prots []Protocol
+	if err := json.Unmarshal(value, &prots); err != nil {
+		return err
+	}
+	set := make(Protocols)
+	for _, prot := range prots {
+		set[prot] = struct{}{}
+	}
+	*p = set
+	return nil
+}
+
+func (p Protocols) MarshalJSON() ([]byte, error) {
+	return json.Marshal(p.Strings())
+}
 
 func (p Protocols) Strings() []string {
 	protocols := make([]string, 0, len(p))
-	for _, protocol := range p {
+	for protocol := range p {
 		protocols = append(protocols, string(protocol))
 	}
 	return protocols
@@ -98,7 +115,7 @@ func Parse(reader io.Reader) (*Config, error) {
 		TCPBatchIntervalMilliseconds:     defaultBatchIntervalMS,
 		MetricBatchIntervalMilliseconds:  5000,
 		RuntimeStatsIntervalMilliseconds: 15000,
-		Protocols:                        []Protocol{"udp"},
+		Protocols:                        Protocols{"udp": struct{}{}},
 	}
 	err := json.NewDecoder(reader).Decode(config)
 	if err != nil {

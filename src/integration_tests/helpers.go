@@ -193,7 +193,9 @@ func SetupMetron(etcdClientURL, proto string) (func(), int, func()) {
 	Expect(metronPath).ToNot(BeEmpty())
 
 	By("starting metron")
-	protocols := []metronConfig.Protocol{metronConfig.Protocol(proto)}
+	protocols := metronConfig.Protocols{
+		metronConfig.Protocol(proto): struct{}{},
+	}
 	metronPort := getPort(metronPortOffset)
 	metronConf := metronConfig.Config{
 		Index:        jobIndex,

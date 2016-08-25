@@ -39,7 +39,7 @@ var _ = Describe("Self Instrumentation", func() {
 
 		stopAnnounce = dopplerservice.Announce("127.0.0.1", time.Minute, dopplerConfig, etcdAdapter, gosteno.NewLogger("test"))
 
-		metronRunner.Protocols = []config.Protocol{"udp"}
+		metronRunner.Protocols = config.Protocols{"udp": struct{}{}}
 		metronRunner.Start()
 
 		env := basicValueMessageEnvelope()

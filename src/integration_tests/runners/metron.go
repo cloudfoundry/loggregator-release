@@ -21,7 +21,7 @@ type MetronRunner struct {
 	Path    string
 	TempDir string
 
-	Protocols     []config.Protocol
+	Protocols     config.Protocols
 	LegacyPort    int
 	MetronPort    int
 	DropsondePort int

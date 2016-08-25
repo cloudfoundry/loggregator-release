@@ -40,7 +40,7 @@ var _ = Describe("DroppedMessages", func() {
 
 		stopAnnounce = dopplerservice.Announce("127.0.0.1", time.Minute, dopplerConfig, etcdAdapter, gosteno.NewLogger("test"))
 
-		metronRunner.Protocols = []config.Protocol{"tcp"}
+		metronRunner.Protocols = config.Protocols{"tcp": struct{}{}}
 		metronRunner.Start()
 
 		var err error
