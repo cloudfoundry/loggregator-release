@@ -39,22 +39,34 @@ var _ = Describe("Uptime", func() {
 			wg.Wait()
 		})
 
+		var fetchValueMetrics = func() []*events.ValueMetric {
+			var results []*events.ValueMetric
+			for _, m := range fakeEventEmitter.GetMessages() {
+				e, ok := m.Event.(*events.ValueMetric)
+				if ok {
+					results = append(results, e)
+				}
+			}
+
+			return results
+		}
+
 		It("returns a value metric containing uptime after specified time", func() {
-			Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(1))
-			Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
+			expectedMetric := &events.ValueMetric{
 				Name:  proto.String("Uptime"),
 				Value: proto.Float64(0),
 				Unit:  proto.String("seconds"),
-			}))
+			}
+			Eventually(fetchValueMetrics).Should(ContainElement(expectedMetric))
 		})
 
 		It("reports increasing uptime value", func() {
-			Eventually(fakeEventEmitter.GetMessages).Should(HaveLen(1))
-			Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
+			expectedMetric := &events.ValueMetric{
 				Name:  proto.String("Uptime"),
 				Value: proto.Float64(0),
 				Unit:  proto.String("seconds"),
-			}))
+			}
+			Eventually(fetchValueMetrics).Should(ContainElement(expectedMetric))
 
 			Eventually(getLatestUptime).Should(Equal(1.0))
 		})
