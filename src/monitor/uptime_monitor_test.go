@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
 )
 
 const (
@@ -51,24 +50,28 @@ var _ = Describe("Uptime", func() {
 			return results
 		}
 
-		It("returns a value metric containing uptime after specified time", func() {
-			expectedMetric := &events.ValueMetric{
-				Name:  proto.String("Uptime"),
-				Value: proto.Float64(0),
-				Unit:  proto.String("seconds"),
+		var fetchNumOfMetrics = func() int {
+			return len(fetchValueMetrics())
+		}
+
+		var fetchLatestValue = func() float64 {
+			metrics := fetchValueMetrics()
+			if len(metrics) <= 0 {
+				return 0
 			}
-			Eventually(fetchValueMetrics).Should(ContainElement(expectedMetric))
+
+			return metrics[len(metrics)-1].GetValue()
+		}
+
+		It("returns a value metric containing uptime after specified time", func() {
+			Eventually(fetchNumOfMetrics).Should(BeNumerically(">", 0))
+			metric := fetchValueMetrics()[0]
+			Expect(metric.GetName()).To(Equal("Uptime"))
+			Expect(metric.GetUnit()).To(Equal("seconds"))
 		})
 
 		It("reports increasing uptime value", func() {
-			expectedMetric := &events.ValueMetric{
-				Name:  proto.String("Uptime"),
-				Value: proto.Float64(0),
-				Unit:  proto.String("seconds"),
-			}
-			Eventually(fetchValueMetrics).Should(ContainElement(expectedMetric))
-
-			Eventually(getLatestUptime).Should(Equal(1.0))
+			Eventually(fetchLatestValue, 3).Should(BeNumerically(">", 0))
 		})
 	})
 
