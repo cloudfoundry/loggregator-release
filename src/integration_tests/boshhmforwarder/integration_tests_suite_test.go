@@ -47,10 +47,10 @@ var _ = AfterSuite(func() {
 
 func createConfig() {
 	config := &config.Config{
-		IncomingPort: 4002,
+		IncomingPort: testPort(),
 		InfoPort:     testPort(),
 		DebugPort:    -1,
-		MetronPort:   10001,
+		MetronPort:   testPort(),
 		LogLevel:     logging.DEBUG,
 	}
 

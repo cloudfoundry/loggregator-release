@@ -28,8 +28,9 @@ var _ = Describe("Bosh HealthMonitor Forwarder - IntegrationTests", func() {
 	)
 
 	BeforeEach(func() {
+		conf = config.Configuration("./integration_config.json")
 		udpChannel = make(chan []byte, 100)
-		udpServerAddr, err := net.ResolveUDPAddr("udp", ":10001")
+		udpServerAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", conf.MetronPort))
 		Expect(err).ToNot(HaveOccurred())
 
 		udpServer, err = net.ListenUDP("udp", udpServerAddr)
@@ -37,7 +38,6 @@ var _ = Describe("Bosh HealthMonitor Forwarder - IntegrationTests", func() {
 
 		go readUdpToCH(udpServer, udpChannel)
 
-		conf = config.Configuration("./integration_config.json")
 	})
 
 	AfterEach(func() {
