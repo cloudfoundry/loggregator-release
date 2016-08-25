@@ -81,9 +81,8 @@ func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
 			close(stopChan)
 			return
 		}
-		sink.counter.Increment(messageEnvelope.GetEventType())
-		messageBytes, err := proto.Marshal(messageEnvelope)
 
+		messageBytes, err := proto.Marshal(messageEnvelope)
 		if err != nil {
 			sink.logger.Errorf("Websocket Sink %s: Error marshalling %s envelope from origin %s: %s", sink.clientAddress, messageEnvelope.GetEventType().String(), messageEnvelope.GetOrigin(), err.Error())
 			continue
@@ -101,5 +100,6 @@ func (sink *WebsocketSink) Run(inputChan <-chan *events.Envelope) {
 		}
 
 		sink.logger.Debugf("Websocket Sink %s: Successfully sent data", sink.clientAddress)
+		sink.counter.Increment(messageEnvelope.GetEventType())
 	}
 }

@@ -2,6 +2,7 @@ package websocket_test
 
 import (
 	"doppler/sinks/websocket"
+	"fmt"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
@@ -80,7 +81,7 @@ var _ = Describe("WebsocketSink", func() {
 			Eventually(fakeWebsocket.WriteDeadline).Should(BeTemporally("~", time.Now().Add(writeTimeout), time.Millisecond*50))
 		})
 
-		Describe("SetCounter", func() {
+		Describe("Counter", func() {
 			var counter *fakeCounter
 
 			BeforeEach(func() {
@@ -90,14 +91,30 @@ var _ = Describe("WebsocketSink", func() {
 				websocketSink.SetCounter(counter)
 			})
 
-			It("uses the passed in counter", func() {
-				go websocketSink.Run(inputChan)
-				message, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "hello world", "appId", "App"), "origin")
-				inputChan <- message
-				Eventually(counter.incrementCalls).Should(Receive(
-					Equal(events.Envelope_LogMessage),
-				))
-				Consistently(counter.incrementCalls).ShouldNot(Receive())
+			Context("write successful", func() {
+				BeforeEach(func() {
+					fakeWebsocket.writeMessageErr = nil
+				})
+
+				It("increments", func() {
+					go websocketSink.Run(inputChan)
+					message, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "hello world", "appId", "App"), "origin")
+					inputChan <- message
+					Eventually(counter.incrementCalls).Should(Receive(Equal(events.Envelope_LogMessage)))
+				})
+			})
+
+			Context("write unsuccessful", func() {
+				BeforeEach(func() {
+					fakeWebsocket.writeMessageErr = fmt.Errorf("some-error")
+				})
+
+				It("does not increment", func() {
+					go websocketSink.Run(inputChan)
+					message, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "hello world", "appId", "App"), "origin")
+					inputChan <- message
+					Consistently(counter.incrementCalls).ShouldNot(Receive())
+				})
 			})
 		})
 	})

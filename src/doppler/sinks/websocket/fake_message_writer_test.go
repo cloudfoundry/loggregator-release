@@ -10,17 +10,19 @@ type fakeMessageWriter struct {
 	messages      [][]byte
 	writeDeadline time.Time
 	sync.RWMutex
+	writeMessageErr error
 }
 
 func (fake *fakeMessageWriter) RemoteAddr() net.Addr {
 	return fakeAddr{}
 }
+
 func (fake *fakeMessageWriter) WriteMessage(messageType int, data []byte) error {
 	fake.Lock()
 	defer fake.Unlock()
 
 	fake.messages = append(fake.messages, data)
-	return nil
+	return fake.writeMessageErr
 }
 
 func (fake *fakeMessageWriter) SetWriteDeadline(t time.Time) error {
