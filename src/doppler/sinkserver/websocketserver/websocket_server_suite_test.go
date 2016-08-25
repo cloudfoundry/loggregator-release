@@ -20,8 +20,13 @@ func TestWebsocketServer(t *testing.T) {
 }
 
 func addSlowWSSink(receivedChan chan []byte, errChan chan error, timeout time.Duration, url string) {
-	ws, _, err := websocket.DefaultDialer.Dial(url, http.Header{})
-	Expect(err).ToNot(HaveOccurred())
+	var ws *websocket.Conn
+	tryToConnect := func() error {
+		var err error
+		ws, _, err = websocket.DefaultDialer.Dial(url, http.Header{})
+		return err
+	}
+	Eventually(tryToConnect, 5).ShouldNot(HaveOccurred())
 
 	go func() {
 		time.Sleep(timeout)
@@ -47,9 +52,6 @@ func addWSSink(receivedChan chan []byte, url string) (chan struct{}, <-chan stru
 	tryToConnect := func() error {
 		var err error
 		ws, _, err = websocket.DefaultDialer.Dial(url, http.Header{})
-		if err != nil {
-			println(err.Error())
-		}
 		return err
 	}
 	Eventually(tryToConnect, 5).ShouldNot(HaveOccurred())
