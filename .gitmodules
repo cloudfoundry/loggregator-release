@@ -102,4 +102,4 @@
 	url = https://github.com/bradylove/envstruct.git
 [submodule "src/dea_logging_agent"]
 	path = src/dea_logging_agent
-	url = https://github.com/cloudfoundry-attic/dea_logging_agent
+	url = https://github.com/cloudfoundry/dea_logging_agent
