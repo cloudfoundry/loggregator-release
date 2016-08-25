@@ -54,14 +54,14 @@ not_unit_tests="github.com,golang.org,gopkg.in,integration_tests,lats"
 if [ $TEST_TYPE == "unit" ] || [ $TEST_TYPE == "everything" ]
 then
   bold_blue "==================================  Running Unit Tests  =================================="
-  ginkgo -r --race --randomizeAllSpecs --cover --skipPackage="${not_unit_tests}" $1 src
+  ginkgo -r --race -skipMeasurements --randomizeAllSpecs --cover --skipPackage="${not_unit_tests}" $1 src
   result=$?
 fi
 
 if [ $TEST_TYPE == "integration" ] || [ $TEST_TYPE == "everything" ]
 then
   bold_blue "==================================  Running Integration Tests  =================================="
-  ginkgo -r --race --randomizeAllSpecs --cover -skipPackage="integration_tests/statsd-injector" $1 src/integration_tests
+  ginkgo -r --race -skipMeasurements --randomizeAllSpecs --cover -skipPackage="integration_tests/statsd-injector" $1 src/integration_tests
   result=$((result + $?))
 fi
 
