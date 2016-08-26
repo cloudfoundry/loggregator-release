@@ -7,7 +7,21 @@ TEST_TYPE=${1-everything}
 echo "Running Test Type: $TEST_TYPE"
 
 pushd $BIN_DIR/../src/github.com/coreos/etcd
-./build
+  ORG_PATH="github.com/coreos"
+  REPO_PATH="${ORG_PATH}/etcd"
+  export ETCD_GOPATH=${PWD}/gopath
+
+  rm -f $ETCD_GOPATH/src/${REPO_PATH}
+  mkdir -p $ETCD_GOPATH/src/${ORG_PATH}
+  ln -s ${PWD} $ETCD_GOPATH/src/${REPO_PATH}
+
+  eval $(go env)
+
+  GIT_SHA=`git rev-parse --short HEAD || echo "GitNotFound"`
+
+  # Static compilation is useful when etcd is run in a container
+  GOPATH=$ETCD_GOPATH CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags "-s -X ${REPO_PATH}/version.GitSHA=${GIT_SHA}" -o bin/etcd ${REPO_PATH}
+  GOPATH=$ETCD_GOPATH CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags "-s" -o bin/etcdctl ${REPO_PATH}/etcdctl
 popd
 
 mv $BIN_DIR/../src/github.com/coreos/etcd/bin/etcd $BIN_DIR/etcd
