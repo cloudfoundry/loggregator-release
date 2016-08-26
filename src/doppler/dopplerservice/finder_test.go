@@ -233,11 +233,12 @@ var _ = Describe("Finder", func() {
 
 		Context("with data in the meta node", func() {
 			BeforeEach(func() {
-				protocols = []string{"tls", "udp"}
+				protocols = []string{"tls", "udp", "ws"}
 				metaNode, legacyNode = etcdNodes(map[string][]string{
 					"z1/doppler_z1/0": []string{"udp://1.2.3.4:567"},
 					"z1/doppler_z1/1": []string{"udp://9.8.7.6:543", "tls://9.8.7.6:555"},
 					"z1/doppler_z1/2": []string{},
+					"z2/doppler_z2/0": []string{"ws://2.3.4.5:789"},
 				}, nil)
 			})
 
@@ -245,6 +246,7 @@ var _ = Describe("Finder", func() {
 				event := finder.Next()
 				Expect(event.UDPDopplers).To(Equal([]string{"1.2.3.4:567"}))
 				Expect(event.TLSDopplers).To(Equal([]string{"9.8.7.6:555"}))
+				Expect(event.WSDopplers).To(Equal([]string{"2.3.4.5:789"}))
 			})
 		})
 
@@ -410,6 +412,62 @@ var _ = Describe("Finder", func() {
 			Eventually(mockStoreAdapter.ListRecursivelyInput.key).Should(Receive(Equal(dopplerservice.META_ROOT)))
 		})
 
+		Describe("Websocket URLs", func() {
+			BeforeEach(func() {
+				protocols = []string{"ws"}
+			})
+
+			Context("when the node is created", func() {
+				It("returns websocket URLs in finder event", func() {
+					node := makeMetaNode("z1/doppler_z1/0", []string{"ws://1.2.3.4:567"})
+					metaEvents <- storeadapter.WatchEvent{
+						Type: storeadapter.CreateEvent,
+						Node: &node,
+					}
+
+					event := finder.Next()
+					Expect(event.WSDopplers).To(Equal([]string{"1.2.3.4:567"}))
+				})
+			})
+
+			Context("when the node value is updated", func() {
+				It("returns the updated URL", func() {
+					node := makeMetaNode("z1/doppler_z1/0", []string{"ws://1.2.3.4:567"})
+					updatedNode := makeMetaNode("z1/doppler_z1/0", []string{"ws://1.2.3.7:678"})
+					metaEvents <- storeadapter.WatchEvent{
+						Type:     storeadapter.UpdateEvent,
+						Node:     &updatedNode,
+						PrevNode: &node,
+					}
+
+					event := finder.Next()
+					Expect(event.WSDopplers).To(Equal([]string{"1.2.3.7:678"}))
+				})
+			})
+
+			Context("when the node is removed", func() {
+				It("removes the entry", func() {
+					node := makeMetaNode("z1/doppler_z1/0", []string{"ws://1.2.3.4:567"})
+
+					metaEvents <- storeadapter.WatchEvent{
+						Type: storeadapter.CreateEvent,
+						Node: &node,
+					}
+
+					event := finder.Next()
+					Expect(event.WSDopplers).ToNot(BeEmpty())
+
+					metaEvents <- storeadapter.WatchEvent{
+						Type:     storeadapter.DeleteEvent,
+						PrevNode: &node,
+					}
+
+					event = finder.Next()
+					Expect(event.WSDopplers).To(BeEmpty())
+				})
+			})
+		})
+
 		Context("meta endpoints", func() {
 			BeforeEach(func() {
 				protocols = []string{"tls"}
@@ -429,6 +487,7 @@ var _ = Describe("Finder", func() {
 					Expect(event.TLSDopplers).To(Equal([]string{"1.2.3.4:567"}))
 					Expect(event.UDPDopplers).To(BeEmpty())
 					Expect(event.TCPDopplers).To(BeEmpty())
+					Expect(event.WSDopplers).To(BeEmpty())
 				})
 			})
 
@@ -460,6 +519,7 @@ var _ = Describe("Finder", func() {
 					Expect(event.TLSDopplers).To(Equal([]string{"1.2.3.4:555"}))
 					Expect(event.UDPDopplers).To(BeEmpty())
 					Expect(event.TCPDopplers).To(BeEmpty())
+					Expect(event.WSDopplers).To(BeEmpty())
 				})
 			})
 

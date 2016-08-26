@@ -18,6 +18,7 @@ var supportedProtocols = []string{
 	"udp",
 	"tcp",
 	"tls",
+	"ws",
 }
 
 //go:generate hel --type StoreAdapter --output mock_store_adapter_test.go
@@ -60,6 +61,7 @@ type Event struct {
 	UDPDopplers []string
 	TLSDopplers []string
 	TCPDopplers []string
+	WSDopplers  []string
 }
 
 func (e Event) empty() bool {
@@ -263,7 +265,6 @@ func (f *Finder) sendEvent() {
 	if event.empty() {
 		event = f.eventWithPrefix("")
 	}
-
 	f.events <- event
 }
 
@@ -282,6 +283,8 @@ func (f *Finder) eventWithPrefix(dopplerPrefix string) Event {
 			event.TCPDopplers = append(event.TCPDopplers, strings.TrimPrefix(addr, "tcp://"))
 		case strings.HasPrefix(addr, "tls"):
 			event.TLSDopplers = append(event.TLSDopplers, strings.TrimPrefix(addr, "tls://"))
+		case strings.HasPrefix(addr, "ws"):
+			event.WSDopplers = append(event.WSDopplers, strings.TrimPrefix(addr, "ws://"))
 		default:
 			f.logger.Errorf("Unexpected address for doppler %s (invalid protocol): %s", doppler, addr)
 		}
