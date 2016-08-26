@@ -2,7 +2,7 @@
 name: boshhmforwarder
 
 dependencies:
-    - golang1.6
+    - golang1.7
 
 files:
 - loggregator/src/boshhmforwarder/*.go # gosub

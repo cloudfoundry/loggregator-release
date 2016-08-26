@@ -1,5 +1,5 @@
 $pkg_name="metron"
-$env:GOROOT="C:\var\vcap\packages\golang1.6-windows\go"
+$env:GOROOT="C:\var\vcap\packages\golang1.7-windows\go"
 $env:GOPATH="${PWD}\loggregator"
 $env:PATH="${env:GOROOT}\bin;${env:PATH}"
 

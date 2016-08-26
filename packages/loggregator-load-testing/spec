@@ -1,7 +1,7 @@
 ---
 name: loggregator-load-testing
 dependencies:
-- golang1.6
+- golang1.7
 files:
 - cli/cf-cli*
 - loggregator/src/tools/logemitter/build/*

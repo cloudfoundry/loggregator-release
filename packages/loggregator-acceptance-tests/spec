@@ -1,6 +1,6 @@
 ---
 name: loggregator-acceptance-tests
 dependencies:
-  - golang1.6
+  - golang1.7
 files:
 - loggregator/**/*
