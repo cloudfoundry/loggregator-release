@@ -248,9 +248,3 @@ func storeAdapterProvider(conf *config.Config) (storeadapter.StoreAdapter, error
 
 	return etcdAdapter, nil
 }
-
-type metronHealthMonitor struct{}
-
-func (*metronHealthMonitor) Ok() bool {
-	return true
-}
