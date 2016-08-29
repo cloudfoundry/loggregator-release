@@ -33,6 +33,7 @@ If you have feedback on Loggregator features that you use, or want, feel free to
 * [Logging message loss in Loggregator](#logging-message-loss-in-loggregator)
 * [Loggregator does not guarantee logs delivered in order](#loggregator-does-not-guarantee-logs-delivered-in-order)
 * [Workaround for Java multiline messages](#multi-line-java-message-workaround)
+* [Log Message Size Constraints](#log-message-size-constraints)
 * [FAQ](https://github.com/cloudfoundry/loggregator/wiki/FAQ)
 * Additional readmes
   * [Bosh HM metrics Forwarder](src/boshhmforwarder/README.md)
@@ -632,4 +633,4 @@ to replace the token with a regular newline again so it displays "properly" in K
 
 ### Log Message Size Constraints
 
-Logs are emitted via UDP messages from Diego/DEA to Metron. Therefore, the maximum log message size from a DEA is ~60KiB (assuming overhead for the transporting envelope). Diego chunks longer log messages into multiple envelopes to mitigate this constraint.
+Application logs are emitted via UDP messages from Diego/DEA to Metron. The maximum log message size from a DEA is ~60KiB (assuming overhead for the transporting envelope). Diego breaks up log messages greater than ~60KiB into multiple envelopes to mitigate this constraint.
