@@ -30,7 +30,7 @@ type Config struct {
 	SystemDomain           string
 	SkipCertVerify         bool
 	UaaHost                string
-	UaaClientId            string
+	UaaClient              string
 	UaaClientSecret        string
 	MonitorIntervalSeconds uint
 	SecurityEventLog       string

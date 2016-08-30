@@ -15,6 +15,6 @@
 
     "MetronPort": 49625,
     "UaaHost": "http://127.0.0.1:49628",
-    "UaaClientId": "bob",
+    "UaaClient": "bob",
     "UaaClientSecret": "yourUncle"
 }

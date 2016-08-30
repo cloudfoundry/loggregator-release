@@ -12,7 +12,7 @@
     "SystemDomain": "vcap.me",
     "MetronPort": 37474,
     "UaaHost": "http://127.0.0.1:5678",
-    "UaaClientId": "bob",
+    "UaaClient": "bob",
     "UaaClientSecret": "yourUncle",
     "MonitorIntervalSeconds": 1
 }

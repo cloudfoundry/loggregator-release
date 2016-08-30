@@ -104,7 +104,7 @@ func main() {
 
 	logAuthorizer := authorization.NewLogAccessAuthorizer(*disableAccessControl, config.ApiHost)
 
-	uaaClient := uaa_client.NewUaaClient(config.UaaHost, config.UaaClientId, config.UaaClientSecret)
+	uaaClient := uaa_client.NewUaaClient(config.UaaHost, config.UaaClient, config.UaaClientSecret)
 	adminAuthorizer := authorization.NewAdminAccessAuthorizer(*disableAccessControl, &uaaClient)
 
 	// TODO: The preferredProtocol of udp tells the finder to pull out the Doppler URLs from the legacy ETCD endpoint.

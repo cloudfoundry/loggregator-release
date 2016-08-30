@@ -28,10 +28,10 @@ properties:
   traffic_controller.security_event_logging.enabled:
     description: "Enable logging of all requests made to the Traffic Controller in CEF format"
     default: false
-  doppler.uaa_client_id:
+  loggregator.uaa.client:
     description: "Doppler's client id to connect to UAA"
     default: "doppler"
-  uaa.clients.doppler.secret:
+  loggregator.uaa.client_secret:
     description: "Doppler's client secret to connect to UAA"
   uaa.url:
     description: "URL of UAA"

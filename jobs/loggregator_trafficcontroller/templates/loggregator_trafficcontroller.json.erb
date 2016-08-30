@@ -36,8 +36,8 @@
     <% scheme = p("login.protocol")
         domain = p("system_domain") %>
     "UaaHost": "<%= p("uaa.url", "#{scheme}://uaa.#{domain}") %>",
-    "UaaClientId": "<%= p("doppler.uaa_client_id") %>",
-    "UaaClientSecret": "<%= p("uaa.clients.doppler.secret") %>"
+    "UaaClient": "<%= p("loggregator.uaa.client") %>",
+    "UaaClientSecret": "<%= p("loggregator.uaa.client_secret") %>"
     <% if_p("syslog_daemon_config") do |_| %>
     , "Syslog": "vcap.trafficcontroller"
     <% end %>

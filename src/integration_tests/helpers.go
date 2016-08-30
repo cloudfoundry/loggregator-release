@@ -289,7 +289,7 @@ func SetupTrafficcontroller(etcdClientURL string, dopplerPort, metronPort int) (
 
 		ApiHost:         "http://127.0.0.1:65530",
 		UaaHost:         "http://127.0.0.1:65531",
-		UaaClientId:     "bob",
+		UaaClient:       "bob",
 		UaaClientSecret: "yourUncle",
 	}
 
