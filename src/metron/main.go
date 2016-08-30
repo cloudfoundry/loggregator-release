@@ -3,6 +3,7 @@ package main
 import (
 	"doppler/dopplerservice"
 	"doppler/listeners"
+	"doppler/sinks/retrystrategy"
 	"flag"
 	"fmt"
 	"net"
@@ -11,6 +12,7 @@ import (
 	"runtime"
 	"time"
 
+	"metron/backoff"
 	"metron/clientpool"
 	"metron/clientreader"
 	"metron/networkreader"
@@ -41,8 +43,9 @@ import (
 const (
 	// This is 6061 to not conflict with any other jobs that might have pprof
 	// running on 6060
-	pprofPort = "6061"
-	origin    = "MetronAgent"
+	pprofPort         = "6061"
+	origin            = "MetronAgent"
+	connectionRetries = 15
 )
 
 var (
@@ -108,25 +111,18 @@ func main() {
 	}
 }
 
-func adapter(conf *config.Config, logger *gosteno.Logger) (storeadapter.StoreAdapter, error) {
+func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBatcher, logger *gosteno.Logger) (*eventmarshaller.EventMarshaller, error) {
 	adapter, err := storeAdapterProvider(conf)
 	if err != nil {
 		return nil, err
 	}
-	err = adapter.Connect()
-	if err != nil {
-		logger.Warnd(map[string]interface{}{
-			"error": err.Error(),
-		}, "Failed to connect to etcd")
-	}
-	return adapter, nil
-}
 
-func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBatcher, logger *gosteno.Logger) (*eventmarshaller.EventMarshaller, error) {
-	adapter, err := adapter(conf, logger)
+	backoffStrategy := retrystrategy.Exponential()
+	err = backoff.Connect(adapter, backoffStrategy, logger, connectionRetries)
 	if err != nil {
 		return nil, err
 	}
+
 	var protocols []string
 	clientPool := make(map[string]clientreader.ClientPool)
 	writers := make(map[string]eventmarshaller.BatchChainByteWriter)

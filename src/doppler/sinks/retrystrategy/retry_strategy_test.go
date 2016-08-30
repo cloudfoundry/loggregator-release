@@ -34,8 +34,8 @@ var _ = Describe("RetryStrategy", func() {
 
 		It("backs off exponentially with different random seeds", func() {
 			rand.Seed(1)
-			strategy := retrystrategy.NewExponentialRetryStrategy()
-			otherStrategy := retrystrategy.NewExponentialRetryStrategy()
+			strategy := retrystrategy.Exponential()
+			otherStrategy := retrystrategy.Exponential()
 
 			Expect(strategy(0).String()).To(Equal("1ms"))
 			Expect(otherStrategy(0).String()).To(Equal("1ms"))
