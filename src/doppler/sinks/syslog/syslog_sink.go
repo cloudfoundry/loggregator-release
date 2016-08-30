@@ -51,7 +51,7 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 	s.logger.Infof("Syslog Sink %s: Running.", syslogIdentifier)
 	defer s.logger.Errorf("Syslog Sink %s: Stopped.", syslogIdentifier)
 
-	backoffStrategy := retrystrategy.NewExponentialRetryStrategy()
+	backoffStrategy := retrystrategy.Exponential()
 
 	context := truncatingbuffer.NewLogAllowedContext(s.dropsondeOrigin, syslogIdentifier)
 	buffer := sinks.RunTruncatingBuffer(inputChan, s.messageDrainBufferSize, context, s.logger, s.disconnectChannel)
