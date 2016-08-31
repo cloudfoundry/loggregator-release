@@ -25,6 +25,9 @@ properties:
   loggregator.outgoing_dropsonde_port:
     description: "Port for outgoing dropsonde messages"
     default: 8081
+  loggregator.doppler_port:
+    description: "Port for outgoing doppler messages"
+    default: 8081
   traffic_controller.security_event_logging.enabled:
     description: "Enable logging of all requests made to the Traffic Controller in CEF format"
     default: false
@@ -77,9 +80,6 @@ properties:
   traffic_controller.outgoing_port:
     description: "DEPRECATED"
     default: 8080
-  loggregator.doppler_port:
-    description: "DEPRECATED"
-    default: 8081
   loggregator.uaa_client_id:
     description: "DEPRECATED in favor of loggregator.uaa.client."
     default: ""
