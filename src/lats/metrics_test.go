@@ -60,9 +60,7 @@ var _ = Describe("Sending metrics through loggregator", func() {
 
 			receivedCounterEvent = receivedEnvelope.GetCounterEvent()
 			Expect(receivedCounterEvent.GetTotal()).To(Equal(uint64(10)))
-
 		})
-
 	})
 
 	Context("When a value metric is emitted to metron", func() {
@@ -85,6 +83,9 @@ var _ = Describe("Sending metrics through loggregator", func() {
 
 			receivedEnvelope := helpers.FindMatchingEnvelope(msgChan)
 			Expect(receivedEnvelope).NotTo(BeNil())
+
+			receivedContainerMetric := receivedEnvelope.GetContainerMetric()
+			Expect(receivedContainerMetric).To(Equal(containerMetric))
 		})
 	})
 })
