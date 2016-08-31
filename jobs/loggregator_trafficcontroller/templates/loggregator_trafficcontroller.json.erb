@@ -14,12 +14,12 @@
     # Handle renamed properties
     uaaClient = p("loggregator.uaa.client")
     oldUaaClient = p("loggregator.uaa_client_id")
-    unless oldUaaClient.nil?
+    unless oldUaaClient.empty?
         uaaClient = oldUaaClient
     end
 
     uaaSecret = p("loggregator.uaa.client_secret")
-    if uaaSecret.nil?
+    if uaaSecret.empty?
         uaaSecret = p("uaa.clients.doppler.secret")
     end
 %>
