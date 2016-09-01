@@ -6,6 +6,7 @@ import (
 )
 
 type TestConfig struct {
+	AppDomain       string
 	DopplerEndpoint string
 	SkipSSLVerify   bool
 

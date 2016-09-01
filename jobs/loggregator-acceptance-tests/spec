@@ -6,7 +6,7 @@ description: "The loggregator acceptance tests."
 packages:
   - golang1.7
   - loggregator-acceptance-tests
-
+  - cli
 templates:
   run.erb: bin/run
   config.json.erb: bin/config.json

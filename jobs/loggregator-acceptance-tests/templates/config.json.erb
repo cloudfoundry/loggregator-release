@@ -2,6 +2,7 @@
   require 'json'
 
   config = {
+    "AppDomain" => properties.system_domain,
     "DopplerEndpoint" => "wss://doppler." + properties.system_domain + ":4443",
     "SkipSSLVerify" => properties.ssl.skip_cert_verify,
     "DropsondePort" => properties.metron_agent.dropsonde_incoming_port,
