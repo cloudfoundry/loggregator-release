@@ -1,5 +1,9 @@
 #!/bin/bash -l
 
+<%
+raise "traffic_controller.disable_access_control must be true" unless p("traffic_controller.disable_access_control")
+%>
+
 set -e
 
 CLI_PATH=/var/vcap/packages/cli/bin

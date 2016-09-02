@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -ex
+
+script_dir=$(dirname $0)
+loggregator_dir=$(dirname $script_dir)
+director_uuid=$(bosh status --uuid)
+
+spiff merge $loggregator_dir/templates/loggregator-infrastructure-bosh-lite.yml \
+  $loggregator_dir/templates/bosh-lite-cloud-config.yml > \
+  /tmp/lite-networks.yml
+
+spiff merge $loggregator_dir/templates/loggregator.yml \
+  <(echo "director_uuid: ${director_uuid}") \
+  /tmp/lite-networks.yml > \
+  /tmp/lite-loggregator.yml
+echo "Bosh lite manifest created at /tmp/lite-loggregator.yml"
