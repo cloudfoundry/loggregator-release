@@ -5,14 +5,10 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"encoding/json"
 	"fmt"
 	. "lats/config"
 	"net"
-	"net/http"
-	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/cloudfoundry/noaa/consumer"
@@ -28,15 +24,22 @@ func Initialize(testConfig *TestConfig) {
 }
 
 func ConnectToFirehose() (<-chan *events.Envelope, <-chan error) {
-	authToken := GetAuthToken()
-
 	connection, printer := SetUpConsumer()
 	randomString := strconv.FormatInt(time.Now().UnixNano(), 10)
 	subscriptionId := "firehose-" + randomString[len(randomString)-5:]
 
-	msgChan, errorChan := connection.Firehose(subscriptionId, authToken)
+	msgChan, errorChan := connection.Firehose(subscriptionId, "")
 
-	Consistently(errorChan).ShouldNot(Receive())
+	readErrs := func() error {
+		select {
+		case err := <-errorChan:
+			return err
+		default:
+			return nil
+		}
+	}
+
+	Consistently(readErrs).Should(BeNil())
 	WaitForWebsocketConnection(printer)
 
 	return msgChan, errorChan
@@ -49,16 +52,6 @@ func SetUpConsumer() (*consumer.Consumer, *TestDebugPrinter) {
 	connection := consumer.New(config.DopplerEndpoint, &tlsConfig, nil)
 	connection.SetDebugPrinter(printer)
 	return connection, printer
-}
-
-func GetAuthToken() string {
-	if config.LoginRequired {
-		token, err := adminLogin()
-		Expect(err).NotTo(HaveOccurred())
-		return token
-	} else {
-		return ""
-	}
 }
 
 func WaitForWebsocketConnection(printer *TestDebugPrinter) {
@@ -74,42 +67,6 @@ func EmitToMetron(envelope *events.Envelope) {
 
 	_, err = metronConn.Write(b)
 	Expect(err).NotTo(HaveOccurred())
-}
-
-func adminLogin() (string, error) {
-	data := url.Values{
-		"username":   {config.AdminUser},
-		"password":   {config.AdminPassword},
-		"client_id":  {"cf"},
-		"grant_type": {"password"},
-		"scope":      {},
-	}
-
-	request, err := http.NewRequest("POST", fmt.Sprintf("%s/oauth/token", config.UaaURL), strings.NewReader(data.Encode()))
-	if err != nil {
-		return "", err
-	}
-	request.SetBasicAuth("cf", "")
-	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	tlsConfig := &tls.Config{InsecureSkipVerify: config.SkipSSLVerify}
-	tr := &http.Transport{TLSClientConfig: tlsConfig}
-	httpClient := &http.Client{Transport: tr}
-
-	resp, err := httpClient.Do(request)
-	if err != nil {
-		return "", err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("Received a status code %v", resp.Status)
-	}
-
-	jsonData := make(map[string]interface{})
-	decoder := json.NewDecoder(resp.Body)
-	err = decoder.Decode(&jsonData)
-
-	return fmt.Sprintf("%s %s", jsonData["token_type"], jsonData["access_token"]), err
 }
 
 func FindMatchingEnvelope(msgChan <-chan *events.Envelope) *events.Envelope {

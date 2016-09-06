@@ -43,6 +43,6 @@ var _ = Describe("Logs", func() {
 			return envelopes
 		}
 
-		Eventually(getRecentLogs).Should(ConsistOf(env))
+		Eventually(getRecentLogs).Should(ContainElement(env.LogMessage))
 	})
 })

@@ -5,7 +5,6 @@ import (
 	"lats/helpers"
 	"net/http"
 	"net/http/httptest"
-	"time"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/instrumented_handler"
@@ -35,7 +34,6 @@ var _ = Describe("Sending Http events through loggregator", func() {
 			emitter := emitter.NewEventEmitter(udpEmitter, helpers.ORIGIN_NAME)
 			done := make(chan struct{})
 			handler := instrumented_handler.InstrumentedHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				time.Sleep(100 * time.Millisecond)
 				w.WriteHeader(http.StatusTeapot)
 				close(done)
 			}), emitter)
@@ -53,7 +51,8 @@ var _ = Describe("Sending Http events through loggregator", func() {
 			event := receivedEnvelope.GetHttpStartStop()
 			Expect(event.GetPeerType().String()).To(Equal(events.PeerType_Server.Enum().String()))
 			Expect(event.GetMethod().String()).To(Equal(events.Method_HEAD.Enum().String()))
-			Expect(event.GetStopTimestamp() - event.GetStartTimestamp()).To(BeNumerically("~", 100*time.Millisecond, time.Millisecond/2))
+			Expect(event.GetStartTimestamp()).ToNot(BeZero())
+			Expect(event.GetStopTimestamp()).ToNot(BeZero())
 			Expect(event.GetUserAgent()).To(Equal("Spider-Man"))
 			Expect(event.GetStatusCode()).To(BeEquivalentTo(http.StatusTeapot))
 		})
