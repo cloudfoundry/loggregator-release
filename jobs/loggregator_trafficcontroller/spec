@@ -25,9 +25,6 @@ properties:
   loggregator.outgoing_dropsonde_port:
     description: "Port for outgoing dropsonde messages"
     default: 8081
-  loggregator.doppler_port:
-    description: "Port for outgoing doppler messages"
-    default: 8081
   traffic_controller.security_event_logging.enabled:
     description: "Enable logging of all requests made to the Traffic Controller in CEF format"
     default: false
@@ -42,6 +39,10 @@ properties:
   login.protocol:
     description: "Protocol to use to connect to UAA (used in case uaa.url is not set)"
     default: https
+
+  doppler.outgoing_port:
+    description: "Port for outgoing doppler messages"
+    default: 8081
 
   metron_endpoint.host:
     description: "The host used to emit messages to the Metron agent"

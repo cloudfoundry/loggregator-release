@@ -121,8 +121,3 @@ properties:
   metron_agent.preferred_protocol:
     description: "DEPRECATED - replaced with metron_agent.protocols"
     default: "udp"
-
-  metron_agent.dropsonde_incoming_port:
-    description: "DEPRECATED - replaced by metron_agent.listening_port"
-    default: 3457
-

@@ -22,17 +22,6 @@
     if instance_zone.nil?
       instance_zone = p("metron_agent.zone")
     end
-
-    incoming_udp_port = nil
-    if_p("metron_agent.listening_port") do |port|
-      incoming_udp_port = port
-    end
-
-    # We're not expecting `metron_agent.dropsonde_incoming_port` to have been set
-    # but prefer this deprecated value if set
-    if_p("metron_agent.dropsonde_incoming_port") do |port|
-      incoming_udp_port = port
-    end
 %>
 
 {
@@ -54,7 +43,7 @@
 
   "SharedSecret": "<%= p("metron_endpoint.shared_secret")  %>",
 
-  "IncomingUDPPort": <%= incoming_udp_port %>,
+  "IncomingUDPPort": <%= p("metron_agent.listening_port") %>,
 
   "Protocols": <%= protocols %>,
 
