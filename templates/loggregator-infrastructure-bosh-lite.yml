@@ -169,46 +169,28 @@ properties:
 networks: (( merge ))
 
 jobs:
-- name: loggregator_trafficcontroller_z1
+- name: loggregator_trafficcontroller
   instances: 1
+  azs: [cf-z1]
   networks:
     - name: cf1
 
-- name: loggregator_trafficcontroller_z2
-  instances: 0
-  networks:
-    - name: cf2
-
-- name: doppler_z1
+- name: doppler
   instances: 1
+  azs: [cf-z1]
   networks:
     - name: cf1
 
-- name: doppler_z2
-  instances: 0
-  networks:
-    - name: cf2
-
-- name: etcd_z1
+- name: etcd
   instances: 1
+  azs: [cf-z1]
   networks:
     - name: cf1
       static_ips: (( static_ips(10, 11) ))
 
-- name: etcd_z2
-  instances: 0
-  networks:
-    - name: cf2
-      static_ips: (( static_ips(9) ))
-
-- name: consul_z1
+- name: consul
   instances: 1
+  azs: [cf-z1]
   networks:
     - name: cf1
       static_ips: (( static_ips(13, 14, 15) ))
-
-- name: consul_z2
-  instances: 0
-  networks:
-    - name: cf2
-      static_ips: (( static_ips(16, 17, 18) ))

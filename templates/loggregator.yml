@@ -21,11 +21,11 @@ jobs:
   networks:
     - name: cf1
 
-- name: consul_z1
+- name: consul
   templates: (( merge || meta.consul_templates ))
   instances: 2
   persistent_disk: 1024
-  resource_pool: small_z1
+  resource_pool: small
   default_networks:
   - name: cf1
   networks: (( merge || default_networks ))
@@ -39,29 +39,11 @@ jobs:
     metron_agent:
       zone: z1
 
-- name: consul_z2
-  templates: (( merge || meta.consul_templates ))
-  instances: 1
-  persistent_disk: 1024
-  resource_pool: small_z2
-  default_networks:
-  - name: cf2
-  networks: (( merge || default_networks ))
-  update:
-    serial: true
-    max_in_flight: 1
-  properties:
-    consul:
-      agent:
-        mode: server
-    metron_agent:
-      zone: z2
-
-- name: etcd_z1
+- name: etcd
   templates: (( merge || meta.etcd_templates ))
   instances: 2
   persistent_disk: 10024
-  resource_pool: medium_z1
+  resource_pool: medium
   default_networks:
     - name: cf1
   networks: (( merge || default_networks ))
@@ -77,30 +59,10 @@ jobs:
     serial: true
     max_in_flight: 1
 
-- name: etcd_z2
-  templates: (( merge || meta.etcd_templates ))
-  instances: 1
-  persistent_disk: 10024
-  resource_pool: medium_z2
-  default_networks:
-    - name: cf2
-  networks: (( merge || default_networks ))
-  properties:
-    metron_agent:
-      zone: z2
-    consul:
-      agent:
-        services:
-          etcd:
-            name: cf-etcd
-  update:
-    serial: true
-    max_in_flight: 1
-
-- name: doppler_z1
+- name: doppler
   templates: (( merge || meta.loggregator_templates ))
   instances: 1
-  resource_pool: medium_z1
+  resource_pool: medium
   default_networks:
     - name: cf1
   networks: (( merge || default_networks ))
@@ -111,24 +73,10 @@ jobs:
       zone: z1
   update: (( merge || empty_hash ))
 
-- name: doppler_z2
-  templates: (( merge || meta.loggregator_templates ))
-  instances: 1
-  resource_pool: medium_z2
-  default_networks:
-    - name: cf2
-  networks: (( merge || default_networks ))
-  properties:
-    doppler:
-      zone: z2
-    metron_agent:
-      zone: z2
-  update: (( merge || empty_hash ))
-
-- name: loggregator_trafficcontroller_z1
+- name: loggregator_trafficcontroller
   templates: (( merge || meta.loggregator_trafficcontroller_templates ))
   instances: 1
-  resource_pool: small_z1
+  resource_pool: small
   default_networks:
     - name: cf1
   networks: (( merge || default_networks ))
@@ -141,24 +89,6 @@ jobs:
           loggregator_trafficcontroller: {}
     metron_agent:
       zone: z1
-  update: (( merge || empty_hash ))
-
-- name: loggregator_trafficcontroller_z2
-  templates: (( merge || meta.loggregator_trafficcontroller_templates ))
-  instances: 1
-  resource_pool: small_z2
-  default_networks:
-    - name: cf2
-  networks: (( merge || default_networks ))
-  properties:
-    traffic_controller:
-      zone: z2
-    consul:
-      agent:
-        services:
-          loggregator_trafficcontroller: {}
-    metron_agent:
-      zone: z2
   update: (( merge || empty_hash ))
 
 properties:
@@ -181,7 +111,7 @@ properties:
     server_key: (( merge ))
 
   etcd:
-    machines: (( merge || jobs.etcd_z1.networks.cf1.static_ips jobs.etcd_z2.networks.cf2.static_ips ))
+    machines: (( merge || jobs.etcd.networks.cf1.static_ips ))
     require_ssl: (( merge || false ))
     peer_require_ssl: (( .properties.etcd.require_ssl ))
     advertise_urls_dns_suffix: cf-etcd.service.cf.internal
@@ -189,10 +119,8 @@ properties:
     client_cert: (( merge || "" ))
     client_key: (( merge || "" ))
     cluster:
-      - instances: (( jobs.etcd_z1.instances ))
-        name: etcd_z1
-      - instances: (( jobs.etcd_z2.instances ))
-        name: etcd_z2
+      - instances: (( jobs.etcd.instances ))
+        name: etcd
     peer_ca_cert: (( merge || "" ))
     peer_cert: (( merge || "" ))
     peer_key: (( merge || "" ))
@@ -298,7 +226,7 @@ meta:
   etcd_release_name: (( releases.etcd.name || "etcd" ))
   loggregator_release_name: (( releases.loggregator.name || "loggregator" ))
 
-  consul_servers: (( merge || jobs.consul_z1.networks.cf1.static_ips jobs.consul_z2.networks.cf2.static_ips ))
+  consul_servers: (( merge || jobs.consul.networks.cf1.static_ips ))
 
   consul_templates:
   - name: consul_agent

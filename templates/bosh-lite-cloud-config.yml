@@ -1,4 +1,9 @@
 ---
+azs:
+- name: cf-z1
+  cloud_properties:
+    availability_zone: us-east-1c
+
 compilation:
   workers: 6
   network: cf1
@@ -7,70 +12,14 @@ compilation:
     name: random
 
 resource_pools:
-- name: small_z1
+- name: small
   stemcell:
     os: ubuntu-trusty
     version: latest
   cloud_properties:
     name: random
 
-- name: small_z2
-  stemcell:
-    os: ubuntu-trusty
-    version: latest
-  cloud_properties:
-    name: random
-
-- name: medium_z1
-  stemcell:
-    os: ubuntu-trusty
-    version: latest
-  cloud_properties:
-    name: random
-
-- name: medium_z2
-  stemcell:
-    os: ubuntu-trusty
-    version: latest
-  cloud_properties:
-    name: random
-
-- name: large_z1
-  stemcell:
-    os: ubuntu-trusty
-    version: latest
-  cloud_properties:
-    name: random
-
-- name: large_z2
-  stemcell:
-    os: ubuntu-trusty
-    version: latest
-  cloud_properties:
-    name: random
-
-- name: runner_z1
-  stemcell:
-    os: ubuntu-trusty
-    version: latest
-  cloud_properties:
-    name: random
-
-- name: runner_z2
-  stemcell:
-    os: ubuntu-trusty
-    version: latest
-  cloud_properties:
-    name: random
-
-- name: router_z1
-  stemcell:
-    os: ubuntu-trusty
-    version: latest
-  cloud_properties:
-    name: random
-
-- name: router_z2
+- name: medium
   stemcell:
     os: ubuntu-trusty
     version: latest
