@@ -12,6 +12,12 @@ packages:
 - loggregator_common
 - loggregator_trafficcontroller
 
+provides:
+- name: trafficcontroller
+  type: trafficcontroller
+  properties:
+  - loggregator.doppler_port
+
 properties:
   traffic_controller.debug:
     description: "boolean value to turn on verbose logging for loggregator system (dea agent & loggregator server)"

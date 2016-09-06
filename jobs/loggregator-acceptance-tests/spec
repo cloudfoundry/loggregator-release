@@ -10,11 +10,13 @@ templates:
   run.erb: bin/run
   config.json.erb: bin/config.json
 
+consumes:
+- name: trafficcontroller
+  type: trafficcontroller
+
 properties:
   etcd.machines:
     description: "IPs pointing to the ETCD cluster"
-  system_domain:
-    description: "for computing the Traffic Controller URL"
   ssl.skip_cert_verify:
     description: ""
   metron_agent.dropsonde_incoming_port:

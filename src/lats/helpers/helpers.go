@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudfoundry/noaa"
+	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
@@ -27,16 +27,14 @@ func Initialize(testConfig *TestConfig) {
 	config = testConfig
 }
 
-func ConnectToFirehose() (chan *events.Envelope, chan error) {
-	msgChan := make(chan *events.Envelope)
-	errorChan := make(chan error)
+func ConnectToFirehose() (<-chan *events.Envelope, <-chan error) {
 	authToken := GetAuthToken()
 
 	connection, printer := SetUpConsumer()
 	randomString := strconv.FormatInt(time.Now().UnixNano(), 10)
 	subscriptionId := "firehose-" + randomString[len(randomString)-5:]
 
-	go connection.Firehose(subscriptionId, authToken, msgChan, errorChan)
+	msgChan, errorChan := connection.Firehose(subscriptionId, authToken)
 
 	Consistently(errorChan).ShouldNot(Receive())
 	WaitForWebsocketConnection(printer)
@@ -44,11 +42,11 @@ func ConnectToFirehose() (chan *events.Envelope, chan error) {
 	return msgChan, errorChan
 }
 
-func SetUpConsumer() (*noaa.Consumer, *TestDebugPrinter) {
+func SetUpConsumer() (*consumer.Consumer, *TestDebugPrinter) {
 	tlsConfig := tls.Config{InsecureSkipVerify: config.SkipSSLVerify}
 	printer := &TestDebugPrinter{}
 
-	connection := noaa.NewConsumer(config.DopplerEndpoint, &tlsConfig, nil)
+	connection := consumer.New(config.DopplerEndpoint, &tlsConfig, nil)
 	connection.SetDebugPrinter(printer)
 	return connection, printer
 }
@@ -114,7 +112,7 @@ func adminLogin() (string, error) {
 	return fmt.Sprintf("%s %s", jsonData["token_type"], jsonData["access_token"]), err
 }
 
-func FindMatchingEnvelope(msgChan chan *events.Envelope) *events.Envelope {
+func FindMatchingEnvelope(msgChan <-chan *events.Envelope) *events.Envelope {
 	timeout := time.After(10 * time.Second)
 	for {
 		select {
