@@ -6,10 +6,8 @@ azs:
 
 compilation:
   workers: 6
-  network: cf1
+  network: compilation
   reuse_compilation_vms: true
-  cloud_properties:
-    name: random
 
 resource_pools:
 - name: small
@@ -34,6 +32,14 @@ resource_pools:
     name: random
 
 networks:
+- name: compilation
+  subnets:
+  - range: 10.244.11.0/28
+    reserved:
+    - 10.244.11.0
+    - 10.244.11.1
+    static:
+    - 10.244.11.2-10.244.11.15
 - name: loggregator
   subnets:
   - cloud_properties:
