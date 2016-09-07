@@ -19,7 +19,7 @@ jobs:
   resource_pool: small_errand
   lifecycle: errand
   networks:
-    - name: cf1
+    - name: loggregator
 
 - name: consul
   templates: (( merge || meta.consul_templates ))
@@ -27,7 +27,7 @@ jobs:
   persistent_disk: 1024
   resource_pool: small
   default_networks:
-  - name: cf1
+  - name: loggregator
   networks: (( merge || default_networks ))
   update:
     serial: true
@@ -45,7 +45,7 @@ jobs:
   persistent_disk: 10024
   resource_pool: medium
   default_networks:
-    - name: cf1
+    - name: loggregator
   networks: (( merge || default_networks ))
   properties:
     metron_agent:
@@ -64,7 +64,7 @@ jobs:
   instances: 1
   resource_pool: medium
   default_networks:
-    - name: cf1
+    - name: loggregator
   networks: (( merge || default_networks ))
   properties:
     doppler:
@@ -78,7 +78,7 @@ jobs:
   instances: 1
   resource_pool: small
   default_networks:
-    - name: cf1
+    - name: loggregator
   networks: (( merge || default_networks ))
   properties:
     traffic_controller:
@@ -111,7 +111,7 @@ properties:
     server_key: (( merge ))
 
   etcd:
-    machines: (( merge || jobs.etcd.networks.cf1.static_ips ))
+    machines: (( merge || jobs.etcd.networks.loggregator.static_ips ))
     require_ssl: (( merge || false ))
     peer_require_ssl: (( .properties.etcd.require_ssl ))
     advertise_urls_dns_suffix: cf-etcd.service.cf.internal
@@ -226,7 +226,7 @@ meta:
   etcd_release_name: (( releases.etcd.name || "etcd" ))
   loggregator_release_name: (( releases.loggregator.name || "loggregator" ))
 
-  consul_servers: (( merge || jobs.consul.networks.cf1.static_ips ))
+  consul_servers: (( merge || jobs.consul.networks.loggregator.static_ips ))
 
   consul_templates:
   - name: consul_agent

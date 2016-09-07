@@ -175,24 +175,24 @@ jobs:
   instances: 1
   azs: [cf-z1]
   networks:
-    - name: cf1
+    - name: loggregator
 
 - name: doppler
   instances: 1
   azs: [cf-z1]
   networks:
-    - name: cf1
+    - name: loggregator
 
 - name: etcd
   instances: 1
   azs: [cf-z1]
   networks:
-    - name: cf1
+    - name: loggregator
       static_ips: (( static_ips(10, 11) ))
 
 - name: consul
   instances: 1
   azs: [cf-z1]
   networks:
-    - name: cf1
+    - name: loggregator
       static_ips: (( static_ips(13, 14, 15) ))

@@ -34,6 +34,16 @@ resource_pools:
     name: random
 
 networks:
+- name: loggregator
+  subnets:
+  - cloud_properties:
+      name: random
+    range: 10.244.10.0/24
+    reserved:
+    - 10.244.10.0
+    - 10.244.10.1
+    static:
+    - 10.244.10.2-10.244.10.250
 - name: cf1
   subnets:
   - cloud_properties:
