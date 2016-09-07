@@ -2,8 +2,8 @@
 
 set -e
 
-modified_packages=$(./bin/sync-package-specs)
-  
+modified_packages=$(./scripts/sync-package-specs)
+
 if [ -n "$modified_packages" ]; then
   echo $'\e[31mthe following package specs are not staged:\e[0m'
   echo
