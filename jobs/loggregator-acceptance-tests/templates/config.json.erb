@@ -1,17 +1,14 @@
 <%
   require 'json'
 
+  tc = link("trafficcontroller")
+
   config = {
-    "AppDomain" => properties.system_domain,
-    "DopplerEndpoint" => "wss://doppler." + properties.system_domain + ":4443",
+    "DopplerEndpoint" => "ws://" + tc.instances.first.address + ":" + tc.p("loggregator.doppler_port").to_s,
     "SkipSSLVerify" => properties.ssl.skip_cert_verify,
     "DropsondePort" => properties.metron_agent.dropsonde_incoming_port,
     "EtcdUrls" => properties.etcd.machines.map {|ip| "http://#{ip}:4001"},
     "SharedSecret" => properties.loggregator_endpoint.shared_secret,
-    "LoginRequired" => properties.loggregator_acceptance_tests.login_required,
-    "UaaURL" => "https://uaa." + properties.system_domain,
-    "AdminUser" => properties.loggregator_acceptance_tests.admin_user,
-    "AdminPassword" => properties.loggregator_acceptance_tests.admin_password,
   }
 %>
 

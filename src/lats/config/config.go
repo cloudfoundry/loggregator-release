@@ -6,7 +6,6 @@ import (
 )
 
 type TestConfig struct {
-	AppDomain       string
 	DopplerEndpoint string
 	SkipSSLVerify   bool
 
@@ -14,11 +13,6 @@ type TestConfig struct {
 
 	EtcdUrls     []string
 	SharedSecret string
-
-	LoginRequired bool
-	UaaURL        string
-	AdminUser     string
-	AdminPassword string
 }
 
 type MetronConfig struct {

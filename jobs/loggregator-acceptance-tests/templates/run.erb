@@ -1,15 +1,16 @@
 #!/bin/bash -l
 
+<%
+raise "traffic_controller.disable_access_control must be true" unless p("traffic_controller.disable_access_control")
+%>
+
 set -e
 
-CLI_PATH=/var/vcap/packages/cli/bin
 export GOROOT=$(readlink -nf /var/vcap/packages/golang1.7)
-export PATH=${GOROOT}/bin:${CLI_PATH}:${PATH}
-
+export PATH=${GOROOT}/bin:${PATH}
 export GOPATH=/var/vcap/packages/loggregator-acceptance-tests
 export PATH=${GOPATH}/bin:${PATH}
 export CONFIG=/var/vcap/jobs/loggregator-acceptance-tests/bin/config.json
-
 export CF_COLOR=false
 
 mkdir -p /var/vcap/sys/log/acceptance_tests

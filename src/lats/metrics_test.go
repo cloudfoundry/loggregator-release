@@ -32,8 +32,8 @@ var (
 
 var _ = Describe("Sending metrics through loggregator", func() {
 	var (
-		msgChan   chan *events.Envelope
-		errorChan chan error
+		msgChan   <-chan *events.Envelope
+		errorChan <-chan error
 	)
 	BeforeEach(func() {
 		msgChan, errorChan = helpers.ConnectToFirehose()

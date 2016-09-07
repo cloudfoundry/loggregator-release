@@ -1,0 +1,269 @@
+name: (( meta.environment ))
+
+director_uuid: (( merge ))
+
+releases:
+- name: (( meta.loggregator_release_name ))
+  version: latest
+- name: (( meta.etcd_release_name ))
+  version: latest
+- name: (( meta.consul_release_name ))
+  version: latest
+
+jobs:
+- name: loggregator-acceptance-tests
+  templates:
+  - name: loggregator-acceptance-tests
+    release: (( meta.loggregator_release_name ))
+  instances: 1
+  resource_pool: small_errand
+  lifecycle: errand
+  networks:
+    - name: cf1
+
+- name: consul
+  templates: (( merge || meta.consul_templates ))
+  instances: 2
+  persistent_disk: 1024
+  resource_pool: small
+  default_networks:
+  - name: cf1
+  networks: (( merge || default_networks ))
+  update:
+    serial: true
+    max_in_flight: 1
+  properties:
+    consul:
+      agent:
+        mode: server
+    metron_agent:
+      zone: z1
+
+- name: etcd
+  templates: (( merge || meta.etcd_templates ))
+  instances: 2
+  persistent_disk: 10024
+  resource_pool: medium
+  default_networks:
+    - name: cf1
+  networks: (( merge || default_networks ))
+  properties:
+    metron_agent:
+      zone: z1
+    consul:
+      agent:
+        services:
+          etcd:
+            name: cf-etcd
+  update:
+    serial: true
+    max_in_flight: 1
+
+- name: doppler
+  templates: (( merge || meta.loggregator_templates ))
+  instances: 1
+  resource_pool: medium
+  default_networks:
+    - name: cf1
+  networks: (( merge || default_networks ))
+  properties:
+    doppler:
+      zone: z1
+    metron_agent:
+      zone: z1
+  update: (( merge || empty_hash ))
+
+- name: loggregator_trafficcontroller
+  templates: (( merge || meta.loggregator_trafficcontroller_templates ))
+  instances: 1
+  resource_pool: small
+  default_networks:
+    - name: cf1
+  networks: (( merge || default_networks ))
+  properties:
+    traffic_controller:
+      zone: z1
+    consul:
+      agent:
+        services:
+          loggregator_trafficcontroller: {}
+    metron_agent:
+      zone: z1
+  update: (( merge || empty_hash ))
+
+properties:
+  ssl:
+    skip_cert_verify: (( merge || false ))
+
+  system_domain: (( merge ))
+
+  consul:
+    agent:
+      domain: cf.internal
+      log_level: (( merge || nil ))
+      servers:
+        lan: (( meta.consul_servers ))
+    ca_cert: (( merge ))
+    agent_cert: (( merge ))
+    agent_key: (( merge ))
+    encrypt_keys: (( merge ))
+    server_cert: (( merge ))
+    server_key: (( merge ))
+
+  etcd:
+    machines: (( merge || jobs.etcd.networks.cf1.static_ips ))
+    require_ssl: (( merge || false ))
+    peer_require_ssl: (( .properties.etcd.require_ssl ))
+    advertise_urls_dns_suffix: cf-etcd.service.cf.internal
+    ca_cert: (( merge || "" ))
+    client_cert: (( merge || "" ))
+    client_key: (( merge || "" ))
+    cluster:
+      - instances: (( jobs.etcd.instances ))
+        name: etcd
+    peer_ca_cert: (( merge || "" ))
+    peer_cert: (( merge || "" ))
+    peer_key: (( merge || "" ))
+    server_cert: (( merge || "" ))
+    server_key: (( merge || "" ))
+
+  etcd_metrics_server:
+    etcd:
+      require_ssl: (( .properties.etcd.require_ssl ))
+      ca_cert: (( .properties.etcd.ca_cert ))
+      client_cert: (( .properties.etcd.client_cert ))
+      client_key: (( .properties.etcd.client_key ))
+      dns_suffix: (( .properties.etcd.advertise_urls_dns_suffix ))
+
+  loggregator:
+    maxRetainedLogMessages: 100
+    debug: (( merge || false ))
+    blacklisted_syslog_ranges: ~
+    outgoing_dropsonde_port: 8081
+    tls:
+      ca_cert: ~
+    etcd:
+      machines: [(( .properties.etcd.advertise_urls_dns_suffix ))]
+      require_ssl: (( .properties.etcd.require_ssl ))
+      ca_cert: (( .properties.etcd.ca_cert ))
+
+  loggregator_endpoint:
+    shared_secret: (( merge ))
+
+  doppler:
+    message_drain_buffer_size: ~
+    zone: (( merge || nil ))
+    maxRetainedLogMessages: 100
+    debug: (( merge || false ))
+    blacklisted_syslog_ranges: ~
+    unmarshaller_count: (( merge || 5 ))
+    port: (( merge || 4443 ))
+    tls:
+      server_cert: ~
+      server_key: ~
+      port: ~
+      enable: ~
+    etcd:
+      client_cert: (( .properties.etcd.client_cert ))
+      client_key: (( .properties.etcd.client_key ))
+
+  doppler_endpoint:
+    shared_secret: (( .properties.loggregator_endpoint.shared_secret ))
+
+  metron_agent:
+    deployment: (( meta.environment ))
+    preferred_protocol: ~
+    enable_buffer: ~
+    buffer_size: ~
+    protocols: ~
+    etcd:
+      client_cert: (( .properties.etcd.client_cert ))
+      client_key: (( .properties.etcd.client_key ))
+    tls:
+      client_cert: ~
+      client_key: ~
+
+  metron_endpoint:
+    shared_secret: (( .properties.loggregator_endpoint.shared_secret ))
+
+  traffic_controller:
+    outgoing_port: 8080
+    zone: (( merge || nil ))
+    disable_access_control: true
+    security_event_logging:
+      enabled: (( merge || false ))
+    etcd:
+      client_cert: (( .properties.etcd.client_cert ))
+      client_key: (( .properties.etcd.client_key ))
+
+  cc:
+    srv_api_uri: ""
+  uaa:
+    url: ""
+  syslog_daemon_config: ~
+
+update:
+  canaries: 1
+  max_in_flight: 1
+  canary_watch_time: 30000-600000
+  update_watch_time: 5000-600000
+  serial: true
+
+meta:
+  # override this in your stub to set the environment name,
+  # which is used for the deployment name
+  #
+  # i.e. cf-tabasco
+  environment: ~
+
+  default_env:
+    # Default vcap & root password on deployed VMs (ie c1oudc0w)
+    # Generated using mkpasswd -m sha-512
+    bosh:
+      password: (( merge || "$6$4gDD3aV0rdqlrKC$2axHCxGKIObs6tAmMTqYCspcdvQXh3JJcvWOY2WGb4SrdXtnCyNaWlrf3WEqvYR2MYizEGp3kMmbpwBC6jsHt0" ))
+
+  consul_release_name: (( releases.consul.name || "consul" ))
+  etcd_release_name: (( releases.etcd.name || "etcd" ))
+  loggregator_release_name: (( releases.loggregator.name || "loggregator" ))
+
+  consul_servers: (( merge || jobs.consul.networks.cf1.static_ips ))
+
+  consul_templates:
+  - name: consul_agent
+    release: (( meta.consul_release_name ))
+  - name: metron_agent
+    release: (( meta.loggregator_release_name ))
+
+  etcd_templates:
+  - name: consul_agent
+    release: (( meta.consul_release_name ))
+  - name: etcd
+    release: (( meta.etcd_release_name ))
+  - name: etcd_metrics_server
+    release: (( meta.etcd_release_name ))
+  - name: metron_agent
+    release: (( meta.loggregator_release_name ))
+
+  loggregator_templates:
+  - name: consul_agent
+    release: (( meta.consul_release_name ))
+  - name: doppler
+    release: (( meta.loggregator_release_name ))
+  - name: metron_agent
+    release: (( meta.loggregator_release_name ))
+
+  loggregator_trafficcontroller_templates:
+  - name: consul_agent
+    release: (( meta.consul_release_name ))
+  - name: loggregator_trafficcontroller
+    release: (( meta.loggregator_release_name ))
+  - name: metron_agent
+    release: (( meta.loggregator_release_name ))
+
+empty_hash: {}
+
+networks: (( merge ))
+
+compilation: (( merge ))
+
+resource_pools: (( merge ))
