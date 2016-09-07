@@ -261,3 +261,9 @@ meta:
     release: (( meta.loggregator_release_name ))
 
 empty_hash: {}
+
+networks: (( merge ))
+
+compilation: (( merge ))
+
+resource_pools: (( merge ))

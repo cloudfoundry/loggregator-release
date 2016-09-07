@@ -167,6 +167,8 @@ properties:
       -----END RSA PRIVATE KEY-----
 
 networks: (( merge ))
+resource_pools: (( merge ))
+compilation: (( merge ))
 
 jobs:
 - name: loggregator_trafficcontroller
