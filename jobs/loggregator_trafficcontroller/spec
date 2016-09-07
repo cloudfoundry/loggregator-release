@@ -16,7 +16,7 @@ provides:
 - name: trafficcontroller
   type: trafficcontroller
   properties:
-  - loggregator.doppler_port
+  - loggregator.outgoing_dropsonde_port
 
 properties:
   traffic_controller.debug:

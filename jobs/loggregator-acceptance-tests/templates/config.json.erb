@@ -4,7 +4,7 @@
   tc = link("trafficcontroller")
 
   config = {
-    "DopplerEndpoint" => "ws://" + tc.instances.first.address + ":" + tc.p("loggregator.doppler_port").to_s,
+    "DopplerEndpoint" => "ws://" + tc.instances.first.address + ":" + tc.p("loggregator.outgoing_dropsonde_port").to_s,
     "SkipSSLVerify" => properties.ssl.skip_cert_verify,
     "DropsondePort" => properties.metron_agent.dropsonde_incoming_port,
     "EtcdUrls" => properties.etcd.machines.map {|ip| "http://#{ip}:4001"},
