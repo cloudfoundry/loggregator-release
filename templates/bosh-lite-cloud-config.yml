@@ -34,12 +34,12 @@ resource_pools:
 networks:
 - name: compilation
   subnets:
-  - range: 10.244.11.0/28
+  - range: 10.244.11.0/24
     reserved:
     - 10.244.11.0
     - 10.244.11.1
     static:
-    - 10.244.11.2-10.244.11.15
+    - 10.244.11.2-10.244.11.100
 - name: loggregator
   subnets:
   - cloud_properties:
