@@ -56,13 +56,6 @@ var _ = Describe("EventMarshaller", func() {
 					marshaller.Write(envelope)
 				}).ToNot(Panic())
 			})
-
-			It("counts messages written while byteWriter was nil", func() {
-				marshaller.Write(envelope)
-				Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
-					With("dropsondeMarshaller.nilByteWriterWrites"),
-				))
-			})
 		})
 
 		Context("with an invalid envelope", func() {

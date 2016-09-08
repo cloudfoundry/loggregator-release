@@ -56,7 +56,6 @@ func (m *EventMarshaller) Write(envelope *events.Envelope) {
 	writer := m.writer()
 	if writer == nil {
 		m.logger.Warn("EventMarshaller: Write called while byteWriter is nil")
-		m.batcher.BatchIncrementCounter("dropsondeMarshaller.nilByteWriterWrites")
 		return
 	}
 

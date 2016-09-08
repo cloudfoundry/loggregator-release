@@ -168,15 +168,12 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 	defer conn.Close()
 	defer t.removeConnection(conn)
 
-	errCountMetric := t.metricProto + ".receiveErrorCount"
-
 	if tlsConn, ok := conn.(*tls.Conn); ok {
 		if err := tlsConn.Handshake(); err != nil {
 			t.logger.Warnd(map[string]interface{}{
 				"error":   err.Error(),
 				"address": conn.RemoteAddr().String(),
 			}, "TLS handshake error")
-			t.batcher.BatchIncrementCounter(errCountMetric)
 			return
 		}
 	}
@@ -191,7 +188,6 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 		err = binary.Read(conn, binary.LittleEndian, &n)
 		if err != nil {
 			if err != io.EOF {
-				t.batcher.BatchIncrementCounter(errCountMetric)
 				t.logger.Errorf("Error while decoding: %v", err)
 			}
 			break
@@ -205,7 +201,6 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 
 		_, err = io.ReadFull(conn, read)
 		if err != nil {
-			t.batcher.BatchIncrementCounter(errCountMetric)
 			t.logger.Errorf("Error during i/o read: %v", err)
 			break
 		}

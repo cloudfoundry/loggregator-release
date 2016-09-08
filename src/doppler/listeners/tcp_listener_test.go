@@ -184,42 +184,6 @@ var _ = Describe("TCPlistener", func() {
 
 				Eventually(envelopeChan).Should(Receive())
 			})
-
-			Context("receiveErrors count", func() {
-				It("does not increment error count for a valid message", func() {
-					envelope := createEnvelope(events.Envelope_LogMessage)
-					conn := openTCPConnection(listener.Address(), tlsClientConfig)
-
-					err := send(conn, envelope)
-					Expect(err).ToNot(HaveOccurred())
-				})
-
-				It("increments when tls handshake fails", func() {
-					tlsConfig, err := listeners.NewTLSConfig("fixtures/bad_client.crt", "fixtures/bad_client.key", "fixtures/badCA.crt")
-					Expect(err).NotTo(HaveOccurred())
-
-					_, err = tls.Dial("tcp", listener.Address(), tlsConfig)
-					Expect(err).To(HaveOccurred())
-					Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
-						With("aname.receiveErrorCount"),
-					))
-				})
-
-				It("increments when size is greater than payload", func() {
-					conn := openTCPConnection(listener.Address(), tlsClientConfig)
-					bytes := []byte("invalid payload")
-					var n uint32
-					n = 1000
-					err := binary.Write(conn, binary.LittleEndian, n)
-					Expect(err).ToNot(HaveOccurred())
-					_, err = conn.Write(bytes)
-					Expect(err).ToNot(HaveOccurred())
-					conn.Close()
-					Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
-						With("aname.receiveErrorCount"),
-					))
-				})
-			})
 		})
 
 		Context("Start Stop", func() {
