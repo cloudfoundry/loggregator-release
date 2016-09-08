@@ -2,6 +2,11 @@
 
 set -ex
 
+if [[ "$#" -ne 1 ]]; then
+  echo "usage: $0 <protocol>"
+  exit 1
+fi
+
 script_dir=$(dirname $0)
 loggregator_dir=$(dirname $script_dir)
 director_uuid=$(bosh status --uuid)
@@ -11,7 +16,7 @@ spiff merge $loggregator_dir/templates/loggregator-infrastructure-bosh-lite.yml 
   > /tmp/lite-networks.yml
 
 spiff merge $loggregator_dir/templates/loggregator.yml \
-  <(echo "director_uuid: ${director_uuid}") \
+  <(echo "director_uuid: ${director_uuid}\nproperties:\n  metron_agent:\n    protocols: [$1]") \
   /tmp/lite-networks.yml \
   > /tmp/lite-loggregator.yml
 
