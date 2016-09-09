@@ -15,7 +15,7 @@ spiff merge $loggregator_dir/templates/loggregator-infrastructure-bosh-lite.yml 
   $loggregator_dir/templates/bosh-lite-cloud-config.yml \
   > /tmp/lite-networks.yml
 
-printf "director_uuid: ${director_uuid}\nproperties:\nmetron_agent:\nprotocols:[\"${1}\"]\n" > /tmp/protocols.yml
+printf "director_uuid: ${director_uuid}\nproperties:\nmetron_agent:\nprotocols: [\"${1}\"]\n" > /tmp/protocols.yml
 
 spiff merge $loggregator_dir/templates/loggregator.yml \
   /tmp/protocols.yml \
