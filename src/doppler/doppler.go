@@ -2,9 +2,13 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net"
+	"plumbing"
 	"sync"
 	"time"
 
+	"google.golang.org/grpc"
 	doppler_config "doppler/config"
 	"doppler/sinkserver"
 	"doppler/sinkserver/blacklist"
@@ -124,6 +128,16 @@ func New(
 		metricTTL,
 		dialTimeout,
 	)
+
+	doppler.Infof("Listening for GRPC connections on %d", config.GRPCPort)
+	grpcListener, err := net.Listen("tcp", fmt.Sprintf(":%d", config.GRPCPort))
+	if err != nil {
+		return nil, err
+	}
+	grpcServer := grpc.NewServer()
+	plumbing.RegisterDopplerServer(grpcServer, doppler.sinkManager)
+	go grpcServer.Serve(grpcListener)
+
 	doppler.messageRouter = sinkserver.NewMessageRouter(doppler.sinkManager, logger)
 
 	doppler.websocketServer, err = websocketserver.New(

@@ -8,16 +8,14 @@ service Doppler {
 }
 
 message StreamRequest {
-  string auth = 1;
-  string appID = 2;
+  string appID = 1;
 }
 
 message FirehoseRequest {
-  string auth = 1;
-  string subID = 2;
+  string subID = 1;
 }
 
 message Response {
-  string payload = 1;
+  bytes payload = 1;
 }
 

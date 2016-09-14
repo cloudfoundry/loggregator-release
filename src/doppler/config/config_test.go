@@ -17,12 +17,6 @@ var _ = Describe("Config", func() {
 			configFile = "./fixtures/minimal_doppler.json"
 		})
 
-		It("defaults to empty blacklist", func() {
-			config, _ := config.ParseConfig(configFile)
-
-			Expect(config.BlackListIps).To(BeNil())
-		})
-
 		It("returns proper config", func() {
 			config, err := config.ParseConfig(configFile)
 			Expect(err).ToNot(HaveOccurred())
@@ -34,6 +28,32 @@ var _ = Describe("Config", func() {
 			Expect(config.EnableTLSTransport).To(BeFalse())
 			Expect(config.EtcdRequireTLS).To(BeFalse())
 			Expect(config.MetricBatchIntervalMilliseconds).To(BeEquivalentTo(5000))
+			Expect(config.GRPCPort).To(BeEquivalentTo(4567))
+		})
+
+		It("defaults to empty blacklist", func() {
+			config, _ := config.ParseConfig(configFile)
+
+			Expect(config.BlackListIps).To(BeNil())
+		})
+	})
+
+	Context("with less than minimal config", func() {
+		It("errors out when GRPCPort is not provided", func() {
+			confData := []byte(`{
+				"OutgoingPort": 8080,
+				"MessageDrainBufferSize": 100,
+				"SinkSkipCertVerify": false,
+				"Index": "0",
+				"MaxRetainedLogMessages": 10,
+				"SharedSecret": "mysecret",
+				"Syslog"  : "",
+				"ContainerMetricTTLSeconds": 120,
+				"SinkInactivityTimeoutSeconds": 120,
+				"EnableTLSTransport": false
+			}`)
+			_, err := config.Parse(confData)
+			Expect(err).To(HaveOccurred())
 		})
 	})
 
