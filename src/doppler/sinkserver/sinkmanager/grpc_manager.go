@@ -1,7 +1,6 @@
 package sinkmanager
 
 import (
-	"log"
 	"plumbing"
 	"sync"
 )
@@ -22,9 +21,7 @@ type GRPCSender interface {
 }
 
 func (m *SinkManager) Stream(req *plumbing.StreamRequest, d plumbing.Doppler_StreamServer) error {
-	log.Printf("Connection accepted for app %s", req.AppID)
 	m.RegisterStream(req, d)
-	log.Printf("Stream registered")
 	<-d.Context().Done()
 	return nil
 }
