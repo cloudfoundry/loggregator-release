@@ -101,6 +101,10 @@ properties:
     description: "Size (KB) of shell's locked memory limit. Set to 'kernel' to use the kernel's default. Non-numeric values other than 'kernel', 'soft', 'hard', and 'unlimited' will result in an error."
     default: "unlimited"
 
+  doppler.log_to_syslog:
+    description: "Set this to True to enable logging to syslog."
+    default: False
+
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"
 
