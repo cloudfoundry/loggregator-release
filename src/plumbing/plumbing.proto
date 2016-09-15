@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package plumbing;
+
+service Doppler {
+  rpc Stream(StreamRequest) returns (stream Response) {}
+  rpc Firehose(FirehoseRequest) returns (stream Response) {}
+}
+
+message StreamRequest {
+  string appID = 1;
+}
+
+message FirehoseRequest {
+  string subID = 1;
+}
+
+message Response {
+  bytes payload = 1;
+}
+

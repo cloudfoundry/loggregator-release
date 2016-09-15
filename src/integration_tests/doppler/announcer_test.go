@@ -13,7 +13,6 @@ import (
 )
 
 var _ = Describe("Doppler Announcer", func() {
-
 	Context("with TLS enabled", func() {
 		It("advertises udp, tcp, and ws endpoints", func() {
 			node, err := etcdAdapter.Get("/doppler/meta/z1/doppler_z1/0")

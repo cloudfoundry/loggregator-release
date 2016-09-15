@@ -3,6 +3,7 @@ package config
 import (
 	"doppler/iprange"
 	"errors"
+	"io/ioutil"
 	"time"
 
 	"encoding/json"
@@ -44,6 +45,7 @@ type Config struct {
 	MetronAddress                   string
 	MonitorIntervalSeconds          uint
 	OutgoingPort                    uint32
+	GRPCPort                        uint32
 	SharedSecret                    string
 	SinkDialTimeoutSeconds          int
 	SinkIOTimeoutSeconds            int
@@ -79,22 +81,35 @@ func (c *Config) validate() (err error) {
 		}
 	}
 
-	return err
+	if c.GRPCPort == 0 {
+		return errors.New("invalid doppler config, no GRPCPort provided")
+	}
+
+	return nil
 }
 
 func ParseConfig(configFile string) (*Config, error) {
-	config := &Config{
-		IncomingUDPPort: 3456,
-		IncomingTCPPort: 3457,
-	}
-
 	file, err := os.Open(configFile)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	err = json.NewDecoder(file).Decode(config)
+	b, err := ioutil.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
+
+	return Parse(b)
+}
+
+func Parse(confData []byte) (*Config, error) {
+	config := &Config{
+		IncomingUDPPort: 3456,
+		IncomingTCPPort: 3457,
+	}
+
+	err := json.Unmarshal(confData, config)
 	if err != nil {
 		return nil, err
 	}

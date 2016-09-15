@@ -38,6 +38,7 @@ const (
 	dopplerTCPPortOffset
 	dopplerTLSPortOffset
 	dopplerOutgoingPortOffset
+	dopplerGRPCPortOffset
 	metronPortOffset
 	trafficcontrollerPortOffset
 )
@@ -116,6 +117,7 @@ func SetupDoppler(etcdClientURL string, metronPort int) (func(), int) {
 	dopplerTCPPort := getPort(dopplerTCPPortOffset)
 	dopplerTLSPort := getPort(dopplerTLSPortOffset)
 	dopplerOutgoingPort := getPort(dopplerOutgoingPortOffset)
+	dopplerGRPCPort := getPort(dopplerGRPCPortOffset)
 
 	dopplerConf := dopplerConfig.Config{
 		Index:        jobIndex,
@@ -126,6 +128,7 @@ func SetupDoppler(etcdClientURL string, metronPort int) (func(), int) {
 		IncomingUDPPort: uint32(dopplerUDPPort),
 		IncomingTCPPort: uint32(dopplerTCPPort),
 		OutgoingPort:    uint32(dopplerOutgoingPort),
+		GRPCPort:        uint32(dopplerGRPCPort),
 
 		EtcdUrls:                  []string{etcdClientURL},
 		EtcdMaxConcurrentRequests: 10,

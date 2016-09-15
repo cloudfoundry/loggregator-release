@@ -1,5 +1,6 @@
 {
     "OutgoingPort": 8080,
+    "GRPCPort": 4567,
     "MessageDrainBufferSize": 100,
     "SinkSkipCertVerify": false,
     "Index": "0",

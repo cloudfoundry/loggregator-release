@@ -6,6 +6,7 @@
     "IncomingUDPPort": 49626,
     "IncomingTCPPort": 49628,
     "OutgoingPort": 49627,
+    "GRPCPort": 5678,
     "MaxRetainedLogMessages": 10,
     "MessageDrainBufferSize": 100,
     "SharedSecret": "end_to_end_secret",

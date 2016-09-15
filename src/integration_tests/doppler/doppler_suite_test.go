@@ -1,14 +1,17 @@
 package doppler_test
 
 import (
+	"encoding/binary"
 	"os/exec"
 	"testing"
 
 	"doppler/config"
 	"time"
 
+	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
+	"github.com/gogo/protobuf/proto"
 	"github.com/pivotal-golang/localip"
 
 	. "github.com/onsi/ginkgo"
@@ -31,6 +34,11 @@ var (
 	pathToDopplerExec    string
 	pathToHTTPEchoServer string
 	pathToTCPEchoServer  string
+
+	streamRegisteredEvent   []byte
+	firehoseRegisteredEvent []byte
+	prefixedLogMessage      []byte
+	logMessage              []byte
 )
 
 var _ = BeforeSuite(func() {
@@ -49,6 +57,33 @@ var _ = BeforeSuite(func() {
 	pathToTCPEchoServer, err = gexec.Build("tools/tcpechoserver")
 	Expect(err).NotTo(HaveOccurred())
 
+	streamRegisteredEvent, err = proto.Marshal(&events.CounterEvent{
+		Name:  proto.String("stream-registered"),
+		Delta: proto.Uint64(1),
+	})
+	Expect(err).ToNot(HaveOccurred())
+
+	firehoseRegisteredEvent, err = proto.Marshal(&events.CounterEvent{
+		Name:  proto.String("firehose-registered"),
+		Delta: proto.Uint64(1),
+	})
+	Expect(err).ToNot(HaveOccurred())
+	e := &events.Envelope{
+		Origin:    proto.String("foo"),
+		EventType: events.Envelope_LogMessage.Enum(),
+		LogMessage: &events.LogMessage{
+			Message:     []byte("foo"),
+			MessageType: events.LogMessage_OUT.Enum(),
+			Timestamp:   proto.Int64(time.Now().UnixNano()),
+		},
+	}
+
+	logMessage, err = proto.Marshal(e)
+	Expect(err).ToNot(HaveOccurred())
+
+	length := uint32(len(logMessage))
+	prefixedLogMessage = append(make([]byte, 4), logMessage...)
+	binary.LittleEndian.PutUint32(prefixedLogMessage, length)
 })
 
 var _ = BeforeEach(func() {

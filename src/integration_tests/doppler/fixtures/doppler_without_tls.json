@@ -4,6 +4,7 @@
     "IncomingUDPPort": 47654,
     "IncomingTCPPort": 43210,
     "OutgoingPort": 45678,
+    "GRPCPort": 63726,
     "SinkSkipCertVerify": true,
     "MaxRetainedLogMessages": 10,
     "MessageDrainBufferSize": 100,

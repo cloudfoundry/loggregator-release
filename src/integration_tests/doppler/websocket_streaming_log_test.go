@@ -4,17 +4,18 @@ import (
 	"net"
 	"time"
 
+	. "integration_tests/doppler/helpers"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gorilla/websocket"
 	"github.com/nu7hatch/gouuid"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	. "integration_tests/doppler/helpers"
 )
 
-var _ = Describe("Streaming Logs", func() {
+var _ = Describe("Websocket Streaming Logs", func() {
 	var ws *websocket.Conn
 	var connDropped <-chan struct{}
 	var receivedChan chan []byte
