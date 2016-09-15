@@ -24,7 +24,7 @@ case $1 in
     <% end %>
 
     <% if p('metron_agent.log_to_syslog') %>
-    tee_output_to_sys_log "$LOG_DIR" metron_agent
+    tee_output_to_sys_log "$LOG_DIR" metron_agent stdout stderr
     <% else %>
     exec >>$LOG_DIR/metron_agent.stdout.log \
         2>>$LOG_DIR/metron_agent.stderr.log
