@@ -15,11 +15,18 @@ setup() {
 
 @test "tee_output_to_sys_log should create the correct logfile when defining log_basename" {
   run tee_output_to_sys_log ${TMPDIR} "foo"
+  ls $TMPDIR
   [ "$status" -eq 0 ]
   [ -e "${TMPDIR}/foo.log" ]
   [ -e "${TMPDIR}/foo.err.log" ]
 }
 
+@test "tee_output_to_sys_log should create the correct logfile when defining log_basename and stdout/stderr suffix" {
+  run tee_output_to_sys_log ${TMPDIR} "foo" "stdout" "stderr"
+  [ "$status" -eq 0 ]
+  [ -e "${TMPDIR}/foo.stdout.log" ]
+  [ -e "${TMPDIR}/foo.stderr.log" ]
+}
 
 @test "tee_output_to_sys_log requires non empty log_dir" {
   run tee_output_to_sys_log
