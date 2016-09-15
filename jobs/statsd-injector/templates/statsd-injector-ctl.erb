@@ -17,8 +17,12 @@ case $1 in
   start)
     pid_guard $PIDFILE "Statsd Injector"
 
+    <% if p('statsd_injector.log_to_syslog') %>
+    tee_output_to_sys_log "$LOG_DIR" statsd_injector
+    <% else %>
     exec >>$LOG_DIR/statsd_injector.stdout.log \
         2>>$LOG_DIR/statsd_injector.stderr.log
+    <% end %>
 
     chown -R vcap:vcap $LOG_DIR
 

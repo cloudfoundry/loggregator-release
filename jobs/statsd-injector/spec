@@ -16,3 +16,6 @@ properties:
   statsd_injector.log_level:
     description: "The log level for the statsd injector"
     default: "info"
+  statsd_injector.log_to_syslog:
+    description: "Set this to True to enable logging to syslog."
+    default: False
