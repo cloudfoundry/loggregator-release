@@ -3,7 +3,7 @@
 setup() {
   source ./syslog_utils.sh
 
-  TMPDIR=$(mktemp -dt "syslog_util")
+  TMPDIR=$(mktemp -dt "syslog_util_XXX")
 }
 
 @test "tee_output_to_sys_log should create the correct logfile" {
