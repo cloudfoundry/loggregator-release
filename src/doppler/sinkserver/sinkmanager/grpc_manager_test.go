@@ -39,10 +39,12 @@ var _ = Describe("SinkManager GRPC", func() {
 			firstSender := newMockGRPCSender()
 			close(firstSender.SendOutput.Err)
 			m.RegisterStream(&req, firstSender)
+			Eventually(firstSender.SendInput).Should(BeCalled())
 
 			secondSender := newMockGRPCSender()
 			close(secondSender.SendOutput.Err)
 			m.RegisterStream(&req, secondSender)
+			Eventually(secondSender.SendInput).Should(BeCalled())
 
 			env := &events.Envelope{
 				EventType: events.Envelope_LogMessage.Enum(),
@@ -75,6 +77,7 @@ var _ = Describe("SinkManager GRPC", func() {
 			sender := newMockGRPCSender()
 			close(sender.SendOutput.Err)
 			m.RegisterStream(&req, sender)
+			Eventually(sender.SendInput).ShouldNot(BeCalled())
 
 			env := &events.Envelope{
 				EventType: events.Envelope_LogMessage.Enum(),
@@ -93,6 +96,7 @@ var _ = Describe("SinkManager GRPC", func() {
 		It("can concurrently register Streams without data races", func() {
 			req := plumbing.StreamRequest{AppID: "app"}
 			sender := newMockGRPCSender()
+			close(sender.SendOutput.Err)
 
 			go m.RegisterStream(&req, sender)
 			m.RegisterStream(&req, sender)
@@ -107,11 +111,13 @@ var _ = Describe("SinkManager GRPC", func() {
 			firstSender := newMockGRPCSender()
 			close(firstSender.SendOutput.Err)
 			m.RegisterFirehose(&firstReq, firstSender)
+			Eventually(firstSender.SendInput).Should(BeCalled())
 
 			secondReq := plumbing.FirehoseRequest{SubID: "second-subscription"}
 			secondSender := newMockGRPCSender()
 			close(secondSender.SendOutput.Err)
 			m.RegisterFirehose(&secondReq, secondSender)
+			Eventually(secondSender.SendInput).Should(BeCalled())
 
 			env := &events.Envelope{
 				EventType: events.Envelope_ContainerMetric.Enum(),
@@ -146,10 +152,12 @@ var _ = Describe("SinkManager GRPC", func() {
 			firstSender := newMockGRPCSender()
 			close(firstSender.SendOutput.Err)
 			m.RegisterFirehose(&req, firstSender)
+			Eventually(firstSender.SendInput).Should(BeCalled())
 
 			secondSender := newMockGRPCSender()
 			close(secondSender.SendOutput.Err)
 			m.RegisterFirehose(&req, secondSender)
+			Eventually(secondSender.SendInput).Should(BeCalled())
 
 			env := &events.Envelope{
 				EventType: events.Envelope_ContainerMetric.Enum(),
@@ -185,6 +193,7 @@ var _ = Describe("SinkManager GRPC", func() {
 		It("can concurrently register Firehoses without data races", func() {
 			req := plumbing.FirehoseRequest{SubID: "subscription"}
 			sender := newMockGRPCSender()
+			close(sender.SendOutput.Err)
 
 			go m.RegisterFirehose(&req, sender)
 			m.RegisterFirehose(&req, sender)

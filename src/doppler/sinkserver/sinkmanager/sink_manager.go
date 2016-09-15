@@ -10,7 +10,6 @@ import (
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/metrics"
 	"fmt"
-	"log"
 	"math/rand"
 	"plumbing"
 	"sync"

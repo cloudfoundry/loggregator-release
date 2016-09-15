@@ -2,18 +2,18 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"plumbing"
 	"sync"
 	"time"
 
-	"google.golang.org/grpc"
 	doppler_config "doppler/config"
 	"doppler/sinkserver"
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
+
+	"google.golang.org/grpc"
 
 	"doppler/listeners"
 	"monitor"

@@ -15,14 +15,17 @@ It has these top-level messages:
 */
 package plumbing
 
-import proto "github.com/golang/protobuf/proto"
-import fmt "fmt"
-import math "math"
-
 import (
+	fmt "fmt"
+
+	proto "github.com/golang/protobuf/proto"
+
 	context "golang.org/x/net/context"
+
 	grpc "google.golang.org/grpc"
 )
+
+import math "math"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
