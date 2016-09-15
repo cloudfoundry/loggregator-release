@@ -6,12 +6,20 @@ setup() {
   TMPDIR=$(mktemp -dt "syslog_util_XXX")
 }
 
-@test "tee_output_to_sys_log should create the correct logfile" {
+@test "tee_output_to_sys_log should create the correct logfile when not defining log_basename" {
   run tee_output_to_sys_log ${TMPDIR}
   [ "$status" -eq 0 ]
   [ -e "${TMPDIR}/bats-exec-test.log" ]
   [ -e "${TMPDIR}/bats-exec-test.err.log" ]
 }
+
+@test "tee_output_to_sys_log should create the correct logfile when defining log_basename" {
+  run tee_output_to_sys_log ${TMPDIR} "foo"
+  [ "$status" -eq 0 ]
+  [ -e "${TMPDIR}/foo.log" ]
+  [ -e "${TMPDIR}/foo.err.log" ]
+}
+
 
 @test "tee_output_to_sys_log requires non empty log_dir" {
   run tee_output_to_sys_log

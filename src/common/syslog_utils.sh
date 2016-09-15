@@ -13,8 +13,10 @@ function tee_output_to_sys_log() {
     return 2
   fi
 
-  local log_basename
-  log_basename="$(basename "$0")"
+  declare log_basename="$2"
+  if [ "$log_basename" = "" ] ; then
+    log_basename="$(basename "$0")"
+  fi
 
   exec > >(tee -a >(logger -p user.info -t "vcap.${log_basename}.stdout") | prepend_datetime >>"${log_dir}/${log_basename}.log")
   exec 2> >(tee -a >(logger -p user.error -t "vcap.${log_basename}.stderr") | prepend_datetime >>"${log_dir}/${log_basename}.err.log")
