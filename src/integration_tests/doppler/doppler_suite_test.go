@@ -35,10 +35,10 @@ var (
 	pathToHTTPEchoServer string
 	pathToTCPEchoServer  string
 
-	streamRegisteredEvent   []byte
-	firehoseRegisteredEvent []byte
-	prefixedLogMessage      []byte
-	logMessage              []byte
+	prefixedLogMessage    []byte
+	logMessage            []byte
+	prefixedPrimerMessage []byte
+	primerMessage         []byte
 )
 
 var _ = BeforeSuite(func() {
@@ -56,34 +56,6 @@ var _ = BeforeSuite(func() {
 
 	pathToTCPEchoServer, err = gexec.Build("tools/tcpechoserver")
 	Expect(err).NotTo(HaveOccurred())
-
-	streamRegisteredEvent, err = proto.Marshal(&events.CounterEvent{
-		Name:  proto.String("stream-registered"),
-		Delta: proto.Uint64(1),
-	})
-	Expect(err).ToNot(HaveOccurred())
-
-	firehoseRegisteredEvent, err = proto.Marshal(&events.CounterEvent{
-		Name:  proto.String("firehose-registered"),
-		Delta: proto.Uint64(1),
-	})
-	Expect(err).ToNot(HaveOccurred())
-	e := &events.Envelope{
-		Origin:    proto.String("foo"),
-		EventType: events.Envelope_LogMessage.Enum(),
-		LogMessage: &events.LogMessage{
-			Message:     []byte("foo"),
-			MessageType: events.LogMessage_OUT.Enum(),
-			Timestamp:   proto.Int64(time.Now().UnixNano()),
-		},
-	}
-
-	logMessage, err = proto.Marshal(e)
-	Expect(err).ToNot(HaveOccurred())
-
-	length := uint32(len(logMessage))
-	prefixedLogMessage = append(make([]byte, 4), logMessage...)
-	binary.LittleEndian.PutUint32(prefixedLogMessage, length)
 })
 
 var _ = BeforeEach(func() {
@@ -101,6 +73,11 @@ var _ = BeforeEach(func() {
 		_, err := etcdAdapter.Get("healthstatus/doppler/z1/doppler_z1/0")
 		return err
 	}, time.Second+config.HeartbeatInterval).ShouldNot(HaveOccurred())
+
+	logMessage = buildLogMessage()
+	prefixedLogMessage = prefixMessage(logMessage)
+	primerMessage = buildLogMessage()
+	prefixedPrimerMessage = prefixMessage(primerMessage)
 })
 
 var _ = AfterEach(func() {
@@ -112,3 +89,35 @@ var _ = AfterSuite(func() {
 	etcdRunner.Stop()
 	gexec.CleanupBuildArtifacts()
 })
+
+func buildLogMessage() []byte {
+	e := &events.Envelope{
+		Origin:    proto.String("foo"),
+		EventType: events.Envelope_LogMessage.Enum(),
+		LogMessage: &events.LogMessage{
+			Message:     []byte("foo"),
+			MessageType: events.LogMessage_OUT.Enum(),
+			Timestamp:   proto.Int64(time.Now().UnixNano()),
+		},
+	}
+	b, err := proto.Marshal(e)
+	Expect(err).ToNot(HaveOccurred())
+	return b
+}
+
+func buildPrimerMessage() []byte {
+	e := &events.Envelope{
+		Origin:    proto.String("prime-message"),
+		EventType: events.Envelope_LogMessage.Enum(),
+	}
+	b, err := proto.Marshal(e)
+	Expect(err).ToNot(HaveOccurred())
+	return b
+}
+
+func prefixMessage(msg []byte) []byte {
+	length := uint32(len(msg))
+	b := append(make([]byte, 4), msg...)
+	binary.LittleEndian.PutUint32(b, length)
+	return b
+}

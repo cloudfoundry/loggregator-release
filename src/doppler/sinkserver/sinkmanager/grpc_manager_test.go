@@ -39,12 +39,10 @@ var _ = Describe("SinkManager GRPC", func() {
 			firstSender := newMockGRPCSender()
 			close(firstSender.SendOutput.Err)
 			m.RegisterStream(&req, firstSender)
-			Eventually(firstSender.SendInput).Should(BeCalled())
 
 			secondSender := newMockGRPCSender()
 			close(secondSender.SendOutput.Err)
 			m.RegisterStream(&req, secondSender)
-			Eventually(secondSender.SendInput).Should(BeCalled())
 
 			env := &events.Envelope{
 				EventType: events.Envelope_LogMessage.Enum(),
@@ -77,7 +75,6 @@ var _ = Describe("SinkManager GRPC", func() {
 			sender := newMockGRPCSender()
 			close(sender.SendOutput.Err)
 			m.RegisterStream(&req, sender)
-			Eventually(sender.SendInput).ShouldNot(BeCalled())
 
 			env := &events.Envelope{
 				EventType: events.Envelope_LogMessage.Enum(),
@@ -111,13 +108,11 @@ var _ = Describe("SinkManager GRPC", func() {
 			firstSender := newMockGRPCSender()
 			close(firstSender.SendOutput.Err)
 			m.RegisterFirehose(&firstReq, firstSender)
-			Eventually(firstSender.SendInput).Should(BeCalled())
 
 			secondReq := plumbing.FirehoseRequest{SubID: "second-subscription"}
 			secondSender := newMockGRPCSender()
 			close(secondSender.SendOutput.Err)
 			m.RegisterFirehose(&secondReq, secondSender)
-			Eventually(secondSender.SendInput).Should(BeCalled())
 
 			env := &events.Envelope{
 				EventType: events.Envelope_ContainerMetric.Enum(),
@@ -152,12 +147,10 @@ var _ = Describe("SinkManager GRPC", func() {
 			firstSender := newMockGRPCSender()
 			close(firstSender.SendOutput.Err)
 			m.RegisterFirehose(&req, firstSender)
-			Eventually(firstSender.SendInput).Should(BeCalled())
 
 			secondSender := newMockGRPCSender()
 			close(secondSender.SendOutput.Err)
 			m.RegisterFirehose(&req, secondSender)
-			Eventually(secondSender.SendInput).Should(BeCalled())
 
 			env := &events.Envelope{
 				EventType: events.Envelope_ContainerMetric.Enum(),

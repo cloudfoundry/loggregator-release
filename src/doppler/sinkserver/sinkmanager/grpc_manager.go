@@ -1,36 +1,9 @@
 package sinkmanager
 
 import (
-	"log"
 	"plumbing"
 	"sync"
-
-	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
 )
-
-var (
-	streamRegisteredEvent   []byte
-	firehoseRegisteredEvent []byte
-)
-
-func init() {
-	var err error
-	streamRegisteredEvent, err = proto.Marshal(&events.CounterEvent{
-		Name:  proto.String("stream-registered"),
-		Delta: proto.Uint64(1),
-	})
-	if err != nil {
-		log.Panicf("unable to marshal stream registered event: %s", err)
-	}
-	firehoseRegisteredEvent, err = proto.Marshal(&events.CounterEvent{
-		Name:  proto.String("firehose-registered"),
-		Delta: proto.Uint64(1),
-	})
-	if err != nil {
-		log.Panicf("unable to marshal firehose registered event: %s", err)
-	}
-}
 
 type grpcRegistry struct {
 	mu       sync.RWMutex
@@ -57,9 +30,6 @@ func (m *SinkManager) RegisterStream(req *plumbing.StreamRequest, sender GRPCSen
 	m.grpcStreams.mu.Lock()
 	defer m.grpcStreams.mu.Unlock()
 	m.grpcStreams.registry[req.AppID] = append(m.grpcStreams.registry[req.AppID], sender)
-	sender.Send(&plumbing.Response{
-		Payload: streamRegisteredEvent,
-	})
 }
 
 func (m *SinkManager) Firehose(req *plumbing.FirehoseRequest, d plumbing.Doppler_FirehoseServer) error {
@@ -72,7 +42,4 @@ func (m *SinkManager) RegisterFirehose(req *plumbing.FirehoseRequest, sender GRP
 	m.grpcFirehoses.mu.Lock()
 	defer m.grpcFirehoses.mu.Unlock()
 	m.grpcFirehoses.registry[req.SubID] = append(m.grpcFirehoses.registry[req.SubID], sender)
-	sender.Send(&plumbing.Response{
-		Payload: firehoseRegisteredEvent,
-	})
 }
