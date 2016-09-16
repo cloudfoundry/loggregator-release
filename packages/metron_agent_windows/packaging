@@ -4,14 +4,12 @@ $env:GOROOT="C:\var\vcap\packages\golang1.7-windows\go"
 $env:GOPATH="${PWD}\loggregator"
 $env:PATH="${env:GOROOT}\bin;${env:PATH}"
 
-try
+$BOSH_INSTALL_TARGET = Resolve-Path $env:BOSH_INSTALL_TARGET
+go build -o "${BOSH_INSTALL_TARGET}\${pkg_name}.exe" "${pkg_name}"
+
+if($LASTEXITCODE -ne 0)
 {
-	$BOSH_INSTALL_TARGET = Resolve-Path $env:BOSH_INSTALL_TARGET
-	go build -o "${BOSH_INSTALL_TARGET}\${pkg_name}.exe" "${pkg_name}"
-}
-catch
-{
-	$Host.UI.WriteErrorLine($_.Exception.Message)
+	$Host.UI.WriteErrorLine("Failed compiling metron")
 	Exit 1
 }
 
