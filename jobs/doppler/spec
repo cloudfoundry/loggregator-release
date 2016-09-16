@@ -62,8 +62,11 @@ properties:
     default: ""
 
   doppler.outgoing_port:
-    description: Port for outgoing log messages
+    description: Port for outgoing log messages via websockets
     default: 8081
+  doppler.grpc_port:
+    description: Port for outgoing log messages via GRPC
+    default: 8082
   doppler.websocket_write_timeout_seconds:
     description: "Interval before a websocket write is aborted if it does not succeed"
     default: 60
