@@ -56,6 +56,11 @@ var _ = BeforeSuite(func() {
 
 	pathToTCPEchoServer, err = gexec.Build("tools/tcpechoserver")
 	Expect(err).NotTo(HaveOccurred())
+
+	logMessage = buildLogMessage()
+	prefixedLogMessage = prefixMessage(logMessage)
+	primerMessage = buildLogMessage()
+	prefixedPrimerMessage = prefixMessage(primerMessage)
 })
 
 var _ = BeforeEach(func() {
@@ -73,11 +78,6 @@ var _ = BeforeEach(func() {
 		_, err := etcdAdapter.Get("healthstatus/doppler/z1/doppler_z1/0")
 		return err
 	}, time.Second+config.HeartbeatInterval).ShouldNot(HaveOccurred())
-
-	logMessage = buildLogMessage()
-	prefixedLogMessage = prefixMessage(logMessage)
-	primerMessage = buildLogMessage()
-	prefixedPrimerMessage = prefixMessage(primerMessage)
 })
 
 var _ = AfterEach(func() {
