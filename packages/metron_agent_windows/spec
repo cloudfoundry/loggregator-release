@@ -3,6 +3,7 @@ name: metron_agent_windows
 dependencies:
 - golang1.7-windows
 files:
+- loggregator/src/exiter.ps1
 - loggregator/src/metron/LICENSE
 - loggregator/src/metron/NOTICE
 - loggregator/src/metron/syslog_daemon_config/*

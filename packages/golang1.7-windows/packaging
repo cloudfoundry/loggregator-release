@@ -1,3 +1,4 @@
+. ./exiter.ps1
 $path="golang/go1.7.windows-amd64.zip"
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
