@@ -4,7 +4,7 @@ import (
 	"github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-golang/localip"
+	"code.cloudfoundry.org/localip"
 	"integration_tests/doppler/helpers"
 	. "integration_tests/doppler/helpers"
 	"io"

@@ -9,7 +9,7 @@ import (
 
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
-	"github.com/pivotal-golang/localip"
+	"code.cloudfoundry.org/localip"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

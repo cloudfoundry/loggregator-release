@@ -5,6 +5,7 @@ dependencies:
 files:
 - loggregator/src/doppler/LICENSE
 - loggregator/src/doppler/NOTICE
+- loggregator/src/code.cloudfoundry.org/localip/*.go # gosub
 - loggregator/src/doppler/*.go # gosub
 - loggregator/src/doppler/config/*.go # gosub
 - loggregator/src/doppler/dopplerservice/*.go # gosub
@@ -60,7 +61,6 @@ files:
 - loggregator/src/github.com/golang/protobuf/proto/*.go # gosub
 - loggregator/src/github.com/gorilla/websocket/*.go # gosub
 - loggregator/src/github.com/nu7hatch/gouuid/*.go # gosub
-- loggregator/src/github.com/pivotal-golang/localip/*.go # gosub
 - loggregator/src/github.com/ugorji/go/codec/*.go # gosub
 - loggregator/src/golang.org/x/net/context/*.go # gosub
 - loggregator/src/golang.org/x/net/http2/*.go # gosub

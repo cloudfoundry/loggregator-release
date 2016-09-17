@@ -15,7 +15,7 @@ import (
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	ginkgoConfig "github.com/onsi/ginkgo/config"
-	"github.com/pivotal-golang/localip"
+	"code.cloudfoundry.org/localip"
 )
 
 var _ = Describe("Announcer", func() {
