@@ -6,6 +6,7 @@ files:
 - loggregator/src/doppler/LICENSE
 - loggregator/src/doppler/NOTICE
 - loggregator/src/code.cloudfoundry.org/localip/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/workpool/*.go # gosub
 - loggregator/src/doppler/*.go # gosub
 - loggregator/src/doppler/config/*.go # gosub
 - loggregator/src/doppler/dopplerservice/*.go # gosub

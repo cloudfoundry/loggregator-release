@@ -8,6 +8,7 @@ files:
 - loggregator/src/metron/NOTICE
 - loggregator/src/metron/syslog_daemon_config/*
 - loggregator/src/code.cloudfoundry.org/localip/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/workpool/*.go # gosub
 - loggregator/src/doppler/config/*.go # gosub
 - loggregator/src/doppler/dopplerservice/*.go # gosub
 - loggregator/src/doppler/iprange/*.go # gosub

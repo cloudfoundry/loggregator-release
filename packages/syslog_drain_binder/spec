@@ -5,6 +5,7 @@ dependencies:
 files:
 - loggregator/src/syslog_drain_binder/LICENSE
 - loggregator/src/syslog_drain_binder/NOTICE
+- loggregator/src/code.cloudfoundry.org/workpool/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/envelope_sender/*.go # gosub
