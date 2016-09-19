@@ -11,7 +11,7 @@ import (
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/gogo/protobuf/proto"
-	"github.com/pivotal-golang/localip"
+	"code.cloudfoundry.org/localip"
 
 	"encoding/json"
 	"fmt"

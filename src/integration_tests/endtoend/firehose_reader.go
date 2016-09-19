@@ -7,7 +7,7 @@ import (
 
 	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/pivotal-golang/localip"
+	"code.cloudfoundry.org/localip"
 )
 
 type FirehoseReader struct {

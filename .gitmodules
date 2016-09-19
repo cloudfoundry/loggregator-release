@@ -58,9 +58,9 @@
 [submodule "src/github.com/apcera/gnatsd"]
 	path = src/github.com/apcera/gnatsd
 	url = https://github.com/apcera/gnatsd
-[submodule "src/github.com/pivotal-golang/localip"]
-	path = src/github.com/pivotal-golang/localip
-	url = https://github.com/pivotal-golang/localip
+[submodule "src/code.cloudfoundry.org/localip"]
+	path = src/code.cloudfoundry.org/localip
+	url = https://github.com/cloudfoundry/localip
 [submodule "src/github.com/cloudfoundry/sonde-go"]
 	path = src/github.com/cloudfoundry/sonde-go
 	url = https://github.com/cloudfoundry/sonde-go

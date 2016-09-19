@@ -13,7 +13,7 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gorilla/websocket"
 	"github.com/nu7hatch/gouuid"
-	"github.com/pivotal-golang/localip"
+	"code.cloudfoundry.org/localip"
 )
 
 var _ = Describe("Listener test", func() {

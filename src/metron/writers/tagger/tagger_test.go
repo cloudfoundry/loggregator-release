@@ -5,7 +5,7 @@ import (
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-	"github.com/pivotal-golang/localip"
+	"code.cloudfoundry.org/localip"
 
 	"metron/writers/mocks"
 

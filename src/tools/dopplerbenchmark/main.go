@@ -14,7 +14,7 @@ import (
 	"tools/benchmark/writestrategies"
 	"tools/dopplerbenchmark/websocketmessagereader"
 
-	"github.com/pivotal-golang/localip"
+	"code.cloudfoundry.org/localip"
 )
 
 func main() {
