@@ -23,6 +23,25 @@ func Initialize(testConfig *TestConfig) {
 	config = testConfig
 }
 
+func ConnectToStream(appId string) (<-chan *events.Envelope, <-chan error) {
+	connection, printer := SetUpConsumer()
+	msgChan, errorChan := connection.Stream(appId, "")
+
+	readErrs := func() error {
+		select {
+		case err := <-errorChan:
+			return err
+		default:
+			return nil
+		}
+	}
+
+	Consistently(readErrs).Should(BeNil())
+	WaitForWebsocketConnection(printer)
+
+	return msgChan, errorChan
+}
+
 func ConnectToFirehose() (<-chan *events.Envelope, <-chan error) {
 	connection, printer := SetUpConsumer()
 	randomString := strconv.FormatInt(time.Now().UnixNano(), 10)
