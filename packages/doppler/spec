@@ -47,7 +47,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/dropsonde/signature/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gosteno/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gosteno/syslog/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/gunk/workpool/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/appservice/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/server/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/store/*.go # gosub

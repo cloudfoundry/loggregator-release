@@ -17,7 +17,7 @@ import (
 	"tools/benchmark/writestrategies"
 	"tools/metronbenchmark/eventtypereader"
 
-	"github.com/cloudfoundry/gunk/workpool"
+	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"

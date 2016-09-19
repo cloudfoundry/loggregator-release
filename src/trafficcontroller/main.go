@@ -25,6 +25,8 @@ import (
 	"trafficcontroller/middleware"
 	"trafficcontroller/uaa_client"
 
+	"code.cloudfoundry.org/localip"
+	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/envelope_sender"
@@ -36,11 +38,8 @@ import (
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/dropsonde/runtime_stats"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/gunk/workpool"
-
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
-	"code.cloudfoundry.org/localip"
 )
 
 const (

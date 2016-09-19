@@ -16,11 +16,11 @@ import (
 
 	"signalmanager"
 
+	"code.cloudfoundry.org/localip"
+	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/dropsonde"
-	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
-	"code.cloudfoundry.org/localip"
 )
 
 const (

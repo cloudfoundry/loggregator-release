@@ -14,9 +14,9 @@ import (
 
 	"signalmanager"
 
+	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/gunk/workpool"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 )
 
