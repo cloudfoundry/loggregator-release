@@ -51,16 +51,16 @@ var _ = Describe("Sending Http events through loggregator", func() {
 			Expect(errorChan).To(BeEmpty())
 		})
 
-		It("should return app related events", func() {
+		It("should emit httpStartStop events for specific apps to the stream endpoint", func() {
 			id, _ := uuid.NewV4()
-			msgChan, errorChan := helpers.ConnectToStream(id.String())
+			msgChan, _ := helpers.ConnectToStream(id.String())
 
 			udpEmitter, err := emitter.NewUdpEmitter(fmt.Sprintf("localhost:%d", config.DropsondePort))
 			Expect(err).ToNot(HaveOccurred())
 			emitter := emitter.NewEventEmitter(udpEmitter, helpers.ORIGIN_NAME)
 			r, err := http.NewRequest("HEAD", "/", nil)
 			Expect(err).ToNot(HaveOccurred())
-			r.Header.Add("User-Agent", "Spider-Man")
+			r.Header.Add("User-Agent", "Superman")
 			r.Header.Add("X-CF-ApplicationID", id.String())
 			done := make(chan struct{})
 			handler := instrumented_handler.InstrumentedHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -72,7 +72,8 @@ var _ = Describe("Sending Http events through loggregator", func() {
 			handler.ServeHTTP(w, r)
 			Eventually(done).Should(BeClosed())
 
-			receivedEnvelope := helpers.FindMatchingEnvelope(msgChan)
+			receivedEnvelope, err := helpers.FindMatchingEnvelopeById(id.String(), msgChan)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(receivedEnvelope).NotTo(BeNil())
 			Expect(receivedEnvelope.GetEventType()).To(Equal(events.Envelope_HttpStartStop))
 
@@ -82,10 +83,8 @@ var _ = Describe("Sending Http events through loggregator", func() {
 			Expect(event.GetMethod().String()).To(Equal(events.Method_HEAD.Enum().String()))
 			Expect(event.GetStartTimestamp()).ToNot(BeZero())
 			Expect(event.GetStopTimestamp()).ToNot(BeZero())
-			Expect(event.GetUserAgent()).To(Equal("Spider-Man"))
+			Expect(event.GetUserAgent()).To(Equal("Superman"))
 			Expect(event.GetStatusCode()).To(BeEquivalentTo(http.StatusTeapot))
-
-			Expect(errorChan).To(BeEmpty())
 		})
 	})
 })
