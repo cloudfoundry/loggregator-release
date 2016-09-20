@@ -8,6 +8,7 @@ files:
 - loggregator/src/metron/NOTICE
 - loggregator/src/metron/syslog_daemon_config/*
 - loggregator/src/code.cloudfoundry.org/localip/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/workpool/*.go # gosub
 - loggregator/src/doppler/config/*.go # gosub
 - loggregator/src/doppler/dopplerservice/*.go # gosub
 - loggregator/src/doppler/iprange/*.go # gosub
@@ -24,7 +25,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/dropsonde/signature/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gosteno/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gosteno/syslog/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/gunk/workpool/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/sonde-go/events/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/etcdstoreadapter/*.go # gosub

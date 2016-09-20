@@ -6,6 +6,7 @@ files:
 - loggregator/src/trafficcontroller/LICENSE
 - loggregator/src/trafficcontroller/NOTICE
 - loggregator/src/code.cloudfoundry.org/localip/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/workpool/*.go # gosub
 - loggregator/src/doppler/config/*.go # gosub
 - loggregator/src/doppler/dopplerservice/*.go # gosub
 - loggregator/src/doppler/iprange/*.go # gosub
@@ -25,7 +26,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/dropsonde/runtime_stats/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gosteno/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gosteno/syslog/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/gunk/workpool/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/logmessage/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/server/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/server/handlers/*.go # gosub
