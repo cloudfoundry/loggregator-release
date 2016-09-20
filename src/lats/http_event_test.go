@@ -53,7 +53,7 @@ var _ = Describe("Sending Http events through loggregator", func() {
 
 		It("should emit httpStartStop events for specific apps to the stream endpoint", func() {
 			id, _ := uuid.NewV4()
-			msgChan, _ := helpers.ConnectToStream(id.String())
+			msgChan, errorChan := helpers.ConnectToStream(id.String())
 
 			udpEmitter, err := emitter.NewUdpEmitter(fmt.Sprintf("localhost:%d", config.DropsondePort))
 			Expect(err).ToNot(HaveOccurred())
@@ -85,6 +85,8 @@ var _ = Describe("Sending Http events through loggregator", func() {
 			Expect(event.GetStopTimestamp()).ToNot(BeZero())
 			Expect(event.GetUserAgent()).To(Equal("Superman"))
 			Expect(event.GetStatusCode()).To(BeEquivalentTo(http.StatusTeapot))
+
+			Expect(errorChan).To(BeEmpty())
 		})
 	})
 })

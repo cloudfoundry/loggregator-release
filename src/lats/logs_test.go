@@ -38,7 +38,7 @@ var _ = Describe("Logs", func() {
 	})
 
 	It("sends log messages for a specific app through the stream endpoint", func() {
-		msgChan, _ := helpers.ConnectToStream("foo")
+		msgChan, errorChan := helpers.ConnectToStream("foo")
 
 		helpers.EmitToMetron(createLogEnvelope("Stream message", "bar"))
 		helpers.EmitToMetron(createLogEnvelope("Stream message", "foo"))
@@ -53,6 +53,8 @@ var _ = Describe("Logs", func() {
 		Expect(string(event.GetMessage())).To(Equal("Stream message"))
 		Expect(event.GetMessageType().String()).To(Equal(events.LogMessage_OUT.Enum().String()))
 		Expect(event.GetTimestamp()).ToNot(BeZero())
+
+		Expect(errorChan).To(BeEmpty())
 	})
 })
 
