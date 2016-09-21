@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"os"
 )
 
@@ -26,6 +27,7 @@ type Config struct {
 	OutgoingDropsondePort  uint32
 	MetronHost             string
 	MetronPort             int
+	GRPCPort               int
 	SystemDomain           string
 	SkipCertVerify         bool
 	UaaHost                string
@@ -35,16 +37,19 @@ type Config struct {
 	SecurityEventLog       string
 }
 
-func ParseConfig(logLevel bool, configFile string) (*Config, error) {
-	config := &Config{}
-
+func ParseConfig(configFile string) (*Config, error) {
 	file, err := os.Open(configFile)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
+	return Parse(file)
+}
 
-	err = json.NewDecoder(file).Decode(config)
+func Parse(r io.Reader) (*Config, error) {
+	config := &Config{}
+
+	err := json.NewDecoder(r).Decode(config)
 	if err != nil {
 		return nil, err
 	}
@@ -77,6 +82,10 @@ func (c *Config) setDefaults() {
 
 	if c.MetronPort == 0 {
 		c.MetronPort = 3457
+	}
+
+	if c.GRPCPort == 0 {
+		c.GRPCPort = 8082
 	}
 }
 

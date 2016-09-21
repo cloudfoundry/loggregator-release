@@ -14,5 +14,6 @@
     "SystemDomain": "vcap.me",
     "SecurityEventLog": "access.log",
     "MetronHost": "foo.bar",
-    "MetronPort": 7543
+    "MetronPort": 7543,
+    "GRPCPort": 3456
 }

@@ -14,5 +14,6 @@
     "UaaHost": "http://127.0.0.1:5678",
     "UaaClient": "bob",
     "UaaClientSecret": "yourUncle",
-    "MonitorIntervalSeconds": 1
+    "MonitorIntervalSeconds": 1,
+    "GRPCPort": 1236
 }

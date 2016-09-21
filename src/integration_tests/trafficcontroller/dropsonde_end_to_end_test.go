@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"plumbing"
 	"strconv"
 	"time"
 
@@ -43,9 +44,9 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 		})
 
 		It("passes messages through", func() {
-			var request *http.Request
-			Eventually(fakeDoppler.TrafficControllerConnected, 10).Should(Receive(&request))
-			Expect(request.URL.Path).To(Equal("/apps/1234/stream"))
+			var grpcRequest *plumbing.StreamRequest
+			Eventually(fakeDoppler.StreamRequests, 10).Should(Receive(&grpcRequest))
+			Expect(grpcRequest.AppID).To(Equal(APP_ID))
 
 			currentTime := time.Now().UnixNano()
 			dropsondeMessage := makeDropsondeMessage("Hello through NOAA", APP_ID, currentTime)
@@ -64,13 +65,12 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 		})
 
 		It("closes the upstream websocket connection when done", func() {
-			var request *http.Request
-			Eventually(fakeDoppler.TrafficControllerConnected, 10).Should(Receive(&request))
-			Eventually(fakeDoppler.ConnectionPresent).Should(BeTrue())
+			var server plumbing.Doppler_StreamServer
+			Eventually(fakeDoppler.StreamServers, 10).Should(Receive(&server))
 
 			client.Close()
 
-			Eventually(fakeDoppler.ConnectionPresent).Should(BeFalse())
+			Eventually(server.Context().Done()).Should(BeClosed())
 		})
 	})
 
@@ -82,11 +82,12 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 
 		It("passes messages through for every app for uaa admins", func() {
 			client := consumer.New(dropsondeEndpoint, &tls.Config{}, nil)
+			defer client.Close()
 			messages, errors = client.FirehoseWithoutReconnect(SUBSCRIPTION_ID, AUTH_TOKEN)
 
-			var request *http.Request
-			Eventually(fakeDoppler.TrafficControllerConnected, 10).Should(Receive(&request))
-			Expect(request.URL.Path).To(Equal("/firehose/" + SUBSCRIPTION_ID))
+			var grpcRequest *plumbing.FirehoseRequest
+			Eventually(fakeDoppler.FirehoseRequests, 10).Should(Receive(&grpcRequest))
+			Expect(grpcRequest.SubID).To(Equal(SUBSCRIPTION_ID))
 
 			currentTime := time.Now().UnixNano()
 			dropsondeMessage := makeDropsondeMessage("Hello through NOAA", APP_ID, currentTime)
@@ -96,12 +97,11 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 			Eventually(messages).Should(Receive(&receivedEnvelope))
 			Consistently(errors).ShouldNot(Receive())
 
+			Expect(receivedEnvelope.GetEventType()).To(Equal(events.Envelope_LogMessage))
 			receivedMessage := receivedEnvelope.GetLogMessage()
 			Expect(receivedMessage.GetMessage()).To(BeEquivalentTo("Hello through NOAA"))
 			Expect(receivedMessage.GetAppId()).To(Equal(APP_ID))
 			Expect(receivedMessage.GetTimestamp()).To(Equal(currentTime))
-
-			client.Close()
 		})
 	})
 

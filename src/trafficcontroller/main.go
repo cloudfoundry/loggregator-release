@@ -19,6 +19,7 @@ import (
 	"trafficcontroller/channel_group_connector"
 	"trafficcontroller/config"
 	"trafficcontroller/dopplerproxy"
+	"trafficcontroller/grpcconnector"
 	"trafficcontroller/httpsetup"
 	"trafficcontroller/listener"
 	"trafficcontroller/middleware"
@@ -58,7 +59,7 @@ var (
 func main() {
 	flag.Parse()
 
-	config, err := config.ParseConfig(*logLevel, *configFile)
+	config, err := config.ParseConfig(*configFile)
 	if err != nil {
 		panic(fmt.Errorf("Unable to parse config: %s", err))
 	}
@@ -109,12 +110,6 @@ func main() {
 	// Eventually we'll have a separate websocket client pool
 	finder := dopplerservice.NewFinder(etcdAdapter, int(config.DopplerPort), []string{"udp"}, "", log)
 	finder.Start()
-	// Draining the finder's events channel in order to not block the finder from handling etcd events.
-	go func() {
-		for {
-			finder.Next()
-		}
-	}()
 
 	var accessMiddleware func(middleware.HttpHandler) *middleware.AccessHandler
 	if config.SecurityEventLog != "" {
@@ -130,8 +125,11 @@ func main() {
 		accessMiddleware = middleware.Access(accessLogger, ipAddress, config.OutgoingDropsondePort, log)
 	}
 
+	rxFetcher := grpcconnector.NewFetcher(config.GRPCPort, finder, log)
+	grpcConnector := grpcconnector.New(rxFetcher)
+
 	dopplerCgc := channel_group_connector.NewChannelGroupConnector(finder, newDropsondeWebsocketListener, batcher, log)
-	dopplerHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, dopplerCgc, "doppler."+config.SystemDomain, log))
+	dopplerHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, dopplerCgc, grpcConnector, "doppler."+config.SystemDomain, log))
 	if accessMiddleware != nil {
 		dopplerHandler = accessMiddleware(dopplerHandler)
 	}

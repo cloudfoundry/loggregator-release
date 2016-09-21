@@ -17,7 +17,7 @@ var _ = Describe("communicating with doppler over TLS", func() {
 		defer etcdCleanup()
 		metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(etcdClientURL, "tls")
 		defer metronCleanup()
-		dopplerCleanup, dopplerOutgoingPort := integration_tests.SetupDoppler(etcdClientURL, metronPort)
+		dopplerCleanup, dopplerWSPort, _ := integration_tests.SetupDoppler(etcdClientURL, metronPort)
 		defer dopplerCleanup()
 		metronReady()
 
@@ -35,7 +35,7 @@ var _ = Describe("communicating with doppler over TLS", func() {
 
 		By("reading a message from doppler")
 		Eventually(func() ([]byte, error) {
-			c, _, err := websocket.DefaultDialer.Dial(fmt.Sprintf("ws://localhost:%d/apps/test-app-id/recentlogs", dopplerOutgoingPort), nil)
+			c, _, err := websocket.DefaultDialer.Dial(fmt.Sprintf("ws://localhost:%d/apps/test-app-id/recentlogs", dopplerWSPort), nil)
 			if err != nil {
 				return []byte{}, err
 			}

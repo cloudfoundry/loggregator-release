@@ -15,5 +15,6 @@
     "UaaClient": "bob",
     "UaaClientSecret": "yourUncle",
     "MonitorIntervalSeconds": 1,
-    "SecurityEventLog": "/tmp/access.log"
+    "SecurityEventLog": "/tmp/access.log",
+    "GRPCPort": 1236
 }

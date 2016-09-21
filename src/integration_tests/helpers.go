@@ -37,7 +37,7 @@ const (
 	dopplerUDPPortOffset
 	dopplerTCPPortOffset
 	dopplerTLSPortOffset
-	dopplerOutgoingPortOffset
+	dopplerWSPortOffset
 	dopplerGRPCPortOffset
 	metronPortOffset
 	trafficcontrollerPortOffset
@@ -107,7 +107,7 @@ func SetupEtcd() (func(), string) {
 	}, etcdClientURL
 }
 
-func SetupDoppler(etcdClientURL string, metronPort int) (func(), int) {
+func SetupDoppler(etcdClientURL string, metronPort int) (cleanup func(), wsPort, grpcPort int) {
 	By("making sure doppler was build")
 	dopplerPath := os.Getenv("DOPPLER_BUILD_PATH")
 	Expect(dopplerPath).ToNot(BeEmpty())
@@ -116,7 +116,7 @@ func SetupDoppler(etcdClientURL string, metronPort int) (func(), int) {
 	dopplerUDPPort := getPort(dopplerUDPPortOffset)
 	dopplerTCPPort := getPort(dopplerTCPPortOffset)
 	dopplerTLSPort := getPort(dopplerTLSPortOffset)
-	dopplerOutgoingPort := getPort(dopplerOutgoingPortOffset)
+	dopplerWSPort := getPort(dopplerWSPortOffset)
 	dopplerGRPCPort := getPort(dopplerGRPCPortOffset)
 
 	dopplerConf := dopplerConfig.Config{
@@ -127,7 +127,7 @@ func SetupDoppler(etcdClientURL string, metronPort int) (func(), int) {
 
 		IncomingUDPPort: uint32(dopplerUDPPort),
 		IncomingTCPPort: uint32(dopplerTCPPort),
-		OutgoingPort:    uint32(dopplerOutgoingPort),
+		OutgoingPort:    uint32(dopplerWSPort),
 		GRPCPort:        uint32(dopplerGRPCPort),
 
 		EtcdUrls:                  []string{etcdClientURL},
@@ -177,7 +177,7 @@ func SetupDoppler(etcdClientURL string, metronPort int) (func(), int) {
 
 	By("waiting for doppler to listen")
 	Eventually(func() error {
-		c, reqErr := net.Dial("tcp", fmt.Sprintf(":%d", dopplerOutgoingPort))
+		c, reqErr := net.Dial("tcp", fmt.Sprintf(":%d", dopplerWSPort))
 		if reqErr == nil {
 			c.Close()
 		}
@@ -187,7 +187,7 @@ func SetupDoppler(etcdClientURL string, metronPort int) (func(), int) {
 	return func() {
 		os.Remove(dopplerCfgFile.Name())
 		dopplerSession.Kill().Wait()
-	}, dopplerOutgoingPort
+	}, dopplerWSPort, dopplerGRPCPort
 }
 
 func SetupMetron(etcdClientURL, proto string) (func(), int, func()) {
@@ -268,7 +268,7 @@ func SetupMetron(etcdClientURL, proto string) (func(), int, func()) {
 		}
 }
 
-func SetupTrafficcontroller(etcdClientURL string, dopplerPort, metronPort int) (func(), int) {
+func SetupTrafficcontroller(etcdClientURL string, dopplerWSPort, dopplerGRPCPort, metronPort int) (func(), int) {
 	By("making sure trafficcontroller was build")
 	tcPath := os.Getenv("TRAFFIC_CONTROLLER_BUILD_PATH")
 	Expect(tcPath).ToNot(BeEmpty())
@@ -279,7 +279,8 @@ func SetupTrafficcontroller(etcdClientURL string, dopplerPort, metronPort int) (
 		Index:   jobIndex,
 		JobName: jobName,
 
-		DopplerPort:           uint32(dopplerPort),
+		DopplerPort:           uint32(dopplerWSPort),
+		GRPCPort:              dopplerGRPCPort,
 		OutgoingDropsondePort: uint32(tcPort),
 		MetronHost:            "localhost",
 		MetronPort:            metronPort,
