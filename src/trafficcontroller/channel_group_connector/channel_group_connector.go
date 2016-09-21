@@ -6,9 +6,11 @@ import (
 	"time"
 	"trafficcontroller/doppler_endpoint"
 	"trafficcontroller/listener"
-	"trafficcontroller/marshaller"
 
+	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 )
 
 const checkServerAddressesInterval = 100 * time.Millisecond
@@ -26,14 +28,12 @@ type ChannelGroupConnector struct {
 	batcher             listener.Batcher
 	logger              *gosteno.Logger
 	listenerConstructor ListenerConstructor
-	generateLogMessage  marshaller.MessageGenerator
 }
 
-func NewChannelGroupConnector(finder Finder, listenerConstructor ListenerConstructor, logMessageGenerator marshaller.MessageGenerator, batcher listener.Batcher, logger *gosteno.Logger) *ChannelGroupConnector {
+func NewChannelGroupConnector(finder Finder, listenerConstructor ListenerConstructor, batcher listener.Batcher, logger *gosteno.Logger) *ChannelGroupConnector {
 	return &ChannelGroupConnector{
 		finder:              finder,
 		listenerConstructor: listenerConstructor,
-		generateLogMessage:  logMessageGenerator,
 		batcher:             batcher,
 		logger:              logger,
 	}
@@ -91,7 +91,7 @@ func (c *ChannelGroupConnector) connectToServer(serverAddress string, dopplerEnd
 
 	if err != nil {
 		errorMsg := fmt.Sprintf("proxy: error connecting to %s: %s", serverAddress, err.Error())
-		messagesChan <- c.generateLogMessage(errorMsg, appId)
+		messagesChan <- errMessage(errorMsg, appId)
 		c.logger.Errorf("proxy: error connecting %s %s %s", appId, dopplerEndpoint.Endpoint, err.Error())
 	}
 }
@@ -124,4 +124,18 @@ func (connections *serverConnections) removeConnectedServer(serverAddress string
 	defer connections.Done()
 
 	delete(connections.connectedAddresses, serverAddress)
+}
+
+// errMessage takes an error string and an appID and generates
+// a dropsonde error message.  It ignores any errors.
+func errMessage(err, appID string) []byte {
+	msg, _ := emitter.Wrap(&events.LogMessage{
+		Message:     []byte(err),
+		MessageType: events.LogMessage_ERR.Enum(),
+		Timestamp:   proto.Int64(time.Now().UnixNano()),
+		SourceType:  proto.String("DOP"),
+		AppId:       &appID,
+	}, "doppler")
+	b, _ := proto.Marshal(msg)
+	return b
 }

@@ -26,10 +26,8 @@ files:
 - loggregator/src/github.com/cloudfoundry/dropsonde/runtime_stats/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gosteno/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/gosteno/syslog/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/loggregatorlib/logmessage/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/server/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/loggregatorlib/server/handlers/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/loggregatorlib/signature/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/sonde-go/events/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/etcdstoreadapter/*.go # gosub
@@ -52,6 +50,5 @@ files:
 - loggregator/src/trafficcontroller/dopplerproxy/*.go # gosub
 - loggregator/src/trafficcontroller/httpsetup/*.go # gosub
 - loggregator/src/trafficcontroller/listener/*.go # gosub
-- loggregator/src/trafficcontroller/marshaller/*.go # gosub
 - loggregator/src/trafficcontroller/middleware/*.go # gosub
 - loggregator/src/trafficcontroller/uaa_client/*.go # gosub

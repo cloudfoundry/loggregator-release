@@ -21,26 +21,6 @@ var _ = Describe("Config", func() {
 			Expect(c.OutgoingDropsondePort).To(Equal(uint32(4566)))
 		})
 
-		Context("with empty Loggregator ports", func() {
-			It("uses defaults", func() {
-				configFile := "./fixtures/minimal_loggregator_trafficcontroller.json"
-
-				c, err := config.ParseConfig(logLevel, configFile)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(c.OutgoingPort).To(Equal(uint32(8080)))
-			})
-		})
-
-		Context("with specified Loggregator ports", func() {
-			It("uses specified ports", func() {
-				configFile := "./fixtures/loggregator_trafficcontroller.json"
-
-				c, err := config.ParseConfig(logLevel, configFile)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(c.OutgoingPort).To(Equal(uint32(4567)))
-			})
-		})
-
 		Context("without ETCD/heartbeat specific configuration", func() {
 			It("uses defaults", func() {
 				configFile := "./fixtures/minimal_loggregator_trafficcontroller.json"

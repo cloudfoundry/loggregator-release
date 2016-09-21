@@ -20,23 +20,19 @@ type Proxy struct {
 	logAuthorize   authorization.LogAccessAuthorizer
 	adminAuthorize authorization.AdminAccessAuthorizer
 	connector      channelGroupConnector
-	translate      RequestTranslator
 	cookieDomain   string
 	logger         *gosteno.Logger
 }
-
-type RequestTranslator func(request *http.Request) (*http.Request, error)
 
 type channelGroupConnector interface {
 	Connect(dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{})
 }
 
-func NewDopplerProxy(logAuthorize authorization.LogAccessAuthorizer, adminAuthorizer authorization.AdminAccessAuthorizer, connector channelGroupConnector, translator RequestTranslator, cookieDomain string, logger *gosteno.Logger) *Proxy {
+func NewDopplerProxy(logAuthorize authorization.LogAccessAuthorizer, adminAuthorizer authorization.AdminAccessAuthorizer, connector channelGroupConnector, cookieDomain string, logger *gosteno.Logger) *Proxy {
 	return &Proxy{
 		logAuthorize:   logAuthorize,
 		adminAuthorize: adminAuthorizer,
 		connector:      connector,
-		translate:      translator,
 		cookieDomain:   cookieDomain,
 		logger:         logger,
 	}
@@ -47,26 +43,18 @@ func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 	proxy.logger.Debugf("doppler proxy: ServeHTTP entered with request %v", request.URL)
 	defer proxy.logger.Debugf("doppler proxy: ServeHTTP exited")
 
-	translatedRequest, err := proxy.translate(request)
-	if err != nil {
-		proxy.logger.Errorf("DopplerProxy.ServeHTTP: unable to translate request: %s", err.Error())
-		writer.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(writer, "Resource Not Found.")
-		return
-	}
-
 	if request.Method == "HEAD" {
 		return
 	}
 
-	paths := strings.Split(translatedRequest.URL.Path, "/")
+	paths := strings.Split(request.URL.Path, "/")
 
 	endpointName := paths[1]
 	switch endpointName {
 	case "firehose":
-		proxy.serveFirehose(paths, writer, translatedRequest)
+		proxy.serveFirehose(paths, writer, request)
 	case "apps":
-		proxy.serveAppLogs(paths, writer, translatedRequest)
+		proxy.serveAppLogs(paths, writer, request)
 		if len(paths) > 3 {
 			endpoint := paths[3]
 			if endpoint != "" && (endpoint == "recentlogs" || endpoint == "containermetrics") {
@@ -74,7 +62,7 @@ func (proxy *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 			}
 		}
 	case "set-cookie":
-		proxy.serveSetCookie(writer, translatedRequest, proxy.cookieDomain)
+		proxy.serveSetCookie(writer, request, proxy.cookieDomain)
 	default:
 		writer.WriteHeader(http.StatusNotFound)
 		fmt.Fprint(writer, "Resource Not Found.")

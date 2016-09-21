@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/cloudfoundry/loggregator_consumer"
 	"github.com/cloudfoundry/noaa/consumer"
 )
 
@@ -75,33 +74,6 @@ var _ = Describe("TrafficController's access logs", func() {
 			noaaConsumer.Firehose("foo", AUTH_TOKEN)
 
 			expected := "CEF:0|cloud_foundry|loggregator_trafficcontroller|1.0|GET /firehose/foo|GET /firehose/foo|0|"
-			Eventually(testContents).Should(ContainSubstring(expected))
-		})
-	})
-
-	Context("with legacy endpoints", func() {
-		var legacyConsumer loggregator_consumer.LoggregatorConsumer
-
-		JustBeforeEach(func() {
-			tcURL := fmt.Sprintf("ws://%s:%d", localIPAddress, TRAFFIC_CONTROLLER_LEGACY_PORT)
-			legacyConsumer = loggregator_consumer.New(tcURL, &tls.Config{}, nil)
-		})
-
-		AfterEach(func() {
-			legacyConsumer.Close()
-		})
-
-		It("logs tail access", func() {
-			legacyConsumer.Tail(APP_ID, AUTH_TOKEN)
-
-			expected := fmt.Sprintf("CEF:0|cloud_foundry|loggregator_trafficcontroller|1.0|GET /tail/?app=%s|GET /tail/?app=%[1]s|0|", APP_ID)
-			Eventually(testContents).Should(ContainSubstring(expected))
-		})
-
-		It("logs recent access", func() {
-			legacyConsumer.Recent(APP_ID, AUTH_TOKEN)
-
-			expected := fmt.Sprintf("CEF:0|cloud_foundry|loggregator_trafficcontroller|1.0|GET /recent?app=%s|GET /recent?app=%[1]s|0|", APP_ID)
 			Eventually(testContents).Should(ContainSubstring(expected))
 		})
 	})

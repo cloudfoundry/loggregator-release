@@ -40,7 +40,6 @@ var _ = Describe("ServeHTTP", func() {
 			auth.Authorize,
 			adminAuth.Authorize,
 			channelGroupConnector,
-			dopplerproxy.TranslateFromDropsondePath,
 			"cookieDomain",
 			loggertesthelper.Logger(),
 		)

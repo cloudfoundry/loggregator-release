@@ -23,7 +23,6 @@ type Config struct {
 	Syslog                 string
 	ApiHost                string
 	DopplerPort            uint32
-	OutgoingPort           uint32
 	OutgoingDropsondePort  uint32
 	MetronHost             string
 	MetronPort             int
@@ -70,10 +69,6 @@ func (c *Config) setDefaults() {
 
 	if c.MonitorIntervalSeconds == 0 {
 		c.MonitorIntervalSeconds = 60
-	}
-
-	if c.OutgoingPort == 0 {
-		c.OutgoingPort = 8080
 	}
 
 	if c.MetronHost == "" {

@@ -21,7 +21,6 @@ import (
 	"trafficcontroller/dopplerproxy"
 	"trafficcontroller/httpsetup"
 	"trafficcontroller/listener"
-	"trafficcontroller/marshaller"
 	"trafficcontroller/middleware"
 	"trafficcontroller/uaa_client"
 
@@ -117,7 +116,7 @@ func main() {
 		}
 	}()
 
-	var accessMiddleware, legacyAccessMiddleware func(middleware.HttpHandler) *middleware.AccessHandler
+	var accessMiddleware func(middleware.HttpHandler) *middleware.AccessHandler
 	if config.SecurityEventLog != "" {
 		accessLog, err := os.OpenFile(config.SecurityEventLog, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 		if err != nil {
@@ -129,22 +128,14 @@ func main() {
 		}()
 		accessLogger := accesslogger.New(accessLog, log)
 		accessMiddleware = middleware.Access(accessLogger, ipAddress, config.OutgoingDropsondePort, log)
-		legacyAccessMiddleware = middleware.Access(accessLogger, ipAddress, config.OutgoingPort, log)
 	}
 
-	dopplerCgc := channel_group_connector.NewChannelGroupConnector(finder, newDropsondeWebsocketListener, marshaller.DropsondeLogMessage, batcher, log)
-	dopplerHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, dopplerCgc, dopplerproxy.TranslateFromDropsondePath, "doppler."+config.SystemDomain, log))
+	dopplerCgc := channel_group_connector.NewChannelGroupConnector(finder, newDropsondeWebsocketListener, batcher, log)
+	dopplerHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, dopplerCgc, "doppler."+config.SystemDomain, log))
 	if accessMiddleware != nil {
 		dopplerHandler = accessMiddleware(dopplerHandler)
 	}
 	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dopplerHandler)
-
-	legacyCgc := channel_group_connector.NewChannelGroupConnector(finder, newLegacyWebsocketListener, marshaller.LoggregatorLogMessage, batcher, log)
-	legacyHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, legacyCgc, dopplerproxy.TranslateFromLegacyPath, "loggregator."+config.SystemDomain, log))
-	if legacyAccessMiddleware != nil {
-		legacyHandler = legacyAccessMiddleware(legacyHandler)
-	}
-	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingPort), 10)), legacyHandler)
 
 	killChan := signalmanager.RegisterKillSignalChannel()
 	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
@@ -230,12 +221,5 @@ func startOutgoingProxy(host string, proxy http.Handler) {
 }
 
 func newDropsondeWebsocketListener(timeout time.Duration, batcher listener.Batcher, logger *gosteno.Logger) listener.Listener {
-	messageConverter := func(message []byte) ([]byte, error) {
-		return message, nil
-	}
-	return listener.NewWebsocket(marshaller.DropsondeLogMessage, messageConverter, timeout, handshakeTimeout, batcher, logger)
-}
-
-func newLegacyWebsocketListener(timeout time.Duration, batcher listener.Batcher, logger *gosteno.Logger) listener.Listener {
-	return listener.NewWebsocket(marshaller.LoggregatorLogMessage, marshaller.TranslateDropsondeToLegacyLogMessage, timeout, handshakeTimeout, batcher, logger)
+	return listener.NewWebsocket(timeout, handshakeTimeout, batcher, logger)
 }
