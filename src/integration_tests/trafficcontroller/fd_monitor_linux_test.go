@@ -9,6 +9,7 @@ import (
 
 	"github.com/apoydence/eachers/testhelpers"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -40,7 +41,7 @@ var _ = Describe("Monitor", func() {
 			defer dropsondeReader.Stop()
 			go dropsondeReader.Start()
 
-			Eventually(func() uint64 { return atomic.LoadUint64(&writer.openFileDescriptors) }, 3).Should(BeNumerically("~", 15, 3))
+			Eventually(func() uint64 { return atomic.LoadUint64(&writer.openFileDescriptors) }, 3).Should(BeNumerically("~", 11, 3))
 		})
 	})
 })
