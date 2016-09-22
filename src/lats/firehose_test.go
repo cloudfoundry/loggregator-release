@@ -66,15 +66,13 @@ var _ = Describe("Firehose", func() {
 			}
 
 			var verifyEnvelopes = func(count int, envelopes []*events.Envelope) bool {
-				if len(envelopes) != count {
-					return false
-				}
-
 				sort.Sort(valueMetrics(envelopes))
-				for i, e := range envelopes {
-					if e.ValueMetric.GetValue() != float64(i) {
+				var i float64
+				for _, e := range envelopes {
+					if e.ValueMetric.GetValue() < i {
 						return false
 					}
+					i = e.ValueMetric.GetValue() + 1
 				}
 
 				return true
@@ -115,6 +113,9 @@ var _ = Describe("Firehose", func() {
 
 				It("sends all the envelopes to the subscription", func() {
 					envelopes := readEnvelopes(2*time.Second, msgs)
+
+					Expect(len(envelopes)).To(BeNumerically("~", count, 3))
+					Expect(len(envelopes)).To(BeNumerically("<=", count))
 					Expect(verifyEnvelopes(count, envelopes)).To(BeTrue())
 				})
 			})
@@ -199,8 +200,11 @@ var _ = Describe("Firehose", func() {
 						It("sends all the envelopes to each connection", func() {
 							envelopes1, envelopes2 := readFromTwoChannels()
 
-							Expect(envelopes1).To(HaveLen(count))
-							Expect(envelopes2).To(HaveLen(count))
+							Expect(len(envelopes1)).To(BeNumerically("~", count, 3))
+							Expect(len(envelopes1)).To(BeNumerically("<=", count))
+
+							Expect(len(envelopes2)).To(BeNumerically("~", count, 3))
+							Expect(len(envelopes2)).To(BeNumerically("<=", count))
 
 							Expect(verifyEnvelopes(count, envelopes1)).To(BeTrue())
 							Expect(verifyEnvelopes(count, envelopes2)).To(BeTrue())
