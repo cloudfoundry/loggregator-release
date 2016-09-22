@@ -171,8 +171,8 @@ var _ = Describe("Firehose", func() {
 					It("sends about half of the envelopes to each connection", func() {
 						envelopes1, envelopes2 := readFromTwoChannels()
 
-						Expect(len(envelopes1)).To(BeNumerically("~", count/2, 10))
-						Expect(len(envelopes2)).To(BeNumerically("~", count/2, 10))
+						Expect(len(envelopes1)).To(BeNumerically("~", count/2, 15))
+						Expect(len(envelopes2)).To(BeNumerically("~", count/2, 15))
 
 						allEnvelopes := append(envelopes1, envelopes2...)
 						Expect(verifyEnvelopes(count, allEnvelopes)).To(BeTrue())
@@ -289,12 +289,12 @@ var _ = Describe("Firehose", func() {
 							envelopes := readFromFourChannels()
 
 							By("subscription A")
-							Expect(len(envelopes[0])).To(BeNumerically("~", count/2, 10))
-							Expect(len(envelopes[1])).To(BeNumerically("~", count/2, 10))
+							Expect(len(envelopes[0])).To(BeNumerically("~", count/2, 15))
+							Expect(len(envelopes[1])).To(BeNumerically("~", count/2, 15))
 
 							By("subscription B")
-							Expect(len(envelopes[2])).To(BeNumerically("~", count/2, 10))
-							Expect(len(envelopes[3])).To(BeNumerically("~", count/2, 10))
+							Expect(len(envelopes[2])).To(BeNumerically("~", count/2, 15))
+							Expect(len(envelopes[3])).To(BeNumerically("~", count/2, 15))
 
 							By("subscription A")
 							allEnvelopesA := append(envelopes[0], envelopes[1]...)
