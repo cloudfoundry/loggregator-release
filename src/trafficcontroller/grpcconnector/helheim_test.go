@@ -11,26 +11,29 @@ import (
 	"time"
 	"trafficcontroller/grpcconnector"
 
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 
-type mockFinder struct {
-	NextCalled chan bool
-	NextOutput struct {
-		Ret0 chan dopplerservice.Event
+type mockReceiver struct {
+	RecvCalled chan bool
+	RecvOutput struct {
+		Ret0 chan *plumbing.Response
+		Ret1 chan error
 	}
 }
 
-func newMockFinder() *mockFinder {
-	m := &mockFinder{}
-	m.NextCalled = make(chan bool, 100)
-	m.NextOutput.Ret0 = make(chan dopplerservice.Event, 100)
+func newMockReceiver() *mockReceiver {
+	m := &mockReceiver{}
+	m.RecvCalled = make(chan bool, 100)
+	m.RecvOutput.Ret0 = make(chan *plumbing.Response, 100)
+	m.RecvOutput.Ret1 = make(chan error, 100)
 	return m
 }
-func (m *mockFinder) Next() dopplerservice.Event {
-	m.NextCalled <- true
-	return <-m.NextOutput.Ret0
+func (m *mockReceiver) Recv() (*plumbing.Response, error) {
+	m.RecvCalled <- true
+	return <-m.RecvOutput.Ret0, <-m.RecvOutput.Ret1
 }
 
 type mockReceiveFetcher struct {
@@ -87,24 +90,45 @@ func (m *mockReceiveFetcher) FetchFirehose(ctx context.Context, in *plumbing.Fir
 	return <-m.FetchFirehoseOutput.Ret0, <-m.FetchFirehoseOutput.Ret1
 }
 
-type mockReceiver struct {
-	RecvCalled chan bool
-	RecvOutput struct {
-		Ret0 chan *plumbing.Response
-		Ret1 chan error
+type mockMetaMetricBatcher struct {
+	BatchCounterCalled chan bool
+	BatchCounterInput  struct {
+		Name chan string
+	}
+	BatchCounterOutput struct {
+		Ret0 chan metricbatcher.BatchCounterChainer
 	}
 }
 
-func newMockReceiver() *mockReceiver {
-	m := &mockReceiver{}
-	m.RecvCalled = make(chan bool, 100)
-	m.RecvOutput.Ret0 = make(chan *plumbing.Response, 100)
-	m.RecvOutput.Ret1 = make(chan error, 100)
+func newMockMetaMetricBatcher() *mockMetaMetricBatcher {
+	m := &mockMetaMetricBatcher{}
+	m.BatchCounterCalled = make(chan bool, 100)
+	m.BatchCounterInput.Name = make(chan string, 100)
+	m.BatchCounterOutput.Ret0 = make(chan metricbatcher.BatchCounterChainer, 100)
 	return m
 }
-func (m *mockReceiver) Recv() (*plumbing.Response, error) {
-	m.RecvCalled <- true
-	return <-m.RecvOutput.Ret0, <-m.RecvOutput.Ret1
+func (m *mockMetaMetricBatcher) BatchCounter(name string) metricbatcher.BatchCounterChainer {
+	m.BatchCounterCalled <- true
+	m.BatchCounterInput.Name <- name
+	return <-m.BatchCounterOutput.Ret0
+}
+
+type mockFinder struct {
+	NextCalled chan bool
+	NextOutput struct {
+		Ret0 chan dopplerservice.Event
+	}
+}
+
+func newMockFinder() *mockFinder {
+	m := &mockFinder{}
+	m.NextCalled = make(chan bool, 100)
+	m.NextOutput.Ret0 = make(chan dopplerservice.Event, 100)
+	return m
+}
+func (m *mockFinder) Next() dopplerservice.Event {
+	m.NextCalled <- true
+	return <-m.NextOutput.Ret0
 }
 
 type mockContext struct {
@@ -160,4 +184,44 @@ func (m *mockContext) Value(key interface{}) interface{} {
 	m.ValueCalled <- true
 	m.ValueInput.Key <- key
 	return <-m.ValueOutput.Ret0
+}
+
+type mockBatchCounterChainer struct {
+	SetTagCalled chan bool
+	SetTagInput  struct {
+		Key, Value chan string
+	}
+	SetTagOutput struct {
+		Ret0 chan metricbatcher.BatchCounterChainer
+	}
+	IncrementCalled chan bool
+	AddCalled       chan bool
+	AddInput        struct {
+		Value chan uint64
+	}
+}
+
+func newMockBatchCounterChainer() *mockBatchCounterChainer {
+	m := &mockBatchCounterChainer{}
+	m.SetTagCalled = make(chan bool, 100)
+	m.SetTagInput.Key = make(chan string, 100)
+	m.SetTagInput.Value = make(chan string, 100)
+	m.SetTagOutput.Ret0 = make(chan metricbatcher.BatchCounterChainer, 100)
+	m.IncrementCalled = make(chan bool, 100)
+	m.AddCalled = make(chan bool, 100)
+	m.AddInput.Value = make(chan uint64, 100)
+	return m
+}
+func (m *mockBatchCounterChainer) SetTag(key, value string) metricbatcher.BatchCounterChainer {
+	m.SetTagCalled <- true
+	m.SetTagInput.Key <- key
+	m.SetTagInput.Value <- value
+	return <-m.SetTagOutput.Ret0
+}
+func (m *mockBatchCounterChainer) Increment() {
+	m.IncrementCalled <- true
+}
+func (m *mockBatchCounterChainer) Add(value uint64) {
+	m.AddCalled <- true
+	m.AddInput.Value <- value
 }

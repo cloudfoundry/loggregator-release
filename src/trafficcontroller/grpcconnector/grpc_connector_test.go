@@ -11,6 +11,7 @@ import (
 	"golang.org/x/net/context"
 
 	. "github.com/apoydence/eachers"
+	"github.com/apoydence/eachers/testhelpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -20,6 +21,8 @@ var _ = Describe("GrpcConnector", func() {
 		mockReceiveFetcher *mockReceiveFetcher
 		mockReceiverA      *mockReceiver
 		mockReceiverB      *mockReceiver
+		mockMetricBatcher  *mockMetaMetricBatcher
+		mockBatchChainer   *mockBatchCounterChainer
 
 		connector *grpcconnector.GrpcConnector
 	)
@@ -56,10 +59,17 @@ var _ = Describe("GrpcConnector", func() {
 		mockReceiveFetcher = newMockReceiveFetcher()
 		mockReceiverA = newMockReceiver()
 		mockReceiverB = newMockReceiver()
-		connector = grpcconnector.New(mockReceiveFetcher)
+		mockBatchChainer = newMockBatchCounterChainer()
+		mockMetricBatcher = newMockMetaMetricBatcher()
+		connector = grpcconnector.New(mockReceiveFetcher, mockMetricBatcher)
 
 		mockReceiveFetcher.FetchStreamOutput.Ret0 <- []grpcconnector.Receiver{mockReceiverA, mockReceiverB}
 		mockReceiveFetcher.FetchFirehoseOutput.Ret0 <- []grpcconnector.Receiver{mockReceiverA, mockReceiverB}
+	})
+
+	JustBeforeEach(func() {
+		testhelpers.AlwaysReturn(mockMetricBatcher.BatchCounterOutput.Ret0, mockBatchChainer)
+		testhelpers.AlwaysReturn(mockBatchChainer.SetTagOutput.Ret0, mockBatchChainer)
 	})
 
 	Describe("Stream", func() {
@@ -99,6 +109,15 @@ var _ = Describe("GrpcConnector", func() {
 						data := channelToSlice(2, payloads)
 						Expect(data).To(ContainElement([]byte("some-data-a")))
 						Expect(data).To(ContainElement([]byte("some-data-b")))
+					})
+
+					It("increments receivedEnvelopes counter per message received", func() {
+						_, err := connector.Stream(context.Background(), &plumbing.StreamRequest{"AppID"})
+						Expect(err).ToNot(HaveOccurred())
+
+						Eventually(mockMetricBatcher.BatchCounterInput.Name).Should(BeCalled(With("listeners.receivedEnvelopes")))
+						Eventually(mockBatchChainer.SetTagInput).Should(BeCalled(With("protocol", "grpc")))
+						Eventually(mockBatchChainer.IncrementCalled).Should(HaveLen(2))
 					})
 				})
 			})

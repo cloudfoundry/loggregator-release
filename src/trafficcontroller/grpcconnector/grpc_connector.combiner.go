@@ -6,11 +6,13 @@ type combiner struct {
 	rxs        []Receiver
 	mainOutput chan []byte
 	errs       chan error
+	batcher    MetaMetricBatcher
 }
 
-func startCombiner(rxs []Receiver) *combiner {
+func startCombiner(rxs []Receiver, batcher MetaMetricBatcher) *combiner {
 	c := &combiner{
 		rxs:        rxs,
+		batcher:    batcher,
 		mainOutput: make(chan []byte, 1000),
 		errs:       make(chan error, 1000),
 	}
@@ -39,6 +41,10 @@ func (c *combiner) start() {
 					c.errs <- err
 					return
 				}
+
+				c.batcher.BatchCounter("listeners.receivedEnvelopes").
+					SetTag("protocol", "grpc").
+					Increment()
 
 				c.mainOutput <- resp.Payload
 			}
