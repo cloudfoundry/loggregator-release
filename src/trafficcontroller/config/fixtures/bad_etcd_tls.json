@@ -6,7 +6,6 @@
     "EtcdRequireTLS": true,
     "OutgoingDropsondePort": 4566,
     "IncomingPort": 8765,
-    "OutgoingPort": 4567,
     "LoggregatorIncomingPort": 8766,
     "LoggregatorOutgoingPort": 4568,
     "SkipCertVerify": true,

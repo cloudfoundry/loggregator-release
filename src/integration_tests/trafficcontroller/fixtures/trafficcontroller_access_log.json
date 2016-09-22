@@ -5,7 +5,6 @@
     "EtcdMaxConcurrentRequests": 5,
     "OutgoingDropsondePort": 4566,
     "DopplerPort": 1235,
-    "OutgoingPort": 4567,
     "SkipCertVerify": true,
     "Zone": "z1",
     "ApiHost": "http://127.0.0.1:42123",

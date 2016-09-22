@@ -6,7 +6,6 @@
     "OutgoingDropsondePort": 49629,
     "DopplerPort": 49627,
     "IncomingPort": 49631,
-    "OutgoingPort": 49630,
     "SkipCertVerify": true,
     "Zone": "z1",
     "Host": "0.0.0.0",

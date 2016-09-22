@@ -84,9 +84,6 @@ properties:
   cc.srv_api_uri:
     description: "API URI of cloud controller"
 
-  traffic_controller.outgoing_port:
-    description: "DEPRECATED"
-    default: 8080
   loggregator.uaa_client_id:
     description: "DEPRECATED in favor of loggregator.uaa.client."
     default: ""

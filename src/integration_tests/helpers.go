@@ -16,12 +16,12 @@ import (
 	metronConfig "metron/config"
 	trafficcontrollerConfig "trafficcontroller/config"
 
+	"code.cloudfoundry.org/localip"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	"code.cloudfoundry.org/localip"
 )
 
 const (
