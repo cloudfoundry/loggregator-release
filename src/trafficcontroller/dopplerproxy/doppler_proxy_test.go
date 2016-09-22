@@ -515,80 +515,82 @@ var _ = Describe("ServeHTTP()", func() {
 		})
 
 		Describe("/stream & /firehose", func() {
-			var (
-				expectedData []byte
-			)
-
-			BeforeEach(func() {
-				expectedData = []byte("hello")
-				mockDopplerStreamClient.RecvOutput.Ret0 <- &plumbing.Response{
-					Payload: expectedData,
-				}
-
-				mockDopplerFirehoseClient.RecvOutput.Ret0 <- &plumbing.Response{
-					Payload: expectedData,
-				}
-			})
-
-			It("/stream sends data to the client websocket connection", func(done Done) {
-				defer close(done)
-				conn, _, err := websocket.DefaultDialer.Dial(
-					wsEndpoint("/apps/abc123/stream"),
-					http.Header{"Authorization": []string{"token"}},
+			Context("with GRPC recv returning data", func() {
+				var (
+					expectedData []byte
 				)
-				Expect(err).ToNot(HaveOccurred())
 
-				_, data, err := conn.ReadMessage()
-				Expect(err).ToNot(HaveOccurred())
-
-				Expect(data).To(Equal(expectedData))
-			})
-
-			It("/firehose sends data to the client websocket connection", func(done Done) {
-				defer close(done)
-				conn, _, err := websocket.DefaultDialer.Dial(
-					wsEndpoint("/firehose/subscription-id"),
-					http.Header{"Authorization": []string{"token"}},
-				)
-				Expect(err).ToNot(HaveOccurred())
-
-				_, data, err := conn.ReadMessage()
-				Expect(err).ToNot(HaveOccurred())
-
-				Expect(data).To(Equal(expectedData))
-			})
-
-			Context("with doppler's stream endpoint returning an error", func() {
 				BeforeEach(func() {
-					mockGrpcConnector.StreamOutput.Ret1 <- fmt.Errorf("some-error")
+					expectedData = []byte("hello")
+					mockDopplerStreamClient.RecvOutput.Ret0 <- &plumbing.Response{
+						Payload: expectedData,
+					}
+
+					mockDopplerFirehoseClient.RecvOutput.Ret0 <- &plumbing.Response{
+						Payload: expectedData,
+					}
 				})
 
-				It("writes a 500", func(done Done) {
+				It("/stream sends data to the client websocket connection", func(done Done) {
 					defer close(done)
-					_, resp, err := websocket.DefaultDialer.Dial(
+					conn, _, err := websocket.DefaultDialer.Dial(
 						wsEndpoint("/apps/abc123/stream"),
 						http.Header{"Authorization": []string{"token"}},
 					)
-					Expect(err).To(HaveOccurred())
+					Expect(err).ToNot(HaveOccurred())
 
-					Expect(resp.StatusCode).To(Equal(http.StatusInternalServerError))
-				})
-			})
+					_, data, err := conn.ReadMessage()
+					Expect(err).ToNot(HaveOccurred())
 
-			Context("with doppler's firehose endpoint returning an error", func() {
-				BeforeEach(func() {
-					mockGrpcConnector.FirehoseOutput.Ret1 <- fmt.Errorf("some-error")
+					Expect(data).To(Equal(expectedData))
 				})
 
-				It("writes a 500", func(done Done) {
+				It("/firehose sends data to the client websocket connection", func(done Done) {
 					defer close(done)
-					_, resp, err := websocket.DefaultDialer.Dial(
-						wsEndpoint("/firehose/abc123"),
+					conn, _, err := websocket.DefaultDialer.Dial(
+						wsEndpoint("/firehose/subscription-id"),
 						http.Header{"Authorization": []string{"token"}},
 					)
-					Expect(err).To(HaveOccurred())
+					Expect(err).ToNot(HaveOccurred())
 
-					Expect(resp.StatusCode).To(Equal(http.StatusInternalServerError))
+					_, data, err := conn.ReadMessage()
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(data).To(Equal(expectedData))
+				})
+
+				Context("with doppler's stream endpoint returning an error", func() {
+					BeforeEach(func() {
+						mockGrpcConnector.StreamOutput.Ret1 <- fmt.Errorf("some-error")
+					})
+
+					It("writes a 500", func(done Done) {
+						defer close(done)
+						_, resp, err := websocket.DefaultDialer.Dial(
+							wsEndpoint("/apps/abc123/stream"),
+							http.Header{"Authorization": []string{"token"}},
+						)
+						Expect(err).To(HaveOccurred())
+
+						Expect(resp.StatusCode).To(Equal(http.StatusInternalServerError))
+					})
+				})
+
+				Context("with doppler's firehose endpoint returning an error", func() {
+					BeforeEach(func() {
+						mockGrpcConnector.FirehoseOutput.Ret1 <- fmt.Errorf("some-error")
+					})
+
+					It("writes a 500", func(done Done) {
+						defer close(done)
+						_, resp, err := websocket.DefaultDialer.Dial(
+							wsEndpoint("/firehose/abc123"),
+							http.Header{"Authorization": []string{"token"}},
+						)
+						Expect(err).To(HaveOccurred())
+
+						Expect(resp.StatusCode).To(Equal(http.StatusInternalServerError))
+					})
 				})
 			})
 

@@ -206,13 +206,13 @@ func (p *Proxy) serveWS(endpointType, streamID string, w http.ResponseWriter, r 
 		defer close(data)
 		for {
 			resp, err := recv()
-			if resp == nil {
-				continue
-			}
-
 			if err != nil {
 				p.logger.Error(err.Error())
 				return
+			}
+
+			if resp == nil {
+				continue
 			}
 
 			data <- resp.Payload
