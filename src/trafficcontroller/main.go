@@ -126,7 +126,7 @@ func main() {
 	}
 
 	rxFetcher := grpcconnector.NewFetcher(config.GRPCPort, finder, log)
-	grpcConnector := grpcconnector.New(rxFetcher)
+	grpcConnector := grpcconnector.New(rxFetcher, batcher)
 
 	dopplerCgc := channel_group_connector.NewChannelGroupConnector(finder, newDropsondeWebsocketListener, batcher, log)
 	dopplerHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, dopplerCgc, grpcConnector, "doppler."+config.SystemDomain, log))
