@@ -63,7 +63,7 @@ function bold_blue {
     fi
 }
 
-not_unit_tests="github.com,golang.org,gopkg.in,integration_tests,lats"
+not_unit_tests="code.cloudfoundry.org,github.com,golang.org,gopkg.in,integration_tests,lats"
 
 if [ $TEST_TYPE == "unit" ] || [ $TEST_TYPE == "everything" ]
 then
