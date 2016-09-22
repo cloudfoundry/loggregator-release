@@ -43,3 +43,19 @@ func (m *SinkManager) RegisterFirehose(req *plumbing.FirehoseRequest, sender GRP
 	defer m.grpcFirehoses.mu.Unlock()
 	m.grpcFirehoses.registry[req.SubID] = append(m.grpcFirehoses.registry[req.SubID], sender)
 }
+
+type bufferedGRPCSender struct {
+	sender GRPCSender
+	diode  *diodes.OneToOne
+}
+
+func newBufferedGRPCSender(sender GRPCSender) *bufferedGRPCSender {
+	return &bufferedGRPCSender{
+		sender: sender,
+		diode:  diodes.New(1000, nil),
+	}
+}
+
+func (s *bufferedGRPCSender) Send(resp *plumbing.Response) (err error) {
+
+}
