@@ -6,8 +6,6 @@ import (
 	"diodes"
 	"sync"
 
-	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -20,8 +18,7 @@ var _ = Describe("OneToOne", func() {
 		mockAlerter *mockAlerter
 	)
 
-	Context("store event", func() {
-
+	Describe("Next()", func() {
 		BeforeEach(func() {
 			mockAlerter = newMockAlerter()
 
@@ -31,11 +28,11 @@ var _ = Describe("OneToOne", func() {
 			d.Set(data)
 		})
 
-		It("fetches event", func() {
+		It("returns the next data slice", func() {
 			Expect(d.Next()).To(Equal(data))
 		})
 
-		Context("multiple events", func() {
+		Context("multiple data slices", func() {
 			var (
 				secondData []byte
 			)
@@ -45,7 +42,7 @@ var _ = Describe("OneToOne", func() {
 				d.Set(secondData)
 			})
 
-			It("fetches events in order", func() {
+			It("returns data slices in order", func() {
 				Expect(d.Next()).To(Equal(data))
 				Expect(d.Next()).To(Equal(secondData))
 			})
@@ -62,6 +59,7 @@ var _ = Describe("OneToOne", func() {
 						d.TryNext()
 						d.TryNext()
 					})
+
 					It("returns false", func() {
 						_, ok := d.TryNext()
 
@@ -157,9 +155,3 @@ var _ = Describe("OneToOne", func() {
 		})
 	})
 })
-
-func newEnvelope(origin string) *events.Envelope {
-	return &events.Envelope{
-		Origin: proto.String(origin),
-	}
-}

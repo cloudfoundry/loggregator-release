@@ -61,6 +61,7 @@ var _ = Describe("SinkManager GRPC", func() {
 			expected := &plumbing.Response{
 				Payload: payload,
 			}
+
 			Eventually(firstSender.SendInput.Resp).Should(BeCalled(
 				With(expected),
 			))
@@ -97,6 +98,41 @@ var _ = Describe("SinkManager GRPC", func() {
 
 			go m.RegisterStream(&req, sender)
 			m.RegisterStream(&req, sender)
+		})
+
+		It("continues to send while a sender is blocking", func(done Done) {
+			defer close(done)
+
+			req := plumbing.StreamRequest{AppID: "app"}
+
+			blockingSender := newMockGRPCSender()
+			m.RegisterStream(&req, blockingSender)
+
+			workingSender := newMockGRPCSender()
+			close(workingSender.SendOutput.Err)
+			m.RegisterStream(&req, workingSender)
+
+			env := &events.Envelope{
+				EventType: events.Envelope_LogMessage.Enum(),
+				Origin:    proto.String("origin"),
+				LogMessage: &events.LogMessage{
+					Message:     []byte("I am a MESSAGE!"),
+					MessageType: events.LogMessage_OUT.Enum(),
+					Timestamp:   proto.Int64(time.Now().UnixNano()),
+				},
+			}
+			m.SendTo("app", env)
+
+			payload, err := proto.Marshal(env)
+			Expect(err).ToNot(HaveOccurred())
+
+			expected := &plumbing.Response{
+				Payload: payload,
+			}
+
+			Eventually(workingSender.SendInput.Resp).Should(BeCalled(
+				With(expected),
+			))
 		})
 	})
 
@@ -190,6 +226,42 @@ var _ = Describe("SinkManager GRPC", func() {
 
 			go m.RegisterFirehose(&req, sender)
 			m.RegisterFirehose(&req, sender)
+		})
+
+		It("continues to send while a sender is blocking", func(done Done) {
+			defer close(done)
+
+			req1 := plumbing.FirehoseRequest{SubID: "sub-1"}
+			req2 := plumbing.FirehoseRequest{SubID: "sub-2"}
+
+			blockingSender := newMockGRPCSender()
+			m.RegisterFirehose(&req1, blockingSender)
+
+			workingSender := newMockGRPCSender()
+			close(workingSender.SendOutput.Err)
+			m.RegisterFirehose(&req2, workingSender)
+
+			env := &events.Envelope{
+				EventType: events.Envelope_LogMessage.Enum(),
+				Origin:    proto.String("origin"),
+				LogMessage: &events.LogMessage{
+					Message:     []byte("I am a MESSAGE!"),
+					MessageType: events.LogMessage_OUT.Enum(),
+					Timestamp:   proto.Int64(time.Now().UnixNano()),
+				},
+			}
+			m.SendTo("app", env)
+
+			payload, err := proto.Marshal(env)
+			Expect(err).ToNot(HaveOccurred())
+
+			expected := &plumbing.Response{
+				Payload: payload,
+			}
+
+			Eventually(workingSender.SendInput.Resp).Should(BeCalled(
+				With(expected),
+			))
 		})
 	})
 })
