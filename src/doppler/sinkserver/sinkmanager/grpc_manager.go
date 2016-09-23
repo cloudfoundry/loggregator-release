@@ -4,6 +4,8 @@ import (
 	"diodes"
 	"plumbing"
 	"sync"
+
+	"github.com/cloudfoundry/dropsonde/metrics"
 )
 
 type grpcRegistry struct {
@@ -54,15 +56,17 @@ func (m *SinkManager) RegisterFirehose(req *plumbing.FirehoseRequest, sender GRP
 // Closing go routine
 
 type bufferedGRPCSender struct {
-	sender GRPCSender
-	diode  *diodes.OneToOne
+	sender  GRPCSender
+	diode   *diodes.OneToOne
+	dropped uint64
 }
 
 func newBufferedGRPCSender(sender GRPCSender) *bufferedGRPCSender {
 	s := &bufferedGRPCSender{
 		sender: sender,
-		diode:  diodes.NewOneToOne(1000, nil),
 	}
+
+	s.diode = diodes.NewOneToOne(1000, s)
 
 	go s.run()
 
@@ -81,4 +85,9 @@ func (s *bufferedGRPCSender) run() {
 			Payload: payload,
 		})
 	}
+}
+
+func (s *bufferedGRPCSender) Alert(missed int) {
+	s.dropped += uint64(missed)
+	metrics.BatchAddCounter("Diode.totalDroppedMessages", s.dropped)
 }
