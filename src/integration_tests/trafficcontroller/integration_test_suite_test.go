@@ -5,13 +5,13 @@ import (
 	"integration_tests/trafficcontroller/fake_doppler"
 	"integration_tests/trafficcontroller/fake_uaa_server"
 
-	"github.com/apcera/nats"
+	"code.cloudfoundry.org/localip"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"github.com/cloudfoundry/yagnats"
 	"github.com/gogo/protobuf/proto"
-	"code.cloudfoundry.org/localip"
+	"github.com/nats-io/nats"
 
 	"encoding/json"
 	"fmt"
@@ -57,7 +57,7 @@ var _ = BeforeSuite(func() {
 	setupFakeAuthServer()
 	setupFakeUaaServer()
 
-	gnatsdExec, err := gexec.Build("github.com/apcera/gnatsd")
+	gnatsdExec, err := gexec.Build("github.com/nats-io/gnatsd")
 	Expect(err).ToNot(HaveOccurred())
 	gnatsdCommand := exec.Command(gnatsdExec, "-p", "4222")
 
