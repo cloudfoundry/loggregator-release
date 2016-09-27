@@ -1,10 +1,8 @@
 package sinkmanager_test
 
 import (
-	"time"
-
-	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
-	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/dropsonde/emitter/fake"
+	fakeMS "github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	"github.com/cloudfoundry/dropsonde/metrics"
 
 	. "github.com/onsi/ginkgo"
@@ -18,9 +16,15 @@ func TestSinkmanager(t *testing.T) {
 	RunSpecs(t, "Sinkmanager Suite")
 }
 
-var fakeMetricSender = fake.NewFakeMetricSender()
+var (
+	fakeMetricSender *fakeMS.FakeMetricSender
+	fakeEventEmitter *fake.FakeEventEmitter
+	mockBatcher      *mockMetricBatcher
+)
 
 var _ = BeforeSuite(func() {
-	batcher := metricbatcher.New(fakeMetricSender, 1*time.Millisecond)
-	metrics.Initialize(fakeMetricSender, batcher)
+	fakeEventEmitter = fake.NewFakeEventEmitter("doppler")
+	fakeMetricSender = fakeMS.NewFakeMetricSender()
+	mockBatcher = newMockMetricBatcher()
+	metrics.Initialize(fakeMetricSender, mockBatcher)
 })

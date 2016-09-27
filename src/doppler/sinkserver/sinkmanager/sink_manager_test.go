@@ -26,6 +26,7 @@ import (
 
 var _ = Describe("SinkManager", func() {
 	logger := loggertesthelper.Logger()
+
 	var blackListManager = blacklist.New([]iprange.IPRange{iprange.IPRange{Start: "10.10.10.10", End: "10.10.10.20"}}, logger)
 	var sinkManager *sinkmanager.SinkManager
 	var sinkManagerDone chan struct{}
@@ -33,6 +34,7 @@ var _ = Describe("SinkManager", func() {
 
 	BeforeEach(func() {
 		fakeMetricSender.Reset()
+
 		sinkManager = sinkmanager.New(1, true, blackListManager, logger, 100, "dropsonde-origin", 1*time.Second, 0, 1*time.Second, 1*time.Second)
 
 		newAppServiceChan = make(chan appservice.AppService)

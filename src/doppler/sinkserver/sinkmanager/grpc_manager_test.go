@@ -15,7 +15,9 @@ import (
 )
 
 var _ = Describe("SinkManager GRPC", func() {
-	var m *sinkmanager.SinkManager
+	var (
+		m *sinkmanager.SinkManager
+	)
 
 	BeforeEach(func() {
 		m = sinkmanager.New(
@@ -30,6 +32,8 @@ var _ = Describe("SinkManager GRPC", func() {
 			time.Second,
 			time.Second,
 		)
+
+		fakeEventEmitter.Reset()
 	})
 
 	Describe("Stream", func() {
@@ -97,6 +101,7 @@ var _ = Describe("SinkManager GRPC", func() {
 			close(sender.SendOutput.Err)
 
 			go m.RegisterStream(&req, sender)
+
 			m.RegisterStream(&req, sender)
 		})
 
@@ -261,6 +266,38 @@ var _ = Describe("SinkManager GRPC", func() {
 
 			Eventually(workingSender.SendInput.Resp).Should(BeCalled(
 				With(expected),
+			))
+		})
+
+		It("reports the number of dropped messages", func() {
+			req := plumbing.FirehoseRequest{SubID: "sub-1"}
+			blockingSender := newMockGRPCSender()
+			m.RegisterFirehose(&req, blockingSender)
+
+			env := &events.Envelope{
+				EventType: events.Envelope_LogMessage.Enum(),
+				Origin:    proto.String("origin"),
+				LogMessage: &events.LogMessage{
+					Message:     []byte("I am a MESSAGE!"),
+					MessageType: events.LogMessage_OUT.Enum(),
+					Timestamp:   proto.Int64(time.Now().UnixNano()),
+				},
+			}
+
+			By("waiting for the diode to grab it's first entry")
+			m.SendTo("app", env)
+			Eventually(blockingSender.SendCalled).Should(Receive())
+
+			By("over running the diode's ring buffer by 1")
+			for i := 0; i < 1001; i++ {
+				m.SendTo("app", env)
+			}
+
+			By("single successful end to invoke the alert")
+			blockingSender.SendOutput.Err <- nil
+
+			Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
+				With("Diode.totalDroppedMessages", uint64(1000)),
 			))
 		})
 	})
