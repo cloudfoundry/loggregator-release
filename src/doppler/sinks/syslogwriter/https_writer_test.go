@@ -25,6 +25,7 @@ var _ = Describe("HttpsWriter", func() {
 		var dialer *net.Dialer
 		var timeout time.Duration
 		var queuedRequests int
+		var statusCode int
 
 		BeforeEach(func() {
 			listener = newHistoryListener("tcp", "127.0.0.1:0")
@@ -33,11 +34,12 @@ var _ = Describe("HttpsWriter", func() {
 			dialer = &net.Dialer{Timeout: 1 * time.Second}
 			timeout = 0
 			queuedRequests = 1
+			statusCode = http.StatusOK
 		})
 
 		JustBeforeEach(func() {
 			requestChan = make(chan []byte, queuedRequests)
-			serveMux.HandleFunc("/234-bxg-234/", syslogHandler(requestChan))
+			serveMux.HandleFunc("/234-bxg-234/", syslogHandler(requestChan, statusCode))
 			server.Listener = listener
 			server.StartTLS()
 		})
@@ -78,7 +80,7 @@ var _ = Describe("HttpsWriter", func() {
 			Expect(w.Connect()).To(BeNil())
 		})
 
-		It("should close connections and return an error if status code returned is not 200", func() {
+		It("should close connections and return an error if status code returned is not 2XX", func() {
 			outputUrl, _ := url.Parse(server.URL + "/doesnotexist")
 
 			w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", true, dialer, timeout)
@@ -92,16 +94,22 @@ var _ = Describe("HttpsWriter", func() {
 			}
 		})
 
-		It("should not return error for response 200 status codes", func() {
-			outputUrl, _ := url.Parse(server.URL + "/234-bxg-234/")
+		Context("returned status code is 2XX (but not 200)", func() {
+			BeforeEach(func() {
+				statusCode = 294
+			})
 
-			w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", true, dialer, timeout)
-			err := w.Connect()
-			Expect(err).ToNot(HaveOccurred())
+			It("should not return error for response 2XX status codes", func() {
+				outputUrl, _ := url.Parse(server.URL + "/234-bxg-234/")
 
-			parsedTime, err := time.Parse(time.RFC3339, "2006-01-02T15:04:05Z")
-			_, err = w.Write(standardErrorPriority, []byte("Message"), "test", "TEST", parsedTime.UnixNano())
-			Expect(err).ToNot(HaveOccurred())
+				w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", true, dialer, timeout)
+				err := w.Connect()
+				Expect(err).ToNot(HaveOccurred())
+
+				parsedTime, err := time.Parse(time.RFC3339, "2006-01-02T15:04:05Z")
+				_, err = w.Write(standardErrorPriority, []byte("Message"), "test", "TEST", parsedTime.UnixNano())
+				Expect(err).ToNot(HaveOccurred())
+			})
 		})
 
 		Context("when the target sink is slow to accept connections", func() {
@@ -205,12 +213,13 @@ var _ = Describe("HttpsWriter", func() {
 	})
 })
 
-func syslogHandler(requestChan chan []byte) http.HandlerFunc {
-	return func(_ http.ResponseWriter, r *http.Request) {
+func syslogHandler(requestChan chan []byte, statusCode int) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		bytes := make([]byte, 1024)
 		byteCount, _ := r.Body.Read(bytes)
 		r.Body.Close()
 		requestChan <- bytes[:byteCount]
+		w.WriteHeader(statusCode)
 	}
 }
 

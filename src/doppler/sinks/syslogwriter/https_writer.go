@@ -83,7 +83,7 @@ func (w *httpsWriter) Close() error {
 func (w *httpsWriter) writeHttp(finalMsg string) (byteCount int, err error) {
 	resp, err := w.client.Post(w.outputUrl.String(), "text/plain", strings.NewReader(finalMsg))
 	if err == nil {
-		if resp.StatusCode != 200 {
+		if resp.StatusCode < 200 || resp.StatusCode > 299 {
 			err = errors.New("Syslog Writer: Post responded with a non 200 status code")
 		}
 		io.Copy(ioutil.Discard, resp.Body)
