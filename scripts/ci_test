@@ -20,7 +20,7 @@ pushd $BIN_DIR/../src/github.com/coreos/etcd
   GIT_SHA=`git rev-parse --short HEAD || echo "GitNotFound"`
 
   # Static compilation is useful when etcd is run in a container
-  GOPATH=$ETCD_GOPATH CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags "-s -X ${REPO_PATH}/version.GitSHA=${GIT_SHA}" -o bin/etcd ${REPO_PATH}
+	GOPATH=$ETCD_GOPATH CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags "-s -X ${REPO_PATH}/version.GitSHA=${GIT_SHA}" -o bin/etcd ${REPO_PATH}
   GOPATH=$ETCD_GOPATH CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags "-s" -o bin/etcdctl ${REPO_PATH}/etcdctl
 popd
 
