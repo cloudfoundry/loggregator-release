@@ -17,7 +17,7 @@
         if_p("loggregator.etcd.require_ssl") do |_|
             a[:EtcdTLSClientConfig] = etcdTLSClientConfig
         end
-        a[:MetronAddress] = p("metron_endpoint.host") + ":" + p("metron_endpoint.dropsonde_port")
+        a[:MetronAddress] = "#{p("metron_endpoint.host")}:#{p("metron_endpoint.dropsonde_port")}"
         a[:CloudControllerAddress] = p("cc.srv_api_uri")
         a[:BulkApiUsername] = bulk_api
         a[:BulkApiPassword] = p("cc.bulk_api_password")
