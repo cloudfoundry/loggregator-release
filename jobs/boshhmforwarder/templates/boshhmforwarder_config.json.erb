@@ -1,10 +1,15 @@
-{
-  "IncomingPort": <%= p('boshhmforwarder.incoming_port') %>,
-  "InfoPort": <%= p('boshhmforwarder.info_port') %>,
-  "DebugPort": <%= p('boshhmforwarder.debug_port') %>,
-  "MetronPort": <%= p('metron_agent.dropsonde_incoming_port') %>,
-  "LogLevel": "<%= p('boshhmforwarder.logLevel') %>"
-  <% if_p("syslog_daemon_config.address") do |_| %>
-  , "Syslog": "vcap.boshhmforwarder"
-  <% end %>
-}
+<%
+    args = {
+    "IncomingPort" => p('boshhmforwarder.incoming_port'),
+    "InfoPort" => p('boshhmforwarder.info_port'),
+    "DebugPort" => p('boshhmforwarder.debug_port'),
+    "MetronPort" => p('metron_agent.dropsonde_incoming_port'),
+    "LogLevel" => p('boshhmforwarder.logLevel'),
+    }
+
+    if_p("syslog_daemon_config.address") do |_|
+        args.merge!("Syslog": "vcap.boshhmforwarder")
+    end
+%>
+
+<%= JSON.pretty_generate(args) %>

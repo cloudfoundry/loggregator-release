@@ -1,25 +1,32 @@
-{
-    "InstanceName": "<%= name %>.<%= spec.index %>",
-    "DrainUrlTtlSeconds": <%= p("syslog_drain_binder.drain_url_ttl_seconds") %>,
-    "UpdateIntervalSeconds": <%= p("syslog_drain_binder.update_interval_seconds") %>,
+<%
+    etcdMachines = p("loggregator.etcd.machines").map{|addr| "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"}
+    etcdTLSClientConfig = {
+        "KeyFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-client.key",
+        "CertFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-client.crt",
+        "CAFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-ca.crt"
+    }
+    bulk_api = p("cc.bulk_api_user")
+    if bulk_api.empty?
+        bulk_api = p("bulk_api")
+    end
 
-    "EtcdMaxConcurrentRequests": <%= p("loggregator.etcd.maxconcurrentrequests") %>,
-    "EtcdUrls": [<%= p("loggregator.etcd.machines").map{|addr| "\"#{p("loggregator.etcd.require_ssl") ? "https" : "http"}://#{addr}:4001\""}.join(",") %>],
-    "EtcdRequireTLS": <%= p("loggregator.etcd.require_ssl") %>,
-    <% if_p("loggregator.etcd.require_ssl") do |_| %>
-    "EtcdTLSClientConfig": {
-      "KeyFile": "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-client.key",
-      "CertFile": "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-client.crt",
-      "CAFile": "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-ca.crt"
-    },
-    <% end %>
+    args = Hash.new.tap do |a|
+        a[:InstanceName] = name + "." + spec.index
+        a[:DrainUrlTtlSeconds] = p("syslog_drain_binder.drain_url_ttl_seconds")
+        a[:UpdateIntervalSeconds] = p("syslog_drain_binder.update_interval_seconds")
+        a[:EtcdMaxConcurrentRequests] = p("loggregator.etcd.maxconcurrentrequests")
+        a[:EtcdUrls] = etcdMachines
+        a[:EtcdRequireTLS] = p("loggregator.etcd.require_ssl")
+        if_p("loggregator.etcd.require_ssl") do |_|
+            a[:EtcdTLSClientConfig] = etcdTLSClientConfig
+        end
+        a[:MetronAddress] = p("metron_endpoint.host") + ":" + p("metron_endpoint.dropsonde_port")
+        a[:CloudControllerAddress] = p("cc.srv_api_uri")
+        a[:BulkApiUsername] = bulk_api
+        a[:BulkApiPassword] = p("cc.bulk_api_password")
+        a[:PollingBatchSize] = p("syslog_drain_binder.polling_batch_size")
+        a[:SkipCertVerify] = p("ssl.skip_cert_verify")
+    end
+%>
 
-    "MetronAddress": "<%= p("metron_endpoint.host") %>:<%= p("metron_endpoint.dropsonde_port") %>",
-
-    "CloudControllerAddress": "<%= p("cc.srv_api_uri") %>",
-    "BulkApiUsername": "<%= p("cc.bulk_api_user", "bulk_api") %>",
-    "BulkApiPassword": "<%= p("cc.bulk_api_password") %>",
-    "PollingBatchSize": <%= p("syslog_drain_binder.polling_batch_size") %>,
-
-    "SkipCertVerify": <%= p("ssl.skip_cert_verify") %>
-}
+<%= JSON.pretty_generate(args) %>

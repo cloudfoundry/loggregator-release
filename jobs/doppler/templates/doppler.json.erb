@@ -15,52 +15,56 @@
     if instance_zone.nil?
       instance_zone = p("doppler.zone")
     end
+
+    etcdMachines = p("loggregator.etcd.machines").map{|addr| "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"}
+    etcdTLSClientConfig = {
+        "KeyFile" => "/var/vcap/jobs/doppler/config/certs/etcd-client.key",
+        "CertFile" => "/var/vcap/jobs/doppler/config/certs/etcd-client.crt",
+        "CAFile" => "/var/vcap/jobs/doppler/config/certs/etcd-ca.crt"
+    }
+    tlsListenerConfig = {
+        "Port" => p("doppler.tls.port"),
+        "KeyFile" => "/var/vcap/jobs/doppler/config/certs/doppler.key",
+        "CertFile" => "/var/vcap/jobs/doppler/config/certs/doppler.crt",
+        "CAFile" => "/var/vcap/jobs/doppler/config/certs/loggregator_ca.crt"
+    }
+
+    args = Hash.new.tap do |a|
+        a[:EtcdUrls] = etcdMachines
+        a[:EtcdMaxConcurrentRequests] = 10
+        a[:EtcdRequireTLS] = p("loggregator.etcd.require_ssl")
+        if_p("loggregator.etcd.require_ssl") do |_|
+            a[:EtcdTLSClientConfig] = etcdTLSClientConfig
+        end
+        a[:MessageDrainBufferSize] = p("doppler.message_drain_buffer_size")
+        a[:IncomingUDPPort] = p("doppler.dropsonde_incoming_port")
+        a[:IncomingTCPPort] = p("doppler.incoming_tcp_port")
+        if_p("doppler.tls.enable") do |_|
+            a[:TLSListenerConfig] = tlsListenerConfig
+        end
+        a[:OutgoingPort] = p("doppler.outgoing_port")
+        a[:GRPCPort] = p("doppler.grpc_port")
+        a[:Zone] = instance_zone
+        a[:JobName] = job_name
+        a[:Index] = instance_id
+        a[:MaxRetainedLogMessages] = p("doppler.maxRetainedLogMessages")
+        a[:SharedSecret] = p("doppler_endpoint.shared_secret")
+        a[:ContainerMetricTTLSeconds] = p("doppler.container_metric_ttl_seconds")
+        a[:SinkSkipCertVerify] = p("doppler.syslog_skip_cert_verify")
+        a[:SinkInactivityTimeoutSeconds] = p("doppler.sink_inactivity_timeout_seconds")
+        a[:SinkDialTimeoutSeconds] = p("doppler.sink_dial_timeout_seconds")
+        a[:WebsocketWriteTimeoutSeconds] = p("doppler.websocket_write_timeout_seconds")
+        a[:SinkIOTimeoutSeconds] = p("doppler.sink_io_timeout_seconds")
+        a[:UnmarshallerCount] = p("doppler.unmarshaller_count")
+        a[:EnableTLSTransport] = p("doppler.tls.enable")
+        a[:MetronAddress] = p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.dropsonde_port').to_s
+        if_p("syslog_daemon_config") do |_|
+            a[:Syslog] = "vcap.doppler"
+        end
+        if_p("doppler.blacklisted_syslog_ranges") do |prop|
+            a[:BlackListIPs] = prop
+        end
+    end
 %>
-{
-  "EtcdUrls": [<%= p("loggregator.etcd.machines").map{|addr| "\"#{p("loggregator.etcd.require_ssl") ? "https" : "http"}://#{addr}:4001\""}.join(",") %>],
-  "EtcdMaxConcurrentRequests": 10,
-  "EtcdRequireTLS": <%= p("loggregator.etcd.require_ssl") %>,
-  <% if_p("loggregator.etcd.require_ssl") do |_| %>
-  "EtcdTLSClientConfig": {
-      "KeyFile": "/var/vcap/jobs/doppler/config/certs/etcd-client.key",
-      "CertFile": "/var/vcap/jobs/doppler/config/certs/etcd-client.crt",
-      "CAFile": "/var/vcap/jobs/doppler/config/certs/etcd-ca.crt"
-  },
-  <% end %>
 
-  "MessageDrainBufferSize": <%= p("doppler.message_drain_buffer_size") %>,
-  "IncomingUDPPort": <%= p("doppler.dropsonde_incoming_port") %>,
-  "IncomingTCPPort": <%= p("doppler.incoming_tcp_port") %>,
-  <% if_p("doppler.tls.enable") do |_| %>
-  "TLSListenerConfig": {
-      "Port": <%= p("doppler.tls.port") %>,
-      "KeyFile": "/var/vcap/jobs/doppler/config/certs/doppler.key",
-      "CertFile": "/var/vcap/jobs/doppler/config/certs/doppler.crt",
-      "CAFile": "/var/vcap/jobs/doppler/config/certs/loggregator_ca.crt"
-  },
-  <% end %>
-  "OutgoingPort": <%= p("doppler.outgoing_port") %>,
-  "GRPCPort": <%= p("doppler.grpc_port") %>,
-  "Zone": "<%= instance_zone %>",
-  "JobName": "<%= job_name %>",
-  "Index": "<%= instance_id %>",
-  "MaxRetainedLogMessages": <%= p("doppler.maxRetainedLogMessages") %>,
-  "SharedSecret": "<%= p("doppler_endpoint.shared_secret") %>",
-  "ContainerMetricTTLSeconds": <%= p("doppler.container_metric_ttl_seconds") %>,
-  "SinkSkipCertVerify": <%= p("doppler.syslog_skip_cert_verify") %>,
-  "SinkInactivityTimeoutSeconds": <%= p("doppler.sink_inactivity_timeout_seconds") %>,
-  "SinkDialTimeoutSeconds": <%= p("doppler.sink_dial_timeout_seconds") %>,
-  "WebsocketWriteTimeoutSeconds": <%= p("doppler.websocket_write_timeout_seconds") %>,
-  "SinkIOTimeoutSeconds": <%= p("doppler.sink_io_timeout_seconds") %>,
-  "UnmarshallerCount": <%= p("doppler.unmarshaller_count") %>,
-  "EnableTLSTransport": <%= p("doppler.tls.enable") %>,
-
-  "MetronAddress": "<%= p("metron_endpoint.host") %>:<%= p("metron_endpoint.dropsonde_port") %>"
-
-    <% if_p("syslog_daemon_config") do |_| %>
-    , "Syslog": "vcap.doppler"
-    <% end %>
-    <% if_p("doppler.blacklisted_syslog_ranges") do |blacklisted_ranges| %>
-    , "BlackListIPs": <%= blacklisted_ranges.to_json %>
-    <% end %>
-}
+<%= JSON.pretty_generate(args) %>

@@ -22,44 +22,42 @@
     if instance_zone.nil?
       instance_zone = p("metron_agent.zone")
     end
+
+    etcdMachines = p("loggregator.etcd.machines").map{|addr| "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"}
+    etcdTLSClientConfig = {
+          "KeyFile": "/var/vcap/jobs/metron_agent/config/certs/etcd-client.key",
+          "CertFile": "/var/vcap/jobs/metron_agent/config/certs/etcd-client.crt",
+          "CAFile": "/var/vcap/jobs/metron_agent/config/certs/etcd-ca.crt"
+    }
+    tlsConfig = {
+        "KeyFile" => "/var/vcap/jobs/metron_agent/config/certs/metron_agent.key",
+        "CertFile" => "/var/vcap/jobs/metron_agent/config/certs/metron_agent.crt",
+        "CAFile" => "/var/vcap/jobs/metron_agent/config/certs/loggregator_ca.crt"
+    }
+
+    args = Hash.new.tap do |a|
+        a[:Index] = instance_id
+        a[:Job] = job_name
+        a[:Zone] = instance_zone
+        a[:Deployment] = p("metron_agent.deployment")
+        a[:EtcdUrls] = etcdMachines
+        a[:EtcdMaxConcurrentRequests] = p("loggregator.etcd.maxconcurrentrequests")
+        a[:EtcdRequireTLS] = p("loggregator.etcd.require_ssl")
+        if_p("loggregator.etcd.require_ssl") do |_|
+            a[:EtcdTLSClientConfig] = etcdTLSClientConfig
+        end
+        a[:SharedSecret] = p("metron_endpoint.shared_secret")
+        a[:IncomingUDPPort] = p("metron_agent.listening_port")
+        a[:Protocols] = protocols
+        a[:TCPBatchSizeBytes] = p("metron_agent.tcp.batching_buffer_bytes")
+        a[:TCPBatchIntervalMilliseconds] = p("metron_agent.tcp.batching_buffer_flush_interval_milliseconds")
+        if useTLS
+            a[:TLSConfig] = tlsConfig
+        end
+        if_p("syslog_daemon_config") do |_|
+            a[:Syslog] = "vcap.metron_agent"
+        end
+    end
 %>
 
-{
-  "Index": "<%= instance_id %>",
-  "Job": "<%= job_name %>",
-  "Zone": "<%= instance_zone %>",
-  "Deployment": "<%= p("metron_agent.deployment") %>",
-
-  "EtcdUrls": [<%= p("loggregator.etcd.machines").map{|addr| "\"#{p("loggregator.etcd.require_ssl") ? "https" : "http"}://#{addr}:4001\""}.join(",") %>],
-  "EtcdMaxConcurrentRequests": <%= p("loggregator.etcd.maxconcurrentrequests") %>,
-  "EtcdRequireTLS": <%= p("loggregator.etcd.require_ssl") %>,
-  <% if_p("loggregator.etcd.require_ssl") do |_| %>
-  "EtcdTLSClientConfig": {
-      "KeyFile": "/var/vcap/jobs/metron_agent/config/certs/etcd-client.key",
-      "CertFile": "/var/vcap/jobs/metron_agent/config/certs/etcd-client.crt",
-      "CAFile": "/var/vcap/jobs/metron_agent/config/certs/etcd-ca.crt"
-  },
-  <% end %>
-
-  "SharedSecret": "<%= p("metron_endpoint.shared_secret")  %>",
-
-  "IncomingUDPPort": <%= p("metron_agent.listening_port") %>,
-
-  "Protocols": <%= protocols %>,
-
-  "TCPBatchSizeBytes": <%= p("metron_agent.tcp.batching_buffer_bytes") %>,
-
-  "TCPBatchIntervalMilliseconds": <%= p("metron_agent.tcp.batching_buffer_flush_interval_milliseconds") %>
-
-  <% if useTLS %>
-  , "TLSConfig": {
-    "KeyFile": "/var/vcap/jobs/metron_agent/config/certs/metron_agent.key",
-    "CertFile": "/var/vcap/jobs/metron_agent/config/certs/metron_agent.crt",
-    "CAFile": "/var/vcap/jobs/metron_agent/config/certs/loggregator_ca.crt"
-  }
-  <% end %>
-
-  <% if_p("syslog_daemon_config") do |_| %>
-  , "Syslog": "vcap.metron_agent"
-  <% end %>
-}
+<%= JSON.pretty_generate(args) %>
