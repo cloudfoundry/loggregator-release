@@ -25,9 +25,9 @@
 
     etcdMachines = p("loggregator.etcd.machines").map{|addr| "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"}
     etcdTLSClientConfig = {
-          "KeyFile": "/var/vcap/jobs/metron_agent/config/certs/etcd-client.key",
-          "CertFile": "/var/vcap/jobs/metron_agent/config/certs/etcd-client.crt",
-          "CAFile": "/var/vcap/jobs/metron_agent/config/certs/etcd-ca.crt"
+        "KeyFile" => "/var/vcap/jobs/metron_agent/config/certs/etcd-client.key",
+        "CertFile" => "/var/vcap/jobs/metron_agent/config/certs/etcd-client.crt",
+        "CAFile" => "/var/vcap/jobs/metron_agent/config/certs/etcd-ca.crt"
     }
     tlsConfig = {
         "KeyFile" => "/var/vcap/jobs/metron_agent/config/certs/metron_agent.key",
