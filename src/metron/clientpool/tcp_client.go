@@ -15,6 +15,7 @@ type TCPClient struct {
 	address   string
 	tlsConfig *tls.Config
 	logger    *gosteno.Logger
+	deadline  time.Duration
 
 	scheme string
 
@@ -22,12 +23,13 @@ type TCPClient struct {
 	conn net.Conn
 }
 
-func NewTCPClient(logger *gosteno.Logger, address string, tlsConfig *tls.Config) *TCPClient {
+func NewTCPClient(logger *gosteno.Logger, address string, deadline time.Duration, tlsConfig *tls.Config) *TCPClient {
 	client := &TCPClient{
 		address:   address,
 		tlsConfig: tlsConfig,
 		logger:    logger,
 		scheme:    "tcp",
+		deadline:  deadline,
 	}
 	if tlsConfig != nil {
 		client.scheme = "tls"
@@ -106,6 +108,7 @@ func (c *TCPClient) Write(data []byte) (int, error) {
 	conn := c.conn
 	c.lock.Unlock()
 
+	conn.SetDeadline(time.Now().Add(c.deadline))
 	written, err := conn.Write(data)
 	if err != nil {
 		c.logError(err)

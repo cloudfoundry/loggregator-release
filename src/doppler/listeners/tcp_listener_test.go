@@ -32,6 +32,7 @@ var _ = Describe("TCPlistener", func() {
 		tlsClientConfig   *tls.Config
 		mockBatcher       *mockBatcher
 		mockChainer       *mockBatchCounterChainer
+		deadline          time.Duration
 	)
 
 	BeforeEach(func() {
@@ -39,6 +40,7 @@ var _ = Describe("TCPlistener", func() {
 		mockChainer = newMockBatchCounterChainer()
 		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
 		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
+		deadline = 500 * time.Millisecond
 
 		tlsListenerConfig = &config.TLSListenerConfig{
 			CertFile: "fixtures/server.crt",
@@ -66,6 +68,7 @@ var _ = Describe("TCPlistener", func() {
 			tlsListenerConfig,
 			envelopeChan,
 			mockBatcher,
+			deadline,
 			loggertesthelper.Logger(),
 		)
 		Expect(err).NotTo(HaveOccurred())
@@ -131,7 +134,7 @@ var _ = Describe("TCPlistener", func() {
 			})
 		})
 
-		Context("dropsonde metric emission", func() {
+		Describe("dropsonde metric emission", func() {
 			DescribeTable("supported message types across multiple connections", func(eventType events.Envelope_EventType) {
 				envelope1 := createEnvelope(events.Envelope_EventType(eventType))
 				conn1 := openTCPConnection(listener.Address(), tlsClientConfig)
@@ -184,9 +187,25 @@ var _ = Describe("TCPlistener", func() {
 
 				Eventually(envelopeChan).Should(Receive())
 			})
+
+			Describe("connection deadlines", func() {
+				It("gives up after enough time", func() {
+					envelope := createEnvelope(events.Envelope_LogMessage)
+					conn := openTCPConnection(listener.Address(), tlsClientConfig)
+
+					By("waiting for deadline to expire")
+					time.Sleep(deadline + time.Second)
+
+					f := func() error {
+						return send(conn, envelope)
+					}
+
+					Eventually(f).ShouldNot(Succeed())
+				})
+			})
 		})
 
-		Context("Start Stop", func() {
+		Describe("Start() & Stop()", func() {
 			It("panics if you start again", func() {
 				conn := openTCPConnection(listener.Address(), tlsClientConfig)
 				defer conn.Close()

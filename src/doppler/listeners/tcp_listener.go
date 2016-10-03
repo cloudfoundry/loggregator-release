@@ -12,6 +12,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
 	"github.com/cloudfoundry/gosteno"
@@ -31,6 +32,7 @@ type TCPListener struct {
 	listenerClosed chan struct{}
 	started        bool
 	metricProto    string
+	deadline       time.Duration
 }
 
 func NewTLSConfig(certFile, keyFile, caCertFile string) (*tls.Config, error) {
@@ -68,6 +70,7 @@ func NewTCPListener(
 	tlsListenerConfig *config.TLSListenerConfig,
 	envelopeChan chan *events.Envelope,
 	batcher Batcher,
+	deadline time.Duration,
 	logger *gosteno.Logger,
 ) (*TCPListener, error) {
 	protocol := "TCP"
@@ -92,6 +95,7 @@ func NewTCPListener(
 		logger:       logger,
 		batcher:      batcher,
 		metricProto:  metricProto,
+		deadline:     deadline,
 
 		connections:    make(map[net.Conn]struct{}),
 		unmarshaller:   dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger),
@@ -185,6 +189,7 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 	)
 
 	for {
+		conn.SetDeadline(time.Now().Add(t.deadline))
 		err = binary.Read(conn, binary.LittleEndian, &n)
 		if err != nil {
 			if err != io.EOF {
@@ -199,6 +204,7 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 		}
 		read = bytes[:n]
 
+		conn.SetDeadline(time.Now().Add(t.deadline))
 		_, err = io.ReadFull(conn, read)
 		if err != nil {
 			t.logger.Errorf("Error during i/o read: %v", err)

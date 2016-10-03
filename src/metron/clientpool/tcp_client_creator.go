@@ -2,24 +2,27 @@ package clientpool
 
 import (
 	"crypto/tls"
+	"time"
 
 	"github.com/cloudfoundry/gosteno"
 )
 
 type TCPClientCreator struct {
-	logger *gosteno.Logger
-	config *tls.Config
+	deadline time.Duration
+	logger   *gosteno.Logger
+	config   *tls.Config
 }
 
-func NewTCPClientCreator(logger *gosteno.Logger, config *tls.Config) *TCPClientCreator {
+func NewTCPClientCreator(deadline time.Duration, logger *gosteno.Logger, config *tls.Config) *TCPClientCreator {
 	return &TCPClientCreator{
-		logger: logger,
-		config: config,
+		deadline: deadline,
+		logger:   logger,
+		config:   config,
 	}
 }
 
 func (t *TCPClientCreator) CreateClient(address string) (Client, error) {
-	client := NewTCPClient(t.logger, address, t.config)
+	client := NewTCPClient(t.logger, address, t.deadline, t.config)
 	err := client.Connect()
 	if err != nil {
 		return nil, err
