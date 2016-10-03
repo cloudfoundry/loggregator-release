@@ -8,7 +8,7 @@
     bulk_api = p("cc.bulk_api_user", "bulk_api")
 
     args = Hash.new.tap do |a|
-        a[:InstanceName] = name + "." + spec.index
+        a[:InstanceName] = "#{name}.#{spec.index}"
         a[:DrainUrlTtlSeconds] = p("syslog_drain_binder.drain_url_ttl_seconds")
         a[:UpdateIntervalSeconds] = p("syslog_drain_binder.update_interval_seconds")
         a[:EtcdMaxConcurrentRequests] = p("loggregator.etcd.maxconcurrentrequests")
