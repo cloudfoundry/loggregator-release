@@ -5,10 +5,7 @@
         "CertFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-client.crt",
         "CAFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-ca.crt"
     }
-    bulk_api = p("cc.bulk_api_user")
-    if bulk_api.empty?
-        bulk_api = p("bulk_api")
-    end
+    bulk_api = p("cc.bulk_api_user", "bulk_api")
 
     args = Hash.new.tap do |a|
         a[:InstanceName] = name + "." + spec.index
