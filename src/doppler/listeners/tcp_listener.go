@@ -188,6 +188,8 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 		err   error
 	)
 
+	timeOut := time.NewTimer(time.Second)
+
 	for {
 		conn.SetDeadline(time.Now().Add(t.deadline))
 		err = binary.Read(conn, binary.LittleEndian, &n)
@@ -228,6 +230,12 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 		case t.envelopeChan <- envelope:
 		case <-t.stopped:
 			return
+		case <-timeOut.C:
+			t.batcher.BatchCounter("listeners.shedEnvelopes").
+				SetTag("protocol", strings.ToLower(t.protocol)).
+				SetTag("event_type", envelope.EventType.String()).
+				Increment()
 		}
+		timeOut.Reset(time.Second)
 	}
 }

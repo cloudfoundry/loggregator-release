@@ -203,6 +203,40 @@ var _ = Describe("TCPlistener", func() {
 					Eventually(f).ShouldNot(Succeed())
 				})
 			})
+
+			Describe("shedding messages", func() {
+				It("emits metric", func() {
+					envelope := createEnvelope(events.Envelope_LogMessage)
+					conn := openTCPConnection(listener.Address(), tlsClientConfig)
+
+					err := send(conn, envelope)
+					Expect(err).ToNot(HaveOccurred())
+
+					Eventually(mockBatcher.BatchCounterInput, 3).Should(BeCalled(With("listeners.shedEnvelopes")))
+					Eventually(mockChainer.SetTagInput, 3).Should(BeCalled(
+						With("protocol", "tls"),
+						With("event_type", "LogMessage"),
+					))
+				})
+
+				It("downstream does not block consumption", func() {
+					envelope1 := createEnvelope(events.Envelope_LogMessage)
+					envelope2 := createEnvelope(events.Envelope_HttpStartStop)
+					conn := openTCPConnection(listener.Address(), tlsClientConfig)
+
+					err := send(conn, envelope1)
+					Expect(err).ToNot(HaveOccurred())
+
+					By("waiting for the first envelope to expire")
+					Eventually(mockBatcher.BatchCounterInput, 3).Should(BeCalled(With("listeners.shedEnvelopes")))
+					err = send(conn, envelope2)
+					Expect(err).ToNot(HaveOccurred())
+
+					var rxEnv *events.Envelope
+					Eventually(envelopeChan, 3).Should(Receive(&rxEnv))
+					Expect(rxEnv.GetEventType()).To(Equal(events.Envelope_HttpStartStop))
+				})
+			})
 		})
 
 		Describe("Start() & Stop()", func() {
