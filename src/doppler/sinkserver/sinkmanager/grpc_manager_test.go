@@ -15,9 +15,7 @@ import (
 )
 
 var _ = Describe("SinkManager GRPC", func() {
-	var (
-		m *sinkmanager.SinkManager
-	)
+	var m *sinkmanager.SinkManager
 
 	BeforeEach(func() {
 		m = sinkmanager.New(
@@ -299,6 +297,108 @@ var _ = Describe("SinkManager GRPC", func() {
 			Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
 				With("Diode.totalDroppedMessages", uint64(1000)),
 			))
+		})
+	})
+
+	Describe("ContainerMetrics", func() {
+		It("returns container metrics for an app's instances", func() {
+			instance1 := events.Envelope{
+				EventType: events.Envelope_ContainerMetric.Enum(),
+				Origin:    proto.String("origin"),
+				Timestamp: proto.Int64(time.Now().UnixNano()),
+				ContainerMetric: &events.ContainerMetric{
+					ApplicationId: proto.String("test-app"),
+					InstanceIndex: proto.Int32(1),
+					CpuPercentage: proto.Float64(10.1),
+					MemoryBytes:   proto.Uint64(1234),
+					DiskBytes:     proto.Uint64(4321),
+				},
+			}
+			instance2 := events.Envelope{
+				EventType: events.Envelope_ContainerMetric.Enum(),
+				Origin:    proto.String("origin"),
+				Timestamp: proto.Int64(time.Now().UnixNano()),
+				ContainerMetric: &events.ContainerMetric{
+					ApplicationId: proto.String("test-app"),
+					InstanceIndex: proto.Int32(2),
+					CpuPercentage: proto.Float64(20.2),
+					MemoryBytes:   proto.Uint64(4321),
+					DiskBytes:     proto.Uint64(1234),
+				},
+			}
+			req := &plumbing.ContainerMetricsRequest{
+				AppID: "test-app",
+			}
+
+			m.SendTo("test-app", &instance1)
+			m.SendTo("test-app", &instance2)
+
+			var resp *plumbing.ContainerMetricsResponse
+			Eventually(func() [][]byte {
+				var err error
+				resp, err = m.ContainerMetrics(nil, req)
+				Expect(err).ToNot(HaveOccurred())
+				return resp.Payload
+			}).Should(HaveLen(2))
+
+			var result []events.Envelope
+			for _, mb := range resp.Payload {
+				var env events.Envelope
+				err := proto.Unmarshal(mb, &env)
+				Expect(err).ToNot(HaveOccurred())
+				result = append(result, env)
+			}
+			Expect(result).To(ConsistOf(instance1, instance2))
+		})
+
+		It("filters out app ids that do not match the app id given", func() {
+			expectedContainerMetric := events.Envelope{
+				EventType: events.Envelope_ContainerMetric.Enum(),
+				Origin:    proto.String("origin"),
+				Timestamp: proto.Int64(time.Now().UnixNano()),
+				ContainerMetric: &events.ContainerMetric{
+					ApplicationId: proto.String("test-app"),
+					InstanceIndex: proto.Int32(1),
+					CpuPercentage: proto.Float64(10.1),
+					MemoryBytes:   proto.Uint64(1234),
+					DiskBytes:     proto.Uint64(4321),
+				},
+			}
+			badContainerMetric := events.Envelope{
+				EventType: events.Envelope_ContainerMetric.Enum(),
+				Origin:    proto.String("origin"),
+				Timestamp: proto.Int64(time.Now().UnixNano()),
+				ContainerMetric: &events.ContainerMetric{
+					ApplicationId: proto.String("bad-app"),
+					InstanceIndex: proto.Int32(2),
+					CpuPercentage: proto.Float64(20.2),
+					MemoryBytes:   proto.Uint64(4321),
+					DiskBytes:     proto.Uint64(1234),
+				},
+			}
+			req := &plumbing.ContainerMetricsRequest{
+				AppID: "test-app",
+			}
+
+			m.SendTo("test-app", &expectedContainerMetric)
+			m.SendTo("bad-app", &badContainerMetric)
+
+			var resp *plumbing.ContainerMetricsResponse
+			Eventually(func() [][]byte {
+				var err error
+				resp, err = m.ContainerMetrics(nil, req)
+				Expect(err).ToNot(HaveOccurred())
+				return resp.Payload
+			}).Should(HaveLen(1))
+
+			var result []events.Envelope
+			for _, mb := range resp.Payload {
+				var env events.Envelope
+				err := proto.Unmarshal(mb, &env)
+				Expect(err).ToNot(HaveOccurred())
+				result = append(result, env)
+			}
+			Expect(result).To(ConsistOf(expectedContainerMetric))
 		})
 	})
 })

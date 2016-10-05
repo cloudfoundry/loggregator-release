@@ -5,7 +5,10 @@ import (
 	"plumbing"
 	"sync"
 
+	context "golang.org/x/net/context"
+
 	"github.com/cloudfoundry/dropsonde/metrics"
+	"github.com/gogo/protobuf/proto"
 )
 
 type grpcRegistry struct {
@@ -47,6 +50,21 @@ func (m *SinkManager) RegisterFirehose(req *plumbing.FirehoseRequest, sender GRP
 	defer m.grpcFirehoses.mu.Unlock()
 	buffSender := newBufferedGRPCSender(sender)
 	m.grpcFirehoses.registry[req.SubID] = append(m.grpcFirehoses.registry[req.SubID], buffSender)
+}
+
+// ContainerMetrics returns the latest container metrics for a given app ID.
+func (m *SinkManager) ContainerMetrics(c context.Context, req *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error) {
+	resp := &plumbing.ContainerMetricsResponse{}
+
+	for _, e := range m.LatestContainerMetrics(req.AppID) {
+		mb, err := proto.Marshal(e)
+		if err != nil {
+			m.logger.Warnf("unable to marshal container metric: %s", err)
+			continue
+		}
+		resp.Payload = append(resp.Payload, mb)
+	}
+	return resp, nil
 }
 
 // TODO:
