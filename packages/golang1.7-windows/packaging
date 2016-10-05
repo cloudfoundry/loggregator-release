@@ -1,4 +1,4 @@
-. ./exiter.ps1
+. ./loggregator/src/exiter.ps1
 
 $GOLANG_ZIP="golang/go1.7.windows-amd64.zip"
 try
