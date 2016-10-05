@@ -46,6 +46,7 @@ const (
 	pprofPort         = "6061"
 	origin            = "MetronAgent"
 	connectionRetries = 15
+	TCPTimeout        = time.Minute
 )
 
 var (
@@ -144,7 +145,7 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 			clientPool[proto] = udpPool
 			writers[proto] = udpForwarder
 		case "tcp":
-			tcpCreator := clientpool.NewTCPClientCreator(logger, nil)
+			tcpCreator := clientpool.NewTCPClientCreator(TCPTimeout, logger, nil)
 			tcpWrapper := dopplerforwarder.NewWrapper(logger, proto)
 			tcpPool := clientpool.NewDopplerPool(logger, tcpCreator)
 			tcpForwarder := dopplerforwarder.New(tcpWrapper, tcpPool, logger)
@@ -172,7 +173,7 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 				return nil, err
 			}
 			tlsConfig.ServerName = "doppler"
-			tlsCreator := clientpool.NewTCPClientCreator(logger, tlsConfig)
+			tlsCreator := clientpool.NewTCPClientCreator(TCPTimeout, logger, tlsConfig)
 			tlsWrapper := dopplerforwarder.NewWrapper(logger, proto)
 			tlsPool := clientpool.NewDopplerPool(logger, tlsCreator)
 			tlsForwarder := dopplerforwarder.New(tlsWrapper, tlsPool, logger)

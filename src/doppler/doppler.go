@@ -98,7 +98,7 @@ func New(
 		tlsConfig := &config.TLSListenerConfig
 		addr := fmt.Sprintf("%s:%d", host, tlsConfig.Port)
 		contextName := "tlsListener"
-		doppler.tlsListener, err = listeners.NewTCPListener(contextName, addr, tlsConfig, doppler.envelopeChan, doppler.batcher, logger)
+		doppler.tlsListener, err = listeners.NewTCPListener(contextName, addr, tlsConfig, doppler.envelopeChan, doppler.batcher, TCPTimeout, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -106,7 +106,7 @@ func New(
 
 	addr := fmt.Sprintf("%s:%d", host, config.IncomingTCPPort)
 	contextName := "tcpListener"
-	doppler.tcpListener, err = listeners.NewTCPListener(contextName, addr, nil, doppler.envelopeChan, doppler.batcher, logger)
+	doppler.tcpListener, err = listeners.NewTCPListener(contextName, addr, nil, doppler.envelopeChan, doppler.batcher, TCPTimeout, logger)
 
 	doppler.signatureVerifier = signature.NewVerifier(logger, config.SharedSecret)
 

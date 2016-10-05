@@ -3,6 +3,7 @@ package clientpool_test
 import (
 	"crypto/tls"
 	"doppler/listeners"
+	"io"
 	"metron/clientpool"
 	"net"
 	"time"
@@ -41,7 +42,7 @@ var _ = Describe("TCPClient", func() {
 			listener, err = net.Listen("tcp", "127.0.0.1:0")
 			Expect(err).NotTo(HaveOccurred())
 
-			client = clientpool.NewTCPClient(logger, listener.Addr().String(), nil)
+			client = clientpool.NewTCPClient(logger, listener.Addr().String(), 500*time.Millisecond, nil)
 			Expect(client).ToNot(BeNil())
 		})
 
@@ -138,6 +139,41 @@ var _ = Describe("TCPClient", func() {
 					Expect(bytes[:n]).To(Equal([]byte("abc")))
 				})
 			})
+
+			Describe("deadlines", func() {
+				var buildBigData = func() []byte {
+					var data []byte
+					for i := 0; i < 1024*50; i++ {
+						data = append(data, byte(i))
+					}
+					return data
+				}
+
+				var keepWriting = func(client io.Writer) <-chan error {
+					c := make(chan error, 100)
+					go func() {
+						defer close(c)
+						data := buildBigData()
+
+						for {
+							_, err := client.Write(data)
+							if err != nil {
+								c <- err
+								return
+							}
+						}
+					}()
+					return c
+				}
+
+				It("returns error after write deadline has expired", func() {
+					Expect(connections).To(BeEmpty())
+					errs := keepWriting(client)
+
+					By("not reading, write deadline expires")
+					Eventually(errs, 5).ShouldNot(BeEmpty())
+				})
+			})
 		})
 
 		Describe("Close", func() {
@@ -170,7 +206,7 @@ var _ = Describe("TCPClient", func() {
 			Expect(err).NotTo(HaveOccurred())
 			tlsClientConfig.ServerName = "doppler"
 
-			client = clientpool.NewTCPClient(logger, listener.Addr().String(), tlsClientConfig)
+			client = clientpool.NewTCPClient(logger, listener.Addr().String(), time.Minute, tlsClientConfig)
 			Expect(client).ToNot(BeNil())
 		})
 

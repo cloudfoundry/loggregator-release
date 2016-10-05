@@ -26,6 +26,7 @@ import (
 const (
 	DOPPLER_ORIGIN = "DopplerServer"
 	pprofPort      = "6060"
+	TCPTimeout     = time.Minute
 )
 
 var (
