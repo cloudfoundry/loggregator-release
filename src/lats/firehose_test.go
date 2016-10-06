@@ -15,12 +15,9 @@ import (
 )
 
 var _ = Describe("Firehose", func() {
-
 	Describe("subscription sharding", func() {
 		Context("100 envelopes emitted", func() {
-			var (
-				count int
-			)
+			var count int
 
 			var generateSubID = func() string {
 				rand.Seed(time.Now().UnixNano())

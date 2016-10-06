@@ -6,16 +6,17 @@ import (
 	"net/http"
 	"net/http/httptest"
 
+	uuid "github.com/nu7hatch/gouuid"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/dropsonde/instrumented_handler"
 	"github.com/cloudfoundry/sonde-go/events"
-	uuid "github.com/nu7hatch/gouuid"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Sending Http events through loggregator", func() {
+var _ = Describe("Sending HTTP events through loggregator", func() {
 	Context("When the instrumented handler receives a request", func() {
 		It("should emit an HttpStartStop through the firehose", func() {
 			msgChan, errorChan := helpers.ConnectToFirehose()

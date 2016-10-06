@@ -25,9 +25,9 @@ func Initialize(testConfig *TestConfig) {
 	config = testConfig
 }
 
-func ConnectToStream(appId string) (<-chan *events.Envelope, <-chan error) {
+func ConnectToStream(appID string) (<-chan *events.Envelope, <-chan error) {
 	connection, printer := SetUpConsumer()
-	msgChan, errorChan := connection.Stream(appId, "")
+	msgChan, errorChan := connection.Stream(appID, "")
 
 	readErrs := func() error {
 		select {
@@ -64,6 +64,16 @@ func ConnectToFirehose() (<-chan *events.Envelope, <-chan error) {
 	WaitForWebsocketConnection(printer)
 
 	return msgChan, errorChan
+}
+
+func RequestContainerMetrics(appID string) ([]*events.ContainerMetric, error) {
+	consumer, _ := SetUpConsumer()
+	return consumer.ContainerMetrics(appID, "")
+}
+
+func RequestRecentLogs(appID string) ([]*events.LogMessage, error) {
+	consumer, _ := SetUpConsumer()
+	return consumer.RecentLogs(appID, "")
 }
 
 func SetUpConsumer() (*consumer.Consumer, *TestDebugPrinter) {
