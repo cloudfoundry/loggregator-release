@@ -36,6 +36,9 @@ properties:
   syslog_daemon_config.transport:
     description: "Transport to be used when forwarding logs (tcp|udp|relp)."
     default: "tcp"
+  syslog_daemon_config.rsyslog_action_parameters:
+    description: "Hash of custom parameters for rsyslog action. See http://www.rsyslog.com/doc/v8-stable/configuration/actions.html#general-action-parameters"
+    default: {}
   syslog_daemon_config.fallback_addresses:
     description: "Addresses of fallback servers to be used if the primary syslog server is down. Only tcp or relp are supported. Each list entry should consist of \"address\", \"transport\" and \"port\" keys. "
     default: []
