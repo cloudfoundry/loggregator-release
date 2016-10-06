@@ -8,11 +8,11 @@ import (
 	"doppler/config"
 	"time"
 
+	"code.cloudfoundry.org/localip"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"github.com/gogo/protobuf/proto"
-	"code.cloudfoundry.org/localip"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -39,6 +39,9 @@ var (
 	logMessage            []byte
 	prefixedPrimerMessage []byte
 	primerMessage         []byte
+
+	prefixedContainerMetric []byte
+	containerMetric         []byte
 )
 
 var _ = BeforeSuite(func() {
@@ -61,6 +64,9 @@ var _ = BeforeSuite(func() {
 	prefixedLogMessage = prefixMessage(logMessage)
 	primerMessage = buildLogMessage()
 	prefixedPrimerMessage = prefixMessage(primerMessage)
+
+	containerMetric = buildContainerMetric()
+	prefixedContainerMetric = prefixMessage(containerMetric)
 })
 
 var _ = BeforeEach(func() {
@@ -109,6 +115,24 @@ func buildPrimerMessage() []byte {
 	e := &events.Envelope{
 		Origin:    proto.String("prime-message"),
 		EventType: events.Envelope_LogMessage.Enum(),
+	}
+	b, err := proto.Marshal(e)
+	Expect(err).ToNot(HaveOccurred())
+	return b
+}
+
+func buildContainerMetric() []byte {
+	e := &events.Envelope{
+		Origin:    proto.String("foo"),
+		EventType: events.Envelope_ContainerMetric.Enum(),
+		Timestamp: proto.Int64(time.Now().UnixNano()),
+		ContainerMetric: &events.ContainerMetric{
+			ApplicationId: proto.String("test-app"),
+			InstanceIndex: proto.Int32(1),
+			CpuPercentage: proto.Float64(12.2),
+			MemoryBytes:   proto.Uint64(1234),
+			DiskBytes:     proto.Uint64(4321),
+		},
 	}
 	b, err := proto.Marshal(e)
 	Expect(err).ToNot(HaveOccurred())
