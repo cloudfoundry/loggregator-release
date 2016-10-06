@@ -1,5 +1,8 @@
 . ./loggregator/src/exiter.ps1
 
+# This is to test that failures in building actually make our pipeline go red
+Exit 1
+
 $pkg_name="metron"
 $env:GOROOT="C:\var\vcap\packages\golang1.7-windows\go"
 $env:GOPATH="${PWD}\loggregator"
