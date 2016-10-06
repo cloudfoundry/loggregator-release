@@ -60,11 +60,22 @@ template(name="CfLogTemplate" type="list") {
 
 <% if transport == "relp" %>
 $ModLoad omrelp
-*.* :omrelp:<%= address %>:<%= port %>;CfLogTemplate
+action(type="omrelp"
+       target="<%= address %>"
+       port="<%= port %>"
+       template="CfLogTemplate")
 <% elsif transport == "udp" %>
-*.* @<%= address %>:<%= port %>;CfLogTemplate
+action(type="omfwd"
+       Protocol="udp"
+       Target="<%= address %>"
+       Port="<%= port %>"
+       template="CfLogTemplate")
 <% elsif transport == "tcp" %>
-*.* @@<%= address %>:<%= port %>;CfLogTemplate
+action(type="omfwd"
+       Protocol="tcp"
+       Target="<%= address %>"
+       Port="<%= port %>"
+       template="CfLogTemplate")
 <% else %>
 #only RELP, UDP, and TCP are supported
 <% end %>
@@ -80,9 +91,16 @@ $ActionExecOnlyWhenPreviousIsSuspended on
    port = fallback_address["port"]
 %>
 <% if transport == "relp" %>
-& :omrelp:<%= address %>:<%= port %>;CfLogTemplate
+action(type="omrelp"
+       target="<%= address %>"
+       port="<%= port %>"
+       template="CfLogTemplate")
 <% elsif transport == "tcp" %>
-& @@<%= address %>:<%= port %>;CfLogTemplate
+action(type="omfwd"
+       Protocol="tcp"
+       Target="<%= address %>"
+       Port="<%= port %>"
+       template="CfLogTemplate")
 <% else %>
 # only RELP and TCP are supported
 <% end %>
