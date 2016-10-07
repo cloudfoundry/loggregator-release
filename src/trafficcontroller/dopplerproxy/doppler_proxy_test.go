@@ -81,13 +81,6 @@ var _ = Describe("ServeHTTP()", func() {
 	})
 
 	Context("App Logs", func() {
-		It("returns a 200 for a head request", func() {
-			req, _ := http.NewRequest("HEAD", "", nil)
-
-			proxy.ServeHTTP(recorder, req)
-
-			Expect(recorder.Code).To(Equal(http.StatusOK))
-		})
 
 		Describe("TrafficController emitted request metrics", func() {
 			var fakeMetricSender *fake.FakeMetricSender
@@ -139,31 +132,10 @@ var _ = Describe("ServeHTTP()", func() {
 				proxy.ServeHTTP(recorder, req)
 
 				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-				Expect(recorder.Body.String()).To(Equal("Resource Not Found."))
 			})
 
 			It("It does not attempt to connect to doppler", func() {
 				req, _ := http.NewRequest("GET", "/apps/abc123/bar", nil)
-
-				proxy.ServeHTTP(recorder, req)
-				Consistently(channelGroupConnector.getPath).Should(Equal(""))
-				Consistently(channelGroupConnector.getStreamId).Should(Equal(""))
-				Consistently(channelGroupConnector.getReconnect).Should(BeFalse())
-			})
-		})
-
-		Context("if the app id is missing", func() {
-			It("returns a 404", func() {
-				req, _ := http.NewRequest("GET", "/apps//stream", nil)
-
-				proxy.ServeHTTP(recorder, req)
-
-				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-				Expect(recorder.Body.String()).To(Equal("App ID missing. Make request to /apps/APP_ID/stream"))
-			})
-
-			It("It does not attempt to connect to doppler", func() {
-				req, _ := http.NewRequest("GET", "/apps//stream", nil)
 
 				proxy.ServeHTTP(recorder, req)
 				Consistently(channelGroupConnector.getPath).Should(Equal(""))
@@ -354,89 +326,13 @@ var _ = Describe("ServeHTTP()", func() {
 			})
 		})
 
-		Context("if subscription_id is not provided (no trailing slash)", func() {
-			It("returns a 404", func() {
-				req, _ := http.NewRequest("GET", "/firehose", nil)
-				req.Header.Add("Authorization", "token")
-
-				proxy.ServeHTTP(recorder, req)
-				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-				Expect(recorder.Body.String()).To(Equal("Firehose SUBSCRIPTION_ID missing. Make request to /firehose/SUBSCRIPTION_ID"))
-			})
-
-			It("It does not attempt to connect to doppler", func() {
-				req, _ := http.NewRequest("GET", "/firehose", nil)
-				req.Header.Add("Authorization", "token")
-
-				proxy.ServeHTTP(recorder, req)
-				Consistently(mockGrpcConnector.FirehoseCalled).ShouldNot(Receive())
-			})
-		})
-
-		Context("if subscription_id is not provided (with trailing slash)", func() {
+		Context("if subscription_id is not provided", func() {
 			It("returns a 404", func() {
 				req, _ := http.NewRequest("GET", "/firehose/", nil)
 				req.Header.Add("Authorization", "token")
 
 				proxy.ServeHTTP(recorder, req)
 				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-				Expect(recorder.Body.String()).To(Equal("Firehose SUBSCRIPTION_ID missing. Make request to /firehose/SUBSCRIPTION_ID"))
-			})
-
-			It("It does not attempt to connect to doppler", func() {
-				req, _ := http.NewRequest("GET", "/firehose/", nil)
-				req.Header.Add("Authorization", "token")
-
-				proxy.ServeHTTP(recorder, req)
-				Consistently(mockGrpcConnector.FirehoseCalled).ShouldNot(Receive())
-			})
-		})
-
-		Context("if there is an extra trailing slash after a valid firehose URL", func() {
-			It("returns a 404", func() {
-				req, _ := http.NewRequest("GET", "/firehose/abc/123", nil)
-				req.Header.Add("Authorization", "token")
-
-				proxy.ServeHTTP(recorder, req)
-				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-				Expect(recorder.Body.String()).To(Equal("Firehose SUBSCRIPTION_ID missing. Make request to /firehose/SUBSCRIPTION_ID"))
-			})
-
-			It("It does not attempt to connect to doppler", func() {
-				req, _ := http.NewRequest("GET", "/firehose/abc/123", nil)
-				req.Header.Add("Authorization", "token")
-
-				proxy.ServeHTTP(recorder, req)
-				Consistently(mockGrpcConnector.FirehoseCalled).ShouldNot(Receive())
-			})
-		})
-
-		Context("if path is invalid but contains the string 'firehose'", func() {
-			It("returns a 404", func() {
-				req, _ := http.NewRequest("GET", "/appsfirehosefoo/abc-123", nil)
-				req.Header.Add("Authorization", "token")
-
-				proxy.ServeHTTP(recorder, req)
-				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-			})
-
-			It("It does not attempt to connect to doppler", func() {
-				req, _ := http.NewRequest("GET", "/appsfirehosefoo/abc-123", nil)
-				req.Header.Add("Authorization", "token")
-
-				proxy.ServeHTTP(recorder, req)
-				Consistently(mockGrpcConnector.FirehoseCalled).ShouldNot(Receive())
-			})
-		})
-
-		Context("if attempting to access the 'firehose' app", func() {
-			It("It does not connect to the endpoint of type 'firehose' in doppler", func() {
-				req, _ := http.NewRequest("GET", "/apps/firehose/stream", nil)
-				req.Header.Add("Authorization", "token")
-
-				proxy.ServeHTTP(recorder, req)
-				Consistently(mockGrpcConnector.FirehoseCalled).ShouldNot(Receive())
-				Eventually(mockGrpcConnector.StreamInput.In).Should(Receive(Equal(&plumbing.StreamRequest{"firehose"})))
 			})
 		})
 	})
@@ -446,15 +342,7 @@ var _ = Describe("ServeHTTP()", func() {
 			req, _ := http.NewRequest("GET", "/", nil)
 			proxy.ServeHTTP(recorder, req)
 			Expect(recorder.Code).To(Equal(http.StatusNotFound))
-			Expect(recorder.Body.String()).To(Equal("Resource Not Found."))
 		})
-	})
-
-	It("returns a 404 if the path does not start with /apps or /firehose or /set-cookie", func() {
-		req, _ := http.NewRequest("GET", "/notApps", nil)
-		proxy.ServeHTTP(recorder, req)
-		Expect(recorder.Code).To(Equal(http.StatusNotFound))
-		Expect(recorder.Body.String()).To(Equal("Resource Not Found."))
 	})
 
 	Context("SetCookie", func() {
