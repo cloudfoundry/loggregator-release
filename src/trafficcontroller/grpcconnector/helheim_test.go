@@ -16,6 +16,24 @@ import (
 	"google.golang.org/grpc"
 )
 
+type mockFinder struct {
+	NextCalled chan bool
+	NextOutput struct {
+		Ret0 chan dopplerservice.Event
+	}
+}
+
+func newMockFinder() *mockFinder {
+	m := &mockFinder{}
+	m.NextCalled = make(chan bool, 100)
+	m.NextOutput.Ret0 = make(chan dopplerservice.Event, 100)
+	return m
+}
+func (m *mockFinder) Next() dopplerservice.Event {
+	m.NextCalled <- true
+	return <-m.NextOutput.Ret0
+}
+
 type mockReceiver struct {
 	RecvCalled chan bool
 	RecvOutput struct {
@@ -57,6 +75,15 @@ type mockReceiveFetcher struct {
 		Ret0 chan []grpcconnector.Receiver
 		Ret1 chan error
 	}
+	FetchContainerMetricsCalled chan bool
+	FetchContainerMetricsInput  struct {
+		Ctx chan context.Context
+		In  chan *plumbing.ContainerMetricsRequest
+	}
+	FetchContainerMetricsOutput struct {
+		Ret0 chan []*plumbing.ContainerMetricsResponse
+		Ret1 chan error
+	}
 }
 
 func newMockReceiveFetcher() *mockReceiveFetcher {
@@ -73,6 +100,11 @@ func newMockReceiveFetcher() *mockReceiveFetcher {
 	m.FetchFirehoseInput.Opts = make(chan []grpc.CallOption, 100)
 	m.FetchFirehoseOutput.Ret0 = make(chan []grpcconnector.Receiver, 100)
 	m.FetchFirehoseOutput.Ret1 = make(chan error, 100)
+	m.FetchContainerMetricsCalled = make(chan bool, 100)
+	m.FetchContainerMetricsInput.Ctx = make(chan context.Context, 100)
+	m.FetchContainerMetricsInput.In = make(chan *plumbing.ContainerMetricsRequest, 100)
+	m.FetchContainerMetricsOutput.Ret0 = make(chan []*plumbing.ContainerMetricsResponse, 100)
+	m.FetchContainerMetricsOutput.Ret1 = make(chan error, 100)
 	return m
 }
 func (m *mockReceiveFetcher) FetchStream(ctx context.Context, in *plumbing.StreamRequest, opts ...grpc.CallOption) ([]grpcconnector.Receiver, error) {
@@ -88,6 +120,12 @@ func (m *mockReceiveFetcher) FetchFirehose(ctx context.Context, in *plumbing.Fir
 	m.FetchFirehoseInput.In <- in
 	m.FetchFirehoseInput.Opts <- opts
 	return <-m.FetchFirehoseOutput.Ret0, <-m.FetchFirehoseOutput.Ret1
+}
+func (m *mockReceiveFetcher) FetchContainerMetrics(ctx context.Context, in *plumbing.ContainerMetricsRequest) ([]*plumbing.ContainerMetricsResponse, error) {
+	m.FetchContainerMetricsCalled <- true
+	m.FetchContainerMetricsInput.Ctx <- ctx
+	m.FetchContainerMetricsInput.In <- in
+	return <-m.FetchContainerMetricsOutput.Ret0, <-m.FetchContainerMetricsOutput.Ret1
 }
 
 type mockMetaMetricBatcher struct {
@@ -111,24 +149,6 @@ func (m *mockMetaMetricBatcher) BatchCounter(name string) metricbatcher.BatchCou
 	m.BatchCounterCalled <- true
 	m.BatchCounterInput.Name <- name
 	return <-m.BatchCounterOutput.Ret0
-}
-
-type mockFinder struct {
-	NextCalled chan bool
-	NextOutput struct {
-		Ret0 chan dopplerservice.Event
-	}
-}
-
-func newMockFinder() *mockFinder {
-	m := &mockFinder{}
-	m.NextCalled = make(chan bool, 100)
-	m.NextOutput.Ret0 = make(chan dopplerservice.Event, 100)
-	return m
-}
-func (m *mockFinder) Next() dopplerservice.Event {
-	m.NextCalled <- true
-	return <-m.NextOutput.Ret0
 }
 
 type mockContext struct {

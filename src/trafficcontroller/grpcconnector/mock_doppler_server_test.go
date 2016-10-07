@@ -1,6 +1,10 @@
 package grpcconnector_test
 
-import "plumbing"
+import (
+	"plumbing"
+
+	"golang.org/x/net/context"
+)
 
 type mockDopplerServer struct {
 	streamInputRequests chan *plumbing.StreamRequest
@@ -10,6 +14,10 @@ type mockDopplerServer struct {
 	firehoseInputRequests chan *plumbing.FirehoseRequest
 	firehoseInputServers  chan plumbing.Doppler_FirehoseServer
 	firehoseOutput        chan error
+
+	containerMetricsRequests    chan *plumbing.ContainerMetricsRequest
+	containerMetricsOutputResps chan *plumbing.ContainerMetricsResponse
+	containerMetricsOutputErrs  chan error
 }
 
 func newMockDopplerServer() *mockDopplerServer {
@@ -21,6 +29,10 @@ func newMockDopplerServer() *mockDopplerServer {
 		firehoseInputRequests: make(chan *plumbing.FirehoseRequest, 100),
 		firehoseInputServers:  make(chan plumbing.Doppler_FirehoseServer, 100),
 		firehoseOutput:        make(chan error, 100),
+
+		containerMetricsRequests:    make(chan *plumbing.ContainerMetricsRequest, 100),
+		containerMetricsOutputResps: make(chan *plumbing.ContainerMetricsResponse, 100),
+		containerMetricsOutputErrs:  make(chan error, 100),
 	}
 }
 
@@ -34,4 +46,9 @@ func (m *mockDopplerServer) Firehose(req *plumbing.FirehoseRequest, server plumb
 	m.firehoseInputRequests <- req
 	m.firehoseInputServers <- server
 	return <-m.firehoseOutput
+}
+
+func (m *mockDopplerServer) ContainerMetrics(ctx context.Context, req *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error) {
+	m.containerMetricsRequests <- req
+	return <-m.containerMetricsOutputResps, <-m.containerMetricsOutputErrs
 }

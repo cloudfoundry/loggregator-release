@@ -1,29 +1,29 @@
 //go:generate hel
+
 package dopplerproxy_test
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"plumbing"
-	"trafficcontroller/dopplerproxy"
-
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"plumbing"
 	"strings"
 	"sync"
 	"time"
 	"trafficcontroller/doppler_endpoint"
+	"trafficcontroller/dopplerproxy"
 
+	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/server/handlers"
 	"github.com/gorilla/websocket"
 
 	. "github.com/apoydence/eachers"
-	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
-	"github.com/cloudfoundry/dropsonde/metricbatcher"
-	"github.com/cloudfoundry/dropsonde/metrics"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
