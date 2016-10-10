@@ -38,7 +38,7 @@ sync_package loggregator_trafficcontroller -app  trafficcontroller/... &
 sync_package syslog_drain_binder           -app  syslog_drain_binder/... &
 sync_package statsd-injector               -app  statsd-injector/... &
 sync_package boshhmforwarder               -app  boshhmforwarder/... &
-sync_package loggregator-acceptance-tests  -app  lats/... &
+sync_package loggregator-acceptance-tests  -app  lats/... -test lats/... &
 sync_package loggregator-load-testing      -app  tools/logemitter/... -app tools/logcounterapp/... -app tools/logfin/... &
 
 wait
