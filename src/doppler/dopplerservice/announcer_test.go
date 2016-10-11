@@ -11,11 +11,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"code.cloudfoundry.org/localip"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	ginkgoConfig "github.com/onsi/ginkgo/config"
-	"code.cloudfoundry.org/localip"
 )
 
 var _ = Describe("Announcer", func() {

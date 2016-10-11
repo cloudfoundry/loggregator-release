@@ -62,7 +62,7 @@ var _ = Describe("Dumping", func() {
 			tempSink.Start(newAppServiceChan, deletedAppServiceChan)
 		}()
 
-		TestMessageRouter = sinkserver.NewMessageRouter(sinkManager, logger)
+		TestMessageRouter = sinkserver.NewMessageRouter(logger, sinkManager)
 		tempMessageRouter := TestMessageRouter
 
 		services.Add(1)

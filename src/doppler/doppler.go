@@ -8,6 +8,7 @@ import (
 	"time"
 
 	doppler_config "doppler/config"
+	"doppler/grpcmanager"
 	"doppler/sinkserver"
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/sinkmanager"
@@ -129,16 +130,19 @@ func New(
 		dialTimeout,
 	)
 
+	grpcRouter := grpcmanager.NewRouter()
+	grpcManager := grpcmanager.New(grpcRouter)
+
 	doppler.Infof("Listening for GRPC connections on %d", config.GRPCPort)
 	grpcListener, err := net.Listen("tcp", fmt.Sprintf(":%d", config.GRPCPort))
 	if err != nil {
 		return nil, err
 	}
 	grpcServer := grpc.NewServer()
-	plumbing.RegisterDopplerServer(grpcServer, doppler.sinkManager)
+	plumbing.RegisterDopplerServer(grpcServer, grpcManager)
 	go grpcServer.Serve(grpcListener)
 
-	doppler.messageRouter = sinkserver.NewMessageRouter(doppler.sinkManager, logger)
+	doppler.messageRouter = sinkserver.NewMessageRouter(logger, doppler.sinkManager, grpcRouter)
 
 	doppler.websocketServer, err = websocketserver.New(
 		fmt.Sprintf(":%d", config.OutgoingPort),
