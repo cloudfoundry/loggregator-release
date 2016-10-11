@@ -3,6 +3,7 @@ package clientpool_test
 import (
 	"doppler/listeners"
 	"metron/clientpool"
+	"time"
 
 	"crypto/tls"
 
@@ -39,7 +40,7 @@ var _ = Describe("TCPClientCreator", func() {
 		address = tlsListener.Addr().String()
 		conns = acceptConnections(tlsListener)
 
-		tlsClientCreator = clientpool.NewTCPClientCreator(logger, tlsClientConfig)
+		tlsClientCreator = clientpool.NewTCPClientCreator(time.Minute, logger, tlsClientConfig)
 	})
 
 	Describe("CreateClient", func() {
