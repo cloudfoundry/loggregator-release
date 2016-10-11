@@ -29,8 +29,9 @@ var _ = Describe("Fetcher", func() {
 
 		ctx context.Context
 
-		streamReq   *plumbing.StreamRequest
-		firehoseReq *plumbing.FirehoseRequest
+		streamReq    *plumbing.StreamRequest
+		firehoseReq  *plumbing.FirehoseRequest
+		containerReq *plumbing.ContainerMetricsRequest
 	)
 
 	var startMockDoppler = func() (*mockDopplerServer, string) {
@@ -55,6 +56,7 @@ var _ = Describe("Fetcher", func() {
 		listeners = nil
 		mockFinder = newMockFinder()
 		var URIa string
+
 		mockDopplerA, URIa = startMockDoppler()
 
 		ctx = context.Background()
@@ -65,6 +67,10 @@ var _ = Describe("Fetcher", func() {
 
 		firehoseReq = &plumbing.FirehoseRequest{
 			SubID: "some-id",
+		}
+
+		containerReq = &plumbing.ContainerMetricsRequest{
+			AppID: "some-id",
 		}
 
 		port = extractPort(URIa)
@@ -222,6 +228,71 @@ var _ = Describe("Fetcher", func() {
 		Context("when no doppler servers are available", func() {
 			It("returns an error", func() {
 				_, err := fetcher.FetchStream(ctx, streamReq)
+				Expect(err).To(HaveOccurred())
+			})
+		})
+	})
+
+	Describe("FetchContainerMetrics()", func() {
+		Context("when Next() returns", func() {
+			var (
+				containerResp *plumbing.ContainerMetricsResponse
+			)
+
+			var waitForConnectionEstablished = func() {
+				f := func() error {
+					_, err := fetcher.FetchFirehose(ctx, &plumbing.FirehoseRequest{SubID: "some-id"})
+					return err
+				}
+				Eventually(f).Should(Succeed())
+			}
+
+			BeforeEach(func() {
+				mockFinder.NextOutput.Ret0 <- dopplerservice.Event{
+					UDPDopplers: []string{fmt.Sprintf("udp://localhost:%d", port)},
+				}
+
+				waitForConnectionEstablished()
+			})
+
+			Context("doppler does not return an error", func() {
+				BeforeEach(func() {
+					containerResp = &plumbing.ContainerMetricsResponse{
+						Payload: [][]byte{
+							[]byte("foo"),
+							[]byte("bar"),
+							[]byte("baz"),
+						},
+					}
+
+					mockDopplerA.containerMetricsOutputResps <- containerResp
+					mockDopplerA.containerMetricsOutputErrs <- nil
+				})
+
+				It("returns container metrics from each doppler", func() {
+					resp, err := fetcher.FetchContainerMetrics(ctx, containerReq)
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(resp).To(ContainElement(containerResp))
+				})
+			})
+
+			Context("when doppler returns an error", func() {
+				BeforeEach(func() {
+					mockDopplerA.containerMetricsOutputResps <- nil
+					mockDopplerA.containerMetricsOutputErrs <- fmt.Errorf("some-error")
+				})
+
+				It("returns an error", func() {
+					_, err := fetcher.FetchContainerMetrics(ctx, containerReq)
+					Expect(err).To(HaveOccurred())
+				})
+			})
+		})
+
+		Context("when no doppler servers are available", func() {
+			It("returns an error", func() {
+				_, err := fetcher.FetchContainerMetrics(ctx, containerReq)
 				Expect(err).To(HaveOccurred())
 			})
 		})

@@ -2,6 +2,8 @@ package dopplerproxy
 
 import (
 	"fmt"
+	"log"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"plumbing"
@@ -39,6 +41,7 @@ type channelGroupConnector interface {
 type grpcConnector interface {
 	Stream(ctx context.Context, in *plumbing.StreamRequest, opts ...grpc.CallOption) (grpcconnector.Receiver, error)
 	Firehose(ctx context.Context, in *plumbing.FirehoseRequest, opts ...grpc.CallOption) (grpcconnector.Receiver, error)
+	ContainerMetrics(ctx context.Context, in *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error)
 }
 
 func NewDopplerProxy(
@@ -145,22 +148,41 @@ func (p *Proxy) serveAppLogs(requestPath, appID string, writer http.ResponseWrit
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if requestPath == "recentlogs" || requestPath == "containermetrics" {
+	if requestPath == "recentlogs" {
 		dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint(requestPath, appID, false)
 		p.serveWithDoppler(writer, request, dopplerEndpoint)
 		return
 	}
 
-	client, err := p.grpcConn.Stream(ctx, &plumbing.StreamRequest{
-		AppID: appID,
-	})
+	if requestPath == "containermetrics" {
+		resp, err := p.grpcConn.ContainerMetrics(ctx, &plumbing.ContainerMetricsRequest{
+			AppID: appID,
+		})
 
-	if err != nil {
-		p.logger.Errorf("Failed to stream from doppler: %s", err)
-		writer.WriteHeader(http.StatusInternalServerError)
+		if err != nil {
+			p.logger.Errorf("Failed to get container metrics from doppler: %s", err)
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		p.serveMultiPartResponse(writer, resp.Payload)
+		log.Println("DONE WITH CONTIANER")
 		return
 	}
-	p.serveWS(requestPath, appID, writer, request, client.Recv)
+
+	if requestPath == "stream" {
+		client, err := p.grpcConn.Stream(ctx, &plumbing.StreamRequest{
+			AppID: appID,
+		})
+
+		if err != nil {
+			p.logger.Errorf("Failed to stream from doppler: %s", err)
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		p.serveWS(requestPath, appID, writer, request, client.Recv)
+		return
+	}
 }
 
 func (p *Proxy) serveWS(endpointType, streamID string, w http.ResponseWriter, r *http.Request, recv func() (*plumbing.Response, error)) {
@@ -196,6 +218,23 @@ func (p *Proxy) serveWithDoppler(writer http.ResponseWriter, request *http.Reque
 
 	handler := dopplerEndpoint.HProvider(messagesChan, p.logger)
 	handler.ServeHTTP(writer, request)
+}
+
+func (p *Proxy) serveMultiPartResponse(rw http.ResponseWriter, messages [][]byte) {
+	mp := multipart.NewWriter(rw)
+	defer mp.Close()
+
+	rw.Header().Set("Content-Type", `multipart/x-protobuf; boundary=`+mp.Boundary())
+
+	for _, message := range messages {
+		partWriter, err := mp.CreatePart(nil)
+		if err != nil {
+			p.logger.Infof("http handler: Client went away while serving recent logs")
+			return
+		}
+
+		partWriter.Write(message)
+	}
 }
 
 func sendMetric(metricName string, startTime time.Time) {

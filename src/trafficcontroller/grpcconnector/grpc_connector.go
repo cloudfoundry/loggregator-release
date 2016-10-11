@@ -51,11 +51,20 @@ func (g *GrpcConnector) Firehose(ctx context.Context, in *plumbing.FirehoseReque
 }
 
 func (g *GrpcConnector) ContainerMetrics(ctx context.Context, in *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error) {
-	rxs, err := g.fetcher.FetchContainerMetrics(ctx, in)
-	_ = err
-	resp := rxs[0]
-	for _, rx := range rxs[1:] {
-		resp.Payload = append(resp.Payload, rx.Payload...)
+	responses, err := g.fetcher.FetchContainerMetrics(ctx, in)
+
+	if err != nil {
+		return nil, err
 	}
+
+	resp := new(plumbing.ContainerMetricsResponse)
+	if len(responses) == 0 {
+		return resp, nil
+	}
+
+	for _, response := range responses {
+		resp.Payload = append(resp.Payload, response.Payload...)
+	}
+
 	return resp, nil
 }

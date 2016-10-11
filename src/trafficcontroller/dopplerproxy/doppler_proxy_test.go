@@ -7,9 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"plumbing"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -109,7 +111,9 @@ var _ = Describe("ServeHTTP()", func() {
 			})
 
 			It("Should emit value metric for containermetrics request", func() {
-				close(channelGroupConnector.messages)
+				mockGrpcConnector.ContainerMetricsOutput.Ret0 <- new(plumbing.ContainerMetricsResponse)
+				close(mockGrpcConnector.ContainerMetricsOutput.Ret1)
+
 				req, _ := http.NewRequest("GET", "/apps/appID123/containermetrics", nil)
 				requestAndAssert(req, "dopplerProxy.containermetricsLatency")
 			})
@@ -249,7 +253,8 @@ var _ = Describe("ServeHTTP()", func() {
 		})
 
 		It("connects to doppler servers without reconnecting for containermetrics", func() {
-			close(channelGroupConnector.messages)
+			mockGrpcConnector.ContainerMetricsOutput.Ret0 <- new(plumbing.ContainerMetricsResponse)
+			close(mockGrpcConnector.ContainerMetricsOutput.Ret1)
 			req, _ := http.NewRequest("GET", "/apps/abc123/containermetrics", nil)
 			req.Header.Add("Authorization", "token")
 
@@ -293,6 +298,38 @@ var _ = Describe("ServeHTTP()", func() {
 			var ctx context.Context
 			Eventually(mockGrpcConnector.StreamInput.Ctx).Should(Receive(&ctx))
 			Eventually(ctx.Done).Should(BeClosed())
+		})
+
+		It("returns the requested container metrics", func(done Done) {
+			defer close(done)
+			req, _ := http.NewRequest("GET", "/apps/abc123/containermetrics", nil)
+			req.Header.Add("Authorization", "token")
+			containerResp := &plumbing.ContainerMetricsResponse{
+				Payload: [][]byte{
+					[]byte("foo"),
+					[]byte("bar"),
+					[]byte("baz"),
+				},
+			}
+			mockGrpcConnector.ContainerMetricsOutput.Ret0 <- containerResp
+			mockGrpcConnector.ContainerMetricsOutput.Ret1 <- nil
+
+			proxy.ServeHTTP(recorder, req)
+
+			boundaryRegexp := regexp.MustCompile("boundary=(.*)")
+			matches := boundaryRegexp.FindStringSubmatch(recorder.Header().Get("Content-Type"))
+			Expect(matches).To(HaveLen(2))
+			Expect(matches[1]).NotTo(BeEmpty())
+			reader := multipart.NewReader(recorder.Body, matches[1])
+
+			for _, payload := range containerResp.Payload {
+				part, err := reader.NextPart()
+				Expect(err).ToNot(HaveOccurred())
+
+				partBytes, err := ioutil.ReadAll(part)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(partBytes).To(Equal(payload))
+			}
 		})
 	})
 

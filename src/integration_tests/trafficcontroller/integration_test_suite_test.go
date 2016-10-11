@@ -161,6 +161,8 @@ func makeContainerMetricMessage(appId string, instanceIndex int32, cpu float64, 
 		ApplicationId: proto.String(appId),
 		InstanceIndex: proto.Int32(instanceIndex),
 		CpuPercentage: proto.Float64(cpu),
+		MemoryBytes:   proto.Uint64(1),
+		DiskBytes:     proto.Uint64(2),
 	}
 
 	envelope := &events.Envelope{

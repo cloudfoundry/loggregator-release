@@ -152,7 +152,7 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 			fakeDoppler.CloseLogMessageStream()
 		})
 
-		It("returns a multi-part HTTP response with the most recent message for all instances for a given app", func() {
+		FIt("returns a multi-part HTTP response with the most recent container metrics for all instances for a given app", func() {
 			client := consumer.New(dropsondeEndpoint, &tls.Config{}, nil)
 
 			Eventually(func() bool {
@@ -162,6 +162,7 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 				select {
 				case request := <-fakeDoppler.TrafficControllerConnected:
 					Expect(request.URL.Path).To(Equal("/apps/1234/containermetrics"))
+					Expect(messages).To(HaveLen(5))
 					for i, message := range messages {
 						Expect(message.GetInstanceIndex()).To(BeEquivalentTo(i))
 						Expect(message.GetCpuPercentage()).To(BeEquivalentTo(i))
