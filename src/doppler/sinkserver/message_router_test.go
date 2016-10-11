@@ -45,12 +45,24 @@ func (f *fakeSinkManager) drains() [][]string {
 
 var _ = Describe("Message Router", func() {
 
-	var fakeManager *fakeSinkManager
-	var messageRouter *sinkserver.MessageRouter
+	var (
+		fakeManagerA  *fakeSinkManager
+		fakeManagerB  *fakeSinkManager
+		messageRouter *sinkserver.MessageRouter
+	)
 
 	BeforeEach(func() {
-		fakeManager = &fakeSinkManager{receivedMessages: make([]*events.Envelope, 0), receivedDrains: make([][]string, 0)}
-		messageRouter = sinkserver.NewMessageRouter(fakeManager, loggertesthelper.Logger())
+		fakeManagerA = &fakeSinkManager{
+			receivedMessages: make([]*events.Envelope, 0),
+			receivedDrains:   make([][]string, 0),
+		}
+
+		fakeManagerB = &fakeSinkManager{
+			receivedMessages: make([]*events.Envelope, 0),
+			receivedDrains:   make([][]string, 0),
+		}
+
+		messageRouter = sinkserver.NewMessageRouter(loggertesthelper.Logger(), fakeManagerA, fakeManagerB)
 	})
 
 	Describe("Start", func() {
@@ -65,11 +77,13 @@ var _ = Describe("Message Router", func() {
 				messageRouter.Stop()
 			})
 
-			It("sends the message to the sink manager if it is an app message", func() {
+			It("sends the message to each sender if it is an app message", func() {
 				message, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "testMessage", "app", "App"), "origin")
 				incomingLogChan <- message
-				Eventually(fakeManager.received).Should(HaveLen(1))
-				Expect(fakeManager.received()[0].GetLogMessage()).To(Equal(message.GetLogMessage()))
+				Eventually(fakeManagerA.received).Should(HaveLen(1))
+				Eventually(fakeManagerB.received).Should(HaveLen(1))
+				Expect(fakeManagerA.received()[0].GetLogMessage()).To(Equal(message.GetLogMessage()))
+				Expect(fakeManagerB.received()[0].GetLogMessage()).To(Equal(message.GetLogMessage()))
 			})
 		})
 	})

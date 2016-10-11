@@ -19,12 +19,10 @@ func TestSinkmanager(t *testing.T) {
 var (
 	fakeMetricSender *fakeMS.FakeMetricSender
 	fakeEventEmitter *fake.FakeEventEmitter
-	mockBatcher      *mockMetricBatcher
 )
 
 var _ = BeforeSuite(func() {
 	fakeEventEmitter = fake.NewFakeEventEmitter("doppler")
 	fakeMetricSender = fakeMS.NewFakeMetricSender()
-	mockBatcher = newMockMetricBatcher()
-	metrics.Initialize(fakeMetricSender, mockBatcher)
+	metrics.Initialize(fakeMetricSender, nil)
 })
