@@ -4,6 +4,7 @@ package grpcconnector_test
 import (
 	"fmt"
 	"plumbing"
+	"time"
 	"trafficcontroller/grpcconnector"
 
 	"google.golang.org/grpc"
@@ -61,7 +62,7 @@ var _ = Describe("GRPCConnector", func() {
 		mockReceiverB = newMockReceiver()
 		mockBatchChainer = newMockBatchCounterChainer()
 		mockMetricBatcher = newMockMetaMetricBatcher()
-		connector = grpcconnector.New(mockReceiveFetcher, mockMetricBatcher)
+		connector = grpcconnector.New(mockReceiveFetcher, mockMetricBatcher, 100*time.Millisecond, 10)
 
 		mockReceiveFetcher.FetchStreamOutput.Ret0 <- []grpcconnector.Receiver{mockReceiverA, mockReceiverB}
 		mockReceiveFetcher.FetchFirehoseOutput.Ret0 <- []grpcconnector.Receiver{mockReceiverA, mockReceiverB}
@@ -118,6 +119,44 @@ var _ = Describe("GRPCConnector", func() {
 						Eventually(mockMetricBatcher.BatchCounterInput.Name).Should(BeCalled(With("listeners.receivedEnvelopes")))
 						Eventually(mockBatchChainer.SetTagInput).Should(BeCalled(With("protocol", "grpc")))
 						Eventually(mockBatchChainer.IncrementCalled).Should(HaveLen(2))
+					})
+
+					Context("when the consumer is not keeping up", func() {
+						var (
+							resp *plumbing.Response
+						)
+
+						BeforeEach(func() {
+							resp = &plumbing.Response{[]byte("some-data-a")}
+							testhelpers.AlwaysReturn(mockReceiverA.RecvOutput.Ret0, resp)
+						})
+
+						It("closes the connection for being too slow", func() {
+							client, _ := connector.Stream(context.Background(), &plumbing.StreamRequest{"AppID"})
+							Eventually(mockReceiverA.RecvOutput.Ret0, 10, "1ns").ShouldNot(
+								BeSent(resp),
+							)
+
+							By("waiting for the connection to time to get cut")
+							time.Sleep(time.Second)
+
+							f := func() error {
+								_, err := client.Recv()
+								return err
+							}
+							Eventually(f, 3).Should(HaveOccurred())
+						})
+
+						It("it emits a metric when it drops the connection", func() {
+							connector.Stream(context.Background(), &plumbing.StreamRequest{"AppID"})
+
+							Eventually(mockMetricBatcher.BatchCounterInput.Name).Should(
+								BeCalled(With("listeners.slowConsumer")),
+							)
+							Eventually(mockBatchChainer.SetTagInput).Should(
+								BeCalled(With("protocol", "grpc")),
+							)
+						})
 					})
 				})
 			})

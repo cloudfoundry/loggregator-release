@@ -2,6 +2,7 @@ package grpcconnector
 
 import (
 	"plumbing"
+	"time"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -27,8 +28,10 @@ type MetaMetricBatcher interface {
 }
 
 type GRPCConnector struct {
-	fetcher ReceiveFetcher
-	batcher MetaMetricBatcher
+	fetcher    ReceiveFetcher
+	batcher    MetaMetricBatcher
+	killAfter  time.Duration
+	bufferSize int
 }
 
 type grpcConnInfo struct {
@@ -36,21 +39,23 @@ type grpcConnInfo struct {
 	conn          *grpc.ClientConn
 }
 
-func New(fetcher ReceiveFetcher, batcher MetaMetricBatcher) *GRPCConnector {
+func New(fetcher ReceiveFetcher, batcher MetaMetricBatcher, killAfter time.Duration, bufferSize int) *GRPCConnector {
 	return &GRPCConnector{
-		fetcher: fetcher,
-		batcher: batcher,
+		fetcher:    fetcher,
+		batcher:    batcher,
+		killAfter:  killAfter,
+		bufferSize: bufferSize,
 	}
 }
 
 func (g *GRPCConnector) Stream(ctx context.Context, in *plumbing.StreamRequest, opts ...grpc.CallOption) (Receiver, error) {
 	rxs, err := g.fetcher.FetchStream(ctx, in, opts...)
-	return startCombiner(rxs, g.batcher), err
+	return startCombiner(rxs, g.batcher, g.killAfter, g.bufferSize), err
 }
 
 func (g *GRPCConnector) Firehose(ctx context.Context, in *plumbing.FirehoseRequest, opts ...grpc.CallOption) (Receiver, error) {
 	rxs, err := g.fetcher.FetchFirehose(ctx, in, opts...)
-	return startCombiner(rxs, g.batcher), err
+	return startCombiner(rxs, g.batcher, g.killAfter, g.bufferSize), err
 }
 
 func (g *GRPCConnector) RecentLogs(ctx context.Context, in *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error) {
