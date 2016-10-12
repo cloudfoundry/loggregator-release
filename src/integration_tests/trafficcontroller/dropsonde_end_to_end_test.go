@@ -126,8 +126,9 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 				messages, err := client.RecentLogs("1234", "bearer iAmAnAdmin")
 				Expect(err).NotTo(HaveOccurred())
 				select {
-				case request := <-fakeDoppler.TrafficControllerConnected:
-					Expect(request.URL.Path).To(Equal("/apps/1234/recentlogs"))
+				case request := <-fakeDoppler.RecentLogsRequests:
+					Expect(request.AppID).To(Equal("1234"))
+					Expect(messages).To(HaveLen(5))
 					for i, message := range messages {
 						Expect(message.GetMessage()).To(BeEquivalentTo(strconv.Itoa(i)))
 					}

@@ -69,6 +69,15 @@ type mockGrpcConnector struct {
 		Ret0 chan *plumbing.ContainerMetricsResponse
 		Ret1 chan error
 	}
+	RecentLogsCalled chan bool
+	RecentLogsInput  struct {
+		Ctx chan context.Context
+		In  chan *plumbing.RecentLogsRequest
+	}
+	RecentLogsOutput struct {
+		Ret0 chan *plumbing.RecentLogsResponse
+		Ret1 chan error
+	}
 }
 
 func newMockGrpcConnector() *mockGrpcConnector {
@@ -90,6 +99,11 @@ func newMockGrpcConnector() *mockGrpcConnector {
 	m.ContainerMetricsInput.In = make(chan *plumbing.ContainerMetricsRequest, 100)
 	m.ContainerMetricsOutput.Ret0 = make(chan *plumbing.ContainerMetricsResponse, 100)
 	m.ContainerMetricsOutput.Ret1 = make(chan error, 100)
+	m.RecentLogsCalled = make(chan bool, 100)
+	m.RecentLogsInput.Ctx = make(chan context.Context, 100)
+	m.RecentLogsInput.In = make(chan *plumbing.RecentLogsRequest, 100)
+	m.RecentLogsOutput.Ret0 = make(chan *plumbing.RecentLogsResponse, 100)
+	m.RecentLogsOutput.Ret1 = make(chan error, 100)
 	return m
 }
 func (m *mockGrpcConnector) Stream(ctx context.Context, in *plumbing.StreamRequest, opts ...grpc.CallOption) (grpcconnector.Receiver, error) {
@@ -111,6 +125,12 @@ func (m *mockGrpcConnector) ContainerMetrics(ctx context.Context, in *plumbing.C
 	m.ContainerMetricsInput.Ctx <- ctx
 	m.ContainerMetricsInput.In <- in
 	return <-m.ContainerMetricsOutput.Ret0, <-m.ContainerMetricsOutput.Ret1
+}
+func (m *mockGrpcConnector) RecentLogs(ctx context.Context, in *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error) {
+	m.RecentLogsCalled <- true
+	m.RecentLogsInput.Ctx <- ctx
+	m.RecentLogsInput.In <- in
+	return <-m.RecentLogsOutput.Ret0, <-m.RecentLogsOutput.Ret1
 }
 
 type mockContext struct {

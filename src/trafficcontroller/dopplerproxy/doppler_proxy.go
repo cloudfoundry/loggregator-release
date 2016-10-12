@@ -41,6 +41,7 @@ type grpcConnector interface {
 	Stream(ctx context.Context, in *plumbing.StreamRequest, opts ...grpc.CallOption) (grpcconnector.Receiver, error)
 	Firehose(ctx context.Context, in *plumbing.FirehoseRequest, opts ...grpc.CallOption) (grpcconnector.Receiver, error)
 	ContainerMetrics(ctx context.Context, in *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error)
+	RecentLogs(ctx context.Context, in *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error)
 }
 
 func NewDopplerProxy(
@@ -148,8 +149,12 @@ func (p *Proxy) serveAppLogs(requestPath, appID string, writer http.ResponseWrit
 	defer cancel()
 
 	if requestPath == "recentlogs" {
-		dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint(requestPath, appID, false)
-		p.serveWithDoppler(writer, request, dopplerEndpoint)
+		resp, err := p.grpcConn.RecentLogs(ctx, &plumbing.RecentLogsRequest{
+			AppID: appID,
+		})
+		_ = err
+
+		p.serveMultiPartResponse(writer, resp.Payload)
 		return
 	}
 

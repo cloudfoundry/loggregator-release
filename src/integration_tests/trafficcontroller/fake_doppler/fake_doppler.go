@@ -27,6 +27,7 @@ type FakeDoppler struct {
 	StreamRequests             chan *plumbing.StreamRequest
 	FirehoseRequests           chan *plumbing.FirehoseRequest
 	ContainerMetricsRequests   chan *plumbing.ContainerMetricsRequest
+	RecentLogsRequests         chan *plumbing.RecentLogsRequest
 	StreamServers              chan plumbing.Doppler_StreamServer
 	connectionPresent          bool
 	done                       chan struct{}
@@ -43,6 +44,7 @@ func New() *FakeDoppler {
 		StreamRequests:             make(chan *plumbing.StreamRequest, 100),
 		FirehoseRequests:           make(chan *plumbing.FirehoseRequest, 100),
 		ContainerMetricsRequests:   make(chan *plumbing.ContainerMetricsRequest, 100),
+		RecentLogsRequests:         make(chan *plumbing.RecentLogsRequest, 100),
 		StreamServers:              make(chan plumbing.Doppler_StreamServer, 100),
 		done:                       make(chan struct{}),
 	}
@@ -156,6 +158,16 @@ func (fakeDoppler *FakeDoppler) Firehose(request *plumbing.FirehoseRequest, serv
 func (fakeDoppler *FakeDoppler) ContainerMetrics(ctx context.Context, request *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error) {
 	fakeDoppler.ContainerMetricsRequests <- request
 	resp := new(plumbing.ContainerMetricsResponse)
+	for msg := range fakeDoppler.grpcOut {
+		resp.Payload = append(resp.Payload, msg)
+	}
+
+	return resp, nil
+}
+
+func (fakeDoppler *FakeDoppler) RecentLogs(ctx context.Context, request *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error) {
+	fakeDoppler.RecentLogsRequests <- request
+	resp := new(plumbing.RecentLogsResponse)
 	for msg := range fakeDoppler.grpcOut {
 		resp.Payload = append(resp.Payload, msg)
 	}

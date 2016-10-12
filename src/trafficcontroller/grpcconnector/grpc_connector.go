@@ -19,6 +19,7 @@ type ReceiveFetcher interface {
 	FetchStream(ctx context.Context, in *plumbing.StreamRequest, opts ...grpc.CallOption) ([]Receiver, error)
 	FetchFirehose(ctx context.Context, in *plumbing.FirehoseRequest, opts ...grpc.CallOption) ([]Receiver, error)
 	FetchContainerMetrics(ctx context.Context, in *plumbing.ContainerMetricsRequest) ([]*plumbing.ContainerMetricsResponse, error)
+	FetchRecentLogs(ctx context.Context, in *plumbing.RecentLogsRequest) ([]*plumbing.RecentLogsResponse, error)
 }
 
 type MetaMetricBatcher interface {
@@ -52,6 +53,21 @@ func (g *GrpcConnector) Firehose(ctx context.Context, in *plumbing.FirehoseReque
 	return startCombiner(rxs, g.batcher), err
 }
 
+func (g *GrpcConnector) RecentLogs(ctx context.Context, in *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error) {
+	responses, err := g.fetcher.FetchRecentLogs(ctx, in)
+
+	if err != nil {
+		return nil, err
+	}
+
+	resp := new(plumbing.RecentLogsResponse)
+	for _, response := range responses {
+		resp.Payload = append(resp.Payload, response.Payload...)
+	}
+
+	return resp, nil
+}
+
 func (g *GrpcConnector) ContainerMetrics(ctx context.Context, in *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error) {
 	responses, err := g.fetcher.FetchContainerMetrics(ctx, in)
 
@@ -60,7 +76,6 @@ func (g *GrpcConnector) ContainerMetrics(ctx context.Context, in *plumbing.Conta
 	}
 
 	resp := new(plumbing.ContainerMetricsResponse)
-
 	for _, response := range responses {
 		resp.Payload = append(resp.Payload, response.Payload...)
 	}

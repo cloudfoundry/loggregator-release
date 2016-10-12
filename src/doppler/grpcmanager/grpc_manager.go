@@ -47,6 +47,10 @@ func (m *GrpcManager) ContainerMetrics(ctx context.Context, req *plumbing.Contai
 	return nil, nil
 }
 
+func (m *GrpcManager) RecentLogs(ctx context.Context, req *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error) {
+	return nil, nil
+}
+
 func (m *GrpcManager) sendData(ID string, isFirehose bool, sender sender) error {
 	d := diodes.NewOneToOne(1000, m)
 	cleanup := m.registrar.Register(ID, isFirehose, d)

@@ -105,7 +105,8 @@ var _ = Describe("ServeHTTP()", func() {
 			}
 
 			It("Should emit value metric for recentlogs request", func() {
-				close(channelGroupConnector.messages)
+				mockGrpcConnector.RecentLogsOutput.Ret0 <- new(plumbing.RecentLogsResponse)
+				close(mockGrpcConnector.RecentLogsOutput.Ret1)
 				req, _ := http.NewRequest("GET", "/apps/appID123/recentlogs", nil)
 				requestAndAssert(req, "dopplerProxy.recentlogsLatency")
 			})
@@ -243,7 +244,8 @@ var _ = Describe("ServeHTTP()", func() {
 		})
 
 		It("connects to doppler servers without reconnecting for recentlogs", func() {
-			close(channelGroupConnector.messages)
+			mockGrpcConnector.RecentLogsOutput.Ret0 <- new(plumbing.RecentLogsResponse)
+			close(mockGrpcConnector.RecentLogsOutput.Ret1)
 			req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs", nil)
 			req.Header.Add("Authorization", "token")
 
@@ -263,7 +265,7 @@ var _ = Describe("ServeHTTP()", func() {
 			Eventually(channelGroupConnector.getReconnect).Should(BeFalse())
 		})
 
-		It("passes messages back to the requestor", func() {
+		PIt("passes messages back to the requestor", func() {
 			channelGroupConnector.messages <- []byte("hello")
 			channelGroupConnector.messages <- []byte("goodbye")
 			close(channelGroupConnector.messages)
@@ -279,7 +281,7 @@ var _ = Describe("ServeHTTP()", func() {
 			Expect(responseBody).To(ContainSubstring("goodbye"))
 		})
 
-		It("stops the channel connector when the client closes its connection", func() {
+		PIt("stops the channel connector when the client closes its connection", func() {
 			close(channelGroupConnector.messages)
 			req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs", nil)
 			req.Header.Add("Authorization", "token")
@@ -323,6 +325,37 @@ var _ = Describe("ServeHTTP()", func() {
 			reader := multipart.NewReader(recorder.Body, matches[1])
 
 			for _, payload := range containerResp.Payload {
+				part, err := reader.NextPart()
+				Expect(err).ToNot(HaveOccurred())
+
+				partBytes, err := ioutil.ReadAll(part)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(partBytes).To(Equal(payload))
+			}
+		})
+
+		It("returns the requested recent logs", func() {
+			req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs", nil)
+			req.Header.Add("Authorization", "token")
+			recentLogResp := &plumbing.RecentLogsResponse{
+				Payload: [][]byte{
+					[]byte("log1"),
+					[]byte("log2"),
+					[]byte("log3"),
+				},
+			}
+			mockGrpcConnector.RecentLogsOutput.Ret0 <- recentLogResp
+			mockGrpcConnector.RecentLogsOutput.Ret1 <- nil
+
+			proxy.ServeHTTP(recorder, req)
+
+			boundaryRegexp := regexp.MustCompile("boundary=(.*)")
+			matches := boundaryRegexp.FindStringSubmatch(recorder.Header().Get("Content-Type"))
+			Expect(matches).To(HaveLen(2))
+			Expect(matches[1]).NotTo(BeEmpty())
+			reader := multipart.NewReader(recorder.Body, matches[1])
+
+			for _, payload := range recentLogResp.Payload {
 				part, err := reader.NextPart()
 				Expect(err).ToNot(HaveOccurred())
 

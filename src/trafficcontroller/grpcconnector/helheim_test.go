@@ -84,6 +84,15 @@ type mockReceiveFetcher struct {
 		Ret0 chan []*plumbing.ContainerMetricsResponse
 		Ret1 chan error
 	}
+	FetchRecentLogsCalled chan bool
+	FetchRecentLogsInput  struct {
+		Ctx chan context.Context
+		In  chan *plumbing.RecentLogsRequest
+	}
+	FetchRecentLogsOutput struct {
+		Ret0 chan []*plumbing.RecentLogsResponse
+		Ret1 chan error
+	}
 }
 
 func newMockReceiveFetcher() *mockReceiveFetcher {
@@ -105,6 +114,11 @@ func newMockReceiveFetcher() *mockReceiveFetcher {
 	m.FetchContainerMetricsInput.In = make(chan *plumbing.ContainerMetricsRequest, 100)
 	m.FetchContainerMetricsOutput.Ret0 = make(chan []*plumbing.ContainerMetricsResponse, 100)
 	m.FetchContainerMetricsOutput.Ret1 = make(chan error, 100)
+	m.FetchRecentLogsCalled = make(chan bool, 100)
+	m.FetchRecentLogsInput.Ctx = make(chan context.Context, 100)
+	m.FetchRecentLogsInput.In = make(chan *plumbing.RecentLogsRequest, 100)
+	m.FetchRecentLogsOutput.Ret0 = make(chan []*plumbing.RecentLogsResponse, 100)
+	m.FetchRecentLogsOutput.Ret1 = make(chan error, 100)
 	return m
 }
 func (m *mockReceiveFetcher) FetchStream(ctx context.Context, in *plumbing.StreamRequest, opts ...grpc.CallOption) ([]grpcconnector.Receiver, error) {
@@ -126,6 +140,12 @@ func (m *mockReceiveFetcher) FetchContainerMetrics(ctx context.Context, in *plum
 	m.FetchContainerMetricsInput.Ctx <- ctx
 	m.FetchContainerMetricsInput.In <- in
 	return <-m.FetchContainerMetricsOutput.Ret0, <-m.FetchContainerMetricsOutput.Ret1
+}
+func (m *mockReceiveFetcher) FetchRecentLogs(ctx context.Context, in *plumbing.RecentLogsRequest) ([]*plumbing.RecentLogsResponse, error) {
+	m.FetchRecentLogsCalled <- true
+	m.FetchRecentLogsInput.Ctx <- ctx
+	m.FetchRecentLogsInput.In <- in
+	return <-m.FetchRecentLogsOutput.Ret0, <-m.FetchRecentLogsOutput.Ret1
 }
 
 type mockMetaMetricBatcher struct {
