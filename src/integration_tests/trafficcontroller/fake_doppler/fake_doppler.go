@@ -157,7 +157,6 @@ func (fakeDoppler *FakeDoppler) ContainerMetrics(ctx context.Context, request *p
 	fakeDoppler.ContainerMetricsRequests <- request
 	resp := new(plumbing.ContainerMetricsResponse)
 	for msg := range fakeDoppler.grpcOut {
-		println("!!!!!!!!!!!!!!!!!!!!!!", resp.Payload)
 		resp.Payload = append(resp.Payload, msg)
 	}
 

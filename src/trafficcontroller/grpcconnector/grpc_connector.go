@@ -4,6 +4,8 @@ import (
 	"plumbing"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -66,5 +68,30 @@ func (g *GrpcConnector) ContainerMetrics(ctx context.Context, in *plumbing.Conta
 		resp.Payload = append(resp.Payload, response.Payload...)
 	}
 
+	resp.Payload = deDupe(resp.Payload)
+
 	return resp, nil
+}
+
+func deDupe(input [][]byte) [][]byte {
+	messages := make(map[int32]*events.Envelope)
+
+	for _, message := range input {
+		var envelope events.Envelope
+		proto.Unmarshal(message, &envelope)
+		cm := envelope.GetContainerMetric()
+
+		oldEnvelope, ok := messages[cm.GetInstanceIndex()]
+		if !ok || oldEnvelope.GetTimestamp() < envelope.GetTimestamp() {
+			messages[cm.GetInstanceIndex()] = &envelope
+		}
+	}
+
+	output := make([][]byte, 0, len(messages))
+
+	for _, envelope := range messages {
+		bytes, _ := proto.Marshal(envelope)
+		output = append(output, bytes)
+	}
+	return output
 }

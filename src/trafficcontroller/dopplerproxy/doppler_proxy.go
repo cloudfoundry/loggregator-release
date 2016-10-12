@@ -2,7 +2,6 @@ package dopplerproxy
 
 import (
 	"fmt"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -166,7 +165,6 @@ func (p *Proxy) serveAppLogs(requestPath, appID string, writer http.ResponseWrit
 		}
 
 		p.serveMultiPartResponse(writer, resp.Payload)
-		log.Println("DONE WITH CONTIANER")
 		return
 	}
 

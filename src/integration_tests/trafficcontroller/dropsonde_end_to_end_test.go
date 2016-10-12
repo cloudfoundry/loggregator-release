@@ -142,17 +142,17 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 	Context("ContainerMetrics", func() {
 		BeforeEach(func() {
 			for i := 0; i < 5; i++ {
-				message := makeContainerMetricMessage("appID", int32(i), float64(i), 100000)
+				message := makeContainerMetricMessage("appID", i, i, i, i, 100000)
 				fakeDoppler.SendLogMessage(message)
 			}
 
-			oldmessage := makeContainerMetricMessage("appID", 1, 6, 50000)
+			oldmessage := makeContainerMetricMessage("appID", 1, 6, 7, 8, 50000)
 			fakeDoppler.SendLogMessage(oldmessage)
 
 			fakeDoppler.CloseLogMessageStream()
 		})
 
-		FIt("returns a multi-part HTTP response with the most recent container metrics for all instances for a given app", func() {
+		It("returns a multi-part HTTP response with the most recent container metrics for all instances for a given app", func() {
 			client := consumer.New(dropsondeEndpoint, &tls.Config{}, nil)
 
 			Eventually(func() bool {
@@ -160,8 +160,8 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				select {
-				case request := <-fakeDoppler.TrafficControllerConnected:
-					Expect(request.URL.Path).To(Equal("/apps/1234/containermetrics"))
+				case request := <-fakeDoppler.ContainerMetricsRequests:
+					Expect(request.AppID).To(Equal("1234"))
 					Expect(messages).To(HaveLen(5))
 					for i, message := range messages {
 						Expect(message.GetInstanceIndex()).To(BeEquivalentTo(i))
