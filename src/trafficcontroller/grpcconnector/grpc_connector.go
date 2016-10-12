@@ -60,9 +60,6 @@ func (g *GrpcConnector) ContainerMetrics(ctx context.Context, in *plumbing.Conta
 	}
 
 	resp := new(plumbing.ContainerMetricsResponse)
-	if len(responses) == 0 {
-		return resp, nil
-	}
 
 	for _, response := range responses {
 		resp.Payload = append(resp.Payload, response.Payload...)

@@ -7,13 +7,11 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
-
-//
-// TODO Rename file
-//
 
 var _ = Describe("GrpcContainerMetrics", func() {
 
@@ -38,15 +36,15 @@ var _ = Describe("GrpcContainerMetrics", func() {
 			mockReceiveFetcher.FetchContainerMetricsOutput.Ret0 <- []*plumbing.ContainerMetricsResponse{
 				{
 					Payload: [][]byte{
-						[]byte("foo"),
-						[]byte("bar"),
-						[]byte("baz"),
+						buildContainerMetric(1),
+						buildContainerMetric(2),
+						buildContainerMetric(3),
 					},
 				},
 				{
 					Payload: [][]byte{
-						[]byte("bacon"),
-						[]byte("eggs"),
+						buildContainerMetric(3),
+						buildContainerMetric(4),
 					},
 				},
 			}
@@ -54,15 +52,15 @@ var _ = Describe("GrpcContainerMetrics", func() {
 
 		It("returns latest container metrics from all dopplers", func() {
 			resp, err := connector.ContainerMetrics(context.Background(), &plumbing.ContainerMetricsRequest{AppID: "AppID"})
-
 			Expect(err).ToNot(HaveOccurred())
+
 			Expect(resp).ToNot(BeNil())
+			Expect(resp.Payload).To(HaveLen(4))
 			Expect(resp.Payload).To(ConsistOf(
-				[]byte("foo"),
-				[]byte("bar"),
-				[]byte("baz"),
-				[]byte("bacon"),
-				[]byte("eggs"),
+				buildContainerMetric(1),
+				buildContainerMetric(2),
+				buildContainerMetric(3),
+				buildContainerMetric(4),
 			))
 		})
 	})
@@ -94,3 +92,22 @@ var _ = Describe("GrpcContainerMetrics", func() {
 		})
 	})
 })
+
+func buildContainerMetric(instance int) []byte {
+	env := &events.Envelope{
+		EventType: events.Envelope_ContainerMetric.Enum(),
+		Timestamp: proto.Int64(10000),
+		Origin:    proto.String("some-origin"),
+		ContainerMetric: &events.ContainerMetric{
+			ApplicationId: proto.String("myApp"),
+			InstanceIndex: proto.Int32(int32(instance)),
+			CpuPercentage: proto.Float64(73),
+			MemoryBytes:   proto.Uint64(2),
+			DiskBytes:     proto.Uint64(3),
+		},
+	}
+	bytes, err := proto.Marshal(env)
+	Expect(err).ToNot(HaveOccurred())
+
+	return bytes
+}
