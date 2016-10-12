@@ -26,7 +26,7 @@ type MetaMetricBatcher interface {
 	BatchCounter(name string) metricbatcher.BatchCounterChainer
 }
 
-type GrpcConnector struct {
+type GRPCConnector struct {
 	fetcher ReceiveFetcher
 	batcher MetaMetricBatcher
 }
@@ -36,24 +36,24 @@ type grpcConnInfo struct {
 	conn          *grpc.ClientConn
 }
 
-func New(fetcher ReceiveFetcher, batcher MetaMetricBatcher) *GrpcConnector {
-	return &GrpcConnector{
+func New(fetcher ReceiveFetcher, batcher MetaMetricBatcher) *GRPCConnector {
+	return &GRPCConnector{
 		fetcher: fetcher,
 		batcher: batcher,
 	}
 }
 
-func (g *GrpcConnector) Stream(ctx context.Context, in *plumbing.StreamRequest, opts ...grpc.CallOption) (Receiver, error) {
+func (g *GRPCConnector) Stream(ctx context.Context, in *plumbing.StreamRequest, opts ...grpc.CallOption) (Receiver, error) {
 	rxs, err := g.fetcher.FetchStream(ctx, in, opts...)
 	return startCombiner(rxs, g.batcher), err
 }
 
-func (g *GrpcConnector) Firehose(ctx context.Context, in *plumbing.FirehoseRequest, opts ...grpc.CallOption) (Receiver, error) {
+func (g *GRPCConnector) Firehose(ctx context.Context, in *plumbing.FirehoseRequest, opts ...grpc.CallOption) (Receiver, error) {
 	rxs, err := g.fetcher.FetchFirehose(ctx, in, opts...)
 	return startCombiner(rxs, g.batcher), err
 }
 
-func (g *GrpcConnector) RecentLogs(ctx context.Context, in *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error) {
+func (g *GRPCConnector) RecentLogs(ctx context.Context, in *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error) {
 	responses, err := g.fetcher.FetchRecentLogs(ctx, in)
 
 	if err != nil {
@@ -68,7 +68,7 @@ func (g *GrpcConnector) RecentLogs(ctx context.Context, in *plumbing.RecentLogsR
 	return resp, nil
 }
 
-func (g *GrpcConnector) ContainerMetrics(ctx context.Context, in *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error) {
+func (g *GRPCConnector) ContainerMetrics(ctx context.Context, in *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error) {
 	responses, err := g.fetcher.FetchContainerMetrics(ctx, in)
 
 	if err != nil {

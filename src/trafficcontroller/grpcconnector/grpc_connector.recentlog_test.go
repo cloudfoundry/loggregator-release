@@ -11,14 +11,14 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("GrpcRecentLogs", func() {
+var _ = Describe("GRPCRecentLogs", func() {
 
 	var (
 		mockReceiveFetcher *mockReceiveFetcher
 		mockMetricBatcher  *mockMetaMetricBatcher
 		mockBatchChainer   *mockBatchCounterChainer
 
-		connector *grpcconnector.GrpcConnector
+		connector *grpcconnector.GRPCConnector
 	)
 
 	BeforeEach(func() {

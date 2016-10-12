@@ -14,13 +14,13 @@ var _ = Describe("Recent Logs Endpoint", func() {
 		envelope := createLogMessage("test-id")
 		helpers.EmitToMetron(envelope)
 
-		f := func() *events.LogMessage {
+		f := func() []*events.LogMessage {
 			resp, _ := helpers.RequestRecentLogs("test-id")
 			if len(resp) == 0 {
 				return nil
 			}
-			return resp[0]
+			return resp
 		}
-		Eventually(f).Should(Equal(envelope.LogMessage))
+		Eventually(f).Should(ContainElement(envelope.LogMessage))
 	})
 })

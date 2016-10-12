@@ -31,7 +31,12 @@ var _ = Describe("Monitor", func() {
 
 		var err error
 		dropsondeUnmarshaller := eventunmarshaller.New(writer, mockBatcher, logger)
-		dropsondeReader, err = networkreader.New("127.0.0.1:37474", "dropsondeAgentListener", dropsondeUnmarshaller, logger)
+		dropsondeReader, err = networkreader.New(
+			"127.0.0.1:37474",
+			"dropsondeAgentListener",
+			dropsondeUnmarshaller,
+			logger,
+		)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -40,7 +45,9 @@ var _ = Describe("Monitor", func() {
 			defer dropsondeReader.Stop()
 			go dropsondeReader.Start()
 
-			Eventually(func() uint64 { return atomic.LoadUint64(&writer.openFileDescriptors) }, 3).Should(BeNumerically("~", 15, 3))
+			Eventually(func() uint64 {
+				return atomic.LoadUint64(&writer.openFileDescriptors)
+			}, 3).Should(BeNumerically("~", 20, 3))
 		})
 	})
 })

@@ -13,14 +13,14 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("GrpcContainerMetrics", func() {
+var _ = Describe("GRPCContainerMetrics", func() {
 
 	var (
 		mockReceiveFetcher *mockReceiveFetcher
 		mockMetricBatcher  *mockMetaMetricBatcher
 		mockBatchChainer   *mockBatchCounterChainer
 
-		connector *grpcconnector.GrpcConnector
+		connector *grpcconnector.GRPCConnector
 	)
 
 	BeforeEach(func() {

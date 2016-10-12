@@ -16,7 +16,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("GrpcConnector", func() {
+var _ = Describe("GRPCConnector", func() {
 	var (
 		mockReceiveFetcher *mockReceiveFetcher
 		mockReceiverA      *mockReceiver
@@ -24,7 +24,7 @@ var _ = Describe("GrpcConnector", func() {
 		mockMetricBatcher  *mockMetaMetricBatcher
 		mockBatchChainer   *mockBatchCounterChainer
 
-		connector *grpcconnector.GrpcConnector
+		connector *grpcconnector.GRPCConnector
 	)
 
 	var fetchPayloads = func(count int, client grpcconnector.Receiver) (chan []byte, chan error) {

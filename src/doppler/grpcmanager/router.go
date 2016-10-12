@@ -23,6 +23,7 @@ func NewRouter() *Router {
 func (r *Router) Register(ID string, isFirehose bool, dataSetter DataSetter) (cleanup func()) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
+
 	r.registerSetter(ID, isFirehose, dataSetter)
 
 	if isFirehose {
@@ -37,6 +38,7 @@ func (r *Router) SendTo(appID string, envelope *events.Envelope) {
 	defer r.lock.RUnlock()
 
 	data := r.marshal(envelope)
+
 	if data == nil {
 		return
 	}

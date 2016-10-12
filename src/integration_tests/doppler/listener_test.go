@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"net"
 
+	"code.cloudfoundry.org/localip"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gorilla/websocket"
 	"github.com/nu7hatch/gouuid"
-	"code.cloudfoundry.org/localip"
 )
 
 var _ = Describe("Listener test", func() {

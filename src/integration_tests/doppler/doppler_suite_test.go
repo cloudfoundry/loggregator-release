@@ -62,7 +62,7 @@ var _ = BeforeSuite(func() {
 
 	logMessage = buildLogMessage()
 	prefixedLogMessage = prefixMessage(logMessage)
-	primerMessage = buildLogMessage()
+	primerMessage = buildPrimerMessage()
 	prefixedPrimerMessage = prefixMessage(primerMessage)
 
 	containerMetric = buildContainerMetric()
@@ -104,6 +104,7 @@ func buildLogMessage() []byte {
 			Message:     []byte("foo"),
 			MessageType: events.LogMessage_OUT.Enum(),
 			Timestamp:   proto.Int64(time.Now().UnixNano()),
+			AppId:       proto.String("test-app"),
 		},
 	}
 	b, err := proto.Marshal(e)

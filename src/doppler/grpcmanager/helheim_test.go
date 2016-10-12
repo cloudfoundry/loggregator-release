@@ -10,8 +10,94 @@ import (
 	"plumbing"
 	"time"
 
+	"github.com/cloudfoundry/sonde-go/events"
 	"golang.org/x/net/context"
 )
+
+type mockRegistrar struct {
+	RegisterCalled chan bool
+	RegisterInput  struct {
+		ID         chan string
+		IsFirehose chan bool
+		Setter     chan grpcmanager.DataSetter
+	}
+	RegisterOutput struct {
+		Ret0 chan func()
+	}
+}
+
+func newMockRegistrar() *mockRegistrar {
+	m := &mockRegistrar{}
+	m.RegisterCalled = make(chan bool, 100)
+	m.RegisterInput.ID = make(chan string, 100)
+	m.RegisterInput.IsFirehose = make(chan bool, 100)
+	m.RegisterInput.Setter = make(chan grpcmanager.DataSetter, 100)
+	m.RegisterOutput.Ret0 = make(chan func(), 100)
+	return m
+}
+func (m *mockRegistrar) Register(ID string, isFirehose bool, setter grpcmanager.DataSetter) func() {
+	m.RegisterCalled <- true
+	m.RegisterInput.ID <- ID
+	m.RegisterInput.IsFirehose <- isFirehose
+	m.RegisterInput.Setter <- setter
+	return <-m.RegisterOutput.Ret0
+}
+
+type mockDataSetter struct {
+	SetCalled chan bool
+	SetInput  struct {
+		Data chan []byte
+	}
+}
+
+func newMockDataSetter() *mockDataSetter {
+	m := &mockDataSetter{}
+	m.SetCalled = make(chan bool, 100)
+	m.SetInput.Data = make(chan []byte, 100)
+	return m
+}
+func (m *mockDataSetter) Set(data []byte) {
+	m.SetCalled <- true
+	m.SetInput.Data <- data
+}
+
+type mockDataDumper struct {
+	LatestContainerMetricsCalled chan bool
+	LatestContainerMetricsInput  struct {
+		AppID chan string
+	}
+	LatestContainerMetricsOutput struct {
+		Ret0 chan []*events.Envelope
+	}
+	RecentLogsForCalled chan bool
+	RecentLogsForInput  struct {
+		AppID chan string
+	}
+	RecentLogsForOutput struct {
+		Ret0 chan []*events.Envelope
+	}
+}
+
+func newMockDataDumper() *mockDataDumper {
+	m := &mockDataDumper{}
+	m.LatestContainerMetricsCalled = make(chan bool, 100)
+	m.LatestContainerMetricsInput.AppID = make(chan string, 100)
+	m.LatestContainerMetricsOutput.Ret0 = make(chan []*events.Envelope, 100)
+	m.RecentLogsForCalled = make(chan bool, 100)
+	m.RecentLogsForInput.AppID = make(chan string, 100)
+	m.RecentLogsForOutput.Ret0 = make(chan []*events.Envelope, 100)
+	return m
+}
+func (m *mockDataDumper) LatestContainerMetrics(appID string) []*events.Envelope {
+	m.LatestContainerMetricsCalled <- true
+	m.LatestContainerMetricsInput.AppID <- appID
+	return <-m.LatestContainerMetricsOutput.Ret0
+}
+func (m *mockDataDumper) RecentLogsFor(appID string) []*events.Envelope {
+	m.RecentLogsForCalled <- true
+	m.RecentLogsForInput.AppID <- appID
+	return <-m.RecentLogsForOutput.Ret0
+}
 
 type mockSender struct {
 	SendCalled chan bool
@@ -44,53 +130,6 @@ func (m *mockSender) Send(arg0 *plumbing.Response) error {
 func (m *mockSender) Context() context.Context {
 	m.ContextCalled <- true
 	return <-m.ContextOutput.Ret0
-}
-
-type mockDataSetter struct {
-	SetCalled chan bool
-	SetInput  struct {
-		Data chan []byte
-	}
-}
-
-func newMockDataSetter() *mockDataSetter {
-	m := &mockDataSetter{}
-	m.SetCalled = make(chan bool, 100)
-	m.SetInput.Data = make(chan []byte, 100)
-	return m
-}
-func (m *mockDataSetter) Set(data []byte) {
-	m.SetCalled <- true
-	m.SetInput.Data <- data
-}
-
-type mockRegistrar struct {
-	RegisterCalled chan bool
-	RegisterInput  struct {
-		ID         chan string
-		IsFirehose chan bool
-		Setter     chan grpcmanager.DataSetter
-	}
-	RegisterOutput struct {
-		Ret0 chan func()
-	}
-}
-
-func newMockRegistrar() *mockRegistrar {
-	m := &mockRegistrar{}
-	m.RegisterCalled = make(chan bool, 100)
-	m.RegisterInput.ID = make(chan string, 100)
-	m.RegisterInput.IsFirehose = make(chan bool, 100)
-	m.RegisterInput.Setter = make(chan grpcmanager.DataSetter, 100)
-	m.RegisterOutput.Ret0 = make(chan func(), 100)
-	return m
-}
-func (m *mockRegistrar) Register(ID string, isFirehose bool, setter grpcmanager.DataSetter) func() {
-	m.RegisterCalled <- true
-	m.RegisterInput.ID <- ID
-	m.RegisterInput.IsFirehose <- isFirehose
-	m.RegisterInput.Setter <- setter
-	return <-m.RegisterOutput.Ret0
 }
 
 type mockContext struct {

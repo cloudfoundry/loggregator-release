@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestGrpcconnector(t *testing.T) {
+func TestGRPCconnector(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Grpc Connector Suite")
+	RunSpecs(t, "GRPC Connector Suite")
 }

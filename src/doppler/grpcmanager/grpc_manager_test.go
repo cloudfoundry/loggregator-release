@@ -1,27 +1,32 @@
 package grpcmanager_test
 
 import (
-	"doppler/grpcmanager"
 	"io"
 	"net"
 	"plumbing"
+	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"golang.org/x/net/context"
-
 	"google.golang.org/grpc"
 
 	. "github.com/apoydence/eachers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"doppler/grpcmanager"
+
+	"github.com/cloudfoundry/sonde-go/events"
 )
 
-var _ = Describe("ServerHandler", func() {
+var _ = Describe("GRPCManager", func() {
 	var (
-		mockRegistrar *mockRegistrar
-		mockCleanup   func()
-		cleanupCalled chan struct{}
+		mockRegistrar  *mockRegistrar
+		mockCleanup    func()
+		cleanupCalled  chan struct{}
+		mockDataDumper *mockDataDumper
 
-		manager       *grpcmanager.GrpcManager
+		manager       *grpcmanager.GRPCManager
 		listener      net.Listener
 		connCloser    io.Closer
 		dopplerClient plumbing.DopplerClient
@@ -32,7 +37,7 @@ var _ = Describe("ServerHandler", func() {
 		setter grpcmanager.DataSetter
 	)
 
-	var startGrpcServer = func(ds plumbing.DopplerServer) net.Listener {
+	var startGRPCServer = func(ds plumbing.DopplerServer) net.Listener {
 		lis, err := net.Listen("tcp", ":0")
 		Expect(err).ToNot(HaveOccurred())
 		s := grpc.NewServer()
@@ -69,10 +74,11 @@ var _ = Describe("ServerHandler", func() {
 		cleanupCalled = make(chan struct{})
 		mockCleanup = buildCleanup(cleanupCalled)
 		mockRegistrar.RegisterOutput.Ret0 <- mockCleanup
+		mockDataDumper = newMockDataDumper()
 
-		manager = grpcmanager.New(mockRegistrar)
+		manager = grpcmanager.New(mockRegistrar, mockDataDumper)
 
-		listener = startGrpcServer(manager)
+		listener = startGRPCServer(manager)
 		dopplerClient, connCloser = establishClient(listener.Addr().String())
 
 		streamRequest = &plumbing.StreamRequest{AppID: "some-app-id"}
@@ -187,7 +193,103 @@ var _ = Describe("ServerHandler", func() {
 		})
 	})
 
-	Describe("metrics", func() {
-		//TODO
+	Describe("container metrics", func() {
+		It("returns container metrics from its data dumper", func() {
+			envelope, data := buildContainerMetric()
+			mockDataDumper.LatestContainerMetricsOutput.Ret0 <- []*events.Envelope{
+				envelope,
+			}
+
+			resp, err := dopplerClient.ContainerMetrics(context.TODO(),
+				&plumbing.ContainerMetricsRequest{AppID: "some-app"})
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(resp.Payload).To(ContainElement(
+				data,
+			))
+			Expect(mockDataDumper.LatestContainerMetricsInput).To(BeCalled(
+				With("some-app"),
+			))
+		})
+
+		It("throw away invalid envelopes from its data dumper", func() {
+			envelope, _ := buildContainerMetric()
+			mockDataDumper.LatestContainerMetricsOutput.Ret0 <- []*events.Envelope{
+				&events.Envelope{},
+				envelope,
+			}
+
+			resp, err := dopplerClient.ContainerMetrics(context.TODO(),
+				&plumbing.ContainerMetricsRequest{AppID: "some-app"})
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(resp.Payload).To(HaveLen(1))
+		})
+	})
+
+	Describe("recent logs", func() {
+		It("returns recent logs from its data dumper", func() {
+			envelope, data := buildLogMessage()
+			mockDataDumper.RecentLogsForOutput.Ret0 <- []*events.Envelope{
+				envelope,
+			}
+			resp, err := dopplerClient.RecentLogs(context.TODO(),
+				&plumbing.RecentLogsRequest{AppID: "some-app"})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(resp.Payload).To(ContainElement(
+				data,
+			))
+			Expect(mockDataDumper.RecentLogsForInput).To(BeCalled(
+				With("some-app"),
+			))
+		})
+
+		It("throw away invalid envelopes from its data dumper", func() {
+			envelope, _ := buildLogMessage()
+			mockDataDumper.RecentLogsForOutput.Ret0 <- []*events.Envelope{
+				&events.Envelope{},
+				envelope,
+			}
+
+			resp, err := dopplerClient.RecentLogs(context.TODO(),
+				&plumbing.RecentLogsRequest{AppID: "some-app"})
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(resp.Payload).To(HaveLen(1))
+		})
 	})
 })
+
+func buildContainerMetric() (*events.Envelope, []byte) {
+	envelope := &events.Envelope{
+		Origin:    proto.String("doppler"),
+		EventType: events.Envelope_ContainerMetric.Enum(),
+		Timestamp: proto.Int64(time.Now().UnixNano()),
+		ContainerMetric: &events.ContainerMetric{
+			ApplicationId: proto.String("some-app"),
+			InstanceIndex: proto.Int32(int32(1)),
+			CpuPercentage: proto.Float64(float64(1)),
+			MemoryBytes:   proto.Uint64(uint64(1)),
+			DiskBytes:     proto.Uint64(uint64(1)),
+		},
+	}
+	data, err := proto.Marshal(envelope)
+	Expect(err).ToNot(HaveOccurred())
+	return envelope, data
+}
+
+func buildLogMessage() (*events.Envelope, []byte) {
+	envelope := &events.Envelope{
+		Origin:    proto.String("doppler"),
+		EventType: events.Envelope_LogMessage.Enum(),
+		Timestamp: proto.Int64(time.Now().UnixNano()),
+		LogMessage: &events.LogMessage{
+			Message:     []byte("some-log-message"),
+			MessageType: events.LogMessage_OUT.Enum(),
+			Timestamp:   proto.Int64(time.Now().UnixNano()),
+		},
+	}
+	data, err := proto.Marshal(envelope)
+	Expect(err).ToNot(HaveOccurred())
+	return envelope, data
+}

@@ -14,13 +14,13 @@ var _ = Describe("Container Metrics Endpoint", func() {
 		envelope := createContainerMetric("test-id")
 		helpers.EmitToMetron(envelope)
 
-		f := func() *events.ContainerMetric {
+		f := func() []*events.ContainerMetric {
 			resp, _ := helpers.RequestContainerMetrics("test-id")
 			if len(resp) == 0 {
 				return nil
 			}
-			return resp[0]
+			return resp
 		}
-		Eventually(f).Should(Equal(envelope.ContainerMetric))
+		Eventually(f).Should(ContainElement(envelope.ContainerMetric))
 	})
 })
