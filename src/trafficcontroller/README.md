@@ -43,3 +43,4 @@ Traffic Controller exposes a few endpoints from which clients like [NOAA](https:
 |`/apps/APP_ID/recentlogs`      | Returns an HTTP response with the most recent logs for the specified application. The number of logs returned can be configured via the Doppler property `doppler.maxRetainedLogMessages`.|
 |`/apps/APP_ID/containermetrics`| Returns an HTTP response with the latest container metrics for the specified application. |
 |`/firehose/SUBSCRIPTION_ID`    | Opens a websocket connection that streams the firehose. Connections with the same subscription id will get an equal portion of the firehose data.|
+|`/set-cookie`                  | Sets a cookie with name and value obtained from FormValues `CookieName` and `CookieValue`. It also sets the headers `Access-Control-Allow-Credentials` and `Access-Control-Allow-Origin`.|
