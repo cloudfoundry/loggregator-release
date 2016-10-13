@@ -45,7 +45,7 @@ import (
 const (
 	pprofPort            = "6060"
 	handshakeTimeout     = 5 * time.Second
-	defaultBatchInterval = 5 * time.Second
+	defaultBatchInterval = 1 * time.Second
 	statsInterval        = 10 * time.Second
 )
 
