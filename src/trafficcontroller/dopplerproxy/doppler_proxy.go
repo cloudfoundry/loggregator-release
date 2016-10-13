@@ -205,6 +205,7 @@ func (p *Proxy) serveWS(endpointType, streamID string, w http.ResponseWriter, r 
 	go func() {
 		defer close(data)
 		timer := time.NewTimer(5 * time.Second)
+		timer.Stop()
 		for {
 			resp, err := recv()
 			if err != nil {
@@ -216,13 +217,16 @@ func (p *Proxy) serveWS(endpointType, streamID string, w http.ResponseWriter, r 
 				continue
 			}
 
+			timer.Reset(5 * time.Second)
 			select {
 			case data <- resp.Payload:
+				if !timer.Stop() {
+					<-timer.C
+				}
 			case <-timer.C:
 				p.logger.Error("Doppler Proxy: Slow Consumer")
 				return
 			}
-			timer.Reset(5 * time.Second)
 		}
 	}()
 	handler.ServeHTTP(w, r)

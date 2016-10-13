@@ -46,7 +46,8 @@ func (c *combiner) start() {
 }
 
 func (c *combiner) readFromReceiver(rx Receiver) {
-	timer := time.NewTimer(c.killAfter)
+	timer := time.NewTimer(time.Second)
+	timer.Stop()
 	for {
 		resp, err := rx.Recv()
 		if err != nil {
@@ -58,8 +59,12 @@ func (c *combiner) readFromReceiver(rx Receiver) {
 			SetTag("protocol", "grpc").
 			Increment()
 
+		timer.Reset(c.killAfter)
 		select {
 		case c.mainOutput <- resp.Payload:
+			if !timer.Stop() {
+				<-timer.C
+			}
 		case <-timer.C:
 			log.Println("Slow connection: Dropping connection")
 
@@ -70,7 +75,6 @@ func (c *combiner) readFromReceiver(rx Receiver) {
 			c.writeError(fmt.Errorf("Slow consumer"))
 			return
 		}
-		timer.Reset(c.killAfter)
 	}
 }
 
