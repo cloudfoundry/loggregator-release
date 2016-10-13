@@ -3,6 +3,7 @@ package grpcconnector_test
 import (
 	"fmt"
 	"plumbing"
+	"time"
 	"trafficcontroller/grpcconnector"
 
 	"golang.org/x/net/context"
@@ -27,7 +28,7 @@ var _ = Describe("GRPCContainerMetrics", func() {
 		mockReceiveFetcher = newMockReceiveFetcher()
 		mockBatchChainer = newMockBatchCounterChainer()
 		mockMetricBatcher = newMockMetaMetricBatcher()
-		connector = grpcconnector.New(mockReceiveFetcher, mockMetricBatcher)
+		connector = grpcconnector.New(mockReceiveFetcher, mockMetricBatcher, time.Second, 100)
 	})
 
 	Context("when the fetcher returns metrics", func() {
