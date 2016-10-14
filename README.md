@@ -1,10 +1,9 @@
 # Loggregator
 
 [![Coverage Status](https://coveralls.io/repos/cloudfoundry/loggregator/badge.png?branch=develop)](https://coveralls.io/r/cloudfoundry/loggregator?branch=develop)
+[![Concourse Badge](http://crossorigin.me/https://loggregator.ci.cf-app.com/api/v1/pipelines/loggregator/jobs/unit-tests/badge)](https://loggregator.ci.cf-app.com/teams/main/pipelines/loggregator/jobs/unit-tests)
 
-[Concourse Build](https://loggregator.ci.cf-app.com)
-
-### Logging in the Clouds   
+### Logging in the Clouds
 
 Loggregator is the user application logging subsystem of Cloud Foundry.
 
