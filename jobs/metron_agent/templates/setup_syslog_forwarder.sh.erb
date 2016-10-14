@@ -1,0 +1,31 @@
+#!/usr/bin/env sh
+
+if [ $# -ne 1 ]
+then
+    echo "Usage: setup_syslog_forwarder.sh [Config dir]"
+    exit 1
+fi
+
+CONFIG_DIR=$1
+ORIGIN_CONFIG_FILE="$CONFIG_DIR/syslog_forwarder.conf"
+TARGET_CONFIG_FILE=/etc/rsyslog.d/00-syslog_forwarder.conf
+
+<% if p("syslog_daemon_config.enable") %>
+# Place to spool logs if the upstream server is down
+mkdir -p /var/vcap/sys/rsyslog/buffered
+chown -R syslog:adm /var/vcap/sys/rsyslog/buffered
+
+if ! cmp "${ORIGIN_CONFIG_FILE}" "${TARGET_CONFIG_FILE}" 2>/dev/null; then
+	cp "${ORIGIN_CONFIG_FILE}" "${TARGET_CONFIG_FILE}"
+	/usr/sbin/service rsyslog restart
+fi
+
+<% else %>
+if [ -f "${TARGET_CONFIG_FILE}" ]; then
+	rm "${TARGET_CONFIG_FILE}"
+	/usr/sbin/service rsyslog restart
+fi
+<% end %>
+
+
+

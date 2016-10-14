@@ -7,5 +7,3 @@ export GOPATH=$PWD/loggregator
 go install metron
 cp -a $PWD/loggregator/bin/metron ${BOSH_INSTALL_TARGET}
 
-mkdir -p ${BOSH_INSTALL_TARGET}/syslog_daemon_config
-cp -a $PWD/loggregator/src/metron/syslog_daemon_config/* ${BOSH_INSTALL_TARGET}/syslog_daemon_config

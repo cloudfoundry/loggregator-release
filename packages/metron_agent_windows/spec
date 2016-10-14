@@ -6,7 +6,6 @@ files:
 - loggregator/src/exiter.ps1
 - loggregator/src/metron/LICENSE
 - loggregator/src/metron/NOTICE
-- loggregator/src/metron/syslog_daemon_config/*
 - loggregator/src/code.cloudfoundry.org/localip/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/workpool/*.go # gosub
 - loggregator/src/doppler/config/*.go # gosub
