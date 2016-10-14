@@ -13,7 +13,6 @@ type fakeWriter struct {
 
 func (f *fakeWriter) Write(message *events.Envelope) {
 	if message.GetEventType() == events.Envelope_ValueMetric {
-
 		switch message.GetValueMetric().GetName() {
 		case "Uptime":
 			atomic.StoreUint64(&f.lastUptime, uint64(message.GetValueMetric().GetValue()))

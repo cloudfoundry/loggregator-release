@@ -14,7 +14,6 @@ import (
 )
 
 var _ = Describe("Monitor", func() {
-
 	var (
 		writer          *fakeWriter
 		dropsondeReader *networkreader.NetworkReader
@@ -47,7 +46,7 @@ var _ = Describe("Monitor", func() {
 
 			Eventually(func() uint64 {
 				return atomic.LoadUint64(&writer.openFileDescriptors)
-			}, 3).Should(BeNumerically("~", 20, 3))
+			}, 3).Should(BeNumerically("~", 18, 5))
 		})
 	})
 })
