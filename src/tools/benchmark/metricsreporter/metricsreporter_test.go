@@ -93,7 +93,7 @@ var _ = Describe("MetricsReporter", func() {
 				reporter.Stop()
 			})
 
-			It("writes averages", func() {
+			PIt("writes averages", func() {
 				reporter.SentCounter().IncrementValue()
 				reporter.SentCounter().IncrementValue()
 				reporter.ReceivedCounter().IncrementValue()
@@ -149,7 +149,7 @@ var _ = Describe("MetricsReporter", func() {
 				Eventually(buffer, 10).Should(gbytes.Say(fmt.Sprintf("%s, 1, 1, %.2f/s, 0.00%%, 1, 2", reporter.Duration(), reporter.Rate())))
 			})
 
-			It("reports individual counter average", func() {
+			PIt("reports individual counter average", func() {
 				reporter.SentCounter().IncrementValue()
 				reporter.SentCounter().IncrementValue()
 				reporter.ReceivedCounter().IncrementValue()
