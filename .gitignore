@@ -26,3 +26,4 @@ dev_releases
 .dev_builds
 loggregator-certs
 config/private.yml
+scripts/etcd
