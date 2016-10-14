@@ -87,6 +87,48 @@ func (f *Fetcher) FetchFirehose(ctx context.Context, req *plumbing.FirehoseReque
 	return result, nil
 }
 
+func (f *Fetcher) FetchContainerMetrics(ctx context.Context, req *plumbing.ContainerMetricsRequest) ([]*plumbing.ContainerMetricsResponse, error) {
+	f.lock.RLock()
+	defer f.lock.RUnlock()
+
+	if len(f.grpcConns) == 0 {
+		return nil, fmt.Errorf("unable to find a single doppler")
+	}
+
+	var result []*plumbing.ContainerMetricsResponse
+	for _, conn := range f.grpcConns {
+		resp, err := conn.client.ContainerMetrics(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, resp)
+	}
+
+	return result, nil
+}
+
+func (f *Fetcher) FetchRecentLogs(ctx context.Context, req *plumbing.RecentLogsRequest) ([]*plumbing.RecentLogsResponse, error) {
+	f.lock.RLock()
+	defer f.lock.RUnlock()
+
+	if len(f.grpcConns) == 0 {
+		return nil, fmt.Errorf("unable to find a single doppler")
+	}
+
+	var result []*plumbing.RecentLogsResponse
+	for _, conn := range f.grpcConns {
+		resp, err := conn.client.RecentLogs(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, resp)
+	}
+
+	return result, nil
+}
+
 func (f *Fetcher) run() {
 	for {
 		event := f.finder.Next()

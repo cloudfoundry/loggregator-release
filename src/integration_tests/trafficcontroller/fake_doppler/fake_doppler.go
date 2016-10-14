@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/server/handlers"
 	"github.com/gorilla/websocket"
@@ -23,8 +25,10 @@ type FakeDoppler struct {
 	grpcOut                    chan []byte
 	TrafficControllerConnected chan *http.Request
 	StreamRequests             chan *plumbing.StreamRequest
-	StreamServers              chan plumbing.Doppler_StreamServer
 	FirehoseRequests           chan *plumbing.FirehoseRequest
+	ContainerMetricsRequests   chan *plumbing.ContainerMetricsRequest
+	RecentLogsRequests         chan *plumbing.RecentLogsRequest
+	StreamServers              chan plumbing.Doppler_StreamServer
 	connectionPresent          bool
 	done                       chan struct{}
 	sync.RWMutex
@@ -38,8 +42,10 @@ func New() *FakeDoppler {
 		sendMessageChan:            make(chan []byte, 100),
 		grpcOut:                    make(chan []byte, 100),
 		StreamRequests:             make(chan *plumbing.StreamRequest, 100),
-		StreamServers:              make(chan plumbing.Doppler_StreamServer, 100),
 		FirehoseRequests:           make(chan *plumbing.FirehoseRequest, 100),
+		ContainerMetricsRequests:   make(chan *plumbing.ContainerMetricsRequest, 100),
+		RecentLogsRequests:         make(chan *plumbing.RecentLogsRequest, 100),
+		StreamServers:              make(chan plumbing.Doppler_StreamServer, 100),
 		done:                       make(chan struct{}),
 	}
 }
@@ -147,4 +153,24 @@ func (fakeDoppler *FakeDoppler) Firehose(request *plumbing.FirehoseRequest, serv
 		}
 	}
 	return nil
+}
+
+func (fakeDoppler *FakeDoppler) ContainerMetrics(ctx context.Context, request *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error) {
+	fakeDoppler.ContainerMetricsRequests <- request
+	resp := new(plumbing.ContainerMetricsResponse)
+	for msg := range fakeDoppler.grpcOut {
+		resp.Payload = append(resp.Payload, msg)
+	}
+
+	return resp, nil
+}
+
+func (fakeDoppler *FakeDoppler) RecentLogs(ctx context.Context, request *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error) {
+	fakeDoppler.RecentLogsRequests <- request
+	resp := new(plumbing.RecentLogsResponse)
+	for msg := range fakeDoppler.grpcOut {
+		resp.Payload = append(resp.Payload, msg)
+	}
+
+	return resp, nil
 }

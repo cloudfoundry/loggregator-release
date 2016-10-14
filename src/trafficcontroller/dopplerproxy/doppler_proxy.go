@@ -2,10 +2,10 @@ package dopplerproxy
 
 import (
 	"fmt"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"plumbing"
-	"strings"
 	"trafficcontroller/authorization"
 	"trafficcontroller/doppler_endpoint"
 	"trafficcontroller/grpcconnector"
@@ -16,12 +16,15 @@ import (
 
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 )
 
 const FIREHOSE_ID = "firehose"
 
 type Proxy struct {
+	mux.Router
+
 	logAuthorize   authorization.LogAccessAuthorizer
 	adminAuthorize authorization.AdminAccessAuthorizer
 	connector      channelGroupConnector
@@ -37,6 +40,8 @@ type channelGroupConnector interface {
 type grpcConnector interface {
 	Stream(ctx context.Context, in *plumbing.StreamRequest, opts ...grpc.CallOption) (grpcconnector.Receiver, error)
 	Firehose(ctx context.Context, in *plumbing.FirehoseRequest, opts ...grpc.CallOption) (grpcconnector.Receiver, error)
+	ContainerMetrics(ctx context.Context, in *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error)
+	RecentLogs(ctx context.Context, in *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error)
 }
 
 func NewDopplerProxy(
@@ -47,7 +52,7 @@ func NewDopplerProxy(
 	cookieDomain string,
 	logger *gosteno.Logger,
 ) *Proxy {
-	return &Proxy{
+	p := &Proxy{
 		logAuthorize:   logAuthorize,
 		adminAuthorize: adminAuthorizer,
 		connector:      connector,
@@ -55,54 +60,41 @@ func NewDopplerProxy(
 		cookieDomain:   cookieDomain,
 		logger:         logger,
 	}
+	r := mux.NewRouter()
+	p.Router = *r
+	p.HandleFunc("/apps/{appID}/stream", p.stream)
+	p.HandleFunc("/apps/{appID}/recentlogs", p.recentlogs)
+	p.HandleFunc("/apps/{appID}/containermetrics", p.containermetrics)
+	p.HandleFunc("/firehose/{subID}", p.firehose)
+	p.HandleFunc("/set-cookie", p.setcookie)
+	return p
 }
 
-func (p *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	requestStartTime := time.Now()
-	p.logger.Debugf("doppler proxy: ServeHTTP entered with request %v", request.URL)
-	defer p.logger.Debugf("doppler proxy: ServeHTTP exited")
-
-	if request.Method == "HEAD" {
-		return
-	}
-
-	paths := strings.Split(request.URL.Path, "/")
-
-	endpointName := paths[1]
-	switch endpointName {
-	case "firehose":
-		p.serveFirehose(paths, writer, request)
-	case "apps":
-		p.serveAppLogs(paths, writer, request)
-		if len(paths) > 3 {
-			endpoint := paths[3]
-			if endpoint != "" && (endpoint == "recentlogs" || endpoint == "containermetrics") {
-				sendMetric(endpoint, requestStartTime)
-			}
-		}
-	case "set-cookie":
-		p.serveSetCookie(writer, request, p.cookieDomain)
-	default:
-		writer.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(writer, "Resource Not Found.")
-	}
+func (p *Proxy) firehose(w http.ResponseWriter, r *http.Request) {
+	subID := mux.Vars(r)["subID"]
+	p.serveFirehose(subID, w, r)
 }
 
-func (p *Proxy) serveFirehose(paths []string, writer http.ResponseWriter, request *http.Request) {
+func (p *Proxy) stream(w http.ResponseWriter, r *http.Request) {
+	p.serveAppLogs("stream", mux.Vars(r)["appID"], w, r)
+}
+
+func (p *Proxy) recentlogs(w http.ResponseWriter, r *http.Request) {
+	p.serveAppLogs("recentlogs", mux.Vars(r)["appID"], w, r)
+	sendMetric("recentlogs", time.Now())
+}
+
+func (p *Proxy) containermetrics(w http.ResponseWriter, r *http.Request) {
+	p.serveAppLogs("containermetrics", mux.Vars(r)["appID"], w, r)
+	sendMetric("containermetrics", time.Now())
+}
+
+func (p *Proxy) setcookie(w http.ResponseWriter, r *http.Request) {
+	p.serveSetCookie(w, r, p.cookieDomain)
+}
+
+func (p *Proxy) serveFirehose(firehoseSubscriptionId string, writer http.ResponseWriter, request *http.Request) {
 	authToken := getAuthToken(request)
-
-	firehoseParams := paths[2:]
-
-	var firehoseSubscriptionId string
-	if len(firehoseParams) == 1 {
-		firehoseSubscriptionId = firehoseParams[0]
-	}
-
-	if len(firehoseParams) != 1 || firehoseSubscriptionId == "" {
-		writer.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(writer, "Firehose SUBSCRIPTION_ID missing. Make request to /firehose/SUBSCRIPTION_ID")
-		return
-	}
 
 	authorized, err := p.adminAuthorize(authToken, p.logger)
 	if !authorized {
@@ -128,37 +120,15 @@ func (p *Proxy) serveFirehose(paths []string, writer http.ResponseWriter, reques
 }
 
 // "^/apps/(.*)/(recentlogs|stream|containermetrics)$"
-func (p *Proxy) serveAppLogs(paths []string, writer http.ResponseWriter, request *http.Request) {
-	badRequest := len(paths) != 4
-	if !badRequest {
-		switch paths[3] {
-		case "recentlogs", "stream", "containermetrics":
-		default:
-			badRequest = true
-		}
-	}
-
-	if badRequest {
-		writer.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(writer, "Resource Not Found.")
-		return
-	}
-
+func (p *Proxy) serveAppLogs(requestPath, appID string, writer http.ResponseWriter, request *http.Request) {
 	authToken := getAuthToken(request)
 
-	appId := paths[2]
-	if appId == "" {
-		writer.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(writer, "App ID missing. Make request to /apps/APP_ID/%s", paths[3])
-		return
-	}
-
-	status, err := p.logAuthorize(authToken, appId, p.logger)
+	status, err := p.logAuthorize(authToken, appID, p.logger)
 	if status != http.StatusOK {
 		p.logger.Warndf(map[string]interface{}{
 			"status": status,
 			"err":    err,
-		}, "auth token not authorized to access appId [%s].", appId)
+		}, "auth token not authorized to access appID [%s].", appID)
 		switch status {
 		case http.StatusUnauthorized:
 			writer.WriteHeader(status)
@@ -178,23 +148,44 @@ func (p *Proxy) serveAppLogs(paths []string, writer http.ResponseWriter, request
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	endpointType := paths[3]
-	if endpointType == "recentlogs" || endpointType == "containermetrics" {
-		dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint(endpointType, appId, false)
-		p.serveWithDoppler(writer, request, dopplerEndpoint)
+	if requestPath == "recentlogs" {
+		resp, err := p.grpcConn.RecentLogs(ctx, &plumbing.RecentLogsRequest{
+			AppID: appID,
+		})
+		_ = err
+
+		p.serveMultiPartResponse(writer, resp.Payload)
 		return
 	}
 
-	client, err := p.grpcConn.Stream(ctx, &plumbing.StreamRequest{
-		AppID: appId,
-	})
+	if requestPath == "containermetrics" {
+		resp, err := p.grpcConn.ContainerMetrics(ctx, &plumbing.ContainerMetricsRequest{
+			AppID: appID,
+		})
 
-	if err != nil {
-		p.logger.Errorf("Failed to stream from doppler: %s", err)
-		writer.WriteHeader(http.StatusInternalServerError)
+		if err != nil {
+			p.logger.Errorf("Failed to get container metrics from doppler: %s", err)
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		p.serveMultiPartResponse(writer, resp.Payload)
 		return
 	}
-	p.serveWS(endpointType, appId, writer, request, client.Recv)
+
+	if requestPath == "stream" {
+		client, err := p.grpcConn.Stream(ctx, &plumbing.StreamRequest{
+			AppID: appID,
+		})
+
+		if err != nil {
+			p.logger.Errorf("Failed to stream from doppler: %s", err)
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		p.serveWS(requestPath, appID, writer, request, client.Recv)
+		return
+	}
 }
 
 func (p *Proxy) serveWS(endpointType, streamID string, w http.ResponseWriter, r *http.Request, recv func() (*plumbing.Response, error)) {
@@ -241,6 +232,23 @@ func (p *Proxy) serveWithDoppler(writer http.ResponseWriter, request *http.Reque
 
 	handler := dopplerEndpoint.HProvider(messagesChan, p.logger)
 	handler.ServeHTTP(writer, request)
+}
+
+func (p *Proxy) serveMultiPartResponse(rw http.ResponseWriter, messages [][]byte) {
+	mp := multipart.NewWriter(rw)
+	defer mp.Close()
+
+	rw.Header().Set("Content-Type", `multipart/x-protobuf; boundary=`+mp.Boundary())
+
+	for _, message := range messages {
+		partWriter, err := mp.CreatePart(nil)
+		if err != nil {
+			p.logger.Infof("http handler: Client went away while serving recent logs")
+			return
+		}
+
+		partWriter.Write(message)
+	}
 }
 
 func sendMetric(metricName string, startTime time.Time) {

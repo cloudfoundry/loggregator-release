@@ -15,60 +15,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-type mockGrpcConnector struct {
-	StreamCalled chan bool
-	StreamInput  struct {
-		Ctx  chan context.Context
-		In   chan *plumbing.StreamRequest
-		Opts chan []grpc.CallOption
-	}
-	StreamOutput struct {
-		Ret0 chan grpcconnector.Receiver
-		Ret1 chan error
-	}
-	FirehoseCalled chan bool
-	FirehoseInput  struct {
-		Ctx  chan context.Context
-		In   chan *plumbing.FirehoseRequest
-		Opts chan []grpc.CallOption
-	}
-	FirehoseOutput struct {
-		Ret0 chan grpcconnector.Receiver
-		Ret1 chan error
-	}
-}
-
-func newMockGrpcConnector() *mockGrpcConnector {
-	m := &mockGrpcConnector{}
-	m.StreamCalled = make(chan bool, 100)
-	m.StreamInput.Ctx = make(chan context.Context, 100)
-	m.StreamInput.In = make(chan *plumbing.StreamRequest, 100)
-	m.StreamInput.Opts = make(chan []grpc.CallOption, 100)
-	m.StreamOutput.Ret0 = make(chan grpcconnector.Receiver, 100)
-	m.StreamOutput.Ret1 = make(chan error, 100)
-	m.FirehoseCalled = make(chan bool, 100)
-	m.FirehoseInput.Ctx = make(chan context.Context, 100)
-	m.FirehoseInput.In = make(chan *plumbing.FirehoseRequest, 100)
-	m.FirehoseInput.Opts = make(chan []grpc.CallOption, 100)
-	m.FirehoseOutput.Ret0 = make(chan grpcconnector.Receiver, 100)
-	m.FirehoseOutput.Ret1 = make(chan error, 100)
-	return m
-}
-func (m *mockGrpcConnector) Stream(ctx context.Context, in *plumbing.StreamRequest, opts ...grpc.CallOption) (grpcconnector.Receiver, error) {
-	m.StreamCalled <- true
-	m.StreamInput.Ctx <- ctx
-	m.StreamInput.In <- in
-	m.StreamInput.Opts <- opts
-	return <-m.StreamOutput.Ret0, <-m.StreamOutput.Ret1
-}
-func (m *mockGrpcConnector) Firehose(ctx context.Context, in *plumbing.FirehoseRequest, opts ...grpc.CallOption) (grpcconnector.Receiver, error) {
-	m.FirehoseCalled <- true
-	m.FirehoseInput.Ctx <- ctx
-	m.FirehoseInput.In <- in
-	m.FirehoseInput.Opts <- opts
-	return <-m.FirehoseOutput.Ret0, <-m.FirehoseOutput.Ret1
-}
-
 type mockChannelGroupConnector struct {
 	ConnectCalled chan bool
 	ConnectInput  struct {
@@ -91,6 +37,100 @@ func (m *mockChannelGroupConnector) Connect(dopplerEndpoint doppler_endpoint.Dop
 	m.ConnectInput.DopplerEndpoint <- dopplerEndpoint
 	m.ConnectInput.MessagesChan <- messagesChan
 	m.ConnectInput.StopChan <- stopChan
+}
+
+type mockGrpcConnector struct {
+	StreamCalled chan bool
+	StreamInput  struct {
+		Ctx  chan context.Context
+		In   chan *plumbing.StreamRequest
+		Opts chan []grpc.CallOption
+	}
+	StreamOutput struct {
+		Ret0 chan grpcconnector.Receiver
+		Ret1 chan error
+	}
+	FirehoseCalled chan bool
+	FirehoseInput  struct {
+		Ctx  chan context.Context
+		In   chan *plumbing.FirehoseRequest
+		Opts chan []grpc.CallOption
+	}
+	FirehoseOutput struct {
+		Ret0 chan grpcconnector.Receiver
+		Ret1 chan error
+	}
+	ContainerMetricsCalled chan bool
+	ContainerMetricsInput  struct {
+		Ctx chan context.Context
+		In  chan *plumbing.ContainerMetricsRequest
+	}
+	ContainerMetricsOutput struct {
+		Ret0 chan *plumbing.ContainerMetricsResponse
+		Ret1 chan error
+	}
+	RecentLogsCalled chan bool
+	RecentLogsInput  struct {
+		Ctx chan context.Context
+		In  chan *plumbing.RecentLogsRequest
+	}
+	RecentLogsOutput struct {
+		Ret0 chan *plumbing.RecentLogsResponse
+		Ret1 chan error
+	}
+}
+
+func newMockGrpcConnector() *mockGrpcConnector {
+	m := &mockGrpcConnector{}
+	m.StreamCalled = make(chan bool, 100)
+	m.StreamInput.Ctx = make(chan context.Context, 100)
+	m.StreamInput.In = make(chan *plumbing.StreamRequest, 100)
+	m.StreamInput.Opts = make(chan []grpc.CallOption, 100)
+	m.StreamOutput.Ret0 = make(chan grpcconnector.Receiver, 100)
+	m.StreamOutput.Ret1 = make(chan error, 100)
+	m.FirehoseCalled = make(chan bool, 100)
+	m.FirehoseInput.Ctx = make(chan context.Context, 100)
+	m.FirehoseInput.In = make(chan *plumbing.FirehoseRequest, 100)
+	m.FirehoseInput.Opts = make(chan []grpc.CallOption, 100)
+	m.FirehoseOutput.Ret0 = make(chan grpcconnector.Receiver, 100)
+	m.FirehoseOutput.Ret1 = make(chan error, 100)
+	m.ContainerMetricsCalled = make(chan bool, 100)
+	m.ContainerMetricsInput.Ctx = make(chan context.Context, 100)
+	m.ContainerMetricsInput.In = make(chan *plumbing.ContainerMetricsRequest, 100)
+	m.ContainerMetricsOutput.Ret0 = make(chan *plumbing.ContainerMetricsResponse, 100)
+	m.ContainerMetricsOutput.Ret1 = make(chan error, 100)
+	m.RecentLogsCalled = make(chan bool, 100)
+	m.RecentLogsInput.Ctx = make(chan context.Context, 100)
+	m.RecentLogsInput.In = make(chan *plumbing.RecentLogsRequest, 100)
+	m.RecentLogsOutput.Ret0 = make(chan *plumbing.RecentLogsResponse, 100)
+	m.RecentLogsOutput.Ret1 = make(chan error, 100)
+	return m
+}
+func (m *mockGrpcConnector) Stream(ctx context.Context, in *plumbing.StreamRequest, opts ...grpc.CallOption) (grpcconnector.Receiver, error) {
+	m.StreamCalled <- true
+	m.StreamInput.Ctx <- ctx
+	m.StreamInput.In <- in
+	m.StreamInput.Opts <- opts
+	return <-m.StreamOutput.Ret0, <-m.StreamOutput.Ret1
+}
+func (m *mockGrpcConnector) Firehose(ctx context.Context, in *plumbing.FirehoseRequest, opts ...grpc.CallOption) (grpcconnector.Receiver, error) {
+	m.FirehoseCalled <- true
+	m.FirehoseInput.Ctx <- ctx
+	m.FirehoseInput.In <- in
+	m.FirehoseInput.Opts <- opts
+	return <-m.FirehoseOutput.Ret0, <-m.FirehoseOutput.Ret1
+}
+func (m *mockGrpcConnector) ContainerMetrics(ctx context.Context, in *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error) {
+	m.ContainerMetricsCalled <- true
+	m.ContainerMetricsInput.Ctx <- ctx
+	m.ContainerMetricsInput.In <- in
+	return <-m.ContainerMetricsOutput.Ret0, <-m.ContainerMetricsOutput.Ret1
+}
+func (m *mockGrpcConnector) RecentLogs(ctx context.Context, in *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error) {
+	m.RecentLogsCalled <- true
+	m.RecentLogsInput.Ctx <- ctx
+	m.RecentLogsInput.In <- in
+	return <-m.RecentLogsOutput.Ret0, <-m.RecentLogsOutput.Ret1
 }
 
 type mockContext struct {

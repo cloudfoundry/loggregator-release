@@ -156,11 +156,13 @@ func makeDropsondeMessage(messageString string, appId string, currentTime int64)
 
 	return msg
 }
-func makeContainerMetricMessage(appId string, instanceIndex int32, cpu float64, currentTime int64) []byte {
+func makeContainerMetricMessage(appId string, instanceIndex int, cpu int, membytes int, diskbytes int, currentTime int64) []byte {
 	containerMetric := &events.ContainerMetric{
 		ApplicationId: proto.String(appId),
-		InstanceIndex: proto.Int32(instanceIndex),
-		CpuPercentage: proto.Float64(cpu),
+		InstanceIndex: proto.Int32(int32(instanceIndex)),
+		CpuPercentage: proto.Float64(float64(cpu)),
+		MemoryBytes:   proto.Uint64(uint64(membytes)),
+		DiskBytes:     proto.Uint64(uint64(diskbytes)),
 	}
 
 	envelope := &events.Envelope{

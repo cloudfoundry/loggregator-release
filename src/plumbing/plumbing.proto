@@ -5,6 +5,8 @@ package plumbing;
 service Doppler {
   rpc Stream(StreamRequest) returns (stream Response) {}
   rpc Firehose(FirehoseRequest) returns (stream Response) {}
+  rpc ContainerMetrics(ContainerMetricsRequest) returns (ContainerMetricsResponse) {}
+  rpc RecentLogs(RecentLogsRequest) returns (RecentLogsResponse) {}
 }
 
 message StreamRequest {
@@ -19,3 +21,18 @@ message Response {
   bytes payload = 1;
 }
 
+message ContainerMetricsRequest {
+  string appID = 1;
+}
+
+message ContainerMetricsResponse {
+  repeated bytes payload = 1;
+}
+
+message RecentLogsRequest {
+  string appID = 1;
+}
+
+message RecentLogsResponse {
+  repeated bytes payload = 1;
+}

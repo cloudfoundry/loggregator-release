@@ -36,6 +36,7 @@ files:
 - loggregator/src/github.com/gogo/protobuf/proto/*.go # gosub
 - loggregator/src/github.com/gogo/protobuf/protoc-gen-gogo/descriptor/*.go # gosub
 - loggregator/src/github.com/golang/protobuf/proto/*.go # gosub
+- loggregator/src/github.com/gorilla/mux/*.go # gosub
 - loggregator/src/github.com/gorilla/websocket/*.go # gosub
 - loggregator/src/github.com/nu7hatch/gouuid/*.go # gosub
 - loggregator/src/github.com/ugorji/go/codec/*.go # gosub

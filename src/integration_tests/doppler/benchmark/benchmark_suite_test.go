@@ -7,9 +7,9 @@ import (
 	"doppler/config"
 	"time"
 
+	"code.cloudfoundry.org/localip"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
-	"code.cloudfoundry.org/localip"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
