@@ -6,7 +6,6 @@ import (
 	"doppler/sinks/retrystrategy"
 	"flag"
 	"fmt"
-	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"runtime"
@@ -41,9 +40,6 @@ import (
 )
 
 const (
-	// This is 6061 to not conflict with any other jobs that might have pprof
-	// running on 6060
-	pprofPort         = "6061"
 	origin            = "MetronAgent"
 	connectionRetries = 15
 	TCPTimeout        = time.Minute
@@ -71,7 +67,7 @@ func main() {
 	batcher, eventWriter := initializeMetrics(config, statsStopChan, logger)
 
 	go func() {
-		err := http.ListenAndServe(net.JoinHostPort("localhost", pprofPort), nil)
+		err := http.ListenAndServe(fmt.Sprintf("localhost:%d", config.PPROFPort), nil)
 		if err != nil {
 			logger.Errorf("Error starting pprof server: %s", err.Error())
 		}

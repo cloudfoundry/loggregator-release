@@ -111,6 +111,9 @@ properties:
   metron_agent.etcd.client_key:
     description: "PEM-encoded client key"
     default: ""
+  metron_agent.pprof_port:
+    description: "The pprof port for runtime profiling data"
+    default: 6061
 
   metron_agent.buffer_size:
     description: "DEPRECATED"

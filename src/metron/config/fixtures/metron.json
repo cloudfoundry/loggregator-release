@@ -22,5 +22,6 @@
     "KeyFile": "./fixtures/client.key",
     "CertFile": "./fixtures/client.crt",
     "CAFile": "./fixtures/ca.crt"
-  }
+  },
+  "PPROFPORT": 666
 }

@@ -116,6 +116,16 @@ var _ = Describe("ParseConfig", func() {
 			Expect(err).To(HaveOccurred())
 		})
 	})
+
+	Context("with PPROFPort", func() {
+		It("uses specified value", func() {
+			configFile := "./fixtures/metron.json"
+
+			c, err := config.ParseConfig(configFile)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(c.PPROFPort).To(Equal(uint32(666)))
+		})
+	})
 })
 
 var _ = Describe("Protocols", func() {

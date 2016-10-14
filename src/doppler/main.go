@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
-	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"time"
@@ -25,7 +24,6 @@ import (
 
 const (
 	DOPPLER_ORIGIN = "DopplerServer"
-	pprofPort      = "6060"
 	TCPTimeout     = time.Minute
 )
 
@@ -78,7 +76,7 @@ func main() {
 	log := logger.NewLogger(*logLevel, *logFilePath, "doppler", conf.Syslog)
 
 	go func() {
-		err := http.ListenAndServe(net.JoinHostPort("localhost", pprofPort), nil)
+		err := http.ListenAndServe(fmt.Sprintf("localhost:%d", conf.PPROFPort), nil)
 		if err != nil {
 			log.Errorf("Error starting pprof server: %s", err.Error())
 		}

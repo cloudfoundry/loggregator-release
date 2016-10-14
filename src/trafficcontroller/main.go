@@ -41,7 +41,6 @@ import (
 )
 
 const (
-	pprofPort            = "6060"
 	handshakeTimeout     = 5 * time.Second
 	defaultBatchInterval = 1 * time.Second
 	statsInterval        = 10 * time.Second
@@ -78,7 +77,7 @@ func main() {
 	}
 
 	go func() {
-		err := http.ListenAndServe(net.JoinHostPort("localhost", pprofPort), nil)
+		err := http.ListenAndServe(fmt.Sprintf("localhost:%d", config.PPROFPort), nil)
 		if err != nil {
 			log.Errorf("Error starting pprof server: %s", err.Error())
 		}

@@ -14,5 +14,6 @@
     "SecurityEventLog": "access.log",
     "MetronHost": "foo.bar",
     "MetronPort": 7543,
-    "GRPCPort": 3456
+    "GRPCPort": 3456,
+    "PPROFPort": 666
 }

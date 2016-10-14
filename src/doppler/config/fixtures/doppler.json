@@ -33,5 +33,6 @@
     "WebsocketWriteTimeoutSeconds": 60,
     "SinkInactivityTimeoutSeconds": 120,
     "MonitorIntervalSeconds": 1,
-    "MetricBatchIntervalMilliseconds": 15000
+    "MetricBatchIntervalMilliseconds": 15000,
+    "PPROFPort": 666
 }
