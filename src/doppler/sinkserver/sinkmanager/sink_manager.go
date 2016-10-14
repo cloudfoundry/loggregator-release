@@ -10,8 +10,6 @@ import (
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/metrics"
 	"fmt"
-	"math/rand"
-	"plumbing"
 	"sync"
 	"time"
 
@@ -21,7 +19,6 @@ import (
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
 )
 
 type SinkManager struct {
@@ -41,9 +38,6 @@ type SinkManager struct {
 	metricTTL           time.Duration
 	dialTimeout         time.Duration
 	logger              *gosteno.Logger
-
-	grpcStreams   *grpcRegistry
-	grpcFirehoses *grpcRegistry
 
 	stopOnce sync.Once
 }
@@ -75,9 +69,6 @@ func New(
 		sinkIOTimeout:          sinkIOTimeout,
 		metricTTL:              metricTTL,
 		dialTimeout:            dialTimeout,
-
-		grpcStreams:   newGRPCRegistry(),
-		grpcFirehoses: newGRPCRegistry(),
 	}
 }
 
@@ -99,36 +90,6 @@ func (sm *SinkManager) SendTo(appID string, msg *events.Envelope) {
 	sm.ensureRecentLogsSinkFor(appID)
 	sm.ensureContainerMetricsSinkFor(appID)
 	sm.sinks.Broadcast(appID, msg)
-	sm.broadcastGRPC(appID, msg)
-}
-
-func (sm *SinkManager) broadcastGRPC(appID string, msg *events.Envelope) {
-	payload, err := proto.Marshal(msg)
-	if err != nil {
-		sm.logger.Warnf("unable to marshal envelope to send to grpc stream: %s", err)
-		return
-	}
-	resp := &plumbing.Response{
-		Payload: payload,
-	}
-	sm.sendGRPCStreams(appID, resp)
-	sm.sendGRPCFirehoses(resp)
-}
-
-func (sm *SinkManager) sendGRPCStreams(appID string, resp *plumbing.Response) {
-	sm.grpcStreams.mu.RLock()
-	defer sm.grpcStreams.mu.RUnlock()
-	for _, s := range sm.grpcStreams.registry[appID] {
-		s.Send(resp)
-	}
-}
-
-func (sm *SinkManager) sendGRPCFirehoses(resp *plumbing.Response) {
-	sm.grpcFirehoses.mu.RLock()
-	defer sm.grpcFirehoses.mu.RUnlock()
-	for _, senders := range sm.grpcFirehoses.registry {
-		senders[rand.Intn(len(senders))].Send(resp)
-	}
 }
 
 func (sm *SinkManager) RegisterSink(sink sinks.Sink) bool {

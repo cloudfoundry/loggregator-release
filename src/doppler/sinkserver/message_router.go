@@ -10,21 +10,21 @@ import (
 )
 
 type MessageRouter struct {
-	sinkManager sinkManager
-	logger      *gosteno.Logger
-	done        chan struct{}
-	stopOnce    sync.Once
+	sinkManagers []sinkManager
+	logger       *gosteno.Logger
+	done         chan struct{}
+	stopOnce     sync.Once
 }
 
 type sinkManager interface {
 	SendTo(string, *events.Envelope)
 }
 
-func NewMessageRouter(sinkManager sinkManager, logger *gosteno.Logger) *MessageRouter {
+func NewMessageRouter(logger *gosteno.Logger, sinkManagers ...sinkManager) *MessageRouter {
 	return &MessageRouter{
-		sinkManager: sinkManager,
-		logger:      logger,
-		done:        make(chan struct{}),
+		sinkManagers: sinkManagers,
+		logger:       logger,
+		done:         make(chan struct{}),
 	}
 }
 
@@ -56,6 +56,8 @@ func (r *MessageRouter) send(envelope *events.Envelope) {
 	appId := envelope_extensions.GetAppId(envelope)
 
 	r.logger.Debugf("MessageRouter:outgoingLogChan: Searching for sinks with appId [%s].", appId)
-	r.sinkManager.SendTo(appId, envelope)
+	for _, sm := range r.sinkManagers {
+		sm.SendTo(appId, envelope)
+	}
 	r.logger.Debugf("MessageRouter:outgoingLogChan: Done sending message.")
 }
