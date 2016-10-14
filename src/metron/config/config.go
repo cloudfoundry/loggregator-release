@@ -93,6 +93,7 @@ type Config struct {
 
 	Protocols Protocols
 	TLSConfig TLSConfig
+	PPROFPort uint32
 
 	// DEPRECATED
 	LoggregatorDropsondePort int

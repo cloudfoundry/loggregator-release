@@ -19,5 +19,6 @@
     "MetricBatchIntervalMilliseconds": 10,
     "MetronAddress": "127.0.0.1:49625",
     "Syslog"  : "",
-    "CollectorRegistrarIntervalMilliseconds": 100
+    "CollectorRegistrarIntervalMilliseconds": 100,
+    "PPROFPort": 6060
 }

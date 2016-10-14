@@ -56,6 +56,7 @@
         a[:WebsocketWriteTimeoutSeconds] = p("doppler.websocket_write_timeout_seconds")
         a[:SinkIOTimeoutSeconds] = p("doppler.sink_io_timeout_seconds")
         a[:UnmarshallerCount] = p("doppler.unmarshaller_count")
+        a[:PPROFPort] = p("doppler.pprof_port")
         a[:EnableTLSTransport] = p("doppler.tls.enable")
         a[:MetronAddress] = p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.dropsonde_port').to_s
         if_p("syslog_daemon_config") do |_|
