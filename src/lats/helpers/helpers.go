@@ -1,9 +1,11 @@
 package helpers
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 
+	"github.com/coreos/etcd/client"
 	. "github.com/onsi/gomega"
 
 	"fmt"
@@ -128,5 +130,21 @@ func FindMatchingEnvelopeById(id string, msgChan <-chan *events.Envelope) (*even
 		case <-timeout:
 			return nil, errors.New("Timed out while waiting for message")
 		}
+	}
+}
+
+func WriteToEtcd(urls []string, key, value string) func() {
+	cfg := client.Config{
+		Endpoints: urls,
+	}
+	c, err := client.New(cfg)
+	if err != nil {
+		panic(err)
+	}
+	api := client.NewKeysAPI(c)
+	options := &client.SetOptions{TTL: time.Minute}
+	api.Set(context.Background(), key, value, options)
+	return func() {
+		api.Delete(context.Background(), key, nil)
 	}
 }
