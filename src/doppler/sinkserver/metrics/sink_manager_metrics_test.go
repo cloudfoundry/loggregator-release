@@ -7,9 +7,15 @@ import (
 	"doppler/sinks/syslog"
 	"doppler/sinks/websocket"
 	"doppler/sinkserver/metrics"
+	"time"
 
+	"github.com/cloudfoundry/dropsonde/emitter/fake"
+	"github.com/cloudfoundry/dropsonde/metric_sender"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
+
+	dropsondeMetrics "github.com/cloudfoundry/dropsonde/metrics"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -17,8 +23,17 @@ import (
 
 var _ = Describe("SinkManagerMetrics", func() {
 
-	var sinkManagerMetrics *metrics.SinkManagerMetrics
-	var sink sinks.Sink
+	var (
+		fakeEventEmitter   = fake.NewFakeEventEmitter("doppler")
+		sinkManagerMetrics *metrics.SinkManagerMetrics
+		sink               sinks.Sink
+	)
+
+	BeforeSuite(func() {
+		sender := metric_sender.NewMetricSender(fakeEventEmitter)
+		batcher := metricbatcher.New(sender, 100*time.Millisecond)
+		dropsondeMetrics.Initialize(sender, batcher)
+	})
 
 	BeforeEach(func() {
 		fakeEventEmitter.Reset()
@@ -26,24 +41,32 @@ var _ = Describe("SinkManagerMetrics", func() {
 	})
 
 	It("emits metrics for dump sinks", func() {
+		sinkManagerMetrics := metrics.NewSinkManagerMetrics()
 		Expect(fakeEventEmitter.GetMessages()).To(BeEmpty())
 
 		sink = &dump.DumpSink{}
 		sinkManagerMetrics.Inc(sink)
 
-		Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
-			Name:  proto.String("messageRouter.numberOfDumpSinks"),
-			Value: proto.Float64(1),
-			Unit:  proto.String("sinks"),
-		}))
+		expected := fake.Message{
+			Origin: "doppler",
+			Event: &events.ValueMetric{
+				Name:  proto.String("messageRouter.numberOfDumpSinks"),
+				Value: proto.Float64(1),
+				Unit:  proto.String("sinks"),
+			},
+		}
+		Eventually(fakeEventEmitter.GetMessages, 2).Should(ContainElement(expected))
+
+		fakeEventEmitter.Reset()
 
 		sinkManagerMetrics.Dec(sink)
 
-		Expect(fakeEventEmitter.GetMessages()[1].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
+		expected.Event = &events.ValueMetric{
 			Name:  proto.String("messageRouter.numberOfDumpSinks"),
 			Value: proto.Float64(0),
 			Unit:  proto.String("sinks"),
-		}))
+		}
+		Eventually(fakeEventEmitter.GetMessages, 2).Should(ContainElement(expected))
 	})
 
 	It("emits metrics for syslog sinks", func() {
@@ -52,19 +75,26 @@ var _ = Describe("SinkManagerMetrics", func() {
 		sink = &syslog.SyslogSink{}
 		sinkManagerMetrics.Inc(sink)
 
-		Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
-			Name:  proto.String("messageRouter.numberOfSyslogSinks"),
-			Value: proto.Float64(1),
-			Unit:  proto.String("sinks"),
-		}))
+		expected := fake.Message{
+			Origin: "doppler",
+			Event: &events.ValueMetric{
+				Name:  proto.String("messageRouter.numberOfSyslogSinks"),
+				Value: proto.Float64(1),
+				Unit:  proto.String("sinks"),
+			},
+		}
+		Eventually(fakeEventEmitter.GetMessages, 2).Should(ContainElement(expected))
+
+		fakeEventEmitter.Reset()
 
 		sinkManagerMetrics.Dec(sink)
 
-		Expect(fakeEventEmitter.GetMessages()[1].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
+		expected.Event = &events.ValueMetric{
 			Name:  proto.String("messageRouter.numberOfSyslogSinks"),
 			Value: proto.Float64(0),
 			Unit:  proto.String("sinks"),
-		}))
+		}
+		Eventually(fakeEventEmitter.GetMessages, 2).Should(ContainElement(expected))
 	})
 
 	It("emits metrics for websocket sinks", func() {
@@ -73,37 +103,53 @@ var _ = Describe("SinkManagerMetrics", func() {
 		sink = &websocket.WebsocketSink{}
 		sinkManagerMetrics.Inc(sink)
 
-		Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
-			Name:  proto.String("messageRouter.numberOfWebsocketSinks"),
-			Value: proto.Float64(1),
-			Unit:  proto.String("sinks"),
-		}))
+		expected := fake.Message{
+			Origin: "doppler",
+			Event: &events.ValueMetric{
+				Name:  proto.String("messageRouter.numberOfWebsocketSinks"),
+				Value: proto.Float64(1),
+				Unit:  proto.String("sinks"),
+			},
+		}
+		Eventually(fakeEventEmitter.GetMessages, 2).Should(ContainElement(expected))
+
+		fakeEventEmitter.Reset()
 
 		sinkManagerMetrics.Dec(sink)
 
-		Expect(fakeEventEmitter.GetMessages()[1].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
+		expected.Event = &events.ValueMetric{
 			Name:  proto.String("messageRouter.numberOfWebsocketSinks"),
 			Value: proto.Float64(0),
 			Unit:  proto.String("sinks"),
-		}))
+		}
+		Eventually(fakeEventEmitter.GetMessages, 2).Should(ContainElement(expected))
 	})
 
 	It("emits metrics for firehose sinks", func() {
 		Expect(fakeEventEmitter.GetMessages()).To(BeEmpty())
 
 		sinkManagerMetrics.IncFirehose()
-		Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
-			Name:  proto.String("messageRouter.numberOfFirehoseSinks"),
-			Value: proto.Float64(1),
-			Unit:  proto.String("sinks"),
-		}))
+
+		expected := fake.Message{
+			Origin: "doppler",
+			Event: &events.ValueMetric{
+				Name:  proto.String("messageRouter.numberOfFirehoseSinks"),
+				Value: proto.Float64(1),
+				Unit:  proto.String("sinks"),
+			},
+		}
+		Eventually(fakeEventEmitter.GetMessages, 2).Should(ContainElement(expected))
+
+		fakeEventEmitter.Reset()
 
 		sinkManagerMetrics.DecFirehose()
-		Expect(fakeEventEmitter.GetMessages()[1].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
+
+		expected.Event = &events.ValueMetric{
 			Name:  proto.String("messageRouter.numberOfFirehoseSinks"),
 			Value: proto.Float64(0),
 			Unit:  proto.String("sinks"),
-		}))
+		}
+		Eventually(fakeEventEmitter.GetMessages, 2).Should(ContainElement(expected))
 	})
 
 	It("emits metrics for container metric sinks", func() {
@@ -112,19 +158,26 @@ var _ = Describe("SinkManagerMetrics", func() {
 		sink = &containermetric.ContainerMetricSink{}
 		sinkManagerMetrics.Inc(sink)
 
-		Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
-			Name:  proto.String("messageRouter.numberOfContainerMetricSinks"),
-			Value: proto.Float64(1),
-			Unit:  proto.String("sinks"),
-		}))
+		expected := fake.Message{
+			Origin: "doppler",
+			Event: &events.ValueMetric{
+				Name:  proto.String("messageRouter.numberOfContainerMetricSinks"),
+				Value: proto.Float64(1),
+				Unit:  proto.String("sinks"),
+			},
+		}
+		Eventually(fakeEventEmitter.GetMessages, 2).Should(ContainElement(expected))
+
+		fakeEventEmitter.Reset()
 
 		sinkManagerMetrics.Dec(sink)
 
-		Expect(fakeEventEmitter.GetMessages()[1].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
+		expected.Event = &events.ValueMetric{
 			Name:  proto.String("messageRouter.numberOfContainerMetricSinks"),
 			Value: proto.Float64(0),
 			Unit:  proto.String("sinks"),
-		}))
+		}
+		Eventually(fakeEventEmitter.GetMessages, 2).Should(ContainElement(expected))
 	})
 
 	It("updates dropped message count", func() {
@@ -137,5 +190,4 @@ var _ = Describe("SinkManagerMetrics", func() {
 			Delta: proto.Uint64(25),
 		}))
 	})
-
 })

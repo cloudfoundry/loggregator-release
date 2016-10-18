@@ -174,21 +174,21 @@ var _ = Describe("SinkManager", func() {
 					initialNumSinks := fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value
 					newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:885"}
 
-					Eventually(func() float64 { return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value }).Should(Equal(initialNumSinks + 1))
+					Eventually(func() float64 { return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value }, 2).Should(Equal(initialNumSinks + 1))
 				})
 
 				It("creates a new syslog sink with tlsWriter from the newAppServicesChan", func() {
 					initialNumSinks := fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value
 					newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog-tls://127.0.1.1:885"}
 
-					Eventually(func() float64 { return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value }).Should(Equal(initialNumSinks + 1))
+					Eventually(func() float64 { return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value }, 2).Should(Equal(initialNumSinks + 1))
 				})
 
 				It("creates a new syslog sink with httpsWriter from the newAppServicesChan", func() {
 					initialNumSinks := fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value
 					newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "https://127.0.1.1:885"}
 
-					Eventually(func() float64 { return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value }).Should(Equal(initialNumSinks + 1))
+					Eventually(func() float64 { return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value }, 2).Should(Equal(initialNumSinks + 1))
 				})
 
 				Context("with an invalid drain Url", func() {
@@ -223,17 +223,17 @@ var _ = Describe("SinkManager", func() {
 					initialNumSinks := fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value
 					newAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886"}
 
-					Eventually(func() float64 { return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value }).Should(Equal(initialNumSinks + 1))
+					Eventually(func() float64 { return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value }, 2).Should(Equal(initialNumSinks + 1))
 
 					deletedAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886"}
 
-					Eventually(func() float64 { return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value }).Should(Equal(initialNumSinks))
+					Eventually(func() float64 { return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value }, 2).Should(Equal(initialNumSinks))
 				})
 
 				It("handles a delete for a nonexistent sink", func() {
 					initialNumSinks := fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value
 					deletedAppServiceChan <- appservice.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886"}
-					Eventually(func() float64 { return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value }).Should(Equal(initialNumSinks))
+					Eventually(func() float64 { return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value }, 2).Should(Equal(initialNumSinks))
 				})
 			})
 		})
@@ -302,11 +302,15 @@ var _ = Describe("SinkManager", func() {
 			})
 
 			It("removes the sink", func() {
-				Expect(fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value).To(Equal(float64(1)))
+				Eventually(func() float64 {
+					return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value
+				}, 2).Should(BeEquivalentTo(1))
 
 				sinkManager.UnregisterSink(syslogSink)
 
-				Expect(fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value).To(Equal(float64(0)))
+				Eventually(func() float64 {
+					return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value
+				}, 2).Should(BeEquivalentTo(0))
 			})
 		})
 
@@ -319,11 +323,17 @@ var _ = Describe("SinkManager", func() {
 			})
 
 			It("decrements the metric only once", func() {
-				Expect(fakeMetricSender.GetValue("messageRouter.numberOfDumpSinks").Value).To(Equal(float64(1)))
+				Eventually(func() float64 {
+					return fakeMetricSender.GetValue("messageRouter.numberOfDumpSinks").Value
+				}, 2).Should(BeEquivalentTo(1))
 				sinkManager.UnregisterSink(dumpSink)
-				Expect(fakeMetricSender.GetValue("messageRouter.numberOfDumpSinks").Value).To(Equal(float64(0)))
+				Eventually(func() float64 {
+					return fakeMetricSender.GetValue("messageRouter.numberOfDumpSinks").Value
+				}, 2).Should(BeEquivalentTo(0))
 				sinkManager.UnregisterSink(dumpSink)
-				Expect(fakeMetricSender.GetValue("messageRouter.numberOfDumpSinks").Value).To(Equal(float64(0)))
+				Eventually(func() float64 {
+					return fakeMetricSender.GetValue("messageRouter.numberOfDumpSinks").Value
+				}, 2).Should(BeEquivalentTo(0))
 			})
 		})
 	})
@@ -334,7 +344,9 @@ var _ = Describe("SinkManager", func() {
 			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
 			Eventually(sink.RunCalled).Should(BeTrue())
 
-			Expect(fakeMetricSender.GetValue("messageRouter.numberOfFirehoseSinks").Value).To(Equal(float64(1)))
+			Eventually(func() float64 {
+				return fakeMetricSender.GetValue("messageRouter.numberOfFirehoseSinks").Value
+			}, 2).Should(BeEquivalentTo(1))
 		})
 
 		It("returns false for a duplicate sink and does not update the sink metrics", func() {
@@ -343,7 +355,9 @@ var _ = Describe("SinkManager", func() {
 			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeTrue())
 
 			Expect(sinkManager.RegisterFirehoseSink(sink)).To(BeFalse())
-			Expect(fakeMetricSender.GetValue("messageRouter.numberOfFirehoseSinks").Value).To(Equal(float64(1)))
+			Eventually(func() float64 {
+				return fakeMetricSender.GetValue("messageRouter.numberOfFirehoseSinks").Value
+			}, 2).Should(BeEquivalentTo(1))
 		})
 
 		It("calls UnregisterFirehoseSink called once Run() returns", func() {
