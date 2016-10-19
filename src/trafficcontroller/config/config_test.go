@@ -114,5 +114,15 @@ var _ = Describe("Config", func() {
 			})
 		})
 
+		Context("with PPROFPort", func() {
+			It("uses specified value", func() {
+				configFile := "./fixtures/loggregator_trafficcontroller.json"
+
+				c, err := config.ParseConfig(configFile)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(c.PPROFPort).To(Equal(uint32(666)))
+			})
+		})
+
 	})
 })

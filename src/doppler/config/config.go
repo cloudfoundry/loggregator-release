@@ -55,6 +55,7 @@ type Config struct {
 	UnmarshallerCount               int
 	WebsocketWriteTimeoutSeconds    int
 	Zone                            string
+	PPROFPort                       uint32
 }
 
 func (c *Config) validate() (err error) {
