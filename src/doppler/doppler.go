@@ -131,6 +131,7 @@ func New(
 	)
 
 	grpcRouter := grpcmanager.NewRouter()
+	defer grpcRouter.Stop()
 	grpcManager := grpcmanager.New(grpcRouter, doppler.sinkManager)
 
 	doppler.Infof("Listening for GRPC connections on %d", config.GRPCPort)

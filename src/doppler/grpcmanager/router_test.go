@@ -2,11 +2,15 @@ package grpcmanager_test
 
 import (
 	"doppler/grpcmanager"
-
-	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
+	"time"
 
 	. "github.com/apoydence/eachers"
+	"github.com/cloudfoundry/dropsonde/emitter/fake"
+	"github.com/cloudfoundry/dropsonde/metric_sender"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/dropsonde/metrics"
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -46,6 +50,10 @@ var _ = Describe("Router", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		router = grpcmanager.NewRouter()
+	})
+
+	AfterEach(func() {
+		router.Stop()
 	})
 
 	Describe("data routing", func() {
@@ -177,6 +185,75 @@ var _ = Describe("Router", func() {
 					cleanupA()
 				})
 			})
+		})
+	})
+
+	Describe("Metrics", func() {
+		var (
+			fakeEmitter            *fake.FakeEventEmitter
+			mockFirehoseDataSetter *mockDataSetter
+			mockStreamDataSetter   *mockDataSetter
+		)
+
+		BeforeEach(func() {
+			mockFirehoseDataSetter = newMockDataSetter()
+			fakeEmitter = fake.NewFakeEventEmitter("doppler")
+			sender := metric_sender.NewMetricSender(fakeEmitter)
+			batcher := metricbatcher.New(sender, 200*time.Millisecond)
+			metrics.Initialize(sender, batcher)
+		})
+
+		AfterEach(func() {
+			fakeEmitter.Reset()
+		})
+
+		It("emits a metric with the number of firehoses", func() {
+			Expect(fakeEmitter.GetMessages()).To(BeEmpty())
+
+			cleanup := router.Register("some-sub-id", true, mockFirehoseDataSetter)
+			defer cleanup()
+			expected := fake.Message{
+				Origin: "doppler",
+				Event: &events.ValueMetric{
+					Name:  proto.String("grpcManager.numberOfFirehoseConns"),
+					Value: proto.Float64(1),
+					Unit:  proto.String("connections"),
+				},
+			}
+
+			Eventually(fakeEmitter.GetMessages, 2).Should(ContainElement(expected))
+			cleanup()
+
+			expected.Event = &events.ValueMetric{
+				Name:  proto.String("grpcManager.numberOfFirehoseConns"),
+				Value: proto.Float64(0),
+				Unit:  proto.String("connections"),
+			}
+			Eventually(fakeEmitter.GetMessages, 2).Should(ContainElement(expected))
+		})
+
+		It("emits a metric with the number of streams", func() {
+			Expect(fakeEmitter.GetMessages()).To(BeEmpty())
+
+			cleanup := router.Register("some-sub-id", false, mockStreamDataSetter)
+			expected := fake.Message{
+				Origin: "doppler",
+				Event: &events.ValueMetric{
+					Name:  proto.String("grpcManager.numberOfStreamConns"),
+					Value: proto.Float64(1),
+					Unit:  proto.String("connections"),
+				},
+			}
+
+			Eventually(fakeEmitter.GetMessages, 2).Should(ContainElement(expected))
+			cleanup()
+
+			expected.Event = &events.ValueMetric{
+				Name:  proto.String("grpcManager.numberOfStreamConns"),
+				Value: proto.Float64(0),
+				Unit:  proto.String("connections"),
+			}
+			Eventually(fakeEmitter.GetMessages, 2).Should(ContainElement(expected))
 		})
 	})
 })
