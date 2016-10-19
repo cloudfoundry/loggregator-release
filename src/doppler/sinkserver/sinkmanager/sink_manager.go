@@ -82,6 +82,7 @@ func (sm *SinkManager) Start(newAppServiceChan, deletedAppServiceChan <-chan app
 func (sm *SinkManager) Stop() {
 	sm.stopOnce.Do(func() {
 		close(sm.doneChannel)
+		sm.metrics.Stop()
 		sm.sinks.DeleteAll()
 	})
 }

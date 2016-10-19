@@ -19,10 +19,13 @@ type SinkManagerMetrics struct {
 	syslogSinks      int32
 	firehoseSinks    int32
 	containerMetrics int32
+	done             chan struct{}
 }
 
 func NewSinkManagerMetrics() *SinkManagerMetrics {
-	mgr := &SinkManagerMetrics{}
+	mgr := &SinkManagerMetrics{
+		done: make(chan struct{}),
+	}
 	ticker := time.NewTicker(time.Second)
 	go mgr.run(ticker)
 	return mgr
@@ -30,6 +33,12 @@ func NewSinkManagerMetrics() *SinkManagerMetrics {
 
 func (s *SinkManagerMetrics) run(ticker *time.Ticker) {
 	for range ticker.C {
+		select {
+		case <-s.done:
+			return
+		default:
+		}
+
 		metrics.SendValue("messageRouter.numberOfDumpSinks", float64(atomic.LoadInt32(&s.dumpSinks)), "sinks")
 		metrics.SendValue("messageRouter.numberOfWebsocketSinks", float64(atomic.LoadInt32(&s.websocketSinks)), "sinks")
 		metrics.SendValue("messageRouter.numberOfSyslogSinks", float64(atomic.LoadInt32(&s.syslogSinks)), "sinks")
@@ -74,4 +83,8 @@ func (s *SinkManagerMetrics) IncFirehose() {
 
 func (s *SinkManagerMetrics) DecFirehose() {
 	atomic.AddInt32(&s.firehoseSinks, -1)
+}
+
+func (s *SinkManagerMetrics) Stop() {
+	close(s.done)
 }

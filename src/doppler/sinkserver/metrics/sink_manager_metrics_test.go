@@ -22,7 +22,6 @@ import (
 )
 
 var _ = Describe("SinkManagerMetrics", func() {
-
 	var (
 		fakeEventEmitter   = fake.NewFakeEventEmitter("doppler")
 		sinkManagerMetrics *metrics.SinkManagerMetrics
@@ -38,6 +37,10 @@ var _ = Describe("SinkManagerMetrics", func() {
 	BeforeEach(func() {
 		fakeEventEmitter.Reset()
 		sinkManagerMetrics = metrics.NewSinkManagerMetrics()
+	})
+
+	AfterEach(func() {
+		sinkManagerMetrics.Stop()
 	})
 
 	It("emits metrics for dump sinks", func() {
