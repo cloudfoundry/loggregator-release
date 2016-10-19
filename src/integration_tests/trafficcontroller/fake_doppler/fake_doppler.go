@@ -24,11 +24,10 @@ type FakeDoppler struct {
 	sendMessageChan            chan []byte
 	grpcOut                    chan []byte
 	TrafficControllerConnected chan *http.Request
-	StreamRequests             chan *plumbing.StreamRequest
-	FirehoseRequests           chan *plumbing.FirehoseRequest
+	SubscriptionRequests       chan *plumbing.SubscriptionRequest
 	ContainerMetricsRequests   chan *plumbing.ContainerMetricsRequest
 	RecentLogsRequests         chan *plumbing.RecentLogsRequest
-	StreamServers              chan plumbing.Doppler_StreamServer
+	SubscribeServers           chan plumbing.Doppler_SubscribeServer
 	connectionPresent          bool
 	done                       chan struct{}
 	sync.RWMutex
@@ -41,11 +40,10 @@ func New() *FakeDoppler {
 		TrafficControllerConnected: make(chan *http.Request, 1),
 		sendMessageChan:            make(chan []byte, 100),
 		grpcOut:                    make(chan []byte, 100),
-		StreamRequests:             make(chan *plumbing.StreamRequest, 100),
-		FirehoseRequests:           make(chan *plumbing.FirehoseRequest, 100),
+		SubscriptionRequests:       make(chan *plumbing.SubscriptionRequest, 100),
 		ContainerMetricsRequests:   make(chan *plumbing.ContainerMetricsRequest, 100),
 		RecentLogsRequests:         make(chan *plumbing.RecentLogsRequest, 100),
-		StreamServers:              make(chan plumbing.Doppler_StreamServer, 100),
+		SubscribeServers:           make(chan plumbing.Doppler_SubscribeServer, 100),
 		done:                       make(chan struct{}),
 	}
 }
@@ -128,22 +126,9 @@ func (fakeDoppler *FakeDoppler) CloseLogMessageStream() {
 	close(fakeDoppler.sendMessageChan)
 }
 
-func (fakeDoppler *FakeDoppler) Stream(request *plumbing.StreamRequest, server plumbing.Doppler_StreamServer) error {
-	fakeDoppler.StreamRequests <- request
-	fakeDoppler.StreamServers <- server
-	for msg := range fakeDoppler.grpcOut {
-		err := server.Send(&plumbing.Response{
-			Payload: msg,
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (fakeDoppler *FakeDoppler) Firehose(request *plumbing.FirehoseRequest, server plumbing.Doppler_FirehoseServer) error {
-	fakeDoppler.FirehoseRequests <- request
+func (fakeDoppler *FakeDoppler) Subscribe(request *plumbing.SubscriptionRequest, server plumbing.Doppler_SubscribeServer) error {
+	fakeDoppler.SubscriptionRequests <- request
+	fakeDoppler.SubscribeServers <- server
 	for msg := range fakeDoppler.grpcOut {
 		err := server.Send(&plumbing.Response{
 			Payload: msg,

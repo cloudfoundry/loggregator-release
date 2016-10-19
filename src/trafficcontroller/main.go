@@ -108,7 +108,7 @@ func main() {
 
 	// TODO: The preferredProtocol of udp tells the finder to pull out the Doppler URLs from the legacy ETCD endpoint.
 	// Eventually we'll have a separate websocket client pool
-	finder := dopplerservice.NewFinder(etcdAdapter, int(config.DopplerPort), []string{"udp"}, "", log)
+	finder := dopplerservice.NewFinder(etcdAdapter, int(config.DopplerPort), int(config.GRPCPort), []string{"ws"}, "", log)
 	finder.Start()
 
 	var accessMiddleware func(middleware.HttpHandler) *middleware.AccessHandler
@@ -125,8 +125,7 @@ func main() {
 		accessMiddleware = middleware.Access(accessLogger, ipAddress, config.OutgoingDropsondePort, log)
 	}
 
-	rxFetcher := grpcconnector.NewFetcher(config.GRPCPort, finder, log)
-	grpcConnector := grpcconnector.New(rxFetcher, batcher, 5*time.Second, 1000)
+	grpcConnector := grpcconnector.New(1000, 5000, finder, batcher)
 
 	dopplerCgc := channel_group_connector.NewChannelGroupConnector(finder, newDropsondeWebsocketListener, batcher, log)
 	dopplerHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, dopplerCgc, grpcConnector, "doppler."+config.SystemDomain, log))

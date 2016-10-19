@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"code.cloudfoundry.org/localip"
 	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
-	"code.cloudfoundry.org/localip"
 )
 
 type FirehoseReader struct {

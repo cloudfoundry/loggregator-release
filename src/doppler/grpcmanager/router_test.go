@@ -2,6 +2,7 @@ package grpcmanager_test
 
 import (
 	"doppler/grpcmanager"
+	"plumbing"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
@@ -51,19 +52,50 @@ var _ = Describe("Router", func() {
 	Describe("data routing", func() {
 		Context("when multiple setters are routed", func() {
 			var (
+				reqA, reqB, reqC, reqD, reqE, reqF                         *plumbing.SubscriptionRequest
 				cleanupA, cleanupB, cleanupC, cleanupD, cleanupE, cleanupF func()
 			)
 
 			BeforeEach(func() {
+				reqA = &plumbing.SubscriptionRequest{
+					Filter: &plumbing.Filter{
+						AppID: "some-app-id",
+					},
+				}
+
+				reqB = &plumbing.SubscriptionRequest{
+					Filter: &plumbing.Filter{
+						AppID: "some-app-id",
+					},
+				}
+
+				reqC = &plumbing.SubscriptionRequest{
+					Filter: &plumbing.Filter{
+						AppID: "some-other-app-id",
+					},
+				}
+
+				reqD = &plumbing.SubscriptionRequest{
+					ShardID: "some-sub-id",
+				}
+
+				reqE = &plumbing.SubscriptionRequest{
+					ShardID: "some-sub-id",
+				}
+
+				reqF = &plumbing.SubscriptionRequest{
+					ShardID: "some-other-sub-id",
+				}
+
 				// Streams
-				cleanupA = router.Register("some-app-id", false, mockDataSetterA)
-				cleanupB = router.Register("some-app-id", false, mockDataSetterB)
-				cleanupC = router.Register("some-other-app-id", false, mockDataSetterC)
+				cleanupA = router.Register(reqA, mockDataSetterA)
+				cleanupB = router.Register(reqB, mockDataSetterB)
+				cleanupC = router.Register(reqC, mockDataSetterC)
 
 				// Firehose
-				cleanupD = router.Register("some-sub-id", true, mockDataSetterD)
-				cleanupE = router.Register("some-sub-id", true, mockDataSetterE)
-				cleanupF = router.Register("some-other-sub-id", true, mockDataSetterF)
+				cleanupD = router.Register(reqD, mockDataSetterD)
+				cleanupE = router.Register(reqE, mockDataSetterE)
+				cleanupF = router.Register(reqF, mockDataSetterF)
 			})
 
 			It("sends data to the registered setters", func() {
@@ -168,7 +200,7 @@ var _ = Describe("Router", func() {
 
 			Describe("thread safety", func() {
 				It("survives the race detector", func(done Done) {
-					cleanupA = router.Register("some-app-id", false, mockDataSetterA)
+					cleanupA = router.Register(reqA, mockDataSetterA)
 
 					go func() {
 						defer close(done)

@@ -9,7 +9,7 @@ import (
 )
 
 var _ = Describe("Sending metrics through loggregator", func() {
-	Describe("the firehose receives a", func() {
+	Describe("Firehose", func() {
 		var (
 			msgChan   <-chan *events.Envelope
 			errorChan <-chan error
@@ -22,7 +22,7 @@ var _ = Describe("Sending metrics through loggregator", func() {
 			Expect(errorChan).To(BeEmpty())
 		})
 
-		It("counter event emitted to metron with correct total", func() {
+		It("receives a counter event with correct total", func() {
 			envelope := createCounterEvent()
 			helpers.EmitToMetron(envelope)
 
@@ -38,7 +38,7 @@ var _ = Describe("Sending metrics through loggregator", func() {
 			Expect(receivedEnvelope.GetCounterEvent().GetTotal()).To(Equal(uint64(10)))
 		})
 
-		It("value metric emitted to metron", func() {
+		It("receives a value metric", func() {
 			envelope := createValueMetric()
 			helpers.EmitToMetron(envelope)
 
@@ -48,7 +48,7 @@ var _ = Describe("Sending metrics through loggregator", func() {
 			Expect(receivedEnvelope.GetValueMetric()).To(Equal(envelope.GetValueMetric()))
 		})
 
-		It("container metric emitted to metron", func() {
+		It("receives a container metric", func() {
 			envelope := createContainerMetric("test-id")
 			helpers.EmitToMetron(envelope)
 
@@ -59,14 +59,14 @@ var _ = Describe("Sending metrics through loggregator", func() {
 		})
 	})
 
-	Describe("the stream receives a", func() {
-		It("container metric emitted to metron", func() {
+	Describe("Stream", func() {
+		It("receives a container metric", func() {
 			msgChan, errorChan := helpers.ConnectToStream("test-id")
 			envelope := createContainerMetric("test-id")
 			helpers.EmitToMetron(createContainerMetric("alternate-id"))
 			helpers.EmitToMetron(envelope)
 
-			receivedEnvelope, err := helpers.FindMatchingEnvelopeById("test-id", msgChan)
+			receivedEnvelope, err := helpers.FindMatchingEnvelopeByID("test-id", msgChan)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(receivedEnvelope).NotTo(BeNil())
 

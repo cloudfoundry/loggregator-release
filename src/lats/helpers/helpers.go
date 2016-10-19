@@ -1,9 +1,11 @@
 package helpers
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 
+	"github.com/coreos/etcd/client"
 	. "github.com/onsi/gomega"
 
 	"fmt"
@@ -114,19 +116,34 @@ func FindMatchingEnvelope(msgChan <-chan *events.Envelope) *events.Envelope {
 	}
 }
 
-func FindMatchingEnvelopeById(id string, msgChan <-chan *events.Envelope) (*events.Envelope, error) {
+func FindMatchingEnvelopeByID(id string, msgChan <-chan *events.Envelope) (*events.Envelope, error) {
 	timeout := time.After(10 * time.Second)
 	for {
 		select {
 		case receivedEnvelope := <-msgChan:
-			receivedId := envelope_extensions.GetAppId(receivedEnvelope)
-			if receivedId == id {
+			receivedID := envelope_extensions.GetAppId(receivedEnvelope)
+			if receivedID == id {
 				return receivedEnvelope, nil
-			} else {
-				return nil, errors.New(fmt.Sprintf("Expected messages with app id: %s, got app id: %s", id, receivedId))
 			}
+			return nil, fmt.Errorf("Expected messages with app id: %s, got app id: %s", id, receivedID)
 		case <-timeout:
 			return nil, errors.New("Timed out while waiting for message")
 		}
+	}
+}
+
+func WriteToEtcd(urls []string, key, value string) func() {
+	cfg := client.Config{
+		Endpoints: urls,
+	}
+	c, err := client.New(cfg)
+	if err != nil {
+		panic(err)
+	}
+	api := client.NewKeysAPI(c)
+	options := &client.SetOptions{TTL: time.Minute}
+	api.Set(context.Background(), key, value, options)
+	return func() {
+		api.Delete(context.Background(), key, nil)
 	}
 }

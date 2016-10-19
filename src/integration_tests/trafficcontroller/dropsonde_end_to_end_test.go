@@ -44,9 +44,10 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 		})
 
 		It("passes messages through", func() {
-			var grpcRequest *plumbing.StreamRequest
-			Eventually(fakeDoppler.StreamRequests, 10).Should(Receive(&grpcRequest))
-			Expect(grpcRequest.AppID).To(Equal(APP_ID))
+			var grpcRequest *plumbing.SubscriptionRequest
+			Eventually(fakeDoppler.SubscriptionRequests, 10).Should(Receive(&grpcRequest))
+			Expect(grpcRequest.Filter).ToNot(BeNil())
+			Expect(grpcRequest.Filter.AppID).To(Equal(APP_ID))
 
 			currentTime := time.Now().UnixNano()
 			dropsondeMessage := makeDropsondeMessage("Hello through NOAA", APP_ID, currentTime)
@@ -65,8 +66,8 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 		})
 
 		It("closes the upstream websocket connection when done", func() {
-			var server plumbing.Doppler_StreamServer
-			Eventually(fakeDoppler.StreamServers, 10).Should(Receive(&server))
+			var server plumbing.Doppler_SubscribeServer
+			Eventually(fakeDoppler.SubscribeServers, 10).Should(Receive(&server))
 
 			client.Close()
 
@@ -85,9 +86,9 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 			defer client.Close()
 			messages, errors = client.FirehoseWithoutReconnect(SUBSCRIPTION_ID, AUTH_TOKEN)
 
-			var grpcRequest *plumbing.FirehoseRequest
-			Eventually(fakeDoppler.FirehoseRequests, 10).Should(Receive(&grpcRequest))
-			Expect(grpcRequest.SubID).To(Equal(SUBSCRIPTION_ID))
+			var grpcRequest *plumbing.SubscriptionRequest
+			Eventually(fakeDoppler.SubscriptionRequests, 10).Should(Receive(&grpcRequest))
+			Expect(grpcRequest.ShardID).To(Equal(SUBSCRIPTION_ID))
 
 			currentTime := time.Now().UnixNano()
 			dropsondeMessage := makeDropsondeMessage("Hello through NOAA", APP_ID, currentTime)

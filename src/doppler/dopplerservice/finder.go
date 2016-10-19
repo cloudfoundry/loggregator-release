@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -58,10 +57,10 @@ type DopplerEvent struct {
 }
 
 type Event struct {
-	UDPDopplers []string
-	TLSDopplers []string
-	TCPDopplers []string
-	WSDopplers  []string
+	GRPCDopplers []string
+	UDPDopplers  []string
+	TLSDopplers  []string
+	TCPDopplers  []string
 }
 
 func (e Event) empty() bool {
@@ -73,6 +72,7 @@ func (e Event) empty() bool {
 type Finder struct {
 	adapter              StoreAdapter
 	legacyPort           int
+	grpcPort             int
 	protocols            []string
 	preferredDopplerZone string
 	metaEndpoints        map[string][]string
@@ -84,7 +84,7 @@ type Finder struct {
 	logger *gosteno.Logger
 }
 
-func NewFinder(adapter StoreAdapter, legacyPort int, protocols []string, preferredDopplerZone string, logger *gosteno.Logger) *Finder {
+func NewFinder(adapter StoreAdapter, legacyPort, grpcPort int, protocols []string, preferredDopplerZone string, logger *gosteno.Logger) *Finder {
 	return &Finder{
 		metaEndpoints:        make(map[string][]string),
 		legacyEndpoints:      make(map[string]string),
@@ -92,22 +92,14 @@ func NewFinder(adapter StoreAdapter, legacyPort int, protocols []string, preferr
 		protocols:            protocols,
 		preferredDopplerZone: preferredDopplerZone,
 		legacyPort:           legacyPort,
+		grpcPort:             grpcPort,
 		events:               make(chan Event, 10),
 		logger:               logger,
 	}
 }
 
 func (f *Finder) WebsocketServers() []string {
-	f.legacyLock.RLock()
-	defer f.legacyLock.RUnlock()
-	wsServers := make([]string, 0, len(f.legacyEndpoints))
-	for _, server := range f.legacyEndpoints {
-		serverURL, err := url.Parse(server)
-		if err == nil {
-			wsServers = append(wsServers, serverURL.Host)
-		}
-	}
-	return wsServers
+	panic("WebsocketServers() has been deprecated")
 }
 
 func (f *Finder) Start() {
@@ -284,7 +276,12 @@ func (f *Finder) eventWithPrefix(dopplerPrefix string) Event {
 		case strings.HasPrefix(addr, "tls"):
 			event.TLSDopplers = append(event.TLSDopplers, strings.TrimPrefix(addr, "tls://"))
 		case strings.HasPrefix(addr, "ws"):
-			event.WSDopplers = append(event.WSDopplers, strings.TrimPrefix(addr, "ws://"))
+			host := strings.TrimPrefix(addr, "ws://")
+			hostEnd := strings.IndexRune(host, ':')
+			if hostEnd != -1 {
+				host = host[:hostEnd]
+			}
+			event.GRPCDopplers = append(event.GRPCDopplers, fmt.Sprintf("%s:%d", host, f.grpcPort))
 		default:
 			f.logger.Errorf("Unexpected address for doppler %s (invalid protocol): %s", doppler, addr)
 		}

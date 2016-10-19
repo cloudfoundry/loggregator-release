@@ -31,8 +31,7 @@ var _ = Describe("GRPCManager", func() {
 		connCloser    io.Closer
 		dopplerClient plumbing.DopplerClient
 
-		streamRequest   *plumbing.StreamRequest
-		firehoseRequest *plumbing.FirehoseRequest
+		subscribeRequest *plumbing.SubscriptionRequest
 
 		setter grpcmanager.DataSetter
 	)
@@ -81,8 +80,11 @@ var _ = Describe("GRPCManager", func() {
 		listener = startGRPCServer(manager)
 		dopplerClient, connCloser = establishClient(listener.Addr().String())
 
-		streamRequest = &plumbing.StreamRequest{AppID: "some-app-id"}
-		firehoseRequest = &plumbing.FirehoseRequest{SubID: "some-sub-id"}
+		subscribeRequest = &plumbing.SubscriptionRequest{
+			Filter: &plumbing.Filter{
+				AppID: "some-app-id",
+			},
+		}
 	})
 
 	AfterEach(func() {
@@ -91,28 +93,19 @@ var _ = Describe("GRPCManager", func() {
 	})
 
 	Describe("registration", func() {
-		It("registers stream", func() {
-			_, err := dopplerClient.Stream(context.TODO(), streamRequest)
+		It("registers subscription", func() {
+			_, err := dopplerClient.Subscribe(context.TODO(), subscribeRequest)
 			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(mockRegistrar.RegisterInput).Should(
-				BeCalled(With(streamRequest.AppID, false, Not(BeNil()))),
-			)
-		})
-
-		It("registers firehose", func() {
-			_, err := dopplerClient.Firehose(context.TODO(), firehoseRequest)
-			Expect(err).ToNot(HaveOccurred())
-
-			Eventually(mockRegistrar.RegisterInput).Should(
-				BeCalled(With(firehoseRequest.SubID, true, Not(BeNil()))),
+				BeCalled(With(subscribeRequest, Not(BeNil()))),
 			)
 		})
 
 		Context("connection is established", func() {
 			Context("client does not close the connection", func() {
 				It("does not unregister itself", func() {
-					dopplerClient.Stream(context.TODO(), streamRequest)
+					dopplerClient.Subscribe(context.TODO(), subscribeRequest)
 					fetchSetter()
 
 					Consistently(cleanupCalled).ShouldNot(BeClosed())
@@ -120,28 +113,19 @@ var _ = Describe("GRPCManager", func() {
 			})
 
 			Context("client closes connection", func() {
-				It("unregisters stream", func() {
-					dopplerClient.Stream(context.TODO(), streamRequest)
+				It("unregisters subscription", func() {
+					dopplerClient.Subscribe(context.TODO(), subscribeRequest)
 					setter = fetchSetter()
 					connCloser.Close()
 
 					Eventually(cleanupCalled).Should(BeClosed())
 				})
-
-				It("unregisters firehose", func() {
-					dopplerClient.Firehose(context.TODO(), firehoseRequest)
-					setter = fetchSetter()
-					connCloser.Close()
-
-					Eventually(cleanupCalled).Should(BeClosed())
-				})
-
 			})
 		})
 	})
 
 	Describe("data transmission", func() {
-		var readFromReceiver = func(r plumbing.Doppler_StreamClient) <-chan []byte {
+		var readFromReceiver = func(r plumbing.Doppler_SubscribeClient) <-chan []byte {
 			c := make(chan []byte, 100)
 
 			go func() {
@@ -158,25 +142,8 @@ var _ = Describe("GRPCManager", func() {
 			return c
 		}
 
-		It("stream sends data from the setter to the client", func() {
-			rx, err := dopplerClient.Stream(context.TODO(), streamRequest)
-			Expect(err).ToNot(HaveOccurred())
-
-			setter = fetchSetter()
-			setter.Set([]byte("some-data-0"))
-			setter.Set([]byte("some-data-1"))
-			setter.Set([]byte("some-data-2"))
-
-			c := readFromReceiver(rx)
-			Eventually(c).Should(BeCalled(With(
-				[]byte("some-data-0"),
-				[]byte("some-data-1"),
-				[]byte("some-data-2"),
-			)))
-		})
-
-		It("firehose sends data from the setter to the client", func() {
-			rx, err := dopplerClient.Firehose(context.TODO(), firehoseRequest)
+		It("sends data from the setter to the client", func() {
+			rx, err := dopplerClient.Subscribe(context.TODO(), subscribeRequest)
 			Expect(err).ToNot(HaveOccurred())
 
 			setter = fetchSetter()

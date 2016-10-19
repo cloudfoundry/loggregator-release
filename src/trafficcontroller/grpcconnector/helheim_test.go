@@ -8,13 +8,29 @@ package grpcconnector_test
 import (
 	"doppler/dopplerservice"
 	"plumbing"
-	"time"
-	"trafficcontroller/grpcconnector"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 )
+
+type mockPlumbingReceiver struct {
+	RecvCalled chan bool
+	RecvOutput struct {
+		Ret0 chan *plumbing.Response
+		Ret1 chan error
+	}
+}
+
+func newMockPlumbingReceiver() *mockPlumbingReceiver {
+	m := &mockPlumbingReceiver{}
+	m.RecvCalled = make(chan bool, 100)
+	m.RecvOutput.Ret0 = make(chan *plumbing.Response, 100)
+	m.RecvOutput.Ret1 = make(chan error, 100)
+	return m
+}
+func (m *mockPlumbingReceiver) Recv() (*plumbing.Response, error) {
+	m.RecvCalled <- true
+	return <-m.RecvOutput.Ret0, <-m.RecvOutput.Ret1
+}
 
 type mockFinder struct {
 	NextCalled chan bool
@@ -34,120 +50,6 @@ func (m *mockFinder) Next() dopplerservice.Event {
 	return <-m.NextOutput.Ret0
 }
 
-type mockReceiver struct {
-	RecvCalled chan bool
-	RecvOutput struct {
-		Ret0 chan *plumbing.Response
-		Ret1 chan error
-	}
-}
-
-func newMockReceiver() *mockReceiver {
-	m := &mockReceiver{}
-	m.RecvCalled = make(chan bool, 100)
-	m.RecvOutput.Ret0 = make(chan *plumbing.Response, 100)
-	m.RecvOutput.Ret1 = make(chan error, 100)
-	return m
-}
-func (m *mockReceiver) Recv() (*plumbing.Response, error) {
-	m.RecvCalled <- true
-	return <-m.RecvOutput.Ret0, <-m.RecvOutput.Ret1
-}
-
-type mockReceiveFetcher struct {
-	FetchStreamCalled chan bool
-	FetchStreamInput  struct {
-		Ctx  chan context.Context
-		In   chan *plumbing.StreamRequest
-		Opts chan []grpc.CallOption
-	}
-	FetchStreamOutput struct {
-		Ret0 chan []grpcconnector.Receiver
-		Ret1 chan error
-	}
-	FetchFirehoseCalled chan bool
-	FetchFirehoseInput  struct {
-		Ctx  chan context.Context
-		In   chan *plumbing.FirehoseRequest
-		Opts chan []grpc.CallOption
-	}
-	FetchFirehoseOutput struct {
-		Ret0 chan []grpcconnector.Receiver
-		Ret1 chan error
-	}
-	FetchContainerMetricsCalled chan bool
-	FetchContainerMetricsInput  struct {
-		Ctx chan context.Context
-		In  chan *plumbing.ContainerMetricsRequest
-	}
-	FetchContainerMetricsOutput struct {
-		Ret0 chan []*plumbing.ContainerMetricsResponse
-		Ret1 chan error
-	}
-	FetchRecentLogsCalled chan bool
-	FetchRecentLogsInput  struct {
-		Ctx chan context.Context
-		In  chan *plumbing.RecentLogsRequest
-	}
-	FetchRecentLogsOutput struct {
-		Ret0 chan []*plumbing.RecentLogsResponse
-		Ret1 chan error
-	}
-}
-
-func newMockReceiveFetcher() *mockReceiveFetcher {
-	m := &mockReceiveFetcher{}
-	m.FetchStreamCalled = make(chan bool, 100)
-	m.FetchStreamInput.Ctx = make(chan context.Context, 100)
-	m.FetchStreamInput.In = make(chan *plumbing.StreamRequest, 100)
-	m.FetchStreamInput.Opts = make(chan []grpc.CallOption, 100)
-	m.FetchStreamOutput.Ret0 = make(chan []grpcconnector.Receiver, 100)
-	m.FetchStreamOutput.Ret1 = make(chan error, 100)
-	m.FetchFirehoseCalled = make(chan bool, 100)
-	m.FetchFirehoseInput.Ctx = make(chan context.Context, 100)
-	m.FetchFirehoseInput.In = make(chan *plumbing.FirehoseRequest, 100)
-	m.FetchFirehoseInput.Opts = make(chan []grpc.CallOption, 100)
-	m.FetchFirehoseOutput.Ret0 = make(chan []grpcconnector.Receiver, 100)
-	m.FetchFirehoseOutput.Ret1 = make(chan error, 100)
-	m.FetchContainerMetricsCalled = make(chan bool, 100)
-	m.FetchContainerMetricsInput.Ctx = make(chan context.Context, 100)
-	m.FetchContainerMetricsInput.In = make(chan *plumbing.ContainerMetricsRequest, 100)
-	m.FetchContainerMetricsOutput.Ret0 = make(chan []*plumbing.ContainerMetricsResponse, 100)
-	m.FetchContainerMetricsOutput.Ret1 = make(chan error, 100)
-	m.FetchRecentLogsCalled = make(chan bool, 100)
-	m.FetchRecentLogsInput.Ctx = make(chan context.Context, 100)
-	m.FetchRecentLogsInput.In = make(chan *plumbing.RecentLogsRequest, 100)
-	m.FetchRecentLogsOutput.Ret0 = make(chan []*plumbing.RecentLogsResponse, 100)
-	m.FetchRecentLogsOutput.Ret1 = make(chan error, 100)
-	return m
-}
-func (m *mockReceiveFetcher) FetchStream(ctx context.Context, in *plumbing.StreamRequest, opts ...grpc.CallOption) ([]grpcconnector.Receiver, error) {
-	m.FetchStreamCalled <- true
-	m.FetchStreamInput.Ctx <- ctx
-	m.FetchStreamInput.In <- in
-	m.FetchStreamInput.Opts <- opts
-	return <-m.FetchStreamOutput.Ret0, <-m.FetchStreamOutput.Ret1
-}
-func (m *mockReceiveFetcher) FetchFirehose(ctx context.Context, in *plumbing.FirehoseRequest, opts ...grpc.CallOption) ([]grpcconnector.Receiver, error) {
-	m.FetchFirehoseCalled <- true
-	m.FetchFirehoseInput.Ctx <- ctx
-	m.FetchFirehoseInput.In <- in
-	m.FetchFirehoseInput.Opts <- opts
-	return <-m.FetchFirehoseOutput.Ret0, <-m.FetchFirehoseOutput.Ret1
-}
-func (m *mockReceiveFetcher) FetchContainerMetrics(ctx context.Context, in *plumbing.ContainerMetricsRequest) ([]*plumbing.ContainerMetricsResponse, error) {
-	m.FetchContainerMetricsCalled <- true
-	m.FetchContainerMetricsInput.Ctx <- ctx
-	m.FetchContainerMetricsInput.In <- in
-	return <-m.FetchContainerMetricsOutput.Ret0, <-m.FetchContainerMetricsOutput.Ret1
-}
-func (m *mockReceiveFetcher) FetchRecentLogs(ctx context.Context, in *plumbing.RecentLogsRequest) ([]*plumbing.RecentLogsResponse, error) {
-	m.FetchRecentLogsCalled <- true
-	m.FetchRecentLogsInput.Ctx <- ctx
-	m.FetchRecentLogsInput.In <- in
-	return <-m.FetchRecentLogsOutput.Ret0, <-m.FetchRecentLogsOutput.Ret1
-}
-
 type mockMetaMetricBatcher struct {
 	BatchCounterCalled chan bool
 	BatchCounterInput  struct {
@@ -156,6 +58,11 @@ type mockMetaMetricBatcher struct {
 	BatchCounterOutput struct {
 		Ret0 chan metricbatcher.BatchCounterChainer
 	}
+	BatchAddCounterCalled chan bool
+	BatchAddCounterInput  struct {
+		Name  chan string
+		Delta chan uint64
+	}
 }
 
 func newMockMetaMetricBatcher() *mockMetaMetricBatcher {
@@ -163,6 +70,9 @@ func newMockMetaMetricBatcher() *mockMetaMetricBatcher {
 	m.BatchCounterCalled = make(chan bool, 100)
 	m.BatchCounterInput.Name = make(chan string, 100)
 	m.BatchCounterOutput.Ret0 = make(chan metricbatcher.BatchCounterChainer, 100)
+	m.BatchAddCounterCalled = make(chan bool, 100)
+	m.BatchAddCounterInput.Name = make(chan string, 100)
+	m.BatchAddCounterInput.Delta = make(chan uint64, 100)
 	return m
 }
 func (m *mockMetaMetricBatcher) BatchCounter(name string) metricbatcher.BatchCounterChainer {
@@ -170,60 +80,30 @@ func (m *mockMetaMetricBatcher) BatchCounter(name string) metricbatcher.BatchCou
 	m.BatchCounterInput.Name <- name
 	return <-m.BatchCounterOutput.Ret0
 }
+func (m *mockMetaMetricBatcher) BatchAddCounter(name string, delta uint64) {
+	m.BatchAddCounterCalled <- true
+	m.BatchAddCounterInput.Name <- name
+	m.BatchAddCounterInput.Delta <- delta
+}
 
-type mockContext struct {
-	DeadlineCalled chan bool
-	DeadlineOutput struct {
-		Deadline chan time.Time
-		Ok       chan bool
-	}
-	DoneCalled chan bool
-	DoneOutput struct {
-		Ret0 chan (<-chan struct{})
-	}
-	ErrCalled chan bool
-	ErrOutput struct {
-		Ret0 chan error
-	}
-	ValueCalled chan bool
-	ValueInput  struct {
-		Key chan interface{}
-	}
-	ValueOutput struct {
-		Ret0 chan interface{}
+type mockReceiver struct {
+	RecvCalled chan bool
+	RecvOutput struct {
+		Ret0 chan []byte
+		Ret1 chan error
 	}
 }
 
-func newMockContext() *mockContext {
-	m := &mockContext{}
-	m.DeadlineCalled = make(chan bool, 100)
-	m.DeadlineOutput.Deadline = make(chan time.Time, 100)
-	m.DeadlineOutput.Ok = make(chan bool, 100)
-	m.DoneCalled = make(chan bool, 100)
-	m.DoneOutput.Ret0 = make(chan (<-chan struct{}), 100)
-	m.ErrCalled = make(chan bool, 100)
-	m.ErrOutput.Ret0 = make(chan error, 100)
-	m.ValueCalled = make(chan bool, 100)
-	m.ValueInput.Key = make(chan interface{}, 100)
-	m.ValueOutput.Ret0 = make(chan interface{}, 100)
+func newMockReceiver() *mockReceiver {
+	m := &mockReceiver{}
+	m.RecvCalled = make(chan bool, 100)
+	m.RecvOutput.Ret0 = make(chan []byte, 100)
+	m.RecvOutput.Ret1 = make(chan error, 100)
 	return m
 }
-func (m *mockContext) Deadline() (deadline time.Time, ok bool) {
-	m.DeadlineCalled <- true
-	return <-m.DeadlineOutput.Deadline, <-m.DeadlineOutput.Ok
-}
-func (m *mockContext) Done() <-chan struct{} {
-	m.DoneCalled <- true
-	return <-m.DoneOutput.Ret0
-}
-func (m *mockContext) Err() error {
-	m.ErrCalled <- true
-	return <-m.ErrOutput.Ret0
-}
-func (m *mockContext) Value(key interface{}) interface{} {
-	m.ValueCalled <- true
-	m.ValueInput.Key <- key
-	return <-m.ValueOutput.Ret0
+func (m *mockReceiver) Recv() ([]byte, error) {
+	m.RecvCalled <- true
+	return <-m.RecvOutput.Ret0, <-m.RecvOutput.Ret1
 }
 
 type mockBatchCounterChainer struct {

@@ -2,6 +2,7 @@ package dopplerproxy
 
 import (
 	"fmt"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -10,12 +11,12 @@ import (
 	"trafficcontroller/doppler_endpoint"
 	"trafficcontroller/grpcconnector"
 
-	"google.golang.org/grpc"
-
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 )
@@ -33,15 +34,16 @@ type Proxy struct {
 	logger         *gosteno.Logger
 }
 
+// TODO delete this (package too)
 type channelGroupConnector interface {
 	Connect(dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{})
 }
 
+// TODO export this
 type grpcConnector interface {
-	Stream(ctx context.Context, in *plumbing.StreamRequest, opts ...grpc.CallOption) (grpcconnector.Receiver, error)
-	Firehose(ctx context.Context, in *plumbing.FirehoseRequest, opts ...grpc.CallOption) (grpcconnector.Receiver, error)
-	ContainerMetrics(ctx context.Context, in *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error)
-	RecentLogs(ctx context.Context, in *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error)
+	Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) grpcconnector.Receiver
+	ContainerMetrics(ctx context.Context, appID string) [][]byte
+	RecentLogs(ctx context.Context, appID string) [][]byte
 }
 
 func NewDopplerProxy(
@@ -108,14 +110,10 @@ func (p *Proxy) serveFirehose(firehoseSubscriptionId string, writer http.Respons
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	client, err := p.grpcConn.Firehose(ctx, &plumbing.FirehoseRequest{
-		SubID: firehoseSubscriptionId,
+	client := p.grpcConn.Subscribe(ctx, &plumbing.SubscriptionRequest{
+		ShardID: firehoseSubscriptionId,
 	})
 
-	if err != nil {
-		writer.WriteHeader(http.StatusInternalServerError)
-		return
-	}
 	p.serveWS(FIREHOSE_ID, firehoseSubscriptionId, writer, request, client.Recv)
 }
 
@@ -149,46 +147,32 @@ func (p *Proxy) serveAppLogs(requestPath, appID string, writer http.ResponseWrit
 	defer cancel()
 
 	if requestPath == "recentlogs" {
-		resp, err := p.grpcConn.RecentLogs(ctx, &plumbing.RecentLogsRequest{
-			AppID: appID,
-		})
-		_ = err
+		resp := p.grpcConn.RecentLogs(ctx, appID)
 
-		p.serveMultiPartResponse(writer, resp.Payload)
+		p.serveMultiPartResponse(writer, resp)
 		return
 	}
 
 	if requestPath == "containermetrics" {
-		resp, err := p.grpcConn.ContainerMetrics(ctx, &plumbing.ContainerMetricsRequest{
-			AppID: appID,
-		})
+		resp := deDupe(p.grpcConn.ContainerMetrics(ctx, appID))
 
-		if err != nil {
-			p.logger.Errorf("Failed to get container metrics from doppler: %s", err)
-			writer.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		p.serveMultiPartResponse(writer, resp.Payload)
+		p.serveMultiPartResponse(writer, resp)
 		return
 	}
 
 	if requestPath == "stream" {
-		client, err := p.grpcConn.Stream(ctx, &plumbing.StreamRequest{
-			AppID: appID,
+		client := p.grpcConn.Subscribe(ctx, &plumbing.SubscriptionRequest{
+			Filter: &plumbing.Filter{
+				AppID: appID,
+			},
 		})
 
-		if err != nil {
-			p.logger.Errorf("Failed to stream from doppler: %s", err)
-			writer.WriteHeader(http.StatusInternalServerError)
-			return
-		}
 		p.serveWS(requestPath, appID, writer, request, client.Recv)
 		return
 	}
 }
 
-func (p *Proxy) serveWS(endpointType, streamID string, w http.ResponseWriter, r *http.Request, recv func() (*plumbing.Response, error)) {
+func (p *Proxy) serveWS(endpointType, streamID string, w http.ResponseWriter, r *http.Request, recv func() ([]byte, error)) {
 	dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint(endpointType, streamID, false)
 	data := make(chan []byte)
 	handler := dopplerEndpoint.HProvider(data, p.logger)
@@ -210,11 +194,12 @@ func (p *Proxy) serveWS(endpointType, streamID string, w http.ResponseWriter, r 
 
 			timer.Reset(5 * time.Second)
 			select {
-			case data <- resp.Payload:
+			case data <- resp:
 				if !timer.Stop() {
 					<-timer.C
 				}
 			case <-timer.C:
+				log.Print("Doppler Proxy: Slow Consumer")
 				p.logger.Error("Doppler Proxy: Slow Consumer")
 				return
 			}
@@ -297,4 +282,27 @@ func (p *Proxy) serveSetCookie(writer http.ResponseWriter, request *http.Request
 	writer.Header().Add("Access-Control-Allow-Origin", origin)
 
 	p.logger.Debugf("Proxy: Set cookie name '%s' for origin '%s' on domain '%s'", cookieName, origin, cookieDomain)
+}
+
+func deDupe(input [][]byte) [][]byte {
+	messages := make(map[int32]*events.Envelope)
+
+	for _, message := range input {
+		var envelope events.Envelope
+		proto.Unmarshal(message, &envelope)
+		cm := envelope.GetContainerMetric()
+
+		oldEnvelope, ok := messages[cm.GetInstanceIndex()]
+		if !ok || oldEnvelope.GetTimestamp() < envelope.GetTimestamp() {
+			messages[cm.GetInstanceIndex()] = &envelope
+		}
+	}
+
+	output := make([][]byte, 0, len(messages))
+
+	for _, envelope := range messages {
+		bytes, _ := proto.Marshal(envelope)
+		output = append(output, bytes)
+	}
+	return output
 }

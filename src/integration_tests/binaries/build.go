@@ -33,7 +33,7 @@ func (bp BuildPaths) SetEnv() {
 
 func Build() (BuildPaths, chan error) {
 	var bp BuildPaths
-	errors := make(chan error)
+	errors := make(chan error, 100)
 	defer close(errors)
 
 	if os.Getenv("SKIP_BUILD") != "" {

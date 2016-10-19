@@ -110,11 +110,18 @@ func setupEtcdAdapter() {
 }
 
 func setupDopplerInEtcd() {
+	adapter := etcdRunner.Adapter(nil)
+
 	node := storeadapter.StoreNode{
 		Key:   "/healthstatus/doppler/z1/doppler/0",
 		Value: []byte("localhost"),
 	}
-	adapter := etcdRunner.Adapter(nil)
+	adapter.Create(node)
+
+	node = storeadapter.StoreNode{
+		Key:   "/doppler/meta/z1/doppler/0",
+		Value: []byte(`{"version":1,"endpoints":["ws://localhost:1234"]}`),
+	}
 	adapter.Create(node)
 }
 

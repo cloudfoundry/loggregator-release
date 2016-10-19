@@ -73,7 +73,7 @@ var _ = Describe("Sending HTTP events through loggregator", func() {
 			handler.ServeHTTP(w, r)
 			Eventually(done).Should(BeClosed())
 
-			receivedEnvelope, err := helpers.FindMatchingEnvelopeById(id.String(), msgChan)
+			receivedEnvelope, err := helpers.FindMatchingEnvelopeByID(id.String(), msgChan)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(receivedEnvelope).NotTo(BeNil())
 			Expect(receivedEnvelope.GetEventType()).To(Equal(events.Envelope_HttpStartStop))

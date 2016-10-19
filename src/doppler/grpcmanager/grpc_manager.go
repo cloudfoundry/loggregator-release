@@ -15,7 +15,7 @@ import (
 
 // Registrar registers stream and firehose DataSetters to accept reads.
 type Registrar interface {
-	Register(ID string, isFirehose bool, setter DataSetter) func()
+	Register(req *plumbing.SubscriptionRequest, setter DataSetter) func()
 }
 
 // DataSetter accepts writes of marshalled data.
@@ -49,14 +49,9 @@ func New(registrar Registrar, dumper DataDumper) *GRPCManager {
 	}
 }
 
-// Stream is called by GRPC on application stream requests.
-func (m *GRPCManager) Stream(req *plumbing.StreamRequest, sender plumbing.Doppler_StreamServer) error {
-	return m.sendData(req.AppID, false, sender)
-}
-
-// Firehose is called by GRPC on firehose stream requests.
-func (m *GRPCManager) Firehose(req *plumbing.FirehoseRequest, sender plumbing.Doppler_FirehoseServer) error {
-	return m.sendData(req.SubID, true, sender)
+// Subscribe is called by GRPC on stream requests.
+func (m *GRPCManager) Subscribe(req *plumbing.SubscriptionRequest, sender plumbing.Doppler_SubscribeServer) error {
+	return m.sendData(req, sender)
 }
 
 // ContainerMetrics is called by GRPC on container metrics requests.
@@ -87,9 +82,9 @@ func marshalEnvelopes(envelopes []*events.Envelope) [][]byte {
 	return marshalled
 }
 
-func (m *GRPCManager) sendData(ID string, isFirehose bool, sender sender) error {
+func (m *GRPCManager) sendData(req *plumbing.SubscriptionRequest, sender sender) error {
 	d := diodes.NewOneToOne(1000, m)
-	cleanup := m.registrar.Register(ID, isFirehose, d)
+	cleanup := m.registrar.Register(req, d)
 	defer cleanup()
 
 	var done int64
