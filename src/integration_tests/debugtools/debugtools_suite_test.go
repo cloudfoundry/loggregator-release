@@ -1,6 +1,8 @@
 package debugtools_test
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"fmt"
@@ -26,9 +28,11 @@ var (
 	metronExecutablePath            string
 	dopplerExecutablePath           string
 	trafficControllerExecutablePath string
+	tmpDir                          string
 )
 
 var _ = BeforeSuite(func() {
+	var err error
 	etcdRunner = etcdstorerunner.NewETCDClusterRunner(49623, 1, nil)
 	etcdRunner.Start()
 	etcdAdapter = etcdRunner.Adapter(nil)
@@ -38,6 +42,11 @@ var _ = BeforeSuite(func() {
 
 	// Wait for etcd to startup
 	Eventually(func() bool { return checkEndpoint("49623", "v2/keys", http.StatusOK) }, 5).Should(Equal(true))
+
+	tmpDir, err = ioutil.TempDir("", "")
+	if err != nil {
+		panic(fmt.Errorf("Could not create temp dir for test run: %s", err))
+	}
 })
 
 var _ = BeforeEach(func() {
@@ -76,4 +85,5 @@ var _ = AfterSuite(func() {
 	etcdAdapter.Disconnect()
 	etcdRunner.Stop()
 	gexec.CleanupBuildArtifacts()
+	os.RemoveAll(tmpDir)
 })
