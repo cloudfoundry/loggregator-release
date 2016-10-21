@@ -41,7 +41,7 @@ type channelGroupConnector interface {
 
 // TODO export this
 type grpcConnector interface {
-	Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) grpcconnector.Receiver
+	Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) (grpcconnector.Receiver, error)
 	ContainerMetrics(ctx context.Context, appID string) [][]byte
 	RecentLogs(ctx context.Context, appID string) [][]byte
 }
@@ -110,9 +110,14 @@ func (p *Proxy) serveFirehose(firehoseSubscriptionId string, writer http.Respons
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	client := p.grpcConn.Subscribe(ctx, &plumbing.SubscriptionRequest{
+	client, err := p.grpcConn.Subscribe(ctx, &plumbing.SubscriptionRequest{
 		ShardID: firehoseSubscriptionId,
 	})
+	if err != nil {
+		writer.WriteHeader(http.StatusServiceUnavailable)
+		writer.Write([]byte(err.Error()))
+		return
+	}
 
 	p.serveWS(FIREHOSE_ID, firehoseSubscriptionId, writer, request, client.Recv)
 }
@@ -161,11 +166,16 @@ func (p *Proxy) serveAppLogs(requestPath, appID string, writer http.ResponseWrit
 	}
 
 	if requestPath == "stream" {
-		client := p.grpcConn.Subscribe(ctx, &plumbing.SubscriptionRequest{
+		client, err := p.grpcConn.Subscribe(ctx, &plumbing.SubscriptionRequest{
 			Filter: &plumbing.Filter{
 				AppID: appID,
 			},
 		})
+		if err != nil {
+			writer.WriteHeader(http.StatusServiceUnavailable)
+			writer.Write([]byte(err.Error()))
+			return
+		}
 
 		p.serveWS(requestPath, appID, writer, request, client.Recv)
 		return

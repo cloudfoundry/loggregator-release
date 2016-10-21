@@ -1,8 +1,8 @@
 package grpcconnector
 
 import (
-	"diodes"
 	"doppler/dopplerservice"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -10,11 +10,16 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+)
+
+const (
+	maxConnections = 2000
 )
 
 // Finder yields events that tell us what dopplers are available.
@@ -35,10 +40,11 @@ type Receiver interface {
 // GRPCConnector establishes GRPC connections to dopplers and allows calls to
 // Firehose, Stream, etc to be reduced down to a single Receiver.
 type GRPCConnector struct {
+	mu      sync.RWMutex
+	clients []*dopplerClientInfo
+
 	finder         Finder
-	mu             sync.Mutex
-	clients        []*dopplerClientInfo
-	consumerStates []*consumerState
+	consumerStates []unsafe.Pointer
 	bufferSize     int
 	maxMissed      int
 	batcher        MetaMetricBatcher
@@ -47,24 +53,25 @@ type GRPCConnector struct {
 // New creates a new GRPCConnector.
 func New(bufferSize, maxMissed int, f Finder, batcher MetaMetricBatcher) *GRPCConnector {
 	c := &GRPCConnector{
-		bufferSize: bufferSize,
-		maxMissed:  maxMissed,
-		finder:     f,
-		batcher:    batcher,
+		bufferSize:     bufferSize,
+		maxMissed:      maxMissed,
+		finder:         f,
+		batcher:        batcher,
+		consumerStates: make([]unsafe.Pointer, maxConnections),
 	}
 	go c.readFinder()
 	return c
 }
 
 // Subscribe returns a Receiver that yields all corresponding messages from Doppler
-func (c *GRPCConnector) Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) Receiver {
+func (c *GRPCConnector) Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) (Receiver, error) {
 	return c.handleRequest(ctx, req)
 }
 
 // ContainerMetrics returns the current container metrics for an app ID.
 func (c *GRPCConnector) ContainerMetrics(ctx context.Context, appID string) [][]byte {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	var resp [][]byte
 	for _, client := range c.clients {
@@ -84,8 +91,8 @@ func (c *GRPCConnector) ContainerMetrics(ctx context.Context, appID string) [][]
 
 // RecentLogs returns the current recent logs for an app ID.
 func (c *GRPCConnector) RecentLogs(ctx context.Context, appID string) [][]byte {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	var resp [][]byte
 	for _, client := range c.clients {
@@ -103,23 +110,27 @@ func (c *GRPCConnector) RecentLogs(ctx context.Context, appID string) [][]byte {
 	return resp
 }
 
-func (c *GRPCConnector) handleRequest(ctx context.Context, req *plumbing.SubscriptionRequest) Receiver {
+func (c *GRPCConnector) handleRequest(ctx context.Context, req *plumbing.SubscriptionRequest) (Receiver, error) {
 	cs := &consumerState{
+		data:      make(chan []byte),
+		errs:      make(chan error, 1),
 		ctx:       ctx,
 		req:       req,
 		maxMissed: c.maxMissed,
 		batcher:   c.batcher,
 	}
-	cs.data = diodes.NewManyToOne(c.bufferSize, cs)
 
-	c.addConsumerState(cs)
+	err := c.addConsumerState(cs)
+	if err != nil {
+		return nil, err
+	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	for _, client := range c.clients {
 		go consumeSubscription(cs, client, c.batcher)
 	}
-	return cs
+	return cs, nil
 }
 
 func (c *GRPCConnector) readFinder() {
@@ -154,8 +165,13 @@ func (c *GRPCConnector) handleFinderEvent(uris []string) {
 		}
 		c.clients = append(c.clients, client)
 
-		for _, cs := range c.consumerStates {
-			go consumeSubscription(cs, client, c.batcher)
+		for i := range c.consumerStates {
+			cs := atomic.LoadPointer(&c.consumerStates[i])
+			if cs != nil &&
+				(*consumerState)(cs) != nil &&
+				atomic.LoadInt64(&(*consumerState)(cs).dead) == 0 {
+				go consumeSubscription((*consumerState)(cs), client, c.batcher)
+			}
 		}
 	}
 
@@ -210,6 +226,7 @@ func consumeSubscription(cs *consumerState, dopplerClient *dopplerClientInfo, ba
 	go func() {
 		<-cs.ctx.Done()
 		atomic.StoreInt64(&ctxDone, 1)
+		atomic.StoreInt64(&cs.dead, 1)
 	}()
 
 	for {
@@ -241,6 +258,8 @@ type plumbingReceiver interface {
 }
 
 func readStream(s plumbingReceiver, cs *consumerState, batcher MetaMetricBatcher) error {
+	timer := time.NewTimer(time.Second)
+	timer.Stop()
 	for {
 		resp, err := s.Recv()
 		if err != nil {
@@ -251,14 +270,40 @@ func readStream(s plumbingReceiver, cs *consumerState, batcher MetaMetricBatcher
 			SetTag("protocol", "grpc").
 			Increment()
 
-		cs.data.Set(resp.Payload)
+		timer.Reset(time.Second)
+		select {
+		case cs.data <- resp.Payload:
+			if !timer.Stop() {
+				<-timer.C
+			}
+		case <-timer.C:
+			cs.batcher.BatchAddCounter("grpcConnector.slowConsumers", 1)
+			writeError(errors.New("GRPCConnector: slow consumer"), cs.errs)
+		}
 	}
 }
 
-func (c *GRPCConnector) addConsumerState(cs *consumerState) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.consumerStates = append(c.consumerStates, cs)
+func writeError(err error, c chan<- error) {
+	select {
+	case c <- err:
+	default:
+	}
+}
+
+func (c *GRPCConnector) addConsumerState(cs *consumerState) error {
+	for i := range c.consumerStates {
+		state := atomic.LoadPointer(&c.consumerStates[i])
+		if state == nil ||
+			(*consumerState)(state) == nil ||
+			atomic.LoadInt64(&(*consumerState)(state).dead) != 0 {
+
+			if atomic.CompareAndSwapPointer(&c.consumerStates[i], state, unsafe.Pointer(cs)) {
+				return nil
+			}
+		}
+	}
+
+	return fmt.Errorf("at connection limit: %d", maxConnections)
 }
 
 type dopplerClientInfo struct {
@@ -279,32 +324,22 @@ func (c dopplerClientInfo) close() {
 type consumerState struct {
 	ctx       context.Context
 	req       *plumbing.SubscriptionRequest
-	data      *diodes.ManyToOne
+	data      chan []byte
+	errs      chan error
 	missed    int
 	maxMissed int
 	batcher   MetaMetricBatcher
+	dead      int64
 }
 
 func (cs *consumerState) Recv() ([]byte, error) {
-	for {
-		if cs.missed > cs.maxMissed {
-			return nil, fmt.Errorf("slow of a consumer")
-		}
-
-		data, ok := cs.data.TryNext()
-		if ok {
-			if cs.missed < 0 {
-				cs.missed--
-			}
-			return data, nil
-		}
-
-		select {
-		case <-cs.ctx.Done():
-			return nil, cs.ctx.Err()
-		case <-time.After(10 * time.Millisecond):
-			continue
-		}
+	select {
+	case err := <-cs.errs:
+		return nil, err
+	case data := <-cs.data:
+		return data, nil
+	case <-cs.ctx.Done():
+		return nil, cs.ctx.Err()
 	}
 }
 
