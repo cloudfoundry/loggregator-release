@@ -224,6 +224,8 @@ func consumeSubscription(cs *consumerState, dopplerClient *dopplerClientInfo, ba
 		}
 	}()
 
+	delay := time.Millisecond
+
 	for {
 		dopplerDisconnect := atomic.LoadInt64(&dopplerClient.disconnect)
 		ctxDisconnect := atomic.LoadInt64(&cs.dead)
@@ -236,10 +238,14 @@ func consumeSubscription(cs *consumerState, dopplerClient *dopplerClientInfo, ba
 
 		if err != nil {
 			log.Printf("Unable to connect to doppler (%s): %s", dopplerClient.uri, err)
-			// TODO: Replace with exponential backoff.
-			time.Sleep(2 * time.Second)
+			time.Sleep(delay)
+			if delay < time.Minute {
+				delay *= 10
+			}
 			continue
 		}
+
+		delay = time.Millisecond
 
 		if err := readStream(dopplerStream, cs, batcher); err != nil {
 			log.Printf("Error while reading from stream (%s): %s", dopplerClient.uri, err)
