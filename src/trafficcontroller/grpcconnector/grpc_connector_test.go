@@ -53,7 +53,7 @@ var _ = Describe("GRPCConnector", func() {
 			},
 		}
 
-		connector = grpcconnector.New(5, 10, mockFinder, mockBatcher)
+		connector = grpcconnector.New(5, mockFinder, mockBatcher)
 
 		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
 		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
@@ -250,13 +250,15 @@ var _ = Describe("GRPCConnector", func() {
 				})
 
 				It("returns an error", func() {
-					r := connector.Subscribe(ctx, req)
+					r, _ := connector.Subscribe(ctx, req)
 					senderA := captureSubscribeSender(mockDopplerServerA)
 					for i := 0; i < 50; i++ {
 						senderA.Send(&plumbing.Response{
 							Payload: []byte(fmt.Sprintf("some-data-a-%d", i)),
 						})
 					}
+
+					time.Sleep(2 * time.Second)
 
 					f := func() error {
 						_, err := r.Recv()
@@ -265,9 +267,9 @@ var _ = Describe("GRPCConnector", func() {
 					Eventually(f).Should(Not(BeNil()))
 					Eventually(mockBatcher.BatchAddCounterInput).Should(
 						BeCalled(With(
-							"writers.shedEnvelopes",
-							BeNumerically("~", 50, 5)),
-						),
+							"grpcConnector.slowConsumers",
+							BeNumerically("==", 1),
+						)),
 					)
 				})
 			})
@@ -428,7 +430,7 @@ func readFromSubscription(ctx context.Context, req *plumbing.SubscriptionRequest
 	ready := make(chan struct{})
 
 	go func() {
-		r := connector.Subscribe(ctx, req)
+		r, _ := connector.Subscribe(ctx, req)
 		close(ready)
 		for {
 			d, e := r.Recv()

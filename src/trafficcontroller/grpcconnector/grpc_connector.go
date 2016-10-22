@@ -46,15 +46,13 @@ type GRPCConnector struct {
 	finder         Finder
 	consumerStates []unsafe.Pointer
 	bufferSize     int
-	maxMissed      int
 	batcher        MetaMetricBatcher
 }
 
 // New creates a new GRPCConnector.
-func New(bufferSize, maxMissed int, f Finder, batcher MetaMetricBatcher) *GRPCConnector {
+func New(bufferSize int, f Finder, batcher MetaMetricBatcher) *GRPCConnector {
 	c := &GRPCConnector{
 		bufferSize:     bufferSize,
-		maxMissed:      maxMissed,
 		finder:         f,
 		batcher:        batcher,
 		consumerStates: make([]unsafe.Pointer, maxConnections),
@@ -112,13 +110,17 @@ func (c *GRPCConnector) RecentLogs(ctx context.Context, appID string) [][]byte {
 
 func (c *GRPCConnector) handleRequest(ctx context.Context, req *plumbing.SubscriptionRequest) (Receiver, error) {
 	cs := &consumerState{
-		data:      make(chan []byte),
-		errs:      make(chan error, 1),
-		ctx:       ctx,
-		req:       req,
-		maxMissed: c.maxMissed,
-		batcher:   c.batcher,
+		data:    make(chan []byte, c.bufferSize),
+		errs:    make(chan error, 1),
+		ctx:     ctx,
+		req:     req,
+		batcher: c.batcher,
 	}
+
+	go func() {
+		<-cs.ctx.Done()
+		atomic.StoreInt64(&cs.dead, 1)
+	}()
 
 	err := c.addConsumerState(cs)
 	if err != nil {
@@ -222,16 +224,9 @@ func consumeSubscription(cs *consumerState, dopplerClient *dopplerClientInfo, ba
 		}
 	}()
 
-	var ctxDone int64
-	go func() {
-		<-cs.ctx.Done()
-		atomic.StoreInt64(&ctxDone, 1)
-		atomic.StoreInt64(&cs.dead, 1)
-	}()
-
 	for {
 		dopplerDisconnect := atomic.LoadInt64(&dopplerClient.disconnect)
-		ctxDisconnect := atomic.LoadInt64(&ctxDone)
+		ctxDisconnect := atomic.LoadInt64(&cs.dead)
 		if dopplerDisconnect != 0 || ctxDisconnect != 0 {
 			log.Printf("Disconnecting from stream (%s) (doppler.disconnect=%d) (ctx.disconnect=%d)", dopplerClient.uri, dopplerDisconnect, ctxDisconnect)
 			return
@@ -341,10 +336,4 @@ func (cs *consumerState) Recv() ([]byte, error) {
 	case <-cs.ctx.Done():
 		return nil, cs.ctx.Err()
 	}
-}
-
-func (cs *consumerState) Alert(missed int) {
-	cs.missed += missed
-	log.Printf("Dropped %d messages for %+v request", missed, cs.req)
-	cs.batcher.BatchAddCounter("writers.shedEnvelopes", uint64(missed))
 }
