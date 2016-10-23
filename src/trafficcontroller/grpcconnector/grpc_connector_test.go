@@ -38,6 +38,8 @@ var _ = Describe("GRPCConnector", func() {
 		mockDopplerServerB = newMockDopplerServer()
 		mockFinder = newMockFinder()
 
+		pool := grpcconnector.NewPool(2)
+
 		mockBatcher = newMockMetaMetricBatcher()
 		mockChainer = newMockBatchCounterChainer()
 
@@ -53,7 +55,7 @@ var _ = Describe("GRPCConnector", func() {
 			},
 		}
 
-		connector = grpcconnector.New(5, mockFinder, mockBatcher)
+		connector = grpcconnector.New(5, pool, mockFinder, mockBatcher)
 
 		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
 		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
@@ -452,6 +454,6 @@ func createGrpcURIs(listeners []net.Listener) []string {
 
 func captureSubscribeSender(doppler *mockDopplerServer) plumbing.Doppler_SubscribeServer {
 	var server plumbing.Doppler_SubscribeServer
-	Eventually(doppler.SubscribeInput.Stream, 5).Should(Receive(&server))
+	EventuallyWithOffset(1, doppler.SubscribeInput.Stream, 5).Should(Receive(&server))
 	return server
 }

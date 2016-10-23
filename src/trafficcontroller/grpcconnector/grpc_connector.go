@@ -4,7 +4,6 @@ import (
 	"doppler/dopplerservice"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"plumbing"
 	"sync"
@@ -15,12 +14,21 @@ import (
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 
 	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 )
 
 const (
 	maxConnections = 2000
 )
+
+// DopplerPool creates a pool of doppler gRPC connections
+type DopplerPool interface {
+	RegisterDoppler(addr string)
+	Subscribe(dopplerAddr string, ctx context.Context, req *plumbing.SubscriptionRequest) (plumbing.Doppler_SubscribeClient, error)
+	ContainerMetrics(dopplerAddr string, ctx context.Context, req *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error)
+	RecentLogs(dopplerAddr string, ctx context.Context, req *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error)
+
+	Close(dopplerAddr string)
+}
 
 // Finder yields events that tell us what dopplers are available.
 type Finder interface {
@@ -43,6 +51,7 @@ type GRPCConnector struct {
 	mu      sync.RWMutex
 	clients []*dopplerClientInfo
 
+	pool           DopplerPool
 	finder         Finder
 	consumerStates []unsafe.Pointer
 	bufferSize     int
@@ -50,9 +59,10 @@ type GRPCConnector struct {
 }
 
 // New creates a new GRPCConnector.
-func New(bufferSize int, f Finder, batcher MetaMetricBatcher) *GRPCConnector {
+func New(bufferSize int, pool DopplerPool, f Finder, batcher MetaMetricBatcher) *GRPCConnector {
 	c := &GRPCConnector{
 		bufferSize:     bufferSize,
+		pool:           pool,
 		finder:         f,
 		batcher:        batcher,
 		consumerStates: make([]unsafe.Pointer, maxConnections),
@@ -76,7 +86,7 @@ func (c *GRPCConnector) ContainerMetrics(ctx context.Context, appID string) [][]
 		req := &plumbing.ContainerMetricsRequest{
 			AppID: appID,
 		}
-		nextResp, err := client.client.ContainerMetrics(ctx, req)
+		nextResp, err := c.pool.ContainerMetrics(client.uri, ctx, req)
 		if err != nil {
 			log.Printf("error from doppler (%s) while fetching container metrics: %s", client.uri, err)
 			continue
@@ -97,7 +107,7 @@ func (c *GRPCConnector) RecentLogs(ctx context.Context, appID string) [][]byte {
 		req := &plumbing.RecentLogsRequest{
 			AppID: appID,
 		}
-		nextResp, err := client.client.RecentLogs(ctx, req)
+		nextResp, err := c.pool.RecentLogs(client.uri, ctx, req)
 		if err != nil {
 			log.Printf("error from doppler (%s) while fetching recent logs: %s", client.uri, err)
 			continue
@@ -130,7 +140,7 @@ func (c *GRPCConnector) handleRequest(ctx context.Context, req *plumbing.Subscri
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	for _, client := range c.clients {
-		go consumeSubscription(cs, client, c.batcher)
+		go c.consumeSubscription(cs, client, c.batcher)
 	}
 	return cs, nil
 }
@@ -151,20 +161,11 @@ func (c *GRPCConnector) handleFinderEvent(uris []string) {
 
 	for _, addr := range newURIs {
 		log.Printf("Adding doppler %s", addr)
-		conn, err := grpc.Dial(addr, grpc.WithInsecure())
-		if err != nil {
-			// TODO: We don't yet understand how this could happen, we should.
-			// TODO: Replace with exponential backoff.
-			log.Printf("Unable to Dial doppler %s: %s", addr, err)
-			time.Sleep(5 * time.Second)
-			continue
+		c.pool.RegisterDoppler(addr)
+		client := &dopplerClientInfo{
+			uri: addr,
 		}
 
-		client := &dopplerClientInfo{
-			client: plumbing.NewDopplerClient(conn),
-			uri:    addr,
-			closer: conn,
-		}
 		c.clients = append(c.clients, client)
 
 		for i := range c.consumerStates {
@@ -172,7 +173,7 @@ func (c *GRPCConnector) handleFinderEvent(uris []string) {
 			if cs != nil &&
 				(*consumerState)(cs) != nil &&
 				atomic.LoadInt64(&(*consumerState)(cs).dead) == 0 {
-				go consumeSubscription((*consumerState)(cs), client, c.batcher)
+				go c.consumeSubscription((*consumerState)(cs), client, c.batcher)
 			}
 		}
 	}
@@ -187,7 +188,8 @@ func (c *GRPCConnector) handleFinderEvent(uris []string) {
 		atomic.StoreInt64(&deadClient.disconnect, 1)
 
 		if atomic.LoadInt64(&deadClient.refCount) == 0 {
-			deadClient.close()
+			log.Printf("closing doppler connection %s...", deadClient.uri)
+			c.pool.Close(deadClient.uri)
 		}
 	}
 }
@@ -215,12 +217,13 @@ func (c *GRPCConnector) subtractClient(remaining []*dopplerClientInfo, uri strin
 	return remaining, false
 }
 
-func consumeSubscription(cs *consumerState, dopplerClient *dopplerClientInfo, batcher MetaMetricBatcher) {
+func (c *GRPCConnector) consumeSubscription(cs *consumerState, dopplerClient *dopplerClientInfo, batcher MetaMetricBatcher) {
 	atomic.AddInt64(&dopplerClient.refCount, 1)
 	defer func() {
 		if atomic.AddInt64(&dopplerClient.refCount, -1) <= 0 &&
 			atomic.LoadInt64(&dopplerClient.disconnect) != 0 {
-			dopplerClient.close()
+			log.Printf("closing doppler connection %s...", dopplerClient.uri)
+			c.pool.Close(dopplerClient.uri)
 		}
 	}()
 
@@ -234,7 +237,7 @@ func consumeSubscription(cs *consumerState, dopplerClient *dopplerClientInfo, ba
 			return
 		}
 
-		dopplerStream, err := dopplerClient.client.Subscribe(cs.ctx, cs.req)
+		dopplerStream, err := c.pool.Subscribe(dopplerClient.uri, cs.ctx, cs.req)
 
 		if err != nil {
 			log.Printf("Unable to connect to doppler (%s): %s", dopplerClient.uri, err)
@@ -308,18 +311,11 @@ func (c *GRPCConnector) addConsumerState(cs *consumerState) error {
 }
 
 type dopplerClientInfo struct {
-	client     plumbing.DopplerClient
-	closer     io.Closer
+	//client     plumbing.DopplerClient
+	//closer     io.Closer
 	uri        string
 	disconnect int64
 	refCount   int64
-}
-
-func (c dopplerClientInfo) close() {
-	log.Printf("Closing doppler (%s) connection...", c.uri)
-	if err := c.closer.Close(); err != nil {
-		log.Printf("Error closing doppler (%s): %s", c.uri, err)
-	}
 }
 
 type consumerState struct {

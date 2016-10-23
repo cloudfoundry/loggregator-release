@@ -125,7 +125,8 @@ func main() {
 		accessMiddleware = middleware.Access(accessLogger, ipAddress, config.OutgoingDropsondePort, log)
 	}
 
-	grpcConnector := grpcconnector.New(1000, finder, batcher)
+	pool := grpcconnector.NewPool(20)
+	grpcConnector := grpcconnector.New(1000, pool, finder, batcher)
 
 	dopplerCgc := channel_group_connector.NewChannelGroupConnector(finder, newDropsondeWebsocketListener, batcher, log)
 	dopplerHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, dopplerCgc, grpcConnector, "doppler."+config.SystemDomain, log))
