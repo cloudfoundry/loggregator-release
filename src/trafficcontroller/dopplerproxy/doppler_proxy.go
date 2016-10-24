@@ -151,21 +151,16 @@ func (p *Proxy) serveAppLogs(requestPath, appID string, writer http.ResponseWrit
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if requestPath == "recentlogs" {
+	switch requestPath {
+	case "recentlogs":
 		resp := p.grpcConn.RecentLogs(ctx, appID)
-
 		p.serveMultiPartResponse(writer, resp)
 		return
-	}
-
-	if requestPath == "containermetrics" {
+	case "containermetrics":
 		resp := deDupe(p.grpcConn.ContainerMetrics(ctx, appID))
-
 		p.serveMultiPartResponse(writer, resp)
 		return
-	}
-
-	if requestPath == "stream" {
+	case "stream":
 		client, err := p.grpcConn.Subscribe(ctx, &plumbing.SubscriptionRequest{
 			Filter: &plumbing.Filter{
 				AppID: appID,
