@@ -69,6 +69,7 @@ var _ = Describe("ServeHTTP()", func() {
 
 	JustBeforeEach(func() {
 		close(mockGrpcConnector.SubscribeOutput.Ret0)
+		close(mockGrpcConnector.SubscribeOutput.Ret1)
 
 		close(mockDopplerStreamClient.RecvOutput.Ret0)
 		close(mockDopplerStreamClient.RecvOutput.Ret1)

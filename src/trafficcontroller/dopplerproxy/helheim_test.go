@@ -14,30 +14,6 @@ import (
 	"golang.org/x/net/context"
 )
 
-type mockChannelGroupConnector struct {
-	ConnectCalled chan bool
-	ConnectInput  struct {
-		DopplerEndpoint chan doppler_endpoint.DopplerEndpoint
-		MessagesChan    chan (chan<- []byte)
-		StopChan        chan (<-chan struct{})
-	}
-}
-
-func newMockChannelGroupConnector() *mockChannelGroupConnector {
-	m := &mockChannelGroupConnector{}
-	m.ConnectCalled = make(chan bool, 100)
-	m.ConnectInput.DopplerEndpoint = make(chan doppler_endpoint.DopplerEndpoint, 100)
-	m.ConnectInput.MessagesChan = make(chan (chan<- []byte), 100)
-	m.ConnectInput.StopChan = make(chan (<-chan struct{}), 100)
-	return m
-}
-func (m *mockChannelGroupConnector) Connect(dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{}) {
-	m.ConnectCalled <- true
-	m.ConnectInput.DopplerEndpoint <- dopplerEndpoint
-	m.ConnectInput.MessagesChan <- messagesChan
-	m.ConnectInput.StopChan <- stopChan
-}
-
 type mockGrpcConnector struct {
 	SubscribeCalled chan bool
 	SubscribeInput  struct {
@@ -46,6 +22,7 @@ type mockGrpcConnector struct {
 	}
 	SubscribeOutput struct {
 		Ret0 chan grpcconnector.Receiver
+		Ret1 chan error
 	}
 	ContainerMetricsCalled chan bool
 	ContainerMetricsInput  struct {
@@ -71,6 +48,7 @@ func newMockGrpcConnector() *mockGrpcConnector {
 	m.SubscribeInput.Ctx = make(chan context.Context, 100)
 	m.SubscribeInput.Req = make(chan *plumbing.SubscriptionRequest, 100)
 	m.SubscribeOutput.Ret0 = make(chan grpcconnector.Receiver, 100)
+	m.SubscribeOutput.Ret1 = make(chan error, 100)
 	m.ContainerMetricsCalled = make(chan bool, 100)
 	m.ContainerMetricsInput.Ctx = make(chan context.Context, 100)
 	m.ContainerMetricsInput.AppID = make(chan string, 100)
@@ -81,11 +59,11 @@ func newMockGrpcConnector() *mockGrpcConnector {
 	m.RecentLogsOutput.Ret0 = make(chan [][]byte, 100)
 	return m
 }
-func (m *mockGrpcConnector) Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) grpcconnector.Receiver {
+func (m *mockGrpcConnector) Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) (grpcconnector.Receiver, error) {
 	m.SubscribeCalled <- true
 	m.SubscribeInput.Ctx <- ctx
 	m.SubscribeInput.Req <- req
-	return <-m.SubscribeOutput.Ret0
+	return <-m.SubscribeOutput.Ret0, <-m.SubscribeOutput.Ret1
 }
 func (m *mockGrpcConnector) ContainerMetrics(ctx context.Context, appID string) [][]byte {
 	m.ContainerMetricsCalled <- true
@@ -98,6 +76,50 @@ func (m *mockGrpcConnector) RecentLogs(ctx context.Context, appID string) [][]by
 	m.RecentLogsInput.Ctx <- ctx
 	m.RecentLogsInput.AppID <- appID
 	return <-m.RecentLogsOutput.Ret0
+}
+
+type mockChannelGroupConnector struct {
+	ConnectCalled chan bool
+	ConnectInput  struct {
+		DopplerEndpoint chan doppler_endpoint.DopplerEndpoint
+		MessagesChan    chan (chan<- []byte)
+		StopChan        chan (<-chan struct{})
+	}
+}
+
+func newMockChannelGroupConnector() *mockChannelGroupConnector {
+	m := &mockChannelGroupConnector{}
+	m.ConnectCalled = make(chan bool, 100)
+	m.ConnectInput.DopplerEndpoint = make(chan doppler_endpoint.DopplerEndpoint, 100)
+	m.ConnectInput.MessagesChan = make(chan (chan<- []byte), 100)
+	m.ConnectInput.StopChan = make(chan (<-chan struct{}), 100)
+	return m
+}
+func (m *mockChannelGroupConnector) Connect(dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{}) {
+	m.ConnectCalled <- true
+	m.ConnectInput.DopplerEndpoint <- dopplerEndpoint
+	m.ConnectInput.MessagesChan <- messagesChan
+	m.ConnectInput.StopChan <- stopChan
+}
+
+type mockReceiver struct {
+	RecvCalled chan bool
+	RecvOutput struct {
+		Ret0 chan []byte
+		Ret1 chan error
+	}
+}
+
+func newMockReceiver() *mockReceiver {
+	m := &mockReceiver{}
+	m.RecvCalled = make(chan bool, 100)
+	m.RecvOutput.Ret0 = make(chan []byte, 100)
+	m.RecvOutput.Ret1 = make(chan error, 100)
+	return m
+}
+func (m *mockReceiver) Recv() ([]byte, error) {
+	m.RecvCalled <- true
+	return <-m.RecvOutput.Ret0, <-m.RecvOutput.Ret1
 }
 
 type mockContext struct {
@@ -153,24 +175,4 @@ func (m *mockContext) Value(key interface{}) interface{} {
 	m.ValueCalled <- true
 	m.ValueInput.Key <- key
 	return <-m.ValueOutput.Ret0
-}
-
-type mockReceiver struct {
-	RecvCalled chan bool
-	RecvOutput struct {
-		Ret0 chan []byte
-		Ret1 chan error
-	}
-}
-
-func newMockReceiver() *mockReceiver {
-	m := &mockReceiver{}
-	m.RecvCalled = make(chan bool, 100)
-	m.RecvOutput.Ret0 = make(chan []byte, 100)
-	m.RecvOutput.Ret1 = make(chan error, 100)
-	return m
-}
-func (m *mockReceiver) Recv() ([]byte, error) {
-	m.RecvCalled <- true
-	return <-m.RecvOutput.Ret0, <-m.RecvOutput.Ret1
 }
