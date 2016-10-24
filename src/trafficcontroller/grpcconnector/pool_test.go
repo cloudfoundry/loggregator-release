@@ -82,8 +82,7 @@ var _ = Describe("Pool", func() {
 				pool.Close(lis1.Addr().String())
 				lis1.Close()
 
-				_, ac := accepter(startListener(lis1.Addr().String()))
-				Consistently(ac).Should(HaveLen(0))
+				Consistently(accepter1).Should(HaveLen(0))
 			})
 		})
 	})
