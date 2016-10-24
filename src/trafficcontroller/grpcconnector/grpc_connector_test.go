@@ -303,11 +303,12 @@ var _ = Describe("GRPCConnector", func() {
 				})
 			})
 
-			Context("when an active doppler closes after reading", func() {
+			XContext("when an active doppler closes after reading", func() {
 				var (
 					event   dopplerservice.Event
 					data    <-chan []byte
 					errs    <-chan error
+					ready   <-chan struct{}
 					senderA plumbing.Doppler_SubscribeServer
 				)
 
@@ -318,8 +319,10 @@ var _ = Describe("GRPCConnector", func() {
 
 					mockFinder.NextOutput.Ret0 <- event
 
-					data, errs, _ = readFromSubscription(ctx, req, connector)
-					Eventually(mockDopplerServerB.SubscribeCalled).Should(HaveLen(1))
+					data, errs, ready = readFromSubscription(ctx, req, connector)
+					Eventually(ready).Should(BeClosed())
+					Eventually(mockDopplerServerA.SubscribeCalled).Should(Receive())
+					Eventually(mockDopplerServerB.SubscribeCalled).Should(Receive())
 
 					senderA = captureSubscribeSender(mockDopplerServerA)
 					senderA.Send(&plumbing.Response{
@@ -328,12 +331,13 @@ var _ = Describe("GRPCConnector", func() {
 
 					Eventually(data).Should(Receive(Equal([]byte("test-payload-1"))))
 
-					listeners[0].Close()
-					grpcServers[0].Stop()
-					listeners[0], grpcServers[0] = startGRPCServer(mockDopplerServerA, listeners[0].Addr().String())
 				})
 
 				It("attempts to reconnect", func() {
+					listeners[0].Close()
+					grpcServers[0].Stop()
+					listeners[0], grpcServers[0] = startGRPCServer(mockDopplerServerA, listeners[0].Addr().String())
+
 					senderA = captureSubscribeSender(mockDopplerServerA)
 					senderA.Send(&plumbing.Response{
 						Payload: []byte("test-payload-2"),
