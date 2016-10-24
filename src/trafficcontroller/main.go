@@ -16,12 +16,10 @@ import (
 	"time"
 	"trafficcontroller/accesslogger"
 	"trafficcontroller/authorization"
-	"trafficcontroller/channel_group_connector"
 	"trafficcontroller/config"
 	"trafficcontroller/dopplerproxy"
 	"trafficcontroller/grpcconnector"
 	"trafficcontroller/httpsetup"
-	"trafficcontroller/listener"
 	"trafficcontroller/middleware"
 	"trafficcontroller/uaa_client"
 
@@ -128,8 +126,7 @@ func main() {
 	pool := grpcconnector.NewPool(20)
 	grpcConnector := grpcconnector.New(1000, pool, finder, batcher)
 
-	dopplerCgc := channel_group_connector.NewChannelGroupConnector(finder, newDropsondeWebsocketListener, batcher, log)
-	dopplerHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, dopplerCgc, grpcConnector, "doppler."+config.SystemDomain, log))
+	dopplerHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, grpcConnector, "doppler."+config.SystemDomain, log))
 	if accessMiddleware != nil {
 		dopplerHandler = accessMiddleware(dopplerHandler)
 	}
@@ -216,8 +213,4 @@ func startOutgoingProxy(host string, proxy http.Handler) {
 			panic(err)
 		}
 	}()
-}
-
-func newDropsondeWebsocketListener(timeout time.Duration, batcher listener.Batcher, logger *gosteno.Logger) listener.Listener {
-	return listener.NewWebsocket(timeout, handshakeTimeout, batcher, logger)
 }

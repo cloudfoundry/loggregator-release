@@ -28,15 +28,9 @@ type Proxy struct {
 
 	logAuthorize   authorization.LogAccessAuthorizer
 	adminAuthorize authorization.AdminAccessAuthorizer
-	connector      channelGroupConnector
 	grpcConn       grpcConnector
 	cookieDomain   string
 	logger         *gosteno.Logger
-}
-
-// TODO delete this (package too)
-type channelGroupConnector interface {
-	Connect(dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{})
 }
 
 // TODO export this
@@ -49,7 +43,6 @@ type grpcConnector interface {
 func NewDopplerProxy(
 	logAuthorize authorization.LogAccessAuthorizer,
 	adminAuthorizer authorization.AdminAccessAuthorizer,
-	connector channelGroupConnector,
 	grpcConn grpcConnector,
 	cookieDomain string,
 	logger *gosteno.Logger,
@@ -57,7 +50,6 @@ func NewDopplerProxy(
 	p := &Proxy{
 		logAuthorize:   logAuthorize,
 		adminAuthorize: adminAuthorizer,
-		connector:      connector,
 		grpcConn:       grpcConn,
 		cookieDomain:   cookieDomain,
 		logger:         logger,
@@ -83,12 +75,12 @@ func (p *Proxy) stream(w http.ResponseWriter, r *http.Request) {
 
 func (p *Proxy) recentlogs(w http.ResponseWriter, r *http.Request) {
 	p.serveAppLogs("recentlogs", mux.Vars(r)["appID"], w, r)
-	sendMetric("recentlogs", time.Now())
+	sendLatencyMetric("recentlogs", time.Now())
 }
 
 func (p *Proxy) containermetrics(w http.ResponseWriter, r *http.Request) {
 	p.serveAppLogs("containermetrics", mux.Vars(r)["appID"], w, r)
-	sendMetric("containermetrics", time.Now())
+	sendLatencyMetric("containermetrics", time.Now())
 }
 
 func (p *Proxy) setcookie(w http.ResponseWriter, r *http.Request) {
@@ -213,17 +205,6 @@ func (p *Proxy) serveWS(endpointType, streamID string, w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
-func (p *Proxy) serveWithDoppler(writer http.ResponseWriter, request *http.Request, dopplerEndpoint doppler_endpoint.DopplerEndpoint) {
-	messagesChan := make(chan []byte, 100)
-	stopChan := make(chan struct{})
-	defer close(stopChan)
-
-	go p.connector.Connect(dopplerEndpoint, messagesChan, stopChan)
-
-	handler := dopplerEndpoint.HProvider(messagesChan, p.logger)
-	handler.ServeHTTP(writer, request)
-}
-
 func (p *Proxy) serveMultiPartResponse(rw http.ResponseWriter, messages [][]byte) {
 	mp := multipart.NewWriter(rw)
 	defer mp.Close()
@@ -241,7 +222,7 @@ func (p *Proxy) serveMultiPartResponse(rw http.ResponseWriter, messages [][]byte
 	}
 }
 
-func sendMetric(metricName string, startTime time.Time) {
+func sendLatencyMetric(metricName string, startTime time.Time) {
 	elapsedMillisecond := float64(time.Since(startTime)) / float64(time.Millisecond)
 	metrics.SendValue(fmt.Sprintf("dopplerProxy.%sLatency", metricName), elapsedMillisecond, "ms")
 }

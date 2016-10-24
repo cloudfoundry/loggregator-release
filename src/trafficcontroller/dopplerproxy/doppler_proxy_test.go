@@ -13,7 +13,6 @@ import (
 	"plumbing"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 	"trafficcontroller/doppler_endpoint"
 	"trafficcontroller/dopplerproxy"
@@ -34,11 +33,10 @@ import (
 
 var _ = Describe("ServeHTTP()", func() {
 	var (
-		auth                  LogAuthorizer
-		adminAuth             AdminAuthorizer
-		proxy                 *dopplerproxy.Proxy
-		recorder              *httptest.ResponseRecorder
-		channelGroupConnector *fakeChannelGroupConnector
+		auth      LogAuthorizer
+		adminAuth AdminAuthorizer
+		proxy     *dopplerproxy.Proxy
+		recorder  *httptest.ResponseRecorder
 
 		mockGrpcConnector       *mockGrpcConnector
 		mockDopplerStreamClient *mockReceiver
@@ -53,12 +51,9 @@ var _ = Describe("ServeHTTP()", func() {
 
 		mockGrpcConnector.SubscribeOutput.Ret0 <- mockDopplerStreamClient
 
-		channelGroupConnector = &fakeChannelGroupConnector{messages: make(chan []byte, 10)}
-
 		proxy = dopplerproxy.NewDopplerProxy(
 			auth.Authorize,
 			adminAuth.Authorize,
-			channelGroupConnector,
 			mockGrpcConnector,
 			"cookieDomain",
 			loggertesthelper.Logger(),
@@ -76,7 +71,6 @@ var _ = Describe("ServeHTTP()", func() {
 	})
 
 	Context("App Logs", func() {
-
 		Describe("TrafficController emitted request metrics", func() {
 			var fakeMetricSender *fake.FakeMetricSender
 
@@ -97,21 +91,20 @@ var _ = Describe("ServeHTTP()", func() {
 
 			}
 
-			It("Should emit value metric for recentlogs request", func() {
+			It("Should emit latency value metric for recentlogs request", func() {
 				mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
 				req, _ := http.NewRequest("GET", "/apps/appID123/recentlogs", nil)
 				requestAndAssert(req, "dopplerProxy.recentlogsLatency")
 			})
 
-			It("Should emit value metric for containermetrics request", func() {
+			It("Should emit latency value metric for containermetrics request", func() {
 				mockGrpcConnector.ContainerMetricsOutput.Ret0 <- nil
 
 				req, _ := http.NewRequest("GET", "/apps/appID123/containermetrics", nil)
 				requestAndAssert(req, "dopplerProxy.containermetricsLatency")
 			})
 
-			It("Should Not emit any metrics for stream request", func() {
-				close(channelGroupConnector.messages)
+			It("Should not emit any metrics for stream request", func() {
 				req, _ := http.NewRequest("GET", "/apps/appID123/stream", nil)
 				proxy.ServeHTTP(recorder, req)
 				metric := fakeMetricSender.GetValue("dopplerProxy.streamLatency")
@@ -121,22 +114,13 @@ var _ = Describe("ServeHTTP()", func() {
 			})
 		})
 
-		Context("if the path does not end with /stream or /recentlogs", func() {
+		Context("if the path is not valid", func() {
 			It("returns a 404", func() {
 				req, _ := http.NewRequest("GET", "/apps/abc123/bar", nil)
 
 				proxy.ServeHTTP(recorder, req)
 
 				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-			})
-
-			It("It does not attempt to connect to doppler", func() {
-				req, _ := http.NewRequest("GET", "/apps/abc123/bar", nil)
-
-				proxy.ServeHTTP(recorder, req)
-				Consistently(channelGroupConnector.getPath).Should(Equal(""))
-				Consistently(channelGroupConnector.getStreamId).Should(Equal(""))
-				Consistently(channelGroupConnector.getReconnect).Should(BeFalse())
 			})
 		})
 
@@ -238,26 +222,6 @@ var _ = Describe("ServeHTTP()", func() {
 					},
 				},
 			)))
-		})
-
-		It("connects to doppler servers without reconnecting for recentlogs", func() {
-			mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
-			req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs", nil)
-			req.Header.Add("Authorization", "token")
-
-			proxy.ServeHTTP(recorder, req)
-
-			Eventually(channelGroupConnector.getReconnect).Should(BeFalse())
-		})
-
-		It("connects to doppler servers without reconnecting for containermetrics", func() {
-			mockGrpcConnector.ContainerMetricsOutput.Ret0 <- nil
-			req, _ := http.NewRequest("GET", "/apps/abc123/containermetrics", nil)
-			req.Header.Add("Authorization", "token")
-
-			proxy.ServeHTTP(recorder, req)
-
-			Eventually(channelGroupConnector.getReconnect).Should(BeFalse())
 		})
 
 		It("closes the context when the client closes its connection", func() {
@@ -523,58 +487,6 @@ var _ = Describe("DefaultHandlerProvider", func() {
 		Expect(target).To(BeAssignableToTypeOf(wsHandler))
 	})
 })
-
-type fakeChannelGroupConnector struct {
-	messages        chan []byte
-	dopplerEndpoint doppler_endpoint.DopplerEndpoint
-	stopped         bool
-	sync.Mutex
-}
-
-func (f *fakeChannelGroupConnector) Connect(dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{}) {
-
-	go func() {
-		for m := range f.messages {
-			messagesChan <- m
-		}
-		close(messagesChan)
-	}()
-
-	go func() {
-		<-stopChan
-		f.Lock()
-		defer f.Unlock()
-		f.stopped = true
-	}()
-
-	f.Lock()
-	defer f.Unlock()
-	f.dopplerEndpoint = dopplerEndpoint
-}
-
-func (f *fakeChannelGroupConnector) getPath() string {
-	f.Lock()
-	defer f.Unlock()
-	return f.dopplerEndpoint.Endpoint
-}
-
-func (f *fakeChannelGroupConnector) getStreamId() string {
-	f.Lock()
-	defer f.Unlock()
-	return f.dopplerEndpoint.StreamId
-}
-
-func (f *fakeChannelGroupConnector) getReconnect() bool {
-	f.Lock()
-	defer f.Unlock()
-	return f.dopplerEndpoint.Reconnect
-}
-
-func (f *fakeChannelGroupConnector) Stopped() bool {
-	f.Lock()
-	defer f.Unlock()
-	return f.stopped
-}
 
 func buildContainerMetric(appID string, t time.Time) (*events.Envelope, []byte) {
 	envelope := &events.Envelope{

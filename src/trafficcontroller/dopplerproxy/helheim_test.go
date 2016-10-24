@@ -8,7 +8,6 @@ package dopplerproxy_test
 import (
 	"plumbing"
 	"time"
-	"trafficcontroller/doppler_endpoint"
 	"trafficcontroller/grpcconnector"
 
 	"golang.org/x/net/context"
@@ -76,30 +75,6 @@ func (m *mockGrpcConnector) RecentLogs(ctx context.Context, appID string) [][]by
 	m.RecentLogsInput.Ctx <- ctx
 	m.RecentLogsInput.AppID <- appID
 	return <-m.RecentLogsOutput.Ret0
-}
-
-type mockChannelGroupConnector struct {
-	ConnectCalled chan bool
-	ConnectInput  struct {
-		DopplerEndpoint chan doppler_endpoint.DopplerEndpoint
-		MessagesChan    chan (chan<- []byte)
-		StopChan        chan (<-chan struct{})
-	}
-}
-
-func newMockChannelGroupConnector() *mockChannelGroupConnector {
-	m := &mockChannelGroupConnector{}
-	m.ConnectCalled = make(chan bool, 100)
-	m.ConnectInput.DopplerEndpoint = make(chan doppler_endpoint.DopplerEndpoint, 100)
-	m.ConnectInput.MessagesChan = make(chan (chan<- []byte), 100)
-	m.ConnectInput.StopChan = make(chan (<-chan struct{}), 100)
-	return m
-}
-func (m *mockChannelGroupConnector) Connect(dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{}) {
-	m.ConnectCalled <- true
-	m.ConnectInput.DopplerEndpoint <- dopplerEndpoint
-	m.ConnectInput.MessagesChan <- messagesChan
-	m.ConnectInput.StopChan <- stopChan
 }
 
 type mockReceiver struct {
