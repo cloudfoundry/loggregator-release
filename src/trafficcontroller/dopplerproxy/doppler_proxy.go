@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"plumbing"
+	"sync/atomic"
 	"trafficcontroller/authorization"
 	"trafficcontroller/doppler_endpoint"
 	"trafficcontroller/grpcconnector"
@@ -21,7 +22,10 @@ import (
 	"golang.org/x/net/context"
 )
 
-const FIREHOSE_ID = "firehose"
+const (
+	FIREHOSE_ID     = "firehose"
+	metricsInterval = time.Second
+)
 
 type Proxy struct {
 	mux.Router
@@ -31,6 +35,8 @@ type Proxy struct {
 	grpcConn       grpcConnector
 	cookieDomain   string
 	logger         *gosteno.Logger
+	numFirehoses   int64
+	numAppStreams  int64
 }
 
 // TODO export this
@@ -61,15 +67,31 @@ func NewDopplerProxy(
 	p.HandleFunc("/apps/{appID}/containermetrics", p.containermetrics)
 	p.HandleFunc("/firehose/{subID}", p.firehose)
 	p.HandleFunc("/set-cookie", p.setcookie)
+
+	go p.emitMetrics()
+
 	return p
 }
 
+func (p *Proxy) emitMetrics() {
+	for range time.Tick(metricsInterval) {
+		metrics.SendValue("dopplerProxy.firehoses", float64(atomic.LoadInt64(&p.numFirehoses)), "")
+		metrics.SendValue("dopplerProxy.appStreams", float64(atomic.LoadInt64(&p.numAppStreams)), "")
+	}
+}
+
 func (p *Proxy) firehose(w http.ResponseWriter, r *http.Request) {
+	atomic.AddInt64(&p.numFirehoses, 1)
+	defer atomic.AddInt64(&p.numFirehoses, -1)
+
 	subID := mux.Vars(r)["subID"]
 	p.serveFirehose(subID, w, r)
 }
 
 func (p *Proxy) stream(w http.ResponseWriter, r *http.Request) {
+	atomic.AddInt64(&p.numAppStreams, 1)
+	defer atomic.AddInt64(&p.numAppStreams, -1)
+
 	p.serveAppLogs("stream", mux.Vars(r)["appID"], w, r)
 }
 
@@ -196,8 +218,8 @@ func (p *Proxy) serveWS(endpointType, streamID string, w http.ResponseWriter, r 
 					<-timer.C
 				}
 			case <-timer.C:
+				metrics.SendValue("dopplerProxy.slowConsumer", 1, "consumer")
 				log.Print("Doppler Proxy: Slow Consumer")
-				p.logger.Error("Doppler Proxy: Slow Consumer")
 				return
 			}
 		}

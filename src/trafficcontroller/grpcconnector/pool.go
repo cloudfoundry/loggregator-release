@@ -90,10 +90,10 @@ func (p *Pool) RecentLogs(dopplerAddr string, ctx context.Context, req *plumbing
 }
 
 func (p *Pool) Close(dopplerAddr string) {
-	p.mu.RLock()
+	p.mu.Lock()
 	clients := p.dopplers[dopplerAddr]
 	delete(p.dopplers, dopplerAddr)
-	p.mu.RUnlock()
+	p.mu.Unlock()
 
 	for i := range clients {
 		clt := atomic.LoadPointer(&clients[i])

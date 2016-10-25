@@ -91,20 +91,20 @@ var _ = Describe("ServeHTTP()", func() {
 
 			}
 
-			It("Should emit latency value metric for recentlogs request", func() {
+			It("emits latency value metric for recentlogs request", func() {
 				mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
 				req, _ := http.NewRequest("GET", "/apps/appID123/recentlogs", nil)
 				requestAndAssert(req, "dopplerProxy.recentlogsLatency")
 			})
 
-			It("Should emit latency value metric for containermetrics request", func() {
+			It("emits latency value metric for containermetrics request", func() {
 				mockGrpcConnector.ContainerMetricsOutput.Ret0 <- nil
 
 				req, _ := http.NewRequest("GET", "/apps/appID123/containermetrics", nil)
 				requestAndAssert(req, "dopplerProxy.containermetricsLatency")
 			})
 
-			It("Should not emit any metrics for stream request", func() {
+			It("does not emit any latency metrics for stream request", func() {
 				req, _ := http.NewRequest("GET", "/apps/appID123/stream", nil)
 				proxy.ServeHTTP(recorder, req)
 				metric := fakeMetricSender.GetValue("dopplerProxy.streamLatency")
@@ -456,6 +456,44 @@ var _ = Describe("ServeHTTP()", func() {
 						return fmt.Sprintf("%s", err)
 					}
 					Eventually(f).Should(ContainSubstring("websocket: close 1000"))
+				})
+			})
+
+			Describe("Emitted Metrics", func() {
+				var fakeMetricSender *fake.FakeMetricSender
+
+				BeforeEach(func() {
+					fakeMetricSender = fake.NewFakeMetricSender()
+					metricBatcher := metricbatcher.New(fakeMetricSender, time.Millisecond)
+					metrics.Initialize(fakeMetricSender, metricBatcher)
+				})
+
+				It("emits a metric saying we have subscriptions", func() {
+					conn, _, err := websocket.DefaultDialer.Dial(
+						wsEndpoint("/firehose/subscription-id"),
+						http.Header{"Authorization": []string{"token"}},
+					)
+					Expect(err).ToNot(HaveOccurred())
+					defer conn.Close()
+
+					f := func() fake.Metric {
+						return fakeMetricSender.GetValue("dopplerProxy.firehoses")
+					}
+					Eventually(f, 4).Should(Equal(fake.Metric{Value: 1}))
+				})
+
+				It("emits a metric saying we have a app stream", func() {
+					conn, _, err := websocket.DefaultDialer.Dial(
+						wsEndpoint("/apps/abc123/stream"),
+						http.Header{"Authorization": []string{"token"}},
+					)
+					Expect(err).ToNot(HaveOccurred())
+					defer conn.Close()
+
+					f := func() fake.Metric {
+						return fakeMetricSender.GetValue("dopplerProxy.appStreams")
+					}
+					Eventually(f, 4).Should(Equal(fake.Metric{Value: 1}))
 				})
 			})
 		})

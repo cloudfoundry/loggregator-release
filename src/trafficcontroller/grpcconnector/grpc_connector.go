@@ -71,11 +71,6 @@ func New(bufferSize int, pool DopplerPool, f Finder, batcher MetaMetricBatcher) 
 	return c
 }
 
-// Subscribe returns a Receiver that yields all corresponding messages from Doppler
-func (c *GRPCConnector) Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) (Receiver, error) {
-	return c.handleRequest(ctx, req)
-}
-
 // ContainerMetrics returns the current container metrics for an app ID.
 func (c *GRPCConnector) ContainerMetrics(ctx context.Context, appID string) [][]byte {
 	c.mu.RLock()
@@ -118,13 +113,19 @@ func (c *GRPCConnector) RecentLogs(ctx context.Context, appID string) [][]byte {
 	return resp
 }
 
+// Subscribe returns a Receiver that yields all corresponding messages from Doppler
+func (c *GRPCConnector) Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) (Receiver, error) {
+	return c.handleRequest(ctx, req)
+}
+
 func (c *GRPCConnector) handleRequest(ctx context.Context, req *plumbing.SubscriptionRequest) (Receiver, error) {
 	cs := &consumerState{
-		data:    make(chan []byte, c.bufferSize),
-		errs:    make(chan error, 1),
-		ctx:     ctx,
-		req:     req,
-		batcher: c.batcher,
+		data:     make(chan []byte, c.bufferSize),
+		errs:     make(chan error, 1),
+		ctx:      ctx,
+		req:      req,
+		batcher:  c.batcher,
+		dopplers: make(map[string]bool),
 	}
 
 	go func() {
@@ -218,6 +219,10 @@ func (c *GRPCConnector) subtractClient(remaining []*dopplerClientInfo, uri strin
 }
 
 func (c *GRPCConnector) consumeSubscription(cs *consumerState, dopplerClient *dopplerClientInfo, batcher MetaMetricBatcher) {
+	if !cs.tryAddDoppler(dopplerClient.uri) {
+		return
+	}
+
 	atomic.AddInt64(&dopplerClient.refCount, 1)
 	defer func() {
 		if atomic.AddInt64(&dopplerClient.refCount, -1) <= 0 &&
@@ -225,6 +230,8 @@ func (c *GRPCConnector) consumeSubscription(cs *consumerState, dopplerClient *do
 			log.Printf("closing doppler connection %s...", dopplerClient.uri)
 			c.pool.Close(dopplerClient.uri)
 		}
+
+		cs.forgetDoppler(dopplerClient.uri)
 	}()
 
 	delay := time.Millisecond
@@ -311,8 +318,6 @@ func (c *GRPCConnector) addConsumerState(cs *consumerState) error {
 }
 
 type dopplerClientInfo struct {
-	//client     plumbing.DopplerClient
-	//closer     io.Closer
 	uri        string
 	disconnect int64
 	refCount   int64
@@ -327,6 +332,9 @@ type consumerState struct {
 	maxMissed int
 	batcher   MetaMetricBatcher
 	dead      int64
+
+	mu       sync.Mutex
+	dopplers map[string]bool
 }
 
 func (cs *consumerState) Recv() ([]byte, error) {
@@ -338,4 +346,24 @@ func (cs *consumerState) Recv() ([]byte, error) {
 	case <-cs.ctx.Done():
 		return nil, cs.ctx.Err()
 	}
+}
+
+func (cs *consumerState) tryAddDoppler(doppler string) bool {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	ok, _ := cs.dopplers[doppler]
+	if ok {
+		return false
+	}
+
+	cs.dopplers[doppler] = true
+	return true
+}
+
+func (cs *consumerState) forgetDoppler(doppler string) {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	delete(cs.dopplers, doppler)
 }

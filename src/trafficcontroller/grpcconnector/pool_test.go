@@ -47,10 +47,14 @@ var _ = Describe("Pool", func() {
 		var accepter = func(lis net.Listener) (net.Listener, chan bool) {
 			c := make(chan bool, 100)
 			go func() {
+				var dontGC []net.Conn
 				for {
-					if _, err := lis.Accept(); err != nil {
+					conn, err := lis.Accept()
+					if err != nil {
 						return
 					}
+
+					dontGC = append(dontGC, conn)
 					c <- true
 				}
 			}()
