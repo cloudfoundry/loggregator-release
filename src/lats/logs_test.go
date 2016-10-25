@@ -43,7 +43,7 @@ var _ = Describe("Logs", func() {
 		helpers.EmitToMetron(createLogEnvelope("Stream message", "bar"))
 		helpers.EmitToMetron(createLogEnvelope("Stream message", "foo"))
 
-		receivedEnvelope, err := helpers.FindMatchingEnvelopeById("foo", msgChan)
+		receivedEnvelope, err := helpers.FindMatchingEnvelopeByID("foo", msgChan)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(receivedEnvelope).NotTo(BeNil())
 		Expect(receivedEnvelope.GetEventType()).To(Equal(events.Envelope_LogMessage))

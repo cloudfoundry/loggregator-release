@@ -3,18 +3,18 @@ syntax = "proto3";
 package plumbing;
 
 service Doppler {
-  rpc Stream(StreamRequest) returns (stream Response) {}
-  rpc Firehose(FirehoseRequest) returns (stream Response) {}
+  rpc Subscribe(SubscriptionRequest) returns (stream Response) {}
   rpc ContainerMetrics(ContainerMetricsRequest) returns (ContainerMetricsResponse) {}
   rpc RecentLogs(RecentLogsRequest) returns (RecentLogsResponse) {}
 }
 
-message StreamRequest {
-  string appID = 1;
+message SubscriptionRequest {
+  string shardID = 1;
+  Filter filter = 2;
 }
 
-message FirehoseRequest {
-  string subID = 1;
+message Filter{
+  string appID = 1;
 }
 
 message Response {

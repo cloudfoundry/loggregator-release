@@ -116,6 +116,12 @@ func buildPrimerMessage() []byte {
 	e := &events.Envelope{
 		Origin:    proto.String("prime-message"),
 		EventType: events.Envelope_LogMessage.Enum(),
+		LogMessage: &events.LogMessage{
+			Message:     []byte("foo"),
+			MessageType: events.LogMessage_OUT.Enum(),
+			Timestamp:   proto.Int64(time.Now().UnixNano()),
+			AppId:       proto.String("test-app"),
+		},
 	}
 	b, err := proto.Marshal(e)
 	Expect(err).ToNot(HaveOccurred())

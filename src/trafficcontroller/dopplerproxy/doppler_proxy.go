@@ -2,52 +2,53 @@ package dopplerproxy
 
 import (
 	"fmt"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"plumbing"
+	"sync/atomic"
 	"trafficcontroller/authorization"
 	"trafficcontroller/doppler_endpoint"
 	"trafficcontroller/grpcconnector"
-
-	"google.golang.org/grpc"
 
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/gosteno"
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 )
 
-const FIREHOSE_ID = "firehose"
+const (
+	FIREHOSE_ID     = "firehose"
+	metricsInterval = time.Second
+)
 
 type Proxy struct {
 	mux.Router
 
 	logAuthorize   authorization.LogAccessAuthorizer
 	adminAuthorize authorization.AdminAccessAuthorizer
-	connector      channelGroupConnector
 	grpcConn       grpcConnector
 	cookieDomain   string
 	logger         *gosteno.Logger
+	numFirehoses   int64
+	numAppStreams  int64
 }
 
-type channelGroupConnector interface {
-	Connect(dopplerEndpoint doppler_endpoint.DopplerEndpoint, messagesChan chan<- []byte, stopChan <-chan struct{})
-}
-
+// TODO export this
 type grpcConnector interface {
-	Stream(ctx context.Context, in *plumbing.StreamRequest, opts ...grpc.CallOption) (grpcconnector.Receiver, error)
-	Firehose(ctx context.Context, in *plumbing.FirehoseRequest, opts ...grpc.CallOption) (grpcconnector.Receiver, error)
-	ContainerMetrics(ctx context.Context, in *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error)
-	RecentLogs(ctx context.Context, in *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error)
+	Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) (grpcconnector.Receiver, error)
+	ContainerMetrics(ctx context.Context, appID string) [][]byte
+	RecentLogs(ctx context.Context, appID string) [][]byte
 }
 
 func NewDopplerProxy(
 	logAuthorize authorization.LogAccessAuthorizer,
 	adminAuthorizer authorization.AdminAccessAuthorizer,
-	connector channelGroupConnector,
 	grpcConn grpcConnector,
 	cookieDomain string,
 	logger *gosteno.Logger,
@@ -55,7 +56,6 @@ func NewDopplerProxy(
 	p := &Proxy{
 		logAuthorize:   logAuthorize,
 		adminAuthorize: adminAuthorizer,
-		connector:      connector,
 		grpcConn:       grpcConn,
 		cookieDomain:   cookieDomain,
 		logger:         logger,
@@ -67,26 +67,42 @@ func NewDopplerProxy(
 	p.HandleFunc("/apps/{appID}/containermetrics", p.containermetrics)
 	p.HandleFunc("/firehose/{subID}", p.firehose)
 	p.HandleFunc("/set-cookie", p.setcookie)
+
+	go p.emitMetrics()
+
 	return p
 }
 
+func (p *Proxy) emitMetrics() {
+	for range time.Tick(metricsInterval) {
+		metrics.SendValue("dopplerProxy.firehoses", float64(atomic.LoadInt64(&p.numFirehoses)), "connections")
+		metrics.SendValue("dopplerProxy.appStreams", float64(atomic.LoadInt64(&p.numAppStreams)), "connections")
+	}
+}
+
 func (p *Proxy) firehose(w http.ResponseWriter, r *http.Request) {
+	atomic.AddInt64(&p.numFirehoses, 1)
+	defer atomic.AddInt64(&p.numFirehoses, -1)
+
 	subID := mux.Vars(r)["subID"]
 	p.serveFirehose(subID, w, r)
 }
 
 func (p *Proxy) stream(w http.ResponseWriter, r *http.Request) {
+	atomic.AddInt64(&p.numAppStreams, 1)
+	defer atomic.AddInt64(&p.numAppStreams, -1)
+
 	p.serveAppLogs("stream", mux.Vars(r)["appID"], w, r)
 }
 
 func (p *Proxy) recentlogs(w http.ResponseWriter, r *http.Request) {
 	p.serveAppLogs("recentlogs", mux.Vars(r)["appID"], w, r)
-	sendMetric("recentlogs", time.Now())
+	sendLatencyMetric("recentlogs", time.Now())
 }
 
 func (p *Proxy) containermetrics(w http.ResponseWriter, r *http.Request) {
 	p.serveAppLogs("containermetrics", mux.Vars(r)["appID"], w, r)
-	sendMetric("containermetrics", time.Now())
+	sendLatencyMetric("containermetrics", time.Now())
 }
 
 func (p *Proxy) setcookie(w http.ResponseWriter, r *http.Request) {
@@ -108,14 +124,15 @@ func (p *Proxy) serveFirehose(firehoseSubscriptionId string, writer http.Respons
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	client, err := p.grpcConn.Firehose(ctx, &plumbing.FirehoseRequest{
-		SubID: firehoseSubscriptionId,
+	client, err := p.grpcConn.Subscribe(ctx, &plumbing.SubscriptionRequest{
+		ShardID: firehoseSubscriptionId,
 	})
-
 	if err != nil {
-		writer.WriteHeader(http.StatusInternalServerError)
+		writer.WriteHeader(http.StatusServiceUnavailable)
+		writer.Write([]byte(err.Error()))
 		return
 	}
+
 	p.serveWS(FIREHOSE_ID, firehoseSubscriptionId, writer, request, client.Recv)
 }
 
@@ -148,47 +165,33 @@ func (p *Proxy) serveAppLogs(requestPath, appID string, writer http.ResponseWrit
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if requestPath == "recentlogs" {
-		resp, err := p.grpcConn.RecentLogs(ctx, &plumbing.RecentLogsRequest{
-			AppID: appID,
-		})
-		_ = err
-
-		p.serveMultiPartResponse(writer, resp.Payload)
+	switch requestPath {
+	case "recentlogs":
+		resp := p.grpcConn.RecentLogs(ctx, appID)
+		p.serveMultiPartResponse(writer, resp)
 		return
-	}
-
-	if requestPath == "containermetrics" {
-		resp, err := p.grpcConn.ContainerMetrics(ctx, &plumbing.ContainerMetricsRequest{
-			AppID: appID,
+	case "containermetrics":
+		resp := deDupe(p.grpcConn.ContainerMetrics(ctx, appID))
+		p.serveMultiPartResponse(writer, resp)
+		return
+	case "stream":
+		client, err := p.grpcConn.Subscribe(ctx, &plumbing.SubscriptionRequest{
+			Filter: &plumbing.Filter{
+				AppID: appID,
+			},
 		})
-
 		if err != nil {
-			p.logger.Errorf("Failed to get container metrics from doppler: %s", err)
-			writer.WriteHeader(http.StatusInternalServerError)
+			writer.WriteHeader(http.StatusServiceUnavailable)
+			writer.Write([]byte(err.Error()))
 			return
 		}
 
-		p.serveMultiPartResponse(writer, resp.Payload)
-		return
-	}
-
-	if requestPath == "stream" {
-		client, err := p.grpcConn.Stream(ctx, &plumbing.StreamRequest{
-			AppID: appID,
-		})
-
-		if err != nil {
-			p.logger.Errorf("Failed to stream from doppler: %s", err)
-			writer.WriteHeader(http.StatusInternalServerError)
-			return
-		}
 		p.serveWS(requestPath, appID, writer, request, client.Recv)
 		return
 	}
 }
 
-func (p *Proxy) serveWS(endpointType, streamID string, w http.ResponseWriter, r *http.Request, recv func() (*plumbing.Response, error)) {
+func (p *Proxy) serveWS(endpointType, streamID string, w http.ResponseWriter, r *http.Request, recv func() ([]byte, error)) {
 	dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint(endpointType, streamID, false)
 	data := make(chan []byte)
 	handler := dopplerEndpoint.HProvider(data, p.logger)
@@ -210,28 +213,18 @@ func (p *Proxy) serveWS(endpointType, streamID string, w http.ResponseWriter, r 
 
 			timer.Reset(5 * time.Second)
 			select {
-			case data <- resp.Payload:
+			case data <- resp:
 				if !timer.Stop() {
 					<-timer.C
 				}
 			case <-timer.C:
-				p.logger.Error("Doppler Proxy: Slow Consumer")
+				metrics.SendValue("dopplerProxy.slowConsumer", 1, "consumer")
+				log.Print("Doppler Proxy: Slow Consumer")
 				return
 			}
 		}
 	}()
 	handler.ServeHTTP(w, r)
-}
-
-func (p *Proxy) serveWithDoppler(writer http.ResponseWriter, request *http.Request, dopplerEndpoint doppler_endpoint.DopplerEndpoint) {
-	messagesChan := make(chan []byte, 100)
-	stopChan := make(chan struct{})
-	defer close(stopChan)
-
-	go p.connector.Connect(dopplerEndpoint, messagesChan, stopChan)
-
-	handler := dopplerEndpoint.HProvider(messagesChan, p.logger)
-	handler.ServeHTTP(writer, request)
 }
 
 func (p *Proxy) serveMultiPartResponse(rw http.ResponseWriter, messages [][]byte) {
@@ -251,7 +244,7 @@ func (p *Proxy) serveMultiPartResponse(rw http.ResponseWriter, messages [][]byte
 	}
 }
 
-func sendMetric(metricName string, startTime time.Time) {
+func sendLatencyMetric(metricName string, startTime time.Time) {
 	elapsedMillisecond := float64(time.Since(startTime)) / float64(time.Millisecond)
 	metrics.SendValue(fmt.Sprintf("dopplerProxy.%sLatency", metricName), elapsedMillisecond, "ms")
 }
@@ -297,4 +290,27 @@ func (p *Proxy) serveSetCookie(writer http.ResponseWriter, request *http.Request
 	writer.Header().Add("Access-Control-Allow-Origin", origin)
 
 	p.logger.Debugf("Proxy: Set cookie name '%s' for origin '%s' on domain '%s'", cookieName, origin, cookieDomain)
+}
+
+func deDupe(input [][]byte) [][]byte {
+	messages := make(map[int32]*events.Envelope)
+
+	for _, message := range input {
+		var envelope events.Envelope
+		proto.Unmarshal(message, &envelope)
+		cm := envelope.GetContainerMetric()
+
+		oldEnvelope, ok := messages[cm.GetInstanceIndex()]
+		if !ok || oldEnvelope.GetTimestamp() < envelope.GetTimestamp() {
+			messages[cm.GetInstanceIndex()] = &envelope
+		}
+	}
+
+	output := make([][]byte, 0, len(messages))
+
+	for _, envelope := range messages {
+		bytes, _ := proto.Marshal(envelope)
+		output = append(output, bytes)
+	}
+	return output
 }

@@ -14,12 +14,44 @@ import (
 	"golang.org/x/net/context"
 )
 
+type mockSender struct {
+	SendCalled chan bool
+	SendInput  struct {
+		Arg0 chan *plumbing.Response
+	}
+	SendOutput struct {
+		Ret0 chan error
+	}
+	ContextCalled chan bool
+	ContextOutput struct {
+		Ret0 chan context.Context
+	}
+}
+
+func newMockSender() *mockSender {
+	m := &mockSender{}
+	m.SendCalled = make(chan bool, 100)
+	m.SendInput.Arg0 = make(chan *plumbing.Response, 100)
+	m.SendOutput.Ret0 = make(chan error, 100)
+	m.ContextCalled = make(chan bool, 100)
+	m.ContextOutput.Ret0 = make(chan context.Context, 100)
+	return m
+}
+func (m *mockSender) Send(arg0 *plumbing.Response) error {
+	m.SendCalled <- true
+	m.SendInput.Arg0 <- arg0
+	return <-m.SendOutput.Ret0
+}
+func (m *mockSender) Context() context.Context {
+	m.ContextCalled <- true
+	return <-m.ContextOutput.Ret0
+}
+
 type mockRegistrar struct {
 	RegisterCalled chan bool
 	RegisterInput  struct {
-		ID         chan string
-		IsFirehose chan bool
-		Setter     chan grpcmanager.DataSetter
+		Req    chan *plumbing.SubscriptionRequest
+		Setter chan grpcmanager.DataSetter
 	}
 	RegisterOutput struct {
 		Ret0 chan func()
@@ -29,16 +61,14 @@ type mockRegistrar struct {
 func newMockRegistrar() *mockRegistrar {
 	m := &mockRegistrar{}
 	m.RegisterCalled = make(chan bool, 100)
-	m.RegisterInput.ID = make(chan string, 100)
-	m.RegisterInput.IsFirehose = make(chan bool, 100)
+	m.RegisterInput.Req = make(chan *plumbing.SubscriptionRequest, 100)
 	m.RegisterInput.Setter = make(chan grpcmanager.DataSetter, 100)
 	m.RegisterOutput.Ret0 = make(chan func(), 100)
 	return m
 }
-func (m *mockRegistrar) Register(ID string, isFirehose bool, setter grpcmanager.DataSetter) func() {
+func (m *mockRegistrar) Register(req *plumbing.SubscriptionRequest, setter grpcmanager.DataSetter) func() {
 	m.RegisterCalled <- true
-	m.RegisterInput.ID <- ID
-	m.RegisterInput.IsFirehose <- isFirehose
+	m.RegisterInput.Req <- req
 	m.RegisterInput.Setter <- setter
 	return <-m.RegisterOutput.Ret0
 }
@@ -97,39 +127,6 @@ func (m *mockDataDumper) RecentLogsFor(appID string) []*events.Envelope {
 	m.RecentLogsForCalled <- true
 	m.RecentLogsForInput.AppID <- appID
 	return <-m.RecentLogsForOutput.Ret0
-}
-
-type mockSender struct {
-	SendCalled chan bool
-	SendInput  struct {
-		Arg0 chan *plumbing.Response
-	}
-	SendOutput struct {
-		Ret0 chan error
-	}
-	ContextCalled chan bool
-	ContextOutput struct {
-		Ret0 chan context.Context
-	}
-}
-
-func newMockSender() *mockSender {
-	m := &mockSender{}
-	m.SendCalled = make(chan bool, 100)
-	m.SendInput.Arg0 = make(chan *plumbing.Response, 100)
-	m.SendOutput.Ret0 = make(chan error, 100)
-	m.ContextCalled = make(chan bool, 100)
-	m.ContextOutput.Ret0 = make(chan context.Context, 100)
-	return m
-}
-func (m *mockSender) Send(arg0 *plumbing.Response) error {
-	m.SendCalled <- true
-	m.SendInput.Arg0 <- arg0
-	return <-m.SendOutput.Ret0
-}
-func (m *mockSender) Context() context.Context {
-	m.ContextCalled <- true
-	return <-m.ContextOutput.Ret0
 }
 
 type mockContext struct {

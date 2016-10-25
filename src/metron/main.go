@@ -196,7 +196,7 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 		}
 	}
 
-	finder := dopplerservice.NewFinder(adapter, conf.LoggregatorDropsondePort, conf.Protocols.Strings(), conf.Zone, logger)
+	finder := dopplerservice.NewFinder(adapter, conf.LoggregatorDropsondePort, 0, conf.Protocols.Strings(), conf.Zone, logger)
 	finder.Start()
 
 	marshaller := eventmarshaller.New(batcher, logger)

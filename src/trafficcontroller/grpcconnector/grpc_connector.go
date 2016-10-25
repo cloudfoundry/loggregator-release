@@ -1,114 +1,369 @@
 package grpcconnector
 
 import (
+	"doppler/dopplerservice"
+	"errors"
+	"fmt"
+	"log"
 	"plumbing"
+	"sync"
+	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
-	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
 
 	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 )
 
-type Receiver interface {
-	Recv() (*plumbing.Response, error)
+const (
+	maxConnections = 2000
+)
+
+// DopplerPool creates a pool of doppler gRPC connections
+type DopplerPool interface {
+	RegisterDoppler(addr string)
+	Subscribe(dopplerAddr string, ctx context.Context, req *plumbing.SubscriptionRequest) (plumbing.Doppler_SubscribeClient, error)
+	ContainerMetrics(dopplerAddr string, ctx context.Context, req *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error)
+	RecentLogs(dopplerAddr string, ctx context.Context, req *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error)
+
+	Close(dopplerAddr string)
 }
 
-type ReceiveFetcher interface {
-	FetchStream(ctx context.Context, in *plumbing.StreamRequest, opts ...grpc.CallOption) ([]Receiver, error)
-	FetchFirehose(ctx context.Context, in *plumbing.FirehoseRequest, opts ...grpc.CallOption) ([]Receiver, error)
-	FetchContainerMetrics(ctx context.Context, in *plumbing.ContainerMetricsRequest) ([]*plumbing.ContainerMetricsResponse, error)
-	FetchRecentLogs(ctx context.Context, in *plumbing.RecentLogsRequest) ([]*plumbing.RecentLogsResponse, error)
+// Finder yields events that tell us what dopplers are available.
+type Finder interface {
+	Next() dopplerservice.Event
 }
 
 type MetaMetricBatcher interface {
 	BatchCounter(name string) metricbatcher.BatchCounterChainer
+	BatchAddCounter(name string, delta uint64)
 }
 
+// Receiver yeilds messages from a pool of Dopplers.
+type Receiver interface {
+	Recv() ([]byte, error)
+}
+
+// GRPCConnector establishes GRPC connections to dopplers and allows calls to
+// Firehose, Stream, etc to be reduced down to a single Receiver.
 type GRPCConnector struct {
-	fetcher    ReceiveFetcher
-	batcher    MetaMetricBatcher
-	killAfter  time.Duration
-	bufferSize int
+	mu      sync.RWMutex
+	clients []*dopplerClientInfo
+
+	pool           DopplerPool
+	finder         Finder
+	consumerStates []unsafe.Pointer
+	bufferSize     int
+	batcher        MetaMetricBatcher
 }
 
-type grpcConnInfo struct {
-	dopplerClient plumbing.DopplerClient
-	conn          *grpc.ClientConn
-}
-
-func New(fetcher ReceiveFetcher, batcher MetaMetricBatcher, killAfter time.Duration, bufferSize int) *GRPCConnector {
-	return &GRPCConnector{
-		fetcher:    fetcher,
-		batcher:    batcher,
-		killAfter:  killAfter,
-		bufferSize: bufferSize,
+// New creates a new GRPCConnector.
+func New(bufferSize int, pool DopplerPool, f Finder, batcher MetaMetricBatcher) *GRPCConnector {
+	c := &GRPCConnector{
+		bufferSize:     bufferSize,
+		pool:           pool,
+		finder:         f,
+		batcher:        batcher,
+		consumerStates: make([]unsafe.Pointer, maxConnections),
 	}
+	go c.readFinder()
+	return c
 }
 
-func (g *GRPCConnector) Stream(ctx context.Context, in *plumbing.StreamRequest, opts ...grpc.CallOption) (Receiver, error) {
-	rxs, err := g.fetcher.FetchStream(ctx, in, opts...)
-	return startCombiner(rxs, g.batcher, g.killAfter, g.bufferSize), err
+// ContainerMetrics returns the current container metrics for an app ID.
+func (c *GRPCConnector) ContainerMetrics(ctx context.Context, appID string) [][]byte {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	var resp [][]byte
+	for _, client := range c.clients {
+		req := &plumbing.ContainerMetricsRequest{
+			AppID: appID,
+		}
+		nextResp, err := c.pool.ContainerMetrics(client.uri, ctx, req)
+		if err != nil {
+			log.Printf("error from doppler (%s) while fetching container metrics: %s", client.uri, err)
+			continue
+		}
+
+		resp = append(resp, nextResp.Payload...)
+	}
+	return resp
 }
 
-func (g *GRPCConnector) Firehose(ctx context.Context, in *plumbing.FirehoseRequest, opts ...grpc.CallOption) (Receiver, error) {
-	rxs, err := g.fetcher.FetchFirehose(ctx, in, opts...)
-	return startCombiner(rxs, g.batcher, g.killAfter, g.bufferSize), err
+// RecentLogs returns the current recent logs for an app ID.
+func (c *GRPCConnector) RecentLogs(ctx context.Context, appID string) [][]byte {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	var resp [][]byte
+	for _, client := range c.clients {
+		req := &plumbing.RecentLogsRequest{
+			AppID: appID,
+		}
+		nextResp, err := c.pool.RecentLogs(client.uri, ctx, req)
+		if err != nil {
+			log.Printf("error from doppler (%s) while fetching recent logs: %s", client.uri, err)
+			continue
+		}
+
+		resp = append(resp, nextResp.Payload...)
+	}
+	return resp
 }
 
-func (g *GRPCConnector) RecentLogs(ctx context.Context, in *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error) {
-	responses, err := g.fetcher.FetchRecentLogs(ctx, in)
+// Subscribe returns a Receiver that yields all corresponding messages from Doppler
+func (c *GRPCConnector) Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) (Receiver, error) {
+	return c.handleRequest(ctx, req)
+}
 
+func (c *GRPCConnector) handleRequest(ctx context.Context, req *plumbing.SubscriptionRequest) (Receiver, error) {
+	cs := &consumerState{
+		data:     make(chan []byte, c.bufferSize),
+		errs:     make(chan error, 1),
+		ctx:      ctx,
+		req:      req,
+		batcher:  c.batcher,
+		dopplers: make(map[string]bool),
+	}
+
+	go func() {
+		<-cs.ctx.Done()
+		atomic.StoreInt64(&cs.dead, 1)
+	}()
+
+	err := c.addConsumerState(cs)
 	if err != nil {
 		return nil, err
 	}
 
-	resp := new(plumbing.RecentLogsResponse)
-	for _, response := range responses {
-		resp.Payload = append(resp.Payload, response.Payload...)
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	for _, client := range c.clients {
+		go c.consumeSubscription(cs, client, c.batcher)
 	}
-
-	return resp, nil
+	return cs, nil
 }
 
-func (g *GRPCConnector) ContainerMetrics(ctx context.Context, in *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error) {
-	responses, err := g.fetcher.FetchContainerMetrics(ctx, in)
-
-	if err != nil {
-		return nil, err
+func (c *GRPCConnector) readFinder() {
+	for {
+		e := c.finder.Next()
+		log.Printf("Event from finder: %+v", e)
+		c.handleFinderEvent(e.GRPCDopplers)
 	}
-
-	resp := new(plumbing.ContainerMetricsResponse)
-	for _, response := range responses {
-		resp.Payload = append(resp.Payload, response.Payload...)
-	}
-
-	resp.Payload = deDupe(resp.Payload)
-
-	return resp, nil
 }
 
-func deDupe(input [][]byte) [][]byte {
-	messages := make(map[int32]*events.Envelope)
+func (c *GRPCConnector) handleFinderEvent(uris []string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	for _, message := range input {
-		var envelope events.Envelope
-		proto.Unmarshal(message, &envelope)
-		cm := envelope.GetContainerMetric()
+	newURIs, deadClients := c.delta(uris)
 
-		oldEnvelope, ok := messages[cm.GetInstanceIndex()]
-		if !ok || oldEnvelope.GetTimestamp() < envelope.GetTimestamp() {
-			messages[cm.GetInstanceIndex()] = &envelope
+	for _, addr := range newURIs {
+		log.Printf("Adding doppler %s", addr)
+		c.pool.RegisterDoppler(addr)
+		client := &dopplerClientInfo{
+			uri: addr,
+		}
+
+		c.clients = append(c.clients, client)
+
+		for i := range c.consumerStates {
+			cs := atomic.LoadPointer(&c.consumerStates[i])
+			if cs != nil &&
+				(*consumerState)(cs) != nil &&
+				atomic.LoadInt64(&(*consumerState)(cs).dead) == 0 {
+				go c.consumeSubscription((*consumerState)(cs), client, c.batcher)
+			}
 		}
 	}
 
-	output := make([][]byte, 0, len(messages))
+	for _, deadClient := range deadClients {
+		log.Printf("Disabling reconnects for doppler %s", deadClient.uri)
+		for i, clt := range c.clients {
+			if clt == deadClient {
+				c.clients = append(c.clients[:i], c.clients[i+1:]...)
+			}
+		}
+		atomic.StoreInt64(&deadClient.disconnect, 1)
 
-	for _, envelope := range messages {
-		bytes, _ := proto.Marshal(envelope)
-		output = append(output, bytes)
+		if atomic.LoadInt64(&deadClient.refCount) == 0 {
+			log.Printf("closing doppler connection %s...", deadClient.uri)
+			c.pool.Close(deadClient.uri)
+		}
 	}
-	return output
+}
+
+func (c *GRPCConnector) delta(uris []string) (add []string, dead []*dopplerClientInfo) {
+	dead = make([]*dopplerClientInfo, len(c.clients))
+	copy(dead, c.clients)
+
+	for _, newURI := range uris {
+		var contained bool
+		dead, contained = c.subtractClient(dead, newURI)
+		if !contained {
+			add = append(add, newURI)
+		}
+	}
+	return add, dead
+}
+
+func (c *GRPCConnector) subtractClient(remaining []*dopplerClientInfo, uri string) ([]*dopplerClientInfo, bool) {
+	for i, client := range remaining {
+		if uri == client.uri {
+			return append(remaining[:i], remaining[i+1:]...), true
+		}
+	}
+	return remaining, false
+}
+
+func (c *GRPCConnector) consumeSubscription(cs *consumerState, dopplerClient *dopplerClientInfo, batcher MetaMetricBatcher) {
+	if !cs.tryAddDoppler(dopplerClient.uri) {
+		return
+	}
+
+	atomic.AddInt64(&dopplerClient.refCount, 1)
+	defer func() {
+		if atomic.AddInt64(&dopplerClient.refCount, -1) <= 0 &&
+			atomic.LoadInt64(&dopplerClient.disconnect) != 0 {
+			log.Printf("closing doppler connection %s...", dopplerClient.uri)
+			c.pool.Close(dopplerClient.uri)
+		}
+
+		cs.forgetDoppler(dopplerClient.uri)
+	}()
+
+	delay := time.Millisecond
+
+	for {
+		dopplerDisconnect := atomic.LoadInt64(&dopplerClient.disconnect)
+		ctxDisconnect := atomic.LoadInt64(&cs.dead)
+		if dopplerDisconnect != 0 || ctxDisconnect != 0 {
+			log.Printf("Disconnecting from stream (%s) (doppler.disconnect=%d) (ctx.disconnect=%d)", dopplerClient.uri, dopplerDisconnect, ctxDisconnect)
+			return
+		}
+
+		dopplerStream, err := c.pool.Subscribe(dopplerClient.uri, cs.ctx, cs.req)
+
+		if err != nil {
+			log.Printf("Unable to connect to doppler (%s): %s", dopplerClient.uri, err)
+			time.Sleep(delay)
+			if delay < time.Minute {
+				delay *= 10
+			}
+			continue
+		}
+
+		delay = time.Millisecond
+
+		if err := readStream(dopplerStream, cs, batcher); err != nil {
+			log.Printf("Error while reading from stream (%s): %s", dopplerClient.uri, err)
+			continue
+		}
+	}
+}
+
+type plumbingReceiver interface {
+	Recv() (*plumbing.Response, error)
+}
+
+func readStream(s plumbingReceiver, cs *consumerState, batcher MetaMetricBatcher) error {
+	timer := time.NewTimer(time.Second)
+	timer.Stop()
+	for {
+		resp, err := s.Recv()
+		if err != nil {
+			return err
+		}
+
+		batcher.BatchCounter("listeners.receivedEnvelopes").
+			SetTag("protocol", "grpc").
+			Increment()
+
+		timer.Reset(time.Second)
+		select {
+		case cs.data <- resp.Payload:
+			if !timer.Stop() {
+				<-timer.C
+			}
+		case <-timer.C:
+			cs.batcher.BatchAddCounter("grpcConnector.slowConsumers", 1)
+			writeError(errors.New("GRPCConnector: slow consumer"), cs.errs)
+		}
+	}
+}
+
+func writeError(err error, c chan<- error) {
+	select {
+	case c <- err:
+	default:
+	}
+}
+
+func (c *GRPCConnector) addConsumerState(cs *consumerState) error {
+	for i := range c.consumerStates {
+		state := atomic.LoadPointer(&c.consumerStates[i])
+		if state == nil ||
+			(*consumerState)(state) == nil ||
+			atomic.LoadInt64(&(*consumerState)(state).dead) != 0 {
+
+			if atomic.CompareAndSwapPointer(&c.consumerStates[i], state, unsafe.Pointer(cs)) {
+				return nil
+			}
+		}
+	}
+
+	return fmt.Errorf("at connection limit: %d", maxConnections)
+}
+
+type dopplerClientInfo struct {
+	uri        string
+	disconnect int64
+	refCount   int64
+}
+
+type consumerState struct {
+	ctx       context.Context
+	req       *plumbing.SubscriptionRequest
+	data      chan []byte
+	errs      chan error
+	missed    int
+	maxMissed int
+	batcher   MetaMetricBatcher
+	dead      int64
+
+	mu       sync.Mutex
+	dopplers map[string]bool
+}
+
+func (cs *consumerState) Recv() ([]byte, error) {
+	select {
+	case err := <-cs.errs:
+		return nil, err
+	case data := <-cs.data:
+		return data, nil
+	case <-cs.ctx.Done():
+		return nil, cs.ctx.Err()
+	}
+}
+
+func (cs *consumerState) tryAddDoppler(doppler string) bool {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	ok, _ := cs.dopplers[doppler]
+	if ok {
+		return false
+	}
+
+	cs.dopplers[doppler] = true
+	return true
+}
+
+func (cs *consumerState) forgetDoppler(doppler string) {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	delete(cs.dopplers, doppler)
 }

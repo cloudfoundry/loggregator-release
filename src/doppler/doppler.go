@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"plumbing"
 	"sync"
@@ -131,17 +132,22 @@ func New(
 	)
 
 	grpcRouter := grpcmanager.NewRouter()
-	defer grpcRouter.Stop()
 	grpcManager := grpcmanager.New(grpcRouter, doppler.sinkManager)
 
 	doppler.Infof("Listening for GRPC connections on %d", config.GRPCPort)
 	grpcListener, err := net.Listen("tcp", fmt.Sprintf(":%d", config.GRPCPort))
 	if err != nil {
+		log.Printf("Failed to start listener (port=%d) for gRPC: %s", config.GRPCPort, err)
 		return nil, err
 	}
 	grpcServer := grpc.NewServer()
 	plumbing.RegisterDopplerServer(grpcServer, grpcManager)
-	go grpcServer.Serve(grpcListener)
+	go func() {
+		log.Printf("Starting gRPC server on %s", grpcListener.Addr().String())
+		if err := grpcServer.Serve(grpcListener); err != nil {
+			log.Fatalf("Failed to start gRPC server: %s", err)
+		}
+	}()
 
 	doppler.messageRouter = sinkserver.NewMessageRouter(logger, doppler.sinkManager, grpcRouter)
 

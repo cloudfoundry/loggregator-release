@@ -25,8 +25,8 @@ var _ = Describe("GRPC Streaming Logs", func() {
 		}()
 	}
 
-	var waitForPrimer = func(firehose plumbing.Doppler_FirehoseClient) {
-		_, err := firehose.Recv()
+	var waitForPrimer = func(subscription plumbing.Doppler_SubscribeClient) {
+		_, err := subscription.Recv()
 		Expect(err).ToNot(HaveOccurred())
 	}
 
@@ -36,47 +36,37 @@ var _ = Describe("GRPC Streaming Logs", func() {
 		return in
 	}
 
-	var connectoToFirehose = func() (*grpc.ClientConn, plumbing.Doppler_FirehoseClient) {
+	var connectoToSubscription = func(req plumbing.SubscriptionRequest) (*grpc.ClientConn, plumbing.Doppler_SubscribeClient) {
 		out, err := grpc.Dial(localIPAddress+":5678", grpc.WithInsecure())
 		Expect(err).ToNot(HaveOccurred())
 		client := plumbing.NewDopplerClient(out)
 		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-		firehose, err := client.Firehose(ctx, &plumbing.FirehoseRequest{
-			SubID: "test-sub",
-		})
+		subscription, err := client.Subscribe(ctx, &req)
 		Expect(err).ToNot(HaveOccurred())
 
-		return out, firehose
+		return out, subscription
 	}
 
-	var connectoToStream = func() (*grpc.ClientConn, plumbing.Doppler_StreamClient) {
-		out, err := grpc.Dial(localIPAddress+":5678", grpc.WithInsecure())
-		Expect(err).ToNot(HaveOccurred())
-		client := plumbing.NewDopplerClient(out)
-		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-		stream, err := client.Stream(ctx, &plumbing.StreamRequest{
-			AppID: "test-app",
-		})
-		Expect(err).ToNot(HaveOccurred())
-
-		return out, stream
-	}
-
-	Context("with a stream connection established", func() {
+	Context("with a subscription established", func() {
 		var (
-			in       net.Conn
-			out      *grpc.ClientConn
-			firehose plumbing.Doppler_FirehoseClient
-			stream   plumbing.Doppler_StreamClient
+			in           net.Conn
+			out          *grpc.ClientConn
+			subscription plumbing.Doppler_SubscribeClient
 		)
 
 		BeforeEach(func() {
 			in = connectToDoppler()
-			_, firehose = connectoToFirehose()
-			out, stream = connectoToStream()
+			out, subscription = connectoToSubscription(
+				plumbing.SubscriptionRequest{
+					ShardID: "foo",
+					Filter: &plumbing.Filter{
+						AppID: "test-app",
+					},
+				},
+			)
 
 			primePump(in)
-			waitForPrimer(firehose)
+			waitForPrimer(subscription)
 		})
 
 		AfterEach(func() {
@@ -84,47 +74,12 @@ var _ = Describe("GRPC Streaming Logs", func() {
 			out.Close()
 		})
 
-		It("responds to a Stream request", func() {
+		It("responds to a subscription request", func() {
 			_, err := in.Write(prefixedLogMessage)
 			Expect(err).ToNot(HaveOccurred())
 
 			f := func() []byte {
-				msg, err := stream.Recv()
-				if err != nil {
-					return nil
-				}
-				return msg.Payload
-			}
-			Eventually(f).Should(Equal(logMessage))
-		})
-	})
-
-	Context("with a firehose connection established", func() {
-		var (
-			in       net.Conn
-			out      *grpc.ClientConn
-			firehose plumbing.Doppler_FirehoseClient
-		)
-
-		BeforeEach(func() {
-			in = connectToDoppler()
-			out, firehose = connectoToFirehose()
-
-			primePump(in)
-			waitForPrimer(firehose)
-		})
-
-		AfterEach(func() {
-			in.Close()
-			out.Close()
-		})
-
-		It("responds to a Firehose request", func() {
-			_, err := in.Write(prefixedLogMessage)
-			Expect(err).ToNot(HaveOccurred())
-
-			f := func() []byte {
-				msg, _ := firehose.Recv()
+				msg, _ := subscription.Recv()
 				return msg.Payload
 			}
 			Eventually(f).Should(Equal(logMessage))
