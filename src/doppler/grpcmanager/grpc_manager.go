@@ -7,10 +7,15 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
 	"golang.org/x/net/context"
+)
+
+const (
+	metricsInterval = time.Second
 )
 
 // Registrar registers stream and firehose DataSetters to accept reads.
@@ -32,8 +37,9 @@ type DataDumper interface {
 // GRPCManager is the GRPC server component that accepts requests for firehose
 // streams, application streams, container metrics, and recent logs.
 type GRPCManager struct {
-	registrar Registrar
-	dumper    DataDumper
+	registrar        Registrar
+	dumper           DataDumper
+	numSubscriptions int64
 }
 
 type sender interface {
@@ -43,14 +49,20 @@ type sender interface {
 
 // New creates a new GRPCManager.
 func New(registrar Registrar, dumper DataDumper) *GRPCManager {
-	return &GRPCManager{
+	m := &GRPCManager{
 		registrar: registrar,
 		dumper:    dumper,
 	}
+
+	go m.emitMetrics()
+	return m
 }
 
 // Subscribe is called by GRPC on stream requests.
 func (m *GRPCManager) Subscribe(req *plumbing.SubscriptionRequest, sender plumbing.Doppler_SubscribeServer) error {
+	atomic.AddInt64(&m.numSubscriptions, 1)
+	defer atomic.AddInt64(&m.numSubscriptions, -1)
+
 	return m.sendData(req, sender)
 }
 
@@ -68,6 +80,12 @@ func (m *GRPCManager) RecentLogs(ctx context.Context, req *plumbing.RecentLogsRe
 	return &plumbing.RecentLogsResponse{
 		Payload: marshalEnvelopes(envelopes),
 	}, nil
+}
+
+func (m *GRPCManager) emitMetrics() {
+	for range time.Tick(metricsInterval) {
+		metrics.SendValue("grpcManager.subscriptions", float64(atomic.LoadInt64(&m.numSubscriptions)), "subscriptions")
+	}
 }
 
 func marshalEnvelopes(envelopes []*events.Envelope) [][]byte {

@@ -40,7 +40,14 @@ var _ = Describe("ServeHTTP()", func() {
 
 		mockGrpcConnector       *mockGrpcConnector
 		mockDopplerStreamClient *mockReceiver
+		fakeMetricSender        *fake.FakeMetricSender
 	)
+
+	BeforeSuite(func() {
+		fakeMetricSender = fake.NewFakeMetricSender()
+		metricBatcher := metricbatcher.New(fakeMetricSender, time.Millisecond)
+		metrics.Initialize(fakeMetricSender, metricBatcher)
+	})
 
 	BeforeEach(func() {
 		auth = LogAuthorizer{Result: AuthorizerResult{Status: http.StatusOK}}
@@ -60,6 +67,8 @@ var _ = Describe("ServeHTTP()", func() {
 		)
 
 		recorder = httptest.NewRecorder()
+
+		fakeMetricSender.Reset()
 	})
 
 	JustBeforeEach(func() {
@@ -72,14 +81,6 @@ var _ = Describe("ServeHTTP()", func() {
 
 	Context("App Logs", func() {
 		Describe("TrafficController emitted request metrics", func() {
-			var fakeMetricSender *fake.FakeMetricSender
-
-			BeforeEach(func() {
-				fakeMetricSender = fake.NewFakeMetricSender()
-				metricBatcher := metricbatcher.New(fakeMetricSender, time.Millisecond)
-				metrics.Initialize(fakeMetricSender, metricBatcher)
-			})
-
 			requestAndAssert := func(req *http.Request, metricName string) {
 				requestStart := time.Now()
 				proxy.ServeHTTP(recorder, req)
@@ -460,14 +461,6 @@ var _ = Describe("ServeHTTP()", func() {
 			})
 
 			Describe("Emitted Metrics", func() {
-				var fakeMetricSender *fake.FakeMetricSender
-
-				BeforeEach(func() {
-					fakeMetricSender = fake.NewFakeMetricSender()
-					metricBatcher := metricbatcher.New(fakeMetricSender, time.Millisecond)
-					metrics.Initialize(fakeMetricSender, metricBatcher)
-				})
-
 				It("emits a metric saying we have subscriptions", func() {
 					conn, _, err := websocket.DefaultDialer.Dial(
 						wsEndpoint("/firehose/subscription-id"),
@@ -479,7 +472,7 @@ var _ = Describe("ServeHTTP()", func() {
 					f := func() fake.Metric {
 						return fakeMetricSender.GetValue("dopplerProxy.firehoses")
 					}
-					Eventually(f, 4).Should(Equal(fake.Metric{Value: 1}))
+					Eventually(f, 4).Should(Equal(fake.Metric{Value: 1, Unit: "connections"}))
 				})
 
 				It("emits a metric saying we have a app stream", func() {
@@ -493,7 +486,7 @@ var _ = Describe("ServeHTTP()", func() {
 					f := func() fake.Metric {
 						return fakeMetricSender.GetValue("dopplerProxy.appStreams")
 					}
-					Eventually(f, 4).Should(Equal(fake.Metric{Value: 1}))
+					Eventually(f, 4).Should(Equal(fake.Metric{Value: 1, Unit: "connections"}))
 				})
 			})
 		})

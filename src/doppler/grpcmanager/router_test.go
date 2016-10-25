@@ -200,13 +200,13 @@ var _ = Describe("Router", func() {
 
 			Describe("thread safety", func() {
 				It("survives the race detector", func(done Done) {
-					cleanupA = router.Register(reqA, mockDataSetterA)
+					cleanup := router.Register(reqA, mockDataSetterA)
 
 					go func() {
 						defer close(done)
 						router.SendTo("some-app-id", envelope)
 					}()
-					cleanupA()
+					cleanup()
 				})
 			})
 		})

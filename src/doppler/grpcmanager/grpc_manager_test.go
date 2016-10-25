@@ -16,6 +16,10 @@ import (
 
 	"doppler/grpcmanager"
 
+	"github.com/cloudfoundry/dropsonde/emitter/fake"
+	"github.com/cloudfoundry/dropsonde/metric_sender"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
@@ -33,7 +37,8 @@ var _ = Describe("GRPCManager", func() {
 
 		subscribeRequest *plumbing.SubscriptionRequest
 
-		setter grpcmanager.DataSetter
+		setter      grpcmanager.DataSetter
+		fakeEmitter *fake.FakeEventEmitter
 	)
 
 	var startGRPCServer = func(ds plumbing.DopplerServer) net.Listener {
@@ -68,6 +73,13 @@ var _ = Describe("GRPCManager", func() {
 		}
 	}
 
+	BeforeSuite(func() {
+		fakeEmitter = fake.NewFakeEventEmitter("doppler")
+		sender := metric_sender.NewMetricSender(fakeEmitter)
+		batcher := metricbatcher.New(sender, 200*time.Millisecond)
+		metrics.Initialize(sender, batcher)
+	})
+
 	BeforeEach(func() {
 		mockRegistrar = newMockRegistrar()
 		cleanupCalled = make(chan struct{})
@@ -85,6 +97,8 @@ var _ = Describe("GRPCManager", func() {
 				AppID: "some-app-id",
 			},
 		}
+
+		fakeEmitter.Reset()
 	})
 
 	AfterEach(func() {
@@ -100,6 +114,20 @@ var _ = Describe("GRPCManager", func() {
 			Eventually(mockRegistrar.RegisterInput).Should(
 				BeCalled(With(subscribeRequest, Not(BeNil()))),
 			)
+		})
+
+		It("emits a metric for the number of subscriptions", func() {
+			dopplerClient.Subscribe(context.TODO(), subscribeRequest)
+			expected := fake.Message{
+				Origin: "doppler",
+				Event: &events.ValueMetric{
+					Name:  proto.String("grpcManager.subscriptions"),
+					Value: proto.Float64(1),
+					Unit:  proto.String("subscriptions"),
+				},
+			}
+
+			Eventually(fakeEmitter.GetMessages, 2).Should(ContainElement(expected))
 		})
 
 		Context("connection is established", func() {
