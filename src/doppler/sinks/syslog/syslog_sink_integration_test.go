@@ -42,7 +42,7 @@ var _ = Describe("SyslogSinkIntegration", func() {
 
 				errorHandler := func(errorMsg, appId string) {}
 
-				syslogSink := syslog.NewSyslogSink(appId, url, loggertesthelper.Logger(), bufferSize, httpsWriter, errorHandler, "dropsonde-origin")
+				syslogSink := syslog.NewSyslogSink(appId, url, loggertesthelper.Logger(), bufferSize, httpsWriter, errorHandler, "dropsonde-origin", false)
 				inputChan := make(chan *events.Envelope)
 
 				defer syslogSink.Disconnect()

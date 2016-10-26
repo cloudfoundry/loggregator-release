@@ -129,6 +129,7 @@ func New(
 		sinkIOTimeout,
 		metricTTL,
 		dialTimeout,
+		config.ForwardContainerMetricsToSysLog,
 	)
 
 	grpcRouter := grpcmanager.NewRouter()

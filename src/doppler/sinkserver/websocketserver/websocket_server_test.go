@@ -28,7 +28,7 @@ var _ = Describe("WebsocketServer", func() {
 	var (
 		logger         = loggertesthelper.Logger()
 		server         *websocketserver.WebsocketServer
-		sinkManager    = sinkmanager.New(1024, false, blacklist.New(nil, logger), logger, 100, "dropsonde-origin", 1*time.Second, 0, 1*time.Second, 500*time.Millisecond)
+		sinkManager    = sinkmanager.New(1024, false, blacklist.New(nil, logger), logger, 100, "dropsonde-origin", 1*time.Second, 0, 1*time.Second, 500*time.Millisecond, false)
 		appId          = "my-app"
 		wsReceivedChan chan []byte
 		apiEndpoint    string

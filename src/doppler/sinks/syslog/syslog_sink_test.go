@@ -26,6 +26,7 @@ const bufferSize = 100
 var _ = Describe("SyslogSink", func() {
 	var (
 		syslogSink            *syslog.SyslogSink
+		syslogSinkMetrics     *syslog.SyslogSink
 		sysLogger             *SyslogWriterRecorder
 		syslogSinkRunFinished chan bool
 		errorChannel          chan *events.Envelope
@@ -59,7 +60,8 @@ var _ = Describe("SyslogSink", func() {
 	JustBeforeEach(func() {
 		drainURL, err := url.Parse(drainURL)
 		Expect(err).ToNot(HaveOccurred())
-		syslogSink = syslog.NewSyslogSink("appId", drainURL, logger, bufferSize, sysLogger, errorHandler, "dropsonde-origin")
+		syslogSink = syslog.NewSyslogSink("appId", drainURL, logger, bufferSize, sysLogger, errorHandler, "dropsonde-origin", false)
+		syslogSinkMetrics = syslog.NewSyslogSink("appId", drainURL, logger, bufferSize, sysLogger, errorHandler, "dropsonde-origin", true)
 	})
 
 	Describe("Identifier", func() {
@@ -214,7 +216,17 @@ var _ = Describe("SyslogSink", func() {
 			close(done)
 		})
 
-		It("does not send non-log messages to the syslog writer", func(done Done) {
+		It("does not send container metrics to the syslog writer", func(done Done) {
+			containerMetric := factories.NewContainerMetric("appId", 0, 2.6, 123456, 500)
+			envelope, _ := emitter.Wrap(containerMetric, "origin")
+
+			inputChan <- envelope
+
+			Consistently(sysLogger.receivedChannel).ShouldNot(Receive())
+			close(done)
+		})
+
+		It("does not send not-allowed messages to the syslog writer", func(done Done) {
 			nonLogMessage := factories.NewValueMetric("value-name", 2.0, "value-unit")
 			envelope, _ := emitter.Wrap(nonLogMessage, "origin")
 
@@ -318,6 +330,34 @@ var _ = Describe("SyslogSink", func() {
 				})
 			})
 		})
+	})
+
+	Context("when remote syslog server is up and container metrics are allowed", func() {
+		JustBeforeEach(func() {
+			go func(*syslog.SyslogSink, chan bool) {
+				syslogSinkMetrics.Run(inputChan)
+				close(syslogSinkRunFinished)
+			}(syslogSinkMetrics, syslogSinkRunFinished)
+		})
+
+		AfterEach(func() {
+			syslogSinkMetrics.Disconnect()
+			Eventually(syslogSinkRunFinished).Should(BeClosed())
+		})
+
+		It("sends container metrics to the syslog writer", func(done Done) {
+                        containerMetric := factories.NewContainerMetric("appId", 0, 2.6, 123456, 500)
+                        envelope, _ := emitter.Wrap(containerMetric, "origin")
+
+                        inputChan <- envelope
+                        data := <-sysLogger.receivedChannel
+
+                        Expect(string(data)).To(MatchRegexp("diskBytes:500"))
+                        Expect(string(data)).To(MatchRegexp("memoryBytes:123456"))
+                        Expect(string(data)).To(MatchRegexp("cpuPercentage:2.6"))
+                        close(done)
+                })
+
 	})
 
 	Describe("Disconnect", func() {

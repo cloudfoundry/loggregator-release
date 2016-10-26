@@ -30,6 +30,7 @@ type Config struct {
 	ContainerMetricTTLSeconds       int
 	IncomingUDPPort                 uint32
 	IncomingTCPPort                 uint32
+	ForwardContainerMetricsToSysLog  bool
 	EnableTLSTransport              bool
 	TLSListenerConfig               TLSListenerConfig
 	EtcdMaxConcurrentRequests       int

@@ -22,24 +22,25 @@ import (
 )
 
 type SinkManager struct {
-	messageDrainBufferSize uint
-	dropsondeOrigin        string
+	messageDrainBufferSize         uint
+	dropsondeOrigin                string
 
-	metrics        *metrics.SinkManagerMetrics
-	recentLogCount uint32
+	metrics                        *metrics.SinkManagerMetrics
+	recentLogCount                 uint32
 
-	doneChannel         chan struct{}
-	errorChannel        chan *events.Envelope
-	urlBlacklistManager *blacklist.URLBlacklistManager
-	sinks               *groupedsinks.GroupedSinks
-	skipCertVerify      bool
-	sinkTimeout         time.Duration
-	sinkIOTimeout       time.Duration
-	metricTTL           time.Duration
-	dialTimeout         time.Duration
-	logger              *gosteno.Logger
+	doneChannel         	       chan struct{}
+	errorChannel        	       chan *events.Envelope
+	urlBlacklistManager 	       *blacklist.URLBlacklistManager
+	sinks               	       *groupedsinks.GroupedSinks
+	skipCertVerify      	       bool
+	sinkTimeout         	       time.Duration
+	sinkIOTimeout       	       time.Duration
+	metricTTL                      time.Duration
+	dialTimeout         	       time.Duration
+	logger              	       *gosteno.Logger
+	enableContainerMetricsToSyslog bool
 
-	stopOnce sync.Once
+	stopOnce                       sync.Once
 }
 
 func New(
@@ -53,22 +54,24 @@ func New(
 	sinkIOTimeout,
 	metricTTL,
 	dialTimeout time.Duration,
+	enableContainerMetricsToSyslog bool,
 ) *SinkManager {
 	return &SinkManager{
-		doneChannel:            make(chan struct{}),
-		errorChannel:           make(chan *events.Envelope, 100),
-		urlBlacklistManager:    blackListManager,
-		sinks:                  groupedsinks.NewGroupedSinks(logger),
-		skipCertVerify:         skipCertVerify,
-		recentLogCount:         maxRetainedLogMessages,
-		metrics:                metrics.NewSinkManagerMetrics(),
-		logger:                 logger,
-		messageDrainBufferSize: messageDrainBufferSize,
-		dropsondeOrigin:        dropsondeOrigin,
-		sinkTimeout:            sinkTimeout,
-		sinkIOTimeout:          sinkIOTimeout,
-		metricTTL:              metricTTL,
-		dialTimeout:            dialTimeout,
+		doneChannel:            	make(chan struct{}),
+		errorChannel:           	make(chan *events.Envelope, 100),
+		urlBlacklistManager:    	blackListManager,
+		sinks:                  	groupedsinks.NewGroupedSinks(logger),
+		skipCertVerify:         	skipCertVerify,
+		recentLogCount:         	maxRetainedLogMessages,
+		metrics:                	metrics.NewSinkManagerMetrics(),
+		logger:                 	logger,
+		messageDrainBufferSize: 	messageDrainBufferSize,
+		dropsondeOrigin:        	dropsondeOrigin,
+		sinkTimeout:            	sinkTimeout,
+		sinkIOTimeout:          	sinkIOTimeout,
+		metricTTL:              	metricTTL,
+		dialTimeout:            	dialTimeout,
+		enableContainerMetricsToSyslog: enableContainerMetricsToSyslog,
 	}
 }
 
@@ -255,6 +258,7 @@ func (sm *SinkManager) registerNewSyslogSink(appId string, syslogSinkURL string)
 		syslogWriter,
 		sm.SendSyslogErrorToLoggregator,
 		sm.dropsondeOrigin,
+		sm.enableContainerMetricsToSyslog,
 	)
 
 	sm.RegisterSink(syslogSink)

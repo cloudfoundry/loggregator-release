@@ -38,14 +38,17 @@ var _ = Describe("BufferContext", func() {
 
 	Context("LogAllowedContext", func() {
 		var logAllowedContext *LogAllowedContext
+		var containerMetricsAllowedContext *LogAllowedContext
 
 		BeforeEach(func() {
-			logAllowedContext = NewLogAllowedContext("origin", "testIdentifier")
+			logAllowedContext = NewLogAllowedContext("origin", "testIdentifier", false)
+			containerMetricsAllowedContext = NewLogAllowedContext("origin", "testIdentifier", true)
 		})
 
 		It("Should return a valid properties", func() {
 			Expect(logAllowedContext.Origin()).To(Equal("origin"))
 			Expect(logAllowedContext.Destination()).To(Equal("testIdentifier"))
+			Expect(logAllowedContext.IsContainerMetricAllowed).To(Equal(false))
 			for _, e := range events.Envelope_EventType_value {
 				event := events.Envelope_EventType(e)
 				allowed := logAllowedContext.EventAllowed(event)
@@ -54,6 +57,21 @@ var _ = Describe("BufferContext", func() {
 				} else {
 					Expect(allowed).To(BeFalse())
 
+				}
+			}
+		})
+
+		It("Should allow container metrics", func() {
+			Expect(containerMetricsAllowedContext.Origin()).To(Equal("origin"))
+			Expect(containerMetricsAllowedContext.Destination()).To(Equal("testIdentifier"))
+			Expect(containerMetricsAllowedContext.IsContainerMetricAllowed).To(Equal(true))
+			for _, e := range events.Envelope_EventType_value {
+				event := events.Envelope_EventType(e)
+				allowed := containerMetricsAllowedContext.EventAllowed(event)
+				if event == events.Envelope_LogMessage || event == events.Envelope_ContainerMetric{
+					Expect(allowed).To(BeTrue())
+				} else {
+					Expect(allowed).To(BeFalse())
 				}
 			}
 		})

@@ -45,6 +45,9 @@ properties:
   doppler.tls.server_key:
     description: "TLS server key"
     default: ""
+  doppler.forward_container_metrics_to_syslog:
+    description: "Enables forwarding container metrics to syslog drain"
+    default: false
   loggregator.tls.ca_cert:
     description: "CA root required for key/cert verification"
     default: ""
