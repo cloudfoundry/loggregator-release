@@ -121,3 +121,7 @@ properties:
   metron_agent.preferred_protocol:
     description: "DEPRECATED - replaced with metron_agent.protocols"
     default: "udp"
+
+  metron_agent.log_to_syslog:
+    description: "Set this to True to enable logging to syslog."
+    default: False

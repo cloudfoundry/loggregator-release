@@ -31,8 +31,12 @@ case $1 in
 
     <% p("doppler.debug") == true ? debug_string = "--debug " : debug_string = "" %>
 
+    <% if p('doppler.log_to_syslog') %>
+    tee_output_to_sys_log "$LOG_DIR" doppler stdout stderr
+    <% else %>
     exec >>$LOG_DIR/doppler.stdout.log  \
        2>>$LOG_DIR/doppler.stderr.log
+    <% end %>
 
     chown -R vcap:vcap $LOG_DIR
 
