@@ -81,7 +81,8 @@ func createTCConfig() string {
 		"MetronPort": %d,
 		"UaaHost": "http://127.0.0.1:49628",
 		"UaaClient": "bob",
-		"UaaClientSecret": "yourUncle"
+		"UaaClientSecret": "yourUncle",
+		"PPROFPort": 6060
 	}`, testPort(), testPort(), testPort(), testPort())
 
 	return tmpFile(js)
@@ -108,7 +109,8 @@ func createDopplerConfig() string {
 		"MetricBatchIntervalMilliseconds": 10,
 		"MetronAddress": "127.0.0.1:49625",
 		"Syslog"  : "",
-		"CollectorRegistrarIntervalMilliseconds": 100
+		"CollectorRegistrarIntervalMilliseconds": 100,
+		"PPROFPort": 6060
 	}`, testPort(), testPort(), testPort(), testPort())
 
 	return tmpFile(js)
@@ -130,7 +132,8 @@ func createMetronConfig() string {
 		"BufferSize": 5000,
 		"MetricBatchIntervalMilliseconds": 10,
 		"TCPBatchSizeBytes": 1024,
-		"TCPBatchIntervalMilliseconds": 10
+		"TCPBatchIntervalMilliseconds": 10,
+		"PPROFPort": 6061
 	}`, testPort(), testPort())
 
 	return tmpFile(js)
