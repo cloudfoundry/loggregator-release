@@ -42,19 +42,22 @@ func (d *DefaultContext) AppID(envelope *events.Envelope) string {
 
 type LogAllowedContext struct {
 	DefaultContext
+	IsContainerMetricAllowed bool
 }
 
-func NewLogAllowedContext(origin string, destination string) *LogAllowedContext {
+func NewLogAllowedContext(origin string, destination string, isContainerMetricAllowed bool) *LogAllowedContext {
 	return &LogAllowedContext{
-		DefaultContext{
-			destination: destination,
-			origin:      origin,
-		},
+		DefaultContext: DefaultContext{
+					destination: destination,
+					origin:      origin,
+				},
+		IsContainerMetricAllowed: isContainerMetricAllowed,
 	}
 }
 
 func (l *LogAllowedContext) EventAllowed(event events.Envelope_EventType) bool {
-	return event == events.Envelope_LogMessage
+	return event == events.Envelope_LogMessage ||
+		(l.IsContainerMetricAllowed && event == events.Envelope_ContainerMetric)
 }
 
 type SystemContext struct {

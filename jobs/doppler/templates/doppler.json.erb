@@ -39,6 +39,7 @@
         a[:MessageDrainBufferSize] = p("doppler.message_drain_buffer_size")
         a[:IncomingUDPPort] = p("doppler.dropsonde_incoming_port")
         a[:IncomingTCPPort] = p("doppler.incoming_tcp_port")
+        a[:ForwardContainerMetricsToSysLog] = p("doppler.forward_container_metrics_to_syslog")
         if_p("doppler.tls.enable") do |_|
             a[:TLSListenerConfig] = tlsListenerConfig
         end

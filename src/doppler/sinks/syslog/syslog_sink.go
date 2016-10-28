@@ -12,34 +12,37 @@ import (
 
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 )
 
 type SyslogSink struct {
-	logger                 *gosteno.Logger
-	appId                  string
-	drainURL               *url.URL
-	sentMessageCount       *uint64
-	sentByteCount          *uint64
-	messageDrainBufferSize uint
-	listenerChannel        chan *events.Envelope
-	syslogWriter           syslogwriter.Writer
-	handleSendError        func(errorMessage, appId string)
-	disconnectChannel      chan struct{}
-	dropsondeOrigin        string
-	disconnectOnce         sync.Once
+	logger                   *gosteno.Logger
+	appId                    string
+	drainURL                 *url.URL
+	sentMessageCount         *uint64
+	sentByteCount            *uint64
+	messageDrainBufferSize   uint
+	listenerChannel          chan *events.Envelope
+	syslogWriter             syslogwriter.Writer
+	handleSendError          func(errorMessage, appId string)
+	disconnectChannel        chan struct{}
+	dropsondeOrigin          string
+	disconnectOnce           sync.Once
+	isContainerMetricAllowed bool
 }
 
-func NewSyslogSink(appId string, drainURL *url.URL, givenLogger *gosteno.Logger, messageDrainBufferSize uint, syslogWriter syslogwriter.Writer, errorHandler func(string, string), dropsondeOrigin string) *SyslogSink {
+func NewSyslogSink(appId string, drainURL *url.URL, givenLogger *gosteno.Logger, messageDrainBufferSize uint, syslogWriter syslogwriter.Writer, errorHandler func(string, string), dropsondeOrigin string, isContainerMetricAllowed bool) *SyslogSink {
 
 	syslogSink := &SyslogSink{
-		appId:                  appId,
-		drainURL:               drainURL,
-		logger:                 givenLogger,
-		messageDrainBufferSize: messageDrainBufferSize,
-		syslogWriter:           syslogWriter,
-		handleSendError:        errorHandler,
-		disconnectChannel:      make(chan struct{}),
-		dropsondeOrigin:        dropsondeOrigin,
+		appId:                    appId,
+		drainURL:                 drainURL,
+		logger:                   givenLogger,
+		messageDrainBufferSize:   messageDrainBufferSize,
+		syslogWriter:             syslogWriter,
+		handleSendError:          errorHandler,
+		disconnectChannel:        make(chan struct{}),
+		dropsondeOrigin:          dropsondeOrigin,
+		isContainerMetricAllowed: isContainerMetricAllowed,
 	}
 
 	givenLogger.Debugf("Syslog Sink %s: Created for appId [%s]", syslogSink.Identifier(), appId)
@@ -53,7 +56,7 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 
 	backoffStrategy := retrystrategy.Exponential()
 
-	context := truncatingbuffer.NewLogAllowedContext(s.dropsondeOrigin, syslogIdentifier)
+	context := truncatingbuffer.NewLogAllowedContext(s.dropsondeOrigin, syslogIdentifier, s.isContainerMetricAllowed)
 	buffer := sinks.RunTruncatingBuffer(inputChan, s.messageDrainBufferSize, context, s.logger, s.disconnectChannel)
 	timer := time.NewTimer(backoffStrategy(0))
 	connected := false
@@ -99,7 +102,7 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 					numberOfTries++
 				}
 
-				err := s.sendLogMessage(messageEnvelope.GetLogMessage())
+				err := s.sendLogMessage(s.getLogMessage(messageEnvelope))
 				if err == nil {
 					connected = true
 					break
@@ -130,6 +133,23 @@ func (s *SyslogSink) AppID() string {
 
 func (s *SyslogSink) ShouldReceiveErrors() bool {
 	return false
+}
+
+func (s *SyslogSink) getLogMessage(env *events.Envelope) *events.LogMessage {
+        switch env.GetEventType() {
+        case events.Envelope_LogMessage:
+                return env.GetLogMessage()
+        case events.Envelope_ContainerMetric:
+                containerMetric := env.GetContainerMetric()
+                message := []byte(containerMetric.String())
+                return &events.LogMessage{
+                        Message:     message,
+                        MessageType: events.LogMessage_OUT.Enum(),
+                        SourceType:  proto.String("REP"),
+                        Timestamp: env.Timestamp,
+                }
+        }
+        return nil
 }
 
 func (s *SyslogSink) sendLogMessage(logMessage *events.LogMessage) error {
