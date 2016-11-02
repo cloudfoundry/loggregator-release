@@ -171,24 +171,6 @@ var _ = Describe("WebsocketServer", func() {
 		close(stopKeepAlive)
 	})
 
-	It("sends sentEnvelopes metrics for /stream", func() {
-		stopKeepAlive, _, cleanup := addWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/stream", apiEndpoint, appId))
-		defer cleanup()
-		defer close(stopKeepAlive)
-		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
-		sinkManager.SendTo(appId, lm)
-
-		Eventually(mockBatcher.BatchCounterInput).Should(BeCalled(
-			With("sentEnvelopes"),
-		))
-		Eventually(mockChainer.SetTagInput).Should(BeCalled(
-			With("protocol", "ws"),
-			With("event_type", "LogMessage"),
-			With("endpoint", "stream"),
-		))
-		Eventually(mockChainer.IncrementCalled).Should(BeCalled())
-	})
-
 	Context("websocket firehose client", func() {
 		var (
 			stopKeepAlive     chan struct{}
