@@ -78,7 +78,7 @@ func main() {
 	}
 
 	go func() {
-		err := http.ListenAndServe(fmt.Sprintf("localhost:%d", config.PPROFPort), nil)
+		err := http.ListenAndServe(fmt.Sprintf("localhost:%d", conf.PPROFPort), nil)
 		if err != nil {
 			log.Errorf("Error starting pprof server: %s", err.Error())
 		}
