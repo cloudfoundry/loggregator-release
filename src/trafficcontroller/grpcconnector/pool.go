@@ -1,6 +1,7 @@
 package grpcconnector
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
@@ -14,6 +15,7 @@ import (
 	"golang.org/x/net/context"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 type Pool struct {
@@ -21,6 +23,7 @@ type Pool struct {
 
 	mu       sync.RWMutex
 	dopplers map[string][]unsafe.Pointer
+	tlsConf  *tls.Config
 }
 
 type clientInfo struct {
@@ -28,10 +31,11 @@ type clientInfo struct {
 	closer io.Closer
 }
 
-func NewPool(size int) *Pool {
+func NewPool(size int, tlsConf *tls.Config) *Pool {
 	return &Pool{
 		size:     size,
 		dopplers: make(map[string][]unsafe.Pointer),
+		tlsConf:  tlsConf,
 	}
 }
 
@@ -126,7 +130,9 @@ func (p *Pool) fetchClient(clients []unsafe.Pointer) plumbing.DopplerClient {
 func (p *Pool) connectToDoppler(addr string, clients []unsafe.Pointer, idx int) {
 	for {
 		log.Printf("Adding doppler %s", addr)
-		conn, err := grpc.Dial(addr, grpc.WithInsecure())
+
+		creds := credentials.NewTLS(p.tlsConf)
+		conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(creds))
 		if err != nil {
 			// TODO: We don't yet understand how this could happen, we should.
 			// TODO: Replace with exponential backoff.

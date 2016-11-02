@@ -99,7 +99,7 @@ var _ = Describe("Config", func() {
 
 				c, err := config.ParseConfig(configFile)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(c.GRPCPort).To(Equal(8082))
+				Expect(c.GRPC.Port).To(Equal(uint16(8082)))
 			})
 		})
 

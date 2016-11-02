@@ -2,18 +2,19 @@ package messagereader_test
 
 import (
 	"crypto/tls"
-	"doppler/listeners"
 	"encoding/binary"
 	"fmt"
 	"io"
 	"net"
-	"tools/benchmark/messagereader"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
+
+	"plumbing"
+	"tools/benchmark/messagereader"
 )
 
 var _ = Describe("TLSReader", func() {
@@ -26,17 +27,19 @@ var _ = Describe("TLSReader", func() {
 
 	BeforeEach(func() {
 		var err error
-		serverConfig, err = listeners.NewTLSConfig(
+		serverConfig, err = plumbing.NewTLSConfig(
 			"fixtures/server.crt",
 			"fixtures/server.key",
 			"fixtures/loggregator-ca.crt",
+			"",
 		)
 		Expect(err).ToNot(HaveOccurred())
 		serverConfig.InsecureSkipVerify = true
-		clientConfig, err = listeners.NewTLSConfig(
+		clientConfig, err = plumbing.NewTLSConfig(
 			"fixtures/client.crt",
 			"fixtures/client.key",
 			"fixtures/loggregator-ca.crt",
+			"",
 		)
 		Expect(err).ToNot(HaveOccurred())
 		clientConfig.InsecureSkipVerify = true

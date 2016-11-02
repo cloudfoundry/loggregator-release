@@ -1,0 +1,7 @@
+#!/bin/bash
+
+mkdir -p bin
+for line in metron trafficcontroller doppler statsd-injector syslog_drain_binder; do
+  echo building $line
+  go build -o bin/$line $line
+done

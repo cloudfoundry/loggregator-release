@@ -3,7 +3,11 @@ package doppler_test
 import (
 	"encoding/binary"
 	"os/exec"
+	"plumbing"
 	"testing"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"doppler/config"
 	"time"
@@ -151,4 +155,19 @@ func prefixMessage(msg []byte) []byte {
 	b := append(make([]byte, 4), msg...)
 	binary.LittleEndian.PutUint32(b, length)
 	return b
+}
+
+func connectToGRPC(conf *config.Config) (*grpc.ClientConn, plumbing.DopplerClient) {
+	tlsCfg, err := plumbing.NewTLSConfig(conf.GRPC.CertFile, conf.GRPC.KeyFile, conf.GRPC.CAFile, "doppler")
+	Expect(err).ToNot(HaveOccurred())
+	creds := credentials.NewTLS(tlsCfg)
+	out, err := grpc.Dial(localIPAddress+":5678", grpc.WithTransportCredentials(creds))
+	Expect(err).ToNot(HaveOccurred())
+	return out, plumbing.NewDopplerClient(out)
+}
+
+func fetchDopplerConfig(path string) *config.Config {
+	conf, err := config.ParseConfig(path)
+	Expect(err).ToNot(HaveOccurred())
+	return conf
 }

@@ -38,7 +38,7 @@ var _ = Describe("OpenFD", func() {
 		openFDMonitor.Stop()
 	})
 
-	It("emits a metric with the number of open file handles", func() {
+	PIt("emits a metric with the number of open file handles", func() {
 		Eventually(func() int { return len(fakeEventEmitter.GetMessages()) }).Should(BeNumerically(">", 0))
 		Expect(fakeEventEmitter.GetMessages()[0].Event.(*events.ValueMetric)).To(Equal(&events.ValueMetric{
 			Name:  proto.String("LinuxFileDescriptor"),

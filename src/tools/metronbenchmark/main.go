@@ -1,7 +1,6 @@
 package main
 
 import (
-	"doppler/listeners"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -9,6 +8,12 @@ import (
 	"os"
 	"runtime"
 	"time"
+
+	"code.cloudfoundry.org/workpool"
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/cloudfoundry/storeadapter"
+	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+
 	"tools/benchmark/experiment"
 	"tools/benchmark/messagegenerator"
 	"tools/benchmark/messagereader"
@@ -17,10 +22,7 @@ import (
 	"tools/benchmark/writestrategies"
 	"tools/metronbenchmark/eventtypereader"
 
-	"code.cloudfoundry.org/workpool"
-	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/cloudfoundry/storeadapter"
-	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+	"plumbing"
 )
 
 const nodeKey = "/doppler/meta/z1/doppler_z1/0"
@@ -71,10 +73,11 @@ func main() {
 		reader = messagereader.NewUDP(3457)
 		dopplerURLs = []string{"udp://127.0.0.1:3457"}
 	case "tls":
-		tlsConfig, err := listeners.NewTLSConfig(
+		tlsConfig, err := plumbing.NewTLSConfig(
 			serverCert,
 			serverKey,
 			caCert,
+			"",
 		)
 		if err != nil {
 			log.Printf("Error: failed to load TLS config: %s", err)

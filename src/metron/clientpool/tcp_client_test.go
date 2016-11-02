@@ -2,9 +2,7 @@ package clientpool_test
 
 import (
 	"crypto/tls"
-	"doppler/listeners"
 	"io"
-	"metron/clientpool"
 	"net"
 	"time"
 
@@ -12,6 +10,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"metron/clientpool"
+	"plumbing"
 )
 
 var _ = Describe("TCPClient", func() {
@@ -196,15 +197,14 @@ var _ = Describe("TCPClient", func() {
 
 		BeforeEach(func() {
 			var err error
-			tlsServerConfig, err := listeners.NewTLSConfig("fixtures/server.crt", "fixtures/server.key", "fixtures/loggregator-ca.crt")
+			tlsServerConfig, err := plumbing.NewTLSConfig("fixtures/server.crt", "fixtures/server.key", "fixtures/loggregator-ca.crt", "")
 			Expect(err).NotTo(HaveOccurred())
 
 			listener, err = tls.Listen("tcp", "127.0.0.1:0", tlsServerConfig)
 			Expect(err).NotTo(HaveOccurred())
 
-			tlsClientConfig, err = listeners.NewTLSConfig("fixtures/client.crt", "fixtures/client.key", "fixtures/loggregator-ca.crt")
+			tlsClientConfig, err = plumbing.NewTLSConfig("fixtures/client.crt", "fixtures/client.key", "fixtures/loggregator-ca.crt", "doppler")
 			Expect(err).NotTo(HaveOccurred())
-			tlsClientConfig.ServerName = "doppler"
 
 			client = clientpool.NewTCPClient(logger, listener.Addr().String(), time.Minute, tlsClientConfig)
 			Expect(client).ToNot(BeNil())

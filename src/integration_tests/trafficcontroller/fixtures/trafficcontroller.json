@@ -14,5 +14,10 @@
     "UaaClient": "bob",
     "UaaClientSecret": "yourUncle",
     "MonitorIntervalSeconds": 1,
-    "GRPCPort": 1236
+    "GRPC": {
+        "Port": 1236,
+        "CAFile": "../../doppler/listeners/fixtures/loggregator-ca.crt",
+        "CertFile": "../../doppler/listeners/fixtures/server.crt",
+        "KeyFile": "../../doppler/listeners/fixtures/server.key"
+    }
 }

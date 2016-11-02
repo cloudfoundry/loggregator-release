@@ -15,5 +15,10 @@
     "UaaClientSecret": "yourUncle",
     "MonitorIntervalSeconds": 1,
     "SecurityEventLog": "/tmp/access.log",
-    "GRPCPort": 1236
+    "GRPC": {
+        "Port": 1236,
+        "CAFile": "fixtures/loggregator-ca.crt",
+        "CertFile": "fixtures/client.crt",
+        "KeyFile": "fixtures/client.key"
+    }
 }

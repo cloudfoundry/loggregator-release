@@ -15,7 +15,12 @@
     },
     "IncomingTCPPort": 8767,
     "OutgoingPort": 4567,
-    "GRPCPort": 1234,
+    "GRPC":{
+        "Port": 1234,
+        "CAFile": "some-ca-file-path",
+        "KeyFile": "some-key-file-path",
+        "CertFile": "some-cert-file-path"
+    },
     "SinkSkipCertVerify": false,
     "Job": "doppler_z1",
     "Zone": "z1",

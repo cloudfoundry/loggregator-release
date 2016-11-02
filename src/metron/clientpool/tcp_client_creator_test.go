@@ -1,8 +1,8 @@
 package clientpool_test
 
 import (
-	"doppler/listeners"
 	"metron/clientpool"
+	"plumbing"
 	"time"
 
 	"crypto/tls"
@@ -27,11 +27,10 @@ var _ = Describe("TCPClientCreator", func() {
 	BeforeEach(func() {
 		logger = gosteno.NewLogger("TestLogger")
 		var err error
-		tlsClientConfig, err = listeners.NewTLSConfig("fixtures/client.crt", "fixtures/client.key", "fixtures/loggregator-ca.crt")
+		tlsClientConfig, err = plumbing.NewTLSConfig("fixtures/client.crt", "fixtures/client.key", "fixtures/loggregator-ca.crt", "doppler")
 		Expect(err).NotTo(HaveOccurred())
-		tlsClientConfig.ServerName = "doppler"
 
-		tlsServerConfig, err := listeners.NewTLSConfig("fixtures/server.crt", "fixtures/server.key", "fixtures/loggregator-ca.crt")
+		tlsServerConfig, err := plumbing.NewTLSConfig("fixtures/server.crt", "fixtures/server.key", "fixtures/loggregator-ca.crt", "")
 		Expect(err).NotTo(HaveOccurred())
 
 		tlsListener, err = tls.Listen("tcp", "127.0.0.1:0", tlsServerConfig)

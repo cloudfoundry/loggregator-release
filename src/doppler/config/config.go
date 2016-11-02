@@ -25,6 +25,13 @@ type TLSListenerConfig struct {
 	CAFile   string
 }
 
+type GRPC struct {
+	Port     uint16
+	CAFile   string
+	CertFile string
+	KeyFile  string
+}
+
 type Config struct {
 	BlackListIps                    []iprange.IPRange
 	ContainerMetricTTLSeconds       int
@@ -45,7 +52,7 @@ type Config struct {
 	MetronAddress                   string
 	MonitorIntervalSeconds          uint
 	OutgoingPort                    uint32
-	GRPCPort                        uint32
+	GRPC                            GRPC
 	SharedSecret                    string
 	SinkDialTimeoutSeconds          int
 	SinkIOTimeoutSeconds            int
@@ -82,8 +89,16 @@ func (c *Config) validate() (err error) {
 		}
 	}
 
-	if c.GRPCPort == 0 {
-		return errors.New("invalid doppler config, no GRPCPort provided")
+	if len(c.GRPC.CAFile) == 0 {
+		return errors.New("invalid doppler config, no GRPC.CAFile provided")
+	}
+
+	if len(c.GRPC.CertFile) == 0 {
+		return errors.New("invalid doppler config, no GRPC.CertFile provided")
+	}
+
+	if len(c.GRPC.KeyFile) == 0 {
+		return errors.New("invalid doppler config, no GRPC.KeyFile provided")
 	}
 
 	return nil
@@ -145,6 +160,10 @@ func Parse(confData []byte) (*Config, error) {
 
 	if config.EtcdMaxConcurrentRequests < 1 {
 		config.EtcdMaxConcurrentRequests = 1
+	}
+
+	if config.GRPC.Port == 0 {
+		config.GRPC.Port = 8082
 	}
 
 	return config, nil

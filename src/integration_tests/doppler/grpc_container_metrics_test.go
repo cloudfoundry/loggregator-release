@@ -3,14 +3,15 @@ package doppler_test
 import (
 	"fmt"
 	"net"
-	"plumbing"
 
 	"golang.org/x/net/context"
-
 	"google.golang.org/grpc"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"doppler/config"
+	"plumbing"
 )
 
 var _ = Describe("ContainerMetrics", func() {
@@ -20,22 +21,18 @@ var _ = Describe("ContainerMetrics", func() {
 		return in
 	}
 
-	var connectToGRPC = func() (*grpc.ClientConn, plumbing.DopplerClient) {
-		out, err := grpc.Dial(localIPAddress+":5678", grpc.WithInsecure())
-		Expect(err).ToNot(HaveOccurred())
-		return out, plumbing.NewDopplerClient(out)
-	}
-
 	Context("with a client connected to GRPC", func() {
 		var (
+			conf   *config.Config
 			in     net.Conn
 			out    *grpc.ClientConn
 			client plumbing.DopplerClient
 		)
 
 		BeforeEach(func() {
+			conf = fetchDopplerConfig("fixtures/doppler.json")
 			in = connectToDoppler()
-			out, client = connectToGRPC()
+			out, client = connectToGRPC(conf)
 		})
 
 		AfterEach(func() {
@@ -53,7 +50,7 @@ var _ = Describe("ContainerMetrics", func() {
 			}
 			f := func() []byte {
 				msg, _ := client.ContainerMetrics(ctx, req)
-				if len(msg.Payload) == 0 {
+				if msg == nil || len(msg.Payload) == 0 {
 					return nil
 				}
 				return msg.Payload[0]

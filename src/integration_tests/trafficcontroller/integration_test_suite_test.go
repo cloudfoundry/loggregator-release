@@ -4,6 +4,9 @@ import (
 	"integration_tests/trafficcontroller/fake_auth_server"
 	"integration_tests/trafficcontroller/fake_doppler"
 	"integration_tests/trafficcontroller/fake_uaa_server"
+	"log"
+
+	"google.golang.org/grpc/grpclog"
 
 	"code.cloudfoundry.org/localip"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -45,6 +48,8 @@ var (
 )
 
 func TestIntegrationTest(t *testing.T) {
+	grpclog.SetLogger(log.New(GinkgoWriter, "", log.LstdFlags))
+	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Traffic Controller Integration Suite")
 }

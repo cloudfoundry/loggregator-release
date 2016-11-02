@@ -13,6 +13,13 @@ type EtcdTLSClientConfig struct {
 	CAFile   string
 }
 
+type GRPC struct {
+	Port     uint16
+	CAFile   string
+	CertFile string
+	KeyFile  string
+}
+
 type Config struct {
 	EtcdUrls                  []string
 	EtcdMaxConcurrentRequests int
@@ -27,7 +34,7 @@ type Config struct {
 	OutgoingDropsondePort  uint32
 	MetronHost             string
 	MetronPort             int
-	GRPCPort               int
+	GRPC                   GRPC
 	SystemDomain           string
 	SkipCertVerify         bool
 	UaaHost                string
@@ -85,8 +92,8 @@ func (c *Config) setDefaults() {
 		c.MetronPort = 3457
 	}
 
-	if c.GRPCPort == 0 {
-		c.GRPCPort = 8082
+	if c.GRPC.Port == 0 {
+		c.GRPC.Port = 8082
 	}
 }
 
@@ -99,6 +106,18 @@ func (c *Config) validate() error {
 		if c.EtcdTLSClientConfig.CertFile == "" || c.EtcdTLSClientConfig.KeyFile == "" || c.EtcdTLSClientConfig.CAFile == "" {
 			return errors.New("invalid etcd TLS client configuration")
 		}
+	}
+
+	if len(c.GRPC.CAFile) == 0 {
+		return errors.New("invalid doppler config, no GRPC.CAFile provided")
+	}
+
+	if len(c.GRPC.CertFile) == 0 {
+		return errors.New("invalid doppler config, no GRPC.CertFile provided")
+	}
+
+	if len(c.GRPC.KeyFile) == 0 {
+		return errors.New("invalid doppler config, no GRPC.KeyFile provided")
 	}
 
 	return nil

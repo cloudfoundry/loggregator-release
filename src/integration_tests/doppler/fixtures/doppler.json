@@ -4,7 +4,6 @@
     "IncomingUDPPort": 8765,
     "IncomingTCPPort": 4321,
     "OutgoingPort": 4567,
-    "GRPCPort": 5678,
     "SinkSkipCertVerify": true,
     "Index": "0",
     "MaxRetainedLogMessages": 10,
@@ -23,6 +22,12 @@
     "EnableTLSTransport": true,
     "TLSListenerConfig": {
         "Port": 8766,
+        "KeyFile": "../fixtures/server.key",
+        "CertFile": "../fixtures/server.crt",
+        "CAFile": "../fixtures/loggregator-ca.crt"
+    },
+    "GRPC": {
+        "Port": 5678,
         "KeyFile": "../fixtures/server.key",
         "CertFile": "../fixtures/server.crt",
         "CAFile": "../fixtures/loggregator-ca.crt"

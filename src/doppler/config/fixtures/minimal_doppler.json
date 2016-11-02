@@ -1,6 +1,11 @@
 {
     "OutgoingPort": 8080,
-    "GRPCPort": 4567,
+    "GRPC":{
+        "Port": 4567,
+        "CAFile": "some-ca-file-path",
+        "KeyFile": "some-key-file-path",
+        "CertFile": "some-cert-file-path"
+    },
     "MessageDrainBufferSize": 100,
     "SinkSkipCertVerify": false,
     "Index": "0",

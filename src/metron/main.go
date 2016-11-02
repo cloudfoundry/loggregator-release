@@ -1,29 +1,12 @@
 package main
 
 import (
-	"doppler/dopplerservice"
-	"doppler/listeners"
-	"doppler/sinks/retrystrategy"
 	"flag"
 	"fmt"
 	"net/http"
 	_ "net/http/pprof"
 	"runtime"
 	"time"
-
-	"metron/backoff"
-	"metron/clientpool"
-	"metron/clientreader"
-	"metron/networkreader"
-	"metron/writers/batch"
-	"metron/writers/dopplerforwarder"
-	"metron/writers/eventmarshaller"
-	"metron/writers/eventunmarshaller"
-	"metron/writers/messageaggregator"
-	"metron/writers/tagger"
-
-	"logger"
-	"metron/eventwriter"
 
 	"code.cloudfoundry.org/localip"
 	"code.cloudfoundry.org/workpool"
@@ -35,7 +18,24 @@ import (
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 
+	"metron/backoff"
+	"metron/clientpool"
+	"metron/clientreader"
 	"metron/config"
+	"metron/eventwriter"
+	"metron/networkreader"
+	"metron/writers/batch"
+	"metron/writers/dopplerforwarder"
+	"metron/writers/eventmarshaller"
+	"metron/writers/eventunmarshaller"
+	"metron/writers/messageaggregator"
+	"metron/writers/tagger"
+
+	"doppler/dopplerservice"
+	"doppler/sinks/retrystrategy"
+
+	"logger"
+	"plumbing"
 	"signalmanager"
 )
 
@@ -164,11 +164,10 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 			writers[proto] = batchWriter
 		case "tls":
 			c := conf.TLSConfig
-			tlsConfig, err := listeners.NewTLSConfig(c.CertFile, c.KeyFile, c.CAFile)
+			tlsConfig, err := plumbing.NewTLSConfig(c.CertFile, c.KeyFile, c.CAFile, "doppler")
 			if err != nil {
 				return nil, err
 			}
-			tlsConfig.ServerName = "doppler"
 			tlsCreator := clientpool.NewTCPClientCreator(TCPTimeout, logger, tlsConfig)
 			tlsWrapper := dopplerforwarder.NewWrapper(logger, proto)
 			tlsPool := clientpool.NewDopplerPool(logger, tlsCreator)

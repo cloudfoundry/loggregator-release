@@ -18,17 +18,20 @@ var _ = Describe("Config", func() {
 		})
 
 		It("returns proper config", func() {
-			config, err := config.ParseConfig(configFile)
+			cfg, err := config.ParseConfig(configFile)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(config.IncomingUDPPort).To(Equal(uint32(3456)))
-			Expect(config.IncomingTCPPort).To(Equal(uint32(3457)))
-			Expect(config.OutgoingPort).To(Equal(uint32(8080)))
-			Expect(config.MessageDrainBufferSize).To(Equal(uint(100)))
-			Expect(config.MonitorIntervalSeconds).To(BeEquivalentTo(60))
-			Expect(config.EnableTLSTransport).To(BeFalse())
-			Expect(config.EtcdRequireTLS).To(BeFalse())
-			Expect(config.MetricBatchIntervalMilliseconds).To(BeEquivalentTo(5000))
-			Expect(config.GRPCPort).To(BeEquivalentTo(4567))
+			Expect(cfg.IncomingUDPPort).To(Equal(uint32(3456)))
+			Expect(cfg.IncomingTCPPort).To(Equal(uint32(3457)))
+			Expect(cfg.OutgoingPort).To(Equal(uint32(8080)))
+			Expect(cfg.MessageDrainBufferSize).To(Equal(uint(100)))
+			Expect(cfg.MonitorIntervalSeconds).To(BeEquivalentTo(60))
+			Expect(cfg.EnableTLSTransport).To(BeFalse())
+			Expect(cfg.EtcdRequireTLS).To(BeFalse())
+			Expect(cfg.MetricBatchIntervalMilliseconds).To(BeEquivalentTo(5000))
+			Expect(cfg.GRPC.Port).To(BeEquivalentTo(4567))
+			Expect(cfg.GRPC.CAFile).To(Equal("some-ca-file-path"))
+			Expect(cfg.GRPC.KeyFile).Should(Equal("some-key-file-path"))
+			Expect(cfg.GRPC.CertFile).Should(Equal("some-cert-file-path"))
 		})
 
 		It("defaults to empty blacklist", func() {
@@ -39,7 +42,7 @@ var _ = Describe("Config", func() {
 	})
 
 	Context("with less than minimal config", func() {
-		It("errors out when GRPCPort is not provided", func() {
+		It("errors out when GRPC is not provided", func() {
 			confData := []byte(`{
 				"OutgoingPort": 8080,
 				"MessageDrainBufferSize": 100,
@@ -51,6 +54,26 @@ var _ = Describe("Config", func() {
 				"ContainerMetricTTLSeconds": 120,
 				"SinkInactivityTimeoutSeconds": 120,
 				"EnableTLSTransport": false
+			}`)
+			_, err := config.Parse(confData)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("errors out when GRPCTLSConfig is not provided", func() {
+			confData := []byte(`{
+				"OutgoingPort": 8080,
+				"MessageDrainBufferSize": 100,
+				"SinkSkipCertVerify": false,
+				"Index": "0",
+				"MaxRetainedLogMessages": 10,
+				"SharedSecret": "mysecret",
+				"Syslog"  : "",
+				"ContainerMetricTTLSeconds": 120,
+				"SinkInactivityTimeoutSeconds": 120,
+				"EnableTLSTransport": false,
+				"GRPC":{
+                    "Port": 1234
+                }
 			}`)
 			_, err := config.Parse(confData)
 			Expect(err).To(HaveOccurred())

@@ -4,7 +4,6 @@
     "IncomingUDPPort": 47654,
     "IncomingTCPPort": 43210,
     "OutgoingPort": 45678,
-    "GRPCPort": 63726,
     "SinkSkipCertVerify": true,
     "MaxRetainedLogMessages": 10,
     "MessageDrainBufferSize": 100,
@@ -20,5 +19,11 @@
     ],
     "MetronAddress": "localhost:37474",
     "MonitorIntervalSeconds": 1,
-    "EnableTLSTransport": false
+    "EnableTLSTransport": false,
+    "GRPC": {
+        "Port": 63726,
+        "KeyFile": "../fixtures/server.key",
+        "CertFile": "../fixtures/server.crt",
+        "CAFile": "../fixtures/loggregator-ca.crt"
+    }
 }

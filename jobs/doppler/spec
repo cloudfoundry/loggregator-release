@@ -4,8 +4,8 @@ name: doppler
 templates:
   doppler_ctl.erb: bin/doppler_ctl
   doppler.json.erb: config/doppler.json
-  doppler.crt.erb: config/certs/doppler.crt
-  doppler.key.erb: config/certs/doppler.key
+  doppler-server.crt.erb: config/certs/doppler-server.crt
+  doppler-server.key.erb: config/certs/doppler-server.key
   loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
   etcd-client.crt.erb: config/certs/etcd-client.crt
   etcd-client.key.erb: config/certs/etcd-client.key
@@ -41,10 +41,9 @@ properties:
     default: 3459
   doppler.tls.server_cert:
     description: "TLS server certificate"
-    default: ""
   doppler.tls.server_key:
     description: "TLS server key"
-    default: ""
+
   loggregator.tls.ca_cert:
     description: "CA root required for key/cert verification"
     default: ""
@@ -65,9 +64,11 @@ properties:
   doppler.outgoing_port:
     description: Port for outgoing log messages via websockets
     default: 8081
+
   doppler.grpc_port:
     description: Port for outgoing log messages via GRPC
     default: 8082
+
   doppler.websocket_write_timeout_seconds:
     description: "Interval before a websocket write is aborted if it does not succeed"
     default: 60

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	doppler_config "doppler/config"
+	"doppler/config"
 	"doppler/grpcmanager"
 	"doppler/sinkserver"
 	"doppler/sinkserver/blacklist"
@@ -16,6 +16,7 @@ import (
 	"doppler/sinkserver/websocketserver"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"doppler/listeners"
 	"monitor"
@@ -66,7 +67,7 @@ type Doppler struct {
 func New(
 	logger *gosteno.Logger,
 	host string,
-	config *doppler_config.Config,
+	conf *config.Config,
 	storeAdapter storeadapter.StoreAdapter,
 	messageDrainBufferSize uint,
 	dropsondeOrigin string,
@@ -84,20 +85,20 @@ func New(
 	appStoreCache := cache.NewAppServiceCache()
 	doppler.appStoreWatcher, doppler.newAppServiceChan, doppler.deletedAppServiceChan = store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache, logger)
 
-	doppler.batcher = initializeMetrics(config.MetricBatchIntervalMilliseconds)
+	doppler.batcher = initializeMetrics(conf.MetricBatchIntervalMilliseconds)
 
 	doppler.envelopeChan = make(chan *events.Envelope)
 
 	doppler.udpListener, doppler.dropsondeBytesChan = listeners.NewUDPListener(
-		fmt.Sprintf("%s:%d", host, config.IncomingUDPPort),
+		fmt.Sprintf("%s:%d", host, conf.IncomingUDPPort),
 		doppler.batcher,
 		logger,
 		"udpListener",
 	)
 
 	var err error
-	if config.EnableTLSTransport {
-		tlsConfig := &config.TLSListenerConfig
+	if conf.EnableTLSTransport {
+		tlsConfig := &conf.TLSListenerConfig
 		addr := fmt.Sprintf("%s:%d", host, tlsConfig.Port)
 		contextName := "tlsListener"
 		doppler.tlsListener, err = listeners.NewTCPListener(contextName, addr, tlsConfig, doppler.envelopeChan, doppler.batcher, TCPTimeout, logger)
@@ -106,21 +107,21 @@ func New(
 		}
 	}
 
-	addr := fmt.Sprintf("%s:%d", host, config.IncomingTCPPort)
+	addr := fmt.Sprintf("%s:%d", host, conf.IncomingTCPPort)
 	contextName := "tcpListener"
 	doppler.tcpListener, err = listeners.NewTCPListener(contextName, addr, nil, doppler.envelopeChan, doppler.batcher, TCPTimeout, logger)
 
-	doppler.signatureVerifier = signature.NewVerifier(logger, config.SharedSecret)
+	doppler.signatureVerifier = signature.NewVerifier(logger, conf.SharedSecret)
 
-	doppler.dropsondeUnmarshallerCollection = dropsonde_unmarshaller.NewDropsondeUnmarshallerCollection(logger, config.UnmarshallerCount)
+	doppler.dropsondeUnmarshallerCollection = dropsonde_unmarshaller.NewDropsondeUnmarshallerCollection(logger, conf.UnmarshallerCount)
 
-	blacklist := blacklist.New(config.BlackListIps, logger)
-	metricTTL := time.Duration(config.ContainerMetricTTLSeconds) * time.Second
-	sinkTimeout := time.Duration(config.SinkInactivityTimeoutSeconds) * time.Second
-	sinkIOTimeout := time.Duration(config.SinkIOTimeoutSeconds) * time.Second
+	blacklist := blacklist.New(conf.BlackListIps, logger)
+	metricTTL := time.Duration(conf.ContainerMetricTTLSeconds) * time.Second
+	sinkTimeout := time.Duration(conf.SinkInactivityTimeoutSeconds) * time.Second
+	sinkIOTimeout := time.Duration(conf.SinkIOTimeoutSeconds) * time.Second
 	doppler.sinkManager = sinkmanager.New(
-		config.MaxRetainedLogMessages,
-		config.SinkSkipCertVerify,
+		conf.MaxRetainedLogMessages,
+		conf.SinkSkipCertVerify,
 		blacklist,
 		logger,
 		messageDrainBufferSize,
@@ -134,13 +135,25 @@ func New(
 	grpcRouter := grpcmanager.NewRouter()
 	grpcManager := grpcmanager.New(grpcRouter, doppler.sinkManager)
 
-	doppler.Infof("Listening for GRPC connections on %d", config.GRPCPort)
-	grpcListener, err := net.Listen("tcp", fmt.Sprintf(":%d", config.GRPCPort))
+	tlsConfig, err := plumbing.NewTLSConfig(
+		conf.GRPC.CertFile,
+		conf.GRPC.KeyFile,
+		conf.GRPC.CAFile,
+		"doppler",
+	)
 	if err != nil {
-		log.Printf("Failed to start listener (port=%d) for gRPC: %s", config.GRPCPort, err)
 		return nil, err
 	}
-	grpcServer := grpc.NewServer()
+	transportCreds := credentials.NewTLS(tlsConfig)
+
+	doppler.Infof("Listening for GRPC connections on %d", conf.GRPC.Port)
+	grpcListener, err := net.Listen("tcp", fmt.Sprintf(":%d", conf.GRPC.Port))
+
+	if err != nil {
+		log.Printf("Failed to start listener (port=%d) for gRPC: %s", conf.GRPC.Port, err)
+		return nil, err
+	}
+	grpcServer := grpc.NewServer(grpc.Creds(transportCreds))
 	plumbing.RegisterDopplerServer(grpcServer, grpcManager)
 	go func() {
 		log.Printf("Starting gRPC server on %s", grpcListener.Addr().String())
@@ -152,11 +165,11 @@ func New(
 	doppler.messageRouter = sinkserver.NewMessageRouter(logger, doppler.sinkManager, grpcRouter)
 
 	doppler.websocketServer, err = websocketserver.New(
-		fmt.Sprintf(":%d", config.OutgoingPort),
+		fmt.Sprintf(":%d", conf.OutgoingPort),
 		doppler.sinkManager,
 		websocketWriteTimeout,
 		keepAliveInterval,
-		config.MessageDrainBufferSize,
+		conf.MessageDrainBufferSize,
 		dropsondeOrigin,
 		doppler.batcher,
 		logger,
@@ -165,7 +178,7 @@ func New(
 		return nil, fmt.Errorf("Failed to create the websocket server: %s", err.Error())
 	}
 
-	monitorInterval := time.Duration(config.MonitorIntervalSeconds) * time.Second
+	monitorInterval := time.Duration(conf.MonitorIntervalSeconds) * time.Second
 	doppler.openFileMonitor = monitor.NewLinuxFD(monitorInterval, logger)
 	doppler.uptimeMonitor = monitor.NewUptime(monitorInterval)
 

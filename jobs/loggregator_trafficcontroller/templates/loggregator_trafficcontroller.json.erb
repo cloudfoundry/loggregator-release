@@ -30,6 +30,12 @@
         "CertFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-client.crt",
         "CAFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-ca.crt"
     }
+    grpcListenerConfig = {
+        "Port" => p("doppler.grpc_port"),
+        "KeyFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/doppler-client.key",
+        "CertFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/doppler-client.crt",
+        "CAFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/loggregator_ca.crt"
+    }
 
     scheme = p("login.protocol")
     domain = p("system_domain")
@@ -46,6 +52,7 @@
         end
         a[:OutgoingDropsondePort] = p("loggregator.outgoing_dropsonde_port")
         a[:DopplerPort] = p("doppler.outgoing_port")
+        a[:GRPC] = grpcListenerConfig
         a[:SkipCertVerify] = p("ssl.skip_cert_verify")
         a[:ApiHost] = p("cc.srv_api_uri")
         a[:SystemDomain] = p("system_domain")
@@ -62,5 +69,4 @@
         end
     end
 %>
-
 <%= JSON.pretty_generate(args) %>

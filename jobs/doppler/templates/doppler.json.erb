@@ -16,7 +16,9 @@
       instance_zone = p("doppler.zone")
     end
 
-    etcdMachines = p("loggregator.etcd.machines").map{|addr| "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"}
+    etcdMachines = p("loggregator.etcd.machines").map { |addr|
+        "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"
+    }
     etcdTLSClientConfig = {
         "KeyFile" => "/var/vcap/jobs/doppler/config/certs/etcd-client.key",
         "CertFile" => "/var/vcap/jobs/doppler/config/certs/etcd-client.crt",
@@ -24,8 +26,14 @@
     }
     tlsListenerConfig = {
         "Port" => p("doppler.tls.port"),
-        "KeyFile" => "/var/vcap/jobs/doppler/config/certs/doppler.key",
-        "CertFile" => "/var/vcap/jobs/doppler/config/certs/doppler.crt",
+        "KeyFile" => "/var/vcap/jobs/doppler/config/certs/doppler-server.key",
+        "CertFile" => "/var/vcap/jobs/doppler/config/certs/doppler-server.crt",
+        "CAFile" => "/var/vcap/jobs/doppler/config/certs/loggregator_ca.crt"
+    }
+    grpcListenerConfig = {
+        "Port" => p("doppler.grpc_port"),
+        "KeyFile" => "/var/vcap/jobs/doppler/config/certs/doppler-server.key",
+        "CertFile" => "/var/vcap/jobs/doppler/config/certs/doppler-server.crt",
         "CAFile" => "/var/vcap/jobs/doppler/config/certs/loggregator_ca.crt"
     }
 
@@ -43,7 +51,7 @@
             a[:TLSListenerConfig] = tlsListenerConfig
         end
         a[:OutgoingPort] = p("doppler.outgoing_port")
-        a[:GRPCPort] = p("doppler.grpc_port")
+        a[:GRPC] = grpcListenerConfig
         a[:Zone] = instance_zone
         a[:JobName] = job_name
         a[:Index] = instance_id
@@ -67,5 +75,4 @@
         end
     end
 %>
-
 <%= JSON.pretty_generate(args) %>

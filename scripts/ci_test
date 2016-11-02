@@ -65,6 +65,13 @@ function bold_blue {
 
 not_unit_tests="code.cloudfoundry.org,github.com,golang.org,gopkg.in,integration_tests,lats"
 
+if [ $TEST_TYPE == "binaries" ] || [ $TEST_TYPE == "everything" ]
+then
+  bold_blue "==================================  Building Binaries  =================================="
+  scripts/build
+  result=$?
+fi
+
 if [ $TEST_TYPE == "unit" ] || [ $TEST_TYPE == "everything" ]
 then
   bold_blue "==================================  Running Unit Tests  =================================="

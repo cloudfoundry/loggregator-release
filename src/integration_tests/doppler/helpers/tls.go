@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"crypto/tls"
-	"doppler/listeners"
 	"encoding/binary"
 	"net"
 
@@ -12,12 +11,18 @@ import (
 	"github.com/gogo/protobuf/proto"
 
 	. "github.com/onsi/gomega"
+
+	"plumbing"
 )
 
 func DialTLS(address, cert, key, ca string) (*tls.Conn, error) {
-	tlsConfig, err := listeners.NewTLSConfig("../fixtures/client.crt", "../fixtures/client.key", "../fixtures/loggregator-ca.crt")
+	tlsConfig, err := plumbing.NewTLSConfig(
+		"../fixtures/client.crt",
+		"../fixtures/client.key",
+		"../fixtures/loggregator-ca.crt",
+		"doppler",
+	)
 	Expect(err).NotTo(HaveOccurred())
-	tlsConfig.ServerName = "doppler"
 	return tls.Dial("tcp", address, tlsConfig)
 }
 

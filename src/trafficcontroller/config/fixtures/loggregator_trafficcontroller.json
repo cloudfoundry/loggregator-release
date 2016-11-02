@@ -14,6 +14,10 @@
     "SecurityEventLog": "access.log",
     "MetronHost": "foo.bar",
     "MetronPort": 7543,
-    "GRPCPort": 3456,
     "PPROFPort": 666
+    "GRPC":{
+        "CAFile": "../../doppler/listeners/fixtures/loggregator-ca.crt",
+        "CertFile": "../../doppler/listeners/fixtures/server.crt",
+        "KeyFile": "../../doppler/listeners/fixtures/server.key"
+    }
 }

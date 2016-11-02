@@ -22,7 +22,14 @@ var _ = Describe("Pool", func() {
 	)
 
 	BeforeEach(func() {
-		pool = grpcconnector.NewPool(2)
+		tlsConfig, err := plumbing.NewTLSConfig(
+			"./fixtures/client.crt",
+			"./fixtures/client.key",
+			"./fixtures/loggregator-ca.crt",
+			"doppler",
+		)
+		Expect(err).ToNot(HaveOccurred())
+		pool = grpcconnector.NewPool(2, tlsConfig)
 	})
 
 	AfterEach(func(done Done) {

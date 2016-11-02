@@ -2,8 +2,6 @@ package listeners_test
 
 import (
 	"crypto/tls"
-	"doppler/config"
-	"doppler/listeners"
 	"encoding/binary"
 	"fmt"
 	"net"
@@ -22,6 +20,10 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/nu7hatch/gouuid"
+
+	"doppler/config"
+	"doppler/listeners"
+	"plumbing"
 )
 
 var _ = Describe("TCPlistener", func() {
@@ -49,13 +51,13 @@ var _ = Describe("TCPlistener", func() {
 		}
 
 		var err error
-		tlsClientConfig, err = listeners.NewTLSConfig(
+		tlsClientConfig, err = plumbing.NewTLSConfig(
 			"fixtures/client.crt",
 			"fixtures/client.key",
 			"fixtures/loggregator-ca.crt",
+			"doppler",
 		)
 		Expect(err).NotTo(HaveOccurred())
-		tlsClientConfig.ServerName = "doppler"
 
 		envelopeChan = make(chan *events.Envelope)
 	})
@@ -116,9 +118,13 @@ var _ = Describe("TCPlistener", func() {
 
 			Context("without a CA file", func() {
 				It("fails", func() {
-					tlsClientConfig, err := listeners.NewTLSConfig("fixtures/client.crt", "fixtures/client.key", "")
+					tlsClientConfig, err := plumbing.NewTLSConfig(
+						"fixtures/client.crt",
+						"fixtures/client.key",
+						"",
+						"doppler",
+					)
 					Expect(err).NotTo(HaveOccurred())
-					tlsClientConfig.ServerName = "doppler"
 
 					_, err = tls.Dial("tcp", listener.Address(), tlsClientConfig)
 					Expect(err).To(MatchError("x509: certificate signed by unknown authority"))

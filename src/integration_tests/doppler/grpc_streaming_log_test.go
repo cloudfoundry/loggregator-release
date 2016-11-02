@@ -1,6 +1,7 @@
 package doppler_test
 
 import (
+	"doppler/config"
 	"fmt"
 	"net"
 	"plumbing"
@@ -36,27 +37,29 @@ var _ = Describe("GRPC Streaming Logs", func() {
 		return in
 	}
 
-	var connectoToSubscription = func(req plumbing.SubscriptionRequest) (*grpc.ClientConn, plumbing.Doppler_SubscribeClient) {
-		out, err := grpc.Dial(localIPAddress+":5678", grpc.WithInsecure())
-		Expect(err).ToNot(HaveOccurred())
-		client := plumbing.NewDopplerClient(out)
+	var connectoToSubscription = func(conf *config.Config, req plumbing.SubscriptionRequest) (*grpc.ClientConn, plumbing.Doppler_SubscribeClient) {
+		conn, client := connectToGRPC(conf)
+
 		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 		subscription, err := client.Subscribe(ctx, &req)
 		Expect(err).ToNot(HaveOccurred())
 
-		return out, subscription
+		return conn, subscription
 	}
 
 	Context("with a subscription established", func() {
 		var (
+			conf         *config.Config
 			in           net.Conn
 			out          *grpc.ClientConn
 			subscription plumbing.Doppler_SubscribeClient
 		)
 
 		BeforeEach(func() {
+			conf = fetchDopplerConfig("fixtures/doppler.json")
 			in = connectToDoppler()
 			out, subscription = connectoToSubscription(
+				conf,
 				plumbing.SubscriptionRequest{
 					ShardID: "foo",
 					Filter: &plumbing.Filter{
@@ -80,6 +83,10 @@ var _ = Describe("GRPC Streaming Logs", func() {
 
 			f := func() []byte {
 				msg, _ := subscription.Recv()
+				if msg == nil {
+					return nil
+				}
+
 				return msg.Payload
 			}
 			Eventually(f).Should(Equal(logMessage))

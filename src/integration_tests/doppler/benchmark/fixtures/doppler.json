@@ -3,7 +3,12 @@
     "EtcdMaxConcurrentRequests": 10,
     "IncomingUDPPort": 8765,
     "OutgoingPort": 4567,
-    "GRPCPort": 5678,
+    "GRPC": {
+        "Port": 5678,
+        "CAFile": "../../../doppler/listeners/fixtures/loggregator-ca.crt",
+        "CertFile": "../../../doppler/listeners/fixtures/server.crt",
+        "KeyFile": "../../../doppler/listeners/fixtures/server.key"
+    },
     "SinkSkipCertVerify": true,
     "Index": "0",
     "MaxRetainedLogMessages": 10,

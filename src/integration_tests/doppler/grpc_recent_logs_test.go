@@ -1,6 +1,7 @@
 package doppler_test
 
 import (
+	"doppler/config"
 	"fmt"
 	"net"
 	"plumbing"
@@ -21,22 +22,18 @@ var _ = Describe("RecentLogs", func() {
 		return in
 	}
 
-	var connectToGRPC = func() (*grpc.ClientConn, plumbing.DopplerClient) {
-		out, err := grpc.Dial(localIPAddress+":5678", grpc.WithInsecure())
-		Expect(err).ToNot(HaveOccurred())
-		return out, plumbing.NewDopplerClient(out)
-	}
-
 	Context("with a client connected to GRPC", func() {
 		var (
+			conf   *config.Config
 			in     net.Conn
 			out    *grpc.ClientConn
 			client plumbing.DopplerClient
 		)
 
 		BeforeEach(func() {
+			conf = fetchDopplerConfig("fixtures/doppler.json")
 			in = connectToDoppler()
-			out, client = connectToGRPC()
+			out, client = connectToGRPC(conf)
 		})
 
 		AfterEach(func() {
@@ -56,7 +53,7 @@ var _ = Describe("RecentLogs", func() {
 			}
 			f := func() []byte {
 				msg, _ := client.RecentLogs(ctx, req)
-				if len(msg.Payload) == 0 {
+				if msg == nil || len(msg.Payload) == 0 {
 					return nil
 				}
 				return msg.Payload[0]

@@ -2,13 +2,8 @@ package listeners
 
 import (
 	"crypto/tls"
-	"crypto/x509"
-	"doppler/config"
 	"encoding/binary"
-	"errors"
-	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"strings"
 	"sync"
@@ -17,6 +12,9 @@ import (
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
 	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
+
+	"doppler/config"
+	"plumbing"
 )
 
 type TCPListener struct {
@@ -35,36 +33,6 @@ type TCPListener struct {
 	deadline       time.Duration
 }
 
-func NewTLSConfig(certFile, keyFile, caCertFile string) (*tls.Config, error) {
-	tlsCert, err := tls.LoadX509KeyPair(certFile, keyFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load keypair: %s", err.Error())
-	}
-
-	tlsConfig := &tls.Config{
-		Certificates:       []tls.Certificate{tlsCert},
-		InsecureSkipVerify: false,
-		ClientAuth:         tls.RequireAndVerifyClientCert,
-		MinVersion:         tls.VersionTLS12,
-	}
-
-	if caCertFile != "" {
-		certBytes, err := ioutil.ReadFile(caCertFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed read ca cert file: %s", err.Error())
-		}
-
-		caCertPool := x509.NewCertPool()
-		if ok := caCertPool.AppendCertsFromPEM(certBytes); !ok {
-			return nil, errors.New("Unable to load caCert")
-		}
-		tlsConfig.RootCAs = caCertPool
-		tlsConfig.ClientCAs = caCertPool
-	}
-
-	return tlsConfig, nil
-}
-
 func NewTCPListener(
 	metricProto, address string,
 	tlsListenerConfig *config.TLSListenerConfig,
@@ -81,7 +49,7 @@ func NewTCPListener(
 
 	if tlsListenerConfig != nil {
 		protocol = "TLS"
-		tlsConfig, err := NewTLSConfig(tlsListenerConfig.CertFile, tlsListenerConfig.KeyFile, tlsListenerConfig.CAFile)
+		tlsConfig, err := plumbing.NewTLSConfig(tlsListenerConfig.CertFile, tlsListenerConfig.KeyFile, tlsListenerConfig.CAFile, "")
 		if err != nil {
 			return nil, err
 		}

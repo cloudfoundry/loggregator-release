@@ -11,6 +11,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"plumbing"
 	"signalmanager"
 	"strconv"
 	"time"
@@ -56,22 +57,22 @@ var (
 func main() {
 	flag.Parse()
 
-	config, err := config.ParseConfig(*configFile)
+	conf, err := config.ParseConfig(*configFile)
 	if err != nil {
 		panic(fmt.Errorf("Unable to parse config: %s", err))
 	}
 
-	httpsetup.SetInsecureSkipVerify(config.SkipCertVerify)
+	httpsetup.SetInsecureSkipVerify(conf.SkipCertVerify)
 
 	ipAddress, err := localip.LocalIP()
 	if err != nil {
 		panic(fmt.Errorf("Unable to resolve own IP address: %s", err))
 	}
 
-	log := logger.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller", config.Syslog)
+	log := logger.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller", conf.Syslog)
 	log.Info("Startup: Setting up the loggregator traffic controller")
 
-	batcher, err := initializeMetrics("LoggregatorTrafficController", net.JoinHostPort(config.MetronHost, strconv.Itoa(config.MetronPort)))
+	batcher, err := initializeMetrics("LoggregatorTrafficController", net.JoinHostPort(conf.MetronHost, strconv.Itoa(conf.MetronPort)))
 	if err != nil {
 		log.Errorf("Error initializing dropsonde: %s", err)
 	}
@@ -83,7 +84,7 @@ func main() {
 		}
 	}()
 
-	monitorInterval := time.Duration(config.MonitorIntervalSeconds) * time.Second
+	monitorInterval := time.Duration(conf.MonitorIntervalSeconds) * time.Second
 	uptimeMonitor := monitor.NewUptime(monitorInterval)
 	go uptimeMonitor.Start()
 	defer uptimeMonitor.Stop()
@@ -92,25 +93,25 @@ func main() {
 	go openFileMonitor.Start()
 	defer openFileMonitor.Stop()
 
-	etcdAdapter := defaultStoreAdapterProvider(config)
+	etcdAdapter := defaultStoreAdapterProvider(conf)
 	err = etcdAdapter.Connect()
 	if err != nil {
 		panic(fmt.Errorf("Unable to connect to ETCD: %s", err))
 	}
 
-	logAuthorizer := authorization.NewLogAccessAuthorizer(*disableAccessControl, config.ApiHost)
+	logAuthorizer := authorization.NewLogAccessAuthorizer(*disableAccessControl, conf.ApiHost)
 
-	uaaClient := uaa_client.NewUaaClient(config.UaaHost, config.UaaClient, config.UaaClientSecret)
+	uaaClient := uaa_client.NewUaaClient(conf.UaaHost, conf.UaaClient, conf.UaaClientSecret)
 	adminAuthorizer := authorization.NewAdminAccessAuthorizer(*disableAccessControl, &uaaClient)
 
 	// TODO: The preferredProtocol of udp tells the finder to pull out the Doppler URLs from the legacy ETCD endpoint.
 	// Eventually we'll have a separate websocket client pool
-	finder := dopplerservice.NewFinder(etcdAdapter, int(config.DopplerPort), int(config.GRPCPort), []string{"ws"}, "", log)
+	finder := dopplerservice.NewFinder(etcdAdapter, int(conf.DopplerPort), int(conf.GRPC.Port), []string{"ws"}, "", log)
 	finder.Start()
 
 	var accessMiddleware func(middleware.HttpHandler) *middleware.AccessHandler
-	if config.SecurityEventLog != "" {
-		accessLog, err := os.OpenFile(config.SecurityEventLog, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	if conf.SecurityEventLog != "" {
+		accessLog, err := os.OpenFile(conf.SecurityEventLog, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 		if err != nil {
 			panic(fmt.Errorf("Unable to open access log: %s", err))
 		}
@@ -119,17 +120,26 @@ func main() {
 			accessLog.Close()
 		}()
 		accessLogger := accesslogger.New(accessLog, log)
-		accessMiddleware = middleware.Access(accessLogger, ipAddress, config.OutgoingDropsondePort, log)
+		accessMiddleware = middleware.Access(accessLogger, ipAddress, conf.OutgoingDropsondePort, log)
 	}
 
-	pool := grpcconnector.NewPool(20)
+	tlsConf, err := plumbing.NewTLSConfig(
+		conf.GRPC.CertFile,
+		conf.GRPC.KeyFile,
+		conf.GRPC.CAFile,
+		"doppler",
+	)
+	if err != nil {
+		panic(fmt.Errorf("Unable to create gRPC TLS config: %s", err))
+	}
+	pool := grpcconnector.NewPool(20, tlsConf)
 	grpcConnector := grpcconnector.New(1000, pool, finder, batcher)
 
-	dopplerHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, grpcConnector, "doppler."+config.SystemDomain, log))
+	dopplerHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, grpcConnector, "doppler."+conf.SystemDomain, log))
 	if accessMiddleware != nil {
 		dopplerHandler = accessMiddleware(dopplerHandler)
 	}
-	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(config.OutgoingDropsondePort), 10)), dopplerHandler)
+	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(conf.OutgoingDropsondePort), 10)), dopplerHandler)
 
 	killChan := signalmanager.RegisterKillSignalChannel()
 	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
