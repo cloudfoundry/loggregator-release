@@ -3,8 +3,8 @@ name: loggregator_trafficcontroller
 templates:
   loggregator_trafficcontroller_ctl.erb: bin/loggregator_trafficcontroller_ctl
   loggregator_trafficcontroller.json.erb: config/loggregator_trafficcontroller.json
-  doppler-client.crt.erb: config/certs/doppler-client.crt
-  doppler-client.key.erb: config/certs/doppler-client.key
+  trafficcontroller.crt.erb: config/certs/trafficcontroller.crt
+  trafficcontroller.key.erb: config/certs/trafficcontroller.key
   loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
   etcd-client.crt.erb: config/certs/etcd-client.crt
   etcd-client.key.erb: config/certs/etcd-client.key
@@ -56,10 +56,10 @@ properties:
   loggregator.tls.ca_cert:
     description: "CA root required for key/cert verification"
     default: ""
-  doppler.tls.client_cert:
-    description: "TLS client certificate"
-  doppler.tls.client_key:
-    description: "TLS client key"
+  loggregator.tls.trafficcontroller.cert:
+    description: "TLS certificate for trafficcontroller"
+  loggregator.tls.trafficcontroller.key:
+    description: "TLS key for trafficcontroller"
 
   doppler.grpc_port:
     description: Port for outgoing log messages via GRPC

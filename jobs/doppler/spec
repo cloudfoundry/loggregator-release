@@ -4,8 +4,8 @@ name: doppler
 templates:
   doppler_ctl.erb: bin/doppler_ctl
   doppler.json.erb: config/doppler.json
-  doppler-server.crt.erb: config/certs/doppler-server.crt
-  doppler-server.key.erb: config/certs/doppler-server.key
+  doppler.crt.erb: config/certs/doppler.crt
+  doppler.key.erb: config/certs/doppler.key
   loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
   etcd-client.crt.erb: config/certs/etcd-client.crt
   etcd-client.key.erb: config/certs/etcd-client.key
@@ -39,14 +39,14 @@ properties:
   doppler.tls.port:
     description: "Port for incoming messages in the dropsonde format over tls listener"
     default: 3459
-  doppler.tls.server_cert:
-    description: "TLS server certificate"
-  doppler.tls.server_key:
-    description: "TLS server key"
 
   loggregator.tls.ca_cert:
     description: "CA root required for key/cert verification"
     default: ""
+  loggregator.tls.doppler.cert:
+    description: "TLS certificate for doppler"
+  loggregator.tls.doppler.key:
+    description: "TLS key for doppler"
 
   loggregator.etcd.require_ssl:
     description: "Enable ssl for all communication with etcd"

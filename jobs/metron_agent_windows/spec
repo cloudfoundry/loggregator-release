@@ -59,15 +59,15 @@ properties:
   metron_agent.protocols:
     description: "A priority list of protocols for metron to connect to doppler over.  Metron will refuse to connect to doppler over any protocol not in this list."
     default: ["udp"]
-  metron_agent.tls.client_cert:
-    description: "TLS client certificate"
-    default: ""
-  metron_agent.tls.client_key:
-    description: "TLS client key"
-    default: ""
 
   loggregator.tls.ca_cert:
     description: "CA root required for key/cert verification"
+    default: ""
+  loggregator.tls.metron.cert:
+    description: "TLS certificate for metron"
+    default: ""
+  loggregator.tls.metron.key:
+    description: "TLS key for metron"
     default: ""
 
   metron_agent.zone:

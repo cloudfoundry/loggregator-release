@@ -18,9 +18,9 @@ If you need to contact us, you can [join our Slack channel](https://cloudfoundry
 * [Constraints](#constraints)
 * [Architecture](#architecture)
 * [Emitting Messages from other Cloud Foundry components](#emitting-messages-from-other-cloud-foundry-components)
+* [Generating TLS Certificates](#generating-tls-certificates)
+  * [Custom TLS Certificates](#custom-tls-certificate-generation)
 * [Enabling TLS between Metron and Doppler](#enabling-tls-between-metron-and-doppler)
-  * [Generating TLS Certificates](#generating-tls-certificates)
-  * [Custom TLS Certificate Generation](#custom-tls-certificate-generation)
 * [Enabling TLS communication with etcd](#enabling-tls-between-loggregator-and-etcd)
 * [Deploying via BOSH](#deploying-via-bosh)
 * [Configuring the Firehose](#configuring-the-firehose)
@@ -114,30 +114,49 @@ Traffic controllers also exposes a `firehose` web socket endpoint. Connecting to
 
 Cloud Foundry developers can easily add source clients to new CF components that emit messages to the doppler.  Currently, there are libraries for [Go](https://github.com/cloudfoundry/dropsonde/) and [Ruby](https://github.com/cloudfoundry/loggregator_emitter). For usage information, look at their respective READMEs.
 
+### Generating TLS Certificates
+
+To generate the Loggregator TLS certs and keys, run
+`scripts/generate-loggregator-certs`.
+
+#### Custom TLS Certificates
+
+If you already have a CA you should use the following common names for each
+component:
+
+ - doppler
+ - metron
+ - trafficcontroller
+
 ### Enabling TLS between Metron and Doppler
 
-The default transport between Metron and Doppler is UDP. We have recently added support for TLS since it is a reliable protocol and also
-has in-built support to ensure integrity, encryption and authentication.
+The default transport between Metron and Doppler is UDP. We have recently added
+support for TLS since it is a reliable protocol and also has in-built support
+to ensure integrity, encryption and authentication.
 
-Metron agents can take a list of protocols of which it will fall back to in case the first protocol fails. For example, for `metron_agent.protocols: ["tls", "udp"]`
-Metrons will try and connect to Dopplers over TLS. If there aren't any available TLS enabled Dopplers, it will then try to connect to Dopplers
-over UDP.
+Metron agents can take a list of protocols of which it will fall back to in
+case the first protocol fails. For example, for `metron_agent.protocols:
+["tls", "udp"]` Metrons will try and connect to Dopplers over TLS. If there
+aren't any available TLS enabled Dopplers, it will then try to connect to
+Dopplers over UDP.
 
-**NOTE: TLS support is currently experimental. Enable it at your own discretion. The properties discussed below as well as their behavior might change in the future.**
+**NOTE: TLS support is currently experimental. Enable it at your own
+discretion. The properties discussed below as well as their behavior might
+change in the future.**
 
-| Property        | Required                              | Description                                     |
-|-----------------|---------------------------------------|-------------------------------------------------|
-| `metron_agent.protocols` | No<br> Default: `["udp"]`                   | Metron prefers this protocol to communicate with Doppler. Options are `udp`, `tcp` and `tls`. `metron_agent.tls.*` properties are required when this is set to `tls`                             |
-| `metron_agent.tls.client_cert`   | Yes if `metron_agent.protocols` includes "tls" <br>Default: `""`              | Signed client certificate used by Metron when communicating with Doppler over TLS            |
-| `metron_agent.tls.client_key`   | Yes if `metron_agent.protocols` includes "tls" <br>Default: `""`              | Client key used by Metron when communicating with Doppler over TLS            |
-| `loggregator.tls.ca_cert`   | Yes if `metron_agent.protocols` include "tls" <br>Default: `""`              | Certificate Authority used to sign the certificate            |
+| Property                      | Required                                                         | Description                                                                                                                                                                |
+|-------------------------------|------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `metron_agent.protocols`      | No<br> Default: `["udp"]`                                        | Metron prefers this protocol to communicate with Doppler. Options are `udp`, `tcp` and `tls`. `loggregator.tls.metron.*` properties are required when this is set to `tls` |
+| `loggregator.tls.metron.cert` | Yes if `metron_agent.protocols` includes "tls" <br>Default: `""` | Signed client certificate used by Metron when communicating with Doppler over TLS                                                                                          |
+| `loggregator.tls.metron.key`  | Yes if `metron_agent.protocols` includes "tls" <br>Default: `""` | Client key used by Metron when communicating with Doppler over TLS                                                                                                         |
+| `loggregator.tls.ca_cert`     | Yes if `metron_agent.protocols` includes "tls" <br>Default: `""` | Certificate Authority used to sign the certificate                                                                                                                         |
 
-| Property        | Required                              | Description                                     |
-|-----------------|---------------------------------------|-------------------------------------------------|
-| `doppler.tls.enable` | No <br>Default: `false`                   | Enable TLS communication with Metron. If enabled, `doppler.tls.*` properties are required.|
-| `doppler.tls.server_cert`   | Yes if `doppler.tls.enable: true` <br>Default: `""`              | Signed server certificate used by Doppler when communicating with Doppler over TLS            |
-| `doppler.tls.server_key`   | Yes if `doppler.tls.enable: true` <br>Default: `""`              | Server key used by Doppler when communicating with Metron over TLS            |
-| `loggregator.tls.ca_cert`   | Yes if `doppler.tls.enable: true` <br>Default: `""`              | Certificate Authority used to sign the certificate            |
+| Property                       | Required                                            | Description                                                                                            |
+|--------------------------------|-----------------------------------------------------|--------------------------------------------------------------------------------------------------------|
+| `doppler.tls.enable`           | No <br>Default: `false`                             | Enable TLS communication with Metron. If enabled, `loggregator.tls.doppler.*` properties are required. |
+| `loggregator.tls.doppler.cert` | Yes if `doppler.tls.enable: true` <br>Default: `""` | Signed server certificate used by Doppler when communicating with Doppler over TLS                     |
+| `loggregator.tls.doppler.key`  | Yes if `doppler.tls.enable: true` <br>Default: `""` | Server key used by Doppler when communicating with Metron over TLS                                     |
+| `loggregator.tls.ca_cert`      | Yes if `doppler.tls.enable: true` <br>Default: `""` | Certificate Authority used to sign the certificate                                                     |
 
 An example manifest is given below:
 
@@ -148,101 +167,41 @@ An example manifest is given below:
         -----BEGIN CERTIFICATE-----
         LOGGREGATOR CA CERTIFICATE
         -----END CERTIFICATE-----
+      doppler:
+        cert: |
+          -----BEGIN CERTIFICATE-----
+          DOPPLER CERTIFICATE
+          -----END CERTIFICATE-----
+        key: |
+          -----BEGIN RSA PRIVATE KEY-----
+          DOPPLER KEY
+          -----END RSA PRIVATE KEY-----
+      trafficcontroller:
+        cert: |
+          -----BEGIN CERTIFICATE-----
+          TRAFFIC CONTROLLER CERTIFICATE
+          -----END CERTIFICATE-----
+        key: |
+          -----BEGIN RSA PRIVATE KEY-----
+          TRAFFIC CONTROLLER KEY
+          -----END RSA PRIVATE KEY-----
+      metron:
+        cert: |
+          -----BEGIN CERTIFICATE-----
+          METRON AGENT CERTIFICATE
+          -----END CERTIFICATE-----
+        key: |
+          -----BEGIN RSA PRIVATE KEY-----
+          METRON AGENT KEY
+          -----END RSA PRIVATE KEY-----
 
   metron_agent:
     protocols: ["tls", "udp"]
-    tls:
-      client_cert: |
-        -----BEGIN CERTIFICATE-----
-        METRON AGENT CERTIFICATE
-        -----END CERTIFICATE-----
-      client_key: |
-        -----BEGIN RSA PRIVATE KEY-----
-        METRON AGENT KEY
-        -----END RSA PRIVATE KEY-----
 
   doppler:
     tls:
       enable: true
-      server_cert: |
-        -----BEGIN CERTIFICATE-----
-        DOPPLER CERTIFICATE
-        -----END CERTIFICATE-----
-      server_key: |
-        -----BEGIN RSA PRIVATE KEY-----
-        DOPPLER KEY
-        -----END RSA PRIVATE KEY-----
 ```
-
-#### Generating TLS Certificates
-
-For generating TLS certificates, we recommend
-[certstrap](https://github.com/square/certstrap).  An operator can follow the
-following steps to successfully generate the required certificates.
-
-1. Get certstrap
-   ```
-   go get github.com/square/certstrap
-   cd $GOPATH/src/github.com/square/certstrap
-   ./build
-   cd bin
-   ```
-
-2. Initialize a new certificate authority.
-   ```
-   $ ./certstrap init --common-name "loggregatorCA"
-   Enter passphrase (empty for no passphrase): <hit enter for no password>
-
-   Enter same passphrase again: <hit enter for no password>
-
-   Created out/loggregatorCA.key
-   Created out/loggregatorCA.crt
-   ```
-
-3. Create and sign a certificate for the Doppler server.
-   ```
-   $ ./certstrap request-cert --common-name "doppler"
-   Enter passphrase (empty for no passphrase): <hit enter for no password>
-
-   Enter same passphrase again: <hit enter for no password>
-
-   Created out/doppler.key
-   Created out/doppler.csr
-
-   $ ./certstrap sign doppler --CA loggregatorCA
-   Created out/doppler.crt from out/doppler.csr signed by out/loggregatorCA.key
-   ```
-
-   - The manifest property `properties.doppler.tls.enable` should be set to `true`.
-   - The manifest property `properties.doppler.tls.server_cert` should be set to the certificate in `out/doppler.crt`.
-   - The manifest property `properties.doppler.tls.server_key` should be set to the certificate in `out/doppler.key`.
-   - The manifest property `properties.loggregator.tls.ca_cert` should be set to the certificate in `out/loggregatorCA.crt`.
-
-4. Create and sign a certificate for metron agents.
-   ```
-   $ ./certstrap request-cert --common-name "metron_agent"
-   Enter passphrase (empty for no passphrase): <hit enter for no password>
-
-   Enter same passphrase again: <hit enter for no password>
-
-   Created out/metron_agent.key
-   Created out/metron_agent.csr
-
-   $ ./certstrap sign metron_agent --CA loggregatorCA
-   Created out/metron_agent.crt from out/metron_agent.csr signed by out/loggregatorCA.key
-   ```
-
-   - The manifest property `properties.metron_agent.protocols` should include "tls". For example, ["tls", "udp"] 
-   - The manifest property `properties.metron_agent.tls.client_cert` should be set to the certificate in `out/metron_agent.crt`,
-   - The manifest property `properties.metron_agent.tls.client_key` should be set to the certificate in `out/metron_agent.key`
-
-#### Custom TLS Certificate Generation
-
-If you already have a CA, or wish to use your own names for clients and
-servers, please note that the common-names "loggregatorCA" and "metron_agent" are
-placeholders and can be renamed.
-
-The server certificate must have the common name `doppler`.
 
 ### Enabling TLS between Loggregator and etcd
 
