@@ -2,8 +2,6 @@ package truncatingbuffer_test
 
 import (
 	"fmt"
-	"strings"
-	"time"
 	"truncatingbuffer"
 
 	. "github.com/apoydence/eachers"
@@ -326,124 +324,6 @@ var _ = Describe("Truncating Buffer", func() {
 					Eventually(truncateChan).Should(Receive())
 				})
 			})
-		})
-	})
-
-	Describe("benchmarks", func() {
-		const runCount = 10000
-		var done chan struct{}
-
-		BeforeEach(func() {
-			done = make(chan struct{})
-		})
-
-		JustBeforeEach(func() {
-			go func() {
-				buffer.Run()
-				close(done)
-			}()
-		})
-
-		AfterEach(func() {
-			close(stopChannel)
-			<-done
-		})
-
-		Context("lossless", func() {
-
-			BeforeEach(func() {
-				bufferSize = runCount
-			})
-
-			Measure("time for 10000 messages to flow through the buffer", func(b Benchmarker) {
-
-				b.Time("truncating buffer throughput", func() {
-					readDone := make(chan struct{})
-					go func() {
-						for i := 0; i < runCount; i++ {
-							<-buffer.GetOutputChannel()
-						}
-						close(readDone)
-					}()
-
-					for i := 0; i < runCount; i++ {
-						sendLogMessages(fmt.Sprintf("message %d", i), inMessageChan)
-					}
-					<-readDone
-				})
-			}, 100)
-		})
-
-		Context("lossy", func() {
-
-			BeforeEach(func() {
-				bufferSize = 100
-			})
-
-			var send = func(count int, delay time.Duration) {
-				msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "message", "appId", "App"), "origin")
-				for i := 0; i < count; i++ {
-					inMessageChan <- msg
-					time.Sleep(delay)
-				}
-			}
-
-			var receive = func(count int, delay time.Duration) (totalLost uint64) {
-				timeout := time.NewTimer(time.Millisecond)
-				for i := 0; i < count; i++ {
-					msgs := buffer.GetOutputChannel()
-					var msg *events.Envelope
-					timeout.Reset(time.Millisecond)
-					select {
-					case msg = <-msgs:
-					case <-timeout.C:
-						return totalLost
-					}
-					if msg.GetEventType() == events.Envelope_LogMessage && strings.HasPrefix(string(msg.GetLogMessage().GetMessage()), "Log message output is too high") {
-						msg = <-msgs
-					}
-					if msg.GetEventType() == events.Envelope_CounterEvent && msg.GetCounterEvent().GetName() == "TruncatingBuffer.DroppedMessages" {
-						totalLost = msg.GetCounterEvent().GetTotal()
-					}
-					time.Sleep(delay)
-				}
-				return totalLost
-			}
-
-			Measure("delay before message loss", func(b Benchmarker) {
-				lostMessages := make(chan uint64)
-				recvDelays := make(chan time.Duration)
-				go func() {
-					for recvDelay := range recvDelays {
-						lost := receive(runCount, recvDelay)
-						if lost > 0 {
-							lostMessages <- lost
-							return
-						}
-					}
-				}()
-
-				recvDelay := time.Duration(0)
-				for sendDelay := time.Microsecond; ; sendDelay /= 2 {
-					select {
-					case lost := <-lostMessages:
-						b.RecordValue("messages lost", float64(lost))
-						b.RecordValue("delay when sending to buffer input (ns)", float64(sendDelay))
-						b.RecordValue("delay when receiving from buffer output (ns)", float64(recvDelay))
-						b.RecordValue("difference between receiving vs sending (receiving delay - sending delay)", float64(recvDelay-sendDelay))
-						return
-					case recvDelays <- recvDelay:
-						send(runCount, sendDelay)
-						if sendDelay == 0 {
-							if recvDelay == 0 {
-								recvDelay = time.Nanosecond
-							} else {
-								recvDelay *= 2
-							}
-						}
-					}
-				}
-			}, 50)
 		})
 	})
 })
