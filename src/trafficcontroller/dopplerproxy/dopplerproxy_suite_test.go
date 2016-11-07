@@ -2,6 +2,7 @@ package dopplerproxy_test
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"testing"
 
@@ -11,6 +12,7 @@ import (
 )
 
 func TestDopplerProxy(t *testing.T) {
+	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "DopplerProxy Suite")
 }

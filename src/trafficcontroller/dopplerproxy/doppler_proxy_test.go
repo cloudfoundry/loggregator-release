@@ -115,7 +115,10 @@ var _ = Describe("ServeHTTP()", func() {
 			})
 
 			It("creates a context with a deadline for recent logs", func() {
-				mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
+				go func() {
+					time.Sleep(100 * time.Millisecond)
+					mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
+				}()
 				req, _ := http.NewRequest("GET", "/apps/appID123/recentlogs", nil)
 				proxy.ServeHTTP(recorder, req)
 
@@ -123,11 +126,16 @@ var _ = Describe("ServeHTTP()", func() {
 				Eventually(mockGrpcConnector.RecentLogsInput.Ctx).Should(Receive(&ctx))
 				_, ok := ctx.Deadline()
 				Expect(ok).To(BeTrue())
+
+				Eventually(ctx.Err).Should(HaveOccurred())
+				Expect(recorder.Code).To(Equal(http.StatusServiceUnavailable))
 			})
 
 			It("creates a context with a deadline for container metrics", func() {
-				mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
-				mockGrpcConnector.ContainerMetricsOutput.Ret0 <- nil
+				go func() {
+					time.Sleep(100 * time.Millisecond)
+					mockGrpcConnector.ContainerMetricsOutput.Ret0 <- nil
+				}()
 				req, _ := http.NewRequest("GET", "/apps/appID123/containermetrics", nil)
 				proxy.ServeHTTP(recorder, req)
 
@@ -135,6 +143,9 @@ var _ = Describe("ServeHTTP()", func() {
 				Eventually(mockGrpcConnector.ContainerMetricsInput.Ctx).Should(Receive(&ctx))
 				_, ok := ctx.Deadline()
 				Expect(ok).To(BeTrue())
+
+				Eventually(ctx.Err).Should(HaveOccurred())
+				Expect(recorder.Code).To(Equal(http.StatusServiceUnavailable))
 			})
 		})
 
@@ -158,7 +169,6 @@ var _ = Describe("ServeHTTP()", func() {
 				proxy.ServeHTTP(recorder, req)
 
 				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-				Expect(recorder.Body.String()).To(Equal(http.StatusText(http.StatusNotFound)))
 			})
 		})
 
@@ -172,7 +182,6 @@ var _ = Describe("ServeHTTP()", func() {
 				proxy.ServeHTTP(recorder, req)
 
 				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-				Expect(recorder.Body.String()).To(Equal(http.StatusText(http.StatusNotFound)))
 			})
 		})
 
@@ -186,7 +195,6 @@ var _ = Describe("ServeHTTP()", func() {
 				proxy.ServeHTTP(recorder, req)
 
 				Expect(recorder.Code).To(Equal(http.StatusInternalServerError))
-				Expect(recorder.Body.String()).To(Equal(http.StatusText(http.StatusInternalServerError)))
 			})
 		})
 
@@ -204,7 +212,6 @@ var _ = Describe("ServeHTTP()", func() {
 
 				Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
 				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
-				Expect(recorder.Body.String()).To(Equal(http.StatusText(http.StatusUnauthorized)))
 			})
 
 			It("does not attempt to connect to doppler", func() {
