@@ -93,19 +93,6 @@ var _ = Describe("MetricsReporter", func() {
 				reporter.Stop()
 			})
 
-			PIt("writes averages", func() {
-				reporter.SentCounter().IncrementValue()
-				reporter.SentCounter().IncrementValue()
-				reporter.ReceivedCounter().IncrementValue()
-
-				Eventually(reporter.NumTicks, "20ms", "1ms").Should(BeEquivalentTo(1))
-				reporter.Stop()
-				duration, rate := int64(reporter.Duration().Seconds()), reporter.Rate()
-				Expect(reporter.NumTicks()).To(BeEquivalentTo(1), "The reporter is writing too quickly")
-
-				Eventually(buffer).Should(gbytes.Say(fmt.Sprintf("Averages: %d, 2, 1, %.f/s, 50.00%%", duration, rate)))
-			})
-
 			It("writes rate", func() {
 				reporter.SentCounter().IncrementValue()
 				reporter.ReceivedCounter().IncrementValue()
@@ -147,34 +134,6 @@ var _ = Describe("MetricsReporter", func() {
 
 				Eventually(reporter.NumTicks, "20ms", "1ms").Should(BeEquivalentTo(1))
 				Eventually(buffer, 10).Should(gbytes.Say(fmt.Sprintf("%s, 1, 1, %.2f/s, 0.00%%, 1, 2", reporter.Duration(), reporter.Rate())))
-			})
-
-			PIt("reports individual counter average", func() {
-				reporter.SentCounter().IncrementValue()
-				reporter.SentCounter().IncrementValue()
-				reporter.ReceivedCounter().IncrementValue()
-
-				counter1.IncrementValue()
-				counter2.IncrementValue()
-				counter2.IncrementValue()
-				counter2.IncrementValue()
-
-				Eventually(reporter.NumTicks, "20ms", "1ms").Should(BeEquivalentTo(1))
-
-				reporter.SentCounter().IncrementValue()
-				reporter.SentCounter().IncrementValue()
-				reporter.ReceivedCounter().IncrementValue()
-
-				counter1.IncrementValue()
-				counter2.IncrementValue()
-				counter2.IncrementValue()
-				counter2.IncrementValue()
-
-				Eventually(reporter.NumTicks, "20ms", "1ms").Should(BeEquivalentTo(2))
-				reporter.Stop()
-				Expect(reporter.NumTicks()).To(BeEquivalentTo(2), "The reporter is writing too quickly")
-
-				Eventually(buffer).Should(gbytes.Say(fmt.Sprintf("Averages: %d, 2, 1, %.f/s, 50.00%%, 1, 3", int64(reporter.Duration().Seconds()), reporter.Rate())))
 			})
 		})
 	})
