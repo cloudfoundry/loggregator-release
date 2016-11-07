@@ -7,7 +7,7 @@
 
 Loggregator is the user application logging subsystem of Cloud Foundry.
 
-If you would to see our plans for future development, check out the [Loggregator Roadmap](https://docs.google.com/spreadsheets/d/1QOCUIlTkhGzVwfRji7Q14vczqkBbFGkiDWrJSKdRLRg/edit?usp=sharing). 
+If you would to see our plans for future development, check out the [Loggregator Roadmap](https://docs.google.com/spreadsheets/d/1QOCUIlTkhGzVwfRji7Q14vczqkBbFGkiDWrJSKdRLRg/edit?usp=sharing).
 You can track what we're working on today in our [Pivotal Tracker Project](https://www.pivotaltracker.com/n/projects/993188).
 If you need to contact us, you can [join our Slack channel](https://cloudfoundry.slack.com/messages/loggregator/).
 
@@ -125,40 +125,27 @@ If you already have a CA you should use the following common names for each
 component:
 
  - doppler
- - metron
  - trafficcontroller
 
-### Enabling TLS between Metron and Doppler
+### Adding your TLS certificates
 
-The default transport between Metron and Doppler is UDP. We have recently added
-support for TLS since it is a reliable protocol and also has in-built support
-to ensure integrity, encryption and authentication.
+#### Doppler
 
-Metron agents can take a list of protocols of which it will fall back to in
-case the first protocol fails. For example, for `metron_agent.protocols:
-["tls", "udp"]` Metrons will try and connect to Dopplers over TLS. If there
-aren't any available TLS enabled Dopplers, it will then try to connect to
-Dopplers over UDP.
+| Property                       | Required | Description                                         |
+|--------------------------------|----------|-----------------------------------------------------|
+| `loggregator.tls.doppler.cert` | Yes      | Certificate used by doppler to communicate over TLS |
+| `loggregator.tls.doppler.key`  | Yes      | Key used by doppler to communicate over TLS         |
+| `loggregator.tls.ca_cert`      | Yes      | Certificate Authority used to sign the certificate  |
 
-**NOTE: TLS support is currently experimental. Enable it at your own
-discretion. The properties discussed below as well as their behavior might
-change in the future.**
+#### Traffic Controller
 
-| Property                      | Required                                                         | Description                                                                                                                                                                |
-|-------------------------------|------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `metron_agent.protocols`      | No<br> Default: `["udp"]`                                        | Metron prefers this protocol to communicate with Doppler. Options are `udp`, `tcp` and `tls`. `loggregator.tls.metron.*` properties are required when this is set to `tls` |
-| `loggregator.tls.metron.cert` | Yes if `metron_agent.protocols` includes "tls" <br>Default: `""` | Signed client certificate used by Metron when communicating with Doppler over TLS                                                                                          |
-| `loggregator.tls.metron.key`  | Yes if `metron_agent.protocols` includes "tls" <br>Default: `""` | Client key used by Metron when communicating with Doppler over TLS                                                                                                         |
-| `loggregator.tls.ca_cert`     | Yes if `metron_agent.protocols` includes "tls" <br>Default: `""` | Certificate Authority used to sign the certificate                                                                                                                         |
+| Property                                 | Required | Description                                                    |
+|------------------------------------------|----------|----------------------------------------------------------------|
+| `loggregator.tls.trafficcontroller.cert` | Yes      | Certificate used by traffic controller to communicate over TLS |
+| `loggregator.tls.trafficcontroller.key`  | Yes      | Key used by traffic controller to communicate over TLS         |
+| `loggregator.tls.ca_cert`                | Yes      | Certificate Authority used to sign the certificate             |
 
-| Property                       | Required                                            | Description                                                                                            |
-|--------------------------------|-----------------------------------------------------|--------------------------------------------------------------------------------------------------------|
-| `doppler.tls.enable`           | No <br>Default: `false`                             | Enable TLS communication with Metron. If enabled, `loggregator.tls.doppler.*` properties are required. |
-| `loggregator.tls.doppler.cert` | Yes if `doppler.tls.enable: true` <br>Default: `""` | Signed server certificate used by Doppler when communicating with Doppler over TLS                     |
-| `loggregator.tls.doppler.key`  | Yes if `doppler.tls.enable: true` <br>Default: `""` | Server key used by Doppler when communicating with Metron over TLS                                     |
-| `loggregator.tls.ca_cert`      | Yes if `doppler.tls.enable: true` <br>Default: `""` | Certificate Authority used to sign the certificate                                                     |
-
-An example manifest is given below:
+#### Example Manifest
 
 ```yaml
   loggregator:
@@ -185,22 +172,6 @@ An example manifest is given below:
           -----BEGIN RSA PRIVATE KEY-----
           TRAFFIC CONTROLLER KEY
           -----END RSA PRIVATE KEY-----
-      metron:
-        cert: |
-          -----BEGIN CERTIFICATE-----
-          METRON AGENT CERTIFICATE
-          -----END CERTIFICATE-----
-        key: |
-          -----BEGIN RSA PRIVATE KEY-----
-          METRON AGENT KEY
-          -----END RSA PRIVATE KEY-----
-
-  metron_agent:
-    protocols: ["tls", "udp"]
-
-  doppler:
-    tls:
-      enable: true
 ```
 
 ### Enabling TLS between Loggregator and etcd
@@ -260,7 +231,7 @@ An example manifest is given below:
         -----BEGIN CERTIFICATE-----
         ETCD CA CERTIFICATE
         -----END CERTIFICATE-----
-      
+
 
   metron_agent:
     etcd:
@@ -492,11 +463,11 @@ Use brew and do
 
     brew install go --cross-compile-all
     brew install direnv
-    
+
 Make sure you add the proper entry to load direnv into your shell. See `brew info direnv`
 for details. To be safe, close the terminal window that you are using to make sure the
 changes to your shell are applied.
-    
+
 #### Checkout
 
 ```
@@ -545,7 +516,7 @@ runtime/pprof.writeGoroutineStacks(0xc2000bc3f0, 0xc200000008, 0xc200000001, 0xc
 runtime/pprof.writeGoroutine(0xc2000bc3f0, 0xc200000008, 0x2, 0xca74765c960d5c8f, 0x40bbf7, ...)
 	/home/travis/.gvm/gos/go1.1.1/src/pkg/runtime/pprof/pprof.go:500 +0x3a
 ....
-``` 
+```
 
 ### Loggregator as a separate release
 There are cases when releases outside of Cloud Foundry would like to emit logs and metrics to the Loggregator system. In such cases we have instructions on using Loggregator as a separate release [here](docs/using_separate_release.md).
@@ -570,7 +541,7 @@ The Loggregator team as a plan to improve this. You can read about it in our [Re
 
 ### Loggregator does not guarantee logs delivered in order
 
-The Loggregator system is designed to scale horizontally in order to handle the different load profiles of logs and metrics that are generated by the apps and the system components. As the size of the deployment grows, this logging load gets larger than can be handled by a single VM chain. This scaling is done by adding Dopplers. The logging load coming out of different VMs varies greatly. These VMs range from DEA and Diego app runners to system components such as the Router and the Cloud Controller. In order to evenly distribute the load over the scaled Dopplers, the Metrons distribute their log streams over the different Dopplers. The algorithm used is that for each log line (message), the Metron chooses a random Doppler to send it to. This means that each sequential log message from an application is routed through a different Doppler via a different network path. Because of the different paths, log lines take varying times to arrive at the destination nozzle or syslog and therefore the lines are not guaranteed to be in order.  
+The Loggregator system is designed to scale horizontally in order to handle the different load profiles of logs and metrics that are generated by the apps and the system components. As the size of the deployment grows, this logging load gets larger than can be handled by a single VM chain. This scaling is done by adding Dopplers. The logging load coming out of different VMs varies greatly. These VMs range from DEA and Diego app runners to system components such as the Router and the Cloud Controller. In order to evenly distribute the load over the scaled Dopplers, the Metrons distribute their log streams over the different Dopplers. The algorithm used is that for each log line (message), the Metron chooses a random Doppler to send it to. This means that each sequential log message from an application is routed through a different Doppler via a different network path. Because of the different paths, log lines take varying times to arrive at the destination nozzle or syslog and therefore the lines are not guaranteed to be in order.
 
 
 ### Multi-line Java message workaround
@@ -579,7 +550,7 @@ Having log lines out of order can be painful when monitoring Java stack traces. 
 
 With the Java Logback library you do this by adding `%replace(%xException){'\n','\u2028'}%nopex` to your logging config , and then use the following logstash conf.
 ```
-# Replace the unicode newline character \u2028 with \n, which Kibana will display as a new line. 
+# Replace the unicode newline character \u2028 with \n, which Kibana will display as a new line.
     mutate {
       gsub => [ "[@message]", '\u2028', "
 "]
