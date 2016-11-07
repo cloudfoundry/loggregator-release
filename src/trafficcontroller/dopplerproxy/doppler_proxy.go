@@ -37,6 +37,7 @@ type Proxy struct {
 	logger         *gosteno.Logger
 	numFirehoses   int64
 	numAppStreams  int64
+	timeout        time.Duration
 }
 
 // TODO export this
@@ -52,6 +53,7 @@ func NewDopplerProxy(
 	grpcConn grpcConnector,
 	cookieDomain string,
 	logger *gosteno.Logger,
+	timeout time.Duration,
 ) *Proxy {
 	p := &Proxy{
 		logAuthorize:   logAuthorize,
@@ -59,6 +61,7 @@ func NewDopplerProxy(
 		grpcConn:       grpcConn,
 		cookieDomain:   cookieDomain,
 		logger:         logger,
+		timeout:        timeout,
 	}
 	r := mux.NewRouter()
 	p.Router = *r
@@ -167,10 +170,12 @@ func (p *Proxy) serveAppLogs(requestPath, appID string, writer http.ResponseWrit
 
 	switch requestPath {
 	case "recentlogs":
+		ctx, _ = context.WithDeadline(ctx, time.Now().Add(p.timeout))
 		resp := p.grpcConn.RecentLogs(ctx, appID)
 		p.serveMultiPartResponse(writer, resp)
 		return
 	case "containermetrics":
+		ctx, _ = context.WithDeadline(ctx, time.Now().Add(p.timeout))
 		resp := deDupe(p.grpcConn.ContainerMetrics(ctx, appID))
 		p.serveMultiPartResponse(writer, resp)
 		return

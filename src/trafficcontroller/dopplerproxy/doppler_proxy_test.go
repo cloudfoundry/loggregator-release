@@ -64,6 +64,7 @@ var _ = Describe("ServeHTTP()", func() {
 			mockGrpcConnector,
 			"cookieDomain",
 			loggertesthelper.Logger(),
+			50*time.Millisecond,
 		)
 
 		recorder = httptest.NewRecorder()
@@ -89,7 +90,6 @@ var _ = Describe("ServeHTTP()", func() {
 
 				Expect(metric.Unit).To(Equal("ms"))
 				Expect(metric.Value).To(BeNumerically("<", elapsed))
-
 			}
 
 			It("emits latency value metric for recentlogs request", func() {
@@ -112,6 +112,29 @@ var _ = Describe("ServeHTTP()", func() {
 
 				Expect(metric.Unit).To(BeEmpty())
 				Expect(metric.Value).To(BeZero())
+			})
+
+			It("creates a context with a deadline for recent logs", func() {
+				mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
+				req, _ := http.NewRequest("GET", "/apps/appID123/recentlogs", nil)
+				proxy.ServeHTTP(recorder, req)
+
+				var ctx context.Context
+				Eventually(mockGrpcConnector.RecentLogsInput.Ctx).Should(Receive(&ctx))
+				_, ok := ctx.Deadline()
+				Expect(ok).To(BeTrue())
+			})
+
+			It("creates a context with a deadline for container metrics", func() {
+				mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
+				mockGrpcConnector.ContainerMetricsOutput.Ret0 <- nil
+				req, _ := http.NewRequest("GET", "/apps/appID123/containermetrics", nil)
+				proxy.ServeHTTP(recorder, req)
+
+				var ctx context.Context
+				Eventually(mockGrpcConnector.ContainerMetricsInput.Ctx).Should(Receive(&ctx))
+				_, ok := ctx.Deadline()
+				Expect(ok).To(BeTrue())
 			})
 		})
 
@@ -422,6 +445,11 @@ var _ = Describe("ServeHTTP()", func() {
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(data).To(Equal(expectedData))
+
+					var ctx context.Context
+					Eventually(mockGrpcConnector.SubscribeInput.Ctx).Should(Receive(&ctx))
+					_, ok := ctx.Deadline()
+					Expect(ok).To(BeFalse())
 				})
 
 				It("/firehose sends data to the client websocket connection", func(done Done) {
@@ -436,6 +464,11 @@ var _ = Describe("ServeHTTP()", func() {
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(data).To(Equal(expectedData))
+
+					var ctx context.Context
+					Eventually(mockGrpcConnector.SubscribeInput.Ctx).Should(Receive(&ctx))
+					_, ok := ctx.Deadline()
+					Expect(ok).To(BeFalse())
 				})
 			})
 

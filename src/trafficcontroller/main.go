@@ -135,7 +135,7 @@ func main() {
 	pool := grpcconnector.NewPool(20, tlsConf)
 	grpcConnector := grpcconnector.New(1000, pool, finder, batcher)
 
-	dopplerHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, grpcConnector, "doppler."+conf.SystemDomain, log))
+	dopplerHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, grpcConnector, "doppler."+conf.SystemDomain, log, 15*time.Second))
 	if accessMiddleware != nil {
 		dopplerHandler = accessMiddleware(dopplerHandler)
 	}
