@@ -8,6 +8,7 @@ import (
 	"doppler/sinks/dump"
 	"doppler/sinks/syslog"
 	"doppler/sinks/websocket"
+	"log"
 	"sync"
 
 	"github.com/cloudfoundry/gosteno"
@@ -89,7 +90,11 @@ func (group *GroupedSinks) Broadcast(appId string, msg *events.Envelope) {
 	defer group.RUnlock()
 
 	for _, wrapper := range group.apps[appId] {
-		wrapper.InputChan <- msg
+		select {
+		case wrapper.InputChan <- msg:
+		default:
+			log.Printf("unable to write to app sink: %s", appId)
+		}
 	}
 
 	group.BroadcastMessageToFirehoses(msg)
@@ -101,7 +106,11 @@ func (group *GroupedSinks) BroadcastError(appId string, errorMsg *events.Envelop
 
 	for _, wrapper := range group.apps[appId] {
 		if wrapper.Sink.ShouldReceiveErrors() {
-			wrapper.InputChan <- errorMsg
+			select {
+			case wrapper.InputChan <- errorMsg:
+			default:
+				log.Printf("unable to write error to app sink: %s", appId)
+			}
 		}
 	}
 

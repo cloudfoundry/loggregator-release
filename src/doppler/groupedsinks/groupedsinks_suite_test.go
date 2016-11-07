@@ -1,6 +1,7 @@
 package groupedsinks_test
 
 import (
+	"log"
 	"net"
 	"testing"
 	"time"
@@ -10,6 +11,7 @@ import (
 )
 
 func TestGroupedsinks(t *testing.T) {
+	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "GroupedSinks Suite")
 }

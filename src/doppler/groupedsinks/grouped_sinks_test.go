@@ -124,6 +124,22 @@ var _ = Describe("GroupedSink", func() {
 			groupedSinks.Broadcast(appId, msg)
 			close(done)
 		})
+
+		It("does not block when sending to slow sink", func() {
+			appId := "syslog-a"
+			fakeSink1A := &fakeSink{sinkId: "sink1", appId: appId}
+			inputChan1A := make(chan *events.Envelope)
+			groupedSinks.RegisterAppSink(inputChan1A, fakeSink1A)
+
+			c := make(chan struct{})
+			go func() {
+				defer close(c)
+				msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", appId, "App"), "origin")
+				groupedSinks.Broadcast(appId, msg)
+			}()
+
+			Eventually(c).Should(BeClosed())
+		})
 	})
 
 	Describe("BroadcastError", func() {
@@ -174,6 +190,22 @@ var _ = Describe("GroupedSink", func() {
 			Expect(<-inputChan).To(Equal(msg))
 			Expect(inputChan).To(HaveLen(0))
 			close(done)
+		})
+
+		It("does not block when sending to slow sink", func() {
+			appId := "syslog-a"
+			fakeSink1A := &fakeSink{sinkId: "sink1", appId: appId, shouldRxErrors: true}
+			inputChan1A := make(chan *events.Envelope)
+			groupedSinks.RegisterAppSink(inputChan1A, fakeSink1A)
+
+			c := make(chan struct{})
+			go func() {
+				defer close(c)
+				msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", appId, "App"), "origin")
+				groupedSinks.BroadcastError(appId, msg)
+			}()
+
+			Eventually(c).Should(BeClosed())
 		})
 	})
 
@@ -506,8 +538,9 @@ func (d DummySyslogWriter) Write(p int, b []byte, source, sourceId string, times
 func (d DummySyslogWriter) Close() error { return nil }
 
 type fakeSink struct {
-	sinkId string
-	appId  string
+	sinkId         string
+	appId          string
+	shouldRxErrors bool
 }
 
 func (f *fakeSink) AppID() string {
@@ -523,7 +556,7 @@ func (f *fakeSink) Identifier() string {
 }
 
 func (f *fakeSink) ShouldReceiveErrors() bool {
-	return false
+	return f.shouldRxErrors
 }
 func (f *fakeSink) GetInstrumentationMetric() sinks.Metric {
 	return sinks.Metric{Name: "numberOfMessagesLost", Value: 5}
