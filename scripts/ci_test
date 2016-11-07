@@ -82,7 +82,7 @@ fi
 if [ $TEST_TYPE == "integration" ] || [ $TEST_TYPE == "everything" ]
 then
   bold_blue "==================================  Running Integration Tests  =================================="
-  ginkgo -r --race --randomizeAllSpecs --cover -skipPackage="integration_tests/statsd-injector" $1 src/integration_tests
+  ginkgo -r --race --randomizeAllSpecs --cover $1 src/integration_tests
   result=$((result + $?))
 fi
 
