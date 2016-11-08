@@ -50,6 +50,7 @@
         if_p("doppler.tls.enable") do |_|
             a[:TLSListenerConfig] = tlsListenerConfig
         end
+        a[:WebsocketHost] = p("doppler.websocket_host")
         a[:OutgoingPort] = p("doppler.outgoing_port")
         a[:GRPC] = grpcListenerConfig
         a[:Zone] = instance_zone
