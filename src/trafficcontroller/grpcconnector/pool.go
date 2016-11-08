@@ -59,7 +59,7 @@ func (p *Pool) Subscribe(dopplerAddr string, ctx context.Context, req *plumbing.
 	client := p.fetchClient(clients)
 
 	if client == nil {
-		return nil, fmt.Errorf("No connections available")
+		return nil, fmt.Errorf("no connections available for subscription")
 	}
 
 	return client.Subscribe(ctx, req)
@@ -73,7 +73,7 @@ func (p *Pool) ContainerMetrics(dopplerAddr string, ctx context.Context, req *pl
 	client := p.fetchClient(clients)
 
 	if client == nil {
-		return nil, fmt.Errorf("No connections available")
+		return nil, fmt.Errorf("no connections available for container metrics")
 	}
 
 	return client.ContainerMetrics(ctx, req)
@@ -87,7 +87,7 @@ func (p *Pool) RecentLogs(dopplerAddr string, ctx context.Context, req *plumbing
 	client := p.fetchClient(clients)
 
 	if client == nil {
-		return nil, fmt.Errorf("No connections available")
+		return nil, fmt.Errorf("no connections available for recent logs")
 	}
 
 	return client.RecentLogs(ctx, req)
@@ -112,8 +112,9 @@ func (p *Pool) Close(dopplerAddr string) {
 }
 
 func (p *Pool) fetchClient(clients []unsafe.Pointer) plumbing.DopplerClient {
+	seed := rand.Int()
 	for i := range clients {
-		idx := (i + rand.Int()) % p.size
+		idx := (i + seed) % p.size
 		clt := atomic.LoadPointer(&clients[idx])
 		if clt == nil ||
 			(*clientInfo)(clt) == nil {
@@ -129,14 +130,14 @@ func (p *Pool) fetchClient(clients []unsafe.Pointer) plumbing.DopplerClient {
 
 func (p *Pool) connectToDoppler(addr string, clients []unsafe.Pointer, idx int) {
 	for {
-		log.Printf("Adding doppler %s", addr)
+		log.Printf("adding doppler %s", addr)
 
 		creds := credentials.NewTLS(p.tlsConf)
 		conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(creds))
 		if err != nil {
 			// TODO: We don't yet understand how this could happen, we should.
 			// TODO: Replace with exponential backoff.
-			log.Printf("Unable to Dial doppler %s: %s", addr, err)
+			log.Printf("unable to subscribe to doppler %s: %s", addr, err)
 			time.Sleep(5 * time.Second)
 			continue
 		}
