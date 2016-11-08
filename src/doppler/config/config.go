@@ -51,6 +51,7 @@ type Config struct {
 	MetricBatchIntervalMilliseconds uint
 	MetronAddress                   string
 	MonitorIntervalSeconds          uint
+	WebsocketHost                   string
 	OutgoingPort                    uint32
 	GRPC                            GRPC
 	SharedSecret                    string

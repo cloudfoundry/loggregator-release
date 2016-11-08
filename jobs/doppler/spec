@@ -61,6 +61,9 @@ properties:
     description: "PEM-encoded client key"
     default: ""
 
+  doppler.websocket_host:
+    description: Host for websocker server
+    default: 0.0.0.0
   doppler.outgoing_port:
     description: Port for outgoing log messages via websockets
     default: 8081
