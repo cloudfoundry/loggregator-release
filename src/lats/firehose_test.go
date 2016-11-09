@@ -1,6 +1,7 @@
 package lats_test
 
 import (
+	"context"
 	"fmt"
 	"lats/helpers"
 	"math/rand"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
+	etcdclient "github.com/coreos/etcd/client"
 	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -321,19 +323,19 @@ var _ = Describe("Firehose", func() {
 	Describe("subscription reconnect", func() {
 		It("gets all of the messages after reconnect", func() {
 			By("establishing first consumer")
-			reader, _ := helpers.SetUpConsumer()
+			consumer, _ := helpers.SetUpConsumer()
 			subscriptionID := generateSubID()
-			msgs, errs := reader.FirehoseWithoutReconnect(subscriptionID, "")
+			msgs, errs := consumer.FirehoseWithoutReconnect(subscriptionID, "")
 			go readFromErrors(errs)
 
 			By("waiting for connection to be established")
 			emitControlMessages()
 			waitForControl(msgs)
-			reader.Close()
+			consumer.Close()
 
 			By("establishing second consumer with the same subscription id")
-			reader, _ = helpers.SetUpConsumer()
-			msgs, errs = reader.FirehoseWithoutReconnect(subscriptionID, "")
+			consumer, _ = helpers.SetUpConsumer()
+			msgs, errs = consumer.FirehoseWithoutReconnect(subscriptionID, "")
 			go readFromErrors(errs)
 
 			By("asserting that most messages get through")
@@ -344,6 +346,43 @@ var _ = Describe("Firehose", func() {
 			Expect(len(envelopes)).To(BeNumerically("~", count, 3))
 			Expect(len(envelopes)).To(BeNumerically("<=", count))
 			Expect(verifyEnvelopes(count, envelopes)).To(BeTrue())
+		})
+
+		Context("etcd misreports available dopplers", func() {
+			It("continues to send data to new streams", func() {
+				By("establishing first consumer")
+				consumer, _ := helpers.SetUpConsumer()
+				subscriptionID := generateSubID()
+				msgs, errs := consumer.FirehoseWithoutReconnect(subscriptionID, "")
+				go readFromErrors(errs)
+
+				By("waiting for connection to be established")
+				emitControlMessages()
+				waitForControl(msgs)
+
+				By("clearing etcd")
+				ttl := deleteLeafs("/doppler/meta", config.EtcdUrls...)
+
+				By("waiting a bit for a new etcd event")
+				f := func() bool {
+					leafs := leafs(listNode("/doppler/meta", config.EtcdUrls...))
+					return len(leafs) > 0
+				}
+				Eventually(f, ttl).Should(BeTrue())
+
+				By("killing the stream connection")
+				Expect(consumer.Close()).To(Succeed())
+
+				By("connecting to tc for stream")
+				consumer, _ = helpers.SetUpConsumer()
+				defer consumer.Close()
+				msgs, errs = consumer.FirehoseWithoutReconnect(subscriptionID, "")
+				go readFromErrors(errs)
+
+				By("expecting data to still flow (like spice)")
+				emitControlMessages()
+				waitForControl(msgs)
+			})
 		})
 	})
 })
@@ -362,4 +401,54 @@ func (m valueMetrics) Swap(i, j int) {
 	tmp := m[i]
 	m[i] = m[j]
 	m[j] = tmp
+}
+
+func listNode(key string, etcdAddrs ...string) *etcdclient.Node {
+	c, err := etcdclient.New(etcdclient.Config{
+		Endpoints: etcdAddrs,
+	})
+	Expect(err).ToNot(HaveOccurred())
+
+	kAPI := etcdclient.NewKeysAPI(c)
+
+	opts := &etcdclient.GetOptions{Recursive: true}
+	ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
+	resp, err := kAPI.Get(ctx, key, opts)
+	Expect(err).ToNot(HaveOccurred())
+
+	return resp.Node
+}
+
+func deleteLeafs(key string, etcdAddrs ...string) time.Duration {
+	node := listNode(key, etcdAddrs...)
+	c, err := etcdclient.New(etcdclient.Config{
+		Endpoints: etcdAddrs,
+	})
+	Expect(err).ToNot(HaveOccurred())
+
+	kAPI := etcdclient.NewKeysAPI(c)
+
+	var longestTTL time.Duration
+	for _, leaf := range leafs(node) {
+		resp, err := kAPI.Delete(context.Background(), leaf.Key, nil)
+		Expect(err).ToNot(HaveOccurred())
+		ttl := time.Duration(resp.PrevNode.TTL) * time.Second
+		if ttl > longestTTL {
+			longestTTL = ttl
+		}
+	}
+	return longestTTL
+}
+
+func leafs(node *etcdclient.Node) []*etcdclient.Node {
+	if !node.Dir {
+		return []*etcdclient.Node{
+			node,
+		}
+	}
+	var ls []*etcdclient.Node
+	for _, n := range node.Nodes {
+		ls = append(ls, leafs(n)...)
+	}
+	return ls
 }

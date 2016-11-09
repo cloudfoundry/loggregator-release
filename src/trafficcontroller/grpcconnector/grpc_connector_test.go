@@ -224,7 +224,7 @@ var _ = Describe("GRPCConnector", func() {
 					})
 				})
 
-				Context("when finder service falsly reports doppler going away", func() {
+				Context("when finder service falsely reports doppler going away", func() {
 					var (
 						secondEvent dopplerservice.Event
 						senderA     plumbing.Doppler_SubscribeServer
@@ -244,7 +244,16 @@ var _ = Describe("GRPCConnector", func() {
 							Payload: []byte("some-data-a"),
 						})
 						Eventually(data).Should(Receive(Equal([]byte("some-data-a"))))
+					})
 
+					It("accepts new streams", func() {
+						data, _, ready := readFromSubscription(ctx, req, connector)
+						Eventually(ready).Should(BeClosed())
+						sender := captureSubscribeSender(mockDopplerServerA)
+						sender.Send(&plumbing.Response{
+							Payload: []byte("some-data"),
+						})
+						Eventually(data).Should(Receive())
 					})
 
 					Context("finder event readvertises the doppler", func() {
@@ -262,6 +271,37 @@ var _ = Describe("GRPCConnector", func() {
 
 						It("doesn't create a second connection", func() {
 							Consistently(mockDopplerServerA.SubscribeCalled, 1).Should(HaveLen(1))
+						})
+
+						Context("when the first connection is closed", func() {
+							var (
+								newCtx       context.Context
+								newCancelCtx func()
+							)
+
+							BeforeEach(func() {
+								cancelCtx()
+
+								newCtx, newCancelCtx = context.WithCancel(context.Background())
+							})
+
+							AfterEach(func() {
+								newCancelCtx()
+							})
+
+							It("allows new connections", func() {
+								// TODO: Once we're using a mock pool, use that
+								// to show when the event has been processed.
+								time.Sleep(time.Second)
+
+								data, _, ready := readFromSubscription(newCtx, req, connector)
+								Eventually(ready).Should(BeClosed())
+								sender := captureSubscribeSender(mockDopplerServerA)
+								sender.Send(&plumbing.Response{
+									Payload: []byte("some-data"),
+								})
+								Eventually(data).Should(Receive())
+							})
 						})
 					})
 				})
@@ -464,8 +504,10 @@ func readFromSubscription(ctx context.Context, req *plumbing.SubscriptionRequest
 	ready := make(chan struct{})
 
 	go func() {
-		r, _ := connector.Subscribe(ctx, req)
+		defer GinkgoRecover()
+		r, err := connector.Subscribe(ctx, req)
 		close(ready)
+		Expect(err).ToNot(HaveOccurred())
 		for {
 			d, e := r.Recv()
 			data <- d

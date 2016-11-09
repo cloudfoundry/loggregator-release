@@ -115,10 +115,6 @@ func (c *GRPCConnector) RecentLogs(ctx context.Context, appID string) [][]byte {
 
 // Subscribe returns a Receiver that yields all corresponding messages from Doppler
 func (c *GRPCConnector) Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) (Receiver, error) {
-	return c.handleRequest(ctx, req)
-}
-
-func (c *GRPCConnector) handleRequest(ctx context.Context, req *plumbing.SubscriptionRequest) (Receiver, error) {
 	cs := &consumerState{
 		data:     make(chan []byte, c.bufferSize),
 		errs:     make(chan error, 1),
@@ -140,6 +136,7 @@ func (c *GRPCConnector) handleRequest(ctx context.Context, req *plumbing.Subscri
 
 	c.mu.RLock()
 	defer c.mu.RUnlock()
+	log.Printf("Connecting to %d dopplers", len(c.clients))
 	for _, client := range c.clients {
 		go c.consumeSubscription(cs, client, c.batcher)
 	}
@@ -181,12 +178,7 @@ func (c *GRPCConnector) handleFinderEvent(uris []string) {
 
 	for _, deadClient := range deadClients {
 		log.Printf("Disabling reconnects for doppler %s", deadClient.uri)
-		for i, clt := range c.clients {
-			if clt == deadClient {
-				c.clients = append(c.clients[:i], c.clients[i+1:]...)
-			}
-		}
-		atomic.StoreInt64(&deadClient.disconnect, 1)
+		deadClient.disconnect = true
 
 		if atomic.LoadInt64(&deadClient.refCount) == 0 {
 			log.Printf("closing doppler connection %s...", deadClient.uri)
@@ -212,6 +204,7 @@ func (c *GRPCConnector) delta(uris []string) (add []string, dead []*dopplerClien
 func (c *GRPCConnector) subtractClient(remaining []*dopplerClientInfo, uri string) ([]*dopplerClientInfo, bool) {
 	for i, client := range remaining {
 		if uri == client.uri {
+			client.disconnect = false
 			return append(remaining[:i], remaining[i+1:]...), true
 		}
 	}
@@ -225,10 +218,17 @@ func (c *GRPCConnector) consumeSubscription(cs *consumerState, dopplerClient *do
 
 	atomic.AddInt64(&dopplerClient.refCount, 1)
 	defer func() {
+		c.mu.Lock()
+		defer c.mu.Unlock()
 		if atomic.AddInt64(&dopplerClient.refCount, -1) <= 0 &&
-			atomic.LoadInt64(&dopplerClient.disconnect) != 0 {
+			dopplerClient.disconnect {
 			log.Printf("closing doppler connection %s...", dopplerClient.uri)
 			c.pool.Close(dopplerClient.uri)
+			for i, clt := range c.clients {
+				if clt == dopplerClient {
+					c.clients = append(c.clients[:i], c.clients[i+1:]...)
+				}
+			}
 		}
 
 		cs.forgetDoppler(dopplerClient.uri)
@@ -236,13 +236,17 @@ func (c *GRPCConnector) consumeSubscription(cs *consumerState, dopplerClient *do
 
 	delay := time.Millisecond
 
+	tried := false
 	for {
-		dopplerDisconnect := atomic.LoadInt64(&dopplerClient.disconnect)
 		ctxDisconnect := atomic.LoadInt64(&cs.dead)
-		if dopplerDisconnect != 0 || ctxDisconnect != 0 {
-			log.Printf("Disconnecting from stream (%s) (doppler.disconnect=%d) (ctx.disconnect=%d)", dopplerClient.uri, dopplerDisconnect, ctxDisconnect)
+		c.mu.RLock()
+		dopplerDisconnect := dopplerClient.disconnect
+		c.mu.RUnlock()
+		if tried && dopplerDisconnect || ctxDisconnect != 0 {
+			log.Printf("Disconnecting from stream (%s) (doppler.disconnect=%v) (ctx.disconnect=%d)", dopplerClient.uri, dopplerDisconnect, ctxDisconnect)
 			return
 		}
+		tried = true
 
 		dopplerStream, err := c.pool.Subscribe(dopplerClient.uri, cs.ctx, cs.req)
 
@@ -319,7 +323,7 @@ func (c *GRPCConnector) addConsumerState(cs *consumerState) error {
 
 type dopplerClientInfo struct {
 	uri        string
-	disconnect int64
+	disconnect bool
 	refCount   int64
 }
 
