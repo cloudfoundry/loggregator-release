@@ -130,4 +130,6 @@ builds:
     version: '64'
   513f3c3c-10d8-4ec6-80e7-c1c6e6985379:
     version: '65'
+  ef3828b8-5279-46b0-93ff-ee644b87170e:
+    version: '66'
 format-version: '2'
