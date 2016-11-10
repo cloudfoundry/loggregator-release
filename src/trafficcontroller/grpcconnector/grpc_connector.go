@@ -183,6 +183,7 @@ func (c *GRPCConnector) handleFinderEvent(uris []string) {
 		if atomic.LoadInt64(&deadClient.refCount) == 0 {
 			log.Printf("closing doppler connection %s...", deadClient.uri)
 			c.pool.Close(deadClient.uri)
+			c.close(deadClient)
 		}
 	}
 }
@@ -211,6 +212,14 @@ func (c *GRPCConnector) subtractClient(remaining []*dopplerClientInfo, uri strin
 	return remaining, false
 }
 
+func (c *GRPCConnector) close(client *dopplerClientInfo) {
+	for i, clt := range c.clients {
+		if clt == client {
+			c.clients = append(c.clients[:i], c.clients[i+1:]...)
+		}
+	}
+}
+
 func (c *GRPCConnector) consumeSubscription(cs *consumerState, dopplerClient *dopplerClientInfo, batcher MetaMetricBatcher) {
 	if !cs.tryAddDoppler(dopplerClient.uri) {
 		return
@@ -224,11 +233,7 @@ func (c *GRPCConnector) consumeSubscription(cs *consumerState, dopplerClient *do
 			dopplerClient.disconnect {
 			log.Printf("closing doppler connection %s...", dopplerClient.uri)
 			c.pool.Close(dopplerClient.uri)
-			for i, clt := range c.clients {
-				if clt == dopplerClient {
-					c.clients = append(c.clients[:i], c.clients[i+1:]...)
-				}
-			}
+			c.close(dopplerClient)
 		}
 
 		cs.forgetDoppler(dopplerClient.uri)
