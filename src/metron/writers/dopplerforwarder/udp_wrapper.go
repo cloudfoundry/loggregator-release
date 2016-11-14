@@ -1,35 +1,40 @@
 package dopplerforwarder
 
 import (
+	"log"
+
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/dropsonde/signature"
-	"github.com/cloudfoundry/gosteno"
 )
 
-type UDPWrapper struct {
-	sharedSecret []byte
-	logger       *gosteno.Logger
+type UDPConn interface {
+	Write(data []byte) error
 }
 
-func NewUDPWrapper(sharedSecret []byte, logger *gosteno.Logger) *UDPWrapper {
+type UDPWrapper struct {
+	conn         UDPConn
+	sharedSecret []byte
+}
+
+func NewUDPWrapper(conn UDPConn, sharedSecret []byte) *UDPWrapper {
 	return &UDPWrapper{
+		conn:         conn,
 		sharedSecret: sharedSecret,
-		logger:       logger,
 	}
 }
 
-func (u *UDPWrapper) Write(client Client, message []byte, chainers ...metricbatcher.BatchCounterChainer) error {
+func (u *UDPWrapper) Write(message []byte, chainers ...metricbatcher.BatchCounterChainer) error {
 	signedMessage := signature.SignMessage(message, u.sharedSecret)
 
-	sentLength, err := client.Write(signedMessage)
+	err := u.conn.Write(signedMessage)
 	if err != nil {
-		u.logger.Errorf("Error writing to UDP client %v\n", err)
+		log.Printf("Error writing to UDP client %s", err)
 		metrics.BatchIncrementCounter("udp.sendErrorCount")
 		return err
 	}
 	metrics.BatchIncrementCounter("udp.sentMessageCount")
-	metrics.BatchAddCounter("udp.sentByteCount", uint64(sentLength))
+	metrics.BatchAddCounter("udp.sentByteCount", uint64(len(message)))
 
 	// The TLS side writes this metric in the batch.Writer.  For UDP,
 	// it needs to be done here.

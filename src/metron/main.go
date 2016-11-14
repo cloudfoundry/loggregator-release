@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"time"
 
-	"code.cloudfoundry.org/localip"
 	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/dropsonde/metric_sender"
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
@@ -20,11 +19,9 @@ import (
 
 	"metron/backoff"
 	"metron/clientpool"
-	"metron/clientreader"
 	"metron/config"
 	"metron/eventwriter"
 	"metron/networkreader"
-	"metron/writers/batch"
 	"metron/writers/dopplerforwarder"
 	"metron/writers/eventmarshaller"
 	"metron/writers/eventunmarshaller"
@@ -35,7 +32,6 @@ import (
 	"doppler/sinks/retrystrategy"
 
 	"logger"
-	"plumbing"
 	"signalmanager"
 )
 
@@ -120,89 +116,20 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 		return nil, err
 	}
 
-	var protocols []string
-	clientPool := make(map[string]clientreader.ClientPool)
-	writers := make(map[string]eventmarshaller.BatchChainByteWriter)
-
-	ip, err := localip.LocalIP()
-	if err != nil {
-		return nil, err
-	}
-
-	for protocol := range conf.Protocols {
-		proto := string(protocol)
-		protocols = append(protocols, proto)
-		switch proto {
-		case "udp":
-			udpCreator := clientpool.NewUDPClientCreator(logger)
-			udpWrapper := dopplerforwarder.NewUDPWrapper([]byte(conf.SharedSecret), logger)
-			udpPool := clientpool.NewDopplerPool(logger, udpCreator)
-			udpForwarder := dopplerforwarder.New(udpWrapper, udpPool, logger)
-			clientPool[proto] = udpPool
-			writers[proto] = udpForwarder
-		case "tcp":
-			tcpCreator := clientpool.NewTCPClientCreator(TCPTimeout, logger, nil)
-			tcpWrapper := dopplerforwarder.NewWrapper(logger, proto)
-			tcpPool := clientpool.NewDopplerPool(logger, tcpCreator)
-			tcpForwarder := dopplerforwarder.New(tcpWrapper, tcpPool, logger)
-
-			tcpBatchInterval := time.Duration(conf.TCPBatchIntervalMilliseconds) * time.Millisecond
-
-			dropCounter := batch.NewDroppedCounter(tcpForwarder, batcher, origin, ip, conf)
-			batchWriter, err := batch.NewWriter(
-				"tcp",
-				tcpForwarder,
-				dropCounter,
-				conf.TCPBatchSizeBytes,
-				tcpBatchInterval,
-				logger,
-			)
-			if err != nil {
-				return nil, err
-			}
-			clientPool[proto] = tcpPool
-			writers[proto] = batchWriter
-		case "tls":
-			c := conf.TLSConfig
-			tlsConfig, err := plumbing.NewMutualTLSConfig(c.CertFile, c.KeyFile, c.CAFile, "doppler")
-			if err != nil {
-				return nil, err
-			}
-			tlsCreator := clientpool.NewTCPClientCreator(TCPTimeout, logger, tlsConfig)
-			tlsWrapper := dopplerforwarder.NewWrapper(logger, proto)
-			tlsPool := clientpool.NewDopplerPool(logger, tlsCreator)
-			tlsForwarder := dopplerforwarder.New(tlsWrapper, tlsPool, logger)
-			tcpBatchInterval := time.Duration(conf.TCPBatchIntervalMilliseconds) * time.Millisecond
-
-			dropCounter := batch.NewDroppedCounter(tlsForwarder, batcher, origin, ip, conf)
-			batchWriter, err := batch.NewWriter(
-				"tls",
-				tlsForwarder,
-				dropCounter,
-				conf.TCPBatchSizeBytes,
-				tcpBatchInterval,
-				logger,
-			)
-			if err != nil {
-				return nil, err
-			}
-			clientPool[proto] = tlsPool
-			writers[proto] = batchWriter
-		}
-	}
-
 	finder := dopplerservice.NewFinder(adapter, conf.LoggregatorDropsondePort, 0, conf.Protocols.Strings(), conf.Zone, logger)
 	finder.Start()
 
-	marshaller := eventmarshaller.New(batcher, logger)
+	dopplerFinder := clientpool.NewDopplerFinder(finder)
+	var connManagers []clientpool.Conn
+	for i := 0; i < 5; i++ {
+		connManagers = append(connManagers, clientpool.NewConnManager(10000, dopplerFinder))
+	}
 
-	go func() {
-		for {
-			protocol := clientreader.Read(clientPool, conf.Protocols.Strings(), finder.Next())
-			logger.Infof("Chose protocol %s from last etcd event, updating writer...", protocol)
-			marshaller.SetWriter(writers[protocol])
-		}
-	}()
+	pool := clientpool.New(connManagers...)
+	udpWrapper := dopplerforwarder.NewUDPWrapper(pool, []byte(conf.SharedSecret))
+
+	marshaller := eventmarshaller.New(batcher, logger)
+	marshaller.SetWriter(udpWrapper)
 
 	return marshaller, nil
 }

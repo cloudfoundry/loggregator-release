@@ -16,7 +16,7 @@ import (
 // additional tags it needs and send the chainer when the message
 // is successfully sent.
 type BatchChainByteWriter interface {
-	Write(message []byte, chainers ...metricbatcher.BatchCounterChainer) (sentLength int, err error)
+	Write(message []byte, chainers ...metricbatcher.BatchCounterChainer) (err error)
 }
 
 //go:generate hel --type EventBatcher --output mock_event_batcher_test.go

@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	dopplerConfig "doppler/config"
 	"doppler/iprange"
@@ -245,7 +246,6 @@ func SetupMetron(etcdClientURL, proto string) (func(), int, func()) {
 	Expect(err).ToNot(HaveOccurred())
 	err = metronCfgFile.Close()
 	Expect(err).ToNot(HaveOccurred())
-
 	metronCommand := exec.Command(metronPath, "--debug", "--config", metronCfgFile.Name())
 	metronSession, err := gexec.Start(
 		metronCommand,
@@ -269,7 +269,9 @@ func SetupMetron(etcdClientURL, proto string) (func(), int, func()) {
 			os.Remove(metronCfgFile.Name())
 			metronSession.Kill().Wait()
 		}, metronPort, func() {
-			Eventually(metronSession.Buffer).Should(gbytes.Say(" from last etcd event, updating writer..."))
+			// TODO When we switch to gRPC we should wait until
+			// we can connect to it
+			time.Sleep(10 * time.Second)
 		}
 }
 

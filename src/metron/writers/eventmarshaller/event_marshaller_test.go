@@ -61,7 +61,6 @@ var _ = Describe("EventMarshaller", func() {
 		Context("with an invalid envelope", func() {
 			BeforeEach(func() {
 				envelope = &events.Envelope{}
-				close(mockChainWriter.WriteOutput.SentLength)
 				close(mockChainWriter.WriteOutput.Err)
 			})
 
@@ -80,7 +79,6 @@ var _ = Describe("EventMarshaller", func() {
 
 		Context("with writer", func() {
 			BeforeEach(func() {
-				close(mockChainWriter.WriteOutput.SentLength)
 				close(mockChainWriter.WriteOutput.Err)
 				envelope = &events.Envelope{
 					Origin:    proto.String("The Negative Zone"),
@@ -109,7 +107,6 @@ var _ = Describe("EventMarshaller", func() {
 		It("writes to the new writer", func() {
 			newWriter := newMockBatchChainByteWriter()
 			close(newWriter.WriteOutput.Err)
-			close(newWriter.WriteOutput.SentLength)
 			marshaller.SetWriter(newWriter)
 
 			envelope := &events.Envelope{

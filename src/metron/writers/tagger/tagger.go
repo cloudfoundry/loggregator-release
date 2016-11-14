@@ -3,9 +3,9 @@ package tagger
 import (
 	"metron/writers"
 
+	"code.cloudfoundry.org/localip"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-	"code.cloudfoundry.org/localip"
 )
 
 type Tagger struct {

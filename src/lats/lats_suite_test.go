@@ -9,7 +9,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 
 	latsConfig "lats/config"
@@ -45,7 +44,8 @@ func setupMetron() *gexec.Session {
 	metronSession, err := gexec.Start(command, gexec.NewPrefixedWriter("[o][metron]", GinkgoWriter), gexec.NewPrefixedWriter("[e][metron]", GinkgoWriter))
 	Expect(err).ShouldNot(HaveOccurred())
 
-	Eventually(metronSession.Buffer).Should(gbytes.Say("Chose protocol"))
+	// TODO: We should have some better way of ensuring we're ready
+	time.Sleep(10 * time.Second)
 	Consistently(metronSession.Exited).ShouldNot(BeClosed())
 
 	return metronSession
