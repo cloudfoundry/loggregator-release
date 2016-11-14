@@ -20,7 +20,6 @@ If you need to contact us, you can [join our Slack channel](https://cloudfoundry
 * [Emitting Messages from other Cloud Foundry components](#emitting-messages-from-other-cloud-foundry-components)
 * [Generating TLS Certificates](#generating-tls-certificates)
   * [Custom TLS Certificates](#custom-tls-certificate-generation)
-* [Enabling TLS between Metron and Doppler](#enabling-tls-between-metron-and-doppler)
 * [Enabling TLS communication with etcd](#enabling-tls-between-loggregator-and-etcd)
 * [Deploying via BOSH](#deploying-via-bosh)
 * [Configuring the Firehose](#configuring-the-firehose)
