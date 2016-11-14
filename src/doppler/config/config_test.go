@@ -22,6 +22,7 @@ var _ = Describe("Config", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(cfg.IncomingUDPPort).To(Equal(uint32(3456)))
 			Expect(cfg.IncomingTCPPort).To(Equal(uint32(3457)))
+			Expect(cfg.WebsocketHost).To(Equal("0.0.0.0"))
 			Expect(cfg.OutgoingPort).To(Equal(uint32(8080)))
 			Expect(cfg.MessageDrainBufferSize).To(Equal(uint(100)))
 			Expect(cfg.MonitorIntervalSeconds).To(BeEquivalentTo(60))

@@ -165,7 +165,7 @@ func New(
 	doppler.messageRouter = sinkserver.NewMessageRouter(logger, doppler.sinkManager, grpcRouter)
 
 	doppler.websocketServer, err = websocketserver.New(
-		fmt.Sprintf(":%d", conf.OutgoingPort),
+		fmt.Sprintf("%s:%d", conf.WebsocketHost, conf.OutgoingPort),
 		doppler.sinkManager,
 		websocketWriteTimeout,
 		keepAliveInterval,
