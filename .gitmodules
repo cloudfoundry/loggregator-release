@@ -121,3 +121,6 @@
 [submodule "src/github.com/kisielk/gotool"]
 	path = src/github.com/kisielk/gotool
 	url = https://github.com/kisielk/gotool
+[submodule "src/github.com/a8m/expect"]
+	path = src/github.com/a8m/expect
+	url = https://github.com/a8m/expect
