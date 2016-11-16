@@ -1,7 +1,0 @@
-#!/bin/bash
-
-set -e
-
-go install github.com/gogo/protobuf/protoc-gen-gogo
-
-exec $(dirname $0)/env protoc --plugin=$(dirname $0)/protoc-gen-gogo --proto_path=$(dirname $0)/../src/github.com/cloudfoundry/loggregatorlib/logmessage/ --gogo_out=src/github.com/cloudfoundry/loggregatorlib/logmessage $(dirname $0)/../src/github.com/cloudfoundry/loggregatorlib/logmessage/log_message.proto
