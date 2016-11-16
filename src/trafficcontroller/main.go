@@ -9,7 +9,6 @@ import (
 	"monitor"
 	"net"
 	"net/http"
-	_ "net/http/pprof"
 	"os"
 	"plumbing"
 	"profiler"
