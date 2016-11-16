@@ -3,8 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net/http"
-	_ "net/http/pprof"
+	"profiler"
 	"runtime"
 	"time"
 
@@ -59,15 +58,11 @@ func main() {
 
 	logger := logger.NewLogger(*debug, *logFilePath, "metron", config.Syslog)
 
+	p := profiler.New(config.PPROFPort, logger)
+	go p.Start()
+
 	statsStopChan := make(chan struct{})
 	batcher, eventWriter := initializeMetrics(config, statsStopChan, logger)
-
-	go func() {
-		err := http.ListenAndServe(fmt.Sprintf("localhost:%d", config.PPROFPort), nil)
-		if err != nil {
-			logger.Errorf("Error starting pprof server: %s", err.Error())
-		}
-	}()
 
 	logger.Info("Startup: Setting up the Metron agent")
 	marshaller, err := initializeDopplerPool(config, batcher, logger)

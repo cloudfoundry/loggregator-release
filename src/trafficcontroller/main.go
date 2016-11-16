@@ -12,6 +12,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"plumbing"
+	"profiler"
 	"signalmanager"
 	"strconv"
 	"time"
@@ -72,17 +73,13 @@ func main() {
 	log := logger.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller", conf.Syslog)
 	log.Info("Startup: Setting up the loggregator traffic controller")
 
+	p := profiler.New(conf.PPROFPort, log)
+	go p.Start()
+
 	batcher, err := initializeMetrics("LoggregatorTrafficController", net.JoinHostPort(conf.MetronHost, strconv.Itoa(conf.MetronPort)))
 	if err != nil {
 		log.Errorf("Error initializing dropsonde: %s", err)
 	}
-
-	go func() {
-		err := http.ListenAndServe(fmt.Sprintf("localhost:%d", conf.PPROFPort), nil)
-		if err != nil {
-			log.Errorf("Error starting pprof server: %s", err.Error())
-		}
-	}()
 
 	monitorInterval := time.Duration(conf.MonitorIntervalSeconds) * time.Second
 	uptimeMonitor := monitor.NewUptime(monitorInterval)

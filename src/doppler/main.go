@@ -4,8 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
-	"net/http"
 	_ "net/http/pprof"
+	"profiler"
 	"time"
 
 	"doppler/config"
@@ -75,12 +75,8 @@ func main() {
 
 	log := logger.NewLogger(*logLevel, *logFilePath, "doppler", conf.Syslog)
 
-	go func() {
-		err := http.ListenAndServe(fmt.Sprintf("localhost:%d", conf.PPROFPort), nil)
-		if err != nil {
-			log.Errorf("Error starting pprof server: %s", err.Error())
-		}
-	}()
+	p := profiler.New(conf.PPROFPort, log)
+	go p.Start()
 
 	log.Info("Startup: Setting up the doppler server")
 	dropsonde.Initialize(conf.MetronAddress, DOPPLER_ORIGIN)

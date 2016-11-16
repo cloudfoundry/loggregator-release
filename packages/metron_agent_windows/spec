@@ -49,4 +49,5 @@ files:
 - loggregator/src/metron/writers/messageaggregator/*.go # gosub
 - loggregator/src/metron/writers/mocks/*.go # gosub
 - loggregator/src/metron/writers/tagger/*.go # gosub
+- loggregator/src/profiler/*.go # gosub
 - loggregator/src/signalmanager/*.go # gosub

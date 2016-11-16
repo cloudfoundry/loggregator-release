@@ -59,6 +59,7 @@ files:
 - loggregator/src/logger/*.go # gosub
 - loggregator/src/monitor/*.go # gosub
 - loggregator/src/plumbing/*.go # gosub
+- loggregator/src/profiler/*.go # gosub
 - loggregator/src/signalmanager/*.go # gosub
 - loggregator/src/trafficcontroller/*.go # gosub
 - loggregator/src/trafficcontroller/accesslogger/*.go # gosub
