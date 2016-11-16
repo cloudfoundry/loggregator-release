@@ -112,3 +112,12 @@
 [submodule "src/github.com/nats-io/nuid"]
 	path = src/github.com/nats-io/nuid
 	url = https://github.com/nats-io/nuid
+[submodule "src/github.com/apoydence/onpar"]
+	path = src/github.com/apoydence/onpar
+	url = https://github.com/apoydence/onpar
+[submodule "src/github.com/apoydence/onparginkgo"]
+	path = src/github.com/apoydence/onparginkgo
+	url = https://github.com/apoydence/onparginkgo
+[submodule "src/github.com/kisielk/gotool"]
+	path = src/github.com/kisielk/gotool
+	url = https://github.com/kisielk/gotool
