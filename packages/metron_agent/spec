@@ -38,6 +38,7 @@ files:
 - loggregator/src/metron/clientreader/*.go # gosub
 - loggregator/src/metron/config/*.go # gosub
 - loggregator/src/metron/eventwriter/*.go # gosub
+- loggregator/src/metron/legacyclientpool/*.go # gosub
 - loggregator/src/metron/networkreader/*.go # gosub
 - loggregator/src/metron/writers/*.go # gosub
 - loggregator/src/metron/writers/batch/*.go # gosub

@@ -18,9 +18,9 @@ import (
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 
 	"metron/backoff"
-	"metron/clientpool"
 	"metron/config"
 	"metron/eventwriter"
+	"metron/legacyclientpool"
 	"metron/networkreader"
 	"metron/writers/dopplerforwarder"
 	"metron/writers/eventmarshaller"
@@ -119,14 +119,8 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 	finder := dopplerservice.NewFinder(adapter, conf.LoggregatorDropsondePort, 0, conf.Protocols.Strings(), conf.Zone, logger)
 	finder.Start()
 
-	dopplerFinder := clientpool.NewDopplerFinder(finder)
-	var connManagers []clientpool.Conn
-	for i := 0; i < 5; i++ {
-		connManagers = append(connManagers, clientpool.NewConnManager(10000, dopplerFinder))
-	}
-
-	pool := clientpool.New(connManagers...)
-	udpWrapper := dopplerforwarder.NewUDPWrapper(pool, []byte(conf.SharedSecret))
+	legacyPool := legacyclientpool.New(finder)
+	udpWrapper := dopplerforwarder.NewUDPWrapper(legacyPool, []byte(conf.SharedSecret))
 
 	marshaller := eventmarshaller.New(batcher, logger)
 	marshaller.SetWriter(udpWrapper)
