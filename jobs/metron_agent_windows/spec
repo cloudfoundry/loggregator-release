@@ -9,7 +9,7 @@ provides:
   - metron_agent.listening_port
 
 templates:
-  metron_agent_ctl.ps1.erb: bin/metron_agent_ctl.ps1
+  pre-start.ps1.erb: bin/pre-start.ps1
   metron_agent.json.erb: config/metron_agent.json
   metron_agent_logrotate.cron.erb: config/metron_agent_logrotate.cron
   logrotate.conf.erb: config/logrotate.conf
