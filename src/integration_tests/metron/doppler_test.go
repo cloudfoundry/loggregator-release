@@ -12,8 +12,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("communicating with doppler over UDP", func() {
-	It("forwards messages", func() {
+var _ = Describe("communicating with doppler", func() {
+	It("forwards messages on UDP", func() {
 		etcdCleanup, etcdClientURL := integration_tests.SetupEtcd()
 		defer etcdCleanup()
 		metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(etcdClientURL, "udp")
