@@ -8,6 +8,17 @@ service Doppler {
   rpc RecentLogs(RecentLogsRequest) returns (RecentLogsResponse) {}
 }
 
+service DopplerIngestor {
+  rpc Push(stream EnvelopeData) returns (PushResponse) {}
+}
+
+message EnvelopeData {
+  bytes payload = 1;
+}
+
+message PushResponse {
+}
+
 message SubscriptionRequest {
   string shardID = 1;
   Filter filter = 2;
@@ -17,6 +28,8 @@ message Filter{
   string appID = 1;
 }
 
+// Note: Ideally this would be EnvelopeData but for the time being we do not
+// want to pay the cost of planning an upgrade path for this to be renamed.
 message Response {
   bytes payload = 1;
 }
