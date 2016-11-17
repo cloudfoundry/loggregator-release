@@ -3,6 +3,7 @@ package profiler
 import (
 	"fmt"
 	"net/http"
+	_ "net/http/pprof"
 )
 
 // Starter is something that can be started
