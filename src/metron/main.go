@@ -40,13 +40,11 @@ const (
 	TCPTimeout        = time.Minute
 )
 
-var (
-	logFilePath    = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
-	configFilePath = flag.String("config", "config/metron.json", "Location of the Metron config json file")
-	debug          = flag.Bool("debug", false, "Debug logging")
-)
-
 func main() {
+	logFilePath := flag.String("logFile", "", "The agent log file, defaults to STDOUT")
+	configFilePath := flag.String("config", "config/metron.json", "Location of the Metron config json file")
+	debug := flag.Bool("debug", false, "Debug logging")
+
 	// Metron is intended to be light-weight so we occupy only one core
 	runtime.GOMAXPROCS(1)
 
