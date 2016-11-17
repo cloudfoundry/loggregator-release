@@ -1,5 +1,3 @@
 #!/bin/bash
 
- protoc -I src/plumbing/ src/plumbing/doppler_trafficcontroller.proto \
-    --go_out=plugins=grpc:src/plumbing
-
+protoc -I src/plumbing/ src/plumbing/*.proto --go_out=plugins=grpc:src/plumbing
