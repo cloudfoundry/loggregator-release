@@ -1,263 +1,270 @@
-name: (( meta.environment ))
+name: loggregator
 
-director_uuid: (( merge ))
+stemcells:
+- alias: default
+  os: ubuntu-trusty
+  version: latest
 
 releases:
-- name: (( meta.loggregator_release_name ))
+- name: loggregator
   version: latest
-- name: (( meta.etcd_release_name ))
+- name: etcd
   version: latest
-- name: (( meta.consul_release_name ))
+- name: consul
   version: latest
 
-jobs:
+instance_groups:
 - name: loggregator-acceptance-tests
-  templates:
-  - name: loggregator-acceptance-tests
-    release: (( meta.loggregator_release_name ))
+  azs:
+  - z1
   instances: 1
-  resource_pool: small_errand
+  vm_type: "((lats_vm_type))"
+  stemcell: default
   lifecycle: errand
   networks:
-    - name: loggregator
+  - name: "((loggregator_network_name))"
+  jobs:
+  - name: loggregator-acceptance-tests
+    release: loggregator
+    properties:
+      loggregator_endpoint:
+        shared_secret: "((dropsonde_shared_secret))"
+      traffic_controller:
+        disable_access_control: "((tc_disable_access_control))"
+      etcd:
+        machines: "((etcd_static_ips))"
 
 - name: consul
-  templates: (( merge || meta.consul_templates ))
-  instances: 2
-  persistent_disk: 1024
-  resource_pool: small
-  default_networks:
-  - name: loggregator
-  networks: (( merge || default_networks ))
+  azs:
+  - z1
+  instances: "((consul_instances))"
+  persistent_disk_type: "((consul_disk_type))"
+  vm_type: "((consul_vm_type))"
+  stemcell: default
+  networks:
+  - name: "((loggregator_network_name))"
+    static_ips: "((consul_static_ips))"
+  jobs:
+  - name: consul_agent
+    release: consul
+    properties:
+      consul:
+        agent:
+          mode: server
+          domain: cf.internal
+          servers: &3
+            lan: "((consul_static_ips))"
+        require_ssl: "((consul_require_ssl))"
+        encrypt_keys: "((consul_encrypt_keys))"
+        agent_cert: "((consul_agent_cert))"
+        agent_key: "((consul_agent_agent_key))"
+        ca_cert: "((consul_agent_ca_cert))"
+        server_cert: "((consul_agent_server_cert))"
+        server_key: "((consul_agent_server_key))"
+  - name: metron_agent
+    release: loggregator
+    properties: &2
+      metron_agent:
+        protocols:
+        - udp
+        deployment: loggregator
+        etcd:
+          client_cert: "((etcd_client_cert))"
+          client_key: "((etcd_client_key))"
+      metron_endpoint:
+        shared_secret: "((dropsonde_shared_secret))"
+      loggregator:
+        tls:
+          ca_cert: "((loggregator_tls_ca_cert))"
+          metron:
+            cert: "((metron_agent_tls_client_cert))"
+            key: "((metron_agent_tls_client_key))"
+        etcd:
+          require_ssl: "((etcd_require_ssl))"
+          ca_cert: "((etcd_ca_cert))"
+          machines: "((etcd_static_ips))"
   update:
     serial: true
     max_in_flight: 1
-  properties:
-    consul:
-      agent:
-        mode: server
-    metron_agent:
-      zone: z1
 
 - name: etcd
-  templates: (( merge || meta.etcd_templates ))
-  instances: 2
-  persistent_disk: 10024
-  resource_pool: medium
-  default_networks:
-    - name: loggregator
-  networks: (( merge || default_networks ))
-  properties:
-    metron_agent:
-      zone: z1
-    consul:
-      agent:
-        services:
-          etcd:
-            name: cf-etcd
+  azs:
+  - z1
+  instances: "((etcd_instances))"
+  persistent_disk_type: "((etcd_disk_type))"
+  vm_type: "((etcd_vm_type))"
+  stemcell: default
+  networks:
+  - name: "((loggregator_network_name))"
+    static_ips: "((etcd_static_ips))"
+  jobs:
+  - name: consul_agent
+    release: consul
+    properties:
+      consul:
+        agent:
+          mode: client
+          domain: cf.internal
+          servers: *3
+          services:
+            etcd:
+              name: etcd
+        require_ssl: "((consul_require_ssl))"
+        encrypt_keys: "((consul_encrypt_keys))"
+        agent_cert: "((consul_agent_cert))"
+        agent_key: "((consul_agent_agent_key))"
+        ca_cert: "((consul_agent_ca_cert))"
+        server_cert: "((consul_agent_server_cert))"
+        server_key: "((consul_agent_server_key))"
+  - name: etcd
+    release: etcd
+    properties:
+      etcd:
+        advertise_urls_dns_suffix: etcd.service.cf.internal
+        cluster:
+        - instances: "((etcd_instances))"
+          name: etcd
+        machines: "((etcd_static_ips))"
+        peer_require_ssl: "((etcd_require_ssl))"
+        require_ssl: "((etcd_require_ssl))"
+        ca_cert: "((etcd_ca_cert))"
+        client_cert: "((etcd_client_cert))"
+        client_key: "((etcd_client_key))"
+        server_cert: "((etcd_server_cert))"
+        server_key: "((etcd_server_key))"
+        peer_ca_cert: "((etcd_peer_ca_cert))"
+        peer_cert: "((etcd_peer_cert))"
+        peer_key: "((etcd_peer_key))"
+  - name: etcd_metrics_server
+    release: etcd
+    properties:
+      etcd_metrics_server:
+        etcd:
+          dns_suffix: etcd.service.cf.internal
+          require_ssl: "((etcd_require_ssl))"
+          ca_cert: "((etcd_ca_cert))"
+          client_cert: "((etcd_client_cert))"
+          client_key: "((etcd_client_key))"
+  - name: metron_agent
+    release: loggregator
+    properties: *2
   update:
     serial: true
     max_in_flight: 1
 
 - name: doppler
-  templates: (( merge || meta.loggregator_templates ))
-  instances: 1
-  resource_pool: medium
-  default_networks:
-    - name: loggregator
-  networks: (( merge || default_networks ))
-  properties:
-    doppler:
-      zone: z1
-    metron_agent:
-      zone: z1
-  update: (( merge || empty_hash ))
+  azs:
+  - z1
+  instances: "((doppler_instances))"
+  persistent_disk_type: "((doppler_disk_type))"
+  vm_type: "((doppler_vm_type))"
+  stemcell: default
+  networks:
+  - name: "((loggregator_network_name))"
+  jobs:
+  - name: consul_agent
+    release: consul
+    properties:
+      consul:
+        agent:
+          mode: client
+          domain: cf.internal
+          servers: *3
+          services:
+            doppler: {}
+        require_ssl: "((consul_require_ssl))"
+        encrypt_keys: "((consul_encrypt_keys))"
+        agent_cert: "((consul_agent_cert))"
+        agent_key: "((consul_agent_agent_key))"
+        ca_cert: "((consul_agent_ca_cert))"
+        server_cert: "((consul_agent_server_cert))"
+        server_key: "((consul_agent_server_key))"
+  - name: doppler
+    release: loggregator
+    properties:
+      doppler:
+        etcd:
+          client_cert: "((etcd_client_cert))"
+          client_key: "((etcd_client_key))"
+        syslog_skip_cert_verify: true
+      loggregator:
+        tls:
+          ca_cert: "((loggregator_tls_ca_cert))"
+          doppler:
+            cert: "((loggregator_tls_doppler_cert))"
+            key: "((loggregator_tls_doppler_key))"
+        etcd:
+          require_ssl: "((etcd_require_ssl))"
+          ca_cert: "((etcd_ca_cert))"
+          machines: "((etcd_static_ips))"
+      doppler_endpoint:
+        shared_secret: "((dropsonde_shared_secret))"
+  - name: metron_agent
+    release: loggregator
+    properties: *2
 
-- name: loggregator_trafficcontroller
-  templates: (( merge || meta.loggregator_trafficcontroller_templates ))
-  instances: 1
-  resource_pool: small
-  default_networks:
-    - name: loggregator
-  networks: (( merge || default_networks ))
-  properties:
-    traffic_controller:
-      zone: z1
-    consul:
-      agent:
-        services:
-          loggregator_trafficcontroller: {}
-    metron_agent:
-      zone: z1
-  update: (( merge || empty_hash ))
-
-properties:
-  ssl:
-    skip_cert_verify: (( merge || false ))
-
-  system_domain: (( merge ))
-
-  consul:
-    agent:
-      domain: cf.internal
-      log_level: (( merge || nil ))
-      servers:
-        lan: (( meta.consul_servers ))
-    ca_cert: (( merge ))
-    agent_cert: (( merge ))
-    agent_key: (( merge ))
-    encrypt_keys: (( merge ))
-    server_cert: (( merge ))
-    server_key: (( merge ))
-
-  etcd:
-    machines: (( merge || jobs.etcd.networks.loggregator.static_ips ))
-    require_ssl: (( merge || false ))
-    peer_require_ssl: (( .properties.etcd.require_ssl ))
-    advertise_urls_dns_suffix: cf-etcd.service.cf.internal
-    ca_cert: (( merge || "" ))
-    client_cert: (( merge || "" ))
-    client_key: (( merge || "" ))
-    cluster:
-      - instances: (( jobs.etcd.instances ))
-        name: etcd
-    peer_ca_cert: (( merge || "" ))
-    peer_cert: (( merge || "" ))
-    peer_key: (( merge || "" ))
-    server_cert: (( merge || "" ))
-    server_key: (( merge || "" ))
-
-  etcd_metrics_server:
-    etcd:
-      require_ssl: (( .properties.etcd.require_ssl ))
-      ca_cert: (( .properties.etcd.ca_cert ))
-      client_cert: (( .properties.etcd.client_cert ))
-      client_key: (( .properties.etcd.client_key ))
-      dns_suffix: (( .properties.etcd.advertise_urls_dns_suffix ))
-
-  loggregator:
-    maxRetainedLogMessages: 100
-    debug: (( merge || false ))
-    blacklisted_syslog_ranges: ~
-    outgoing_dropsonde_port: 8081
-    tls: (( merge ))
-    etcd:
-      machines: [(( .properties.etcd.advertise_urls_dns_suffix ))]
-      require_ssl: (( .properties.etcd.require_ssl ))
-      ca_cert: (( .properties.etcd.ca_cert ))
-
-  loggregator_endpoint:
-    shared_secret: (( merge ))
-
-  doppler:
-    message_drain_buffer_size: ~
-    zone: (( merge || nil ))
-    maxRetainedLogMessages: 100
-    debug: (( merge || false ))
-    blacklisted_syslog_ranges: ~
-    unmarshaller_count: (( merge || 5 ))
-    port: (( merge || 4443 ))
-    tls:
-      port: ~
-      enable: ~
-    etcd:
-      client_cert: (( .properties.etcd.client_cert ))
-      client_key: (( .properties.etcd.client_key ))
-
-  doppler_endpoint:
-    shared_secret: (( .properties.loggregator_endpoint.shared_secret ))
-
-  metron_agent:
-    deployment: (( meta.environment ))
-    preferred_protocol: ~
-    enable_buffer: ~
-    buffer_size: ~
-    protocols: ~
-    etcd:
-      client_cert: (( .properties.etcd.client_cert ))
-      client_key: (( .properties.etcd.client_key ))
-
-  metron_endpoint:
-    shared_secret: (( .properties.loggregator_endpoint.shared_secret ))
-
-  traffic_controller:
-    outgoing_port: 8080
-    zone: (( merge || nil ))
-    disable_access_control: true
-    security_event_logging:
-      enabled: (( merge || false ))
-    etcd:
-      client_cert: (( .properties.etcd.client_cert ))
-      client_key: (( .properties.etcd.client_key ))
-
-  cc:
-    srv_api_uri: ""
-  uaa:
-    url: ""
-  syslog_daemon_config: ~
+- name: log-api
+  azs:
+  - z1
+  instances: "((log_api_instances))"
+  persistent_disk_type: "((log_api_disk_type))"
+  vm_type: "((log_api_vm_type))"
+  stemcell: default
+  networks:
+  - name: "((loggregator_network_name))"
+  jobs:
+  - name: consul_agent
+    release: consul
+    properties:
+      consul:
+        agent:
+          mode: client
+          domain: cf.internal
+          servers: *3
+          services:
+            loggregator_trafficcontroller: {}
+        require_ssl: "((consul_require_ssl))"
+        encrypt_keys: "((consul_encrypt_keys))"
+        agent_cert: "((consul_agent_cert))"
+        agent_key: "((consul_agent_agent_key))"
+        ca_cert: "((consul_agent_ca_cert))"
+        server_cert: "((consul_agent_server_cert))"
+        server_key: "((consul_agent_server_key))"
+  - name: loggregator_trafficcontroller
+    release: loggregator
+    properties:
+      cc:
+        srv_api_uri: ""
+      uaa:
+        url: ""
+      system_domain: "((system_domain))"
+      traffic_controller:
+        disable_access_control: "((tc_disable_access_control))"
+        etcd:
+          client_cert: "((etcd_client_cert))"
+          client_key: "((etcd_client_key))"
+      loggregator:
+        tls:
+          ca_cert: "((loggregator_tls_ca_cert))"
+          trafficcontroller:
+            cert: "((loggregator_tls_tc_cert))"
+            key: "((loggregator_tls_tc_key))"
+        etcd:
+          require_ssl: "((etcd_require_ssl))"
+          ca_cert: "((etcd_ca_cert))"
+          machines: "((etcd_static_ips))"
+      ssl:
+        skip_cert_verify: "((skip_ssl_verify))"
+  - name: metron_agent
+    release: loggregator
+    properties: *2
+  update:
+    max_in_flight: 1
+    serial: true
 
 update:
-  canaries: 1
-  max_in_flight: 1
-  canary_watch_time: 30000-600000
-  update_watch_time: 5000-600000
+  canaries: 10
+  max_in_flight: 10
+  canary_watch_time: 30000-60000
+  update_watch_time: 5000-60000
   serial: true
-
-meta:
-  # override this in your stub to set the environment name,
-  # which is used for the deployment name
-  #
-  # i.e. cf-tabasco
-  environment: ~
-
-  default_env:
-    # Default vcap & root password on deployed VMs (ie c1oudc0w)
-    # Generated using mkpasswd -m sha-512
-    bosh:
-      password: (( merge || "$6$4gDD3aV0rdqlrKC$2axHCxGKIObs6tAmMTqYCspcdvQXh3JJcvWOY2WGb4SrdXtnCyNaWlrf3WEqvYR2MYizEGp3kMmbpwBC6jsHt0" ))
-
-  consul_release_name: (( releases.consul.name || "consul" ))
-  etcd_release_name: (( releases.etcd.name || "etcd" ))
-  loggregator_release_name: (( releases.loggregator.name || "loggregator" ))
-
-  consul_servers: (( merge || jobs.consul.networks.loggregator.static_ips ))
-
-  consul_templates:
-  - name: consul_agent
-    release: (( meta.consul_release_name ))
-  - name: metron_agent
-    release: (( meta.loggregator_release_name ))
-
-  etcd_templates:
-  - name: consul_agent
-    release: (( meta.consul_release_name ))
-  - name: etcd
-    release: (( meta.etcd_release_name ))
-  - name: etcd_metrics_server
-    release: (( meta.etcd_release_name ))
-  - name: metron_agent
-    release: (( meta.loggregator_release_name ))
-
-  loggregator_templates:
-  - name: consul_agent
-    release: (( meta.consul_release_name ))
-  - name: doppler
-    release: (( meta.loggregator_release_name ))
-  - name: metron_agent
-    release: (( meta.loggregator_release_name ))
-
-  loggregator_trafficcontroller_templates:
-  - name: consul_agent
-    release: (( meta.consul_release_name ))
-  - name: loggregator_trafficcontroller
-    release: (( meta.loggregator_release_name ))
-  - name: metron_agent
-    release: (( meta.loggregator_release_name ))
-
-empty_hash: {}
-
-networks: (( merge ))
-
-compilation: (( merge ))
-
-resource_pools: (( merge ))
