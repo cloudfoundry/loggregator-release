@@ -32,7 +32,7 @@ instance_groups:
       traffic_controller:
         disable_access_control: "((tc_disable_access_control))"
       etcd:
-        machines: "((etcd_static_ips))"
+        machines: "((etcd_machines))"
 
 - name: consul
   azs:
@@ -82,7 +82,7 @@ instance_groups:
         etcd:
           require_ssl: "((etcd_require_ssl))"
           ca_cert: "((etcd_ca_cert))"
-          machines: "((etcd_static_ips))"
+          machines: "((etcd_machines))"
   update:
     serial: true
     max_in_flight: 1
@@ -124,7 +124,7 @@ instance_groups:
         cluster:
         - instances: "((etcd_instances))"
           name: etcd
-        machines: "((etcd_static_ips))"
+        machines: "((etcd_machines))"
         peer_require_ssl: "((etcd_require_ssl))"
         require_ssl: "((etcd_require_ssl))"
         ca_cert: "((etcd_ca_cert))"
@@ -196,7 +196,7 @@ instance_groups:
         etcd:
           require_ssl: "((etcd_require_ssl))"
           ca_cert: "((etcd_ca_cert))"
-          machines: "((etcd_static_ips))"
+          machines: "((etcd_machines))"
       doppler_endpoint:
         shared_secret: "((dropsonde_shared_secret))"
   - name: metron_agent
@@ -252,7 +252,7 @@ instance_groups:
         etcd:
           require_ssl: "((etcd_require_ssl))"
           ca_cert: "((etcd_ca_cert))"
-          machines: "((etcd_static_ips))"
+          machines: "((etcd_machines))"
       ssl:
         skip_cert_verify: "((skip_ssl_verify))"
   - name: metron_agent

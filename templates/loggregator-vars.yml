@@ -159,6 +159,7 @@ etcd_require_ssl: false
 etcd_server_cert: ""
 etcd_server_key: ""
 etcd_static_ips: [10.244.10.3]
+etcd_machines: [10.244.10.3]
 etcd_vm_type: small
 lats_vm_type: small
 log_api_disk_type: 1GB
