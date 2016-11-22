@@ -29,13 +29,16 @@ var _ = Describe("Syslog Drain", func() {
 			// flowing through doppler
 			env := createLogMessage("test-id")
 			helpers.EmitToMetron(env)
+
+			l.SetDeadline(time.Now().Add(1 * time.Second))
 			conn, err = l.Accept()
 			if err != nil {
 				println("Error accepting conn: ", err.Error())
 			}
 			return conn
 		}
-		Eventually(f).ShouldNot(BeNil())
+
+		Eventually(f, 10*time.Second, 2*time.Second).ShouldNot(BeNil())
 		defer conn.Close()
 
 		env := createLogMessage("test-id")
@@ -56,8 +59,12 @@ var _ = Describe("Syslog Drain", func() {
 	})
 })
 
-func buildListener() (net.Listener, string) {
-	listener, err := net.Listen("tcp", ":0")
+func buildListener() (*net.TCPListener, string) {
+	ip, err := localip.LocalIP()
+	Expect(err).ToNot(HaveOccurred())
+	tcpAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:0", ip))
+	Expect(err).ToNot(HaveOccurred())
+	listener, err := net.ListenTCP("tcp", tcpAddr)
 	Expect(err).ToNot(HaveOccurred())
 	port := strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)
 	return listener, port
