@@ -9,9 +9,11 @@ releases:
 - name: loggregator
   version: latest
 - name: etcd
+  url: https://bosh.io/d/github.com/cloudfoundry-incubator/etcd-release
   version: latest
 - name: consul
   version: latest
+  url: https://bosh.io/d/github.com/cloudfoundry-incubator/consul-release
 
 instance_groups:
 - name: loggregator-acceptance-tests
