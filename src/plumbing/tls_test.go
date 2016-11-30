@@ -86,6 +86,14 @@ var _ = Describe("TLS", func() {
 		_, err := NewTLSConfig(clientCertFilename, clientKeyFilename, empty, "")
 		Expect(err.Error()).To(Equal("unable to load ca cert file"))
 	})
+
+	It("returns the specified cipher suites", func() {
+		tlsConfig, err := NewTLSConfig(clientCertFilename, clientKeyFilename, "", "")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(tlsConfig.CipherSuites).To(ContainElement(tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256))
+		Expect(tlsConfig.CipherSuites).To(ContainElement(tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384))
+	})
+
 })
 
 func writeFile(data string) string {
