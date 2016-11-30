@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"plumbing"
 	"strings"
 	"sync"
 	"time"
@@ -25,7 +26,7 @@ type httpsWriter struct {
 
 	mu sync.Mutex // guards lastError
 
-	tlsConfig *tls.Config
+	TlsConfig *tls.Config
 	client    *http.Client
 	lastError error
 }
@@ -38,7 +39,9 @@ func NewHttpsWriter(outputUrl *url.URL, appId string, skipCertVerify bool, diale
 	if outputUrl.Scheme != "https" {
 		return nil, errors.New(fmt.Sprintf("Invalid scheme %s, httpsWriter only supports https", outputUrl.Scheme))
 	}
-	tlsConfig := &tls.Config{InsecureSkipVerify: skipCertVerify}
+
+	tlsConfig := plumbing.NewTLSConfig()
+	tlsConfig.InsecureSkipVerify = skipCertVerify
 	tr := &http.Transport{
 		MaxIdleConnsPerHost: 1,
 		TLSClientConfig:     tlsConfig,
@@ -51,7 +54,7 @@ func NewHttpsWriter(outputUrl *url.URL, appId string, skipCertVerify bool, diale
 	return &httpsWriter{
 		appId:     appId,
 		outputUrl: outputUrl,
-		tlsConfig: tlsConfig,
+		TlsConfig: tlsConfig,
 		client:    client,
 	}, nil
 }

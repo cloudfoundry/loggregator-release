@@ -1,11 +1,13 @@
 package syslogwriter_test
 
 import (
+	"crypto/tls"
 	"doppler/sinks/syslogwriter"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"plumbing"
 	"sync"
 	"time"
 
@@ -18,14 +20,16 @@ const standardErrorPriority = 14
 var _ = Describe("HttpsWriter", func() {
 
 	Context("With an HTTPS Sink", func() {
-		var server *httptest.Server
-		var listener *historyListener
-		var serveMux *http.ServeMux
-		var requestChan chan []byte
-		var dialer *net.Dialer
-		var timeout time.Duration
-		var queuedRequests int
-		var statusCode int
+		var (
+			server         *httptest.Server
+			listener       *historyListener
+			serveMux       *http.ServeMux
+			requestChan    chan []byte
+			dialer         *net.Dialer
+			timeout        time.Duration
+			queuedRequests int
+			statusCode     int
+		)
 
 		BeforeEach(func() {
 			listener = newHistoryListener("tcp", "127.0.0.1:0")
@@ -46,6 +50,20 @@ var _ = Describe("HttpsWriter", func() {
 
 		AfterEach(func() {
 			server.Close()
+		})
+
+		It("requires TLS Version 1.2", func() {
+			outputUrl, _ := url.Parse(server.URL + "/234-bxg-234/")
+			w, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", true, dialer, timeout)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(w.TlsConfig.MinVersion).To(BeEquivalentTo(tls.VersionTLS12))
+		})
+
+		It("requires certain cipher suites", func() {
+			outputUrl, _ := url.Parse(server.URL + "/234-bxg-234/")
+			w, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", true, dialer, timeout)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(w.TlsConfig.CipherSuites).To(Equal(plumbing.SupportedCipherSuites))
 		})
 
 		It("HTTP POSTs each log message to the HTTPS syslog endpoint", func() {
