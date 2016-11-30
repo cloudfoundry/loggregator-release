@@ -3,6 +3,7 @@ package httpsetup
 import (
 	"crypto/tls"
 	"net/http"
+	"plumbing"
 	"time"
 )
 
@@ -13,8 +14,11 @@ var (
 func init() {
 	transport = &http.Transport{
 		TLSHandshakeTimeout: 10 * time.Second,
-		TLSClientConfig:     &tls.Config{},
-		DisableKeepAlives:   true,
+		TLSClientConfig: &tls.Config{
+			CipherSuites: plumbing.SupportedCipherSuites,
+			MinVersion:   tls.VersionTLS12,
+		},
+		DisableKeepAlives: true,
 	}
 
 	http.DefaultClient.Transport = transport
