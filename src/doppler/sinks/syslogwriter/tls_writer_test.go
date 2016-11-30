@@ -1,10 +1,12 @@
 package syslogwriter_test
 
 import (
+	"crypto/tls"
 	"doppler/sinks/syslogwriter"
 	"net"
 	"net/url"
 	"os/exec"
+	"plumbing"
 	"strconv"
 	"time"
 
@@ -45,6 +47,15 @@ var _ = Describe("TLSWriter", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("cannot construct a writer with a nil dialer"))
 		})
+
+		It("requires TLS Version 1.2 and specific cipher suites", func() {
+			outputURL, _ := url.Parse("syslog-tls://localhost")
+			w, err := syslogwriter.NewTlsWriter(outputURL, "appId", false, dialer, ioTimeout)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(w.TlsConfig.MinVersion).To(BeEquivalentTo(tls.VersionTLS12))
+			Expect(w.TlsConfig.CipherSuites).To(Equal(plumbing.SupportedCipherSuites))
+		})
+
 	})
 
 	Describe("Write", func() {

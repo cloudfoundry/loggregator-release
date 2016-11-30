@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"plumbing"
 	"sync"
 	"time"
 )
@@ -24,7 +25,7 @@ type tlsWriter struct {
 	dialer    *net.Dialer
 	ioTimeout time.Duration
 
-	tlsConfig *tls.Config
+	TlsConfig *tls.Config
 }
 
 func NewTlsWriter(outputUrl *url.URL, appId string, skipCertVerify bool, dialer *net.Dialer, ioTimeout time.Duration) (w *tlsWriter, err error) {
@@ -35,11 +36,13 @@ func NewTlsWriter(outputUrl *url.URL, appId string, skipCertVerify bool, dialer 
 	if outputUrl.Scheme != "syslog-tls" {
 		return nil, errors.New(fmt.Sprintf("Invalid scheme %s, tlsWriter only supports syslog-tls", outputUrl.Scheme))
 	}
-	tlsConfig := &tls.Config{InsecureSkipVerify: skipCertVerify}
+
+	tlsConfig := plumbing.NewTLSConfig()
+	tlsConfig.InsecureSkipVerify = skipCertVerify
 	return &tlsWriter{
 		appId:     appId,
 		host:      outputUrl.Host,
-		tlsConfig: tlsConfig,
+		TlsConfig: tlsConfig,
 		dialer:    dialer,
 		ioTimeout: ioTimeout,
 	}, nil
@@ -54,7 +57,7 @@ func (w *tlsWriter) Connect() error {
 		w.conn.Close()
 		w.conn = nil
 	}
-	c, err := tls.DialWithDialer(w.dialer, "tcp", w.host, w.tlsConfig)
+	c, err := tls.DialWithDialer(w.dialer, "tcp", w.host, w.TlsConfig)
 	if err == nil {
 		w.conn = c
 	}
