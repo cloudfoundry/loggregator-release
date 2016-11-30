@@ -164,7 +164,7 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 			writers[proto] = batchWriter
 		case "tls":
 			c := conf.TLSConfig
-			tlsConfig, err := plumbing.NewTLSConfig(c.CertFile, c.KeyFile, c.CAFile, "doppler")
+			tlsConfig, err := plumbing.NewMutualTLSConfig(c.CertFile, c.KeyFile, c.CAFile, "doppler")
 			if err != nil {
 				return nil, err
 			}

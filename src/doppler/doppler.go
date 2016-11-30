@@ -135,7 +135,7 @@ func New(
 	grpcRouter := grpcmanager.NewRouter()
 	grpcManager := grpcmanager.New(grpcRouter, doppler.sinkManager)
 
-	tlsConfig, err := plumbing.NewTLSConfig(
+	tlsConfig, err := plumbing.NewMutualTLSConfig(
 		conf.GRPC.CertFile,
 		conf.GRPC.KeyFile,
 		conf.GRPC.CAFile,

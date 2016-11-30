@@ -158,7 +158,7 @@ func prefixMessage(msg []byte) []byte {
 }
 
 func connectToGRPC(conf *config.Config) (*grpc.ClientConn, plumbing.DopplerClient) {
-	tlsCfg, err := plumbing.NewTLSConfig(conf.GRPC.CertFile, conf.GRPC.KeyFile, conf.GRPC.CAFile, "doppler")
+	tlsCfg, err := plumbing.NewMutualTLSConfig(conf.GRPC.CertFile, conf.GRPC.KeyFile, conf.GRPC.CAFile, "doppler")
 	Expect(err).ToNot(HaveOccurred())
 	creds := credentials.NewTLS(tlsCfg)
 	out, err := grpc.Dial(localIPAddress+":5678", grpc.WithTransportCredentials(creds))

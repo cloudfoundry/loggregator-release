@@ -16,7 +16,7 @@ import (
 )
 
 func DialTLS(address, cert, key, ca string) (*tls.Conn, error) {
-	tlsConfig, err := plumbing.NewTLSConfig(
+	tlsConfig, err := plumbing.NewMutualTLSConfig(
 		"../fixtures/client.crt",
 		"../fixtures/client.key",
 		"../fixtures/loggregator-ca.crt",

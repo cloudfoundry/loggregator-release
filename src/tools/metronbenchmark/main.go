@@ -73,7 +73,7 @@ func main() {
 		reader = messagereader.NewUDP(3457)
 		dopplerURLs = []string{"udp://127.0.0.1:3457"}
 	case "tls":
-		tlsConfig, err := plumbing.NewTLSConfig(
+		tlsConfig, err := plumbing.NewMutualTLSConfig(
 			serverCert,
 			serverKey,
 			caCert,

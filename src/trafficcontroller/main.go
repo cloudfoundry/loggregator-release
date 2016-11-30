@@ -123,7 +123,7 @@ func main() {
 		accessMiddleware = middleware.Access(accessLogger, ipAddress, conf.OutgoingDropsondePort, log)
 	}
 
-	tlsConf, err := plumbing.NewTLSConfig(
+	tlsConf, err := plumbing.NewMutualTLSConfig(
 		conf.GRPC.CertFile,
 		conf.GRPC.KeyFile,
 		conf.GRPC.CAFile,

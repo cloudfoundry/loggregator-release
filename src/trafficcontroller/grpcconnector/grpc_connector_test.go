@@ -38,7 +38,7 @@ var _ = Describe("GRPCConnector", func() {
 		mockDopplerServerB = newMockDopplerServer()
 		mockFinder = newMockFinder()
 
-		tlsConfig, err := plumbing.NewTLSConfig(
+		tlsConfig, err := plumbing.NewMutualTLSConfig(
 			"./fixtures/client.crt",
 			"./fixtures/client.key",
 			"./fixtures/loggregator-ca.crt",

@@ -197,13 +197,13 @@ var _ = Describe("TCPClient", func() {
 
 		BeforeEach(func() {
 			var err error
-			tlsServerConfig, err := plumbing.NewTLSConfig("fixtures/server.crt", "fixtures/server.key", "fixtures/loggregator-ca.crt", "")
+			tlsServerConfig, err := plumbing.NewMutualTLSConfig("fixtures/server.crt", "fixtures/server.key", "fixtures/loggregator-ca.crt", "")
 			Expect(err).NotTo(HaveOccurred())
 
 			listener, err = tls.Listen("tcp", "127.0.0.1:0", tlsServerConfig)
 			Expect(err).NotTo(HaveOccurred())
 
-			tlsClientConfig, err = plumbing.NewTLSConfig("fixtures/client.crt", "fixtures/client.key", "fixtures/loggregator-ca.crt", "doppler")
+			tlsClientConfig, err = plumbing.NewMutualTLSConfig("fixtures/client.crt", "fixtures/client.key", "fixtures/loggregator-ca.crt", "doppler")
 			Expect(err).NotTo(HaveOccurred())
 
 			client = clientpool.NewTCPClient(logger, listener.Addr().String(), time.Minute, tlsClientConfig)

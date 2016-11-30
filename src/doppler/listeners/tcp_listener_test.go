@@ -51,7 +51,7 @@ var _ = Describe("TCPlistener", func() {
 		}
 
 		var err error
-		tlsClientConfig, err = plumbing.NewTLSConfig(
+		tlsClientConfig, err = plumbing.NewMutualTLSConfig(
 			"fixtures/client.crt",
 			"fixtures/client.key",
 			"fixtures/loggregator-ca.crt",
@@ -118,7 +118,7 @@ var _ = Describe("TCPlistener", func() {
 
 			Context("without a CA file", func() {
 				It("fails", func() {
-					tlsClientConfig, err := plumbing.NewTLSConfig(
+					tlsClientConfig, err := plumbing.NewMutualTLSConfig(
 						"fixtures/client.crt",
 						"fixtures/client.key",
 						"",

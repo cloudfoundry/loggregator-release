@@ -13,22 +13,26 @@ var SupportedCipherSuites = []uint16{
 	tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 }
 
-// NewTLSConfig returns a tls.Config with certs loaded from files and
+func NewTLSConfig() *tls.Config {
+	return &tls.Config{
+		InsecureSkipVerify: false,
+		MinVersion:         tls.VersionTLS12,
+		CipherSuites:       SupportedCipherSuites,
+	}
+}
+
+// NewMutualTLSConfig returns a tls.Config with certs loaded from files and
 // the ServerName set.
-func NewTLSConfig(certFile, keyFile, caCertFile, serverName string) (*tls.Config, error) {
+func NewMutualTLSConfig(certFile, keyFile, caCertFile, serverName string) (*tls.Config, error) {
 	tlsCert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load keypair: %s", err.Error())
 	}
 
-	tlsConfig := &tls.Config{
-		Certificates:       []tls.Certificate{tlsCert},
-		InsecureSkipVerify: false,
-		ClientAuth:         tls.RequireAndVerifyClientCert,
-		MinVersion:         tls.VersionTLS12,
-		CipherSuites:       SupportedCipherSuites,
-		ServerName:         serverName,
-	}
+	tlsConfig := NewTLSConfig()
+	tlsConfig.Certificates = []tls.Certificate{tlsCert}
+	tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+	tlsConfig.ServerName = serverName
 
 	if caCertFile != "" {
 		certBytes, err := ioutil.ReadFile(caCertFile)

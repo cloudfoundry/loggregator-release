@@ -13,87 +13,95 @@ import (
 )
 
 var _ = Describe("TLS", func() {
-	var (
-		clientCertFilename string
-		clientKeyFilename  string
-		caCertFilename     string
-	)
 
-	BeforeEach(func() {
-		clientCertFilename = writeFile(clientCert)
-		clientKeyFilename = writeFile(clientKey)
-		caCertFilename = writeFile(caCert)
-	})
-
-	AfterEach(func() {
-		err := os.Remove(clientCertFilename)
-		Expect(err).ToNot(HaveOccurred())
-		err = os.Remove(clientKeyFilename)
-		Expect(err).ToNot(HaveOccurred())
-		err = os.Remove(caCertFilename)
-		Expect(err).ToNot(HaveOccurred())
-	})
-
-	It("builds a config struct", func() {
-		conf, err := NewTLSConfig(
-			clientCertFilename,
-			clientKeyFilename,
-			caCertFilename,
-			"test-server-name",
+	Context(".NewMutalTLSConfig", func() {
+		var (
+			clientCertFilename string
+			clientKeyFilename  string
+			caCertFilename     string
 		)
-		Expect(err).ToNot(HaveOccurred())
 
-		Expect(conf.Certificates).To(HaveLen(1))
-		Expect(conf.InsecureSkipVerify).To(BeFalse())
-		Expect(conf.ClientAuth).To(Equal(tls.RequireAndVerifyClientCert))
-		Expect(conf.MinVersion).To(Equal(uint16(tls.VersionTLS12)))
+		BeforeEach(func() {
+			clientCertFilename = writeFile(clientCert)
+			clientKeyFilename = writeFile(clientKey)
+			caCertFilename = writeFile(caCert)
+		})
 
-		Expect(string(conf.RootCAs.Subjects()[0])).To(ContainSubstring("loggregatorCA"))
-		Expect(string(conf.ClientCAs.Subjects()[0])).To(ContainSubstring("loggregatorCA"))
-
-		Expect(conf.ServerName).To(Equal("test-server-name"))
-	})
-
-	It("allows you to not specify a CA cert", func() {
-		conf, err := NewTLSConfig(
-			clientCertFilename,
-			clientKeyFilename,
-			"",
-			"",
-		)
-		Expect(err).ToNot(HaveOccurred())
-
-		Expect(conf.RootCAs).To(BeNil())
-		Expect(conf.ClientCAs).To(BeNil())
-	})
-
-	It("returns an error when given invalid cert/key paths", func() {
-		_, err := NewTLSConfig("", "", caCertFilename, "")
-		Expect(err.Error()).To(Equal("failed to load keypair: open : no such file or directory"))
-	})
-
-	It("returns an error when given invalid ca cert path", func() {
-		_, err := NewTLSConfig(clientCertFilename, clientKeyFilename, "/file/that/does/not/exist", "")
-		Expect(err.Error()).To(Equal("failed to read ca cert file: open /file/that/does/not/exist: no such file or directory"))
-	})
-
-	It("returns an error when given invalid ca cert file", func() {
-		empty := writeFile("")
-		defer func() {
-			err := os.Remove(empty)
+		AfterEach(func() {
+			err := os.Remove(clientCertFilename)
 			Expect(err).ToNot(HaveOccurred())
-		}()
-		_, err := NewTLSConfig(clientCertFilename, clientKeyFilename, empty, "")
-		Expect(err.Error()).To(Equal("unable to load ca cert file"))
+			err = os.Remove(clientKeyFilename)
+			Expect(err).ToNot(HaveOccurred())
+			err = os.Remove(caCertFilename)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("builds a config struct", func() {
+			conf, err := NewMutualTLSConfig(
+				clientCertFilename,
+				clientKeyFilename,
+				caCertFilename,
+				"test-server-name",
+			)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(conf.Certificates).To(HaveLen(1))
+			Expect(conf.InsecureSkipVerify).To(BeFalse())
+			Expect(conf.ClientAuth).To(Equal(tls.RequireAndVerifyClientCert))
+			Expect(conf.MinVersion).To(Equal(uint16(tls.VersionTLS12)))
+			Expect(conf.CipherSuites).To(ContainElement(tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256))
+			Expect(conf.CipherSuites).To(ContainElement(tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384))
+
+			Expect(string(conf.RootCAs.Subjects()[0])).To(ContainSubstring("loggregatorCA"))
+			Expect(string(conf.ClientCAs.Subjects()[0])).To(ContainSubstring("loggregatorCA"))
+
+			Expect(conf.ServerName).To(Equal("test-server-name"))
+		})
+
+		It("allows you to not specify a CA cert", func() {
+			conf, err := NewMutualTLSConfig(
+				clientCertFilename,
+				clientKeyFilename,
+				"",
+				"",
+			)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(conf.RootCAs).To(BeNil())
+			Expect(conf.ClientCAs).To(BeNil())
+		})
+
+		It("returns an error when given invalid cert/key paths", func() {
+			_, err := NewMutualTLSConfig("", "", caCertFilename, "")
+			Expect(err.Error()).To(Equal("failed to load keypair: open : no such file or directory"))
+		})
+
+		It("returns an error when given invalid ca cert path", func() {
+			_, err := NewMutualTLSConfig(clientCertFilename, clientKeyFilename, "/file/that/does/not/exist", "")
+			Expect(err.Error()).To(Equal("failed to read ca cert file: open /file/that/does/not/exist: no such file or directory"))
+		})
+
+		It("returns an error when given invalid ca cert file", func() {
+			empty := writeFile("")
+			defer func() {
+				err := os.Remove(empty)
+				Expect(err).ToNot(HaveOccurred())
+			}()
+			_, err := NewMutualTLSConfig(clientCertFilename, clientKeyFilename, empty, "")
+			Expect(err.Error()).To(Equal("unable to load ca cert file"))
+		})
 	})
 
-	It("returns the specified cipher suites", func() {
-		tlsConfig, err := NewTLSConfig(clientCertFilename, clientKeyFilename, "", "")
-		Expect(err).ToNot(HaveOccurred())
-		Expect(tlsConfig.CipherSuites).To(ContainElement(tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256))
-		Expect(tlsConfig.CipherSuites).To(ContainElement(tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384))
+	Context(".NewTLSConfig", func() {
+		It("returns basic TLS config", func() {
+			tlsConf := NewTLSConfig()
+			Expect(tlsConf.InsecureSkipVerify).To(BeFalse())
+			Expect(tlsConf.ClientAuth).To(Equal(tls.NoClientCert))
+			Expect(tlsConf.MinVersion).To(Equal(uint16(tls.VersionTLS12)))
+			Expect(tlsConf.CipherSuites).To(ContainElement(tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256))
+			Expect(tlsConf.CipherSuites).To(ContainElement(tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384))
+		})
 	})
-
 })
 
 func writeFile(data string) string {

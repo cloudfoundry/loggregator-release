@@ -49,7 +49,7 @@ func NewTCPListener(
 
 	if tlsListenerConfig != nil {
 		protocol = "TLS"
-		tlsConfig, err := plumbing.NewTLSConfig(tlsListenerConfig.CertFile, tlsListenerConfig.KeyFile, tlsListenerConfig.CAFile, "")
+		tlsConfig, err := plumbing.NewMutualTLSConfig(tlsListenerConfig.CertFile, tlsListenerConfig.KeyFile, tlsListenerConfig.CAFile, "")
 		if err != nil {
 			return nil, err
 		}
