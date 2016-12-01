@@ -170,7 +170,7 @@ var _ = Describe("Finder", func() {
 
 			It("returns the endpoint of each doppler", func() {
 				event := finder.Next()
-				Expect(event.UDPDopplers).To(Equal([]string{"1.2.3.4:567"}))
+				Expect(event.UDPDopplers).To(ConsistOf([]string{"1.2.3.4:567", "9.8.7.6:543"}))
 				Expect(event.TLSDopplers).To(Equal([]string{"9.8.7.6:555"}))
 				Expect(event.GRPCDopplers).To(Equal([]string{fmt.Sprintf("2.3.4.5:%d", grpcPort)}))
 			})
@@ -217,6 +217,7 @@ var _ = Describe("Finder", func() {
 				}
 				expectedTLS := []string{
 					"31.32.33.34:1234",
+					"9.8.7.6:555",
 				}
 				event := finder.Next()
 				Expect(event.UDPDopplers).To(ConsistOf(expectedUDP))
@@ -443,7 +444,7 @@ var _ = Describe("Finder", func() {
 				It("returns the updated endpoints", func() {
 					event := finder.Next()
 					Expect(event.TLSDopplers).To(Equal([]string{"1.2.3.4:555"}))
-					Expect(event.UDPDopplers).To(BeEmpty())
+					Expect(event.UDPDopplers).To(Equal([]string{"1.2.3.4:567"}))
 					Expect(event.TCPDopplers).To(BeEmpty())
 					Expect(event.GRPCDopplers).To(BeEmpty())
 				})
@@ -908,9 +909,10 @@ var _ = Describe("Finder", func() {
 				event := finder.Next()
 				Expect(event.UDPDopplers).To(ConsistOf(
 					"9.8.7.7:3457",
+					"9.8.7.6:3457",
 					fmt.Sprintf("%s:%d", legacyServers["z1/doppler_z1/1"], legacyPort),
 				))
-				Expect(event.TLSDopplers).To(BeEmpty())
+				Expect(event.TLSDopplers).To(ConsistOf([]string{"9.8.7.7:3458", "9.8.7.6:3458"}))
 				Expect(event.TCPDopplers).To(ConsistOf("9.8.7.6:3459"))
 			})
 		})
@@ -1019,9 +1021,10 @@ var _ = Describe("Finder", func() {
 			It("returns dopplers from meta endpoint", func() {
 				event := finder.Next()
 				Expect(event.UDPDopplers).To(ConsistOf(
+					"9.8.7.6:3457",
 					fmt.Sprintf("21.22.23.24:%d", legacyPort),
 				))
-				Expect(event.TCPDopplers).To(BeEmpty())
+				Expect(event.TCPDopplers).To(ConsistOf("9.8.7.6:3459"))
 				Expect(event.TLSDopplers).To(ConsistOf("9.8.7.6:3458"))
 			})
 		})
@@ -1078,9 +1081,9 @@ var _ = Describe("Finder", func() {
 
 		It("returns only the addrs for the highest priority dopplers", func() {
 			event := finder.Next()
-			Expect(event.TLSDopplers).To(HaveLen(0))
-			Expect(event.UDPDopplers).To(HaveLen(1))
-			Expect(event.UDPDopplers).To(ConsistOf("9.8.7.7:3457"))
+			Expect(event.TLSDopplers).To(HaveLen(2))
+			Expect(event.UDPDopplers).To(HaveLen(2))
+			Expect(event.UDPDopplers).To(ConsistOf("9.8.7.7:3457", "9.8.7.6:3457"))
 			Expect(event.TCPDopplers).To(HaveLen(1))
 			Expect(event.TCPDopplers).To(ConsistOf("9.8.7.6:3459"))
 		})
@@ -1144,7 +1147,7 @@ var _ = Describe("Finder", func() {
 				event := finder.Next()
 				Expect(event.UDPDopplers).To(HaveLen(2))
 				Expect(event.UDPDopplers).To(ConsistOf("9.8.7.6:3457", fmt.Sprintf("21.22.23.24:%d", legacyPort)))
-				Expect(event.TLSDopplers).To(BeEmpty())
+				Expect(event.TLSDopplers).To(ConsistOf("9.8.7.6:3458"))
 				Expect(event.TCPDopplers).To(BeEmpty())
 			})
 		})

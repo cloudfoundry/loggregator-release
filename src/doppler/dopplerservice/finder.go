@@ -264,60 +264,44 @@ func (f *Finder) eventWithPrefix(dopplerPrefix string) Event {
 	chosenAddrs := f.chooseAddrs()
 
 	var event Event
-	for doppler, addr := range chosenAddrs {
-		if !strings.HasPrefix(doppler, dopplerPrefix) {
-			continue
-		}
-		switch {
-		case strings.HasPrefix(addr, "udp"):
-			event.UDPDopplers = append(event.UDPDopplers, strings.TrimPrefix(addr, "udp://"))
-		case strings.HasPrefix(addr, "tcp"):
-			event.TCPDopplers = append(event.TCPDopplers, strings.TrimPrefix(addr, "tcp://"))
-		case strings.HasPrefix(addr, "tls"):
-			event.TLSDopplers = append(event.TLSDopplers, strings.TrimPrefix(addr, "tls://"))
-		case strings.HasPrefix(addr, "ws"):
-			host := strings.TrimPrefix(addr, "ws://")
-			hostEnd := strings.IndexRune(host, ':')
-			if hostEnd != -1 {
-				host = host[:hostEnd]
+	for doppler, addrs := range chosenAddrs {
+		for _, addr := range addrs {
+			if !strings.HasPrefix(doppler, dopplerPrefix) {
+				continue
 			}
-			event.GRPCDopplers = append(event.GRPCDopplers, fmt.Sprintf("%s:%d", host, f.grpcPort))
-		default:
-			f.logger.Errorf("Unexpected address for doppler %s (invalid protocol): %s", doppler, addr)
+			switch {
+			case strings.HasPrefix(addr, "udp"):
+				event.UDPDopplers = append(event.UDPDopplers, strings.TrimPrefix(addr, "udp://"))
+			case strings.HasPrefix(addr, "tcp"):
+				event.TCPDopplers = append(event.TCPDopplers, strings.TrimPrefix(addr, "tcp://"))
+			case strings.HasPrefix(addr, "tls"):
+				event.TLSDopplers = append(event.TLSDopplers, strings.TrimPrefix(addr, "tls://"))
+			case strings.HasPrefix(addr, "ws"):
+				host := strings.TrimPrefix(addr, "ws://")
+				hostEnd := strings.IndexRune(host, ':')
+				if hostEnd != -1 {
+					host = host[:hostEnd]
+				}
+				event.GRPCDopplers = append(event.GRPCDopplers, fmt.Sprintf("%s:%d", host, f.grpcPort))
+			default:
+				f.logger.Errorf("Unexpected address for doppler %s (invalid protocol): %s", doppler, addr)
+			}
 		}
 	}
 
 	return event
 }
 
-func (f *Finder) chooseAddrs() map[string]string {
-	chosen := f.chooseMetaAddrs()
-	f.addLegacyAddrs(chosen)
-	return chosen
-}
-
-func (f *Finder) chooseMetaAddrs() map[string]string {
-	chosen := make(map[string]string)
-	f.metaLock.RLock()
-	defer f.metaLock.RUnlock()
-	for doppler, addrs := range f.metaEndpoints {
-		// Set currentIndex to one greater than any possible index of f.protocols
-		var currentIndex int = len(f.protocols)
-		for _, addr := range addrs {
-			if addr == "" || !supported(addr) {
-				continue
-			}
-			index, err := f.protocolIndex(addr)
-			if err == nil && index < currentIndex {
-				currentIndex = index
-				chosen[doppler] = addr
-			}
-		}
+func (f *Finder) chooseAddrs() map[string][]string {
+	addrs := make(map[string][]string)
+	for k, v := range f.metaEndpoints {
+		addrs[k] = v
 	}
-	return chosen
+	f.addLegacyAddrs(addrs)
+	return addrs
 }
 
-func (f *Finder) addLegacyAddrs(addrs map[string]string) {
+func (f *Finder) addLegacyAddrs(addrs map[string][]string) {
 	f.legacyLock.RLock()
 	defer f.legacyLock.RUnlock()
 	udpIdx, err := f.protocolIndex("udp")
@@ -325,8 +309,9 @@ func (f *Finder) addLegacyAddrs(addrs map[string]string) {
 		return
 	}
 	for doppler, legacyAddr := range f.legacyEndpoints {
-		chosenAddr, ok := addrs[doppler]
+		chosenAddrs, ok := addrs[doppler]
 		if ok {
+			chosenAddr := chosenAddrs[0]
 			idx, err := f.protocolIndex(chosenAddr)
 			if err != nil {
 				// If chosen addr is not supported (should never happen)
@@ -343,7 +328,7 @@ func (f *Finder) addLegacyAddrs(addrs map[string]string) {
 				continue
 			}
 		}
-		addrs[doppler] = legacyAddr
+		addrs[doppler] = []string{legacyAddr}
 	}
 }
 
