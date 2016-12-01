@@ -49,8 +49,10 @@ var _ = Describe("TLS", func() {
 			Expect(conf.InsecureSkipVerify).To(BeFalse())
 			Expect(conf.ClientAuth).To(Equal(tls.RequireAndVerifyClientCert))
 			Expect(conf.MinVersion).To(Equal(uint16(tls.VersionTLS12)))
-			Expect(conf.CipherSuites).To(ContainElement(tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256))
-			Expect(conf.CipherSuites).To(ContainElement(tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384))
+			Expect(conf.CipherSuites).To(ConsistOf(
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			))
 
 			Expect(string(conf.RootCAs.Subjects()[0])).To(ContainSubstring("loggregatorCA"))
 			Expect(string(conf.ClientCAs.Subjects()[0])).To(ContainSubstring("loggregatorCA"))

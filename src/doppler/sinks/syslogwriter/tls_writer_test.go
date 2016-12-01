@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/url"
 	"os/exec"
-	"plumbing"
 	"strconv"
 	"time"
 
@@ -53,9 +52,11 @@ var _ = Describe("TLSWriter", func() {
 			w, err := syslogwriter.NewTlsWriter(outputURL, "appId", false, dialer, ioTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(w.TlsConfig.MinVersion).To(BeEquivalentTo(tls.VersionTLS12))
-			Expect(w.TlsConfig.CipherSuites).To(Equal(plumbing.SupportedCipherSuites))
+			Expect(w.TlsConfig.CipherSuites).To(ConsistOf(
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			))
 		})
-
 	})
 
 	Describe("Write", func() {

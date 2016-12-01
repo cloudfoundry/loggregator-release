@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"plumbing"
 	"sync"
 	"time"
 
@@ -63,7 +62,10 @@ var _ = Describe("HttpsWriter", func() {
 			outputUrl, _ := url.Parse(server.URL + "/234-bxg-234/")
 			w, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", true, dialer, timeout)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(w.TlsConfig.CipherSuites).To(Equal(plumbing.SupportedCipherSuites))
+			Expect(w.TlsConfig.CipherSuites).To(ConsistOf(
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			))
 		})
 
 		It("HTTP POSTs each log message to the HTTPS syslog endpoint", func() {

@@ -3,7 +3,6 @@ package main_test
 import (
 	"crypto/tls"
 	"net"
-	"plumbing"
 	syslog_drain_binder "syslog_drain_binder"
 	"time"
 
@@ -101,8 +100,11 @@ var _ = Describe("CloudControllerPoller", func() {
 			BeforeEach(func() {
 				secureTestServer = httptest.NewUnstartedServer(http.HandlerFunc(fakeCloudController.ServeHTTP))
 				secureTestServer.TLS = &tls.Config{
-					CipherSuites: plumbing.SupportedCipherSuites,
-					MinVersion:   tls.VersionTLS12,
+					CipherSuites: []uint16{
+						tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+						tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+					},
+					MinVersion: tls.VersionTLS12,
 				}
 				secureTestServer.StartTLS()
 				baseURL = "https://" + secureTestServer.Listener.Addr().String()
