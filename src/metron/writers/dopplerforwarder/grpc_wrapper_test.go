@@ -16,10 +16,10 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-var _ = Describe("UDPWrapper", func() {
+var _ = Describe("GRPCWrapper", func() {
 	var (
 		envelope     *events.Envelope
-		udpWrapper   *dopplerforwarder.UDPWrapper
+		grpcWrapper  *dopplerforwarder.GRPCWrapper
 		message      []byte
 		sharedSecret []byte
 
@@ -39,7 +39,7 @@ var _ = Describe("UDPWrapper", func() {
 			EventType:  events.Envelope_LogMessage.Enum(),
 			LogMessage: factories.NewLogMessage(events.LogMessage_OUT, "message", "appid", "sourceType"),
 		}
-		udpWrapper = dopplerforwarder.NewUDPWrapper(mockConn, sharedSecret)
+		grpcWrapper = dopplerforwarder.NewGRPCWrapper(mockConn, sharedSecret)
 
 		var err error
 		message, err = proto.Marshal(envelope)
@@ -52,10 +52,10 @@ var _ = Describe("UDPWrapper", func() {
 		sentLength := len(message)
 		mockConn.WriteOutput.Ret0 <- nil
 
-		err := udpWrapper.Write(message)
+		err := grpcWrapper.Write(message)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
-			With("udp.sentByteCount", uint64(sentLength)),
+			With("grpc.sentByteCount", uint64(sentLength)),
 		))
 	})
 
@@ -64,16 +64,16 @@ var _ = Describe("UDPWrapper", func() {
 		mockChainer := newMockBatchCounterChainer()
 		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
 
-		err := udpWrapper.Write(message, mockChainer)
+		err := grpcWrapper.Write(message, mockChainer)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
-			With("udp.sentMessageCount"),
+			With("grpc.sentMessageCount"),
 		))
 		Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
 			With("DopplerForwarder.sentMessages"),
 		))
 		Eventually(mockChainer.SetTagInput).Should(BeCalled(
-			With("protocol", "udp"),
+			With("protocol", "grpc"),
 		))
 		Eventually(mockChainer.IncrementCalled).Should(BeCalled())
 	})
@@ -81,19 +81,19 @@ var _ = Describe("UDPWrapper", func() {
 	It("increments transmitErrorCount *only* if client write fails", func() {
 		mockConn.WriteOutput.Ret0 <- nil
 
-		err := udpWrapper.Write(message)
+		err := grpcWrapper.Write(message)
 		Expect(err).NotTo(HaveOccurred())
 		Consistently(mockBatcher.BatchIncrementCounterInput).ShouldNot(BeCalled(
-			With("udp.sendErrorCount"),
+			With("grpc.sendErrorCount"),
 		))
 
 		err = errors.New("Client Write Failed")
 		mockConn.WriteOutput.Ret0 <- err
 
-		err = udpWrapper.Write(message)
+		err = grpcWrapper.Write(message)
 		Expect(err).To(HaveOccurred())
 		Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
-			With("udp.sendErrorCount"),
+			With("grpc.sendErrorCount"),
 		))
 	})
 
@@ -102,7 +102,7 @@ var _ = Describe("UDPWrapper", func() {
 
 		mockConn.WriteOutput.Ret0 <- nil
 
-		udpWrapper.Write(message)
+		grpcWrapper.Write(message)
 
 		Eventually(mockConn.WriteCalled).Should(HaveLen(1))
 		Eventually(mockConn.WriteInput.Data).Should(Receive(Equal(signedMessage)))
@@ -114,16 +114,16 @@ var _ = Describe("UDPWrapper", func() {
 		})
 
 		It("returns an error", func() {
-			err := udpWrapper.Write(message)
+			err := grpcWrapper.Write(message)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("does not increment message count or sentMessages", func() {
-			udpWrapper.Write(message)
+			grpcWrapper.Write(message)
 
 			var name string
 			Eventually(mockBatcher.BatchIncrementCounterInput.Name).Should(Receive(&name))
-			Expect(name).To(Equal("udp.sendErrorCount"))
+			Expect(name).To(Equal("grpc.sendErrorCount"))
 			Consistently(mockBatcher.BatchIncrementCounterInput).ShouldNot(BeCalled())
 
 			Consistently(mockBatcher.BatchIncrementCounterInput).ShouldNot(BeCalled())

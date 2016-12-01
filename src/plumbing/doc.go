@@ -1,3 +1,3 @@
 package plumbing
 
-//go:generate protoc plumbing.proto --go_out=plugins=grpc:.
+//go:generate protoc grpc.proto --go_out=plugins=grpc:.

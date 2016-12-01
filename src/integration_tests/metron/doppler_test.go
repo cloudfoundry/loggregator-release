@@ -13,10 +13,10 @@ import (
 )
 
 var _ = Describe("communicating with doppler", func() {
-	It("forwards messages on UDP", func() {
+	It("forwards messages via gRPC", func() {
 		etcdCleanup, etcdClientURL := integration_tests.SetupEtcd()
 		defer etcdCleanup()
-		metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(etcdClientURL, "udp")
+		metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(etcdClientURL, 0)
 		defer metronCleanup()
 		dopplerCleanup, dopplerWSPort, _ := integration_tests.SetupDoppler(etcdClientURL, metronPort)
 		defer dopplerCleanup()

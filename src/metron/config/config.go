@@ -1,10 +1,8 @@
 package config
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 )
@@ -14,47 +12,6 @@ const (
 	defaultBatchSize       = 10 * kilobyte
 	defaultBatchIntervalMS = 100
 )
-
-type Protocol string
-
-func (p *Protocol) UnmarshalJSON(value []byte) error {
-	value = bytes.Trim(value, `"`)
-	valueStr := string(value)
-	switch valueStr {
-	case "udp", "tls", "tcp":
-		*p = Protocol(value)
-	default:
-		return fmt.Errorf("Invalid protocol: %s", valueStr)
-	}
-	return nil
-}
-
-type Protocols map[Protocol]struct{}
-
-func (p *Protocols) UnmarshalJSON(value []byte) error {
-	var prots []Protocol
-	if err := json.Unmarshal(value, &prots); err != nil {
-		return err
-	}
-	set := make(Protocols)
-	for _, prot := range prots {
-		set[prot] = struct{}{}
-	}
-	*p = set
-	return nil
-}
-
-func (p Protocols) MarshalJSON() ([]byte, error) {
-	return json.Marshal(p.Strings())
-}
-
-func (p Protocols) Strings() []string {
-	protocols := make([]string, 0, len(p))
-	for protocol := range p {
-		protocols = append(protocols, string(protocol))
-	}
-	return protocols
-}
 
 type EtcdTLSClientConfig struct {
 	CertFile string
@@ -66,6 +23,13 @@ type TLSConfig struct {
 	CertFile string
 	KeyFile  string
 	CAFile   string
+}
+
+type GRPC struct {
+	Port     int
+	CAFile   string
+	CertFile string
+	KeyFile  string
 }
 
 type Config struct {
@@ -83,6 +47,8 @@ type Config struct {
 	EtcdRequireTLS                bool
 	EtcdTLSClientConfig           EtcdTLSClientConfig
 
+	GRPC GRPC
+
 	SharedSecret string
 
 	MetricBatchIntervalMilliseconds  uint
@@ -91,7 +57,6 @@ type Config struct {
 	TCPBatchSizeBytes            uint64
 	TCPBatchIntervalMilliseconds uint
 
-	Protocols Protocols
 	TLSConfig TLSConfig
 	PPROFPort uint32
 
@@ -116,15 +81,12 @@ func Parse(reader io.Reader) (*Config, error) {
 		TCPBatchIntervalMilliseconds:     defaultBatchIntervalMS,
 		MetricBatchIntervalMilliseconds:  5000,
 		RuntimeStatsIntervalMilliseconds: 15000,
-		Protocols:                        Protocols{"udp": struct{}{}},
 	}
 	err := json.NewDecoder(reader).Decode(config)
 	if err != nil {
 		return nil, err
 	}
-	if len(config.Protocols) == 0 {
-		return nil, errors.New("Metron cannot start without protocols")
-	}
+
 	if config.EtcdRequireTLS {
 		if config.EtcdTLSClientConfig.CertFile == "" || config.EtcdTLSClientConfig.KeyFile == "" || config.EtcdTLSClientConfig.CAFile == "" {
 			return nil, errors.New("invalid etcd TLS client configuration")

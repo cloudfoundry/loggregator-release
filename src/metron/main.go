@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"profiler"
 	"runtime"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 
 	"metron/backoff"
+	"metron/clientpool"
 	"metron/config"
 	"metron/eventwriter"
 	"metron/legacyclientpool"
@@ -109,14 +111,27 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 		return nil, err
 	}
 
-	finder := dopplerservice.NewFinder(adapter, conf.LoggregatorDropsondePort, 0, conf.Protocols.Strings(), conf.Zone, logger)
+	finder := dopplerservice.NewFinder(adapter, conf.LoggregatorDropsondePort, conf.GRPC.Port, []string{"ws", "udp"}, conf.Zone, logger)
 	finder.Start()
 
-	legacyPool := legacyclientpool.New(finder)
+	log.Println("Initializing Doppler connection managers")
+	dopplerFinder := clientpool.NewDopplerFinder(finder)
+
+	var connManagers []clientpool.Conn
+	for i := 0; i < 5; i++ {
+		connManagers = append(connManagers, clientpool.NewConnManager(10000, dopplerFinder))
+	}
+
+	pool := clientpool.New(connManagers...)
+	grpcWrapper := dopplerforwarder.NewGRPCWrapper(pool, []byte(conf.SharedSecret))
+
+	legacyPool := legacyclientpool.New(dopplerFinder)
 	udpWrapper := dopplerforwarder.NewUDPWrapper(legacyPool, []byte(conf.SharedSecret))
 
+	combinedPool := legacyclientpool.NewCombinedPool(grpcWrapper, udpWrapper)
+
 	marshaller := eventmarshaller.New(batcher, logger)
-	marshaller.SetWriter(udpWrapper)
+	marshaller.SetWriter(combinedPool)
 
 	return marshaller, nil
 }

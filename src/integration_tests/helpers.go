@@ -59,7 +59,7 @@ func getPort(offset int) int {
 }
 
 func SetupEtcd() (func(), string) {
-	By("making sure etcd was build")
+	By("making sure etcd was built")
 	etcdPath := os.Getenv("ETCD_BUILD_PATH")
 	Expect(etcdPath).ToNot(BeEmpty())
 
@@ -196,15 +196,12 @@ func SetupDoppler(etcdClientURL string, metronPort int) (cleanup func(), wsPort,
 	}, dopplerWSPort, dopplerGRPCPort
 }
 
-func SetupMetron(etcdClientURL, proto string) (func(), int, func()) {
+func SetupMetron(etcdClientURL string, grpcPort int) (func(), int, func()) {
 	By("making sure metron was build")
 	metronPath := os.Getenv("METRON_BUILD_PATH")
 	Expect(metronPath).ToNot(BeEmpty())
 
 	By("starting metron")
-	protocols := metronConfig.Protocols{
-		metronConfig.Protocol(proto): struct{}{},
-	}
 	metronPort := getPort(metronPortOffset)
 	metronConf := metronConfig.Config{
 		Index:        jobIndex,
@@ -212,31 +209,23 @@ func SetupMetron(etcdClientURL, proto string) (func(), int, func()) {
 		Zone:         availabilityZone,
 		SharedSecret: sharedSecret,
 
-		Protocols:       metronConfig.Protocols(protocols),
 		IncomingUDPPort: metronPort,
 		Deployment:      "deployment",
 
 		EtcdUrls:                  []string{etcdClientURL},
 		EtcdMaxConcurrentRequests: 1,
 
+		GRPC: metronConfig.GRPC{
+			Port:     grpcPort,
+			CertFile: "../fixtures/client.crt",
+			KeyFile:  "../fixtures/client.key",
+			CAFile:   "../fixtures/loggregator-ca.crt",
+		},
+
 		MetricBatchIntervalMilliseconds:  10,
 		RuntimeStatsIntervalMilliseconds: 10,
 		TCPBatchSizeBytes:                1024,
 		TCPBatchIntervalMilliseconds:     10,
-	}
-
-	switch proto {
-	case "udp":
-	case "tls":
-		metronConf.TLSConfig = metronConfig.TLSConfig{
-			CertFile: "../fixtures/client.crt",
-			KeyFile:  "../fixtures/client.key",
-			CAFile:   "../fixtures/loggregator-ca.crt",
-		}
-		fallthrough
-	case "tcp":
-		metronConf.TCPBatchIntervalMilliseconds = 100
-		metronConf.TCPBatchSizeBytes = 10240
 	}
 
 	metronCfgFile, err := ioutil.TempFile("", "metron-config")
@@ -269,6 +258,7 @@ func SetupMetron(etcdClientURL, proto string) (func(), int, func()) {
 			os.Remove(metronCfgFile.Name())
 			metronSession.Kill().Wait()
 		}, metronPort, func() {
+			// TODO
 			// TODO When we switch to gRPC we should wait until
 			// we can connect to it
 			time.Sleep(10 * time.Second)

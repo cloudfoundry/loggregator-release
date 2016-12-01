@@ -155,6 +155,8 @@ func New(
 	}
 	grpcServer := grpc.NewServer(grpc.Creds(transportCreds))
 	plumbing.RegisterDopplerServer(grpcServer, grpcManager)
+	// register doppler ingestor
+
 	go func() {
 		log.Printf("Starting gRPC server on %s", grpcListener.Addr().String())
 		if err := grpcServer.Serve(grpcListener); err != nil {

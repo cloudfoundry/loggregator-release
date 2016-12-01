@@ -1,13 +1,16 @@
 package clientpool
 
 import (
+	"context"
 	"errors"
-	"fmt"
+	"io"
 	"log"
-	"net"
+	"plumbing"
 	"sync/atomic"
 	"time"
 	"unsafe"
+
+	"google.golang.org/grpc"
 )
 
 type Finder interface {
@@ -17,8 +20,14 @@ type Finder interface {
 type ConnManager struct {
 	finder    Finder
 	conn      unsafe.Pointer
-	writes    int64
 	maxWrites int64
+}
+
+type grpcConn struct {
+	uri    string
+	client plumbing.DopplerIngestor_PusherClient
+	closer io.Closer
+	writes int64
 }
 
 func NewConnManager(maxWrites int64, finder Finder) *ConnManager {
@@ -33,29 +42,26 @@ func NewConnManager(maxWrites int64, finder Finder) *ConnManager {
 
 func (m *ConnManager) Write(data []byte) error {
 	conn := atomic.LoadPointer(&m.conn)
-	if conn == nil || (*net.UDPConn)(conn) == nil {
+	if conn == nil || (*grpcConn)(conn) == nil {
 		return errors.New("no connection to doppler present")
 	}
 
-	udpConn := (*net.UDPConn)(conn)
-	n, err := udpConn.Write(data)
+	gRPCConn := (*grpcConn)(conn)
+	err := gRPCConn.client.Send(&plumbing.EnvelopeData{
+		Payload: data,
+	})
+
 	if err != nil {
-		// TODO: This won't happen for good reasons with UDP
-		// gRPC it can, so we will need to ensure this is tested
-		// when we move to gRPC
+		log.Printf("error writing to doppler %s: %s", gRPCConn.uri, err)
 		atomic.StorePointer(&m.conn, nil)
-		udpConn.Close()
+		gRPCConn.closer.Close()
 		return err
 	}
 
-	if n != len(data) {
-		return fmt.Errorf("expected to write %d bytes, but only wrote %d", len(data), n)
-	}
-
-	if atomic.AddInt64(&m.writes, 1) >= m.maxWrites {
+	if atomic.AddInt64(&gRPCConn.writes, 1) >= m.maxWrites {
+		log.Printf("recycling connection to doppler %s after %d writes", gRPCConn.uri, m.maxWrites)
 		atomic.StorePointer(&m.conn, nil)
-		atomic.StoreInt64(&m.writes, 0)
-		udpConn.Close()
+		gRPCConn.closer.Close()
 	}
 
 	return nil
@@ -64,24 +70,31 @@ func (m *ConnManager) Write(data []byte) error {
 func (m *ConnManager) maintainConn() {
 	for range time.Tick(50 * time.Millisecond) {
 		conn := atomic.LoadPointer(&m.conn)
-		if conn != nil && (*net.UDPConn)(conn) != nil {
+		if conn != nil && (*grpcConn)(conn) != nil {
 			continue
 		}
 
 		dopplerURI := m.finder.Doppler()
-		dopplerAddr, err := net.ResolveUDPAddr("udp4", dopplerURI)
-		if err != nil {
-			log.Printf("error resolving doppler URI (%s): %s", dopplerURI, err)
-			continue
-		}
 
-		udpConn, err := net.DialUDP("udp4", nil, dopplerAddr)
+		c, err := grpc.Dial(dopplerURI, grpc.WithInsecure())
 		if err != nil {
 			log.Printf("error dialing doppler %s: %s", dopplerURI, err)
 			continue
 		}
+		client := plumbing.NewDopplerIngestorClient(c)
 
 		log.Printf("successfully connected to doppler %s", dopplerURI)
-		atomic.StorePointer(&m.conn, unsafe.Pointer(udpConn))
+		pusher, err := client.Pusher(context.Background())
+		if err != nil {
+			log.Printf("error establishing ingestor stream to %s: %s", dopplerURI, err)
+			continue
+		}
+		log.Printf("successfully established a stream to doppler %s", dopplerURI)
+
+		atomic.StorePointer(&m.conn, unsafe.Pointer(&grpcConn{
+			uri:    dopplerURI,
+			client: pusher,
+			closer: c,
+		}))
 	}
 }

@@ -12,14 +12,22 @@ import (
 	"github.com/apoydence/onpar"
 )
 
-func TestFinder(t *testing.T) {
+func TestFinderDoppler(t *testing.T) {
 	t.Parallel()
 	o := onpar.New()
 	defer o.Run(t)
 
 	o.BeforeEach(func(t *testing.T) (Expectation, *clientpool.DopplerFinder, *mockEventer) {
 		eventer := newMockEventer()
-		return Expectation(expect.New(t)), clientpool.NewDopplerFinder(eventer), eventer
+		pool := clientpool.NewDopplerFinder(eventer)
+
+		// You have to drain this
+		go func() {
+			for {
+				pool.Next()
+			}
+		}()
+		return Expectation(expect.New(t)), pool, eventer
 	})
 
 	o.Spec("it blocks if it doesn't have a doppler", func(
@@ -45,7 +53,7 @@ func TestFinder(t *testing.T) {
 			mockEventer *mockEventer,
 		) {
 			mockEventer.NextOutput.Ret0 <- dopplerservice.Event{
-				UDPDopplers: []string{"some-addr-1", "some-addr-2"},
+				GRPCDopplers: []string{"some-addr-1", "some-addr-2"},
 			}
 		})
 
@@ -70,7 +78,7 @@ func TestFinder(t *testing.T) {
 			mockEventer *mockEventer,
 		) {
 			mockEventer.NextOutput.Ret0 <- dopplerservice.Event{
-				UDPDopplers: []string{"some-addr-1", "some-addr-2"},
+				GRPCDopplers: []string{"some-addr-1", "some-addr-2"},
 			}
 		})
 
@@ -86,7 +94,7 @@ func TestFinder(t *testing.T) {
 			}})
 
 			mockEventer.NextOutput.Ret0 <- dopplerservice.Event{
-				UDPDopplers: []string{},
+				GRPCDopplers: []string{},
 			}
 
 			done := make(chan bool)
@@ -99,6 +107,31 @@ func TestFinder(t *testing.T) {
 
 			expect(done).To.Pass(eventuallyBlocks{})
 		})
+	})
+}
+
+func TestFinderNext(t *testing.T) {
+	t.Parallel()
+	o := onpar.New()
+	defer o.Run(t)
+
+	o.BeforeEach(func(t *testing.T) (Expectation, *clientpool.DopplerFinder, *mockEventer) {
+		eventer := newMockEventer()
+		return Expectation(expect.New(t)), clientpool.NewDopplerFinder(eventer), eventer
+	})
+
+	o.Spec("it repeats the event from the Finder service", func(
+		t *testing.T,
+		expect Expectation,
+		finder *clientpool.DopplerFinder,
+		mockEventer *mockEventer,
+	) {
+		event := dopplerservice.Event{
+			GRPCDopplers: []string{"foo"},
+		}
+		mockEventer.NextOutput.Ret0 <- event
+
+		expect(finder.Next()).To.Equal(event)
 	})
 }
 

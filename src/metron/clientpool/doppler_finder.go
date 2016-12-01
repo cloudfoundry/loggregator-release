@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/rand"
 	"sync"
+	"time"
 )
 
 type Eventer interface {
@@ -14,14 +15,16 @@ type Eventer interface {
 type DopplerFinder struct {
 	eventer Eventer
 
-	cond     *sync.Cond
-	dopplers []string
+	cond           *sync.Cond
+	dopplers       []string
+	repeatedEvents chan dopplerservice.Event
 }
 
 func NewDopplerFinder(eventer Eventer) *DopplerFinder {
 	f := &DopplerFinder{
-		eventer: eventer,
-		cond:    sync.NewCond(new(sync.Mutex)),
+		eventer:        eventer,
+		cond:           sync.NewCond(new(sync.Mutex)),
+		repeatedEvents: make(chan dopplerservice.Event),
 	}
 	go f.run()
 	return f
@@ -42,14 +45,28 @@ func (f *DopplerFinder) Doppler() string {
 	}
 }
 
+// TODO: Delete this once UDP is deprecated
+func (f *DopplerFinder) Next() dopplerservice.Event {
+	return <-f.repeatedEvents
+}
+
 func (f *DopplerFinder) run() {
 	for {
 		event := f.eventer.Next()
-		log.Printf("Available Dopplers: %v", event.UDPDopplers)
+		f.repeatEvent(event)
 
+		log.Printf("Available Dopplers: %v", event.GRPCDopplers)
 		f.cond.L.Lock()
-		f.dopplers = event.UDPDopplers
+		f.dopplers = event.GRPCDopplers
 		f.cond.Broadcast()
 		f.cond.L.Unlock()
+	}
+}
+
+func (f *DopplerFinder) repeatEvent(event dopplerservice.Event) {
+	select {
+	case f.repeatedEvents <- event:
+	case <-time.After(time.Second):
+		log.Panic("The repeated events are not being consumed!")
 	}
 }

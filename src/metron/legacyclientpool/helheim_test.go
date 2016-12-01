@@ -5,7 +5,11 @@
 
 package legacyclientpool_test
 
-import "doppler/dopplerservice"
+import (
+	"doppler/dopplerservice"
+
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+)
 
 type mockFinder struct {
 	NextCalled chan bool
@@ -23,4 +27,30 @@ func newMockFinder() *mockFinder {
 func (m *mockFinder) Next() dopplerservice.Event {
 	m.NextCalled <- true
 	return <-m.NextOutput.Ret0
+}
+
+type mockPool struct {
+	WriteCalled chan bool
+	WriteInput  struct {
+		Message  chan []byte
+		Chainers chan []metricbatcher.BatchCounterChainer
+	}
+	WriteOutput struct {
+		Ret0 chan error
+	}
+}
+
+func newMockPool() *mockPool {
+	m := &mockPool{}
+	m.WriteCalled = make(chan bool, 100)
+	m.WriteInput.Message = make(chan []byte, 100)
+	m.WriteInput.Chainers = make(chan []metricbatcher.BatchCounterChainer, 100)
+	m.WriteOutput.Ret0 = make(chan error, 100)
+	return m
+}
+func (m *mockPool) Write(message []byte, chainers ...metricbatcher.BatchCounterChainer) error {
+	m.WriteCalled <- true
+	m.WriteInput.Message <- message
+	m.WriteInput.Chainers <- chainers
+	return <-m.WriteOutput.Ret0
 }

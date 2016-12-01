@@ -9,7 +9,7 @@ service Doppler {
 }
 
 service DopplerIngestor {
-  rpc Push(stream EnvelopeData) returns (PushResponse) {}
+  rpc Pusher(stream EnvelopeData) returns (PushResponse) {}
 }
 
 message EnvelopeData {

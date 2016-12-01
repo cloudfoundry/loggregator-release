@@ -14,15 +14,20 @@ import (
 )
 
 var _ = Describe("End to end tests", func() {
-	Context("with metron and doppler in tcp mode", func() {
+	Context("with metron and doppler", func() {
 		It("sends messages", func() {
 			etcdCleanup, etcdClientURL := integration_tests.SetupEtcd()
 			defer etcdCleanup()
-			metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(etcdClientURL, "udp")
+			metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(etcdClientURL, 0)
 			defer metronCleanup()
 			dopplerCleanup, dopplerWSPort, dopplerGRPCPort := integration_tests.SetupDoppler(etcdClientURL, metronPort)
 			defer dopplerCleanup()
-			trafficcontrollerCleanup, tcPort := integration_tests.SetupTrafficcontroller(etcdClientURL, dopplerWSPort, dopplerGRPCPort, metronPort)
+			trafficcontrollerCleanup, tcPort := integration_tests.SetupTrafficcontroller(
+				etcdClientURL,
+				dopplerWSPort,
+				dopplerGRPCPort,
+				metronPort,
+			)
 			defer trafficcontrollerCleanup()
 			metronReady()
 

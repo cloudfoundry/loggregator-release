@@ -3,74 +3,14 @@
 // doing.  Expect any changes made manually to be overwritten
 // the next time hel regenerates this file.
 
-package clientpool_test
+package component_test
 
 import (
 	"context"
-	"doppler/dopplerservice"
 	"plumbing"
 
 	"google.golang.org/grpc/metadata"
 )
-
-type mockConn struct {
-	WriteCalled chan bool
-	WriteInput  struct {
-		Data chan []byte
-	}
-	WriteOutput struct {
-		Err chan error
-	}
-}
-
-func newMockConn() *mockConn {
-	m := &mockConn{}
-	m.WriteCalled = make(chan bool, 100)
-	m.WriteInput.Data = make(chan []byte, 100)
-	m.WriteOutput.Err = make(chan error, 100)
-	return m
-}
-func (m *mockConn) Write(data []byte) (err error) {
-	m.WriteCalled <- true
-	m.WriteInput.Data <- data
-	return <-m.WriteOutput.Err
-}
-
-type mockEventer struct {
-	NextCalled chan bool
-	NextOutput struct {
-		Ret0 chan dopplerservice.Event
-	}
-}
-
-func newMockEventer() *mockEventer {
-	m := &mockEventer{}
-	m.NextCalled = make(chan bool, 100)
-	m.NextOutput.Ret0 = make(chan dopplerservice.Event, 100)
-	return m
-}
-func (m *mockEventer) Next() dopplerservice.Event {
-	m.NextCalled <- true
-	return <-m.NextOutput.Ret0
-}
-
-type mockFinder struct {
-	DopplerCalled chan bool
-	DopplerOutput struct {
-		Uri chan string
-	}
-}
-
-func newMockFinder() *mockFinder {
-	m := &mockFinder{}
-	m.DopplerCalled = make(chan bool, 100)
-	m.DopplerOutput.Uri = make(chan string, 100)
-	return m
-}
-func (m *mockFinder) Doppler() (uri string) {
-	m.DopplerCalled <- true
-	return <-m.DopplerOutput.Uri
-}
 
 type mockDopplerIngestorServer struct {
 	PusherCalled chan bool

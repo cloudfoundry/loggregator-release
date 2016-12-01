@@ -6,34 +6,36 @@ import (
 	"github.com/cloudfoundry/dropsonde/signature"
 )
 
-type UDPWrapper struct {
+type Conn interface {
+	Write(data []byte) error
+}
+
+type GRPCWrapper struct {
 	conn         Conn
 	sharedSecret []byte
 }
 
-func NewUDPWrapper(conn Conn, sharedSecret []byte) *UDPWrapper {
-	return &UDPWrapper{
+func NewGRPCWrapper(conn Conn, sharedSecret []byte) *GRPCWrapper {
+	return &GRPCWrapper{
 		conn:         conn,
 		sharedSecret: sharedSecret,
 	}
 }
 
-func (u *UDPWrapper) Write(message []byte, chainers ...metricbatcher.BatchCounterChainer) error {
+func (u *GRPCWrapper) Write(message []byte, chainers ...metricbatcher.BatchCounterChainer) error {
 	signedMessage := signature.SignMessage(message, u.sharedSecret)
 
 	err := u.conn.Write(signedMessage)
 	if err != nil {
-		metrics.BatchIncrementCounter("udp.sendErrorCount")
+		metrics.BatchIncrementCounter("grpc.sendErrorCount")
 		return err
 	}
-	metrics.BatchIncrementCounter("udp.sentMessageCount")
-	metrics.BatchAddCounter("udp.sentByteCount", uint64(len(message)))
+	metrics.BatchIncrementCounter("grpc.sentMessageCount")
+	metrics.BatchAddCounter("grpc.sentByteCount", uint64(len(message)))
 
-	// The TLS side writes this metric in the batch.Writer.  For UDP,
-	// it needs to be done here.
 	metrics.BatchIncrementCounter("DopplerForwarder.sentMessages")
 	for _, chainer := range chainers {
-		chainer.SetTag("protocol", "udp").Increment()
+		chainer.SetTag("protocol", "grpc").Increment()
 	}
 
 	return nil
