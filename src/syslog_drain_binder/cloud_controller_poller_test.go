@@ -2,8 +2,10 @@ package main_test
 
 import (
 	"crypto/tls"
+	"net"
 	"plumbing"
 	syslog_drain_binder "syslog_drain_binder"
+	"time"
 
 	"encoding/base64"
 	"encoding/json"
@@ -29,7 +31,9 @@ var _ = Describe("CloudControllerPoller", func() {
 		BeforeEach(func() {
 			fakeCloudController = fakeCC{}
 
-			testServer = httptest.NewServer(http.HandlerFunc(fakeCloudController.ServeHTTP))
+			testServer = httptest.NewServer(
+				http.HandlerFunc(fakeCloudController.ServeHTTP),
+			)
 			baseURL = "http://" + testServer.Listener.Addr().String()
 		})
 
@@ -53,7 +57,7 @@ var _ = Describe("CloudControllerPoller", func() {
 			Expect(fakeCloudController.requestCount).To(Equal(6))
 
 			for _, entry := range appDrains {
-				Expect(drainUrls).To(HaveKeyWithValue(entry.appId, entry.urls))
+				Expect(drainUrls).To(HaveKeyWithValue(entry.appID, entry.urls))
 			}
 		})
 
@@ -64,7 +68,7 @@ var _ = Describe("CloudControllerPoller", func() {
 			Expect(fakeCloudController.requestCount).To(Equal(5))
 
 			for _, entry := range appDrains {
-				Expect(drainUrls).To(HaveKeyWithValue(entry.appId, entry.urls))
+				Expect(drainUrls).To(HaveKeyWithValue(entry.appID, entry.urls))
 			}
 		})
 
@@ -81,58 +85,107 @@ var _ = Describe("CloudControllerPoller", func() {
 
 				for i := 0; i < 8; i++ {
 					entry := appDrains[i]
-					Expect(drainUrls).To(HaveKeyWithValue(entry.appId, entry.urls))
+					Expect(drainUrls).To(HaveKeyWithValue(entry.appID, entry.urls))
 				}
 
 				for i := 8; i < 10; i++ {
 					entry := appDrains[i]
-					Expect(drainUrls).NotTo(HaveKeyWithValue(entry.appId, entry.urls))
+					Expect(drainUrls).NotTo(HaveKeyWithValue(entry.appID, entry.urls))
 				}
 			})
 		})
 
 		Context("when connecting to a secure server with a self-signed certificate", func() {
-			It("fails to connect if skipCertVerify is false", func() {
-				fakeCC := httptest.NewTLSServer(http.HandlerFunc(fakeCloudController.ServeHTTP))
+			var secureTestServer *httptest.Server
 
-				baseURL = "https://" + fakeCC.Listener.Addr().String()
+			BeforeEach(func() {
+				secureTestServer = httptest.NewUnstartedServer(http.HandlerFunc(fakeCloudController.ServeHTTP))
+				secureTestServer.TLS = &tls.Config{
+					CipherSuites: plumbing.SupportedCipherSuites,
+					MinVersion:   tls.VersionTLS12,
+				}
+				secureTestServer.StartTLS()
+				baseURL = "https://" + secureTestServer.Listener.Addr().String()
+			})
+
+			AfterEach(func() {
+				secureTestServer.Close()
+			})
+
+			It("fails to connect if skipCertVerify is false", func() {
 				_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("certificate signed by unknown authority"))
 			})
 
 			It("successfully connects if skipCertVerify is true", func() {
-				fakeCC := httptest.NewUnstartedServer(http.HandlerFunc(fakeCloudController.ServeHTTP))
-				fakeCC.TLS = &tls.Config{
-					CipherSuites: plumbing.SupportedCipherSuites,
-					MinVersion:   tls.VersionTLS12,
-				}
-				fakeCC.StartTLS()
-
-				baseURL = "https://" + fakeCC.Listener.Addr().String()
 				_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2, syslog_drain_binder.SkipCertVerify(true))
 				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("with the cloud controller not responding", func() {
+			var serverNotResponding net.Listener
+
+			BeforeEach(func() {
+				var err error
+				serverNotResponding, err = net.Listen("tcp", ":0")
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("times out by default", func() {
+				unpatch := patchDefaultTimeout(10 * time.Millisecond)
+				defer unpatch()
+				baseURL = "http://" + serverNotResponding.Addr().String()
+
+				errs := make(chan error)
+				go func() {
+					_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2)
+					errs <- err
+				}()
+
+				Eventually(errs, 100*time.Millisecond).Should(Receive())
+			})
+
+			It("times out with explicit timeout", func() {
+				baseURL = "http://" + serverNotResponding.Addr().String()
+
+				errs := make(chan error)
+				go func() {
+					_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2, syslog_drain_binder.Timeout(10*time.Millisecond))
+					errs <- err
+				}()
+
+				Eventually(errs, 100*time.Millisecond).Should(Receive())
 			})
 		})
 	})
 })
 
+func patchDefaultTimeout(t time.Duration) func() {
+	orig := syslog_drain_binder.DefaultTimeout
+	syslog_drain_binder.DefaultTimeout = t
+	return func() {
+		syslog_drain_binder.DefaultTimeout = orig
+	}
+}
+
 type appEntry struct {
-	appId shared_types.AppId
+	appID shared_types.AppID
 	urls  []shared_types.DrainURL
 }
 
 var appDrains = []appEntry{
-	{appId: "app0", urls: []shared_types.DrainURL{"urlA"}},
-	{appId: "app1", urls: []shared_types.DrainURL{"urlB"}},
-	{appId: "app2", urls: []shared_types.DrainURL{"urlA", "urlC"}},
-	{appId: "app3", urls: []shared_types.DrainURL{"urlA", "urlD", "urlE"}},
-	{appId: "app4", urls: []shared_types.DrainURL{"urlA"}},
-	{appId: "app5", urls: []shared_types.DrainURL{"urlA"}},
-	{appId: "app6", urls: []shared_types.DrainURL{"urlA"}},
-	{appId: "app7", urls: []shared_types.DrainURL{"urlA"}},
-	{appId: "app8", urls: []shared_types.DrainURL{"urlA"}},
-	{appId: "app9", urls: []shared_types.DrainURL{"urlA"}},
+	{appID: "app0", urls: []shared_types.DrainURL{"urlA"}},
+	{appID: "app1", urls: []shared_types.DrainURL{"urlB"}},
+	{appID: "app2", urls: []shared_types.DrainURL{"urlA", "urlC"}},
+	{appID: "app3", urls: []shared_types.DrainURL{"urlA", "urlD", "urlE"}},
+	{appID: "app4", urls: []shared_types.DrainURL{"urlA"}},
+	{appID: "app5", urls: []shared_types.DrainURL{"urlA"}},
+	{appID: "app6", urls: []shared_types.DrainURL{"urlA"}},
+	{appID: "app7", urls: []shared_types.DrainURL{"urlA"}},
+	{appID: "app8", urls: []shared_types.DrainURL{"urlA"}},
+	{appID: "app9", urls: []shared_types.DrainURL{"urlA"}},
 }
 
 type fakeCC struct {
@@ -172,17 +225,17 @@ func buildResponse(start int, end int) []byte {
 	var r jsonResponse
 	if start >= 10 {
 		r = jsonResponse{
-			Results: make(map[shared_types.AppId][]shared_types.DrainURL),
+			Results: make(map[shared_types.AppID][]shared_types.DrainURL),
 			NextId:  nil,
 		}
 	} else {
 		r = jsonResponse{
-			Results: make(map[shared_types.AppId][]shared_types.DrainURL),
+			Results: make(map[shared_types.AppID][]shared_types.DrainURL),
 			NextId:  &end,
 		}
 
 		for i := start; i < end && i < 10; i++ {
-			r.Results[appDrains[i].appId] = appDrains[i].urls
+			r.Results[appDrains[i].appID] = appDrains[i].urls
 		}
 	}
 
@@ -191,6 +244,6 @@ func buildResponse(start int, end int) []byte {
 }
 
 type jsonResponse struct {
-	Results map[shared_types.AppId][]shared_types.DrainURL `json:"results"`
+	Results map[shared_types.AppID][]shared_types.DrainURL `json:"results"`
 	NextId  *int                                           `json:"next_id"`
 }

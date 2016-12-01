@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"plumbing"
+	"time"
 
 	"syslog_drain_binder/shared_types"
 )
@@ -13,12 +14,23 @@ import (
 // PollOptions contains the options for the Poll function.
 type PollOptions struct {
 	insecureSkipVerify bool
+	timeout            time.Duration
 }
 
 // SkipCertVerify allows skipping of cert verification when polling.
 func SkipCertVerify(s bool) func(*PollOptions) {
 	return func(o *PollOptions) {
 		o.insecureSkipVerify = s
+	}
+}
+
+// DefaultTimeout is the default http client timeout used when polling.
+var DefaultTimeout = 5 * time.Second
+
+// Timeout specifies the http client timeout when polling.
+func Timeout(t time.Duration) func(*PollOptions) {
+	return func(o *PollOptions) {
+		o.timeout = t
 	}
 }
 
@@ -29,11 +41,13 @@ func Poll(
 	password string,
 	batchSize int,
 	options ...func(*PollOptions),
-) (map[shared_types.AppId][]shared_types.DrainURL, error) {
-	drainURLs := make(map[shared_types.AppId][]shared_types.DrainURL)
+) (map[shared_types.AppID][]shared_types.DrainURL, error) {
+	drainURLs := make(map[shared_types.AppID][]shared_types.DrainURL)
 	nextID := 0
 
-	opts := PollOptions{}
+	opts := PollOptions{
+		timeout: DefaultTimeout,
+	}
 	for _, o := range options {
 		o(&opts)
 	}
@@ -46,6 +60,7 @@ func Poll(
 		DisableKeepAlives: true,
 	}
 	client := &http.Client{
+		Timeout:   opts.timeout,
 		Transport: tr,
 	}
 
@@ -59,8 +74,8 @@ func Poll(
 			return drainURLs, err
 		}
 
-		for appId, urls := range ccResponse.Results {
-			drainURLs[appId] = urls
+		for appID, urls := range ccResponse.Results {
+			drainURLs[appID] = urls
 		}
 
 		if ccResponse.NextID == nil {
@@ -92,7 +107,7 @@ func pollAndDecode(client *http.Client, request *http.Request) (*cloudController
 }
 
 type cloudControllerResponse struct {
-	Results map[shared_types.AppId][]shared_types.DrainURL `json:"results"`
+	Results map[shared_types.AppID][]shared_types.DrainURL `json:"results"`
 	NextID  *int                                           `json:"next_id"`
 }
 

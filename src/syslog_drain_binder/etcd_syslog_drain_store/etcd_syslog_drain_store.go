@@ -26,7 +26,7 @@ func NewEtcdSyslogDrainStore(storeAdapter storeadapter.StoreAdapter, ttl time.Du
 	}
 }
 
-func (store *EtcdSyslogDrainStore) UpdateDrains(appDrainUrlMap map[shared_types.AppId][]shared_types.DrainURL) error {
+func (store *EtcdSyslogDrainStore) UpdateDrains(appDrainUrlMap map[shared_types.AppID][]shared_types.DrainURL) error {
 
 	for appId, drainUrls := range appDrainUrlMap {
 		err := store.updateAppDrains(appId, drainUrls)
@@ -38,7 +38,7 @@ func (store *EtcdSyslogDrainStore) UpdateDrains(appDrainUrlMap map[shared_types.
 	return nil
 }
 
-func (store *EtcdSyslogDrainStore) updateAppDrains(appId shared_types.AppId, drainUrls []shared_types.DrainURL) error {
+func (store *EtcdSyslogDrainStore) updateAppDrains(appId shared_types.AppID, drainUrls []shared_types.DrainURL) error {
 	var nodes []storeadapter.StoreNode
 
 	for _, drainUrl := range drainUrls {
@@ -68,11 +68,11 @@ func (store *EtcdSyslogDrainStore) updateAppDrains(appId shared_types.AppId, dra
 	return nil
 }
 
-func appKey(appId shared_types.AppId) string {
+func appKey(appId shared_types.AppID) string {
 	return fmt.Sprintf("/loggregator/services/%s", appId)
 }
 
-func drainKey(appId shared_types.AppId, drainUrl shared_types.DrainURL) string {
+func drainKey(appId shared_types.AppID, drainUrl shared_types.DrainURL) string {
 	hash := sha1.Sum([]byte(drainUrl))
 	return fmt.Sprintf("%s/%x", appKey(appId), hash)
 }
