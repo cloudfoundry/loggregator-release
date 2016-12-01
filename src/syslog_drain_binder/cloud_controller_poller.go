@@ -5,24 +5,52 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"plumbing"
 
-	"crypto/tls"
 	"syslog_drain_binder/shared_types"
 )
 
-func Poll(hostname string, username string, password string, batchSize int, skipCertVerify bool) (map[shared_types.AppId][]shared_types.DrainURL, error) {
-	drainURLs := make(map[shared_types.AppId][]shared_types.DrainURL)
+// PollOptions contains the options for the Poll function.
+type PollOptions struct {
+	insecureSkipVerify bool
+}
 
-	nextId := 0
+// SkipCertVerify allows skipping of cert verification when polling.
+func SkipCertVerify(s bool) func(*PollOptions) {
+	return func(o *PollOptions) {
+		o.insecureSkipVerify = s
+	}
+}
+
+// Poll gets all the app's syslog drain urls from the cloud controller.
+func Poll(
+	urlBase string,
+	username string,
+	password string,
+	batchSize int,
+	options ...func(*PollOptions),
+) (map[shared_types.AppId][]shared_types.DrainURL, error) {
+	drainURLs := make(map[shared_types.AppId][]shared_types.DrainURL)
+	nextID := 0
+
+	opts := PollOptions{}
+	for _, o := range options {
+		o(&opts)
+	}
+
+	tlsConfig := plumbing.NewTLSConfig()
+	tlsConfig.InsecureSkipVerify = opts.insecureSkipVerify
 
 	tr := &http.Transport{
-		TLSClientConfig:   &tls.Config{InsecureSkipVerify: skipCertVerify},
+		TLSClientConfig:   tlsConfig,
 		DisableKeepAlives: true,
 	}
-	client := &http.Client{Transport: tr}
+	client := &http.Client{
+		Transport: tr,
+	}
 
 	for {
-		url := buildUrl(hostname, batchSize, nextId)
+		url := buildUrl(urlBase, batchSize, nextID)
 		request, _ := http.NewRequest("GET", url, nil)
 		request.SetBasicAuth(username, password)
 
@@ -35,10 +63,10 @@ func Poll(hostname string, username string, password string, batchSize int, skip
 			drainURLs[appId] = urls
 		}
 
-		if ccResponse.NextId == nil {
+		if ccResponse.NextID == nil {
 			break
 		}
-		nextId = *ccResponse.NextId
+		nextID = *ccResponse.NextID
 	}
 
 	return drainURLs, nil
@@ -65,14 +93,14 @@ func pollAndDecode(client *http.Client, request *http.Request) (*cloudController
 
 type cloudControllerResponse struct {
 	Results map[shared_types.AppId][]shared_types.DrainURL `json:"results"`
-	NextId  *int                                           `json:"next_id"`
+	NextID  *int                                           `json:"next_id"`
 }
 
-func buildUrl(baseURL string, batchSize int, nextId int) string {
+func buildUrl(baseURL string, batchSize int, nextID int) string {
 	url := fmt.Sprintf("%s/v2/syslog_drain_urls?batch_size=%d", baseURL, batchSize)
 
-	if nextId != 0 {
-		url = fmt.Sprintf("%s&next_id=%d", url, nextId)
+	if nextID != 0 {
+		url = fmt.Sprintf("%s&next_id=%d", url, nextID)
 	}
 	return url
 }

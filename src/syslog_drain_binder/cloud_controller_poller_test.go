@@ -1,6 +1,8 @@
 package main_test
 
 import (
+	"crypto/tls"
+	"plumbing"
 	syslog_drain_binder "syslog_drain_binder"
 
 	"encoding/base64"
@@ -21,14 +23,14 @@ var _ = Describe("CloudControllerPoller", func() {
 		var (
 			testServer          *httptest.Server
 			fakeCloudController fakeCC
-			addr                string
+			baseURL             string
 		)
 
 		BeforeEach(func() {
 			fakeCloudController = fakeCC{}
 
 			testServer = httptest.NewServer(http.HandlerFunc(fakeCloudController.ServeHTTP))
-			addr = "http://" + testServer.Listener.Addr().String()
+			baseURL = "http://" + testServer.Listener.Addr().String()
 		})
 
 		AfterEach(func() {
@@ -36,7 +38,7 @@ var _ = Describe("CloudControllerPoller", func() {
 		})
 
 		It("connects to the correct endpoint with basic authentication and the expected parameters", func() {
-			syslog_drain_binder.Poll(addr, "user", "pass", 2, false)
+			syslog_drain_binder.Poll(baseURL, "user", "pass", 2)
 			Expect(fakeCloudController.servedRoute).To(Equal("/v2/syslog_drain_urls"))
 			Expect(fakeCloudController.username).To(Equal("user"))
 			Expect(fakeCloudController.password).To(Equal("pass"))
@@ -45,7 +47,7 @@ var _ = Describe("CloudControllerPoller", func() {
 		})
 
 		It("processes all pages into a single result with batch_size 2", func() {
-			drainUrls, err := syslog_drain_binder.Poll(addr, "user", "pass", 2, false)
+			drainUrls, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeCloudController.requestCount).To(Equal(6))
@@ -56,7 +58,7 @@ var _ = Describe("CloudControllerPoller", func() {
 		})
 
 		It("processes all pages into a single result with batch_size 3", func() {
-			drainUrls, err := syslog_drain_binder.Poll(addr, "user", "pass", 3, false)
+			drainUrls, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 3)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeCloudController.requestCount).To(Equal(5))
@@ -72,7 +74,7 @@ var _ = Describe("CloudControllerPoller", func() {
 			})
 
 			It("returns as much data as it has, and an error", func() {
-				drainUrls, err := syslog_drain_binder.Poll(addr, "user", "pass", 2, false)
+				drainUrls, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2)
 				Expect(err).To(HaveOccurred())
 
 				Expect(fakeCloudController.requestCount).To(Equal(4))
@@ -90,28 +92,25 @@ var _ = Describe("CloudControllerPoller", func() {
 		})
 
 		Context("when connecting to a secure server with a self-signed certificate", func() {
-			var secureTestServer *httptest.Server
-
-			BeforeEach(func() {
-				secureTestServer = httptest.NewTLSServer(http.HandlerFunc(fakeCloudController.ServeHTTP))
-
-				addr = "https://" + secureTestServer.Listener.Addr().String()
-			})
-
 			It("fails to connect if skipCertVerify is false", func() {
-				secureTestServer = httptest.NewTLSServer(http.HandlerFunc(fakeCloudController.ServeHTTP))
+				fakeCC := httptest.NewTLSServer(http.HandlerFunc(fakeCloudController.ServeHTTP))
 
-				addr = "https://" + secureTestServer.Listener.Addr().String()
-				_, err := syslog_drain_binder.Poll(addr, "user", "pass", 2, false)
+				baseURL = "https://" + fakeCC.Listener.Addr().String()
+				_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("certificate signed by unknown authority"))
 			})
 
 			It("successfully connects if skipCertVerify is true", func() {
-				secureTestServer := httptest.NewTLSServer(http.HandlerFunc(fakeCloudController.ServeHTTP))
+				fakeCC := httptest.NewUnstartedServer(http.HandlerFunc(fakeCloudController.ServeHTTP))
+				fakeCC.TLS = &tls.Config{
+					CipherSuites: plumbing.SupportedCipherSuites,
+					MinVersion:   tls.VersionTLS12,
+				}
+				fakeCC.StartTLS()
 
-				addr = "https://" + secureTestServer.Listener.Addr().String()
-				_, err := syslog_drain_binder.Poll(addr, "user", "pass", 2, true)
+				baseURL = "https://" + fakeCC.Listener.Addr().String()
+				_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2, syslog_drain_binder.SkipCertVerify(true))
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})

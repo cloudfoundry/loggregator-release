@@ -86,7 +86,14 @@ func main() {
 			}
 
 			log.Debugf("Polling %s for updates", conf.CloudControllerAddress)
-			drainUrls, err := Poll(conf.CloudControllerAddress, conf.BulkApiUsername, conf.BulkApiPassword, conf.PollingBatchSize, conf.SkipCertVerify)
+
+			drainUrls, err := Poll(
+				conf.CloudControllerAddress,
+				conf.BulkApiUsername,
+				conf.BulkApiPassword,
+				conf.PollingBatchSize,
+				SkipCertVerify(conf.SkipCertVerify),
+			)
 			if err != nil {
 				log.Errorf("Error when polling cloud controller: %s", err.Error())
 				politician.Vacate()
