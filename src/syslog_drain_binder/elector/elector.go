@@ -47,7 +47,8 @@ func (elector *Elector) RunForElection() error {
 			return nil
 		}
 
-		if err != storeadapter.ErrorKeyExists { // weird error with etcd; give up
+		cerr, ok := err.(storeadapter.Error)
+		if !ok || cerr.Type() != storeadapter.ErrorKeyExists { // weird error with etcd; give up
 			elector.logger.Errorf("Elector: unexpected error from Etcd: %s", err)
 			return err
 		}

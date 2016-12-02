@@ -186,7 +186,7 @@ var _ = Describe("Elector", func() {
 
 				node, err := fakeStore.Get("syslog_drain_binder/leader")
 				Expect(node).To(Equal(storeadapter.StoreNode{}))
-				Expect(err).To(Equal(storeadapter.ErrorKeyNotFound))
+				Expect(err.(storeadapter.Error).Type()).To(Equal(storeadapter.ErrorKeyNotFound))
 			})
 		})
 
@@ -201,7 +201,7 @@ var _ = Describe("Elector", func() {
 
 			It("returns an error", func() {
 				err := candidate.Vacate()
-				Expect(err).To(Equal(storeadapter.ErrorKeyComparisonFailed))
+				Expect(err.(storeadapter.Error).Type()).To(Equal(storeadapter.ErrorKeyComparisonFailed))
 			})
 
 			It("does not affect the existing leader", func() {
@@ -212,7 +212,6 @@ var _ = Describe("Elector", func() {
 					Key:   "syslog_drain_binder/leader",
 					Value: []byte("candidate2"),
 				}))
-
 			})
 		})
 	})
