@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"plumbing"
 	"profiler"
 	"runtime"
 	"time"
@@ -117,9 +118,19 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 	log.Println("Initializing Doppler connection managers")
 	dopplerFinder := clientpool.NewDopplerFinder(finder)
 
+	tlsConfig, err := plumbing.NewMutualTLSConfig(
+		conf.GRPC.CertFile,
+		conf.GRPC.KeyFile,
+		conf.GRPC.CAFile,
+		"doppler",
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	var connManagers []clientpool.Conn
 	for i := 0; i < 5; i++ {
-		connManagers = append(connManagers, clientpool.NewConnManager(10000, dopplerFinder))
+		connManagers = append(connManagers, clientpool.NewConnManager(tlsConfig, 10000, dopplerFinder))
 	}
 
 	pool := clientpool.New(connManagers...)

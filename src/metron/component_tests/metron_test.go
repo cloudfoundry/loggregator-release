@@ -4,7 +4,7 @@ import (
 	dopplerConfig "doppler/config"
 	"fmt"
 	"integration_tests"
-	"integration_tests/binaries"
+	"metron/testutil"
 	"net"
 	"strconv"
 	"strings"
@@ -24,37 +24,34 @@ import (
 )
 
 var _ = Describe("Metron", func() {
-
 	var (
 		etcdCleanup func()
 		etcdURI     string
 	)
 
-	BeforeSuite(func() {
-		buildPaths, _ := binaries.Build()
-		buildPaths.SetEnv()
+	BeforeEach(func() {
 		etcdCleanup, etcdURI = integration_tests.SetupEtcd()
 	})
 
-	AfterSuite(func() {
+	AfterEach(func() {
 		etcdCleanup()
 	})
 
 	Context("when a doppler is accepting gRPC connections", func() {
 		var (
-			metronCleanup  func()
-			dopplerCleanup func()
-			metronPort     int
-			dopplerPort    int
-			mockDoppler    *mockDopplerIngestorServer
-			eventEmitter   dropsonde.EventEmitter
+			metronCleanup func()
+			metronPort    int
+			dopplerServer *testutil.Server
+			eventEmitter  dropsonde.EventEmitter
 		)
 
 		BeforeEach(func() {
-			dopplerPort, mockDoppler, dopplerCleanup = StartFakeGRPCDoppler()
+			var err error
+			dopplerServer, err = testutil.NewServer()
+			Expect(err).ToNot(HaveOccurred())
 
 			var metronReady func()
-			metronCleanup, metronPort, metronReady = integration_tests.SetupMetron(etcdURI, dopplerPort)
+			metronCleanup, metronPort, metronReady = integration_tests.SetupMetron(etcdURI, dopplerServer.Port())
 			defer metronReady()
 
 			storeAdapter := NewStoreAdapter(&dopplerConfig.Config{
@@ -65,7 +62,7 @@ var _ = Describe("Metron", func() {
 			storeAdapter.Delete("/doppler/meta/z1/doppler/0")
 			node := storeadapter.StoreNode{
 				Key:   "/doppler/meta/z1/doppler/0",
-				Value: []byte(fmt.Sprintf(`{"version":1,"endpoints":["ws://127.0.0.1:%d"]}`, dopplerPort)),
+				Value: []byte(fmt.Sprintf(`{"version":1,"endpoints":["ws://127.0.0.1:%d"]}`, dopplerServer.Port())),
 			}
 			Expect(storeAdapter.Create(node)).To(Succeed())
 
@@ -75,7 +72,7 @@ var _ = Describe("Metron", func() {
 		})
 
 		AfterEach(func() {
-			dopplerCleanup()
+			dopplerServer.Stop()
 			metronCleanup()
 		})
 
@@ -92,7 +89,7 @@ var _ = Describe("Metron", func() {
 
 			f := func() int {
 				eventEmitter.Emit(envelope)
-				return len(mockDoppler.PusherCalled)
+				return len(dopplerServer.PusherCalled)
 			}
 			Eventually(f, 5).Should(BeNumerically(">", 0))
 		})

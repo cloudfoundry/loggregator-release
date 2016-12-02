@@ -217,9 +217,9 @@ func SetupMetron(etcdClientURL string, grpcPort int) (func(), int, func()) {
 
 		GRPC: metronConfig.GRPC{
 			Port:     grpcPort,
-			CertFile: "../fixtures/client.crt",
-			KeyFile:  "../fixtures/client.key",
-			CAFile:   "../fixtures/loggregator-ca.crt",
+			CertFile: ClientCertFilePath(),
+			KeyFile:  ClientKeyFilePath(),
+			CAFile:   CAFilePath(),
 		},
 
 		MetricBatchIntervalMilliseconds:  10,

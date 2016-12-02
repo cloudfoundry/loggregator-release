@@ -124,3 +124,9 @@
 [submodule "src/github.com/a8m/expect"]
 	path = src/github.com/a8m/expect
 	url = https://github.com/a8m/expect
+[submodule "src/github.com/codegangsta/cli"]
+	path = src/github.com/codegangsta/cli
+	url = https://github.com/codegangsta/cli
+[submodule "src/github.com/vito/gosub"]
+	path = src/github.com/vito/gosub
+	url = https://github.com/vito/gosub

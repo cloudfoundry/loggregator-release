@@ -2,6 +2,7 @@ package clientpool
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"io"
 	"log"
@@ -11,6 +12,7 @@ import (
 	"unsafe"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 type Finder interface {
@@ -30,13 +32,13 @@ type grpcConn struct {
 	writes int64
 }
 
-func NewConnManager(maxWrites int64, finder Finder) *ConnManager {
+func NewConnManager(config *tls.Config, maxWrites int64, finder Finder) *ConnManager {
 	m := &ConnManager{
 		finder:    finder,
 		maxWrites: maxWrites,
 	}
 
-	go m.maintainConn()
+	go m.maintainConn(config)
 	return m
 }
 
@@ -67,7 +69,7 @@ func (m *ConnManager) Write(data []byte) error {
 	return nil
 }
 
-func (m *ConnManager) maintainConn() {
+func (m *ConnManager) maintainConn(config *tls.Config) {
 	for range time.Tick(50 * time.Millisecond) {
 		conn := atomic.LoadPointer(&m.conn)
 		if conn != nil && (*grpcConn)(conn) != nil {
@@ -76,7 +78,8 @@ func (m *ConnManager) maintainConn() {
 
 		dopplerURI := m.finder.Doppler()
 
-		c, err := grpc.Dial(dopplerURI, grpc.WithInsecure())
+		transportCreds := credentials.NewTLS(config)
+		c, err := grpc.Dial(dopplerURI, grpc.WithTransportCredentials(transportCreds))
 		if err != nil {
 			log.Printf("error dialing doppler %s: %s", dopplerURI, err)
 			continue
