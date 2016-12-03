@@ -9,7 +9,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/stretchr/testify/assert"
 
 	"time"
 
@@ -37,7 +36,7 @@ var _ = Describe("Dump Sink", func() {
 		<-dumpRunnerDone
 
 		data := testDump.Dump()
-		assert.Equal(GinkgoT(), len(data), 1)
+		Expect(len(data)).To(Equal(1))
 		Expect(string(data[0].GetLogMessage().GetMessage())).To(Equal("hi"))
 	})
 
