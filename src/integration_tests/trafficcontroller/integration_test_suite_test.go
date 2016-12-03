@@ -12,17 +12,12 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
-	"github.com/cloudfoundry/yagnats"
 	"github.com/gogo/protobuf/proto"
-	"github.com/nats-io/nats"
 
-	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"os/exec"
 	"testing"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -39,7 +34,6 @@ const (
 var (
 	trafficControllerExecPath string
 	trafficControllerSession  *gexec.Session
-	gnatsdSession             *gexec.Session
 	etcdRunner                *etcdstorerunner.ETCDClusterRunner
 	etcdPort                  int
 	localIPAddress            string
@@ -62,14 +56,7 @@ var _ = BeforeSuite(func() {
 	setupFakeAuthServer()
 	setupFakeUaaServer()
 
-	gnatsdExec, err := gexec.Build("github.com/nats-io/gnatsd")
-	Expect(err).ToNot(HaveOccurred())
-	gnatsdCommand := exec.Command(gnatsdExec, "-p", "4222")
-
-	gnatsdSession, _ = gexec.Start(gnatsdCommand, nil, nil)
-
-	StartFakeRouter()
-
+	var err error
 	trafficControllerExecPath, err = gexec.Build("trafficcontroller", "-race")
 	Expect(err).ToNot(HaveOccurred())
 
@@ -103,7 +90,6 @@ var _ = AfterEach(func() {
 })
 
 var _ = AfterSuite(func() {
-	gnatsdSession.Kill().Wait()
 	gexec.CleanupBuildArtifacts()
 	etcdRunner.Stop()
 })
@@ -186,45 +172,6 @@ func makeContainerMetricMessage(appId string, instanceIndex int, cpu int, membyt
 	msg, _ := proto.Marshal(envelope)
 
 	return msg
-}
-
-func StartFakeRouter() {
-
-	var startMessage = func() []byte {
-		d := RouterStart{
-			MinimumRegisterIntervalInSeconds: 20,
-		}
-
-		value, _ := json.Marshal(d)
-		return value
-	}
-
-	natsMembers := make([]string, 1)
-	uri := url.URL{
-		Scheme: "nats",
-		User:   url.UserPassword("", ""),
-		Host:   "127.0.0.1:4222",
-	}
-	natsMembers = append(natsMembers, uri.String())
-
-	var natsClient yagnats.NATSConn
-	var err error
-	for i := 0; i < 10; i++ {
-		natsClient, err = yagnats.Connect(natsMembers)
-		if err == nil {
-			break
-		}
-		time.Sleep(time.Second)
-	}
-	Expect(err).ToNot(HaveOccurred())
-
-	natsClient.Subscribe("router.register", func(msg *nats.Msg) {
-	})
-	natsClient.Subscribe("router.greet", func(msg *nats.Msg) {
-		natsClient.Publish(msg.Reply, startMessage())
-	})
-
-	natsClient.Publish("router.start", startMessage())
 }
 
 type RouterStart struct {
