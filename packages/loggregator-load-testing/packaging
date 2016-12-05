@@ -1,8 +1,0 @@
-set -ex
-
-rsync -avzci $PWD/loggregator/ ${BOSH_INSTALL_TARGET}/
-
-tar xzf cli/cf-cli*
-BIN_DIR=${BOSH_INSTALL_TARGET}/bin
-mkdir -p ${BIN_DIR}
-cp cf ${BIN_DIR}/cf
