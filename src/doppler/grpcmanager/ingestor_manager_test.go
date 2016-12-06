@@ -85,6 +85,7 @@ var _ = Describe("IngestorManager", func() {
 			fakeStream := newMockIngestorGRPCServer()
 			fakeStream.RecvOutput.Ret0 <- nil
 			fakeStream.RecvOutput.Ret1 <- io.EOF
+			fakeStream.ContextOutput.Ret0 <- context.TODO()
 
 			Eventually(func() error {
 				return manager.Pusher(fakeStream)
@@ -98,9 +99,29 @@ var _ = Describe("IngestorManager", func() {
 			fakeStream := newMockIngestorGRPCServer()
 			fakeStream.RecvOutput.Ret0 <- nil
 			fakeStream.RecvOutput.Ret1 <- errors.New("fake error")
+			fakeStream.ContextOutput.Ret0 <- context.TODO()
 
 			go manager.Pusher(fakeStream)
 			Consistently(outgoingMsgs).ShouldNot(Receive())
+		})
+	})
+
+	Context("When the pusher context finishes", func() {
+		It("returns the error from the context", func() {
+			fakeStream := newMockIngestorGRPCServer()
+
+			for i := 0; i < 100; i++ {
+				fakeStream.RecvOutput.Ret0 <- nil
+				fakeStream.RecvOutput.Ret1 <- errors.New("fake error")
+			}
+
+			context, cancelCtx := context.WithCancel(context.Background())
+			fakeStream.ContextOutput.Ret0 <- context
+			cancelCtx()
+
+			err := manager.Pusher(fakeStream)
+
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })
