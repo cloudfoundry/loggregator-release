@@ -1,6 +1,6 @@
 . ./loggregator/src/exiter.ps1
 
-$GOLANG_ZIP="golang/go1.7.windows-amd64.zip"
+$GOLANG_ZIP="golang/go1.7.4.windows-amd64.zip"
 try
 {
     Add-Type -AssemblyName System.IO.Compression.FileSystem
