@@ -131,9 +131,9 @@ func SetupDoppler(etcdClientURL string, metronPort int) (cleanup func(), wsPort,
 		OutgoingPort:    uint32(dopplerWSPort),
 		GRPC: dopplerConfig.GRPC{
 			Port:     uint16(dopplerGRPCPort),
-			CertFile: "../fixtures/server.crt",
-			KeyFile:  "../fixtures/server.key",
-			CAFile:   "../fixtures/loggregator-ca.crt",
+			CertFile: ServerCertFilePath(),
+			KeyFile:  ServerKeyFilePath(),
+			CAFile:   CAFilePath(),
 		},
 
 		EtcdUrls:                  []string{etcdClientURL},
@@ -144,9 +144,9 @@ func SetupDoppler(etcdClientURL string, metronPort int) (cleanup func(), wsPort,
 		TLSListenerConfig: dopplerConfig.TLSListenerConfig{
 			Port: uint32(dopplerTLSPort),
 			// TODO: move these files as source code and write them to tmp files
-			CertFile: "../fixtures/server.crt",
-			KeyFile:  "../fixtures/server.key",
-			CAFile:   "../fixtures/loggregator-ca.crt",
+			CertFile: ServerCertFilePath(),
+			KeyFile:  ServerKeyFilePath(),
+			CAFile:   CAFilePath(),
 		},
 
 		MetricBatchIntervalMilliseconds: 10,
@@ -279,9 +279,9 @@ func SetupTrafficcontroller(etcdClientURL string, dopplerWSPort, dopplerGRPCPort
 		DopplerPort: uint32(dopplerWSPort),
 		GRPC: trafficcontrollerConfig.GRPC{
 			Port:     uint16(dopplerGRPCPort),
-			CertFile: "../fixtures/client.crt",
-			KeyFile:  "../fixtures/client.key",
-			CAFile:   "../fixtures/loggregator-ca.crt",
+			CertFile: ClientCertFilePath(),
+			KeyFile:  ClientKeyFilePath(),
+			CAFile:   CAFilePath(),
 		},
 		OutgoingDropsondePort: uint32(tcPort),
 		MetronHost:            "localhost",

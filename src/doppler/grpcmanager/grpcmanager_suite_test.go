@@ -1,4 +1,5 @@
 //go:generate hel
+
 package grpcmanager_test
 
 import (

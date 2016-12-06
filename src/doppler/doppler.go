@@ -153,9 +153,12 @@ func New(
 		log.Printf("Failed to start listener (port=%d) for gRPC: %s", conf.GRPC.Port, err)
 		return nil, err
 	}
+
 	grpcServer := grpc.NewServer(grpc.Creds(transportCreds))
+	grpcIngestorManager := grpcmanager.NewIngestor(doppler.envelopeChan)
+
+	plumbing.RegisterDopplerIngestorServer(grpcServer, grpcIngestorManager)
 	plumbing.RegisterDopplerServer(grpcServer, grpcManager)
-	// register doppler ingestor
 
 	go func() {
 		log.Printf("Starting gRPC server on %s", grpcListener.Addr().String())

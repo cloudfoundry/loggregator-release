@@ -10,7 +10,6 @@ import (
 )
 
 type DopplerIngestorServer interface {
-	// TODO: add other grpc methods
 	plumbing.DopplerIngestorServer
 }
 

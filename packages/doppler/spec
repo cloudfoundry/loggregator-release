@@ -9,6 +9,7 @@ files:
 - loggregator/src/code.cloudfoundry.org/workpool/*.go # gosub
 - loggregator/src/diodes/*.go # gosub
 - loggregator/src/doppler/*.go # gosub
+- loggregator/src/doppler/component_tests/*.go # gosub
 - loggregator/src/doppler/config/*.go # gosub
 - loggregator/src/doppler/dopplerservice/*.go # gosub
 - loggregator/src/doppler/dopplerservice/fakes/*.go # gosub
@@ -30,6 +31,7 @@ files:
 - loggregator/src/doppler/sinkserver/metrics/*.go # gosub
 - loggregator/src/doppler/sinkserver/sinkmanager/*.go # gosub
 - loggregator/src/doppler/sinkserver/websocketserver/*.go # gosub
+- loggregator/src/doppler/testutil/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
