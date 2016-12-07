@@ -1,6 +1,7 @@
 package sinkserver_test
 
 import (
+	"diodes"
 	"doppler/sinkserver"
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/sinkmanager"
@@ -29,7 +30,7 @@ var _ = Describe("Dumping", func() {
 		sinkManager         *sinkmanager.SinkManager
 		TestMessageRouter   *sinkserver.MessageRouter
 		TestWebsocketServer *websocketserver.WebsocketServer
-		dataReadChannel     chan *events.Envelope
+		dataRead            *diodes.ManyToOneEnvelope
 		services            sync.WaitGroup
 		serverPort          string
 		mockBatcher         *mockBatcher
@@ -44,7 +45,7 @@ var _ = Describe("Dumping", func() {
 
 		port := 9081 + config.GinkgoConfig.ParallelNode
 		serverPort = strconv.Itoa(port)
-		dataReadChannel = make(chan *events.Envelope, 2)
+		dataRead = diodes.NewManyToOneEnvelope(5, nil)
 
 		logger := loggertesthelper.Logger()
 
@@ -65,10 +66,8 @@ var _ = Describe("Dumping", func() {
 		TestMessageRouter = sinkserver.NewMessageRouter(logger, sinkManager)
 		tempMessageRouter := TestMessageRouter
 
-		services.Add(1)
 		go func() {
-			defer services.Done()
-			tempMessageRouter.Start(dataReadChannel)
+			tempMessageRouter.Start(dataRead)
 		}()
 
 		apiEndpoint := "localhost:" + serverPort
@@ -95,7 +94,6 @@ var _ = Describe("Dumping", func() {
 
 	AfterEach(func() {
 		sinkManager.Stop()
-		TestMessageRouter.Stop()
 		TestWebsocketServer.Stop()
 
 		services.Wait()
@@ -110,8 +108,8 @@ var _ = Describe("Dumping", func() {
 		lm = factories.NewLogMessage(events.LogMessage_OUT, expectedSecondMessageString, "myOtherApp", "APP")
 		env2, _ := emitter.Wrap(lm, "ORIGIN")
 
-		dataReadChannel <- env1
-		dataReadChannel <- env2
+		dataRead.Set(env1)
+		dataRead.Set(env2)
 
 		var receivedChan chan []byte
 		Eventually(func() int {

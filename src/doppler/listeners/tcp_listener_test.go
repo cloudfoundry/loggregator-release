@@ -2,6 +2,7 @@ package listeners_test
 
 import (
 	"crypto/tls"
+	"diodes"
 	"encoding/binary"
 	"fmt"
 	"net"
@@ -29,17 +30,19 @@ import (
 var _ = Describe("TCPlistener", func() {
 	var (
 		listener          *listeners.TCPListener
-		envelopeChan      chan *events.Envelope
+		envelopeBuffer    *diodes.ManyToOneEnvelope
 		tlsListenerConfig *config.TLSListenerConfig
 		tlsClientConfig   *tls.Config
 		mockBatcher       *mockBatcher
 		mockChainer       *mockBatchCounterChainer
+		mockAlerter       *mockAlerter
 		deadline          time.Duration
 	)
 
 	BeforeEach(func() {
 		mockBatcher = newMockBatcher()
 		mockChainer = newMockBatchCounterChainer()
+		mockAlerter = newMockAlerter()
 		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
 		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
 		deadline = 500 * time.Millisecond
@@ -59,7 +62,7 @@ var _ = Describe("TCPlistener", func() {
 		)
 		Expect(err).NotTo(HaveOccurred())
 
-		envelopeChan = make(chan *events.Envelope)
+		envelopeBuffer = diodes.NewManyToOneEnvelope(5, mockAlerter)
 	})
 
 	JustBeforeEach(func() {
@@ -68,7 +71,7 @@ var _ = Describe("TCPlistener", func() {
 			"aname",
 			"127.0.0.1:1234",
 			tlsListenerConfig,
-			envelopeChan,
+			envelopeBuffer,
 			mockBatcher,
 			deadline,
 			loggertesthelper.Logger(),
@@ -97,7 +100,7 @@ var _ = Describe("TCPlistener", func() {
 			err := send(conn, envelope)
 			Expect(err).ToNot(HaveOccurred())
 
-			Eventually(envelopeChan).Should(Receive(Equal(envelope)))
+			Eventually(envelopeBuffer.Next).Should(Equal(envelope))
 			conn.Close()
 		},
 			Entry(events.Envelope_LogMessage.String(), events.Envelope_LogMessage),
@@ -153,7 +156,7 @@ var _ = Describe("TCPlistener", func() {
 				err = send(conn2, envelope2)
 				Expect(err).ToNot(HaveOccurred())
 
-				envelopes := readMessages(envelopeChan, 2)
+				envelopes := readMessages(envelopeBuffer, 2)
 				Expect(envelopes).To(ContainElement(envelope1))
 				Expect(envelopes).To(ContainElement(envelope2))
 
@@ -191,7 +194,11 @@ var _ = Describe("TCPlistener", func() {
 					With("listeners.totalReceivedByteCount", uint64(67)),
 				))
 
-				Eventually(envelopeChan).Should(Receive())
+				f := func() bool {
+					_, ok := envelopeBuffer.TryNext()
+					return ok
+				}
+				Eventually(f).Should(BeTrue())
 			})
 
 			Describe("connection deadlines", func() {
@@ -215,32 +222,13 @@ var _ = Describe("TCPlistener", func() {
 					envelope := createEnvelope(events.Envelope_LogMessage)
 					conn := openTCPConnection(listener.Address(), tlsClientConfig)
 
-					err := send(conn, envelope)
-					Expect(err).ToNot(HaveOccurred())
+					for i := 0; i < 6; i++ {
+						err := send(conn, envelope)
+						Expect(err).ToNot(HaveOccurred())
+					}
 
-					Eventually(mockBatcher.BatchCounterInput, 3).Should(BeCalled(With("listeners.shedEnvelopes")))
-					Eventually(mockChainer.SetTagInput, 3).Should(BeCalled(
-						With("protocol", "tls"),
-						With("event_type", "LogMessage"),
-					))
-				})
-
-				It("downstream does not block consumption", func() {
-					envelope1 := createEnvelope(events.Envelope_LogMessage)
-					envelope2 := createEnvelope(events.Envelope_HttpStartStop)
-					conn := openTCPConnection(listener.Address(), tlsClientConfig)
-
-					err := send(conn, envelope1)
-					Expect(err).ToNot(HaveOccurred())
-
-					By("waiting for the first envelope to expire")
-					Eventually(mockBatcher.BatchCounterInput, 3).Should(BeCalled(With("listeners.shedEnvelopes")))
-					err = send(conn, envelope2)
-					Expect(err).ToNot(HaveOccurred())
-
-					var rxEnv *events.Envelope
-					Eventually(envelopeChan, 3).Should(Receive(&rxEnv))
-					Expect(rxEnv.GetEventType()).To(Equal(events.Envelope_HttpStartStop))
+					envelopeBuffer.Next()
+					Eventually(mockAlerter.AlertCalled).Should(Receive())
 				})
 			})
 		})
@@ -281,12 +269,10 @@ var _ = Describe("TCPlistener", func() {
 	})
 })
 
-func readMessages(envelopeChan chan *events.Envelope, n int) []*events.Envelope {
+func readMessages(envelopeBuffer *diodes.ManyToOneEnvelope, n int) []*events.Envelope {
 	var envelopes []*events.Envelope
 	for i := 0; i < n; i++ {
-		var envelope *events.Envelope
-		Eventually(envelopeChan).Should(Receive(&envelope))
-		envelopes = append(envelopes, envelope)
+		envelopes = append(envelopes, envelopeBuffer.Next())
 	}
 	return envelopes
 }

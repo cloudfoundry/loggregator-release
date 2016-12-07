@@ -1,6 +1,7 @@
 package sinkserver_test
 
 import (
+	"diodes"
 	"doppler/sinkserver"
 	"sync"
 
@@ -67,19 +68,15 @@ var _ = Describe("Message Router", func() {
 
 	Describe("Start", func() {
 		Context("with an incoming message", func() {
-			var incomingLogChan chan *events.Envelope
+			var incoming *diodes.ManyToOneEnvelope
 			BeforeEach(func() {
-				incomingLogChan = make(chan *events.Envelope)
-				go messageRouter.Start(incomingLogChan)
-			})
-
-			AfterEach(func() {
-				messageRouter.Stop()
+				incoming = diodes.NewManyToOneEnvelope(5, nil)
+				go messageRouter.Start(incoming)
 			})
 
 			It("sends the message to each sender if it is an app message", func() {
 				message, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "testMessage", "app", "App"), "origin")
-				incomingLogChan <- message
+				incoming.Set(message)
 				Eventually(fakeManagerA.received).Should(HaveLen(1))
 				Eventually(fakeManagerB.received).Should(HaveLen(1))
 				Expect(fakeManagerA.received()[0].GetLogMessage()).To(Equal(message.GetLogMessage()))
@@ -87,23 +84,4 @@ var _ = Describe("Message Router", func() {
 			})
 		})
 	})
-
-	Describe("Stop", func() {
-		It("returns", func() {
-			incomingLogChan := make(chan *events.Envelope)
-			done := make(chan struct{})
-			go func() {
-				messageRouter.Start(incomingLogChan)
-				close(done)
-			}()
-			messageRouter.Stop()
-			Eventually(done).Should(BeClosed())
-		})
-
-		It("is idempotent", func() {
-			messageRouter.Stop()
-			Expect(messageRouter.Stop).NotTo(Panic())
-		})
-	})
-
 })

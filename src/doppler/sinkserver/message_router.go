@@ -1,6 +1,7 @@
 package sinkserver
 
 import (
+	"diodes"
 	"sync"
 
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
@@ -28,28 +29,15 @@ func NewMessageRouter(logger *gosteno.Logger, sinkManagers ...sinkManager) *Mess
 	}
 }
 
-func (r *MessageRouter) Start(incomingLogChan <-chan *events.Envelope) {
+func (r *MessageRouter) Start(incomingLog *diodes.ManyToOneEnvelope) {
 	r.logger.Debug("MessageRouter:Starting")
 	for {
-		select {
-		case <-r.done:
-			r.logger.Debug("MessageRouter:MessageReceived:Done")
-			return
-		case envelope, ok := <-incomingLogChan:
-			if !ok {
-				r.logger.Debug("MessageRouter closed")
-				return
-			}
-			r.logger.Debug("MessageRouter:MessageReceived")
-			metrics.BatchIncrementCounter("httpServer.receivedMessages")
-			r.logger.Debugf("MessageRouter:outgoingLogChan: Received %s message from %s at %d.", envelope.GetEventType().String(), envelope.GetOrigin(), envelope.Timestamp)
-			r.send(envelope)
-		}
+		envelope := incomingLog.Next()
+		r.logger.Debug("MessageRouter:MessageReceived")
+		metrics.BatchIncrementCounter("httpServer.receivedMessages")
+		r.logger.Debugf("MessageRouter:outgoingLogChan: Received %s message from %s at %d.", envelope.GetEventType().String(), envelope.GetOrigin(), envelope.Timestamp)
+		r.send(envelope)
 	}
-}
-
-func (r *MessageRouter) Stop() {
-	r.stopOnce.Do(func() { close(r.done) })
 }
 
 func (r *MessageRouter) send(envelope *events.Envelope) {

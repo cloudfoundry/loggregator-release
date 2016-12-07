@@ -19,13 +19,20 @@ var _ = Describe("doppler service registration", func() {
 			Expect(len(registration.Value)).NotTo(BeZero())
 
 			By("dying")
-			dopplerSession.Interrupt().Wait(5 * time.Second)
+			dopplerSession.Kill().Wait(5 * time.Second)
 
-			registration, err = etcdAdapter.Get("healthstatus/doppler/z1/doppler_z1/0")
-			Expect(err).To(HaveOccurred())
+			fLegacy := func() error {
+				_, err := etcdAdapter.Get("healthstatus/doppler/z1/doppler_z1/0")
+				return err
+			}
 
-			registration, err = etcdAdapter.Get("/doppler/meta/z1/doppler_z1/0")
-			Expect(err).To(HaveOccurred())
+			Eventually(fLegacy, 20).Should(HaveOccurred())
+
+			f := func() error {
+				_, err := etcdAdapter.Get("/doppler/meta/z1/doppler_z1/0")
+				return err
+			}
+			Eventually(f, 20).Should(HaveOccurred())
 		})
 	})
 })

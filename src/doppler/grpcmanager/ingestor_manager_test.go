@@ -2,6 +2,7 @@ package grpcmanager_test
 
 import (
 	"context"
+	"diodes"
 	"doppler/grpcmanager"
 	"errors"
 	"io"
@@ -10,7 +11,6 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/cloudfoundry/sonde-go/events"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -35,7 +35,7 @@ var _ = Describe("IngestorManager", func() {
 	}
 
 	var (
-		outgoingMsgs  chan *events.Envelope
+		outgoingMsgs  *diodes.ManyToOneEnvelope
 		manager       *grpcmanager.IngestorManager
 		server        *grpc.Server
 		connCloser    io.Closer
@@ -44,7 +44,7 @@ var _ = Describe("IngestorManager", func() {
 
 	BeforeEach(func() {
 		var grpcAddr string
-		outgoingMsgs = make(chan *events.Envelope)
+		outgoingMsgs = diodes.NewManyToOneEnvelope(5, nil)
 		manager = grpcmanager.NewIngestor(outgoingMsgs)
 		server, grpcAddr = startGRPCServer(manager)
 		dopplerClient, connCloser = establishClient(grpcAddr)
@@ -62,7 +62,7 @@ var _ = Describe("IngestorManager", func() {
 		someEnvelope, data := buildContainerMetric()
 		pusherClient.Send(&plumbing.EnvelopeData{data})
 
-		Eventually(outgoingMsgs).Should(Receive(Equal(someEnvelope)))
+		Eventually(outgoingMsgs.Next).Should(Equal(someEnvelope))
 	})
 
 	Context("With an unsupported envelope payload", func() {
@@ -72,11 +72,17 @@ var _ = Describe("IngestorManager", func() {
 
 			err = pusherClient.Send(&plumbing.EnvelopeData{[]byte("unsupported envelope")})
 			Expect(err).ToNot(HaveOccurred())
-			Consistently(outgoingMsgs).ShouldNot(Receive())
+			Consistently(func() bool {
+				_, ok := outgoingMsgs.TryNext()
+				return ok
+			}).Should(BeFalse())
 
 			err = pusherClient.Send(&plumbing.EnvelopeData{nil})
 			Expect(err).ToNot(HaveOccurred())
-			Consistently(outgoingMsgs).ShouldNot(Receive())
+			Consistently(func() bool {
+				_, ok := outgoingMsgs.TryNext()
+				return ok
+			}).Should(BeFalse())
 		})
 	})
 
@@ -90,7 +96,10 @@ var _ = Describe("IngestorManager", func() {
 			Eventually(func() error {
 				return manager.Pusher(fakeStream)
 			}).Should(Succeed())
-			Expect(len(outgoingMsgs)).To(Equal(0))
+			Consistently(func() bool {
+				_, ok := outgoingMsgs.TryNext()
+				return ok
+			}).Should(BeFalse())
 		})
 	})
 
@@ -102,7 +111,10 @@ var _ = Describe("IngestorManager", func() {
 			fakeStream.ContextOutput.Ret0 <- context.TODO()
 
 			go manager.Pusher(fakeStream)
-			Consistently(outgoingMsgs).ShouldNot(Receive())
+			Consistently(func() bool {
+				_, ok := outgoingMsgs.TryNext()
+				return ok
+			}).Should(BeFalse())
 		})
 	})
 

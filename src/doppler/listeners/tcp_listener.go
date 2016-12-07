@@ -2,6 +2,7 @@ package listeners
 
 import (
 	"crypto/tls"
+	"diodes"
 	"encoding/binary"
 	"io"
 	"net"
@@ -11,32 +12,30 @@ import (
 
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/sonde-go/events"
 
 	"doppler/config"
 	"plumbing"
 )
 
 type TCPListener struct {
-	envelopeChan   chan *events.Envelope
-	logger         *gosteno.Logger
-	batcher        Batcher
-	listener       net.Listener
-	protocol       string
-	connections    map[net.Conn]struct{}
-	unmarshaller   *dropsonde_unmarshaller.DropsondeUnmarshaller
-	stopped        chan struct{}
-	lock           sync.Mutex
-	listenerClosed chan struct{}
-	started        bool
-	metricProto    string
-	deadline       time.Duration
+	envelopesBuffer *diodes.ManyToOneEnvelope
+	logger          *gosteno.Logger
+	batcher         Batcher
+	listener        net.Listener
+	protocol        string
+	connections     map[net.Conn]struct{}
+	unmarshaller    *dropsonde_unmarshaller.DropsondeUnmarshaller
+	lock            sync.Mutex
+	listenerClosed  chan struct{}
+	started         bool
+	metricProto     string
+	deadline        time.Duration
 }
 
 func NewTCPListener(
 	metricProto, address string,
 	tlsListenerConfig *config.TLSListenerConfig,
-	envelopeChan chan *events.Envelope,
+	envelopesBuffer *diodes.ManyToOneEnvelope,
 	batcher Batcher,
 	deadline time.Duration,
 	logger *gosteno.Logger,
@@ -57,17 +56,16 @@ func NewTCPListener(
 	}
 
 	return &TCPListener{
-		listener:     listener,
-		protocol:     protocol,
-		envelopeChan: envelopeChan,
-		logger:       logger,
-		batcher:      batcher,
-		metricProto:  metricProto,
-		deadline:     deadline,
+		listener:        listener,
+		protocol:        protocol,
+		envelopesBuffer: envelopesBuffer,
+		logger:          logger,
+		batcher:         batcher,
+		metricProto:     metricProto,
+		deadline:        deadline,
 
 		connections:    make(map[net.Conn]struct{}),
 		unmarshaller:   dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger),
-		stopped:        make(chan struct{}),
 		listenerClosed: make(chan struct{}),
 	}, nil
 }
@@ -111,7 +109,6 @@ func (t *TCPListener) Stop() {
 		return
 	}
 
-	close(t.stopped)
 	t.listener.Close()
 	t.listener = nil
 
@@ -156,8 +153,6 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 		err   error
 	)
 
-	timeOut := time.NewTimer(time.Second)
-
 	for {
 		conn.SetDeadline(time.Now().Add(t.deadline))
 		err = binary.Read(conn, binary.LittleEndian, &n)
@@ -194,16 +189,6 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 		t.batcher.BatchAddCounter(t.metricProto+".receivedByteCount", uint64(n+4))
 		t.batcher.BatchAddCounter("listeners.totalReceivedByteCount", uint64(n+4))
 
-		select {
-		case t.envelopeChan <- envelope:
-		case <-t.stopped:
-			return
-		case <-timeOut.C:
-			t.batcher.BatchCounter("listeners.shedEnvelopes").
-				SetTag("protocol", strings.ToLower(t.protocol)).
-				SetTag("event_type", envelope.EventType.String()).
-				Increment()
-		}
-		timeOut.Reset(time.Second)
+		t.envelopesBuffer.Set(envelope)
 	}
 }

@@ -15,7 +15,11 @@ import (
 type IngestorManager struct {
 	sender MessageSender
 }
-type MessageSender chan *events.Envelope
+
+type MessageSender interface {
+	Set(*events.Envelope)
+}
+
 type IngestorGRPCServer interface {
 	plumbing.DopplerIngestor_PusherServer
 }
@@ -41,7 +45,7 @@ func (i *IngestorManager) Pusher(pusher plumbing.DopplerIngestor_PusherServer) e
 			break
 		}
 		if err != nil {
-			time.Sleep(1 * time.Nanosecond)
+			time.Sleep(10 * time.Millisecond)
 			continue
 		}
 		env := &events.Envelope{}
@@ -50,7 +54,7 @@ func (i *IngestorManager) Pusher(pusher plumbing.DopplerIngestor_PusherServer) e
 			log.Printf("Received bad envelope: %s", err)
 			continue
 		}
-		i.sender <- env
+		i.sender.Set(env)
 	}
 	return nil
 }

@@ -1,6 +1,7 @@
 package listeners
 
 import (
+	"diodes"
 	"doppler/config"
 	"doppler/grpcmanager"
 	"doppler/sinkserver/sinkmanager"
@@ -8,8 +9,6 @@ import (
 	"log"
 	"net"
 	"plumbing"
-
-	"github.com/cloudfoundry/sonde-go/events"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -24,7 +23,7 @@ func NewGRPCListener(
 	router *grpcmanager.Router,
 	sinkmanager *sinkmanager.SinkManager,
 	conf config.GRPC,
-	envelopeChan chan *events.Envelope,
+	envelopeBuffer *diodes.ManyToOneEnvelope,
 ) (*GRPCListener, error) {
 	grpcManager := grpcmanager.New(router, sinkmanager)
 
@@ -47,7 +46,7 @@ func NewGRPCListener(
 		return nil, err
 	}
 	grpcServer := grpc.NewServer(grpc.Creds(transportCreds))
-	grpcIngestorManager := grpcmanager.NewIngestor(envelopeChan)
+	grpcIngestorManager := grpcmanager.NewIngestor(envelopeBuffer)
 
 	plumbing.RegisterDopplerIngestorServer(grpcServer, grpcIngestorManager)
 	plumbing.RegisterDopplerServer(grpcServer, grpcManager)

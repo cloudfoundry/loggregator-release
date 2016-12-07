@@ -1,7 +1,9 @@
 package main
 
 import (
+	"diodes"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -36,6 +38,7 @@ type Doppler struct {
 	appStoreWatcher *store.AppServiceStoreWatcher
 
 	errChan         chan error
+	envelopeBuffer  *diodes.ManyToOneEnvelope
 	udpListener     *listeners.UDPListener
 	tcpListener     *listeners.TCPListener
 	tlsListener     *listeners.TCPListener
@@ -47,7 +50,6 @@ type Doppler struct {
 	dropsondeUnmarshallerCollection *dropsonde_unmarshaller.DropsondeUnmarshallerCollection
 	dropsondeBytesChan              <-chan []byte
 	dropsondeVerifiedBytesChan      chan []byte
-	envelopeChan                    chan *events.Envelope
 	signatureVerifier               *signature.Verifier
 
 	storeAdapter storeadapter.StoreAdapter
@@ -82,8 +84,6 @@ func New(
 
 	doppler.batcher = initializeMetrics(conf.MetricBatchIntervalMilliseconds)
 
-	doppler.envelopeChan = make(chan *events.Envelope)
-
 	doppler.udpListener, doppler.dropsondeBytesChan = listeners.NewUDPListener(
 		fmt.Sprintf("%s:%d", host, conf.IncomingUDPPort),
 		doppler.batcher,
@@ -91,12 +91,14 @@ func New(
 		"udpListener",
 	)
 
+	doppler.envelopeBuffer = diodes.NewManyToOneEnvelope(1000, doppler)
+
 	var err error
 	if conf.EnableTLSTransport {
 		tlsConfig := &conf.TLSListenerConfig
 		addr := fmt.Sprintf("%s:%d", host, tlsConfig.Port)
 		contextName := "tlsListener"
-		doppler.tlsListener, err = listeners.NewTCPListener(contextName, addr, tlsConfig, doppler.envelopeChan, doppler.batcher, TCPTimeout, logger)
+		doppler.tlsListener, err = listeners.NewTCPListener(contextName, addr, tlsConfig, doppler.envelopeBuffer, doppler.batcher, TCPTimeout, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -104,7 +106,7 @@ func New(
 
 	addr := fmt.Sprintf("%s:%d", host, conf.IncomingTCPPort)
 	contextName := "tcpListener"
-	doppler.tcpListener, err = listeners.NewTCPListener(contextName, addr, nil, doppler.envelopeChan, doppler.batcher, TCPTimeout, logger)
+	doppler.tcpListener, err = listeners.NewTCPListener(contextName, addr, nil, doppler.envelopeBuffer, doppler.batcher, TCPTimeout, logger)
 
 	doppler.signatureVerifier = signature.NewVerifier(logger, conf.SharedSecret)
 
@@ -128,7 +130,7 @@ func New(
 	)
 
 	grpcRouter := grpcmanager.NewRouter()
-	doppler.grpcListener, err = listeners.NewGRPCListener(grpcRouter, doppler.sinkManager, conf.GRPC, doppler.envelopeChan)
+	doppler.grpcListener, err = listeners.NewGRPCListener(grpcRouter, doppler.sinkManager, conf.GRPC, doppler.envelopeBuffer)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +161,7 @@ func New(
 func (doppler *Doppler) Start() {
 	doppler.errChan = make(chan error)
 
-	doppler.wg.Add(8 + doppler.dropsondeUnmarshallerCollection.Size())
+	doppler.wg.Add(7 + doppler.dropsondeUnmarshallerCollection.Size())
 
 	go func() {
 		defer doppler.wg.Done()
@@ -198,7 +200,7 @@ func (doppler *Doppler) Start() {
 				SetTag("protocol", "udp").
 				SetTag("event_type", env.GetEventType().String()).
 				Increment()
-			doppler.envelopeChan <- env
+			doppler.envelopeBuffer.Set(env)
 		}
 	}()
 
@@ -216,11 +218,8 @@ func (doppler *Doppler) Start() {
 	}()
 
 	go func() {
-		defer func() {
-			doppler.wg.Done()
-			close(doppler.envelopeChan)
-		}()
-		doppler.messageRouter.Start(doppler.envelopeChan)
+		defer doppler.wg.Done()
+		doppler.messageRouter.Start(doppler.envelopeBuffer)
 	}()
 
 	go func() {
@@ -242,7 +241,6 @@ func (doppler *Doppler) Stop() {
 	go doppler.tcpListener.Stop()
 	go doppler.tlsListener.Stop()
 	go doppler.sinkManager.Stop()
-	go doppler.messageRouter.Stop()
 	go doppler.websocketServer.Stop()
 	doppler.appStoreWatcher.Stop()
 	doppler.wg.Wait()
@@ -251,6 +249,11 @@ func (doppler *Doppler) Stop() {
 	close(doppler.errChan)
 	doppler.uptimeMonitor.Stop()
 	doppler.openFileMonitor.Stop()
+}
+
+func (doppler *Doppler) Alert(missed int) {
+	log.Printf("Shed %d envelopes", missed)
+	doppler.batcher.BatchCounter("doppler.shedEnvelopes").Add(uint64(missed))
 }
 
 func initializeMetrics(batchIntervalMilliseconds uint) *metricbatcher.MetricBatcher {
