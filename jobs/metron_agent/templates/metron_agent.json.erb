@@ -52,6 +52,9 @@
         a[:TCPBatchSizeBytes] = p("metron_agent.tcp.batching_buffer_bytes")
         a[:TCPBatchIntervalMilliseconds] = p("metron_agent.tcp.batching_buffer_flush_interval_milliseconds")
         a[:PPROFPort] = p("metron_agent.pprof_port")
+        a[:GRPC] = tlsConfig.merge(
+            :Port => p("doppler.grpc_port")
+        )
         if useTLS
             a[:TLSConfig] = tlsConfig
         end
