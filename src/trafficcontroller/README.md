@@ -32,14 +32,14 @@ trafficcontoller [--logFile <path to log file>] [--config <path to config file>]
 | ```--disableAccessControl``` | No, default: ```false```     | All clients' access to app logs                 |
 
 ## Editing Manifest Templates
-The up-to-date Traffic-Controller configuration can be found [in the Traffic-Controller spec file](../../jobs/loggregator_trafficcontroller/spec). You can see a list of available configurable properties, their defaults and descriptions in that file. 
+The up-to-date Traffic-Controller configuration can be found [in the Traffic-Controller spec file](../../jobs/loggregator_trafficcontroller/spec). You can see a list of available configurable properties, their defaults and descriptions in that file.
 
 ## Endpoints
 Traffic Controller exposes a few endpoints from which clients like [NOAA](https://github.com/cloudfoundry/noaa) use to obtain logs and metrics.
 
 | Endpoint                      | Description                                                    |
 |-------------------------------|----------------------------------------------------------------|
-|`/apps/APP_ID/stream`          | Opens a websocket connection that streams the specified application logs, container metrics associated with that app, and HttpStartStop events for that app.|
+|`/apps/APP_ID/stream`          | Opens a websocket connection that streams metrics and logs for the specified app ID. The types of available metrics are specified by [this function](https://github.com/cloudfoundry/dropsonde/blob/master/envelope_extensions/envelope_extensions.go#L12). Any metric or log that has an app ID will be sent.|
 |`/apps/APP_ID/recentlogs`      | Returns an HTTP response with the most recent logs for the specified application. The number of logs returned can be configured via the Doppler property `doppler.maxRetainedLogMessages`.|
 |`/apps/APP_ID/containermetrics`| Returns an HTTP response with the latest container metrics for the specified application. |
 |`/firehose/SUBSCRIPTION_ID`    | Opens a websocket connection that streams the firehose. Connections with the same subscription id will get an equal portion of the firehose data.|
