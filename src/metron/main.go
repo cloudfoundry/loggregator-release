@@ -134,7 +134,7 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 	}
 
 	pool := clientpool.New(connManagers...)
-	grpcWrapper := dopplerforwarder.NewGRPCWrapper(pool, []byte(conf.SharedSecret))
+	grpcWrapper := dopplerforwarder.NewGRPCWrapper(pool)
 
 	legacyPool := legacyclientpool.New(dopplerFinder)
 	udpWrapper := dopplerforwarder.NewUDPWrapper(legacyPool, []byte(conf.SharedSecret))

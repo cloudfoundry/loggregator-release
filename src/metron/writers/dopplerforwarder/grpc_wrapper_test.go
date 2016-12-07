@@ -11,24 +11,21 @@ import (
 
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )
 
 var _ = Describe("GRPCWrapper", func() {
 	var (
-		envelope     *events.Envelope
-		grpcWrapper  *dopplerforwarder.GRPCWrapper
-		message      []byte
-		sharedSecret []byte
+		envelope    *events.Envelope
+		grpcWrapper *dopplerforwarder.GRPCWrapper
+		message     []byte
 
 		mockBatcher *mockMetricBatcher
 		mockConn    *mockConn
 	)
 
 	BeforeEach(func() {
-		sharedSecret = []byte("secret")
 		mockBatcher = newMockMetricBatcher()
 		metrics.Initialize(nil, mockBatcher)
 
@@ -39,7 +36,7 @@ var _ = Describe("GRPCWrapper", func() {
 			EventType:  events.Envelope_LogMessage.Enum(),
 			LogMessage: factories.NewLogMessage(events.LogMessage_OUT, "message", "appid", "sourceType"),
 		}
-		grpcWrapper = dopplerforwarder.NewGRPCWrapper(mockConn, sharedSecret)
+		grpcWrapper = dopplerforwarder.NewGRPCWrapper(mockConn)
 
 		var err error
 		message, err = proto.Marshal(envelope)
@@ -95,17 +92,6 @@ var _ = Describe("GRPCWrapper", func() {
 		Eventually(mockBatcher.BatchIncrementCounterInput).Should(BeCalled(
 			With("grpc.sendErrorCount"),
 		))
-	})
-
-	It("signs and writes a message", func() {
-		signedMessage := signature.SignMessage(message, sharedSecret)
-
-		mockConn.WriteOutput.Ret0 <- nil
-
-		grpcWrapper.Write(message)
-
-		Eventually(mockConn.WriteCalled).Should(HaveLen(1))
-		Eventually(mockConn.WriteInput.Data).Should(Receive(Equal(signedMessage)))
 	})
 
 	Context("when client write fail", func() {

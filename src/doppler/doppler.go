@@ -2,9 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"net"
-	"plumbing"
 	"sync"
 	"time"
 
@@ -14,9 +11,6 @@ import (
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 
 	"doppler/listeners"
 	"monitor"
@@ -45,6 +39,7 @@ type Doppler struct {
 	udpListener     *listeners.UDPListener
 	tcpListener     *listeners.TCPListener
 	tlsListener     *listeners.TCPListener
+	grpcListener    *listeners.GRPCListener
 	sinkManager     *sinkmanager.SinkManager
 	messageRouter   *sinkserver.MessageRouter
 	websocketServer *websocketserver.WebsocketServer
@@ -133,39 +128,10 @@ func New(
 	)
 
 	grpcRouter := grpcmanager.NewRouter()
-	grpcManager := grpcmanager.New(grpcRouter, doppler.sinkManager)
-
-	tlsConfig, err := plumbing.NewMutualTLSConfig(
-		conf.GRPC.CertFile,
-		conf.GRPC.KeyFile,
-		conf.GRPC.CAFile,
-		"doppler",
-	)
+	doppler.grpcListener, err = listeners.NewGRPCListener(grpcRouter, doppler.sinkManager, conf.GRPC, doppler.envelopeChan)
 	if err != nil {
 		return nil, err
 	}
-	transportCreds := credentials.NewTLS(tlsConfig)
-
-	doppler.Infof("Listening for GRPC connections on %d", conf.GRPC.Port)
-	grpcListener, err := net.Listen("tcp", fmt.Sprintf(":%d", conf.GRPC.Port))
-
-	if err != nil {
-		log.Printf("Failed to start listener (port=%d) for gRPC: %s", conf.GRPC.Port, err)
-		return nil, err
-	}
-
-	grpcServer := grpc.NewServer(grpc.Creds(transportCreds))
-	grpcIngestorManager := grpcmanager.NewIngestor(doppler.envelopeChan)
-
-	plumbing.RegisterDopplerIngestorServer(grpcServer, grpcIngestorManager)
-	plumbing.RegisterDopplerServer(grpcServer, grpcManager)
-
-	go func() {
-		log.Printf("Starting gRPC server on %s", grpcListener.Addr().String())
-		if err := grpcServer.Serve(grpcListener); err != nil {
-			log.Fatalf("Failed to start gRPC server: %s", err)
-		}
-	}()
 
 	doppler.messageRouter = sinkserver.NewMessageRouter(logger, doppler.sinkManager, grpcRouter)
 
@@ -193,7 +159,12 @@ func New(
 func (doppler *Doppler) Start() {
 	doppler.errChan = make(chan error)
 
-	doppler.wg.Add(7 + doppler.dropsondeUnmarshallerCollection.Size())
+	doppler.wg.Add(8 + doppler.dropsondeUnmarshallerCollection.Size())
+
+	go func() {
+		defer doppler.wg.Done()
+		doppler.grpcListener.Start()
+	}()
 
 	go func() {
 		defer doppler.wg.Done()
@@ -211,8 +182,8 @@ func (doppler *Doppler) Start() {
 	}()
 
 	if doppler.tlsListener != nil {
+		doppler.wg.Add(1)
 		go func() {
-			doppler.wg.Add(1)
 			defer doppler.wg.Done()
 			doppler.tlsListener.Start()
 		}()

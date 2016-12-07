@@ -3,7 +3,6 @@ package dopplerforwarder
 import (
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/dropsonde/signature"
 )
 
 type Conn interface {
@@ -11,21 +10,17 @@ type Conn interface {
 }
 
 type GRPCWrapper struct {
-	conn         Conn
-	sharedSecret []byte
+	conn Conn
 }
 
-func NewGRPCWrapper(conn Conn, sharedSecret []byte) *GRPCWrapper {
+func NewGRPCWrapper(conn Conn) *GRPCWrapper {
 	return &GRPCWrapper{
-		conn:         conn,
-		sharedSecret: sharedSecret,
+		conn: conn,
 	}
 }
 
 func (u *GRPCWrapper) Write(message []byte, chainers ...metricbatcher.BatchCounterChainer) error {
-	signedMessage := signature.SignMessage(message, u.sharedSecret)
-
-	err := u.conn.Write(signedMessage)
+	err := u.conn.Write(message)
 	if err != nil {
 		metrics.BatchIncrementCounter("grpc.sendErrorCount")
 		return err

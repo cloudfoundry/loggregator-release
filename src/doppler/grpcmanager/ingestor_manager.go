@@ -3,6 +3,7 @@ package grpcmanager
 import (
 	"context"
 	"io"
+	"log"
 	"plumbing"
 	"sync/atomic"
 	"time"
@@ -46,6 +47,7 @@ func (i *IngestorManager) Pusher(pusher plumbing.DopplerIngestor_PusherServer) e
 		env := &events.Envelope{}
 		err = proto.Unmarshal(envelopeData.Payload, env)
 		if err != nil {
+			log.Printf("Received bad envelope: %s", err)
 			continue
 		}
 		i.sender <- env

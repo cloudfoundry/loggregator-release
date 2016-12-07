@@ -6,6 +6,7 @@ import (
 	"integration_tests"
 	"metron/testutil"
 	"net"
+	"plumbing"
 	"strconv"
 	"strings"
 	"sync"
@@ -77,7 +78,7 @@ var _ = Describe("Metron", func() {
 		})
 
 		It("writes to the doppler via gRPC", func() {
-			envelope := &events.Envelope{
+			emitEnvelope := &events.Envelope{
 				Origin:    proto.String("some-origin"),
 				EventType: events.Envelope_Error.Enum(),
 				Error: &events.Error{
@@ -88,10 +89,19 @@ var _ = Describe("Metron", func() {
 			}
 
 			f := func() int {
-				eventEmitter.Emit(envelope)
+				eventEmitter.Emit(emitEnvelope)
 				return len(dopplerServer.PusherCalled)
 			}
 			Eventually(f, 5).Should(BeNumerically(">", 0))
+
+			var rx plumbing.DopplerIngestor_PusherServer
+			Expect(dopplerServer.PusherInput.Arg0).Should(Receive(&rx))
+
+			data, err := rx.Recv()
+			Expect(err).ToNot(HaveOccurred())
+
+			envelope := new(events.Envelope)
+			Expect(envelope.Unmarshal(data.Payload)).To(Succeed())
 		})
 	})
 
