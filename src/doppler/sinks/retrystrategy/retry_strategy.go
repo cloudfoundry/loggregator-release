@@ -23,3 +23,13 @@ func Exponential() RetryStrategy {
 	}
 	return exponential
 }
+
+func CappedDouble(start, cap time.Duration) RetryStrategy {
+	return func(counter int) time.Duration {
+		delay := start * time.Duration(math.Pow(2, float64(counter)))
+		if delay > cap {
+			return cap
+		}
+		return delay
+	}
+}

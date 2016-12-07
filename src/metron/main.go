@@ -114,7 +114,7 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 		return nil, err
 	}
 
-	backoffStrategy := retrystrategy.Exponential()
+	backoffStrategy := retrystrategy.CappedDouble(time.Second, time.Minute)
 	err = backoff.Connect(adapter, backoffStrategy, logger, connectionRetries)
 	if err != nil {
 		return nil, err
