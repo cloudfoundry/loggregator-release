@@ -8,12 +8,18 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )
 
 type IngestorManager struct {
-	sender MessageSender
+	sender  MessageSender
+	batcher Batcher
+}
+
+type Batcher interface {
+	BatchCounter(name string) metricbatcher.BatchCounterChainer
 }
 
 type MessageSender interface {
@@ -24,9 +30,10 @@ type IngestorGRPCServer interface {
 	plumbing.DopplerIngestor_PusherServer
 }
 
-func NewIngestor(sender MessageSender) *IngestorManager {
+func NewIngestor(sender MessageSender, batcher Batcher) *IngestorManager {
 	return &IngestorManager{
-		sender: sender,
+		sender:  sender,
+		batcher: batcher,
 	}
 }
 
@@ -54,6 +61,10 @@ func (i *IngestorManager) Pusher(pusher plumbing.DopplerIngestor_PusherServer) e
 			log.Printf("Received bad envelope: %s", err)
 			continue
 		}
+		i.batcher.BatchCounter("listeners.receivedEnvelopes").
+			SetTag("protocol", "grpc").
+			SetTag("event_type", env.GetEventType().String()).
+			Increment()
 		i.sender.Set(env)
 	}
 	return nil

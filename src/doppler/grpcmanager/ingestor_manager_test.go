@@ -11,6 +11,7 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/apoydence/eachers/testhelpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -45,7 +46,11 @@ var _ = Describe("IngestorManager", func() {
 	BeforeEach(func() {
 		var grpcAddr string
 		outgoingMsgs = diodes.NewManyToOneEnvelope(5, nil)
-		manager = grpcmanager.NewIngestor(outgoingMsgs)
+		mockBatcher := newMockBatcher()
+		mockChainer := newMockBatchCounterChainer()
+		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
+		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
+		manager = grpcmanager.NewIngestor(outgoingMsgs, mockBatcher)
 		server, grpcAddr = startGRPCServer(manager)
 		dopplerClient, connCloser = establishClient(grpcAddr)
 	})

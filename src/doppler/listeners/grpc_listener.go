@@ -10,6 +10,8 @@ import (
 	"net"
 	"plumbing"
 
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -24,6 +26,7 @@ func NewGRPCListener(
 	sinkmanager *sinkmanager.SinkManager,
 	conf config.GRPC,
 	envelopeBuffer *diodes.ManyToOneEnvelope,
+	batcher *metricbatcher.MetricBatcher,
 ) (*GRPCListener, error) {
 	grpcManager := grpcmanager.New(router, sinkmanager)
 
@@ -46,7 +49,7 @@ func NewGRPCListener(
 		return nil, err
 	}
 	grpcServer := grpc.NewServer(grpc.Creds(transportCreds))
-	grpcIngestorManager := grpcmanager.NewIngestor(envelopeBuffer)
+	grpcIngestorManager := grpcmanager.NewIngestor(envelopeBuffer, batcher)
 
 	plumbing.RegisterDopplerIngestorServer(grpcServer, grpcIngestorManager)
 	plumbing.RegisterDopplerServer(grpcServer, grpcManager)

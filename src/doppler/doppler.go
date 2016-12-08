@@ -130,7 +130,7 @@ func New(
 	)
 
 	grpcRouter := grpcmanager.NewRouter()
-	doppler.grpcListener, err = listeners.NewGRPCListener(grpcRouter, doppler.sinkManager, conf.GRPC, doppler.envelopeBuffer)
+	doppler.grpcListener, err = listeners.NewGRPCListener(grpcRouter, doppler.sinkManager, conf.GRPC, doppler.envelopeBuffer, doppler.batcher)
 	if err != nil {
 		return nil, err
 	}
