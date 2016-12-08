@@ -220,7 +220,6 @@ func SetupMetron(dopplerURI string, grpcPort, udpPort int) (func(), int, func())
 		DopplerAddrUDP: fmt.Sprintf("%s:%d", dopplerURI, udpPort),
 
 		GRPC: metronConfig.GRPC{
-			Port:     grpcPort,
 			CertFile: ClientCertFilePath(),
 			KeyFile:  ClientKeyFilePath(),
 			CAFile:   CAFilePath(),
@@ -228,8 +227,6 @@ func SetupMetron(dopplerURI string, grpcPort, udpPort int) (func(), int, func())
 
 		MetricBatchIntervalMilliseconds:  10,
 		RuntimeStatsIntervalMilliseconds: 10,
-		TCPBatchSizeBytes:                1024,
-		TCPBatchIntervalMilliseconds:     10,
 	}
 
 	metronCfgFile, err := ioutil.TempFile("", "metron-config")

@@ -16,9 +16,6 @@ templates:
   metron_agent.crt.erb: config/certs/metron_agent.crt
   metron_agent.key.erb: config/certs/metron_agent.key
   loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
-  etcd-client.crt.erb: config/certs/etcd-client.crt
-  etcd-client.key.erb: config/certs/etcd-client.key
-  etcd-ca.crt.erb: config/certs/etcd-ca.crt
 
 packages:
 - metron_agent_windows
@@ -56,9 +53,16 @@ properties:
   metron_agent.debug:
     description: "boolean value to turn on verbose mode"
     default: false
-  metron_agent.protocols:
-    description: "A priority list of protocols for metron to connect to doppler over.  Metron will refuse to connect to doppler over any protocol not in this list."
-    default: ["udp"]
+
+  doppler.addr:
+    description: DNS name for doppler
+
+  doppler.grpc_port:
+    description: Port for outgoing log messages via GRPC
+    default: 8082
+  doppler.udp_port:
+    description: Port for outgoing log messages via UDP
+    default: 3457
 
   loggregator.tls.ca_cert:
     description: "CA root required for key/cert verification"
@@ -75,13 +79,6 @@ properties:
   metron_agent.deployment:
     description: "Name of deployment (added as tag on all outgoing metrics)"
 
-  metron_agent.tcp.batching_buffer_bytes:
-    description: "The number of bytes which can be buffered prior to TCP writes (applies to TLS over TCP)"
-    default: 10240
-  metron_agent.tcp.batching_buffer_flush_interval_milliseconds:
-    description: "The maximum time that a message can stay in the batching buffer before being flushed"
-    default: 100
-
   metron_agent.logrotate.freq_min:
     description: "The frequency in minutes which logrotate will rotate VM logs"
     default: 5
@@ -92,35 +89,6 @@ properties:
     description: "The size at which logrotate will decide to rotate the log file"
     default: 50M
 
-  loggregator.etcd.require_ssl:
-    description: "Enable ssl for all communication with etcd"
-    default: false
-  loggregator.etcd.machines:
-    description: "IPs pointing to the ETCD cluster"
-  loggregator.etcd.maxconcurrentrequests:
-    description: "Number of concurrent requests to ETCD"
-    default: 10
-  loggregator.etcd.ca_cert:
-    description: "PEM-encoded CA certificate"
-    default: ""
-  metron_agent.etcd.client_cert:
-    description: "PEM-encoded client certificate"
-    default: ""
-  metron_agent.etcd.client_key:
-    description: "PEM-encoded client key"
-    default: ""
-
-  metron_agent.buffer_size:
-    description: "DEPRECATED"
-    default: 10000
-  metron_agent.enable_buffer:
-    description: "DEPRECATED"
-    default: false
-  metron_agent.preferred_protocol:
-    description: "DEPRECATED - replaced with metron_agent.protocols"
-    default: "udp"
-
-  metron_agent.dropsonde_incoming_port:
-    description: "DEPRECATED - replaced by metron_agent.listening_port"
-    default: 3457
-
+  metron_agent.pprof_port:
+    description: "The pprof port for runtime profiling data"
+    default: 6061

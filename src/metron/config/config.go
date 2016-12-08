@@ -13,14 +13,7 @@ const (
 	defaultBatchIntervalMS = 100
 )
 
-type TLSConfig struct {
-	CertFile string
-	KeyFile  string
-	CAFile   string
-}
-
 type GRPC struct {
-	Port     int
 	CAFile   string
 	CertFile string
 	KeyFile  string
@@ -45,15 +38,7 @@ type Config struct {
 	MetricBatchIntervalMilliseconds  uint
 	RuntimeStatsIntervalMilliseconds uint
 
-	TCPBatchSizeBytes            uint64
-	TCPBatchIntervalMilliseconds uint
-
-	TLSConfig TLSConfig
 	PPROFPort uint32
-
-	// TODO: DEPRECATED
-	LoggregatorDropsondePort int
-	PreferredProtocol        string
 }
 
 func ParseConfig(configFile string) (*Config, error) {
@@ -68,8 +53,6 @@ func ParseConfig(configFile string) (*Config, error) {
 
 func Parse(reader io.Reader) (*Config, error) {
 	config := &Config{
-		TCPBatchSizeBytes:                defaultBatchSize,
-		TCPBatchIntervalMilliseconds:     defaultBatchIntervalMS,
 		MetricBatchIntervalMilliseconds:  5000,
 		RuntimeStatsIntervalMilliseconds: 15000,
 	}

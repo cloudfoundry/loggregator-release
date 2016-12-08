@@ -1,11 +1,4 @@
 <%
-    protocols = p("metron_agent.protocols")
-    if protocols == ["udp"] and p("metron_agent.preferred_protocol") == "tls"
-      protocols = ["tls"]
-    end
-
-    useTLS = protocols.include? "tls"
-
     # try and set these properties from a BOSH 2.0 spec object
     job_name = spec.job.name
     instance_id = spec.id
@@ -37,18 +30,10 @@
         a[:Deployment] = p("metron_agent.deployment")
         a[:SharedSecret] = p("metron_endpoint.shared_secret")
         a[:IncomingUDPPort] = p("metron_agent.listening_port")
-        a[:Protocols] = protocols
-        a[:TCPBatchSizeBytes] = p("metron_agent.tcp.batching_buffer_bytes")
-        a[:TCPBatchIntervalMilliseconds] = p("metron_agent.tcp.batching_buffer_flush_interval_milliseconds")
         a[:PPROFPort] = p("metron_agent.pprof_port")
-        a[:GRPC] = tlsConfig.merge(
-            :Port => p("doppler.grpc_port") # TODO: Delete
-        )
+        a[:GRPC] = tlsConfig
         a[:DopplerAddr] = "#{p('doppler.addr')}:#{p('doppler.grpc_port')}"
         a[:DopplerAddrUDP] = "#{p('doppler.addr')}:#{p('doppler.udp_port')}"
-        if useTLS
-            a[:TLSConfig] = tlsConfig
-        end
         if_p("syslog_daemon_config") do |_|
             a[:Syslog] = "vcap.metron_agent"
         end

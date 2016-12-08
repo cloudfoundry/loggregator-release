@@ -1,11 +1,4 @@
 <%
-    protocols = p("metron_agent.protocols")
-    if protocols == ["udp"] and p("metron_agent.preferred_protocol") == "tls"
-      protocols = ["tls"]
-    end
-
-    useTLS = protocols.include? "tls"
-
     # try and set these properties from a BOSH 2.0 spec object
     job_name = spec.job.name
     instance_id = spec.id
@@ -34,12 +27,6 @@
       incoming_udp_port = port
     end
 
-    etcdMachines = p("loggregator.etcd.machines").map{|addr| "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"}
-    etcdTLSClientConfig = {
-        "KeyFile" =>"/var/vcap/jobs/metron_agent_windows/config/certs/etcd-client.key",
-        "CertFile" => "/var/vcap/jobs/metron_agent_windows/config/certs/etcd-client.crt",
-        "CAFile" => "/var/vcap/jobs/metron_agent_windows/config/certs/etcd-ca.crt"
-    }
     tlsConfig = {
         "KeyFile" => "/var/vcap/jobs/metron_agent_windows/config/certs/metron_agent.key",
         "CertFile" => "/var/vcap/jobs/metron_agent_windows/config/certs/metron_agent.crt",
@@ -51,20 +38,12 @@
         a[:Job] = job_name
         a[:Zone] = instance_zone
         a[:Deployment] = p("metron_agent.deployment")
-        a[:EtcdUrls] = etcdMachines
-        a[:EtcdMaxConcurrentRequests] = p("loggregator.etcd.maxconcurrentrequests")
-        a[:EtcdRequireTLS] = p("loggregator.etcd.require_ssl")
-        if_p("loggregator.etcd.require_ssl") do |_|
-            a[:EtcdTLSClientConfig] = etcdTLSClientConfig
-        end
         a[:SharedSecret] = p("metron_endpoint.shared_secret")
         a[:IncomingUDPPort] = incoming_udp_port
-        a[:Protocols] = protocols
-        a[:TCPBatchSizeBytes] = p("metron_agent.tcp.batching_buffer_bytes")
-        a[:TCPBatchIntervalMilliseconds] = p("metron_agent.tcp.batching_buffer_flush_interval_milliseconds")
-        if useTLS
-            a[:TLSConfig] = tlsConfig
-        end
+        a[:PPROFPort] = p("metron_agent.pprof_port")
+        a[:GRPC] = tlsConfig
+        a[:DopplerAddr] = "#{p('doppler.addr')}:#{p('doppler.grpc_port')}"
+        a[:DopplerAddrUDP] = "#{p('doppler.addr')}:#{p('doppler.udp_port')}"
         if_p("syslog_daemon_config") do |_|
             a[:Syslog] = "vcap.metron_agent"
         end
