@@ -17,11 +17,9 @@ import (
 	metronConfig "metron/config"
 	trafficcontrollerConfig "trafficcontroller/config"
 
-	"code.cloudfoundry.org/localip"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -33,15 +31,21 @@ const (
 
 	portRangeStart       = 55000
 	portRangeCoefficient = 100
-	etcdPortOffset       = iota
+)
+
+const (
+	etcdPortOffset = iota
 	etcdPeerPortOffset
 	dopplerUDPPortOffset
 	dopplerTCPPortOffset
 	dopplerTLSPortOffset
 	dopplerWSPortOffset
 	dopplerGRPCPortOffset
+	dopplerPPROFPortOffset
 	metronPortOffset
-	trafficcontrollerPortOffset
+	metronPPROFPortOffset
+	tcPortOffset
+	tcPPROFPortOffset
 )
 
 const (
@@ -109,7 +113,7 @@ func SetupEtcd() (func(), string) {
 }
 
 func SetupDoppler(etcdClientURL string, metronPort int) (cleanup func(), wsPort, grpcPort int) {
-	By("making sure doppler was build")
+	By("making sure doppler was built")
 	dopplerPath := os.Getenv("DOPPLER_BUILD_PATH")
 	Expect(dopplerPath).ToNot(BeEmpty())
 
@@ -135,6 +139,7 @@ func SetupDoppler(etcdClientURL string, metronPort int) (cleanup func(), wsPort,
 			KeyFile:  ServerKeyFilePath(),
 			CAFile:   CAFilePath(),
 		},
+		PPROFPort: uint32(getPort(dopplerPPROFPortOffset)),
 
 		EtcdUrls:                  []string{etcdClientURL},
 		EtcdMaxConcurrentRequests: 10,
@@ -178,17 +183,15 @@ func SetupDoppler(etcdClientURL string, metronPort int) (cleanup func(), wsPort,
 	)
 	Expect(err).ToNot(HaveOccurred())
 
-	// a terrible hack
-	Eventually(dopplerSession.Buffer).Should(gbytes.Say("doppler server started"))
-
 	By("waiting for doppler to listen")
-	Eventually(func() error {
-		c, reqErr := net.Dial("tcp", fmt.Sprintf(":%d", dopplerWSPort))
-		if reqErr == nil {
-			c.Close()
+	Eventually(func() bool {
+		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", dopplerConf.PPROFPort))
+		if err != nil {
+			return false
 		}
-		return reqErr
-	}, 3).Should(Succeed())
+		conn.Close()
+		return true
+	}).Should(BeTrue())
 
 	return func() {
 		os.Remove(dopplerCfgFile.Name())
@@ -210,6 +213,7 @@ func SetupMetron(etcdClientURL string, grpcPort int) (func(), int, func()) {
 		SharedSecret: sharedSecret,
 
 		IncomingUDPPort: metronPort,
+		PPROFPort:       uint32(getPort(metronPPROFPortOffset)),
 		Deployment:      "deployment",
 
 		EtcdUrls:                  []string{etcdClientURL},
@@ -243,16 +247,15 @@ func SetupMetron(etcdClientURL string, grpcPort int) (func(), int, func()) {
 	)
 	Expect(err).ToNot(HaveOccurred())
 
-	Eventually(metronSession.Buffer).Should(gbytes.Say("metron started"))
-
 	By("waiting for metron to listen")
-	Eventually(func() error {
-		c, reqErr := net.Dial("udp4", fmt.Sprintf(":%d", metronPort))
-		if reqErr == nil {
-			c.Close()
+	Eventually(func() bool {
+		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", metronConf.PPROFPort))
+		if err != nil {
+			return false
 		}
-		return reqErr
-	}, 3).Should(Succeed())
+		conn.Close()
+		return true
+	}).Should(BeTrue())
 
 	return func() {
 			os.Remove(metronCfgFile.Name())
@@ -271,7 +274,7 @@ func SetupTrafficcontroller(etcdClientURL string, dopplerWSPort, dopplerGRPCPort
 	Expect(tcPath).ToNot(BeEmpty())
 
 	By("starting trafficcontroller")
-	tcPort := getPort(trafficcontrollerPortOffset)
+	tcPort := getPort(tcPortOffset)
 	tcConfig := trafficcontrollerConfig.Config{
 		Index:   jobIndex,
 		JobName: jobName,
@@ -284,6 +287,7 @@ func SetupTrafficcontroller(etcdClientURL string, dopplerWSPort, dopplerGRPCPort
 			CAFile:   CAFilePath(),
 		},
 		OutgoingDropsondePort: uint32(tcPort),
+		PPROFPort:             uint32(getPort(tcPPROFPortOffset)),
 		MetronHost:            "localhost",
 		MetronPort:            metronPort,
 
@@ -316,16 +320,14 @@ func SetupTrafficcontroller(etcdClientURL string, dopplerWSPort, dopplerGRPCPort
 	Expect(err).ToNot(HaveOccurred())
 
 	By("waiting for trafficcontroller to listen")
-	ip, err := localip.LocalIP()
-	Expect(err).ToNot(HaveOccurred())
-	Eventually(func() error {
-		url := fmt.Sprintf("http://%s:%d", ip, tcPort)
-		resp, err := http.Get(url)
-		if err == nil {
-			resp.Body.Close()
+	Eventually(func() bool {
+		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", tcConfig.PPROFPort))
+		if err != nil {
+			return false
 		}
-		return err
-	}, 3).Should(Succeed())
+		conn.Close()
+		return true
+	}).Should(BeTrue())
 
 	return func() {
 		os.Remove(tcCfgFile.Name())

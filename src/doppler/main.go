@@ -74,9 +74,6 @@ func main() {
 
 	log := logger.NewLogger(*logLevel, *logFilePath, "doppler", conf.Syslog)
 
-	p := profiler.New(conf.PPROFPort, log)
-	go p.Start()
-
 	log.Info("Startup: Setting up the doppler server")
 	dropsonde.Initialize(conf.MetronAddress, DOPPLER_ORIGIN)
 	storeAdapter := NewStoreAdapter(conf)
@@ -95,6 +92,11 @@ func main() {
 
 	releaseNodeChan := dopplerservice.Announce(localIp, config.HeartbeatInterval, conf, storeAdapter, log)
 	legacyReleaseNodeChan := dopplerservice.AnnounceLegacy(localIp, config.HeartbeatInterval, conf, storeAdapter, log)
+
+	// We start the profiler last so that we can difinitively say that we're ready for
+	// connections by the time we're listening on PPROFPort.
+	p := profiler.New(conf.PPROFPort, log)
+	go p.Start()
 
 	for {
 		select {

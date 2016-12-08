@@ -72,9 +72,6 @@ func main() {
 	log := logger.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller", conf.Syslog)
 	log.Info("Startup: Setting up the loggregator traffic controller")
 
-	p := profiler.New(conf.PPROFPort, log)
-	go p.Start()
-
 	batcher, err := initializeMetrics("LoggregatorTrafficController", net.JoinHostPort(conf.MetronHost, strconv.Itoa(conf.MetronPort)))
 	if err != nil {
 		log.Errorf("Error initializing dropsonde: %s", err)
@@ -139,6 +136,11 @@ func main() {
 
 	killChan := signalmanager.RegisterKillSignalChannel()
 	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
+
+	// We start the profiler last so that we can definitively claim that we're ready for
+	// connections by the time we're listening on the PPROFPort.
+	p := profiler.New(conf.PPROFPort, log)
+	go p.Start()
 
 	for {
 		select {

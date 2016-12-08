@@ -59,9 +59,6 @@ func main() {
 
 	logger := logger.NewLogger(*debug, *logFilePath, "metron", config.Syslog)
 
-	p := profiler.New(config.PPROFPort, logger)
-	go p.Start()
-
 	statsStopChan := make(chan struct{})
 	batcher, eventWriter := initializeMetrics(config, statsStopChan, logger)
 
@@ -87,6 +84,11 @@ func main() {
 
 	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
 	killChan := signalmanager.RegisterKillSignalChannel()
+
+	// We start the profiler last so that we can definitively say that we're all connected and ready
+	// for data by the time the profiler starts up.
+	p := profiler.New(config.PPROFPort, logger)
+	go p.Start()
 
 	for {
 		select {
