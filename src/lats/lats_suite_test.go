@@ -45,6 +45,7 @@ func createLogMessage(appID string) *events.Envelope {
 			Timestamp:   proto.Int64(time.Now().UnixNano()),
 			AppId:       proto.String(appID),
 		},
+		Tags: map[string]string{"UniqueName": fmt.Sprintf("LATs-%d", time.Now().UnixNano())},
 	}
 }
 
@@ -58,6 +59,7 @@ func createCounterEvent() *events.Envelope {
 			Delta: proto.Uint64(5),
 			Total: proto.Uint64(5),
 		},
+		Tags: map[string]string{"UniqueName": fmt.Sprintf("LATs-%d", time.Now().UnixNano())},
 	}
 }
 
@@ -71,6 +73,7 @@ func createValueMetric() *events.Envelope {
 			Value: proto.Float64(10),
 			Unit:  proto.String("test-unit"),
 		},
+		Tags: map[string]string{"UniqueName": fmt.Sprintf("LATs-%d", time.Now().UnixNano())},
 	}
 }
 
@@ -86,5 +89,6 @@ func createContainerMetric(appId string) *events.Envelope {
 			MemoryBytes:   proto.Uint64(10),
 			DiskBytes:     proto.Uint64(20),
 		},
+		Tags: map[string]string{"UniqueName": fmt.Sprintf("LATs-%d", time.Now().UnixNano())},
 	}
 }

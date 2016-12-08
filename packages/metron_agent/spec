@@ -7,7 +7,6 @@ files:
 - loggregator/src/metron/NOTICE
 - loggregator/src/metron/syslog_daemon_config/*
 - loggregator/src/code.cloudfoundry.org/localip/*.go # gosub
-- loggregator/src/code.cloudfoundry.org/workpool/*.go # gosub
 - loggregator/src/doppler/config/*.go # gosub
 - loggregator/src/doppler/dopplerservice/*.go # gosub
 - loggregator/src/doppler/iprange/*.go # gosub
@@ -24,13 +23,10 @@ files:
 - loggregator/src/github.com/cloudfoundry/gosteno/syslog/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/sonde-go/events/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/storeadapter/etcdstoreadapter/*.go # gosub
-- loggregator/src/github.com/coreos/go-etcd/etcd/*.go # gosub
 - loggregator/src/github.com/gogo/protobuf/gogoproto/*.go # gosub
 - loggregator/src/github.com/gogo/protobuf/proto/*.go # gosub
 - loggregator/src/github.com/gogo/protobuf/protoc-gen-gogo/descriptor/*.go # gosub
 - loggregator/src/github.com/golang/protobuf/proto/*.go # gosub
-- loggregator/src/github.com/nu7hatch/gouuid/*.go # gosub
 - loggregator/src/github.com/onsi/ginkgo/*.go # gosub
 - loggregator/src/github.com/onsi/ginkgo/config/*.go # gosub
 - loggregator/src/github.com/onsi/ginkgo/internal/codelocation/*.go # gosub
@@ -60,7 +56,6 @@ files:
 - loggregator/src/github.com/onsi/gomega/matchers/support/goraph/node/*.go # gosub
 - loggregator/src/github.com/onsi/gomega/matchers/support/goraph/util/*.go # gosub
 - loggregator/src/github.com/onsi/gomega/types/*.go # gosub
-- loggregator/src/github.com/ugorji/go/codec/*.go # gosub
 - loggregator/src/golang.org/x/net/context/*.go # gosub
 - loggregator/src/golang.org/x/net/http2/*.go # gosub
 - loggregator/src/golang.org/x/net/http2/hpack/*.go # gosub

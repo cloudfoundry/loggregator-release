@@ -33,6 +33,24 @@ instance_groups:
         disable_access_control: "((tc_disable_access_control))"
       etcd:
         machines: "((etcd_machines))"
+  - name: consul_agent
+    release: consul
+    properties:
+      consul:
+        agent:
+          mode: client
+          domain: cf.internal
+          servers: *3
+          services:
+            etcd:
+              name: etcd
+        require_ssl: "((consul_require_ssl))"
+        encrypt_keys: "((consul_encrypt_keys))"
+        agent_cert: "((consul_agent_cert))"
+        agent_key: "((consul_agent_agent_key))"
+        ca_cert: "((consul_agent_ca_cert))"
+        server_cert: "((consul_agent_server_cert))"
+        server_key: "((consul_agent_server_key))"
   - name: metron_agent
     release: loggregator
     properties: *2
@@ -67,6 +85,8 @@ instance_groups:
   - name: metron_agent
     release: loggregator
     properties: &2
+      doppler:
+        addr: doppler.service.cf.internal
       metron_agent:
         protocols:
         - udp

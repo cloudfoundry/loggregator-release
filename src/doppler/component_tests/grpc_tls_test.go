@@ -18,14 +18,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// have fake metron that sends only on grpc tls
-// ?? maybe need fake etcd if it fails
-// connect to grpc stream endpoints and get data out
-
 func setupDopplerEnv() (string, func()) {
 	etcdCleanup, etcdURI := integration_tests.SetupEtcd()
 
-	// todo: get random port from kernel....
+	// TODO: get random port from kernel....
 	udpAddr, err := net.ResolveUDPAddr("udp", ":12345")
 	Expect(err).ToNot(HaveOccurred())
 

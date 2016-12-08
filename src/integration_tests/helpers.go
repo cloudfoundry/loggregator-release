@@ -199,7 +199,7 @@ func SetupDoppler(etcdClientURL string, metronPort int) (cleanup func(), wsPort,
 	}, dopplerWSPort, dopplerGRPCPort
 }
 
-func SetupMetron(etcdClientURL string, grpcPort int) (func(), int, func()) {
+func SetupMetron(dopplerURI string, grpcPort, udpPort int) (func(), int, func()) {
 	By("making sure metron was build")
 	metronPath := os.Getenv("METRON_BUILD_PATH")
 	Expect(metronPath).ToNot(BeEmpty())
@@ -216,8 +216,8 @@ func SetupMetron(etcdClientURL string, grpcPort int) (func(), int, func()) {
 		PPROFPort:       uint32(getPort(metronPPROFPortOffset)),
 		Deployment:      "deployment",
 
-		EtcdUrls:                  []string{etcdClientURL},
-		EtcdMaxConcurrentRequests: 1,
+		DopplerAddr:    fmt.Sprintf("%s:%d", dopplerURI, grpcPort),
+		DopplerAddrUDP: fmt.Sprintf("%s:%d", dopplerURI, udpPort),
 
 		GRPC: metronConfig.GRPC{
 			Port:     grpcPort,
@@ -261,7 +261,6 @@ func SetupMetron(etcdClientURL string, grpcPort int) (func(), int, func()) {
 			os.Remove(metronCfgFile.Name())
 			metronSession.Kill().Wait()
 		}, metronPort, func() {
-			// TODO
 			// TODO When we switch to gRPC we should wait until
 			// we can connect to it
 			time.Sleep(10 * time.Second)

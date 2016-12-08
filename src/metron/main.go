@@ -3,22 +3,17 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"plumbing"
 	"profiler"
 	"runtime"
 	"time"
 
-	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/dropsonde/metric_sender"
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/dropsonde/runtime_stats"
 	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/storeadapter"
-	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 
-	"metron/backoff"
 	"metron/clientpool"
 	"metron/config"
 	"metron/eventwriter"
@@ -29,9 +24,6 @@ import (
 	"metron/writers/eventunmarshaller"
 	"metron/writers/messageaggregator"
 	"metron/writers/tagger"
-
-	"doppler/dopplerservice"
-	"doppler/sinks/retrystrategy"
 
 	"logger"
 	"signalmanager"
@@ -103,23 +95,6 @@ func main() {
 }
 
 func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBatcher, logger *gosteno.Logger) (*eventmarshaller.EventMarshaller, error) {
-	adapter, err := storeAdapterProvider(conf)
-	if err != nil {
-		return nil, err
-	}
-
-	backoffStrategy := retrystrategy.CappedDouble(time.Second, time.Minute)
-	err = backoff.Connect(adapter, backoffStrategy, logger, connectionRetries)
-	if err != nil {
-		return nil, err
-	}
-
-	finder := dopplerservice.NewFinder(adapter, conf.LoggregatorDropsondePort, conf.GRPC.Port, []string{"ws", "udp"}, conf.Zone, logger)
-	finder.Start()
-
-	log.Println("Initializing Doppler connection managers")
-	dopplerFinder := clientpool.NewDopplerFinder(finder)
-
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
 		conf.GRPC.CertFile,
 		conf.GRPC.KeyFile,
@@ -132,13 +107,14 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 
 	var connManagers []clientpool.Conn
 	for i := 0; i < 5; i++ {
-		connManagers = append(connManagers, clientpool.NewConnManager(tlsConfig, 10000, dopplerFinder))
+		connManagers = append(connManagers, clientpool.NewConnManager(conf.DopplerAddr, tlsConfig, 10000))
 	}
 
 	pool := clientpool.New(connManagers...)
 	grpcWrapper := dopplerforwarder.NewGRPCWrapper(pool)
 
-	legacyPool := legacyclientpool.New(dopplerFinder)
+	// TODO: delete this legacy pool stuff when UDP goes away
+	legacyPool := legacyclientpool.New(conf.DopplerAddrUDP, 100)
 	udpWrapper := dopplerforwarder.NewUDPWrapper(legacyPool, []byte(conf.SharedSecret))
 
 	combinedPool := legacyclientpool.NewCombinedPool(grpcWrapper, udpWrapper)
@@ -158,27 +134,4 @@ func initializeMetrics(config *config.Config, stopChan chan struct{}, logger *go
 	stats := runtime_stats.NewRuntimeStats(eventWriter, time.Duration(config.RuntimeStatsIntervalMilliseconds)*time.Millisecond)
 	go stats.Run(stopChan)
 	return metricBatcher, eventWriter
-}
-
-func storeAdapterProvider(conf *config.Config) (storeadapter.StoreAdapter, error) {
-	workPool, err := workpool.NewWorkPool(conf.EtcdMaxConcurrentRequests)
-	if err != nil {
-		return nil, err
-	}
-
-	options := &etcdstoreadapter.ETCDOptions{
-		ClusterUrls: conf.EtcdUrls,
-	}
-	if conf.EtcdRequireTLS {
-		options.IsSSL = true
-		options.CertFile = conf.EtcdTLSClientConfig.CertFile
-		options.KeyFile = conf.EtcdTLSClientConfig.KeyFile
-		options.CAFile = conf.EtcdTLSClientConfig.CAFile
-	}
-	etcdAdapter, err := etcdstoreadapter.New(options, workPool)
-	if err != nil {
-		return nil, err
-	}
-
-	return etcdAdapter, nil
 }

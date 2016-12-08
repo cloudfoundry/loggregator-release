@@ -1,7 +1,6 @@
 package component_test
 
 import (
-	dopplerConfig "doppler/config"
 	"fmt"
 	"integration_tests"
 	"metron/testutil"
@@ -12,32 +11,15 @@ import (
 	"sync"
 	"time"
 
-	"code.cloudfoundry.org/workpool"
-
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/cloudfoundry/storeadapter"
-	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Metron", func() {
-	var (
-		etcdCleanup func()
-		etcdURI     string
-	)
-
-	BeforeEach(func() {
-		etcdCleanup, etcdURI = integration_tests.SetupEtcd()
-	})
-
-	AfterEach(func() {
-		etcdCleanup()
-	})
-
 	Context("when a doppler is accepting gRPC connections", func() {
 		var (
 			metronCleanup func()
@@ -52,20 +34,8 @@ var _ = Describe("Metron", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			var metronReady func()
-			metronCleanup, metronPort, metronReady = integration_tests.SetupMetron(etcdURI, dopplerServer.Port())
+			metronCleanup, metronPort, metronReady = integration_tests.SetupMetron("localhost", dopplerServer.Port(), 0)
 			defer metronReady()
-
-			storeAdapter := NewStoreAdapter(&dopplerConfig.Config{
-				EtcdMaxConcurrentRequests: 1,
-				EtcdUrls:                  []string{etcdURI},
-			})
-
-			storeAdapter.Delete("/doppler/meta/z1/doppler/0")
-			node := storeadapter.StoreNode{
-				Key:   "/doppler/meta/z1/doppler/0",
-				Value: []byte(fmt.Sprintf(`{"version":1,"endpoints":["ws://127.0.0.1:%d"]}`, dopplerServer.Port())),
-			}
-			Expect(storeAdapter.Create(node)).To(Succeed())
 
 			udpEmitter, err := emitter.NewUdpEmitter(fmt.Sprintf("127.0.0.1:%d", metronPort))
 			Expect(err).ToNot(HaveOccurred())
@@ -110,7 +80,7 @@ var _ = Describe("Metron", func() {
 			metronCleanup  func()
 			dopplerCleanup func()
 			metronPort     int
-			dopplerPort    int
+			udpPort        int
 			eventEmitter   dropsonde.EventEmitter
 			dopplerConn    *net.UDPConn
 		)
@@ -120,26 +90,14 @@ var _ = Describe("Metron", func() {
 			Expect(err).ToNot(HaveOccurred())
 			dopplerConn, err = net.ListenUDP("udp4", addr)
 			Expect(err).ToNot(HaveOccurred())
-			dopplerPort = HomeAddrToPort(dopplerConn.LocalAddr())
+			udpPort = HomeAddrToPort(dopplerConn.LocalAddr())
 			dopplerCleanup = func() {
 				dopplerConn.Close()
 			}
 
 			var metronReady func()
-			metronCleanup, metronPort, metronReady = integration_tests.SetupMetron(etcdURI, 0)
+			metronCleanup, metronPort, metronReady = integration_tests.SetupMetron("localhost", 0, udpPort)
 			defer metronReady()
-
-			storeAdapter := NewStoreAdapter(&dopplerConfig.Config{
-				EtcdMaxConcurrentRequests: 1,
-				EtcdUrls:                  []string{etcdURI},
-			})
-
-			storeAdapter.Delete("/doppler/meta/z1/doppler/0")
-			node := storeadapter.StoreNode{
-				Key:   "/doppler/meta/z1/doppler/0",
-				Value: []byte(fmt.Sprintf(`{"version":1,"endpoints":["udp://127.0.0.1:%d"]}`, dopplerPort)),
-			}
-			Expect(storeAdapter.Create(node)).To(Succeed())
 
 			udpEmitter, err := emitter.NewUdpEmitter(fmt.Sprintf("127.0.0.1:%d", metronPort))
 			Expect(err).ToNot(HaveOccurred())
@@ -192,30 +150,6 @@ var _ = Describe("Metron", func() {
 		})
 	})
 })
-
-func NewStoreAdapter(conf *dopplerConfig.Config) storeadapter.StoreAdapter {
-	workPool, err := workpool.NewWorkPool(conf.EtcdMaxConcurrentRequests)
-	if err != nil {
-		panic(err)
-	}
-	options := &etcdstoreadapter.ETCDOptions{
-		ClusterUrls: conf.EtcdUrls,
-	}
-	if conf.EtcdRequireTLS {
-		options.IsSSL = true
-		options.CertFile = conf.EtcdTLSClientConfig.CertFile
-		options.KeyFile = conf.EtcdTLSClientConfig.KeyFile
-		options.CAFile = conf.EtcdTLSClientConfig.CAFile
-	}
-	etcdStoreAdapter, err := etcdstoreadapter.New(options, workPool)
-	if err != nil {
-		panic(err)
-	}
-	if err = etcdStoreAdapter.Connect(); err != nil {
-		panic(err)
-	}
-	return etcdStoreAdapter
-}
 
 func HomeAddrToPort(addr net.Addr) int {
 	port, err := strconv.Atoi(strings.Replace(addr.String(), "127.0.0.1:", "", 1))

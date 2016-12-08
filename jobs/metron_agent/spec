@@ -62,9 +62,15 @@ properties:
     description: "A priority list of protocols for metron to connect to doppler over.  Metron will refuse to connect to doppler over any protocol not in this list."
     default: ["udp"]
 
+  doppler.addr:
+    description: DNS name for doppler
+
   doppler.grpc_port:
     description: Port for outgoing log messages via GRPC
     default: 8082
+  doppler.udp_port:
+    description: Port for outgoing log messages via UDP
+    default: 3457
 
   loggregator.tls.ca_cert:
     description: "CA root required for key/cert verification"

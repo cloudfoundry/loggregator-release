@@ -5,6 +5,7 @@ import (
 	"lats/helpers"
 	"net/http"
 	"net/http/httptest"
+	"time"
 
 	uuid "github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo"
@@ -23,7 +24,8 @@ var _ = Describe("Sending HTTP events through loggregator", func() {
 
 			udpEmitter, err := emitter.NewUdpEmitter(fmt.Sprintf("localhost:%d", config.DropsondePort))
 			Expect(err).ToNot(HaveOccurred())
-			emitter := emitter.NewEventEmitter(udpEmitter, helpers.ORIGIN_NAME)
+			origin := fmt.Sprintf("%s-%d", helpers.ORIGIN_NAME, time.Now().UnixNano())
+			emitter := emitter.NewEventEmitter(udpEmitter, origin)
 			done := make(chan struct{})
 			handler := instrumented_handler.InstrumentedHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusTeapot)
@@ -37,7 +39,7 @@ var _ = Describe("Sending HTTP events through loggregator", func() {
 			handler.ServeHTTP(w, r)
 			Eventually(done).Should(BeClosed())
 
-			receivedEnvelope := helpers.FindMatchingEnvelope(msgChan)
+			receivedEnvelope := helpers.FindMatchingEnvelopeByOrigin(msgChan, origin)
 			Expect(receivedEnvelope).NotTo(BeNil())
 			Expect(receivedEnvelope.GetEventType()).To(Equal(events.Envelope_HttpStartStop))
 

@@ -26,13 +26,13 @@ var _ = Describe("Sending metrics through loggregator", func() {
 			envelope := createCounterEvent()
 			helpers.EmitToMetron(envelope)
 
-			receivedEnvelope := helpers.FindMatchingEnvelope(msgChan)
+			receivedEnvelope := helpers.FindMatchingEnvelope(msgChan, envelope)
 			Expect(receivedEnvelope).NotTo(BeNil())
 
 			Expect(receivedEnvelope.GetCounterEvent()).To(Equal(envelope.GetCounterEvent()))
 			helpers.EmitToMetron(envelope)
 
-			receivedEnvelope = helpers.FindMatchingEnvelope(msgChan)
+			receivedEnvelope = helpers.FindMatchingEnvelope(msgChan, envelope)
 			Expect(receivedEnvelope).NotTo(BeNil())
 
 			Expect(receivedEnvelope.GetCounterEvent().GetTotal()).To(Equal(uint64(10)))
@@ -42,7 +42,7 @@ var _ = Describe("Sending metrics through loggregator", func() {
 			envelope := createValueMetric()
 			helpers.EmitToMetron(envelope)
 
-			receivedEnvelope := helpers.FindMatchingEnvelope(msgChan)
+			receivedEnvelope := helpers.FindMatchingEnvelope(msgChan, envelope)
 			Expect(receivedEnvelope).NotTo(BeNil())
 
 			Expect(receivedEnvelope.GetValueMetric()).To(Equal(envelope.GetValueMetric()))
@@ -52,7 +52,7 @@ var _ = Describe("Sending metrics through loggregator", func() {
 			envelope := createContainerMetric("test-id")
 			helpers.EmitToMetron(envelope)
 
-			receivedEnvelope := helpers.FindMatchingEnvelope(msgChan)
+			receivedEnvelope := helpers.FindMatchingEnvelope(msgChan, envelope)
 			Expect(receivedEnvelope).NotTo(BeNil())
 
 			Expect(receivedEnvelope.GetContainerMetric()).To(Equal(envelope.GetContainerMetric()))

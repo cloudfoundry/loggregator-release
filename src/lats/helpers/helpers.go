@@ -102,12 +102,26 @@ func EmitToMetron(envelope *events.Envelope) {
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func FindMatchingEnvelope(msgChan <-chan *events.Envelope) *events.Envelope {
+func FindMatchingEnvelope(msgChan <-chan *events.Envelope, envelope *events.Envelope) *events.Envelope {
 	timeout := time.After(10 * time.Second)
 	for {
 		select {
 		case receivedEnvelope := <-msgChan:
-			if receivedEnvelope.GetOrigin() == ORIGIN_NAME {
+			if receivedEnvelope.GetTags()["UniqueName"] == envelope.GetTags()["UniqueName"] {
+				return receivedEnvelope
+			}
+		case <-timeout:
+			return nil
+		}
+	}
+}
+
+func FindMatchingEnvelopeByOrigin(msgChan <-chan *events.Envelope, origin string) *events.Envelope {
+	timeout := time.After(10 * time.Second)
+	for {
+		select {
+		case receivedEnvelope := <-msgChan:
+			if receivedEnvelope.GetOrigin() == origin {
 				return receivedEnvelope
 			}
 		case <-timeout:

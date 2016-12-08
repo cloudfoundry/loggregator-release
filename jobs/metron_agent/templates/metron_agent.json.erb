@@ -23,12 +23,7 @@
       instance_zone = p("metron_agent.zone")
     end
 
-    etcdMachines = p("loggregator.etcd.machines").map{|addr| "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"}
-    etcdTLSClientConfig = {
-        "KeyFile" => "/var/vcap/jobs/metron_agent/config/certs/etcd-client.key",
-        "CertFile" => "/var/vcap/jobs/metron_agent/config/certs/etcd-client.crt",
-        "CAFile" => "/var/vcap/jobs/metron_agent/config/certs/etcd-ca.crt"
-    }
+
     tlsConfig = {
         "KeyFile" => "/var/vcap/jobs/metron_agent/config/certs/metron_agent.key",
         "CertFile" => "/var/vcap/jobs/metron_agent/config/certs/metron_agent.crt",
@@ -40,12 +35,6 @@
         a[:Job] = job_name
         a[:Zone] = instance_zone
         a[:Deployment] = p("metron_agent.deployment")
-        a[:EtcdUrls] = etcdMachines
-        a[:EtcdMaxConcurrentRequests] = p("loggregator.etcd.maxconcurrentrequests")
-        a[:EtcdRequireTLS] = p("loggregator.etcd.require_ssl")
-        if_p("loggregator.etcd.require_ssl") do |_|
-            a[:EtcdTLSClientConfig] = etcdTLSClientConfig
-        end
         a[:SharedSecret] = p("metron_endpoint.shared_secret")
         a[:IncomingUDPPort] = p("metron_agent.listening_port")
         a[:Protocols] = protocols
@@ -53,8 +42,10 @@
         a[:TCPBatchIntervalMilliseconds] = p("metron_agent.tcp.batching_buffer_flush_interval_milliseconds")
         a[:PPROFPort] = p("metron_agent.pprof_port")
         a[:GRPC] = tlsConfig.merge(
-            :Port => p("doppler.grpc_port")
+            :Port => p("doppler.grpc_port") # TODO: Delete
         )
+        a[:DopplerAddr] = "#{p('doppler.addr')}:#{p('doppler.grpc_port')}"
+        a[:DopplerAddrUDP] = "#{p('doppler.addr')}:#{p('doppler.udp_port')}"
         if useTLS
             a[:TLSConfig] = tlsConfig
         end

@@ -18,10 +18,12 @@ var _ = Describe("End to end tests", func() {
 		It("sends messages", func() {
 			etcdCleanup, etcdClientURL := integration_tests.SetupEtcd()
 			defer etcdCleanup()
-			metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(etcdClientURL, 0)
-			defer metronCleanup()
-			dopplerCleanup, dopplerWSPort, dopplerGRPCPort := integration_tests.SetupDoppler(etcdClientURL, metronPort)
+
+			dopplerCleanup, dopplerWSPort, dopplerGRPCPort := integration_tests.SetupDoppler(etcdClientURL, 0)
 			defer dopplerCleanup()
+
+			metronCleanup, metronPort, metronReady := integration_tests.SetupMetron("localhost", dopplerGRPCPort, 0)
+			defer metronCleanup()
 			trafficcontrollerCleanup, tcPort := integration_tests.SetupTrafficcontroller(
 				etcdClientURL,
 				dopplerWSPort,

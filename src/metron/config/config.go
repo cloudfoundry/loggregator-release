@@ -2,7 +2,7 @@ package config
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"io"
 	"os"
 )
@@ -12,12 +12,6 @@ const (
 	defaultBatchSize       = 10 * kilobyte
 	defaultBatchIntervalMS = 100
 )
-
-type EtcdTLSClientConfig struct {
-	CertFile string
-	KeyFile  string
-	CAFile   string
-}
 
 type TLSConfig struct {
 	CertFile string
@@ -41,15 +35,12 @@ type Config struct {
 
 	IncomingUDPPort int
 
-	EtcdUrls                      []string
-	EtcdMaxConcurrentRequests     int
-	EtcdQueryIntervalMilliseconds int
-	EtcdRequireTLS                bool
-	EtcdTLSClientConfig           EtcdTLSClientConfig
-
 	GRPC GRPC
 
-	SharedSecret string
+	SharedSecret string // TODO: Delete when UDP is removed
+
+	DopplerAddr    string
+	DopplerAddrUDP string // TODO: Delete when UDP is removed
 
 	MetricBatchIntervalMilliseconds  uint
 	RuntimeStatsIntervalMilliseconds uint
@@ -60,7 +51,7 @@ type Config struct {
 	TLSConfig TLSConfig
 	PPROFPort uint32
 
-	// DEPRECATED
+	// TODO: DEPRECATED
 	LoggregatorDropsondePort int
 	PreferredProtocol        string
 }
@@ -87,10 +78,12 @@ func Parse(reader io.Reader) (*Config, error) {
 		return nil, err
 	}
 
-	if config.EtcdRequireTLS {
-		if config.EtcdTLSClientConfig.CertFile == "" || config.EtcdTLSClientConfig.KeyFile == "" || config.EtcdTLSClientConfig.CAFile == "" {
-			return nil, errors.New("invalid etcd TLS client configuration")
-		}
+	if config.DopplerAddr == "" {
+		return nil, fmt.Errorf("DopplerAddr is required")
+	}
+
+	if config.DopplerAddrUDP == "" {
+		return nil, fmt.Errorf("DopplerAddrUDP is required")
 	}
 
 	return config, nil

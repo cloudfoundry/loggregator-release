@@ -16,10 +16,11 @@ var _ = Describe("communicating with doppler", func() {
 	It("forwards messages via gRPC", func() {
 		etcdCleanup, etcdClientURL := integration_tests.SetupEtcd()
 		defer etcdCleanup()
-		metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(etcdClientURL, 0)
-		defer metronCleanup()
-		dopplerCleanup, dopplerWSPort, _ := integration_tests.SetupDoppler(etcdClientURL, metronPort)
+		dopplerCleanup, dopplerWSPort, dopplerGRPCPort := integration_tests.SetupDoppler(etcdClientURL, 0)
 		defer dopplerCleanup()
+
+		metronCleanup, metronPort, metronReady := integration_tests.SetupMetron("localhost", dopplerGRPCPort, 0)
+		defer metronCleanup()
 		metronReady()
 
 		err := dropsonde.Initialize(fmt.Sprintf("localhost:%d", metronPort), "test-origin")
