@@ -1,6 +1,7 @@
 package lats_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -53,7 +54,7 @@ func createCounterEvent() *events.Envelope {
 		EventType: events.Envelope_CounterEvent.Enum(),
 		Timestamp: proto.Int64(time.Now().UnixNano()),
 		CounterEvent: &events.CounterEvent{
-			Name:  proto.String("LATs-Counter"),
+			Name:  proto.String(fmt.Sprintf("LATs-Counter-%d", time.Now().UnixNano())),
 			Delta: proto.Uint64(5),
 			Total: proto.Uint64(5),
 		},
