@@ -194,7 +194,8 @@ instance_groups:
           domain: cf.internal
           servers: *3
           services:
-            doppler: {}
+            doppler:
+              name: doppler
         require_ssl: "((consul_require_ssl))"
         encrypt_keys: "((consul_encrypt_keys))"
         agent_cert: "((consul_agent_cert))"
