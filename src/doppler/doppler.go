@@ -91,7 +91,7 @@ func New(
 		"udpListener",
 	)
 
-	doppler.envelopeBuffer = diodes.NewManyToOneEnvelope(1000, doppler)
+	doppler.envelopeBuffer = diodes.NewManyToOneEnvelope(10000, doppler)
 
 	var err error
 	if conf.EnableTLSTransport {
