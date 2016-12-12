@@ -25,7 +25,7 @@ var _ = Describe("GroupedSink", func() {
 
 	BeforeEach(func() {
 		groupedSinks = groupedsinks.NewGroupedSinks(loggertesthelper.Logger())
-		inputChan = make(chan *events.Envelope)
+		inputChan = make(chan *events.Envelope, 10)
 	})
 
 	Describe("Broadcast", func() {
@@ -177,7 +177,7 @@ var _ = Describe("GroupedSink", func() {
 			Eventually(inputChan1).Should(Receive(Equal(msg)))
 		})
 
-		It("does not send to sinks that don't want errors", func(done Done) {
+		It("does not send to sinks that don't want errors", func() {
 			appId := "789"
 
 			sink1 := dump.NewDumpSink(appId, 10, loggertesthelper.Logger(), time.Second)
@@ -187,9 +187,8 @@ var _ = Describe("GroupedSink", func() {
 			groupedSinks.RegisterAppSink(inputChan, sink2)
 			msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "error message", appId, "App"), "origin")
 			go groupedSinks.BroadcastError(appId, msg)
-			Expect(<-inputChan).To(Equal(msg))
+			Eventually(inputChan).Should(Receive(Equal(msg)))
 			Expect(inputChan).To(HaveLen(0))
-			close(done)
 		})
 
 		It("does not block when sending to slow sink", func() {
