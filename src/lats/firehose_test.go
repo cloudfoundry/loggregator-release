@@ -347,43 +347,6 @@ var _ = Describe("Firehose", func() {
 			Expect(len(envelopes)).To(BeNumerically("<=", count))
 			Expect(verifyEnvelopes(count, envelopes)).To(BeTrue())
 		})
-
-		Context("etcd misreports available dopplers", func() {
-			It("continues to send data to new streams", func() {
-				By("establishing first consumer")
-				consumer, _ := helpers.SetUpConsumer()
-				subscriptionID := generateSubID()
-				msgs, errs := consumer.FirehoseWithoutReconnect(subscriptionID, "")
-				go readFromErrors(errs)
-
-				By("waiting for connection to be established")
-				emitControlMessages()
-				waitForControl(msgs)
-
-				By("clearing etcd")
-				ttl := deleteLeafs("/doppler/meta", config.EtcdUrls...)
-
-				By("waiting a bit for a new etcd event")
-				f := func() bool {
-					leafs := leafs(listNode("/doppler/meta", config.EtcdUrls...))
-					return len(leafs) > 0
-				}
-				Eventually(f, ttl).Should(BeTrue())
-
-				By("killing the stream connection")
-				Expect(consumer.Close()).To(Succeed())
-
-				By("connecting to tc for stream")
-				consumer, _ = helpers.SetUpConsumer()
-				defer consumer.Close()
-				msgs, errs = consumer.FirehoseWithoutReconnect(subscriptionID, "")
-				go readFromErrors(errs)
-
-				By("expecting data to still flow (like spice)")
-				emitControlMessages()
-				waitForControl(msgs)
-			})
-		})
 	})
 })
 
