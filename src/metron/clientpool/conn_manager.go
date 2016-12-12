@@ -86,6 +86,7 @@ func (m *ConnManager) maintainConn(config *tls.Config) {
 		pusher, err := client.Pusher(context.Background())
 		if err != nil {
 			log.Printf("error establishing ingestor stream to %s: %s", m.dopplerAddr, err)
+			c.Close()
 			continue
 		}
 		log.Printf("successfully established a stream to doppler %s", m.dopplerAddr)
