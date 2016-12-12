@@ -53,10 +53,10 @@ var _ = Describe("SyslogWriter", func() {
 			Eventually(syslogServerSession, 5).Should(gbytes.Say(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}([-+]\d{2}:\d{2}) loggregator appId \[APP/2\] - - just a test\n`))
 		}, 10)
 
-		It("sends messages in the proper format with source type APP", func() {
-			sysLogWriter.Write(standardOutPriority, []byte("just a test"), "APP", "2", time.Now().UnixNano())
+		It("sends messages in the proper format with source type APP/<AnyThing>", func() {
+			sysLogWriter.Write(standardOutPriority, []byte("just a test"), "APP/PROC/BLAH", "2", time.Now().UnixNano())
 
-			Eventually(syslogServerSession, 5).Should(gbytes.Say(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}([-+]\d{2}:\d{2}) loggregator appId \[APP/2\] - - just a test\n`))
+			Eventually(syslogServerSession, 5).Should(gbytes.Say(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}([-+]\d{2}:\d{2}) loggregator appId \[APP/PROC/BLAH/2\] - - just a test\n`))
 		}, 10)
 
 		It("strips null termination char from message", func() {
