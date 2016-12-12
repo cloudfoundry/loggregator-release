@@ -22,8 +22,7 @@ func NewCombinedPool(pools ...Pool) *CombinedPool {
 
 func (p *CombinedPool) Write(message []byte, chainers ...metricbatcher.BatchCounterChainer) error {
 	for _, pool := range p.pools {
-		err := pool.Write(message, chainers...)
-		if err == nil {
+		if err := pool.Write(message, chainers...); err == nil {
 			return nil
 		}
 	}

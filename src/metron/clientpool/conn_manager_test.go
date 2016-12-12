@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
 
 	"github.com/a8m/expect"
@@ -49,7 +51,12 @@ func TestConnManager(t *testing.T) {
 		grpcServer, err := testutil.NewServer()
 		expect(err).To.Be.Nil().Else.FailNow()
 
-		return expect, clientpool.NewConnManager(grpcServer.URI(), tlsConfig, 5), grpcServer
+		dialer := clientpool.NewDialer(
+			grpcServer.URI(),
+			"z1",
+			grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
+		)
+		return expect, clientpool.NewConnManager(dialer, 5), grpcServer
 	})
 
 	o.Group("when a connection is present", func() {
@@ -109,7 +116,12 @@ func TestConnManagerBadDNS(t *testing.T) {
 		)
 		expect(err).To.Be.Nil().Else.FailNow()
 
-		return expect, clientpool.NewConnManager("invalid", tlsConfig, 5)
+		dialer := clientpool.NewDialer(
+			"invalid",
+			"z1",
+			grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
+		)
+		return expect, clientpool.NewConnManager(dialer, 5)
 	})
 
 	o.Spec("write returns an error", func(
