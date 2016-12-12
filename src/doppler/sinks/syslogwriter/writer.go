@@ -55,7 +55,7 @@ func createMessage(p int, appId string, source string, sourceId string, msg []by
 
 	var formattedSource string
 	source = strings.ToUpper(source)
-	if source == "APP" {
+	if strings.HasPrefix(source, "APP") {
 		formattedSource = fmt.Sprintf("[%s/%s]", source, sourceId)
 	} else {
 		formattedSource = fmt.Sprintf("[%s]", source)
