@@ -10,6 +10,7 @@ provides:
 
 templates:
   metron_agent_ctl.erb: bin/metron_agent_ctl
+  setup_syslog_forwarder.sh.erb: bin/setup_syslog_forwarder.sh
   metron_agent.json.erb: config/metron_agent.json
   syslog_forwarder.conf.erb: config/syslog_forwarder.conf
   metron_agent_logrotate.cron.erb: config/metron_agent_logrotate.cron
