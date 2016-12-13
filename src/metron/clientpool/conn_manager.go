@@ -1,7 +1,6 @@
 package clientpool
 
 import (
-	"context"
 	"errors"
 	"io"
 	"log"
@@ -69,26 +68,16 @@ func (m *ConnManager) maintainConn() {
 			continue
 		}
 
-		c, err := m.dialer.Dial()
+		closer, pusherClient, err := m.dialer.Dial()
 		if err != nil {
 			log.Printf("error dialing doppler %s: %s", m.dialer, err)
 			continue
 		}
-		client := plumbing.NewDopplerIngestorClient(c)
-
-		log.Printf("successfully connected to doppler %s", m.dialer)
-		pusher, err := client.Pusher(context.Background())
-		if err != nil {
-			log.Printf("error establishing ingestor stream to %s: %s", m.dialer, err)
-			c.Close()
-			continue
-		}
-		log.Printf("successfully established a stream to doppler %s", m.dialer)
 
 		atomic.StorePointer(&m.conn, unsafe.Pointer(&grpcConn{
 			addr:   m.dialer.String(),
-			client: pusher,
-			closer: c,
+			client: pusherClient,
+			closer: closer,
 		}))
 	}
 }

@@ -54,6 +54,8 @@ func TestConnManager(t *testing.T) {
 		dialer := clientpool.NewDialer(
 			grpcServer.URI(),
 			"z1",
+			grpc.Dial,
+			plumbing.NewDopplerIngestorClient,
 			grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
 		)
 		return expect, clientpool.NewConnManager(dialer, 5), grpcServer
@@ -119,6 +121,8 @@ func TestConnManagerBadDNS(t *testing.T) {
 		dialer := clientpool.NewDialer(
 			"invalid",
 			"z1",
+			grpc.Dial,
+			plumbing.NewDopplerIngestorClient,
 			grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
 		)
 		return expect, clientpool.NewConnManager(dialer, 5)
