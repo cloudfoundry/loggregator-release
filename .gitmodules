@@ -4,9 +4,6 @@
 [submodule "src/github.com/gogo/protobuf"]
 	path = src/github.com/gogo/protobuf
 	url = https://github.com/gogo/protobuf
-[submodule "src/github.com/cloudfoundry/yagnats"]
-	path = src/github.com/cloudfoundry/yagnats
-	url = https://github.com/cloudfoundry/yagnats
 [submodule "src/github.com/howeyc/fsnotify"]
 	path = src/github.com/howeyc/fsnotify
 	url = https://github.com/howeyc/fsnotify
@@ -40,15 +37,9 @@
 [submodule "src/github.com/cloudfoundry/dropsonde"]
 	path = src/github.com/cloudfoundry/dropsonde
 	url = https://github.com/cloudfoundry/dropsonde
-[submodule "src/github.com/nats-io/nats"]
-	path = src/github.com/nats-io/nats
-	url = https://github.com/nats-io/nats
 [submodule "src/github.com/cloudfoundry/noaa"]
 	path = src/github.com/cloudfoundry/noaa
 	url = https://github.com/cloudfoundry/noaa.git
-[submodule "src/github.com/nats-io/gnatsd"]
-	path = src/github.com/nats-io/gnatsd
-	url = https://github.com/nats-io/gnatsd
 [submodule "src/code.cloudfoundry.org/localip"]
 	path = src/code.cloudfoundry.org/localip
 	url = https://github.com/cloudfoundry/localip
@@ -106,9 +97,6 @@
 [submodule "src/code.cloudfoundry.org/clock"]
 	path = src/code.cloudfoundry.org/clock
 	url = https://github.com/cloudfoundry/clock
-[submodule "src/github.com/nats-io/nuid"]
-	path = src/github.com/nats-io/nuid
-	url = https://github.com/nats-io/nuid
 [submodule "src/github.com/apoydence/onpar"]
 	path = src/github.com/apoydence/onpar
 	url = https://github.com/apoydence/onpar
