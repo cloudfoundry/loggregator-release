@@ -108,7 +108,7 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 		return nil, err
 	}
 
-	dialer := clientpool.NewDialer(
+	dialer := clientpool.MakeGRPCConnector(
 		conf.DopplerAddr,
 		// todo: add actual zone
 		"",

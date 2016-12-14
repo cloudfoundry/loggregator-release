@@ -12,7 +12,7 @@ import (
 	"metron/clientpool"
 )
 
-var _ = Describe("Dialer", func() {
+var _ = Describe("GRPCConnector", func() {
 	Context("when successfully connecting to the AZ", func() {
 		var (
 			// todo rename with prefix mock
@@ -38,25 +38,25 @@ var _ = Describe("Dialer", func() {
 			mockPusher.PusherOutput.Ret1 <- nil
 		})
 
-		It("dials the addr with az prefix", func() {
-			dialer := clientpool.NewDialer("test-addr", "z1", df.fn, cf.fn, grpc.WithInsecure())
-			_, _, err := dialer.Dial()
+		It("connects to the addr with az prefix", func() {
+			connector := clientpool.MakeGRPCConnector("test-addr", "z1", df.fn, cf.fn, grpc.WithInsecure())
+			_, _, err := connector.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(df.inputAddr).To(Receive(Equal("z1.test-addr")))
 		})
 
-		It("returns the original dialer client connection", func() {
-			dialer := clientpool.NewDialer("test-addr", "", df.fn, cf.fn, grpc.WithInsecure())
-			conn, _, err := dialer.Dial()
+		It("returns the original client connection", func() {
+			connector := clientpool.MakeGRPCConnector("test-addr", "", df.fn, cf.fn, grpc.WithInsecure())
+			conn, _, err := connector.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(conn).To(Equal(clientConn))
 		})
 
 		It("returns the pusher client", func() {
-			dialer := clientpool.NewDialer("test-addr", "", df.fn, cf.fn, grpc.WithInsecure())
-			_, pusherClient, err := dialer.Dial()
+			connector := clientpool.MakeGRPCConnector("test-addr", "", df.fn, cf.fn, grpc.WithInsecure())
+			_, pusherClient, err := connector.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(pusherClient).To(Equal(mockPusherClient))
@@ -82,8 +82,8 @@ var _ = Describe("Dialer", func() {
 			mockPusher.PusherOutput.Ret1 <- nil
 			cf.retIngestorClient <- mockPusher
 
-			dialer := clientpool.NewDialer("test-addr", "z1", df.fn, cf.fn)
-			_, _, err := dialer.Dial()
+			connector := clientpool.MakeGRPCConnector("test-addr", "z1", df.fn, cf.fn)
+			_, _, err := connector.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(df.inputAddr).To(Receive(Equal("z1.test-addr")))
@@ -101,8 +101,8 @@ var _ = Describe("Dialer", func() {
 			df.retClientConn <- nil
 			df.retErr <- errors.New("fake error")
 
-			dialer := clientpool.NewDialer("test-addr", "z1", df.fn, nil)
-			_, _, err := dialer.Dial()
+			connector := clientpool.MakeGRPCConnector("test-addr", "z1", df.fn, nil)
+			_, _, err := connector.Connect()
 			Expect(err).To(HaveOccurred())
 		})
 	})

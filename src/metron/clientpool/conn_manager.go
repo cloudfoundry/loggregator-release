@@ -2,6 +2,7 @@ package clientpool
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"plumbing"
@@ -10,10 +11,8 @@ import (
 	"unsafe"
 )
 
-type ConnManager struct {
-	conn      unsafe.Pointer
-	maxWrites int64
-	dialer    Dialer
+type Connector interface {
+	Connect() (io.Closer, plumbing.DopplerIngestor_PusherClient, error)
 }
 
 type grpcConn struct {
@@ -23,10 +22,16 @@ type grpcConn struct {
 	writes int64
 }
 
-func NewConnManager(d Dialer, maxWrites int64) *ConnManager {
+type ConnManager struct {
+	conn      unsafe.Pointer
+	maxWrites int64
+	connector Connector
+}
+
+func NewConnManager(c Connector, maxWrites int64) *ConnManager {
 	m := &ConnManager{
 		maxWrites: maxWrites,
-		dialer:    d,
+		connector: c,
 	}
 	go m.maintainConn()
 	return m
@@ -68,14 +73,14 @@ func (m *ConnManager) maintainConn() {
 			continue
 		}
 
-		closer, pusherClient, err := m.dialer.Dial()
+		closer, pusherClient, err := m.connector.Connect()
 		if err != nil {
-			log.Printf("error dialing doppler %s: %s", m.dialer, err)
+			log.Printf("error dialing doppler %s: %s", m.connector, err)
 			continue
 		}
 
 		atomic.StorePointer(&m.conn, unsafe.Pointer(&grpcConn{
-			addr:   m.dialer.String(),
+			addr:   fmt.Sprintf("%s", m.connector),
 			client: pusherClient,
 			closer: closer,
 		}))

@@ -51,7 +51,7 @@ func TestConnManager(t *testing.T) {
 		grpcServer, err := testutil.NewServer()
 		expect(err).To.Be.Nil().Else.FailNow()
 
-		dialer := clientpool.NewDialer(
+		dialer := clientpool.MakeGRPCConnector(
 			grpcServer.URI(),
 			"z1",
 			grpc.Dial,
@@ -118,7 +118,7 @@ func TestConnManagerBadDNS(t *testing.T) {
 		)
 		expect(err).To.Be.Nil().Else.FailNow()
 
-		dialer := clientpool.NewDialer(
+		dialer := clientpool.MakeGRPCConnector(
 			"invalid",
 			"z1",
 			grpc.Dial,
