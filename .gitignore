@@ -27,3 +27,4 @@ dev_releases
 loggregator-certs
 config/private.yml
 scripts/etcd
+/src/github.com/client9/misspell
