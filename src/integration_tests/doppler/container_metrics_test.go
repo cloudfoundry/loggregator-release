@@ -42,7 +42,7 @@ var _ = Describe("Container Metrics", func() {
 			Expect(receivedMetric).To(Equal(containerMetric))
 		})
 
-		It("does not recieve metrics for different appIds", func() {
+		It("does not receive metrics for different appIds", func() {
 			send(factories.NewContainerMetric(appID+"other", 0, 1, 2, 3), inputConnection)
 
 			goodMetric := factories.NewContainerMetric(appID, 0, 100, 2, 3)

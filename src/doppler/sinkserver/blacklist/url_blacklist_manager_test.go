@@ -14,7 +14,7 @@ var _ = Describe("UrlBlacklistManager", func() {
 	var urlBlacklistManager *blacklist.URLBlacklistManager
 
 	BeforeEach(func() {
-		urlBlacklistManager = blacklist.New([]iprange.IPRange{iprange.IPRange{Start: "14.15.16.17", End: "14.15.16.20"}}, loggertesthelper.Logger())
+		urlBlacklistManager = blacklist.New([]iprange.IPRange{{Start: "14.15.16.17", End: "14.15.16.20"}}, loggertesthelper.Logger())
 	})
 
 	Describe("CheckUrl", func() {

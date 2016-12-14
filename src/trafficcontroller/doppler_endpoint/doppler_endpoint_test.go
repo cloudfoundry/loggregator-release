@@ -1,12 +1,13 @@
 package doppler_endpoint_test
 
 import (
+	"time"
+	"trafficcontroller/doppler_endpoint"
+
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/server/handlers"
 	"github.com/gogo/protobuf/proto"
-	"time"
-	"trafficcontroller/doppler_endpoint"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

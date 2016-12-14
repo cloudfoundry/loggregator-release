@@ -3,10 +3,11 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/cactus/go-statsd-client/statsd"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/cactus/go-statsd-client/statsd"
 )
 
 func main() {

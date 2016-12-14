@@ -41,7 +41,7 @@ var _ = Describe("Streaming Logs", func() {
 			Expect(string(receivedMessage.GetMessage())).To(Equal("msg 1"))
 		})
 
-		It("only recieves messages for the specified appId", func() {
+		It("only receives messages for the specified appId", func() {
 			logMessage := factories.NewLogMessage(events.LogMessage_OUT, "msg 1", appID, "APP")
 			err := send(logMessage, inputConnection)
 			Expect(err).NotTo(HaveOccurred())
@@ -62,7 +62,7 @@ var _ = Describe("Streaming Logs", func() {
 			Expect(string(receivedMessage.GetMessage())).To(Equal("msg 1"))
 		})
 
-		It("does not recieve non-log messages", func() {
+		It("does not receive non-log messages", func() {
 			metricEvent := factories.NewContainerMetric(appID, 0, 10, 10, 10)
 			err := send(metricEvent, inputConnection)
 			Expect(err).NotTo(HaveOccurred())
@@ -74,7 +74,7 @@ var _ = Describe("Streaming Logs", func() {
 			}).Should(HaveLen(0))
 		})
 
-		It("only recieves the most recent logs", func() {
+		It("only receives the most recent logs", func() {
 			for i := 0; i < 15; i++ {
 				logMessage := factories.NewLogMessage(events.LogMessage_OUT, strconv.Itoa(i), appID, "APP")
 				err := send(logMessage, inputConnection)

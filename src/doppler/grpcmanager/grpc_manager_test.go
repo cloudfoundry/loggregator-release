@@ -210,7 +210,7 @@ var _ = Describe("GRPCManager", func() {
 		It("throw away invalid envelopes from its data dumper", func() {
 			envelope, _ := buildContainerMetric()
 			mockDataDumper.LatestContainerMetricsOutput.Ret0 <- []*events.Envelope{
-				&events.Envelope{},
+				{},
 				envelope,
 			}
 
@@ -242,7 +242,7 @@ var _ = Describe("GRPCManager", func() {
 		It("throw away invalid envelopes from its data dumper", func() {
 			envelope, _ := buildLogMessage()
 			mockDataDumper.RecentLogsForOutput.Ret0 <- []*events.Envelope{
-				&events.Envelope{},
+				{},
 				envelope,
 			}
 

@@ -73,7 +73,7 @@ var _ = Describe("NetworkReader", func() {
 			<-readerStopped
 		})
 
-		It("sends data recieved on UDP socket to its writer", func() {
+		It("sends data received on UDP socket to its writer", func() {
 			expectedData := "Some Data"
 			otherData := "More stuff"
 

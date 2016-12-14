@@ -122,9 +122,9 @@ var _ = Describe("Finder", func() {
 			BeforeEach(func() {
 				protocols = []string{"udp", "tls"}
 				metaNode, legacyNode = etcdNodes(map[string][]string{
-					"z1/doppler_z1/0": []string{"udp://1.2.3.4:567"},
-					"z1/doppler_z1/1": []string{"tls://9.8.7.6:555"},
-					"z1/doppler_z1/2": []string{"xyz://9.8.7.6:543", "tca://9.8.7.6:555"},
+					"z1/doppler_z1/0": {"udp://1.2.3.4:567"},
+					"z1/doppler_z1/1": {"tls://9.8.7.6:555"},
+					"z1/doppler_z1/2": {"xyz://9.8.7.6:543", "tca://9.8.7.6:555"},
 				}, nil)
 			})
 
@@ -141,7 +141,7 @@ var _ = Describe("Finder", func() {
 			BeforeEach(func() {
 				protocols = []string{"udp"}
 				metaNode, legacyNode = etcdNodes(map[string][]string{
-					"z1/doppler_z1/0": []string{"udp://1.2.3.4:567"},
+					"z1/doppler_z1/0": {"udp://1.2.3.4:567"},
 				}, nil)
 				metaNode.ChildNodes = append(metaNode.ChildNodes, storeadapter.StoreNode{
 					Key:   path.Join(dopplerservice.META_ROOT, "z1/doppler_z1/0"),
@@ -161,10 +161,10 @@ var _ = Describe("Finder", func() {
 			BeforeEach(func() {
 				protocols = []string{"tls", "udp", "ws"}
 				metaNode, legacyNode = etcdNodes(map[string][]string{
-					"z1/doppler_z1/0": []string{"udp://1.2.3.4:567"},
-					"z1/doppler_z1/1": []string{"udp://9.8.7.6:543", "tls://9.8.7.6:555"},
-					"z1/doppler_z1/2": []string{},
-					"z2/doppler_z2/0": []string{"ws://2.3.4.5:789"},
+					"z1/doppler_z1/0": {"udp://1.2.3.4:567"},
+					"z1/doppler_z1/1": {"udp://9.8.7.6:543", "tls://9.8.7.6:555"},
+					"z1/doppler_z1/2": {},
+					"z2/doppler_z2/0": {"ws://2.3.4.5:789"},
 				}, nil)
 			})
 
@@ -198,10 +198,10 @@ var _ = Describe("Finder", func() {
 			BeforeEach(func() {
 				protocols = []string{"udp", "tls"}
 				metaNode, legacyNode = etcdNodes(map[string][]string{
-					"z1/doppler_z1/0": []string{"udp://1.2.3.4:567"},
-					"z1/doppler_z1/1": []string{"udp://9.8.7.6:543", "tls://9.8.7.6:555"},
-					"z1/doppler_z1/2": []string{"tls://11.21.31.41:1234"},
-					"z1/doppler_z1/4": []string{"tls://31.32.33.34:1234"},
+					"z1/doppler_z1/0": {"udp://1.2.3.4:567"},
+					"z1/doppler_z1/1": {"udp://9.8.7.6:543", "tls://9.8.7.6:555"},
+					"z1/doppler_z1/2": {"tls://11.21.31.41:1234"},
+					"z1/doppler_z1/4": {"tls://31.32.33.34:1234"},
 				}, map[string]string{
 					"z1/doppler_z1/2": "11.21.31.41",
 					"z1/doppler_z1/3": "21.22.23.24",
@@ -230,9 +230,9 @@ var _ = Describe("Finder", func() {
 				protocols = []string{"udp", "tls"}
 				preferredDopplerZone = "z2"
 				metaNode, legacyNode = etcdNodes(map[string][]string{
-					"z1/doppler_z1/0": []string{"udp://1.2.3.4:567"},
-					"z2/doppler_z3/1": []string{"tls://11.21.31.41:1234"},
-					"z2/doppler_z3/2": []string{"tls://11.21.31.42:1234"},
+					"z1/doppler_z1/0": {"udp://1.2.3.4:567"},
+					"z2/doppler_z3/1": {"tls://11.21.31.41:1234"},
+					"z2/doppler_z3/2": {"tls://11.21.31.42:1234"},
 				}, map[string]string{
 					"z1/doppler_z2/0": "11.21.31.41",
 					"z2/doppler_z3/2": "21.22.23.24",
@@ -254,8 +254,8 @@ var _ = Describe("Finder", func() {
 				preferredDopplerZone = "z4"
 				protocols = []string{"udp", "tls"}
 				metaNode, legacyNode = etcdNodes(map[string][]string{
-					"z1/doppler_z1/0": []string{"udp://1.2.3.4:567"},
-					"z3/doppler_z3/2": []string{"tls://11.21.31.41:1234"},
+					"z1/doppler_z1/0": {"udp://1.2.3.4:567"},
+					"z3/doppler_z3/2": {"tls://11.21.31.41:1234"},
 				}, map[string]string{
 					"z2/doppler_z2/2": "11.21.31.41",
 					"z3/doppler_z3/3": "21.22.23.24",
@@ -867,7 +867,7 @@ var _ = Describe("Finder", func() {
 		Context("with dopplers advertising UDP on meta and legacy root", func() {
 			BeforeEach(func() {
 				metaServers = map[string][]string{
-					"z1/doppler_z1/0": []string{"udp://9.8.7.6:3457"},
+					"z1/doppler_z1/0": {"udp://9.8.7.6:3457"},
 				}
 				legacyServers = map[string]string{
 					"z1/doppler_z1/0": "9.8.7.6",
@@ -889,12 +889,12 @@ var _ = Describe("Finder", func() {
 		Context("with dopplers advertising UDP, TCP, and TLS on meta and legacy root", func() {
 			BeforeEach(func() {
 				metaServers = map[string][]string{
-					"z1/doppler_z1/0": []string{
+					"z1/doppler_z1/0": {
 						"udp://9.8.7.6:3457",
 						"tcp://9.8.7.6:3459",
 						"tls://9.8.7.6:3458",
 					},
-					"z1/doppler_z1/2": []string{
+					"z1/doppler_z1/2": {
 						"udp://9.8.7.7:3457",
 						"tls://9.8.7.7:3458",
 					},
@@ -920,7 +920,7 @@ var _ = Describe("Finder", func() {
 		Context("with dopplers advertising UDP and an unsupported protocol", func() {
 			BeforeEach(func() {
 				metaServers = map[string][]string{
-					"z1/doppler_z1/0": []string{
+					"z1/doppler_z1/0": {
 						"https://1.2.3.4/foo",
 						"udp://1.2.3.4:5678",
 					},
@@ -984,7 +984,7 @@ var _ = Describe("Finder", func() {
 		Context("with dopplers advertising UDP on meta and legacy root", func() {
 			BeforeEach(func() {
 				metaServers = map[string][]string{
-					"z1/doppler_z1/0": []string{"udp://9.8.7.6:3457"},
+					"z1/doppler_z1/0": {"udp://9.8.7.6:3457"},
 				}
 				legacyServers = map[string]string{
 					"z1/doppler_z1/0": "9.8.7.6",
@@ -1006,7 +1006,7 @@ var _ = Describe("Finder", func() {
 		Context("with dopplers advertising TLS, TCP, and UDP on meta and legacy root", func() {
 			BeforeEach(func() {
 				metaServers = map[string][]string{
-					"z1/doppler_z1/0": []string{
+					"z1/doppler_z1/0": {
 						"udp://9.8.7.6:3457",
 						"tcp://9.8.7.6:3459",
 						"tls://9.8.7.6:3458",
@@ -1032,7 +1032,7 @@ var _ = Describe("Finder", func() {
 		Context("with dopplers advertising UDP and unsupported protocols", func() {
 			BeforeEach(func() {
 				metaServers = map[string][]string{
-					"z1/doppler_z1/0": []string{
+					"z1/doppler_z1/0": {
 						"https://1.2.3.4/foo",
 						"udp://1.2.3.4:5678",
 						"wss://1.2.3.4/bar",
@@ -1063,12 +1063,12 @@ var _ = Describe("Finder", func() {
 
 		JustBeforeEach(func() {
 			metaServers := map[string][]string{
-				"z1/doppler_z1/0": []string{
+				"z1/doppler_z1/0": {
 					"udp://9.8.7.6:3457",
 					"tls://9.8.7.6:3458",
 					"tcp://9.8.7.6:3459",
 				},
-				"z1/doppler_z1/1": []string{
+				"z1/doppler_z1/1": {
 					"udp://9.8.7.7:3457",
 					"tls://9.8.7.7:3458",
 				},
@@ -1135,7 +1135,7 @@ var _ = Describe("Finder", func() {
 		Context("legacy and meta endpoints available", func() {
 			BeforeEach(func() {
 				metaServers = map[string][]string{
-					"z1/doppler_z1/0": []string{"udp://9.8.7.6:3457", "tls://9.8.7.6:3458"},
+					"z1/doppler_z1/0": {"udp://9.8.7.6:3457", "tls://9.8.7.6:3458"},
 				}
 				legacyServers = map[string]string{
 					"z1/doppler_z1/0": "9.8.7.6",

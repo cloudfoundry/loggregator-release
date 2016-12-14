@@ -2,9 +2,10 @@ package authorization
 
 import (
 	"errors"
-	"github.com/cloudfoundry/gosteno"
 	"strings"
 	"trafficcontroller/uaa_client"
+
+	"github.com/cloudfoundry/gosteno"
 )
 
 const LOGGREGATOR_ADMIN_ROLE = "doppler.firehose"
