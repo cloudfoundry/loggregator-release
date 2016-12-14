@@ -55,7 +55,7 @@ properties:
     default: false
 
   doppler.addr:
-    description: DNS name for doppler
+    description: DNS name for doppler. This needs to be round robbin DNS if you want metron to communicate with multiple dopplers.
 
   doppler.grpc_port:
     description: Port for outgoing log messages via GRPC
