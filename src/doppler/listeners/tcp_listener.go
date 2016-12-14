@@ -112,7 +112,7 @@ func (t *TCPListener) Stop() {
 	t.listener.Close()
 	t.listener = nil
 
-	for conn, _ := range t.connections {
+	for conn := range t.connections {
 		conn.Close()
 	}
 	done := t.listenerClosed

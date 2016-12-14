@@ -27,7 +27,7 @@ import (
 var _ = Describe("SinkManager", func() {
 	logger := loggertesthelper.Logger()
 
-	var blackListManager = blacklist.New([]iprange.IPRange{iprange.IPRange{Start: "10.10.10.10", End: "10.10.10.20"}}, logger)
+	var blackListManager = blacklist.New([]iprange.IPRange{{Start: "10.10.10.10", End: "10.10.10.20"}}, logger)
 	var sinkManager *sinkmanager.SinkManager
 	var sinkManagerDone chan struct{}
 	var newAppServiceChan, deletedAppServiceChan chan appservice.AppService

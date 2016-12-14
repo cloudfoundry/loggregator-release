@@ -28,7 +28,7 @@ func (matcher *specifiedContentsMatcher) Match(actual interface{}) (bool, error)
 }
 
 func (matcher *specifiedContentsMatcher) FailureMessage(actual interface{}) string {
-	return fmt.Sprintf("Expected\n\t%#s\nto equal non-nil contents of\n\t%#s\nReason for failure: %s\n", format.Object(actual, 1), format.Object(matcher.expected, 1), matcher.failureReason)
+	return fmt.Sprintf("Expected\n\t%#s\not equal non-nil contents of\n\t%#s\nReason for failure: %s\n", format.Object(actual, 1), format.Object(matcher.expected, 1), matcher.failureReason)
 }
 
 func (matcher *specifiedContentsMatcher) NegatedFailureMessage(actual interface{}) string {

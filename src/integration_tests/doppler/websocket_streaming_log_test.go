@@ -51,7 +51,7 @@ var _ = Describe("Websocket Streaming Logs", func() {
 
 	})
 
-	It("only recieves messages for the specified appId", func() {
+	It("only receives messages for the specified appId", func() {
 		err := SendAppLog(appID, "message 1", inputConnection)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -67,7 +67,7 @@ var _ = Describe("Websocket Streaming Logs", func() {
 		Expect(receivedChan).To(BeEmpty())
 	})
 
-	It("does not recieve non-log messages", func() {
+	It("does not receive non-log messages", func() {
 		metricEvent := factories.NewContainerMetric(appID, 0, 10, 10, 10)
 		SendEvent(metricEvent, inputConnection)
 

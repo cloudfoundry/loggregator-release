@@ -68,19 +68,19 @@ var _ = Describe("RetryStrategy", func() {
 
 	Describe("CappedDouble", func() {
 		type backoffTest struct {
-			count int
+			count    int
 			expected time.Duration
 		}
 		var backoffTests = []backoffTest{
 			{count: 0, expected: time.Second},
-			{count: 1, expected: 2*time.Second},
-			{count: 2, expected: 4*time.Second},
-			{count: 5, expected: 32*time.Second},
+			{count: 1, expected: 2 * time.Second},
+			{count: 2, expected: 4 * time.Second},
+			{count: 5, expected: 32 * time.Second},
 			{count: 6, expected: time.Minute},
 		}
 
 		It("backs off by doubling the wait", func() {
-			strategy := retrystrategy.CappedDouble(1 * time.Second, 1 * time.Minute)
+			strategy := retrystrategy.CappedDouble(1*time.Second, 1*time.Minute)
 
 			for _, test := range backoffTests {
 				Expect(strategy(test.count)).To(Equal(test.expected))

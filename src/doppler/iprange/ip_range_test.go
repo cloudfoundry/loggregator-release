@@ -12,40 +12,40 @@ import (
 var _ = Describe("IPRange", func() {
 	Describe("ValidateIpAddresses", func() {
 		It("recognizes a valid IP address range", func() {
-			ranges := []iprange.IPRange{iprange.IPRange{Start: "127.0.2.2", End: "127.0.2.4"}}
+			ranges := []iprange.IPRange{{Start: "127.0.2.2", End: "127.0.2.4"}}
 			err := iprange.ValidateIpAddresses(ranges)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("validates the start address", func() {
-			ranges := []iprange.IPRange{iprange.IPRange{Start: "127.0.2.2.1", End: "127.0.2.4"}}
+			ranges := []iprange.IPRange{{Start: "127.0.2.2.1", End: "127.0.2.4"}}
 			err := iprange.ValidateIpAddresses(ranges)
 			Expect(err).To(MatchError("Invalid IP Address for Blacklist IP Range: 127.0.2.2.1"))
 		})
 
 		It("validates the end address", func() {
-			ranges := []iprange.IPRange{iprange.IPRange{Start: "127.0.2.2", End: "127.0.2.4.3"}}
+			ranges := []iprange.IPRange{{Start: "127.0.2.2", End: "127.0.2.4.3"}}
 			err := iprange.ValidateIpAddresses(ranges)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("validates all given IP addresses", func() {
 			ranges := []iprange.IPRange{
-				iprange.IPRange{Start: "127.0.2.2", End: "127.0.2.4"},
-				iprange.IPRange{Start: "127.0.2.2", End: "127.0.2.4.5"},
+				{Start: "127.0.2.2", End: "127.0.2.4"},
+				{Start: "127.0.2.2", End: "127.0.2.4.5"},
 			}
 			err := iprange.ValidateIpAddresses(ranges)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("validates that start IP is before end IP", func() {
-			ranges := []iprange.IPRange{iprange.IPRange{Start: "10.10.10.10", End: "10.8.10.12"}}
+			ranges := []iprange.IPRange{{Start: "10.10.10.10", End: "10.8.10.12"}}
 			err := iprange.ValidateIpAddresses(ranges)
 			Expect(err).To(MatchError("Invalid Blacklist IP Range: Start 10.10.10.10 has to be before End 10.8.10.12"))
 		})
 
 		It("accepts start and end as the same", func() {
-			ranges := []iprange.IPRange{iprange.IPRange{Start: "127.0.2.2", End: "127.0.2.2"}}
+			ranges := []iprange.IPRange{{Start: "127.0.2.2", End: "127.0.2.2"}}
 			err := iprange.ValidateIpAddresses(ranges)
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -54,7 +54,7 @@ var _ = Describe("IPRange", func() {
 
 	Describe("IpOutsideOfRanges", func() {
 		It("parses the IP address properly", func() {
-			ranges := []iprange.IPRange{iprange.IPRange{Start: "127.0.1.2", End: "127.0.3.4"}}
+			ranges := []iprange.IPRange{{Start: "127.0.1.2", End: "127.0.3.4"}}
 
 			for _, ipTest := range ipTests {
 				parsedURL, _ := url.Parse(ipTest.url)
@@ -65,7 +65,7 @@ var _ = Describe("IPRange", func() {
 		})
 
 		It("returns error on malformatted URL", func() {
-			ranges := []iprange.IPRange{iprange.IPRange{Start: "127.0.2.2", End: "127.0.2.4"}}
+			ranges := []iprange.IPRange{{Start: "127.0.2.2", End: "127.0.2.4"}}
 
 			for _, testUrl := range malformattedURLs {
 				parsedURL, _ := url.Parse(testUrl.url)
@@ -91,7 +91,7 @@ var _ = Describe("IPRange", func() {
 		})
 
 		It("resolves ip addresses", func() {
-			ranges := []iprange.IPRange{iprange.IPRange{Start: "127.0.0.0", End: "127.0.0.4"}}
+			ranges := []iprange.IPRange{{Start: "127.0.0.0", End: "127.0.0.4"}}
 
 			parsedURL, _ := url.Parse("syslog://vcap.me:3000?app=great")
 			outSideOfRange, err := iprange.IpOutsideOfRanges(*parsedURL, ranges)

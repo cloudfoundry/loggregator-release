@@ -1,40 +1,39 @@
 package clientpool
 
 import (
-	"context"
-	"crypto/tls"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"plumbing"
 	"sync/atomic"
 	"time"
 	"unsafe"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 )
 
-type ConnManager struct {
-	dopplerAddr string
-	conn        unsafe.Pointer
-	maxWrites   int64
+type Connector interface {
+	Connect() (io.Closer, plumbing.DopplerIngestor_PusherClient, error)
 }
 
 type grpcConn struct {
-	uri    string
+	addr   string
 	client plumbing.DopplerIngestor_PusherClient
 	closer io.Closer
 	writes int64
 }
 
-func NewConnManager(dopplerAddr string, config *tls.Config, maxWrites int64) *ConnManager {
-	m := &ConnManager{
-		dopplerAddr: dopplerAddr,
-		maxWrites:   maxWrites,
-	}
+type ConnManager struct {
+	conn      unsafe.Pointer
+	maxWrites int64
+	connector Connector
+}
 
-	go m.maintainConn(config)
+func NewConnManager(c Connector, maxWrites int64) *ConnManager {
+	m := &ConnManager{
+		maxWrites: maxWrites,
+		connector: c,
+	}
+	go m.maintainConn()
 	return m
 }
 
@@ -52,14 +51,14 @@ func (m *ConnManager) Write(data []byte) error {
 	// TODO: This block is untested because we don't know how to
 	// induce an error from the stream via the test
 	if err != nil {
-		log.Printf("error writing to doppler %s: %s", gRPCConn.uri, err)
+		log.Printf("error writing to doppler %s: %s", gRPCConn.addr, err)
 		atomic.StorePointer(&m.conn, nil)
 		gRPCConn.closer.Close()
 		return err
 	}
 
 	if atomic.AddInt64(&gRPCConn.writes, 1) >= m.maxWrites {
-		log.Printf("recycling connection to doppler %s after %d writes", gRPCConn.uri, m.maxWrites)
+		log.Printf("recycling connection to doppler %s after %d writes", gRPCConn.addr, m.maxWrites)
 		atomic.StorePointer(&m.conn, nil)
 		gRPCConn.closer.Close()
 	}
@@ -67,34 +66,23 @@ func (m *ConnManager) Write(data []byte) error {
 	return nil
 }
 
-func (m *ConnManager) maintainConn(config *tls.Config) {
+func (m *ConnManager) maintainConn() {
 	for range time.Tick(50 * time.Millisecond) {
 		conn := atomic.LoadPointer(&m.conn)
 		if conn != nil && (*grpcConn)(conn) != nil {
 			continue
 		}
 
-		transportCreds := credentials.NewTLS(config)
-		c, err := grpc.Dial(m.dopplerAddr, grpc.WithTransportCredentials(transportCreds))
+		closer, pusherClient, err := m.connector.Connect()
 		if err != nil {
-			log.Printf("error dialing doppler %s: %s", m.dopplerAddr, err)
+			log.Printf("error dialing doppler %s: %s", m.connector, err)
 			continue
 		}
-		client := plumbing.NewDopplerIngestorClient(c)
-
-		log.Printf("successfully connected to doppler %s", m.dopplerAddr)
-		pusher, err := client.Pusher(context.Background())
-		if err != nil {
-			log.Printf("error establishing ingestor stream to %s: %s", m.dopplerAddr, err)
-			c.Close()
-			continue
-		}
-		log.Printf("successfully established a stream to doppler %s", m.dopplerAddr)
 
 		atomic.StorePointer(&m.conn, unsafe.Pointer(&grpcConn{
-			uri:    m.dopplerAddr,
-			client: pusher,
-			closer: c,
+			addr:   fmt.Sprintf("%s", m.connector),
+			client: pusherClient,
+			closer: closer,
 		}))
 	}
 }

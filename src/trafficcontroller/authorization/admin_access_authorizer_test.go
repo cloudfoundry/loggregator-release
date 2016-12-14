@@ -4,8 +4,9 @@ import (
 	"trafficcontroller/authorization"
 
 	"errors"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"trafficcontroller/uaa_client"
+
+	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

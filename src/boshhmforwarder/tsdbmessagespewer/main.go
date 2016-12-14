@@ -18,7 +18,7 @@ func main() {
 
 	ticker := time.NewTicker(time.Duration(sleepDurationInSec))
 	defer ticker.Stop()
-	for _ = range ticker.C {
+	for range ticker.C {
 		go func() {
 			conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", *host, *port))
 

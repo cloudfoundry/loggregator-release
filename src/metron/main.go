@@ -8,6 +8,9 @@ import (
 	"runtime"
 	"time"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+
 	"github.com/cloudfoundry/dropsonde/metric_sender"
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
@@ -105,9 +108,17 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 		return nil, err
 	}
 
+	dialer := clientpool.MakeGRPCConnector(
+		conf.DopplerAddr,
+		conf.Zone,
+		grpc.Dial,
+		plumbing.NewDopplerIngestorClient,
+		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
+	)
+
 	var connManagers []clientpool.Conn
 	for i := 0; i < 5; i++ {
-		connManagers = append(connManagers, clientpool.NewConnManager(conf.DopplerAddr, tlsConfig, 10000))
+		connManagers = append(connManagers, clientpool.NewConnManager(dialer, 10000))
 	}
 
 	pool := clientpool.New(connManagers...)
