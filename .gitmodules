@@ -52,9 +52,6 @@
 [submodule "src/github.com/ugorji/go"]
 	path = src/github.com/ugorji/go
 	url = https://github.com/ugorji/go
-[submodule "src/github.com/remyoudompheng/go-misc"]
-	path = src/github.com/remyoudompheng/go-misc
-	url = https://github.com/remyoudompheng/go-misc
 [submodule "src/github.com/cactus/go-statsd-client"]
 	path = src/github.com/cactus/go-statsd-client
 	url = https://github.com/cactus/go-statsd-client.git
