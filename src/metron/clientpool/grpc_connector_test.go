@@ -38,16 +38,16 @@ var _ = Describe("GRPCConnector", func() {
 			mockPusher.PusherOutput.Ret1 <- nil
 		})
 
-		It("connects to the addr with az prefix", func() {
-			connector := clientpool.MakeGRPCConnector("test-addr", "z1", df.fn, cf.fn, grpc.WithInsecure())
+		It("connects to the dns name with az prefix", func() {
+			connector := clientpool.MakeGRPCConnector("test-name", "z1", df.fn, cf.fn, grpc.WithInsecure())
 			_, _, err := connector.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(df.inputAddr).To(Receive(Equal("z1.test-addr")))
+			Expect(df.inputDoppler).To(Receive(Equal("z1.test-name")))
 		})
 
 		It("returns the original client connection", func() {
-			connector := clientpool.MakeGRPCConnector("test-addr", "", df.fn, cf.fn, grpc.WithInsecure())
+			connector := clientpool.MakeGRPCConnector("test-name", "", df.fn, cf.fn, grpc.WithInsecure())
 			conn, _, err := connector.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
@@ -55,7 +55,7 @@ var _ = Describe("GRPCConnector", func() {
 		})
 
 		It("returns the pusher client", func() {
-			connector := clientpool.MakeGRPCConnector("test-addr", "", df.fn, cf.fn, grpc.WithInsecure())
+			connector := clientpool.MakeGRPCConnector("test-name", "", df.fn, cf.fn, grpc.WithInsecure())
 			_, pusherClient, err := connector.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
@@ -64,7 +64,7 @@ var _ = Describe("GRPCConnector", func() {
 	})
 
 	Context("when unable to connect to AZ specific dopplers", func() {
-		It("dials the original addr", func() {
+		It("dials the original dns name", func() {
 			df := newMockDialFunc()
 			cf := newMockIngestorClientFunc()
 			mockPusher := newMockPusher()
@@ -82,12 +82,12 @@ var _ = Describe("GRPCConnector", func() {
 			mockPusher.PusherOutput.Ret1 <- nil
 			cf.retIngestorClient <- mockPusher
 
-			connector := clientpool.MakeGRPCConnector("test-addr", "z1", df.fn, cf.fn)
+			connector := clientpool.MakeGRPCConnector("test-name", "z1", df.fn, cf.fn)
 			_, _, err := connector.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(df.inputAddr).To(Receive(Equal("z1.test-addr")))
-			Expect(df.inputAddr).To(Receive(Equal("test-addr")))
+			Expect(df.inputDoppler).To(Receive(Equal("z1.test-name")))
+			Expect(df.inputDoppler).To(Receive(Equal("test-name")))
 		})
 	})
 
@@ -101,7 +101,7 @@ var _ = Describe("GRPCConnector", func() {
 			df.retClientConn <- nil
 			df.retErr <- errors.New("fake error")
 
-			connector := clientpool.MakeGRPCConnector("test-addr", "z1", df.fn, nil)
+			connector := clientpool.MakeGRPCConnector("test-name", "z1", df.fn, nil)
 			_, _, err := connector.Connect()
 			Expect(err).To(HaveOccurred())
 		})
@@ -109,7 +109,7 @@ var _ = Describe("GRPCConnector", func() {
 })
 
 type mockDialFunc struct {
-	inputAddr        chan string
+	inputDoppler     chan string
 	inputDialOptions chan []grpc.DialOption
 	retClientConn    chan *grpc.ClientConn
 	retErr           chan error
@@ -118,13 +118,13 @@ type mockDialFunc struct {
 
 func newMockDialFunc() *mockDialFunc {
 	df := &mockDialFunc{
-		inputAddr:        make(chan string, 100),
+		inputDoppler:     make(chan string, 100),
 		inputDialOptions: make(chan []grpc.DialOption, 100),
 		retClientConn:    make(chan *grpc.ClientConn, 100),
 		retErr:           make(chan error, 100),
 	}
-	df.fn = func(addr string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
-		df.inputAddr <- addr
+	df.fn = func(doppler string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+		df.inputDoppler <- doppler
 		df.inputDialOptions <- opts
 		return <-df.retClientConn, <-df.retErr
 	}

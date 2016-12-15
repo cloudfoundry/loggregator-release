@@ -11,7 +11,7 @@ import (
 )
 
 type GRPCConnector struct {
-	dopplerAddr    string
+	doppler        string
 	zonePrefix     string
 	dial           DialFunc
 	ingestorClient IngestorClientFunc
@@ -23,14 +23,14 @@ type DialFunc func(string, ...grpc.DialOption) (*grpc.ClientConn, error)
 type IngestorClientFunc func(*grpc.ClientConn) plumbing.DopplerIngestorClient
 
 func MakeGRPCConnector(
-	dopplerAddr string,
+	doppler string,
 	zonePrefix string,
 	df DialFunc,
 	cf IngestorClientFunc,
 	opts ...grpc.DialOption,
 ) GRPCConnector {
 	return GRPCConnector{
-		dopplerAddr:    dopplerAddr,
+		doppler:        doppler,
 		zonePrefix:     zonePrefix,
 		dial:           df,
 		ingestorClient: cf,
@@ -39,15 +39,15 @@ func MakeGRPCConnector(
 }
 
 func (c GRPCConnector) Connect() (io.Closer, plumbing.DopplerIngestor_PusherClient, error) {
-	closer, pusher, err := c.connect(c.zonePrefix + "." + c.dopplerAddr)
+	closer, pusher, err := c.connect(c.zonePrefix + "." + c.doppler)
 	if err != nil {
-		return c.connect(c.dopplerAddr)
+		return c.connect(c.doppler)
 	}
 	return closer, pusher, err
 }
 
-func (c GRPCConnector) connect(addr string) (io.Closer, plumbing.DopplerIngestor_PusherClient, error) {
-	conn, err := c.dial(addr, c.opts...)
+func (c GRPCConnector) connect(doppler string) (io.Closer, plumbing.DopplerIngestor_PusherClient, error) {
+	conn, err := c.dial(doppler, c.opts...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error dialing ingestor stream to %s: %s", c, err)
 	}
@@ -66,5 +66,5 @@ func (c GRPCConnector) connect(addr string) (io.Closer, plumbing.DopplerIngestor
 }
 
 func (c GRPCConnector) String() string {
-	return fmt.Sprintf("[%s]%s", c.zonePrefix, c.dopplerAddr)
+	return fmt.Sprintf("[%s]%s", c.zonePrefix, c.doppler)
 }

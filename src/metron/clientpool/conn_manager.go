@@ -16,7 +16,7 @@ type Connector interface {
 }
 
 type grpcConn struct {
-	addr   string
+	name   string
 	client plumbing.DopplerIngestor_PusherClient
 	closer io.Closer
 	writes int64
@@ -51,14 +51,14 @@ func (m *ConnManager) Write(data []byte) error {
 	// TODO: This block is untested because we don't know how to
 	// induce an error from the stream via the test
 	if err != nil {
-		log.Printf("error writing to doppler %s: %s", gRPCConn.addr, err)
+		log.Printf("error writing to doppler %s: %s", gRPCConn.name, err)
 		atomic.StorePointer(&m.conn, nil)
 		gRPCConn.closer.Close()
 		return err
 	}
 
 	if atomic.AddInt64(&gRPCConn.writes, 1) >= m.maxWrites {
-		log.Printf("recycling connection to doppler %s after %d writes", gRPCConn.addr, m.maxWrites)
+		log.Printf("recycling connection to doppler %s after %d writes", gRPCConn.name, m.maxWrites)
 		atomic.StorePointer(&m.conn, nil)
 		gRPCConn.closer.Close()
 	}
@@ -80,7 +80,7 @@ func (m *ConnManager) maintainConn() {
 		}
 
 		atomic.StorePointer(&m.conn, unsafe.Pointer(&grpcConn{
-			addr:   fmt.Sprintf("%s", m.connector),
+			name:   fmt.Sprintf("%s", m.connector),
 			client: pusherClient,
 			closer: closer,
 		}))

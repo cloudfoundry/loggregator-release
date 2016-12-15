@@ -1,83 +1,81 @@
-//go:generate hel
-
 package clientpool_test
 
 import (
 	"fmt"
 	"metron/clientpool"
 	"reflect"
-	"testing"
 
-	"github.com/a8m/expect"
-	"github.com/apoydence/onpar"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-func TestClientPool(t *testing.T) {
-	t.Parallel()
-	o := onpar.New()
-	defer o.Run(t)
+var _ = Describe("ClientPool", func() {
+	var (
+		pool      *clientpool.ClientPool
+		mockConns []*mockConn
+	)
 
-	o.BeforeEach(func(t *testing.T) (Expectation, *clientpool.ClientPool, []*mockConn) {
-		var conns []*mockConn
+	BeforeEach(func() {
 		var poolConns []clientpool.Conn
+		mockConns = make([]*mockConn, 0)
 		for i := 0; i < 5; i++ {
 			conn := newMockConn()
-			conns = append(conns, conn)
+			mockConns = append(mockConns, conn)
 			poolConns = append(poolConns, conn)
 		}
-		return expect.New(t), clientpool.New(poolConns...), conns
+		pool = clientpool.New(poolConns...)
 	})
 
-	o.Group("Write()", func() {
-		o.Group("all conn managers return an error", func() {
-			o.BeforeEach(func(t *testing.T, expect Expectation, pool *clientpool.ClientPool, mockConns []*mockConn) {
+	Describe("Write()", func() {
+		Context("all conn managers return an error", func() {
+			BeforeEach(func() {
 				for _, c := range mockConns {
 					c.WriteOutput.Err <- fmt.Errorf("some-error")
 				}
 			})
 
-			o.Spec("it returns an error", func(t *testing.T, expect Expectation, pool *clientpool.ClientPool, mockConns []*mockConn) {
+			It("returns an error", func() {
 				err := pool.Write([]byte("some-data"))
-				expect(err).Not.To.Be.Nil()
+				Expect(err).ToNot(Succeed())
 			})
 
-			o.Spec("it tries all conns before erroring", func(t *testing.T, expect Expectation, pool *clientpool.ClientPool, mockConns []*mockConn) {
+			It("tries all conns before erroring", func() {
 				pool.Write([]byte("some-data"))
 
 				for len(mockConns) > 0 {
 					i, _ := chooseData(mockConns)
-					expect(i).Not.To.Equal(-1)
+					Expect(i).ToNot(Equal(-1))
 					mockConns = append(mockConns[:i], mockConns[i+1:]...)
 				}
 			})
 		})
 
-		o.Group("all conns succeed", func() {
-			o.BeforeEach(func(t *testing.T, expect Expectation, pool *clientpool.ClientPool, mockConns []*mockConn) {
+		Context("all conns succeed", func() {
+			BeforeEach(func() {
 				for _, c := range mockConns {
 					c.WriteOutput.Err <- nil
 				}
 			})
 
-			o.Spec("it returns a nil error", func(t *testing.T, expect Expectation, pool *clientpool.ClientPool, mockConns []*mockConn) {
+			It("returns a nil error", func() {
 				err := pool.Write([]byte("some-data"))
-				expect(err).To.Be.Nil()
+				Expect(err).To(Succeed())
 			})
 
-			o.Spec("it uses the given data once", func(t *testing.T, expect Expectation, pool *clientpool.ClientPool, mockConns []*mockConn) {
+			It("uses the given data once", func() {
 				data := []byte("some-data")
 				pool.Write(data)
 
 				idx, msg := chooseData(mockConns)
-				expect(idx).Not.To.Equal(-1)
-				expect(msg).To.Equal(data)
+				Expect(idx).ToNot(Equal(-1))
+				Expect(msg).To(Equal(data))
 
 				idx, _ = chooseData(mockConns)
-				expect(idx).To.Equal(-1)
+				Expect(idx).To(Equal(-1))
 			})
 		})
 	})
-}
+})
 
 func chooseData(conns []*mockConn) (idx int, value []byte) {
 	var cases []reflect.SelectCase

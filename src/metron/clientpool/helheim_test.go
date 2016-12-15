@@ -7,6 +7,7 @@ package clientpool_test
 
 import (
 	"doppler/dopplerservice"
+	"io"
 	"plumbing"
 
 	"golang.org/x/net/context"
@@ -207,4 +208,26 @@ func (m *mockDopplerIngestor_PusherClient) RecvMsg(m_ interface{}) error {
 	m.RecvMsgCalled <- true
 	m.RecvMsgInput.M <- m_
 	return <-m.RecvMsgOutput.Ret0
+}
+
+type mockConnector struct {
+	ConnectCalled chan bool
+	ConnectOutput struct {
+		Ret0 chan io.Closer
+		Ret1 chan plumbing.DopplerIngestor_PusherClient
+		Ret2 chan error
+	}
+}
+
+func newMockConnector() *mockConnector {
+	m := &mockConnector{}
+	m.ConnectCalled = make(chan bool, 100)
+	m.ConnectOutput.Ret0 = make(chan io.Closer, 100)
+	m.ConnectOutput.Ret1 = make(chan plumbing.DopplerIngestor_PusherClient, 100)
+	m.ConnectOutput.Ret2 = make(chan error, 100)
+	return m
+}
+func (m *mockConnector) Connect() (io.Closer, plumbing.DopplerIngestor_PusherClient, error) {
+	m.ConnectCalled <- true
+	return <-m.ConnectOutput.Ret0, <-m.ConnectOutput.Ret1, <-m.ConnectOutput.Ret2
 }
