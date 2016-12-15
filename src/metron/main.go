@@ -125,7 +125,7 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 	grpcWrapper := dopplerforwarder.NewGRPCWrapper(pool)
 
 	// TODO: delete this legacy pool stuff when UDP goes away
-	legacyPool := legacyclientpool.New(conf.DopplerAddrUDP, 100)
+	legacyPool := legacyclientpool.New(conf.DopplerAddrUDP, 100, 5*time.Second)
 	udpWrapper := dopplerforwarder.NewUDPWrapper(legacyPool, []byte(conf.SharedSecret))
 
 	combinedPool := legacyclientpool.NewCombinedPool(grpcWrapper, udpWrapper)
