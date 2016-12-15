@@ -1,5 +1,5 @@
 {
 	"ImportPath": "logSpinner",
-	"GoVersion": "go1.6.2",
+	"GoVersion": "go1.7.4",
 	"Deps": []
 }
