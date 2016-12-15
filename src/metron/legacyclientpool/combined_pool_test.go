@@ -3,78 +3,57 @@ package legacyclientpool_test
 import (
 	"errors"
 	"metron/legacyclientpool"
-	"testing"
 
-	"github.com/a8m/expect"
-	"github.com/apoydence/onpar"
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-func TestCombinedPool(t *testing.T) {
-	t.Parallel()
-	o := onpar.New()
-	defer o.Run(t)
-
-	o.BeforeEach(func(t *testing.T) (
-		Expectation,
-		[]*mockPool,
-		*legacyclientpool.CombinedPool,
-	) {
+var _ = Describe("Combined Pool", func() {
+	var (
+		mockPools    []*mockPool
+		combinedPool *legacyclientpool.CombinedPool
+	)
+	BeforeEach(func() {
 		mockPoolA := newMockPool()
 		mockPoolB := newMockPool()
-		pool := legacyclientpool.NewCombinedPool(mockPoolA, mockPoolB)
-
-		return expect.New(t), []*mockPool{mockPoolA, mockPoolB}, pool
+		combinedPool = legacyclientpool.NewCombinedPool(mockPoolA, mockPoolB)
+		mockPools = []*mockPool{mockPoolA, mockPoolB}
 	})
 
-	o.Spec("it writes to the first pool", func(
-		t *testing.T,
-		expect Expectation,
-		mockPools []*mockPool,
-		combinedPool *legacyclientpool.CombinedPool,
-	) {
+	It("it writes to the first pool", func() {
 		close(mockPools[0].WriteOutput.Ret0)
 		close(mockPools[1].WriteOutput.Ret0)
 		msg := []byte("a message")
 
 		err := combinedPool.Write(msg, nil)
-		expect(err == nil).To.Equal(true)
+		Expect(err).ToNot(HaveOccurred())
 
-		expect(mockPools[0].WriteCalled).To.Have.Len(1).Else.FailNow()
-		expect(<-mockPools[0].WriteInput.Message).To.Equal(msg)
-		expect(<-mockPools[0].WriteInput.Chainers).To.Equal([]metricbatcher.BatchCounterChainer{nil})
-		expect(mockPools[1].WriteCalled).To.Have.Len(0)
+		Expect(mockPools[0].WriteCalled).To(HaveLen(1))
+		Expect(<-mockPools[0].WriteInput.Message).To(Equal(msg))
+		Expect(<-mockPools[0].WriteInput.Chainers).To(Equal([]metricbatcher.BatchCounterChainer{nil}))
+		Expect(mockPools[1].WriteCalled).To(HaveLen(0))
 	})
 
-	o.Spec("it writes to the second pool when the first fails", func(
-		t *testing.T,
-		expect Expectation,
-		mockPools []*mockPool,
-		combinedPool *legacyclientpool.CombinedPool,
-	) {
+	It("it writes to the second pool when the first fails", func() {
 		mockPools[0].WriteOutput.Ret0 <- errors.New("some-error")
 		close(mockPools[1].WriteOutput.Ret0)
 		msg := []byte("a message")
 
 		err := combinedPool.Write(msg, nil)
-		expect(err == nil).To.Equal(true)
+		Expect(err).ToNot(HaveOccurred())
 
-		expect(mockPools[1].WriteCalled).To.Have.Len(1).Else.FailNow()
-		expect(<-mockPools[1].WriteInput.Message).To.Equal(msg)
-		expect(<-mockPools[1].WriteInput.Chainers).To.Equal([]metricbatcher.BatchCounterChainer{nil})
+		Expect(mockPools[1].WriteCalled).To(HaveLen(1))
+		Expect(<-mockPools[1].WriteInput.Message).To(Equal(msg))
+		Expect(<-mockPools[1].WriteInput.Chainers).To(Equal([]metricbatcher.BatchCounterChainer{nil}))
 	})
 
-	o.Spec("returns an error when all the pools fail", func(
-		t *testing.T,
-		expect Expectation,
-		mockPools []*mockPool,
-		combinedPool *legacyclientpool.CombinedPool,
-	) {
+	It("returns an error when all the pools fail", func() {
 		mockPools[0].WriteOutput.Ret0 <- errors.New("some-error")
 		mockPools[1].WriteOutput.Ret0 <- errors.New("some-error")
 		msg := []byte("a message")
 
 		err := combinedPool.Write(msg, nil)
-		expect(err == nil).To.Equal(false)
+		Expect(err).To(HaveOccurred())
 	})
-}
+})
