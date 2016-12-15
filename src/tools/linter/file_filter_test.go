@@ -1,26 +1,22 @@
 package linter_test
 
 import (
-	"testing"
 	"tools/linter"
 
-	"github.com/apoydence/onpar"
-	. "github.com/apoydence/onparginkgo"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-func TestFileFilter(t *testing.T) {
-	o := onpar.New()
-	defer o.Run(t)
-
-	o.Spec("it filters in regular files", func(t *testing.T) {
+var _ = Describe("File Filter", func() {
+	It("filters in regular files", func() {
 		mock := newMockFileInfo()
 		mock.NameOutput.Ret0 <- "foo.go"
-		Expect(t, linter.FileFilter(mock)).To(BeTrue())
+		Expect(linter.FileFilter(mock)).To(BeTrue())
 	})
 
-	o.Spec("it filters out test files", func(t *testing.T) {
+	It("filters out test files", func() {
 		mock := newMockFileInfo()
 		mock.NameOutput.Ret0 <- "foo_test.go"
-		Expect(t, linter.FileFilter(mock)).To(BeFalse())
+		Expect(linter.FileFilter(mock)).To(BeFalse())
 	})
-}
+})
