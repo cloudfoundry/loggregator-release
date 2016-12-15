@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 )
 
 type ClientPool struct {
@@ -13,13 +14,18 @@ type ClientPool struct {
 	writeCount    int
 	maxWriteCount int
 
+	refreshInterval time.Duration
+	lastRefreshed   time.Time
+
 	dopplerAddr string
 }
 
-func New(dopplerAddr string, maxWriteCount int) *ClientPool {
+func New(dopplerAddr string, maxWriteCount int, ri time.Duration) *ClientPool {
 	p := &ClientPool{
-		dopplerAddr:   dopplerAddr,
-		maxWriteCount: maxWriteCount,
+		dopplerAddr:     dopplerAddr,
+		maxWriteCount:   maxWriteCount,
+		refreshInterval: ri,
+		lastRefreshed:   time.Now(),
 	}
 
 	return p
@@ -44,11 +50,13 @@ func (p *ClientPool) Write(data []byte) error {
 func (p *ClientPool) fetchConn() *net.UDPConn {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if p.conn != nil && p.writeCount < p.maxWriteCount {
+	if p.conn != nil && p.writeCount < p.maxWriteCount &&
+		time.Since(p.lastRefreshed) < p.refreshInterval {
 		p.writeCount++
 		return p.conn
 	}
 	p.writeCount = 0
+	p.lastRefreshed = time.Now()
 
 	raddr, err := net.ResolveUDPAddr("udp4", p.dopplerAddr)
 	if err != nil {
