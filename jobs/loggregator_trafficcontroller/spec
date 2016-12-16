@@ -55,7 +55,6 @@ properties:
 
   loggregator.tls.ca_cert:
     description: "CA root required for key/cert verification"
-    default: ""
   loggregator.tls.trafficcontroller.cert:
     description: "TLS certificate for trafficcontroller"
   loggregator.tls.trafficcontroller.key:

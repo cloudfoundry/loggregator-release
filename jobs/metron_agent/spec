@@ -69,13 +69,10 @@ properties:
 
   loggregator.tls.ca_cert:
     description: "CA root required for key/cert verification"
-    default: ""
   loggregator.tls.metron.cert:
     description: "TLS certificate for metron"
-    default: ""
   loggregator.tls.metron.key:
     description: "TLS key for metron"
-    default: ""
 
   metron_agent.zone:
     description: "Availability zone where this agent is running"
