@@ -14,42 +14,40 @@ import (
 )
 
 var _ = Describe("End to end tests", func() {
-	Context("with metron and doppler", func() {
-		It("sends messages", func() {
-			etcdCleanup, etcdClientURL := integration_tests.SetupEtcd()
-			defer etcdCleanup()
+	It("sends messages from metron through doppler and traffic controller", func() {
+		etcdCleanup, etcdClientURL := integration_tests.SetupEtcd()
+		defer etcdCleanup()
 
-			dopplerCleanup, dopplerWSPort, dopplerGRPCPort := integration_tests.SetupDoppler(etcdClientURL, 0)
-			defer dopplerCleanup()
+		dopplerCleanup, dopplerWSPort, dopplerGRPCPort := integration_tests.SetupDoppler(etcdClientURL, 0)
+		defer dopplerCleanup()
 
-			metronCleanup, metronPort, metronReady := integration_tests.SetupMetron("localhost", dopplerGRPCPort, 0)
-			defer metronCleanup()
-			trafficcontrollerCleanup, tcPort := integration_tests.SetupTrafficcontroller(
-				etcdClientURL,
-				dopplerWSPort,
-				dopplerGRPCPort,
-				metronPort,
-			)
-			defer trafficcontrollerCleanup()
-			metronReady()
+		metronCleanup, metronPort, metronReady := integration_tests.SetupMetron("localhost", dopplerGRPCPort, 0)
+		defer metronCleanup()
+		trafficcontrollerCleanup, tcPort := integration_tests.SetupTrafficcontroller(
+			etcdClientURL,
+			dopplerWSPort,
+			dopplerGRPCPort,
+			metronPort,
+		)
+		defer trafficcontrollerCleanup()
+		metronReady()
 
-			const writeRatePerSecond = 10
-			metronStreamWriter := endtoend.NewMetronStreamWriter(metronPort)
-			generator := messagegenerator.NewLogMessageGenerator("custom-app-id")
-			writeStrategy := writestrategies.NewConstantWriteStrategy(generator, metronStreamWriter, writeRatePerSecond)
+		const writeRatePerSecond = 10
+		metronStreamWriter := endtoend.NewMetronStreamWriter(metronPort)
+		generator := messagegenerator.NewLogMessageGenerator("custom-app-id")
+		writeStrategy := writestrategies.NewConstantWriteStrategy(generator, metronStreamWriter, writeRatePerSecond)
 
-			firehoseReader := endtoend.NewFirehoseReader(tcPort)
-			ex := experiment.NewExperiment(firehoseReader)
-			ex.AddWriteStrategy(writeStrategy)
+		firehoseReader := endtoend.NewFirehoseReader(tcPort)
+		ex := experiment.NewExperiment(firehoseReader)
+		ex.AddWriteStrategy(writeStrategy)
 
-			ex.Warmup()
-			go func() {
-				defer ex.Stop()
-				time.Sleep(2 * time.Second)
-			}()
-			ex.Start()
+		ex.Warmup()
+		go func() {
+			defer ex.Stop()
+			time.Sleep(2 * time.Second)
+		}()
+		ex.Start()
 
-			Eventually(firehoseReader.LogMessages).Should(Receive(ContainSubstring("custom-app-id")))
-		}, 10)
-	})
+		Eventually(firehoseReader.LogMessages).Should(Receive(ContainSubstring("custom-app-id")))
+	}, 10)
 })
