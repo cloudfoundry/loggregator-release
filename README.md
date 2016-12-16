@@ -144,6 +144,14 @@ component:
 | `loggregator.tls.trafficcontroller.key`  | Yes      | Key used by traffic controller to communicate over TLS         |
 | `loggregator.tls.ca_cert`                | Yes      | Certificate Authority used to sign the certificate             |
 
+#### Metron
+
+| Property                      | Required | Description                                        |
+|-------------------------------|----------|----------------------------------------------------|
+| `loggregator.tls.metron.cert` | Yes      | Certificate used by metron to communicate over TLS |
+| `loggregator.tls.metron.key`  | Yes      | Key used by metron to communicate over TLS         |
+| `loggregator.tls.ca_cert`     | Yes      | Certificate Authority used to sign the certificate |
+
 #### Example Manifest
 
 ```yaml
@@ -170,6 +178,15 @@ component:
         key: |
           -----BEGIN RSA PRIVATE KEY-----
           TRAFFIC CONTROLLER KEY
+          -----END RSA PRIVATE KEY-----
+      metron:
+        cert: |
+          -----BEGIN CERTIFICATE-----
+          METRON CERTIFICATE
+          -----END CERTIFICATE-----
+        key: |
+          -----BEGIN RSA PRIVATE KEY-----
+          METRON KEY
           -----END RSA PRIVATE KEY-----
 ```
 
