@@ -34,7 +34,9 @@ var _ = Describe("Metron", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			var metronReady func()
-			metronCleanup, metronPort, metronReady = integration_tests.SetupMetron("localhost", dopplerServer.Port(), 0)
+			metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(
+				integration_tests.BuildTestMetronConfig("localhost", dopplerServer.Port(), 0),
+			)
 			defer metronReady()
 
 			udpEmitter, err := emitter.NewUdpEmitter(fmt.Sprintf("127.0.0.1:%d", metronPort))

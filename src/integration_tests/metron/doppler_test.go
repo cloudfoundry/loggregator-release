@@ -21,7 +21,9 @@ var _ = Describe("communicating with doppler", func() {
 		)
 		defer dopplerCleanup()
 
-		metronCleanup, metronPort, metronReady := integration_tests.SetupMetron("localhost", dopplerGRPCPort, 0)
+		metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(
+			integration_tests.BuildTestMetronConfig("localhost", dopplerGRPCPort, 0),
+		)
 		defer metronCleanup()
 		metronReady()
 

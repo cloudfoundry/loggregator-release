@@ -14,7 +14,7 @@ import (
 
 	dopplerConf "doppler/config"
 	"doppler/iprange"
-	metronConfig "metron/config"
+	metronConf "metron/config"
 	trafficcontrollerConfig "trafficcontroller/config"
 
 	. "github.com/onsi/ginkgo"
@@ -198,14 +198,9 @@ func StartTestDoppler(conf dopplerConf.Config) (cleanup func(), wsPort, grpcPort
 	return cleanup, int(conf.OutgoingPort), int(conf.GRPC.Port)
 }
 
-func SetupMetron(dopplerURI string, grpcPort, udpPort int) (func(), int, func()) {
-	By("making sure metron was build")
-	metronPath := os.Getenv("METRON_BUILD_PATH")
-	Expect(metronPath).ToNot(BeEmpty())
-
-	By("starting metron")
+func BuildTestMetronConfig(dopplerURI string, grpcPort, udpPort int) metronConf.Config {
 	metronPort := getPort(metronPortOffset)
-	metronConf := metronConfig.Config{
+	return metronConf.Config{
 		Index:        jobIndex,
 		Job:          jobName,
 		Zone:         availabilityZone,
@@ -218,7 +213,7 @@ func SetupMetron(dopplerURI string, grpcPort, udpPort int) (func(), int, func())
 		DopplerAddr:    fmt.Sprintf("%s:%d", dopplerURI, grpcPort),
 		DopplerAddrUDP: fmt.Sprintf("%s:%d", dopplerURI, udpPort),
 
-		GRPC: metronConfig.GRPC{
+		GRPC: metronConf.GRPC{
 			CertFile: ClientCertFilePath(),
 			KeyFile:  ClientKeyFilePath(),
 			CAFile:   CAFilePath(),
@@ -227,11 +222,18 @@ func SetupMetron(dopplerURI string, grpcPort, udpPort int) (func(), int, func())
 		MetricBatchIntervalMilliseconds:  10,
 		RuntimeStatsIntervalMilliseconds: 10,
 	}
+}
 
+func SetupMetron(conf metronConf.Config) (func(), int, func()) {
+	By("making sure metron was build")
+	metronPath := os.Getenv("METRON_BUILD_PATH")
+	Expect(metronPath).ToNot(BeEmpty())
+
+	By("starting metron")
 	metronCfgFile, err := ioutil.TempFile("", "metron-config")
 	Expect(err).ToNot(HaveOccurred())
 
-	err = json.NewEncoder(metronCfgFile).Encode(metronConf)
+	err = json.NewEncoder(metronCfgFile).Encode(conf)
 	Expect(err).ToNot(HaveOccurred())
 	err = metronCfgFile.Close()
 	Expect(err).ToNot(HaveOccurred())
@@ -245,7 +247,7 @@ func SetupMetron(dopplerURI string, grpcPort, udpPort int) (func(), int, func())
 
 	By("waiting for metron to listen")
 	Eventually(func() bool {
-		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", metronConf.PPROFPort))
+		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", conf.PPROFPort))
 		if err != nil {
 			return false
 		}
@@ -256,7 +258,7 @@ func SetupMetron(dopplerURI string, grpcPort, udpPort int) (func(), int, func())
 	return func() {
 			os.Remove(metronCfgFile.Name())
 			metronSession.Kill().Wait()
-		}, metronPort, func() {
+		}, conf.IncomingUDPPort, func() {
 			// TODO When we switch to gRPC we should wait until
 			// we can connect to it
 			time.Sleep(10 * time.Second)
