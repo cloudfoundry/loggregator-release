@@ -1,10 +1,10 @@
 package endtoend_test
 
 import (
+	"integration_tests/endtoend"
 	"time"
 
 	"integration_tests"
-	"integration_tests/endtoend"
 	"tools/benchmark/experiment"
 	"tools/benchmark/messagegenerator"
 	"tools/benchmark/writestrategies"
@@ -18,7 +18,9 @@ var _ = Describe("End to end tests", func() {
 		etcdCleanup, etcdClientURL := integration_tests.SetupEtcd()
 		defer etcdCleanup()
 
-		dopplerCleanup, dopplerWSPort, dopplerGRPCPort := integration_tests.SetupDoppler(etcdClientURL, 0)
+		dopplerCleanup, dopplerWSPort, dopplerGRPCPort := integration_tests.SetupDoppler(
+			integration_tests.BuildTestDopplerConfig(etcdClientURL, 0),
+		)
 		defer dopplerCleanup()
 
 		metronCleanup, metronPort, metronReady := integration_tests.SetupMetron("localhost", dopplerGRPCPort, 0)

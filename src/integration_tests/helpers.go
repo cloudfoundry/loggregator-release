@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	dopplerConfig "doppler/config"
+	dopplerConf "doppler/config"
 	"doppler/iprange"
 	metronConfig "metron/config"
 	trafficcontrollerConfig "trafficcontroller/config"
@@ -112,43 +112,38 @@ func SetupEtcd() (func(), string) {
 	}, etcdClientURL
 }
 
-func SetupDoppler(etcdClientURL string, metronPort int) (cleanup func(), wsPort, grpcPort int) {
-	By("making sure doppler was built")
-	dopplerPath := os.Getenv("DOPPLER_BUILD_PATH")
-	Expect(dopplerPath).ToNot(BeEmpty())
-
-	By("starting doppler")
+func BuildTestDopplerConfig(etcdClientURL string, metronPort int) dopplerConf.Config {
 	dopplerUDPPort := getPort(dopplerUDPPortOffset)
 	dopplerTCPPort := getPort(dopplerTCPPortOffset)
 	dopplerTLSPort := getPort(dopplerTLSPortOffset)
 	dopplerWSPort := getPort(dopplerWSPortOffset)
 	dopplerGRPCPort := getPort(dopplerGRPCPortOffset)
+	pprofPort := getPort(dopplerPPROFPortOffset)
 
-	dopplerConf := dopplerConfig.Config{
-		Index:        jobIndex,
-		JobName:      jobName,
-		Zone:         availabilityZone,
-		SharedSecret: sharedSecret,
+	return dopplerConf.Config{
+		Index:        "42",
+		JobName:      "test-job-name",
+		Zone:         "test-availability-zone",
+		SharedSecret: "test-shared-secret",
 
 		IncomingUDPPort: uint32(dopplerUDPPort),
 		IncomingTCPPort: uint32(dopplerTCPPort),
 		OutgoingPort:    uint32(dopplerWSPort),
-		GRPC: dopplerConfig.GRPC{
+		GRPC: dopplerConf.GRPC{
 			Port:     uint16(dopplerGRPCPort),
 			CertFile: ServerCertFilePath(),
 			KeyFile:  ServerKeyFilePath(),
 			CAFile:   CAFilePath(),
 		},
-		PPROFPort: uint32(getPort(dopplerPPROFPortOffset)),
+		PPROFPort: uint32(pprofPort),
 
 		EtcdUrls:                  []string{etcdClientURL},
 		EtcdMaxConcurrentRequests: 10,
 		MetronAddress:             fmt.Sprintf("127.0.0.1:%d", metronPort),
 
 		EnableTLSTransport: true,
-		TLSListenerConfig: dopplerConfig.TLSListenerConfig{
-			Port: uint32(dopplerTLSPort),
-			// TODO: move these files as source code and write them to tmp files
+		TLSListenerConfig: dopplerConf.TLSListenerConfig{
+			Port:     uint32(dopplerTLSPort),
 			CertFile: ServerCertFilePath(),
 			KeyFile:  ServerKeyFilePath(),
 			CAFile:   CAFilePath(),
@@ -166,16 +161,17 @@ func SetupDoppler(etcdClientURL string, metronPort int) (cleanup func(), wsPort,
 		BlackListIps:                    make([]iprange.IPRange, 0),
 		Syslog:                          "",
 	}
+}
 
-	dopplerCfgFile, err := ioutil.TempFile("", "doppler-config")
+func SetupDoppler(conf dopplerConf.Config) (cleanup func(), wsPort, grpcPort int) {
+	By("making sure doppler was built")
+	dopplerPath := os.Getenv("DOPPLER_BUILD_PATH")
+	Expect(dopplerPath).ToNot(BeEmpty())
+
+	filename, err := writeConfigToFile("doppler-config", conf)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = json.NewEncoder(dopplerCfgFile).Encode(dopplerConf)
-	Expect(err).ToNot(HaveOccurred())
-	err = dopplerCfgFile.Close()
-	Expect(err).ToNot(HaveOccurred())
-
-	dopplerCommand := exec.Command(dopplerPath, "--config", dopplerCfgFile.Name())
+	dopplerCommand := exec.Command(dopplerPath, "--config", filename)
 	dopplerSession, err := gexec.Start(
 		dopplerCommand,
 		gexec.NewPrefixedWriter(color("o", "doppler", green, blue), GinkgoWriter),
@@ -184,19 +180,22 @@ func SetupDoppler(etcdClientURL string, metronPort int) (cleanup func(), wsPort,
 	Expect(err).ToNot(HaveOccurred())
 
 	By("waiting for doppler to listen")
-	Eventually(func() bool {
-		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", dopplerConf.PPROFPort))
+	dopplerStartedFn := func() bool {
+		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", conf.PPROFPort))
 		if err != nil {
 			return false
 		}
 		conn.Close()
 		return true
-	}).Should(BeTrue())
+	}
+	Eventually(dopplerStartedFn).Should(BeTrue())
 
-	return func() {
-		os.Remove(dopplerCfgFile.Name())
+	cleanup = func() {
+		os.Remove(filename)
 		dopplerSession.Kill().Wait()
-	}, dopplerWSPort, dopplerGRPCPort
+	}
+
+	return cleanup, int(conf.OutgoingPort), int(conf.GRPC.Port)
 }
 
 func SetupMetron(dopplerURI string, grpcPort, udpPort int) (func(), int, func()) {
@@ -337,4 +336,23 @@ func color(oe, proc string, oeColor, procColor int) string {
 		procColor = 0
 	}
 	return fmt.Sprintf(colorFmt, oeColor, oe, procColor, proc)
+}
+
+func writeConfigToFile(name string, conf interface{}) (string, error) {
+	confFile, err := ioutil.TempFile("", name)
+	if err != nil {
+		return "", err
+	}
+
+	err = json.NewEncoder(confFile).Encode(conf)
+	if err != nil {
+		return "", err
+	}
+
+	err = confFile.Close()
+	if err != nil {
+		return "", err
+	}
+
+	return confFile.Name(), nil
 }
