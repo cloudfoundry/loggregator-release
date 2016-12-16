@@ -228,7 +228,7 @@ var _ = Describe("TCPlistener", func() {
 					}
 
 					envelopeBuffer.Next()
-					Eventually(mockAlerter.AlertCalled).Should(Receive())
+					Eventually(mockAlerter.AlertCalled, 2).Should(Receive())
 				})
 			})
 		})
