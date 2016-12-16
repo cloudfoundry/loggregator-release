@@ -18,7 +18,7 @@ var _ = Describe("End to end tests", func() {
 		etcdCleanup, etcdClientURL := integration_tests.SetupEtcd()
 		defer etcdCleanup()
 
-		dopplerCleanup, dopplerWSPort, dopplerGRPCPort := integration_tests.SetupDoppler(
+		dopplerCleanup, dopplerWSPort, dopplerGRPCPort := integration_tests.StartTestDoppler(
 			integration_tests.BuildTestDopplerConfig(etcdClientURL, 0),
 		)
 		defer dopplerCleanup()

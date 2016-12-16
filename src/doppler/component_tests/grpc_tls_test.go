@@ -26,7 +26,7 @@ func setupDopplerEnv() (string, func()) {
 	Expect(err).ToNot(HaveOccurred())
 
 	_, err = net.ListenUDP("udp", udpAddr)
-	dopplerCleanup, _, dopplerPort := integration_tests.SetupDoppler(
+	dopplerCleanup, _, dopplerPort := integration_tests.StartTestDoppler(
 		integration_tests.BuildTestDopplerConfig(etcdURI, 12345),
 	)
 	uri := fmt.Sprintf("localhost:%d", dopplerPort)

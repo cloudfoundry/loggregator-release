@@ -163,7 +163,7 @@ func BuildTestDopplerConfig(etcdClientURL string, metronPort int) dopplerConf.Co
 	}
 }
 
-func SetupDoppler(conf dopplerConf.Config) (cleanup func(), wsPort, grpcPort int) {
+func StartTestDoppler(conf dopplerConf.Config) (cleanup func(), wsPort, grpcPort int) {
 	By("making sure doppler was built")
 	dopplerPath := os.Getenv("DOPPLER_BUILD_PATH")
 	Expect(dopplerPath).ToNot(BeEmpty())
