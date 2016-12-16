@@ -8,12 +8,9 @@ import (
 	"testing/quick"
 	"time"
 
-	"github.com/a8m/expect"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
-
-type Expectation func(actual interface{}) *expect.Expect
 
 var _ = Describe("ClientPool", func() {
 	var (
