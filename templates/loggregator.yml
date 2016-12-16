@@ -14,47 +14,6 @@ releases:
   version: latest
 
 instance_groups:
-- name: loggregator-acceptance-tests
-  azs:
-  - z1
-  instances: 1
-  vm_type: "((lats_vm_type))"
-  stemcell: default
-  lifecycle: errand
-  networks:
-  - name: "((loggregator_network_name))"
-  jobs:
-  - name: loggregator-acceptance-tests
-    release: loggregator
-    properties:
-      loggregator_endpoint:
-        shared_secret: "((dropsonde_shared_secret))"
-      traffic_controller:
-        disable_access_control: "((tc_disable_access_control))"
-      etcd:
-        machines: "((etcd_machines))"
-  - name: consul_agent
-    release: consul
-    properties:
-      consul:
-        agent:
-          mode: client
-          domain: cf.internal
-          servers: *3
-          services:
-            etcd:
-              name: etcd
-        require_ssl: "((consul_require_ssl))"
-        encrypt_keys: "((consul_encrypt_keys))"
-        agent_cert: "((consul_agent_cert))"
-        agent_key: "((consul_agent_agent_key))"
-        ca_cert: "((consul_agent_ca_cert))"
-        server_cert: "((consul_agent_server_cert))"
-        server_key: "((consul_agent_server_key))"
-  - name: metron_agent
-    release: loggregator
-    properties: *2
-
 - name: consul
   azs:
   - z1
@@ -109,6 +68,57 @@ instance_groups:
   update:
     serial: true
     max_in_flight: 1
+
+- name: loggregator-acceptance-tests
+  azs:
+  - z1
+  instances: 1
+  vm_type: "((lats_vm_type))"
+  stemcell: default
+  lifecycle: errand
+  networks:
+  - name: "((loggregator_network_name))"
+  jobs:
+  - name: loggregator-acceptance-tests
+    release: loggregator
+    properties:
+      loggregator:
+        etcd:
+          require_ssl: "((etcd_require_ssl))"
+          ca_cert: "((etcd_ca_cert))"
+          machines: "((etcd_machines))"
+      loggregator_acceptance_tests:
+        etcd:
+          cert: "((etcd_client_cert))"
+          key: "((etcd_client_key))"
+      loggregator_endpoint:
+        shared_secret: "((dropsonde_shared_secret))"
+      traffic_controller:
+        disable_access_control: "((tc_disable_access_control))"
+      etcd:
+        machines: "((etcd_machines))"
+  - name: consul_agent
+    release: consul
+    properties:
+      consul:
+        agent:
+          mode: client
+          domain: cf.internal
+          servers: *3
+          services:
+            etcd:
+              name: etcd
+        require_ssl: "((consul_require_ssl))"
+        encrypt_keys: "((consul_encrypt_keys))"
+        agent_cert: "((consul_agent_cert))"
+        agent_key: "((consul_agent_agent_key))"
+        ca_cert: "((consul_agent_ca_cert))"
+        server_cert: "((consul_agent_server_cert))"
+        server_key: "((consul_agent_server_key))"
+  - name: metron_agent
+    release: loggregator
+    properties: *2
+
 
 - name: etcd
   azs:

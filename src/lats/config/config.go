@@ -11,8 +11,16 @@ type TestConfig struct {
 
 	DropsondePort int
 
-	EtcdUrls     []string
-	SharedSecret string
+	EtcdUrls            []string
+	SharedSecret        string
+	EtcdRequireTLS      bool
+	EtcdTLSClientConfig EtcdTLSClientConfig
+}
+
+type EtcdTLSClientConfig struct {
+	CertFile string
+	KeyFile  string
+	CAFile   string
 }
 
 type MetronConfig struct {
@@ -24,6 +32,8 @@ type MetronConfig struct {
 	EtcdMaxConcurrentRequests     int
 	EtcdQueryIntervalMilliseconds int
 	Zone                          string
+	EtcdRequireTLS                bool
+	EtcdTLSClientConfig           EtcdTLSClientConfig
 }
 
 func Load() *TestConfig {
@@ -66,6 +76,11 @@ func (tc *TestConfig) SaveMetronConfig() {
 
 	if tc.SharedSecret != "" {
 		metronConfig.SharedSecret = tc.SharedSecret
+	}
+
+	if tc.EtcdRequireTLS {
+		metronConfig.EtcdRequireTLS = true
+		metronConfig.EtcdTLSClientConfig = tc.EtcdTLSClientConfig
 	}
 
 	metronConfigFile, err := os.Create("fixtures/metron.json")
