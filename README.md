@@ -120,11 +120,19 @@ To generate the Loggregator TLS certs and keys, run
 
 #### Custom TLS Certificates
 
-If you already have a CA you should use the following common names for each
-component:
+If you already have a CA, you'll need to create a certificate for each component.  Values for the components are:
 
- - doppler
- - trafficcontroller
+##### Doppler
+- common name: doppler
+- extended key usage: serverAuth
+
+##### TrafficController
+- common name: trafficcontroller
+- extended key usage: clientAuth
+
+##### Metron
+- common name: metron
+- extended key usage: clientAuth
 
 ### Adding your TLS certificates
 
