@@ -14,7 +14,7 @@ import (
 
 var _ = Describe("communicating with doppler", func() {
 	It("forwards messages via gRPC", func() {
-		etcdCleanup, etcdClientURL := integration_tests.SetupEtcd()
+		etcdCleanup, etcdClientURL := integration_tests.StartTestEtcd()
 		defer etcdCleanup()
 		dopplerCleanup, dopplerWSPort, dopplerGRPCPort := integration_tests.StartTestDoppler(
 			integration_tests.BuildTestDopplerConfig(etcdClientURL, 0),

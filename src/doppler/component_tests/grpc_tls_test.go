@@ -19,7 +19,7 @@ import (
 )
 
 func setupDopplerEnv() (string, func()) {
-	etcdCleanup, etcdURI := integration_tests.SetupEtcd()
+	etcdCleanup, etcdURI := integration_tests.StartTestEtcd()
 
 	// TODO: get random port from kernel....
 	udpAddr, err := net.ResolveUDPAddr("udp", ":12345")

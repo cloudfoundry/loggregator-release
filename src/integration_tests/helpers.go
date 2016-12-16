@@ -62,7 +62,7 @@ func getPort(offset int) int {
 	return config.GinkgoConfig.ParallelNode*portRangeCoefficient + portRangeStart + offset
 }
 
-func SetupEtcd() (func(), string) {
+func StartTestEtcd() (func(), string) {
 	By("making sure etcd was built")
 	etcdPath := os.Getenv("ETCD_BUILD_PATH")
 	Expect(etcdPath).ToNot(BeEmpty())
