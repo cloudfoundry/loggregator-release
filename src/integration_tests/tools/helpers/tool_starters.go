@@ -30,8 +30,6 @@ func BuildLogemitter() {
 func StartLogemitter(logfinPort string) (*gexec.Session, string) {
 	port := testPort()
 	os.Setenv("PORT", port)
-	os.Setenv("RATE", "100")
-	os.Setenv("TIME", ".5s")
 	os.Setenv("LOGFIN_URL", "http://localhost:"+logfinPort)
 	//PORT
 	return startComponent(

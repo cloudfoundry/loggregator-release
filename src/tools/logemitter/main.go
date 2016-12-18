@@ -6,18 +6,18 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"strconv"
 	"time"
 
-	"github.com/bradylove/envstruct"
 	"github.com/nu7hatch/gouuid"
 )
 
 type Config struct {
-	Rate           float64       `env:"rate"`
-	Time           time.Duration `env:"time"`
-	LogFinURL      *url.URL      `env:"logfin_url,required"`
-	Port           uint16        `env:"port,required"`
-	SkipCertVerify bool          `env:"skip_cert_verify"`
+	Rate      float64
+	Time      time.Duration
+	LogFinURL *url.URL
+	Port      int
 }
 
 func (c Config) Max() int {
@@ -29,14 +29,21 @@ func (c Config) Delay() time.Duration {
 }
 
 func main() {
-	conf := Config{
-		Rate: 1000,
-		Time: 5 * time.Minute,
-	}
-
-	err := envstruct.Load(&conf)
+	url, err := url.Parse(os.Getenv("LOGFIN_URL"))
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	port, err := strconv.Atoi(os.Getenv("PORT"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	conf := Config{
+		Rate:      100,
+		Time:      500 * time.Millisecond,
+		LogFinURL: url,
+		Port:      port,
 	}
 
 	uuid, err := uuid.NewV4()
@@ -52,8 +59,7 @@ func main() {
 		printUntil(guid, conf.Delay(), conf.Max())
 		http.DefaultClient.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: conf.SkipCertVerify,
-				ServerName:         "127.0.0.1",
+				ServerName: "127.0.0.1",
 			},
 		}
 		_, err := http.Get(conf.LogFinURL.String() + "/count")
