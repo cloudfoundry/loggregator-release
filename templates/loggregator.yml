@@ -17,13 +17,13 @@ instance_groups:
 - name: consul
   azs:
   - z1
-  instances: "((consul_instances))"
-  persistent_disk_type: "((consul_disk_type))"
-  vm_type: "((consul_vm_type))"
+  instances: 1
+  persistent_disk_type: 1GB
+  vm_type: common
   stemcell: default
   networks:
-  - name: "((loggregator_network_name))"
-    static_ips: "((consul_static_ips))"
+  - name: loggregator
+    static_ips: [10.244.10.2]
   jobs:
   - name: consul_agent
     release: consul
@@ -33,8 +33,8 @@ instance_groups:
           mode: server
           domain: cf.internal
           servers: &3
-            lan: "((consul_static_ips))"
-        require_ssl: "((consul_require_ssl))"
+            lan: [10.244.10.2]
+        require_ssl: true
         encrypt_keys: "((consul_encrypt_keys))"
         agent_cert: "((consul_agent_cert))"
         agent_key: "((consul_agent_agent_key))"
@@ -62,9 +62,9 @@ instance_groups:
             cert: "((metron_agent_tls_client_cert))"
             key: "((metron_agent_tls_client_key))"
         etcd:
-          require_ssl: "((etcd_require_ssl))"
+          require_ssl: true
           ca_cert: "((etcd_ca_cert))"
-          machines: "((etcd_machines))"
+          machines: [etcd.service.cf.internal]
   update:
     serial: true
     max_in_flight: 1
@@ -73,30 +73,30 @@ instance_groups:
   azs:
   - z1
   instances: 1
-  vm_type: "((lats_vm_type))"
+  vm_type: common
   stemcell: default
   lifecycle: errand
   networks:
-  - name: "((loggregator_network_name))"
+  - name: loggregator
   jobs:
   - name: loggregator-acceptance-tests
     release: loggregator
     properties:
+      traffic_controller:
+        disable_access_control: true
       loggregator:
         etcd:
-          require_ssl: "((etcd_require_ssl))"
+          require_ssl: true
           ca_cert: "((etcd_ca_cert))"
-          machines: "((etcd_machines))"
+          machines: [etcd.service.cf.internal]
       loggregator_acceptance_tests:
         etcd:
           cert: "((etcd_client_cert))"
           key: "((etcd_client_key))"
       loggregator_endpoint:
         shared_secret: "((dropsonde_shared_secret))"
-      traffic_controller:
-        disable_access_control: "((tc_disable_access_control))"
       etcd:
-        machines: "((etcd_machines))"
+        machines: [etcd.service.cf.internal]
   - name: consul_agent
     release: consul
     properties:
@@ -108,7 +108,7 @@ instance_groups:
           services:
             etcd:
               name: etcd
-        require_ssl: "((consul_require_ssl))"
+        require_ssl: true
         encrypt_keys: "((consul_encrypt_keys))"
         agent_cert: "((consul_agent_cert))"
         agent_key: "((consul_agent_agent_key))"
@@ -123,13 +123,13 @@ instance_groups:
 - name: etcd
   azs:
   - z1
-  instances: "((etcd_instances))"
-  persistent_disk_type: "((etcd_disk_type))"
-  vm_type: "((etcd_vm_type))"
+  instances: 1
+  persistent_disk_type: 1GB
+  vm_type: common
   stemcell: default
   networks:
-  - name: "((loggregator_network_name))"
-    static_ips: "((etcd_static_ips))"
+  - name: loggregator
+    static_ips: [10.244.10.3]
   jobs:
   - name: consul_agent
     release: consul
@@ -142,7 +142,7 @@ instance_groups:
           services:
             etcd:
               name: etcd
-        require_ssl: "((consul_require_ssl))"
+        require_ssl: true
         encrypt_keys: "((consul_encrypt_keys))"
         agent_cert: "((consul_agent_cert))"
         agent_key: "((consul_agent_agent_key))"
@@ -155,11 +155,11 @@ instance_groups:
       etcd:
         advertise_urls_dns_suffix: etcd.service.cf.internal
         cluster:
-        - instances: "((etcd_instances))"
+        - instances: 1
           name: etcd
-        machines: "((etcd_machines))"
-        peer_require_ssl: "((etcd_require_ssl))"
-        require_ssl: "((etcd_require_ssl))"
+        machines: [etcd.service.cf.internal]
+        peer_require_ssl: true
+        require_ssl: true
         ca_cert: "((etcd_ca_cert))"
         client_cert: "((etcd_client_cert))"
         client_key: "((etcd_client_key))"
@@ -174,7 +174,7 @@ instance_groups:
       etcd_metrics_server:
         etcd:
           dns_suffix: etcd.service.cf.internal
-          require_ssl: "((etcd_require_ssl))"
+          require_ssl: true
           ca_cert: "((etcd_ca_cert))"
           client_cert: "((etcd_client_cert))"
           client_key: "((etcd_client_key))"
@@ -188,12 +188,12 @@ instance_groups:
 - name: doppler
   azs:
   - z1
-  instances: "((doppler_instances))"
-  persistent_disk_type: "((doppler_disk_type))"
-  vm_type: "((doppler_vm_type))"
+  instances: 1
+  persistent_disk_type: 1GB
+  vm_type: common
   stemcell: default
   networks:
-  - name: "((loggregator_network_name))"
+  - name: loggregator
   jobs:
   - name: consul_agent
     release: consul
@@ -206,7 +206,7 @@ instance_groups:
           services:
             doppler:
               name: doppler
-        require_ssl: "((consul_require_ssl))"
+        require_ssl: true
         encrypt_keys: "((consul_encrypt_keys))"
         agent_cert: "((consul_agent_cert))"
         agent_key: "((consul_agent_agent_key))"
@@ -228,9 +228,9 @@ instance_groups:
             cert: "((loggregator_tls_doppler_cert))"
             key: "((loggregator_tls_doppler_key))"
         etcd:
-          require_ssl: "((etcd_require_ssl))"
+          require_ssl: true
           ca_cert: "((etcd_ca_cert))"
-          machines: "((etcd_machines))"
+          machines: [etcd.service.cf.internal]
       doppler_endpoint:
         shared_secret: "((dropsonde_shared_secret))"
   - name: metron_agent
@@ -240,12 +240,12 @@ instance_groups:
 - name: log-api
   azs:
   - z1
-  instances: "((log_api_instances))"
-  persistent_disk_type: "((log_api_disk_type))"
-  vm_type: "((log_api_vm_type))"
+  instances: 1
+  persistent_disk_type: 1GB
+  vm_type: common
   stemcell: default
   networks:
-  - name: "((loggregator_network_name))"
+  - name: loggregator
   jobs:
   - name: consul_agent
     release: consul
@@ -257,7 +257,7 @@ instance_groups:
           servers: *3
           services:
             loggregator_trafficcontroller: {}
-        require_ssl: "((consul_require_ssl))"
+        require_ssl: true
         encrypt_keys: "((consul_encrypt_keys))"
         agent_cert: "((consul_agent_cert))"
         agent_key: "((consul_agent_agent_key))"
@@ -271,9 +271,9 @@ instance_groups:
         srv_api_uri: ""
       uaa:
         url: ""
-      system_domain: "((system_domain))"
+      system_domain: bosh-lite.com
       traffic_controller:
-        disable_access_control: "((tc_disable_access_control))"
+        disable_access_control: true
         etcd:
           client_cert: "((etcd_client_cert))"
           client_key: "((etcd_client_key))"
@@ -284,11 +284,11 @@ instance_groups:
             cert: "((loggregator_tls_tc_cert))"
             key: "((loggregator_tls_tc_key))"
         etcd:
-          require_ssl: "((etcd_require_ssl))"
+          require_ssl: true
           ca_cert: "((etcd_ca_cert))"
-          machines: "((etcd_machines))"
+          machines: [etcd.service.cf.internal]
       ssl:
-        skip_cert_verify: "((skip_ssl_verify))"
+        skip_cert_verify: true
   - name: metron_agent
     release: loggregator
     properties: *2

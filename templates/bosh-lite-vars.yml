@@ -136,16 +136,8 @@ consul_agent_server_key: |+
   EroZtdjv1A9NVpCHJM7a/3nl0aALEsn3JKYEuG4HCY/oJ7rPpJItfrJ3MUTn/uqD
   BKcJHlf9kYxFaLL17iOq9rY0+LURr63BkRa2uyn489luxcHnTjk=
   -----END RSA PRIVATE KEY-----
-consul_disk_type: 1GB
 consul_encrypt_keys:
   - Atzo3VBv+YVDzQAzlQRPRA==
-consul_instances: 1
-consul_require_ssl: true
-consul_static_ips: [10.244.10.2]
-consul_vm_type: small
-doppler_disk_type: 1GB
-doppler_instances: 1
-doppler_vm_type: small
 dropsonde_shared_secret: secret
 etcd_ca_cert: |+
   -----BEGIN CERTIFICATE-----
@@ -231,8 +223,6 @@ etcd_client_key: |+
   1R/DkEfox0Iff+srpov8PyQ7xxRuXVMCQmuzozFJglqXVEuP1zZKq9uY9FL3uz8r
   rJrrFnyk22bnF7SbxckZVT1E5BfOCcgol5FgvgH8jhVImvyzc2WK+Fs=
   -----END RSA PRIVATE KEY-----
-etcd_disk_type: 1GB
-etcd_instances: 1
 etcd_peer_ca_cert: |+
   -----BEGIN CERTIFICATE-----
   MIIE4jCCAsqgAwIBAgIBATANBgkqhkiG9w0BAQsFADARMQ8wDQYDVQQDEwZwZWVy
@@ -318,7 +308,6 @@ etcd_peer_key: |+
   5kI5+dCP48b6TAG3CxSIYaCmHvzzXZmHTBjp7vGDhbUe5IxuVgWksMW+ncG2fzVg
   f6Zd9HwsfXEF8JmXhK9snnhHs7mFwSI3zw2sIZvGUitKSJ1Ib0i+
   -----END RSA PRIVATE KEY-----
-etcd_require_ssl: true
 etcd_server_cert: |+
   -----BEGIN CERTIFICATE-----
   MIIEcjCCAlqgAwIBAgIQabonHCIXZQv7wEt6qUx1nzANBgkqhkiG9w0BAQsFADAR
@@ -374,14 +363,6 @@ etcd_server_key: |+
   +BO/Bttk+Crr+SxAggkN+jYQ4EWYvWFUOnyNJACQuvKy9DRV8zEHQvEyPjh0Y59E
   5YzfqFBspSYjKmUoTjFPk1VDsYTmCt2a4qyOafdMG+FDtK5DwJSL
   -----END RSA PRIVATE KEY-----
-etcd_static_ips: [10.244.10.3]
-etcd_machines: [etcd.service.cf.internal]
-etcd_vm_type: small
-lats_vm_type: small
-log_api_disk_type: 1GB
-log_api_instances: 1
-log_api_vm_type: small
-loggregator_network_name: loggregator
 loggregator_tls_ca_cert: |+
   -----BEGIN CERTIFICATE-----
   MIIE8DCCAtigAwIBAgIBATANBgkqhkiG9w0BAQsFADAYMRYwFAYDVQQDEw1sb2dn
@@ -574,6 +555,3 @@ metron_agent_tls_client_key: |+
   lRBu4dsciMhIwxbrw7DnUghxRb6PyZ5oJXOvXqXLA1TmzXEurIKb2dIVBUdQCZca
   6rj2u7u4Am46em71piFN/Gt7cUhiX6ueTfg+d9aMue+i2dwTZHMs
   -----END RSA PRIVATE KEY-----
-skip_ssl_verify: true
-system_domain: bosh-lite.com
-tc_disable_access_control: true

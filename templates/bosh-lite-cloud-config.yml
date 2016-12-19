@@ -2,7 +2,7 @@ azs:
 - name: z1
 
 vm_types:
-- name: small
+- name: common
 
 disk_types:
 - name: 1GB
@@ -13,7 +13,7 @@ compilation:
   network: compilation
   az: z1
   reuse_compilation_vms: true
-  vm_type: small
+  vm_type: common
 
 networks:
 - name: loggregator
