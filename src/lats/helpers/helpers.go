@@ -1,22 +1,24 @@
 package helpers
 
 import (
-	"context"
 	"crypto/tls"
 	"errors"
-
-	"github.com/coreos/etcd/client"
-	. "github.com/onsi/gomega"
-
 	"fmt"
-	. "lats/config"
 	"net"
 	"strconv"
 	"time"
 
+	"code.cloudfoundry.org/workpool"
+
+	. "github.com/onsi/gomega"
+
+	. "lats/config"
+
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/cloudfoundry/storeadapter"
+	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 )
 
 const ORIGIN_NAME = "LATs"
@@ -147,17 +149,27 @@ func FindMatchingEnvelopeByID(id string, msgChan <-chan *events.Envelope) (*even
 }
 
 func WriteToEtcd(urls []string, key, value string) func() {
-	cfg := client.Config{
-		Endpoints: urls,
+	etcdOptions := &etcdstoreadapter.ETCDOptions{
+		IsSSL:       true,
+		CertFile:    config.EtcdTLSClientConfig.CertFile,
+		KeyFile:     config.EtcdTLSClientConfig.KeyFile,
+		CAFile:      config.EtcdTLSClientConfig.CAFile,
+		ClusterUrls: urls,
 	}
-	c, err := client.New(cfg)
-	if err != nil {
-		panic(err)
-	}
-	api := client.NewKeysAPI(c)
-	options := &client.SetOptions{TTL: time.Minute}
-	api.Set(context.Background(), key, value, options)
+
+	workPool, err := workpool.NewWorkPool(10)
+	Expect(err).NotTo(HaveOccurred())
+	adapter, err := etcdstoreadapter.New(etcdOptions, workPool)
+	Expect(err).NotTo(HaveOccurred())
+	err = adapter.Create(storeadapter.StoreNode{
+		Key:   key,
+		Value: []byte(value),
+		TTL:   uint64(time.Minute),
+	})
+	Expect(err).NotTo(HaveOccurred())
+
 	return func() {
-		api.Delete(context.Background(), key, nil)
+		err = adapter.Delete(key)
+		Expect(err).ToNot(HaveOccurred())
 	}
 }

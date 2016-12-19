@@ -9,18 +9,35 @@ packages:
 templates:
   run.erb: bin/run
   config.json.erb: bin/config.json
+  etcd-client.crt.erb: config/certs/etcd-client.crt
+  etcd-client.key.erb: config/certs/etcd-client.key
+  etcd-ca.crt.erb: config/certs/etcd-ca.crt
 
 consumes:
 - name: trafficcontroller
   type: trafficcontroller
 
 properties:
-  etcd.machines:
+  loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"
   ssl.skip_cert_verify:
     description: ""
   metron_agent.dropsonde_incoming_port:
     description: "port for tests to send metrics to metron"
+
+  loggregator.etcd.require_ssl:
+    description: "Enable ssl for all communication with etcd"
+    default: false
+  loggregator.etcd.ca_cert:
+    description: "PEM-encoded CA certificate"
+    default: ""
+  loggregator_acceptance_tests.etcd.cert:
+    description: "PEM-encoded client certificate"
+    default: ""
+  loggregator_acceptance_tests.etcd.key:
+    description: "PEM-encoded client key"
+    default: ""
+
   loggregator_endpoint.shared_secret:
     description: ""
   loggregator_acceptance_tests.login_required:
@@ -29,6 +46,7 @@ properties:
     description: ""
   loggregator_acceptance_tests.admin_password:
     description: ""
+
   traffic_controller.disable_access_control:
     description: "Disable UAA/CC auth in traffic controller.  This **MUST** be set to true in the manifest for LATs to work."
     default: false
