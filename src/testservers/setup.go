@@ -13,9 +13,6 @@ const (
 	availabilityZone = "test-availability-zone"
 	jobName          = "test-job-name"
 	jobIndex         = "42"
-
-	portRangeStart       = 55000
-	portRangeCoefficient = 100
 )
 
 const (
