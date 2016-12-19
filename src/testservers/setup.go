@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"github.com/onsi/ginkgo/config"
+	"net"
 )
 
 const (
@@ -43,7 +44,17 @@ const (
 )
 
 func getPort(offset int) int {
-	return config.GinkgoConfig.ParallelNode*portRangeCoefficient + portRangeStart + offset
+	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	if err != nil {
+		panic(err)
+	}
+
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		panic(err)
+	}
+	defer l.Close()
+	return l.Addr().(*net.TCPAddr).Port + offset
 }
 
 func color(oe, proc string, oeColor, procColor int) string {
