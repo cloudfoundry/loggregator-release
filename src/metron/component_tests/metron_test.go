@@ -2,7 +2,6 @@ package component_test
 
 import (
 	"fmt"
-	"integration_tests"
 	"metron/testutil"
 	"net"
 	"plumbing"
@@ -17,6 +16,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"testservers"
 )
 
 var _ = Describe("Metron", func() {
@@ -34,8 +34,8 @@ var _ = Describe("Metron", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			var metronReady func()
-			metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(
-				integration_tests.BuildTestMetronConfig("localhost", dopplerServer.Port(), 0),
+			metronCleanup, metronPort, metronReady = testservers.StartMetron(
+				testservers.BuildMetronConfig("localhost", dopplerServer.Port(), 0),
 			)
 			defer metronReady()
 
@@ -98,7 +98,9 @@ var _ = Describe("Metron", func() {
 			}
 
 			var metronReady func()
-			metronCleanup, metronPort, metronReady = integration_tests.SetupMetron("localhost", 0, udpPort)
+			metronCleanup, metronPort, metronReady = testservers.StartMetron(
+				testservers.BuildMetronConfig("localhost", 0, udpPort),
+			)
 			defer metronReady()
 
 			udpEmitter, err := emitter.NewUdpEmitter(fmt.Sprintf("127.0.0.1:%d", metronPort))

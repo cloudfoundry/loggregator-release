@@ -4,7 +4,6 @@ import (
 	// . "doppler/component_tests"
 	"context"
 	"fmt"
-	"integration_tests"
 	"net"
 	"plumbing"
 	"time"
@@ -16,18 +15,19 @@ import (
 	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"testservers"
 )
 
 func setupDopplerEnv() (string, func()) {
-	etcdCleanup, etcdURI := integration_tests.StartTestEtcd()
+	etcdCleanup, etcdURI := testservers.StartTestEtcd()
 
 	// TODO: get random port from kernel....
 	udpAddr, err := net.ResolveUDPAddr("udp", ":12345")
 	Expect(err).ToNot(HaveOccurred())
 
 	_, err = net.ListenUDP("udp", udpAddr)
-	dopplerCleanup, _, dopplerPort := integration_tests.StartTestDoppler(
-		integration_tests.BuildTestDopplerConfig(etcdURI, 12345),
+	dopplerCleanup, _, dopplerPort := testservers.StartDoppler(
+		testservers.BuildDopplerConfig(etcdURI, 12345),
 	)
 	uri := fmt.Sprintf("localhost:%d", dopplerPort)
 	return uri, func() {
@@ -38,9 +38,9 @@ func setupDopplerEnv() (string, func()) {
 
 func setupIngestor(uri string) plumbing.DopplerIngestor_PusherClient {
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
-		integration_tests.ClientCertFilePath(),
-		integration_tests.ClientKeyFilePath(),
-		integration_tests.CAFilePath(),
+		testservers.ClientCertFilePath(),
+		testservers.ClientKeyFilePath(),
+		testservers.CAFilePath(),
 		"doppler",
 	)
 	Expect(err).ToNot(HaveOccurred())
@@ -57,9 +57,9 @@ func setupIngestor(uri string) plumbing.DopplerIngestor_PusherClient {
 
 func setupSubscriber(uri string) plumbing.Doppler_SubscribeClient {
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
-		integration_tests.ClientCertFilePath(),
-		integration_tests.ClientKeyFilePath(),
-		integration_tests.CAFilePath(),
+		testservers.ClientCertFilePath(),
+		testservers.ClientKeyFilePath(),
+		testservers.CAFilePath(),
 		"doppler",
 	)
 	Expect(err).ToNot(HaveOccurred())

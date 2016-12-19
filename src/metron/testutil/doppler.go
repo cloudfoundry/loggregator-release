@@ -1,12 +1,12 @@
 package testutil
 
 import (
-	"integration_tests"
 	"net"
 	"plumbing"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"testservers"
 )
 
 type DopplerIngestorServer interface {
@@ -22,9 +22,9 @@ type Server struct {
 
 func NewServer() (*Server, error) {
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
-		integration_tests.ServerCertFilePath(),
-		integration_tests.ServerKeyFilePath(),
-		integration_tests.CAFilePath(),
+		testservers.ServerCertFilePath(),
+		testservers.ServerKeyFilePath(),
+		testservers.CAFilePath(),
 		"",
 	)
 	if err != nil {

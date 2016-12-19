@@ -2,7 +2,6 @@ package metron_test
 
 import (
 	"fmt"
-	"integration_tests"
 
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/logs"
@@ -10,19 +9,20 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"testservers"
 )
 
 var _ = Describe("communicating with doppler", func() {
 	It("forwards messages via gRPC", func() {
-		etcdCleanup, etcdClientURL := integration_tests.StartTestEtcd()
+		etcdCleanup, etcdClientURL := testservers.StartTestEtcd()
 		defer etcdCleanup()
-		dopplerCleanup, dopplerWSPort, dopplerGRPCPort := integration_tests.StartTestDoppler(
-			integration_tests.BuildTestDopplerConfig(etcdClientURL, 0),
+		dopplerCleanup, dopplerWSPort, dopplerGRPCPort := testservers.StartDoppler(
+			testservers.BuildDopplerConfig(etcdClientURL, 0),
 		)
 		defer dopplerCleanup()
 
-		metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(
-			integration_tests.BuildTestMetronConfig("localhost", dopplerGRPCPort, 0),
+		metronCleanup, metronPort, metronReady := testservers.StartMetron(
+			testservers.BuildMetronConfig("localhost", dopplerGRPCPort, 0),
 		)
 		defer metronCleanup()
 		metronReady()

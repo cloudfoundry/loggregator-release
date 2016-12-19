@@ -4,34 +4,36 @@ import (
 	"integration_tests/endtoend"
 	"time"
 
-	"integration_tests"
 	"tools/benchmark/experiment"
 	"tools/benchmark/messagegenerator"
 	"tools/benchmark/writestrategies"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"testservers"
 )
 
 var _ = Describe("End to end tests", func() {
 	It("sends messages from metron through doppler and traffic controller", func() {
-		etcdCleanup, etcdClientURL := integration_tests.StartTestEtcd()
+		etcdCleanup, etcdClientURL := testservers.StartTestEtcd()
 		defer etcdCleanup()
 
-		dopplerCleanup, dopplerWSPort, dopplerGRPCPort := integration_tests.StartTestDoppler(
-			integration_tests.BuildTestDopplerConfig(etcdClientURL, 0),
+		dopplerCleanup, dopplerWSPort, dopplerGRPCPort := testservers.StartDoppler(
+			testservers.BuildDopplerConfig(etcdClientURL, 0),
 		)
 		defer dopplerCleanup()
 
-		metronCleanup, metronPort, metronReady := integration_tests.SetupMetron(
-			integration_tests.BuildTestMetronConfig("localhost", dopplerGRPCPort, 0),
+		metronCleanup, metronPort, metronReady := testservers.StartMetron(
+			testservers.BuildMetronConfig("localhost", dopplerGRPCPort, 0),
 		)
 		defer metronCleanup()
-		trafficcontrollerCleanup, tcPort := integration_tests.SetupTrafficcontroller(
-			etcdClientURL,
-			dopplerWSPort,
-			dopplerGRPCPort,
-			metronPort,
+		trafficcontrollerCleanup, tcPort := testservers.StartTrafficController(
+			testservers.BuildTrafficControllerConf(
+				etcdClientURL,
+				dopplerWSPort,
+				dopplerGRPCPort,
+				metronPort,
+			),
 		)
 		defer trafficcontrollerCleanup()
 		metronReady()
