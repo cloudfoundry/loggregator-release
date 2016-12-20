@@ -271,7 +271,7 @@ instance_groups:
         srv_api_uri: ""
       uaa:
         url: ""
-      system_domain: bosh-lite.com
+      system_domain: unused
       traffic_controller:
         disable_access_control: true
         etcd:
@@ -288,7 +288,7 @@ instance_groups:
           ca_cert: "((etcd_ca_cert))"
           machines: [etcd.service.cf.internal]
       ssl:
-        skip_cert_verify: true
+        skip_cert_verify: false
   - name: metron_agent
     release: loggregator
     properties: *2
