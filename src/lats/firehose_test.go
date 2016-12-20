@@ -1,7 +1,6 @@
 package lats_test
 
 import (
-	"context"
 	"fmt"
 	"lats/helpers"
 	"math/rand"
@@ -10,7 +9,6 @@ import (
 
 	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
-	etcdclient "github.com/coreos/etcd/client"
 	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -364,54 +362,4 @@ func (m valueMetrics) Swap(i, j int) {
 	tmp := m[i]
 	m[i] = m[j]
 	m[j] = tmp
-}
-
-func listNode(key string, etcdAddrs ...string) *etcdclient.Node {
-	c, err := etcdclient.New(etcdclient.Config{
-		Endpoints: etcdAddrs,
-	})
-	Expect(err).ToNot(HaveOccurred())
-
-	kAPI := etcdclient.NewKeysAPI(c)
-
-	opts := &etcdclient.GetOptions{Recursive: true}
-	ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(3*time.Second))
-	resp, err := kAPI.Get(ctx, key, opts)
-	Expect(err).ToNot(HaveOccurred())
-
-	return resp.Node
-}
-
-func deleteLeafs(key string, etcdAddrs ...string) time.Duration {
-	node := listNode(key, etcdAddrs...)
-	c, err := etcdclient.New(etcdclient.Config{
-		Endpoints: etcdAddrs,
-	})
-	Expect(err).ToNot(HaveOccurred())
-
-	kAPI := etcdclient.NewKeysAPI(c)
-
-	var longestTTL time.Duration
-	for _, leaf := range leafs(node) {
-		resp, err := kAPI.Delete(context.Background(), leaf.Key, nil)
-		Expect(err).ToNot(HaveOccurred())
-		ttl := time.Duration(resp.PrevNode.TTL) * time.Second
-		if ttl > longestTTL {
-			longestTTL = ttl
-		}
-	}
-	return longestTTL
-}
-
-func leafs(node *etcdclient.Node) []*etcdclient.Node {
-	if !node.Dir {
-		return []*etcdclient.Node{
-			node,
-		}
-	}
-	var ls []*etcdclient.Node
-	for _, n := range node.Nodes {
-		ls = append(ls, leafs(n)...)
-	}
-	return ls
 }
