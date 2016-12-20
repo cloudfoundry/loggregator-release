@@ -129,7 +129,6 @@ instance_groups:
   stemcell: default
   networks:
   - name: loggregator
-    static_ips: [10.244.10.3]
   jobs:
   - name: consul_agent
     release: consul
