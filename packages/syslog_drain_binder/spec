@@ -47,7 +47,6 @@ files:
 - loggregator/src/google.golang.org/grpc/naming/*.go # gosub
 - loggregator/src/google.golang.org/grpc/peer/*.go # gosub
 - loggregator/src/google.golang.org/grpc/transport/*.go # gosub
-- loggregator/src/logger/*.go # gosub
 - loggregator/src/plumbing/*.go # gosub
 - loggregator/src/signalmanager/*.go # gosub
 - loggregator/src/syslog_drain_binder/*.go # gosub

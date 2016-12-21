@@ -8,7 +8,6 @@ import (
 	"syslog_drain_binder/shared_types"
 	"time"
 
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
 
@@ -24,7 +23,7 @@ var _ = Describe("EtcdSyslogDrainStore", func() {
 
 	BeforeEach(func() {
 		fakeStoreAdapter = NewFakeStoreAdapter()
-		syslogDrainStore = etcd_syslog_drain_store.NewEtcdSyslogDrainStore(fakeStoreAdapter, 10*time.Second, loggertesthelper.Logger())
+		syslogDrainStore = etcd_syslog_drain_store.NewEtcdSyslogDrainStore(fakeStoreAdapter, 10*time.Second)
 	})
 
 	Describe("UpdateDrains", func() {

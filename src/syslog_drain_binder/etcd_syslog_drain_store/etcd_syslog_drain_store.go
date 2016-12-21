@@ -3,26 +3,24 @@ package etcd_syslog_drain_store
 import (
 	"crypto/sha1"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
 	"syslog_drain_binder/shared_types"
 
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/storeadapter"
 )
 
 type EtcdSyslogDrainStore struct {
 	storeAdapter storeadapter.StoreAdapter
 	ttl          time.Duration
-	logger       *gosteno.Logger
 }
 
-func NewEtcdSyslogDrainStore(storeAdapter storeadapter.StoreAdapter, ttl time.Duration, logger *gosteno.Logger) *EtcdSyslogDrainStore {
+func NewEtcdSyslogDrainStore(storeAdapter storeadapter.StoreAdapter, ttl time.Duration) *EtcdSyslogDrainStore {
 	return &EtcdSyslogDrainStore{
 		storeAdapter: storeAdapter,
 		ttl:          ttl,
-		logger:       logger,
 	}
 }
 
@@ -44,11 +42,11 @@ func (store *EtcdSyslogDrainStore) updateAppDrains(appId shared_types.AppID, dra
 	for _, drainUrl := range drainUrls {
 
 		if strings.TrimSpace(string(drainUrl)) == "" {
-			store.logger.Infof("UpdateDrains: attempted to add whitespace-only drain url '%s' for app %s. Skipping.", drainUrl, appId)
+			log.Printf("UpdateDrains: attempted to add whitespace-only drain url '%s' for app %s. Skipping.", drainUrl, appId)
 			continue
 		}
 
-		store.logger.Debugf("UpdateDrains: adding drain %s to app %s", drainUrl, appId)
+		log.Printf("UpdateDrains: adding drain %s to app %s", drainUrl, appId)
 		node := storeadapter.StoreNode{
 			Key:   drainKey(appId, drainUrl),
 			Value: []byte(drainUrl),

@@ -5,7 +5,6 @@ import (
 	"syslog_drain_binder/elector"
 	"time"
 
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
 
@@ -15,45 +14,15 @@ import (
 
 var _ = Describe("Elector", func() {
 	var fakeStore *fakestoreadapter.FakeStoreAdapter
-	var logger *gosteno.Logger
-	var testingSink *gosteno.TestingSink
 
 	BeforeEach(func() {
-		gosteno.EnterTestMode()
-		testingSink = gosteno.GetMeTheGlobalTestSink()
-
 		fakeStore = fakestoreadapter.New()
-		logger = gosteno.NewLogger("test")
 	})
 
 	Context("at initialization", func() {
 		It("connects to the store", func() {
-			elector.NewElector("name", fakeStore, 1*time.Millisecond, logger)
+			elector.NewElector("name", fakeStore, 1*time.Millisecond)
 			Expect(fakeStore.DidConnect).To(BeTrue())
-		})
-
-		Context("when store connection fails", func() {
-			BeforeEach(func() {
-				fakeStore.ConnectErr = errors.New("connection error")
-			})
-
-			It("logs an error", func() {
-				go elector.NewElector("name", fakeStore, 100*time.Millisecond, logger)
-
-				Eventually(func() int { return len(testingSink.Records()) }).Should(BeNumerically(">=", 1))
-				var messages []string
-				for _, record := range testingSink.Records() {
-					messages = append(messages, record.Message)
-				}
-
-				Expect(messages).To(ContainElement("Elector: Unable to connect to store: 'connection error'"))
-			})
-
-			It("reconnects on an interval", func() {
-				go elector.NewElector("name", fakeStore, 10*time.Millisecond, logger)
-
-				Eventually(func() int { return len(testingSink.Records()) }).Should(BeNumerically(">=", 2))
-			})
 		})
 	})
 
@@ -61,7 +30,7 @@ var _ = Describe("Elector", func() {
 		var candidate *elector.Elector
 
 		BeforeEach(func() {
-			candidate = elector.NewElector("name", fakeStore, time.Second, logger)
+			candidate = elector.NewElector("name", fakeStore, time.Second)
 		})
 
 		It("makes a bid to become leader", func() {
@@ -80,18 +49,19 @@ var _ = Describe("Elector", func() {
 		})
 
 		It("re-attempts on an interval if key already exists", func() {
+			key := "syslog_drain_binder/leader"
 			err := fakeStore.Create(storeadapter.StoreNode{
-				Key:   "syslog_drain_binder/leader",
+				Key:   key,
 				Value: []byte("some-other-instance"),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
 			go candidate.RunForElection()
 
-			Eventually(func() int { return len(testingSink.Records()) }, 3).Should(BeNumerically(">=", 2))
-			for _, record := range testingSink.Records() {
-				Expect(record.Message).To(Equal("Elector: 'name' lost election for cluster leader."))
-			}
+			Consistently(candidate.IsLeader).Should(BeFalse())
+
+			Expect(fakeStore.Delete(key)).To(Succeed())
+			Eventually(candidate.IsLeader, 3).Should(BeTrue())
 		})
 
 		It("returns an error if any other error occurs while setting key", func() {
@@ -134,7 +104,7 @@ var _ = Describe("Elector", func() {
 
 		Context("when already leader", func() {
 			It("maintains leadership of cluster if successful", func() {
-				candidate = elector.NewElector("candidate1", fakeStore, time.Second, logger)
+				candidate = elector.NewElector("candidate1", fakeStore, time.Second)
 
 				err := candidate.StayAsLeader()
 				Expect(err).NotTo(HaveOccurred())
@@ -148,7 +118,7 @@ var _ = Describe("Elector", func() {
 
 		Context("when not the cluster leader", func() {
 			It("returns an error", func() {
-				candidate = elector.NewElector("candidate2", fakeStore, time.Second, logger)
+				candidate = elector.NewElector("candidate2", fakeStore, time.Second)
 
 				err := candidate.StayAsLeader()
 				Expect(err).To(HaveOccurred())
@@ -156,7 +126,7 @@ var _ = Describe("Elector", func() {
 			})
 
 			It("does not replace the existing leader", func() {
-				candidate = elector.NewElector("candidate2", fakeStore, time.Second, logger)
+				candidate = elector.NewElector("candidate2", fakeStore, time.Second)
 
 				candidate.StayAsLeader()
 
@@ -170,7 +140,7 @@ var _ = Describe("Elector", func() {
 		var candidate *elector.Elector
 
 		BeforeEach(func() {
-			candidate = elector.NewElector("candidate1", fakeStore, time.Second, logger)
+			candidate = elector.NewElector("candidate1", fakeStore, time.Second)
 			candidate.RunForElection()
 		})
 

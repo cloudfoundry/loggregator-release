@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"logger"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -22,7 +22,6 @@ import (
 
 var (
 	logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
-	debug       = flag.Bool("debug", false, "Verbose (debug) logging")
 	configFile  = flag.String("config", "config/syslog_drain_binder.json", "Location of the Syslog Drain Binder config json file")
 )
 
@@ -32,7 +31,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	log := logger.NewLogger(*debug, *logFilePath, "syslog_drain_binder", conf.Syslog)
 
 	dropsonde.Initialize(conf.MetronAddress, "syslog_drain_binder")
 
@@ -56,10 +54,10 @@ func main() {
 	}
 
 	updateInterval := time.Duration(conf.UpdateIntervalSeconds) * time.Second
-	politician := elector.NewElector(conf.InstanceName, adapter, updateInterval, log)
+	politician := elector.NewElector(conf.InstanceName, adapter, updateInterval)
 
 	drainTTL := time.Duration(conf.DrainUrlTtlSeconds) * time.Second
-	store := etcd_syslog_drain_store.NewEtcdSyslogDrainStore(adapter, drainTTL, log)
+	store := etcd_syslog_drain_store.NewEtcdSyslogDrainStore(adapter, drainTTL)
 
 	dumpChan := registerGoRoutineDumpSignalChannel()
 	ticker := time.NewTicker(updateInterval)
@@ -71,7 +69,7 @@ func main() {
 			if politician.IsLeader() {
 				err = politician.StayAsLeader()
 				if err != nil {
-					log.Errorf("Error when staying leader: %s", err.Error())
+					log.Printf("Error when staying leader: %s", err.Error())
 					politician.Vacate()
 					continue
 				}
@@ -79,13 +77,11 @@ func main() {
 				err = politician.RunForElection()
 
 				if err != nil {
-					log.Errorf("Error when running for leader: %s", err.Error())
+					log.Printf("Error when running for leader: %s", err.Error())
 					politician.Vacate()
 					continue
 				}
 			}
-
-			log.Debugf("Polling %s for updates", conf.CloudControllerAddress)
 
 			drainUrls, err := Poll(
 				conf.CloudControllerAddress,
@@ -95,7 +91,7 @@ func main() {
 				SkipCertVerify(conf.SkipCertVerify),
 			)
 			if err != nil {
-				log.Errorf("Error when polling cloud controller: %s", err.Error())
+				log.Printf("Error when polling cloud controller: %s", err.Error())
 				politician.Vacate()
 				continue
 			}
@@ -108,11 +104,9 @@ func main() {
 			}
 
 			metrics.SendValue("totalDrains", float64(totalDrains), "drains")
-
-			log.Debugf("Updating drain URLs for %d application(s)", len(drainUrls))
 			err = store.UpdateDrains(drainUrls)
 			if err != nil {
-				log.Errorf("Error when updating ETCD: %s", err.Error())
+				log.Printf("Error when updating ETCD: %s", err.Error())
 				politician.Vacate()
 				continue
 			}
