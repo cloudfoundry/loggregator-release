@@ -141,12 +141,15 @@ function parse_argc {
 
 function build_etcd {
     if which etcd > /dev/null
+        echo "etcd already present. skip building..."
     then
         return
     fi
 
-    local scripts_dir="$(dirname "$0")"
-    local bin_dir="$(dirname $(dirname "$0"))/bin"
+    echo "building etcd"
+
+    local scripts_dir="$(realpath $(dirname "$0"))"
+    local bin_dir="$(realpath $(dirname $(dirname "$0"))/bin)"
 
     pushd $scripts_dir/../src/github.com/coreos/etcd > /dev/null
         ORG_PATH="github.com/coreos"
@@ -170,6 +173,7 @@ function build_etcd {
 }
 
 function setup_env {
+    export PATH="$(realpath $(dirname $(dirname $0))/bin):$PATH"
     export GORACE="halt_on_error=1"
 }
 
