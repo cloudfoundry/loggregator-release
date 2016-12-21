@@ -1,9 +1,7 @@
 set -e -x
 
-export GOROOT=$(readlink -nf /var/vcap/packages/golang1.7)
-export PATH=$GOROOT/bin:$PATH
-export GOPATH=$PWD/loggregator
-
-go install doppler
-cp -a $PWD/loggregator/bin/doppler ${BOSH_INSTALL_TARGET}
-
+pushd loggregator-blobs
+    gunzip doppler.gz
+    chmod +x doppler
+    cp -a doppler ${BOSH_INSTALL_TARGET}
+popd
