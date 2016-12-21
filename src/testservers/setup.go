@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"github.com/onsi/ginkgo/config"
 	"net"
+
+	"github.com/onsi/ginkgo/config"
 )
 
 const (

@@ -21,7 +21,7 @@ type Config struct {
 }
 
 func (c Config) Max() int {
-	return int(float64(c.Rate) * c.Time.Seconds())
+	return int(c.Rate * c.Time.Seconds())
 }
 
 func (c Config) Delay() time.Duration {

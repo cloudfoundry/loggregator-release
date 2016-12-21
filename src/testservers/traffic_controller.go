@@ -1,10 +1,10 @@
 package testservers
 
 import (
+	"fmt"
+	"net"
 	"os"
 	"os/exec"
-	"net"
-	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

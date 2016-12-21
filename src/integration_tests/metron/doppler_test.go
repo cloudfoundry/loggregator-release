@@ -7,9 +7,10 @@ import (
 	"github.com/cloudfoundry/dropsonde/logs"
 	"github.com/gorilla/websocket"
 
+	"testservers"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"testservers"
 )
 
 var _ = Describe("communicating with doppler", func() {

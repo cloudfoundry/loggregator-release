@@ -27,4 +27,9 @@ dev_releases
 loggregator-certs
 config/private.yml
 scripts/etcd
+
+# cleaner deps
 /src/github.com/client9/misspell
+/src/github.com/mdempsky/
+/src/golang.org/x/text/
+/src/golang.org/x/tools/

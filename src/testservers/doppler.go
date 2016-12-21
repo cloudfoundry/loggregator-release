@@ -1,13 +1,14 @@
 package testservers
 
 import (
-	"fmt"
 	"doppler/iprange"
+	"fmt"
+	"net"
 	"os"
 	"os/exec"
-	"net"
 
 	dopplerConf "doppler/config"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"

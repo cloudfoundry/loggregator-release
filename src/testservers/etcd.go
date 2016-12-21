@@ -1,17 +1,18 @@
 package testservers
 
 import (
-	"os"
 	"fmt"
-	"os/exec"
 	"net/http"
+	"os"
+	"os/exec"
 	"strings"
+
+	"errors"
+	"io/ioutil"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-	"io/ioutil"
-	"errors"
 )
 
 func StartTestEtcd() (func(), string) {

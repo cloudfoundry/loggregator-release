@@ -8,9 +8,10 @@ import (
 	"tools/benchmark/messagegenerator"
 	"tools/benchmark/writestrategies"
 
+	"testservers"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"testservers"
 )
 
 var _ = Describe("End to end tests", func() {
