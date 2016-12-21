@@ -6,3 +6,11 @@ golang/go1.7.4.windows-amd64.zip:
   size: 90409580
   object_id: b9a9acbb-b9a2-4a48-7fde-a1f373fe84cc
   sha: a0da2f5d67e5b800eba811a34ca4b2aa22cca678
+metron-agent/metron.exe:
+  size: 11400192
+  object_id: 0b8f3df3-78ab-402c-5e3d-de522e4bc8ef
+  sha: 6200be396310813d070ccf0992bc26b41b08be03
+metron-agent/metron.gz:
+  size: 3609306
+  object_id: 8f014717-b455-44a6-4750-b0a3c09dbe15
+  sha: a1a0fafcebddc23db231450fb6bcd2a85339eadc
