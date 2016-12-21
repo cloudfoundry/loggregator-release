@@ -2,4 +2,4 @@
 name: metron_agent_windows
 files:
 - loggregator/src/exiter.ps1
-- metron-agent/metron.exe
+- loggregator-blobs/metron.exe

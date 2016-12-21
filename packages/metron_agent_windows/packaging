@@ -1,6 +1,6 @@
 . ./loggregator/src/exiter.ps1
 
 $BOSH_INSTALL_TARGET = Resolve-Path $env:BOSH_INSTALL_TARGET
-Copy-Item metron-agent\metron.exe $BOSH_INSTALL_TARGET
+Copy-Item loggregator-blobs\metron.exe $BOSH_INSTALL_TARGET
 
 Exit 0

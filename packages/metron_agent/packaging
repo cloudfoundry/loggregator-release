@@ -1,6 +1,6 @@
 set -e -x
 
-pushd metron-agent
+pushd loggregator-blobs
     gunzip metron.gz
     chmod +x metron
     cp -a metron ${BOSH_INSTALL_TARGET}

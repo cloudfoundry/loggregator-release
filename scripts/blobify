@@ -13,6 +13,6 @@ echo "building metron -- WIN"
 GOOS=windows go build -o $workspace/bin/metron.exe metron
 
 pushd $workspace
-    bosh add-blob bin/metron.gz metron-agent/metron.gz
-    bosh add-blob bin/metron.exe metron-agent/metron.exe
+    bosh add-blob bin/metron.gz loggregator-blobs/metron.gz
+    bosh add-blob bin/metron.exe loggregator-blobs/metron.exe
 popd
