@@ -6,11 +6,14 @@ function print_usage {
     echo "usage: test [subcommand] [ginkgo args]"
     echo
     echo -e "\033[1mSubcommands:\033[0m"
-    echo "   all         Run all the tests (default)"
+    echo "   all         Run all the tests, excluding linters (default)"
     echo "   build       Build all binaries for the project"
     echo "   cleaners    Run tools that clean the code base"
     echo "   unit        Run the unit tests"
     echo "   integration Run the integration tests"
+    echo ""
+    echo "   linters"
+    echo "   install_linters"
 }
 
 function print_checkpoint {
@@ -64,8 +67,10 @@ function loggregator_package {
 }
 
 function run_cleaners {
-    which goimports >/dev/null || go get golang.org/x/tools/cmd/goimports
-    which misspell >/dev/null || go get github.com/client9/misspell/cmd/misspell
+    print_checkpoint "Running Cleaners"
+    which goimports > /dev/null || go get golang.org/x/tools/cmd/goimports
+    which misspell > /dev/null || go get github.com/client9/misspell/cmd/misspell
+    which unconvert > /dev/null || go get github.com/mdempsky/unconvert
 
     src_dir="$(dirname $(dirname $0))/src"
     for name in $(ls -1 $src_dir)
@@ -81,12 +86,14 @@ function run_cleaners {
             goimports -w $dir
             gofmt -s -w $dir
             misspell -w $dir
+            unconvert -v -apply $(basename $dir)/...
         fi
     done
     return 0
 }
 
 function run_all {
+    check_output run_cleaners
     check_output run_build
     check_output run_unit $@
     check_output run_integration $@
@@ -128,7 +135,7 @@ function parse_argc {
             print_usage
             exit 0
             ;;
-        all|unit|integration|build|cleaners)
+        all|unit|integration|build|cleaners|linters|install_linters)
             command=run_$arg
             ;;
         *)
@@ -172,6 +179,57 @@ function build_etcd {
     mv $bin_dir/../src/github.com/coreos/etcd/bin/etcd $bin_dir/etcd
 }
 
+function run_install_linters {
+    go get github.com/tsenart/deadcode
+    go get github.com/golang/lint/golint
+    go get github.com/opennota/check/cmd/aligncheck
+    go get github.com/opennota/check/cmd/structcheck
+    go get github.com/opennota/check/cmd/varcheck
+    go get github.com/kisielk/errcheck
+    go get github.com/gordonklaus/ineffassign
+    go get github.com/mvdan/interfacer/cmd/interfacer
+    go get honnef.co/go/simple/cmd/gosimple
+    go get honnef.co/go/staticcheck/cmd/staticcheck
+    go get honnef.co/go/unused/cmd/unused
+}
+
+function run_linters {
+    print_checkpoint "Running Linters"
+
+    src_dir="$(dirname $(dirname $0))/src"
+    for name in $(ls -1 $src_dir)
+    do
+        dir="$src_dir/$name"
+        if [[ ! -d $dir ]]
+        then
+            continue
+        fi
+        if loggregator_package $(basename $dir)
+        then
+            echo cleaning $dir
+            goimports -w $dir
+            gofmt -s -w $dir
+            misspell -w $dir
+            unconvert -v -apply
+
+            local pkg="$(basename $dir)/..."
+            go vet $pkg
+            deadcode $dir
+            golint $pkg
+            aligncheck $pkg
+            structcheck $pkg
+            varcheck $pkg
+            errcheck $pkg
+            ineffassign $dir
+            interfacer $pkg
+            gosimple $pkg
+            staticcheck $pkg
+            unused $pkg
+        fi
+    done
+    return 0
+}
+
 function setup_env {
     export PATH="$(realpath $(dirname $(dirname $0))/bin):$PATH"
     export GORACE="halt_on_error=1"
@@ -191,4 +249,4 @@ function main {
     fi
     exit $result
 }
-main
+main $@
