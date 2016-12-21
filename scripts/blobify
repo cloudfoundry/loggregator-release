@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -eux
+
+workspace=$(realpath $(dirname "$0")/..)
+export GOPATH=$workspace
+
+echo "building metron -- LINUX"
+GOOS=linux go build -o $workspace/bin/metron metron
+gzip -f $workspace/bin/metron
+
+echo "building metron -- WIN"
+GOOS=windows go build -o $workspace/bin/metron.exe metron
+
+pushd $workspace
+    bosh add-blob bin/metron.gz metron-agent/metron.gz
+    bosh add-blob bin/metron.exe metron-agent/metron.exe
+popd
