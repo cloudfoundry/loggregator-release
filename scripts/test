@@ -142,6 +142,12 @@ function parse_argc {
 function build_etcd {
     echo "building etcd"
 
+    if which etcd > /dev/null
+    then
+        echo "etcd already present. skip building..."
+        return
+    fi
+
     local scripts_dir="$(realpath $(dirname "$0"))"
     local bin_dir="$(realpath $(dirname $(dirname "$0"))/bin)"
 
