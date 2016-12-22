@@ -20,6 +20,7 @@ compile_linux "doppler"
 compile_linux "trafficcontroller"
 compile_linux "syslog_drain_binder"
 compile_linux "statsd-injector"
+compile_linux "boshhmforwarder"
 
 echo "building metron -- WIN"
 GOOS=windows go build -o $workspace/bin/metron.exe metron
