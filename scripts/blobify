@@ -16,9 +16,14 @@ echo "building doppler -- LINUX"
 GOOS=linux go build -o $workspace/bin/doppler doppler
 gzip -f $workspace/bin/doppler
 
+echo "building trafficcontroller -- LINUX"
+GOOS=linux go build -o $workspace/bin/trafficcontroller trafficcontroller
+gzip -f $workspace/bin/trafficcontroller
+
 pushd $workspace
     bosh add-blob bin/metron.gz loggregator-blobs/metron.gz
     bosh add-blob bin/metron.exe loggregator-blobs/metron.exe
 
     bosh add-blob bin/doppler.gz loggregator-blobs/doppler.gz
+    bosh add-blob bin/trafficcontroller.gz loggregator-blobs/trafficcontroller.gz
 popd
