@@ -11,7 +11,6 @@ import (
 
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )
@@ -27,7 +26,6 @@ var _ = Describe("MessageAggregator", func() {
 		mockWriter = &mocks.MockEnvelopeWriter{}
 		messageAggregator = messageaggregator.New(
 			mockWriter,
-			loggertesthelper.Logger(),
 		)
 		originalTTL = messageaggregator.MaxTTL
 	})

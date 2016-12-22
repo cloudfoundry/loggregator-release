@@ -1,13 +1,12 @@
 package networkreader
 
 import (
+	"log"
 	"net"
 
 	"metron/writers"
 
-	"github.com/cloudfoundry/dropsonde/logging"
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/gosteno"
 )
 
 type NetworkReader struct {
@@ -15,22 +14,19 @@ type NetworkReader struct {
 	writer     writers.ByteArrayWriter
 
 	contextName string
-
-	logger *gosteno.Logger
 }
 
-func New(address string, name string, writer writers.ByteArrayWriter, logger *gosteno.Logger) (*NetworkReader, error) {
+func New(address string, name string, writer writers.ByteArrayWriter) (*NetworkReader, error) {
 	connection, err := net.ListenPacket("udp4", address)
 	if err != nil {
 		return nil, err
 	}
-	logger.Infof("Listening on %s", address)
+	log.Printf("Listening on %s", address)
 
 	return &NetworkReader{
 		connection:  connection,
 		contextName: name,
 		writer:      writer,
-		logger:      logger,
 	}, nil
 }
 
@@ -40,13 +36,12 @@ func (nr *NetworkReader) Start() {
 
 	readBuffer := make([]byte, 65535) //buffer with size = max theoretical UDP size
 	for {
-		readCount, senderAddr, err := nr.connection.ReadFrom(readBuffer)
+		readCount, _, err := nr.connection.ReadFrom(readBuffer)
 		if err != nil {
-			nr.logger.Errorf("Error while reading. %s", err)
+			log.Printf("Error while reading: %s", err)
 			return
 		}
-		logging.Debugf(nr.logger, "NetworkReader: Read %d bytes from address %s", readCount, senderAddr)
-		readData := make([]byte, readCount) //pass on buffer in size only of read data
+		readData := make([]byte, readCount)
 		copy(readData, readBuffer[:readCount])
 
 		metrics.BatchIncrementCounter(receivedMessageCountName)

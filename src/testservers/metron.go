@@ -49,7 +49,7 @@ func StartMetron(conf metronConf.Config) (func(), int, func()) {
 	Expect(err).ToNot(HaveOccurred())
 
 	By("starting metron")
-	metronCommand := exec.Command(metronPath, "--debug", "--config", filename)
+	metronCommand := exec.Command(metronPath, "--config", filename)
 	metronSession, err := gexec.Start(
 		metronCommand,
 		gexec.NewPrefixedWriter(color("o", "metron", green, magenta), GinkgoWriter),

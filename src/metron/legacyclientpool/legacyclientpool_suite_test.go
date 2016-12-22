@@ -16,5 +16,5 @@ func TestLegacyclientpool(t *testing.T) {
 	}
 
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Legacyclientpool Suite")
+	RunSpecs(t, "LegacyClientPool Suite")
 }

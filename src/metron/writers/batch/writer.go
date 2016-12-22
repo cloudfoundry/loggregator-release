@@ -3,12 +3,12 @@ package batch
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/gosteno"
 )
 
 const (
@@ -57,13 +57,12 @@ type Writer struct {
 	msgBufferLock  sync.Mutex
 	flushing       sync.WaitGroup
 	timer          *time.Timer
-	logger         *gosteno.Logger
 	droppedCounter DroppedMessageCounter
 	chainers       []metricbatcher.BatchCounterChainer
 	protocol       string
 }
 
-func NewWriter(protocol string, writer BatchChainByteWriter, droppedCounter DroppedMessageCounter, bufferCapacity uint64, flushDuration time.Duration, logger *gosteno.Logger) (*Writer, error) {
+func NewWriter(protocol string, writer BatchChainByteWriter, droppedCounter DroppedMessageCounter, bufferCapacity uint64, flushDuration time.Duration) (*Writer, error) {
 	if bufferCapacity < minBufferCapacity {
 		return nil, fmt.Errorf("batch.Writer requires a buffer of at least %d bytes", minBufferCapacity)
 	}
@@ -79,7 +78,6 @@ func NewWriter(protocol string, writer BatchChainByteWriter, droppedCounter Drop
 		droppedCounter: droppedCounter,
 		msgBuffer:      newMessageBuffer(make([]byte, 0, bufferCapacity)),
 		timer:          batchTimer,
-		logger:         logger,
 		protocol:       protocol,
 	}
 	go batchWriter.flushOnTimer()
@@ -133,7 +131,7 @@ func (w *Writer) Stop() {
 func (w *Writer) flushWrite(toWrite []byte, messageCount uint64, chainers ...metricbatcher.BatchCounterChainer) (int, error) {
 	sent, err := w.outWriter.Write(toWrite, chainers...)
 	if err != nil {
-		w.logger.Warnf("Received error while trying to flush TCP bytes: %s", err)
+		log.Printf("Received error while trying to flush TCP bytes: %s", err)
 		return 0, err
 	}
 

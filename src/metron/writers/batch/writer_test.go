@@ -14,8 +14,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 
 	"metron/writers/batch"
 )
@@ -31,7 +29,6 @@ var _ = Describe("Batch Writer", func() {
 		prefixedMessage []byte
 		batcher         *batch.Writer
 		timeout         time.Duration
-		logger          *gosteno.Logger
 		sender          *fake.FakeMetricSender
 		mockBatcher     *mockMetricBatcher
 		constructorErr  error
@@ -47,7 +44,6 @@ var _ = Describe("Batch Writer", func() {
 		messageBytes = []byte("this is a log message")
 		timeout = time.Second / 2
 		bufferSize = 1024
-		logger = loggertesthelper.Logger()
 
 		// zero out the values that are assigned in the JustBeforeEach
 		prefixedMessage = nil
@@ -57,7 +53,7 @@ var _ = Describe("Batch Writer", func() {
 
 	JustBeforeEach(func() {
 		prefixedMessage = prefixWithLength(messageBytes)
-		batcher, constructorErr = batch.NewWriter("foo", byteWriter, droppedCounter, bufferSize, timeout, logger)
+		batcher, constructorErr = batch.NewWriter("foo", byteWriter, droppedCounter, bufferSize, timeout)
 	})
 
 	AfterEach(func() {

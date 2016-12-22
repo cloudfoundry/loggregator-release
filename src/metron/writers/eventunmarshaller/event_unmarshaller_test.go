@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry/dropsonde/factories"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )
@@ -32,7 +31,7 @@ var _ = Describe("EventUnmarshaller", func() {
 		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
 		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
 
-		unmarshaller = eventunmarshaller.New(mockWriter, mockBatcher, loggertesthelper.Logger())
+		unmarshaller = eventunmarshaller.New(mockWriter, mockBatcher)
 		event = &events.Envelope{
 			Origin:      proto.String("fake-origin-3"),
 			EventType:   events.Envelope_ValueMetric.Enum(),

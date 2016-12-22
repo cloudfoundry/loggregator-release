@@ -1,10 +1,10 @@
 package eventmarshaller
 
 import (
+	"log"
 	"sync"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )
@@ -28,15 +28,13 @@ type EventBatcher interface {
 
 type EventMarshaller struct {
 	batcher    EventBatcher
-	logger     *gosteno.Logger
 	byteWriter BatchChainByteWriter
 	bwLock     sync.RWMutex
 }
 
-func New(batcher EventBatcher, logger *gosteno.Logger) *EventMarshaller {
+func New(batcher EventBatcher) *EventMarshaller {
 	return &EventMarshaller{
 		batcher: batcher,
-		logger:  logger,
 	}
 }
 
@@ -55,13 +53,13 @@ func (m *EventMarshaller) writer() BatchChainByteWriter {
 func (m *EventMarshaller) Write(envelope *events.Envelope) {
 	writer := m.writer()
 	if writer == nil {
-		m.logger.Warn("EventMarshaller: Write called while byteWriter is nil")
+		log.Print("EventMarshaller: Write called while byteWriter is nil")
 		return
 	}
 
 	envelopeBytes, err := proto.Marshal(envelope)
 	if err != nil {
-		m.logger.Errorf("marshalling error: %v", err)
+		log.Printf("marshalling error: %v", err)
 		m.batcher.BatchIncrementCounter("dropsondeMarshaller.marshalErrors")
 		return
 	}

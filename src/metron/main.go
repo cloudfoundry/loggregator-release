@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"plumbing"
 	"profiler"
 	"runtime"
@@ -15,7 +16,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/dropsonde/runtime_stats"
-	"github.com/cloudfoundry/gosteno"
 
 	"metron/clientpool"
 	"metron/config"
@@ -28,7 +28,6 @@ import (
 	"metron/writers/messageaggregator"
 	"metron/writers/tagger"
 
-	"logger"
 	"signalmanager"
 )
 
@@ -39,9 +38,7 @@ const (
 )
 
 func main() {
-	logFilePath := flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 	configFilePath := flag.String("config", "config/metron.json", "Location of the Metron config json file")
-	debug := flag.Bool("debug", false, "Debug logging")
 
 	// Metron is intended to be light-weight so we occupy only one core
 	runtime.GOMAXPROCS(1)
@@ -52,29 +49,27 @@ func main() {
 		panic(fmt.Errorf("Unable to parse config: %s", err))
 	}
 
-	logger := logger.NewLogger(*debug, *logFilePath, "metron", config.Syslog)
-
 	statsStopChan := make(chan struct{})
-	batcher, eventWriter := initializeMetrics(config, statsStopChan, logger)
+	batcher, eventWriter := initializeMetrics(config, statsStopChan)
 
-	logger.Info("Startup: Setting up the Metron agent")
-	marshaller, err := initializeDopplerPool(config, batcher, logger)
+	log.Print("Startup: Setting up the Metron agent")
+	marshaller, err := initializeDopplerPool(config, batcher)
 	if err != nil {
 		panic(fmt.Errorf("Could not initialize doppler connection pool: %s", err))
 	}
 
 	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, marshaller)
-	aggregator := messageaggregator.New(messageTagger, logger)
+	aggregator := messageaggregator.New(messageTagger)
 	eventWriter.SetWriter(aggregator)
 
-	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, batcher, logger)
+	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, batcher)
 	metronAddress := fmt.Sprintf("127.0.0.1:%d", config.IncomingUDPPort)
-	dropsondeReader, err := networkreader.New(metronAddress, "dropsondeAgentListener", dropsondeUnmarshaller, logger)
+	dropsondeReader, err := networkreader.New(metronAddress, "dropsondeAgentListener", dropsondeUnmarshaller)
 	if err != nil {
 		panic(fmt.Errorf("Failed to listen on %s: %s", metronAddress, err))
 	}
 
-	logger.Info("metron started")
+	log.Print("metron started")
 	go dropsondeReader.Start()
 
 	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
@@ -82,7 +77,7 @@ func main() {
 
 	// We start the profiler last so that we can definitively say that we're all connected and ready
 	// for data by the time the profiler starts up.
-	p := profiler.New(config.PPROFPort, logger)
+	p := profiler.New(config.PPROFPort)
 	go p.Start()
 
 	for {
@@ -90,14 +85,14 @@ func main() {
 		case <-dumpChan:
 			signalmanager.DumpGoRoutine()
 		case <-killChan:
-			logger.Info("Shutting down")
+			log.Print("Shutting down")
 			close(statsStopChan)
 			return
 		}
 	}
 }
 
-func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBatcher, logger *gosteno.Logger) (*eventmarshaller.EventMarshaller, error) {
+func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBatcher) (*eventmarshaller.EventMarshaller, error) {
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
 		conf.GRPC.CertFile,
 		conf.GRPC.KeyFile,
@@ -130,13 +125,13 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 
 	combinedPool := legacyclientpool.NewCombinedPool(grpcWrapper, udpWrapper)
 
-	marshaller := eventmarshaller.New(batcher, logger)
+	marshaller := eventmarshaller.New(batcher)
 	marshaller.SetWriter(combinedPool)
 
 	return marshaller, nil
 }
 
-func initializeMetrics(config *config.Config, stopChan chan struct{}, logger *gosteno.Logger) (*metricbatcher.MetricBatcher, *eventwriter.EventWriter) {
+func initializeMetrics(config *config.Config, stopChan chan struct{}) (*metricbatcher.MetricBatcher, *eventwriter.EventWriter) {
 	eventWriter := eventwriter.New(origin)
 	metricSender := metric_sender.NewMetricSender(eventWriter)
 	metricBatcher := metricbatcher.New(metricSender, time.Duration(config.MetricBatchIntervalMilliseconds)*time.Millisecond)
