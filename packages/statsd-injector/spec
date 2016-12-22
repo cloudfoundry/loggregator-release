@@ -1,17 +1,4 @@
 ---
 name: statsd-injector
-dependencies:
-    - golang1.7
 files:
-- loggregator/src/statsd-injector/LICENSE
-- loggregator/src/github.com/cactus/go-statsd-client/statsd/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/gosteno/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/gosteno/syslog/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/sonde-go/events/*.go # gosub
-- loggregator/src/github.com/gogo/protobuf/gogoproto/*.go # gosub
-- loggregator/src/github.com/gogo/protobuf/proto/*.go # gosub
-- loggregator/src/github.com/gogo/protobuf/protoc-gen-gogo/descriptor/*.go # gosub
-- loggregator/src/statsd-injector/*.go # gosub
-- loggregator/src/statsd-injector/statsdemitter/*.go # gosub
-- loggregator/src/statsd-injector/statsdlistener/*.go # gosub
-- loggregator/src/statsd-injector/tools/statsdGoClient/*.go # gosub
+- loggregator-blobs/statsd-injector.gz

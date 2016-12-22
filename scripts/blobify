@@ -1,18 +1,29 @@
 #!/bin/bash
 
-set -eux
+set -eu
+
+function compile_linux() {
+    local name=$1
+
+    echo "building $name -- LINUX"
+    GOOS=linux go build -o $workspace/bin/$name $name
+    gzip -f $workspace/bin/$name
+    bosh add-blob bin/$name.gz loggregator-blobs/$name.gz
+}
+
 
 workspace=$(realpath $(dirname "$0")/..)
 export GOPATH=$workspace
 
-echo "building metron -- LINUX"
-GOOS=linux go build -o $workspace/bin/metron metron
-gzip -f $workspace/bin/metron
+compile_linux "metron"
+compile_linux "doppler"
+compile_linux "trafficcontroller"
+compile_linux "syslog_drain_binder"
+compile_linux "statsd-injector"
 
 echo "building metron -- WIN"
 GOOS=windows go build -o $workspace/bin/metron.exe metron
 
 pushd $workspace
-    bosh add-blob bin/metron.gz loggregator-blobs/metron.gz
     bosh add-blob bin/metron.exe loggregator-blobs/metron.exe
 popd

@@ -140,4 +140,8 @@ builds:
     version: '69'
   15c6a249-741f-4d4b-8ed0-235aaea99bfc:
     version: '70'
+  9f4d122f-e69e-4b7c-9744-1d7931135bd4:
+    version: '71'
+  bacdfa8e-5fd6-4d92-8cf9-a9e40e0d187a:
+    version: '72'
 format-version: '2'
