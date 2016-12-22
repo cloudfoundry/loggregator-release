@@ -8,16 +8,24 @@ golang/go1.7.4.windows-amd64.zip:
   sha: a0da2f5d67e5b800eba811a34ca4b2aa22cca678
 loggregator-blobs/doppler.gz:
   size: 4826636
-  object_id: 37d82065-dc8c-40cb-4602-2b9987d6772c
-  sha: 39403946bbcb62a098399dd2bc3a431997922735
+  object_id: 17aa2ae2-dcab-49a4-5d61-36a167411052
+  sha: 8a4ed4c559ceeeff27a6180aa022f62a89387444
 loggregator-blobs/metron.exe:
   size: 11200512
-  object_id: 6a0e29a2-19db-44a6-4c7b-0951149f29a2
+  object_id: 4de24edc-d83b-432e-76bf-a6fc98513653
   sha: 5d6652d182ac2fe4f9aeb455e146226c162440be
 loggregator-blobs/metron.gz:
   size: 3539713
-  object_id: 08ff9763-4cfc-4ccf-5d09-de95844e2dfe
-  sha: 19d635c0ec1c7d30f0daec9ab4c6b4422c0dfcf3
+  object_id: a578eab8-be5d-46b8-56f2-7e38621447a1
+  sha: a7c9af5f6af495f3102de9d4bfff0f6155b44396
+loggregator-blobs/syslog_drain_binder.gz:
+  size: 4586621
+  object_id: 90db36f4-b13b-4c0b-5acf-ad72a21aacaa
+  sha: 00274edc70fac4986d854c7738af4208253cd9ec
+loggregator-blobs/trafficcontroller.gz:
+  size: 4833577
+  object_id: d055fc9d-2199-414f-441d-3bfdacc6a009
+  sha: d6ca40bdb5dcf2457fa91c15417da64177d17943
 metron-agent/metron.exe:
   size: 11400192
   object_id: da5c67dc-1211-4eb6-5168-65584a4302db
