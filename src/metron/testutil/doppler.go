@@ -4,9 +4,10 @@ import (
 	"net"
 	"plumbing"
 
+	"testservers"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"testservers"
 )
 
 type DopplerIngestorServer interface {

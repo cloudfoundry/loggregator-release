@@ -31,9 +31,6 @@ function sync_package() {
   )
 }
 
-sync_package metron_agent                  -app  metron/... &
-sync_package metron_agent_windows          -app  metron/... &
-sync_package doppler                       -app  doppler/... &
 sync_package loggregator_trafficcontroller -app  trafficcontroller/... &
 sync_package syslog_drain_binder           -app  syslog_drain_binder/... &
 sync_package statsd-injector               -app  statsd-injector/... &

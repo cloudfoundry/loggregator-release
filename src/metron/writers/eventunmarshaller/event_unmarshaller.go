@@ -2,6 +2,7 @@ package eventunmarshaller
 
 import (
 	"errors"
+	"log"
 	"unicode"
 	"unicode/utf8"
 
@@ -9,9 +10,7 @@ import (
 
 	"fmt"
 
-	"github.com/cloudfoundry/dropsonde/logging"
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )
@@ -41,16 +40,12 @@ type EventBatcher interface {
 // An EventUnmarshaller is an self-instrumenting tool for converting Protocol
 // Buffer-encoded dropsonde messages to Envelope instances.
 type EventUnmarshaller struct {
-	logger       *gosteno.Logger
 	outputWriter writers.EnvelopeWriter
 	batcher      EventBatcher
 }
 
-// New instantiates a EventUnmarshaller and logs to the
-// provided logger.
-func New(outputWriter writers.EnvelopeWriter, batcher EventBatcher, logger *gosteno.Logger) *EventUnmarshaller {
+func New(outputWriter writers.EnvelopeWriter, batcher EventBatcher) *EventUnmarshaller {
 	return &EventUnmarshaller{
-		logger:       logger,
 		outputWriter: outputWriter,
 		batcher:      batcher,
 	}
@@ -59,7 +54,7 @@ func New(outputWriter writers.EnvelopeWriter, batcher EventBatcher, logger *gost
 func (u *EventUnmarshaller) Write(message []byte) {
 	envelope, err := u.UnmarshallMessage(message)
 	if err != nil {
-		u.logger.Errorf("Error unmarshalling: %s", err)
+		log.Printf("Error unmarshalling: %s", err)
 		return
 	}
 	u.outputWriter.Write(envelope)
@@ -69,19 +64,19 @@ func (u *EventUnmarshaller) UnmarshallMessage(message []byte) (*events.Envelope,
 	envelope := &events.Envelope{}
 	err := proto.Unmarshal(message, envelope)
 	if err != nil {
-		u.logger.Errorf("eventUnmarshaller: unmarshal error %v", err)
+		log.Printf("eventUnmarshaller: unmarshal error %v", err)
 		u.batcher.BatchIncrementCounter("dropsondeUnmarshaller.unmarshalErrors")
 		return nil, err
 	}
 
 	if !valid(envelope) {
-		logging.Debugf(u.logger, "eventUnmarshaller: validation failed for message %v", envelope.GetEventType())
+		log.Printf("eventUnmarshaller: validation failed for message %v", envelope.GetEventType())
 		u.batcher.BatchIncrementCounter("dropsondeUnmarshaller.unmarshalErrors")
 		return nil, invalidEnvelope
 	}
 
 	if err := u.incrementReceiveCount(envelope.GetEventType()); err != nil {
-		u.logger.Debug(err.Error())
+		log.Printf("Error incrementing receive count: %s", err)
 		return nil, err
 	}
 

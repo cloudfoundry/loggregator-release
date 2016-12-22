@@ -1,0 +1,24 @@
+#!/bin/bash
+
+set -eux
+
+workspace=$(realpath $(dirname "$0")/..)
+export GOPATH=$workspace
+
+echo "building metron -- LINUX"
+GOOS=linux go build -o $workspace/bin/metron metron
+gzip -f $workspace/bin/metron
+
+echo "building metron -- WIN"
+GOOS=windows go build -o $workspace/bin/metron.exe metron
+
+echo "building doppler -- LINUX"
+GOOS=linux go build -o $workspace/bin/doppler doppler
+gzip -f $workspace/bin/doppler
+
+pushd $workspace
+    bosh add-blob bin/metron.gz loggregator-blobs/metron.gz
+    bosh add-blob bin/metron.exe loggregator-blobs/metron.exe
+
+    bosh add-blob bin/doppler.gz loggregator-blobs/doppler.gz
+popd

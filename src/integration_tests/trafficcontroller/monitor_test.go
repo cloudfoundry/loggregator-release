@@ -8,13 +8,10 @@ import (
 	"github.com/apoydence/eachers/testhelpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 )
 
 var _ = Describe("Monitor", func() {
 	It("sends uptime metrics", func() {
-		logger := loggertesthelper.Logger()
 		writer := &fakeWriter{}
 
 		mockBatcher := newMockEventBatcher()
@@ -23,8 +20,8 @@ var _ = Describe("Monitor", func() {
 		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
 
 		var err error
-		dropsondeUnmarshaller := eventunmarshaller.New(writer, mockBatcher, logger)
-		dropsondeReader, err := networkreader.New("127.0.0.1:37474", "dropsondeAgentListener", dropsondeUnmarshaller, logger)
+		dropsondeUnmarshaller := eventunmarshaller.New(writer, mockBatcher)
+		dropsondeReader, err := networkreader.New("127.0.0.1:37474", "dropsondeAgentListener", dropsondeUnmarshaller)
 		Expect(err).NotTo(HaveOccurred())
 
 		go dropsondeReader.Start()

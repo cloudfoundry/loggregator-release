@@ -10,13 +10,14 @@ import (
 	"sync"
 	"time"
 
+	"testservers"
+
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"testservers"
 )
 
 var _ = Describe("Metron", func() {

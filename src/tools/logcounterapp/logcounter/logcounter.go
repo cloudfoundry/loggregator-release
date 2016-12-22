@@ -261,7 +261,7 @@ func (l *logCounter) processEnvelope(env *events.Envelope) {
 		return
 	}
 	if !strings.HasPrefix(msg, l.cfg.MessagePrefix) {
-		fmt.Printf("mismatched prefix: log message %s did not match prefix: %s\n", string(logMsg.GetMessage()), string(l.cfg.MessagePrefix))
+		fmt.Printf("mismatched prefix: log message %s did not match prefix: %s\n", string(logMsg.GetMessage()), l.cfg.MessagePrefix)
 		return
 	}
 

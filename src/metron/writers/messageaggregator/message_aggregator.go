@@ -11,7 +11,6 @@ import (
 	"metron/writers"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
@@ -20,13 +19,11 @@ var MaxTTL = time.Minute
 type MessageAggregator struct {
 	mu            sync.Mutex
 	counterTotals map[counterID]uint64
-	logger        *gosteno.Logger
 	outputWriter  writers.EnvelopeWriter
 }
 
-func New(outputWriter writers.EnvelopeWriter, logger *gosteno.Logger) *MessageAggregator {
+func New(outputWriter writers.EnvelopeWriter) *MessageAggregator {
 	return &MessageAggregator{
-		logger:        logger,
 		outputWriter:  outputWriter,
 		counterTotals: make(map[counterID]uint64),
 	}

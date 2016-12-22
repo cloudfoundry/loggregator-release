@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )
@@ -31,8 +30,7 @@ var _ = Describe("EventMarshaller", func() {
 	})
 
 	JustBeforeEach(func() {
-		logger := gosteno.NewLogger("TestLogger")
-		marshaller = eventmarshaller.New(mockBatcher, logger)
+		marshaller = eventmarshaller.New(mockBatcher)
 		marshaller.SetWriter(mockChainWriter)
 	})
 

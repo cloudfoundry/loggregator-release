@@ -139,7 +139,7 @@ func main() {
 
 	// We start the profiler last so that we can definitively claim that we're ready for
 	// connections by the time we're listening on the PPROFPort.
-	p := profiler.New(conf.PPROFPort, log)
+	p := profiler.New(conf.PPROFPort)
 	go p.Start()
 
 	for {

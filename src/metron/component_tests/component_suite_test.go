@@ -2,14 +2,17 @@ package component_test
 
 import (
 	"integration_tests/binaries"
+	"log"
+	"testing"
+
+	"google.golang.org/grpc/grpclog"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 func TestComponentTests(t *testing.T) {
+	grpclog.SetLogger(log.New(GinkgoWriter, "", log.LstdFlags))
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "ComponentTests Suite")
 }

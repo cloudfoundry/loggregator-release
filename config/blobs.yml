@@ -6,3 +6,23 @@ golang/go1.7.4.windows-amd64.zip:
   size: 90409580
   object_id: b9a9acbb-b9a2-4a48-7fde-a1f373fe84cc
   sha: a0da2f5d67e5b800eba811a34ca4b2aa22cca678
+loggregator-blobs/doppler.gz:
+  size: 4826636
+  object_id: 1ce872f4-45a1-4660-5b69-75d314ffab3b
+  sha: e6e07f9924a0333f0ce1ba156876670408dd8e2e
+loggregator-blobs/metron.exe:
+  size: 11200512
+  object_id: 8ddce022-b1b6-4ffb-5298-300608fffa8e
+  sha: 5d6652d182ac2fe4f9aeb455e146226c162440be
+loggregator-blobs/metron.gz:
+  size: 3539713
+  object_id: df87acb9-f2d8-4496-5794-d9de0ae96b0c
+  sha: 7d556d5990dab88e98dbd299a25511d25c8c1ce6
+metron-agent/metron.exe:
+  size: 11400192
+  object_id: da5c67dc-1211-4eb6-5168-65584a4302db
+  sha: 6200be396310813d070ccf0992bc26b41b08be03
+metron-agent/metron.gz:
+  size: 3609306
+  object_id: cfbc44a4-c7a7-480d-6c36-2db303f34958
+  sha: f680ee28d2f7c03b112e910a57d16d3776f19a0d

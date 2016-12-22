@@ -3,16 +3,15 @@ package backoff
 import (
 	"doppler/sinks/retrystrategy"
 	"fmt"
+	"log"
 	"time"
-
-	"github.com/cloudfoundry/gosteno"
 )
 
 type Adapter interface {
 	Connect() error
 }
 
-func Connect(adapter Adapter, backoffStrategy retrystrategy.RetryStrategy, logger *gosteno.Logger, maxRetries int) error {
+func Connect(adapter Adapter, backoffStrategy retrystrategy.RetryStrategy, maxRetries int) error {
 	timer := time.NewTimer(backoffStrategy(0))
 	defer timer.Stop()
 
@@ -20,15 +19,13 @@ func Connect(adapter Adapter, backoffStrategy retrystrategy.RetryStrategy, logge
 	for {
 		err := adapter.Connect()
 		if err == nil {
-			logger.Info("Connected to etcd")
+			log.Print("Connected to etcd")
 			return nil
 		}
 
 		numberOfTries++
 		sleepDuration := backoffStrategy(numberOfTries)
-		logger.Warnd(map[string]interface{}{
-			"error": err.Error(),
-		}, fmt.Sprintf("Failed to connect to etcd. Number of tries: %d. Backing off for %v.", numberOfTries, sleepDuration))
+		log.Printf("Failed to connect to etcd. Number of tries: %d. Backing off for %v: %s", numberOfTries, sleepDuration, err)
 
 		timer.Reset(sleepDuration)
 		<-timer.C

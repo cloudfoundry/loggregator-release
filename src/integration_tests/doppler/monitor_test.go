@@ -6,7 +6,6 @@ import (
 	"sync/atomic"
 
 	"github.com/apoydence/eachers/testhelpers"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -19,7 +18,6 @@ var _ = Describe("Uptime Monitor", func() {
 	)
 
 	BeforeEach(func() {
-		logger := loggertesthelper.Logger()
 		writer = &fakeWriter{}
 
 		mockBatcher := newMockEventBatcher()
@@ -28,8 +26,8 @@ var _ = Describe("Uptime Monitor", func() {
 		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
 
 		var err error
-		dropsondeUnmarshaller := eventunmarshaller.New(writer, mockBatcher, logger)
-		dropsondeReader, err = networkreader.New(":37474", "dropsondeAgentListener", dropsondeUnmarshaller, logger)
+		dropsondeUnmarshaller := eventunmarshaller.New(writer, mockBatcher)
+		dropsondeReader, err = networkreader.New(":37474", "dropsondeAgentListener", dropsondeUnmarshaller)
 		Expect(err).NotTo(HaveOccurred())
 	})
 

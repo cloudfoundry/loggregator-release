@@ -1,9 +1,10 @@
 package elector
 
 import (
+	"log"
+	"sync/atomic"
 	"time"
 
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/storeadapter"
 )
 
@@ -11,11 +12,10 @@ type Elector struct {
 	instanceName   []byte
 	adapter        storeadapter.StoreAdapter
 	updateInterval time.Duration
-	isLeader       bool
-	logger         *gosteno.Logger
+	isLeader       int32 // 0 = false, 1 = true
 }
 
-func NewElector(instanceName string, adapter storeadapter.StoreAdapter, updateInterval time.Duration, logger *gosteno.Logger) *Elector {
+func NewElector(instanceName string, adapter storeadapter.StoreAdapter, updateInterval time.Duration) *Elector {
 	for {
 		err := adapter.Connect()
 
@@ -23,7 +23,7 @@ func NewElector(instanceName string, adapter storeadapter.StoreAdapter, updateIn
 			break
 		}
 
-		logger.Errorf("Elector: Unable to connect to store: '%s'", err.Error())
+		log.Printf("Elector: Unable to connect to store: '%s'", err.Error())
 		time.Sleep(updateInterval)
 	}
 
@@ -31,7 +31,6 @@ func NewElector(instanceName string, adapter storeadapter.StoreAdapter, updateIn
 		instanceName:   []byte(instanceName),
 		adapter:        adapter,
 		updateInterval: updateInterval,
-		logger:         logger,
 	}
 }
 
@@ -41,44 +40,53 @@ func (elector *Elector) RunForElection() error {
 	for {
 		err = elector.adapter.Create(elector.generateNode())
 
-		elector.isLeader = (err == nil)
+		elector.setLeader(err == nil)
 		if err == nil { // won election
-			elector.logger.Infof("Elector: '%s' won election for cluster leader.", elector.instanceName)
+			log.Printf("Elector: '%s' won election for cluster leader.", elector.instanceName)
 			return nil
 		}
 
 		cerr, ok := err.(storeadapter.Error)
 		if !ok || cerr.Type() != storeadapter.ErrorKeyExists { // weird error with etcd; give up
-			elector.logger.Errorf("Elector: unexpected error from Etcd: %s", err)
+			log.Printf("Elector: unexpected error from Etcd: %s", err)
 			return err
 		}
 
 		// lost election
-		elector.logger.Infof("Elector: '%s' lost election for cluster leader.", elector.instanceName)
+		log.Printf("Elector: '%s' lost election for cluster leader.", elector.instanceName)
 		time.Sleep(elector.updateInterval)
 	}
 }
 
 func (elector *Elector) StayAsLeader() error {
-	elector.logger.Debugf("Elector: '%s' attempting to remain cluster leader…", elector.instanceName)
+	log.Printf("Elector: '%s' attempting to remain cluster leader…", elector.instanceName)
 
 	node := elector.generateNode()
 
 	err := elector.adapter.CompareAndSwap(node, node)
 
-	elector.isLeader = (err == nil)
+	elector.setLeader(err == nil)
 	return err
 }
 
 func (elector *Elector) Vacate() error {
-	elector.logger.Debugf("Elector: '%s' attempting to vacate leadership…", elector.instanceName)
+	log.Printf("Elector: '%s' attempting to vacate leadership…", elector.instanceName)
 
-	elector.isLeader = false
+	elector.setLeader(false)
 	return elector.adapter.CompareAndDelete(elector.generateNode())
 }
 
-func (elector Elector) IsLeader() bool {
-	return elector.isLeader
+func (elector *Elector) IsLeader() bool {
+	return atomic.LoadInt32(&elector.isLeader) != 0
+}
+
+func (elector *Elector) setLeader(isLeader bool) {
+	if isLeader {
+		atomic.StoreInt32(&elector.isLeader, 1)
+		return
+	}
+
+	atomic.StoreInt32(&elector.isLeader, 0)
 }
 
 func (elector *Elector) generateNode() storeadapter.StoreNode {
