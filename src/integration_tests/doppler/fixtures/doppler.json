@@ -4,6 +4,7 @@
     "IncomingUDPPort": 8765,
     "IncomingTCPPort": 4321,
     "OutgoingPort": 4567,
+    "PPROFPort": 6790,
     "SinkSkipCertVerify": true,
     "Index": "0",
     "MaxRetainedLogMessages": 10,

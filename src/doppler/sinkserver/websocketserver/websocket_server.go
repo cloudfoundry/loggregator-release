@@ -6,13 +6,13 @@ import (
 	"doppler/sinkserver/sinkmanager"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/server"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
@@ -71,15 +71,14 @@ type WebsocketServer struct {
 	keepAliveInterval time.Duration
 	bufferSize        uint
 	batcher           Batcher
-	logger            *gosteno.Logger
 	listener          net.Listener
 	dropsondeOrigin   string
 
 	done chan struct{}
 }
 
-func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, writeTimeout time.Duration, keepAliveInterval time.Duration, messageDrainBufferSize uint, dropsondeOrigin string, batcher Batcher, logger *gosteno.Logger) (*WebsocketServer, error) {
-	logger.Infof("WebsocketServer: Listening for sinks at %s", apiEndpoint)
+func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, writeTimeout time.Duration, keepAliveInterval time.Duration, messageDrainBufferSize uint, dropsondeOrigin string, batcher Batcher) (*WebsocketServer, error) {
+	log.Printf("WebsocketServer: Listening for sinks at %s", apiEndpoint)
 
 	listener, e := net.Listen("tcp", apiEndpoint)
 	if e != nil {
@@ -93,7 +92,6 @@ func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, writeTimeout 
 		keepAliveInterval: keepAliveInterval,
 		bufferSize:        messageDrainBufferSize,
 		batcher:           batcher,
-		logger:            logger,
 		dropsondeOrigin:   dropsondeOrigin,
 		done:              make(chan struct{}),
 	}, nil
@@ -102,12 +100,12 @@ func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, writeTimeout 
 func (w *WebsocketServer) Start() {
 	s := &http.Server{Handler: w}
 	err := s.Serve(w.listener)
-	w.logger.Errorf("serve ended with %v", err.Error())
+	log.Printf("Serve ended with %v", err.Error())
 	close(w.done)
 }
 
 func (w *WebsocketServer) Stop() {
-	w.logger.Debug("stopping websocket server")
+	log.Print("stopping websocket server")
 	w.listener.Close()
 	<-w.done
 }
@@ -115,7 +113,7 @@ func (w *WebsocketServer) Stop() {
 type wsHandler func(*gorilla.Conn)
 
 func (w *WebsocketServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	w.logger.Debug("WebsocketServer.ServeHTTP: starting")
+	log.Print("WebsocketServer.ServeHTTP: starting")
 	var handler wsHandler
 	var err error
 
@@ -129,13 +127,13 @@ func (w *WebsocketServer) ServeHTTP(writer http.ResponseWriter, request *http.Re
 	}
 
 	if err != nil {
-		w.logger.Errorf("WebsocketServer.ServeHTTP: %s", err.Error())
+		log.Printf("WebsocketServer.ServeHTTP: %s", err.Error())
 		return
 	}
 
 	ws, err := gorilla.Upgrade(writer, request, nil, 1024, 1024)
 	if err != nil {
-		w.logger.Errorf("WebsocketServer.ServeHTTP: Upgrade error (returning 400): %s", err.Error())
+		log.Printf("WebsocketServer.ServeHTTP: Upgrade error (returning 400): %s", err.Error())
 		http.Error(writer, err.Error(), 400)
 		return
 	}
@@ -177,7 +175,7 @@ func (w *WebsocketServer) appHandler(paths []string, writer http.ResponseWriter,
 		writer.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(writer, "App ID missing. Make request to /apps/APP_ID/%s", paths[3])
 
-		w.logInvalidApp(request.RemoteAddr)
+		log.Printf("WebsocketServer: Did not accept sink connection with invalid app id: %s.", request.RemoteAddr)
 		return nil, errors.New("Validation error (returning 400): No AppId")
 	}
 	endpoint := paths[3]
@@ -201,10 +199,8 @@ func (w *WebsocketServer) appHandler(paths []string, writer http.ResponseWriter,
 }
 
 func (w *WebsocketServer) streamLogs(appId string, websocketConnection *gorilla.Conn) {
-	w.logger.Debugf("WebsocketServer: Requesting a wss sink for app %s", appId)
 	websocketSink := websocket.NewWebsocketSink(
 		appId,
-		w.logger,
 		websocketConnection,
 		w.bufferSize,
 		w.writeTimeout,
@@ -217,10 +213,8 @@ func (w *WebsocketServer) streamLogs(appId string, websocketConnection *gorilla.
 }
 
 func (w *WebsocketServer) streamFirehose(subscriptionId string, websocketConnection *gorilla.Conn) {
-	w.logger.Debugf("WebsocketServer: Requesting firehose wss sink")
 	websocketSink := websocket.NewWebsocketSink(
 		subscriptionId,
-		w.logger,
 		websocketConnection,
 		w.bufferSize,
 		w.writeTimeout,
@@ -243,30 +237,25 @@ func (w *WebsocketServer) streamWebsocket(websocketSink *websocket.WebsocketSink
 
 func (w *WebsocketServer) recentLogs(appId string, websocketConnection *gorilla.Conn) {
 	logMessages := w.sinkManager.RecentLogsFor(appId)
-	sendMessagesToWebsocket("recentlogs", logMessages, websocketConnection, w.batcher, w.logger)
+	sendMessagesToWebsocket("recentlogs", logMessages, websocketConnection, w.batcher)
 }
 
 func (w *WebsocketServer) latestContainerMetrics(appId string, websocketConnection *gorilla.Conn) {
 	metrics := w.sinkManager.LatestContainerMetrics(appId)
-	sendMessagesToWebsocket("containermetrics", metrics, websocketConnection, w.batcher, w.logger)
+	sendMessagesToWebsocket("containermetrics", metrics, websocketConnection, w.batcher)
 }
 
-func (w *WebsocketServer) logInvalidApp(address string) {
-	message := fmt.Sprintf("WebsocketServer: Did not accept sink connection with invalid app id: %s.", address)
-	w.logger.Warn(message)
-}
-
-func sendMessagesToWebsocket(endpoint string, envelopes []*events.Envelope, websocketConnection *gorilla.Conn, batcher Batcher, logger *gosteno.Logger) {
+func sendMessagesToWebsocket(endpoint string, envelopes []*events.Envelope, websocketConnection *gorilla.Conn, batcher Batcher) {
 	for _, messageEnvelope := range envelopes {
 		envelopeBytes, err := proto.Marshal(messageEnvelope)
 		if err != nil {
-			logger.Errorf("Websocket Server %s: Error marshalling %s envelope from origin %s: %s", websocketConnection.RemoteAddr(), messageEnvelope.GetEventType().String(), messageEnvelope.GetOrigin(), err.Error())
+			log.Printf("Websocket Server %s: Error marshalling %s envelope from origin %s: %s", websocketConnection.RemoteAddr(), messageEnvelope.GetEventType().String(), messageEnvelope.GetOrigin(), err.Error())
 			continue
 		}
 
 		err = websocketConnection.WriteMessage(gorilla.BinaryMessage, envelopeBytes)
 		if err != nil {
-			logger.Errorf("Websocket Server %s: Error when trying to send data to sink %s. Err: %v", websocketConnection.RemoteAddr(), err)
+			log.Printf("Websocket Server %s: Error when trying to send data to sink %s. Err: %v", websocketConnection.RemoteAddr(), err)
 			continue
 		}
 		batcher.BatchCounter("sentEnvelopes").
@@ -275,6 +264,5 @@ func sendMessagesToWebsocket(endpoint string, envelopes []*events.Envelope, webs
 			SetTag("endpoint", endpoint).
 			Increment()
 
-		logger.Debugf("Websocket Server %s: Successfully sent data", websocketConnection.RemoteAddr())
 	}
 }

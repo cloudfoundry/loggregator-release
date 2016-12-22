@@ -5,13 +5,13 @@ import (
 	"diodes"
 	"encoding/binary"
 	"io"
+	"log"
 	"net"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
-	"github.com/cloudfoundry/gosteno"
 
 	"doppler/config"
 	"plumbing"
@@ -19,7 +19,6 @@ import (
 
 type TCPListener struct {
 	envelopesBuffer *diodes.ManyToOneEnvelope
-	logger          *gosteno.Logger
 	batcher         Batcher
 	listener        net.Listener
 	protocol        string
@@ -38,7 +37,6 @@ func NewTCPListener(
 	envelopesBuffer *diodes.ManyToOneEnvelope,
 	batcher Batcher,
 	deadline time.Duration,
-	logger *gosteno.Logger,
 ) (*TCPListener, error) {
 	protocol := "TCP"
 	listener, err := net.Listen("tcp", address)
@@ -59,13 +57,12 @@ func NewTCPListener(
 		listener:        listener,
 		protocol:        protocol,
 		envelopesBuffer: envelopesBuffer,
-		logger:          logger,
 		batcher:         batcher,
 		metricProto:     metricProto,
 		deadline:        deadline,
 
 		connections:    make(map[net.Conn]struct{}),
-		unmarshaller:   dropsonde_unmarshaller.NewDropsondeUnmarshaller(logger),
+		unmarshaller:   dropsonde_unmarshaller.NewDropsondeUnmarshaller(),
 		listenerClosed: make(chan struct{}),
 	}, nil
 }
@@ -83,18 +80,18 @@ func (t *TCPListener) Start() {
 	t.lock.Lock()
 	if t.started {
 		t.lock.Unlock()
-		t.logger.Fatalf("%s listener has already been started", t.protocol)
+		log.Fatalf("%s listener has already been started", t.protocol)
 	}
 	t.started = true
 	listener := t.listener
 	t.lock.Unlock()
 
-	t.logger.Infof("%s listener listening on %s", t.protocol, t.Address())
+	log.Printf("%s listener listening on %s", t.protocol, t.Address())
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
 			close(t.listenerClosed)
-			t.logger.Debugf("Error while reading: %s", err)
+			log.Printf("Error while reading: %s", err)
 			return
 		}
 		t.addConnection(conn)
@@ -139,10 +136,7 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 
 	if tlsConn, ok := conn.(*tls.Conn); ok {
 		if err := tlsConn.Handshake(); err != nil {
-			t.logger.Warnd(map[string]interface{}{
-				"error":   err.Error(),
-				"address": conn.RemoteAddr().String(),
-			}, "TLS handshake error")
+			log.Printf("TLS handshake error on %s: %s", conn.RemoteAddr(), err)
 			return
 		}
 	}
@@ -158,7 +152,7 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 		err = binary.Read(conn, binary.LittleEndian, &n)
 		if err != nil {
 			if err != io.EOF {
-				t.logger.Errorf("Error while decoding: %v", err)
+				log.Printf("Error while decoding: %v", err)
 			}
 			break
 		}
@@ -172,7 +166,7 @@ func (t *TCPListener) handleConnection(conn net.Conn) {
 		conn.SetDeadline(time.Now().Add(t.deadline))
 		_, err = io.ReadFull(conn, read)
 		if err != nil {
-			t.logger.Errorf("Error during i/o read: %v", err)
+			log.Printf("Error during i/o read: %v", err)
 			break
 		}
 

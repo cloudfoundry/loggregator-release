@@ -16,7 +16,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
@@ -25,9 +24,7 @@ import (
 )
 
 var _ = Describe("SinkManager", func() {
-	logger := loggertesthelper.Logger()
-
-	var blackListManager = blacklist.New([]iprange.IPRange{{Start: "10.10.10.10", End: "10.10.10.20"}}, logger)
+	var blackListManager = blacklist.New([]iprange.IPRange{{Start: "10.10.10.10", End: "10.10.10.20"}})
 	var sinkManager *sinkmanager.SinkManager
 	var sinkManagerDone chan struct{}
 	var newAppServiceChan, deletedAppServiceChan chan appservice.AppService
@@ -35,7 +32,7 @@ var _ = Describe("SinkManager", func() {
 	BeforeEach(func() {
 		fakeMetricSender.Reset()
 
-		sinkManager = sinkmanager.New(1, true, blackListManager, logger, 100, "dropsonde-origin", 1*time.Second, 0, 1*time.Second, 1*time.Second)
+		sinkManager = sinkmanager.New(1, true, blackListManager, 100, "dropsonde-origin", 1*time.Second, 0, 1*time.Second, 1*time.Second)
 
 		newAppServiceChan = make(chan appservice.AppService)
 		deletedAppServiceChan = make(chan appservice.AppService)
@@ -269,7 +266,7 @@ var _ = Describe("SinkManager", func() {
 			var dumpSink *dump.DumpSink
 
 			BeforeEach(func() {
-				dumpSink = dump.NewDumpSink("appId", 1, loggertesthelper.Logger(), time.Hour)
+				dumpSink = dump.NewDumpSink("appId", 1, time.Hour)
 				sinkManager.RegisterSink(dumpSink)
 			})
 
@@ -296,7 +293,7 @@ var _ = Describe("SinkManager", func() {
 			BeforeEach(func() {
 				url := &url.URL{Scheme: "syslog", Host: "localhost:9998"}
 				writer, _ := syslogwriter.NewSyslogWriter(url, "appId", &net.Dialer{Timeout: 500 * time.Millisecond}, 0)
-				syslogSink = syslog.NewSyslogSink("appId", url, loggertesthelper.Logger(), 100, writer, func(string, string) {}, "dropsonde-origin")
+				syslogSink = syslog.NewSyslogSink("appId", url, 100, writer, func(string, string) {}, "dropsonde-origin")
 
 				sinkManager.RegisterSink(syslogSink)
 			})
@@ -318,7 +315,7 @@ var _ = Describe("SinkManager", func() {
 			var dumpSink *dump.DumpSink
 
 			BeforeEach(func() {
-				dumpSink = dump.NewDumpSink("appId", 1, loggertesthelper.Logger(), time.Hour)
+				dumpSink = dump.NewDumpSink("appId", 1, time.Hour)
 				sinkManager.RegisterSink(dumpSink)
 			})
 

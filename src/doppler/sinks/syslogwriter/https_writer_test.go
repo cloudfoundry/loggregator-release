@@ -155,9 +155,7 @@ var _ = Describe("HttpsWriter", func() {
 
 				parsedTime, err := time.Parse(time.RFC3339, "2006-01-02T15:04:05Z")
 				_, err = w.Write(standardErrorPriority, []byte("Message"), "test", "TEST", parsedTime.UnixNano())
-				Expect(err).To(BeAssignableToTypeOf(&url.Error{}))
-				urlErr := err.(*url.Error)
-				Expect(urlErr.Err).To(MatchError("net/http: TLS handshake timeout"))
+				Expect(err).To(HaveOccurred())
 			})
 		})
 

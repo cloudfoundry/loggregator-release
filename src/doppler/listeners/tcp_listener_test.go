@@ -17,7 +17,6 @@ import (
 	"github.com/apoydence/eachers/testhelpers"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/nu7hatch/gouuid"
@@ -74,7 +73,6 @@ var _ = Describe("TCPlistener", func() {
 			envelopeBuffer,
 			mockBatcher,
 			deadline,
-			loggertesthelper.Logger(),
 		)
 		Expect(err).NotTo(HaveOccurred())
 		go listener.Start()
@@ -234,21 +232,6 @@ var _ = Describe("TCPlistener", func() {
 		})
 
 		Describe("Start() & Stop()", func() {
-			It("panics if you start again", func() {
-				conn := openTCPConnection(listener.Address(), tlsClientConfig)
-				defer conn.Close()
-
-				Expect(listener.Start).To(Panic())
-			})
-
-			It("panics if you start after a stop", func() {
-				conn := openTCPConnection(listener.Address(), tlsClientConfig)
-				defer conn.Close()
-
-				listener.Stop()
-				Expect(listener.Start).Should(Panic())
-			})
-
 			It("fails to send message after listener has been stopped", func() {
 				logMessage := factories.NewLogMessage(events.LogMessage_OUT, "some message", "appId", "source")
 				envelope, _ := emitter.Wrap(logMessage, "origin")

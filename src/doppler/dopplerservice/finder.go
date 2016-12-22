@@ -4,12 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/cloudfoundry/dropsonde/logging"
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/storeadapter"
 )
 
@@ -81,10 +80,9 @@ type Finder struct {
 	legacyLock           sync.RWMutex
 
 	events chan Event
-	logger *gosteno.Logger
 }
 
-func NewFinder(adapter StoreAdapter, legacyPort, grpcPort int, protocols []string, preferredDopplerZone string, logger *gosteno.Logger) *Finder {
+func NewFinder(adapter StoreAdapter, legacyPort, grpcPort int, protocols []string, preferredDopplerZone string) *Finder {
 	return &Finder{
 		metaEndpoints:        make(map[string][]string),
 		legacyEndpoints:      make(map[string]string),
@@ -94,7 +92,6 @@ func NewFinder(adapter StoreAdapter, legacyPort, grpcPort int, protocols []strin
 		legacyPort:           legacyPort,
 		grpcPort:             grpcPort,
 		events:               make(chan Event, 10),
-		logger:               logger,
 	}
 }
 
@@ -134,7 +131,7 @@ func (f *Finder) hasAddrs() bool {
 func (f *Finder) handleEvent(event *storeadapter.WatchEvent, parser func([]byte) (interface{}, error)) {
 	switch event.Type {
 	case storeadapter.InvalidEvent:
-		f.logger.Errorf("Received invalid event: %+v", event)
+		log.Printf("Received invalid event: %+v", event)
 		return
 	case storeadapter.UpdateEvent:
 		if f.equal(event.PrevNode, event.Node) {
@@ -142,10 +139,10 @@ func (f *Finder) handleEvent(event *storeadapter.WatchEvent, parser func([]byte)
 		}
 		fallthrough
 	case storeadapter.CreateEvent:
-		logging.Debugf(f.logger, "Received create/update event: %+v", event.Type)
+		log.Printf("Received create/update event: %+v", event.Type)
 		f.saveEndpoints(f.parseNode(*event.Node, parser))
 	case storeadapter.DeleteEvent, storeadapter.ExpireEvent:
-		logging.Debugf(f.logger, "Received delete/expire event: %+v", event.Type)
+		log.Printf("Received delete/expire event: %+v", event.Type)
 		f.deleteEndpoints(f.parseNode(*event.PrevNode, parser))
 	}
 	f.sendEvent()
@@ -163,12 +160,12 @@ func (f *Finder) equal(prev, next *storeadapter.StoreNode) bool {
 	var prevEvent, nextEvent DopplerEvent
 	err := json.Unmarshal(prev.Value, &prevEvent)
 	if err != nil {
-		f.logger.Errorf("Unmarshaling: %v", err)
+		log.Printf("error unmarshaling %v: %v", string(prev.Value), err)
 		return false
 	}
 	err = json.Unmarshal(next.Value, &nextEvent)
 	if err != nil {
-		f.logger.Errorf("Unmarshaling: %v", err)
+		log.Printf("error unmarshaling %v: %v", string(next.Value), err)
 		return false
 	}
 	if len(prevEvent.Endpoints) != len(nextEvent.Endpoints) {
@@ -188,8 +185,7 @@ func (f *Finder) run(etcdRoot string, events <-chan storeadapter.WatchEvent, err
 		case event := <-events:
 			f.handleEvent(&event, parser)
 		case err := <-errs:
-			f.logger.Errord(map[string]interface{}{
-				"error": err.Error()}, "Finder: Watch sent an error")
+			log.Printf("storeadapter.Watch error: %v", err)
 			time.Sleep(time.Second)
 			events, stop, errs = f.adapter.Watch(etcdRoot)
 			f.read(etcdRoot, parser)
@@ -238,7 +234,7 @@ func (f *Finder) saveEndpoints(key string, value interface{}) {
 func (f *Finder) parseNode(node storeadapter.StoreNode, parser func([]byte) (interface{}, error)) (dopplerKey string, value interface{}) {
 	nodeValue, err := parser(node.Value)
 	if err != nil {
-		f.logger.Errorf("could not parse etcd node %s: %v", string(node.Value), err)
+		log.Printf("could not parse etcd node %s: %v", string(node.Value), err)
 		return "", nil
 	}
 
@@ -284,7 +280,7 @@ func (f *Finder) eventWithPrefix(dopplerPrefix string) Event {
 				}
 				event.GRPCDopplers = append(event.GRPCDopplers, fmt.Sprintf("%s:%d", host, f.grpcPort))
 			default:
-				f.logger.Errorf("Unexpected address for doppler %s (invalid protocol): %s", doppler, addr)
+				log.Printf("unexpected address for doppler %s (invalid protocol): %s", doppler, addr)
 			}
 		}
 	}

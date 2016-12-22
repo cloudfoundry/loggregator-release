@@ -4,9 +4,9 @@ import (
 	"doppler/config"
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/storeadapter"
 )
 
@@ -19,14 +19,14 @@ const dopplerMetaVersion = 1
 const META_ROOT = "/doppler/meta"
 const LEGACY_ROOT = "/healthstatus/doppler"
 
-func Announce(localIP string, ttl time.Duration, config *config.Config, storeAdapter storeadapter.StoreAdapter, logger *gosteno.Logger) chan (chan bool) {
+func Announce(localIP string, ttl time.Duration, config *config.Config, storeAdapter storeadapter.StoreAdapter) chan (chan bool) {
 	dopplerMetaBytes, err := buildDopplerMeta(localIP, config)
 	if err != nil {
 		panic(err)
 	}
 
 	key := fmt.Sprintf("%s/%s/%s/%s", META_ROOT, config.Zone, config.JobName, config.Index)
-	logger.Debugf("Starting Health Status Updates to Store: %s", key)
+	log.Printf("Starting Health Status Updates to Store: %s", key)
 
 	node := storeadapter.StoreNode{
 		Key:   key,
@@ -44,14 +44,14 @@ func Announce(localIP string, ttl time.Duration, config *config.Config, storeAda
 	// The status channel needs to be drained to maintain the node within the etcd cluster
 	go func() {
 		for stat := range status {
-			logger.Debugf("Health updates channel pushed %v at time %v", stat, time.Now())
+			log.Printf("Health updates channel pushed %v at time %v", stat, time.Now())
 		}
 	}()
 
 	return stopChan
 }
 
-func AnnounceLegacy(localIP string, ttl time.Duration, config *config.Config, storeAdapter storeadapter.StoreAdapter, logger *gosteno.Logger) chan (chan bool) {
+func AnnounceLegacy(localIP string, ttl time.Duration, config *config.Config, storeAdapter storeadapter.StoreAdapter) chan (chan bool) {
 	key := fmt.Sprintf("%s/%s/%s/%s", LEGACY_ROOT, config.Zone, config.JobName, config.Index)
 	status, stopChan, err := storeAdapter.MaintainNode(storeadapter.StoreNode{
 		Key:   key,
@@ -66,7 +66,7 @@ func AnnounceLegacy(localIP string, ttl time.Duration, config *config.Config, st
 	// The status channel needs to be drained to maintain the node within the etcd cluster
 	go func() {
 		for stat := range status {
-			logger.Debugf("Health updates channel pushed %v at time %v", stat, time.Now())
+			log.Printf("Health updates channel pushed %v at time %v", stat, time.Now())
 		}
 	}()
 

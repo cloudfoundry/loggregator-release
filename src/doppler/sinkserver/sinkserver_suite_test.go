@@ -1,6 +1,7 @@
 package sinkserver_test
 
 import (
+	"log"
 	"net/http"
 	"testing"
 	"time"
@@ -12,6 +13,7 @@ import (
 )
 
 func TestSinkserver(t *testing.T) {
+	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
 
 	RunSpecs(t, "Sinkserver Suite")

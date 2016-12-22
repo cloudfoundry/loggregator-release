@@ -19,16 +19,14 @@ import (
 	"github.com/apoydence/eachers/testhelpers"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gorilla/websocket"
 )
 
 var _ = Describe("WebsocketServer", func() {
 	var (
-		logger         = loggertesthelper.Logger()
 		server         *websocketserver.WebsocketServer
-		sinkManager    = sinkmanager.New(1024, false, blacklist.New(nil, logger), logger, 100, "dropsonde-origin", 1*time.Second, 0, 1*time.Second, 500*time.Millisecond)
+		sinkManager    = sinkmanager.New(1024, false, blacklist.New(nil), 100, "dropsonde-origin", 1*time.Second, 0, 1*time.Second, 500*time.Millisecond)
 		appId          = "my-app"
 		wsReceivedChan chan []byte
 		apiEndpoint    string
@@ -59,7 +57,6 @@ var _ = Describe("WebsocketServer", func() {
 				100,
 				"dropsonde-origin",
 				mockBatcher,
-				logger,
 			)
 
 			if err == nil {

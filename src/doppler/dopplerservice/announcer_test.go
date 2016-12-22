@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"code.cloudfoundry.org/localip"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	ginkgoConfig "github.com/onsi/ginkgo/config"
@@ -76,7 +75,7 @@ var _ = Describe("Announcer", func() {
 
 			It("creates, then maintains the node", func() {
 				fakeadapter := &fakes.FakeStoreAdapter{}
-				dopplerservice.Announce(localIP, time.Second, &conf, fakeadapter, loggertesthelper.Logger())
+				dopplerservice.Announce(localIP, time.Second, &conf, fakeadapter)
 				Expect(fakeadapter.CreateCallCount()).To(Equal(1))
 				Expect(fakeadapter.MaintainNodeCallCount()).To(Equal(1))
 			})
@@ -86,7 +85,7 @@ var _ = Describe("Announcer", func() {
 				fakeadapter := &fakes.FakeStoreAdapter{}
 				fakeadapter.MaintainNodeReturns(nil, nil, err)
 				Expect(func() {
-					dopplerservice.Announce(localIP, time.Second, &conf, fakeadapter, loggertesthelper.Logger())
+					dopplerservice.Announce(localIP, time.Second, &conf, fakeadapter)
 				}).To(Panic())
 			})
 
@@ -98,7 +97,7 @@ var _ = Describe("Announcer", func() {
 					conf.TLSListenerConfig = config.TLSListenerConfig{
 						Port: 9012,
 					}
-					stopChan = dopplerservice.Announce(localIP, time.Second, &conf, etcdAdapter, loggertesthelper.Logger())
+					stopChan = dopplerservice.Announce(localIP, time.Second, &conf, etcdAdapter)
 
 					Eventually(func() []byte {
 						node, err := etcdAdapter.Get(dopplerKey)
@@ -115,7 +114,7 @@ var _ = Describe("Announcer", func() {
 					dopplerMeta := fmt.Sprintf(`{"version": 1, "endpoints":["udp://%[1]s:1234", "tcp://%[1]s:5678", "ws://%[1]s:8888" ]}`, localIP)
 
 					conf.EnableTLSTransport = false
-					stopChan = dopplerservice.Announce(localIP, time.Second, &conf, etcdAdapter, loggertesthelper.Logger())
+					stopChan = dopplerservice.Announce(localIP, time.Second, &conf, etcdAdapter)
 
 					Eventually(func() []byte {
 						node, err := etcdAdapter.Get(dopplerKey)
@@ -138,7 +137,7 @@ var _ = Describe("Announcer", func() {
 
 		It("maintains the node", func() {
 			fakeadapter := &fakes.FakeStoreAdapter{}
-			dopplerservice.AnnounceLegacy(localIP, time.Second, &conf, fakeadapter, loggertesthelper.Logger())
+			dopplerservice.AnnounceLegacy(localIP, time.Second, &conf, fakeadapter)
 			Expect(fakeadapter.MaintainNodeCallCount()).To(Equal(1))
 		})
 
@@ -147,12 +146,12 @@ var _ = Describe("Announcer", func() {
 			fakeadapter := &fakes.FakeStoreAdapter{}
 			fakeadapter.MaintainNodeReturns(nil, nil, err)
 			Expect(func() {
-				dopplerservice.AnnounceLegacy(localIP, time.Second, &conf, fakeadapter, loggertesthelper.Logger())
+				dopplerservice.AnnounceLegacy(localIP, time.Second, &conf, fakeadapter)
 			}).To(Panic())
 		})
 
 		It("Should maintain legacy healthstatus key and value", func() {
-			stopChan = dopplerservice.AnnounceLegacy(localIP, time.Second, &conf, etcdAdapter, loggertesthelper.Logger())
+			stopChan = dopplerservice.AnnounceLegacy(localIP, time.Second, &conf, etcdAdapter)
 			Eventually(func() []byte {
 				node, err := etcdAdapter.Get(legacyKey)
 				if err != nil {

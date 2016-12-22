@@ -3,14 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"math/rand"
 	"profiler"
 	"time"
 
 	"doppler/config"
 	"doppler/dopplerservice"
-
-	"logger"
 
 	"signalmanager"
 
@@ -27,9 +26,7 @@ const (
 )
 
 var (
-	logFilePath = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
-	logLevel    = flag.Bool("debug", false, "Debug logging")
-	configFile  = flag.String("config", "config/doppler.json", "Location of the doppler config json file")
+	configFile = flag.String("config", "config/doppler.json", "Location of the doppler config json file")
 )
 
 func NewStoreAdapter(conf *config.Config) storeadapter.StoreAdapter {
@@ -72,26 +69,32 @@ func main() {
 		fatal("Unable to parse config: %s", err)
 	}
 
-	log := logger.NewLogger(*logLevel, *logFilePath, "doppler", conf.Syslog)
-
-	log.Info("Startup: Setting up the doppler server")
+	log.Printf("Startup: Setting up the doppler server")
 	dropsonde.Initialize(conf.MetronAddress, DOPPLER_ORIGIN)
 	storeAdapter := NewStoreAdapter(conf)
 
-	doppler, err := New(log, localIp, conf, storeAdapter, conf.MessageDrainBufferSize, DOPPLER_ORIGIN, time.Duration(conf.WebsocketWriteTimeoutSeconds)*time.Second, time.Duration(conf.SinkDialTimeoutSeconds)*time.Second)
+	doppler, err := New(
+		localIp,
+		conf,
+		storeAdapter,
+		conf.MessageDrainBufferSize,
+		DOPPLER_ORIGIN,
+		time.Duration(conf.WebsocketWriteTimeoutSeconds)*time.Second,
+		time.Duration(conf.SinkDialTimeoutSeconds)*time.Second,
+	)
 
 	if err != nil {
 		fatal("Failed to create doppler: %s", err)
 	}
 
 	go doppler.Start()
-	log.Info("Startup: doppler server started.")
+	log.Print("Startup: doppler server started.")
 
 	killChan := signalmanager.RegisterKillSignalChannel()
 	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
 
-	releaseNodeChan := dopplerservice.Announce(localIp, config.HeartbeatInterval, conf, storeAdapter, log)
-	legacyReleaseNodeChan := dopplerservice.AnnounceLegacy(localIp, config.HeartbeatInterval, conf, storeAdapter, log)
+	releaseNodeChan := dopplerservice.Announce(localIp, config.HeartbeatInterval, conf, storeAdapter)
+	legacyReleaseNodeChan := dopplerservice.AnnounceLegacy(localIp, config.HeartbeatInterval, conf, storeAdapter)
 
 	// We start the profiler last so that we can difinitively say that we're ready for
 	// connections by the time we're listening on PPROFPort.
@@ -103,7 +106,7 @@ func main() {
 		case <-dumpChan:
 			signalmanager.DumpGoRoutine()
 		case <-killChan:
-			log.Info("Shutting down")
+			log.Print("Shutting down")
 
 			stopped := make(chan bool)
 			legacyStopped := make(chan bool)

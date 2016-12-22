@@ -5,32 +5,30 @@ package monitor
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/gosteno"
 )
 
 type LinuxFileDescriptor struct {
 	interval time.Duration
 	done     chan chan struct{}
-	logger   *gosteno.Logger
 }
 
-func NewLinuxFD(interval time.Duration, logger *gosteno.Logger) *LinuxFileDescriptor {
+func NewLinuxFD(interval time.Duration) *LinuxFileDescriptor {
 	return &LinuxFileDescriptor{
 		interval: interval,
 		done:     make(chan chan struct{}),
-		logger:   logger,
 	}
 }
 
 func (l *LinuxFileDescriptor) Start() {
-	l.logger.Info("Starting Open File Descriptor Monitor...")
+	log.Print("Starting Open File Descriptor Monitor...")
 
 	ticker := time.NewTicker(l.interval)
-	l.logger.Infof("Starting FD monitor with pid %d", os.Getpid())
+	log.Printf("Starting FD monitor with pid %d", os.Getpid())
 	path := fmt.Sprintf("/proc/%d/fd", os.Getpid())
 
 	for {
@@ -38,7 +36,7 @@ func (l *LinuxFileDescriptor) Start() {
 		case <-ticker.C:
 			finfos, err := ioutil.ReadDir(path)
 			if err != nil {
-				l.logger.Errorf("Could not read pid dir %s: %s", path, err)
+				log.Printf("Could not read pid dir %s: %s", path, err)
 				break
 			}
 

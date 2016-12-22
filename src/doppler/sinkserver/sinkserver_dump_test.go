@@ -18,7 +18,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/websocket"
@@ -47,13 +46,11 @@ var _ = Describe("Dumping", func() {
 		serverPort = strconv.Itoa(port)
 		dataRead = diodes.NewManyToOneEnvelope(5, nil)
 
-		logger := loggertesthelper.Logger()
-
 		newAppServiceChan := make(chan appservice.AppService)
 		deletedAppServiceChan := make(chan appservice.AppService)
 
-		emptyBlacklist := blacklist.New(nil, logger)
-		sinkManager = sinkmanager.New(1024, false, emptyBlacklist, logger, 100, "dropsonde-origin",
+		emptyBlacklist := blacklist.New(nil)
+		sinkManager = sinkmanager.New(1024, false, emptyBlacklist, 100, "dropsonde-origin",
 			2*time.Second, 0, 1*time.Second, 500*time.Millisecond)
 
 		tempSink := sinkManager
@@ -63,7 +60,7 @@ var _ = Describe("Dumping", func() {
 			tempSink.Start(newAppServiceChan, deletedAppServiceChan)
 		}()
 
-		TestMessageRouter = sinkserver.NewMessageRouter(logger, sinkManager)
+		TestMessageRouter = sinkserver.NewMessageRouter(sinkManager)
 		tempMessageRouter := TestMessageRouter
 
 		go func() {
@@ -80,7 +77,6 @@ var _ = Describe("Dumping", func() {
 			100,
 			"dropsonde-origin",
 			mockBatcher,
-			logger,
 		)
 		Expect(err).NotTo(HaveOccurred())
 		tempWebsocketServer := TestWebsocketServer

@@ -13,7 +13,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/dropsonde/metric_sender"
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
@@ -88,7 +87,7 @@ var _ = Describe("Truncating Buffer", func() {
 	})
 
 	JustBeforeEach(func() {
-		buffer = truncatingbuffer.NewTruncatingBuffer(inMessageChan, bufferSize, context, loggertesthelper.Logger(), stopChannel)
+		buffer = truncatingbuffer.NewTruncatingBuffer(inMessageChan, bufferSize, context, stopChannel)
 	})
 
 	AfterEach(func() {
@@ -99,13 +98,13 @@ var _ = Describe("Truncating Buffer", func() {
 
 	It("panics if buffer size is less than 3", func() {
 		Expect(func() {
-			truncatingbuffer.NewTruncatingBuffer(inMessageChan, 2, context, loggertesthelper.Logger(), nil)
+			truncatingbuffer.NewTruncatingBuffer(inMessageChan, 2, context, nil)
 		}).To(Panic())
 	})
 
 	It("panics if context is nil", func() {
 		Expect(func() {
-			truncatingbuffer.NewTruncatingBuffer(inMessageChan, 3, nil, loggertesthelper.Logger(), nil)
+			truncatingbuffer.NewTruncatingBuffer(inMessageChan, 3, nil, nil)
 		}).To(Panic())
 	})
 

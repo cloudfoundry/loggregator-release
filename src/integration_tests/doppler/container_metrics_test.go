@@ -2,6 +2,7 @@ package doppler_test
 
 import (
 	"net"
+	"time"
 
 	"github.com/nu7hatch/gouuid"
 
@@ -12,7 +13,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 )
 
 var _ = Describe("Container Metrics", func() {
@@ -26,7 +26,7 @@ var _ = Describe("Container Metrics", func() {
 
 			send(containerMetric, inputConnection)
 
-			Eventually(dopplerSession).Should(gbytes.Say(`Done sending`))
+			time.Sleep(5 * time.Second)
 
 			receivedChan = make(chan []byte)
 			ws, _ := AddWSSink(receivedChan, "4567", "/apps/"+appID+"/containermetrics")
@@ -50,9 +50,7 @@ var _ = Describe("Container Metrics", func() {
 
 			send(factories.NewContainerMetric(appID+"other", 1, 1, 2, 3), inputConnection)
 
-			Eventually(dopplerSession).Should(gbytes.Say(`Done sending`))
-			Eventually(dopplerSession).Should(gbytes.Say(`Done sending`))
-			Eventually(dopplerSession).Should(gbytes.Say(`Done sending`))
+			time.Sleep(5 * time.Second)
 
 			receivedChan = make(chan []byte)
 			ws, _ := AddWSSink(receivedChan, "4567", "/apps/"+appID+"/containermetrics")
@@ -72,8 +70,7 @@ var _ = Describe("Container Metrics", func() {
 			send(factories.NewContainerMetric(appID, 0, 1, 2, 3), inputConnection)
 			send(factories.NewContainerMetric(appID, 1, 1, 2, 3), inputConnection)
 
-			Eventually(dopplerSession).Should(gbytes.Say(`Done sending`))
-			Eventually(dopplerSession).Should(gbytes.Say(`Done sending`))
+			time.Sleep(5 * time.Second)
 
 			receivedChan = make(chan []byte)
 			ws, _ := AddWSSink(receivedChan, "4567", "/apps/"+appID+"/containermetrics")
@@ -99,8 +96,7 @@ var _ = Describe("Container Metrics", func() {
 			laterMetric := factories.NewContainerMetric(appID, 0, 20, 2, 3)
 			send(laterMetric, inputConnection)
 
-			Eventually(dopplerSession).Should(gbytes.Say(`Done sending`))
-			Eventually(dopplerSession).Should(gbytes.Say(`Done sending`))
+			time.Sleep(5 * time.Second)
 
 			receivedChan = make(chan []byte)
 			ws, _ := AddWSSink(receivedChan, "4567", "/apps/"+appID+"/containermetrics")

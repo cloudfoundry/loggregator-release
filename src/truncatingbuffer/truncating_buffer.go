@@ -2,12 +2,12 @@ package truncatingbuffer
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )
@@ -18,7 +18,6 @@ type TruncatingBuffer struct {
 	inputChannel               <-chan *events.Envelope
 	context                    BufferContext
 	outputChannel              chan *events.Envelope
-	logger                     *gosteno.Logger
 	lock                       *sync.RWMutex
 	bufferSize                 uint64
 	sentMessageCount           uint64
@@ -27,7 +26,7 @@ type TruncatingBuffer struct {
 	stopChannel                chan struct{}
 }
 
-func NewTruncatingBuffer(inputChannel <-chan *events.Envelope, bufferSize uint, context BufferContext, logger *gosteno.Logger, stopChannel chan struct{}) *TruncatingBuffer {
+func NewTruncatingBuffer(inputChannel <-chan *events.Envelope, bufferSize uint, context BufferContext, stopChannel chan struct{}) *TruncatingBuffer {
 	if bufferSize < 3 {
 		panic("bufferSize must be larger than 3 for overflow")
 	}
@@ -37,7 +36,6 @@ func NewTruncatingBuffer(inputChannel <-chan *events.Envelope, bufferSize uint, 
 	return &TruncatingBuffer{
 		inputChannel:               inputChannel,
 		outputChannel:              make(chan *events.Envelope, bufferSize),
-		logger:                     logger,
 		lock:                       &sync.RWMutex{},
 		bufferSize:                 uint64(bufferSize),
 		sentMessageCount:           0,
@@ -100,14 +98,12 @@ func (r *TruncatingBuffer) forwardMessage(msg *events.Envelope) {
 		r.outputChannel <- msg
 		r.sentMessageCount = 1
 
-		if r.logger != nil {
-			r.logger.Warnd(map[string]interface{}{
-				"dropped":       deltaDropped,
-				"total_dropped": totalDropped,
-				"appId":         appId,
-				"destination":   r.context.Destination(),
-			}, "TB: Output channel too full")
-		}
+		log.Printf("TruncatingBuffer: deltaDropped=%d totalDropped=%d appId=%s destination=%s",
+			deltaDropped,
+			totalDropped,
+			appId,
+			r.context.Destination(),
+		)
 	}
 }
 
@@ -138,12 +134,13 @@ func (r *TruncatingBuffer) notifyMessagesDropped(outputChannel chan *events.Enve
 
 func (r *TruncatingBuffer) emitMessage(outputChannel chan *events.Envelope, event events.Event) {
 	env, err := emitter.Wrap(event, r.context.Origin())
-	if err == nil {
-		outputChannel <- env
-		r.queuedInternalMessageCount++
-	} else {
-		r.logger.Warnf("Error marshalling message: %v", err)
+	if err != nil {
+		log.Printf("Error marshalling message: %v", err)
+		return
 	}
+
+	outputChannel <- env
+	r.queuedInternalMessageCount++
 }
 
 func generateLogMessage(deltaDropped, totalDropped uint64, appId, source, destination string) *events.LogMessage {

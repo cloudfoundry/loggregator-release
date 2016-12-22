@@ -3,6 +3,7 @@
     "EtcdMaxConcurrentRequests": 10,
     "IncomingUDPPort": 47654,
     "IncomingTCPPort": 43210,
+    "PPROFPort": 6789,
     "OutgoingPort": 45678,
     "SinkSkipCertVerify": true,
     "MaxRetainedLogMessages": 10,

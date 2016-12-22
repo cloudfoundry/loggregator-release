@@ -13,13 +13,11 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/storeadapter"
 )
 
 var _ = Describe("Finder", func() {
 	var (
-		testLogger           *gosteno.Logger
 		protocols            []string
 		mockStoreAdapter     *mockStoreAdapter
 		legacyPort           int
@@ -35,11 +33,10 @@ var _ = Describe("Finder", func() {
 		mockStoreAdapter = newMockStoreAdapter()
 		legacyPort = 1234
 		grpcPort = 1235
-		testLogger = gosteno.NewLogger("TestLogger")
 	})
 
 	JustBeforeEach(func() {
-		finder = dopplerservice.NewFinder(mockStoreAdapter, legacyPort, grpcPort, protocols, preferredDopplerZone, testLogger)
+		finder = dopplerservice.NewFinder(mockStoreAdapter, legacyPort, grpcPort, protocols, preferredDopplerZone)
 		Expect(finder).ToNot(BeNil())
 	})
 

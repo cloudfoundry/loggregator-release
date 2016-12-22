@@ -83,11 +83,6 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 				drainSession.Kill().Wait()
 
-				Eventually(func() *gbytes.Buffer {
-					SendAppLog(appID, "http-message", inputConnection)
-					return dopplerSession.Out
-				}, 10, 1).Should(gbytes.Say(`syslog://:6666: Error when dialing out. Backing off`))
-
 				drainSession = StartUnencryptedTCPServer(pathToTCPEchoServer, syslogDrainAddress)
 
 				Eventually(func() *gbytes.Buffer {
@@ -125,11 +120,6 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 				drainSession.Kill().Wait()
 
-				Eventually(func() *gbytes.Buffer {
-					SendAppLog(appID, "message", inputConnection)
-					return dopplerSession.Out
-				}, 10, 1).Should(gbytes.Say(`syslog-tls://:6666: Error when dialing out. Backing off`))
-
 				drainSession = StartEncryptedTCPServer(pathToTCPEchoServer, syslogDrainAddress)
 
 				Eventually(func() *gbytes.Buffer {
@@ -147,13 +137,21 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 		BeforeEach(func() {
 			serverSession = StartHTTPSServer(pathToHTTPEchoServer)
-			httpsURL := fmt.Sprintf("https://%s:1234/syslog/", localIPAddress)
+			httpsURL := fmt.Sprintf("https://foo:somereallycrazypassword@%s:1234/syslog/?someuser=foo&somepass=somereallycrazypassword", localIPAddress)
 			key := DrainKey(appID, httpsURL)
 			AddETCDNode(etcdAdapter, key, httpsURL)
 		})
 
 		AfterEach(func() {
 			serverSession.Kill().Wait()
+
+			Consistently(func() *gbytes.Buffer {
+				return dopplerSession.Out
+			}).ShouldNot(gbytes.Say(`somereallycrazypassword`))
+
+			Consistently(func() *gbytes.Buffer {
+				return dopplerSession.Err
+			}).ShouldNot(gbytes.Say(`somereallycrazypassword`))
 		})
 
 		It("forwards log messages to an https endpoint", func() {
@@ -161,13 +159,13 @@ var _ = Describe("Syslog Drain Binding", func() {
 				SendAppLog(appID, "http-message", inputConnection)
 				return serverSession.Out
 			}, 20, 1).Should(gbytes.Say(`http-message`))
+
 		})
 
 		It("reconnects a reappearing https server", func() {
 			serverSession.Kill().Wait()
 
 			SendAppLog(appID, "http-message", inputConnection)
-			Eventually(dopplerSession.Out).Should(gbytes.Say(`1234/syslog.*backoff`))
 
 			serverSession = StartHTTPSServer(pathToHTTPEchoServer)
 
@@ -175,52 +173,6 @@ var _ = Describe("Syslog Drain Binding", func() {
 				SendAppLog(appID, "http-message", inputConnection)
 				return serverSession.Out
 			}, 20, 1).Should(gbytes.Say(`http-message`))
-		})
-
-		It("logs the number of dropped messages", func() {
-			Eventually(func() *gbytes.Buffer {
-				SendAppLog(appID, "http-message", inputConnection)
-				return serverSession.Out
-			}, 20, 1).Should(gbytes.Say(`http-message`))
-
-			serverSession.Kill().Wait()
-
-			for i := 0; i < 100; i++ {
-				SendAppLog(appID, "overflow", inputConnection)
-			}
-			Eventually(func() *gbytes.Buffer {
-				SendAppLog(appID, "overflow", inputConnection)
-				return dopplerSession.Out
-			}, 20, 1).Should(gbytes.Say(`TB: Output channel too full`))
-
-			By("starting the endpoint (1st time)")
-			serverSession = StartHTTPSServer(pathToHTTPEchoServer)
-			Eventually(serverSession.Out, 10, 1).Should(gbytes.Say(`Log message output is too high. 100 messages dropped \(Total 100 messages dropped\)`))
-			Eventually(serverSession.Out, 10, 1).Should(gbytes.Say(`overflow`))
-
-			serverSession.Kill().Wait()
-
-			for i := 0; i < 315; i++ {
-				SendAppLog(appID, "overflow2", inputConnection)
-			}
-			Eventually(func() *gbytes.Buffer {
-				SendAppLog(appID, "overflow2", inputConnection)
-				return dopplerSession.Out
-			}, 50, 0.5).Should(gbytes.Say(`TB: Output channel too full`))
-
-			Eventually(func() *gbytes.Buffer {
-				SendAppLog(appID, "overflow2", inputConnection)
-				return dopplerSession.Out
-			}, 50, 0.5).Should(gbytes.Say(`TB: Output channel too full`))
-
-			Eventually(func() *gbytes.Buffer {
-				SendAppLog(appID, "overflow2", inputConnection)
-				return dopplerSession.Out
-			}, 50, 0.5).Should(gbytes.Say(`TB: Output channel too full`))
-
-			By("starting the endpoint (2nd time)")
-			serverSession = StartHTTPSServer(pathToHTTPEchoServer)
-			Eventually(serverSession.Out, 10, 1).Should(gbytes.Say(`Log message output is too high. 99 messages dropped \(Total 398 messages dropped\)`))
 		})
 	})
 
@@ -238,8 +190,6 @@ var _ = Describe("Syslog Drain Binding", func() {
 				return drainSession.Out
 			}, 5, 1).ShouldNot(gbytes.Say("syslog-message"))
 
-			Eventually(dopplerSession, 5).Should(gbytes.Say(`Invalid syslog drain URL \(syslog://localhost:6666\).*Err: Syslog Drain URL is blacklisted`))
-
 			drainSession.Kill().Wait()
 		})
 
@@ -256,8 +206,6 @@ var _ = Describe("Syslog Drain Binding", func() {
 				return drainSession.Out
 			}, 5, 1).ShouldNot(gbytes.Say("syslog-message"))
 
-			Eventually(dopplerSession, 5).Should(gbytes.Say(`Invalid syslog drain URL \(syslog-tls://localhost:6666\).*Err: Syslog Drain URL is blacklisted`))
-
 			drainSession.Kill().Wait()
 		})
 
@@ -271,8 +219,6 @@ var _ = Describe("Syslog Drain Binding", func() {
 				SendAppLog(appID, "http-message", inputConnection)
 				return serverSession.Out
 			}, 5, 1).ShouldNot(gbytes.Say(`http-message`))
-
-			Eventually(dopplerSession).Should(gbytes.Say(`Invalid syslog drain URL \(https://localhost:1234/syslog/\).*Err: Syslog Drain URL is blacklisted`))
 
 			serverSession.Kill().Wait()
 		})

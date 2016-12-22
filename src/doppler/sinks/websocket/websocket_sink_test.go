@@ -7,8 +7,6 @@ import (
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
-	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
@@ -18,17 +16,15 @@ import (
 
 var _ = Describe("WebsocketSink", func() {
 	var (
-		logger        *gosteno.Logger
 		websocketSink *websocket.WebsocketSink
 		fakeWebsocket *fakeMessageWriter
 		writeTimeout  time.Duration
 	)
 
 	BeforeEach(func() {
-		logger = loggertesthelper.Logger()
 		fakeWebsocket = &fakeMessageWriter{}
 		writeTimeout = 5 * time.Second
-		websocketSink = websocket.NewWebsocketSink("appId", logger, fakeWebsocket, 10, writeTimeout, "dropsonde-origin")
+		websocketSink = websocket.NewWebsocketSink("appId", fakeWebsocket, 10, writeTimeout, "dropsonde-origin")
 	})
 
 	Describe("Identifier", func() {

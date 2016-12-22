@@ -1,6 +1,8 @@
 package sinkmanager_test
 
 import (
+	"log"
+
 	"github.com/cloudfoundry/dropsonde/emitter/fake"
 	fakeMS "github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	"github.com/cloudfoundry/dropsonde/metrics"
@@ -12,6 +14,7 @@ import (
 )
 
 func TestSinkmanager(t *testing.T) {
+	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Sinkmanager Suite")
 }

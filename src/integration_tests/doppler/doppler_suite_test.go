@@ -2,6 +2,8 @@ package doppler_test
 
 import (
 	"encoding/binary"
+	"fmt"
+	"net"
 	"os/exec"
 	"plumbing"
 	"testing"
@@ -20,7 +22,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -78,11 +79,19 @@ var _ = BeforeEach(func() {
 
 	etcdRunner.Reset()
 
-	command := exec.Command(pathToDopplerExec, "--config=fixtures/doppler.json", "--debug")
+	command := exec.Command(pathToDopplerExec, "--config=fixtures/doppler.json")
 	dopplerSession, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 
-	Eventually(dopplerSession.Out, 3).Should(gbytes.Say("Startup: doppler server started"))
+	dopplerStartedFn := func() bool {
+		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", 6790))
+		if err != nil {
+			return false
+		}
+		conn.Close()
+		return true
+	}
+	Eventually(dopplerStartedFn).Should(BeTrue())
 	localIPAddress, _ = localip.LocalIP()
 	Eventually(func() error {
 		_, err := etcdAdapter.Get("healthstatus/doppler/z1/doppler_z1/0")

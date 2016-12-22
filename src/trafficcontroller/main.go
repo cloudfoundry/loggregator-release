@@ -82,7 +82,7 @@ func main() {
 	go uptimeMonitor.Start()
 	defer uptimeMonitor.Stop()
 
-	openFileMonitor := monitor.NewLinuxFD(monitorInterval, log)
+	openFileMonitor := monitor.NewLinuxFD(monitorInterval)
 	go openFileMonitor.Start()
 	defer openFileMonitor.Stop()
 
@@ -99,7 +99,7 @@ func main() {
 
 	// TODO: The preferredProtocol of udp tells the finder to pull out the Doppler URLs from the legacy ETCD endpoint.
 	// Eventually we'll have a separate websocket client pool
-	finder := dopplerservice.NewFinder(etcdAdapter, int(conf.DopplerPort), int(conf.GRPC.Port), []string{"ws"}, "", log)
+	finder := dopplerservice.NewFinder(etcdAdapter, int(conf.DopplerPort), int(conf.GRPC.Port), []string{"ws"}, "")
 	finder.Start()
 
 	var accessMiddleware func(middleware.HttpHandler) *middleware.AccessHandler

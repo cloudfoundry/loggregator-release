@@ -23,7 +23,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/dropsonde/signature"
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/loggregatorlib/store"
 	"github.com/cloudfoundry/loggregatorlib/store/cache"
@@ -32,7 +31,6 @@ import (
 )
 
 type Doppler struct {
-	*gosteno.Logger
 	batcher *metricbatcher.MetricBatcher
 
 	appStoreWatcher *store.AppServiceStoreWatcher
@@ -62,7 +60,6 @@ type Doppler struct {
 }
 
 func New(
-	logger *gosteno.Logger,
 	host string,
 	conf *config.Config,
 	storeAdapter storeadapter.StoreAdapter,
@@ -72,7 +69,6 @@ func New(
 	dialTimeout time.Duration,
 ) (*Doppler, error) {
 	doppler := &Doppler{
-		Logger:                     logger,
 		storeAdapter:               storeAdapter,
 		dropsondeVerifiedBytesChan: make(chan []byte),
 	}
@@ -80,14 +76,13 @@ func New(
 	keepAliveInterval := 30 * time.Second
 
 	appStoreCache := cache.NewAppServiceCache()
-	doppler.appStoreWatcher, doppler.newAppServiceChan, doppler.deletedAppServiceChan = store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache, logger)
+	doppler.appStoreWatcher, doppler.newAppServiceChan, doppler.deletedAppServiceChan = store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
 
 	doppler.batcher = initializeMetrics(conf.MetricBatchIntervalMilliseconds)
 
 	doppler.udpListener, doppler.dropsondeBytesChan = listeners.NewUDPListener(
 		fmt.Sprintf("%s:%d", host, conf.IncomingUDPPort),
 		doppler.batcher,
-		logger,
 		"udpListener",
 	)
 
@@ -98,7 +93,7 @@ func New(
 		tlsConfig := &conf.TLSListenerConfig
 		addr := fmt.Sprintf("%s:%d", host, tlsConfig.Port)
 		contextName := "tlsListener"
-		doppler.tlsListener, err = listeners.NewTCPListener(contextName, addr, tlsConfig, doppler.envelopeBuffer, doppler.batcher, TCPTimeout, logger)
+		doppler.tlsListener, err = listeners.NewTCPListener(contextName, addr, tlsConfig, doppler.envelopeBuffer, doppler.batcher, TCPTimeout)
 		if err != nil {
 			return nil, err
 		}
@@ -106,13 +101,13 @@ func New(
 
 	addr := fmt.Sprintf("%s:%d", host, conf.IncomingTCPPort)
 	contextName := "tcpListener"
-	doppler.tcpListener, err = listeners.NewTCPListener(contextName, addr, nil, doppler.envelopeBuffer, doppler.batcher, TCPTimeout, logger)
+	doppler.tcpListener, err = listeners.NewTCPListener(contextName, addr, nil, doppler.envelopeBuffer, doppler.batcher, TCPTimeout)
 
-	doppler.signatureVerifier = signature.NewVerifier(logger, conf.SharedSecret)
+	doppler.signatureVerifier = signature.NewVerifier(conf.SharedSecret)
 
-	doppler.dropsondeUnmarshallerCollection = dropsonde_unmarshaller.NewDropsondeUnmarshallerCollection(logger, conf.UnmarshallerCount)
+	doppler.dropsondeUnmarshallerCollection = dropsonde_unmarshaller.NewDropsondeUnmarshallerCollection(conf.UnmarshallerCount)
 
-	blacklist := blacklist.New(conf.BlackListIps, logger)
+	blacklist := blacklist.New(conf.BlackListIps)
 	metricTTL := time.Duration(conf.ContainerMetricTTLSeconds) * time.Second
 	sinkTimeout := time.Duration(conf.SinkInactivityTimeoutSeconds) * time.Second
 	sinkIOTimeout := time.Duration(conf.SinkIOTimeoutSeconds) * time.Second
@@ -120,7 +115,6 @@ func New(
 		conf.MaxRetainedLogMessages,
 		conf.SinkSkipCertVerify,
 		blacklist,
-		logger,
 		messageDrainBufferSize,
 		dropsondeOrigin,
 		sinkTimeout,
@@ -135,7 +129,7 @@ func New(
 		return nil, err
 	}
 
-	doppler.messageRouter = sinkserver.NewMessageRouter(logger, doppler.sinkManager, grpcRouter)
+	doppler.messageRouter = sinkserver.NewMessageRouter(doppler.sinkManager, grpcRouter)
 
 	doppler.websocketServer, err = websocketserver.New(
 		fmt.Sprintf("%s:%d", conf.WebsocketHost, conf.OutgoingPort),
@@ -145,14 +139,13 @@ func New(
 		conf.MessageDrainBufferSize,
 		dropsondeOrigin,
 		doppler.batcher,
-		logger,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create the websocket server: %s", err.Error())
 	}
 
 	monitorInterval := time.Duration(conf.MonitorIntervalSeconds) * time.Second
-	doppler.openFileMonitor = monitor.NewLinuxFD(monitorInterval, logger)
+	doppler.openFileMonitor = monitor.NewLinuxFD(monitorInterval)
 	doppler.uptimeMonitor = monitor.NewUptime(monitorInterval)
 
 	return doppler, nil
@@ -232,7 +225,7 @@ func (doppler *Doppler) Start() {
 
 	// The following runs forever. Put all startup functions above here.
 	for err := range doppler.errChan {
-		doppler.Errorf("Got error %s", err)
+		log.Printf("Got error %s", err)
 	}
 }
 

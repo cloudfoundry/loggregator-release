@@ -3,7 +3,6 @@ package sinks
 import (
 	"truncatingbuffer"
 
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
@@ -19,8 +18,8 @@ type Metric struct {
 	Value int64
 }
 
-func RunTruncatingBuffer(inputChan <-chan *events.Envelope, bufferSize uint, context truncatingbuffer.BufferContext, logger *gosteno.Logger, stopChannel chan struct{}) *truncatingbuffer.TruncatingBuffer {
-	b := truncatingbuffer.NewTruncatingBuffer(inputChan, bufferSize, context, logger, stopChannel)
+func RunTruncatingBuffer(inputChan <-chan *events.Envelope, bufferSize uint, context truncatingbuffer.BufferContext, stopChannel chan struct{}) *truncatingbuffer.TruncatingBuffer {
+	b := truncatingbuffer.NewTruncatingBuffer(inputChan, bufferSize, context, stopChannel)
 	go b.Run()
 	return b
 }

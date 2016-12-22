@@ -3,19 +3,17 @@ package blacklist
 import (
 	"doppler/iprange"
 	"errors"
+	"log"
 	"net/url"
-
-	"github.com/cloudfoundry/gosteno"
 )
 
 type URLBlacklistManager struct {
 	blacklistIPs    []iprange.IPRange
 	blacklistedURLs []string
-	logger          *gosteno.Logger
 }
 
-func New(blacklistIPs []iprange.IPRange, logger *gosteno.Logger) *URLBlacklistManager {
-	return &URLBlacklistManager{blacklistIPs: blacklistIPs, logger: logger}
+func New(blacklistIPs []iprange.IPRange) *URLBlacklistManager {
+	return &URLBlacklistManager{blacklistIPs: blacklistIPs}
 }
 
 func (blacklistManager *URLBlacklistManager) CheckUrl(rawUrl string) (outputURL *url.URL, err error) {
@@ -30,7 +28,7 @@ func (blacklistManager *URLBlacklistManager) CheckUrl(rawUrl string) (outputURL 
 		if !ok {
 			return nil, err
 		}
-		blacklistManager.logger.Errorf("Could not resolve URL %s: %s", outputURL, err)
+		log.Printf("Could not resolve URL %s: %s", outputURL, err)
 
 		// Allow the syslog drain backoff to deal with this URL if it
 		// continues to not resolve.

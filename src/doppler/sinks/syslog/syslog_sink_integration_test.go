@@ -13,7 +13,6 @@ import (
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 
 	. "github.com/onsi/ginkgo"
@@ -42,7 +41,7 @@ var _ = Describe("SyslogSinkIntegration", func() {
 
 				errorHandler := func(errorMsg, appId string) {}
 
-				syslogSink := syslog.NewSyslogSink(appId, url, loggertesthelper.Logger(), bufferSize, httpsWriter, errorHandler, "dropsonde-origin")
+				syslogSink := syslog.NewSyslogSink(appId, url, bufferSize, httpsWriter, errorHandler, "dropsonde-origin")
 				inputChan := make(chan *events.Envelope)
 
 				defer syslogSink.Disconnect()

@@ -1,15 +1,13 @@
 package listeners
 
 import (
+	"log"
 	"net"
 	"sync"
-
-	"github.com/cloudfoundry/gosteno"
 )
 
 type UDPListener struct {
 	batcher     Batcher
-	logger      *gosteno.Logger
 	host        string
 	dataChannel chan []byte
 	connection  net.PacketConn
@@ -17,10 +15,9 @@ type UDPListener struct {
 	lock        sync.RWMutex
 }
 
-func NewUDPListener(host string, batcher Batcher, logger *gosteno.Logger, metricProto string) (*UDPListener, <-chan []byte) {
+func NewUDPListener(host string, batcher Batcher, metricProto string) (*UDPListener, <-chan []byte) {
 	byteChan := make(chan []byte, 1024)
 	listener := &UDPListener{
-		logger:      logger,
 		batcher:     batcher,
 		host:        host,
 		dataChannel: byteChan,
@@ -37,10 +34,10 @@ func (l *UDPListener) Address() string {
 func (l *UDPListener) Start() {
 	connection, err := net.ListenPacket("udp", l.host)
 	if err != nil {
-		l.logger.Fatalf("Failed to listen on port. %s", err)
+		log.Fatalf("Failed to listen on port. %s", err)
 	}
 
-	l.logger.Infof("UDP listener listening on port %s", l.host)
+	log.Printf("UDP listener listening on port %s", l.host)
 	l.lock.Lock()
 	l.connection = connection
 	l.lock.Unlock()
@@ -48,12 +45,11 @@ func (l *UDPListener) Start() {
 	readBuffer := make([]byte, 65535) //buffer with size = max theoretical UDP size
 	defer close(l.dataChannel)
 	for {
-		readCount, senderAddr, err := connection.ReadFrom(readBuffer)
+		readCount, _, err := connection.ReadFrom(readBuffer)
 		if err != nil {
-			l.logger.Debugf("Error while reading: %s", err)
+			log.Printf("error while reading UDP: %s", err)
 			return
 		}
-		l.logger.Debugf("AgentListener: Read %d bytes from address %s", readCount, senderAddr)
 
 		readData := make([]byte, readCount) //pass on buffer in size only of read data
 		copy(readData, readBuffer[:readCount])

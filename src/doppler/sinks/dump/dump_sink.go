@@ -5,23 +5,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
 type DumpSink struct {
 	appId              string
-	logger             *gosteno.Logger
 	messageRing        *ring.Ring
 	inputChan          chan *events.Envelope
 	inactivityDuration time.Duration
 	lock               sync.RWMutex
 }
 
-func NewDumpSink(appId string, bufferSize uint32, givenLogger *gosteno.Logger, inactivityDuration time.Duration) *DumpSink {
+func NewDumpSink(appId string, bufferSize uint32, inactivityDuration time.Duration) *DumpSink {
 	dumpSink := &DumpSink{
 		appId:              appId,
-		logger:             givenLogger,
 		messageRing:        ring.New(int(bufferSize)),
 		inactivityDuration: inactivityDuration,
 	}
@@ -39,7 +36,6 @@ func (d *DumpSink) Run(inputChan <-chan *events.Envelope) {
 			}
 
 			if msg.GetEventType() != events.Envelope_LogMessage {
-				d.logger.Debugf("Dump sink (app id %s): Skipping non-log message (type %s)", d.appId, msg.GetEventType().String())
 				continue
 			}
 
@@ -81,10 +77,6 @@ func (d *DumpSink) Dump() []*events.Envelope {
 
 func (d *DumpSink) AppID() string {
 	return d.appId
-}
-
-func (d *DumpSink) Logger() *gosteno.Logger {
-	return d.logger
 }
 
 func (d *DumpSink) Identifier() string {

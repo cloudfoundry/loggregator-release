@@ -11,20 +11,17 @@ import (
 	"log"
 	"sync"
 
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
-func NewGroupedSinks(logger *gosteno.Logger) *GroupedSinks {
+func NewGroupedSinks() *GroupedSinks {
 	return &GroupedSinks{
-		logger:    logger,
 		apps:      make(map[string]map[string]*sink_wrapper.SinkWrapper),
 		firehoses: make(map[string]firehose_group.FirehoseGroup),
 	}
 }
 
 type GroupedSinks struct {
-	logger    *gosteno.Logger
 	apps      map[string]map[string]*sink_wrapper.SinkWrapper
 	firehoses map[string]firehose_group.FirehoseGroup
 	sync.RWMutex
@@ -182,13 +179,11 @@ func (group *GroupedSinks) ContainerMetricsFor(appId string) *containermetric.Co
 	appCache, ok := group.apps[appId]
 
 	if !ok {
-		group.logger.Debugf("GroupedSinks.ContainerMetricsFor: no sink cache for app id %s", appId)
 		return nil
 	}
 
 	sinkId := "container-metrics-" + appId
 	if _, ok := appCache[sinkId]; !ok {
-		group.logger.Debugf("GroupedSinks.ContainerMetricsFor: no ContainerMetricSink found for app id %s", appId)
 		return nil
 	}
 

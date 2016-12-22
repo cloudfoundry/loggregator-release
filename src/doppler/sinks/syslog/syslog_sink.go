@@ -5,17 +5,16 @@ import (
 	"doppler/sinks/retrystrategy"
 	"doppler/sinks/syslogwriter"
 	"fmt"
+	"log"
 	"net/url"
 	"sync"
 	"time"
 	"truncatingbuffer"
 
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
 type SyslogSink struct {
-	logger                 *gosteno.Logger
 	appId                  string
 	drainURL               *url.URL
 	sentMessageCount       *uint64
@@ -29,12 +28,11 @@ type SyslogSink struct {
 	disconnectOnce         sync.Once
 }
 
-func NewSyslogSink(appId string, drainURL *url.URL, givenLogger *gosteno.Logger, messageDrainBufferSize uint, syslogWriter syslogwriter.Writer, errorHandler func(string, string), dropsondeOrigin string) *SyslogSink {
+func NewSyslogSink(appId string, drainURL *url.URL, messageDrainBufferSize uint, syslogWriter syslogwriter.Writer, errorHandler func(string, string), dropsondeOrigin string) *SyslogSink {
 
 	syslogSink := &SyslogSink{
 		appId:                  appId,
 		drainURL:               drainURL,
-		logger:                 givenLogger,
 		messageDrainBufferSize: messageDrainBufferSize,
 		syslogWriter:           syslogWriter,
 		handleSendError:        errorHandler,
@@ -42,44 +40,41 @@ func NewSyslogSink(appId string, drainURL *url.URL, givenLogger *gosteno.Logger,
 		dropsondeOrigin:        dropsondeOrigin,
 	}
 
-	givenLogger.Debugf("Syslog Sink %s: Created for appId [%s]", syslogSink.Identifier(), appId)
+	log.Printf("Syslog Sink %s: Created for appId [%s]", syslogSink.Identifier(), appId)
 	return syslogSink
 }
 
 func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 	syslogIdentifier := s.Identifier()
-	s.logger.Infof("Syslog Sink %s: Running.", syslogIdentifier)
-	defer s.logger.Errorf("Syslog Sink %s: Stopped.", syslogIdentifier)
+	log.Printf("Syslog Sink %s: Running.", syslogIdentifier)
+	defer log.Printf("Syslog Sink %s: Stopped.", syslogIdentifier)
 
 	backoffStrategy := retrystrategy.Exponential()
 
 	context := truncatingbuffer.NewLogAllowedContext(s.dropsondeOrigin, syslogIdentifier)
-	buffer := sinks.RunTruncatingBuffer(inputChan, s.messageDrainBufferSize, context, s.logger, s.disconnectChannel)
+	buffer := sinks.RunTruncatingBuffer(inputChan, s.messageDrainBufferSize, context, s.disconnectChannel)
 	timer := time.NewTimer(backoffStrategy(0))
 	connected := false
 	defer timer.Stop()
 	defer s.syslogWriter.Close()
 
-	s.logger.Debugf("Syslog Sink %s: Starting loop. Current backoff: %v", syslogIdentifier, backoffStrategy(0))
+	log.Printf("Syslog Sink %s: Starting loop. Current backoff: %v", syslogIdentifier, backoffStrategy(0))
 	for {
-		s.logger.Debugf("Syslog Sink %s: Waiting for activity\n", syslogIdentifier)
-
 		select {
 		case <-s.disconnectChannel:
 			return
 		case messageEnvelope, ok := <-buffer.GetOutputChannel():
 			if !ok {
-				s.logger.Debugf("Syslog Sink %s: Closed listener channel detected. Closing.\n", syslogIdentifier)
+				log.Printf("Syslog Sink %s: Closed listener channel detected. Closing.\n", syslogIdentifier)
 				return
 			}
 
 			numberOfTries := 0
 			for {
 				for !connected {
-					s.logger.Debugf("Syslog Sink %s: Not connected. Trying to connect.", syslogIdentifier)
 					err := s.syslogWriter.Connect()
 					if err == nil {
-						s.logger.Infof("Syslog Sink %s: successfully connected.", syslogIdentifier)
+						log.Printf("Syslog Sink %s: successfully connected.", syslogIdentifier)
 						connected = true
 						break
 					}
@@ -105,7 +100,6 @@ func (s *SyslogSink) Run(inputChan <-chan *events.Envelope) {
 					break
 				}
 
-				s.logger.Debugf("Syslog Sink %s: Error when trying to send data to sink. Backing off. Err: %v\n", syslogIdentifier, err)
 				connected = false
 				numberOfTries++
 			}

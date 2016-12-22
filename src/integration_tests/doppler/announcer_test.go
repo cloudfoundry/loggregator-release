@@ -3,12 +3,12 @@ package doppler_test
 import (
 	"doppler/config"
 	"fmt"
+	"net"
 	"os/exec"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -36,7 +36,15 @@ var _ = Describe("Doppler Announcer", func() {
 			command := exec.Command(pathToDopplerExec, "--config=fixtures/doppler_without_tls.json")
 			dopplerSessionWithoutTLS, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(dopplerSessionWithoutTLS.Out, 3).Should(gbytes.Say("Startup: doppler server started"))
+			dopplerStartedFn := func() bool {
+				conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", 6789))
+				if err != nil {
+					return false
+				}
+				conn.Close()
+				return true
+			}
+			Eventually(dopplerStartedFn).Should(BeTrue())
 
 			Eventually(func() error {
 				_, err := etcdAdapter.Get("/doppler/meta/z1/doppler_z1/1")

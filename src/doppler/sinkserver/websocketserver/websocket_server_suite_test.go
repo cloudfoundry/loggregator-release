@@ -1,6 +1,8 @@
 package websocketserver_test
 
 import (
+	"log"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -15,6 +17,7 @@ import (
 )
 
 func TestWebsocketServer(t *testing.T) {
+	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "WebsocketServer Suite")
 }

@@ -7,7 +7,6 @@ import (
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 
 	. "github.com/onsi/ginkgo"
@@ -63,7 +62,7 @@ var _ = Describe("Message Router", func() {
 			receivedDrains:   make([][]string, 0),
 		}
 
-		messageRouter = sinkserver.NewMessageRouter(loggertesthelper.Logger(), fakeManagerA, fakeManagerB)
+		messageRouter = sinkserver.NewMessageRouter(fakeManagerA, fakeManagerB)
 	})
 
 	Describe("Start", func() {
