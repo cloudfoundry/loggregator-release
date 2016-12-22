@@ -2,6 +2,10 @@ package component_test
 
 import (
 	"integration_tests/binaries"
+	"io/ioutil"
+	"log"
+
+	"google.golang.org/grpc/grpclog"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -10,6 +14,9 @@ import (
 )
 
 func TestComponentTests(t *testing.T) {
+	nullLogger := log.New(ioutil.Discard, "", 0)
+	grpclog.SetLogger(nullLogger)
+
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "ComponentTests Suite")
 }

@@ -111,14 +111,14 @@ function run_unit {
     print_checkpoint "Running Unit Tests"
     # TODO: remove build_etcd once announcer unit tests no longer depend on it
     build_etcd
-    ginkgo -r --race --randomizeAllSpecs --cover --skipPackage="${not_unit_tests}" $@
+    ginkgo -r --race --randomizeAllSpecs --slowSpecThreshold 20 --skipPackage="${not_unit_tests}" $@
     return $?
 }
 
 function run_integration {
     print_checkpoint "Running Integration Tests"
     build_etcd
-    ginkgo -r --race --randomizeAllSpecs --cover $@ src/integration_tests
+    ginkgo -r --race --randomizeAllSpecs --slowSpecThreshold 20 $@ src/integration_tests
     return $?
 }
 
