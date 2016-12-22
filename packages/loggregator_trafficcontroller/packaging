@@ -1,9 +1,5 @@
 set -e -x
 
-export GOROOT=$(readlink -nf /var/vcap/packages/golang1.7)
-export PATH=$GOROOT/bin:$PATH
-set -e -x
-
 pushd loggregator-blobs
     gunzip trafficcontroller.gz
     chmod +x trafficcontroller
