@@ -1,6 +1,5 @@
 # Loggregator
 
-[![Coverage Status](https://coveralls.io/repos/cloudfoundry/loggregator/badge.png?branch=develop)](https://coveralls.io/r/cloudfoundry/loggregator?branch=develop)
 [![Concourse Badge](https://loggregator.ci.cf-app.com/api/v1/pipelines/loggregator/jobs/unit-tests/badge)](https://loggregator.ci.cf-app.com/teams/main/pipelines/loggregator/jobs/unit-tests)
 
 ### Logging in the Clouds
@@ -503,10 +502,9 @@ Please run `bin/install-git-hooks` before committing for the first time. The pre
 
 #### Additional go tools
 
-Install go vet and go cover
+Install go vet:
 
     go get golang.org/x/tools/cmd/vet
-    go get golang.org/x/tools/cmd/cover
 
 Install gosub
 ```
