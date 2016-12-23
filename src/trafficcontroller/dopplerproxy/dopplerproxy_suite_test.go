@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cloudfoundry/gosteno"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -28,7 +27,7 @@ type LogAuthorizer struct {
 	Result     AuthorizerResult
 }
 
-func (a *LogAuthorizer) Authorize(authToken string, target string, l *gosteno.Logger) (int, error) {
+func (a *LogAuthorizer) Authorize(authToken string, target string) (int, error) {
 	a.TokenParam = authToken
 	a.Target = target
 
@@ -40,7 +39,7 @@ type AdminAuthorizer struct {
 	Result     AuthorizerResult
 }
 
-func (a *AdminAuthorizer) Authorize(authToken string, l *gosteno.Logger) (bool, error) {
+func (a *AdminAuthorizer) Authorize(authToken string) (bool, error) {
 	a.TokenParam = authToken
 
 	return a.Result.Status == http.StatusOK, errors.New(a.Result.ErrorMessage)

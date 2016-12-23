@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/loggregatorlib/server/handlers"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
@@ -48,19 +47,19 @@ func NewDopplerEndpoint(endpoint string,
 	}
 }
 
-type HandlerProvider func(<-chan []byte, *gosteno.Logger) http.Handler
+type HandlerProvider func(<-chan []byte) http.Handler
 
-func HttpHandlerProvider(messages <-chan []byte, logger *gosteno.Logger) http.Handler {
-	return handlers.NewHttpHandler(messages, logger)
+func HttpHandlerProvider(messages <-chan []byte) http.Handler {
+	return handlers.NewHttpHandler(messages)
 }
 
-func WebsocketHandlerProvider(messages <-chan []byte, logger *gosteno.Logger) http.Handler {
-	return handlers.NewWebsocketHandler(messages, WebsocketKeepAliveDuration, logger)
+func WebsocketHandlerProvider(messages <-chan []byte) http.Handler {
+	return handlers.NewWebsocketHandler(messages, WebsocketKeepAliveDuration)
 }
 
-func ContainerMetricHandlerProvider(messages <-chan []byte, logger *gosteno.Logger) http.Handler {
+func ContainerMetricHandlerProvider(messages <-chan []byte) http.Handler {
 	outputChan := DeDupe(messages)
-	return handlers.NewHttpHandler(outputChan, logger)
+	return handlers.NewHttpHandler(outputChan)
 }
 
 func (endpoint *DopplerEndpoint) GetPath() string {

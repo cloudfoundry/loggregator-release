@@ -5,7 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"logger"
+	"log"
 	"monitor"
 	"net"
 	"net/http"
@@ -36,7 +36,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/dropsonde/runtime_stats"
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 )
@@ -49,7 +48,6 @@ const (
 
 var (
 	logFilePath          = flag.String("logFile", "", "The agent log file, defaults to STDOUT")
-	logLevel             = flag.Bool("debug", false, "Debug logging")
 	disableAccessControl = flag.Bool("disableAccessControl", false, "always all access to app logs")
 	configFile           = flag.String("config", "config/loggregator_trafficcontroller.json", "Location of the loggregator trafficcontroller config json file")
 )
@@ -69,12 +67,11 @@ func main() {
 		panic(fmt.Errorf("Unable to resolve own IP address: %s", err))
 	}
 
-	log := logger.NewLogger(*logLevel, *logFilePath, "loggregator trafficcontroller", conf.Syslog)
-	log.Info("Startup: Setting up the loggregator traffic controller")
+	log.Print("Startup: Setting up the loggregator traffic controller")
 
 	batcher, err := initializeMetrics("LoggregatorTrafficController", net.JoinHostPort(conf.MetronHost, strconv.Itoa(conf.MetronPort)))
 	if err != nil {
-		log.Errorf("Error initializing dropsonde: %s", err)
+		log.Printf("Error initializing dropsonde: %s", err)
 	}
 
 	monitorInterval := time.Duration(conf.MonitorIntervalSeconds) * time.Second
@@ -112,8 +109,8 @@ func main() {
 			accessLog.Sync()
 			accessLog.Close()
 		}()
-		accessLogger := accesslogger.New(accessLog, log)
-		accessMiddleware = middleware.Access(accessLogger, ipAddress, conf.OutgoingDropsondePort, log)
+		accessLogger := accesslogger.New(accessLog)
+		accessMiddleware = middleware.Access(accessLogger, ipAddress, conf.OutgoingDropsondePort)
 	}
 
 	tlsConf, err := plumbing.NewMutualTLSConfig(
@@ -128,7 +125,7 @@ func main() {
 	pool := grpcconnector.NewPool(20, tlsConf)
 	grpcConnector := grpcconnector.New(1000, pool, finder, batcher)
 
-	dopplerHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, grpcConnector, "doppler."+conf.SystemDomain, log, 15*time.Second))
+	dopplerHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, grpcConnector, "doppler."+conf.SystemDomain, 15*time.Second))
 	if accessMiddleware != nil {
 		dopplerHandler = accessMiddleware(dopplerHandler)
 	}
@@ -147,7 +144,7 @@ func main() {
 		case <-dumpChan:
 			signalmanager.DumpGoRoutine()
 		case <-killChan:
-			log.Info("Shutting down")
+			log.Print("Shutting down")
 			return
 		}
 	}
@@ -185,7 +182,7 @@ func initializeMetrics(origin, destination string) (*metricbatcher.MetricBatcher
 	sender := metric_sender.NewMetricSender(dropsonde.DefaultEmitter)
 	batcher := metricbatcher.New(sender, defaultBatchInterval)
 	metrics.Initialize(sender, batcher)
-	logs.Initialize(log_sender.NewLogSender(dropsonde.DefaultEmitter, gosteno.NewLogger("dropsonde/logs")))
+	logs.Initialize(log_sender.NewLogSender(dropsonde.DefaultEmitter))
 	envelopes.Initialize(envelope_sender.NewEnvelopeSender(dropsonde.DefaultEmitter))
 	go runtime_stats.NewRuntimeStats(dropsonde.DefaultEmitter, statsInterval).Run(nil)
 	http.DefaultTransport = dropsonde.InstrumentedRoundTripper(http.DefaultTransport)

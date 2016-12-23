@@ -12,8 +12,6 @@ import (
 	"regexp"
 	"runtime/pprof"
 
-	"github.com/cloudfoundry/gosteno"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -22,7 +20,6 @@ var _ = Describe("LogAccessAuthorizer", func() {
 
 	var (
 		transport *http.Transport
-		logger    *gosteno.Logger = loggertesthelper.Logger()
 		server    *httptest.Server
 	)
 
@@ -38,7 +35,7 @@ var _ = Describe("LogAccessAuthorizer", func() {
 	Context("Disable Access Control", func() {
 		It("returns http.StatusOK", func() {
 			authorizer := authorization.NewLogAccessAuthorizer(true, "http://cloudcontroller.example.com")
-			Expect(authorizer("bearer anything", "myAppId", logger)).To(Equal(http.StatusOK))
+			Expect(authorizer("bearer anything", "myAppId")).To(Equal(http.StatusOK))
 		})
 	})
 
@@ -55,7 +52,7 @@ var _ = Describe("LogAccessAuthorizer", func() {
 		It("does not allow access for requests with empty AuthTokens", func() {
 			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL)
 
-			status, err := authorizer("", "myAppId", logger)
+			status, err := authorizer("", "myAppId")
 			Expect(status).To(Equal(http.StatusUnauthorized))
 			Expect(err).To(Equal(errors.New(authorization.NO_AUTH_TOKEN_PROVIDED_ERROR_MESSAGE)))
 		})
@@ -63,22 +60,22 @@ var _ = Describe("LogAccessAuthorizer", func() {
 		It("allows access when the api returns 200, and otherwise denies access", func() {
 			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL)
 
-			status, err := authorizer("bearer something", "myAppId", logger)
+			status, err := authorizer("bearer something", "myAppId")
 			Expect(status).To(Equal(http.StatusOK))
 			Expect(err).To(BeNil())
 
-			status, err = authorizer("bearer something", "notMyAppId", logger)
+			status, err = authorizer("bearer something", "notMyAppId")
 			Expect(status).To(Equal(http.StatusForbidden))
 			Expect(err).To(MatchError(http.StatusText(http.StatusForbidden)))
 
-			status, err = authorizer("bearer something", "nonExistantAppId", logger)
+			status, err = authorizer("bearer something", "nonExistantAppId")
 			Expect(status).To(Equal(http.StatusNotFound))
 			Expect(err).To(MatchError(http.StatusText(http.StatusNotFound)))
 		})
 
 		It("has no leaking go routines", func() {
 			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL)
-			authorizer("bearer something", "myAppId", logger)
+			authorizer("bearer something", "myAppId")
 
 			otherGoRoutines := func() bool {
 				var buf bytes.Buffer
@@ -112,7 +109,7 @@ var _ = Describe("LogAccessAuthorizer", func() {
 
 		It("does allow access when cert verification is skipped", func() {
 			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL)
-			status, err := authorizer("bearer something", "myAppId", logger)
+			status, err := authorizer("bearer something", "myAppId")
 			Expect(status).To(Equal(http.StatusOK))
 			Expect(err).To(BeNil())
 		})
@@ -120,7 +117,7 @@ var _ = Describe("LogAccessAuthorizer", func() {
 		It("does not allow access when cert verifcation is not skipped", func() {
 			transport.TLSClientConfig.InsecureSkipVerify = false
 			authorizer := authorization.NewLogAccessAuthorizer(false, server.URL)
-			status, err := authorizer("bearer something", "myAppId", logger)
+			status, err := authorizer("bearer something", "myAppId")
 			Expect(status).To(Equal(http.StatusInternalServerError))
 			Expect(err).To(BeAssignableToTypeOf(&url.Error{}))
 			urlErr := err.(*url.Error)

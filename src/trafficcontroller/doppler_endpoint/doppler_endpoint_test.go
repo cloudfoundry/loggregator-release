@@ -17,8 +17,8 @@ var _ = Describe("NewDopplerEndpoint", func() {
 	Context("when endpoint is 'recentlogs'", func() {
 		It("uses an HTTP handler", func() {
 			dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("recentlogs", "abc123", true)
-			knownHttpHandler := handlers.NewHttpHandler(nil, nil)
-			Expect(dopplerEndpoint.HProvider(nil, nil)).To(BeAssignableToTypeOf(knownHttpHandler))
+			knownHttpHandler := handlers.NewHttpHandler(nil)
+			Expect(dopplerEndpoint.HProvider(nil)).To(BeAssignableToTypeOf(knownHttpHandler))
 		})
 
 		It("sets a timeout of five seconds", func() {
@@ -30,10 +30,10 @@ var _ = Describe("NewDopplerEndpoint", func() {
 	Context("when endpoint is 'containermetrics'", func() {
 		It("uses an HTTP Container metrics handler", func() {
 			dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("containermetrics", "abc123", true)
-			handler := handlers.NewHttpHandler(nil, nil)
+			handler := handlers.NewHttpHandler(nil)
 			closedChan := make(chan []byte)
 			close(closedChan)
-			Expect(dopplerEndpoint.HProvider(closedChan, nil)).To(BeAssignableToTypeOf(handler))
+			Expect(dopplerEndpoint.HProvider(closedChan)).To(BeAssignableToTypeOf(handler))
 		})
 
 		It("sets a timeout of five seconds", func() {

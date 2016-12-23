@@ -6,8 +6,6 @@ import (
 	"errors"
 	"trafficcontroller/uaa_client"
 
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -47,7 +45,7 @@ var _ = Describe("AdminAccessAuthorizer", func() {
 			client := &NonAdminUaaClient{}
 			authorizer := authorization.NewAdminAccessAuthorizer(true, client)
 
-			authorized, err := authorizer("", loggertesthelper.Logger())
+			authorized, err := authorizer("")
 			Expect(authorized).To(BeTrue())
 			Expect(err).To(BeNil())
 		})
@@ -58,7 +56,7 @@ var _ = Describe("AdminAccessAuthorizer", func() {
 			client := &LoggregatorAdminUaaClient{}
 			authorizer := authorization.NewAdminAccessAuthorizer(false, client)
 
-			authorized, err := authorizer("", loggertesthelper.Logger())
+			authorized, err := authorizer("")
 
 			Expect(authorized).To(BeFalse())
 			Expect(err).To(Equal(errors.New(authorization.NO_AUTH_TOKEN_PROVIDED_ERROR_MESSAGE)))
@@ -71,7 +69,7 @@ var _ = Describe("AdminAccessAuthorizer", func() {
 
 			authorizer := authorization.NewAdminAccessAuthorizer(false, client)
 
-			authorized, err := authorizer(authToken, loggertesthelper.Logger())
+			authorized, err := authorizer(authToken)
 			Expect(authorized).To(BeTrue())
 			Expect(err).To(BeNil())
 			Expect(client.UsedToken).To(Equal("my-token"))
@@ -84,7 +82,7 @@ var _ = Describe("AdminAccessAuthorizer", func() {
 
 			authorizer := authorization.NewAdminAccessAuthorizer(false, client)
 
-			authorized, err := authorizer(authToken, loggertesthelper.Logger())
+			authorized, err := authorizer(authToken)
 			Expect(authorized).To(BeFalse())
 			Expect(err).To(Equal(errors.New(authorization.INVALID_AUTH_TOKEN_ERROR_MESSAGE)))
 
@@ -97,7 +95,7 @@ var _ = Describe("AdminAccessAuthorizer", func() {
 
 			authorizer := authorization.NewAdminAccessAuthorizer(false, client)
 
-			authorized, err := authorizer(authToken, loggertesthelper.Logger())
+			authorized, err := authorizer(authToken)
 			Expect(authorized).To(BeFalse())
 			Expect(err).To(Equal(errors.New(authorization.INVALID_AUTH_TOKEN_ERROR_MESSAGE)))
 

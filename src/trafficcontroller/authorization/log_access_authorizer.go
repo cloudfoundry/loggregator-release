@@ -2,9 +2,8 @@ package authorization
 
 import (
 	"errors"
+	"log"
 	"net/http"
-
-	"github.com/cloudfoundry/gosteno"
 )
 
 const (
@@ -12,9 +11,10 @@ const (
 	INVALID_AUTH_TOKEN_ERROR_MESSAGE     = "Error: Invalid authorization"
 )
 
-type LogAccessAuthorizer func(authToken string, appId string, logger *gosteno.Logger) (int, error)
+// TODO: We don't need to return an error and a status code. One will suffice.
+type LogAccessAuthorizer func(authToken string, appId string) (int, error)
 
-func disableLogAccessControlAuthorizer(_, _ string, _ *gosteno.Logger) (int, error) {
+func disableLogAccessControlAuthorizer(_, _ string) (int, error) {
 	return http.StatusOK, nil
 }
 
@@ -24,9 +24,9 @@ func NewLogAccessAuthorizer(disableAccessControl bool, apiHost string) LogAccess
 		return LogAccessAuthorizer(disableLogAccessControlAuthorizer)
 	}
 
-	isAccessAllowed := func(authToken string, target string, logger *gosteno.Logger) (int, error) {
+	isAccessAllowed := func(authToken string, target string) (int, error) {
 		if authToken == "" {
-			logger.Errorf(NO_AUTH_TOKEN_PROVIDED_ERROR_MESSAGE)
+			log.Printf(NO_AUTH_TOKEN_PROVIDED_ERROR_MESSAGE)
 			return http.StatusUnauthorized, errors.New(NO_AUTH_TOKEN_PROVIDED_ERROR_MESSAGE)
 		}
 
@@ -34,7 +34,7 @@ func NewLogAccessAuthorizer(disableAccessControl bool, apiHost string) LogAccess
 		req.Header.Set("Authorization", authToken)
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
-			logger.Errorf("Could not get app information: [%s]", err)
+			log.Printf("Could not get app information: [%s]", err)
 			return http.StatusInternalServerError, err
 		}
 
@@ -42,7 +42,7 @@ func NewLogAccessAuthorizer(disableAccessControl bool, apiHost string) LogAccess
 
 		err = nil
 		if res.StatusCode != 200 {
-			logger.Warnf("Non 200 response from CC API: %d for %s", res.StatusCode, target)
+			log.Printf("Non 200 response from CC API: %d for %s", res.StatusCode, target)
 			err = errors.New(http.StatusText(res.StatusCode))
 		}
 

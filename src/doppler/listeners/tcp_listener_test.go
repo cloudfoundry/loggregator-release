@@ -214,21 +214,6 @@ var _ = Describe("TCPlistener", func() {
 					Eventually(f).ShouldNot(Succeed())
 				})
 			})
-
-			Describe("shedding messages", func() {
-				It("emits metric", func() {
-					envelope := createEnvelope(events.Envelope_LogMessage)
-					conn := openTCPConnection(listener.Address(), tlsClientConfig)
-
-					for i := 0; i < 6; i++ {
-						err := send(conn, envelope)
-						Expect(err).ToNot(HaveOccurred())
-					}
-
-					envelopeBuffer.Next()
-					Eventually(mockAlerter.AlertCalled, 2).Should(Receive())
-				})
-			})
 		})
 
 		Describe("Start() & Stop()", func() {

@@ -8,7 +8,6 @@ import (
 	"time"
 	. "trafficcontroller/accesslogger"
 
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -54,8 +53,7 @@ var _ = Describe("AccessLog", func() {
 		req = buildRequest(method, url, remoteAddr, requestId, forwardedFor)
 		port, err := strconv.Atoi(dstPort)
 		Expect(err).ToNot(HaveOccurred())
-		logger := loggertesthelper.Logger()
-		al = NewAccessLog(req, timestamp, dstHost, uint32(port), logger)
+		al = NewAccessLog(req, timestamp, dstHost, uint32(port))
 	})
 
 	Describe("String", func() {

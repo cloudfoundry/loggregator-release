@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/mux"
@@ -34,7 +33,6 @@ type Proxy struct {
 	adminAuthorize authorization.AdminAccessAuthorizer
 	grpcConn       grpcConnector
 	cookieDomain   string
-	logger         *gosteno.Logger
 	numFirehoses   int64
 	numAppStreams  int64
 	timeout        time.Duration
@@ -52,7 +50,6 @@ func NewDopplerProxy(
 	adminAuthorizer authorization.AdminAccessAuthorizer,
 	grpcConn grpcConnector,
 	cookieDomain string,
-	logger *gosteno.Logger,
 	timeout time.Duration,
 ) *Proxy {
 	p := &Proxy{
@@ -60,7 +57,6 @@ func NewDopplerProxy(
 		adminAuthorize: adminAuthorizer,
 		grpcConn:       grpcConn,
 		cookieDomain:   cookieDomain,
-		logger:         logger,
 		timeout:        timeout,
 	}
 	r := mux.NewRouter()
@@ -115,12 +111,11 @@ func (p *Proxy) setcookie(w http.ResponseWriter, r *http.Request) {
 func (p *Proxy) serveFirehose(firehoseSubscriptionId string, writer http.ResponseWriter, request *http.Request) {
 	authToken := getAuthToken(request)
 
-	authorized, err := p.adminAuthorize(authToken, p.logger)
+	authorized, err := p.adminAuthorize(authToken)
 	if !authorized {
 		writer.Header().Set("WWW-Authenticate", "Basic")
 		writer.WriteHeader(http.StatusUnauthorized)
 		fmt.Fprintf(writer, "You are not authorized. %s", err.Error())
-		p.logger.Warnf("auth token not authorized to access firehose")
 		return
 	}
 
@@ -143,12 +138,8 @@ func (p *Proxy) serveFirehose(firehoseSubscriptionId string, writer http.Respons
 func (p *Proxy) serveAppLogs(requestPath, appID string, writer http.ResponseWriter, request *http.Request) {
 	authToken := getAuthToken(request)
 
-	status, err := p.logAuthorize(authToken, appID, p.logger)
+	status, _ := p.logAuthorize(authToken, appID)
 	if status != http.StatusOK {
-		p.logger.Warndf(map[string]interface{}{
-			"status": status,
-			"err":    err,
-		}, "auth token not authorized to access appID [%s].", appID)
 		switch status {
 		case http.StatusUnauthorized:
 			writer.WriteHeader(status)
@@ -207,7 +198,7 @@ func (p *Proxy) serveAppLogs(requestPath, appID string, writer http.ResponseWrit
 func (p *Proxy) serveWS(endpointType, streamID string, w http.ResponseWriter, r *http.Request, recv func() ([]byte, error)) {
 	dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint(endpointType, streamID, false)
 	data := make(chan []byte)
-	handler := dopplerEndpoint.HProvider(data, p.logger)
+	handler := dopplerEndpoint.HProvider(data)
 
 	go func() {
 		defer close(data)
@@ -216,7 +207,7 @@ func (p *Proxy) serveWS(endpointType, streamID string, w http.ResponseWriter, r 
 		for {
 			resp, err := recv()
 			if err != nil {
-				p.logger.Error(err.Error())
+				log.Printf("Error serving websocket: %s", err)
 				return
 			}
 
@@ -249,7 +240,7 @@ func (p *Proxy) serveMultiPartResponse(rw http.ResponseWriter, messages [][]byte
 	for _, message := range messages {
 		partWriter, err := mp.CreatePart(nil)
 		if err != nil {
-			p.logger.Infof("http handler: Client went away while serving recent logs")
+			log.Printf("http handler: Client went away while serving recent logs")
 			return
 		}
 
@@ -301,8 +292,6 @@ func (p *Proxy) serveSetCookie(writer http.ResponseWriter, request *http.Request
 
 	writer.Header().Add("Access-Control-Allow-Credentials", "true")
 	writer.Header().Add("Access-Control-Allow-Origin", origin)
-
-	p.logger.Debugf("Proxy: Set cookie name '%s' for origin '%s' on domain '%s'", cookieName, origin, cookieDomain)
 }
 
 func deDupe(input [][]byte) [][]byte {

@@ -2,18 +2,17 @@ package authorization
 
 import (
 	"errors"
+	"log"
 	"strings"
 	"trafficcontroller/uaa_client"
-
-	"github.com/cloudfoundry/gosteno"
 )
 
 const LOGGREGATOR_ADMIN_ROLE = "doppler.firehose"
 const BEARER_PREFIX = "bearer "
 
-type AdminAccessAuthorizer func(authToken string, logger *gosteno.Logger) (bool, error)
+type AdminAccessAuthorizer func(authToken string) (bool, error)
 
-func disableAdminAccessControlAuthorizer(_ string, _ *gosteno.Logger) (bool, error) {
+func disableAdminAccessControlAuthorizer(string) (bool, error) {
 	return true, nil
 }
 
@@ -23,7 +22,7 @@ func NewAdminAccessAuthorizer(disableAccessControl bool, client uaa_client.UaaCl
 		return AdminAccessAuthorizer(disableAdminAccessControlAuthorizer)
 	}
 
-	isAccessAllowed := func(authToken string, logger *gosteno.Logger) (bool, error) {
+	isAccessAllowed := func(authToken string) (bool, error) {
 		if authToken == "" {
 			return false, errors.New(NO_AUTH_TOKEN_PROVIDED_ERROR_MESSAGE)
 		}
@@ -31,7 +30,7 @@ func NewAdminAccessAuthorizer(disableAccessControl bool, client uaa_client.UaaCl
 		authData, err := client.GetAuthData(strings.TrimPrefix(authToken, BEARER_PREFIX))
 
 		if err != nil {
-			logger.Errorf("Error getting auth data: %s", err.Error())
+			log.Printf("Error getting auth data: %s", err)
 			return false, errors.New(INVALID_AUTH_TOKEN_ERROR_MESSAGE)
 		}
 

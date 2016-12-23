@@ -4,7 +4,6 @@ import (
 	"errors"
 	"trafficcontroller/accesslogger"
 
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -17,8 +16,7 @@ var _ = Describe("AccessLogger", func() {
 
 	BeforeEach(func() {
 		writer = newMockWriter()
-		loggie := loggertesthelper.Logger()
-		logger = accesslogger.New(writer, loggie)
+		logger = accesslogger.New(writer)
 	})
 
 	Describe("LogAccess", func() {

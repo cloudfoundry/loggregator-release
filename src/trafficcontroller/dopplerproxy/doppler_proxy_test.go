@@ -20,7 +20,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/loggregatorlib/server/handlers"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
@@ -63,7 +62,6 @@ var _ = Describe("ServeHTTP()", func() {
 			adminAuth.Authorize,
 			mockGrpcConnector,
 			"cookieDomain",
-			loggertesthelper.Logger(),
 			50*time.Millisecond,
 		)
 
@@ -535,25 +533,25 @@ var _ = Describe("ServeHTTP()", func() {
 
 var _ = Describe("DefaultHandlerProvider", func() {
 	It("returns an HTTP handler for .../recentlogs", func() {
-		httpHandler := handlers.NewHttpHandler(make(chan []byte), loggertesthelper.Logger())
+		httpHandler := handlers.NewHttpHandler(make(chan []byte))
 
-		target := doppler_endpoint.HttpHandlerProvider(make(chan []byte), loggertesthelper.Logger())
+		target := doppler_endpoint.HttpHandlerProvider(make(chan []byte))
 
 		Expect(target).To(BeAssignableToTypeOf(httpHandler))
 	})
 
 	It("returns a Websocket handler for .../stream", func() {
-		wsHandler := handlers.NewWebsocketHandler(make(chan []byte), time.Minute, loggertesthelper.Logger())
+		wsHandler := handlers.NewWebsocketHandler(make(chan []byte), time.Minute)
 
-		target := doppler_endpoint.WebsocketHandlerProvider(make(chan []byte), loggertesthelper.Logger())
+		target := doppler_endpoint.WebsocketHandlerProvider(make(chan []byte))
 
 		Expect(target).To(BeAssignableToTypeOf(wsHandler))
 	})
 
 	It("returns a Websocket handler for anything else", func() {
-		wsHandler := handlers.NewWebsocketHandler(make(chan []byte), time.Minute, loggertesthelper.Logger())
+		wsHandler := handlers.NewWebsocketHandler(make(chan []byte), time.Minute)
 
-		target := doppler_endpoint.WebsocketHandlerProvider(make(chan []byte), loggertesthelper.Logger())
+		target := doppler_endpoint.WebsocketHandlerProvider(make(chan []byte))
 
 		Expect(target).To(BeAssignableToTypeOf(wsHandler))
 	})

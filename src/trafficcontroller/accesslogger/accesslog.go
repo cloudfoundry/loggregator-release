@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"log"
 	"net"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/cloudfoundry/gosteno"
 )
 
 const REQUEST_ID_HEADER = "X-Vcap-Request-ID"
@@ -33,16 +32,14 @@ type AccessLog struct {
 	timestamp time.Time
 	host      string
 	port      uint32
-	logger    *gosteno.Logger
 }
 
-func NewAccessLog(req *http.Request, ts time.Time, host string, port uint32, logger *gosteno.Logger) *AccessLog {
+func NewAccessLog(req *http.Request, ts time.Time, host string, port uint32) *AccessLog {
 	return &AccessLog{
 		request:   req,
 		timestamp: ts,
 		host:      host,
 		port:      port,
-		logger:    logger,
 	}
 }
 
@@ -67,7 +64,7 @@ func (al *AccessLog) String() string {
 	var buf bytes.Buffer
 	err := logTemplate.Execute(&buf, context)
 	if err != nil {
-		al.logger.Errorf("Error executing security access log template: %s\n", err)
+		log.Printf("Error executing security access log template: %s\n", err)
 		return ""
 	}
 	return buf.String()
@@ -89,7 +86,7 @@ func (al *AccessLog) extractRemoteInfo() (string, string) {
 	}
 	host, port, err := net.SplitHostPort(remoteAddr)
 	if err != nil {
-		al.logger.Errorf("Error splitting host and port for access log: %s\n", err)
+		log.Printf("Error splitting host and port for access log: %s\n", err)
 		return "", ""
 	}
 	return host, port

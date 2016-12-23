@@ -53,7 +53,7 @@ func StartTrafficController(conf tcConf.Config) (func(), int) {
 	Expect(err).ToNot(HaveOccurred())
 
 	By("starting trafficcontroller")
-	tcCommand := exec.Command(tcPath, "--debug", "--disableAccessControl", "--config", filename)
+	tcCommand := exec.Command(tcPath, "--disableAccessControl", "--config", filename)
 	tcSession, err := gexec.Start(
 		tcCommand,
 		gexec.NewPrefixedWriter(color("o", "tc", green, cyan), GinkgoWriter),

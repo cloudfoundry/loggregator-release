@@ -68,7 +68,7 @@ var _ = BeforeEach(func() {
 })
 
 var _ = JustBeforeEach(func() {
-	trafficControllerCommand := exec.Command(trafficControllerExecPath, "--config", configFile, "--debug")
+	trafficControllerCommand := exec.Command(trafficControllerExecPath, "--config", configFile)
 
 	var err error
 	trafficControllerSession, err = gexec.Start(trafficControllerCommand, GinkgoWriter, GinkgoWriter)

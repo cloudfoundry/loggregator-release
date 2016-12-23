@@ -11,8 +11,6 @@ import (
 	. "github.com/apoydence/eachers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 )
 
 var _ = Describe("AccessHandler", func() {
@@ -27,10 +25,9 @@ var _ = Describe("AccessHandler", func() {
 	)
 
 	BeforeEach(func() {
-		gostLogger := loggertesthelper.Logger()
 		mockHandler = newMockHttpHandler()
 		mockAccessLogger = newMockAccessLogger()
-		accessMiddleware := middleware.Access(mockAccessLogger, host, port, gostLogger)
+		accessMiddleware := middleware.Access(mockAccessLogger, host, port)
 		accessHandler = accessMiddleware(mockHandler)
 
 		var _ http.Handler = accessHandler

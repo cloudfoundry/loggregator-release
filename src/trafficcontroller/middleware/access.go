@@ -1,9 +1,8 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
-
-	"github.com/cloudfoundry/gosteno"
 )
 
 //go:generate hel --type HttpHandler --output mock_http_writer_test.go
@@ -21,17 +20,15 @@ type AccessLogger interface {
 type AccessHandler struct {
 	handler      HttpHandler
 	accessLogger AccessLogger
-	logger       *gosteno.Logger
 	host         string
 	port         uint32
 }
 
-func Access(accessLogger AccessLogger, host string, port uint32, logger *gosteno.Logger) func(HttpHandler) *AccessHandler {
+func Access(accessLogger AccessLogger, host string, port uint32) func(HttpHandler) *AccessHandler {
 	return func(handler HttpHandler) *AccessHandler {
 		return &AccessHandler{
 			handler:      handler,
 			accessLogger: accessLogger,
-			logger:       logger,
 			host:         host,
 			port:         port,
 		}
@@ -40,7 +37,7 @@ func Access(accessLogger AccessLogger, host string, port uint32, logger *gosteno
 
 func (h *AccessHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if err := h.accessLogger.LogAccess(req, h.host, h.port); err != nil {
-		h.logger.Errorf("access handler : %s", err)
+		log.Printf("access handler : %s", err)
 	}
 
 	h.handler.ServeHTTP(rw, req)
