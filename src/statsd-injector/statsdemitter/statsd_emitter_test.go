@@ -7,7 +7,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/cloudfoundry/loggregatorlib/loggertesthelper"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )
@@ -20,7 +19,6 @@ var _ = Describe("Statsdemitter", func() {
 	var _ = BeforeEach(func() {
 		udpAddr, _ := net.ResolveUDPAddr("udp", ":8088")
 		udpListener, _ = net.ListenUDP("udp", udpAddr)
-		loggertesthelper.TestLoggerSink.Clear()
 	})
 
 	var _ = AfterEach(func() {
@@ -30,7 +28,7 @@ var _ = Describe("Statsdemitter", func() {
 	It("emits the serialized envelope on the given UDP port", func(done Done) {
 		defer close(done)
 		inputChan := make(chan *events.Envelope)
-		emitter := statsdemitter.New(8088, loggertesthelper.Logger())
+		emitter := statsdemitter.New(8088)
 		go emitter.Run(inputChan)
 		message := &events.Envelope{
 			Origin:    proto.String("origin"),
@@ -59,7 +57,7 @@ var _ = Describe("Statsdemitter", func() {
 	It("does not emit invalid envelope", func(done Done) {
 		defer close(done)
 		inputChan := make(chan *events.Envelope)
-		emitter := statsdemitter.New(8088, loggertesthelper.Logger())
+		emitter := statsdemitter.New(8088)
 		go emitter.Run(inputChan)
 
 		badMessage := &events.Envelope{

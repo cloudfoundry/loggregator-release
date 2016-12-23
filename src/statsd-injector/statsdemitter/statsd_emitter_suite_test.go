@@ -1,6 +1,8 @@
 package statsdemitter_test
 
 import (
+	"log"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -8,6 +10,7 @@ import (
 )
 
 func TestStatsdemitter(t *testing.T) {
+	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Statsdemitter Suite")
 }

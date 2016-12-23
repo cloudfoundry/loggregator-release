@@ -2,22 +2,20 @@ package statsdemitter
 
 import (
 	"fmt"
+	"log"
 	"net"
 
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )
 
 type StatsdEmitter struct {
-	port   uint
-	logger *gosteno.Logger
+	port uint
 }
 
-func New(port uint, logger *gosteno.Logger) *StatsdEmitter {
+func New(port uint) *StatsdEmitter {
 	return &StatsdEmitter{
-		port:   port,
-		logger: logger,
+		port: port,
 	}
 }
 
@@ -34,14 +32,12 @@ func (s *StatsdEmitter) Run(inputChan chan *events.Envelope) {
 		}
 		bytes, err := proto.Marshal(message)
 		if err != nil {
-			s.logger.Errorf("Error while marshaling envelope: %s", err.Error())
+			log.Printf("Error while marshaling envelope: %s", err)
 			continue
 		}
-		s.logger.Debug("Sending envelope to metron")
-		bytesWritten, err := conn.Write(bytes)
+		_, err = conn.Write(bytes)
 		if err != nil {
-			s.logger.Errorf("Error writing to metron: %v\n", err)
+			log.Printf("Error writing to metron: %v\n", err)
 		}
-		s.logger.Debugf("Written %d bytes\n", bytesWritten)
 	}
 }

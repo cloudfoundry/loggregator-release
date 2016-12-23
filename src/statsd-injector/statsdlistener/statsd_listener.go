@@ -4,12 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"log"
 	"net"
 	"regexp"
 	"strconv"
 	"time"
 
-	"github.com/cloudfoundry/gosteno"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )
@@ -20,11 +20,9 @@ type StatsdListener struct {
 
 	gaugeValues   map[string]float64 // key is "origin.name"
 	counterValues map[string]float64 // key is "origin.name"
-
-	logger *gosteno.Logger
 }
 
-func New(listenerPort uint, logger *gosteno.Logger) *StatsdListener {
+func New(listenerPort uint) *StatsdListener {
 	listenerAddress := fmt.Sprintf(":%d", listenerPort)
 	return &StatsdListener{
 		host:     listenerAddress,
@@ -32,22 +30,20 @@ func New(listenerPort uint, logger *gosteno.Logger) *StatsdListener {
 
 		gaugeValues:   make(map[string]float64),
 		counterValues: make(map[string]float64),
-
-		logger: logger,
 	}
 }
 
 func (l *StatsdListener) Run(outputChan chan *events.Envelope) {
 	udpAddr, err := net.ResolveUDPAddr("udp", l.host)
 	if err != nil {
-		l.logger.Fatalf("Failed to resolve address %s. %s", l.host, err.Error())
+		log.Fatalf("Failed to resolve address %s. %s", l.host, err.Error())
 	}
 	connection, err := net.ListenUDP("udp", udpAddr)
 	if err != nil {
-		l.logger.Fatalf("Failed to start UDP listener. %s", err.Error())
+		log.Fatalf("Failed to start UDP listener. %s", err.Error())
 	}
 
-	l.logger.Infof("Listening for statsd on host %s", l.host)
+	log.Printf("Listening for statsd on host %s", l.host)
 
 	// Use max UDP size because we don't know how big the message is.
 	maxUDPsize := 65535
@@ -59,12 +55,11 @@ func (l *StatsdListener) Run(outputChan chan *events.Envelope) {
 	}()
 
 	for {
-		readCount, senderAddr, err := connection.ReadFrom(readBytes)
+		readCount, _, err := connection.ReadFrom(readBytes)
 		if err != nil {
-			l.logger.Debugf("Error while reading. %s", err)
+			log.Printf("Error while reading. %s", err)
 			return
 		}
-		l.logger.Debugf("StatsdListener: Read %d bytes from address %s", readCount, senderAddr)
 		trimmedBytes := make([]byte, readCount)
 		copy(trimmedBytes, readBytes[:readCount])
 
@@ -75,7 +70,7 @@ func (l *StatsdListener) Run(outputChan chan *events.Envelope) {
 			if err == nil {
 				outputChan <- envelope
 			} else {
-				l.logger.Warnf("Error parsing stat line \"%s\": %s", line, err.Error())
+				log.Printf("Error parsing stat line \"%s\": %s", line, err.Error())
 			}
 		}
 	}
