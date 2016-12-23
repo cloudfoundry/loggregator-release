@@ -2,17 +2,13 @@
 
 package monitor
 
-import (
-	"time"
-
-	"github.com/cloudfoundry/gosteno"
-)
+import "time"
 
 // LinuxFileDescriptor does nothing if it's not on linux.
 type LinuxFileDescriptor struct {
 }
 
-func NewLinuxFD(time.Duration, *gosteno.Logger) *LinuxFileDescriptor {
+func NewLinuxFD(time.Duration) *LinuxFileDescriptor {
 	return &LinuxFileDescriptor{}
 }
 
