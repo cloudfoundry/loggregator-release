@@ -8,32 +8,32 @@ golang/go1.7.4.windows-amd64.zip:
   sha: a0da2f5d67e5b800eba811a34ca4b2aa22cca678
 loggregator-blobs/boshhmforwarder.gz:
   size: 3198602
-  object_id: befe5cfe-3884-4ecd-50cf-ea5621f01f5d
-  sha: 715c6b1c9000e362daad7aec762fffc045e37644
+  object_id: ac8368ea-1794-4d85-6f64-c2b28b02cc62
+  sha: 0f246971ceabe3846159998cc8d75a987ee85f1c
 loggregator-blobs/doppler.gz:
   size: 4784618
-  object_id: b5f48247-6827-45fe-6017-efdf62487ea1
-  sha: 02db9fb59f43784bf81446bd78e2ed5fcae9635d
+  object_id: 5cc16523-e365-4cc2-4769-6157114a205a
+  sha: 58e378db8440db15dbef2816b2d9279414736eef
 loggregator-blobs/metron.exe:
   size: 11155968
-  object_id: a4cbe57d-6155-442f-584b-645458c0222b
+  object_id: 38cc07c4-bfc3-4b1e-5b78-86edcd1b06a6
   sha: 0facf8d00c478f170c72d8d61d9b5f1db1a3511d
 loggregator-blobs/metron.gz:
   size: 3527767
-  object_id: b4427897-657b-42fa-41ce-59707587fc85
-  sha: 7c8ae14b5ce730a1cbcb82453e23e6585b5e8f35
+  object_id: 50efb579-ad82-4fd1-6be7-dd89d7b2e228
+  sha: 9494de94a2b05ccafe1278e5174219cb3527a912
 loggregator-blobs/statsd-injector.gz:
   size: 1405915
-  object_id: 9a103c9e-7c3b-430e-61f9-62ab33c9a7f0
-  sha: 9c6e9efd2f5c90263cbc284463d4028b64f34a07
+  object_id: 1e6a6f47-170d-48bb-69e2-c69cf6eebf71
+  sha: f0f85ddb8900a93f589bef077f9f9b887efde2f6
 loggregator-blobs/syslog_drain_binder.gz:
   size: 4570369
-  object_id: 32739d16-94ab-4aea-5b95-85822d071154
-  sha: 7bf5dff10cf53adeea2a5974acc3c27d6af1a415
+  object_id: 1eaf53cd-91e3-4fd2-5b2b-44dbf254bf59
+  sha: 725717e4909f8dc1e78e76b69927a3f76d914c9e
 loggregator-blobs/trafficcontroller.gz:
   size: 4799180
-  object_id: d95a8b67-2ae6-4dbf-7755-ae9881bb9631
-  sha: c6a496efabd5a63dda9b39b1a1cbe8059e75ed1f
+  object_id: 092fec6c-5c3e-4e68-77d6-448d45b8f30c
+  sha: 871d4771a8ffa456ff9afbef9093df791b83149c
 metron-agent/metron.exe:
   size: 11400192
   object_id: da5c67dc-1211-4eb6-5168-65584a4302db
