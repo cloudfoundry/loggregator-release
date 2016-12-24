@@ -2,6 +2,8 @@
 
 trap "echo Exited!; exit 1;" SIGINT SIGTERM
 
+PROJECT_DIR="$(cd "$(dirname "$0")/.."; pwd)"
+
 function print_usage {
     echo "usage: test [subcommand] [ginkgo args]"
     echo
@@ -155,10 +157,7 @@ function build_etcd {
         return
     fi
 
-    local scripts_dir="$(realpath $(dirname "$0"))"
-    local bin_dir="$(realpath $(dirname $(dirname "$0"))/bin)"
-
-    pushd $scripts_dir/../src/github.com/coreos/etcd > /dev/null
+    pushd $PROJECT_DIR/src/github.com/coreos/etcd > /dev/null
         ORG_PATH="github.com/coreos"
         REPO_PATH="${ORG_PATH}/etcd"
         export ETCD_GOPATH=${PWD}/gopath
@@ -176,7 +175,7 @@ function build_etcd {
         GOPATH=$ETCD_GOPATH CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags "-s" -o bin/etcdctl ${REPO_PATH}/etcdctl
     popd > /dev/null
 
-    mv $bin_dir/../src/github.com/coreos/etcd/bin/etcd $bin_dir/etcd
+    mv $PROJECT_DIR/src/github.com/coreos/etcd/bin/etcd $PROJECT_DIR/bin/etcd
 }
 
 function run_install_linters {
@@ -231,12 +230,22 @@ function run_linters {
 }
 
 function setup_env {
-    export PATH="$(realpath $(dirname $(dirname $0))/bin):$PATH"
+    export PATH="$PROJECT_DIR/bin:$PATH"
     export GORACE="halt_on_error=1"
+}
+
+function install_ginkgo {
+    if which ginkgo > /dev/null
+    then
+        return
+    fi
+
+    go install github.com/onsi/ginkgo/ginkgo
 }
 
 function main {
     setup_env
+    install_ginkgo
     parse_argc $1
     shift
     "$command" $@
