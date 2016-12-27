@@ -3,7 +3,6 @@
 package grpcmanager_test
 
 import (
-	"io/ioutil"
 	"log"
 
 	"google.golang.org/grpc/grpclog"
@@ -15,10 +14,8 @@ import (
 )
 
 func TestServerhandler(t *testing.T) {
-	nullLogger := log.New(ioutil.Discard, "", 0)
-	grpclog.SetLogger(nullLogger)
-
-	log.SetOutput(ioutil.Discard)
+	grpclog.SetLogger(log.New(GinkgoWriter, "", 0))
+	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "gRPC Manager Suite")
 }

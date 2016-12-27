@@ -1,7 +1,6 @@
 package legacyclientpool_test
 
 import (
-	"io/ioutil"
 	"log"
 
 	. "github.com/onsi/ginkgo"
@@ -11,10 +10,7 @@ import (
 )
 
 func TestLegacyclientpool(t *testing.T) {
-	if !testing.Verbose() {
-		log.SetOutput(ioutil.Discard)
-	}
-
+	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "LegacyClientPool Suite")
 }

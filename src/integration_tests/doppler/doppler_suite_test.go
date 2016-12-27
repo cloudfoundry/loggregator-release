@@ -3,6 +3,7 @@ package doppler_test
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 	"net"
 	"os/exec"
 	"plumbing"
@@ -26,6 +27,7 @@ import (
 )
 
 func TestDoppler(t *testing.T) {
+	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Doppler Integration Suite")
 }

@@ -1,7 +1,6 @@
 package main_test
 
 import (
-	"io/ioutil"
 	"log"
 
 	. "github.com/onsi/ginkgo"
@@ -11,7 +10,7 @@ import (
 )
 
 func TestSyslogDrainBinder(t *testing.T) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "SyslogDrainBinder Suite")
 }
