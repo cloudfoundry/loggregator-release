@@ -70,9 +70,6 @@
 [submodule "src/gopkg.in/check.v1"]
 	path = src/gopkg.in/check.v1
 	url = https://gopkg.in/check.v1
-[submodule "src/github.com/bradylove/envstruct"]
-	path = src/github.com/bradylove/envstruct
-	url = https://github.com/bradylove/envstruct.git
 [submodule "src/dea_logging_agent"]
 	path = src/dea_logging_agent
 	url = https://github.com/cloudfoundry/dea_logging_agent
