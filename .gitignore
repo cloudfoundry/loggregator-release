@@ -1,35 +1,47 @@
+
+# golang
 pkg/
-out/
-*/**/test_assets/stdout.log
-release/
-*/bin
-.DS_Store
-.idea
-*.iml
-*.pem
-src/code.google.com/p/go.tools/
-*.etcd
+/bin/
 *.prof
 *.mprof
 *.coverprofile
-/bin/
 *.test
-src/lats/fixtures/metron.json
-src/github.com/cloudfoundry/gorouter/
-src/github.com/rcrowley/
-config/dev.yml
-releases/*.tgz
-releases/**/*.tgz
+
+# macOS
+.DS_Store
+
+# jetbrains
+.idea
+
+# bosh
 .blobs
 blobs
-dev_releases
 .dev_builds
-loggregator-certs
+dev_releases
+config/dev.yml
 config/private.yml
-scripts/etcd
+releases/*.tgz
+releases/**/*.tgz
 
 # cleaner deps
 /src/github.com/client9/misspell
 /src/github.com/mdempsky/
 /src/golang.org/x/text/
 /src/golang.org/x/tools/
+
+# cert script output
+loggregator-certs
+
+# misc
+out/
+*/**/test_assets/stdout.log
+release/
+*/bin
+*.iml
+*.pem
+*.etcd
+src/code.google.com/p/go.tools/
+src/github.com/cloudfoundry/gorouter/
+src/github.com/rcrowley/
+src/lats/fixtures/metron.json
+scripts/etcd
