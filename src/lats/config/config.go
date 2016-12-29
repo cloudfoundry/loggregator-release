@@ -57,16 +57,18 @@ func Load() *TestConfig {
 }
 
 func (tc *TestConfig) SaveMetronConfig() {
-	baseMetronConfigFile, err := os.Open("fixtures/bosh_lite_metron.json")
-	if err != nil {
-		panic(err)
-	}
-
-	var metronConfig MetronConfig
-	decoder := json.NewDecoder(baseMetronConfigFile)
-	err = decoder.Decode(&metronConfig)
-	if err != nil {
-		panic(err)
+	// TODO: Consider removing these default values and forcing user to
+	// provide all values. These were initially added as a fixture file to get
+	// bosh-lite lats passing. When we converted over to binary blobs the
+	// fixture file had to go.
+	metronConfig := MetronConfig{
+		IncomingUDPPort:          3457,
+		SharedSecret:             "PLACEHOLDER-LOGGREGATOR-SECRET",
+		EtcdUrls:                 []string{"http://10.244.0.42:4001"},
+		LoggregatorDropsondePort: 3457,
+		Index: "0",
+		EtcdMaxConcurrentRequests: k1,
+		Zone: "z1",
 	}
 
 	metronConfig.IncomingUDPPort = tc.DropsondePort

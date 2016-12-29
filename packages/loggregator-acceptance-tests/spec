@@ -1,7 +1,4 @@
 ---
 name: loggregator-acceptance-tests
-dependencies:
-  - golang1.7
 files:
-- loggregator/src/**/*.go
-- loggregator/src/**/*.json
+- loggregator-blobs/lats.gz

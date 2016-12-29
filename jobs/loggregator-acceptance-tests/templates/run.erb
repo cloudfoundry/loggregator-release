@@ -6,23 +6,19 @@ raise "traffic_controller.disable_access_control must be true" unless p("traffic
 
 set -e
 
-export GOROOT=$(readlink -nf /var/vcap/packages/golang1.7)
-export PATH=${GOROOT}/bin:${PATH}
-export GOPATH=/var/vcap/packages/loggregator-acceptance-tests
-export PATH=${GOPATH}/bin:${PATH}
-export CONFIG=/var/vcap/jobs/loggregator-acceptance-tests/bin/config.json
+lats_bin_dir=/var/vcap/packages/loggregator-acceptance-tests
+lats_config=/var/vcap/jobs/loggregator-acceptance-tests/bin/config.json
+
+export PATH=$lats_bin_dir:$PATH
+export CONFIG=$lats_config
 export CF_COLOR=false
 
 mkdir -p /var/vcap/sys/log/acceptance_tests
 rm -rf /var/vcap/sys/log/acceptance_tests/*
 
-cd /var/vcap/packages/loggregator-acceptance-tests/src/lats
-
 echo '################################################################################################################'
-echo $(go version)
 echo CONFIG=$CONFIG
 echo '################################################################################################################'
-
 echo "Running loggregator acceptance tests..."
 
-ginkgo -r
+lats
