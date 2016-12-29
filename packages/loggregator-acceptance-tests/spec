@@ -1,4 +1,4 @@
 ---
 name: loggregator-acceptance-tests
 files:
-- loggregator-blobs/lats.gz
+- loggregator-blobs/lats.xz

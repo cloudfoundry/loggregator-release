@@ -1,4 +1,4 @@
 ---
 name: syslog_drain_binder
 files:
-- loggregator-blobs/syslog_drain_binder.gz
+- loggregator-blobs/syslog_drain_binder.xz

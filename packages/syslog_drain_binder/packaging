@@ -1,7 +1,7 @@
 set -e -x
 
 pushd loggregator-blobs
-    gunzip syslog_drain_binder.gz
+    unxz syslog_drain_binder.xz
     chmod +x syslog_drain_binder
     cp -a syslog_drain_binder ${BOSH_INSTALL_TARGET}
 popd

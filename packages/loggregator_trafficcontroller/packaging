@@ -1,7 +1,7 @@
 set -e -x
 
 pushd loggregator-blobs
-    gunzip trafficcontroller.gz
+    unxz trafficcontroller.xz
     chmod +x trafficcontroller
     cp -a trafficcontroller ${BOSH_INSTALL_TARGET}
 popd

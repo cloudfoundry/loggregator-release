@@ -7,8 +7,8 @@ function compile_linux() {
 
     echo "building $name -- LINUX"
     GOOS=linux go build -o $workspace/bin/$name $name
-    gzip -f $workspace/bin/$name
-    bosh add-blob bin/$name.gz loggregator-blobs/$name.gz
+    xz -f $workspace/bin/$name
+    bosh add-blob bin/$name.xz loggregator-blobs/$name.xz
 }
 
 function compile_test_linux() {
@@ -16,8 +16,8 @@ function compile_test_linux() {
 
     echo "building test $name -- LINUX"
     GOOS=linux go test -c -o $workspace/bin/$name $name
-    gzip -f $workspace/bin/$name
-    bosh add-blob bin/$name.gz loggregator-blobs/$name.gz
+    xz -f $workspace/bin/$name
+    bosh add-blob bin/$name.xz loggregator-blobs/$name.xz
 }
 
 

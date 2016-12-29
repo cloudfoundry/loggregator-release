@@ -1,7 +1,7 @@
 set -e -x
 
 pushd loggregator-blobs
-    gunzip metron.gz
+    unxz metron.xz
     chmod +x metron
     cp -a metron ${BOSH_INSTALL_TARGET}
 popd

@@ -1,8 +1,7 @@
 set -e -x
 
 pushd loggregator-blobs
-    gunzip statsd-injector.gz
+    unxz statsd-injector.xz
     chmod +x statsd-injector
     cp -a statsd-injector ${BOSH_INSTALL_TARGET}
 popd
-

@@ -6,43 +6,27 @@ golang/go1.7.4.windows-amd64.zip:
   size: 90409580
   object_id: b9a9acbb-b9a2-4a48-7fde-a1f373fe84cc
   sha: a0da2f5d67e5b800eba811a34ca4b2aa22cca678
-loggregator-blobs/boshhmforwarder.gz:
-  size: 3198602
-  object_id: 1be7508f-9222-436f-4bb8-27d8ac1ed9b3
-  sha: d72dde84f0be15e3c78b570975e7aaadb8bd825c
-loggregator-blobs/doppler.gz:
-  size: 4784618
-  object_id: fa8d28d6-babb-4d12-71a8-ab2bc20add25
-  sha: 0a75f8c875ef2cf4eff27defcad7b3b9bd7d8c67
-loggregator-blobs/lats.gz:
-  size: 4378679
-  object_id: 9f080ecd-0f3d-49fa-64f9-494dc8bb5afb
-  sha: 4f0b72b9af886638881f35dd8e910e5423ae59a1
+loggregator-blobs/boshhmforwarder.xz:
+  size: 2376564
+  sha: a1a769dbae5f796c3c6ee2d7e18cbb51455b7957
+loggregator-blobs/doppler.xz:
+  size: 3386292
+  sha: c27023e46e1e7fccb4b75f8b6ac3b0ac6c7be5f3
+loggregator-blobs/lats.xz:
+  size: 3185976
+  sha: 8da9267e3c8d5c50246bafbaf23e16ee31d89976
 loggregator-blobs/metron.exe:
-  size: 11155968
-  object_id: 50e35557-fc3d-42ea-467a-330d7f523e0d
-  sha: 0facf8d00c478f170c72d8d61d9b5f1db1a3511d
-loggregator-blobs/metron.gz:
-  size: 3527767
-  object_id: c788d53f-1aba-4e2b-4563-de7116803e47
-  sha: a855255aa38efbe60232f33dab6410b2886968c7
-loggregator-blobs/statsd-injector.gz:
-  size: 1405915
-  object_id: 47fe78f8-d71e-4fda-4d64-5aba0b263e7d
-  sha: 31acfc85eebc6cb81cf4c2e04f478cf4d3238f24
-loggregator-blobs/syslog_drain_binder.gz:
-  size: 4570369
-  object_id: 2388fcca-cbd5-4382-69c6-5a02c704b2a0
-  sha: 8ece8a2e64c51915fdfc527cbd5c159a6de03d00
-loggregator-blobs/trafficcontroller.gz:
-  size: 4799180
-  object_id: 14a2f655-40d1-4a6a-44d6-712987f13886
-  sha: 1a1241b2b205b5fa4200b1718b884f51e1eaf883
-metron-agent/metron.exe:
-  size: 11400192
-  object_id: da5c67dc-1211-4eb6-5168-65584a4302db
-  sha: 6200be396310813d070ccf0992bc26b41b08be03
-metron-agent/metron.gz:
-  size: 3609306
-  object_id: cfbc44a4-c7a7-480d-6c36-2db303f34958
-  sha: f680ee28d2f7c03b112e910a57d16d3776f19a0d
+  size: 11158016
+  sha: ca8cf0bc473272d831b9e37a7958ff640176c69b
+loggregator-blobs/metron.xz:
+  size: 2531412
+  sha: 90d41247e216ca89e2ce554869f2920c2deb39be
+loggregator-blobs/statsd-injector.xz:
+  size: 1067292
+  sha: 23b439357fc26678e386579ee6ff5764de0c4526
+loggregator-blobs/syslog_drain_binder.xz:
+  size: 3239420
+  sha: 9e7f59155089e68283b4a0cc72a21dd0385056ea
+loggregator-blobs/trafficcontroller.xz:
+  size: 3401912
+  sha: a55431a3d461272ed553cefae191944c20895821

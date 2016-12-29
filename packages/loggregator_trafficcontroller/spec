@@ -1,4 +1,4 @@
 ---
 name: loggregator_trafficcontroller
 files:
-- loggregator-blobs/trafficcontroller.gz
+- loggregator-blobs/trafficcontroller.xz

@@ -1,4 +1,4 @@
 ---
 name: doppler
 files:
-- loggregator-blobs/doppler.gz
+- loggregator-blobs/doppler.xz

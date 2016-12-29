@@ -2,4 +2,4 @@
 name: metron_agent
 files:
 - loggregator/src/metron/syslog_daemon_config/*
-- loggregator-blobs/metron.gz
+- loggregator-blobs/metron.xz

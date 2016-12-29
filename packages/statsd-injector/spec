@@ -1,4 +1,4 @@
 ---
 name: statsd-injector
 files:
-- loggregator-blobs/statsd-injector.gz
+- loggregator-blobs/statsd-injector.xz

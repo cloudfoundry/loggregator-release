@@ -1,7 +1,7 @@
 set -e -x
 
 pushd loggregator-blobs
-    gunzip lats.gz
+    unxz lats.xz
     chmod +x lats
     cp -a lats ${BOSH_INSTALL_TARGET}
 popd

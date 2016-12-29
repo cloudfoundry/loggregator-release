@@ -1,7 +1,7 @@
 set -e -x
 
 pushd loggregator-blobs
-    gunzip doppler.gz
+    unxz doppler.xz
     chmod +x doppler
     cp -a doppler ${BOSH_INSTALL_TARGET}
 popd

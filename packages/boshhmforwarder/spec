@@ -1,4 +1,4 @@
 ---
 name: boshhmforwarder
 files:
-- loggregator-blobs/boshhmforwarder.gz
+- loggregator-blobs/boshhmforwarder.xz

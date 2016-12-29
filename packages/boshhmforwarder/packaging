@@ -1,7 +1,7 @@
 set -e -x
 
 pushd loggregator-blobs
-    gunzip boshhmforwarder.gz
+    unxz boshhmforwarder.xz
     chmod +x boshhmforwarder
     cp -a boshhmforwarder ${BOSH_INSTALL_TARGET}
 popd
