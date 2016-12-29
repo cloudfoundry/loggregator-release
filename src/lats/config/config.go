@@ -67,7 +67,7 @@ func (tc *TestConfig) SaveMetronConfig() {
 		EtcdUrls:                 []string{"http://10.244.0.42:4001"},
 		LoggregatorDropsondePort: 3457,
 		Index: "0",
-		EtcdMaxConcurrentRequests: k1,
+		EtcdMaxConcurrentRequests: 1,
 		Zone: "z1",
 	}
 
