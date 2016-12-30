@@ -2,39 +2,54 @@
 
 set -eu
 
-function compile_linux() {
+function compile_linux {
     local name=$1
+    local pkg=${2:-$1}
+    local build_output=$workspace/bin/$name
+    local compress_output=$workspace/bin/$name.xz
+    local blob_name=loggregator-blobs/$name.xz
 
     echo "building $name -- LINUX"
-    GOOS=linux go build -o $workspace/bin/$name $name
-    xz -f $workspace/bin/$name
-    bosh add-blob bin/$name.xz loggregator-blobs/$name.xz
+    GOOS=linux go build -o $build_output $pkg
+    xz -f $build_output
+    bosh add-blob $compress_output $blob_name
 }
 
-function compile_test_linux() {
+function compile_test_linux {
     local name=$1
+    local pkg=${2:-$1}
+    local build_output=$workspace/bin/$name
+    local compress_output=$workspace/bin/$name.xz
+    local blob_name=loggregator-blobs/$name.xz
 
-    echo "building test $name -- LINUX"
-    GOOS=linux go test -c -o $workspace/bin/$name $name
-    xz -f $workspace/bin/$name
-    bosh add-blob bin/$name.xz loggregator-blobs/$name.xz
+    echo "building test $name -- LINUX TEST"
+    GOOS=linux go test -c -o $build_output $pkg
+    xz -f $build_output
+    bosh add-blob $compress_output $blob_name
+}
+
+function compile_windows {
+    local name=$1
+    local pkg=${2:-$1}
+    local build_output=$workspace/bin/$name.exe
+    local blob_name=loggregator-blobs/$name.exe
+
+    echo "building test $name -- WIN"
+    GOOS=windows go build -o $build_output $pkg
+    bosh add-blob $build_output $blob_name
 }
 
 
 workspace=$(realpath $(dirname "$0")/..)
 export GOPATH=$workspace
 
-compile_linux "metron"
-compile_linux "doppler"
-compile_linux "trafficcontroller"
-compile_linux "syslog_drain_binder"
-compile_linux "statsd-injector"
-compile_linux "boshhmforwarder"
-compile_test_linux "lats"
-
-echo "building metron -- WIN"
-GOOS=windows go build -o $workspace/bin/metron.exe metron
-
-pushd $workspace
-    bosh add-blob bin/metron.exe loggregator-blobs/metron.exe
-popd
+compile_linux "metron" &
+compile_linux "doppler" &
+compile_linux "trafficcontroller" &
+compile_linux "syslog_drain_binder" &
+compile_linux "statsd-injector" &
+compile_linux "boshhmforwarder" &
+compile_linux "deaagent" "deaagent/deaagent" &
+compile_test_linux "lats" &
+compile_windows "metron" &
+wait
