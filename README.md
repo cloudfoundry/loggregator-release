@@ -110,7 +110,11 @@ Traffic controllers also exposes a `firehose` web socket endpoint. Connecting to
 
 ### Emitting Messages from other Cloud Foundry components
 
-Cloud Foundry developers can easily add source clients to new CF components that emit messages to the doppler.  Currently, there are libraries for [Go](https://github.com/cloudfoundry/dropsonde/) and [Ruby](https://github.com/cloudfoundry/loggregator_emitter). For usage information, look at their respective READMEs.
+Cloud Foundry developers can easily add source clients to new CF components
+that emit messages to the doppler.  Currently, there are libraries for
+[Go](https://github.com/cloudfoundry/dropsonde/) and
+[Ruby](https://github.com/cloudfoundry/loggregator_emitter). For usage
+information, look at their respective READMEs.
 
 ### Generating TLS Certificates
 
