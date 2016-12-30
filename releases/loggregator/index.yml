@@ -144,4 +144,6 @@ builds:
     version: '71'
   bacdfa8e-5fd6-4d92-8cf9-a9e40e0d187a:
     version: '72'
+  5139e0ce-5815-4800-944e-2a3c4a8937da:
+    version: 72.0.1
 format-version: '2'
