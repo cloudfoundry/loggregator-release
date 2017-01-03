@@ -14,6 +14,20 @@ releases:
   version: latest
 
 instance_groups:
+- name: testing-blobs
+  azs:
+  - z1
+  instances: 1
+  persistent_disk_type: 1GB
+  vm_type: common
+  stemcell: default
+  networks:
+  - name: loggregator
+  jobs:
+  - name: boshhmforwarder
+    release: loggregator
+  - name: dea_logging_agent
+    release: loggregator
 - name: consul
   azs:
   - z1
