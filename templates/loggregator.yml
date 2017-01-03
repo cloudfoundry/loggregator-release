@@ -46,7 +46,7 @@ instance_groups:
         agent:
           mode: server
           domain: cf.internal
-          servers: &3
+          servers: &consul_servers
             lan: [10.244.10.2]
         require_ssl: true
         encrypt_keys: "((consul_encrypt_keys))"
@@ -57,7 +57,7 @@ instance_groups:
         server_key: "((consul_agent_server_key))"
   - name: metron_agent
     release: loggregator
-    properties: &2
+    properties: &metron_agent_properties
       doppler:
         addr: doppler.service.cf.internal
       metron_agent:
@@ -118,7 +118,7 @@ instance_groups:
         agent:
           mode: client
           domain: cf.internal
-          servers: *3
+          servers: *consul_servers
           services:
             etcd:
               name: etcd
@@ -131,7 +131,7 @@ instance_groups:
         server_key: "((consul_agent_server_key))"
   - name: metron_agent
     release: loggregator
-    properties: *2
+    properties: *metron_agent_properties
 
 
 - name: etcd
@@ -151,7 +151,7 @@ instance_groups:
         agent:
           mode: client
           domain: cf.internal
-          servers: *3
+          servers: *consul_servers
           services:
             etcd:
               name: etcd
@@ -193,7 +193,7 @@ instance_groups:
           client_key: "((etcd_client_key))"
   - name: metron_agent
     release: loggregator
-    properties: *2
+    properties: *metron_agent_properties
   update:
     serial: true
     max_in_flight: 1
@@ -215,7 +215,7 @@ instance_groups:
         agent:
           mode: client
           domain: cf.internal
-          servers: *3
+          servers: *consul_servers
           services:
             doppler:
               name: doppler
@@ -248,7 +248,7 @@ instance_groups:
         shared_secret: "((dropsonde_shared_secret))"
   - name: metron_agent
     release: loggregator
-    properties: *2
+    properties: *metron_agent_properties
 
 - name: log-api
   azs:
@@ -267,7 +267,7 @@ instance_groups:
         agent:
           mode: client
           domain: cf.internal
-          servers: *3
+          servers: *consul_servers
           services:
             loggregator_trafficcontroller: {}
         require_ssl: true
@@ -304,7 +304,7 @@ instance_groups:
         skip_cert_verify: false
   - name: metron_agent
     release: loggregator
-    properties: *2
+    properties: *metron_agent_properties
   update:
     max_in_flight: 1
     serial: true
