@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -eu
+
+./scripts/blobify
+
+loggregator_dir=$(realpath $(dirname "$0")/..)
+cf_release_dir=$(realpath $(dirname "$0")/../../cf-release)
+
+pushd $cf_release_dir
+  ls $loggregator_dir/blobs/loggregator-blobs |
+  grep -v 'lats' | grep -v 'boshhmforwarder' |
+  xargs -I {} obosh add blob src/loggregator/blobs/loggregator-blobs/{} loggregator-blobs
+popd
