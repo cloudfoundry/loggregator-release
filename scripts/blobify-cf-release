@@ -2,10 +2,10 @@
 
 set -eu
 
-./scripts/blobify
+obosh sync blobs
 
 loggregator_dir=$(realpath $(dirname "$0")/..)
-cf_release_dir=$(realpath $(dirname "$0")/../../cf-release)
+cf_release_dir=$(realpath $(dirname "$0")/../../../)
 
 pushd $cf_release_dir
   ls $loggregator_dir/blobs/loggregator-blobs |
