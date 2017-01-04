@@ -13,16 +13,15 @@ Metron only listens to local network interfaces and all logs and metrics are imm
 Source agents emit the logging data through the system as [protocol-buffers](https://developers.google.com/protocol-buffers/) via the [Dropsonde Protocol](https://github.com/cloudfoundry/dropsonde-protocol). Metrics can also be emitted using statsd. The statsd metrics are forwarded to Metron by the [statsd-injector](https://github.com/cloudfoundry/statsd-injector)
 
 ## Usage
-```metron [--logFile <path to log file>] [--config <path to config file>] [--debug=<true|false>]```
+```metron [--logFile <path to log file>] [--config <path to config file>]```
 
 | Flag            | Required                              | Description                                     |
 |-----------------|---------------------------------------|-------------------------------------------------|
 | ```--logFile``` | No, default: STDOUT                   | The agent log file.                             |
 | ```--config```  | No, default: ```config/metron.json``` | Location of the Metron configuration JSON file. |
-| ```--debug```   | No, default: ```false```              | Debug logging                                   |
 
 ## Editing Manifest Templates
-The up-to-date Metron configuration can be found [in the metron spec file](../../jobs/metron_agent/spec). You can see a list of available configurable properties, their defaults and descriptions in that file. 
+The up-to-date Metron configuration can be found [in the metron spec file](../../jobs/metron_agent/spec). You can see a list of available configurable properties, their defaults and descriptions in that file.
 
 ## Benchmark tests
 

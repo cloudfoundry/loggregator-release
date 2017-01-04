@@ -50,9 +50,6 @@ properties:
   metron_agent.listening_address:
     description: "Address the metron agent is listening on to receive dropsonde log messages provided for BOSH links and should not be overwritten"
     default: "127.0.0.1"
-  metron_agent.debug:
-    description: "boolean value to turn on verbose mode"
-    default: false
 
   doppler.addr:
     description: DNS name for doppler. This needs to be round robbin DNS if you want metron to communicate with multiple dopplers.

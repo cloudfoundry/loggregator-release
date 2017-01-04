@@ -7,13 +7,12 @@ Each syslog drain binding belongs to a single app, but each app can have multipl
 Multiple instances of Syslog Drain Binder can and should be deployed, but only one is active at a given time (via an etcd [election process](elector/elector.go)).
 
 ## Usage
-```syslog_drain_binder [--config <path to config file>] [--debug=<true|false>]```
+```syslog_drain_binder [--config <path to config file>]```
 
 | Flag           | Required                              | Description                                     |
 |----------------|---------------------------------------|-------------------------------------------------|
 | ```--config``` | No, default: ```config/syslog_drain_binder.json``` | Location of the Syslog Drain Binder configuration JSON file. |
-| ```--debug```  | No, default: ```false```              | Debug logging                                   |
 | ```--logFile```| No, default: STDOUT                   | The agent log file.                             |
 
 ## Editing Manifest Templates
-The up-to-date Syslog Drain Binder configuration can be found [in the syslog_drain_binder spec file](../../jobs/syslog_drain_binder/spec). You can see a list of available configurable properties, their defaults and descriptions in that file. 
+The up-to-date Syslog Drain Binder configuration can be found [in the syslog_drain_binder spec file](../../jobs/syslog_drain_binder/spec). You can see a list of available configurable properties, their defaults and descriptions in that file.

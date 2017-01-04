@@ -18,7 +18,7 @@ Logging data passes through the system as [protocol-buffers](https://github.com/
 ## Usage
 ```
 trafficcontoller [--logFile <path to log file>] [--config <path to config file>] \
-    [--debug=<true|false>] [--cpuprofile <path to desired CPU profile>] \
+    [--cpuprofile <path to desired CPU profile>] \
     [--memprofile <path to desired memory profile>]
 ```
 
@@ -26,7 +26,6 @@ trafficcontoller [--logFile <path to log file>] [--config <path to config file>]
 |--------------------|----------------------------------------|-------------------------------------------------|
 | ```--logFile```    | No, default: STDOUT                    | The agent log file.                             |
 | ```--config``` | No, default: ```config/loggregator_trafficcontroller.json``` | Location of the Traffic Controller configuration JSON file. |
-| ```--debug```      | No, default: ```false```               | Debug logging                                   |
 | ```--cpuprofile``` | No, default: no CPU profiling          | Write CPU profile to a file.                    |
 | ```--memprofile``` | No, default: no memory profiling       | Write memory profile to a file.                 |
 | ```--disableAccessControl``` | No, default: ```false```     | All clients' access to app logs                 |

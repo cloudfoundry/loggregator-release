@@ -32,7 +32,6 @@ case $1 in
     <% end %>
     ulimit -n 65536
 
-    <% p("traffic_controller.debug") == true ? debug_string = "--debug " : debug_string = "" %>
     <% p("traffic_controller.disable_access_control") == true ? disable_access_control_string = "--disableAccessControl" : disable_access_control_string = "" %>
 
     exec >>$LOG_DIR/loggregator_trafficcontroller.stdout.log \
@@ -40,7 +39,7 @@ case $1 in
 
     chown -R vcap:vcap $LOG_DIR
 
-    chpst -u vcap:vcap /var/vcap/packages/loggregator_trafficcontroller/trafficcontroller <%= debug_string %> <%= disable_access_control_string %> \
+    chpst -u vcap:vcap /var/vcap/packages/loggregator_trafficcontroller/trafficcontroller <%= disable_access_control_string %> \
         --config /var/vcap/jobs/loggregator_trafficcontroller/config/loggregator_trafficcontroller.json &
 
     echo $! > $PIDFILE

@@ -15,7 +15,7 @@ In a redundant Cloud Foundry setup, Loggregator can be configured to survive zon
 ## Usage
 ```
 doppler [--logFile <path to log file>] [--config <path to config file>] \
-    [--debug=<true|false>] [--cpuprofile <path to desired CPU profile>] \
+    [--cpuprofile <path to desired CPU profile>] \
     [--memprofile <path to desired memory profile>]
 ```
 
@@ -23,7 +23,6 @@ doppler [--logFile <path to log file>] [--config <path to config file>] \
 |--------------------|----------------------------------------|-------------------------------------------------|
 | ```--logFile```    | No, default: STDOUT                    | The agent log file.                             |
 | ```--config```     | No, default: ```config/doppler.json``` | Location of the Doppler configuration JSON file. |
-| ```--debug```      | No, default: ```false```               | Debug logging                                   |
 | ```--cpuprofile``` | No, default: no CPU profiling          | Write CPU profile to a file.                    |
 | ```--memprofile``` | No, default: no memory profiling       | Write memory profile to a file.                 |
 
@@ -32,4 +31,4 @@ doppler [--logFile <path to log file>] [--config <path to config file>] \
 Cloud Foundry developers can easily add source clients to new CF components that emit messages to Doppler.  Currently, there are libraries for [Go](https://github.com/cloudfoundry/dropsonde/). For usage information, look at its README.
 
 ## Editing Manifest Templates
-The up-to-date Doppler configuration can be found [in the doppler spec file](../../jobs/doppler/spec). You can see a list of available configurable properties, their defaults and descriptions in that file. 
+The up-to-date Doppler configuration can be found [in the doppler spec file](../../jobs/doppler/spec). You can see a list of available configurable properties, their defaults and descriptions in that file.

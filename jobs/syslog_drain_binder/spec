@@ -49,9 +49,6 @@ properties:
   syslog_drain_binder.polling_batch_size:
     description: "Batch size for the poll from cloud controller"
     default: 1000
-  syslog_drain_binder.debug:
-    description: Boolean value to turn on verbose logging for syslog_drain_binder
-    default: false
   syslog_drain_binder.locked_memory_limit:
     description: "Size (KB) of shell's locked memory limit. Set to 'kernel' to use the kernel's default. Non-numeric values other than 'kernel', 'soft', 'hard', and 'unlimited' will result in an error."
     default: "unlimited"

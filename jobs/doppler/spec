@@ -19,9 +19,6 @@ packages:
 properties:
   doppler.zone:
     description: Zone of the doppler server
-  doppler.debug:
-    description: boolean value to turn on verbose logging for doppler system (dea agent & doppler server)
-    default: false
   doppler.maxRetainedLogMessages:
     description: number of log messages to retain per application
     default: 100
