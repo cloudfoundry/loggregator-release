@@ -1,0 +1,97 @@
+---
+packages:
+- name: boshhmforwarder
+  version: 115ae89102c52cf3b8ed239fa0939e6bb238c5f6
+  fingerprint: 115ae89102c52cf3b8ed239fa0939e6bb238c5f6
+  sha1: 311eea60275a6d1609940b34f121ee31b8d89361
+  dependencies: []
+- name: dea_logging_agent
+  version: 79c9c3cd3489389e56db0378e45984642373e19a
+  fingerprint: 79c9c3cd3489389e56db0378e45984642373e19a
+  sha1: 9740ae950f54fbc0b19fbe64eb51d049c75ba352
+  dependencies: []
+- name: doppler
+  version: f9905ce22911124d814a0c9086660638d3f6c302
+  fingerprint: f9905ce22911124d814a0c9086660638d3f6c302
+  sha1: cce095e02fb015986d6bc51ed2a902c46fe0f5aa
+  dependencies: []
+- name: loggregator-acceptance-tests
+  version: 625dbcbc855ebbba2acc7babffa6dc899674e55d
+  fingerprint: 625dbcbc855ebbba2acc7babffa6dc899674e55d
+  sha1: b286fedc1970e0ff3bddc36c1cd7766d498414df
+  dependencies: []
+- name: loggregator_common
+  version: 0fce24a169a51b745965d683f436121c2086c9bd
+  fingerprint: 0fce24a169a51b745965d683f436121c2086c9bd
+  sha1: 6b2934e23ce550a87fedf862f030875571c9f869
+  dependencies: []
+- name: loggregator_trafficcontroller
+  version: 893027b5f4b2d746f0dd1b450e18ee98485afb00
+  fingerprint: 893027b5f4b2d746f0dd1b450e18ee98485afb00
+  sha1: 9e2b81a4957d19ab1e4c918ebbb83fbb51baab31
+  dependencies: []
+- name: metron_agent
+  version: 48e325ec69571e1b84ee744963569a110fea8334
+  fingerprint: 48e325ec69571e1b84ee744963569a110fea8334
+  sha1: d5219045d76a59d08980429d3276a78f9b7f706a
+  dependencies: []
+- name: metron_agent_windows
+  version: 0b9dc41bf136c810cd32d63d93a4e12f0f91abde
+  fingerprint: 0b9dc41bf136c810cd32d63d93a4e12f0f91abde
+  sha1: 6a6ef1f39e63b179475fb7f93a9e5a5bde888900
+  dependencies: []
+- name: statsd-injector
+  version: 5628eab16abc430ea797c63ebbdcc2cdbfe5819d
+  fingerprint: 5628eab16abc430ea797c63ebbdcc2cdbfe5819d
+  sha1: 1b198ce4a79917dfe7e54f96d15a72632bff8c9d
+  dependencies: []
+- name: syslog_drain_binder
+  version: 9f86122625166865fa8c9b646ba367f8fafc6ad4
+  fingerprint: 9f86122625166865fa8c9b646ba367f8fafc6ad4
+  sha1: bb8ac8a3360f5e2acea92fc0d97ea416a5f5268a
+  dependencies: []
+jobs:
+- name: boshhmforwarder
+  version: 875c890fcb7bbb2dfaf160a2857dadbb80b52339
+  fingerprint: 875c890fcb7bbb2dfaf160a2857dadbb80b52339
+  sha1: 63e6951267b6b676ac0e3ea881a4eeb6206b8f3b
+- name: dea_logging_agent
+  version: 59de9485646549194e501ce2878449842943020c
+  fingerprint: 59de9485646549194e501ce2878449842943020c
+  sha1: 4189fd78ae2febef4ceaf416a90f4987e51f4e77
+- name: doppler
+  version: 4e442789507f4a9ba2fc5fd9073f149d7bf3c3b8
+  fingerprint: 4e442789507f4a9ba2fc5fd9073f149d7bf3c3b8
+  sha1: 411f12e80001f0ee4f6c113b7044a8e478472fd7
+- name: loggregator-acceptance-tests
+  version: f6b1d3a5f0776702a50b89fd6d9a5cb6bbf3385d
+  fingerprint: f6b1d3a5f0776702a50b89fd6d9a5cb6bbf3385d
+  sha1: b67bcb0f555af6f0efe1894adee231d11ec2e2b1
+- name: loggregator_trafficcontroller
+  version: 14a096227a39e715a414714698533a6481cfb7e7
+  fingerprint: 14a096227a39e715a414714698533a6481cfb7e7
+  sha1: 0acabfe718c6dcf4d956ff9c306f8521c064d745
+- name: metron_agent
+  version: 6d4ed2d7cad629d5b31eb6af2d6f2e46dba1bf45
+  fingerprint: 6d4ed2d7cad629d5b31eb6af2d6f2e46dba1bf45
+  sha1: bec42b80cc026e674efe94669189a918147f0df9
+- name: metron_agent_windows
+  version: 79ecdefdfd9f37f7af88c447506c7b4ca04bb2a7
+  fingerprint: 79ecdefdfd9f37f7af88c447506c7b4ca04bb2a7
+  sha1: ec124ea36d7ba9b5829136fe9f7d0d9ade87163b
+- name: statsd-injector
+  version: 5af522647303bada3b43a39f415ff2e4e0033024
+  fingerprint: 5af522647303bada3b43a39f415ff2e4e0033024
+  sha1: 318e8e4ae33094be080b95837e0c23baf708038c
+- name: syslog_drain_binder
+  version: 6263896cf62da8e00c74a011077f41f94fa693ec
+  fingerprint: 6263896cf62da8e00c74a011077f41f94fa693ec
+  sha1: 4cece62a5b0e84188c4fb5234f7b2645ae6615b0
+license:
+  version: 29f14304ab1dc334aa64268c1a5c57bbc1fb0673
+  fingerprint: 29f14304ab1dc334aa64268c1a5c57bbc1fb0673
+  sha1: 70557eb603cf8c7771e38a9c79dd51db9f982c44
+commit_hash: 284804ec
+uncommitted_changes: true
+name: loggregator
+version: 73.0.1
