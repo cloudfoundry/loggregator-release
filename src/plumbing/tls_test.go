@@ -9,12 +9,12 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	. "plumbing"
+	"plumbing"
 )
 
 var _ = Describe("TLS", func() {
 
-	Context(".NewMutalTLSConfig", func() {
+	Context("NewMutalTLSConfig", func() {
 		var (
 			clientCertFilename string
 			clientKeyFilename  string
@@ -37,7 +37,7 @@ var _ = Describe("TLS", func() {
 		})
 
 		It("builds a config struct", func() {
-			conf, err := NewMutualTLSConfig(
+			conf, err := plumbing.NewMutualTLSConfig(
 				clientCertFilename,
 				clientKeyFilename,
 				caCertFilename,
@@ -61,7 +61,7 @@ var _ = Describe("TLS", func() {
 		})
 
 		It("allows you to not specify a CA cert", func() {
-			conf, err := NewMutualTLSConfig(
+			conf, err := plumbing.NewMutualTLSConfig(
 				clientCertFilename,
 				clientKeyFilename,
 				"",
@@ -74,12 +74,12 @@ var _ = Describe("TLS", func() {
 		})
 
 		It("returns an error when given invalid cert/key paths", func() {
-			_, err := NewMutualTLSConfig("", "", caCertFilename, "")
+			_, err := plumbing.NewMutualTLSConfig("", "", caCertFilename, "")
 			Expect(err.Error()).To(Equal("failed to load keypair: open : no such file or directory"))
 		})
 
 		It("returns an error when given invalid ca cert path", func() {
-			_, err := NewMutualTLSConfig(clientCertFilename, clientKeyFilename, "/file/that/does/not/exist", "")
+			_, err := plumbing.NewMutualTLSConfig(clientCertFilename, clientKeyFilename, "/file/that/does/not/exist", "")
 			Expect(err.Error()).To(Equal("failed to read ca cert file: open /file/that/does/not/exist: no such file or directory"))
 		})
 
@@ -89,14 +89,14 @@ var _ = Describe("TLS", func() {
 				err := os.Remove(empty)
 				Expect(err).ToNot(HaveOccurred())
 			}()
-			_, err := NewMutualTLSConfig(clientCertFilename, clientKeyFilename, empty, "")
+			_, err := plumbing.NewMutualTLSConfig(clientCertFilename, clientKeyFilename, empty, "")
 			Expect(err.Error()).To(Equal("unable to load ca cert file"))
 		})
 	})
 
-	Context(".NewTLSConfig", func() {
+	Context("NewTLSConfig", func() {
 		It("returns basic TLS config", func() {
-			tlsConf := NewTLSConfig()
+			tlsConf := plumbing.NewTLSConfig()
 			Expect(tlsConf.InsecureSkipVerify).To(BeFalse())
 			Expect(tlsConf.ClientAuth).To(Equal(tls.NoClientCert))
 			Expect(tlsConf.MinVersion).To(Equal(uint16(tls.VersionTLS12)))
