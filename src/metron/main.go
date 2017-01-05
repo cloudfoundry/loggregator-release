@@ -92,7 +92,7 @@ func main() {
 	}
 }
 
-func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBatcher) (*eventmarshaller.EventMarshaller, error) {
+func setupGRPC(conf *config.Config) []legacyclientpool.Pool {
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
 		conf.GRPC.CertFile,
 		conf.GRPC.KeyFile,
@@ -100,7 +100,8 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 		"doppler",
 	)
 	if err != nil {
-		return nil, err
+		log.Printf("Failed to load TLS config: %s", err)
+		return nil
 	}
 
 	dialer := clientpool.MakeGRPCConnector(
@@ -118,12 +119,18 @@ func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBat
 
 	pool := clientpool.New(connManagers...)
 	grpcWrapper := dopplerforwarder.NewGRPCWrapper(pool)
+	return []legacyclientpool.Pool{grpcWrapper}
+}
+
+func initializeDopplerPool(conf *config.Config, batcher *metricbatcher.MetricBatcher) (*eventmarshaller.EventMarshaller, error) {
+	pools := setupGRPC(conf)
 
 	// TODO: delete this legacy pool stuff when UDP goes away
 	legacyPool := legacyclientpool.New(conf.DopplerAddrUDP, 100, 5*time.Second)
 	udpWrapper := dopplerforwarder.NewUDPWrapper(legacyPool, []byte(conf.SharedSecret))
+	pools = append(pools, udpWrapper)
 
-	combinedPool := legacyclientpool.NewCombinedPool(grpcWrapper, udpWrapper)
+	combinedPool := legacyclientpool.NewCombinedPool(pools...)
 
 	marshaller := eventmarshaller.New(batcher)
 	marshaller.SetWriter(combinedPool)

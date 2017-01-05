@@ -13,6 +13,12 @@ var supportedCipherSuites = []uint16{
 	tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 }
 
+type CASignatureError string
+
+func (e CASignatureError) Error() string {
+	return string(e)
+}
+
 // NewTLSConfig
 func NewTLSConfig() *tls.Config {
 	return &tls.Config{
@@ -36,18 +42,35 @@ func NewMutualTLSConfig(certFile, keyFile, caCertFile, serverName string) (*tls.
 	tlsConfig.ServerName = serverName
 
 	if caCertFile != "" {
-		certBytes, err := ioutil.ReadFile(caCertFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read ca cert file: %s", err.Error())
+		if err := addCA(tlsConfig, tlsCert, caCertFile); err != nil {
+			return nil, err
 		}
-
-		caCertPool := x509.NewCertPool()
-		if ok := caCertPool.AppendCertsFromPEM(certBytes); !ok {
-			return nil, errors.New("unable to load ca cert file")
-		}
-		tlsConfig.RootCAs = caCertPool
-		tlsConfig.ClientCAs = caCertPool
 	}
 
-	return tlsConfig, nil
+	return tlsConfig, err
+}
+
+func addCA(tlsConfig *tls.Config, tlsCert tls.Certificate, caCertFile string) error {
+	certBytes, err := ioutil.ReadFile(caCertFile)
+	if err != nil {
+		return fmt.Errorf("failed to read ca cert file: %s", err.Error())
+	}
+
+	caCertPool := x509.NewCertPool()
+	if ok := caCertPool.AppendCertsFromPEM(certBytes); !ok {
+		return errors.New("unable to load ca cert file")
+	}
+	tlsConfig.RootCAs = caCertPool
+	tlsConfig.ClientCAs = caCertPool
+
+	verifier, err := x509.ParseCertificate(tlsCert.Certificate[0])
+	if err != nil {
+		return err
+	}
+
+	_, err = verifier.Verify(x509.VerifyOptions{Roots: caCertPool})
+	if err != nil {
+		return CASignatureError(err.Error())
+	}
+	return nil
 }
