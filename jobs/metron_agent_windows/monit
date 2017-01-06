@@ -1,9 +1,16 @@
+<%
+  CONF_DIR="/var/vcap/jobs/metron_agent_windows/config"
+  args = %W(--config #{CONF_DIR}/metron_agent.json)
+  if p("metron_agent.debug") == true
+    args.push "--debug "
+  end
+%>
 {
   "processes": [
     {
       "name": "metron_agent",
-      "executable": "powershell",
-      "args": ["C:\\var\\vcap\\jobs\\metron_agent_windows\\bin\\metron_agent_ctl.ps1"]
+      "executable": "/var/vcap/packages/metron_agent_windows/metron.exe",
+      "args": <%= args.to_s %>
     }
   ]
 }

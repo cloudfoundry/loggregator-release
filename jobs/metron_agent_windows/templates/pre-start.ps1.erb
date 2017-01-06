@@ -1,0 +1,8 @@
+<%=
+RUN_DIR="/var/vcap/sys/run/metron_agent_windows"
+LOG_DIR="/var/vcap/sys/log/metron_agent_windows"
+<<-POWERSHELL
+New-Item -Path #{RUN_DIR} -ItemType directory -Force
+New-Item -Path #{LOG_DIR} -ItemType directory -Force
+POWERSHELL
+ %>
