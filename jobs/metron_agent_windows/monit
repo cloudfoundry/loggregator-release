@@ -1,9 +1,6 @@
 <%
   CONF_DIR="/var/vcap/jobs/metron_agent_windows/config"
   args = %W(--config #{CONF_DIR}/metron_agent.json)
-  if p("metron_agent.debug") == true
-    args.push "--debug "
-  end
 %>
 {
   "processes": [
