@@ -1,36 +1,36 @@
 loggregator-blobs/boshhmforwarder.xz:
   size: 2378140
-  object_id: c22a9f5c-eb93-4197-42c8-903e9160683c
+  object_id: 3de454cb-f46b-4df6-4e2f-a04df3bc6781
   sha: e23e21b4ec41e6bd26ed29787401d519c5475730
 loggregator-blobs/deaagent.xz:
   size: 2050556
-  object_id: 67498ce5-b1a8-40a2-5219-278fc8d3dd7b
+  object_id: c9ff2957-e364-4ec6-7c5c-88258376c3d1
   sha: 8e6bf0eb25286248892e5c0b1dae265f91602e97
 loggregator-blobs/doppler.xz:
   size: 3386660
-  object_id: 4a3af3d3-a2db-421b-72ae-31a9a962ba93
+  object_id: 4920eaf5-3abe-411a-48ba-633929a0fdbc
   sha: 96c25f8ae9cc081178adf7e6df1282d400f62089
 loggregator-blobs/lats.xz:
   size: 3185408
-  object_id: 54324fbc-c89e-466f-6724-686bb5a68bc3
+  object_id: c5ac94b5-2e54-4bb5-4b4a-257f8160f4ba
   sha: 30e1686dd9274fa5d9d5fc338da769d2479f5b4d
 loggregator-blobs/metron.exe:
   size: 11158016
-  object_id: f46fb66f-f9b6-461d-6c0c-467ff9f71ca5
+  object_id: d905b88c-8259-4b24-6565-eaf5ded1b0de
   sha: 21af69b72bbbe8f80a841767a9d42e3c1a1fd4de
 loggregator-blobs/metron.xz:
   size: 2533188
-  object_id: 6c08fd9f-9af3-45a5-4505-dc68bceba9d3
+  object_id: 322aa309-cdb1-4aac-7858-3c7e7deb4895
   sha: 27076b0486628e0b6e85826b9d7837d833394ff6
 loggregator-blobs/statsd-injector.xz:
   size: 1067492
-  object_id: 5b1485d2-1b01-4d34-7dd9-6f54ee8e2148
+  object_id: 16fe359a-028e-438c-75af-322dd8f98677
   sha: 28ce173b9cc8efb66e2b6e836d9c3f195138e051
 loggregator-blobs/syslog_drain_binder.xz:
   size: 3236804
-  object_id: b262ccc5-4a11-451c-67fc-52eed794582b
+  object_id: 975de99a-8131-4d0c-5f4a-6f15829729f4
   sha: ba49dbd44741d42fbd013f309474cd1a1d53bd29
 loggregator-blobs/trafficcontroller.xz:
   size: 3400084
-  object_id: fef2bc2c-8735-40d4-7ed7-095edcf1e76f
+  object_id: 0d043e64-f70f-4772-514f-be4ceb95fdc3
   sha: 4db762d6e52dfa514c723c6cfcd1c4aa0aac3408
