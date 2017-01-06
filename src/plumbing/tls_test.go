@@ -9,22 +9,24 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	. "plumbing"
+	"plumbing"
 )
 
 var _ = Describe("TLS", func() {
 
-	Context(".NewMutalTLSConfig", func() {
+	Context("NewMutalTLSConfig", func() {
 		var (
-			clientCertFilename string
-			clientKeyFilename  string
-			caCertFilename     string
+			clientCertFilename  string
+			clientKeyFilename   string
+			caCertFilename      string
+			nonSignedCAFilename string
 		)
 
 		BeforeEach(func() {
 			clientCertFilename = writeFile(clientCert)
 			clientKeyFilename = writeFile(clientKey)
 			caCertFilename = writeFile(caCert)
+			nonSignedCAFilename = writeFile(nonSignedCACert)
 		})
 
 		AfterEach(func() {
@@ -37,7 +39,7 @@ var _ = Describe("TLS", func() {
 		})
 
 		It("builds a config struct", func() {
-			conf, err := NewMutualTLSConfig(
+			conf, err := plumbing.NewMutualTLSConfig(
 				clientCertFilename,
 				clientKeyFilename,
 				caCertFilename,
@@ -61,7 +63,7 @@ var _ = Describe("TLS", func() {
 		})
 
 		It("allows you to not specify a CA cert", func() {
-			conf, err := NewMutualTLSConfig(
+			conf, err := plumbing.NewMutualTLSConfig(
 				clientCertFilename,
 				clientKeyFilename,
 				"",
@@ -74,12 +76,14 @@ var _ = Describe("TLS", func() {
 		})
 
 		It("returns an error when given invalid cert/key paths", func() {
-			_, err := NewMutualTLSConfig("", "", caCertFilename, "")
+			_, err := plumbing.NewMutualTLSConfig("", "", caCertFilename, "")
+			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("failed to load keypair: open : no such file or directory"))
 		})
 
 		It("returns an error when given invalid ca cert path", func() {
-			_, err := NewMutualTLSConfig(clientCertFilename, clientKeyFilename, "/file/that/does/not/exist", "")
+			_, err := plumbing.NewMutualTLSConfig(clientCertFilename, clientKeyFilename, "/file/that/does/not/exist", "")
+			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("failed to read ca cert file: open /file/that/does/not/exist: no such file or directory"))
 		})
 
@@ -89,14 +93,22 @@ var _ = Describe("TLS", func() {
 				err := os.Remove(empty)
 				Expect(err).ToNot(HaveOccurred())
 			}()
-			_, err := NewMutualTLSConfig(clientCertFilename, clientKeyFilename, empty, "")
+			_, err := plumbing.NewMutualTLSConfig(clientCertFilename, clientKeyFilename, empty, "")
+			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("unable to load ca cert file"))
+		})
+
+		It("returns an error when the certificate is not signed by the CA", func() {
+			_, err := plumbing.NewMutualTLSConfig(clientCertFilename, clientKeyFilename, nonSignedCAFilename, "")
+			Expect(err).To(HaveOccurred())
+			_, ok := err.(plumbing.CASignatureError)
+			Expect(ok).To(BeTrue())
 		})
 	})
 
-	Context(".NewTLSConfig", func() {
+	Context("NewTLSConfig", func() {
 		It("returns basic TLS config", func() {
-			tlsConf := NewTLSConfig()
+			tlsConf := plumbing.NewTLSConfig()
 			Expect(tlsConf.InsecureSkipVerify).To(BeFalse())
 			Expect(tlsConf.ClientAuth).To(Equal(tls.NoClientCert))
 			Expect(tlsConf.MinVersion).To(Equal(uint16(tls.VersionTLS12)))
@@ -114,7 +126,8 @@ func writeFile(data string) string {
 	return f.Name()
 }
 
-var clientCert = `
+var (
+	clientCert = `
 -----BEGIN CERTIFICATE-----
 MIIEJTCCAg2gAwIBAgIRAO/ptD//eUEdVZUcAiPL0+UwDQYJKoZIhvcNAQELBQAw
 GDEWMBQGA1UEAxMNbG9nZ3JlZ2F0b3JDQTAeFw0xNTEwMjgyMTM2MDlaFw0xNzEw
@@ -141,7 +154,7 @@ kjn0VhOd9baSX8A9GM2Hf65Gs2fy4NkPB56igI95eWjuDDzPhsjess8gYhaQPhVf
 HpPEaHjzzIJP
 -----END CERTIFICATE-----`
 
-var clientKey = `
+	clientKey = `
 -----BEGIN RSA PRIVATE KEY-----
 MIIEogIBAAKCAQEAxwNNsnDFFmb90dnzvei+V2nTpnKMsjnMaB4QmGO15pN8UxG1
 O2l1xmwiFlOV0849p1WJ6WNBcCM/ETmPtfTQJaYIYfF2lWIJcaHFa4JErpQ5yB3w
@@ -170,7 +183,7 @@ jBaeRtxDZtG4jemGzGM5JNZ4FlONOWybszeCyhQswrpnxrS25+NsyBxXAQgSX/s+
 2aumdeOue2gC5pBE9V1ctAx6g/mA6E1gK6xg/ZCxoraj/Oe1Kvc=
 -----END RSA PRIVATE KEY-----`
 
-var caCert = `
+	caCert = `
 -----BEGIN CERTIFICATE-----
 MIIFETCCAvmgAwIBAgIBATANBgkqhkiG9w0BAQsFADAYMRYwFAYDVQQDEw1sb2dn
 cmVnYXRvckNBMB4XDTE1MTAyODIxMzYwN1oXDTI1MTAyODIxMzYwOVowGDEWMBQG
@@ -201,3 +214,36 @@ p90nie0j6AMqteAJroHjPjxsvBwyQ/+YA4Crp6kYQXAnxlIBbpLpiCdrI92Bb9XB
 6XB6kWdquC8zW+AZ2ev4bed0wfkgvb/j+/5bsLqYvR00CVg7UrnYlQW5/qsLy1Yc
 bupooHk=
 -----END CERTIFICATE-----`
+
+	nonSignedCACert = `
+-----BEGIN CERTIFICATE-----
+MIIE8DCCAtigAwIBAgIBATANBgkqhkiG9w0BAQsFADAYMRYwFAYDVQQDEw1sb2dn
+cmVnYXRvckNBMB4XDTE3MDEwNTE3MjQzMFoXDTI3MDEwNTE3MjQzNVowGDEWMBQG
+A1UEAxMNbG9nZ3JlZ2F0b3JDQTCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoC
+ggIBAPLHojin/u+PZ+NWXrNFipHrMo8jc4J9UUB5udjteweNv6cGItZBybF12PrH
+cuiYcajfpu3EBB0d2GjhwddGDhr9PCb8lIdkfGEjtwywdvnu4OcuuibP9vRHsVH8
+01q5EYha9z37YXdVGSOa6fMBe/vVjX4q+N9xaGxVpxSJ8bbJj7TkMOOtk44X48xy
+UuQsZAnidKXxDi873tpfDaX+V4ImUXeSQDvwOX05KSFEqqfNBXKQbIX+8vpO/Sb0
+AUKbOEZvXsLLB6Q10Z+swbkARLqxZo77p9M9nxPugitdY694gzae/tduVto/az01
+PHqduveI+nFq84T/4lhzLiO7cuG+hJMsbvbAiPuygxVh4e5divi2MzfMuvay70cs
+xppPJ8kB6PLiGwN5aSyjuYBRcejQVTEQJeRdWSyiTknGllbOCgqd3hjKZ2qjE+es
+6m+8KwgEKK+KSSnF1IiWxCe/eeYdvAzgaikB7Q6wJKZfqPdED9CpHm7yUL+ABhF3
+GHR4QOwEtXzt4RgZ9ckr+pJjUmid1VXBqzp0/C47OlGFL47vCbEMvw1I4zFtWxnS
+JuCKshAbwaVFF+XrbrimibBY4iSw7cxlcOBBLxfqjqFCmU80tNnQCAo5174su0HH
+EIXNdAjb/Fr0CvTv6SYo44wfV4PJKOU9FLb3bHemUHbJLWAxAgMBAAGjRTBDMA4G
+A1UdDwEB/wQEAwIBBjASBgNVHRMBAf8ECDAGAQH/AgEAMB0GA1UdDgQWBBQ6n/UQ
+PPjfmPnUJIz8VMzzns7KazANBgkqhkiG9w0BAQsFAAOCAgEAa0VGI85F7/qylHCt
+QpcyW6P3PayUIhVO0YnJy9iWlSE6ecfZyqWmM/4WnaSfYH0Ak8uWoPo8WiFWJEl0
+LLYWvRyZIwBjdqXgJ8ynCSaRawDacyFFu/fLhQ01KgsI2buMHRGab/HxcBcYDHq4
+tf1RnlD8HVeGuZEBhu79BqUJucWlIC52evNShMWneCgOpfy2YoDX9mIMuh4Skmb+
+nHDSo/0fa/X5vggltooeSLhCkesVSbb4RmctwPlpFFXKSBF6z2C8rFF5ouWeCQCk
+yQYEODe5oRrx+hOJd7NCDzBtAMUfKRFHxhtL+sk3mCa9idyivi2UG5dmXDyIIrJ6
+dvbXTFeG9XjyVWATsfUyQowslLvDCtobDiYcSNv94fwTD1+m/l4q8qRDMK4P0x8c
+H5gnzWJ8chPbVy//XsOKv0jSHUjSFE/kWhwazevJGj4NjKgbxYEThRc73RDUp65t
+rQ37g+d1vsPPBd9sM2wFSeJg64JPdlzxd0IhuEQoYmM0lQcUN3NYIzSvxx8SDYrO
+c/yHffS6WmdY0ep8K2v1BH1PAyYBINPI5RFU2DAZGd0fUC+ryDWRvCpNaDYGHOJ+
+i9ulkuurJM524mRT51gX2DrTbuJ2xCTY536bmPJmVFmfWaB3Rz+lt0dBMmlFRtEr
+I1L4StQ7QGOszvGnFF/CcZnzwIY=
+-----END CERTIFICATE-----
+`
+)
