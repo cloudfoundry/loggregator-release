@@ -6,7 +6,7 @@ function add_blob {
     local compress_output=$1
     local blob_name=$2
 
-    shasum=$(sha1sum $compress_output)
+    shasum=$(sha1sum $compress_output | awk '{print $1}')
     current_shasum=$(bosh blobs | grep $blob_name | awk '{print $5}')
 
     if [ "$shasum" != "$current_shasum" ]; then
