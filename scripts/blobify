@@ -2,6 +2,18 @@
 
 set -eu
 
+function add_blob {
+    local compress_output=$1
+    local blob_name=$2
+
+    shasum=$(sha1sum $compress_output)
+    current_shasum=$(bosh blobs | grep $blob_name | awk '{print $5}')
+
+    if [ "$shasum" != "$current_shasum" ]; then
+        bosh add-blob $compress_output $blob_name
+    fi
+}
+
 function compile_linux {
     local name=$1
     local pkg=${2:-$1}
@@ -12,7 +24,7 @@ function compile_linux {
     echo "building $name -- LINUX"
     GOOS=linux go build -o $build_output $pkg
     xz -f $build_output
-    bosh add-blob $compress_output $blob_name
+    add_blob $compress_output $blob_name
 }
 
 function compile_test_linux {
@@ -25,7 +37,7 @@ function compile_test_linux {
     echo "building test $name -- LINUX TEST"
     GOOS=linux go test -c -o $build_output $pkg
     xz -f $build_output
-    bosh add-blob $compress_output $blob_name
+    add_blob $compress_output $blob_name
 }
 
 function compile_windows {
@@ -36,7 +48,7 @@ function compile_windows {
 
     echo "building test $name -- WIN"
     GOOS=windows go build -o $build_output $pkg
-    bosh add-blob $build_output $blob_name
+    add_blob $build_output $blob_name
 }
 
 
