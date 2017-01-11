@@ -24,6 +24,8 @@ func ToV1(e *v2.Envelope) *events.Envelope {
 		convertLog(v1e, e)
 	case *v2.Envelope_Counter:
 		convertCounter(v1e, e)
+	case *v2.Envelope_Gauge:
+		convertGauge(v1e, e)
 	}
 
 	return v1e
@@ -49,6 +51,16 @@ func convertCounter(v1e *events.Envelope, v2e *v2.Envelope) {
 		Name:  proto.String(counterEvent.Name),
 		Delta: proto.Uint64(0),
 		Total: proto.Uint64(counterEvent.GetTotal()),
+	}
+}
+
+func convertGauge(v1e *events.Envelope, v2e *v2.Envelope) {
+	gaugeEvent := v2e.GetGauge()
+	v1e.EventType = events.Envelope_ValueMetric.Enum()
+	v1e.ValueMetric = &events.ValueMetric{
+		Name:  proto.String(gaugeEvent.Name),
+		Unit:  proto.String(gaugeEvent.Unit),
+		Value: proto.Float64(gaugeEvent.Value),
 	}
 }
 
