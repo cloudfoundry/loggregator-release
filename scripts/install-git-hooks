@@ -2,5 +2,5 @@
 
 RELEASE=$(cd $(dirname $0)/.. && pwd)
 
-ln -fs ${RELEASE}/git-hooks/pre-commit ${RELEASE}/.git/hooks/pre-commit
-ln -fs ${RELEASE}/git-hooks/pre-push ${RELEASE}/.git/hooks/pre-push
+rm -r "${RELEASE}/.git/hooks"
+ln -fs "${RELEASE}/git-hooks" "${RELEASE}/.git/hooks"
