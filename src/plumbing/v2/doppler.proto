@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package loggregator;
+
+import "envelope.proto";
+
+service DopplerIn {
+    rpc Pusher(stream loggregator.Envelope) returns (PushResponse) {}
+}
+
+message PushResponse {}
+
