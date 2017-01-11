@@ -17,9 +17,12 @@ var _ = Describe("ValueMetric", func() {
 			envelope := &v2.Envelope{
 				Message: &v2.Envelope_Gauge{
 					Gauge: &v2.Gauge{
-						Name:  "name",
-						Unit:  "meters",
-						Value: 123,
+						Metrics: map[string]*v2.GaugeValue{
+							"name": &v2.GaugeValue{
+								Unit:  "meters",
+								Value: 123,
+							},
+						},
 					},
 				},
 			}

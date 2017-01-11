@@ -16,7 +16,7 @@ It has these top-level messages:
 	Log
 	Counter
 	Gauge
-	CorrelatedGauge
+	GaugeValue
 	Timer
 */
 package loggregator

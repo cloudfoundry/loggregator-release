@@ -55,13 +55,40 @@ func convertCounter(v1e *events.Envelope, v2e *v2.Envelope) {
 }
 
 func convertGauge(v1e *events.Envelope, v2e *v2.Envelope) {
+	if tryConvertContainerMetric(v1e, v2e) {
+		return
+	}
+
 	gaugeEvent := v2e.GetGauge()
 	v1e.EventType = events.Envelope_ValueMetric.Enum()
-	v1e.ValueMetric = &events.ValueMetric{
-		Name:  proto.String(gaugeEvent.Name),
-		Unit:  proto.String(gaugeEvent.Unit),
-		Value: proto.Float64(gaugeEvent.Value),
+	for key, metric := range gaugeEvent.Metrics {
+		v1e.ValueMetric = &events.ValueMetric{
+			Name:  proto.String(key),
+			Unit:  proto.String(metric.Unit),
+			Value: proto.Float64(metric.Value),
+		}
+		break
 	}
+}
+
+func tryConvertContainerMetric(v1e *events.Envelope, v2e *v2.Envelope) bool {
+	gaugeEvent := v2e.GetGauge()
+	if len(gaugeEvent.Metrics) == 1 {
+		return false
+	}
+
+	v1e.EventType = events.Envelope_ContainerMetric.Enum()
+	v1e.ContainerMetric = &events.ContainerMetric{
+		ApplicationId:    proto.String(v2e.SourceUuid),
+		InstanceIndex:    proto.Int32(int32(gaugeEvent.Metrics["instance_index"].Value)),
+		CpuPercentage:    proto.Float64(gaugeEvent.Metrics["cpu"].Value),
+		MemoryBytes:      proto.Uint64(uint64(gaugeEvent.Metrics["memory"].Value)),
+		DiskBytes:        proto.Uint64(uint64(gaugeEvent.Metrics["disk"].Value)),
+		MemoryBytesQuota: proto.Uint64(uint64(gaugeEvent.Metrics["memory_quota"].Value)),
+		DiskBytesQuota:   proto.Uint64(uint64(gaugeEvent.Metrics["disk_quota"].Value)),
+	}
+
+	return true
 }
 
 func convertTags(tags map[string]*v2.Value) map[string]string {
