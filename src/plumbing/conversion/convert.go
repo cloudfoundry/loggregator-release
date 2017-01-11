@@ -9,24 +9,46 @@ import (
 )
 
 func ToV1(e *v2.Envelope) *events.Envelope {
-	logMessage := e.GetLog()
-	return &events.Envelope{
+	v1e := &events.Envelope{
 		Origin:     proto.String(e.Tags["origin"].GetText()),
 		Deployment: proto.String(e.Tags["deployment"].GetText()),
 		Job:        proto.String(e.Tags["job"].GetText()),
 		Index:      proto.String(e.Tags["index"].GetText()),
 		Timestamp:  proto.Int64(e.Timestamp),
 		Ip:         proto.String(e.Tags["ip"].GetText()),
-		EventType:  events.Envelope_LogMessage.Enum(),
 		Tags:       convertTags(e.Tags),
-		LogMessage: &events.LogMessage{
-			Message:        logMessage.Payload,
-			MessageType:    messageType(logMessage),
-			Timestamp:      proto.Int64(e.Timestamp),
-			AppId:          proto.String(e.SourceUuid),
-			SourceType:     proto.String(e.Tags["source_type"].GetText()),
-			SourceInstance: proto.String(e.Tags["source_instance"].GetText()),
-		},
+	}
+
+	switch (e.Message).(type) {
+	case *v2.Envelope_Log:
+		convertLog(v1e, e)
+	case *v2.Envelope_Counter:
+		convertCounter(v1e, e)
+	}
+
+	return v1e
+}
+
+func convertLog(v1e *events.Envelope, v2e *v2.Envelope) {
+	logMessage := v2e.GetLog()
+	v1e.EventType = events.Envelope_LogMessage.Enum()
+	v1e.LogMessage = &events.LogMessage{
+		Message:        logMessage.Payload,
+		MessageType:    messageType(logMessage),
+		Timestamp:      proto.Int64(v2e.Timestamp),
+		AppId:          proto.String(v2e.SourceUuid),
+		SourceType:     proto.String(v2e.Tags["source_type"].GetText()),
+		SourceInstance: proto.String(v2e.Tags["source_instance"].GetText()),
+	}
+}
+
+func convertCounter(v1e *events.Envelope, v2e *v2.Envelope) {
+	counterEvent := v2e.GetCounter()
+	v1e.EventType = events.Envelope_CounterEvent.Enum()
+	v1e.CounterEvent = &events.CounterEvent{
+		Name:  proto.String(counterEvent.Name),
+		Delta: proto.Uint64(0),
+		Total: proto.Uint64(counterEvent.GetTotal()),
 	}
 }
 
