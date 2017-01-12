@@ -1,6 +1,6 @@
 # Loggregator
 
-[![Concourse Badge](https://loggregator.ci.cf-app.com/api/v1/pipelines/loggregator/jobs/unit-tests/badge)](https://loggregator.ci.cf-app.com/teams/main/pipelines/loggregator/jobs/unit-tests)
+[![CI Badge][ci-badge]][ci-pipeline]
 
 ### Logging in the Clouds
 
@@ -586,3 +586,7 @@ to replace the token with a regular newline again so it displays "properly" in K
 ### Log Message Size Constraints
 
 Application logs are emitted via UDP messages from Diego/DEA to Metron. The maximum log message size from a DEA is ~60KiB (assuming overhead for the transporting envelope). Diego breaks up log messages greater than ~60KiB into multiple envelopes to mitigate this constraint.
+
+
+[ci-badge]: https://loggregator.ci.cf-app.com/api/v1/pipelines/loggregator/jobs/run-tests/badge
+[ci-pipeline]: https://loggregator.ci.cf-app.com/
