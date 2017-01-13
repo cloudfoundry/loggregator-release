@@ -46,4 +46,19 @@ var _ = Describe("Envelope", func() {
 			Expect(oldEnvelope.Tags).To(HaveKeyWithValue("random_decimal", fmt.Sprintf("%f", 123.0)))
 		})
 	})
+
+	It("rejects empty tags", func() {
+		envelope := &v2.Envelope{
+			Tags: map[string]*v2.Value{
+				"foo": &v2.Value{&v2.Value_Text{"bar"}},
+				"baz": nil,
+			},
+			Message: &v2.Envelope_Log{Log: &v2.Log{}},
+		}
+
+		oldEnvelope := conversion.ToV1(envelope)
+		Expect(oldEnvelope.Tags).To(Equal(map[string]string{
+			"foo": "bar",
+		}))
+	})
 })

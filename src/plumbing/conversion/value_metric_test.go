@@ -36,5 +36,19 @@ var _ = Describe("ValueMetric", func() {
 				}),
 			}))
 		})
+
+		It("is resilient to parial envelopes", func() {
+			envelope := &v2.Envelope{
+				Message: &v2.Envelope_Gauge{
+					Gauge: &v2.Gauge{
+						Metrics: map[string]*v2.GaugeValue{
+							"name": nil,
+						},
+					},
+				},
+			}
+
+			Expect(conversion.ToV1(envelope)).To(BeNil())
+		})
 	})
 })

@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 )
@@ -61,6 +62,39 @@ var _ = Describe("ContainerMetric", func() {
 				}),
 			}))
 		})
-	})
 
+		DescribeTable("it is resilient to malformed envelopes", func(v2e *v2.Envelope) {
+			Expect(conversion.ToV1(v2e)).To(BeNil())
+		},
+			Entry("bare envelope", &v2.Envelope{}),
+			Entry("partial container metric", &v2.Envelope{
+				Message: &v2.Envelope_Gauge{
+					Gauge: &v2.Gauge{
+						Metrics: map[string]*v2.GaugeValue{
+							"cpu": &v2.GaugeValue{
+								Value: 99,
+							},
+							"memory": &v2.GaugeValue{
+								Value: 101,
+							},
+						},
+					},
+				},
+			}),
+			Entry("with empty fields", &v2.Envelope{
+				Message: &v2.Envelope_Gauge{
+					Gauge: &v2.Gauge{
+						Metrics: map[string]*v2.GaugeValue{
+							"instance_index": nil,
+							"cpu":            nil,
+							"memory":         nil,
+							"disk":           nil,
+							"memory_quota":   nil,
+							"disk_quota":     nil,
+						},
+					},
+				},
+			}),
+		)
+	})
 })

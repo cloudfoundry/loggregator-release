@@ -29,9 +29,13 @@ func ToV1(e *v2.Envelope) *events.Envelope {
 	case *v2.Envelope_Counter:
 		convertCounter(v1e, e)
 	case *v2.Envelope_Gauge:
-		convertGauge(v1e, e)
+		if !convertGauge(v1e, e) {
+			return nil
+		}
 	case *v2.Envelope_Timer:
 		convertTimer(v1e, e)
+	default:
+		return nil
 	}
 
 	return v1e
@@ -85,27 +89,61 @@ func convertCounter(v1e *events.Envelope, v2e *v2.Envelope) {
 	}
 }
 
-func convertGauge(v1e *events.Envelope, v2e *v2.Envelope) {
+func convertGauge(v1e *events.Envelope, v2e *v2.Envelope) bool {
 	if tryConvertContainerMetric(v1e, v2e) {
-		return
+		return true
 	}
 
 	gaugeEvent := v2e.GetGauge()
+	if len(gaugeEvent.Metrics) != 1 {
+		return false
+	}
+
 	v1e.EventType = events.Envelope_ValueMetric.Enum()
 	for key, metric := range gaugeEvent.Metrics {
+		unit, value, ok := extractGaugeValues(metric)
+		if !ok {
+			return false
+		}
+
 		v1e.ValueMetric = &events.ValueMetric{
 			Name:  proto.String(key),
-			Unit:  proto.String(metric.Unit),
-			Value: proto.Float64(metric.Value),
+			Unit:  proto.String(unit),
+			Value: proto.Float64(value),
 		}
-		break
+		return true
 	}
+
+	return false
+}
+
+func extractGaugeValues(metric *v2.GaugeValue) (string, float64, bool) {
+	if metric == nil {
+		return "", 0, false
+	}
+
+	return metric.Unit, metric.Value, true
 }
 
 func tryConvertContainerMetric(v1e *events.Envelope, v2e *v2.Envelope) bool {
 	gaugeEvent := v2e.GetGauge()
 	if len(gaugeEvent.Metrics) == 1 {
 		return false
+	}
+
+	required := []string{
+		"instance_index",
+		"cpu",
+		"memory",
+		"disk",
+		"memory_quota",
+		"disk_quota",
+	}
+
+	for _, req := range required {
+		if v, ok := gaugeEvent.Metrics[req]; !ok || v == nil {
+			return false
+		}
 	}
 
 	v1e.EventType = events.Envelope_ContainerMetric.Enum()
@@ -125,6 +163,9 @@ func tryConvertContainerMetric(v1e *events.Envelope, v2e *v2.Envelope) bool {
 func convertTags(tags map[string]*v2.Value) map[string]string {
 	oldTags := make(map[string]string)
 	for key, value := range tags {
+		if value == nil {
+			continue
+		}
 		switch value.Data.(type) {
 		case *v2.Value_Text:
 			oldTags[key] = value.GetText()
