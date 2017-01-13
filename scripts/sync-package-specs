@@ -40,5 +40,3 @@ sync_package statsd-injector               -app  statsd-injector &
 sync_package boshhmforwarder               -app  boshhmforwarder &
 
 wait
-
-git diff --name-only packages/*/spec
