@@ -68,7 +68,13 @@ func addCA(tlsConfig *tls.Config, tlsCert tls.Certificate, caCertFile string) er
 		return err
 	}
 
-	_, err = verifier.Verify(x509.VerifyOptions{Roots: caCertPool})
+	verify_options := x509.VerifyOptions{
+		Roots: caCertPool,
+		KeyUsages: []x509.ExtKeyUsage{
+			x509.ExtKeyUsageAny,
+		},
+	}
+	_, err = verifier.Verify(verify_options)
 	if err != nil {
 		return CASignatureError(err.Error())
 	}
