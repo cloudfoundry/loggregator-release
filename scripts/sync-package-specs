@@ -1,0 +1,44 @@
+#!/bin/bash
+set -e
+
+go get github.com/vito/gosub
+
+if [ ! $(which gosub) ]; then
+    echo "Gosub required to update dependencies in bosh/*/spec files."
+    echo 'Please install with `go get github.com/vito/gosub`'
+    exit 1
+fi
+
+loggregator_root=${GOPATH}
+
+function sync_package() {
+  bosh_pkg=${1}
+
+  shift
+
+  (
+    set -e
+
+    cd packages/${bosh_pkg}
+
+    {
+      cat spec | grep -v '# gosub'
+      gosub list "$@" | \
+        sed -e 's|\(.*\)|- loggregator/src/\1/*.go # gosub|g'
+    } > spec.new
+
+    mv spec.new spec
+  )
+}
+
+sync_package metron_agent                  -app  metron &
+sync_package metron_agent_windows          -app  metron &
+sync_package doppler                       -app  doppler &
+sync_package loggregator_trafficcontroller -app  trafficcontroller &
+sync_package syslog_drain_binder           -app  syslog_drain_binder &
+sync_package statsd-injector               -app  statsd-injector &
+sync_package boshhmforwarder               -app  boshhmforwarder &
+
+wait
+
+git diff --name-only packages/*/spec
