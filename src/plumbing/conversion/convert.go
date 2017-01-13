@@ -1,13 +1,17 @@
 package conversion
 
 import (
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	v2 "plumbing/v2"
+	"strings"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )
 
+// ToV1 converts v2 envelopes down to v1 envelopes.
 func ToV1(e *v2.Envelope) *events.Envelope {
 	v1e := &events.Envelope{
 		Origin:     proto.String(e.Tags["origin"].GetText()),
@@ -26,9 +30,36 @@ func ToV1(e *v2.Envelope) *events.Envelope {
 		convertCounter(v1e, e)
 	case *v2.Envelope_Gauge:
 		convertGauge(v1e, e)
+	case *v2.Envelope_Timer:
+		convertTimer(v1e, e)
 	}
 
 	return v1e
+}
+
+func convertTimer(v1e *events.Envelope, v2e *v2.Envelope) {
+	timer := v2e.GetTimer()
+	v1e.EventType = events.Envelope_HttpStartStop.Enum()
+
+	method := events.Method(events.Method_value[v2e.Tags["method"].GetText()])
+	peerType := events.PeerType(events.PeerType_value[v2e.Tags["peer_type"].GetText()])
+
+	v1e.HttpStartStop = &events.HttpStartStop{
+		StartTimestamp: proto.Int64(timer.Start),
+		StopTimestamp:  proto.Int64(timer.Stop),
+		RequestId:      convertUUID(parseUUID(v2e.Tags["request_id"].GetText())),
+		ApplicationId:  convertUUID(parseUUID(v2e.SourceUuid)),
+		PeerType:       &peerType,
+		Method:         &method,
+		Uri:            proto.String(v2e.Tags["uri"].GetText()),
+		RemoteAddress:  proto.String(v2e.Tags["remote_address"].GetText()),
+		UserAgent:      proto.String(v2e.Tags["user_agent"].GetText()),
+		StatusCode:     proto.Int32(int32(v2e.Tags["status_code"].GetInteger())),
+		ContentLength:  proto.Int64(v2e.Tags["content_length"].GetInteger()),
+		InstanceIndex:  proto.Int32(int32(v2e.Tags["instance_index"].GetInteger())),
+		InstanceId:     proto.String(v2e.Tags["instance_id"].GetText()),
+		Forwarded:      strings.Split(v2e.Tags["forwarded"].GetText(), "\n"),
+	}
 }
 
 func convertLog(v1e *events.Envelope, v2e *v2.Envelope) {
@@ -111,4 +142,30 @@ func messageType(log *v2.Log) *events.LogMessage_MessageType {
 		return events.LogMessage_OUT.Enum()
 	}
 	return events.LogMessage_ERR.Enum()
+}
+
+func parseUUID(id string) []byte {
+	// e.g. b3015d69-09cd-476d-aace-ad2d824d5ab7
+	if len(id) != 36 {
+		return nil
+	}
+	h := id[:8] + id[9:13] + id[14:18] + id[19:23] + id[24:]
+
+	data, err := hex.DecodeString(h)
+	if err != nil {
+		return nil
+	}
+
+	return data
+}
+
+func convertUUID(id []byte) *events.UUID {
+	if len(id) != 16 {
+		return &events.UUID{}
+	}
+
+	return &events.UUID{
+		Low:  proto.Uint64(binary.LittleEndian.Uint64(id[:8])),
+		High: proto.Uint64(binary.LittleEndian.Uint64(id[8:])),
+	}
 }
