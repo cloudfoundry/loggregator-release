@@ -20,27 +20,27 @@ var _ = Describe("ContainerMetric", func() {
 				Message: &v2.Envelope_Gauge{
 					Gauge: &v2.Gauge{
 						Metrics: map[string]*v2.GaugeValue{
-							"instance_index": &v2.GaugeValue{
+							"instance_index": {
 								Unit:  "index",
 								Value: 123,
 							},
-							"cpu": &v2.GaugeValue{
+							"cpu": {
 								Unit:  "percentage",
 								Value: 11,
 							},
-							"memory": &v2.GaugeValue{
+							"memory": {
 								Unit:  "bytes",
 								Value: 13,
 							},
-							"disk": &v2.GaugeValue{
+							"disk": {
 								Unit:  "bytes",
 								Value: 15,
 							},
-							"memory_quota": &v2.GaugeValue{
+							"memory_quota": {
 								Unit:  "bytes",
 								Value: 17,
 							},
-							"disk_quota": &v2.GaugeValue{
+							"disk_quota": {
 								Unit:  "bytes",
 								Value: 19,
 							},
@@ -71,10 +71,10 @@ var _ = Describe("ContainerMetric", func() {
 				Message: &v2.Envelope_Gauge{
 					Gauge: &v2.Gauge{
 						Metrics: map[string]*v2.GaugeValue{
-							"cpu": &v2.GaugeValue{
+							"cpu": {
 								Value: 99,
 							},
-							"memory": &v2.GaugeValue{
+							"memory": {
 								Value: 101,
 							},
 						},

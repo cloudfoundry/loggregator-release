@@ -21,9 +21,9 @@ var _ = Describe("LogMessage", func() {
 					Timestamp:  99,
 					SourceUuid: "uuid",
 					Tags: map[string]*v2.Value{
-						"source_type":     &v2.Value{&v2.Value_Text{"value"}},
-						"source_instance": &v2.Value{&v2.Value_Text{"value"}},
-						"origin":          &v2.Value{&v2.Value_Text{"value"}},
+						"source_type":     {&v2.Value_Text{"value"}},
+						"source_instance": {&v2.Value_Text{"value"}},
+						"origin":          {&v2.Value_Text{"value"}},
 					},
 					Message: &v2.Envelope_Log{
 						Log: &v2.Log{
@@ -53,9 +53,9 @@ var _ = Describe("LogMessage", func() {
 					Timestamp:  99,
 					SourceUuid: "uuid",
 					Tags: map[string]*v2.Value{
-						"source_type":     &v2.Value{&v2.Value_Text{"value"}},
-						"source_instance": &v2.Value{&v2.Value_Text{"value"}},
-						"origin":          &v2.Value{&v2.Value_Text{"value"}},
+						"source_type":     {&v2.Value_Text{"value"}},
+						"source_instance": {&v2.Value_Text{"value"}},
+						"origin":          {&v2.Value_Text{"value"}},
 					},
 					Message: &v2.Envelope_Log{
 						Log: &v2.Log{
@@ -86,14 +86,14 @@ var _ = Describe("LogMessage", func() {
 					Timestamp:  99,
 					SourceUuid: "uuid",
 					Tags: map[string]*v2.Value{
-						"origin":         &v2.Value{&v2.Value_Text{"origin"}},
-						"deployment":     &v2.Value{&v2.Value_Text{"deployment"}},
-						"job":            &v2.Value{&v2.Value_Text{"job"}},
-						"index":          &v2.Value{&v2.Value_Text{"index"}},
-						"ip":             &v2.Value{&v2.Value_Text{"ip"}},
-						"random_text":    &v2.Value{&v2.Value_Text{"random_text"}},
-						"random_int":     &v2.Value{&v2.Value_Integer{123}},
-						"random_decimal": &v2.Value{&v2.Value_Decimal{123}},
+						"origin":         {&v2.Value_Text{"origin"}},
+						"deployment":     {&v2.Value_Text{"deployment"}},
+						"job":            {&v2.Value_Text{"job"}},
+						"index":          {&v2.Value_Text{"index"}},
+						"ip":             {&v2.Value_Text{"ip"}},
+						"random_text":    {&v2.Value_Text{"random_text"}},
+						"random_int":     {&v2.Value_Integer{123}},
+						"random_decimal": {&v2.Value_Decimal{123}},
 					},
 					Message: &v2.Envelope_Log{Log: &v2.Log{}},
 				}
