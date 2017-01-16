@@ -17,21 +17,6 @@ const (
 )
 
 const (
-	etcdPortOffset = iota
-	etcdPeerPortOffset
-	dopplerUDPPortOffset
-	dopplerTCPPortOffset
-	dopplerTLSPortOffset
-	dopplerWSPortOffset
-	dopplerGRPCPortOffset
-	dopplerPPROFPortOffset
-	metronPortOffset
-	metronPPROFPortOffset
-	tcPortOffset
-	tcPPROFPortOffset
-)
-
-const (
 	red = 31 + iota
 	green
 	yellow
@@ -41,7 +26,7 @@ const (
 	colorFmt = "\x1b[%dm[%s]\x1b[%dm[%s]\x1b[0m "
 )
 
-func getTCPPort(offset int) int {
+func getTCPPort() int {
 	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
 	if err != nil {
 		panic(err)
@@ -52,21 +37,21 @@ func getTCPPort(offset int) int {
 		panic(err)
 	}
 	defer l.Close()
-	return l.Addr().(*net.TCPAddr).Port + offset
+	return l.Addr().(*net.TCPAddr).Port
 }
 
-func getUDPPort(offset int) int {
+func getUDPPort() int {
 	addr, err := net.ResolveUDPAddr("udp", "localhost:0")
 	if err != nil {
 		panic(err)
 	}
 
-	l, err := net.ListenUDP("udp", addr)
+	c, err := net.ListenUDP("udp", addr)
 	if err != nil {
 		panic(err)
 	}
-	defer l.Close()
-	return l.Addr().(*net.UDPAddr).Port + offset
+	defer c.Close()
+	return c.LocalAddr().(*net.UDPAddr).Port
 }
 
 func color(oe, proc string, oeColor, procColor int) string {

@@ -15,12 +15,12 @@ import (
 )
 
 func BuildDopplerConfig(etcdClientURL string, metronPort int) dopplerConf.Config {
-	dopplerUDPPort := getUDPPort(dopplerUDPPortOffset)
-	dopplerTCPPort := getTCPPort(dopplerTCPPortOffset)
-	dopplerTLSPort := getTCPPort(dopplerTLSPortOffset)
-	dopplerWSPort := getTCPPort(dopplerWSPortOffset)
-	dopplerGRPCPort := getTCPPort(dopplerGRPCPortOffset)
-	pprofPort := getTCPPort(dopplerPPROFPortOffset)
+	dopplerUDPPort := getUDPPort()
+	dopplerTCPPort := getTCPPort()
+	dopplerTLSPort := getTCPPort()
+	dopplerWSPort := getTCPPort()
+	dopplerGRPCPort := getTCPPort()
+	pprofPort := getTCPPort()
 
 	return dopplerConf.Config{
 		Index:        "42",

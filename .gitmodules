@@ -99,4 +99,4 @@
 	url = https://github.com/vito/gosub
 [submodule "src/github.com/cloudfoundry/loggregator-api"]
 	path = src/github.com/cloudfoundry/loggregator-api
-	url = git@github.com:cloudfoundry/loggregator-api
+	url = https://github.com/cloudfoundry/loggregator-api

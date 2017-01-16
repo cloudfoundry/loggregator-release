@@ -21,8 +21,8 @@ func StartTestEtcd() (func(), string) {
 	Expect(etcdPath).ToNot(BeEmpty())
 
 	By("starting etcd")
-	etcdPort := getTCPPort(etcdPortOffset)
-	etcdPeerPort := getTCPPort(etcdPeerPortOffset)
+	etcdPort := getTCPPort()
+	etcdPeerPort := getTCPPort()
 	etcdClientURL := fmt.Sprintf("http://localhost:%d", etcdPort)
 	etcdPeerURL := fmt.Sprintf("http://localhost:%d", etcdPeerPort)
 	etcdDataDir, err := ioutil.TempDir("", "etcd-data")
