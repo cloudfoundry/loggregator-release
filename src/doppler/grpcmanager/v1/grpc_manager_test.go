@@ -1,6 +1,7 @@
-package grpcmanager_test
+package v1_test
 
 import (
+	"doppler/grpcmanager/v1"
 	"io"
 	"net"
 	"plumbing"
@@ -13,8 +14,6 @@ import (
 	. "github.com/apoydence/eachers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"doppler/grpcmanager"
 
 	"github.com/cloudfoundry/dropsonde/emitter/fake"
 	"github.com/cloudfoundry/dropsonde/metric_sender"
@@ -30,14 +29,14 @@ var _ = Describe("GRPCManager", func() {
 		cleanupCalled  chan struct{}
 		mockDataDumper *mockDataDumper
 
-		manager       *grpcmanager.GRPCManager
+		manager       *v1.GRPCManager
 		listener      net.Listener
 		connCloser    io.Closer
 		dopplerClient plumbing.DopplerClient
 
 		subscribeRequest *plumbing.SubscriptionRequest
 
-		setter      grpcmanager.DataSetter
+		setter      v1.DataSetter
 		fakeEmitter *fake.FakeEventEmitter
 	)
 
@@ -59,8 +58,8 @@ var _ = Describe("GRPCManager", func() {
 		return c, conn
 	}
 
-	var fetchSetter = func() grpcmanager.DataSetter {
-		var s grpcmanager.DataSetter
+	var fetchSetter = func() v1.DataSetter {
+		var s v1.DataSetter
 		Eventually(mockRegistrar.RegisterInput.Setter).Should(
 			Receive(&s),
 		)
@@ -87,7 +86,7 @@ var _ = Describe("GRPCManager", func() {
 		mockRegistrar.RegisterOutput.Ret0 <- mockCleanup
 		mockDataDumper = newMockDataDumper()
 
-		manager = grpcmanager.New(mockRegistrar, mockDataDumper)
+		manager = v1.New(mockRegistrar, mockDataDumper)
 
 		listener = startGRPCServer(manager)
 		dopplerClient, connCloser = establishClient(listener.Addr().String())

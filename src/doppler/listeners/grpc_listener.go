@@ -3,7 +3,7 @@ package listeners
 import (
 	"diodes"
 	"doppler/config"
-	"doppler/grpcmanager"
+	"doppler/grpcmanager/v1"
 	"doppler/sinkserver/sinkmanager"
 	"fmt"
 	"log"
@@ -22,13 +22,13 @@ type GRPCListener struct {
 }
 
 func NewGRPCListener(
-	router *grpcmanager.Router,
+	router *v1.Router,
 	sinkmanager *sinkmanager.SinkManager,
 	conf config.GRPC,
 	envelopeBuffer *diodes.ManyToOneEnvelope,
 	batcher *metricbatcher.MetricBatcher,
 ) (*GRPCListener, error) {
-	grpcManager := grpcmanager.New(router, sinkmanager)
+	grpcManager := v1.New(router, sinkmanager)
 
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
 		conf.CertFile,
@@ -49,7 +49,7 @@ func NewGRPCListener(
 		return nil, err
 	}
 	grpcServer := grpc.NewServer(grpc.Creds(transportCreds))
-	grpcIngestorManager := grpcmanager.NewIngestor(envelopeBuffer, batcher)
+	grpcIngestorManager := v1.NewIngestor(envelopeBuffer, batcher)
 
 	plumbing.RegisterDopplerIngestorServer(grpcServer, grpcIngestorManager)
 	plumbing.RegisterDopplerServer(grpcServer, grpcManager)

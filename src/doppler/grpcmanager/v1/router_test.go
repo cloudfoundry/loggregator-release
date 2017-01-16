@@ -1,7 +1,7 @@
-package grpcmanager_test
+package v1_test
 
 import (
-	"doppler/grpcmanager"
+	"doppler/grpcmanager/v1"
 	"plumbing"
 
 	. "github.com/apoydence/eachers"
@@ -26,7 +26,7 @@ var _ = Describe("Router", func() {
 		envelope      *events.Envelope
 		envelopeBytes []byte
 
-		router *grpcmanager.Router
+		router *v1.Router
 	)
 
 	BeforeEach(func() {
@@ -45,7 +45,7 @@ var _ = Describe("Router", func() {
 		envelopeBytes, err = envelope.Marshal()
 		Expect(err).ToNot(HaveOccurred())
 
-		router = grpcmanager.NewRouter()
+		router = v1.NewRouter()
 	})
 
 	Describe("data routing", func() {
