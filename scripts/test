@@ -8,11 +8,12 @@ function print_usage {
     echo "usage: test [subcommand] [ginkgo args]"
     echo
     echo -e "\033[1mSubcommands:\033[0m"
-    echo "   all         Run all the tests, excluding linters (default)"
-    echo "   build       Build all binaries for the project"
-    echo "   cleaners    Run tools that clean the code base"
-    echo "   unit        Run the unit tests"
-    echo "   integration Run the integration tests"
+    echo "   all           Run all the tests, excluding linters (default)"
+    echo "   build         Build all binaries for the project"
+    echo "   cleaners      Run tools that clean the code base"
+    echo "   unit          Run the unit tests"
+    echo "   integration   Run the integration tests"
+    echo "   multiplatform Run the multiplatform sanity checks"
     echo ""
     echo "   linters"
     echo "   install_linters"
@@ -94,12 +95,12 @@ function run_cleaners {
     return 0
 }
 
-function run_all {
-    check_output run_cleaners
-    check_output run_build
-    check_output run_unit $@
-    check_output run_integration $@
-    return $failure_status
+function run_multiplatform {
+    print_checkpoint "Running Multi-Platform Checks"
+    sed -n -e '/^properties:/,$p' jobs/metron_agent/spec > /tmp/a
+    sed -n -e '/^properties:/,$p' jobs/metron_agent_windows/spec > /tmp/b
+    diff /tmp/a /tmp/b
+    return $?
 }
 
 function run_build {
@@ -124,6 +125,15 @@ function run_integration {
     return $?
 }
 
+function run_all {
+    check_output run_cleaners
+    check_output run_build
+    check_output run_multiplatform
+    check_output run_unit $@
+    check_output run_integration $@
+    return $failure_status
+}
+
 function parse_argc {
     command=run_all
     if [[ $# -eq 0 ]]
@@ -137,7 +147,7 @@ function parse_argc {
             print_usage
             exit 0
             ;;
-        all|unit|integration|build|cleaners|linters|install_linters)
+        all|unit|integration|build|cleaners|multiplatform|linters|install_linters)
             command=run_$arg
             ;;
         *)
