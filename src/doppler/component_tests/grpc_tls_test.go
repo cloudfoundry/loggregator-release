@@ -70,14 +70,13 @@ func setupDopplerEnv() (string, func()) {
 	etcdCleanup, etcdURI := testservers.StartTestEtcd()
 
 	By("listen for doppler writes into metron")
-	// TODO: get random port from kernel....
-	udpAddr, err := net.ResolveUDPAddr("udp", ":12345")
+	udpAddr, err := net.ResolveUDPAddr("udp", ":0")
 	Expect(err).ToNot(HaveOccurred())
 	udpLn, err := net.ListenUDP("udp", udpAddr)
 	Expect(err).ToNot(HaveOccurred())
 
 	dopplerCleanup, _, dopplerPort := testservers.StartDoppler(
-		testservers.BuildDopplerConfig(etcdURI, 12345),
+		testservers.BuildDopplerConfig(etcdURI, udpAddr.Port),
 	)
 	hostPort := fmt.Sprintf("localhost:%d", dopplerPort)
 	return hostPort, func() {
