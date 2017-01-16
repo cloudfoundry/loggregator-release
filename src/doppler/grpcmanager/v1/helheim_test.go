@@ -3,10 +3,10 @@
 // doing.  Expect any changes made manually to be overwritten
 // the next time hel regenerates this file.
 
-package grpcmanager_test
+package v1_test
 
 import (
-	"doppler/grpcmanager"
+	"doppler/grpcmanager/v1"
 	"plumbing"
 	"time"
 
@@ -20,7 +20,7 @@ type mockRegistrar struct {
 	RegisterCalled chan bool
 	RegisterInput  struct {
 		Req    chan *plumbing.SubscriptionRequest
-		Setter chan grpcmanager.DataSetter
+		Setter chan v1.DataSetter
 	}
 	RegisterOutput struct {
 		Ret0 chan func()
@@ -31,11 +31,11 @@ func newMockRegistrar() *mockRegistrar {
 	m := &mockRegistrar{}
 	m.RegisterCalled = make(chan bool, 100)
 	m.RegisterInput.Req = make(chan *plumbing.SubscriptionRequest, 100)
-	m.RegisterInput.Setter = make(chan grpcmanager.DataSetter, 100)
+	m.RegisterInput.Setter = make(chan v1.DataSetter, 100)
 	m.RegisterOutput.Ret0 = make(chan func(), 100)
 	return m
 }
-func (m *mockRegistrar) Register(req *plumbing.SubscriptionRequest, setter grpcmanager.DataSetter) func() {
+func (m *mockRegistrar) Register(req *plumbing.SubscriptionRequest, setter v1.DataSetter) func() {
 	m.RegisterCalled <- true
 	m.RegisterInput.Req <- req
 	m.RegisterInput.Setter <- setter

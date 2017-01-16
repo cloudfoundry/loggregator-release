@@ -1,4 +1,4 @@
-package grpcmanager
+package v1
 
 import (
 	"math/rand"

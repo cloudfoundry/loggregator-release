@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"doppler/config"
-	"doppler/grpcmanager"
+	"doppler/grpcmanager/v1"
 	"doppler/sinkserver"
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/sinkmanager"
@@ -123,7 +123,7 @@ func New(
 		dialTimeout,
 	)
 
-	grpcRouter := grpcmanager.NewRouter()
+	grpcRouter := v1.NewRouter()
 	doppler.grpcListener, err = listeners.NewGRPCListener(grpcRouter, doppler.sinkManager, conf.GRPC, doppler.envelopeBuffer, doppler.batcher)
 	if err != nil {
 		return nil, err

@@ -1,9 +1,9 @@
-package grpcmanager_test
+package v1_test
 
 import (
 	"context"
 	"diodes"
-	"doppler/grpcmanager"
+	"doppler/grpcmanager/v1"
 	"errors"
 	"io"
 	"net"
@@ -37,7 +37,7 @@ var _ = Describe("IngestorManager", func() {
 
 	var (
 		outgoingMsgs  *diodes.ManyToOneEnvelope
-		manager       *grpcmanager.IngestorManager
+		manager       *v1.IngestorManager
 		server        *grpc.Server
 		connCloser    io.Closer
 		dopplerClient plumbing.DopplerIngestorClient
@@ -50,7 +50,7 @@ var _ = Describe("IngestorManager", func() {
 		mockChainer := newMockBatchCounterChainer()
 		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
 		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
-		manager = grpcmanager.NewIngestor(outgoingMsgs, mockBatcher)
+		manager = v1.NewIngestor(outgoingMsgs, mockBatcher)
 		server, grpcAddr = startGRPCServer(manager)
 		dopplerClient, connCloser = establishClient(grpcAddr)
 	})

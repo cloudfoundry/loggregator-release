@@ -3,12 +3,14 @@ package listeners
 import (
 	"diodes"
 	"doppler/config"
-	"doppler/grpcmanager"
+	"doppler/grpcmanager/v1"
+	"doppler/grpcmanager/v2"
 	"doppler/sinkserver/sinkmanager"
 	"fmt"
 	"log"
 	"net"
-	"plumbing"
+	plumbingv1 "plumbing"
+	plumbingv2 "plumbing/v2"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 
@@ -22,15 +24,13 @@ type GRPCListener struct {
 }
 
 func NewGRPCListener(
-	router *grpcmanager.Router,
+	router *v1.Router,
 	sinkmanager *sinkmanager.SinkManager,
 	conf config.GRPC,
 	envelopeBuffer *diodes.ManyToOneEnvelope,
 	batcher *metricbatcher.MetricBatcher,
 ) (*GRPCListener, error) {
-	grpcManager := grpcmanager.New(router, sinkmanager)
-
-	tlsConfig, err := plumbing.NewMutualTLSConfig(
+	tlsConfig, err := plumbingv1.NewMutualTLSConfig(
 		conf.CertFile,
 		conf.KeyFile,
 		conf.CAFile,
@@ -49,10 +49,24 @@ func NewGRPCListener(
 		return nil, err
 	}
 	grpcServer := grpc.NewServer(grpc.Creds(transportCreds))
-	grpcIngestorManager := grpcmanager.NewIngestor(envelopeBuffer, batcher)
 
-	plumbing.RegisterDopplerIngestorServer(grpcServer, grpcIngestorManager)
-	plumbing.RegisterDopplerServer(grpcServer, grpcManager)
+	// v1 ingress
+	plumbingv1.RegisterDopplerIngestorServer(
+		grpcServer,
+		v1.NewIngestor(envelopeBuffer, batcher),
+	)
+	// v1 egress
+	plumbingv1.RegisterDopplerServer(
+		grpcServer,
+		v1.New(router, sinkmanager),
+	)
+
+	// v2 ingress
+	plumbingv2.RegisterDopplerIngressServer(
+		grpcServer,
+		// TODO: add batcher to v2 ingestor
+		v2.NewIngestor(envelopeBuffer),
+	)
 
 	return &GRPCListener{
 		listener: grpcListener,

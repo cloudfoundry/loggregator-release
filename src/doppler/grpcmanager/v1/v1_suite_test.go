@@ -1,6 +1,6 @@
 //go:generate hel
 
-package grpcmanager_test
+package v1_test
 
 import (
 	"log"
@@ -17,5 +17,5 @@ func TestServerhandler(t *testing.T) {
 	grpclog.SetLogger(log.New(GinkgoWriter, "", 0))
 	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "gRPC Manager Suite")
+	RunSpecs(t, "gRPC Manager V1 Suite")
 }
