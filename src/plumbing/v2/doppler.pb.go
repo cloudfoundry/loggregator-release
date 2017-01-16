@@ -10,7 +10,7 @@ It is generated from these files:
 	envelope.proto
 
 It has these top-level messages:
-	PushResponse
+	SenderResponse
 	Envelope
 	Value
 	Log
@@ -41,16 +41,16 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-type PushResponse struct {
+type SenderResponse struct {
 }
 
-func (m *PushResponse) Reset()                    { *m = PushResponse{} }
-func (m *PushResponse) String() string            { return proto.CompactTextString(m) }
-func (*PushResponse) ProtoMessage()               {}
-func (*PushResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (m *SenderResponse) Reset()                    { *m = SenderResponse{} }
+func (m *SenderResponse) String() string            { return proto.CompactTextString(m) }
+func (*SenderResponse) ProtoMessage()               {}
+func (*SenderResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
 func init() {
-	proto.RegisterType((*PushResponse)(nil), "loggregator.PushResponse")
+	proto.RegisterType((*SenderResponse)(nil), "loggregator.SenderResponse")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -61,83 +61,83 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion3
 
-// Client API for DopplerIn service
+// Client API for DopplerIngress service
 
-type DopplerInClient interface {
-	Pusher(ctx context.Context, opts ...grpc.CallOption) (DopplerIn_PusherClient, error)
+type DopplerIngressClient interface {
+	Sender(ctx context.Context, opts ...grpc.CallOption) (DopplerIngress_SenderClient, error)
 }
 
-type dopplerInClient struct {
+type dopplerIngressClient struct {
 	cc *grpc.ClientConn
 }
 
-func NewDopplerInClient(cc *grpc.ClientConn) DopplerInClient {
-	return &dopplerInClient{cc}
+func NewDopplerIngressClient(cc *grpc.ClientConn) DopplerIngressClient {
+	return &dopplerIngressClient{cc}
 }
 
-func (c *dopplerInClient) Pusher(ctx context.Context, opts ...grpc.CallOption) (DopplerIn_PusherClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_DopplerIn_serviceDesc.Streams[0], c.cc, "/loggregator.DopplerIn/Pusher", opts...)
+func (c *dopplerIngressClient) Sender(ctx context.Context, opts ...grpc.CallOption) (DopplerIngress_SenderClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_DopplerIngress_serviceDesc.Streams[0], c.cc, "/loggregator.DopplerIngress/Sender", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &dopplerInPusherClient{stream}
+	x := &dopplerIngressSenderClient{stream}
 	return x, nil
 }
 
-type DopplerIn_PusherClient interface {
+type DopplerIngress_SenderClient interface {
 	Send(*Envelope) error
-	CloseAndRecv() (*PushResponse, error)
+	CloseAndRecv() (*SenderResponse, error)
 	grpc.ClientStream
 }
 
-type dopplerInPusherClient struct {
+type dopplerIngressSenderClient struct {
 	grpc.ClientStream
 }
 
-func (x *dopplerInPusherClient) Send(m *Envelope) error {
+func (x *dopplerIngressSenderClient) Send(m *Envelope) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *dopplerInPusherClient) CloseAndRecv() (*PushResponse, error) {
+func (x *dopplerIngressSenderClient) CloseAndRecv() (*SenderResponse, error) {
 	if err := x.ClientStream.CloseSend(); err != nil {
 		return nil, err
 	}
-	m := new(PushResponse)
+	m := new(SenderResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
-// Server API for DopplerIn service
+// Server API for DopplerIngress service
 
-type DopplerInServer interface {
-	Pusher(DopplerIn_PusherServer) error
+type DopplerIngressServer interface {
+	Sender(DopplerIngress_SenderServer) error
 }
 
-func RegisterDopplerInServer(s *grpc.Server, srv DopplerInServer) {
-	s.RegisterService(&_DopplerIn_serviceDesc, srv)
+func RegisterDopplerIngressServer(s *grpc.Server, srv DopplerIngressServer) {
+	s.RegisterService(&_DopplerIngress_serviceDesc, srv)
 }
 
-func _DopplerIn_Pusher_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(DopplerInServer).Pusher(&dopplerInPusherServer{stream})
+func _DopplerIngress_Sender_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(DopplerIngressServer).Sender(&dopplerIngressSenderServer{stream})
 }
 
-type DopplerIn_PusherServer interface {
-	SendAndClose(*PushResponse) error
+type DopplerIngress_SenderServer interface {
+	SendAndClose(*SenderResponse) error
 	Recv() (*Envelope, error)
 	grpc.ServerStream
 }
 
-type dopplerInPusherServer struct {
+type dopplerIngressSenderServer struct {
 	grpc.ServerStream
 }
 
-func (x *dopplerInPusherServer) SendAndClose(m *PushResponse) error {
+func (x *dopplerIngressSenderServer) SendAndClose(m *SenderResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *dopplerInPusherServer) Recv() (*Envelope, error) {
+func (x *dopplerIngressSenderServer) Recv() (*Envelope, error) {
 	m := new(Envelope)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -145,14 +145,14 @@ func (x *dopplerInPusherServer) Recv() (*Envelope, error) {
 	return m, nil
 }
 
-var _DopplerIn_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "loggregator.DopplerIn",
-	HandlerType: (*DopplerInServer)(nil),
+var _DopplerIngress_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "loggregator.DopplerIngress",
+	HandlerType: (*DopplerIngressServer)(nil),
 	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "Pusher",
-			Handler:       _DopplerIn_Pusher_Handler,
+			StreamName:    "Sender",
+			Handler:       _DopplerIngress_Sender_Handler,
 			ClientStreams: true,
 		},
 	},
@@ -162,13 +162,13 @@ var _DopplerIn_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("doppler.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 122 bytes of a gzipped FileDescriptorProto
+	// 127 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0xe2, 0x4d, 0xc9, 0x2f, 0x28,
 	0xc8, 0x49, 0x2d, 0xd2, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0xce, 0xc9, 0x4f, 0x4f, 0x2f,
 	0x4a, 0x4d, 0x4f, 0x2c, 0xc9, 0x2f, 0x92, 0xe2, 0x4b, 0xcd, 0x2b, 0x4b, 0xcd, 0xc9, 0x2f, 0x48,
-	0x85, 0x48, 0x2a, 0xf1, 0x71, 0xf1, 0x04, 0x94, 0x16, 0x67, 0x04, 0xa5, 0x16, 0x17, 0xe4, 0xe7,
-	0x15, 0xa7, 0x1a, 0x79, 0x73, 0x71, 0xba, 0x40, 0x74, 0x7b, 0xe6, 0x09, 0xd9, 0x71, 0xb1, 0x81,
-	0x24, 0x53, 0x8b, 0x84, 0x44, 0xf5, 0x90, 0x0c, 0xd1, 0x73, 0x85, 0x9a, 0x21, 0x25, 0x89, 0x22,
-	0x8c, 0x6c, 0x90, 0x12, 0x83, 0x06, 0x63, 0x12, 0x1b, 0xd8, 0x0e, 0x63, 0x40, 0x00, 0x00, 0x00,
-	0xff, 0xff, 0x50, 0x77, 0xe8, 0x37, 0x91, 0x00, 0x00, 0x00,
+	0x85, 0x48, 0x2a, 0x09, 0x70, 0xf1, 0x05, 0xa7, 0xe6, 0xa5, 0xa4, 0x16, 0x05, 0xa5, 0x16, 0x17,
+	0xe4, 0xe7, 0x15, 0xa7, 0x1a, 0x05, 0x71, 0xf1, 0xb9, 0x40, 0xf4, 0x7b, 0xe6, 0xa5, 0x17, 0xa5,
+	0x16, 0x17, 0x0b, 0x39, 0x70, 0xb1, 0x41, 0xd4, 0x08, 0x89, 0xea, 0x21, 0x99, 0xa5, 0xe7, 0x0a,
+	0x35, 0x4a, 0x4a, 0x1a, 0x45, 0x18, 0xd5, 0x3c, 0x25, 0x06, 0x0d, 0xc6, 0x24, 0x36, 0xb0, 0x65,
+	0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xea, 0x24, 0x80, 0x9a, 0x00, 0x00, 0x00,
 }

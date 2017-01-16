@@ -4,9 +4,8 @@ package loggregator;
 
 import "envelope.proto";
 
-service DopplerIn {
-    rpc Pusher(stream loggregator.Envelope) returns (PushResponse) {}
+service DopplerIngress {
+    rpc Sender(stream loggregator.Envelope) returns (SenderResponse) {}
 }
 
-message PushResponse {}
-
+message SenderResponse {}
