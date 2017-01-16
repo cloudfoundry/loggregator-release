@@ -57,12 +57,12 @@ var _ = Describe("Http", func() {
 					StartTimestamp: proto.Int64(99),
 					StopTimestamp:  proto.Int64(100),
 					RequestId: &events.UUID{
-						Low:  proto.Uint64(13710229043186585493),
-						High: proto.Uint64(4754419335048271762),
+						Low:  proto.Uint64(0xbe4484acc4614f95),
+						High: proto.Uint64(0x41fb1731facd1792),
 					},
 					ApplicationId: &events.UUID{
-						Low:  proto.Uint64(7874487913786704307),
-						High: proto.Uint64(13211957678352223914),
+						Low:  proto.Uint64(0x6d47cd09695d01b3),
+						High: proto.Uint64(0xb75a4d822dadceaa),
 					},
 					PeerType:      events.PeerType_Client.Enum(),
 					Method:        events.Method_GET.Enum(),
