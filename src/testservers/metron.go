@@ -15,7 +15,7 @@ import (
 )
 
 func BuildMetronConfig(dopplerURI string, grpcPort, udpPort int) metronConf.Config {
-	metronPort := getPort(metronPortOffset)
+	metronPort := getUDPPort(metronPortOffset)
 	return metronConf.Config{
 		Index:        jobIndex,
 		Job:          jobName,
@@ -23,7 +23,7 @@ func BuildMetronConfig(dopplerURI string, grpcPort, udpPort int) metronConf.Conf
 		SharedSecret: sharedSecret,
 
 		IncomingUDPPort: metronPort,
-		PPROFPort:       uint32(getPort(metronPPROFPortOffset)),
+		PPROFPort:       uint32(getTCPPort(metronPPROFPortOffset)),
 		Deployment:      "deployment",
 
 		DopplerAddr:    fmt.Sprintf("%s:%d", dopplerURI, grpcPort),

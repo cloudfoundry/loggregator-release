@@ -41,7 +41,7 @@ const (
 	colorFmt = "\x1b[%dm[%s]\x1b[%dm[%s]\x1b[0m "
 )
 
-func getPort(offset int) int {
+func getTCPPort(offset int) int {
 	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
 	if err != nil {
 		panic(err)
@@ -53,6 +53,20 @@ func getPort(offset int) int {
 	}
 	defer l.Close()
 	return l.Addr().(*net.TCPAddr).Port + offset
+}
+
+func getUDPPort(offset int) int {
+	addr, err := net.ResolveUDPAddr("udp", "localhost:0")
+	if err != nil {
+		panic(err)
+	}
+
+	l, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		panic(err)
+	}
+	defer l.Close()
+	return l.Addr().(*net.UDPAddr).Port + offset
 }
 
 func color(oe, proc string, oeColor, procColor int) string {

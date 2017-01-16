@@ -14,7 +14,7 @@ import (
 )
 
 func BuildTrafficControllerConf(etcdClientURL string, dopplerWSPort, dopplerGRPCPort, metronPort int) tcConf.Config {
-	tcPort := getPort(tcPortOffset)
+	tcPort := getTCPPort(tcPortOffset)
 	return tcConf.Config{
 		Index:   jobIndex,
 		JobName: jobName,
@@ -27,7 +27,7 @@ func BuildTrafficControllerConf(etcdClientURL string, dopplerWSPort, dopplerGRPC
 			CAFile:   CAFilePath(),
 		},
 		OutgoingDropsondePort: uint32(tcPort),
-		PPROFPort:             uint32(getPort(tcPPROFPortOffset)),
+		PPROFPort:             uint32(getTCPPort(tcPPROFPortOffset)),
 		MetronHost:            "localhost",
 		MetronPort:            metronPort,
 
