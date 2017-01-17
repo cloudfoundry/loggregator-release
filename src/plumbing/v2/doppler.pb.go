@@ -8,6 +8,7 @@ Package loggregator is a generated protocol buffer package.
 It is generated from these files:
 	doppler.proto
 	envelope.proto
+	metron.proto
 
 It has these top-level messages:
 	SenderResponse
@@ -18,6 +19,7 @@ It has these top-level messages:
 	Gauge
 	GaugeValue
 	Timer
+	MetronResponse
 */
 package loggregator
 
