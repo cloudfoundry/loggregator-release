@@ -21,22 +21,22 @@ import (
 )
 
 var _ = Describe("Metron", func() {
-	Context("when a doppler is accepting gRPC connections", func() {
+	Context("when a consumer is accepting gRPC connections", func() {
 		var (
-			metronCleanup func()
-			metronPort    int
-			dopplerServer *testutil.Server
-			eventEmitter  dropsonde.EventEmitter
+			metronCleanup  func()
+			metronPort     int
+			consumerServer *testutil.Server
+			eventEmitter   dropsonde.EventEmitter
 		)
 
 		BeforeEach(func() {
 			var err error
-			dopplerServer, err = testutil.NewServer()
+			consumerServer, err = testutil.NewServer()
 			Expect(err).ToNot(HaveOccurred())
 
 			var metronReady func()
 			metronCleanup, metronPort, metronReady = testservers.StartMetron(
-				testservers.BuildMetronConfig("localhost", dopplerServer.Port(), 0),
+				testservers.BuildMetronConfig("localhost", consumerServer.Port(), 0),
 			)
 			defer metronReady()
 
@@ -46,11 +46,11 @@ var _ = Describe("Metron", func() {
 		})
 
 		AfterEach(func() {
-			dopplerServer.Stop()
+			consumerServer.Stop()
 			metronCleanup()
 		})
 
-		It("writes to the doppler via gRPC", func() {
+		It("writes to the consumer via gRPC", func() {
 			emitEnvelope := &events.Envelope{
 				Origin:    proto.String("some-origin"),
 				EventType: events.Envelope_Error.Enum(),
@@ -63,12 +63,12 @@ var _ = Describe("Metron", func() {
 
 			f := func() int {
 				eventEmitter.Emit(emitEnvelope)
-				return len(dopplerServer.PusherCalled)
+				return len(consumerServer.PusherCalled)
 			}
 			Eventually(f, 5).Should(BeNumerically(">", 0))
 
 			var rx plumbing.DopplerIngestor_PusherServer
-			Expect(dopplerServer.PusherInput.Arg0).Should(Receive(&rx))
+			Expect(consumerServer.PusherInput.Arg0).Should(Receive(&rx))
 
 			data, err := rx.Recv()
 			Expect(err).ToNot(HaveOccurred())
@@ -78,24 +78,24 @@ var _ = Describe("Metron", func() {
 		})
 	})
 
-	Context("when the doppler is only accepting UDP messages", func() {
+	Context("when the consumer is only accepting UDP messages", func() {
 		var (
-			metronCleanup  func()
-			dopplerCleanup func()
-			metronPort     int
-			udpPort        int
-			eventEmitter   dropsonde.EventEmitter
-			dopplerConn    *net.UDPConn
+			metronCleanup   func()
+			consumerCleanup func()
+			metronPort      int
+			udpPort         int
+			eventEmitter    dropsonde.EventEmitter
+			consumerConn    *net.UDPConn
 		)
 
 		BeforeEach(func() {
 			addr, err := net.ResolveUDPAddr("udp4", "localhost:0")
 			Expect(err).ToNot(HaveOccurred())
-			dopplerConn, err = net.ListenUDP("udp4", addr)
+			consumerConn, err = net.ListenUDP("udp4", addr)
 			Expect(err).ToNot(HaveOccurred())
-			udpPort = HomeAddrToPort(dopplerConn.LocalAddr())
-			dopplerCleanup = func() {
-				dopplerConn.Close()
+			udpPort = HomeAddrToPort(consumerConn.LocalAddr())
+			consumerCleanup = func() {
+				consumerConn.Close()
 			}
 
 			var metronReady func()
@@ -110,11 +110,11 @@ var _ = Describe("Metron", func() {
 		})
 
 		AfterEach(func() {
-			dopplerCleanup()
+			consumerCleanup()
 			metronCleanup()
 		})
 
-		It("writes to the doppler via UDP", func() {
+		It("writes to the consumer via UDP", func() {
 			envelope := &events.Envelope{
 				Origin:    proto.String("some-origin"),
 				EventType: events.Envelope_Error.Enum(),
@@ -135,8 +135,8 @@ var _ = Describe("Metron", func() {
 
 				buffer := make([]byte, 1024)
 				for {
-					dopplerConn.SetReadDeadline(time.Now().Add(5 * time.Second))
-					_, err := dopplerConn.Read(buffer)
+					consumerConn.SetReadDeadline(time.Now().Add(5 * time.Second))
+					_, err := consumerConn.Read(buffer)
 					Expect(err).ToNot(HaveOccurred())
 
 					select {
