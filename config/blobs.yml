@@ -7,9 +7,9 @@ loggregator-blobs/deaagent.xz:
   object_id: aa39c436-ea8e-4468-48c7-e788c792de90
   sha: 151a78e37cdf094c09603af86b7b9de6af9e3cba
 loggregator-blobs/doppler.xz:
-  size: 3413896
-  object_id: 549fad48-c5cc-400d-450d-88b68923d673
-  sha: bfead70169579844007026549e0630534e094b80
+  size: 3414580
+  object_id: 06ed805c-e74a-4026-425b-f32aeb632e31
+  sha: 3338d816e16791ab883c671f395de0ac9d7fe292
 loggregator-blobs/lats.xz:
   size: 3185324
   object_id: 2bb4dfe7-8b49-48fd-7e23-3ce04c616894
