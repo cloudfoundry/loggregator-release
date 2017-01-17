@@ -1,10 +1,8 @@
 package doppler_test
 
 import (
-	"fmt"
 	"metron/networkreader"
 	"metron/writers/eventunmarshaller"
-	"net"
 	"sync/atomic"
 
 	"github.com/apoydence/eachers/testhelpers"
@@ -13,7 +11,6 @@ import (
 )
 
 var _ = Describe("Uptime Monitor", func() {
-
 	var (
 		writer          *fakeWriter
 		dropsondeReader *networkreader.NetworkReader
@@ -29,7 +26,11 @@ var _ = Describe("Uptime Monitor", func() {
 
 		var err error
 		dropsondeUnmarshaller := eventunmarshaller.New(writer, mockBatcher)
-		dropsondeReader, err = networkreader.New(fmt.Sprintf(":%d", getUDPPort()), "dropsondeAgentListener", dropsondeUnmarshaller)
+		dropsondeReader, err = networkreader.New(
+			"localhost:37474",
+			"dropsondeAgentListener",
+			dropsondeUnmarshaller,
+		)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -38,21 +39,9 @@ var _ = Describe("Uptime Monitor", func() {
 			defer dropsondeReader.Stop()
 			go dropsondeReader.Start()
 
-			Eventually(func() uint64 { return atomic.LoadUint64(&writer.lastUptime) }, 3).Should(BeNumerically(">", 1))
+			Eventually(func() uint64 {
+				return atomic.LoadUint64(&writer.lastUptime)
+			}, 3).Should(BeNumerically(">", 1))
 		})
 	})
 })
-
-func getUDPPort() int {
-	addr, err := net.ResolveUDPAddr("udp", "localhost:0")
-	if err != nil {
-		panic(err)
-	}
-
-	c, err := net.ListenUDP("udp", addr)
-	if err != nil {
-		panic(err)
-	}
-	defer c.Close()
-	return c.LocalAddr().(*net.UDPAddr).Port
-}
