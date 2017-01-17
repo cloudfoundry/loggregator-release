@@ -26,8 +26,6 @@ import (
 	"metron/writers/eventunmarshaller"
 	"metron/writers/messageaggregator"
 	"metron/writers/tagger"
-
-	"signalmanager"
 )
 
 const (
@@ -68,24 +66,9 @@ func main() {
 	log.Print("metron started")
 	go dropsondeReader.Start()
 
-	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
-	killChan := signalmanager.RegisterKillSignalChannel()
-
 	// We start the profiler last so that we can definitively say that we're all connected and ready
 	// for data by the time the profiler starts up.
-	p := profiler.New(config.PPROFPort)
-	go p.Start()
-
-	for {
-		select {
-		case <-dumpChan:
-			signalmanager.DumpGoRoutine()
-		case <-killChan:
-			log.Print("Shutting down")
-			close(statsStopChan)
-			return
-		}
-	}
+	profiler.New(config.PPROFPort).Start()
 }
 
 func setupGRPC(conf *config.Config) []legacyclientpool.Pool {
