@@ -63,12 +63,12 @@ var _ = Describe("Metron", func() {
 
 			f := func() int {
 				eventEmitter.Emit(emitEnvelope)
-				return len(consumerServer.PusherCalled)
+				return len(consumerServer.V1.PusherCalled)
 			}
 			Eventually(f, 5).Should(BeNumerically(">", 0))
 
 			var rx plumbing.DopplerIngestor_PusherServer
-			Expect(consumerServer.PusherInput.Arg0).Should(Receive(&rx))
+			Expect(consumerServer.V1.PusherInput.Arg0).Should(Receive(&rx))
 
 			data, err := rx.Recv()
 			Expect(err).ToNot(HaveOccurred())

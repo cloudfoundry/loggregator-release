@@ -18,7 +18,7 @@ type Server struct {
 	port     int
 	server   *grpc.Server
 	listener net.Listener
-	*mockDopplerIngestorServer
+	V1       *mockDopplerIngestorServer
 }
 
 func NewServer() (*Server, error) {
@@ -45,10 +45,10 @@ func NewServer() (*Server, error) {
 	go s.Serve(lis)
 
 	return &Server{
-		port:                      lis.Addr().(*net.TCPAddr).Port,
-		server:                    s,
-		listener:                  lis,
-		mockDopplerIngestorServer: mockDoppler,
+		port:     lis.Addr().(*net.TCPAddr).Port,
+		server:   s,
+		listener: lis,
+		V1:       mockDoppler,
 	}, nil
 }
 
