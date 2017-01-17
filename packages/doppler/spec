@@ -11,7 +11,8 @@ files:
 - loggregator/src/doppler/groupedsinks/*.go # gosub
 - loggregator/src/doppler/groupedsinks/firehose_group/*.go # gosub
 - loggregator/src/doppler/groupedsinks/sink_wrapper/*.go # gosub
-- loggregator/src/doppler/grpcmanager/*.go # gosub
+- loggregator/src/doppler/grpcmanager/v1/*.go # gosub
+- loggregator/src/doppler/grpcmanager/v2/*.go # gosub
 - loggregator/src/doppler/iprange/*.go # gosub
 - loggregator/src/doppler/listeners/*.go # gosub
 - loggregator/src/doppler/sinks/*.go # gosub
@@ -75,6 +76,8 @@ files:
 - loggregator/src/google.golang.org/grpc/transport/*.go # gosub
 - loggregator/src/monitor/*.go # gosub
 - loggregator/src/plumbing/*.go # gosub
+- loggregator/src/plumbing/conversion/*.go # gosub
+- loggregator/src/plumbing/v2/*.go # gosub
 - loggregator/src/profiler/*.go # gosub
 - loggregator/src/signalmanager/*.go # gosub
 - loggregator/src/truncatingbuffer/*.go # gosub
