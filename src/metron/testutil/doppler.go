@@ -3,6 +3,7 @@ package testutil
 import (
 	"net"
 	"plumbing"
+	v2 "plumbing/v2"
 
 	"testservers"
 
@@ -18,7 +19,8 @@ type Server struct {
 	port     int
 	server   *grpc.Server
 	listener net.Listener
-	V1       *mockDopplerIngestorServer
+	V1       *mockDopplerIngestorServerV1
+	V2       *mockDopplerIngressServerV2
 }
 
 func NewServer() (*Server, error) {
@@ -32,7 +34,8 @@ func NewServer() (*Server, error) {
 		return nil, err
 	}
 	transportCreds := credentials.NewTLS(tlsConfig)
-	mockDoppler := newMockDopplerIngestorServer()
+	mockDopplerV1 := newMockDopplerIngestorServerV1()
+	mockDopplerV2 := newMockDopplerIngressServerV2()
 
 	lis, err := net.Listen("tcp", ":0")
 	if err != nil {
@@ -40,7 +43,8 @@ func NewServer() (*Server, error) {
 	}
 
 	s := grpc.NewServer(grpc.Creds(transportCreds))
-	plumbing.RegisterDopplerIngestorServer(s, mockDoppler)
+	plumbing.RegisterDopplerIngestorServer(s, mockDopplerV1)
+	v2.RegisterDopplerIngressServer(s, mockDopplerV2)
 
 	go s.Serve(lis)
 
@@ -48,7 +52,8 @@ func NewServer() (*Server, error) {
 		port:     lis.Addr().(*net.TCPAddr).Port,
 		server:   s,
 		listener: lis,
-		V1:       mockDoppler,
+		V1:       mockDopplerV1,
+		V2:       mockDopplerV2,
 	}, nil
 }
 

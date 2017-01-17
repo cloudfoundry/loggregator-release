@@ -50,7 +50,7 @@ var _ = Describe("Metron", func() {
 			metronCleanup()
 		})
 
-		It("writes to the consumer via gRPC", func() {
+		It("routes from UDP to gRPC", func() {
 			emitEnvelope := &events.Envelope{
 				Origin:    proto.String("some-origin"),
 				EventType: events.Envelope_Error.Enum(),
