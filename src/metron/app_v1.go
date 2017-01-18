@@ -51,6 +51,33 @@ func (a *AppV1) Start(config *config.Config) {
 	dropsondeReader.Start()
 }
 
+func initializeMetrics(config *config.Config, stopChan chan struct{}) (*metricbatcher.MetricBatcher, *eventwriter.EventWriter) {
+	eventWriter := eventwriter.New(origin)
+	metricSender := metric_sender.NewMetricSender(eventWriter)
+	metricBatcher := metricbatcher.New(metricSender, time.Duration(config.MetricBatchIntervalMilliseconds)*time.Millisecond)
+	metrics.Initialize(metricSender, metricBatcher)
+
+	stats := runtime_stats.NewRuntimeStats(eventWriter, time.Duration(config.RuntimeStatsIntervalMilliseconds)*time.Millisecond)
+	go stats.Run(stopChan)
+	return metricBatcher, eventWriter
+}
+
+func initializeV1DopplerPool(conf *config.Config, batcher *metricbatcher.MetricBatcher) (*eventmarshaller.EventMarshaller, error) {
+	pools := setupGRPC(conf)
+
+	// TODO: delete this legacy pool stuff when UDP goes away
+	legacyPool := legacyclientpool.New(conf.DopplerAddrUDP, 100, 5*time.Second)
+	udpWrapper := dopplerforwarder.NewUDPWrapper(legacyPool, []byte(conf.SharedSecret))
+	pools = append(pools, udpWrapper)
+
+	combinedPool := legacyclientpool.NewCombinedPool(pools...)
+
+	marshaller := eventmarshaller.New(batcher)
+	marshaller.SetWriter(combinedPool)
+
+	return marshaller, nil
+}
+
 func setupGRPC(conf *config.Config) []legacyclientpool.Pool {
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
 		conf.GRPC.CertFile,
@@ -79,31 +106,4 @@ func setupGRPC(conf *config.Config) []legacyclientpool.Pool {
 	pool := clientpool.New(connManagers...)
 	grpcWrapper := dopplerforwarder.NewGRPCWrapper(pool)
 	return []legacyclientpool.Pool{grpcWrapper}
-}
-
-func initializeV1DopplerPool(conf *config.Config, batcher *metricbatcher.MetricBatcher) (*eventmarshaller.EventMarshaller, error) {
-	pools := setupGRPC(conf)
-
-	// TODO: delete this legacy pool stuff when UDP goes away
-	legacyPool := legacyclientpool.New(conf.DopplerAddrUDP, 100, 5*time.Second)
-	udpWrapper := dopplerforwarder.NewUDPWrapper(legacyPool, []byte(conf.SharedSecret))
-	pools = append(pools, udpWrapper)
-
-	combinedPool := legacyclientpool.NewCombinedPool(pools...)
-
-	marshaller := eventmarshaller.New(batcher)
-	marshaller.SetWriter(combinedPool)
-
-	return marshaller, nil
-}
-
-func initializeMetrics(config *config.Config, stopChan chan struct{}) (*metricbatcher.MetricBatcher, *eventwriter.EventWriter) {
-	eventWriter := eventwriter.New(origin)
-	metricSender := metric_sender.NewMetricSender(eventWriter)
-	metricBatcher := metricbatcher.New(metricSender, time.Duration(config.MetricBatchIntervalMilliseconds)*time.Millisecond)
-	metrics.Initialize(metricSender, metricBatcher)
-
-	stats := runtime_stats.NewRuntimeStats(eventWriter, time.Duration(config.RuntimeStatsIntervalMilliseconds)*time.Millisecond)
-	go stats.Run(stopChan)
-	return metricBatcher, eventWriter
 }
