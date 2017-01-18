@@ -10,9 +10,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("ConnManager", func() {
+var _ = Describe("V1 ConnManager", func() {
 	var (
-		connManager      *clientpool.ConnManager
+		connManager      *clientpool.V1ConnManager
 		mockConnector    *mockConnector
 		mockCloser       *mockCloser
 		mockPusherClient *mockDopplerIngestor_PusherClient
