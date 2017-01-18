@@ -121,6 +121,15 @@ information, look at their respective READMEs.
 To generate the Loggregator TLS certs and keys, run
 `scripts/generate-loggregator-certs`.
 
+#### Using bosh 2.0
+
+If you are using the [new bosh cli](https://github.com/cloudfoundry/bosh-cli) you can generate certs using `--vars-store` flag.
+
+```
+bosh -e lite -d loggregator deploy templates/loggregator.yml
+--vars-store=loggregator-vars.yml
+```
+
 #### Custom TLS Certificates
 
 If you already have a CA, you'll need to create a certificate for each component.  Values for the components are:
