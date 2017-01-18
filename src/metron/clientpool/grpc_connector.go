@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-type GRPCConnector struct {
+type GRPCV1Connector struct {
 	doppler        string
 	zonePrefix     string
 	dial           DialFunc
@@ -28,8 +28,8 @@ func MakeV1Connector(
 	df DialFunc,
 	cf IngestorClientFunc,
 	opts ...grpc.DialOption,
-) GRPCConnector {
-	return GRPCConnector{
+) GRPCV1Connector {
+	return GRPCV1Connector{
 		doppler:        doppler,
 		zonePrefix:     zonePrefix,
 		dial:           df,
@@ -38,7 +38,7 @@ func MakeV1Connector(
 	}
 }
 
-func (c GRPCConnector) Connect() (io.Closer, plumbing.DopplerIngestor_PusherClient, error) {
+func (c GRPCV1Connector) Connect() (io.Closer, plumbing.DopplerIngestor_PusherClient, error) {
 	closer, pusher, err := c.connect(c.zonePrefix + "." + c.doppler)
 	if err != nil {
 		return c.connect(c.doppler)
@@ -46,7 +46,7 @@ func (c GRPCConnector) Connect() (io.Closer, plumbing.DopplerIngestor_PusherClie
 	return closer, pusher, err
 }
 
-func (c GRPCConnector) connect(doppler string) (io.Closer, plumbing.DopplerIngestor_PusherClient, error) {
+func (c GRPCV1Connector) connect(doppler string) (io.Closer, plumbing.DopplerIngestor_PusherClient, error) {
 	conn, err := c.dial(doppler, c.opts...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error dialing ingestor stream to %s: %s", c, err)
@@ -65,6 +65,6 @@ func (c GRPCConnector) connect(doppler string) (io.Closer, plumbing.DopplerInges
 	return conn, pusher, err
 }
 
-func (c GRPCConnector) String() string {
+func (c GRPCV1Connector) String() string {
 	return fmt.Sprintf("[%s]%s", c.zonePrefix, c.doppler)
 }
