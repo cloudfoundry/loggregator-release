@@ -28,7 +28,7 @@ type ConnManager struct {
 	connector Connector
 }
 
-func NewConnManager(c Connector, maxWrites int64) *ConnManager {
+func NewV1ConnManager(c Connector, maxWrites int64) *ConnManager {
 	m := &ConnManager{
 		maxWrites: maxWrites,
 		connector: c,

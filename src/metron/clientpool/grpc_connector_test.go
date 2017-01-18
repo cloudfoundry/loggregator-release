@@ -39,7 +39,7 @@ var _ = Describe("GRPCConnector", func() {
 		})
 
 		It("connects to the dns name with az prefix", func() {
-			connector := clientpool.MakeGRPCConnector("test-name", "z1", df.fn, cf.fn, grpc.WithInsecure())
+			connector := clientpool.MakeV1Connector("test-name", "z1", df.fn, cf.fn, grpc.WithInsecure())
 			_, _, err := connector.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
@@ -47,7 +47,7 @@ var _ = Describe("GRPCConnector", func() {
 		})
 
 		It("returns the original client connection", func() {
-			connector := clientpool.MakeGRPCConnector("test-name", "", df.fn, cf.fn, grpc.WithInsecure())
+			connector := clientpool.MakeV1Connector("test-name", "", df.fn, cf.fn, grpc.WithInsecure())
 			conn, _, err := connector.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
@@ -55,7 +55,7 @@ var _ = Describe("GRPCConnector", func() {
 		})
 
 		It("returns the pusher client", func() {
-			connector := clientpool.MakeGRPCConnector("test-name", "", df.fn, cf.fn, grpc.WithInsecure())
+			connector := clientpool.MakeV1Connector("test-name", "", df.fn, cf.fn, grpc.WithInsecure())
 			_, pusherClient, err := connector.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
@@ -82,7 +82,7 @@ var _ = Describe("GRPCConnector", func() {
 			mockPusher.PusherOutput.Ret1 <- nil
 			cf.retIngestorClient <- mockPusher
 
-			connector := clientpool.MakeGRPCConnector("test-name", "z1", df.fn, cf.fn)
+			connector := clientpool.MakeV1Connector("test-name", "z1", df.fn, cf.fn)
 			_, _, err := connector.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
@@ -101,7 +101,7 @@ var _ = Describe("GRPCConnector", func() {
 			df.retClientConn <- nil
 			df.retErr <- errors.New("fake error")
 
-			connector := clientpool.MakeGRPCConnector("test-name", "z1", df.fn, nil)
+			connector := clientpool.MakeV1Connector("test-name", "z1", df.fn, nil)
 			_, _, err := connector.Connect()
 			Expect(err).To(HaveOccurred())
 		})

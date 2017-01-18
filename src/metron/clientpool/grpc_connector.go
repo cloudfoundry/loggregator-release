@@ -22,7 +22,7 @@ type DialFunc func(string, ...grpc.DialOption) (*grpc.ClientConn, error)
 
 type IngestorClientFunc func(*grpc.ClientConn) plumbing.DopplerIngestorClient
 
-func MakeGRPCConnector(
+func MakeV1Connector(
 	doppler string,
 	zonePrefix string,
 	df DialFunc,
