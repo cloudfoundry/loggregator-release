@@ -12,7 +12,7 @@ import (
 	"metron/clientpool"
 )
 
-var _ = Describe("GRPCConnector", func() {
+var _ = Describe("GRPCV1Connector", func() {
 	Context("when successfully connecting to the AZ", func() {
 		var (
 			// todo rename with prefix mock
