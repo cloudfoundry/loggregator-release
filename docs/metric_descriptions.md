@@ -1,88 +1,12 @@
 ## Metrics emitted by the Loggregator subsystem
 
-| Metric | Description |
-|--------------------------------------------------------------|---------------------------------------------------------------|
-| dea_logging_agent.logSenderTotalMessagesRead |  |
-| dea_logging_agent.memoryStats.lastGCPauseTimeNS |  |
-| dea_logging_agent.memoryStats.numBytesAllocated |  |
-| dea_logging_agent.memoryStats.numBytesAllocatedHeap |  |
-| dea_logging_agent.memoryStats.numBytesAllocatedStack |  |
-| dea_logging_agent.memoryStats.numFrees |  |
-| dea_logging_agent.memoryStats.numMallocs |  |
-| dea_logging_agent.numCPUS |  |
-| dea_logging_agent.numGoRoutines |  |
-| dea_logging_agent.totalApps |  |
-| doppler.TruncatingBuffer.DroppedMessages |  |
-| DopplerServer.dropsondeListener.receivedByteCount |  |
-| DopplerServer.dropsondeListener.receivedMessageCount |  |
-| DopplerServer.dropsondeUnmarshaller.containerMetricReceived |  |
-| DopplerServer.dropsondeUnmarshaller.counterEventReceived |  |
-| DopplerServer.dropsondeUnmarshaller.httpStartStopReceived |  |
-| DopplerServer.dropsondeUnmarshaller.logMessageTotal |  |
-| DopplerServer.dropsondeUnmarshaller.valueMetricReceived |  |
-| DopplerServer.httpServer.receivedMessages |  |
-| DopplerServer.logSenderTotalMessagesRead |  |
-| DopplerServer.memoryStats.lastGCPauseTimeNS |  |
-| DopplerServer.memoryStats.numBytesAllocated |  |
-| DopplerServer.memoryStats.numBytesAllocatedHeap |  |
-| DopplerServer.memoryStats.numBytesAllocatedStack |  |
-| DopplerServer.memoryStats.numFrees |  |
-| DopplerServer.memoryStats.numMallocs |  |
-| DopplerServer.messageRouter.numberOfDumpSinks |  |
-| DopplerServer.messageRouter.numberOfFirehoseSinks |  |
-| DopplerServer.messageRouter.numberOfSyslogSinks |  |
-| DopplerServer.messageRouter.numberOfWebsocketSinks |  |
-| DopplerServer.messageRouter.numberOfContainerMetricSinks | |
-| DopplerServer.numCPUS |  |
-| DopplerServer.numGoRoutines |  |
-| DopplerServer.signatureVerifier.validSignatures |  |
-| DopplerServer.TruncatingBuffer.totalDroppedMessages |  |
-| DopplerServer.Uptime |  |
-| dopplerProxy.recentlogsLatency |  |
-| dopplerProxy.containermetricsLatency |  |
-| LoggregatorTrafficController.logSenderTotalMessagesRead |  |
-| LoggregatorTrafficController.memoryStats.lastGCPauseTimeNS |  |
-| LoggregatorTrafficController.memoryStats.numBytesAllocated |  |
-| LoggregatorTrafficController.memoryStats.numBytesAllocatedHeap |  |
-| LoggregatorTrafficController.memoryStats.numBytesAllocatedStack |  |
-| LoggregatorTrafficController.memoryStats.numFrees |  |
-| LoggregatorTrafficController.memoryStats.numMallocs |  |
-| LoggregatorTrafficController.numCPUS |  |
-| LoggregatorTrafficController.numGoRoutines |  |
-| LoggregatorTrafficController.Uptime |  |
-| MetronAgent.DopplerForwarder.sentMessages |  |
-| MetronAgent.dropsondeAgentListener.receivedByteCount |  |
-| MetronAgent.dropsondeAgentListener.receivedMessageCount |  |
-| MetronAgent.dropsondeMarshaller.containerMetricMarshalled |  |
-| MetronAgent.dropsondeMarshaller.counterEventMarshalled |  |
-| MetronAgent.dropsondeMarshaller.httpStartStopMarshalled |  |
-| MetronAgent.dropsondeMarshaller.logMessageMarshalled |  |
-| MetronAgent.dropsondeMarshaller.valueMetricMarshalled |  |
-| MetronAgent.dropsondeUnmarshaller.containerMetricReceived |  |
-| MetronAgent.dropsondeUnmarshaller.counterEventReceived |  |
-| MetronAgent.dropsondeUnmarshaller.httpStartReceived |  |
-| MetronAgent.dropsondeUnmarshaller.httpStopReceived |  |
-| MetronAgent.dropsondeUnmarshaller.logMessageTotal |  |
-| MetronAgent.dropsondeUnmarshaller.valueMetricReceived |  |
-| MetronAgent.legacyAgentListener.receivedByteCount |  |
-| MetronAgent.legacyAgentListener.receivedMessageCount |  |
-| MetronAgent.MessageAggregator.counterEventReceived |  |
-| MetronAgent.MessageAggregator.httpStartReceived |  |
-| MetronAgent.MessageAggregator.httpStartStopEmitted |  |
-| MetronAgent.MessageAggregator.httpStopReceived |  |
-| MetronAgent.MessageAggregator.httpUnmatchedStartReceived |  |
-| MetronAgent.MessageAggregator.httpUnmatchedStopReceived |  |
-| MetronAgent.MessageAggregator.uncategorizedEvents |  |
-| syslog_drain_binder.logSenderTotalMessagesRead |  |
-| syslog_drain_binder.memoryStats.lastGCPauseTimeNS |  |
-| syslog_drain_binder.memoryStats.numBytesAllocated |  |
-| syslog_drain_binder.memoryStats.numBytesAllocatedHeap |  |
-| syslog_drain_binder.memoryStats.numBytesAllocatedStack |  |
-| syslog_drain_binder.memoryStats.numFrees |  |
-| syslog_drain_binder.memoryStats.numMallocs |  |
-| syslog_drain_binder.numCPUS |  |
-| syslog_drain_binder.numGoRoutines |  |
-| syslog_drain_binder.pollCount |  |
-| syslog_drain_binder.totalDrains |  |
-| totalMessagesReceived |  |
-| totalMetricsSent |  |
+Loggregator emits a series of metrics as a pulse for healthy operations. **Please note** The names of these metrics will change as new features are released. 
+
+Metric Name as Emitted|Component|Origin|Description|Emitted Consistently or Only on Event?|Notes - Why should someone care about this metric? Why is it valuable?
+DopplerServer.messageRouter.numberOfDumpSinks|Loggregator|Doppler|Number of app loop buffers|Consistently|The number of dump sinks has a memory impact on doppler
+DopplerServer.listeners.receivedEnvelopes|Loggregator |Doppler|Can be used in conjunction w/MetronAgent.dropsondeMarshaller.sentEnvelopes to calculate specific loss between Metron->Doppler|Consistently|Good for isolating loss and determing if scale will help with log loss. 
+DopplerServer.TruncatingBuffer.totalDroppedMessages|Loggregator|Doppler|Total dropped messages by doppler for application syslog drains|Event|Singifies dopplers are not processing messages fast enough
+MetronAgent.dropsondeMarshaller.sentEnvelopes|Loggregator|Metron|Can be used in conjunction w/DopplerServer.listeners.receivedEnvelopes to calculate specific loss between Metron->Doppler|Consistently|Good for isolating loss and determing if scale will help with log loss. 
+MetronAgent.dropsondeUnmarshaller.receivedEnvelopes|Loggregator|Metron|||
+LoggregatorTrafficController.LinuxFileDescriptor|Loggregator|Traffic Controller|Number of connections maintained by Traffic Controller||
+LoggregatorTrafficController.listeners.receivedEnvelopes|Loggregator|Traffic Controller|||
