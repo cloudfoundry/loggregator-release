@@ -208,3 +208,26 @@ func newMockDialFunc() *mockDialFunc {
 	}
 	return df
 }
+
+type mockConn struct {
+	WriteCalled chan bool
+	WriteInput  struct {
+		Data chan *v2.Envelope
+	}
+	WriteOutput struct {
+		Err chan error
+	}
+}
+
+func newMockConn() *mockConn {
+	m := &mockConn{}
+	m.WriteCalled = make(chan bool, 100)
+	m.WriteInput.Data = make(chan *v2.Envelope, 100)
+	m.WriteOutput.Err = make(chan error, 100)
+	return m
+}
+func (m *mockConn) Write(data *v2.Envelope) (err error) {
+	m.WriteCalled <- true
+	m.WriteInput.Data <- data
+	return <-m.WriteOutput.Err
+}
