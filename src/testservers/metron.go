@@ -14,22 +14,25 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-func BuildMetronConfig(dopplerURI string, grpcPort, udpPort int) metronConf.Config {
-	metronPort := getUDPPort()
+func BuildMetronConfig(dopplerURI string, dopplerGRPCPort, dopplerUDPPort int) metronConf.Config {
+	metronUDPPort := getUDPPort()
+	metronGRPCPort := getTCPPort()
+
 	return metronConf.Config{
 		Index:        jobIndex,
 		Job:          jobName,
 		Zone:         availabilityZone,
 		SharedSecret: sharedSecret,
 
-		IncomingUDPPort: metronPort,
+		IncomingUDPPort: metronUDPPort,
 		PPROFPort:       uint32(getTCPPort()),
 		Deployment:      "deployment",
 
-		DopplerAddr:    fmt.Sprintf("%s:%d", dopplerURI, grpcPort),
-		DopplerAddrUDP: fmt.Sprintf("%s:%d", dopplerURI, udpPort),
+		DopplerAddr:    fmt.Sprintf("%s:%d", dopplerURI, dopplerGRPCPort),
+		DopplerAddrUDP: fmt.Sprintf("%s:%d", dopplerURI, dopplerUDPPort),
 
 		GRPC: metronConf.GRPC{
+			Port:     uint16(metronGRPCPort),
 			CertFile: ClientCertFilePath(),
 			KeyFile:  ClientKeyFilePath(),
 			CAFile:   CAFilePath(),
@@ -40,7 +43,7 @@ func BuildMetronConfig(dopplerURI string, grpcPort, udpPort int) metronConf.Conf
 	}
 }
 
-func StartMetron(conf metronConf.Config) (func(), int, func()) {
+func StartMetron(conf metronConf.Config) (func(), metronConf.Config, func()) {
 	By("making sure metron was build")
 	metronPath := os.Getenv("METRON_BUILD_PATH")
 	Expect(metronPath).ToNot(BeEmpty())
@@ -70,7 +73,7 @@ func StartMetron(conf metronConf.Config) (func(), int, func()) {
 	return func() {
 			os.Remove(filename)
 			metronSession.Kill().Wait()
-		}, conf.IncomingUDPPort, func() {
+		}, conf, func() {
 			// TODO When we switch to gRPC we should wait until
 			// we can connect to it
 			time.Sleep(10 * time.Second)

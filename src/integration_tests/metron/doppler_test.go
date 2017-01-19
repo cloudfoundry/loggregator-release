@@ -22,13 +22,13 @@ var _ = Describe("communicating with doppler", func() {
 		)
 		defer dopplerCleanup()
 
-		metronCleanup, metronPort, metronReady := testservers.StartMetron(
+		metronCleanup, metronConfig, metronReady := testservers.StartMetron(
 			testservers.BuildMetronConfig("localhost", dopplerGRPCPort, 0),
 		)
 		defer metronCleanup()
 		metronReady()
 
-		err := dropsonde.Initialize(fmt.Sprintf("localhost:%d", metronPort), "test-origin")
+		err := dropsonde.Initialize(fmt.Sprintf("localhost:%d", metronConfig.IncomingUDPPort), "test-origin")
 		Expect(err).NotTo(HaveOccurred())
 
 		By("sending a message into metron")

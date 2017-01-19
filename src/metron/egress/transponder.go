@@ -27,6 +27,7 @@ func NewTransponder(n Nexter, w Writer) *Transponder {
 func (t *Transponder) Start() {
 	for {
 		envelope := t.nexter.Next()
+		// TODO: emit a metric here
 		t.writer.Write(envelope)
 	}
 }

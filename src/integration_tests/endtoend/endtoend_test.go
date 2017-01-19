@@ -24,7 +24,7 @@ var _ = Describe("End to end tests", func() {
 		)
 		defer dopplerCleanup()
 
-		metronCleanup, metronPort, metronReady := testservers.StartMetron(
+		metronCleanup, metronConfig, metronReady := testservers.StartMetron(
 			testservers.BuildMetronConfig("localhost", dopplerGRPCPort, 0),
 		)
 		defer metronCleanup()
@@ -33,14 +33,14 @@ var _ = Describe("End to end tests", func() {
 				etcdClientURL,
 				dopplerWSPort,
 				dopplerGRPCPort,
-				metronPort,
+				metronConfig.IncomingUDPPort,
 			),
 		)
 		defer trafficcontrollerCleanup()
 		metronReady()
 
 		const writeRatePerSecond = 10
-		metronStreamWriter := endtoend.NewMetronStreamWriter(metronPort)
+		metronStreamWriter := endtoend.NewMetronStreamWriter(metronConfig.IncomingUDPPort)
 		generator := messagegenerator.NewLogMessageGenerator("custom-app-id")
 		writeStrategy := writestrategies.NewConstantWriteStrategy(generator, metronStreamWriter, writeRatePerSecond)
 

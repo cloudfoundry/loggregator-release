@@ -14,6 +14,7 @@ const (
 )
 
 type GRPC struct {
+	Port     uint16
 	CAFile   string
 	CertFile string
 	KeyFile  string
