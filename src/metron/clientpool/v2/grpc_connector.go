@@ -5,31 +5,31 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"plumbing"
+	v2 "plumbing/v2"
 
 	"google.golang.org/grpc"
 )
 
-type GRPCV1Connector struct {
+type GRPCConnector struct {
 	doppler        string
 	zonePrefix     string
 	dial           DialFunc
-	ingestorClient IngestorClientFunc
+	ingestorClient SenderClientFunc
 	opts           []grpc.DialOption
 }
 
 type DialFunc func(string, ...grpc.DialOption) (*grpc.ClientConn, error)
 
-type IngestorClientFunc func(*grpc.ClientConn) plumbing.DopplerIngestorClient
+type SenderClientFunc func(*grpc.ClientConn) v2.DopplerIngressClient
 
-func MakeV1Connector(
+func MakeGRPCConnector(
 	doppler string,
 	zonePrefix string,
 	df DialFunc,
-	cf IngestorClientFunc,
+	cf SenderClientFunc,
 	opts ...grpc.DialOption,
-) GRPCV1Connector {
-	return GRPCV1Connector{
+) GRPCConnector {
+	return GRPCConnector{
 		doppler:        doppler,
 		zonePrefix:     zonePrefix,
 		dial:           df,
@@ -38,7 +38,7 @@ func MakeV1Connector(
 	}
 }
 
-func (c GRPCV1Connector) Connect() (io.Closer, plumbing.DopplerIngestor_PusherClient, error) {
+func (c GRPCConnector) Connect() (io.Closer, v2.DopplerIngress_SenderClient, error) {
 	closer, pusher, err := c.connect(c.zonePrefix + "." + c.doppler)
 	if err != nil {
 		return c.connect(c.doppler)
@@ -46,14 +46,14 @@ func (c GRPCV1Connector) Connect() (io.Closer, plumbing.DopplerIngestor_PusherCl
 	return closer, pusher, err
 }
 
-func (c GRPCV1Connector) connect(doppler string) (io.Closer, plumbing.DopplerIngestor_PusherClient, error) {
+func (c GRPCConnector) connect(doppler string) (io.Closer, v2.DopplerIngress_SenderClient, error) {
 	conn, err := c.dial(doppler, c.opts...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error dialing ingestor stream to %s: %s", c, err)
 	}
 	client := c.ingestorClient(conn)
 	log.Printf("successfully connected to doppler %s", c)
-	pusher, err := client.Pusher(context.Background())
+	pusher, err := client.Sender(context.Background())
 	if err != nil {
 		// TODO: this close is not tested as we don't know how to assert
 		// against a grpc.ClientConn being closed.
@@ -65,6 +65,6 @@ func (c GRPCV1Connector) connect(doppler string) (io.Closer, plumbing.DopplerIng
 	return conn, pusher, err
 }
 
-func (c GRPCV1Connector) String() string {
+func (c GRPCConnector) String() string {
 	return fmt.Sprintf("[%s]%s", c.zonePrefix, c.doppler)
 }

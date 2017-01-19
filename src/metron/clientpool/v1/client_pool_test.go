@@ -2,7 +2,7 @@ package clientpool_test
 
 import (
 	"fmt"
-	"metron/clientpool"
+	"metron/clientpool/v1"
 	"reflect"
 
 	. "github.com/onsi/ginkgo"

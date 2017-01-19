@@ -9,10 +9,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"metron/clientpool"
+	"metron/clientpool/v2"
 )
 
-var _ = Describe("GRPCV2Connector", func() {
+var _ = Describe("GRPCConnector", func() {
 	Context("when successfully connecting to the AZ", func() {
 		var (
 			df               *mockDialFunc
@@ -38,7 +38,7 @@ var _ = Describe("GRPCV2Connector", func() {
 		})
 
 		It("connects to the dns name with az prefix", func() {
-			connector := clientpool.MakeV2Connector("test-name", "z1", df.fn, cf.fn, grpc.WithInsecure())
+			connector := clientpool.MakeGRPCConnector("test-name", "z1", df.fn, cf.fn, grpc.WithInsecure())
 			_, _, err := connector.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
@@ -46,7 +46,7 @@ var _ = Describe("GRPCV2Connector", func() {
 		})
 
 		It("returns the original client connection", func() {
-			connector := clientpool.MakeV2Connector("test-name", "", df.fn, cf.fn, grpc.WithInsecure())
+			connector := clientpool.MakeGRPCConnector("test-name", "", df.fn, cf.fn, grpc.WithInsecure())
 			conn, _, err := connector.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
@@ -54,7 +54,7 @@ var _ = Describe("GRPCV2Connector", func() {
 		})
 
 		It("returns the pusher client", func() {
-			connector := clientpool.MakeV2Connector("test-name", "", df.fn, cf.fn, grpc.WithInsecure())
+			connector := clientpool.MakeGRPCConnector("test-name", "", df.fn, cf.fn, grpc.WithInsecure())
 			_, pusherClient, err := connector.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
@@ -81,7 +81,7 @@ var _ = Describe("GRPCV2Connector", func() {
 			mockSender.SenderOutput.Ret1 <- nil
 			cf.retIngressClient <- mockSender
 
-			connector := clientpool.MakeV2Connector("test-name", "z1", df.fn, cf.fn)
+			connector := clientpool.MakeGRPCConnector("test-name", "z1", df.fn, cf.fn)
 			_, _, err := connector.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
@@ -100,7 +100,7 @@ var _ = Describe("GRPCV2Connector", func() {
 			df.retClientConn <- nil
 			df.retErr <- errors.New("fake error")
 
-			connector := clientpool.MakeV2Connector("test-name", "z1", df.fn, nil)
+			connector := clientpool.MakeGRPCConnector("test-name", "z1", df.fn, nil)
 			_, _, err := connector.Connect()
 			Expect(err).To(HaveOccurred())
 		})
@@ -123,4 +123,10 @@ func newMockIngressClientFunc() *mockIngressClientFunc {
 		return <-cf.retIngressClient
 	}
 	return cf
+}
+
+func newMockClientConn() *grpc.ClientConn {
+	conn, err := grpc.Dial("", grpc.WithInsecure())
+	Expect(err).NotTo(HaveOccurred())
+	return conn
 }

@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
-	"metron/clientpool"
+	clientpool "metron/clientpool/v1"
 	"metron/config"
 	"metron/eventwriter"
 	"metron/legacyclientpool"
@@ -90,7 +90,7 @@ func setupGRPC(conf *config.Config) []legacyclientpool.Pool {
 		return nil
 	}
 
-	connector := clientpool.MakeV1Connector(
+	connector := clientpool.MakeGRPCConnector(
 		conf.DopplerAddr,
 		conf.Zone,
 		grpc.Dial,
@@ -100,7 +100,7 @@ func setupGRPC(conf *config.Config) []legacyclientpool.Pool {
 
 	var connManagers []clientpool.Conn
 	for i := 0; i < 5; i++ {
-		connManagers = append(connManagers, clientpool.NewV1ConnManager(connector, 10000))
+		connManagers = append(connManagers, clientpool.NewConnManager(connector, 10000))
 	}
 
 	pool := clientpool.New(connManagers...)

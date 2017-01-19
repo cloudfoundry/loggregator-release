@@ -2,7 +2,7 @@ package clientpool_test
 
 import (
 	"errors"
-	"metron/clientpool"
+	"metron/clientpool/v2"
 	"plumbing/v2"
 
 	"github.com/apoydence/eachers/testhelpers"
@@ -10,9 +10,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("V2 ConnManager", func() {
+var _ = Describe("ConnManager", func() {
 	var (
-		connManager      *clientpool.V2ConnManager
+		connManager      *clientpool.ConnManager
 		mockConnector    *mockV2Connector
 		mockCloser       *mockCloser
 		mockSenderClient *mockDopplerIngress_SenderClient
@@ -20,7 +20,7 @@ var _ = Describe("V2 ConnManager", func() {
 
 	BeforeEach(func() {
 		mockConnector = newMockV2Connector()
-		connManager = clientpool.NewV2ConnManager(mockConnector, 5)
+		connManager = clientpool.NewConnManager(mockConnector, 5)
 		mockCloser = newMockCloser()
 		mockSenderClient = newMockDopplerIngress_SenderClient()
 	})

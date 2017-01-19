@@ -11,7 +11,7 @@ import (
 	"unsafe"
 )
 
-type V2Connector interface {
+type Connector interface {
 	Connect() (io.Closer, loggregator.DopplerIngress_SenderClient, error)
 }
 
@@ -22,14 +22,14 @@ type v2GRPCConn struct {
 	writes int64
 }
 
-type V2ConnManager struct {
+type ConnManager struct {
 	conn      unsafe.Pointer
 	maxWrites int64
-	connector V2Connector
+	connector Connector
 }
 
-func NewV2ConnManager(c V2Connector, maxWrites int64) *V2ConnManager {
-	m := &V2ConnManager{
+func NewConnManager(c Connector, maxWrites int64) *ConnManager {
+	m := &ConnManager{
 		maxWrites: maxWrites,
 		connector: c,
 	}
@@ -37,7 +37,7 @@ func NewV2ConnManager(c V2Connector, maxWrites int64) *V2ConnManager {
 	return m
 }
 
-func (m *V2ConnManager) Write(envelope *loggregator.Envelope) error {
+func (m *ConnManager) Write(envelope *loggregator.Envelope) error {
 	conn := atomic.LoadPointer(&m.conn)
 	if conn == nil || (*v2GRPCConn)(conn) == nil {
 		return errors.New("no connection to doppler present")
@@ -64,7 +64,7 @@ func (m *V2ConnManager) Write(envelope *loggregator.Envelope) error {
 	return nil
 }
 
-func (m *V2ConnManager) maintainConn() {
+func (m *ConnManager) maintainConn() {
 	for range time.Tick(50 * time.Millisecond) {
 		conn := atomic.LoadPointer(&m.conn)
 		if conn != nil && (*v2GRPCConn)(conn) != nil {

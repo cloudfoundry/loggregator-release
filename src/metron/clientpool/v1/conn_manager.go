@@ -22,14 +22,14 @@ type grpcConn struct {
 	writes int64
 }
 
-type V1ConnManager struct {
+type ConnManager struct {
 	conn      unsafe.Pointer
 	maxWrites int64
 	connector Connector
 }
 
-func NewV1ConnManager(c Connector, maxWrites int64) *V1ConnManager {
-	m := &V1ConnManager{
+func NewConnManager(c Connector, maxWrites int64) *ConnManager {
+	m := &ConnManager{
 		maxWrites: maxWrites,
 		connector: c,
 	}
@@ -37,7 +37,7 @@ func NewV1ConnManager(c Connector, maxWrites int64) *V1ConnManager {
 	return m
 }
 
-func (m *V1ConnManager) Write(data []byte) error {
+func (m *ConnManager) Write(data []byte) error {
 	conn := atomic.LoadPointer(&m.conn)
 	if conn == nil || (*grpcConn)(conn) == nil {
 		return errors.New("no connection to doppler present")
@@ -66,7 +66,7 @@ func (m *V1ConnManager) Write(data []byte) error {
 	return nil
 }
 
-func (m *V1ConnManager) maintainConn() {
+func (m *ConnManager) maintainConn() {
 	for range time.Tick(50 * time.Millisecond) {
 		conn := atomic.LoadPointer(&m.conn)
 		if conn != nil && (*grpcConn)(conn) != nil {
