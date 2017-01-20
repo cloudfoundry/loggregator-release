@@ -342,6 +342,7 @@ variables:
     common_name: metron
     ext_key_usage:
     - client_auth
+    - server_auth
 - name: etcd_ca
   type: certificate
   options:

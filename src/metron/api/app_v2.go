@@ -19,6 +19,16 @@ import (
 type AppV2 struct{}
 
 func (a *AppV2) Start(conf *config.Config) {
+	tlsConfig, err := plumbing.NewMutualTLSConfig(
+		conf.GRPC.CertFile,
+		conf.GRPC.KeyFile,
+		conf.GRPC.CAFile,
+		"metron",
+	)
+	if err != nil {
+		log.Panicf("Failed to load TLS config: %s", err)
+	}
+
 	envelopeBuffer := diodes.NewManyToOneEnvelopeV2(10000, diodes.AlertFunc(func(missed int) {
 		// TODO Emit metric
 		log.Printf("Dropped %d v2 envelopes", missed)
@@ -30,7 +40,7 @@ func (a *AppV2) Start(conf *config.Config) {
 
 	rx := ingress.NewReceiver(envelopeBuffer)
 	metronAddress := fmt.Sprintf("127.0.0.1:%d", conf.GRPC.Port)
-	ingressServer := ingress.NewServer(metronAddress, rx)
+	ingressServer := ingress.NewServer(metronAddress, rx, grpc.Creds(credentials.NewTLS(tlsConfig)))
 	ingressServer.Start()
 }
 

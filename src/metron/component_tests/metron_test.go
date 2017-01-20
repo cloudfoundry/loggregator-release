@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"testservers"
 
@@ -92,7 +93,7 @@ var _ = Describe("Metron", func() {
 				},
 			}
 
-			client := metronClient(fmt.Sprintf("127.0.0.1:%d", metronConfig.GRPC.Port))
+			client := metronClient(metronConfig)
 			sender, err := client.Sender(context.Background())
 			Expect(err).ToNot(HaveOccurred())
 
@@ -198,8 +199,20 @@ func HomeAddrToPort(addr net.Addr) int {
 	return port
 }
 
-func metronClient(addr string) v2.MetronIngressClient {
-	conn, err := grpc.Dial(addr, grpc.WithInsecure())
+func metronClient(conf config.Config) v2.MetronIngressClient {
+	addr := fmt.Sprintf("127.0.0.1:%d", conf.GRPC.Port)
+
+	tlsConfig, err := plumbing.NewMutualTLSConfig(
+		conf.GRPC.CertFile,
+		conf.GRPC.KeyFile,
+		conf.GRPC.CAFile,
+		"metron",
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
 	if err != nil {
 		panic(err)
 	}

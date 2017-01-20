@@ -22,8 +22,8 @@ func BuildTrafficControllerConf(etcdClientURL string, dopplerWSPort, dopplerGRPC
 		DopplerPort: uint32(dopplerWSPort),
 		GRPC: tcConf.GRPC{
 			Port:     uint16(dopplerGRPCPort),
-			CertFile: ClientCertFilePath(),
-			KeyFile:  ClientKeyFilePath(),
+			CertFile: TrafficControllerCertPath(),
+			KeyFile:  TrafficControllerKeyPath(),
 			CAFile:   CAFilePath(),
 		},
 		OutgoingDropsondePort: uint32(tcPort),
@@ -31,8 +31,7 @@ func BuildTrafficControllerConf(etcdClientURL string, dopplerWSPort, dopplerGRPC
 		MetronHost:            "localhost",
 		MetronPort:            metronPort,
 
-		EtcdUrls:                  []string{etcdClientURL},
-		EtcdMaxConcurrentRequests: 5,
+		EtcdUrls: []string{etcdClientURL}, EtcdMaxConcurrentRequests: 5,
 
 		SystemDomain:   "vcap.me",
 		SkipCertVerify: true,

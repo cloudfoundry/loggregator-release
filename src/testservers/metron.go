@@ -33,8 +33,8 @@ func BuildMetronConfig(dopplerURI string, dopplerGRPCPort, dopplerUDPPort int) m
 
 		GRPC: metronConf.GRPC{
 			Port:     uint16(metronGRPCPort),
-			CertFile: ClientCertFilePath(),
-			KeyFile:  ClientKeyFilePath(),
+			CertFile: MetronCertPath(),
+			KeyFile:  MetronKeyPath(),
 			CAFile:   CAFilePath(),
 		},
 

@@ -25,8 +25,8 @@ type Server struct {
 
 func NewServer() (*Server, error) {
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
-		testservers.ServerCertFilePath(),
-		testservers.ServerKeyFilePath(),
+		testservers.DopplerCertPath(),
+		testservers.DopplerKeyPath(),
 		testservers.CAFilePath(),
 		"",
 	)
