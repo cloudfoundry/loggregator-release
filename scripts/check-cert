@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# e.g., ~/path/to/my_cert.crt
+cert_file_path="$1"
+
+openssl x509 -in "$cert_file_path" -text -noout
