@@ -2,7 +2,7 @@ package clientreader
 
 import (
 	"doppler/dopplerservice"
-	"fmt"
+	"log"
 )
 
 //go:generate hel --type ClientPool --output mock_client_pool_test.go
@@ -14,11 +14,11 @@ type ClientPool interface {
 func Read(clientPool map[string]ClientPool, protocols []string, event dopplerservice.Event) string {
 	protocol, servers := chooseProtocol(protocols, event)
 	if protocol == "" {
-		panic(fmt.Sprintf("No dopplers listening on %v", protocols))
+		log.Fatalf("No dopplers listening on %v", protocols)
 	}
 	clients := clientPool[protocol].SetAddresses(servers)
 	if clients == 0 {
-		panic(fmt.Sprintf("Unable to connect to dopplers running on %s", protocol))
+		log.Fatalf("Unable to connect to dopplers running on %s", protocol)
 	}
 	return protocol
 }

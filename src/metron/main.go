@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"log"
 	"math/rand"
 	"profiler"
 	"time"
@@ -23,7 +23,7 @@ func main() {
 	flag.Parse()
 	config, err := config.ParseConfig(*configFilePath)
 	if err != nil {
-		panic(fmt.Errorf("Unable to parse config: %s", err))
+		log.Fatalf("Unable to parse config: %s", err)
 	}
 
 	appV1 := &api.AppV1{}

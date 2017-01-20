@@ -34,7 +34,7 @@ func (a *AppV1) Start(config *config.Config) {
 	log.Print("Startup: Setting up the Metron agent")
 	marshaller, err := a.initializeV1DopplerPool(config, batcher)
 	if err != nil {
-		panic(fmt.Errorf("Could not initialize doppler connection pool: %s", err))
+		log.Panic(fmt.Errorf("Could not initialize doppler connection pool: %s", err))
 	}
 
 	messageTagger := tagger.New(config.Deployment, config.Job, config.Index, marshaller)
@@ -45,7 +45,7 @@ func (a *AppV1) Start(config *config.Config) {
 	metronAddress := fmt.Sprintf("127.0.0.1:%d", config.IncomingUDPPort)
 	dropsondeReader, err := networkreader.New(metronAddress, "dropsondeAgentListener", dropsondeUnmarshaller)
 	if err != nil {
-		panic(fmt.Errorf("Failed to listen on %s: %s", metronAddress, err))
+		log.Panic(fmt.Errorf("Failed to listen on %s: %s", metronAddress, err))
 	}
 
 	log.Print("metron v1 API started")
