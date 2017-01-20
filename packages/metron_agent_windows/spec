@@ -4,6 +4,7 @@ files:
 - loggregator/src/exiter.ps1
 - loggregator-blobs/metron.exe
 - loggregator/src/code.cloudfoundry.org/localip/*.go # gosub
+- loggregator/src/diodes/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metricbatcher/*.go # gosub
@@ -32,9 +33,13 @@ files:
 - loggregator/src/google.golang.org/grpc/peer/*.go # gosub
 - loggregator/src/google.golang.org/grpc/transport/*.go # gosub
 - loggregator/src/metron/*.go # gosub
-- loggregator/src/metron/clientpool/*.go # gosub
+- loggregator/src/metron/api/*.go # gosub
+- loggregator/src/metron/clientpool/v1/*.go # gosub
+- loggregator/src/metron/clientpool/v2/*.go # gosub
 - loggregator/src/metron/config/*.go # gosub
+- loggregator/src/metron/egress/*.go # gosub
 - loggregator/src/metron/eventwriter/*.go # gosub
+- loggregator/src/metron/ingress/*.go # gosub
 - loggregator/src/metron/legacyclientpool/*.go # gosub
 - loggregator/src/metron/networkreader/*.go # gosub
 - loggregator/src/metron/writers/*.go # gosub
@@ -44,4 +49,5 @@ files:
 - loggregator/src/metron/writers/messageaggregator/*.go # gosub
 - loggregator/src/metron/writers/tagger/*.go # gosub
 - loggregator/src/plumbing/*.go # gosub
+- loggregator/src/plumbing/v2/*.go # gosub
 - loggregator/src/profiler/*.go # gosub
