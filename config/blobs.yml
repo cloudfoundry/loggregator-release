@@ -15,13 +15,13 @@ loggregator-blobs/lats.xz:
   object_id: 2bb4dfe7-8b49-48fd-7e23-3ce04c616894
   sha: 36ebb0c87ab2025446a0ca2c0524352d91221c7d
 loggregator-blobs/metron.exe:
-  size: 11309568
-  object_id: ce4a2623-104f-4769-49f4-f1d4628c462c
-  sha: 26074e99c965cab0486aa704a84af5c38c9d61fb
+  size: 11314176
+  object_id: 2f110041-311f-4791-679c-182db8f65798
+  sha: 7924d30fdf35327cddc7501bdaa0955334addc48
 loggregator-blobs/metron.xz:
-  size: 2554004
-  object_id: 88ae1fa6-1a84-44ef-47c6-148b2a9d1295
-  sha: e6eba56fe5396b84bb2f2eaf1c59e95ece3383cc
+  size: 2553692
+  object_id: 41db02fd-cb63-4d7f-6f13-21d51f6e53eb
+  sha: 64a49ad517d37ad4a7b79e2bf0d8586500c4b608
 loggregator-blobs/statsd-injector.xz:
   size: 1067492
   object_id: f658af7f-e11d-4f6a-755a-9594ab02f019
