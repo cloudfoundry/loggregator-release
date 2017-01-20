@@ -3,13 +3,17 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math/rand"
 	"profiler"
+	"time"
 
 	"metron/api"
 	"metron/config"
 )
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	configFilePath := flag.String(
 		"config",
 		"config/metron.json",

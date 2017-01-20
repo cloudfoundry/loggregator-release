@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	clientpool "metron/clientpool/v1"
 	"metron/config"
 	"metron/eventwriter"
@@ -100,7 +101,7 @@ func (a *AppV1) setupGRPC(conf *config.Config) []legacyclientpool.Pool {
 
 	var connManagers []clientpool.Conn
 	for i := 0; i < 5; i++ {
-		connManagers = append(connManagers, clientpool.NewConnManager(connector, 10000))
+		connManagers = append(connManagers, clientpool.NewConnManager(connector, 10000+rand.Int63n(1000)))
 	}
 
 	pool := clientpool.New(connManagers...)

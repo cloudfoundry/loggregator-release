@@ -4,6 +4,7 @@ import (
 	"diodes"
 	"fmt"
 	"log"
+	"math/rand"
 
 	clientpool "metron/clientpool/v2"
 	"metron/config"
@@ -65,7 +66,7 @@ func (a *AppV2) initializePool(conf *config.Config) *clientpool.ClientPool {
 
 	var connManagers []clientpool.Conn
 	for i := 0; i < 5; i++ {
-		connManagers = append(connManagers, clientpool.NewConnManager(connector, 10000))
+		connManagers = append(connManagers, clientpool.NewConnManager(connector, 10000+rand.Int63n(1000)))
 	}
 
 	return clientpool.New(connManagers...)
