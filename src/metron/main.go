@@ -4,15 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"profiler"
-	"time"
 
+	"metron/api"
 	"metron/config"
-)
-
-const (
-	origin            = "MetronAgent"
-	connectionRetries = 15
-	TCPTimeout        = time.Minute
 )
 
 func main() {
@@ -28,10 +22,10 @@ func main() {
 		panic(fmt.Errorf("Unable to parse config: %s", err))
 	}
 
-	appV1 := &AppV1{}
+	appV1 := &api.AppV1{}
 	go appV1.Start(config)
 
-	appV2 := &AppV2{}
+	appV2 := &api.AppV2{}
 	go appV2.Start(config)
 
 	// We start the profiler last so that we can definitively say that we're
