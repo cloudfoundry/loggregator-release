@@ -7,21 +7,21 @@ loggregator-blobs/deaagent.xz:
   object_id: aa39c436-ea8e-4468-48c7-e788c792de90
   sha: 151a78e37cdf094c09603af86b7b9de6af9e3cba
 loggregator-blobs/doppler.xz:
-  size: 3414580
-  object_id: 06ed805c-e74a-4026-425b-f32aeb632e31
-  sha: 3338d816e16791ab883c671f395de0ac9d7fe292
+  size: 3414768
+  object_id: 18b2fffd-7e62-4ebb-6e0f-b9eead2ad04c
+  sha: 944a8c41b9f2f732bb1e666bc8399e12234ff55d
 loggregator-blobs/lats.xz:
   size: 3185324
   object_id: 2bb4dfe7-8b49-48fd-7e23-3ce04c616894
   sha: 36ebb0c87ab2025446a0ca2c0524352d91221c7d
 loggregator-blobs/metron.exe:
-  size: 11158016
-  object_id: 7bc87e1c-35a7-4c2e-5065-7f1030a2c53b
-  sha: 1c9f42db25d084dbf5c52bf2d505fceb9cfcdea9
+  size: 11139584
+  object_id: 4f70b06b-5520-4c6b-5bd9-228b7bb9ce3f
+  sha: 413c2e9cf6f0d2daa8d1c7e613ecb4a99be087f1
 loggregator-blobs/metron.xz:
-  size: 2526836
-  object_id: bad86ea5-b4ef-4d2c-57ce-0a7f43f47128
-  sha: 0c65d5a2cd541ee2c17f56d58760b81925de6d7f
+  size: 2527536
+  object_id: abc9cf41-ccea-479d-7b76-a88d42e33cff
+  sha: 00212ec7a670a5ccdc3e01a9bb70913eff9e49aa
 loggregator-blobs/statsd-injector.xz:
   size: 1067492
   object_id: f658af7f-e11d-4f6a-755a-9594ab02f019
