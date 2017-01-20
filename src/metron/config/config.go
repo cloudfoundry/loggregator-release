@@ -27,6 +27,7 @@ type Config struct {
 	Job        string
 	Index      string
 
+	DisableUDP      bool
 	IncomingUDPPort int
 
 	GRPC GRPC

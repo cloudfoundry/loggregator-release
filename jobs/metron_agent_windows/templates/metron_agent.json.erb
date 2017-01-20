@@ -41,6 +41,7 @@
         a[:Deployment] = p("metron_agent.deployment")
         a[:SharedSecret] = p("metron_endpoint.shared_secret")
         a[:IncomingUDPPort] = incoming_udp_port
+        a[:DisableUDP] = p("metron_agent.disable_udp")
         a[:PPROFPort] = p("metron_agent.pprof_port")
         a[:GRPC] = grpcConfig
         a[:DopplerAddr] = "#{p('doppler.addr')}:#{p('doppler.grpc_port')}"

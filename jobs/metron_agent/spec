@@ -44,8 +44,11 @@ properties:
     default: 4k
 
   metron_endpoint.shared_secret:
-      description: "Shared secret used to verify cryptographically signed dropsonde messages"
+    description: "Shared secret used to verify cryptographically signed dropsonde messages"
 
+  metron_agent.disable_udp:
+    description: "Disable incoming UDP"
+    default: false
   metron_agent.listening_port:
     description: "Port the metron agent is listening on to receive dropsonde log messages"
     default: 3457

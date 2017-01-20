@@ -28,6 +28,10 @@ import (
 type AppV1 struct{}
 
 func (a *AppV1) Start(config *config.Config) {
+	if config.DisableUDP {
+		return
+	}
+
 	statsStopChan := make(chan struct{})
 	batcher, eventWriter := a.initializeMetrics(config, statsStopChan)
 
