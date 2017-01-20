@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"metron/clientpool"
+	"metron/clientpool/v1"
 )
 
 var _ = Describe("GRPCConnector", func() {

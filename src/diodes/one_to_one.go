@@ -91,3 +91,9 @@ func (d *OneToOne) pollBuffer(idx uint64) []byte {
 		return result
 	}
 }
+
+type AlertFunc func(missed int)
+
+func (f AlertFunc) Alert(missed int) {
+	f(missed)
+}

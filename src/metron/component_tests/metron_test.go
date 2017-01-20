@@ -1,14 +1,19 @@
 package component_test
 
 import (
+	"context"
 	"fmt"
+	"metron/config"
 	"metron/testutil"
 	"net"
 	"plumbing"
+	v2 "plumbing/v2"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"google.golang.org/grpc"
 
 	"testservers"
 
@@ -24,7 +29,7 @@ var _ = Describe("Metron", func() {
 	Context("when a consumer is accepting gRPC connections", func() {
 		var (
 			metronCleanup  func()
-			metronPort     int
+			metronConfig   config.Config
 			consumerServer *testutil.Server
 			eventEmitter   dropsonde.EventEmitter
 		)
@@ -35,14 +40,10 @@ var _ = Describe("Metron", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			var metronReady func()
-			metronCleanup, metronPort, metronReady = testservers.StartMetron(
+			metronCleanup, metronConfig, metronReady = testservers.StartMetron(
 				testservers.BuildMetronConfig("localhost", consumerServer.Port(), 0),
 			)
 			defer metronReady()
-
-			udpEmitter, err := emitter.NewUdpEmitter(fmt.Sprintf("127.0.0.1:%d", metronPort))
-			Expect(err).ToNot(HaveOccurred())
-			eventEmitter = emitter.NewEventEmitter(udpEmitter, "some-origin")
 		})
 
 		AfterEach(func() {
@@ -51,6 +52,10 @@ var _ = Describe("Metron", func() {
 		})
 
 		It("routes from UDP to gRPC", func() {
+			udpEmitter, err := emitter.NewUdpEmitter(fmt.Sprintf("127.0.0.1:%d", metronConfig.IncomingUDPPort))
+			Expect(err).ToNot(HaveOccurred())
+			eventEmitter = emitter.NewEventEmitter(udpEmitter, "some-origin")
+
 			emitEnvelope := &events.Envelope{
 				Origin:    proto.String("some-origin"),
 				EventType: events.Envelope_Error.Enum(),
@@ -76,13 +81,42 @@ var _ = Describe("Metron", func() {
 			envelope := new(events.Envelope)
 			Expect(envelope.Unmarshal(data.Payload)).To(Succeed())
 		})
+
+		It("routes from gRPC to gRPC", func() {
+			emitEnvelope := &v2.Envelope{
+				Message: &v2.Envelope_Log{
+					Log: &v2.Log{
+						Payload: []byte("some-message"),
+						Type:    v2.Log_OUT,
+					},
+				},
+			}
+
+			client := metronClient(fmt.Sprintf("127.0.0.1:%d", metronConfig.GRPC.Port))
+			sender, err := client.Sender(context.Background())
+			Expect(err).ToNot(HaveOccurred())
+
+			Consistently(func() error {
+				return sender.Send(emitEnvelope)
+			}, 5).Should(Succeed())
+
+			var rx v2.DopplerIngress_SenderServer
+			Expect(consumerServer.V2.SenderInput.Arg0).Should(Receive(&rx))
+
+			f := func() *v2.Envelope {
+				envelope, err := rx.Recv()
+				Expect(err).ToNot(HaveOccurred())
+				return envelope
+			}
+			Eventually(f).Should(Equal(emitEnvelope))
+		})
 	})
 
 	Context("when the consumer is only accepting UDP messages", func() {
 		var (
 			metronCleanup   func()
 			consumerCleanup func()
-			metronPort      int
+			metronConfig    config.Config
 			udpPort         int
 			eventEmitter    dropsonde.EventEmitter
 			consumerConn    *net.UDPConn
@@ -99,12 +133,12 @@ var _ = Describe("Metron", func() {
 			}
 
 			var metronReady func()
-			metronCleanup, metronPort, metronReady = testservers.StartMetron(
+			metronCleanup, metronConfig, metronReady = testservers.StartMetron(
 				testservers.BuildMetronConfig("localhost", 0, udpPort),
 			)
 			defer metronReady()
 
-			udpEmitter, err := emitter.NewUdpEmitter(fmt.Sprintf("127.0.0.1:%d", metronPort))
+			udpEmitter, err := emitter.NewUdpEmitter(fmt.Sprintf("127.0.0.1:%d", metronConfig.IncomingUDPPort))
 			Expect(err).ToNot(HaveOccurred())
 			eventEmitter = emitter.NewEventEmitter(udpEmitter, "some-origin")
 		})
@@ -162,4 +196,12 @@ func HomeAddrToPort(addr net.Addr) int {
 		panic(err)
 	}
 	return port
+}
+
+func metronClient(addr string) v2.MetronIngressClient {
+	conn, err := grpc.Dial(addr, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	return v2.NewMetronIngressClient(conn)
 }

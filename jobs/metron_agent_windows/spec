@@ -50,6 +50,9 @@ properties:
   metron_agent.listening_address:
     description: "Address the metron agent is listening on to receive dropsonde log messages provided for BOSH links and should not be overwritten"
     default: "127.0.0.1"
+  metron_agent.grpc_port:
+    description: "Port the metron agent is listening on to receive gRPC log envelopes"
+    default: 3458
 
   doppler.addr:
     description: DNS name for doppler. This needs to be round robbin DNS if you want metron to communicate with multiple dopplers.

@@ -2,7 +2,7 @@ package clientpool_test
 
 import (
 	"errors"
-	"metron/clientpool"
+	"metron/clientpool/v1"
 	"plumbing"
 
 	"github.com/apoydence/eachers/testhelpers"
