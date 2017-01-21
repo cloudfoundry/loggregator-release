@@ -79,7 +79,8 @@ func main() {
 		fatal("Failed to create doppler: %s", err)
 	}
 
-	go doppler.Start()
+	go start(doppler)
+
 	log.Print("Startup: doppler server started.")
 
 	killChan := signalmanager.RegisterKillSignalChannel()
@@ -240,7 +241,7 @@ func New(
 	return doppler, nil
 }
 
-func (doppler *Doppler) Start() {
+func start(doppler *Doppler) {
 	doppler.errChan = make(chan error)
 
 	doppler.wg.Add(7 + doppler.dropsondeUnmarshallerCollection.Size())
