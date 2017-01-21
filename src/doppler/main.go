@@ -25,10 +25,6 @@ const (
 	TCPTimeout     = time.Minute
 )
 
-var (
-	configFile = flag.String("config", "config/doppler.json", "Location of the doppler config json file")
-)
-
 func NewStoreAdapter(conf *config.Config) storeadapter.StoreAdapter {
 	workPool, err := workpool.NewWorkPool(conf.EtcdMaxConcurrentRequests)
 	if err != nil {
@@ -54,6 +50,8 @@ func NewStoreAdapter(conf *config.Config) storeadapter.StoreAdapter {
 }
 
 func main() {
+	configFile := flag.String("config", "config/doppler.json", "Location of the doppler config json file")
+
 	seed := time.Now().UnixNano()
 	rand.Seed(seed)
 
