@@ -106,7 +106,7 @@ func main() {
 			releaseNodeChan <- stopped
 			legacyReleaseNodeChan <- legacyStopped
 
-			doppler.Stop()
+			stop(doppler)
 
 			<-stopped
 			<-legacyStopped
@@ -319,7 +319,7 @@ func start(doppler *Doppler) {
 	}
 }
 
-func (doppler *Doppler) Stop() {
+func stop(doppler *Doppler) {
 	go doppler.udpListener.Stop()
 	go doppler.tcpListener.Stop()
 	go doppler.tlsListener.Stop()
