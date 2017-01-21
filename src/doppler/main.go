@@ -43,30 +43,6 @@ const (
 	TCPTimeout     = time.Minute
 )
 
-func NewStoreAdapter(conf *config.Config) storeadapter.StoreAdapter {
-	workPool, err := workpool.NewWorkPool(conf.EtcdMaxConcurrentRequests)
-	if err != nil {
-		panic(err)
-	}
-	options := &etcdstoreadapter.ETCDOptions{
-		ClusterUrls: conf.EtcdUrls,
-	}
-	if conf.EtcdRequireTLS {
-		options.IsSSL = true
-		options.CertFile = conf.EtcdTLSClientConfig.CertFile
-		options.KeyFile = conf.EtcdTLSClientConfig.KeyFile
-		options.CAFile = conf.EtcdTLSClientConfig.CAFile
-	}
-	etcdStoreAdapter, err := etcdstoreadapter.New(options, workPool)
-	if err != nil {
-		panic(err)
-	}
-	if err = etcdStoreAdapter.Connect(); err != nil {
-		panic(err)
-	}
-	return etcdStoreAdapter
-}
-
 func main() {
 	configFile := flag.String("config", "config/doppler.json", "Location of the doppler config json file")
 
@@ -87,7 +63,7 @@ func main() {
 
 	log.Printf("Startup: Setting up the doppler server")
 	dropsonde.Initialize(conf.MetronAddress, DOPPLER_ORIGIN)
-	storeAdapter := NewStoreAdapter(conf)
+	storeAdapter := connectToEtcd(conf)
 
 	doppler, err := New(
 		localIp,
@@ -368,4 +344,28 @@ func initializeMetrics(batchIntervalMilliseconds uint) *metricbatcher.MetricBatc
 	metricBatcher := metricbatcher.New(metricSender, time.Duration(batchIntervalMilliseconds)*time.Millisecond)
 	metrics.Initialize(metricSender, metricBatcher)
 	return metricBatcher
+}
+
+func connectToEtcd(conf *config.Config) storeadapter.StoreAdapter {
+	workPool, err := workpool.NewWorkPool(conf.EtcdMaxConcurrentRequests)
+	if err != nil {
+		panic(err)
+	}
+	options := &etcdstoreadapter.ETCDOptions{
+		ClusterUrls: conf.EtcdUrls,
+	}
+	if conf.EtcdRequireTLS {
+		options.IsSSL = true
+		options.CertFile = conf.EtcdTLSClientConfig.CertFile
+		options.KeyFile = conf.EtcdTLSClientConfig.KeyFile
+		options.CAFile = conf.EtcdTLSClientConfig.CAFile
+	}
+	etcdStoreAdapter, err := etcdstoreadapter.New(options, workPool)
+	if err != nil {
+		panic(err)
+	}
+	if err = etcdStoreAdapter.Connect(); err != nil {
+		panic(err)
+	}
+	return etcdStoreAdapter
 }
