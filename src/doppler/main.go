@@ -1,13 +1,10 @@
 package main
 
 import (
-	"diodes"
 	"flag"
 	"fmt"
 	"log"
 	"math/rand"
-	"monitor"
-	"profiler"
 	"sync"
 	"time"
 
@@ -20,6 +17,9 @@ import (
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
 
+	"diodes"
+	"monitor"
+	"profiler"
 	"signalmanager"
 
 	"code.cloudfoundry.org/localip"
