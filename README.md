@@ -30,6 +30,7 @@ If you need to contact us, you can [join our Slack channel](https://cloudfoundry
 * [Loggregator does not guarantee logs delivered in order](#loggregator-does-not-guarantee-logs-delivered-in-order)
 * [Workaround for Java multiline messages](#multi-line-java-message-workaround)
 * [Log Message Size Constraints](#log-message-size-constraints)
+* [Disable Metron UDP](#disable-metron-udp)
 * [FAQ](https://github.com/cloudfoundry/loggregator/wiki/FAQ)
 * Additional readmes
   * [Bosh HM metrics Forwarder](src/boshhmforwarder/README.md)
@@ -596,6 +597,9 @@ to replace the token with a regular newline again so it displays "properly" in K
 
 Application logs are emitted via UDP messages from Diego/DEA to Metron. The maximum log message size from a DEA is ~60KiB (assuming overhead for the transporting envelope). Diego breaks up log messages greater than ~60KiB into multiple envelopes to mitigate this constraint.
 
+### Disable Metron UDP
+
+Metron accepts envelopes in two different protocols: UDP and gRPC. UDP is insecure and supports the [v1 envelopes](https://github.com/cloudfoundry/dropsonde-protocol). It will eventually be deprecated. gRPC supports [v2](https://github.com/cloudfoundry/loggregator-api). If you are running Metron and would like to not have UDP for security purposes you can set the [`metron_agent.disable_udp`](https://github.com/cloudfoundry/loggregator/blob/69e7f387ddb0eb04a358b7078bf37e6adcf69439/jobs/metron_agent/spec#L49-L51) property in the bosh manifest.
 
 [ci-badge]: https://loggregator.ci.cf-app.com/api/v1/pipelines/loggregator/jobs/run-tests/badge
 [ci-pipeline]: https://loggregator.ci.cf-app.com/
