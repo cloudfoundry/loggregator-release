@@ -15,17 +15,16 @@ import (
 )
 
 type StatsdListener struct {
-	host     string
+	hostport string
 	stopChan chan struct{}
 
 	gaugeValues   map[string]float64 // key is "origin.name"
 	counterValues map[string]float64 // key is "origin.name"
 }
 
-func New(listenerPort uint) *StatsdListener {
-	listenerAddress := fmt.Sprintf(":%d", listenerPort)
+func New(hostport string) *StatsdListener {
 	return &StatsdListener{
-		host:     listenerAddress,
+		hostport: hostport,
 		stopChan: make(chan struct{}),
 
 		gaugeValues:   make(map[string]float64),
@@ -34,16 +33,16 @@ func New(listenerPort uint) *StatsdListener {
 }
 
 func (l *StatsdListener) Run(outputChan chan *events.Envelope) {
-	udpAddr, err := net.ResolveUDPAddr("udp", l.host)
+	udpAddr, err := net.ResolveUDPAddr("udp", l.hostport)
 	if err != nil {
-		log.Fatalf("Failed to resolve address %s. %s", l.host, err.Error())
+		log.Fatalf("Failed to resolve address %s. %s", l.hostport, err.Error())
 	}
 	connection, err := net.ListenUDP("udp", udpAddr)
 	if err != nil {
 		log.Fatalf("Failed to start UDP listener. %s", err.Error())
 	}
 
-	log.Printf("Listening for statsd on host %s", l.host)
+	log.Printf("Listening for statsd on hostport %s", l.hostport)
 
 	// Use max UDP size because we don't know how big the message is.
 	maxUDPsize := 65535
