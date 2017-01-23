@@ -23,9 +23,9 @@ loggregator-blobs/metron.xz:
   object_id: a6c2ac2d-f2f4-4cd3-6743-137695e6dc6f
   sha: d1d2d501f2b4020c98f5cec61957882178fd5bfa
 loggregator-blobs/statsd-injector.xz:
-  size: 1067492
-  object_id: f658af7f-e11d-4f6a-755a-9594ab02f019
-  sha: ad76e235056a09d809ed44fdefd72807024cdc77
+  size: 1068112
+  object_id: dcf81bdf-876e-43b3-4f57-a0d1fbd910a2
+  sha: 936fd9ee82032f3488a6cda998748a4123c3d699
 loggregator-blobs/syslog_drain_binder.xz:
   size: 3235872
   object_id: 52baf33b-6259-48ce-6494-2ed5f6cae28d
