@@ -62,7 +62,7 @@ instance_groups:
       doppler:
         addr: doppler.service.cf.internal
       metron_agent:
-        disable_udp: true
+        disable_udp: false
         protocols:
         - udp
         deployment: loggregator
