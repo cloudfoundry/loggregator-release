@@ -44,21 +44,24 @@ const (
 )
 
 func main() {
-	configFile := flag.String("config", "config/doppler.json", "Location of the doppler config json file")
-
 	seed := time.Now().UnixNano()
 	rand.Seed(seed)
 
+	configFile := flag.String(
+		"config",
+		"config/doppler.json",
+		"Location of the doppler config json file",
+	)
 	flag.Parse()
-
-	localIp, err := localip.LocalIP()
-	if err != nil {
-		log.Fatalf("Unable to resolve own IP address: %s", err)
-	}
 
 	conf, err := config.ParseConfig(*configFile)
 	if err != nil {
 		log.Fatalf("Unable to parse config: %s", err)
+	}
+
+	localIp, err := localip.LocalIP()
+	if err != nil {
+		log.Fatalf("Unable to resolve own IP address: %s", err)
 	}
 
 	log.Printf("Startup: Setting up the doppler server")
