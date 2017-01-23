@@ -93,7 +93,7 @@ var _ = BeforeEach(func() {
 		conn.Close()
 		return true
 	}
-	Eventually(dopplerStartedFn).Should(BeTrue())
+	Eventually(dopplerStartedFn, 3).Should(BeTrue())
 	localIPAddress, _ = localip.LocalIP()
 	Eventually(func() error {
 		_, err := etcdAdapter.Get("healthstatus/doppler/z1/doppler_z1/0")
