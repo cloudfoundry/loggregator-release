@@ -39,8 +39,8 @@ import (
 )
 
 const (
-	DOPPLER_ORIGIN = "DopplerServer"
-	TCPTimeout     = time.Minute
+	dopplerOrigin = "DopplerServer"
+	tcpTimeout    = time.Minute
 )
 
 func main() {
@@ -65,7 +65,7 @@ func main() {
 	}
 
 	log.Printf("Startup: Setting up the doppler server")
-	dropsonde.Initialize(conf.MetronAddress, DOPPLER_ORIGIN)
+	dropsonde.Initialize(conf.MetronAddress, dopplerOrigin)
 	storeAdapter := connectToEtcd(conf)
 
 	errChan := make(chan error)
@@ -96,7 +96,7 @@ func main() {
 		conf.SinkSkipCertVerify,
 		blacklist,
 		conf.MessageDrainBufferSize,
-		DOPPLER_ORIGIN,
+		dopplerOrigin,
 		sinkTimeout,
 		sinkIOTimeout,
 		metricTTL,
@@ -108,7 +108,7 @@ func main() {
 		time.Duration(conf.WebsocketWriteTimeoutSeconds)*time.Second,
 		30*time.Second,
 		conf.MessageDrainBufferSize,
-		DOPPLER_ORIGIN,
+		dopplerOrigin,
 		batcher,
 	)
 	if err != nil {
@@ -123,14 +123,14 @@ func main() {
 		tlsConfig := &conf.TLSListenerConfig
 		addr := fmt.Sprintf("%s:%d", host, tlsConfig.Port)
 		contextName := "tlsListener"
-		tlsListener, err = listeners.NewTCPListener(contextName, addr, tlsConfig, envelopeBuffer, batcher, TCPTimeout)
+		tlsListener, err = listeners.NewTCPListener(contextName, addr, tlsConfig, envelopeBuffer, batcher, tcpTimeout)
 		if err != nil {
 			log.Panicf("Failed to create TLS listener: %s", err)
 		}
 	}
 	addr := fmt.Sprintf("%s:%d", host, conf.IncomingTCPPort)
 	contextName := "tcpListener"
-	tcpListener, err := listeners.NewTCPListener(contextName, addr, nil, envelopeBuffer, batcher, TCPTimeout)
+	tcpListener, err := listeners.NewTCPListener(contextName, addr, nil, envelopeBuffer, batcher, tcpTimeout)
 	grpcListener, err := listeners.NewGRPCListener(grpcRouter, sinkManager, conf.GRPC, envelopeBuffer, batcher)
 	if err != nil {
 		log.Panicf("Failed to create grpcListener: %s", err)
