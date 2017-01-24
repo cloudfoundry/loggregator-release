@@ -1,8 +1,11 @@
 ---
 name: metron_agent
+dependencies:
+- golang1.7
 files:
+- loggregator/src/metron/LICENSE
+- loggregator/src/metron/NOTICE
 - loggregator/src/metron/syslog_daemon_config/*
-- loggregator-blobs/metron.xz
 - loggregator/src/code.cloudfoundry.org/localip/*.go # gosub
 - loggregator/src/diodes/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub

@@ -1,7 +1,8 @@
 set -e -x
 
-pushd loggregator-blobs
-    unxz trafficcontroller.xz
-    chmod +x trafficcontroller
-    cp -a trafficcontroller ${BOSH_INSTALL_TARGET}
-popd
+export GOROOT=$(readlink -nf /var/vcap/packages/golang1.7)
+export PATH=$GOROOT/bin:$PATH
+export GOPATH=$PWD/loggregator
+
+go install trafficcontroller
+cp -a $PWD/loggregator/bin/trafficcontroller ${BOSH_INSTALL_TARGET}

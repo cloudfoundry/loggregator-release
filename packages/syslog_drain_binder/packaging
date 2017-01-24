@@ -1,7 +1,8 @@
 set -e -x
 
-pushd loggregator-blobs
-    unxz syslog_drain_binder.xz
-    chmod +x syslog_drain_binder
-    cp -a syslog_drain_binder ${BOSH_INSTALL_TARGET}
-popd
+export GOROOT=$(readlink -nf /var/vcap/packages/golang1.7)
+export PATH=$GOROOT/bin:$PATH
+export GOPATH=$PWD/loggregator
+
+go install syslog_drain_binder
+cp -a $PWD/loggregator/bin/syslog_drain_binder ${BOSH_INSTALL_TARGET}
