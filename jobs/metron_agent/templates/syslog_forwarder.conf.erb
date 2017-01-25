@@ -21,6 +21,10 @@ $UDPServerRun 514
 
 
 <%
+   def rendered_action_parameters
+      return p("syslog_daemon_config.rsyslog_action_parameters").map{|k,v| "#{k}=\"#{v}\""}.join(' ')
+   end
+
    def discover_external_ip
      networks = spec.networks.marshal_dump
      _, network = networks.find do |_name, network_spec|
@@ -57,14 +61,27 @@ template(name="CfLogTemplate" type="list") {
 <%= p('syslog_daemon_config.custom_rule') %>
 
 <% if_p("syslog_daemon_config.address", "syslog_daemon_config.port", "syslog_daemon_config.transport") do |address, port, transport| %>
-
 <% if transport == "relp" %>
 $ModLoad omrelp
-*.* :omrelp:<%= address %>:<%= port %>;CfLogTemplate
+action(type="omrelp"
+       target="<%= address %>"
+       port="<%= port %>"
+       template="CfLogTemplate"
+       <%= rendered_action_parameters() %>)
 <% elsif transport == "udp" %>
-*.* @<%= address %>:<%= port %>;CfLogTemplate
+action(type="omfwd"
+       Protocol="udp"
+       Target="<%= address %>"
+       Port="<%= port %>"
+       template="CfLogTemplate"
+       <%= rendered_action_parameters() %>)
 <% elsif transport == "tcp" %>
-*.* @@<%= address %>:<%= port %>;CfLogTemplate
+action(type="omfwd"
+       Protocol="tcp"
+       Target="<%= address %>"
+       Port="<%= port %>"
+       template="CfLogTemplate"
+       <%= rendered_action_parameters() %>)
 <% else %>
 #only RELP, UDP, and TCP are supported
 <% end %>
@@ -80,9 +97,18 @@ $ActionExecOnlyWhenPreviousIsSuspended on
    port = fallback_address["port"]
 %>
 <% if transport == "relp" %>
-& :omrelp:<%= address %>:<%= port %>;CfLogTemplate
+action(type="omrelp"
+       target="<%= address %>"
+       port="<%= port %>"
+       template="CfLogTemplate"
+       <%= rendered_action_parameters() %>)
 <% elsif transport == "tcp" %>
-& @@<%= address %>:<%= port %>;CfLogTemplate
+action(type="omfwd"
+       Protocol="tcp"
+       Target="<%= address %>"
+       Port="<%= port %>"
+       template="CfLogTemplate"
+       <%= rendered_action_parameters() %>)
 <% else %>
 # only RELP and TCP are supported
 <% end %>
