@@ -3,6 +3,7 @@ package metric
 import (
 	"context"
 	"diodes"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -15,9 +16,10 @@ import (
 var (
 	mu sync.Mutex
 
-	client v2.MetronIngressClient
-	sender v2.MetronIngress_SenderClient
-	conf   *config
+	client      v2.MetronIngressClient
+	sender      v2.MetronIngress_SenderClient
+	conf        *config
+	batchBuffer *diodes.ManyToOneEnvelopeV2
 )
 
 type config struct {
@@ -25,6 +27,8 @@ type config struct {
 	dialOpts      []grpc.DialOption
 	sourceUUID    string
 	batchInterval time.Duration
+	prefix        string
+	component     string
 }
 
 type SetOpts func(c *config)
@@ -53,6 +57,18 @@ func WithBatchInterval(interval time.Duration) func(c *config) {
 	}
 }
 
+func WithPrefix(prefix string) func(c *config) {
+	return func(c *config) {
+		c.prefix = prefix
+	}
+}
+
+func WithComponent(name string) func(c *config) {
+	return func(c *config) {
+		c.component = name
+	}
+}
+
 func Setup(opts ...SetOpts) {
 	mu.Lock()
 	defer mu.Unlock()
@@ -61,6 +77,7 @@ func Setup(opts ...SetOpts) {
 		consumerAddr:  "localhost:3458",
 		dialOpts:      []grpc.DialOption{grpc.WithInsecure()},
 		batchInterval: 10 * time.Second,
+		prefix:        "loggregator",
 	}
 
 	for _, opt := range opts {
@@ -81,33 +98,85 @@ func Setup(opts ...SetOpts) {
 		return
 	}
 
+	batchBuffer = diodes.NewManyToOneEnvelopeV2(1000, diodes.AlertFunc(func(missed int) {
+		log.Printf("dropped metrics %d", missed)
+	}))
+
 	go runBatcher()
 }
 
-func IncCounter(name string) {
+type IncrementOpt func(*incrementOption)
+
+type incrementOption struct {
+	delta uint64
+}
+
+func WithIncrement(delta uint64) func(*incrementOption) {
+	return func(i *incrementOption) {
+		i.delta = delta
+	}
+}
+
+func IncCounter(name string, options ...IncrementOpt) {
+	incConf := &incrementOption{
+		delta: 1,
+	}
+
+	for _, opt := range options {
+		opt(incConf)
+	}
+
 	e := &v2.Envelope{
 		SourceUuid: conf.sourceUUID,
 		Timestamp:  time.Now().UnixNano(),
 		Message: &v2.Envelope_Counter{
 			Counter: &v2.Counter{
-				Name: name,
+				Name: fmt.Sprintf("%s.%s", conf.prefix, name),
 				Value: &v2.Counter_Delta{
-					Delta: 1,
+					Delta: incConf.delta,
+				},
+			},
+		},
+		Tags: map[string]*v2.Value{
+			"component": &v2.Value{
+				Data: &v2.Value_Text{
+					Text: conf.component,
 				},
 			},
 		},
 	}
 
-	if err := sender.Send(e); err != nil {
-		log.Printf("Failed to send envelope: %s", err)
-	}
+	batchBuffer.Set(e)
 }
 
-func runBatcher(buffer diodes.ManyToOneEnvelopeV2) {
+func runBatcher() {
 	ticker := time.NewTicker(conf.batchInterval)
 	defer ticker.Stop()
 
 	for range ticker.C {
-
+		for _, e := range aggregateCounters() {
+			sender.Send(e)
+		}
 	}
+}
+
+func aggregateCounters() map[string]*v2.Envelope {
+	m := make(map[string]*v2.Envelope)
+	for {
+		envelope, ok := batchBuffer.TryNext()
+		if !ok {
+			break
+		}
+
+		existingEnvelope, ok := m[envelope.GetCounter().Name]
+		if !ok {
+			existingEnvelope = envelope
+			m[envelope.GetCounter().Name] = existingEnvelope
+			continue
+		}
+
+		existingEnvelope.GetCounter().GetValue().(*v2.Counter_Delta).Delta += envelope.GetCounter().GetDelta()
+	}
+
+	return m
 }

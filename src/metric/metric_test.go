@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"metric"
 	"net"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -27,6 +28,9 @@ var _ = Describe("Metric", func() {
 		metric.Setup(
 			metric.WithAddr(addr),
 			metric.WithSourceUUID("some-uuid"),
+			metric.WithBatchInterval(250*time.Millisecond),
+			metric.WithPrefix("loggregator"),
+			metric.WithComponent("metron"),
 		)
 
 		rx := fetchReceiver(mockConsumer)
@@ -69,14 +73,37 @@ var _ = Describe("Metric", func() {
 						return false
 					}
 
-					return counter.Name == randName
+					return counter.Name == "loggregator."+randName
 				}
 
 				Eventually(f).Should(BeTrue())
 				Expect(e.Timestamp).ToNot(Equal(int64(0)))
 				Expect(e.SourceUuid).To(Equal("some-uuid"))
-				Expect(e.GetCounter().Name).To(Equal(randName))
 				Expect(e.GetCounter().GetDelta()).To(Equal(uint64(5)))
+
+				value, ok := e.GetTags()["component"]
+				Expect(ok).To(Equal(true))
+
+				Expect(value.GetText()).To(Equal("metron"))
+			})
+
+			It("increments by the given value", func() {
+				metric.IncCounter(randName, metric.WithIncrement(42))
+
+				var e *v2.Envelope
+				f := func() bool {
+					Eventually(receiver).Should(Receive(&e))
+
+					counter := e.GetCounter()
+					if counter == nil {
+						return false
+					}
+
+					return counter.Name == "loggregator."+randName
+				}
+
+				Eventually(f).Should(BeTrue())
+				Expect(e.GetCounter().GetDelta()).To(Equal(uint64(42)))
 			})
 		})
 	})
