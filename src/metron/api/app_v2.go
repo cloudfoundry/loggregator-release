@@ -17,13 +17,21 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-type AppV2 struct{}
+type AppV2 struct {
+	config *config.Config
+}
 
-func (a *AppV2) Start(conf *config.Config) {
+func NewV2App(c *config.Config) *AppV2 {
+	return &AppV2{
+		config: c,
+	}
+}
+
+func (a *AppV2) Start() {
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
-		conf.GRPC.CertFile,
-		conf.GRPC.KeyFile,
-		conf.GRPC.CAFile,
+		a.config.GRPC.CertFile,
+		a.config.GRPC.KeyFile,
+		a.config.GRPC.CAFile,
 		"metron",
 	)
 	if err != nil {
@@ -35,21 +43,21 @@ func (a *AppV2) Start(conf *config.Config) {
 		log.Printf("Dropped %d v2 envelopes", missed)
 	}))
 
-	pool := a.initializePool(conf)
+	pool := a.initializePool()
 	tx := egress.NewTransponder(envelopeBuffer, pool)
 	go tx.Start()
 
 	rx := ingress.NewReceiver(envelopeBuffer)
-	metronAddress := fmt.Sprintf("127.0.0.1:%d", conf.GRPC.Port)
+	metronAddress := fmt.Sprintf("127.0.0.1:%d", a.config.GRPC.Port)
 	ingressServer := ingress.NewServer(metronAddress, rx, grpc.Creds(credentials.NewTLS(tlsConfig)))
 	ingressServer.Start()
 }
 
-func (a *AppV2) initializePool(conf *config.Config) *clientpool.ClientPool {
+func (a *AppV2) initializePool() *clientpool.ClientPool {
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
-		conf.GRPC.CertFile,
-		conf.GRPC.KeyFile,
-		conf.GRPC.CAFile,
+		a.config.GRPC.CertFile,
+		a.config.GRPC.KeyFile,
+		a.config.GRPC.CAFile,
 		"doppler",
 	)
 	if err != nil {
@@ -57,8 +65,8 @@ func (a *AppV2) initializePool(conf *config.Config) *clientpool.ClientPool {
 	}
 
 	connector := clientpool.MakeGRPCConnector(
-		conf.DopplerAddr,
-		conf.Zone,
+		a.config.DopplerAddr,
+		a.config.Zone,
 		grpc.Dial,
 		v2.NewDopplerIngressClient,
 		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),

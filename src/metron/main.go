@@ -29,8 +29,8 @@ func main() {
 	appV1 := api.NewV1App(config)
 	go appV1.Start()
 
-	appV2 := &api.AppV2{}
-	go appV2.Start(config)
+	appV2 := api.NewV2App(config)
+	go appV2.Start()
 
 	// We start the profiler last so that we can definitively say that we're
 	// all connected and ready for data by the time the profiler starts up.
