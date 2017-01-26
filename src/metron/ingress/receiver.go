@@ -1,6 +1,7 @@
 package ingress
 
 import (
+	"metric"
 	v2 "plumbing/v2"
 )
 
@@ -24,6 +25,7 @@ func (s *Receiver) Sender(sender v2.MetronIngress_SenderServer) error {
 		if err != nil {
 			return err
 		}
+		metric.IncCounter("ingress")
 		s.dataSetter.Set(e)
 	}
 

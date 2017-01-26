@@ -4,12 +4,15 @@ import (
 	"flag"
 	"log"
 	"math/rand"
-	"plumbing"
-	"profiler"
 	"time"
 
+	"google.golang.org/grpc"
+
+	"metric"
 	"metron/api"
 	"metron/config"
+	"plumbing"
+	"profiler"
 )
 
 func main() {
@@ -20,8 +23,8 @@ func main() {
 		"config/metron.json",
 		"Location of the Metron config json file",
 	)
-
 	flag.Parse()
+
 	config, err := config.ParseConfig(*configFilePath)
 	if err != nil {
 		log.Fatalf("Unable to parse config: %s", err)
@@ -38,6 +41,14 @@ func main() {
 		config.GRPC.KeyFile,
 		config.GRPC.CAFile,
 		"metron",
+	)
+
+	batchInterval := time.Duration(config.MetricBatchIntervalMilliseconds) * time.Millisecond
+	metric.Setup(
+		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(serverCreds)),
+		metric.WithBatchInterval(batchInterval),
+		metric.WithPrefix("loggregator"),
+		metric.WithComponent("metron"),
 	)
 
 	appV1 := api.NewV1App(config, clientCreds)

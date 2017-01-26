@@ -36,6 +36,7 @@ files:
 - loggregator/src/google.golang.org/grpc/naming/*.go # gosub
 - loggregator/src/google.golang.org/grpc/peer/*.go # gosub
 - loggregator/src/google.golang.org/grpc/transport/*.go # gosub
+- loggregator/src/metric/*.go # gosub
 - loggregator/src/metron/*.go # gosub
 - loggregator/src/metron/api/*.go # gosub
 - loggregator/src/metron/clientpool/v1/*.go # gosub

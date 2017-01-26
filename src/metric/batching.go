@@ -44,7 +44,7 @@ func IncCounter(name string, options ...IncrementOpt) {
 			},
 		},
 		Tags: map[string]*v2.Value{
-			"component": &v2.Value{
+			"component": {
 				Data: &v2.Value_Text{
 					Text: conf.component,
 				},

@@ -27,7 +27,7 @@ import (
 
 type AppV1 struct {
 	config *config.Config
-	creds credentials.TransportCredentials
+	creds  credentials.TransportCredentials
 }
 
 func NewV1App(c *config.Config, creds credentials.TransportCredentials) *AppV1 {
