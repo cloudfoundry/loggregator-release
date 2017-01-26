@@ -33,6 +33,9 @@ var _ = Describe("Metric", func() {
 			metric.WithComponent("metron"),
 		)
 
+		// Seed the data
+		metric.IncCounter("seed-data")
+
 		rx := fetchReceiver(mockConsumer)
 		receiver = rxToCh(rx)
 	})
@@ -143,7 +146,7 @@ func rxToCh(rx v2.MetronIngress_SenderServer) <-chan *v2.Envelope {
 }
 
 func fetchReceiver(mockConsumer *mockMetronIngressServer) (rx v2.MetronIngress_SenderServer) {
-	Eventually(mockConsumer.SenderInput.Arg0).Should(Receive(&rx))
+	Eventually(mockConsumer.SenderInput.Arg0, 3).Should(Receive(&rx))
 	return rx
 }
 

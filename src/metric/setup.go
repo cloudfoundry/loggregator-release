@@ -102,4 +102,26 @@ func Setup(opts ...SetOpts) {
 	}))
 
 	go runBatcher()
+	go maintainer()
+}
+
+func maintainer() {
+	for range time.Tick(time.Second) {
+		mu.Lock()
+		s := sender
+		mu.Unlock()
+
+		if s != nil {
+			continue
+		}
+
+		s, err := client.Sender(context.Background())
+		if err != nil {
+			continue
+		}
+
+		mu.Lock()
+		sender = s
+		mu.Unlock()
+	}
 }

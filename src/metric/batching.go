@@ -20,6 +20,10 @@ func WithIncrement(delta uint64) func(*incrementOption) {
 }
 
 func IncCounter(name string, options ...IncrementOpt) {
+	if batchBuffer == nil {
+		return
+	}
+
 	incConf := &incrementOption{
 		delta: 1,
 	}
@@ -56,8 +60,16 @@ func runBatcher() {
 	defer ticker.Stop()
 
 	for range ticker.C {
+		mu.Lock()
+		s := sender
+		mu.Unlock()
+
+		if s == nil {
+			continue
+		}
+
 		for _, e := range aggregateCounters() {
-			sender.Send(e)
+			s.Send(e)
 		}
 	}
 }
