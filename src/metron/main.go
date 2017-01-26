@@ -26,8 +26,8 @@ func main() {
 		log.Fatalf("Unable to parse config: %s", err)
 	}
 
-	appV1 := &api.AppV1{}
-	go appV1.Start(config)
+	appV1 := api.NewV1App(config)
+	go appV1.Start()
 
 	appV2 := &api.AppV2{}
 	go appV2.Start(config)
