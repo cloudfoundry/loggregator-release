@@ -10,7 +10,6 @@ import (
 	"metron/config"
 	"metron/egress"
 	"metron/ingress"
-	"plumbing"
 	v2 "plumbing/v2"
 
 	"google.golang.org/grpc"
@@ -18,24 +17,26 @@ import (
 )
 
 type AppV2 struct {
-	config *config.Config
+	config      *config.Config
+	clientCreds credentials.TransportCredentials
+	serverCreds credentials.TransportCredentials
 }
 
-func NewV2App(c *config.Config) *AppV2 {
+func NewV2App(
+	c *config.Config,
+	clientCreds credentials.TransportCredentials,
+	serverCreds credentials.TransportCredentials,
+) *AppV2 {
 	return &AppV2{
-		config: c,
+		config:      c,
+		clientCreds: clientCreds,
+		serverCreds: serverCreds,
 	}
 }
 
 func (a *AppV2) Start() {
-	tlsConfig, err := plumbing.NewMutualTLSConfig(
-		a.config.GRPC.CertFile,
-		a.config.GRPC.KeyFile,
-		a.config.GRPC.CAFile,
-		"metron",
-	)
-	if err != nil {
-		log.Panicf("Failed to load TLS config: %s", err)
+	if a.serverCreds == nil {
+		log.Panic("Failed to load TLS server config")
 	}
 
 	envelopeBuffer := diodes.NewManyToOneEnvelopeV2(10000, diodes.AlertFunc(func(missed int) {
@@ -49,19 +50,13 @@ func (a *AppV2) Start() {
 
 	rx := ingress.NewReceiver(envelopeBuffer)
 	metronAddress := fmt.Sprintf("127.0.0.1:%d", a.config.GRPC.Port)
-	ingressServer := ingress.NewServer(metronAddress, rx, grpc.Creds(credentials.NewTLS(tlsConfig)))
+	ingressServer := ingress.NewServer(metronAddress, rx, grpc.Creds(a.serverCreds))
 	ingressServer.Start()
 }
 
 func (a *AppV2) initializePool() *clientpool.ClientPool {
-	tlsConfig, err := plumbing.NewMutualTLSConfig(
-		a.config.GRPC.CertFile,
-		a.config.GRPC.KeyFile,
-		a.config.GRPC.CAFile,
-		"doppler",
-	)
-	if err != nil {
-		log.Panicf("Failed to load TLS config: %s", err)
+	if a.clientCreds == nil {
+		log.Panic("Failed to load TLS client config")
 	}
 
 	connector := clientpool.MakeGRPCConnector(
@@ -69,7 +64,7 @@ func (a *AppV2) initializePool() *clientpool.ClientPool {
 		a.config.Zone,
 		grpc.Dial,
 		v2.NewDopplerIngressClient,
-		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
+		grpc.WithTransportCredentials(a.clientCreds),
 	)
 
 	var connManagers []clientpool.Conn

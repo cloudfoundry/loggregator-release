@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"math/rand"
+	"plumbing"
 	"profiler"
 	"time"
 
@@ -26,10 +27,23 @@ func main() {
 		log.Fatalf("Unable to parse config: %s", err)
 	}
 
-	appV1 := api.NewV1App(config)
+	clientCreds := plumbing.NewCredentials(
+		config.GRPC.CertFile,
+		config.GRPC.KeyFile,
+		config.GRPC.CAFile,
+		"doppler",
+	)
+	serverCreds := plumbing.NewCredentials(
+		config.GRPC.CertFile,
+		config.GRPC.KeyFile,
+		config.GRPC.CAFile,
+		"metron",
+	)
+
+	appV1 := api.NewV1App(config, clientCreds)
 	go appV1.Start()
 
-	appV2 := api.NewV2App(config)
+	appV2 := api.NewV2App(config, clientCreds, serverCreds)
 	go appV2.Start()
 
 	// We start the profiler last so that we can definitively say that we're

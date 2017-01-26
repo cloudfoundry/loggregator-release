@@ -27,10 +27,11 @@ import (
 
 type AppV1 struct {
 	config *config.Config
+	creds credentials.TransportCredentials
 }
 
-func NewV1App(c *config.Config) *AppV1 {
-	return &AppV1{config: c}
+func NewV1App(c *config.Config, creds credentials.TransportCredentials) *AppV1 {
+	return &AppV1{config: c, creds: creds}
 }
 
 func (a *AppV1) Start() {
@@ -42,10 +43,7 @@ func (a *AppV1) Start() {
 	batcher, eventWriter := a.initializeMetrics(statsStopChan)
 
 	log.Print("Startup: Setting up the Metron agent")
-	marshaller, err := a.initializeV1DopplerPool(batcher)
-	if err != nil {
-		log.Panic(fmt.Errorf("Could not initialize doppler connection pool: %s", err))
-	}
+	marshaller := a.initializeV1DopplerPool(batcher)
 
 	messageTagger := tagger.New(a.config.Deployment, a.config.Job, a.config.Index, marshaller)
 	aggregator := messageaggregator.New(messageTagger)
@@ -73,7 +71,7 @@ func (a *AppV1) initializeMetrics(stopChan chan struct{}) (*metricbatcher.Metric
 	return metricBatcher, eventWriter
 }
 
-func (a *AppV1) initializeV1DopplerPool(batcher *metricbatcher.MetricBatcher) (*eventmarshaller.EventMarshaller, error) {
+func (a *AppV1) initializeV1DopplerPool(batcher *metricbatcher.MetricBatcher) *eventmarshaller.EventMarshaller {
 	pools := a.setupGRPC()
 
 	// TODO: delete this legacy pool stuff when UDP goes away
@@ -86,18 +84,11 @@ func (a *AppV1) initializeV1DopplerPool(batcher *metricbatcher.MetricBatcher) (*
 	marshaller := eventmarshaller.New(batcher)
 	marshaller.SetWriter(combinedPool)
 
-	return marshaller, nil
+	return marshaller
 }
 
 func (a *AppV1) setupGRPC() []legacyclientpool.Pool {
-	tlsConfig, err := plumbing.NewMutualTLSConfig(
-		a.config.GRPC.CertFile,
-		a.config.GRPC.KeyFile,
-		a.config.GRPC.CAFile,
-		"doppler",
-	)
-	if err != nil {
-		log.Printf("Failed to load TLS config: %s", err)
+	if a.creds == nil {
 		return nil
 	}
 
@@ -106,7 +97,7 @@ func (a *AppV1) setupGRPC() []legacyclientpool.Pool {
 		a.config.Zone,
 		grpc.Dial,
 		plumbing.NewDopplerIngestorClient,
-		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
+		grpc.WithTransportCredentials(a.creds),
 	)
 
 	var connManagers []clientpool.Conn
