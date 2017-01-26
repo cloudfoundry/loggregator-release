@@ -83,6 +83,10 @@ func Setup(opts ...SetOpts) {
 		opt(conf)
 	}
 
+	batchBuffer = diodes.NewManyToOneEnvelopeV2(1000, diodes.AlertFunc(func(missed int) {
+		log.Printf("dropped metrics %d", missed)
+	}))
+
 	conn, err := grpc.Dial(conf.consumerAddr, conf.dialOpts...)
 	if err != nil {
 		log.Printf("Failed to connect to metric consumer: %s", err)
@@ -96,10 +100,6 @@ func Setup(opts ...SetOpts) {
 		log.Printf("Failed to get sender from metric consumer: %s", err)
 		return
 	}
-
-	batchBuffer = diodes.NewManyToOneEnvelopeV2(1000, diodes.AlertFunc(func(missed int) {
-		log.Printf("dropped metrics %d", missed)
-	}))
 
 	go runBatcher()
 	go maintainer()

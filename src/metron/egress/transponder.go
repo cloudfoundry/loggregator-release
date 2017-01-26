@@ -28,7 +28,11 @@ func NewTransponder(n Nexter, w Writer) *Transponder {
 func (t *Transponder) Start() {
 	for {
 		envelope := t.nexter.Next()
-		t.writer.Write(envelope)
+		err := t.writer.Write(envelope)
+		if err != nil {
+			metric.IncCounter("dropped") // TODO: add "egress" tag
+			continue
+		}
 		metric.IncCounter("egress")
 	}
 }
