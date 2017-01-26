@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"math/rand"
 	"time"
@@ -49,6 +50,7 @@ func main() {
 		metric.WithBatchInterval(batchInterval),
 		metric.WithPrefix("loggregator"),
 		metric.WithComponent("metron"),
+		metric.WithAddr(fmt.Sprintf("localhost:%d", config.GRPC.Port)),
 	)
 
 	appV1 := api.NewV1App(config, clientCreds)

@@ -50,8 +50,9 @@ func (a *AppV2) Start() {
 	tx := egress.NewTransponder(envelopeBuffer, pool)
 	go tx.Start()
 
-	rx := ingress.NewReceiver(envelopeBuffer)
 	metronAddress := fmt.Sprintf("127.0.0.1:%d", a.config.GRPC.Port)
+	log.Printf("metron v2 API started on addr %s", metronAddress)
+	rx := ingress.NewReceiver(envelopeBuffer)
 	ingressServer := ingress.NewServer(metronAddress, rx, grpc.Creds(a.serverCreds))
 	ingressServer.Start()
 }

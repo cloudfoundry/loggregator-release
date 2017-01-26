@@ -56,7 +56,7 @@ func (a *AppV1) Start() {
 		log.Panic(fmt.Errorf("Failed to listen on %s: %s", metronAddress, err))
 	}
 
-	log.Print("metron v1 API started")
+	log.Printf("metron v1 API started on addr %s", metronAddress)
 	dropsondeReader.Start()
 }
 

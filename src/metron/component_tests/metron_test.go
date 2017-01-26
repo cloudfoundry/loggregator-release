@@ -52,7 +52,7 @@ var _ = Describe("Metron", func() {
 			metronCleanup()
 		})
 
-		It("routes from UDP to gRPC", func() {
+		It("accepts connections on the v1 API", func() {
 			udpEmitter, err := emitter.NewUdpEmitter(fmt.Sprintf("127.0.0.1:%d", metronConfig.IncomingUDPPort))
 			Expect(err).ToNot(HaveOccurred())
 			eventEmitter = emitter.NewEventEmitter(udpEmitter, "some-origin")
@@ -83,7 +83,7 @@ var _ = Describe("Metron", func() {
 			Expect(envelope.Unmarshal(data.Payload)).To(Succeed())
 		})
 
-		It("routes from gRPC to gRPC", func() {
+		It("accepts connections on the v2 API", func() {
 			emitEnvelope := &v2.Envelope{
 				Message: &v2.Envelope_Log{
 					Log: &v2.Log{
@@ -110,6 +110,38 @@ var _ = Describe("Metron", func() {
 				return envelope
 			}
 			Eventually(f).Should(Equal(emitEnvelope))
+		})
+
+		It("emits metrics to the v2 API", func() {
+			emitEnvelope := &v2.Envelope{
+				Message: &v2.Envelope_Log{
+					Log: &v2.Log{
+						Payload: []byte("some-message"),
+						Type:    v2.Log_OUT,
+					},
+				},
+			}
+
+			client := metronClient(metronConfig)
+			ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
+			sender, err := client.Sender(ctx)
+			Expect(err).ToNot(HaveOccurred())
+
+			Consistently(func() error {
+				return sender.Send(emitEnvelope)
+			}, 5).Should(Succeed())
+
+			var rx v2.DopplerIngress_SenderServer
+			Expect(consumerServer.V2.SenderInput.Arg0).Should(Receive(&rx))
+
+			f := func() bool {
+				envelope, err := rx.Recv()
+				Expect(err).ToNot(HaveOccurred())
+
+				return envelope.GetCounter() != nil &&
+					envelope.GetCounter().GetDelta() > 0
+			}
+			Eventually(f).Should(Equal(true))
 		})
 	})
 

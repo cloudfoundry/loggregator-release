@@ -95,10 +95,8 @@ func Setup(opts ...SetOpts) {
 
 	client = v2.NewMetronIngressClient(conn)
 	sender, err = client.Sender(context.Background())
-
 	if err != nil {
 		log.Printf("Failed to get sender from metric consumer: %s", err)
-		return
 	}
 
 	go runBatcher()
@@ -117,6 +115,7 @@ func maintainer() {
 
 		s, err := client.Sender(context.Background())
 		if err != nil {
+			log.Printf("Failed to get sender from metric consumer: %s (retrying)", err)
 			continue
 		}
 
