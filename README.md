@@ -6,7 +6,7 @@
 
 Loggregator is the user application logging subsystem of Cloud Foundry.
 
-If you would to see our plans for future development, check out the [Loggregator Roadmap](https://docs.google.com/spreadsheets/d/1QOCUIlTkhGzVwfRji7Q14vczqkBbFGkiDWrJSKdRLRg/edit?usp=sharing).
+If you would to see our plans for future development, check out the [Loggregator Roadmap](https://docs.google.com/spreadsheets/d/1bM1bInPQeC2xLayLsFb0aBuD3_HFNfJj9mEJZygnuWo/edit#gid=0).
 You can track what we're working on today in our [Pivotal Tracker Project](https://www.pivotaltracker.com/n/projects/993188).
 If you need to contact us, you can [join our Slack channel](https://cloudfoundry.slack.com/messages/loggregator/).
 
