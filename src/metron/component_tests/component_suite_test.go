@@ -14,7 +14,7 @@ import (
 func TestComponentTests(t *testing.T) {
 	grpclog.SetLogger(log.New(GinkgoWriter, "", log.LstdFlags))
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ComponentTests Suite")
+	RunSpecs(t, "Metron ComponentTests Suite")
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {

@@ -16,7 +16,7 @@ func TestComponentTests(t *testing.T) {
 	grpclog.SetLogger(log.New(GinkgoWriter, "", 0))
 
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ComponentTests Suite")
+	RunSpecs(t, "Doppler ComponentTests Suite")
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {
