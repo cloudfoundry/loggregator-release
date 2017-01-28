@@ -2,7 +2,7 @@ package batch
 
 import (
 	"fmt"
-	"metron/config"
+	"metron/api"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -21,7 +21,7 @@ type BatchCounterIncrementer interface {
 }
 
 type DroppedCounter struct {
-	conf           *config.Config
+	conf           *api.Config
 	origin         string
 	ip             string
 	deltaDropped   int64
@@ -32,7 +32,7 @@ type DroppedCounter struct {
 	timerResetLock sync.Mutex
 }
 
-func NewDroppedCounter(byteWriter BatchChainByteWriter, incrementer BatchCounterIncrementer, origin, ip string, conf *config.Config) *DroppedCounter {
+func NewDroppedCounter(byteWriter BatchChainByteWriter, incrementer BatchCounterIncrementer, origin, ip string, conf *api.Config) *DroppedCounter {
 	counter := &DroppedCounter{
 		origin:      origin,
 		ip:          ip,

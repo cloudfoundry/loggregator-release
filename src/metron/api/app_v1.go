@@ -5,7 +5,6 @@ import (
 	"log"
 	"math/rand"
 	clientpool "metron/clientpool/v1"
-	"metron/config"
 	"metron/eventwriter"
 	"metron/legacyclientpool"
 	"metron/networkreader"
@@ -26,11 +25,11 @@ import (
 )
 
 type AppV1 struct {
-	config *config.Config
+	config *Config
 	creds  credentials.TransportCredentials
 }
 
-func NewV1App(c *config.Config, creds credentials.TransportCredentials) *AppV1 {
+func NewV1App(c *Config, creds credentials.TransportCredentials) *AppV1 {
 	return &AppV1{config: c, creds: creds}
 }
 

@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
-	"metron/config"
+	"metron/api"
 	"metron/writers/batch"
 
 	"github.com/cloudfoundry/sonde-go/events"
@@ -139,7 +139,7 @@ var _ = Describe("DroppedCounter", func() {
 	It("retries sending messages when sending errors", func() {
 		incrementer := newMockBatchCounterIncrementer()
 		byteWriter := newMockBatchChainByteWriter()
-		counter := batch.NewDroppedCounter(byteWriter, incrementer, origin, "some-ip", new(config.Config))
+		counter := batch.NewDroppedCounter(byteWriter, incrementer, origin, "some-ip", new(api.Config))
 
 		byteWriter.WriteOutput.SentLength <- 0
 		byteWriter.WriteOutput.Err <- errors.New("boom")
@@ -172,7 +172,7 @@ var _ = Describe("DroppedCounter", func() {
 
 func newCounterAndMockWriter() (*batch.DroppedCounter, *mockBatchChainByteWriter) {
 	byteWriter := newMockBatchChainByteWriter()
-	conf := &config.Config{
+	conf := &api.Config{
 		Deployment: "some-deployment",
 		Job:        "some-job",
 		Index:      "some-index",

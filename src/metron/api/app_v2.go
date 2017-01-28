@@ -8,7 +8,6 @@ import (
 	"metric"
 
 	clientpool "metron/clientpool/v2"
-	"metron/config"
 	"metron/egress"
 	"metron/ingress"
 	v2 "plumbing/v2"
@@ -18,13 +17,13 @@ import (
 )
 
 type AppV2 struct {
-	config      *config.Config
+	config      *Config
 	clientCreds credentials.TransportCredentials
 	serverCreds credentials.TransportCredentials
 }
 
 func NewV2App(
-	c *config.Config,
+	c *Config,
 	clientCreds credentials.TransportCredentials,
 	serverCreds credentials.TransportCredentials,
 ) *AppV2 {

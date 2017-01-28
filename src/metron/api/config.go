@@ -1,16 +1,10 @@
-package config
+package api
 
 import (
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
-)
-
-const (
-	kilobyte               = 1024
-	defaultBatchSize       = 10 * kilobyte
-	defaultBatchIntervalMS = 100
 )
 
 type GRPC struct {

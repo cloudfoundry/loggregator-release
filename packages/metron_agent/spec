@@ -40,7 +40,6 @@ files:
 - loggregator/src/metron/api/*.go # gosub
 - loggregator/src/metron/clientpool/v1/*.go # gosub
 - loggregator/src/metron/clientpool/v2/*.go # gosub
-- loggregator/src/metron/config/*.go # gosub
 - loggregator/src/metron/egress/*.go # gosub
 - loggregator/src/metron/eventwriter/*.go # gosub
 - loggregator/src/metron/ingress/*.go # gosub
