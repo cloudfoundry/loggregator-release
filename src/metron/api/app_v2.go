@@ -9,7 +9,7 @@ import (
 
 	clientpool "metron/clientpool/v2"
 	"metron/egress"
-	"metron/ingress"
+	ingress "metron/ingress/v2"
 	v2 "plumbing/v2"
 
 	"google.golang.org/grpc"

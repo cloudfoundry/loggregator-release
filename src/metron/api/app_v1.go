@@ -7,7 +7,7 @@ import (
 	clientpool "metron/clientpool/v1"
 	"metron/eventwriter"
 	"metron/clientpool/legacy"
-	"metron/networkreader"
+	ingress "metron/ingress/v1"
 	"metron/writers/dopplerforwarder"
 	"metron/writers/eventmarshaller"
 	"metron/writers/eventunmarshaller"
@@ -50,7 +50,7 @@ func (a *AppV1) Start() {
 
 	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, batcher)
 	metronAddress := fmt.Sprintf("127.0.0.1:%d", a.config.IncomingUDPPort)
-	dropsondeReader, err := networkreader.New(metronAddress, "dropsondeAgentListener", dropsondeUnmarshaller)
+	dropsondeReader, err := ingress.New(metronAddress, "dropsondeAgentListener", dropsondeUnmarshaller)
 	if err != nil {
 		log.Panic(fmt.Errorf("Failed to listen on %s: %s", metronAddress, err))
 	}

@@ -9,5 +9,5 @@ import (
 
 func TestIngress(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Ingress Suite")
+	RunSpecs(t, "Ingress V2 Suite")
 }

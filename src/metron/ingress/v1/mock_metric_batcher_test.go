@@ -1,4 +1,4 @@
-package networkreader_test
+package ingress_test
 
 type mockMetricBatcher struct {
 	BatchIncrementCounterCalled chan bool

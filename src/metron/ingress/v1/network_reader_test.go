@@ -1,7 +1,6 @@
-package networkreader_test
+package ingress_test
 
 import (
-	"metron/networkreader"
 	"metron/writers/mocks"
 	"net"
 	"strconv"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	"github.com/cloudfoundry/dropsonde/metrics"
+	ingress "metron/ingress/v1"
 )
 
 func randomPort() int {
@@ -28,7 +28,7 @@ func randomPort() int {
 
 var _ = Describe("NetworkReader", func() {
 	var (
-		reader           *networkreader.NetworkReader
+		reader           *ingress.NetworkReader
 		readerStopped    chan struct{}
 		writer           mocks.MockByteArrayWriter
 		port             int
@@ -41,7 +41,7 @@ var _ = Describe("NetworkReader", func() {
 		address = net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
 		writer = mocks.MockByteArrayWriter{}
 		var err error
-		reader, err = networkreader.New(address, "networkReader", &writer)
+		reader, err = ingress.New(address, "networkReader", &writer)
 		Expect(err).NotTo(HaveOccurred())
 		readerStopped = make(chan struct{})
 	})

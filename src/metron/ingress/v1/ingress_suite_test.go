@@ -1,16 +1,15 @@
-package networkreader_test
+package ingress_test
 
 import (
-	"log"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"testing"
+	"log"
 )
 
-func TestNetworkReader(t *testing.T) {
+func TestIngress(t *testing.T) {
 	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "NetworkReader Suite")
+	RunSpecs(t, "Ingress V1 Suite")
 }

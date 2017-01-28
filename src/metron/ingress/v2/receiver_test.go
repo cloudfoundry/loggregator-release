@@ -3,7 +3,7 @@ package ingress_test
 import (
 	"errors"
 	"io"
-	"metron/ingress"
+	ingress "metron/ingress/v2"
 	v2 "plumbing/v2"
 
 	. "github.com/onsi/ginkgo"

@@ -1,22 +1,24 @@
-package networkreader
+package ingress
 
 import (
 	"log"
 	"net"
 
-	"metron/writers"
-
 	"github.com/cloudfoundry/dropsonde/metrics"
 )
 
+type ByteArrayWriter interface {
+	Write(message []byte)
+}
+
 type NetworkReader struct {
 	connection net.PacketConn
-	writer     writers.ByteArrayWriter
+	writer     ByteArrayWriter
 
 	contextName string
 }
 
-func New(address string, name string, writer writers.ByteArrayWriter) (*NetworkReader, error) {
+func New(address string, name string, writer ByteArrayWriter) (*NetworkReader, error) {
 	connection, err := net.ListenPacket("udp4", address)
 	if err != nil {
 		return nil, err

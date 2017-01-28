@@ -43,8 +43,8 @@ files:
 - loggregator/src/metron/clientpool/v2/*.go # gosub
 - loggregator/src/metron/egress/*.go # gosub
 - loggregator/src/metron/eventwriter/*.go # gosub
-- loggregator/src/metron/ingress/*.go # gosub
-- loggregator/src/metron/networkreader/*.go # gosub
+- loggregator/src/metron/ingress/v1/*.go # gosub
+- loggregator/src/metron/ingress/v2/*.go # gosub
 - loggregator/src/metron/writers/*.go # gosub
 - loggregator/src/metron/writers/dopplerforwarder/*.go # gosub
 - loggregator/src/metron/writers/eventmarshaller/*.go # gosub
