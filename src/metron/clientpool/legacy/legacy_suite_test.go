@@ -1,4 +1,4 @@
-package legacyclientpool_test
+package legacy_test
 
 import (
 	"log"
@@ -9,8 +9,8 @@ import (
 	"testing"
 )
 
-func TestLegacyclientpool(t *testing.T) {
+func TestLegacy(t *testing.T) {
 	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "LegacyClientPool Suite")
+	RunSpecs(t, "Clientpool Legacy Suite")
 }

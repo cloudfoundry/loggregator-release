@@ -38,12 +38,12 @@ files:
 - loggregator/src/metric/*.go # gosub
 - loggregator/src/metron/*.go # gosub
 - loggregator/src/metron/api/*.go # gosub
+- loggregator/src/metron/clientpool/legacy/*.go # gosub
 - loggregator/src/metron/clientpool/v1/*.go # gosub
 - loggregator/src/metron/clientpool/v2/*.go # gosub
 - loggregator/src/metron/egress/*.go # gosub
 - loggregator/src/metron/eventwriter/*.go # gosub
 - loggregator/src/metron/ingress/*.go # gosub
-- loggregator/src/metron/legacyclientpool/*.go # gosub
 - loggregator/src/metron/networkreader/*.go # gosub
 - loggregator/src/metron/writers/*.go # gosub
 - loggregator/src/metron/writers/dopplerforwarder/*.go # gosub

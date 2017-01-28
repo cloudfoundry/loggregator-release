@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	clientpool "metron/clientpool/v1"
 	"metron/eventwriter"
-	"metron/legacyclientpool"
+	"metron/clientpool/legacy"
 	"metron/networkreader"
 	"metron/writers/dopplerforwarder"
 	"metron/writers/eventmarshaller"
@@ -74,11 +74,11 @@ func (a *AppV1) initializeV1DopplerPool(batcher *metricbatcher.MetricBatcher) *e
 	pools := a.setupGRPC()
 
 	// TODO: delete this legacy pool stuff when UDP goes away
-	legacyPool := legacyclientpool.New(a.config.DopplerAddrUDP, 100, 5*time.Second)
+	legacyPool := legacy.New(a.config.DopplerAddrUDP, 100, 5*time.Second)
 	udpWrapper := dopplerforwarder.NewUDPWrapper(legacyPool, []byte(a.config.SharedSecret))
 	pools = append(pools, udpWrapper)
 
-	combinedPool := legacyclientpool.NewCombinedPool(pools...)
+	combinedPool := legacy.NewCombinedPool(pools...)
 
 	marshaller := eventmarshaller.New(batcher)
 	marshaller.SetWriter(combinedPool)
@@ -86,7 +86,7 @@ func (a *AppV1) initializeV1DopplerPool(batcher *metricbatcher.MetricBatcher) *e
 	return marshaller
 }
 
-func (a *AppV1) setupGRPC() []legacyclientpool.Pool {
+func (a *AppV1) setupGRPC() []legacy.Pool {
 	if a.creds == nil {
 		return nil
 	}
@@ -106,5 +106,5 @@ func (a *AppV1) setupGRPC() []legacyclientpool.Pool {
 
 	pool := clientpool.New(connManagers...)
 	grpcWrapper := dopplerforwarder.NewGRPCWrapper(pool)
-	return []legacyclientpool.Pool{grpcWrapper}
+	return []legacy.Pool{grpcWrapper}
 }

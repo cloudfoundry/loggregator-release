@@ -1,8 +1,8 @@
-package legacyclientpool_test
+package legacy_test
 
 import (
 	"errors"
-	"metron/legacyclientpool"
+	"metron/clientpool/legacy"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	. "github.com/onsi/ginkgo"
@@ -12,12 +12,12 @@ import (
 var _ = Describe("Combined Pool", func() {
 	var (
 		mockPools    []*mockPool
-		combinedPool *legacyclientpool.CombinedPool
+		combinedPool *legacy.CombinedPool
 	)
 	BeforeEach(func() {
 		mockPoolA := newMockPool()
 		mockPoolB := newMockPool()
-		combinedPool = legacyclientpool.NewCombinedPool(mockPoolA, mockPoolB)
+		combinedPool = legacy.NewCombinedPool(mockPoolA, mockPoolB)
 		mockPools = []*mockPool{mockPoolA, mockPoolB}
 	})
 

@@ -1,4 +1,4 @@
-package legacyclientpool
+package legacy
 
 import (
 	"fmt"

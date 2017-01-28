@@ -3,7 +3,7 @@
 // doing.  Expect any changes made manually to be overwritten
 // the next time hel regenerates this file.
 
-package legacyclientpool_test
+package legacy_test
 
 import (
 	"doppler/dopplerservice"

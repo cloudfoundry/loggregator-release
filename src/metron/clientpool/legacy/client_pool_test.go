@@ -1,9 +1,8 @@
 //go:generate hel
-
-package legacyclientpool_test
+package legacy_test
 
 import (
-	"metron/legacyclientpool"
+	"metron/clientpool/legacy"
 	"net"
 	"testing/quick"
 	"time"
@@ -14,7 +13,7 @@ import (
 
 var _ = Describe("ClientPool", func() {
 	var (
-		pool *legacyclientpool.ClientPool
+		pool *legacy.ClientPool
 		conn *net.UDPConn
 	)
 
@@ -24,7 +23,7 @@ var _ = Describe("ClientPool", func() {
 		conn, err = net.ListenUDP("udp4", addr)
 		Expect(err).ToNot(HaveOccurred())
 
-		pool = legacyclientpool.New(conn.LocalAddr().String(), 10, 100*time.Millisecond)
+		pool = legacy.New(conn.LocalAddr().String(), 10, 100*time.Millisecond)
 	})
 
 	AfterEach(func() {
@@ -68,9 +67,9 @@ var _ = Describe("ClientPool", func() {
 })
 
 var _ = Describe("Invalid Addr", func() {
-	var pool *legacyclientpool.ClientPool
+	var pool *legacy.ClientPool
 	BeforeEach(func() {
-		pool = legacyclientpool.New("!#$&!$#&", 10, 100*time.Millisecond)
+		pool = legacy.New("!#$&!$#&", 10, 100*time.Millisecond)
 	})
 
 	It("it returns an error", func() {
