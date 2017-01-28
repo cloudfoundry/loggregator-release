@@ -1,8 +1,8 @@
 package doppler_test
 
 import (
-	"metron/networkreader"
-	"metron/writers/eventunmarshaller"
+	egress "metron/egress/v1"
+	ingress "metron/ingress/v1"
 	"sync/atomic"
 
 	"github.com/apoydence/eachers/testhelpers"
@@ -13,7 +13,7 @@ import (
 var _ = Describe("Uptime Monitor", func() {
 	var (
 		writer          *fakeWriter
-		dropsondeReader *networkreader.NetworkReader
+		dropsondeReader *ingress.NetworkReader
 	)
 
 	BeforeEach(func() {
@@ -25,8 +25,8 @@ var _ = Describe("Uptime Monitor", func() {
 		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
 
 		var err error
-		dropsondeUnmarshaller := eventunmarshaller.New(writer, mockBatcher)
-		dropsondeReader, err = networkreader.New(
+		dropsondeUnmarshaller := egress.NewUnMarshaller(writer, mockBatcher)
+		dropsondeReader, err = ingress.New(
 			"localhost:37474",
 			"dropsondeAgentListener",
 			dropsondeUnmarshaller,

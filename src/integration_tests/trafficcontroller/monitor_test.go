@@ -1,8 +1,8 @@
 package trafficcontroller_test
 
 import (
-	"metron/networkreader"
-	"metron/writers/eventunmarshaller"
+	egress "metron/egress/v1"
+	ingress "metron/ingress/v1"
 	"sync/atomic"
 
 	"github.com/apoydence/eachers/testhelpers"
@@ -20,8 +20,8 @@ var _ = Describe("Monitor", func() {
 		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
 
 		var err error
-		dropsondeUnmarshaller := eventunmarshaller.New(writer, mockBatcher)
-		dropsondeReader, err := networkreader.New("127.0.0.1:37474", "dropsondeAgentListener", dropsondeUnmarshaller)
+		dropsondeUnmarshaller := egress.NewUnMarshaller(writer, mockBatcher)
+		dropsondeReader, err := ingress.New("127.0.0.1:37474", "dropsondeAgentListener", dropsondeUnmarshaller)
 		Expect(err).NotTo(HaveOccurred())
 
 		go dropsondeReader.Start()

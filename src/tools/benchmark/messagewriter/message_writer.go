@@ -6,12 +6,12 @@ import (
 
 	"github.com/cloudfoundry/dropsonde/signature"
 
-	"metron/writers"
+	ingress "metron/ingress/v1"
 	"tools/benchmark/metricsreporter"
 )
 
 type messageWriter struct {
-	writer writers.ByteArrayWriter
+	writer ingress.ByteArrayWriter
 }
 
 type networkWriter struct {
@@ -44,7 +44,7 @@ func NewMessageWriter(host string, port int, sharedSecret string, sentCounter *m
 		fmt.Printf("DIAL Error: %s\n", err.Error())
 	}
 
-	var writer writers.ByteArrayWriter
+	var writer ingress.ByteArrayWriter
 	writer = networkWriter{
 		sentCounter: sentCounter,
 		conn:        output,

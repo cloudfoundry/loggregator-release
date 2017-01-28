@@ -1,16 +1,17 @@
 package ingress_test
 
 import (
-	"metron/writers/mocks"
 	"net"
 	"strconv"
+	"sync"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	ingress "metron/ingress/v1"
+
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	"github.com/cloudfoundry/dropsonde/metrics"
-	ingress "metron/ingress/v1"
 )
 
 func randomPort() int {
@@ -30,7 +31,7 @@ var _ = Describe("NetworkReader", func() {
 	var (
 		reader           *ingress.NetworkReader
 		readerStopped    chan struct{}
-		writer           mocks.MockByteArrayWriter
+		writer           MockByteArrayWriter
 		port             int
 		address          string
 		fakeMetricSender *fake.FakeMetricSender
@@ -39,7 +40,7 @@ var _ = Describe("NetworkReader", func() {
 	BeforeEach(func() {
 		port = randomPort() + GinkgoParallelNode()
 		address = net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
-		writer = mocks.MockByteArrayWriter{}
+		writer = MockByteArrayWriter{}
 		var err error
 		reader, err = ingress.New(address, "networkReader", &writer)
 		Expect(err).NotTo(HaveOccurred())
@@ -83,3 +84,24 @@ var _ = Describe("NetworkReader", func() {
 		})
 	})
 })
+
+type MockByteArrayWriter struct {
+	data [][]byte
+	lock sync.RWMutex
+}
+
+func (m *MockByteArrayWriter) Write(p []byte) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	m.data = append(m.data, p)
+}
+
+func (m *MockByteArrayWriter) Data() [][]byte {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+	return m.data
+}
+
+func (m *MockByteArrayWriter) Weight() int {
+	return 0
+}

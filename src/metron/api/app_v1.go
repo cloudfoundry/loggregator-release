@@ -4,16 +4,6 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	clientpool "metron/clientpool/v1"
-	"metron/eventwriter"
-	"metron/clientpool/legacy"
-	ingress "metron/ingress/v1"
-	"metron/writers/dopplerforwarder"
-	"metron/writers/eventmarshaller"
-	"metron/writers/eventunmarshaller"
-	"metron/writers/messageaggregator"
-	"metron/writers/tagger"
-	"plumbing"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/metric_sender"
@@ -22,6 +12,12 @@ import (
 	"github.com/cloudfoundry/dropsonde/runtime_stats"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	"metron/clientpool/legacy"
+	clientpool "metron/clientpool/v1"
+	egress "metron/egress/v1"
+	ingress "metron/ingress/v1"
+	"plumbing"
 )
 
 type AppV1 struct {
@@ -44,11 +40,11 @@ func (a *AppV1) Start() {
 	log.Print("Startup: Setting up the Metron agent")
 	marshaller := a.initializeV1DopplerPool(batcher)
 
-	messageTagger := tagger.New(a.config.Deployment, a.config.Job, a.config.Index, marshaller)
-	aggregator := messageaggregator.New(messageTagger)
+	messageTagger := egress.NewTagger(a.config.Deployment, a.config.Job, a.config.Index, marshaller)
+	aggregator := egress.NewAggregator(messageTagger)
 	eventWriter.SetWriter(aggregator)
 
-	dropsondeUnmarshaller := eventunmarshaller.New(aggregator, batcher)
+	dropsondeUnmarshaller := egress.NewUnMarshaller(aggregator, batcher)
 	metronAddress := fmt.Sprintf("127.0.0.1:%d", a.config.IncomingUDPPort)
 	dropsondeReader, err := ingress.New(metronAddress, "dropsondeAgentListener", dropsondeUnmarshaller)
 	if err != nil {
@@ -59,8 +55,8 @@ func (a *AppV1) Start() {
 	dropsondeReader.Start()
 }
 
-func (a *AppV1) initializeMetrics(stopChan chan struct{}) (*metricbatcher.MetricBatcher, *eventwriter.EventWriter) {
-	eventWriter := eventwriter.New("MetronAgent")
+func (a *AppV1) initializeMetrics(stopChan chan struct{}) (*metricbatcher.MetricBatcher, *egress.EventWriter) {
+	eventWriter := egress.New("MetronAgent")
 	metricSender := metric_sender.NewMetricSender(eventWriter)
 	metricBatcher := metricbatcher.New(metricSender, time.Duration(a.config.MetricBatchIntervalMilliseconds)*time.Millisecond)
 	metrics.Initialize(metricSender, metricBatcher)
@@ -70,17 +66,17 @@ func (a *AppV1) initializeMetrics(stopChan chan struct{}) (*metricbatcher.Metric
 	return metricBatcher, eventWriter
 }
 
-func (a *AppV1) initializeV1DopplerPool(batcher *metricbatcher.MetricBatcher) *eventmarshaller.EventMarshaller {
+func (a *AppV1) initializeV1DopplerPool(batcher *metricbatcher.MetricBatcher) *egress.EventMarshaller {
 	pools := a.setupGRPC()
 
 	// TODO: delete this legacy pool stuff when UDP goes away
 	legacyPool := legacy.New(a.config.DopplerAddrUDP, 100, 5*time.Second)
-	udpWrapper := dopplerforwarder.NewUDPWrapper(legacyPool, []byte(a.config.SharedSecret))
+	udpWrapper := egress.NewUDPWrapper(legacyPool, []byte(a.config.SharedSecret))
 	pools = append(pools, udpWrapper)
 
 	combinedPool := legacy.NewCombinedPool(pools...)
 
-	marshaller := eventmarshaller.New(batcher)
+	marshaller := egress.NewMarshaller(batcher)
 	marshaller.SetWriter(combinedPool)
 
 	return marshaller
@@ -105,6 +101,6 @@ func (a *AppV1) setupGRPC() []legacy.Pool {
 	}
 
 	pool := clientpool.New(connManagers...)
-	grpcWrapper := dopplerforwarder.NewGRPCWrapper(pool)
+	grpcWrapper := egress.NewGRPCWrapper(pool)
 	return []legacy.Pool{grpcWrapper}
 }

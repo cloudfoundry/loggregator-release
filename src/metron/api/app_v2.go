@@ -8,7 +8,7 @@ import (
 	"metric"
 
 	clientpool "metron/clientpool/v2"
-	"metron/egress"
+	egress "metron/egress/v2"
 	ingress "metron/ingress/v2"
 	v2 "plumbing/v2"
 

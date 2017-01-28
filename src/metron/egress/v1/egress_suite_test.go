@@ -1,15 +1,16 @@
-package ingress_test
+package egress_test
 
 import (
+	"log"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"log"
 	"testing"
 )
 
-func TestIngress(t *testing.T) {
+func TestBatch(t *testing.T) {
 	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Ingress V1 Suite")
+	RunSpecs(t, "Egress V1 Suite")
 }
