@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"metron/api"
-	"metron/testutil"
 	"net"
 	"plumbing"
 	v2 "plumbing/v2"
@@ -31,13 +30,13 @@ var _ = Describe("Metron", func() {
 		var (
 			metronCleanup  func()
 			metronConfig   api.Config
-			consumerServer *testutil.Server
+			consumerServer *Server
 			eventEmitter   dropsonde.EventEmitter
 		)
 
 		BeforeEach(func() {
 			var err error
-			consumerServer, err = testutil.NewServer()
+			consumerServer, err = NewServer()
 			Expect(err).ToNot(HaveOccurred())
 
 			var metronReady func()

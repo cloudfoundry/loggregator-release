@@ -1,4 +1,4 @@
-package testutil
+package component_test
 
 import (
 	"net"
