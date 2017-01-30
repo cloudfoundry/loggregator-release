@@ -1,6 +1,7 @@
 package egress
 
 import (
+	"metric"
 	v2 "plumbing/v2"
 )
 
@@ -27,7 +28,11 @@ func NewTransponder(n Nexter, w Writer) *Transponder {
 func (t *Transponder) Start() {
 	for {
 		envelope := t.nexter.Next()
-		// TODO: emit a metric here
-		t.writer.Write(envelope)
+		err := t.writer.Write(envelope)
+		if err != nil {
+			metric.IncCounter("dropped") // TODO: add "egress" tag
+			continue
+		}
+		metric.IncCounter("egress")
 	}
 }

@@ -1,7 +1,9 @@
 set -e -x
 
-pushd loggregator-blobs
-    unxz boshhmforwarder.xz
-    chmod +x boshhmforwarder
-    cp -a boshhmforwarder ${BOSH_INSTALL_TARGET}
-popd
+export GOROOT=$(readlink -nf /var/vcap/packages/golang1.7)
+export PATH=$GOROOT/bin:$PATH
+export GOPATH=$PWD/loggregator
+
+go install boshhmforwarder
+cp -a $PWD/loggregator/bin/boshhmforwarder ${BOSH_INSTALL_TARGET}
+

@@ -15,12 +15,12 @@ var _ = Describe("Transponder", func() {
 		nexter := newMockNexter()
 		nexter.NextOutput.Ret0 <- envelope
 		writer := newMockWriter()
+		close(writer.WriteOutput.Ret0)
 		tx := egress.NewTransponder(nexter, writer)
 
 		go tx.Start()
 
 		Eventually(nexter.NextCalled).Should(Receive())
-		Eventually(writer.WriteCalled).Should(Receive())
-		Eventually(<-writer.WriteInput.Msg).Should(Equal(envelope))
+		Eventually(writer.WriteInput.Msg).Should(Receive(Equal(envelope)))
 	})
 })

@@ -1,7 +1,10 @@
 ---
 name: loggregator_trafficcontroller
+dependencies:
+- golang1.7
 files:
-- loggregator-blobs/trafficcontroller.xz
+- loggregator/src/trafficcontroller/LICENSE
+- loggregator/src/trafficcontroller/NOTICE
 - loggregator/src/code.cloudfoundry.org/localip/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/workpool/*.go # gosub
 - loggregator/src/doppler/config/*.go # gosub

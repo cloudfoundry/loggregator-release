@@ -5,63 +5,69 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"metric"
 
 	clientpool "metron/clientpool/v2"
 	"metron/config"
 	"metron/egress"
 	"metron/ingress"
-	"plumbing"
 	v2 "plumbing/v2"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
 
-type AppV2 struct{}
+type AppV2 struct {
+	config      *config.Config
+	clientCreds credentials.TransportCredentials
+	serverCreds credentials.TransportCredentials
+}
 
-func (a *AppV2) Start(conf *config.Config) {
-	tlsConfig, err := plumbing.NewMutualTLSConfig(
-		conf.GRPC.CertFile,
-		conf.GRPC.KeyFile,
-		conf.GRPC.CAFile,
-		"metron",
-	)
-	if err != nil {
-		log.Panicf("Failed to load TLS config: %s", err)
+func NewV2App(
+	c *config.Config,
+	clientCreds credentials.TransportCredentials,
+	serverCreds credentials.TransportCredentials,
+) *AppV2 {
+	return &AppV2{
+		config:      c,
+		clientCreds: clientCreds,
+		serverCreds: serverCreds,
+	}
+}
+
+func (a *AppV2) Start() {
+	if a.serverCreds == nil {
+		log.Panic("Failed to load TLS server config")
 	}
 
 	envelopeBuffer := diodes.NewManyToOneEnvelopeV2(10000, diodes.AlertFunc(func(missed int) {
-		// TODO Emit metric
+		// TODO: add tag "ingress"
+		metric.IncCounter("dropped", metric.WithIncrement(uint64(missed)))
 		log.Printf("Dropped %d v2 envelopes", missed)
 	}))
 
-	pool := a.initializePool(conf)
+	pool := a.initializePool()
 	tx := egress.NewTransponder(envelopeBuffer, pool)
 	go tx.Start()
 
+	metronAddress := fmt.Sprintf("127.0.0.1:%d", a.config.GRPC.Port)
+	log.Printf("metron v2 API started on addr %s", metronAddress)
 	rx := ingress.NewReceiver(envelopeBuffer)
-	metronAddress := fmt.Sprintf("127.0.0.1:%d", conf.GRPC.Port)
-	ingressServer := ingress.NewServer(metronAddress, rx, grpc.Creds(credentials.NewTLS(tlsConfig)))
+	ingressServer := ingress.NewServer(metronAddress, rx, grpc.Creds(a.serverCreds))
 	ingressServer.Start()
 }
 
-func (a *AppV2) initializePool(conf *config.Config) *clientpool.ClientPool {
-	tlsConfig, err := plumbing.NewMutualTLSConfig(
-		conf.GRPC.CertFile,
-		conf.GRPC.KeyFile,
-		conf.GRPC.CAFile,
-		"doppler",
-	)
-	if err != nil {
-		log.Panicf("Failed to load TLS config: %s", err)
+func (a *AppV2) initializePool() *clientpool.ClientPool {
+	if a.clientCreds == nil {
+		log.Panic("Failed to load TLS client config")
 	}
 
 	connector := clientpool.MakeGRPCConnector(
-		conf.DopplerAddr,
-		conf.Zone,
+		a.config.DopplerAddr,
+		a.config.Zone,
 		grpc.Dial,
 		v2.NewDopplerIngressClient,
-		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
+		grpc.WithTransportCredentials(a.clientCreds),
 	)
 
 	var connManagers []clientpool.Conn

@@ -6,6 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
+
+	"google.golang.org/grpc/credentials"
 )
 
 var supportedCipherSuites = []uint16{
@@ -79,4 +82,20 @@ func addCA(tlsConfig *tls.Config, tlsCert tls.Certificate, caCertFile string) er
 		return CASignatureError(err.Error())
 	}
 	return nil
+}
+
+func NewCredentials(certFile, keyFile, caCertFile, serverName string) credentials.TransportCredentials {
+	tlsConfig, err := NewMutualTLSConfig(
+		certFile,
+		keyFile,
+		caCertFile,
+		serverName,
+	)
+
+	if err != nil {
+		log.Printf("failed to create mutual tls config: %v", err)
+		return nil
+	}
+
+	return credentials.NewTLS(tlsConfig)
 }

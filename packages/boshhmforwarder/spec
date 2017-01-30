@@ -1,7 +1,10 @@
 ---
 name: boshhmforwarder
+
+dependencies:
+    - golang1.7
+
 files:
-- loggregator-blobs/boshhmforwarder.xz
 - loggregator/src/boshhmforwarder/*.go # gosub
 - loggregator/src/boshhmforwarder/config/*.go # gosub
 - loggregator/src/boshhmforwarder/forwarder/*.go # gosub

@@ -1,10 +1,11 @@
 set -e -x
 
-pushd loggregator-blobs
-    unxz metron.xz
-    chmod +x metron
-    cp -a metron ${BOSH_INSTALL_TARGET}
-popd
+export GOROOT=$(readlink -nf /var/vcap/packages/golang1.7)
+export PATH=$GOROOT/bin:$PATH
+export GOPATH=$PWD/loggregator
+
+go install metron
+cp -a $PWD/loggregator/bin/metron ${BOSH_INSTALL_TARGET}
 
 mkdir -p ${BOSH_INSTALL_TARGET}/syslog_daemon_config
 cp -a $PWD/loggregator/src/metron/syslog_daemon_config/* ${BOSH_INSTALL_TARGET}/syslog_daemon_config

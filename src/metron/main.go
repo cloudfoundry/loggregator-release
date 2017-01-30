@@ -2,13 +2,18 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"math/rand"
-	"profiler"
 	"time"
 
+	"google.golang.org/grpc"
+
+	"metric"
 	"metron/api"
 	"metron/config"
+	"plumbing"
+	"profiler"
 )
 
 func main() {
@@ -19,18 +24,40 @@ func main() {
 		"config/metron.json",
 		"Location of the Metron config json file",
 	)
-
 	flag.Parse()
+
 	config, err := config.ParseConfig(*configFilePath)
 	if err != nil {
 		log.Fatalf("Unable to parse config: %s", err)
 	}
 
-	appV1 := &api.AppV1{}
-	go appV1.Start(config)
+	clientCreds := plumbing.NewCredentials(
+		config.GRPC.CertFile,
+		config.GRPC.KeyFile,
+		config.GRPC.CAFile,
+		"doppler",
+	)
+	serverCreds := plumbing.NewCredentials(
+		config.GRPC.CertFile,
+		config.GRPC.KeyFile,
+		config.GRPC.CAFile,
+		"metron",
+	)
 
-	appV2 := &api.AppV2{}
-	go appV2.Start(config)
+	appV1 := api.NewV1App(config, clientCreds)
+	go appV1.Start()
+
+	appV2 := api.NewV2App(config, clientCreds, serverCreds)
+	go appV2.Start()
+
+	batchInterval := time.Duration(config.MetricBatchIntervalMilliseconds) * time.Millisecond
+	metric.Setup(
+		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(serverCreds)),
+		metric.WithBatchInterval(batchInterval),
+		metric.WithPrefix("loggregator"),
+		metric.WithComponent("metron"),
+		metric.WithAddr(fmt.Sprintf("localhost:%d", config.GRPC.Port)),
+	)
 
 	// We start the profiler last so that we can definitively say that we're
 	// all connected and ready for data by the time the profiler starts up.

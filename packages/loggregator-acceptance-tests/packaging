@@ -1,7 +1,9 @@
 set -e -x
 
-pushd loggregator-blobs
-    unxz lats.xz
-    chmod +x lats
-    cp -a lats ${BOSH_INSTALL_TARGET}
-popd
+export GOROOT=$(readlink -nf /var/vcap/packages/golang1.7)
+export PATH=${GOROOT}/bin:${PATH}
+
+cp -r $PWD/loggregator/src ${BOSH_INSTALL_TARGET}/
+export GOPATH=$BOSH_INSTALL_TARGET
+
+go install github.com/onsi/ginkgo/ginkgo
