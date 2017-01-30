@@ -5,8 +5,12 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"metric"
+	"plumbing"
 	"sync"
 	"time"
+
+	"google.golang.org/grpc"
 
 	"doppler/config"
 	"doppler/dopplerservice"
@@ -64,8 +68,10 @@ func main() {
 		log.Fatalf("Unable to resolve own IP address: %s", err)
 	}
 
+	setupMetricsEmitter(conf)
+
 	log.Printf("Startup: Setting up the doppler server")
-	dropsonde.Initialize(conf.MetronAddress, dopplerOrigin)
+	dropsonde.Initialize(conf.MetronConfig.UDPAddress, dopplerOrigin)
 	storeAdapter := connectToEtcd(conf)
 
 	errChan := make(chan error)
@@ -78,6 +84,7 @@ func main() {
 	envelopeBuffer := diodes.NewManyToOneEnvelope(10000, diodes.AlertFunc(func(missed int) {
 		log.Printf("Shed %d envelopes", missed)
 		batcher.BatchCounter("doppler.shedEnvelopes").Add(uint64(missed))
+		metric.IncCounter("dropped") // TODO: add "egress" tag
 	}))
 	appStoreCache := cache.NewAppServiceCache()
 	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
@@ -127,6 +134,7 @@ func main() {
 		if err != nil {
 			log.Panicf("Failed to create TLS listener: %s", err)
 		}
+
 	}
 	addr := fmt.Sprintf("%s:%d", host, conf.IncomingTCPPort)
 	contextName := "tcpListener"
@@ -362,4 +370,22 @@ func connectToEtcd(conf *config.Config) storeadapter.StoreAdapter {
 		panic(err)
 	}
 	return etcdStoreAdapter
+}
+
+func setupMetricsEmitter(conf *config.Config) {
+	serverCreds := plumbing.NewCredentials(
+		conf.GRPC.CertFile,
+		conf.GRPC.KeyFile,
+		conf.GRPC.CAFile,
+		"metron",
+	)
+
+	batchInterval := time.Duration(conf.MetricBatchIntervalMilliseconds) * time.Millisecond
+	metric.Setup(
+		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(serverCreds)),
+		metric.WithBatchInterval(batchInterval),
+		metric.WithPrefix("loggregator"),
+		metric.WithComponent("doppler"),
+		metric.WithAddr(conf.MetronConfig.GRPCAddress),
+	)
 }

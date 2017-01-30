@@ -14,7 +14,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-func BuildDopplerConfig(etcdClientURL string, metronPort int) dopplerConf.Config {
+func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int) dopplerConf.Config {
 	dopplerUDPPort := getUDPPort()
 	dopplerTCPPort := getTCPPort()
 	dopplerTLSPort := getTCPPort()
@@ -41,7 +41,11 @@ func BuildDopplerConfig(etcdClientURL string, metronPort int) dopplerConf.Config
 
 		EtcdUrls:                  []string{etcdClientURL},
 		EtcdMaxConcurrentRequests: 10,
-		MetronAddress:             fmt.Sprintf("127.0.0.1:%d", metronPort),
+
+		MetronConfig: dopplerConf.MetronConfig{
+			UDPAddress:  fmt.Sprintf("127.0.0.1:%d", metronUDPPort),
+			GRPCAddress: fmt.Sprintf("127.0.0.1:%d", metronGRPCPort),
+		},
 
 		EnableTLSTransport: true,
 		TLSListenerConfig: dopplerConf.TLSListenerConfig{

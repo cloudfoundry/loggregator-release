@@ -18,7 +18,7 @@ var _ = Describe("communicating with doppler", func() {
 		etcdCleanup, etcdClientURL := testservers.StartTestEtcd()
 		defer etcdCleanup()
 		dopplerCleanup, dopplerWSPort, dopplerGRPCPort := testservers.StartDoppler(
-			testservers.BuildDopplerConfig(etcdClientURL, 0),
+			testservers.BuildDopplerConfig(etcdClientURL, 0, 0),
 		)
 		defer dopplerCleanup()
 
