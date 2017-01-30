@@ -22,6 +22,7 @@ import (
 
 type httpsWriter struct {
 	appId     string
+	hostname  string
 	outputUrl *url.URL
 
 	mu sync.Mutex // guards lastError
@@ -31,7 +32,7 @@ type httpsWriter struct {
 	lastError error
 }
 
-func NewHttpsWriter(outputUrl *url.URL, appId string, skipCertVerify bool, dialer *net.Dialer, timeout time.Duration) (w *httpsWriter, err error) {
+func NewHttpsWriter(outputUrl *url.URL, appId, hostname string, skipCertVerify bool, dialer *net.Dialer, timeout time.Duration) (w *httpsWriter, err error) {
 	if dialer == nil {
 		return nil, errors.New("cannot construct a writer with a nil dialer")
 	}
@@ -53,6 +54,7 @@ func NewHttpsWriter(outputUrl *url.URL, appId string, skipCertVerify bool, diale
 	client := &http.Client{Transport: tr, Timeout: timeout}
 	return &httpsWriter{
 		appId:     appId,
+		hostname:  hostname,
 		outputUrl: outputUrl,
 		TlsConfig: tlsConfig,
 		client:    client,
@@ -71,7 +73,7 @@ func (w *httpsWriter) Connect() error {
 }
 
 func (w *httpsWriter) Write(p int, b []byte, source string, sourceId string, timestamp int64) (int, error) {
-	syslogMsg := createMessage(p, w.appId, source, sourceId, b, timestamp)
+	syslogMsg := createMessage(p, w.appId, w.hostname, source, sourceId, b, timestamp)
 	bytesWritten, err := w.writeHttp(syslogMsg)
 	w.mu.Lock()
 	w.lastError = err

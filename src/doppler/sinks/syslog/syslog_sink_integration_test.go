@@ -36,7 +36,7 @@ var _ = Describe("SyslogSinkIntegration", func() {
 				url, _ := url.Parse(server.URL)
 
 				dialer := &net.Dialer{}
-				httpsWriter, err := syslogwriter.NewHttpsWriter(url, appId, true, dialer, 0)
+				httpsWriter, err := syslogwriter.NewHttpsWriter(url, appId, "loggregator", true, dialer, 0)
 				Expect(err).ToNot(HaveOccurred())
 
 				errorHandler := func(errorMsg, appId string) {}

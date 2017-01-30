@@ -27,6 +27,7 @@ type Writer interface {
 func NewWriter(
 	outputUrl *url.URL,
 	appId string,
+	hostname string,
 	skipCertVerify bool,
 	dialTimeout time.Duration,
 	ioTimeout time.Duration,
@@ -34,11 +35,11 @@ func NewWriter(
 	dialer := &net.Dialer{Timeout: dialTimeout}
 	switch outputUrl.Scheme {
 	case "https":
-		return NewHttpsWriter(outputUrl, appId, skipCertVerify, dialer, ioTimeout)
+		return NewHttpsWriter(outputUrl, appId, hostname, skipCertVerify, dialer, ioTimeout)
 	case "syslog":
-		return NewSyslogWriter(outputUrl, appId, dialer, ioTimeout)
+		return NewSyslogWriter(outputUrl, appId, hostname, dialer, ioTimeout)
 	case "syslog-tls":
-		return NewTlsWriter(outputUrl, appId, skipCertVerify, dialer, ioTimeout)
+		return NewTlsWriter(outputUrl, appId, hostname, skipCertVerify, dialer, ioTimeout)
 	default:
 		return nil, errors.New(fmt.Sprintf(
 			"Invalid scheme type %s, must be https, syslog-tls or syslog",
@@ -54,6 +55,7 @@ func clean(in []byte) []byte {
 func createMessage(
 	priority int,
 	appId string,
+	hostname string,
 	source string,
 	sourceId string,
 	msg []byte,
@@ -82,7 +84,7 @@ func createMessage(
 		"<%d>1 %s %s %s %s - - %s%s",
 		priority,
 		timeString,
-		"loggregator",
+		hostname,
 		appId,
 		formattedSource,
 		msg,

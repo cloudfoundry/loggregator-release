@@ -30,26 +30,26 @@ var _ = Describe("TLSWriter", func() {
 	Describe("New", func() {
 		It("returns an error for syslog scheme", func() {
 			outputURL, _ := url.Parse("syslog://localhost")
-			_, err := syslogwriter.NewTlsWriter(outputURL, "appId", false, dialer, ioTimeout)
+			_, err := syslogwriter.NewTlsWriter(outputURL, "appId", "hostname", false, dialer, ioTimeout)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("returns an error for https scheme", func() {
 			outputURL, _ := url.Parse("https://localhost")
-			_, err := syslogwriter.NewTlsWriter(outputURL, "appId", false, dialer, ioTimeout)
+			_, err := syslogwriter.NewTlsWriter(outputURL, "appId", "hostname", false, dialer, ioTimeout)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("returns an error if the provided dialer is nil", func() {
 			outputURL, _ := url.Parse("syslog-tls://localhost")
-			_, err := syslogwriter.NewTlsWriter(outputURL, "appId", false, nil, ioTimeout)
+			_, err := syslogwriter.NewTlsWriter(outputURL, "appId", "hostname", false, nil, ioTimeout)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("cannot construct a writer with a nil dialer"))
 		})
 
 		It("requires TLS Version 1.2 and specific cipher suites", func() {
 			outputURL, _ := url.Parse("syslog-tls://localhost")
-			w, err := syslogwriter.NewTlsWriter(outputURL, "appId", false, dialer, ioTimeout)
+			w, err := syslogwriter.NewTlsWriter(outputURL, "appId", "hostname", false, dialer, ioTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(w.TlsConfig.MinVersion).To(BeEquivalentTo(tls.VersionTLS12))
 			Expect(w.TlsConfig.CipherSuites).To(ConsistOf(
@@ -79,7 +79,7 @@ var _ = Describe("TLSWriter", func() {
 			address := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
 			syslogServerSession = startEncryptedTCPServer(address)
 			outputURL := &url.URL{Scheme: "syslog-tls", Host: address}
-			syslogWriter, err = syslogwriter.NewTlsWriter(outputURL, "appId", skipCertVerify, dialer, ioTimeout)
+			syslogWriter, err = syslogwriter.NewTlsWriter(outputURL, "appId", "hostname", skipCertVerify, dialer, ioTimeout)
 			Expect(err).ToNot(HaveOccurred())
 		}, 5)
 

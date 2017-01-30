@@ -233,7 +233,7 @@ func (sm *SinkManager) registerNewSyslogSink(appId string, syslogSinkURL string)
 		return
 	}
 
-	syslogWriter, err := syslogwriter.NewWriter(parsedSyslogDrainURL, appId, sm.skipCertVerify, sm.dialTimeout, sm.sinkIOTimeout)
+	syslogWriter, err := syslogwriter.NewWriter(parsedSyslogDrainURL, appId, "loggregator", sm.skipCertVerify, sm.dialTimeout, sm.sinkIOTimeout)
 	if err != nil {
 		logURL := fmt.Sprintf("%s://%s%s", parsedSyslogDrainURL.Scheme, parsedSyslogDrainURL.Host, parsedSyslogDrainURL.Path)
 		sm.SendSyslogErrorToLoggregator(invalidSyslogURLErrorMsg(appId, logURL, err), appId)

@@ -292,7 +292,7 @@ var _ = Describe("SinkManager", func() {
 
 			BeforeEach(func() {
 				url := &url.URL{Scheme: "syslog", Host: "localhost:9998"}
-				writer, _ := syslogwriter.NewSyslogWriter(url, "appId", &net.Dialer{Timeout: 500 * time.Millisecond}, 0)
+				writer, _ := syslogwriter.NewSyslogWriter(url, "appId", "loggregator", &net.Dialer{Timeout: 500 * time.Millisecond}, 0)
 				syslogSink = syslog.NewSyslogSink("appId", url, 100, writer, func(string, string) {}, "dropsonde-origin")
 
 				sinkManager.RegisterSink(syslogSink)
