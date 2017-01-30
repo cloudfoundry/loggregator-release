@@ -24,7 +24,8 @@ var _ = Describe("Monitor", func() {
 		dropsondeReader, err := networkreader.New("127.0.0.1:37474", "dropsondeAgentListener", dropsondeUnmarshaller)
 		Expect(err).NotTo(HaveOccurred())
 
-		go dropsondeReader.Start()
+		go dropsondeReader.StartReading()
+		go dropsondeReader.StartWriting()
 		defer dropsondeReader.Stop()
 
 		Eventually(func() uint64 { return atomic.LoadUint64(&writer.lastUptime) }, 3).Should(BeNumerically(">", 1))
