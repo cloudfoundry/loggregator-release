@@ -2,6 +2,7 @@ package v2_test
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path"
 	"sync"
@@ -10,6 +11,7 @@ import (
 	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -83,6 +85,23 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 
 			Eventually(outRemoveChan).Should(BeClosed())
 			Eventually(outAddChan).Should(BeClosed())
+		})
+	})
+
+	Context("when there is an error", func() {
+		var adapter *fakeStoreAdapter
+
+		BeforeEach(func() {
+			adapter = newFSA()
+			watcher, _, _ := v2.NewAppServiceStoreWatcher(adapter, v2.NewAppServiceCache())
+
+			go watcher.Run()
+		})
+
+		It("calls watch again", func() {
+			Eventually(adapter.GetWatchCounter).Should(Equal(1))
+			adapter.WatchErrChannel <- errors.New("Haha")
+			Eventually(adapter.GetWatchCounter).Should(Equal(2))
 		})
 	})
 
@@ -320,7 +339,7 @@ func buildNode(appService store.AppService) storeadapter.StoreNode {
 	Expect(err).ToNot(HaveOccurred())
 
 	return storeadapter.StoreNode{
-		Key:   path.Join(watchDir, appService.AppId(), appService.Id()), // FIXME use correct key
+		Key:   path.Join(watchDir, appService.AppId(), appService.Id()),
 		Value: data,
 	}
 }
@@ -328,4 +347,33 @@ func buildNode(appService store.AppService) storeadapter.StoreNode {
 type metaData struct {
 	Hostname string `json:"hostname"`
 	DrainURL string `json:"drainURL"`
+}
+
+type fakeStoreAdapter struct {
+	*fakestoreadapter.FakeStoreAdapter
+	watchCounter int
+	sync.Mutex
+}
+
+func (fsa *fakeStoreAdapter) Watch(key string) (events <-chan storeadapter.WatchEvent, stop chan<- bool, errors <-chan error) {
+	events, _, errors = fsa.FakeStoreAdapter.Watch(key)
+
+	fsa.Lock()
+	defer fsa.Unlock()
+	fsa.watchCounter++
+
+	return events, make(chan bool), errors
+}
+
+func (fsa *fakeStoreAdapter) GetWatchCounter() int {
+	fsa.Lock()
+	defer fsa.Unlock()
+
+	return fsa.watchCounter
+}
+
+func newFSA() *fakeStoreAdapter {
+	return &fakeStoreAdapter{
+		FakeStoreAdapter: fakestoreadapter.New(),
+	}
 }
