@@ -1,9 +1,10 @@
 package store_test
 
 import (
+	"doppler/store"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"doppler/store"
 )
 
 var _ = Describe("AppService", func() {

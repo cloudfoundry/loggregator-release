@@ -4,8 +4,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"testing"
 	"log"
+	"testing"
 )
 
 func TestDopplerEndpoint(t *testing.T) {

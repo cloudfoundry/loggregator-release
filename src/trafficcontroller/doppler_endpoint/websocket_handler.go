@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"dea_logging_agent/src/github.com/cloudfoundry/loggregatorlib/server"
 )
 
 type websocketHandler struct {
@@ -50,7 +49,7 @@ func (h *websocketHandler) runWebsocketUntilClosed(ws *websocket.Conn) (closeCod
 	}()
 
 	go func() {
-		server.NewKeepAlive(ws, h.keepAlive).Run()
+		NewKeepAlive(ws, h.keepAlive).Run()
 		close(keepAliveExpired)
 	}()
 

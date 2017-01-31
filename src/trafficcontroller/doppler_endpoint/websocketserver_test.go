@@ -1,4 +1,4 @@
-package websocketserver_test
+package doppler_endpoint
 
 import (
 	"net/http"
@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-
-	"doppler/sinkserver/websocketserver"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -62,7 +60,7 @@ func makeTestHandler(keepAliveCompleted chan struct{}) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		conn, _ := websocket.Upgrade(rw, req, nil, 0, 0)
 		go conn.ReadMessage()
-		websocketserver.NewKeepAlive(conn, 50*time.Millisecond).Run()
+		NewKeepAlive(conn, 50*time.Millisecond).Run()
 		close(keepAliveCompleted)
 	})
 }

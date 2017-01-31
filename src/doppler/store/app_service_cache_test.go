@@ -34,7 +34,7 @@ var _ = Describe("AppServiceCache", func() {
 		})
 
 		It("returns an empty slice of AppServices for an unknown AppId", func() {
-			appServices := appServiceCache.Get("non-existant-app-id")
+			appServices := appServiceCache.Get("non-existent-app-id")
 
 			Expect(len(appServices)).To(Equal(0))
 		})

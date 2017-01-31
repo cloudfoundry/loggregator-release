@@ -16,7 +16,6 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	gorilla "github.com/gorilla/websocket"
-	"dea_logging_agent/src/github.com/cloudfoundry/loggregatorlib/server"
 )
 
 type Batcher interface {
@@ -232,7 +231,7 @@ func (w *WebsocketServer) streamWebsocket(websocketSink *websocket.WebsocketSink
 	defer unregister(websocketSink)
 
 	go websocketConnection.ReadMessage()
-	server.NewKeepAlive(websocketConnection, w.keepAliveInterval).Run()
+	NewKeepAlive(websocketConnection, w.keepAliveInterval).Run()
 }
 
 func (w *WebsocketServer) recentLogs(appId string, websocketConnection *gorilla.Conn) {

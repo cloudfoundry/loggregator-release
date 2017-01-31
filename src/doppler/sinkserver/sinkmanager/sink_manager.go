@@ -14,11 +14,12 @@ import (
 	"sync"
 	"time"
 
+	"doppler/store"
+
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/sonde-go/events"
-	"doppler/store"
 )
 
 type SinkManager struct {

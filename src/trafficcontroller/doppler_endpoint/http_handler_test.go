@@ -7,9 +7,10 @@ import (
 	"net/http/httptest"
 	"regexp"
 
+	"trafficcontroller/doppler_endpoint"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"trafficcontroller/doppler_endpoint"
 )
 
 var _ = Describe("HttpHandler", func() {

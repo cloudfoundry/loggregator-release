@@ -7,9 +7,10 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"trafficcontroller/doppler_endpoint"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"trafficcontroller/doppler_endpoint"
 )
 
 var _ = Describe("WebsocketHandler", func() {

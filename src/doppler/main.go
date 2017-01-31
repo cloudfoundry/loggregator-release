@@ -22,6 +22,8 @@ import (
 	"profiler"
 	"signalmanager"
 
+	"doppler/store"
+
 	"code.cloudfoundry.org/localip"
 	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/dropsonde"
@@ -33,7 +35,6 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
-	"doppler/store"
 )
 
 const (
