@@ -137,15 +137,15 @@ If you already have a CA, you'll need to create a certificate for each component
 
 ##### Doppler
 - common name: doppler
-- extended key usage: serverAuth
+- extended key usage: serverAuth, clientAuth
 
 ##### TrafficController
 - common name: trafficcontroller
-- extended key usage: clientAuth
+- extended key usage: serverAuth, clientAuth
 
 ##### Metron
 - common name: metron
-- extended key usage: clientAuth
+- extended key usage: serverAuth, clientAuth
 
 ### Adding your TLS certificates
 

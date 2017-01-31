@@ -1,5 +1,0 @@
-#!/bin/bash
-
-trap "echo Exited!; exit 1;" SIGINT SIGTERM
-
-ginkgo -r --race --randomizeAllSpecs src/integration_tests/doppler/

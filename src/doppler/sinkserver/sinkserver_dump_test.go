@@ -1,11 +1,6 @@
 package sinkserver_test
 
 import (
-	"diodes"
-	"doppler/sinkserver"
-	"doppler/sinkserver/blacklist"
-	"doppler/sinkserver/sinkmanager"
-	"doppler/sinkserver/websocketserver"
 	"net/http"
 	"strconv"
 	"sync"
@@ -17,11 +12,17 @@ import (
 	"github.com/apoydence/eachers/testhelpers"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
-	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/websocket"
 	"github.com/onsi/ginkgo/config"
+
+	"diodes"
+	"doppler/sinkserver"
+	"doppler/sinkserver/blacklist"
+	"doppler/sinkserver/sinkmanager"
+	"doppler/sinkserver/websocketserver"
+	"doppler/store"
 )
 
 var _ = Describe("Dumping", func() {
@@ -46,8 +47,8 @@ var _ = Describe("Dumping", func() {
 		serverPort = strconv.Itoa(port)
 		dataRead = diodes.NewManyToOneEnvelope(5, nil)
 
-		newAppServiceChan := make(chan appservice.AppService)
-		deletedAppServiceChan := make(chan appservice.AppService)
+		newAppServiceChan := make(chan store.AppService)
+		deletedAppServiceChan := make(chan store.AppService)
 
 		emptyBlacklist := blacklist.New(nil)
 		sinkManager = sinkmanager.New(1024, false, emptyBlacklist, 100, "dropsonde-origin",

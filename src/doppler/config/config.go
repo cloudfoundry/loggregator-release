@@ -12,6 +12,11 @@ import (
 
 const HeartbeatInterval = 10 * time.Second
 
+type MetronConfig struct {
+	UDPAddress  string
+	GRPCAddress string
+}
+
 type EtcdTLSClientConfig struct {
 	CertFile string
 	KeyFile  string
@@ -49,7 +54,7 @@ type Config struct {
 	MaxRetainedLogMessages          uint32
 	MessageDrainBufferSize          uint
 	MetricBatchIntervalMilliseconds uint
-	MetronAddress                   string
+	MetronConfig                    MetronConfig
 	MonitorIntervalSeconds          uint
 	WebsocketHost                   string
 	OutgoingPort                    uint32

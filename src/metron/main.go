@@ -44,12 +44,6 @@ func main() {
 		"metron",
 	)
 
-	appV1 := api.NewV1App(config, clientCreds)
-	go appV1.Start()
-
-	appV2 := api.NewV2App(config, clientCreds, serverCreds)
-	go appV2.Start()
-
 	batchInterval := time.Duration(config.MetricBatchIntervalMilliseconds) * time.Millisecond
 	metric.Setup(
 		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(serverCreds)),
@@ -58,6 +52,12 @@ func main() {
 		metric.WithComponent("metron"),
 		metric.WithAddr(fmt.Sprintf("localhost:%d", config.GRPC.Port)),
 	)
+
+	appV1 := api.NewV1App(config, clientCreds)
+	go appV1.Start()
+
+	appV2 := api.NewV2App(config, clientCreds, serverCreds)
+	go appV2.Start()
 
 	// We start the profiler last so that we can definitively say that we're
 	// all connected and ready for data by the time the profiler starts up.

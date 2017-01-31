@@ -3,6 +3,7 @@ package sinkserver
 import (
 	"diodes"
 	"log"
+	"metric"
 	"sync"
 
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
@@ -31,7 +32,11 @@ func (r *MessageRouter) Start(incomingLog *diodes.ManyToOneEnvelope) {
 	log.Print("MessageRouter:Starting")
 	for {
 		envelope := incomingLog.Next()
+		metric.IncCounter("egress")
+
+		// TODO: To be removed
 		metrics.BatchIncrementCounter("httpServer.receivedMessages")
+
 		r.send(envelope)
 	}
 }
