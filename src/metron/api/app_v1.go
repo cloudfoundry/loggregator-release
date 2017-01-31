@@ -46,13 +46,14 @@ func (a *AppV1) Start() {
 
 	dropsondeUnmarshaller := egress.NewUnMarshaller(aggregator, batcher)
 	metronAddress := fmt.Sprintf("127.0.0.1:%d", a.config.IncomingUDPPort)
-	dropsondeReader, err := ingress.New(metronAddress, "dropsondeAgentListener", dropsondeUnmarshaller)
+	networkReader, err := ingress.New(metronAddress, "dropsondeAgentListener", dropsondeUnmarshaller)
 	if err != nil {
 		log.Panic(fmt.Errorf("Failed to listen on %s: %s", metronAddress, err))
 	}
 
 	log.Printf("metron v1 API started on addr %s", metronAddress)
-	dropsondeReader.Start()
+	go networkReader.StartReading()
+	networkReader.StartWriting()
 }
 
 func (a *AppV1) initializeMetrics(stopChan chan struct{}) (*metricbatcher.MetricBatcher, *egress.EventWriter) {

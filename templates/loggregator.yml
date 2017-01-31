@@ -328,6 +328,7 @@ variables:
     ca: loggregator_ca
     common_name: doppler
     ext_key_usage:
+    - client_auth
     - server_auth
 - name: loggregator_tc
   type: certificate
@@ -336,6 +337,7 @@ variables:
     common_name: trafficcontroller
     ext_key_usage:
     - client_auth
+    - server_auth
 - name: loggregator_metron
   type: certificate
   options:

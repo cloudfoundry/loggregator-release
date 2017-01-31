@@ -36,8 +36,9 @@ var _ = Describe("Uptime Monitor", func() {
 
 	Context("Uptime", func() {
 		It("sends uptime metrics", func() {
+			go dropsondeReader.StartWriting()
+			go dropsondeReader.StartReading()
 			defer dropsondeReader.Stop()
-			go dropsondeReader.Start()
 
 			Eventually(func() uint64 {
 				return atomic.LoadUint64(&writer.lastUptime)

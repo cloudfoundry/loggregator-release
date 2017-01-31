@@ -4,6 +4,8 @@ import (
 	"log"
 	"net"
 
+	"diodes"
+
 	"github.com/cloudfoundry/dropsonde/metrics"
 )
 
@@ -16,6 +18,7 @@ type NetworkReader struct {
 	writer     ByteArrayWriter
 
 	contextName string
+	buffer      *diodes.OneToOne
 }
 
 func New(address string, name string, writer ByteArrayWriter) (*NetworkReader, error) {
@@ -29,13 +32,14 @@ func New(address string, name string, writer ByteArrayWriter) (*NetworkReader, e
 		connection:  connection,
 		contextName: name,
 		writer:      writer,
+		buffer: diodes.NewOneToOne(10000, diodes.AlertFunc(func(missed int) {
+			log.Printf("network reader dropped messages %d", missed)
+			metrics.BatchAddCounter("udp.receiveErrorCount", uint64(missed))
+		})),
 	}, nil
 }
 
-func (nr *NetworkReader) Start() {
-	receivedMessageCountName := nr.contextName + ".receivedMessageCount"
-	receivedByteCountName := nr.contextName + ".receivedByteCount"
-
+func (nr *NetworkReader) StartReading() {
 	readBuffer := make([]byte, 65535) //buffer with size = max theoretical UDP size
 	for {
 		readCount, _, err := nr.connection.ReadFrom(readBuffer)
@@ -46,9 +50,19 @@ func (nr *NetworkReader) Start() {
 		readData := make([]byte, readCount)
 		copy(readData, readBuffer[:readCount])
 
+		nr.buffer.Set(readData)
+	}
+}
+
+func (nr *NetworkReader) StartWriting() {
+	receivedMessageCountName := nr.contextName + ".receivedMessageCount"
+	receivedByteCountName := nr.contextName + ".receivedByteCount"
+
+	for {
+		data := nr.buffer.Next()
 		metrics.BatchIncrementCounter(receivedMessageCountName)
-		metrics.BatchAddCounter(receivedByteCountName, uint64(readCount))
-		nr.writer.Write(readData)
+		metrics.BatchAddCounter(receivedByteCountName, uint64(len(data)))
+		nr.writer.Write(data)
 	}
 }
 

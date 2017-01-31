@@ -55,8 +55,9 @@ var _ = Describe("NetworkReader", func() {
 			mockBatcher = newMockMetricBatcher()
 			metrics.Initialize(fakeMetricSender, mockBatcher)
 
+			go reader.StartWriting()
 			go func() {
-				reader.Start()
+				reader.StartReading()
 				close(readerStopped)
 			}()
 		})
