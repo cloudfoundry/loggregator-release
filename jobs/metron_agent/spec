@@ -28,11 +28,13 @@ properties:
     default: true
   syslog_daemon_config.address:
     description: "IP address for syslog aggregator"
+    default: ""
   syslog_daemon_config.port:
-    description: "TCP port of syslog aggregator"
+    description: "Port of syslog aggregator"
+    default: ""
   syslog_daemon_config.transport:
-    description: "Transport to be used when forwarding logs (tcp|udp|relp)."
-    default: "tcp"
+    description: "Transport to be used when forwarding logs (tcp|udp)."
+    default: "udp"
   syslog_daemon_config.fallback_addresses:
     description: "Addresses of fallback servers to be used if the primary syslog server is down. Only tcp or relp are supported. Each list entry should consist of \"address\", \"transport\" and \"port\" keys. "
     default: []
