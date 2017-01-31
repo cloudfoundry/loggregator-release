@@ -74,34 +74,30 @@ func (w *AppServiceStoreWatcher) Run() {
 
 	w.registerExistingServicesFromStore()
 	for {
-		for {
-			select {
-			case <-w.done:
-				close(stopChan)
+		select {
+		case <-w.done:
+			close(stopChan)
+			return
+		case err, ok := <-errChan:
+			if !ok {
 				return
-			case err, ok := <-errChan:
-				if !ok {
-					return
-				}
-				log.Printf("AppStoreWatcher: Got error while waiting for ETCD events: %s", err.Error())
-				events, stopChan, errChan = w.adapter.Watch("/loggregator/services")
-			case event, ok := <-events:
-				if !ok {
-					return
-				}
+			}
+			log.Printf("AppStoreWatcher: Got error while waiting for ETCD events: %s", err.Error())
+			events, stopChan, errChan = w.adapter.Watch("/loggregator/services")
+		case event, ok := <-events:
+			if !ok {
+				return
+			}
 
-				switch event.Type {
-				case storeadapter.CreateEvent, storeadapter.UpdateEvent:
-					if event.Node.Dir || len(event.Node.Value) == 0 {
-						// we can ignore any directory nodes (app or other namespace additions)
-						continue
-					}
-					w.Add(appServiceFromStoreNode(event.Node))
-				case storeadapter.DeleteEvent:
-					w.deleteEvent(event.PrevNode)
-				case storeadapter.ExpireEvent:
-					w.deleteEvent(event.PrevNode)
+			switch event.Type {
+			case storeadapter.CreateEvent, storeadapter.UpdateEvent:
+				if event.Node.Dir || len(event.Node.Value) == 0 {
+					// we can ignore any directory nodes (app or other namespace additions)
+					continue
 				}
+				w.Add(appServiceFromStoreNode(event.Node))
+			case storeadapter.DeleteEvent, storeadapter.ExpireEvent:
+				w.deleteEvent(event.PrevNode)
 			}
 		}
 	}
