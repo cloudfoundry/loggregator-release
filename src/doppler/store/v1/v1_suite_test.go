@@ -1,14 +1,13 @@
-package store_test
+package v1_test
 
 import (
+	"doppler/store"
 	"log"
 	"path"
 	"testing"
 
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
-
-	"doppler/store"
 
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
@@ -21,7 +20,7 @@ var etcdRunner *etcdstorerunner.ETCDClusterRunner
 func TestStore(t *testing.T) {
 	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Store Suite")
+	RunSpecs(t, "Store V1 Suite")
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {
@@ -47,7 +46,7 @@ var _ = BeforeEach(func() {
 
 func buildNode(appService store.AppService) storeadapter.StoreNode {
 	return storeadapter.StoreNode{
-		Key:   path.Join("/loggregator/services", appService.AppId, appService.Id()),
-		Value: []byte(appService.Url),
+		Key:   path.Join("/loggregator/services", appService.AppId(), appService.Id()),
+		Value: []byte(appService.Url()),
 	}
 }

@@ -10,23 +10,20 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/grpc"
-
+	"diodes"
 	"doppler/config"
 	"doppler/dopplerservice"
-	"doppler/grpcmanager/v1"
+	grpcv1 "doppler/grpcmanager/v1"
 	"doppler/listeners"
 	"doppler/sinkserver"
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
-
-	"diodes"
+	"doppler/store"
+	storev1 "doppler/store/v1"
 	"monitor"
 	"profiler"
 	"signalmanager"
-
-	"doppler/store"
 
 	"code.cloudfoundry.org/localip"
 	"code.cloudfoundry.org/workpool"
@@ -39,6 +36,7 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -85,8 +83,8 @@ func main() {
 		batcher.BatchCounter("doppler.shedEnvelopes").Add(uint64(missed))
 		metric.IncCounter("dropped") // TODO: add "egress" tag
 	}))
-	appStoreCache := store.NewAppServiceCache()
-	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
+	appStoreCache := storev1.NewAppServiceCache()
+	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := storev1.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
 	dropsondeVerifiedBytesChan := make(chan []byte)
 	udpListener, dropsondeBytesChan := listeners.NewUDPListener(
 		fmt.Sprintf("%s:%d", localIp, conf.IncomingUDPPort),
@@ -120,7 +118,7 @@ func main() {
 	if err != nil {
 		log.Panicf("Failed to create the websocket server: %s", err)
 	}
-	grpcRouter := v1.NewRouter()
+	grpcRouter := grpcv1.NewRouter()
 	messageRouter := sinkserver.NewMessageRouter(sinkManager, grpcRouter)
 	signatureVerifier := signature.NewVerifier(conf.SharedSecret)
 	host := localIp
@@ -220,7 +218,7 @@ func start(
 	openFileMonitor *monitor.LinuxFileDescriptor,
 	uptimeMonitor *monitor.Uptime,
 	envelopeBuffer *diodes.ManyToOneEnvelope,
-	appStoreWatcher *store.AppServiceStoreWatcher,
+	appStoreWatcher *storev1.AppServiceStoreWatcher,
 	newAppServiceChan <-chan store.AppService,
 	deletedAppServiceChan <-chan store.AppService,
 	dropsondeVerifiedBytesChan chan []byte,
@@ -315,7 +313,7 @@ func stop(
 	wg sync.WaitGroup,
 	openFileMonitor *monitor.LinuxFileDescriptor,
 	uptimeMonitor *monitor.Uptime,
-	appStoreWatcher *store.AppServiceStoreWatcher,
+	appStoreWatcher *storev1.AppServiceStoreWatcher,
 	udpListener *listeners.UDPListener,
 	tcpListener *listeners.TCPListener,
 	tlsListener *listeners.TCPListener,

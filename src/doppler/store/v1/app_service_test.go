@@ -1,17 +1,17 @@
-package store_test
+package v1_test
 
 import (
-	"doppler/store"
+	"doppler/store/v1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("AppService", func() {
-	var appService store.AppService
+	var appService v1.ServiceInfo
 
 	BeforeEach(func() {
-		appService = store.AppService{AppId: "app-id", Url: "syslog://example.com:12345"}
+		appService = v1.NewServiceInfo("app-id", "syslog://example.com:12345")
 	})
 
 	Describe("Id", func() {
@@ -20,7 +20,7 @@ var _ = Describe("AppService", func() {
 		})
 
 		It("should have a different ID for different Urls", func() {
-			otherAppService := store.AppService{AppId: "app-id", Url: "syslog://example.com:12346"}
+			otherAppService := v1.NewServiceInfo("app-id", "syslog://example.com:12346")
 			Expect(appService.Id()).NotTo(Equal(otherAppService.Id()))
 		})
 

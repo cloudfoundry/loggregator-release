@@ -1,4 +1,4 @@
-package store_test
+package v1_test
 
 import (
 	"fmt"
@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"doppler/store"
+	"doppler/store/v1"
 )
 
 const (
@@ -23,7 +24,7 @@ const (
 )
 
 var _ = Describe("AppServiceStoreWatcher", func() {
-	var watcher *store.AppServiceStoreWatcher
+	var watcher *v1.AppServiceStoreWatcher
 	var watcherRunComplete sync.WaitGroup
 
 	var runWatcher func()
@@ -32,14 +33,14 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 	var outAddChan <-chan store.AppService
 	var outRemoveChan <-chan store.AppService
 
-	var app1Service1 store.AppService
-	var app1Service2 store.AppService
-	var app2Service1 store.AppService
+	var app1Service1 v1.ServiceInfo
+	var app1Service2 v1.ServiceInfo
+	var app2Service1 v1.ServiceInfo
 
 	BeforeEach(func() {
-		app1Service1 = store.AppService{AppId: APP1_ID, Url: "syslog://example.com:12345"}
-		app1Service2 = store.AppService{AppId: APP1_ID, Url: "syslog://example.com:12346"}
-		app2Service1 = store.AppService{AppId: APP2_ID, Url: "syslog://example.com:12345"}
+		app1Service1 = v1.NewServiceInfo(APP1_ID, "syslog://example.com:12345")
+		app1Service2 = v1.NewServiceInfo(APP1_ID, "syslog://example.com:12346")
+		app2Service1 = v1.NewServiceInfo(APP2_ID, "syslog://example.com:12345")
 
 		workPool, err := workpool.NewWorkPool(10)
 		Expect(err).NotTo(HaveOccurred())
@@ -53,8 +54,8 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 		err = adapter.Connect()
 		Expect(err).NotTo(HaveOccurred())
 
-		c := store.NewAppServiceCache()
-		watcher, outAddChan, outRemoveChan = store.NewAppServiceStoreWatcher(adapter, c)
+		c := v1.NewAppServiceCache()
+		watcher, outAddChan, outRemoveChan = v1.NewAppServiceStoreWatcher(adapter, c)
 
 		runWatcher = func() {
 			watcherRunComplete.Add(1)
@@ -137,7 +138,7 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 		Context("when there is new data in the store", func() {
 			Context("when an existing app has a new service through a create operation", func() {
 				It("adds that service to the outgoing add channel", func() {
-					app2Service2 := store.AppService{AppId: APP2_ID, Url: "syslog://new.example.com:12345"}
+					app2Service2 := v1.NewServiceInfo(APP2_ID, "syslog://new.example.com:12345")
 					_, err := adapter.Get(key(app2Service2))
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("Key not found"))
@@ -154,7 +155,7 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 
 			Context("When an existing app gets a new service through an update operation", func() {
 				It("adds that service to the outgoing add channel", func() {
-					app2Service2 := store.AppService{AppId: APP2_ID, Url: "syslog://new.example.com:12345"}
+					app2Service2 := v1.NewServiceInfo(APP2_ID, "syslog://new.example.com:12345")
 					adapter.Get(key(app2Service2))
 
 					err := adapter.SetMulti([]storeadapter.StoreNode{buildNode(app2Service2)})
@@ -171,8 +172,8 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 
 			Context("when a new app appears", func() {
 				It("adds that app and its services to the outgoing add channel", func() {
-					app3Service1 := store.AppService{AppId: APP3_ID, Url: "syslog://app3.example.com:12345"}
-					app3Service2 := store.AppService{AppId: APP3_ID, Url: "syslog://app3.example.com:12346"}
+					app3Service1 := v1.NewServiceInfo(APP3_ID, "syslog://app3.example.com:12345")
+					app3Service2 := v1.NewServiceInfo(APP3_ID, "syslog://app3.example.com:12346")
 
 					adapter.Create(buildNode(app3Service1))
 					adapter.Create(buildNode(app3Service2))
@@ -251,7 +252,7 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 
 		Context("when an existing app service expires", func() {
 			It("removes the app service from the cache", func() {
-				app2Service2 := store.AppService{AppId: APP2_ID, Url: "syslog://foo/a"}
+				app2Service2 := v1.NewServiceInfo(APP2_ID, "syslog://foo/a")
 				adapter.Get(key(app2Service2))
 				adapter.Create(buildNode(app2Service2))
 				var appService store.AppService
@@ -278,8 +279,8 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 	})
 })
 
-func key(service store.AppService) string {
-	return path.Join("/loggregator/services", service.AppId, service.Id())
+func key(service v1.ServiceInfo) string {
+	return path.Join("/loggregator/services", service.AppId(), service.Id())
 }
 
 func drainOutgoingChannel(c <-chan store.AppService, count int) []store.AppService {

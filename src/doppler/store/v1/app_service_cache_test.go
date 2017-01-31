@@ -1,22 +1,22 @@
-package store_test
+package v1_test
 
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"doppler/store"
+	"doppler/store/v1"
 )
 
 var _ = Describe("AppServiceCache", func() {
-	var appServiceCache store.AppServiceWatcherCache
-	var app1Service1, app1Service2, app2Service1 store.AppService
+	var appServiceCache v1.AppServiceWatcherCache
+	var app1Service1, app1Service2, app2Service1 v1.ServiceInfo
 
 	BeforeEach(func() {
-		appServiceCache = store.NewAppServiceCache()
+		appServiceCache = v1.NewAppServiceCache()
 
-		app1Service1 = store.AppService{AppId: "app-1", Url: "syslog://example.com:12345"}
-		app1Service2 = store.AppService{AppId: "app-1", Url: "syslog://example.com:12346"}
-		app2Service1 = store.AppService{AppId: "app-2", Url: "syslog://example.com:12345"}
+		app1Service1 = v1.NewServiceInfo("app-1", "syslog://example.com:12345")
+		app1Service2 = v1.NewServiceInfo("app-1", "syslog://example.com:12346")
+		app2Service1 = v1.NewServiceInfo("app-2", "syslog://example.com:12345")
 
 		appServiceCache.Add(app1Service1)
 		appServiceCache.Add(app1Service2)
@@ -26,7 +26,7 @@ var _ = Describe("AppServiceCache", func() {
 	Describe("Get", func() {
 
 		It("returns the AppServices for the given AppId", func() {
-			appServices := appServiceCache.Get(app1Service1.AppId)
+			appServices := appServiceCache.Get(app1Service1.AppId())
 
 			Expect(len(appServices)).To(Equal(2))
 			Expect(appServices).To(ContainElement(app1Service1))
@@ -43,7 +43,7 @@ var _ = Describe("AppServiceCache", func() {
 	Describe("Size", func() {
 
 		It("returns the total number of AppServices for all AppIds", func() {
-			anotherAppService := store.AppService{AppId: "98765", Url: "http://foo.com"}
+			anotherAppService := v1.NewServiceInfo("98765", "http://foo.com")
 			appServiceCache.Add(anotherAppService)
 
 			Expect(appServiceCache.Size()).To(Equal(4))
@@ -81,12 +81,12 @@ var _ = Describe("AppServiceCache", func() {
 		It("removes the AppServices for the given AppId from the cache", func() {
 			Expect(appServiceCache.Size()).To(Equal(3))
 
-			appServiceCache.RemoveApp(app1Service1.AppId)
+			appServiceCache.RemoveApp(app1Service1.AppId())
 			Expect(appServiceCache.Size()).To(Equal(1))
 		})
 
 		It("returns the removed AppServices", func() {
-			appServices := appServiceCache.RemoveApp(app1Service1.AppId)
+			appServices := appServiceCache.RemoveApp(app1Service1.AppId())
 			Expect(len(appServices)).To(Equal(2))
 			Expect(appServices).To(ContainElement(app1Service1))
 			Expect(appServices).To(ContainElement(app1Service2))
@@ -99,7 +99,7 @@ var _ = Describe("AppServiceCache", func() {
 		})
 
 		It("returns the removed AppServices", func() {
-			anotherAppService := store.AppService{AppId: "98765", Url: "http://foo.com"}
+			anotherAppService := v1.NewServiceInfo("98765", "http://foo.com")
 			Expect(appServiceCache.Exists(anotherAppService)).To(BeFalse())
 		})
 	})

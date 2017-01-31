@@ -1,4 +1,4 @@
-package store_test
+package v1_test
 
 import (
 	"errors"
@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"doppler/store"
+	"doppler/store/v1"
 )
 
 var _ = Describe("AppServiceStoreWatcherUnit", func() {
@@ -18,7 +18,7 @@ var _ = Describe("AppServiceStoreWatcherUnit", func() {
 
 		BeforeEach(func() {
 			adapter = newFSA()
-			watcher, _, _ := store.NewAppServiceStoreWatcher(adapter, store.NewAppServiceCache())
+			watcher, _, _ := v1.NewAppServiceStoreWatcher(adapter, v1.NewAppServiceCache())
 
 			go watcher.Run()
 		})

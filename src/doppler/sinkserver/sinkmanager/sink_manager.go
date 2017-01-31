@@ -193,7 +193,7 @@ func (sm *SinkManager) listenForNewAppServices(newAppServiceChan <-chan store.Ap
 		case <-sm.doneChannel:
 			return
 		case appService := <-newAppServiceChan:
-			sm.registerNewSyslogSink(appService.AppId, appService.Url, appService.Hostname)
+			sm.registerNewSyslogSink(appService.AppId(), appService.Url(), appService.Hostname())
 		}
 	}
 }
@@ -204,7 +204,7 @@ func (sm *SinkManager) listenForDeletedAppServices(deletedAppServiceChan <-chan 
 		case <-sm.doneChannel:
 			return
 		case appService := <-deletedAppServiceChan:
-			syslogSink := sm.sinks.DrainFor(appService.AppId, appService.Url)
+			syslogSink := sm.sinks.DrainFor(appService.AppId(), appService.Url())
 			if syslogSink != nil {
 				sm.UnregisterSink(syslogSink)
 			}
