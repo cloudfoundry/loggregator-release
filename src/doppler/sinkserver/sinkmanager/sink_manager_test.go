@@ -169,21 +169,21 @@ var _ = Describe("SinkManager", func() {
 			Context("when an add update is received", func() {
 				It("creates a new syslog sink with syslog writer from the newAppServicesChan", func() {
 					initialNumSinks := fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value
-					newAppServiceChan <- store.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:885"}
+					newAppServiceChan <- store.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:885", Hostname: "org.space.app.1"}
 
 					Eventually(func() float64 { return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value }, 2).Should(Equal(initialNumSinks + 1))
 				})
 
 				It("creates a new syslog sink with tlsWriter from the newAppServicesChan", func() {
 					initialNumSinks := fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value
-					newAppServiceChan <- store.AppService{AppId: "aptastic", Url: "syslog-tls://127.0.1.1:885"}
+					newAppServiceChan <- store.AppService{AppId: "aptastic", Url: "syslog-tls://127.0.1.1:885", Hostname: "org.space.app.1"}
 
 					Eventually(func() float64 { return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value }, 2).Should(Equal(initialNumSinks + 1))
 				})
 
 				It("creates a new syslog sink with httpsWriter from the newAppServicesChan", func() {
 					initialNumSinks := fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value
-					newAppServiceChan <- store.AppService{AppId: "aptastic", Url: "https://127.0.1.1:885"}
+					newAppServiceChan <- store.AppService{AppId: "aptastic", Url: "https://127.0.1.1:885", Hostname: "org.space.app.1"}
 
 					Eventually(func() float64 { return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value }, 2).Should(Equal(initialNumSinks + 1))
 				})
@@ -200,14 +200,14 @@ var _ = Describe("SinkManager", func() {
 					})
 
 					It("sends an error message if the drain URL is blacklisted", func() {
-						newAppServiceChan <- store.AppService{AppId: "aptastic", Url: "syslog://10.10.10.11:884"}
+						newAppServiceChan <- store.AppService{AppId: "aptastic", Url: "syslog://10.10.10.11:884", Hostname: "org.space.app.1"}
 						Eventually(errorSink.Received).Should(HaveLen(1))
 						errorMsg := errorSink.Received()[0]
 						Expect(string(errorMsg.GetLogMessage().GetMessage())).To(MatchRegexp("Invalid syslog drain URL"))
 					})
 
 					It("sends an error message if the drain URL is invalid", func() {
-						newAppServiceChan <- store.AppService{AppId: "aptastic", Url: "syslog//invalid"}
+						newAppServiceChan <- store.AppService{AppId: "aptastic", Url: "syslog//invalid", Hostname: "org.space.app.1"}
 						Eventually(errorSink.Received).Should(HaveLen(1))
 						errorMsg := errorSink.Received()[0]
 						Expect(string(errorMsg.GetLogMessage().GetMessage())).To(MatchRegexp("Invalid syslog drain URL"))
@@ -218,19 +218,25 @@ var _ = Describe("SinkManager", func() {
 			Context("when a delete update is received", func() {
 				It("deletes the corresponding syslog sink if it exists", func() {
 					initialNumSinks := fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value
-					newAppServiceChan <- store.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886"}
+					newAppServiceChan <- store.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886", Hostname: "org.space.app.1"}
 
-					Eventually(func() float64 { return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value }, 2).Should(Equal(initialNumSinks + 1))
+					Eventually(func() float64 {
+						return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value
+					}, 2).Should(Equal(initialNumSinks + 1))
 
-					deletedAppServiceChan <- store.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886"}
+					deletedAppServiceChan <- store.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886", Hostname: "org.space.app.1"}
 
-					Eventually(func() float64 { return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value }, 2).Should(Equal(initialNumSinks))
+					Eventually(func() float64 {
+						return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value
+					}, 2).Should(Equal(initialNumSinks))
 				})
 
 				It("handles a delete for a nonexistent sink", func() {
 					initialNumSinks := fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value
-					deletedAppServiceChan <- store.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886"}
-					Eventually(func() float64 { return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value }, 2).Should(Equal(initialNumSinks))
+					deletedAppServiceChan <- store.AppService{AppId: "aptastic", Url: "syslog://127.0.1.1:886", Hostname: "org.space.app.1"}
+					Eventually(func() float64 {
+						return fakeMetricSender.GetValue("messageRouter.numberOfSyslogSinks").Value
+					}, 2).Should(Equal(initialNumSinks))
 				})
 			})
 		})

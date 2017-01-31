@@ -193,7 +193,7 @@ func (sm *SinkManager) listenForNewAppServices(newAppServiceChan <-chan store.Ap
 		case <-sm.doneChannel:
 			return
 		case appService := <-newAppServiceChan:
-			sm.registerNewSyslogSink(appService.AppId, appService.Url)
+			sm.registerNewSyslogSink(appService.AppId, appService.Url, appService.Hostname)
 		}
 	}
 }
@@ -227,14 +227,21 @@ func (sm *SinkManager) listenForErrorMessages() {
 	}
 }
 
-func (sm *SinkManager) registerNewSyslogSink(appId string, syslogSinkURL string) {
+func (sm *SinkManager) registerNewSyslogSink(appId, syslogSinkURL, hostname string) {
 	parsedSyslogDrainURL, err := sm.urlBlacklistManager.CheckUrl(syslogSinkURL)
 	if err != nil {
 		sm.SendSyslogErrorToLoggregator(invalidSyslogURLErrorMsg(appId, syslogSinkURL, err), appId)
 		return
 	}
 
-	syslogWriter, err := syslogwriter.NewWriter(parsedSyslogDrainURL, appId, "loggregator", sm.skipCertVerify, sm.dialTimeout, sm.sinkIOTimeout)
+	syslogWriter, err := syslogwriter.NewWriter(
+		parsedSyslogDrainURL,
+		appId,
+		hostname,
+		sm.skipCertVerify,
+		sm.dialTimeout,
+		sm.sinkIOTimeout,
+	)
 	if err != nil {
 		logURL := fmt.Sprintf("%s://%s%s", parsedSyslogDrainURL.Scheme, parsedSyslogDrainURL.Host, parsedSyslogDrainURL.Path)
 		sm.SendSyslogErrorToLoggregator(invalidSyslogURLErrorMsg(appId, logURL, err), appId)
@@ -251,7 +258,6 @@ func (sm *SinkManager) registerNewSyslogSink(appId string, syslogSinkURL string)
 	)
 
 	sm.RegisterSink(syslogSink)
-
 }
 
 func invalidSyslogURLErrorMsg(appId string, syslogSinkURL string, err error) string {

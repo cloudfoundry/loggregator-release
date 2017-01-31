@@ -6,8 +6,9 @@ import (
 )
 
 type AppService struct {
-	AppId string
-	Url   string
+	AppId    string
+	Url      string
+	Hostname string
 }
 
 func (a AppService) Id() string {

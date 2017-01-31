@@ -130,11 +130,11 @@ func (group *GroupedSinks) CountFor(appId string) int {
 	return len(group.apps[appId])
 }
 
-func (group *GroupedSinks) DrainFor(appId, drainUrl string) sinks.Sink {
+func (group *GroupedSinks) DrainFor(appId, drainMetaData string) sinks.Sink {
 	group.RLock()
 	defer group.RUnlock()
 
-	wrapper, ok := group.apps[appId][drainUrl]
+	wrapper, ok := group.apps[appId][drainMetaData]
 	if ok {
 		return wrapper.Sink
 	}
