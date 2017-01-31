@@ -8,6 +8,11 @@
       "name": "metron_agent",
       "executable": "/var/vcap/packages/metron_agent_windows/metron.exe",
       "args": <%= args.to_s %>
+      "env": {
+        "__PIPE_SYSLOG_HOST": "<%= p('syslog_daemon_config.address') %>",
+        "__PIPE_SYSLOG_PORT": "<%= p('syslog_daemon_config.port') %>",
+        "__PIPE_SYSLOG_TRANSPORT": "<%= p('syslog_daemon_config.transport') %>"
+      }
     }
   ]
 }
