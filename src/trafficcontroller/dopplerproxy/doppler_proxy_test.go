@@ -20,7 +20,6 @@ import (
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/loggregatorlib/server/handlers"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/websocket"
@@ -533,7 +532,7 @@ var _ = Describe("ServeHTTP()", func() {
 
 var _ = Describe("DefaultHandlerProvider", func() {
 	It("returns an HTTP handler for .../recentlogs", func() {
-		httpHandler := handlers.NewHttpHandler(make(chan []byte))
+		httpHandler := doppler_endpoint.NewHttpHandler(make(chan []byte))
 
 		target := doppler_endpoint.HttpHandlerProvider(make(chan []byte))
 
@@ -541,7 +540,7 @@ var _ = Describe("DefaultHandlerProvider", func() {
 	})
 
 	It("returns a Websocket handler for .../stream", func() {
-		wsHandler := handlers.NewWebsocketHandler(make(chan []byte), time.Minute)
+		wsHandler := doppler_endpoint.NewWebsocketHandler(make(chan []byte), time.Minute)
 
 		target := doppler_endpoint.WebsocketHandlerProvider(make(chan []byte))
 
@@ -549,7 +548,7 @@ var _ = Describe("DefaultHandlerProvider", func() {
 	})
 
 	It("returns a Websocket handler for anything else", func() {
-		wsHandler := handlers.NewWebsocketHandler(make(chan []byte), time.Minute)
+		wsHandler := doppler_endpoint.NewWebsocketHandler(make(chan []byte), time.Minute)
 
 		target := doppler_endpoint.WebsocketHandlerProvider(make(chan []byte))
 

@@ -23,8 +23,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/dropsonde/metricbatcher/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metrics/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/runtime_stats/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/loggregatorlib/server/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/loggregatorlib/server/handlers/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/sonde-go/events/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/etcdstoreadapter/*.go # gosub

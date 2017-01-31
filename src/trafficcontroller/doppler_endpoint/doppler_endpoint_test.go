@@ -6,7 +6,6 @@ import (
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
-	"github.com/cloudfoundry/loggregatorlib/server/handlers"
 	"github.com/gogo/protobuf/proto"
 
 	. "github.com/onsi/ginkgo"
@@ -17,7 +16,7 @@ var _ = Describe("NewDopplerEndpoint", func() {
 	Context("when endpoint is 'recentlogs'", func() {
 		It("uses an HTTP handler", func() {
 			dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("recentlogs", "abc123", true)
-			knownHttpHandler := handlers.NewHttpHandler(nil)
+			knownHttpHandler := doppler_endpoint.NewHttpHandler(nil)
 			Expect(dopplerEndpoint.HProvider(nil)).To(BeAssignableToTypeOf(knownHttpHandler))
 		})
 
@@ -30,7 +29,7 @@ var _ = Describe("NewDopplerEndpoint", func() {
 	Context("when endpoint is 'containermetrics'", func() {
 		It("uses an HTTP Container metrics handler", func() {
 			dopplerEndpoint := doppler_endpoint.NewDopplerEndpoint("containermetrics", "abc123", true)
-			handler := handlers.NewHttpHandler(nil)
+			handler := doppler_endpoint.NewHttpHandler(nil)
 			closedChan := make(chan []byte)
 			close(closedChan)
 			Expect(dopplerEndpoint.HProvider(closedChan)).To(BeAssignableToTypeOf(handler))

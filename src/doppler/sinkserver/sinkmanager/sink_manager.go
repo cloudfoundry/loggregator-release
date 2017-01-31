@@ -14,10 +14,11 @@ import (
 	"sync"
 	"time"
 
+	"doppler/store"
+
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/dropsonde/factories"
-	"github.com/cloudfoundry/loggregatorlib/appservice"
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
@@ -69,7 +70,7 @@ func New(
 	}
 }
 
-func (sm *SinkManager) Start(newAppServiceChan, deletedAppServiceChan <-chan appservice.AppService) {
+func (sm *SinkManager) Start(newAppServiceChan, deletedAppServiceChan <-chan store.AppService) {
 	go sm.listenForNewAppServices(newAppServiceChan)
 	go sm.listenForDeletedAppServices(deletedAppServiceChan)
 
@@ -186,7 +187,7 @@ func (sm *SinkManager) SendSyslogErrorToLoggregator(errorMsg string, appId strin
 	sm.errorChannel <- envelope
 }
 
-func (sm *SinkManager) listenForNewAppServices(newAppServiceChan <-chan appservice.AppService) {
+func (sm *SinkManager) listenForNewAppServices(newAppServiceChan <-chan store.AppService) {
 	for {
 		select {
 		case <-sm.doneChannel:
@@ -197,7 +198,7 @@ func (sm *SinkManager) listenForNewAppServices(newAppServiceChan <-chan appservi
 	}
 }
 
-func (sm *SinkManager) listenForDeletedAppServices(deletedAppServiceChan <-chan appservice.AppService) {
+func (sm *SinkManager) listenForDeletedAppServices(deletedAppServiceChan <-chan store.AppService) {
 	for {
 		select {
 		case <-sm.doneChannel:

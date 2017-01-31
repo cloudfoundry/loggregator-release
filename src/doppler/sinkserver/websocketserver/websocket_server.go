@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
-	"github.com/cloudfoundry/loggregatorlib/server"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	gorilla "github.com/gorilla/websocket"
@@ -232,7 +231,7 @@ func (w *WebsocketServer) streamWebsocket(websocketSink *websocket.WebsocketSink
 	defer unregister(websocketSink)
 
 	go websocketConnection.ReadMessage()
-	server.NewKeepAlive(websocketConnection, w.keepAliveInterval).Run()
+	NewKeepAlive(websocketConnection, w.keepAliveInterval).Run()
 }
 
 func (w *WebsocketServer) recentLogs(appId string, websocketConnection *gorilla.Conn) {

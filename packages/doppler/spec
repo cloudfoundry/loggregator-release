@@ -30,6 +30,7 @@ files:
 - loggregator/src/doppler/sinkserver/metrics/*.go # gosub
 - loggregator/src/doppler/sinkserver/sinkmanager/*.go # gosub
 - loggregator/src/doppler/sinkserver/websocketserver/*.go # gosub
+- loggregator/src/doppler/store/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
@@ -46,10 +47,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/dropsonde/metrics/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/runtime_stats/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/signature/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/loggregatorlib/appservice/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/loggregatorlib/server/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/loggregatorlib/store/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/loggregatorlib/store/cache/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/sonde-go/events/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/etcdstoreadapter/*.go # gosub
