@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
-	"github.com/cloudfoundry/loggregatorlib/server"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	gorilla "github.com/gorilla/websocket"
+	"dea_logging_agent/src/github.com/cloudfoundry/loggregatorlib/server"
 )
 
 type Batcher interface {

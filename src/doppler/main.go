@@ -30,12 +30,10 @@ import (
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/dropsonde/signature"
-	"github.com/cloudfoundry/loggregatorlib/appservice"
-	"github.com/cloudfoundry/loggregatorlib/store"
-	"github.com/cloudfoundry/loggregatorlib/store/cache"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+	"doppler/store"
 )
 
 const (
@@ -79,7 +77,7 @@ func main() {
 		log.Printf("Shed %d envelopes", missed)
 		batcher.BatchCounter("doppler.shedEnvelopes").Add(uint64(missed))
 	}))
-	appStoreCache := cache.NewAppServiceCache()
+	appStoreCache := store.NewAppServiceCache()
 	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
 	dropsondeVerifiedBytesChan := make(chan []byte)
 	udpListener, dropsondeBytesChan := listeners.NewUDPListener(
@@ -214,8 +212,8 @@ func start(
 	uptimeMonitor *monitor.Uptime,
 	envelopeBuffer *diodes.ManyToOneEnvelope,
 	appStoreWatcher *store.AppServiceStoreWatcher,
-	newAppServiceChan <-chan appservice.AppService,
-	deletedAppServiceChan <-chan appservice.AppService,
+	newAppServiceChan <-chan store.AppService,
+	deletedAppServiceChan <-chan store.AppService,
 	dropsondeVerifiedBytesChan chan []byte,
 	dropsondeBytesChan <-chan []byte,
 	udpListener *listeners.UDPListener,

@@ -5,9 +5,12 @@ import (
 	. "github.com/onsi/gomega"
 
 	"testing"
+	"log"
 )
 
 func TestDopplerEndpoint(t *testing.T) {
+	log.SetOutput(GinkgoWriter)
+
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "DopplerEndpoint Suite")
 }
