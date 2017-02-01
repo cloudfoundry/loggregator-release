@@ -11,6 +11,7 @@ import (
 	"metron/config"
 	"metron/egress"
 	"metron/ingress"
+	"metron/writers/v2/counteraggregator"
 	v2 "plumbing/v2"
 
 	"google.golang.org/grpc"
@@ -47,7 +48,8 @@ func (a *AppV2) Start() {
 	}))
 
 	pool := a.initializePool()
-	tx := egress.NewTransponder(envelopeBuffer, pool)
+	counterAggr := counteraggregator.New(pool)
+	tx := egress.NewTransponder(envelopeBuffer, counterAggr)
 	go tx.Start()
 
 	metronAddress := fmt.Sprintf("127.0.0.1:%d", a.config.GRPC.Port)
