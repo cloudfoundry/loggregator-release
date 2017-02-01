@@ -1,22 +1,22 @@
-package v2_test
+package store_test
 
 import (
-	"doppler/store/v2"
+	"doppler/store"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("AppServiceCache", func() {
-	var appServiceCache v2.AppServiceWatcherCache
-	var app1Service1, app1Service2, app2Service1 v2.ServiceInfo
+	var appServiceCache store.AppServiceWatcherCache
+	var app1Service1, app1Service2, app2Service1 store.ServiceInfo
 
 	BeforeEach(func() {
-		appServiceCache = v2.NewAppServiceCache()
+		appServiceCache = store.NewAppServiceCache()
 
-		app1Service1 = v2.NewServiceInfo("app-1", "syslog://example.com:12345", "org.space.app.1")
-		app1Service2 = v2.NewServiceInfo("app-1", "syslog://example.com:12346", "org.space.app.1")
-		app2Service1 = v2.NewServiceInfo("app-2", "syslog://example.com:12345", "org.space.app.1")
+		app1Service1 = store.NewServiceInfo("app-1", "syslog://example.com:12345", "org.space.app.1")
+		app1Service2 = store.NewServiceInfo("app-1", "syslog://example.com:12346", "org.space.app.1")
+		app2Service1 = store.NewServiceInfo("app-2", "syslog://example.com:12345", "org.space.app.1")
 
 		appServiceCache.Add(app1Service1)
 		appServiceCache.Add(app1Service2)
@@ -41,7 +41,7 @@ var _ = Describe("AppServiceCache", func() {
 
 	Describe("Size", func() {
 		It("returns the total number of AppServices for all AppIds", func() {
-			anotherAppService := v2.NewServiceInfo("98765", "http://foo.com", "org.space.app.1")
+			anotherAppService := store.NewServiceInfo("98765", "http://foo.com", "org.space.app.1")
 			appServiceCache.Add(anotherAppService)
 
 			Expect(appServiceCache.Size()).To(Equal(4))
@@ -96,7 +96,7 @@ var _ = Describe("AppServiceCache", func() {
 		})
 
 		It("returns the removed AppServices", func() {
-			anotherAppService := v2.NewServiceInfo("98765", "http://foo.com", "org.space.app.1")
+			anotherAppService := store.NewServiceInfo("98765", "http://foo.com", "org.space.app.1")
 			Expect(appServiceCache.Exists(anotherAppService)).To(BeFalse())
 		})
 	})

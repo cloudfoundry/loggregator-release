@@ -1,48 +1,47 @@
-package v2
+package store
 
 import (
-	"doppler/store"
 	"sync"
 )
 
 type AppServiceCache interface {
-	Add(appService store.AppService)
-	Remove(appService store.AppService)
-	RemoveApp(appId string) []store.AppService
+	Add(appService AppService)
+	Remove(appService AppService)
+	RemoveApp(appId string) []AppService
 
-	Get(appId string) []store.AppService
-	Exists(AppService store.AppService) bool
+	Get(appId string) []AppService
+	Exists(AppService AppService) bool
 }
 
 type AppServiceWatcherCache interface {
 	AppServiceCache
-	GetAll() []store.AppService
+	GetAll() []AppService
 	Size() int
 }
 
 type appServiceCache struct {
 	sync.RWMutex
-	appServicesByAppId map[string]map[string]store.AppService
+	appServicesByAppId map[string]map[string]AppService
 }
 
 func NewAppServiceCache() AppServiceWatcherCache {
-	c := &appServiceCache{appServicesByAppId: make(map[string]map[string]store.AppService)}
+	c := &appServiceCache{appServicesByAppId: make(map[string]map[string]AppService)}
 	return c
 }
 
-func (c *appServiceCache) Add(appService store.AppService) {
+func (c *appServiceCache) Add(appService AppService) {
 	c.Lock()
 	defer c.Unlock()
 	appServicesById, ok := c.appServicesByAppId[appService.AppId()]
 	if !ok {
-		appServicesById = make(map[string]store.AppService)
+		appServicesById = make(map[string]AppService)
 		c.appServicesByAppId[appService.AppId()] = appServicesById
 	}
 
 	appServicesById[appService.Id()] = appService
 }
 
-func (c *appServiceCache) Remove(appService store.AppService) {
+func (c *appServiceCache) Remove(appService AppService) {
 	c.Lock()
 	defer c.Unlock()
 	appCache := c.appServicesByAppId[appService.AppId()]
@@ -52,7 +51,7 @@ func (c *appServiceCache) Remove(appService store.AppService) {
 	}
 }
 
-func (c *appServiceCache) RemoveApp(appId string) []store.AppService {
+func (c *appServiceCache) RemoveApp(appId string) []AppService {
 	c.Lock()
 	defer c.Unlock()
 	appCache := c.appServicesByAppId[appId]
@@ -60,16 +59,16 @@ func (c *appServiceCache) RemoveApp(appId string) []store.AppService {
 	return values(appCache)
 }
 
-func (c *appServiceCache) Get(appId string) []store.AppService {
+func (c *appServiceCache) Get(appId string) []AppService {
 	c.RLock()
 	defer c.RUnlock()
 	return values(c.appServicesByAppId[appId])
 }
 
-func (c *appServiceCache) GetAll() []store.AppService {
+func (c *appServiceCache) GetAll() []AppService {
 	c.RLock()
 	defer c.RUnlock()
-	var result []store.AppService
+	var result []AppService
 	for _, appServices := range c.appServicesByAppId {
 		result = append(result, values(appServices)...)
 	}
@@ -91,7 +90,7 @@ func (c *appServiceCache) Size() int {
 	return count
 }
 
-func (c *appServiceCache) Exists(appService store.AppService) bool {
+func (c *appServiceCache) Exists(appService AppService) bool {
 	c.RLock()
 	defer c.RUnlock()
 	serviceExists := false
@@ -102,8 +101,8 @@ func (c *appServiceCache) Exists(appService store.AppService) bool {
 	return serviceExists
 }
 
-func values(appCache map[string]store.AppService) []store.AppService {
-	appServices := make([]store.AppService, len(appCache))
+func values(appCache map[string]AppService) []AppService {
+	appServices := make([]AppService, len(appCache))
 	i := 0
 	for _, appService := range appCache {
 		appServices[i] = appService

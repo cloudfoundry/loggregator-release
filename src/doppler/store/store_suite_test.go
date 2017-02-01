@@ -1,4 +1,4 @@
-package v2_test
+package store_test
 
 import (
 	"log"
@@ -17,7 +17,7 @@ var etcdRunner *etcdstorerunner.ETCDClusterRunner
 func TestStore(t *testing.T) {
 	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Store V2 Suite")
+	RunSpecs(t, "Store Suite")
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {

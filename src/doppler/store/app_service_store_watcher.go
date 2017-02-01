@@ -1,11 +1,9 @@
-package v2
+package store
 
 import (
 	"encoding/json"
 	"log"
 	"path"
-
-	"doppler/store"
 
 	"github.com/cloudfoundry/storeadapter"
 )
@@ -19,7 +17,7 @@ type appServiceMetadata struct {
 
 type AppServiceStoreWatcher struct {
 	adapter                   storeadapter.StoreAdapter
-	outAddChan, outRemoveChan chan<- store.AppService
+	outAddChan, outRemoveChan chan<- AppService
 	cache                     AppServiceWatcherCache
 
 	done chan struct{}
@@ -28,9 +26,9 @@ type AppServiceStoreWatcher struct {
 func NewAppServiceStoreWatcher(
 	adapter storeadapter.StoreAdapter,
 	cache AppServiceWatcherCache,
-) (*AppServiceStoreWatcher, <-chan store.AppService, <-chan store.AppService) {
-	outAddChan := make(chan store.AppService)
-	outRemoveChan := make(chan store.AppService)
+) (*AppServiceStoreWatcher, <-chan AppService, <-chan AppService) {
+	outAddChan := make(chan AppService)
+	outRemoveChan := make(chan AppService)
 	return &AppServiceStoreWatcher{
 		adapter:       adapter,
 		outAddChan:    outAddChan,
@@ -40,21 +38,21 @@ func NewAppServiceStoreWatcher(
 	}, outAddChan, outRemoveChan
 }
 
-func (w *AppServiceStoreWatcher) Add(appService store.AppService) {
+func (w *AppServiceStoreWatcher) Add(appService AppService) {
 	if !w.cache.Exists(appService) {
 		w.cache.Add(appService)
 		w.outAddChan <- appService
 	}
 }
 
-func (w *AppServiceStoreWatcher) Remove(appService store.AppService) {
+func (w *AppServiceStoreWatcher) Remove(appService AppService) {
 	if w.cache.Exists(appService) {
 		w.cache.Remove(appService)
 		w.outRemoveChan <- appService
 	}
 }
 
-func (w *AppServiceStoreWatcher) RemoveApp(appId string) []store.AppService {
+func (w *AppServiceStoreWatcher) RemoveApp(appId string) []AppService {
 	appServices := w.cache.RemoveApp(appId)
 	for _, appService := range appServices {
 		w.outRemoveChan <- appService
@@ -62,11 +60,11 @@ func (w *AppServiceStoreWatcher) RemoveApp(appId string) []store.AppService {
 	return appServices
 }
 
-func (w *AppServiceStoreWatcher) Get(appId string) []store.AppService {
+func (w *AppServiceStoreWatcher) Get(appId string) []AppService {
 	return w.cache.Get(appId)
 }
 
-func (w *AppServiceStoreWatcher) Exists(appService store.AppService) bool {
+func (w *AppServiceStoreWatcher) Exists(appService AppService) bool {
 	return w.cache.Exists(appService)
 }
 
@@ -130,7 +128,7 @@ func (w *AppServiceStoreWatcher) registerExistingServicesFromStore() {
 	}
 }
 
-func appServiceFromStoreNode(node *storeadapter.StoreNode) (store.AppService, error) {
+func appServiceFromStoreNode(node *storeadapter.StoreNode) (AppService, error) {
 	key := node.Key
 	appId := path.Base(path.Dir(key))
 

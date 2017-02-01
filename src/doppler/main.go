@@ -20,7 +20,6 @@ import (
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
 	"doppler/store"
-	storev2 "doppler/store/v2"
 	"monitor"
 	"profiler"
 	"signalmanager"
@@ -148,9 +147,9 @@ func main() {
 	//------------------------------
 	// Egress
 	//------------------------------
-	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := storev2.NewAppServiceStoreWatcher(
+	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(
 		storeAdapter,
-		storev2.NewAppServiceCache(),
+		store.NewAppServiceCache(),
 	)
 
 	websocketServer, err := websocketserver.New(
@@ -249,7 +248,7 @@ func start(
 	openFileMonitor *monitor.LinuxFileDescriptor,
 	uptimeMonitor *monitor.Uptime,
 	envelopeBuffer *diodes.ManyToOneEnvelope,
-	appStoreWatcher *storev2.AppServiceStoreWatcher,
+	appStoreWatcher *store.AppServiceStoreWatcher,
 	newAppServiceChan <-chan store.AppService,
 	deletedAppServiceChan <-chan store.AppService,
 	dropsondeBytesChan <-chan []byte,
@@ -345,7 +344,7 @@ func stop(
 	wg sync.WaitGroup,
 	openFileMonitor *monitor.LinuxFileDescriptor,
 	uptimeMonitor *monitor.Uptime,
-	appStoreWatcher *storev2.AppServiceStoreWatcher,
+	appStoreWatcher *store.AppServiceStoreWatcher,
 	udpListener *listeners.UDPListener,
 	tcpListener *listeners.TCPListener,
 	tlsListener *listeners.TCPListener,

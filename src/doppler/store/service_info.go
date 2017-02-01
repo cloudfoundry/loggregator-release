@@ -1,4 +1,4 @@
-package v2
+package store
 
 import (
 	"crypto/sha1"
