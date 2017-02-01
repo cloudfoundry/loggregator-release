@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"plumbing"
-	"time"
-
 	"syslog_drain_binder/shared_types"
+	"time"
 )
 
 // PollOptions contains the options for the Poll function.
@@ -34,6 +33,11 @@ func Timeout(t time.Duration) func(*PollOptions) {
 	}
 }
 
+type cloudControllerResponse struct {
+	Results map[shared_types.AppID]shared_types.SyslogDrainBinding `json:"results"`
+	NextID  *int                                                   `json:"next_id"`
+}
+
 // Poll gets all the app's syslog drain urls from the cloud controller.
 func Poll(
 	urlBase string,
@@ -41,8 +45,8 @@ func Poll(
 	password string,
 	batchSize int,
 	options ...func(*PollOptions),
-) (map[shared_types.AppID][]shared_types.DrainURL, error) {
-	drainURLs := make(map[shared_types.AppID][]shared_types.DrainURL)
+) (shared_types.AllSyslogDrainBindings, error) {
+	drainURLs := make(shared_types.AllSyslogDrainBindings)
 	nextID := 0
 
 	opts := PollOptions{
@@ -104,11 +108,6 @@ func pollAndDecode(client *http.Client, request *http.Request) (*cloudController
 	decoder.Decode(&ccResponse)
 
 	return &ccResponse, nil
-}
-
-type cloudControllerResponse struct {
-	Results map[shared_types.AppID][]shared_types.DrainURL `json:"results"`
-	NextID  *int                                           `json:"next_id"`
 }
 
 func buildUrl(baseURL string, batchSize int, nextID int) string {

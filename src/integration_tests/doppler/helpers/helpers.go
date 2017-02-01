@@ -103,7 +103,7 @@ func DecodeProtoBufCounterEvent(actual []byte) *events.CounterEvent {
 }
 
 func AppKey(appID string) string {
-	return fmt.Sprintf("/loggregator/services/%s", appID)
+	return fmt.Sprintf("/loggregator/v2/services/%s", appID)
 }
 
 func DrainKey(appID string, drainURL string) string {

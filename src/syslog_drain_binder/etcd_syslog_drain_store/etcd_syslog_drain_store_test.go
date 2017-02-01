@@ -28,48 +28,51 @@ var _ = Describe("EtcdSyslogDrainStore", func() {
 
 	Describe("UpdateDrains", func() {
 		It("writes drain urls to the store adapter", func() {
-			appDrainUrlMap := map[shared_types.AppID][]shared_types.DrainURL{
-				"app-id": {"url1", "url2"},
+			appDrainUrlMap := shared_types.AllSyslogDrainBindings{
+				"app-id": shared_types.SyslogDrainBinding{DrainURLs: []string{"url1", "url2"}, Hostname: "org.space.app.1"},
 			}
 
 			err := syslogDrainStore.UpdateDrains(appDrainUrlMap)
 			Expect(err).ToNot(HaveOccurred())
-
-			node, err := fakeStoreAdapter.Get(drainKey("app-id", "url1"))
+			drainData := `{"hostname":"org.space.app.1","drainURL":"url1"}`
+			node, err := fakeStoreAdapter.Get(drainKey("app-id", drainData))
 			Expect(err).ToNot(HaveOccurred())
-			Expect(node.Value).To(BeEquivalentTo("url1"))
+			Expect(node.Value).To(MatchJSON(drainData))
 
-			node, _ = fakeStoreAdapter.Get(drainKey("app-id", "url2"))
-			Expect(node.Value).To(BeEquivalentTo("url2"))
+			drainData = `{"hostname":"org.space.app.1","drainURL":"url2"}`
+			node, _ = fakeStoreAdapter.Get(drainKey("app-id", drainData))
+			Expect(node.Value).To(MatchJSON(drainData))
 		})
 
 		It("sets TTL on the app node if there are drain changes", func() {
-			appDrainUrlMap := map[shared_types.AppID][]shared_types.DrainURL{
-				"app-id": {"url1"},
+			appDrainUrlMap := shared_types.AllSyslogDrainBindings{
+				"app-id": shared_types.SyslogDrainBinding{DrainURLs: []string{"url1"}, Hostname: "org.space.app.1"},
 			}
+			drainData := `{"hostname":"org.space.app.1","drainURL":"url1"}`
+
 			syslogDrainStore.UpdateDrains(appDrainUrlMap)
-			node, _ := fakeStoreAdapter.Get(drainKey("app-id", "url1"))
+
+			node, _ := fakeStoreAdapter.Get(drainKey("app-id", drainData))
 			Expect(node.TTL).To(BeEquivalentTo(10))
 		})
 
 		It("returns an error if adapter.SetMulti fails", func() {
 			fakeError := errors.New("fake error")
 			fakeStoreAdapter.SetErrInjector = fakestoreadapter.NewFakeStoreAdapterErrorInjector(".*", fakeError)
-			appDrainUrlMap := map[shared_types.AppID][]shared_types.DrainURL{
-				"app-id": {"url1"},
+			appDrainUrlMap := shared_types.AllSyslogDrainBindings{
+				"app-id": shared_types.SyslogDrainBinding{DrainURLs: []string{"url1"}, Hostname: "org.space.app.1"},
 			}
+
 			err := syslogDrainStore.UpdateDrains(appDrainUrlMap)
 			Expect(err).To(Equal(fakeError))
 		})
 
 		It("does not store drain nodes if they have an empty URL", func() {
-			appDrainUrlMap := map[shared_types.AppID][]shared_types.DrainURL{
-				"app-id": {" ", "", "\t"},
+			appDrainUrlMap := shared_types.AllSyslogDrainBindings{
+				"app-id": shared_types.SyslogDrainBinding{DrainURLs: []string{" ", "\t "}, Hostname: "org.space.app.1"},
 			}
 			syslogDrainStore.UpdateDrains(appDrainUrlMap)
-			Expect(fakeStoreAdapter.SetKeyCounters).NotTo(HaveKey(drainKey("app-id", "")))
-			Expect(fakeStoreAdapter.SetKeyCounters).NotTo(HaveKey(drainKey("app-id", " ")))
-			Expect(fakeStoreAdapter.SetKeyCounters).NotTo(HaveKey(drainKey("app-id", "\t")))
+			Expect(fakeStoreAdapter.SetKeyCounters).To(HaveLen(0))
 		})
 	})
 })
@@ -103,10 +106,10 @@ func (adapter *FakeStoreAdapter) SetMulti(nodes []storeadapter.StoreNode) error 
 }
 
 func appKey(appId shared_types.AppID) string {
-	return fmt.Sprintf("/loggregator/services/%s", appId)
+	return fmt.Sprintf("/loggregator/v2/services/%s", appId)
 }
 
-func drainKey(appId shared_types.AppID, drainUrl shared_types.DrainURL) string {
-	hash := sha1.Sum([]byte(drainUrl))
+func drainKey(appId shared_types.AppID, drainBinding string) string {
+	hash := sha1.Sum([]byte(drainBinding))
 	return fmt.Sprintf("%s/%x", appKey(appId), hash)
 }
