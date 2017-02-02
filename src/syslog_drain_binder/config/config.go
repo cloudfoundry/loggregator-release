@@ -13,6 +13,12 @@ type EtcdTLSClientConfig struct {
 	CAFile   string
 }
 
+type MutualTLSConfig struct {
+	CertFile string
+	KeyFile  string
+	CAFile   string
+}
+
 type Config struct {
 	InstanceName          string
 	DrainUrlTtlSeconds    int64
@@ -25,10 +31,11 @@ type Config struct {
 
 	MetronAddress string
 
-	CloudControllerAddress string
-	BulkApiUsername        string
-	BulkApiPassword        string
-	PollingBatchSize       int
+	CloudControllerAddress   string
+	CloudControllerTLSConfig MutualTLSConfig
+	BulkApiUsername          string
+	BulkApiPassword          string
+	PollingBatchSize         int
 
 	SkipCertVerify bool
 
