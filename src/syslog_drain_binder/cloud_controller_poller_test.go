@@ -33,7 +33,7 @@ var _ = Describe("CloudControllerPoller", func() {
 			testServer = httptest.NewServer(
 				http.HandlerFunc(fakeCloudController.ServeHTTP),
 			)
-			baseURL = "http://" + testServer.Listener.Addr().String()
+			baseURL = testServer.URL
 		})
 
 		AfterEach(func() {
