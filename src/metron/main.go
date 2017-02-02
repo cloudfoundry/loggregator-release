@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"metric"
 	"time"
 
 	"google.golang.org/grpc"
 
-	"metric"
 	"metron/api"
 	"metron/config"
 	"plumbing"

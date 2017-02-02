@@ -139,7 +139,7 @@ var _ = Describe("Metron", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				return envelope.GetCounter() != nil &&
-					envelope.GetCounter().GetDelta() > 0
+					envelope.GetCounter().GetTotal() > 5
 			}
 			Eventually(f).Should(Equal(true))
 		})
