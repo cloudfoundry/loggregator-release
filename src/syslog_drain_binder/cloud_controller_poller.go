@@ -10,14 +10,16 @@ import (
 	"time"
 )
 
+const urlPathFmt = "%s/internal/v4/syslog_drain_urls?batch_size=%d"
+
+// DefaultTimeout is the default http client timeout used when polling.
+var DefaultTimeout = 5 * time.Second
+
 // PollOptions contains the options for the Poll function.
 type PollOptions struct {
 	insecureSkipVerify bool
 	timeout            time.Duration
 }
-
-// DefaultTimeout is the default http client timeout used when polling.
-var DefaultTimeout = 5 * time.Second
 
 // Timeout specifies the http client timeout when polling.
 func Timeout(t time.Duration) func(*PollOptions) {
@@ -99,7 +101,7 @@ func pollAndDecode(client *http.Client, request *http.Request) (*cloudController
 }
 
 func buildUrl(baseURL string, batchSize int, nextID int) string {
-	url := fmt.Sprintf("%s/v2/syslog_drain_urls?batch_size=%d", baseURL, batchSize)
+	url := fmt.Sprintf(urlPathFmt, baseURL, batchSize)
 
 	if nextID != 0 {
 		url = fmt.Sprintf("%s&next_id=%d", url, nextID)

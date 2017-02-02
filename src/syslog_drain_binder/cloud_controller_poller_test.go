@@ -44,7 +44,7 @@ var _ = Describe("CloudControllerPoller", func() {
 		It("connects to the correct endpoint with basic authentication and the expected parameters", func() {
 			syslog_drain_binder.Poll(baseURL, 2, tlsConfig)
 
-			Expect(fakeCloudController.servedRoute).To(Equal("/v2/syslog_drain_urls"))
+			Expect(fakeCloudController.servedRoute).To(Equal("/internal/v4/syslog_drain_urls"))
 			Expect(fakeCloudController.queryParams).To(HaveKeyWithValue("batch_size", []string{"2"}))
 		})
 
