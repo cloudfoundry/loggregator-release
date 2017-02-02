@@ -2,7 +2,7 @@
     # try and set these properties from a BOSH 2.0 spec object
     job_name = spec.job.name
     instance_id = spec.id
-    instance_zone = spec.az
+    instance_zone = p("metron_agent.zone", spec.az)
 
     if job_name.nil?
       job_name = name
@@ -10,10 +10,6 @@
 
     if instance_id.nil?
       instance_id = spec.index.to_s
-    end
-
-    if instance_zone.nil?
-      instance_zone = p("metron_agent.zone")
     end
 
     incoming_udp_port = nil
