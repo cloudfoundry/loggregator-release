@@ -40,16 +40,22 @@ func rootResponse(res http.ResponseWriter, req *http.Request) {
 		logText = "LogSpinner Log Message"
 	}
 
-	go outputLog(cycleCount, delay, logText)
+	length, _ := strconv.Atoi(req.FormValue("length"))
 
-	fmt.Fprintf(res, "cycles %d, delay %s, text %s\n", cycleCount, delay, logText)
+	go outputLog(cycleCount, delay, logText, length)
+
+	fmt.Fprintf(res, "cycles %d, delay %s, length %d, text %s\n", cycleCount, delay, length, logText)
 }
 
-func outputLog(cycleCount int, delay time.Duration, logText string) {
+func outputLog(cycleCount int, delay time.Duration, logText string, length int) {
 
 	now := time.Now()
 	for i := 0; i < cycleCount; i++ {
-		fmt.Printf("msg %d %s\n", i+1, logText)
+		fmt.Printf("msg %d %s", i+1, logText)
+		for l := 0; l < length/10; l++ {
+			fmt.Printf(".%08d0", l)
+		}
+		fmt.Println()
 		time.Sleep(delay)
 	}
 	done := time.Now()
