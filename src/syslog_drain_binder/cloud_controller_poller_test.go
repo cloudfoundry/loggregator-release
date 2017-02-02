@@ -1,6 +1,7 @@
 package main_test
 
 import (
+	"crypto/tls"
 	"net"
 	syslog_drain_binder "syslog_drain_binder"
 	"syslog_drain_binder/shared_types"
@@ -24,11 +25,14 @@ var _ = Describe("CloudControllerPoller", func() {
 			testServer          *httptest.Server
 			fakeCloudController fakeCC
 			baseURL             string
+			tlsConfig           *tls.Config
 		)
 
 		BeforeEach(func() {
 			fakeCloudController = fakeCC{}
-
+			tlsConfig = &tls.Config{
+				InsecureSkipVerify: true,
+			}
 			testServer = httptest.NewTLSServer(
 				http.HandlerFunc(fakeCloudController.ServeHTTP),
 			)
@@ -40,7 +44,7 @@ var _ = Describe("CloudControllerPoller", func() {
 		})
 
 		It("connects to the correct endpoint with basic authentication and the expected parameters", func() {
-			syslog_drain_binder.Poll(baseURL, "user", "pass", 2, syslog_drain_binder.SkipCertVerify(true))
+			syslog_drain_binder.Poll(baseURL, "user", "pass", 2, tlsConfig)
 
 			Expect(fakeCloudController.servedRoute).To(Equal("/v2/syslog_drain_urls"))
 			Expect(fakeCloudController.username).To(Equal("user"))
@@ -49,7 +53,7 @@ var _ = Describe("CloudControllerPoller", func() {
 		})
 
 		It("returns sys log drain bindings for all apps", func() {
-			drainUrls, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 3, syslog_drain_binder.SkipCertVerify(true))
+			drainUrls, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 3, tlsConfig)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(len(drainUrls)).To(Equal(3))
@@ -75,7 +79,7 @@ var _ = Describe("CloudControllerPoller", func() {
 		})
 
 		It("issues multiple requests to support pagination", func() {
-			_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2, syslog_drain_binder.SkipCertVerify(true))
+			_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2, tlsConfig)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeCloudController.requestCount).To(Equal(3))
@@ -85,7 +89,7 @@ var _ = Describe("CloudControllerPoller", func() {
 			It("returns as much data as it has, and an error", func() {
 				fakeCloudController.failOn = 2
 
-				_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2, syslog_drain_binder.SkipCertVerify(true))
+				_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2, tlsConfig)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -102,7 +106,7 @@ var _ = Describe("CloudControllerPoller", func() {
 
 				errs := make(chan error)
 				go func() {
-					_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2, syslog_drain_binder.SkipCertVerify(true))
+					_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2, tlsConfig)
 					errs <- err
 				}()
 

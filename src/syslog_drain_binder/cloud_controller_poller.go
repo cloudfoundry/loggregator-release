@@ -1,11 +1,11 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"plumbing"
 	"syslog_drain_binder/shared_types"
 	"time"
 )
@@ -14,13 +14,6 @@ import (
 type PollOptions struct {
 	insecureSkipVerify bool
 	timeout            time.Duration
-}
-
-// SkipCertVerify allows skipping of cert verification when polling.
-func SkipCertVerify(s bool) func(*PollOptions) {
-	return func(o *PollOptions) {
-		o.insecureSkipVerify = s
-	}
 }
 
 // DefaultTimeout is the default http client timeout used when polling.
@@ -44,6 +37,7 @@ func Poll(
 	username string,
 	password string,
 	batchSize int,
+	tlsConfig *tls.Config,
 	options ...func(*PollOptions),
 ) (shared_types.AllSyslogDrainBindings, error) {
 	drainURLs := make(shared_types.AllSyslogDrainBindings)
@@ -55,9 +49,6 @@ func Poll(
 	for _, o := range options {
 		o(&opts)
 	}
-
-	tlsConfig := plumbing.NewTLSConfig()
-	tlsConfig.InsecureSkipVerify = opts.insecureSkipVerify
 
 	tr := &http.Transport{
 		TLSClientConfig:   tlsConfig,

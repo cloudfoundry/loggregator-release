@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"plumbing"
 	"syscall"
 	"syslog_drain_binder/config"
 	"time"
@@ -28,6 +29,16 @@ var (
 func main() {
 	flag.Parse()
 	conf, err := config.ParseConfig(*configFile)
+	if err != nil {
+		panic(err)
+	}
+
+	tlsConfig, err := plumbing.NewMutualTLSConfig(
+		conf.CloudControllerTLSConfig.CertFile,
+		conf.CloudControllerTLSConfig.KeyFile,
+		conf.CloudControllerTLSConfig.CAFile,
+		"",
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -88,7 +99,7 @@ func main() {
 				conf.BulkApiUsername,
 				conf.BulkApiPassword,
 				conf.PollingBatchSize,
-				SkipCertVerify(conf.SkipCertVerify),
+				tlsConfig,
 			)
 			if err != nil {
 				log.Printf("Error when polling cloud controller: %s", err.Error())
