@@ -37,11 +37,12 @@ func main() {
 		conf.CloudControllerTLSConfig.CertFile,
 		conf.CloudControllerTLSConfig.KeyFile,
 		conf.CloudControllerTLSConfig.CAFile,
-		"",
+		"cloud-controller-ng.service.cf.internal",
 	)
 	if err != nil {
 		panic(err)
 	}
+	tlsConfig.InsecureSkipVerify = conf.SkipCertVerify
 
 	dropsonde.Initialize(conf.MetronAddress, "syslog_drain_binder")
 
