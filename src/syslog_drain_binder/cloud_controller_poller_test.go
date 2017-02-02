@@ -1,7 +1,6 @@
 package main_test
 
 import (
-	"crypto/tls"
 	"net"
 	syslog_drain_binder "syslog_drain_binder"
 	"syslog_drain_binder/shared_types"
@@ -30,7 +29,7 @@ var _ = Describe("CloudControllerPoller", func() {
 		BeforeEach(func() {
 			fakeCloudController = fakeCC{}
 
-			testServer = httptest.NewServer(
+			testServer = httptest.NewTLSServer(
 				http.HandlerFunc(fakeCloudController.ServeHTTP),
 			)
 			baseURL = testServer.URL
@@ -41,7 +40,7 @@ var _ = Describe("CloudControllerPoller", func() {
 		})
 
 		It("connects to the correct endpoint with basic authentication and the expected parameters", func() {
-			syslog_drain_binder.Poll(baseURL, "user", "pass", 2)
+			syslog_drain_binder.Poll(baseURL, "user", "pass", 2, syslog_drain_binder.SkipCertVerify(true))
 
 			Expect(fakeCloudController.servedRoute).To(Equal("/v2/syslog_drain_urls"))
 			Expect(fakeCloudController.username).To(Equal("user"))
@@ -50,7 +49,7 @@ var _ = Describe("CloudControllerPoller", func() {
 		})
 
 		It("returns sys log drain bindings for all apps", func() {
-			drainUrls, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 3)
+			drainUrls, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 3, syslog_drain_binder.SkipCertVerify(true))
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(len(drainUrls)).To(Equal(3))
@@ -76,7 +75,7 @@ var _ = Describe("CloudControllerPoller", func() {
 		})
 
 		It("issues multiple requests to support pagination", func() {
-			_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2)
+			_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2, syslog_drain_binder.SkipCertVerify(true))
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeCloudController.requestCount).To(Equal(3))
@@ -86,40 +85,9 @@ var _ = Describe("CloudControllerPoller", func() {
 			It("returns as much data as it has, and an error", func() {
 				fakeCloudController.failOn = 2
 
-				_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2)
-
-				Expect(err).To(HaveOccurred())
-			})
-		})
-
-		Context("when connecting to a secure server with a self-signed certificate", func() {
-			var secureTestServer *httptest.Server
-
-			BeforeEach(func() {
-				secureTestServer = httptest.NewUnstartedServer(http.HandlerFunc(fakeCloudController.ServeHTTP))
-				secureTestServer.TLS = &tls.Config{
-					CipherSuites: []uint16{
-						tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-						tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-					},
-					MinVersion: tls.VersionTLS12,
-				}
-				secureTestServer.StartTLS()
-				baseURL = "https://" + secureTestServer.Listener.Addr().String()
-			})
-
-			AfterEach(func() {
-				secureTestServer.Close()
-			})
-
-			It("fails to connect if skipCertVerify is false", func() {
-				_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2)
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("successfully connects if skipCertVerify is true", func() {
 				_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2, syslog_drain_binder.SkipCertVerify(true))
-				Expect(err).NotTo(HaveOccurred())
+
+				Expect(err).To(HaveOccurred())
 			})
 		})
 
@@ -130,11 +98,11 @@ var _ = Describe("CloudControllerPoller", func() {
 				orig := syslog_drain_binder.DefaultTimeout
 				syslog_drain_binder.DefaultTimeout = 10 * time.Millisecond
 				defer func() { syslog_drain_binder.DefaultTimeout = orig }()
-				baseURL = "http://" + serverNotResponding.Addr().String()
+				baseURL = "https://" + serverNotResponding.Addr().String()
 
 				errs := make(chan error)
 				go func() {
-					_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2)
+					_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2, syslog_drain_binder.SkipCertVerify(true))
 					errs <- err
 				}()
 
