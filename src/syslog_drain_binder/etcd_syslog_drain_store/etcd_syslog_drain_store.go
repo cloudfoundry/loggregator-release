@@ -67,11 +67,7 @@ func (store *EtcdSyslogDrainStore) updateAppDrains(appId shared_types.AppID, dra
 	return nil
 }
 
-func appKey(appId shared_types.AppID) string {
-	return fmt.Sprintf("/loggregator/v2/services/%s", appId)
-}
-
-func drainKey(appId shared_types.AppID, drainURL string) string {
-	hash := sha1.Sum([]byte(drainURL))
-	return fmt.Sprintf("%s/%x", appKey(appId), hash)
+func drainKey(appId shared_types.AppID, drainData string) string {
+	hash := sha1.Sum([]byte(drainData))
+	return fmt.Sprintf("/loggregator/v2/services/%s/%x", appId, hash)
 }
