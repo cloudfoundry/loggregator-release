@@ -1,6 +1,7 @@
 package counteraggregator_test
 
 import (
+	"fmt"
 	"metron/writers/v2/counteraggregator"
 	v2 "plumbing/v2"
 
@@ -95,6 +96,30 @@ var _ = Describe("Counteraggregator", func() {
 		var receivedEnvelope *v2.Envelope
 		Expect(mockWriter.WriteInput.Msg).To(Receive(&receivedEnvelope))
 		Expect(receivedEnvelope.GetCounter().GetTotal()).To(Equal(uint64(10)))
+
+		Expect(mockWriter.WriteInput.Msg).To(Receive(&receivedEnvelope))
+		Expect(receivedEnvelope.GetCounter().GetTotal()).To(Equal(uint64(10)))
+	})
+
+	It("prunes the cache of totals when there are too many unique counters", func() {
+		mockWriter := newMockWriter()
+		close(mockWriter.WriteOutput.Err)
+
+		aggregator := counteraggregator.New(mockWriter)
+
+		aggregator.Write(buildCounterEnvelope(500, "unique-name", "origin-1"))
+
+		var receivedEnvelope *v2.Envelope
+		Expect(mockWriter.WriteInput.Msg).To(Receive(&receivedEnvelope))
+		Expect(receivedEnvelope.GetCounter().GetTotal()).To(Equal(uint64(500)))
+
+		for i := 0; i < 10000; i++ {
+			aggregator.Write(buildCounterEnvelope(10, fmt.Sprint("name-", i), "origin-1"))
+			<-mockWriter.WriteInput.Msg
+			<-mockWriter.WriteCalled
+		}
+
+		aggregator.Write(buildCounterEnvelope(10, "unique-name", "origin-1"))
 
 		Expect(mockWriter.WriteInput.Msg).To(Receive(&receivedEnvelope))
 		Expect(receivedEnvelope.GetCounter().GetTotal()).To(Equal(uint64(10)))

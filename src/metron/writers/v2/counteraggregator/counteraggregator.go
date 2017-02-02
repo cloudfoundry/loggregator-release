@@ -31,6 +31,10 @@ func New(w Writer) *CounterAggregator {
 
 func (ca *CounterAggregator) Write(msg *v2.Envelope) error {
 	if msg.GetCounter() != nil {
+		if len(ca.counterTotals) > 10000 {
+			ca.resetTotals()
+		}
+
 		id := counterID{
 			name:     msg.GetCounter().Name,
 			tagsHash: hashTags(msg.GetTags()),
@@ -44,6 +48,10 @@ func (ca *CounterAggregator) Write(msg *v2.Envelope) error {
 	}
 
 	return ca.writer.Write(msg)
+}
+
+func (ca *CounterAggregator) resetTotals() {
+	ca.counterTotals = make(map[counterID]uint64)
 }
 
 func hashTags(tags map[string]*v2.Value) string {
