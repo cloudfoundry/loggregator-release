@@ -97,8 +97,6 @@ func main() {
 
 			drainBindings, err := Poll(
 				conf.CloudControllerAddress,
-				conf.BulkApiUsername,
-				conf.BulkApiPassword,
 				conf.PollingBatchSize,
 				tlsConfig,
 			)

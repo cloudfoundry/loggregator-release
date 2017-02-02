@@ -7,13 +7,11 @@ import (
 	"syslog_drain_binder/shared_types"
 	"time"
 
-	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strconv"
-	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -44,16 +42,14 @@ var _ = Describe("CloudControllerPoller", func() {
 		})
 
 		It("connects to the correct endpoint with basic authentication and the expected parameters", func() {
-			syslog_drain_binder.Poll(baseURL, "user", "pass", 2, tlsConfig)
+			syslog_drain_binder.Poll(baseURL, 2, tlsConfig)
 
 			Expect(fakeCloudController.servedRoute).To(Equal("/v2/syslog_drain_urls"))
-			Expect(fakeCloudController.username).To(Equal("user"))
-			Expect(fakeCloudController.password).To(Equal("pass"))
 			Expect(fakeCloudController.queryParams).To(HaveKeyWithValue("batch_size", []string{"2"}))
 		})
 
 		It("returns sys log drain bindings for all apps", func() {
-			drainUrls, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 3, tlsConfig)
+			drainUrls, err := syslog_drain_binder.Poll(baseURL, 3, tlsConfig)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(len(drainUrls)).To(Equal(3))
@@ -79,7 +75,7 @@ var _ = Describe("CloudControllerPoller", func() {
 		})
 
 		It("issues multiple requests to support pagination", func() {
-			_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2, tlsConfig)
+			_, err := syslog_drain_binder.Poll(baseURL, 2, tlsConfig)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeCloudController.requestCount).To(Equal(3))
@@ -89,7 +85,7 @@ var _ = Describe("CloudControllerPoller", func() {
 			It("returns as much data as it has, and an error", func() {
 				fakeCloudController.failOn = 2
 
-				_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2, tlsConfig)
+				_, err := syslog_drain_binder.Poll(baseURL, 2, tlsConfig)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -106,7 +102,7 @@ var _ = Describe("CloudControllerPoller", func() {
 
 				errs := make(chan error)
 				go func() {
-					_, err := syslog_drain_binder.Poll(baseURL, "user", "pass", 2, tlsConfig)
+					_, err := syslog_drain_binder.Poll(baseURL, 2, tlsConfig)
 					errs <- err
 				}()
 
@@ -157,8 +153,6 @@ type jsonResponse struct {
 
 type fakeCC struct {
 	servedRoute  string
-	username     string
-	password     string
 	queryParams  url.Values
 	requestCount int
 	failOn       int
@@ -173,14 +167,6 @@ func (fake *fakeCC) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fake.requestCount++
 	fake.servedRoute = r.URL.Path
 	fake.queryParams = r.URL.Query()
-
-	auth := r.Header.Get("Authorization")
-	parts := strings.Split(auth, " ")
-	decodedBytes, _ := base64.StdEncoding.DecodeString(parts[1])
-	creds := strings.Split(string(decodedBytes), ":")
-
-	fake.username = creds[0]
-	fake.password = creds[1]
 
 	batchSize, _ := strconv.Atoi(fake.queryParams.Get("batch_size"))
 	start, _ := strconv.Atoi(fake.queryParams.Get("next_id"))

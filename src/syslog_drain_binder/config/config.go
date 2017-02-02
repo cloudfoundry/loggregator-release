@@ -33,8 +33,6 @@ type Config struct {
 
 	CloudControllerAddress   string
 	CloudControllerTLSConfig MutualTLSConfig
-	BulkApiUsername          string
-	BulkApiPassword          string
 	PollingBatchSize         int
 
 	SkipCertVerify bool

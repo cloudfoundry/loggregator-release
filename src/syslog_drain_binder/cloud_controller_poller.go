@@ -34,8 +34,6 @@ type cloudControllerResponse struct {
 // Poll gets all the app's syslog drain urls from the cloud controller.
 func Poll(
 	urlBase string,
-	username string,
-	password string,
 	batchSize int,
 	tlsConfig *tls.Config,
 	options ...func(*PollOptions),
@@ -62,7 +60,6 @@ func Poll(
 	for {
 		url := buildUrl(urlBase, batchSize, nextID)
 		request, _ := http.NewRequest("GET", url, nil)
-		request.SetBasicAuth(username, password)
 
 		ccResponse, err := pollAndDecode(client, request)
 		if err != nil {
