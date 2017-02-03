@@ -5,7 +5,7 @@ templates:
   syslog_drain_binder.json.erb: config/syslog_drain_binder.json
   syslogdrainbinder.crt.erb: config/certs/syslogdrainbinder.crt
   syslogdrainbinder.key.erb: config/certs/syslogdrainbinder.key
-  loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
+  mutual_tls_ca.crt.erb: config/certs/mutual_tls_ca.crt
   etcd-client.crt.erb: config/certs/etcd-client.crt
   etcd-client.key.erb: config/certs/etcd-client.key
   etcd-ca.crt.erb: config/certs/etcd-ca.crt
@@ -22,13 +22,13 @@ properties:
     description: "The port used to emit dropsonde messages to the Metron agent"
     default: 3457
 
-  loggregator.tls.ca_cert:
-    description: "CA root required for key/cert verification"
   loggregator.tls.syslogdrainbinder.cert:
     description: "TLS certificate for syslogdrainbinder"
   loggregator.tls.syslogdrainbinder.key:
     description: "TLS key for syslogdrainbinder"
 
+  cc.mutual_tls.ca_cert:
+    description: "PEM-encoded CA certificate for secure, mutually authenticated TLS communication"
   cc.tls_port:
     description: "Port for internal TLS communication"
     default: 9023

@@ -8,7 +8,7 @@
     ccTLSConfig = {
         "KeyFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/syslogdrainbinder.key",
         "CertFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/syslogdrainbinder.crt",
-        "CAFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/loggregator_ca.crt"
+        "CAFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/mutual_tls_ca.crt"
     }
 
     args = Hash.new.tap do |a|
