@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"metric"
 	"plumbing/conversion"
 	plumbing "plumbing/v2"
 
@@ -37,6 +38,7 @@ func (i Ingestor) Sender(s plumbing.DopplerIngress_SenderServer) error {
 			continue
 		}
 
+		metric.IncCounter("ingress")
 		i.envelopeBuffer.Set(v1e)
 	}
 }

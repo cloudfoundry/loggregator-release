@@ -20,7 +20,7 @@ var _ = Describe("End to end tests", func() {
 		defer etcdCleanup()
 
 		dopplerCleanup, dopplerWSPort, dopplerGRPCPort := testservers.StartDoppler(
-			testservers.BuildDopplerConfig(etcdClientURL, 0),
+			testservers.BuildDopplerConfig(etcdClientURL, 0, 0),
 		)
 		defer dopplerCleanup()
 

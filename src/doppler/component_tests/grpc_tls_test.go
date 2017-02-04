@@ -21,7 +21,7 @@ import (
 
 var _ = Describe("gRPC TLS", func() {
 	It("supports v1 api", func() {
-		hostPort, cleanup := setupDopplerEnv()
+		hostPort, cleanup := setupDopplerEnv(0)
 		defer cleanup()
 		subscriber := setupSubscriber(hostPort)
 		sender := setupV1Ingestor(hostPort)
@@ -40,33 +40,68 @@ var _ = Describe("gRPC TLS", func() {
 		Eventually(f).Should(Equal(data))
 	})
 
-	It("supports v2 api", func() {
-		hostPort, cleanup := setupDopplerEnv()
-		defer cleanup()
-		subscriber := setupSubscriber(hostPort)
-		sender := setupV2Ingestor(hostPort)
+	Context("with the v2 api", func() {
+		It("supports v2 api", func() {
+			hostPort, cleanup := setupDopplerEnv(0)
+			defer cleanup()
+			subscriber := setupSubscriber(hostPort)
+			sender := setupV2Ingestor(hostPort)
 
-		v2e, _ := buildV2ContainerMetric()
-		v1e, _ := buildV1ContainerMetric()
-		v1e.Timestamp = proto.Int64(v2e.Timestamp)
+			v2e, _ := buildV2ContainerMetric()
+			v1e, _ := buildV1ContainerMetric()
+			v1e.Timestamp = proto.Int64(v2e.Timestamp)
 
-		Consistently(func() error {
-			return sender.Send(v2e)
-		}, 5).Should(Succeed())
+			Consistently(func() error {
+				return sender.Send(v2e)
+			}, 5).Should(Succeed())
 
-		f := func() *events.Envelope {
-			resp, err := subscriber.Recv()
-			Expect(err).ToNot(HaveOccurred())
+			f := func() *events.Envelope {
+				resp, err := subscriber.Recv()
+				Expect(err).ToNot(HaveOccurred())
 
-			v1e := &events.Envelope{}
-			Expect(v1e.Unmarshal(resp.Payload)).To(Succeed())
-			return v1e
-		}
-		Eventually(f).Should(Equal(v1e))
+				v1e := &events.Envelope{}
+				Expect(v1e.Unmarshal(resp.Payload)).To(Succeed())
+				return v1e
+			}
+			Eventually(f).Should(Equal(v1e))
+		})
+
+		It("emits metrics about ingress and egress", func() {
+			gRPCPort, metronMock := startMetronServer()
+
+			hostPort, cleanup := setupDopplerEnv(gRPCPort)
+			defer cleanup()
+			sender := setupV2Ingestor(hostPort)
+
+			v2e, _ := buildV2ContainerMetric()
+			v1e, _ := buildV1ContainerMetric()
+			v1e.Timestamp = proto.Int64(v2e.Timestamp)
+
+			Consistently(func() error {
+				return sender.Send(v2e)
+			}, 5).Should(Succeed())
+
+			rx := fetchReceiver(metronMock)
+			receiver := rxToCh(rx)
+
+			f := func(name string) func() bool {
+				return func() bool {
+					var resp *v2.Envelope
+					Eventually(receiver).Should(Receive(&resp))
+
+					counter := resp.GetCounter()
+					return counter != nil &&
+						counter.GetDelta() > 0 &&
+						counter.Name == name
+				}
+			}
+			Eventually(f("loggregator.ingress")).Should(Equal(true), "missing ingress metric")
+			Eventually(f("loggregator.egress")).Should(Equal(true), "missing egress metric")
+		})
 	})
 })
 
-func setupDopplerEnv() (string, func()) {
+func setupDopplerEnv(metronGRPCPort int) (string, func()) {
 	etcdCleanup, etcdURI := testservers.StartTestEtcd()
 
 	By("listen for doppler writes into metron")
@@ -76,7 +111,7 @@ func setupDopplerEnv() (string, func()) {
 	Expect(err).ToNot(HaveOccurred())
 
 	dopplerCleanup, _, dopplerPort := testservers.StartDoppler(
-		testservers.BuildDopplerConfig(etcdURI, udpAddr.Port),
+		testservers.BuildDopplerConfig(etcdURI, udpAddr.Port, metronGRPCPort),
 	)
 	hostPort := fmt.Sprintf("localhost:%d", dopplerPort)
 	return hostPort, func() {
@@ -197,4 +232,51 @@ func buildV2ContainerMetric() (*v2.Envelope, []byte) {
 	data, err := proto.Marshal(envelope)
 	Expect(err).ToNot(HaveOccurred())
 	return envelope, data
+}
+
+func startMetronServer() (int, *mockMetronIngressServer) {
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		panic(err)
+	}
+
+	tlsConfig, err := plumbing.NewMutualTLSConfig(
+		testservers.MetronCertPath(),
+		testservers.MetronKeyPath(),
+		testservers.CAFilePath(),
+		"doppler",
+	)
+	Expect(err).ToNot(HaveOccurred())
+	transportCreds := credentials.NewTLS(tlsConfig)
+
+	mockMetronIngressServer := newMockMetronIngressServer()
+
+	s := grpc.NewServer(grpc.Creds(transportCreds))
+	v2.RegisterMetronIngressServer(s, mockMetronIngressServer)
+	go func() {
+		if err := s.Serve(lis); err != nil {
+			panic(err)
+		}
+	}()
+
+	return lis.Addr().(*net.TCPAddr).Port, mockMetronIngressServer
+}
+
+func rxToCh(rx v2.MetronIngress_SenderServer) <-chan *v2.Envelope {
+	c := make(chan *v2.Envelope, 100)
+	go func() {
+		for {
+			e, err := rx.Recv()
+			if err != nil {
+				continue
+			}
+			c <- e
+		}
+	}()
+	return c
+}
+
+func fetchReceiver(mockConsumer *mockMetronIngressServer) (rx v2.MetronIngress_SenderServer) {
+	Eventually(mockConsumer.SenderInput.Arg0, 3).Should(Receive(&rx))
+	return rx
 }

@@ -16,7 +16,7 @@ compilation:
   vm_type: common
 
 networks:
-- name: loggregator
+- name: default
   type: manual
   subnets:
   - range: 10.244.10.0/24

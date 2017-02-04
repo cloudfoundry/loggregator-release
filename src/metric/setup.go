@@ -27,7 +27,7 @@ type config struct {
 	sourceUUID    string
 	batchInterval time.Duration
 	prefix        string
-	component     string
+	origin        string
 }
 
 type SetOpts func(c *config)
@@ -62,9 +62,9 @@ func WithPrefix(prefix string) func(c *config) {
 	}
 }
 
-func WithComponent(name string) func(c *config) {
+func WithOrigin(name string) func(c *config) {
 	return func(c *config) {
-		c.component = name
+		c.origin = name
 	}
 }
 

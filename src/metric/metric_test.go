@@ -30,7 +30,7 @@ var _ = Describe("Metric", func() {
 			metric.WithSourceUUID("some-uuid"),
 			metric.WithBatchInterval(250*time.Millisecond),
 			metric.WithPrefix("loggregator"),
-			metric.WithComponent("metron"),
+			metric.WithOrigin("metron"),
 		)
 
 		// Seed the data
@@ -84,9 +84,8 @@ var _ = Describe("Metric", func() {
 				Expect(e.SourceUuid).To(Equal("some-uuid"))
 				Expect(e.GetCounter().GetDelta()).To(Equal(uint64(5)))
 
-				value, ok := e.GetTags()["component"]
+				value, ok := e.GetTags()["origin"]
 				Expect(ok).To(Equal(true))
-
 				Expect(value.GetText()).To(Equal("metron"))
 			})
 

@@ -1,7 +1,6 @@
 package component_test
 
 import (
-	"integration_tests/binaries"
 	"log"
 	"testing"
 
@@ -9,6 +8,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"integration_tests/binaries"
 )
 
 func TestComponentTests(t *testing.T) {

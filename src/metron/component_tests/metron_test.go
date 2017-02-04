@@ -3,19 +3,11 @@ package component_test
 import (
 	"context"
 	"fmt"
-	"metron/api"
 	"net"
-	"plumbing"
-	v2 "plumbing/v2"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
-	"testservers"
 
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/emitter"
@@ -23,6 +15,13 @@ import (
 	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+
+	"metron/api"
+	"plumbing"
+	v2 "plumbing/v2"
+	"testservers"
 )
 
 var _ = Describe("Metron", func() {
@@ -138,7 +137,7 @@ var _ = Describe("Metron", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				return envelope.GetCounter() != nil &&
-					envelope.GetCounter().GetDelta() > 0
+					envelope.GetCounter().GetTotal() > 5
 			}
 			Eventually(f).Should(Equal(true))
 		})

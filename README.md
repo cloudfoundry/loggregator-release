@@ -43,7 +43,6 @@ If you need to contact us, you can [join our Slack channel](https://cloudfoundry
     * [Statsd Java Client](src/statsd-injector/tools/statsdJavaClient/README.md)
     * [Statsd Ruby Client](src/statsd-injector/tools/statsdRubyClient/README.md)
   * [Syslog Drain Binder](src/syslog_drain_binder/README.md)
-  * [Doppler Benchmarking](src/tools/dopplerbenchmark/README.md)
   * [Metron Benchmarking](src/tools/metronbenchmark/README.md)
   * [Traffic Controller](src/trafficcontroller/README.md)
   * [Truncating Buffer](src/truncatingbuffer/README.md)

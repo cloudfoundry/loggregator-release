@@ -22,7 +22,7 @@ instance_groups:
   vm_type: common
   stemcell: default
   networks:
-  - name: loggregator
+  - name: default
   jobs:
   - name: boshhmforwarder
     release: loggregator
@@ -36,7 +36,7 @@ instance_groups:
   vm_type: common
   stemcell: default
   networks:
-  - name: loggregator
+  - name: default
     static_ips: [10.244.10.2]
   jobs:
   - name: consul_agent
@@ -93,7 +93,7 @@ instance_groups:
   stemcell: default
   lifecycle: errand
   networks:
-  - name: loggregator
+  - name: default
   jobs:
   - name: loggregator-acceptance-tests
     release: loggregator
@@ -145,7 +145,7 @@ instance_groups:
   vm_type: common
   stemcell: default
   networks:
-  - name: loggregator
+  - name: default
   jobs:
   - name: consul_agent
     release: consul
@@ -210,7 +210,7 @@ instance_groups:
   vm_type: common
   stemcell: default
   networks:
-  - name: loggregator
+  - name: default
   jobs:
   - name: consul_agent
     release: consul
@@ -263,7 +263,7 @@ instance_groups:
   vm_type: common
   stemcell: default
   networks:
-  - name: loggregator
+  - name: default
   jobs:
   - name: consul_agent
     release: consul

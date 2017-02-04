@@ -3,7 +3,6 @@ package messagegenerator
 import (
 	"time"
 
-	"github.com/cloudfoundry/loggregatorlib/logmessage"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )
@@ -90,14 +89,14 @@ func BasicLegacyLogMessage() []byte {
 	return message
 }
 
-func BasicLegacyLogMessageEnvelope() *logmessage.LogEnvelope {
+func BasicLegacyLogMessageEnvelope() *LogEnvelope {
 
-	return &logmessage.LogEnvelope{
+	return &LogEnvelope{
 		RoutingKey: proto.String("routing-key"),
 		Signature:  []byte(""),
-		LogMessage: &logmessage.LogMessage{
+		LogMessage: &LogMessage{
 			Message:     []byte("test message"),
-			MessageType: logmessage.LogMessage_OUT.Enum(),
+			MessageType: LogMessage_OUT.Enum(),
 			Timestamp:   proto.Int64(time.Now().UnixNano()),
 			AppId:       proto.String("app-id"),
 		},

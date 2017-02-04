@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"metric"
 	"time"
 
 	"google.golang.org/grpc"
 
-	"metric"
 	"metron/api"
 	"plumbing"
 	"profiler"
@@ -54,7 +54,7 @@ func main() {
 		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(serverCreds)),
 		metric.WithBatchInterval(batchInterval),
 		metric.WithPrefix("loggregator"),
-		metric.WithComponent("metron"),
+		metric.WithOrigin("metron"),
 		metric.WithAddr(fmt.Sprintf("localhost:%d", config.GRPC.Port)),
 	)
 
