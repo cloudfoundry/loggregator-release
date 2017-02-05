@@ -1,13 +1,12 @@
-package egress_test
+package v1_test
 
 import (
 	egress "metron/egress/v1"
 
-	. "github.com/apoydence/eachers"
 	"github.com/apoydence/eachers/testhelpers"
+	. "github.com/apoydence/eachers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"

@@ -1,4 +1,4 @@
-package egress_test
+package v2_test
 
 import (
 	egress "metron/egress/v2"

@@ -1,4 +1,4 @@
-package egress_test
+package v1_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -8,7 +8,7 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
-	"metron/egress/v1"
+	egress "metron/egress/v1"
 )
 
 var _ = Describe("EventWriter", func() {

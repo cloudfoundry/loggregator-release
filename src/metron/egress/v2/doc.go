@@ -1,2 +1,2 @@
 //go:generate hel
-package egress
+package v2

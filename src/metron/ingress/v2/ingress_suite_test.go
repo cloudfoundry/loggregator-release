@@ -1,4 +1,4 @@
-package ingress_test
+package v2_test
 
 import (
 	. "github.com/onsi/ginkgo"

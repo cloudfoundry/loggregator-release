@@ -1,4 +1,4 @@
-package ingress
+package v1
 
 import (
 	"log"

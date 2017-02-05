@@ -1,4 +1,4 @@
-package egress
+package v1
 
 import (
 	"crypto/sha1"

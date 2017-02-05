@@ -1,4 +1,4 @@
-package egress_test
+package v1_test
 
 import (
 	"time"

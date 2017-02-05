@@ -1,16 +1,16 @@
-package egress
+package v2
 
 import (
 	"metric"
-	v2 "plumbing/v2"
+	plumbing "plumbing/v2"
 )
 
 type Nexter interface {
-	Next() *v2.Envelope
+	Next() *plumbing.Envelope
 }
 
 type Writer interface {
-	Write(msg *v2.Envelope) error
+	Write(msg *plumbing.Envelope) error
 }
 
 type Transponder struct {

@@ -1,8 +1,8 @@
-package clientpool_test
+package v1_test
 
 import (
 	"errors"
-	"metron/clientpool/v1"
+	clientpool "metron/clientpool/v1"
 	"plumbing"
 
 	"github.com/apoydence/eachers/testhelpers"

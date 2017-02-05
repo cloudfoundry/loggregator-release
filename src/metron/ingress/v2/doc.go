@@ -1,3 +1,2 @@
-package ingress
-
 //go:generate hel
+package v2

@@ -1,4 +1,4 @@
-package ingress_test
+package v1_test
 
 type mockMetricBatcher struct {
 	BatchIncrementCounterCalled chan bool

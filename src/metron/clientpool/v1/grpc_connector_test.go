@@ -1,4 +1,4 @@
-package clientpool_test
+package v1_test
 
 import (
 	"errors"
@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"metron/clientpool/v1"
+	clientpool "metron/clientpool/v1"
 )
 
 var _ = Describe("GRPCConnector", func() {

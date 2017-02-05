@@ -1,15 +1,15 @@
-package clientpool_test
+package v2_test
 
 import (
 	"errors"
-	"plumbing/v2"
 
 	"google.golang.org/grpc"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"metron/clientpool/v2"
+	clientpool "metron/clientpool/v2"
+	plumbing "plumbing/v2"
 )
 
 var _ = Describe("GRPCConnector", func() {
@@ -109,16 +109,16 @@ var _ = Describe("GRPCConnector", func() {
 
 type mockIngressClientFunc struct {
 	inputClientConn  chan *grpc.ClientConn
-	retIngressClient chan loggregator.DopplerIngressClient
+	retIngressClient chan plumbing.DopplerIngressClient
 	fn               clientpool.SenderClientFunc
 }
 
 func newMockIngressClientFunc() *mockIngressClientFunc {
 	cf := &mockIngressClientFunc{
 		inputClientConn:  make(chan *grpc.ClientConn, 100),
-		retIngressClient: make(chan loggregator.DopplerIngressClient, 100),
+		retIngressClient: make(chan plumbing.DopplerIngressClient, 100),
 	}
-	cf.fn = func(conn *grpc.ClientConn) loggregator.DopplerIngressClient {
+	cf.fn = func(conn *grpc.ClientConn) plumbing.DopplerIngressClient {
 		cf.inputClientConn <- conn
 		return <-cf.retIngressClient
 	}

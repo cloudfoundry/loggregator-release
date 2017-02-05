@@ -1,4 +1,4 @@
-package clientpool_test
+package v2_test
 
 import (
 	"log"
