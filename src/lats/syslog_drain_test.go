@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"lats/helpers"
 	"net"
-	"path"
 	"strconv"
 	"time"
 
@@ -18,8 +17,8 @@ import (
 var _ = Describe("Syslog Drain", func() {
 	It("sends envelopes to syslog drains", func() {
 		l, port := buildListener()
-		drain, key := buildDrain(port)
-		cleanup := helpers.WriteToEtcd(config.EtcdUrls, key, drain)
+		drainKey, drainData := buildDrain(port)
+		cleanup := helpers.WriteToEtcd(config.EtcdUrls, drainKey, drainData)
 		defer cleanup()
 
 		var conn net.Conn
@@ -34,6 +33,7 @@ var _ = Describe("Syslog Drain", func() {
 			conn, err = l.Accept()
 			if err != nil {
 				println("Error accepting conn: ", err.Error())
+				return nil
 			}
 			return conn
 		}
@@ -73,8 +73,17 @@ func buildListener() (*net.TCPListener, string) {
 func buildDrain(port string) (string, string) {
 	ip, err := localip.LocalIP()
 	Expect(err).ToNot(HaveOccurred())
-	drain := fmt.Sprintf("syslog://%s:%s", ip, port)
-	drainHash := fmt.Sprintf("%x", sha1.Sum([]byte(drain)))
-	key := path.Join("/loggregator", "services", "test-id", drainHash)
-	return drain, key
+	url := fmt.Sprintf("syslog://%s:%s", ip, port)
+	data := drainData(ip, url)
+	key := drainKey("test-id", data)
+	return key, data
+}
+
+func drainKey(appID, drainData string) string {
+	hash := sha1.Sum([]byte(drainData))
+	return fmt.Sprintf("/loggregator/v2/services/%s/%x", appID, hash)
+}
+
+func drainData(hostname, drainURL string) string {
+	return fmt.Sprintf(`{"hostname":"%s","drainURL":"%s"}`, hostname, drainURL)
 }
