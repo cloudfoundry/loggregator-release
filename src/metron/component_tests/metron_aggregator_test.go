@@ -2,26 +2,26 @@ package component_test
 
 import (
 	"context"
-	"metron/config"
-	"metron/testutil"
-	v2 "plumbing/v2"
-	"testservers"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"metron/api"
+	v2 "plumbing/v2"
+	"testservers"
 )
 
 var _ = Describe("MetronAggregator", func() {
 	var (
 		metronCleanup  func()
-		metronConfig   config.Config
-		consumerServer *testutil.Server
+		metronConfig   api.Config
+		consumerServer *Server
 	)
 
 	BeforeEach(func() {
 		var err error
-		consumerServer, err = testutil.NewServer()
+		consumerServer, err = NewServer()
 		Expect(err).ToNot(HaveOccurred())
 
 		var metronReady func()

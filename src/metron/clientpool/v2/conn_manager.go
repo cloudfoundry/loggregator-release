@@ -1,23 +1,23 @@
-package clientpool
+package v2
 
 import (
 	"errors"
 	"fmt"
 	"io"
 	"log"
-	loggregator "plumbing/v2"
+	plumbing "plumbing/v2"
 	"sync/atomic"
 	"time"
 	"unsafe"
 )
 
 type Connector interface {
-	Connect() (io.Closer, loggregator.DopplerIngress_SenderClient, error)
+	Connect() (io.Closer, plumbing.DopplerIngress_SenderClient, error)
 }
 
 type v2GRPCConn struct {
 	name   string
-	client loggregator.DopplerIngress_SenderClient
+	client plumbing.DopplerIngress_SenderClient
 	closer io.Closer
 	writes int64
 }
@@ -37,7 +37,7 @@ func NewConnManager(c Connector, maxWrites int64) *ConnManager {
 	return m
 }
 
-func (m *ConnManager) Write(envelope *loggregator.Envelope) error {
+func (m *ConnManager) Write(envelope *plumbing.Envelope) error {
 	conn := atomic.LoadPointer(&m.conn)
 	if conn == nil || (*v2GRPCConn)(conn) == nil {
 		return errors.New("no connection to doppler present")

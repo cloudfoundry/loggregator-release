@@ -1,4 +1,4 @@
-package clientpool_test
+package v1_test
 
 import (
 	"doppler/dopplerservice"

@@ -11,7 +11,6 @@ import (
 	"google.golang.org/grpc"
 
 	"metron/api"
-	"metron/config"
 	"plumbing"
 	"profiler"
 )
@@ -26,7 +25,7 @@ func main() {
 	)
 	flag.Parse()
 
-	config, err := config.ParseConfig(*configFilePath)
+	config, err := api.ParseConfig(*configFilePath)
 	if err != nil {
 		log.Fatalf("Unable to parse config: %s", err)
 	}

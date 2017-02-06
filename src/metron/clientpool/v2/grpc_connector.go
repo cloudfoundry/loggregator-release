@@ -1,11 +1,11 @@
-package clientpool
+package v2
 
 import (
 	"context"
 	"fmt"
 	"io"
 	"log"
-	v2 "plumbing/v2"
+	plumbing "plumbing/v2"
 
 	"google.golang.org/grpc"
 )
@@ -20,7 +20,7 @@ type GRPCConnector struct {
 
 type DialFunc func(string, ...grpc.DialOption) (*grpc.ClientConn, error)
 
-type SenderClientFunc func(*grpc.ClientConn) v2.DopplerIngressClient
+type SenderClientFunc func(*grpc.ClientConn) plumbing.DopplerIngressClient
 
 func MakeGRPCConnector(
 	doppler string,
@@ -38,7 +38,7 @@ func MakeGRPCConnector(
 	}
 }
 
-func (c GRPCConnector) Connect() (io.Closer, v2.DopplerIngress_SenderClient, error) {
+func (c GRPCConnector) Connect() (io.Closer, plumbing.DopplerIngress_SenderClient, error) {
 	closer, pusher, err := c.connect(c.zonePrefix + "." + c.doppler)
 	if err != nil {
 		return c.connect(c.doppler)
@@ -46,7 +46,7 @@ func (c GRPCConnector) Connect() (io.Closer, v2.DopplerIngress_SenderClient, err
 	return closer, pusher, err
 }
 
-func (c GRPCConnector) connect(doppler string) (io.Closer, v2.DopplerIngress_SenderClient, error) {
+func (c GRPCConnector) connect(doppler string) (io.Closer, plumbing.DopplerIngress_SenderClient, error) {
 	conn, err := c.dial(doppler, c.opts...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error dialing ingestor stream to %s: %s", c, err)

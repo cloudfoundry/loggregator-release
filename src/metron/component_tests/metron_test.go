@@ -3,20 +3,11 @@ package component_test
 import (
 	"context"
 	"fmt"
-	"metron/config"
-	"metron/testutil"
 	"net"
-	"plumbing"
-	v2 "plumbing/v2"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
-	"testservers"
 
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/emitter"
@@ -24,20 +15,27 @@ import (
 	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+
+	"metron/api"
+	"plumbing"
+	v2 "plumbing/v2"
+	"testservers"
 )
 
 var _ = Describe("Metron", func() {
 	Context("when a consumer is accepting gRPC connections", func() {
 		var (
 			metronCleanup  func()
-			metronConfig   config.Config
-			consumerServer *testutil.Server
+			metronConfig   api.Config
+			consumerServer *Server
 			eventEmitter   dropsonde.EventEmitter
 		)
 
 		BeforeEach(func() {
 			var err error
-			consumerServer, err = testutil.NewServer()
+			consumerServer, err = NewServer()
 			Expect(err).ToNot(HaveOccurred())
 
 			var metronReady func()
@@ -149,7 +147,7 @@ var _ = Describe("Metron", func() {
 		var (
 			metronCleanup   func()
 			consumerCleanup func()
-			metronConfig    config.Config
+			metronConfig    api.Config
 			udpPort         int
 			eventEmitter    dropsonde.EventEmitter
 			consumerConn    *net.UDPConn
@@ -231,7 +229,7 @@ func HomeAddrToPort(addr net.Addr) int {
 	return port
 }
 
-func metronClient(conf config.Config) v2.MetronIngressClient {
+func metronClient(conf api.Config) v2.MetronIngressClient {
 	addr := fmt.Sprintf("127.0.0.1:%d", conf.GRPC.Port)
 
 	tlsConfig, err := plumbing.NewMutualTLSConfig(

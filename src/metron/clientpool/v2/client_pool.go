@@ -1,4 +1,4 @@
-package clientpool
+package v2
 
 import (
 	"errors"
@@ -6,11 +6,11 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	v2 "plumbing/v2"
+	plumbing "plumbing/v2"
 )
 
 type Conn interface {
-	Write(data *v2.Envelope) (err error)
+	Write(data *plumbing.Envelope) (err error)
 }
 
 type ClientPool struct {
@@ -29,7 +29,7 @@ func New(conns ...Conn) *ClientPool {
 	return pool
 }
 
-func (c *ClientPool) Write(msg *v2.Envelope) error {
+func (c *ClientPool) Write(msg *plumbing.Envelope) error {
 	seed := rand.Int()
 	for i := range c.conns {
 		idx := (i + seed) % len(c.conns)

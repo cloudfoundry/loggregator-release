@@ -1,9 +1,9 @@
-package clientpool_test
+package v2_test
 
 import (
 	"io"
 	clientpool "metron/clientpool/v2"
-	v2 "plumbing/v2"
+	plumbing "plumbing/v2"
 
 	"golang.org/x/net/context"
 
@@ -15,7 +15,7 @@ type mockV2Connector struct {
 	ConnectCalled chan bool
 	ConnectOutput struct {
 		Ret0 chan io.Closer
-		Ret1 chan v2.DopplerIngress_SenderClient
+		Ret1 chan plumbing.DopplerIngress_SenderClient
 		Ret2 chan error
 	}
 }
@@ -24,11 +24,11 @@ func newMockV2Connector() *mockV2Connector {
 	m := &mockV2Connector{}
 	m.ConnectCalled = make(chan bool, 100)
 	m.ConnectOutput.Ret0 = make(chan io.Closer, 100)
-	m.ConnectOutput.Ret1 = make(chan v2.DopplerIngress_SenderClient, 100)
+	m.ConnectOutput.Ret1 = make(chan plumbing.DopplerIngress_SenderClient, 100)
 	m.ConnectOutput.Ret2 = make(chan error, 100)
 	return m
 }
-func (m *mockV2Connector) Connect() (io.Closer, v2.DopplerIngress_SenderClient, error) {
+func (m *mockV2Connector) Connect() (io.Closer, plumbing.DopplerIngress_SenderClient, error) {
 	m.ConnectCalled <- true
 	return <-m.ConnectOutput.Ret0, <-m.ConnectOutput.Ret1, <-m.ConnectOutput.Ret2
 }
@@ -40,7 +40,7 @@ type mockDopplerIngressClient struct {
 		Opts chan []grpc.CallOption
 	}
 	SenderOutput struct {
-		Ret0 chan v2.DopplerIngress_SenderClient
+		Ret0 chan plumbing.DopplerIngress_SenderClient
 		Ret1 chan error
 	}
 }
@@ -50,11 +50,11 @@ func newMockDopplerIngressClient() *mockDopplerIngressClient {
 	m.SenderCalled = make(chan bool, 100)
 	m.SenderInput.Ctx = make(chan context.Context, 100)
 	m.SenderInput.Opts = make(chan []grpc.CallOption, 100)
-	m.SenderOutput.Ret0 = make(chan v2.DopplerIngress_SenderClient, 100)
+	m.SenderOutput.Ret0 = make(chan plumbing.DopplerIngress_SenderClient, 100)
 	m.SenderOutput.Ret1 = make(chan error, 100)
 	return m
 }
-func (m *mockDopplerIngressClient) Sender(ctx context.Context, opts ...grpc.CallOption) (v2.DopplerIngress_SenderClient, error) {
+func (m *mockDopplerIngressClient) Sender(ctx context.Context, opts ...grpc.CallOption) (plumbing.DopplerIngress_SenderClient, error) {
 	m.SenderCalled <- true
 	m.SenderInput.Ctx <- ctx
 	m.SenderInput.Opts <- opts
@@ -64,14 +64,14 @@ func (m *mockDopplerIngressClient) Sender(ctx context.Context, opts ...grpc.Call
 type mockDopplerIngress_SenderClient struct {
 	SendCalled chan bool
 	SendInput  struct {
-		Arg0 chan *v2.Envelope
+		Arg0 chan *plumbing.Envelope
 	}
 	SendOutput struct {
 		Ret0 chan error
 	}
 	CloseAndRecvCalled chan bool
 	CloseAndRecvOutput struct {
-		Ret0 chan *v2.SenderResponse
+		Ret0 chan *plumbing.SenderResponse
 		Ret1 chan error
 	}
 	HeaderCalled chan bool
@@ -110,10 +110,10 @@ type mockDopplerIngress_SenderClient struct {
 func newMockDopplerIngress_SenderClient() *mockDopplerIngress_SenderClient {
 	m := &mockDopplerIngress_SenderClient{}
 	m.SendCalled = make(chan bool, 100)
-	m.SendInput.Arg0 = make(chan *v2.Envelope, 100)
+	m.SendInput.Arg0 = make(chan *plumbing.Envelope, 100)
 	m.SendOutput.Ret0 = make(chan error, 100)
 	m.CloseAndRecvCalled = make(chan bool, 100)
-	m.CloseAndRecvOutput.Ret0 = make(chan *v2.SenderResponse, 100)
+	m.CloseAndRecvOutput.Ret0 = make(chan *plumbing.SenderResponse, 100)
 	m.CloseAndRecvOutput.Ret1 = make(chan error, 100)
 	m.HeaderCalled = make(chan bool, 100)
 	m.HeaderOutput.Ret0 = make(chan metadata.MD, 100)
@@ -132,12 +132,12 @@ func newMockDopplerIngress_SenderClient() *mockDopplerIngress_SenderClient {
 	m.RecvMsgOutput.Ret0 = make(chan error, 100)
 	return m
 }
-func (m *mockDopplerIngress_SenderClient) Send(arg0 *v2.Envelope) error {
+func (m *mockDopplerIngress_SenderClient) Send(arg0 *plumbing.Envelope) error {
 	m.SendCalled <- true
 	m.SendInput.Arg0 <- arg0
 	return <-m.SendOutput.Ret0
 }
-func (m *mockDopplerIngress_SenderClient) CloseAndRecv() (*v2.SenderResponse, error) {
+func (m *mockDopplerIngress_SenderClient) CloseAndRecv() (*plumbing.SenderResponse, error) {
 	m.CloseAndRecvCalled <- true
 	return <-m.CloseAndRecvOutput.Ret0, <-m.CloseAndRecvOutput.Ret1
 }
@@ -212,7 +212,7 @@ func newMockDialFunc() *mockDialFunc {
 type mockConn struct {
 	WriteCalled chan bool
 	WriteInput  struct {
-		Data chan *v2.Envelope
+		Data chan *plumbing.Envelope
 	}
 	WriteOutput struct {
 		Err chan error
@@ -222,11 +222,11 @@ type mockConn struct {
 func newMockConn() *mockConn {
 	m := &mockConn{}
 	m.WriteCalled = make(chan bool, 100)
-	m.WriteInput.Data = make(chan *v2.Envelope, 100)
+	m.WriteInput.Data = make(chan *plumbing.Envelope, 100)
 	m.WriteOutput.Err = make(chan error, 100)
 	return m
 }
-func (m *mockConn) Write(data *v2.Envelope) (err error) {
+func (m *mockConn) Write(data *plumbing.Envelope) (err error) {
 	m.WriteCalled <- true
 	m.WriteInput.Data <- data
 	return <-m.WriteOutput.Err

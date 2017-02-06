@@ -8,10 +8,8 @@ import (
 	"metric"
 
 	clientpool "metron/clientpool/v2"
-	"metron/config"
-	"metron/egress"
-	"metron/ingress"
-	"metron/writers/v2/counteraggregator"
+	egress "metron/egress/v2"
+	ingress "metron/ingress/v2"
 	v2 "plumbing/v2"
 
 	"google.golang.org/grpc"
@@ -19,13 +17,13 @@ import (
 )
 
 type AppV2 struct {
-	config      *config.Config
+	config      *Config
 	clientCreds credentials.TransportCredentials
 	serverCreds credentials.TransportCredentials
 }
 
 func NewV2App(
-	c *config.Config,
+	c *Config,
 	clientCreds credentials.TransportCredentials,
 	serverCreds credentials.TransportCredentials,
 ) *AppV2 {
@@ -48,7 +46,7 @@ func (a *AppV2) Start() {
 	}))
 
 	pool := a.initializePool()
-	counterAggr := counteraggregator.New(pool)
+	counterAggr := egress.New(pool)
 	tx := egress.NewTransponder(envelopeBuffer, counterAggr)
 	go tx.Start()
 

@@ -1,9 +1,9 @@
-package clientpool_test
+package v2_test
 
 import (
 	"fmt"
-	"metron/clientpool/v2"
-	v2 "plumbing/v2"
+	clientpool "metron/clientpool/v2"
+	plumbing "plumbing/v2"
 	"reflect"
 
 	. "github.com/onsi/ginkgo"
@@ -36,12 +36,12 @@ var _ = Describe("ClientPool", func() {
 			})
 
 			It("returns an error", func() {
-				err := pool.Write(&v2.Envelope{SourceUuid: "some-uuid"})
+				err := pool.Write(&plumbing.Envelope{SourceUuid: "some-uuid"})
 				Expect(err).ToNot(Succeed())
 			})
 
 			It("tries all conns before erroring", func() {
-				pool.Write(&v2.Envelope{SourceUuid: "some-uuid"})
+				pool.Write(&plumbing.Envelope{SourceUuid: "some-uuid"})
 
 				for len(mockConns) > 0 {
 					i, _ := chooseData(mockConns)
@@ -59,12 +59,12 @@ var _ = Describe("ClientPool", func() {
 			})
 
 			It("returns a nil error", func() {
-				err := pool.Write(&v2.Envelope{SourceUuid: "some-uuid"})
+				err := pool.Write(&plumbing.Envelope{SourceUuid: "some-uuid"})
 				Expect(err).To(Succeed())
 			})
 
 			It("uses the given data once", func() {
-				data := &v2.Envelope{SourceUuid: "some-uuid"}
+				data := &plumbing.Envelope{SourceUuid: "some-uuid"}
 				pool.Write(data)
 
 				idx, msg := chooseData(mockConns)
@@ -78,7 +78,7 @@ var _ = Describe("ClientPool", func() {
 	})
 })
 
-func chooseData(conns []*mockConn) (idx int, value *v2.Envelope) {
+func chooseData(conns []*mockConn) (idx int, value *plumbing.Envelope) {
 	var cases []reflect.SelectCase
 	for _, c := range conns {
 		cases = append(cases, reflect.SelectCase{
@@ -93,5 +93,5 @@ func chooseData(conns []*mockConn) (idx int, value *v2.Envelope) {
 	if cases[caseIdx] == def {
 		return -1, nil
 	}
-	return caseIdx, v.Interface().(*v2.Envelope)
+	return caseIdx, v.Interface().(*plumbing.Envelope)
 }
