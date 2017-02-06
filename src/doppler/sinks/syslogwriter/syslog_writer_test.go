@@ -33,7 +33,13 @@ var _ = Describe("SyslogWriter", func() {
 
 		outputURL := &url.URL{Scheme: "syslog", Host: address}
 		syslogServerSession = startSyslogServer(address)
-		sysLogWriter, _ = syslogwriter.NewSyslogWriter(outputURL, "appId", dialer, 0)
+		sysLogWriter, _ = syslogwriter.NewSyslogWriter(
+			outputURL,
+			"appId",
+			"org-name.space-name.app-name.1",
+			dialer,
+			0,
+		)
 
 		Eventually(func() error {
 			err := sysLogWriter.Connect()
@@ -50,13 +56,13 @@ var _ = Describe("SyslogWriter", func() {
 		It("sends messages in the proper format", func() {
 			sysLogWriter.Write(standardOutPriority, []byte("just a test"), "App", "2", time.Now().UnixNano())
 
-			Eventually(syslogServerSession, 5).Should(gbytes.Say(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}([-+]\d{2}:\d{2}) loggregator appId \[APP/2\] - - just a test\n`))
+			Eventually(syslogServerSession, 5).Should(gbytes.Say(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}([-+]\d{2}:\d{2}) org-name.space-name.app-name.1 appId \[APP/2\] - - just a test\n`))
 		}, 10)
 
 		It("sends messages in the proper format with source type APP/<AnyThing>", func() {
 			sysLogWriter.Write(standardOutPriority, []byte("just a test"), "APP/PROC/BLAH", "2", time.Now().UnixNano())
 
-			Eventually(syslogServerSession, 5).Should(gbytes.Say(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}([-+]\d{2}:\d{2}) loggregator appId \[APP/PROC/BLAH/2\] - - just a test\n`))
+			Eventually(syslogServerSession, 5).Should(gbytes.Say(`\d <\d+>1 \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}([-+]\d{2}:\d{2}) org-name.space-name.app-name.1 appId \[APP/PROC/BLAH/2\] - - just a test\n`))
 		}, 10)
 
 		It("strips null termination char from message", func() {
@@ -85,20 +91,20 @@ var _ = Describe("SyslogWriter", func() {
 
 	It("returns an error when the provided dialer is nil", func() {
 		outputURL, _ := url.Parse("syslog://localhost")
-		_, err := syslogwriter.NewSyslogWriter(outputURL, "appId", nil, 0)
+		_, err := syslogwriter.NewSyslogWriter(outputURL, "appId", "hostname", nil, 0)
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("cannot construct a writer with a nil dialer"))
 	})
 
 	It("returns an error for syslog-tls scheme", func() {
 		outputURL, _ := url.Parse("syslog-tls://localhost")
-		_, err := syslogwriter.NewSyslogWriter(outputURL, "appId", dialer, 0)
+		_, err := syslogwriter.NewSyslogWriter(outputURL, "appId", "hostname", dialer, 0)
 		Expect(err).To(HaveOccurred())
 	})
 
 	It("returns an error for https scheme", func() {
 		outputURL, _ := url.Parse("https://localhost")
-		_, err := syslogwriter.NewSyslogWriter(outputURL, "appId", dialer, 0)
+		_, err := syslogwriter.NewSyslogWriter(outputURL, "appId", "hostname", dialer, 0)
 		Expect(err).To(HaveOccurred())
 	})
 
@@ -137,7 +143,7 @@ var _ = Describe("SyslogWriter", func() {
 			url, err := url.Parse("syslog://" + listener.Addr().String())
 			Expect(err).NotTo(HaveOccurred())
 
-			sysLogWriter, err = syslogwriter.NewSyslogWriter(url, "appId", dialer, writeTimeout)
+			sysLogWriter, err = syslogwriter.NewSyslogWriter(url, "appId", "hostname", dialer, writeTimeout)
 			Expect(err).NotTo(HaveOccurred())
 
 			acceptedConns = make(chan net.Conn, 1)

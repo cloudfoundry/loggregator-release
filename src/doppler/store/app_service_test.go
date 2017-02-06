@@ -8,10 +8,10 @@ import (
 )
 
 var _ = Describe("AppService", func() {
-	var appService store.AppService
+	var appService store.ServiceInfo
 
 	BeforeEach(func() {
-		appService = store.AppService{AppId: "app-id", Url: "syslog://example.com:12345"}
+		appService = store.NewServiceInfo("app-id", "syslog://example.com:12345", "org.space.app.1")
 	})
 
 	Describe("Id", func() {
@@ -20,7 +20,7 @@ var _ = Describe("AppService", func() {
 		})
 
 		It("should have a different ID for different Urls", func() {
-			otherAppService := store.AppService{AppId: "app-id", Url: "syslog://example.com:12346"}
+			otherAppService := store.NewServiceInfo("app-id", "syslog://example.com:12346", "org.space.app.1")
 			Expect(appService.Id()).NotTo(Equal(otherAppService.Id()))
 		})
 

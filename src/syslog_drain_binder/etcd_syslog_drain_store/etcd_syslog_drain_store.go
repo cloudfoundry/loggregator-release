@@ -24,10 +24,10 @@ func NewEtcdSyslogDrainStore(storeAdapter storeadapter.StoreAdapter, ttl time.Du
 	}
 }
 
-func (store *EtcdSyslogDrainStore) UpdateDrains(appDrainUrlMap map[shared_types.AppID][]shared_types.DrainURL) error {
+func (store *EtcdSyslogDrainStore) UpdateDrains(allDrainBindings shared_types.AllSyslogDrainBindings) error {
 
-	for appId, drainUrls := range appDrainUrlMap {
-		err := store.updateAppDrains(appId, drainUrls)
+	for appId, drainBinding := range allDrainBindings {
+		err := store.updateAppDrains(appId, drainBinding)
 		if err != nil {
 			return err
 		}
@@ -36,20 +36,21 @@ func (store *EtcdSyslogDrainStore) UpdateDrains(appDrainUrlMap map[shared_types.
 	return nil
 }
 
-func (store *EtcdSyslogDrainStore) updateAppDrains(appId shared_types.AppID, drainUrls []shared_types.DrainURL) error {
+func (store *EtcdSyslogDrainStore) updateAppDrains(appId shared_types.AppID, drainBinding shared_types.SyslogDrainBinding) error {
 	var nodes []storeadapter.StoreNode
 
-	for _, drainUrl := range drainUrls {
+	for _, drainURL := range drainBinding.DrainURLs {
 
-		if strings.TrimSpace(string(drainUrl)) == "" {
-			log.Printf("UpdateDrains: attempted to add whitespace-only drain url '%s' for app %s. Skipping.", drainUrl, appId)
+		if strings.TrimSpace(drainURL) == "" {
+			log.Printf("UpdateDrains: attempted to add whitespace-only drain url '%s' for app %s. Skipping.", drainURL, appId)
 			continue
 		}
 
-		log.Printf("UpdateDrains: adding drain %s to app %s", drainUrl, appId)
+		log.Printf("UpdateDrains: adding drain %s to app %s", drainURL, appId)
+		drainData := fmt.Sprintf(`{"hostname":"%s","drainURL":"%s"}`, drainBinding.Hostname, drainURL)
 		node := storeadapter.StoreNode{
-			Key:   drainKey(appId, drainUrl),
-			Value: []byte(drainUrl),
+			Key:   drainKey(appId, drainData),
+			Value: []byte(drainData),
 			TTL:   uint64(store.ttl.Seconds()),
 		}
 
@@ -66,11 +67,7 @@ func (store *EtcdSyslogDrainStore) updateAppDrains(appId shared_types.AppID, dra
 	return nil
 }
 
-func appKey(appId shared_types.AppID) string {
-	return fmt.Sprintf("/loggregator/services/%s", appId)
-}
-
-func drainKey(appId shared_types.AppID, drainUrl shared_types.DrainURL) string {
-	hash := sha1.Sum([]byte(drainUrl))
-	return fmt.Sprintf("%s/%x", appKey(appId), hash)
+func drainKey(appId shared_types.AppID, drainData string) string {
+	hash := sha1.Sum([]byte(drainData))
+	return fmt.Sprintf("/loggregator/v2/services/%s/%x", appId, hash)
 }

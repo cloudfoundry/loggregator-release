@@ -17,8 +17,9 @@ import (
 )
 
 type tlsWriter struct {
-	appId string
-	host  string
+	appId    string
+	host     string
+	hostname string
 
 	mu        sync.Mutex // guards conn
 	conn      net.Conn
@@ -28,7 +29,7 @@ type tlsWriter struct {
 	TlsConfig *tls.Config
 }
 
-func NewTlsWriter(outputUrl *url.URL, appId string, skipCertVerify bool, dialer *net.Dialer, ioTimeout time.Duration) (w *tlsWriter, err error) {
+func NewTlsWriter(outputUrl *url.URL, appId, hostname string, skipCertVerify bool, dialer *net.Dialer, ioTimeout time.Duration) (w *tlsWriter, err error) {
 	if dialer == nil {
 		return nil, errors.New("cannot construct a writer with a nil dialer")
 	}
@@ -41,6 +42,7 @@ func NewTlsWriter(outputUrl *url.URL, appId string, skipCertVerify bool, dialer 
 	tlsConfig.InsecureSkipVerify = skipCertVerify
 	return &tlsWriter{
 		appId:     appId,
+		hostname:  hostname,
 		host:      outputUrl.Host,
 		TlsConfig: tlsConfig,
 		dialer:    dialer,
@@ -77,7 +79,7 @@ func (w *tlsWriter) Close() error {
 }
 
 func (w *tlsWriter) Write(p int, b []byte, source string, sourceId string, timestamp int64) (byteCount int, err error) {
-	syslogMsg := createMessage(p, w.appId, source, sourceId, b, timestamp)
+	syslogMsg := createMessage(p, w.appId, w.hostname, source, sourceId, b, timestamp)
 	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
 	finalMsg := []byte(fmt.Sprintf("%d %s", len(syslogMsg), syslogMsg))
 

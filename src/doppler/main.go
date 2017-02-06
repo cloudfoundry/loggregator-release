@@ -10,23 +10,19 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/grpc"
-
+	"diodes"
 	"doppler/config"
 	"doppler/dopplerservice"
-	"doppler/grpcmanager/v1"
+	grpcv1 "doppler/grpcmanager/v1"
 	"doppler/listeners"
 	"doppler/sinkserver"
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
-
-	"diodes"
+	"doppler/store"
 	"monitor"
 	"profiler"
 	"signalmanager"
-
-	"doppler/store"
 
 	"code.cloudfoundry.org/localip"
 	"code.cloudfoundry.org/workpool"
@@ -39,6 +35,7 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -47,8 +44,10 @@ const (
 )
 
 func main() {
-	seed := time.Now().UnixNano()
-	rand.Seed(seed)
+	//------------------------------
+	// MAIN
+	//------------------------------
+	rand.Seed(time.Now().UnixNano())
 
 	configFile := flag.String(
 		"config",
@@ -67,7 +66,32 @@ func main() {
 		log.Fatalf("Unable to resolve own IP address: %s", err)
 	}
 
+	//------------------------------
+	// Monitoring
+	//------------------------------
 	setupMetricsEmitter(conf)
+	monitorInterval := time.Duration(conf.MonitorIntervalSeconds) * time.Second
+	openFileMonitor := monitor.NewLinuxFD(monitorInterval)
+	uptimeMonitor := monitor.NewUptime(monitorInterval)
+
+	//------------------------------
+	// Caching
+	//------------------------------
+	sinkManager := sinkmanager.New(
+		conf.MaxRetainedLogMessages,
+		conf.SinkSkipCertVerify,
+		blacklist.New(conf.BlackListIps),
+		conf.MessageDrainBufferSize,
+		dopplerOrigin,
+		time.Duration(conf.SinkInactivityTimeoutSeconds)*time.Second,
+		time.Duration(conf.SinkIOTimeoutSeconds)*time.Second,
+		time.Duration(conf.ContainerMetricTTLSeconds)*time.Second,
+		time.Duration(conf.SinkDialTimeoutSeconds)*time.Second,
+	)
+
+	//------------------------------
+	// Ingress
+	//------------------------------
 
 	log.Printf("Startup: Setting up the doppler server")
 	dropsonde.Initialize(conf.MetronConfig.UDPAddress, dopplerOrigin)
@@ -76,38 +100,58 @@ func main() {
 	errChan := make(chan error)
 	var wg sync.WaitGroup
 	dropsondeUnmarshallerCollection := dropsonde_unmarshaller.NewDropsondeUnmarshallerCollection(conf.UnmarshallerCount)
-	monitorInterval := time.Duration(conf.MonitorIntervalSeconds) * time.Second
-	openFileMonitor := monitor.NewLinuxFD(monitorInterval)
-	uptimeMonitor := monitor.NewUptime(monitorInterval)
 	batcher := initializeMetrics(conf.MetricBatchIntervalMilliseconds)
 	envelopeBuffer := diodes.NewManyToOneEnvelope(10000, diodes.AlertFunc(func(missed int) {
 		log.Printf("Shed %d envelopes", missed)
 		batcher.BatchCounter("doppler.shedEnvelopes").Add(uint64(missed))
 		metric.IncCounter("dropped") // TODO: add "egress" tag
 	}))
-	appStoreCache := store.NewAppServiceCache()
-	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
-	dropsondeVerifiedBytesChan := make(chan []byte)
+
 	udpListener, dropsondeBytesChan := listeners.NewUDPListener(
 		fmt.Sprintf("%s:%d", localIp, conf.IncomingUDPPort),
 		batcher,
 		"udpListener",
 	)
-	blacklist := blacklist.New(conf.BlackListIps)
-	metricTTL := time.Duration(conf.ContainerMetricTTLSeconds) * time.Second
-	sinkTimeout := time.Duration(conf.SinkInactivityTimeoutSeconds) * time.Second
-	sinkIOTimeout := time.Duration(conf.SinkIOTimeoutSeconds) * time.Second
-	sinkManager := sinkmanager.New(
-		conf.MaxRetainedLogMessages,
-		conf.SinkSkipCertVerify,
-		blacklist,
-		conf.MessageDrainBufferSize,
-		dopplerOrigin,
-		sinkTimeout,
-		sinkIOTimeout,
-		metricTTL,
-		time.Duration(conf.SinkDialTimeoutSeconds)*time.Second,
+
+	grpcRouter := grpcv1.NewRouter()
+	messageRouter := sinkserver.NewMessageRouter(sinkManager, grpcRouter)
+	signatureVerifier := signature.NewVerifier(conf.SharedSecret)
+	var tlsListener *listeners.TCPListener
+	if conf.EnableTLSTransport {
+		tlsConfig := &conf.TLSListenerConfig
+		tlsListener, err = listeners.NewTCPListener(
+			"tlsListener",
+			fmt.Sprint(localIp, ":", tlsConfig.Port),
+			tlsConfig,
+			envelopeBuffer,
+			batcher,
+			tcpTimeout,
+		)
+		if err != nil {
+			log.Panicf("Failed to create TLS listener: %s", err)
+		}
+	}
+	tcpListener, err := listeners.NewTCPListener(
+		"tcpListener",
+		fmt.Sprint(localIp, ":", conf.IncomingTCPPort),
+		nil,
+		envelopeBuffer,
+		batcher,
+		tcpTimeout,
 	)
+	grpcListener, err := listeners.NewGRPCListener(grpcRouter, sinkManager, conf.GRPC, envelopeBuffer, batcher)
+	if err != nil {
+		log.Panicf("Failed to create grpcListener: %s", err)
+	}
+
+	//------------------------------
+	// Egress
+	//------------------------------
+	appStoreWatcher, newAppServiceChan, deletedAppServiceChan := store.NewAppServiceStoreWatcher(
+		storeAdapter,
+		store.NewAppServiceCache(),
+	)
+
 	websocketServer, err := websocketserver.New(
 		fmt.Sprintf("%s:%d", conf.WebsocketHost, conf.OutgoingPort),
 		sinkManager,
@@ -120,29 +164,10 @@ func main() {
 	if err != nil {
 		log.Panicf("Failed to create the websocket server: %s", err)
 	}
-	grpcRouter := v1.NewRouter()
-	messageRouter := sinkserver.NewMessageRouter(sinkManager, grpcRouter)
-	signatureVerifier := signature.NewVerifier(conf.SharedSecret)
-	host := localIp
-	var tlsListener *listeners.TCPListener
-	if conf.EnableTLSTransport {
-		tlsConfig := &conf.TLSListenerConfig
-		addr := fmt.Sprintf("%s:%d", host, tlsConfig.Port)
-		contextName := "tlsListener"
-		tlsListener, err = listeners.NewTCPListener(contextName, addr, tlsConfig, envelopeBuffer, batcher, tcpTimeout)
-		if err != nil {
-			log.Panicf("Failed to create TLS listener: %s", err)
-		}
 
-	}
-	addr := fmt.Sprintf("%s:%d", host, conf.IncomingTCPPort)
-	contextName := "tcpListener"
-	tcpListener, err := listeners.NewTCPListener(contextName, addr, nil, envelopeBuffer, batcher, tcpTimeout)
-	grpcListener, err := listeners.NewGRPCListener(grpcRouter, sinkManager, conf.GRPC, envelopeBuffer, batcher)
-	if err != nil {
-		log.Panicf("Failed to create grpcListener: %s", err)
-	}
-
+	//------------------------------
+	// Start
+	//------------------------------
 	go start(
 		errChan,
 		wg,
@@ -153,7 +178,6 @@ func main() {
 		appStoreWatcher,
 		newAppServiceChan,
 		deletedAppServiceChan,
-		dropsondeVerifiedBytesChan,
 		dropsondeBytesChan,
 		udpListener,
 		batcher,
@@ -178,6 +202,10 @@ func main() {
 	// connections by the time we're listening on PPROFPort.
 	p := profiler.New(conf.PPROFPort)
 	go p.Start()
+
+	//------------------------------
+	// Post Start
+	//------------------------------
 
 	for {
 		select {
@@ -223,7 +251,6 @@ func start(
 	appStoreWatcher *store.AppServiceStoreWatcher,
 	newAppServiceChan <-chan store.AppService,
 	deletedAppServiceChan <-chan store.AppService,
-	dropsondeVerifiedBytesChan chan []byte,
 	dropsondeBytesChan <-chan []byte,
 	udpListener *listeners.UDPListener,
 	batcher *metricbatcher.MetricBatcher,
@@ -236,6 +263,8 @@ func start(
 	grpcListener *listeners.GRPCListener,
 ) {
 	wg.Add(7 + dropsondeUnmarshallerCollection.Size())
+
+	dropsondeVerifiedBytesChan := make(chan []byte)
 
 	go func() {
 		defer wg.Done()

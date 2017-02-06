@@ -1,31 +1,25 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"plumbing"
-	"time"
-
 	"syslog_drain_binder/shared_types"
+	"time"
 )
+
+const urlPathFmt = "%s/internal/v4/syslog_drain_urls?batch_size=%d"
+
+// DefaultTimeout is the default http client timeout used when polling.
+var DefaultTimeout = 5 * time.Second
 
 // PollOptions contains the options for the Poll function.
 type PollOptions struct {
 	insecureSkipVerify bool
 	timeout            time.Duration
 }
-
-// SkipCertVerify allows skipping of cert verification when polling.
-func SkipCertVerify(s bool) func(*PollOptions) {
-	return func(o *PollOptions) {
-		o.insecureSkipVerify = s
-	}
-}
-
-// DefaultTimeout is the default http client timeout used when polling.
-var DefaultTimeout = 5 * time.Second
 
 // Timeout specifies the http client timeout when polling.
 func Timeout(t time.Duration) func(*PollOptions) {
@@ -34,15 +28,19 @@ func Timeout(t time.Duration) func(*PollOptions) {
 	}
 }
 
+type cloudControllerResponse struct {
+	Results map[shared_types.AppID]shared_types.SyslogDrainBinding `json:"results"`
+	NextID  *int                                                   `json:"next_id"`
+}
+
 // Poll gets all the app's syslog drain urls from the cloud controller.
 func Poll(
 	urlBase string,
-	username string,
-	password string,
 	batchSize int,
+	tlsConfig *tls.Config,
 	options ...func(*PollOptions),
-) (map[shared_types.AppID][]shared_types.DrainURL, error) {
-	drainURLs := make(map[shared_types.AppID][]shared_types.DrainURL)
+) (shared_types.AllSyslogDrainBindings, error) {
+	drainURLs := make(shared_types.AllSyslogDrainBindings)
 	nextID := 0
 
 	opts := PollOptions{
@@ -51,9 +49,6 @@ func Poll(
 	for _, o := range options {
 		o(&opts)
 	}
-
-	tlsConfig := plumbing.NewTLSConfig()
-	tlsConfig.InsecureSkipVerify = opts.insecureSkipVerify
 
 	tr := &http.Transport{
 		TLSClientConfig:   tlsConfig,
@@ -67,7 +62,6 @@ func Poll(
 	for {
 		url := buildUrl(urlBase, batchSize, nextID)
 		request, _ := http.NewRequest("GET", url, nil)
-		request.SetBasicAuth(username, password)
 
 		ccResponse, err := pollAndDecode(client, request)
 		if err != nil {
@@ -106,13 +100,8 @@ func pollAndDecode(client *http.Client, request *http.Request) (*cloudController
 	return &ccResponse, nil
 }
 
-type cloudControllerResponse struct {
-	Results map[shared_types.AppID][]shared_types.DrainURL `json:"results"`
-	NextID  *int                                           `json:"next_id"`
-}
-
 func buildUrl(baseURL string, batchSize int, nextID int) string {
-	url := fmt.Sprintf("%s/v2/syslog_drain_urls?batch_size=%d", baseURL, batchSize)
+	url := fmt.Sprintf(urlPathFmt, baseURL, batchSize)
 
 	if nextID != 0 {
 		url = fmt.Sprintf("%s&next_id=%d", url, nextID)

@@ -15,16 +15,17 @@ import (
 )
 
 type syslogWriter struct {
-	appId  string
-	host   string
-	dialer *net.Dialer
+	appId    string
+	host     string
+	hostname string
+	dialer   *net.Dialer
 
 	mu           sync.Mutex // guards conn
 	conn         *net.TCPConn
 	writeTimeout time.Duration
 }
 
-func NewSyslogWriter(outputUrl *url.URL, appId string, dialer *net.Dialer, writeTimeout time.Duration) (w *syslogWriter, err error) {
+func NewSyslogWriter(outputUrl *url.URL, appId, hostname string, dialer *net.Dialer, writeTimeout time.Duration) (w *syslogWriter, err error) {
 	if dialer == nil {
 		return nil, errors.New("cannot construct a writer with a nil dialer")
 	}
@@ -34,6 +35,7 @@ func NewSyslogWriter(outputUrl *url.URL, appId string, dialer *net.Dialer, write
 	}
 	return &syslogWriter{
 		appId:        appId,
+		hostname:     hostname,
 		host:         outputUrl.Host,
 		dialer:       dialer,
 		writeTimeout: writeTimeout,
@@ -65,7 +67,7 @@ func (w *syslogWriter) Connect() error {
 }
 
 func (w *syslogWriter) Write(p int, b []byte, source string, sourceId string, timestamp int64) (byteCount int, err error) {
-	syslogMsg := createMessage(p, w.appId, source, sourceId, b, timestamp)
+	syslogMsg := createMessage(p, w.appId, w.hostname, source, sourceId, b, timestamp)
 	// Frame msg with Octet Counting: https://tools.ietf.org/html/rfc6587#section-3.4.1
 	finalMsg := []byte(fmt.Sprintf("%d %s", len(syslogMsg), syslogMsg))
 

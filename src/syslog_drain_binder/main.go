@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"plumbing"
 	"syscall"
 	"syslog_drain_binder/config"
 	"time"
@@ -31,6 +32,17 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	tlsConfig, err := plumbing.NewMutualTLSConfig(
+		conf.CloudControllerTLSConfig.CertFile,
+		conf.CloudControllerTLSConfig.KeyFile,
+		conf.CloudControllerTLSConfig.CAFile,
+		"cloud-controller-ng.service.cf.internal",
+	)
+	if err != nil {
+		panic(err)
+	}
+	tlsConfig.InsecureSkipVerify = conf.SkipCertVerify
 
 	dropsonde.Initialize(conf.MetronAddress, "syslog_drain_binder")
 
@@ -83,12 +95,10 @@ func main() {
 				}
 			}
 
-			drainUrls, err := Poll(
+			drainBindings, err := Poll(
 				conf.CloudControllerAddress,
-				conf.BulkApiUsername,
-				conf.BulkApiPassword,
 				conf.PollingBatchSize,
-				SkipCertVerify(conf.SkipCertVerify),
+				tlsConfig,
 			)
 			if err != nil {
 				log.Printf("Error when polling cloud controller: %s", err.Error())
@@ -99,12 +109,12 @@ func main() {
 			metrics.IncrementCounter("pollCount")
 
 			var totalDrains int
-			for _, drainList := range drainUrls {
-				totalDrains += len(drainList)
+			for _, drainBindings := range drainBindings {
+				totalDrains += len(drainBindings.DrainURLs)
 			}
 
 			metrics.SendValue("totalDrains", float64(totalDrains), "drains")
-			err = store.UpdateDrains(drainUrls)
+			err = store.UpdateDrains(drainBindings)
 			if err != nil {
 				log.Printf("Error when updating ETCD: %s", err.Error())
 				politician.Vacate()

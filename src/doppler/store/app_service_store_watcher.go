@@ -1,11 +1,19 @@
 package store
 
 import (
+	"encoding/json"
 	"log"
 	"path"
 
 	"github.com/cloudfoundry/storeadapter"
 )
+
+const adapterWatchDir = "/loggregator/v2/services"
+
+type appServiceMetadata struct {
+	Hostname string `json:"hostname"`
+	DrainURL string `json:"drainURL"`
+}
 
 type AppServiceStoreWatcher struct {
 	adapter                   storeadapter.StoreAdapter
@@ -70,59 +78,67 @@ func (w *AppServiceStoreWatcher) Run() {
 		close(w.outRemoveChan)
 	}()
 
-	events, stopChan, errChan := w.adapter.Watch("/loggregator/services")
+	events, stopChan, errChan := w.adapter.Watch(adapterWatchDir)
 
 	w.registerExistingServicesFromStore()
 	for {
-		for {
-			select {
-			case <-w.done:
-				close(stopChan)
+		select {
+		case <-w.done:
+			close(stopChan)
+			return
+		case err, ok := <-errChan:
+			if !ok {
 				return
-			case err, ok := <-errChan:
-				if !ok {
-					return
-				}
-				log.Printf("AppStoreWatcher: Got error while waiting for ETCD events: %s", err.Error())
-				events, stopChan, errChan = w.adapter.Watch("/loggregator/services")
-			case event, ok := <-events:
-				if !ok {
-					return
-				}
+			}
+			log.Printf("AppStoreWatcher: Got error while waiting for ETCD events: %s", err.Error())
+			events, stopChan, errChan = w.adapter.Watch(adapterWatchDir)
+		case event, ok := <-events:
+			if !ok {
+				return
+			}
 
-				switch event.Type {
-				case storeadapter.CreateEvent, storeadapter.UpdateEvent:
-					if event.Node.Dir || len(event.Node.Value) == 0 {
-						// we can ignore any directory nodes (app or other namespace additions)
-						continue
-					}
-					w.Add(appServiceFromStoreNode(event.Node))
-				case storeadapter.DeleteEvent:
-					w.deleteEvent(event.PrevNode)
-				case storeadapter.ExpireEvent:
-					w.deleteEvent(event.PrevNode)
+			switch event.Type {
+			case storeadapter.CreateEvent, storeadapter.UpdateEvent:
+				if event.Node.Dir || len(event.Node.Value) == 0 {
+					// we can ignore any directory nodes (app or other namespace additions)
+					continue
 				}
+				appService, err := appServiceFromStoreNode(event.Node)
+				if err != nil {
+					continue
+				}
+				w.Add(appService)
+			case storeadapter.DeleteEvent, storeadapter.ExpireEvent:
+				w.deleteEvent(event.PrevNode)
 			}
 		}
 	}
 }
 
 func (w *AppServiceStoreWatcher) registerExistingServicesFromStore() {
-	services, _ := w.adapter.ListRecursively("/loggregator/services/")
+	services, _ := w.adapter.ListRecursively(adapterWatchDir)
 	for _, node := range services.ChildNodes {
 		for _, node := range node.ChildNodes {
-			appService := appServiceFromStoreNode(&node)
+			appService, err := appServiceFromStoreNode(&node)
+			if err != nil {
+				continue
+			}
 			w.Add(appService)
 		}
 	}
 }
 
-func appServiceFromStoreNode(node *storeadapter.StoreNode) AppService {
+func appServiceFromStoreNode(node *storeadapter.StoreNode) (AppService, error) {
 	key := node.Key
 	appId := path.Base(path.Dir(key))
-	serviceUrl := string(node.Value)
-	appService := AppService{AppId: appId, Url: serviceUrl}
-	return appService
+
+	var metadata appServiceMetadata
+	err := json.Unmarshal(node.Value, &metadata)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewServiceInfo(appId, metadata.DrainURL, metadata.Hostname), nil
 }
 
 func (w *AppServiceStoreWatcher) deleteEvent(node *storeadapter.StoreNode) {
@@ -130,7 +146,12 @@ func (w *AppServiceStoreWatcher) deleteEvent(node *storeadapter.StoreNode) {
 		key := node.Key
 		appId := path.Base(key)
 		w.RemoveApp(appId)
-	} else {
-		w.Remove(appServiceFromStoreNode(node))
+		return
 	}
+
+	appService, err := appServiceFromStoreNode(node)
+	if err != nil {
+		return
+	}
+	w.Remove(appService)
 }

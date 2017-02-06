@@ -37,9 +37,13 @@ var _ = Describe("Syslog Drain Binding", func() {
 		ws, _ := AddWSSink(receivedChan, "4567", "/apps/"+appID+"/stream")
 		defer ws.Close()
 
-		syslogDrainURL := fmt.Sprintf("syslog-invalid://%s:%d", localIPAddress, syslogPort)
-		key := DrainKey(appID, syslogDrainURL)
-		AddETCDNode(etcdAdapter, key, syslogDrainURL)
+		syslogdrain := fmt.Sprintf(
+			`{"hostname":"org.app.space.1","drainURL":"syslog-invalid://%s:%d"}`,
+			localIPAddress,
+			syslogPort,
+		)
+		key := DrainKey(appID, syslogdrain)
+		AddETCDNode(etcdAdapter, key, syslogdrain)
 
 		receivedMessageBytes := []byte{}
 		Eventually(receivedChan, 20).Should(Receive(&receivedMessageBytes))
@@ -65,9 +69,12 @@ var _ = Describe("Syslog Drain Binding", func() {
 			})
 
 			It("forwards log messages to a syslog", func() {
-				syslogDrainURL := "syslog://" + syslogDrainAddress
-				key := DrainKey(appID, syslogDrainURL)
-				AddETCDNode(etcdAdapter, key, syslogDrainURL)
+				syslogdrain := fmt.Sprintf(
+					`{"hostname":"org.app.space.1","drainURL":"syslog://%s"}`,
+					syslogDrainAddress,
+				)
+				key := DrainKey(appID, syslogdrain)
+				AddETCDNode(etcdAdapter, key, syslogdrain)
 
 				Eventually(func() *gbytes.Buffer {
 					SendAppLog(appID, "syslog-message", inputConnection)
@@ -77,9 +84,12 @@ var _ = Describe("Syslog Drain Binding", func() {
 			})
 
 			It("reconnects to a reappearing syslog server after an unexpected close", func() {
-				syslogDrainURL := "syslog://" + syslogDrainAddress
-				key := DrainKey(appID, syslogDrainURL)
-				AddETCDNode(etcdAdapter, key, syslogDrainURL)
+				syslogdrain := fmt.Sprintf(
+					`{"hostname":"org.app.space.1","drainURL":"syslog://%s"}`,
+					syslogDrainAddress,
+				)
+				key := DrainKey(appID, syslogdrain)
+				AddETCDNode(etcdAdapter, key, syslogdrain)
 
 				drainSession.Kill().Wait()
 
@@ -103,9 +113,12 @@ var _ = Describe("Syslog Drain Binding", func() {
 			})
 
 			It("forwards log messages to a syslog-tls", func() {
-				syslogDrainURL := "syslog-tls://" + syslogDrainAddress
-				key := DrainKey(appID, syslogDrainURL)
-				AddETCDNode(etcdAdapter, key, syslogDrainURL)
+				syslogdrain := fmt.Sprintf(
+					`{"hostname":"org.app.space.1","drainURL":"syslog-tls://%s"}`,
+					syslogDrainAddress,
+				)
+				key := DrainKey(appID, syslogdrain)
+				AddETCDNode(etcdAdapter, key, syslogdrain)
 
 				Eventually(func() *gbytes.Buffer {
 					SendAppLog(appID, "syslog-message", inputConnection)
@@ -114,9 +127,12 @@ var _ = Describe("Syslog Drain Binding", func() {
 			})
 
 			It("reconnects to a reappearing tls server", func() {
-				syslogDrainURL := "syslog-tls://" + syslogDrainAddress
-				key := DrainKey(appID, syslogDrainURL)
-				AddETCDNode(etcdAdapter, key, syslogDrainURL)
+				syslogdrain := fmt.Sprintf(
+					`{"hostname":"org.app.space.1","drainURL":"syslog-tls://%s"}`,
+					syslogDrainAddress,
+				)
+				key := DrainKey(appID, syslogdrain)
+				AddETCDNode(etcdAdapter, key, syslogdrain)
 
 				drainSession.Kill().Wait()
 
@@ -137,9 +153,16 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 		BeforeEach(func() {
 			serverSession = StartHTTPSServer(pathToHTTPEchoServer)
-			httpsURL := fmt.Sprintf("https://foo:somereallycrazypassword@%s:1234/syslog/?someuser=foo&somepass=somereallycrazypassword", localIPAddress)
-			key := DrainKey(appID, httpsURL)
-			AddETCDNode(etcdAdapter, key, httpsURL)
+			httpsURL := fmt.Sprintf(
+				"https://foo:somereallycrazypassword@%s:1234/syslog/?someuser=foo&somepass=somereallycrazypassword",
+				localIPAddress,
+			)
+			syslogdrain := fmt.Sprintf(
+				`{"hostname":"org.app.space.1","drainURL":"%s"}`,
+				httpsURL,
+			)
+			key := DrainKey(appID, syslogdrain)
+			AddETCDNode(etcdAdapter, key, syslogdrain)
 		})
 
 		AfterEach(func() {
@@ -181,9 +204,12 @@ var _ = Describe("Syslog Drain Binding", func() {
 			syslogDrainAddress := fmt.Sprintf("localhost:%d", syslogPort)
 			drainSession := StartUnencryptedTCPServer(pathToTCPEchoServer, syslogDrainAddress)
 
-			syslogDrainURL := "syslog://" + syslogDrainAddress
-			key := DrainKey(appID, syslogDrainURL)
-			AddETCDNode(etcdAdapter, key, syslogDrainURL)
+			syslogdrain := fmt.Sprintf(
+				`{"hostname":"org.app.space.1","drainURL":"syslog://%s"}`,
+				syslogDrainAddress,
+			)
+			key := DrainKey(appID, syslogdrain)
+			AddETCDNode(etcdAdapter, key, syslogdrain)
 
 			Consistently(func() *gbytes.Buffer {
 				SendAppLog(appID, "syslog-message", inputConnection)
@@ -197,9 +223,12 @@ var _ = Describe("Syslog Drain Binding", func() {
 			syslogDrainAddress := fmt.Sprintf("localhost:%d", syslogPort)
 			drainSession := StartEncryptedTCPServer(pathToTCPEchoServer, syslogDrainAddress)
 
-			syslogDrainURL := "syslog-tls://" + syslogDrainAddress
-			key := DrainKey(appID, syslogDrainURL)
-			AddETCDNode(etcdAdapter, key, syslogDrainURL)
+			syslogdrain := fmt.Sprintf(
+				`{"hostname":"org.app.space.1","drainURL":"syslog-tls://%s"}`,
+				syslogDrainAddress,
+			)
+			key := DrainKey(appID, syslogdrain)
+			AddETCDNode(etcdAdapter, key, syslogdrain)
 
 			Consistently(func() *gbytes.Buffer {
 				SendAppLog(appID, "syslog-message", inputConnection)

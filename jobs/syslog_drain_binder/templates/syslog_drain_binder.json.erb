@@ -5,7 +5,11 @@
         "CertFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-client.crt",
         "CAFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-ca.crt"
     }
-    bulk_api = p("cc.bulk_api_user", "bulk_api")
+    ccTLSConfig = {
+        "KeyFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/syslogdrainbinder.key",
+        "CertFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/syslogdrainbinder.crt",
+        "CAFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/mutual_tls_ca.crt"
+    }
 
     args = Hash.new.tap do |a|
         a[:InstanceName] = "#{name}.#{spec.index}"
@@ -18,12 +22,10 @@
             a[:EtcdTLSClientConfig] = etcdTLSClientConfig
         end
         a[:MetronAddress] = "#{p("metron_endpoint.host")}:#{p("metron_endpoint.dropsonde_port")}"
-        a[:CloudControllerAddress] = p("cc.srv_api_uri")
-        a[:BulkApiUsername] = bulk_api
-        a[:BulkApiPassword] = p("cc.bulk_api_password")
+        a[:CloudControllerAddress] = "https://#{p('cc.internal_service_hostname')}:#{p('cc.tls_port')}"
+        a[:CloudControllerTLSConfig] = ccTLSConfig
         a[:PollingBatchSize] = p("syslog_drain_binder.polling_batch_size")
         a[:SkipCertVerify] = p("ssl.skip_cert_verify")
     end
 %>
-
 <%= JSON.pretty_generate(args) %>

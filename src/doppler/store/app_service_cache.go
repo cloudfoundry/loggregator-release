@@ -1,6 +1,8 @@
 package store
 
-import "sync"
+import (
+	"sync"
+)
 
 type AppServiceCache interface {
 	Add(appService AppService)
@@ -8,7 +10,7 @@ type AppServiceCache interface {
 	RemoveApp(appId string) []AppService
 
 	Get(appId string) []AppService
-	Exists(appService AppService) bool
+	Exists(AppService AppService) bool
 }
 
 type AppServiceWatcherCache interface {
@@ -30,10 +32,10 @@ func NewAppServiceCache() AppServiceWatcherCache {
 func (c *appServiceCache) Add(appService AppService) {
 	c.Lock()
 	defer c.Unlock()
-	appServicesById, ok := c.appServicesByAppId[appService.AppId]
+	appServicesById, ok := c.appServicesByAppId[appService.AppId()]
 	if !ok {
 		appServicesById = make(map[string]AppService)
-		c.appServicesByAppId[appService.AppId] = appServicesById
+		c.appServicesByAppId[appService.AppId()] = appServicesById
 	}
 
 	appServicesById[appService.Id()] = appService
@@ -42,10 +44,10 @@ func (c *appServiceCache) Add(appService AppService) {
 func (c *appServiceCache) Remove(appService AppService) {
 	c.Lock()
 	defer c.Unlock()
-	appCache := c.appServicesByAppId[appService.AppId]
+	appCache := c.appServicesByAppId[appService.AppId()]
 	delete(appCache, appService.Id())
 	if len(appCache) == 0 {
-		delete(c.appServicesByAppId, appService.AppId)
+		delete(c.appServicesByAppId, appService.AppId())
 	}
 }
 
@@ -92,7 +94,7 @@ func (c *appServiceCache) Exists(appService AppService) bool {
 	c.RLock()
 	defer c.RUnlock()
 	serviceExists := false
-	appServices, appExists := c.appServicesByAppId[appService.AppId]
+	appServices, appExists := c.appServicesByAppId[appService.AppId()]
 	if appExists {
 		_, serviceExists = appServices[appService.Id()]
 	}

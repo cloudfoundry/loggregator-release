@@ -2,13 +2,9 @@ package store_test
 
 import (
 	"log"
-	"path"
 	"testing"
 
-	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
-
-	"doppler/store"
 
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
@@ -44,10 +40,3 @@ var _ = SynchronizedAfterSuite(func() {
 var _ = BeforeEach(func() {
 	etcdRunner.Reset()
 })
-
-func buildNode(appService store.AppService) storeadapter.StoreNode {
-	return storeadapter.StoreNode{
-		Key:   path.Join("/loggregator/services", appService.AppId, appService.Id()),
-		Value: []byte(appService.Url),
-	}
-}

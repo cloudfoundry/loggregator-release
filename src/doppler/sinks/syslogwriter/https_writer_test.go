@@ -53,14 +53,14 @@ var _ = Describe("HttpsWriter", func() {
 
 		It("requires TLS Version 1.2", func() {
 			outputUrl, _ := url.Parse(server.URL + "/234-bxg-234/")
-			w, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", true, dialer, timeout)
+			w, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", "org-name.space-name.app-name.1", true, dialer, timeout)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(w.TlsConfig.MinVersion).To(BeEquivalentTo(tls.VersionTLS12))
 		})
 
 		It("requires certain cipher suites", func() {
 			outputUrl, _ := url.Parse(server.URL + "/234-bxg-234/")
-			w, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", true, dialer, timeout)
+			w, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", "org-name.space-name.app-name.1", true, dialer, timeout)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(w.TlsConfig.CipherSuites).To(ConsistOf(
 				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
@@ -71,20 +71,20 @@ var _ = Describe("HttpsWriter", func() {
 		It("HTTP POSTs each log message to the HTTPS syslog endpoint", func() {
 			outputUrl, _ := url.Parse(server.URL + "/234-bxg-234/")
 
-			w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", true, dialer, timeout)
+			w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", "org-name.space-name.app-name.1", true, dialer, timeout)
 			err := w.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
 			parsedTime, err := time.Parse(time.RFC3339, "2006-01-02T15:04:05Z")
 			_, err = w.Write(standardErrorPriority, []byte("Message"), "test", "TEST", parsedTime.UnixNano())
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(requestChan).Should(Receive(ContainSubstring("loggregator appId [TEST] - - Message")))
+			Eventually(requestChan).Should(Receive(ContainSubstring("org-name.space-name.app-name.1 appId [TEST] - - Message")))
 		})
 
 		It("returns an error when unable to HTTP POST the log message", func() {
 			outputUrl, _ := url.Parse("https://")
 
-			w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", true, dialer, timeout)
+			w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", "org-name.space-name.app-name.1", true, dialer, timeout)
 			_, err := w.Write(standardErrorPriority, []byte("Message"), "test", "TEST", time.Now().UnixNano())
 			Expect(err).To(HaveOccurred())
 		})
@@ -92,7 +92,7 @@ var _ = Describe("HttpsWriter", func() {
 		It("holds onto the last error when unable to POST a log message", func() {
 			outputUrl, _ := url.Parse("https://")
 
-			w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", true, dialer, timeout)
+			w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", "org-name.space-name.app-name.1", true, dialer, timeout)
 			_, err := w.Write(standardErrorPriority, []byte("Message"), "test", "TEST", time.Now().UnixNano())
 
 			conErr := w.Connect()
@@ -103,7 +103,7 @@ var _ = Describe("HttpsWriter", func() {
 		It("should close connections and return an error if status code returned is not 2XX", func() {
 			outputUrl, _ := url.Parse(server.URL + "/doesnotexist")
 
-			w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", true, dialer, timeout)
+			w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", "org-name.space-name.app-name.1", true, dialer, timeout)
 			err := w.Connect()
 			Expect(err).ToNot(HaveOccurred())
 
@@ -122,7 +122,7 @@ var _ = Describe("HttpsWriter", func() {
 			It("should not return error for response 2XX status codes", func() {
 				outputUrl, _ := url.Parse(server.URL + "/234-bxg-234/")
 
-				w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", true, dialer, timeout)
+				w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", "org-name.space-name.app-name.1", true, dialer, timeout)
 				err := w.Connect()
 				Expect(err).ToNot(HaveOccurred())
 
@@ -147,7 +147,7 @@ var _ = Describe("HttpsWriter", func() {
 
 			It("times out", func() {
 				outputUrl, _ := url.Parse("https://" + listener.Addr().String() + "/")
-				w, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", true, dialer, timeout)
+				w, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", "org-name.space-name.app-name.1", true, dialer, timeout)
 				Expect(err).NotTo(HaveOccurred())
 
 				err = w.Connect()
@@ -176,7 +176,7 @@ var _ = Describe("HttpsWriter", func() {
 
 			It("returns a timeout error", func() {
 				outputUrl, _ := url.Parse(server.URL + "/234-bxg-234/")
-				w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", true, dialer, timeout)
+				w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", "org-name.space-name.app-name.1", true, dialer, timeout)
 				err := w.Connect()
 				Expect(err).ToNot(HaveOccurred())
 
@@ -196,7 +196,7 @@ var _ = Describe("HttpsWriter", func() {
 
 			It("only keeps one idle connection", func() {
 				outputUrl, _ := url.Parse(server.URL + "/pause/")
-				w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", true, dialer, timeout)
+				w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", "org-name.space-name.app-name.1", true, dialer, timeout)
 				err := w.Connect()
 				Expect(err).ToNot(HaveOccurred())
 
@@ -212,19 +212,19 @@ var _ = Describe("HttpsWriter", func() {
 
 		It("returns an error for syslog-tls scheme", func() {
 			outputUrl, _ := url.Parse("syslog-tls://localhost")
-			_, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", false, dialer, timeout)
+			_, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", "org-name.space-name.app-name.1", false, dialer, timeout)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("returns an error for syslog scheme", func() {
 			outputUrl, _ := url.Parse("syslog://localhost")
-			_, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", false, dialer, timeout)
+			_, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", "org-name.space-name.app-name.1", false, dialer, timeout)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("returns an error when the provided dialer is nil", func() {
 			outputURL, _ := url.Parse("https://localhost")
-			_, err := syslogwriter.NewHttpsWriter(outputURL, "appId", false, nil, timeout)
+			_, err := syslogwriter.NewHttpsWriter(outputURL, "appId", "org-name.space-name.app-name.1", false, nil, timeout)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("cannot construct a writer with a nil dialer"))
 		})

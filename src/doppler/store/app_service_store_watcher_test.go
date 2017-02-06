@@ -1,6 +1,8 @@
 package store_test
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"path"
 	"sync"
@@ -9,6 +11,7 @@ import (
 	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+	"github.com/cloudfoundry/storeadapter/fakestoreadapter"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -20,6 +23,8 @@ const (
 	APP1_ID = "app-1"
 	APP2_ID = "app-2"
 	APP3_ID = "app-3"
+
+	watchDir = "/loggregator/v2/services"
 )
 
 var _ = Describe("AppServiceStoreWatcher", func() {
@@ -32,14 +37,14 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 	var outAddChan <-chan store.AppService
 	var outRemoveChan <-chan store.AppService
 
-	var app1Service1 store.AppService
-	var app1Service2 store.AppService
-	var app2Service1 store.AppService
+	var app1Service1 store.ServiceInfo
+	var app1Service2 store.ServiceInfo
+	var app2Service1 store.ServiceInfo
 
 	BeforeEach(func() {
-		app1Service1 = store.AppService{AppId: APP1_ID, Url: "syslog://example.com:12345"}
-		app1Service2 = store.AppService{AppId: APP1_ID, Url: "syslog://example.com:12346"}
-		app2Service1 = store.AppService{AppId: APP2_ID, Url: "syslog://example.com:12345"}
+		app1Service1 = store.NewServiceInfo(APP1_ID, "syslog://example.com:12345", "org.space.app-one.1")
+		app1Service2 = store.NewServiceInfo(APP1_ID, "syslog://example.com:12346", "org.space.app-one.1")
+		app2Service1 = store.NewServiceInfo(APP2_ID, "syslog://example.com:12345", "org.space.app-two.1")
 
 		workPool, err := workpool.NewWorkPool(10)
 		Expect(err).NotTo(HaveOccurred())
@@ -82,6 +87,23 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 		})
 	})
 
+	Context("when there is an error", func() {
+		var adapter *fakeStoreAdapter
+
+		BeforeEach(func() {
+			adapter = newFSA()
+			watcher, _, _ := store.NewAppServiceStoreWatcher(adapter, store.NewAppServiceCache())
+
+			go watcher.Run()
+		})
+
+		It("calls watch again", func() {
+			Eventually(adapter.GetWatchCounter).Should(Equal(1))
+			adapter.WatchErrChannel <- errors.New("Haha")
+			Eventually(adapter.GetWatchCounter).Should(Equal(2))
+		})
+	})
+
 	Describe("Loading watcher state on startup", func() {
 		Context("when the store is empty", func() {
 			It("should not send anything on the output channels", func() {
@@ -94,21 +116,34 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 
 		Context("when the store has AppServices in it", func() {
 			BeforeEach(func() {
-				adapter.Create(buildNode(app1Service1))
-				adapter.Create(buildNode(app1Service2))
-				adapter.Create(buildNode(app2Service1))
+				Expect(adapter.Create(buildNode(app1Service1))).To(Succeed())
+				Expect(adapter.Create(buildNode(app1Service2))).To(Succeed())
 			})
 
 			It("should send all the AppServices on the output add channel", func() {
 				runWatcher()
 
-				appServices := drainOutgoingChannel(outAddChan, 3)
+				appServices := drainOutgoingChannel(outAddChan, 2)
 
 				Expect(appServices).To(ContainElement(app1Service1))
 				Expect(appServices).To(ContainElement(app1Service2))
-				Expect(appServices).To(ContainElement(app2Service1))
 
 				Expect(outRemoveChan).To(BeEmpty())
+			})
+		})
+
+		Context("and it receives invalid json for value", func() {
+			It("ignores the bad data", func() {
+				runWatcher()
+
+				node := storeadapter.StoreNode{
+					Key:   watchDir + "/some-app-id/some-url-id",
+					Value: []byte(`{"invalid: "json"}`),
+				}
+
+				Expect(adapter.Create(node)).To(Succeed())
+
+				Consistently(outAddChan).ShouldNot(Receive())
 			})
 		})
 	})
@@ -137,7 +172,7 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 		Context("when there is new data in the store", func() {
 			Context("when an existing app has a new service through a create operation", func() {
 				It("adds that service to the outgoing add channel", func() {
-					app2Service2 := store.AppService{AppId: APP2_ID, Url: "syslog://new.example.com:12345"}
+					app2Service2 := store.NewServiceInfo(APP2_ID, "syslog://new.example.com:12345", "org.space.app-two.1")
 					_, err := adapter.Get(key(app2Service2))
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("Key not found"))
@@ -154,7 +189,7 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 
 			Context("When an existing app gets a new service through an update operation", func() {
 				It("adds that service to the outgoing add channel", func() {
-					app2Service2 := store.AppService{AppId: APP2_ID, Url: "syslog://new.example.com:12345"}
+					app2Service2 := store.NewServiceInfo(APP2_ID, "syslog://new.example.com:12345", "org.space.app-two.1")
 					adapter.Get(key(app2Service2))
 
 					err := adapter.SetMulti([]storeadapter.StoreNode{buildNode(app2Service2)})
@@ -171,8 +206,8 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 
 			Context("when a new app appears", func() {
 				It("adds that app and its services to the outgoing add channel", func() {
-					app3Service1 := store.AppService{AppId: APP3_ID, Url: "syslog://app3.example.com:12345"}
-					app3Service2 := store.AppService{AppId: APP3_ID, Url: "syslog://app3.example.com:12346"}
+					app3Service1 := store.NewServiceInfo(APP3_ID, "syslog://app3.example.com:12345", "org.space.app-three.1")
+					app3Service2 := store.NewServiceInfo(APP3_ID, "syslog://app3.example.com:12346", "org.space.app-three.1")
 
 					adapter.Create(buildNode(app3Service1))
 					adapter.Create(buildNode(app3Service2))
@@ -210,8 +245,8 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 
 			Context("when an existing app loses all of its services", func() {
 				It("sends all of the app services on the outgoing remove channel", func() {
-					adapter.Get(path.Join("/loggregator/services", APP1_ID))
-					adapter.Delete(path.Join("/loggregator/services", APP1_ID))
+					adapter.Get(path.Join(watchDir, APP1_ID))
+					adapter.Delete(path.Join(watchDir, APP1_ID))
 					appServices := drainOutgoingChannel(outRemoveChan, 2)
 					Expect(appServices).To(ConsistOf(app1Service1, app1Service2))
 					Expect(outAddChan).To(BeEmpty())
@@ -251,7 +286,7 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 
 		Context("when an existing app service expires", func() {
 			It("removes the app service from the cache", func() {
-				app2Service2 := store.AppService{AppId: APP2_ID, Url: "syslog://foo/a"}
+				app2Service2 := store.NewServiceInfo(APP2_ID, "syslog://foo/a", "org.space.app-two.1")
 				adapter.Get(key(app2Service2))
 				adapter.Create(buildNode(app2Service2))
 				var appService store.AppService
@@ -259,7 +294,7 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 				Eventually(outAddChan).Should(Receive(&appService))
 				Expect(appService).To(Equal(app2Service2))
 
-				adapter.UpdateDirTTL("/loggregator/services/app-2", 1)
+				adapter.UpdateDirTTL(watchDir+"/app-2", 1)
 				Eventually(func() error {
 					_, err := adapter.Get(key(app2Service2))
 					return err
@@ -278,17 +313,66 @@ var _ = Describe("AppServiceStoreWatcher", func() {
 	})
 })
 
-func key(service store.AppService) string {
-	return path.Join("/loggregator/services", service.AppId, service.Id())
+func key(service store.ServiceInfo) string {
+	return path.Join(watchDir, service.AppId(), service.Id())
 }
 
 func drainOutgoingChannel(c <-chan store.AppService, count int) []store.AppService {
-	appServices := []store.AppService{}
+	var appServices []store.AppService
+
 	for i := 0; i < count; i++ {
 		var appService store.AppService
-		Eventually(c).Should(Receive(&appService), fmt.Sprintf("Failed to drain outgoing chan with expected number of messages; received %d but expected %d.", i, count))
+		Eventually(c).Should(Receive(&appService),
+			fmt.Sprintf("Failed to drain outgoing chan with expected number of messages; received %d but expected %d.", i, count),
+		)
 		appServices = append(appServices, appService)
 	}
 
 	return appServices
+}
+
+func buildNode(appService store.AppService) storeadapter.StoreNode {
+	m := metaData{Hostname: appService.Hostname(), DrainURL: appService.Url()}
+
+	data, err := json.Marshal(&m)
+	Expect(err).ToNot(HaveOccurred())
+
+	return storeadapter.StoreNode{
+		Key:   path.Join(watchDir, appService.AppId(), appService.Id()),
+		Value: data,
+	}
+}
+
+type metaData struct {
+	Hostname string `json:"hostname"`
+	DrainURL string `json:"drainURL"`
+}
+
+type fakeStoreAdapter struct {
+	*fakestoreadapter.FakeStoreAdapter
+	watchCounter int
+	sync.Mutex
+}
+
+func (fsa *fakeStoreAdapter) Watch(key string) (events <-chan storeadapter.WatchEvent, stop chan<- bool, errors <-chan error) {
+	events, _, errors = fsa.FakeStoreAdapter.Watch(key)
+
+	fsa.Lock()
+	defer fsa.Unlock()
+	fsa.watchCounter++
+
+	return events, make(chan bool), errors
+}
+
+func (fsa *fakeStoreAdapter) GetWatchCounter() int {
+	fsa.Lock()
+	defer fsa.Unlock()
+
+	return fsa.watchCounter
+}
+
+func newFSA() *fakeStoreAdapter {
+	return &fakeStoreAdapter{
+		FakeStoreAdapter: fakestoreadapter.New(),
+	}
 }
