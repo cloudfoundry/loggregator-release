@@ -30,7 +30,7 @@ In order to secure transport of logs throughout the system, Loggregator needs se
 
 ## Streaming Application Logs
 
-Any user of CloudFoundry can experience Loggregator by using two simple interfaces for streaming application specific logs. These dno not require any special [User Account and Authentication(UAA)](https://github.com/cloudfoundry/uaa) Scope. 
+Any user of CloudFoundry can experience Loggregator by using two simple interfaces for streaming application specific logs. These do not require any special [User Account and Authentication(UAA)](https://github.com/cloudfoundry/uaa) Scope. 
 
 ### Using the CF CLI 
 The fastest way to see your logs is by running the `cf logs` command using the [CF CLI](https://github.com/cloudfoundry/cli). Check the [CloudFoundry CLI docs](http://cli.cloudfoundry.org/en-US/cf/logs.html) for more details. 
@@ -59,7 +59,7 @@ For components of Cloud Foundry or standalone BOSH deployments, Loggregator prov
 The Loggregator API (formerly known as Dropsonde) defines an envelope structure which packages logs and metrics in a common format for distribution throughout Loggregator. See the [Loggregator API README](https://github.com/cloudfoundry/loggregator-api/README.md) for more details. 
 
 ### Including Metron 
-The Metron Agent listens on both UDP and gRPC endpoints for multiple versions of Loggregator API which it forwards onto the Firehose. To include Metron in your component or deployment see the [Settup up Metron README](src/metron/README.md). 
+The Metron Agent listens on both UDP and gRPC endpoints for multiple versions of Loggregator API which it forwards onto the Firehose. To include Metron in your component or deployment see the [Setting up up Metron README](src/metron/README.md). 
 
 ### Statsd-injector
 The statsd-injector is a companion component to Metron and allows use of the statsd metric aggregator format. For more see the [stats-d-injector README](https://github.com/cloudfoundry/statsd-injector/README.md).
