@@ -2,7 +2,7 @@
 
 Loggregator is a [BOSH](http://bosh.io/) release deployed as a part of [cf-release](https://github.com/cloudfoundry/cf-release). Loggregator provides a highly-available (HA) and secure stream of logs and metrics for all applications and components on Cloud Foundry. It does so while not disrupting the behavior of the the applications and components on the platform (i.e "backpressure").
 
-The [Loggregator Design Notes]() presents an overview of Loggregator components, and links to Loggregator Components.
+The [Loggregator Design Notes](docs/loggregator-design.md) presents an overview of Loggregator components, and links to Loggregator Components.
 
 * [Security Configurations](#security-configurations)
 * [Streaming Application Logs](#streaming-application-logs)
@@ -30,52 +30,52 @@ In order to secure transport of logs throughout the system, Loggregator needs se
 
 ## Streaming Application Logs
 
-Any user of CloudFoundry can experience Loggregator by using two simple interfaces for streaming application specific logs. These dno not require any special [User Account and Authentication(UAA)]() Scope. 
+Any user of CloudFoundry can experience Loggregator by using two simple interfaces for streaming application specific logs. These dno not require any special [User Account and Authentication(UAA)](https://github.com/cloudfoundry/uaa) Scope. 
 
 ### Using the CF CLI 
-The fastest way to see your logs is by running the `cf logs` command. Check the [CloudFoundry docs]() for more details. 
+The fastest way to see your logs is by running the `cf logs` command using the [CF CLI](https://github.com/cloudfoundry/cli). Check the [CloudFoundry CLI docs](http://cli.cloudfoundry.org/en-US/cf/logs.html) for more details. 
 
 ### Forwarding to a Log Drain
-If you’d like to save all logs for an application in a third party or custom tool that expects the syslog format a log drain allows you to do so. Check the [CloudFoundry docs]() for more details. 
+If you’d like to save all logs for an application in a third party or custom tool that expects the syslog format a log drain allows you to do so. Check the [CloudFoundry docs](https://docs.cloudfoundry.org/devguide/services/log-management.html) for more details. 
 
 ## Consuming the Firehose
 
 The firehose is an aggregated stream of all application logs and component metrics on the platform. This allows operators to ensure they capture all logs within a microservice architecture as well as monitor the health of their platform. 
 
 ### User Account and Authentication Scope
-In order to consume the firehose you’ll need the `doppler.firehose` scope from UAA. For more details see this [Configuring the Firehose README]().
+In order to consume the firehose you’ll need the `doppler.firehose` scope from UAA. For more details see this [Configuring the Firehose README](docs/configuring-firehose.md).
 
 ### Nozzle Development
-Once you have configured appropriate authentication scope you are ready to start developing a nozzle for the firehose. See our [Nozzle community page]() for more details about existing nozzles and how to get started. 
+Once you have configured appropriate authentication scope you are ready to start developing a nozzle for the firehose. See our [Nozzle community page](docs/community-nozzles.md) for more details about existing nozzles and how to get started. 
 
 ### Metrics
 
-Loggregator and other CloudFoundry components emit regular messages through the Firehose that monitor the health, throughput, and details of a component's operations. For more detials about Loggregator’s metrics see our [Loggregator Metrics README]().
+Loggregator and other CloudFoundry components emit regular messages through the Firehose that monitor the health, throughput, and details of a component's operations. For more detials about Loggregator’s metrics see our [Loggregator Metrics README](docs/metric_descriptions.md).
 
 ## Emitting Logs and Metrics into Loggregator
 For components of Cloud Foundry or standalone BOSH deployments, Loggregator provides a set of tools for emitting Logs and Metrics. 
 
 ### Loggregator API
-The Loggregator API (formerly known as Dropsonde) defines an envelope structure which packages logs and metrics in a common format for distribution throughout Loggregator. See the [Loggregator API README]() for more details. 
+The Loggregator API (formerly known as Dropsonde) defines an envelope structure which packages logs and metrics in a common format for distribution throughout Loggregator. See the [Loggregator API README](https://github.com/cloudfoundry/loggregator-api/README.md) for more details. 
 
 ### Including Metron 
-Metron listens on both UDP and gRPC endpoints for multiple versions of Loggregator API which it forwards onto the Firehose. To include Metron in your component or deployment see the [Settup up Metron README](). 
+Metron listens on both UDP and gRPC endpoints for multiple versions of Loggregator API which it forwards onto the Firehose. To include Metron in your component or deployment see the [Settup up Metron README](src/metron/README.md). 
 
 ### Statsd-injector
-The statsd-injector is a companion component to Metron and allows use of the statsd metric aggregator format. For more see the [stats-d-injector README]().
+The statsd-injector is a companion component to Metron and allows use of the statsd metric aggregator format. For more see the [stats-d-injector README](https://github.com/cloudfoundry/statsd-injector/README.md).
 
 ### Syslog Release
-For some components (such as UAA) it makes sense to route logs separate from the Firehose. The syslog release using rsyslog to accomplish this. For more information see the [syslog-release README]() (note this release is maintianed by the bosh team).
+For some components (such as UAA) it makes sense to route logs separate from the Firehose. The syslog release using rsyslog to accomplish this. For more information see the [syslog-release README](https://github.com/cloudfoundry/syslog-release/README.md) (note this release is maintianed by the bosh team).
 
 ### Bosh HM Forwarder
-The bosh-HM Forwarder allows operators to capture health metrics from the Bosh Director through the Firehose. For more information see the [boshhmforwarder README](). 
+The bosh-HM Forwarder allows operators to capture health metrics from the Bosh Director through the Firehose. For more information see the [bosh-hm-forwarder README](https://github.com/cloudfoundry/bosh-hm-forwarder/README.md). 
 
 ## Tools for Testing and Monitoring Loggregator
 ### Tools
-Loggregator provides a set of tools written in golang for testing the performance and efficacy of your loggregator installation. These tools emit logs and metrics in a controlled fashion. For more information see the [Loggregator tools README](). 
+Loggregator provides a set of tools written in golang for testing the performance and efficacy of your loggregator installation. These tools emit logs and metrics in a controlled fashion. For more information see the [Loggregator tools README](docs/loggregator-tools.md). 
 
 ### Health Nozzle
-The Loggregator Team is currently proposing supporting a nozzle which aggregates health metrics across various Loggregator releases to monitor, ingress, egress, and loss within the Loggregator system. See the [Health Nozzle Feature Proposal]() for more detials. 
+The Loggregator Team is currently proposing supporting a nozzle which aggregates health metrics across various Loggregator releases to monitor, ingress, egress, and loss within the Loggregator system. See the [Health Nozzle Feature Proposal](https://docs.google.com/document/d/1rqlSDssaNk7B9TUmHhjUsn1-FeUNX8odslc-T_3ixck/edit) for more detials. 
 
 ## More Resources and Documentation
 ### Cloud Foundry Docs
