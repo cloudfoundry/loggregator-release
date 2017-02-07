@@ -12,7 +12,7 @@ The [Loggregator Design Notes]() presents an overview of Loggregator components,
   * [User Account and Authentication Scope](#user-account-and-authentication-scope)
   * [Nozzle Development](#nozzle-development)
   * [Metrics](#metrics)
-* [Emitting Logs and Metrics](#emitting-logs-and-metrics)
+* [Emitting Logs and Metrics into Loggregator](#emitting-logs-and-metrics-into-loggregator)
   * [Including Metron](#including-metron)
   * [Loggregator API](#loggregator-api)
   * [Statsd-injector](#statsd-injector)
