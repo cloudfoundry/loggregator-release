@@ -13,8 +13,8 @@ The [Loggregator Design Notes]() presents an overview of Loggregator components,
   * [Nozzle Development](#nozzle-development)
   * [Metrics](#metrics)
 * [Emitting Logs and Metrics into Loggregator](#emitting-logs-and-metrics-into-loggregator)
-  * [Including Metron](#including-metron)
   * [Loggregator API](#loggregator-api)
+  * [Including Metron](#including-metron)
   * [Statsd-injector](#statsd-injector)
   * [Syslog-release](#syslog-release)
   * [Bosh HM forwarder](#bosh-hm-forwarder)
@@ -30,7 +30,7 @@ In order to secure transport of logs throughout the system, Loggregator needs se
 
 ## Streaming Application Logs
 
-Any user of CloudFoundry can experience Loggregator by using two simple interfaces for streaming application specific logs. These dno not require any special User Account and Authentication(UAA) Scope. 
+Any user of CloudFoundry can experience Loggregator by using two simple interfaces for streaming application specific logs. These dno not require any special [User Account and Authentication(UAA)]() Scope. 
 
 ### Using the CF CLI 
 The fastest way to see your logs is by running the `cf logs` command. Check the [CloudFoundry docs]() for more details. 
@@ -50,16 +50,16 @@ Once you have configured appropriate authentication scope you are ready to start
 
 ### Metrics
 
-Loggregator and other CloudFoundry components emit regular messages through the Firehose that monitor the health, throughput, and details of a component's operations. For more detials about Loggregator’s metrics see our Loggregator Metrics README.
+Loggregator and other CloudFoundry components emit regular messages through the Firehose that monitor the health, throughput, and details of a component's operations. For more detials about Loggregator’s metrics see our [Loggregator Metrics README]().
 
 ## Emitting Logs and Metrics into Loggregator
-For components of Cloud Foundry or a standalone BOSH deployments, Loggregator provides a set of tools for emitting Logs and Metrics. 
-
-### Including Metron 
-Metron listens on both UDP and gRPC endpoints for multiple versions of Loggregator API which it forwards onto the Firehose. To include Metron in your component or deployment see the [Settup up Metron README](). 
+For components of Cloud Foundry or standalone BOSH deployments, Loggregator provides a set of tools for emitting Logs and Metrics. 
 
 ### Loggregator API
 The Loggregator API (formerly known as Dropsonde) defines an envelope structure which packages logs and metrics in a common format for distribution throughout Loggregator. See the [Loggregator API README]() for more details. 
+
+### Including Metron 
+Metron listens on both UDP and gRPC endpoints for multiple versions of Loggregator API which it forwards onto the Firehose. To include Metron in your component or deployment see the [Settup up Metron README](). 
 
 ### Statsd-injector
 The statsd-injector is a companion component to Metron and allows use of the statsd metric aggregator format. For more see the [stats-d-injector README]().
