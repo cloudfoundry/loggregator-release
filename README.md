@@ -4,7 +4,26 @@ Loggregator is a BOSH release deployed as a part of cf-release. Loggregator prov
 
 The [Loggregator Design Notes]() presents an overview of Loggregator components, and links to Loggregator Components.
 
-This README outlines resources and interfaces for Loggregator 
+* [Security Configurations](#security-configurations)
+* [Streaming Application Logs](#streaming-application-logs)
+  * [Using the CF CLI](#using-the-cf-cli)
+  * [Forwarding to a Log Drain](#forwarding-to-a-log-drain)
+* [Consuming the Firehose](#consuming-the-firehose)
+  * [User Account and Authentication Scope](#user-account-and-authentication-scope)
+  * [Nozzle Development](#nozzle-development)
+  * [Metrics](#metrics)
+* [Emitting Logs and Metrics](#emitting-logs-and-metrics)
+  * [Including Metron](#including-metron)
+  * [Loggregator API](#loggregator-api)
+  * [Statsd-injector](#statsd-injector)
+  * [Syslog-release](#syslog-release)
+  * [Bosh HM forwarder](#bosh-hm-forwarder)
+* [Tools for Testing and Monitoring Loggregator](#tools-for-testing-and-monitoring-loggregator)
+  * [Tools](#tools)
+  * [Health Nozzle](#health-nozzle)
+* [More Resources and Documentation](#more-resources-and-documentation)
+  
+  
 
 ### Security Configurations
 In order to secure transport of logs throughout the system, Loggregator needs several certificates to be generated for each of the components. You start this process by running the `/scripts/generate-certs`, and then configure the corresponding certificates for each of the components you are deploying. For more details see our [Certificate Configuration README]()
@@ -23,13 +42,14 @@ If you’d like to save all logs for an application in a third party or custom t
 
 The firehose is an aggregated stream of all application logs and component metrics on the platform. This allows operators to ensure they capture all logs within a microservice architecture as well as monitor the health of their platform. 
 
-## User Account and Authentication (UAA) Scope
-In order to consume the firehose you’ll need the doppler firehose scope. For more details see this [Configuring the Firehose README]().
+## User Account and Authentication Scope
+In order to consume the firehose you’ll need the `doppler.firehose` scope from UAA. For more details see this [Configuring the Firehose README]().
 
 ## Nozzle Development
 Once you have configured appropriate authentication scope you are ready to start developing a nozzle for the firehose. See our [Nozzle community page]() for more details about existing nozzles and how to get started. 
 
 ## Metrics
+
 Loggregator and other CloudFoundry components emit regular messages through the Firehose that monitor the health, throughput, and details of a component's operations. For more detials about Loggregator’s metrics see our Loggregator Metrics README.
 
 ### Emitting Logs and Metrics into Loggregator
@@ -54,7 +74,7 @@ The bosh-HM Forwarder allows operators to capture health metrics from the Bosh D
 ## Tools
 Loggregator provides a set of tools written in golang for testing the performance and efficacy of your loggregator installation. These tools emit logs and metrics in a controlled fashion. For more information see the [Loggregator tools README](). 
 
-## Health Nozzle (proposed)
+## Health Nozzle
 The Loggregator Team is currently proposing supporting a nozzle which aggregates health metrics across various Loggregator releases to monitor, ingress, egress, and loss within the Loggregator system. See the [Health Nozzle Feature Proposal]() for more detials. 
 
 ### More Resources and Documentation
