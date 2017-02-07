@@ -78,8 +78,8 @@ Loggregator provides a set of tools written in golang for testing the performanc
 The Loggregator Team is currently proposing supporting a nozzle which aggregates health metrics across various Loggregator releases to monitor, ingress, egress, and loss within the Loggregator system. See the [Health Nozzle Feature Proposal](https://docs.google.com/document/d/1rqlSDssaNk7B9TUmHhjUsn1-FeUNX8odslc-T_3ixck/edit) for more detials. 
 
 ## More Resources and Documentation
-### Cloud Foundry Docs
-### Glossary
-### Trouble Shooting Guides
 ### Roadmap
+We communicate our long term planning using a [Product Road Map](https://docs.google.com/spreadsheets/d/1bM1bInPQeC2xLayLsFb0aBuD3_HFNfJj9mEJZygnuWo/edit#gid=0), and are always looking to gather feedback and input from Loggregator operators. Get in touch or file an issue if you have feature suggestions you'd like to see added.
+
 ### Pivotal Tracker
+Items marked as "In Flight" on the Roadmap are tracked as new Features in [Pivotal Tracker](https://www.pivotaltracker.com/n/projects/993188). 
