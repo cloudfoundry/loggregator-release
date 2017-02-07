@@ -1,6 +1,6 @@
-## Cloud Native Logging 
+# Cloud Native Logging 
 
-Loggregator is a BOSH release deployed as a part of cf-release. Loggregator provides a highly-available (HA) and secure stream of logs and metrics for all applications and components on Cloud Foundry. It must do so while not disrupting the behavior of the the applications and components on the platform (i.e "backpressure").
+Loggregator is a [BOSH]() release deployed as a part of [cf-release](). Loggregator provides a highly-available (HA) and secure stream of logs and metrics for all applications and components on Cloud Foundry. It must do so while not disrupting the behavior of the the applications and components on the platform (i.e "backpressure").
 
 The [Loggregator Design Notes]() presents an overview of Loggregator components, and links to Loggregator Components.
 
