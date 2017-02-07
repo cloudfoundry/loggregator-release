@@ -26,7 +26,7 @@ The [Loggregator Design Notes]() presents an overview of Loggregator components,
   
 
 ## Security Configurations
-In order to secure transport of logs throughout the system, Loggregator needs several certificates to be generated for each of the components. You start this process by running the `/scripts/generate-certs`, and then configure the corresponding certificates for each of the components you are deploying. For more details see our [Certificate Configuration README]()
+In order to secure transport of logs throughout the system, Loggregator needs several certificates to be generated for each of the components. You start this process by running the `/scripts/generate-certs`, and then configure the corresponding certificates for each of the components you are deploying. For more details see our [Certificate Configuration README](docs/cert-config.md)
 
 ## Streaming Application Logs
 
