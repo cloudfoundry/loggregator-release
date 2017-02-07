@@ -1,4 +1,4 @@
-# Cloud Native Logging [![slack.cloudfoundry.org](https://slack.cloudfoundry.org/badge.svg)](https://cloudfoundry.slack.com/archives/loggregator)
+# Cloud Native Logging [![slack.cloudfoundry.org](https://slack.cloudfoundry.org/badge.svg)](https://cloudfoundry.slack.com/loggregator)
 
 Loggregator is a [BOSH](http://bosh.io/) release deployed as a part of [cf-release](https://github.com/cloudfoundry/cf-release). Loggregator provides a highly-available (HA) and secure stream of logs and metrics for all applications and components on Cloud Foundry. It does so while not disrupting the behavior of the the applications and components on the platform (i.e "backpressure").
 
