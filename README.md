@@ -59,7 +59,7 @@ For components of Cloud Foundry or standalone BOSH deployments, Loggregator prov
 The Loggregator API (formerly known as Dropsonde) defines an envelope structure which packages logs and metrics in a common format for distribution throughout Loggregator. See the [Loggregator API README](https://github.com/cloudfoundry/loggregator-api/README.md) for more details. 
 
 ### Including Metron 
-Metron listens on both UDP and gRPC endpoints for multiple versions of Loggregator API which it forwards onto the Firehose. To include Metron in your component or deployment see the [Settup up Metron README](src/metron/README.md). 
+The Metron Agent listens on both UDP and gRPC endpoints for multiple versions of Loggregator API which it forwards onto the Firehose. To include Metron in your component or deployment see the [Settup up Metron README](src/metron/README.md). 
 
 ### Statsd-injector
 The statsd-injector is a companion component to Metron and allows use of the statsd metric aggregator format. For more see the [stats-d-injector README](https://github.com/cloudfoundry/statsd-injector/README.md).
