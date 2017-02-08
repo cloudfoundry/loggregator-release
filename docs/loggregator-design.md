@@ -1,5 +1,8 @@
 
 # Loggregator Design
+Loggregator is a highly available and secure message transport system written in golang, leverage the grpc protocol. 
+
+<img src="Loggregator%202.0.jpg"/>
 
 ## Design Restraints
 
