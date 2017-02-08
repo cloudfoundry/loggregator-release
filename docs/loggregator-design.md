@@ -2,7 +2,7 @@
 # Loggregator Design
 Loggregator is a highly available and secure message transport system written in golang, leveraging the [grpc](http://www.grpc.io/) protocol. 
 
-<img src="Loggregator%202.0.jpg"/>
+<img src="Loggregator-medium.jpgg"/>
 
 ## Design Restraints
 
