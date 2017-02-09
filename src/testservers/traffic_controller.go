@@ -24,7 +24,7 @@ func BuildTrafficControllerConf(etcdClientURL string, dopplerWSPort, dopplerGRPC
 			Port:     uint16(dopplerGRPCPort),
 			CertFile: TrafficControllerCertPath(),
 			KeyFile:  TrafficControllerKeyPath(),
-			CAFile:   CAFilePath(),
+			CAFile:   CACertPath(),
 		},
 		OutgoingDropsondePort: uint32(tcPort),
 		PPROFPort:             uint32(getTCPPort()),

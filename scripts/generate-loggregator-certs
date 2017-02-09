@@ -4,12 +4,19 @@ set -ex
 
 if [ "$1" = "" ]; then
     echo "usage: $0 <bbs-ca.crt> <bbs-ca.key>"
+    echo "       $0 no-bbs-ca"
     exit 1
 fi
 
-bbs_ca_cert_path=$1
-bbs_ca_key_path=$2
-bbs_ca_name=$(basename ${bbs_ca_cert_path} ".crt")
+if [ "$1" = "no-bbs-ca" ]; then
+    bbs_ca_name="loggregator-ca"
+else
+    bbs_ca_cert_path=$1
+    bbs_ca_key_path=$2
+    bbs_ca_name=$(basename ${bbs_ca_cert_path} ".crt")
+    ln -s ${bbs_ca_cert_path} ${depot_path}/
+    ln -s ${bbs_ca_key_path} ${depot_path}/
+fi
 
 # Install certstrap
 go get -v github.com/square/certstrap
@@ -18,13 +25,11 @@ go get -v github.com/square/certstrap
 depot_path="loggregator-certs"
 mkdir -p ${depot_path}
 
-ln -s ${bbs_ca_cert_path} ${depot_path}/
-ln -s ${bbs_ca_key_path} ${depot_path}/
-
 # CA to distribute to loggregator certs
 certstrap --depot-path ${depot_path} init --passphrase '' --common-name loggregatorCA
 mv -f ${depot_path}/loggregatorCA.crt ${depot_path}/loggregator-ca.crt
 mv -f ${depot_path}/loggregatorCA.key ${depot_path}/loggregator-ca.key
+mv -f ${depot_path}/loggregatorCA.crl ${depot_path}/loggregator-ca.crl
 
 # Doppler certificate
 certstrap --depot-path ${depot_path} request-cert --passphrase '' --common-name doppler

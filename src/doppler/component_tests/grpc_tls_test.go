@@ -125,7 +125,7 @@ func setupV1Ingestor(hostPort string) plumbing.DopplerIngestor_PusherClient {
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
 		testservers.MetronCertPath(),
 		testservers.MetronKeyPath(),
-		testservers.CAFilePath(),
+		testservers.CACertPath(),
 		"doppler",
 	)
 	Expect(err).ToNot(HaveOccurred())
@@ -145,7 +145,7 @@ func setupV2Ingestor(hostPort string) v2.DopplerIngress_SenderClient {
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
 		testservers.MetronCertPath(),
 		testservers.MetronKeyPath(),
-		testservers.CAFilePath(),
+		testservers.CACertPath(),
 		"doppler",
 	)
 	Expect(err).ToNot(HaveOccurred())
@@ -165,7 +165,7 @@ func setupSubscriber(hostPort string) plumbing.Doppler_SubscribeClient {
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
 		testservers.TrafficControllerCertPath(),
 		testservers.TrafficControllerKeyPath(),
-		testservers.CAFilePath(),
+		testservers.CACertPath(),
 		"doppler",
 	)
 	Expect(err).ToNot(HaveOccurred())
@@ -243,7 +243,7 @@ func startMetronServer() (int, *mockMetronIngressServer) {
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
 		testservers.MetronCertPath(),
 		testservers.MetronKeyPath(),
-		testservers.CAFilePath(),
+		testservers.CACertPath(),
 		"doppler",
 	)
 	Expect(err).ToNot(HaveOccurred())

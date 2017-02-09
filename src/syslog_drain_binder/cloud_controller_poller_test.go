@@ -4,14 +4,12 @@ import (
 	"crypto/tls"
 	"net"
 	syslog_drain_binder "syslog_drain_binder"
+	"syslog_drain_binder/fake_cc"
 	"syslog_drain_binder/shared_types"
 	"time"
 
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
-	"strconv"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -21,13 +19,36 @@ var _ = Describe("CloudControllerPoller", func() {
 	var _ = Describe("GetSyslogDrainURLs", func() {
 		var (
 			testServer          *httptest.Server
-			fakeCloudController fakeCC
+			fakeCloudController *fake_cc.FakeCC
 			baseURL             string
 			tlsConfig           *tls.Config
 		)
 
 		BeforeEach(func() {
-			fakeCloudController = fakeCC{}
+			fakeCloudController = fake_cc.NewFakeCC([]fake_cc.AppEntry{
+				{
+					AppId: "app0",
+					SyslogBinding: fake_cc.SysLogBinding{
+						Hostname:  "org.space.app.1",
+						DrainURLs: []string{"urlA"},
+					},
+				},
+				{
+					AppId: "app1",
+					SyslogBinding: fake_cc.SysLogBinding{
+						Hostname:  "org.space.app.2",
+						DrainURLs: []string{"urlB"},
+					},
+				},
+				{
+					AppId: "app2",
+					SyslogBinding: fake_cc.SysLogBinding{
+						Hostname:  "org.space.app.3",
+						DrainURLs: []string{"urlA", "urlC"},
+					},
+				},
+			})
+
 			tlsConfig = &tls.Config{
 				InsecureSkipVerify: true,
 			}
@@ -44,8 +65,8 @@ var _ = Describe("CloudControllerPoller", func() {
 		It("connects to the correct endpoint with basic authentication and the expected parameters", func() {
 			syslog_drain_binder.Poll(baseURL, 2, tlsConfig)
 
-			Expect(fakeCloudController.servedRoute).To(Equal("/internal/v4/syslog_drain_urls"))
-			Expect(fakeCloudController.queryParams).To(HaveKeyWithValue("batch_size", []string{"2"}))
+			Expect(fakeCloudController.ServedRoute).To(Equal("/internal/v4/syslog_drain_urls"))
+			Expect(fakeCloudController.QueryParams).To(HaveKeyWithValue("batch_size", []string{"2"}))
 		})
 
 		It("returns sys log drain bindings for all apps", func() {
@@ -78,12 +99,12 @@ var _ = Describe("CloudControllerPoller", func() {
 			_, err := syslog_drain_binder.Poll(baseURL, 2, tlsConfig)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeCloudController.requestCount).To(Equal(3))
+			Expect(fakeCloudController.RequestCount).To(Equal(3))
 		})
 
 		Context("when CC becomes unreachable before finishing", func() {
 			It("returns as much data as it has, and an error", func() {
-				fakeCloudController.failOn = 2
+				fakeCloudController.FailOn = 2
 
 				_, err := syslog_drain_binder.Poll(baseURL, 2, tlsConfig)
 
@@ -111,89 +132,3 @@ var _ = Describe("CloudControllerPoller", func() {
 		})
 	})
 })
-
-type appEntry struct {
-	appID         string
-	syslogBinding SysLogBinding
-}
-
-var appDrains = []appEntry{
-	{
-		appID: "app0",
-		syslogBinding: SysLogBinding{
-			Hostname:  "org.space.app.1",
-			DrainURLs: []string{"urlA"},
-		},
-	},
-	{
-		appID: "app1",
-		syslogBinding: SysLogBinding{
-			Hostname:  "org.space.app.2",
-			DrainURLs: []string{"urlB"},
-		},
-	},
-	{
-		appID: "app2",
-		syslogBinding: SysLogBinding{
-			Hostname:  "org.space.app.3",
-			DrainURLs: []string{"urlA", "urlC"},
-		},
-	},
-}
-
-type SysLogBinding struct {
-	Hostname  string   `json:"hostname"`
-	DrainURLs []string `json:"drains"`
-}
-
-type jsonResponse struct {
-	Results map[string]SysLogBinding `json:"results"`
-	NextId  *int                     `json:"next_id"`
-}
-
-type fakeCC struct {
-	servedRoute  string
-	queryParams  url.Values
-	requestCount int
-	failOn       int
-}
-
-func (fake *fakeCC) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if fake.failOn > 0 && fake.requestCount >= fake.failOn {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	fake.requestCount++
-	fake.servedRoute = r.URL.Path
-	fake.queryParams = r.URL.Query()
-
-	batchSize, _ := strconv.Atoi(fake.queryParams.Get("batch_size"))
-	start, _ := strconv.Atoi(fake.queryParams.Get("next_id"))
-
-	w.Write(buildResponse(start, start+batchSize))
-}
-
-func buildResponse(start int, end int) []byte {
-	var r jsonResponse
-	if start >= len(appDrains) {
-		r = jsonResponse{
-			Results: make(map[string]SysLogBinding),
-			NextId:  nil,
-		}
-		b, _ := json.Marshal(r)
-		return b
-	}
-
-	r = jsonResponse{
-		Results: make(map[string]SysLogBinding),
-		NextId:  &end,
-	}
-
-	for i := start; i < end && i < len(appDrains); i++ {
-		r.Results[appDrains[i].appID] = appDrains[i].syslogBinding
-	}
-
-	b, _ := json.Marshal(r)
-	return b
-}
