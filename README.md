@@ -119,7 +119,8 @@ information, look at their respective READMEs.
 ### Generating TLS Certificates
 
 To generate the Loggregator TLS certs and keys, run
-`scripts/generate-loggregator-certs`.
+`scripts/generate-loggregator-certs <diego-bbs-ca.crt> <diego-bbs-ca.key>`. The
+diego BBS CA cert and key are typically generated separately from this script.
 
 #### Using bosh 2.0
 
@@ -146,6 +147,10 @@ If you already have a CA, you'll need to create a certificate for each component
 - common name: metron
 - extended key usage: serverAuth, clientAuth
 
+##### Syslog Drain Binder
+- common name: syslogdrainbinder
+- extended key usage: clientAuth
+
 ### Adding your TLS certificates
 
 #### Doppler
@@ -171,6 +176,14 @@ If you already have a CA, you'll need to create a certificate for each component
 | `loggregator.tls.metron.cert` | Yes      | Certificate used by metron to communicate over TLS |
 | `loggregator.tls.metron.key`  | Yes      | Key used by metron to communicate over TLS         |
 | `loggregator.tls.ca_cert`     | Yes      | Certificate Authority used to sign the certificate |
+
+#### Syslog Drain Binder
+
+| Property                                 | Required | Description                                                                                 |
+|------------------------------------------|----------|---------------------------------------------------------------------------------------------|
+| `loggregator.tls.syslogdrainbinder.cert` | Yes      | Certificate used by syslog drain binder to communicate with cloud controller via mutual TLS |
+| `loggregator.tls.syslogdrainbinder.key`  | Yes      | Key used by syslog drain binder to communicate with cloud controller via mutual TLS         |
+| `cc.mutual_tls.ca_cert`                  | Yes      | Certificate Authority used to sign the certificate                                          |
 
 #### Example Manifest
 
