@@ -98,8 +98,6 @@ If you already have a CA, you'll need to create a certificate for each component
 By default, metron, doppler, syslog_drain_binder, and loggregator_trafficcontroller all communicate with etcd over
 http.  To enable TLS mutual auth to etcd, you'll need to generate certificates and update your manifest
 
-**NOTE: Communicating with etcd over TLS is currently experimental, and will have an impact on other components within CloudFoundry. Enable it at your own discretion. The properties discussed below as well as their behavior might change in the future.**
-
 #### etcd
 
 Refer to [etcd-release's guide on Encrypting Traffic](https://github.com/cloudfoundry-incubator/etcd-release#encryption) for etcd's properties.
