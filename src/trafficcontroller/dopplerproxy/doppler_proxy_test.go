@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
@@ -294,6 +295,63 @@ var _ = Describe("ServeHTTP()", func() {
 
 		It("returns the requested recent logs", func() {
 			req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs", nil)
+			req.Header.Add("Authorization", "token")
+			recentLogResp := [][]byte{
+				[]byte("log1"),
+				[]byte("log2"),
+				[]byte("log3"),
+			}
+			mockGrpcConnector.RecentLogsOutput.Ret0 <- recentLogResp
+
+			proxy.ServeHTTP(recorder, req)
+
+			boundaryRegexp := regexp.MustCompile("boundary=(.*)")
+			matches := boundaryRegexp.FindStringSubmatch(recorder.Header().Get("Content-Type"))
+			Expect(matches).To(HaveLen(2))
+			Expect(matches[1]).NotTo(BeEmpty())
+			reader := multipart.NewReader(recorder.Body, matches[1])
+
+			for _, payload := range recentLogResp {
+				part, err := reader.NextPart()
+				Expect(err).ToNot(HaveOccurred())
+
+				partBytes, err := ioutil.ReadAll(part)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(partBytes).To(Equal(payload))
+			}
+		})
+
+		It("returns the requested recent logs with limit", func() {
+			req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs?limit=2", nil)
+			req.Header.Add("Authorization", "token")
+			recentLogResp := [][]byte{
+				[]byte("log1"),
+				[]byte("log2"),
+				[]byte("log3"),
+			}
+			mockGrpcConnector.RecentLogsOutput.Ret0 <- recentLogResp
+
+			proxy.ServeHTTP(recorder, req)
+
+			boundaryRegexp := regexp.MustCompile("boundary=(.*)")
+			matches := boundaryRegexp.FindStringSubmatch(recorder.Header().Get("Content-Type"))
+			Expect(matches).To(HaveLen(2))
+			Expect(matches[1]).NotTo(BeEmpty())
+			reader := multipart.NewReader(recorder.Body, matches[1])
+
+			var count int
+			for {
+				_, err := reader.NextPart()
+				if err == io.EOF {
+					break
+				}
+				count++
+			}
+			Expect(count).To(Equal(2))
+		})
+
+		It("ignores limit if it is negative", func() {
+			req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs?limit=-2", nil)
 			req.Header.Add("Authorization", "token")
 			recentLogResp := [][]byte{
 				[]byte("log1"),

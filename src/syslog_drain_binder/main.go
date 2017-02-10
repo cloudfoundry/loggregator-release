@@ -105,6 +105,7 @@ func main() {
 				politician.Vacate()
 				continue
 			}
+			drainBindings = Filter(drainBindings)
 
 			metrics.IncrementCounter("pollCount")
 

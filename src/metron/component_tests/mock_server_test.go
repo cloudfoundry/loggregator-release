@@ -27,7 +27,7 @@ func NewServer() (*Server, error) {
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
 		testservers.DopplerCertPath(),
 		testservers.DopplerKeyPath(),
-		testservers.CAFilePath(),
+		testservers.CACertPath(),
 		"",
 	)
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"plumbing"
+	"strconv"
 	"sync/atomic"
 	"trafficcontroller/authorization"
 	"trafficcontroller/doppler_endpoint"
@@ -167,6 +168,10 @@ func (p *Proxy) serveAppLogs(requestPath, appID string, writer http.ResponseWrit
 			log.Printf("recentlogs request encountered an error: %s", err)
 			return
 		}
+		limit, ok := limitFrom(request)
+		if ok && len(resp) > limit {
+			resp = resp[:limit]
+		}
 		p.serveMultiPartResponse(writer, resp)
 		return
 	case "containermetrics":
@@ -193,6 +198,19 @@ func (p *Proxy) serveAppLogs(requestPath, appID string, writer http.ResponseWrit
 		p.serveWS(requestPath, appID, writer, request, client.Recv)
 		return
 	}
+}
+
+func limitFrom(req *http.Request) (int, bool) {
+	query := req.URL.Query()
+	values, ok := query["limit"]
+	if !ok {
+		return 0, false
+	}
+	value, err := strconv.Atoi(values[0])
+	if err != nil || value < 0 {
+		return 0, false
+	}
+	return value, true
 }
 
 func (p *Proxy) serveWS(endpointType, streamID string, w http.ResponseWriter, r *http.Request, recv func() ([]byte, error)) {

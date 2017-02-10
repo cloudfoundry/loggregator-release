@@ -35,7 +35,7 @@ func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int)
 			Port:     uint16(dopplerGRPCPort),
 			CertFile: DopplerCertPath(),
 			KeyFile:  DopplerKeyPath(),
-			CAFile:   CAFilePath(),
+			CAFile:   CACertPath(),
 		},
 		PPROFPort: uint32(pprofPort),
 
@@ -52,7 +52,7 @@ func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int)
 			Port:     uint32(dopplerTLSPort),
 			CertFile: DopplerCertPath(),
 			KeyFile:  DopplerKeyPath(),
-			CAFile:   CAFilePath(),
+			CAFile:   CACertPath(),
 		},
 
 		MetricBatchIntervalMilliseconds: 10,

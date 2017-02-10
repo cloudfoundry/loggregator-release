@@ -35,7 +35,7 @@ func BuildMetronConfig(dopplerURI string, dopplerGRPCPort, dopplerUDPPort int) a
 			Port:     uint16(metronGRPCPort),
 			CertFile: MetronCertPath(),
 			KeyFile:  MetronKeyPath(),
-			CAFile:   CAFilePath(),
+			CAFile:   CACertPath(),
 		},
 
 		MetricBatchIntervalMilliseconds:  10,
