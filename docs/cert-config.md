@@ -2,7 +2,8 @@
 ### Generating TLS Certificates
 
 To generate the Loggregator TLS certs and keys, run
-`scripts/generate-loggregator-certs`.
+scripts/generate-loggregator-certs <diego-bbs-ca.crt> <diego-bbs-ca.key>. The
+diego BBS CA cert and key are typically generated separately from this script.
 
 #### Using bosh 2.0
 

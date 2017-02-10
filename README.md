@@ -4,7 +4,7 @@ Loggregator is a [BOSH](http://bosh.io/) release deployed as a part of [cf-relea
 
 The [Loggregator Design Notes](docs/loggregator-design.md) presents an overview of Loggregator components and architecture.
 
-* [Security Configurations](#security-configurations)
+* [Generating TLS Certificates](#generating-tls-certificates)
 * [Streaming Application Logs](#streaming-application-logs)
   * [Using the CF CLI](#using-the-cf-cli)
   * [Forwarding to a Log Drain](#forwarding-to-a-log-drain)
@@ -25,7 +25,7 @@ The [Loggregator Design Notes](docs/loggregator-design.md) presents an overview 
 
 
 
-## Security Configurations
+## Generating TLS Certificates
 In order to secure transport of logs throughout the system, Loggregator needs several certificates to be generated for each of the components. You start this process by running the `scripts/generate-certs`, and then configure the corresponding certificates for each of the components you are deploying. For more details see our [Certificate Configuration README](docs/cert-config.md)
 
 ## Streaming Application Logs
