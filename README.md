@@ -1,6 +1,6 @@
 # Cloud Native Logging [![slack.cloudfoundry.org](https://slack.cloudfoundry.org/badge.svg)](https://cloudfoundry.slack.com/archives/loggregator)
 
-Loggregator is a [BOSH](http://bosh.io/) release deployed as a part of [cf-release](https://github.com/cloudfoundry/cf-release). Loggregator provides a highly-available (HA) and secure stream of logs and metrics for all applications and components on Cloud Foundry. It does so while not disrupting the behavior of the the applications and components on the platform (i.e "backpressure").
+Loggregator is a [BOSH](http://bosh.io/) release deployed as a part of [cf-release](https://github.com/cloudfoundry/cf-release). Loggregator provides a highly-available (HA) and secure stream of logs and metrics for all applications and components on Cloud Foundry. It does so while not disrupting the behavior of the the applications and components on the platform (i.e. "backpressure").
 
 The [Loggregator Design Notes](docs/loggregator-design.md) presents an overview of Loggregator components and architecture.
 
@@ -75,7 +75,7 @@ The Bosh Health Monitor Forwarder allows operators to capture health metrics fro
 Loggregator provides a set of tools written in golang for testing the performance and efficacy of your loggregator installation. These tools emit logs and metrics in a controlled fashion. For more information see the [Loggregator tools README](docs/loggregator-tools.md).
 
 ### Health Nozzle
-The Loggregator Team is currently proposing supporting a nozzle which aggregates health metrics across various Loggregator releases to monitor, ingress, egress, and loss within the Loggregator system. See the [Health Nozzle Feature Proposal](https://docs.google.com/document/d/1rqlSDssaNk7B9TUmHhjUsn1-FeUNX8odslc-T_3ixck/edit) for more detials.
+The Loggregator Team is currently proposing supporting a nozzle which aggregates health metrics across various Loggregator releases to monitor ingress, egress, and loss within the Loggregator system. See the [Health Nozzle Feature Proposal](https://docs.google.com/document/d/1rqlSDssaNk7B9TUmHhjUsn1-FeUNX8odslc-T_3ixck/edit) for more detials.
 
 ## More Resources and Documentation
 ### Roadmap
