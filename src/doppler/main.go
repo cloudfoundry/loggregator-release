@@ -69,6 +69,12 @@ func main() {
 	//------------------------------
 	// Monitoring
 	//------------------------------
+	log.Printf("Startup: Setting up the doppler server")
+	err = dropsonde.Initialize(conf.MetronConfig.UDPAddress, dopplerOrigin)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	setupMetricsEmitter(conf)
 	monitorInterval := time.Duration(conf.MonitorIntervalSeconds) * time.Second
 	openFileMonitor := monitor.NewLinuxFD(monitorInterval)
@@ -92,12 +98,6 @@ func main() {
 	//------------------------------
 	// Ingress
 	//------------------------------
-
-	log.Printf("Startup: Setting up the doppler server")
-	err = dropsonde.Initialize(conf.MetronConfig.UDPAddress, dopplerOrigin)
-	if err != nil {
-		log.Fatal(err)
-	}
 	storeAdapter := connectToEtcd(conf)
 
 	errChan := make(chan error)
