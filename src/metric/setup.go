@@ -26,12 +26,7 @@ type config struct {
 	dialOpts      []grpc.DialOption
 	sourceUUID    string
 	batchInterval time.Duration
-
-	prefix     string
-	origin     string
-	deployment string
-	job        string
-	index      string
+	tags          map[string]string
 }
 
 type SetOpts func(c *config)
@@ -62,21 +57,21 @@ func WithBatchInterval(interval time.Duration) func(c *config) {
 
 func WithPrefix(prefix string) func(c *config) {
 	return func(c *config) {
-		c.prefix = prefix
+		c.tags["prefix"] = prefix
 	}
 }
 
 func WithOrigin(name string) func(c *config) {
 	return func(c *config) {
-		c.origin = name
+		c.tags["origin"] = name
 	}
 }
 
 func WithDeploymentMeta(deployment, job, index string) func(c *config) {
 	return func(c *config) {
-		c.deployment = deployment
-		c.job = job
-		c.index = index
+		c.tags["deployment"] = deployment
+		c.tags["job"] = job
+		c.tags["index"] = index
 	}
 }
 
@@ -88,7 +83,7 @@ func Setup(opts ...SetOpts) {
 		consumerAddr:  "localhost:3458",
 		dialOpts:      []grpc.DialOption{grpc.WithInsecure()},
 		batchInterval: 10 * time.Second,
-		prefix:        "loggregator",
+		tags:          map[string]string{"prefix": "loggregator"},
 	}
 
 	for _, opt := range opts {

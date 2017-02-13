@@ -37,7 +37,7 @@ func IncCounter(name string, options ...IncrementOpt) {
 		Timestamp:  time.Now().UnixNano(),
 		Message: &v2.Envelope_Counter{
 			Counter: &v2.Counter{
-				Name: fmt.Sprintf("%s.%s", conf.prefix, name),
+				Name: fmt.Sprintf("%s.%s", conf.tags["prefix"], name),
 				Value: &v2.Counter_Delta{
 					Delta: incConf.delta,
 				},
@@ -46,22 +46,22 @@ func IncCounter(name string, options ...IncrementOpt) {
 		Tags: map[string]*v2.Value{
 			"origin": {
 				Data: &v2.Value_Text{
-					Text: conf.origin,
+					Text: conf.tags["origin"],
 				},
 			},
 			"deployment": {
 				Data: &v2.Value_Text{
-					Text: conf.deployment,
+					Text: conf.tags["deployment"],
 				},
 			},
 			"job": {
 				Data: &v2.Value_Text{
-					Text: conf.job,
+					Text: conf.tags["job"],
 				},
 			},
 			"index": {
 				Data: &v2.Value_Text{
-					Text: conf.index,
+					Text: conf.tags["index"],
 				},
 			},
 		},
