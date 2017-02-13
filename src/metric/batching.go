@@ -49,6 +49,21 @@ func IncCounter(name string, options ...IncrementOpt) {
 					Text: conf.origin,
 				},
 			},
+			"deployment": {
+				Data: &v2.Value_Text{
+					Text: conf.deployment,
+				},
+			},
+			"job": {
+				Data: &v2.Value_Text{
+					Text: conf.job,
+				},
+			},
+			"index": {
+				Data: &v2.Value_Text{
+					Text: conf.index,
+				},
+			},
 		},
 	}
 

@@ -31,6 +31,7 @@ var _ = Describe("Metric", func() {
 			metric.WithBatchInterval(250*time.Millisecond),
 			metric.WithPrefix("loggregator"),
 			metric.WithOrigin("metron"),
+			metric.WithDeploymentMeta("some-deployment", "some-job", "some-index"),
 		)
 
 		// Seed the data
@@ -106,6 +107,26 @@ var _ = Describe("Metric", func() {
 
 				Eventually(f).Should(BeTrue())
 				Expect(e.GetCounter().GetDelta()).To(Equal(uint64(42)))
+			})
+
+			It("tags with meta deployment tags", func() {
+				metric.IncCounter(randName, metric.WithIncrement(42))
+				var e *v2.Envelope
+				f := func() bool {
+					Eventually(receiver).Should(Receive(&e))
+
+					counter := e.GetCounter()
+					if counter == nil {
+						return false
+					}
+
+					return counter.Name == "loggregator."+randName
+				}
+
+				Eventually(f).Should(BeTrue())
+				Expect(e.Tags["deployment"].GetText()).To(Equal("some-deployment"))
+				Expect(e.Tags["job"].GetText()).To(Equal("some-job"))
+				Expect(e.Tags["index"].GetText()).To(Equal("some-index"))
 			})
 		})
 	})

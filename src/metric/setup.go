@@ -26,8 +26,12 @@ type config struct {
 	dialOpts      []grpc.DialOption
 	sourceUUID    string
 	batchInterval time.Duration
-	prefix        string
-	origin        string
+
+	prefix     string
+	origin     string
+	deployment string
+	job        string
+	index      string
 }
 
 type SetOpts func(c *config)
@@ -65,6 +69,14 @@ func WithPrefix(prefix string) func(c *config) {
 func WithOrigin(name string) func(c *config) {
 	return func(c *config) {
 		c.origin = name
+	}
+}
+
+func WithDeploymentMeta(deployment, job, index string) func(c *config) {
+	return func(c *config) {
+		c.deployment = deployment
+		c.job = job
+		c.index = index
 	}
 }
 

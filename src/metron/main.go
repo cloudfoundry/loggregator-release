@@ -56,6 +56,7 @@ func main() {
 		metric.WithPrefix("loggregator"),
 		metric.WithOrigin("metron"),
 		metric.WithAddr(fmt.Sprintf("localhost:%d", config.GRPC.Port)),
+		metric.WithDeploymentMeta(config.Deployment, config.Job, config.Index),
 	)
 
 	// We start the profiler last so that we can definitively say that we're
