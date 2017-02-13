@@ -10,15 +10,22 @@ fi
 
 set -x
 
+readlink() {
+  (
+    cd $(dirname $1)
+    echo $PWD/$(basename $1)
+  )
+}
+
 # Place keys and certificates here
-depot_path=$(readlink --canonicalize ./loggregator-certs)
+depot_path=$(readlink ./loggregator-certs)
 mkdir -p ${depot_path}
 
 if [ "$1" = "no-bbs-ca" ]; then
     bbs_ca_name="loggregator-ca"
 else
-    bbs_ca_cert_path=$(readlink --canonicalize ${1})
-    bbs_ca_key_path=$(readlink --canonicalize ${2})
+    bbs_ca_cert_path=$(readlink ${1})
+    bbs_ca_key_path=$(readlink ${2})
     bbs_ca_name=$(basename ${bbs_ca_cert_path} ".crt")
     ln -s ${bbs_ca_cert_path} ${depot_path}/
     ln -s ${bbs_ca_key_path} ${depot_path}/
