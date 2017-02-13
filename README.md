@@ -62,7 +62,7 @@ The Loggregator API is a replacement of the [Dropsonde Protocol](https://github.
 The Metron Agent listens on both UDP and gRPC endpoints for multiple versions of Loggregator API which it forwards onto the Firehose. To include Metron in your component or deployment see the [Setting up up Metron README](src/metron/README.md).
 
 ### Statsd-injector
-The statsd-injector is a companion component to Metron and allows use of the statsd metric aggregator format. For more see the [statsd-injector README](https://github.com/cloudfoundry/statsd-injector/blob/master/README.md).
+The statsd-injector is a companion component to Metron and allows use of the [statsd metric aggregator format](https://github.com/etsy/statsd). For more see the [statsd-injector README](https://github.com/cloudfoundry/statsd-injector/blob/master/README.md).
 
 ### Syslog Release
 For some components (such as UAA) it makes sense to route logs separate from the Firehose. The syslog release using rsyslog to accomplish this. For more information see the [syslog-release README](https://github.com/cloudfoundry/syslog-release/blob/master/README.md) (note this release is maintianed by the bosh team).
