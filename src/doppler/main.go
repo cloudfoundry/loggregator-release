@@ -94,7 +94,10 @@ func main() {
 	//------------------------------
 
 	log.Printf("Startup: Setting up the doppler server")
-	dropsonde.Initialize(conf.MetronConfig.UDPAddress, dopplerOrigin)
+	err = dropsonde.Initialize(conf.MetronConfig.UDPAddress, dopplerOrigin)
+	if err != nil {
+		log.Fatal(err)
+	}
 	storeAdapter := connectToEtcd(conf)
 
 	errChan := make(chan error)
@@ -139,7 +142,16 @@ func main() {
 		batcher,
 		tcpTimeout,
 	)
-	grpcListener, err := listeners.NewGRPCListener(grpcRouter, sinkManager, conf.GRPC, envelopeBuffer, batcher)
+	if err != nil {
+		log.Panicf("Failed to create tcpListener: %s", err)
+	}
+	grpcListener, err := listeners.NewGRPCListener(
+		grpcRouter,
+		sinkManager,
+		conf.GRPC,
+		envelopeBuffer,
+		batcher,
+	)
 	if err != nil {
 		log.Panicf("Failed to create grpcListener: %s", err)
 	}
@@ -360,8 +372,10 @@ func stop(
 	appStoreWatcher.Stop()
 	wg.Wait()
 
-	storeAdapter.Disconnect()
-
+	err := storeAdapter.Disconnect()
+	if err != nil {
+		log.Printf("error when disconnecting from store adapter: %s", err)
+	}
 	close(errChan)
 
 	uptimeMonitor.Stop()
