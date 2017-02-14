@@ -36,12 +36,12 @@ var _ = Describe("ClientPool", func() {
 			})
 
 			It("returns an error", func() {
-				err := pool.Write(&plumbing.Envelope{SourceUuid: "some-uuid"})
+				err := pool.Write(&plumbing.Envelope{SourceId: "some-uuid"})
 				Expect(err).ToNot(Succeed())
 			})
 
 			It("tries all conns before erroring", func() {
-				pool.Write(&plumbing.Envelope{SourceUuid: "some-uuid"})
+				pool.Write(&plumbing.Envelope{SourceId: "some-uuid"})
 
 				for len(mockConns) > 0 {
 					i, _ := chooseData(mockConns)
@@ -59,12 +59,12 @@ var _ = Describe("ClientPool", func() {
 			})
 
 			It("returns a nil error", func() {
-				err := pool.Write(&plumbing.Envelope{SourceUuid: "some-uuid"})
+				err := pool.Write(&plumbing.Envelope{SourceId: "some-uuid"})
 				Expect(err).To(Succeed())
 			})
 
 			It("uses the given data once", func() {
-				data := &plumbing.Envelope{SourceUuid: "some-uuid"}
+				data := &plumbing.Envelope{SourceId: "some-uuid"}
 				pool.Write(data)
 
 				idx, msg := chooseData(mockConns)

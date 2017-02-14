@@ -18,7 +18,7 @@ go get github.com/golang/protobuf/{proto,protoc-gen-go}
 tmp_dir=$(mktemp -d)
 mkdir -p $tmp_dir/loggregator
 
-cp $GOPATH/src/github.com/cloudfoundry/loggregator-api/*proto $tmp_dir/loggregator
+cp $GOPATH/src/github.com/cloudfoundry/loggregator-api/v2/*proto $tmp_dir/loggregator
 cp *.proto $tmp_dir/loggregator
 
 protoc $tmp_dir/loggregator/*.proto --go_out=plugins=grpc:. --proto_path=$tmp_dir/loggregator

@@ -1,11 +1,11 @@
 syntax = "proto3";
 
-package loggregator;
+package loggregator.v2;
 
 import "envelope.proto";
 
 service DopplerIngress {
-    rpc Sender(stream loggregator.Envelope) returns (SenderResponse) {}
+    rpc Sender(stream loggregator.v2.Envelope) returns (SenderResponse) {}
 }
 
 message SenderResponse {}

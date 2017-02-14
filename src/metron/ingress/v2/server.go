@@ -30,7 +30,7 @@ func (s *Server) Start() {
 	}
 
 	grpcServer := grpc.NewServer(s.opts...)
-	v2.RegisterMetronIngressServer(grpcServer, s.rx)
+	v2.RegisterIngressServer(grpcServer, s.rx)
 
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)

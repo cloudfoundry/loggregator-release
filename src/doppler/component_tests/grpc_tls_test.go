@@ -211,8 +211,8 @@ func buildV1ContainerMetric() (*events.Envelope, []byte) {
 
 func buildV2ContainerMetric() (*v2.Envelope, []byte) {
 	envelope := &v2.Envelope{
-		SourceUuid: "some-app",
-		Timestamp:  time.Now().UnixNano(),
+		SourceId:  "some-app",
+		Timestamp: time.Now().UnixNano(),
 		Message: &v2.Envelope_Gauge{
 			Gauge: &v2.Gauge{
 				Metrics: map[string]*v2.GaugeValue{
@@ -234,7 +234,7 @@ func buildV2ContainerMetric() (*v2.Envelope, []byte) {
 	return envelope, data
 }
 
-func startMetronServer() (int, *mockMetronIngressServer) {
+func startMetronServer() (int, *mockIngressServer) {
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		panic(err)
@@ -249,20 +249,20 @@ func startMetronServer() (int, *mockMetronIngressServer) {
 	Expect(err).ToNot(HaveOccurred())
 	transportCreds := credentials.NewTLS(tlsConfig)
 
-	mockMetronIngressServer := newMockMetronIngressServer()
+	mockIngressServer := newMockIngressServer()
 
 	s := grpc.NewServer(grpc.Creds(transportCreds))
-	v2.RegisterMetronIngressServer(s, mockMetronIngressServer)
+	v2.RegisterIngressServer(s, mockIngressServer)
 	go func() {
 		if err := s.Serve(lis); err != nil {
 			panic(err)
 		}
 	}()
 
-	return lis.Addr().(*net.TCPAddr).Port, mockMetronIngressServer
+	return lis.Addr().(*net.TCPAddr).Port, mockIngressServer
 }
 
-func rxToCh(rx v2.MetronIngress_SenderServer) <-chan *v2.Envelope {
+func rxToCh(rx v2.Ingress_SenderServer) <-chan *v2.Envelope {
 	c := make(chan *v2.Envelope, 100)
 	go func() {
 		for {
@@ -276,7 +276,7 @@ func rxToCh(rx v2.MetronIngress_SenderServer) <-chan *v2.Envelope {
 	return c
 }
 
-func fetchReceiver(mockConsumer *mockMetronIngressServer) (rx v2.MetronIngress_SenderServer) {
+func fetchReceiver(mockConsumer *mockIngressServer) (rx v2.Ingress_SenderServer) {
 	Eventually(mockConsumer.SenderInput.Arg0, 3).Should(Receive(&rx))
 	return rx
 }

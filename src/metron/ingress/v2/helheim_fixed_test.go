@@ -34,7 +34,7 @@ func (m *mockDataSetter) Set(e *v2.Envelope) {
 type mockSender struct {
 	SendAndCloseCalled chan bool
 	SendAndCloseInput  struct {
-		Arg0 chan *v2.MetronResponse
+		Arg0 chan *v2.IngressResponse
 	}
 	SendAndCloseOutput struct {
 		Ret0 chan error
@@ -78,7 +78,7 @@ type mockSender struct {
 func newMockSender() *mockSender {
 	m := &mockSender{}
 	m.SendAndCloseCalled = make(chan bool, 100)
-	m.SendAndCloseInput.Arg0 = make(chan *v2.MetronResponse, 100)
+	m.SendAndCloseInput.Arg0 = make(chan *v2.IngressResponse, 100)
 	m.SendAndCloseOutput.Ret0 = make(chan error, 100)
 	m.RecvCalled = make(chan bool, 100)
 	m.RecvOutput.Ret0 = make(chan *v2.Envelope, 100)
@@ -98,7 +98,7 @@ func newMockSender() *mockSender {
 	m.RecvMsgOutput.Ret0 = make(chan error, 100)
 	return m
 }
-func (m *mockSender) SendAndClose(arg0 *v2.MetronResponse) error {
+func (m *mockSender) SendAndClose(arg0 *v2.IngressResponse) error {
 	m.SendAndCloseCalled <- true
 	m.SendAndCloseInput.Arg0 <- arg0
 	return <-m.SendAndCloseOutput.Ret0

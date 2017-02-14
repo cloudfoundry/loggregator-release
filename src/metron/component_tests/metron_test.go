@@ -229,7 +229,7 @@ func HomeAddrToPort(addr net.Addr) int {
 	return port
 }
 
-func metronClient(conf api.Config) v2.MetronIngressClient {
+func metronClient(conf api.Config) v2.IngressClient {
 	addr := fmt.Sprintf("127.0.0.1:%d", conf.GRPC.Port)
 
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
@@ -246,5 +246,5 @@ func metronClient(conf api.Config) v2.MetronIngressClient {
 	if err != nil {
 		panic(err)
 	}
-	return v2.NewMetronIngressClient(conn)
+	return v2.NewIngressClient(conn)
 }

@@ -52,7 +52,7 @@ func convertTimer(v1e *events.Envelope, v2e *v2.Envelope) {
 		StartTimestamp: proto.Int64(timer.Start),
 		StopTimestamp:  proto.Int64(timer.Stop),
 		RequestId:      convertUUID(parseUUID(v2e.Tags["request_id"].GetText())),
-		ApplicationId:  convertUUID(parseUUID(v2e.SourceUuid)),
+		ApplicationId:  convertUUID(parseUUID(v2e.SourceId)),
 		PeerType:       &peerType,
 		Method:         &method,
 		Uri:            proto.String(v2e.Tags["uri"].GetText()),
@@ -73,7 +73,7 @@ func convertLog(v1e *events.Envelope, v2e *v2.Envelope) {
 		Message:        logMessage.Payload,
 		MessageType:    messageType(logMessage),
 		Timestamp:      proto.Int64(v2e.Timestamp),
-		AppId:          proto.String(v2e.SourceUuid),
+		AppId:          proto.String(v2e.SourceId),
 		SourceType:     proto.String(v2e.Tags["source_type"].GetText()),
 		SourceInstance: proto.String(v2e.Tags["source_instance"].GetText()),
 	}
@@ -148,7 +148,7 @@ func tryConvertContainerMetric(v1e *events.Envelope, v2e *v2.Envelope) bool {
 
 	v1e.EventType = events.Envelope_ContainerMetric.Enum()
 	v1e.ContainerMetric = &events.ContainerMetric{
-		ApplicationId:    proto.String(v2e.SourceUuid),
+		ApplicationId:    proto.String(v2e.SourceId),
 		InstanceIndex:    proto.Int32(int32(gaugeEvent.Metrics["instance_index"].Value)),
 		CpuPercentage:    proto.Float64(gaugeEvent.Metrics["cpu"].Value),
 		MemoryBytes:      proto.Uint64(uint64(gaugeEvent.Metrics["memory"].Value)),

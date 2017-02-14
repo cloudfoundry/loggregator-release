@@ -16,7 +16,7 @@ var _ = Describe("ContainerMetric", func() {
 	Context("given a v3 envelope", func() {
 		It("converts to a v2 protobuf", func() {
 			envelope := &v2.Envelope{
-				SourceUuid: "some-id",
+				SourceId: "some-id",
 				Message: &v2.Envelope_Gauge{
 					Gauge: &v2.Gauge{
 						Metrics: map[string]*v2.GaugeValue{

@@ -38,14 +38,14 @@ var _ = Describe("ConnManager", func() {
 			})
 
 			It("sends the message down the connection", func() {
-				e := &plumbing.Envelope{SourceUuid: "some-uuid"}
+				e := &plumbing.Envelope{SourceId: "some-uuid"}
 				f := func() error {
 					return connManager.Write(e)
 				}
 				Eventually(f).Should(Succeed())
 
 				Eventually(mockSenderClient.SendInput.Arg0).Should(Receive(Equal(
-					&plumbing.Envelope{SourceUuid: "some-uuid"},
+					&plumbing.Envelope{SourceId: "some-uuid"},
 				)))
 			})
 
@@ -58,7 +58,7 @@ var _ = Describe("ConnManager", func() {
 				})
 
 				It("recycles the connections after max writes", func() {
-					e := &plumbing.Envelope{SourceUuid: "some-uuid"}
+					e := &plumbing.Envelope{SourceId: "some-uuid"}
 					f := func() int {
 						connManager.Write(e)
 						return len(mockConnector.ConnectCalled)
@@ -74,7 +74,7 @@ var _ = Describe("ConnManager", func() {
 			BeforeEach(func() {
 				mockSenderClient.SendOutput.Ret0 <- nil
 				f := func() error {
-					return connManager.Write(&plumbing.Envelope{SourceUuid: "some-uuid"})
+					return connManager.Write(&plumbing.Envelope{SourceId: "some-uuid"})
 				}
 				Eventually(f).Should(Succeed())
 
@@ -83,7 +83,7 @@ var _ = Describe("ConnManager", func() {
 			})
 
 			It("returns an error and closes the closer", func() {
-				err := connManager.Write(&plumbing.Envelope{SourceUuid: "some-uuid"})
+				err := connManager.Write(&plumbing.Envelope{SourceId: "some-uuid"})
 				Expect(err).To(HaveOccurred())
 				Expect(mockCloser.CloseCalled).To(HaveLen(1))
 			})
@@ -99,7 +99,7 @@ var _ = Describe("ConnManager", func() {
 
 		It("always returns an error", func() {
 			f := func() error {
-				return connManager.Write(&plumbing.Envelope{SourceUuid: "some-uuid"})
+				return connManager.Write(&plumbing.Envelope{SourceId: "some-uuid"})
 			}
 			Consistently(f).Should(HaveOccurred())
 		})

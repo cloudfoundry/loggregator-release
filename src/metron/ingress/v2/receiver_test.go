@@ -27,7 +27,7 @@ var _ = Describe("Receiver", func() {
 
 	It("calls set on the data setter with the data", func() {
 		e := &v2.Envelope{
-			SourceUuid: "some-id",
+			SourceId: "some-id",
 		}
 		mockSender.RecvOutput.Ret0 <- e
 		mockSender.RecvOutput.Ret1 <- nil

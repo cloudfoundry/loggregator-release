@@ -6,6 +6,6 @@ import (
 
 //go:generate hel
 
-type MetronIngressServer interface {
-	v2.MetronIngressServer
+type IngressServer interface {
+	v2.IngressServer
 }

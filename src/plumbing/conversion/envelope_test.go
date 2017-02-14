@@ -16,8 +16,8 @@ var _ = Describe("Envelope", func() {
 	Context("for v1 envelope specific properties", func() {
 		It("sets them", func() {
 			envelope := &v2.Envelope{
-				Timestamp:  99,
-				SourceUuid: "uuid",
+				Timestamp: 99,
+				SourceId:  "uuid",
 				Tags: map[string]*v2.Value{
 					"origin":         {&v2.Value_Text{"origin"}},
 					"deployment":     {&v2.Value_Text{"deployment"}},

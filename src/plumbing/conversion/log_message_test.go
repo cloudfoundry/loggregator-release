@@ -18,8 +18,8 @@ var _ = Describe("LogMessage", func() {
 		Context("for stderr", func() {
 			It("converts it to a v2 protobuf", func() {
 				envelope := &v2.Envelope{
-					Timestamp:  99,
-					SourceUuid: "uuid",
+					Timestamp: 99,
+					SourceId:  "uuid",
 					Tags: map[string]*v2.Value{
 						"source_type":     {&v2.Value_Text{"value"}},
 						"source_instance": {&v2.Value_Text{"value"}},
@@ -50,8 +50,8 @@ var _ = Describe("LogMessage", func() {
 		Context("for stdout", func() {
 			It("converts it to a v2 protobuf", func() {
 				envelope := &v2.Envelope{
-					Timestamp:  99,
-					SourceUuid: "uuid",
+					Timestamp: 99,
+					SourceId:  "uuid",
 					Tags: map[string]*v2.Value{
 						"source_type":     {&v2.Value_Text{"value"}},
 						"source_instance": {&v2.Value_Text{"value"}},
@@ -83,8 +83,8 @@ var _ = Describe("LogMessage", func() {
 		Context("for v1 envelope specific properties", func() {
 			It("sets them", func() {
 				envelope := &v2.Envelope{
-					Timestamp:  99,
-					SourceUuid: "uuid",
+					Timestamp: 99,
+					SourceId:  "uuid",
 					Tags: map[string]*v2.Value{
 						"origin":         {&v2.Value_Text{"origin"}},
 						"deployment":     {&v2.Value_Text{"deployment"}},

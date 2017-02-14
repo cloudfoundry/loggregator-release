@@ -15,8 +15,8 @@ import (
 var (
 	mu sync.Mutex
 
-	client      v2.MetronIngressClient
-	sender      v2.MetronIngress_SenderClient
+	client      v2.IngressClient
+	sender      v2.Ingress_SenderClient
 	conf        *config
 	batchBuffer *diodes.ManyToOneEnvelopeV2
 )
@@ -100,7 +100,7 @@ func Setup(opts ...SetOpts) {
 		return
 	}
 
-	client = v2.NewMetronIngressClient(conn)
+	client = v2.NewIngressClient(conn)
 	sender, err = client.Sender(context.Background())
 	if err != nil {
 		log.Printf("Failed to get sender from metric consumer: %s", err)

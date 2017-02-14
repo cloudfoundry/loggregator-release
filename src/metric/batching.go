@@ -33,8 +33,8 @@ func IncCounter(name string, options ...IncrementOpt) {
 	}
 
 	e := &v2.Envelope{
-		SourceUuid: conf.sourceUUID,
-		Timestamp:  time.Now().UnixNano(),
+		SourceId:  conf.sourceUUID,
+		Timestamp: time.Now().UnixNano(),
 		Message: &v2.Envelope_Counter{
 			Counter: &v2.Counter{
 				Name: fmt.Sprintf("%s.%s", conf.tags["prefix"], name),

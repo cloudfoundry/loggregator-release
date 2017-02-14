@@ -11,7 +11,7 @@ import (
 var _ = Describe("Transponder", func() {
 
 	It("reads from the buffer to the writer", func() {
-		envelope := &v2.Envelope{SourceUuid: "uuid"}
+		envelope := &v2.Envelope{SourceId: "uuid"}
 		nexter := newMockNexter()
 		nexter.NextOutput.Ret0 <- envelope
 		writer := newMockWriter()

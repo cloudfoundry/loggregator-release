@@ -18,7 +18,7 @@ import (
 var _ = Describe("Metric", func() {
 
 	var (
-		mockConsumer *mockMetronIngressServer
+		mockConsumer *mockIngressServer
 		receiver     <-chan *v2.Envelope
 	)
 
@@ -82,7 +82,7 @@ var _ = Describe("Metric", func() {
 
 				Eventually(f).Should(BeTrue())
 				Expect(e.Timestamp).ToNot(Equal(int64(0)))
-				Expect(e.SourceUuid).To(Equal("some-uuid"))
+				Expect(e.SourceId).To(Equal("some-uuid"))
 				Expect(e.GetCounter().GetDelta()).To(Equal(uint64(5)))
 
 				value, ok := e.GetTags()["origin"]
@@ -132,26 +132,26 @@ var _ = Describe("Metric", func() {
 	})
 })
 
-func startConsumer() (string, *mockMetronIngressServer) {
+func startConsumer() (string, *mockIngressServer) {
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		panic(err)
 	}
 
-	mockMetronIngressServer := newMockMetronIngressServer()
+	mockIngressServer := newMockIngressServer()
 
 	s := grpc.NewServer()
-	v2.RegisterMetronIngressServer(s, mockMetronIngressServer)
+	v2.RegisterIngressServer(s, mockIngressServer)
 	go func() {
 		if err := s.Serve(lis); err != nil {
 			panic(err)
 		}
 	}()
 
-	return lis.Addr().String(), mockMetronIngressServer
+	return lis.Addr().String(), mockIngressServer
 }
 
-func rxToCh(rx v2.MetronIngress_SenderServer) <-chan *v2.Envelope {
+func rxToCh(rx v2.Ingress_SenderServer) <-chan *v2.Envelope {
 	c := make(chan *v2.Envelope, 100)
 	go func() {
 		for {
@@ -165,7 +165,7 @@ func rxToCh(rx v2.MetronIngress_SenderServer) <-chan *v2.Envelope {
 	return c
 }
 
-func fetchReceiver(mockConsumer *mockMetronIngressServer) (rx v2.MetronIngress_SenderServer) {
+func fetchReceiver(mockConsumer *mockIngressServer) (rx v2.Ingress_SenderServer) {
 	Eventually(mockConsumer.SenderInput.Arg0, 3).Should(Receive(&rx))
 	return rx
 }

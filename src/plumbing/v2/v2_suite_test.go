@@ -1,4 +1,4 @@
-package loggregator_test
+package loggregator_v2_test
 
 import (
 	. "github.com/onsi/ginkgo"

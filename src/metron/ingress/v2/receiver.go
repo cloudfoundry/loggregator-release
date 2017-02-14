@@ -19,7 +19,7 @@ func NewReceiver(dataSetter DataSetter) *Receiver {
 	}
 }
 
-func (s *Receiver) Sender(sender v2.MetronIngress_SenderServer) error {
+func (s *Receiver) Sender(sender v2.Ingress_SenderServer) error {
 	for {
 		e, err := sender.Recv()
 		if err != nil {

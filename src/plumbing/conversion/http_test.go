@@ -23,7 +23,7 @@ var _ = Describe("Http", func() {
 	Context("given a v3 envelope", func() {
 		It("converts to a v2 protobuf", func() {
 			envelope := &v2.Envelope{
-				SourceUuid: "b3015d69-09cd-476d-aace-ad2d824d5ab7",
+				SourceId: "b3015d69-09cd-476d-aace-ad2d824d5ab7",
 				Message: &v2.Envelope_Timer{
 					Timer: &v2.Timer{
 						Name:  "http",
