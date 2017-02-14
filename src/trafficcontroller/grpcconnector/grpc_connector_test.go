@@ -38,15 +38,7 @@ var _ = Describe("GRPCConnector", func() {
 		mockDopplerServerB = newMockDopplerServer()
 		mockFinder = newMockFinder()
 
-		tlsConfig, err := plumbing.NewMutualTLSConfig(
-			"./fixtures/client.crt",
-			"./fixtures/client.key",
-			"./fixtures/loggregator-ca.crt",
-			"doppler",
-		)
-		Expect(err).ToNot(HaveOccurred())
-
-		pool := grpcconnector.NewPool(2, tlsConfig)
+		pool := grpcconnector.NewPool(2, grpc.WithInsecure())
 
 		mockBatcher = newMockMetaMetricBatcher()
 		mockChainer = newMockBatchCounterChainer()

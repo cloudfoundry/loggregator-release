@@ -24,6 +24,8 @@ import (
 	"trafficcontroller/middleware"
 	"trafficcontroller/uaa_client"
 
+	"google.golang.org/grpc"
+
 	"code.cloudfoundry.org/localip"
 	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/dropsonde"
@@ -113,16 +115,17 @@ func main() {
 		accessMiddleware = middleware.Access(accessLogger, ipAddress, conf.OutgoingDropsondePort)
 	}
 
-	tlsConf, err := plumbing.NewMutualTLSConfig(
+	creds := plumbing.NewCredentials(
 		conf.GRPC.CertFile,
 		conf.GRPC.KeyFile,
 		conf.GRPC.CAFile,
 		"doppler",
 	)
-	if err != nil {
-		panic(fmt.Errorf("Unable to create gRPC TLS config: %s", err))
+	if creds == nil {
+		log.Fatalf("Unable to create setup gRPC TLS")
 	}
-	pool := grpcconnector.NewPool(20, tlsConf)
+
+	pool := grpcconnector.NewPool(20, grpc.WithTransportCredentials(creds))
 	grpcConnector := grpcconnector.New(1000, pool, finder, batcher)
 
 	dopplerHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, grpcConnector, "doppler."+conf.SystemDomain, 15*time.Second))

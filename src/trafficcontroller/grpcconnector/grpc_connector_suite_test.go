@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
 
 	. "github.com/onsi/ginkgo"
@@ -37,15 +36,7 @@ func startListener(addr string) net.Listener {
 
 func startGRPCServer(ds plumbing.DopplerServer, addr string) (net.Listener, *grpc.Server) {
 	lis := startListener(addr)
-	tlsConfig, err := plumbing.NewMutualTLSConfig(
-		"./fixtures/server.crt",
-		"./fixtures/server.key",
-		"./fixtures/loggregator-ca.crt",
-		"doppler",
-	)
-	Expect(err).ToNot(HaveOccurred())
-	transportCreds := credentials.NewTLS(tlsConfig)
-	s := grpc.NewServer(grpc.Creds(transportCreds))
+	s := grpc.NewServer()
 	plumbing.RegisterDopplerServer(s, ds)
 	go s.Serve(lis)
 
