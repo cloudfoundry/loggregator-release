@@ -1,0 +1,5 @@
+check process statsd-injector
+  with pidfile /var/vcap/sys/run/statsd-injector/statsd-injector.pid
+  start program "/var/vcap/jobs/statsd-injector/bin/statsd-injector-ctl start"
+  stop program "/var/vcap/jobs/statsd-injector/bin/statsd-injector-ctl stop"
+  group vcap

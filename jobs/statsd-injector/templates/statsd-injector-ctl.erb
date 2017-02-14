@@ -1,0 +1,43 @@
+#!/bin/bash -e
+
+RUN_DIR=/var/vcap/sys/run/statsd-injector
+LOG_DIR=/var/vcap/sys/log/statsd-injector
+PIDFILE=$RUN_DIR/statsd-injector.pid
+
+mkdir -p $RUN_DIR
+mkdir -p $LOG_DIR
+
+source /var/vcap/packages/loggregator_common/pid_utils.sh
+source /var/vcap/packages/loggregator_common/syslog_utils.sh
+
+tee_output_to_sys_log "$LOG_DIR"
+
+case $1 in
+
+  start)
+    pid_guard $PIDFILE "Statsd Injector"
+
+    exec >>$LOG_DIR/statsd_injector.stdout.log \
+        2>>$LOG_DIR/statsd_injector.stderr.log
+
+    chown -R vcap:vcap $LOG_DIR
+
+    chpst -u vcap:vcap /var/vcap/packages/statsd-injector/statsd-injector \
+        -statsdPort=<%= p("statsd_injector.statsd_port") %> \
+        -metronPort=<%= p("statsd_injector.metron_port") %> &
+
+    echo $! > $PIDFILE
+
+    ;;
+
+  stop)
+    kill_and_wait $PIDFILE 40
+
+    ;;
+
+  *)
+    echo "Usage: statsd-injector-ctl {start|stop}"
+
+    ;;
+
+esac

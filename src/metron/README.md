@@ -10,7 +10,7 @@ Metron only listens to local network interfaces and all logs and metrics are imm
 
 ![Loggregator Diagram](../../docs/metron.png)
 
-Source agents emit the logging data through the system as [protocol-buffers](https://developers.google.com/protocol-buffers/) via the [Dropsonde Protocol](https://github.com/cloudfoundry/dropsonde-protocol).
+Source agents emit the logging data through the system as [protocol-buffers](https://developers.google.com/protocol-buffers/) via the [Dropsonde Protocol](https://github.com/cloudfoundry/dropsonde-protocol). Metrics can also be emitted using statsd. The statsd metrics are forwarded to Metron by the [statsd-injector](https://github.com/cloudfoundry/statsd-injector)
 
 ## Usage
 ```metron [--logFile <path to log file>] [--config <path to config file>]```

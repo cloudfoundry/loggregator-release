@@ -1,0 +1,9 @@
+set -e -x
+
+export GOROOT=$(readlink -nf /var/vcap/packages/golang1.7)
+export PATH=$GOROOT/bin:$PATH
+export GOPATH=$PWD/loggregator
+
+go install statsd-injector
+cp -a $PWD/loggregator/bin/statsd-injector ${BOSH_INSTALL_TARGET}
+
