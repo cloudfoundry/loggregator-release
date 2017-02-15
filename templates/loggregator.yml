@@ -41,13 +41,17 @@ instance_groups:
   jobs:
   - name: consul_agent
     release: consul
+    consumes:
+      consul: nil
+    provides:
+      consul: {as: consul_server}
     properties:
       consul:
         agent:
           mode: server
           domain: cf.internal
-          servers: &consul_servers
-            lan: [10.244.10.2]
+          servers:
+            lan: [ 10.244.10.2 ]
         require_ssl: true
         encrypt_keys:
         - "((consul_encrypt_key))"
@@ -106,23 +110,14 @@ instance_groups:
         machines: [etcd.service.cf.internal]
   - name: consul_agent
     release: consul
+    consumes:
+      consul: {from: consul_server}
     properties:
       consul:
         agent:
-          mode: client
-          domain: cf.internal
-          servers: *consul_servers
           services:
             etcd:
               name: etcd
-        require_ssl: true
-        encrypt_keys:
-        - "((consul_encrypt_key))"
-        agent_cert: "((consul_agent.certificate))"
-        agent_key: "((consul_agent.private_key))"
-        ca_cert: "((consul_agent.ca))"
-        server_cert: "((consul_server.certificate))"
-        server_key: "((consul_server.private_key))"
   - name: metron_agent
     release: loggregator
     properties: *metron_agent_properties
@@ -140,23 +135,14 @@ instance_groups:
   jobs:
   - name: consul_agent
     release: consul
+    consumes:
+      consul: {from: consul_server}
     properties:
       consul:
         agent:
-          mode: client
-          domain: cf.internal
-          servers: *consul_servers
           services:
             etcd:
               name: etcd
-        require_ssl: true
-        encrypt_keys:
-        - "((consul_encrypt_key))"
-        agent_cert: "((consul_agent.certificate))"
-        agent_key: "((consul_agent.private_key))"
-        ca_cert: "((consul_agent.ca))"
-        server_cert: "((consul_server.certificate))"
-        server_key: "((consul_server.private_key))"
   - name: etcd
     release: etcd
     properties:
@@ -205,23 +191,14 @@ instance_groups:
   jobs:
   - name: consul_agent
     release: consul
+    consumes:
+      consul: {from: consul_server}
     properties:
       consul:
         agent:
-          mode: client
-          domain: cf.internal
-          servers: *consul_servers
           services:
             doppler:
               name: doppler
-        require_ssl: true
-        encrypt_keys:
-        - "((consul_encrypt_key))"
-        agent_cert: "((consul_agent.certificate))"
-        agent_key: "((consul_agent.private_key))"
-        ca_cert: "((consul_agent.ca))"
-        server_cert: "((consul_server.certificate))"
-        server_key: "((consul_server.private_key))"
   - name: doppler
     release: loggregator
     properties:
@@ -258,22 +235,13 @@ instance_groups:
   jobs:
   - name: consul_agent
     release: consul
+    consumes:
+      consul: {from: consul_server}
     properties:
       consul:
         agent:
-          mode: client
-          domain: cf.internal
-          servers: *consul_servers
           services:
             loggregator_trafficcontroller: {}
-        require_ssl: true
-        encrypt_keys:
-        - "((consul_encrypt_key))"
-        agent_cert: "((consul_agent.certificate))"
-        agent_key: "((consul_agent.private_key))"
-        ca_cert: "((consul_agent.ca))"
-        server_cert: "((consul_server.certificate))"
-        server_key: "((consul_server.private_key))"
   - name: loggregator_trafficcontroller
     release: loggregator
     properties:
