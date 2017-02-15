@@ -40,11 +40,6 @@ type MetaMetricBatcher interface {
 	BatchAddCounter(name string, delta uint64)
 }
 
-// Receiver yeilds messages from a pool of Dopplers.
-type Receiver interface {
-	Recv() ([]byte, error)
-}
-
 // GRPCConnector establishes GRPC connections to dopplers and allows calls to
 // Firehose, Stream, etc to be reduced down to a single Receiver.
 type GRPCConnector struct {
@@ -114,7 +109,7 @@ func (c *GRPCConnector) RecentLogs(ctx context.Context, appID string) [][]byte {
 }
 
 // Subscribe returns a Receiver that yields all corresponding messages from Doppler
-func (c *GRPCConnector) Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) (Receiver, error) {
+func (c *GRPCConnector) Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) (recv func() ([]byte, error), err error) {
 	cs := &consumerState{
 		data:     make(chan []byte, c.bufferSize),
 		errs:     make(chan error, 1),
@@ -129,7 +124,7 @@ func (c *GRPCConnector) Subscribe(ctx context.Context, req *plumbing.Subscriptio
 		atomic.StoreInt64(&cs.dead, 1)
 	}()
 
-	err := c.addConsumerState(cs)
+	err = c.addConsumerState(cs)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +135,7 @@ func (c *GRPCConnector) Subscribe(ctx context.Context, req *plumbing.Subscriptio
 	for _, client := range c.clients {
 		go c.consumeSubscription(cs, client, c.batcher)
 	}
-	return cs, nil
+	return cs.Recv, nil
 }
 
 func (c *GRPCConnector) readFinder() {

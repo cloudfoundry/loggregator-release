@@ -11,7 +11,6 @@ import (
 	"sync/atomic"
 	"trafficcontroller/authorization"
 	"trafficcontroller/doppler_endpoint"
-	"trafficcontroller/grpcconnector"
 
 	"time"
 
@@ -41,7 +40,7 @@ type Proxy struct {
 
 // TODO export this
 type grpcConnector interface {
-	Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) (grpcconnector.Receiver, error)
+	Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) (func() ([]byte, error), error)
 	ContainerMetrics(ctx context.Context, appID string) [][]byte
 	RecentLogs(ctx context.Context, appID string) [][]byte
 }
@@ -132,7 +131,7 @@ func (p *Proxy) serveFirehose(firehoseSubscriptionId string, writer http.Respons
 		return
 	}
 
-	p.serveWS(FIREHOSE_ID, firehoseSubscriptionId, writer, request, client.Recv)
+	p.serveWS(FIREHOSE_ID, firehoseSubscriptionId, writer, request, client)
 }
 
 // "^/apps/(.*)/(recentlogs|stream|containermetrics)$"
@@ -195,7 +194,7 @@ func (p *Proxy) serveAppLogs(requestPath, appID string, writer http.ResponseWrit
 			return
 		}
 
-		p.serveWS(requestPath, appID, writer, request, client.Recv)
+		p.serveWS(requestPath, appID, writer, request, client)
 		return
 	}
 }

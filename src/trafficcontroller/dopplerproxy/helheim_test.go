@@ -8,7 +8,6 @@ package dopplerproxy_test
 import (
 	"plumbing"
 	"time"
-	"trafficcontroller/grpcconnector"
 
 	"golang.org/x/net/context"
 )
@@ -20,7 +19,7 @@ type mockGrpcConnector struct {
 		Req chan *plumbing.SubscriptionRequest
 	}
 	SubscribeOutput struct {
-		Ret0 chan grpcconnector.Receiver
+		Ret0 chan func() ([]byte, error)
 		Ret1 chan error
 	}
 	ContainerMetricsCalled chan bool
@@ -46,7 +45,7 @@ func newMockGrpcConnector() *mockGrpcConnector {
 	m.SubscribeCalled = make(chan bool, 100)
 	m.SubscribeInput.Ctx = make(chan context.Context, 100)
 	m.SubscribeInput.Req = make(chan *plumbing.SubscriptionRequest, 100)
-	m.SubscribeOutput.Ret0 = make(chan grpcconnector.Receiver, 100)
+	m.SubscribeOutput.Ret0 = make(chan func() ([]byte, error), 100)
 	m.SubscribeOutput.Ret1 = make(chan error, 100)
 	m.ContainerMetricsCalled = make(chan bool, 100)
 	m.ContainerMetricsInput.Ctx = make(chan context.Context, 100)
@@ -58,7 +57,7 @@ func newMockGrpcConnector() *mockGrpcConnector {
 	m.RecentLogsOutput.Ret0 = make(chan [][]byte, 100)
 	return m
 }
-func (m *mockGrpcConnector) Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) (grpcconnector.Receiver, error) {
+func (m *mockGrpcConnector) Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) (func() ([]byte, error), error) {
 	m.SubscribeCalled <- true
 	m.SubscribeInput.Ctx <- ctx
 	m.SubscribeInput.Req <- req

@@ -55,7 +55,7 @@ var _ = Describe("ServeHTTP()", func() {
 
 		mockDopplerStreamClient = newMockReceiver()
 
-		mockGrpcConnector.SubscribeOutput.Ret0 <- mockDopplerStreamClient
+		mockGrpcConnector.SubscribeOutput.Ret0 <- mockDopplerStreamClient.Recv
 
 		proxy = dopplerproxy.NewDopplerProxy(
 			auth.Authorize,

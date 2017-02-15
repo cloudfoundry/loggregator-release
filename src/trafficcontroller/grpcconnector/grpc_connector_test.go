@@ -345,7 +345,7 @@ var _ = Describe("GRPCConnector", func() {
 					time.Sleep(2 * time.Second)
 
 					f := func() error {
-						_, err := r.Recv()
+						_, err := r()
 						return err
 					}
 					Eventually(f).Should(Not(BeNil()))
@@ -501,7 +501,7 @@ func readFromSubscription(ctx context.Context, req *plumbing.SubscriptionRequest
 		close(ready)
 		Expect(err).ToNot(HaveOccurred())
 		for {
-			d, e := r.Recv()
+			d, e := r()
 			data <- d
 			errs <- e
 		}
