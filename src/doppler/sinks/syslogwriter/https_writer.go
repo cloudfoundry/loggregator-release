@@ -93,7 +93,7 @@ func (w *httpsWriter) writeHttp(finalMsg string) (byteCount int, err error) {
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		err = errors.New("Syslog Writer: Post responded with a non 2XX status code")
+		err = fmt.Errorf("Syslog Writer: Post responded with %d status code", resp.StatusCode)
 	}
 	io.Copy(ioutil.Discard, resp.Body)
 	resp.Body.Close()
