@@ -150,5 +150,24 @@ var _ = Describe("ContainerMetric", func() {
 				"Message":  Equal(v2Envelope.Message),
 			}))
 		})
+
+		It("sets the source ID to deployment/job when App ID is missing", func() {
+			v1Envelope := &events.Envelope{
+				Deployment:      proto.String("some-deployment"),
+				Job:             proto.String("some-job"),
+				EventType:       events.Envelope_ContainerMetric.Enum(),
+				ContainerMetric: &events.ContainerMetric{},
+			}
+
+			expectedV2Envelope := &v2.Envelope{
+				SourceId: "some-deployment/some-job",
+			}
+
+			converted := conversion.ToV2(v1Envelope)
+
+			Expect(*converted).To(MatchFields(IgnoreExtras, Fields{
+				"SourceId": Equal(expectedV2Envelope.SourceId),
+			}))
+		})
 	})
 })

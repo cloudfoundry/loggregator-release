@@ -68,8 +68,10 @@ var _ = Describe("Envelope", func() {
 	Context("given a v1 envelope", func() {
 		It("sets v2 specific properties", func() {
 			v1Envelope := &events.Envelope{
-				Timestamp: proto.Int64(99),
-				Origin:    proto.String("origin-value"),
+				Timestamp:  proto.Int64(99),
+				Origin:     proto.String("origin-value"),
+				Deployment: proto.String("some-deployment"),
+				Job:        proto.String("some-job"),
 				Tags: map[string]string{
 					"random-tag": "random-value",
 				},
@@ -77,6 +79,7 @@ var _ = Describe("Envelope", func() {
 
 			expectedV2Envelope := &v2.Envelope{
 				Timestamp: 99,
+				SourceId:  "some-deployment/some-job",
 				Tags: map[string]*v2.Value{
 					"random-tag": ValueText("random-value"),
 					"origin":     ValueText("origin-value"),
@@ -86,6 +89,7 @@ var _ = Describe("Envelope", func() {
 			converted := conversion.ToV2(v1Envelope)
 
 			Expect(*converted).To(MatchFields(IgnoreExtras, Fields{
+				"SourceId":  Equal(expectedV2Envelope.SourceId),
 				"Timestamp": Equal(expectedV2Envelope.Timestamp),
 			}))
 			Expect(converted.Tags["random-tag"]).To(Equal(expectedV2Envelope.Tags["random-tag"]))

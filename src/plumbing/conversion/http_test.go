@@ -147,5 +147,22 @@ var _ = Describe("HTTP", func() {
 				"Tags":     Equal(expectedV2Envelope.Tags),
 			}))
 		})
+
+		It("sets the source ID to deployment/job when App ID is missing", func() {
+			v1Envelope := &events.Envelope{
+				Deployment: proto.String("some-deployment"),
+				Job:        proto.String("some-job"),
+			}
+
+			expectedV2Envelope := &v2.Envelope{
+				SourceId: "some-deployment/some-job",
+			}
+
+			converted := conversion.ToV2(v1Envelope)
+
+			Expect(*converted).To(MatchFields(IgnoreExtras, Fields{
+				"SourceId": Equal(expectedV2Envelope.SourceId),
+			}))
+		})
 	})
 })

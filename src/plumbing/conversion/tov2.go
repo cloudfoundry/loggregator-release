@@ -16,6 +16,7 @@ func ToV2(e *events.Envelope) *v2.Envelope {
 		Tags:      buildTags(e.GetTags()),
 	}
 	v2e.Tags["origin"] = valueText(e.GetOrigin())
+	v2e.SourceId = e.GetDeployment() + "/" + e.GetJob()
 
 	switch e.GetEventType() {
 	case events.Envelope_LogMessage:
@@ -56,9 +57,23 @@ func convertError(v2e *v2.Envelope, v1e *events.Envelope) {
 	}
 }
 
+func convertAppUUID(appID *events.UUID, sourceID string) string {
+	if appID.GetLow() == 0 && appID.GetHigh() == 0 {
+		return sourceID
+	}
+	return uuidToString(appID)
+}
+
+func convertAppID(appID, sourceID string) string {
+	if appID == "" {
+		return sourceID
+	}
+	return appID
+}
+
 func convertHTTPStartStop(v2e *v2.Envelope, v1e *events.Envelope) {
 	t := v1e.GetHttpStartStop()
-	v2e.SourceId = uuidToString(t.GetApplicationId())
+	v2e.SourceId = convertAppUUID(t.GetApplicationId(), v2e.SourceId)
 	v2e.Message = &v2.Envelope_Timer{
 		Timer: &v2.Timer{
 			Name:  "http",
@@ -88,8 +103,8 @@ func convertLogMessage(v2e *v2.Envelope, e *events.Envelope) {
 	t := e.GetLogMessage()
 	v2e.Tags["source_type"] = valueText(t.GetSourceType())
 	v2e.Tags["source_instance"] = valueText(t.GetSourceInstance())
+	v2e.SourceId = convertAppID(t.GetAppId(), v2e.SourceId)
 
-	v2e.SourceId = t.GetAppId()
 	v2e.Message = &v2.Envelope_Log{
 		Log: &v2.Log{
 			Payload: t.GetMessage(),
@@ -126,7 +141,7 @@ func convertCounterEvent(v2e *v2.Envelope, e *events.Envelope) {
 
 func convertContainerMetric(v2e *v2.Envelope, e *events.Envelope) {
 	t := e.GetContainerMetric()
-	v2e.SourceId = t.GetApplicationId()
+	v2e.SourceId = convertAppID(t.GetApplicationId(), v2e.SourceId)
 	v2e.Message = &v2.Envelope_Gauge{
 		Gauge: &v2.Gauge{
 			Metrics: map[string]*v2.GaugeValue{
