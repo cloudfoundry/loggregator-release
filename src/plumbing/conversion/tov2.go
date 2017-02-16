@@ -18,20 +18,18 @@ func ToV2(e *events.Envelope) *v2.Envelope {
 	v2e.Tags["origin"] = valueText(e.GetOrigin())
 
 	switch e.GetEventType() {
-	case events.Envelope_HttpStartStop:
-		convertHTTPStartStop(v2e, e)
 	case events.Envelope_LogMessage:
 		convertLogMessage(v2e, e)
+	case events.Envelope_HttpStartStop:
+		convertHTTPStartStop(v2e, e)
 	case events.Envelope_ValueMetric:
 		convertValueMetric(v2e, e)
 	case events.Envelope_CounterEvent:
 		convertCounterEvent(v2e, e)
+	case events.Envelope_Error:
+		convertError(v2e, e)
 	case events.Envelope_ContainerMetric:
 		convertContainerMetric(v2e, e)
-	default:
-		// TODO: this would have to be error type, should we keep this? v1
-		// envelopes default to httpstartstop
-		return nil
 	}
 
 	return v2e
@@ -43,6 +41,19 @@ func buildTags(oldTags map[string]string) map[string]*v2.Value {
 		newTags[k] = valueText(v)
 	}
 	return newTags
+}
+
+func convertError(v2e *v2.Envelope, v1e *events.Envelope) {
+	t := v1e.GetError()
+	v2e.Tags["source"] = valueText(t.GetSource())
+	v2e.Tags["code"] = valueInt32(t.GetCode())
+
+	v2e.Message = &v2.Envelope_Log{
+		Log: &v2.Log{
+			Payload: []byte(t.GetMessage()),
+			Type:    v2.Log_OUT,
+		},
+	}
 }
 
 func convertHTTPStartStop(v2e *v2.Envelope, v1e *events.Envelope) {

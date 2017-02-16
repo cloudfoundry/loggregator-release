@@ -61,8 +61,6 @@ var _ = Describe("LogMessage", func() {
 			}
 
 			expectedV2Envelope := &v2.Envelope{
-				// TODO: consider asserting or removing this
-				//Timestamp: 99,
 				SourceId: "uuid",
 				Tags: map[string]*v2.Value{
 					"source_type":     {&v2.Value_Text{"test-source-type"}},
