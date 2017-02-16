@@ -13,8 +13,8 @@ import (
 )
 
 var _ = Describe("ContainerMetric", func() {
-	Context("given a v3 envelope", func() {
-		It("converts to a v2 protobuf", func() {
+	Context("given a v2 envelope", func() {
+		It("converts to a v1 envelope", func() {
 			envelope := &v2.Envelope{
 				SourceId: "some-id",
 				Message: &v2.Envelope_Gauge{
@@ -96,5 +96,59 @@ var _ = Describe("ContainerMetric", func() {
 				},
 			}),
 		)
+	})
+
+	Context("given a v1 envelope", func() {
+		It("converts to a v2 envelope", func() {
+			v1Envelope := &events.Envelope{
+				EventType: events.Envelope_ContainerMetric.Enum(),
+				ContainerMetric: &events.ContainerMetric{
+					ApplicationId:    proto.String("some-id"),
+					InstanceIndex:    proto.Int32(123),
+					CpuPercentage:    proto.Float64(11),
+					MemoryBytes:      proto.Uint64(13),
+					DiskBytes:        proto.Uint64(15),
+					MemoryBytesQuota: proto.Uint64(17),
+					DiskBytesQuota:   proto.Uint64(19),
+				},
+			}
+			v2Envelope := &v2.Envelope{
+				SourceId: "some-id",
+				Message: &v2.Envelope_Gauge{
+					Gauge: &v2.Gauge{
+						Metrics: map[string]*v2.GaugeValue{
+							"instance_index": {
+								Unit:  "index",
+								Value: 123,
+							},
+							"cpu": {
+								Unit:  "percentage",
+								Value: 11,
+							},
+							"memory": {
+								Unit:  "bytes",
+								Value: 13,
+							},
+							"disk": {
+								Unit:  "bytes",
+								Value: 15,
+							},
+							"memory_quota": {
+								Unit:  "bytes",
+								Value: 17,
+							},
+							"disk_quota": {
+								Unit:  "bytes",
+								Value: 19,
+							},
+						},
+					},
+				},
+			}
+			Expect(*conversion.ToV2(v1Envelope)).To(MatchFields(IgnoreExtras, Fields{
+				"SourceId": Equal(v2Envelope.SourceId),
+				"Message":  Equal(v2Envelope.Message),
+			}))
+		})
 	})
 })

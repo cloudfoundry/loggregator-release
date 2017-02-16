@@ -1,7 +1,6 @@
 package conversion_test
 
 import (
-	"fmt"
 	"plumbing/conversion"
 	v2 "plumbing/v2"
 
@@ -14,104 +13,76 @@ import (
 )
 
 var _ = Describe("LogMessage", func() {
-	Context("given a v3 envelope", func() {
-		Context("for stderr", func() {
-			It("converts it to a v2 protobuf", func() {
-				envelope := &v2.Envelope{
-					Timestamp: 99,
-					SourceId:  "uuid",
-					Tags: map[string]*v2.Value{
-						"source_type":     {&v2.Value_Text{"value"}},
-						"source_instance": {&v2.Value_Text{"value"}},
-						"origin":          {&v2.Value_Text{"value"}},
+	Context("given a v2 envelope", func() {
+		It("converts messages to a v1 envelope", func() {
+			envelope := &v2.Envelope{
+				Timestamp: 99,
+				SourceId:  "uuid",
+				Tags: map[string]*v2.Value{
+					"source_type":     {&v2.Value_Text{"test-source-type"}},
+					"source_instance": {&v2.Value_Text{"test-source-instance"}},
+				},
+				Message: &v2.Envelope_Log{
+					Log: &v2.Log{
+						Payload: []byte("Hello World"),
+						Type:    v2.Log_OUT,
 					},
-					Message: &v2.Envelope_Log{
-						Log: &v2.Log{
-							Payload: []byte("Hello World"),
-							Type:    v2.Log_ERR,
-						},
-					},
-				}
+				},
+			}
 
-				oldEnvelope := conversion.ToV1(envelope)
-				Expect(*oldEnvelope).To(MatchFields(IgnoreExtras, Fields{
-					"EventType": Equal(events.Envelope_LogMessage.Enum()),
-					"LogMessage": Equal(&events.LogMessage{
-						Message:        []byte("Hello World"),
-						MessageType:    events.LogMessage_ERR.Enum(),
-						Timestamp:      proto.Int64(99),
-						AppId:          proto.String("uuid"),
-						SourceType:     proto.String("value"),
-						SourceInstance: proto.String("value"),
-					}),
-				}))
-			})
+			oldEnvelope := conversion.ToV1(envelope)
+			Expect(*oldEnvelope).To(MatchFields(IgnoreExtras, Fields{
+				"EventType": Equal(events.Envelope_LogMessage.Enum()),
+				"LogMessage": Equal(&events.LogMessage{
+					Message:        []byte("Hello World"),
+					MessageType:    events.LogMessage_OUT.Enum(),
+					Timestamp:      proto.Int64(99),
+					AppId:          proto.String("uuid"),
+					SourceType:     proto.String("test-source-type"),
+					SourceInstance: proto.String("test-source-instance"),
+				}),
+			}))
 		})
-		Context("for stdout", func() {
-			It("converts it to a v2 protobuf", func() {
-				envelope := &v2.Envelope{
-					Timestamp: 99,
-					SourceId:  "uuid",
-					Tags: map[string]*v2.Value{
-						"source_type":     {&v2.Value_Text{"value"}},
-						"source_instance": {&v2.Value_Text{"value"}},
-						"origin":          {&v2.Value_Text{"value"}},
-					},
-					Message: &v2.Envelope_Log{
-						Log: &v2.Log{
-							Payload: []byte("Hello World"),
-							Type:    v2.Log_OUT,
-						},
-					},
-				}
+	})
 
-				oldEnvelope := conversion.ToV1(envelope)
-				Expect(*oldEnvelope).To(MatchFields(IgnoreExtras, Fields{
-					"EventType": Equal(events.Envelope_LogMessage.Enum()),
-					"LogMessage": Equal(&events.LogMessage{
-						Message:        []byte("Hello World"),
-						MessageType:    events.LogMessage_OUT.Enum(),
-						Timestamp:      proto.Int64(99),
-						AppId:          proto.String("uuid"),
-						SourceType:     proto.String("value"),
-						SourceInstance: proto.String("value"),
-					}),
-				}))
-			})
-		})
+	Context("given a v1 envelop", func() {
+		It("converts messages to v2 envelopes", func() {
+			v1Envelope := &events.Envelope{
+				Origin:    proto.String("some-origin"),
+				EventType: events.Envelope_LogMessage.Enum(),
+				LogMessage: &events.LogMessage{
+					Message:        []byte("Hello World"),
+					MessageType:    events.LogMessage_OUT.Enum(),
+					Timestamp:      proto.Int64(99),
+					AppId:          proto.String("uuid"),
+					SourceType:     proto.String("test-source-type"),
+					SourceInstance: proto.String("test-source-instance"),
+				},
+			}
 
-		Context("for v1 envelope specific properties", func() {
-			It("sets them", func() {
-				envelope := &v2.Envelope{
-					Timestamp: 99,
-					SourceId:  "uuid",
-					Tags: map[string]*v2.Value{
-						"origin":         {&v2.Value_Text{"origin"}},
-						"deployment":     {&v2.Value_Text{"deployment"}},
-						"job":            {&v2.Value_Text{"job"}},
-						"index":          {&v2.Value_Text{"index"}},
-						"ip":             {&v2.Value_Text{"ip"}},
-						"random_text":    {&v2.Value_Text{"random_text"}},
-						"random_int":     {&v2.Value_Integer{123}},
-						"random_decimal": {&v2.Value_Decimal{123}},
+			expectedV2Envelope := &v2.Envelope{
+				// TODO: consider asserting or removing this
+				//Timestamp: 99,
+				SourceId: "uuid",
+				Tags: map[string]*v2.Value{
+					"source_type":     {&v2.Value_Text{"test-source-type"}},
+					"source_instance": {&v2.Value_Text{"test-source-instance"}},
+					"origin":          {&v2.Value_Text{"some-origin"}},
+				},
+				Message: &v2.Envelope_Log{
+					Log: &v2.Log{
+						Payload: []byte("Hello World"),
+						Type:    v2.Log_OUT,
 					},
-					Message: &v2.Envelope_Log{Log: &v2.Log{}},
-				}
+				},
+			}
 
-				oldEnvelope := conversion.ToV1(envelope)
-				Expect(*oldEnvelope).To(MatchFields(IgnoreExtras, Fields{
-					"Origin":     Equal(proto.String("origin")),
-					"EventType":  Equal(events.Envelope_LogMessage.Enum()),
-					"Timestamp":  Equal(proto.Int64(99)),
-					"Deployment": Equal(proto.String("deployment")),
-					"Job":        Equal(proto.String("job")),
-					"Index":      Equal(proto.String("index")),
-					"Ip":         Equal(proto.String("ip")),
-				}))
-				Expect(oldEnvelope.Tags).To(HaveKeyWithValue("random_text", "random_text"))
-				Expect(oldEnvelope.Tags).To(HaveKeyWithValue("random_int", "123"))
-				Expect(oldEnvelope.Tags).To(HaveKeyWithValue("random_decimal", fmt.Sprintf("%f", 123.0)))
-			})
+			v2Envelope := conversion.ToV2(v1Envelope)
+			Expect(*v2Envelope).To(MatchFields(IgnoreExtras, Fields{
+				"SourceId": Equal(expectedV2Envelope.SourceId),
+				"Tags":     Equal(expectedV2Envelope.Tags),
+				"Message":  Equal(expectedV2Envelope.Message),
+			}))
 		})
 	})
 })

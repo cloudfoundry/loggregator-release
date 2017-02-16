@@ -13,11 +13,14 @@ import (
 )
 
 var _ = Describe("Envelope", func() {
-	Context("for v1 envelope specific properties", func() {
-		It("sets them", func() {
+	ValueText := func(s string) *v2.Value {
+		return &v2.Value{&v2.Value_Text{Text: s}}
+	}
+
+	Context("given a v2 envelope", func() {
+		It("sets v1 specific properties", func() {
 			envelope := &v2.Envelope{
 				Timestamp: 99,
-				SourceId:  "uuid",
 				Tags: map[string]*v2.Value{
 					"origin":         {&v2.Value_Text{"origin"}},
 					"deployment":     {&v2.Value_Text{"deployment"}},
@@ -45,20 +48,48 @@ var _ = Describe("Envelope", func() {
 			Expect(oldEnvelope.Tags).To(HaveKeyWithValue("random_int", "123"))
 			Expect(oldEnvelope.Tags).To(HaveKeyWithValue("random_decimal", fmt.Sprintf("%f", 123.0)))
 		})
+
+		It("rejects empty tags", func() {
+			envelope := &v2.Envelope{
+				Tags: map[string]*v2.Value{
+					"foo": {&v2.Value_Text{"bar"}},
+					"baz": nil,
+				},
+				Message: &v2.Envelope_Log{Log: &v2.Log{}},
+			}
+
+			oldEnvelope := conversion.ToV1(envelope)
+			Expect(oldEnvelope.Tags).To(Equal(map[string]string{
+				"foo": "bar",
+			}))
+		})
 	})
 
-	It("rejects empty tags", func() {
-		envelope := &v2.Envelope{
-			Tags: map[string]*v2.Value{
-				"foo": {&v2.Value_Text{"bar"}},
-				"baz": nil,
-			},
-			Message: &v2.Envelope_Log{Log: &v2.Log{}},
-		}
+	Context("given a v1 envelope", func() {
+		It("sets v2 specific properties", func() {
+			v1Envelope := &events.Envelope{
+				Timestamp: proto.Int64(99),
+				Origin:    proto.String("origin-value"),
+				Tags: map[string]string{
+					"random-tag": "random-value",
+				},
+			}
 
-		oldEnvelope := conversion.ToV1(envelope)
-		Expect(oldEnvelope.Tags).To(Equal(map[string]string{
-			"foo": "bar",
-		}))
+			expectedV2Envelope := &v2.Envelope{
+				Timestamp: 99,
+				Tags: map[string]*v2.Value{
+					"random-tag": ValueText("random-value"),
+					"origin":     ValueText("origin-value"),
+				},
+			}
+
+			converted := conversion.ToV2(v1Envelope)
+
+			Expect(*converted).To(MatchFields(IgnoreExtras, Fields{
+				"Timestamp": Equal(expectedV2Envelope.Timestamp),
+			}))
+			Expect(converted.Tags["random-tag"]).To(Equal(expectedV2Envelope.Tags["random-tag"]))
+			Expect(converted.Tags["origin"]).To(Equal(expectedV2Envelope.Tags["origin"]))
+		})
 	})
 })
