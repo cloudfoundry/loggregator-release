@@ -107,7 +107,10 @@ func main() {
 	envelopeBuffer := diodes.NewManyToOneEnvelope(10000, diodes.AlertFunc(func(missed int) {
 		log.Printf("Shed %d envelopes", missed)
 		batcher.BatchCounter("doppler.shedEnvelopes").Add(uint64(missed))
-		metric.IncCounter("dropped") // TODO: add "egress" tag
+		metric.IncCounter("dropped",
+			metric.WithIncrement(uint64(missed)),
+			metric.WithVersion(2, 0),
+		)
 	}))
 
 	udpListener, dropsondeBytesChan := listeners.NewUDPListener(

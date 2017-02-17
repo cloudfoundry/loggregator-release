@@ -25,7 +25,7 @@ func (s *Receiver) Sender(sender v2.Ingress_SenderServer) error {
 		if err != nil {
 			return err
 		}
-		metric.IncCounter("ingress")
+		metric.IncCounter("ingress", metric.WithVersion(2, 0))
 		s.dataSetter.Set(e)
 	}
 

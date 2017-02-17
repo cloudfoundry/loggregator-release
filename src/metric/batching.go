@@ -11,11 +11,18 @@ type IncrementOpt func(*incrementOption)
 
 type incrementOption struct {
 	delta uint64
+	tags  map[string]string
 }
 
 func WithIncrement(delta uint64) func(*incrementOption) {
 	return func(i *incrementOption) {
 		i.delta = delta
+	}
+}
+
+func WithVersion(major, minor uint) func(*incrementOption) {
+	return func(i *incrementOption) {
+		i.tags["metric_version"] = fmt.Sprintf("%d.%d", major, minor)
 	}
 }
 
@@ -26,10 +33,28 @@ func IncCounter(name string, options ...IncrementOpt) {
 
 	incConf := &incrementOption{
 		delta: 1,
+		tags:  make(map[string]string),
 	}
 
 	for _, opt := range options {
 		opt(incConf)
+	}
+
+	tags := make(map[string]*v2.Value)
+	for k, v := range incConf.tags {
+		tags[k] = &v2.Value{
+			Data: &v2.Value_Text{
+				Text: v,
+			},
+		}
+	}
+
+	for k, v := range conf.tags {
+		tags[k] = &v2.Value{
+			Data: &v2.Value_Text{
+				Text: v,
+			},
+		}
 	}
 
 	e := &v2.Envelope{
@@ -43,28 +68,7 @@ func IncCounter(name string, options ...IncrementOpt) {
 				},
 			},
 		},
-		Tags: map[string]*v2.Value{
-			"origin": {
-				Data: &v2.Value_Text{
-					Text: conf.tags["origin"],
-				},
-			},
-			"deployment": {
-				Data: &v2.Value_Text{
-					Text: conf.tags["deployment"],
-				},
-			},
-			"job": {
-				Data: &v2.Value_Text{
-					Text: conf.tags["job"],
-				},
-			},
-			"index": {
-				Data: &v2.Value_Text{
-					Text: conf.tags["index"],
-				},
-			},
-		},
+		Tags: tags,
 	}
 
 	batchBuffer.Set(e)

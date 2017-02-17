@@ -32,7 +32,7 @@ func (r *MessageRouter) Start(incomingLog *diodes.ManyToOneEnvelope) {
 	log.Print("MessageRouter:Starting")
 	for {
 		envelope := incomingLog.Next()
-		metric.IncCounter("egress")
+		metric.IncCounter("egress", metric.WithVersion(2, 0))
 
 		// TODO: To be removed
 		metrics.BatchIncrementCounter("httpServer.receivedMessages")

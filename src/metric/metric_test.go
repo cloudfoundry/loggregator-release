@@ -109,6 +109,23 @@ var _ = Describe("Metric", func() {
 				Expect(e.GetCounter().GetDelta()).To(Equal(uint64(42)))
 			})
 
+			It("tags with the given version", func() {
+				metric.IncCounter(randName, metric.WithVersion(1, 2))
+				var e *v2.Envelope
+				f := func() bool {
+					Eventually(receiver).Should(Receive(&e))
+
+					counter := e.GetCounter()
+					if counter == nil {
+						return false
+					}
+
+					return counter.Name == "loggregator."+randName
+				}
+				Eventually(f).Should(BeTrue())
+				Expect(e.GetTags()["metric_version"].GetText()).To(Equal("1.2"))
+			})
+
 			It("tags with meta deployment tags", func() {
 				metric.IncCounter(randName, metric.WithIncrement(42))
 				var e *v2.Envelope

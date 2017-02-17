@@ -30,9 +30,11 @@ func (t *Transponder) Start() {
 		envelope := t.nexter.Next()
 		err := t.writer.Write(envelope)
 		if err != nil {
-			metric.IncCounter("dropped") // TODO: add "egress" tag
+			metric.IncCounter("dropped",
+				metric.WithVersion(2, 0),
+			)
 			continue
 		}
-		metric.IncCounter("egress")
+		metric.IncCounter("egress", metric.WithVersion(2, 0))
 	}
 }

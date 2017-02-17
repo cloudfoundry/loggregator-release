@@ -38,7 +38,7 @@ func (i Ingestor) Sender(s plumbing.DopplerIngress_SenderServer) error {
 			continue
 		}
 
-		metric.IncCounter("ingress")
+		metric.IncCounter("ingress", metric.WithVersion(2, 0))
 		i.envelopeBuffer.Set(v1e)
 	}
 }
