@@ -26,6 +26,12 @@ func WithVersion(major, minor uint) func(*incrementOption) {
 	}
 }
 
+func WithTag(name, value string) func(*incrementOption) {
+	return func(i *incrementOption) {
+		i.tags[name] = value
+	}
+}
+
 func IncCounter(name string, options ...IncrementOpt) {
 	if batchBuffer == nil {
 		return

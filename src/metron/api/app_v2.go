@@ -44,6 +44,7 @@ func (a *AppV2) Start() {
 		metric.IncCounter("dropped",
 			metric.WithIncrement(uint64(missed)),
 			metric.WithVersion(2, 0),
+			metric.WithTag("direction", "ingress"),
 		)
 		log.Printf("Dropped %d v2 envelopes", missed)
 	}))

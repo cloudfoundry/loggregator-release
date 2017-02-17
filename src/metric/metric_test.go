@@ -126,6 +126,23 @@ var _ = Describe("Metric", func() {
 				Expect(e.GetTags()["metric_version"].GetText()).To(Equal("1.2"))
 			})
 
+			It("adds additional tags", func() {
+				metric.IncCounter(randName, metric.WithTag("name", "value"))
+				var e *v2.Envelope
+				f := func() bool {
+					Eventually(receiver).Should(Receive(&e))
+
+					counter := e.GetCounter()
+					if counter == nil {
+						return false
+					}
+
+					return counter.Name == "loggregator."+randName
+				}
+				Eventually(f).Should(BeTrue())
+				Expect(e.GetTags()["name"].GetText()).To(Equal("value"))
+			})
+
 			It("tags with meta deployment tags", func() {
 				metric.IncCounter(randName, metric.WithIncrement(42))
 				var e *v2.Envelope

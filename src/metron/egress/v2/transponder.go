@@ -32,6 +32,7 @@ func (t *Transponder) Start() {
 		if err != nil {
 			metric.IncCounter("dropped",
 				metric.WithVersion(2, 0),
+				metric.WithTag("direction", "egress"),
 			)
 			continue
 		}
