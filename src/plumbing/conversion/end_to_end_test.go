@@ -161,7 +161,7 @@ var ValueInteger = func(i int64) *v2.Value {
 	return &v2.Value{&v2.Value_Integer{Integer: i}}
 }
 
-var _ = FDescribeTable("v2->v1->v2",
+var _ = DescribeTable("v2->v1->v2",
 
 	func(v2e *v2.Envelope) {
 		_, err := proto.Marshal(v2e)

@@ -156,7 +156,7 @@ func convertContainerMetric(v2e *v2.Envelope, e *events.Envelope) {
 				},
 				"cpu": {
 					Unit:  "percentage",
-					Value: float64(t.GetCpuPercentage()),
+					Value: t.GetCpuPercentage(),
 				},
 				"memory": {
 					Unit:  "bytes",
