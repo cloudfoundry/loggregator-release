@@ -153,7 +153,6 @@ func (c *GRPCConnector) handleFinderEvent(uris []string) {
 	newURIs, deadClients := c.delta(uris)
 
 	for _, addr := range newURIs {
-		log.Printf("Adding doppler %s", addr)
 		c.pool.RegisterDoppler(addr)
 		client := &dopplerClientInfo{
 			uri: addr,
