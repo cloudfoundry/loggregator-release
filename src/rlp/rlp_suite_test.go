@@ -9,5 +9,5 @@ import (
 
 func TestRlp(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "RLP Suite")
+	RunSpecs(t, "RLP compile main")
 }

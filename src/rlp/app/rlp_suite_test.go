@@ -9,5 +9,5 @@ import (
 
 func TestApp(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "App Suite")
+	RunSpecs(t, "RLP Suite")
 }

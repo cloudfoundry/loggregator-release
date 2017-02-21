@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"context"
+	"log"
 	"net"
 	"plumbing"
 	v2 "plumbing/v2"
@@ -18,31 +19,48 @@ import (
 
 var _ = Describe("Start", func() {
 	It("receive messages via egress client", func() {
-		router := newMockDopplerServer()
+		// create fake doppler
+		doppler := newMockDopplerServer()
 
 		lis, err := net.Listen("tcp", "localhost:0")
 		defer lis.Close()
 		Expect(err).ToNot(HaveOccurred())
 
 		grpcServer := grpc.NewServer()
-		plumbing.RegisterDopplerServer(grpcServer, router)
+		plumbing.RegisterDopplerServer(grpcServer, doppler)
 		go grpcServer.Serve(lis)
 
-		addr := app.Start(
-			app.WithLogRouterAddrs([]string{lis.Addr().String()}),
-		)
+		egressLis, err := net.Listen("tcp", "localhost:0")
+		egressLis.Close()
+		Expect(err).ToNot(HaveOccurred())
 
-		// grpc client
-		conn, err := grpc.Dial(addr, grpc.WithInsecure())
+		egressPort := egressLis.Addr().(*net.TCPAddr).Port
+		// point our app at the fake doppler
+		rlp := app.NewRLP(
+			app.WithIngressAddrs([]string{lis.Addr().String()}),
+			app.WithEgressPort(egressPort),
+		)
+		go rlp.Start()
+
+		// create public client consuming log API
+		conn, err := grpc.Dial(
+			egressLis.Addr().String(),
+			grpc.WithInsecure(),
+		)
 		Expect(err).ToNot(HaveOccurred())
 
 		defer conn.Close()
 		egressRequest := &v2.EgressRequest{}
 		egressClient := v2.NewEgressClient(conn)
-		egressStream, err := egressClient.Receiver(context.Background(), egressRequest)
+
+		var egressStream v2.Egress_ReceiverClient
+		Eventually(func() error {
+			egressStream, err = egressClient.Receiver(context.Background(), egressRequest)
+			return err
+		}, 5).ShouldNot(HaveOccurred())
 
 		var subscriber plumbing.Doppler_SubscribeServer
-		Eventually(router.SubscribeInput.Stream, 5).Should(Receive(&subscriber))
+		Eventually(doppler.SubscribeInput.Stream, 5).Should(Receive(&subscriber))
 
 		go func() {
 			payload := buildLogMessage()
@@ -53,6 +71,7 @@ var _ = Describe("Start", func() {
 			for {
 				err := subscriber.Send(response)
 				if err != nil {
+					log.Printf("subscriber#Send failed: %s\n", err)
 					return
 				}
 			}
@@ -60,13 +79,13 @@ var _ = Describe("Start", func() {
 
 		envelope, err := egressStream.Recv()
 		Expect(err).ToNot(HaveOccurred())
-		Expect(envelope.Timestamp).To(Equal(int64(99)))
+		Expect(envelope.GetTags()["origin"].GetText()).To(Equal("some-origin"))
 	})
 })
 
 func buildLogMessage() []byte {
 	e := &events.Envelope{
-		Origin:    proto.String("foo"),
+		Origin:    proto.String("some-origin"),
 		EventType: events.Envelope_LogMessage.Enum(),
 		LogMessage: &events.LogMessage{
 			Message:     []byte("foo"),
