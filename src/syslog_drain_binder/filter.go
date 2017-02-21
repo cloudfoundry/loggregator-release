@@ -10,7 +10,10 @@ func Filter(bindings shared_types.AllSyslogDrainBindings) shared_types.AllSyslog
 	for appId, b := range bindings {
 		drainUrls := []string{}
 		for _, d := range b.DrainURLs {
-			url, _ := url.Parse(d)
+			url, err := url.Parse(d)
+			if err != nil {
+				continue
+			}
 			if url.Query().Get("drain-version") != "2.0" {
 				drainUrls = append(drainUrls, d)
 			}
