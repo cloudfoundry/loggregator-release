@@ -23,6 +23,13 @@ func ToV1(e *v2.Envelope) *events.Envelope {
 		Tags:       convertTags(e.Tags),
 	}
 
+	delete(v1e.Tags, "__v1_type")
+	delete(v1e.Tags, "origin")
+	delete(v1e.Tags, "deployment")
+	delete(v1e.Tags, "job")
+	delete(v1e.Tags, "index")
+	delete(v1e.Tags, "ip")
+
 	switch (e.Message).(type) {
 	case *v2.Envelope_Log:
 		convertLog(v1e, e)
@@ -64,9 +71,25 @@ func convertTimer(v1e *events.Envelope, v2e *v2.Envelope) {
 		InstanceId:     proto.String(v2e.Tags["instance_id"].GetText()),
 		Forwarded:      strings.Split(v2e.Tags["forwarded"].GetText(), "\n"),
 	}
+
+	delete(v1e.Tags, "peer_type")
+	delete(v1e.Tags, "method")
+	delete(v1e.Tags, "request_id")
+	delete(v1e.Tags, "uri")
+	delete(v1e.Tags, "remote_address")
+	delete(v1e.Tags, "user_agent")
+	delete(v1e.Tags, "status_code")
+	delete(v1e.Tags, "content_length")
+	delete(v1e.Tags, "instance_index")
+	delete(v1e.Tags, "instance_id")
+	delete(v1e.Tags, "forwarded")
 }
 
 func convertLog(v1e *events.Envelope, v2e *v2.Envelope) {
+	if v2e.Tags["__v1_type"].GetText() == "Error" {
+		recoverError(v1e, v2e)
+		return
+	}
 	logMessage := v2e.GetLog()
 	v1e.EventType = events.Envelope_LogMessage.Enum()
 	v1e.LogMessage = &events.LogMessage{
@@ -77,6 +100,21 @@ func convertLog(v1e *events.Envelope, v2e *v2.Envelope) {
 		SourceType:     proto.String(v2e.Tags["source_type"].GetText()),
 		SourceInstance: proto.String(v2e.Tags["source_instance"].GetText()),
 	}
+	delete(v1e.Tags, "source_type")
+	delete(v1e.Tags, "source_instance")
+}
+
+func recoverError(v1e *events.Envelope, v2e *v2.Envelope) {
+	logMessage := v2e.GetLog()
+	v1e.EventType = events.Envelope_Error.Enum()
+	code := int32(v2e.Tags["code"].GetInteger())
+	v1e.Error = &events.Error{
+		Source:  proto.String(v2e.Tags["source"].GetText()),
+		Code:    proto.Int32(code),
+		Message: proto.String(string(logMessage.Payload)),
+	}
+	delete(v1e.Tags, "source")
+	delete(v1e.Tags, "code")
 }
 
 func convertCounter(v1e *events.Envelope, v2e *v2.Envelope) {

@@ -72,6 +72,8 @@ var _ = Describe("Envelope", func() {
 				Origin:     proto.String("origin-value"),
 				Deployment: proto.String("some-deployment"),
 				Job:        proto.String("some-job"),
+				Index:      proto.String("some-index"),
+				Ip:         proto.String("some-ip"),
 				Tags: map[string]string{
 					"random-tag": "random-value",
 				},
@@ -83,6 +85,10 @@ var _ = Describe("Envelope", func() {
 				Tags: map[string]*v2.Value{
 					"random-tag": ValueText("random-value"),
 					"origin":     ValueText("origin-value"),
+					"deployment": ValueText("some-deployment"),
+					"job":        ValueText("some-job"),
+					"index":      ValueText("some-index"),
+					"ip":         ValueText("some-ip"),
 				},
 			}
 
@@ -94,6 +100,10 @@ var _ = Describe("Envelope", func() {
 			}))
 			Expect(converted.Tags["random-tag"]).To(Equal(expectedV2Envelope.Tags["random-tag"]))
 			Expect(converted.Tags["origin"]).To(Equal(expectedV2Envelope.Tags["origin"]))
+			Expect(converted.Tags["deployment"]).To(Equal(expectedV2Envelope.Tags["deployment"]))
+			Expect(converted.Tags["job"]).To(Equal(expectedV2Envelope.Tags["job"]))
+			Expect(converted.Tags["index"]).To(Equal(expectedV2Envelope.Tags["index"]))
+			Expect(converted.Tags["ip"]).To(Equal(expectedV2Envelope.Tags["ip"]))
 		})
 	})
 })

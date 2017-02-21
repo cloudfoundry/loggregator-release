@@ -16,6 +16,11 @@ func ToV2(e *events.Envelope) *v2.Envelope {
 		Tags:      buildTags(e.GetTags()),
 	}
 	v2e.Tags["origin"] = valueText(e.GetOrigin())
+	v2e.Tags["deployment"] = valueText(e.GetDeployment())
+	v2e.Tags["job"] = valueText(e.GetJob())
+	v2e.Tags["index"] = valueText(e.GetIndex())
+	v2e.Tags["ip"] = valueText(e.GetIp())
+	v2e.Tags["__v1_type"] = valueText(e.GetEventType().String())
 	v2e.SourceId = e.GetDeployment() + "/" + e.GetJob()
 
 	switch e.GetEventType() {

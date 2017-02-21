@@ -85,8 +85,12 @@ var _ = Describe("HTTP", func() {
 	Context("given a v1 envelope", func() {
 		It("converts to a v2 envelope", func() {
 			v1Envelope := &events.Envelope{
-				Origin:    proto.String("some-origin"),
-				EventType: events.Envelope_HttpStartStop.Enum(),
+				Origin:     proto.String("some-origin"),
+				EventType:  events.Envelope_HttpStartStop.Enum(),
+				Deployment: proto.String("some-deployment"),
+				Job:        proto.String("some-job"),
+				Index:      proto.String("some-index"),
+				Ip:         proto.String("some-ip"),
 				HttpStartStop: &events.HttpStartStop{
 					StartTimestamp: proto.Int64(99),
 					StopTimestamp:  proto.Int64(100),
@@ -121,6 +125,7 @@ var _ = Describe("HTTP", func() {
 					},
 				},
 				Tags: map[string]*v2.Value{
+					"__v1_type":      ValueText("HttpStartStop"),
 					"origin":         ValueText("some-origin"),
 					"request_id":     ValueText("954f61c4-ac84-44be-9217-cdfa3117fb41"),
 					"peer_type":      ValueText("Client"),
@@ -133,6 +138,10 @@ var _ = Describe("HTTP", func() {
 					"instance_index": ValueInteger(10),
 					"instance_id":    ValueText("application-id"),
 					"forwarded":      ValueText("6.6.6.6\n8.8.8.8"),
+					"deployment":     ValueText("some-deployment"),
+					"job":            ValueText("some-job"),
+					"index":          ValueText("some-index"),
+					"ip":             ValueText("some-ip"),
 				},
 			}
 
