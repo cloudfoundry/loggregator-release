@@ -1,0 +1,35 @@
+---
+name: reverse_log_proxy
+templates:
+  reverse_log_proxy_ctl.erb: bin/reverse_log_proxy_ctl
+  reverse_log_proxy.crt.erb: config/certs/reverse_log_proxy.crt
+  reverse_log_proxy.key.erb: config/certs/reverse_log_proxy.key
+  mutual_tls_ca.crt.erb: config/certs/mutual_tls_ca.crt
+
+packages:
+- reverse_log_proxy
+
+consumes:
+- name: doppler
+  type: doppler
+
+provides:
+- name: reverse_log_proxy
+  type: reverse_log_proxy
+  properties:
+  - reverse_log_proxy.egress.port
+
+properties:
+  reverse_log_proxy.egress.port:
+    description: "The port of Loggregator's v2 API"
+    default: 8082
+  reverse_log_proxy.pprof.port:
+    descripts: "The port of pprof endpoint"
+    default: 0
+
+  loggregator.tls.ca_cert:
+    description: "CA root required for key/cert verification"
+  loggregator.tls.reverse_log_proxy.cert:
+    description: "TLS certificate for the reverse log proxy"
+  loggregator.tls.reverse_log_proxy.key:
+    description: "TLS key for the reverse log proxy"

@@ -1,0 +1,5 @@
+check process reverse_log_proxy
+  with pidfile /var/vcap/sys/run/reverse_log_proxy/reverse_log_proxy.pid
+  start program "/var/vcap/jobs/reverse_log_proxy/bin/reverse_log_proxy_ctl start"
+  stop program "/var/vcap/jobs/reverse_log_proxy/bin/reverse_log_proxy_ctl stop"
+  group vcap

@@ -267,6 +267,17 @@ instance_groups:
           machines: [etcd.service.cf.internal]
       ssl:
         skip_cert_verify: false
+  - name: reverse_log_proxy
+    release: loggregator
+    provides:
+      reverse_log_proxy: {as: reverse_log_proxy, shared: true}
+    properties:
+      loggregator:
+        tls:
+          ca_cert: "((loggregator_rlp.ca))"
+          reverse_log_proxy:
+            cert: "((loggregator_rlp.certificate))"
+            key: "((loggregator_rlp.private_key))"
   - name: metron_agent
     release: loggregator
     properties: *metron_agent_properties
@@ -296,6 +307,14 @@ variables:
     ca: loggregator_ca
     common_name: trafficcontroller
     extended_key_usage:
+    - client_auth
+    - server_auth
+- name: loggregator_rlp
+  type: certificate
+  options:
+    ca: loggregator_ca
+    common_name: reverselogproxy
+    ext_key_usage:
     - client_auth
     - server_auth
 - name: loggregator_metron

@@ -16,6 +16,12 @@ packages:
 - loggregator_common
 - doppler
 
+provides:
+- name: doppler
+  type: doppler
+  properties:
+  - doppler.grpc_port
+
 properties:
   doppler.zone:
     description: Zone of the doppler server

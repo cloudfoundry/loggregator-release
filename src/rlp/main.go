@@ -42,6 +42,7 @@ func main() {
 		app.WithEgressPort(*egressPort),
 		app.WithIngressAddrs(hostPorts),
 		app.WithIngressDialOptions(grpc.WithTransportCredentials(tlsCredentials)),
+		app.WithEgressServerOptions(grpc.Creds(tlsCredentials)),
 	)
 	go rlp.Start()
 

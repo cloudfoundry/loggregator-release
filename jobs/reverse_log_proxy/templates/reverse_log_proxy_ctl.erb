@@ -1,0 +1,48 @@
+#!/bin/bash
+
+RUN_DIR=/var/vcap/sys/run/reverse_log_proxy
+LOG_DIR=/var/vcap/sys/log/reverse_log_proxy
+PIDFILE=${RUN_DIR}/reverse_log_proxy.pid
+JOB_DIR=/var/vcap/jobs/reverse_log_proxy
+CERT_DIR=$JOB_DIR/config/certs
+
+PACKAGE_DIR=/var/vcap/packages/reverse_log_proxy
+
+case $1 in
+
+start)
+mkdir -p $RUN_DIR $LOG_DIR
+chown -R vcap:vcap $RUN_DIR $LOG_DIR
+
+cd $PACKAGE_DIR
+
+ulimit -n 8192
+
+<%
+    dopplers = link("doppler")
+    ingress_addrs = dopplers.instances.map{|i| "#{i.address}:#{dopplers.p('doppler.grpc_port')}"}
+%>
+echo $$ > $PIDFILE
+exec chpst -u vcap:vcap ./rlp \
+  --pprof-port="<%= p('reverse_log_proxy.pprof.port') %>" \
+  --egress-port="<%= p('reverse_log_proxy.egress.port') %>" \
+  --ingress-addrs="<%= ingress_addrs.join(',') %>" \
+  --ca=$CERT_DIR/mutual_tls_ca.crt \
+  --cert=$CERT_DIR/reverse_log_proxy.crt \
+  --key=$CERT_DIR/reverse_log_proxy.key \
+  &>> ${LOG_DIR}/rlp.log
+
+;;
+
+stop)
+
+kill `cat $PIDFILE`
+
+rm -f $PIDFILE
+
+;;
+
+*)
+echo "Usage: ctl {start|stop}" ;;
+
+esac
