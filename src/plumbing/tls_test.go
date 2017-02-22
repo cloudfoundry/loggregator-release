@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"testservers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -13,7 +14,6 @@ import (
 )
 
 var _ = Describe("TLS", func() {
-
 	Context("NewMutalTLSConfig", func() {
 		var (
 			clientCertFilename  string
@@ -114,6 +114,30 @@ var _ = Describe("TLS", func() {
 			Expect(tlsConf.MinVersion).To(Equal(uint16(tls.VersionTLS12)))
 			Expect(tlsConf.CipherSuites).To(ContainElement(tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256))
 			Expect(tlsConf.CipherSuites).To(ContainElement(tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384))
+		})
+	})
+
+	Context("NewCredentials", func() {
+		It("returns transport credentials", func() {
+			creds, err := plumbing.NewCredentials(
+				testservers.Cert("doppler.crt"),
+				testservers.Cert("doppler.key"),
+				testservers.Cert("loggregator-ca.crt"),
+				"doppler",
+			)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(creds.Info().ServerName).To(Equal("doppler"))
+		})
+
+		It("returns an error with invalid certs", func() {
+			creds, err := plumbing.NewCredentials(
+				testservers.Cert("doppler.crt"),
+				testservers.Cert("doppler.key"),
+				testservers.Cert("doppler.key"),
+				"doppler",
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(creds).To(BeNil())
 		})
 	})
 })

@@ -115,14 +115,14 @@ func main() {
 		accessMiddleware = middleware.Access(accessLogger, ipAddress, conf.OutgoingDropsondePort)
 	}
 
-	creds := plumbing.NewCredentials(
+	creds, err := plumbing.NewCredentials(
 		conf.GRPC.CertFile,
 		conf.GRPC.KeyFile,
 		conf.GRPC.CAFile,
 		"doppler",
 	)
-	if creds == nil {
-		log.Fatalf("Unable to create setup gRPC TLS")
+	if err != nil {
+		log.Fatalf("Could not use GRPC creds for server: %s", err)
 	}
 
 	pool := grpcconnector.NewPool(20, grpc.WithTransportCredentials(creds))

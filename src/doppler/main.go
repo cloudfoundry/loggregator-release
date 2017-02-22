@@ -419,12 +419,15 @@ func connectToEtcd(conf *config.Config) storeadapter.StoreAdapter {
 }
 
 func setupMetricsEmitter(conf *config.Config) {
-	serverCreds := plumbing.NewCredentials(
+	serverCreds, err := plumbing.NewCredentials(
 		conf.GRPC.CertFile,
 		conf.GRPC.KeyFile,
 		conf.GRPC.CAFile,
 		"metron",
 	)
+	if err != nil {
+		log.Fatalf("Could not use GRPC creds for server: %s", err)
+	}
 
 	batchInterval := time.Duration(conf.MetricBatchIntervalMilliseconds) * time.Millisecond
 	metric.Setup(

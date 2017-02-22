@@ -23,14 +23,14 @@ func main() {
 
 	flag.Parse()
 
-	tlsCredentials := plumbing.NewCredentials(
+	tlsCredentials, err := plumbing.NewCredentials(
 		*certFile,
 		*keyFile,
 		*caFile,
 		"doppler",
 	)
-	if tlsCredentials == nil {
-		log.Fatal("failed to create mutual TLS credentials")
+	if err != nil {
+		log.Fatalf("Could not use TLS config: %s", err)
 	}
 
 	hostPorts := strings.Split(*ingressAddrsList, ",")

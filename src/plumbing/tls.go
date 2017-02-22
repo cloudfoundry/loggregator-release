@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 
 	"google.golang.org/grpc/credentials"
 )
@@ -84,18 +83,16 @@ func addCA(tlsConfig *tls.Config, tlsCert tls.Certificate, caCertFile string) er
 	return nil
 }
 
-func NewCredentials(certFile, keyFile, caCertFile, serverName string) credentials.TransportCredentials {
+func NewCredentials(certFile, keyFile, caCertFile, serverName string) (credentials.TransportCredentials, error) {
 	tlsConfig, err := NewMutualTLSConfig(
 		certFile,
 		keyFile,
 		caCertFile,
 		serverName,
 	)
-
 	if err != nil {
-		log.Printf("failed to create mutual tls config: %v", err)
-		return nil
+		return nil, err
 	}
 
-	return credentials.NewTLS(tlsConfig)
+	return credentials.NewTLS(tlsConfig), nil
 }
