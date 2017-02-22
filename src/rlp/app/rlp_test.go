@@ -7,6 +7,7 @@ import (
 	"plumbing"
 	v2 "plumbing/v2"
 	app "rlp/app"
+	"testservers"
 	"time"
 
 	"google.golang.org/grpc"
@@ -69,7 +70,15 @@ func setupDoppler() (*mockDopplerServer, net.Listener) {
 	lis, err := net.Listen("tcp", "localhost:0")
 	Expect(err).ToNot(HaveOccurred())
 
-	grpcServer := grpc.NewServer()
+	tlsCredentials := plumbing.NewCredentials(
+		testservers.Cert("doppler.crt"),
+		testservers.Cert("doppler.key"),
+		testservers.Cert("loggregator-ca.crt"),
+		"doppler",
+	)
+	Expect(tlsCredentials).ToNot(BeNil())
+
+	grpcServer := grpc.NewServer(grpc.Creds(tlsCredentials))
 	plumbing.RegisterDopplerServer(grpcServer, doppler)
 	go grpcServer.Serve(lis)
 	return doppler, lis
@@ -80,20 +89,45 @@ func setupRLP(dopplerLis net.Listener) net.Listener {
 	egressLis.Close()
 	Expect(err).ToNot(HaveOccurred())
 
+	ingressTLSCredentials := plumbing.NewCredentials(
+		testservers.Cert("reverselogproxy.crt"),
+		testservers.Cert("reverselogproxy.key"),
+		testservers.Cert("loggregator-ca.crt"),
+		"doppler",
+	)
+	Expect(ingressTLSCredentials).ToNot(BeNil())
+
+	egressTLSCredentials := plumbing.NewCredentials(
+		testservers.Cert("reverselogproxy.crt"),
+		testservers.Cert("reverselogproxy.key"),
+		testservers.Cert("loggregator-ca.crt"),
+		"reverselogproxy",
+	)
+	Expect(egressTLSCredentials).ToNot(BeNil())
+
 	egressPort := egressLis.Addr().(*net.TCPAddr).Port
 	rlp := app.NewRLP(
-		app.WithIngressAddrs([]string{dopplerLis.Addr().String()}),
 		app.WithEgressPort(egressPort),
-		app.
+		app.WithIngressAddrs([]string{dopplerLis.Addr().String()}),
+		app.WithIngressDialOptions(grpc.WithTransportCredentials(ingressTLSCredentials)),
+		app.WithEgressServerOptions(grpc.Creds(egressTLSCredentials)),
 	)
 	go rlp.Start()
 	return egressLis
 }
 
 func setupRLPClient(egressLis net.Listener) (v2.Egress_ReceiverClient, func()) {
+	ingressTLSCredentials := plumbing.NewCredentials(
+		testservers.Cert("reverselogproxy.crt"),
+		testservers.Cert("reverselogproxy.key"),
+		testservers.Cert("loggregator-ca.crt"),
+		"reverselogproxy",
+	)
+	Expect(ingressTLSCredentials).ToNot(BeNil())
+
 	conn, err := grpc.Dial(
 		egressLis.Addr().String(),
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(ingressTLSCredentials),
 	)
 	Expect(err).ToNot(HaveOccurred())
 

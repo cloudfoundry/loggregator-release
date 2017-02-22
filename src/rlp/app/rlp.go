@@ -15,8 +15,9 @@ import (
 
 func NewRLP(opts ...RLPOption) *RLP {
 	rlp := &RLP{
-		ingressAddrs:    []string{"doppler.service.cf.internal"},
-		ingressDialOpts: []grpc.DialOption{grpc.WithInsecure()},
+		ingressAddrs:     []string{"doppler.service.cf.internal"},
+		ingressDialOpts:  []grpc.DialOption{grpc.WithInsecure()},
+		egressServerOpts: []grpc.ServerOption{},
 	}
 	for _, o := range opts {
 		o(rlp)
@@ -27,13 +28,15 @@ func NewRLP(opts ...RLPOption) *RLP {
 // RLP represents a running reverse log proxy. It connects to various gRPC
 // servers to ingress data and opens a gRPC server to egress data.
 type RLP struct {
-	egressAddr net.Addr
-	egressPort int
+	egressAddr       net.Addr
+	egressPort       int
+	egressServerOpts []grpc.ServerOption
 
 	ingressAddrs    []string
 	ingressDialOpts []grpc.DialOption
 
-	receiver       *ingress.Receiver
+	receiver *ingress.Receiver
+
 	egressListener net.Listener
 	egressServer   *grpc.Server
 }
@@ -45,6 +48,14 @@ type RLPOption func(c *RLP)
 func WithEgressPort(port int) RLPOption {
 	return func(r *RLP) {
 		r.egressPort = port
+	}
+}
+
+// WithEgressServerOptions specifies the dial options used when serving data via
+// gRPC.
+func WithEgressServerOptions(opts ...grpc.ServerOption) RLPOption {
+	return func(r *RLP) {
+		r.egressServerOpts = opts
 	}
 }
 
@@ -86,7 +97,7 @@ func (r *RLP) setupEgress() {
 		log.Fatalf("failed to listen on port: %d: %s", r.egressPort, err)
 	}
 	r.egressAddr = r.egressListener.Addr()
-	r.egressServer = grpc.NewServer()
+	r.egressServer = grpc.NewServer(r.egressServerOpts...)
 	v2.RegisterEgressServer(r.egressServer, egress.NewServer(r.receiver))
 }
 
