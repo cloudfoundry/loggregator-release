@@ -123,9 +123,9 @@ func setupDopplerEnv(metronGRPCPort int) (string, func()) {
 
 func setupV1Ingestor(hostPort string) plumbing.DopplerIngestor_PusherClient {
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
-		testservers.MetronCertPath(),
-		testservers.MetronKeyPath(),
-		testservers.CACertPath(),
+		testservers.Cert("metron.crt"),
+		testservers.Cert("metron.key"),
+		testservers.Cert("loggregator-ca.crt"),
 		"doppler",
 	)
 	Expect(err).ToNot(HaveOccurred())
@@ -143,9 +143,9 @@ func setupV1Ingestor(hostPort string) plumbing.DopplerIngestor_PusherClient {
 
 func setupV2Ingestor(hostPort string) v2.DopplerIngress_SenderClient {
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
-		testservers.MetronCertPath(),
-		testservers.MetronKeyPath(),
-		testservers.CACertPath(),
+		testservers.Cert("metron.crt"),
+		testservers.Cert("metron.key"),
+		testservers.Cert("loggregator-ca.crt"),
 		"doppler",
 	)
 	Expect(err).ToNot(HaveOccurred())
@@ -163,9 +163,9 @@ func setupV2Ingestor(hostPort string) v2.DopplerIngress_SenderClient {
 
 func setupSubscriber(hostPort string) plumbing.Doppler_SubscribeClient {
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
-		testservers.TrafficControllerCertPath(),
-		testservers.TrafficControllerKeyPath(),
-		testservers.CACertPath(),
+		testservers.Cert("trafficcontroller.crt"),
+		testservers.Cert("trafficcontroller.key"),
+		testservers.Cert("loggregator-ca.crt"),
 		"doppler",
 	)
 	Expect(err).ToNot(HaveOccurred())
@@ -239,9 +239,9 @@ func startMetronServer() (int, *mockIngressServer) {
 	}
 
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
-		testservers.MetronCertPath(),
-		testservers.MetronKeyPath(),
-		testservers.CACertPath(),
+		testservers.Cert("metron.crt"),
+		testservers.Cert("metron.key"),
+		testservers.Cert("loggregator-ca.crt"),
 		"doppler",
 	)
 	Expect(err).ToNot(HaveOccurred())

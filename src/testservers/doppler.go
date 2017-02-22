@@ -33,9 +33,9 @@ func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int)
 		OutgoingPort:    uint32(dopplerWSPort),
 		GRPC: dopplerConf.GRPC{
 			Port:     uint16(dopplerGRPCPort),
-			CertFile: DopplerCertPath(),
-			KeyFile:  DopplerKeyPath(),
-			CAFile:   CACertPath(),
+			CertFile: Cert("doppler.crt"),
+			KeyFile:  Cert("doppler.key"),
+			CAFile:   Cert("loggregator-ca.crt"),
 		},
 		PPROFPort: uint32(pprofPort),
 
@@ -50,9 +50,9 @@ func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int)
 		EnableTLSTransport: true,
 		TLSListenerConfig: dopplerConf.TLSListenerConfig{
 			Port:     uint32(dopplerTLSPort),
-			CertFile: DopplerCertPath(),
-			KeyFile:  DopplerKeyPath(),
-			CAFile:   CACertPath(),
+			CertFile: Cert("doppler.crt"),
+			KeyFile:  Cert("doppler.key"),
+			CAFile:   Cert("loggregator-ca.crt"),
 		},
 
 		MetricBatchIntervalMilliseconds: 10,

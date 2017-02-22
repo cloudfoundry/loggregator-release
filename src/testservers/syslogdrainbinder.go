@@ -23,9 +23,9 @@ func BuildSyslogDrainBinderConfig(etcdURL, ccAddress string) config.Config {
 
 		CloudControllerAddress: ccAddress,
 		CloudControllerTLSConfig: config.MutualTLSConfig{
-			CertFile: SyslogDrainBinderCertPath(),
-			KeyFile:  SyslogDrainBinderKeyPath(),
-			CAFile:   CACertPath(),
+			CertFile: Cert("syslogdrainbinder.crt"),
+			KeyFile:  Cert("syslogdrainbinder.key"),
+			CAFile:   Cert("loggregator-ca.crt"),
 		},
 		SkipCertVerify: true,
 	}
