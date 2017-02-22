@@ -214,7 +214,7 @@ func main() {
 	releaseNodeChan := dopplerservice.Announce(localIp, config.HeartbeatInterval, conf, storeAdapter)
 	legacyReleaseNodeChan := dopplerservice.AnnounceLegacy(localIp, config.HeartbeatInterval, conf, storeAdapter)
 
-	// We start the profiler last so that we can difinitively say that we're ready for
+	// We start the profiler last so that we can definitively say that we're ready for
 	// connections by the time we're listening on PPROFPort.
 	p := profiler.New(conf.PPROFPort)
 	go p.Start()
