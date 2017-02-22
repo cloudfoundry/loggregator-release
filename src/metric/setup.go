@@ -89,6 +89,7 @@ func Setup(opts ...SetOpts) {
 	for _, opt := range opts {
 		opt(conf)
 	}
+	conf.dialOpts = append(conf.dialOpts, grpc.WithBackoffMaxDelay(1*time.Second))
 
 	batchBuffer = diodes.NewManyToOneEnvelopeV2(1000, diodes.AlertFunc(func(missed int) {
 		log.Printf("dropped metrics %d", missed)
