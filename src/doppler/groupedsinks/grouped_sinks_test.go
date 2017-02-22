@@ -559,5 +559,3 @@ func (f *fakeSink) ShouldReceiveErrors() bool {
 func (f *fakeSink) GetInstrumentationMetric() sinks.Metric {
 	return sinks.Metric{Name: "numberOfMessagesLost", Value: 5}
 }
-
-func (f *fakeSink) UpdateDroppedMessageCount(messageCount int64) {}

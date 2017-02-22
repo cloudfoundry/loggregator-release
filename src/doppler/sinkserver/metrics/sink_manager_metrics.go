@@ -47,10 +47,6 @@ func (s *SinkManagerMetrics) run(ticker *time.Ticker) {
 	}
 }
 
-func (s *SinkManagerMetrics) UpdateDroppedMessageCount(delta int64) {
-	metrics.BatchAddCounter("messageRouter.totalDroppedMessages", uint64(delta))
-}
-
 func (s *SinkManagerMetrics) Inc(sink sinks.Sink) {
 	switch sink.(type) {
 	case *dump.DumpSink:

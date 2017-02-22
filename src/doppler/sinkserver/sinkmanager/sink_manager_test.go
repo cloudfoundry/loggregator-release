@@ -526,4 +526,3 @@ func (c *channelSink) ShouldReceiveErrors() bool { return true }
 func (c *channelSink) GetInstrumentationMetric() sinks.Metric {
 	return sinks.Metric{Name: "numberOfMessagesLost", Value: 25}
 }
-func (c *channelSink) UpdateDroppedMessageCount(mc int64) {}

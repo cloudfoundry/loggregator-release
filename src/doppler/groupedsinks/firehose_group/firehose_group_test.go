@@ -37,8 +37,6 @@ func (f *fakeSink) GetInstrumentationMetric() sinks.Metric {
 	return sinks.Metric{}
 }
 
-func (f *fakeSink) UpdateDroppedMessageCount(messageCount int64) {}
-
 var _ = Describe("FirehoseGroup", func() {
 	It("sends message to all registered sinks", func() {
 		receiveChan1 := make(chan *events.Envelope, 10)
