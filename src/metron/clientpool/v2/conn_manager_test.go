@@ -4,6 +4,7 @@ import (
 	"errors"
 	clientpool "metron/clientpool/v2"
 	plumbing "plumbing/v2"
+	"time"
 
 	"github.com/apoydence/eachers/testhelpers"
 	. "github.com/onsi/ginkgo"
@@ -20,7 +21,7 @@ var _ = Describe("ConnManager", func() {
 
 	BeforeEach(func() {
 		mockConnector = newMockV2Connector()
-		connManager = clientpool.NewConnManager(mockConnector, 5)
+		connManager = clientpool.NewConnManager(mockConnector, 5, time.Millisecond)
 		mockCloser = newMockCloser()
 		mockSenderClient = newMockDopplerIngress_SenderClient()
 	})

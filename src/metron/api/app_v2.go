@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"metric"
+	"time"
 
 	clientpool "metron/clientpool/v2"
 	egress "metron/egress/v2"
@@ -76,7 +77,11 @@ func (a *AppV2) initializePool() *clientpool.ClientPool {
 
 	var connManagers []clientpool.Conn
 	for i := 0; i < 5; i++ {
-		connManagers = append(connManagers, clientpool.NewConnManager(connector, 10000+rand.Int63n(1000)))
+		connManagers = append(connManagers, clientpool.NewConnManager(
+			connector,
+			10000+rand.Int63n(1000),
+			time.Second,
+		))
 	}
 
 	return clientpool.New(connManagers...)

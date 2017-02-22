@@ -23,15 +23,17 @@ type v2GRPCConn struct {
 }
 
 type ConnManager struct {
-	conn      unsafe.Pointer
-	maxWrites int64
-	connector Connector
+	conn         unsafe.Pointer
+	maxWrites    int64
+	pollDuration time.Duration
+	connector    Connector
 }
 
-func NewConnManager(c Connector, maxWrites int64) *ConnManager {
+func NewConnManager(c Connector, maxWrites int64, pollDuration time.Duration) *ConnManager {
 	m := &ConnManager{
-		maxWrites: maxWrites,
-		connector: c,
+		maxWrites:    maxWrites,
+		pollDuration: pollDuration,
+		connector:    c,
 	}
 	go m.maintainConn()
 	return m
@@ -65,7 +67,7 @@ func (m *ConnManager) Write(envelope *plumbing.Envelope) error {
 }
 
 func (m *ConnManager) maintainConn() {
-	for range time.Tick(50 * time.Millisecond) {
+	for range time.Tick(m.pollDuration) {
 		conn := atomic.LoadPointer(&m.conn)
 		if conn != nil && (*v2GRPCConn)(conn) != nil {
 			continue

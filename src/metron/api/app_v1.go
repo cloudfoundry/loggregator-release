@@ -98,7 +98,11 @@ func (a *AppV1) setupGRPC() []legacy.Pool {
 
 	var connManagers []clientpool.Conn
 	for i := 0; i < 5; i++ {
-		connManagers = append(connManagers, clientpool.NewConnManager(connector, 10000+rand.Int63n(1000)))
+		connManagers = append(connManagers, clientpool.NewConnManager(
+			connector,
+			10000+rand.Int63n(1000),
+			time.Second,
+		))
 	}
 
 	pool := clientpool.New(connManagers...)
