@@ -96,4 +96,4 @@ properties:
 
   metron_agent.pprof_port:
     description: "The pprof port for runtime profiling data"
-    default: 6061
+    default: 0

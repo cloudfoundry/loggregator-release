@@ -87,7 +87,7 @@ properties:
     default: ""
   traffic_controller.pprof_port:
     description: "The pprof port for runtime profiling data"
-    default: 6060
+    default: 0
 
   system_domain:
     description: "Domain reserved for CF operator, base URL where the login, uaa, and other non-user apps listen"

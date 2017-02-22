@@ -107,7 +107,7 @@ properties:
 
   doppler.pprof_port:
     description: "The pprof port for runtime profiling data"
-    default: 6060
+    default: 0
 
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"
