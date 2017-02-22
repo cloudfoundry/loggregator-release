@@ -23,11 +23,12 @@ config/private.yml
 releases/*.tgz
 releases/**/*.tgz
 
-# cleaner deps
+# tools
 /src/github.com/client9/misspell
 /src/github.com/mdempsky/
 /src/golang.org/x/text/
 /src/golang.org/x/tools/
+/src/github.com/square/certstrap
 
 # cert script output
 loggregator-certs
