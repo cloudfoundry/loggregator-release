@@ -19,53 +19,18 @@ import (
 
 var _ = Describe("Start", func() {
 	It("receive messages via egress client", func() {
-		// create fake doppler
-		doppler := newMockDopplerServer()
+		doppler, dopplerLis := setupDoppler()
+		defer dopplerLis.Close()
 
-		lis, err := net.Listen("tcp", "localhost:0")
-		defer lis.Close()
-		Expect(err).ToNot(HaveOccurred())
-
-		grpcServer := grpc.NewServer()
-		plumbing.RegisterDopplerServer(grpcServer, doppler)
-		go grpcServer.Serve(lis)
-
-		egressLis, err := net.Listen("tcp", "localhost:0")
-		egressLis.Close()
-		Expect(err).ToNot(HaveOccurred())
-
-		egressPort := egressLis.Addr().(*net.TCPAddr).Port
-		// point our app at the fake doppler
-		rlp := app.NewRLP(
-			app.WithIngressAddrs([]string{lis.Addr().String()}),
-			app.WithEgressPort(egressPort),
-		)
-		go rlp.Start()
-
-		// create public client consuming log API
-		conn, err := grpc.Dial(
-			egressLis.Addr().String(),
-			grpc.WithInsecure(),
-		)
-		Expect(err).ToNot(HaveOccurred())
-
-		defer conn.Close()
-		egressRequest := &v2.EgressRequest{}
-		egressClient := v2.NewEgressClient(conn)
-
-		var egressStream v2.Egress_ReceiverClient
-		Eventually(func() error {
-			egressStream, err = egressClient.Receiver(context.Background(), egressRequest)
-			return err
-		}, 5).ShouldNot(HaveOccurred())
+		egressLis := setupRLP(dopplerLis)
+		egressStream, cleanup := setupRLPClient(egressLis)
+		defer cleanup()
 
 		var subscriber plumbing.Doppler_SubscribeServer
 		Eventually(doppler.SubscribeInput.Stream, 5).Should(Receive(&subscriber))
-
 		go func() {
-			payload := buildLogMessage()
 			response := &plumbing.Response{
-				Payload: payload,
+				Payload: buildLogMessage(),
 			}
 
 			for {
@@ -96,4 +61,51 @@ func buildLogMessage() []byte {
 	}
 	b, _ := proto.Marshal(e)
 	return b
+}
+
+func setupDoppler() (*mockDopplerServer, net.Listener) {
+	doppler := newMockDopplerServer()
+
+	lis, err := net.Listen("tcp", "localhost:0")
+	Expect(err).ToNot(HaveOccurred())
+
+	grpcServer := grpc.NewServer()
+	plumbing.RegisterDopplerServer(grpcServer, doppler)
+	go grpcServer.Serve(lis)
+	return doppler, lis
+}
+
+func setupRLP(dopplerLis net.Listener) net.Listener {
+	egressLis, err := net.Listen("tcp", "localhost:0")
+	egressLis.Close()
+	Expect(err).ToNot(HaveOccurred())
+
+	egressPort := egressLis.Addr().(*net.TCPAddr).Port
+	rlp := app.NewRLP(
+		app.WithIngressAddrs([]string{dopplerLis.Addr().String()}),
+		app.WithEgressPort(egressPort),
+		app.
+	)
+	go rlp.Start()
+	return egressLis
+}
+
+func setupRLPClient(egressLis net.Listener) (v2.Egress_ReceiverClient, func()) {
+	conn, err := grpc.Dial(
+		egressLis.Addr().String(),
+		grpc.WithInsecure(),
+	)
+	Expect(err).ToNot(HaveOccurred())
+
+	egressClient := v2.NewEgressClient(conn)
+
+	var egressStream v2.Egress_ReceiverClient
+	Eventually(func() error {
+		egressStream, err = egressClient.Receiver(context.Background(), &v2.EgressRequest{})
+		return err
+	}, 5).ShouldNot(HaveOccurred())
+
+	return egressStream, func() {
+		conn.Close()
+	}
 }
