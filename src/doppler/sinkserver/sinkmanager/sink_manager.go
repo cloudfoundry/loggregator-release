@@ -100,8 +100,6 @@ func (sm *SinkManager) RegisterSink(sink sinks.Sink) bool {
 
 	sm.metrics.Inc(sink)
 
-	log.Printf("SinkManager: Sink with identifier %v requested. Opened it.", sink.Identifier())
-
 	go func() {
 		sink.Run(inputChan)
 		sm.UnregisterSink(sink)
@@ -121,8 +119,6 @@ func (sm *SinkManager) UnregisterSink(sink sinks.Sink) {
 	if syslogSink, ok := sink.(*syslog.SyslogSink); ok {
 		syslogSink.Disconnect()
 	}
-
-	log.Printf("SinkManager: Sink with identifier %s requested closing. Closed it.", sink.Identifier())
 }
 
 func (sm *SinkManager) IsFirehoseRegistered(sink sinks.Sink) bool {
@@ -137,8 +133,6 @@ func (sm *SinkManager) RegisterFirehoseSink(sink sinks.Sink) bool {
 	}
 
 	sm.metrics.IncFirehose()
-
-	log.Printf("SinkManager: Firehose sink with identifier %v requested. Opened it.", sink.Identifier())
 
 	go func() {
 		sink.Run(inputChan)
@@ -155,7 +149,6 @@ func (sm *SinkManager) UnregisterFirehoseSink(sink sinks.Sink) {
 	}
 
 	sm.metrics.DecFirehose()
-	log.Printf("SinkManager: Firehose Sink with identifier %s requested closing. Closed it.", sink.Identifier())
 }
 
 func (sm *SinkManager) RecentLogsFor(appId string) []*events.Envelope {
