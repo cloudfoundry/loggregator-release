@@ -13,6 +13,23 @@ import (
 	"google.golang.org/grpc"
 )
 
+// RLP represents a running reverse log proxy. It connects to various gRPC
+// servers to ingress data and opens a gRPC server to egress data.
+type RLP struct {
+	egressPort       int
+	egressServerOpts []grpc.ServerOption
+
+	ingressAddrs    []string
+	ingressDialOpts []grpc.DialOption
+
+	receiver *ingress.Receiver
+
+	egressAddr     net.Addr
+	egressListener net.Listener
+	egressServer   *grpc.Server
+}
+
+// NewRLP returns a new unstarted RLP.
 func NewRLP(opts ...RLPOption) *RLP {
 	rlp := &RLP{
 		ingressAddrs:     []string{"doppler.service.cf.internal"},
@@ -23,22 +40,6 @@ func NewRLP(opts ...RLPOption) *RLP {
 		o(rlp)
 	}
 	return rlp
-}
-
-// RLP represents a running reverse log proxy. It connects to various gRPC
-// servers to ingress data and opens a gRPC server to egress data.
-type RLP struct {
-	egressAddr       net.Addr
-	egressPort       int
-	egressServerOpts []grpc.ServerOption
-
-	ingressAddrs    []string
-	ingressDialOpts []grpc.DialOption
-
-	receiver *ingress.Receiver
-
-	egressListener net.Listener
-	egressServer   *grpc.Server
 }
 
 // RLPOption represents a function that can configure a remote log proxy.
