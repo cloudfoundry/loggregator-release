@@ -314,7 +314,7 @@ variables:
   options:
     ca: loggregator_ca
     common_name: reverselogproxy
-    ext_key_usage:
+    extended_key_usage:
     - client_auth
     - server_auth
 - name: loggregator_metron
