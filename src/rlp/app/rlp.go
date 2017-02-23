@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// RLP represents a running reverse log proxy. It connects to various gRPC
+// RLP represents the reverse log proxy component. It connects to various gRPC
 // servers to ingress data and opens a gRPC server to egress data.
 type RLP struct {
 	egressPort       int
@@ -75,7 +75,8 @@ func WithIngressDialOptions(opts ...grpc.DialOption) RLPOption {
 	}
 }
 
-// Start creates and starts a remote log proxy.
+// Start starts a remote log proxy. This connects to various gRPC servers and
+// listens for gRPC connections for egressing data.
 func (r *RLP) Start() {
 	r.setupIngress()
 	r.setupEgress()
