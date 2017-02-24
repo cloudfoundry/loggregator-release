@@ -2,6 +2,7 @@ package v2
 
 import (
 	"metric"
+	"log"
 	plumbing "plumbing/v2"
 )
 
@@ -34,6 +35,7 @@ func (t *Transponder) Start() {
 				metric.WithVersion(2, 0),
 				metric.WithTag("direction", "egress"),
 			)
+			log.Printf("v2 egress dropped: %s", err)
 			continue
 		}
 		metric.IncCounter("egress", metric.WithVersion(2, 0))
