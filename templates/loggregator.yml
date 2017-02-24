@@ -18,8 +18,8 @@ instance_groups:
   azs:
   - z1
   instances: 1
-  persistent_disk_type: 1GB
-  vm_type: common
+  persistent_disk_type: default
+  vm_type: default
   stemcell: default
   networks:
   - name: default
@@ -32,17 +32,16 @@ instance_groups:
   azs:
   - z1
   instances: 1
-  persistent_disk_type: 1GB
-  vm_type: common
+  persistent_disk_type: default
+  vm_type: default
   stemcell: default
   networks:
   - name: default
-    static_ips: [10.244.10.2]
   jobs:
   - name: consul_agent
     release: consul
     consumes:
-      consul: nil
+      consul: { from: consul_server }
     provides:
       consul: {as: consul_server}
     properties:
@@ -50,8 +49,6 @@ instance_groups:
         agent:
           mode: server
           domain: cf.internal
-          servers:
-            lan: [ 10.244.10.2 ]
         require_ssl: true
         encrypt_keys:
         - "((consul_encrypt_key))"
@@ -84,7 +81,7 @@ instance_groups:
   azs:
   - z1
   instances: 1
-  vm_type: common
+  vm_type: default
   stemcell: default
   lifecycle: errand
   networks:
@@ -127,8 +124,8 @@ instance_groups:
   azs:
   - z1
   instances: 1
-  persistent_disk_type: 1GB
-  vm_type: common
+  persistent_disk_type: default
+  vm_type: default
   stemcell: default
   networks:
   - name: default
@@ -183,8 +180,8 @@ instance_groups:
   azs:
   - z1
   instances: 1
-  persistent_disk_type: 1GB
-  vm_type: common
+  persistent_disk_type: default
+  vm_type: default
   stemcell: default
   networks:
   - name: default
@@ -227,8 +224,8 @@ instance_groups:
   azs:
   - z1
   instances: 1
-  persistent_disk_type: 1GB
-  vm_type: common
+  persistent_disk_type: default
+  vm_type: default
   stemcell: default
   networks:
   - name: default
