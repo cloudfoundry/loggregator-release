@@ -27,6 +27,7 @@ func NewIngestor(envelopeBuffer DataSetter) *Ingestor {
 }
 
 func (i Ingestor) Sender(s plumbing.DopplerIngress_SenderServer) error {
+	var count int
 	for {
 		v2e, err := s.Recv()
 		if err != nil {
@@ -38,7 +39,13 @@ func (i Ingestor) Sender(s plumbing.DopplerIngress_SenderServer) error {
 			continue
 		}
 
-		metric.IncCounter("ingress", metric.WithVersion(2, 0))
+		count++
+		if count%1000 == 0 {
+			metric.IncCounter("ingress",
+				metric.WithIncrement(1000),
+				metric.WithVersion(2, 0),
+			)
+		}
 		i.envelopeBuffer.Set(v1e)
 	}
 }
