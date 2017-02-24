@@ -1,8 +1,8 @@
 package v2
 
 import (
-	"metric"
 	"log"
+	"metric"
 	plumbing "plumbing/v2"
 )
 
@@ -27,6 +27,7 @@ func NewTransponder(n Nexter, w Writer) *Transponder {
 }
 
 func (t *Transponder) Start() {
+	var count int
 	for {
 		envelope := t.nexter.Next()
 		err := t.writer.Write(envelope)
@@ -38,6 +39,13 @@ func (t *Transponder) Start() {
 			log.Printf("v2 egress dropped: %s", err)
 			continue
 		}
-		metric.IncCounter("egress", metric.WithVersion(2, 0))
+		count++
+		if count%1000 == 0 {
+			metric.IncCounter("egress",
+				metric.WithIncrement(1000),
+				metric.WithVersion(2, 0),
+			)
+			log.Print("egressed (v2) 1000 envelopes")
+		}
 	}
 }
