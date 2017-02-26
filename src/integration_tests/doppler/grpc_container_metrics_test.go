@@ -1,12 +1,12 @@
 package doppler_test
 
 import (
-	"fmt"
 	"net"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
+	"github.com/cloudfoundry/dropsonde/signature"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -16,7 +16,7 @@ import (
 
 var _ = Describe("ContainerMetrics", func() {
 	var connectToDoppler = func() net.Conn {
-		in, err := net.Dial("tcp", fmt.Sprintf(localIPAddress+":4321"))
+		in, err := net.Dial("udp", localIPAddress+":8765")
 		Expect(err).ToNot(HaveOccurred())
 		return in
 	}
@@ -42,15 +42,14 @@ var _ = Describe("ContainerMetrics", func() {
 
 		It("gets container metrics", func() {
 			containerMetric := buildContainerMetric()
-			prefixedContainerMetric := prefixMessage(containerMetric)
+			signedMetric := signature.SignMessage(containerMetric, []byte("secret"))
 
-			_, err := in.Write(prefixedContainerMetric)
+			_, err := in.Write(signedMetric)
 			Expect(err).ToNot(HaveOccurred())
 
 			ctx := context.Background()
-			req := &plumbing.ContainerMetricsRequest{
-				AppID: "test-app",
-			}
+			req := &plumbing.ContainerMetricsRequest{AppID: "test-app"}
+
 			f := func() []byte {
 				msg, _ := client.ContainerMetrics(ctx, req)
 				if msg == nil || len(msg.Payload) == 0 {

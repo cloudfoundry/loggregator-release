@@ -119,22 +119,6 @@ func buildLogMessage() []byte {
 	return b
 }
 
-func buildPrimerMessage() []byte {
-	e := &events.Envelope{
-		Origin:    proto.String("prime-message"),
-		EventType: events.Envelope_LogMessage.Enum(),
-		LogMessage: &events.LogMessage{
-			Message:     []byte("foo"),
-			MessageType: events.LogMessage_OUT.Enum(),
-			Timestamp:   proto.Int64(time.Now().UnixNano()),
-			AppId:       proto.String("test-app"),
-		},
-	}
-	b, err := proto.Marshal(e)
-	Expect(err).ToNot(HaveOccurred())
-	return b
-}
-
 func buildContainerMetric() []byte {
 	e := &events.Envelope{
 		Origin:    proto.String("foo"),
@@ -148,15 +132,8 @@ func buildContainerMetric() []byte {
 			DiskBytes:     proto.Uint64(4321),
 		},
 	}
-	b, err := proto.Marshal(e)
+	b, err := e.Marshal()
 	Expect(err).ToNot(HaveOccurred())
-	return b
-}
-
-func prefixMessage(msg []byte) []byte {
-	length := uint32(len(msg))
-	b := append(make([]byte, 4), msg...)
-	binary.LittleEndian.PutUint32(b, length)
 	return b
 }
 
