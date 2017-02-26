@@ -42,6 +42,8 @@ var _ = Describe("RecentLogs", func() {
 		})
 
 		It("gets recent logs", func() {
+			logMessage := buildLogMessage()
+			prefixedLogMessage := prefixMessage(logMessage)
 			_, err := in.Write(prefixedLogMessage)
 			Expect(err).ToNot(HaveOccurred())
 

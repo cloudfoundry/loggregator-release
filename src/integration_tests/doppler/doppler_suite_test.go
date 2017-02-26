@@ -48,14 +48,6 @@ var (
 	pathToDopplerExec    string
 	pathToHTTPEchoServer string
 	pathToTCPEchoServer  string
-
-	prefixedLogMessage    []byte
-	logMessage            []byte
-	prefixedPrimerMessage []byte
-	primerMessage         []byte
-
-	prefixedContainerMetric []byte
-	containerMetric         []byte
 )
 
 var _ = BeforeSuite(func() {
@@ -74,13 +66,6 @@ var _ = BeforeSuite(func() {
 	pathToTCPEchoServer, err = gexec.Build("tools/tcpechoserver")
 	Expect(err).NotTo(HaveOccurred())
 
-	logMessage = buildLogMessage()
-	prefixedLogMessage = prefixMessage(logMessage)
-	primerMessage = buildPrimerMessage()
-	prefixedPrimerMessage = prefixMessage(primerMessage)
-
-	containerMetric = buildContainerMetric()
-	prefixedContainerMetric = prefixMessage(containerMetric)
 })
 
 var _ = BeforeEach(func() {
