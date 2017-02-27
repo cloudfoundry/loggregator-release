@@ -28,7 +28,7 @@ func NewTransponder(n Nexter, w Writer) *Transponder {
 }
 
 func (t *Transponder) Start() {
-	var count int
+	var count uint64
 	lastEmitted := time.Now()
 	for {
 		envelope := t.nexter.Next()
@@ -42,13 +42,14 @@ func (t *Transponder) Start() {
 			continue
 		}
 		count++
-		if count%1000 == 0 || time.Since(lastEmitted) > 5*time.Second {
+		if count >= 1000 || time.Since(lastEmitted) > 5*time.Second {
 			metric.IncCounter("egress",
-				metric.WithIncrement(1000),
+				metric.WithIncrement(count),
 				metric.WithVersion(2, 0),
 			)
 			lastEmitted = time.Now()
-			log.Print("egressed (v2) 1000 envelopes")
+			log.Printf("egressed (v2) %d envelopes", count)
+			count = 0
 		}
 	}
 }

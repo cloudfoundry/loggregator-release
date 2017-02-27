@@ -22,7 +22,7 @@ func NewReceiver(dataSetter DataSetter) *Receiver {
 }
 
 func (s *Receiver) Sender(sender v2.Ingress_SenderServer) error {
-	var count int
+	var count uint64
 	lastEmitted := time.Now()
 	for {
 		e, err := sender.Recv()
@@ -34,13 +34,14 @@ func (s *Receiver) Sender(sender v2.Ingress_SenderServer) error {
 		s.dataSetter.Set(e)
 
 		count++
-		if count%1000 == 0 || time.Since(lastEmitted) > 5*time.Second {
+		if count >= 1000 || time.Since(lastEmitted) > 5*time.Second {
 			metric.IncCounter("ingress",
-				metric.WithIncrement(1000),
+				metric.WithIncrement(count),
 				metric.WithVersion(2, 0),
 			)
 			lastEmitted = time.Now()
-			log.Print("Ingressed (v2) 1000 envelopes")
+			log.Printf("Ingressed (v2) %d envelopes", count)
+			count = 0
 		}
 	}
 
