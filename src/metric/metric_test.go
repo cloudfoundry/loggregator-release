@@ -29,8 +29,7 @@ var _ = Describe("Metric", func() {
 			metric.WithAddr(addr),
 			metric.WithSourceUUID("some-uuid"),
 			metric.WithBatchInterval(250*time.Millisecond),
-			metric.WithPrefix("loggregator"),
-			metric.WithOrigin("metron"),
+			metric.WithOrigin("loggregator.metron"),
 			metric.WithDeploymentMeta("some-deployment", "some-job", "some-index"),
 		)
 
@@ -77,7 +76,7 @@ var _ = Describe("Metric", func() {
 						return false
 					}
 
-					return counter.Name == "loggregator."+randName
+					return counter.Name == randName
 				}
 
 				Eventually(f).Should(BeTrue())
@@ -87,7 +86,7 @@ var _ = Describe("Metric", func() {
 
 				value, ok := e.GetTags()["origin"]
 				Expect(ok).To(Equal(true))
-				Expect(value.GetText()).To(Equal("metron"))
+				Expect(value.GetText()).To(Equal("loggregator.metron"))
 			})
 
 			It("increments by the given value", func() {
@@ -102,7 +101,7 @@ var _ = Describe("Metric", func() {
 						return false
 					}
 
-					return counter.Name == "loggregator."+randName
+					return counter.Name == randName
 				}
 
 				Eventually(f).Should(BeTrue())
@@ -120,7 +119,7 @@ var _ = Describe("Metric", func() {
 						return false
 					}
 
-					return counter.Name == "loggregator."+randName
+					return counter.Name == randName
 				}
 				Eventually(f).Should(BeTrue())
 				Expect(e.GetTags()["metric_version"].GetText()).To(Equal("1.2"))
@@ -137,7 +136,7 @@ var _ = Describe("Metric", func() {
 						return false
 					}
 
-					return counter.Name == "loggregator."+randName
+					return counter.Name == randName
 				}
 				Eventually(f).Should(BeTrue())
 				Expect(e.GetTags()["name"].GetText()).To(Equal("value"))
@@ -154,7 +153,7 @@ var _ = Describe("Metric", func() {
 						return false
 					}
 
-					return counter.Name == "loggregator."+randName
+					return counter.Name == randName
 				}
 
 				Eventually(f).Should(BeTrue())

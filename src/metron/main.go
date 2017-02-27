@@ -59,8 +59,7 @@ func main() {
 	metric.Setup(
 		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(serverCreds)),
 		metric.WithBatchInterval(batchInterval),
-		metric.WithPrefix("loggregator"),
-		metric.WithOrigin("metron"),
+		metric.WithOrigin("loggregator.metron"),
 		metric.WithAddr(fmt.Sprintf("localhost:%d", config.GRPC.Port)),
 		metric.WithDeploymentMeta(config.Deployment, config.Job, config.Index),
 	)

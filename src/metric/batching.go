@@ -68,7 +68,7 @@ func IncCounter(name string, options ...IncrementOpt) {
 		Timestamp: time.Now().UnixNano(),
 		Message: &v2.Envelope_Counter{
 			Counter: &v2.Counter{
-				Name: fmt.Sprintf("%s.%s", conf.tags["prefix"], name),
+				Name: name,
 				Value: &v2.Counter_Delta{
 					Delta: incConf.delta,
 				},

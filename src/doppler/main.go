@@ -433,8 +433,7 @@ func setupMetricsEmitter(conf *config.Config) {
 	metric.Setup(
 		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(serverCreds)),
 		metric.WithBatchInterval(batchInterval),
-		metric.WithPrefix("loggregator"),
-		metric.WithOrigin("doppler"),
+		metric.WithOrigin("loggregator.doppler"),
 		metric.WithAddr(conf.MetronConfig.GRPCAddress),
 		metric.WithDeploymentMeta(conf.DeploymentName, conf.JobName, conf.Index),
 	)

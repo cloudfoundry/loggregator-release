@@ -55,12 +55,6 @@ func WithBatchInterval(interval time.Duration) func(c *config) {
 	}
 }
 
-func WithPrefix(prefix string) func(c *config) {
-	return func(c *config) {
-		c.tags["prefix"] = prefix
-	}
-}
-
 func WithOrigin(name string) func(c *config) {
 	return func(c *config) {
 		c.tags["origin"] = name
