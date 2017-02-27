@@ -30,12 +30,20 @@ func NewMessageRouter(sinkManagers ...sinkManager) *MessageRouter {
 
 func (r *MessageRouter) Start(incomingLog *diodes.ManyToOneEnvelope) {
 	log.Print("MessageRouter:Starting")
+	var count int
+
 	for {
 		envelope := incomingLog.Next()
-		metric.IncCounter("egress", metric.WithVersion(2, 0))
+		count++
+		if count%1000 == 0 {
+			metric.IncCounter("egress",
+				metric.WithIncrement(1000),
+				metric.WithVersion(2, 0),
+			)
 
-		// TODO: To be removed
-		metrics.BatchIncrementCounter("httpServer.receivedMessages")
+			// TODO: To be removed
+			metrics.BatchAddCounter("listeners.receivedEnvelopes", 1000)
+		}
 
 		r.send(envelope)
 	}
