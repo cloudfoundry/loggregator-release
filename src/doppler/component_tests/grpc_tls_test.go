@@ -97,8 +97,8 @@ var _ = Describe("gRPC TLS", func() {
 						counter.Name == name
 				}
 			}
-			Eventually(f("loggregator.ingress")).Should(Equal(true), "missing ingress metric")
-			Eventually(f("loggregator.egress")).Should(Equal(true), "missing egress metric")
+			Eventually(f("ingress")).Should(Equal(true), "missing ingress metric")
+			Eventually(f("egress")).Should(Equal(true), "missing egress metric")
 		})
 	})
 })
