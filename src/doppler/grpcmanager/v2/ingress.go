@@ -49,6 +49,7 @@ func (i Ingestor) Sender(s plumbing.DopplerIngress_SenderServer) error {
 				metric.WithVersion(2, 0),
 			)
 			log.Printf("Ingressed (v2) %d envelopes", count)
+			lastEmitted = time.Now()
 			count = 0
 		}
 		i.envelopeBuffer.Set(v1e)
