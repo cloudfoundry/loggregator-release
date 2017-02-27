@@ -50,6 +50,7 @@ type Config struct {
 	EtcdTLSClientConfig             EtcdTLSClientConfig
 	Index                           string
 	JobName                         string
+	DeploymentName                  string
 	LogFilePath                     string
 	MaxRetainedLogMessages          uint32
 	MessageDrainBufferSize          uint

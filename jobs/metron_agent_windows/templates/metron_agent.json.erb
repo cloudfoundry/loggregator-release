@@ -38,7 +38,7 @@
         a[:Index] = instance_id
         a[:Job] = job_name
         a[:Zone] = instance_zone
-        a[:Deployment] = p("metron_agent.deployment")
+        a[:Deployment] = spec.deployment
         a[:SharedSecret] = p("metron_endpoint.shared_secret")
         a[:IncomingUDPPort] = incoming_udp_port
         a[:DisableUDP] = p("metron_agent.disable_udp")
