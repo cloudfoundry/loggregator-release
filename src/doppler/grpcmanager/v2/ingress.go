@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"log"
 	"metric"
 	"plumbing/conversion"
 	plumbing "plumbing/v2"
@@ -45,6 +46,7 @@ func (i Ingestor) Sender(s plumbing.DopplerIngress_SenderServer) error {
 				metric.WithIncrement(1000),
 				metric.WithVersion(2, 0),
 			)
+			log.Print("Ingressed (v2) 1000 envelopes")
 		}
 		i.envelopeBuffer.Set(v1e)
 	}
