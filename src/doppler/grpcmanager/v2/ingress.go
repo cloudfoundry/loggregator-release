@@ -5,6 +5,7 @@ import (
 	"metric"
 	"plumbing/conversion"
 	plumbing "plumbing/v2"
+	"time"
 
 	"github.com/cloudfoundry/sonde-go/events"
 )
@@ -29,6 +30,7 @@ func NewIngestor(envelopeBuffer DataSetter) *Ingestor {
 
 func (i Ingestor) Sender(s plumbing.DopplerIngress_SenderServer) error {
 	var count int
+	lastEmitted := time.Now()
 	for {
 		v2e, err := s.Recv()
 		if err != nil {
@@ -41,7 +43,7 @@ func (i Ingestor) Sender(s plumbing.DopplerIngress_SenderServer) error {
 		}
 
 		count++
-		if count%1000 == 0 {
+		if count%1000 == 0 || time.Since(lastEmitted) > 5*time.Second {
 			metric.IncCounter("ingress",
 				metric.WithIncrement(1000),
 				metric.WithVersion(2, 0),
