@@ -4,6 +4,7 @@ import (
 	"log"
 	"metric"
 	plumbing "plumbing/v2"
+	"time"
 )
 
 type Nexter interface {
@@ -28,6 +29,7 @@ func NewTransponder(n Nexter, w Writer) *Transponder {
 
 func (t *Transponder) Start() {
 	var count int
+	lastEmitted := time.Now()
 	for {
 		envelope := t.nexter.Next()
 		err := t.writer.Write(envelope)
@@ -40,11 +42,12 @@ func (t *Transponder) Start() {
 			continue
 		}
 		count++
-		if count%1000 == 0 {
+		if count%1000 == 0 || time.Since(lastEmitted) > 5*time.Second {
 			metric.IncCounter("egress",
 				metric.WithIncrement(1000),
 				metric.WithVersion(2, 0),
 			)
+			lastEmitted = time.Now()
 			log.Print("egressed (v2) 1000 envelopes")
 		}
 	}

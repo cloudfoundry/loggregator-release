@@ -125,21 +125,24 @@ var _ = Describe("Metron", func() {
 			sender, err := client.Sender(ctx)
 			Expect(err).ToNot(HaveOccurred())
 
-			Consistently(func() error {
-				return sender.Send(emitEnvelope)
-			}, 5).Should(Succeed())
+			go func() {
+				for {
+					sender.Send(emitEnvelope)
+				}
+			}()
 
 			var rx v2.DopplerIngress_SenderServer
-			Expect(consumerServer.V2.SenderInput.Arg0).Should(Receive(&rx))
+			Eventually(consumerServer.V2.SenderInput.Arg0).Should(Receive(&rx))
 
 			f := func() bool {
+				sender.Send(emitEnvelope)
 				envelope, err := rx.Recv()
 				Expect(err).ToNot(HaveOccurred())
 
 				return envelope.GetCounter() != nil &&
 					envelope.GetCounter().GetTotal() > 5
 			}
-			Eventually(f).Should(Equal(true))
+			Eventually(f, 15, "1ns").Should(Equal(true))
 		})
 	})
 

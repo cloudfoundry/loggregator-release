@@ -37,7 +37,7 @@ func NewServer() (*Server, error) {
 	mockDopplerV1 := newMockDopplerIngestorServerV1()
 	mockDopplerV2 := newMockDopplerIngressServerV2()
 
-	lis, err := net.Listen("tcp", ":0")
+	lis, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		return nil, err
 	}
