@@ -246,7 +246,6 @@ instance_groups:
         srv_api_uri: ""
       uaa:
         url: ""
-        client_secret: ""
       system_domain: unused
       traffic_controller:
         disable_access_control: true
@@ -263,6 +262,8 @@ instance_groups:
           require_ssl: true
           ca_cert: "((etcd_client.ca))"
           machines: [etcd.service.cf.internal]
+        uaa:
+          client_secret: ""
       ssl:
         skip_cert_verify: false
   - name: reverse_log_proxy
