@@ -246,6 +246,7 @@ instance_groups:
         srv_api_uri: ""
       uaa:
         url: ""
+        client_secret: ""
       system_domain: unused
       traffic_controller:
         disable_access_control: true
