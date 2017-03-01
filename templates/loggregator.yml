@@ -263,7 +263,7 @@ instance_groups:
           ca_cert: "((etcd_client.ca))"
           machines: [etcd.service.cf.internal]
         uaa:
-          client_secret: ""
+          client_secret: "some-secret"
       ssl:
         skip_cert_verify: false
   - name: reverse_log_proxy
