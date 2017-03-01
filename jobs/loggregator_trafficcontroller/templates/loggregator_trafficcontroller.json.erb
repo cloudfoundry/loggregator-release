@@ -18,11 +18,6 @@
         uaaClient = oldUaaClient
     end
 
-    uaaSecret = p("loggregator.uaa.client_secret")
-    if uaaSecret.empty?
-        uaaSecret = p("uaa.clients.doppler.secret")
-    end
-
     etcdMachines = p("loggregator.etcd.machines").map{|addr| "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"}
 
     etcdTLSClientConfig = {
@@ -60,7 +55,7 @@
         a[:PPROFPort] = p("traffic_controller.pprof_port")
         a[:UaaHost] = uaaHost
         a[:UaaClient] = uaaClient
-        a[:UaaClientSecret] = uaaSecret
+        a[:UaaClientSecret] = p("loggregator.uaa.client_secret")
         if_p("syslog_daemon_config") do |_|
             a[:Syslog] = "vcap.trafficcontroller"
         end

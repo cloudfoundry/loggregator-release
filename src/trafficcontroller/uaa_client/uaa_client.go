@@ -20,7 +20,6 @@ type uaaClient struct {
 }
 
 func NewUaaClient(address, id, secret string) uaaClient {
-
 	return uaaClient{
 		address: address,
 		id:      id,

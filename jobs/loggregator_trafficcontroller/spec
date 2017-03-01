@@ -39,7 +39,6 @@ properties:
     default: "doppler"
   loggregator.uaa.client_secret:
     description: "Doppler's client secret to connect to UAA"
-    default: ""
   uaa.url:
     description: "URL of UAA"
   login.protocol:
@@ -100,7 +99,4 @@ properties:
 
   loggregator.uaa_client_id:
     description: "DEPRECATED in favor of loggregator.uaa.client."
-    default: ""
-  uaa.clients.doppler.secret:
-    description: "DEPRECATED in favor of loggregator.uaa.client_secret."
     default: ""

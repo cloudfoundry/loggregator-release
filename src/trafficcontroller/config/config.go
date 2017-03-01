@@ -120,5 +120,9 @@ func (c *Config) validate() error {
 		return errors.New("invalid doppler config, no GRPC.KeyFile provided")
 	}
 
+	if c.UaaClientSecret == "" {
+		return errors.New("missing UAA client secret")
+	}
+
 	return nil
 }
