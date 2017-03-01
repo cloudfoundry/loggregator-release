@@ -17,7 +17,6 @@ import (
 	clientpool "metron/clientpool/v1"
 	egress "metron/egress/v1"
 	ingress "metron/ingress/v1"
-	"plumbing"
 )
 
 type AppV1 struct {
@@ -88,13 +87,16 @@ func (a *AppV1) setupGRPC() []legacy.Pool {
 		return nil
 	}
 
-	connector := clientpool.MakeGRPCConnector(
-		a.config.DopplerAddr,
-		a.config.Zone,
-		grpc.Dial,
-		plumbing.NewDopplerIngestorClient,
+	balancers := []*clientpool.Balancer{
+		clientpool.NewBalancer(fmt.Sprintf("%s.%s", a.config.Zone, a.config.DopplerAddr)),
+		clientpool.NewBalancer(a.config.DopplerAddr),
+	}
+
+	fetcher := clientpool.NewPusherFetcher(
 		grpc.WithTransportCredentials(a.creds),
 	)
+
+	connector := clientpool.MakeGRPCConnector(fetcher, balancers)
 
 	var connManagers []clientpool.Conn
 	for i := 0; i < 5; i++ {
