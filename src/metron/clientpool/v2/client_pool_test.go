@@ -2,96 +2,93 @@ package v2_test
 
 import (
 	"fmt"
+
 	clientpool "metron/clientpool/v2"
 	plumbing "plumbing/v2"
-	"reflect"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
+type SpyConn struct {
+	err  error
+	data []*plumbing.Envelope
+}
+
+func (s *SpyConn) Write(e *plumbing.Envelope) error {
+	s.data = append(s.data, e)
+	return s.err
+}
+
 var _ = Describe("ClientPool", func() {
 	var (
-		pool      *clientpool.ClientPool
-		mockConns []*mockConn
+		pool  *clientpool.ClientPool
+		conns []*SpyConn
 	)
 
 	BeforeEach(func() {
 		var poolConns []clientpool.Conn
-		mockConns = make([]*mockConn, 0)
+		conns = nil
 		for i := 0; i < 5; i++ {
-			conn := newMockConn()
-			mockConns = append(mockConns, conn)
+			conn := &SpyConn{}
+			conns = append(conns, conn)
 			poolConns = append(poolConns, conn)
 		}
 		pool = clientpool.New(poolConns...)
 	})
 
 	Describe("Write()", func() {
-		Context("all conn managers return an error", func() {
+		Context("with all conn managers returning an error", func() {
 			BeforeEach(func() {
-				for _, c := range mockConns {
-					c.WriteOutput.Err <- fmt.Errorf("some-error")
+				for _, c := range conns {
+					c.err = fmt.Errorf("some-error")
 				}
 			})
 
 			It("returns an error", func() {
-				err := pool.Write(&plumbing.Envelope{SourceId: "some-uuid"})
-				Expect(err).ToNot(Succeed())
+				err := pool.Write(&plumbing.Envelope{})
+				Expect(err.Error()).To(Equal("unable to write to any dopplers"))
 			})
 
 			It("tries all conns before erroring", func() {
 				pool.Write(&plumbing.Envelope{SourceId: "some-uuid"})
 
-				for len(mockConns) > 0 {
-					i, _ := chooseData(mockConns)
+				for len(conns) > 0 {
+					i, _ := chooseData(conns)
 					Expect(i).ToNot(Equal(-1))
-					mockConns = append(mockConns[:i], mockConns[i+1:]...)
+					conns = append(conns[:i], conns[i+1:]...)
 				}
 			})
 		})
 
 		Context("all conns succeed", func() {
-			BeforeEach(func() {
-				for _, c := range mockConns {
-					c.WriteOutput.Err <- nil
-				}
-			})
-
 			It("returns a nil error", func() {
-				err := pool.Write(&plumbing.Envelope{SourceId: "some-uuid"})
-				Expect(err).To(Succeed())
+				Expect(pool.Write(&plumbing.Envelope{})).To(Succeed())
 			})
 
-			It("uses the given data once", func() {
+			It("writes only to one connection", func() {
 				data := &plumbing.Envelope{SourceId: "some-uuid"}
-				pool.Write(data)
+				Expect(pool.Write(data)).To(Succeed())
 
-				idx, msg := chooseData(mockConns)
-				Expect(idx).ToNot(Equal(-1))
-				Expect(msg).To(Equal(data))
-
-				idx, _ = chooseData(mockConns)
-				Expect(idx).To(Equal(-1))
+				Expect(envelopeCount(conns)).To(Equal(1))
 			})
 		})
 	})
 })
 
-func chooseData(conns []*mockConn) (idx int, value *plumbing.Envelope) {
-	var cases []reflect.SelectCase
-	for _, c := range conns {
-		cases = append(cases, reflect.SelectCase{
-			Dir:  reflect.SelectRecv,
-			Chan: reflect.ValueOf(c.WriteInput.Data),
-		})
+func chooseData(conns []*SpyConn) (idx int, value *plumbing.Envelope) {
+	for i, conn := range conns {
+		if len(conn.data) > 0 {
+			return i, conn.data[0]
+		}
 	}
-	def := reflect.SelectCase{Dir: reflect.SelectDefault}
-	cases = append(cases, def)
+	return -1, nil
+}
 
-	caseIdx, v, _ := reflect.Select(cases)
-	if cases[caseIdx] == def {
-		return -1, nil
+func envelopeCount(conns []*SpyConn) int {
+	var count int
+	for _, conn := range conns {
+		count += len(conn.data)
 	}
-	return caseIdx, v.Interface().(*plumbing.Envelope)
+	return count
 }

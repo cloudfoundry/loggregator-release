@@ -21,7 +21,6 @@ func New(conns ...Conn) *ClientPool {
 	pool := &ClientPool{
 		conns: make([]unsafe.Pointer, len(conns)),
 	}
-
 	for i := range conns {
 		pool.conns[i] = unsafe.Pointer(&conns[i])
 	}

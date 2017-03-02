@@ -2,131 +2,107 @@ package v2_test
 
 import (
 	"errors"
-
-	"google.golang.org/grpc"
+	"io"
+	"io/ioutil"
+	"metron/clientpool/v1"
+	"net"
+	"plumbing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	clientpool "metron/clientpool/v2"
-	plumbing "plumbing/v2"
 )
 
+type SpyFetcher struct {
+	Addr   string
+	Closer io.Closer
+	Client plumbing.DopplerIngestor_PusherClient
+}
+
+func (f *SpyFetcher) Fetch(addr string) (conn io.Closer, client plumbing.DopplerIngestor_PusherClient, err error) {
+	f.Addr = addr
+	return f.Closer, f.Client, nil
+}
+
+type SpyStream struct {
+	plumbing.DopplerIngestor_PusherClient
+}
+
 var _ = Describe("GRPCConnector", func() {
-	Context("when successfully connecting to the AZ", func() {
+	Context("when first balancer returns an address", func() {
 		var (
-			df               *mockDialFunc
-			cf               *mockIngressClientFunc
-			mockSender       *mockDopplerIngressClient
-			mockSenderClient *mockDopplerIngress_SenderClient
-			clientConn       *grpc.ClientConn
+			fetcher   *SpyFetcher
+			connector v1.GRPCConnector
 		)
 
 		BeforeEach(func() {
-			df = newMockDialFunc()
-			clientConn = &grpc.ClientConn{}
-			df.retClientConn <- clientConn
-			df.retErr <- nil
-
-			cf = newMockIngressClientFunc()
-			mockSender = newMockDopplerIngressClient()
-			mockSenderClient = newMockDopplerIngress_SenderClient()
-
-			cf.retIngressClient <- mockSender
-			mockSender.SenderOutput.Ret0 <- mockSenderClient
-			mockSender.SenderOutput.Ret1 <- nil
+			balancers := []*v1.Balancer{
+				v1.NewBalancer("z1.doppler.com:99", v1.WithLookup(func(string) ([]net.IP, error) {
+					return []net.IP{net.ParseIP("10.10.10.1")}, nil
+				})),
+				v1.NewBalancer("doppler.com:99", v1.WithLookup(func(string) ([]net.IP, error) {
+					return []net.IP{net.ParseIP("1.1.1.1")}, nil
+				})),
+			}
+			fetcher = &SpyFetcher{
+				Closer: ioutil.NopCloser(nil),
+				Client: SpyStream{},
+			}
+			connector = v1.MakeGRPCConnector(fetcher, balancers)
 		})
 
-		It("connects to the dns name with az prefix", func() {
-			connector := clientpool.MakeGRPCConnector("test-name", "z1", df.fn, cf.fn, grpc.WithInsecure())
-			_, _, err := connector.Connect()
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(df.inputDoppler).To(Receive(Equal("z1.test-name")))
+		It("fetches a client with the given address", func() {
+			connector.Connect()
+			Expect(fetcher.Addr).To(Equal("10.10.10.1:99"))
 		})
 
-		It("returns the original client connection", func() {
-			connector := clientpool.MakeGRPCConnector("test-name", "", df.fn, cf.fn, grpc.WithInsecure())
-			conn, _, err := connector.Connect()
+		It("returns the connection as a closer and client", func() {
+			closer, client, err := connector.Connect()
+
 			Expect(err).ToNot(HaveOccurred())
-
-			Expect(conn).To(Equal(clientConn))
-		})
-
-		It("returns the pusher client", func() {
-			connector := clientpool.MakeGRPCConnector("test-name", "", df.fn, cf.fn, grpc.WithInsecure())
-			_, pusherClient, err := connector.Connect()
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(pusherClient).To(Equal(mockSenderClient))
+			Expect(closer).To(Equal(fetcher.Closer))
+			Expect(client).To(Equal(fetcher.Client))
 		})
 	})
 
-	Context("when unable to connect to AZ specific dopplers", func() {
-		It("dials the original dns name", func() {
-			df := newMockDialFunc()
-			cf := newMockIngressClientFunc()
-			mockSender := newMockDopplerIngressClient()
-			mockSenderClient := newMockDopplerIngress_SenderClient()
+	Context("when first balancer does not return an address", func() {
+		It("dials the next balancer", func() {
+			balancers := []*v1.Balancer{
+				v1.NewBalancer("z1.doppler.com:99", v1.WithLookup(func(string) ([]net.IP, error) {
+					return nil, errors.New("Should not get here")
+				})),
+				v1.NewBalancer("doppler.com:99", v1.WithLookup(func(string) ([]net.IP, error) {
+					return []net.IP{net.ParseIP("1.1.1.1")}, nil
+				})),
+			}
+			fetcher := &SpyFetcher{
+				Closer: ioutil.NopCloser(nil),
+				Client: SpyStream{},
+			}
+			connector := v1.MakeGRPCConnector(fetcher, balancers)
 
-			df.retClientConn <- newMockClientConn()
-			df.retErr <- nil
-			mockSender.SenderOutput.Ret0 <- nil
-			mockSender.SenderOutput.Ret1 <- errors.New("fake error")
-			cf.retIngressClient <- mockSender
-
-			df.retClientConn <- &grpc.ClientConn{}
-			df.retErr <- nil
-			mockSender.SenderOutput.Ret0 <- mockSenderClient
-			mockSender.SenderOutput.Ret1 <- nil
-			cf.retIngressClient <- mockSender
-
-			connector := clientpool.MakeGRPCConnector("test-name", "z1", df.fn, cf.fn)
-			_, _, err := connector.Connect()
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(df.inputDoppler).To(Receive(Equal("z1.test-name")))
-			Expect(df.inputDoppler).To(Receive(Equal("test-name")))
+			connector.Connect()
+			Expect(fetcher.Addr).To(Equal("1.1.1.1:99"))
 		})
 	})
 
-	Context("when unable to connect to any doppler", func() {
+	Context("when the none balancer return anything", func() {
 		It("returns an error", func() {
-			df := newMockDialFunc()
+			balancers := []*v1.Balancer{
+				v1.NewBalancer("z1.doppler.com:99", v1.WithLookup(func(string) ([]net.IP, error) {
+					return nil, errors.New("Should not get here")
+				})),
+				v1.NewBalancer("doppler.com:99", v1.WithLookup(func(string) ([]net.IP, error) {
+					return nil, errors.New("Should not get here")
+				})),
+			}
+			fetcher := &SpyFetcher{
+				Closer: ioutil.NopCloser(nil),
+				Client: SpyStream{},
+			}
+			connector := v1.MakeGRPCConnector(fetcher, balancers)
 
-			df.retClientConn <- nil
-			df.retErr <- errors.New("fake error")
-
-			df.retClientConn <- nil
-			df.retErr <- errors.New("fake error")
-
-			connector := clientpool.MakeGRPCConnector("test-name", "z1", df.fn, nil)
 			_, _, err := connector.Connect()
 			Expect(err).To(HaveOccurred())
 		})
 	})
 })
-
-type mockIngressClientFunc struct {
-	inputClientConn  chan *grpc.ClientConn
-	retIngressClient chan plumbing.DopplerIngressClient
-	fn               clientpool.SenderClientFunc
-}
-
-func newMockIngressClientFunc() *mockIngressClientFunc {
-	cf := &mockIngressClientFunc{
-		inputClientConn:  make(chan *grpc.ClientConn, 100),
-		retIngressClient: make(chan plumbing.DopplerIngressClient, 100),
-	}
-	cf.fn = func(conn *grpc.ClientConn) plumbing.DopplerIngressClient {
-		cf.inputClientConn <- conn
-		return <-cf.retIngressClient
-	}
-	return cf
-}
-
-func newMockClientConn() *grpc.ClientConn {
-	conn, err := grpc.Dial("", grpc.WithInsecure())
-	Expect(err).NotTo(HaveOccurred())
-	return conn
-}

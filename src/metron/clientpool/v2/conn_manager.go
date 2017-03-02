@@ -48,8 +48,6 @@ func (m *ConnManager) Write(envelope *plumbing.Envelope) error {
 	gRPCConn := (*v2GRPCConn)(conn)
 	err := gRPCConn.client.Send(envelope)
 
-	// TODO: This block is untested because we don't know how to
-	// induce an error from the stream via the test
 	if err != nil {
 		log.Printf("error writing to doppler %s: %s", gRPCConn.name, err)
 		atomic.StorePointer(&m.conn, nil)
@@ -73,7 +71,7 @@ func (m *ConnManager) maintainConn() {
 			continue
 		}
 
-		closer, pusherClient, err := m.connector.Connect()
+		closer, senderClient, err := m.connector.Connect()
 		if err != nil {
 			log.Printf("error dialing doppler %s: %s", m.connector, err)
 			continue
@@ -81,7 +79,7 @@ func (m *ConnManager) maintainConn() {
 
 		atomic.StorePointer(&m.conn, unsafe.Pointer(&v2GRPCConn{
 			name:   fmt.Sprintf("%s", m.connector),
-			client: pusherClient,
+			client: senderClient,
 			closer: closer,
 		}))
 	}

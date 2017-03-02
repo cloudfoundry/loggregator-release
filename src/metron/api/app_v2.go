@@ -11,7 +11,6 @@ import (
 	clientpool "metron/clientpool/v2"
 	egress "metron/egress/v2"
 	ingress "metron/ingress/v2"
-	v2 "plumbing/v2"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -67,13 +66,16 @@ func (a *AppV2) initializePool() *clientpool.ClientPool {
 		log.Panic("Failed to load TLS client config")
 	}
 
-	connector := clientpool.MakeGRPCConnector(
-		a.config.DopplerAddr,
-		a.config.Zone,
-		grpc.Dial,
-		v2.NewDopplerIngressClient,
+	balancers := []*clientpool.Balancer{
+		clientpool.NewBalancer(fmt.Sprintf("%s.%s", a.config.Zone, a.config.DopplerAddr)),
+		clientpool.NewBalancer(a.config.DopplerAddr),
+	}
+
+	fetcher := clientpool.NewPusherFetcher(
 		grpc.WithTransportCredentials(a.clientCreds),
 	)
+
+	connector := clientpool.MakeGRPCConnector(fetcher, balancers)
 
 	var connManagers []clientpool.Conn
 	for i := 0; i < 5; i++ {
