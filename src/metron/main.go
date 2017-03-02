@@ -23,11 +23,20 @@ func main() {
 		"config/metron.json",
 		"Location of the Metron config json file",
 	)
+	zone := flag.String(
+		"zone",
+		"",
+		"Override the metron zone specified in the config file",
+	)
 	flag.Parse()
 
 	config, err := api.ParseConfig(*configFilePath)
 	if err != nil {
 		log.Fatalf("Unable to parse config: %s", err)
+	}
+
+	if *zone != "" {
+		config.Zone = *zone
 	}
 
 	clientCreds, err := plumbing.NewCredentials(

@@ -32,10 +32,21 @@ case $1 in
     exec >>$LOG_DIR/doppler.stdout.log  \
        2>>$LOG_DIR/doppler.stderr.log
 
+    zone_flag=""
+<% if p("doppler.use_azure_fault_domains") %>
+    set +e
+    azure_fd=$(curl -f --max-time 5 --connect-timeout 5 --silent http://169.254.169.254/metadata/v1/InstanceInfo/FD)
+    if [ 0 -eq $? ]; then
+        zone_flag="--zone=z${azure_fd}"
+    fi
+    set -e
+<% end %>
+
     chown -R vcap:vcap $LOG_DIR
 
     chpst -u vcap:vcap /var/vcap/packages/doppler/doppler \
-         --config /var/vcap/jobs/doppler/config/doppler.json &
+         --config /var/vcap/jobs/doppler/config/doppler.json \
+         ${zone_flag} &
 
     echo $! > $PIDFILE
 

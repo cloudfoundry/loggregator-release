@@ -81,6 +81,9 @@ properties:
 
   metron_agent.zone:
     description: "Availability zone where this agent is running"
+  metron_agent.use_azure_fault_domains:
+      description: "Use Azure Fault-Domains to determine the value of the zone. The value of the zone will be z<FD-index>. e.g. z0, z1, etc."
+      default: false
   metron_agent.deployment:
     description: "Name of deployment (added as tag on all outgoing metrics)"
 

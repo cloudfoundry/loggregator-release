@@ -54,11 +54,20 @@ func main() {
 		"config/doppler.json",
 		"Location of the doppler config json file",
 	)
+	zone := flag.String(
+		"zone",
+		"",
+		"Override the metron zone specified in the config file",
+	)
 	flag.Parse()
 
 	conf, err := config.ParseConfig(*configFile)
 	if err != nil {
 		log.Fatalf("Unable to parse config: %s", err)
+	}
+
+	if *zone != "" {
+		conf.Zone = *zone
 	}
 
 	localIp, err := localip.LocalIP()
