@@ -1,20 +1,9 @@
 <%
     # try and set these properties from a BOSH 2.0 spec object
-    job_name = spec.job.name
-    instance_id = spec.id
-    instance_zone = spec.az
-
-    if job_name.nil?
-      job_name = name
-    end
-
-    if instance_id.nil?
-      instance_id = spec.index.to_s
-    end
-
-    if instance_zone.nil?
-      instance_zone = p("metron_agent.zone")
-    end
+    job_name = spec.job.name || name
+    instance_id = spec.id || spec.index.to_s
+    instance_zone = spec.az || p("metron_agent.zone")
+    deployment = spec.deployment || p("metron_agent.deployment")
 
     incoming_udp_port = nil
     if_p("metron_agent.listening_port") do |port|
@@ -38,7 +27,7 @@
         a[:Index] = instance_id
         a[:Job] = job_name
         a[:Zone] = instance_zone
-        a[:Deployment] = spec.deployment
+        a[:Deployment] = deployment
         a[:SharedSecret] = p("metron_endpoint.shared_secret")
         a[:IncomingUDPPort] = incoming_udp_port
         a[:DisableUDP] = p("metron_agent.disable_udp")
