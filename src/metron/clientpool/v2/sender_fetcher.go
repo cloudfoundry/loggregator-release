@@ -10,17 +10,17 @@ import (
 	"google.golang.org/grpc"
 )
 
-type PusherFetcher struct {
+type SenderFetcher struct {
 	opts []grpc.DialOption
 }
 
-func NewPusherFetcher(opts ...grpc.DialOption) *PusherFetcher {
-	return &PusherFetcher{
+func NewSenderFetcher(opts ...grpc.DialOption) *SenderFetcher {
+	return &SenderFetcher{
 		opts: opts,
 	}
 }
 
-func (p *PusherFetcher) Fetch(addr string) (io.Closer, plumbing.DopplerIngress_SenderClient, error) {
+func (p *SenderFetcher) Fetch(addr string) (io.Closer, plumbing.DopplerIngress_SenderClient, error) {
 	conn, err := grpc.Dial(addr, p.opts...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error dialing ingestor stream to %s: %s", addr, err)
@@ -29,7 +29,7 @@ func (p *PusherFetcher) Fetch(addr string) (io.Closer, plumbing.DopplerIngress_S
 	client := plumbing.NewDopplerIngressClient(conn)
 	log.Printf("successfully connected to doppler %s", addr)
 
-	pusher, err := client.Sender(context.Background())
+	sender, err := client.Sender(context.Background())
 	if err != nil {
 		conn.Close()
 		return nil, nil, fmt.Errorf("error establishing ingestor stream to %s: %s", addr, err)
@@ -37,5 +37,5 @@ func (p *PusherFetcher) Fetch(addr string) (io.Closer, plumbing.DopplerIngress_S
 
 	log.Printf("successfully established a stream to doppler %s", addr)
 
-	return conn, pusher, err
+	return conn, sender, err
 }

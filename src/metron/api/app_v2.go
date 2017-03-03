@@ -71,7 +71,7 @@ func (a *AppV2) initializePool() *clientpool.ClientPool {
 		clientpool.NewBalancer(a.config.DopplerAddr),
 	}
 
-	fetcher := clientpool.NewPusherFetcher(
+	fetcher := clientpool.NewSenderFetcher(
 		grpc.WithTransportCredentials(a.clientCreds),
 	)
 
