@@ -88,14 +88,11 @@ func (r *TruncatingBuffer) forwardMessage(msg *events.Envelope) {
 		deltaDropped := (r.dropMessages() - r.queuedInternalMessageCount)
 		r.queuedInternalMessageCount = 0
 
-		r.lock.Lock()
 		r.droppedMessageCount += deltaDropped
 		appId := r.context.AppID(msg)
-		r.notifyMessagesDropped(r.outputChannel, deltaDropped, r.droppedMessageCount, appId)
+		r.notifyMessagesDropped(deltaDropped, r.droppedMessageCount, appId)
 		totalDropped := r.droppedMessageCount
-		r.lock.Unlock()
-
-		r.outputChannel <- msg
+		r.writeToOutput(msg)
 		r.sentMessageCount = 1
 
 		log.Printf("TruncatingBuffer: deltaDropped=%d totalDropped=%d appId=%s destination=%s",
@@ -104,6 +101,14 @@ func (r *TruncatingBuffer) forwardMessage(msg *events.Envelope) {
 			appId,
 			r.context.Destination(),
 		)
+	}
+}
+
+func (r *TruncatingBuffer) writeToOutput(msg *events.Envelope) {
+	select {
+	case r.outputChannel <- msg:
+	default:
+		r.droppedMessageCount++
 	}
 }
 
@@ -122,24 +127,24 @@ func (r *TruncatingBuffer) dropMessages() uint64 {
 	}
 }
 
-func (r *TruncatingBuffer) notifyMessagesDropped(outputChannel chan *events.Envelope, deltaDropped, totalDropped uint64, appId string) {
+func (r *TruncatingBuffer) notifyMessagesDropped(deltaDropped, totalDropped uint64, appId string) {
 	metrics.BatchAddCounter("TruncatingBuffer.totalDroppedMessages", deltaDropped)
 	if r.eventAllowed(events.Envelope_LogMessage) {
-		r.emitMessage(outputChannel, generateLogMessage(deltaDropped, totalDropped, appId, r.context.Origin(), r.context.Destination()))
+		r.emitMessage(generateLogMessage(deltaDropped, totalDropped, appId, r.context.Origin(), r.context.Destination()))
 	}
 	if r.eventAllowed(events.Envelope_CounterEvent) {
-		r.emitMessage(outputChannel, generateCounterEvent(deltaDropped, totalDropped))
+		r.emitMessage(generateCounterEvent(deltaDropped, totalDropped))
 	}
 }
 
-func (r *TruncatingBuffer) emitMessage(outputChannel chan *events.Envelope, event events.Event) {
+func (r *TruncatingBuffer) emitMessage(event events.Event) {
 	env, err := emitter.Wrap(event, r.context.Origin())
 	if err != nil {
 		log.Printf("Error marshalling message: %v", err)
 		return
 	}
 
-	outputChannel <- env
+	r.outputChannel <- env
 	r.queuedInternalMessageCount++
 }
 
