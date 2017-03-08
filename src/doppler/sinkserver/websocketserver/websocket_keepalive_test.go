@@ -24,9 +24,12 @@ var _ = Describe("WebsocketKeepalive", func() {
 	BeforeEach(func() {
 		keepAliveCompleted = make(chan struct{})
 		testServer = httptest.NewServer(makeTestHandler(keepAliveCompleted))
-		var err error
-		wsClient, _, err = websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
-		Expect(err).NotTo(HaveOccurred())
+		f := func() error {
+			var err error
+			wsClient, _, err = websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
+			return err
+		}
+		Eventually(f).ShouldNot(HaveOccurred())
 	})
 
 	AfterEach(func() {

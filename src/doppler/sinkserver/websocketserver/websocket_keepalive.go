@@ -30,6 +30,10 @@ func (k *KeepAlive) Run() {
 		if err != nil {
 			return
 		}
+
+		if !timeout.Stop() {
+			<-timeout.C
+		}
 		timeout.Reset(k.keepAliveInterval)
 		select {
 		case <-k.pongChan:
