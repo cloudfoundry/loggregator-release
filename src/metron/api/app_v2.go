@@ -40,7 +40,6 @@ func (a *AppV2) Start() {
 	}
 
 	envelopeBuffer := diodes.NewManyToOneEnvelopeV2(10000, diodes.AlertFunc(func(missed int) {
-		// TODO: add tag "ingress"
 		metric.IncCounter("dropped",
 			metric.WithIncrement(uint64(missed)),
 			metric.WithVersion(2, 0),

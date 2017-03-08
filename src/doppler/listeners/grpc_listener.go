@@ -64,7 +64,6 @@ func NewGRPCListener(
 	// v2 ingress
 	plumbingv2.RegisterDopplerIngressServer(
 		grpcServer,
-		// TODO: add batcher to v2 ingestor
 		v2.NewIngestor(envelopeBuffer),
 	)
 
