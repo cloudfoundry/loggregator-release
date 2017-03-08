@@ -199,7 +199,7 @@ var _ = Describe("Truncating Buffer", func() {
 				sendLogMessages("message 4", inMessageChan)
 
 				Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
-					With("TruncatingBuffer.totalDroppedMessages", uint64(3)),
+					With("TruncatingBuffer.totalDroppedMessages", BeNumerically(">=", 3)),
 				))
 			})
 
