@@ -24,7 +24,7 @@ type GRPCListener struct {
 }
 
 func NewGRPCListener(
-	router *v1.Router,
+	r v1.Registrar,
 	sinkmanager *sinkmanager.SinkManager,
 	conf config.GRPC,
 	envelopeBuffer *diodes.ManyToOneEnvelope,
@@ -58,7 +58,7 @@ func NewGRPCListener(
 	// v1 egress
 	plumbingv1.RegisterDopplerServer(
 		grpcServer,
-		v1.NewDopplerServer(router, sinkmanager),
+		v1.NewDopplerServer(r, sinkmanager),
 	)
 
 	// v2 ingress
