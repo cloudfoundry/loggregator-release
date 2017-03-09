@@ -29,22 +29,10 @@ message Filter{
 
   oneof Message {
     LogFilter log = 2;
-    CounterFilter counter = 3;
-    GaugeFilter gauge = 4;
-    TimerFilter timer = 5;
   }
 }
 
 message LogFilter {
-}
-
-message CounterFilter {
-}
-
-message GaugeFilter {
-}
-
-message TimerFilter {
 }
 
 // Note: Ideally this would be EnvelopeData but for the time being we do not

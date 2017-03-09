@@ -46,40 +46,4 @@ var _ = Describe("RequestConverter", func() {
 
 		Expect(req.GetFilter().GetLog()).ToNot(BeNil())
 	})
-
-	It("sets a CounterFilter", func() {
-		req := c.Convert(&v2.EgressRequest{
-			Filter: &v2.Filter{
-				Message: &v2.Filter_Counter{
-					Counter: &v2.CounterFilter{},
-				},
-			},
-		})
-
-		Expect(req.GetFilter().GetCounter()).ToNot(BeNil())
-	})
-
-	It("sets a GaugeFilter", func() {
-		req := c.Convert(&v2.EgressRequest{
-			Filter: &v2.Filter{
-				Message: &v2.Filter_Gauge{
-					Gauge: &v2.GaugeFilter{},
-				},
-			},
-		})
-
-		Expect(req.GetFilter().GetGauge()).ToNot(BeNil())
-	})
-
-	It("sets a TimerFilter", func() {
-		req := c.Convert(&v2.EgressRequest{
-			Filter: &v2.Filter{
-				Message: &v2.Filter_Timer{
-					Timer: &v2.TimerFilter{},
-				},
-			},
-		})
-
-		Expect(req.GetFilter().GetTimer()).ToNot(BeNil())
-	})
 })

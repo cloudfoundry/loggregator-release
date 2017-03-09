@@ -32,18 +32,6 @@ func (r requestConverter) convertFilter(v2filter *v2.Filter) *plumbing.Filter {
 		f.Message = &plumbing.Filter_Log{
 			&plumbing.LogFilter{},
 		}
-	case *v2.Filter_Counter:
-		f.Message = &plumbing.Filter_Counter{
-			&plumbing.CounterFilter{},
-		}
-	case *v2.Filter_Gauge:
-		f.Message = &plumbing.Filter_Gauge{
-			&plumbing.GaugeFilter{},
-		}
-	case *v2.Filter_Timer:
-		f.Message = &plumbing.Filter_Timer{
-			&plumbing.TimerFilter{},
-		}
 	}
 
 	return f

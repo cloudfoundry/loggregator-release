@@ -16,9 +16,6 @@ It has these top-level messages:
 	EgressRequest
 	Filter
 	LogFilter
-	CounterFilter
-	GaugeFilter
-	TimerFilter
 	Envelope
 	Value
 	Log
