@@ -34,9 +34,9 @@ type DataDumper interface {
 	RecentLogsFor(appID string) []*events.Envelope
 }
 
-// GRPCManager is the GRPC server component that accepts requests for firehose
+// DopplerServer is the GRPC server component that accepts requests for firehose
 // streams, application streams, container metrics, and recent logs.
-type GRPCManager struct {
+type DopplerServer struct {
 	registrar        Registrar
 	dumper           DataDumper
 	numSubscriptions int64
@@ -47,9 +47,9 @@ type sender interface {
 	Context() context.Context
 }
 
-// New creates a new GRPCManager.
-func New(registrar Registrar, dumper DataDumper) *GRPCManager {
-	m := &GRPCManager{
+// NewDopplerServer creates a new DopplerServer.
+func NewDopplerServer(registrar Registrar, dumper DataDumper) *DopplerServer {
+	m := &DopplerServer{
 		registrar: registrar,
 		dumper:    dumper,
 	}
@@ -59,7 +59,7 @@ func New(registrar Registrar, dumper DataDumper) *GRPCManager {
 }
 
 // Subscribe is called by GRPC on stream requests.
-func (m *GRPCManager) Subscribe(req *plumbing.SubscriptionRequest, sender plumbing.Doppler_SubscribeServer) error {
+func (m *DopplerServer) Subscribe(req *plumbing.SubscriptionRequest, sender plumbing.Doppler_SubscribeServer) error {
 	atomic.AddInt64(&m.numSubscriptions, 1)
 	defer atomic.AddInt64(&m.numSubscriptions, -1)
 
@@ -67,7 +67,7 @@ func (m *GRPCManager) Subscribe(req *plumbing.SubscriptionRequest, sender plumbi
 }
 
 // ContainerMetrics is called by GRPC on container metrics requests.
-func (m *GRPCManager) ContainerMetrics(ctx context.Context, req *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error) {
+func (m *DopplerServer) ContainerMetrics(ctx context.Context, req *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error) {
 	envelopes := m.dumper.LatestContainerMetrics(req.AppID)
 	return &plumbing.ContainerMetricsResponse{
 		Payload: marshalEnvelopes(envelopes),
@@ -75,14 +75,14 @@ func (m *GRPCManager) ContainerMetrics(ctx context.Context, req *plumbing.Contai
 }
 
 // RecentLogs is called by GRPC on recent logs requests.
-func (m *GRPCManager) RecentLogs(ctx context.Context, req *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error) {
+func (m *DopplerServer) RecentLogs(ctx context.Context, req *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error) {
 	envelopes := m.dumper.RecentLogsFor(req.AppID)
 	return &plumbing.RecentLogsResponse{
 		Payload: marshalEnvelopes(envelopes),
 	}, nil
 }
 
-func (m *GRPCManager) emitMetrics() {
+func (m *DopplerServer) emitMetrics() {
 	for range time.Tick(metricsInterval) {
 		metrics.SendValue("grpcManager.subscriptions", float64(atomic.LoadInt64(&m.numSubscriptions)), "subscriptions")
 	}
@@ -100,7 +100,7 @@ func marshalEnvelopes(envelopes []*events.Envelope) [][]byte {
 	return marshalled
 }
 
-func (m *GRPCManager) sendData(req *plumbing.SubscriptionRequest, sender sender) error {
+func (m *DopplerServer) sendData(req *plumbing.SubscriptionRequest, sender sender) error {
 	d := diodes.NewOneToOne(1000, m)
 	cleanup := m.registrar.Register(req, d)
 	defer cleanup()
@@ -132,11 +132,11 @@ func (m *GRPCManager) sendData(req *plumbing.SubscriptionRequest, sender sender)
 }
 
 // Alert logs dropped message counts to stderr.
-func (m *GRPCManager) Alert(missed int) {
+func (m *DopplerServer) Alert(missed int) {
 	log.Printf("Dropped %d envelopes", missed)
 }
 
-func (m *GRPCManager) monitorContext(ctx context.Context, done *int64) {
+func (m *DopplerServer) monitorContext(ctx context.Context, done *int64) {
 	<-ctx.Done()
 	atomic.StoreInt64(done, 1)
 }

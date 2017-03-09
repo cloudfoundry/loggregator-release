@@ -29,7 +29,7 @@ var _ = Describe("GRPCManager", func() {
 		cleanupCalled  chan struct{}
 		mockDataDumper *mockDataDumper
 
-		manager       *v1.GRPCManager
+		manager       *v1.DopplerServer
 		listener      net.Listener
 		connCloser    io.Closer
 		dopplerClient plumbing.DopplerClient
@@ -86,7 +86,7 @@ var _ = Describe("GRPCManager", func() {
 		mockRegistrar.RegisterOutput.Ret0 <- mockCleanup
 		mockDataDumper = newMockDataDumper()
 
-		manager = v1.New(mockRegistrar, mockDataDumper)
+		manager = v1.NewDopplerServer(mockRegistrar, mockDataDumper)
 
 		listener = startGRPCServer(manager)
 		dopplerClient, connCloser = establishClient(listener.Addr().String())

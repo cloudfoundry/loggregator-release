@@ -58,7 +58,7 @@ func NewGRPCListener(
 	// v1 egress
 	plumbingv1.RegisterDopplerServer(
 		grpcServer,
-		v1.New(router, sinkmanager),
+		v1.NewDopplerServer(router, sinkmanager),
 	)
 
 	// v2 ingress
