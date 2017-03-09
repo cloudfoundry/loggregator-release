@@ -7,13 +7,13 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
-func NewConverter() *EnvelopeConverter {
-	return &EnvelopeConverter{}
+func NewConverter() EnvelopeConverter {
+	return &envelopeConverter{}
 }
 
-type EnvelopeConverter struct{}
+type envelopeConverter struct{}
 
-func (e *EnvelopeConverter) Convert(payload []byte) (*v2.Envelope, error) {
+func (e *envelopeConverter) Convert(payload []byte) (*v2.Envelope, error) {
 	v1e := &events.Envelope{}
 	err := v1e.Unmarshal(payload)
 	if err != nil {

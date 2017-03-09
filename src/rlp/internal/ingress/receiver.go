@@ -12,8 +12,8 @@ type Subscriber interface {
 	Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) (recv func() ([]byte, error), err error)
 }
 
-type Converter interface {
-	Convert(data []byte) (envelope *v2.Envelope, err error)
+type EnvelopeConverter interface {
+	Convert(data []byte) (*v2.Envelope, error)
 }
 
 type RequestConverter interface {
@@ -21,14 +21,14 @@ type RequestConverter interface {
 }
 
 type Receiver struct {
-	converter    Converter
+	envConverter EnvelopeConverter
 	reqConverter RequestConverter
 	subscriber   Subscriber
 }
 
-func NewReceiver(c Converter, r RequestConverter, s Subscriber) *Receiver {
+func NewReceiver(c EnvelopeConverter, r RequestConverter, s Subscriber) *Receiver {
 	return &Receiver{
-		converter:    c,
+		envConverter: c,
 		reqConverter: r,
 		subscriber:   s,
 	}
@@ -47,7 +47,7 @@ func (r *Receiver) Subscribe(ctx context.Context, req *v2.EgressRequest) (rx fun
 			return nil, err
 		}
 
-		v2e, err := r.converter.Convert(data)
+		v2e, err := r.envConverter.Convert(data)
 		if err != nil {
 			log.Printf("V1->V2 convert failed: %s", err)
 			return nil, err
