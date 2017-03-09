@@ -53,7 +53,7 @@ func NewGRPCListener(
 	// v1 ingress
 	plumbingv1.RegisterDopplerIngestorServer(
 		grpcServer,
-		v1.NewIngestor(envelopeBuffer, batcher),
+		v1.NewIngestorServer(envelopeBuffer, batcher),
 	)
 	// v1 egress
 	plumbingv1.RegisterDopplerServer(

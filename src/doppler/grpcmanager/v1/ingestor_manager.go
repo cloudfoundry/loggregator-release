@@ -13,7 +13,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-type IngestorManager struct {
+type IngestorServer struct {
 	sender  MessageSender
 	batcher Batcher
 }
@@ -30,14 +30,14 @@ type IngestorGRPCServer interface {
 	plumbing.DopplerIngestor_PusherServer
 }
 
-func NewIngestor(sender MessageSender, batcher Batcher) *IngestorManager {
-	return &IngestorManager{
+func NewIngestorServer(sender MessageSender, batcher Batcher) *IngestorServer {
+	return &IngestorServer{
 		sender:  sender,
 		batcher: batcher,
 	}
 }
 
-func (i *IngestorManager) Pusher(pusher plumbing.DopplerIngestor_PusherServer) error {
+func (i *IngestorServer) Pusher(pusher plumbing.DopplerIngestor_PusherServer) error {
 	var done int64
 	context := pusher.Context()
 	go i.monitorContext(context, &done)
@@ -70,7 +70,7 @@ func (i *IngestorManager) Pusher(pusher plumbing.DopplerIngestor_PusherServer) e
 	return nil
 }
 
-func (i *IngestorManager) monitorContext(ctx context.Context, done *int64) {
+func (i *IngestorServer) monitorContext(ctx context.Context, done *int64) {
 	<-ctx.Done()
 	atomic.StoreInt64(done, 1)
 }

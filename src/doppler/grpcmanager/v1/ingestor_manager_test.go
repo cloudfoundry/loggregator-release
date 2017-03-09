@@ -37,7 +37,7 @@ var _ = Describe("IngestorManager", func() {
 
 	var (
 		outgoingMsgs  *diodes.ManyToOneEnvelope
-		manager       *v1.IngestorManager
+		manager       *v1.IngestorServer
 		server        *grpc.Server
 		connCloser    io.Closer
 		dopplerClient plumbing.DopplerIngestorClient
@@ -50,7 +50,7 @@ var _ = Describe("IngestorManager", func() {
 		mockChainer := newMockBatchCounterChainer()
 		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
 		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
-		manager = v1.NewIngestor(outgoingMsgs, mockBatcher)
+		manager = v1.NewIngestorServer(outgoingMsgs, mockBatcher)
 		server, grpcAddr = startGRPCServer(manager)
 		dopplerClient, connCloser = establishClient(grpcAddr)
 	})
