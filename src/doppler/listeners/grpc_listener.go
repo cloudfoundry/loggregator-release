@@ -64,7 +64,7 @@ func NewGRPCListener(
 	// v2 ingress
 	plumbingv2.RegisterDopplerIngressServer(
 		grpcServer,
-		v2.NewIngestor(envelopeBuffer),
+		v2.NewIngressServer(envelopeBuffer),
 	)
 
 	return &GRPCListener{

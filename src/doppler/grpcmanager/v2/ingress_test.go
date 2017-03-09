@@ -14,14 +14,14 @@ var _ = Describe("Ingress", func() {
 		mockDataSetter *mockDataSetter
 		mockSender     *mockDopplerIngress_SenderServer
 
-		ingestor *v2.Ingestor
+		ingestor *v2.IngressServer
 	)
 
 	BeforeEach(func() {
 		mockDataSetter = newMockDataSetter()
 		mockSender = newMockDopplerIngress_SenderServer()
 
-		ingestor = v2.NewIngestor(mockDataSetter)
+		ingestor = v2.NewIngressServer(mockDataSetter)
 	})
 
 	It("writes the v2 envelope as a v1 envelope to data setter", func() {

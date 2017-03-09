@@ -18,17 +18,17 @@ type DataSetter interface {
 	Set(data *events.Envelope)
 }
 
-type Ingestor struct {
+type IngressServer struct {
 	envelopeBuffer DataSetter
 }
 
-func NewIngestor(envelopeBuffer DataSetter) *Ingestor {
-	return &Ingestor{
+func NewIngressServer(envelopeBuffer DataSetter) *IngressServer {
+	return &IngressServer{
 		envelopeBuffer: envelopeBuffer,
 	}
 }
 
-func (i Ingestor) Sender(s plumbing.DopplerIngress_SenderServer) error {
+func (i IngressServer) Sender(s plumbing.DopplerIngress_SenderServer) error {
 	var count uint64
 	lastEmitted := time.Now()
 	for {
