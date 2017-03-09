@@ -21,7 +21,7 @@ var _ = Describe("Receiver", func() {
 	BeforeEach(func() {
 		mockConverter = newMockConverter()
 		mockSubscriber = newMockSubscriber()
-		rx = ingress.NewReceiver(mockConverter, mockSubscriber)
+		rx = ingress.NewReceiver(mockConverter, ingress.NewRequestConverter(), mockSubscriber)
 	})
 
 	Context("when the subscriber does not return an error", func() {
@@ -37,11 +37,19 @@ var _ = Describe("Receiver", func() {
 				ShardId: "some-id",
 				Filter: &v2.Filter{
 					SourceId: "some-source-id",
+					Message: &v2.Filter_Log{
+						Log: &v2.LogFilter{},
+					},
 				},
 			}
 			expectedReq := &plumbing.SubscriptionRequest{
 				ShardID: req.ShardId,
-				Filter:  &plumbing.Filter{AppID: "some-source-id"},
+				Filter: &plumbing.Filter{
+					AppID: "some-source-id",
+					Message: &plumbing.Filter_Log{
+						Log: &plumbing.LogFilter{},
+					},
+				},
 			}
 			rx.Subscribe(context.Background(), req)
 

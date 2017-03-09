@@ -15,6 +15,10 @@ It has these top-level messages:
 	SenderResponse
 	EgressRequest
 	Filter
+	LogFilter
+	CounterFilter
+	GaugeFilter
+	TimerFilter
 	Envelope
 	Value
 	Log

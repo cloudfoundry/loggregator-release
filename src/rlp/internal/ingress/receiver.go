@@ -16,20 +16,26 @@ type Converter interface {
 	Convert(data []byte) (envelope *v2.Envelope, err error)
 }
 
-type Receiver struct {
-	converter  Converter
-	subscriber Subscriber
+type RequestConverter interface {
+	Convert(req *v2.EgressRequest) *plumbing.SubscriptionRequest
 }
 
-func NewReceiver(c Converter, s Subscriber) *Receiver {
+type Receiver struct {
+	converter    Converter
+	reqConverter RequestConverter
+	subscriber   Subscriber
+}
+
+func NewReceiver(c Converter, r RequestConverter, s Subscriber) *Receiver {
 	return &Receiver{
-		converter:  c,
-		subscriber: s,
+		converter:    c,
+		reqConverter: r,
+		subscriber:   s,
 	}
 }
 
 func (r *Receiver) Subscribe(ctx context.Context, req *v2.EgressRequest) (rx func() (*v2.Envelope, error), err error) {
-	v1Rx, err := r.subscriber.Subscribe(ctx, convertReq(req))
+	v1Rx, err := r.subscriber.Subscribe(ctx, r.reqConverter.Convert(req))
 	if err != nil {
 		return nil, err
 	}
@@ -49,20 +55,4 @@ func (r *Receiver) Subscribe(ctx context.Context, req *v2.EgressRequest) (rx fun
 
 		return v2e, nil
 	}, nil
-}
-
-func convertReq(v2req *v2.EgressRequest) *plumbing.SubscriptionRequest {
-	return &plumbing.SubscriptionRequest{
-		ShardID: v2req.ShardId,
-		Filter:  convertFilter(v2req.GetFilter()),
-	}
-}
-
-func convertFilter(v2filter *v2.Filter) *plumbing.Filter {
-	if v2filter == nil {
-		return nil
-	}
-	return &plumbing.Filter{
-		AppID: v2filter.SourceId,
-	}
 }

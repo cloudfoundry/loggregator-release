@@ -89,7 +89,7 @@ func (r *RLP) setupIngress() {
 	batcher := &ingress.NullMetricBatcher{} // TODO: Add real metrics
 	connector := grpcconnector.New(1000, pool, finder, batcher)
 	converter := ingress.NewConverter()
-	r.receiver = ingress.NewReceiver(converter, connector)
+	r.receiver = ingress.NewReceiver(converter, ingress.NewRequestConverter(), connector)
 }
 
 func (r *RLP) setupEgress() {
