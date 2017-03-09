@@ -12,19 +12,19 @@ import (
 )
 
 type MessageRouter struct {
-	sinkManagers []sinkManager
-	done         chan struct{}
-	stopOnce     sync.Once
+	senders  []EnvelopeSender
+	done     chan struct{}
+	stopOnce sync.Once
 }
 
-type sinkManager interface {
+type EnvelopeSender interface {
 	SendTo(string, *events.Envelope)
 }
 
-func NewMessageRouter(sinkManagers ...sinkManager) *MessageRouter {
+func NewMessageRouter(e ...EnvelopeSender) *MessageRouter {
 	return &MessageRouter{
-		sinkManagers: sinkManagers,
-		done:         make(chan struct{}),
+		senders: e,
+		done:    make(chan struct{}),
 	}
 }
 
@@ -41,18 +41,13 @@ func (r *MessageRouter) Start(incomingLog *diodes.ManyToOneEnvelope) {
 				metric.WithVersion(2, 0),
 			)
 
-			// TODO: To be removed
 			metrics.BatchAddCounter("listeners.receivedEnvelopes", 1000)
 		}
 
-		r.send(envelope)
-	}
-}
+		appId := envelope_extensions.GetAppId(envelope)
 
-func (r *MessageRouter) send(envelope *events.Envelope) {
-	appId := envelope_extensions.GetAppId(envelope)
-
-	for _, sm := range r.sinkManagers {
-		sm.SendTo(appId, envelope)
+		for _, sm := range r.senders {
+			sm.SendTo(appId, envelope)
+		}
 	}
 }
