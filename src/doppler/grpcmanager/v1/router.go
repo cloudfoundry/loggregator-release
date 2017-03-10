@@ -12,12 +12,16 @@ type shardID string
 
 type Router struct {
 	lock          sync.RWMutex
-	subscriptions map[plumbing.Filter]map[shardID][]DataSetter
+	subscriptions map[filter]map[shardID][]DataSetter
+}
+
+type filter struct {
+	appID string
 }
 
 func NewRouter() *Router {
 	return &Router{
-		subscriptions: make(map[plumbing.Filter]map[shardID][]DataSetter),
+		subscriptions: make(map[filter]map[shardID][]DataSetter),
 	}
 }
 
@@ -40,15 +44,15 @@ func (r *Router) SendTo(appID string, envelope *events.Envelope) {
 		return
 	}
 
-	filter := plumbing.Filter{
-		AppID: appID,
+	singleAppFilter := filter{
+		appID: appID,
 	}
 
-	for id, setters := range r.subscriptions[filter] {
+	for id, setters := range r.subscriptions[singleAppFilter] {
 		r.writeToShard(id, setters, data)
 	}
 
-	var noFilter plumbing.Filter
+	var noFilter filter
 	for id, setters := range r.subscriptions[noFilter] {
 		r.writeToShard(id, setters, data)
 	}
@@ -66,15 +70,12 @@ func (r *Router) writeToShard(id shardID, setters []DataSetter, data []byte) {
 }
 
 func (r *Router) registerSetter(req *plumbing.SubscriptionRequest, dataSetter DataSetter) {
-	var filter plumbing.Filter
-	if req.Filter != nil {
-		filter = *req.Filter
-	}
+	f := r.convertFilter(req)
 
-	m, ok := r.subscriptions[filter]
+	m, ok := r.subscriptions[f]
 	if !ok {
 		m = make(map[shardID][]DataSetter)
-		r.subscriptions[filter] = m
+		r.subscriptions[f] = m
 	}
 
 	m[shardID(req.ShardID)] = append(m[shardID(req.ShardID)], dataSetter)
@@ -85,27 +86,23 @@ func (r *Router) buildCleanup(req *plumbing.SubscriptionRequest, dataSetter Data
 		r.lock.Lock()
 		defer r.lock.Unlock()
 
-		var filter plumbing.Filter
-		if req.Filter != nil {
-			filter = *req.Filter
-		}
-
+		f := r.convertFilter(req)
 		var setters []DataSetter
-		for _, s := range r.subscriptions[filter][shardID(req.ShardID)] {
+		for _, s := range r.subscriptions[f][shardID(req.ShardID)] {
 			if s != dataSetter {
 				setters = append(setters, s)
 			}
 		}
 
 		if len(setters) > 0 {
-			r.subscriptions[filter][shardID(req.ShardID)] = setters
+			r.subscriptions[f][shardID(req.ShardID)] = setters
 			return
 		}
 
-		delete(r.subscriptions[filter], shardID(req.ShardID))
+		delete(r.subscriptions[f], shardID(req.ShardID))
 
-		if len(r.subscriptions[filter]) == 0 {
-			delete(r.subscriptions, filter)
+		if len(r.subscriptions[f]) == 0 {
+			delete(r.subscriptions, f)
 		}
 	}
 }
@@ -117,4 +114,14 @@ func (r *Router) marshal(envelope *events.Envelope) []byte {
 	}
 
 	return data
+}
+
+func (r *Router) convertFilter(req *plumbing.SubscriptionRequest) filter {
+	if req.GetFilter() == nil {
+		return filter{}
+	}
+
+	return filter{
+		appID: req.Filter.AppID,
+	}
 }
