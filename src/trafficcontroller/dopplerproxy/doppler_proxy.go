@@ -224,7 +224,7 @@ func (p *Proxy) serveWS(endpointType, streamID string, w http.ResponseWriter, r 
 		for {
 			resp, err := recv()
 			if err != nil {
-				log.Printf("Error serving websocket: %s", err)
+				log.Printf("error receiving from doppler via gRPC %s", err)
 				return
 			}
 
