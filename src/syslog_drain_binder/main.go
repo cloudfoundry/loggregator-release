@@ -3,10 +3,7 @@ package main
 import (
 	"flag"
 	"log"
-	"os"
-	"os/signal"
 	"plumbing"
-	"syscall"
 	"syslog_drain_binder/config"
 	"time"
 
@@ -123,11 +120,4 @@ func main() {
 			}
 		}
 	}
-}
-
-func registerGoRoutineDumpSignalChannel() chan os.Signal {
-	threadDumpChan := make(chan os.Signal)
-	signal.Notify(threadDumpChan, syscall.SIGUSR1)
-
-	return threadDumpChan
 }
