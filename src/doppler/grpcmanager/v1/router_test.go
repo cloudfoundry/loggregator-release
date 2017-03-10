@@ -13,7 +13,7 @@ import (
 
 var _ = Describe("Router", func() {
 	var (
-		// Streams
+		// Streams without type filter
 		mockDataSetterA *mockDataSetter
 		mockDataSetterB *mockDataSetter
 		mockDataSetterC *mockDataSetter
@@ -23,8 +23,13 @@ var _ = Describe("Router", func() {
 		mockDataSetterE *mockDataSetter
 		mockDataSetterF *mockDataSetter
 
-		envelope      *events.Envelope
-		envelopeBytes []byte
+		// Streams with type filter
+		mockDataSetterG *mockDataSetter
+
+		counterEnvelope      *events.Envelope
+		logEnvelope          *events.Envelope
+		counterEnvelopeBytes []byte
+		logEnvelopeBytes     []byte
 
 		router *v1.Router
 	)
@@ -36,13 +41,22 @@ var _ = Describe("Router", func() {
 		mockDataSetterD = newMockDataSetter()
 		mockDataSetterE = newMockDataSetter()
 		mockDataSetterF = newMockDataSetter()
+		mockDataSetterG = newMockDataSetter()
 
-		envelope = &events.Envelope{
+		counterEnvelope = &events.Envelope{
 			Origin:    proto.String("some-origin"),
 			EventType: events.Envelope_CounterEvent.Enum(),
 		}
+
+		logEnvelope = &events.Envelope{
+			Origin:    proto.String("some-origin"),
+			EventType: events.Envelope_LogMessage.Enum(),
+		}
 		var err error
-		envelopeBytes, err = envelope.Marshal()
+		counterEnvelopeBytes, err = counterEnvelope.Marshal()
+		Expect(err).ToNot(HaveOccurred())
+
+		logEnvelopeBytes, err = logEnvelope.Marshal()
 		Expect(err).ToNot(HaveOccurred())
 
 		router = v1.NewRouter()
@@ -51,8 +65,8 @@ var _ = Describe("Router", func() {
 	Describe("data routing", func() {
 		Context("when multiple setters are routed", func() {
 			var (
-				reqA, reqB, reqC, reqD, reqE, reqF                         *plumbing.SubscriptionRequest
-				cleanupA, cleanupB, cleanupC, cleanupD, cleanupE, cleanupF func()
+				reqA, reqB, reqC, reqD, reqE, reqF, reqG                             *plumbing.SubscriptionRequest
+				cleanupA, cleanupB, cleanupC, cleanupD, cleanupE, cleanupF, cleanupG func()
 			)
 
 			BeforeEach(func() {
@@ -86,7 +100,16 @@ var _ = Describe("Router", func() {
 					ShardID: "some-other-sub-id",
 				}
 
-				// Streams
+				reqG = &plumbing.SubscriptionRequest{
+					Filter: &plumbing.Filter{
+						AppID: "some-app-id",
+						Message: &plumbing.Filter_Log{
+							Log: &plumbing.LogFilter{},
+						},
+					},
+				}
+
+				// Streams without type filters
 				cleanupA = router.Register(reqA, mockDataSetterA)
 				cleanupB = router.Register(reqB, mockDataSetterB)
 				cleanupC = router.Register(reqC, mockDataSetterC)
@@ -95,30 +118,49 @@ var _ = Describe("Router", func() {
 				cleanupD = router.Register(reqD, mockDataSetterD)
 				cleanupE = router.Register(reqE, mockDataSetterE)
 				cleanupF = router.Register(reqF, mockDataSetterF)
+
+				// Streams with type filters
+				cleanupG = router.Register(reqG, mockDataSetterG)
 			})
 
 			It("sends data to the registered setters", func() {
-				router.SendTo("some-app-id", envelope)
+				router.SendTo("some-app-id", logEnvelope)
 
 				Eventually(mockDataSetterA.SetInput).Should(
-					BeCalled(With(envelopeBytes)),
+					BeCalled(With(logEnvelopeBytes)),
 				)
 
 				Eventually(mockDataSetterB.SetInput).Should(
-					BeCalled(With(envelopeBytes)),
+					BeCalled(With(logEnvelopeBytes)),
+				)
+
+				Eventually(mockDataSetterG.SetInput).Should(
+					BeCalled(With(logEnvelopeBytes)),
+				)
+			})
+
+			It("only sends the envelope to a subscription once", func() {
+				router.SendTo("some-app-id", counterEnvelope)
+
+				Consistently(mockDataSetterA.SetCalled).Should(
+					HaveLen(1),
 				)
 			})
 
 			It("does not send data to the wrong setter", func() {
-				router.SendTo("some-app-id", envelope)
+				router.SendTo("some-app-id", counterEnvelope)
 
 				Consistently(mockDataSetterC.SetCalled).Should(
+					Not(BeCalled()),
+				)
+
+				Consistently(mockDataSetterG.SetCalled).Should(
 					Not(BeCalled()),
 				)
 			})
 
 			It("sends to a random firehose subscription", func() {
-				router.SendTo("some-app-id", envelope)
+				router.SendTo("some-app-id", counterEnvelope)
 
 				f := func() int {
 					return len(mockDataSetterD.SetCalled) + len(mockDataSetterE.SetCalled)
@@ -127,7 +169,7 @@ var _ = Describe("Router", func() {
 				Eventually(f).Should(Equal(1))
 
 				Eventually(mockDataSetterF.SetInput).Should(
-					BeCalled(With(envelopeBytes)),
+					BeCalled(With(counterEnvelopeBytes)),
 				)
 			})
 
@@ -153,7 +195,7 @@ var _ = Describe("Router", func() {
 				})
 
 				It("does not send data to that setter", func() {
-					router.SendTo("some-app-id", envelope)
+					router.SendTo("some-app-id", counterEnvelope)
 
 					Consistently(mockDataSetterA.SetCalled).Should(
 						Not(BeCalled()),
@@ -161,10 +203,10 @@ var _ = Describe("Router", func() {
 				})
 
 				It("does send data to the remaining registered setter", func() {
-					router.SendTo("some-app-id", envelope)
+					router.SendTo("some-app-id", counterEnvelope)
 
 					Eventually(mockDataSetterB.SetInput).Should(
-						BeCalled(With(envelopeBytes)),
+						BeCalled(With(counterEnvelopeBytes)),
 					)
 				})
 			})
@@ -175,7 +217,7 @@ var _ = Describe("Router", func() {
 				})
 
 				It("does not send data to that setter", func() {
-					router.SendTo("some-app-id", envelope)
+					router.SendTo("some-app-id", counterEnvelope)
 
 					Consistently(mockDataSetterD.SetCalled).Should(
 						Not(BeCalled()),
@@ -189,7 +231,7 @@ var _ = Describe("Router", func() {
 				})
 
 				It("does not send data to that setter", func() {
-					router.SendTo("some-app-id", envelope)
+					router.SendTo("some-app-id", counterEnvelope)
 
 					Consistently(mockDataSetterF.SetCalled).Should(
 						Not(BeCalled()),
@@ -203,7 +245,7 @@ var _ = Describe("Router", func() {
 
 					go func() {
 						defer close(done)
-						router.SendTo("some-app-id", envelope)
+						router.SendTo("some-app-id", counterEnvelope)
 					}()
 					cleanup()
 				})

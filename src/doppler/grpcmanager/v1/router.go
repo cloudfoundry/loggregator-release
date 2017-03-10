@@ -15,8 +15,17 @@ type Router struct {
 	subscriptions map[filter]map[shardID][]DataSetter
 }
 
+type filterType uint8
+
+const (
+	noType filterType = iota
+	logType
+	otherType
+)
+
 type filter struct {
-	appID string
+	appID        string
+	envelopeType filterType
 }
 
 func NewRouter() *Router {
@@ -44,11 +53,17 @@ func (r *Router) SendTo(appID string, envelope *events.Envelope) {
 		return
 	}
 
-	singleAppFilter := filter{
-		appID: appID,
+	nonTypedFilter := filter{
+		appID:        appID,
+		envelopeType: noType,
 	}
 
-	for id, setters := range r.subscriptions[singleAppFilter] {
+	for id, setters := range r.subscriptions[nonTypedFilter] {
+		r.writeToShard(id, setters, data)
+	}
+
+	typedFilter := r.createTypedFilter(appID, envelope)
+	for id, setters := range r.subscriptions[typedFilter] {
 		r.writeToShard(id, setters, data)
 	}
 
@@ -67,6 +82,19 @@ func (r *Router) writeToShard(id shardID, setters []DataSetter, data []byte) {
 	}
 
 	setters[rand.Intn(len(setters))].Set(data)
+}
+
+func (r *Router) createTypedFilter(appID string, envelope *events.Envelope) filter {
+	filter := filter{
+		appID:        appID,
+		envelopeType: otherType,
+	}
+
+	if envelope.GetEventType() == events.Envelope_LogMessage {
+		filter.envelopeType = logType
+	}
+
+	return filter
 }
 
 func (r *Router) registerSetter(req *plumbing.SubscriptionRequest, dataSetter DataSetter) {
@@ -120,8 +148,11 @@ func (r *Router) convertFilter(req *plumbing.SubscriptionRequest) filter {
 	if req.GetFilter() == nil {
 		return filter{}
 	}
-
-	return filter{
+	f := filter{
 		appID: req.Filter.AppID,
 	}
+	if req.GetFilter().GetLog() != nil {
+		f.envelopeType = logType
+	}
+	return f
 }
