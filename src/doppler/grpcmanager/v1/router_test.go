@@ -126,15 +126,15 @@ var _ = Describe("Router", func() {
 			It("sends data to the registered setters", func() {
 				router.SendTo("some-app-id", logEnvelope)
 
-				Eventually(mockDataSetterA.SetInput).Should(
+				Expect(mockDataSetterA.SetInput).To(
 					BeCalled(With(logEnvelopeBytes)),
 				)
 
-				Eventually(mockDataSetterB.SetInput).Should(
+				Expect(mockDataSetterB.SetInput).To(
 					BeCalled(With(logEnvelopeBytes)),
 				)
 
-				Eventually(mockDataSetterG.SetInput).Should(
+				Expect(mockDataSetterG.SetInput).To(
 					BeCalled(With(logEnvelopeBytes)),
 				)
 			})
@@ -142,7 +142,7 @@ var _ = Describe("Router", func() {
 			It("only sends the envelope to a subscription once", func() {
 				router.SendTo("some-app-id", counterEnvelope)
 
-				Consistently(mockDataSetterA.SetCalled).Should(
+				Expect(mockDataSetterA.SetCalled).To(
 					HaveLen(1),
 				)
 			})
@@ -150,25 +150,21 @@ var _ = Describe("Router", func() {
 			It("does not send data to the wrong setter", func() {
 				router.SendTo("some-app-id", counterEnvelope)
 
-				Consistently(mockDataSetterC.SetCalled).Should(
+				Expect(mockDataSetterC.SetCalled).To(
 					Not(BeCalled()),
 				)
 
-				Consistently(mockDataSetterG.SetCalled).Should(
+				Expect(mockDataSetterG.SetCalled).To(
 					Not(BeCalled()),
 				)
 			})
 
 			It("sends to a random firehose subscription", func() {
 				router.SendTo("some-app-id", counterEnvelope)
+				combinedLen := len(mockDataSetterD.SetCalled) + len(mockDataSetterE.SetCalled)
 
-				f := func() int {
-					return len(mockDataSetterD.SetCalled) + len(mockDataSetterE.SetCalled)
-				}
-
-				Eventually(f).Should(Equal(1))
-
-				Eventually(mockDataSetterF.SetInput).Should(
+				Expect(combinedLen).To(Equal(1))
+				Expect(mockDataSetterF.SetInput).To(
 					BeCalled(With(counterEnvelopeBytes)),
 				)
 			})
@@ -176,15 +172,15 @@ var _ = Describe("Router", func() {
 			It("does not send data for bad envelope", func() {
 				router.SendTo("some-app-id", new(events.Envelope))
 
-				Consistently(mockDataSetterA.SetCalled).Should(
+				Expect(mockDataSetterA.SetCalled).To(
 					Not(BeCalled()),
 				)
 
-				Consistently(mockDataSetterD.SetCalled).Should(
+				Expect(mockDataSetterD.SetCalled).To(
 					Not(BeCalled()),
 				)
 
-				Consistently(mockDataSetterE.SetCalled).Should(
+				Expect(mockDataSetterE.SetCalled).To(
 					Not(BeCalled()),
 				)
 			})
@@ -197,7 +193,7 @@ var _ = Describe("Router", func() {
 				It("does not send data to that setter", func() {
 					router.SendTo("some-app-id", counterEnvelope)
 
-					Consistently(mockDataSetterA.SetCalled).Should(
+					Expect(mockDataSetterA.SetCalled).To(
 						Not(BeCalled()),
 					)
 				})
@@ -205,7 +201,7 @@ var _ = Describe("Router", func() {
 				It("does send data to the remaining registered setter", func() {
 					router.SendTo("some-app-id", counterEnvelope)
 
-					Eventually(mockDataSetterB.SetInput).Should(
+					Expect(mockDataSetterB.SetInput).To(
 						BeCalled(With(counterEnvelopeBytes)),
 					)
 				})
@@ -219,7 +215,7 @@ var _ = Describe("Router", func() {
 				It("does not send data to that setter", func() {
 					router.SendTo("some-app-id", counterEnvelope)
 
-					Consistently(mockDataSetterD.SetCalled).Should(
+					Expect(mockDataSetterD.SetCalled).To(
 						Not(BeCalled()),
 					)
 				})
@@ -233,7 +229,7 @@ var _ = Describe("Router", func() {
 				It("does not send data to that setter", func() {
 					router.SendTo("some-app-id", counterEnvelope)
 
-					Consistently(mockDataSetterF.SetCalled).Should(
+					Expect(mockDataSetterF.SetCalled).To(
 						Not(BeCalled()),
 					)
 				})
