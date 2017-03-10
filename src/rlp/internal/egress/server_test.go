@@ -49,6 +49,19 @@ var _ = Describe("Server", func() {
 				mockSubscriber.SubscribeOutput.Rx <- rx
 			})
 
+			It("returns an error for a request that has type filter but not a source ID", func() {
+				req := &v2.EgressRequest{
+					Filter: &v2.Filter{
+						Message: &v2.Filter_Log{
+							Log: &v2.LogFilter{},
+						},
+					},
+				}
+				err := server.Receiver(req, mockReceiverServer)
+
+				Expect(err).To(HaveOccurred())
+			})
+
 			It("uses the request", func() {
 				dataOut <- nil
 				errOut <- io.EOF

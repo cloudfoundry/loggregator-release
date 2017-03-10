@@ -1,6 +1,7 @@
 package egress
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -24,6 +25,12 @@ func NewServer(s Subscriber) *Server {
 }
 
 func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) error {
+	if r.GetFilter() != nil &&
+		r.GetFilter().SourceId == "" &&
+		r.GetFilter().Message != nil {
+		return errors.New("invalid request: cannot have type filter without source id")
+	}
+
 	rx, err := s.subscriber.Subscribe(srv.Context(), r)
 	if err != nil {
 		log.Printf("Unable to setup subscription: %s", err)
