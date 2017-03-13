@@ -96,21 +96,12 @@ If you already have a CA, you'll need to create a certificate for each component
 
 ### Enabling TLS between Loggregator and etcd
 
-By default, metron, doppler, syslog_drain_binder, and loggregator_trafficcontroller all communicate with etcd over
+By default, doppler, syslog_drain_binder, and loggregator_trafficcontroller all communicate with etcd over
 http.  To enable TLS mutual auth to etcd, you'll need to generate certificates and update your manifest
 
 #### etcd
 
 Refer to [etcd-release's guide on Encrypting Traffic](https://github.com/cloudfoundry-incubator/etcd-release#encryption) for etcd's properties.
-
-#### Metron Agent
-
-| Property        | Required                              | Description                                     |
-|-----------------|---------------------------------------|-------------------------------------------------|
-| `loggregator.etcd.require_ssl` | No<br> Default: `false`                   | Enable ssl for all communcation with etcd |
-| `loggregator.etcd.ca_cert`   | Yes if `loggregator.etcd.require_ssl` is set to `true` <br>Default: `""`              | PEM-encoded CA certificate            |
-| `metron_agent.etcd.client_cert`   | Yes if `loggregator.etcd.require_ssl` is set to `true` <br>Default: `""`              | PEM-encoded client certificate            |
-| `metron_agent.etcd.client_key`   | Yes if `loggregator.etcd.require_ssl` is set to `true` <br>Default: `""`              | PEM-encoded client key            |
 
 #### Doppler
 
@@ -150,17 +141,6 @@ An example manifest is given below:
         ETCD CA CERTIFICATE
         -----END CERTIFICATE-----
 
-
-  metron_agent:
-    etcd:
-      client_cert: |
-        -----BEGIN CERTIFICATE-----
-        METRON AGENT CERTIFICATE
-        -----END CERTIFICATE-----
-      client_key: |
-        -----BEGIN RSA PRIVATE KEY-----
-        METRON AGENT KEY
-        -----END RSA PRIVATE KEY-----
 
   doppler:
     etcd:
