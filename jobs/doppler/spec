@@ -25,6 +25,9 @@ provides:
 properties:
   doppler.zone:
     description: Zone of the doppler server
+  doppler.use_azure_fault_domains:
+      description: "Use Azure Fault-Domains to determine the value of the zone. The value of the zone will be z<FD-index>. e.g. z0, z1, etc."
+      default: false
   doppler.maxRetainedLogMessages:
     description: number of log messages to retain per application
     default: 100
