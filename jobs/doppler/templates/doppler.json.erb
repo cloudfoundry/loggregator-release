@@ -1,20 +1,9 @@
 <%
     # try and set these properties from a BOSH 2.0 spec object
-    job_name = spec.job.name
-    instance_id = spec.id
-    instance_zone = spec.az
-
-    if job_name.nil?
-      job_name = name
-    end
-
-    if instance_id.nil?
-      instance_id = spec.index.to_s
-    end
-
-    if instance_zone.nil?
-      instance_zone = p("doppler.zone")
-    end
+    job_name = spec.job.name || name
+    instance_id = spec.id || spec.index.to_s
+    instance_zone = p("doppler.zone").empty? ? spec.az : p("doppler.zone")
+    deployment = p("doppler.deployment").empty? ? spec.deployment : p("doppler.deployment")
 
     etcdMachines = p("loggregator.etcd.machines").map { |addr|
         "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"
@@ -59,7 +48,7 @@
         a[:OutgoingPort] = p("doppler.outgoing_port")
         a[:GRPC] = grpcListenerConfig
         a[:Zone] = instance_zone
-        a[:DeploymentName] = spec.deployment
+        a[:DeploymentName] = deployment
         a[:JobName] = job_name
         a[:Index] = instance_id
         a[:MaxRetainedLogMessages] = p("doppler.maxRetainedLogMessages")

@@ -79,8 +79,10 @@ properties:
 
   metron_agent.zone:
     description: "Availability zone where this agent is running"
+    default: ""
   metron_agent.deployment:
     description: "Name of deployment (added as tag on all outgoing metrics)"
+    default: ""
 
   metron_agent.logrotate.freq_min:
     description: "The frequency in minutes which logrotate will rotate VM logs"

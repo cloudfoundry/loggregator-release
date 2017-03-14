@@ -2,8 +2,8 @@
     # try and set these properties from a BOSH 2.0 spec object
     job_name = spec.job.name || name
     instance_id = spec.id || spec.index.to_s
-    instance_zone = spec.az || p("metron_agent.zone")
-    deployment = spec.deployment || p("metron_agent.deployment")
+    instance_zone = p("metron_agent.zone").empty? ? spec.az : p("metron_agent.zone")
+    deployment = p("metron_agent.deployment").empty? ? spec.deployment : p("metron_agent.deployment")
 
     grpcConfig = {
         "Port" => p("metron_agent.grpc_port"),
