@@ -63,9 +63,6 @@
         a[:PPROFPort] = p("doppler.pprof_port")
         a[:EnableTLSTransport] = p("doppler.tls.enable")
         a[:MetronConfig] = metronConfig
-        if_p("syslog_daemon_config") do |_|
-            a[:Syslog] = "vcap.doppler"
-        end
         if_p("doppler.blacklisted_syslog_ranges") do |prop|
             a[:BlackListIPs] = prop
         end

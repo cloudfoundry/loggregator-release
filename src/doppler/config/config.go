@@ -65,7 +65,6 @@ type Config struct {
 	SinkIOTimeoutSeconds            int
 	SinkInactivityTimeoutSeconds    int
 	SinkSkipCertVerify              bool
-	Syslog                          string
 	UnmarshallerCount               int
 	WebsocketWriteTimeoutSeconds    int
 	Zone                            string

@@ -65,7 +65,6 @@ func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int)
 		SinkSkipCertVerify:              true,
 		UnmarshallerCount:               5,
 		BlackListIps:                    make([]iprange.IPRange, 0),
-		Syslog:                          "",
 	}
 }
 
