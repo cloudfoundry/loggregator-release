@@ -4,13 +4,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/nu7hatch/gouuid"
-
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/sonde-go/events"
-
-	. "integration_tests/doppler/helpers"
-
+	"github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
