@@ -4,13 +4,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/nu7hatch/gouuid"
-
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/sonde-go/events"
-
-	. "integration_tests/doppler/helpers"
-
+	"github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -110,23 +106,6 @@ var _ = Describe("Container Metrics", func() {
 			Expect(receivedEnvelope.GetContainerMetric()).To(Equal(laterMetric))
 		})
 	}
-
-	Context("TLS", func() {
-		BeforeEach(func() {
-			var err error
-			inputConnection, err = DialTLS(localIPAddress+":8766", "../fixtures/client.crt", "../fixtures/client.key", "../fixtures/loggregator-ca.crt")
-			Expect(err).NotTo(HaveOccurred())
-
-			guid, _ := uuid.NewV4()
-			appID = guid.String()
-		})
-
-		AfterEach(func() {
-			inputConnection.Close()
-		})
-
-		itDoesContainerMetrics(SendEventTCP)
-	})
 
 	Context("UDP", func() {
 		BeforeEach(func() {

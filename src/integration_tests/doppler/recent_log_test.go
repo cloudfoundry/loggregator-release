@@ -8,8 +8,6 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/nu7hatch/gouuid"
 
-	. "integration_tests/doppler/helpers"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -94,20 +92,6 @@ var _ = Describe("Streaming Logs", func() {
 			}).Should(Equal([]string{"5", "6", "7", "8", "9", "10", "11", "12", "13", "14"}))
 		})
 	}
-
-	Context("TLS", func() {
-		BeforeEach(func() {
-			var err error
-			inputConnection, err = DialTLS(localIPAddress+":8766", "../fixtures/client.crt", "../fixtures/client.key", "../fixtures/loggregator-ca.crt")
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		AfterEach(func() {
-			inputConnection.Close()
-		})
-
-		itStreams(SendEventTCP)
-	})
 
 	Context("UDP", func() {
 		BeforeEach(func() {
