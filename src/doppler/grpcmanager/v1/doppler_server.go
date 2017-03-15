@@ -91,6 +91,8 @@ func (m *DopplerServer) RecentLogs(ctx context.Context, req *plumbing.RecentLogs
 
 func (m *DopplerServer) emitMetrics() {
 	for range time.Tick(metricsInterval) {
+		// metrics:v1 (grpcManager.subscriptions) Number of v1 egress gRPC
+		// subscriptions
 		metrics.SendValue("grpcManager.subscriptions", float64(atomic.LoadInt64(&m.numSubscriptions)), "subscriptions")
 	}
 }

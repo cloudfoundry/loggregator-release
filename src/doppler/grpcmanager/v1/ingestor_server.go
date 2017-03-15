@@ -61,6 +61,8 @@ func (i *IngestorServer) Pusher(pusher plumbing.DopplerIngestor_PusherServer) er
 			log.Printf("Received bad envelope: %s", err)
 			continue
 		}
+		// metric:v1 (listeners.receivedEnvelopes) Number of received
+		// envelopes in v1 ingress server
 		i.batcher.BatchCounter("listeners.receivedEnvelopes").
 			SetTag("protocol", "grpc").
 			SetTag("event_type", env.GetEventType().String()).

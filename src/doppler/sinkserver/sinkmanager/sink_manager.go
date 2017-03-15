@@ -98,6 +98,7 @@ func (sm *SinkManager) RegisterSink(sink sinks.Sink) bool {
 		return false
 	}
 
+	// metric:v1 see sink_manager_metrics.go for details
 	sm.metrics.Inc(sink)
 
 	go func() {
