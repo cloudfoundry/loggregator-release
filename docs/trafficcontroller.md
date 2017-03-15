@@ -34,7 +34,8 @@ Logging data passes through the system as
 ## Usage
 
 ```
-trafficcontoller [--logFile <path to log file>] [--config <path to config file>] \
+trafficcontoller [--logFile <path to log file>] \
+    [--config <path to config file>] \
     [--cpuprofile <path to desired CPU profile>] \
     [--memprofile <path to desired memory profile>]
 ```
@@ -62,7 +63,7 @@ Traffic Controller exposes a few endpoints from which clients like
 | Endpoint                      | Description                                                    |
 |-------------------------------|----------------------------------------------------------------|
 |`/apps/APP_ID/stream`          | Opens a websocket connection that streams metrics and logs for the specified app ID. The types of available metrics are specified by [this function](https://github.com/cloudfoundry/dropsonde/blob/master/envelope_extensions/envelope_extensions.go#L12). Any metric or log that has an app ID will be sent.|
-|`/apps/APP_ID/recentlogs`      | Returns an HTTP response with the most recent logs for the specified application. The number of logs returned can be configured via the Doppler property `doppler.maxRetainedLogMessages`.|
+|`/apps/APP_ID/recentlogs`      | Returns an HTTP response with the most recent logs for the specified application. The number of logs returned can be configured via the Doppler property `doppler.maxRetainedLogMessages`. Note this endpoint supports a `limit` query param, which will return only the number of logs as specified by the query up to the maximum number of retained application logs. |
 |`/apps/APP_ID/containermetrics`| Returns an HTTP response with the latest container metrics for the specified application. |
 |`/firehose/SUBSCRIPTION_ID`    | Opens a websocket connection that streams the firehose. Connections with the same subscription id will get an equal portion of the firehose data.|
 |`/set-cookie`                  | Sets a cookie with name and value obtained from FormValues `CookieName` and `CookieValue`. It also sets the headers `Access-Control-Allow-Credentials` and `Access-Control-Allow-Origin`.|
