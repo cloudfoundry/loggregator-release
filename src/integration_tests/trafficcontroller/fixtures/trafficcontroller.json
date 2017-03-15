@@ -16,8 +16,8 @@
     "MonitorIntervalSeconds": 1,
     "GRPC": {
         "Port": 1236,
-        "CAFile": "../../doppler/listeners/fixtures/loggregator-ca.crt",
-        "CertFile": "../../doppler/listeners/fixtures/server.crt",
-        "KeyFile": "../../doppler/listeners/fixtures/server.key"
+        "CAFile": "fixtures/loggregator-ca.crt",
+        "CertFile": "fixtures/client.crt",
+        "KeyFile": "fixtures/client.key"
     }
 }

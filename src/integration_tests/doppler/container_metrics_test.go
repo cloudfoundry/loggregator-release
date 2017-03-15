@@ -107,23 +107,6 @@ var _ = Describe("Container Metrics", func() {
 		})
 	}
 
-	Context("TLS", func() {
-		BeforeEach(func() {
-			var err error
-			inputConnection, err = DialTLS(localIPAddress+":8766", "../fixtures/client.crt", "../fixtures/client.key", "../fixtures/loggregator-ca.crt")
-			Expect(err).NotTo(HaveOccurred())
-
-			guid, _ := uuid.NewV4()
-			appID = guid.String()
-		})
-
-		AfterEach(func() {
-			inputConnection.Close()
-		})
-
-		itDoesContainerMetrics(SendEventTCP)
-	})
-
 	Context("UDP", func() {
 		BeforeEach(func() {
 			inputConnection, _ = net.Dial("udp", localIPAddress+":8765")

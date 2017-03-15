@@ -40,7 +40,6 @@ import (
 
 const (
 	dopplerOrigin = "DopplerServer"
-	tcpTimeout    = time.Minute
 )
 
 func main() {
@@ -123,32 +122,6 @@ func main() {
 	grpcRouter := grpcv1.NewRouter()
 	messageRouter := sinkserver.NewMessageRouter(sinkManager, grpcRouter)
 	signatureVerifier := signature.NewVerifier(conf.SharedSecret)
-	var tlsListener *listeners.TCPListener
-	if conf.EnableTLSTransport {
-		tlsConfig := &conf.TLSListenerConfig
-		tlsListener, err = listeners.NewTCPListener(
-			"tlsListener",
-			fmt.Sprint(localIp, ":", tlsConfig.Port),
-			tlsConfig,
-			envelopeBuffer,
-			batcher,
-			tcpTimeout,
-		)
-		if err != nil {
-			log.Panicf("Failed to create TLS listener: %s", err)
-		}
-	}
-	tcpListener, err := listeners.NewTCPListener(
-		"tcpListener",
-		fmt.Sprint(localIp, ":", conf.IncomingTCPPort),
-		nil,
-		envelopeBuffer,
-		batcher,
-		tcpTimeout,
-	)
-	if err != nil {
-		log.Panicf("Failed to create tcpListener: %s", err)
-	}
 	grpcListener, err := listeners.NewGRPCListener(
 		grpcRouter,
 		sinkManager,
@@ -201,8 +174,6 @@ func main() {
 		websocketServer,
 		messageRouter,
 		signatureVerifier,
-		tlsListener,
-		tcpListener,
 		grpcListener,
 	)
 
@@ -242,8 +213,6 @@ func main() {
 				uptimeMonitor,
 				appStoreWatcher,
 				udpListener,
-				tcpListener,
-				tlsListener,
 				sinkManager,
 				websocketServer,
 				storeAdapter,
@@ -274,8 +243,6 @@ func start(
 	websocketServer *websocketserver.WebsocketServer,
 	messageRouter *sinkserver.MessageRouter,
 	signatureVerifier *signature.Verifier,
-	tlsListener *listeners.TCPListener,
-	tcpListener *listeners.TCPListener,
 	grpcListener *listeners.GRPCListener,
 ) {
 	wg.Add(7 + dropsondeUnmarshallerCollection.Size())
@@ -296,19 +263,6 @@ func start(
 		defer wg.Done()
 		udpListener.Start()
 	}()
-
-	go func() {
-		defer wg.Done()
-		tcpListener.Start()
-	}()
-
-	if tlsListener != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			tlsListener.Start()
-		}()
-	}
 
 	udpEnvelopes := make(chan *events.Envelope)
 	dropsondeUnmarshallerCollection.Run(dropsondeVerifiedBytesChan, udpEnvelopes, &wg)
@@ -362,15 +316,11 @@ func stop(
 	uptimeMonitor *monitor.Uptime,
 	appStoreWatcher *store.AppServiceStoreWatcher,
 	udpListener *listeners.UDPListener,
-	tcpListener *listeners.TCPListener,
-	tlsListener *listeners.TCPListener,
 	sinkManager *sinkmanager.SinkManager,
 	websocketServer *websocketserver.WebsocketServer,
 	storeAdapter storeadapter.StoreAdapter,
 ) {
 	go udpListener.Stop()
-	go tcpListener.Stop()
-	go tlsListener.Stop()
 	go sinkManager.Stop()
 	go websocketServer.Stop()
 	appStoreWatcher.Stop()
