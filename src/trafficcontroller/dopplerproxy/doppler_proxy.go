@@ -74,7 +74,9 @@ func NewDopplerProxy(
 
 func (p *Proxy) emitMetrics() {
 	for range time.Tick(metricsInterval) {
+		// metric: (dopplerProxy.firehoses) Number of open firehose streams
 		metrics.SendValue("dopplerProxy.firehoses", float64(atomic.LoadInt64(&p.numFirehoses)), "connections")
+		// metric: (dopplerProxy.appStreams) Number of open app streams
 		metrics.SendValue("dopplerProxy.appStreams", float64(atomic.LoadInt64(&p.numAppStreams)), "connections")
 	}
 }
@@ -96,11 +98,13 @@ func (p *Proxy) stream(w http.ResponseWriter, r *http.Request) {
 
 func (p *Proxy) recentlogs(w http.ResponseWriter, r *http.Request) {
 	p.serveAppLogs("recentlogs", mux.Vars(r)["appID"], w, r)
+	// metric: (dopplerProxy.recentlogsLatency) USELESS metric which measures nothing of value
 	sendLatencyMetric("recentlogs", time.Now())
 }
 
 func (p *Proxy) containermetrics(w http.ResponseWriter, r *http.Request) {
 	p.serveAppLogs("containermetrics", mux.Vars(r)["appID"], w, r)
+	// metric: (dopplerProxy.containermetricsLatency) USELESS metric which measures nothing of value
 	sendLatencyMetric("containermetrics", time.Now())
 }
 
@@ -239,6 +243,8 @@ func (p *Proxy) serveWS(endpointType, streamID string, w http.ResponseWriter, r 
 					<-timer.C
 				}
 			case <-timer.C:
+				// metric: (dopplerProxy.slowConsumer) A slow consumer of the
+				// websocket stream
 				metrics.SendValue("dopplerProxy.slowConsumer", 1, "consumer")
 				log.Print("Doppler Proxy: Slow Consumer")
 				return
@@ -267,6 +273,7 @@ func (p *Proxy) serveMultiPartResponse(rw http.ResponseWriter, messages [][]byte
 
 func sendLatencyMetric(metricName string, startTime time.Time) {
 	elapsedMillisecond := float64(time.Since(startTime)) / float64(time.Millisecond)
+	// metric: see callers of sendLatencyMetric
 	metrics.SendValue(fmt.Sprintf("dopplerProxy.%sLatency", metricName), elapsedMillisecond, "ms")
 }
 
