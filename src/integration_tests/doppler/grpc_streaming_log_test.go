@@ -2,11 +2,11 @@ package doppler_test
 
 import (
 	"doppler/config"
-	"fmt"
 	"net"
 	"plumbing"
 	"time"
 
+	"github.com/cloudfoundry/dropsonde/signature"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -16,9 +16,12 @@ import (
 
 var _ = Describe("GRPC Streaming Logs", func() {
 	var primePump = func(conn net.Conn) {
+		logMessage := buildLogMessage()
+		signedLog := signature.SignMessage(logMessage, []byte("secret"))
+
 		go func() {
 			for i := 0; i < 20; i++ {
-				if _, err := conn.Write(prefixedPrimerMessage); err != nil {
+				if _, err := conn.Write(signedLog); err != nil {
 					return
 				}
 				time.Sleep(10 * time.Millisecond)
@@ -32,7 +35,7 @@ var _ = Describe("GRPC Streaming Logs", func() {
 	}
 
 	var connectToDoppler = func() net.Conn {
-		in, err := net.Dial("tcp", fmt.Sprintf(localIPAddress+":4321"))
+		in, err := net.Dial("udp", localIPAddress+":8765")
 		Expect(err).ToNot(HaveOccurred())
 		return in
 	}
@@ -78,7 +81,10 @@ var _ = Describe("GRPC Streaming Logs", func() {
 		})
 
 		It("responds to a subscription request", func() {
-			_, err := in.Write(prefixedLogMessage)
+			logMessage := buildLogMessage()
+			signedLog := signature.SignMessage(logMessage, []byte("secret"))
+
+			_, err := in.Write(signedLog)
 			Expect(err).ToNot(HaveOccurred())
 
 			f := func() []byte {

@@ -1,10 +1,13 @@
 package doppler_test
 
 import (
+	"crypto/sha1"
+	"crypto/tls"
 	"encoding/binary"
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os/exec"
 	"plumbing"
 	"testing"
@@ -16,10 +19,14 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/localip"
+	"github.com/cloudfoundry/dropsonde/emitter"
+	"github.com/cloudfoundry/dropsonde/factories"
+	"github.com/cloudfoundry/dropsonde/signature"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"github.com/gogo/protobuf/proto"
+	"github.com/gorilla/websocket"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -41,14 +48,6 @@ var (
 	pathToDopplerExec    string
 	pathToHTTPEchoServer string
 	pathToTCPEchoServer  string
-
-	prefixedLogMessage    []byte
-	logMessage            []byte
-	prefixedPrimerMessage []byte
-	primerMessage         []byte
-
-	prefixedContainerMetric []byte
-	containerMetric         []byte
 )
 
 var _ = BeforeSuite(func() {
@@ -67,13 +66,6 @@ var _ = BeforeSuite(func() {
 	pathToTCPEchoServer, err = gexec.Build("tools/tcpechoserver")
 	Expect(err).NotTo(HaveOccurred())
 
-	logMessage = buildLogMessage()
-	prefixedLogMessage = prefixMessage(logMessage)
-	primerMessage = buildPrimerMessage()
-	prefixedPrimerMessage = prefixMessage(primerMessage)
-
-	containerMetric = buildContainerMetric()
-	prefixedContainerMetric = prefixMessage(containerMetric)
 })
 
 var _ = BeforeEach(func() {
@@ -127,22 +119,6 @@ func buildLogMessage() []byte {
 	return b
 }
 
-func buildPrimerMessage() []byte {
-	e := &events.Envelope{
-		Origin:    proto.String("prime-message"),
-		EventType: events.Envelope_LogMessage.Enum(),
-		LogMessage: &events.LogMessage{
-			Message:     []byte("foo"),
-			MessageType: events.LogMessage_OUT.Enum(),
-			Timestamp:   proto.Int64(time.Now().UnixNano()),
-			AppId:       proto.String("test-app"),
-		},
-	}
-	b, err := proto.Marshal(e)
-	Expect(err).ToNot(HaveOccurred())
-	return b
-}
-
 func buildContainerMetric() []byte {
 	e := &events.Envelope{
 		Origin:    proto.String("foo"),
@@ -156,15 +132,8 @@ func buildContainerMetric() []byte {
 			DiskBytes:     proto.Uint64(4321),
 		},
 	}
-	b, err := proto.Marshal(e)
+	b, err := e.Marshal()
 	Expect(err).ToNot(HaveOccurred())
-	return b
-}
-
-func prefixMessage(msg []byte) []byte {
-	length := uint32(len(msg))
-	b := append(make([]byte, 4), msg...)
-	binary.LittleEndian.PutUint32(b, length)
 	return b
 }
 
@@ -181,4 +150,171 @@ func fetchDopplerConfig(path string) *config.Config {
 	conf, err := config.ParseConfig(path)
 	Expect(err).ToNot(HaveOccurred())
 	return conf
+}
+
+func SendAppLog(appID string, message string, connection net.Conn) error {
+	logMessage := factories.NewLogMessage(events.LogMessage_OUT, message, appID, "APP")
+
+	return SendEvent(logMessage, connection)
+}
+
+func SendEvent(event events.Event, connection net.Conn) error {
+	signedEnvelope := MarshalEvent(event, "secret")
+
+	_, err := connection.Write(signedEnvelope)
+	return err
+}
+
+func MarshalEvent(event events.Event, secret string) []byte {
+	envelope, _ := emitter.Wrap(event, "origin")
+	envelopeBytes := MarshalProtoBuf(envelope)
+
+	return signature.SignMessage(envelopeBytes, []byte(secret))
+}
+
+func MarshalProtoBuf(pb proto.Message) []byte {
+	marshalledProtoBuf, err := proto.Marshal(pb)
+	Expect(err).NotTo(HaveOccurred())
+
+	return marshalledProtoBuf
+}
+
+func AddWSSink(receivedChan chan []byte, port string, path string) (*websocket.Conn, <-chan struct{}) {
+	connectionDroppedChannel := make(chan struct{}, 1)
+
+	var ws *websocket.Conn
+
+	ip := "127.0.0.1"
+	fullURL := "ws://" + ip + ":" + port + path
+
+	Eventually(func() error {
+		var err error
+		ws, _, err = websocket.DefaultDialer.Dial(fullURL, http.Header{})
+		return err
+	}, 5, 1).ShouldNot(HaveOccurred(), fmt.Sprintf("Unable to connect to server at %s.", fullURL))
+
+	ws.SetPingHandler(func(message string) error {
+		ws.WriteControl(websocket.PongMessage, []byte(message), time.Time{})
+		return nil
+	})
+
+	go func() {
+		for {
+			_, data, err := ws.ReadMessage()
+			if err != nil {
+				close(connectionDroppedChannel)
+				close(receivedChan)
+				return
+			}
+
+			receivedChan <- data
+		}
+
+	}()
+
+	return ws, connectionDroppedChannel
+}
+
+func DecodeProtoBufEnvelope(actual []byte) *events.Envelope {
+	var receivedEnvelope events.Envelope
+	err := proto.Unmarshal(actual, &receivedEnvelope)
+	Expect(err).NotTo(HaveOccurred())
+	return &receivedEnvelope
+}
+
+func DecodeProtoBufLogMessage(actual []byte) *events.LogMessage {
+	receivedEnvelope := DecodeProtoBufEnvelope(actual)
+	return receivedEnvelope.GetLogMessage()
+}
+
+func DecodeProtoBufCounterEvent(actual []byte) *events.CounterEvent {
+	receivedEnvelope := DecodeProtoBufEnvelope(actual)
+	return receivedEnvelope.GetCounterEvent()
+}
+
+func AppKey(appID string) string {
+	return fmt.Sprintf("/loggregator/v2/services/%s", appID)
+}
+
+func DrainKey(appID string, drainURL string) string {
+	hash := sha1.Sum([]byte(drainURL))
+	return fmt.Sprintf("%s/%x", AppKey(appID), hash)
+}
+
+func AddETCDNode(etcdAdapter storeadapter.StoreAdapter, key string, value string) {
+	node := storeadapter.StoreNode{
+		Key:   key,
+		Value: []byte(value),
+		TTL:   uint64(20),
+	}
+	etcdAdapter.Create(node)
+	recvNode, err := etcdAdapter.Get(key)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(string(recvNode.Value)).To(Equal(value))
+}
+
+func UnmarshalMessage(messageBytes []byte) events.Envelope {
+	var envelope events.Envelope
+	err := proto.Unmarshal(messageBytes, &envelope)
+	Expect(err).NotTo(HaveOccurred())
+	return envelope
+}
+
+func StartHTTPSServer(pathToHTTPEchoServer string) *gexec.Session {
+	command := exec.Command(pathToHTTPEchoServer, "-cert", "../fixtures/server.crt", "-key", "../fixtures/server.key")
+	session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+
+	return session
+}
+
+func StartUnencryptedTCPServer(pathToTCPEchoServer string, syslogDrainAddress string) *gexec.Session {
+	command := exec.Command(pathToTCPEchoServer, "-address", syslogDrainAddress)
+	drainSession, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+
+	return drainSession
+}
+
+func StartEncryptedTCPServer(pathToTCPEchoServer string, syslogDrainAddress string) *gexec.Session {
+	command := exec.Command(pathToTCPEchoServer, "-address", syslogDrainAddress, "-ssl", "-cert", "../fixtures/server.crt", "-key", "../fixtures/server.key")
+	drainSession, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+
+	return drainSession
+}
+
+func DialTLS(address, cert, key, ca string) (*tls.Conn, error) {
+	tlsConfig, err := plumbing.NewMutualTLSConfig(
+		"../fixtures/client.crt",
+		"../fixtures/client.key",
+		"../fixtures/loggregator-ca.crt",
+		"doppler",
+	)
+	Expect(err).NotTo(HaveOccurred())
+	return tls.Dial("tcp", address, tlsConfig)
+}
+
+func SendAppLogTCP(appID string, message string, connection net.Conn) error {
+	logMessage := factories.NewLogMessage(events.LogMessage_OUT, message, appID, "APP")
+
+	return SendEventTCP(logMessage, connection)
+}
+
+func SendEventTCP(event events.Event, conn net.Conn) error {
+	envelope, err := emitter.Wrap(event, "origin")
+	Expect(err).NotTo(HaveOccurred())
+
+	bytes, err := proto.Marshal(envelope)
+	if err != nil {
+		return err
+	}
+
+	err = binary.Write(conn, binary.LittleEndian, uint32(len(bytes)))
+	if err != nil {
+		return err
+	}
+
+	_, err = conn.Write(bytes)
+	return err
 }

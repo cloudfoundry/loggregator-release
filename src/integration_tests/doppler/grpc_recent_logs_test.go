@@ -2,7 +2,6 @@ package doppler_test
 
 import (
 	"doppler/config"
-	"fmt"
 	"net"
 	"plumbing"
 	"time"
@@ -11,13 +10,14 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/cloudfoundry/dropsonde/signature"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("RecentLogs", func() {
 	var connectToDoppler = func() net.Conn {
-		in, err := net.Dial("tcp", fmt.Sprintf(localIPAddress+":4321"))
+		in, err := net.Dial("udp", localIPAddress+":8765")
 		Expect(err).ToNot(HaveOccurred())
 		return in
 	}
@@ -42,7 +42,10 @@ var _ = Describe("RecentLogs", func() {
 		})
 
 		It("gets recent logs", func() {
-			_, err := in.Write(prefixedLogMessage)
+			logMessage := buildLogMessage()
+			signedLog := signature.SignMessage(logMessage, []byte("secret"))
+
+			_, err := in.Write(signedLog)
 			Expect(err).ToNot(HaveOccurred())
 
 			time.Sleep(2 * time.Second)
