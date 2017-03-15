@@ -16,6 +16,9 @@ import (
 
 var _ = Describe("GRPC Streaming Logs", func() {
 	var primePump = func(conn net.Conn) {
+		primerMessage := buildPrimerMessage()
+		prefixedPrimerMessage := prefixMessage(primerMessage)
+
 		go func() {
 			for i := 0; i < 20; i++ {
 				if _, err := conn.Write(prefixedPrimerMessage); err != nil {
@@ -78,6 +81,9 @@ var _ = Describe("GRPC Streaming Logs", func() {
 		})
 
 		It("responds to a subscription request", func() {
+			logMessage := buildLogMessage()
+			prefixedLogMessage := prefixMessage(logMessage)
+
 			_, err := in.Write(prefixedLogMessage)
 			Expect(err).ToNot(HaveOccurred())
 

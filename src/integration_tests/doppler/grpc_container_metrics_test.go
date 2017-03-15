@@ -41,6 +41,9 @@ var _ = Describe("ContainerMetrics", func() {
 		})
 
 		It("gets container metrics", func() {
+			containerMetric := buildContainerMetric()
+			prefixedContainerMetric := prefixMessage(containerMetric)
+
 			_, err := in.Write(prefixedContainerMetric)
 			Expect(err).ToNot(HaveOccurred())
 
