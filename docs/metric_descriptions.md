@@ -1,12 +1,13 @@
 ## Metrics emitted by the Loggregator subsystem
 
-|                                                          |                                                                                                                               |                                        |                                                                          | 
-|----------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|----------------------------------------|--------------------------------------------------------------------------| 
-| Metric Name as Emitted                                   | Description                                                                                                                  | Emitted Consistently or Only on Event? | Notes                                                                 | 
-| DopplerServer.messageRouter.numberOfDumpSinks            | Number of app loop buffers                                                                                                    | Consistently                           | The number of dump sinks has a memory impact on doppler                  | 
-| DopplerServer.listeners.receivedEnvelopes                | Can be used in conjunction w/MetronAgent.dropsondeMarshaller.sentEnvelopes to calculate specific loss between Metron->Doppler | Consistently                           | Good for isolating loss and determing if scale will help with log loss.  | 
-| DopplerServer.TruncatingBuffer.totalDroppedMessages      | Total dropped messages by doppler for application syslog drains                                                               | Event                                  | Singifies dopplers are not processing messages fast enough               | 
-| MetronAgent.dropsondeMarshaller.sentEnvelopes            | Can be used in conjunction w/DopplerServer.listeners.receivedEnvelopes to calculate specific loss between Metron->Doppler     | Consistently                           | Good for isolating loss and determing if scale will help with log loss.  | 
-| MetronAgent.dropsondeUnmarshaller.receivedEnvelopes      |                                                                                                                               |                                        |                                                                          | 
-| LoggregatorTrafficController.LinuxFileDescriptor         | Number of connections maintained by Traffic Controller                                                                        |                                        |                                                                          | 
-| LoggregatorTrafficController.listeners.receivedEnvelopes |                                                                                                                               |                                        |                                                                          | 
+As of Loggregator 82 Metrics are now documented inline. Here are some suggested searches for metrics. 
+
+[`metrics-documentation-v1`](https://github.com/cloudfoundry/loggregator/search?utf8=%E2%9C%93&q=metric-documentation-v1&type=Code) - These are all metrics related to Dropsonde envelopes. 
+
+[`metrics-documentation-v2`](https://github.com/cloudfoundry/loggregator/search?utf8=%E2%9C%93&q=metric-documentation-v2&type=Code) - These are all metrics for the new Loggretor API V2
+
+[`DEPRECATAED`](https://github.com/cloudfoundry/loggregator/search?utf8=%E2%9C%93&q=DEPRECATED) - These are all metrics that will be deprecated in a future release. They are usually adjacent to a new replacement for the metric or no longer provide value.
+
+[`USELESS`](https://github.com/cloudfoundry/loggregator/search?utf8=%E2%9C%93&q=USELESS) - These metrics do not provide a meaningful datapoint and should not be used. 
+
+
