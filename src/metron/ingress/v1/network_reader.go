@@ -34,6 +34,8 @@ func New(address string, name string, writer ByteArrayWriter) (*NetworkReader, e
 		writer:      writer,
 		buffer: diodes.NewOneToOne(10000, diodes.AlertFunc(func(missed int) {
 			log.Printf("network reader dropped messages %d", missed)
+			// metric:v1 (udp.receiveErrorCount) Number of dropped messages
+			// inbound to Metron over the v1 (UDP) API
 			metrics.BatchAddCounter("udp.receiveErrorCount", uint64(missed))
 		})),
 	}, nil
@@ -60,7 +62,11 @@ func (nr *NetworkReader) StartWriting() {
 
 	for {
 		data := nr.buffer.Next()
+		// metric:v1 (dropsondeAgentListener.receivedMessageCount) Number of
+		// received messages inbound to Metron over the v1 (UDP) API
 		metrics.BatchIncrementCounter(receivedMessageCountName)
+		// metric:v1 (dropsondeAgentListener.receivedByteCount) Number of
+		// received bytes inbound to Metron over the v1 (UDP) API
 		metrics.BatchAddCounter(receivedByteCountName, uint64(len(data)))
 		nr.writer.Write(data)
 	}

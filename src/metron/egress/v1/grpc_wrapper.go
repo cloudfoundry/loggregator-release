@@ -22,12 +22,22 @@ func NewGRPCWrapper(conn Conn) *GRPCWrapper {
 func (u *GRPCWrapper) Write(message []byte, chainers ...metricbatcher.BatchCounterChainer) error {
 	err := u.conn.Write(message)
 	if err != nil {
+		// metric:v1 (grpc.sendErrorCount) Total number of errors that have
+		// occured while trying to send envelope to doppler v1 gRPC API
 		metrics.BatchIncrementCounter("grpc.sendErrorCount")
 		return err
 	}
+
+	// metric:v1 (grpc.sentMessageCount) The number of envelopes sent to
+	// dopplers v1 gRPC API
 	metrics.BatchIncrementCounter("grpc.sentMessageCount")
+
+	// metric:v1 (grpc.sentByteCount) The number of bytes sent to
+	// dopplers v1 gRPC API
 	metrics.BatchAddCounter("grpc.sentByteCount", uint64(len(message)))
 
+	// metric:v1 (DopplerForwarder.sentMessages) The number of envelopes sent to
+	// dopplers v1 API over all protocols
 	metrics.BatchIncrementCounter("DopplerForwarder.sentMessages")
 	for _, chainer := range chainers {
 		chainer.SetTag("protocol", "grpc").Increment()

@@ -35,6 +35,8 @@ func (s *Receiver) Sender(sender v2.Ingress_SenderServer) error {
 
 		count++
 		if count >= 1000 || time.Since(lastEmitted) > 5*time.Second {
+			// metric:v2 (loggregator.metron.ingress) The number of received
+			// messages over Metrons V2 gRPC API.
 			metric.IncCounter("ingress",
 				metric.WithIncrement(count),
 				metric.WithVersion(2, 0),

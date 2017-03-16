@@ -34,6 +34,8 @@ func (t *Transponder) Start() {
 		envelope := t.nexter.Next()
 		err := t.writer.Write(envelope)
 		if err != nil {
+			// metric:v2 (loggregator.metron.dropped) Number of messages
+			// dropped when failing to write to Dopplers v2 API
 			metric.IncCounter("dropped",
 				metric.WithVersion(2, 0),
 				metric.WithTag("direction", "egress"),
@@ -43,6 +45,8 @@ func (t *Transponder) Start() {
 		}
 		count++
 		if count >= 1000 || time.Since(lastEmitted) > 5*time.Second {
+			// metric:v2 (loggregator.metron.egress) Number of messages
+			// written to Doppler's v2 API
 			metric.IncCounter("egress",
 				metric.WithIncrement(count),
 				metric.WithVersion(2, 0),

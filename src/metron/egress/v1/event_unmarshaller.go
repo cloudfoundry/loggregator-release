@@ -54,12 +54,16 @@ func (u *EventUnmarshaller) UnmarshallMessage(message []byte) (*events.Envelope,
 	err := proto.Unmarshal(message, envelope)
 	if err != nil {
 		log.Printf("eventUnmarshaller: unmarshal error %v", err)
+		// metric:v1 (dropsondeUnmarshaller.unmarshalErrors) Number of
+		// envelopes that failed to unmarshal from bytes
 		u.batcher.BatchIncrementCounter("dropsondeUnmarshaller.unmarshalErrors")
 		return nil, err
 	}
 
 	if !valid(envelope) {
 		log.Printf("eventUnmarshaller: validation failed for message %v", envelope.GetEventType())
+		// metric:v1 (dropsondeUnmarshaller.unmarshalErrors) Number of
+		// envelopes that failed to unmarshal from bytes
 		u.batcher.BatchIncrementCounter("dropsondeUnmarshaller.unmarshalErrors")
 		return nil, invalidEnvelope
 	}
@@ -76,8 +80,8 @@ func (u *EventUnmarshaller) incrementReceiveCount(eventType events.Envelope_Even
 	var err error
 	switch eventType {
 	case events.Envelope_LogMessage:
-		// LogMessage is a special case. `logMessageReceived` used to be broken out by app ID, and
-		// `logMessageTotal` was the sum of all of those.
+		// metric:v1 (dropsondeUnmarshaller.logMessageTotal) Total number of
+		// log messages received
 		u.batcher.BatchIncrementCounter("dropsondeUnmarshaller.logMessageTotal")
 	default:
 		metricName := metricNames[eventType]
@@ -85,9 +89,19 @@ func (u *EventUnmarshaller) incrementReceiveCount(eventType events.Envelope_Even
 			metricName = "dropsondeUnmarshaller.unknownEventTypeReceived"
 			err = fmt.Errorf("eventUnmarshaller: received unknown event type %#v", eventType)
 		}
+		// metric:v1 (
+		//   dropsondeUnmarshaller.unknownEventTypeReceived,
+		//   dropsondUnmarshaller.HttpStartStop,
+		//   dropsondUnmarshaller.ValueMetric,
+		//   dropsondUnmarshaller.CounterEvent,
+		//   dropsondUnmarshaller.Error,
+		//   dropsondUnmarshaller.ContainerMetric
+		// ) Number of envelopes by type unmarshalled from UDP ingress.
 		u.batcher.BatchIncrementCounter(metricName)
 	}
 
+	// metric:v1 (dropsondeUnmarshaller.receivedEnvelopes) Total number of
+	// envelopes by the dropsonde unmarshaller
 	u.batcher.BatchCounter("dropsondeUnmarshaller.receivedEnvelopes").
 		SetTag("protocol", "udp").
 		SetTag("event_type", eventType.String()).

@@ -129,7 +129,14 @@ func (w *Writer) flushWrite(toWrite []byte, messageCount uint64, chainers ...met
 		return err
 	}
 
+	// metric:v1 (DopplerForwarder.sentMessages) The number of envelopes sent to
+	// dopplers v1 API over all protocols
 	metrics.BatchAddCounter("DopplerForwarder.sentMessages", messageCount)
+
+	// metric:v1 (
+	//   grpc.sentMessageCount,
+	//   udp.sentMessageCount
+	// ) The number of envelopes sent to dopplers v1 gRPC or UDP API
 	metrics.BatchAddCounter(w.protocol+".sentMessageCount", messageCount)
 	return nil
 }
@@ -152,6 +159,8 @@ func (w *Writer) flushBuffer() {
 	messages := make([]byte, len(w.msgBuffer.buffer))
 	copy(messages, w.msgBuffer.buffer)
 	if err := w.flushWrite(messages, count, w.chainers...); err != nil {
+		// metric:v1 (DopplerForwarder.retryCount) Number of retries made when
+		// trying to write to Doppler's v1 UDP or gRPC API
 		metrics.BatchIncrementCounter("DopplerForwarder.retryCount")
 		w.timer.Reset(w.flushDuration)
 		return
@@ -165,6 +174,8 @@ func (w *Writer) retryWrites(message []byte, messageCount uint64, chainers ...me
 	defer w.flushing.Done()
 	for i := 0; i < maxOverflowTries; i++ {
 		if i > 0 {
+			// metric:v1 (DopplerForwarder.retryCount) Number of retries made when
+			// trying to write to Doppler's v1 UDP or gRPC API
 			metrics.BatchIncrementCounter("DopplerForwarder.retryCount")
 		}
 		err = w.flushWrite(message, messageCount, chainers...)

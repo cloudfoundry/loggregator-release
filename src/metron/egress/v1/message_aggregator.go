@@ -35,6 +35,8 @@ func (m *MessageAggregator) Write(envelope *events.Envelope) {
 }
 
 func (m *MessageAggregator) handleCounter(envelope *events.Envelope) *events.Envelope {
+	// metric:v1 (MessageAggregator.counterEventReceived) Total number of
+	// counter events received by the message aggregator.
 	metrics.BatchIncrementCounter("MessageAggregator.counterEventReceived")
 
 	countID := counterID{

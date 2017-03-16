@@ -60,10 +60,14 @@ func (m *EventMarshaller) Write(envelope *events.Envelope) {
 	envelopeBytes, err := proto.Marshal(envelope)
 	if err != nil {
 		log.Printf("marshalling error: %v", err)
+		// metric:v1 (dropsondeMarshaller.marshalErrors) Number of envelopes
+		// that failed to marshal on Metron v1 egress
 		m.batcher.BatchIncrementCounter("dropsondeMarshaller.marshalErrors")
 		return
 	}
 
+	// metric:v1 (dropsondeMarshaller.sentEnvelopes) Number of envelopes sent
+	// by the Metron v1 egress
 	chainer := m.batcher.BatchCounter("dropsondeMarshaller.sentEnvelopes").
 		SetTag("event_type", envelope.GetEventType().String())
 
