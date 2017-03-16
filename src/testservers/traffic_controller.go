@@ -68,7 +68,7 @@ func StartTrafficController(conf tcConf.Config) (func(), int) {
 		}
 		conn.Close()
 		return true
-	}).Should(BeTrue())
+	}, 10).Should(BeTrue())
 
 	return func() {
 		os.Remove(filename)
