@@ -27,7 +27,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1, nil)
 
 	etcdRunner.Start()
-})
+}, 10)
 
 var _ = SynchronizedAfterSuite(func() {
 	if etcdRunner != nil {
