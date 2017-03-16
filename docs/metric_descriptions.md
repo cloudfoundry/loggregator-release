@@ -1,6 +1,6 @@
 ## Metrics emitted by the Loggregator subsystem
 
-As of Loggregator 82 Metrics are now documented inline. Here are some suggested searches for metrics. 
+As of Loggregator 82 Metrics are now documented inline with specifics about what the metric represents. Here are some searches that you can use to get a summary of all metrics. 
 
 [`metrics-documentation-v1`](https://github.com/cloudfoundry/loggregator/search?utf8=%E2%9C%93&q=metric-documentation-v1&type=Code) - These are all metrics related to Dropsonde envelopes. 
 
