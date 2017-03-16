@@ -24,7 +24,7 @@ library.
 
 ## Architecture Within Loggregator
 
-![Loggregator Diagram](../../docs/trafficcontroller.png)
+![Loggregator Diagram](./trafficcontroller.png)
 
 Logging data passes through the system as
 [protocol-buffers](https://github.com/google/protobuf), using
