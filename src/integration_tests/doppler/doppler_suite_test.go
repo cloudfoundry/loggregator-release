@@ -65,7 +65,6 @@ var _ = BeforeSuite(func() {
 
 	pathToTCPEchoServer, err = gexec.Build("tools/tcpechoserver")
 	Expect(err).NotTo(HaveOccurred())
-
 })
 
 var _ = BeforeEach(func() {

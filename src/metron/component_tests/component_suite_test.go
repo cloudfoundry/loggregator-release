@@ -8,6 +8,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
 
 	"integration_tests/binaries"
 )
@@ -19,12 +20,13 @@ func TestComponentTests(t *testing.T) {
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {
-	bp, errors := binaries.Build()
-	for err := range errors {
-		Expect(err).ToNot(HaveOccurred())
-	}
+	metronPath, err := gexec.Build("metron", "-race")
+	Expect(err).ToNot(HaveOccurred())
+
+	bp := binaries.BuildPaths{Metron: metronPath}
 	text, err := bp.Marshal()
 	Expect(err).ToNot(HaveOccurred())
+
 	return text
 }, func(bpText []byte) {
 	var bp binaries.BuildPaths
@@ -34,5 +36,5 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 })
 
 var _ = SynchronizedAfterSuite(func() {}, func() {
-	binaries.Cleanup()
+	gexec.CleanupBuildArtifacts()
 })
