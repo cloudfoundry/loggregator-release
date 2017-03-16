@@ -2,6 +2,7 @@ package component_test
 
 import (
 	"log"
+	"os"
 	"testing"
 
 	"google.golang.org/grpc/grpclog"
@@ -20,10 +21,18 @@ func TestComponentTests(t *testing.T) {
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {
-	metronPath, err := gexec.Build("metron", "-race")
-	Expect(err).ToNot(HaveOccurred())
+	var bp binaries.BuildPaths
+	if os.Getenv("SKIP_BUILD") != "" {
+		bp.Metron = os.Getenv("METRON_BUILD_PATH")
+	}
 
-	bp := binaries.BuildPaths{Metron: metronPath}
+	if os.Getenv("SKIP_BUILD") == "" {
+		metronPath, err := gexec.Build("metron", "-race")
+		Expect(err).ToNot(HaveOccurred())
+
+		bp.Metron = metronPath
+	}
+
 	text, err := bp.Marshal()
 	Expect(err).ToNot(HaveOccurred())
 
