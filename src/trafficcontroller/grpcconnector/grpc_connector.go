@@ -280,7 +280,7 @@ func readStream(s plumbingReceiver, cs *consumerState, batcher MetaMetricBatcher
 			return err
 		}
 
-		// metric: (listeners.receivedEnvelopes) Number of V1 envelopes
+		// metric:v1 (listeners.receivedEnvelopes) Number of V1 envelopes
 		// received over gRPC from Dopplers.
 		batcher.BatchCounter("listeners.receivedEnvelopes").
 			SetTag("protocol", "grpc").
@@ -293,7 +293,7 @@ func readStream(s plumbingReceiver, cs *consumerState, batcher MetaMetricBatcher
 				<-timer.C
 			}
 		case <-timer.C:
-			// metric: (grpcConnector.slowConsumers) Number of slow consumers of
+			// metric:v1 (grpcConnector.slowConsumers) Number of slow consumers of
 			// the TrafficController API
 			cs.batcher.BatchAddCounter("grpcConnector.slowConsumers", 1)
 			writeError(errors.New("GRPCConnector: slow consumer"), cs.errs)
