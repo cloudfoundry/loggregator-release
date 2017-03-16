@@ -10,13 +10,13 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
-	egress "metron/egress/v1"
+	ingress "metron/ingress/v1"
 )
 
 var _ = Describe("EventUnmarshaller", func() {
 	var (
 		mockWriter   *MockEnvelopeWriter
-		unmarshaller *egress.EventUnmarshaller
+		unmarshaller *ingress.EventUnmarshaller
 		event        *events.Envelope
 		message      []byte
 		mockBatcher  *mockEventBatcher
@@ -30,7 +30,7 @@ var _ = Describe("EventUnmarshaller", func() {
 		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
 		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
 
-		unmarshaller = egress.NewUnMarshaller(mockWriter, mockBatcher)
+		unmarshaller = ingress.NewUnMarshaller(mockWriter, mockBatcher)
 		event = &events.Envelope{
 			Origin:      proto.String("fake-origin-3"),
 			EventType:   events.Envelope_ValueMetric.Enum(),

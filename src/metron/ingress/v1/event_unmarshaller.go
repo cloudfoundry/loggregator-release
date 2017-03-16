@@ -7,9 +7,21 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )
+
+//go:generate hel --type EventBatcher --output mock_event_batcher_test.go
+
+type EventBatcher interface {
+	BatchCounter(name string) (chainer metricbatcher.BatchCounterChainer)
+	BatchIncrementCounter(name string)
+}
+
+type EnvelopeWriter interface {
+	Write(event *events.Envelope)
+}
 
 var (
 	invalidEnvelope = errors.New("Invalid Envelope")

@@ -43,7 +43,7 @@ func (a *AppV1) Start() {
 	aggregator := egress.NewAggregator(messageTagger)
 	eventWriter.SetWriter(aggregator)
 
-	dropsondeUnmarshaller := egress.NewUnMarshaller(aggregator, batcher)
+	dropsondeUnmarshaller := ingress.NewUnMarshaller(aggregator, batcher)
 	metronAddress := fmt.Sprintf("127.0.0.1:%d", a.config.IncomingUDPPort)
 	networkReader, err := ingress.New(metronAddress, "dropsondeAgentListener", dropsondeUnmarshaller)
 	if err != nil {
