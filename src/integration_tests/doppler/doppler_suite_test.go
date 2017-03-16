@@ -98,7 +98,11 @@ var _ = AfterEach(func() {
 
 var _ = AfterSuite(func() {
 	etcdAdapter.Disconnect()
-	etcdRunner.Stop()
+
+	if etcdRunner != nil {
+		etcdRunner.Stop()
+	}
+
 	gexec.CleanupBuildArtifacts()
 })
 
