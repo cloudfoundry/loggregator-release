@@ -82,7 +82,7 @@ var _ = JustBeforeEach(func() {
 			resp.Body.Close()
 		}
 		return err
-	}).Should(Succeed())
+	}, 10).Should(Succeed())
 })
 
 var _ = AfterEach(func() {
