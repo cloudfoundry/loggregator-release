@@ -54,25 +54,25 @@ func (l *UDPListener) Start() {
 		readData := make([]byte, readCount) //pass on buffer in size only of read data
 		copy(readData, readBuffer[:readCount])
 
-		// metric:v1 (dropsondeListener.receivedMessageCount) DEPRECATED Number of
+		// metric-documentation-v1: (dropsondeListener.receivedMessageCount) DEPRECATED Number of
 		// received messages from Metron on the UDP listener. This is a
 		// duplicate of udpListener.receivedMessageCount.
 		l.batcher.BatchIncrementCounter("dropsondeListener.receivedMessageCount")
-		// metric:v1 (dropsondeListener.receivedByteCount) DEPRECATED Number
+		// metric-documentation-v1: (dropsondeListener.receivedByteCount) DEPRECATED Number
 		// of bytes received from Metron on the UDP listener. This metric is a
 		// duplicate of udpListener.receivedByteCount.
 		l.batcher.BatchAddCounter("dropsondeListener.receivedByteCount", uint64(readCount))
 
-		// metric:v1 (udpListener.receivedByteCount) Number of received
+		// metric-documentation-v1: (udpListener.receivedByteCount) Number of received
 		// messages from Metron on the UDP listener
 		l.batcher.BatchIncrementCounter(l.metricProto + ".receivedMessageCount")
-		// metric:v1 (listeners.totalReceivedMessageCount) USELESS Total number of
+		// metric-documentation-v1: (listeners.totalReceivedMessageCount) USELESS Total number of
 		// received messages used by only the UDP listener
 		l.batcher.BatchIncrementCounter("listeners.totalReceivedMessageCount")
-		// metric:v1 (udpListener.receivedByteCount) Number of bytes received
+		// metric-documentation-v1: (udpListener.receivedByteCount) Number of bytes received
 		// from Metron on the UDP listener
 		l.batcher.BatchAddCounter(l.metricProto+".receivedByteCount", uint64(readCount))
-		// metric:v1 (listeners.totalReceivedByteCount) USELESS Number of bytes
+		// metric-documentation-v1: (listeners.totalReceivedByteCount) USELESS Number of bytes
 		// received from Metron used only by the UDP listener
 		l.batcher.BatchAddCounter("listeners.totalReceivedByteCount", uint64(readCount))
 

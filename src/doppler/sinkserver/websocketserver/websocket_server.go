@@ -29,7 +29,7 @@ type envelopeCounter struct {
 }
 
 func (c *envelopeCounter) Increment(typ events.Envelope_EventType) {
-	// metric:v1 (sentEnvelopes) Number of v1 envelopes sent across a
+	// metric-documentation-v1: (sentEnvelopes) Number of v1 envelopes sent across a
 	// websocket connection. Possible duplicate. See below.
 	c.batcher.BatchCounter("sentEnvelopes").
 		SetTag("protocol", "ws").
@@ -59,7 +59,7 @@ func newFirehoseCounter(subscriptionID string, batcher Batcher) *firehoseCounter
 }
 
 func (f *firehoseCounter) Increment(typ events.Envelope_EventType) {
-	// metric:v1 (sentMessagesFirehose) Number of v1 envelopes sent to a
+	// metric-documentation-v1: (sentMessagesFirehose) Number of v1 envelopes sent to a
 	// firehose subscription
 	f.batcher.BatchCounter("sentMessagesFirehose").
 		SetTag("subscription_id", f.subscriptionID).
@@ -261,7 +261,7 @@ func sendMessagesToWebsocket(endpoint string, envelopes []*events.Envelope, webs
 			log.Printf("Websocket Server %s: Error when trying to send data to sink %s. Err: %v", websocketConnection.RemoteAddr(), err)
 			continue
 		}
-		// metric:v1 (sentEnvelopes) Number of envelopes sent outbound across
+		// metric-documentation-v1: (sentEnvelopes) Number of envelopes sent outbound across
 		// a websocket connection. Possible duplicate. See above.
 		batcher.BatchCounter("sentEnvelopes").
 			SetTag("protocol", "ws").

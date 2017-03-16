@@ -105,10 +105,10 @@ func main() {
 	batcher := initializeMetrics(conf.MetricBatchIntervalMilliseconds)
 	envelopeBuffer := diodes.NewManyToOneEnvelope(10000, diodes.AlertFunc(func(missed int) {
 		log.Printf("Shed %d envelopes", missed)
-		// metric:v1 (doppler.shedEnvelopes) Number of envelopes dropped by the
+		// metric-documentation-v1: (doppler.shedEnvelopes) Number of envelopes dropped by the
 		// diode inbound from metron
 		batcher.BatchCounter("doppler.shedEnvelopes").Add(uint64(missed))
-		// metric:v2 (loggregator.doppler.dropped) Number of envelopes dropped by the
+		// metric-documentation-v2: (loggregator.doppler.dropped) Number of envelopes dropped by the
 		// diode inbound from metron
 		metric.IncCounter("dropped",
 			metric.WithIncrement(uint64(missed)),
@@ -273,7 +273,7 @@ func start(
 	go func() {
 		for {
 			env := <-udpEnvelopes
-			// metric:v1 (listeners.receivedEnvelopes) Number of envelopes
+			// metric-documentation-v1: (listeners.receivedEnvelopes) Number of envelopes
 			// received from Metron on Doppler's UDP ingress listener
 			batcher.BatchCounter("listeners.receivedEnvelopes").
 				SetTag("protocol", "udp").
@@ -386,7 +386,7 @@ func setupMetricsEmitter(conf *config.Config) {
 	}
 
 	batchInterval := time.Duration(conf.MetricBatchIntervalMilliseconds) * time.Millisecond
-	// metric:v2 setup function
+	// metric-documentation-v2: setup function
 	metric.Setup(
 		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(serverCreds)),
 		metric.WithBatchInterval(batchInterval),

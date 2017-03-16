@@ -39,18 +39,18 @@ func (s *SinkManagerMetrics) run(ticker *time.Ticker) {
 		default:
 		}
 
-		// metric:v1 (messageRouter.numberOfDumpSinks) Number of Dump Sinks
+		// metric-documentation-v1: (messageRouter.numberOfDumpSinks) Number of Dump Sinks
 		metrics.SendValue("messageRouter.numberOfDumpSinks", float64(atomic.LoadInt32(&s.dumpSinks)), "sinks")
-		// metric:v1 (messageRouter.numberOfWebsocketSinks) Number of
+		// metric-documentation-v1: (messageRouter.numberOfWebsocketSinks) Number of
 		// websocket sinks
 		metrics.SendValue("messageRouter.numberOfWebsocketSinks", float64(atomic.LoadInt32(&s.websocketSinks)), "sinks")
-		// metric:v1 (messageRouter.numberOfSyslogSinks) Number of
+		// metric-documentation-v1: (messageRouter.numberOfSyslogSinks) Number of
 		// syslog sinks
 		metrics.SendValue("messageRouter.numberOfSyslogSinks", float64(atomic.LoadInt32(&s.syslogSinks)), "sinks")
-		// metric:v1 (messageRouter.numberOfFirehoseSinks) Number of
+		// metric-documentation-v1: (messageRouter.numberOfFirehoseSinks) Number of
 		// firehose sinks
 		metrics.SendValue("messageRouter.numberOfFirehoseSinks", float64(atomic.LoadInt32(&s.firehoseSinks)), "sinks")
-		// metric:v1 (messageRouter.numberOfContainerMetricSinks) Number of
+		// metric-documentation-v1: (messageRouter.numberOfContainerMetricSinks) Number of
 		// container metric sinks
 		metrics.SendValue("messageRouter.numberOfContainerMetricSinks", float64(atomic.LoadInt32(&s.containerMetrics)), "sinks")
 	}

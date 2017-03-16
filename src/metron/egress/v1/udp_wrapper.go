@@ -23,21 +23,21 @@ func (u *UDPWrapper) Write(message []byte, chainers ...metricbatcher.BatchCounte
 
 	err := u.conn.Write(signedMessage)
 	if err != nil {
-		// metric:v1 (udp.sendErrorCount) Total number of errors that have
+		// metric-documentation-v1: (udp.sendErrorCount) Total number of errors that have
 		// occured while trying to send envelope to doppler v1 UDP API
 		metrics.BatchIncrementCounter("udp.sendErrorCount")
 		return err
 	}
 
-	// metric:v1 (udp.sentMessageCount) The number of envelopes sent to
+	// metric-documentation-v1: (udp.sentMessageCount) The number of envelopes sent to
 	// dopplers v1 UDP API
 	metrics.BatchIncrementCounter("udp.sentMessageCount")
 
-	// metric:v1 (udp.sentByteCount) The number of bytes sent to
+	// metric-documentation-v1: (udp.sentByteCount) The number of bytes sent to
 	// dopplers v1 UDP API
 	metrics.BatchAddCounter("udp.sentByteCount", uint64(len(message)))
 
-	// metric:v1 (DopplerForwarder.sentMessages) The number of envelopes sent to
+	// metric-documentation-v1: (DopplerForwarder.sentMessages) The number of envelopes sent to
 	// dopplers v1 API over all protocols
 	metrics.BatchIncrementCounter("DopplerForwarder.sentMessages")
 	for _, chainer := range chainers {

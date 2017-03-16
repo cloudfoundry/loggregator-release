@@ -36,14 +36,14 @@ func (r *MessageRouter) Start(incomingLog *diodes.ManyToOneEnvelope) {
 		envelope := incomingLog.Next()
 		count++
 		if count%1000 == 0 {
-			// metric:v2 (loggregator.doppler.egress) Number of v1 envelopes
+			// metric-documentation-v2: (loggregator.doppler.egress) Number of v1 envelopes
 			// read from a diode to be sent to TrafficController consumers.
 			metric.IncCounter("egress",
 				metric.WithIncrement(1000),
 				metric.WithVersion(2, 0),
 			)
 
-			// metric:v1 (listeners.receivedEnvelopes) Number of v1 envelopes
+			// metric-documentation-v1: (listeners.receivedEnvelopes) Number of v1 envelopes
 			// read from a diode to be sent to TrafficController consumers.
 			metrics.BatchAddCounter("listeners.receivedEnvelopes", 1000)
 		}
