@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+set -e -x
+
+bosh create-release --force
+bosh -e lite upload-release --rebase
+bosh -e lite deploy -d loggregator templates/loggregator.yml --vars-store=/tmp/loggregator-vars.yml -n
