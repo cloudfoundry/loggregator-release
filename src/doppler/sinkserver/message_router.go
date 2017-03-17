@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
-	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
@@ -36,16 +35,12 @@ func (r *MessageRouter) Start(incomingLog *diodes.ManyToOneEnvelope) {
 		envelope := incomingLog.Next()
 		count++
 		if count%1000 == 0 {
-			// metric-documentation-v2: (loggregator.doppler.egress) Number of v1 envelopes
-			// read from a diode to be sent to TrafficController consumers.
+			// metric-documentation-v2: (loggregator.doppler.egress) Number of
+			// v1 envelopes read from a diode to be sent to consumers.
 			metric.IncCounter("egress",
 				metric.WithIncrement(1000),
 				metric.WithVersion(2, 0),
 			)
-
-			// metric-documentation-v1: (listeners.receivedEnvelopes) Number of v1 envelopes
-			// read from a diode to be sent to TrafficController consumers.
-			metrics.BatchAddCounter("listeners.receivedEnvelopes", 1000)
 		}
 
 		appId := envelope_extensions.GetAppId(envelope)

@@ -38,9 +38,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-const (
-	dopplerOrigin = "DopplerServer"
-)
+const dopplerOrigin = "DopplerServer"
 
 func main() {
 	//------------------------------
