@@ -5,9 +5,10 @@ Required environment variables
 - `CF_PASSWORD`
 - `CF_SPACE`
 - `CF_ORG`
+- `NUM_APPS`
 - `CYCLES`
 - `DELAY_US`
-- `DRAIN_URL`
+- `DRAIN_URLS` a string with URLs separated by spaces
 - `DATADOG_API_KEY`
 
 Usage:
