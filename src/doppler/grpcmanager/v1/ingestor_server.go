@@ -68,6 +68,11 @@ func (i *IngestorServer) Pusher(pusher plumbing.DopplerIngestor_PusherServer) er
 			SetTag("event_type", env.GetEventType().String()).
 			Increment()
 		i.sender.Set(env)
+
+		// metric-documentation-v1: (listeners.totalReceivedMessageCount) Total
+		// number of messages received by doppler.
+		i.batcher.BatchCounter("listeners.totalReceivedMessageCount").
+			Increment()
 	}
 	return nil
 }

@@ -66,8 +66,8 @@ func (l *UDPListener) Start() {
 		// metric-documentation-v1: (udpListener.receivedByteCount) Number of received
 		// messages from Metron on the UDP listener
 		l.batcher.BatchIncrementCounter(l.metricProto + ".receivedMessageCount")
-		// metric-documentation-v1: (listeners.totalReceivedMessageCount) USELESS Total number of
-		// received messages used by only the UDP listener
+		// metric-documentation-v1: (listeners.totalReceivedMessageCount) Total
+		// number of messages received by doppler.
 		l.batcher.BatchIncrementCounter("listeners.totalReceivedMessageCount")
 		// metric-documentation-v1: (udpListener.receivedByteCount) Number of bytes received
 		// from Metron on the UDP listener

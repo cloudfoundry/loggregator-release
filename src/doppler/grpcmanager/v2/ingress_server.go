@@ -7,11 +7,16 @@ import (
 	plumbing "plumbing/v2"
 	"time"
 
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
 type DopplerIngress_SenderServer interface {
 	plumbing.DopplerIngress_SenderServer
+}
+
+type Batcher interface {
+	BatchCounter(name string) metricbatcher.BatchCounterChainer
 }
 
 type DataSetter interface {
@@ -20,11 +25,13 @@ type DataSetter interface {
 
 type IngressServer struct {
 	envelopeBuffer DataSetter
+	batcher        Batcher
 }
 
-func NewIngressServer(envelopeBuffer DataSetter) *IngressServer {
+func NewIngressServer(envelopeBuffer DataSetter, batcher Batcher) *IngressServer {
 	return &IngressServer{
 		envelopeBuffer: envelopeBuffer,
+		batcher:        batcher,
 	}
 }
 
@@ -50,6 +57,12 @@ func (i IngressServer) Sender(s plumbing.DopplerIngress_SenderServer) error {
 				metric.WithIncrement(count),
 				metric.WithVersion(2, 0),
 			)
+
+			// metric-documentation-v1: (listeners.totalReceivedMessageCount)
+			// Total number of messages received by doppler.
+			i.batcher.BatchCounter("listeners.totalReceivedMessageCount").
+				Increment()
+
 			log.Printf("Ingressed (v2) %d envelopes", count)
 			lastEmitted = time.Now()
 			count = 0
