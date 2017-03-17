@@ -36,6 +36,7 @@ type Config struct {
 	PollingBatchSize         int
 
 	SkipCertVerify bool
+	PPROFPort      uint32
 }
 
 func ParseConfig(configFile string) (*Config, error) {
