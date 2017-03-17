@@ -13,11 +13,3 @@ for i in `seq 1 $NUM_APPS`; do
 done;
 
 sleep 15
-
-msg_count=0
-for i in `seq 1 $NUM_APPS`; do
-    c=$(cat output-$i.txt | grep -c 'msg')
-    : $(( msg_count = $msg_count + $c ))
-done;
-
-echo $msg_count

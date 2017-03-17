@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 set -e
 
-[ $# -ge 1 -a -f "$1" ] && input="$1" || input="-"
+msg_count=0
+for i in `seq 1 $NUM_APPS`; do
+    c=$(cat output-$i.txt | grep -c 'msg')
+    : $(( msg_count = $msg_count + $c ))
+done;
 
-msg_count=$(cat $input)
 currenttime=$(date +%s)
 
 curl  -X POST -H "Content-type: application/json" \
@@ -31,7 +34,7 @@ curl  -X POST -H "Content-type: application/json" \
 curl  -X POST -H "Content-type: application/json" \
 -d "{ \"series\" :
        [{\"metric\":\"smoke_test.ss.loggregator.cycles\",
-        \"points\":[[${currenttime}, ${CYCLES}]],
+       \"points\":[[${currenttime}, $(expr $CYCLES \* $NUM_APPS)]],
         \"type\":\"gauge\",
         \"host\":\"${CF_SYSTEM_DOMAIN}\",
         \"tags\":[]}
