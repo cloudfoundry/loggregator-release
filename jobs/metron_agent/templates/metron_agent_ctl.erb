@@ -8,9 +8,6 @@ mkdir -p $RUN_DIR
 mkdir -p $LOG_DIR
 
 source /var/vcap/packages/loggregator_common/pid_utils.sh
-source /var/vcap/packages/loggregator_common/syslog_utils.sh
-
-tee_output_to_sys_log "$LOG_DIR"
 
 case $1 in
 
@@ -23,15 +20,14 @@ case $1 in
     /var/vcap/packages/metron_agent/syslog_daemon_config/setup_syslog_forwarder.sh /var/vcap/jobs/metron_agent/config
     <% end %>
 
-    exec >>$LOG_DIR/metron_agent.stdout.log \
-        2>>$LOG_DIR/metron_agent.stderr.log
-
     chown -R vcap:vcap $LOG_DIR
 
     chpst -u vcap:vcap /var/vcap/packages/metron_agent/metron \
-         --config /var/vcap/jobs/metron_agent/config/metron_agent.json &
+         --config /var/vcap/jobs/metron_agent/config/metron_agent.json 2>&1 | \
+         tee -a "$LOG_DIR/metron.log" | \
+         logger -t "vcap.metron" -p user.error &
 
-    echo $! > $PIDFILE
+    jobs -p > $PIDFILE
 
     ;;
 

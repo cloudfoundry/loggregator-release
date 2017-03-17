@@ -36,8 +36,6 @@ type Config struct {
 	PollingBatchSize         int
 
 	SkipCertVerify bool
-
-	Syslog string
 }
 
 func ParseConfig(configFile string) (*Config, error) {

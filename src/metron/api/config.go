@@ -15,7 +15,6 @@ type GRPC struct {
 }
 
 type Config struct {
-	Syslog     string
 	Deployment string
 	Zone       string
 	Job        string

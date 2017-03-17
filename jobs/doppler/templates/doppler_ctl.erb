@@ -15,9 +15,6 @@ mkdir -p $RUN_DIR
 mkdir -p $LOG_DIR
 
 source /var/vcap/packages/loggregator_common/pid_utils.sh
-source /var/vcap/packages/loggregator_common/syslog_utils.sh
-
-tee_output_to_sys_log "$LOG_DIR"
 
 case $1 in
 
@@ -29,15 +26,14 @@ case $1 in
     <% end %>
     ulimit -n 65536
 
-    exec >>$LOG_DIR/doppler.stdout.log  \
-       2>>$LOG_DIR/doppler.stderr.log
-
     chown -R vcap:vcap $LOG_DIR
 
     chpst -u vcap:vcap /var/vcap/packages/doppler/doppler \
-         --config /var/vcap/jobs/doppler/config/doppler.json &
+         --config /var/vcap/jobs/doppler/config/doppler.json 2>&1 | \
+         tee -a "$LOG_DIR/doppler.log" | \
+         logger -t "vcap.doppler" -p user.error &
 
-    echo $! > $PIDFILE
+    jobs -p > $PIDFILE
 
     ;;
 

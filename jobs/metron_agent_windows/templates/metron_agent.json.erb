@@ -35,9 +35,6 @@
         a[:GRPC] = grpcConfig
         a[:DopplerAddr] = "#{p('doppler.addr')}:#{p('doppler.grpc_port')}"
         a[:DopplerAddrUDP] = "#{p('doppler.addr')}:#{p('doppler.udp_port')}"
-        if_p("syslog_daemon_config") do |_|
-            a[:Syslog] = "vcap.metron_agent"
-        end
     end
 %>
 

@@ -15,9 +15,6 @@ mkdir -p $RUN_DIR
 mkdir -p $LOG_DIR
 
 source /var/vcap/packages/loggregator_common/pid_utils.sh
-source /var/vcap/packages/loggregator_common/syslog_utils.sh
-
-tee_output_to_sys_log "$LOG_DIR"
 
 case $1 in
 
@@ -29,15 +26,14 @@ case $1 in
     <% end %>
     ulimit -n 65536
 
-    exec >>$LOG_DIR/syslog_drain_binder.stdout.log \
-         2>>$LOG_DIR/syslog_drain_binder.stderr.log
-
     chown -R vcap:vcap $LOG_DIR
 
     chpst -u vcap:vcap /var/vcap/packages/syslog_drain_binder/syslog_drain_binder \
-         --config /var/vcap/jobs/syslog_drain_binder/config/syslog_drain_binder.json &
+        --config /var/vcap/jobs/syslog_drain_binder/config/syslog_drain_binder.json 2>&1 | \
+         tee -a "$LOG_DIR/syslog_drain_binder.log" | \
+         logger -t "vcap.syslog-drain-binder" -p user.error &
 
-    echo $! > $PIDFILE
+    jobs -p > $PIDFILE
 
     ;;
 

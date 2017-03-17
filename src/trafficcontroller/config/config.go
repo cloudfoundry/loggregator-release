@@ -28,7 +28,6 @@ type Config struct {
 
 	JobName                string
 	Index                  string
-	Syslog                 string
 	ApiHost                string
 	DopplerPort            uint32
 	OutgoingDropsondePort  uint32

@@ -56,9 +56,6 @@
         a[:UaaHost] = uaaHost
         a[:UaaClient] = uaaClient
         a[:UaaClientSecret] = p("loggregator.uaa.client_secret")
-        if_p("syslog_daemon_config") do |_|
-            a[:Syslog] = "vcap.trafficcontroller"
-        end
         if p("traffic_controller.security_event_logging.enabled")
             a[:SecurityEventLog] = "/var/vcap/sys/log/loggregator_trafficcontroller/loggregator_trafficcontroller_security_events.log"
         end
