@@ -22,7 +22,7 @@ import (
 var _ = Describe("SyslogSinkIntegration", func() {
 	Describe("HTTPS writer", func() {
 		Context("with non-200 return codes", func() {
-			It("backs off", func() {
+			PIt("backs off", func() {
 				bufferSize := uint(6)
 				appId := "appId"
 				var timestampsInMillis []int64

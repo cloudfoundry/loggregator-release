@@ -35,7 +35,7 @@ type messageHolder struct {
 
 var _ = Describe("DeaLoggingAgent integration tests", func() {
 	Context("It sends messages from the input file out to metron", func() {
-		It("gets sent messages and internally emitted metrics", func() {
+		PIt("gets sent messages and internally emitted metrics", func() {
 			m := &messageHolder{}
 			conn := makeDeaLoggingAgentOutputConn()
 			defer conn.Close()
