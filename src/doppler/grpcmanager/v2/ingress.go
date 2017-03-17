@@ -1,15 +1,22 @@
 package v2
 
 import (
+	"log"
 	"metric"
 	"plumbing/conversion"
 	plumbing "plumbing/v2"
+	"time"
 
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
 type DopplerIngress_SenderServer interface {
 	plumbing.DopplerIngress_SenderServer
+}
+
+type Batcher interface {
+	BatchCounter(name string) metricbatcher.BatchCounterChainer
 }
 
 type DataSetter interface {
@@ -18,15 +25,19 @@ type DataSetter interface {
 
 type Ingestor struct {
 	envelopeBuffer DataSetter
+	batcher        Batcher
 }
 
-func NewIngestor(envelopeBuffer DataSetter) *Ingestor {
+func NewIngestor(envelopeBuffer DataSetter, batcher Batcher) *Ingestor {
 	return &Ingestor{
 		envelopeBuffer: envelopeBuffer,
+		batcher:        batcher,
 	}
 }
 
 func (i Ingestor) Sender(s plumbing.DopplerIngress_SenderServer) error {
+	var count uint64
+	lastEmitted := time.Now()
 	for {
 		v2e, err := s.Recv()
 		if err != nil {
@@ -38,7 +49,23 @@ func (i Ingestor) Sender(s plumbing.DopplerIngress_SenderServer) error {
 			continue
 		}
 
-		metric.IncCounter("ingress")
+		count++
+		if count >= 1000 || time.Since(lastEmitted) > 5*time.Second {
+			// metric-documentation-v2: (loggregator.doppler.ingress) Number of received
+			// envelopes from Metron on Doppler's v2 gRPC server
+			metric.IncCounter("ingress",
+				metric.WithIncrement(count),
+			)
+
+			// metric-documentation-v1: (listeners.totalReceivedMessageCount)
+			// Total number of messages received by doppler.
+			i.batcher.BatchCounter("listeners.totalReceivedMessageCount").
+				Increment()
+
+			log.Printf("Ingressed (v2) %d envelopes", count)
+			lastEmitted = time.Now()
+			count = 0
+		}
 		i.envelopeBuffer.Set(v1e)
 	}
 }

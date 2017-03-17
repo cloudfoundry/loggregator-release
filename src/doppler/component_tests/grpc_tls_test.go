@@ -77,9 +77,11 @@ var _ = Describe("gRPC TLS", func() {
 			v1e, _ := buildV1ContainerMetric()
 			v1e.Timestamp = proto.Int64(v2e.Timestamp)
 
-			Consistently(func() error {
-				return sender.Send(v2e)
-			}, 5).Should(Succeed())
+			go func() {
+				for {
+					sender.Send(v2e)
+				}
+			}()
 
 			rx := fetchReceiver(metronMock)
 			receiver := rxToCh(rx)
