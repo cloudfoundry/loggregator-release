@@ -43,7 +43,7 @@ func Announce(localIP string, ttl time.Duration, config *config.Config, storeAda
 
 	// The status channel needs to be drained to maintain the node within the etcd cluster
 	go func() {
-		for stat := range status {
+		for range status {
 			// Do nothing
 		}
 	}()
@@ -65,7 +65,7 @@ func AnnounceLegacy(localIP string, ttl time.Duration, config *config.Config, st
 
 	// The status channel needs to be drained to maintain the node within the etcd cluster
 	go func() {
-		for stat := range status {
+		for range status {
 			// Do nothing
 		}
 	}()
