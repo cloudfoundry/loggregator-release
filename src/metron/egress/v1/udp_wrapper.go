@@ -24,7 +24,7 @@ func (u *UDPWrapper) Write(message []byte, chainers ...metricbatcher.BatchCounte
 	err := u.conn.Write(signedMessage)
 	if err != nil {
 		// metric-documentation-v1: (udp.sendErrorCount) Total number of errors that have
-		// occured while trying to send envelope to doppler v1 UDP API
+		// occurred while trying to send envelope to doppler v1 UDP API
 		metrics.BatchIncrementCounter("udp.sendErrorCount")
 		return err
 	}

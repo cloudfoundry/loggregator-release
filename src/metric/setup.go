@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	gendiodes "github.com/cloudfoundry/diodes"
+
 	v2 "plumbing/v2"
 
 	"google.golang.org/grpc"
@@ -85,7 +87,7 @@ func Setup(opts ...SetOpts) {
 	}
 	conf.dialOpts = append(conf.dialOpts, grpc.WithBackoffMaxDelay(1*time.Second))
 
-	batchBuffer = diodes.NewManyToOneEnvelopeV2(1000, diodes.AlertFunc(func(missed int) {
+	batchBuffer = diodes.NewManyToOneEnvelopeV2(1000, gendiodes.AlertFunc(func(missed int) {
 		log.Printf("dropped metrics %d", missed)
 	}))
 

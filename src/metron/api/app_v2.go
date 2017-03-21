@@ -8,6 +8,8 @@ import (
 	"metric"
 	"time"
 
+	gendiodes "github.com/cloudfoundry/diodes"
+
 	clientpool "metron/clientpool/v2"
 	egress "metron/egress/v2"
 	ingress "metron/ingress/v2"
@@ -39,7 +41,7 @@ func (a *AppV2) Start() {
 		log.Panic("Failed to load TLS server config")
 	}
 
-	envelopeBuffer := diodes.NewManyToOneEnvelopeV2(10000, diodes.AlertFunc(func(missed int) {
+	envelopeBuffer := diodes.NewManyToOneEnvelopeV2(10000, gendiodes.AlertFunc(func(missed int) {
 		// metric-documentation-v2: (loggregator.metron.dropped) Number of v2 envelopes
 		// droppred from the metron ingress diode
 		metric.IncCounter("dropped",

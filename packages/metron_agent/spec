@@ -8,6 +8,7 @@ files:
 - loggregator/src/metron/syslog_daemon_config/*
 - loggregator/src/code.cloudfoundry.org/localip/*.go # gosub
 - loggregator/src/diodes/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/diodes/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metricbatcher/*.go # gosub
