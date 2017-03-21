@@ -22,13 +22,16 @@ func ToV2(e *events.Envelope) *v2.Envelope {
 	v2e.Tags["index"] = valueText(e.GetIndex())
 	v2e.Tags["ip"] = valueText(e.GetIp())
 	v2e.Tags["__v1_type"] = valueText(e.GetEventType().String())
-	delete(v2e.Tags, "source_id")
 
+	delete(v2e.Tags, "source_id")
 	sourceId, ok := e.GetTags()["source_id"]
 	v2e.SourceId = sourceId
 	if !ok {
 		v2e.SourceId = e.GetDeployment() + "/" + e.GetJob()
 	}
+
+	delete(v2e.Tags, "instance_id")
+	v2e.InstanceId = e.GetTags()["instance_id"]
 
 	switch e.GetEventType() {
 	case events.Envelope_LogMessage:
@@ -102,7 +105,7 @@ func convertHTTPStartStop(v2e *v2.Envelope, v1e *events.Envelope) {
 	v2e.Tags["status_code"] = valueInt32(t.GetStatusCode())
 	v2e.Tags["content_length"] = valueInt64(t.GetContentLength())
 	v2e.Tags["instance_index"] = valueInt32(t.GetInstanceIndex())
-	v2e.Tags["instance_id"] = valueText(t.GetInstanceId())
+	v2e.Tags["routing_instance_id"] = valueText(t.GetInstanceId())
 	v2e.Tags["forwarded"] = valueTextSlice(t.GetForwarded())
 }
 

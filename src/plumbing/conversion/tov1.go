@@ -34,6 +34,10 @@ func ToV1(e *v2.Envelope) *events.Envelope {
 		v1e.Tags["source_id"] = e.SourceId
 	}
 
+	if e.InstanceId != "" {
+		v1e.Tags["instance_id"] = e.InstanceId
+	}
+
 	switch (e.Message).(type) {
 	case *v2.Envelope_Log:
 		convertLog(v1e, e)
@@ -72,7 +76,7 @@ func convertTimer(v1e *events.Envelope, v2e *v2.Envelope) {
 		StatusCode:     proto.Int32(int32(v2e.Tags["status_code"].GetInteger())),
 		ContentLength:  proto.Int64(v2e.Tags["content_length"].GetInteger()),
 		InstanceIndex:  proto.Int32(int32(v2e.Tags["instance_index"].GetInteger())),
-		InstanceId:     proto.String(v2e.Tags["instance_id"].GetText()),
+		InstanceId:     proto.String(v2e.Tags["routing_instance_id"].GetText()),
 		Forwarded:      strings.Split(v2e.Tags["forwarded"].GetText(), "\n"),
 	}
 
@@ -85,7 +89,7 @@ func convertTimer(v1e *events.Envelope, v2e *v2.Envelope) {
 	delete(v1e.Tags, "status_code")
 	delete(v1e.Tags, "content_length")
 	delete(v1e.Tags, "instance_index")
-	delete(v1e.Tags, "instance_id")
+	delete(v1e.Tags, "routing_instance_id")
 	delete(v1e.Tags, "forwarded")
 }
 
