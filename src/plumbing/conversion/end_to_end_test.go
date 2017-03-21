@@ -235,8 +235,9 @@ var _ = Describe("Envelope conversion", func() {
 	Context("v2->v1->v2", func() {
 		It("converts HttpStartStop", func() {
 			v2e := &v2.Envelope{
-				Timestamp: time.Now().UnixNano(),
-				SourceId:  "b3015d69-09cd-476d-aace-ad2d824d5ab7",
+				Timestamp:  time.Now().UnixNano(),
+				SourceId:   "b3015d69-09cd-476d-aace-ad2d824d5ab7",
+				InstanceId: "some-number",
 				Message: &v2.Envelope_Timer{
 					Timer: &v2.Timer{
 						Name:  "http",
@@ -245,23 +246,22 @@ var _ = Describe("Envelope conversion", func() {
 					},
 				},
 				Tags: map[string]*v2.Value{
-					"request_id":     ValueText("954f61c4-ac84-44be-9217-cdfa3117fb41"),
-					"peer_type":      ValueText("Client"),
-					"method":         ValueText("GET"),
-					"uri":            ValueText("/hello-world"),
-					"remote_address": ValueText("10.1.1.0"),
-					"user_agent":     ValueText("Mozilla/5.0"),
-					"status_code":    ValueInteger(200),
-					"content_length": ValueInteger(1000000),
-					"instance_index": ValueInteger(10),
-					"instance_id":    ValueText("application-id"),
-					"forwarded":      ValueText("6.6.6.6\n8.8.8.8"),
-					"deployment":     ValueText("some-deployment"),
-					"ip":             ValueText("some-ip"),
-					"job":            ValueText("some-job"),
-					"origin":         ValueText("some-origin"),
-					"index":          ValueText("some-index"),
-					"__v1_type":      ValueText("HttpStartStop"),
+					"request_id":         ValueText("954f61c4-ac84-44be-9217-cdfa3117fb41"),
+					"peer_type":          ValueText("Client"),
+					"method":             ValueText("GET"),
+					"uri":                ValueText("/hello-world"),
+					"remote_address":     ValueText("10.1.1.0"),
+					"user_agent":         ValueText("Mozilla/5.0"),
+					"status_code":        ValueInteger(200),
+					"content_length":     ValueInteger(1000000),
+					"instance_index":     ValueInteger(10),
+					"router_instance_id": ValueText("application-id"),
+					"forwarded":          ValueText("6.6.6.6\n8.8.8.8"),
+					"deployment":         ValueText("some-deployment"),
+					"ip":                 ValueText("some-ip"),
+					"job":                ValueText("some-job"),
+					"origin":             ValueText("some-origin"),
+					"__v1_type":          ValueText("HttpStartStop"),
 				},
 			}
 
@@ -279,8 +279,9 @@ var _ = Describe("Envelope conversion", func() {
 
 		It("converts Log", func() {
 			v2e := &v2.Envelope{
-				Timestamp: time.Now().UnixNano(),
-				SourceId:  "b3015d69-09cd-476d-aace-ad2d824d5ab7",
+				Timestamp:  time.Now().UnixNano(),
+				SourceId:   "b3015d69-09cd-476d-aace-ad2d824d5ab7",
+				InstanceId: "some-number",
 				Message: &v2.Envelope_Log{
 					Log: &v2.Log{
 						Payload: []byte("some-payload"),
@@ -294,7 +295,6 @@ var _ = Describe("Envelope conversion", func() {
 					"ip":              ValueText("some-ip"),
 					"job":             ValueText("some-job"),
 					"origin":          ValueText("some-origin"),
-					"index":           ValueText("some-index"),
 					"__v1_type":       ValueText("LogMessage"),
 				},
 			}
@@ -313,8 +313,9 @@ var _ = Describe("Envelope conversion", func() {
 
 		It("converts Counter", func() {
 			v2e := &v2.Envelope{
-				Timestamp: time.Now().UnixNano(),
-				SourceId:  "b3015d69-09cd-476d-aace-ad2d824d5ab7",
+				Timestamp:  time.Now().UnixNano(),
+				SourceId:   "b3015d69-09cd-476d-aace-ad2d824d5ab7",
+				InstanceId: "some-number",
 				Message: &v2.Envelope_Counter{
 					Counter: &v2.Counter{
 						Name: "some-name",
@@ -328,7 +329,6 @@ var _ = Describe("Envelope conversion", func() {
 					"ip":         ValueText("some-ip"),
 					"job":        ValueText("some-job"),
 					"origin":     ValueText("some-origin"),
-					"index":      ValueText("some-index"),
 					"__v1_type":  ValueText("CounterEvent"),
 				},
 			}

@@ -20,12 +20,12 @@ var _ = Describe("Envelope", func() {
 	Context("given a v2 envelope", func() {
 		It("sets v1 specific properties", func() {
 			envelope := &v2.Envelope{
-				Timestamp: 99,
+				Timestamp:  99,
+				InstanceId: "index",
 				Tags: map[string]*v2.Value{
 					"origin":         {&v2.Value_Text{"origin"}},
 					"deployment":     {&v2.Value_Text{"deployment"}},
 					"job":            {&v2.Value_Text{"job"}},
-					"index":          {&v2.Value_Text{"index"}},
 					"ip":             {&v2.Value_Text{"ip"}},
 					"random_text":    {&v2.Value_Text{"random_text"}},
 					"random_int":     {&v2.Value_Integer{123}},
@@ -80,14 +80,14 @@ var _ = Describe("Envelope", func() {
 			}
 
 			expectedV2Envelope := &v2.Envelope{
-				Timestamp: 99,
-				SourceId:  "some-deployment/some-job",
+				Timestamp:  99,
+				SourceId:   "some-deployment/some-job",
+				InstanceId: "some-index",
 				Tags: map[string]*v2.Value{
 					"random-tag": ValueText("random-value"),
 					"origin":     ValueText("origin-value"),
 					"deployment": ValueText("some-deployment"),
 					"job":        ValueText("some-job"),
-					"index":      ValueText("some-index"),
 					"ip":         ValueText("some-ip"),
 				},
 			}
@@ -102,7 +102,7 @@ var _ = Describe("Envelope", func() {
 			Expect(converted.Tags["origin"]).To(Equal(expectedV2Envelope.Tags["origin"]))
 			Expect(converted.Tags["deployment"]).To(Equal(expectedV2Envelope.Tags["deployment"]))
 			Expect(converted.Tags["job"]).To(Equal(expectedV2Envelope.Tags["job"]))
-			Expect(converted.Tags["index"]).To(Equal(expectedV2Envelope.Tags["index"]))
+			Expect(converted.InstanceId).To(Equal("some-index"))
 			Expect(converted.Tags["ip"]).To(Equal(expectedV2Envelope.Tags["ip"]))
 		})
 	})
