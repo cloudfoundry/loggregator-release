@@ -17,7 +17,7 @@ func ToV1(e *v2.Envelope) *events.Envelope {
 		Origin:     proto.String(e.Tags["origin"].GetText()),
 		Deployment: proto.String(e.Tags["deployment"].GetText()),
 		Job:        proto.String(e.Tags["job"].GetText()),
-		Index:      proto.String(e.InstanceId),
+		Index:      proto.String(e.Tags["index"].GetText()),
 		Timestamp:  proto.Int64(e.Timestamp),
 		Ip:         proto.String(e.Tags["ip"].GetText()),
 		Tags:       convertTags(e.Tags),
@@ -27,6 +27,7 @@ func ToV1(e *v2.Envelope) *events.Envelope {
 	delete(v1e.Tags, "origin")
 	delete(v1e.Tags, "deployment")
 	delete(v1e.Tags, "job")
+	delete(v1e.Tags, "index")
 	delete(v1e.Tags, "ip")
 
 	if e.SourceId != "" {
@@ -71,7 +72,7 @@ func convertTimer(v1e *events.Envelope, v2e *v2.Envelope) {
 		StatusCode:     proto.Int32(int32(v2e.Tags["status_code"].GetInteger())),
 		ContentLength:  proto.Int64(v2e.Tags["content_length"].GetInteger()),
 		InstanceIndex:  proto.Int32(int32(v2e.Tags["instance_index"].GetInteger())),
-		InstanceId:     proto.String(v2e.Tags["router_instance_id"].GetText()),
+		InstanceId:     proto.String(v2e.Tags["instance_id"].GetText()),
 		Forwarded:      strings.Split(v2e.Tags["forwarded"].GetText(), "\n"),
 	}
 
@@ -84,7 +85,7 @@ func convertTimer(v1e *events.Envelope, v2e *v2.Envelope) {
 	delete(v1e.Tags, "status_code")
 	delete(v1e.Tags, "content_length")
 	delete(v1e.Tags, "instance_index")
-	delete(v1e.Tags, "router_instance_id")
+	delete(v1e.Tags, "instance_id")
 	delete(v1e.Tags, "forwarded")
 }
 

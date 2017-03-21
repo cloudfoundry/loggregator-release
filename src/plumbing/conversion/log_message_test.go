@@ -73,6 +73,7 @@ var _ = Describe("LogMessage", func() {
 					"origin":          {&v2.Value_Text{"some-origin"}},
 					"deployment":      {&v2.Value_Text{"some-deployment"}},
 					"job":             {&v2.Value_Text{"some-job"}},
+					"index":           {&v2.Value_Text{"some-index"}},
 					"ip":              {&v2.Value_Text{"some-ip"}},
 				},
 				Message: &v2.Envelope_Log{
