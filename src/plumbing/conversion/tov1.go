@@ -106,10 +106,9 @@ func convertLog(v1e *events.Envelope, v2e *v2.Envelope) {
 		Timestamp:      proto.Int64(v2e.Timestamp),
 		AppId:          proto.String(v2e.SourceId),
 		SourceType:     proto.String(v2e.Tags["source_type"].GetText()),
-		SourceInstance: proto.String(v2e.Tags["source_instance"].GetText()),
+		SourceInstance: proto.String(v2e.InstanceId),
 	}
 	delete(v1e.Tags, "source_type")
-	delete(v1e.Tags, "source_instance")
 }
 
 func recoverError(v1e *events.Envelope, v2e *v2.Envelope) {

@@ -117,7 +117,7 @@ func convertLogMessageType(t events.LogMessage_MessageType) v2.Log_Type {
 func convertLogMessage(v2e *v2.Envelope, e *events.Envelope) {
 	t := e.GetLogMessage()
 	v2e.Tags["source_type"] = valueText(t.GetSourceType())
-	v2e.Tags["source_instance"] = valueText(t.GetSourceInstance())
+	v2e.InstanceId = t.GetSourceInstance()
 	v2e.SourceId = convertAppID(t.GetAppId(), v2e.SourceId)
 
 	v2e.Message = &v2.Envelope_Log{

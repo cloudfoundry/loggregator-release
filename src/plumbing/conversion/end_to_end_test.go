@@ -75,6 +75,7 @@ var _ = Describe("Envelope conversion", func() {
 				Tags: map[string]string{
 					"some-random": "tag",
 					"source_id":   "some-app-id",
+					"instance_id": "some-source-instance",
 				},
 				EventType: events.Envelope_LogMessage.Enum(),
 				LogMessage: &events.LogMessage{
@@ -290,14 +291,13 @@ var _ = Describe("Envelope conversion", func() {
 					},
 				},
 				Tags: map[string]*v2.Value{
-					"source_type":     ValueText("some-source-type"),
-					"source_instance": ValueText("some-source-instance"),
-					"deployment":      ValueText("some-deployment"),
-					"ip":              ValueText("some-ip"),
-					"job":             ValueText("some-job"),
-					"origin":          ValueText("some-origin"),
-					"index":           ValueText("some-index"),
-					"__v1_type":       ValueText("LogMessage"),
+					"source_type": ValueText("some-source-type"),
+					"deployment":  ValueText("some-deployment"),
+					"ip":          ValueText("some-ip"),
+					"job":         ValueText("some-job"),
+					"origin":      ValueText("some-origin"),
+					"index":       ValueText("some-index"),
+					"__v1_type":   ValueText("LogMessage"),
 				},
 			}
 
