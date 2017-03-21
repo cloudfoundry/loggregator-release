@@ -30,6 +30,10 @@ func ToV1(e *v2.Envelope) *events.Envelope {
 	delete(v1e.Tags, "index")
 	delete(v1e.Tags, "ip")
 
+	if e.SourceId != "" {
+		v1e.Tags["source_id"] = e.SourceId
+	}
+
 	switch (e.Message).(type) {
 	case *v2.Envelope_Log:
 		convertLog(v1e, e)

@@ -194,6 +194,7 @@ func buildV1ContainerMetric() (*events.Envelope, []byte) {
 		Job:        proto.String(""),
 		Index:      proto.String(""),
 		Ip:         proto.String(""),
+		Tags:       map[string]string{"source_id": "some-app"},
 		ContainerMetric: &events.ContainerMetric{
 			ApplicationId:    proto.String("some-app"),
 			InstanceIndex:    proto.Int32(1),

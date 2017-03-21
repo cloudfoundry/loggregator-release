@@ -2,6 +2,7 @@ package conversion_test
 
 import (
 	. "plumbing/conversion"
+	"time"
 
 	v2 "plumbing/v2"
 
@@ -34,6 +35,7 @@ var _ = DescribeTable("v1->v2->v1",
 		Ip:         proto.String("test-ip"),
 		Tags: map[string]string{
 			"some-random": "tag",
+			"source_id":   "08000000-0000-0000-0500-000000000000",
 		},
 		EventType: events.Envelope_HttpStartStop.Enum(),
 		HttpStartStop: &events.HttpStartStop{
@@ -68,6 +70,7 @@ var _ = DescribeTable("v1->v2->v1",
 		Ip:         proto.String("test-ip"),
 		Tags: map[string]string{
 			"some-random": "tag",
+			"source_id":   "some-app-id",
 		},
 		EventType: events.Envelope_LogMessage.Enum(),
 		LogMessage: &events.LogMessage{
@@ -88,6 +91,7 @@ var _ = DescribeTable("v1->v2->v1",
 		Ip:         proto.String("test-ip"),
 		Tags: map[string]string{
 			"some-random": "tag",
+			"source_id":   "test-deployment/test-job",
 		},
 		EventType: events.Envelope_ValueMetric.Enum(),
 		ValueMetric: &events.ValueMetric{
@@ -105,6 +109,7 @@ var _ = DescribeTable("v1->v2->v1",
 		Ip:         proto.String("test-ip"),
 		Tags: map[string]string{
 			"some-random": "tag",
+			"source_id":   "test-deployment/test-job",
 		},
 		EventType: events.Envelope_CounterEvent.Enum(),
 		CounterEvent: &events.CounterEvent{
@@ -122,6 +127,7 @@ var _ = DescribeTable("v1->v2->v1",
 		Ip:         proto.String("test-ip"),
 		Tags: map[string]string{
 			"some-random": "tag",
+			"source_id":   "test-deployment/test-job",
 		},
 		EventType: events.Envelope_Error.Enum(),
 		Error: &events.Error{
@@ -139,6 +145,7 @@ var _ = DescribeTable("v1->v2->v1",
 		Ip:         proto.String("test-ip"),
 		Tags: map[string]string{
 			"some-random": "tag",
+			"source_id":   "some-application-id",
 		},
 		EventType: events.Envelope_ContainerMetric.Enum(),
 		ContainerMetric: &events.ContainerMetric{
@@ -176,7 +183,8 @@ var _ = DescribeTable("v2->v1->v2",
 		Expect(newV2e).To(Equal(v2e))
 	},
 	Entry("HttpStartStop", &v2.Envelope{
-		SourceId: "b3015d69-09cd-476d-aace-ad2d824d5ab7",
+		Timestamp: time.Now().UnixNano(),
+		SourceId:  "b3015d69-09cd-476d-aace-ad2d824d5ab7",
 		Message: &v2.Envelope_Timer{
 			Timer: &v2.Timer{
 				Name:  "http",
@@ -202,6 +210,46 @@ var _ = DescribeTable("v2->v1->v2",
 			"origin":         ValueText("some-origin"),
 			"index":          ValueText("some-index"),
 			"__v1_type":      ValueText("HttpStartStop"),
+		},
+	}),
+	Entry("Log", &v2.Envelope{
+		Timestamp: time.Now().UnixNano(),
+		SourceId:  "b3015d69-09cd-476d-aace-ad2d824d5ab7",
+		Message: &v2.Envelope_Log{
+			Log: &v2.Log{
+				Payload: []byte("some-payload"),
+				Type:    v2.Log_OUT,
+			},
+		},
+		Tags: map[string]*v2.Value{
+			"source_type":     ValueText("some-source-type"),
+			"source_instance": ValueText("some-source-instance"),
+			"deployment":      ValueText("some-deployment"),
+			"ip":              ValueText("some-ip"),
+			"job":             ValueText("some-job"),
+			"origin":          ValueText("some-origin"),
+			"index":           ValueText("some-index"),
+			"__v1_type":       ValueText("LogMessage"),
+		},
+	}),
+	Entry("Counter", &v2.Envelope{
+		Timestamp: time.Now().UnixNano(),
+		SourceId:  "b3015d69-09cd-476d-aace-ad2d824d5ab7",
+		Message: &v2.Envelope_Counter{
+			Counter: &v2.Counter{
+				Name: "some-name",
+				Value: &v2.Counter_Total{
+					Total: 99,
+				},
+			},
+		},
+		Tags: map[string]*v2.Value{
+			"deployment": ValueText("some-deployment"),
+			"ip":         ValueText("some-ip"),
+			"job":        ValueText("some-job"),
+			"origin":     ValueText("some-origin"),
+			"index":      ValueText("some-index"),
+			"__v1_type":  ValueText("CounterEvent"),
 		},
 	}),
 )
