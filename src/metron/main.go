@@ -39,6 +39,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not use GRPC creds for client: %s", err)
 	}
+
 	serverCreds, err := plumbing.NewCredentials(
 		config.GRPC.CertFile,
 		config.GRPC.KeyFile,
@@ -55,9 +56,19 @@ func main() {
 	appV2 := api.NewV2App(config, clientCreds, serverCreds)
 	go appV2.Start()
 
+	metricsCreds, err := plumbing.NewCredentials(
+		config.GRPC.CertFile,
+		config.GRPC.KeyFile,
+		config.GRPC.CAFile,
+		"metron",
+	)
+	if err != nil {
+		log.Fatalf("Could not use GRPC creds for server: %s", err)
+	}
+
 	batchInterval := time.Duration(config.MetricBatchIntervalMilliseconds) * time.Millisecond
 	metric.Setup(
-		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(serverCreds)),
+		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(metricsCreds)),
 		metric.WithBatchInterval(batchInterval),
 		metric.WithOrigin("loggregator.metron"),
 		metric.WithAddr(fmt.Sprintf("localhost:%d", config.GRPC.Port)),
