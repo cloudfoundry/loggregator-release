@@ -17,7 +17,7 @@
     "JobName": "doppler_z1",
     "Zone": "z1",
     "BlackListIps": [
-        {"Start": "127.0.0.0", "End": "127.0.0.2"}
+        {"Start": "127.0.0.2", "End": "127.0.0.3"}
     ],
     "MetronConfig": {
         "UDPAddress": "localhost:37474"

@@ -198,7 +198,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 	Context("when bound to a blacklisted drain", func() {
 		It("does not forward to a TCP listener", func() {
-			syslogDrainAddress := fmt.Sprintf("localhost:%d", syslogPort)
+			syslogDrainAddress := fmt.Sprintf("127.0.0.2:%d", syslogPort)
 			drainSession := StartUnencryptedTCPServer(pathToTCPEchoServer, syslogDrainAddress)
 
 			syslogdrain := fmt.Sprintf(
@@ -217,7 +217,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 		})
 
 		It("does not forward to a TCP+TLS listener", func() {
-			syslogDrainAddress := fmt.Sprintf("localhost:%d", syslogPort)
+			syslogDrainAddress := fmt.Sprintf("127.0.0.2:%d", syslogPort)
 			drainSession := StartEncryptedTCPServer(pathToTCPEchoServer, syslogDrainAddress)
 
 			syslogdrain := fmt.Sprintf(
@@ -237,7 +237,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 		It("does not forward to an HTTPS listener", func() {
 			serverSession := StartHTTPSServer(pathToHTTPEchoServer)
-			httpsURL := "https://localhost:1234/syslog/"
+			httpsURL := "https://127.0.0.2:1234/syslog/"
 			key := DrainKey(appID, httpsURL)
 			AddETCDNode(etcdAdapter, key, httpsURL)
 

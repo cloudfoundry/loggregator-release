@@ -17,7 +17,7 @@
     "Index": "1",
     "IP": "127.0.0.1",
     "BlackListIps": [
-        {"Start": "127.0.0.0", "End": "127.0.0.2"}
+        {"Start": "127.0.0.2", "End": "127.0.0.3"}
     ],
     "MetronConfig": {
         "UDPAddress": "localhost:37474"
