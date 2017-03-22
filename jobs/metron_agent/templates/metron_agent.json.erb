@@ -12,11 +12,20 @@
         "CAFile" => "/var/vcap/jobs/metron_agent/config/certs/loggregator_ca.crt"
     }
 
+    tags = {
+        deployment: deployment,
+        job: job_name,
+        index: instance_id,
+        ip: spec.ip,
+    }
+    tags.merge!(p("metron_agent.tags")
+
     args = Hash.new.tap do |a|
         a[:Index] = instance_id
         a[:Job] = job_name
         a[:Zone] = instance_zone
         a[:Deployment] = deployment
+        a[:Tags] = tags
         a[:SharedSecret] = p("metron_endpoint.shared_secret")
         a[:IncomingUDPPort] = p("metron_agent.listening_port")
         a[:DisableUDP] = p("metron_agent.disable_udp")
