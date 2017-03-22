@@ -3,7 +3,6 @@ package v1_test
 import (
 	egress "metron/egress/v1"
 
-	"code.cloudfoundry.org/localip"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 
@@ -14,27 +13,65 @@ import (
 var _ = Describe("Tagger", func() {
 	It("tags events with the given deployment name, job, index and IP address", func() {
 		mockWriter := &MockEnvelopeWriter{}
-		t := egress.NewTagger("test-deployment", "test-job", "2", mockWriter)
+		t := egress.NewTagger(
+			"test-deployment",
+			"test-job",
+			"2",
+			"123.123.123.123",
+			mockWriter,
+		)
+		envelope := &events.Envelope{
+			EventType: events.Envelope_ValueMetric.Enum(),
+			ValueMetric: &events.ValueMetric{
+				Name:  proto.String("metricName"),
+				Value: proto.Float64(2.0),
+				Unit:  proto.String("seconds"),
+			},
+		}
 
-		envelope := basicMessage()
 		t.Write(envelope)
 
 		Expect(mockWriter.Events).To(HaveLen(1))
-		expectedEnvelope := basicTaggedMessage(*envelope)
-
-		Eventually(mockWriter.Events[0]).Should(Equal(expectedEnvelope))
+		expected := &events.Envelope{
+			EventType: events.Envelope_ValueMetric.Enum(),
+			ValueMetric: &events.ValueMetric{
+				Name:  proto.String("metricName"),
+				Value: proto.Float64(2.0),
+				Unit:  proto.String("seconds"),
+			},
+			Deployment: proto.String("test-deployment"),
+			Job:        proto.String("test-job"),
+			Index:      proto.String("2"),
+			Ip:         proto.String("123.123.123.123"),
+		}
+		Eventually(mockWriter.Events[0]).Should(Equal(expected))
 	})
 
 	Context("doesn't overwrite", func() {
-		var mockWriter *MockEnvelopeWriter
-		var t *egress.Tagger
-		var envelope *events.Envelope
+		var (
+			mockWriter *MockEnvelopeWriter
+			t          *egress.Tagger
+			envelope   *events.Envelope
+		)
 
 		BeforeEach(func() {
 			mockWriter = &MockEnvelopeWriter{}
-			t = egress.NewTagger("test-deployment", "test-job", "2", mockWriter)
+			t = egress.NewTagger(
+				"test-deployment",
+				"test-job",
+				"2",
+				"123.123.123.123",
+				mockWriter,
+			)
 
-			envelope = basicMessage()
+			envelope = &events.Envelope{
+				EventType: events.Envelope_ValueMetric.Enum(),
+				ValueMetric: &events.ValueMetric{
+					Name:  proto.String("metricName"),
+					Value: proto.Float64(2.0),
+					Unit:  proto.String("seconds"),
+				},
+			}
 		})
 
 		It("when deployment is already set", func() {
@@ -74,25 +111,3 @@ var _ = Describe("Tagger", func() {
 		})
 	})
 })
-
-func basicMessage() *events.Envelope {
-	return &events.Envelope{
-		EventType: events.Envelope_ValueMetric.Enum(),
-		ValueMetric: &events.ValueMetric{
-			Name:  proto.String("metricName"),
-			Value: proto.Float64(2.0),
-			Unit:  proto.String("seconds"),
-		},
-	}
-}
-
-func basicTaggedMessage(envelope events.Envelope) *events.Envelope {
-	ip, _ := localip.LocalIP()
-
-	envelope.Deployment = proto.String("test-deployment")
-	envelope.Job = proto.String("test-job")
-	envelope.Index = proto.String("2")
-	envelope.Ip = proto.String(ip)
-
-	return &envelope
-}

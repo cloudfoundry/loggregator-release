@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"code.cloudfoundry.org/localip"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 )
@@ -14,8 +13,7 @@ type Tagger struct {
 	outputWriter   EnvelopeWriter
 }
 
-func NewTagger(deploymentName string, job string, index string, outputWriter EnvelopeWriter) *Tagger {
-	ip, _ := localip.LocalIP()
+func NewTagger(deploymentName, job, index, ip string, outputWriter EnvelopeWriter) *Tagger {
 	return &Tagger{
 		deploymentName: deploymentName,
 		job:            job,

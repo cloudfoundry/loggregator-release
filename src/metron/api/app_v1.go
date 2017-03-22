@@ -39,7 +39,13 @@ func (a *AppV1) Start() {
 	log.Print("Startup: Setting up the Metron agent")
 	marshaller := a.initializeV1DopplerPool(batcher)
 
-	messageTagger := egress.NewTagger(a.config.Deployment, a.config.Job, a.config.Index, marshaller)
+	messageTagger := egress.NewTagger(
+		a.config.Deployment,
+		a.config.Job,
+		a.config.Index,
+		a.config.IP,
+		marshaller,
+	)
 	aggregator := egress.NewAggregator(messageTagger)
 	eventWriter.SetWriter(aggregator)
 

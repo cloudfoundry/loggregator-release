@@ -19,6 +19,7 @@ type Config struct {
 	Zone       string
 	Job        string
 	Index      string
+	IP         string
 
 	Tags map[string]string
 

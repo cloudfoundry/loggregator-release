@@ -25,6 +25,7 @@
         a[:Job] = job_name
         a[:Zone] = instance_zone
         a[:Deployment] = deployment
+        a[:IP] = spec.ip
         a[:Tags] = tags
         a[:SharedSecret] = p("metron_endpoint.shared_secret")
         a[:IncomingUDPPort] = p("metron_agent.listening_port")
