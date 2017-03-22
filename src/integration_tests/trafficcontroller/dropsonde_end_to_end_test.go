@@ -12,8 +12,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"integration_tests/trafficcontroller/fake_doppler"
-
 	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
 )
@@ -22,7 +20,7 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 	var dropsondeEndpoint string
 
 	BeforeEach(func() {
-		fakeDoppler = fake_doppler.New()
+		fakeDoppler = NewFakeDoppler()
 		go fakeDoppler.Start()
 		dropsondeEndpoint = fmt.Sprintf("ws://%s:%d", localIPAddress, TRAFFIC_CONTROLLER_DROPSONDE_PORT)
 	})

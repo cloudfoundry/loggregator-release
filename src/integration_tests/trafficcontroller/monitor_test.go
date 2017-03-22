@@ -1,8 +1,9 @@
 package trafficcontroller_test
 
 import (
-	ingress "metron/ingress/v1"
 	"sync/atomic"
+
+	ingress "metron/ingress/v1"
 
 	"github.com/apoydence/eachers/testhelpers"
 	. "github.com/onsi/ginkgo"

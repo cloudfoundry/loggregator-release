@@ -1,4 +1,4 @@
-package fake_auth_server
+package trafficcontroller_test
 
 import (
 	"net/http"

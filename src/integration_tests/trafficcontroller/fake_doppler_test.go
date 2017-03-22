@@ -1,4 +1,4 @@
-package fake_doppler
+package trafficcontroller_test
 
 import (
 	"net"
@@ -23,7 +23,7 @@ type FakeDoppler struct {
 	sync.RWMutex
 }
 
-func New() *FakeDoppler {
+func NewFakeDoppler() *FakeDoppler {
 	return &FakeDoppler{
 		GrpcEndpoint:             "127.0.0.1:1236",
 		grpcOut:                  make(chan []byte, 100),

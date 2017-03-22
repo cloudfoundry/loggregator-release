@@ -1,23 +1,18 @@
 package trafficcontroller_test
 
 import (
-	"integration_tests/trafficcontroller/fake_auth_server"
-	"integration_tests/trafficcontroller/fake_doppler"
-	"integration_tests/trafficcontroller/fake_uaa_server"
+	"fmt"
 	"log"
-
-	"google.golang.org/grpc/grpclog"
+	"net/http"
+	"os/exec"
+	"testing"
 
 	"code.cloudfoundry.org/localip"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"github.com/gogo/protobuf/proto"
-
-	"fmt"
-	"net/http"
-	"os/exec"
-	"testing"
+	"google.golang.org/grpc/grpclog"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -37,7 +32,7 @@ var (
 	etcdRunner                *etcdstorerunner.ETCDClusterRunner
 	etcdPort                  int
 	localIPAddress            string
-	fakeDoppler               *fake_doppler.FakeDoppler
+	fakeDoppler               *FakeDoppler
 	configFile                string
 )
 
@@ -117,7 +112,7 @@ func setupDopplerInEtcd() {
 }
 
 var setupFakeAuthServer = func() {
-	fakeAuthServer := &fake_auth_server.FakeAuthServer{ApiEndpoint: ":42123"}
+	fakeAuthServer := &FakeAuthServer{ApiEndpoint: ":42123"}
 	fakeAuthServer.Start()
 
 	Eventually(func() error {
@@ -127,7 +122,7 @@ var setupFakeAuthServer = func() {
 }
 
 var setupFakeUaaServer = func() {
-	fakeUaaServer := &fake_uaa_server.FakeUaaHandler{}
+	fakeUaaServer := &FakeUaaHandler{}
 	go http.ListenAndServe(":5678", fakeUaaServer)
 	Eventually(func() error {
 		_, err := http.Get("http://" + localIPAddress + ":5678/check_token")

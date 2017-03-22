@@ -1,4 +1,4 @@
-package fake_uaa_server
+package trafficcontroller_test
 
 import (
 	"encoding/json"
