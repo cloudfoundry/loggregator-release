@@ -92,10 +92,6 @@ properties:
   team via cf-loggregator@pivotal.io about this. If appropriate we would like to add language-specific dropsonde-protocol implementations
   to our CI tests.
 
-## Steps to Deploy Bosh HM Forwarder
-
-Please see instructions [here](https://github.com/cloudfoundry/loggregator/tree/develop/src/boshhmforwarder#setup-with-loggregator-as-a-separate-release)
-
 ## Backward and Forward Compatibility
 
 Deploying Metron into a service, separate from a Cloud Foundry deploy, means that you will have a Metron of one version talking to a Doppler of another version. This means that changes in the dropsonde protocol as the Loggregator system evolves could result in different versions of the protocol being used by communicating Metrons and Dopplers. In order to allow developer and operators to understand the possible ramifications of a difference in protocol, here is the behavior "contract" between Doppler and Metron:

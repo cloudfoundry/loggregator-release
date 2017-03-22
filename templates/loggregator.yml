@@ -24,8 +24,6 @@ instance_groups:
   networks:
   - name: default
   jobs:
-  - name: boshhmforwarder
-    release: loggregator
   - name: dea_logging_agent
     release: loggregator
 - name: consul
