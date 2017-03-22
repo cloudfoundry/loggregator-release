@@ -1,6 +1,3 @@
-[submodule "src/github.com/cloudfoundry/gosteno"]
-	path = src/github.com/cloudfoundry/gosteno
-        url = https://github.com/cloudfoundry/gosteno
 [submodule "src/github.com/gogo/protobuf"]
 	path = src/github.com/gogo/protobuf
 	url = https://github.com/gogo/protobuf
