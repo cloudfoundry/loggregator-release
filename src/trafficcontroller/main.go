@@ -26,7 +26,6 @@ import (
 
 	"google.golang.org/grpc"
 
-	"code.cloudfoundry.org/localip"
 	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/emitter"
@@ -63,11 +62,6 @@ func main() {
 	}
 
 	httpsetup.SetInsecureSkipVerify(conf.SkipCertVerify)
-
-	ipAddress, err := localip.LocalIP()
-	if err != nil {
-		panic(fmt.Errorf("Unable to resolve own IP address: %s", err))
-	}
 
 	log.Print("Startup: Setting up the loggregator traffic controller")
 
@@ -112,7 +106,7 @@ func main() {
 			accessLog.Close()
 		}()
 		accessLogger := accesslogger.New(accessLog)
-		accessMiddleware = middleware.Access(accessLogger, ipAddress, conf.OutgoingDropsondePort)
+		accessMiddleware = middleware.Access(accessLogger, conf.IP, conf.OutgoingDropsondePort)
 	}
 
 	creds, err := plumbing.NewCredentials(
@@ -132,7 +126,7 @@ func main() {
 	if accessMiddleware != nil {
 		dopplerHandler = accessMiddleware(dopplerHandler)
 	}
-	startOutgoingProxy(net.JoinHostPort(ipAddress, strconv.FormatUint(uint64(conf.OutgoingDropsondePort), 10)), dopplerHandler)
+	startOutgoingProxy(fmt.Sprintf(":%d", conf.OutgoingDropsondePort), dopplerHandler)
 
 	killChan := signalmanager.RegisterKillSignalChannel()
 	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()

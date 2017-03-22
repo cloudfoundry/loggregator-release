@@ -28,6 +28,7 @@ type Config struct {
 
 	JobName                string
 	Index                  string
+	IP                     string
 	ApiHost                string
 	DopplerPort            uint32
 	OutgoingDropsondePort  uint32
@@ -99,6 +100,10 @@ func (c *Config) setDefaults() {
 func (c *Config) validate() error {
 	if c.SystemDomain == "" {
 		return errors.New("Need system domain in order to create the proxies")
+	}
+
+	if c.IP == "" {
+		return errors.New("Need IP address for access logging")
 	}
 
 	if c.EtcdRequireTLS {

@@ -51,6 +51,7 @@ type Config struct {
 	Index                           string
 	JobName                         string
 	DeploymentName                  string
+	IP                              string
 	LogFilePath                     string
 	MaxRetainedLogMessages          uint32
 	MessageDrainBufferSize          uint
@@ -72,6 +73,10 @@ type Config struct {
 }
 
 func (c *Config) validate() (err error) {
+	if c.IP == "" {
+		return errors.New("invalid doppler config, no IP provided")
+	}
+
 	if c.MaxRetainedLogMessages == 0 {
 		return errors.New("Need max number of log messages to retain per application")
 	}

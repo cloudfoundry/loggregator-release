@@ -39,6 +39,7 @@
     args = Hash.new.tap do |a|
         a[:JobName] = job_name
         a[:Index] = instance_id
+        a[:IP] = spec.ip
         a[:EtcdUrls] = etcdMachines
         a[:EtcdMaxConcurrentRequests] = p("loggregator.etcd.maxconcurrentrequests")
         a[:EtcdRequireTLS] = p("loggregator.etcd.require_ssl")

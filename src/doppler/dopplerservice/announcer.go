@@ -19,8 +19,8 @@ const dopplerMetaVersion = 1
 const META_ROOT = "/doppler/meta"
 const LEGACY_ROOT = "/healthstatus/doppler"
 
-func Announce(localIP string, ttl time.Duration, config *config.Config, storeAdapter storeadapter.StoreAdapter) chan (chan bool) {
-	dopplerMetaBytes, err := buildDopplerMeta(localIP, config)
+func Announce(ip string, ttl time.Duration, config *config.Config, storeAdapter storeadapter.StoreAdapter) chan (chan bool) {
+	dopplerMetaBytes, err := buildDopplerMeta(ip, config)
 	if err != nil {
 		panic(err)
 	}
@@ -51,11 +51,11 @@ func Announce(localIP string, ttl time.Duration, config *config.Config, storeAda
 	return stopChan
 }
 
-func AnnounceLegacy(localIP string, ttl time.Duration, config *config.Config, storeAdapter storeadapter.StoreAdapter) chan (chan bool) {
+func AnnounceLegacy(ip string, ttl time.Duration, config *config.Config, storeAdapter storeadapter.StoreAdapter) chan (chan bool) {
 	key := fmt.Sprintf("%s/%s/%s/%s", LEGACY_ROOT, config.Zone, config.JobName, config.Index)
 	status, stopChan, err := storeAdapter.MaintainNode(storeadapter.StoreNode{
 		Key:   key,
-		Value: []byte(localIP),
+		Value: []byte(ip),
 		TTL:   uint64(ttl.Seconds()),
 	})
 
@@ -73,17 +73,18 @@ func AnnounceLegacy(localIP string, ttl time.Duration, config *config.Config, st
 	return stopChan
 }
 
-func buildDopplerMeta(localIp string, config *config.Config) ([]byte, error) {
-	udpAddr := fmt.Sprintf("udp://%s:%d", localIp, config.IncomingUDPPort)
-	tcpAddr := fmt.Sprintf("tcp://%s:%d", localIp, config.IncomingTCPPort)
-	wsAddr := fmt.Sprintf("ws://%s:%d", localIp, config.OutgoingPort)
+func buildDopplerMeta(ip string, config *config.Config) ([]byte, error) {
+	udpAddr := fmt.Sprintf("udp://%s:%d", ip, config.IncomingUDPPort)
+	tcpAddr := fmt.Sprintf("tcp://%s:%d", ip, config.IncomingTCPPort)
+	wsAddr := fmt.Sprintf("ws://%s:%d", ip, config.OutgoingPort)
 	dopplerMeta := DopplerMeta{
 		Version:   dopplerMetaVersion,
 		Endpoints: []string{udpAddr, tcpAddr, wsAddr},
 	}
 
 	if config.EnableTLSTransport {
-		dopplerMeta.Endpoints = append(dopplerMeta.Endpoints, fmt.Sprintf("tls://%s:%d", localIp, config.TLSListenerConfig.Port))
+		tlsAddr := fmt.Sprintf("tls://%s:%d", ip, config.TLSListenerConfig.Port)
+		dopplerMeta.Endpoints = append(dopplerMeta.Endpoints, tlsAddr)
 	}
 
 	return json.Marshal(dopplerMeta)

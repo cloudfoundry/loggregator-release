@@ -24,7 +24,6 @@ import (
 	"profiler"
 	"signalmanager"
 
-	"code.cloudfoundry.org/localip"
 	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
@@ -56,11 +55,6 @@ func main() {
 	conf, err := config.ParseConfig(*configFile)
 	if err != nil {
 		log.Fatalf("Unable to parse config: %s", err)
-	}
-
-	localIp, err := localip.LocalIP()
-	if err != nil {
-		log.Fatalf("Unable to resolve own IP address: %s", err)
 	}
 
 	//------------------------------
@@ -116,7 +110,7 @@ func main() {
 	}))
 
 	udpListener, dropsondeBytesChan := listeners.NewUDPListener(
-		fmt.Sprintf("%s:%d", localIp, conf.IncomingUDPPort),
+		fmt.Sprintf(":%d", conf.IncomingUDPPort),
 		batcher,
 		"udpListener",
 	)
@@ -184,8 +178,8 @@ func main() {
 	killChan := signalmanager.RegisterKillSignalChannel()
 	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
 
-	releaseNodeChan := dopplerservice.Announce(localIp, config.HeartbeatInterval, conf, storeAdapter)
-	legacyReleaseNodeChan := dopplerservice.AnnounceLegacy(localIp, config.HeartbeatInterval, conf, storeAdapter)
+	releaseNodeChan := dopplerservice.Announce(conf.IP, config.HeartbeatInterval, conf, storeAdapter)
+	legacyReleaseNodeChan := dopplerservice.AnnounceLegacy(conf.IP, config.HeartbeatInterval, conf, storeAdapter)
 
 	p := profiler.New(conf.PPROFPort)
 	go p.Start()

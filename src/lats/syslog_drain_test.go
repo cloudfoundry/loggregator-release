@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"code.cloudfoundry.org/localip"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -60,9 +58,8 @@ var _ = Describe("Syslog Drain", func() {
 })
 
 func buildListener() (*net.TCPListener, string) {
-	ip, err := localip.LocalIP()
 	Expect(err).ToNot(HaveOccurred())
-	tcpAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:0", ip))
+	tcpAddr, err := net.ResolveTCPAddr("tcp", ":0")
 	Expect(err).ToNot(HaveOccurred())
 	listener, err := net.ListenTCP("tcp", tcpAddr)
 	Expect(err).ToNot(HaveOccurred())
@@ -71,7 +68,7 @@ func buildListener() (*net.TCPListener, string) {
 }
 
 func buildDrain(port string) (string, string) {
-	ip, err := localip.LocalIP()
+	ip = "127.0.0.1"
 	Expect(err).ToNot(HaveOccurred())
 	url := fmt.Sprintf("syslog://%s:%s", ip, port)
 	data := drainData(ip, url)

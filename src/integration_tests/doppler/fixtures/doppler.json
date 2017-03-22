@@ -7,6 +7,7 @@
     "PPROFPort": 6790,
     "SinkSkipCertVerify": true,
     "Index": "0",
+    "IP": "127.0.0.1",
     "MaxRetainedLogMessages": 10,
     "MessageDrainBufferSize": 100,
     "SharedSecret": "secret",

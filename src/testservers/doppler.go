@@ -26,6 +26,7 @@ func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int)
 		Index:        "42",
 		JobName:      "test-job-name",
 		Zone:         "test-availability-zone",
+		IP:           "127.0.0.1",
 		SharedSecret: "test-shared-secret",
 
 		IncomingUDPPort: uint32(dopplerUDPPort),

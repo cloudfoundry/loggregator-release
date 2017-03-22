@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"testing"
 
-	"code.cloudfoundry.org/localip"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
@@ -55,7 +54,7 @@ var _ = BeforeSuite(func() {
 	trafficControllerExecPath, err = gexec.Build("trafficcontroller", "-race")
 	Expect(err).ToNot(HaveOccurred())
 
-	localIPAddress, _ = localip.LocalIP()
+	localIPAddress = "127.0.0.1"
 })
 
 var _ = BeforeEach(func() {

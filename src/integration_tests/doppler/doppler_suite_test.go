@@ -18,7 +18,6 @@ import (
 	"doppler/config"
 	"time"
 
-	"code.cloudfoundry.org/localip"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/dropsonde/signature"
@@ -85,7 +84,7 @@ var _ = BeforeEach(func() {
 		return true
 	}
 	Eventually(dopplerStartedFn, 3).Should(BeTrue())
-	localIPAddress, _ = localip.LocalIP()
+	localIPAddress = "127.0.0.1"
 	Eventually(func() error {
 		_, err := etcdAdapter.Get("healthstatus/doppler/z1/doppler_z1/0")
 		return err

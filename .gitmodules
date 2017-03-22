@@ -34,9 +34,6 @@
 [submodule "src/github.com/cloudfoundry/noaa"]
 	path = src/github.com/cloudfoundry/noaa
 	url = https://github.com/cloudfoundry/noaa.git
-[submodule "src/code.cloudfoundry.org/localip"]
-	path = src/code.cloudfoundry.org/localip
-	url = https://github.com/cloudfoundry/localip
 [submodule "src/github.com/cloudfoundry/sonde-go"]
 	path = src/github.com/cloudfoundry/sonde-go
 	url = https://github.com/cloudfoundry/sonde-go

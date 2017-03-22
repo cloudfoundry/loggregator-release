@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"code.cloudfoundry.org/localip"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	ginkgoConfig "github.com/onsi/ginkgo/config"
@@ -19,14 +18,14 @@ import (
 
 var _ = Describe("Announcer", func() {
 	var (
-		localIP     string
+		ip          string
 		conf        config.Config
 		etcdRunner  *etcdstorerunner.ETCDClusterRunner
 		etcdAdapter storeadapter.StoreAdapter
 	)
 
 	BeforeSuite(func() {
-		localIP, _ = localip.LocalIP()
+		ip = "127.0.0.1"
 
 		etcdPort := 5500 + ginkgoConfig.GinkgoConfig.ParallelNode*10
 		etcdRunner = etcdstorerunner.NewETCDClusterRunner(etcdPort, 1, nil)
@@ -75,7 +74,7 @@ var _ = Describe("Announcer", func() {
 
 			It("creates, then maintains the node", func() {
 				fakeadapter := &fakes.FakeStoreAdapter{}
-				dopplerservice.Announce(localIP, time.Second, &conf, fakeadapter)
+				dopplerservice.Announce(ip, time.Second, &conf, fakeadapter)
 				Expect(fakeadapter.CreateCallCount()).To(Equal(1))
 				Expect(fakeadapter.MaintainNodeCallCount()).To(Equal(1))
 			})
@@ -85,19 +84,19 @@ var _ = Describe("Announcer", func() {
 				fakeadapter := &fakes.FakeStoreAdapter{}
 				fakeadapter.MaintainNodeReturns(nil, nil, err)
 				Expect(func() {
-					dopplerservice.Announce(localIP, time.Second, &conf, fakeadapter)
+					dopplerservice.Announce(ip, time.Second, &conf, fakeadapter)
 				}).To(Panic())
 			})
 
 			Context("when tls transport is enabled", func() {
 				It("announces udp, tcp, and tls values", func() {
-					dopplerMeta := fmt.Sprintf(`{"version": 1, "endpoints":["udp://%[1]s:1234", "tcp://%[1]s:5678", "ws://%[1]s:8888", "tls://%[1]s:9012"]}`, localIP)
+					dopplerMeta := fmt.Sprintf(`{"version": 1, "endpoints":["udp://%[1]s:1234", "tcp://%[1]s:5678", "ws://%[1]s:8888", "tls://%[1]s:9012"]}`, ip)
 
 					conf.EnableTLSTransport = true
 					conf.TLSListenerConfig = config.TLSListenerConfig{
 						Port: 9012,
 					}
-					stopChan = dopplerservice.Announce(localIP, time.Second, &conf, etcdAdapter)
+					stopChan = dopplerservice.Announce(ip, time.Second, &conf, etcdAdapter)
 
 					Eventually(func() []byte {
 						node, err := etcdAdapter.Get(dopplerKey)
@@ -111,10 +110,10 @@ var _ = Describe("Announcer", func() {
 
 			Context("when tls transport is disabled", func() {
 				It("announces only udp and tcp values", func() {
-					dopplerMeta := fmt.Sprintf(`{"version": 1, "endpoints":["udp://%[1]s:1234", "tcp://%[1]s:5678", "ws://%[1]s:8888" ]}`, localIP)
+					dopplerMeta := fmt.Sprintf(`{"version": 1, "endpoints":["udp://%[1]s:1234", "tcp://%[1]s:5678", "ws://%[1]s:8888" ]}`, ip)
 
 					conf.EnableTLSTransport = false
-					stopChan = dopplerservice.Announce(localIP, time.Second, &conf, etcdAdapter)
+					stopChan = dopplerservice.Announce(ip, time.Second, &conf, etcdAdapter)
 
 					Eventually(func() []byte {
 						node, err := etcdAdapter.Get(dopplerKey)
@@ -137,7 +136,7 @@ var _ = Describe("Announcer", func() {
 
 		It("maintains the node", func() {
 			fakeadapter := &fakes.FakeStoreAdapter{}
-			dopplerservice.AnnounceLegacy(localIP, time.Second, &conf, fakeadapter)
+			dopplerservice.AnnounceLegacy(ip, time.Second, &conf, fakeadapter)
 			Expect(fakeadapter.MaintainNodeCallCount()).To(Equal(1))
 		})
 
@@ -146,19 +145,19 @@ var _ = Describe("Announcer", func() {
 			fakeadapter := &fakes.FakeStoreAdapter{}
 			fakeadapter.MaintainNodeReturns(nil, nil, err)
 			Expect(func() {
-				dopplerservice.AnnounceLegacy(localIP, time.Second, &conf, fakeadapter)
+				dopplerservice.AnnounceLegacy(ip, time.Second, &conf, fakeadapter)
 			}).To(Panic())
 		})
 
 		It("Should maintain legacy healthstatus key and value", func() {
-			stopChan = dopplerservice.AnnounceLegacy(localIP, time.Second, &conf, etcdAdapter)
+			stopChan = dopplerservice.AnnounceLegacy(ip, time.Second, &conf, etcdAdapter)
 			Eventually(func() []byte {
 				node, err := etcdAdapter.Get(legacyKey)
 				if err != nil {
 					return nil
 				}
 				return node.Value
-			}).Should(Equal([]byte(localIP)))
+			}).Should(Equal([]byte(ip)))
 		})
 	})
 })

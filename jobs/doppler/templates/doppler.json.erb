@@ -49,6 +49,7 @@
         a[:GRPC] = grpcListenerConfig
         a[:Zone] = instance_zone
         a[:DeploymentName] = deployment
+        a[:IP] = spec.ip
         a[:JobName] = job_name
         a[:Index] = instance_id
         a[:MaxRetainedLogMessages] = p("doppler.maxRetainedLogMessages")

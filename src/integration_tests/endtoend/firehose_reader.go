@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"code.cloudfoundry.org/localip"
 	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
 )
@@ -72,7 +71,7 @@ func (r *FirehoseReader) Close() {
 }
 
 func initiateFirehoseConnection(tcPort int) (*consumer.Consumer, <-chan *events.Envelope) {
-	localIP, _ := localip.LocalIP()
+	localIP = "127.0.0.1"
 	url := fmt.Sprintf("ws://%s:%d", localIP, tcPort)
 	firehoseConnection := consumer.New(url, &tls.Config{InsecureSkipVerify: true}, nil)
 	msgChan, _ := firehoseConnection.Firehose("uniqueId", "")
