@@ -9,19 +9,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cloudfoundry/dropsonde"
-	"github.com/cloudfoundry/dropsonde/emitter"
-	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
 	"metron/api"
 	"plumbing"
 	v2 "plumbing/v2"
 	"testservers"
+
+	"github.com/cloudfoundry/dropsonde"
+	"github.com/cloudfoundry/dropsonde/emitter"
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 )
 
 var _ = Describe("Metron", func() {
@@ -102,12 +104,34 @@ var _ = Describe("Metron", func() {
 			var rx v2.DopplerIngress_SenderServer
 			Expect(consumerServer.V2.SenderInput.Arg0).Should(Receive(&rx))
 
+			var env *v2.Envelope
 			f := func() *v2.Envelope {
 				envelope, err := rx.Recv()
 				Expect(err).ToNot(HaveOccurred())
-				return envelope
+
+				defer func() { env = envelope }()
+
+				if envelope.GetLog() != nil {
+					return envelope
+				}
+
+				return nil
 			}
-			Eventually(f).Should(Equal(emitEnvelope))
+			Eventually(f).ShouldNot(BeNil())
+
+			Expect(*env).To(MatchFields(IgnoreExtras, Fields{
+				"Message": Equal(&v2.Envelope_Log{
+					Log: &v2.Log{Payload: []byte("some-message")},
+				}),
+				"Tags": Equal(map[string]*v2.Value{
+					"auto-tag-1": {
+						Data: &v2.Value_Text{"auto-tag-value-1"},
+					},
+					"auto-tag-2": {
+						Data: &v2.Value_Text{"auto-tag-value-2"},
+					},
+				}),
+			}))
 		})
 
 		It("emits metrics to the v2 API", func() {

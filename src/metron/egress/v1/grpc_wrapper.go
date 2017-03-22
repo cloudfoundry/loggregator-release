@@ -23,7 +23,7 @@ func (u *GRPCWrapper) Write(message []byte, chainers ...metricbatcher.BatchCount
 	err := u.conn.Write(message)
 	if err != nil {
 		// metric-documentation-v1: (grpc.sendErrorCount) Total number of errors that have
-		// occured while trying to send envelope to doppler v1 gRPC API
+		// occurred while trying to send envelope to doppler v1 gRPC API
 		metrics.BatchIncrementCounter("grpc.sendErrorCount")
 		return err
 	}

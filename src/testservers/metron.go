@@ -24,6 +24,11 @@ func BuildMetronConfig(dopplerURI string, dopplerGRPCPort, dopplerUDPPort int) a
 		Zone:         availabilityZone,
 		SharedSecret: sharedSecret,
 
+		Tags: map[string]string{
+			"auto-tag-1": "auto-tag-value-1",
+			"auto-tag-2": "auto-tag-value-2",
+		},
+
 		IncomingUDPPort: metronUDPPort,
 		PPROFPort:       uint32(getTCPPort()),
 		Deployment:      "deployment",

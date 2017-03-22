@@ -18,12 +18,14 @@ type Writer interface {
 type Transponder struct {
 	nexter Nexter
 	writer Writer
+	tags   map[string]string
 }
 
-func NewTransponder(n Nexter, w Writer) *Transponder {
+func NewTransponder(n Nexter, w Writer, tags map[string]string) *Transponder {
 	return &Transponder{
 		nexter: n,
 		writer: w,
+		tags:   tags,
 	}
 }
 
@@ -32,6 +34,7 @@ func (t *Transponder) Start() {
 	lastEmitted := time.Now()
 	for {
 		envelope := t.nexter.Next()
+		t.addTags(envelope)
 		err := t.writer.Write(envelope)
 		if err != nil {
 			// metric-documentation-v2: (loggregator.metron.dropped) Number of messages
@@ -54,6 +57,21 @@ func (t *Transponder) Start() {
 			lastEmitted = time.Now()
 			log.Printf("egressed (v2) %d envelopes", count)
 			count = 0
+		}
+	}
+}
+
+func (t *Transponder) addTags(e *plumbing.Envelope) {
+	if e.Tags == nil {
+		e.Tags = make(map[string]*plumbing.Value)
+	}
+	for k, v := range t.tags {
+		if _, ok := e.Tags[k]; !ok {
+			e.Tags[k] = &plumbing.Value{
+				Data: &plumbing.Value_Text{
+					Text: v,
+				},
+			}
 		}
 	}
 }

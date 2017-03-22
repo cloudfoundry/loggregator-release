@@ -20,6 +20,8 @@ type Config struct {
 	Job        string
 	Index      string
 
+	Tags map[string]string
+
 	DisableUDP      bool
 	IncomingUDPPort int
 

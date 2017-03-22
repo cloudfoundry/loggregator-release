@@ -52,7 +52,7 @@ func (a *AppV2) Start() {
 
 	pool := a.initializePool()
 	counterAggr := egress.New(pool)
-	tx := egress.NewTransponder(envelopeBuffer, counterAggr)
+	tx := egress.NewTransponder(envelopeBuffer, counterAggr, a.config.Tags)
 	go tx.Start()
 
 	metronAddress := fmt.Sprintf("127.0.0.1:%d", a.config.GRPC.Port)
