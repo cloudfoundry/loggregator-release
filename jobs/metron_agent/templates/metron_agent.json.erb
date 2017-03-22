@@ -18,7 +18,7 @@
         index: instance_id,
         ip: spec.ip,
     }
-    tags.merge!(p("metron_agent.tags")
+    tags.merge!(p("metron_agent.tags"))
 
     args = Hash.new.tap do |a|
         a[:Index] = instance_id
