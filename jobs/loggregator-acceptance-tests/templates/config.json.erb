@@ -4,6 +4,7 @@
   tc = link("trafficcontroller")
 
   config = {
+    "IP" => spec.ip,
     "DopplerEndpoint" => "ws://" + tc.instances.first.address + ":" + tc.p("loggregator.outgoing_dropsonde_port").to_s,
     "SkipSSLVerify" => properties.ssl.skip_cert_verify,
     "DropsondePort" => properties.metron_agent.dropsonde_incoming_port,

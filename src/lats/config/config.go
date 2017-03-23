@@ -2,10 +2,12 @@ package config
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 )
 
 type TestConfig struct {
+	IP              string
 	DopplerEndpoint string
 	SkipSSLVerify   bool
 
@@ -51,6 +53,10 @@ func Load() *TestConfig {
 
 	if config.DropsondePort == 0 {
 		config.DropsondePort = 3457
+	}
+
+	if config.IP == "" {
+		log.Panic("Config requires IP but is missing")
 	}
 
 	return config

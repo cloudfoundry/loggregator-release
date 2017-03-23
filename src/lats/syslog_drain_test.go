@@ -15,7 +15,7 @@ import (
 var _ = Describe("Syslog Drain", func() {
 	It("sends envelopes to syslog drains", func() {
 		l, port := buildListener()
-		drainKey, drainData := buildDrain(port)
+		drainKey, drainData := buildDrain(config.IP, port)
 		cleanup := helpers.WriteToEtcd(config.EtcdUrls, drainKey, drainData)
 		defer cleanup()
 
@@ -66,8 +66,7 @@ func buildListener() (*net.TCPListener, string) {
 	return listener, port
 }
 
-func buildDrain(port string) (string, string) {
-	ip := "127.0.0.1"
+func buildDrain(ip, port string) (string, string) {
 	url := fmt.Sprintf("syslog://%s:%s", ip, port)
 	data := drainData(ip, url)
 	key := drainKey("test-id", data)
