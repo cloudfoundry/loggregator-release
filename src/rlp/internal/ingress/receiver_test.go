@@ -23,101 +23,87 @@ var _ = Describe("Receiver", func() {
 
 	BeforeEach(func() {
 		spyConverter = &SpyEnvelopeConverter{}
-		spySubscriber = &SpySubscriber{}
+		spySubscriber = &SpySubscriber{
+			recv: func() ([]byte, error) {
+				return []byte("something"), nil
+			},
+		}
 		receiver = ingress.NewReceiver(spyConverter, ingress.NewRequestConverter(), spySubscriber)
 	})
 
-	Context("when the subscriber does not return an error", func() {
-		BeforeEach(func() {
-			spySubscriber.recv = func() ([]byte, error) {
-				return []byte("something"), nil
-			}
-		})
+	It("streams converted data", func() {
+		expectedEnv := &v2.Envelope{Timestamp: 1}
+		spyConverter.envelope = expectedEnv
 
-		It("subscribes to data", func() {
-			req := &v2.EgressRequest{
-				ShardId: "some-id",
-				Filter: &v2.Filter{
-					SourceId: "some-source-id",
-					Message: &v2.Filter_Log{
-						Log: &v2.LogFilter{},
-					},
-				},
-			}
-			expectedReq := &plumbing.SubscriptionRequest{
-				ShardID: req.ShardId,
-				Filter: &plumbing.Filter{
-					AppID: "some-source-id",
-					Message: &plumbing.Filter_Log{
-						Log: &plumbing.LogFilter{},
-					},
-				},
-			}
-			receiver.Receive(context.Background(), req)
+		req := &v2.EgressRequest{}
+		receiver, err := receiver.Receive(context.Background(), req)
+		Expect(err).ToNot(HaveOccurred())
 
-			Expect(spySubscriber.req).To(Equal(expectedReq))
-		})
-
-		It("converts the data", func() {
-			req := &v2.EgressRequest{}
-			receiver, err := receiver.Receive(context.Background(), req)
-			Expect(err).ToNot(HaveOccurred())
-			receiver()
-
-			Expect(spyConverter.data).To(Equal([]byte("something")))
-		})
-
-		It("returns an error if the convert fails", func() {
-			spyConverter.err = errors.New("some error")
-			req := &v2.EgressRequest{}
-			receiver, err := receiver.Receive(context.Background(), req)
-			Expect(err).ToNot(HaveOccurred())
-			_, err = receiver()
-
-			Expect(err).To(HaveOccurred())
-		})
-
-		It("streams the converted data", func() {
-			expectedEnv := &v2.Envelope{Timestamp: 1}
-			spyConverter.envelope = expectedEnv
-
-			req := &v2.EgressRequest{}
-			receiver, err := receiver.Receive(context.Background(), req)
-			Expect(err).ToNot(HaveOccurred())
-
-			env, err := receiver()
-			Expect(err).ToNot(HaveOccurred())
-			Expect(env).To(Equal(expectedEnv))
-		})
+		env, err := receiver()
+		Expect(err).ToNot(HaveOccurred())
+		Expect(env).To(Equal(expectedEnv))
 	})
 
-	Context("when the subscriber receiver errors", func() {
-		BeforeEach(func() {
-			spySubscriber.recv = func() ([]byte, error) {
-				return nil, fmt.Errorf("some-error")
-			}
-		})
+	It("subscribes to data", func() {
+		req := &v2.EgressRequest{
+			ShardId: "some-id",
+			Filter: &v2.Filter{
+				SourceId: "some-source-id",
+				Message: &v2.Filter_Log{
+					Log: &v2.LogFilter{},
+				},
+			},
+		}
+		expectedReq := &plumbing.SubscriptionRequest{
+			ShardID: req.ShardId,
+			Filter: &plumbing.Filter{
+				AppID: "some-source-id",
+				Message: &plumbing.Filter_Log{
+					Log: &plumbing.LogFilter{},
+				},
+			},
+		}
+		receiver.Receive(context.Background(), req)
 
-		It("returns an error via the receiver", func() {
-			req := &v2.EgressRequest{}
-			receiver, err := receiver.Receive(context.Background(), req)
-			Expect(err).ToNot(HaveOccurred())
-
-			_, err = receiver()
-			Expect(err).To(HaveOccurred())
-		})
+		Expect(spySubscriber.req).To(Equal(expectedReq))
 	})
 
-	Context("when the subscriber returns an error", func() {
-		BeforeEach(func() {
-			spySubscriber.err = errors.New("some error")
-		})
+	It("converts the data", func() {
+		req := &v2.EgressRequest{}
+		receiver, err := receiver.Receive(context.Background(), req)
+		Expect(err).ToNot(HaveOccurred())
+		receiver()
 
-		It("returns an error", func() {
-			req := &v2.EgressRequest{}
-			_, err := receiver.Receive(context.Background(), req)
-			Expect(err).To(HaveOccurred())
-		})
+		Expect(spyConverter.data).To(Equal([]byte("something")))
+	})
+
+	It("returns an error if the convert fails", func() {
+		spyConverter.err = errors.New("some error")
+		req := &v2.EgressRequest{}
+		receiver, err := receiver.Receive(context.Background(), req)
+		Expect(err).ToNot(HaveOccurred())
+		_, err = receiver()
+
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("returns an error via the receiver", func() {
+		spySubscriber.recv = func() ([]byte, error) {
+			return nil, fmt.Errorf("some-error")
+		}
+		req := &v2.EgressRequest{}
+		receiver, err := receiver.Receive(context.Background(), req)
+		Expect(err).ToNot(HaveOccurred())
+
+		_, err = receiver()
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("returns an error when the subscriber fails", func() {
+		spySubscriber.err = errors.New("some error")
+		req := &v2.EgressRequest{}
+		_, err := receiver.Receive(context.Background(), req)
+		Expect(err).To(HaveOccurred())
 	})
 
 })
