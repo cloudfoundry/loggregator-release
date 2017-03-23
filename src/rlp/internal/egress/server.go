@@ -10,17 +10,17 @@ import (
 	"golang.org/x/net/context"
 )
 
-type Subscriber interface {
-	Subscribe(ctx context.Context, req *v2.EgressRequest) (rx func() (*v2.Envelope, error), err error)
+type Receiver interface {
+	Receive(ctx context.Context, req *v2.EgressRequest) (rx func() (*v2.Envelope, error), err error)
 }
 
 type Server struct {
-	subscriber Subscriber
+	receiver Receiver
 }
 
-func NewServer(s Subscriber) *Server {
+func NewServer(r Receiver) *Server {
 	return &Server{
-		subscriber: s,
+		receiver: r,
 	}
 }
 
@@ -31,7 +31,7 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 		return errors.New("invalid request: cannot have type filter without source id")
 	}
 
-	rx, err := s.subscriber.Subscribe(srv.Context(), r)
+	rx, err := s.receiver.Receive(srv.Context(), r)
 	if err != nil {
 		log.Printf("Unable to setup subscription: %s", err)
 		return fmt.Errorf("unable to setup subscription")

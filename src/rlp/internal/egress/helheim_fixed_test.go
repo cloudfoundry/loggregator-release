@@ -14,32 +14,32 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-type mockSubscriber struct {
-	SubscribeCalled chan bool
-	SubscribeInput  struct {
+type mockReceiver struct {
+	ReceiveCalled chan bool
+	ReceiveInput  struct {
 		Ctx     chan context.Context
 		Request chan *v2.EgressRequest
 	}
-	SubscribeOutput struct {
+	ReceiveOutput struct {
 		Rx  chan func() (*v2.Envelope, error)
 		Err chan error
 	}
 }
 
-func newMockSubscriber() *mockSubscriber {
-	m := &mockSubscriber{}
-	m.SubscribeCalled = make(chan bool, 100)
-	m.SubscribeInput.Ctx = make(chan context.Context, 100)
-	m.SubscribeInput.Request = make(chan *v2.EgressRequest, 100)
-	m.SubscribeOutput.Rx = make(chan func() (*v2.Envelope, error), 100)
-	m.SubscribeOutput.Err = make(chan error, 100)
+func newMockReceiver() *mockReceiver {
+	m := &mockReceiver{}
+	m.ReceiveCalled = make(chan bool, 100)
+	m.ReceiveInput.Ctx = make(chan context.Context, 100)
+	m.ReceiveInput.Request = make(chan *v2.EgressRequest, 100)
+	m.ReceiveOutput.Rx = make(chan func() (*v2.Envelope, error), 100)
+	m.ReceiveOutput.Err = make(chan error, 100)
 	return m
 }
-func (m *mockSubscriber) Subscribe(ctx context.Context, filter *v2.EgressRequest) (rx func() (*v2.Envelope, error), err error) {
-	m.SubscribeCalled <- true
-	m.SubscribeInput.Ctx <- ctx
-	m.SubscribeInput.Request <- filter
-	return <-m.SubscribeOutput.Rx, <-m.SubscribeOutput.Err
+func (m *mockReceiver) Receive(ctx context.Context, filter *v2.EgressRequest) (rx func() (*v2.Envelope, error), err error) {
+	m.ReceiveCalled <- true
+	m.ReceiveInput.Ctx <- ctx
+	m.ReceiveInput.Request <- filter
+	return <-m.ReceiveOutput.Rx, <-m.ReceiveOutput.Err
 }
 
 type mockReceiverServer struct {

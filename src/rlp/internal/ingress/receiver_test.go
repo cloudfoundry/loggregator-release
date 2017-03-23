@@ -51,7 +51,7 @@ var _ = Describe("Receiver", func() {
 					},
 				},
 			}
-			rx.Subscribe(context.Background(), req)
+			rx.Receive(context.Background(), req)
 
 			Expect(mockSubscriber.SubscribeInput.Ctx).To(Receive(Not(BeNil())))
 			Expect(mockSubscriber.SubscribeInput.Req).To(Receive(Equal(expectedReq)))
@@ -61,7 +61,7 @@ var _ = Describe("Receiver", func() {
 			close(mockConverter.ConvertOutput.Envelope)
 			close(mockConverter.ConvertOutput.Err)
 			req := &v2.EgressRequest{}
-			rx, err := rx.Subscribe(context.Background(), req)
+			rx, err := rx.Receive(context.Background(), req)
 			Expect(err).ToNot(HaveOccurred())
 			rx()
 
@@ -74,7 +74,7 @@ var _ = Describe("Receiver", func() {
 			close(mockConverter.ConvertOutput.Envelope)
 			mockConverter.ConvertOutput.Err <- fmt.Errorf("some-error")
 			req := &v2.EgressRequest{}
-			rx, err := rx.Subscribe(context.Background(), req)
+			rx, err := rx.Receive(context.Background(), req)
 			Expect(err).ToNot(HaveOccurred())
 			_, err = rx()
 
@@ -89,7 +89,7 @@ var _ = Describe("Receiver", func() {
 			close(mockConverter.ConvertOutput.Err)
 
 			req := &v2.EgressRequest{}
-			rx, err := rx.Subscribe(context.Background(), req)
+			rx, err := rx.Receive(context.Background(), req)
 			Expect(err).ToNot(HaveOccurred())
 
 			env, err := rx()
@@ -110,7 +110,7 @@ var _ = Describe("Receiver", func() {
 
 		It("returns an error via the receiver", func() {
 			req := &v2.EgressRequest{}
-			rx, err := rx.Subscribe(context.Background(), req)
+			rx, err := rx.Receive(context.Background(), req)
 			Expect(err).ToNot(HaveOccurred())
 
 			_, err = rx()
@@ -126,7 +126,7 @@ var _ = Describe("Receiver", func() {
 
 		It("returns an error", func() {
 			req := &v2.EgressRequest{}
-			_, err := rx.Subscribe(context.Background(), req)
+			_, err := rx.Receive(context.Background(), req)
 			Expect(err).To(HaveOccurred())
 		})
 	})

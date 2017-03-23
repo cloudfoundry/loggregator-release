@@ -15,7 +15,7 @@ import (
 
 var _ = Describe("Server", func() {
 	var (
-		mockSubscriber     *mockSubscriber
+		mockReceiver       *mockReceiver
 		mockReceiverServer *mockReceiverServer
 		server             *egress.Server
 		ctx                context.Context
@@ -24,8 +24,8 @@ var _ = Describe("Server", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		mockReceiverServer = newMockReceiverServer()
-		mockSubscriber = newMockSubscriber()
-		server = egress.NewServer(mockSubscriber)
+		mockReceiver = newMockReceiver()
+		server = egress.NewServer(mockReceiver)
 
 		mockReceiverServer.ContextOutput.Ret0 <- ctx
 	})
@@ -45,8 +45,8 @@ var _ = Describe("Server", func() {
 					return <-dataOut, <-errOut
 				}
 
-				close(mockSubscriber.SubscribeOutput.Err)
-				mockSubscriber.SubscribeOutput.Rx <- rx
+				close(mockReceiver.ReceiveOutput.Err)
+				mockReceiver.ReceiveOutput.Rx <- rx
 			})
 
 			It("returns an error for a request that has type filter but not a source ID", func() {
@@ -70,8 +70,8 @@ var _ = Describe("Server", func() {
 				err := server.Receiver(req, mockReceiverServer)
 				Expect(err).To(Equal(io.EOF))
 
-				Expect(mockSubscriber.SubscribeInput.Ctx).To(Receive(Equal(ctx)))
-				Expect(mockSubscriber.SubscribeInput.Request).To(Receive(Equal(req)))
+				Expect(mockReceiver.ReceiveInput.Ctx).To(Receive(Equal(ctx)))
+				Expect(mockReceiver.ReceiveInput.Request).To(Receive(Equal(req)))
 			})
 
 			It("streams data from the subscriber until an error from the subscriber", func() {
@@ -106,8 +106,8 @@ var _ = Describe("Server", func() {
 
 		Context("when subscriber returns an error", func() {
 			BeforeEach(func() {
-				close(mockSubscriber.SubscribeOutput.Rx)
-				mockSubscriber.SubscribeOutput.Err <- fmt.Errorf("some-error")
+				close(mockReceiver.ReceiveOutput.Rx)
+				mockReceiver.ReceiveOutput.Err <- fmt.Errorf("some-error")
 			})
 
 			It("returns an error", func() {

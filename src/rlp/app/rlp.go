@@ -86,7 +86,9 @@ func (r *RLP) Start() {
 func (r *RLP) setupIngress() {
 	finder := ingress.NewFinder(r.ingressAddrs)
 	pool := grpcconnector.NewPool(20, r.ingressDialOpts...)
+
 	batcher := &ingress.NullMetricBatcher{} // TODO: Add real metrics
+
 	connector := grpcconnector.New(1000, pool, finder, batcher)
 	converter := ingress.NewConverter()
 	r.receiver = ingress.NewReceiver(converter, ingress.NewRequestConverter(), connector)

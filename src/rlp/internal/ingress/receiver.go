@@ -34,7 +34,7 @@ func NewReceiver(c EnvelopeConverter, r RequestConverter, s Subscriber) *Receive
 	}
 }
 
-func (r *Receiver) Subscribe(ctx context.Context, req *v2.EgressRequest) (rx func() (*v2.Envelope, error), err error) {
+func (r *Receiver) Receive(ctx context.Context, req *v2.EgressRequest) (rx func() (*v2.Envelope, error), err error) {
 	v1Rx, err := r.subscriber.Subscribe(ctx, r.reqConverter.Convert(req))
 	if err != nil {
 		return nil, err
