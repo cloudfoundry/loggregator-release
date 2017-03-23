@@ -58,7 +58,6 @@ var _ = Describe("Syslog Drain", func() {
 })
 
 func buildListener() (*net.TCPListener, string) {
-	Expect(err).ToNot(HaveOccurred())
 	tcpAddr, err := net.ResolveTCPAddr("tcp", ":0")
 	Expect(err).ToNot(HaveOccurred())
 	listener, err := net.ListenTCP("tcp", tcpAddr)
@@ -68,8 +67,7 @@ func buildListener() (*net.TCPListener, string) {
 }
 
 func buildDrain(port string) (string, string) {
-	ip = "127.0.0.1"
-	Expect(err).ToNot(HaveOccurred())
+	ip := "127.0.0.1"
 	url := fmt.Sprintf("syslog://%s:%s", ip, port)
 	data := drainData(ip, url)
 	key := drainKey("test-id", data)
