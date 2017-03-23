@@ -145,13 +145,14 @@ var _ = Describe("Metron", func() {
 			}
 
 			client := metronClient(metronConfig)
-			ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
+			ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(20*time.Second))
 			sender, err := client.Sender(ctx)
 			Expect(err).ToNot(HaveOccurred())
 
 			go func() {
 				for {
 					sender.Send(emitEnvelope)
+					time.Sleep(10 * time.Millisecond)
 				}
 			}()
 
@@ -159,14 +160,13 @@ var _ = Describe("Metron", func() {
 			Eventually(consumerServer.V2.SenderInput.Arg0).Should(Receive(&rx))
 
 			f := func() bool {
-				sender.Send(emitEnvelope)
 				envelope, err := rx.Recv()
 				Expect(err).ToNot(HaveOccurred())
 
 				return envelope.GetCounter() != nil &&
 					envelope.GetCounter().GetTotal() > 5
 			}
-			Eventually(f, 15, "1ns").Should(Equal(true))
+			Eventually(f, 20, "1ns").Should(Equal(true))
 		})
 	})
 
