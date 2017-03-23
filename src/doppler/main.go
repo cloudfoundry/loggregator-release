@@ -110,7 +110,7 @@ func main() {
 	}))
 
 	udpListener, dropsondeBytesChan := listeners.NewUDPListener(
-		fmt.Sprintf(":%d", conf.IncomingUDPPort),
+		fmt.Sprintf("%s:%d", conf.IP, conf.IncomingUDPPort),
 		batcher,
 		"udpListener",
 	)
