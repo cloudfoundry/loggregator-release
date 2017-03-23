@@ -17,7 +17,7 @@ man-in-the-middle attacks and ensures data integrity.
 
 ## Architecture Within Loggregator
 
-![Loggregator Diagram](../../docs/metron.png)
+![Loggregator Diagram](metron.png)
 
 Source agents emit the logging data through the system as
 [protocol-buffers](https://developers.google.com/protocol-buffers/) via the
