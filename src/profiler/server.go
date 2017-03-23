@@ -24,16 +24,16 @@ type server struct {
 
 // Start initializes a profiler server on a port
 func (s *server) Start() {
-
 	addr := fmt.Sprintf("localhost:%d", s.port)
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Printf("Error creating pprof listener: %s", err)
+		log.Panicf("Error creating pprof listener: %s", err)
+
 	}
 
 	log.Printf("Starting pprof server on: %s", lis.Addr().String())
 	err = http.Serve(lis, nil)
 	if err != nil {
-		log.Printf("Error starting pprof server: %s", err)
+		log.Panicf("Error starting pprof server: %s", err)
 	}
 }
