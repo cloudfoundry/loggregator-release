@@ -30,6 +30,7 @@ files:
 - loggregator/src/doppler/sinkserver/sinkmanager/*.go # gosub
 - loggregator/src/doppler/sinkserver/websocketserver/*.go # gosub
 - loggregator/src/doppler/store/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/diodes/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub

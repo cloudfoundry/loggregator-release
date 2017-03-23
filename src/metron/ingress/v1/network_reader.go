@@ -6,6 +6,8 @@ import (
 
 	"diodes"
 
+	gendiodes "github.com/cloudfoundry/diodes"
+
 	"github.com/cloudfoundry/dropsonde/metrics"
 )
 
@@ -32,7 +34,7 @@ func New(address string, name string, writer ByteArrayWriter) (*NetworkReader, e
 		connection:  connection,
 		contextName: name,
 		writer:      writer,
-		buffer: diodes.NewOneToOne(10000, diodes.AlertFunc(func(missed int) {
+		buffer: diodes.NewOneToOne(10000, gendiodes.AlertFunc(func(missed int) {
 			log.Printf("network reader dropped messages %d", missed)
 			// metric-documentation-v1: (udp.receiveErrorCount) Number of dropped messages
 			// inbound to Metron over the v1 (UDP) API

@@ -25,6 +25,7 @@ import (
 	"signalmanager"
 
 	"code.cloudfoundry.org/workpool"
+	gendiodes "github.com/cloudfoundry/diodes"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
 	"github.com/cloudfoundry/dropsonde/metric_sender"
@@ -95,7 +96,7 @@ func main() {
 	var wg sync.WaitGroup
 	dropsondeUnmarshallerCollection := dropsonde_unmarshaller.NewDropsondeUnmarshallerCollection(conf.UnmarshallerCount)
 	batcher := initializeMetrics(conf.MetricBatchIntervalMilliseconds)
-	envelopeBuffer := diodes.NewManyToOneEnvelope(10000, diodes.AlertFunc(func(missed int) {
+	envelopeBuffer := diodes.NewManyToOneEnvelope(10000, gendiodes.AlertFunc(func(missed int) {
 		log.Printf("Shed %d envelopes", missed)
 		// metric-documentation-v1: (doppler.shedEnvelopes) Number of envelopes dropped by the
 		// diode inbound from metron
