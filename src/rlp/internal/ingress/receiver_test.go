@@ -1,11 +1,14 @@
 package ingress_test
 
 import (
-	"context"
+	"errors"
 	"fmt"
 	"plumbing"
+
 	v2 "plumbing/v2"
 	"rlp/internal/ingress"
+
+	"golang.org/x/net/context"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -13,23 +16,22 @@ import (
 
 var _ = Describe("Receiver", func() {
 	var (
-		mockConverter  *mockConverter
-		mockSubscriber *mockSubscriber
-		rx             *ingress.Receiver
+		spyConverter  *SpyEnvelopeConverter
+		spySubscriber *SpySubscriber
+		receiver      *ingress.Receiver
 	)
 
 	BeforeEach(func() {
-		mockConverter = newMockConverter()
-		mockSubscriber = newMockSubscriber()
-		rx = ingress.NewReceiver(mockConverter, ingress.NewRequestConverter(), mockSubscriber)
+		spyConverter = &SpyEnvelopeConverter{}
+		spySubscriber = &SpySubscriber{}
+		receiver = ingress.NewReceiver(spyConverter, ingress.NewRequestConverter(), spySubscriber)
 	})
 
 	Context("when the subscriber does not return an error", func() {
 		BeforeEach(func() {
-			mockSubscriber.SubscribeOutput.Recv <- func() ([]byte, error) {
+			spySubscriber.recv = func() ([]byte, error) {
 				return []byte("something"), nil
 			}
-			close(mockSubscriber.SubscribeOutput.Err)
 		})
 
 		It("subscribes to data", func() {
@@ -51,48 +53,39 @@ var _ = Describe("Receiver", func() {
 					},
 				},
 			}
-			rx.Receive(context.Background(), req)
+			receiver.Receive(context.Background(), req)
 
-			Expect(mockSubscriber.SubscribeInput.Ctx).To(Receive(Not(BeNil())))
-			Expect(mockSubscriber.SubscribeInput.Req).To(Receive(Equal(expectedReq)))
+			Expect(spySubscriber.req).To(Equal(expectedReq))
 		})
 
 		It("converts the data", func() {
-			close(mockConverter.ConvertOutput.Envelope)
-			close(mockConverter.ConvertOutput.Err)
 			req := &v2.EgressRequest{}
-			rx, err := rx.Receive(context.Background(), req)
+			receiver, err := receiver.Receive(context.Background(), req)
 			Expect(err).ToNot(HaveOccurred())
-			rx()
+			receiver()
 
-			Expect(mockConverter.ConvertInput.Data).To(Receive(Equal(
-				[]byte("something"),
-			)))
+			Expect(spyConverter.data).To(Equal([]byte("something")))
 		})
 
 		It("returns an error if the convert fails", func() {
-			close(mockConverter.ConvertOutput.Envelope)
-			mockConverter.ConvertOutput.Err <- fmt.Errorf("some-error")
+			spyConverter.err = errors.New("some error")
 			req := &v2.EgressRequest{}
-			rx, err := rx.Receive(context.Background(), req)
+			receiver, err := receiver.Receive(context.Background(), req)
 			Expect(err).ToNot(HaveOccurred())
-			_, err = rx()
+			_, err = receiver()
 
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("streams the converted data", func() {
-			expectedEnv := &v2.Envelope{
-				Timestamp: 1,
-			}
-			mockConverter.ConvertOutput.Envelope <- expectedEnv
-			close(mockConverter.ConvertOutput.Err)
+			expectedEnv := &v2.Envelope{Timestamp: 1}
+			spyConverter.envelope = expectedEnv
 
 			req := &v2.EgressRequest{}
-			rx, err := rx.Receive(context.Background(), req)
+			receiver, err := receiver.Receive(context.Background(), req)
 			Expect(err).ToNot(HaveOccurred())
 
-			env, err := rx()
+			env, err := receiver()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(env).To(Equal(expectedEnv))
 		})
@@ -100,35 +93,53 @@ var _ = Describe("Receiver", func() {
 
 	Context("when the subscriber receiver errors", func() {
 		BeforeEach(func() {
-			mockSubscriber.SubscribeOutput.Recv <- func() ([]byte, error) {
+			spySubscriber.recv = func() ([]byte, error) {
 				return nil, fmt.Errorf("some-error")
 			}
-			close(mockSubscriber.SubscribeOutput.Err)
-			close(mockConverter.ConvertOutput.Err)
-			close(mockConverter.ConvertOutput.Envelope)
 		})
 
 		It("returns an error via the receiver", func() {
 			req := &v2.EgressRequest{}
-			rx, err := rx.Receive(context.Background(), req)
+			receiver, err := receiver.Receive(context.Background(), req)
 			Expect(err).ToNot(HaveOccurred())
 
-			_, err = rx()
+			_, err = receiver()
 			Expect(err).To(HaveOccurred())
 		})
 	})
 
 	Context("when the subscriber returns an error", func() {
 		BeforeEach(func() {
-			close(mockSubscriber.SubscribeOutput.Recv)
-			mockSubscriber.SubscribeOutput.Err <- fmt.Errorf("some-error")
+			spySubscriber.err = errors.New("some error")
 		})
 
 		It("returns an error", func() {
 			req := &v2.EgressRequest{}
-			_, err := rx.Receive(context.Background(), req)
+			_, err := receiver.Receive(context.Background(), req)
 			Expect(err).To(HaveOccurred())
 		})
 	})
 
 })
+
+type SpyEnvelopeConverter struct {
+	data     []byte
+	envelope *v2.Envelope
+	err      error
+}
+
+func (s *SpyEnvelopeConverter) Convert(data []byte) (*v2.Envelope, error) {
+	s.data = data
+	return s.envelope, s.err
+}
+
+type SpySubscriber struct {
+	req  *plumbing.SubscriptionRequest
+	recv func() ([]byte, error)
+	err  error
+}
+
+func (s *SpySubscriber) Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) (recv func() ([]byte, error), err error) {
+	s.req = req
+	return s.recv, s.err
+}
