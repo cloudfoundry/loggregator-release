@@ -3,8 +3,6 @@ name: loggregator_trafficcontroller
 dependencies:
 - golang1.7
 files:
-- loggregator/src/trafficcontroller/LICENSE
-- loggregator/src/trafficcontroller/NOTICE
 - loggregator/src/code.cloudfoundry.org/workpool/*.go # gosub
 - loggregator/src/doppler/config/*.go # gosub
 - loggregator/src/doppler/dopplerservice/*.go # gosub
@@ -55,12 +53,6 @@ files:
 - loggregator/src/profiler/*.go # gosub
 - loggregator/src/signalmanager/*.go # gosub
 - loggregator/src/trafficcontroller/*.go # gosub
-- loggregator/src/trafficcontroller/accesslogger/*.go # gosub
-- loggregator/src/trafficcontroller/authorization/*.go # gosub
-- loggregator/src/trafficcontroller/config/*.go # gosub
-- loggregator/src/trafficcontroller/doppler_endpoint/*.go # gosub
-- loggregator/src/trafficcontroller/dopplerproxy/*.go # gosub
-- loggregator/src/trafficcontroller/grpcconnector/*.go # gosub
-- loggregator/src/trafficcontroller/httpsetup/*.go # gosub
-- loggregator/src/trafficcontroller/middleware/*.go # gosub
-- loggregator/src/trafficcontroller/uaa_client/*.go # gosub
+- loggregator/src/trafficcontroller/app/*.go # gosub
+- loggregator/src/trafficcontroller/internal/auth/*.go # gosub
+- loggregator/src/trafficcontroller/internal/proxy/*.go # gosub

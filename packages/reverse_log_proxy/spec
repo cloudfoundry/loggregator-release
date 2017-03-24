@@ -38,4 +38,3 @@ files:
 - loggregator/src/rlp/app/*.go # gosub
 - loggregator/src/rlp/internal/egress/*.go # gosub
 - loggregator/src/rlp/internal/ingress/*.go # gosub
-- loggregator/src/trafficcontroller/grpcconnector/*.go # gosub
