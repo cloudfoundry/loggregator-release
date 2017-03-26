@@ -67,11 +67,17 @@ var _ = Describe("IPRange", func() {
 		It("returns error on malformatted URL", func() {
 			ranges := []iprange.IPRange{{Start: "127.0.2.2", End: "127.0.2.4"}}
 
-			for _, testUrl := range malformattedURLs {
-				parsedURL, _ := url.Parse(testUrl.url)
-				_, err := iprange.IpOutsideOfRanges(*parsedURL, ranges)
+			cases := []url.URL{
+				{
+					Scheme: "syslog",
+					Opaque: "127.0.0.1:300/new",
+				},
+			}
+
+			for _, testURL := range cases {
+				_, err := iprange.IpOutsideOfRanges(testURL, ranges)
 				if err == nil {
-					GinkgoT().Fatal(fmt.Sprintf("There should be an error about malformatted URL for %s", testUrl))
+					GinkgoT().Fatal(fmt.Sprintf("There should be an error about malformatted URL for %s", testURL))
 				}
 			}
 		})
@@ -102,14 +108,8 @@ var _ = Describe("IPRange", func() {
 			outSideOfRange, err = iprange.IpOutsideOfRanges(*parsedURL, ranges)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(outSideOfRange).To(BeFalse())
-
-			parsedURL, _ = url.Parse("syslog://doesNotExist.local:3000?app=great")
-			outSideOfRange, err = iprange.IpOutsideOfRanges(*parsedURL, ranges)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("Resolving host failed: "))
 		})
 	})
-
 })
 
 var ipTests = []struct {
@@ -133,12 +133,4 @@ var ipTests = []struct {
 	{"syslog://127.0.1.1:3000?app=great", true},
 	{"syslog://127.0.2.3:3000?app=great", false},
 	{"syslog://127.0.2.3:3000?app=great", false},
-}
-
-var malformattedURLs = []struct {
-	url string
-}{
-	{"127.0.0.1:300/new"},
-	{"syslog:127.0.0.1:300/new"},
-	{"<nil>"},
 }
