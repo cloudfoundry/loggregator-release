@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"doppler/config"
+	"doppler/app"
 	"plumbing"
 )
 
@@ -23,7 +23,7 @@ var _ = Describe("ContainerMetrics", func() {
 
 	Context("with a client connected to GRPC", func() {
 		var (
-			conf   *config.Config
+			conf   *app.Config
 			in     net.Conn
 			out    *grpc.ClientConn
 			client plumbing.DopplerClient

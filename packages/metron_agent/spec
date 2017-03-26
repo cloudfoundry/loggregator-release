@@ -5,9 +5,9 @@ dependencies:
 files:
 - loggregator/src/metron/syslog_daemon_config/*
 - loggregator/src/diodes/*.go # gosub
-- loggregator/src/doppler/config/*.go # gosub
-- loggregator/src/doppler/dopplerservice/*.go # gosub
-- loggregator/src/doppler/iprange/*.go # gosub
+- loggregator/src/doppler/app/*.go # gosub
+- loggregator/src/doppler/internal/iprange/*.go # gosub
+- loggregator/src/dopplerservice/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/diodes/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub

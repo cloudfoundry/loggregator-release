@@ -6,7 +6,7 @@
 package proxy_test
 
 import (
-	"doppler/dopplerservice"
+	"dopplerservice"
 	"plumbing"
 	"time"
 

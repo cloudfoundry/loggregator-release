@@ -1,7 +1,7 @@
 package doppler_test
 
 import (
-	"doppler/config"
+	"doppler/app"
 	"net"
 	"plumbing"
 	"time"
@@ -24,7 +24,7 @@ var _ = Describe("RecentLogs", func() {
 
 	Context("with a client connected to GRPC", func() {
 		var (
-			conf   *config.Config
+			conf   *app.Config
 			in     net.Conn
 			out    *grpc.ClientConn
 			client plumbing.DopplerClient

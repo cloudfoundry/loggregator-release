@@ -11,15 +11,15 @@ import (
 	"time"
 
 	"diodes"
-	"doppler/config"
-	"doppler/dopplerservice"
-	grpcv1 "doppler/grpcmanager/v1"
-	"doppler/listeners"
-	"doppler/sinkserver"
-	"doppler/sinkserver/blacklist"
-	"doppler/sinkserver/sinkmanager"
-	"doppler/sinkserver/websocketserver"
-	"doppler/store"
+	"doppler/app"
+	grpcv1 "doppler/internal/grpcmanager/v1"
+	"doppler/internal/listeners"
+	"doppler/internal/sinkserver"
+	"doppler/internal/sinkserver/blacklist"
+	"doppler/internal/sinkserver/sinkmanager"
+	"doppler/internal/sinkserver/websocketserver"
+	"doppler/internal/store"
+	"dopplerservice"
 	"monitor"
 	"profiler"
 	"signalmanager"
@@ -53,7 +53,7 @@ func main() {
 	)
 	flag.Parse()
 
-	conf, err := config.ParseConfig(*configFile)
+	conf, err := app.ParseConfig(*configFile)
 	if err != nil {
 		log.Fatalf("Unable to parse config: %s", err)
 	}
@@ -179,8 +179,8 @@ func main() {
 	killChan := signalmanager.RegisterKillSignalChannel()
 	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
 
-	releaseNodeChan := dopplerservice.Announce(conf.IP, config.HeartbeatInterval, conf, storeAdapter)
-	legacyReleaseNodeChan := dopplerservice.AnnounceLegacy(conf.IP, config.HeartbeatInterval, conf, storeAdapter)
+	releaseNodeChan := dopplerservice.Announce(conf.IP, app.HeartbeatInterval, conf, storeAdapter)
+	legacyReleaseNodeChan := dopplerservice.AnnounceLegacy(conf.IP, app.HeartbeatInterval, conf, storeAdapter)
 
 	p := profiler.New(conf.PPROFPort)
 	go p.Start()
@@ -341,7 +341,7 @@ func initializeMetrics(batchIntervalMilliseconds uint) *metricbatcher.MetricBatc
 	return metricBatcher
 }
 
-func connectToEtcd(conf *config.Config) storeadapter.StoreAdapter {
+func connectToEtcd(conf *app.Config) storeadapter.StoreAdapter {
 	workPool, err := workpool.NewWorkPool(conf.EtcdMaxConcurrentRequests)
 	if err != nil {
 		panic(err)
@@ -365,7 +365,7 @@ func connectToEtcd(conf *config.Config) storeadapter.StoreAdapter {
 	return etcdStoreAdapter
 }
 
-func setupMetricsEmitter(conf *config.Config) {
+func setupMetricsEmitter(conf *app.Config) {
 	serverCreds, err := plumbing.NewCredentials(
 		conf.GRPC.CertFile,
 		conf.GRPC.KeyFile,

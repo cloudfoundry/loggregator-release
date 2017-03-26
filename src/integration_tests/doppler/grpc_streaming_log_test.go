@@ -1,7 +1,7 @@
 package doppler_test
 
 import (
-	"doppler/config"
+	"doppler/app"
 	"net"
 	"plumbing"
 	"time"
@@ -40,7 +40,7 @@ var _ = Describe("GRPC Streaming Logs", func() {
 		return in
 	}
 
-	var connectoToSubscription = func(conf *config.Config, req plumbing.SubscriptionRequest) (*grpc.ClientConn, plumbing.Doppler_SubscribeClient) {
+	var connectoToSubscription = func(conf *app.Config, req plumbing.SubscriptionRequest) (*grpc.ClientConn, plumbing.Doppler_SubscribeClient) {
 		conn, client := connectToGRPC(conf)
 
 		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
@@ -52,7 +52,7 @@ var _ = Describe("GRPC Streaming Logs", func() {
 
 	Context("with a subscription established", func() {
 		var (
-			conf         *config.Config
+			conf         *app.Config
 			in           net.Conn
 			out          *grpc.ClientConn
 			subscription plumbing.Doppler_SubscribeClient

@@ -1,7 +1,7 @@
 package doppler_test
 
 import (
-	"doppler/config"
+	"doppler/app"
 	"fmt"
 	"net"
 	"os/exec"
@@ -49,7 +49,7 @@ var _ = Describe("Doppler Announcer", func() {
 			Eventually(func() error {
 				_, err := etcdAdapter.Get("/doppler/meta/z1/doppler_z1/1")
 				return err
-			}, time.Second+config.HeartbeatInterval).ShouldNot(HaveOccurred())
+			}, time.Second+app.HeartbeatInterval).ShouldNot(HaveOccurred())
 		})
 
 		AfterEach(func() {

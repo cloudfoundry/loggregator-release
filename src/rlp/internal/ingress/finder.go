@@ -1,6 +1,6 @@
 package ingress
 
-import "doppler/dopplerservice"
+import "dopplerservice"
 
 type Finder struct {
 	event chan dopplerservice.Event

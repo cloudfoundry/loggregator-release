@@ -1,7 +1,7 @@
 package v1_test
 
 import (
-	"doppler/dopplerservice"
+	"dopplerservice"
 	"io"
 	"plumbing"
 
