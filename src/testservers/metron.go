@@ -7,18 +7,18 @@ import (
 	"os/exec"
 	"time"
 
-	"metron/app"
+	"metron/api"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 )
 
-func BuildMetronConfig(dopplerURI string, dopplerGRPCPort, dopplerUDPPort int) app.Config {
+func BuildMetronConfig(dopplerURI string, dopplerGRPCPort, dopplerUDPPort int) api.Config {
 	metronUDPPort := getUDPPort()
 	metronGRPCPort := getTCPPort()
 
-	return app.Config{
+	return api.Config{
 		Index:        jobIndex,
 		Job:          jobName,
 		Zone:         availabilityZone,
@@ -36,7 +36,7 @@ func BuildMetronConfig(dopplerURI string, dopplerGRPCPort, dopplerUDPPort int) a
 		DopplerAddr:    fmt.Sprintf("%s:%d", dopplerURI, dopplerGRPCPort),
 		DopplerAddrUDP: fmt.Sprintf("%s:%d", dopplerURI, dopplerUDPPort),
 
-		GRPC: app.GRPC{
+		GRPC: api.GRPC{
 			Port:     uint16(metronGRPCPort),
 			CertFile: Cert("metron.crt"),
 			KeyFile:  Cert("metron.key"),
@@ -48,7 +48,7 @@ func BuildMetronConfig(dopplerURI string, dopplerGRPCPort, dopplerUDPPort int) a
 	}
 }
 
-func StartMetron(conf app.Config) (func(), app.Config, func()) {
+func StartMetron(conf api.Config) (func(), api.Config, func()) {
 	By("making sure metron was build")
 	metronPath := os.Getenv("METRON_BUILD_PATH")
 	Expect(metronPath).ToNot(BeEmpty())

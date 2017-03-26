@@ -1,0 +1,17 @@
+{
+    "Index": "42",
+    "Job": "test-component",
+    "IncomingUDPPort": 51161,
+    "SharedSecret": "shared_secret",
+    "EtcdUrls"    : ["http://127.0.0.1:4001"],
+    "EtcdMaxConcurrentRequests": 1,
+    "Zone": "z1",
+    "Deployment": "deployment-name",
+    "LoggregatorDropsondePort": 3457,
+    "Protocols": ["tls", "tcp", "udp"],
+    "TLSConfig": {
+        "CertFile": "../../integration_tests/fixtures/client.crt",
+        "KeyFile": "../../integration_tests/fixtures/client.key",
+        "CAFile": "../../integration_tests/fixtures/loggregator-ca.crt"
+    }
+}

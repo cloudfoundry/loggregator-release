@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"metron/app"
+	"metron/api"
 	v2 "plumbing/v2"
 	"testservers"
 )
@@ -15,7 +15,7 @@ import (
 var _ = Describe("MetronAggregator", func() {
 	var (
 		metronCleanup  func()
-		metronConfig   app.Config
+		metronConfig   api.Config
 		consumerServer *Server
 	)
 

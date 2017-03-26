@@ -10,7 +10,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	"metron/app"
+	"metron/api"
 	"plumbing"
 	"profiler"
 )
@@ -25,7 +25,7 @@ func main() {
 	)
 	flag.Parse()
 
-	config, err := app.ParseConfig(*configFilePath)
+	config, err := api.ParseConfig(*configFilePath)
 	if err != nil {
 		log.Fatalf("Unable to parse config: %s", err)
 	}
@@ -50,10 +50,10 @@ func main() {
 		log.Fatalf("Could not use GRPC creds for server: %s", err)
 	}
 
-	appV1 := app.NewV1App(config, clientCreds)
+	appV1 := api.NewV1App(config, clientCreds)
 	go appV1.Start()
 
-	appV2 := app.NewV2App(config, clientCreds, serverCreds)
+	appV2 := api.NewV2App(config, clientCreds, serverCreds)
 	go appV2.Start()
 
 	metricsCreds, err := plumbing.NewCredentials(
