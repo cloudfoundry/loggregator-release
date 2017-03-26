@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"metron/api"
+	"metron/app"
 	"plumbing"
 	v2 "plumbing/v2"
 	"testservers"
@@ -30,7 +30,7 @@ var _ = Describe("Metron", func() {
 	Context("when a consumer is accepting gRPC connections", func() {
 		var (
 			metronCleanup  func()
-			metronConfig   api.Config
+			metronConfig   app.Config
 			consumerServer *Server
 			eventEmitter   dropsonde.EventEmitter
 		)
@@ -174,7 +174,7 @@ var _ = Describe("Metron", func() {
 		var (
 			metronCleanup   func()
 			consumerCleanup func()
-			metronConfig    api.Config
+			metronConfig    app.Config
 			udpPort         int
 			eventEmitter    dropsonde.EventEmitter
 			consumerConn    *net.UDPConn
@@ -256,7 +256,7 @@ func HomeAddrToPort(addr net.Addr) int {
 	return port
 }
 
-func metronClient(conf api.Config) v2.IngressClient {
+func metronClient(conf app.Config) v2.IngressClient {
 	addr := fmt.Sprintf("127.0.0.1:%d", conf.GRPC.Port)
 
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
