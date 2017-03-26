@@ -5,12 +5,12 @@ import gendiodes "github.com/cloudfoundry/diodes"
 // ManyToOne diode is optimal for many writers and a single
 // reader.
 type ManyToOne struct {
-	d *gendiodes.ManyToOne
+	d *gendiodes.Poller
 }
 
 func NewManyToOne(size int, alerter gendiodes.Alerter) *ManyToOne {
 	return &ManyToOne{
-		d: gendiodes.NewManyToOne(size, alerter),
+		d: gendiodes.NewPoller(gendiodes.NewManyToOne(size, alerter)),
 	}
 }
 
