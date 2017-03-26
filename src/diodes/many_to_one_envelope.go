@@ -8,12 +8,12 @@ import (
 // ManyToOneEnvelope diode is optimal for many writers and a single
 // reader.
 type ManyToOneEnvelope struct {
-	d *gendiodes.ManyToOne
+	d *gendiodes.Poller
 }
 
 func NewManyToOneEnvelope(size int, alerter gendiodes.Alerter) *ManyToOneEnvelope {
 	return &ManyToOneEnvelope{
-		d: gendiodes.NewManyToOne(size, alerter),
+		d: gendiodes.NewPoller(gendiodes.NewManyToOne(size, alerter)),
 	}
 }
 

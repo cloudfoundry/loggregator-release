@@ -4,12 +4,12 @@ import gendiodes "github.com/cloudfoundry/diodes"
 
 // OneToOne diode is optimized for a single writer and a single reader
 type OneToOne struct {
-	d *gendiodes.OneToOne
+	d *gendiodes.Poller
 }
 
 func NewOneToOne(size int, alerter gendiodes.Alerter) *OneToOne {
 	return &OneToOne{
-		d: gendiodes.NewOneToOne(size, alerter),
+		d: gendiodes.NewPoller(gendiodes.NewOneToOne(size, alerter)),
 	}
 }
 
