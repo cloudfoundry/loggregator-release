@@ -15,7 +15,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"doppler/config"
+	"doppler/app"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
@@ -88,7 +88,7 @@ var _ = BeforeEach(func() {
 	Eventually(func() error {
 		_, err := etcdAdapter.Get("healthstatus/doppler/z1/doppler_z1/0")
 		return err
-	}, time.Second+config.HeartbeatInterval).ShouldNot(HaveOccurred())
+	}, time.Second+app.HeartbeatInterval).ShouldNot(HaveOccurred())
 })
 
 var _ = AfterEach(func() {
@@ -139,7 +139,7 @@ func buildContainerMetric() []byte {
 	return b
 }
 
-func connectToGRPC(conf *config.Config) (*grpc.ClientConn, plumbing.DopplerClient) {
+func connectToGRPC(conf *app.Config) (*grpc.ClientConn, plumbing.DopplerClient) {
 	tlsCfg, err := plumbing.NewMutualTLSConfig(conf.GRPC.CertFile, conf.GRPC.KeyFile, conf.GRPC.CAFile, "doppler")
 	Expect(err).ToNot(HaveOccurred())
 	creds := credentials.NewTLS(tlsCfg)
@@ -148,8 +148,8 @@ func connectToGRPC(conf *config.Config) (*grpc.ClientConn, plumbing.DopplerClien
 	return out, plumbing.NewDopplerClient(out)
 }
 
-func fetchDopplerConfig(path string) *config.Config {
-	conf, err := config.ParseConfig(path)
+func fetchDopplerConfig(path string) *app.Config {
+	conf, err := app.ParseConfig(path)
 	Expect(err).ToNot(HaveOccurred())
 	return conf
 }

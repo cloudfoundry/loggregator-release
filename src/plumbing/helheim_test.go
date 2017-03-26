@@ -6,7 +6,7 @@
 package plumbing_test
 
 import (
-	"doppler/dopplerservice"
+	"dopplerservice"
 	"plumbing"
 	"time"
 

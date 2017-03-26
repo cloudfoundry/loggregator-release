@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	"doppler/dopplerservice"
+	"dopplerservice"
 	"plumbing"
 
 	"golang.org/x/net/context"

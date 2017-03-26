@@ -1,13 +1,12 @@
 package testservers
 
 import (
-	"doppler/iprange"
 	"fmt"
 	"net"
 	"os"
 	"os/exec"
 
-	dopplerConf "doppler/config"
+	dopplerConf "doppler/app"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -65,7 +64,6 @@ func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int)
 		SinkInactivityTimeoutSeconds:    120,
 		SinkSkipCertVerify:              true,
 		UnmarshallerCount:               5,
-		BlackListIps:                    make([]iprange.IPRange, 0),
 	}
 }
 

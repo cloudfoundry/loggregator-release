@@ -6,7 +6,7 @@
 package legacy_test
 
 import (
-	"doppler/dopplerservice"
+	"dopplerservice"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 )

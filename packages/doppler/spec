@@ -3,33 +3,31 @@ name: doppler
 dependencies:
 - golang1.7
 files:
-- loggregator/src/doppler/LICENSE
-- loggregator/src/doppler/NOTICE
 - loggregator/src/code.cloudfoundry.org/workpool/*.go # gosub
 - loggregator/src/diodes/*.go # gosub
 - loggregator/src/doppler/*.go # gosub
-- loggregator/src/doppler/config/*.go # gosub
-- loggregator/src/doppler/dopplerservice/*.go # gosub
-- loggregator/src/doppler/groupedsinks/*.go # gosub
-- loggregator/src/doppler/groupedsinks/firehose_group/*.go # gosub
-- loggregator/src/doppler/groupedsinks/sink_wrapper/*.go # gosub
-- loggregator/src/doppler/grpcmanager/v1/*.go # gosub
-- loggregator/src/doppler/grpcmanager/v2/*.go # gosub
-- loggregator/src/doppler/iprange/*.go # gosub
-- loggregator/src/doppler/listeners/*.go # gosub
-- loggregator/src/doppler/sinks/*.go # gosub
-- loggregator/src/doppler/sinks/containermetric/*.go # gosub
-- loggregator/src/doppler/sinks/dump/*.go # gosub
-- loggregator/src/doppler/sinks/retrystrategy/*.go # gosub
-- loggregator/src/doppler/sinks/syslog/*.go # gosub
-- loggregator/src/doppler/sinks/syslogwriter/*.go # gosub
-- loggregator/src/doppler/sinks/websocket/*.go # gosub
-- loggregator/src/doppler/sinkserver/*.go # gosub
-- loggregator/src/doppler/sinkserver/blacklist/*.go # gosub
-- loggregator/src/doppler/sinkserver/metrics/*.go # gosub
-- loggregator/src/doppler/sinkserver/sinkmanager/*.go # gosub
-- loggregator/src/doppler/sinkserver/websocketserver/*.go # gosub
-- loggregator/src/doppler/store/*.go # gosub
+- loggregator/src/doppler/app/*.go # gosub
+- loggregator/src/doppler/internal/groupedsinks/*.go # gosub
+- loggregator/src/doppler/internal/groupedsinks/firehose_group/*.go # gosub
+- loggregator/src/doppler/internal/groupedsinks/sink_wrapper/*.go # gosub
+- loggregator/src/doppler/internal/grpcmanager/v1/*.go # gosub
+- loggregator/src/doppler/internal/grpcmanager/v2/*.go # gosub
+- loggregator/src/doppler/internal/iprange/*.go # gosub
+- loggregator/src/doppler/internal/listeners/*.go # gosub
+- loggregator/src/doppler/internal/sinks/*.go # gosub
+- loggregator/src/doppler/internal/sinks/containermetric/*.go # gosub
+- loggregator/src/doppler/internal/sinks/dump/*.go # gosub
+- loggregator/src/doppler/internal/sinks/retrystrategy/*.go # gosub
+- loggregator/src/doppler/internal/sinks/syslog/*.go # gosub
+- loggregator/src/doppler/internal/sinks/syslogwriter/*.go # gosub
+- loggregator/src/doppler/internal/sinks/websocket/*.go # gosub
+- loggregator/src/doppler/internal/sinkserver/*.go # gosub
+- loggregator/src/doppler/internal/sinkserver/blacklist/*.go # gosub
+- loggregator/src/doppler/internal/sinkserver/metrics/*.go # gosub
+- loggregator/src/doppler/internal/sinkserver/sinkmanager/*.go # gosub
+- loggregator/src/doppler/internal/sinkserver/websocketserver/*.go # gosub
+- loggregator/src/doppler/internal/store/*.go # gosub
+- loggregator/src/dopplerservice/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/diodes/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller/*.go # gosub
