@@ -6,13 +6,14 @@ import (
 	"log"
 	"math/rand"
 	"metric"
+	"profiler"
+	"runtime"
 	"time"
 
 	"google.golang.org/grpc"
 
 	"metron/app"
 	"plumbing"
-	"profiler"
 )
 
 func main() {
@@ -23,6 +24,9 @@ func main() {
 		"config/metron.json",
 		"Location of the Metron config json file",
 	)
+	// Metron is intended to be light-weight so we occupy only one core
+	runtime.GOMAXPROCS(1)
+
 	flag.Parse()
 
 	config, err := app.ParseConfig(*configFilePath)
