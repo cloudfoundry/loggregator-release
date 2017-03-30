@@ -347,6 +347,57 @@ var _ = Describe("Envelope conversion", func() {
 			newV2e := ToV2(v1e)
 			Expect(newV2e).To(Equal(v2e))
 		})
+
+		It("converts Gauge", func() {
+			v2e := &v2.Envelope{
+				Timestamp:  time.Now().UnixNano(),
+				SourceId:   "b3015d69-09cd-476d-aace-ad2d824d5ab7",
+				InstanceId: "99",
+				Message: &v2.Envelope_Gauge{
+					Gauge: &v2.Gauge{
+						Metrics: map[string]*v2.GaugeValue{
+							"cpu": {
+								Unit: "percentage", Value: 0.18079146710267877,
+							},
+							"disk": {
+								Unit: "bytes", Value: 7.9466496e+07,
+							},
+							"disk_quota": {
+								Unit: "bytes", Value: 1.073741824e+09,
+							},
+							"instance_index": {
+								Unit: "index", Value: 0,
+							},
+							"memory": {
+								Unit: "bytes", Value: 2.5223168e+07,
+							},
+							"memory_quota": {
+								Unit: "bytes", Value: 2.68435456e+08,
+							},
+						},
+					},
+				},
+				Tags: map[string]*v2.Value{
+					"deployment": ValueText("some-deployment"),
+					"ip":         ValueText("some-ip"),
+					"job":        ValueText("some-job"),
+					"origin":     ValueText("some-origin"),
+					"index":      ValueText("some-index"),
+					"__v1_type":  ValueText("ContainerMetric"),
+				},
+			}
+
+			_, err := proto.Marshal(v2e)
+			Expect(err).ToNot(HaveOccurred())
+
+			v1e := ToV1(v2e)
+
+			_, err = proto.Marshal(v1e)
+			Expect(err).ToNot(HaveOccurred())
+
+			newV2e := ToV2(v1e)
+			Expect(newV2e).To(Equal(v2e))
+		})
 	})
 })
 
