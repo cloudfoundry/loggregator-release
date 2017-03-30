@@ -1,7 +1,7 @@
 package truncatingbuffer_test
 
 import (
-	. "truncatingbuffer"
+	. "doppler/internal/truncatingbuffer"
 
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/dropsonde/factories"

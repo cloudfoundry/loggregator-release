@@ -4,12 +4,12 @@ import (
 	"doppler/internal/sinks"
 	"doppler/internal/sinks/retrystrategy"
 	"doppler/internal/sinks/syslogwriter"
+	"doppler/internal/truncatingbuffer"
 	"fmt"
 	"log"
 	"net/url"
 	"sync"
 	"time"
-	"truncatingbuffer"
 
 	"github.com/cloudfoundry/sonde-go/events"
 )

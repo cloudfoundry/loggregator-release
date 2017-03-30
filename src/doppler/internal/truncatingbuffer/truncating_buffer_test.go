@@ -1,8 +1,8 @@
 package truncatingbuffer_test
 
 import (
+	"doppler/internal/truncatingbuffer"
 	"fmt"
-	"truncatingbuffer"
 
 	. "github.com/apoydence/eachers"
 	. "github.com/onsi/ginkgo"

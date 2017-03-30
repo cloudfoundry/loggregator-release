@@ -6,7 +6,7 @@ import (
 	"net"
 	"time"
 
-	"truncatingbuffer"
+	"doppler/internal/truncatingbuffer"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
