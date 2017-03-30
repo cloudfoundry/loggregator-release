@@ -12,7 +12,10 @@ source /var/vcap/packages/loggregator_common/pid_utils.sh
 case $1 in
 
   start)
-    pid_guard $PIDFILE "MetronAgent"
+    killall -15 metron
+    killall -9 metron
+    killall -2 metron
+    killall -3 metron
 
     (crontab -l | sed /metron_agent.*logrotate/d; cat /var/vcap/jobs/metron_agent/config/metron_agent_logrotate.cron) | sed /^$/d | crontab
 
@@ -32,7 +35,11 @@ case $1 in
     ;;
 
   stop)
-    killall metron
+    killall -15 metron
+    killall -9 metron
+    killall -2 metron
+    killall -3 metron
+
     rm -f $PIDFILE
 
     ;;
