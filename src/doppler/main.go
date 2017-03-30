@@ -371,7 +371,14 @@ func stop(
 func initializeMetrics(batchIntervalMilliseconds uint) *metricbatcher.MetricBatcher {
 	eventEmitter := dropsonde.AutowiredEmitter()
 	metricSender := metric_sender.NewMetricSender(eventEmitter)
-	metricBatcher := metricbatcher.New(metricSender, time.Duration(batchIntervalMilliseconds)*time.Millisecond)
+	metricBatcher := metricbatcher.New(
+		metricSender,
+		time.Duration(batchIntervalMilliseconds)*time.Millisecond,
+	)
+	metricBatcher.AddConsistentlyEmittedMetrics(
+		"doppler.shedEnvelopes",
+		"TruncatingBuffer.totalDroppedMessages",
+	)
 	metrics.Initialize(metricSender, metricBatcher)
 	return metricBatcher
 }
