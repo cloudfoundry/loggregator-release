@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-cf login -a api.$CF_SYSTEM_DOMAIN -u $CF_USERNAME -p $CF_PASSWORD -s $CF_SPACE -o $CF_ORG
+cf login -a api.$CF_SYSTEM_DOMAIN -u $CF_USERNAME -p $CF_PASSWORD -s $CF_SPACE -o $CF_ORG --skip-ssl-validation
 
 pushd ./http_drain
     GOOS=linux go build
