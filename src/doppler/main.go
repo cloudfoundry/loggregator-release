@@ -378,6 +378,7 @@ func initializeMetrics(batchIntervalMilliseconds uint) *metricbatcher.MetricBatc
 	metricBatcher.AddConsistentlyEmittedMetrics(
 		"doppler.shedEnvelopes",
 		"TruncatingBuffer.totalDroppedMessages",
+		"listeners.totalReceivedMessageCount",
 	)
 	metrics.Initialize(metricSender, metricBatcher)
 	return metricBatcher
