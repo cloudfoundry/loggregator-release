@@ -2,11 +2,11 @@
 set -ex
 
 for i in `seq 1 $NUM_APPS`; do
-    rm -f output-$i.txt
+    rm "output-$i.txt"
     cf logs drainspinner-$i > output-$i.txt 2>&1 &
 done;
 
-sleep 30 #wait 30 seconds for socket connection
+sleep 80
 
 echo "Begin the hammer"
 for i in `seq 1 $NUM_APPS`; do
