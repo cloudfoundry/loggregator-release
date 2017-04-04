@@ -24,7 +24,7 @@ var _ = Describe("Counteraggregator", func() {
 			},
 		}
 
-		aggregator := egress.New(mockWriter)
+		aggregator := egress.NewCounterAggregator(mockWriter)
 		aggregator.Write(logEnvelope)
 
 		Expect(mockWriter.WriteInput.Msg).To(Receive(Equal(logEnvelope)))
@@ -34,7 +34,7 @@ var _ = Describe("Counteraggregator", func() {
 		mockWriter := newMockWriter()
 		close(mockWriter.WriteOutput.Ret0)
 
-		aggregator := egress.New(mockWriter)
+		aggregator := egress.NewCounterAggregator(mockWriter)
 		aggregator.Write(buildCounterEnvelope(10, "name-1", "origin-1"))
 		aggregator.Write(buildCounterEnvelope(15, "name-1", "origin-1"))
 
@@ -50,7 +50,7 @@ var _ = Describe("Counteraggregator", func() {
 		mockWriter := newMockWriter()
 		close(mockWriter.WriteOutput.Ret0)
 
-		aggregator := egress.New(mockWriter)
+		aggregator := egress.NewCounterAggregator(mockWriter)
 		aggregator.Write(buildCounterEnvelope(10, "name-1", "origin-1"))
 		aggregator.Write(buildCounterEnvelope(15, "name-2", "origin-1"))
 		aggregator.Write(buildCounterEnvelope(20, "name-3", "origin-1"))
@@ -70,7 +70,7 @@ var _ = Describe("Counteraggregator", func() {
 		mockWriter := newMockWriter()
 		close(mockWriter.WriteOutput.Ret0)
 
-		aggregator := egress.New(mockWriter)
+		aggregator := egress.NewCounterAggregator(mockWriter)
 		aggregator.Write(buildCounterEnvelope(10, "name-1", "origin-1"))
 		aggregator.Write(buildCounterEnvelope(15, "name-1", "origin-1"))
 		aggregator.Write(buildCounterEnvelope(20, "name-1", "origin-2"))
@@ -90,7 +90,7 @@ var _ = Describe("Counteraggregator", func() {
 		mockWriter := newMockWriter()
 		close(mockWriter.WriteOutput.Ret0)
 
-		aggregator := egress.New(mockWriter)
+		aggregator := egress.NewCounterAggregator(mockWriter)
 		aggregator.Write(buildCounterEnvelope(10, "name-1", "origin-1"))
 		aggregator.Write(buildCounterEnvelopeWithTotal(5000, "name-1", "origin-1"))
 
@@ -106,7 +106,7 @@ var _ = Describe("Counteraggregator", func() {
 		mockWriter := newMockWriter()
 		close(mockWriter.WriteOutput.Ret0)
 
-		aggregator := egress.New(mockWriter)
+		aggregator := egress.NewCounterAggregator(mockWriter)
 
 		aggregator.Write(buildCounterEnvelope(500, "unique-name", "origin-1"))
 

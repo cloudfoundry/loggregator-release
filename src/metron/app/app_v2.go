@@ -53,7 +53,7 @@ func (a *AppV2) Start() {
 	}))
 
 	pool := a.initializePool()
-	counterAggr := egress.New(pool)
+	counterAggr := egress.NewCounterAggregator(pool)
 	tx := egress.NewTransponder(envelopeBuffer, counterAggr, a.config.Tags)
 	go tx.Start()
 

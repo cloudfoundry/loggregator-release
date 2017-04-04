@@ -19,7 +19,7 @@ type CounterAggregator struct {
 	counterTotals map[counterID]uint64
 }
 
-func New(w Writer) *CounterAggregator {
+func NewCounterAggregator(w Writer) *CounterAggregator {
 	return &CounterAggregator{
 		writer:        w,
 		counterTotals: make(map[counterID]uint64),
