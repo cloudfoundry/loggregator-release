@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/nu7hatch/gouuid"
+	uuid "github.com/nu7hatch/gouuid"
 )
 
 type Config struct {
