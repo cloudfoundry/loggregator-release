@@ -10,7 +10,8 @@ sleep 30 #wait 30 seconds for socket connection
 
 echo "Begin the hammer"
 for i in `seq 1 $NUM_APPS`; do
-    curl "drainspinner-$i.$CF_SYSTEM_DOMAIN?cycles=${CYCLES}&delay=${DELAY_US}us" &> /dev/null
+    domain=$(cf app drainspinner-$i | grep urls | awk '{print $2}')
+    curl "$domain?cycles=${CYCLES}&delay=${DELAY_US}us" &> /dev/null
 done;
 
 sleep 25
