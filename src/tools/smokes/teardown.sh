@@ -2,7 +2,7 @@
 set -e
 
 for i in `seq 1 $NUM_APPS`; do
-    cf delete logspinner-$i -r -f
+    cf delete drainspinner-$i -r -f
     rm output-$i.txt || true
 done;
 

@@ -19,12 +19,12 @@ pushd ../logspinner
     GOOS=linux go build
 
     for i in `seq 1 $NUM_APPS`; do
-        cf push logspinner-$i -c ./logspinner -b binary_buildpack
-        cf bind-service logspinner-$i ss-smoke-syslog-https-drain
+        cf push drainspinner-$i -c ./logspinner -b binary_buildpack
+        cf bind-service drainspinner-$i ss-smoke-syslog-https-drain
 
         count=0
         for url in $DRAIN_URLS; do
-            cf bind-service logspinner-$i ss-smoke-syslog-drain-$count
+            cf bind-service drainspinner-$i ss-smoke-syslog-drain-$count
             : $(( count = count + 1 ))
         done;
     done;
