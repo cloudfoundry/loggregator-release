@@ -6,7 +6,7 @@ cf login -a api.$CF_SYSTEM_DOMAIN -u $CF_USERNAME -p $CF_PASSWORD -s $CF_SPACE -
 pushd ./http_drain
     GOOS=linux go build
     cf push https-drain -c ./http_drain -b binary_buildpack
-    drain_domain=$(cf app drainspinner-$i | grep urls | awk '{print $2}')
+    drain_domain=$(cf app https-drain | grep urls | awk '{print $2}')
     cf create-user-provided-service ss-smoke-syslog-https-drain -l "https://$drain_domain/drain?drain-version=$DRAIN_VERSION" || true
 popd
 
