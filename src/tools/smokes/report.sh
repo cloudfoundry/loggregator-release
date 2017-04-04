@@ -9,7 +9,8 @@ for i in `seq 1 $NUM_APPS`; do
     : $(( msg_count = $msg_count + $c ))
 done;
 
-drain_count=$(curl -k https://https-drain.$CF_SYSTEM_DOMAIN/count)
+drain_domain=$(cf app drainspinner-$i | grep urls | awk '{print $2}')
+drain_count=$(curl -k https://$drain_domain/count)
 
 currenttime=$(date +%s)
 
