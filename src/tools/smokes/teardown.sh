@@ -12,5 +12,5 @@ for url in $DRAIN_URLS; do
     : $(( count = count + 1 ))
 done;
 
-cf delete-service ss-smoke-syslog-https-drain -f
-cf delete https-drain -r -f
+cf delete-service ss-smoke-syslog-https-drain-${DRAIN_VERSION} -f
+cf delete https-drain-${DRAIN_VERSION} -r -f

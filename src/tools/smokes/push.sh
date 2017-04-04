@@ -5,9 +5,9 @@ cf login -a api.$CF_SYSTEM_DOMAIN -u $CF_USERNAME -p $CF_PASSWORD -s $CF_SPACE -
 
 pushd ./http_drain
     GOOS=linux go build
-    cf push https-drain -c ./http_drain -b binary_buildpack
-    drain_domain=$(cf app https-drain | grep urls | awk '{print $2}')
-    cf create-user-provided-service ss-smoke-syslog-https-drain -l "https://$drain_domain/drain?drain-version=$DRAIN_VERSION" || true
+    cf push https-drain-${DRAIN_VERSION} -c ./http_drain -b binary_buildpack
+    drain_domain=$(cf app https-drain-${DRAIN_VERSION} | grep urls | awk '{print $2}')
+    cf create-user-provided-service ss-smoke-syslog-https-drain-${DRAIN_VERSION} -l "https://$drain_domain/drain?drain-version=$DRAIN_VERSION" || true
 popd
 
 count=0
@@ -21,7 +21,7 @@ pushd ../logspinner
 
     for i in `seq 1 $NUM_APPS`; do
         cf push drainspinner-$i -c ./logspinner -b binary_buildpack
-        cf bind-service drainspinner-$i ss-smoke-syslog-https-drain
+        cf bind-service drainspinner-$i ss-smoke-syslog-https-drain-${DRAIN_VERSION}
 
         count=0
         for url in $DRAIN_URLS; do
