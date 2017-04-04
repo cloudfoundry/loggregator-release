@@ -12,8 +12,9 @@ import (
 
 var _ = Describe("Ingress", func() {
 	var (
-		mockDataSetter *mockDataSetter
-		mockSender     *mockDopplerIngress_SenderServer
+		mockDataSetter  *mockDataSetter
+		mockSender      *mockDopplerIngress_SenderServer
+		mockBatchSender *mockDopplerIngress_BatchSenderServer
 
 		ingestor *v2.IngressServer
 	)
@@ -21,8 +22,37 @@ var _ = Describe("Ingress", func() {
 	BeforeEach(func() {
 		mockDataSetter = newMockDataSetter()
 		mockSender = newMockDopplerIngress_SenderServer()
+		mockBatchSender = newMockDopplerIngress_BatchSenderServer()
 
 		ingestor = v2.NewIngressServer(mockDataSetter, SpyBatcher{})
+	})
+
+	It("writes batches to the data setter", func() {
+		mockBatchSender.RecvOutput.Ret0 <- &plumbing.EnvelopeBatch{
+			Batch: []*plumbing.Envelope{
+				{
+					Message: &plumbing.Envelope_Log{
+						Log: &plumbing.Log{
+							Payload: []byte("hello-1"),
+						},
+					},
+				},
+				{
+					Message: &plumbing.Envelope_Log{
+						Log: &plumbing.Log{
+							Payload: []byte("hello-2"),
+						},
+					},
+				},
+			},
+		}
+
+		mockBatchSender.RecvOutput.Ret1 <- nil
+		mockBatchSender.RecvOutput.Ret0 <- nil
+		mockBatchSender.RecvOutput.Ret1 <- io.EOF
+
+		ingestor.BatchSender(mockBatchSender)
+		Expect(mockDataSetter.SetCalled).To(HaveLen(2))
 	})
 
 	It("writes the v2 envelope as a v1 envelope to data setter", func() {
