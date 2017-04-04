@@ -144,6 +144,14 @@ type mockDopplerIngressServerV2 struct {
 	SenderOutput struct {
 		Ret0 chan error
 	}
+
+	BatchSenderCalled chan bool
+	BatchSenderInput  struct {
+		Arg0 chan v2.DopplerIngress_BatchSenderServer
+	}
+	BatchSenderOutput struct {
+		Ret0 chan error
+	}
 }
 
 func newMockDopplerIngressServerV2() *mockDopplerIngressServerV2 {
@@ -151,12 +159,21 @@ func newMockDopplerIngressServerV2() *mockDopplerIngressServerV2 {
 	m.SenderCalled = make(chan bool, 100)
 	m.SenderInput.Arg0 = make(chan v2.DopplerIngress_SenderServer, 100)
 	m.SenderOutput.Ret0 = make(chan error, 100)
+
+	m.BatchSenderCalled = make(chan bool, 100)
+	m.BatchSenderInput.Arg0 = make(chan v2.DopplerIngress_BatchSenderServer, 100)
+	m.BatchSenderOutput.Ret0 = make(chan error, 100)
 	return m
 }
 func (m *mockDopplerIngressServerV2) Sender(arg0 v2.DopplerIngress_SenderServer) error {
 	m.SenderCalled <- true
 	m.SenderInput.Arg0 <- arg0
 	return <-m.SenderOutput.Ret0
+}
+func (m *mockDopplerIngressServerV2) BatchSender(arg0 v2.DopplerIngress_BatchSenderServer) error {
+	m.BatchSenderCalled <- true
+	m.BatchSenderInput.Arg0 <- arg0
+	return <-m.BatchSenderOutput.Ret0
 }
 
 type mockDopplerIngestor_PusherServerV2 struct {

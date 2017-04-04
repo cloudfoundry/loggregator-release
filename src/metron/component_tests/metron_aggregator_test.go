@@ -48,18 +48,22 @@ var _ = Describe("MetronAggregator", func() {
 			return sender.Send(buildCounterEnvelope(10, "name-1", "origin-1"))
 		}, 2).Should(Succeed())
 
-		var rx v2.DopplerIngress_SenderServer
-		Expect(consumerServer.V2.SenderInput.Arg0).Should(Receive(&rx))
+		var rx v2.DopplerIngress_BatchSenderServer
+		Expect(consumerServer.V2.BatchSenderInput.Arg0).Should(Receive(&rx))
 
 		f := func() uint64 {
-			envelope, err := rx.Recv()
+			batch, err := rx.Recv()
 			Expect(err).ToNot(HaveOccurred())
 
-			if envelope.GetCounter().Name != "name-1" {
-				return 0
+			for _, envelope := range batch.Batch {
+				if envelope.GetCounter().Name != "name-1" {
+					continue
+				}
+
+				return envelope.GetCounter().GetTotal()
 			}
 
-			return envelope.GetCounter().GetTotal()
+			return 0
 		}
 		Eventually(f, 10).Should(BeNumerically(">", 40))
 	})

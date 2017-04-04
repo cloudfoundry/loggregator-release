@@ -20,7 +20,7 @@ func NewSenderFetcher(opts ...grpc.DialOption) *SenderFetcher {
 	}
 }
 
-func (p *SenderFetcher) Fetch(addr string) (io.Closer, plumbing.DopplerIngress_SenderClient, error) {
+func (p *SenderFetcher) Fetch(addr string) (io.Closer, plumbing.DopplerIngress_BatchSenderClient, error) {
 	conn, err := grpc.Dial(addr, p.opts...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error dialing ingestor stream to %s: %s", addr, err)
@@ -29,7 +29,7 @@ func (p *SenderFetcher) Fetch(addr string) (io.Closer, plumbing.DopplerIngress_S
 	client := plumbing.NewDopplerIngressClient(conn)
 	log.Printf("successfully connected to doppler %s", addr)
 
-	sender, err := client.Sender(context.Background())
+	sender, err := client.BatchSender(context.Background())
 	if err != nil {
 		conn.Close()
 		return nil, nil, fmt.Errorf("error establishing ingestor stream to %s: %s", addr, err)

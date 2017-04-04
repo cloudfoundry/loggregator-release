@@ -16,12 +16,12 @@ import (
 type SpyConnector struct {
 	mu      sync.Mutex
 	closer  io.Closer
-	client  plumbing.DopplerIngress_SenderClient
+	client  plumbing.DopplerIngress_BatchSenderClient
 	err     error
 	called_ int
 }
 
-func (s *SpyConnector) Connect() (io.Closer, plumbing.DopplerIngress_SenderClient, error) {
+func (s *SpyConnector) Connect() (io.Closer, plumbing.DopplerIngress_BatchSenderClient, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.called_++
@@ -39,13 +39,14 @@ func (s *SpyConnector) called() int {
 }
 
 type SpyClient struct {
-	envelope *plumbing.Envelope
-	err      error
-	plumbing.DopplerIngress_SenderClient
+	plumbing.DopplerIngress_BatchSenderClient
+
+	batch *plumbing.EnvelopeBatch
+	err   error
 }
 
-func (s *SpyClient) Send(e *plumbing.Envelope) error {
-	s.envelope = e
+func (s *SpyClient) Send(e *plumbing.EnvelopeBatch) error {
+	s.batch = e
 	return s.err
 }
 
@@ -83,7 +84,9 @@ var _ = Describe("ConnManager", func() {
 				return connManager.Write(e)
 			}
 			Eventually(f).Should(Succeed())
-			Expect(senderClient.envelope).To(Equal(e))
+
+			Expect(senderClient.batch.Batch).To(HaveLen(1))
+			Expect(senderClient.batch.Batch[0]).To(Equal(e))
 		})
 
 		It("recycles the connections after max writes", func() {

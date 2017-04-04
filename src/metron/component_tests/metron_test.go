@@ -101,25 +101,29 @@ var _ = Describe("Metron", func() {
 				return sender.Send(emitEnvelope)
 			}, 5).Should(Succeed())
 
-			var rx v2.DopplerIngress_SenderServer
-			Expect(consumerServer.V2.SenderInput.Arg0).Should(Receive(&rx))
+			var rx v2.DopplerIngress_BatchSenderServer
+			Expect(consumerServer.V2.BatchSenderInput.Arg0).Should(Receive(&rx))
 
-			var env *v2.Envelope
+			var envBatch *v2.EnvelopeBatch
 			f := func() *v2.Envelope {
-				envelope, err := rx.Recv()
+				batch, err := rx.Recv()
 				Expect(err).ToNot(HaveOccurred())
 
-				defer func() { env = envelope }()
+				defer func() { envBatch = batch }()
 
-				if envelope.GetLog() != nil {
-					return envelope
+				for _, envelope := range batch.Batch {
+					if envelope.GetLog() != nil {
+						return envelope
+					}
 				}
 
 				return nil
 			}
 			Eventually(f).ShouldNot(BeNil())
 
-			Expect(*env).To(MatchFields(IgnoreExtras, Fields{
+			Expect(envBatch.Batch).To(HaveLen(1))
+
+			Expect(*envBatch.Batch[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Message": Equal(&v2.Envelope_Log{
 					Log: &v2.Log{Payload: []byte("some-message")},
 				}),
@@ -156,15 +160,21 @@ var _ = Describe("Metron", func() {
 				}
 			}()
 
-			var rx v2.DopplerIngress_SenderServer
-			Eventually(consumerServer.V2.SenderInput.Arg0).Should(Receive(&rx))
+			var rx v2.DopplerIngress_BatchSenderServer
+			Eventually(consumerServer.V2.BatchSenderInput.Arg0).Should(Receive(&rx))
 
 			f := func() bool {
-				envelope, err := rx.Recv()
+				batch, err := rx.Recv()
 				Expect(err).ToNot(HaveOccurred())
 
-				return envelope.GetCounter() != nil &&
-					envelope.GetCounter().GetTotal() > 5
+				for _, envelope := range batch.Batch {
+					if envelope.GetCounter() != nil &&
+						envelope.GetCounter().GetTotal() > 5 {
+						return true
+					}
+				}
+
+				return false
 			}
 			Eventually(f, 20, "1ns").Should(Equal(true))
 		})
