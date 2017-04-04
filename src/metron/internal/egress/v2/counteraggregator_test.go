@@ -25,9 +25,9 @@ var _ = Describe("Counteraggregator", func() {
 		}
 
 		aggregator := egress.NewCounterAggregator(mockWriter)
-		aggregator.Write(logEnvelope)
+		aggregator.Write([]*plumbing.Envelope{logEnvelope})
 
-		Expect(mockWriter.WriteInput.Msg).To(Receive(Equal(logEnvelope)))
+		Expect(mockWriter.WriteInput.Msg).To(Receive(Equal([]*plumbing.Envelope{logEnvelope})))
 	})
 
 	It("calculates totals for same counter envelopes", func() {
@@ -38,12 +38,14 @@ var _ = Describe("Counteraggregator", func() {
 		aggregator.Write(buildCounterEnvelope(10, "name-1", "origin-1"))
 		aggregator.Write(buildCounterEnvelope(15, "name-1", "origin-1"))
 
-		var receivedEnvelope *plumbing.Envelope
+		var receivedEnvelope []*plumbing.Envelope
 		Expect(mockWriter.WriteInput.Msg).To(Receive(&receivedEnvelope))
-		Expect(receivedEnvelope.GetCounter().GetTotal()).To(Equal(uint64(10)))
+		Expect(receivedEnvelope).To(HaveLen(1))
+		Expect(receivedEnvelope[0].GetCounter().GetTotal()).To(Equal(uint64(10)))
 
 		Expect(mockWriter.WriteInput.Msg).To(Receive(&receivedEnvelope))
-		Expect(receivedEnvelope.GetCounter().GetTotal()).To(Equal(uint64(25)))
+		Expect(receivedEnvelope).To(HaveLen(1))
+		Expect(receivedEnvelope[0].GetCounter().GetTotal()).To(Equal(uint64(25)))
 	})
 
 	It("calculates totals separately for counter envelopes with unique names", func() {
@@ -55,15 +57,18 @@ var _ = Describe("Counteraggregator", func() {
 		aggregator.Write(buildCounterEnvelope(15, "name-2", "origin-1"))
 		aggregator.Write(buildCounterEnvelope(20, "name-3", "origin-1"))
 
-		var receivedEnvelope *plumbing.Envelope
+		var receivedEnvelope []*plumbing.Envelope
 		Expect(mockWriter.WriteInput.Msg).To(Receive(&receivedEnvelope))
-		Expect(receivedEnvelope.GetCounter().GetTotal()).To(Equal(uint64(10)))
+		Expect(receivedEnvelope).To(HaveLen(1))
+		Expect(receivedEnvelope[0].GetCounter().GetTotal()).To(Equal(uint64(10)))
 
 		Expect(mockWriter.WriteInput.Msg).To(Receive(&receivedEnvelope))
-		Expect(receivedEnvelope.GetCounter().GetTotal()).To(Equal(uint64(15)))
+		Expect(receivedEnvelope).To(HaveLen(1))
+		Expect(receivedEnvelope[0].GetCounter().GetTotal()).To(Equal(uint64(15)))
 
 		Expect(mockWriter.WriteInput.Msg).To(Receive(&receivedEnvelope))
-		Expect(receivedEnvelope.GetCounter().GetTotal()).To(Equal(uint64(20)))
+		Expect(receivedEnvelope).To(HaveLen(1))
+		Expect(receivedEnvelope[0].GetCounter().GetTotal()).To(Equal(uint64(20)))
 	})
 
 	It("calculates totals separately for counter envelopes with same name but unique tags", func() {
@@ -75,15 +80,18 @@ var _ = Describe("Counteraggregator", func() {
 		aggregator.Write(buildCounterEnvelope(15, "name-1", "origin-1"))
 		aggregator.Write(buildCounterEnvelope(20, "name-1", "origin-2"))
 
-		var receivedEnvelope *plumbing.Envelope
+		var receivedEnvelope []*plumbing.Envelope
 		Expect(mockWriter.WriteInput.Msg).To(Receive(&receivedEnvelope))
-		Expect(receivedEnvelope.GetCounter().GetTotal()).To(Equal(uint64(10)))
+		Expect(receivedEnvelope).To(HaveLen(1))
+		Expect(receivedEnvelope[0].GetCounter().GetTotal()).To(Equal(uint64(10)))
 
 		Expect(mockWriter.WriteInput.Msg).To(Receive(&receivedEnvelope))
-		Expect(receivedEnvelope.GetCounter().GetTotal()).To(Equal(uint64(25)))
+		Expect(receivedEnvelope).To(HaveLen(1))
+		Expect(receivedEnvelope[0].GetCounter().GetTotal()).To(Equal(uint64(25)))
 
 		Expect(mockWriter.WriteInput.Msg).To(Receive(&receivedEnvelope))
-		Expect(receivedEnvelope.GetCounter().GetTotal()).To(Equal(uint64(20)))
+		Expect(receivedEnvelope).To(HaveLen(1))
+		Expect(receivedEnvelope[0].GetCounter().GetTotal()).To(Equal(uint64(20)))
 	})
 
 	It("calculations are unaffected for counter envelopes with total set", func() {
@@ -94,12 +102,14 @@ var _ = Describe("Counteraggregator", func() {
 		aggregator.Write(buildCounterEnvelope(10, "name-1", "origin-1"))
 		aggregator.Write(buildCounterEnvelopeWithTotal(5000, "name-1", "origin-1"))
 
-		var receivedEnvelope *plumbing.Envelope
+		var receivedEnvelope []*plumbing.Envelope
 		Expect(mockWriter.WriteInput.Msg).To(Receive(&receivedEnvelope))
-		Expect(receivedEnvelope.GetCounter().GetTotal()).To(Equal(uint64(10)))
+		Expect(receivedEnvelope).To(HaveLen(1))
+		Expect(receivedEnvelope[0].GetCounter().GetTotal()).To(Equal(uint64(10)))
 
 		Expect(mockWriter.WriteInput.Msg).To(Receive(&receivedEnvelope))
-		Expect(receivedEnvelope.GetCounter().GetTotal()).To(Equal(uint64(10)))
+		Expect(receivedEnvelope).To(HaveLen(1))
+		Expect(receivedEnvelope[0].GetCounter().GetTotal()).To(Equal(uint64(10)))
 	})
 
 	It("prunes the cache of totals when there are too many unique counters", func() {
@@ -110,9 +120,10 @@ var _ = Describe("Counteraggregator", func() {
 
 		aggregator.Write(buildCounterEnvelope(500, "unique-name", "origin-1"))
 
-		var receivedEnvelope *plumbing.Envelope
+		var receivedEnvelope []*plumbing.Envelope
 		Expect(mockWriter.WriteInput.Msg).To(Receive(&receivedEnvelope))
-		Expect(receivedEnvelope.GetCounter().GetTotal()).To(Equal(uint64(500)))
+		Expect(receivedEnvelope).To(HaveLen(1))
+		Expect(receivedEnvelope[0].GetCounter().GetTotal()).To(Equal(uint64(500)))
 
 		for i := 0; i < 10000; i++ {
 			aggregator.Write(buildCounterEnvelope(10, fmt.Sprint("name-", i), "origin-1"))
@@ -123,12 +134,13 @@ var _ = Describe("Counteraggregator", func() {
 		aggregator.Write(buildCounterEnvelope(10, "unique-name", "origin-1"))
 
 		Expect(mockWriter.WriteInput.Msg).To(Receive(&receivedEnvelope))
-		Expect(receivedEnvelope.GetCounter().GetTotal()).To(Equal(uint64(10)))
+		Expect(receivedEnvelope).To(HaveLen(1))
+		Expect(receivedEnvelope[0].GetCounter().GetTotal()).To(Equal(uint64(10)))
 	})
 })
 
-func buildCounterEnvelope(delta uint64, name, origin string) *plumbing.Envelope {
-	return &plumbing.Envelope{
+func buildCounterEnvelope(delta uint64, name, origin string) []*plumbing.Envelope {
+	return []*plumbing.Envelope{{
 		Message: &plumbing.Envelope_Counter{
 			Counter: &plumbing.Counter{
 				Name: name,
@@ -140,11 +152,11 @@ func buildCounterEnvelope(delta uint64, name, origin string) *plumbing.Envelope 
 		Tags: map[string]*plumbing.Value{
 			"origin": {Data: &plumbing.Value_Text{origin}},
 		},
-	}
+	}}
 }
 
-func buildCounterEnvelopeWithTotal(total uint64, name, origin string) *plumbing.Envelope {
-	return &plumbing.Envelope{
+func buildCounterEnvelopeWithTotal(total uint64, name, origin string) []*plumbing.Envelope {
+	return []*plumbing.Envelope{{
 		Message: &plumbing.Envelope_Counter{
 			Counter: &plumbing.Counter{
 				Name: name,
@@ -156,5 +168,5 @@ func buildCounterEnvelopeWithTotal(total uint64, name, origin string) *plumbing.
 		Tags: map[string]*plumbing.Value{
 			"origin": {Data: &plumbing.Value_Text{origin}},
 		},
-	}
+	}}
 }

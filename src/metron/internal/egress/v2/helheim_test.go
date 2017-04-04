@@ -28,7 +28,7 @@ func (m *mockNexter) Next() *v2.Envelope {
 type mockWriter struct {
 	WriteCalled chan bool
 	WriteInput  struct {
-		Msg chan *v2.Envelope
+		Msg chan []*v2.Envelope
 	}
 	WriteOutput struct {
 		Ret0 chan error
@@ -38,11 +38,11 @@ type mockWriter struct {
 func newMockWriter() *mockWriter {
 	m := &mockWriter{}
 	m.WriteCalled = make(chan bool, 100)
-	m.WriteInput.Msg = make(chan *v2.Envelope, 100)
+	m.WriteInput.Msg = make(chan []*v2.Envelope, 100)
 	m.WriteOutput.Ret0 = make(chan error, 100)
 	return m
 }
-func (m *mockWriter) Write(msg *v2.Envelope) error {
+func (m *mockWriter) Write(msg []*v2.Envelope) error {
 	m.WriteCalled <- true
 	m.WriteInput.Msg <- msg
 	return <-m.WriteOutput.Ret0

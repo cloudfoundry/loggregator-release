@@ -10,7 +10,7 @@ import (
 )
 
 type Conn interface {
-	Write(data *plumbing.Envelope) (err error)
+	Write(data []*plumbing.Envelope) (err error)
 }
 
 type ClientPool struct {
@@ -28,13 +28,13 @@ func New(conns ...Conn) *ClientPool {
 	return pool
 }
 
-func (c *ClientPool) Write(msg *plumbing.Envelope) error {
+func (c *ClientPool) Write(msgs []*plumbing.Envelope) error {
 	seed := rand.Int()
 	for i := range c.conns {
 		idx := (i + seed) % len(c.conns)
 		conn := *(*Conn)(atomic.LoadPointer(&c.conns[idx]))
 
-		if err := conn.Write(msg); err == nil {
+		if err := conn.Write(msgs); err == nil {
 			return nil
 		}
 	}

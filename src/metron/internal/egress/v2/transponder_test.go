@@ -21,7 +21,7 @@ var _ = Describe("Transponder", func() {
 		go tx.Start()
 
 		Eventually(nexter.NextCalled).Should(Receive())
-		Eventually(writer.WriteInput.Msg).Should(Receive(Equal(envelope)))
+		Eventually(writer.WriteInput.Msg).Should(Receive(Equal([]*v2.Envelope{envelope})))
 	})
 
 	Describe("tagging", func() {
@@ -42,11 +42,12 @@ var _ = Describe("Transponder", func() {
 
 			Eventually(nexter.NextCalled).Should(Receive())
 
-			var output *v2.Envelope
+			var output []*v2.Envelope
 			Eventually(writer.WriteInput.Msg).Should(Receive(&output))
 
-			Expect(output.Tags["tag-one"].GetText()).To(Equal("value-one"))
-			Expect(output.Tags["tag-two"].GetText()).To(Equal("value-two"))
+			Expect(output).To(HaveLen(1))
+			Expect(output[0].Tags["tag-one"].GetText()).To(Equal("value-one"))
+			Expect(output[0].Tags["tag-two"].GetText()).To(Equal("value-two"))
 		})
 
 		It("does not write over tags if they already exist", func() {
@@ -74,10 +75,11 @@ var _ = Describe("Transponder", func() {
 
 			Eventually(nexter.NextCalled).Should(Receive())
 
-			var output *v2.Envelope
+			var output []*v2.Envelope
 			Eventually(writer.WriteInput.Msg).Should(Receive(&output))
+			Expect(output).To(HaveLen(1))
 
-			Expect(output.Tags["existing-tag"].GetText()).To(Equal("existing-value"))
+			Expect(output[0].Tags["existing-tag"].GetText()).To(Equal("existing-value"))
 		})
 	})
 })

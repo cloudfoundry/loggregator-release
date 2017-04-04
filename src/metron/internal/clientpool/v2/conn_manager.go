@@ -39,14 +39,14 @@ func NewConnManager(c Connector, maxWrites int64, pollDuration time.Duration) *C
 	return m
 }
 
-func (m *ConnManager) Write(envelope *plumbing.Envelope) error {
+func (m *ConnManager) Write(envelopes []*plumbing.Envelope) error {
 	conn := atomic.LoadPointer(&m.conn)
 	if conn == nil || (*v2GRPCConn)(conn) == nil {
 		return errors.New("no connection to doppler present")
 	}
 
 	gRPCConn := (*v2GRPCConn)(conn)
-	err := gRPCConn.client.Send(&plumbing.EnvelopeBatch{Batch: []*plumbing.Envelope{envelope}})
+	err := gRPCConn.client.Send(&plumbing.EnvelopeBatch{Batch: envelopes})
 
 	if err != nil {
 		log.Printf("error writing to doppler %s: %s", gRPCConn.name, err)

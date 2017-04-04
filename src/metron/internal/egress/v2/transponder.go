@@ -12,7 +12,7 @@ type Nexter interface {
 }
 
 type Writer interface {
-	Write(msg *plumbing.Envelope) error
+	Write(msgs []*plumbing.Envelope) error
 }
 
 type Transponder struct {
@@ -35,7 +35,7 @@ func (t *Transponder) Start() {
 	for {
 		envelope := t.nexter.Next()
 		t.addTags(envelope)
-		err := t.writer.Write(envelope)
+		err := t.writer.Write([]*plumbing.Envelope{envelope})
 		if err != nil {
 			// metric-documentation-v2: (loggregator.metron.dropped) Number of messages
 			// dropped when failing to write to Dopplers v2 API
