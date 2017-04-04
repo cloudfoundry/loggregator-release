@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -ex
 
 for i in `seq 1 $NUM_APPS`; do
     rm -f output-$i.txt
