@@ -3,7 +3,7 @@ set -ex
 
 for i in `seq 1 $NUM_APPS`; do
     cf delete drainspinner-$i -r -f
-    rm output-$i.txt || true
+    rm "output-$i.txt" || true
 done;
 
 count=0

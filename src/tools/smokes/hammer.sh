@@ -2,7 +2,7 @@
 set -ex
 
 for i in `seq 1 $NUM_APPS`; do
-    rm "output-$i.txt"
+    rm "output-$i.txt" || true
     cf logs drainspinner-$i > output-$i.txt 2>&1 &
 done;
 
