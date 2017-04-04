@@ -130,7 +130,7 @@ func (p *DopplerProxy) serveFirehose(firehoseSubscriptionId string, writer http.
 	})
 	if err != nil {
 		writer.WriteHeader(http.StatusServiceUnavailable)
-		log.Println("error occurred when subscribing to doppler: %s", err)
+		log.Printf("error occurred when subscribing to doppler: %s", err)
 		return
 	}
 
