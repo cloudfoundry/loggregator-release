@@ -58,7 +58,6 @@ func NewDopplerProxy(
 	r := mux.NewRouter()
 	p.Router = *r
 
-	p.HandleFunc("/apps/{appID}/stream", p.serveStream)
 	p.HandleFunc("/firehose/{subID}", p.serveFirehose)
 
 	p.Handle("/set-cookie", NewSetCookieHandler(p.cookieDomain))
@@ -75,17 +74,23 @@ func NewDopplerProxy(
 	)
 	p.Handle("/apps/{appID}/recentlogs", recentLogsHandler)
 
-	go p.emitMetrics()
+	streamHandler := NewStreamHandler(p.grpcConn)
+	p.Handle("/apps/{appID}/stream", NewLogAccessMiddleware(
+		p.logAuthorize,
+		streamHandler,
+	))
+
+	go p.emitMetrics(streamHandler)
 
 	return p
 }
 
-func (p *DopplerProxy) emitMetrics() {
+func (p *DopplerProxy) emitMetrics(stream *StreamHandler) {
 	for range time.Tick(metricsInterval) {
 		// metric-documentation-v1: (dopplerProxy.firehoses) Number of open firehose streams
 		metrics.SendValue("dopplerProxy.firehoses", float64(atomic.LoadInt64(&p.numFirehoses)), "connections")
 		// metric-documentation-v1: (dopplerProxy.appStreams) Number of open app streams
-		metrics.SendValue("dopplerProxy.appStreams", float64(atomic.LoadInt64(&p.numAppStreams)), "connections")
+		metrics.SendValue("dopplerProxy.appStreams", float64(stream.Count()), "connections")
 	}
 }
 
@@ -116,52 +121,10 @@ func (p *DopplerProxy) serveFirehose(writer http.ResponseWriter, request *http.R
 		return
 	}
 
-	p.serveWS(FIREHOSE_ID, subID, writer, request, client)
+	serveWS(FIREHOSE_ID, subID, writer, request, client)
 }
 
-// "^/apps/(.*)/(recentlogs|stream|containermetrics)$"
-func (p *DopplerProxy) serveStream(writer http.ResponseWriter, request *http.Request) {
-	atomic.AddInt64(&p.numAppStreams, 1)
-	defer atomic.AddInt64(&p.numAppStreams, -1)
-
-	appID := mux.Vars(request)["appID"]
-	authToken := getAuthToken(request)
-
-	status, _ := p.logAuthorize(authToken, appID)
-	if status != http.StatusOK {
-		switch status {
-		case http.StatusUnauthorized:
-			writer.WriteHeader(status)
-			writer.Header().Set("WWW-Authenticate", "Basic")
-		case http.StatusForbidden, http.StatusNotFound:
-			status = http.StatusNotFound
-		default:
-			status = http.StatusInternalServerError
-		}
-
-		writer.WriteHeader(status)
-
-		return
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	client, err := p.grpcConn.Subscribe(ctx, &plumbing.SubscriptionRequest{
-		Filter: &plumbing.Filter{
-			AppID: appID,
-		},
-	})
-	if err != nil {
-		writer.WriteHeader(http.StatusServiceUnavailable)
-		return
-	}
-
-	p.serveWS("stream", appID, writer, request, client)
-	return
-}
-
-func (p *DopplerProxy) serveWS(endpointType, streamID string, w http.ResponseWriter, r *http.Request, recv func() ([]byte, error)) {
+func serveWS(endpointType, streamID string, w http.ResponseWriter, r *http.Request, recv func() ([]byte, error)) {
 	dopplerEndpoint := NewDopplerEndpoint(endpointType, streamID, false)
 	data := make(chan []byte)
 	handler := dopplerEndpoint.HProvider(data)
