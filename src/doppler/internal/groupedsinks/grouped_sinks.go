@@ -1,6 +1,9 @@
 package groupedsinks
 
 import (
+	"log"
+	"sync"
+
 	"doppler/internal/groupedsinks/firehose_group"
 	"doppler/internal/groupedsinks/sink_wrapper"
 	"doppler/internal/sinks"
@@ -8,8 +11,6 @@ import (
 	"doppler/internal/sinks/dump"
 	"doppler/internal/sinks/syslog"
 	"doppler/internal/sinks/websocket"
-	"log"
-	"sync"
 
 	"github.com/cloudfoundry/sonde-go/events"
 )

@@ -1,14 +1,16 @@
 package groupedsinks_test
 
 import (
+	"net"
+	"net/url"
+	"time"
+
 	"doppler/internal/groupedsinks"
 	"doppler/internal/sinks"
 	"doppler/internal/sinks/containermetric"
 	"doppler/internal/sinks/dump"
 	"doppler/internal/sinks/syslog"
 	"doppler/internal/sinks/websocket"
-	"net/url"
-	"time"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
@@ -558,4 +560,32 @@ func (f *fakeSink) ShouldReceiveErrors() bool {
 }
 func (f *fakeSink) GetInstrumentationMetric() sinks.Metric {
 	return sinks.Metric{Name: "numberOfMessagesLost", Value: 5}
+}
+
+type fakeMessageWriter struct {
+	RemoteAddress string
+}
+
+func (fake *fakeMessageWriter) RemoteAddr() net.Addr {
+	return fakeAddr{remoteAddress: fake.RemoteAddress}
+}
+
+func (fake *fakeMessageWriter) WriteMessage(messageType int, data []byte) error {
+	return nil
+}
+
+func (fake *fakeMessageWriter) SetWriteDeadline(t time.Time) error {
+	return nil
+}
+
+type fakeAddr struct {
+	remoteAddress string
+}
+
+func (fake fakeAddr) Network() string {
+	return "RemoteAddressNetwork"
+}
+
+func (fake fakeAddr) String() string {
+	return fake.remoteAddress
 }
