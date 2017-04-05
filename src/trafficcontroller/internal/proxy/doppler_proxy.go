@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"plumbing"
-	"sync/atomic"
 	"trafficcontroller/internal/auth"
 
 	"time"
@@ -42,14 +41,14 @@ type grpcConnector interface {
 }
 
 func NewDopplerProxy(
-	logAuthorize auth.LogAccessAuthorizer,
+	logAuthorizer auth.LogAccessAuthorizer,
 	adminAuthorizer auth.AdminAccessAuthorizer,
 	grpcConn grpcConnector,
 	cookieDomain string,
 	timeout time.Duration,
 ) *DopplerProxy {
 	p := &DopplerProxy{
-		logAuthorize:   logAuthorize,
+		logAuthorize:   logAuthorizer,
 		adminAuthorize: adminAuthorizer,
 		grpcConn:       grpcConn,
 		cookieDomain:   cookieDomain,
@@ -58,70 +57,37 @@ func NewDopplerProxy(
 	r := mux.NewRouter()
 	p.Router = *r
 
-	p.HandleFunc("/firehose/{subID}", p.serveFirehose)
+	adminAccessMiddleware := NewAdminAccessMiddleware(adminAuthorizer)
+	logAccessMiddleware := NewLogAccessMiddleware(logAuthorizer)
 
 	p.Handle("/set-cookie", NewSetCookieHandler(p.cookieDomain))
 
-	containerMetricsHandler := NewLogAccessMiddleware(
-		p.logAuthorize,
-		NewContainerMetricsHandler(p.grpcConn, p.timeout),
-	)
-	p.Handle("/apps/{appID}/containermetrics", containerMetricsHandler)
-
-	recentLogsHandler := NewLogAccessMiddleware(
-		p.logAuthorize,
-		NewRecentLogsHandler(p.grpcConn, p.timeout),
-	)
-	p.Handle("/apps/{appID}/recentlogs", recentLogsHandler)
-
-	streamHandler := NewStreamHandler(p.grpcConn)
-	p.Handle("/apps/{appID}/stream", NewLogAccessMiddleware(
-		p.logAuthorize,
-		streamHandler,
+	containerMetricsHandler := NewContainerMetricsHandler(p.grpcConn, p.timeout)
+	p.Handle("/apps/{appID}/containermetrics", logAccessMiddleware.Wrap(
+		containerMetricsHandler,
 	))
 
-	go p.emitMetrics(streamHandler)
+	recentLogsHandler := NewRecentLogsHandler(p.grpcConn, p.timeout)
+	p.Handle("/apps/{appID}/recentlogs", logAccessMiddleware.Wrap(recentLogsHandler))
+
+	streamHandler := NewStreamHandler(p.grpcConn)
+	p.Handle("/apps/{appID}/stream", logAccessMiddleware.Wrap(streamHandler))
+
+	firehoseHandler := NewFirehoseHandler(p.grpcConn)
+	p.Handle("/firehose/{subID}", adminAccessMiddleware.Wrap(firehoseHandler))
+
+	go p.emitMetrics(firehoseHandler, streamHandler)
 
 	return p
 }
 
-func (p *DopplerProxy) emitMetrics(stream *StreamHandler) {
+func (p *DopplerProxy) emitMetrics(firehose *FirehoseHandler, stream *StreamHandler) {
 	for range time.Tick(metricsInterval) {
 		// metric-documentation-v1: (dopplerProxy.firehoses) Number of open firehose streams
-		metrics.SendValue("dopplerProxy.firehoses", float64(atomic.LoadInt64(&p.numFirehoses)), "connections")
+		metrics.SendValue("dopplerProxy.firehoses", float64(firehose.Count()), "connections")
 		// metric-documentation-v1: (dopplerProxy.appStreams) Number of open app streams
 		metrics.SendValue("dopplerProxy.appStreams", float64(stream.Count()), "connections")
 	}
-}
-
-func (p *DopplerProxy) serveFirehose(writer http.ResponseWriter, request *http.Request) {
-	atomic.AddInt64(&p.numFirehoses, 1)
-	defer atomic.AddInt64(&p.numFirehoses, -1)
-
-	subID := mux.Vars(request)["subID"]
-	authToken := getAuthToken(request)
-
-	authorized, err := p.adminAuthorize(authToken)
-	if !authorized {
-		writer.Header().Set("WWW-Authenticate", "Basic")
-		writer.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprintf(writer, "You are not authorized. %s", err.Error())
-		return
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	client, err := p.grpcConn.Subscribe(ctx, &plumbing.SubscriptionRequest{
-		ShardID: subID,
-	})
-	if err != nil {
-		writer.WriteHeader(http.StatusServiceUnavailable)
-		log.Printf("error occurred when subscribing to doppler: %s", err)
-		return
-	}
-
-	serveWS(FIREHOSE_ID, subID, writer, request, client)
 }
 
 func serveWS(endpointType, streamID string, w http.ResponseWriter, r *http.Request, recv func() ([]byte, error)) {
