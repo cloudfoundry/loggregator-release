@@ -62,9 +62,14 @@ func NewDopplerProxy(
 	p.Router = *r
 
 	p.HandleFunc("/apps/{appID}/stream", p.stream)
-	p.HandleFunc("/apps/{appID}/containermetrics", p.containermetrics)
 	p.HandleFunc("/firehose/{subID}", p.firehose)
 	p.HandleFunc("/set-cookie", p.setcookie)
+
+	containerMetricsHandler := NewLogAccessMiddleware(
+		p.logAuthorize,
+		NewContainerMetricsHandler(p.grpcConn, p.timeout),
+	)
+	p.Handle("/apps/{appID}/containermetrics", containerMetricsHandler)
 
 	recentLogsHandler := NewLogAccessMiddleware(
 		p.logAuthorize,
@@ -99,12 +104,6 @@ func (p *DopplerProxy) stream(w http.ResponseWriter, r *http.Request) {
 	defer atomic.AddInt64(&p.numAppStreams, -1)
 
 	p.serveAppLogs("stream", mux.Vars(r)["appID"], w, r)
-}
-
-func (p *DopplerProxy) containermetrics(w http.ResponseWriter, r *http.Request) {
-	p.serveAppLogs("containermetrics", mux.Vars(r)["appID"], w, r)
-	// metric-documentation-v1: (dopplerProxy.containermetricsLatency) USELESS metric which measures nothing of value
-	sendLatencyMetric("containermetrics", time.Now())
 }
 
 func (p *DopplerProxy) setcookie(w http.ResponseWriter, r *http.Request) {
@@ -162,16 +161,6 @@ func (p *DopplerProxy) serveAppLogs(requestPath, appID string, writer http.Respo
 	defer cancel()
 
 	switch requestPath {
-	case "containermetrics":
-		ctx, _ = context.WithDeadline(ctx, time.Now().Add(p.timeout))
-		resp := deDupe(p.grpcConn.ContainerMetrics(ctx, appID))
-		if err := ctx.Err(); err != nil {
-			writer.WriteHeader(http.StatusServiceUnavailable)
-			log.Printf("containermetrics request encountered an error: %s", err)
-			return
-		}
-		p.serveMultiPartResponse(writer, resp)
-		return
 	case "stream":
 		client, err := p.grpcConn.Subscribe(ctx, &plumbing.SubscriptionRequest{
 			Filter: &plumbing.Filter{
