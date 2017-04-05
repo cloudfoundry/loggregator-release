@@ -44,9 +44,11 @@ var _ = Describe("MetronAggregator", func() {
 		sender, err := client.Sender(ctx)
 		Expect(err).ToNot(HaveOccurred())
 
-		Consistently(func() error {
-			return sender.Send(buildCounterEnvelope(10, "name-1", "origin-1"))
-		}, 2).Should(Succeed())
+		go func() {
+			for range time.Tick(time.Millisecond) {
+				sender.Send(buildCounterEnvelope(10, "name-1", "origin-1"))
+			}
+		}()
 
 		var rx v2.DopplerIngress_BatchSenderServer
 		Expect(consumerServer.V2.BatchSenderInput.Arg0).Should(Receive(&rx))
@@ -56,7 +58,7 @@ var _ = Describe("MetronAggregator", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			for _, envelope := range batch.Batch {
-				if envelope.GetCounter().Name != "name-1" {
+				if envelope.GetCounter().Name != "name-1" || envelope.GetCounter().GetTotal() == 0 {
 					continue
 				}
 

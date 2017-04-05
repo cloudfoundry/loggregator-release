@@ -97,22 +97,26 @@ var _ = Describe("Metron", func() {
 			sender, err := client.Sender(context.Background())
 			Expect(err).ToNot(HaveOccurred())
 
-			Consistently(func() error {
-				return sender.Send(emitEnvelope)
-			}, 5).Should(Succeed())
+			go func() {
+				for range time.Tick(time.Millisecond) {
+					sender.Send(emitEnvelope)
+				}
+			}()
 
 			var rx v2.DopplerIngress_BatchSenderServer
 			Expect(consumerServer.V2.BatchSenderInput.Arg0).Should(Receive(&rx))
 
 			var envBatch *v2.EnvelopeBatch
+			var idx int
 			f := func() *v2.Envelope {
 				batch, err := rx.Recv()
 				Expect(err).ToNot(HaveOccurred())
 
 				defer func() { envBatch = batch }()
 
-				for _, envelope := range batch.Batch {
+				for i, envelope := range batch.Batch {
 					if envelope.GetLog() != nil {
+						idx = i
 						return envelope
 					}
 				}
@@ -121,9 +125,9 @@ var _ = Describe("Metron", func() {
 			}
 			Eventually(f).ShouldNot(BeNil())
 
-			Expect(envBatch.Batch).To(HaveLen(1))
+			Expect(len(envBatch.Batch)).ToNot(BeZero())
 
-			Expect(*envBatch.Batch[0]).To(MatchFields(IgnoreExtras, Fields{
+			Expect(*envBatch.Batch[idx]).To(MatchFields(IgnoreExtras, Fields{
 				"Message": Equal(&v2.Envelope_Log{
 					Log: &v2.Log{Payload: []byte("some-message")},
 				}),

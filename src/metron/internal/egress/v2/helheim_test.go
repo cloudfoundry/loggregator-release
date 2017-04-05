@@ -8,21 +8,23 @@ package v2_test
 import v2 "plumbing/v2"
 
 type mockNexter struct {
-	NextCalled chan bool
-	NextOutput struct {
+	TryNextCalled chan bool
+	TryNextOutput struct {
 		Ret0 chan *v2.Envelope
+		Ret1 chan bool
 	}
 }
 
 func newMockNexter() *mockNexter {
 	m := &mockNexter{}
-	m.NextCalled = make(chan bool, 100)
-	m.NextOutput.Ret0 = make(chan *v2.Envelope, 100)
+	m.TryNextCalled = make(chan bool, 100)
+	m.TryNextOutput.Ret0 = make(chan *v2.Envelope, 100)
+	m.TryNextOutput.Ret1 = make(chan bool, 100)
 	return m
 }
-func (m *mockNexter) Next() *v2.Envelope {
-	m.NextCalled <- true
-	return <-m.NextOutput.Ret0
+func (m *mockNexter) TryNext() (*v2.Envelope, bool) {
+	m.TryNextCalled <- true
+	return <-m.TryNextOutput.Ret0, <-m.TryNextOutput.Ret1
 }
 
 type mockWriter struct {
