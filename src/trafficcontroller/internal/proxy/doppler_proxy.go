@@ -22,15 +22,10 @@ const (
 )
 
 type DopplerProxy struct {
-	mux.Router
+	*mux.Router
 
-	logAuthorize   auth.LogAccessAuthorizer
-	adminAuthorize auth.AdminAccessAuthorizer
-	grpcConn       grpcConnector
-	cookieDomain   string
-	numFirehoses   int64
-	numAppStreams  int64
-	timeout        time.Duration
+	numFirehoses  int64
+	numAppStreams int64
 }
 
 // TODO export this
@@ -47,41 +42,36 @@ func NewDopplerProxy(
 	cookieDomain string,
 	timeout time.Duration,
 ) *DopplerProxy {
-	p := &DopplerProxy{
-		logAuthorize:   logAuthorizer,
-		adminAuthorize: adminAuthorizer,
-		grpcConn:       grpcConn,
-		cookieDomain:   cookieDomain,
-		timeout:        timeout,
-	}
+
 	r := mux.NewRouter()
-	p.Router = *r
 
 	adminAccessMiddleware := NewAdminAccessMiddleware(adminAuthorizer)
 	logAccessMiddleware := NewLogAccessMiddleware(logAuthorizer)
 
-	p.Handle("/set-cookie", NewSetCookieHandler(p.cookieDomain))
+	r.Handle("/set-cookie", NewSetCookieHandler(cookieDomain))
 
-	containerMetricsHandler := NewContainerMetricsHandler(p.grpcConn, p.timeout)
-	p.Handle("/apps/{appID}/containermetrics", logAccessMiddleware.Wrap(
+	containerMetricsHandler := NewContainerMetricsHandler(grpcConn, timeout)
+	r.Handle("/apps/{appID}/containermetrics", logAccessMiddleware.Wrap(
 		containerMetricsHandler,
 	))
 
-	recentLogsHandler := NewRecentLogsHandler(p.grpcConn, p.timeout)
-	p.Handle("/apps/{appID}/recentlogs", logAccessMiddleware.Wrap(recentLogsHandler))
+	recentLogsHandler := NewRecentLogsHandler(grpcConn, timeout)
+	r.Handle("/apps/{appID}/recentlogs", logAccessMiddleware.Wrap(recentLogsHandler))
 
-	streamHandler := NewStreamHandler(p.grpcConn)
-	p.Handle("/apps/{appID}/stream", logAccessMiddleware.Wrap(streamHandler))
+	streamHandler := NewStreamHandler(grpcConn)
+	r.Handle("/apps/{appID}/stream", logAccessMiddleware.Wrap(streamHandler))
 
-	firehoseHandler := NewFirehoseHandler(p.grpcConn)
-	p.Handle("/firehose/{subID}", adminAccessMiddleware.Wrap(firehoseHandler))
+	firehoseHandler := NewFirehoseHandler(grpcConn)
+	r.Handle("/firehose/{subID}", adminAccessMiddleware.Wrap(firehoseHandler))
 
-	go p.emitMetrics(firehoseHandler, streamHandler)
+	go emitMetrics(firehoseHandler, streamHandler)
 
-	return p
+	return &DopplerProxy{
+		Router: r,
+	}
 }
 
-func (p *DopplerProxy) emitMetrics(firehose *FirehoseHandler, stream *StreamHandler) {
+func emitMetrics(firehose *FirehoseHandler, stream *StreamHandler) {
 	for range time.Tick(metricsInterval) {
 		// metric-documentation-v1: (dopplerProxy.firehoses) Number of open firehose streams
 		metrics.SendValue("dopplerProxy.firehoses", float64(firehose.Count()), "connections")
