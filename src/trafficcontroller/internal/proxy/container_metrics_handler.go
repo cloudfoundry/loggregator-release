@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/mux"
 )
 
@@ -37,6 +39,29 @@ func (h *ContainerMetricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 		log.Printf("containermetrics request encountered an error: %s", err)
 		return
 	}
+
 	serveMultiPartResponse(w, resp)
-	return
+}
+
+func deDupe(input [][]byte) [][]byte {
+	messages := make(map[int32]*events.Envelope)
+
+	for _, message := range input {
+		var envelope events.Envelope
+		proto.Unmarshal(message, &envelope)
+		cm := envelope.GetContainerMetric()
+
+		oldEnvelope, ok := messages[cm.GetInstanceIndex()]
+		if !ok || oldEnvelope.GetTimestamp() < envelope.GetTimestamp() {
+			messages[cm.GetInstanceIndex()] = &envelope
+		}
+	}
+
+	output := make([][]byte, 0, len(messages))
+
+	for _, envelope := range messages {
+		bytes, _ := proto.Marshal(envelope)
+		output = append(output, bytes)
+	}
+	return output
 }

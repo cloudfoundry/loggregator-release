@@ -7,15 +7,12 @@ import (
 	"net/http"
 	"net/url"
 	"plumbing"
-	"strconv"
 	"sync/atomic"
 	"trafficcontroller/internal/auth"
 
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
-	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 )
@@ -61,8 +58,8 @@ func NewDopplerProxy(
 	r := mux.NewRouter()
 	p.Router = *r
 
-	p.HandleFunc("/apps/{appID}/stream", p.stream)
-	p.HandleFunc("/firehose/{subID}", p.firehose)
+	p.HandleFunc("/apps/{appID}/stream", p.serveStream)
+	p.HandleFunc("/firehose/{subID}", p.serveFirehose)
 
 	p.Handle("/set-cookie", NewSetCookieHandler(p.cookieDomain))
 
@@ -92,22 +89,11 @@ func (p *DopplerProxy) emitMetrics() {
 	}
 }
 
-func (p *DopplerProxy) firehose(w http.ResponseWriter, r *http.Request) {
+func (p *DopplerProxy) serveFirehose(writer http.ResponseWriter, request *http.Request) {
 	atomic.AddInt64(&p.numFirehoses, 1)
 	defer atomic.AddInt64(&p.numFirehoses, -1)
 
-	subID := mux.Vars(r)["subID"]
-	p.serveFirehose(subID, w, r)
-}
-
-func (p *DopplerProxy) stream(w http.ResponseWriter, r *http.Request) {
-	atomic.AddInt64(&p.numAppStreams, 1)
-	defer atomic.AddInt64(&p.numAppStreams, -1)
-
-	p.serveAppLogs("stream", mux.Vars(r)["appID"], w, r)
-}
-
-func (p *DopplerProxy) serveFirehose(firehoseSubscriptionId string, writer http.ResponseWriter, request *http.Request) {
+	subID := mux.Vars(request)["subID"]
 	authToken := getAuthToken(request)
 
 	authorized, err := p.adminAuthorize(authToken)
@@ -122,7 +108,7 @@ func (p *DopplerProxy) serveFirehose(firehoseSubscriptionId string, writer http.
 	defer cancel()
 
 	client, err := p.grpcConn.Subscribe(ctx, &plumbing.SubscriptionRequest{
-		ShardID: firehoseSubscriptionId,
+		ShardID: subID,
 	})
 	if err != nil {
 		writer.WriteHeader(http.StatusServiceUnavailable)
@@ -130,11 +116,15 @@ func (p *DopplerProxy) serveFirehose(firehoseSubscriptionId string, writer http.
 		return
 	}
 
-	p.serveWS(FIREHOSE_ID, firehoseSubscriptionId, writer, request, client)
+	p.serveWS(FIREHOSE_ID, subID, writer, request, client)
 }
 
 // "^/apps/(.*)/(recentlogs|stream|containermetrics)$"
-func (p *DopplerProxy) serveAppLogs(requestPath, appID string, writer http.ResponseWriter, request *http.Request) {
+func (p *DopplerProxy) serveStream(writer http.ResponseWriter, request *http.Request) {
+	atomic.AddInt64(&p.numAppStreams, 1)
+	defer atomic.AddInt64(&p.numAppStreams, -1)
+
+	appID := mux.Vars(request)["appID"]
 	authToken := getAuthToken(request)
 
 	status, _ := p.logAuthorize(authToken, appID)
@@ -157,34 +147,18 @@ func (p *DopplerProxy) serveAppLogs(requestPath, appID string, writer http.Respo
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	switch requestPath {
-	case "stream":
-		client, err := p.grpcConn.Subscribe(ctx, &plumbing.SubscriptionRequest{
-			Filter: &plumbing.Filter{
-				AppID: appID,
-			},
-		})
-		if err != nil {
-			writer.WriteHeader(http.StatusServiceUnavailable)
-			return
-		}
-
-		p.serveWS(requestPath, appID, writer, request, client)
+	client, err := p.grpcConn.Subscribe(ctx, &plumbing.SubscriptionRequest{
+		Filter: &plumbing.Filter{
+			AppID: appID,
+		},
+	})
+	if err != nil {
+		writer.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
-}
 
-func limitFrom(req *http.Request) (int, bool) {
-	query := req.URL.Query()
-	values, ok := query["limit"]
-	if !ok {
-		return 0, false
-	}
-	value, err := strconv.Atoi(values[0])
-	if err != nil || value < 0 {
-		return 0, false
-	}
-	return value, true
+	p.serveWS("stream", appID, writer, request, client)
+	return
 }
 
 func (p *DopplerProxy) serveWS(endpointType, streamID string, w http.ResponseWriter, r *http.Request, recv func() ([]byte, error)) {
@@ -222,24 +196,8 @@ func (p *DopplerProxy) serveWS(endpointType, streamID string, w http.ResponseWri
 			}
 		}
 	}()
+
 	handler.ServeHTTP(w, r)
-}
-
-func (p *DopplerProxy) serveMultiPartResponse(rw http.ResponseWriter, messages [][]byte) {
-	mp := multipart.NewWriter(rw)
-	defer mp.Close()
-
-	rw.Header().Set("Content-Type", `multipart/x-protobuf; boundary=`+mp.Boundary())
-
-	for _, message := range messages {
-		partWriter, err := mp.CreatePart(nil)
-		if err != nil {
-			log.Printf("http handler: Client went away while serving recent logs")
-			return
-		}
-
-		partWriter.Write(message)
-	}
 }
 
 func serveMultiPartResponse(rw http.ResponseWriter, messages [][]byte) {
@@ -288,27 +246,4 @@ func extractAuthTokenFromCookie(cookies []*http.Cookie) string {
 	}
 
 	return ""
-}
-
-func deDupe(input [][]byte) [][]byte {
-	messages := make(map[int32]*events.Envelope)
-
-	for _, message := range input {
-		var envelope events.Envelope
-		proto.Unmarshal(message, &envelope)
-		cm := envelope.GetContainerMetric()
-
-		oldEnvelope, ok := messages[cm.GetInstanceIndex()]
-		if !ok || oldEnvelope.GetTimestamp() < envelope.GetTimestamp() {
-			messages[cm.GetInstanceIndex()] = &envelope
-		}
-	}
-
-	output := make([][]byte, 0, len(messages))
-
-	for _, envelope := range messages {
-		bytes, _ := proto.Marshal(envelope)
-		output = append(output, bytes)
-	}
-	return output
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -44,5 +45,19 @@ func (h *RecentLogsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	serveMultiPartResponse(w, resp)
-	return
+}
+
+func limitFrom(r *http.Request) (int, bool) {
+	query := r.URL.Query()
+	values, ok := query["limit"]
+	if !ok {
+		return 0, false
+	}
+
+	value, err := strconv.Atoi(values[0])
+	if err != nil || value < 0 {
+		return 0, false
+	}
+
+	return value, true
 }
