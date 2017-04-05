@@ -38,17 +38,17 @@ var _ = Describe("GroupedSink", func() {
 
 				groupedSinks.CloseAndDeleteFirehose(firehoseSink)
 				appSink := syslog.NewSyslogSink("123", &url.URL{Host: "url"}, 100, DummySyslogWriter{}, dummyErrorHandler, "dropsonde-origin")
-				appSinkInputChan := make(chan *events.Envelope)
+				appSinkInputChan := make(chan *events.Envelope, 10)
 				groupedSinks.RegisterAppSink(appSinkInputChan, appSink)
 
 				msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "123", "App"), "origin")
 				go groupedSinks.Broadcast("123", msg)
 
-				Expect(<-appSinkInputChan).To(Equal(msg))
+				Eventually(appSinkInputChan).Should(Receive(Equal(msg)))
 			})
 		})
 
-		It("sends message to all registered sinks that match the appId", func(done Done) {
+		It("sends message to all registered sinks that match the appId", func() {
 			appId := "123"
 			appSink := syslog.NewSyslogSink("123", &url.URL{Host: "url"}, 100, DummySyslogWriter{}, dummyErrorHandler, "dropsonde-origin")
 
@@ -63,9 +63,8 @@ var _ = Describe("GroupedSink", func() {
 			msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", appId, "App"), "origin")
 			go groupedSinks.Broadcast(appId, msg)
 
-			Expect(<-inputChan).To(Equal(msg))
+			Eventually(inputChan).Should(Receive(Equal(msg)))
 			Expect(otherInputChan).To(HaveLen(0))
-			close(done)
 		})
 
 		It("sends message to all registered firehose subscribers", func() {
@@ -144,7 +143,7 @@ var _ = Describe("GroupedSink", func() {
 	})
 
 	Describe("BroadcastError", func() {
-		It("sends message to all registered sinks that match the appId", func(done Done) {
+		It("sends message to all registered sinks that match the appId", func() {
 			appId := "123"
 			appSink := dump.NewDumpSink(appId, 10, time.Second)
 			otherInputChan := make(chan *events.Envelope)
@@ -157,9 +156,8 @@ var _ = Describe("GroupedSink", func() {
 			msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "error message", appId, "App"), "origin")
 			go groupedSinks.BroadcastError(appId, msg)
 
-			Expect(<-inputChan).To(Equal(msg))
+			Eventually(inputChan).Should(Receive(Equal(msg)))
 			Expect(otherInputChan).To(HaveLen(0))
-			close(done)
 		})
 
 		It("sends message to all registered firehose subscribers", func() {
