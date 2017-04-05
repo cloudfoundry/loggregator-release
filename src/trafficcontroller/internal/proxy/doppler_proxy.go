@@ -60,11 +60,17 @@ func NewDopplerProxy(
 	}
 	r := mux.NewRouter()
 	p.Router = *r
+
 	p.HandleFunc("/apps/{appID}/stream", p.stream)
-	p.HandleFunc("/apps/{appID}/recentlogs", p.recentlogs)
 	p.HandleFunc("/apps/{appID}/containermetrics", p.containermetrics)
 	p.HandleFunc("/firehose/{subID}", p.firehose)
 	p.HandleFunc("/set-cookie", p.setcookie)
+
+	recentLogsHandler := NewLogAccessMiddleware(
+		p.logAuthorize,
+		NewRecentLogsHandler(p.grpcConn, p.timeout),
+	)
+	p.Handle("/apps/{appID}/recentlogs", recentLogsHandler)
 
 	go p.emitMetrics()
 
@@ -93,12 +99,6 @@ func (p *DopplerProxy) stream(w http.ResponseWriter, r *http.Request) {
 	defer atomic.AddInt64(&p.numAppStreams, -1)
 
 	p.serveAppLogs("stream", mux.Vars(r)["appID"], w, r)
-}
-
-func (p *DopplerProxy) recentlogs(w http.ResponseWriter, r *http.Request) {
-	p.serveAppLogs("recentlogs", mux.Vars(r)["appID"], w, r)
-	// metric-documentation-v1: (dopplerProxy.recentlogsLatency) USELESS metric which measures nothing of value
-	sendLatencyMetric("recentlogs", time.Now())
 }
 
 func (p *DopplerProxy) containermetrics(w http.ResponseWriter, r *http.Request) {
@@ -162,20 +162,6 @@ func (p *DopplerProxy) serveAppLogs(requestPath, appID string, writer http.Respo
 	defer cancel()
 
 	switch requestPath {
-	case "recentlogs":
-		ctx, _ = context.WithDeadline(ctx, time.Now().Add(p.timeout))
-		resp := p.grpcConn.RecentLogs(ctx, appID)
-		if err := ctx.Err(); err != nil {
-			writer.WriteHeader(http.StatusServiceUnavailable)
-			log.Printf("recentlogs request encountered an error: %s", err)
-			return
-		}
-		limit, ok := limitFrom(request)
-		if ok && len(resp) > limit {
-			resp = resp[:limit]
-		}
-		p.serveMultiPartResponse(writer, resp)
-		return
 	case "containermetrics":
 		ctx, _ = context.WithDeadline(ctx, time.Now().Add(p.timeout))
 		resp := deDupe(p.grpcConn.ContainerMetrics(ctx, appID))
@@ -254,6 +240,23 @@ func (p *DopplerProxy) serveWS(endpointType, streamID string, w http.ResponseWri
 }
 
 func (p *DopplerProxy) serveMultiPartResponse(rw http.ResponseWriter, messages [][]byte) {
+	mp := multipart.NewWriter(rw)
+	defer mp.Close()
+
+	rw.Header().Set("Content-Type", `multipart/x-protobuf; boundary=`+mp.Boundary())
+
+	for _, message := range messages {
+		partWriter, err := mp.CreatePart(nil)
+		if err != nil {
+			log.Printf("http handler: Client went away while serving recent logs")
+			return
+		}
+
+		partWriter.Write(message)
+	}
+}
+
+func serveMultiPartResponse(rw http.ResponseWriter, messages [][]byte) {
 	mp := multipart.NewWriter(rw)
 	defer mp.Close()
 
