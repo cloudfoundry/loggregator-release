@@ -63,7 +63,8 @@ func NewDopplerProxy(
 
 	p.HandleFunc("/apps/{appID}/stream", p.stream)
 	p.HandleFunc("/firehose/{subID}", p.firehose)
-	p.HandleFunc("/set-cookie", p.setcookie)
+
+	p.Handle("/set-cookie", NewSetCookieHandler(p.cookieDomain))
 
 	containerMetricsHandler := NewLogAccessMiddleware(
 		p.logAuthorize,
@@ -104,10 +105,6 @@ func (p *DopplerProxy) stream(w http.ResponseWriter, r *http.Request) {
 	defer atomic.AddInt64(&p.numAppStreams, -1)
 
 	p.serveAppLogs("stream", mux.Vars(r)["appID"], w, r)
-}
-
-func (p *DopplerProxy) setcookie(w http.ResponseWriter, r *http.Request) {
-	p.serveSetCookie(w, r, p.cookieDomain)
 }
 
 func (p *DopplerProxy) serveFirehose(firehoseSubscriptionId string, writer http.ResponseWriter, request *http.Request) {
@@ -291,22 +288,6 @@ func extractAuthTokenFromCookie(cookies []*http.Cookie) string {
 	}
 
 	return ""
-}
-
-func (p *DopplerProxy) serveSetCookie(writer http.ResponseWriter, request *http.Request, cookieDomain string) {
-	err := request.ParseForm()
-	if err != nil {
-		writer.WriteHeader(http.StatusBadRequest)
-	}
-
-	cookieName := request.FormValue("CookieName")
-	cookieValue := request.FormValue("CookieValue")
-	origin := request.Header.Get("Origin")
-
-	http.SetCookie(writer, &http.Cookie{Name: cookieName, Value: cookieValue, Domain: cookieDomain, Secure: true})
-
-	writer.Header().Add("Access-Control-Allow-Credentials", "true")
-	writer.Header().Add("Access-Control-Allow-Origin", origin)
 }
 
 func deDupe(input [][]byte) [][]byte {
