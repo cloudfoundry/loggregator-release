@@ -24,6 +24,7 @@ func NewRecentLogsHandler(grpcConn grpcConnector, t time.Duration) *RecentLogsHa
 
 func (h *RecentLogsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
+	// metric-documentation-v1: (dopplerProxy.recentlogsLatency) Measures amount of time to serve the request for recent logs
 	defer sendLatencyMetric("recentlogs", startTime)
 
 	appID := mux.Vars(r)["appID"]

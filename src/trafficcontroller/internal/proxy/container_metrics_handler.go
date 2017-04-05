@@ -25,6 +25,7 @@ func NewContainerMetricsHandler(grpcConn grpcConnector, t time.Duration) *Contai
 
 func (h *ContainerMetricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
+	// metric-documentation-v1: (dopplerProxy.containermetricsLatency) Measures amount of time to serve the request for container metrics
 	defer sendLatencyMetric("containermetrics", startTime)
 
 	appID := mux.Vars(r)["appID"]
