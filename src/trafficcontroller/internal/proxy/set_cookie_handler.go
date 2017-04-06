@@ -15,6 +15,7 @@ func NewSetCookieHandler(domain string) *SetCookieHandler {
 func (h SetCookieHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	cookieName := r.FormValue("CookieName")

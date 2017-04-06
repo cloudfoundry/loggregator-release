@@ -438,13 +438,16 @@ var _ = Describe("ServeHTTP()", func() {
 			Expect(recorder.Code).To(Equal(http.StatusOK))
 		})
 
-		It("sets the passed value as a cookie", func() {
+		It("sets the passed value as a cookie and sets CORS headers", func() {
 			req, _ := http.NewRequest("POST", "/set-cookie", strings.NewReader("CookieName=cookie&CookieValue=monster"))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.Header.Set("Origin", "fake-origin-string")
 
 			dopplerProxy.ServeHTTP(recorder, req)
 
 			Expect(recorder.Header().Get("Set-Cookie")).To(Equal("cookie=monster; Domain=cookieDomain; Secure"))
+			Expect(recorder.Header().Get("Access-Control-Allow-Origin")).To(Equal("fake-origin-string"))
+			Expect(recorder.Header().Get("Access-Control-Allow-Credentials")).To(Equal("true"))
 		})
 
 		It("returns a bad request if the form does not parse", func() {
@@ -454,17 +457,6 @@ var _ = Describe("ServeHTTP()", func() {
 			dopplerProxy.ServeHTTP(recorder, req)
 
 			Expect(recorder.Code).To(Equal(http.StatusBadRequest))
-		})
-
-		It("sets required CORS headers", func() {
-			req, _ := http.NewRequest("POST", "/set-cookie", nil)
-			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-			req.Header.Set("Origin", "fake-origin-string")
-
-			dopplerProxy.ServeHTTP(recorder, req)
-
-			Expect(recorder.Header().Get("Access-Control-Allow-Origin")).To(Equal("fake-origin-string"))
-			Expect(recorder.Header().Get("Access-Control-Allow-Credentials")).To(Equal("true"))
 		})
 	})
 
