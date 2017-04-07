@@ -28,7 +28,6 @@ type DopplerProxy struct {
 	numAppStreams int64
 }
 
-// TODO export this
 type grpcConnector interface {
 	Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) (func() ([]byte, error), error)
 	ContainerMetrics(ctx context.Context, appID string) [][]byte
