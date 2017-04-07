@@ -1,21 +1,21 @@
-package ingress
+package plumbing
 
 import "dopplerservice"
 
-type Finder struct {
+type StaticFinder struct {
 	event chan dopplerservice.Event
 }
 
-func NewFinder(addrs []string) *Finder {
+func NewStaticFinder(addrs []string) *StaticFinder {
 	event := make(chan dopplerservice.Event, 1)
 	event <- dopplerservice.Event{
 		GRPCDopplers: addrs,
 	}
-	return &Finder{
+	return &StaticFinder{
 		event: event,
 	}
 }
 
-func (f *Finder) Next() dopplerservice.Event {
+func (f *StaticFinder) Next() dopplerservice.Event {
 	return <-f.event
 }

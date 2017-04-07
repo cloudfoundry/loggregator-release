@@ -84,7 +84,7 @@ func (r *RLP) Start() {
 }
 
 func (r *RLP) setupIngress() {
-	finder := ingress.NewFinder(r.ingressAddrs)
+	finder := plumbing.NewStaticFinder(r.ingressAddrs)
 	pool := plumbing.NewPool(20, r.ingressDialOpts...)
 
 	batcher := &ingress.NullMetricBatcher{} // TODO: Add real metrics
