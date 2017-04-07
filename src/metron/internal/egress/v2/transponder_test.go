@@ -3,6 +3,7 @@ package v2_test
 import (
 	egress "metron/internal/egress/v2"
 	v2 "plumbing/v2"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -12,16 +13,56 @@ var _ = Describe("Transponder", func() {
 	It("reads from the buffer to the writer", func() {
 		envelope := &v2.Envelope{SourceId: "uuid"}
 		nexter := newMockNexter()
-		nexter.NextOutput.Ret0 <- envelope
+		nexter.TryNextOutput.Ret0 <- envelope
+		nexter.TryNextOutput.Ret1 <- true
 		writer := newMockWriter()
 		close(writer.WriteOutput.Ret0)
 
-		tx := egress.NewTransponder(nexter, writer, nil)
-
+		tx := egress.NewTransponder(nexter, writer, nil, 1, time.Nanosecond)
 		go tx.Start()
 
-		Eventually(nexter.NextCalled).Should(Receive())
-		Eventually(writer.WriteInput.Msg).Should(Receive(Equal(envelope)))
+		Eventually(nexter.TryNextCalled).Should(Receive())
+		Eventually(writer.WriteInput.Msg).Should(Receive(Equal([]*v2.Envelope{envelope})))
+	})
+
+	Describe("batching", func() {
+		It("emits once the batch count has been reached", func() {
+			envelope := &v2.Envelope{SourceId: "uuid"}
+			nexter := newMockNexter()
+			writer := newMockWriter()
+			close(writer.WriteOutput.Ret0)
+
+			for i := 0; i < 6; i++ {
+				nexter.TryNextOutput.Ret0 <- envelope
+				nexter.TryNextOutput.Ret1 <- true
+			}
+
+			tx := egress.NewTransponder(nexter, writer, nil, 5, time.Minute)
+			go tx.Start()
+
+			var batch []*v2.Envelope
+			Eventually(writer.WriteInput.Msg).Should(Receive(&batch))
+			Expect(batch).To(HaveLen(5))
+		})
+
+		It("emits once the batch interval has been reached", func() {
+			envelope := &v2.Envelope{SourceId: "uuid"}
+			nexter := newMockNexter()
+			writer := newMockWriter()
+			close(writer.WriteOutput.Ret0)
+
+			nexter.TryNextOutput.Ret0 <- envelope
+			nexter.TryNextOutput.Ret1 <- true
+			close(nexter.TryNextOutput.Ret0)
+			close(nexter.TryNextOutput.Ret1)
+
+			tx := egress.NewTransponder(nexter, writer, nil, 5, time.Millisecond)
+			go tx.Start()
+
+			var batch []*v2.Envelope
+			Eventually(writer.WriteInput.Msg).Should(Receive(&batch))
+			Expect(batch).To(HaveLen(1))
+		})
 	})
 
 	Describe("tagging", func() {
@@ -32,21 +73,23 @@ var _ = Describe("Transponder", func() {
 			}
 			input := &v2.Envelope{SourceId: "uuid"}
 			nexter := newMockNexter()
-			nexter.NextOutput.Ret0 <- input
+			nexter.TryNextOutput.Ret0 <- input
+			nexter.TryNextOutput.Ret1 <- true
 			writer := newMockWriter()
 			close(writer.WriteOutput.Ret0)
 
-			tx := egress.NewTransponder(nexter, writer, tags)
+			tx := egress.NewTransponder(nexter, writer, tags, 1, time.Nanosecond)
 
 			go tx.Start()
 
-			Eventually(nexter.NextCalled).Should(Receive())
+			Eventually(nexter.TryNextCalled).Should(Receive())
 
-			var output *v2.Envelope
+			var output []*v2.Envelope
 			Eventually(writer.WriteInput.Msg).Should(Receive(&output))
 
-			Expect(output.Tags["tag-one"].GetText()).To(Equal("value-one"))
-			Expect(output.Tags["tag-two"].GetText()).To(Equal("value-two"))
+			Expect(output).To(HaveLen(1))
+			Expect(output[0].Tags["tag-one"].GetText()).To(Equal("value-one"))
+			Expect(output[0].Tags["tag-two"].GetText()).To(Equal("value-two"))
 		})
 
 		It("does not write over tags if they already exist", func() {
@@ -64,20 +107,22 @@ var _ = Describe("Transponder", func() {
 				},
 			}
 			nexter := newMockNexter()
-			nexter.NextOutput.Ret0 <- input
+			nexter.TryNextOutput.Ret0 <- input
+			nexter.TryNextOutput.Ret1 <- true
 			writer := newMockWriter()
 			close(writer.WriteOutput.Ret0)
 
-			tx := egress.NewTransponder(nexter, writer, tags)
+			tx := egress.NewTransponder(nexter, writer, tags, 1, time.Nanosecond)
 
 			go tx.Start()
 
-			Eventually(nexter.NextCalled).Should(Receive())
+			Eventually(nexter.TryNextCalled).Should(Receive())
 
-			var output *v2.Envelope
+			var output []*v2.Envelope
 			Eventually(writer.WriteInput.Msg).Should(Receive(&output))
+			Expect(output).To(HaveLen(1))
 
-			Expect(output.Tags["existing-tag"].GetText()).To(Equal("existing-value"))
+			Expect(output[0].Tags["existing-tag"].GetText()).To(Equal("existing-value"))
 		})
 	})
 })

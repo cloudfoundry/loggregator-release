@@ -21,6 +21,11 @@ provides:
   properties:
   - loggregator.outgoing_dropsonde_port
 
+consumes:
+- name: doppler
+  type: doppler
+  optional: true
+
 properties:
   traffic_controller.disable_access_control:
     description: "Traffic controller bypasses authentication with the UAA and CC"

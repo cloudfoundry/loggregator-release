@@ -12,12 +12,12 @@ import (
 )
 
 type Connector interface {
-	Connect() (io.Closer, plumbing.DopplerIngress_SenderClient, error)
+	Connect() (io.Closer, plumbing.DopplerIngress_BatchSenderClient, error)
 }
 
 type v2GRPCConn struct {
 	name   string
-	client plumbing.DopplerIngress_SenderClient
+	client plumbing.DopplerIngress_BatchSenderClient
 	closer io.Closer
 	writes int64
 }
@@ -39,14 +39,14 @@ func NewConnManager(c Connector, maxWrites int64, pollDuration time.Duration) *C
 	return m
 }
 
-func (m *ConnManager) Write(envelope *plumbing.Envelope) error {
+func (m *ConnManager) Write(envelopes []*plumbing.Envelope) error {
 	conn := atomic.LoadPointer(&m.conn)
 	if conn == nil || (*v2GRPCConn)(conn) == nil {
 		return errors.New("no connection to doppler present")
 	}
 
 	gRPCConn := (*v2GRPCConn)(conn)
-	err := gRPCConn.client.Send(envelope)
+	err := gRPCConn.client.Send(&plumbing.EnvelopeBatch{Batch: envelopes})
 
 	if err != nil {
 		log.Printf("error writing to doppler %s: %s", gRPCConn.name, err)

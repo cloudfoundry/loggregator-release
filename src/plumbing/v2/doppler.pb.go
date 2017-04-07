@@ -12,7 +12,9 @@ It is generated from these files:
 	ingress.proto
 
 It has these top-level messages:
+	EnvelopeBatch
 	SenderResponse
+	BatchSenderResponse
 	EgressRequest
 	Filter
 	LogFilter
@@ -47,16 +49,42 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
+type EnvelopeBatch struct {
+	Batch []*Envelope `protobuf:"bytes,1,rep,name=batch" json:"batch,omitempty"`
+}
+
+func (m *EnvelopeBatch) Reset()                    { *m = EnvelopeBatch{} }
+func (m *EnvelopeBatch) String() string            { return proto.CompactTextString(m) }
+func (*EnvelopeBatch) ProtoMessage()               {}
+func (*EnvelopeBatch) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+
+func (m *EnvelopeBatch) GetBatch() []*Envelope {
+	if m != nil {
+		return m.Batch
+	}
+	return nil
+}
+
 type SenderResponse struct {
 }
 
 func (m *SenderResponse) Reset()                    { *m = SenderResponse{} }
 func (m *SenderResponse) String() string            { return proto.CompactTextString(m) }
 func (*SenderResponse) ProtoMessage()               {}
-func (*SenderResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (*SenderResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+
+type BatchSenderResponse struct {
+}
+
+func (m *BatchSenderResponse) Reset()                    { *m = BatchSenderResponse{} }
+func (m *BatchSenderResponse) String() string            { return proto.CompactTextString(m) }
+func (*BatchSenderResponse) ProtoMessage()               {}
+func (*BatchSenderResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
 
 func init() {
+	proto.RegisterType((*EnvelopeBatch)(nil), "loggregator.v2.EnvelopeBatch")
 	proto.RegisterType((*SenderResponse)(nil), "loggregator.v2.SenderResponse")
+	proto.RegisterType((*BatchSenderResponse)(nil), "loggregator.v2.BatchSenderResponse")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -71,6 +99,7 @@ const _ = grpc.SupportPackageIsVersion3
 
 type DopplerIngressClient interface {
 	Sender(ctx context.Context, opts ...grpc.CallOption) (DopplerIngress_SenderClient, error)
+	BatchSender(ctx context.Context, opts ...grpc.CallOption) (DopplerIngress_BatchSenderClient, error)
 }
 
 type dopplerIngressClient struct {
@@ -115,10 +144,45 @@ func (x *dopplerIngressSenderClient) CloseAndRecv() (*SenderResponse, error) {
 	return m, nil
 }
 
+func (c *dopplerIngressClient) BatchSender(ctx context.Context, opts ...grpc.CallOption) (DopplerIngress_BatchSenderClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_DopplerIngress_serviceDesc.Streams[1], c.cc, "/loggregator.v2.DopplerIngress/BatchSender", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &dopplerIngressBatchSenderClient{stream}
+	return x, nil
+}
+
+type DopplerIngress_BatchSenderClient interface {
+	Send(*EnvelopeBatch) error
+	CloseAndRecv() (*BatchSenderResponse, error)
+	grpc.ClientStream
+}
+
+type dopplerIngressBatchSenderClient struct {
+	grpc.ClientStream
+}
+
+func (x *dopplerIngressBatchSenderClient) Send(m *EnvelopeBatch) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *dopplerIngressBatchSenderClient) CloseAndRecv() (*BatchSenderResponse, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(BatchSenderResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // Server API for DopplerIngress service
 
 type DopplerIngressServer interface {
 	Sender(DopplerIngress_SenderServer) error
+	BatchSender(DopplerIngress_BatchSenderServer) error
 }
 
 func RegisterDopplerIngressServer(s *grpc.Server, srv DopplerIngressServer) {
@@ -151,6 +215,32 @@ func (x *dopplerIngressSenderServer) Recv() (*Envelope, error) {
 	return m, nil
 }
 
+func _DopplerIngress_BatchSender_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(DopplerIngressServer).BatchSender(&dopplerIngressBatchSenderServer{stream})
+}
+
+type DopplerIngress_BatchSenderServer interface {
+	SendAndClose(*BatchSenderResponse) error
+	Recv() (*EnvelopeBatch, error)
+	grpc.ServerStream
+}
+
+type dopplerIngressBatchSenderServer struct {
+	grpc.ServerStream
+}
+
+func (x *dopplerIngressBatchSenderServer) SendAndClose(m *BatchSenderResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *dopplerIngressBatchSenderServer) Recv() (*EnvelopeBatch, error) {
+	m := new(EnvelopeBatch)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 var _DopplerIngress_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "loggregator.v2.DopplerIngress",
 	HandlerType: (*DopplerIngressServer)(nil),
@@ -161,6 +251,11 @@ var _DopplerIngress_serviceDesc = grpc.ServiceDesc{
 			Handler:       _DopplerIngress_Sender_Handler,
 			ClientStreams: true,
 		},
+		{
+			StreamName:    "BatchSender",
+			Handler:       _DopplerIngress_BatchSender_Handler,
+			ClientStreams: true,
+		},
 	},
 	Metadata: fileDescriptor0,
 }
@@ -168,14 +263,17 @@ var _DopplerIngress_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("doppler.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 130 bytes of a gzipped FileDescriptorProto
+	// 190 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0xe2, 0x4d, 0xc9, 0x2f, 0x28,
 	0xc8, 0x49, 0x2d, 0xd2, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0xcb, 0xc9, 0x4f, 0x4f, 0x2f,
 	0x4a, 0x4d, 0x4f, 0x2c, 0xc9, 0x2f, 0xd2, 0x2b, 0x33, 0x92, 0xe2, 0x4b, 0xcd, 0x2b, 0x4b, 0xcd,
-	0xc9, 0x2f, 0x48, 0x85, 0xc8, 0x2b, 0x09, 0x70, 0xf1, 0x05, 0xa7, 0xe6, 0xa5, 0xa4, 0x16, 0x05,
-	0xa5, 0x16, 0x17, 0xe4, 0xe7, 0x15, 0xa7, 0x1a, 0x45, 0x70, 0xf1, 0xb9, 0x40, 0x8c, 0xf0, 0xcc,
-	0x4b, 0x2f, 0x4a, 0x2d, 0x2e, 0x16, 0x72, 0xe3, 0x62, 0x83, 0xa8, 0x11, 0x92, 0xd0, 0x43, 0x35,
-	0x4e, 0xcf, 0x15, 0x6a, 0x9a, 0x94, 0x1c, 0xba, 0x0c, 0xaa, 0xa9, 0x4a, 0x0c, 0x1a, 0x8c, 0x49,
-	0x6c, 0x60, 0x2b, 0x8d, 0x01, 0x01, 0x00, 0x00, 0xff, 0xff, 0xdf, 0xbc, 0x62, 0x52, 0xa3, 0x00,
-	0x00, 0x00,
+	0xc9, 0x2f, 0x48, 0x85, 0xc8, 0x2b, 0xd9, 0x73, 0xf1, 0xba, 0x42, 0x45, 0x9c, 0x12, 0x4b, 0x92,
+	0x33, 0x84, 0xf4, 0xb8, 0x58, 0x93, 0x40, 0x0c, 0x09, 0x46, 0x05, 0x66, 0x0d, 0x6e, 0x23, 0x09,
+	0x3d, 0x54, 0x03, 0xf4, 0x60, 0xaa, 0x83, 0x20, 0xca, 0x94, 0x04, 0xb8, 0xf8, 0x82, 0x53, 0xf3,
+	0x52, 0x52, 0x8b, 0x82, 0x52, 0x8b, 0x0b, 0xf2, 0xf3, 0x8a, 0x53, 0x95, 0x44, 0xb9, 0x84, 0xc1,
+	0x46, 0xa1, 0x0a, 0x1b, 0xad, 0x67, 0xe4, 0xe2, 0x73, 0x81, 0xb8, 0xcd, 0x33, 0x2f, 0xbd, 0x28,
+	0xb5, 0xb8, 0x58, 0xc8, 0x8d, 0x8b, 0x0d, 0xa2, 0x48, 0x08, 0xa7, 0x35, 0x52, 0x72, 0xe8, 0x32,
+	0x68, 0xb6, 0x31, 0x68, 0x30, 0x0a, 0x85, 0x72, 0x71, 0x23, 0xd9, 0x28, 0x24, 0x8b, 0xcb, 0x30,
+	0xb0, 0x22, 0x29, 0x65, 0x74, 0x69, 0x2c, 0xae, 0x05, 0x19, 0x9b, 0xc4, 0x06, 0x0e, 0x22, 0x63,
+	0x40, 0x00, 0x00, 0x00, 0xff, 0xff, 0xa2, 0xf8, 0x64, 0x05, 0x53, 0x01, 0x00, 0x00,
 }

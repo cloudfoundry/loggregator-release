@@ -19,32 +19,34 @@ type CounterAggregator struct {
 	counterTotals map[counterID]uint64
 }
 
-func New(w Writer) *CounterAggregator {
+func NewCounterAggregator(w Writer) *CounterAggregator {
 	return &CounterAggregator{
 		writer:        w,
 		counterTotals: make(map[counterID]uint64),
 	}
 }
 
-func (ca *CounterAggregator) Write(msg *plumbing.Envelope) error {
-	if msg.GetCounter() != nil {
-		if len(ca.counterTotals) > 10000 {
-			ca.resetTotals()
-		}
+func (ca *CounterAggregator) Write(msgs []*plumbing.Envelope) error {
+	for i := range msgs {
+		if msgs[i].GetCounter() != nil {
+			if len(ca.counterTotals) > 10000 {
+				ca.resetTotals()
+			}
 
-		id := counterID{
-			name:     msg.GetCounter().Name,
-			tagsHash: hashTags(msg.GetTags()),
-		}
+			id := counterID{
+				name:     msgs[i].GetCounter().Name,
+				tagsHash: hashTags(msgs[i].GetTags()),
+			}
 
-		ca.counterTotals[id] = ca.counterTotals[id] + msg.GetCounter().GetDelta()
+			ca.counterTotals[id] = ca.counterTotals[id] + msgs[i].GetCounter().GetDelta()
 
-		msg.GetCounter().Value = &plumbing.Counter_Total{
-			Total: ca.counterTotals[id],
+			msgs[i].GetCounter().Value = &plumbing.Counter_Total{
+				Total: ca.counterTotals[id],
+			}
 		}
 	}
 
-	return ca.writer.Write(msg)
+	return ca.writer.Write(msgs)
 }
 
 func (ca *CounterAggregator) resetTotals() {

@@ -16,12 +16,12 @@ import (
 type SpyConnector struct {
 	mu      sync.Mutex
 	closer  io.Closer
-	client  plumbing.DopplerIngress_SenderClient
+	client  plumbing.DopplerIngress_BatchSenderClient
 	err     error
 	called_ int
 }
 
-func (s *SpyConnector) Connect() (io.Closer, plumbing.DopplerIngress_SenderClient, error) {
+func (s *SpyConnector) Connect() (io.Closer, plumbing.DopplerIngress_BatchSenderClient, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.called_++
@@ -39,13 +39,14 @@ func (s *SpyConnector) called() int {
 }
 
 type SpyClient struct {
-	envelope *plumbing.Envelope
-	err      error
-	plumbing.DopplerIngress_SenderClient
+	plumbing.DopplerIngress_BatchSenderClient
+
+	batch *plumbing.EnvelopeBatch
+	err   error
 }
 
-func (s *SpyClient) Send(e *plumbing.Envelope) error {
-	s.envelope = e
+func (s *SpyClient) Send(e *plumbing.EnvelopeBatch) error {
+	s.batch = e
 	return s.err
 }
 
@@ -80,16 +81,18 @@ var _ = Describe("ConnManager", func() {
 		It("sends the message down the connection", func() {
 			e := &plumbing.Envelope{SourceId: "some-uuid"}
 			f := func() error {
-				return connManager.Write(e)
+				return connManager.Write([]*plumbing.Envelope{e})
 			}
 			Eventually(f).Should(Succeed())
-			Expect(senderClient.envelope).To(Equal(e))
+
+			Expect(senderClient.batch.Batch).To(HaveLen(1))
+			Expect(senderClient.batch.Batch[0]).To(Equal(e))
 		})
 
 		It("recycles the connections after max writes", func() {
 			e := &plumbing.Envelope{SourceId: "some-uuid"}
 			f := func() int {
-				connManager.Write(e)
+				connManager.Write([]*plumbing.Envelope{e})
 				return connector.called()
 			}
 			Eventually(f).Should(Equal(2))
@@ -99,7 +102,7 @@ var _ = Describe("ConnManager", func() {
 		Context("when Send() returns an error", func() {
 			BeforeEach(func() {
 				f := func() error {
-					return connManager.Write(&plumbing.Envelope{})
+					return connManager.Write(nil)
 				}
 				Eventually(f).Should(Succeed())
 			})
@@ -108,7 +111,7 @@ var _ = Describe("ConnManager", func() {
 				expectedErr := errors.New("It is the error")
 				senderClient.err = expectedErr
 
-				actualErr := connManager.Write(&plumbing.Envelope{SourceId: "some-uuid"})
+				actualErr := connManager.Write([]*plumbing.Envelope{{SourceId: "some-uuid"}})
 				Expect(actualErr).To(Equal(expectedErr))
 				Expect(closer.called).To(Equal(1))
 			})
@@ -125,7 +128,7 @@ var _ = Describe("ConnManager", func() {
 
 		It("always returns an error", func() {
 			f := func() error {
-				return connManager.Write(&plumbing.Envelope{})
+				return connManager.Write(nil)
 			}
 			Consistently(f).Should(HaveOccurred())
 		})

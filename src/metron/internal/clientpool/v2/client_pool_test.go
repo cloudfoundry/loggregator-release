@@ -15,8 +15,8 @@ type SpyConn struct {
 	data []*plumbing.Envelope
 }
 
-func (s *SpyConn) Write(e *plumbing.Envelope) error {
-	s.data = append(s.data, e)
+func (s *SpyConn) Write(e []*plumbing.Envelope) error {
+	s.data = append(s.data, e...)
 	return s.err
 }
 
@@ -46,12 +46,12 @@ var _ = Describe("ClientPool", func() {
 			})
 
 			It("returns an error", func() {
-				err := pool.Write(&plumbing.Envelope{})
+				err := pool.Write(nil)
 				Expect(err.Error()).To(Equal("unable to write to any dopplers"))
 			})
 
 			It("tries all conns before erroring", func() {
-				pool.Write(&plumbing.Envelope{SourceId: "some-uuid"})
+				pool.Write([]*plumbing.Envelope{{SourceId: "some-uuid"}})
 
 				for len(conns) > 0 {
 					i, _ := chooseData(conns)
@@ -63,12 +63,11 @@ var _ = Describe("ClientPool", func() {
 
 		Context("all conns succeed", func() {
 			It("returns a nil error", func() {
-				Expect(pool.Write(&plumbing.Envelope{})).To(Succeed())
+				Expect(pool.Write(nil)).To(Succeed())
 			})
 
 			It("writes only to one connection", func() {
-				data := &plumbing.Envelope{SourceId: "some-uuid"}
-				Expect(pool.Write(data)).To(Succeed())
+				Expect(pool.Write([]*plumbing.Envelope{{SourceId: "some-uuid"}})).To(Succeed())
 
 				Expect(envelopeCount(conns)).To(Equal(1))
 			})

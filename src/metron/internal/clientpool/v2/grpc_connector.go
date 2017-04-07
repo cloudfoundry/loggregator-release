@@ -8,7 +8,7 @@ import (
 )
 
 type ClientFetcher interface {
-	Fetch(addr string) (conn io.Closer, client plumbing.DopplerIngress_SenderClient, err error)
+	Fetch(addr string) (conn io.Closer, client plumbing.DopplerIngress_BatchSenderClient, err error)
 }
 
 type GRPCConnector struct {
@@ -23,7 +23,7 @@ func MakeGRPCConnector(fetcher ClientFetcher, balancers []*Balancer) GRPCConnect
 	}
 }
 
-func (c GRPCConnector) Connect() (io.Closer, plumbing.DopplerIngress_SenderClient, error) {
+func (c GRPCConnector) Connect() (io.Closer, plumbing.DopplerIngress_BatchSenderClient, error) {
 	for _, balancer := range c.balancers {
 		hostPort, err := balancer.NextHostPort()
 		if err != nil {
