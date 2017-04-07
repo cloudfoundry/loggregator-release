@@ -31,6 +31,7 @@ type Config struct {
 	IP                     string
 	ApiHost                string
 	DopplerPort            uint32
+	DopplerAddrs           []string
 	OutgoingDropsondePort  uint32
 	MetronHost             string
 	MetronPort             int

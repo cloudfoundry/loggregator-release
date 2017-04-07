@@ -11,6 +11,11 @@
       instance_id = spec.index.to_s
     end
 
+    doppler_addrs = []
+    if_link("doppler") do |ds|
+        doppler_addrs = ds.instances.map{|i| "#{i.address}:#{ds.p('doppler.grpc_port')}"}
+    end
+
     # Handle renamed properties
     uaaClient = p("loggregator.uaa.client")
     oldUaaClient = p("loggregator.uaa_client_id")
@@ -48,6 +53,7 @@
         end
         a[:OutgoingDropsondePort] = p("loggregator.outgoing_dropsonde_port")
         a[:DopplerPort] = p("doppler.outgoing_port")
+        a[:DopplerAddrs] = doppler_addrs
         a[:GRPC] = grpcListenerConfig
         a[:SkipCertVerify] = p("ssl.skip_cert_verify")
         a[:ApiHost] = p("cc.srv_api_uri")
