@@ -40,6 +40,12 @@ type trafficController struct {
 	disableAccessControl bool
 }
 
+// finder provides service discovery of Doppler processes
+type finder interface {
+	Start()
+	Next() dopplerservice.Event
+}
+
 func NewTrafficController(c *Config, path string, disableAccessControl bool) *trafficController {
 	return &trafficController{
 		conf:                 c,
@@ -102,16 +108,21 @@ func (t *trafficController) Start() {
 		log.Fatalf("Could not use GRPC creds for server: %s", err)
 	}
 
-	finder := dopplerservice.NewFinder(
-		etcdAdapter,
-		int(t.conf.DopplerPort),
-		int(t.conf.GRPC.Port),
-		[]string{"ws"},
-		"",
-	)
-	finder.Start()
+	var f finder
+	if len(t.conf.DopplerAddrs) > 0 {
+		f = plumbing.NewStaticFinder(t.conf.DopplerAddrs)
+	} else {
+		f = dopplerservice.NewFinder(
+			etcdAdapter,
+			int(t.conf.DopplerPort),
+			int(t.conf.GRPC.Port),
+			[]string{"ws"},
+			"",
+		)
+	}
+	f.Start()
 	pool := plumbing.NewPool(20, grpc.WithTransportCredentials(creds))
-	grpcConnector := plumbing.NewGRPCConnector(1000, pool, finder, batcher)
+	grpcConnector := plumbing.NewGRPCConnector(1000, pool, f, batcher)
 
 	dopplerHandler := http.Handler(
 		proxy.NewDopplerProxy(

@@ -16,6 +16,8 @@ func NewStaticFinder(addrs []string) *StaticFinder {
 	}
 }
 
+func (f *StaticFinder) Start() {}
+
 func (f *StaticFinder) Next() dopplerservice.Event {
 	return <-f.event
 }
