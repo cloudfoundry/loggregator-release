@@ -109,9 +109,10 @@ func (t *trafficController) Start() {
 	}
 
 	var f finder
-	if len(t.conf.DopplerAddrs) > 0 {
+	switch {
+	case len(t.conf.DopplerAddrs) > 0:
 		f = plumbing.NewStaticFinder(t.conf.DopplerAddrs)
-	} else {
+	default:
 		f = dopplerservice.NewFinder(
 			etcdAdapter,
 			int(t.conf.DopplerPort),
