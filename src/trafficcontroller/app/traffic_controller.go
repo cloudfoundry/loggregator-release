@@ -78,9 +78,6 @@ func (t *trafficController) Start() {
 	uaaClient := auth.NewUaaClient(t.conf.UaaHost, t.conf.UaaClient, t.conf.UaaClientSecret)
 	adminAuthorizer := auth.NewAdminAccessAuthorizer(t.disableAccessControl, &uaaClient)
 
-	finder := dopplerservice.NewFinder(etcdAdapter, int(t.conf.DopplerPort), int(t.conf.GRPC.Port), []string{"ws"}, "")
-	finder.Start()
-
 	var accessMiddleware func(auth.HttpHandler) *auth.AccessHandler
 	if t.conf.SecurityEventLog != "" {
 		accessLog, err := os.OpenFile(t.conf.SecurityEventLog, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
@@ -105,10 +102,26 @@ func (t *trafficController) Start() {
 		log.Fatalf("Could not use GRPC creds for server: %s", err)
 	}
 
+	finder := dopplerservice.NewFinder(
+		etcdAdapter,
+		int(t.conf.DopplerPort),
+		int(t.conf.GRPC.Port),
+		[]string{"ws"},
+		"",
+	)
+	finder.Start()
 	pool := plumbing.NewPool(20, grpc.WithTransportCredentials(creds))
 	grpcConnector := plumbing.NewGRPCConnector(1000, pool, finder, batcher)
 
-	dopplerHandler := http.Handler(proxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, grpcConnector, "doppler."+t.conf.SystemDomain, 15*time.Second))
+	dopplerHandler := http.Handler(
+		proxy.NewDopplerProxy(
+			logAuthorizer,
+			adminAuthorizer,
+			grpcConnector,
+			"doppler."+t.conf.SystemDomain,
+			15*time.Second,
+		),
+	)
 	if accessMiddleware != nil {
 		dopplerHandler = accessMiddleware(dopplerHandler)
 	}
