@@ -11,40 +11,58 @@ import (
 	"time"
 )
 
-var useSSL = flag.Bool("ssl", false, "Use SSL")
-var certFile = flag.String("cert", "", "TLS certificate")
-var keyFile = flag.String("key", "", "TLS private key")
-
-var address = flag.String("address", "", "Listener address")
-
 func main() {
+	ssl := flag.Bool("ssl", false, "Use SSL")
+	certPath := flag.String("cert", "", "TLS certificate")
+	keyPath := flag.String("key", "", "TLS private key")
+	address := flag.String("address", "", "Listener address")
 	flag.Parse()
 
-	var listener net.Listener
-	if *useSSL {
-		cert, err := ioutil.ReadFile(*certFile)
-		if err != nil {
-			panic(err)
-		}
-
-		key, err := ioutil.ReadFile(*keyFile)
-		if err != nil {
-			panic(err)
-		}
-
-		listener = secureListener(*address, cert, key)
-	} else {
-		listener = insecureListener(*address)
-	}
-
-	go listen(listener)
-
-	log.Printf("Startup: tcp echo server listening")
-	blocker := make(chan bool)
-	<-blocker
+	s := NewServer(*ssl, *certPath, *keyPath, *address)
+	s.Start()
+	defer s.Stop()
 }
 
-func insecureListener(address string) net.Listener {
+const (
+	readDeadline = 100 * time.Millisecond
+)
+
+func NewServer(listenTLS bool, certPath, keyPath, address string) *server {
+	s := &server{}
+	if listenTLS {
+		s.listenTLS(address, certPath, keyPath)
+		return s
+	}
+
+	s.listener = s.listen(address)
+	return s
+}
+
+type server struct {
+	listener net.Listener
+}
+
+func (s *server) Start() {
+	log.Printf("tcp echo server listening on %s", s.listener.Addr())
+
+	for {
+		conn, err := s.listener.Accept()
+		if err != nil {
+			return
+		}
+
+		go s.handleConnection(conn)
+	}
+}
+
+func (s *server) Stop() {
+	err := s.listener.Close()
+	if err != nil {
+		log.Fatalf("could not stop listener: %s", err)
+	}
+}
+
+func (s *server) listen(address string) net.Listener {
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		panic(err)
@@ -53,7 +71,17 @@ func insecureListener(address string) net.Listener {
 	return listener
 }
 
-func secureListener(address string, certContent []byte, keyContent []byte) net.Listener {
+func (s *server) listenTLS(address string, certPath, keyPath string) {
+	certContent, err := ioutil.ReadFile(certPath)
+	if err != nil {
+		panic(err)
+	}
+
+	keyContent, err := ioutil.ReadFile(keyPath)
+	if err != nil {
+		panic(err)
+	}
+
 	cert, err := tls.X509KeyPair(certContent, keyContent)
 	if err != nil {
 		panic(err)
@@ -69,32 +97,26 @@ func secureListener(address string, certContent []byte, keyContent []byte) net.L
 		panic(err)
 	}
 
-	return listener
+	s.listener = listener
 }
 
-func listen(listener net.Listener) {
+func (s *server) handleConnection(conn net.Conn) {
+	defer conn.Close()
+	conn.SetReadDeadline(time.Now().Add(readDeadline))
+
+	buffer := make([]byte, 1024)
 	for {
-		conn, err := listener.Accept()
-		if err != nil {
+		readCount, err := conn.Read(buffer)
+		if err == io.EOF {
 			return
 		}
 
-		go func() {
-			defer conn.Close()
-			buffer := make([]byte, 1024)
-			for {
-				conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
-				readCount, err := conn.Read(buffer)
-				if err == io.EOF {
-					return
-				} else if err != nil {
-					continue
-				}
+		if err != nil {
+			continue
+		}
 
-				buffer2 := make([]byte, readCount)
-				copy(buffer2, buffer[:readCount])
-				fmt.Printf("%s", buffer2)
-			}
-		}()
+		buffer2 := make([]byte, readCount)
+		copy(buffer2, buffer[:readCount])
+		fmt.Printf("%s", buffer2)
 	}
 }
