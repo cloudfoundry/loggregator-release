@@ -34,7 +34,7 @@ func NewServer(listenTLS bool, certPath, keyPath, address string) *server {
 		return s
 	}
 
-	s.listener = s.listen(address)
+	s.listen(address)
 	return s
 }
 
@@ -62,13 +62,13 @@ func (s *server) Stop() {
 	}
 }
 
-func (s *server) listen(address string) net.Listener {
+func (s *server) listen(address string) {
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		panic(err)
 	}
 
-	return listener
+	s.listener = listener
 }
 
 func (s *server) listenTLS(address string, certPath, keyPath string) {

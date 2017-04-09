@@ -17,7 +17,7 @@ var pathToTCPEchoServer string
 
 var _ = BeforeSuite(func() {
 	var err error
-	pathToTCPEchoServer, err = gexec.Build("tools/tcpechoserver")
+	pathToTCPEchoServer, err = gexec.Build("tools/echo/cmd/tcp_server")
 	Expect(err).NotTo(HaveOccurred())
 })
 

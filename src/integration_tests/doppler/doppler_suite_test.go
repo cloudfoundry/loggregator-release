@@ -9,13 +9,10 @@ import (
 	"net"
 	"net/http"
 	"os/exec"
-	"plumbing"
 	"testing"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
 	"doppler/app"
+	"plumbing"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
@@ -26,6 +23,8 @@ import (
 	"github.com/cloudfoundry/storeadapter/storerunner/etcdstorerunner"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/websocket"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -59,10 +58,10 @@ var _ = BeforeSuite(func() {
 	pathToDopplerExec, err = gexec.Build("doppler", "-race")
 	Expect(err).NotTo(HaveOccurred())
 
-	pathToHTTPEchoServer, err = gexec.Build("tools/httpechoserver")
+	pathToHTTPEchoServer, err = gexec.Build("tools/echo/cmd/http_server")
 	Expect(err).NotTo(HaveOccurred())
 
-	pathToTCPEchoServer, err = gexec.Build("tools/tcpechoserver")
+	pathToTCPEchoServer, err = gexec.Build("tools/echo/cmd/tcp_server")
 	Expect(err).NotTo(HaveOccurred())
 })
 
