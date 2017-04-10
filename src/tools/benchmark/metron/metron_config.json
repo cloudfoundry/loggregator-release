@@ -1,0 +1,12 @@
+{
+    "DopplerAddr": "localhost:9999",
+    "DopplerAddrUDP": "localhost:10000",
+    "IncomingUDPPort": 10002,
+
+    "GRPC": {
+        "PORT": 10001,
+        "CAFile": "ca.cert",
+        "KeyFile": "metron.key",
+        "CertFile": "metron.cert"
+    }
+}

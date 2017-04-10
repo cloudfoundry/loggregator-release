@@ -73,7 +73,7 @@ func (m *ConnManager) Write(envelopes []*plumbing.Envelope) error {
 
 func (m *ConnManager) maintainConn() {
 
-	// Ensure intial connection does not wait on timer
+	// Ensure initial connection does not wait on timer
 	m.reset <- true
 
 	for {
