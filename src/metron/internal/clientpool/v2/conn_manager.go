@@ -27,6 +27,9 @@ type ConnManager struct {
 	maxWrites    int64
 	pollDuration time.Duration
 	connector    Connector
+
+	ticker *time.Ticker
+	reset  chan bool
 }
 
 func NewConnManager(c Connector, maxWrites int64, pollDuration time.Duration) *ConnManager {
@@ -34,6 +37,8 @@ func NewConnManager(c Connector, maxWrites int64, pollDuration time.Duration) *C
 		maxWrites:    maxWrites,
 		pollDuration: pollDuration,
 		connector:    c,
+		ticker:       time.NewTicker(pollDuration),
+		reset:        make(chan bool, 100),
 	}
 	go m.maintainConn()
 	return m
@@ -52,6 +57,7 @@ func (m *ConnManager) Write(envelopes []*plumbing.Envelope) error {
 		log.Printf("error writing to doppler %s: %s", gRPCConn.name, err)
 		atomic.StorePointer(&m.conn, nil)
 		gRPCConn.closer.Close()
+		m.reset <- true
 		return err
 	}
 
@@ -59,13 +65,20 @@ func (m *ConnManager) Write(envelopes []*plumbing.Envelope) error {
 		log.Printf("recycling connection to doppler %s after %d writes", gRPCConn.name, m.maxWrites)
 		atomic.StorePointer(&m.conn, nil)
 		gRPCConn.closer.Close()
+		m.reset <- true
 	}
 
 	return nil
 }
 
 func (m *ConnManager) maintainConn() {
-	for range time.Tick(m.pollDuration) {
+
+	// Ensure intial connection does not wait on timer
+	m.reset <- true
+
+	for {
+		m.checkConnectionTimer()
+
 		conn := atomic.LoadPointer(&m.conn)
 		if conn != nil && (*v2GRPCConn)(conn) != nil {
 			continue
@@ -82,5 +95,12 @@ func (m *ConnManager) maintainConn() {
 			client: senderClient,
 			closer: closer,
 		}))
+	}
+}
+
+func (m *ConnManager) checkConnectionTimer() {
+	select {
+	case <-m.ticker.C:
+	case <-m.reset:
 	}
 }
