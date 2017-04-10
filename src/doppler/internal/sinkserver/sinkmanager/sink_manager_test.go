@@ -128,12 +128,15 @@ var _ = Describe("SinkManager", func() {
 			sink1 := &channelSink{done: make(chan struct{}), appId: "firehose-a"}
 
 			expectedMessageString := "Some Data"
-			expectedMessage, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp", "App"), "origin")
+			expectedMessage, _ := emitter.Wrap(
+				factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp", "App"),
+				"origin",
+			)
 			go sinkManager.SendTo("myApp1", expectedMessage)
 
 			sinkManager.RegisterFirehoseSink(sink1)
 
-			Eventually(sink1.Received).Should(ContainElement(expectedMessage))
+			Eventually(sink1.Received, 5).Should(ContainElement(expectedMessage))
 		})
 
 		Context("When a sync is consuming slowly", func() {
