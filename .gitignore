@@ -24,11 +24,19 @@ releases/*.tgz
 releases/**/*.tgz
 
 # tools
-/src/github.com/client9/misspell
-/src/github.com/mdempsky/
 /src/golang.org/x/text/
 /src/golang.org/x/tools/
 /src/github.com/square/certstrap
+/src/github.com/client9/misspell
+/src/github.com/mdempsky/unconvert
+/src/github.com/tsenart/deadcode
+/src/github.com/golang/lint
+/src/github.com/opennota/check
+/src/github.com/kisielk/errcheck
+/src/github.com/gordonklaus/ineffassign
+/src/github.com/mvdan/interfacer
+/src/github.com/mvdan/lint
+/src/honnef.co/go
 
 # cert script output
 loggregator-certs
