@@ -12,33 +12,32 @@
     end
 
     doppler_addrs = []
-    etcdMachines = []
-    etcdTLSClientConfig = {}
-    etcdMaxConcurrentRequets = 0
-    etcdRequireTLS = false
+    etcd_machines = []
+    etcd_tls_client_config = {}
+    etcd_max_concurrent_requests = 0
+    etcd_require_tls = false
 
     if_link("doppler") { |ds|
         doppler_addrs = ds.instances.map{|i| "#{i.address}:#{ds.p('doppler.grpc_port')}"}
     }.else {
-        etcdMachines = p("loggregator.etcd.machines").map{|addr| "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"}
-            etcdTLSClientConfig = {
+        etcd_machines = p("loggregator.etcd.machines").map{|addr| "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"}
+            etcd_tls_client_config = {
             "KeyFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-client.key",
             "CertFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-client.crt",
             "CAFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-ca.crt"
         }
-        etcdMaxConcurrentRequets = p("loggregator.etcd.maxconcurrentrequests")
-        etcdRequireTLS = p("loggregator.etcd.require_ssl")
+        etcd_max_concurrent_requests = p("loggregator.etcd.maxconcurrentrequests")
+        etcd_require_tls = p("loggregator.etcd.require_ssl")
     }
 
     # Handle renamed properties
-    uaaClient = p("loggregator.uaa.client")
+    uaa_client = p("loggregator.uaa.client")
     oldUaaClient = p("loggregator.uaa_client_id")
     unless oldUaaClient.empty?
-        uaaClient = oldUaaClient
+        uaa_client = oldUaaClient
     end
 
-
-    grpcListenerConfig = {
+    grpc_config = {
         "Port" => p("doppler.grpc_port"),
         "KeyFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/trafficcontroller.key",
         "CertFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/trafficcontroller.crt",
@@ -47,32 +46,32 @@
 
     scheme = p("login.protocol")
     domain = p("system_domain")
-    uaaHost = p("uaa.url", "#{scheme}://uaa.#{domain}")
+    uaa_host = p("uaa.url", "#{scheme}://uaa.#{domain}")
 
     args = Hash.new.tap do |a|
         a[:JobName] = job_name
         a[:Index] = instance_id
         a[:IP] = spec.ip
 
-        a[:EtcdUrls] = etcdMachines
-        a[:EtcdMaxConcurrentRequests] = etcdMaxConcurrentRequets
-        a[:EtcdRequireTLS] = etcdRequireTLS
-        if etcdRequireTLS
-            a[:EtcdTLSClientConfig] = etcdTLSClientConfig
+        a[:EtcdUrls] = etcd_machines
+        a[:EtcdMaxConcurrentRequests] = etcd_max_concurrent_requests
+        a[:EtcdRequireTLS] = etcd_require_tls
+        if etcd_require_tls
+            a[:EtcdTLSClientConfig] = etcd_tls_client_config
         end
 
         a[:DopplerAddrs] = doppler_addrs
         a[:DopplerPort] = p("doppler.outgoing_port")
 
         a[:OutgoingDropsondePort] = p("loggregator.outgoing_dropsonde_port")
-        a[:GRPC] = grpcListenerConfig
+        a[:GRPC] = grpc_config
         a[:SkipCertVerify] = p("ssl.skip_cert_verify")
         a[:ApiHost] = p("cc.srv_api_uri")
         a[:SystemDomain] = p("system_domain")
         a[:MetronPort] = p("metron_endpoint.dropsonde_port")
         a[:PPROFPort] = p("traffic_controller.pprof_port")
-        a[:UaaHost] = uaaHost
-        a[:UaaClient] = uaaClient
+        a[:UaaHost] = uaa_host
+        a[:UaaClient] = uaa_client
         a[:UaaClientSecret] = p("loggregator.uaa.client_secret")
         if p("traffic_controller.security_event_logging.enabled")
             a[:SecurityEventLog] = "/var/vcap/sys/log/loggregator_trafficcontroller/loggregator_trafficcontroller_security_events.log"
