@@ -22,7 +22,7 @@ var _ = Describe("ConnManager", func() {
 
 	BeforeEach(func() {
 		mockConnector = newMockConnector()
-		connManager = clientpool.NewConnManager(mockConnector, 5, time.Millisecond)
+		connManager = clientpool.NewConnManager(mockConnector, 5, time.Minute)
 		mockCloser = newMockCloser()
 		mockPusherClient = newMockDopplerIngestor_PusherClient()
 	})
@@ -61,7 +61,7 @@ var _ = Describe("ConnManager", func() {
 					mockConnector.ConnectOutput.Ret2 <- nil
 				})
 
-				It("recycles the connections after max writes", func() {
+				It("recycles the connections after max writes and reconnects", func() {
 					msg := []byte("some-data")
 					f := func() int {
 						connManager.Write(msg)
