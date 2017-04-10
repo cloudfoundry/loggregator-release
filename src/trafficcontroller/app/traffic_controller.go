@@ -73,12 +73,6 @@ func (t *trafficController) Start() {
 	go openFileMonitor.Start()
 	defer openFileMonitor.Stop()
 
-	etcdAdapter := t.defaultStoreAdapterProvider(t.conf)
-	err = etcdAdapter.Connect()
-	if err != nil {
-		panic(fmt.Errorf("Unable to connect to ETCD: %s", err))
-	}
-
 	logAuthorizer := auth.NewLogAccessAuthorizer(t.disableAccessControl, t.conf.ApiHost)
 
 	uaaClient := auth.NewUaaClient(t.conf.UaaHost, t.conf.UaaClient, t.conf.UaaClientSecret)
@@ -113,6 +107,12 @@ func (t *trafficController) Start() {
 	case len(t.conf.DopplerAddrs) > 0:
 		f = plumbing.NewStaticFinder(t.conf.DopplerAddrs)
 	default:
+		etcdAdapter := t.defaultStoreAdapterProvider(t.conf)
+		err = etcdAdapter.Connect()
+		if err != nil {
+			panic(fmt.Errorf("Unable to connect to ETCD: %s", err))
+		}
+
 		f = dopplerservice.NewFinder(
 			etcdAdapter,
 			int(t.conf.DopplerPort),

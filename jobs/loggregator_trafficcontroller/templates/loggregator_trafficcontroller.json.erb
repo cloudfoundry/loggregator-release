@@ -12,9 +12,23 @@
     end
 
     doppler_addrs = []
-    if_link("doppler") do |ds|
+    etcdMachines = []
+    etcdTLSClientConfig = {}
+    etcdMaxConcurrentRequets = 0
+    etcdRequireTLS = false
+
+    if_link("doppler") { |ds|
         doppler_addrs = ds.instances.map{|i| "#{i.address}:#{ds.p('doppler.grpc_port')}"}
-    end
+    }.else {
+        etcdMachines = p("loggregator.etcd.machines").map{|addr| "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"}
+            etcdTLSClientConfig = {
+            "KeyFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-client.key",
+            "CertFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-client.crt",
+            "CAFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-ca.crt"
+        }
+        etcdMaxConcurrentRequets = p("loggregator.etcd.maxconcurrentrequests")
+        etcdRequireTLS = p("loggregator.etcd.require_ssl")
+    }
 
     # Handle renamed properties
     uaaClient = p("loggregator.uaa.client")
@@ -23,13 +37,7 @@
         uaaClient = oldUaaClient
     end
 
-    etcdMachines = p("loggregator.etcd.machines").map{|addr| "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"}
 
-    etcdTLSClientConfig = {
-        "KeyFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-client.key",
-        "CertFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-client.crt",
-        "CAFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-ca.crt"
-    }
     grpcListenerConfig = {
         "Port" => p("doppler.grpc_port"),
         "KeyFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/trafficcontroller.key",
@@ -45,15 +53,18 @@
         a[:JobName] = job_name
         a[:Index] = instance_id
         a[:IP] = spec.ip
+
         a[:EtcdUrls] = etcdMachines
-        a[:EtcdMaxConcurrentRequests] = p("loggregator.etcd.maxconcurrentrequests")
-        a[:EtcdRequireTLS] = p("loggregator.etcd.require_ssl")
-        if_p("loggregator.etcd.require_ssl") do |_|
+        a[:EtcdMaxConcurrentRequests] = etcdMaxConcurrentRequets
+        a[:EtcdRequireTLS] = etcdRequireTLS
+        if etcdRequireTLS
             a[:EtcdTLSClientConfig] = etcdTLSClientConfig
         end
-        a[:OutgoingDropsondePort] = p("loggregator.outgoing_dropsonde_port")
-        a[:DopplerPort] = p("doppler.outgoing_port")
+
         a[:DopplerAddrs] = doppler_addrs
+        a[:DopplerPort] = p("doppler.outgoing_port")
+
+        a[:OutgoingDropsondePort] = p("loggregator.outgoing_dropsonde_port")
         a[:GRPC] = grpcListenerConfig
         a[:SkipCertVerify] = p("ssl.skip_cert_verify")
         a[:ApiHost] = p("cc.srv_api_uri")
