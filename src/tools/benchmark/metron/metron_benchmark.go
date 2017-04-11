@@ -69,7 +69,7 @@ func main() {
 	}
 
 	c := newConsumer()
-	consumeEnvelopes(*iterations, c, *dopplerAddr, certs)
+	consumeEnvelopes(c, *dopplerAddr, certs)
 
 	chunks := strings.SplitN(*metronCmd, " ", -1)
 
@@ -96,7 +96,7 @@ func main() {
 	fmt.Printf("%s %v\n", *resultTag, results)
 }
 
-func consumeEnvelopes(iterations int, c *consumer, addr string, creds credentials.TransportCredentials) {
+func consumeEnvelopes(c *consumer, addr string, creds credentials.TransportCredentials) {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Panicf("Failed to listen: %s", err)
@@ -115,7 +115,7 @@ func produceEnvelopes(iterations int, delay time.Duration, metronAddr string) {
 	conn := dial(metronAddr)
 
 	for i := 0; i < iterations; i++ {
-		_, err := conn.Write(createEnvelope(i))
+		_, err := conn.Write(createEnvelope())
 		if err != nil {
 			log.Panicf("Failed to write data to metron: %s", err)
 		}
@@ -124,7 +124,7 @@ func produceEnvelopes(iterations int, delay time.Duration, metronAddr string) {
 	}
 }
 
-func createEnvelope(idx int) []byte {
+func createEnvelope() []byte {
 	e := &events.Envelope{
 		Origin:    proto.String("metron-benchmark"),
 		EventType: events.Envelope_CounterEvent.Enum(),
