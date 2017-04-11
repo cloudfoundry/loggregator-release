@@ -80,13 +80,20 @@ type WebsocketServer struct {
 	done chan struct{}
 }
 
-func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, writeTimeout time.Duration, keepAliveInterval time.Duration, messageDrainBufferSize uint, dropsondeOrigin string, batcher Batcher) (*WebsocketServer, error) {
-	log.Printf("WebsocketServer: Listening for sinks at %s", apiEndpoint)
-
-	listener, e := net.Listen("tcp", apiEndpoint)
-	if e != nil {
-		return nil, e
+func New(
+	apiEndpoint string,
+	sinkManager *sinkmanager.SinkManager,
+	writeTimeout time.Duration,
+	keepAliveInterval time.Duration,
+	messageDrainBufferSize uint,
+	dropsondeOrigin string,
+	batcher Batcher,
+) (*WebsocketServer, error) {
+	listener, err := net.Listen("tcp", apiEndpoint)
+	if err != nil {
+		return nil, err
 	}
+	log.Printf("WebsocketServer: Listening for sinks at %s", listener.Addr())
 
 	return &WebsocketServer{
 		listener:          listener,
@@ -111,6 +118,10 @@ func (w *WebsocketServer) Stop() {
 	log.Print("stopping websocket server")
 	w.listener.Close()
 	<-w.done
+}
+
+func (w *WebsocketServer) Addr() string {
+	return w.listener.Addr().String()
 }
 
 type wsHandler func(*gorilla.Conn)

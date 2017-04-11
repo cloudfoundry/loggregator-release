@@ -6,9 +6,7 @@ import (
 	"doppler/internal/sinkserver/websocketserver"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
-	"strconv"
 	"time"
 
 	. "github.com/apoydence/eachers"
@@ -42,28 +40,18 @@ var _ = Describe("WebsocketServer", func() {
 
 		wsReceivedChan = make(chan []byte, 100)
 
-		// TODO: This is a poor solution that we need to remove ASAP. Ideally,
-		// we can rely on the kernel to give us an open port and pass the
-		// listener directly to websocket.New call.
-		retries := 5
-		for ; retries > 0; retries-- {
-			apiEndpoint = net.JoinHostPort("127.0.0.1", strconv.Itoa(getPort()+(config.GinkgoConfig.ParallelNode*10)))
-			var err error
-			server, err = websocketserver.New(
-				apiEndpoint,
-				sinkManager,
-				100*time.Millisecond,
-				100*time.Millisecond,
-				100,
-				"dropsonde-origin",
-				mockBatcher,
-			)
-
-			if err == nil {
-				break
-			}
-		}
-		Expect(retries).To(BeNumerically(">", 0))
+		var err error
+		server, err = websocketserver.New(
+			"127.0.0.1:0",
+			sinkManager,
+			100*time.Millisecond,
+			100*time.Millisecond,
+			100,
+			"dropsonde-origin",
+			mockBatcher,
+		)
+		Expect(err).NotTo(HaveOccurred())
+		apiEndpoint = server.Addr()
 
 		go server.Start()
 		websocket.DefaultDialer = &websocket.Dialer{HandshakeTimeout: 10 * time.Millisecond}
