@@ -1,0 +1,19 @@
+{
+    "GRPC": {
+        "Port": 9999,
+        "CAFile": "ca.cert",
+        "CertFile": "doppler.cert",
+        "KeyFile": "doppler.key"
+    },
+    "IP": "127.0.0.1",
+    "MaxRetainedLogMessages": 1024,
+    "MetronConfig": {
+        "UDPAddress": "127.0.0.1:0"
+    },
+    "EtcdMaxConcurrentRequests": 1,
+    "EtcdUrls": [
+        "127.0.0.1:2379"
+    ],
+    "EtcdRequireTLS": false,
+    "MetricBatchIntervalMilliseconds": 40000000
+}

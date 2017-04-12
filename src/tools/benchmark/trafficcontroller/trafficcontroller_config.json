@@ -1,0 +1,14 @@
+{
+    "SystemDomain": "an-domain",
+    "IP": "127.0.0.1",
+    "OutgoingDropsondePort": 10000,
+    "EtcdRequireTLS": false,
+    "EtcdUrls": ["127.0.0.1:2379"],
+    "GRPC": {
+        "Port": 9999,
+        "CAFile": "ca.cert",
+        "CertFile": "doppler.cert",
+        "KeyFile": "doppler.key"
+    },
+    "UaaClientSecret": "an-secret"
+}
