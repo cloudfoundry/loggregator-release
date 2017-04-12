@@ -1,7 +1,6 @@
 package groupedsinks
 
 import (
-	"log"
 	"sync"
 
 	"doppler/internal/groupedsinks/firehose_group"
@@ -91,7 +90,7 @@ func (group *GroupedSinks) Broadcast(appId string, msg *events.Envelope) {
 		select {
 		case wrapper.InputChan <- msg:
 		default:
-			log.Printf("unable to write to app sink: %s", appId)
+			// Do nothing.
 		}
 	}
 
@@ -107,7 +106,7 @@ func (group *GroupedSinks) BroadcastError(appId string, errorMsg *events.Envelop
 			select {
 			case wrapper.InputChan <- errorMsg:
 			default:
-				log.Printf("unable to write error to app sink: %s", appId)
+				// Do nothing.
 			}
 		}
 	}
