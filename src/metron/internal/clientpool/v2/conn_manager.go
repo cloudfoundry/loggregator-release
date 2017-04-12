@@ -2,7 +2,6 @@ package v2
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	plumbing "plumbing/v2"
@@ -16,7 +15,6 @@ type Connector interface {
 }
 
 type v2GRPCConn struct {
-	name   string
 	client plumbing.DopplerIngress_BatchSenderClient
 	closer io.Closer
 	writes int64
@@ -54,7 +52,7 @@ func (m *ConnManager) Write(envelopes []*plumbing.Envelope) error {
 	err := gRPCConn.client.Send(&plumbing.EnvelopeBatch{Batch: envelopes})
 
 	if err != nil {
-		log.Printf("error writing to doppler %s: %s", gRPCConn.name, err)
+		log.Printf("error writing to doppler: %s", err)
 		atomic.StorePointer(&m.conn, nil)
 		gRPCConn.closer.Close()
 		m.reset <- true
@@ -62,7 +60,7 @@ func (m *ConnManager) Write(envelopes []*plumbing.Envelope) error {
 	}
 
 	if atomic.AddInt64(&gRPCConn.writes, 1) >= m.maxWrites {
-		log.Printf("recycling connection to doppler %s after %d writes", gRPCConn.name, m.maxWrites)
+		log.Printf("recycling connection to doppler after %d writes", m.maxWrites)
 		atomic.StorePointer(&m.conn, nil)
 		gRPCConn.closer.Close()
 		m.reset <- true
@@ -91,7 +89,6 @@ func (m *ConnManager) maintainConn() {
 		}
 
 		atomic.StorePointer(&m.conn, unsafe.Pointer(&v2GRPCConn{
-			name:   fmt.Sprintf("%s", m.connector),
 			client: senderClient,
 			closer: closer,
 		}))
