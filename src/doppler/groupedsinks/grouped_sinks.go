@@ -8,7 +8,6 @@ import (
 	"doppler/sinks/dump"
 	"doppler/sinks/syslog"
 	"doppler/sinks/websocket"
-	"log"
 	"sync"
 
 	"github.com/cloudfoundry/sonde-go/events"
@@ -90,7 +89,7 @@ func (group *GroupedSinks) Broadcast(appId string, msg *events.Envelope) {
 		select {
 		case wrapper.InputChan <- msg:
 		default:
-			log.Printf("unable to write to app sink: %s", appId)
+			// Do nothing.
 		}
 	}
 
@@ -106,7 +105,7 @@ func (group *GroupedSinks) BroadcastError(appId string, errorMsg *events.Envelop
 			select {
 			case wrapper.InputChan <- errorMsg:
 			default:
-				log.Printf("unable to write error to app sink: %s", appId)
+				// Do nothing.
 			}
 		}
 	}
