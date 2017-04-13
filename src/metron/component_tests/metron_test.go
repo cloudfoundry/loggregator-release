@@ -141,47 +141,6 @@ var _ = Describe("Metron", func() {
 				}),
 			}))
 		})
-
-		It("emits metrics to the v2 API", func() {
-			emitEnvelope := &v2.Envelope{
-				Message: &v2.Envelope_Log{
-					Log: &v2.Log{
-						Payload: []byte("some-message"),
-						Type:    v2.Log_OUT,
-					},
-				},
-			}
-
-			client := metronClient(metronConfig)
-			ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(20*time.Second))
-			sender, err := client.Sender(ctx)
-			Expect(err).ToNot(HaveOccurred())
-
-			go func() {
-				for {
-					sender.Send(emitEnvelope)
-					time.Sleep(10 * time.Millisecond)
-				}
-			}()
-
-			var rx v2.DopplerIngress_BatchSenderServer
-			Eventually(consumerServer.V2.BatchSenderInput.Arg0).Should(Receive(&rx))
-
-			f := func() bool {
-				batch, err := rx.Recv()
-				Expect(err).ToNot(HaveOccurred())
-
-				for _, envelope := range batch.Batch {
-					if envelope.GetCounter() != nil &&
-						envelope.GetCounter().GetTotal() > 5 {
-						return true
-					}
-				}
-
-				return false
-			}
-			Eventually(f, 20, "1ns").Should(Equal(true))
-		})
 	})
 
 	Context("when the consumer is only accepting UDP messages", func() {
