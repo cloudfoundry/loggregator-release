@@ -8,6 +8,7 @@ import (
 	"doppler/sinks/dump"
 	"doppler/sinks/syslog"
 	"doppler/sinks/websocket"
+	"metric"
 	"sync"
 
 	"github.com/cloudfoundry/sonde-go/events"
@@ -98,6 +99,10 @@ func (group *GroupedSinks) Broadcast(appId string, msg *events.Envelope) {
 			// metric-documentation-v1: (sinks.dropped) Number of envelopes dropped
 			// while inserting envelope into sink.
 			group.batcher.BatchIncrementCounter("sinks.dropped")
+
+			// metric-documentation-v2: (loggregator.doppler.sinks.dropped)
+			// Number of envelopes dropped while inserting envelope into sink.
+			metric.IncCounter("sinks.dropped")
 		}
 	}
 
@@ -116,6 +121,10 @@ func (group *GroupedSinks) BroadcastError(appId string, errorMsg *events.Envelop
 				// metric-documentation-v1: (sinks.errors.dropped) Number of errors dropped
 				// while inserting error into sink.
 				group.batcher.BatchIncrementCounter("sinks.errors.dropped")
+
+				// metric-documentation-v2: (loggregator.doppler.sinks.errors.dropped)
+				// Number of errors dropped while inserting error into sink.
+				metric.IncCounter("sinks.errors.dropped")
 			}
 		}
 	}
