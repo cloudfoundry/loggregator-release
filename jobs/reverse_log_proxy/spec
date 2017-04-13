@@ -34,3 +34,10 @@ properties:
     description: "TLS certificate for the reverse log proxy"
   loggregator.tls.reverse_log_proxy.key:
     description: "TLS key for the reverse log proxy"
+
+  loggregator.doppler.addrs:
+    description: "The addresses of Dopplers (alternative to doppler link)"
+    default: []
+  loggregator.doppler.grpc_port:
+    description: "The grpc port for Doppler (alternative to doppler link)"
+    default: 8082
