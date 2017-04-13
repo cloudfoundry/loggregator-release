@@ -84,7 +84,7 @@ func (m *ConnManager) maintainConn() {
 
 		closer, senderClient, err := m.connector.Connect()
 		if err != nil {
-			log.Printf("error dialing doppler %s: %s", m.connector, err)
+			log.Printf("error dialing doppler: %s", err)
 			continue
 		}
 
