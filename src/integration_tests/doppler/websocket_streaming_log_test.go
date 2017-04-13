@@ -12,7 +12,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Websocket Streaming Logs", func() {
+// WebsocketSinks are a deprecated code path
+var _ = XDescribe("Websocket Streaming Logs", func() {
 	var ws *websocket.Conn
 	var connDropped <-chan struct{}
 	var receivedChan chan []byte
