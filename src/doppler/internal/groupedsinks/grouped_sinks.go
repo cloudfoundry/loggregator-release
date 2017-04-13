@@ -14,16 +14,22 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
-func NewGroupedSinks() *GroupedSinks {
+type MetricBatcher interface {
+	BatchIncrementCounter(name string)
+}
+
+func NewGroupedSinks(b MetricBatcher) *GroupedSinks {
 	return &GroupedSinks{
 		apps:      make(map[string]map[string]*sink_wrapper.SinkWrapper),
 		firehoses: make(map[string]firehose_group.FirehoseGroup),
+		batcher:   b,
 	}
 }
 
 type GroupedSinks struct {
 	apps      map[string]map[string]*sink_wrapper.SinkWrapper
 	firehoses map[string]firehose_group.FirehoseGroup
+	batcher   MetricBatcher
 	sync.RWMutex
 }
 
@@ -90,7 +96,9 @@ func (group *GroupedSinks) Broadcast(appId string, msg *events.Envelope) {
 		select {
 		case wrapper.InputChan <- msg:
 		default:
-			// Do nothing.
+			// metric-documentation-v1: (sinks.dropped) Number of envelopes dropped
+			// while inserting envelope into sink.
+			group.batcher.BatchIncrementCounter("sinks.dropped")
 		}
 	}
 
@@ -106,7 +114,9 @@ func (group *GroupedSinks) BroadcastError(appId string, errorMsg *events.Envelop
 			select {
 			case wrapper.InputChan <- errorMsg:
 			default:
-				// Do nothing.
+				// metric-documentation-v1: (sinks.errors.dropped) Number of errors dropped
+				// while inserting error into sink.
+				group.batcher.BatchIncrementCounter("sinks.errors.dropped")
 			}
 		}
 	}

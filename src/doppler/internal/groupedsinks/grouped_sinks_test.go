@@ -25,7 +25,7 @@ var _ = Describe("GroupedSink", func() {
 	var inputChan chan *events.Envelope
 
 	BeforeEach(func() {
-		groupedSinks = groupedsinks.NewGroupedSinks()
+		groupedSinks = groupedsinks.NewGroupedSinks(&spyMetricBatcher{})
 		inputChan = make(chan *events.Envelope, 10)
 	})
 
@@ -587,3 +587,7 @@ func (fake fakeAddr) Network() string {
 func (fake fakeAddr) String() string {
 	return fake.remoteAddress
 }
+
+type spyMetricBatcher struct{}
+
+func (s *spyMetricBatcher) BatchIncrementCounter(name string) {}

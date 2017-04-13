@@ -71,6 +71,7 @@ func main() {
 	monitorInterval := time.Duration(conf.MonitorIntervalSeconds) * time.Second
 	openFileMonitor := monitor.NewLinuxFD(monitorInterval)
 	uptimeMonitor := monitor.NewUptime(monitorInterval)
+	batcher := initializeMetrics(conf.MetricBatchIntervalMilliseconds)
 
 	//------------------------------
 	// Caching
@@ -85,6 +86,7 @@ func main() {
 		time.Duration(conf.SinkIOTimeoutSeconds)*time.Second,
 		time.Duration(conf.ContainerMetricTTLSeconds)*time.Second,
 		time.Duration(conf.SinkDialTimeoutSeconds)*time.Second,
+		batcher,
 	)
 
 	//------------------------------
@@ -95,7 +97,6 @@ func main() {
 	errChan := make(chan error)
 	var wg sync.WaitGroup
 	dropsondeUnmarshallerCollection := dropsonde_unmarshaller.NewDropsondeUnmarshallerCollection(conf.UnmarshallerCount)
-	batcher := initializeMetrics(conf.MetricBatchIntervalMilliseconds)
 	envelopeBuffer := diodes.NewManyToOneEnvelope(10000, gendiodes.AlertFunc(func(missed int) {
 		log.Printf("Shed %d envelopes", missed)
 		// metric-documentation-v1: (doppler.shedEnvelopes) Number of envelopes dropped by the

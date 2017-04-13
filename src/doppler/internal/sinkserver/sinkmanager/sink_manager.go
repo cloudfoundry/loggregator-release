@@ -22,6 +22,10 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
+type MetricBatcher interface {
+	BatchIncrementCounter(name string)
+}
+
 type SinkManager struct {
 	messageDrainBufferSize uint
 	dropsondeOrigin        string
@@ -52,12 +56,13 @@ func New(
 	sinkIOTimeout,
 	metricTTL,
 	dialTimeout time.Duration,
+	metricBatcher MetricBatcher,
 ) *SinkManager {
 	return &SinkManager{
 		doneChannel:            make(chan struct{}),
 		errorChannel:           make(chan *events.Envelope, 100),
 		urlBlacklistManager:    blackListManager,
-		sinks:                  groupedsinks.NewGroupedSinks(),
+		sinks:                  groupedsinks.NewGroupedSinks(metricBatcher),
 		skipCertVerify:         skipCertVerify,
 		recentLogCount:         maxRetainedLogMessages,
 		metrics:                metrics.NewSinkManagerMetrics(),
