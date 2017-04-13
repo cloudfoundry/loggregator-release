@@ -74,7 +74,7 @@ var _ = Describe("Metron", func() {
 			Eventually(f, 5).Should(BeNumerically(">", 0))
 
 			var rx plumbing.DopplerIngestor_PusherServer
-			Expect(consumerServer.V1.PusherInput.Arg0).Should(Receive(&rx))
+			Eventually(consumerServer.V1.PusherInput.Arg0).Should(Receive(&rx))
 
 			data, err := rx.Recv()
 			Expect(err).ToNot(HaveOccurred())
@@ -104,7 +104,7 @@ var _ = Describe("Metron", func() {
 			}()
 
 			var rx v2.DopplerIngress_BatchSenderServer
-			Expect(consumerServer.V2.BatchSenderInput.Arg0).Should(Receive(&rx))
+			Eventually(consumerServer.V2.BatchSenderInput.Arg0).Should(Receive(&rx))
 
 			var envBatch *v2.EnvelopeBatch
 			var idx int
