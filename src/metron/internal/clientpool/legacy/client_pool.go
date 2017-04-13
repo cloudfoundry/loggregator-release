@@ -40,7 +40,6 @@ func (p *ClientPool) Write(data []byte) error {
 
 	_, err := conn.Write(data)
 	if err != nil {
-		log.Printf("failed to write to Doppler: %s", err)
 		return err
 	}
 
