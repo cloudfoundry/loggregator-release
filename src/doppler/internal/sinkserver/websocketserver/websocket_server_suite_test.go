@@ -19,7 +19,9 @@ import (
 func TestWebsocketServer(t *testing.T) {
 	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "WebsocketServer Suite")
+
+	// WebsocketSinks are a deprecated code path
+	// RunSpecs(t, "WebsocketServer Suite")
 }
 
 func addSlowWSSink(receivedChan chan []byte, errChan chan error, timeout time.Duration, url string) {

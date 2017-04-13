@@ -14,7 +14,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("WebsocketKeepalive", func() {
+// WebsocketSinks are a deprecated code path
+var _ = XDescribe("WebsocketKeepalive", func() {
 	var (
 		testServer         *httptest.Server
 		wsClient           *websocket.Conn
