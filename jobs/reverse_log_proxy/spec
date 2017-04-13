@@ -12,6 +12,7 @@ packages:
 consumes:
 - name: doppler
   type: doppler
+  optional: true
 
 provides:
 - name: reverse_log_proxy
