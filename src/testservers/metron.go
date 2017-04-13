@@ -73,7 +73,7 @@ func StartMetron(conf app.Config) (func(), app.Config, func()) {
 		}
 		conn.Close()
 		return true
-	}).Should(BeTrue())
+	}, 5).Should(BeTrue())
 
 	return func() {
 			os.Remove(filename)
