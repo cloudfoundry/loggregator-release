@@ -81,7 +81,7 @@ var _ = Describe("TLSWriter", func() {
 			outputURL := &url.URL{Scheme: "syslog-tls", Host: address}
 			syslogWriter, err = syslogwriter.NewTlsWriter(outputURL, "appId", "hostname", skipCertVerify, dialer, ioTimeout)
 			Expect(err).ToNot(HaveOccurred())
-		}, 5)
+		})
 
 		AfterEach(func() {
 			syslogServerSession.Terminate().Wait()
@@ -90,16 +90,13 @@ var _ = Describe("TLSWriter", func() {
 
 		It("connects and writes", func() {
 			ts := time.Now().UnixNano()
-			Eventually(func() error {
-				err := syslogWriter.Connect()
-				return err
-			}, 5, 1).ShouldNot(HaveOccurred())
+			Eventually(syslogWriter.Connect, 5, 1).Should(Succeed())
 
 			_, err := syslogWriter.Write(standardOutPriority, []byte("just a test"), "test", "", ts)
 			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(syslogServerSession, 3).Should(gbytes.Say("just a test"))
-		}, 10)
+		})
 
 		Context("when an i/o timeout is set", func() {
 			BeforeEach(func() {
