@@ -114,6 +114,25 @@ var _ = Describe("HttpsWriter", func() {
 			}
 		})
 
+		It("returns an error for syslog-tls scheme", func() {
+			outputUrl, _ := url.Parse("syslog-tls://localhost")
+			_, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", "org-name.space-name.app-name.1", false, dialer, timeout)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("returns an error for syslog scheme", func() {
+			outputUrl, _ := url.Parse("syslog://localhost")
+			_, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", "org-name.space-name.app-name.1", false, dialer, timeout)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("returns an error when the provided dialer is nil", func() {
+			outputURL, _ := url.Parse("https://localhost")
+			_, err := syslogwriter.NewHttpsWriter(outputURL, "appId", "org-name.space-name.app-name.1", false, nil, timeout)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("cannot construct a writer with a nil dialer"))
+		})
+
 		Context("returned status code is 2XX (but not 200)", func() {
 			BeforeEach(func() {
 				statusCode = 294
@@ -184,25 +203,6 @@ var _ = Describe("HttpsWriter", func() {
 				_, err = w.Write(standardErrorPriority, []byte("Message"), "test", "TEST", parsedTime.UnixNano())
 				Expect(err).To(HaveOccurred())
 			})
-		})
-
-		It("returns an error for syslog-tls scheme", func() {
-			outputUrl, _ := url.Parse("syslog-tls://localhost")
-			_, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", "org-name.space-name.app-name.1", false, dialer, timeout)
-			Expect(err).To(HaveOccurred())
-		})
-
-		It("returns an error for syslog scheme", func() {
-			outputUrl, _ := url.Parse("syslog://localhost")
-			_, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", "org-name.space-name.app-name.1", false, dialer, timeout)
-			Expect(err).To(HaveOccurred())
-		})
-
-		It("returns an error when the provided dialer is nil", func() {
-			outputURL, _ := url.Parse("https://localhost")
-			_, err := syslogwriter.NewHttpsWriter(outputURL, "appId", "org-name.space-name.app-name.1", false, nil, timeout)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("cannot construct a writer with a nil dialer"))
 		})
 	})
 })
