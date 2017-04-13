@@ -14,7 +14,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("WebsocketSink", func() {
+// WebsocketSinks are a deprecated code path
+var _ = XDescribe("WebsocketSink", func() {
 	var (
 		websocketSink *websocket.WebsocketSink
 		fakeWebsocket *fakeMessageWriter
