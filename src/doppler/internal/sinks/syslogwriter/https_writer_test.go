@@ -186,32 +186,6 @@ var _ = Describe("HttpsWriter", func() {
 			})
 		})
 
-		Context("when requests complete", func() {
-			var requester *concurrentWriteRequestSimulator
-
-			BeforeEach(func() {
-				requester = &concurrentWriteRequestSimulator{}
-				serveMux.Handle("/pause/", requester)
-			})
-
-			It("only keeps one idle connection", func() {
-				outputUrl, _ := url.Parse(server.URL + "/pause/")
-				w, _ := syslogwriter.NewHttpsWriter(outputUrl, "appId", "org-name.space-name.app-name.1", true, dialer, timeout)
-				err := w.Connect()
-				Expect(err).ToNot(HaveOccurred())
-
-				// one connection per request
-				requester.concurrentWriteRequests(2, w)
-				Eventually(func() int {
-					return listener.GetHistoryLength()
-				}, 5).Should(Equal(2))
-
-				// one pooled connection, one new connection
-				requester.concurrentWriteRequests(2, w)
-				Expect(listener.GetHistoryLength()).To(BeNumerically("<=", 3))
-			})
-		})
-
 		It("returns an error for syslog-tls scheme", func() {
 			outputUrl, _ := url.Parse("syslog-tls://localhost")
 			_, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", "org-name.space-name.app-name.1", false, dialer, timeout)
