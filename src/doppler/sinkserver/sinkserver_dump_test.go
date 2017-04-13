@@ -52,7 +52,7 @@ var _ = Describe("Dumping", func() {
 
 		emptyBlacklist := blacklist.New(nil)
 		sinkManager = sinkmanager.New(1024, false, emptyBlacklist, 100, "dropsonde-origin",
-			2*time.Second, 0, 1*time.Second, 500*time.Millisecond)
+			2*time.Second, 0, 1*time.Second, 500*time.Millisecond, nil)
 
 		tempSink := sinkManager
 		services.Add(1)

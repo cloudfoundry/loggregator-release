@@ -7,6 +7,7 @@ import (
 	"doppler/sinks/dump"
 	"doppler/sinks/syslog"
 	"doppler/sinks/websocket"
+	"net"
 	"net/url"
 	"time"
 
@@ -23,7 +24,7 @@ var _ = Describe("GroupedSink", func() {
 	var inputChan chan *events.Envelope
 
 	BeforeEach(func() {
-		groupedSinks = groupedsinks.NewGroupedSinks()
+		groupedSinks = groupedsinks.NewGroupedSinks(&spyMetricBatcher{})
 		inputChan = make(chan *events.Envelope, 10)
 	})
 
@@ -561,3 +562,35 @@ func (f *fakeSink) GetInstrumentationMetric() sinks.Metric {
 }
 
 func (f *fakeSink) UpdateDroppedMessageCount(messageCount int64) {}
+
+type fakeMessageWriter struct {
+	RemoteAddress string
+}
+
+func (fake *fakeMessageWriter) RemoteAddr() net.Addr {
+	return fakeAddr{remoteAddress: fake.RemoteAddress}
+}
+
+func (fake *fakeMessageWriter) WriteMessage(messageType int, data []byte) error {
+	return nil
+}
+
+func (fake *fakeMessageWriter) SetWriteDeadline(t time.Time) error {
+	return nil
+}
+
+type fakeAddr struct {
+	remoteAddress string
+}
+
+func (fake fakeAddr) Network() string {
+	return "RemoteAddressNetwork"
+}
+
+func (fake fakeAddr) String() string {
+	return fake.remoteAddress
+}
+
+type spyMetricBatcher struct{}
+
+func (s *spyMetricBatcher) BatchIncrementCounter(name string) {}

@@ -32,7 +32,7 @@ var _ = Describe("SinkManager", func() {
 	BeforeEach(func() {
 		fakeMetricSender.Reset()
 
-		sinkManager = sinkmanager.New(1, true, blackListManager, 100, "dropsonde-origin", 1*time.Second, 0, 1*time.Second, 1*time.Second)
+		sinkManager = sinkmanager.New(1, true, blackListManager, 100, "dropsonde-origin", 1*time.Second, 0, 1*time.Second, 1*time.Second, nil)
 
 		newAppServiceChan = make(chan store.AppService)
 		deletedAppServiceChan = make(chan store.AppService)
