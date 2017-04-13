@@ -79,25 +79,6 @@ var _ = Describe("Syslog Drain Binding", func() {
 				}, 20, 1).Should(gbytes.Say("syslog-message"))
 
 			})
-
-			It("reconnects to a reappearing syslog server after an unexpected close", func() {
-				syslogdrain := fmt.Sprintf(
-					`{"hostname":"org.app.space.1","drainURL":"syslog://%s"}`,
-					syslogDrainAddress,
-				)
-				key := DrainKey(appID, syslogdrain)
-				AddETCDNode(etcdAdapter, key, syslogdrain)
-
-				drainSession.Kill().Wait()
-
-				drainSession = StartUnencryptedTCPServer(pathToTCPEchoServer, syslogDrainAddress)
-
-				Eventually(func() *gbytes.Buffer {
-					SendAppLog(appID, "syslog-message", inputConnection)
-					return drainSession.Out
-				}, 20, 1).Should(gbytes.Say("syslog-message"))
-
-			})
 		})
 
 		Context("when forwarding to an encrypted syslog-tls:// endpoint", func() {
