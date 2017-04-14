@@ -41,7 +41,6 @@ var _ = XDescribe("Announcer", func() {
 			EtcdUrls:                  etcdRunner.NodeURLS(),
 			Zone:                      "z1",
 			IncomingUDPPort:           1234,
-			IncomingTCPPort:           5678,
 			OutgoingPort:              8888,
 		}
 	})
@@ -89,41 +88,18 @@ var _ = XDescribe("Announcer", func() {
 				}).To(Panic())
 			})
 
-			Context("when tls transport is enabled", func() {
-				It("announces udp, tcp, and tls values", func() {
-					dopplerMeta := fmt.Sprintf(`{"version": 1, "endpoints":["udp://%[1]s:1234", "tcp://%[1]s:5678", "ws://%[1]s:8888", "tls://%[1]s:9012"]}`, ip)
+			It("announces only udp and websocket", func() {
+				dopplerMeta := fmt.Sprintf(`{"version": 1, "endpoints":["udp://%[1]s:1234", "ws://%[1]s:8888" ]}`, ip)
 
-					conf.EnableTLSTransport = true
-					conf.TLSListenerConfig = app.TLSListenerConfig{
-						Port: 9012,
+				stopChan = dopplerservice.Announce(ip, time.Second, &conf, etcdAdapter)
+
+				Eventually(func() []byte {
+					node, err := etcdAdapter.Get(dopplerKey)
+					if err != nil {
+						return nil
 					}
-					stopChan = dopplerservice.Announce(ip, time.Second, &conf, etcdAdapter)
-
-					Eventually(func() []byte {
-						node, err := etcdAdapter.Get(dopplerKey)
-						if err != nil {
-							return nil
-						}
-						return node.Value
-					}).Should(MatchJSON(dopplerMeta))
-				})
-			})
-
-			Context("when tls transport is disabled", func() {
-				It("announces only udp and tcp values", func() {
-					dopplerMeta := fmt.Sprintf(`{"version": 1, "endpoints":["udp://%[1]s:1234", "tcp://%[1]s:5678", "ws://%[1]s:8888" ]}`, ip)
-
-					conf.EnableTLSTransport = false
-					stopChan = dopplerservice.Announce(ip, time.Second, &conf, etcdAdapter)
-
-					Eventually(func() []byte {
-						node, err := etcdAdapter.Get(dopplerKey)
-						if err != nil {
-							return nil
-						}
-						return node.Value
-					}).Should(MatchJSON(dopplerMeta))
-				})
+					return node.Value
+				}).Should(MatchJSON(dopplerMeta))
 			})
 		})
 	})

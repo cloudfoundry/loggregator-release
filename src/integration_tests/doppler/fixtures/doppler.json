@@ -2,7 +2,6 @@
     "EtcdUrls": ["http://localhost:5555"],
     "EtcdMaxConcurrentRequests": 10,
     "IncomingUDPPort": 8765,
-    "IncomingTCPPort": 4321,
     "OutgoingPort": 4567,
     "PPROFPort": 6790,
     "SinkSkipCertVerify": true,
@@ -23,13 +22,6 @@
         "UDPAddress": "localhost:37474"
     },
     "MonitorIntervalSeconds": 1,
-    "EnableTLSTransport": true,
-    "TLSListenerConfig": {
-        "Port": 8766,
-        "KeyFile": "../fixtures/server.key",
-        "CertFile": "../fixtures/server.crt",
-        "CAFile": "../fixtures/loggregator-ca.crt"
-    },
     "GRPC": {
         "Port": 5678,
         "KeyFile": "../fixtures/server.key",

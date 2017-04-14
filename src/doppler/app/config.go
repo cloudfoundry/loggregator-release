@@ -23,13 +23,6 @@ type EtcdTLSClientConfig struct {
 	CAFile   string
 }
 
-type TLSListenerConfig struct {
-	Port     uint32
-	CertFile string
-	KeyFile  string
-	CAFile   string
-}
-
 type GRPC struct {
 	Port     uint16
 	CAFile   string
@@ -41,9 +34,6 @@ type Config struct {
 	BlackListIps                    []iprange.IPRange
 	ContainerMetricTTLSeconds       int
 	IncomingUDPPort                 uint32
-	IncomingTCPPort                 uint32
-	EnableTLSTransport              bool
-	TLSListenerConfig               TLSListenerConfig
 	EtcdMaxConcurrentRequests       int
 	EtcdUrls                        []string
 	EtcdRequireTLS                  bool
@@ -88,12 +78,6 @@ func (c *Config) validate() (err error) {
 		}
 	}
 
-	if c.EnableTLSTransport {
-		if c.TLSListenerConfig.CertFile == "" || c.TLSListenerConfig.KeyFile == "" || c.TLSListenerConfig.Port == 0 {
-			return errors.New("invalid TLS listener configuration")
-		}
-	}
-
 	if c.EtcdRequireTLS {
 		if c.EtcdTLSClientConfig.CertFile == "" || c.EtcdTLSClientConfig.KeyFile == "" || c.EtcdTLSClientConfig.CAFile == "" {
 			return errors.New("invalid etcd TLS client configuration")
@@ -133,7 +117,6 @@ func ParseConfig(configFile string) (*Config, error) {
 func Parse(confData []byte) (*Config, error) {
 	config := &Config{
 		IncomingUDPPort: 3456,
-		IncomingTCPPort: 3457,
 	}
 
 	err := json.Unmarshal(confData, config)

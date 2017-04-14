@@ -15,8 +15,6 @@ import (
 
 func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int) dopplerConf.Config {
 	dopplerUDPPort := getUDPPort()
-	dopplerTCPPort := getTCPPort()
-	dopplerTLSPort := getTCPPort()
 	dopplerWSPort := getTCPPort()
 	dopplerGRPCPort := getTCPPort()
 	pprofPort := getTCPPort()
@@ -29,7 +27,6 @@ func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int)
 		SharedSecret: "test-shared-secret",
 
 		IncomingUDPPort: uint32(dopplerUDPPort),
-		IncomingTCPPort: uint32(dopplerTCPPort),
 		OutgoingPort:    uint32(dopplerWSPort),
 		GRPC: dopplerConf.GRPC{
 			Port:     uint16(dopplerGRPCPort),
@@ -45,14 +42,6 @@ func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int)
 		MetronConfig: dopplerConf.MetronConfig{
 			UDPAddress:  fmt.Sprintf("127.0.0.1:%d", metronUDPPort),
 			GRPCAddress: fmt.Sprintf("127.0.0.1:%d", metronGRPCPort),
-		},
-
-		EnableTLSTransport: true,
-		TLSListenerConfig: dopplerConf.TLSListenerConfig{
-			Port:     uint32(dopplerTLSPort),
-			CertFile: Cert("doppler.crt"),
-			KeyFile:  Cert("doppler.key"),
-			CAFile:   Cert("loggregator-ca.crt"),
 		},
 
 		MetricBatchIntervalMilliseconds: 10,

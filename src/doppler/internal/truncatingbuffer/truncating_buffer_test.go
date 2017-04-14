@@ -1,12 +1,9 @@
 package truncatingbuffer_test
 
 import (
-	"doppler/internal/truncatingbuffer"
 	"fmt"
 
-	. "github.com/apoydence/eachers"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"doppler/internal/truncatingbuffer"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/emitter/fake"
@@ -14,6 +11,10 @@ import (
 	"github.com/cloudfoundry/dropsonde/metric_sender"
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/sonde-go/events"
+
+	. "github.com/apoydence/eachers"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 type FakeContext struct{}
