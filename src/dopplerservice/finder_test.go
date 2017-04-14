@@ -16,7 +16,8 @@ import (
 	"github.com/cloudfoundry/storeadapter"
 )
 
-var _ = Describe("Finder", func() {
+// Using etcd for service discovery is a deprecated code path
+var _ = XDescribe("Finder", func() {
 	var (
 		protocols            []string
 		mockStoreAdapter     *mockStoreAdapter

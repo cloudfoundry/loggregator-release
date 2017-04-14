@@ -12,5 +12,7 @@ import (
 func TestAnnouncer(t *testing.T) {
 	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "DopplerService Suite")
+
+	// Using etcd for service discovery is a deprecated code path
+	// RunSpecs(t, "DopplerService Suite")
 }

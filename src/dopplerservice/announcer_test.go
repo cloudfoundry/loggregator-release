@@ -16,7 +16,8 @@ import (
 	ginkgoConfig "github.com/onsi/ginkgo/config"
 )
 
-var _ = Describe("Announcer", func() {
+// Using etcd for service discovery is a deprecated code path
+var _ = XDescribe("Announcer", func() {
 	var (
 		ip          string
 		conf        app.Config
