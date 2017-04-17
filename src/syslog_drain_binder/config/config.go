@@ -31,7 +31,7 @@ type Config struct {
 
 	MetronAddress string
 
-	Ciphers                  []string
+	CipherSuites             []string
 	CloudControllerAddress   string
 	CloudControllerTLSConfig MutualTLSConfig
 	PollingBatchSize         int
