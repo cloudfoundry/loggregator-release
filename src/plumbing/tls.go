@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-var supportedCipherSuites = []uint16{
+var defaultCipherSuites = []uint16{
 	tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 	tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 }
@@ -22,18 +22,68 @@ func (e CASignatureError) Error() string {
 	return string(e)
 }
 
-// NewTLSConfig
-func NewTLSConfig() *tls.Config {
-	return &tls.Config{
+func NewTLSConfig(
+	opts ...ConfigOption,
+) *tls.Config {
+	tlsConfig := &tls.Config{
 		InsecureSkipVerify: false,
 		MinVersion:         tls.VersionTLS12,
-		CipherSuites:       supportedCipherSuites,
+		CipherSuites:       defaultCipherSuites,
+	}
+	for _, opt := range opts {
+		opt(tlsConfig)
+	}
+
+	return tlsConfig
+}
+
+var cipherMap = map[string]uint16{
+	"TLS_RSA_WITH_RC4_128_SHA":                tls.TLS_RSA_WITH_RC4_128_SHA,
+	"TLS_RSA_WITH_3DES_EDE_CBC_SHA":           tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+	"TLS_RSA_WITH_AES_128_CBC_SHA":            tls.TLS_RSA_WITH_AES_128_CBC_SHA,
+	"TLS_RSA_WITH_AES_256_CBC_SHA":            tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+	"TLS_RSA_WITH_AES_128_GCM_SHA256":         tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+	"TLS_RSA_WITH_AES_256_GCM_SHA384":         tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+	"TLS_ECDHE_ECDSA_WITH_RC4_128_SHA":        tls.TLS_ECDHE_ECDSA_WITH_RC4_128_SHA,
+	"TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA":    tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+	"TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA":    tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+	"TLS_ECDHE_RSA_WITH_RC4_128_SHA":          tls.TLS_ECDHE_RSA_WITH_RC4_128_SHA,
+	"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA":     tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
+	"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA":      tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+	"TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA":      tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+	"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256":   tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+	"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256": tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+	"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384":   tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+	"TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384": tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+}
+
+type ConfigOption func(*tls.Config)
+
+func WithCipherSuites(ciphers []string) ConfigOption {
+	return func(c *tls.Config) {
+		var configuredCiphers []uint16
+		for _, c := range ciphers {
+			cipher, ok := cipherMap[c]
+			if !ok {
+				continue
+			}
+			configuredCiphers = append(configuredCiphers, cipher)
+		}
+		c.CipherSuites = configuredCiphers
+		if len(c.CipherSuites) == 0 {
+			panic("no valid ciphers provided for TLS configuration")
+		}
 	}
 }
 
 // NewMutualTLSConfig returns a tls.Config with certs loaded from files and
 // the ServerName set.
-func NewMutualTLSConfig(certFile, keyFile, caCertFile, serverName string) (*tls.Config, error) {
+func NewMutualTLSConfig(
+	certFile string,
+	keyFile string,
+	caCertFile string,
+	serverName string,
+) (*tls.Config, error) {
 	tlsCert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load keypair: %s", err.Error())
