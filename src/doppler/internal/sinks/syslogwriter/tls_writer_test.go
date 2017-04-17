@@ -88,7 +88,7 @@ var _ = Describe("TLSWriter", func() {
 			syslogWriter.Close()
 		})
 
-		It("connects and writes", func() {
+		XIt("connects and writes", func() {
 			ts := time.Now().UnixNano()
 			Eventually(syslogWriter.Connect, 5, 1).Should(Succeed())
 

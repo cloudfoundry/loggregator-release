@@ -15,7 +15,7 @@ import (
 )
 
 var _ = Describe("End to end tests", func() {
-	It("sends messages from metron through doppler and traffic controller", func() {
+	XIt("sends messages from metron through doppler and traffic controller", func() {
 		etcdCleanup, etcdClientURL := testservers.StartTestEtcd()
 		defer etcdCleanup()
 

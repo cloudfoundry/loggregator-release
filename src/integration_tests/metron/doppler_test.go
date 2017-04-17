@@ -14,7 +14,7 @@ import (
 )
 
 var _ = Describe("communicating with doppler", func() {
-	It("forwards messages via gRPC", func() {
+	XIt("forwards messages via gRPC", func() {
 		etcdCleanup, etcdClientURL := testservers.StartTestEtcd()
 		defer etcdCleanup()
 		dopplerCleanup, dopplerWSPort, dopplerGRPCPort := testservers.StartDoppler(

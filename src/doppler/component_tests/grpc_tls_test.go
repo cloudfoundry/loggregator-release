@@ -41,7 +41,7 @@ var _ = Describe("gRPC TLS", func() {
 	})
 
 	Context("with the v2 api", func() {
-		It("supports v2 api", func() {
+		XIt("supports v2 api", func() {
 			hostPort, cleanup := setupDopplerEnv(0)
 			defer cleanup()
 			subscriber := setupSubscriber(hostPort)
