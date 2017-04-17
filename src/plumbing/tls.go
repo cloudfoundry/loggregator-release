@@ -82,13 +82,22 @@ func NewMutualTLSConfig(
 	keyFile string,
 	caCertFile string,
 	serverName string,
+	opts ...ConfigOption,
 ) (*tls.Config, error) {
 	tlsCert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load keypair: %s", err.Error())
 	}
 
-	tlsConfig := NewTLSConfig()
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: false,
+		MinVersion:         tls.VersionTLS12,
+		CipherSuites:       defaultCipherSuites,
+	}
+	for _, opt := range opts {
+		opt(tlsConfig)
+	}
+
 	tlsConfig.Certificates = []tls.Certificate{tlsCert}
 	tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
 	tlsConfig.ServerName = serverName

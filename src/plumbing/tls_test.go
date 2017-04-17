@@ -101,6 +101,70 @@ var _ = Describe("TLS", func() {
 			_, ok := err.(plumbing.CASignatureError)
 			Expect(ok).To(BeTrue())
 		})
+
+		It("accepts configuration for CIPHER suites", func() {
+			conf, err := plumbing.NewMutualTLSConfig(
+				testservers.Cert("doppler.crt"),
+				testservers.Cert("doppler.key"),
+				testservers.Cert("loggregator-ca.crt"),
+				"test-server-name",
+				plumbing.WithCipherSuites([]string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"}),
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(conf.CipherSuites).To(ConsistOf(
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			))
+		})
+
+		It("ignores garbage CIPHERs in favor of valid ones", func() {
+			conf, err := plumbing.NewMutualTLSConfig(
+				testservers.Cert("doppler.crt"),
+				testservers.Cert("doppler.key"),
+				testservers.Cert("loggregator-ca.crt"),
+				"test-server-name",
+				plumbing.WithCipherSuites([]string{
+					"GARBAGE",
+					"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+				}),
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(conf.CipherSuites).To(ConsistOf(
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			))
+		})
+
+		It("panics if no ciphers are provided", func() {
+			Expect(func() {
+				plumbing.NewMutualTLSConfig(
+					testservers.Cert("doppler.crt"),
+					testservers.Cert("doppler.key"),
+					testservers.Cert("loggregator-ca.crt"),
+					"test-server-name",
+					plumbing.WithCipherSuites([]string{}),
+				)
+			}).Should(Panic())
+		})
+
+		It("maintains the order of the ciphers provided", func() {
+			conf, err := plumbing.NewMutualTLSConfig(
+				testservers.Cert("doppler.crt"),
+				testservers.Cert("doppler.key"),
+				testservers.Cert("loggregator-ca.crt"),
+				"test-server-name",
+				plumbing.WithCipherSuites([]string{
+					"TLS_RSA_WITH_RC4_128_SHA",
+					"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+				}),
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(conf.CipherSuites).To(Equal([]uint16{
+				tls.TLS_RSA_WITH_RC4_128_SHA,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			}))
+		})
 	})
 
 	Context("NewTLSConfig", func() {
