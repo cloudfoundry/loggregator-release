@@ -1,35 +1,40 @@
 <%
-    etcdMachines = p("loggregator.etcd.machines").map do |addr|
-        "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"
+    etcd_machines = p("loggregator.etcd.machines").map do |addr|
+        schema = if p('loggregator.etcd.require_ssl')
+                     'https'
+                 else
+                     'http'
+                 end
+        "#{schema}://#{addr}:4001"
     end
 
-    etcdTLSClientConfig = {
+    etcd_tls_client_config = {
         "KeyFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-client.key",
         "CertFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-client.crt",
         "CAFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-ca.crt"
     }
-    ccTLSConfig = {
+    cc_tls_config = {
         "KeyFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/syslogdrainbinder.key",
         "CertFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/syslogdrainbinder.crt",
         "CAFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/mutual_tls_ca.crt"
     }
 
-    args = Hash.new.tap do |a|
-        a[:InstanceName] = "#{name}.#{spec.index}"
-        a[:DrainUrlTtlSeconds] = p("syslog_drain_binder.drain_url_ttl_seconds")
-        a[:UpdateIntervalSeconds] = p("syslog_drain_binder.update_interval_seconds")
-        a[:EtcdMaxConcurrentRequests] = p("loggregator.etcd.maxconcurrentrequests")
-        a[:EtcdUrls] = etcdMachines
-        a[:EtcdRequireTLS] = p("loggregator.etcd.require_ssl")
-        if_p("loggregator.etcd.require_ssl") do |_|
-            a[:EtcdTLSClientConfig] = etcdTLSClientConfig
-        end
-        a[:MetronAddress] = "#{p("metron_endpoint.host")}:#{p("metron_endpoint.dropsonde_port")}"
-        a[:CipherSuites] = p("router.cipher_suites").split(":")
-        a[:CloudControllerAddress] = "https://#{p('cc.internal_service_hostname')}:#{p('cc.tls_port')}"
-        a[:CloudControllerTLSConfig] = ccTLSConfig
-        a[:PollingBatchSize] = p("syslog_drain_binder.polling_batch_size")
-        a[:SkipCertVerify] = p("ssl.skip_cert_verify")
+    args = {
+        "InstanceName" => "#{name}.#{spec.index}",
+        "DrainUrlTtlSeconds" => p("syslog_drain_binder.drain_url_ttl_seconds"),
+        "UpdateIntervalSeconds" => p("syslog_drain_binder.update_interval_seconds"),
+        "EtcdMaxConcurrentRequests" => p("loggregator.etcd.maxconcurrentrequests"),
+        "EtcdUrls" => etcd_machines,
+        "EtcdRequireTLS" => p("loggregator.etcd.require_ssl"),
+        "MetronAddress" => "#{p("metron_endpoint.host")}:#{p("metron_endpoint.dropsonde_port")}",
+        "CipherSuites" => p("router.cipher_suites").split(":"),
+        "CloudControllerAddress" => "https://#{p('cc.internal_service_hostname')}:#{p('cc.tls_port')}",
+        "CloudControllerTLSConfig" => cc_tls_config,
+        "PollingBatchSize" => p("syslog_drain_binder.polling_batch_size"),
+        "SkipCertVerify" => p("ssl.skip_cert_verify"),
+    }
+    if_p("loggregator.etcd.require_ssl") do |_|
+        args[:EtcdTLSClientConfig] = etcd_tls_client_config
     end
 %>
 <%= JSON.pretty_generate(args) %>
