@@ -36,6 +36,7 @@ type Config struct {
 	MetronHost             string
 	MetronPort             int
 	GRPC                   GRPC
+	CipherSuites           []string
 	SystemDomain           string
 	SkipCertVerify         bool
 	UaaHost                string

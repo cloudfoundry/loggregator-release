@@ -55,7 +55,9 @@ func NewTrafficController(c *Config, path string, disableAccessControl bool) *tr
 }
 
 func (t *trafficController) Start() {
-	tlsConf := plumbing.NewTLSConfig()
+	tlsConf := plumbing.NewTLSConfig(
+		plumbing.WithCipherSuites(t.conf.CipherSuites),
+	)
 	transport := &http.Transport{
 		TLSHandshakeTimeout: 10 * time.Second,
 		TLSClientConfig:     tlsConf,
