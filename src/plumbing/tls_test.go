@@ -15,7 +15,7 @@ import (
 
 var _ = Describe("TLS", func() {
 	Context("NewMutalTLSConfig", func() {
-		It("builds a config struct", func() {
+		It("builds a config struct with default CIPHERs", func() {
 			conf, err := plumbing.NewMutualTLSConfig(
 				testservers.Cert("doppler.crt"),
 				testservers.Cert("doppler.key"),
@@ -106,12 +106,61 @@ var _ = Describe("TLS", func() {
 	Context("NewTLSConfig", func() {
 		It("returns basic TLS config", func() {
 			tlsConf := plumbing.NewTLSConfig()
+
 			Expect(tlsConf.InsecureSkipVerify).To(BeFalse())
 			Expect(tlsConf.ClientAuth).To(Equal(tls.NoClientCert))
 			Expect(tlsConf.MinVersion).To(Equal(uint16(tls.VersionTLS12)))
-			Expect(tlsConf.CipherSuites).To(ContainElement(tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256))
-			Expect(tlsConf.CipherSuites).To(ContainElement(tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384))
+			Expect(tlsConf.CipherSuites).To(Equal([]uint16{
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			}))
 		})
+
+		It("accepts configuration for CIPHER suites", func() {
+			conf := plumbing.NewTLSConfig(
+				plumbing.WithCipherSuites([]string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"}),
+			)
+
+			Expect(conf.CipherSuites).To(ConsistOf(
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			))
+		})
+
+		It("ignores garbage CIPHERs in favor of valid ones", func() {
+			conf := plumbing.NewTLSConfig(
+				plumbing.WithCipherSuites([]string{
+					"GARBAGE",
+					"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+				}),
+			)
+
+			Expect(conf.CipherSuites).To(ConsistOf(
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			))
+		})
+
+		It("panics if no ciphers are provided", func() {
+			Expect(func() {
+				plumbing.NewTLSConfig(
+					plumbing.WithCipherSuites([]string{}),
+				)
+			}).Should(Panic())
+		})
+
+		It("maintains the order of the ciphers provided", func() {
+			conf := plumbing.NewTLSConfig(
+				plumbing.WithCipherSuites([]string{
+					"TLS_RSA_WITH_RC4_128_SHA",
+					"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+				}),
+			)
+
+			Expect(conf.CipherSuites).To(Equal([]uint16{
+				tls.TLS_RSA_WITH_RC4_128_SHA,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			}))
+		})
+
 	})
 
 	Context("NewCredentials", func() {

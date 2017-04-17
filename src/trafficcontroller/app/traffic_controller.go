@@ -55,7 +55,16 @@ func NewTrafficController(c *Config, path string, disableAccessControl bool) *tr
 }
 
 func (t *trafficController) Start() {
-	SetInsecureSkipVerify(t.conf.SkipCertVerify)
+	tlsConf := plumbing.NewTLSConfig()
+	transport := &http.Transport{
+		TLSHandshakeTimeout: 10 * time.Second,
+		TLSClientConfig:     tlsConf,
+		DisableKeepAlives:   true,
+	}
+	http.DefaultClient.Transport = transport
+	http.DefaultClient.Timeout = 20 * time.Second
+
+	transport.TLSClientConfig.InsecureSkipVerify = t.conf.SkipCertVerify
 
 	log.Print("Startup: Setting up the loggregator traffic controller")
 
