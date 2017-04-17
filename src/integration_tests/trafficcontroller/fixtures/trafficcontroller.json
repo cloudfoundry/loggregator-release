@@ -19,5 +19,9 @@
         "CAFile": "../../doppler/listeners/fixtures/loggregator-ca.crt",
         "CertFile": "../../doppler/listeners/fixtures/server.crt",
         "KeyFile": "../../doppler/listeners/fixtures/server.key"
-    }
+    },
+    "CipherSuites": [
+        "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+        "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+    ]
 }

@@ -12,6 +12,13 @@ import (
 )
 
 var _ = Describe("DefaultClient", func() {
+	BeforeEach(func() {
+		httpsetup.Setup([]string{
+			"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+			"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+		})
+	})
+
 	It("has a 20 second timeout", func() {
 		Expect(http.DefaultClient.Timeout).To(Equal(20 * time.Second))
 	})

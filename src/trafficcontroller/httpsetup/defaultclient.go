@@ -10,8 +10,10 @@ var (
 	transport *http.Transport
 )
 
-func init() {
-	tlsConf := plumbing.NewTLSConfig()
+func Setup(cipherSuites []string) {
+	tlsConf := plumbing.NewTLSConfig(
+		plumbing.WithCipherSuites(cipherSuites),
+	)
 	transport = &http.Transport{
 		TLSHandshakeTimeout: 10 * time.Second,
 		TLSClientConfig:     tlsConf,
@@ -20,7 +22,6 @@ func init() {
 
 	http.DefaultClient.Transport = transport
 	http.DefaultClient.Timeout = 20 * time.Second
-
 }
 
 func SetInsecureSkipVerify(skipCert bool) {

@@ -60,6 +60,7 @@ func main() {
 		panic(fmt.Errorf("Unable to parse config: %s", err))
 	}
 
+	httpsetup.Setup(conf.CipherSuites)
 	httpsetup.SetInsecureSkipVerify(conf.SkipCertVerify)
 
 	ipAddress, err := localip.LocalIP()

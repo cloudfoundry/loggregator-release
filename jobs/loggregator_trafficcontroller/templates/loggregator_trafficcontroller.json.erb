@@ -55,6 +55,7 @@
         a[:GRPC] = grpcListenerConfig
         a[:SkipCertVerify] = p("ssl.skip_cert_verify")
         a[:ApiHost] = p("cc.srv_api_uri")
+        a[:CipherSuites] = p("router.cipher_suites").split(":")
         a[:SystemDomain] = p("system_domain")
         a[:MetronPort] = p("metron_endpoint.dropsonde_port")
         a[:PPROFPort] = p("traffic_controller.pprof_port")
