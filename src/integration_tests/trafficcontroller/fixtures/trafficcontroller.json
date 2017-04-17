@@ -20,5 +20,9 @@
         "CAFile": "fixtures/loggregator-ca.crt",
         "CertFile": "fixtures/client.crt",
         "KeyFile": "fixtures/client.key"
-    }
+    },
+    "CipherSuites": [
+        "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+        "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+    ]
 }
