@@ -38,6 +38,7 @@ func main() {
 		conf.CloudControllerTLSConfig.KeyFile,
 		conf.CloudControllerTLSConfig.CAFile,
 		"cloud-controller-ng.service.cf.internal",
+		plumbing.WithCipherSuites(conf.Ciphers),
 	)
 	if err != nil {
 		panic(err)

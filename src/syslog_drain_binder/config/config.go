@@ -31,6 +31,7 @@ type Config struct {
 
 	MetronAddress string
 
+	Ciphers                  []string
 	CloudControllerAddress   string
 	CloudControllerTLSConfig MutualTLSConfig
 	PollingBatchSize         int
@@ -72,7 +73,9 @@ func (config Config) validate() error {
 	}
 
 	if config.EtcdRequireTLS {
-		if config.EtcdTLSClientConfig.CertFile == "" || config.EtcdTLSClientConfig.KeyFile == "" || config.EtcdTLSClientConfig.CAFile == "" {
+		if config.EtcdTLSClientConfig.CertFile == "" ||
+			config.EtcdTLSClientConfig.KeyFile == "" ||
+			config.EtcdTLSClientConfig.CAFile == "" {
 			return errors.New("Invalid etcd TLS client configuration")
 		}
 	}
