@@ -100,8 +100,10 @@ function run_multiplatform {
 }
 
 function run_build {
+    set -e
     print_checkpoint "Building Binaries"
     "$(dirname $0)/build"
+    set +e
     return $?
 }
 
