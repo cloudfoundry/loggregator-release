@@ -136,7 +136,6 @@ func (e *Emitter) aggregateCounters() map[string]*v2.Envelope {
 		}
 
 		value := existingEnvelope.GetCounter().GetValue().(*v2.Counter_Delta)
-		// BUG: what if two deltas for the same metric name are in the diode
 		value.Delta += envelope.GetCounter().GetDelta()
 	}
 	return m
