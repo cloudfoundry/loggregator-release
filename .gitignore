@@ -24,7 +24,6 @@ releases/*.tgz
 releases/**/*.tgz
 
 # tools
-/src/golang.org/x/text/
 /src/golang.org/x/tools/
 /src/github.com/square/certstrap
 /src/github.com/client9/misspell
