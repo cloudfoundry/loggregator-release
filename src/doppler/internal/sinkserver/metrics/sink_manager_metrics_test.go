@@ -45,7 +45,7 @@ var _ = Describe("SinkManagerMetrics", func() {
 
 	It("emits metrics for dump sinks", func() {
 		sinkManagerMetrics := metrics.NewSinkManagerMetrics()
-		Expect(fakeEventEmitter.GetMessages()).To(BeEmpty())
+		Eventually(fakeEventEmitter.GetMessages).Should(BeEmpty())
 
 		sink = &dump.DumpSink{}
 		sinkManagerMetrics.Inc(sink)
@@ -73,7 +73,7 @@ var _ = Describe("SinkManagerMetrics", func() {
 	})
 
 	It("emits metrics for syslog sinks", func() {
-		Expect(fakeEventEmitter.GetMessages()).To(BeEmpty())
+		Eventually(fakeEventEmitter.GetMessages).Should(BeEmpty())
 
 		sink = &syslog.SyslogSink{}
 		sinkManagerMetrics.Inc(sink)
@@ -101,7 +101,7 @@ var _ = Describe("SinkManagerMetrics", func() {
 	})
 
 	It("emits metrics for websocket sinks", func() {
-		Expect(fakeEventEmitter.GetMessages()).To(BeEmpty())
+		Eventually(fakeEventEmitter.GetMessages).Should(BeEmpty())
 
 		sink = &websocket.WebsocketSink{}
 		sinkManagerMetrics.Inc(sink)
@@ -129,7 +129,7 @@ var _ = Describe("SinkManagerMetrics", func() {
 	})
 
 	XIt("emits metrics for firehose sinks", func() {
-		Expect(fakeEventEmitter.GetMessages()).To(BeEmpty())
+		Eventually(fakeEventEmitter.GetMessages).Should(BeEmpty())
 
 		sinkManagerMetrics.IncFirehose()
 
@@ -156,7 +156,7 @@ var _ = Describe("SinkManagerMetrics", func() {
 	})
 
 	It("emits metrics for container metric sinks", func() {
-		Expect(fakeEventEmitter.GetMessages()).To(BeEmpty())
+		Eventually(fakeEventEmitter.GetMessages).Should(BeEmpty())
 
 		sink = &containermetric.ContainerMetricSink{}
 		sinkManagerMetrics.Inc(sink)
