@@ -54,19 +54,18 @@ var _ = Describe("Dumping", func() {
 		sinkManager = sinkmanager.New(1024, false, emptyBlacklist, 100, "dropsonde-origin",
 			2*time.Second, 0, 1*time.Second, 500*time.Millisecond, nil)
 
-		tempSink := sinkManager
 		services.Add(1)
-		go func() {
+		go func(sinkManager *sinkmanager.SinkManager) {
 			defer services.Done()
-			tempSink.Start(newAppServiceChan, deletedAppServiceChan)
-		}()
+			sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
+		}(sinkManager)
 
 		TestMessageRouter = sinkserver.NewMessageRouter(sinkManager)
 		tempMessageRouter := TestMessageRouter
 
-		go func() {
+		go func(dataRead *diodes.ManyToOneEnvelope) {
 			tempMessageRouter.Start(dataRead)
-		}()
+		}(dataRead)
 
 		apiEndpoint := "localhost:" + serverPort
 		var err error
@@ -80,13 +79,12 @@ var _ = Describe("Dumping", func() {
 			mockBatcher,
 		)
 		Expect(err).NotTo(HaveOccurred())
-		tempWebsocketServer := TestWebsocketServer
 
 		services.Add(1)
-		go func() {
+		go func(tempWebsocketServer *websocketserver.WebsocketServer) {
 			defer services.Done()
 			tempWebsocketServer.Start()
-		}()
+		}(TestWebsocketServer)
 	})
 
 	AfterEach(func() {
