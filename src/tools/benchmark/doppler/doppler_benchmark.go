@@ -58,8 +58,8 @@ func main() {
 		log.Fatal("Missing required flag 'cn'")
 	}
 
-	creds := plumbing.NewCredentials(*cert, *key, *ca, *cn)
-	if creds == nil {
+	creds, err := plumbing.NewCredentials(*cert, *key, *ca, *cn)
+	if err != nil || creds == nil {
 		log.Fatalf("Unable to setup TLS")
 	}
 
@@ -69,7 +69,7 @@ func main() {
 	chunks := strings.SplitN(*dopplerCmd, " ", -1)
 
 	cmd := exec.Command(chunks[0], chunks[1:]...)
-	err := cmd.Start()
+	err = cmd.Start()
 	if err != nil {
 		log.Panicf("Failed to start doppler: %s", err)
 	}

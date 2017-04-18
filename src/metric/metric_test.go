@@ -4,10 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"metric"
-	"net"
 	"time"
-
-	"google.golang.org/grpc"
 
 	v2 "plumbing/v2"
 
@@ -16,192 +13,222 @@ import (
 )
 
 var _ = Describe("Metric", func() {
-
 	var (
-		mockConsumer *mockIngressServer
-		receiver     <-chan *v2.Envelope
+		emitter  *metric.Emitter
+		receiver <-chan *v2.Envelope
 	)
 
-	BeforeSuite(func() {
-		var addr string
-		addr, mockConsumer = startConsumer()
-		metric.Setup(
+	BeforeEach(func() {
+		var (
+			addr             string
+			spyIngressServer *SpyIngressServer
+		)
+		addr, spyIngressServer = startIngressServer()
+		var err error
+		emitter, err = metric.New(
 			metric.WithAddr(addr),
-			metric.WithSourceUUID("some-uuid"),
-			metric.WithBatchInterval(250*time.Millisecond),
+			metric.WithSourceID("some-uuid"),
+			metric.WithBatchInterval(time.Millisecond),
 			metric.WithOrigin("loggregator.metron"),
 			metric.WithDeploymentMeta("some-deployment", "some-job", "some-index"),
 		)
+		Expect(err).ToNot(HaveOccurred())
 
-		// Seed the data
-		metric.IncCounter("seed-data")
+		emitter.IncCounter("seed-data")
 
-		rx := fetchReceiver(mockConsumer)
+		rx := fetchReceiver(spyIngressServer)
 		receiver = rxToCh(rx)
+		Eventually(receiver).Should(Receive())
 	})
 
 	Context("when a consumer is not available", func() {
-		It("does not block when writing to it", func() {
+		It("does not block when emitting metric", func() {
 			done := make(chan struct{})
+			emitter, err := metric.New(
+				metric.WithAddr("does-not-exist:0"),
+			)
+			Expect(err).ToNot(HaveOccurred())
 			go func() {
 				defer close(done)
-				metric.IncCounter("some-name")
+				emitter.IncCounter("some-name")
 			}()
-
 			Eventually(done).Should(BeClosed())
 		})
 	})
 
-	Context("when a consumer is available", func() {
-		var (
-			randName string
-		)
+	Describe("IncCounter()", func() {
+		It("increments a counter event emitted to the consumer", func() {
+			randName := generateRandName()
+			for i := 0; i < 5; i++ {
+				emitter.IncCounter(randName)
+			}
 
-		BeforeEach(func() {
-			randName = generateRandName()
+			var e *v2.Envelope
+			f := func() bool {
+				Eventually(receiver).Should(Receive(&e))
+
+				counter := e.GetCounter()
+				if counter == nil {
+					return false
+				}
+
+				return counter.Name == randName
+			}
+			Eventually(f).Should(BeTrue())
+			Expect(e.Timestamp).ToNot(Equal(int64(0)))
+			Expect(e.SourceId).To(Equal("some-uuid"))
+			Expect(e.GetCounter().GetDelta()).To(Equal(uint64(5)))
+
+			Expect(e.GetTags()["origin"].GetText()).To(Equal("loggregator.metron"))
 		})
 
-		Describe("IncCounter()", func() {
-			It("writes a counter event periodically to the consumer", func() {
-				for i := 0; i < 5; i++ {
-					metric.IncCounter(randName)
+		It("increments by the given value", func() {
+			randName := generateRandName()
+			emitter.IncCounter(randName)
+			emitter.IncCounter(randName, metric.WithIncrement(42))
+
+			var e *v2.Envelope
+			f := func() bool {
+				Eventually(receiver).Should(Receive(&e))
+
+				counter := e.GetCounter()
+				if counter == nil {
+					return false
 				}
 
-				var e *v2.Envelope
-				f := func() bool {
-					Eventually(receiver).Should(Receive(&e))
+				return counter.Name == randName
+			}
 
-					counter := e.GetCounter()
-					if counter == nil {
-						return false
-					}
+			Eventually(f).Should(BeTrue())
+			Expect(e.GetCounter().GetDelta()).To(Equal(uint64(43)))
+		})
 
-					return counter.Name == randName
+		It("tags with the given version", func() {
+			randName := generateRandName()
+			emitter.IncCounter(randName, metric.WithVersion(1, 2))
+			var e *v2.Envelope
+			f := func() bool {
+				Eventually(receiver).Should(Receive(&e))
+
+				counter := e.GetCounter()
+				if counter == nil {
+					return false
 				}
 
-				Eventually(f).Should(BeTrue())
-				Expect(e.Timestamp).ToNot(Equal(int64(0)))
-				Expect(e.SourceId).To(Equal("some-uuid"))
-				Expect(e.GetCounter().GetDelta()).To(Equal(uint64(5)))
+				return counter.Name == randName
+			}
+			Eventually(f).Should(BeTrue())
+			Expect(e.GetTags()["metric_version"].GetText()).To(Equal("1.2"))
+		})
 
-				value, ok := e.GetTags()["origin"]
-				Expect(ok).To(Equal(true))
-				Expect(value.GetText()).To(Equal("loggregator.metron"))
-			})
+		It("adds additional tags", func() {
+			randName := generateRandName()
+			emitter.IncCounter(randName, metric.WithTag("name", "value"))
+			var e *v2.Envelope
+			f := func() bool {
+				Eventually(receiver).Should(Receive(&e))
 
-			It("increments by the given value", func() {
-				metric.IncCounter(randName, metric.WithIncrement(42))
-
-				var e *v2.Envelope
-				f := func() bool {
-					Eventually(receiver).Should(Receive(&e))
-
-					counter := e.GetCounter()
-					if counter == nil {
-						return false
-					}
-
-					return counter.Name == randName
+				counter := e.GetCounter()
+				if counter == nil {
+					return false
 				}
 
-				Eventually(f).Should(BeTrue())
-				Expect(e.GetCounter().GetDelta()).To(Equal(uint64(42)))
-			})
+				return counter.Name == randName
+			}
+			Eventually(f).Should(BeTrue())
+			Expect(e.GetTags()["name"].GetText()).To(Equal("value"))
+		})
 
-			It("tags with the given version", func() {
-				metric.IncCounter(randName, metric.WithVersion(1, 2))
-				var e *v2.Envelope
-				f := func() bool {
-					Eventually(receiver).Should(Receive(&e))
+		It("tags with meta deployment tags", func() {
+			randName := generateRandName()
+			emitter.IncCounter(randName, metric.WithIncrement(42))
+			var e *v2.Envelope
+			f := func() bool {
+				Eventually(receiver).Should(Receive(&e))
 
-					counter := e.GetCounter()
-					if counter == nil {
-						return false
-					}
-
-					return counter.Name == randName
-				}
-				Eventually(f).Should(BeTrue())
-				Expect(e.GetTags()["metric_version"].GetText()).To(Equal("1.2"))
-			})
-
-			It("adds additional tags", func() {
-				metric.IncCounter(randName, metric.WithTag("name", "value"))
-				var e *v2.Envelope
-				f := func() bool {
-					Eventually(receiver).Should(Receive(&e))
-
-					counter := e.GetCounter()
-					if counter == nil {
-						return false
-					}
-
-					return counter.Name == randName
-				}
-				Eventually(f).Should(BeTrue())
-				Expect(e.GetTags()["name"].GetText()).To(Equal("value"))
-			})
-
-			It("tags with meta deployment tags", func() {
-				metric.IncCounter(randName, metric.WithIncrement(42))
-				var e *v2.Envelope
-				f := func() bool {
-					Eventually(receiver).Should(Receive(&e))
-
-					counter := e.GetCounter()
-					if counter == nil {
-						return false
-					}
-
-					return counter.Name == randName
+				counter := e.GetCounter()
+				if counter == nil {
+					return false
 				}
 
-				Eventually(f).Should(BeTrue())
-				Expect(e.Tags["deployment"].GetText()).To(Equal("some-deployment"))
-				Expect(e.Tags["job"].GetText()).To(Equal("some-job"))
-				Expect(e.Tags["index"].GetText()).To(Equal("some-index"))
-			})
+				return counter.Name == randName
+			}
+
+			Eventually(f).Should(BeTrue())
+			Expect(e.Tags["deployment"].GetText()).To(Equal("some-deployment"))
+			Expect(e.Tags["job"].GetText()).To(Equal("some-job"))
+			Expect(e.Tags["index"].GetText()).To(Equal("some-index"))
 		})
 	})
-})
 
-func startConsumer() (string, *mockIngressServer) {
-	lis, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		panic(err)
-	}
+	Describe("Pulse()", func() {
+		It("pulses zero values for metrics that are not incremented", func() {
+			randName := generateRandName()
+			emitter.PulseCounter(
+				randName,
+				metric.WithPulseInterval(time.Millisecond),
+			)
 
-	mockIngressServer := newMockIngressServer()
-
-	s := grpc.NewServer()
-	v2.RegisterIngressServer(s, mockIngressServer)
-	go func() {
-		if err := s.Serve(lis); err != nil {
-			panic(err)
-		}
-	}()
-
-	return lis.Addr().String(), mockIngressServer
-}
-
-func rxToCh(rx v2.Ingress_SenderServer) <-chan *v2.Envelope {
-	c := make(chan *v2.Envelope, 100)
-	go func() {
-		for {
-			e, err := rx.Recv()
-			if err != nil {
-				continue
+			for i := 0; i < 3; i++ {
+				var e *v2.Envelope
+				Eventually(receiver).Should(Receive(&e))
+				Expect(e.GetCounter().GetDelta()).To(BeZero())
 			}
-			c <- e
-		}
-	}()
-	return c
-}
+		})
 
-func fetchReceiver(mockConsumer *mockIngressServer) (rx v2.Ingress_SenderServer) {
-	Eventually(mockConsumer.SenderInput.Arg0, 3).Should(Receive(&rx))
-	return rx
-}
+		It("returns a func that can increment the counter", func() {
+			randName := generateRandName()
+			increment := emitter.PulseCounter(
+				randName,
+				metric.WithPulseInterval(time.Millisecond),
+			)
+
+			var e *v2.Envelope
+			Eventually(receiver).Should(Receive(&e))
+			Expect(e.GetCounter().GetDelta()).To(BeZero())
+
+			increment(42)
+			f := func() bool {
+				var e *v2.Envelope
+				Eventually(receiver).Should(Receive(&e))
+				return e.GetCounter().GetDelta() == 42
+			}
+			Eventually(f).Should(BeTrue())
+		})
+
+		It("pulses tags", func() {
+			randName := generateRandName()
+			emitter.PulseCounter(
+				randName,
+				metric.WithPulseTag("foo", "bar"),
+				metric.WithPulseInterval(time.Millisecond),
+			)
+
+			var e *v2.Envelope
+			Eventually(receiver).Should(Receive(&e))
+			Expect(e.GetCounter().GetDelta()).To(BeZero())
+			Expect(e.Tags["foo"].GetText()).To(Equal("bar"))
+		})
+
+		It("increments with tags", func() {
+			randName := generateRandName()
+			increment := emitter.PulseCounter(
+				randName,
+				metric.WithPulseTag("foo", "baz"),
+			)
+
+			increment(42)
+			var e *v2.Envelope
+			f := func() bool {
+				Eventually(receiver).Should(Receive(&e))
+				return e.GetCounter().GetDelta() == 42
+			}
+			Eventually(f).Should(BeTrue())
+			Expect(e.Tags["foo"].GetText()).To(Equal("baz"))
+		})
+
+	})
+})
 
 func generateRandName() string {
 	return fmt.Sprintf("rand-name-%d", rand.Int63())
