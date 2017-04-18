@@ -91,3 +91,6 @@
 [submodule "src/github.com/cloudfoundry/diodes"]
 	path = src/github.com/cloudfoundry/diodes
 	url = https://github.com/cloudfoundry/diodes
+[submodule "src/google.golang.org/genproto"]
+	path = src/google.golang.org/genproto
+	url = https://github.com/google/go-genproto

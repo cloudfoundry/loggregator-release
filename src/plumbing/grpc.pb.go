@@ -51,6 +51,13 @@ func (m *EnvelopeData) String() string            { return proto.CompactTextStri
 func (*EnvelopeData) ProtoMessage()               {}
 func (*EnvelopeData) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
+func (m *EnvelopeData) GetPayload() []byte {
+	if m != nil {
+		return m.Payload
+	}
+	return nil
+}
+
 type PushResponse struct {
 }
 
@@ -68,6 +75,13 @@ func (m *SubscriptionRequest) Reset()                    { *m = SubscriptionRequ
 func (m *SubscriptionRequest) String() string            { return proto.CompactTextString(m) }
 func (*SubscriptionRequest) ProtoMessage()               {}
 func (*SubscriptionRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+func (m *SubscriptionRequest) GetShardID() string {
+	if m != nil {
+		return m.ShardID
+	}
+	return ""
+}
 
 func (m *SubscriptionRequest) GetFilter() *Filter {
 	if m != nil {
@@ -103,6 +117,13 @@ func (m *Filter) GetMessage() isFilter_Message {
 		return m.Message
 	}
 	return nil
+}
+
+func (m *Filter) GetAppID() string {
+	if m != nil {
+		return m.AppID
+	}
+	return ""
 }
 
 func (m *Filter) GetLog() *LogFilter {
@@ -186,6 +207,13 @@ func (m *Response) String() string            { return proto.CompactTextString(m
 func (*Response) ProtoMessage()               {}
 func (*Response) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
 
+func (m *Response) GetPayload() []byte {
+	if m != nil {
+		return m.Payload
+	}
+	return nil
+}
+
 type ContainerMetricsRequest struct {
 	AppID string `protobuf:"bytes,1,opt,name=appID" json:"appID,omitempty"`
 }
@@ -194,6 +222,13 @@ func (m *ContainerMetricsRequest) Reset()                    { *m = ContainerMet
 func (m *ContainerMetricsRequest) String() string            { return proto.CompactTextString(m) }
 func (*ContainerMetricsRequest) ProtoMessage()               {}
 func (*ContainerMetricsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
+
+func (m *ContainerMetricsRequest) GetAppID() string {
+	if m != nil {
+		return m.AppID
+	}
+	return ""
+}
 
 type ContainerMetricsResponse struct {
 	Payload [][]byte `protobuf:"bytes,1,rep,name=payload,proto3" json:"payload,omitempty"`
@@ -204,6 +239,13 @@ func (m *ContainerMetricsResponse) String() string            { return proto.Com
 func (*ContainerMetricsResponse) ProtoMessage()               {}
 func (*ContainerMetricsResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
 
+func (m *ContainerMetricsResponse) GetPayload() [][]byte {
+	if m != nil {
+		return m.Payload
+	}
+	return nil
+}
+
 type RecentLogsRequest struct {
 	AppID string `protobuf:"bytes,1,opt,name=appID" json:"appID,omitempty"`
 }
@@ -213,6 +255,13 @@ func (m *RecentLogsRequest) String() string            { return proto.CompactTex
 func (*RecentLogsRequest) ProtoMessage()               {}
 func (*RecentLogsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
 
+func (m *RecentLogsRequest) GetAppID() string {
+	if m != nil {
+		return m.AppID
+	}
+	return ""
+}
+
 type RecentLogsResponse struct {
 	Payload [][]byte `protobuf:"bytes,1,rep,name=payload,proto3" json:"payload,omitempty"`
 }
@@ -221,6 +270,13 @@ func (m *RecentLogsResponse) Reset()                    { *m = RecentLogsRespons
 func (m *RecentLogsResponse) String() string            { return proto.CompactTextString(m) }
 func (*RecentLogsResponse) ProtoMessage()               {}
 func (*RecentLogsResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
+
+func (m *RecentLogsResponse) GetPayload() [][]byte {
+	if m != nil {
+		return m.Payload
+	}
+	return nil
+}
 
 func init() {
 	proto.RegisterType((*EnvelopeData)(nil), "plumbing.EnvelopeData")
@@ -241,7 +297,7 @@ var _ grpc.ClientConn
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion3
+const _ = grpc.SupportPackageIsVersion4
 
 // Client API for Doppler service
 
@@ -398,7 +454,7 @@ var _Doppler_serviceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: fileDescriptor0,
+	Metadata: "grpc.proto",
 }
 
 // Client API for DopplerIngestor service
@@ -496,7 +552,7 @@ var _DopplerIngestor_serviceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
-	Metadata: fileDescriptor0,
+	Metadata: "grpc.proto",
 }
 
 func init() { proto.RegisterFile("grpc.proto", fileDescriptor0) }

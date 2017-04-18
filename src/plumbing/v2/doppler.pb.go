@@ -93,7 +93,7 @@ var _ grpc.ClientConn
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion3
+const _ = grpc.SupportPackageIsVersion4
 
 // Client API for DopplerIngress service
 
@@ -257,7 +257,7 @@ var _DopplerIngress_serviceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
-	Metadata: fileDescriptor0,
+	Metadata: "doppler.proto",
 }
 
 func init() { proto.RegisterFile("doppler.proto", fileDescriptor0) }

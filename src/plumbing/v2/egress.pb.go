@@ -28,6 +28,13 @@ func (m *EgressRequest) String() string            { return proto.CompactTextStr
 func (*EgressRequest) ProtoMessage()               {}
 func (*EgressRequest) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{0} }
 
+func (m *EgressRequest) GetShardId() string {
+	if m != nil {
+		return m.ShardId
+	}
+	return ""
+}
+
 func (m *EgressRequest) GetFilter() *Filter {
 	if m != nil {
 		return m.Filter
@@ -62,6 +69,13 @@ func (m *Filter) GetMessage() isFilter_Message {
 		return m.Message
 	}
 	return nil
+}
+
+func (m *Filter) GetSourceId() string {
+	if m != nil {
+		return m.SourceId
+	}
+	return ""
 }
 
 func (m *Filter) GetLog() *LogFilter {
@@ -146,7 +160,7 @@ var _ grpc.ClientConn
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion3
+const _ = grpc.SupportPackageIsVersion4
 
 // Client API for Egress service
 
@@ -236,7 +250,7 @@ var _Egress_serviceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: fileDescriptor1,
+	Metadata: "egress.proto",
 }
 
 func init() { proto.RegisterFile("egress.proto", fileDescriptor1) }

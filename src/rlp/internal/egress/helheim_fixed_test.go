@@ -43,6 +43,8 @@ func (m *mockReceiver) Receive(ctx context.Context, filter *v2.EgressRequest) (r
 }
 
 type mockReceiverServer struct {
+	v2.Egress_ReceiverServer
+
 	SendCalled chan bool
 	SendInput  struct {
 		Arg0 chan *v2.Envelope

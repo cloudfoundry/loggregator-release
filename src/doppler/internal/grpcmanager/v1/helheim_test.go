@@ -6,15 +6,49 @@
 package v1_test
 
 import (
-	"doppler/internal/grpcmanager/v1"
 	"plumbing"
 	"time"
+
+	"doppler/internal/grpcmanager/v1"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/sonde-go/events"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/metadata"
 )
+
+type mockSender struct {
+	SendCalled chan bool
+	SendInput  struct {
+		Arg0 chan *plumbing.Response
+	}
+	SendOutput struct {
+		Ret0 chan error
+	}
+	ContextCalled chan bool
+	ContextOutput struct {
+		Ret0 chan context.Context
+	}
+}
+
+func newMockSender() *mockSender {
+	m := &mockSender{}
+	m.SendCalled = make(chan bool, 100)
+	m.SendInput.Arg0 = make(chan *plumbing.Response, 100)
+	m.SendOutput.Ret0 = make(chan error, 100)
+	m.ContextCalled = make(chan bool, 100)
+	m.ContextOutput.Ret0 = make(chan context.Context, 100)
+	return m
+}
+func (m *mockSender) Send(arg0 *plumbing.Response) error {
+	m.SendCalled <- true
+	m.SendInput.Arg0 <- arg0
+	return <-m.SendOutput.Ret0
+}
+func (m *mockSender) Context() context.Context {
+	m.ContextCalled <- true
+	return <-m.ContextOutput.Ret0
+}
 
 type mockRegistrar struct {
 	RegisterCalled chan bool
@@ -98,39 +132,6 @@ func (m *mockDataDumper) RecentLogsFor(appID string) []*events.Envelope {
 	return <-m.RecentLogsForOutput.Ret0
 }
 
-type mockSender struct {
-	SendCalled chan bool
-	SendInput  struct {
-		Arg0 chan *plumbing.Response
-	}
-	SendOutput struct {
-		Ret0 chan error
-	}
-	ContextCalled chan bool
-	ContextOutput struct {
-		Ret0 chan context.Context
-	}
-}
-
-func newMockSender() *mockSender {
-	m := &mockSender{}
-	m.SendCalled = make(chan bool, 100)
-	m.SendInput.Arg0 = make(chan *plumbing.Response, 100)
-	m.SendOutput.Ret0 = make(chan error, 100)
-	m.ContextCalled = make(chan bool, 100)
-	m.ContextOutput.Ret0 = make(chan context.Context, 100)
-	return m
-}
-func (m *mockSender) Send(arg0 *plumbing.Response) error {
-	m.SendCalled <- true
-	m.SendInput.Arg0 <- arg0
-	return <-m.SendOutput.Ret0
-}
-func (m *mockSender) Context() context.Context {
-	m.ContextCalled <- true
-	return <-m.ContextOutput.Ret0
-}
-
 type mockBatcher struct {
 	BatchCounterCalled chan bool
 	BatchCounterInput  struct {
@@ -185,6 +186,13 @@ type mockIngestorGRPCServer struct {
 		Ret0 chan *plumbing.EnvelopeData
 		Ret1 chan error
 	}
+	SetHeaderCalled chan bool
+	SetHeaderInput  struct {
+		Arg0 chan metadata.MD
+	}
+	SetHeaderOutput struct {
+		Ret0 chan error
+	}
 	SendHeaderCalled chan bool
 	SendHeaderInput  struct {
 		Arg0 chan metadata.MD
@@ -224,6 +232,9 @@ func newMockIngestorGRPCServer() *mockIngestorGRPCServer {
 	m.RecvCalled = make(chan bool, 100)
 	m.RecvOutput.Ret0 = make(chan *plumbing.EnvelopeData, 100)
 	m.RecvOutput.Ret1 = make(chan error, 100)
+	m.SetHeaderCalled = make(chan bool, 100)
+	m.SetHeaderInput.Arg0 = make(chan metadata.MD, 100)
+	m.SetHeaderOutput.Ret0 = make(chan error, 100)
 	m.SendHeaderCalled = make(chan bool, 100)
 	m.SendHeaderInput.Arg0 = make(chan metadata.MD, 100)
 	m.SendHeaderOutput.Ret0 = make(chan error, 100)
@@ -247,6 +258,11 @@ func (m *mockIngestorGRPCServer) SendAndClose(arg0 *plumbing.PushResponse) error
 func (m *mockIngestorGRPCServer) Recv() (*plumbing.EnvelopeData, error) {
 	m.RecvCalled <- true
 	return <-m.RecvOutput.Ret0, <-m.RecvOutput.Ret1
+}
+func (m *mockIngestorGRPCServer) SetHeader(arg0 metadata.MD) error {
+	m.SetHeaderCalled <- true
+	m.SetHeaderInput.Arg0 <- arg0
+	return <-m.SetHeaderOutput.Ret0
 }
 func (m *mockIngestorGRPCServer) SendHeader(arg0 metadata.MD) error {
 	m.SendHeaderCalled <- true

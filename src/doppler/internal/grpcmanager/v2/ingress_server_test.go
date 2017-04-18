@@ -14,7 +14,7 @@ var _ = Describe("Ingress", func() {
 	var (
 		mockDataSetter  *mockDataSetter
 		mockSender      *mockDopplerIngress_SenderServer
-		mockBatchSender *mockDopplerIngress_BatchSenderServer
+		mockBatchSender *mockBatcherSenderServer
 
 		ingestor *v2.IngressServer
 	)
@@ -22,7 +22,7 @@ var _ = Describe("Ingress", func() {
 	BeforeEach(func() {
 		mockDataSetter = newMockDataSetter()
 		mockSender = newMockDopplerIngress_SenderServer()
-		mockBatchSender = newMockDopplerIngress_BatchSenderServer()
+		mockBatchSender = newMockBatcherSenderServer()
 
 		ingestor = v2.NewIngressServer(mockDataSetter, SpyBatcher{})
 	})

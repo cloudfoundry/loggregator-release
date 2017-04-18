@@ -32,6 +32,8 @@ func (m *mockDataSetter) Set(e *v2.Envelope) {
 }
 
 type mockSender struct {
+	v2.Ingress_SenderServer
+
 	SendAndCloseCalled chan bool
 	SendAndCloseInput  struct {
 		Arg0 chan *v2.IngressResponse

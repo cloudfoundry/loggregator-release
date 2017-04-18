@@ -36,7 +36,7 @@ var _ grpc.ClientConn
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion3
+const _ = grpc.SupportPackageIsVersion4
 
 // Client API for Ingress service
 
@@ -133,7 +133,7 @@ var _Ingress_serviceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
-	Metadata: fileDescriptor3,
+	Metadata: "ingress.proto",
 }
 
 func init() { proto.RegisterFile("ingress.proto", fileDescriptor3) }
