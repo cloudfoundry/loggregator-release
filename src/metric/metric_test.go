@@ -227,6 +227,18 @@ var _ = Describe("Metric", func() {
 			Expect(e.Tags["foo"].GetText()).To(Equal("baz"))
 		})
 
+		It("pulses with the given version", func() {
+			randName := generateRandName()
+			emitter.PulseCounter(
+				randName,
+				metric.WithPulseVersion(1, 2),
+				metric.WithPulseInterval(time.Millisecond),
+			)
+
+			var e *v2.Envelope
+			Eventually(receiver).Should(Receive(&e))
+			Expect(e.Tags["metric_version"].GetText()).To(Equal("1.2"))
+		})
 	})
 })
 

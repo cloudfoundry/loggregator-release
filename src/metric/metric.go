@@ -247,6 +247,12 @@ func WithPulseInterval(t time.Duration) func(*pulse) {
 	}
 }
 
+func WithPulseVersion(major, minor uint) func(*pulse) {
+	return func(p *pulse) {
+		p.tags["metric_version"] = fmt.Sprintf("%d.%d", major, minor)
+	}
+}
+
 func (e *Emitter) PulseCounter(name string, opts ...PulseOpt) func(delta uint64) {
 	p := &pulse{
 		emitter:  e,
