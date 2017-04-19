@@ -42,28 +42,5 @@ var _ = Describe("default emitter", func() {
 			Eventually(f).Should(BeTrue())
 			Expect(e.GetCounter().GetDelta()).To(Equal(uint64(42)))
 		})
-
-		It("can pulse a counter", func() {
-			increment := metric.PulseCounter(
-				"foo",
-				metric.WithPulseTag("bar", "baz"),
-				metric.WithPulseInterval(time.Millisecond),
-			)
-			var e *v2.Envelope
-			f := func() bool {
-				Eventually(receiver).Should(Receive(&e))
-				return e.GetCounter().Name == "foo"
-			}
-			Eventually(f).Should(BeTrue())
-			Expect(e.GetCounter().GetDelta()).To(BeZero())
-			Expect(e.Tags["bar"].GetText()).To(Equal("baz"))
-
-			increment(42)
-			f = func() bool {
-				Eventually(receiver).Should(Receive(&e))
-				return e.GetCounter().Name == "foo" && e.GetCounter().GetDelta() == 42
-			}
-			Eventually(f).Should(BeTrue())
-		})
 	})
 })

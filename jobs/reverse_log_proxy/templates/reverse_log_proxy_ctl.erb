@@ -39,6 +39,10 @@ exec chpst -u vcap:vcap ./rlp \
   --ca=$CERT_DIR/mutual_tls_ca.crt \
   --cert=$CERT_DIR/reverse_log_proxy.crt \
   --key=$CERT_DIR/reverse_log_proxy.key \
+  --metron-addr="<%= [ p('metron_endpoint.host'), p('metron_endpoint.grpc_port')].join(':') %>" \
+  --job="<%= spec.job.name || name %>" \
+  --deployment="<%= spec.deployment %>" \
+  --index="<%= spec.id || spec.index.to_s %>" \
   &>> ${LOG_DIR}/rlp.log
 
 ;;

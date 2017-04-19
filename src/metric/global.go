@@ -25,9 +25,3 @@ func IncCounter(name string, options ...IncrementOpt) {
 	defer mu.RUnlock()
 	defaultEmitter.IncCounter(name, options...)
 }
-
-func PulseCounter(name string, options ...PulseOpt) func(delta uint64) {
-	mu.RLock()
-	defer mu.RUnlock()
-	return defaultEmitter.PulseCounter(name, options...)
-}

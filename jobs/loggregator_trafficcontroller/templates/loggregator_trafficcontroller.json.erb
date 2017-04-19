@@ -2,6 +2,7 @@
     # try and set these properties from a BOSH 2.0 spec object
     job_name = spec.job.name || name
     instance_id = spec.id || spec.index.to_s
+    deployment = spec.deployment
 
     doppler_addrs = []
     etcd_machines = []
@@ -36,6 +37,11 @@
         "CAFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/loggregator_ca.crt"
     }
 
+    metronConfig = {
+        "UDPAddress" => p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.dropsonde_port').to_s,
+        "GRPCAddress" => p('metron_endpoint.host').to_s + ":" + p('metron_endpoint.grpc_port').to_s
+    }
+
     scheme = p("login.protocol")
     domain = p("system_domain")
     uaa_host = p("uaa.url", "#{scheme}://uaa.#{domain}")
@@ -43,6 +49,7 @@
     args = {
         "JobName" => job_name,
         "Index" => instance_id,
+        "DeploymentName" => deployment,
         "IP" => spec.ip,
         "EtcdUrls" => etcd_machines,
         "EtcdMaxConcurrentRequests" => etcd_max_concurrent_requests,
@@ -55,11 +62,11 @@
         "ApiHost" => p("cc.srv_api_uri"),
         "CipherSuites" => p("router.cipher_suites").split(":"),
         "SystemDomain" => p("system_domain"),
-        "MetronPort" => p("metron_endpoint.dropsonde_port"),
         "PPROFPort" => p("traffic_controller.pprof_port"),
         "UaaHost" => uaa_host,
         "UaaClient" => uaa_client,
         "UaaClientSecret" => p("loggregator.uaa.client_secret"),
+        "MetronConfig" => metronConfig,
     }
 
     if etcd_require_tls
