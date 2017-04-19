@@ -4,6 +4,7 @@ package egress_test
 
 import (
 	"log"
+	"metric"
 
 	"google.golang.org/grpc/grpclog"
 
@@ -16,6 +17,7 @@ import (
 func TestEgress(t *testing.T) {
 	log.SetOutput(GinkgoWriter)
 	grpclog.SetLogger(log.New(GinkgoWriter, "", 0))
+	metric.Setup()
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Egress Suite")

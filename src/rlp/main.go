@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"log"
+	"metric"
 	"strings"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -21,9 +23,15 @@ func main() {
 	certFile := flag.String("cert", "", "The file path for the client cert")
 	keyFile := flag.String("key", "", "The file path for the client key")
 
+	metronAddr := flag.String("metron-addr", "localhost:3458", "The GRPC address to inject metrics to")
+	batchInterval := flag.Duration("batch-interval", time.Minute, "The interval to send batched metrics to metron")
+	job := flag.String("job", "", "The name of the job")
+	deployment := flag.String("deployment", "", "The name of the deployment")
+	index := flag.String("index", "", "The name of the index")
+
 	flag.Parse()
 
-	tlsCredentials, err := plumbing.NewCredentials(
+	dopplerCredentials, err := plumbing.NewCredentials(
 		*certFile,
 		*keyFile,
 		*caFile,
@@ -38,11 +46,29 @@ func main() {
 		log.Fatal("no Ingress Addrs were provided")
 	}
 
+	metronCredentials, err := plumbing.NewCredentials(
+		*certFile,
+		*keyFile,
+		*caFile,
+		"metron",
+	)
+	if err != nil {
+		log.Fatalf("Could not use TLS config: %s", err)
+	}
+
+	metric.Setup(
+		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(metronCredentials)),
+		metric.WithBatchInterval(*batchInterval),
+		metric.WithOrigin("loggregator.rlp"),
+		metric.WithAddr(*metronAddr),
+		metric.WithDeploymentMeta(*deployment, *job, *index),
+	)
+
 	rlp := app.NewRLP(
 		app.WithEgressPort(*egressPort),
 		app.WithIngressAddrs(hostPorts),
-		app.WithIngressDialOptions(grpc.WithTransportCredentials(tlsCredentials)),
-		app.WithEgressServerOptions(grpc.Creds(tlsCredentials)),
+		app.WithIngressDialOptions(grpc.WithTransportCredentials(dopplerCredentials)),
+		app.WithEgressServerOptions(grpc.Creds(dopplerCredentials)),
 	)
 	go rlp.Start()
 

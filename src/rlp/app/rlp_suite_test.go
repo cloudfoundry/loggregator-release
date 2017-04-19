@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"log"
+	"metric"
 
 	"google.golang.org/grpc/grpclog"
 
@@ -14,6 +15,7 @@ import (
 func TestApp(t *testing.T) {
 	log.SetOutput(GinkgoWriter)
 	grpclog.SetLogger(log.New(GinkgoWriter, "", 0))
+	metric.Setup()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "RLP Suite")
 }

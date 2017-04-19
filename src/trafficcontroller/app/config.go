@@ -7,6 +7,11 @@ import (
 	"os"
 )
 
+type MetronConfig struct {
+	UDPAddress  string
+	GRPCAddress string
+}
+
 type EtcdTLSClientConfig struct {
 	CertFile string
 	KeyFile  string
@@ -26,6 +31,7 @@ type Config struct {
 	EtcdRequireTLS            bool
 	EtcdTLSClientConfig       EtcdTLSClientConfig
 
+	DeploymentName         string
 	JobName                string
 	Index                  string
 	IP                     string
@@ -33,8 +39,7 @@ type Config struct {
 	DopplerPort            uint32
 	DopplerAddrs           []string
 	OutgoingDropsondePort  uint32
-	MetronHost             string
-	MetronPort             int
+	MetronConfig           MetronConfig
 	GRPC                   GRPC
 	CipherSuites           []string
 	SystemDomain           string
@@ -84,14 +89,6 @@ func (c *Config) setDefaults() {
 
 	if c.MonitorIntervalSeconds == 0 {
 		c.MonitorIntervalSeconds = 60
-	}
-
-	if c.MetronHost == "" {
-		c.MetronHost = "127.0.0.1"
-	}
-
-	if c.MetronPort == 0 {
-		c.MetronPort = 3457
 	}
 
 	if c.GRPC.Port == 0 {

@@ -2,6 +2,7 @@ package plumbing_test
 
 import (
 	"log"
+	"metric"
 	"net"
 	"testing"
 
@@ -15,6 +16,7 @@ import (
 
 func TestPlumbing(t *testing.T) {
 	grpclog.SetLogger(log.New(GinkgoWriter, "", log.LstdFlags))
+	metric.Setup()
 	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Plumbing Suite")

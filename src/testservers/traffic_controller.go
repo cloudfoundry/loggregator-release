@@ -29,8 +29,9 @@ func BuildTrafficControllerConf(etcdClientURL string, dopplerWSPort, dopplerGRPC
 		},
 		OutgoingDropsondePort: uint32(tcPort),
 		PPROFPort:             uint32(getTCPPort()),
-		MetronHost:            "localhost",
-		MetronPort:            metronPort,
+		MetronConfig: tcConf.MetronConfig{
+			UDPAddress: fmt.Sprintf("localhost:%d", metronPort),
+		},
 
 		EtcdUrls: []string{etcdClientURL}, EtcdMaxConcurrentRequests: 5,
 

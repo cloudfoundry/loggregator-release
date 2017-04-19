@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"metric"
 	v2 "plumbing/v2"
 
 	"golang.org/x/net/context"
@@ -15,12 +16,22 @@ type Receiver interface {
 }
 
 type Server struct {
-	receiver Receiver
+	receiver  Receiver
+	increment func(delta uint64)
 }
 
 func NewServer(r Receiver) *Server {
+	// metric-documentation-v2: (egress) Number of v2 envelopes sent to RLP
+	// consumers.
+	increment := metric.PulseCounter(
+		"egress",
+		metric.WithPulseTag("protocol", "grpc"),
+		metric.WithPulseVersion(2, 0),
+	)
+
 	return &Server{
-		receiver: r,
+		receiver:  r,
+		increment: increment,
 	}
 }
 
@@ -52,5 +63,6 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 			log.Printf("Send error: %s", err)
 			return io.ErrUnexpectedEOF
 		}
+		s.increment(1)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"metric"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -273,17 +274,26 @@ type plumbingReceiver interface {
 func readStream(s plumbingReceiver, cs *consumerState, batcher MetaMetricBatcher) error {
 	timer := time.NewTimer(time.Second)
 	timer.Stop()
+
+	// metric-documentation-v2: (ingress) Number of v1 envelopes received over
+	// gRPC from Dopplers.
+	v2increment := metric.PulseCounter(
+		"ingress",
+		metric.WithPulseTag("protocol", "grpc"),
+		metric.WithPulseVersion(2, 0),
+	)
 	for {
 		resp, err := s.Recv()
 		if err != nil {
 			return err
 		}
 
-		// metric-documentation-v1: (listeners.receivedEnvelopes) Number of V1 envelopes
-		// received over gRPC from Dopplers.
+		// metric-documentation-v1: (listeners.receivedEnvelopes) Number of v1
+		// envelopes received over gRPC from Dopplers.
 		batcher.BatchCounter("listeners.receivedEnvelopes").
 			SetTag("protocol", "grpc").
 			Increment()
+		v2increment(1)
 
 		timer.Reset(time.Second)
 		select {
@@ -292,8 +302,8 @@ func readStream(s plumbingReceiver, cs *consumerState, batcher MetaMetricBatcher
 				<-timer.C
 			}
 		case <-timer.C:
-			// metric-documentation-v1: (grpcConnector.slowConsumers) Number of slow consumers of
-			// the TrafficController API
+			// metric-documentation-v1: (grpcConnector.slowConsumers) Number of
+			// slow consumers of the TrafficController API.
 			cs.batcher.BatchAddCounter("grpcConnector.slowConsumers", 1)
 			writeError(errors.New("GRPCConnector: slow consumer"), cs.errs)
 		}

@@ -4,11 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"profiler"
-	"strconv"
 	"time"
 
 	"dopplerservice"
@@ -70,7 +68,7 @@ func (t *trafficController) Start() {
 
 	log.Print("Startup: Setting up the loggregator traffic controller")
 
-	batcher, err := t.initializeMetrics("LoggregatorTrafficController", net.JoinHostPort(t.conf.MetronHost, strconv.Itoa(t.conf.MetronPort)))
+	batcher, err := t.initializeMetrics("LoggregatorTrafficController", t.conf.MetronConfig.UDPAddress)
 	if err != nil {
 		log.Printf("Error initializing dropsonde: %s", err)
 	}

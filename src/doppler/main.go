@@ -375,7 +375,7 @@ func connectToEtcd(conf *app.Config) storeadapter.StoreAdapter {
 }
 
 func setupMetricsEmitter(conf *app.Config) {
-	serverCreds, err := plumbing.NewCredentials(
+	credentials, err := plumbing.NewCredentials(
 		conf.GRPC.CertFile,
 		conf.GRPC.KeyFile,
 		conf.GRPC.CAFile,
@@ -388,7 +388,7 @@ func setupMetricsEmitter(conf *app.Config) {
 	batchInterval := time.Duration(conf.MetricBatchIntervalMilliseconds) * time.Millisecond
 	// metric-documentation-v2: setup function
 	metric.Setup(
-		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(serverCreds)),
+		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(credentials)),
 		metric.WithBatchInterval(batchInterval),
 		metric.WithOrigin("loggregator.doppler"),
 		metric.WithAddr(conf.MetronConfig.GRPCAddress),
