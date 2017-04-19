@@ -3,7 +3,7 @@
 set -e
 
 mkdir -p bin
-for line in metron trafficcontroller doppler syslog_drain_binder; do
+for line in rlp metron trafficcontroller doppler syslog_drain_binder; do
   echo building $line
   go build -o bin/$line $line
 done
