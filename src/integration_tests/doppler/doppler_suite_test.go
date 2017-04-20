@@ -46,6 +46,7 @@ var (
 	pathToDopplerExec    string
 	pathToHTTPEchoServer string
 	pathToTCPEchoServer  string
+	pathToConfigFile     = "fixtures/doppler.json"
 )
 
 var _ = BeforeSuite(func() {
@@ -65,12 +66,12 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 })
 
-var _ = BeforeEach(func() {
+var _ = JustBeforeEach(func() {
 	var err error
 
 	etcdRunner.Reset()
 
-	command := exec.Command(pathToDopplerExec, "--config=fixtures/doppler.json")
+	command := exec.Command(pathToDopplerExec, "--config="+pathToConfigFile)
 	dopplerSession, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 

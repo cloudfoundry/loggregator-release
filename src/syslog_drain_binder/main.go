@@ -34,6 +34,13 @@ func main() {
 		panic(err)
 	}
 
+	if conf.DisableSyslogDrains {
+		for {
+			time.Sleep(10 * time.Millisecond)
+		}
+		return
+	}
+
 	p := profiler.New(conf.PPROFPort)
 	go p.Start()
 

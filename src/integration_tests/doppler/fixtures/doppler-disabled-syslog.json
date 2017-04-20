@@ -1,0 +1,32 @@
+{
+    "DisableSyslogDrains": true,
+    "EtcdUrls": ["http://localhost:5555"],
+    "EtcdMaxConcurrentRequests": 10,
+    "IncomingUDPPort": 8765,
+    "OutgoingPort": 4567,
+    "PPROFPort": 6790,
+    "SinkSkipCertVerify": true,
+    "Index": "0",
+    "IP": "127.0.0.1",
+    "MaxRetainedLogMessages": 10,
+    "MessageDrainBufferSize": 100,
+    "SharedSecret": "secret",
+    "Syslog"  : "",
+    "ContainerMetricTTLSeconds": 120,
+    "SinkInactivityTimeoutSeconds": 120,
+    "JobName": "doppler_z1",
+    "Zone": "z1",
+    "BlackListIps": [
+        {"Start": "127.0.0.2", "End": "127.0.0.3"}
+    ],
+    "MetronConfig": {
+        "UDPAddress": "localhost:37474"
+    },
+    "MonitorIntervalSeconds": 1,
+    "GRPC": {
+        "Port": 5678,
+        "KeyFile": "../fixtures/server.key",
+        "CertFile": "../fixtures/server.crt",
+        "CAFile": "../fixtures/loggregator-ca.crt"
+    }
+}

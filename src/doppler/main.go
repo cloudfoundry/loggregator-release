@@ -173,6 +173,7 @@ func main() {
 		messageRouter,
 		signatureVerifier,
 		grpcListener,
+		conf.DisableSyslogDrains,
 	)
 
 	log.Print("Startup: doppler server started.")
@@ -240,6 +241,7 @@ func start(
 	messageRouter *sinkserver.MessageRouter,
 	signatureVerifier *signature.Verifier,
 	grpcListener *listeners.GRPCListener,
+	disableSyslogDrains bool,
 ) {
 	wg.Add(7 + dropsondeUnmarshallerCollection.Size())
 
@@ -252,7 +254,9 @@ func start(
 
 	go func() {
 		defer wg.Done()
-		appStoreWatcher.Run()
+		if !disableSyslogDrains {
+			appStoreWatcher.Run()
+		}
 	}()
 
 	go func() {

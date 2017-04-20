@@ -12,11 +12,9 @@ import (
 )
 
 var _ = Describe("Syslog Drain Binding", func() {
-
 	var (
 		appID           string
 		inputConnection net.Conn
-		syslogPort      = 6666
 	)
 
 	BeforeEach(func() {
@@ -37,7 +35,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 		syslogdrain := fmt.Sprintf(
 			`{"hostname":"org.app.space.1","drainURL":"syslog-invalid://%s:%d"}`,
 			localIPAddress,
-			syslogPort,
+			6666,
 		)
 		key := DrainKey(appID, syslogdrain)
 		AddETCDNode(etcdAdapter, key, syslogdrain)
@@ -52,7 +50,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 	Context("when connecting over TCP", func() {
 		var (
-			syslogDrainAddress = fmt.Sprintf("%s:%d", localIPAddress, syslogPort)
+			syslogDrainAddress = fmt.Sprintf("%s:%d", localIPAddress, 6667)
 			drainSession       *gexec.Session
 		)
 
@@ -77,7 +75,6 @@ var _ = Describe("Syslog Drain Binding", func() {
 					SendAppLog(appID, "syslog-message", inputConnection)
 					return drainSession.Out
 				}, 20, 1).Should(gbytes.Say("syslog-message"))
-
 			})
 		})
 
@@ -129,7 +126,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 			serverSession *gexec.Session
 		)
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			serverSession = StartHTTPSServer(pathToHTTPEchoServer)
 			httpsURL := fmt.Sprintf(
 				"https://foo:somereallycrazypassword@%s:1234/syslog/?someuser=foo&somepass=somereallycrazypassword",
@@ -179,7 +176,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 
 	Context("when bound to a blacklisted drain", func() {
 		It("does not forward to a TCP listener", func() {
-			syslogDrainAddress := fmt.Sprintf("127.0.0.2:%d", syslogPort)
+			syslogDrainAddress := fmt.Sprintf("127.0.0.2:%d", 6668)
 			drainSession := StartUnencryptedTCPServer(pathToTCPEchoServer, syslogDrainAddress)
 
 			syslogdrain := fmt.Sprintf(
@@ -198,7 +195,7 @@ var _ = Describe("Syslog Drain Binding", func() {
 		})
 
 		It("does not forward to a TCP+TLS listener", func() {
-			syslogDrainAddress := fmt.Sprintf("127.0.0.2:%d", syslogPort)
+			syslogDrainAddress := fmt.Sprintf("127.0.0.2:%d", 6669)
 			drainSession := StartEncryptedTCPServer(pathToTCPEchoServer, syslogDrainAddress)
 
 			syslogdrain := fmt.Sprintf(
@@ -230,4 +227,43 @@ var _ = Describe("Syslog Drain Binding", func() {
 			serverSession.Kill().Wait()
 		})
 	})
+
+	Context("when disabling syslog drains", func() {
+		var unpatch func()
+
+		BeforeEach(func() {
+			unpatch = patchDopplerConfig("fixtures/doppler-disabled-syslog.json")
+		})
+
+		AfterEach(func() {
+			unpatch()
+		})
+
+		It("does not forward log messages to a syslog", func() {
+			syslogDrainAddress := fmt.Sprintf("%s:%d", localIPAddress, 6670)
+			drainSession := StartUnencryptedTCPServer(pathToTCPEchoServer, syslogDrainAddress)
+			syslogdrain := fmt.Sprintf(
+				`{"hostname":"org.app.space.1","drainURL":"syslog://%s"}`,
+				syslogDrainAddress,
+			)
+
+			key := DrainKey(appID, syslogdrain)
+			AddETCDNode(etcdAdapter, key, syslogdrain)
+
+			Consistently(func() *gbytes.Buffer {
+				SendAppLog(appID, "syslog-message", inputConnection)
+				return drainSession.Out
+			}).ShouldNot(gbytes.Say("syslog-message"))
+
+			drainSession.Kill().Wait()
+		})
+	})
 })
+
+func patchDopplerConfig(new string) func() {
+	old := pathToConfigFile
+	pathToConfigFile = new
+	return func() {
+		pathToConfigFile = old
+	}
+}

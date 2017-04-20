@@ -125,7 +125,8 @@ function run_integration {
     ginkgo -r --race --randomizeAllSpecs --slowSpecThreshold 20 $@ \
         src/integration_tests \
         src/metron/component_tests \
-        src/doppler/component_tests
+        src/doppler/component_tests \
+        src/syslog_drain_binder/component_tests
     return $?
 }
 

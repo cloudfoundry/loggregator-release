@@ -26,6 +26,7 @@
     }
 
     args = Hash.new.tap do |a|
+        a[:DisableSyslogDrains] = p("loggregator.disable_syslog_drains")
         a[:EtcdUrls] = etcdMachines
         a[:EtcdMaxConcurrentRequests] = 10
         a[:EtcdRequireTLS] = p("loggregator.etcd.require_ssl")

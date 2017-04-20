@@ -18,32 +18,9 @@ import (
 
 var _ = Describe("Syslog Drain Binder", func() {
 	Context("when a consumer is accepting gRPC connections", func() {
-		var (
-			drainCleanup        func()
-			etcdCleanup         func()
-			etcdURL             string
-			conf                config.Config
-			fakeCloudController *httptest.Server
-		)
-
-		BeforeEach(func() {
-			fakeCloudController = startFakeCC()
-			etcdCleanup, etcdURL = testservers.StartTestEtcd()
-			drainCleanup, conf = testservers.StartSyslogDrainBinder(
-				testservers.BuildSyslogDrainBinderConfig(
-					etcdURL,
-					fakeCloudController.URL,
-				),
-			)
-		})
-
-		AfterEach(func() {
-			drainCleanup()
-			fakeCloudController.Close()
-			etcdCleanup()
-		})
-
 		It("works", func() {
+			conf, cleanup := setupSyslogDrainBinder(false)
+			defer cleanup()
 			adapter := connectToEtcd(conf)
 
 			var nodes []storeadapter.StoreNode
@@ -64,7 +41,44 @@ var _ = Describe("Syslog Drain Binder", func() {
 			Consistently(f, 2).Should(HaveLen(2))
 		})
 	})
+
+	Context("with syslog drains disabled", func() {
+		It("does not start any servers", func() {
+			conf, cleanup := setupSyslogDrainBinder(true)
+			defer cleanup()
+			adapter := connectToEtcd(conf)
+
+			var nodes []storeadapter.StoreNode
+			f := func() []storeadapter.StoreNode {
+				n, err := adapter.ListRecursively("/loggregator/v2/services")
+				if err != nil {
+					return nil
+				}
+				nodes = n.ChildNodes
+				return nodes
+			}
+
+			Consistently(f, 2).Should(HaveLen(0))
+		})
+	})
 })
+
+func setupSyslogDrainBinder(disable bool) (config.Config, func()) {
+	fakeCloudController := startFakeCC()
+	etcdCleanup, etcdURL := testservers.StartTestEtcd()
+	drainCleanup, conf := testservers.StartSyslogDrainBinder(
+		testservers.BuildSyslogDrainBinderConfig(
+			etcdURL,
+			fakeCloudController.URL,
+			disable,
+		),
+	)
+	return conf, func() {
+		drainCleanup()
+		fakeCloudController.Close()
+		etcdCleanup()
+	}
+}
 
 func toMap(nodes []storeadapter.StoreNode) map[string][]byte {
 	m := make(map[string][]byte)

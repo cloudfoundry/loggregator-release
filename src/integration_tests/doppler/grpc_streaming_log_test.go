@@ -40,7 +40,7 @@ var _ = Describe("GRPC Streaming Logs", func() {
 		return in
 	}
 
-	var connectoToSubscription = func(conf *app.Config, req plumbing.SubscriptionRequest) (*grpc.ClientConn, plumbing.Doppler_SubscribeClient) {
+	var connectToSubscription = func(conf *app.Config, req plumbing.SubscriptionRequest) (*grpc.ClientConn, plumbing.Doppler_SubscribeClient) {
 		conn, client := connectToGRPC(conf)
 
 		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
@@ -58,10 +58,10 @@ var _ = Describe("GRPC Streaming Logs", func() {
 			subscription plumbing.Doppler_SubscribeClient
 		)
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			conf = fetchDopplerConfig("fixtures/doppler.json")
 			in = connectToDoppler()
-			out, subscription = connectoToSubscription(
+			out, subscription = connectToSubscription(
 				conf,
 				plumbing.SubscriptionRequest{
 					ShardID: "foo",

@@ -11,8 +11,9 @@ import (
 	"syslog_drain_binder/config"
 )
 
-func BuildSyslogDrainBinderConfig(etcdURL, ccAddress string) config.Config {
+func BuildSyslogDrainBinderConfig(etcdURL, ccAddress string, disable bool) config.Config {
 	return config.Config{
+		DisableSyslogDrains:       disable,
 		PollingBatchSize:          5,
 		InstanceName:              "test-binder",
 		UpdateIntervalSeconds:     1,
@@ -28,6 +29,10 @@ func BuildSyslogDrainBinderConfig(etcdURL, ccAddress string) config.Config {
 			CAFile:   Cert("loggregator-ca.crt"),
 		},
 		SkipCertVerify: true,
+		CipherSuites: []string{
+			"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+			"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+		},
 	}
 }
 

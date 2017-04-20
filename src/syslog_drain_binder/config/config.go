@@ -20,6 +20,8 @@ type MutualTLSConfig struct {
 }
 
 type Config struct {
+	DisableSyslogDrains bool
+
 	InstanceName          string
 	DrainUrlTtlSeconds    int64
 	UpdateIntervalSeconds int64

@@ -32,7 +32,7 @@ var _ = Describe("Firehose test", func() {
 		var ws *websocket.Conn
 		var receiveChan chan []byte
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			receiveChan = make(chan []byte, 10)
 			ws, _ = AddWSSink(receiveChan, "4567", "/firehose/hose-subcription-a")
 		})

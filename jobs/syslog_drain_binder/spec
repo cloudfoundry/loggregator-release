@@ -42,6 +42,12 @@ properties:
       separated by colons. The cipher suite will be chosen according to this order during SSL handshake
     default: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256:TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
 
+  loggregator.disable_syslog_drains:
+    description: |
+      Disable syslog drain capability in Loggregator. This is meant to be used
+      when migrating to scalable-syslog-release.
+    default: false
+
   loggregator.etcd.require_ssl:
     description: "Enable ssl for all communication with etcd"
     default: false
