@@ -291,7 +291,6 @@ func readStream(s plumbingReceiver, cs *consumerState, batcher MetaMetricBatcher
 		metric.IncCounter(
 			"ingress",
 			metric.WithTag("protocol", "grpc"),
-			metric.WithTag("something", "unicorn"),
 			metric.WithVersion(2, 0),
 		)
 
