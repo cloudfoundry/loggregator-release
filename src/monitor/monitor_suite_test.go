@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"log"
 	"testing"
 )
 
@@ -20,6 +21,7 @@ var (
 )
 
 var _ = BeforeSuite(func() {
+	log.SetOutput(GinkgoWriter)
 	fakeEventEmitter = fake.NewFakeEventEmitter("MonitorTest")
 	sender := metric_sender.NewMetricSender(fakeEventEmitter)
 
