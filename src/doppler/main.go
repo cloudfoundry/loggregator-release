@@ -92,7 +92,10 @@ func main() {
 	//------------------------------
 	// Ingress
 	//------------------------------
-	storeAdapter := connectToEtcd(conf)
+	var storeAdapter storeadapter.StoreAdapter
+	if !conf.DisableAnnounce || !conf.DisableSyslogDrains {
+		storeAdapter = connectToEtcd(conf)
+	}
 
 	errChan := make(chan error)
 	var wg sync.WaitGroup
@@ -181,8 +184,12 @@ func main() {
 	killChan := signalmanager.RegisterKillSignalChannel()
 	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
 
-	releaseNodeChan := dopplerservice.Announce(conf.IP, app.HeartbeatInterval, conf, storeAdapter)
-	legacyReleaseNodeChan := dopplerservice.AnnounceLegacy(conf.IP, app.HeartbeatInterval, conf, storeAdapter)
+	releaseNodeChan := make(chan chan bool, 1)
+	legacyReleaseNodeChan := make(chan chan bool, 1)
+	if !conf.DisableAnnounce {
+		releaseNodeChan = dopplerservice.Announce(conf.IP, app.HeartbeatInterval, conf, storeAdapter)
+		legacyReleaseNodeChan = dopplerservice.AnnounceLegacy(conf.IP, app.HeartbeatInterval, conf, storeAdapter)
+	}
 
 	p := profiler.New(conf.PPROFPort)
 	go p.Start()
@@ -328,9 +335,11 @@ func stop(
 	appStoreWatcher.Stop()
 	wg.Wait()
 
-	err := storeAdapter.Disconnect()
-	if err != nil {
-		log.Printf("error when disconnecting from store adapter: %s", err)
+	if storeAdapter != nil {
+		err := storeAdapter.Disconnect()
+		if err != nil {
+			log.Printf("error when disconnecting from store adapter: %s", err)
+		}
 	}
 	close(errChan)
 

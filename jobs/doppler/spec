@@ -62,6 +62,9 @@ properties:
   doppler.outgoing_port:
     description: Port for outgoing log messages via websockets
     default: 8081
+  doppler.disable_announce:
+    description: Disable doppler announcing via etcd
+    default: false
 
   doppler.grpc_port:
     description: Port for outgoing log messages via GRPC
@@ -115,6 +118,7 @@ properties:
 
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"
+    default: []
 
   metron_endpoint.host:
     description: "The host used to emit messages to the Metron agent"

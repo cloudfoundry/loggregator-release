@@ -32,6 +32,7 @@ type GRPC struct {
 
 type Config struct {
 	DisableSyslogDrains             bool
+	DisableAnnounce                 bool
 	BlackListIps                    []iprange.IPRange
 	ContainerMetricTTLSeconds       int
 	IncomingUDPPort                 uint32
