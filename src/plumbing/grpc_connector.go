@@ -273,7 +273,6 @@ type plumbingReceiver interface {
 
 func readStream(s plumbingReceiver, cs *consumerState, batcher MetaMetricBatcher) error {
 	timer := time.NewTimer(time.Second)
-	timer.Stop()
 
 	for {
 		resp, err := s.Recv()
@@ -294,12 +293,12 @@ func readStream(s plumbingReceiver, cs *consumerState, batcher MetaMetricBatcher
 			metric.WithVersion(2, 0),
 		)
 
+		if !timer.Stop() {
+			<-timer.C
+		}
 		timer.Reset(time.Second)
 		select {
 		case cs.data <- resp.Payload:
-			if !timer.Stop() {
-				<-timer.C
-			}
 		case <-timer.C:
 			// metric-documentation-v1: (grpcConnector.slowConsumers) Number of
 			// slow consumers of the TrafficController API.
