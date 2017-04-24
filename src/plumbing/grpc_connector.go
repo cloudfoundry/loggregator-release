@@ -274,6 +274,8 @@ type plumbingReceiver interface {
 func readStream(s plumbingReceiver, cs *consumerState, batcher MetaMetricBatcher) error {
 	timer := time.NewTimer(time.Second)
 
+	var count uint64
+	lastEmitted := time.Now()
 	for {
 		resp, err := s.Recv()
 		if err != nil {
@@ -285,13 +287,20 @@ func readStream(s plumbingReceiver, cs *consumerState, batcher MetaMetricBatcher
 		batcher.BatchCounter("listeners.receivedEnvelopes").
 			SetTag("protocol", "grpc").
 			Increment()
-		// metric-documentation-v2: (ingress) Number of v1 envelopes received over
-		// gRPC from Dopplers.
-		metric.IncCounter(
-			"ingress",
-			metric.WithTag("protocol", "grpc"),
-			metric.WithVersion(2, 0),
-		)
+
+		count++
+		if count >= 1000 || time.Since(lastEmitted) > 5*time.Second {
+			// metric-documentation-v2: (ingress) Number of v1 envelopes received over
+			// gRPC from Dopplers.
+			metric.IncCounter(
+				"ingress",
+				metric.WithTag("protocol", "grpc"),
+				metric.WithVersion(2, 0),
+				metric.WithIncrement(count),
+			)
+			lastEmitted = time.Now()
+			count = 0
+		}
 
 		if !timer.Stop() {
 			<-timer.C
