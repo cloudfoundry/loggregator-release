@@ -29,7 +29,7 @@ Metron by the
 ## Editing Manifest Templates
 
 The up-to-date Metron configuration can be found [in the metron spec
-file](../../jobs/metron_agent/spec). You can see a list of available
+file](../jobs/metron_agent/spec). You can see a list of available
 configurable properties, their defaults and descriptions in that file.
 
 ## Configuring Rsyslog (Deprecated)
