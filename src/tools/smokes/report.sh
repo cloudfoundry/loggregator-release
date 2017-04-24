@@ -57,3 +57,8 @@ curl  -X POST -H "Content-type: application/json" \
       ]
   }" \
 "https://app.datadoghq.com/api/v1/series?api_key=$DATADOG_API_KEY"
+
+if [ "$msg_count" -eq 0 ]; then
+    echo message count was zero, sad
+    exit 1
+fi
