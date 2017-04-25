@@ -20,6 +20,7 @@ consumes:
 properties:
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"
+    default: []
   ssl.skip_cert_verify:
     description: ""
   metron_agent.dropsonde_incoming_port:

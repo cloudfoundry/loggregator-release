@@ -8,8 +8,6 @@ stemcells:
 releases:
 - name: loggregator
   version: latest
-- name: etcd
-  version: latest
 - name: consul
   version: latest
 
@@ -90,89 +88,15 @@ instance_groups:
     properties:
       traffic_controller:
         disable_access_control: true
-      loggregator:
-        etcd:
-          require_ssl: true
-          ca_cert: "((etcd_client.ca))"
-          machines: [etcd.service.cf.internal]
-      loggregator_acceptance_tests:
-        etcd:
-          cert: "((etcd_client.certificate))"
-          key: "((etcd_client.private_key))"
       loggregator_endpoint:
         shared_secret: "((dropsonde_shared_secret))"
-      etcd:
-        machines: [etcd.service.cf.internal]
   - name: consul_agent
     release: consul
     consumes:
       consul: {from: consul_server}
-    properties:
-      consul:
-        agent:
-          services:
-            etcd:
-              name: etcd
   - name: metron_agent
     release: loggregator
     properties: *metron_agent_properties
-
-
-- name: etcd
-  azs:
-  - z1
-  instances: 1
-  persistent_disk_type: default
-  vm_type: default
-  stemcell: default
-  networks:
-  - name: default
-  jobs:
-  - name: consul_agent
-    release: consul
-    consumes:
-      consul: {from: consul_server}
-    properties:
-      consul:
-        agent:
-          services:
-            etcd:
-              name: etcd
-  - name: etcd
-    release: etcd
-    properties:
-      etcd:
-        advertise_urls_dns_suffix: etcd.service.cf.internal
-        cluster:
-        - instances: 1
-          name: etcd
-        machines: [etcd.service.cf.internal]
-        peer_require_ssl: true
-        require_ssl: true
-        ca_cert: "((etcd_server.ca))"
-        client_cert: "((etcd_client.certificate))"
-        client_key: "((etcd_client.private_key))"
-        server_cert: "((etcd_server.certificate))"
-        server_key: "((etcd_server.private_key))"
-        peer_ca_cert: "((etcd_peer.ca))"
-        peer_cert: "((etcd_peer.certificate))"
-        peer_key: "((etcd_peer.private_key))"
-  - name: etcd_metrics_server
-    release: etcd
-    properties:
-      etcd_metrics_server:
-        etcd:
-          dns_suffix: etcd.service.cf.internal
-          require_ssl: true
-          ca_cert: "((etcd_client.ca))"
-          client_cert: "((etcd_client.certificate))"
-          client_key: "((etcd_client.private_key))"
-  - name: metron_agent
-    release: loggregator
-    properties: *metron_agent_properties
-  update:
-    serial: true
-    max_in_flight: 1
 
 - name: doppler
   azs:
@@ -198,20 +122,15 @@ instance_groups:
     release: loggregator
     properties:
       doppler:
-        etcd:
-          client_cert: "((etcd_client.certificate))"
-          client_key: "((etcd_client.private_key))"
+        disable_announce: true
         syslog_skip_cert_verify: true
       loggregator:
+        disable_syslog_drains: true
         tls:
           ca_cert: "((loggregator_doppler.ca))"
           doppler:
             cert: "((loggregator_doppler.certificate))"
             key: "((loggregator_doppler.private_key))"
-        etcd:
-          require_ssl: true
-          ca_cert: "((etcd_client.ca))"
-          machines: [etcd.service.cf.internal]
       doppler_endpoint:
         shared_secret: "((dropsonde_shared_secret))"
   - name: metron_agent
@@ -247,19 +166,12 @@ instance_groups:
       system_domain: unused
       traffic_controller:
         disable_access_control: true
-        etcd:
-          client_cert: "((etcd_client.certificate))"
-          client_key: "((etcd_client.private_key))"
       loggregator:
         tls:
           ca_cert: "((loggregator_tc.ca))"
           trafficcontroller:
             cert: "((loggregator_tc.certificate))"
             key: "((loggregator_tc.private_key))"
-        etcd:
-          require_ssl: true
-          ca_cert: "((etcd_client.ca))"
-          machines: [etcd.service.cf.internal]
         uaa:
           client_secret: "some-secret"
       ssl:
@@ -319,44 +231,6 @@ variables:
   options:
     ca: loggregator_ca
     common_name: metron
-    extended_key_usage:
-    - client_auth
-    - server_auth
-- name: etcd_ca
-  type: certificate
-  options:
-    common_name: etcdCA
-    is_ca: true
-- name: etcd_server
-  type: certificate
-  options:
-    ca: etcd_ca
-    common_name: etcd.service.cf.internal
-    alternative_names:
-    - "*.etcd.service.cf.internal"
-    - etcd.service.cf.internal
-    extended_key_usage:
-    - server_auth
-- name: etcd_client
-  type: certificate
-  options:
-    ca: etcd_ca
-    common_name: clientName
-    extended_key_usage:
-    - client_auth
-- name: etcd_peer_ca
-  type: certificate
-  options:
-    common_name: peerCA
-    is_ca: true
-- name: etcd_peer
-  type: certificate
-  options:
-    ca: etcd_peer_ca
-    common_name: etcd.service.cf.internal
-    alternative_names:
-    - "*.etcd.service.cf.internal"
-    - etcd.service.cf.internal
     extended_key_usage:
     - client_auth
     - server_auth
