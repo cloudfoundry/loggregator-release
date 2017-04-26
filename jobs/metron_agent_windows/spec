@@ -20,6 +20,11 @@ templates:
 packages:
 - metron_agent_windows
 
+consumes:
+- name: doppler
+  type: doppler
+  optional: true
+
 properties:
   syslog_daemon_config.enable:
     description: "Enable or disable rsyslog configuration for forwarding syslog messages into metron"

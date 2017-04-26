@@ -27,7 +27,11 @@
         a[:Deployment] = deployment
         a[:IP] = spec.ip
         a[:Tags] = tags
-        a[:SharedSecret] = p("metron_endpoint.shared_secret")
+        if_p("metron_endpoint.shared_secret") do |_|
+          a[:SharedSecret] = p("metron_endpoint.shared_secret")
+        end.else do
+          a[:SharedSecret] = link("doppler").p("doppler_endpoint.shared_secret")
+        end
         a[:IncomingUDPPort] = p("metron_agent.listening_port")
         a[:DisableUDP] = p("metron_agent.disable_udp")
         a[:PPROFPort] = p("metron_agent.pprof_port")

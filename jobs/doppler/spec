@@ -21,6 +21,7 @@ provides:
   type: doppler
   properties:
   - doppler.grpc_port
+  - doppler_endpoint.shared_secret
 
 properties:
   doppler.deployment:
