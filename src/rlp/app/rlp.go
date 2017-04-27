@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"log"
+	"metricemitter"
 	"net"
 
 	"plumbing"
@@ -27,14 +28,17 @@ type RLP struct {
 	egressAddr     net.Addr
 	egressListener net.Listener
 	egressServer   *grpc.Server
+
+	metricClient metricemitter.MetricClient
 }
 
 // NewRLP returns a new unstarted RLP.
-func NewRLP(opts ...RLPOption) *RLP {
+func NewRLP(m metricemitter.MetricClient, opts ...RLPOption) *RLP {
 	rlp := &RLP{
 		ingressAddrs:     []string{"doppler.service.cf.internal"},
 		ingressDialOpts:  []grpc.DialOption{grpc.WithInsecure()},
 		egressServerOpts: []grpc.ServerOption{},
+		metricClient:     m,
 	}
 	for _, o := range opts {
 		o(rlp)
@@ -89,7 +93,7 @@ func (r *RLP) setupIngress() {
 
 	batcher := &ingress.NullMetricBatcher{} // TODO: Add real metrics
 
-	connector := plumbing.NewGRPCConnector(1000, pool, finder, batcher)
+	connector := plumbing.NewGRPCConnector(1000, pool, finder, batcher, r.metricClient)
 	converter := ingress.NewConverter()
 	r.receiver = ingress.NewReceiver(converter, ingress.NewRequestConverter(), connector)
 }
@@ -102,7 +106,7 @@ func (r *RLP) setupEgress() {
 	}
 	r.egressAddr = r.egressListener.Addr()
 	r.egressServer = grpc.NewServer(r.egressServerOpts...)
-	v2.RegisterEgressServer(r.egressServer, egress.NewServer(r.receiver))
+	v2.RegisterEgressServer(r.egressServer, egress.NewServer(r.receiver, r.metricClient))
 }
 
 func (r *RLP) serveEgress() {

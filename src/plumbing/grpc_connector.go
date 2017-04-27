@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"metric"
+	"metricemitter"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -51,16 +51,24 @@ type GRPCConnector struct {
 	consumerStates []unsafe.Pointer
 	bufferSize     int
 	batcher        MetaMetricBatcher
+	metricClient   metricemitter.MetricClient
 }
 
 // NewGRPCConnector creates a new GRPCConnector.
-func NewGRPCConnector(bufferSize int, pool DopplerPool, f Finder, batcher MetaMetricBatcher) *GRPCConnector {
+func NewGRPCConnector(
+	bufferSize int,
+	pool DopplerPool,
+	f Finder,
+	batcher MetaMetricBatcher,
+	m metricemitter.MetricClient,
+) *GRPCConnector {
 	c := &GRPCConnector{
 		bufferSize:     bufferSize,
 		pool:           pool,
 		finder:         f,
 		batcher:        batcher,
 		consumerStates: make([]unsafe.Pointer, maxConnections),
+		metricClient:   m,
 	}
 	go c.readFinder()
 	return c
@@ -260,7 +268,7 @@ func (c *GRPCConnector) consumeSubscription(cs *consumerState, dopplerClient *do
 
 		delay = time.Millisecond
 
-		if err := readStream(dopplerStream, cs, batcher); err != nil {
+		if err := c.readStream(dopplerStream, cs); err != nil {
 			log.Printf("Error while reading from stream (%s): %s", dopplerClient.uri, err)
 			continue
 		}
@@ -271,11 +279,16 @@ type plumbingReceiver interface {
 	Recv() (*Response, error)
 }
 
-func readStream(s plumbingReceiver, cs *consumerState, batcher MetaMetricBatcher) error {
+func (c *GRPCConnector) readStream(s plumbingReceiver, cs *consumerState) error {
 	timer := time.NewTimer(time.Second)
+	metric := c.metricClient.NewCounterMetric(
+		"ingress",
+		metricemitter.WithTags(map[string]string{
+			"protocol": "grpc",
+		}),
+		metricemitter.WithVersion(2, 0),
+	)
 
-	var count uint64
-	lastEmitted := time.Now()
 	for {
 		resp, err := s.Recv()
 		if err != nil {
@@ -284,23 +297,13 @@ func readStream(s plumbingReceiver, cs *consumerState, batcher MetaMetricBatcher
 
 		// metric-documentation-v1: (listeners.receivedEnvelopes) Number of v1
 		// envelopes received over gRPC from Dopplers.
-		batcher.BatchCounter("listeners.receivedEnvelopes").
+		c.batcher.BatchCounter("listeners.receivedEnvelopes").
 			SetTag("protocol", "grpc").
 			Increment()
 
-		count++
-		if count >= 1000 || time.Since(lastEmitted) > 5*time.Second {
-			// metric-documentation-v2: (ingress) Number of v1 envelopes received over
-			// gRPC from Dopplers.
-			metric.IncCounter(
-				"ingress",
-				metric.WithTag("protocol", "grpc"),
-				metric.WithVersion(2, 0),
-				metric.WithIncrement(count),
-			)
-			lastEmitted = time.Now()
-			count = 0
-		}
+		// metric-documentation-v2: (ingress) Number of v1 envelopes received over
+		// gRPC from Dopplers.
+		metric.Increment(1)
 
 		if !timer.Stop() {
 			<-timer.C

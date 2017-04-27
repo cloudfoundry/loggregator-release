@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"metric"
+	"metricemitter"
 	"plumbing"
 
 	"google.golang.org/grpc"
@@ -34,12 +34,15 @@ func main() {
 	}
 
 	// metric-documentation-v2: setup function
-	metric.Setup(
-		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(credentials)),
-		metric.WithOrigin("loggregator.trafficcontroller"),
-		metric.WithAddr(conf.MetronConfig.GRPCAddress),
-		metric.WithDeploymentMeta(conf.DeploymentName, conf.JobName, conf.Index),
+	metricClient, err := metricemitter.NewClient(
+		conf.MetronConfig.GRPCAddress,
+		metricemitter.WithGRPCDialOptions(grpc.WithTransportCredentials(credentials)),
+		metricemitter.WithOrigin("loggregator.trafficcontroller"),
+		metricemitter.WithDeployment(conf.DeploymentName, conf.JobName, conf.Index),
 	)
-	tc := app.NewTrafficController(conf, *logFilePath, *disableAccessControl)
+	if err != nil {
+		log.Fatalf("Couldn't connect to metric emitter: %s", err)
+	}
+	tc := app.NewTrafficController(conf, *logFilePath, *disableAccessControl, metricClient)
 	tc.Start()
 }

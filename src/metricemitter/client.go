@@ -8,6 +8,10 @@ import (
 	"google.golang.org/grpc"
 )
 
+type MetricClient interface {
+	NewCounterMetric(name string, opts ...MetricOption) *CounterMetric
+}
+
 type client struct {
 	ingressClient v2.IngressClient
 	pulseInterval time.Duration
@@ -56,7 +60,8 @@ func WithDeployment(deployment, job, index string) ClientOption {
 
 func NewClient(addr string, opts ...ClientOption) (*client, error) {
 	client := &client{
-		tags: make(map[string]string),
+		tags:          make(map[string]string),
+		pulseInterval: 5 * time.Second,
 	}
 
 	for _, opt := range opts {
@@ -73,7 +78,7 @@ func NewClient(addr string, opts ...ClientOption) (*client, error) {
 	return client, nil
 }
 
-func (c *client) NewCounterMetric(name string, opts ...MetricOption) *counterMetric {
+func (c *client) NewCounterMetric(name string, opts ...MetricOption) *CounterMetric {
 	opts = append(opts, WithTags(c.tags))
 	m := NewCounterMetric(name, c.sourceID, opts...)
 	go c.pulse(m)

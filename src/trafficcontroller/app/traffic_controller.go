@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"metricemitter"
 	"net/http"
 	"os"
 	"profiler"
@@ -36,6 +37,7 @@ type trafficController struct {
 	conf                 *Config
 	logFilePath          string
 	disableAccessControl bool
+	metricClient         metricemitter.MetricClient
 }
 
 // finder provides service discovery of Doppler processes
@@ -44,11 +46,17 @@ type finder interface {
 	Next() dopplerservice.Event
 }
 
-func NewTrafficController(c *Config, path string, disableAccessControl bool) *trafficController {
+func NewTrafficController(
+	c *Config,
+	path string,
+	disableAccessControl bool,
+	metricClient metricemitter.MetricClient,
+) *trafficController {
 	return &trafficController{
 		conf:                 c,
 		logFilePath:          path,
 		disableAccessControl: disableAccessControl,
+		metricClient:         metricClient,
 	}
 }
 
@@ -132,7 +140,7 @@ func (t *trafficController) Start() {
 	}
 	f.Start()
 	pool := plumbing.NewPool(20, grpc.WithTransportCredentials(creds))
-	grpcConnector := plumbing.NewGRPCConnector(1000, pool, f, batcher)
+	grpcConnector := plumbing.NewGRPCConnector(1000, pool, f, batcher, t.metricClient)
 
 	dopplerHandler := http.Handler(
 		proxy.NewDopplerProxy(

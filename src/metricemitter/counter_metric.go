@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-type counterMetric struct {
+type CounterMetric struct {
 	client   *client
 	name     string
 	sourceID string
@@ -15,10 +15,10 @@ type counterMetric struct {
 	delta    uint64
 }
 
-type MetricOption func(*counterMetric)
+type MetricOption func(*CounterMetric)
 
-func NewCounterMetric(name, sourceID string, opts ...MetricOption) *counterMetric {
-	m := &counterMetric{
+func NewCounterMetric(name, sourceID string, opts ...MetricOption) *CounterMetric {
+	m := &CounterMetric{
 		name:     name,
 		sourceID: sourceID,
 		tags:     make(map[string]*v2.Value),
@@ -31,15 +31,15 @@ func NewCounterMetric(name, sourceID string, opts ...MetricOption) *counterMetri
 	return m
 }
 
-func (m *counterMetric) Increment(c uint64) {
+func (m *CounterMetric) Increment(c uint64) {
 	atomic.AddUint64(&m.delta, c)
 }
 
-func (m *counterMetric) GetDelta() uint64 {
+func (m *CounterMetric) GetDelta() uint64 {
 	return atomic.LoadUint64(&m.delta)
 }
 
-func (m *counterMetric) WithEnvelope(fn func(*v2.Envelope) error) error {
+func (m *CounterMetric) WithEnvelope(fn func(*v2.Envelope) error) error {
 	d := m.GetDelta()
 
 	if err := fn(m.toEnvelope(d)); err != nil {
@@ -50,7 +50,7 @@ func (m *counterMetric) WithEnvelope(fn func(*v2.Envelope) error) error {
 	return nil
 }
 
-func (m *counterMetric) toEnvelope(delta uint64) *v2.Envelope {
+func (m *CounterMetric) toEnvelope(delta uint64) *v2.Envelope {
 	return &v2.Envelope{
 		SourceId:  m.sourceID,
 		Timestamp: time.Now().UnixNano(),
@@ -74,7 +74,7 @@ func WithVersion(major, minor uint) MetricOption {
 }
 
 func WithTags(tags map[string]string) MetricOption {
-	return func(m *counterMetric) {
+	return func(m *CounterMetric) {
 		for k, v := range tags {
 			m.tags[k] = &v2.Value{
 				Data: &v2.Value_Text{

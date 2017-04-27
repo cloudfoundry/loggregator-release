@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"metric"
+	"metricemitter"
 	v2 "plumbing/v2"
 
 	"golang.org/x/net/context"
@@ -16,12 +16,14 @@ type Receiver interface {
 }
 
 type Server struct {
-	receiver Receiver
+	receiver     Receiver
+	metricClient metricemitter.MetricClient
 }
 
-func NewServer(r Receiver) *Server {
+func NewServer(r Receiver, m metricemitter.MetricClient) *Server {
 	return &Server{
-		receiver: r,
+		receiver:     r,
+		metricClient: m,
 	}
 }
 
@@ -37,6 +39,14 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 		log.Printf("Unable to setup subscription: %s", err)
 		return fmt.Errorf("unable to setup subscription")
 	}
+
+	metric := s.metricClient.NewCounterMetric(
+		"egress",
+		metricemitter.WithTags(map[string]string{
+			"protocol": "grpc",
+		}),
+		metricemitter.WithVersion(2, 0),
+	)
 
 	for {
 		e, err := rx()
@@ -55,10 +65,6 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 		}
 		// metric-documentation-v2: (egress) Number of v2 envelopes sent to RLP
 		// consumers.
-		metric.IncCounter(
-			"egress",
-			metric.WithTag("protocol", "grpc"),
-			metric.WithVersion(2, 0),
-		)
+		metric.Increment(1)
 	}
 }

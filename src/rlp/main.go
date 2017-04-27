@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"log"
-	"metric"
+	"metricemitter"
 	"strings"
 	"time"
 
@@ -56,15 +56,19 @@ func main() {
 		log.Fatalf("Could not use TLS config: %s", err)
 	}
 
-	metric.Setup(
-		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(metronCredentials)),
-		metric.WithBatchInterval(*batchInterval),
-		metric.WithOrigin("loggregator.rlp"),
-		metric.WithAddr(*metronAddr),
-		metric.WithDeploymentMeta(*deployment, *job, *index),
+	metric, err := metricemitter.NewClient(
+		*metronAddr,
+		metricemitter.WithGRPCDialOptions(grpc.WithTransportCredentials(metronCredentials)),
+		metricemitter.WithOrigin("loggregator.rlp"),
+		metricemitter.WithDeployment(*deployment, *job, *index),
+		metricemitter.WithPulseInterval(*batchInterval),
 	)
+	if err != nil {
+		log.Fatalf("Couldn't connect to metric emitter: %s", err)
+	}
 
 	rlp := app.NewRLP(
+		metric,
 		app.WithEgressPort(*egressPort),
 		app.WithIngressAddrs(hostPorts),
 		app.WithIngressDialOptions(grpc.WithTransportCredentials(dopplerCredentials)),

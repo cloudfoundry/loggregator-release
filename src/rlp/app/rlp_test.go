@@ -3,6 +3,7 @@ package app_test
 import (
 	"context"
 	"log"
+	"metricemitter/testhelper"
 	"net"
 	"plumbing"
 	v2 "plumbing/v2"
@@ -107,6 +108,7 @@ func setupRLP(dopplerLis net.Listener) net.Listener {
 
 	egressPort := egressLis.Addr().(*net.TCPAddr).Port
 	rlp := app.NewRLP(
+		testhelper.NewMetricClient(),
 		app.WithEgressPort(egressPort),
 		app.WithIngressAddrs([]string{dopplerLis.Addr().String()}),
 		app.WithIngressDialOptions(grpc.WithTransportCredentials(ingressTLSCredentials)),

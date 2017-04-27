@@ -1,16 +1,18 @@
 package main_test
 
 import (
-	"metric"
+	"log"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"google.golang.org/grpc/grpclog"
 
 	"testing"
 )
 
 func TestRlp(t *testing.T) {
-	metric.Setup()
+	log.SetOutput(GinkgoWriter)
+	grpclog.SetLogger(log.New(GinkgoWriter, "", 0))
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "RLP compile main")
 }

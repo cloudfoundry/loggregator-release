@@ -3,6 +3,8 @@ package egress_test
 import (
 	"fmt"
 	"io"
+	"metricemitter"
+	"metricemitter/testhelper"
 	"rlp/internal/egress"
 
 	"golang.org/x/net/context"
@@ -19,13 +21,15 @@ var _ = Describe("Server", func() {
 		mockReceiverServer *mockReceiverServer
 		server             *egress.Server
 		ctx                context.Context
+		metricClient       metricemitter.MetricClient
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
 		mockReceiverServer = newMockReceiverServer()
 		mockReceiver = newMockReceiver()
-		server = egress.NewServer(mockReceiver)
+		metricClient = testhelper.NewMetricClient()
+		server = egress.NewServer(mockReceiver, metricClient)
 
 		mockReceiverServer.ContextOutput.Ret0 <- ctx
 	})

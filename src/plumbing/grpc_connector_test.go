@@ -2,17 +2,18 @@ package plumbing_test
 
 import (
 	"fmt"
+	"metricemitter/testhelper"
 	"net"
 	"time"
 
 	"dopplerservice"
 	"plumbing"
 
+	"github.com/apoydence/eachers/testhelpers"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
 	. "github.com/apoydence/eachers"
-	"github.com/apoydence/eachers/testhelpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -54,7 +55,7 @@ var _ = Describe("GRPCConnector", func() {
 			},
 		}
 
-		connector = plumbing.NewGRPCConnector(5, pool, mockFinder, mockBatcher)
+		connector = plumbing.NewGRPCConnector(5, pool, mockFinder, mockBatcher, testhelper.NewMetricClient())
 
 		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
 		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
