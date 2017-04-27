@@ -27,6 +27,33 @@ var _ = Describe("Emitter Client", func() {
 		Expect(err).ToNot(HaveOccurred())
 	})
 
+	It("reconnects if the connection is lost", func() {
+		grpcServer := newgRPCServer()
+
+		client, err := metricemitter.NewClient(
+			grpcServer.addr,
+			metricemitter.WithGRPCDialOptions(grpc.WithInsecure()),
+			metricemitter.WithPulseInterval(50*time.Millisecond),
+		)
+		Expect(err).ToNot(HaveOccurred())
+
+		client.NewCounterMetric("some-name")
+		Eventually(grpcServer.senders).Should(HaveLen(1))
+		Eventually(grpcServer.envelopes).Should(HaveLen(1))
+
+		grpcServer.stop()
+
+		envelopeCount := len(grpcServer.envelopes)
+		Consistently(grpcServer.envelopes).Should(HaveLen(envelopeCount))
+
+		grpcServer = newgRPCServerWithAddr(grpcServer.addr)
+		defer grpcServer.stop()
+
+		Eventually(func() int {
+			return len(grpcServer.envelopes)
+		}).Should(BeNumerically(">", envelopeCount))
+	})
+
 	It("creates a new metric", func() {
 		grpcServer := newgRPCServer()
 		defer grpcServer.stop()
@@ -38,7 +65,7 @@ var _ = Describe("Emitter Client", func() {
 		)
 		Expect(err).ToNot(HaveOccurred())
 
-		client.NewMetric("some-name")
+		client.NewCounterMetric("some-name")
 		Eventually(grpcServer.senders).Should(HaveLen(1))
 	})
 
@@ -55,7 +82,7 @@ var _ = Describe("Emitter Client", func() {
 			)
 			Expect(err).ToNot(HaveOccurred())
 
-			client.NewMetric("some-name")
+			client.NewCounterMetric("some-name")
 			Eventually(grpcServer.senders).Should(HaveLen(1))
 
 			var env *v2.Envelope
@@ -85,8 +112,7 @@ var _ = Describe("Emitter Client", func() {
 			)
 			Expect(err).ToNot(HaveOccurred())
 
-			client.NewMetric(
-				"some-name",
+			client.NewCounterMetric("some-name",
 				metricemitter.WithVersion(2, 0),
 				metricemitter.WithTags(map[string]string{
 					"unicorn": "another-unicorn",
@@ -124,7 +150,7 @@ var _ = Describe("Emitter Client", func() {
 				)
 				Expect(err).ToNot(HaveOccurred())
 
-				metric := client.NewMetric("some-name")
+				metric := client.NewCounterMetric("some-name")
 				Eventually(grpcServer.senders).Should(HaveLen(1))
 
 				metric.Increment(5)
@@ -144,7 +170,11 @@ var _ = Describe("Emitter Client", func() {
 })
 
 func newgRPCServer() *SpyIngressServer {
-	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	return newgRPCServerWithAddr("127.0.0.1:0")
+}
+
+func newgRPCServerWithAddr(addr string) *SpyIngressServer {
+	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		panic(err)
 	}
@@ -152,7 +182,7 @@ func newgRPCServer() *SpyIngressServer {
 	s := grpc.NewServer()
 	spyIngressServer := &SpyIngressServer{
 		addr:      lis.Addr().String(),
-		senders:   make(chan v2.Ingress_SenderServer, 10),
+		senders:   make(chan v2.Ingress_SenderServer, 100),
 		envelopes: make(chan *v2.Envelope, 100),
 		server:    s,
 	}
@@ -183,8 +213,6 @@ func (s *SpyIngressServer) Sender(sender v2.Ingress_SenderServer) error {
 
 	return nil
 }
-
-func (s *SpyIngressServer) closeClients() {}
 
 func (s *SpyIngressServer) stop() {
 	s.server.Stop()

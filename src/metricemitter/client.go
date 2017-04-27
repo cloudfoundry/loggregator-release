@@ -16,6 +16,10 @@ type client struct {
 	tags          map[string]string
 }
 
+type sendable interface {
+	WithEnvelope(func(*v2.Envelope) error) error
+}
+
 type ClientOption func(*client)
 
 func WithGRPCDialOptions(opts ...grpc.DialOption) ClientOption {
@@ -69,32 +73,31 @@ func NewClient(addr string, opts ...ClientOption) (*client, error) {
 	return client, nil
 }
 
-func (c *client) NewMetric(name string, opts ...MetricOption) *metric {
+func (c *client) NewCounterMetric(name string, opts ...MetricOption) *counterMetric {
 	opts = append(opts, WithTags(c.tags))
-	m := newMetric(name, opts...)
+	m := NewCounterMetric(name, c.sourceID, opts...)
 	go c.pulse(m)
 
 	return m
 }
 
-func (c *client) pulse(m *metric) {
-	senderClient, _ := c.ingressClient.Sender(context.Background())
-
+func (c *client) pulse(s sendable) {
+	var senderClient v2.Ingress_SenderClient
 	for range time.Tick(c.pulseInterval) {
-		envelope := &v2.Envelope{
-			SourceId:  c.sourceID,
-			Timestamp: time.Now().UnixNano(),
-			Message: &v2.Envelope_Counter{
-				Counter: &v2.Counter{
-					Name: m.name,
-					Value: &v2.Counter_Delta{
-						Delta: m.GetDelta(),
-					},
-				},
-			},
-			Tags: m.tags,
+		if senderClient == nil {
+			var err error
+			senderClient, err = c.ingressClient.Sender(context.Background())
+			if err != nil {
+				continue
+			}
 		}
 
-		senderClient.Send(envelope)
+		err := s.WithEnvelope(func(env *v2.Envelope) error {
+			return senderClient.Send(env)
+		})
+
+		if err != nil {
+			senderClient = nil
+		}
 	}
 }
