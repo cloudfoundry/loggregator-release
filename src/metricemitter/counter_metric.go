@@ -64,7 +64,6 @@ func (m *CounterMetric) toEnvelope(delta uint64) *v2.Envelope {
 		},
 		Tags: m.tags,
 	}
-
 }
 
 func WithVersion(major, minor uint) MetricOption {

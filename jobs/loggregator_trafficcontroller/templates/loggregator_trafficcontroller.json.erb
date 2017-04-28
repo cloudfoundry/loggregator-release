@@ -67,6 +67,7 @@
         "UaaClient" => uaa_client,
         "UaaClientSecret" => p("loggregator.uaa.client_secret"),
         "MetronConfig" => metronConfig,
+        "MetricEmitterInterval" => p('metric_emitter.interval'),
     }
 
     if etcd_require_tls

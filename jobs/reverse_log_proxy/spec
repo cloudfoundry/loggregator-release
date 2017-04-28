@@ -49,3 +49,7 @@ properties:
   metron_endpoint.grpc_port:
     description: "The port used to emit grpc messages to the Metron agent"
     default: 3458
+
+  metric_emitter.interval:
+    description: "The interval that metrics are emitted to the metron."
+    default: "1m"

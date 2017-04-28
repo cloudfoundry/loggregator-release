@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"time"
 )
 
 type MetronConfig struct {
@@ -50,6 +51,8 @@ type Config struct {
 	MonitorIntervalSeconds uint
 	SecurityEventLog       string
 	PPROFPort              uint32
+	MetricEmitterInterval  string
+	MetricEmitterDuration  time.Duration `json:"-"`
 }
 
 func ParseConfig(configFile string) (*Config, error) {
@@ -93,6 +96,13 @@ func (c *Config) setDefaults() {
 
 	if c.GRPC.Port == 0 {
 		c.GRPC.Port = 8082
+	}
+
+	duration, err := time.ParseDuration(c.MetricEmitterInterval)
+	if err != nil {
+		c.MetricEmitterDuration = time.Minute
+	} else {
+		c.MetricEmitterDuration = duration
 	}
 }
 

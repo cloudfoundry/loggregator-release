@@ -43,6 +43,7 @@ exec chpst -u vcap:vcap ./rlp \
   --job="<%= spec.job.name || name %>" \
   --deployment="<%= spec.deployment %>" \
   --index="<%= spec.id || spec.index.to_s %>" \
+  --metric-emitter-interval="<%= p('metric_emitter.interval') %>" \
   &>> ${LOG_DIR}/rlp.log
 
 ;;

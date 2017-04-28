@@ -16,6 +16,7 @@ func main() {
 	logFilePath := flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 	disableAccessControl := flag.Bool("disableAccessControl", false, "always all access to app logs")
 	configFile := flag.String("config", "config/loggregator_trafficcontroller.json", "Location of the loggregator trafficcontroller config json file")
+
 	flag.Parse()
 
 	conf, err := app.ParseConfig(*configFile)
@@ -39,6 +40,7 @@ func main() {
 		metricemitter.WithGRPCDialOptions(grpc.WithTransportCredentials(credentials)),
 		metricemitter.WithOrigin("loggregator.trafficcontroller"),
 		metricemitter.WithDeployment(conf.DeploymentName, conf.JobName, conf.Index),
+		metricemitter.WithPulseInterval(conf.MetricEmitterDuration),
 	)
 	if err != nil {
 		log.Fatalf("Couldn't connect to metric emitter: %s", err)

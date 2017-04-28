@@ -84,6 +84,7 @@ files:
 - loggregator/src/google.golang.org/grpc/tap/*.go # gosub
 - loggregator/src/google.golang.org/grpc/transport/*.go # gosub
 - loggregator/src/metric/*.go # gosub
+- loggregator/src/metricemitter/*.go # gosub
 - loggregator/src/monitor/*.go # gosub
 - loggregator/src/plumbing/*.go # gosub
 - loggregator/src/plumbing/conversion/*.go # gosub

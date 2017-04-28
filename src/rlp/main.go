@@ -24,7 +24,7 @@ func main() {
 	keyFile := flag.String("key", "", "The file path for the client key")
 
 	metronAddr := flag.String("metron-addr", "localhost:3458", "The GRPC address to inject metrics to")
-	batchInterval := flag.Duration("batch-interval", time.Minute, "The interval to send batched metrics to metron")
+	metricEmitterInterval := flag.Duration("metric-emitter-interval", time.Minute, "The interval to send batched metrics to metron")
 	job := flag.String("job", "", "The name of the job")
 	deployment := flag.String("deployment", "", "The name of the deployment")
 	index := flag.String("index", "", "The name of the index")
@@ -56,12 +56,13 @@ func main() {
 		log.Fatalf("Could not use TLS config: %s", err)
 	}
 
+	// metric-documentation-v2: setup function
 	metric, err := metricemitter.NewClient(
 		*metronAddr,
 		metricemitter.WithGRPCDialOptions(grpc.WithTransportCredentials(metronCredentials)),
 		metricemitter.WithOrigin("loggregator.rlp"),
 		metricemitter.WithDeployment(*deployment, *job, *index),
-		metricemitter.WithPulseInterval(*batchInterval),
+		metricemitter.WithPulseInterval(*metricEmitterInterval),
 	)
 	if err != nil {
 		log.Fatalf("Couldn't connect to metric emitter: %s", err)

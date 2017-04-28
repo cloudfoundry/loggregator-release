@@ -114,3 +114,7 @@ properties:
   loggregator.uaa_client_id:
     description: "DEPRECATED in favor of loggregator.uaa.client."
     default: ""
+
+  metric_emitter.interval:
+    description: "The interval that metrics are emitted to the metron."
+    default: "1m"

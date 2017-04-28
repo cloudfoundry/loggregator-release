@@ -17,13 +17,21 @@ type Receiver interface {
 
 type Server struct {
 	receiver     Receiver
-	metricClient metricemitter.MetricClient
+	egressMetric *metricemitter.CounterMetric
 }
 
 func NewServer(r Receiver, m metricemitter.MetricClient) *Server {
+	egressMetric := m.NewCounterMetric(
+		"egress",
+		metricemitter.WithTags(map[string]string{
+			"protocol": "grpc",
+		}),
+		metricemitter.WithVersion(2, 0),
+	)
+
 	return &Server{
 		receiver:     r,
-		metricClient: m,
+		egressMetric: egressMetric,
 	}
 }
 
@@ -39,14 +47,6 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 		log.Printf("Unable to setup subscription: %s", err)
 		return fmt.Errorf("unable to setup subscription")
 	}
-
-	metric := s.metricClient.NewCounterMetric(
-		"egress",
-		metricemitter.WithTags(map[string]string{
-			"protocol": "grpc",
-		}),
-		metricemitter.WithVersion(2, 0),
-	)
 
 	for {
 		e, err := rx()
@@ -65,6 +65,6 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 		}
 		// metric-documentation-v2: (egress) Number of v2 envelopes sent to RLP
 		// consumers.
-		metric.Increment(1)
+		s.egressMetric.Increment(1)
 	}
 }

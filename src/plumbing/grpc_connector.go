@@ -51,7 +51,7 @@ type GRPCConnector struct {
 	consumerStates []unsafe.Pointer
 	bufferSize     int
 	batcher        MetaMetricBatcher
-	metricClient   metricemitter.MetricClient
+	ingressMetric  *metricemitter.CounterMetric
 }
 
 // NewGRPCConnector creates a new GRPCConnector.
@@ -62,13 +62,21 @@ func NewGRPCConnector(
 	batcher MetaMetricBatcher,
 	m metricemitter.MetricClient,
 ) *GRPCConnector {
+	ingressMetric := m.NewCounterMetric(
+		"ingress",
+		metricemitter.WithTags(map[string]string{
+			"protocol": "grpc",
+		}),
+		metricemitter.WithVersion(2, 0),
+	)
+
 	c := &GRPCConnector{
 		bufferSize:     bufferSize,
 		pool:           pool,
 		finder:         f,
 		batcher:        batcher,
 		consumerStates: make([]unsafe.Pointer, maxConnections),
-		metricClient:   m,
+		ingressMetric:  ingressMetric,
 	}
 	go c.readFinder()
 	return c
@@ -281,13 +289,6 @@ type plumbingReceiver interface {
 
 func (c *GRPCConnector) readStream(s plumbingReceiver, cs *consumerState) error {
 	timer := time.NewTimer(time.Second)
-	metric := c.metricClient.NewCounterMetric(
-		"ingress",
-		metricemitter.WithTags(map[string]string{
-			"protocol": "grpc",
-		}),
-		metricemitter.WithVersion(2, 0),
-	)
 
 	for {
 		resp, err := s.Recv()
@@ -303,7 +304,7 @@ func (c *GRPCConnector) readStream(s plumbingReceiver, cs *consumerState) error 
 
 		// metric-documentation-v2: (ingress) Number of v1 envelopes received over
 		// gRPC from Dopplers.
-		metric.Increment(1)
+		c.ingressMetric.Increment(1)
 
 		if !timer.Stop() {
 			<-timer.C
