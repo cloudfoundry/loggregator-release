@@ -10,7 +10,7 @@ deployment you must do the following:
  - Set `instances` for etcd to `0` or remove the instance group entirely.
 
 If you are deploying loggregator stand alone you can use the manifest under
-`manifests/loggregator.yml`.
+`templates/loggregator.yml`.
 
 If you are using `cf-deployment` you can use the ops file under
 `operations/experimental/disable-etcd.yml`
