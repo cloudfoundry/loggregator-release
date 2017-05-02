@@ -176,6 +176,32 @@ instance_groups:
           client_secret: "some-secret"
       ssl:
         skip_cert_verify: false
+  - name: metron_agent
+    release: loggregator
+    properties: *metron_agent_properties
+  update:
+    max_in_flight: 1
+    serial: true
+
+- name: reverse_log_proxy
+  azs:
+  - z1
+  instances: 1
+  persistent_disk_type: default
+  vm_type: default
+  stemcell: default
+  networks:
+  - name: default
+  jobs:
+  - name: consul_agent
+    release: consul
+    consumes:
+      consul: {from: consul_server}
+    properties:
+      consul:
+        agent:
+          services:
+            loggregator_trafficcontroller: {}
   - name: reverse_log_proxy
     release: loggregator
     provides:
