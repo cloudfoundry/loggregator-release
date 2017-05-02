@@ -2,6 +2,12 @@
 
 set -e -x
 
+env_name=$1
+if [ "$env_name" == '' ]
+then
+    env_name=lite
+fi
+
 bosh create-release --force
-bosh -e lite upload-release --rebase
-bosh -e lite deploy -d loggregator templates/loggregator.yml --vars-store=/tmp/loggregator-vars.yml -n
+bosh -e $env_name upload-release --rebase
+bosh -e $env_name deploy -d loggregator templates/loggregator.yml --vars-store=/tmp/loggregator-vars.yml -n
