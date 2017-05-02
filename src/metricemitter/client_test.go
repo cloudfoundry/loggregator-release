@@ -51,7 +51,7 @@ var _ = Describe("Emitter Client", func() {
 
 		Eventually(func() int {
 			return len(grpcServer.envelopes)
-		}).Should(BeNumerically(">", envelopeCount))
+		}, 3).Should(BeNumerically(">", envelopeCount))
 	})
 
 	It("creates a new metric", func() {
