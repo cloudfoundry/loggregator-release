@@ -60,7 +60,10 @@ var _ = Describe("Envelope conversion", func() {
 			_, err = proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
 
-			newV1e := ToV1(v2e)
+			v1Envs := ToV1(v2e)
+			Expect(len(v1Envs)).To(Equal(1))
+
+			newV1e := v1Envs[0]
 			Expect(newV1e).To(Equal(v1e))
 		})
 
@@ -96,7 +99,10 @@ var _ = Describe("Envelope conversion", func() {
 			_, err = proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
 
-			newV1e := ToV1(v2e)
+			v1Envs := ToV1(v2e)
+			Expect(len(v1Envs)).To(Equal(1))
+
+			newV1e := v1Envs[0]
 			Expect(newV1e).To(Equal(v1e))
 		})
 
@@ -128,7 +134,10 @@ var _ = Describe("Envelope conversion", func() {
 			_, err = proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
 
-			newV1e := ToV1(v2e)
+			v1Envs := ToV1(v2e)
+			Expect(len(v1Envs)).To(Equal(1))
+
+			newV1e := v1Envs[0]
 			Expect(newV1e).To(Equal(v1e))
 		})
 
@@ -160,7 +169,10 @@ var _ = Describe("Envelope conversion", func() {
 			_, err = proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
 
-			newV1e := ToV1(v2e)
+			v1Envs := ToV1(v2e)
+			Expect(len(v1Envs)).To(Equal(1))
+
+			newV1e := v1Envs[0]
 			Expect(newV1e).To(Equal(v1e))
 		})
 
@@ -192,7 +204,10 @@ var _ = Describe("Envelope conversion", func() {
 			_, err = proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
 
-			newV1e := ToV1(v2e)
+			v1Envs := ToV1(v2e)
+			Expect(len(v1Envs)).To(Equal(1))
+
+			newV1e := v1Envs[0]
 			Expect(newV1e).To(Equal(v1e))
 		})
 
@@ -228,7 +243,10 @@ var _ = Describe("Envelope conversion", func() {
 			_, err = proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
 
-			newV1e := ToV1(v2e)
+			v1Envs := ToV1(v2e)
+			Expect(len(v1Envs)).To(Equal(1))
+
+			newV1e := v1Envs[0]
 			Expect(newV1e).To(Equal(v1e))
 		})
 	})
@@ -270,13 +288,18 @@ var _ = Describe("Envelope conversion", func() {
 			_, err := proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v1e := ToV1(v2e)
+			envelopes := ToV1(v2e)
+			Expect(len(envelopes)).To(Equal(1))
+			v1e := envelopes[0]
 
 			_, err = proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
 
-			newV2e := ToV2(v1e)
-			Expect(newV2e).To(Equal(v2e))
+			v1Envs := ToV1(v2e)
+			Expect(len(v1Envs)).To(Equal(1))
+
+			newV1e := v1Envs[0]
+			Expect(newV1e).To(Equal(v1e))
 		})
 
 		It("converts Log", func() {
@@ -304,13 +327,18 @@ var _ = Describe("Envelope conversion", func() {
 			_, err := proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v1e := ToV1(v2e)
+			envelopes := ToV1(v2e)
+			Expect(len(envelopes)).To(Equal(1))
+			v1e := envelopes[0]
 
 			_, err = proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
 
-			newV2e := ToV2(v1e)
-			Expect(newV2e).To(Equal(v2e))
+			v1Envs := ToV1(v2e)
+			Expect(len(v1Envs)).To(Equal(1))
+
+			newV1e := v1Envs[0]
+			Expect(newV1e).To(Equal(v1e))
 		})
 
 		It("converts Counter", func() {
@@ -339,13 +367,18 @@ var _ = Describe("Envelope conversion", func() {
 			_, err := proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v1e := ToV1(v2e)
+			envelopes := ToV1(v2e)
+			Expect(len(envelopes)).To(Equal(1))
+			v1e := envelopes[0]
 
 			_, err = proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
 
-			newV2e := ToV2(v1e)
-			Expect(newV2e).To(Equal(v2e))
+			v1Envs := ToV1(v2e)
+			Expect(len(v1Envs)).To(Equal(1))
+
+			newV1e := v1Envs[0]
+			Expect(newV1e).To(Equal(v1e))
 		})
 
 		It("converts Gauge", func() {
@@ -390,13 +423,18 @@ var _ = Describe("Envelope conversion", func() {
 			_, err := proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v1e := ToV1(v2e)
+			envelopes := ToV1(v2e)
+			Expect(len(envelopes)).To(Equal(1))
+			v1e := envelopes[0]
 
 			_, err = proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
 
-			newV2e := ToV2(v1e)
-			Expect(newV2e).To(Equal(v2e))
+			v1Envs := ToV1(v2e)
+			Expect(len(v1Envs)).To(Equal(1))
+
+			newV1e := v1Envs[0]
+			Expect(newV1e).To(Equal(v1e))
 		})
 	})
 })

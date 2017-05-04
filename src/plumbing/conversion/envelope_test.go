@@ -34,7 +34,9 @@ var _ = Describe("Envelope", func() {
 				Message: &v2.Envelope_Log{Log: &v2.Log{}},
 			}
 
-			oldEnvelope := conversion.ToV1(envelope)
+			envelopes := conversion.ToV1(envelope)
+			Expect(len(envelopes)).To(Equal(1))
+			oldEnvelope := envelopes[0]
 			Expect(*oldEnvelope).To(MatchFields(IgnoreExtras, Fields{
 				"Origin":     Equal(proto.String("origin")),
 				"EventType":  Equal(events.Envelope_LogMessage.Enum()),
@@ -58,7 +60,9 @@ var _ = Describe("Envelope", func() {
 				Message: &v2.Envelope_Log{Log: &v2.Log{}},
 			}
 
-			oldEnvelope := conversion.ToV1(envelope)
+			envelopes := conversion.ToV1(envelope)
+			Expect(len(envelopes)).To(Equal(1))
+			oldEnvelope := envelopes[0]
 			Expect(oldEnvelope.Tags).To(Equal(map[string]string{
 				"foo": "bar",
 			}))

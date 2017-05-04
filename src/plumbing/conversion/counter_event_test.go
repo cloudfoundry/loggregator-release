@@ -25,7 +25,9 @@ var _ = Describe("CounterEvent", func() {
 				},
 			}
 
-			Expect(*conversion.ToV1(envelope)).To(MatchFields(IgnoreExtras, Fields{
+			envelopes := conversion.ToV1(envelope)
+			Expect(len(envelopes)).To(Equal(1))
+			Expect(*envelopes[0]).To(MatchFields(IgnoreExtras, Fields{
 				"EventType": Equal(events.Envelope_CounterEvent.Enum()),
 				"CounterEvent": Equal(&events.CounterEvent{
 					Name:  proto.String("name"),

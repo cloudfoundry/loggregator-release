@@ -71,7 +71,9 @@ var _ = Describe("HTTP", func() {
 				},
 			}
 
-			converted := conversion.ToV1(v2Envelope)
+			envelopes := conversion.ToV1(v2Envelope)
+			Expect(len(envelopes)).To(Equal(1))
+			converted := envelopes[0]
 
 			_, err := proto.Marshal(converted)
 			Expect(err).ToNot(HaveOccurred())
