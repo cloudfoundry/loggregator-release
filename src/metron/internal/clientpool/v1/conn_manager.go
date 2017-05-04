@@ -53,8 +53,6 @@ func (m *ConnManager) Write(data []byte) error {
 		Payload: data,
 	})
 
-	// TODO: This block is untested because we don't know how to
-	// induce an error from the stream via the test
 	if err != nil {
 		log.Printf("error writing to doppler: %s", err)
 		atomic.StorePointer(&m.conn, nil)
@@ -65,7 +63,9 @@ func (m *ConnManager) Write(data []byte) error {
 
 	if atomic.AddInt64(&gRPCConn.writes, 1) >= m.maxWrites {
 		log.Printf("recycling connection to doppler after %d writes", m.maxWrites)
-		atomic.StorePointer(&m.conn, nil)
+		if !atomic.CompareAndSwapPointer(&m.conn, conn, nil) {
+			return nil
+		}
 		gRPCConn.closer.Close()
 		m.reset <- true
 	}
@@ -74,7 +74,6 @@ func (m *ConnManager) Write(data []byte) error {
 }
 
 func (m *ConnManager) maintainConn() {
-
 	// Ensure initial connection does not wait on timer
 	m.reset <- true
 
