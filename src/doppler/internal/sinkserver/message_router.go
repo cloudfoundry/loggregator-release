@@ -3,7 +3,6 @@ package sinkserver
 import (
 	"diodes"
 	"log"
-	"metric"
 	"sync"
 
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
@@ -29,20 +28,9 @@ func NewMessageRouter(e ...EnvelopeSender) *MessageRouter {
 
 func (r *MessageRouter) Start(incomingLog *diodes.ManyToOneEnvelope) {
 	log.Print("MessageRouter:Starting")
-	var count int
 
 	for {
 		envelope := incomingLog.Next()
-		count++
-		if count%1000 == 0 {
-			// metric-documentation-v2: (loggregator.doppler.egress) Number of
-			// v1 envelopes read from a diode to be sent to consumers.
-			metric.IncCounter("egress",
-				metric.WithIncrement(1000),
-				metric.WithVersion(2, 0),
-			)
-		}
-
 		appId := envelope_extensions.GetAppId(envelope)
 
 		for _, sm := range r.senders {

@@ -4,6 +4,7 @@ import (
 	"diodes"
 	"errors"
 	"log"
+	"metric"
 	"plumbing"
 	"sync/atomic"
 	"time"
@@ -114,7 +115,8 @@ func (m *DopplerServer) sendData(req *plumbing.SubscriptionRequest, sender sende
 	cleanup := m.registrar.Register(req, d)
 	defer cleanup()
 
-	var done int64
+	var done, count int64
+	lastEmitted := time.Now()
 	go m.monitorContext(sender.Context(), &done)
 
 	for {
@@ -131,6 +133,19 @@ func (m *DopplerServer) sendData(req *plumbing.SubscriptionRequest, sender sende
 		err := sender.Send(&plumbing.Response{
 			Payload: data,
 		})
+
+		count++
+		if count >= 1000 || time.Since(lastEmitted) > 5*time.Second {
+			// metric-documentation-v2: (loggregator.doppler.egress) Number of
+			// v1 envelopes read from a diode to be sent to subscriptions.
+			metric.IncCounter("egress",
+				metric.WithIncrement(1000),
+				metric.WithVersion(2, 0),
+			)
+
+			lastEmitted = time.Now()
+			count = 0
+		}
 
 		if err != nil {
 			return err
