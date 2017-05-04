@@ -13,12 +13,3 @@ func RegisterKillSignalChannel() chan os.Signal {
 
 	return killChan
 }
-
-func RegisterGoRoutineDumpSignalChannel() chan os.Signal {
-	threadDumpChan := make(chan os.Signal)
-	return threadDumpChan
-}
-
-func DumpGoRoutine() {
-	// no op
-}

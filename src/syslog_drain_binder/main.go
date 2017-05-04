@@ -3,18 +3,13 @@ package main
 import (
 	"flag"
 	"log"
-	"os"
-	"os/signal"
 	"plumbing"
 	"profiler"
-	"syscall"
 	"syslog_drain_binder/config"
 	"time"
 
 	"syslog_drain_binder/elector"
 	"syslog_drain_binder/etcd_syslog_drain_store"
-
-	"signalmanager"
 
 	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/dropsonde"
@@ -83,63 +78,50 @@ func main() {
 	drainTTL := time.Duration(conf.DrainUrlTtlSeconds) * time.Second
 	store := etcd_syslog_drain_store.NewEtcdSyslogDrainStore(adapter, drainTTL)
 
-	dumpChan := registerGoRoutineDumpSignalChannel()
 	ticker := time.NewTicker(updateInterval)
-	for {
-		select {
-		case <-dumpChan:
-			signalmanager.DumpGoRoutine()
-		case <-ticker.C:
-			if politician.IsLeader() {
-				err = politician.StayAsLeader()
-				if err != nil {
-					log.Printf("Error when staying leader: %s", err.Error())
-					politician.Vacate()
-					continue
-				}
-			} else {
-				err = politician.RunForElection()
-
-				if err != nil {
-					log.Printf("Error when running for leader: %s", err.Error())
-					politician.Vacate()
-					continue
-				}
-			}
-
-			drainBindings, err := Poll(
-				conf.CloudControllerAddress,
-				conf.PollingBatchSize,
-				tlsConfig,
-			)
+	for range ticker.C {
+		if politician.IsLeader() {
+			err = politician.StayAsLeader()
 			if err != nil {
-				log.Printf("Error when polling cloud controller: %s", err.Error())
+				log.Printf("Error when staying leader: %s", err.Error())
 				politician.Vacate()
 				continue
 			}
-			drainBindings = Filter(drainBindings)
+		} else {
+			err = politician.RunForElection()
 
-			metrics.IncrementCounter("pollCount")
-
-			var totalDrains int
-			for _, drainBindings := range drainBindings {
-				totalDrains += len(drainBindings.DrainURLs)
-			}
-
-			metrics.SendValue("totalDrains", float64(totalDrains), "drains")
-			err = store.UpdateDrains(drainBindings)
 			if err != nil {
-				log.Printf("Error when updating ETCD: %s", err.Error())
+				log.Printf("Error when running for leader: %s", err.Error())
 				politician.Vacate()
 				continue
 			}
 		}
+
+		drainBindings, err := Poll(
+			conf.CloudControllerAddress,
+			conf.PollingBatchSize,
+			tlsConfig,
+		)
+		if err != nil {
+			log.Printf("Error when polling cloud controller: %s", err.Error())
+			politician.Vacate()
+			continue
+		}
+		drainBindings = Filter(drainBindings)
+
+		metrics.IncrementCounter("pollCount")
+
+		var totalDrains int
+		for _, drainBindings := range drainBindings {
+			totalDrains += len(drainBindings.DrainURLs)
+		}
+
+		metrics.SendValue("totalDrains", float64(totalDrains), "drains")
+		err = store.UpdateDrains(drainBindings)
+		if err != nil {
+			log.Printf("Error when updating ETCD: %s", err.Error())
+			politician.Vacate()
+			continue
+		}
 	}
-}
-
-func registerGoRoutineDumpSignalChannel() chan os.Signal {
-	threadDumpChan := make(chan os.Signal)
-	signal.Notify(threadDumpChan, syscall.SIGUSR1)
-
-	return threadDumpChan
 }

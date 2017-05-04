@@ -156,22 +156,15 @@ func (t *trafficController) Start() {
 	}
 	t.startOutgoingProxy(fmt.Sprintf(":%d", t.conf.OutgoingDropsondePort), dopplerHandler)
 
-	killChan := signalmanager.RegisterKillSignalChannel()
-	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
-
 	// We start the profiler last so that we can definitively claim that we're ready for
 	// connections by the time we're listening on the PPROFPort.
 	p := profiler.New(t.conf.PPROFPort)
 	go p.Start()
 
-	for {
-		select {
-		case <-dumpChan:
-			signalmanager.DumpGoRoutine()
-		case <-killChan:
-			log.Print("Shutting down")
-			return
-		}
+	killChan := signalmanager.RegisterKillSignalChannel()
+	for range killChan {
+		log.Print("Shutting down")
+		return
 	}
 }
 

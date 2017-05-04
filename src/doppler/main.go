@@ -181,9 +181,6 @@ func main() {
 
 	log.Print("Startup: doppler server started.")
 
-	killChan := signalmanager.RegisterKillSignalChannel()
-	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
-
 	releaseNodeChan := make(chan chan bool, 1)
 	legacyReleaseNodeChan := make(chan chan bool, 1)
 	if !conf.DisableAnnounce {
@@ -198,35 +195,31 @@ func main() {
 	// Post Start
 	//------------------------------
 
-	for {
-		select {
-		case <-dumpChan:
-			signalmanager.DumpGoRoutine()
-		case <-killChan:
-			log.Print("Shutting down")
+	killChan := signalmanager.RegisterKillSignalChannel()
+	for range killChan {
+		log.Print("Shutting down")
 
-			stopped := make(chan bool)
-			legacyStopped := make(chan bool)
-			releaseNodeChan <- stopped
-			legacyReleaseNodeChan <- legacyStopped
+		stopped := make(chan bool)
+		legacyStopped := make(chan bool)
+		releaseNodeChan <- stopped
+		legacyReleaseNodeChan <- legacyStopped
 
-			stop(
-				errChan,
-				wg,
-				openFileMonitor,
-				uptimeMonitor,
-				appStoreWatcher,
-				udpListener,
-				sinkManager,
-				websocketServer,
-				storeAdapter,
-			)
+		stop(
+			errChan,
+			wg,
+			openFileMonitor,
+			uptimeMonitor,
+			appStoreWatcher,
+			udpListener,
+			sinkManager,
+			websocketServer,
+			storeAdapter,
+		)
 
-			<-stopped
-			<-legacyStopped
+		<-stopped
+		<-legacyStopped
 
-			return
-		}
+		return
 	}
 }
 
