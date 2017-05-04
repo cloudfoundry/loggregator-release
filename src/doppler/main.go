@@ -196,31 +196,30 @@ func main() {
 	//------------------------------
 
 	killChan := signalmanager.RegisterKillSignalChannel()
-	for range killChan {
-		log.Print("Shutting down")
+	<-killChan
+	log.Print("Shutting down")
 
-		stopped := make(chan bool)
-		legacyStopped := make(chan bool)
-		releaseNodeChan <- stopped
-		legacyReleaseNodeChan <- legacyStopped
+	stopped := make(chan bool)
+	legacyStopped := make(chan bool)
+	releaseNodeChan <- stopped
+	legacyReleaseNodeChan <- legacyStopped
 
-		stop(
-			errChan,
-			wg,
-			openFileMonitor,
-			uptimeMonitor,
-			appStoreWatcher,
-			udpListener,
-			sinkManager,
-			websocketServer,
-			storeAdapter,
-		)
+	stop(
+		errChan,
+		wg,
+		openFileMonitor,
+		uptimeMonitor,
+		appStoreWatcher,
+		udpListener,
+		sinkManager,
+		websocketServer,
+		storeAdapter,
+	)
 
-		<-stopped
-		<-legacyStopped
+	<-stopped
+	<-legacyStopped
 
-		return
-	}
+	return
 }
 
 func start(

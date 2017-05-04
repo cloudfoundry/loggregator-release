@@ -9,7 +9,7 @@ import (
 
 func RegisterKillSignalChannel() chan os.Signal {
 	killChan := make(chan os.Signal)
-	signal.Notify(killChan, os.Kill, os.Interrupt)
+	signal.Notify(killChan, os.Interrupt)
 
 	return killChan
 }

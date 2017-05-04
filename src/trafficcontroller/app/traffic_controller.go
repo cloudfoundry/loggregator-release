@@ -162,10 +162,8 @@ func (t *trafficController) Start() {
 	go p.Start()
 
 	killChan := signalmanager.RegisterKillSignalChannel()
-	for range killChan {
-		log.Print("Shutting down")
-		return
-	}
+	<-killChan
+	log.Print("Shutting down")
 }
 
 func (t *trafficController) setupDefaultEmitter(origin, destination string) error {
