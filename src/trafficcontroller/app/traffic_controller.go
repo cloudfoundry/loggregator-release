@@ -7,13 +7,13 @@ import (
 	"metricemitter"
 	"net/http"
 	"os"
+	"os/signal"
 	"profiler"
 	"time"
 
 	"dopplerservice"
 	"monitor"
 	"plumbing"
-	"signalmanager"
 	"trafficcontroller/internal/auth"
 	"trafficcontroller/internal/proxy"
 
@@ -161,7 +161,8 @@ func (t *trafficController) Start() {
 	p := profiler.New(t.conf.PPROFPort)
 	go p.Start()
 
-	killChan := signalmanager.RegisterKillSignalChannel()
+	killChan := make(chan os.Signal)
+	signal.Notify(killChan, os.Interrupt)
 	<-killChan
 	log.Print("Shutting down")
 }

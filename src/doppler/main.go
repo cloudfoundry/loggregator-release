@@ -6,6 +6,8 @@ import (
 	"log"
 	"math/rand"
 	"metric"
+	"os"
+	"os/signal"
 	"plumbing"
 	"sync"
 	"time"
@@ -22,7 +24,6 @@ import (
 	"dopplerservice"
 	"monitor"
 	"profiler"
-	"signalmanager"
 
 	"code.cloudfoundry.org/workpool"
 	gendiodes "github.com/cloudfoundry/diodes"
@@ -195,7 +196,8 @@ func main() {
 	// Post Start
 	//------------------------------
 
-	killChan := signalmanager.RegisterKillSignalChannel()
+	killChan := make(chan os.Signal)
+	signal.Notify(killChan, os.Interrupt)
 	<-killChan
 	log.Print("Shutting down")
 
@@ -218,8 +220,6 @@ func main() {
 
 	<-stopped
 	<-legacyStopped
-
-	return
 }
 
 func start(
