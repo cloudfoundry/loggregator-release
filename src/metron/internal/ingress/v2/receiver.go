@@ -51,5 +51,32 @@ func (s *Receiver) Sender(sender v2.Ingress_SenderServer) error {
 }
 
 func (s *Receiver) BatchSender(sender v2.Ingress_BatchSenderServer) error {
+	var count uint64
+	lastEmitted := time.Now()
+	for {
+		envelopes, err := sender.Recv()
+		if err != nil {
+			log.Printf("Failed to receive data: %s", err)
+			return err
+		}
+
+		for _, e := range envelopes.Batch {
+			s.dataSetter.Set(e)
+		}
+
+		count += uint64(len(envelopes.Batch))
+		if count >= 1000 || time.Since(lastEmitted) > 5*time.Second {
+			// metric-documentation-v2: (loggregator.metron.ingress) The number of received
+			// messages over Metrons V2 gRPC API.
+			metric.IncCounter("ingress",
+				metric.WithIncrement(count),
+				metric.WithVersion(2, 0),
+			)
+			lastEmitted = time.Now()
+			log.Printf("Ingressed (v2) %d envelopes", count)
+			count = 0
+		}
+	}
+
 	return nil
 }
