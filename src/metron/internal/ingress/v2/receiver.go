@@ -49,3 +49,7 @@ func (s *Receiver) Sender(sender v2.Ingress_SenderServer) error {
 
 	return nil
 }
+
+func (s *Receiver) BatchSender(sender v2.Ingress_BatchSenderServer) error {
+	return nil
+}

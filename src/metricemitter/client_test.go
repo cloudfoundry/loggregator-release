@@ -214,6 +214,10 @@ func (s *SpyIngressServer) Sender(sender v2.Ingress_SenderServer) error {
 	return nil
 }
 
+func (s *SpyIngressServer) BatchSender(sender v2.Ingress_BatchSenderServer) error {
+	return nil
+}
+
 func (s *SpyIngressServer) stop() {
 	s.server.Stop()
 }

@@ -26,8 +26,34 @@ func (m *IngressResponse) String() string            { return proto.CompactTextS
 func (*IngressResponse) ProtoMessage()               {}
 func (*IngressResponse) Descriptor() ([]byte, []int) { return fileDescriptor3, []int{0} }
 
+type EnvelopeBatch struct {
+	Batch []*Envelope `protobuf:"bytes,1,rep,name=batch" json:"batch,omitempty"`
+}
+
+func (m *EnvelopeBatch) Reset()                    { *m = EnvelopeBatch{} }
+func (m *EnvelopeBatch) String() string            { return proto.CompactTextString(m) }
+func (*EnvelopeBatch) ProtoMessage()               {}
+func (*EnvelopeBatch) Descriptor() ([]byte, []int) { return fileDescriptor3, []int{1} }
+
+func (m *EnvelopeBatch) GetBatch() []*Envelope {
+	if m != nil {
+		return m.Batch
+	}
+	return nil
+}
+
+type BatchSenderResponse struct {
+}
+
+func (m *BatchSenderResponse) Reset()                    { *m = BatchSenderResponse{} }
+func (m *BatchSenderResponse) String() string            { return proto.CompactTextString(m) }
+func (*BatchSenderResponse) ProtoMessage()               {}
+func (*BatchSenderResponse) Descriptor() ([]byte, []int) { return fileDescriptor3, []int{2} }
+
 func init() {
 	proto.RegisterType((*IngressResponse)(nil), "loggregator.v2.IngressResponse")
+	proto.RegisterType((*EnvelopeBatch)(nil), "loggregator.v2.EnvelopeBatch")
+	proto.RegisterType((*BatchSenderResponse)(nil), "loggregator.v2.BatchSenderResponse")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -42,6 +68,7 @@ const _ = grpc.SupportPackageIsVersion4
 
 type IngressClient interface {
 	Sender(ctx context.Context, opts ...grpc.CallOption) (Ingress_SenderClient, error)
+	BatchSender(ctx context.Context, opts ...grpc.CallOption) (Ingress_BatchSenderClient, error)
 }
 
 type ingressClient struct {
@@ -86,10 +113,45 @@ func (x *ingressSenderClient) CloseAndRecv() (*IngressResponse, error) {
 	return m, nil
 }
 
+func (c *ingressClient) BatchSender(ctx context.Context, opts ...grpc.CallOption) (Ingress_BatchSenderClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Ingress_serviceDesc.Streams[1], c.cc, "/loggregator.v2.Ingress/BatchSender", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &ingressBatchSenderClient{stream}
+	return x, nil
+}
+
+type Ingress_BatchSenderClient interface {
+	Send(*EnvelopeBatch) error
+	CloseAndRecv() (*BatchSenderResponse, error)
+	grpc.ClientStream
+}
+
+type ingressBatchSenderClient struct {
+	grpc.ClientStream
+}
+
+func (x *ingressBatchSenderClient) Send(m *EnvelopeBatch) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *ingressBatchSenderClient) CloseAndRecv() (*BatchSenderResponse, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(BatchSenderResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // Server API for Ingress service
 
 type IngressServer interface {
 	Sender(Ingress_SenderServer) error
+	BatchSender(Ingress_BatchSenderServer) error
 }
 
 func RegisterIngressServer(s *grpc.Server, srv IngressServer) {
@@ -122,6 +184,32 @@ func (x *ingressSenderServer) Recv() (*Envelope, error) {
 	return m, nil
 }
 
+func _Ingress_BatchSender_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(IngressServer).BatchSender(&ingressBatchSenderServer{stream})
+}
+
+type Ingress_BatchSenderServer interface {
+	SendAndClose(*BatchSenderResponse) error
+	Recv() (*EnvelopeBatch, error)
+	grpc.ServerStream
+}
+
+type ingressBatchSenderServer struct {
+	grpc.ServerStream
+}
+
+func (x *ingressBatchSenderServer) SendAndClose(m *BatchSenderResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *ingressBatchSenderServer) Recv() (*EnvelopeBatch, error) {
+	m := new(EnvelopeBatch)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 var _Ingress_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "loggregator.v2.Ingress",
 	HandlerType: (*IngressServer)(nil),
@@ -132,6 +220,11 @@ var _Ingress_serviceDesc = grpc.ServiceDesc{
 			Handler:       _Ingress_Sender_Handler,
 			ClientStreams: true,
 		},
+		{
+			StreamName:    "BatchSender",
+			Handler:       _Ingress_BatchSender_Handler,
+			ClientStreams: true,
+		},
 	},
 	Metadata: "ingress.proto",
 }
@@ -139,13 +232,17 @@ var _Ingress_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("ingress.proto", fileDescriptor3) }
 
 var fileDescriptor3 = []byte{
-	// 123 bytes of a gzipped FileDescriptorProto
+	// 185 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0xe2, 0xcd, 0xcc, 0x4b, 0x2f,
 	0x4a, 0x2d, 0x2e, 0xd6, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0xcb, 0xc9, 0x4f, 0x4f, 0x2f,
 	0x4a, 0x4d, 0x4f, 0x2c, 0xc9, 0x2f, 0xd2, 0x2b, 0x33, 0x92, 0xe2, 0x4b, 0xcd, 0x2b, 0x4b, 0xcd,
 	0xc9, 0x2f, 0x48, 0x85, 0xc8, 0x2b, 0x09, 0x72, 0xf1, 0x7b, 0x42, 0x34, 0x04, 0xa5, 0x16, 0x17,
-	0xe4, 0xe7, 0x15, 0xa7, 0x1a, 0x05, 0x71, 0xb1, 0x43, 0x85, 0x84, 0xdc, 0xb9, 0xd8, 0x82, 0x53,
-	0xf3, 0x52, 0x52, 0x8b, 0x84, 0x24, 0xf4, 0x50, 0x0d, 0xd2, 0x73, 0x85, 0x9a, 0x23, 0x25, 0x8f,
-	0x2e, 0x83, 0x66, 0x9e, 0x12, 0x83, 0x06, 0x63, 0x12, 0x1b, 0xd8, 0x36, 0x63, 0x40, 0x00, 0x00,
-	0x00, 0xff, 0xff, 0xfb, 0x5d, 0x75, 0xe0, 0x9e, 0x00, 0x00, 0x00,
+	0xe4, 0xe7, 0x15, 0xa7, 0x2a, 0xd9, 0x73, 0xf1, 0xba, 0x42, 0x15, 0x39, 0x25, 0x96, 0x24, 0x67,
+	0x08, 0xe9, 0x71, 0xb1, 0x26, 0x81, 0x18, 0x12, 0x8c, 0x0a, 0xcc, 0x1a, 0xdc, 0x46, 0x12, 0x7a,
+	0xa8, 0x66, 0xea, 0xc1, 0x54, 0x07, 0x41, 0x94, 0x29, 0x89, 0x72, 0x09, 0x83, 0x35, 0x06, 0xa7,
+	0xe6, 0xa5, 0xa4, 0x16, 0xc1, 0xcc, 0x35, 0x5a, 0xc9, 0xc8, 0xc5, 0x0e, 0xb5, 0x4b, 0xc8, 0x9d,
+	0x8b, 0x0d, 0x22, 0x2b, 0x84, 0xd3, 0x34, 0x29, 0x79, 0x74, 0x19, 0x74, 0x87, 0x32, 0x68, 0x30,
+	0x0a, 0x85, 0x72, 0x71, 0x23, 0xd9, 0x25, 0x24, 0x8b, 0xcb, 0x34, 0xb0, 0x22, 0x29, 0x65, 0x74,
+	0x69, 0x2c, 0xee, 0x04, 0x19, 0x9b, 0xc4, 0x06, 0x0e, 0x1d, 0x63, 0x40, 0x00, 0x00, 0x00, 0xff,
+	0xff, 0x93, 0x79, 0x36, 0x90, 0x4e, 0x01, 0x00, 0x00,
 }
