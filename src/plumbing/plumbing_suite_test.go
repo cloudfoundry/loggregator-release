@@ -1,6 +1,7 @@
 package plumbing_test
 
 import (
+	"io/ioutil"
 	"log"
 	"metric"
 	"net"
@@ -15,7 +16,8 @@ import (
 )
 
 func TestPlumbing(t *testing.T) {
-	grpclog.SetLogger(log.New(GinkgoWriter, "", log.LstdFlags))
+	log.SetOutput(ioutil.Discard)
+	grpclog.SetLogger(log.New(ioutil.Discard, "", log.LstdFlags))
 	metric.Setup()
 	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
