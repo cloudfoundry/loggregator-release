@@ -13,13 +13,14 @@ type TestConfig struct {
 
 	DropsondePort int
 
-	EtcdUrls            []string
-	SharedSecret        string
-	EtcdRequireTLS      bool
-	EtcdTLSClientConfig EtcdTLSClientConfig
+	EtcdUrls              []string
+	SharedSecret          string
+	EtcdRequireTLS        bool
+	EtcdTLSClientConfig   TLSClientConfig
+	MetronTLSClientConfig TLSClientConfig
 }
 
-type EtcdTLSClientConfig struct {
+type TLSClientConfig struct {
 	CertFile string
 	KeyFile  string
 	CAFile   string
@@ -35,7 +36,7 @@ type MetronConfig struct {
 	EtcdQueryIntervalMilliseconds int
 	Zone                          string
 	EtcdRequireTLS                bool
-	EtcdTLSClientConfig           EtcdTLSClientConfig
+	EtcdTLSClientConfig           TLSClientConfig
 }
 
 func Load() *TestConfig {
@@ -44,7 +45,13 @@ func Load() *TestConfig {
 		panic(err)
 	}
 
-	config := &TestConfig{}
+	config := &TestConfig{
+		MetronTLSClientConfig: TLSClientConfig{
+			CAFile:   "/var/vcap/jobs/metron_agent/config/certs/loggregator_ca.crt",
+			CertFile: "/var/vcap/jobs/metron_agent/config/certs/metron_agent.crt",
+			KeyFile:  "/var/vcap/jobs/metron_agent/config/certs/metron_agent.key",
+		},
+	}
 	decoder := json.NewDecoder(configFile)
 	err = decoder.Decode(config)
 	if err != nil {

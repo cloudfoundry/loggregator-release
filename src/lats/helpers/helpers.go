@@ -1,12 +1,16 @@
 package helpers
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
+	"plumbing"
 	"strconv"
 	"time"
+
+	"google.golang.org/grpc"
 
 	"code.cloudfoundry.org/workpool"
 
@@ -19,9 +23,14 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+
+	v2 "plumbing/v2"
 )
 
-const ORIGIN_NAME = "LATs"
+const (
+	OriginName = "LATs"
+	WriteCount = 500
+)
 
 var config *TestConfig
 
@@ -93,7 +102,7 @@ func WaitForWebsocketConnection(printer *TestDebugPrinter) {
 	Eventually(printer.Dump, 2*time.Second).Should(ContainSubstring("101 Switching Protocols"))
 }
 
-func EmitToMetron(envelope *events.Envelope) {
+func EmitToMetronV1(envelope *events.Envelope) {
 	metronConn, err := net.Dial("udp4", fmt.Sprintf("localhost:%d", config.DropsondePort))
 	Expect(err).NotTo(HaveOccurred())
 
@@ -102,6 +111,30 @@ func EmitToMetron(envelope *events.Envelope) {
 
 	_, err = metronConn.Write(b)
 	Expect(err).NotTo(HaveOccurred())
+}
+
+func EmitToMetronV2(envelope *v2.Envelope) {
+	creds, err := plumbing.NewCredentials(
+		config.MetronTLSClientConfig.CertFile,
+		config.MetronTLSClientConfig.KeyFile,
+		config.MetronTLSClientConfig.CAFile,
+		"metron",
+	)
+	Expect(err).NotTo(HaveOccurred())
+
+	conn, err := grpc.Dial("localhost:3458", grpc.WithTransportCredentials(creds))
+	Expect(err).NotTo(HaveOccurred())
+	defer conn.Close()
+	c := v2.NewIngressClient(conn)
+
+	s, err := c.Sender(context.Background())
+	Expect(err).NotTo(HaveOccurred())
+	defer s.CloseSend()
+
+	for i := 0; i < WriteCount; i++ {
+		err = s.Send(envelope)
+		Expect(err).NotTo(HaveOccurred())
+	}
 }
 
 func FindMatchingEnvelope(msgChan <-chan *events.Envelope, envelope *events.Envelope) *events.Envelope {

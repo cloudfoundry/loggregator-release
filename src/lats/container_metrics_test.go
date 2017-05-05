@@ -12,7 +12,7 @@ import (
 var _ = Describe("Container Metrics Endpoint", func() {
 	It("can receive container metrics", func() {
 		envelope := createContainerMetric("test-id")
-		helpers.EmitToMetron(envelope)
+		helpers.EmitToMetronV1(envelope)
 
 		f := func() []*events.ContainerMetric {
 			resp, _ := helpers.RequestContainerMetrics("test-id")

@@ -31,7 +31,7 @@ var _ = Describe("Firehose", func() {
 	var emitControlMessages = func() {
 		for i := 0; i < 20; i++ {
 			time.Sleep(10 * time.Millisecond)
-			helpers.EmitToMetron(buildValueMetric("controlValue", 0))
+			helpers.EmitToMetronV1(buildValueMetric("controlValue", 0))
 		}
 	}
 
@@ -52,7 +52,7 @@ var _ = Describe("Firehose", func() {
 			case <-timer.C:
 				return envelopes
 			case e := <-msgs:
-				if e.GetOrigin() == helpers.ORIGIN_NAME && e.ValueMetric.GetName() == "mainValue" {
+				if e.GetOrigin() == helpers.OriginName && e.ValueMetric.GetName() == "mainValue" {
 					envelopes = append(envelopes, e)
 				}
 			}
@@ -75,7 +75,7 @@ var _ = Describe("Firehose", func() {
 	var emitMetrics = func(count int) {
 		for i := 0; i < count; i++ {
 			time.Sleep(10 * time.Millisecond)
-			helpers.EmitToMetron(buildValueMetric("mainValue", float64(i)))
+			helpers.EmitToMetronV1(buildValueMetric("mainValue", float64(i)))
 		}
 	}
 
@@ -92,7 +92,7 @@ var _ = Describe("Firehose", func() {
 			JustBeforeEach(func() {
 				for i := 0; i < count; i++ {
 					time.Sleep(10 * time.Millisecond)
-					helpers.EmitToMetron(buildValueMetric("mainValue", float64(i)))
+					helpers.EmitToMetronV1(buildValueMetric("mainValue", float64(i)))
 				}
 			})
 
@@ -148,11 +148,11 @@ var _ = Describe("Firehose", func() {
 						case <-t.C:
 							return envelopes1, envelopes2
 						case e := <-msgs1:
-							if e.GetOrigin() == helpers.ORIGIN_NAME && e.ValueMetric.GetName() == "mainValue" {
+							if e.GetOrigin() == helpers.OriginName && e.ValueMetric.GetName() == "mainValue" {
 								envelopes1 = append(envelopes1, e)
 							}
 						case e := <-msgs2:
-							if e.GetOrigin() == helpers.ORIGIN_NAME && e.ValueMetric.GetName() == "mainValue" {
+							if e.GetOrigin() == helpers.OriginName && e.ValueMetric.GetName() == "mainValue" {
 								envelopes2 = append(envelopes2, e)
 							}
 						}
@@ -246,20 +246,20 @@ var _ = Describe("Firehose", func() {
 										envelopesB2,
 									}
 								case e := <-msgsA1:
-									if e.GetOrigin() == helpers.ORIGIN_NAME && e.ValueMetric.GetName() == "mainValue" {
+									if e.GetOrigin() == helpers.OriginName && e.ValueMetric.GetName() == "mainValue" {
 										envelopesA1 = append(envelopesA1, e)
 									}
 								case e := <-msgsA2:
-									if e.GetOrigin() == helpers.ORIGIN_NAME && e.ValueMetric.GetName() == "mainValue" {
+									if e.GetOrigin() == helpers.OriginName && e.ValueMetric.GetName() == "mainValue" {
 										envelopesA2 = append(envelopesA2, e)
 									}
 
 								case e := <-msgsB1:
-									if e.GetOrigin() == helpers.ORIGIN_NAME && e.ValueMetric.GetName() == "mainValue" {
+									if e.GetOrigin() == helpers.OriginName && e.ValueMetric.GetName() == "mainValue" {
 										envelopesB1 = append(envelopesB1, e)
 									}
 								case e := <-msgsB2:
-									if e.GetOrigin() == helpers.ORIGIN_NAME && e.ValueMetric.GetName() == "mainValue" {
+									if e.GetOrigin() == helpers.OriginName && e.ValueMetric.GetName() == "mainValue" {
 										envelopesB2 = append(envelopesB2, e)
 									}
 								}

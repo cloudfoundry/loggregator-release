@@ -11,7 +11,10 @@ import (
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
+
+	"plumbing/conversion"
+	v2 "plumbing/v2"
 )
 
 const (
@@ -21,53 +24,109 @@ const (
 )
 
 var _ = Describe("Logs", func() {
-	It("gets through recent logs", func() {
-		env := createLogEnvelope("I AM A BANANA!", "foo")
-		helpers.EmitToMetron(env)
+	Describe("emit v1 and consume via traffic controller", func() {
+		It("gets through recent logs", func() {
+			env := createLogEnvelopeV1("Recent log message", "foo")
+			helpers.EmitToMetronV1(env)
 
-		tlsConfig := &tls.Config{InsecureSkipVerify: true}
-		consumer := consumer.New(config.DopplerEndpoint, tlsConfig, nil)
+			tlsConfig := &tls.Config{InsecureSkipVerify: true}
+			consumer := consumer.New(config.DopplerEndpoint, tlsConfig, nil)
 
-		getRecentLogs := func() []*events.LogMessage {
-			envelopes, err := consumer.RecentLogs("foo", "")
+			getRecentLogs := func() []*events.LogMessage {
+				envelopes, err := consumer.RecentLogs("foo", "")
+				Expect(err).NotTo(HaveOccurred())
+				return envelopes
+			}
+
+			Eventually(getRecentLogs).Should(ContainElement(env.LogMessage))
+		})
+
+		It("sends log messages for a specific app through the stream endpoint", func() {
+			msgChan, errorChan := helpers.ConnectToStream("foo")
+
+			helpers.EmitToMetronV1(createLogEnvelopeV1("Stream message", "bar"))
+			helpers.EmitToMetronV1(createLogEnvelopeV1("Stream message", "foo"))
+
+			receivedEnvelope, err := helpers.FindMatchingEnvelopeByID("foo", msgChan)
 			Expect(err).NotTo(HaveOccurred())
-			return envelopes
-		}
+			Expect(receivedEnvelope).NotTo(BeNil())
+			Expect(receivedEnvelope.GetEventType()).To(Equal(events.Envelope_LogMessage))
 
-		Eventually(getRecentLogs).Should(ContainElement(env.LogMessage))
+			event := receivedEnvelope.GetLogMessage()
+			Expect(envelope_extensions.GetAppId(receivedEnvelope)).To(Equal("foo"))
+			Expect(string(event.GetMessage())).To(Equal("Stream message"))
+			Expect(event.GetMessageType().String()).To(Equal(events.LogMessage_OUT.Enum().String()))
+			Expect(event.GetTimestamp()).ToNot(BeZero())
+
+			Expect(errorChan).To(BeEmpty())
+		})
 	})
 
-	It("sends log messages for a specific app through the stream endpoint", func() {
-		msgChan, errorChan := helpers.ConnectToStream("foo")
+	Describe("emit v2 and consume via traffic controller", func() {
+		It("gets through recent logs", func() {
+			env := createLogEnvelopeV2("Recent log message", "foo")
+			helpers.EmitToMetronV2(env)
 
-		helpers.EmitToMetron(createLogEnvelope("Stream message", "bar"))
-		helpers.EmitToMetron(createLogEnvelope("Stream message", "foo"))
+			tlsConfig := &tls.Config{InsecureSkipVerify: true}
+			consumer := consumer.New(config.DopplerEndpoint, tlsConfig, nil)
 
-		receivedEnvelope, err := helpers.FindMatchingEnvelopeByID("foo", msgChan)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(receivedEnvelope).NotTo(BeNil())
-		Expect(receivedEnvelope.GetEventType()).To(Equal(events.Envelope_LogMessage))
+			getRecentLogs := func() []*events.LogMessage {
+				envelopes, err := consumer.RecentLogs("foo", "")
+				Expect(err).NotTo(HaveOccurred())
+				return envelopes
+			}
+			v1Env := conversion.ToV1(env)[0]
+			Eventually(getRecentLogs).Should(ContainElement(v1Env.LogMessage))
+		})
 
-		event := receivedEnvelope.GetLogMessage()
-		Expect(envelope_extensions.GetAppId(receivedEnvelope)).To(Equal("foo"))
-		Expect(string(event.GetMessage())).To(Equal("Stream message"))
-		Expect(event.GetMessageType().String()).To(Equal(events.LogMessage_OUT.Enum().String()))
-		Expect(event.GetTimestamp()).ToNot(BeZero())
+		It("sends log messages for a specific app through the stream endpoint", func() {
+			msgChan, errorChan := helpers.ConnectToStream("foo-stream")
 
-		Expect(errorChan).To(BeEmpty())
+			env := createLogEnvelopeV2("Stream message", "foo-stream")
+			helpers.EmitToMetronV2(env)
+			helpers.EmitToMetronV2(createLogEnvelopeV2("Stream message", "bar-stream"))
+
+			receivedEnvelope, err := helpers.FindMatchingEnvelopeByID("foo-stream", msgChan)
+			Expect(err).NotTo(HaveOccurred())
+
+			v1Env := conversion.ToV1(env)[0]
+			Expect(receivedEnvelope.LogMessage).To(Equal(v1Env.LogMessage))
+
+			Expect(errorChan).To(BeEmpty())
+		})
 	})
 })
 
-func createLogEnvelope(message, appId string) *events.Envelope {
+func createLogEnvelopeV1(message, appID string) *events.Envelope {
 	return &events.Envelope{
 		EventType: events.Envelope_LogMessage.Enum(),
-		Origin:    proto.String(helpers.ORIGIN_NAME),
+		Origin:    proto.String(helpers.OriginName),
 		Timestamp: proto.Int64(time.Now().UnixNano()),
 		LogMessage: &events.LogMessage{
 			Message:     []byte(message),
 			MessageType: events.LogMessage_OUT.Enum(),
 			Timestamp:   proto.Int64(time.Now().UnixNano()),
-			AppId:       proto.String(appId),
+			AppId:       proto.String(appID),
+		},
+	}
+}
+
+func createLogEnvelopeV2(message, appID string) *v2.Envelope {
+	return &v2.Envelope{
+		SourceId:  appID,
+		Timestamp: time.Now().UnixNano(),
+		Tags: map[string]*v2.Value{
+			"origin": &v2.Value{
+				Data: &v2.Value_Text{
+					Text: helpers.OriginName,
+				},
+			},
+		},
+		Message: &v2.Envelope_Log{
+			Log: &v2.Log{
+				Payload: []byte(message),
+				Type:    v2.Log_OUT,
+			},
 		},
 	}
 }

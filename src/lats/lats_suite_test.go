@@ -36,7 +36,7 @@ func setupMetron() {
 
 func createLogMessage(appID string) *events.Envelope {
 	return &events.Envelope{
-		Origin:    proto.String(helpers.ORIGIN_NAME),
+		Origin:    proto.String(helpers.OriginName),
 		EventType: events.Envelope_LogMessage.Enum(),
 		Timestamp: proto.Int64(time.Now().UnixNano()),
 		LogMessage: &events.LogMessage{
@@ -51,7 +51,7 @@ func createLogMessage(appID string) *events.Envelope {
 
 func createCounterEvent() *events.Envelope {
 	return &events.Envelope{
-		Origin:    proto.String(helpers.ORIGIN_NAME),
+		Origin:    proto.String(helpers.OriginName),
 		EventType: events.Envelope_CounterEvent.Enum(),
 		Timestamp: proto.Int64(time.Now().UnixNano()),
 		CounterEvent: &events.CounterEvent{
@@ -65,7 +65,7 @@ func createCounterEvent() *events.Envelope {
 
 func createValueMetric() *events.Envelope {
 	return &events.Envelope{
-		Origin:    proto.String(helpers.ORIGIN_NAME),
+		Origin:    proto.String(helpers.OriginName),
 		EventType: events.Envelope_ValueMetric.Enum(),
 		Timestamp: proto.Int64(time.Now().UnixNano()),
 		ValueMetric: &events.ValueMetric{
@@ -79,7 +79,7 @@ func createValueMetric() *events.Envelope {
 
 func createContainerMetric(appId string) *events.Envelope {
 	return &events.Envelope{
-		Origin:    proto.String(helpers.ORIGIN_NAME),
+		Origin:    proto.String(helpers.OriginName),
 		EventType: events.Envelope_ContainerMetric.Enum(),
 		Timestamp: proto.Int64(time.Now().UnixNano()),
 		ContainerMetric: &events.ContainerMetric{

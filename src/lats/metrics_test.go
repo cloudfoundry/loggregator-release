@@ -24,13 +24,13 @@ var _ = Describe("Sending metrics through loggregator", func() {
 
 		It("receives a counter event with correct total", func() {
 			envelope := createCounterEvent()
-			helpers.EmitToMetron(envelope)
+			helpers.EmitToMetronV1(envelope)
 
 			receivedEnvelope := helpers.FindMatchingEnvelope(msgChan, envelope)
 			Expect(receivedEnvelope).NotTo(BeNil())
 
 			Expect(receivedEnvelope.GetCounterEvent()).To(Equal(envelope.GetCounterEvent()))
-			helpers.EmitToMetron(envelope)
+			helpers.EmitToMetronV1(envelope)
 
 			receivedEnvelope = helpers.FindMatchingEnvelope(msgChan, envelope)
 			Expect(receivedEnvelope).NotTo(BeNil())
@@ -40,7 +40,7 @@ var _ = Describe("Sending metrics through loggregator", func() {
 
 		It("receives a value metric", func() {
 			envelope := createValueMetric()
-			helpers.EmitToMetron(envelope)
+			helpers.EmitToMetronV1(envelope)
 
 			receivedEnvelope := helpers.FindMatchingEnvelope(msgChan, envelope)
 			Expect(receivedEnvelope).NotTo(BeNil())
@@ -50,7 +50,7 @@ var _ = Describe("Sending metrics through loggregator", func() {
 
 		It("receives a container metric", func() {
 			envelope := createContainerMetric("test-id")
-			helpers.EmitToMetron(envelope)
+			helpers.EmitToMetronV1(envelope)
 
 			receivedEnvelope := helpers.FindMatchingEnvelope(msgChan, envelope)
 			Expect(receivedEnvelope).NotTo(BeNil())
@@ -63,8 +63,8 @@ var _ = Describe("Sending metrics through loggregator", func() {
 		It("receives a container metric", func() {
 			msgChan, errorChan := helpers.ConnectToStream("test-id")
 			envelope := createContainerMetric("test-id")
-			helpers.EmitToMetron(createContainerMetric("alternate-id"))
-			helpers.EmitToMetron(envelope)
+			helpers.EmitToMetronV1(createContainerMetric("alternate-id"))
+			helpers.EmitToMetronV1(envelope)
 
 			receivedEnvelope, err := helpers.FindMatchingEnvelopeByID("test-id", msgChan)
 			Expect(err).NotTo(HaveOccurred())
