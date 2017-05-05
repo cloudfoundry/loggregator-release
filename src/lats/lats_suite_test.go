@@ -34,21 +34,6 @@ func setupMetron() {
 	time.Sleep(10 * time.Second)
 }
 
-func createLogMessage(appID string) *events.Envelope {
-	return &events.Envelope{
-		Origin:    proto.String(helpers.OriginName),
-		EventType: events.Envelope_LogMessage.Enum(),
-		Timestamp: proto.Int64(time.Now().UnixNano()),
-		LogMessage: &events.LogMessage{
-			Message:     []byte("test-log-message"),
-			MessageType: events.LogMessage_OUT.Enum(),
-			Timestamp:   proto.Int64(time.Now().UnixNano()),
-			AppId:       proto.String(appID),
-		},
-		Tags: map[string]string{"UniqueName": fmt.Sprintf("LATs-%d", time.Now().UnixNano())},
-	}
-}
-
 func createCounterEvent() *events.Envelope {
 	return &events.Envelope{
 		Origin:    proto.String(helpers.OriginName),

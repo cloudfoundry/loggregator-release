@@ -12,19 +12,14 @@ import (
 
 	"google.golang.org/grpc"
 
-	"code.cloudfoundry.org/workpool"
-
-	. "github.com/onsi/gomega"
-
-	. "lats/config"
+	v2 "plumbing/v2"
 
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/cloudfoundry/storeadapter"
-	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 
-	v2 "plumbing/v2"
+	. "github.com/onsi/gomega"
+	. "lats/config"
 )
 
 const (
@@ -219,31 +214,5 @@ func FindMatchingEnvelopeByID(id string, msgChan <-chan *events.Envelope) (*even
 		case <-timeout:
 			return nil, errors.New("Timed out while waiting for message")
 		}
-	}
-}
-
-func WriteToEtcd(urls []string, key, value string) func() {
-	etcdOptions := &etcdstoreadapter.ETCDOptions{
-		IsSSL:       true,
-		CertFile:    config.EtcdTLSClientConfig.CertFile,
-		KeyFile:     config.EtcdTLSClientConfig.KeyFile,
-		CAFile:      config.EtcdTLSClientConfig.CAFile,
-		ClusterUrls: urls,
-	}
-
-	workPool, err := workpool.NewWorkPool(10)
-	Expect(err).NotTo(HaveOccurred())
-	adapter, err := etcdstoreadapter.New(etcdOptions, workPool)
-	Expect(err).NotTo(HaveOccurred())
-	err = adapter.Create(storeadapter.StoreNode{
-		Key:   key,
-		Value: []byte(value),
-		TTL:   uint64(time.Minute),
-	})
-	Expect(err).NotTo(HaveOccurred())
-
-	return func() {
-		err = adapter.Delete(key)
-		Expect(err).ToNot(HaveOccurred())
 	}
 }
