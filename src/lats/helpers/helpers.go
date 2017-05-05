@@ -137,6 +137,47 @@ func EmitToMetronV2(envelope *v2.Envelope) {
 	}
 }
 
+func ReadFromRLP(appID string) <-chan *v2.Envelope {
+	creds, err := plumbing.NewCredentials(
+		config.MetronTLSClientConfig.CertFile,
+		config.MetronTLSClientConfig.KeyFile,
+		config.MetronTLSClientConfig.CAFile,
+		"reverselogproxy",
+	)
+	Expect(err).NotTo(HaveOccurred())
+
+	conn, err := grpc.Dial(config.ReverseLogProxyAddr, grpc.WithTransportCredentials(creds))
+	Expect(err).NotTo(HaveOccurred())
+
+	client := v2.NewEgressClient(conn)
+	receiver, err := client.Receiver(context.Background(), &v2.EgressRequest{
+		ShardId: fmt.Sprint("shard-", time.Now().UnixNano()),
+		Filter: &v2.Filter{
+			SourceId: appID,
+			Message: &v2.Filter_Log{
+				Log: &v2.LogFilter{},
+			},
+		},
+	})
+	Expect(err).ToNot(HaveOccurred())
+
+	msgChan := make(chan *v2.Envelope, 100)
+
+	go func() {
+		defer conn.Close()
+		for {
+			e, err := receiver.Recv()
+			if err != nil {
+				break
+			}
+
+			msgChan <- e
+		}
+	}()
+
+	return msgChan
+}
+
 func FindMatchingEnvelope(msgChan <-chan *events.Envelope, envelope *events.Envelope) *events.Envelope {
 	timeout := time.After(10 * time.Second)
 	for {

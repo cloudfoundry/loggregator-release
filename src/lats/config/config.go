@@ -18,6 +18,8 @@ type TestConfig struct {
 	EtcdRequireTLS        bool
 	EtcdTLSClientConfig   TLSClientConfig
 	MetronTLSClientConfig TLSClientConfig
+
+	ReverseLogProxyAddr string
 }
 
 type TLSClientConfig struct {
@@ -51,6 +53,7 @@ func Load() *TestConfig {
 			CertFile: "/var/vcap/jobs/metron_agent/config/certs/metron_agent.crt",
 			KeyFile:  "/var/vcap/jobs/metron_agent/config/certs/metron_agent.key",
 		},
+		ReverseLogProxyAddr: "reverse-log-proxy.service.cf.internal:8082",
 	}
 	decoder := json.NewDecoder(configFile)
 	err = decoder.Decode(config)

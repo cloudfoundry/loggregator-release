@@ -201,7 +201,7 @@ instance_groups:
       consul:
         agent:
           services:
-            loggregator_trafficcontroller: {}
+            reverse_log_proxy: {}
   - name: reverse_log_proxy
     release: loggregator
     provides:

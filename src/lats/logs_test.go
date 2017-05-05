@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/golang/protobuf/proto"
@@ -44,19 +43,13 @@ var _ = Describe("Logs", func() {
 		It("sends log messages for a specific app through the stream endpoint", func() {
 			msgChan, errorChan := helpers.ConnectToStream("foo")
 
-			helpers.EmitToMetronV1(createLogEnvelopeV1("Stream message", "bar"))
-			helpers.EmitToMetronV1(createLogEnvelopeV1("Stream message", "foo"))
+			env := createLogEnvelopeV1("Stream message", "foo")
+			helpers.EmitToMetronV1(env)
 
 			receivedEnvelope, err := helpers.FindMatchingEnvelopeByID("foo", msgChan)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(receivedEnvelope).NotTo(BeNil())
-			Expect(receivedEnvelope.GetEventType()).To(Equal(events.Envelope_LogMessage))
 
-			event := receivedEnvelope.GetLogMessage()
-			Expect(envelope_extensions.GetAppId(receivedEnvelope)).To(Equal("foo"))
-			Expect(string(event.GetMessage())).To(Equal("Stream message"))
-			Expect(event.GetMessageType().String()).To(Equal(events.LogMessage_OUT.Enum().String()))
-			Expect(event.GetTimestamp()).ToNot(BeZero())
+			Expect(receivedEnvelope.LogMessage).To(Equal(env.LogMessage))
 
 			Expect(errorChan).To(BeEmpty())
 		})
@@ -84,7 +77,6 @@ var _ = Describe("Logs", func() {
 
 			env := createLogEnvelopeV2("Stream message", "foo-stream")
 			helpers.EmitToMetronV2(env)
-			helpers.EmitToMetronV2(createLogEnvelopeV2("Stream message", "bar-stream"))
 
 			receivedEnvelope, err := helpers.FindMatchingEnvelopeByID("foo-stream", msgChan)
 			Expect(err).NotTo(HaveOccurred())
@@ -93,6 +85,34 @@ var _ = Describe("Logs", func() {
 			Expect(receivedEnvelope.LogMessage).To(Equal(v1Env.LogMessage))
 
 			Expect(errorChan).To(BeEmpty())
+		})
+	})
+
+	Describe("emit v1 and consume via reverse log proxy", func() {
+		It("sends log messages through rlp", func() {
+			msgChan := helpers.ReadFromRLP("rlp-stream-foo")
+
+			env := createLogEnvelopeV1("Stream message", "rlp-stream-foo")
+			helpers.EmitToMetronV1(env)
+
+			v2Env := conversion.ToV2(env)
+
+			var outEnv *v2.Envelope
+			Eventually(msgChan, 5).Should(Receive(&outEnv))
+			Expect(outEnv.GetLog()).To(Equal(v2Env.GetLog()))
+		})
+	})
+
+	Describe("emit v2 and consume via reverse log proxy", func() {
+		It("sends log messages through rlp", func() {
+			msgChan := helpers.ReadFromRLP("rlp-stream-foo")
+
+			env := createLogEnvelopeV2("Stream message", "rlp-stream-foo")
+			helpers.EmitToMetronV2(env)
+
+			var outEnv *v2.Envelope
+			Eventually(msgChan, 5).Should(Receive(&outEnv))
+			Expect(outEnv.GetLog()).To(Equal(env.GetLog()))
 		})
 	})
 })
