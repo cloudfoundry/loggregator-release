@@ -41,7 +41,7 @@ func BuildMetronConfig(dopplerURI string, dopplerGRPCPort int) app.Config {
 			CAFile:   Cert("loggregator-ca.crt"),
 		},
 
-		MetricBatchIntervalMilliseconds:  10,
+		MetricBatchIntervalMilliseconds:  5000,
 		RuntimeStatsIntervalMilliseconds: 10,
 	}
 }

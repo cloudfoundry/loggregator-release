@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"metric"
+	"metricemitter"
 	"time"
 
 	gendiodes "github.com/cloudfoundry/diodes"
@@ -19,20 +19,23 @@ import (
 )
 
 type AppV2 struct {
-	config      *Config
-	clientCreds credentials.TransportCredentials
-	serverCreds credentials.TransportCredentials
+	config       *Config
+	clientCreds  credentials.TransportCredentials
+	serverCreds  credentials.TransportCredentials
+	metricClient metricemitter.MetricClient
 }
 
 func NewV2App(
 	c *Config,
 	clientCreds credentials.TransportCredentials,
 	serverCreds credentials.TransportCredentials,
+	metricClient metricemitter.MetricClient,
 ) *AppV2 {
 	return &AppV2{
-		config:      c,
-		clientCreds: clientCreds,
-		serverCreds: serverCreds,
+		config:       c,
+		clientCreds:  clientCreds,
+		serverCreds:  serverCreds,
+		metricClient: metricClient,
 	}
 }
 
@@ -41,14 +44,16 @@ func (a *AppV2) Start() {
 		log.Panic("Failed to load TLS server config")
 	}
 
+	droppedMetric := a.metricClient.NewCounterMetric("dropped",
+		metricemitter.WithVersion(2, 0),
+		metricemitter.WithTags(map[string]string{"direction": "ingress"}),
+	)
+
 	envelopeBuffer := diodes.NewManyToOneEnvelopeV2(10000, gendiodes.AlertFunc(func(missed int) {
 		// metric-documentation-v2: (loggregator.metron.dropped) Number of v2 envelopes
 		// droppred from the metron ingress diode
-		metric.IncCounter("dropped",
-			metric.WithIncrement(uint64(missed)),
-			metric.WithVersion(2, 0),
-			metric.WithTag("direction", "ingress"),
-		)
+		droppedMetric.Increment(uint64(missed))
+
 		log.Printf("Dropped %d v2 envelopes", missed)
 	}))
 
@@ -59,12 +64,13 @@ func (a *AppV2) Start() {
 		counterAggr,
 		a.config.Tags,
 		100, 5*time.Second,
+		a.metricClient,
 	)
 	go tx.Start()
 
 	metronAddress := fmt.Sprintf("127.0.0.1:%d", a.config.GRPC.Port)
 	log.Printf("metron v2 API started on addr %s", metronAddress)
-	rx := ingress.NewReceiver(envelopeBuffer)
+	rx := ingress.NewReceiver(envelopeBuffer, a.metricClient)
 	ingressServer := ingress.NewServer(metronAddress, rx, grpc.Creds(a.serverCreds))
 	ingressServer.Start()
 }

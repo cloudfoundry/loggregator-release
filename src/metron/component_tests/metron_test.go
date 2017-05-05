@@ -97,7 +97,7 @@ var _ = Describe("Metron", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			go func() {
-				for range time.Tick(time.Millisecond) {
+				for range time.Tick(time.Nanosecond) {
 					sender.Send(emitEnvelope)
 				}
 			}()

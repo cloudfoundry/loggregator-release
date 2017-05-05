@@ -3,6 +3,7 @@ package v2_test
 import (
 	"errors"
 	"io"
+	"metricemitter/testhelper"
 
 	ingress "metron/internal/ingress/v2"
 	v2 "plumbing/v2"
@@ -21,7 +22,7 @@ var _ = Describe("Receiver", func() {
 	BeforeEach(func() {
 		spySetter = NewSpySetter()
 
-		rx = ingress.NewReceiver(spySetter)
+		rx = ingress.NewReceiver(spySetter, testhelper.NewMetricClient())
 	})
 
 	Describe("Sender()", func() {

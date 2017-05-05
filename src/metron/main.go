@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"metric"
+	"metricemitter"
 	"time"
 
 	"google.golang.org/grpc"
@@ -50,12 +50,6 @@ func main() {
 		log.Fatalf("Could not use GRPC creds for server: %s", err)
 	}
 
-	appV1 := app.NewV1App(config, clientCreds)
-	go appV1.Start()
-
-	appV2 := app.NewV2App(config, clientCreds, serverCreds)
-	go appV2.Start()
-
 	metricsCreds, err := plumbing.NewCredentials(
 		config.GRPC.CertFile,
 		config.GRPC.KeyFile,
@@ -67,13 +61,23 @@ func main() {
 	}
 
 	batchInterval := time.Duration(config.MetricBatchIntervalMilliseconds) * time.Millisecond
-	metric.Setup(
-		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(metricsCreds)),
-		metric.WithBatchInterval(batchInterval),
-		metric.WithOrigin("loggregator.metron"),
-		metric.WithAddr(fmt.Sprintf("localhost:%d", config.GRPC.Port)),
-		metric.WithDeploymentMeta(config.Deployment, config.Job, config.Index),
+	// metric-documentation-v2: setup function
+	metricClient, err := metricemitter.NewClient(
+		fmt.Sprintf("localhost:%d", config.GRPC.Port),
+		metricemitter.WithGRPCDialOptions(grpc.WithTransportCredentials(metricsCreds)),
+		metricemitter.WithOrigin("loggregator.metron"),
+		metricemitter.WithDeployment(config.Deployment, config.Job, config.Index),
+		metricemitter.WithPulseInterval(batchInterval),
 	)
+	if err != nil {
+		log.Fatalf("Could not configure metric emitter: %s", err)
+	}
+
+	appV1 := app.NewV1App(config, clientCreds)
+	go appV1.Start()
+
+	appV2 := app.NewV2App(config, clientCreds, serverCreds, metricClient)
+	go appV2.Start()
 
 	// We start the profiler last so that we can definitively say that we're
 	// all connected and ready for data by the time the profiler starts up.

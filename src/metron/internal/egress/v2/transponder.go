@@ -2,7 +2,7 @@ package v2
 
 import (
 	"log"
-	"metric"
+	"metricemitter"
 	plumbing "plumbing/v2"
 	"time"
 )
@@ -21,6 +21,8 @@ type Transponder struct {
 	tags          map[string]string
 	batchSize     int
 	batchInterval time.Duration
+	droppedMetric *metricemitter.CounterMetric
+	egressMetric  *metricemitter.CounterMetric
 }
 
 func NewTransponder(
@@ -29,20 +31,29 @@ func NewTransponder(
 	tags map[string]string,
 	batchSize int,
 	batchInterval time.Duration,
+	metricClient metricemitter.MetricClient,
 ) *Transponder {
+	droppedMetric := metricClient.NewCounterMetric("dropped",
+		metricemitter.WithVersion(2, 0),
+		metricemitter.WithTags(map[string]string{"direction": "egress"}),
+	)
+
+	egressMetric := metricClient.NewCounterMetric("dropped",
+		metricemitter.WithVersion(2, 0),
+	)
+
 	return &Transponder{
 		nexter:        n,
 		writer:        w,
 		tags:          tags,
 		batchSize:     batchSize,
 		batchInterval: batchInterval,
+		droppedMetric: droppedMetric,
+		egressMetric:  egressMetric,
 	}
 }
 
 func (t *Transponder) Start() {
-	var count uint64
-	lastEmitted := time.Now()
-
 	var batch []*plumbing.Envelope
 	lastSent := time.Now()
 
@@ -68,26 +79,14 @@ func (t *Transponder) Start() {
 		if err != nil {
 			// metric-documentation-v2: (loggregator.metron.dropped) Number of messages
 			// dropped when failing to write to Dopplers v2 API
-			metric.IncCounter("dropped",
-				metric.WithVersion(2, 0),
-				metric.WithTag("direction", "egress"),
-			)
+			t.droppedMetric.Increment(uint64(len(batch)))
 			log.Printf("v2 egress dropped: %s", err)
 			continue
 		}
 
-		count++
-		if count >= 1000 || time.Since(lastEmitted) > 5*time.Second {
-			// metric-documentation-v2: (loggregator.metron.egress) Number of messages
-			// written to Doppler's v2 API
-			metric.IncCounter("egress",
-				metric.WithIncrement(count),
-				metric.WithVersion(2, 0),
-			)
-			lastEmitted = time.Now()
-			log.Printf("egressed (v2) %d envelopes", count)
-			count = 0
-		}
+		// metric-documentation-v2: (loggregator.metron.egress)
+		// Number of messages written to Doppler's v2 API
+		t.egressMetric.Increment(uint64(len(batch)))
 	}
 }
 

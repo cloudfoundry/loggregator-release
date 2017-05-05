@@ -1,6 +1,7 @@
 package v2_test
 
 import (
+	"metricemitter/testhelper"
 	egress "metron/internal/egress/v2"
 	v2 "plumbing/v2"
 	"time"
@@ -18,7 +19,7 @@ var _ = Describe("Transponder", func() {
 		writer := newMockWriter()
 		close(writer.WriteOutput.Ret0)
 
-		tx := egress.NewTransponder(nexter, writer, nil, 1, time.Nanosecond)
+		tx := egress.NewTransponder(nexter, writer, nil, 1, time.Nanosecond, testhelper.NewMetricClient())
 		go tx.Start()
 
 		Eventually(nexter.TryNextCalled).Should(Receive())
@@ -37,7 +38,7 @@ var _ = Describe("Transponder", func() {
 				nexter.TryNextOutput.Ret1 <- true
 			}
 
-			tx := egress.NewTransponder(nexter, writer, nil, 5, time.Minute)
+			tx := egress.NewTransponder(nexter, writer, nil, 5, time.Minute, testhelper.NewMetricClient())
 			go tx.Start()
 
 			var batch []*v2.Envelope
@@ -56,7 +57,7 @@ var _ = Describe("Transponder", func() {
 			close(nexter.TryNextOutput.Ret0)
 			close(nexter.TryNextOutput.Ret1)
 
-			tx := egress.NewTransponder(nexter, writer, nil, 5, time.Millisecond)
+			tx := egress.NewTransponder(nexter, writer, nil, 5, time.Millisecond, testhelper.NewMetricClient())
 			go tx.Start()
 
 			var batch []*v2.Envelope
@@ -78,7 +79,7 @@ var _ = Describe("Transponder", func() {
 			writer := newMockWriter()
 			close(writer.WriteOutput.Ret0)
 
-			tx := egress.NewTransponder(nexter, writer, tags, 1, time.Nanosecond)
+			tx := egress.NewTransponder(nexter, writer, tags, 1, time.Nanosecond, testhelper.NewMetricClient())
 
 			go tx.Start()
 
@@ -112,7 +113,7 @@ var _ = Describe("Transponder", func() {
 			writer := newMockWriter()
 			close(writer.WriteOutput.Ret0)
 
-			tx := egress.NewTransponder(nexter, writer, tags, 1, time.Nanosecond)
+			tx := egress.NewTransponder(nexter, writer, tags, 1, time.Nanosecond, testhelper.NewMetricClient())
 
 			go tx.Start()
 
