@@ -90,6 +90,11 @@ func (i IngressServer) Sender(s plumbing.DopplerIngress_SenderServer) error {
 				continue
 			}
 
+			// metric-documentation-v1: (listeners.totalReceivedMessageCount)
+			// Total number of messages received by doppler.
+			i.batcher.BatchCounter("listeners.totalReceivedMessageCount").
+				Increment()
+
 			count++
 			if count >= 1000 || time.Since(lastEmitted) > 5*time.Second {
 				// metric-documentation-v2: (loggregator.doppler.ingress) Number of received
@@ -98,11 +103,6 @@ func (i IngressServer) Sender(s plumbing.DopplerIngress_SenderServer) error {
 					metric.WithIncrement(count),
 					metric.WithVersion(2, 0),
 				)
-
-				// metric-documentation-v1: (listeners.totalReceivedMessageCount)
-				// Total number of messages received by doppler.
-				i.batcher.BatchCounter("listeners.totalReceivedMessageCount").
-					Increment()
 
 				log.Printf("Ingressed (v2) %d envelopes", count)
 				lastEmitted = time.Now()

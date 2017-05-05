@@ -70,3 +70,7 @@ func fetchReceiver(spyIngressServer *SpyIngressServer) (rx v2.Ingress_SenderServ
 	Eventually(spyIngressServer.senders, 3).Should(Receive(&rx))
 	return rx
 }
+
+func (s *SpyIngressServer) BatchSender(sender v2.Ingress_BatchSenderServer) error {
+	return nil
+}
