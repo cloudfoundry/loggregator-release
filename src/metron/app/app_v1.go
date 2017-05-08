@@ -13,7 +13,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"metron/internal/clientpool/legacy"
 	clientpool "metron/internal/clientpool/v1"
 	egress "metron/internal/egress/v1"
 	ingress "metron/internal/ingress/v1"
@@ -73,22 +72,15 @@ func (a *AppV1) initializeMetrics(stopChan chan struct{}) (*metricbatcher.Metric
 }
 
 func (a *AppV1) initializeV1DopplerPool(batcher *metricbatcher.MetricBatcher) *egress.EventMarshaller {
-	pools := a.setupGRPC()
-
-	// TODO: delete this legacy pool stuff when UDP goes away
-	legacyPool := legacy.New(a.config.DopplerAddrUDP, 100, 5*time.Second)
-	udpWrapper := egress.NewUDPWrapper(legacyPool, []byte(a.config.SharedSecret))
-	pools = append(pools, udpWrapper)
-
-	combinedPool := legacy.NewCombinedPool(pools...)
+	pool := a.setupGRPC()
 
 	marshaller := egress.NewMarshaller(batcher)
-	marshaller.SetWriter(combinedPool)
+	marshaller.SetWriter(pool)
 
 	return marshaller
 }
 
-func (a *AppV1) setupGRPC() []legacy.Pool {
+func (a *AppV1) setupGRPC() egress.BatchChainByteWriter {
 	if a.creds == nil {
 		return nil
 	}
@@ -114,6 +106,5 @@ func (a *AppV1) setupGRPC() []legacy.Pool {
 	}
 
 	pool := clientpool.New(connManagers...)
-	grpcWrapper := egress.NewGRPCWrapper(pool)
-	return []legacy.Pool{grpcWrapper}
+	return egress.NewGRPCWrapper(pool)
 }

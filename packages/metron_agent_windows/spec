@@ -15,7 +15,6 @@ files:
 - loggregator/src/github.com/cloudfoundry/dropsonde/metricbatcher/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metrics/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/runtime_stats/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/dropsonde/signature/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/sonde-go/events/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/storeadapter/*.go # gosub
 - loggregator/src/github.com/gogo/protobuf/gogoproto/*.go # gosub
@@ -52,7 +51,6 @@ files:
 - loggregator/src/metricemitter/*.go # gosub
 - loggregator/src/metron/*.go # gosub
 - loggregator/src/metron/app/*.go # gosub
-- loggregator/src/metron/internal/clientpool/legacy/*.go # gosub
 - loggregator/src/metron/internal/clientpool/v1/*.go # gosub
 - loggregator/src/metron/internal/clientpool/v2/*.go # gosub
 - loggregator/src/metron/internal/egress/v1/*.go # gosub

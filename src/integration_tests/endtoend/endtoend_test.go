@@ -25,7 +25,7 @@ var _ = Describe("End to end tests", func() {
 		defer dopplerCleanup()
 
 		metronCleanup, metronConfig, metronReady := testservers.StartMetron(
-			testservers.BuildMetronConfig("localhost", dopplerGRPCPort, 0),
+			testservers.BuildMetronConfig("localhost", dopplerGRPCPort),
 		)
 		defer metronCleanup()
 		trafficcontrollerCleanup, tcPort := testservers.StartTrafficController(

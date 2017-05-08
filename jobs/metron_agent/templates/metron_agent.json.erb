@@ -27,7 +27,6 @@
         a[:Deployment] = deployment
         a[:IP] = spec.ip
         a[:Tags] = tags
-        a[:SharedSecret] = p("metron_endpoint.shared_secret")
         a[:IncomingUDPPort] = p("metron_agent.listening_port")
         a[:DisableUDP] = p("metron_agent.disable_udp")
         a[:PPROFPort] = p("metron_agent.pprof_port")

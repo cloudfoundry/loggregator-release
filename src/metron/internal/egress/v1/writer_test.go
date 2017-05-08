@@ -53,7 +53,7 @@ var _ = Describe("Batch Writer", func() {
 
 	JustBeforeEach(func() {
 		prefixedMessage = prefixWithLength(messageBytes)
-		batcher, constructorErr = egress.NewWriter("foo", byteWriter, droppedCounter, bufferSize, timeout)
+		batcher, constructorErr = egress.NewWriter(byteWriter, droppedCounter, bufferSize, timeout)
 	})
 
 	AfterEach(func() {
@@ -389,12 +389,12 @@ var _ = Describe("Batch Writer", func() {
 				Expect(err).ToNot(HaveOccurred())
 			}
 			Consistently(mockBatcher.BatchAddCounterInput).ShouldNot(BeCalled(
-				With("foo.sentMessageCount"),
+				With("grpc.sentMessageCount"),
 			))
 
 			Eventually(byteWriter.WriteInput.Message).Should(Receive())
 			Eventually(mockBatcher.BatchAddCounterInput).Should(BeCalled(
-				With("foo.sentMessageCount", uint64(3)),
+				With("grpc.sentMessageCount", uint64(3)),
 			))
 		})
 	})

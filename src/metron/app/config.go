@@ -28,10 +28,7 @@ type Config struct {
 
 	GRPC GRPC
 
-	SharedSecret string // TODO: Delete when UDP is removed
-
-	DopplerAddr    string
-	DopplerAddrUDP string // TODO: Delete when UDP is removed
+	DopplerAddr string
 
 	MetricBatchIntervalMilliseconds  uint
 	RuntimeStatsIntervalMilliseconds uint
@@ -61,10 +58,6 @@ func Parse(reader io.Reader) (*Config, error) {
 
 	if config.DopplerAddr == "" {
 		return nil, fmt.Errorf("DopplerAddr is required")
-	}
-
-	if config.DopplerAddrUDP == "" {
-		return nil, fmt.Errorf("DopplerAddrUDP is required")
 	}
 
 	return config, nil
