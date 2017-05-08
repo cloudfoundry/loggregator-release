@@ -3,7 +3,6 @@ package trafficcontroller_test
 import (
 	"fmt"
 	"log"
-	"metric"
 	"net/http"
 	"os/exec"
 	"testing"
@@ -39,7 +38,6 @@ var (
 func TestIntegrationTest(t *testing.T) {
 	grpclog.SetLogger(log.New(GinkgoWriter, "", log.LstdFlags))
 	log.SetOutput(GinkgoWriter)
-	metric.Setup()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Traffic Controller Integration Suite")
 }

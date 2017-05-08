@@ -3,22 +3,21 @@ package plumbing_test
 import (
 	"io/ioutil"
 	"log"
-	"metric"
 	"net"
 	"testing"
 
 	"plumbing"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 func TestPlumbing(t *testing.T) {
 	log.SetOutput(ioutil.Discard)
 	grpclog.SetLogger(log.New(ioutil.Discard, "", log.LstdFlags))
-	metric.Setup()
 	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Plumbing Suite")
