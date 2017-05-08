@@ -1,6 +1,7 @@
 package sinkserver_test
 
 import (
+	"metricemitter/testhelper"
 	"net/http"
 	"strconv"
 	"sync"
@@ -52,7 +53,7 @@ var _ = Describe("Dumping", func() {
 
 		emptyBlacklist := blacklist.New(nil)
 		sinkManager = sinkmanager.New(1024, false, emptyBlacklist, 100, "dropsonde-origin",
-			2*time.Second, 0, 1*time.Second, 500*time.Millisecond, nil)
+			2*time.Second, 0, 1*time.Second, 500*time.Millisecond, nil, testhelper.NewMetricClient())
 
 		services.Add(1)
 		go func(sinkManager *sinkmanager.SinkManager) {

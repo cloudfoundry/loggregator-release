@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"metric"
+	"metricemitter"
 	"plumbing"
 	"sync"
 	"time"
@@ -67,7 +67,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	setupMetricsEmitter(conf)
+	metricClient := setupMetricsEmitter(conf)
 	monitorInterval := time.Duration(conf.MonitorIntervalSeconds) * time.Second
 	openFileMonitor := monitor.NewLinuxFD(monitorInterval)
 	uptimeMonitor := monitor.NewUptime(monitorInterval)
@@ -87,6 +87,7 @@ func main() {
 		time.Duration(conf.ContainerMetricTTLSeconds)*time.Second,
 		time.Duration(conf.SinkDialTimeoutSeconds)*time.Second,
 		batcher,
+		metricClient,
 	)
 
 	//------------------------------
@@ -100,18 +101,21 @@ func main() {
 	errChan := make(chan error)
 	var wg sync.WaitGroup
 	dropsondeUnmarshallerCollection := dropsonde_unmarshaller.NewDropsondeUnmarshallerCollection(conf.UnmarshallerCount)
+
+	droppedMetric := metricClient.NewCounterMetric("dropped",
+		metricemitter.WithVersion(2, 0),
+		metricemitter.WithTags(map[string]string{"direction": "ingress"}),
+	)
+
 	envelopeBuffer := diodes.NewManyToOneEnvelope(10000, gendiodes.AlertFunc(func(missed int) {
 		log.Printf("Shed %d envelopes", missed)
 		// metric-documentation-v1: (doppler.shedEnvelopes) Number of envelopes dropped by the
 		// diode inbound from metron
 		batcher.BatchCounter("doppler.shedEnvelopes").Add(uint64(missed))
+
 		// metric-documentation-v2: (loggregator.doppler.dropped) Number of envelopes dropped by the
 		// diode inbound from metron
-		metric.IncCounter("dropped",
-			metric.WithIncrement(uint64(missed)),
-			metric.WithVersion(2, 0),
-			metric.WithTag("direction", "ingress"),
-		)
+		droppedMetric.Increment(uint64(missed))
 	}))
 
 	udpListener, dropsondeBytesChan := listeners.NewUDPListener(
@@ -129,6 +133,7 @@ func main() {
 		conf.GRPC,
 		envelopeBuffer,
 		batcher,
+		metricClient,
 	)
 	if err != nil {
 		log.Panicf("Failed to create grpcListener: %s", err)
@@ -387,7 +392,7 @@ func connectToEtcd(conf *app.Config) storeadapter.StoreAdapter {
 	return etcdStoreAdapter
 }
 
-func setupMetricsEmitter(conf *app.Config) {
+func setupMetricsEmitter(conf *app.Config) metricemitter.MetricClient {
 	credentials, err := plumbing.NewCredentials(
 		conf.GRPC.CertFile,
 		conf.GRPC.KeyFile,
@@ -399,12 +404,18 @@ func setupMetricsEmitter(conf *app.Config) {
 	}
 
 	batchInterval := time.Duration(conf.MetricBatchIntervalMilliseconds) * time.Millisecond
+
 	// metric-documentation-v2: setup function
-	metric.Setup(
-		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(credentials)),
-		metric.WithBatchInterval(batchInterval),
-		metric.WithOrigin("loggregator.doppler"),
-		metric.WithAddr(conf.MetronConfig.GRPCAddress),
-		metric.WithDeploymentMeta(conf.DeploymentName, conf.JobName, conf.Index),
+	metricClient, err := metricemitter.NewClient(
+		conf.MetronConfig.GRPCAddress,
+		metricemitter.WithGRPCDialOptions(grpc.WithTransportCredentials(credentials)),
+		metricemitter.WithOrigin("loggregator.doppler"),
+		metricemitter.WithDeployment(conf.DeploymentName, conf.JobName, conf.Index),
+		metricemitter.WithPulseInterval(batchInterval),
 	)
+	if err != nil {
+		log.Fatalf("Could not configure metric emitter: %s", err)
+	}
+
+	return metricClient
 }

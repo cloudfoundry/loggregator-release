@@ -46,7 +46,6 @@ files:
 - loggregator/src/google.golang.org/grpc/status/*.go # gosub
 - loggregator/src/google.golang.org/grpc/tap/*.go # gosub
 - loggregator/src/google.golang.org/grpc/transport/*.go # gosub
-- loggregator/src/metric/*.go # gosub
 - loggregator/src/metricemitter/*.go # gosub
 - loggregator/src/metron/*.go # gosub
 - loggregator/src/metron/app/*.go # gosub

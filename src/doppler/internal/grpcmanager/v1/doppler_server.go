@@ -4,7 +4,7 @@ import (
 	"diodes"
 	"errors"
 	"log"
-	"metric"
+	"metricemitter"
 	"plumbing"
 	"sync/atomic"
 	"time"
@@ -42,6 +42,7 @@ type DopplerServer struct {
 	registrar        Registrar
 	dumper           DataDumper
 	numSubscriptions int64
+	egressMetric     *metricemitter.CounterMetric
 }
 
 type sender interface {
@@ -50,13 +51,23 @@ type sender interface {
 }
 
 // NewDopplerServer creates a new DopplerServer.
-func NewDopplerServer(registrar Registrar, dumper DataDumper) *DopplerServer {
+func NewDopplerServer(
+	registrar Registrar,
+	dumper DataDumper,
+	metricClient metricemitter.MetricClient,
+) *DopplerServer {
+	egressMetric := metricClient.NewCounterMetric("egress",
+		metricemitter.WithVersion(2, 0),
+	)
+
 	m := &DopplerServer{
-		registrar: registrar,
-		dumper:    dumper,
+		registrar:    registrar,
+		dumper:       dumper,
+		egressMetric: egressMetric,
 	}
 
 	go m.emitMetrics()
+
 	return m
 }
 
@@ -115,8 +126,7 @@ func (m *DopplerServer) sendData(req *plumbing.SubscriptionRequest, sender sende
 	cleanup := m.registrar.Register(req, d)
 	defer cleanup()
 
-	var done, count int64
-	lastEmitted := time.Now()
+	var done int64
 	go m.monitorContext(sender.Context(), &done)
 
 	for {
@@ -130,26 +140,14 @@ func (m *DopplerServer) sendData(req *plumbing.SubscriptionRequest, sender sende
 			continue
 		}
 
-		err := sender.Send(&plumbing.Response{
-			Payload: data,
-		})
-
-		count++
-		if count >= 1000 || time.Since(lastEmitted) > 5*time.Second {
-			// metric-documentation-v2: (loggregator.doppler.egress) Number of
-			// v1 envelopes read from a diode to be sent to subscriptions.
-			metric.IncCounter("egress",
-				metric.WithIncrement(1000),
-				metric.WithVersion(2, 0),
-			)
-
-			lastEmitted = time.Now()
-			count = 0
-		}
-
+		err := sender.Send(&plumbing.Response{Payload: data})
 		if err != nil {
 			return err
 		}
+
+		// metric-documentation-v2: (loggregator.doppler.egress) Number of
+		// v1 envelopes read from a diode to be sent to subscriptions.
+		m.egressMetric.Increment(1)
 	}
 
 	return sender.Context().Err()

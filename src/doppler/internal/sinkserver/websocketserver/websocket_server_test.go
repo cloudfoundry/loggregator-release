@@ -6,6 +6,7 @@ import (
 	"doppler/internal/sinkserver/websocketserver"
 	"fmt"
 	"io/ioutil"
+	"metricemitter/testhelper"
 	"net/http"
 	"time"
 
@@ -24,8 +25,10 @@ import (
 // WebsocketSinks are a deprecated code path
 var _ = XDescribe("WebsocketServer", func() {
 	var (
-		server         *websocketserver.WebsocketServer
-		sinkManager    = sinkmanager.New(1024, false, blacklist.New(nil), 100, "dropsonde-origin", 1*time.Second, 0, 1*time.Second, 500*time.Millisecond, nil)
+		server      *websocketserver.WebsocketServer
+		sinkManager = sinkmanager.New(1024, false, blacklist.New(nil),
+			100, "dropsonde-origin", 1*time.Second, 0, 1*time.Second,
+			500*time.Millisecond, nil, testhelper.NewMetricClient())
 		appId          = "my-app"
 		wsReceivedChan chan []byte
 		apiEndpoint    string

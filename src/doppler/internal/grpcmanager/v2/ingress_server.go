@@ -1,11 +1,9 @@
 package v2
 
 import (
-	"log"
-	"metric"
+	"metricemitter"
 	"plumbing/conversion"
 	plumbing "plumbing/v2"
-	"time"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -26,18 +24,26 @@ type DataSetter interface {
 type IngressServer struct {
 	envelopeBuffer DataSetter
 	batcher        Batcher
+	ingressMetric  *metricemitter.CounterMetric
 }
 
-func NewIngressServer(envelopeBuffer DataSetter, batcher Batcher) *IngressServer {
+func NewIngressServer(
+	envelopeBuffer DataSetter,
+	batcher Batcher,
+	metricClient metricemitter.MetricClient,
+) *IngressServer {
+	ingressMetric := metricClient.NewCounterMetric("ingress",
+		metricemitter.WithVersion(2, 0),
+	)
+
 	return &IngressServer{
 		envelopeBuffer: envelopeBuffer,
 		batcher:        batcher,
+		ingressMetric:  ingressMetric,
 	}
 }
 
 func (i IngressServer) BatchSender(s plumbing.DopplerIngress_BatchSenderServer) error {
-	var count uint64
-	lastEmitted := time.Now()
 	for {
 		v2eBatch, err := s.Recv()
 		if err != nil {
@@ -51,33 +57,22 @@ func (i IngressServer) BatchSender(s plumbing.DopplerIngress_BatchSenderServer) 
 					continue
 				}
 
-				count++
-				if count >= 1000 || time.Since(lastEmitted) > 5*time.Second {
-					// metric-documentation-v2: (loggregator.doppler.ingress) Number of received
-					// envelopes from Metron on Doppler's v2 gRPC server
-					metric.IncCounter("ingress",
-						metric.WithIncrement(count),
-						metric.WithVersion(2, 0),
-					)
-
-					// metric-documentation-v1: (listeners.totalReceivedMessageCount)
-					// Total number of messages received by doppler.
-					i.batcher.BatchCounter("listeners.totalReceivedMessageCount").
-						Increment()
-
-					log.Printf("Ingressed (v2) %d envelopes", count)
-					lastEmitted = time.Now()
-					count = 0
-				}
 				i.envelopeBuffer.Set(v1e)
+
+				// metric-documentation-v1: (listeners.totalReceivedMessageCount)
+				// Total number of messages received by doppler.
+				i.batcher.BatchCounter("listeners.totalReceivedMessageCount").
+					Increment()
+
+				// metric-documentation-v2: (loggregator.doppler.ingress) Number of received
+				// envelopes from Metron on Doppler's v2 gRPC server
+				i.ingressMetric.Increment(1)
 			}
 		}
 	}
 }
 
 func (i IngressServer) Sender(s plumbing.DopplerIngress_SenderServer) error {
-	var count uint64
-	lastEmitted := time.Now()
 	for {
 		v2e, err := s.Recv()
 		if err != nil {
@@ -90,25 +85,16 @@ func (i IngressServer) Sender(s plumbing.DopplerIngress_SenderServer) error {
 				continue
 			}
 
+			i.envelopeBuffer.Set(v1e)
+
 			// metric-documentation-v1: (listeners.totalReceivedMessageCount)
 			// Total number of messages received by doppler.
 			i.batcher.BatchCounter("listeners.totalReceivedMessageCount").
 				Increment()
 
-			count++
-			if count >= 1000 || time.Since(lastEmitted) > 5*time.Second {
-				// metric-documentation-v2: (loggregator.doppler.ingress) Number of received
-				// envelopes from Metron on Doppler's v2 gRPC server
-				metric.IncCounter("ingress",
-					metric.WithIncrement(count),
-					metric.WithVersion(2, 0),
-				)
-
-				log.Printf("Ingressed (v2) %d envelopes", count)
-				lastEmitted = time.Now()
-				count = 0
-			}
-			i.envelopeBuffer.Set(v1e)
+			// metric-documentation-v2: (loggregator.doppler.ingress) Number of received
+			// envelopes from Metron on Doppler's v2 gRPC server
+			i.ingressMetric.Increment(1)
 		}
 	}
 }

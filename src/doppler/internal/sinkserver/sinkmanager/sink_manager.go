@@ -11,6 +11,7 @@ import (
 	"doppler/internal/sinkserver/metrics"
 	"fmt"
 	"log"
+	"metricemitter"
 	"sync"
 	"time"
 
@@ -57,12 +58,13 @@ func New(
 	metricTTL,
 	dialTimeout time.Duration,
 	metricBatcher MetricBatcher,
+	metricClient metricemitter.MetricClient,
 ) *SinkManager {
 	return &SinkManager{
 		doneChannel:            make(chan struct{}),
 		errorChannel:           make(chan *events.Envelope, 100),
 		urlBlacklistManager:    blackListManager,
-		sinks:                  groupedsinks.NewGroupedSinks(metricBatcher),
+		sinks:                  groupedsinks.NewGroupedSinks(metricBatcher, metricClient),
 		skipCertVerify:         skipCertVerify,
 		recentLogCount:         maxRetainedLogMessages,
 		metrics:                metrics.NewSinkManagerMetrics(),

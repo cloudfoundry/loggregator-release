@@ -1,6 +1,7 @@
 package groupedsinks_test
 
 import (
+	"metricemitter/testhelper"
 	"net"
 	"net/url"
 	"time"
@@ -25,7 +26,10 @@ var _ = Describe("GroupedSink", func() {
 	var inputChan chan *events.Envelope
 
 	BeforeEach(func() {
-		groupedSinks = groupedsinks.NewGroupedSinks(&spyMetricBatcher{})
+		groupedSinks = groupedsinks.NewGroupedSinks(
+			&spyMetricBatcher{},
+			testhelper.NewMetricClient(),
+		)
 		inputChan = make(chan *events.Envelope, 10)
 	})
 
