@@ -61,8 +61,6 @@ instance_groups:
       metron_agent:
         disable_udp: false
         deployment: loggregator
-      metron_endpoint:
-        shared_secret: "((dropsonde_shared_secret))"
       loggregator:
         tls:
           ca_cert: "((loggregator_metron.ca))"
