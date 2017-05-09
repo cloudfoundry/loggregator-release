@@ -19,6 +19,13 @@ source /var/vcap/packages/loggregator_common/pid_utils.sh
 case $1 in
 
   start)
+    set +e
+      killall -15 doppler
+      killall -9 doppler
+      killall -2 doppler
+      killall -3 doppler
+    set -e
+
     pid_guard $PIDFILE "Loggregator"
 
     <% if p("doppler.locked_memory_limit") != "kernel" %>
@@ -38,7 +45,12 @@ case $1 in
     ;;
 
   stop)
-    kill_and_wait $PIDFILE 40
+    set +e
+      killall -15 doppler
+      killall -9 doppler
+      killall -2 doppler
+      killall -3 doppler
+    set -e
 
     ;;
 

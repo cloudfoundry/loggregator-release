@@ -1,7 +1,7 @@
 package groupedsinks
 
 import (
-	"metric"
+	"metricemitter"
 	"sync"
 
 	"doppler/internal/groupedsinks/firehose_group"
@@ -19,19 +19,31 @@ type MetricBatcher interface {
 	BatchIncrementCounter(name string)
 }
 
-func NewGroupedSinks(b MetricBatcher) *GroupedSinks {
+func NewGroupedSinks(b MetricBatcher, mc metricemitter.MetricClient) *GroupedSinks {
+	droppedMetric := mc.NewCounterMetric("sinks.dropped",
+		metricemitter.WithVersion(2, 0),
+	)
+	errorMetric := mc.NewCounterMetric("sinks.errors.dropped",
+		metricemitter.WithVersion(2, 0),
+	)
+
 	return &GroupedSinks{
-		apps:      make(map[string]map[string]*sink_wrapper.SinkWrapper),
-		firehoses: make(map[string]firehose_group.FirehoseGroup),
-		batcher:   b,
+		apps:          make(map[string]map[string]*sink_wrapper.SinkWrapper),
+		firehoses:     make(map[string]firehose_group.FirehoseGroup),
+		batcher:       b,
+		droppedMetric: droppedMetric,
+		errorMetric:   errorMetric,
 	}
 }
 
 type GroupedSinks struct {
-	apps      map[string]map[string]*sink_wrapper.SinkWrapper
-	firehoses map[string]firehose_group.FirehoseGroup
-	batcher   MetricBatcher
 	sync.RWMutex
+
+	apps          map[string]map[string]*sink_wrapper.SinkWrapper
+	firehoses     map[string]firehose_group.FirehoseGroup
+	batcher       MetricBatcher
+	droppedMetric *metricemitter.CounterMetric
+	errorMetric   *metricemitter.CounterMetric
 }
 
 func (group *GroupedSinks) RegisterAppSink(in chan<- *events.Envelope, sink sinks.Sink) bool {
@@ -103,7 +115,7 @@ func (group *GroupedSinks) Broadcast(appId string, msg *events.Envelope) {
 
 			// metric-documentation-v2: (loggregator.doppler.sinks.dropped)
 			// Number of envelopes dropped while inserting envelope into sink.
-			metric.IncCounter("sinks.dropped", metric.WithVersion(2, 0))
+			group.droppedMetric.Increment(1)
 		}
 	}
 
@@ -125,7 +137,7 @@ func (group *GroupedSinks) BroadcastError(appId string, errorMsg *events.Envelop
 
 				// metric-documentation-v2: (loggregator.doppler.sinks.errors.dropped)
 				// Number of errors dropped while inserting error into sink.
-				metric.IncCounter("sinks.errors.dropped", metric.WithVersion(2, 0))
+				group.errorMetric.Increment(1)
 			}
 		}
 	}

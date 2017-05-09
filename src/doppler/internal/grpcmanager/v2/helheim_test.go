@@ -6,66 +6,26 @@
 package v2_test
 
 import (
-	plumbing "plumbing/v2"
+	"golang.org/x/net/context"
+
+	v2 "plumbing/v2"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/sonde-go/events"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/metadata"
 )
-
-type mockBatcher struct {
-	BatchCounterCalled chan bool
-	BatchCounterInput  struct {
-		Name chan string
-	}
-	BatchCounterOutput struct {
-		Ret0 chan metricbatcher.BatchCounterChainer
-	}
-}
-
-func newMockBatcher() *mockBatcher {
-	m := &mockBatcher{}
-	m.BatchCounterCalled = make(chan bool, 100)
-	m.BatchCounterInput.Name = make(chan string, 100)
-	m.BatchCounterOutput.Ret0 = make(chan metricbatcher.BatchCounterChainer, 100)
-	return m
-}
-func (m *mockBatcher) BatchCounter(name string) metricbatcher.BatchCounterChainer {
-	m.BatchCounterCalled <- true
-	m.BatchCounterInput.Name <- name
-	return <-m.BatchCounterOutput.Ret0
-}
-
-type mockDataSetter struct {
-	SetCalled chan bool
-	SetInput  struct {
-		Data chan *events.Envelope
-	}
-}
-
-func newMockDataSetter() *mockDataSetter {
-	m := &mockDataSetter{}
-	m.SetCalled = make(chan bool, 100)
-	m.SetInput.Data = make(chan *events.Envelope, 100)
-	return m
-}
-func (m *mockDataSetter) Set(data *events.Envelope) {
-	m.SetCalled <- true
-	m.SetInput.Data <- data
-}
 
 type mockDopplerIngress_SenderServer struct {
 	SendAndCloseCalled chan bool
 	SendAndCloseInput  struct {
-		Arg0 chan *plumbing.SenderResponse
+		Arg0 chan *v2.SenderResponse
 	}
 	SendAndCloseOutput struct {
 		Ret0 chan error
 	}
 	RecvCalled chan bool
 	RecvOutput struct {
-		Ret0 chan *plumbing.Envelope
+		Ret0 chan *v2.Envelope
 		Ret1 chan error
 	}
 	SetHeaderCalled chan bool
@@ -109,10 +69,10 @@ type mockDopplerIngress_SenderServer struct {
 func newMockDopplerIngress_SenderServer() *mockDopplerIngress_SenderServer {
 	m := &mockDopplerIngress_SenderServer{}
 	m.SendAndCloseCalled = make(chan bool, 100)
-	m.SendAndCloseInput.Arg0 = make(chan *plumbing.SenderResponse, 100)
+	m.SendAndCloseInput.Arg0 = make(chan *v2.SenderResponse, 100)
 	m.SendAndCloseOutput.Ret0 = make(chan error, 100)
 	m.RecvCalled = make(chan bool, 100)
-	m.RecvOutput.Ret0 = make(chan *plumbing.Envelope, 100)
+	m.RecvOutput.Ret0 = make(chan *v2.Envelope, 100)
 	m.RecvOutput.Ret1 = make(chan error, 100)
 	m.SetHeaderCalled = make(chan bool, 100)
 	m.SetHeaderInput.Arg0 = make(chan metadata.MD, 100)
@@ -132,12 +92,12 @@ func newMockDopplerIngress_SenderServer() *mockDopplerIngress_SenderServer {
 	m.RecvMsgOutput.Ret0 = make(chan error, 100)
 	return m
 }
-func (m *mockDopplerIngress_SenderServer) SendAndClose(arg0 *plumbing.SenderResponse) error {
+func (m *mockDopplerIngress_SenderServer) SendAndClose(arg0 *v2.SenderResponse) error {
 	m.SendAndCloseCalled <- true
 	m.SendAndCloseInput.Arg0 <- arg0
 	return <-m.SendAndCloseOutput.Ret0
 }
-func (m *mockDopplerIngress_SenderServer) Recv() (*plumbing.Envelope, error) {
+func (m *mockDopplerIngress_SenderServer) Recv() (*v2.Envelope, error) {
 	m.RecvCalled <- true
 	return <-m.RecvOutput.Ret0, <-m.RecvOutput.Ret1
 }
@@ -170,17 +130,58 @@ func (m *mockDopplerIngress_SenderServer) RecvMsg(m_ interface{}) error {
 	return <-m.RecvMsgOutput.Ret0
 }
 
+type mockBatcher struct {
+	BatchCounterCalled chan bool
+	BatchCounterInput  struct {
+		Name chan string
+	}
+	BatchCounterOutput struct {
+		Ret0 chan metricbatcher.BatchCounterChainer
+	}
+}
+
+func newMockBatcher() *mockBatcher {
+	m := &mockBatcher{}
+	m.BatchCounterCalled = make(chan bool, 100)
+	m.BatchCounterInput.Name = make(chan string, 100)
+	m.BatchCounterOutput.Ret0 = make(chan metricbatcher.BatchCounterChainer, 100)
+	return m
+}
+func (m *mockBatcher) BatchCounter(name string) metricbatcher.BatchCounterChainer {
+	m.BatchCounterCalled <- true
+	m.BatchCounterInput.Name <- name
+	return <-m.BatchCounterOutput.Ret0
+}
+
+type mockDataSetter struct {
+	SetCalled chan bool
+	SetInput  struct {
+		Data chan *events.Envelope
+	}
+}
+
+func newMockDataSetter() *mockDataSetter {
+	m := &mockDataSetter{}
+	m.SetCalled = make(chan bool, 100)
+	m.SetInput.Data = make(chan *events.Envelope, 100)
+	return m
+}
+func (m *mockDataSetter) Set(data *events.Envelope) {
+	m.SetCalled <- true
+	m.SetInput.Data <- data
+}
+
 type mockBatcherSenderServer struct {
 	SendAndCloseCalled chan bool
 	SendAndCloseInput  struct {
-		Arg0 chan *plumbing.BatchSenderResponse
+		Arg0 chan *v2.BatchSenderResponse
 	}
 	SendAndCloseOutput struct {
 		Ret0 chan error
 	}
 	RecvCalled chan bool
 	RecvOutput struct {
-		Ret0 chan *plumbing.EnvelopeBatch
+		Ret0 chan *v2.EnvelopeBatch
 		Ret1 chan error
 	}
 	SetHeaderCalled chan bool
@@ -224,10 +225,10 @@ type mockBatcherSenderServer struct {
 func newMockBatcherSenderServer() *mockBatcherSenderServer {
 	m := &mockBatcherSenderServer{}
 	m.SendAndCloseCalled = make(chan bool, 100)
-	m.SendAndCloseInput.Arg0 = make(chan *plumbing.BatchSenderResponse, 100)
+	m.SendAndCloseInput.Arg0 = make(chan *v2.BatchSenderResponse, 100)
 	m.SendAndCloseOutput.Ret0 = make(chan error, 100)
 	m.RecvCalled = make(chan bool, 100)
-	m.RecvOutput.Ret0 = make(chan *plumbing.EnvelopeBatch, 100)
+	m.RecvOutput.Ret0 = make(chan *v2.EnvelopeBatch, 100)
 	m.RecvOutput.Ret1 = make(chan error, 100)
 	m.SetHeaderCalled = make(chan bool, 100)
 	m.SetHeaderInput.Arg0 = make(chan metadata.MD, 100)
@@ -247,12 +248,12 @@ func newMockBatcherSenderServer() *mockBatcherSenderServer {
 	m.RecvMsgOutput.Ret0 = make(chan error, 100)
 	return m
 }
-func (m *mockBatcherSenderServer) SendAndClose(arg0 *plumbing.BatchSenderResponse) error {
+func (m *mockBatcherSenderServer) SendAndClose(arg0 *v2.BatchSenderResponse) error {
 	m.SendAndCloseCalled <- true
 	m.SendAndCloseInput.Arg0 <- arg0
 	return <-m.SendAndCloseOutput.Ret0
 }
-func (m *mockBatcherSenderServer) Recv() (*plumbing.EnvelopeBatch, error) {
+func (m *mockBatcherSenderServer) Recv() (*v2.EnvelopeBatch, error) {
 	m.RecvCalled <- true
 	return <-m.RecvOutput.Ret0, <-m.RecvOutput.Ret1
 }

@@ -43,9 +43,6 @@ properties:
     description: maximum message size to be sent
     default: 4k
 
-  metron_endpoint.shared_secret:
-    description: "Shared secret used to verify cryptographically signed dropsonde messages"
-
   metron_agent.disable_udp:
     description: "Disable incoming UDP"
     default: false

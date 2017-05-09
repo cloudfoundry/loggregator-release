@@ -8,6 +8,7 @@ import (
 	"doppler/internal/sinkserver/sinkmanager"
 	"fmt"
 	"log"
+	"metricemitter"
 	"net"
 	plumbingv1 "plumbing"
 	plumbingv2 "plumbing/v2"
@@ -29,6 +30,7 @@ func NewGRPCListener(
 	conf app.GRPC,
 	envelopeBuffer *diodes.ManyToOneEnvelope,
 	batcher *metricbatcher.MetricBatcher,
+	metricClient metricemitter.MetricClient,
 ) (*GRPCListener, error) {
 	tlsConfig, err := plumbingv1.NewMutualTLSConfig(
 		conf.CertFile,
@@ -58,13 +60,13 @@ func NewGRPCListener(
 	// v1 egress
 	plumbingv1.RegisterDopplerServer(
 		grpcServer,
-		v1.NewDopplerServer(reg, sinkmanager),
+		v1.NewDopplerServer(reg, sinkmanager, metricClient),
 	)
 
 	// v2 ingress
 	plumbingv2.RegisterDopplerIngressServer(
 		grpcServer,
-		v2.NewIngressServer(envelopeBuffer, batcher),
+		v2.NewIngressServer(envelopeBuffer, batcher, metricClient),
 	)
 
 	return &GRPCListener{

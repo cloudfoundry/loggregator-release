@@ -30,7 +30,10 @@ var _ = Describe("LogMessage", func() {
 				},
 			}
 
-			oldEnvelope := conversion.ToV1(envelope)
+			envelopes := conversion.ToV1(envelope)
+			Expect(len(envelopes)).To(Equal(1))
+			oldEnvelope := envelopes[0]
+
 			Expect(*oldEnvelope).To(MatchFields(IgnoreExtras, Fields{
 				"EventType": Equal(events.Envelope_LogMessage.Enum()),
 				"LogMessage": Equal(&events.LogMessage{

@@ -9,7 +9,7 @@ releases:
 - name: loggregator
   version: latest
 - name: consul
-  version: latest
+  version: 164
 
 instance_groups:
 - name: testing-blobs
@@ -61,8 +61,6 @@ instance_groups:
       metron_agent:
         disable_udp: false
         deployment: loggregator
-      metron_endpoint:
-        shared_secret: "((dropsonde_shared_secret))"
       loggregator:
         tls:
           ca_cert: "((loggregator_metron.ca))"
@@ -201,7 +199,7 @@ instance_groups:
       consul:
         agent:
           services:
-            loggregator_trafficcontroller: {}
+            reverse_log_proxy: {}
   - name: reverse_log_proxy
     release: loggregator
     provides:

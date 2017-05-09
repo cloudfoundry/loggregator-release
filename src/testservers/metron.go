@@ -14,15 +14,14 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-func BuildMetronConfig(dopplerURI string, dopplerGRPCPort, dopplerUDPPort int) app.Config {
+func BuildMetronConfig(dopplerURI string, dopplerGRPCPort int) app.Config {
 	metronUDPPort := getUDPPort()
 	metronGRPCPort := getTCPPort()
 
 	return app.Config{
-		Index:        jobIndex,
-		Job:          jobName,
-		Zone:         availabilityZone,
-		SharedSecret: sharedSecret,
+		Index: jobIndex,
+		Job:   jobName,
+		Zone:  availabilityZone,
 
 		Tags: map[string]string{
 			"auto-tag-1": "auto-tag-value-1",
@@ -33,8 +32,7 @@ func BuildMetronConfig(dopplerURI string, dopplerGRPCPort, dopplerUDPPort int) a
 		PPROFPort:       uint32(getTCPPort()),
 		Deployment:      "deployment",
 
-		DopplerAddr:    fmt.Sprintf("%s:%d", dopplerURI, dopplerGRPCPort),
-		DopplerAddrUDP: fmt.Sprintf("%s:%d", dopplerURI, dopplerUDPPort),
+		DopplerAddr: fmt.Sprintf("%s:%d", dopplerURI, dopplerGRPCPort),
 
 		GRPC: app.GRPC{
 			Port:     uint16(metronGRPCPort),
@@ -43,7 +41,7 @@ func BuildMetronConfig(dopplerURI string, dopplerGRPCPort, dopplerUDPPort int) a
 			CAFile:   Cert("loggregator-ca.crt"),
 		},
 
-		MetricBatchIntervalMilliseconds:  10,
+		MetricBatchIntervalMilliseconds:  5000,
 		RuntimeStatsIntervalMilliseconds: 10,
 	}
 }

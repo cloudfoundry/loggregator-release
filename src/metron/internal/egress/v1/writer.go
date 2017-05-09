@@ -53,10 +53,9 @@ type Writer struct {
 	timer          *time.Timer
 	droppedCounter DroppedMessageCounter
 	chainers       []metricbatcher.BatchCounterChainer
-	protocol       string
 }
 
-func NewWriter(protocol string, writer BatchChainByteWriter, droppedCounter DroppedMessageCounter, bufferCapacity uint64, flushDuration time.Duration) (*Writer, error) {
+func NewWriter(writer BatchChainByteWriter, droppedCounter DroppedMessageCounter, bufferCapacity uint64, flushDuration time.Duration) (*Writer, error) {
 	if bufferCapacity < minBufferCapacity {
 		return nil, fmt.Errorf("batch.Writer requires a buffer of at least %d bytes", minBufferCapacity)
 	}
@@ -72,7 +71,6 @@ func NewWriter(protocol string, writer BatchChainByteWriter, droppedCounter Drop
 		droppedCounter: droppedCounter,
 		msgBuffer:      newMessageBuffer(make([]byte, 0, bufferCapacity)),
 		timer:          batchTimer,
-		protocol:       protocol,
 	}
 	go batchWriter.flushOnTimer()
 	return batchWriter, nil
@@ -129,15 +127,13 @@ func (w *Writer) flushWrite(toWrite []byte, messageCount uint64, chainers ...met
 		return err
 	}
 
-	// metric-documentation-v1: (DopplerForwarder.sentMessages) The number of envelopes sent to
-	// dopplers v1 API over all protocols
+	// metric-documentation-v1: (DopplerForwarder.sentMessages) The number of
+	// envelopes sent to dopplers v1 API over all protocols
 	metrics.BatchAddCounter("DopplerForwarder.sentMessages", messageCount)
 
-	// metric-documentation-v1: (
-	//   grpc.sentMessageCount,
-	//   udp.sentMessageCount
-	// ) The number of envelopes sent to dopplers v1 gRPC or UDP API
-	metrics.BatchAddCounter(w.protocol+".sentMessageCount", messageCount)
+	// metric-documentation-v1: (grpc.sentMessageCount) The number of
+	// envelopes sent to dopplers v1 gRPC API
+	metrics.BatchAddCounter("grpc.sentMessageCount", messageCount)
 	return nil
 }
 
@@ -159,8 +155,8 @@ func (w *Writer) flushBuffer() {
 	messages := make([]byte, len(w.msgBuffer.buffer))
 	copy(messages, w.msgBuffer.buffer)
 	if err := w.flushWrite(messages, count, w.chainers...); err != nil {
-		// metric-documentation-v1: (DopplerForwarder.retryCount) Number of retries made when
-		// trying to write to Doppler's v1 UDP or gRPC API
+		// metric-documentation-v1: (DopplerForwarder.retryCount) Number of
+		// retries made when trying to write to Doppler's v1 gRPC API
 		metrics.BatchIncrementCounter("DopplerForwarder.retryCount")
 		w.timer.Reset(w.flushDuration)
 		return
@@ -174,8 +170,8 @@ func (w *Writer) retryWrites(message []byte, messageCount uint64, chainers ...me
 	defer w.flushing.Done()
 	for i := 0; i < maxOverflowTries; i++ {
 		if i > 0 {
-			// metric-documentation-v1: (DopplerForwarder.retryCount) Number of retries made when
-			// trying to write to Doppler's v1 UDP or gRPC API
+			// metric-documentation-v1: (DopplerForwarder.retryCount) Number
+			// of retries made when trying to write to Doppler's v1 gRPC API
 			metrics.BatchIncrementCounter("DopplerForwarder.retryCount")
 		}
 		err = w.flushWrite(message, messageCount, chainers...)

@@ -24,7 +24,7 @@ var _ = Describe("Sending HTTP events through loggregator", func() {
 
 			udpEmitter, err := emitter.NewUdpEmitter(fmt.Sprintf("localhost:%d", config.DropsondePort))
 			Expect(err).ToNot(HaveOccurred())
-			origin := fmt.Sprintf("%s-%d", helpers.ORIGIN_NAME, time.Now().UnixNano())
+			origin := fmt.Sprintf("%s-%d", helpers.OriginName, time.Now().UnixNano())
 			emitter := emitter.NewEventEmitter(udpEmitter, origin)
 			done := make(chan struct{})
 			handler := instrumented_handler.InstrumentedHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +60,7 @@ var _ = Describe("Sending HTTP events through loggregator", func() {
 
 			udpEmitter, err := emitter.NewUdpEmitter(fmt.Sprintf("localhost:%d", config.DropsondePort))
 			Expect(err).ToNot(HaveOccurred())
-			emitter := emitter.NewEventEmitter(udpEmitter, helpers.ORIGIN_NAME)
+			emitter := emitter.NewEventEmitter(udpEmitter, helpers.OriginName)
 			r, err := http.NewRequest("HEAD", "/", nil)
 			Expect(err).ToNot(HaveOccurred())
 			r.Header.Add("User-Agent", "Superman")

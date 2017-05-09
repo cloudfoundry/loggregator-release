@@ -1,27 +1,31 @@
 package helpers
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
+	"plumbing"
 	"strconv"
 	"time"
 
-	"code.cloudfoundry.org/workpool"
+	"google.golang.org/grpc"
 
-	. "github.com/onsi/gomega"
-
-	. "lats/config"
+	v2 "plumbing/v2"
 
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/cloudfoundry/storeadapter"
-	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+
+	. "github.com/onsi/gomega"
+	. "lats/config"
 )
 
-const ORIGIN_NAME = "LATs"
+const (
+	OriginName = "LATs"
+	WriteCount = 500
+)
 
 var config *TestConfig
 
@@ -93,7 +97,7 @@ func WaitForWebsocketConnection(printer *TestDebugPrinter) {
 	Eventually(printer.Dump, 2*time.Second).Should(ContainSubstring("101 Switching Protocols"))
 }
 
-func EmitToMetron(envelope *events.Envelope) {
+func EmitToMetronV1(envelope *events.Envelope) {
 	metronConn, err := net.Dial("udp4", fmt.Sprintf("localhost:%d", config.DropsondePort))
 	Expect(err).NotTo(HaveOccurred())
 
@@ -102,6 +106,71 @@ func EmitToMetron(envelope *events.Envelope) {
 
 	_, err = metronConn.Write(b)
 	Expect(err).NotTo(HaveOccurred())
+}
+
+func EmitToMetronV2(envelope *v2.Envelope) {
+	creds, err := plumbing.NewCredentials(
+		config.MetronTLSClientConfig.CertFile,
+		config.MetronTLSClientConfig.KeyFile,
+		config.MetronTLSClientConfig.CAFile,
+		"metron",
+	)
+	Expect(err).NotTo(HaveOccurred())
+
+	conn, err := grpc.Dial("localhost:3458", grpc.WithTransportCredentials(creds))
+	Expect(err).NotTo(HaveOccurred())
+	defer conn.Close()
+	c := v2.NewIngressClient(conn)
+
+	s, err := c.Sender(context.Background())
+	Expect(err).NotTo(HaveOccurred())
+	defer s.CloseSend()
+
+	for i := 0; i < WriteCount; i++ {
+		err = s.Send(envelope)
+		Expect(err).NotTo(HaveOccurred())
+	}
+}
+
+func ReadFromRLP(appID string) <-chan *v2.Envelope {
+	creds, err := plumbing.NewCredentials(
+		config.MetronTLSClientConfig.CertFile,
+		config.MetronTLSClientConfig.KeyFile,
+		config.MetronTLSClientConfig.CAFile,
+		"reverselogproxy",
+	)
+	Expect(err).NotTo(HaveOccurred())
+
+	conn, err := grpc.Dial(config.ReverseLogProxyAddr, grpc.WithTransportCredentials(creds))
+	Expect(err).NotTo(HaveOccurred())
+
+	client := v2.NewEgressClient(conn)
+	receiver, err := client.Receiver(context.Background(), &v2.EgressRequest{
+		ShardId: fmt.Sprint("shard-", time.Now().UnixNano()),
+		Filter: &v2.Filter{
+			SourceId: appID,
+			Message: &v2.Filter_Log{
+				Log: &v2.LogFilter{},
+			},
+		},
+	})
+	Expect(err).ToNot(HaveOccurred())
+
+	msgChan := make(chan *v2.Envelope, 100)
+
+	go func() {
+		defer conn.Close()
+		for {
+			e, err := receiver.Recv()
+			if err != nil {
+				break
+			}
+
+			msgChan <- e
+		}
+	}()
+
+	return msgChan
 }
 
 func FindMatchingEnvelope(msgChan <-chan *events.Envelope, envelope *events.Envelope) *events.Envelope {
@@ -145,31 +214,5 @@ func FindMatchingEnvelopeByID(id string, msgChan <-chan *events.Envelope) (*even
 		case <-timeout:
 			return nil, errors.New("Timed out while waiting for message")
 		}
-	}
-}
-
-func WriteToEtcd(urls []string, key, value string) func() {
-	etcdOptions := &etcdstoreadapter.ETCDOptions{
-		IsSSL:       true,
-		CertFile:    config.EtcdTLSClientConfig.CertFile,
-		KeyFile:     config.EtcdTLSClientConfig.KeyFile,
-		CAFile:      config.EtcdTLSClientConfig.CAFile,
-		ClusterUrls: urls,
-	}
-
-	workPool, err := workpool.NewWorkPool(10)
-	Expect(err).NotTo(HaveOccurred())
-	adapter, err := etcdstoreadapter.New(etcdOptions, workPool)
-	Expect(err).NotTo(HaveOccurred())
-	err = adapter.Create(storeadapter.StoreNode{
-		Key:   key,
-		Value: []byte(value),
-		TTL:   uint64(time.Minute),
-	})
-	Expect(err).NotTo(HaveOccurred())
-
-	return func() {
-		err = adapter.Delete(key)
-		Expect(err).ToNot(HaveOccurred())
 	}
 }

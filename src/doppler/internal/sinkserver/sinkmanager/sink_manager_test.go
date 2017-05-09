@@ -9,6 +9,7 @@ import (
 	"doppler/internal/sinkserver/blacklist"
 	"doppler/internal/sinkserver/sinkmanager"
 	"doppler/internal/store"
+	"metricemitter/testhelper"
 	"net"
 	"net/url"
 	"sync"
@@ -32,7 +33,9 @@ var _ = Describe("SinkManager", func() {
 	BeforeEach(func() {
 		fakeMetricSender.Reset()
 
-		sinkManager = sinkmanager.New(1, true, blackListManager, 100, "dropsonde-origin", 1*time.Second, 0, 1*time.Second, 1*time.Second, nil)
+		sinkManager = sinkmanager.New(1, true, blackListManager, 100,
+			"dropsonde-origin", 1*time.Second, 0, 1*time.Second,
+			1*time.Second, nil, testhelper.NewMetricClient())
 
 		newAppServiceChan = make(chan store.AppService)
 		deletedAppServiceChan = make(chan store.AppService)

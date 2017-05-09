@@ -6,7 +6,6 @@ import (
 	"net"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"metron/app"
@@ -42,7 +41,7 @@ var _ = Describe("Metron", func() {
 
 			var metronReady func()
 			metronCleanup, metronConfig, metronReady = testservers.StartMetron(
-				testservers.BuildMetronConfig("localhost", consumerServer.Port(), 0),
+				testservers.BuildMetronConfig("localhost", consumerServer.Port()),
 			)
 			defer metronReady()
 		})
@@ -98,7 +97,7 @@ var _ = Describe("Metron", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			go func() {
-				for range time.Tick(time.Millisecond) {
+				for range time.Tick(time.Nanosecond) {
 					sender.Send(emitEnvelope)
 				}
 			}()
@@ -140,83 +139,6 @@ var _ = Describe("Metron", func() {
 					},
 				}),
 			}))
-		})
-	})
-
-	Context("when the consumer is only accepting UDP messages", func() {
-		var (
-			metronCleanup   func()
-			consumerCleanup func()
-			metronConfig    app.Config
-			udpPort         int
-			eventEmitter    dropsonde.EventEmitter
-			consumerConn    *net.UDPConn
-		)
-
-		BeforeEach(func() {
-			addr, err := net.ResolveUDPAddr("udp4", "localhost:0")
-			Expect(err).ToNot(HaveOccurred())
-			consumerConn, err = net.ListenUDP("udp4", addr)
-			Expect(err).ToNot(HaveOccurred())
-			udpPort = HomeAddrToPort(consumerConn.LocalAddr())
-			consumerCleanup = func() {
-				consumerConn.Close()
-			}
-
-			var metronReady func()
-			metronCleanup, metronConfig, metronReady = testservers.StartMetron(
-				testservers.BuildMetronConfig("localhost", 0, udpPort),
-			)
-			defer metronReady()
-
-			udpEmitter, err := emitter.NewUdpEmitter(fmt.Sprintf("127.0.0.1:%d", metronConfig.IncomingUDPPort))
-			Expect(err).ToNot(HaveOccurred())
-			eventEmitter = emitter.NewEventEmitter(udpEmitter, "some-origin")
-		})
-
-		AfterEach(func() {
-			consumerCleanup()
-			metronCleanup()
-		})
-
-		It("writes to the consumer via UDP", func() {
-			envelope := &events.Envelope{
-				Origin:    proto.String("some-origin"),
-				EventType: events.Envelope_Error.Enum(),
-				Error: &events.Error{
-					Source:  proto.String("some-source"),
-					Code:    proto.Int32(1),
-					Message: proto.String("message"),
-				},
-			}
-
-			c := make(chan bool, 100)
-			var wg sync.WaitGroup
-			wg.Add(1)
-			defer wg.Wait()
-			go func() {
-				defer wg.Done()
-				defer GinkgoRecover()
-
-				buffer := make([]byte, 1024)
-				for {
-					consumerConn.SetReadDeadline(time.Now().Add(5 * time.Second))
-					_, err := consumerConn.Read(buffer)
-					Expect(err).ToNot(HaveOccurred())
-
-					select {
-					case c <- true:
-					default:
-						return
-					}
-				}
-			}()
-
-			f := func() int {
-				eventEmitter.Emit(envelope)
-				return len(c)
-			}
-			Eventually(f, 5).Should(BeNumerically(">", 0))
 		})
 	})
 })

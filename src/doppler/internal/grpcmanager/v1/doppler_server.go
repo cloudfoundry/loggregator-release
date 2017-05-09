@@ -4,6 +4,7 @@ import (
 	"diodes"
 	"errors"
 	"log"
+	"metricemitter"
 	"plumbing"
 	"sync/atomic"
 	"time"
@@ -41,6 +42,7 @@ type DopplerServer struct {
 	registrar        Registrar
 	dumper           DataDumper
 	numSubscriptions int64
+	egressMetric     *metricemitter.CounterMetric
 }
 
 type sender interface {
@@ -49,13 +51,23 @@ type sender interface {
 }
 
 // NewDopplerServer creates a new DopplerServer.
-func NewDopplerServer(registrar Registrar, dumper DataDumper) *DopplerServer {
+func NewDopplerServer(
+	registrar Registrar,
+	dumper DataDumper,
+	metricClient metricemitter.MetricClient,
+) *DopplerServer {
+	egressMetric := metricClient.NewCounterMetric("egress",
+		metricemitter.WithVersion(2, 0),
+	)
+
 	m := &DopplerServer{
-		registrar: registrar,
-		dumper:    dumper,
+		registrar:    registrar,
+		dumper:       dumper,
+		egressMetric: egressMetric,
 	}
 
 	go m.emitMetrics()
+
 	return m
 }
 
@@ -128,13 +140,14 @@ func (m *DopplerServer) sendData(req *plumbing.SubscriptionRequest, sender sende
 			continue
 		}
 
-		err := sender.Send(&plumbing.Response{
-			Payload: data,
-		})
-
+		err := sender.Send(&plumbing.Response{Payload: data})
 		if err != nil {
 			return err
 		}
+
+		// metric-documentation-v2: (loggregator.doppler.egress) Number of
+		// v1 envelopes read from a diode to be sent to subscriptions.
+		m.egressMetric.Increment(1)
 	}
 
 	return sender.Context().Err()

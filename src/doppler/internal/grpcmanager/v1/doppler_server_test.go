@@ -3,6 +3,7 @@ package v1_test
 import (
 	"doppler/internal/grpcmanager/v1"
 	"io"
+	"metricemitter/testhelper"
 	"net"
 	"plumbing"
 	"time"
@@ -86,7 +87,11 @@ var _ = Describe("GRPCManager", func() {
 		mockRegistrar.RegisterOutput.Ret0 <- mockCleanup
 		mockDataDumper = newMockDataDumper()
 
-		manager = v1.NewDopplerServer(mockRegistrar, mockDataDumper)
+		manager = v1.NewDopplerServer(
+			mockRegistrar,
+			mockDataDumper,
+			testhelper.NewMetricClient(),
+		)
 
 		listener = startGRPCServer(manager)
 		dopplerClient, connCloser = establishClient(listener.Addr().String())

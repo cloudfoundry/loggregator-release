@@ -111,7 +111,7 @@ var _ = Describe("MessageAggregator", func() {
 				"total",
 				"fake-origin-4",
 				map[string]string{
-					"protocol": "udp",
+					"protocol": "grpc",
 				},
 			))
 			messageAggregator.Write(createCounterMessage(
@@ -125,7 +125,7 @@ var _ = Describe("MessageAggregator", func() {
 				"total",
 				"fake-origin-4",
 				map[string]string{
-					"protocol": "udp",
+					"protocol": "grpc",
 				},
 			))
 
@@ -134,7 +134,7 @@ var _ = Describe("MessageAggregator", func() {
 				"total",
 				"fake-origin-4",
 				map[string]string{
-					"proto": "coludp",
+					"proto": "other",
 				},
 			))
 

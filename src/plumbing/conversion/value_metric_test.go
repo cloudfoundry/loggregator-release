@@ -27,7 +27,11 @@ var _ = Describe("ValueMetric", func() {
 				},
 			}
 
-			Expect(*conversion.ToV1(envelope)).To(MatchFields(IgnoreExtras, Fields{
+			envelopes := conversion.ToV1(envelope)
+			Expect(len(envelopes)).To(Equal(1))
+
+			converted := envelopes[0]
+			Expect(*converted).To(MatchFields(IgnoreExtras, Fields{
 				"EventType": Equal(events.Envelope_ValueMetric.Enum()),
 				"ValueMetric": Equal(&events.ValueMetric{
 					Name:  proto.String("name"),
@@ -35,6 +39,41 @@ var _ = Describe("ValueMetric", func() {
 					Value: proto.Float64(123),
 				}),
 			}))
+		})
+
+		It("converts multiple Gauge values", func() {
+			envelope := &v2.Envelope{
+				Message: &v2.Envelope_Gauge{
+					Gauge: &v2.Gauge{
+						Metrics: map[string]*v2.GaugeValue{
+							"name": {
+								Unit:  "meters",
+								Value: 123,
+							},
+							"other-name": {
+								Unit:  "feet",
+								Value: 321,
+							},
+						},
+					},
+				},
+			}
+
+			envelopes := conversion.ToV1(envelope)
+			Expect(len(envelopes)).To(Equal(2))
+
+			Expect(envelopes[0].GetValueMetric().GetName()).To(Or(
+				Equal("name"),
+				Equal("other-name"),
+			))
+
+			Expect(envelopes[1].GetValueMetric().GetName()).To(Or(
+				Equal("name"),
+				Equal("other-name"),
+			))
+
+			Expect(envelopes[0].GetValueMetric().GetName()).ToNot(Equal(
+				envelopes[1].GetValueMetric().GetName()))
 		})
 
 		It("is resilient to parial envelopes", func() {

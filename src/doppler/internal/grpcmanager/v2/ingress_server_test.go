@@ -3,6 +3,7 @@ package v2_test
 import (
 	"doppler/internal/grpcmanager/v2"
 	"io"
+	"metricemitter/testhelper"
 	plumbing "plumbing/v2"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
@@ -24,7 +25,11 @@ var _ = Describe("Ingress", func() {
 		mockSender = newMockDopplerIngress_SenderServer()
 		mockBatchSender = newMockBatcherSenderServer()
 
-		ingestor = v2.NewIngressServer(mockDataSetter, SpyBatcher{})
+		ingestor = v2.NewIngressServer(
+			mockDataSetter,
+			SpyBatcher{},
+			testhelper.NewMetricClient(),
+		)
 	})
 
 	It("writes batches to the data setter", func() {
