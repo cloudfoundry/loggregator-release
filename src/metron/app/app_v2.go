@@ -51,7 +51,7 @@ func (a *AppV2) Start() {
 
 	envelopeBuffer := diodes.NewManyToOneEnvelopeV2(10000, gendiodes.AlertFunc(func(missed int) {
 		// metric-documentation-v2: (loggregator.metron.dropped) Number of v2 envelopes
-		// droppred from the metron ingress diode
+		// dropped from the metron ingress diode
 		droppedMetric.Increment(uint64(missed))
 
 		log.Printf("Dropped %d v2 envelopes", missed)
