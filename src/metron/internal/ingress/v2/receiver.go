@@ -35,6 +35,8 @@ func (s *Receiver) Sender(sender v2.Ingress_SenderServer) error {
 		}
 
 		s.dataSetter.Set(e)
+		// metric-documentation-v2: (loggregator.metron.ingress) The number of
+		// received messages over Metrons V2 gRPC API.
 		s.ingressMetric.Increment(1)
 	}
 
@@ -53,6 +55,8 @@ func (s *Receiver) BatchSender(sender v2.Ingress_BatchSenderServer) error {
 			s.dataSetter.Set(e)
 		}
 
+		// metric-documentation-v2: (loggregator.metron.ingress) The number of
+		// received messages over Metrons V2 gRPC API.
 		s.ingressMetric.Increment(uint64(len(envelopes.Batch)))
 	}
 
