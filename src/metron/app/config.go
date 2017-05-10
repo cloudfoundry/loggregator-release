@@ -23,8 +23,9 @@ type Config struct {
 
 	Tags map[string]string
 
-	DisableUDP      bool
-	IncomingUDPPort int
+	DisableUDP         bool
+	IncomingUDPPort    int
+	HealthEndpointPort uint
 
 	GRPC GRPC
 

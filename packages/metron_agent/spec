@@ -53,6 +53,7 @@ files:
 - loggregator/src/metron/internal/clientpool/v2/*.go # gosub
 - loggregator/src/metron/internal/egress/v1/*.go # gosub
 - loggregator/src/metron/internal/egress/v2/*.go # gosub
+- loggregator/src/metron/internal/health/*.go # gosub
 - loggregator/src/metron/internal/ingress/v1/*.go # gosub
 - loggregator/src/metron/internal/ingress/v2/*.go # gosub
 - loggregator/src/plumbing/*.go # gosub

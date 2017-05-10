@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc"
 
 	"metron/app"
+	"metron/internal/health"
 	"plumbing"
 	"profiler"
 )
@@ -73,7 +74,10 @@ func main() {
 		log.Fatalf("Could not configure metric emitter: %s", err)
 	}
 
-	appV1 := app.NewV1App(config, clientCreds)
+	server, registry := health.New(config.HealthEndpointPort)
+	go server.Run()
+
+	appV1 := app.NewV1App(config, registry, clientCreds)
 	go appV1.Start()
 
 	appV2 := app.NewV2App(config, clientCreds, serverCreds, metricClient)

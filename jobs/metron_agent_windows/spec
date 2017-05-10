@@ -99,3 +99,6 @@ properties:
   metron_agent.pprof_port:
     description: "The pprof port for runtime profiling data"
     default: 0
+  metron_agent.health_port:
+    description: "The port for the health endpoint"
+    default: 9090

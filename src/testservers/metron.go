@@ -28,9 +28,10 @@ func BuildMetronConfig(dopplerURI string, dopplerGRPCPort int) app.Config {
 			"auto-tag-2": "auto-tag-value-2",
 		},
 
-		IncomingUDPPort: metronUDPPort,
-		PPROFPort:       uint32(getTCPPort()),
-		Deployment:      "deployment",
+		IncomingUDPPort:    metronUDPPort,
+		HealthEndpointPort: uint(7629),
+		PPROFPort:          uint32(getTCPPort()),
+		Deployment:         "deployment",
 
 		DopplerAddr: fmt.Sprintf("%s:%d", dopplerURI, dopplerGRPCPort),
 

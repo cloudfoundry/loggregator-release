@@ -15,16 +15,18 @@ import (
 
 	clientpool "metron/internal/clientpool/v1"
 	egress "metron/internal/egress/v1"
+	"metron/internal/health"
 	ingress "metron/internal/ingress/v1"
 )
 
 type AppV1 struct {
-	config *Config
-	creds  credentials.TransportCredentials
+	config         *Config
+	creds          credentials.TransportCredentials
+	healthRegistry *health.Registry
 }
 
-func NewV1App(c *Config, creds credentials.TransportCredentials) *AppV1 {
-	return &AppV1{config: c, creds: creds}
+func NewV1App(c *Config, r *health.Registry, creds credentials.TransportCredentials) *AppV1 {
+	return &AppV1{config: c, healthRegistry: r, creds: creds}
 }
 
 func (a *AppV1) Start() {
@@ -91,6 +93,7 @@ func (a *AppV1) setupGRPC() egress.BatchChainByteWriter {
 	}
 
 	fetcher := clientpool.NewPusherFetcher(
+		a.healthRegistry,
 		grpc.WithTransportCredentials(a.creds),
 	)
 

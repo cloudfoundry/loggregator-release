@@ -4,6 +4,7 @@ import (
 	"net"
 
 	"metron/internal/clientpool/v1"
+	"metron/internal/health"
 	"plumbing"
 
 	"google.golang.org/grpc"
@@ -18,7 +19,7 @@ var _ = Describe("PusherFetcher", func() {
 		Expect(server.Start()).To(Succeed())
 		defer server.Stop()
 
-		fetcher := v1.NewPusherFetcher(grpc.WithInsecure())
+		fetcher := v1.NewPusherFetcher(newSpyRegistry(), grpc.WithInsecure())
 		closer, pusher, err := fetcher.Fetch(server.addr)
 		Expect(err).ToNot(HaveOccurred())
 
@@ -28,12 +29,69 @@ var _ = Describe("PusherFetcher", func() {
 		Expect(closer.Close()).To(Succeed())
 	})
 
+	It("increments a counter when a connection is established", func() {
+		server := newSpyIngestorServer()
+		Expect(server.Start()).To(Succeed())
+		defer server.Stop()
+
+		registry := newSpyRegistry()
+
+		fetcher := v1.NewPusherFetcher(registry, grpc.WithInsecure())
+		_, _, err := fetcher.Fetch(server.addr)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(registry.GetValue("doppler_connections")).To(Equal(int64(1)))
+		Expect(registry.GetValue("doppler_v1_streams")).To(Equal(int64(1)))
+	})
+
+	It("decremtns a counter when a connection is closed", func() {
+		server := newSpyIngestorServer()
+		Expect(server.Start()).To(Succeed())
+		defer server.Stop()
+
+		registry := newSpyRegistry()
+
+		fetcher := v1.NewPusherFetcher(registry, grpc.WithInsecure())
+		closer, _, err := fetcher.Fetch(server.addr)
+		Expect(err).ToNot(HaveOccurred())
+
+		closer.Close()
+		Expect(registry.GetValue("doppler_connections")).To(Equal(int64(0)))
+		Expect(registry.GetValue("doppler_v1_streams")).To(Equal(int64(0)))
+	})
+
 	It("returns an error when the server is unavailable", func() {
-		fetcher := v1.NewPusherFetcher(grpc.WithInsecure())
+		fetcher := v1.NewPusherFetcher(newSpyRegistry(), grpc.WithInsecure())
 		_, _, err := fetcher.Fetch("localhost:1122")
 		Expect(err).To(HaveOccurred())
 	})
 })
+
+type SpyRegistry struct {
+	counters map[string]*health.Value
+}
+
+func newSpyRegistry() *SpyRegistry {
+	return &SpyRegistry{
+		counters: make(map[string]*health.Value),
+	}
+}
+
+func (s *SpyRegistry) RegisterValue(name string) *health.Value {
+	counter := &health.Value{}
+	s.counters[name] = counter
+
+	return counter
+}
+
+func (s *SpyRegistry) GetValue(name string) int64 {
+	v, ok := s.counters[name]
+	if !ok {
+		return 0
+	}
+
+	return v.Number()
+}
 
 type SpyIngestorServer struct {
 	addr         string
