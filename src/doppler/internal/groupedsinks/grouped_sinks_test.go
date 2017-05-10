@@ -46,7 +46,7 @@ var _ = Describe("GroupedSink", func() {
 				groupedSinks.RegisterAppSink(appSinkInputChan, appSink)
 
 				msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "123", "App"), "origin")
-				go groupedSinks.Broadcast("123", msg)
+				groupedSinks.Broadcast("123", msg)
 
 				Eventually(appSinkInputChan).Should(Receive(Equal(msg)))
 			})
@@ -65,26 +65,41 @@ var _ = Describe("GroupedSink", func() {
 			groupedSinks.RegisterAppSink(inputChan, appSink)
 
 			msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", appId, "App"), "origin")
-			go groupedSinks.Broadcast(appId, msg)
+			groupedSinks.Broadcast(appId, msg)
 
 			Eventually(inputChan).Should(Receive(Equal(msg)))
 			Expect(otherInputChan).To(HaveLen(0))
 		})
 
 		It("sends message to all registered firehose subscribers", func() {
-			fakeSink1 := &fakeSink{sinkId: "sink1", appId: "firehose-a"}
 			inputChan1 := make(chan *events.Envelope, 2)
-			groupedSinks.RegisterFirehoseSink(inputChan1, fakeSink1)
-
-			fakeSink2 := &fakeSink{sinkId: "sink2", appId: "firehose-b"}
 			inputChan2 := make(chan *events.Envelope, 2)
-			groupedSinks.RegisterFirehoseSink(inputChan2, fakeSink2)
+
+			fakeSink1 := &fakeSink{sinkId: "sink1", appId: "firehose-a"}
+			fakeSink2 := &fakeSink{sinkId: "sink2", appId: "firehose-b"}
+
+			registered := groupedSinks.RegisterFirehoseSink(inputChan1, fakeSink1)
+			Expect(registered).To(BeTrue())
+			registered = groupedSinks.RegisterFirehoseSink(inputChan2, fakeSink2)
+			Expect(registered).To(BeTrue())
 
 			msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "app-id", "App"), "origin")
-			go groupedSinks.Broadcast("app-id", msg)
 
-			Eventually(inputChan2).Should(Receive(Equal(msg)))
-			Eventually(inputChan1).Should(Receive(Equal(msg)))
+			var (
+				readFromChan1 bool
+				readFromChan2 bool
+			)
+			f := func() bool {
+				groupedSinks.Broadcast("app-id", msg)
+				select {
+				case <-inputChan1:
+					readFromChan1 = true
+				case <-inputChan2:
+					readFromChan2 = true
+				}
+				return readFromChan1 && readFromChan2
+			}
+			Eventually(f).Should(BeTrue())
 		})
 
 		It("distributes messages to all firehose sinks with the same subscription id", func() {
@@ -102,7 +117,7 @@ var _ = Describe("GroupedSink", func() {
 
 			msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "app-id", "App"), "origin")
 			for i := 0; i < 100; i++ {
-				go groupedSinks.Broadcast("app-id", msg)
+				groupedSinks.Broadcast("app-id", msg)
 			}
 
 			Eventually(func() int {
@@ -150,7 +165,7 @@ var _ = Describe("GroupedSink", func() {
 		It("sends message to all registered sinks that match the appId", func() {
 			appId := "123"
 			appSink := dump.NewDumpSink(appId, 10, time.Second)
-			otherInputChan := make(chan *events.Envelope)
+			otherInputChan := make(chan *events.Envelope, 1)
 			groupedSinks.RegisterAppSink(otherInputChan, appSink)
 
 			appId = "789"
@@ -158,7 +173,7 @@ var _ = Describe("GroupedSink", func() {
 
 			groupedSinks.RegisterAppSink(inputChan, appSink)
 			msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "error message", appId, "App"), "origin")
-			go groupedSinks.BroadcastError(appId, msg)
+			groupedSinks.BroadcastError(appId, msg)
 
 			Eventually(inputChan).Should(Receive(Equal(msg)))
 			Expect(otherInputChan).To(HaveLen(0))
@@ -174,7 +189,7 @@ var _ = Describe("GroupedSink", func() {
 			groupedSinks.RegisterFirehoseSink(inputChan2, fakeSink2)
 
 			msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "app-id", "App"), "origin")
-			go groupedSinks.BroadcastError("app-id", msg)
+			groupedSinks.BroadcastError("app-id", msg)
 
 			Eventually(inputChan2).Should(Receive(Equal(msg)))
 			Eventually(inputChan1).Should(Receive(Equal(msg)))
@@ -189,8 +204,8 @@ var _ = Describe("GroupedSink", func() {
 			groupedSinks.RegisterAppSink(inputChan, sink1)
 			groupedSinks.RegisterAppSink(inputChan, sink2)
 			msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "error message", appId, "App"), "origin")
-			go groupedSinks.BroadcastError(appId, msg)
-			Eventually(inputChan).Should(Receive(Equal(msg)))
+			groupedSinks.BroadcastError(appId, msg)
+			Expect(<-inputChan).To(Equal(msg))
 			Expect(inputChan).To(HaveLen(0))
 		})
 

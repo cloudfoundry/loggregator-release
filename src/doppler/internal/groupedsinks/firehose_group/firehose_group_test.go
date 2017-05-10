@@ -2,6 +2,8 @@ package firehose_group_test
 
 import (
 	"doppler/internal/sinks"
+	"metricemitter"
+	"metricemitter/testhelper"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
@@ -45,27 +47,36 @@ var _ = Describe("FirehoseGroup", func() {
 		sink1 := fakeSink{appId: "firehose-a", sinkId: "sink-a"}
 		sink2 := fakeSink{appId: "firehose-a", sinkId: "sink-b"}
 
-		group := firehose_group.NewFirehoseGroup()
+		mc := testhelper.NewMetricClient()
+		group := firehose_group.NewFirehoseGroup(
+			&spyMetricBatcher{},
+			mc.NewCounterMetric("sinks.dropped",
+				metricemitter.WithVersion(2, 0),
+			),
+		)
 
 		group.AddSink(&sink1, receiveChan1)
 		group.AddSink(&sink2, receiveChan2)
 
 		msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "234", "App"), "origin")
-		group.BroadcastMessage(msg)
 
-		var nextChannelToReceive chan *events.Envelope
-		var rmsg *events.Envelope
-		select {
-		case rmsg = <-receiveChan1:
-			nextChannelToReceive = receiveChan2
-		case rmsg = <-receiveChan2:
-			nextChannelToReceive = receiveChan1
+		var (
+			readFromChan1 bool
+			readFromChan2 bool
+		)
+		f := func() bool {
+			group.BroadcastMessage(msg)
+			var rmsg *events.Envelope
+			select {
+			case rmsg = <-receiveChan1:
+				readFromChan1 = true
+			case rmsg = <-receiveChan2:
+				readFromChan2 = true
+			}
+			Expect(rmsg).To(Equal(msg))
+			return readFromChan1 && readFromChan2
 		}
-
-		Expect(rmsg).To(Equal(msg))
-
-		group.BroadcastMessage(msg)
-		Expect(nextChannelToReceive).To(Receive(&msg))
+		Eventually(f).Should(BeTrue())
 	})
 
 	It("does not send messages to unregistered sinks", func() {
@@ -75,7 +86,13 @@ var _ = Describe("FirehoseGroup", func() {
 		sink1 := fakeSink{appId: "firehose-a", sinkId: "sink-a"}
 		sink2 := fakeSink{appId: "firehose-a", sinkId: "sink-b"}
 
-		group := firehose_group.NewFirehoseGroup()
+		mc := testhelper.NewMetricClient()
+		group := firehose_group.NewFirehoseGroup(
+			&spyMetricBatcher{},
+			mc.NewCounterMetric("sinks.dropped",
+				metricemitter.WithVersion(2, 0),
+			),
+		)
 
 		group.AddSink(&sink1, receiveChan1)
 		group.AddSink(&sink2, receiveChan2)
@@ -92,12 +109,24 @@ var _ = Describe("FirehoseGroup", func() {
 
 	Describe("IsEmpty", func() {
 		It("is true when the group is empty", func() {
-			group := firehose_group.NewFirehoseGroup()
+			mc := testhelper.NewMetricClient()
+			group := firehose_group.NewFirehoseGroup(
+				&spyMetricBatcher{},
+				mc.NewCounterMetric("sinks.dropped",
+					metricemitter.WithVersion(2, 0),
+				),
+			)
 			Expect(group.IsEmpty()).To(BeTrue())
 		})
 
 		It("is false when the group is not empty", func() {
-			group := firehose_group.NewFirehoseGroup()
+			mc := testhelper.NewMetricClient()
+			group := firehose_group.NewFirehoseGroup(
+				&spyMetricBatcher{},
+				mc.NewCounterMetric("sinks.dropped",
+					metricemitter.WithVersion(2, 0),
+				),
+			)
 			sink := fakeSink{appId: "firehose-a", sinkId: "sink-a"}
 
 			group.AddSink(&sink, make(chan *events.Envelope, 10))
@@ -108,7 +137,13 @@ var _ = Describe("FirehoseGroup", func() {
 
 	Describe("RemoveSink", func() {
 		It("makes the group empty and returns true when there is one sink to remove", func() {
-			group := firehose_group.NewFirehoseGroup()
+			mc := testhelper.NewMetricClient()
+			group := firehose_group.NewFirehoseGroup(
+				&spyMetricBatcher{},
+				mc.NewCounterMetric("sinks.dropped",
+					metricemitter.WithVersion(2, 0),
+				),
+			)
 			sink := fakeSink{appId: "firehose-a", sinkId: "sink-a"}
 
 			group.AddSink(&sink, make(chan *events.Envelope, 10))
@@ -118,7 +153,13 @@ var _ = Describe("FirehoseGroup", func() {
 		})
 
 		It("returns false when the group does not contain the requested sink and does not remove any sinks from the group", func() {
-			group := firehose_group.NewFirehoseGroup()
+			mc := testhelper.NewMetricClient()
+			group := firehose_group.NewFirehoseGroup(
+				&spyMetricBatcher{},
+				mc.NewCounterMetric("sinks.dropped",
+					metricemitter.WithVersion(2, 0),
+				),
+			)
 			sink := fakeSink{appId: "firehose-a", sinkId: "sink-a"}
 
 			group.AddSink(&sink, make(chan *events.Envelope, 10))
@@ -130,3 +171,7 @@ var _ = Describe("FirehoseGroup", func() {
 		})
 	})
 })
+
+type spyMetricBatcher struct{}
+
+func (s *spyMetricBatcher) BatchIncrementCounter(name string) {}
