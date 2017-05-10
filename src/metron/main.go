@@ -80,7 +80,7 @@ func main() {
 	appV1 := app.NewV1App(config, registry, clientCreds)
 	go appV1.Start()
 
-	appV2 := app.NewV2App(config, clientCreds, serverCreds, metricClient)
+	appV2 := app.NewV2App(config, registry, clientCreds, serverCreds, metricClient)
 	go appV2.Start()
 
 	// We start the profiler last so that we can definitively say that we're

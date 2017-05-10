@@ -12,6 +12,7 @@ import (
 
 	clientpool "metron/internal/clientpool/v2"
 	egress "metron/internal/egress/v2"
+	"metron/internal/health"
 	ingress "metron/internal/ingress/v2"
 
 	"google.golang.org/grpc"
@@ -19,23 +20,26 @@ import (
 )
 
 type AppV2 struct {
-	config       *Config
-	clientCreds  credentials.TransportCredentials
-	serverCreds  credentials.TransportCredentials
-	metricClient metricemitter.MetricClient
+	config         *Config
+	healthRegistry *health.Registry
+	clientCreds    credentials.TransportCredentials
+	serverCreds    credentials.TransportCredentials
+	metricClient   metricemitter.MetricClient
 }
 
 func NewV2App(
 	c *Config,
+	r *health.Registry,
 	clientCreds credentials.TransportCredentials,
 	serverCreds credentials.TransportCredentials,
 	metricClient metricemitter.MetricClient,
 ) *AppV2 {
 	return &AppV2{
-		config:       c,
-		clientCreds:  clientCreds,
-		serverCreds:  serverCreds,
-		metricClient: metricClient,
+		config:         c,
+		healthRegistry: r,
+		clientCreds:    clientCreds,
+		serverCreds:    serverCreds,
+		metricClient:   metricClient,
 	}
 }
 
@@ -86,6 +90,7 @@ func (a *AppV2) initializePool() *clientpool.ClientPool {
 	}
 
 	fetcher := clientpool.NewSenderFetcher(
+		a.healthRegistry,
 		grpc.WithTransportCredentials(a.clientCreds),
 	)
 
