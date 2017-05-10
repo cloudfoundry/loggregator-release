@@ -28,7 +28,6 @@ func (s *server) Start() {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Panicf("Error creating pprof listener: %s", err)
-
 	}
 
 	log.Printf("Starting pprof server on: %s", lis.Addr().String())
