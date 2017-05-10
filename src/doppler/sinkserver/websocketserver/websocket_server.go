@@ -100,7 +100,11 @@ func New(apiEndpoint string, sinkManager *sinkmanager.SinkManager, writeTimeout 
 }
 
 func (w *WebsocketServer) Start() {
-	s := &http.Server{Handler: w}
+	s := &http.Server{
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		Handler:      w,
+	}
 	err := s.Serve(w.listener)
 	w.logger.Errorf("serve ended with %v", err.Error())
 	close(w.done)
@@ -141,7 +145,6 @@ func (w *WebsocketServer) ServeHTTP(writer http.ResponseWriter, request *http.Re
 	}
 
 	defer func() {
-		ws.WriteControl(gorilla.CloseMessage, gorilla.FormatCloseMessage(gorilla.CloseNormalClosure, ""), time.Time{})
 		ws.Close()
 	}()
 
@@ -237,7 +240,15 @@ func (w *WebsocketServer) streamWebsocket(websocketSink *websocket.WebsocketSink
 	register(websocketSink)
 	defer unregister(websocketSink)
 
-	go websocketConnection.ReadMessage()
+	go func() {
+		var err error
+		for {
+			_, _, err = websocketConnection.ReadMessage()
+			if err != nil {
+				return
+			}
+		}
+	}()
 	server.NewKeepAlive(websocketConnection, w.keepAliveInterval).Run()
 }
 

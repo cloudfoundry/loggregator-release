@@ -1,11 +1,13 @@
 package websocketserver_test
 
 import (
+	"crypto/rand"
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -195,11 +197,11 @@ var _ = Describe("WebsocketServer", func() {
 			connectionDropped <-chan struct{}
 			lm                *events.Envelope
 			cleanup           func()
+			subscriptionID    string
 		)
 
-		const subscriptionID = "firehose-subscription-a"
-
 		BeforeEach(func() {
+			subscriptionID = "firehose-subscription-a-" + randString()
 			stopKeepAlive, connectionDropped, cleanup = addWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/firehose/%s", apiEndpoint, subscriptionID))
 
 			lm, _ = emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
@@ -260,21 +262,16 @@ var _ = Describe("WebsocketServer", func() {
 
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 
-		for i := 0; i < 2; i++ {
-			sinkManager.SendTo(appId, lm)
+		sinkManager.SendTo(appId, lm)
+
+		select {
+		case <-firehoseAChan1:
+			Consistently(firehoseAChan2).ShouldNot(Receive())
+		case <-firehoseAChan2:
+			Consistently(firehoseAChan1).ShouldNot(Receive())
+		case <-time.After(3 * time.Second):
+			Fail("did not receive message")
 		}
-
-		Eventually(func() int {
-			return len(firehoseAChan1) + len(firehoseAChan2)
-		}).Should(Equal(2))
-
-		Consistently(func() int {
-			return len(firehoseAChan2)
-		}).Should(BeNumerically(">", 0))
-
-		Consistently(func() int {
-			return len(firehoseAChan1)
-		}).Should(BeNumerically(">", 0))
 
 		close(stopKeepAlive1)
 		close(stopKeepAlive2)
@@ -332,4 +329,13 @@ func getPort() int {
 	portRangeCoefficient := 100
 	offset := 5
 	return config.GinkgoConfig.ParallelNode*portRangeCoefficient + portRangeStart + offset
+}
+
+func randString() string {
+	b := make([]byte, 20)
+	_, err := rand.Read(b)
+	if err != nil {
+		log.Panicf("unable to read randomness %s:", err)
+	}
+	return fmt.Sprintf("%x", b)
 }

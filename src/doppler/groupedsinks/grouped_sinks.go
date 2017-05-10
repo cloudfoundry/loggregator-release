@@ -17,14 +17,14 @@ import (
 func NewGroupedSinks(logger *gosteno.Logger) *GroupedSinks {
 	return &GroupedSinks{
 		logger:    logger,
-		apps:      make(map[string]map[string]*sink_wrapper.SinkWrapper),
+		apps:      make(map[string]*AppGroup),
 		firehoses: make(map[string]firehose_group.FirehoseGroup),
 	}
 }
 
 type GroupedSinks struct {
 	logger    *gosteno.Logger
-	apps      map[string]map[string]*sink_wrapper.SinkWrapper
+	apps      map[string]*AppGroup
 	firehoses map[string]firehose_group.FirehoseGroup
 	sync.RWMutex
 }
@@ -37,17 +37,13 @@ func (group *GroupedSinks) RegisterAppSink(in chan<- *events.Envelope, sink sink
 	if appId == "" || sink.Identifier() == "" {
 		return false
 	}
-	sinksForApp := group.apps[appId]
-	if sinksForApp == nil {
-		group.apps[appId] = make(map[string]*sink_wrapper.SinkWrapper)
-		sinksForApp = group.apps[appId]
-	}
 
-	if _, ok := sinksForApp[sink.Identifier()]; ok {
-		return false
+	sinksForApp, ok := group.apps[appId]
+	if !ok || sinksForApp == nil {
+		sinksForApp = NewAppGroup()
+		group.apps[appId] = sinksForApp
 	}
-	sinksForApp[sink.Identifier()] = &sink_wrapper.SinkWrapper{InputChan: in, Sink: sink}
-	return true
+	return sinksForApp.AddSink(sink, in)
 }
 
 func (group *GroupedSinks) RegisterFirehoseSink(in chan<- *events.Envelope, sink sinks.Sink) bool {
@@ -59,10 +55,10 @@ func (group *GroupedSinks) RegisterFirehoseSink(in chan<- *events.Envelope, sink
 		return false
 	}
 
-	fgroup := group.firehoses[subscriptionId]
-	if fgroup == nil {
-		group.firehoses[subscriptionId] = firehose_group.NewFirehoseGroup()
-		fgroup = group.firehoses[subscriptionId]
+	fgroup, ok := group.firehoses[subscriptionId]
+	if !ok || fgroup == nil {
+		fgroup = firehose_group.NewFirehoseGroup()
+		group.firehoses[subscriptionId] = fgroup
 	}
 
 	return fgroup.AddSink(sink, in)
@@ -71,13 +67,14 @@ func (group *GroupedSinks) RegisterFirehoseSink(in chan<- *events.Envelope, sink
 func (group *GroupedSinks) IsFirehoseRegistered(sink sinks.Sink) bool {
 	group.RLock()
 	defer group.RUnlock()
+
 	subscriptionId := sink.AppID()
 	if subscriptionId == "" {
 		return false
 	}
 
-	fgroup := group.firehoses[subscriptionId]
-	if fgroup == nil {
+	fgroup, ok := group.firehoses[subscriptionId]
+	if !ok || fgroup == nil {
 		return false
 	}
 
@@ -88,28 +85,29 @@ func (group *GroupedSinks) Broadcast(appId string, msg *events.Envelope) {
 	group.RLock()
 	defer group.RUnlock()
 
-	for _, wrapper := range group.apps[appId] {
-		wrapper.InputChan <- msg
+	sinksForApp, ok := group.apps[appId]
+	if ok && sinksForApp != nil {
+		sinksForApp.BroadcastMessage(msg)
 	}
-
-	group.BroadcastMessageToFirehoses(msg)
+	group.broadcastMessageToFirehoses(msg)
 }
 
-func (group *GroupedSinks) BroadcastError(appId string, errorMsg *events.Envelope) {
+func (group *GroupedSinks) BroadcastError(appId string, msg *events.Envelope) {
 	group.RLock()
 	defer group.RUnlock()
 
-	for _, wrapper := range group.apps[appId] {
-		if wrapper.Sink.ShouldReceiveErrors() {
-			wrapper.InputChan <- errorMsg
-		}
+	sinksForApp, ok := group.apps[appId]
+	if ok && sinksForApp != nil {
+		sinksForApp.BroadcastError(msg)
 	}
-
-	group.BroadcastMessageToFirehoses(errorMsg)
+	group.broadcastMessageToFirehoses(msg)
 }
 
-func (group *GroupedSinks) BroadcastMessageToFirehoses(msg *events.Envelope) {
+func (group *GroupedSinks) broadcastMessageToFirehoses(msg *events.Envelope) {
 	for _, fgroup := range group.firehoses {
+		if fgroup == nil {
+			continue
+		}
 		fgroup.BroadcastMessage(msg)
 	}
 }
@@ -118,88 +116,66 @@ func (group *GroupedSinks) CountFor(appId string) int {
 	group.RLock()
 	defer group.RUnlock()
 
-	if _, ok := group.apps[appId]; !ok {
+	sinksForApp, ok := group.apps[appId]
+	if !ok || sinksForApp == nil {
 		return 0
 	}
-	return len(group.apps[appId])
+	return sinksForApp.length()
 }
 
 func (group *GroupedSinks) DrainFor(appId, drainUrl string) sinks.Sink {
 	group.RLock()
 	defer group.RUnlock()
 
-	wrapper, ok := group.apps[appId][drainUrl]
-	if ok {
-		return wrapper.Sink
+	sinksForApp, ok := group.apps[appId]
+	if !ok || sinksForApp == nil {
+		return nil
 	}
-	return nil
+	return sinksForApp.Sink(drainUrl)
 }
 
 func (group *GroupedSinks) DrainsFor(appId string) []sinks.Sink {
 	group.RLock()
 	defer group.RUnlock()
 
-	results := []sinks.Sink{}
-	for _, wrapper := range group.apps[appId] {
-		_, isSyslogSink := wrapper.Sink.(*syslog.SyslogSink)
-		if isSyslogSink {
-			results = append(results, wrapper.Sink)
-		}
+	sinksForApp, ok := group.apps[appId]
+	if !ok || sinksForApp == nil {
+		return nil
 	}
-
-	return results
+	return sinksForApp.SyslogSinks()
 }
 
 func (group *GroupedSinks) DumpFor(appId string) *dump.DumpSink {
 	group.RLock()
 	defer group.RUnlock()
 
-	appCache, ok := group.apps[appId]
-
-	if !ok {
+	sinksForApp, ok := group.apps[appId]
+	if !ok || sinksForApp == nil {
 		return nil
 	}
-	if _, ok := appCache[appId]; !ok {
-
-		return nil
-	}
-	return appCache[appId].Sink.(*dump.DumpSink)
+	return sinksForApp.RecentLogsSink(appId)
 }
 
 func (group *GroupedSinks) ContainerMetricsFor(appId string) *containermetric.ContainerMetricSink {
 	group.RLock()
 	defer group.RUnlock()
 
-	appCache, ok := group.apps[appId]
-
-	if !ok {
-		group.logger.Debugf("GroupedSinks.ContainerMetricsFor: no sink cache for app id %s", appId)
+	sinksForApp, ok := group.apps[appId]
+	if !ok || sinksForApp == nil {
 		return nil
 	}
-
-	sinkId := "container-metrics-" + appId
-	if _, ok := appCache[sinkId]; !ok {
-		group.logger.Debugf("GroupedSinks.ContainerMetricsFor: no ContainerMetricSink found for app id %s", appId)
-		return nil
-	}
-
-	return appCache[sinkId].Sink.(*containermetric.ContainerMetricSink)
+	return sinksForApp.ContainerMetricsSink("container-metrics-" + appId)
 }
 
 func (group *GroupedSinks) WebsocketSinksFor(appId string) []websocket.WebsocketSink {
-	results := []websocket.WebsocketSink{}
-
 	group.RLock()
-	group.RUnlock()
+	defer group.RUnlock()
 
-	for _, wrapper := range group.apps[appId] {
-		webSocketSink, isWebsocketSink := wrapper.Sink.(*websocket.WebsocketSink)
-		if isWebsocketSink {
-			results = append(results, *webSocketSink)
-		}
+	sinksForApp, ok := group.apps[appId]
+	if !ok || sinksForApp == nil {
+		return nil
 	}
-
-	return results
+	return sinksForApp.WebsocketSinks()
 }
 
 func (group *GroupedSinks) CloseAndDelete(sink sinks.Sink) bool {
@@ -207,48 +183,244 @@ func (group *GroupedSinks) CloseAndDelete(sink sinks.Sink) bool {
 	defer group.Unlock()
 
 	appId := sink.AppID()
-	wrapper, ok := group.apps[appId][sink.Identifier()]
-	if ok {
-		close(wrapper.InputChan)
-		delete(group.apps[appId], sink.Identifier())
-		return true
+
+	sinksForApp, ok := group.apps[appId]
+	if !ok || sinksForApp == nil {
+		return false
 	}
-	return false
+
+	removed := sinksForApp.RemoveSink(sink)
+	if sinksForApp.IsEmpty() {
+		delete(group.apps, appId)
+	}
+
+	return removed
 }
 
 func (group *GroupedSinks) CloseAndDeleteFirehose(sink sinks.Sink) bool {
 	group.Lock()
 	defer group.Unlock()
+
 	firehoseSubscriptionId := sink.AppID()
+
 	fgroup, ok := group.firehoses[firehoseSubscriptionId]
-	if !ok {
+	if !ok || fgroup == nil {
 		return false
 	}
 
 	removed := fgroup.RemoveSink(sink)
 
-	if removed == false {
-		return false
-	}
-
-	if fgroup.IsEmpty() == true {
+	if fgroup.IsEmpty() {
 		delete(group.firehoses, firehoseSubscriptionId)
 	}
 
-	return true
+	return removed
 }
 
 func (group *GroupedSinks) DeleteAll() {
 	group.Lock()
 	defer group.Unlock()
-	for appId, appSinks := range group.apps {
-		for _, wrapper := range appSinks {
-			close(wrapper.InputChan)
+
+	for appId, sinksForApp := range group.apps {
+		if sinksForApp != nil {
+			sinksForApp.RemoveAllSinks()
 		}
 		delete(group.apps, appId)
 	}
 	for subscriptionId, fgroup := range group.firehoses {
-		fgroup.RemoveAllSinks()
+		if fgroup != nil {
+			fgroup.RemoveAllSinks()
+		}
 		delete(group.firehoses, subscriptionId)
 	}
+}
+
+type AppGroup struct {
+	mu       sync.RWMutex
+	wrappers map[string]*sink_wrapper.SinkWrapper
+}
+
+func NewAppGroup() *AppGroup {
+	return &AppGroup{
+		wrappers: make(map[string]*sink_wrapper.SinkWrapper),
+	}
+}
+
+func (g *AppGroup) AddSink(sink sinks.Sink, in chan<- *events.Envelope) bool {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if g.exists(sink) {
+		return false
+	}
+
+	g.wrappers[sink.Identifier()] = &sink_wrapper.SinkWrapper{
+		InputChan: in,
+		Sink:      sink,
+	}
+
+	return true
+}
+
+func (g *AppGroup) Exists(sink sinks.Sink) bool {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.exists(sink)
+}
+
+// exists needs to be called with read or write lock held.
+func (g *AppGroup) exists(sink sinks.Sink) bool {
+	w, ok := g.wrappers[sink.Identifier()]
+	return ok && w != nil
+}
+
+func (g *AppGroup) Sink(id string) sinks.Sink {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.sink(id)
+}
+
+func (g *AppGroup) RecentLogsSink(id string) *dump.DumpSink {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	dump, ok := g.sink(id).(*dump.DumpSink)
+	if !ok {
+		return nil
+	}
+	return dump
+}
+
+func (g *AppGroup) ContainerMetricsSink(id string) *containermetric.ContainerMetricSink {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	containerMetrics, ok := g.sink(id).(*containermetric.ContainerMetricSink)
+	if !ok {
+		return nil
+	}
+	return containerMetrics
+}
+
+// sink needs to be called with read or write lock held.
+func (g *AppGroup) sink(id string) sinks.Sink {
+	wrapper, ok := g.wrappers[id]
+	if !ok || wrapper == nil {
+		return nil
+	}
+	return wrapper.Sink
+}
+
+func (g *AppGroup) SyslogSinks() []sinks.Sink {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	results := []sinks.Sink{}
+	for _, wrapper := range g.wrappers {
+		if wrapper == nil {
+			continue
+		}
+		_, ok := wrapper.Sink.(*syslog.SyslogSink)
+		if !ok {
+			continue
+		}
+		results = append(results, wrapper.Sink)
+	}
+
+	return results
+}
+
+func (g *AppGroup) WebsocketSinks() []websocket.WebsocketSink {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	results := []websocket.WebsocketSink{}
+	for _, wrapper := range g.wrappers {
+		if wrapper == nil {
+			continue
+		}
+		sink, ok := wrapper.Sink.(*websocket.WebsocketSink)
+		if ok {
+			results = append(results, *sink)
+		}
+	}
+
+	return results
+}
+
+func (g *AppGroup) RemoveSink(sink sinks.Sink) bool {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.removeSink(sink)
+}
+
+func (g *AppGroup) RemoveAllSinks() {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	for _, wrapper := range g.wrappers {
+		if wrapper == nil {
+			continue
+		}
+		g.removeSink(wrapper.Sink)
+	}
+}
+
+// removeSink needs to be called with write lock held.
+func (g *AppGroup) removeSink(sink sinks.Sink) bool {
+	wrapper, ok := g.wrappers[sink.Identifier()]
+	delete(g.wrappers, sink.Identifier())
+
+	if !ok || wrapper == nil {
+		return false
+	}
+
+	close(wrapper.InputChan)
+	return true
+}
+
+func (g *AppGroup) IsEmpty() bool {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return len(g.wrappers) == 0
+}
+
+func (g *AppGroup) BroadcastMessage(msg *events.Envelope) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	for _, wrapper := range g.wrappers {
+		if wrapper == nil {
+			continue
+		}
+		select {
+		case wrapper.InputChan <- msg:
+		default:
+			// TODO: emit metric when this occurs
+		}
+	}
+}
+
+func (g *AppGroup) BroadcastError(msg *events.Envelope) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	for _, wrapper := range g.wrappers {
+		if wrapper == nil {
+			continue
+		}
+		if wrapper.Sink.ShouldReceiveErrors() {
+			select {
+			case wrapper.InputChan <- msg:
+			default:
+				// TODO: emit metric when this occurs
+			}
+		}
+	}
+}
+
+func (g *AppGroup) length() int {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return len(g.wrappers)
 }
