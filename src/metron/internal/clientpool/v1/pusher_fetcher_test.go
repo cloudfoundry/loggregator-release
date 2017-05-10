@@ -44,7 +44,7 @@ var _ = Describe("PusherFetcher", func() {
 		Expect(registry.GetValue("doppler_v1_streams")).To(Equal(int64(1)))
 	})
 
-	It("decremtns a counter when a connection is closed", func() {
+	It("decremetns a counter when a connection is closed", func() {
 		server := newSpyIngestorServer()
 		Expect(server.Start()).To(Succeed())
 		defer server.Stop()
@@ -108,7 +108,7 @@ func newSpyIngestorServer() *SpyIngestorServer {
 }
 
 func (s *SpyIngestorServer) Start() error {
-	lis, err := net.Listen("tcp", ":0")
+	lis, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		return err
 	}
