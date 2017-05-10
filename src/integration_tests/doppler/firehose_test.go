@@ -109,21 +109,21 @@ var _ = Describe("Firehose test", func() {
 	})
 
 	It("firehose subscriptions split message load", func() {
-		receiveChan1 := make(chan []byte, 10)
-		receiveChan2 := make(chan []byte, 10)
+		receiveChan1 := make(chan []byte, 100)
+		receiveChan2 := make(chan []byte, 100)
 		firehoseWs1, _ := AddWSSink(receiveChan1, "4567", "/firehose/hose-subscription-1")
 		firehoseWs2, _ := AddWSSink(receiveChan2, "4567", "/firehose/hose-subscription-1")
 		defer firehoseWs1.Close()
 		defer firehoseWs2.Close()
 
-		for i := 0; i < 10; i++ {
+		for i := 0; i < 100; i++ {
 			SendAppLog(appID, "message", inputConnection)
 		}
 
 		Eventually(func() int {
 			return len(receiveChan1) + len(receiveChan2)
-		}).Should(Equal(10))
+		}).Should(Equal(100))
 
-		Expect(len(receiveChan1) - len(receiveChan2)).To(BeNumerically("~", 0, 2.5))
+		Expect(len(receiveChan1) - len(receiveChan2)).To(BeNumerically("~", 0, 25))
 	})
 })

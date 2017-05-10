@@ -3,6 +3,7 @@ package firehose_group
 import (
 	"doppler/groupedsinks/sink_wrapper"
 	"doppler/sinks"
+	"math/rand"
 	"sync"
 
 	"github.com/cloudfoundry/sonde-go/events"
@@ -18,86 +19,108 @@ type FirehoseGroup interface {
 }
 
 type firehoseGroup struct {
-	sinkWrappers      []*sink_wrapper.SinkWrapper
-	lastUsedSinkIndex int
-	sync.RWMutex
+	mu       sync.RWMutex
+	wrappers map[string]*sink_wrapper.SinkWrapper
 }
 
 func NewFirehoseGroup() *firehoseGroup {
 	return &firehoseGroup{
-		sinkWrappers: make([]*sink_wrapper.SinkWrapper, 0),
+		wrappers: make(map[string]*sink_wrapper.SinkWrapper),
 	}
 }
 
 func (group *firehoseGroup) Exists(sink sinks.Sink) bool {
-	group.Lock()
-	defer group.Unlock()
-	for _, sinkWrapper := range group.sinkWrappers {
-		if sink.Identifier() == sinkWrapper.Sink.Identifier() {
-			return true
-		}
-	}
-	return false
+	group.mu.RLock()
+	defer group.mu.RUnlock()
+	return group.exists(sink)
 }
 
 func (group *firehoseGroup) AddSink(sink sinks.Sink, in chan<- *events.Envelope) bool {
-	if group.Exists(sink) {
+	group.mu.Lock()
+	defer group.mu.Unlock()
+
+	if group.exists(sink) {
 		return false
 	}
 
-	group.Lock()
-	defer group.Unlock()
+	group.wrappers[sink.Identifier()] = &sink_wrapper.SinkWrapper{
+		InputChan: in,
+		Sink:      sink,
+	}
 
-	sinkWrapper := sink_wrapper.SinkWrapper{InputChan: in, Sink: sink}
-	group.sinkWrappers = append(group.sinkWrappers, &sinkWrapper)
 	return true
 }
 
+// exists needs to be called with read or write lock held.
+func (group *firehoseGroup) exists(sink sinks.Sink) bool {
+	w, ok := group.wrappers[sink.Identifier()]
+	return ok && w != nil
+}
+
 func (group *firehoseGroup) RemoveSink(fsink sinks.Sink) bool {
-	for i, sinkWrapper := range group.sinkWrappers {
-		if sinkWrapper.Sink == fsink {
-			group.Lock()
-			defer group.Unlock()
-
-			close(sinkWrapper.InputChan)
-			s := group.sinkWrappers
-			group.sinkWrappers = s[:i+copy(s[i:], s[i+1:])]
-
-			return true
-		}
-	}
-
-	return false
+	group.mu.Lock()
+	defer group.mu.Unlock()
+	return group.removeSink(fsink)
 }
 
 func (group *firehoseGroup) RemoveAllSinks() {
-	for _, sinkWrapper := range group.sinkWrappers {
-		group.RemoveSink(sinkWrapper.Sink)
+	group.mu.Lock()
+	defer group.mu.Unlock()
+
+	for _, wrapper := range group.wrappers {
+		if wrapper != nil {
+			group.removeSink(wrapper.Sink)
+		}
 	}
+}
+
+// removeSink needs to be called with write lock held.
+func (group *firehoseGroup) removeSink(sink sinks.Sink) bool {
+	wrapper, ok := group.wrappers[sink.Identifier()]
+	delete(group.wrappers, sink.Identifier())
+
+	if !ok || wrapper == nil {
+		return false
+	}
+
+	close(wrapper.InputChan)
+	return true
 }
 
 func (group *firehoseGroup) IsEmpty() bool {
-	return group.length() == 0
+	group.mu.RLock()
+	defer group.mu.RUnlock()
+	return len(group.wrappers) == 0
 }
 
 func (group *firehoseGroup) BroadcastMessage(msg *events.Envelope) {
-	group.Lock()
-	defer group.Unlock()
+	group.mu.RLock()
+	defer group.mu.RUnlock()
 
-	l := len(group.sinkWrappers)
-	lastUsed := group.lastUsedSinkIndex
-	if lastUsed >= l {
-		group.lastUsedSinkIndex = 0
+	// only write to a single wrapper
+	wrapper := group.randomWrapper()
+	if wrapper == nil {
+		return
 	}
-
-	group.sinkWrappers[group.lastUsedSinkIndex].InputChan <- msg
-
-	group.lastUsedSinkIndex += 1
+	select {
+	case wrapper.InputChan <- msg:
+	default:
+		// TODO: emit metric when this occurs
+	}
 }
 
-func (group *firehoseGroup) length() int {
-	group.RLock()
-	defer group.RUnlock()
-
-	return len(group.sinkWrappers)
+// randomWrapper needs to be called with read or write lock held.
+func (group *firehoseGroup) randomWrapper() *sink_wrapper.SinkWrapper {
+	var i int
+	if len(group.wrappers) == 0 {
+		return nil
+	}
+	r := rand.Intn(len(group.wrappers))
+	for _, w := range group.wrappers {
+		if i == r {
+			return w
+		}
+		i++
+	}
+	return nil
 }

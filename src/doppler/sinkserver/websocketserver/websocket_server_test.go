@@ -1,11 +1,13 @@
 package websocketserver_test
 
 import (
+	"crypto/rand"
 	"doppler/sinkserver/blacklist"
 	"doppler/sinkserver/sinkmanager"
 	"doppler/sinkserver/websocketserver"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -182,14 +184,13 @@ var _ = Describe("WebsocketServer", func() {
 
 	Context("websocket firehose client", func() {
 		var (
-			stopKeepAlive chan struct{}
-			lm            *events.Envelope
+			stopKeepAlive  chan struct{}
+			lm             *events.Envelope
+			subscriptionID string
 		)
 
-		const subscriptionID = "firehose-subscription-a"
-
 		BeforeEach(func() {
-
+			subscriptionID = "firehose-subscription-a-" + randString()
 			var err error
 			stopKeepAlive, _, err = AddWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/firehose/%s", apiEndpoint, subscriptionID))
 			Expect(err).NotTo(HaveOccurred())
@@ -238,21 +239,16 @@ var _ = Describe("WebsocketServer", func() {
 
 		lm, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "my message", appId, "App"), "origin")
 
-		for i := 0; i < 2; i++ {
-			sinkManager.SendTo(appId, lm)
+		sinkManager.SendTo(appId, lm)
+
+		select {
+		case <-firehoseAChan1:
+			Consistently(firehoseAChan2).ShouldNot(Receive())
+		case <-firehoseAChan2:
+			Consistently(firehoseAChan1).ShouldNot(Receive())
+		case <-time.After(3 * time.Second):
+			Fail("did not receive message")
 		}
-
-		Eventually(func() int {
-			return len(firehoseAChan1) + len(firehoseAChan2)
-		}).Should(Equal(2))
-
-		Consistently(func() int {
-			return len(firehoseAChan2)
-		}).Should(BeNumerically(">", 0))
-
-		Consistently(func() int {
-			return len(firehoseAChan1)
-		}).Should(BeNumerically(">", 0))
 
 		close(stopKeepAlive1)
 		close(stopKeepAlive2)
@@ -303,4 +299,13 @@ func receiveEnvelope(dataChan <-chan []byte) (*events.Envelope, error) {
 	var data []byte
 	Eventually(dataChan).Should(Receive(&data))
 	return parseEnvelope(data)
+}
+
+func randString() string {
+	b := make([]byte, 20)
+	_, err := rand.Read(b)
+	if err != nil {
+		log.Panicf("unable to read randomness %s:", err)
+	}
+	return fmt.Sprintf("%x", b)
 }

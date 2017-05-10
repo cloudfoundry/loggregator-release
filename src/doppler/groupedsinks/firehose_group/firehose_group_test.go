@@ -53,21 +53,24 @@ var _ = Describe("FirehoseGroup", func() {
 		group.AddSink(&sink2, receiveChan2)
 
 		msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "test message", "234", "App"), "origin")
-		group.BroadcastMessage(msg)
 
-		var nextChannelToReceive chan *events.Envelope
-		var rmsg *events.Envelope
-		select {
-		case rmsg = <-receiveChan1:
-			nextChannelToReceive = receiveChan2
-		case rmsg = <-receiveChan2:
-			nextChannelToReceive = receiveChan1
+		var (
+			readFromChan1 bool
+			readFromChan2 bool
+		)
+		f := func() bool {
+			group.BroadcastMessage(msg)
+			var rmsg *events.Envelope
+			select {
+			case rmsg = <-receiveChan1:
+				readFromChan1 = true
+			case rmsg = <-receiveChan2:
+				readFromChan2 = true
+			}
+			Expect(rmsg).To(Equal(msg))
+			return readFromChan1 && readFromChan2
 		}
-
-		Expect(rmsg).To(Equal(msg))
-
-		group.BroadcastMessage(msg)
-		Expect(nextChannelToReceive).To(Receive(&msg))
+		Eventually(f).Should(BeTrue())
 	})
 
 	It("does not send messages to unregistered sinks", func() {
