@@ -25,7 +25,6 @@ import (
 	"github.com/gorilla/websocket"
 	"golang.org/x/net/context"
 
-	. "github.com/apoydence/eachers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
