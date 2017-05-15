@@ -14,12 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"plumbing"
 	"trafficcontroller/internal/proxy"
 
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
-	"github.com/cloudfoundry/dropsonde/metricbatcher"
-	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/websocket"
@@ -38,14 +35,7 @@ var _ = Describe("ServeHTTP()", func() {
 
 		mockGrpcConnector       *mockGrpcConnector
 		mockDopplerStreamClient *mockReceiver
-		fakeMetricSender        *fake.FakeMetricSender
 	)
-
-	BeforeSuite(func() {
-		fakeMetricSender = fake.NewFakeMetricSender()
-		metricBatcher := metricbatcher.New(fakeMetricSender, time.Millisecond)
-		metrics.Initialize(fakeMetricSender, metricBatcher)
-	})
 
 	BeforeEach(func() {
 		auth = LogAuthorizer{Result: AuthorizerResult{Status: http.StatusOK}}
@@ -144,123 +134,6 @@ var _ = Describe("ServeHTTP()", func() {
 				Eventually(ctx.Err).Should(HaveOccurred())
 				Expect(recorder.Code).To(Equal(http.StatusServiceUnavailable))
 			})
-		})
-
-		Context("if the path is not valid", func() {
-			It("returns a 404", func() {
-				req, _ := http.NewRequest("GET", "/apps/abc123/bar", nil)
-
-				dopplerProxy.ServeHTTP(recorder, req)
-
-				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-			})
-		})
-
-		Context("if the app id is forbidden", func() {
-			It("returns a not found status", func() {
-				auth.Result = AuthorizerResult{Status: http.StatusForbidden, ErrorMessage: http.StatusText(http.StatusForbidden)}
-
-				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
-				req.Header.Add("Authorization", "token")
-
-				dopplerProxy.ServeHTTP(recorder, req)
-
-				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-			})
-		})
-
-		Context("if the app id is not found", func() {
-			It("returns a not found status", func() {
-				auth.Result = AuthorizerResult{Status: http.StatusNotFound, ErrorMessage: http.StatusText(http.StatusNotFound)}
-
-				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
-				req.Header.Add("Authorization", "token")
-
-				dopplerProxy.ServeHTTP(recorder, req)
-
-				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-			})
-		})
-
-		Context("if any other error occurs", func() {
-			It("returns an Internal Server Error", func() {
-				auth.Result = AuthorizerResult{Status: http.StatusInternalServerError, ErrorMessage: "some bad error"}
-
-				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
-				req.Header.Add("Authorization", "token")
-
-				dopplerProxy.ServeHTTP(recorder, req)
-
-				Expect(recorder.Code).To(Equal(http.StatusInternalServerError))
-			})
-		})
-
-		Context("if authorization fails", func() {
-			It("returns an unauthorized status and sets the WWW-Authenticate header", func() {
-				auth.Result = AuthorizerResult{Status: http.StatusUnauthorized, ErrorMessage: "Error: Invalid authorization"}
-
-				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
-				req.Header.Add("Authorization", "token")
-
-				dopplerProxy.ServeHTTP(recorder, req)
-
-				Expect(auth.TokenParam).To(Equal("token"))
-				Expect(auth.Target).To(Equal("abc123"))
-
-				Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
-				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
-			})
-
-			It("does not attempt to connect to doppler", func() {
-				auth.Result = AuthorizerResult{Status: http.StatusUnauthorized, ErrorMessage: "Authorization Failed"}
-
-				req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
-				req.Header.Add("Authorization", "token")
-
-				dopplerProxy.ServeHTTP(recorder, req)
-				Consistently(mockGrpcConnector.SubscribeCalled).ShouldNot(Receive())
-			})
-		})
-
-		It("can read the authorization information from a cookie", func() {
-			auth.Result = AuthorizerResult{Status: http.StatusUnauthorized, ErrorMessage: "Authorization Failed"}
-
-			req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
-
-			req.AddCookie(&http.Cookie{Name: "authorization", Value: "cookie-token"})
-
-			dopplerProxy.ServeHTTP(recorder, req)
-
-			Expect(auth.TokenParam).To(Equal("cookie-token"))
-		})
-
-		It("connects to doppler servers with correct parameters", func() {
-			req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
-			req.Header.Add("Authorization", "token")
-
-			dopplerProxy.ServeHTTP(recorder, req)
-
-			Eventually(mockGrpcConnector.SubscribeCalled).Should(Receive())
-
-			Expect(mockGrpcConnector.SubscribeInput.Ctx).To(Receive(Not(BeNil())))
-			Expect(mockGrpcConnector.SubscribeInput.Req).To(Receive(Equal(
-				&plumbing.SubscriptionRequest{
-					Filter: &plumbing.Filter{
-						AppID: "abc123",
-					},
-				},
-			)))
-		})
-
-		It("closes the context when the client closes its connection", func() {
-			req, _ := http.NewRequest("GET", "/apps/abc123/stream", nil)
-			req.Header.Add("Authorization", "token")
-
-			dopplerProxy.ServeHTTP(recorder, req)
-
-			var ctx context.Context
-			Eventually(mockGrpcConnector.SubscribeInput.Ctx).Should(Receive(&ctx))
-			Eventually(ctx.Done).Should(BeClosed())
 		})
 
 		It("returns the requested container metrics", func(done Done) {

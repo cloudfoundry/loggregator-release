@@ -10,7 +10,6 @@ import (
 
 	"golang.org/x/net/context"
 
-	. "github.com/apoydence/eachers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -51,10 +50,11 @@ var _ = Describe("FirehoseHandler", func() {
 				context.WithValue(req.Context(), "subID", "abc-123")),
 			)
 
-			expectedRequest := &plumbing.SubscriptionRequest{
+			var request subscribeRequest
+			Eventually(connector.subscriptions).Should(Receive(&request))
+			Expect(request.request).To(Equal(&plumbing.SubscriptionRequest{
 				ShardID: "abc-123",
-			}
-			Eventually(connector.subscriptionRequests).Should(BeCalled(With(expectedRequest)))
+			}))
 		})
 
 		It("returns an unauthorized status and sets the WWW-Authenticate header if authorization fails", func() {
@@ -83,25 +83,3 @@ var _ = Describe("FirehoseHandler", func() {
 		})
 	})
 })
-
-type SpyGRPCConnector struct {
-	subscriptionRequests chan *plumbing.SubscriptionRequest
-}
-
-func newSpyGRPCConnector() *SpyGRPCConnector {
-	return &SpyGRPCConnector{
-		subscriptionRequests: make(chan *plumbing.SubscriptionRequest, 100),
-	}
-}
-
-func (s *SpyGRPCConnector) Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) (func() ([]byte, error), error) {
-	s.subscriptionRequests <- req
-
-	return func() ([]byte, error) { return []byte("a-slice"), nil }, nil
-}
-func (s *SpyGRPCConnector) ContainerMetrics(ctx context.Context, appID string) [][]byte {
-	return nil
-}
-func (s *SpyGRPCConnector) RecentLogs(ctx context.Context, appID string) [][]byte {
-	return nil
-}

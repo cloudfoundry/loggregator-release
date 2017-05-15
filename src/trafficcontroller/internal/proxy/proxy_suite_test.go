@@ -5,13 +5,19 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"sync"
+	"time"
 
 	"plumbing"
 	"testing"
 
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
 
+	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+	"github.com/cloudfoundry/dropsonde/metrics"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -22,6 +28,14 @@ func TestProxy(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Proxy Suite")
 }
+
+var fakeMetricSender *fake.FakeMetricSender
+
+var _ = BeforeSuite(func() {
+	fakeMetricSender = fake.NewFakeMetricSender()
+	metricBatcher := metricbatcher.New(fakeMetricSender, time.Millisecond)
+	metrics.Initialize(fakeMetricSender, metricBatcher)
+})
 
 type AuthorizerResult struct {
 	Status       int
@@ -71,4 +85,54 @@ func startGRPCServer(ds plumbing.DopplerServer, addr string) (net.Listener, *grp
 	go s.Serve(lis)
 
 	return lis, s
+}
+
+type recentLogsRequest struct {
+	ctx   context.Context
+	appID string
+}
+
+type subscribeRequest struct {
+	ctx     context.Context
+	request *plumbing.SubscriptionRequest
+}
+
+type SpyGRPCConnector struct {
+	mu            sync.Mutex
+	subscriptions chan subscribeRequest
+	recentLogs    chan recentLogsRequest
+}
+
+func newSpyGRPCConnector() *SpyGRPCConnector {
+	return &SpyGRPCConnector{
+		subscriptions: make(chan subscribeRequest, 100),
+		recentLogs:    make(chan recentLogsRequest, 100),
+	}
+}
+
+func (s *SpyGRPCConnector) Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) (func() ([]byte, error), error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.subscriptions <- subscribeRequest{
+		ctx:     ctx,
+		request: req,
+	}
+
+	return func() ([]byte, error) { return []byte("a-slice"), nil }, nil
+}
+
+func (s *SpyGRPCConnector) ContainerMetrics(ctx context.Context, appID string) [][]byte {
+	return nil
+}
+func (s *SpyGRPCConnector) RecentLogs(ctx context.Context, appID string) [][]byte {
+	s.recentLogs <- recentLogsRequest{
+		ctx:   ctx,
+		appID: appID,
+	}
+
+	return [][]byte{
+		[]byte("log1"),
+		[]byte("log2"),
+		[]byte("log3"),
+	}
 }
