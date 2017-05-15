@@ -155,7 +155,7 @@ func (m *DopplerServer) sendData(req *plumbing.SubscriptionRequest, sender sende
 
 // Alert logs dropped message counts to stderr.
 func (m *DopplerServer) Alert(missed int) {
-	log.Printf("Dropped %d envelopes", missed)
+	log.Printf("Dropped (egress) %d envelopes", missed)
 }
 
 func (m *DopplerServer) monitorContext(ctx context.Context, done *int64) {
