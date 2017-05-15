@@ -379,47 +379,6 @@ var _ = Describe("ServeHTTP()", func() {
 		})
 	})
 
-	Context("Firehose", func() {
-		Context("if a subscription_id is provided", func() {
-			It("connects to doppler servers with correct parameters", func() {
-				req, _ := http.NewRequest("GET", "/firehose/abc-123", nil)
-				req.Header.Add("Authorization", "token")
-
-				dopplerProxy.ServeHTTP(recorder, req)
-
-				expectedRequest := &plumbing.SubscriptionRequest{
-					ShardID: "abc-123",
-				}
-				Eventually(mockGrpcConnector.SubscribeInput.Req).Should(BeCalled(With(expectedRequest)))
-			})
-
-			It("returns an unauthorized status and sets the WWW-Authenticate header if authorization fails", func() {
-				adminAuth.Result = AuthorizerResult{Status: http.StatusUnauthorized, ErrorMessage: "Error: Invalid authorization"}
-
-				req, _ := http.NewRequest("GET", "/firehose/abc-123", nil)
-				req.Header.Add("Authorization", "token")
-
-				dopplerProxy.ServeHTTP(recorder, req)
-
-				Expect(adminAuth.TokenParam).To(Equal("token"))
-
-				Expect(recorder.Code).To(Equal(http.StatusUnauthorized))
-				Expect(recorder.HeaderMap.Get("WWW-Authenticate")).To(Equal("Basic"))
-				Expect(recorder.Body.String()).To(Equal("You are not authorized. Error: Invalid authorization"))
-			})
-		})
-
-		Context("if subscription_id is not provided", func() {
-			It("returns a 404", func() {
-				req, _ := http.NewRequest("GET", "/firehose/", nil)
-				req.Header.Add("Authorization", "token")
-
-				dopplerProxy.ServeHTTP(recorder, req)
-				Expect(recorder.Code).To(Equal(http.StatusNotFound))
-			})
-		})
-	})
-
 	Context("Other invalid paths", func() {
 		It("returns a 404 for an empty path", func() {
 			req, _ := http.NewRequest("GET", "/", nil)
