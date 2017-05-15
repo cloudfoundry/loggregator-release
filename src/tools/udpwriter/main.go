@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	target = flag.String("target", "", "the host:port of the target metron")
+	target = flag.String("target", "localhost:3457", "the host:port of the target metron")
 	fast   = flag.Duration("fast", time.Second, "the delay of the fast writer")
 	slow   = flag.Duration("slow", time.Second, "the delay of the slow writer")
 )
