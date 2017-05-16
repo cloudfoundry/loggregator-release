@@ -59,6 +59,20 @@ var _ = Describe("FirehoseHandler", func() {
 		}))
 	})
 
+	It("accepts a query param for filtering logs", func() {
+		req, err := http.NewRequest("GET", "/firehose/123?filter-type=logs", nil)
+		Expect(err).NotTo(HaveOccurred())
+
+		h := proxy.NewFirehoseHandler(connector)
+		h.ServeHTTP(recorder, req)
+
+		Expect(connector.subscriptions.request.Filter).To(Equal(&plumbing.Filter{
+			Message: &plumbing.Filter_Log{
+				Log: &plumbing.LogFilter{},
+			},
+		}))
+	})
+
 	It("returns an unauthorized status and sets the WWW-Authenticate header if authorization fails", func() {
 		adminAuth.Result = AuthorizerResult{Status: http.StatusUnauthorized, ErrorMessage: "Error: Invalid authorization"}
 

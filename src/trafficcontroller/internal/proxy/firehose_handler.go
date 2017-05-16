@@ -30,8 +30,19 @@ func (h *FirehoseHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	var filter *plumbing.Filter
+	filter_type := r.URL.Query().Get("filter-type")
+	if filter_type == "logs" {
+		filter = &plumbing.Filter{
+			Message: &plumbing.Filter_Log{
+				Log: &plumbing.LogFilter{},
+			},
+		}
+	}
+
 	client, err := h.grpcConn.Subscribe(ctx, &plumbing.SubscriptionRequest{
 		ShardID: subID,
+		Filter:  filter,
 	})
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
