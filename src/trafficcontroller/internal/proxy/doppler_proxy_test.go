@@ -3,8 +3,6 @@
 package proxy_test
 
 import (
-	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -16,17 +14,15 @@ import (
 
 	"trafficcontroller/internal/proxy"
 
-	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-	"github.com/gorilla/websocket"
 	"golang.org/x/net/context"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("ServeHTTP()", func() {
+var _ = Describe("DopplerProxy", func() {
 	var (
 		auth         LogAuthorizer
 		adminAuth    AdminAuthorizer
@@ -67,196 +63,186 @@ var _ = Describe("ServeHTTP()", func() {
 		close(mockDopplerStreamClient.RecvOutput.Ret1)
 	})
 
-	Context("App Logs", func() {
-		Describe("TrafficController emitted request metrics", func() {
-			requestAndAssert := func(req *http.Request, metricName string) {
-				requestStart := time.Now()
-				dopplerProxy.ServeHTTP(recorder, req)
-				metric := fakeMetricSender.GetValue(metricName)
-				elapsed := float64(time.Since(requestStart)) / float64(time.Millisecond)
+	Describe("TrafficController emitted request metrics", func() {
+		requestAndAssert := func(req *http.Request, metricName string) {
+			requestStart := time.Now()
+			dopplerProxy.ServeHTTP(recorder, req)
+			metric := fakeMetricSender.GetValue(metricName)
+			elapsed := float64(time.Since(requestStart)) / float64(time.Millisecond)
 
-				Expect(metric.Unit).To(Equal("ms"))
-				Expect(metric.Value).To(BeNumerically("<", elapsed))
-			}
+			Expect(metric.Unit).To(Equal("ms"))
+			Expect(metric.Value).To(BeNumerically("<", elapsed))
+		}
 
-			It("emits latency value metric for recentlogs request", func() {
-				mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
-				req, _ := http.NewRequest("GET", "/apps/appID123/recentlogs", nil)
-				requestAndAssert(req, "dopplerProxy.recentlogsLatency")
-			})
-
-			It("emits latency value metric for containermetrics request", func() {
-				mockGrpcConnector.ContainerMetricsOutput.Ret0 <- nil
-
-				req, _ := http.NewRequest("GET", "/apps/appID123/containermetrics", nil)
-				requestAndAssert(req, "dopplerProxy.containermetricsLatency")
-			})
-
-			It("does not emit any latency metrics for stream request", func() {
-				req, _ := http.NewRequest("GET", "/apps/appID123/stream", nil)
-				dopplerProxy.ServeHTTP(recorder, req)
-				metric := fakeMetricSender.GetValue("dopplerProxy.streamLatency")
-
-				Expect(metric.Unit).To(BeEmpty())
-				Expect(metric.Value).To(BeZero())
-			})
-
-			It("creates a context with a deadline for recent logs", func() {
-				go func() {
-					time.Sleep(100 * time.Millisecond)
-					mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
-				}()
-				req, _ := http.NewRequest("GET", "/apps/appID123/recentlogs", nil)
-				dopplerProxy.ServeHTTP(recorder, req)
-
-				var ctx context.Context
-				Eventually(mockGrpcConnector.RecentLogsInput.Ctx).Should(Receive(&ctx))
-				_, ok := ctx.Deadline()
-				Expect(ok).To(BeTrue())
-
-				Eventually(ctx.Err).Should(HaveOccurred())
-				Expect(recorder.Code).To(Equal(http.StatusServiceUnavailable))
-			})
-
-			It("creates a context with a deadline for container metrics", func() {
-				go func() {
-					time.Sleep(100 * time.Millisecond)
-					mockGrpcConnector.ContainerMetricsOutput.Ret0 <- nil
-				}()
-				req, _ := http.NewRequest("GET", "/apps/appID123/containermetrics", nil)
-				dopplerProxy.ServeHTTP(recorder, req)
-
-				var ctx context.Context
-				Eventually(mockGrpcConnector.ContainerMetricsInput.Ctx).Should(Receive(&ctx))
-				_, ok := ctx.Deadline()
-				Expect(ok).To(BeTrue())
-
-				Eventually(ctx.Err).Should(HaveOccurred())
-				Expect(recorder.Code).To(Equal(http.StatusServiceUnavailable))
-			})
+		It("emits latency value metric for recentlogs request", func() {
+			mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
+			req, _ := http.NewRequest("GET", "/apps/appID123/recentlogs", nil)
+			requestAndAssert(req, "dopplerProxy.recentlogsLatency")
 		})
 
-		It("returns the requested container metrics", func(done Done) {
-			defer close(done)
-			req, _ := http.NewRequest("GET", "/apps/abc123/containermetrics", nil)
-			req.Header.Add("Authorization", "token")
-			now := time.Now()
-			_, envBytes1 := buildContainerMetric("abc123", now)
-			_, envBytes2 := buildContainerMetric("abc123", now.Add(-5*time.Minute))
-			containerResp := [][]byte{
-				envBytes1,
-				envBytes2,
-			}
-			mockGrpcConnector.ContainerMetricsOutput.Ret0 <- containerResp
+		It("emits latency value metric for containermetrics request", func() {
+			mockGrpcConnector.ContainerMetricsOutput.Ret0 <- nil
 
+			req, _ := http.NewRequest("GET", "/apps/appID123/containermetrics", nil)
+			requestAndAssert(req, "dopplerProxy.containermetricsLatency")
+		})
+
+		It("does not emit any latency metrics for stream request", func() {
+			req, _ := http.NewRequest("GET", "/apps/appID123/stream", nil)
+			dopplerProxy.ServeHTTP(recorder, req)
+			metric := fakeMetricSender.GetValue("dopplerProxy.streamLatency")
+
+			Expect(metric.Unit).To(BeEmpty())
+			Expect(metric.Value).To(BeZero())
+		})
+
+		It("creates a context with a deadline for recent logs", func() {
+			go func() {
+				time.Sleep(100 * time.Millisecond)
+				mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
+			}()
+			req, _ := http.NewRequest("GET", "/apps/appID123/recentlogs", nil)
 			dopplerProxy.ServeHTTP(recorder, req)
 
-			boundaryRegexp := regexp.MustCompile("boundary=(.*)")
-			matches := boundaryRegexp.FindStringSubmatch(recorder.Header().Get("Content-Type"))
-			Expect(matches).To(HaveLen(2))
-			Expect(matches[1]).NotTo(BeEmpty())
-			reader := multipart.NewReader(recorder.Body, matches[1])
+			var ctx context.Context
+			Eventually(mockGrpcConnector.RecentLogsInput.Ctx).Should(Receive(&ctx))
+			_, ok := ctx.Deadline()
+			Expect(ok).To(BeTrue())
 
+			Eventually(ctx.Err).Should(HaveOccurred())
+			Expect(recorder.Code).To(Equal(http.StatusServiceUnavailable))
+		})
+
+		It("creates a context with a deadline for container metrics", func() {
+			go func() {
+				time.Sleep(100 * time.Millisecond)
+				mockGrpcConnector.ContainerMetricsOutput.Ret0 <- nil
+			}()
+			req, _ := http.NewRequest("GET", "/apps/appID123/containermetrics", nil)
+			dopplerProxy.ServeHTTP(recorder, req)
+
+			var ctx context.Context
+			Eventually(mockGrpcConnector.ContainerMetricsInput.Ctx).Should(Receive(&ctx))
+			_, ok := ctx.Deadline()
+			Expect(ok).To(BeTrue())
+
+			Eventually(ctx.Err).Should(HaveOccurred())
+			Expect(recorder.Code).To(Equal(http.StatusServiceUnavailable))
+		})
+	})
+
+	It("returns the requested container metrics", func(done Done) {
+		defer close(done)
+		req, _ := http.NewRequest("GET", "/apps/abc123/containermetrics", nil)
+		req.Header.Add("Authorization", "token")
+		now := time.Now()
+		_, envBytes1 := buildContainerMetric("abc123", now)
+		_, envBytes2 := buildContainerMetric("abc123", now.Add(-5*time.Minute))
+		containerResp := [][]byte{
+			envBytes1,
+			envBytes2,
+		}
+		mockGrpcConnector.ContainerMetricsOutput.Ret0 <- containerResp
+
+		dopplerProxy.ServeHTTP(recorder, req)
+
+		boundaryRegexp := regexp.MustCompile("boundary=(.*)")
+		matches := boundaryRegexp.FindStringSubmatch(recorder.Header().Get("Content-Type"))
+		Expect(matches).To(HaveLen(2))
+		Expect(matches[1]).NotTo(BeEmpty())
+		reader := multipart.NewReader(recorder.Body, matches[1])
+
+		part, err := reader.NextPart()
+		Expect(err).ToNot(HaveOccurred())
+
+		partBytes, err := ioutil.ReadAll(part)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(partBytes).To(Equal(containerResp[0]))
+	})
+
+	It("returns the requested recent logs", func() {
+		req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs", nil)
+		req.Header.Add("Authorization", "token")
+		recentLogResp := [][]byte{
+			[]byte("log1"),
+			[]byte("log2"),
+			[]byte("log3"),
+		}
+		mockGrpcConnector.RecentLogsOutput.Ret0 <- recentLogResp
+
+		dopplerProxy.ServeHTTP(recorder, req)
+
+		boundaryRegexp := regexp.MustCompile("boundary=(.*)")
+		matches := boundaryRegexp.FindStringSubmatch(recorder.Header().Get("Content-Type"))
+		Expect(matches).To(HaveLen(2))
+		Expect(matches[1]).NotTo(BeEmpty())
+		reader := multipart.NewReader(recorder.Body, matches[1])
+
+		for _, payload := range recentLogResp {
 			part, err := reader.NextPart()
 			Expect(err).ToNot(HaveOccurred())
 
 			partBytes, err := ioutil.ReadAll(part)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(partBytes).To(Equal(containerResp[0]))
-		})
-
-		It("returns the requested recent logs", func() {
-			req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs", nil)
-			req.Header.Add("Authorization", "token")
-			recentLogResp := [][]byte{
-				[]byte("log1"),
-				[]byte("log2"),
-				[]byte("log3"),
-			}
-			mockGrpcConnector.RecentLogsOutput.Ret0 <- recentLogResp
-
-			dopplerProxy.ServeHTTP(recorder, req)
-
-			boundaryRegexp := regexp.MustCompile("boundary=(.*)")
-			matches := boundaryRegexp.FindStringSubmatch(recorder.Header().Get("Content-Type"))
-			Expect(matches).To(HaveLen(2))
-			Expect(matches[1]).NotTo(BeEmpty())
-			reader := multipart.NewReader(recorder.Body, matches[1])
-
-			for _, payload := range recentLogResp {
-				part, err := reader.NextPart()
-				Expect(err).ToNot(HaveOccurred())
-
-				partBytes, err := ioutil.ReadAll(part)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(partBytes).To(Equal(payload))
-			}
-		})
-
-		It("returns the requested recent logs with limit", func() {
-			req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs?limit=2", nil)
-			req.Header.Add("Authorization", "token")
-			recentLogResp := [][]byte{
-				[]byte("log1"),
-				[]byte("log2"),
-				[]byte("log3"),
-			}
-			mockGrpcConnector.RecentLogsOutput.Ret0 <- recentLogResp
-
-			dopplerProxy.ServeHTTP(recorder, req)
-
-			boundaryRegexp := regexp.MustCompile("boundary=(.*)")
-			matches := boundaryRegexp.FindStringSubmatch(recorder.Header().Get("Content-Type"))
-			Expect(matches).To(HaveLen(2))
-			Expect(matches[1]).NotTo(BeEmpty())
-			reader := multipart.NewReader(recorder.Body, matches[1])
-
-			var count int
-			for {
-				_, err := reader.NextPart()
-				if err == io.EOF {
-					break
-				}
-				count++
-			}
-			Expect(count).To(Equal(2))
-		})
-
-		It("ignores limit if it is negative", func() {
-			req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs?limit=-2", nil)
-			req.Header.Add("Authorization", "token")
-			recentLogResp := [][]byte{
-				[]byte("log1"),
-				[]byte("log2"),
-				[]byte("log3"),
-			}
-			mockGrpcConnector.RecentLogsOutput.Ret0 <- recentLogResp
-
-			dopplerProxy.ServeHTTP(recorder, req)
-
-			boundaryRegexp := regexp.MustCompile("boundary=(.*)")
-			matches := boundaryRegexp.FindStringSubmatch(recorder.Header().Get("Content-Type"))
-			Expect(matches).To(HaveLen(2))
-			Expect(matches[1]).NotTo(BeEmpty())
-			reader := multipart.NewReader(recorder.Body, matches[1])
-
-			for _, payload := range recentLogResp {
-				part, err := reader.NextPart()
-				Expect(err).ToNot(HaveOccurred())
-
-				partBytes, err := ioutil.ReadAll(part)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(partBytes).To(Equal(payload))
-			}
-		})
+			Expect(partBytes).To(Equal(payload))
+		}
 	})
 
-	Context("Other invalid paths", func() {
-		It("returns a 404 for an empty path", func() {
-			req, _ := http.NewRequest("GET", "/", nil)
-			dopplerProxy.ServeHTTP(recorder, req)
-			Expect(recorder.Code).To(Equal(http.StatusNotFound))
-		})
+	It("returns the requested recent logs with limit", func() {
+		req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs?limit=2", nil)
+		req.Header.Add("Authorization", "token")
+		recentLogResp := [][]byte{
+			[]byte("log1"),
+			[]byte("log2"),
+			[]byte("log3"),
+		}
+		mockGrpcConnector.RecentLogsOutput.Ret0 <- recentLogResp
+
+		dopplerProxy.ServeHTTP(recorder, req)
+
+		boundaryRegexp := regexp.MustCompile("boundary=(.*)")
+		matches := boundaryRegexp.FindStringSubmatch(recorder.Header().Get("Content-Type"))
+		Expect(matches).To(HaveLen(2))
+		Expect(matches[1]).NotTo(BeEmpty())
+		reader := multipart.NewReader(recorder.Body, matches[1])
+
+		var count int
+		for {
+			_, err := reader.NextPart()
+			if err == io.EOF {
+				break
+			}
+			count++
+		}
+		Expect(count).To(Equal(2))
+	})
+
+	It("ignores limit if it is negative", func() {
+		req, _ := http.NewRequest("GET", "/apps/abc123/recentlogs?limit=-2", nil)
+		req.Header.Add("Authorization", "token")
+		recentLogResp := [][]byte{
+			[]byte("log1"),
+			[]byte("log2"),
+			[]byte("log3"),
+		}
+		mockGrpcConnector.RecentLogsOutput.Ret0 <- recentLogResp
+
+		dopplerProxy.ServeHTTP(recorder, req)
+
+		boundaryRegexp := regexp.MustCompile("boundary=(.*)")
+		matches := boundaryRegexp.FindStringSubmatch(recorder.Header().Get("Content-Type"))
+		Expect(matches).To(HaveLen(2))
+		Expect(matches[1]).NotTo(BeEmpty())
+		reader := multipart.NewReader(recorder.Body, matches[1])
+
+		for _, payload := range recentLogResp {
+			part, err := reader.NextPart()
+			Expect(err).ToNot(HaveOccurred())
+
+			partBytes, err := ioutil.ReadAll(part)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(partBytes).To(Equal(payload))
+		}
 	})
 
 	Context("SetCookie", func() {
@@ -288,125 +274,6 @@ var _ = Describe("ServeHTTP()", func() {
 			dopplerProxy.ServeHTTP(recorder, req)
 
 			Expect(recorder.Code).To(Equal(http.StatusBadRequest))
-		})
-	})
-
-	Describe("Streaming Data", func() {
-		var (
-			server *httptest.Server
-		)
-
-		var wsEndpoint = func(path string) string {
-			return strings.Replace(server.URL, "http", "ws", 1) + path
-		}
-
-		BeforeEach(func() {
-			server = httptest.NewServer(dopplerProxy)
-		})
-
-		AfterEach(func() {
-			server.CloseClientConnections()
-		})
-
-		Describe("/stream & /firehose", func() {
-			Context("with GRPC recv returning data", func() {
-				var (
-					expectedData []byte
-				)
-
-				BeforeEach(func() {
-					expectedData = []byte("hello")
-					mockDopplerStreamClient.RecvOutput.Ret0 <- expectedData
-				})
-
-				It("/stream sends data to the client websocket connection", func() {
-					conn, _, err := websocket.DefaultDialer.Dial(
-						wsEndpoint("/apps/abc123/stream"),
-						http.Header{"Authorization": []string{"token"}},
-					)
-					Expect(err).ToNot(HaveOccurred())
-
-					_, data, err := conn.ReadMessage()
-					Expect(err).ToNot(HaveOccurred())
-
-					Expect(data).To(Equal(expectedData))
-
-					var ctx context.Context
-					Eventually(mockGrpcConnector.SubscribeInput.Ctx).Should(Receive(&ctx))
-					_, ok := ctx.Deadline()
-					Expect(ok).To(BeFalse())
-				})
-
-				It("/firehose sends data to the client websocket connection", func(done Done) {
-					defer close(done)
-					conn, _, err := websocket.DefaultDialer.Dial(
-						wsEndpoint("/firehose/subscription-id"),
-						http.Header{"Authorization": []string{"token"}},
-					)
-					Expect(err).ToNot(HaveOccurred())
-
-					_, data, err := conn.ReadMessage()
-					Expect(err).ToNot(HaveOccurred())
-
-					Expect(data).To(Equal(expectedData))
-
-					var ctx context.Context
-					Eventually(mockGrpcConnector.SubscribeInput.Ctx).Should(Receive(&ctx))
-					_, ok := ctx.Deadline()
-					Expect(ok).To(BeFalse())
-				})
-			})
-
-			Context("with GRPC recv returning an error", func() {
-				BeforeEach(func() {
-					mockDopplerStreamClient.RecvOutput.Ret1 <- errors.New("foo")
-				})
-
-				It("closes the connection to the client", func(done Done) {
-					defer close(done)
-					conn, _, err := websocket.DefaultDialer.Dial(
-						wsEndpoint("/firehose/subscription-id"),
-						http.Header{"Authorization": []string{"token"}},
-					)
-					Expect(err).ToNot(HaveOccurred())
-
-					f := func() string {
-						_, _, err := conn.ReadMessage()
-						return fmt.Sprintf("%s", err)
-					}
-					Eventually(f).Should(ContainSubstring("websocket: close 1000"))
-				})
-			})
-
-			Describe("Emitted Metrics", func() {
-				It("emits a metric saying we have subscriptions", func() {
-					conn, _, err := websocket.DefaultDialer.Dial(
-						wsEndpoint("/firehose/subscription-id"),
-						http.Header{"Authorization": []string{"token"}},
-					)
-					Expect(err).ToNot(HaveOccurred())
-					defer conn.Close()
-
-					f := func() fake.Metric {
-						return fakeMetricSender.GetValue("dopplerProxy.firehoses")
-					}
-					Eventually(f, 4).Should(Equal(fake.Metric{Value: 1, Unit: "connections"}))
-				})
-
-				It("emits a metric saying we have a app stream", func() {
-					conn, _, err := websocket.DefaultDialer.Dial(
-						wsEndpoint("/apps/abc123/stream"),
-						http.Header{"Authorization": []string{"token"}},
-					)
-					Expect(err).ToNot(HaveOccurred())
-					defer conn.Close()
-
-					f := func() fake.Metric {
-						return fakeMetricSender.GetValue("dopplerProxy.appStreams")
-					}
-					Eventually(f, 4).Should(Equal(fake.Metric{Value: 1, Unit: "connections"}))
-				})
-			})
 		})
 	})
 })

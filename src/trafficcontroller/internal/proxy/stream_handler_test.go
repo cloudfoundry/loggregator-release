@@ -26,7 +26,7 @@ var _ = Describe("StreamHandler", func() {
 		auth = LogAuthorizer{Result: AuthorizerResult{Status: http.StatusOK}}
 		adminAuth = AdminAuthorizer{Result: AuthorizerResult{Status: http.StatusOK}}
 
-		connector = newSpyGRPCConnector()
+		connector = newSpyGRPCConnector(nil)
 
 		dopplerProxy = proxy.NewDopplerProxy(
 			auth.Authorize,

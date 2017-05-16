@@ -1,8 +1,11 @@
 package proxy_test
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"time"
 
 	"plumbing"
@@ -10,6 +13,8 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
+	"github.com/gorilla/websocket"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -25,7 +30,7 @@ var _ = Describe("FirehoseHandler", func() {
 	)
 
 	BeforeEach(func() {
-		connector = newSpyGRPCConnector()
+		connector = newSpyGRPCConnector(nil)
 
 		adminAuth = AdminAuthorizer{Result: AuthorizerResult{Status: http.StatusOK}}
 		auth = LogAuthorizer{Result: AuthorizerResult{Status: http.StatusOK}}
@@ -73,13 +78,65 @@ var _ = Describe("FirehoseHandler", func() {
 		})
 	})
 
-	Context("if subscription_id is not provided", func() {
-		It("returns a 404", func() {
-			req, _ := http.NewRequest("GET", "/firehose/", nil)
-			req.Header.Add("Authorization", "token")
+	It("returns a 404 if subscription_id is not provided", func() {
+		req, _ := http.NewRequest("GET", "/firehose/", nil)
+		req.Header.Add("Authorization", "token")
 
-			handler.ServeHTTP(recorder, req)
-			Expect(recorder.Code).To(Equal(http.StatusNotFound))
-		})
+		handler.ServeHTTP(recorder, req)
+		Expect(recorder.Code).To(Equal(http.StatusNotFound))
+	})
+
+	It("closes the connection to the client on error", func() {
+		connector := newSpyGRPCConnector(errors.New("subscribe failed"))
+		handler := proxy.NewDopplerProxy(
+			auth.Authorize,
+			adminAuth.Authorize,
+			connector,
+			"cookieDomain",
+			50*time.Millisecond,
+		)
+		server := httptest.NewServer(handler)
+		defer server.CloseClientConnections()
+
+		conn, _, err := websocket.DefaultDialer.Dial(
+			wsEndpoint(server, "/firehose/subscription-id"),
+			http.Header{"Authorization": []string{"token"}},
+		)
+		Expect(err).ToNot(HaveOccurred())
+
+		f := func() string {
+			_, _, err := conn.ReadMessage()
+			return fmt.Sprintf("%s", err)
+		}
+		Eventually(f).Should(ContainSubstring("websocket: close 1000"))
+	})
+
+	It("emits the number of connections as a metric", func() {
+		connector := newSpyGRPCConnector(nil)
+		handler := proxy.NewDopplerProxy(
+			auth.Authorize,
+			adminAuth.Authorize,
+			connector,
+			"cookieDomain",
+			50*time.Millisecond,
+		)
+		server := httptest.NewServer(handler)
+		defer server.CloseClientConnections()
+
+		conn, _, err := websocket.DefaultDialer.Dial(
+			wsEndpoint(server, "/firehose/subscription-id"),
+			http.Header{"Authorization": []string{"token"}},
+		)
+		Expect(err).ToNot(HaveOccurred())
+		defer conn.Close()
+
+		f := func() fake.Metric {
+			return fakeMetricSender.GetValue("dopplerProxy.firehoses")
+		}
+		Eventually(f, 4).Should(Equal(fake.Metric{Value: 1, Unit: "connections"}))
 	})
 })
+
+func wsEndpoint(server *httptest.Server, path string) string {
+	return strings.Replace(server.URL, "http", "ws", 1) + path
+}
