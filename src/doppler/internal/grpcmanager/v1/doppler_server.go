@@ -2,7 +2,6 @@ package v1
 
 import (
 	"diodes"
-	"errors"
 	"log"
 	"metricemitter"
 	"plumbing"
@@ -73,12 +72,6 @@ func NewDopplerServer(
 
 // Subscribe is called by GRPC on stream requests.
 func (m *DopplerServer) Subscribe(req *plumbing.SubscriptionRequest, sender plumbing.Doppler_SubscribeServer) error {
-	if req.GetFilter() != nil &&
-		req.GetFilter().AppID == "" &&
-		req.GetFilter().Message != nil {
-		return errors.New("invalid subscription: cannot have filter type without app id")
-	}
-
 	atomic.AddInt64(&m.numSubscriptions, 1)
 	defer atomic.AddInt64(&m.numSubscriptions, -1)
 

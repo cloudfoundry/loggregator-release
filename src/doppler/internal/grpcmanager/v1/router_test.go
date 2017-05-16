@@ -112,7 +112,7 @@ var _ = Describe("Router", func() {
 		})
 	})
 
-	Context("with app id subscriptions", func() {
+	Context("with app ID subscriptions", func() {
 		var (
 			streamForAppA              *mockDataSetter
 			streamForAppB              *mockDataSetter
@@ -219,6 +219,41 @@ var _ = Describe("Router", func() {
 
 			Expect(streamWithLogFilter.SetInput).To(
 				BeCalled(With(logEnvelopeBytes)),
+			)
+		})
+	})
+
+	Context("with metric filter subscriptions", func() {
+		var (
+			stream              *mockDataSetter
+			subscriptionRequest *plumbing.SubscriptionRequest
+		)
+
+		BeforeEach(func() {
+			stream = newMockDataSetter()
+
+			subscriptionRequest = &plumbing.SubscriptionRequest{
+				Filter: &plumbing.Filter{
+					Message: &plumbing.Filter_Metric{
+						Metric: &plumbing.MetricFilter{},
+					},
+				},
+			}
+
+			router.Register(subscriptionRequest, stream)
+		})
+
+		It("sends only metric messages", func() {
+			router.SendTo("some-app-id", logEnvelope)
+
+			Expect(stream.SetCalled).To(
+				Not(BeCalled()),
+			)
+
+			router.SendTo("some-app-id", counterEnvelope)
+
+			Expect(stream.SetInput).To(
+				BeCalled(With(counterEnvelopeBytes)),
 			)
 		})
 	})

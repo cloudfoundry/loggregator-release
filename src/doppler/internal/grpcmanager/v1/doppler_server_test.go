@@ -152,24 +152,6 @@ var _ = Describe("GRPCManager", func() {
 				})
 			})
 		})
-
-		Context("when a type filter is provided but not a appID", func() {
-			BeforeEach(func() {
-				subscribeRequest.Filter.Message = &plumbing.Filter_Log{
-					Log: &plumbing.LogFilter{},
-				}
-				subscribeRequest.Filter.AppID = ""
-			})
-
-			It("returns an error", func() {
-				clt, _ := dopplerClient.Subscribe(context.TODO(), subscribeRequest)
-				f := func() error {
-					_, err := clt.Recv()
-					return err
-				}
-				Eventually(f).Should(HaveOccurred())
-			})
-		})
 	})
 
 	Describe("data transmission", func() {

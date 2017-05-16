@@ -20,7 +20,7 @@ type filterType uint8
 const (
 	noType filterType = iota
 	logType
-	otherType
+	metricType
 )
 
 type filter struct {
@@ -53,23 +53,11 @@ func (r *Router) SendTo(appID string, envelope *events.Envelope) {
 		return
 	}
 
-	nonTypedFilter := filter{
-		appID:        appID,
-		envelopeType: noType,
-	}
-
-	for id, setters := range r.subscriptions[nonTypedFilter] {
-		r.writeToShard(id, setters, data)
-	}
-
-	typedFilter := r.createTypedFilter(appID, envelope)
-	for id, setters := range r.subscriptions[typedFilter] {
-		r.writeToShard(id, setters, data)
-	}
-
-	var noFilter filter
-	for id, setters := range r.subscriptions[noFilter] {
-		r.writeToShard(id, setters, data)
+	typedFilters := r.createTypedFilters(appID, envelope)
+	for _, typedFilter := range typedFilters {
+		for id, setters := range r.subscriptions[typedFilter] {
+			r.writeToShard(id, setters, data)
+		}
 	}
 }
 
@@ -84,17 +72,22 @@ func (r *Router) writeToShard(id shardID, setters []DataSetter, data []byte) {
 	setters[rand.Intn(len(setters))].Set(data)
 }
 
-func (r *Router) createTypedFilter(appID string, envelope *events.Envelope) filter {
-	filter := filter{
-		appID:        appID,
-		envelopeType: otherType,
+func (r *Router) createTypedFilters(appID string, envelope *events.Envelope) []filter {
+	return []filter{
+		{appID: appID, envelopeType: noType},
+		{appID: appID, envelopeType: r.filterTypeFromEnvelope(envelope)},
+		{appID: "", envelopeType: r.filterTypeFromEnvelope(envelope)},
+		{},
 	}
+}
 
-	if envelope.GetEventType() == events.Envelope_LogMessage {
-		filter.envelopeType = logType
+func (r *Router) filterTypeFromEnvelope(envelope *events.Envelope) filterType {
+	switch envelope.GetEventType() {
+	case events.Envelope_LogMessage:
+		return logType
+	default:
+		return metricType
 	}
-
-	return filter
 }
 
 func (r *Router) registerSetter(req *plumbing.SubscriptionRequest, dataSetter DataSetter) {
@@ -153,6 +146,9 @@ func (r *Router) convertFilter(req *plumbing.SubscriptionRequest) filter {
 	}
 	if req.GetFilter().GetLog() != nil {
 		f.envelopeType = logType
+	}
+	if req.GetFilter().GetMetric() != nil {
+		f.envelopeType = metricType
 	}
 	return f
 }
