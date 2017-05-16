@@ -7,13 +7,13 @@ import (
 	"metricemitter"
 	"net/http"
 	"os"
+	"os/signal"
 	"profiler"
 	"time"
 
 	"dopplerservice"
 	"monitor"
 	"plumbing"
-	"signalmanager"
 	"trafficcontroller/internal/auth"
 	"trafficcontroller/internal/proxy"
 
@@ -156,23 +156,15 @@ func (t *trafficController) Start() {
 	}
 	t.startOutgoingProxy(fmt.Sprintf(":%d", t.conf.OutgoingDropsondePort), dopplerHandler)
 
-	killChan := signalmanager.RegisterKillSignalChannel()
-	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
-
 	// We start the profiler last so that we can definitively claim that we're ready for
 	// connections by the time we're listening on the PPROFPort.
 	p := profiler.New(t.conf.PPROFPort)
 	go p.Start()
 
-	for {
-		select {
-		case <-dumpChan:
-			signalmanager.DumpGoRoutine()
-		case <-killChan:
-			log.Print("Shutting down")
-			return
-		}
-	}
+	killChan := make(chan os.Signal)
+	signal.Notify(killChan, os.Interrupt)
+	<-killChan
+	log.Print("Shutting down")
 }
 
 func (t *trafficController) setupDefaultEmitter(origin, destination string) error {

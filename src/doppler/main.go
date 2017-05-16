@@ -6,6 +6,8 @@ import (
 	"log"
 	"math/rand"
 	"metricemitter"
+	"os"
+	"os/signal"
 	"plumbing"
 	"sync"
 	"time"
@@ -22,7 +24,6 @@ import (
 	"dopplerservice"
 	"monitor"
 	"profiler"
-	"signalmanager"
 
 	"code.cloudfoundry.org/workpool"
 	gendiodes "github.com/cloudfoundry/diodes"
@@ -186,9 +187,6 @@ func main() {
 
 	log.Print("Startup: doppler server started.")
 
-	killChan := signalmanager.RegisterKillSignalChannel()
-	dumpChan := signalmanager.RegisterGoRoutineDumpSignalChannel()
-
 	releaseNodeChan := make(chan chan bool, 1)
 	legacyReleaseNodeChan := make(chan chan bool, 1)
 	if !conf.DisableAnnounce {
@@ -203,36 +201,30 @@ func main() {
 	// Post Start
 	//------------------------------
 
-	for {
-		select {
-		case <-dumpChan:
-			signalmanager.DumpGoRoutine()
-		case <-killChan:
-			log.Print("Shutting down")
+	killChan := make(chan os.Signal)
+	signal.Notify(killChan, os.Interrupt)
+	<-killChan
+	log.Print("Shutting down")
 
-			stopped := make(chan bool)
-			legacyStopped := make(chan bool)
-			releaseNodeChan <- stopped
-			legacyReleaseNodeChan <- legacyStopped
+	stopped := make(chan bool)
+	legacyStopped := make(chan bool)
+	releaseNodeChan <- stopped
+	legacyReleaseNodeChan <- legacyStopped
 
-			stop(
-				errChan,
-				wg,
-				openFileMonitor,
-				uptimeMonitor,
-				appStoreWatcher,
-				udpListener,
-				sinkManager,
-				websocketServer,
-				storeAdapter,
-			)
+	stop(
+		errChan,
+		wg,
+		openFileMonitor,
+		uptimeMonitor,
+		appStoreWatcher,
+		udpListener,
+		sinkManager,
+		websocketServer,
+		storeAdapter,
+	)
 
-			<-stopped
-			<-legacyStopped
-
-			return
-		}
-	}
+	<-stopped
+	<-legacyStopped
 }
 
 func start(
