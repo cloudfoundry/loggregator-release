@@ -99,15 +99,13 @@ type subscribeRequest struct {
 
 type SpyGRPCConnector struct {
 	mu               sync.Mutex
-	subscriptions    chan subscribeRequest
+	subscriptions    *subscribeRequest
 	subscriptionsErr error
-	recentLogs       chan recentLogsRequest
+	recentLogs       *recentLogsRequest
 }
 
 func newSpyGRPCConnector(err error) *SpyGRPCConnector {
 	return &SpyGRPCConnector{
-		subscriptions:    make(chan subscribeRequest, 100),
-		recentLogs:       make(chan recentLogsRequest, 100),
 		subscriptionsErr: err,
 	}
 }
@@ -115,7 +113,7 @@ func newSpyGRPCConnector(err error) *SpyGRPCConnector {
 func (s *SpyGRPCConnector) Subscribe(ctx context.Context, req *plumbing.SubscriptionRequest) (func() ([]byte, error), error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.subscriptions <- subscribeRequest{
+	s.subscriptions = &subscribeRequest{
 		ctx:     ctx,
 		request: req,
 	}
@@ -127,7 +125,7 @@ func (s *SpyGRPCConnector) ContainerMetrics(ctx context.Context, appID string) [
 	return nil
 }
 func (s *SpyGRPCConnector) RecentLogs(ctx context.Context, appID string) [][]byte {
-	s.recentLogs <- recentLogsRequest{
+	s.recentLogs = &recentLogsRequest{
 		ctx:   ctx,
 		appID: appID,
 	}

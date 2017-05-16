@@ -103,7 +103,8 @@ var _ = Describe("StreamHandler", func() {
 			req.Header.Add("Authorization", "token")
 
 			dopplerProxy.ServeHTTP(recorder, req)
-			Consistently(connector.subscriptions).ShouldNot(Receive())
+
+			Expect(connector.subscriptions).To(BeNil())
 		})
 	})
 
@@ -125,9 +126,7 @@ var _ = Describe("StreamHandler", func() {
 
 		dopplerProxy.ServeHTTP(recorder, req)
 
-		var request subscribeRequest
-		Eventually(connector.subscriptions).Should(Receive(&request))
-		Expect(request.request).To(Equal(
+		Expect(connector.subscriptions.request).To(Equal(
 			&plumbing.SubscriptionRequest{
 				Filter: &plumbing.Filter{
 					AppID: "abc123",
@@ -142,8 +141,6 @@ var _ = Describe("StreamHandler", func() {
 
 		dopplerProxy.ServeHTTP(recorder, req)
 
-		var request subscribeRequest
-		Eventually(connector.subscriptions).Should(Receive(&request))
-		Eventually(request.ctx.Done).Should(BeClosed())
+		Eventually(connector.subscriptions.ctx.Done).Should(BeClosed())
 	})
 })
