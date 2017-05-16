@@ -13,39 +13,15 @@ import (
 
 var _ = Describe("Router", func() {
 	var (
-		// Streams without type filter
-		mockDataSetterA *mockDataSetter
-		mockDataSetterB *mockDataSetter
-		mockDataSetterC *mockDataSetter
-
-		// Firehoses
-		mockDataSetterD *mockDataSetter
-		mockDataSetterE *mockDataSetter
-		mockDataSetterF *mockDataSetter
-
-		// Streams with type filter
-		mockDataSetterG *mockDataSetter
-
 		counterEnvelope      *events.Envelope
 		logEnvelope          *events.Envelope
 		counterEnvelopeBytes []byte
 		logEnvelopeBytes     []byte
 
 		router *v1.Router
-
-		reqA, reqB, reqC, reqD, reqE, reqF, reqG                             *plumbing.SubscriptionRequest
-		cleanupA, cleanupB, cleanupC, cleanupD, cleanupE, cleanupF, cleanupG func()
 	)
 
 	BeforeEach(func() {
-		mockDataSetterA = newMockDataSetter()
-		mockDataSetterB = newMockDataSetter()
-		mockDataSetterC = newMockDataSetter()
-		mockDataSetterD = newMockDataSetter()
-		mockDataSetterE = newMockDataSetter()
-		mockDataSetterF = newMockDataSetter()
-		mockDataSetterG = newMockDataSetter()
-
 		counterEnvelope = &events.Envelope{
 			Origin:    proto.String("some-origin"),
 			EventType: events.Envelope_CounterEvent.Enum(),
@@ -63,181 +39,187 @@ var _ = Describe("Router", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		router = v1.NewRouter()
-
-		reqA = &plumbing.SubscriptionRequest{
-			Filter: &plumbing.Filter{
-				AppID: "some-app-id",
-			},
-		}
-
-		reqB = &plumbing.SubscriptionRequest{
-			Filter: &plumbing.Filter{
-				AppID: "some-app-id",
-			},
-		}
-
-		reqC = &plumbing.SubscriptionRequest{
-			Filter: &plumbing.Filter{
-				AppID: "some-other-app-id",
-			},
-		}
-
-		reqD = &plumbing.SubscriptionRequest{
-			ShardID: "some-sub-id",
-		}
-
-		reqE = &plumbing.SubscriptionRequest{
-			ShardID: "some-sub-id",
-		}
-
-		reqF = &plumbing.SubscriptionRequest{
-			ShardID: "some-other-sub-id",
-		}
-
-		reqG = &plumbing.SubscriptionRequest{
-			Filter: &plumbing.Filter{
-				AppID: "some-app-id",
-				Message: &plumbing.Filter_Log{
-					Log: &plumbing.LogFilter{},
-				},
-			},
-		}
-
-		// Streams without type filters
-		cleanupA = router.Register(reqA, mockDataSetterA)
-		cleanupB = router.Register(reqB, mockDataSetterB)
-		cleanupC = router.Register(reqC, mockDataSetterC)
-
-		// Firehose
-		cleanupD = router.Register(reqD, mockDataSetterD)
-		cleanupE = router.Register(reqE, mockDataSetterE)
-		cleanupF = router.Register(reqF, mockDataSetterF)
-
-		// Streams with type filters
-		cleanupG = router.Register(reqG, mockDataSetterG)
 	})
 
-	It("sends data to the registered setters", func() {
-		router.SendTo("some-app-id", logEnvelope)
+	Context("with firehose subscriptions", func() {
+		var (
+			// Firehoses
+			multipleFirehoseOfSameSubscription []*mockDataSetter
+			singleFirehoseSubscription         *mockDataSetter
 
-		Expect(mockDataSetterA.SetInput).To(
-			BeCalled(With(logEnvelopeBytes)),
+			requestForMultipleSubscriptions *plumbing.SubscriptionRequest
+			requestForSingleSubscription    *plumbing.SubscriptionRequest
+
+			cleanupSingleFirehose func()
 		)
 
-		Expect(mockDataSetterB.SetInput).To(
-			BeCalled(With(logEnvelopeBytes)),
-		)
-
-		Expect(mockDataSetterG.SetInput).To(
-			BeCalled(With(logEnvelopeBytes)),
-		)
-	})
-
-	It("only sends the envelope to a subscription once", func() {
-		router.SendTo("some-app-id", counterEnvelope)
-
-		Expect(mockDataSetterA.SetCalled).To(
-			HaveLen(1),
-		)
-	})
-
-	It("does not send data to the wrong setter", func() {
-		router.SendTo("some-app-id", counterEnvelope)
-
-		Expect(mockDataSetterC.SetCalled).To(
-			Not(BeCalled()),
-		)
-
-		Expect(mockDataSetterG.SetCalled).To(
-			Not(BeCalled()),
-		)
-	})
-
-	It("sends to a random firehose subscription", func() {
-		router.SendTo("some-app-id", counterEnvelope)
-		combinedLen := len(mockDataSetterD.SetCalled) + len(mockDataSetterE.SetCalled)
-
-		Expect(combinedLen).To(Equal(1))
-		Expect(mockDataSetterF.SetInput).To(
-			BeCalled(With(counterEnvelopeBytes)),
-		)
-	})
-
-	It("does not send data for bad envelope", func() {
-		router.SendTo("some-app-id", new(events.Envelope))
-
-		Expect(mockDataSetterA.SetCalled).To(
-			Not(BeCalled()),
-		)
-
-		Expect(mockDataSetterD.SetCalled).To(
-			Not(BeCalled()),
-		)
-
-		Expect(mockDataSetterE.SetCalled).To(
-			Not(BeCalled()),
-		)
-	})
-
-	Context("when one stream setter is unregistered", func() {
 		BeforeEach(func() {
-			cleanupA()
+			multipleFirehoseOfSameSubscription = []*mockDataSetter{
+				newMockDataSetter(),
+				newMockDataSetter(),
+			}
+			singleFirehoseSubscription = newMockDataSetter()
+
+			requestForMultipleSubscriptions = &plumbing.SubscriptionRequest{
+				ShardID: "some-sub-id",
+			}
+
+			requestForSingleSubscription = &plumbing.SubscriptionRequest{
+				ShardID: "some-other-sub-id",
+			}
+			// Firehose
+			router.Register(requestForMultipleSubscriptions, multipleFirehoseOfSameSubscription[0])
+			router.Register(requestForMultipleSubscriptions, multipleFirehoseOfSameSubscription[1])
+			cleanupSingleFirehose = router.Register(requestForSingleSubscription, singleFirehoseSubscription)
 		})
 
-		It("does not send data to that setter", func() {
+		It("receives all messages", func() {
+			router.SendTo("some-app-id", logEnvelope)
 			router.SendTo("some-app-id", counterEnvelope)
 
-			Expect(mockDataSetterA.SetCalled).To(
-				Not(BeCalled()),
+			Expect(singleFirehoseSubscription.SetInput).To(
+				BeCalled(With(logEnvelopeBytes)),
 			)
-		})
-
-		It("does send data to the remaining registered setter", func() {
-			router.SendTo("some-app-id", counterEnvelope)
-
-			Expect(mockDataSetterB.SetInput).To(
+			Expect(singleFirehoseSubscription.SetInput).To(
 				BeCalled(With(counterEnvelopeBytes)),
 			)
 		})
-	})
 
-	Context("when one firehoses subscription is unregistered", func() {
-		BeforeEach(func() {
-			cleanupD()
+		Context("when there are two subscriptions with the same ID", func() {
+			It("sends the message to one subscription", func() {
+				router.SendTo("some-app-id", logEnvelope)
+				combinedLen := len(multipleFirehoseOfSameSubscription[0].SetCalled) + len(multipleFirehoseOfSameSubscription[1].SetCalled)
+
+				Expect(combinedLen).To(Equal(1))
+			})
 		})
 
-		It("does not send data to that setter", func() {
+		It("does not send messages to unregistered firehose subscriptions", func() {
+			cleanupSingleFirehose()
 			router.SendTo("some-app-id", counterEnvelope)
 
-			Expect(mockDataSetterD.SetCalled).To(
+			Expect(singleFirehoseSubscription.SetInput).To(
+				Not(BeCalled()),
+			)
+		})
+
+		It("ignores invalid envelopes", func() {
+			router.SendTo("some-app-id", new(events.Envelope))
+
+			Expect(singleFirehoseSubscription.SetCalled).To(
 				Not(BeCalled()),
 			)
 		})
 	})
 
-	Context("when one of one firehoses subscription is unregistered", func() {
+	Context("with app id subscriptions", func() {
+		var (
+			streamForAppA              *mockDataSetter
+			streamForAppB              *mockDataSetter
+			subscriptionRequestForAppA *plumbing.SubscriptionRequest
+			subscriptionRequestForAppC *plumbing.SubscriptionRequest
+
+			cleanupForAppA func()
+			cleanupForAppC func()
+		)
+
 		BeforeEach(func() {
-			cleanupF()
+			streamForAppA = newMockDataSetter()
+			streamForAppB = newMockDataSetter()
+
+			subscriptionRequestForAppA = &plumbing.SubscriptionRequest{
+				Filter: &plumbing.Filter{
+					AppID: "some-app-id",
+				},
+			}
+
+			subscriptionRequestForAppC = &plumbing.SubscriptionRequest{
+				Filter: &plumbing.Filter{
+					AppID: "some-other-app-id",
+				},
+			}
+			// Streams without type filters
+			cleanupForAppA = router.Register(subscriptionRequestForAppA, streamForAppA)
+			cleanupForAppC = router.Register(subscriptionRequestForAppC, streamForAppB)
 		})
 
-		It("does not send data to that setter", func() {
-			router.SendTo("some-app-id", counterEnvelope)
-
-			Expect(mockDataSetterF.SetCalled).To(
-				Not(BeCalled()),
-			)
-		})
-	})
-
-	Describe("thread safety", func() {
-		It("survives the race detector", func(done Done) {
-			cleanup := router.Register(reqA, mockDataSetterA)
+		It("survives the race detector for thread safety", func(done Done) {
+			cleanup := router.Register(subscriptionRequestForAppA, streamForAppA)
 
 			go func() {
 				defer close(done)
 				router.SendTo("some-app-id", counterEnvelope)
 			}()
 			cleanup()
+		})
+
+		It("sends a message to the subscription with the same app id", func() {
+			router.SendTo("some-app-id", counterEnvelope)
+
+			Expect(streamForAppA.SetInput).To(
+				BeCalled(With(counterEnvelopeBytes)),
+			)
+		})
+
+		It("sends the envelope to a subscription only once", func() {
+			router.SendTo("some-app-id", counterEnvelope)
+
+			Expect(streamForAppA.SetCalled).To(
+				HaveLen(1),
+			)
+		})
+
+		It("does not send data to that setter", func() {
+			cleanupForAppA()
+			router.SendTo("some-app-id", counterEnvelope)
+
+			Expect(streamForAppA.SetCalled).To(
+				Not(BeCalled()),
+			)
+		})
+
+		It("does not send the message to a subscription of a different app id", func() {
+			router.SendTo("some-app-id", counterEnvelope)
+
+			Expect(streamForAppB.SetInput).To(
+				Not(BeCalled()),
+			)
+		})
+	})
+
+	Context("with log filter subscriptions", func() {
+		var (
+			streamWithLogFilter *mockDataSetter
+			subscriptionRequest *plumbing.SubscriptionRequest
+		)
+
+		BeforeEach(func() {
+			streamWithLogFilter = newMockDataSetter()
+
+			subscriptionRequest = &plumbing.SubscriptionRequest{
+				Filter: &plumbing.Filter{
+					AppID: "some-app-id",
+					Message: &plumbing.Filter_Log{
+						Log: &plumbing.LogFilter{},
+					},
+				},
+			}
+
+			router.Register(subscriptionRequest, streamWithLogFilter)
+		})
+
+		It("sends only log messages", func() {
+			router.SendTo("some-app-id", counterEnvelope)
+
+			Expect(streamWithLogFilter.SetCalled).To(
+				Not(BeCalled()),
+			)
+
+			router.SendTo("some-app-id", logEnvelope)
+
+			Expect(streamWithLogFilter.SetInput).To(
+				BeCalled(With(logEnvelopeBytes)),
+			)
 		})
 	})
 })
