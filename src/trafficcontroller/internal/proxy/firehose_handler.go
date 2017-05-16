@@ -31,13 +31,21 @@ func (h *FirehoseHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	var filter *plumbing.Filter
-	filter_type := r.URL.Query().Get("filter-type")
-	if filter_type == "logs" {
+	switch r.URL.Query().Get("filter-type") {
+	case "logs":
 		filter = &plumbing.Filter{
 			Message: &plumbing.Filter_Log{
 				Log: &plumbing.LogFilter{},
 			},
 		}
+	case "metrics":
+		filter = &plumbing.Filter{
+			Message: &plumbing.Filter_Metric{
+				Metric: &plumbing.MetricFilter{},
+			},
+		}
+	default:
+		filter = nil
 	}
 
 	client, err := h.grpcConn.Subscribe(ctx, &plumbing.SubscriptionRequest{
