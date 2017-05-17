@@ -59,13 +59,12 @@ the [Cloud Foundry docs][cf-docs] for more details.
 The firehose is an aggregated stream of all application logs and component
 metrics on the platform. This allows operators to ensure they capture all logs
 within a microservice architecture as well as monitor the health of their
-platform.
+platform. See the [Firehose README](docs/firehose.md).
 
 ### User Account and Authentication Scope
 
 In order to consume the firehose you’ll need the `doppler.firehose` scope from
-UAA. For more details see this [Configuring the Firehose
-README](docs/configuring-firehose.md).
+UAA. For more details see the [Firehose README](docs/firehose.md).
 
 ### Nozzle Development
 
