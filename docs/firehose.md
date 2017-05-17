@@ -1,5 +1,18 @@
 # Firehose
 
+## Filtering
+
+The firehose supports filtering with a `filter-type` query param. The query
+param may be set to `logs` to receive only log messsages, or it may be set to
+`metrics` to receive only metrics.
+
+For example, when requesting a subscription, the following request will return
+only log messages.
+
+```
+http://loggregator.system-domain:8081/firehose/subscription-id?filter-type=logs
+```
+
 ## Configuration
 
 The firehose feature includes the combined stream of logs from all apps, plus
