@@ -21,10 +21,7 @@ type DopplerEndpoint struct {
 	HProvider HandlerProvider
 }
 
-func NewDopplerEndpoint(endpoint string,
-	streamId string,
-	reconnect bool) DopplerEndpoint {
-
+func NewDopplerEndpoint(endpoint, streamId string, reconnect bool) DopplerEndpoint {
 	var hProvider HandlerProvider
 	var timeout time.Duration
 	if endpoint == "recentlogs" {

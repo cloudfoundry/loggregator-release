@@ -154,7 +154,7 @@ func (t *trafficController) Start() {
 	if accessMiddleware != nil {
 		dopplerHandler = accessMiddleware(dopplerHandler)
 	}
-	t.startOutgoingProxy(fmt.Sprintf(":%d", t.conf.OutgoingDropsondePort), dopplerHandler)
+	go log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", t.conf.OutgoingDropsondePort), dopplerHandler))
 
 	// We start the profiler last so that we can definitively claim that we're ready for
 	// connections by the time we're listening on the PPROFPort.
@@ -225,13 +225,4 @@ func (t *trafficController) defaultStoreAdapterProvider(conf *Config) storeadapt
 		panic(err)
 	}
 	return etcdStoreAdapter
-}
-
-func (t *trafficController) startOutgoingProxy(host string, h http.Handler) {
-	go func() {
-		err := http.ListenAndServe(host, h)
-		if err != nil {
-			panic(err)
-		}
-	}()
 }
