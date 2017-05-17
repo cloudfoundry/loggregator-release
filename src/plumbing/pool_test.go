@@ -43,22 +43,6 @@ var _ = Describe("Pool", func() {
 			lis1, lis2           net.Listener
 			accepter1, accepter2 chan bool
 		)
-		var accepter = func(lis net.Listener) (net.Listener, chan bool) {
-			c := make(chan bool, 100)
-			go func() {
-				var dontGC []net.Conn
-				for {
-					conn, err := lis.Accept()
-					if err != nil {
-						return
-					}
-
-					dontGC = append(dontGC, conn)
-					c <- true
-				}
-			}()
-			return lis, c
-		}
 
 		BeforeEach(func() {
 			lis1, accepter1 = accepter(startListener(":0"))
@@ -85,6 +69,7 @@ var _ = Describe("Pool", func() {
 				pool.Close(lis1.Addr().String())
 				lis1.Close()
 
+				Eventually(accepter1).Should(HaveLen(0))
 				Consistently(accepter1).Should(HaveLen(0))
 			})
 		})
@@ -278,4 +263,21 @@ func fetchRx(
 	}
 	Eventually(f).ShouldNot(HaveOccurred())
 	return rx
+}
+
+func accepter(lis net.Listener) (net.Listener, chan bool) {
+	c := make(chan bool, 100)
+	go func() {
+		var dontGC []net.Conn
+		for {
+			conn, err := lis.Accept()
+			if err != nil {
+				return
+			}
+
+			dontGC = append(dontGC, conn)
+			c <- true
+		}
+	}()
+	return lis, c
 }
