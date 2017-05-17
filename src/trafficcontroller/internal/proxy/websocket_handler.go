@@ -37,7 +37,6 @@ func (h *websocketHandler) runWebsocketUntilClosed(ws *websocket.Conn) (closeCod
 	keepAliveExpired := make(chan struct{})
 	clientWentAway := make(chan struct{})
 
-	// TODO: remove this loop (but keep ws.ReadMessage()) once we retire support in the cli for old style keep alives
 	go func() {
 		for {
 			_, _, err := ws.ReadMessage()
