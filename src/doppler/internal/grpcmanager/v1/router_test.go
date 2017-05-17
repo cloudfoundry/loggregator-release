@@ -114,17 +114,21 @@ var _ = Describe("Router", func() {
 
 	Context("with app ID subscriptions", func() {
 		var (
-			streamForAppA              *mockDataSetter
+			streamsForAppA             []*mockDataSetter
 			streamForAppB              *mockDataSetter
 			subscriptionRequestForAppA *plumbing.SubscriptionRequest
-			subscriptionRequestForAppC *plumbing.SubscriptionRequest
+			subscriptionRequestForAppB *plumbing.SubscriptionRequest
 
-			cleanupForAppA func()
-			cleanupForAppC func()
+			cleanupForAppA []func()
+			cleanupForAppB func()
 		)
 
 		BeforeEach(func() {
-			streamForAppA = newMockDataSetter()
+			streamsForAppA = []*mockDataSetter{
+				newMockDataSetter(),
+				newMockDataSetter(),
+			}
+
 			streamForAppB = newMockDataSetter()
 
 			subscriptionRequestForAppA = &plumbing.SubscriptionRequest{
@@ -133,47 +137,53 @@ var _ = Describe("Router", func() {
 				},
 			}
 
-			subscriptionRequestForAppC = &plumbing.SubscriptionRequest{
+			subscriptionRequestForAppB = &plumbing.SubscriptionRequest{
 				Filter: &plumbing.Filter{
 					AppID: "some-other-app-id",
 				},
 			}
 			// Streams without type filters
-			cleanupForAppA = router.Register(subscriptionRequestForAppA, streamForAppA)
-			cleanupForAppC = router.Register(subscriptionRequestForAppC, streamForAppB)
+			cleanupForAppA = []func(){
+				router.Register(subscriptionRequestForAppA, streamsForAppA[0]),
+				router.Register(subscriptionRequestForAppA, streamsForAppA[1]),
+			}
+			cleanupForAppB = router.Register(subscriptionRequestForAppB, streamForAppB)
 		})
 
 		It("survives the race detector for thread safety", func(done Done) {
-			cleanup := router.Register(subscriptionRequestForAppA, streamForAppA)
+			cleanup := router.Register(subscriptionRequestForAppB, streamForAppB)
 
 			go func() {
 				defer close(done)
-				router.SendTo("some-app-id", counterEnvelope)
+				router.SendTo("some-other-app-id", counterEnvelope)
 			}()
 			cleanup()
 		})
 
-		It("sends a message to the subscription with the same app id", func() {
+		It("sends a message to all subscriptions of the same app id", func() {
 			router.SendTo("some-app-id", counterEnvelope)
 
-			Expect(streamForAppA.SetInput).To(
+			Expect(streamsForAppA[0].SetInput).To(
+				BeCalled(With(counterEnvelopeBytes)),
+			)
+			Expect(streamsForAppA[1].SetInput).To(
 				BeCalled(With(counterEnvelopeBytes)),
 			)
 		})
 
 		It("sends the envelope to a subscription only once", func() {
-			router.SendTo("some-app-id", counterEnvelope)
+			router.SendTo("some-other-app-id", counterEnvelope)
 
-			Expect(streamForAppA.SetCalled).To(
+			Expect(streamForAppB.SetCalled).To(
 				HaveLen(1),
 			)
 		})
 
 		It("does not send data to that setter", func() {
-			cleanupForAppA()
+			cleanupForAppB()
 			router.SendTo("some-app-id", counterEnvelope)
 
-			Expect(streamForAppA.SetCalled).To(
+			Expect(streamForAppB.SetCalled).To(
 				Not(BeCalled()),
 			)
 		})

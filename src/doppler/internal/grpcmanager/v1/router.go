@@ -81,15 +81,6 @@ func (r *Router) createTypedFilters(appID string, envelope *events.Envelope) []f
 	}
 }
 
-func (r *Router) filterTypeFromEnvelope(envelope *events.Envelope) filterType {
-	switch envelope.GetEventType() {
-	case events.Envelope_LogMessage:
-		return logType
-	default:
-		return metricType
-	}
-}
-
 func (r *Router) registerSetter(req *plumbing.SubscriptionRequest, dataSetter DataSetter) {
 	f := r.convertFilter(req)
 
@@ -151,4 +142,13 @@ func (r *Router) convertFilter(req *plumbing.SubscriptionRequest) filter {
 		f.envelopeType = metricType
 	}
 	return f
+}
+
+func (r *Router) filterTypeFromEnvelope(envelope *events.Envelope) filterType {
+	switch envelope.GetEventType() {
+	case events.Envelope_LogMessage:
+		return logType
+	default:
+		return metricType
+	}
 }
