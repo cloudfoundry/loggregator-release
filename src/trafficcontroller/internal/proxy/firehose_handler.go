@@ -13,12 +13,16 @@ import (
 const firehoseID = "firehose"
 
 type FirehoseHandler struct {
+	server   *WebSocketServer
 	grpcConn grpcConnector
 	counter  int64
 }
 
-func NewFirehoseHandler(grpcConn grpcConnector) *FirehoseHandler {
-	return &FirehoseHandler{grpcConn: grpcConn}
+func NewFirehoseHandler(grpcConn grpcConnector, w *WebSocketServer) *FirehoseHandler {
+	return &FirehoseHandler{
+		grpcConn: grpcConn,
+		server:   w,
+	}
 }
 
 func (h *FirehoseHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +62,7 @@ func (h *FirehoseHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	serveWS(firehoseID, subID, w, r, client)
+	h.server.serveWS(firehoseID, subID, w, r, client)
 }
 
 func (h *FirehoseHandler) Count() int64 {

@@ -31,14 +31,17 @@ var _ = Describe("DopplerProxy", func() {
 
 		mockGrpcConnector       *mockGrpcConnector
 		mockDopplerStreamClient *mockReceiver
+
+		mockSender *mockMetricSender
 	)
 
 	BeforeEach(func() {
 		auth = LogAuthorizer{Result: AuthorizerResult{Status: http.StatusOK}}
 		adminAuth = AdminAuthorizer{Result: AuthorizerResult{Status: http.StatusOK}}
-		mockGrpcConnector = newMockGrpcConnector()
 
+		mockGrpcConnector = newMockGrpcConnector()
 		mockDopplerStreamClient = newMockReceiver()
+		mockSender = newMockMetricSender()
 
 		mockGrpcConnector.SubscribeOutput.Ret0 <- mockDopplerStreamClient.Recv
 
@@ -48,11 +51,10 @@ var _ = Describe("DopplerProxy", func() {
 			mockGrpcConnector,
 			"cookieDomain",
 			50*time.Millisecond,
+			mockSender,
 		)
 
 		recorder = httptest.NewRecorder()
-
-		fakeMetricSender.Reset()
 	})
 
 	JustBeforeEach(func() {
@@ -64,33 +66,41 @@ var _ = Describe("DopplerProxy", func() {
 	})
 
 	Describe("TrafficController emitted request metrics", func() {
-		requestAndAssert := func(req *http.Request, metricName string) {
-			requestStart := time.Now()
-			dopplerProxy.ServeHTTP(recorder, req)
-			metric := fakeMetricSender.GetValue(metricName)
-			elapsed := float64(time.Since(requestStart)) / float64(time.Millisecond)
-
-			Expect(metric.Unit).To(Equal("ms"))
-			Expect(metric.Value).To(BeNumerically("<", elapsed))
-		}
-
 		It("emits latency value metric for recentlogs request", func() {
 			mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
 			req, _ := http.NewRequest("GET", "/apps/appID123/recentlogs", nil)
-			requestAndAssert(req, "dopplerProxy.recentlogsLatency")
+			metricName := "dopplerProxy.recentlogsLatency"
+			requestStart := time.Now()
+
+			dopplerProxy.ServeHTTP(recorder, req)
+
+			metric := mockSender.getValue(metricName)
+			Expect(metric.Unit).To(Equal("ms"))
+
+			elapsed := float64(time.Since(requestStart)) / float64(time.Millisecond)
+			Expect(metric.Value).To(BeNumerically("<", elapsed))
 		})
 
 		It("emits latency value metric for containermetrics request", func() {
 			mockGrpcConnector.ContainerMetricsOutput.Ret0 <- nil
 
 			req, _ := http.NewRequest("GET", "/apps/appID123/containermetrics", nil)
-			requestAndAssert(req, "dopplerProxy.containermetricsLatency")
+			metricName := "dopplerProxy.containermetricsLatency"
+			requestStart := time.Now()
+
+			dopplerProxy.ServeHTTP(recorder, req)
+
+			metric := mockSender.getValue(metricName)
+			Expect(metric.Unit).To(Equal("ms"))
+
+			elapsed := float64(time.Since(requestStart)) / float64(time.Millisecond)
+			Expect(metric.Value).To(BeNumerically("<", elapsed))
 		})
 
 		It("does not emit any latency metrics for stream request", func() {
 			req, _ := http.NewRequest("GET", "/apps/appID123/stream", nil)
 			dopplerProxy.ServeHTTP(recorder, req)
-			metric := fakeMetricSender.GetValue("dopplerProxy.streamLatency")
+			metric := mockSender.getValue("dopplerProxy.streamLatency")
 
 			Expect(metric.Unit).To(BeEmpty())
 			Expect(metric.Value).To(BeZero())

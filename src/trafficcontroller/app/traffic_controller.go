@@ -4,16 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"metricemitter"
 	"net/http"
 	"os"
 	"os/signal"
-	"profiler"
 	"time"
 
 	"dopplerservice"
+	"metricemitter"
 	"monitor"
 	"plumbing"
+	"profiler"
 	"trafficcontroller/internal/auth"
 	"trafficcontroller/internal/proxy"
 
@@ -149,6 +149,7 @@ func (t *trafficController) Start() {
 			grpcConnector,
 			"doppler."+t.conf.SystemDomain,
 			15*time.Second,
+			&metricShim{},
 		),
 	)
 	if accessMiddleware != nil {

@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 	"sync"
-	"time"
 
 	"plumbing"
 	"testing"
@@ -15,9 +14,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
 
-	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
-	"github.com/cloudfoundry/dropsonde/metricbatcher"
-	"github.com/cloudfoundry/dropsonde/metrics"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -28,14 +24,6 @@ func TestProxy(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Proxy Suite")
 }
-
-var fakeMetricSender *fake.FakeMetricSender
-
-var _ = BeforeSuite(func() {
-	fakeMetricSender = fake.NewFakeMetricSender()
-	metricBatcher := metricbatcher.New(fakeMetricSender, time.Millisecond)
-	metrics.Initialize(fakeMetricSender, metricBatcher)
-})
 
 type AuthorizerResult struct {
 	Status       int
@@ -135,4 +123,41 @@ func (s *SpyGRPCConnector) RecentLogs(ctx context.Context, appID string) [][]byt
 		[]byte("log2"),
 		[]byte("log3"),
 	}
+}
+
+type valueUnit struct {
+	Value float64
+	Unit  string
+}
+
+type mockMetricSender struct {
+	mu      sync.Mutex
+	metrics map[string]valueUnit
+}
+
+func newMockMetricSender() *mockMetricSender {
+	return &mockMetricSender{
+		metrics: make(map[string]valueUnit),
+	}
+}
+
+func (m *mockMetricSender) SendValue(name string, value float64, unit string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.metrics[name] = valueUnit{Value: value, Unit: unit}
+
+	return nil
+}
+
+func (m *mockMetricSender) getValue(name string) valueUnit {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	v, ok := m.metrics[name]
+	if !ok {
+		return valueUnit{Value: 0.0, Unit: ""}
+	}
+
+	return v
 }
