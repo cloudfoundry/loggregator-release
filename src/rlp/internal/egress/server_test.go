@@ -1,11 +1,14 @@
 package egress_test
 
 import (
-	"fmt"
+	"errors"
 	"io"
 	"metricemitter"
 	"metricemitter/testhelper"
 	"rlp/internal/egress"
+	"sync/atomic"
+
+	"google.golang.org/grpc"
 
 	"golang.org/x/net/context"
 
@@ -17,42 +20,20 @@ import (
 
 var _ = Describe("Server", func() {
 	var (
-		mockReceiver       *mockReceiver
-		mockReceiverServer *mockReceiverServer
-		server             *egress.Server
-		ctx                context.Context
-		metricClient       metricemitter.MetricClient
+		receiver       *spyReceiver
+		receiverServer *spyReceiverServer
+		server         *egress.Server
+		ctx            context.Context
+		metricClient   metricemitter.MetricClient
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		mockReceiverServer = newMockReceiverServer()
-		mockReceiver = newMockReceiver()
 		metricClient = testhelper.NewMetricClient()
-		server = egress.NewServer(mockReceiver, metricClient)
-
-		mockReceiverServer.ContextOutput.Ret0 <- ctx
 	})
 
 	Describe("Receiver()", func() {
 		Context("when subscriber does not return an error", func() {
-			var (
-				rx      func() (*v2.Envelope, error)
-				dataOut chan *v2.Envelope
-				errOut  chan error
-			)
-
-			BeforeEach(func() {
-				dataOut = make(chan *v2.Envelope, 100)
-				errOut = make(chan error, 100)
-				rx = func() (*v2.Envelope, error) {
-					return <-dataOut, <-errOut
-				}
-
-				close(mockReceiver.ReceiveOutput.Err)
-				mockReceiver.ReceiveOutput.Rx <- rx
-			})
-
 			It("returns an error for a request that has type filter but not a source ID", func() {
 				req := &v2.EgressRequest{
 					Filter: &v2.Filter{
@@ -61,63 +42,80 @@ var _ = Describe("Server", func() {
 						},
 					},
 				}
-				err := server.Receiver(req, mockReceiverServer)
+				receiverServer = &spyReceiverServer{}
+				receiver = &spyReceiver{}
+				server = egress.NewServer(receiver, metricClient)
 
-				Expect(err).To(HaveOccurred())
+				err := server.Receiver(req, receiverServer)
+				Expect(err).To(MatchError("invalid request: cannot have type filter without source id"))
 			})
 
-			It("uses the request", func() {
-				dataOut <- nil
-				errOut <- io.EOF
+			It("errors when the subscription from the receiver errors", func() {
+				receiverServer = &spyReceiverServer{}
+				receiver = &spyReceiver{}
+				server = egress.NewServer(receiver, metricClient)
 
-				req := &v2.EgressRequest{Filter: &v2.Filter{SourceId: "some-id"}}
-				err := server.Receiver(req, mockReceiverServer)
-				Expect(err).To(Equal(io.EOF))
-
-				Expect(mockReceiver.ReceiveInput.Ctx).To(Receive(Equal(ctx)))
-				Expect(mockReceiver.ReceiveInput.Request).To(Receive(Equal(req)))
-			})
-
-			It("streams data from the subscriber until an error from the subscriber", func() {
-				close(mockReceiverServer.SendOutput.Ret0)
-				e := &v2.Envelope{Timestamp: 1}
-
-				dataOut <- e
-				errOut <- nil
-				dataOut <- nil
-				errOut <- fmt.Errorf("some-secret-error")
-
-				err := server.Receiver(&v2.EgressRequest{}, mockReceiverServer)
+				err := server.Receiver(&v2.EgressRequest{}, receiverServer)
 				Expect(err).To(Equal(io.ErrUnexpectedEOF))
-
-				Expect(mockReceiverServer.SendInput.Arg0).To(Receive(Equal(e)))
 			})
 
-			It("streams data from the subscriber until an error from the sender", func() {
-				close(errOut)
-				e := &v2.Envelope{Timestamp: 1}
+			It("errors when the sender cannot send the envelope", func() {
+				receiverServer = &spyReceiverServer{err: errors.New("Oh No!")}
+				receiver = &spyReceiver{}
 
-				dataOut <- e
-				dataOut <- nil
-				mockReceiverServer.SendOutput.Ret0 <- fmt.Errorf("some-secret-error")
-
-				err := server.Receiver(&v2.EgressRequest{}, mockReceiverServer)
+				server = egress.NewServer(receiver, metricClient)
+				err := server.Receiver(&v2.EgressRequest{}, receiverServer)
 				Expect(err).To(Equal(io.ErrUnexpectedEOF))
-
-				Expect(mockReceiverServer.SendInput.Arg0).To(Receive(Equal(e)))
-			})
-		})
-
-		Context("when subscriber returns an error", func() {
-			BeforeEach(func() {
-				close(mockReceiver.ReceiveOutput.Rx)
-				mockReceiver.ReceiveOutput.Err <- fmt.Errorf("some-error")
 			})
 
-			It("returns an error", func() {
-				err := server.Receiver(&v2.EgressRequest{Filter: &v2.Filter{SourceId: "some-id"}}, mockReceiverServer)
-				Expect(err).To(HaveOccurred())
+			It("streams data when there are envelopes", func() {
+				receiverServer = &spyReceiverServer{}
+				receiver = &spyReceiver{
+					envelope:       &v2.Envelope{},
+					envelopeRepeat: 10,
+				}
+
+				server = egress.NewServer(receiver, metricClient)
+				server.Receiver(&v2.EgressRequest{}, receiverServer)
+
+				Eventually(receiverServer.EnvelopeCount).Should(Equal(int64(10)))
 			})
 		})
 	})
 })
+
+type spyReceiverServer struct {
+	err           error
+	envelopeCount int64
+
+	grpc.ServerStream
+}
+
+func (*spyReceiverServer) Context() context.Context {
+	return context.Background()
+}
+
+func (s *spyReceiverServer) Send(*v2.Envelope) error {
+	atomic.AddInt64(&s.envelopeCount, 1)
+	return s.err
+}
+
+func (s *spyReceiverServer) EnvelopeCount() int64 {
+	return atomic.LoadInt64(&s.envelopeCount)
+}
+
+type spyReceiver struct {
+	envelope       *v2.Envelope
+	envelopeRepeat int
+}
+
+func (s *spyReceiver) Receive(ctx context.Context, req *v2.EgressRequest) (func() (*v2.Envelope, error), error) {
+	return func() (*v2.Envelope, error) {
+		if s.envelopeRepeat > 0 {
+			s.envelopeRepeat--
+			return s.envelope, nil
+		}
+
+		return nil, errors.New("Oh no!")
+	}, nil
+}
