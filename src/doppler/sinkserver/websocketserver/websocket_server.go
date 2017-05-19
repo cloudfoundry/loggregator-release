@@ -144,6 +144,7 @@ func (w *WebsocketServer) ServeHTTP(writer http.ResponseWriter, request *http.Re
 	}
 
 	defer func() {
+		ws.WriteControl(gorilla.CloseMessage, gorilla.FormatCloseMessage(gorilla.CloseNormalClosure, ""), time.Now().Add(5*time.Second))
 		ws.Close()
 	}()
 
