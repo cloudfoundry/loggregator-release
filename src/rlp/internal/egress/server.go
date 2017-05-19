@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"io"
 	"log"
+
+	"diodes"
 	"metricemitter"
 	v2 "plumbing/v2"
 
+	gendiodes "github.com/cloudfoundry/diodes"
 	"golang.org/x/net/context"
 )
 
@@ -42,27 +45,47 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 		return errors.New("invalid request: cannot have type filter without source id")
 	}
 
-	rx, err := s.receiver.Receive(srv.Context(), r)
+	ctx, cancel := context.WithCancel(srv.Context())
+	rx, err := s.receiver.Receive(ctx, r)
 	if err != nil {
 		log.Printf("Unable to setup subscription: %s", err)
 		return fmt.Errorf("unable to setup subscription")
 	}
 
+	alerter := gendiodes.AlertFunc(func(missed int) {
+		fmt.Println("DROPPED")
+	})
+
+	buffer := diodes.NewOneToOneEnvelopeV2(100, alerter, gendiodes.WithPollingContext(ctx))
+
+	go func() {
+		defer cancel()
+		for {
+			e, err := rx()
+			if err == io.EOF {
+				break
+			}
+
+			if err != nil {
+				log.Printf("Subscribe error: %s", err)
+				break
+			}
+
+			buffer.Set(e)
+		}
+	}()
+
 	for {
-		e, err := rx()
-		if err == io.EOF {
-			return io.EOF
+		data := buffer.Next()
+		if data == nil {
+			return nil
 		}
 
-		if err != nil {
-			log.Printf("Subscribe error: %s", err)
-			return io.ErrUnexpectedEOF
-		}
-
-		if err := srv.Send(e); err != nil {
+		if err := srv.Send(data); err != nil {
 			log.Printf("Send error: %s", err)
 			return io.ErrUnexpectedEOF
 		}
+
 		// metric-documentation-v2: (egress) Number of v2 envelopes sent to RLP
 		// consumers.
 		s.egressMetric.Increment(1)

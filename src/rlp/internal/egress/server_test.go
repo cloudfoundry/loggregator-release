@@ -33,53 +33,45 @@ var _ = Describe("Server", func() {
 	})
 
 	Describe("Receiver()", func() {
-		Context("when subscriber does not return an error", func() {
-			It("returns an error for a request that has type filter but not a source ID", func() {
-				req := &v2.EgressRequest{
-					Filter: &v2.Filter{
-						Message: &v2.Filter_Log{
-							Log: &v2.LogFilter{},
-						},
+		It("returns an error for a request that has type filter but not a source ID", func() {
+			req := &v2.EgressRequest{
+				Filter: &v2.Filter{
+					Message: &v2.Filter_Log{
+						Log: &v2.LogFilter{},
 					},
-				}
-				receiverServer = &spyReceiverServer{}
-				receiver = &spyReceiver{}
-				server = egress.NewServer(receiver, metricClient)
+				},
+			}
+			receiverServer = &spyReceiverServer{}
+			receiver = &spyReceiver{}
+			server = egress.NewServer(receiver, metricClient)
 
-				err := server.Receiver(req, receiverServer)
-				Expect(err).To(MatchError("invalid request: cannot have type filter without source id"))
-			})
+			err := server.Receiver(req, receiverServer)
+			Expect(err).To(MatchError("invalid request: cannot have type filter without source id"))
+		})
 
-			It("errors when the subscription from the receiver errors", func() {
-				receiverServer = &spyReceiverServer{}
-				receiver = &spyReceiver{}
-				server = egress.NewServer(receiver, metricClient)
+		It("errors when the sender cannot send the envelope", func() {
+			receiverServer = &spyReceiverServer{err: errors.New("Oh No!")}
+			receiver = &spyReceiver{
+				envelope:       &v2.Envelope{},
+				envelopeRepeat: 1,
+			}
 
-				err := server.Receiver(&v2.EgressRequest{}, receiverServer)
-				Expect(err).To(Equal(io.ErrUnexpectedEOF))
-			})
+			server = egress.NewServer(receiver, metricClient)
+			err := server.Receiver(&v2.EgressRequest{}, receiverServer)
+			Expect(err).To(Equal(io.ErrUnexpectedEOF))
+		})
 
-			It("errors when the sender cannot send the envelope", func() {
-				receiverServer = &spyReceiverServer{err: errors.New("Oh No!")}
-				receiver = &spyReceiver{}
+		It("streams data when there are envelopes", func() {
+			receiverServer = &spyReceiverServer{}
+			receiver = &spyReceiver{
+				envelope:       &v2.Envelope{},
+				envelopeRepeat: 10,
+			}
 
-				server = egress.NewServer(receiver, metricClient)
-				err := server.Receiver(&v2.EgressRequest{}, receiverServer)
-				Expect(err).To(Equal(io.ErrUnexpectedEOF))
-			})
+			server = egress.NewServer(receiver, metricClient)
+			server.Receiver(&v2.EgressRequest{}, receiverServer)
 
-			It("streams data when there are envelopes", func() {
-				receiverServer = &spyReceiverServer{}
-				receiver = &spyReceiver{
-					envelope:       &v2.Envelope{},
-					envelopeRepeat: 10,
-				}
-
-				server = egress.NewServer(receiver, metricClient)
-				server.Receiver(&v2.EgressRequest{}, receiverServer)
-
-				Eventually(receiverServer.EnvelopeCount).Should(Equal(int64(10)))
-			})
+			Eventually(receiverServer.EnvelopeCount).Should(Equal(int64(10)))
 		})
 	})
 })

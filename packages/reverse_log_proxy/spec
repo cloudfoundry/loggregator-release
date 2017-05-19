@@ -3,9 +3,11 @@ name: reverse_log_proxy
 dependencies:
 - golang1.7
 files:
+- loggregator/src/diodes/*.go # gosub
 - loggregator/src/doppler/app/*.go # gosub
 - loggregator/src/doppler/internal/iprange/*.go # gosub
 - loggregator/src/dopplerservice/*.go # gosub
+- loggregator/src/github.com/cloudfoundry/diodes/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metricbatcher/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/sonde-go/events/*.go # gosub
