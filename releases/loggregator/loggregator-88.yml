@@ -1,0 +1,105 @@
+name: loggregator
+version: "88"
+commit_hash: 266e0f1
+uncommitted_changes: false
+jobs:
+- name: dea_logging_agent
+  version: 9ce68259014000cffe00fc39b4a73ab7beb7d95f
+  fingerprint: 9ce68259014000cffe00fc39b4a73ab7beb7d95f
+  sha1: 835bb8b0e4ee60feadf114d08c6cb3781525db03
+- name: doppler
+  version: 4a19d52a5f018d177526a6eb098fa92e6769cbf3
+  fingerprint: 4a19d52a5f018d177526a6eb098fa92e6769cbf3
+  sha1: 43e6f71d0da438378b38b30276ceefd810072c04
+- name: loggregator-acceptance-tests
+  version: 45883c865821661c6d31115a061bcf6846178777
+  fingerprint: 45883c865821661c6d31115a061bcf6846178777
+  sha1: 60e8de654ad9bd1d886c054c35993679d27e3558
+- name: loggregator_trafficcontroller
+  version: 45772ede2b5fa3ea27535d96dda1a61db0058491
+  fingerprint: 45772ede2b5fa3ea27535d96dda1a61db0058491
+  sha1: 69b2c07a173c515e9c7d97ffea484507e221b30d
+- name: metron_agent
+  version: 247f9e857f4199f5331188d3d0d0e9b7ad000b52
+  fingerprint: 247f9e857f4199f5331188d3d0d0e9b7ad000b52
+  sha1: 9b963b7fb79a330919007282ee1c925d14519904
+- name: metron_agent_windows
+  version: ec7fb4428af1e122df968e1d87ec87f16eb840ab
+  fingerprint: ec7fb4428af1e122df968e1d87ec87f16eb840ab
+  sha1: b055d9d9b24a81d0517c4f99d9fbdf1f3595c239
+- name: reverse_log_proxy
+  version: abd857b6c7f2d11eecd7ca115264d95d2f7565ce
+  fingerprint: abd857b6c7f2d11eecd7ca115264d95d2f7565ce
+  sha1: 3b48a3b1c33e1d35fbb40b8577d33eb45aa48c1f
+- name: syslog_drain_binder
+  version: d1713a11c3e4811e9cab459b57371d9b073dc480
+  fingerprint: d1713a11c3e4811e9cab459b57371d9b073dc480
+  sha1: 023c41e2d2decf286704619d7b4377ef30c18ca0
+packages:
+- name: dea_logging_agent
+  version: b9ba5926caff75f53e62fd68f0e2bab1b651b240
+  fingerprint: b9ba5926caff75f53e62fd68f0e2bab1b651b240
+  sha1: bd797853c9deb37059050d3dcd9f93ae9982a27a
+  dependencies:
+  - golang1.7
+- name: doppler
+  version: 29ad5843fa06b6f8198fe098a3e76b9efec47811
+  fingerprint: 29ad5843fa06b6f8198fe098a3e76b9efec47811
+  sha1: e691d30f2057d63953e9c883f3cdb6e22213bdad
+  dependencies:
+  - golang1.7
+- name: golang1.7
+  version: 46105d4480ca083a6cafb8ca307d5e5084c655c4
+  fingerprint: 46105d4480ca083a6cafb8ca307d5e5084c655c4
+  sha1: c58afda1f702ac2af08374acc708244c8a8032df
+  dependencies: []
+- name: golang1.7-windows
+  version: de0796b9d78caad6db3afb787a0c176444c35e5e
+  fingerprint: de0796b9d78caad6db3afb787a0c176444c35e5e
+  sha1: 795f519b213fc2648ab50a71c83c57abf30a3974
+  dependencies: []
+- name: loggregator-acceptance-tests
+  version: 8344f91d70943c506a488c040b71714c31be070d
+  fingerprint: 8344f91d70943c506a488c040b71714c31be070d
+  sha1: 67d8e84cdae89da0352344d7db6c499cb8a94e12
+  dependencies:
+  - golang1.7
+- name: loggregator_common
+  version: 0fce24a169a51b745965d683f436121c2086c9bd
+  fingerprint: 0fce24a169a51b745965d683f436121c2086c9bd
+  sha1: 6b2934e23ce550a87fedf862f030875571c9f869
+  dependencies: []
+- name: loggregator_trafficcontroller
+  version: 6008a18cff77af32f59570aac8b276b9c32acc25
+  fingerprint: 6008a18cff77af32f59570aac8b276b9c32acc25
+  sha1: 339fe6c5156f14c53978b65525c6974b73dfcf77
+  dependencies:
+  - golang1.7
+- name: metron_agent
+  version: c35dd9dda629967c215b2d1962e1cc4373fd15de
+  fingerprint: c35dd9dda629967c215b2d1962e1cc4373fd15de
+  sha1: dc4f521924d1891fa739b32f1db3c1e289ddc1e0
+  dependencies:
+  - golang1.7
+- name: metron_agent_windows
+  version: df1d32764aab130ba79d4c4be38a30b026caf735
+  fingerprint: df1d32764aab130ba79d4c4be38a30b026caf735
+  sha1: 80e9596e7e83b800bdb3ac3bd1099bed047866dc
+  dependencies:
+  - golang1.7-windows
+- name: reverse_log_proxy
+  version: a8a6df3429d930bb11a077b59c5c64a21a71146d
+  fingerprint: a8a6df3429d930bb11a077b59c5c64a21a71146d
+  sha1: a0dc890a8900e7e525407011f1dc5c64ab367426
+  dependencies:
+  - golang1.7
+- name: syslog_drain_binder
+  version: a0ce2261b326d5d915cfb4d71d4da5b27ac0eed9
+  fingerprint: a0ce2261b326d5d915cfb4d71d4da5b27ac0eed9
+  sha1: 21623c323db0f575a1959694a3534d846e43b973
+  dependencies:
+  - golang1.7
+license:
+  version: 61b51b4388351bfdf65f7b5151c9ba84ad64a1bf
+  fingerprint: 61b51b4388351bfdf65f7b5151c9ba84ad64a1bf
+  sha1: c047c77032ef7f7b99aecd935d5b26842c27ae5e
