@@ -24,12 +24,11 @@ type Server struct {
 }
 
 func NewServer(r Receiver, m metricemitter.MetricClient) *Server {
-	egressMetric := m.NewCounterMetric(
-		"egress",
+	egressMetric := m.NewCounterMetric("egress",
+		metricemitter.WithVersion(2, 0),
 		metricemitter.WithTags(map[string]string{
 			"protocol": "grpc",
 		}),
-		metricemitter.WithVersion(2, 0),
 	)
 
 	return &Server{
@@ -52,28 +51,9 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 		return fmt.Errorf("unable to setup subscription")
 	}
 
-	alerter := gendiodes.AlertFunc(func(missed int) {
-		fmt.Println("DROPPED")
-	})
+	buffer := diodes.NewOneToOneEnvelopeV2(100, s, gendiodes.WithPollingContext(ctx))
 
-	buffer := diodes.NewOneToOneEnvelopeV2(100, alerter, gendiodes.WithPollingContext(ctx))
-
-	go func() {
-		defer cancel()
-		for {
-			e, err := rx()
-			if err == io.EOF {
-				break
-			}
-
-			if err != nil {
-				log.Printf("Subscribe error: %s", err)
-				break
-			}
-
-			buffer.Set(e)
-		}
-	}()
+	go s.consumeReceiver(buffer, rx, cancel)
 
 	for {
 		data := buffer.Next()
@@ -89,5 +69,31 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 		// metric-documentation-v2: (egress) Number of v2 envelopes sent to RLP
 		// consumers.
 		s.egressMetric.Increment(1)
+	}
+}
+
+func (s *Server) Alert(missed int) {
+	log.Printf("Dropped (egress) %d envelopes", missed)
+}
+
+func (s *Server) consumeReceiver(
+	buffer *diodes.OneToOneEnvelopeV2,
+	rx func() (*v2.Envelope, error),
+	cancel func(),
+) {
+
+	defer cancel()
+	for {
+		e, err := rx()
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			log.Printf("Subscribe error: %s", err)
+			break
+		}
+
+		buffer.Set(e)
 	}
 }
