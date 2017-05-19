@@ -19,21 +19,27 @@ type Receiver interface {
 }
 
 type Server struct {
-	receiver     Receiver
-	egressMetric *metricemitter.CounterMetric
+	receiver      Receiver
+	egressMetric  *metricemitter.CounterMetric
+	droppedMetric *metricemitter.CounterMetric
 }
 
 func NewServer(r Receiver, m metricemitter.MetricClient) *Server {
 	egressMetric := m.NewCounterMetric("egress",
 		metricemitter.WithVersion(2, 0),
+	)
+
+	droppedMetric := m.NewCounterMetric("dropped",
+		metricemitter.WithVersion(2, 0),
 		metricemitter.WithTags(map[string]string{
-			"protocol": "grpc",
+			"direction": "egress",
 		}),
 	)
 
 	return &Server{
-		receiver:     r,
-		egressMetric: egressMetric,
+		receiver:      r,
+		egressMetric:  egressMetric,
+		droppedMetric: droppedMetric,
 	}
 }
 
@@ -73,6 +79,9 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 }
 
 func (s *Server) Alert(missed int) {
+	// metric-documentation-v2: (dropped) Number of v2 envelopes dropped
+	// while egressing to a consumer.
+	s.droppedMetric.Increment(uint64(missed))
 	log.Printf("Dropped (egress) %d envelopes", missed)
 }
 

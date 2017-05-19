@@ -3,7 +3,6 @@ package egress_test
 import (
 	"errors"
 	"io"
-	"metricemitter"
 	"metricemitter/testhelper"
 	"rlp/internal/egress"
 	"sync/atomic"
@@ -24,7 +23,7 @@ var _ = Describe("Server", func() {
 		receiverServer *spyReceiverServer
 		server         *egress.Server
 		ctx            context.Context
-		metricClient   metricemitter.MetricClient
+		metricClient   *testhelper.SpyMetricClient
 	)
 
 	BeforeEach(func() {
@@ -72,6 +71,38 @@ var _ = Describe("Server", func() {
 			server.Receiver(&v2.EgressRequest{}, receiverServer)
 
 			Eventually(receiverServer.EnvelopeCount).Should(Equal(int64(10)))
+		})
+
+		Describe("Metrics", func() {
+			It("emits 'egress' metric for each envelope", func() {
+				receiverServer = &spyReceiverServer{}
+				receiver = &spyReceiver{
+					envelope:       &v2.Envelope{},
+					envelopeRepeat: 10,
+				}
+
+				server = egress.NewServer(receiver, metricClient)
+				server.Receiver(&v2.EgressRequest{}, receiverServer)
+
+				Eventually(func() uint64 {
+					return metricClient.GetDelta("egress")
+				}).Should(BeNumerically("==", 10))
+			})
+
+			It("emits 'egress' metric for each envelope", func() {
+				receiverServer = &spyReceiverServer{}
+				receiver = &spyReceiver{
+					envelope:       &v2.Envelope{},
+					envelopeRepeat: 1000,
+				}
+
+				server = egress.NewServer(receiver, metricClient)
+				server.Receiver(&v2.EgressRequest{}, receiverServer)
+
+				Eventually(func() uint64 {
+					return metricClient.GetDelta("dropped")
+				}).Should(BeNumerically(">", 100))
+			})
 		})
 	})
 })
