@@ -9,7 +9,7 @@ releases:
 - name: loggregator
   version: latest
 - name: consul
-  version: latest
+  version: 164
 
 instance_groups:
 - name: testing-blobs
@@ -37,7 +37,7 @@ instance_groups:
   - name: consul_agent
     release: consul
     consumes:
-      consul: { from: consul_server }
+      consul: {from: consul_server}
     provides:
       consul: {as: consul_server}
     properties:
