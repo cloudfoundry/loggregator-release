@@ -38,10 +38,11 @@ type DataDumper interface {
 // DopplerServer is the GRPC server component that accepts requests for firehose
 // streams, application streams, container metrics, and recent logs.
 type DopplerServer struct {
-	registrar        Registrar
-	dumper           DataDumper
-	numSubscriptions int64
-	egressMetric     *metricemitter.CounterMetric
+	registrar           Registrar
+	dumper              DataDumper
+	numSubscriptions    int64
+	egressMetric        *metricemitter.CounterMetric
+	egressDroppedMetric *metricemitter.CounterMetric
 }
 
 type sender interface {
@@ -59,10 +60,16 @@ func NewDopplerServer(
 		metricemitter.WithVersion(2, 0),
 	)
 
+	egressDroppedMetric := metricClient.NewCounterMetric("dropped",
+		metricemitter.WithVersion(2, 0),
+		metricemitter.WithTags(map[string]string{"direction": "egress"}),
+	)
+
 	m := &DopplerServer{
-		registrar:    registrar,
-		dumper:       dumper,
-		egressMetric: egressMetric,
+		registrar:           registrar,
+		dumper:              dumper,
+		egressMetric:        egressMetric,
+		egressDroppedMetric: egressDroppedMetric,
 	}
 
 	go m.emitMetrics()
@@ -148,6 +155,10 @@ func (m *DopplerServer) sendData(req *plumbing.SubscriptionRequest, sender sende
 
 // Alert logs dropped message counts to stderr.
 func (m *DopplerServer) Alert(missed int) {
+	// metric-documentation-v2: (loggregator.doppler.dropped) Number of
+	// v1 envelopes dropped while egressing.
+	m.egressDroppedMetric.Increment(uint64(missed))
+
 	log.Printf("Dropped (egress) %d envelopes", missed)
 }
 

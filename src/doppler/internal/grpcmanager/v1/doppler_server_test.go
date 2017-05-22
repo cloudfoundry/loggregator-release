@@ -29,6 +29,7 @@ var _ = Describe("GRPCManager", func() {
 		mockCleanup    func()
 		cleanupCalled  chan struct{}
 		mockDataDumper *mockDataDumper
+		metricClient   *testhelper.SpyMetricClient
 
 		manager       *v1.DopplerServer
 		listener      net.Listener
@@ -86,11 +87,12 @@ var _ = Describe("GRPCManager", func() {
 		mockCleanup = buildCleanup(cleanupCalled)
 		mockRegistrar.RegisterOutput.Ret0 <- mockCleanup
 		mockDataDumper = newMockDataDumper()
+		metricClient = testhelper.NewMetricClient()
 
 		manager = v1.NewDopplerServer(
 			mockRegistrar,
 			mockDataDumper,
-			testhelper.NewMetricClient(),
+			metricClient,
 		)
 
 		listener = startGRPCServer(manager)
@@ -130,6 +132,21 @@ var _ = Describe("GRPCManager", func() {
 			}
 
 			Eventually(fakeEmitter.GetMessages, 2).Should(ContainElement(expected))
+		})
+
+		It("emits a metric for dropped egress messages", func() {
+			subscription, _ := dopplerClient.Subscribe(context.TODO(), subscribeRequest)
+
+			setter = fetchSetter()
+			for i := 0; i < 2001; i++ {
+				setter.Set([]byte("some-data"))
+			}
+
+			subscription.Recv()
+			f := func() uint64 {
+				return metricClient.GetDelta("dropped")
+			}
+			Eventually(f).Should(BeNumerically(">=", 1000))
 		})
 
 		Context("connection is established", func() {
