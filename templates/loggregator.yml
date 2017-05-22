@@ -16,7 +16,7 @@ instance_groups:
   azs:
   - z1
   instances: 1
-  persistent_disk_type: default
+  persistent_disk_type: 1GB
   vm_type: default
   stemcell: default
   networks:
@@ -28,7 +28,7 @@ instance_groups:
   azs:
   - z1
   instances: 1
-  persistent_disk_type: default
+  persistent_disk_type: 1GB
   vm_type: default
   stemcell: default
   networks:
@@ -100,7 +100,7 @@ instance_groups:
   azs:
   - z1
   instances: 1
-  persistent_disk_type: default
+  persistent_disk_type: 5GB
   vm_type: default
   stemcell: default
   networks:
@@ -139,7 +139,7 @@ instance_groups:
   azs:
   - z1
   instances: 1
-  persistent_disk_type: default
+  persistent_disk_type: 5GB
   vm_type: default
   stemcell: default
   networks:
@@ -185,7 +185,7 @@ instance_groups:
   azs:
   - z1
   instances: 1
-  persistent_disk_type: default
+  persistent_disk_type: 5GB
   vm_type: default
   stemcell: default
   networks:
