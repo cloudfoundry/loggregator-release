@@ -48,6 +48,25 @@ var _ = Describe("Start", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(envelope.GetTags()["origin"].GetText()).To(Equal("some-origin"))
 	})
+
+	It("receives container metrics via egress query client", func() {
+		doppler, dopplerLis := setupDoppler()
+		defer dopplerLis.Close()
+		doppler.ContainerMetricsOutput.Err <- nil
+		doppler.ContainerMetricsOutput.Resp <- &plumbing.ContainerMetricsResponse{
+			Payload: [][]byte{buildContainerMetric()},
+		}
+
+		egressLis := setupRLP(dopplerLis)
+		egressClient, cleanup := setupRLPQueryClient(egressLis)
+		defer cleanup()
+
+		ctx, _ := context.WithTimeout(context.Background(), time.Second)
+		resp, err := egressClient.ContainerMetrics(ctx, &v2.ContainerMetricRequest{})
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(resp.Envelopes).To(HaveLen(1))
+	})
 })
 
 func buildLogMessage() []byte {
@@ -59,6 +78,22 @@ func buildLogMessage() []byte {
 			MessageType: events.LogMessage_OUT.Enum(),
 			Timestamp:   proto.Int64(time.Now().UnixNano()),
 			AppId:       proto.String("test-app"),
+		},
+	}
+	b, _ := proto.Marshal(e)
+	return b
+}
+
+func buildContainerMetric() []byte {
+	e := &events.Envelope{
+		Origin:    proto.String("some-origin"),
+		EventType: events.Envelope_ContainerMetric.Enum(),
+		ContainerMetric: &events.ContainerMetric{
+			ApplicationId: proto.String("test-app"),
+			InstanceIndex: proto.Int32(1),
+			CpuPercentage: proto.Float64(10.0),
+			MemoryBytes:   proto.Uint64(1),
+			DiskBytes:     proto.Uint64(1),
 		},
 	}
 	b, _ := proto.Marshal(e)
@@ -142,6 +177,28 @@ func setupRLPClient(egressLis net.Listener) (v2.Egress_ReceiverClient, func()) {
 	}, 5).ShouldNot(HaveOccurred())
 
 	return egressStream, func() {
+		conn.Close()
+	}
+}
+
+func setupRLPQueryClient(egressLis net.Listener) (v2.EgressQueryClient, func()) {
+	ingressTLSCredentials, err := plumbing.NewCredentials(
+		testservers.Cert("reverselogproxy.crt"),
+		testservers.Cert("reverselogproxy.key"),
+		testservers.Cert("loggregator-ca.crt"),
+		"reverselogproxy",
+	)
+	Expect(err).ToNot(HaveOccurred())
+
+	conn, err := grpc.Dial(
+		egressLis.Addr().String(),
+		grpc.WithTransportCredentials(ingressTLSCredentials),
+	)
+	Expect(err).ToNot(HaveOccurred())
+
+	egressClient := v2.NewEgressQueryClient(conn)
+
+	return egressClient, func() {
 		conn.Close()
 	}
 }

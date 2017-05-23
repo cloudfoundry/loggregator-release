@@ -18,8 +18,9 @@ import (
 	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
 
-	. "github.com/onsi/gomega"
 	. "lats/config"
+
+	. "github.com/onsi/gomega"
 )
 
 const (
@@ -74,9 +75,10 @@ func ConnectToFirehose() (<-chan *events.Envelope, <-chan error) {
 	return msgChan, errorChan
 }
 
-func RequestContainerMetrics(appID string) ([]*events.ContainerMetric, error) {
+func RequestContainerMetrics(appID string) []*events.ContainerMetric {
 	consumer, _ := SetUpConsumer()
-	return consumer.ContainerMetrics(appID, "")
+	resp, _ := consumer.ContainerMetrics(appID, "")
+	return resp
 }
 
 func RequestRecentLogs(appID string) ([]*events.LogMessage, error) {
@@ -171,6 +173,28 @@ func ReadFromRLP(appID string) <-chan *v2.Envelope {
 	}()
 
 	return msgChan
+}
+
+func ReadContainerFromRLP(appID string) []*v2.Envelope {
+	creds, err := plumbing.NewCredentials(
+		config.MetronTLSClientConfig.CertFile,
+		config.MetronTLSClientConfig.KeyFile,
+		config.MetronTLSClientConfig.CAFile,
+		"reverselogproxy",
+	)
+	Expect(err).NotTo(HaveOccurred())
+
+	conn, err := grpc.Dial(config.ReverseLogProxyAddr, grpc.WithTransportCredentials(creds))
+	Expect(err).NotTo(HaveOccurred())
+
+	client := v2.NewEgressQueryClient(conn)
+
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	resp, err := client.ContainerMetrics(ctx, &v2.ContainerMetricRequest{
+		SourceId: appID,
+	})
+	Expect(err).ToNot(HaveOccurred())
+	return resp.Envelopes
 }
 
 func FindMatchingEnvelope(msgChan <-chan *events.Envelope, envelope *events.Envelope) *events.Envelope {

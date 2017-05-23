@@ -24,6 +24,7 @@ type RLP struct {
 	ingressDialOpts []grpc.DialOption
 
 	receiver *ingress.Receiver
+	querier  *ingress.Querier
 
 	egressAddr     net.Addr
 	egressListener net.Listener
@@ -96,6 +97,7 @@ func (r *RLP) setupIngress() {
 	connector := plumbing.NewGRPCConnector(1000, pool, finder, batcher, r.metricClient)
 	converter := ingress.NewConverter()
 	r.receiver = ingress.NewReceiver(converter, ingress.NewRequestConverter(), connector)
+	r.querier = ingress.NewQuerier(converter, connector)
 }
 
 func (r *RLP) setupEgress() {
@@ -107,6 +109,7 @@ func (r *RLP) setupEgress() {
 	r.egressAddr = r.egressListener.Addr()
 	r.egressServer = grpc.NewServer(r.egressServerOpts...)
 	v2.RegisterEgressServer(r.egressServer, egress.NewServer(r.receiver, r.metricClient))
+	v2.RegisterEgressQueryServer(r.egressServer, egress.NewQueryServer(r.querier))
 }
 
 func (r *RLP) serveEgress() {
