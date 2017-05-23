@@ -46,6 +46,11 @@ var _ = Describe("QueryServer", func() {
 		Expect(results.Envelopes[0]).To(Equal(e))
 	})
 
+	It("returns an error if the source_id is empty", func() {
+		_, err := server.ContainerMetrics(context.TODO(), &v2.ContainerMetricRequest{})
+		Expect(err).To(HaveOccurred())
+	})
+
 	It("returns an error if fetcher fails", func() {
 		spy.err = errors.New("some-error")
 

@@ -1,6 +1,7 @@
 package egress
 
 import (
+	"errors"
 	v2 "plumbing/v2"
 
 	"golang.org/x/net/context"
@@ -21,6 +22,10 @@ func NewQueryServer(f ContainerMetricFetcher) *QueryServer {
 }
 
 func (s *QueryServer) ContainerMetrics(ctx context.Context, req *v2.ContainerMetricRequest) (*v2.QueryResponse, error) {
+	if req.SourceId == "" {
+		return nil, errors.New("source_id is required")
+	}
+
 	results, err := s.fetcher.ContainerMetrics(ctx, req.SourceId)
 	if err != nil {
 		return nil, err
