@@ -62,7 +62,9 @@ var _ = Describe("Start", func() {
 		defer cleanup()
 
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
-		resp, err := egressClient.ContainerMetrics(ctx, &v2.ContainerMetricRequest{})
+		resp, err := egressClient.ContainerMetrics(ctx, &v2.ContainerMetricRequest{
+			SourceId: "some-app",
+		})
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(resp.Envelopes).To(HaveLen(1))
