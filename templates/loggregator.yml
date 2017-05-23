@@ -9,7 +9,7 @@ releases:
 - name: loggregator
   version: latest
 - name: consul
-  version: 164
+  version: 167
 
 instance_groups:
 - name: testing-blobs
@@ -37,9 +37,14 @@ instance_groups:
   - name: consul_agent
     release: consul
     consumes:
-      consul: {from: consul_server}
+      consul: nil
+      consul_common: {from: consul_common_link}
+      consul_server: {from: consul_server_link}
+      consul_client: {from: consul_client_link}
     provides:
-      consul: {as: consul_server}
+      consul_common: {as: consul_common_link, shared: true}
+      consul_server: {as: consul_server_link, shared: true}
+      consul_client: {as: consul_client_link, shared: true}
     properties:
       consul:
         agent:
@@ -91,7 +96,10 @@ instance_groups:
   - name: consul_agent
     release: consul
     consumes:
-      consul: {from: consul_server}
+      consul: nil
+      consul_common: {from: consul_common_link}
+      consul_server: nil
+      consul_client: {from: consul_client_link}
   - name: metron_agent
     release: loggregator
     properties: *metron_agent_properties
@@ -109,7 +117,10 @@ instance_groups:
   - name: consul_agent
     release: consul
     consumes:
-      consul: {from: consul_server}
+      consul: nil
+      consul_common: {from: consul_common_link}
+      consul_server: nil
+      consul_client: {from: consul_client_link}
     properties:
       consul:
         agent:
@@ -148,7 +159,10 @@ instance_groups:
   - name: consul_agent
     release: consul
     consumes:
-      consul: {from: consul_server}
+      consul: nil
+      consul_common: {from: consul_common_link}
+      consul_server: nil
+      consul_client: {from: consul_client_link}
     properties:
       consul:
         agent:
@@ -194,7 +208,10 @@ instance_groups:
   - name: consul_agent
     release: consul
     consumes:
-      consul: {from: consul_server}
+      consul: nil
+      consul_common: {from: consul_common_link}
+      consul_server: nil
+      consul_client: {from: consul_client_link}
     properties:
       consul:
         agent:
