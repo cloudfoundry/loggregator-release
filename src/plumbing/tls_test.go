@@ -91,10 +91,11 @@ var _ = Describe("TLS", func() {
 		})
 
 		It("returns an error when the certificate is not signed by the CA", func() {
+
 			_, err := plumbing.NewMutualTLSConfig(
 				testservers.Cert("doppler.crt"),
 				testservers.Cert("doppler.key"),
-				testservers.Cert("doppler.crt"),
+				wrongCA(),
 				"",
 			)
 			Expect(err).To(HaveOccurred())
@@ -257,5 +258,40 @@ func writeFile(data string) string {
 	Expect(err).ToNot(HaveOccurred())
 	_, err = fmt.Fprintf(f, data)
 	Expect(err).ToNot(HaveOccurred())
+	return f.Name()
+}
+
+func wrongCA() string {
+	someCA := `
+-----BEGIN CERTIFICATE-----
+MIIDKTCCAhGgAwIBAgIQKn+Y6URzoieLEs3Vc8e3PTANBgkqhkiG9w0BAQsFADA+
+MQwwCgYDVQQGEwNVU0ExFjAUBgNVBAoTDUNsb3VkIEZvdW5kcnkxFjAUBgNVBAMT
+DWxvZ2dyZWdhdG9yQ0EwHhcNMTcwNTAyMTgyNjM2WhcNMTgwNTAyMTgyNjM2WjA+
+MQwwCgYDVQQGEwNVU0ExFjAUBgNVBAoTDUNsb3VkIEZvdW5kcnkxFjAUBgNVBAMT
+DWxvZ2dyZWdhdG9yQ0EwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDl
+FmaUqdn8XEJ8Uh8nhQSsqf/u0nDg1oyPlVk1XA8rwibn1ENoeqCyxPPfDIMfozt0
+X5aRqB7Opgn66VQxdD9pIh2jRirvSCC15392VVRX1YJAVCk51zcmGSF7wNky++DG
+VonpPdREyPO78joYtdysMkhwWUD+iDHFg4IbmKvklzJbBoVCjMsmqubqae5RhzZ2
+vAOu2SP5jYYyjrvfC/pN41sWN9mYEXsLfVxwT6oFTKBxmCHNnJ6zqyJmxbz8JykJ
+3Z08GovnKMGcYquZyxREk10Mz5hzor4/G53toUAbfDRfAuTUnsUXbJu3/5UB4VIw
+gbRRAxNHsPYMu6iuG4vrAgMBAAGjIzAhMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMB
+Af8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQBMkum9b9Jh8kwzBUTgXMbtdRYf
+Dnj4LeymTElBp0jsMHcEfKjyOVDtEUusmyhCbIaSPU1uyHRqFw4e5e83372JTazg
+FGNs+nMEp3ph+dZdCQaNtO5GhUirC6AyJyvoBaO7enwTDWEMOBPynOvKbuW3fsBF
+Z6No3WSX/53KcdPvJch6GWMcRoPRuMhkcTe5bASZYskC+td0PesuFTaBBHxEb9ij
+en1e8KTEwXpj1NURmEluDy0KSyXicem4cYRBRbrVX0tliibgrUxj1pK4DxgW84+y
+/9xLJDAaNKGHIxPT6Cw3TmIIfywGncHnI8/ObhPB9Cg3Xv6dMDemZVkFbuue
+-----END CERTIFICATE-----`
+
+	f, err := ioutil.TempFile("", "test_ca")
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = f.Write([]byte(someCA))
+	if err != nil {
+		panic(err)
+	}
+
 	return f.Name()
 }
