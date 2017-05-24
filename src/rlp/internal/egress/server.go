@@ -57,7 +57,7 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 		return fmt.Errorf("unable to setup subscription")
 	}
 
-	buffer := diodes.NewOneToOneEnvelopeV2(100, s, gendiodes.WithPollingContext(ctx))
+	buffer := diodes.NewOneToOneEnvelopeV2(10000, s, gendiodes.WithPollingContext(ctx))
 
 	go s.consumeReceiver(buffer, rx, cancel)
 
