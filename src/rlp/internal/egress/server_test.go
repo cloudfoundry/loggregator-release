@@ -89,11 +89,11 @@ var _ = Describe("Server", func() {
 				}).Should(BeNumerically("==", 10))
 			})
 
-			It("emits 'egress' metric for each envelope", func() {
+			It("emits 'dropped' metric for each envelope", func() {
 				receiverServer = &spyReceiverServer{}
 				receiver = &spyReceiver{
 					envelope:       &v2.Envelope{},
-					envelopeRepeat: 1000,
+					envelopeRepeat: 100000,
 				}
 
 				server = egress.NewServer(receiver, metricClient)
