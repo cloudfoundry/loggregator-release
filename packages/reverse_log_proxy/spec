@@ -1,7 +1,7 @@
 ---
 name: reverse_log_proxy
 dependencies:
-- golang1.7
+- golang1.8.2
 files:
 - loggregator/src/diodes/*.go # gosub
 - loggregator/src/doppler/app/*.go # gosub

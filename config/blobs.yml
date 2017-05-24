@@ -6,3 +6,11 @@ golang/go1.7.4.windows-amd64.zip:
   size: 90409580
   object_id: b9a9acbb-b9a2-4a48-7fde-a1f373fe84cc
   sha: a0da2f5d67e5b800eba811a34ca4b2aa22cca678
+golang/go1.8.1.linux-amd64.tar.gz:
+  size: 91277742
+  object_id: 66e42355-61d2-4194-40df-d5ec78415977
+  sha: a433f76c569055ff8536d796995518dd91a9fa5b
+golang/go1.8.2.linux-amd64.tar.gz:
+  size: 89994271
+  object_id: f5047e02-01e8-4e90-6488-9e8faac230e1
+  sha: 282b9117d00403f1bb287a39a78de58626064aa1
