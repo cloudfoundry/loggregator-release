@@ -202,7 +202,7 @@ func (h *latencyHandler) sample() (time.Duration, error) {
 			found = true
 			break
 		}
-		log.Printf("unexpected message (%s): %s", start.Sub(time.Now()), b)
+		log.Printf("unexpected message")
 	}
 	if err != nil {
 		return 0, err
