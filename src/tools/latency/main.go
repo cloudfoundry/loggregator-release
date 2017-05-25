@@ -23,7 +23,7 @@ const (
 )
 
 var dialer = websocket.Dialer{
-	HandshakeTimeout: 500 * time.Millisecond,
+	HandshakeTimeout: 5 * time.Second,
 }
 
 func main() {
