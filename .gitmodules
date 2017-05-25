@@ -58,9 +58,6 @@
 [submodule "src/gopkg.in/check.v1"]
 	path = src/gopkg.in/check.v1
 	url = https://gopkg.in/check.v1
-[submodule "src/dea_logging_agent"]
-	path = src/dea_logging_agent
-	url = https://github.com/cloudfoundry/dea_logging_agent
 [submodule "src/golang.org/x/net"]
 	path = src/golang.org/x/net
 	url = https://go.googlesource.com/net
