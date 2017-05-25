@@ -1,8 +1,7 @@
 package main
 
 import (
-	"bytes"
-	"crypto/rand"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,19 +10,29 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
+	"github.com/cloudfoundry/noaa/consumer"
+	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gorilla/websocket"
+	uuid "github.com/nu7hatch/gouuid"
 )
 
 const (
 	defaultSampleSize   = 10
 	readAttempts        = 5
-	readAttemptDuration = 10 * time.Second
+	readAttemptDuration = 2 * time.Second
+	messagePrefix       = "loggregator-latency-test-"
 )
 
 var dialer = websocket.Dialer{
 	HandshakeTimeout: 5 * time.Second,
+}
+
+func init() {
+	log.SetOutput(os.Stdout)
 }
 
 func main() {
@@ -68,18 +77,12 @@ func input() (addr, token string, location, origin *url.URL, err error) {
 	}
 	addr = ":" + port
 
-	appID, err := appID()
-	if err != nil {
-		return "", "", nil, nil, fmt.Errorf("unablet to obtain app id: %s", err)
-	}
-
 	location, err = url.Parse(targetURL)
 	if err != nil {
 		return "", "", nil, nil, fmt.Errorf("invalid target url: %s", err)
 	}
 	// This shallow copies location, which is enough to create an origin URL.
 	originLocal := *location
-	location.Path = fmt.Sprintf("/apps/%s/stream", appID)
 
 	switch location.Scheme {
 	case "ws":
@@ -122,24 +125,15 @@ type latencyHandler struct {
 
 func (h *latencyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sampleSize := sampleSize(r)
-	var samples []time.Duration
 
-	for i := 0; i < sampleSize; i++ {
-		sample, err := h.sample()
-		if err != nil {
-			log.Printf("sample failed: %s", err)
-			continue
-		}
-		samples = append(samples, sample)
-	}
-
-	if len(samples) < 1 || len(samples) < sampleSize/2 {
-		log.Printf("not enough samples to average")
+	avg, err := h.executeLatencyTest(sampleSize)
+	if err != nil {
+		log.Printf("sample failed: %s", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Fprintf(w, "%f\n", average(samples).Seconds())
+	fmt.Fprintf(w, "%f\n", avg.Seconds())
 }
 
 func sampleSize(r *http.Request) int {
@@ -154,87 +148,111 @@ func sampleSize(r *http.Request) int {
 	return sampleSize
 }
 
-func average(samples []time.Duration) time.Duration {
-	var total uint64
-	for _, sample := range samples {
-		total += uint64(sample)
-	}
-	return time.Duration(total / uint64(len(samples)))
-}
+func (h *latencyHandler) executeLatencyTest(sampleQuantity int) (time.Duration, error) {
+	sendTimes := make(map[string]time.Time)
+	results := make(map[string]time.Duration)
 
-func (h *latencyHandler) sample() (time.Duration, error) {
-	conn, err := h.establishConnection()
-	if err != nil {
-		return 0, fmt.Errorf("dial error: %s", err)
-	}
-	defer conn.Close()
+	appID, _ := appID()
+	consumer := consumer.New(h.location.String(), &tls.Config{InsecureSkipVerify: true}, nil)
+	consumer.SetDebugPrinter(ConsoleDebugPrinter{})
+	msgChan, errorChan := consumer.Stream(appID, h.token)
+	defer consumer.Close()
 
-	msg, err := generateRandomMessage()
-	if err != nil {
-		return 0, err
-	}
-	var outMsg []byte
-	outMsg = append(outMsg, msg...)
-	outMsg = append(outMsg, []byte("\n")...)
-
-	start := time.Now()
-	n, err := os.Stdout.Write(outMsg)
-	if err != nil {
-		return 0, err
-	}
-	if n != len(outMsg) {
-		return 0, fmt.Errorf("written length: %d does not match length: %d", n, len(outMsg))
-	}
-
-	var (
-		end   time.Time
-		found bool
-		b     []byte
-	)
-	for i := 0; i < readAttempts; i++ {
-		conn.SetReadDeadline(time.Now().Add(readAttemptDuration))
-		_, b, err = conn.ReadMessage()
-		end = time.Now()
-		if err != nil {
-			continue
+	go func() {
+		for err := range errorChan {
+			if err == nil {
+				return
+			}
+			log.Println(err)
 		}
-		if bytes.Contains(b, msg) {
-			found = true
-			break
+	}()
+
+Loop:
+	for {
+		select {
+		case envelope := <-msgChan:
+			if envelope.GetEventType() == events.Envelope_LogMessage {
+				message := string(envelope.GetLogMessage().GetMessage())
+
+				if message == "ENSURE CONNECTION" {
+					break Loop
+				}
+			}
+		default:
+			fmt.Println("ENSURE CONNECTION")
+			time.Sleep(time.Second)
 		}
-		log.Printf("unexpected message")
-	}
-	if err != nil {
-		return 0, err
-	}
-	if !found {
-		return 0, errors.New("test message was not found")
 	}
 
-	return end.Sub(start), nil
+	var mutex sync.RWMutex
+	go func() {
+		for i := 0; i < sampleQuantity; i++ {
+			sampleMessage := generateRandomMessage()
+			mutex.Lock()
+			sendTimes[sampleMessage] = time.Now()
+			fmt.Println(sampleMessage)
+			mutex.Unlock()
+			time.Sleep(1 * time.Millisecond)
+		}
+	}()
+
+	timer := time.NewTimer(readAttemptDuration)
+	for {
+		select {
+		case envelope := <-msgChan:
+			end := time.Now()
+
+			if envelope.GetEventType() == events.Envelope_LogMessage {
+				message := string(envelope.GetLogMessage().GetMessage())
+
+				if strings.Contains(message, messagePrefix) {
+					mutex.RLock()
+					start, ok := sendTimes[message]
+					mutex.RUnlock()
+
+					if ok {
+						results[message] = end.Sub(start)
+					}
+				}
+			}
+
+			if len(results) == sampleQuantity {
+				return computeAverages(results)
+			}
+
+			if !timer.Stop() {
+				<-timer.C
+			}
+			timer.Reset(readAttemptDuration)
+		case <-timer.C:
+			lost := sampleQuantity - len(results)
+			log.Printf("Test timeout expired with %d messages lost.", lost)
+			return computeAverages(results)
+		}
+	}
 }
 
-func (h *latencyHandler) establishConnection() (*websocket.Conn, error) {
-	header := make(http.Header)
-	header.Add("Authorization", h.token)
-	header.Add("Origin", h.origin.String())
-	conn, _, err := dialer.Dial(h.location.String(), header)
-	return conn, err
+func computeAverages(results map[string]time.Duration) (time.Duration, error) {
+	if len(results) == 0 {
+		return 0, errors.New("No results.")
+	}
+
+	var totalDuration time.Duration
+	for _, d := range results {
+		totalDuration += d
+	}
+
+	return totalDuration / time.Duration(len(results)), nil
 }
 
-func generateRandomMessage() ([]byte, error) {
-	r, err := randString()
-	if err != nil {
-		return nil, err
-	}
-	return []byte("loggregator-latency-test-" + r), nil
+func generateRandomMessage() string {
+	id, _ := uuid.NewV4()
+	return fmt.Sprint(messagePrefix, id.String())
 }
 
-func randString() (string, error) {
-	b := make([]byte, 20)
-	_, err := rand.Read(b)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%x", b), nil
+type ConsoleDebugPrinter struct{}
+
+func (c ConsoleDebugPrinter) Print(title, dump string) {
+	println(title)
+	println(dump)
 }
