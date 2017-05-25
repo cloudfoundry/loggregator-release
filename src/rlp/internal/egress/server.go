@@ -72,15 +72,15 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 			return io.ErrUnexpectedEOF
 		}
 
-		// metric-documentation-v2: (egress) Number of v2 envelopes sent to RLP
-		// consumers.
+		// metric-documentation-v2: (loggregator.rlp.egress) Number of v2
+		// envelopes sent to RLP consumers.
 		s.egressMetric.Increment(1)
 	}
 }
 
 func (s *Server) Alert(missed int) {
-	// metric-documentation-v2: (dropped) Number of v2 envelopes dropped
-	// while egressing to a consumer.
+	// metric-documentation-v2: (loggregator.rlp.dropped) Number of v2
+	// envelopes dropped while egressing to a consumer.
 	s.droppedMetric.Increment(uint64(missed))
 	log.Printf("Dropped (egress) %d envelopes", missed)
 }
