@@ -1,8 +1,4 @@
 - type: replace
-  path: /instance_groups/name=testing-blobs/persistent_disk_type?
-  value: default
-
-- type: replace
   path: /instance_groups/name=consul/persistent_disk_type?
   value: default
 
