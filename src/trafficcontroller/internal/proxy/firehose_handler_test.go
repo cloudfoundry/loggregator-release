@@ -13,7 +13,6 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	"github.com/gorilla/websocket"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -23,10 +22,11 @@ var _ = Describe("FirehoseHandler", func() {
 	var (
 		handler http.Handler
 
-		auth      LogAuthorizer
-		adminAuth AdminAuthorizer
-		recorder  *httptest.ResponseRecorder
-		connector *SpyGRPCConnector
+		auth       LogAuthorizer
+		adminAuth  AdminAuthorizer
+		recorder   *httptest.ResponseRecorder
+		connector  *SpyGRPCConnector
+		mockSender *mockMetricSender
 	)
 
 	BeforeEach(func() {
@@ -36,6 +36,7 @@ var _ = Describe("FirehoseHandler", func() {
 		auth = LogAuthorizer{Result: AuthorizerResult{Status: http.StatusOK}}
 
 		recorder = httptest.NewRecorder()
+		mockSender = newMockMetricSender()
 
 		handler = proxy.NewDopplerProxy(
 			auth.Authorize,
@@ -43,6 +44,7 @@ var _ = Describe("FirehoseHandler", func() {
 			connector,
 			"cookieDomain",
 			50*time.Millisecond,
+			mockSender,
 		)
 	})
 
@@ -63,7 +65,7 @@ var _ = Describe("FirehoseHandler", func() {
 		req, err := http.NewRequest("GET", "/firehose/123?filter-type=logs", nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		h := proxy.NewFirehoseHandler(connector)
+		h := proxy.NewFirehoseHandler(connector, &proxy.WebSocketServer{})
 		h.ServeHTTP(recorder, req)
 
 		Expect(connector.subscriptions.request.Filter).To(Equal(&plumbing.Filter{
@@ -77,7 +79,7 @@ var _ = Describe("FirehoseHandler", func() {
 		req, err := http.NewRequest("GET", "/firehose/123?filter-type=metrics", nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		h := proxy.NewFirehoseHandler(connector)
+		h := proxy.NewFirehoseHandler(connector, &proxy.WebSocketServer{})
 		h.ServeHTTP(recorder, req)
 
 		Expect(connector.subscriptions.request.Filter).To(Equal(&plumbing.Filter{
@@ -118,6 +120,7 @@ var _ = Describe("FirehoseHandler", func() {
 			connector,
 			"cookieDomain",
 			50*time.Millisecond,
+			mockSender,
 		)
 		server := httptest.NewServer(handler)
 		defer server.CloseClientConnections()
@@ -143,6 +146,7 @@ var _ = Describe("FirehoseHandler", func() {
 			connector,
 			"cookieDomain",
 			50*time.Millisecond,
+			mockSender,
 		)
 		server := httptest.NewServer(handler)
 		defer server.CloseClientConnections()
@@ -154,10 +158,10 @@ var _ = Describe("FirehoseHandler", func() {
 		Expect(err).ToNot(HaveOccurred())
 		defer conn.Close()
 
-		f := func() fake.Metric {
-			return fakeMetricSender.GetValue("dopplerProxy.firehoses")
+		f := func() valueUnit {
+			return mockSender.getValue("dopplerProxy.firehoses")
 		}
-		Eventually(f, 4).Should(Equal(fake.Metric{Value: 1, Unit: "connections"}))
+		Eventually(f, 4).Should(Equal(valueUnit{Value: 1, Unit: "connections"}))
 	})
 })
 

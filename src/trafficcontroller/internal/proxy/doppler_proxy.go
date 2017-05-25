@@ -1,17 +1,15 @@
 package proxy
 
 import (
-	"fmt"
 	"log"
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"time"
+
 	"plumbing"
 	"trafficcontroller/internal/auth"
 
-	"time"
-
-	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 )
@@ -26,6 +24,8 @@ type DopplerProxy struct {
 
 	numFirehoses  int64
 	numAppStreams int64
+
+	metricSender metricSender
 }
 
 type grpcConnector interface {
@@ -34,14 +34,18 @@ type grpcConnector interface {
 	RecentLogs(ctx context.Context, appID string) [][]byte
 }
 
+type metricSender interface {
+	SendValue(name string, value float64, unit string) error
+}
+
 func NewDopplerProxy(
 	logAuthorizer auth.LogAccessAuthorizer,
 	adminAuthorizer auth.AdminAccessAuthorizer,
 	grpcConn grpcConnector,
 	cookieDomain string,
 	timeout time.Duration,
+	m metricSender,
 ) *DopplerProxy {
-
 	r := mux.NewRouter()
 
 	adminAccessMiddleware := NewAdminAccessMiddleware(adminAuthorizer)
@@ -49,73 +53,40 @@ func NewDopplerProxy(
 
 	r.Handle("/set-cookie", NewSetCookieHandler(cookieDomain))
 
-	containerMetricsHandler := NewContainerMetricsHandler(grpcConn, timeout)
+	containerMetricsHandler := NewContainerMetricsHandler(grpcConn, timeout, m)
 	r.Handle("/apps/{appID}/containermetrics", logAccessMiddleware.Wrap(
 		containerMetricsHandler,
 	))
 
-	recentLogsHandler := NewRecentLogsHandler(grpcConn, timeout)
+	recentLogsHandler := NewRecentLogsHandler(grpcConn, timeout, m)
 	r.Handle("/apps/{appID}/recentlogs", logAccessMiddleware.Wrap(recentLogsHandler))
 
-	streamHandler := NewStreamHandler(grpcConn)
+	wsServer := &WebSocketServer{
+		metricSender: m,
+	}
+	streamHandler := NewStreamHandler(grpcConn, wsServer)
 	r.Handle("/apps/{appID}/stream", logAccessMiddleware.Wrap(streamHandler))
 
-	firehoseHandler := NewFirehoseHandler(grpcConn)
+	firehoseHandler := NewFirehoseHandler(grpcConn, wsServer)
 	r.Handle("/firehose/{subID}", adminAccessMiddleware.Wrap(firehoseHandler))
 
-	go emitMetrics(firehoseHandler, streamHandler)
-
-	return &DopplerProxy{
-		Router: r,
+	d := &DopplerProxy{
+		Router:       r,
+		metricSender: m,
 	}
+
+	go d.emitMetrics(firehoseHandler, streamHandler)
+
+	return d
 }
 
-func emitMetrics(firehose *FirehoseHandler, stream *StreamHandler) {
+func (d *DopplerProxy) emitMetrics(firehose *FirehoseHandler, stream *StreamHandler) {
 	for range time.Tick(metricsInterval) {
 		// metric-documentation-v1: (dopplerProxy.firehoses) Number of open firehose streams
-		metrics.SendValue("dopplerProxy.firehoses", float64(firehose.Count()), "connections")
+		d.metricSender.SendValue("dopplerProxy.firehoses", float64(firehose.Count()), "connections")
 		// metric-documentation-v1: (dopplerProxy.appStreams) Number of open app streams
-		metrics.SendValue("dopplerProxy.appStreams", float64(stream.Count()), "connections")
+		d.metricSender.SendValue("dopplerProxy.appStreams", float64(stream.Count()), "connections")
 	}
-}
-
-func serveWS(endpointType, streamID string, w http.ResponseWriter, r *http.Request, recv func() ([]byte, error)) {
-	dopplerEndpoint := NewDopplerEndpoint(endpointType, streamID, false)
-	data := make(chan []byte)
-	handler := dopplerEndpoint.HProvider(data)
-
-	go func() {
-		defer close(data)
-		timer := time.NewTimer(5 * time.Second)
-		timer.Stop()
-		for {
-			resp, err := recv()
-			if err != nil {
-				log.Printf("error receiving from doppler via gRPC %s", err)
-				return
-			}
-
-			if resp == nil {
-				continue
-			}
-
-			timer.Reset(5 * time.Second)
-			select {
-			case data <- resp:
-				if !timer.Stop() {
-					<-timer.C
-				}
-			case <-timer.C:
-				// metric-documentation-v1: (dopplerProxy.slowConsumer) A slow consumer of the
-				// websocket stream
-				metrics.SendValue("dopplerProxy.slowConsumer", 1, "consumer")
-				log.Print("Doppler Proxy: Slow Consumer")
-				return
-			}
-		}
-	}()
-
-	handler.ServeHTTP(w, r)
 }
 
 func serveMultiPartResponse(rw http.ResponseWriter, messages [][]byte) {
@@ -133,12 +104,6 @@ func serveMultiPartResponse(rw http.ResponseWriter, messages [][]byte) {
 
 		partWriter.Write(message)
 	}
-}
-
-func sendLatencyMetric(metricName string, startTime time.Time) {
-	elapsedMillisecond := float64(time.Since(startTime)) / float64(time.Millisecond)
-	// metric-documentation-v1: see callers of sendLatencyMetric
-	metrics.SendValue(fmt.Sprintf("dopplerProxy.%sLatency", metricName), elapsedMillisecond, "ms")
 }
 
 func getAuthToken(req *http.Request) string {

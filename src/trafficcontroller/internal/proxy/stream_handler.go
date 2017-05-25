@@ -10,12 +10,16 @@ import (
 )
 
 type StreamHandler struct {
+	server   *WebSocketServer
 	grpcConn grpcConnector
 	counter  int64
 }
 
-func NewStreamHandler(grpcConn grpcConnector) *StreamHandler {
-	return &StreamHandler{grpcConn: grpcConn}
+func NewStreamHandler(grpcConn grpcConnector, w *WebSocketServer) *StreamHandler {
+	return &StreamHandler{
+		grpcConn: grpcConn,
+		server:   w,
+	}
 }
 
 func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +41,7 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	serveWS("stream", appID, w, r, client)
+	h.server.serveWS("stream", appID, w, r, client)
 }
 
 func (h *StreamHandler) Count() int64 {

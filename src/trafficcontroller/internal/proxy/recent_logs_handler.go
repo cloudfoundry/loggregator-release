@@ -11,21 +11,31 @@ import (
 )
 
 type RecentLogsHandler struct {
-	grpcConn grpcConnector
-	timeout  time.Duration
+	grpcConn     grpcConnector
+	timeout      time.Duration
+	metricSender metricSender
 }
 
-func NewRecentLogsHandler(grpcConn grpcConnector, t time.Duration) *RecentLogsHandler {
+func NewRecentLogsHandler(
+	grpcConn grpcConnector,
+	t time.Duration,
+	m metricSender,
+) *RecentLogsHandler {
 	return &RecentLogsHandler{
-		grpcConn: grpcConn,
-		timeout:  t,
+		grpcConn:     grpcConn,
+		timeout:      t,
+		metricSender: m,
 	}
 }
 
 func (h *RecentLogsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
-	// metric-documentation-v1: (dopplerProxy.recentlogsLatency) Measures amount of time to serve the request for recent logs
-	defer sendLatencyMetric("recentlogs", startTime)
+	defer func() {
+		elapsedMillisecond := float64(time.Since(startTime)) / float64(time.Millisecond)
+		// metric-documentation-v1: (dopplerProxy.recentlogsLatency) Measures
+		// amount of time to serve the request for recent logs
+		h.metricSender.SendValue("dopplerProxy.recentlogsLatency", elapsedMillisecond, "ms")
+	}()
 
 	appID := mux.Vars(r)["appID"]
 

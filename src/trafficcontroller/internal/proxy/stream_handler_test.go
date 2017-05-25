@@ -19,7 +19,8 @@ var _ = Describe("StreamHandler", func() {
 		dopplerProxy *proxy.DopplerProxy
 		recorder     *httptest.ResponseRecorder
 
-		connector *SpyGRPCConnector
+		connector  *SpyGRPCConnector
+		mockSender *mockMetricSender
 	)
 
 	BeforeEach(func() {
@@ -27,6 +28,7 @@ var _ = Describe("StreamHandler", func() {
 		adminAuth = AdminAuthorizer{Result: AuthorizerResult{Status: http.StatusOK}}
 
 		connector = newSpyGRPCConnector(nil)
+		mockSender = newMockMetricSender()
 
 		dopplerProxy = proxy.NewDopplerProxy(
 			auth.Authorize,
@@ -34,11 +36,10 @@ var _ = Describe("StreamHandler", func() {
 			connector,
 			"cookieDomain",
 			50*time.Millisecond,
+			mockSender,
 		)
 
 		recorder = httptest.NewRecorder()
-
-		fakeMetricSender.Reset()
 	})
 
 	Context("if the app id is forbidden", func() {

@@ -12,21 +12,31 @@ import (
 )
 
 type ContainerMetricsHandler struct {
-	grpcConn grpcConnector
-	timeout  time.Duration
+	grpcConn     grpcConnector
+	timeout      time.Duration
+	metricSender metricSender
 }
 
-func NewContainerMetricsHandler(grpcConn grpcConnector, t time.Duration) *ContainerMetricsHandler {
+func NewContainerMetricsHandler(
+	grpcConn grpcConnector,
+	t time.Duration,
+	m metricSender,
+) *ContainerMetricsHandler {
 	return &ContainerMetricsHandler{
-		grpcConn: grpcConn,
-		timeout:  t,
+		grpcConn:     grpcConn,
+		timeout:      t,
+		metricSender: m,
 	}
 }
 
 func (h *ContainerMetricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
-	// metric-documentation-v1: (dopplerProxy.containermetricsLatency) Measures amount of time to serve the request for container metrics
-	defer sendLatencyMetric("containermetrics", startTime)
+	defer func() {
+		elapsedMillisecond := float64(time.Since(startTime)) / float64(time.Millisecond)
+		// metric-documentation-v1: (dopplerProxy.containermetricsLatency)
+		// Measures amount of time to serve the request for container metrics
+		h.metricSender.SendValue("dopplerProxy.containermetricsLatency", elapsedMillisecond, "ms")
+	}()
 
 	appID := mux.Vars(r)["appID"]
 
