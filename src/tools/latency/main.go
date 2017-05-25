@@ -16,26 +16,19 @@ import (
 
 	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
-	"github.com/gorilla/websocket"
 	uuid "github.com/nu7hatch/gouuid"
 )
 
 const (
 	defaultSampleSize   = 10
 	readAttempts        = 5
-	readAttemptDuration = 2 * time.Second
+	readAttemptDuration = time.Second
 	messagePrefix       = "loggregator-latency-test-"
 )
 
-var dialer = websocket.Dialer{
-	HandshakeTimeout: 5 * time.Second,
-}
-
-func init() {
-	log.SetOutput(os.Stdout)
-}
-
 func main() {
+	log.SetOutput(os.Stdout)
+
 	addr, token, location, origin, err := input()
 	if err != nil {
 		log.Fatal(err)
@@ -180,7 +173,7 @@ Loop:
 			}
 		default:
 			fmt.Println("ENSURE CONNECTION")
-			time.Sleep(time.Second)
+			time.Sleep(250 * time.Millisecond)
 		}
 	}
 
