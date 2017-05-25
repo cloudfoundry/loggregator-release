@@ -57,7 +57,7 @@ function check_output {
 }
 
 function loggregator_package {
-    local not_loggregator_packages=( dea_logging_agent code.cloudfoundry.org github.com golang.org google.golang.org gopkg.in )
+    local not_loggregator_packages=( code.cloudfoundry.org github.com golang.org google.golang.org gopkg.in )
     for p in "${not_loggregator_packages[@]}"
     do
         if [[ "$p" == "$1" ]]
@@ -108,7 +108,7 @@ function run_build {
 }
 
 function run_unit {
-    local not_unit_tests="code.cloudfoundry.org,github.com,golang.org,google.golang.org,gopkg.in,integration_tests,lats,component_tests,dea_logging_agent"
+    local not_unit_tests="code.cloudfoundry.org,github.com,golang.org,google.golang.org,gopkg.in,integration_tests,lats,component_tests"
     print_checkpoint "Running Unit Tests"
     # TODO: remove build_etcd once announcer unit tests no longer depend on it
     build_etcd
