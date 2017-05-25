@@ -19,7 +19,7 @@ import (
 const (
 	defaultSampleSize   = 10
 	readAttempts        = 5
-	readAttemptDuration = 5 * time.Second
+	readAttemptDuration = 10 * time.Second
 )
 
 var dialer = websocket.Dialer{
@@ -202,7 +202,7 @@ func (h *latencyHandler) sample() (time.Duration, error) {
 			found = true
 			break
 		}
-		log.Printf("unexpected message")
+		log.Printf("unexpected message (%s): %s", start.Sub(time.Now()), b)
 	}
 	if err != nil {
 		return 0, err
