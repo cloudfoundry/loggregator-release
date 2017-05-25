@@ -19,7 +19,7 @@ import (
 const (
 	defaultSampleSize   = 10
 	readAttempts        = 5
-	readAttemptDuration = 400 * time.Millisecond
+	readAttemptDuration = 5 * time.Second
 )
 
 var dialer = websocket.Dialer{
