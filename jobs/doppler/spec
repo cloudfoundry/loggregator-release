@@ -115,6 +115,9 @@ properties:
   doppler.pprof_port:
     description: "The pprof port for runtime profiling data"
     default: 0
+  doppler.health_addr:
+    description: "The host:port to expose health metrics for doppler"
+    default: "localhost:22222"
 
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"

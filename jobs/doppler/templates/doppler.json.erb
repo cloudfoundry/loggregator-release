@@ -54,6 +54,7 @@
         a[:SinkIOTimeoutSeconds] = p("doppler.sink_io_timeout_seconds")
         a[:UnmarshallerCount] = p("doppler.unmarshaller_count")
         a[:PPROFPort] = p("doppler.pprof_port")
+        a[:HealthAddr] = p("doppler.health_addr")
         a[:MetronConfig] = metronConfig
         if_p("doppler.blacklisted_syslog_ranges") do |prop|
             a[:BlackListIPs] = prop
