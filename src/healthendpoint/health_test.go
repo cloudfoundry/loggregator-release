@@ -1,16 +1,17 @@
-package health_test
+package healthendpoint_test
 
 import (
-	"trafficcontroller/internal/health"
+	"healthendpoint"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 var _ = Describe("Health", func() {
 	var (
-		h           *health.Health
+		h           *healthendpoint.Health
 		registrar   *spyRegistrar
 		gaugeCount1 *spyGauge
 		gaugeCount2 *spyGauge
@@ -20,7 +21,7 @@ var _ = Describe("Health", func() {
 		gaugeCount1 = newSpyGauge()
 		gaugeCount2 = newSpyGauge()
 		registrar = newSpyRegistrar()
-		h = health.New(registrar, map[string]prometheus.Gauge{
+		h = healthendpoint.New(registrar, map[string]prometheus.Gauge{
 			"count-1": gaugeCount1,
 			"count-2": gaugeCount2,
 		})

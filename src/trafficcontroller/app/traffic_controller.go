@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 	"fmt"
+	"healthendpoint"
 	"log"
 	"net/http"
 	"os"
@@ -15,7 +16,6 @@ import (
 	"plumbing"
 	"profiler"
 	"trafficcontroller/internal/auth"
-	"trafficcontroller/internal/health"
 	"trafficcontroller/internal/proxy"
 
 	"code.cloudfoundry.org/workpool"
@@ -99,8 +99,8 @@ func (t *trafficController) Start() {
 
 	// Start the health endpoint listener
 	promRegistry := prometheus.NewRegistry()
-	health.StartServer(t.conf.HealthAddr, promRegistry)
-	health := health.New(promRegistry, map[string]prometheus.Gauge{
+	healthendpoint.StartServer(t.conf.HealthAddr, promRegistry)
+	health := healthendpoint.New(promRegistry, map[string]prometheus.Gauge{
 		// metric-documentation-health: (firehoseStreamCount)
 		// Number of open firehose streams
 		"firehoseStreamCount": prometheus.NewGauge(
