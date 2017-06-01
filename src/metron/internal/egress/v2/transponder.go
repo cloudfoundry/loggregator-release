@@ -38,7 +38,7 @@ func NewTransponder(
 		metricemitter.WithTags(map[string]string{"direction": "egress"}),
 	)
 
-	egressMetric := metricClient.NewCounterMetric("dropped",
+	egressMetric := metricClient.NewCounterMetric("egress",
 		metricemitter.WithVersion(2, 0),
 	)
 
