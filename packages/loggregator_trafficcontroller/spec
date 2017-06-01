@@ -7,6 +7,7 @@ files:
 - loggregator/src/doppler/app/*.go # gosub
 - loggregator/src/doppler/internal/iprange/*.go # gosub
 - loggregator/src/dopplerservice/*.go # gosub
+- loggregator/src/github.com/beorn7/perks/quantile/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/envelope_sender/*.go # gosub
@@ -31,7 +32,16 @@ files:
 - loggregator/src/github.com/golang/protobuf/ptypes/any/*.go # gosub
 - loggregator/src/github.com/gorilla/mux/*.go # gosub
 - loggregator/src/github.com/gorilla/websocket/*.go # gosub
+- loggregator/src/github.com/matttproud/golang_protobuf_extensions/pbutil/*.go # gosub
 - loggregator/src/github.com/nu7hatch/gouuid/*.go # gosub
+- loggregator/src/github.com/prometheus/client_golang/prometheus/*.go # gosub
+- loggregator/src/github.com/prometheus/client_golang/prometheus/promhttp/*.go # gosub
+- loggregator/src/github.com/prometheus/client_model/go/*.go # gosub
+- loggregator/src/github.com/prometheus/common/expfmt/*.go # gosub
+- loggregator/src/github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg/*.go # gosub
+- loggregator/src/github.com/prometheus/common/model/*.go # gosub
+- loggregator/src/github.com/prometheus/procfs/*.go # gosub
+- loggregator/src/github.com/prometheus/procfs/xfs/*.go # gosub
 - loggregator/src/github.com/ugorji/go/codec/*.go # gosub
 - loggregator/src/golang.org/x/net/context/*.go # gosub
 - loggregator/src/golang.org/x/net/http2/*.go # gosub
@@ -66,4 +76,5 @@ files:
 - loggregator/src/trafficcontroller/*.go # gosub
 - loggregator/src/trafficcontroller/app/*.go # gosub
 - loggregator/src/trafficcontroller/internal/auth/*.go # gosub
+- loggregator/src/trafficcontroller/internal/health/*.go # gosub
 - loggregator/src/trafficcontroller/internal/proxy/*.go # gosub

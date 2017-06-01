@@ -69,7 +69,7 @@ var _ = JustBeforeEach(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	// wait for TC
-	trafficControllerDropsondeEndpoint := fmt.Sprintf("http://%s:%d", localIPAddress, 4566)
+	trafficControllerDropsondeEndpoint := fmt.Sprintf("http://%s:%d", localIPAddress, TRAFFIC_CONTROLLER_DROPSONDE_PORT)
 	Eventually(func() error {
 		resp, err := http.Get(trafficControllerDropsondeEndpoint)
 		if err == nil {

@@ -27,6 +27,7 @@ var _ = Describe("FirehoseHandler", func() {
 		recorder   *httptest.ResponseRecorder
 		connector  *SpyGRPCConnector
 		mockSender *mockMetricSender
+		mockHealth *mockHealth
 	)
 
 	BeforeEach(func() {
@@ -37,6 +38,7 @@ var _ = Describe("FirehoseHandler", func() {
 
 		recorder = httptest.NewRecorder()
 		mockSender = newMockMetricSender()
+		mockHealth = newMockHealth()
 
 		handler = proxy.NewDopplerProxy(
 			auth.Authorize,
@@ -45,6 +47,7 @@ var _ = Describe("FirehoseHandler", func() {
 			"cookieDomain",
 			50*time.Millisecond,
 			mockSender,
+			mockHealth,
 		)
 	})
 
@@ -121,6 +124,7 @@ var _ = Describe("FirehoseHandler", func() {
 			"cookieDomain",
 			50*time.Millisecond,
 			mockSender,
+			mockHealth,
 		)
 		server := httptest.NewServer(handler)
 		defer server.CloseClientConnections()
@@ -147,6 +151,7 @@ var _ = Describe("FirehoseHandler", func() {
 			"cookieDomain",
 			50*time.Millisecond,
 			mockSender,
+			mockHealth,
 		)
 		server := httptest.NewServer(handler)
 		defer server.CloseClientConnections()

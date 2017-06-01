@@ -15,6 +15,7 @@ import (
 	"plumbing"
 	"profiler"
 	"trafficcontroller/internal/auth"
+	"trafficcontroller/internal/health"
 	"trafficcontroller/internal/proxy"
 
 	"code.cloudfoundry.org/workpool"
@@ -30,6 +31,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/runtime_stats"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
 )
 
@@ -95,19 +97,31 @@ func (t *trafficController) Start() {
 	uaaClient := auth.NewUaaClient(t.conf.UaaHost, t.conf.UaaClient, t.conf.UaaClientSecret)
 	adminAuthorizer := auth.NewAdminAccessAuthorizer(t.disableAccessControl, &uaaClient)
 
-	var accessMiddleware func(auth.HttpHandler) *auth.AccessHandler
-	if t.conf.SecurityEventLog != "" {
-		accessLog, err := os.OpenFile(t.conf.SecurityEventLog, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-		if err != nil {
-			panic(fmt.Errorf("Unable to open access log: %s", err))
-		}
-		defer func() {
-			accessLog.Sync()
-			accessLog.Close()
-		}()
-		accessLogger := auth.NewAccessLogger(accessLog)
-		accessMiddleware = auth.Access(accessLogger, t.conf.IP, t.conf.OutgoingDropsondePort)
-	}
+	// Start the health endpoint listener
+	promRegistry := prometheus.NewRegistry()
+	health.StartServer(t.conf.HealthAddr, promRegistry)
+	health := health.New(promRegistry, map[string]prometheus.Gauge{
+		// metric-documentation-health: (firehoseStreamCount)
+		// Number of open firehose streams
+		"firehoseStreamCount": prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Namespace: "loggregator",
+				Subsystem: "trafficcontroller",
+				Name:      "firehoseStreamCount",
+				Help:      "Number of open firehose streams",
+			},
+		),
+		// metric-documentation-health: (appStreamCount)
+		// Number of open app streams
+		"appStreamCount": prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Namespace: "loggregator",
+				Subsystem: "trafficcontroller",
+				Name:      "appStreamCount",
+				Help:      "Number of open app streams",
+			},
+		),
+	})
 
 	creds, err := plumbing.NewCredentials(
 		t.conf.GRPC.CertFile,
@@ -138,6 +152,7 @@ func (t *trafficController) Start() {
 			"",
 		)
 	}
+
 	f.Start()
 	pool := plumbing.NewPool(20, grpc.WithTransportCredentials(creds))
 	grpcConnector := plumbing.NewGRPCConnector(1000, pool, f, batcher, t.metricClient)
@@ -150,8 +165,24 @@ func (t *trafficController) Start() {
 			"doppler."+t.conf.SystemDomain,
 			15*time.Second,
 			&metricShim{},
+			health,
 		),
 	)
+
+	var accessMiddleware func(auth.HttpHandler) *auth.AccessHandler
+	if t.conf.SecurityEventLog != "" {
+		accessLog, err := os.OpenFile(t.conf.SecurityEventLog, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+		if err != nil {
+			panic(fmt.Errorf("Unable to open access log: %s", err))
+		}
+		defer func() {
+			accessLog.Sync()
+			accessLog.Close()
+		}()
+		accessLogger := auth.NewAccessLogger(accessLog)
+		accessMiddleware = auth.Access(accessLogger, t.conf.IP, t.conf.OutgoingDropsondePort)
+	}
+
 	if accessMiddleware != nil {
 		dopplerHandler = accessMiddleware(dopplerHandler)
 	}

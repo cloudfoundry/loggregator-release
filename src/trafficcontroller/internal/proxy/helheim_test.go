@@ -266,3 +266,25 @@ func (m *mockContext) Value(key interface{}) interface{} {
 	m.ValueInput.Key <- key
 	return <-m.ValueOutput.Ret0
 }
+
+type mockHealth struct {
+	SetCalled chan bool
+	SetInput  struct {
+		Name  chan string
+		Value chan float64
+	}
+}
+
+func newMockHealth() *mockHealth {
+	m := &mockHealth{}
+	m.SetCalled = make(chan bool, 100)
+	m.SetInput.Name = make(chan string, 100)
+	m.SetInput.Value = make(chan float64, 100)
+	return m
+}
+
+func (m *mockHealth) Set(name string, value float64) {
+	m.SetCalled <- true
+	m.SetInput.Name <- name
+	m.SetInput.Value <- value
+}

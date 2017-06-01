@@ -95,6 +95,10 @@ properties:
   traffic_controller.pprof_port:
     description: "The pprof port for runtime profiling data"
     default: 0
+  traffic_controller.health_addr:
+    description: "The host:port to expose health metrics for trafficcontroller"
+    default: "localhost:56447"
+
 
   system_domain:
     description: "Domain reserved for CF operator, base URL where the login, uaa, and other non-user apps listen"

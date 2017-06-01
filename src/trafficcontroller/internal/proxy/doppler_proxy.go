@@ -19,6 +19,10 @@ const (
 	metricsInterval = time.Second
 )
 
+type Health interface {
+	Set(name string, value float64)
+}
+
 type DopplerProxy struct {
 	*mux.Router
 
@@ -26,6 +30,7 @@ type DopplerProxy struct {
 	numAppStreams int64
 
 	metricSender metricSender
+	health       Health
 }
 
 type grpcConnector interface {
@@ -45,6 +50,7 @@ func NewDopplerProxy(
 	cookieDomain string,
 	timeout time.Duration,
 	m metricSender,
+	health Health,
 ) *DopplerProxy {
 	r := mux.NewRouter()
 
@@ -73,6 +79,7 @@ func NewDopplerProxy(
 	d := &DopplerProxy{
 		Router:       r,
 		metricSender: m,
+		health:       health,
 	}
 
 	go d.emitMetrics(firehoseHandler, streamHandler)
@@ -84,8 +91,11 @@ func (d *DopplerProxy) emitMetrics(firehose *FirehoseHandler, stream *StreamHand
 	for range time.Tick(metricsInterval) {
 		// metric-documentation-v1: (dopplerProxy.firehoses) Number of open firehose streams
 		d.metricSender.SendValue("dopplerProxy.firehoses", float64(firehose.Count()), "connections")
+		d.health.Set("firehoseStreamCount", float64(firehose.Count()))
+
 		// metric-documentation-v1: (dopplerProxy.appStreams) Number of open app streams
 		d.metricSender.SendValue("dopplerProxy.appStreams", float64(stream.Count()), "connections")
+		d.health.Set("appStreamCount", float64(stream.Count()))
 	}
 }
 

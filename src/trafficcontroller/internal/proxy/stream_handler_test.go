@@ -21,6 +21,7 @@ var _ = Describe("StreamHandler", func() {
 
 		connector  *SpyGRPCConnector
 		mockSender *mockMetricSender
+		mockHealth *mockHealth
 	)
 
 	BeforeEach(func() {
@@ -29,6 +30,7 @@ var _ = Describe("StreamHandler", func() {
 
 		connector = newSpyGRPCConnector(nil)
 		mockSender = newMockMetricSender()
+		mockHealth = newMockHealth()
 
 		dopplerProxy = proxy.NewDopplerProxy(
 			auth.Authorize,
@@ -37,6 +39,7 @@ var _ = Describe("StreamHandler", func() {
 			"cookieDomain",
 			50*time.Millisecond,
 			mockSender,
+			mockHealth,
 		)
 
 		recorder = httptest.NewRecorder()

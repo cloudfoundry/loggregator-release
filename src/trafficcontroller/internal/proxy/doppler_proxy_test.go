@@ -31,6 +31,7 @@ var _ = Describe("DopplerProxy", func() {
 
 		mockGrpcConnector       *mockGrpcConnector
 		mockDopplerStreamClient *mockReceiver
+		mockHealth              *mockHealth
 
 		mockSender *mockMetricSender
 	)
@@ -42,6 +43,7 @@ var _ = Describe("DopplerProxy", func() {
 		mockGrpcConnector = newMockGrpcConnector()
 		mockDopplerStreamClient = newMockReceiver()
 		mockSender = newMockMetricSender()
+		mockHealth = newMockHealth()
 
 		mockGrpcConnector.SubscribeOutput.Ret0 <- mockDopplerStreamClient.Recv
 
@@ -52,6 +54,7 @@ var _ = Describe("DopplerProxy", func() {
 			"cookieDomain",
 			50*time.Millisecond,
 			mockSender,
+			mockHealth,
 		)
 
 		recorder = httptest.NewRecorder()
@@ -65,7 +68,7 @@ var _ = Describe("DopplerProxy", func() {
 		close(mockDopplerStreamClient.RecvOutput.Ret1)
 	})
 
-	Describe("TrafficController emitted request metrics", func() {
+	Describe("health metrics", func() {
 		It("emits latency value metric for recentlogs request", func() {
 			mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
 			req, _ := http.NewRequest("GET", "/apps/appID123/recentlogs", nil)
@@ -138,6 +141,18 @@ var _ = Describe("DopplerProxy", func() {
 
 			Eventually(ctx.Err).Should(HaveOccurred())
 			Expect(recorder.Code).To(Equal(http.StatusServiceUnavailable))
+		})
+
+		It("sets the health value for firehose count", func() {
+			req, _ := http.NewRequest("GET", "/firehose/streamID", nil)
+			dopplerProxy.ServeHTTP(recorder, req)
+			Eventually(mockHealth.SetInput.Name, 3).Should(Receive(Equal("firehoseStreamCount")))
+		})
+
+		It("sets the health value for app stream count", func() {
+			req, _ := http.NewRequest("GET", "/apps/appID/stream", nil)
+			dopplerProxy.ServeHTTP(recorder, req)
+			Eventually(mockHealth.SetInput.Name, 3).Should(Receive(Equal("appStreamCount")))
 		})
 	})
 

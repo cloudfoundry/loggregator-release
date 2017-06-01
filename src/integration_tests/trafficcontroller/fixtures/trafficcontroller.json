@@ -15,6 +15,7 @@
     "UaaClient": "bob",
     "UaaClientSecret": "yourUncle",
     "MonitorIntervalSeconds": 1,
+    "HealthAddr": "127.0.0.1:8080",
     "GRPC": {
         "Port": 1236,
         "CAFile": "fixtures/loggregator-ca.crt",

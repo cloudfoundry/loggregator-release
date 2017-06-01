@@ -126,6 +126,8 @@ func (p *Pool) fetchClient(clients []unsafe.Pointer) DopplerClient {
 
 func (p *Pool) connectToDoppler(addr string, clients []unsafe.Pointer, idx int) {
 	for {
+		// TODO: Do we need this log line? It prints the same log line based
+		// on pool size
 		log.Printf("adding doppler %s", addr)
 
 		conn, err := grpc.Dial(addr, p.dialOpts...)
