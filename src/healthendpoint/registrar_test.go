@@ -11,7 +11,7 @@ import (
 
 var _ = Describe("Health", func() {
 	var (
-		h           *healthendpoint.Health
+		h           *healthendpoint.Registrar
 		registrar   *spyRegistrar
 		gaugeCount1 *spyGauge
 		gaugeCount2 *spyGauge

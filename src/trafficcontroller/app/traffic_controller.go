@@ -100,7 +100,7 @@ func (t *trafficController) Start() {
 	// Start the health endpoint listener
 	promRegistry := prometheus.NewRegistry()
 	healthendpoint.StartServer(t.conf.HealthAddr, promRegistry)
-	health := healthendpoint.New(promRegistry, map[string]prometheus.Gauge{
+	healthRegistry := healthendpoint.New(promRegistry, map[string]prometheus.Gauge{
 		// metric-documentation-health: (firehoseStreamCount)
 		// Number of open firehose streams
 		"firehoseStreamCount": prometheus.NewGauge(
@@ -165,7 +165,7 @@ func (t *trafficController) Start() {
 			"doppler."+t.conf.SystemDomain,
 			15*time.Second,
 			&metricShim{},
-			health,
+			healthRegistry,
 		),
 	)
 
