@@ -27,6 +27,11 @@ type MetricBatcher interface {
 	BatchIncrementCounter(name string)
 }
 
+type HealthRegistrar interface {
+	Inc(name string)
+	Dec(name string)
+}
+
 type SinkManager struct {
 	messageDrainBufferSize uint
 	dropsondeOrigin        string
@@ -43,6 +48,7 @@ type SinkManager struct {
 	sinkIOTimeout       time.Duration
 	metricTTL           time.Duration
 	dialTimeout         time.Duration
+	health              HealthRegistrar
 
 	stopOnce sync.Once
 }
@@ -59,6 +65,7 @@ func New(
 	dialTimeout time.Duration,
 	metricBatcher MetricBatcher,
 	metricClient metricemitter.MetricClient,
+	health HealthRegistrar,
 ) *SinkManager {
 	return &SinkManager{
 		doneChannel:            make(chan struct{}),
@@ -74,6 +81,7 @@ func New(
 		sinkIOTimeout:          sinkIOTimeout,
 		metricTTL:              metricTTL,
 		dialTimeout:            dialTimeout,
+		health:                 health,
 	}
 }
 
@@ -274,6 +282,7 @@ func (sm *SinkManager) ensureRecentLogsSinkFor(appId string) {
 		appId,
 		sm.recentLogCount,
 		sm.sinkTimeout,
+		sm.health,
 	)
 
 	sm.RegisterSink(sink)
@@ -288,6 +297,7 @@ func (sm *SinkManager) ensureContainerMetricsSinkFor(appId string) {
 		appId,
 		sm.metricTTL,
 		sm.sinkTimeout,
+		sm.health,
 	)
 
 	sm.RegisterSink(sink)

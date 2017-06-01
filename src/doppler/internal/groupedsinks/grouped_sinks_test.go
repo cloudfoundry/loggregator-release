@@ -4,6 +4,7 @@ import (
 	"metricemitter/testhelper"
 	"net"
 	"net/url"
+	"sync"
 	"time"
 
 	"doppler/internal/groupedsinks"
@@ -164,12 +165,13 @@ var _ = Describe("GroupedSink", func() {
 	Describe("BroadcastError", func() {
 		It("sends message to all registered sinks that match the appId", func() {
 			appId := "123"
-			appSink := dump.NewDumpSink(appId, 10, time.Second)
+			health := newSpyHealthRegistrar()
+			appSink := dump.NewDumpSink(appId, 10, time.Second, health)
 			otherInputChan := make(chan *events.Envelope, 1)
 			groupedSinks.RegisterAppSink(otherInputChan, appSink)
 
 			appId = "789"
-			appSink = dump.NewDumpSink(appId, 10, time.Second)
+			appSink = dump.NewDumpSink(appId, 10, time.Second, health)
 
 			groupedSinks.RegisterAppSink(inputChan, appSink)
 			msg, _ := emitter.Wrap(factories.NewLogMessage(events.LogMessage_OUT, "error message", appId, "App"), "origin")
@@ -198,7 +200,8 @@ var _ = Describe("GroupedSink", func() {
 		It("does not send to sinks that don't want errors", func() {
 			appId := "789"
 
-			sink1 := dump.NewDumpSink(appId, 10, time.Second)
+			health := newSpyHealthRegistrar()
+			sink1 := dump.NewDumpSink(appId, 10, time.Second, health)
 			sink2 := syslog.NewSyslogSink(appId, &url.URL{Host: "url"}, 100, DummySyslogWriter{}, dummyErrorHandler, "dropsonde-origin")
 
 			groupedSinks.RegisterAppSink(inputChan, sink1)
@@ -383,7 +386,8 @@ var _ = Describe("GroupedSink", func() {
 		It("does not return dump sinks", func() {
 			target := "789"
 
-			sink1 := dump.NewDumpSink(target, 10, time.Second)
+			health := newSpyHealthRegistrar()
+			sink1 := dump.NewDumpSink(target, 10, time.Second, health)
 			sink2 := syslog.NewSyslogSink(target, &url.URL{Host: "url"}, 100, DummySyslogWriter{}, dummyErrorHandler, "dropsonde-origin")
 
 			groupedSinks.RegisterAppSink(inputChan, sink1)
@@ -428,7 +432,8 @@ var _ = Describe("GroupedSink", func() {
 			appId := "789"
 			sink1 := syslog.NewSyslogSink(appId, &url.URL{Host: "url1"}, 100, DummySyslogWriter{}, dummyErrorHandler, "dropsonde-origin")
 			sink2 := syslog.NewSyslogSink(appId, &url.URL{Host: "url2"}, 100, DummySyslogWriter{}, dummyErrorHandler, "dropsonde-origin")
-			sink3 := dump.NewDumpSink(appId, 5, time.Second)
+			health := newSpyHealthRegistrar()
+			sink3 := dump.NewDumpSink(appId, 5, time.Second, health)
 
 			groupedSinks.RegisterAppSink(inputChan, sink1)
 			groupedSinks.RegisterAppSink(inputChan, sink2)
@@ -441,8 +446,9 @@ var _ = Describe("GroupedSink", func() {
 			appId := "789"
 			otherAppId := "790"
 
-			sink1 := dump.NewDumpSink(appId, 5, time.Second)
-			sink2 := dump.NewDumpSink(otherAppId, 5, time.Second)
+			health := newSpyHealthRegistrar()
+			sink1 := dump.NewDumpSink(appId, 5, time.Second, health)
+			sink2 := dump.NewDumpSink(otherAppId, 5, time.Second, health)
 
 			groupedSinks.RegisterAppSink(inputChan, sink1)
 			groupedSinks.RegisterAppSink(inputChan, sink2)
@@ -469,8 +475,9 @@ var _ = Describe("GroupedSink", func() {
 		It("returns only container metric sinks", func() {
 			appId := "456"
 
-			sink1 := containermetric.NewContainerMetricSink(appId, 1*time.Second, time.Second)
-			sink2 := dump.NewDumpSink(appId, 5, time.Second)
+			health := newSpyHealthRegistrar()
+			sink1 := containermetric.NewContainerMetricSink(appId, 1*time.Second, time.Second, health)
+			sink2 := dump.NewDumpSink(appId, 5, time.Second, health)
 
 			groupedSinks.RegisterAppSink(inputChan, sink1)
 			groupedSinks.RegisterAppSink(inputChan, sink2)
@@ -482,8 +489,9 @@ var _ = Describe("GroupedSink", func() {
 			appId1 := "123"
 			appId2 := "456"
 
-			sink1 := containermetric.NewContainerMetricSink(appId1, 1*time.Second, time.Second)
-			sink2 := containermetric.NewContainerMetricSink(appId2, 1*time.Second, time.Second)
+			health := newSpyHealthRegistrar()
+			sink1 := containermetric.NewContainerMetricSink(appId1, 1*time.Second, time.Second, health)
+			sink2 := containermetric.NewContainerMetricSink(appId2, 1*time.Second, time.Second, health)
 
 			groupedSinks.RegisterAppSink(inputChan, sink1)
 			groupedSinks.RegisterAppSink(inputChan, sink2)
@@ -493,7 +501,8 @@ var _ = Describe("GroupedSink", func() {
 
 		It("returns nil if no container metrics sinks are registered", func() {
 			appId := "1234"
-			sink2 := dump.NewDumpSink(appId, 5, time.Second)
+			health := newSpyHealthRegistrar()
+			sink2 := dump.NewDumpSink(appId, 5, time.Second, health)
 			groupedSinks.RegisterAppSink(inputChan, sink2)
 
 			Expect(groupedSinks.ContainerMetricsFor(appId)).To(BeNil())
@@ -610,3 +619,32 @@ func (fake fakeAddr) String() string {
 type spyMetricBatcher struct{}
 
 func (s *spyMetricBatcher) BatchIncrementCounter(name string) {}
+
+type SpyHealthRegistrar struct {
+	mu     sync.Mutex
+	values map[string]float64
+}
+
+func newSpyHealthRegistrar() *SpyHealthRegistrar {
+	return &SpyHealthRegistrar{
+		values: make(map[string]float64),
+	}
+}
+
+func (s *SpyHealthRegistrar) Inc(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.values[name]++
+}
+
+func (s *SpyHealthRegistrar) Dec(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.values[name]--
+}
+
+func (s *SpyHealthRegistrar) Get(name string) float64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.values[name]
+}

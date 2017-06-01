@@ -33,9 +33,10 @@ var _ = Describe("SinkManager", func() {
 	BeforeEach(func() {
 		fakeMetricSender.Reset()
 
+		health := newSpyHealthRegistrar()
 		sinkManager = sinkmanager.New(1, true, blackListManager, 100,
 			"dropsonde-origin", 1*time.Second, 0, 1*time.Second,
-			1*time.Second, nil, testhelper.NewMetricClient())
+			1*time.Second, nil, testhelper.NewMetricClient(), health)
 
 		newAppServiceChan = make(chan store.AppService)
 		deletedAppServiceChan = make(chan store.AppService)
@@ -278,7 +279,8 @@ var _ = Describe("SinkManager", func() {
 			var dumpSink *dump.DumpSink
 
 			BeforeEach(func() {
-				dumpSink = dump.NewDumpSink("appId", 1, time.Hour)
+				health := newSpyHealthRegistrar()
+				dumpSink = dump.NewDumpSink("appId", 1, time.Hour, health)
 				sinkManager.RegisterSink(dumpSink)
 			})
 
@@ -327,7 +329,8 @@ var _ = Describe("SinkManager", func() {
 			var dumpSink *dump.DumpSink
 
 			BeforeEach(func() {
-				dumpSink = dump.NewDumpSink("appId", 1, time.Hour)
+				health := newSpyHealthRegistrar()
+				dumpSink = dump.NewDumpSink("appId", 1, time.Hour, health)
 				sinkManager.RegisterSink(dumpSink)
 			})
 
@@ -531,4 +534,33 @@ func (c *channelSink) ShouldReceiveErrors() bool { return true }
 
 func (c *channelSink) GetInstrumentationMetric() sinks.Metric {
 	return sinks.Metric{Name: "numberOfMessagesLost", Value: 25}
+}
+
+type SpyHealthRegistrar struct {
+	mu     sync.Mutex
+	values map[string]float64
+}
+
+func newSpyHealthRegistrar() *SpyHealthRegistrar {
+	return &SpyHealthRegistrar{
+		values: make(map[string]float64),
+	}
+}
+
+func (s *SpyHealthRegistrar) Inc(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.values[name]++
+}
+
+func (s *SpyHealthRegistrar) Dec(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.values[name]--
+}
+
+func (s *SpyHealthRegistrar) Get(name string) float64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.values[name]
 }

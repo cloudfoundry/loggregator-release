@@ -30,7 +30,7 @@ var _ = XDescribe("WebsocketServer", func() {
 		server      *websocketserver.WebsocketServer
 		sinkManager = sinkmanager.New(1024, false, blacklist.New(nil),
 			100, "dropsonde-origin", 1*time.Second, 0, 1*time.Second,
-			500*time.Millisecond, nil, testhelper.NewMetricClient())
+			500*time.Millisecond, nil, testhelper.NewMetricClient(), nil)
 		appId          = "my-app"
 		wsReceivedChan chan []byte
 		apiEndpoint    string

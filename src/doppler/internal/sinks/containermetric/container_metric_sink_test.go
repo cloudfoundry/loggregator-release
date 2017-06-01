@@ -21,7 +21,8 @@ var _ = Describe("Containermetric", func() {
 	BeforeEach(func() {
 		eventChan = make(chan *events.Envelope)
 
-		sink = containermetric.NewContainerMetricSink("myApp", 2*time.Second, 2*time.Second)
+		health := newSpyHealthRegistrar()
+		sink = containermetric.NewContainerMetricSink("myApp", 2*time.Second, 2*time.Second, health)
 		go sink.Run(eventChan)
 	})
 
@@ -110,7 +111,8 @@ var _ = Describe("Containermetric", func() {
 	})
 
 	It("closes after a period of inactivity", func() {
-		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, 1*time.Millisecond)
+		health := newSpyHealthRegistrar()
+		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, 1*time.Millisecond, health)
 		containerMetricRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -123,7 +125,8 @@ var _ = Describe("Containermetric", func() {
 	})
 
 	It("closes after input chan is closed", func() {
-		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, 10*time.Second)
+		health := newSpyHealthRegistrar()
+		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, 10*time.Second, health)
 		containerMetricRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -138,8 +141,9 @@ var _ = Describe("Containermetric", func() {
 	})
 
 	It("won't return while it is still receiving data", func() {
+		health := newSpyHealthRegistrar()
 		inactivityDuration := 100 * time.Millisecond
-		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, inactivityDuration)
+		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, inactivityDuration, health)
 		containerMetricRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -153,6 +157,26 @@ var _ = Describe("Containermetric", func() {
 		defer wg.Wait()
 		defer close(done)
 		Consistently(containerMetricRunnerDone, 1).ShouldNot(BeClosed())
+	})
+
+	It("increments and decrements the container metric count", func() {
+		health := newSpyHealthRegistrar()
+		inactivityDuration := 100 * time.Millisecond
+		containerMetricSink := containermetric.NewContainerMetricSink("myAppId", 2*time.Second, inactivityDuration, health)
+
+		inputChan := make(chan *events.Envelope, 5)
+
+		go containerMetricSink.Run(inputChan)
+
+		Eventually(func() float64 {
+			return health.Get("containerMetricCacheCount")
+		}).Should(Equal(1.0))
+
+		close(inputChan)
+
+		Eventually(func() float64 {
+			return health.Get("containerMetricCacheCount")
+		}).Should(Equal(0.0))
 	})
 })
 
@@ -187,4 +211,33 @@ func metricFor(instanceId int32, timestamp time.Time, cpu float64, mem uint64, d
 			DiskBytes:     proto.Uint64(disk),
 		},
 	}
+}
+
+type SpyHealthRegistrar struct {
+	mu     sync.Mutex
+	values map[string]float64
+}
+
+func newSpyHealthRegistrar() *SpyHealthRegistrar {
+	return &SpyHealthRegistrar{
+		values: make(map[string]float64),
+	}
+}
+
+func (s *SpyHealthRegistrar) Inc(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.values[name]++
+}
+
+func (s *SpyHealthRegistrar) Dec(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.values[name]--
+}
+
+func (s *SpyHealthRegistrar) Get(name string) float64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.values[name]
 }

@@ -7,24 +7,38 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
+type HealthRegistrar interface {
+	Inc(name string)
+	Dec(name string)
+}
+
 type ContainerMetricSink struct {
 	appID              string
 	ttl                time.Duration
 	metrics            map[int32]*events.Envelope
 	inactivityDuration time.Duration
 	lock               sync.RWMutex
+	health             HealthRegistrar
 }
 
-func NewContainerMetricSink(appID string, ttl time.Duration, inactivityDuration time.Duration) *ContainerMetricSink {
+func NewContainerMetricSink(
+	appID string,
+	ttl time.Duration,
+	inactivityDuration time.Duration,
+	h HealthRegistrar,
+) *ContainerMetricSink {
 	return &ContainerMetricSink{
 		appID:              appID,
 		ttl:                ttl,
 		inactivityDuration: inactivityDuration,
 		metrics:            make(map[int32]*events.Envelope),
+		health:             h,
 	}
 }
 
 func (sink *ContainerMetricSink) Run(eventChan <-chan *events.Envelope) {
+	sink.health.Inc("containerMetricCacheCount")
+	defer sink.health.Dec("containerMetricCacheCount")
 
 	timer := time.NewTimer(sink.inactivityDuration)
 	for {

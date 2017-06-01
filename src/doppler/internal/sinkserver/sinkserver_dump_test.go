@@ -52,8 +52,9 @@ var _ = Describe("Dumping", func() {
 		deletedAppServiceChan := make(chan store.AppService)
 
 		emptyBlacklist := blacklist.New(nil)
+		health := newSpyHealthRegistrar()
 		sinkManager = sinkmanager.New(1024, false, emptyBlacklist, 100, "dropsonde-origin",
-			2*time.Second, 0, 1*time.Second, 500*time.Millisecond, nil, testhelper.NewMetricClient())
+			2*time.Second, 0, 1*time.Second, 500*time.Millisecond, nil, testhelper.NewMetricClient(), health)
 
 		services.Add(1)
 		go func(sinkManager *sinkmanager.SinkManager) {
@@ -156,4 +157,33 @@ func dumpAllMessages(receivedChan chan []byte) [][]byte {
 		logMessages = append(logMessages, message)
 	}
 	return logMessages
+}
+
+type SpyHealthRegistrar struct {
+	mu     sync.Mutex
+	values map[string]float64
+}
+
+func newSpyHealthRegistrar() *SpyHealthRegistrar {
+	return &SpyHealthRegistrar{
+		values: make(map[string]float64),
+	}
+}
+
+func (s *SpyHealthRegistrar) Inc(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.values[name]++
+}
+
+func (s *SpyHealthRegistrar) Dec(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.values[name]--
+}
+
+func (s *SpyHealthRegistrar) Get(name string) float64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.values[name]
 }

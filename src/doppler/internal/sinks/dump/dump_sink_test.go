@@ -4,6 +4,7 @@ import (
 	"doppler/internal/sinks/dump"
 	"runtime"
 	"strconv"
+	"sync"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
@@ -17,8 +18,8 @@ import (
 
 var _ = Describe("Dump Sink", func() {
 	It("works with one message", func() {
-
-		testDump := dump.NewDumpSink("myApp", 1, time.Second)
+		health := newSpyHealthRegistrar()
+		testDump := dump.NewDumpSink("myApp", 1, time.Second, health)
 
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
@@ -40,8 +41,8 @@ var _ = Describe("Dump Sink", func() {
 	})
 
 	It("works with two messages", func() {
-
-		testDump := dump.NewDumpSink("myApp", 2, time.Second)
+		health := newSpyHealthRegistrar()
+		testDump := dump.NewDumpSink("myApp", 2, time.Second, health)
 
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
@@ -67,9 +68,9 @@ var _ = Describe("Dump Sink", func() {
 	})
 
 	It("never fills up", func() {
-
+		health := newSpyHealthRegistrar()
 		bufferSize := uint32(3)
-		testDump := dump.NewDumpSink("myApp", bufferSize, time.Second)
+		testDump := dump.NewDumpSink("myApp", bufferSize, time.Second, health)
 
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
@@ -90,8 +91,8 @@ var _ = Describe("Dump Sink", func() {
 	})
 
 	It("always returns the newest messages", func() {
-
-		testDump := dump.NewDumpSink("myApp", 2, time.Second)
+		health := newSpyHealthRegistrar()
+		testDump := dump.NewDumpSink("myApp", 2, time.Second, health)
 
 		dumpRunnerDone := make(chan struct{})
 
@@ -120,7 +121,8 @@ var _ = Describe("Dump Sink", func() {
 
 	It("returns all recent messages to multiple dump requests", func() {
 
-		testDump := dump.NewDumpSink("myApp", 2, time.Second)
+		health := newSpyHealthRegistrar()
+		testDump := dump.NewDumpSink("myApp", 2, time.Second, health)
 
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
@@ -152,7 +154,8 @@ var _ = Describe("Dump Sink", func() {
 	})
 
 	It("returns all recent messages to multiple dump requests with messages cloning in in the meantime", func() {
-		testDump := dump.NewDumpSink("myApp", 2, time.Second)
+		health := newSpyHealthRegistrar()
+		testDump := dump.NewDumpSink("myApp", 2, time.Second, health)
 
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
@@ -198,7 +201,8 @@ var _ = Describe("Dump Sink", func() {
 	})
 
 	It("works with lots of messages", func() {
-		testDump := dump.NewDumpSink("myApp", 2, time.Second)
+		health := newSpyHealthRegistrar()
+		testDump := dump.NewDumpSink("myApp", 2, time.Second, health)
 
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
@@ -249,7 +253,8 @@ var _ = Describe("Dump Sink", func() {
 	})
 
 	It("works with lots of messages and large buffer", func() {
-		testDump := dump.NewDumpSink("myApp", 200, time.Second)
+		health := newSpyHealthRegistrar()
+		testDump := dump.NewDumpSink("myApp", 200, time.Second, health)
 
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
@@ -300,7 +305,8 @@ var _ = Describe("Dump Sink", func() {
 	})
 
 	It("works with lots of messages and large buffer2", func() {
-		testDump := dump.NewDumpSink("myApp", 200, time.Second)
+		health := newSpyHealthRegistrar()
+		testDump := dump.NewDumpSink("myApp", 200, time.Second, health)
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -366,7 +372,8 @@ var _ = Describe("Dump Sink", func() {
 
 	It("works with lots of dumps", func() {
 		runtime.GOMAXPROCS(runtime.NumCPU())
-		testDump := dump.NewDumpSink("myApp", 5, time.Second)
+		health := newSpyHealthRegistrar()
+		testDump := dump.NewDumpSink("myApp", 5, time.Second, health)
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -395,7 +402,8 @@ var _ = Describe("Dump Sink", func() {
 	})
 
 	It("closes itself after period of inactivity", func() {
-		testDump := dump.NewDumpSink("myApp", 5, 2*time.Microsecond)
+		health := newSpyHealthRegistrar()
+		testDump := dump.NewDumpSink("myApp", 5, 2*time.Microsecond, health)
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -408,7 +416,8 @@ var _ = Describe("Dump Sink", func() {
 	})
 
 	It("closes after input chan is closed", func() {
-		testDump := dump.NewDumpSink("myApp", 5, 2*time.Microsecond)
+		health := newSpyHealthRegistrar()
+		testDump := dump.NewDumpSink("myApp", 5, 2*time.Microsecond, health)
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -424,7 +433,8 @@ var _ = Describe("Dump Sink", func() {
 
 	It("resets the inactivity duration when a metric is received", func() {
 		inactivityDuration := 1 * time.Millisecond
-		testDump := dump.NewDumpSink("myApp", 5, inactivityDuration)
+		health := newSpyHealthRegistrar()
+		testDump := dump.NewDumpSink("myApp", 5, inactivityDuration, health)
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope)
 
@@ -440,7 +450,8 @@ var _ = Describe("Dump Sink", func() {
 	})
 
 	It("only stores log messages", func() {
-		testDump := dump.NewDumpSink("myApp", 5, 2*time.Second)
+		health := newSpyHealthRegistrar()
+		testDump := dump.NewDumpSink("myApp", 5, 2*time.Second, health)
 
 		dumpRunnerDone := make(chan struct{})
 		inputChan := make(chan *events.Envelope, 5)
@@ -463,6 +474,29 @@ var _ = Describe("Dump Sink", func() {
 
 		Expect(testDump.Dump()).To(HaveLen(1))
 	})
+
+	It("increments and decrements the recent log count", func() {
+		health := newSpyHealthRegistrar()
+		testDump := dump.NewDumpSink("myApp", 5, 2*time.Second, health)
+
+		dumpRunnerDone := make(chan struct{})
+		inputChan := make(chan *events.Envelope, 5)
+
+		go func() {
+			testDump.Run(inputChan)
+			close(dumpRunnerDone)
+		}()
+
+		Eventually(func() float64 {
+			return health.Get("recentLogCacheCount")
+		}).Should(Equal(1.0))
+
+		close(inputChan)
+
+		Eventually(func() float64 {
+			return health.Get("recentLogCacheCount")
+		}).Should(Equal(0.0))
+	})
 })
 
 func continuouslySend(inputChan chan<- *events.Envelope, message *events.Envelope, duration time.Duration) {
@@ -475,4 +509,33 @@ func continuouslySend(inputChan chan<- *events.Envelope, message *events.Envelop
 			return
 		}
 	}
+}
+
+type SpyHealthRegistrar struct {
+	mu     sync.Mutex
+	values map[string]float64
+}
+
+func newSpyHealthRegistrar() *SpyHealthRegistrar {
+	return &SpyHealthRegistrar{
+		values: make(map[string]float64),
+	}
+}
+
+func (s *SpyHealthRegistrar) Inc(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.values[name]++
+}
+
+func (s *SpyHealthRegistrar) Dec(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.values[name]--
+}
+
+func (s *SpyHealthRegistrar) Get(name string) float64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.values[name]
 }

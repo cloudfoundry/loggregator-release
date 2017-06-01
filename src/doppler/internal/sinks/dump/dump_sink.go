@@ -8,24 +8,39 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
+type HealthRegistrar interface {
+	Inc(name string)
+	Dec(name string)
+}
+
 type DumpSink struct {
 	appId              string
 	messageRing        *ring.Ring
 	inputChan          chan *events.Envelope
 	inactivityDuration time.Duration
 	lock               sync.RWMutex
+	health             HealthRegistrar
 }
 
-func NewDumpSink(appId string, bufferSize uint32, inactivityDuration time.Duration) *DumpSink {
+func NewDumpSink(
+	appId string,
+	bufferSize uint32,
+	inactivityDuration time.Duration,
+	h HealthRegistrar,
+) *DumpSink {
 	dumpSink := &DumpSink{
 		appId:              appId,
 		messageRing:        ring.New(int(bufferSize)),
 		inactivityDuration: inactivityDuration,
+		health:             h,
 	}
 	return dumpSink
 }
 
 func (d *DumpSink) Run(inputChan <-chan *events.Envelope) {
+	d.health.Inc("recentLogCacheCount")
+	defer d.health.Dec("recentLogCacheCount")
+
 	timer := time.NewTimer(d.inactivityDuration)
 	defer timer.Stop()
 	for {

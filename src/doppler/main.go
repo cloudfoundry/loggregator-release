@@ -99,6 +99,26 @@ func main() {
 				Help:      "Number of open subscriptions",
 			},
 		),
+		// metric-documentation-health: (recentLogCacheCount)
+		// Number of recent log caches
+		"recentLogCacheCount": prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Namespace: "loggregator",
+				Subsystem: "doppler",
+				Name:      "recentLogCacheCount",
+				Help:      "Number of recent log caches",
+			},
+		),
+		// metric-documentation-health: (containerMetricCacheCount)
+		// Number of container metric caches
+		"containerMetricCacheCount": prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Namespace: "loggregator",
+				Subsystem: "doppler",
+				Name:      "containerMetricCacheCount",
+				Help:      "Number of container metric caches",
+			},
+		),
 	})
 
 	//------------------------------
@@ -116,6 +136,7 @@ func main() {
 		time.Duration(conf.SinkDialTimeoutSeconds)*time.Second,
 		batcher,
 		metricClient,
+		healthRegistrar,
 	)
 
 	//------------------------------
