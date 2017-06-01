@@ -97,7 +97,7 @@ properties:
     default: 0
   traffic_controller.health_addr:
     description: "The host:port to expose health metrics for trafficcontroller"
-    default: "localhost:56447"
+    default: "localhost:22222"
 
 
   system_domain:

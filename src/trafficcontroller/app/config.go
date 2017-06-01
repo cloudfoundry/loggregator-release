@@ -106,7 +106,7 @@ func (c *Config) setDefaults() {
 		c.MetricEmitterDuration = duration
 	}
 	if len(c.HealthAddr) == 0 {
-		c.HealthAddr = "localhost:56447"
+		c.HealthAddr = "localhost:22222"
 	}
 }
 
