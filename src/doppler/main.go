@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"healthendpoint"
 	"log"
 	"math/rand"
 	"metricemitter"
@@ -36,6 +37,7 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
+	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
 )
 
@@ -73,6 +75,31 @@ func main() {
 	openFileMonitor := monitor.NewLinuxFD(monitorInterval)
 	uptimeMonitor := monitor.NewUptime(monitorInterval)
 	batcher := initializeMetrics(conf.MetricBatchIntervalMilliseconds)
+
+	promRegistry := prometheus.NewRegistry()
+	healthendpoint.StartServer(conf.HealthAddr, promRegistry)
+	healthRegistrar := healthendpoint.New(promRegistry, map[string]prometheus.Gauge{
+		// metric-documentation-health: (ingressStreamCount)
+		// Number of open firehose streams
+		"ingressStreamCount": prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Namespace: "loggregator",
+				Subsystem: "doppler",
+				Name:      "ingressStreamCount",
+				Help:      "Number of open ingress streams",
+			},
+		),
+		// metric-documentation-health: (subscriptionCount)
+		// Number of open subscriptions
+		"subscriptionCount": prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Namespace: "loggregator",
+				Subsystem: "doppler",
+				Name:      "subscriptionCount",
+				Help:      "Number of open subscriptions",
+			},
+		),
+	})
 
 	//------------------------------
 	// Caching
@@ -135,6 +162,7 @@ func main() {
 		envelopeBuffer,
 		batcher,
 		metricClient,
+		healthRegistrar,
 	)
 	if err != nil {
 		log.Panicf("Failed to create grpcListener: %s", err)

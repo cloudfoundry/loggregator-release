@@ -42,6 +42,26 @@ var _ = Describe("Health", func() {
 			Expect(gaugeCount2.value).To(Equal(60.0))
 		})
 	})
+
+	Describe("Inc()", func() {
+		It("Increments the guage", func() {
+			h.Inc("count-1")
+			Expect(gaugeCount1.inc).To(Equal(1))
+
+			h.Inc("count-2")
+			Expect(gaugeCount2.inc).To(Equal(1))
+		})
+	})
+
+	Describe("Dec()", func() {
+		It("Decrements the guage", func() {
+			h.Dec("count-1")
+			Expect(gaugeCount1.dec).To(Equal(1))
+
+			h.Dec("count-2")
+			Expect(gaugeCount2.dec).To(Equal(1))
+		})
+	})
 })
 
 type spyRegistrar struct {
@@ -60,6 +80,8 @@ func (s *spyRegistrar) MustRegister(c ...prometheus.Collector) {
 type spyGauge struct {
 	prometheus.Gauge
 	value float64
+	inc   int
+	dec   int
 }
 
 func newSpyGauge() *spyGauge {
@@ -68,4 +90,12 @@ func newSpyGauge() *spyGauge {
 
 func (s *spyGauge) Set(val float64) {
 	s.value = val
+}
+
+func (s *spyGauge) Inc() {
+	s.inc++
+}
+
+func (s *spyGauge) Dec() {
+	s.dec++
 }

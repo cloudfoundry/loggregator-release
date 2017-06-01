@@ -9,6 +9,11 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
+type HealthRegistrar interface {
+	Inc(name string)
+	Dec(name string)
+}
+
 type DopplerIngress_SenderServer interface {
 	plumbing.DopplerIngress_SenderServer
 }
@@ -25,12 +30,14 @@ type IngressServer struct {
 	envelopeBuffer DataSetter
 	batcher        Batcher
 	ingressMetric  *metricemitter.CounterMetric
+	health         HealthRegistrar
 }
 
 func NewIngressServer(
 	envelopeBuffer DataSetter,
 	batcher Batcher,
 	metricClient metricemitter.MetricClient,
+	health HealthRegistrar,
 ) *IngressServer {
 	ingressMetric := metricClient.NewCounterMetric("ingress",
 		metricemitter.WithVersion(2, 0),
@@ -40,10 +47,14 @@ func NewIngressServer(
 		envelopeBuffer: envelopeBuffer,
 		batcher:        batcher,
 		ingressMetric:  ingressMetric,
+		health:         health,
 	}
 }
 
 func (i IngressServer) BatchSender(s plumbing.DopplerIngress_BatchSenderServer) error {
+	i.health.Inc("ingressStreamCount")
+	defer i.health.Dec("ingressStreamCount")
+
 	for {
 		v2eBatch, err := s.Recv()
 		if err != nil {
@@ -73,6 +84,9 @@ func (i IngressServer) BatchSender(s plumbing.DopplerIngress_BatchSenderServer) 
 }
 
 func (i IngressServer) Sender(s plumbing.DopplerIngress_SenderServer) error {
+	i.health.Inc("ingressStreamCount")
+	defer i.health.Dec("ingressStreamCount")
+
 	for {
 		v2e, err := s.Recv()
 		if err != nil {

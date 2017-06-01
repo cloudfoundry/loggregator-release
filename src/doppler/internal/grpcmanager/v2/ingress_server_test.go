@@ -5,6 +5,7 @@ import (
 	"io"
 	"metricemitter/testhelper"
 	plumbing "plumbing/v2"
+	"sync"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	. "github.com/onsi/ginkgo"
@@ -16,6 +17,7 @@ var _ = Describe("Ingress", func() {
 		mockDataSetter  *mockDataSetter
 		mockSender      *mockDopplerIngress_SenderServer
 		mockBatchSender *mockBatcherSenderServer
+		healthRegistrar *SpyHealthRegistrar
 
 		ingestor *v2.IngressServer
 	)
@@ -24,11 +26,13 @@ var _ = Describe("Ingress", func() {
 		mockDataSetter = newMockDataSetter()
 		mockSender = newMockDopplerIngress_SenderServer()
 		mockBatchSender = newMockBatcherSenderServer()
+		healthRegistrar = newSpyHealthRegistrar()
 
 		ingestor = v2.NewIngressServer(
 			mockDataSetter,
 			SpyBatcher{},
 			testhelper.NewMetricClient(),
+			healthRegistrar,
 		)
 	})
 
@@ -85,6 +89,42 @@ var _ = Describe("Ingress", func() {
 		ingestor.Sender(mockSender)
 		Expect(mockDataSetter.SetCalled).To(HaveLen(0))
 	})
+
+	Describe("health monitoring", func() {
+		Describe("Sender()", func() {
+			It("increments and decrements the number of ingress streams", func() {
+				go ingestor.Sender(mockSender)
+
+				Eventually(func() float64 {
+					return healthRegistrar.Get("ingressStreamCount")
+				}).Should(Equal(1.0))
+
+				mockSender.RecvOutput.Ret0 <- nil
+				mockSender.RecvOutput.Ret1 <- io.EOF
+
+				Eventually(func() float64 {
+					return healthRegistrar.Get("ingressStreamCount")
+				}).Should(Equal(0.0))
+			})
+		})
+
+		Describe("BatchSender()", func() {
+			It("increments and decrements the number of ingress streams", func() {
+				go ingestor.BatchSender(mockBatchSender)
+
+				Eventually(func() float64 {
+					return healthRegistrar.Get("ingressStreamCount")
+				}).Should(Equal(1.0))
+
+				mockBatchSender.RecvOutput.Ret0 <- nil
+				mockBatchSender.RecvOutput.Ret1 <- io.EOF
+
+				Eventually(func() float64 {
+					return healthRegistrar.Get("ingressStreamCount")
+				}).Should(Equal(0.0))
+			})
+		})
+	})
 })
 
 type SpyBatcher struct {
@@ -96,4 +136,33 @@ func (s SpyBatcher) BatchCounter(string) metricbatcher.BatchCounterChainer {
 }
 
 func (s SpyBatcher) Increment() {
+}
+
+type SpyHealthRegistrar struct {
+	mu     sync.Mutex
+	values map[string]float64
+}
+
+func newSpyHealthRegistrar() *SpyHealthRegistrar {
+	return &SpyHealthRegistrar{
+		values: make(map[string]float64),
+	}
+}
+
+func (s *SpyHealthRegistrar) Inc(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.values[name]++
+}
+
+func (s *SpyHealthRegistrar) Dec(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.values[name]--
+}
+
+func (s *SpyHealthRegistrar) Get(name string) float64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.values[name]
 }

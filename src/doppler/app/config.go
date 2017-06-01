@@ -62,6 +62,7 @@ type Config struct {
 	WebsocketWriteTimeoutSeconds    int
 	Zone                            string
 	PPROFPort                       uint32
+	HealthAddr                      string
 }
 
 func (c *Config) validate() (err error) {
@@ -160,6 +161,10 @@ func Parse(confData []byte) (*Config, error) {
 
 	if config.GRPC.Port == 0 {
 		config.GRPC.Port = 8082
+	}
+
+	if config.HealthAddr == "" {
+		config.HealthAddr = "localhost:22222"
 	}
 
 	return config, nil

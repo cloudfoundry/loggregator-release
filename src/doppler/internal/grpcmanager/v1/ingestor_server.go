@@ -16,6 +16,7 @@ import (
 type IngestorServer struct {
 	sender  MessageSender
 	batcher Batcher
+	health  HealthRegistrar
 }
 
 type Batcher interface {
@@ -30,14 +31,23 @@ type IngestorGRPCServer interface {
 	plumbing.DopplerIngestor_PusherServer
 }
 
-func NewIngestorServer(sender MessageSender, batcher Batcher) *IngestorServer {
+func NewIngestorServer(
+	sender MessageSender,
+	batcher Batcher,
+	health HealthRegistrar,
+) *IngestorServer {
+
 	return &IngestorServer{
 		sender:  sender,
 		batcher: batcher,
+		health:  health,
 	}
 }
 
 func (i *IngestorServer) Pusher(pusher plumbing.DopplerIngestor_PusherServer) error {
+	i.health.Inc("ingressStreamCount")
+	defer i.health.Dec("ingressStreamCount")
+
 	var done int64
 	context := pusher.Context()
 	go i.monitorContext(context, &done)

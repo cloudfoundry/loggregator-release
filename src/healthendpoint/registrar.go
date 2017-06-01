@@ -21,10 +21,28 @@ func New(registrar prometheus.Registerer, gauges map[string]prometheus.Gauge) *R
 }
 
 func (h *Registrar) Set(name string, value float64) {
-	c, ok := h.gauges[name]
+	g, ok := h.gauges[name]
 	if !ok {
-		log.Panicf("set called for unknown health metric: %s", name)
+		log.Panicf("Set called for unknown health metric: %s", name)
 	}
 
-	c.Set(value)
+	g.Set(value)
+}
+
+func (h *Registrar) Inc(name string) {
+	g, ok := h.gauges[name]
+	if !ok {
+		log.Panicf("Inc called for unknown health metric: %s", name)
+	}
+
+	g.Inc()
+}
+
+func (h *Registrar) Dec(name string) {
+	g, ok := h.gauges[name]
+	if !ok {
+		log.Panicf("Dec called for unknown health metric: %s", name)
+	}
+
+	g.Dec()
 }

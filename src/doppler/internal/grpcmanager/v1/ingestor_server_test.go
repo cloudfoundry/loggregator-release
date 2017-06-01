@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"plumbing"
+	"sync"
 
 	"google.golang.org/grpc"
 
@@ -36,11 +37,12 @@ var _ = Describe("IngestorManager", func() {
 	}
 
 	var (
-		outgoingMsgs  *diodes.ManyToOneEnvelope
-		manager       *v1.IngestorServer
-		server        *grpc.Server
-		connCloser    io.Closer
-		dopplerClient plumbing.DopplerIngestorClient
+		outgoingMsgs    *diodes.ManyToOneEnvelope
+		manager         *v1.IngestorServer
+		server          *grpc.Server
+		connCloser      io.Closer
+		dopplerClient   plumbing.DopplerIngestorClient
+		healthRegistrar *SpyHealthRegistrar
 	)
 
 	BeforeEach(func() {
@@ -50,7 +52,9 @@ var _ = Describe("IngestorManager", func() {
 		mockChainer := newMockBatchCounterChainer()
 		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
 		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
-		manager = v1.NewIngestorServer(outgoingMsgs, mockBatcher)
+		healthRegistrar = newSpyHealthRegistrar()
+
+		manager = v1.NewIngestorServer(outgoingMsgs, mockBatcher, healthRegistrar)
 		server, grpcAddr = startGRPCServer(manager)
 		dopplerClient, connCloser = establishClient(grpcAddr)
 	})
@@ -68,6 +72,26 @@ var _ = Describe("IngestorManager", func() {
 		pusherClient.Send(&plumbing.EnvelopeData{data})
 
 		Eventually(outgoingMsgs.Next).Should(Equal(someEnvelope))
+	})
+
+	Describe("health monitoring", func() {
+		It("increments and decrements the number of ingress streams", func() {
+			pusher, err := dopplerClient.Pusher(context.TODO())
+			Expect(err).ToNot(HaveOccurred())
+
+			_, data := buildContainerMetric()
+			pusher.Send(&plumbing.EnvelopeData{data})
+
+			Eventually(func() float64 {
+				return healthRegistrar.Get("ingressStreamCount")
+			}).Should(Equal(1.0))
+
+			pusher.CloseAndRecv()
+
+			Eventually(func() float64 {
+				return healthRegistrar.Get("ingressStreamCount")
+			}).Should(Equal(0.0))
+		})
 	})
 
 	Context("With an unsupported envelope payload", func() {
@@ -142,3 +166,32 @@ var _ = Describe("IngestorManager", func() {
 		})
 	})
 })
+
+type SpyHealthRegistrar struct {
+	mu     sync.Mutex
+	values map[string]float64
+}
+
+func newSpyHealthRegistrar() *SpyHealthRegistrar {
+	return &SpyHealthRegistrar{
+		values: make(map[string]float64),
+	}
+}
+
+func (s *SpyHealthRegistrar) Inc(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.values[name]++
+}
+
+func (s *SpyHealthRegistrar) Dec(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.values[name]--
+}
+
+func (s *SpyHealthRegistrar) Get(name string) float64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.values[name]
+}

@@ -25,11 +25,12 @@ import (
 
 var _ = Describe("GRPCManager", func() {
 	var (
-		mockRegistrar  *mockRegistrar
-		mockCleanup    func()
-		cleanupCalled  chan struct{}
-		mockDataDumper *mockDataDumper
-		metricClient   *testhelper.SpyMetricClient
+		mockRegistrar   *mockRegistrar
+		mockCleanup     func()
+		cleanupCalled   chan struct{}
+		mockDataDumper  *mockDataDumper
+		metricClient    *testhelper.SpyMetricClient
+		healthRegistrar *SpyHealthRegistrar
 
 		manager       *v1.DopplerServer
 		listener      net.Listener
@@ -88,11 +89,13 @@ var _ = Describe("GRPCManager", func() {
 		mockRegistrar.RegisterOutput.Ret0 <- mockCleanup
 		mockDataDumper = newMockDataDumper()
 		metricClient = testhelper.NewMetricClient()
+		healthRegistrar = newSpyHealthRegistrar()
 
 		manager = v1.NewDopplerServer(
 			mockRegistrar,
 			mockDataDumper,
 			metricClient,
+			healthRegistrar,
 		)
 
 		listener = startGRPCServer(manager)
@@ -167,6 +170,23 @@ var _ = Describe("GRPCManager", func() {
 
 					Eventually(cleanupCalled).Should(BeClosed())
 				})
+			})
+		})
+
+		Describe("health monitoring", func() {
+			It("increments and decrements the subscription count", func() {
+				_, err := dopplerClient.Subscribe(context.TODO(), subscribeRequest)
+				Expect(err).ToNot(HaveOccurred())
+
+				Eventually(func() float64 {
+					return healthRegistrar.Get("subscriptionCount")
+				}).Should(Equal(1.0))
+
+				connCloser.Close()
+
+				Eventually(func() float64 {
+					return healthRegistrar.Get("subscriptionCount")
+				}).Should(Equal(0.0))
 			})
 		})
 	})

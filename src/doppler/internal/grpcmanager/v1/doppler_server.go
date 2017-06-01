@@ -19,6 +19,11 @@ const (
 	metricsInterval = time.Second
 )
 
+type HealthRegistrar interface {
+	Inc(name string)
+	Dec(name string)
+}
+
 // Registrar registers stream and firehose DataSetters to accept reads.
 type Registrar interface {
 	Register(req *plumbing.SubscriptionRequest, setter DataSetter) func()
@@ -43,6 +48,7 @@ type DopplerServer struct {
 	numSubscriptions    int64
 	egressMetric        *metricemitter.CounterMetric
 	egressDroppedMetric *metricemitter.CounterMetric
+	health              HealthRegistrar
 }
 
 type sender interface {
@@ -55,6 +61,7 @@ func NewDopplerServer(
 	registrar Registrar,
 	dumper DataDumper,
 	metricClient metricemitter.MetricClient,
+	health HealthRegistrar,
 ) *DopplerServer {
 	egressMetric := metricClient.NewCounterMetric("egress",
 		metricemitter.WithVersion(2, 0),
@@ -70,6 +77,7 @@ func NewDopplerServer(
 		dumper:              dumper,
 		egressMetric:        egressMetric,
 		egressDroppedMetric: egressDroppedMetric,
+		health:              health,
 	}
 
 	go m.emitMetrics()
@@ -81,6 +89,8 @@ func NewDopplerServer(
 func (m *DopplerServer) Subscribe(req *plumbing.SubscriptionRequest, sender plumbing.Doppler_SubscribeServer) error {
 	atomic.AddInt64(&m.numSubscriptions, 1)
 	defer atomic.AddInt64(&m.numSubscriptions, -1)
+	m.health.Inc("subscriptionCount")
+	defer m.health.Dec("subscriptionCount")
 
 	return m.sendData(req, sender)
 }

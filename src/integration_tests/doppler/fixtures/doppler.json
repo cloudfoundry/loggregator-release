@@ -27,5 +27,6 @@
         "KeyFile": "../fixtures/server.key",
         "CertFile": "../fixtures/server.crt",
         "CAFile": "../fixtures/loggregator-ca.crt"
-    }
+    },
+    "HealthAddr": "localhost:8080"
 }
