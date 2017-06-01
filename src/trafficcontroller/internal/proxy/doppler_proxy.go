@@ -68,7 +68,7 @@ func NewDopplerProxy(
 	r.Handle("/apps/{appID}/recentlogs", logAccessMiddleware.Wrap(recentLogsHandler))
 
 	wsServer := &WebSocketServer{
-		metricSender: m,
+		MetricSender: m,
 	}
 	streamHandler := NewStreamHandler(grpcConn, wsServer)
 	r.Handle("/apps/{appID}/stream", logAccessMiddleware.Wrap(streamHandler))

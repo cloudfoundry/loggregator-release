@@ -7,7 +7,7 @@ import (
 )
 
 type WebSocketServer struct {
-	metricSender metricSender
+	MetricSender metricSender
 }
 
 func (s *WebSocketServer) serveWS(
@@ -45,7 +45,7 @@ func (s *WebSocketServer) serveWS(
 			case <-timer.C:
 				// metric-documentation-v1: (dopplerProxy.slowConsumer) A slow consumer of the
 				// websocket stream
-				s.metricSender.SendValue("dopplerProxy.slowConsumer", 1, "consumer")
+				s.MetricSender.SendValue("dopplerProxy.slowConsumer", 1, "consumer")
 				log.Print("Doppler Proxy: Slow Consumer")
 				return
 			}

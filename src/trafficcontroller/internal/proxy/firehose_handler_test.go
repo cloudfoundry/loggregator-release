@@ -68,7 +68,9 @@ var _ = Describe("FirehoseHandler", func() {
 		req, err := http.NewRequest("GET", "/firehose/123?filter-type=logs", nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		h := proxy.NewFirehoseHandler(connector, &proxy.WebSocketServer{})
+		h := proxy.NewFirehoseHandler(connector, &proxy.WebSocketServer{
+			MetricSender: newMockMetricSender(),
+		})
 		h.ServeHTTP(recorder, req)
 
 		Expect(connector.subscriptions.request.Filter).To(Equal(&plumbing.Filter{
@@ -82,7 +84,9 @@ var _ = Describe("FirehoseHandler", func() {
 		req, err := http.NewRequest("GET", "/firehose/123?filter-type=metrics", nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		h := proxy.NewFirehoseHandler(connector, &proxy.WebSocketServer{})
+		h := proxy.NewFirehoseHandler(connector, &proxy.WebSocketServer{
+			MetricSender: newMockMetricSender(),
+		})
 		h.ServeHTTP(recorder, req)
 
 		Expect(connector.subscriptions.request.Filter).To(Equal(&plumbing.Filter{
