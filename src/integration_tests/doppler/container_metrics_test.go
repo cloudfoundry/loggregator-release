@@ -12,15 +12,27 @@ import (
 )
 
 var _ = Describe("Container Metrics", func() {
-	var receivedChan chan []byte
-	var inputConnection net.Conn
-	var appID string
+	var (
+		receivedChan    chan []byte
+		inputConnection net.Conn
+		appID           string
+	)
 
-	itDoesContainerMetrics := func(send func(events.Event, net.Conn) error) {
+	Context("UDP", func() {
+		BeforeEach(func() {
+			inputConnection, _ = net.Dial("udp", localIPAddress+":8765")
+			guid, _ := uuid.NewV4()
+			appID = guid.String()
+		})
+
+		AfterEach(func() {
+			inputConnection.Close()
+		})
+
 		It("returns container metrics for an app", func() {
 			containerMetric := factories.NewContainerMetric(appID, 0, 1, 2, 3)
 
-			send(containerMetric, inputConnection)
+			SendEvent(containerMetric, inputConnection)
 
 			time.Sleep(5 * time.Second)
 
@@ -39,12 +51,12 @@ var _ = Describe("Container Metrics", func() {
 		})
 
 		It("does not receive metrics for different appIds", func() {
-			send(factories.NewContainerMetric(appID+"other", 0, 1, 2, 3), inputConnection)
+			SendEvent(factories.NewContainerMetric(appID+"other", 0, 1, 2, 3), inputConnection)
 
 			goodMetric := factories.NewContainerMetric(appID, 0, 100, 2, 3)
-			send(goodMetric, inputConnection)
+			SendEvent(goodMetric, inputConnection)
 
-			send(factories.NewContainerMetric(appID+"other", 1, 1, 2, 3), inputConnection)
+			SendEvent(factories.NewContainerMetric(appID+"other", 1, 1, 2, 3), inputConnection)
 
 			time.Sleep(5 * time.Second)
 
@@ -63,8 +75,8 @@ var _ = Describe("Container Metrics", func() {
 		})
 
 		XIt("returns metrics for all instances of the app", func() {
-			send(factories.NewContainerMetric(appID, 0, 1, 2, 3), inputConnection)
-			send(factories.NewContainerMetric(appID, 1, 1, 2, 3), inputConnection)
+			SendEvent(factories.NewContainerMetric(appID, 0, 1, 2, 3), inputConnection)
+			SendEvent(factories.NewContainerMetric(appID, 1, 1, 2, 3), inputConnection)
 
 			time.Sleep(5 * time.Second)
 
@@ -87,10 +99,10 @@ var _ = Describe("Container Metrics", func() {
 		})
 
 		It("returns only the latest container metric", func() {
-			send(factories.NewContainerMetric(appID, 0, 10, 2, 3), inputConnection)
+			SendEvent(factories.NewContainerMetric(appID, 0, 10, 2, 3), inputConnection)
 
 			laterMetric := factories.NewContainerMetric(appID, 0, 20, 2, 3)
-			send(laterMetric, inputConnection)
+			SendEvent(laterMetric, inputConnection)
 
 			time.Sleep(5 * time.Second)
 
@@ -105,19 +117,5 @@ var _ = Describe("Container Metrics", func() {
 
 			Expect(receivedEnvelope.GetContainerMetric()).To(Equal(laterMetric))
 		})
-	}
-
-	Context("UDP", func() {
-		BeforeEach(func() {
-			inputConnection, _ = net.Dial("udp", localIPAddress+":8765")
-			guid, _ := uuid.NewV4()
-			appID = guid.String()
-		})
-
-		AfterEach(func() {
-			inputConnection.Close()
-		})
-
-		itDoesContainerMetrics(SendEvent)
 	})
 })
