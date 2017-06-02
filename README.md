@@ -1,4 +1,4 @@
-# Cloud Native Logging [![slack.cloudfoundry.org][slack-badge]][loggregator-slack]
+# Cloud Native Logging [![slack.cloudfoundry.org][slack-badge]][loggregator-slack] [![CI Badge][ci-badge]][ci-pipeline]
 
 Loggregator is a [BOSH][bosh] release deployed as a part of
 [cf-release][cf-release]. Loggregator provides
@@ -165,3 +165,5 @@ Items marked as "In Flight" on the Roadmap are tracked as new Features in
 [health-nozzle-proposal]:   https://docs.google.com/document/d/1rqlSDssaNk7B9TUmHhjUsn1-FeUNX8odslc-T_3ixck/edit
 [road-map]:                 https://docs.google.com/spreadsheets/d/1bM1bInPQeC2xLayLsFb0aBuD3_HFNfJj9mEJZygnuWo/edit#gid=0
 [loggregator-tracker]:      https://www.pivotaltracker.com/n/projects/993188
+[ci-badge]:                 https://loggregator.ci.cf-app.com/api/v1/pipelines/loggregator/jobs/run-tests/badge
+[ci-pipeline]:              https://loggregator.ci.cf-app.com/
