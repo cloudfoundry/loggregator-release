@@ -1,11 +1,15 @@
 package doppler_test
 
 import (
-	"net"
+	"context"
+	"plumbing"
 	"time"
+
+	"google.golang.org/grpc"
 
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 	uuid "github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -13,26 +17,27 @@ import (
 
 var _ = Describe("Container Metrics", func() {
 	var (
-		receivedChan    chan []byte
-		inputConnection net.Conn
-		appID           string
+		receivedChan chan []byte
+		appID        string
+		conn         *grpc.ClientConn
+		client       plumbing.DopplerIngestor_PusherClient
 	)
 
-	Context("UDP", func() {
-		BeforeEach(func() {
-			inputConnection, _ = net.Dial("udp", localIPAddress+":8765")
+	Context("gRPC V1", func() {
+		JustBeforeEach(func() {
+			conn, client = dopplerIngressV1Client("localhost:5678")
 			guid, _ := uuid.NewV4()
 			appID = guid.String()
 		})
 
 		AfterEach(func() {
-			inputConnection.Close()
+			conn.Close()
 		})
 
 		It("returns container metrics for an app", func() {
 			containerMetric := factories.NewContainerMetric(appID, 0, 1, 2, 3)
 
-			SendEvent(containerMetric, inputConnection)
+			client.Send(marshalContainerMetric(containerMetric))
 
 			time.Sleep(5 * time.Second)
 
@@ -51,12 +56,16 @@ var _ = Describe("Container Metrics", func() {
 		})
 
 		It("does not receive metrics for different appIds", func() {
-			SendEvent(factories.NewContainerMetric(appID+"other", 0, 1, 2, 3), inputConnection)
+			client.Send(marshalContainerMetric(
+				factories.NewContainerMetric(appID+"other", 0, 1, 2, 3),
+			))
 
 			goodMetric := factories.NewContainerMetric(appID, 0, 100, 2, 3)
-			SendEvent(goodMetric, inputConnection)
+			client.Send(marshalContainerMetric(goodMetric))
 
-			SendEvent(factories.NewContainerMetric(appID+"other", 1, 1, 2, 3), inputConnection)
+			client.Send(marshalContainerMetric(
+				factories.NewContainerMetric(appID+"other", 1, 1, 2, 3),
+			))
 
 			time.Sleep(5 * time.Second)
 
@@ -75,8 +84,12 @@ var _ = Describe("Container Metrics", func() {
 		})
 
 		XIt("returns metrics for all instances of the app", func() {
-			SendEvent(factories.NewContainerMetric(appID, 0, 1, 2, 3), inputConnection)
-			SendEvent(factories.NewContainerMetric(appID, 1, 1, 2, 3), inputConnection)
+			client.Send(marshalContainerMetric(
+				factories.NewContainerMetric(appID, 0, 1, 2, 3),
+			))
+			client.Send(marshalContainerMetric(
+				factories.NewContainerMetric(appID, 1, 1, 2, 3),
+			))
 
 			time.Sleep(5 * time.Second)
 
@@ -99,10 +112,12 @@ var _ = Describe("Container Metrics", func() {
 		})
 
 		It("returns only the latest container metric", func() {
-			SendEvent(factories.NewContainerMetric(appID, 0, 10, 2, 3), inputConnection)
+			client.Send(marshalContainerMetric(
+				factories.NewContainerMetric(appID, 0, 10, 2, 3),
+			))
 
 			laterMetric := factories.NewContainerMetric(appID, 0, 20, 2, 3)
-			SendEvent(laterMetric, inputConnection)
+			client.Send(marshalContainerMetric(laterMetric))
 
 			time.Sleep(5 * time.Second)
 
@@ -119,3 +134,44 @@ var _ = Describe("Container Metrics", func() {
 		})
 	})
 })
+
+func dopplerIngressV1Client(addr string) (*grpc.ClientConn, plumbing.DopplerIngestor_PusherClient) {
+	creds, err := plumbing.NewCredentials(
+		"../fixtures/server.crt",
+		"../fixtures/server.key",
+		"../fixtures/loggregator-ca.crt",
+		"doppler",
+	)
+	Expect(err).ToNot(HaveOccurred())
+
+	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(creds))
+	Expect(err).ToNot(HaveOccurred())
+	client := plumbing.NewDopplerIngestorClient(conn)
+
+	var pusherClient plumbing.DopplerIngestor_PusherClient
+	f := func() error {
+		var err error
+		ctx, _ := context.WithTimeout(context.TODO(), 10*time.Second)
+		pusherClient, err = client.Pusher(ctx)
+		return err
+	}
+	Eventually(f).ShouldNot(HaveOccurred())
+
+	return conn, pusherClient
+}
+
+func marshalContainerMetric(metric *events.ContainerMetric) *plumbing.EnvelopeData {
+	env := &events.Envelope{
+		Origin:          proto.String("origin"),
+		Timestamp:       proto.Int64(time.Now().UnixNano()),
+		EventType:       events.Envelope_ContainerMetric.Enum(),
+		ContainerMetric: metric,
+	}
+
+	data, err := proto.Marshal(env)
+	Expect(err).ToNot(HaveOccurred())
+
+	return &plumbing.EnvelopeData{
+		Payload: data,
+	}
+}
