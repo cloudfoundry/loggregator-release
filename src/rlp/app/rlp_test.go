@@ -65,11 +65,17 @@ var _ = Describe("Start", func() {
 		egressClient, cleanup := setupRLPQueryClient(egressLis)
 		defer cleanup()
 
-		ctx, _ := context.WithTimeout(context.Background(), time.Second)
-		resp, err := egressClient.ContainerMetrics(ctx, &v2.ContainerMetricRequest{
-			SourceId: "some-app",
-		})
-		Expect(err).ToNot(HaveOccurred())
+		var resp *v2.QueryResponse
+		f := func() error {
+			var err error
+			ctx, _ := context.WithTimeout(context.Background(), time.Second)
+			resp, err = egressClient.ContainerMetrics(ctx, &v2.ContainerMetricRequest{
+				SourceId: "some-app",
+			})
+
+			return err
+		}
+		Eventually(f).Should(Succeed())
 
 		Expect(resp.Envelopes).To(HaveLen(1))
 	})
