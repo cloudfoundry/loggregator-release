@@ -12,19 +12,26 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Streaming Logs", func() {
-	var inputConnection net.Conn
-	var appID string
+var _ = Describe("Recent Logs", func() {
+	var (
+		inputConnection net.Conn
+		appID           string
+	)
 
-	BeforeEach(func() {
-		guid, _ := uuid.NewV4()
-		appID = guid.String()
-	})
+	Context("UDP", func() {
+		BeforeEach(func() {
+			inputConnection, _ = net.Dial("udp", localIPAddress+":8765")
+			guid, _ := uuid.NewV4()
+			appID = guid.String()
+		})
 
-	itStreams := func(send func(event events.Event, connection net.Conn) error) {
+		AfterEach(func() {
+			inputConnection.Close()
+		})
+
 		It("receives recent log messages", func() {
 			logMessage := factories.NewLogMessage(events.LogMessage_OUT, "msg 1", appID, "APP")
-			err := send(logMessage, inputConnection)
+			err := SendEvent(logMessage, inputConnection)
 			Expect(err).NotTo(HaveOccurred())
 
 			returnedMessages := make([][]byte, 1)
@@ -41,11 +48,11 @@ var _ = Describe("Streaming Logs", func() {
 
 		It("only receives messages for the specified appId", func() {
 			logMessage := factories.NewLogMessage(events.LogMessage_OUT, "msg 1", appID, "APP")
-			err := send(logMessage, inputConnection)
+			err := SendEvent(logMessage, inputConnection)
 			Expect(err).NotTo(HaveOccurred())
 
 			logMessage = factories.NewLogMessage(events.LogMessage_OUT, "msg 2", "otherId", "APP")
-			err = send(logMessage, inputConnection)
+			err = SendEvent(logMessage, inputConnection)
 			Expect(err).NotTo(HaveOccurred())
 
 			returnedMessages := make([][]byte, 1)
@@ -62,7 +69,7 @@ var _ = Describe("Streaming Logs", func() {
 
 		It("does not receive non-log messages", func() {
 			metricEvent := factories.NewContainerMetric(appID, 0, 10, 10, 10)
-			err := send(metricEvent, inputConnection)
+			err := SendEvent(metricEvent, inputConnection)
 			Expect(err).NotTo(HaveOccurred())
 			returnedMessages := make([][]byte, 1)
 
@@ -75,7 +82,7 @@ var _ = Describe("Streaming Logs", func() {
 		It("only receives the most recent logs", func() {
 			for i := 0; i < 15; i++ {
 				logMessage := factories.NewLogMessage(events.LogMessage_OUT, strconv.Itoa(i), appID, "APP")
-				err := send(logMessage, inputConnection)
+				err := SendEvent(logMessage, inputConnection)
 				Expect(err).NotTo(HaveOccurred())
 			}
 
@@ -91,18 +98,6 @@ var _ = Describe("Streaming Logs", func() {
 				return messages
 			}).Should(Equal([]string{"5", "6", "7", "8", "9", "10", "11", "12", "13", "14"}))
 		})
-	}
-
-	Context("UDP", func() {
-		BeforeEach(func() {
-			inputConnection, _ = net.Dial("udp", localIPAddress+":8765")
-		})
-
-		AfterEach(func() {
-			inputConnection.Close()
-		})
-
-		itStreams(SendEvent)
 	})
 })
 
