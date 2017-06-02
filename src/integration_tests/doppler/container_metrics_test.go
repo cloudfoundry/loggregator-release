@@ -43,16 +43,7 @@ var _ = Describe("Container Metrics", func() {
 
 			ingressClient.Send(marshalContainerMetric(containerMetric))
 
-			time.Sleep(5 * time.Second)
-
-			ctx, _ := context.WithTimeout(context.TODO(), time.Second)
-			resp, err := egressClient.ContainerMetrics(ctx, &plumbing.ContainerMetricsRequest{
-				AppID: appID,
-			})
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(resp.Payload).To(HaveLen(1))
-			receivedEnvelope := UnmarshalMessage(resp.Payload[0])
+			receivedEnvelope := pollForContainerMetric(appID, egressClient)
 
 			Expect(receivedEnvelope.GetEventType()).To(Equal(events.Envelope_ContainerMetric))
 			receivedMetric := receivedEnvelope.GetContainerMetric()
@@ -71,16 +62,7 @@ var _ = Describe("Container Metrics", func() {
 				factories.NewContainerMetric(appID+"other", 1, 1, 2, 3),
 			))
 
-			time.Sleep(5 * time.Second)
-
-			ctx, _ := context.WithTimeout(context.TODO(), time.Second)
-			resp, err := egressClient.ContainerMetrics(ctx, &plumbing.ContainerMetricsRequest{
-				AppID: appID,
-			})
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(resp.Payload).To(HaveLen(1))
-			receivedEnvelope := UnmarshalMessage(resp.Payload[0])
+			receivedEnvelope := pollForContainerMetric(appID, egressClient)
 
 			Expect(receivedEnvelope.GetContainerMetric().GetApplicationId()).To(Equal(appID))
 			Expect(receivedEnvelope.GetContainerMetric()).To(Equal(goodMetric))
@@ -94,16 +76,7 @@ var _ = Describe("Container Metrics", func() {
 			laterMetric := factories.NewContainerMetric(appID, 0, 20, 2, 3)
 			ingressClient.Send(marshalContainerMetric(laterMetric))
 
-			time.Sleep(5 * time.Second)
-
-			ctx, _ := context.WithTimeout(context.TODO(), time.Second)
-			resp, err := egressClient.ContainerMetrics(ctx, &plumbing.ContainerMetricsRequest{
-				AppID: appID,
-			})
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(resp.Payload).To(HaveLen(1))
-			receivedEnvelope := UnmarshalMessage(resp.Payload[0])
+			receivedEnvelope := pollForContainerMetric(appID, egressClient)
 
 			Expect(receivedEnvelope.GetContainerMetric()).To(Equal(laterMetric))
 		})
@@ -149,4 +122,24 @@ func marshalContainerMetric(metric *events.ContainerMetric) *plumbing.EnvelopeDa
 	return &plumbing.EnvelopeData{
 		Payload: data,
 	}
+}
+
+func pollForContainerMetric(appID string, client plumbing.DopplerClient) *events.Envelope {
+	var payload [][]byte
+	f := func() int {
+		ctx, _ := context.WithTimeout(context.TODO(), time.Second)
+		resp, err := client.ContainerMetrics(ctx, &plumbing.ContainerMetricsRequest{
+			AppID: appID,
+		})
+		if err != nil {
+			return 0
+		}
+
+		payload = resp.Payload
+
+		return len(payload)
+	}
+	Eventually(f).Should(Equal(1))
+	env := UnmarshalMessage(payload[0])
+	return &env
 }
