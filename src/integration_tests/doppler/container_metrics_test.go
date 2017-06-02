@@ -17,38 +17,42 @@ import (
 
 var _ = Describe("Container Metrics", func() {
 	var (
-		receivedChan chan []byte
-		appID        string
-		conn         *grpc.ClientConn
-		client       plumbing.DopplerIngestor_PusherClient
+		appID                   string
+		ingressConn, egressConn *grpc.ClientConn
+		ingressClient           plumbing.DopplerIngestor_PusherClient
+		egressClient            plumbing.DopplerClient
 	)
 
 	Context("gRPC V1", func() {
 		JustBeforeEach(func() {
-			conn, client = dopplerIngressV1Client("localhost:5678")
+			ingressConn, ingressClient = dopplerIngressV1Client("localhost:5678")
 			guid, _ := uuid.NewV4()
 			appID = guid.String()
+
+			conf := fetchDopplerConfig("fixtures/doppler.json")
+			egressConn, egressClient = connectToGRPC(conf)
 		})
 
 		AfterEach(func() {
-			conn.Close()
+			ingressConn.Close()
+			egressConn.Close()
 		})
 
 		It("returns container metrics for an app", func() {
 			containerMetric := factories.NewContainerMetric(appID, 0, 1, 2, 3)
 
-			client.Send(marshalContainerMetric(containerMetric))
+			ingressClient.Send(marshalContainerMetric(containerMetric))
 
 			time.Sleep(5 * time.Second)
 
-			receivedChan = make(chan []byte)
-			ws, _ := AddWSSink(receivedChan, "4567", "/apps/"+appID+"/containermetrics")
-			defer ws.Close()
+			ctx, _ := context.WithTimeout(context.TODO(), time.Second)
+			resp, err := egressClient.ContainerMetrics(ctx, &plumbing.ContainerMetricsRequest{
+				AppID: appID,
+			})
+			Expect(err).ToNot(HaveOccurred())
 
-			var receivedMessageBytes []byte
-			Eventually(receivedChan).Should(Receive(&receivedMessageBytes))
-
-			receivedEnvelope := UnmarshalMessage(receivedMessageBytes)
+			Expect(resp.Payload).To(HaveLen(1))
+			receivedEnvelope := UnmarshalMessage(resp.Payload[0])
 
 			Expect(receivedEnvelope.GetEventType()).To(Equal(events.Envelope_ContainerMetric))
 			receivedMetric := receivedEnvelope.GetContainerMetric()
@@ -56,79 +60,50 @@ var _ = Describe("Container Metrics", func() {
 		})
 
 		It("does not receive metrics for different appIds", func() {
-			client.Send(marshalContainerMetric(
+			ingressClient.Send(marshalContainerMetric(
 				factories.NewContainerMetric(appID+"other", 0, 1, 2, 3),
 			))
 
 			goodMetric := factories.NewContainerMetric(appID, 0, 100, 2, 3)
-			client.Send(marshalContainerMetric(goodMetric))
+			ingressClient.Send(marshalContainerMetric(goodMetric))
 
-			client.Send(marshalContainerMetric(
+			ingressClient.Send(marshalContainerMetric(
 				factories.NewContainerMetric(appID+"other", 1, 1, 2, 3),
 			))
 
 			time.Sleep(5 * time.Second)
 
-			receivedChan = make(chan []byte)
-			ws, _ := AddWSSink(receivedChan, "4567", "/apps/"+appID+"/containermetrics")
-			defer ws.Close()
+			ctx, _ := context.WithTimeout(context.TODO(), time.Second)
+			resp, err := egressClient.ContainerMetrics(ctx, &plumbing.ContainerMetricsRequest{
+				AppID: appID,
+			})
+			Expect(err).ToNot(HaveOccurred())
 
-			var receivedMessageBytes []byte
-			Eventually(receivedChan).Should(Receive(&receivedMessageBytes))
-			Eventually(receivedChan).Should(BeClosed())
-
-			receivedEnvelope := UnmarshalMessage(receivedMessageBytes)
+			Expect(resp.Payload).To(HaveLen(1))
+			receivedEnvelope := UnmarshalMessage(resp.Payload[0])
 
 			Expect(receivedEnvelope.GetContainerMetric().GetApplicationId()).To(Equal(appID))
 			Expect(receivedEnvelope.GetContainerMetric()).To(Equal(goodMetric))
 		})
 
-		XIt("returns metrics for all instances of the app", func() {
-			client.Send(marshalContainerMetric(
-				factories.NewContainerMetric(appID, 0, 1, 2, 3),
-			))
-			client.Send(marshalContainerMetric(
-				factories.NewContainerMetric(appID, 1, 1, 2, 3),
-			))
-
-			time.Sleep(5 * time.Second)
-
-			receivedChan = make(chan []byte)
-			ws, _ := AddWSSink(receivedChan, "4567", "/apps/"+appID+"/containermetrics")
-			defer ws.Close()
-
-			var firstReceivedMessageBytes []byte
-			var secondReceivedMessageBytes []byte
-
-			Eventually(receivedChan).Should(Receive(&firstReceivedMessageBytes))
-			Eventually(receivedChan).Should(Receive(&secondReceivedMessageBytes))
-
-			firstEnvelope := UnmarshalMessage(firstReceivedMessageBytes)
-			secondEnvelope := UnmarshalMessage(secondReceivedMessageBytes)
-
-			Expect(firstEnvelope.GetContainerMetric().GetApplicationId()).To(Equal(appID))
-			Expect(secondEnvelope.GetContainerMetric().GetApplicationId()).To(Equal(appID))
-			Expect(firstEnvelope.GetContainerMetric()).NotTo(Equal(secondEnvelope.GetContainerMetric()))
-		})
-
 		It("returns only the latest container metric", func() {
-			client.Send(marshalContainerMetric(
+			ingressClient.Send(marshalContainerMetric(
 				factories.NewContainerMetric(appID, 0, 10, 2, 3),
 			))
 
 			laterMetric := factories.NewContainerMetric(appID, 0, 20, 2, 3)
-			client.Send(marshalContainerMetric(laterMetric))
+			ingressClient.Send(marshalContainerMetric(laterMetric))
 
 			time.Sleep(5 * time.Second)
 
-			receivedChan = make(chan []byte)
-			ws, _ := AddWSSink(receivedChan, "4567", "/apps/"+appID+"/containermetrics")
-			defer ws.Close()
+			ctx, _ := context.WithTimeout(context.TODO(), time.Second)
+			resp, err := egressClient.ContainerMetrics(ctx, &plumbing.ContainerMetricsRequest{
+				AppID: appID,
+			})
+			Expect(err).ToNot(HaveOccurred())
 
-			var receivedMessageBytes []byte
-			Eventually(receivedChan).Should(Receive(&receivedMessageBytes))
-
-			receivedEnvelope := UnmarshalMessage(receivedMessageBytes)
+			Expect(resp.Payload).To(HaveLen(1))
+			receivedEnvelope := UnmarshalMessage(resp.Payload[0])
 
 			Expect(receivedEnvelope.GetContainerMetric()).To(Equal(laterMetric))
 		})
