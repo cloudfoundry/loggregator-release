@@ -29,7 +29,7 @@ var _ = Describe("Container Metrics", func() {
 			guid, _ := uuid.NewV4()
 			appID = guid.String()
 
-			conf := fetchDopplerConfig("fixtures/doppler.json")
+			conf := fetchDopplerConfig(pathToConfigFile)
 			egressConn, egressClient = connectToGRPC(conf)
 		})
 
