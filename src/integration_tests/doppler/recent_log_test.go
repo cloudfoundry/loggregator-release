@@ -1,11 +1,15 @@
 package doppler_test
 
 import (
-	"net"
+	"plumbing"
 	"strconv"
+	"time"
+
+	"google.golang.org/grpc"
 
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/gogo/protobuf/proto"
 	uuid "github.com/nu7hatch/gouuid"
 
 	. "github.com/onsi/ginkgo"
@@ -14,25 +18,26 @@ import (
 
 var _ = Describe("Recent Logs", func() {
 	var (
-		inputConnection net.Conn
-		appID           string
+		appID         string
+		ingressConn   *grpc.ClientConn
+		ingressClient plumbing.DopplerIngestor_PusherClient
 	)
 
-	Context("UDP", func() {
-		BeforeEach(func() {
-			inputConnection, _ = net.Dial("udp", localIPAddress+":8765")
+	Context("gRPC v1", func() {
+		JustBeforeEach(func() {
+			ingressConn, ingressClient = dopplerIngressV1Client("localhost:5678")
 			guid, _ := uuid.NewV4()
 			appID = guid.String()
 		})
 
 		AfterEach(func() {
-			inputConnection.Close()
+			ingressConn.Close()
 		})
 
 		It("receives recent log messages", func() {
-			logMessage := factories.NewLogMessage(events.LogMessage_OUT, "msg 1", appID, "APP")
-			err := SendEvent(logMessage, inputConnection)
-			Expect(err).NotTo(HaveOccurred())
+			ingressClient.Send(marshalLogMessage(
+				factories.NewLogMessage(events.LogMessage_OUT, "msg 1", appID, "APP"),
+			))
 
 			returnedMessages := make([][]byte, 1)
 			Eventually(func() [][]byte {
@@ -48,12 +53,10 @@ var _ = Describe("Recent Logs", func() {
 
 		It("only receives messages for the specified appId", func() {
 			logMessage := factories.NewLogMessage(events.LogMessage_OUT, "msg 1", appID, "APP")
-			err := SendEvent(logMessage, inputConnection)
-			Expect(err).NotTo(HaveOccurred())
+			ingressClient.Send(marshalLogMessage(logMessage))
 
 			logMessage = factories.NewLogMessage(events.LogMessage_OUT, "msg 2", "otherId", "APP")
-			err = SendEvent(logMessage, inputConnection)
-			Expect(err).NotTo(HaveOccurred())
+			ingressClient.Send(marshalLogMessage(logMessage))
 
 			returnedMessages := make([][]byte, 1)
 			Eventually(func() [][]byte {
@@ -68,13 +71,12 @@ var _ = Describe("Recent Logs", func() {
 		})
 
 		It("does not receive non-log messages", func() {
-			metricEvent := factories.NewContainerMetric(appID, 0, 10, 10, 10)
-			err := SendEvent(metricEvent, inputConnection)
-			Expect(err).NotTo(HaveOccurred())
-			returnedMessages := make([][]byte, 1)
+			ingressClient.Send(marshalContainerMetric(
+				factories.NewContainerMetric(appID, 0, 10, 10, 10),
+			))
 
 			Consistently(func() [][]byte {
-				returnedMessages = retreiveRecentMessages(appID)
+				returnedMessages := retreiveRecentMessages(appID)
 				return returnedMessages
 			}).Should(HaveLen(0))
 		})
@@ -82,8 +84,7 @@ var _ = Describe("Recent Logs", func() {
 		It("only receives the most recent logs", func() {
 			for i := 0; i < 15; i++ {
 				logMessage := factories.NewLogMessage(events.LogMessage_OUT, strconv.Itoa(i), appID, "APP")
-				err := SendEvent(logMessage, inputConnection)
-				Expect(err).NotTo(HaveOccurred())
+				ingressClient.Send(marshalLogMessage(logMessage))
 			}
 
 			Eventually(func() []string {
@@ -113,4 +114,20 @@ func retreiveRecentMessages(appID string) [][]byte {
 	}
 
 	return returnedMessages
+}
+
+func marshalLogMessage(log *events.LogMessage) *plumbing.EnvelopeData {
+	env := &events.Envelope{
+		Origin:     proto.String("origin"),
+		Timestamp:  proto.Int64(time.Now().UnixNano()),
+		EventType:  events.Envelope_LogMessage.Enum(),
+		LogMessage: log,
+	}
+
+	data, err := proto.Marshal(env)
+	Expect(err).ToNot(HaveOccurred())
+
+	return &plumbing.EnvelopeData{
+		Payload: data,
+	}
 }
