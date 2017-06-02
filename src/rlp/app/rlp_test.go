@@ -2,9 +2,12 @@ package app_test
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"metricemitter/testhelper"
 	"net"
+	"net/http"
 	"plumbing"
 	v2 "plumbing/v2"
 	app "rlp/app"
@@ -24,7 +27,8 @@ var _ = Describe("Start", func() {
 		doppler, dopplerLis := setupDoppler()
 		defer dopplerLis.Close()
 
-		egressLis := setupRLP(dopplerLis)
+		egressLis := setupRLP(dopplerLis, "localhost:0")
+
 		egressStream, cleanup := setupRLPClient(egressLis)
 		defer cleanup()
 
@@ -57,7 +61,7 @@ var _ = Describe("Start", func() {
 			Payload: [][]byte{buildContainerMetric()},
 		}
 
-		egressLis := setupRLP(dopplerLis)
+		egressLis := setupRLP(dopplerLis, "localhost:0")
 		egressClient, cleanup := setupRLPQueryClient(egressLis)
 		defer cleanup()
 
@@ -68,6 +72,32 @@ var _ = Describe("Start", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(resp.Envelopes).To(HaveLen(1))
+	})
+
+	Describe("health endpoint", func() {
+		It("returns health metrics", func() {
+			doppler, dopplerLis := setupDoppler()
+			defer dopplerLis.Close()
+			doppler.ContainerMetricsOutput.Err <- nil
+			doppler.ContainerMetricsOutput.Resp <- &plumbing.ContainerMetricsResponse{
+				Payload: [][]byte{buildContainerMetric()},
+			}
+			setupRLP(dopplerLis, "localhost:8080")
+
+			var err error
+			var resp *http.Response
+			Eventually(func() error {
+				resp, err = http.Get(fmt.Sprintf("http://localhost:8080/health"))
+				return err
+			}).Should(Succeed())
+
+			defer resp.Body.Close()
+
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			body, err := ioutil.ReadAll(resp.Body)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(body).To(ContainSubstring("subscriptionCount"))
+		})
 	})
 })
 
@@ -122,7 +152,7 @@ func setupDoppler() (*mockDopplerServer, net.Listener) {
 	return doppler, lis
 }
 
-func setupRLP(dopplerLis net.Listener) net.Listener {
+func setupRLP(dopplerLis net.Listener, healthAddr string) net.Listener {
 	egressLis, err := net.Listen("tcp", "localhost:0")
 	egressLis.Close()
 	Expect(err).ToNot(HaveOccurred())
@@ -150,6 +180,7 @@ func setupRLP(dopplerLis net.Listener) net.Listener {
 		app.WithIngressAddrs([]string{dopplerLis.Addr().String()}),
 		app.WithIngressDialOptions(grpc.WithTransportCredentials(ingressTLSCredentials)),
 		app.WithEgressServerOptions(grpc.Creds(egressTLSCredentials)),
+		app.WithHealthAddr(healthAddr),
 	)
 	go rlp.Start()
 	return egressLis

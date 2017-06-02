@@ -14,6 +14,11 @@ import (
 	"golang.org/x/net/context"
 )
 
+type HealthRegistrar interface {
+	Inc(name string)
+	Dec(name string)
+}
+
 type Receiver interface {
 	Receive(ctx context.Context, req *v2.EgressRequest) (rx func() (*v2.Envelope, error), err error)
 }
@@ -22,9 +27,14 @@ type Server struct {
 	receiver      Receiver
 	egressMetric  *metricemitter.CounterMetric
 	droppedMetric *metricemitter.CounterMetric
+	health        HealthRegistrar
 }
 
-func NewServer(r Receiver, m metricemitter.MetricClient) *Server {
+func NewServer(
+	r Receiver,
+	m metricemitter.MetricClient,
+	h HealthRegistrar,
+) *Server {
 	egressMetric := m.NewCounterMetric("egress",
 		metricemitter.WithVersion(2, 0),
 	)
@@ -40,10 +50,14 @@ func NewServer(r Receiver, m metricemitter.MetricClient) *Server {
 		receiver:      r,
 		egressMetric:  egressMetric,
 		droppedMetric: droppedMetric,
+		health:        h,
 	}
 }
 
 func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) error {
+	s.health.Inc("subscriptionCount")
+	defer s.health.Dec("subscriptionCount")
+
 	if r.GetFilter() != nil &&
 		r.GetFilter().SourceId == "" &&
 		r.GetFilter().Message != nil {

@@ -2,9 +2,12 @@ package app
 
 import (
 	"fmt"
+	"healthendpoint"
 	"log"
 	"metricemitter"
 	"net"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	"plumbing"
 	v2 "plumbing/v2"
@@ -30,6 +33,9 @@ type RLP struct {
 	egressListener net.Listener
 	egressServer   *grpc.Server
 
+	healthAddr string
+	health     *healthendpoint.Registrar
+
 	metricClient metricemitter.MetricClient
 }
 
@@ -40,6 +46,7 @@ func NewRLP(m metricemitter.MetricClient, opts ...RLPOption) *RLP {
 		ingressDialOpts:  []grpc.DialOption{grpc.WithInsecure()},
 		egressServerOpts: []grpc.ServerOption{},
 		metricClient:     m,
+		healthAddr:       "localhost:22222",
 	}
 	for _, o := range opts {
 		o(rlp)
@@ -80,9 +87,18 @@ func WithIngressDialOptions(opts ...grpc.DialOption) RLPOption {
 	}
 }
 
+// WithHealthAddr specifies the host and port to bind to for servicing the
+// health endpoint.
+func WithHealthAddr(addr string) RLPOption {
+	return func(r *RLP) {
+		r.healthAddr = addr
+	}
+}
+
 // Start starts a remote log proxy. This connects to various gRPC servers and
 // listens for gRPC connections for egressing data.
 func (r *RLP) Start() {
+	r.setupHealthEndpoint()
 	r.setupIngress()
 	r.setupEgress()
 	r.serveEgress()
@@ -108,8 +124,27 @@ func (r *RLP) setupEgress() {
 	}
 	r.egressAddr = r.egressListener.Addr()
 	r.egressServer = grpc.NewServer(r.egressServerOpts...)
-	v2.RegisterEgressServer(r.egressServer, egress.NewServer(r.receiver, r.metricClient))
+	v2.RegisterEgressServer(
+		r.egressServer,
+		egress.NewServer(r.receiver, r.metricClient, r.health))
 	v2.RegisterEgressQueryServer(r.egressServer, egress.NewQueryServer(r.querier))
+}
+
+func (r *RLP) setupHealthEndpoint() {
+	promRegistry := prometheus.NewRegistry()
+	healthendpoint.StartServer(r.healthAddr, promRegistry)
+	r.health = healthendpoint.New(promRegistry, map[string]prometheus.Gauge{
+		// metric-documentation-health: (subscriptionCount)
+		// Number of open subscriptions
+		"subscriptionCount": prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Namespace: "loggregator",
+				Subsystem: "reverseLogProxy",
+				Name:      "subscriptionCount",
+				Help:      "Number of open subscriptions",
+			},
+		),
+	})
 }
 
 func (r *RLP) serveEgress() {

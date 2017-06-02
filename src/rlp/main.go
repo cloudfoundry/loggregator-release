@@ -18,6 +18,7 @@ func main() {
 	egressPort := flag.Int("egress-port", 0, "The port of the Egress server")
 	ingressAddrsList := flag.String("ingress-addrs", "", "The addresses of Dopplers")
 	pprofPort := flag.Int("pprof-port", 6061, "The port of pprof for health checks")
+	healthAddr := flag.String("health-addr", "localhost:22222", "The address for the health endpoint")
 
 	caFile := flag.String("ca", "", "The file path for the CA cert")
 	certFile := flag.String("cert", "", "The file path for the client cert")
@@ -25,6 +26,7 @@ func main() {
 
 	metronAddr := flag.String("metron-addr", "localhost:3458", "The GRPC address to inject metrics to")
 	metricEmitterInterval := flag.Duration("metric-emitter-interval", time.Minute, "The interval to send batched metrics to metron")
+
 	job := flag.String("job", "", "The name of the job")
 	deployment := flag.String("deployment", "", "The name of the deployment")
 	index := flag.String("index", "", "The name of the index")
@@ -74,6 +76,7 @@ func main() {
 		app.WithIngressAddrs(hostPorts),
 		app.WithIngressDialOptions(grpc.WithTransportCredentials(dopplerCredentials)),
 		app.WithEgressServerOptions(grpc.Creds(dopplerCredentials)),
+		app.WithHealthAddr(*healthAddr),
 	)
 	go rlp.Start()
 

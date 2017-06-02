@@ -34,6 +34,7 @@ ulimit -n 8192
 echo $$ > $PIDFILE
 exec chpst -u vcap:vcap ./rlp \
   --pprof-port="<%= p('reverse_log_proxy.pprof.port') %>" \
+  --health-addr="<%= p('reverse_log_proxy.health_addr') %>" \
   --egress-port="<%= p('reverse_log_proxy.egress.port') %>" \
   --ingress-addrs="<%= ingress_addrs.join(',') %>" \
   --ca=$CERT_DIR/mutual_tls_ca.crt \

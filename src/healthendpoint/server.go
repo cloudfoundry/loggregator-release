@@ -10,7 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func StartServer(addr string, gatherer prometheus.Gatherer) string {
+func StartServer(addr string, gatherer prometheus.Gatherer) net.Listener {
 	router := http.NewServeMux()
 	router.Handle("/health", promhttp.HandlerFor(gatherer, promhttp.HandlerOpts{}))
 
@@ -30,5 +30,5 @@ func StartServer(addr string, gatherer prometheus.Gatherer) string {
 		log.Printf("Metrics endpoint is listening on %s", lis.Addr().String())
 		log.Fatalf("Metrics server closing: %s", server.Serve(lis))
 	}()
-	return lis.Addr().String()
+	return lis
 }
