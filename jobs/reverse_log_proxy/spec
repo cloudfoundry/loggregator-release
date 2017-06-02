@@ -30,7 +30,7 @@ properties:
     default: 0
   reverse_log_proxy.health_addr:
     description: "The host:port to expose health metrics for reverse log proxy"
-    default: "localhost:22222"
+    default: "localhost:33333"
 
   loggregator.tls.ca_cert:
     description: "CA root required for key/cert verification"

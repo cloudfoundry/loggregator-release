@@ -46,7 +46,7 @@ func NewRLP(m metricemitter.MetricClient, opts ...RLPOption) *RLP {
 		ingressDialOpts:  []grpc.DialOption{grpc.WithInsecure()},
 		egressServerOpts: []grpc.ServerOption{},
 		metricClient:     m,
-		healthAddr:       "localhost:22222",
+		healthAddr:       "localhost:33333",
 	}
 	for _, o := range opts {
 		o(rlp)
