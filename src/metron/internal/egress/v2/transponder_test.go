@@ -64,6 +64,28 @@ var _ = Describe("Transponder", func() {
 			Eventually(writer.WriteInput.Msg).Should(Receive(&batch))
 			Expect(batch).To(HaveLen(1))
 		})
+
+		It("emits egress metric", func() {
+			envelope := &v2.Envelope{SourceId: "uuid"}
+			nexter := newMockNexter()
+			writer := newMockWriter()
+			close(writer.WriteOutput.Ret0)
+
+			for i := 0; i < 6; i++ {
+				nexter.TryNextOutput.Ret0 <- envelope
+				nexter.TryNextOutput.Ret1 <- true
+			}
+
+			spy := testhelper.NewMetricClient()
+			tx := egress.NewTransponder(nexter, writer, nil, 5, time.Minute, spy)
+			go tx.Start()
+
+			f := func() uint64 {
+				return spy.GetDelta("egress")
+			}
+
+			Eventually(f).Should(Equal(uint64(5)))
+		})
 	})
 
 	Describe("tagging", func() {

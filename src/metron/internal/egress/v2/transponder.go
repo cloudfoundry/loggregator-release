@@ -74,8 +74,6 @@ func (t *Transponder) Start() {
 		}
 
 		err := t.writer.Write(batch)
-		batch = nil
-		lastSent = time.Now()
 		if err != nil {
 			// metric-documentation-v2: (loggregator.metron.dropped) Number of messages
 			// dropped when failing to write to Dopplers v2 API
@@ -87,6 +85,9 @@ func (t *Transponder) Start() {
 		// metric-documentation-v2: (loggregator.metron.egress)
 		// Number of messages written to Doppler's v2 API
 		t.egressMetric.Increment(uint64(len(batch)))
+
+		batch = nil
+		lastSent = time.Now()
 	}
 }
 
