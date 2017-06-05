@@ -1,6 +1,7 @@
 package doppler_test
 
 import (
+	"context"
 	"plumbing"
 	"strconv"
 	"time"
@@ -18,9 +19,10 @@ import (
 
 var _ = Describe("Recent Logs", func() {
 	var (
-		appID         string
-		ingressConn   *grpc.ClientConn
-		ingressClient plumbing.DopplerIngestor_PusherClient
+		appID                   string
+		ingressConn, egressConn *grpc.ClientConn
+		ingressClient           plumbing.DopplerIngestor_PusherClient
+		egressClient            plumbing.DopplerClient
 	)
 
 	Context("gRPC v1", func() {
@@ -28,10 +30,14 @@ var _ = Describe("Recent Logs", func() {
 			ingressConn, ingressClient = dopplerIngressV1Client("localhost:5678")
 			guid, _ := uuid.NewV4()
 			appID = guid.String()
+
+			conf := fetchDopplerConfig(pathToConfigFile)
+			egressConn, egressClient = connectToGRPC(conf)
 		})
 
 		AfterEach(func() {
 			ingressConn.Close()
+			egressConn.Close()
 		})
 
 		It("receives recent log messages", func() {
@@ -39,13 +45,7 @@ var _ = Describe("Recent Logs", func() {
 				factories.NewLogMessage(events.LogMessage_OUT, "msg 1", appID, "APP"),
 			))
 
-			returnedMessages := make([][]byte, 1)
-			Eventually(func() [][]byte {
-				returnedMessages = retreiveRecentMessages(appID)
-				return returnedMessages
-			}).Should(HaveLen(1))
-
-			receivedMessage := DecodeProtoBufLogMessage(returnedMessages[0])
+			receivedMessage := pollForRecentLogs(appID, egressClient).GetLogMessage()
 
 			Expect(receivedMessage.GetAppId()).To(Equal(appID))
 			Expect(string(receivedMessage.GetMessage())).To(Equal("msg 1"))
@@ -58,27 +58,10 @@ var _ = Describe("Recent Logs", func() {
 			logMessage = factories.NewLogMessage(events.LogMessage_OUT, "msg 2", "otherId", "APP")
 			ingressClient.Send(marshalLogMessage(logMessage))
 
-			returnedMessages := make([][]byte, 1)
-			Eventually(func() [][]byte {
-				returnedMessages = retreiveRecentMessages(appID)
-				return returnedMessages
-			}).Should(HaveLen(1))
-
-			receivedMessage := DecodeProtoBufLogMessage(returnedMessages[0])
+			receivedMessage := pollForRecentLogs(appID, egressClient).GetLogMessage()
 
 			Expect(receivedMessage.GetAppId()).To(Equal(appID))
 			Expect(string(receivedMessage.GetMessage())).To(Equal("msg 1"))
-		})
-
-		It("does not receive non-log messages", func() {
-			ingressClient.Send(marshalContainerMetric(
-				factories.NewContainerMetric(appID, 0, 10, 10, 10),
-			))
-
-			Consistently(func() [][]byte {
-				returnedMessages := retreiveRecentMessages(appID)
-				return returnedMessages
-			}).Should(HaveLen(0))
 		})
 
 		It("only receives the most recent logs", func() {
@@ -88,10 +71,16 @@ var _ = Describe("Recent Logs", func() {
 			}
 
 			Eventually(func() []string {
-				returnedMessages := retreiveRecentMessages(appID)
-				var messages []string
+				ctx, _ := context.WithTimeout(context.TODO(), time.Second)
+				resp, err := egressClient.RecentLogs(ctx, &plumbing.RecentLogsRequest{
+					AppID: appID,
+				})
+				if err != nil {
+					return []string{}
+				}
 
-				for _, messageBytes := range returnedMessages {
+				var messages []string
+				for _, messageBytes := range resp.Payload {
 					receivedMessage := DecodeProtoBufLogMessage(messageBytes)
 					messages = append(messages, string(receivedMessage.GetMessage()))
 				}
@@ -130,4 +119,24 @@ func marshalLogMessage(log *events.LogMessage) *plumbing.EnvelopeData {
 	return &plumbing.EnvelopeData{
 		Payload: data,
 	}
+}
+
+func pollForRecentLogs(appID string, client plumbing.DopplerClient) *events.Envelope {
+	var payload [][]byte
+	f := func() int {
+		ctx, _ := context.WithTimeout(context.TODO(), time.Second)
+		resp, err := client.RecentLogs(ctx, &plumbing.RecentLogsRequest{
+			AppID: appID,
+		})
+		if err != nil {
+			return 0
+		}
+
+		payload = resp.Payload
+
+		return len(payload)
+	}
+	Eventually(f).Should(Equal(1))
+	env := UnmarshalMessage(payload[0])
+	return &env
 }
