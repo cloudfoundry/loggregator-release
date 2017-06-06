@@ -27,4 +27,13 @@ var _ = Describe("StaticFinder", func() {
 
 		Consistently(done).Should(Not(BeClosed()))
 	})
+
+	It("return no dopplers after Stop(ing", func() {
+		finder := plumbing.NewStaticFinder([]string{"1.1.1.1", "2.2.2.2"})
+		finder.Next()
+		finder.Stop()
+		event := finder.Next()
+
+		Expect(event.GRPCDopplers).To(HaveLen(0))
+	})
 })

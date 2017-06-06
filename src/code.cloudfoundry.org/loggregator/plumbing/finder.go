@@ -7,7 +7,7 @@ type StaticFinder struct {
 }
 
 func NewStaticFinder(addrs []string) *StaticFinder {
-	event := make(chan dopplerservice.Event, 1)
+	event := make(chan dopplerservice.Event, 10)
 	event <- dopplerservice.Event{
 		GRPCDopplers: addrs,
 	}
@@ -17,6 +17,12 @@ func NewStaticFinder(addrs []string) *StaticFinder {
 }
 
 func (f *StaticFinder) Start() {}
+
+func (f *StaticFinder) Stop() {
+	f.event <- dopplerservice.Event{
+		GRPCDopplers: []string{},
+	}
+}
 
 func (f *StaticFinder) Next() dopplerservice.Event {
 	return <-f.event

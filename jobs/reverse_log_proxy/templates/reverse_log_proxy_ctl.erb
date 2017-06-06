@@ -48,8 +48,7 @@ exec chpst -u vcap:vcap ./rlp \
 
 stop)
 
-kill `cat $PIDFILE`
-
+killall -9 rlp
 rm -f $PIDFILE
 
 ;;

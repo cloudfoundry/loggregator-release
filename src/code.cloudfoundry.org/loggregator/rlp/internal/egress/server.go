@@ -29,12 +29,14 @@ type Server struct {
 	egressMetric  *metricemitter.CounterMetric
 	droppedMetric *metricemitter.CounterMetric
 	health        HealthRegistrar
+	ctx           context.Context
 }
 
 func NewServer(
 	r Receiver,
 	m metricemitter.MetricClient,
 	h HealthRegistrar,
+	c context.Context,
 ) *Server {
 	egressMetric := m.NewCounterMetric("egress",
 		metricemitter.WithVersion(2, 0),
@@ -52,6 +54,7 @@ func NewServer(
 		egressMetric:  egressMetric,
 		droppedMetric: droppedMetric,
 		health:        h,
+		ctx:           c,
 	}
 }
 
@@ -66,6 +69,12 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 	}
 
 	ctx, cancel := context.WithCancel(srv.Context())
+
+	go func() {
+		<-s.ctx.Done()
+		cancel()
+	}()
+
 	rx, err := s.receiver.Receive(ctx, r)
 	if err != nil {
 		log.Printf("Unable to setup subscription: %s", err)
@@ -77,6 +86,7 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 	go s.consumeReceiver(buffer, rx, cancel)
 
 	for {
+		// Diodes return nil when they are empty and their context is done
 		data := buffer.Next()
 		if data == nil {
 			return nil

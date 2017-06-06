@@ -1,7 +1,6 @@
 package app_test
 
 import (
-	"code.cloudfoundry.org/loggregator/testservers"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -11,9 +10,10 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
-
 	"code.cloudfoundry.org/loggregator/plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing/conversion"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
+	"code.cloudfoundry.org/loggregator/testservers"
 
 	app "code.cloudfoundry.org/loggregator/rlp/app"
 
@@ -30,9 +30,9 @@ var _ = Describe("Start", func() {
 		doppler, dopplerLis := setupDoppler()
 		defer dopplerLis.Close()
 
-		egressLis := setupRLP(dopplerLis, "localhost:0")
+		egressAddr, _ := setupRLP(dopplerLis, "localhost:0")
 
-		egressStream, cleanup := setupRLPClient(egressLis)
+		egressStream, cleanup := setupRLPStream(egressAddr)
 		defer cleanup()
 
 		var subscriber plumbing.Doppler_SubscribeServer
@@ -64,8 +64,8 @@ var _ = Describe("Start", func() {
 			Payload: [][]byte{buildContainerMetric()},
 		}
 
-		egressLis := setupRLP(dopplerLis, "localhost:0")
-		egressClient, cleanup := setupRLPQueryClient(egressLis)
+		egressAddr, _ := setupRLP(dopplerLis, "localhost:0")
+		egressClient, cleanup := setupRLPQueryClient(egressAddr)
 		defer cleanup()
 
 		var resp *v2.QueryResponse
@@ -81,6 +81,93 @@ var _ = Describe("Start", func() {
 		Eventually(f).Should(Succeed())
 
 		Expect(resp.Envelopes).To(HaveLen(1))
+	})
+
+	Describe("draining", func() {
+		It("Stops accepting new connections", func() {
+			doppler, dopplerLis := setupDoppler()
+			defer dopplerLis.Close()
+			doppler.ContainerMetricsOutput.Err <- nil
+			doppler.ContainerMetricsOutput.Resp <- &plumbing.ContainerMetricsResponse{
+				Payload: [][]byte{buildContainerMetric()},
+			}
+
+			egressAddr, rlp := setupRLP(dopplerLis, "localhost:0")
+
+			egressClient, cleanup := setupRLPQueryClient(egressAddr)
+			defer cleanup()
+
+			Eventually(func() error {
+				ctx, _ := context.WithTimeout(context.Background(), 500*time.Millisecond)
+				_, err := egressClient.ContainerMetrics(ctx, &v2.ContainerMetricRequest{
+					SourceId: "some-id",
+				})
+				return err
+			}, 5).ShouldNot(HaveOccurred())
+
+			rlp.Stop()
+
+			ctx, _ := context.WithTimeout(context.Background(), time.Second)
+			_, err := egressClient.ContainerMetrics(ctx, &v2.ContainerMetricRequest{
+				SourceId: "some-id",
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(ctx.Done()).ToNot(BeClosed())
+		})
+
+		It("Drains the envelopes", func() {
+			doppler, dopplerLis := setupDoppler()
+			defer dopplerLis.Close()
+
+			egressAddr, rlp := setupRLP(dopplerLis, "localhost:0")
+
+			stream, cleanup := setupRLPStream(egressAddr)
+			defer cleanup()
+
+			var subscriber plumbing.Doppler_SubscribeServer
+			Eventually(doppler.SubscribeInput.Stream, 5).Should(Receive(&subscriber))
+
+			expectedEnvelope := buildLogMessage()
+			response := &plumbing.Response{
+				Payload: expectedEnvelope,
+			}
+			Expect(subscriber.Send(response)).ToNot(HaveOccurred())
+
+			done := make(chan struct{})
+			go func() {
+				// Wait for envelope to reach buffer
+				time.Sleep(250 * time.Millisecond)
+				defer close(done)
+				rlp.Stop()
+			}()
+
+			By("stop reading from the dopplers")
+			response2 := &plumbing.Response{
+				Payload: buildContainerMetric(),
+			}
+			Eventually(func() error { return subscriber.Send(response2) }).Should(HaveOccurred())
+
+			// Currently, the call to Stop() blocks.
+			// We need to Recv the message after the call to Stop has been
+			// made.
+			envelope, err := stream.Recv()
+			Expect(err).ToNot(HaveOccurred())
+
+			var e events.Envelope
+			proto.Unmarshal(expectedEnvelope, &e)
+			Expect(envelope).To(Equal(conversion.ToV2(&e)))
+
+			errs := make(chan error, 100)
+			go func() {
+				for {
+					_, err := stream.Recv()
+					errs <- err
+				}
+			}()
+			Eventually(errs).Should(Receive(HaveOccurred()))
+			Eventually(done).Should(BeClosed())
+		})
+
 	})
 
 	Describe("health endpoint", func() {
@@ -161,7 +248,7 @@ func setupDoppler() (*mockDopplerServer, net.Listener) {
 	return doppler, lis
 }
 
-func setupRLP(dopplerLis net.Listener, healthAddr string) net.Listener {
+func setupRLP(dopplerLis net.Listener, healthAddr string) (addr string, rlp *app.RLP) {
 	egressLis, err := net.Listen("tcp", "localhost:0")
 	egressLis.Close()
 	Expect(err).ToNot(HaveOccurred())
@@ -183,7 +270,7 @@ func setupRLP(dopplerLis net.Listener, healthAddr string) net.Listener {
 	Expect(err).ToNot(HaveOccurred())
 
 	egressPort := egressLis.Addr().(*net.TCPAddr).Port
-	rlp := app.NewRLP(
+	rlp = app.NewRLP(
 		testhelper.NewMetricClient(),
 		app.WithEgressPort(egressPort),
 		app.WithIngressAddrs([]string{dopplerLis.Addr().String()}),
@@ -192,10 +279,10 @@ func setupRLP(dopplerLis net.Listener, healthAddr string) net.Listener {
 		app.WithHealthAddr(healthAddr),
 	)
 	go rlp.Start()
-	return egressLis
+	return egressLis.Addr().String(), rlp
 }
 
-func setupRLPClient(egressLis net.Listener) (v2.Egress_ReceiverClient, func()) {
+func setupRLPClient(egressAddr string) (v2.EgressClient, func()) {
 	ingressTLSCredentials, err := plumbing.NewCredentials(
 		testservers.Cert("reverselogproxy.crt"),
 		testservers.Cert("reverselogproxy.key"),
@@ -205,25 +292,32 @@ func setupRLPClient(egressLis net.Listener) (v2.Egress_ReceiverClient, func()) {
 	Expect(err).ToNot(HaveOccurred())
 
 	conn, err := grpc.Dial(
-		egressLis.Addr().String(),
+		egressAddr,
 		grpc.WithTransportCredentials(ingressTLSCredentials),
 	)
 	Expect(err).ToNot(HaveOccurred())
 
 	egressClient := v2.NewEgressClient(conn)
 
-	var egressStream v2.Egress_ReceiverClient
-	Eventually(func() error {
-		egressStream, err = egressClient.Receiver(context.Background(), &v2.EgressRequest{})
-		return err
-	}, 5).ShouldNot(HaveOccurred())
-
-	return egressStream, func() {
+	return egressClient, func() {
 		conn.Close()
 	}
 }
 
-func setupRLPQueryClient(egressLis net.Listener) (v2.EgressQueryClient, func()) {
+func setupRLPStream(egressAddr string) (v2.Egress_ReceiverClient, func()) {
+	egressClient, cleanup := setupRLPClient(egressAddr)
+
+	var egressStream v2.Egress_ReceiverClient
+	Eventually(func() error {
+		var err error
+		egressStream, err = egressClient.Receiver(context.Background(), &v2.EgressRequest{})
+		return err
+	}, 5).ShouldNot(HaveOccurred())
+
+	return egressStream, cleanup
+}
+
+func setupRLPQueryClient(egressAddr string) (v2.EgressQueryClient, func()) {
 	ingressTLSCredentials, err := plumbing.NewCredentials(
 		testservers.Cert("reverselogproxy.crt"),
 		testservers.Cert("reverselogproxy.key"),
@@ -233,7 +327,7 @@ func setupRLPQueryClient(egressLis net.Listener) (v2.EgressQueryClient, func()) 
 	Expect(err).ToNot(HaveOccurred())
 
 	conn, err := grpc.Dial(
-		egressLis.Addr().String(),
+		egressAddr,
 		grpc.WithTransportCredentials(ingressTLSCredentials),
 	)
 	Expect(err).ToNot(HaveOccurred())

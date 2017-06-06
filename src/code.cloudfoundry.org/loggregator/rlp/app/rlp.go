@@ -1,14 +1,16 @@
 package app
 
 import (
-	"code.cloudfoundry.org/loggregator/healthendpoint"
-	"code.cloudfoundry.org/loggregator/metricemitter"
+	"context"
 	"fmt"
 	"log"
 	"net"
+	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 
+	"code.cloudfoundry.org/loggregator/healthendpoint"
+	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 	"code.cloudfoundry.org/loggregator/rlp/internal/egress"
@@ -20,11 +22,15 @@ import (
 // RLP represents the reverse log proxy component. It connects to various gRPC
 // servers to ingress data and opens a gRPC server to egress data.
 type RLP struct {
+	ctx       context.Context
+	ctxCancel func()
+
 	egressPort       int
 	egressServerOpts []grpc.ServerOption
 
 	ingressAddrs    []string
 	ingressDialOpts []grpc.DialOption
+	ingressPool     *plumbing.Pool
 
 	receiver *ingress.Receiver
 	querier  *ingress.Querier
@@ -37,16 +43,21 @@ type RLP struct {
 	health     *healthendpoint.Registrar
 
 	metricClient metricemitter.MetricClient
+
+	finder *plumbing.StaticFinder
 }
 
 // NewRLP returns a new unstarted RLP.
 func NewRLP(m metricemitter.MetricClient, opts ...RLPOption) *RLP {
+	ctx, cancel := context.WithCancel(context.Background())
 	rlp := &RLP{
 		ingressAddrs:     []string{"doppler.service.cf.internal"},
 		ingressDialOpts:  []grpc.DialOption{grpc.WithInsecure()},
 		egressServerOpts: []grpc.ServerOption{},
 		metricClient:     m,
 		healthAddr:       "localhost:33333",
+		ctx:              ctx,
+		ctxCancel:        cancel,
 	}
 	for _, o := range opts {
 		o(rlp)
@@ -104,13 +115,35 @@ func (r *RLP) Start() {
 	r.serveEgress()
 }
 
+// Stop stops the remote log proxy. It stops listening for new subscriptions
+// and drains existing ones. Stop will not return until existing connections
+// are drained or timeout has elapsed.
+func (r *RLP) Stop() {
+	r.ctxCancel()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	defer wg.Wait()
+	go func() {
+		defer wg.Done()
+		r.egressServer.GracefulStop()
+	}()
+
+	// Stop reconnects to ingress servers
+	r.finder.Stop()
+
+	// Close current connections to ingress servers
+	for _, addr := range r.ingressAddrs {
+		r.ingressPool.Close(addr)
+	}
+}
+
 func (r *RLP) setupIngress() {
-	finder := plumbing.NewStaticFinder(r.ingressAddrs)
-	pool := plumbing.NewPool(20, r.ingressDialOpts...)
+	r.finder = plumbing.NewStaticFinder(r.ingressAddrs)
+	r.ingressPool = plumbing.NewPool(20, r.ingressDialOpts...)
 
 	batcher := &ingress.NullMetricBatcher{} // TODO: Add real metrics
 
-	connector := plumbing.NewGRPCConnector(1000, pool, finder, batcher, r.metricClient)
+	connector := plumbing.NewGRPCConnector(1000, r.ingressPool, r.finder, batcher, r.metricClient)
 	converter := ingress.NewConverter()
 	r.receiver = ingress.NewReceiver(converter, ingress.NewRequestConverter(), connector)
 	r.querier = ingress.NewQuerier(converter, connector)
@@ -126,7 +159,7 @@ func (r *RLP) setupEgress() {
 	r.egressServer = grpc.NewServer(r.egressServerOpts...)
 	v2.RegisterEgressServer(
 		r.egressServer,
-		egress.NewServer(r.receiver, r.metricClient, r.health))
+		egress.NewServer(r.receiver, r.metricClient, r.health, r.ctx))
 	v2.RegisterEgressQueryServer(r.egressServer, egress.NewQueryServer(r.querier))
 }
 
@@ -148,7 +181,16 @@ func (r *RLP) setupHealthEndpoint() {
 }
 
 func (r *RLP) serveEgress() {
-	if err := r.egressServer.Serve(r.egressListener); err != nil {
+	if err := r.egressServer.Serve(r.egressListener); err != nil && !r.isDone() {
 		log.Fatal("failed to serve: ", err)
+	}
+}
+
+func (r *RLP) isDone() bool {
+	select {
+	case <-r.ctx.Done():
+		return true
+	default:
+		return false
 	}
 }
