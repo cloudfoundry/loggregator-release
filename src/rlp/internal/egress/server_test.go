@@ -94,7 +94,7 @@ var _ = Describe("Server", func() {
 				receiverServer = &spyReceiverServer{}
 				receiver = &spyReceiver{
 					envelope:       &v2.Envelope{},
-					envelopeRepeat: 100000,
+					envelopeRepeat: 1000000,
 				}
 
 				server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar())
