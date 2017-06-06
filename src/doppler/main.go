@@ -1,6 +1,7 @@
 package main
 
 import (
+	"dopplerservice"
 	"flag"
 	"fmt"
 	"healthendpoint"
@@ -22,7 +23,6 @@ import (
 	"doppler/internal/sinkserver/sinkmanager"
 	"doppler/internal/sinkserver/websocketserver"
 	"doppler/internal/store"
-	"dopplerservice"
 	"monitor"
 	"profiler"
 
@@ -148,7 +148,6 @@ func main() {
 	}
 
 	errChan := make(chan error)
-	var wg sync.WaitGroup
 	dropsondeUnmarshallerCollection := dropsonde_unmarshaller.NewDropsondeUnmarshallerCollection(conf.UnmarshallerCount)
 
 	droppedMetric := metricClient.NewCounterMetric("dropped",
@@ -215,7 +214,6 @@ func main() {
 	//------------------------------
 	go start(
 		errChan,
-		wg,
 		dropsondeUnmarshallerCollection,
 		openFileMonitor,
 		uptimeMonitor,
@@ -236,11 +234,9 @@ func main() {
 
 	log.Print("Startup: doppler server started.")
 
-	releaseNodeChan := make(chan chan bool, 1)
-	legacyReleaseNodeChan := make(chan chan bool, 1)
 	if !conf.DisableAnnounce {
-		releaseNodeChan = dopplerservice.Announce(conf.IP, app.HeartbeatInterval, conf, storeAdapter)
-		legacyReleaseNodeChan = dopplerservice.AnnounceLegacy(conf.IP, app.HeartbeatInterval, conf, storeAdapter)
+		dopplerservice.Announce(conf.IP, app.HeartbeatInterval, conf, storeAdapter)
+		dopplerservice.AnnounceLegacy(conf.IP, app.HeartbeatInterval, conf, storeAdapter)
 	}
 
 	p := profiler.New(conf.PPROFPort)
@@ -254,31 +250,10 @@ func main() {
 	signal.Notify(killChan, os.Interrupt)
 	<-killChan
 	log.Print("Shutting down")
-
-	stopped := make(chan bool)
-	legacyStopped := make(chan bool)
-	releaseNodeChan <- stopped
-	legacyReleaseNodeChan <- legacyStopped
-
-	stop(
-		errChan,
-		wg,
-		openFileMonitor,
-		uptimeMonitor,
-		appStoreWatcher,
-		udpListener,
-		sinkManager,
-		websocketServer,
-		storeAdapter,
-	)
-
-	<-stopped
-	<-legacyStopped
 }
 
 func start(
 	errChan chan error,
-	wg sync.WaitGroup,
 	dropsondeUnmarshallerCollection *dropsonde_unmarshaller.DropsondeUnmarshallerCollection,
 	openFileMonitor *monitor.LinuxFileDescriptor,
 	uptimeMonitor *monitor.Uptime,
@@ -296,29 +271,20 @@ func start(
 	grpcListener *listeners.GRPCListener,
 	disableSyslogDrains bool,
 ) {
-	wg.Add(7 + dropsondeUnmarshallerCollection.Size())
-
 	dropsondeVerifiedBytesChan := make(chan []byte)
+	go grpcListener.Start()
 
 	go func() {
-		defer wg.Done()
-		grpcListener.Start()
-	}()
-
-	go func() {
-		defer wg.Done()
 		if !disableSyslogDrains {
 			appStoreWatcher.Run()
 		}
 	}()
 
-	go func() {
-		defer wg.Done()
-		udpListener.Start()
-	}()
+	go udpListener.Start()
 
 	udpEnvelopes := make(chan *events.Envelope)
-	dropsondeUnmarshallerCollection.Run(dropsondeVerifiedBytesChan, udpEnvelopes, &wg)
+	var nopWg sync.WaitGroup
+	dropsondeUnmarshallerCollection.Run(dropsondeVerifiedBytesChan, udpEnvelopes, &nopWg)
 	go func() {
 		for {
 			env := <-udpEnvelopes
@@ -334,27 +300,14 @@ func start(
 
 	go func() {
 		defer func() {
-			wg.Done()
 			close(dropsondeVerifiedBytesChan)
 		}()
 		signatureVerifier.Run(dropsondeBytesChan, dropsondeVerifiedBytesChan)
 	}()
 
-	go func() {
-		defer wg.Done()
-		sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
-	}()
-
-	go func() {
-		defer wg.Done()
-		messageRouter.Start(envelopeBuffer)
-	}()
-
-	go func() {
-		defer wg.Done()
-		websocketServer.Start()
-	}()
-
+	go sinkManager.Start(newAppServiceChan, deletedAppServiceChan)
+	go messageRouter.Start(envelopeBuffer)
+	go websocketServer.Start()
 	go uptimeMonitor.Start()
 	go openFileMonitor.Start()
 
@@ -362,35 +315,6 @@ func start(
 	for err := range errChan {
 		log.Printf("Got error %s", err)
 	}
-}
-
-func stop(
-	errChan chan error,
-	wg sync.WaitGroup,
-	openFileMonitor *monitor.LinuxFileDescriptor,
-	uptimeMonitor *monitor.Uptime,
-	appStoreWatcher *store.AppServiceStoreWatcher,
-	udpListener *listeners.UDPListener,
-	sinkManager *sinkmanager.SinkManager,
-	websocketServer *websocketserver.WebsocketServer,
-	storeAdapter storeadapter.StoreAdapter,
-) {
-	go udpListener.Stop()
-	go sinkManager.Stop()
-	go websocketServer.Stop()
-	appStoreWatcher.Stop()
-	wg.Wait()
-
-	if storeAdapter != nil {
-		err := storeAdapter.Disconnect()
-		if err != nil {
-			log.Printf("error when disconnecting from store adapter: %s", err)
-		}
-	}
-	close(errChan)
-
-	uptimeMonitor.Stop()
-	openFileMonitor.Stop()
 }
 
 func initializeMetrics(batchIntervalMilliseconds uint) *metricbatcher.MetricBatcher {
