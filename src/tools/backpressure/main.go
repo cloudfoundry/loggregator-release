@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -24,7 +25,7 @@ func init() {
 	}
 }
 
-func postDatadog(avg float64) {
+func postDatadog(avg float64, host string) {
 	url := fmt.Sprintf(
 		"https://app.datadoghq.com/api/v1/series?api_key=%s",
 		os.Getenv("DATADOG_API_KEY"),
@@ -33,9 +34,10 @@ func postDatadog(avg float64) {
 		{"series": [{
 			"metric": "loggregator.backpressure.duration",
 			"points": [[%d, %f]],
-			"type": "gauge"
+			"type": "gauge",
+			"host": "%s"
 		}]}
-	`, time.Now().Unix(), avg)
+	`, time.Now().Unix(), avg, host)
 	resp, err := http.Post(url, "application/json", strings.NewReader(payload))
 	if err != nil {
 		log.Printf("err when posting to datadog: %s", err)
@@ -48,7 +50,7 @@ func postDatadog(avg float64) {
 	}
 }
 
-func observer(d *diode) {
+func observer(d *diode, host string) {
 	ticker := time.NewTicker(5 * time.Second)
 	var count, sum float64
 	for {
@@ -57,7 +59,7 @@ func observer(d *diode) {
 			avg := sum / count
 			sum = 0
 			count = 0
-			postDatadog(avg)
+			postDatadog(avg, host)
 		default:
 			delta := d.Next()
 			count++
@@ -74,8 +76,24 @@ func logger(d *diode) {
 	}
 }
 
+func hostFromEnv() string {
+	type vcap struct {
+		URIs []string `json:"uris"`
+	}
+	vcapData := &vcap{}
+	err := json.Unmarshal([]byte(os.Getenv("VCAP_APPLICATION")), vcapData)
+	if err != nil {
+		log.Fatalf("unable to parse VCAP_APPLICATION: %s", err)
+	}
+	if len(vcapData.URIs) == 0 {
+		log.Fatal("no uris available from VCAP_APPLICATION")
+	}
+	return vcapData.URIs[0]
+}
+
 func main() {
+	host := hostFromEnv()
 	d := newDiode()
-	go observer(d)
+	go observer(d, host)
 	logger(d)
 }
