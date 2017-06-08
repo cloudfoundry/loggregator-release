@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -15,14 +14,7 @@ import (
 var msg1K []byte
 
 func init() {
-	msg1K = make([]byte, 1000)
-	n, err := rand.Read(msg1K)
-	if n != 1000 {
-		log.Fatalf("1K msg not the correct length: %d", n)
-	}
-	if err != nil {
-		log.Fatal("unable to build 1K msg")
-	}
+	msg1K = []byte(strings.Repeat("J", 1024) + "\n")
 }
 
 func postDatadog(avg float64, host string) {
