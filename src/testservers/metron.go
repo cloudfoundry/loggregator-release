@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"time"
 
-	"metron/app"
+	"code.cloudfoundry.org/loggregator/metron/app"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
