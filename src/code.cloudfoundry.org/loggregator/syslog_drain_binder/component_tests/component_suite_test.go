@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"integration_tests/binaries"
+	"code.cloudfoundry.org/loggregator/integration_tests/binaries"
 )
 
 func TestComponentTests(t *testing.T) {

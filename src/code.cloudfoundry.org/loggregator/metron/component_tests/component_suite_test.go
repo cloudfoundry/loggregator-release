@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 
-	"integration_tests/binaries"
+	"code.cloudfoundry.org/loggregator/integration_tests/binaries"
 )
 
 func TestComponentTests(t *testing.T) {

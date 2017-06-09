@@ -1,8 +1,9 @@
 package endtoend_test
 
 import (
-	"integration_tests/endtoend"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/integration_tests/endtoend"
 
 	"tools/benchmark/experiment"
 	"tools/benchmark/messagegenerator"

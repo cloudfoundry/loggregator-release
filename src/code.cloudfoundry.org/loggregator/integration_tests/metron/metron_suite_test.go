@@ -1,18 +1,17 @@
-package endtoend_test
+package metron_test
 
 import (
-	"integration_tests/binaries"
 	"testing"
+
+	"code.cloudfoundry.org/loggregator/integration_tests/binaries"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-func TestIntegrationTest(t *testing.T) {
+func TestMetron(t *testing.T) {
 	RegisterFailHandler(Fail)
-
-	// This test is pending for being flaky...
-	//	RunSpecs(t, "End to end Integration Test Suite")
+	RunSpecs(t, "Metron Integration Test Suite")
 }
 
 var _ = SynchronizedBeforeSuite(func() []byte {
