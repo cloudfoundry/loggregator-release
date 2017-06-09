@@ -4,9 +4,10 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
-	"syslog_drain_binder/etcd_syslog_drain_store"
-	"syslog_drain_binder/shared_types"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/syslog_drain_binder/etcd_syslog_drain_store"
+	"code.cloudfoundry.org/loggregator/syslog_drain_binder/shared_types"
 
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"

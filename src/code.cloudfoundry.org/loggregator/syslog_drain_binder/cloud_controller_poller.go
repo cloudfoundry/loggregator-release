@@ -6,8 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"syslog_drain_binder/shared_types"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/syslog_drain_binder/shared_types"
 )
 
 const urlPathFmt = "%s/internal/v4/syslog_drain_urls?batch_size=%d"

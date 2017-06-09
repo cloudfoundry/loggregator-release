@@ -1,9 +1,9 @@
 package main_test
 
 import (
-	syslog_drain_binder "syslog_drain_binder"
+	syslog_drain_binder "code.cloudfoundry.org/loggregator/syslog_drain_binder"
 
-	"syslog_drain_binder/shared_types"
+	"code.cloudfoundry.org/loggregator/syslog_drain_binder/shared_types"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

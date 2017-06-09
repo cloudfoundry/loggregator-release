@@ -5,11 +5,12 @@ import (
 	"log"
 	"plumbing"
 	"profiler"
-	"syslog_drain_binder/config"
 	"time"
 
-	"syslog_drain_binder/elector"
-	"syslog_drain_binder/etcd_syslog_drain_store"
+	"code.cloudfoundry.org/loggregator/syslog_drain_binder/config"
+
+	"code.cloudfoundry.org/loggregator/syslog_drain_binder/elector"
+	"code.cloudfoundry.org/loggregator/syslog_drain_binder/etcd_syslog_drain_store"
 
 	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/dropsonde"

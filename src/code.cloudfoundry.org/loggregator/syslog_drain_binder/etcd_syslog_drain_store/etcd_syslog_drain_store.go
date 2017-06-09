@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"syslog_drain_binder/shared_types"
+	"code.cloudfoundry.org/loggregator/syslog_drain_binder/shared_types"
 
 	"github.com/cloudfoundry/storeadapter"
 )

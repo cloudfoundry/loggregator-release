@@ -2,8 +2,9 @@ package elector_test
 
 import (
 	"errors"
-	"syslog_drain_binder/elector"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/syslog_drain_binder/elector"
 
 	"github.com/cloudfoundry/storeadapter"
 	"github.com/cloudfoundry/storeadapter/fakestoreadapter"

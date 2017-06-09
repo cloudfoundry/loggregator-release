@@ -56,7 +56,7 @@ func Build() (BuildPaths, chan error) {
 
 	go func() {
 		defer wg.Done()
-		metronPath, err := gexec.Build("metron", "-race")
+		metronPath, err := gexec.Build("code.cloudfoundry.org/loggregator/metron", "-race")
 		if err != nil {
 			errors <- err
 			return
@@ -68,7 +68,7 @@ func Build() (BuildPaths, chan error) {
 
 	go func() {
 		defer wg.Done()
-		dopplerPath, err := gexec.Build("doppler", "-race")
+		dopplerPath, err := gexec.Build("code.cloudfoundry.org/loggregator/doppler", "-race")
 		if err != nil {
 			errors <- err
 			return
@@ -80,7 +80,7 @@ func Build() (BuildPaths, chan error) {
 
 	go func() {
 		defer wg.Done()
-		tcPath, err := gexec.Build("trafficcontroller", "-race")
+		tcPath, err := gexec.Build("code.cloudfoundry.org/loggregator/trafficcontroller", "-race")
 		if err != nil {
 			errors <- err
 			return
@@ -92,7 +92,7 @@ func Build() (BuildPaths, chan error) {
 
 	go func() {
 		defer wg.Done()
-		drainBinderPath, err := gexec.Build("syslog_drain_binder", "-race")
+		drainBinderPath, err := gexec.Build("code.cloudfoundry.org/loggregator/syslog_drain_binder", "-race")
 		if err != nil {
 			errors <- err
 			return

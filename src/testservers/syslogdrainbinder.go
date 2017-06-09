@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 
-	"syslog_drain_binder/config"
+	"code.cloudfoundry.org/loggregator/syslog_drain_binder/config"
 )
 
 func BuildSyslogDrainBinderConfig(etcdURL, ccAddress string, disable bool) config.Config {

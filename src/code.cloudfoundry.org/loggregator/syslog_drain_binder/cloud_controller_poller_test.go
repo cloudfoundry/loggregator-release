@@ -3,10 +3,11 @@ package main_test
 import (
 	"crypto/tls"
 	"net"
-	syslog_drain_binder "syslog_drain_binder"
-	"syslog_drain_binder/fake_cc"
-	"syslog_drain_binder/shared_types"
 	"time"
+
+	syslog_drain_binder "code.cloudfoundry.org/loggregator/syslog_drain_binder"
+	"code.cloudfoundry.org/loggregator/syslog_drain_binder/fake_cc"
+	"code.cloudfoundry.org/loggregator/syslog_drain_binder/shared_types"
 
 	"net/http"
 	"net/http/httptest"

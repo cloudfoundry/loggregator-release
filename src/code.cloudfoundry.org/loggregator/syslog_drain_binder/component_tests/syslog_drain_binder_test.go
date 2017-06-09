@@ -11,9 +11,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"syslog_drain_binder/config"
-	"syslog_drain_binder/fake_cc"
 	"testservers"
+
+	"code.cloudfoundry.org/loggregator/syslog_drain_binder/config"
+	"code.cloudfoundry.org/loggregator/syslog_drain_binder/fake_cc"
 )
 
 var _ = Describe("Syslog Drain Binder", func() {

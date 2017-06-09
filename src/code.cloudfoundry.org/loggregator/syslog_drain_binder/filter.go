@@ -2,7 +2,8 @@ package main
 
 import (
 	"net/url"
-	"syslog_drain_binder/shared_types"
+
+	"code.cloudfoundry.org/loggregator/syslog_drain_binder/shared_types"
 )
 
 func Filter(bindings shared_types.AllSyslogDrainBindings) shared_types.AllSyslogDrainBindings {
