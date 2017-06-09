@@ -1,0 +1,5 @@
+- type: replace
+  path: /releases/name=loggregator
+  value:
+    name: loggregator
+    version: latest
