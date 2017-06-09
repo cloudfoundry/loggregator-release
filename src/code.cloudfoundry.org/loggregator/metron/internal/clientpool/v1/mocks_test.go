@@ -1,7 +1,7 @@
 package v1_test
 
 import (
-	"dopplerservice"
+	"code.cloudfoundry.org/loggregator/dopplerservice"
 	"io"
 	"plumbing"
 

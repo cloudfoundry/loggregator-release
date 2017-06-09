@@ -3,10 +3,10 @@ name: loggregator_trafficcontroller
 dependencies:
 - golang1.8.3
 files:
+- loggregator/src/code.cloudfoundry.org/loggregator/doppler/app/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/iprange/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/dopplerservice/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/workpool/*.go # gosub
-- loggregator/src/doppler/app/*.go # gosub
-- loggregator/src/doppler/internal/iprange/*.go # gosub
-- loggregator/src/dopplerservice/*.go # gosub
 - loggregator/src/github.com/beorn7/perks/quantile/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub

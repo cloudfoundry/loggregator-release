@@ -33,7 +33,7 @@ function sync_package() {
 
 sync_package metron_agent                  -app  code.cloudfoundry.org/loggregator/metron &
 sync_package metron_agent_windows          -app  code.cloudfoundry.org/loggregator/metron &
-sync_package doppler                       -app  doppler &
+sync_package doppler                       -app  code.cloudfoundry.org/loggregator/doppler &
 sync_package loggregator_trafficcontroller -app  trafficcontroller &
 sync_package reverse_log_proxy             -app  rlp &
 sync_package syslog_drain_binder           -app  syslog_drain_binder &

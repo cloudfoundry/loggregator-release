@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/exec"
 
-	dopplerConf "doppler/app"
+	dopplerConf "code.cloudfoundry.org/loggregator/doppler/app"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

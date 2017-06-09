@@ -1,8 +1,8 @@
 package main
 
 import (
+	config "code.cloudfoundry.org/loggregator/doppler/app"
 	"crypto/tls"
-	config "doppler/app"
 	"flag"
 	"fmt"
 	"log"
@@ -16,7 +16,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"dopplerservice"
+	"code.cloudfoundry.org/loggregator/dopplerservice"
 
 	"google.golang.org/grpc"
 

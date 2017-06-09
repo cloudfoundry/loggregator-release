@@ -5,10 +5,10 @@ dependencies:
 files:
 - loggregator/src/syslog_drain_binder/LICENSE
 - loggregator/src/syslog_drain_binder/NOTICE
+- loggregator/src/code.cloudfoundry.org/loggregator/doppler/app/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/iprange/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/dopplerservice/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/workpool/*.go # gosub
-- loggregator/src/doppler/app/*.go # gosub
-- loggregator/src/doppler/internal/iprange/*.go # gosub
-- loggregator/src/dopplerservice/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/envelope_sender/*.go # gosub

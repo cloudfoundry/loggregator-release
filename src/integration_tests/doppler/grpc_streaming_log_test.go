@@ -1,10 +1,11 @@
 package doppler_test
 
 import (
-	"doppler/app"
 	"net"
 	"plumbing"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/doppler/app"
 
 	"github.com/cloudfoundry/dropsonde/signature"
 	. "github.com/onsi/ginkgo"

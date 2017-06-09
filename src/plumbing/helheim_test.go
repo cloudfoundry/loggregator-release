@@ -6,7 +6,7 @@
 package plumbing_test
 
 import (
-	"dopplerservice"
+	"code.cloudfoundry.org/loggregator/dopplerservice"
 	"plumbing"
 	"time"
 

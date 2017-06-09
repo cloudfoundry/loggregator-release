@@ -11,9 +11,10 @@ import (
 	"os/exec"
 	"testing"
 
-	"doppler/app"
 	"plumbing"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/doppler/app"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"

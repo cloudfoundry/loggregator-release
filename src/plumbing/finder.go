@@ -1,6 +1,6 @@
 package plumbing
 
-import "dopplerservice"
+import "code.cloudfoundry.org/loggregator/dopplerservice"
 
 type StaticFinder struct {
 	event chan dopplerservice.Event

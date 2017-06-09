@@ -6,7 +6,7 @@ import (
 	"net"
 	"time"
 
-	"dopplerservice"
+	"code.cloudfoundry.org/loggregator/dopplerservice"
 	"plumbing"
 
 	"github.com/apoydence/eachers/testhelpers"

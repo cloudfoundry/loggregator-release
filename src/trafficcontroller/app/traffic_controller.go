@@ -10,7 +10,7 @@ import (
 	"os/signal"
 	"time"
 
-	"dopplerservice"
+	"code.cloudfoundry.org/loggregator/dopplerservice"
 	"metricemitter"
 	"monitor"
 	"plumbing"

@@ -10,7 +10,7 @@ import (
 	"time"
 	"unsafe"
 
-	"dopplerservice"
+	"code.cloudfoundry.org/loggregator/dopplerservice"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"golang.org/x/net/context"
