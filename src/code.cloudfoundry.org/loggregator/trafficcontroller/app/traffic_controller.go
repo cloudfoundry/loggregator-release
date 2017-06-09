@@ -1,9 +1,9 @@
 package app
 
 import (
+	"code.cloudfoundry.org/loggregator/healthendpoint"
 	"errors"
 	"fmt"
-	"healthendpoint"
 	"log"
 	"net/http"
 	"os"

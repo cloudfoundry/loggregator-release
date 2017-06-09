@@ -1,10 +1,10 @@
 package main
 
 import (
+	"code.cloudfoundry.org/loggregator/healthendpoint"
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"flag"
 	"fmt"
-	"healthendpoint"
 	"log"
 	"math/rand"
 	"metricemitter"

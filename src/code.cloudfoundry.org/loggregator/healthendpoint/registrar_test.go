@@ -1,7 +1,7 @@
 package healthendpoint_test
 
 import (
-	"healthendpoint"
+	"code.cloudfoundry.org/loggregator/healthendpoint"
 
 	"github.com/prometheus/client_golang/prometheus"
 

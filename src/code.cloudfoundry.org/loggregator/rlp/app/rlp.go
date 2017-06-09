@@ -1,8 +1,8 @@
 package app
 
 import (
+	"code.cloudfoundry.org/loggregator/healthendpoint"
 	"fmt"
-	"healthendpoint"
 	"log"
 	"metricemitter"
 	"net"
