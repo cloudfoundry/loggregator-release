@@ -4,9 +4,10 @@ import (
 	"errors"
 	"io"
 	"metricemitter/testhelper"
-	"rlp/internal/egress"
 	"sync"
 	"sync/atomic"
+
+	"code.cloudfoundry.org/loggregator/rlp/internal/egress"
 
 	"google.golang.org/grpc"
 

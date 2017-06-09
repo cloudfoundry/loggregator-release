@@ -1,7 +1,7 @@
 package ingress_test
 
 import (
-	"rlp/internal/ingress"
+	"code.cloudfoundry.org/loggregator/rlp/internal/ingress"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"

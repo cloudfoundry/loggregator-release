@@ -6,7 +6,8 @@ import (
 	"plumbing"
 
 	v2 "plumbing/v2"
-	"rlp/internal/ingress"
+
+	"code.cloudfoundry.org/loggregator/rlp/internal/ingress"
 
 	"golang.org/x/net/context"
 

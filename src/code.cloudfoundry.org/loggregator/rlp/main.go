@@ -11,7 +11,8 @@ import (
 
 	"plumbing"
 	"profiler"
-	"rlp/app"
+
+	"code.cloudfoundry.org/loggregator/rlp/app"
 )
 
 func main() {

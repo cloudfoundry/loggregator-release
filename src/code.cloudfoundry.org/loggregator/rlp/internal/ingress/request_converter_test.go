@@ -2,7 +2,8 @@ package ingress_test
 
 import (
 	v2 "plumbing/v2"
-	"rlp/internal/ingress"
+
+	"code.cloudfoundry.org/loggregator/rlp/internal/ingress"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

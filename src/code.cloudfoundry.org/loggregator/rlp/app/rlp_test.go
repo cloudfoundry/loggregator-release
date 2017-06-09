@@ -10,9 +10,10 @@ import (
 	"net/http"
 	"plumbing"
 	v2 "plumbing/v2"
-	app "rlp/app"
 	"testservers"
 	"time"
+
+	app "code.cloudfoundry.org/loggregator/rlp/app"
 
 	"google.golang.org/grpc"
 

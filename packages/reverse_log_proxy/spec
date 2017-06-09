@@ -6,6 +6,10 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/app/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/iprange/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/dopplerservice/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/rlp/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/rlp/app/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/rlp/internal/egress/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/rlp/internal/ingress/*.go # gosub
 - loggregator/src/diodes/*.go # gosub
 - loggregator/src/github.com/beorn7/perks/quantile/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/diodes/*.go # gosub
@@ -58,7 +62,3 @@ files:
 - loggregator/src/plumbing/conversion/*.go # gosub
 - loggregator/src/plumbing/v2/*.go # gosub
 - loggregator/src/profiler/*.go # gosub
-- loggregator/src/rlp/*.go # gosub
-- loggregator/src/rlp/app/*.go # gosub
-- loggregator/src/rlp/internal/egress/*.go # gosub
-- loggregator/src/rlp/internal/ingress/*.go # gosub

@@ -3,7 +3,8 @@ package egress_test
 import (
 	"errors"
 	v2 "plumbing/v2"
-	"rlp/internal/egress"
+
+	"code.cloudfoundry.org/loggregator/rlp/internal/egress"
 
 	"golang.org/x/net/context"
 

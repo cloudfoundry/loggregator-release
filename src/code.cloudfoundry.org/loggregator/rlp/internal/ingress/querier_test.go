@@ -3,7 +3,8 @@ package ingress_test
 import (
 	"errors"
 	"plumbing/conversion"
-	"rlp/internal/ingress"
+
+	"code.cloudfoundry.org/loggregator/rlp/internal/ingress"
 
 	"golang.org/x/net/context"
 
