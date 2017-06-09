@@ -16,8 +16,8 @@ import (
 	"code.cloudfoundry.org/loggregator/dopplerservice"
 
 	"code.cloudfoundry.org/loggregator/diodes"
+	"code.cloudfoundry.org/loggregator/monitor"
 	"code.cloudfoundry.org/loggregator/profiler"
-	"monitor"
 
 	"code.cloudfoundry.org/loggregator/doppler/app"
 	grpcv1 "code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1"

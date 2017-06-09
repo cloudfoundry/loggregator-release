@@ -1,7 +1,7 @@
 package monitor_test
 
 import (
-	"monitor"
+	"code.cloudfoundry.org/loggregator/monitor"
 	"sync"
 	"time"
 

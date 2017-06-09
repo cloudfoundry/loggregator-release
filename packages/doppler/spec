@@ -30,6 +30,7 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/dopplerservice/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/healthendpoint/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/metricemitter/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/monitor/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/conversion/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/v2/*.go # gosub
@@ -99,4 +100,3 @@ files:
 - loggregator/src/google.golang.org/grpc/status/*.go # gosub
 - loggregator/src/google.golang.org/grpc/tap/*.go # gosub
 - loggregator/src/google.golang.org/grpc/transport/*.go # gosub
-- loggregator/src/monitor/*.go # gosub
