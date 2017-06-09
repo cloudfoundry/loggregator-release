@@ -109,7 +109,7 @@ function run_build {
 
 function run_unit {
     pushd $PROJECT_DIR/src
-        local not_unit_tests="code.cloudfoundry.org,github.com,golang.org,google.golang.org,gopkg.in,integration_tests,lats,component_tests"
+        local not_unit_tests="code.cloudfoundry.org/clock,code.cloudfoundry.org/workpool,github.com,golang.org,google.golang.org,gopkg.in,integration_tests,lats,component_tests"
         print_checkpoint "Running Unit Tests"
         # TODO: remove build_etcd once announcer unit tests no longer depend on it
         build_etcd
