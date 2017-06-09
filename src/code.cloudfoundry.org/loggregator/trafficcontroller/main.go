@@ -9,7 +9,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	"trafficcontroller/app"
+	"code.cloudfoundry.org/loggregator/trafficcontroller/app"
 )
 
 func main() {

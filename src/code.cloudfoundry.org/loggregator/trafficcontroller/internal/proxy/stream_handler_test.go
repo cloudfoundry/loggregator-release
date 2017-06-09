@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"plumbing"
-	"trafficcontroller/internal/proxy"
+
+	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

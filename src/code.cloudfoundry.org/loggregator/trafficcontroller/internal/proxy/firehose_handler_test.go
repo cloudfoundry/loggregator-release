@@ -9,7 +9,8 @@ import (
 	"time"
 
 	"plumbing"
-	"trafficcontroller/internal/proxy"
+
+	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
 
 	"golang.org/x/net/context"
 

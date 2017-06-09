@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"trafficcontroller/internal/auth"
+	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/auth"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

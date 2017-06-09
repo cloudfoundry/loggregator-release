@@ -3,7 +3,8 @@ package auth_test
 import (
 	"net/http"
 	"net/http/httptest"
-	"trafficcontroller/internal/auth"
+
+	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/auth"
 
 	. "github.com/apoydence/eachers"
 	. "github.com/onsi/ginkgo"

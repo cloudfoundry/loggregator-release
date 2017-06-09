@@ -5,7 +5,8 @@ import (
 	"net/http/httptest"
 	"sync/atomic"
 	"time"
-	"trafficcontroller/internal/proxy"
+
+	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
 
 	"github.com/gorilla/websocket"
 

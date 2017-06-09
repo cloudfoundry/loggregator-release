@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 
-	tcConf "trafficcontroller/app"
+	tcConf "code.cloudfoundry.org/loggregator/trafficcontroller/app"
 )
 
 func BuildTrafficControllerConf(etcdClientURL string, dopplerWSPort, dopplerGRPCPort, metronPort int) tcConf.Config {

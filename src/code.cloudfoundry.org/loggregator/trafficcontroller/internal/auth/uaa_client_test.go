@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"trafficcontroller/internal/auth"
+	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/auth"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

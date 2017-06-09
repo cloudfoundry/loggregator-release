@@ -7,7 +7,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"trafficcontroller/internal/proxy"
+	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

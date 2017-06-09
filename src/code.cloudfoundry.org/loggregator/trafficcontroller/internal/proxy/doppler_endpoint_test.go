@@ -2,7 +2,8 @@ package proxy_test
 
 import (
 	"time"
-	"trafficcontroller/internal/proxy"
+
+	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"

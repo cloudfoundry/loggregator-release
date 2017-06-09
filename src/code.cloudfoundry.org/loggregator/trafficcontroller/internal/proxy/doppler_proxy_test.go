@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"trafficcontroller/internal/proxy"
+	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"

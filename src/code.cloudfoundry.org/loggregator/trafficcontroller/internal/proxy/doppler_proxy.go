@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"time"
 
+	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/auth"
 	"plumbing"
-	"trafficcontroller/internal/auth"
 
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
