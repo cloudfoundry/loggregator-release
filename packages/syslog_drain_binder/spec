@@ -3,12 +3,21 @@ name: syslog_drain_binder
 dependencies:
 - golang1.8.3
 files:
-- loggregator/src/syslog_drain_binder/LICENSE
-- loggregator/src/syslog_drain_binder/NOTICE
+- loggregator/src/code.cloudfoundry.org/loggregator/syslog_drain_binder/LICENSE
+- loggregator/src/code.cloudfoundry.org/loggregator/syslog_drain_binder/NOTICE
+- loggregator/src/code.cloudfoundry.org/loggregator/doppler/app/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/iprange/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/dopplerservice/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/metricemitter/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/plumbing/v2/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/profiler/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/syslog_drain_binder/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/syslog_drain_binder/config/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/syslog_drain_binder/elector/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/syslog_drain_binder/etcd_syslog_drain_store/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/syslog_drain_binder/shared_types/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/workpool/*.go # gosub
-- loggregator/src/doppler/app/*.go # gosub
-- loggregator/src/doppler/internal/iprange/*.go # gosub
-- loggregator/src/dopplerservice/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/envelope_sender/*.go # gosub
@@ -58,12 +67,3 @@ files:
 - loggregator/src/google.golang.org/grpc/status/*.go # gosub
 - loggregator/src/google.golang.org/grpc/tap/*.go # gosub
 - loggregator/src/google.golang.org/grpc/transport/*.go # gosub
-- loggregator/src/metricemitter/*.go # gosub
-- loggregator/src/plumbing/*.go # gosub
-- loggregator/src/plumbing/v2/*.go # gosub
-- loggregator/src/profiler/*.go # gosub
-- loggregator/src/syslog_drain_binder/*.go # gosub
-- loggregator/src/syslog_drain_binder/config/*.go # gosub
-- loggregator/src/syslog_drain_binder/elector/*.go # gosub
-- loggregator/src/syslog_drain_binder/etcd_syslog_drain_store/*.go # gosub
-- loggregator/src/syslog_drain_binder/shared_types/*.go # gosub

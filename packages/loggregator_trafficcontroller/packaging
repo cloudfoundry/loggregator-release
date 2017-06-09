@@ -4,5 +4,5 @@ export GOROOT=$(readlink -nf /var/vcap/packages/golang1.8.3)
 export PATH=$GOROOT/bin:$PATH
 export GOPATH=$PWD/loggregator
 
-go install trafficcontroller
+go install code.cloudfoundry.org/loggregator/trafficcontroller
 cp -a $PWD/loggregator/bin/trafficcontroller ${BOSH_INSTALL_TARGET}

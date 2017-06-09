@@ -3,10 +3,20 @@ name: reverse_log_proxy
 dependencies:
 - golang1.8.3
 files:
-- loggregator/src/diodes/*.go # gosub
-- loggregator/src/doppler/app/*.go # gosub
-- loggregator/src/doppler/internal/iprange/*.go # gosub
-- loggregator/src/dopplerservice/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/diodes/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/doppler/app/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/iprange/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/dopplerservice/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/healthendpoint/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/metricemitter/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/plumbing/conversion/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/plumbing/v2/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/profiler/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/rlp/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/rlp/app/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/rlp/internal/egress/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/rlp/internal/ingress/*.go # gosub
 - loggregator/src/github.com/beorn7/perks/quantile/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/diodes/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub
@@ -52,13 +62,3 @@ files:
 - loggregator/src/google.golang.org/grpc/status/*.go # gosub
 - loggregator/src/google.golang.org/grpc/tap/*.go # gosub
 - loggregator/src/google.golang.org/grpc/transport/*.go # gosub
-- loggregator/src/healthendpoint/*.go # gosub
-- loggregator/src/metricemitter/*.go # gosub
-- loggregator/src/plumbing/*.go # gosub
-- loggregator/src/plumbing/conversion/*.go # gosub
-- loggregator/src/plumbing/v2/*.go # gosub
-- loggregator/src/profiler/*.go # gosub
-- loggregator/src/rlp/*.go # gosub
-- loggregator/src/rlp/app/*.go # gosub
-- loggregator/src/rlp/internal/egress/*.go # gosub
-- loggregator/src/rlp/internal/ingress/*.go # gosub

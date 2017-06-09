@@ -1,22 +1,22 @@
 package main
 
 import (
+	config "code.cloudfoundry.org/loggregator/doppler/app"
+	"code.cloudfoundry.org/loggregator/plumbing"
 	"crypto/tls"
-	config "doppler/app"
 	"flag"
 	"fmt"
 	"log"
 	"math/rand"
 	"net"
 	"os/exec"
-	"plumbing"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"golang.org/x/net/context"
 
-	"dopplerservice"
+	"code.cloudfoundry.org/loggregator/dopplerservice"
 
 	"google.golang.org/grpc"
 
