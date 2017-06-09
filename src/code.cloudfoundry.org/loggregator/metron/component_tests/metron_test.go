@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"testservers"
+	"code.cloudfoundry.org/loggregator/testservers"
 
 	"code.cloudfoundry.org/loggregator/plumbing"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"

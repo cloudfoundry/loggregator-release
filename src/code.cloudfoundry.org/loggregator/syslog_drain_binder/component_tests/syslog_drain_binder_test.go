@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"testservers"
+	"code.cloudfoundry.org/loggregator/testservers"
 
 	"code.cloudfoundry.org/loggregator/syslog_drain_binder/config"
 	"code.cloudfoundry.org/loggregator/syslog_drain_binder/fake_cc"

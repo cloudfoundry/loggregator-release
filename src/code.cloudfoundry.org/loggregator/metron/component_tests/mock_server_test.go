@@ -6,7 +6,7 @@ import (
 	"code.cloudfoundry.org/loggregator/plumbing"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
-	"testservers"
+	"code.cloudfoundry.org/loggregator/testservers"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"

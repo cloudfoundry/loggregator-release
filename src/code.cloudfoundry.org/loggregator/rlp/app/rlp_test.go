@@ -1,13 +1,13 @@
 package app_test
 
 import (
+	"code.cloudfoundry.org/loggregator/testservers"
 	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
-	"testservers"
 	"time"
 
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"

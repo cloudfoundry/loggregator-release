@@ -8,7 +8,7 @@ import (
 	"tools/benchmark/messagegenerator"
 	"tools/benchmark/writestrategies"
 
-	"testservers"
+	"code.cloudfoundry.org/loggregator/testservers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

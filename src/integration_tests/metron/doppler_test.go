@@ -7,7 +7,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/logs"
 	"github.com/gorilla/websocket"
 
-	"testservers"
+	"code.cloudfoundry.org/loggregator/testservers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
