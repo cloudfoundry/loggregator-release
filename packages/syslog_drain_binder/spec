@@ -10,6 +10,7 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/dopplerservice/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/v2/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/profiler/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/syslog_drain_binder/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/syslog_drain_binder/config/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/syslog_drain_binder/elector/*.go # gosub
@@ -66,4 +67,3 @@ files:
 - loggregator/src/google.golang.org/grpc/tap/*.go # gosub
 - loggregator/src/google.golang.org/grpc/transport/*.go # gosub
 - loggregator/src/metricemitter/*.go # gosub
-- loggregator/src/profiler/*.go # gosub

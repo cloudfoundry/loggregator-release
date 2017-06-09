@@ -31,6 +31,7 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/conversion/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/v2/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/profiler/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/workpool/*.go # gosub
 - loggregator/src/github.com/beorn7/perks/quantile/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/diodes/*.go # gosub
@@ -99,4 +100,3 @@ files:
 - loggregator/src/healthendpoint/*.go # gosub
 - loggregator/src/metricemitter/*.go # gosub
 - loggregator/src/monitor/*.go # gosub
-- loggregator/src/profiler/*.go # gosub

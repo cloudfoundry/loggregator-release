@@ -20,6 +20,7 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/metron/internal/ingress/v2/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/v2/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/profiler/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/diodes/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub
@@ -59,4 +60,3 @@ files:
 - loggregator/src/google.golang.org/grpc/tap/*.go # gosub
 - loggregator/src/google.golang.org/grpc/transport/*.go # gosub
 - loggregator/src/metricemitter/*.go # gosub
-- loggregator/src/profiler/*.go # gosub

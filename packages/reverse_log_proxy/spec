@@ -10,6 +10,7 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/conversion/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/v2/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/profiler/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/rlp/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/rlp/app/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/rlp/internal/egress/*.go # gosub
@@ -61,4 +62,3 @@ files:
 - loggregator/src/google.golang.org/grpc/transport/*.go # gosub
 - loggregator/src/healthendpoint/*.go # gosub
 - loggregator/src/metricemitter/*.go # gosub
-- loggregator/src/profiler/*.go # gosub

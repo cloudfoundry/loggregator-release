@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc"
 
 	"code.cloudfoundry.org/loggregator/plumbing"
-	"profiler"
+	"code.cloudfoundry.org/loggregator/profiler"
 
 	"code.cloudfoundry.org/loggregator/metron/app"
 	"code.cloudfoundry.org/loggregator/metron/internal/health"

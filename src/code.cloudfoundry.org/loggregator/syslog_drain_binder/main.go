@@ -2,9 +2,9 @@ package main
 
 import (
 	"code.cloudfoundry.org/loggregator/plumbing"
+	"code.cloudfoundry.org/loggregator/profiler"
 	"flag"
 	"log"
-	"profiler"
 	"time"
 
 	"code.cloudfoundry.org/loggregator/syslog_drain_binder/config"

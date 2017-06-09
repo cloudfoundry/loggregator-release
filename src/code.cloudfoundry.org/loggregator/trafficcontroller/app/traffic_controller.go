@@ -12,11 +12,11 @@ import (
 
 	"code.cloudfoundry.org/loggregator/dopplerservice"
 	"code.cloudfoundry.org/loggregator/plumbing"
+	"code.cloudfoundry.org/loggregator/profiler"
 	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/auth"
 	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
 	"metricemitter"
 	"monitor"
-	"profiler"
 
 	"code.cloudfoundry.org/workpool"
 	"github.com/cloudfoundry/dropsonde"
