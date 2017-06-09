@@ -4,6 +4,6 @@ export GOROOT=$(readlink -nf /var/vcap/packages/golang1.8.3)
 export PATH=$GOROOT/bin:$PATH
 export GOPATH=$PWD/loggregator
 
-go install doppler
+go install code.cloudfoundry.org/loggregator/doppler
 cp -a $PWD/loggregator/bin/doppler ${BOSH_INSTALL_TARGET}
 

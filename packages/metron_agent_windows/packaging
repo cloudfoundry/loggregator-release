@@ -8,7 +8,7 @@ $env:PATH="${env:GOROOT}\bin;${env:PATH}"
 try {
     $BOSH_INSTALL_TARGET = Resolve-Path $env:BOSH_INSTALL_TARGET
 
-    go build -o "${BOSH_INSTALL_TARGET}\${pkg_name}.exe" "${pkg_name}"
+    go build -o "${BOSH_INSTALL_TARGET}\${pkg_name}.exe" "code.cloudfoundry.org/loggregator/${pkg_name}"
     if($LASTEXITCODE -ne 0)
     {
         Write-Error "Error compiling: ${pkg_name}"
