@@ -5,7 +5,7 @@ set -e
 mkdir -p bin
 for line in rlp metron trafficcontroller doppler syslog_drain_binder; do
   echo building $line
-  go build -o bin/$line $line
+  go build -o bin/$line code.cloudfoundry.org/loggregator/$line
 done
 
 echo building lats
