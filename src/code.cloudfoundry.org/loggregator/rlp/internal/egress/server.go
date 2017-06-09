@@ -6,9 +6,10 @@ import (
 	"io"
 	"log"
 
-	"code.cloudfoundry.org/loggregator/diodes"
 	"metricemitter"
-	v2 "plumbing/v2"
+
+	"code.cloudfoundry.org/loggregator/diodes"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	gendiodes "github.com/cloudfoundry/diodes"
 	"golang.org/x/net/context"

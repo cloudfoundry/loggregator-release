@@ -2,8 +2,9 @@ package conversion_test
 
 import (
 	"fmt"
-	"plumbing/conversion"
-	v2 "plumbing/v2"
+
+	"code.cloudfoundry.org/loggregator/plumbing/conversion"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"

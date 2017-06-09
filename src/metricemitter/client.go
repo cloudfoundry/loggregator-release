@@ -2,10 +2,10 @@ package metricemitter
 
 import (
 	"context"
-	v2 "plumbing/v2"
 	"time"
 
 	"google.golang.org/grpc"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 )
 
 type MetricClient interface {

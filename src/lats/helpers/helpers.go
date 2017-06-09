@@ -6,13 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"plumbing"
 	"strconv"
 	"time"
 
+	"code.cloudfoundry.org/loggregator/plumbing"
+
 	"google.golang.org/grpc"
 
-	v2 "plumbing/v2"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/noaa/consumer"

@@ -2,7 +2,8 @@ package egress
 
 import (
 	"errors"
-	v2 "plumbing/v2"
+
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	"golang.org/x/net/context"
 )

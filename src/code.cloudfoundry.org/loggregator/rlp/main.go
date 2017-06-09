@@ -9,7 +9,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	"plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing"
 	"profiler"
 
 	"code.cloudfoundry.org/loggregator/rlp/app"

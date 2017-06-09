@@ -2,6 +2,7 @@ package main
 
 import (
 	config "code.cloudfoundry.org/loggregator/doppler/app"
+	"code.cloudfoundry.org/loggregator/plumbing"
 	"crypto/tls"
 	"flag"
 	"fmt"
@@ -9,7 +10,6 @@ import (
 	"math/rand"
 	"net"
 	"os/exec"
-	"plumbing"
 	"strings"
 	"sync/atomic"
 	"time"

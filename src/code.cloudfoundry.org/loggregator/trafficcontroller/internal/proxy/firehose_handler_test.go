@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
 

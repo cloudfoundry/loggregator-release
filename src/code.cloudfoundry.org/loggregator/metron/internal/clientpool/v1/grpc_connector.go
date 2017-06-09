@@ -1,10 +1,10 @@
 package v1
 
 import (
+	"code.cloudfoundry.org/loggregator/plumbing"
 	"errors"
 	"io"
 	"log"
-	"plumbing"
 )
 
 type ClientFetcher interface {

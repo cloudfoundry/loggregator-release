@@ -12,8 +12,8 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/golang/protobuf/proto"
 
-	"plumbing/conversion"
-	v2 "plumbing/v2"
+	"code.cloudfoundry.org/loggregator/plumbing/conversion"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 )
 
 const (

@@ -3,8 +3,9 @@ package v2_test
 import (
 	"io"
 	"metricemitter/testhelper"
-	plumbing "plumbing/v2"
 	"sync"
+
+	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v2"
 

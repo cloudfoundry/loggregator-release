@@ -1,9 +1,9 @@
 package proxy
 
 import (
+	"code.cloudfoundry.org/loggregator/plumbing"
 	"context"
 	"net/http"
-	"plumbing"
 	"sync/atomic"
 
 	"github.com/gorilla/mux"

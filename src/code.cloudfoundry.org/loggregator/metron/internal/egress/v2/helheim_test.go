@@ -5,7 +5,7 @@
 
 package v2_test
 
-import v2 "plumbing/v2"
+import v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 type mockNexter struct {
 	TryNextCalled chan bool

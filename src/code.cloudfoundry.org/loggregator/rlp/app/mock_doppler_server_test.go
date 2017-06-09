@@ -1,7 +1,7 @@
 package app_test
 
 import (
-	"plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing"
 	"time"
 
 	"golang.org/x/net/context"

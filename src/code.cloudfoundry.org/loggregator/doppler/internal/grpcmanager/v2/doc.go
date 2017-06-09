@@ -1,6 +1,6 @@
 package v2
 
-import plumbing "plumbing/v2"
+import plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 //go:generate hel
 type BatcherSenderServer interface {

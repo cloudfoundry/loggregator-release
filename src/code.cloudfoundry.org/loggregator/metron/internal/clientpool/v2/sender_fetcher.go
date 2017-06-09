@@ -2,11 +2,11 @@ package v2
 
 import (
 	"code.cloudfoundry.org/loggregator/metron/internal/health"
+	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
 	"context"
 	"fmt"
 	"io"
 	"log"
-	plumbing "plumbing/v2"
 
 	"google.golang.org/grpc"
 )

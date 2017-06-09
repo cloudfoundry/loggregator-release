@@ -2,8 +2,8 @@ package v1_test
 
 import (
 	"code.cloudfoundry.org/loggregator/dopplerservice"
+	"code.cloudfoundry.org/loggregator/plumbing"
 	"io"
-	"plumbing"
 
 	"golang.org/x/net/context"
 

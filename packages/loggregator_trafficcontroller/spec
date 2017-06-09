@@ -6,6 +6,8 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/app/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/iprange/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/dopplerservice/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/plumbing/v2/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/trafficcontroller/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/trafficcontroller/app/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/trafficcontroller/internal/auth/*.go # gosub
@@ -75,6 +77,4 @@ files:
 - loggregator/src/healthendpoint/*.go # gosub
 - loggregator/src/metricemitter/*.go # gosub
 - loggregator/src/monitor/*.go # gosub
-- loggregator/src/plumbing/*.go # gosub
-- loggregator/src/plumbing/v2/*.go # gosub
 - loggregator/src/profiler/*.go # gosub

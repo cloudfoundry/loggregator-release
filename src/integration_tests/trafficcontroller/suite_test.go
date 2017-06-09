@@ -51,7 +51,7 @@ var _ = BeforeSuite(func() {
 	setupFakeUaaServer()
 
 	var err error
-	trafficControllerExecPath, err = gexec.Build("trafficcontroller", "-race")
+	trafficControllerExecPath, err = gexec.Build("code.cloudfoundry.org/loggregator/trafficcontroller", "-race")
 	Expect(err).ToNot(HaveOccurred())
 
 	localIPAddress = "127.0.0.1"

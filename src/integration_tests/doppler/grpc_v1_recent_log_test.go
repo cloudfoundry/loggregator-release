@@ -1,8 +1,8 @@
 package doppler_test
 
 import (
+	"code.cloudfoundry.org/loggregator/plumbing"
 	"context"
-	"plumbing"
 	"strconv"
 	"time"
 

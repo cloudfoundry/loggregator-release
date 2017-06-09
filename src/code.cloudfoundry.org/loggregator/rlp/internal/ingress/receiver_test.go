@@ -3,10 +3,9 @@ package ingress_test
 import (
 	"errors"
 	"fmt"
-	"plumbing"
 
-	v2 "plumbing/v2"
-
+	"code.cloudfoundry.org/loggregator/plumbing"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 	"code.cloudfoundry.org/loggregator/rlp/internal/ingress"
 
 	"golang.org/x/net/context"

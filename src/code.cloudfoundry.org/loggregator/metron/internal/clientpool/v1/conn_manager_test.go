@@ -1,8 +1,8 @@
 package v1_test
 
 import (
+	"code.cloudfoundry.org/loggregator/plumbing"
 	"errors"
-	"plumbing"
 	"time"
 
 	clientpool "code.cloudfoundry.org/loggregator/metron/internal/clientpool/v1"

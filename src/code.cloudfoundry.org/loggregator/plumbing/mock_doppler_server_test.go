@@ -1,7 +1,7 @@
 package plumbing_test
 
 import (
-	"plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/metadata"

@@ -1,10 +1,10 @@
 package v2
 
 import (
+	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
 	"errors"
 	"io"
 	"log"
-	plumbing "plumbing/v2"
 	"sync/atomic"
 	"time"
 	"unsafe"

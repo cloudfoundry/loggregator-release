@@ -2,8 +2,9 @@ package v2_test
 
 import (
 	"metricemitter/testhelper"
-	v2 "plumbing/v2"
 	"time"
+
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	egress "code.cloudfoundry.org/loggregator/metron/internal/egress/v2"
 

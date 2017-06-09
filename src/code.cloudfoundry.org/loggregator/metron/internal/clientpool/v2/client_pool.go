@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"unsafe"
 
-	plumbing "plumbing/v2"
+	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
 )
 
 type Conn interface {

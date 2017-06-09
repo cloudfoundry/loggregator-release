@@ -11,10 +11,10 @@ import (
 	"os/exec"
 	"testing"
 
-	"plumbing"
 	"time"
 
 	"code.cloudfoundry.org/loggregator/doppler/app"
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
@@ -59,7 +59,7 @@ var _ = BeforeSuite(func() {
 	etcdRunner.Start()
 	etcdAdapter = etcdRunner.Adapter(nil)
 
-	pathToDopplerExec, err = gexec.Build("doppler", "-race")
+	pathToDopplerExec, err = gexec.Build("code.cloudfoundry.org/loggregator/doppler", "-race")
 	Expect(err).NotTo(HaveOccurred())
 
 	pathToHTTPEchoServer, err = gexec.Build("tools/echo/cmd/http_server")

@@ -6,6 +6,7 @@
 package syslogwriter
 
 import (
+	"code.cloudfoundry.org/loggregator/plumbing"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -14,7 +15,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"plumbing"
 	"strings"
 	"sync"
 	"time"

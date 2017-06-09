@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	plumbing "plumbing/v2"
+	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	clientpool "code.cloudfoundry.org/loggregator/metron/internal/clientpool/v2"
 

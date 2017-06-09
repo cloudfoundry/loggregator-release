@@ -3,7 +3,8 @@ package v2
 import (
 	"log"
 	"metricemitter"
-	v2 "plumbing/v2"
+
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 )
 
 type DataSetter interface {

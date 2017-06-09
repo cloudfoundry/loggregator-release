@@ -6,7 +6,7 @@
 package v1_test
 
 import (
-	"plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing"
 	"time"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1"

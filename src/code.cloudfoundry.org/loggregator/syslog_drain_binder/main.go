@@ -1,9 +1,9 @@
 package main
 
 import (
+	"code.cloudfoundry.org/loggregator/plumbing"
 	"flag"
 	"log"
-	"plumbing"
 	"profiler"
 	"time"
 

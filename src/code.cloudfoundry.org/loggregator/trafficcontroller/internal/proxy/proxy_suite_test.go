@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"sync"
 
-	"plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing"
 	"testing"
 
 	"golang.org/x/net/context"

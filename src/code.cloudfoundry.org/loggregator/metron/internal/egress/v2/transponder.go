@@ -1,9 +1,9 @@
 package v2
 
 import (
+	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
 	"log"
 	"metricemitter"
-	plumbing "plumbing/v2"
 	"time"
 )
 

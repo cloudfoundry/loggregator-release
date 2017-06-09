@@ -1,11 +1,11 @@
 package trafficcontroller_test
 
 import (
+	"code.cloudfoundry.org/loggregator/plumbing"
 	"crypto/tls"
 	"fmt"
 	"net/http"
 	"net/url"
-	"plumbing"
 	"strconv"
 	"time"
 

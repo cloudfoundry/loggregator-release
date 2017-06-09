@@ -3,7 +3,7 @@ package v1_test
 import (
 	"net"
 
-	"plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"code.cloudfoundry.org/loggregator/metron/internal/clientpool/v1"
 	"code.cloudfoundry.org/loggregator/metron/internal/health"

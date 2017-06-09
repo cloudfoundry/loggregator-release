@@ -1,8 +1,8 @@
 package ingress
 
 import (
-	"plumbing"
-	v2 "plumbing/v2"
+	"code.cloudfoundry.org/loggregator/plumbing"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 )
 
 type requestConverter struct{}

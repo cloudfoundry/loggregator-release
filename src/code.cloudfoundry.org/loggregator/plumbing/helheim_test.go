@@ -7,7 +7,7 @@ package plumbing_test
 
 import (
 	"code.cloudfoundry.org/loggregator/dopplerservice"
-	"plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"

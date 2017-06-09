@@ -6,7 +6,7 @@ import (
 	"net"
 	"testing"
 
-	"plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"

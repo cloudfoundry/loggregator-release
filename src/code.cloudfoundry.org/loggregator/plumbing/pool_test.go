@@ -3,7 +3,7 @@ package plumbing_test
 import (
 	"net"
 
-	"plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"

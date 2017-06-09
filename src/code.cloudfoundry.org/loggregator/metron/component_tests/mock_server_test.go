@@ -2,8 +2,9 @@ package component_test
 
 import (
 	"net"
-	"plumbing"
-	v2 "plumbing/v2"
+
+	"code.cloudfoundry.org/loggregator/plumbing"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	"testservers"
 

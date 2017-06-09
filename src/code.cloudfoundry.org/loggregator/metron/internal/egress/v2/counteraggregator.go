@@ -6,7 +6,7 @@ import (
 	"io"
 	"sort"
 
-	plumbing "plumbing/v2"
+	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
 )
 
 type counterID struct {

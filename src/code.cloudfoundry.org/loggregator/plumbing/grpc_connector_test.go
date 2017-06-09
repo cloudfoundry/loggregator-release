@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/loggregator/dopplerservice"
-	"plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"github.com/apoydence/eachers/testhelpers"
 	"golang.org/x/net/context"

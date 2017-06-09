@@ -2,9 +2,9 @@ package v1
 
 import (
 	"code.cloudfoundry.org/loggregator/diodes"
+	"code.cloudfoundry.org/loggregator/plumbing"
 	"log"
 	"metricemitter"
-	"plumbing"
 	"sync/atomic"
 	"time"
 

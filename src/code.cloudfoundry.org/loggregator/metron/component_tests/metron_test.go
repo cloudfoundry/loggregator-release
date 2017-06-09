@@ -9,9 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"plumbing"
-	v2 "plumbing/v2"
 	"testservers"
+
+	"code.cloudfoundry.org/loggregator/plumbing"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	"code.cloudfoundry.org/loggregator/metron/app"
 

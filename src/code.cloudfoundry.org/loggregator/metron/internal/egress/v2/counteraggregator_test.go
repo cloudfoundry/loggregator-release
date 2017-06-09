@@ -3,7 +3,7 @@ package v2_test
 import (
 	"fmt"
 
-	plumbing "plumbing/v2"
+	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	egress "code.cloudfoundry.org/loggregator/metron/internal/egress/v2"
 

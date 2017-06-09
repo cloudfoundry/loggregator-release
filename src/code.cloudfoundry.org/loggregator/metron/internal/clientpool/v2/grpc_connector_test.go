@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"net"
 
-	"plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"code.cloudfoundry.org/loggregator/metron/internal/clientpool/v1"
 

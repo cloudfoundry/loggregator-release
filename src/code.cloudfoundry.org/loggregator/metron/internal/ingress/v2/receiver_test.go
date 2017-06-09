@@ -5,7 +5,7 @@ import (
 	"io"
 	"metricemitter/testhelper"
 
-	v2 "plumbing/v2"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	ingress "code.cloudfoundry.org/loggregator/metron/internal/ingress/v2"
 

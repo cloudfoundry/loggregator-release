@@ -13,7 +13,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	v2 "plumbing/v2"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

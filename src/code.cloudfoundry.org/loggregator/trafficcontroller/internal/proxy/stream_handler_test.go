@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"time"
 
-	"plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
 

@@ -2,8 +2,9 @@ package lats_test
 
 import (
 	"lats/helpers"
-	"plumbing/conversion"
-	v2 "plumbing/v2"
+
+	"code.cloudfoundry.org/loggregator/plumbing/conversion"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

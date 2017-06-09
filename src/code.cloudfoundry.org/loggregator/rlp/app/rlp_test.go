@@ -8,10 +8,11 @@ import (
 	"metricemitter/testhelper"
 	"net"
 	"net/http"
-	"plumbing"
-	v2 "plumbing/v2"
 	"testservers"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/plumbing"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	app "code.cloudfoundry.org/loggregator/rlp/app"
 

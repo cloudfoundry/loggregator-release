@@ -1,6 +1,7 @@
 package main
 
 import (
+	"code.cloudfoundry.org/loggregator/plumbing"
 	"flag"
 	"fmt"
 	"healthendpoint"
@@ -9,7 +10,6 @@ import (
 	"metricemitter"
 	"os"
 	"os/signal"
-	"plumbing"
 	"sync"
 	"time"
 

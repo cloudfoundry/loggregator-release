@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing"
 )
 
 var _ = Describe("TLS", func() {

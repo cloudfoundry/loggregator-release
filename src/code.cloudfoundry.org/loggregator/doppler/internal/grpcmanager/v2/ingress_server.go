@@ -1,9 +1,9 @@
 package v2
 
 import (
+	"code.cloudfoundry.org/loggregator/plumbing/conversion"
+	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
 	"metricemitter"
-	"plumbing/conversion"
-	plumbing "plumbing/v2"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/sonde-go/events"

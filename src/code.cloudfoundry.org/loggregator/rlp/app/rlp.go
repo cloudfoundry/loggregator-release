@@ -9,10 +9,10 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
+	"code.cloudfoundry.org/loggregator/plumbing"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 	"code.cloudfoundry.org/loggregator/rlp/internal/egress"
 	"code.cloudfoundry.org/loggregator/rlp/internal/ingress"
-	"plumbing"
-	v2 "plumbing/v2"
 
 	"google.golang.org/grpc"
 )
