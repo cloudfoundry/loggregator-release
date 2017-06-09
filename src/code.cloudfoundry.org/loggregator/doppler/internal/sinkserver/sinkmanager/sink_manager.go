@@ -9,9 +9,9 @@ import (
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslogwriter"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/blacklist"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/metrics"
+	"code.cloudfoundry.org/loggregator/metricemitter"
 	"fmt"
 	"log"
-	"metricemitter"
 	"sync"
 	"time"
 

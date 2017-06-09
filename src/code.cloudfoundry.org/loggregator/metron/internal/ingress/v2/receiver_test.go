@@ -3,7 +3,8 @@ package v2_test
 import (
 	"errors"
 	"io"
-	"metricemitter/testhelper"
+
+	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 

@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"metricemitter/testhelper"
 	"net"
 	"net/http"
 	"testservers"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 
 	"code.cloudfoundry.org/loggregator/plumbing"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"

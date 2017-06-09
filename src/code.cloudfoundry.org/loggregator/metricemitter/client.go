@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"google.golang.org/grpc"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
+	"google.golang.org/grpc"
 )
 
 type MetricClient interface {

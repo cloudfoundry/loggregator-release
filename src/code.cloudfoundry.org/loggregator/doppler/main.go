@@ -2,12 +2,12 @@ package main
 
 import (
 	"code.cloudfoundry.org/loggregator/healthendpoint"
+	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"flag"
 	"fmt"
 	"log"
 	"math/rand"
-	"metricemitter"
 	"os"
 	"os/signal"
 	"sync"

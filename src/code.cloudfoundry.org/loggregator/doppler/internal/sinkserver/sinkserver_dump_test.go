@@ -1,11 +1,12 @@
 package sinkserver_test
 
 import (
-	"metricemitter/testhelper"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

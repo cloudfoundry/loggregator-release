@@ -9,6 +9,7 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/app/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/iprange/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/dopplerservice/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/metricemitter/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/metron/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/metron/app/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/metron/internal/clientpool/v1/*.go # gosub
@@ -59,4 +60,3 @@ files:
 - loggregator/src/google.golang.org/grpc/status/*.go # gosub
 - loggregator/src/google.golang.org/grpc/tap/*.go # gosub
 - loggregator/src/google.golang.org/grpc/transport/*.go # gosub
-- loggregator/src/metricemitter/*.go # gosub

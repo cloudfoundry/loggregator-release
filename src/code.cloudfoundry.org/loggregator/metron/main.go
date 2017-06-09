@@ -1,11 +1,11 @@
 package main
 
 import (
+	"code.cloudfoundry.org/loggregator/metricemitter"
 	"flag"
 	"fmt"
 	"log"
 	"math/rand"
-	"metricemitter"
 	"time"
 
 	"google.golang.org/grpc"

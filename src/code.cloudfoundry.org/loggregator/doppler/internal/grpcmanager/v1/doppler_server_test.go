@@ -1,11 +1,12 @@
 package v1_test
 
 import (
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"io"
-	"metricemitter/testhelper"
 	"net"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1"
 

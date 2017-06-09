@@ -1,10 +1,10 @@
 package plumbing
 
 import (
+	"code.cloudfoundry.org/loggregator/metricemitter"
 	"errors"
 	"fmt"
 	"log"
-	"metricemitter"
 	"sync"
 	"sync/atomic"
 	"time"

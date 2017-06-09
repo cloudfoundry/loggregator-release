@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"metricemitter/testhelper"
 	"net/http"
 	"time"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/blacklist"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/sinkmanager"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/websocketserver"
+	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 
 	. "github.com/apoydence/eachers"
 	. "github.com/onsi/ginkgo"

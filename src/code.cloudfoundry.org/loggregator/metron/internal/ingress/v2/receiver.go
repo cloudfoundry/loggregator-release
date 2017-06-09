@@ -1,8 +1,8 @@
 package v2
 
 import (
+	"code.cloudfoundry.org/loggregator/metricemitter"
 	"log"
-	"metricemitter"
 
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 )

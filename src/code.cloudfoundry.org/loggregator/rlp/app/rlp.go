@@ -2,9 +2,9 @@ package app
 
 import (
 	"code.cloudfoundry.org/loggregator/healthendpoint"
+	"code.cloudfoundry.org/loggregator/metricemitter"
 	"fmt"
 	"log"
-	"metricemitter"
 	"net"
 
 	"github.com/prometheus/client_golang/prometheus"

@@ -1,6 +1,6 @@
 package testhelper
 
-import "metricemitter"
+import "code.cloudfoundry.org/loggregator/metricemitter"
 
 type SpyMetricClient struct {
 	counterMetrics map[string]*metricemitter.CounterMetric

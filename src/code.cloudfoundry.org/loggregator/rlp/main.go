@@ -1,9 +1,9 @@
 package main
 
 import (
+	"code.cloudfoundry.org/loggregator/metricemitter"
 	"flag"
 	"log"
-	"metricemitter"
 	"strings"
 	"time"
 

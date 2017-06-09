@@ -1,7 +1,7 @@
 package groupedsinks
 
 import (
-	"metricemitter"
+	"code.cloudfoundry.org/loggregator/metricemitter"
 	"sync"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks/firehose_group"

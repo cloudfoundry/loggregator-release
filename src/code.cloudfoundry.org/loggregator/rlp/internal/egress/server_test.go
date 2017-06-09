@@ -3,10 +3,10 @@ package egress_test
 import (
 	"errors"
 	"io"
-	"metricemitter/testhelper"
 	"sync"
 	"sync/atomic"
 
+	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 	"code.cloudfoundry.org/loggregator/rlp/internal/egress"
 
 	"google.golang.org/grpc"

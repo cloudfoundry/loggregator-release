@@ -2,12 +2,11 @@ package v2_test
 
 import (
 	"io"
-	"metricemitter/testhelper"
 	"sync"
 
-	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
-
 	"code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v2"
+	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
+	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	. "github.com/onsi/ginkgo"

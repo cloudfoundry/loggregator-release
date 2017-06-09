@@ -1,7 +1,7 @@
 package metricemitter_test
 
 import (
-	"metricemitter"
+	"code.cloudfoundry.org/loggregator/metricemitter"
 	"net"
 	"time"
 

@@ -7,11 +7,11 @@ import (
 	"code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v2"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/sinkmanager"
 	"code.cloudfoundry.org/loggregator/healthendpoint"
+	"code.cloudfoundry.org/loggregator/metricemitter"
 	plumbingv1 "code.cloudfoundry.org/loggregator/plumbing"
 	plumbingv2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 	"fmt"
 	"log"
-	"metricemitter"
 	"net"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"

@@ -2,9 +2,10 @@ package plumbing_test
 
 import (
 	"fmt"
-	"metricemitter/testhelper"
 	"net"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 
 	"code.cloudfoundry.org/loggregator/dopplerservice"
 	"code.cloudfoundry.org/loggregator/plumbing"

@@ -3,8 +3,8 @@ package firehose_group
 import (
 	"code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks/sink_wrapper"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
+	"code.cloudfoundry.org/loggregator/metricemitter"
 	"math/rand"
-	"metricemitter"
 	"sync"
 
 	"github.com/cloudfoundry/sonde-go/events"

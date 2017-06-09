@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/loggregator/dopplerservice"
+	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"code.cloudfoundry.org/loggregator/profiler"
 	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/auth"
 	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
-	"metricemitter"
 	"monitor"
 
 	"code.cloudfoundry.org/workpool"

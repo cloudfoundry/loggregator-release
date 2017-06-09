@@ -1,8 +1,8 @@
 package firehose_group_test
 
 import (
-	"metricemitter"
-	"metricemitter/testhelper"
+	"code.cloudfoundry.org/loggregator/metricemitter"
+	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
 

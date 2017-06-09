@@ -1,8 +1,8 @@
 package metricemitter_test
 
 import (
+	"code.cloudfoundry.org/loggregator/metricemitter"
 	"errors"
-	"metricemitter"
 
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 

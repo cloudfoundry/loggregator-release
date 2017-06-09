@@ -6,7 +6,7 @@ import (
 	"io"
 	"log"
 
-	"metricemitter"
+	"code.cloudfoundry.org/loggregator/metricemitter"
 
 	"code.cloudfoundry.org/loggregator/diodes"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"

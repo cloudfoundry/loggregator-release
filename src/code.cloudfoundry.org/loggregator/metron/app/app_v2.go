@@ -2,10 +2,10 @@ package app
 
 import (
 	"code.cloudfoundry.org/loggregator/diodes"
+	"code.cloudfoundry.org/loggregator/metricemitter"
 	"fmt"
 	"log"
 	"math/rand"
-	"metricemitter"
 	"time"
 
 	gendiodes "github.com/cloudfoundry/diodes"

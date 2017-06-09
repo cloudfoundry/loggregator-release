@@ -1,7 +1,6 @@
 package sinkmanager_test
 
 import (
-	"metricemitter/testhelper"
 	"net"
 	"net/url"
 	"sync"
@@ -15,6 +14,7 @@ import (
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/blacklist"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/sinkmanager"
 	"code.cloudfoundry.org/loggregator/doppler/internal/store"
+	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"

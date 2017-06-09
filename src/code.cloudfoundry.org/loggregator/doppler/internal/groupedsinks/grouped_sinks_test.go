@@ -1,11 +1,12 @@
 package groupedsinks_test
 
 import (
-	"metricemitter/testhelper"
 	"net"
 	"net/url"
 	"sync"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"

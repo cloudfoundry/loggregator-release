@@ -1,8 +1,9 @@
 package v2_test
 
 import (
-	"metricemitter/testhelper"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
