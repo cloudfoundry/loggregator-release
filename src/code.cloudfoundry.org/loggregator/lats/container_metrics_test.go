@@ -1,7 +1,7 @@
 package lats_test
 
 import (
-	"lats/helpers"
+	"code.cloudfoundry.org/loggregator/lats/helpers"
 
 	"code.cloudfoundry.org/loggregator/plumbing/conversion"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"

@@ -1,7 +1,7 @@
 package lats_test
 
 import (
-	"lats/helpers"
+	"code.cloudfoundry.org/loggregator/lats/helpers"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	. "github.com/onsi/ginkgo"

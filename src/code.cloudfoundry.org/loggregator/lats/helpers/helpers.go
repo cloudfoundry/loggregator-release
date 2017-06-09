@@ -19,7 +19,7 @@ import (
 	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"
 
-	. "lats/config"
+	. "code.cloudfoundry.org/loggregator/lats/config"
 
 	. "github.com/onsi/gomega"
 )

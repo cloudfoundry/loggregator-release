@@ -2,10 +2,11 @@ package lats_test
 
 import (
 	"fmt"
-	"lats/helpers"
 	"math/rand"
 	"sort"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/lats/helpers"
 
 	"github.com/cloudfoundry/noaa/consumer"
 	"github.com/cloudfoundry/sonde-go/events"

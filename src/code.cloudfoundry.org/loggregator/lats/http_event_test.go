@@ -2,10 +2,11 @@ package lats_test
 
 import (
 	"fmt"
-	"lats/helpers"
 	"net/http"
 	"net/http/httptest"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/lats/helpers"
 
 	uuid "github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo"

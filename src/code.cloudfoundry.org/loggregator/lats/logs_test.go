@@ -2,8 +2,9 @@ package lats_test
 
 import (
 	"crypto/tls"
-	"lats/helpers"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/lats/helpers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

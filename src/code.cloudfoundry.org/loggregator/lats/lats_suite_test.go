@@ -10,8 +10,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	latsConfig "lats/config"
-	"lats/helpers"
+	latsConfig "code.cloudfoundry.org/loggregator/lats/config"
+	"code.cloudfoundry.org/loggregator/lats/helpers"
 )
 
 var config *latsConfig.TestConfig

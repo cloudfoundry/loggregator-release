@@ -9,4 +9,4 @@ for line in rlp metron trafficcontroller doppler syslog_drain_binder; do
 done
 
 echo building lats
-go test -c -o bin/lats lats
+go test -c -o bin/lats code.cloudfoundry.org/loggregator/lats
