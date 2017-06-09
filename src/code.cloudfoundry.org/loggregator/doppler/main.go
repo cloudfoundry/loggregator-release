@@ -15,7 +15,7 @@ import (
 
 	"code.cloudfoundry.org/loggregator/dopplerservice"
 
-	"diodes"
+	"code.cloudfoundry.org/loggregator/diodes"
 	"monitor"
 	"profiler"
 

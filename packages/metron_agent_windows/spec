@@ -5,6 +5,7 @@ dependencies:
 files:
 - loggregator/src/exiter.ps1
 - loggregator/src/code.cloudfoundry.org/loggregator/metron/syslog_daemon_config/*
+- loggregator/src/code.cloudfoundry.org/loggregator/diodes/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/app/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/iprange/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/dopplerservice/*.go # gosub
@@ -17,7 +18,6 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/metron/internal/health/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/metron/internal/ingress/v1/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/metron/internal/ingress/v2/*.go # gosub
-- loggregator/src/diodes/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/diodes/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub

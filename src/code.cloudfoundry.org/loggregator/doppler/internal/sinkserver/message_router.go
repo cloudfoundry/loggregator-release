@@ -1,7 +1,7 @@
 package sinkserver
 
 import (
-	"diodes"
+	"code.cloudfoundry.org/loggregator/diodes"
 	"log"
 	"sync"
 

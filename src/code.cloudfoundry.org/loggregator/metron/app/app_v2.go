@@ -1,7 +1,7 @@
 package app
 
 import (
-	"diodes"
+	"code.cloudfoundry.org/loggregator/diodes"
 	"fmt"
 	"log"
 	"math/rand"

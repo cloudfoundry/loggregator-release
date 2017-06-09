@@ -4,7 +4,7 @@ import (
 	"log"
 	"net"
 
-	"diodes"
+	"code.cloudfoundry.org/loggregator/diodes"
 
 	gendiodes "github.com/cloudfoundry/diodes"
 

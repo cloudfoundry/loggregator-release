@@ -1,8 +1,8 @@
 package v1_test
 
 import (
+	"code.cloudfoundry.org/loggregator/diodes"
 	"context"
-	"diodes"
 	"errors"
 	"io"
 	"net"

@@ -18,7 +18,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/onsi/ginkgo/config"
 
-	"diodes"
+	"code.cloudfoundry.org/loggregator/diodes"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/blacklist"

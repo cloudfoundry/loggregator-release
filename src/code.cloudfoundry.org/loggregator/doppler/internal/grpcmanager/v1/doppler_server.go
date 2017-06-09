@@ -1,7 +1,7 @@
 package v1
 
 import (
-	"diodes"
+	"code.cloudfoundry.org/loggregator/diodes"
 	"log"
 	"metricemitter"
 	"plumbing"

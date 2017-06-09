@@ -1,11 +1,11 @@
 package listeners
 
 import (
+	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/doppler/app"
 	"code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1"
 	"code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v2"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/sinkmanager"
-	"diodes"
 	"fmt"
 	"healthendpoint"
 	"log"

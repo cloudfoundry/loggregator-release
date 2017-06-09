@@ -6,7 +6,7 @@ import (
 	"io"
 	"log"
 
-	"diodes"
+	"code.cloudfoundry.org/loggregator/diodes"
 	"metricemitter"
 	v2 "plumbing/v2"
 

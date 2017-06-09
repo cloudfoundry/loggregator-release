@@ -1,7 +1,7 @@
 package sinkserver_test
 
 import (
-	"diodes"
+	"code.cloudfoundry.org/loggregator/diodes"
 	"sync"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver"
