@@ -17,19 +17,25 @@ func init() {
 	msg1K = []byte(strings.Repeat("J", 1024) + "\n")
 }
 
-func postDatadog(avg float64, host string) {
+func postDatadog(max float64, count int64, host string) {
 	url := fmt.Sprintf(
 		"https://app.datadoghq.com/api/v1/series?api_key=%s",
 		os.Getenv("DATADOG_API_KEY"),
 	)
+	now := time.Now().Unix()
 	payload := fmt.Sprintf(`
 		{"series": [{
 			"metric": "loggregator.backpressure.duration",
 			"points": [[%d, %f]],
 			"type": "gauge",
 			"host": "%s"
+		}, {
+			"metric": "loggregator.backpressure.count",
+			"points": [[%d, %d]],
+			"type": "gauge",
+			"host": "%s"
 		}]}
-	`, time.Now().Unix(), avg, host)
+	`, now, max, host, now, count, host)
 	resp, err := http.Post(url, "application/json", strings.NewReader(payload))
 	if err != nil {
 		log.Printf("err when posting to datadog: %s", err)
@@ -42,29 +48,35 @@ func postDatadog(avg float64, host string) {
 	}
 }
 
-func observer(d *diode, host string) {
+func observer(d chan time.Duration, host string) {
 	ticker := time.NewTicker(5 * time.Second)
-	var count, sum float64
+	var (
+		max   time.Duration
+		count int64
+	)
 	for {
 		select {
 		case <-ticker.C:
-			avg := sum / count
-			sum = 0
-			count = 0
-			postDatadog(avg, host)
-		default:
-			delta := d.Next()
+			report := max
+			max = 0
+			postDatadog(float64(report), count, host)
+		case delta := <-d:
 			count++
-			sum += float64(delta)
+			if delta > max {
+				max = delta
+			}
 		}
 	}
 }
 
-func logger(d *diode) {
+func logger(d chan time.Duration) {
 	for {
 		start := time.Now()
 		os.Stdout.Write(msg1K)
-		d.Set(time.Since(start))
+		select {
+		case d <- time.Since(start):
+		default:
+		}
 	}
 }
 
@@ -85,7 +97,7 @@ func hostFromEnv() string {
 
 func main() {
 	host := hostFromEnv()
-	d := newDiode()
+	d := make(chan time.Duration, 100000)
 	go observer(d, host)
 	logger(d)
 }
