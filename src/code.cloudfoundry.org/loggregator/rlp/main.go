@@ -1,11 +1,12 @@
 package main
 
 import (
-	"code.cloudfoundry.org/loggregator/metricemitter"
 	"flag"
 	"log"
 	"strings"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/metricemitter"
 
 	"google.golang.org/grpc"
 
@@ -27,10 +28,6 @@ func main() {
 
 	metronAddr := flag.String("metron-addr", "localhost:3458", "The GRPC address to inject metrics to")
 	metricEmitterInterval := flag.Duration("metric-emitter-interval", time.Minute, "The interval to send batched metrics to metron")
-
-	job := flag.String("job", "", "The name of the job")
-	deployment := flag.String("deployment", "", "The name of the deployment")
-	index := flag.String("index", "", "The name of the index")
 
 	flag.Parse()
 
@@ -64,7 +61,6 @@ func main() {
 		*metronAddr,
 		metricemitter.WithGRPCDialOptions(grpc.WithTransportCredentials(metronCredentials)),
 		metricemitter.WithOrigin("loggregator.rlp"),
-		metricemitter.WithDeployment(*deployment, *job, *index),
 		metricemitter.WithPulseInterval(*metricEmitterInterval),
 	)
 	if err != nil {

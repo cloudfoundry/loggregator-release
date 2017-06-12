@@ -1,11 +1,12 @@
 package main
 
 import (
-	"code.cloudfoundry.org/loggregator/metricemitter"
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"flag"
 	"fmt"
 	"log"
+
+	"code.cloudfoundry.org/loggregator/metricemitter"
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"google.golang.org/grpc"
 
@@ -39,7 +40,6 @@ func main() {
 		conf.MetronConfig.GRPCAddress,
 		metricemitter.WithGRPCDialOptions(grpc.WithTransportCredentials(credentials)),
 		metricemitter.WithOrigin("loggregator.trafficcontroller"),
-		metricemitter.WithDeployment(conf.DeploymentName, conf.JobName, conf.Index),
 		metricemitter.WithPulseInterval(conf.MetricEmitterDuration),
 	)
 	if err != nil {

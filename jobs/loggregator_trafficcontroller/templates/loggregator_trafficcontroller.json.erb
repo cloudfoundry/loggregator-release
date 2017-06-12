@@ -1,9 +1,4 @@
 <%
-    # try and set these properties from a BOSH 2.0 spec object
-    job_name = spec.job.name || name
-    instance_id = spec.id || spec.index.to_s
-    deployment = spec.deployment
-
     doppler_addrs = []
     etcd_machines = []
     etcd_tls_client_config = {}
@@ -47,9 +42,6 @@
     uaa_host = p("uaa.url", "#{scheme}://uaa.#{domain}")
 
     args = {
-        "JobName" => job_name,
-        "Index" => instance_id,
-        "DeploymentName" => deployment,
         "IP" => spec.ip,
         "EtcdUrls" => etcd_machines,
         "EtcdMaxConcurrentRequests" => etcd_max_concurrent_requests,

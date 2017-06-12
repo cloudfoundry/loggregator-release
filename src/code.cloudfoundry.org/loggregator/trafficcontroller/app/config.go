@@ -32,9 +32,6 @@ type Config struct {
 	EtcdRequireTLS            bool
 	EtcdTLSClientConfig       EtcdTLSClientConfig
 
-	DeploymentName         string
-	JobName                string
-	Index                  string
 	IP                     string
 	ApiHost                string
 	DopplerPort            uint32
@@ -83,10 +80,6 @@ func Parse(r io.Reader) (*Config, error) {
 }
 
 func (c *Config) setDefaults() {
-	if c.JobName == "" {
-		c.JobName = "loggregator_trafficcontroller"
-	}
-
 	if c.EtcdMaxConcurrentRequests < 1 {
 		c.EtcdMaxConcurrentRequests = 10
 	}

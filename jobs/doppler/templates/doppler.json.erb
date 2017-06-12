@@ -3,7 +3,6 @@
     job_name = spec.job.name || name
     instance_id = spec.id || spec.index.to_s
     instance_zone = p("doppler.zone").empty? ? spec.az : p("doppler.zone")
-    deployment = p("doppler.deployment").empty? ? spec.deployment : p("doppler.deployment")
 
     etcdMachines = p("loggregator.etcd.machines").map { |addr|
         "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"
@@ -40,7 +39,6 @@
         a[:OutgoingPort] = p("doppler.outgoing_port")
         a[:GRPC] = grpcListenerConfig
         a[:Zone] = instance_zone
-        a[:DeploymentName] = deployment
         a[:IP] = spec.ip
         a[:JobName] = job_name
         a[:Index] = instance_id

@@ -1,10 +1,11 @@
 package app
 
 import (
-	"code.cloudfoundry.org/loggregator/doppler/internal/iprange"
 	"errors"
 	"io/ioutil"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/doppler/internal/iprange"
 
 	"encoding/json"
 	"os"
@@ -42,9 +43,7 @@ type Config struct {
 	EtcdTLSClientConfig             EtcdTLSClientConfig
 	Index                           string
 	JobName                         string
-	DeploymentName                  string
 	IP                              string
-	LogFilePath                     string
 	MaxRetainedLogMessages          uint32
 	MessageDrainBufferSize          uint
 	MetricBatchIntervalMilliseconds uint

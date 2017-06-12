@@ -23,9 +23,6 @@ provides:
   - doppler.grpc_port
 
 properties:
-  doppler.deployment:
-    description: Name of deployment
-    default: ""
   doppler.zone:
     description: Zone of the doppler server
     default: ""

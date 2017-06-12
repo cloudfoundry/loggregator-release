@@ -16,9 +16,7 @@ import (
 func BuildTrafficControllerConf(etcdClientURL string, dopplerWSPort, dopplerGRPCPort, metronPort int) tcConf.Config {
 	tcPort := getTCPPort()
 	return tcConf.Config{
-		Index:   jobIndex,
-		JobName: jobName,
-		IP:      "127.0.0.1",
+		IP: "127.0.0.1",
 
 		DopplerPort: uint32(dopplerWSPort),
 		GRPC: tcConf.GRPC{

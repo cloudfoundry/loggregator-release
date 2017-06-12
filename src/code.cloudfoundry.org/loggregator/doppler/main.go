@@ -1,9 +1,6 @@
 package main
 
 import (
-	"code.cloudfoundry.org/loggregator/healthendpoint"
-	"code.cloudfoundry.org/loggregator/metricemitter"
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"flag"
 	"fmt"
 	"log"
@@ -12,6 +9,10 @@ import (
 	"os/signal"
 	"sync"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/healthendpoint"
+	"code.cloudfoundry.org/loggregator/metricemitter"
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"code.cloudfoundry.org/loggregator/dopplerservice"
 
@@ -377,7 +378,6 @@ func setupMetricsEmitter(conf *app.Config) metricemitter.MetricClient {
 		conf.MetronConfig.GRPCAddress,
 		metricemitter.WithGRPCDialOptions(grpc.WithTransportCredentials(credentials)),
 		metricemitter.WithOrigin("loggregator.doppler"),
-		metricemitter.WithDeployment(conf.DeploymentName, conf.JobName, conf.Index),
 		metricemitter.WithPulseInterval(batchInterval),
 	)
 	if err != nil {
