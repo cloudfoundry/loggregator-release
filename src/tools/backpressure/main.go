@@ -11,11 +11,7 @@ import (
 	"time"
 )
 
-var msg1K []byte
-
-func init() {
-	msg1K = []byte(strings.Repeat("J", 1024) + "\n")
-}
+var msg1K = []byte(strings.Repeat("J", 1024) + "\n")
 
 func postDatadog(max float64, count int64, host string) {
 	url := fmt.Sprintf(
@@ -48,7 +44,8 @@ func postDatadog(max float64, count int64, host string) {
 	}
 }
 
-func observer(d chan time.Duration, host string) {
+func observer(d chan time.Duration) {
+	host := hostFromEnv()
 	ticker := time.NewTicker(5 * time.Second)
 	var (
 		max   time.Duration
@@ -96,8 +93,7 @@ func hostFromEnv() string {
 }
 
 func main() {
-	host := hostFromEnv()
 	d := make(chan time.Duration, 100000)
-	go observer(d, host)
+	go observer(d)
 	logger(d)
 }
