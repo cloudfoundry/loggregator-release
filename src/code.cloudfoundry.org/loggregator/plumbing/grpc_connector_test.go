@@ -500,6 +500,11 @@ var _ = Describe("GRPCConnector", func() {
 						Payload: [][]byte{testMetricA},
 					}
 					mockDopplerServerA.ContainerMetricsOutput.Err <- nil
+
+					mockDopplerServerA.RecentLogsOutput.Resp <- &plumbing.RecentLogsResponse{
+						Payload: [][]byte{testRecentLogA},
+					}
+					mockDopplerServerA.RecentLogsOutput.Err <- nil
 				})
 
 				It("can request container metrics", func() {
@@ -508,6 +513,14 @@ var _ = Describe("GRPCConnector", func() {
 						return connector.ContainerMetrics(c, "test-app-id")
 					}
 					Eventually(f).Should(ConsistOf([][]byte{testMetricA}))
+				})
+
+				It("can request recent logs", func() {
+					f := func() [][]byte {
+						c, _ := context.WithTimeout(ctx, 250*time.Millisecond)
+						return connector.RecentLogs(c, "test-app-id")
+					}
+					Eventually(f).Should(ConsistOf([][]byte{testRecentLogA}))
 				})
 			})
 		})
