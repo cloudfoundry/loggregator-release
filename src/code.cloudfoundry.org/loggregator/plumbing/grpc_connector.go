@@ -1,7 +1,6 @@
 package plumbing
 
 import (
-	"code.cloudfoundry.org/loggregator/metricemitter"
 	"errors"
 	"fmt"
 	"log"
@@ -9,6 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 	"unsafe"
+
+	"code.cloudfoundry.org/loggregator/metricemitter"
 
 	"code.cloudfoundry.org/loggregator/dopplerservice"
 
@@ -87,18 +88,26 @@ func (c *GRPCConnector) ContainerMetrics(ctx context.Context, appID string) [][]
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	var resp [][]byte
-	for _, client := range c.clients {
-		req := &ContainerMetricsRequest{
-			AppID: appID,
-		}
-		nextResp, err := c.pool.ContainerMetrics(client.uri, ctx, req)
-		if err != nil {
-			log.Printf("error from doppler (%s) while fetching container metrics: %s", client.uri, err)
-			continue
-		}
+	results := make(chan [][]byte, len(c.clients))
 
-		resp = append(resp, nextResp.Payload...)
+	for _, client := range c.clients {
+		go func(client *dopplerClientInfo) {
+			req := &ContainerMetricsRequest{
+				AppID: appID,
+			}
+			nextResp, err := c.pool.ContainerMetrics(client.uri, ctx, req)
+			if err != nil {
+				log.Printf("error from doppler (%s) while fetching container metrics: %s", client.uri, err)
+				results <- nil
+				return
+			}
+			results <- nextResp.Payload
+		}(client)
+	}
+
+	var resp [][]byte
+	for i := 0; i < len(c.clients); i++ {
+		resp = append(resp, <-results...)
 	}
 	return resp
 }

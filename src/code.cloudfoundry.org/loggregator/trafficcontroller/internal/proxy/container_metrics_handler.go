@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"time"
 
@@ -45,11 +44,6 @@ func (h *ContainerMetricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 	defer cancel()
 
 	resp := deDupe(h.grpcConn.ContainerMetrics(ctx, appID))
-	if err := ctx.Err(); err != nil {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		log.Printf("containermetrics request encountered an error: %s", err)
-		return
-	}
 
 	serveMultiPartResponse(w, resp)
 }

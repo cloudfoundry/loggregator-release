@@ -126,23 +126,6 @@ var _ = Describe("DopplerProxy", func() {
 			Expect(recorder.Code).To(Equal(http.StatusServiceUnavailable))
 		})
 
-		It("creates a context with a deadline for container metrics", func() {
-			go func() {
-				time.Sleep(100 * time.Millisecond)
-				mockGrpcConnector.ContainerMetricsOutput.Ret0 <- nil
-			}()
-			req, _ := http.NewRequest("GET", "/apps/appID123/containermetrics", nil)
-			dopplerProxy.ServeHTTP(recorder, req)
-
-			var ctx context.Context
-			Eventually(mockGrpcConnector.ContainerMetricsInput.Ctx).Should(Receive(&ctx))
-			_, ok := ctx.Deadline()
-			Expect(ok).To(BeTrue())
-
-			Eventually(ctx.Err).Should(HaveOccurred())
-			Expect(recorder.Code).To(Equal(http.StatusServiceUnavailable))
-		})
-
 		It("sets the health value for firehose count", func() {
 			req, _ := http.NewRequest("GET", "/firehose/streamID", nil)
 			dopplerProxy.ServeHTTP(recorder, req)
