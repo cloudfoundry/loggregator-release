@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 
 	"code.cloudfoundry.org/loggregator/metricemitter"
@@ -22,7 +21,7 @@ func main() {
 
 	conf, err := app.ParseConfig(*configFile)
 	if err != nil {
-		panic(fmt.Errorf("Unable to parse config: %s", err))
+		log.Panicf("Unable to parse config: %s", err)
 	}
 
 	credentials, err := plumbing.NewCredentials(

@@ -142,7 +142,7 @@ func (t *trafficController) Start() {
 		etcdAdapter := t.defaultStoreAdapterProvider(t.conf)
 		err = etcdAdapter.Connect()
 		if err != nil {
-			panic(fmt.Errorf("Unable to connect to ETCD: %s", err))
+			log.Panicf("Unable to connect to ETCD: %s", err)
 		}
 
 		f = dopplerservice.NewFinder(
@@ -174,7 +174,7 @@ func (t *trafficController) Start() {
 	if t.conf.SecurityEventLog != "" {
 		accessLog, err := os.OpenFile(t.conf.SecurityEventLog, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 		if err != nil {
-			panic(fmt.Errorf("Unable to open access log: %s", err))
+			log.Panicf("Unable to open access log: %s", err)
 		}
 		defer func() {
 			accessLog.Sync()
@@ -244,7 +244,7 @@ func (t *trafficController) initializeMetrics(origin, destination string) (*metr
 func (t *trafficController) defaultStoreAdapterProvider(conf *Config) storeadapter.StoreAdapter {
 	workPool, err := workpool.NewWorkPool(conf.EtcdMaxConcurrentRequests)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 	options := &etcdstoreadapter.ETCDOptions{
 		ClusterUrls: conf.EtcdUrls,
@@ -257,7 +257,7 @@ func (t *trafficController) defaultStoreAdapterProvider(conf *Config) storeadapt
 	}
 	etcdStoreAdapter, err := etcdstoreadapter.New(options, workPool)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 	return etcdStoreAdapter
 }
