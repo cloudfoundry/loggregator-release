@@ -163,7 +163,7 @@ func Parse(confData []byte) (*Config, error) {
 	}
 
 	if config.HealthAddr == "" {
-		config.HealthAddr = "localhost:22222"
+		config.HealthAddr = "localhost:14825"
 	}
 
 	return config, nil
