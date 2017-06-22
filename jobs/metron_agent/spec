@@ -103,4 +103,4 @@ properties:
     default: 0
   metron_agent.health_port:
     description: "The port for the health endpoint"
-    default: 22222
+    default: 14824

@@ -114,7 +114,7 @@ properties:
     default: 0
   doppler.health_addr:
     description: "The host:port to expose health metrics for doppler"
-    default: "localhost:22222"
+    default: "localhost:14825"
 
   loggregator.etcd.machines:
     description: "IPs pointing to the ETCD cluster"

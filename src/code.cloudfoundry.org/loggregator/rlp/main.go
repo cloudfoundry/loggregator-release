@@ -23,7 +23,7 @@ func main() {
 	egressPort := flag.Int("egress-port", 0, "The port of the Egress server")
 	ingressAddrsList := flag.String("ingress-addrs", "", "The addresses of Dopplers")
 	pprofPort := flag.Int("pprof-port", 6061, "The port of pprof for health checks")
-	healthAddr := flag.String("health-addr", "localhost:22222", "The address for the health endpoint")
+	healthAddr := flag.String("health-addr", "localhost:14825", "The address for the health endpoint")
 
 	caFile := flag.String("ca", "", "The file path for the CA cert")
 	certFile := flag.String("cert", "", "The file path for the client cert")
