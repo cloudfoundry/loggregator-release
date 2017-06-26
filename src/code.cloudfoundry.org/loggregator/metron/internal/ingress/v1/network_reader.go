@@ -28,7 +28,6 @@ func New(address string, name string, writer ByteArrayWriter) (*NetworkReader, e
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Listening on %s", address)
 
 	return &NetworkReader{
 		connection:  connection,
@@ -41,6 +40,10 @@ func New(address string, name string, writer ByteArrayWriter) (*NetworkReader, e
 			metrics.BatchAddCounter("udp.receiveErrorCount", uint64(missed))
 		})),
 	}, nil
+}
+
+func (nr *NetworkReader) Addr() net.Addr {
+	return nr.connection.LocalAddr()
 }
 
 func (nr *NetworkReader) StartReading() {

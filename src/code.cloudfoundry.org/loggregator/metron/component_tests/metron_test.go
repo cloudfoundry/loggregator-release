@@ -2,7 +2,6 @@ package component_test
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 	"strconv"
@@ -32,6 +31,7 @@ var _ = Describe("Metron", func() {
 	var (
 		metronCleanup  func()
 		metronConfig   app.Config
+		metronInfoPath string
 		consumerServer *Server
 		eventEmitter   dropsonde.EventEmitter
 	)
@@ -42,7 +42,7 @@ var _ = Describe("Metron", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		var metronReady func()
-		metronCleanup, metronConfig, metronReady = testservers.StartMetron(
+		metronCleanup, metronConfig, metronInfoPath, metronReady = testservers.StartMetron(
 			testservers.BuildMetronConfig("localhost", consumerServer.Port()),
 		)
 		defer metronReady()
@@ -54,14 +54,15 @@ var _ = Describe("Metron", func() {
 	})
 
 	It("provides a health endpoint", func() {
-		resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/health", metronConfig.HealthEndpointPort))
+		healthURL := testservers.InfoPollString(metronInfoPath, "metron", "health_url")
+		resp, err := http.Get(healthURL)
 		Expect(err).ToNot(HaveOccurred())
-
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 	})
 
 	It("accepts connections on the v1 API", func() {
-		udpEmitter, err := emitter.NewUdpEmitter(fmt.Sprintf("127.0.0.1:%d", metronConfig.IncomingUDPPort))
+		udpAddr := testservers.InfoPollString(metronInfoPath, "metron", "udp_addr")
+		udpEmitter, err := emitter.NewUdpEmitter(udpAddr)
 		Expect(err).ToNot(HaveOccurred())
 		eventEmitter = emitter.NewEventEmitter(udpEmitter, "some-origin")
 
@@ -101,7 +102,8 @@ var _ = Describe("Metron", func() {
 			},
 		}
 
-		client := metronClient(metronConfig)
+		grpcAddr := testservers.InfoPollString(metronInfoPath, "metron", "grpc_addr")
+		client := metronClient(grpcAddr, metronConfig.GRPC)
 		sender, err := client.Sender(context.Background())
 		Expect(err).ToNot(HaveOccurred())
 
@@ -159,13 +161,11 @@ func HomeAddrToPort(addr net.Addr) int {
 	return port
 }
 
-func metronClient(conf app.Config) v2.IngressClient {
-	addr := fmt.Sprintf("127.0.0.1:%d", conf.GRPC.Port)
-
+func metronClient(addr string, grpcConfig app.GRPC) v2.IngressClient {
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
-		conf.GRPC.CertFile,
-		conf.GRPC.KeyFile,
-		conf.GRPC.CAFile,
+		grpcConfig.CertFile,
+		grpcConfig.KeyFile,
+		grpcConfig.CAFile,
 		"metron",
 	)
 	if err != nil {
