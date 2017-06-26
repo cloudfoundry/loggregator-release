@@ -1,7 +1,6 @@
 package plumbing_test
 
 import (
-	"fmt"
 	"net"
 	"time"
 
@@ -317,43 +316,6 @@ var _ = Describe("GRPCConnector", func() {
 				It("connects to the doppler with the correct request", func() {
 					Eventually(mockDopplerServerA.SubscribeInput).Should(
 						BeCalled(With(req, Not(BeNil()))),
-					)
-				})
-			})
-
-			Context("when a consumer is too slow", func() {
-				var event dopplerservice.Event
-
-				BeforeEach(func() {
-					event = dopplerservice.Event{
-						GRPCDopplers: createGrpcURIs(listeners),
-					}
-
-					mockFinder.NextOutput.Ret0 <- event
-					Eventually(mockFinder.NextCalled).Should(HaveLen(2))
-				})
-
-				It("returns an error", func() {
-					r, _ := connector.Subscribe(ctx, req)
-					senderA := captureSubscribeSender(mockDopplerServerA)
-					for i := 0; i < 50; i++ {
-						senderA.Send(&plumbing.Response{
-							Payload: []byte(fmt.Sprintf("some-data-a-%d", i)),
-						})
-					}
-
-					time.Sleep(2 * time.Second)
-
-					f := func() error {
-						_, err := r()
-						return err
-					}
-					Eventually(f).Should(Not(BeNil()))
-					Eventually(mockBatcher.BatchAddCounterInput).Should(
-						BeCalled(With(
-							"grpcConnector.slowConsumers",
-							BeNumerically("==", 1),
-						)),
 					)
 				})
 			})

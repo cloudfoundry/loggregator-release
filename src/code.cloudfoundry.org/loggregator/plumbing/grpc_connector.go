@@ -1,7 +1,6 @@
 package plumbing
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -305,13 +304,13 @@ type plumbingReceiver interface {
 }
 
 func (c *GRPCConnector) readStream(s plumbingReceiver, cs *consumerState) error {
-	timer := time.NewTimer(time.Second)
-
 	for {
 		resp, err := s.Recv()
 		if err != nil {
 			return err
 		}
+
+		cs.data <- resp.Payload
 
 		// metric-documentation-v1: (listeners.receivedEnvelopes) Number of v1
 		// envelopes received over gRPC from Dopplers.
@@ -322,19 +321,6 @@ func (c *GRPCConnector) readStream(s plumbingReceiver, cs *consumerState) error 
 		// metric-documentation-v2: (ingress) Number of v1 envelopes received over
 		// gRPC from Dopplers.
 		c.ingressMetric.Increment(1)
-
-		if !timer.Stop() {
-			<-timer.C
-		}
-		timer.Reset(time.Second)
-		select {
-		case cs.data <- resp.Payload:
-		case <-timer.C:
-			// metric-documentation-v1: (grpcConnector.slowConsumers) Number of
-			// slow consumers of the TrafficController API.
-			cs.batcher.BatchAddCounter("grpcConnector.slowConsumers", 1)
-			writeError(errors.New("GRPCConnector: slow consumer"), cs.errs)
-		}
 	}
 }
 
