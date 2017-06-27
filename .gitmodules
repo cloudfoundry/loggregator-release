@@ -114,4 +114,4 @@
 	url = https://github.com/prometheus/procfs
 [submodule "src/github.com/go-ini"]
 	path = src/github.com/go-ini
-	url = git@github.com:go-ini/ini
+	url = https://github.com/go-ini/ini
