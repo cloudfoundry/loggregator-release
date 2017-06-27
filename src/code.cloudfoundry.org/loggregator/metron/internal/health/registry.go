@@ -3,7 +3,7 @@ package health
 import "sync"
 
 type Registry struct {
-	mu     sync.Mutex
+	mu     sync.RWMutex
 	values map[string]*Value
 }
 
@@ -29,13 +29,12 @@ func (r *Registry) RegisterValue(name string) *Value {
 }
 
 func (r *Registry) State() map[string]int64 {
-	r.mu.Lock()
-	values := r.values
-	r.mu.Unlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
 	state := make(map[string]int64)
 
-	for k, v := range values {
+	for k, v := range r.values {
 		state[k] = v.Number()
 	}
 
