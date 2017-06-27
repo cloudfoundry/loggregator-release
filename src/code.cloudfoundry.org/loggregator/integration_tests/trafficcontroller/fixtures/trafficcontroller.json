@@ -4,7 +4,7 @@
     "IP": "127.0.0.1",
     "EtcdUrls": ["http://127.0.0.1:4001"],
     "EtcdMaxConcurrentRequests": 5,
-    "OutgoingDropsondePort": 4566,
+    "OutgoingDropsondePort": 0,
     "DopplerPort": 1235,
     "SkipCertVerify": true,
     "Zone": "z1",
@@ -15,7 +15,7 @@
     "UaaClient": "bob",
     "UaaClientSecret": "yourUncle",
     "MonitorIntervalSeconds": 1,
-    "HealthAddr": "127.0.0.1:8080",
+    "HealthAddr": "127.0.0.1:0",
     "GRPC": {
         "Port": 1236,
         "CAFile": "fixtures/loggregator-ca.crt",

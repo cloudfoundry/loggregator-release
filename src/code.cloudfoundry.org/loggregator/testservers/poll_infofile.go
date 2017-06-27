@@ -20,6 +20,15 @@ func InfoPollInt(path, name, key string) int {
 	return v
 }
 
+func InfoPollUint(path, name, key string) uint {
+	r := infoPoll(path, name, key)
+	v, err := r.Uint()
+	if err != nil {
+		log.Panicf("key is not an uint: %s %#v", key, r)
+	}
+	return v
+}
+
 func infoPoll(path, name, key string) *ini.Key {
 	done := time.After(5 * time.Second)
 	for {

@@ -2,8 +2,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 
+	"code.cloudfoundry.org/loggregator/infofile"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
 
@@ -16,6 +18,7 @@ func main() {
 	logFilePath := flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 	disableAccessControl := flag.Bool("disableAccessControl", false, "always all access to app logs")
 	configFile := flag.String("config", "config/loggregator_trafficcontroller.json", "Location of the loggregator trafficcontroller config json file")
+	infoFilePath := flag.String("info-path", "", "Location of the info file")
 
 	flag.Parse()
 
@@ -23,6 +26,12 @@ func main() {
 	if err != nil {
 		log.Panicf("Unable to parse config: %s", err)
 	}
+
+	var opts []infofile.Option
+	if *infoFilePath != "" {
+		opts = append(opts, infofile.WithPath(*infoFilePath))
+	}
+	info := infofile.New("trafficcontroller", opts...)
 
 	credentials, err := plumbing.NewCredentials(
 		conf.GRPC.CertFile,
@@ -44,6 +53,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("Couldn't connect to metric emitter: %s", err)
 	}
+
 	tc := app.NewTrafficController(conf, *logFilePath, *disableAccessControl, metricClient)
+	tc.StartHealth()
+
+	log.Printf("PProf listening on %s", tc.PProfAddr())
+	log.Printf("HTTP listening on port %d", tc.DropsondePort())
+
+	info.Set("health_url", fmt.Sprintf("http://%s/health", tc.HealthAddr()))
+	info.Set("pprof_addr", tc.PProfAddr().String())
+	info.Set("outgoing_dropsonde_port", fmt.Sprint(tc.DropsondePort()))
+
 	tc.Start()
 }

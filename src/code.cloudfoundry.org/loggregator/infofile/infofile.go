@@ -46,22 +46,6 @@ func New(name string, opts ...Option) InfoFile {
 	return i
 }
 
-func initPath(p string) error {
-	dir := path.Dir(p)
-
-	err := os.MkdirAll(dir, os.FileMode(0755))
-	if err != nil {
-		return err
-	}
-
-	_, err = os.Create(p)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // Path returns the path of the created file.
 func (i *InfoFile) Path() string {
 	return i.path
@@ -84,4 +68,20 @@ func (i *InfoFile) Set(key, value string) {
 	if err != nil {
 		log.Printf("failed to write infofile with path: %s, err: %s", i.path, err)
 	}
+}
+
+func initPath(p string) error {
+	dir := path.Dir(p)
+
+	err := os.MkdirAll(dir, os.FileMode(0755))
+	if err != nil {
+		return err
+	}
+
+	_, err = os.Create(p)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
