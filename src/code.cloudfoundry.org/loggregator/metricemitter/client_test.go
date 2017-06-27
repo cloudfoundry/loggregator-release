@@ -1,9 +1,10 @@
 package metricemitter_test
 
 import (
-	"code.cloudfoundry.org/loggregator/metricemitter"
 	"net"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/metricemitter"
 
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
@@ -39,7 +40,9 @@ var _ = Describe("Emitter Client", func() {
 
 		client.NewCounterMetric("some-name")
 		Eventually(grpcServer.senders).Should(HaveLen(1))
-		Eventually(grpcServer.envelopes).Should(HaveLen(1))
+		Eventually(func() int {
+			return len(grpcServer.envelopes)
+		}).Should(BeNumerically(">=", 1))
 
 		grpcServer.stop()
 
