@@ -44,7 +44,7 @@ func BuildTrafficControllerConf(etcdClientURL string, dopplerWSPort, dopplerGRPC
 }
 
 func StartTrafficController(conf tcConf.Config) (func(), int) {
-	By("making sure trafficcontroller was build")
+	By("making sure trafficcontroller was built")
 	tcPath := os.Getenv("TRAFFIC_CONTROLLER_BUILD_PATH")
 	Expect(tcPath).ToNot(BeEmpty())
 

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"time"
 
 	"code.cloudfoundry.org/loggregator/metron/app"
 
@@ -67,7 +68,7 @@ func StartMetron(conf app.Config) (func(), app.Config, string, func()) {
 	return func() {
 			os.Remove(infoPath)
 			os.Remove(filename)
-			metronSession.Kill().Wait()
+			metronSession.Kill().Wait(3 * time.Second)
 		}, conf, infoPath, func() {
 			By("waiting for metron to listen")
 			healthURL := InfoPollString(infoPath, "metron", "health_url")

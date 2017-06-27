@@ -2,6 +2,7 @@ package component_test
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"strconv"
@@ -15,7 +16,6 @@ import (
 
 	"code.cloudfoundry.org/loggregator/metron/app"
 
-	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
@@ -29,11 +29,10 @@ import (
 
 var _ = Describe("Metron", func() {
 	var (
+		consumerServer *Server
 		metronCleanup  func()
 		metronConfig   app.Config
 		metronInfoPath string
-		consumerServer *Server
-		eventEmitter   dropsonde.EventEmitter
 	)
 
 	BeforeEach(func() {
@@ -45,7 +44,7 @@ var _ = Describe("Metron", func() {
 		metronCleanup, metronConfig, metronInfoPath, metronReady = testservers.StartMetron(
 			testservers.BuildMetronConfig("localhost", consumerServer.Port()),
 		)
-		defer metronReady()
+		metronReady()
 	})
 
 	AfterEach(func() {
@@ -64,7 +63,7 @@ var _ = Describe("Metron", func() {
 		udpAddr := testservers.InfoPollString(metronInfoPath, "metron", "udp_addr")
 		udpEmitter, err := emitter.NewUdpEmitter(udpAddr)
 		Expect(err).ToNot(HaveOccurred())
-		eventEmitter = emitter.NewEventEmitter(udpEmitter, "some-origin")
+		eventEmitter := emitter.NewEventEmitter(udpEmitter, "some-origin")
 
 		emitEnvelope := &events.Envelope{
 			Origin:    proto.String("some-origin"),
@@ -104,7 +103,8 @@ var _ = Describe("Metron", func() {
 
 		grpcAddr := testservers.InfoPollString(metronInfoPath, "metron", "grpc_addr")
 		client := metronClient(grpcAddr, metronConfig.GRPC)
-		sender, err := client.Sender(context.Background())
+		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+		sender, err := client.Sender(ctx)
 		Expect(err).ToNot(HaveOccurred())
 
 		go func() {
@@ -115,14 +115,18 @@ var _ = Describe("Metron", func() {
 
 		var rx v2.DopplerIngress_BatchSenderServer
 		Eventually(consumerServer.V2.BatchSenderInput.Arg0).Should(Receive(&rx))
+		fmt.Printf("%#v\n", rx)
 
 		var envBatch *v2.EnvelopeBatch
 		var idx int
 		f := func() *v2.Envelope {
+			// TODO: this thing blocks and keeps test running forever
 			batch, err := rx.Recv()
 			Expect(err).ToNot(HaveOccurred())
 
-			defer func() { envBatch = batch }()
+			defer func() {
+				envBatch = batch
+			}()
 
 			for i, envelope := range batch.Batch {
 				if envelope.GetLog() != nil {
