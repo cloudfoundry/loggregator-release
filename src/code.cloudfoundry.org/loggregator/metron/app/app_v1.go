@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"net"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/metric_sender"
@@ -22,21 +21,23 @@ import (
 
 type AppV1 struct {
 	config         *Config
-	networkReader  *ingress.NetworkReader
 	creds          credentials.TransportCredentials
 	healthRegistry *health.Registry
 }
 
 func NewV1App(c *Config, r *health.Registry, creds credentials.TransportCredentials) *AppV1 {
-	statsStopChan := make(chan struct{})
-	batcher, eventWriter := initializeMetrics(statsStopChan, c)
+	return &AppV1{config: c, healthRegistry: r, creds: creds}
+}
 
-	a := &AppV1{
-		config:         c,
-		healthRegistry: r,
-		creds:          creds,
+func (a *AppV1) Start() {
+	if a.config.DisableUDP {
+		return
 	}
 
+	statsStopChan := make(chan struct{})
+	batcher, eventWriter := a.initializeMetrics(statsStopChan)
+
+	log.Print("Startup: Setting up the Metron agent")
 	marshaller := a.initializeV1DopplerPool(batcher)
 
 	messageTagger := egress.NewTagger(
@@ -50,38 +51,24 @@ func NewV1App(c *Config, r *health.Registry, creds credentials.TransportCredenti
 	eventWriter.SetWriter(aggregator)
 
 	dropsondeUnmarshaller := ingress.NewUnMarshaller(aggregator, batcher)
-
 	metronAddress := fmt.Sprintf("127.0.0.1:%d", a.config.IncomingUDPPort)
 	networkReader, err := ingress.New(metronAddress, "dropsondeAgentListener", dropsondeUnmarshaller)
 	if err != nil {
-		log.Panicf("Failed to listen on %s: %s", metronAddress, err)
-	}
-	a.networkReader = networkReader
-
-	return a
-}
-
-func (a *AppV1) Addr() net.Addr {
-	return a.networkReader.Addr()
-}
-
-func (a *AppV1) Start() {
-	if a.config.DisableUDP {
-		return
+		log.Panic(fmt.Errorf("Failed to listen on %s: %s", metronAddress, err))
 	}
 
-	log.Printf("metron v1 API started on addr %s", a.Addr())
-	go a.networkReader.StartReading()
-	a.networkReader.StartWriting()
+	log.Printf("metron v1 API started on addr %s", metronAddress)
+	go networkReader.StartReading()
+	networkReader.StartWriting()
 }
 
-func initializeMetrics(stopChan chan struct{}, config *Config) (*metricbatcher.MetricBatcher, *egress.EventWriter) {
+func (a *AppV1) initializeMetrics(stopChan chan struct{}) (*metricbatcher.MetricBatcher, *egress.EventWriter) {
 	eventWriter := egress.New("MetronAgent")
 	metricSender := metric_sender.NewMetricSender(eventWriter)
-	metricBatcher := metricbatcher.New(metricSender, time.Duration(config.MetricBatchIntervalMilliseconds)*time.Millisecond)
+	metricBatcher := metricbatcher.New(metricSender, time.Duration(a.config.MetricBatchIntervalMilliseconds)*time.Millisecond)
 	metrics.Initialize(metricSender, metricBatcher)
 
-	stats := runtime_stats.NewRuntimeStats(eventWriter, time.Duration(config.RuntimeStatsIntervalMilliseconds)*time.Millisecond)
+	stats := runtime_stats.NewRuntimeStats(eventWriter, time.Duration(a.config.RuntimeStatsIntervalMilliseconds)*time.Millisecond)
 	go stats.Run(stopChan)
 	return metricBatcher, eventWriter
 }
