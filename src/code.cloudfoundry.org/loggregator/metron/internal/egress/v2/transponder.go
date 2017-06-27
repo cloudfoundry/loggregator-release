@@ -1,10 +1,10 @@
 package v2
 
 import (
+	"time"
+
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
-	"log"
-	"time"
 )
 
 type Nexter interface {
@@ -78,7 +78,6 @@ func (t *Transponder) Start() {
 			// metric-documentation-v2: (loggregator.metron.dropped) Number of messages
 			// dropped when failing to write to Dopplers v2 API
 			t.droppedMetric.Increment(uint64(len(batch)))
-			log.Printf("v2 egress dropped: %s", err)
 			continue
 		}
 

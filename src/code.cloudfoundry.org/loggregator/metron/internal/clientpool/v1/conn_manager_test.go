@@ -1,9 +1,10 @@
 package v1_test
 
 import (
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"errors"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	clientpool "code.cloudfoundry.org/loggregator/metron/internal/clientpool/v1"
 

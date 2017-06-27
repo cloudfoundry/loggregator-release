@@ -6,8 +6,9 @@
 package component_test
 
 import (
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"context"
+
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"google.golang.org/grpc/metadata"
 )

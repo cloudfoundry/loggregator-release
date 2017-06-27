@@ -1,13 +1,14 @@
 package v1
 
 import (
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"errors"
 	"io"
 	"log"
 	"sync/atomic"
 	"time"
 	"unsafe"
+
+	"code.cloudfoundry.org/loggregator/plumbing"
 )
 
 type Connector interface {
@@ -54,7 +55,6 @@ func (m *ConnManager) Write(data []byte) error {
 	})
 
 	if err != nil {
-		log.Printf("error writing to doppler: %s", err)
 		atomic.StorePointer(&m.conn, nil)
 		gRPCConn.closer.Close()
 		m.reset <- true
@@ -86,7 +86,6 @@ func (m *ConnManager) maintainConn() {
 
 		closer, pusherClient, err := m.connector.Connect()
 		if err != nil {
-			log.Printf("error dialing doppler: %s", err)
 			continue
 		}
 

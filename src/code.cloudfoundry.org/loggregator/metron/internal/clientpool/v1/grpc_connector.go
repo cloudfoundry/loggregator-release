@@ -1,10 +1,10 @@
 package v1
 
 import (
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"errors"
 	"io"
-	"log"
+
+	"code.cloudfoundry.org/loggregator/plumbing"
 )
 
 type ClientFetcher interface {
@@ -27,7 +27,6 @@ func (c GRPCConnector) Connect() (io.Closer, plumbing.DopplerIngestor_PusherClie
 	for _, balancer := range c.balancers {
 		hostPort, err := balancer.NextHostPort()
 		if err != nil {
-			log.Printf("Failed to lookup hostport: %s", err)
 			continue
 		}
 
