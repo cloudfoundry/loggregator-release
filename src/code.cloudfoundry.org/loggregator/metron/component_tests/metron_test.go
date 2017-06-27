@@ -16,7 +16,6 @@ import (
 
 	"code.cloudfoundry.org/loggregator/metron/app"
 
-	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
@@ -30,10 +29,10 @@ import (
 
 var _ = Describe("Metron", func() {
 	var (
+		consumerServer *Server
 		metronCleanup  func()
 		metronConfig   app.Config
-		consumerServer *Server
-		eventEmitter   dropsonde.EventEmitter
+		metronInfoPath string
 	)
 
 	BeforeEach(func() {
@@ -42,10 +41,10 @@ var _ = Describe("Metron", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		var metronReady func()
-		metronCleanup, metronConfig, metronReady = testservers.StartMetron(
+		metronCleanup, metronConfig, metronInfoPath, metronReady = testservers.StartMetron(
 			testservers.BuildMetronConfig("localhost", consumerServer.Port()),
 		)
-		defer metronReady()
+		metronReady()
 	})
 
 	AfterEach(func() {
@@ -54,16 +53,17 @@ var _ = Describe("Metron", func() {
 	})
 
 	It("provides a health endpoint", func() {
-		resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/health", metronConfig.HealthEndpointPort))
+		healthURL := testservers.InfoPollString(metronInfoPath, "metron", "health_url")
+		resp, err := http.Get(healthURL)
 		Expect(err).ToNot(HaveOccurred())
-
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 	})
 
 	It("accepts connections on the v1 API", func() {
-		udpEmitter, err := emitter.NewUdpEmitter(fmt.Sprintf("127.0.0.1:%d", metronConfig.IncomingUDPPort))
+		udpAddr := testservers.InfoPollString(metronInfoPath, "metron", "udp_addr")
+		udpEmitter, err := emitter.NewUdpEmitter(udpAddr)
 		Expect(err).ToNot(HaveOccurred())
-		eventEmitter = emitter.NewEventEmitter(udpEmitter, "some-origin")
+		eventEmitter := emitter.NewEventEmitter(udpEmitter, "some-origin")
 
 		emitEnvelope := &events.Envelope{
 			Origin:    proto.String("some-origin"),
@@ -101,8 +101,10 @@ var _ = Describe("Metron", func() {
 			},
 		}
 
-		client := metronClient(metronConfig)
-		sender, err := client.Sender(context.Background())
+		grpcAddr := testservers.InfoPollString(metronInfoPath, "metron", "grpc_addr")
+		client := metronClient(grpcAddr, metronConfig.GRPC)
+		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+		sender, err := client.Sender(ctx)
 		Expect(err).ToNot(HaveOccurred())
 
 		go func() {
@@ -113,14 +115,18 @@ var _ = Describe("Metron", func() {
 
 		var rx v2.DopplerIngress_BatchSenderServer
 		Eventually(consumerServer.V2.BatchSenderInput.Arg0).Should(Receive(&rx))
+		fmt.Printf("%#v\n", rx)
 
 		var envBatch *v2.EnvelopeBatch
 		var idx int
 		f := func() *v2.Envelope {
+			// TODO: this thing blocks and keeps test running forever
 			batch, err := rx.Recv()
 			Expect(err).ToNot(HaveOccurred())
 
-			defer func() { envBatch = batch }()
+			defer func() {
+				envBatch = batch
+			}()
 
 			for i, envelope := range batch.Batch {
 				if envelope.GetLog() != nil {
@@ -159,13 +165,11 @@ func HomeAddrToPort(addr net.Addr) int {
 	return port
 }
 
-func metronClient(conf app.Config) v2.IngressClient {
-	addr := fmt.Sprintf("127.0.0.1:%d", conf.GRPC.Port)
-
+func metronClient(addr string, grpcConfig app.GRPC) v2.IngressClient {
 	tlsConfig, err := plumbing.NewMutualTLSConfig(
-		conf.GRPC.CertFile,
-		conf.GRPC.KeyFile,
-		conf.GRPC.CAFile,
+		grpcConfig.CertFile,
+		grpcConfig.KeyFile,
+		grpcConfig.CAFile,
 		"metron",
 	)
 	if err != nil {

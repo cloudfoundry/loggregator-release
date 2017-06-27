@@ -1,12 +1,14 @@
 package main
 
 import (
-	"code.cloudfoundry.org/loggregator/metricemitter"
 	"flag"
 	"fmt"
 	"log"
 	"math/rand"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/infofile"
+	"code.cloudfoundry.org/loggregator/metricemitter"
 
 	"google.golang.org/grpc"
 
@@ -25,6 +27,13 @@ func main() {
 		"config/metron.json",
 		"Location of the Metron config json file",
 	)
+
+	infoFilePath := flag.String(
+		"info-path",
+		"",
+		"Path to the info file",
+	)
+
 	flag.Parse()
 
 	config, err := app.ParseConfig(*configFilePath)
@@ -75,14 +84,23 @@ func main() {
 		log.Fatalf("Could not configure metric emitter: %s", err)
 	}
 
+	var opts []infofile.Option
+	if *infoFilePath != "" {
+		opts = append(opts, infofile.WithPath(*infoFilePath))
+	}
+	info := infofile.New("metron", opts...)
+
 	server, registry := health.New(config.HealthEndpointPort)
 	go server.Run()
+	info.Set("health_url", fmt.Sprintf("http://%s/health", server.Addr()))
 
 	appV1 := app.NewV1App(config, registry, clientCreds)
 	go appV1.Start()
+	info.Set("udp_addr", appV1.Addr().String())
 
 	appV2 := app.NewV2App(config, registry, clientCreds, serverCreds, metricClient)
 	go appV2.Start()
+	info.Set("grpc_addr", appV2.Addr().String())
 
 	// We start the profiler last so that we can definitively say that we're
 	// all connected and ready for data by the time the profiler starts up.
