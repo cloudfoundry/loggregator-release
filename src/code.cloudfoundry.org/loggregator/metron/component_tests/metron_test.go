@@ -2,7 +2,6 @@ package component_test
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 	"strconv"
@@ -115,7 +114,6 @@ var _ = Describe("Metron", func() {
 
 		var rx v2.DopplerIngress_BatchSenderServer
 		Eventually(consumerServer.V2.BatchSenderInput.Arg0).Should(Receive(&rx))
-		fmt.Printf("%#v\n", rx)
 
 		var envBatch *v2.EnvelopeBatch
 		var idx int

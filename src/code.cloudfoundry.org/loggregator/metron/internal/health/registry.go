@@ -29,10 +29,14 @@ func (r *Registry) RegisterValue(name string) *Value {
 }
 
 func (r *Registry) State() map[string]int64 {
+	r.mu.Lock()
+	values := r.values
+	r.mu.Unlock()
+
 	state := make(map[string]int64)
 
-	for k, v := range r.values {
-		state[k] = v.number
+	for k, v := range values {
+		state[k] = v.Number()
 	}
 
 	return state
