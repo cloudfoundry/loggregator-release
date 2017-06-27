@@ -249,10 +249,6 @@ func setupDoppler() (*mockDopplerServer, net.Listener) {
 }
 
 func setupRLP(dopplerLis net.Listener, healthAddr string) (addr string, rlp *app.RLP) {
-	egressLis, err := net.Listen("tcp", "localhost:0")
-	egressLis.Close()
-	Expect(err).ToNot(HaveOccurred())
-
 	ingressTLSCredentials, err := plumbing.NewCredentials(
 		testservers.Cert("reverselogproxy.crt"),
 		testservers.Cert("reverselogproxy.key"),
@@ -269,17 +265,17 @@ func setupRLP(dopplerLis net.Listener, healthAddr string) (addr string, rlp *app
 	)
 	Expect(err).ToNot(HaveOccurred())
 
-	egressPort := egressLis.Addr().(*net.TCPAddr).Port
 	rlp = app.NewRLP(
 		testhelper.NewMetricClient(),
-		app.WithEgressPort(egressPort),
+		app.WithEgressPort(0),
 		app.WithIngressAddrs([]string{dopplerLis.Addr().String()}),
 		app.WithIngressDialOptions(grpc.WithTransportCredentials(ingressTLSCredentials)),
 		app.WithEgressServerOptions(grpc.Creds(egressTLSCredentials)),
 		app.WithHealthAddr(healthAddr),
 	)
+
 	go rlp.Start()
-	return egressLis.Addr().String(), rlp
+	return rlp.EgressAddr().String(), rlp
 }
 
 func setupRLPClient(egressAddr string) (v2.EgressClient, func()) {

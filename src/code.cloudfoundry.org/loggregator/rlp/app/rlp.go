@@ -62,6 +62,9 @@ func NewRLP(m metricemitter.MetricClient, opts ...RLPOption) *RLP {
 	for _, o := range opts {
 		o(rlp)
 	}
+
+	rlp.startEgressListener()
+
 	return rlp
 }
 
@@ -104,6 +107,11 @@ func WithHealthAddr(addr string) RLPOption {
 	return func(r *RLP) {
 		r.healthAddr = addr
 	}
+}
+
+// EgressAddr returns the address used for the egress server.
+func (r *RLP) EgressAddr() net.Addr {
+	return r.egressAddr
 }
 
 // Start starts a remote log proxy. This connects to various gRPC servers and
@@ -149,13 +157,16 @@ func (r *RLP) setupIngress() {
 	r.querier = ingress.NewQuerier(converter, connector)
 }
 
-func (r *RLP) setupEgress() {
+func (r *RLP) startEgressListener() {
 	var err error
 	r.egressListener, err = net.Listen("tcp", fmt.Sprintf(":%d", r.egressPort))
 	if err != nil {
 		log.Fatalf("failed to listen on port: %d: %s", r.egressPort, err)
 	}
 	r.egressAddr = r.egressListener.Addr()
+}
+
+func (r *RLP) setupEgress() {
 	r.egressServer = grpc.NewServer(r.egressServerOpts...)
 	v2.RegisterEgressServer(
 		r.egressServer,
