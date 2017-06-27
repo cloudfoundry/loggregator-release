@@ -4,11 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"time"
 
 	"code.cloudfoundry.org/loggregator/healthendpoint"
@@ -43,10 +41,6 @@ type trafficController struct {
 	logFilePath          string
 	disableAccessControl bool
 	metricClient         metricemitter.MetricClient
-	healthAddr           net.Addr
-	healthRegistry       *healthendpoint.Registrar
-	profiler             profiler.Starter
-	dropsondeListener    net.Listener
 }
 
 // finder provides service discovery of Doppler processes
@@ -61,49 +55,12 @@ func NewTrafficController(
 	disableAccessControl bool,
 	metricClient metricemitter.MetricClient,
 ) *trafficController {
-	dropsondeListener, err := net.Listen("tcp", fmt.Sprintf(":%d", c.OutgoingDropsondePort))
-	if err != nil {
-		log.Fatalf("Failed to open dropsonde listener: %s", err)
-	}
-
 	return &trafficController{
 		conf:                 c,
 		logFilePath:          path,
 		disableAccessControl: disableAccessControl,
 		metricClient:         metricClient,
-		profiler:             profiler.New(c.PPROFPort),
-		dropsondeListener:    dropsondeListener,
 	}
-}
-
-func (t *trafficController) StartHealth() {
-	promRegistry := prometheus.NewRegistry()
-	healthAddr := healthendpoint.StartServer(t.conf.HealthAddr, promRegistry).Addr()
-	healthRegistry := healthendpoint.New(promRegistry, map[string]prometheus.Gauge{
-		// metric-documentation-health: (firehoseStreamCount)
-		// Number of open firehose streams
-		"firehoseStreamCount": prometheus.NewGauge(
-			prometheus.GaugeOpts{
-				Namespace: "loggregator",
-				Subsystem: "trafficcontroller",
-				Name:      "firehoseStreamCount",
-				Help:      "Number of open firehose streams",
-			},
-		),
-		// metric-documentation-health: (appStreamCount)
-		// Number of open app streams
-		"appStreamCount": prometheus.NewGauge(
-			prometheus.GaugeOpts{
-				Namespace: "loggregator",
-				Subsystem: "trafficcontroller",
-				Name:      "appStreamCount",
-				Help:      "Number of open app streams",
-			},
-		),
-	})
-
-	t.healthAddr = healthAddr
-	t.healthRegistry = healthRegistry
 }
 
 func (t *trafficController) Start() {
@@ -140,6 +97,32 @@ func (t *trafficController) Start() {
 
 	uaaClient := auth.NewUaaClient(t.conf.UaaHost, t.conf.UaaClient, t.conf.UaaClientSecret)
 	adminAuthorizer := auth.NewAdminAccessAuthorizer(t.disableAccessControl, &uaaClient)
+
+	// Start the health endpoint listener
+	promRegistry := prometheus.NewRegistry()
+	healthendpoint.StartServer(t.conf.HealthAddr, promRegistry)
+	healthRegistry := healthendpoint.New(promRegistry, map[string]prometheus.Gauge{
+		// metric-documentation-health: (firehoseStreamCount)
+		// Number of open firehose streams
+		"firehoseStreamCount": prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Namespace: "loggregator",
+				Subsystem: "trafficcontroller",
+				Name:      "firehoseStreamCount",
+				Help:      "Number of open firehose streams",
+			},
+		),
+		// metric-documentation-health: (appStreamCount)
+		// Number of open app streams
+		"appStreamCount": prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Namespace: "loggregator",
+				Subsystem: "trafficcontroller",
+				Name:      "appStreamCount",
+				Help:      "Number of open app streams",
+			},
+		),
+	})
 
 	creds, err := plumbing.NewCredentials(
 		t.conf.GRPC.CertFile,
@@ -183,7 +166,7 @@ func (t *trafficController) Start() {
 			"doppler."+t.conf.SystemDomain,
 			15*time.Second,
 			&metricShim{},
-			t.healthRegistry,
+			healthRegistry,
 		),
 	)
 
@@ -198,42 +181,25 @@ func (t *trafficController) Start() {
 			accessLog.Close()
 		}()
 		accessLogger := auth.NewAccessLogger(accessLog)
-		accessMiddleware = auth.Access(accessLogger, t.conf.IP, uint32(t.DropsondePort()))
+		accessMiddleware = auth.Access(accessLogger, t.conf.IP, t.conf.OutgoingDropsondePort)
 	}
 
 	if accessMiddleware != nil {
 		dopplerHandler = accessMiddleware(dopplerHandler)
 	}
+	go func() {
+		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", t.conf.OutgoingDropsondePort), dopplerHandler))
+	}()
 
-	go log.Fatal(http.Serve(t.dropsondeListener, dopplerHandler))
-	go t.profiler.Start()
+	// We start the profiler last so that we can definitively claim that we're ready for
+	// connections by the time we're listening on the PPROFPort.
+	p := profiler.New(t.conf.PPROFPort)
+	go p.Start()
 
 	killChan := make(chan os.Signal)
 	signal.Notify(killChan, os.Interrupt)
 	<-killChan
 	log.Print("Shutting down")
-}
-
-func (t *trafficController) HealthAddr() net.Addr {
-	return t.healthAddr
-}
-
-func (t *trafficController) PProfAddr() net.Addr {
-	return t.profiler.Addr()
-}
-
-func (t *trafficController) DropsondePort() uint {
-	_, p, err := net.SplitHostPort(t.dropsondeListener.Addr().String())
-	if err != nil {
-		log.Fatalf("Failed to get port for dropsonde: %s", err)
-	}
-
-	port, err := strconv.ParseUint(p, 10, 32)
-	if err != nil {
-		log.Fatalf("Failed to get port for dropsonde: %s", err)
-	}
-
-	return uint(port)
 }
 
 func (t *trafficController) setupDefaultEmitter(origin, destination string) error {

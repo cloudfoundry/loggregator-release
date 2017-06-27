@@ -2,14 +2,10 @@ package trafficcontroller_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"os/exec"
 	"testing"
-
-	"code.cloudfoundry.org/loggregator/testservers"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/cloudfoundry/storeadapter"
@@ -23,9 +19,10 @@ import (
 )
 
 const (
-	APP_ID          = "1234"
-	AUTH_TOKEN      = "bearer iAmAnAdmin"
-	SUBSCRIPTION_ID = "firehose-subscription-1"
+	APP_ID                            = "1234"
+	AUTH_TOKEN                        = "bearer iAmAnAdmin"
+	SUBSCRIPTION_ID                   = "firehose-subscription-1"
+	TRAFFIC_CONTROLLER_DROPSONDE_PORT = 4566
 )
 
 var (
@@ -36,7 +33,6 @@ var (
 	localIPAddress            string
 	fakeDoppler               *FakeDoppler
 	configFile                string
-	infoPath                  string
 )
 
 func TestIntegrationTest(t *testing.T) {
@@ -63,26 +59,17 @@ var _ = BeforeSuite(func() {
 
 var _ = BeforeEach(func() {
 	configFile = "fixtures/trafficcontroller.json"
-	infoFile, err := ioutil.TempFile("", "trafficcontroller")
-	if err != nil {
-		log.Panic(err)
-	}
-	infoPath = infoFile.Name()
 })
 
 var _ = JustBeforeEach(func() {
-	trafficControllerCommand := exec.Command(trafficControllerExecPath,
-		"--config", configFile,
-		"--info-path", infoPath,
-	)
+	trafficControllerCommand := exec.Command(trafficControllerExecPath, "--config", configFile)
 
 	var err error
 	trafficControllerSession, err = gexec.Start(trafficControllerCommand, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 
 	// wait for TC
-	dropsondeOutgoingPort := testservers.InfoPollUint(infoPath, "trafficcontroller", "outgoing_dropsonde_port")
-	trafficControllerDropsondeEndpoint := fmt.Sprintf("http://127.0.0.1:%d", dropsondeOutgoingPort)
+	trafficControllerDropsondeEndpoint := fmt.Sprintf("http://%s:%d", localIPAddress, TRAFFIC_CONTROLLER_DROPSONDE_PORT)
 	Eventually(func() error {
 		resp, err := http.Get(trafficControllerDropsondeEndpoint)
 		if err == nil {
@@ -94,7 +81,6 @@ var _ = JustBeforeEach(func() {
 
 var _ = AfterEach(func() {
 	trafficControllerSession.Kill().Wait()
-	os.Remove(infoPath)
 })
 
 var _ = AfterSuite(func() {

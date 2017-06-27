@@ -1,14 +1,12 @@
 package app
 
 import (
+	"code.cloudfoundry.org/loggregator/diodes"
+	"code.cloudfoundry.org/loggregator/metricemitter"
 	"fmt"
 	"log"
 	"math/rand"
-	"net"
 	"time"
-
-	"code.cloudfoundry.org/loggregator/diodes"
-	"code.cloudfoundry.org/loggregator/metricemitter"
 
 	gendiodes "github.com/cloudfoundry/diodes"
 
@@ -22,9 +20,6 @@ import (
 )
 
 type AppV2 struct {
-	addr           net.Addr
-	ingressServer  *ingress.Server
-	envelopeBuffer *diodes.ManyToOneEnvelopeV2
 	config         *Config
 	healthRegistry *health.Registry
 	clientCreds    credentials.TransportCredentials
@@ -39,17 +34,25 @@ func NewV2App(
 	serverCreds credentials.TransportCredentials,
 	metricClient metricemitter.MetricClient,
 ) *AppV2 {
-	if serverCreds == nil {
-		log.Panic("Failed to load TLS server config: provided nil server creds")
+	return &AppV2{
+		config:         c,
+		healthRegistry: r,
+		clientCreds:    clientCreds,
+		serverCreds:    serverCreds,
+		metricClient:   metricClient,
 	}
-	if clientCreds == nil {
-		log.Panic("Failed to load TLS client config: provided nil client creds")
+}
+
+func (a *AppV2) Start() {
+	if a.serverCreds == nil {
+		log.Panic("Failed to load TLS server config")
 	}
 
-	droppedMetric := metricClient.NewCounterMetric("dropped",
+	droppedMetric := a.metricClient.NewCounterMetric("dropped",
 		metricemitter.WithVersion(2, 0),
 		metricemitter.WithTags(map[string]string{"direction": "ingress"}),
 	)
+
 	envelopeBuffer := diodes.NewManyToOneEnvelopeV2(10000, gendiodes.AlertFunc(func(missed int) {
 		// metric-documentation-v2: (loggregator.metron.dropped) Number of v2 envelopes
 		// dropped from the metron ingress diode
@@ -58,32 +61,10 @@ func NewV2App(
 		log.Printf("Dropped %d v2 envelopes", missed)
 	}))
 
-	rx := ingress.NewReceiver(envelopeBuffer, metricClient)
-	metronAddress := fmt.Sprintf("127.0.0.1:%d", c.GRPC.Port)
-	ingressServer := ingress.NewServer(metronAddress, rx, grpc.Creds(serverCreds))
-	addr := ingressServer.Addr()
-
-	return &AppV2{
-		addr:           addr,
-		ingressServer:  ingressServer,
-		envelopeBuffer: envelopeBuffer,
-		config:         c, // remove from state?
-		healthRegistry: r,
-		clientCreds:    clientCreds,
-		serverCreds:    serverCreds,
-		metricClient:   metricClient,
-	}
-}
-
-func (a *AppV2) Addr() net.Addr {
-	return a.addr
-}
-
-func (a *AppV2) Start() {
 	pool := a.initializePool()
 	counterAggr := egress.NewCounterAggregator(pool)
 	tx := egress.NewTransponder(
-		a.envelopeBuffer,
+		envelopeBuffer,
 		counterAggr,
 		a.config.Tags,
 		100, time.Second,
@@ -91,11 +72,18 @@ func (a *AppV2) Start() {
 	)
 	go tx.Start()
 
-	log.Printf("metron v2 API started on addr %s", a.addr)
-	a.ingressServer.Start()
+	metronAddress := fmt.Sprintf("127.0.0.1:%d", a.config.GRPC.Port)
+	log.Printf("metron v2 API started on addr %s", metronAddress)
+	rx := ingress.NewReceiver(envelopeBuffer, a.metricClient)
+	ingressServer := ingress.NewServer(metronAddress, rx, grpc.Creds(a.serverCreds))
+	ingressServer.Start()
 }
 
 func (a *AppV2) initializePool() *clientpool.ClientPool {
+	if a.clientCreds == nil {
+		log.Panic("Failed to load TLS client config")
+	}
+
 	balancers := []*clientpool.Balancer{
 		clientpool.NewBalancer(fmt.Sprintf("%s.%s", a.config.Zone, a.config.DopplerAddr)),
 		clientpool.NewBalancer(a.config.DopplerAddr),

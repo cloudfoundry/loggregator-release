@@ -3,12 +3,13 @@ package component_test
 import (
 	"net"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
 	"code.cloudfoundry.org/loggregator/plumbing"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
+
 	"code.cloudfoundry.org/loggregator/testservers"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 type DopplerIngestorServer interface {
@@ -28,13 +29,12 @@ func NewServer() (*Server, error) {
 		testservers.Cert("doppler.crt"),
 		testservers.Cert("doppler.key"),
 		testservers.Cert("loggregator-ca.crt"),
-		"doppler",
+		"",
 	)
 	if err != nil {
 		return nil, err
 	}
 	transportCreds := credentials.NewTLS(tlsConfig)
-
 	mockDopplerV1 := newMockDopplerIngestorServerV1()
 	mockDopplerV2 := newMockDopplerIngressServerV2()
 
