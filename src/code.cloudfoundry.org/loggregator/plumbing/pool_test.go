@@ -207,6 +207,7 @@ var _ = Describe("Pool", func() {
 					Expect(resp).To(Equal(payload))
 				})
 			})
+
 			Describe("RecentLogs()", func() {
 				var fetchResp = func(addr string, ctx context.Context, req *plumbing.RecentLogsRequest) [][]byte {
 					var resp *plumbing.RecentLogsResponse
@@ -236,7 +237,6 @@ var _ = Describe("Pool", func() {
 
 		})
 	})
-
 })
 
 func consumeReceiver(rx plumbing.Doppler_SubscribeClient, data chan []byte) {
