@@ -13,36 +13,6 @@ import (
 	tcConf "code.cloudfoundry.org/loggregator/trafficcontroller/app"
 )
 
-func BuildTrafficControllerConf(etcdClientURL string, dopplerWSPort, dopplerGRPCPort, metronPort int) tcConf.Config {
-	tcPort := getTCPPort()
-	return tcConf.Config{
-		IP: "127.0.0.1",
-
-		DopplerPort: uint32(dopplerWSPort),
-		GRPC: tcConf.GRPC{
-			Port:     uint16(dopplerGRPCPort),
-			CertFile: Cert("trafficcontroller.crt"),
-			KeyFile:  Cert("trafficcontroller.key"),
-			CAFile:   Cert("loggregator-ca.crt"),
-		},
-		OutgoingDropsondePort: uint32(tcPort),
-		PPROFPort:             uint32(getTCPPort()),
-		MetronConfig: tcConf.MetronConfig{
-			UDPAddress: fmt.Sprintf("localhost:%d", metronPort),
-		},
-
-		EtcdUrls: []string{etcdClientURL}, EtcdMaxConcurrentRequests: 5,
-
-		SystemDomain:   "vcap.me",
-		SkipCertVerify: true,
-
-		ApiHost:         "http://127.0.0.1:65530",
-		UaaHost:         "http://127.0.0.1:65531",
-		UaaClient:       "bob",
-		UaaClientSecret: "yourUncle",
-	}
-}
-
 func StartTrafficController(conf tcConf.Config) (func(), int) {
 	By("making sure trafficcontroller was built")
 	tcPath := os.Getenv("TRAFFIC_CONTROLLER_BUILD_PATH")
