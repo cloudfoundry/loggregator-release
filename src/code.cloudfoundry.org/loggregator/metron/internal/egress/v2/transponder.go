@@ -73,21 +73,23 @@ func (t *Transponder) Start() {
 			continue
 		}
 
-		err := t.writer.Write(batch)
-		if err != nil {
-			// metric-documentation-v2: (loggregator.metron.dropped) Number of messages
-			// dropped when failing to write to Dopplers v2 API
-			t.droppedMetric.Increment(uint64(len(batch)))
-			continue
-		}
-
-		// metric-documentation-v2: (loggregator.metron.egress)
-		// Number of messages written to Doppler's v2 API
-		t.egressMetric.Increment(uint64(len(batch)))
-
+		t.write(batch)
 		batch = nil
 		lastSent = time.Now()
 	}
+}
+
+func (t *Transponder) write(batch []*plumbing.Envelope) {
+	if err := t.writer.Write(batch); err != nil {
+		// metric-documentation-v2: (loggregator.metron.dropped) Number of messages
+		// dropped when failing to write to Dopplers v2 API
+		t.droppedMetric.Increment(uint64(len(batch)))
+		return
+	}
+
+	// metric-documentation-v2: (loggregator.metron.egress)
+	// Number of messages written to Doppler's v2 API
+	t.egressMetric.Increment(uint64(len(batch)))
 }
 
 func (t *Transponder) batchReady(batch []*plumbing.Envelope, lastSent time.Time) bool {
