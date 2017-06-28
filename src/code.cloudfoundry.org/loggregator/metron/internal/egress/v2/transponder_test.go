@@ -1,6 +1,7 @@
 package v2_test
 
 import (
+	"errors"
 	"time"
 
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
@@ -66,6 +67,29 @@ var _ = Describe("Transponder", func() {
 			var batch []*v2.Envelope
 			Eventually(writer.WriteInput.Msg).Should(Receive(&batch))
 			Expect(batch).To(HaveLen(1))
+		})
+
+		It("clears batch upon egress failure", func() {
+			envelope := &v2.Envelope{SourceId: "uuid"}
+			nexter := newMockNexter()
+			writer := newMockWriter()
+
+			go func() {
+				for {
+					writer.WriteOutput.Ret0 <- errors.New("some-error")
+				}
+			}()
+
+			for i := 0; i < 6; i++ {
+				nexter.TryNextOutput.Ret0 <- envelope
+				nexter.TryNextOutput.Ret1 <- true
+			}
+
+			tx := egress.NewTransponder(nexter, writer, nil, 5, time.Minute, testhelper.NewMetricClient())
+			go tx.Start()
+
+			Eventually(writer.WriteCalled).Should(HaveLen(1))
+			Consistently(writer.WriteCalled).Should(HaveLen(1))
 		})
 
 		It("emits egress metric", func() {
