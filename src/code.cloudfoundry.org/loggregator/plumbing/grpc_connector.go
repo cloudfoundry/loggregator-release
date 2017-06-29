@@ -310,7 +310,11 @@ func (c *GRPCConnector) readStream(s plumbingReceiver, cs *consumerState) error 
 			return err
 		}
 
-		cs.data <- resp.Payload
+		select {
+		case cs.data <- resp.Payload:
+		case <-cs.ctx.Done():
+			return nil
+		}
 
 		// metric-documentation-v1: (listeners.receivedEnvelopes) Number of v1
 		// envelopes received over gRPC from Dopplers.
