@@ -3,10 +3,9 @@ Loggregator uses a microservices design architecture, with several distinct comp
 
 For a walk through fo a message delivery and monitoring approaches see this [video](https://www.youtube.com/watch?v=vR2wl22sU6Q)
 
-[(./loggregatornew.png)]
+![Loggregator System Design](./loggregatornew.png)
+**note** this diagram assumes the use of cf-deployment, cf-release is still using the following [design](./loggregator.png).
 
-
- 
 ## Ring Buffer Circuit Breaker
 In order to prevent disrupting application behavior or applying “backpressure” most of the Loggregator components share a common ring buffer data structure known as a “diode”. This diode utilizes separate read heads, and write heads and allows the components to handle faster writes than reads from within the Loggregator system. Each of these buffers emits metrics for ingress, egress, and dropped. 
 
