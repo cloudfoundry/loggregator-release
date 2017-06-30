@@ -2,17 +2,20 @@ package main
 
 import (
 	"flag"
+	"io/ioutil"
 	"log"
 
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/grpclog"
 
 	"code.cloudfoundry.org/loggregator/trafficcontroller/app"
 )
 
 func main() {
+	grpclog.SetLogger(log.New(ioutil.Discard, "", 0))
 	logFilePath := flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 	disableAccessControl := flag.Bool("disableAccessControl", false, "always all access to app logs")
 	configFile := flag.String("config", "config/loggregator_trafficcontroller.json", "Location of the loggregator trafficcontroller config json file")

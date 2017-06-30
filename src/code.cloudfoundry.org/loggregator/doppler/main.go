@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -42,6 +43,7 @@ import (
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/grpclog"
 )
 
 const dopplerOrigin = "DopplerServer"
@@ -51,6 +53,7 @@ func main() {
 	// MAIN
 	//------------------------------
 	rand.Seed(time.Now().UnixNano())
+	grpclog.SetLogger(log.New(ioutil.Discard, "", 0))
 
 	configFile := flag.String(
 		"config",

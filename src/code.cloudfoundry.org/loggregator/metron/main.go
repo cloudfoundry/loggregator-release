@@ -1,14 +1,17 @@
 package main
 
 import (
-	"code.cloudfoundry.org/loggregator/metricemitter"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"time"
 
+	"code.cloudfoundry.org/loggregator/metricemitter"
+
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/grpclog"
 
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"code.cloudfoundry.org/loggregator/profiler"
@@ -19,6 +22,7 @@ import (
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
+	grpclog.SetLogger(log.New(ioutil.Discard, "", 0))
 
 	configFilePath := flag.String(
 		"config",
