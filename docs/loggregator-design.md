@@ -29,4 +29,4 @@ Doppler is scaling is complex, and relies on a variety of factors but, primarily
 Traffic Controller manages the rate of egress from the Loggregator system for the Firehose and 'cf logs' stream. Additionally it provides the interface for container metrics and recent logs calls. Rather than using a diode it does this by notifying the system of slow consumers. 
 
 ## Syslog Drain Binders
-The Reverse Log Proxy, and a set of additional components for syslog drain binders is managed in a seperate but releated release known as the [scalable syslog release]. 
+The Reverse Log Proxy, and a set of additional components for syslog drain binders is managed in a seperate but releated release known as the [scalable syslog release](https://github.com/cloudfoundry/scalable-syslog-release). 
