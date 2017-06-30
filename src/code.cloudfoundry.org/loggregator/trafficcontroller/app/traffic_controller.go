@@ -38,7 +38,6 @@ import (
 
 type trafficController struct {
 	conf                 *Config
-	logFilePath          string
 	disableAccessControl bool
 	metricClient         metricemitter.MetricClient
 }
@@ -51,13 +50,11 @@ type finder interface {
 
 func NewTrafficController(
 	c *Config,
-	path string,
 	disableAccessControl bool,
 	metricClient metricemitter.MetricClient,
 ) *trafficController {
 	return &trafficController{
 		conf:                 c,
-		logFilePath:          path,
 		disableAccessControl: disableAccessControl,
 		metricClient:         metricClient,
 	}

@@ -16,7 +16,6 @@ import (
 
 func main() {
 	grpclog.SetLogger(log.New(ioutil.Discard, "", 0))
-	logFilePath := flag.String("logFile", "", "The agent log file, defaults to STDOUT")
 	disableAccessControl := flag.Bool("disableAccessControl", false, "always all access to app logs")
 	configFile := flag.String("config", "config/loggregator_trafficcontroller.json", "Location of the loggregator trafficcontroller config json file")
 
@@ -47,6 +46,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Couldn't connect to metric emitter: %s", err)
 	}
-	tc := app.NewTrafficController(conf, *logFilePath, *disableAccessControl, metricClient)
+	tc := app.NewTrafficController(conf, *disableAccessControl, metricClient)
 	tc.Start()
 }
