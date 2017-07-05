@@ -1,11 +1,12 @@
 package proxy
 
 import (
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"context"
 	"log"
 	"net/http"
 	"sync/atomic"
+
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"github.com/gorilla/mux"
 )
@@ -62,7 +63,7 @@ func (h *FirehoseHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.server.serveWS(firehoseID, subID, w, r, client)
+	h.server.serveWS(firehoseID, w, r, client)
 }
 
 func (h *FirehoseHandler) Count() int64 {

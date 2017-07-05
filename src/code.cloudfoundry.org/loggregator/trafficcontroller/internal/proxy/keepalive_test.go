@@ -14,7 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("WebsocketKeepalive", func() {
+var _ = Describe("KeepAlive", func() {
 	var (
 		testServer         *httptest.Server
 		wsClient           *websocket.Conn

@@ -268,32 +268,6 @@ var _ = Describe("DopplerProxy", func() {
 	})
 })
 
-var _ = Describe("DefaultHandlerProvider", func() {
-	It("returns an HTTP handler for .../recentlogs", func() {
-		httpHandler := proxy.NewHttpHandler(make(chan []byte))
-
-		target := proxy.HttpHandlerProvider(make(chan []byte))
-
-		Expect(target).To(BeAssignableToTypeOf(httpHandler))
-	})
-
-	It("returns a Websocket handler for .../stream", func() {
-		wsHandler := proxy.NewWebsocketHandler(make(chan []byte), time.Minute)
-
-		target := proxy.WebsocketHandlerProvider(make(chan []byte))
-
-		Expect(target).To(BeAssignableToTypeOf(wsHandler))
-	})
-
-	It("returns a Websocket handler for anything else", func() {
-		wsHandler := proxy.NewWebsocketHandler(make(chan []byte), time.Minute)
-
-		target := proxy.WebsocketHandlerProvider(make(chan []byte))
-
-		Expect(target).To(BeAssignableToTypeOf(wsHandler))
-	})
-})
-
 func buildContainerMetric(appID string, t time.Time) (*events.Envelope, []byte) {
 	envelope := &events.Envelope{
 		Origin:    proto.String("doppler"),

@@ -1,10 +1,11 @@
 package proxy
 
 import (
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"context"
 	"net/http"
 	"sync/atomic"
+
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"github.com/gorilla/mux"
 )
@@ -41,7 +42,7 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.server.serveWS("stream", appID, w, r, client)
+	h.server.serveWS("stream", w, r, client)
 }
 
 func (h *StreamHandler) Count() int64 {
