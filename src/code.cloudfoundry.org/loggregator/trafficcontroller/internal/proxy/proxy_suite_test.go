@@ -6,9 +6,12 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"time"
+
+	"testing"
 
 	"code.cloudfoundry.org/loggregator/plumbing"
-	"testing"
+	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -35,6 +38,10 @@ type LogAuthorizer struct {
 	Target     string
 	Result     AuthorizerResult
 }
+
+var _ = BeforeSuite(func() {
+	proxy.MetricsInterval = 100 * time.Millisecond
+})
 
 func (a *LogAuthorizer) Authorize(authToken string, target string) (int, error) {
 	a.TokenParam = authToken

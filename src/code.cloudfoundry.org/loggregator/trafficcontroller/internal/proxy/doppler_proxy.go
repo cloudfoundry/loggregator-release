@@ -15,8 +15,11 @@ import (
 )
 
 const (
-	FIREHOSE_ID     = "firehose"
-	metricsInterval = time.Second
+	FIREHOSE_ID = "firehose"
+)
+
+var (
+	MetricsInterval = 60 * time.Second
 )
 
 type Health interface {
@@ -88,7 +91,7 @@ func NewDopplerProxy(
 }
 
 func (d *DopplerProxy) emitMetrics(firehose *FirehoseHandler, stream *StreamHandler) {
-	for range time.Tick(metricsInterval) {
+	for range time.Tick(MetricsInterval) {
 		// metric-documentation-v1: (dopplerProxy.firehoses) Number of open firehose streams
 		d.metricSender.SendValue("dopplerProxy.firehoses", float64(firehose.Count()), "connections")
 		d.health.Set("firehoseStreamCount", float64(firehose.Count()))
