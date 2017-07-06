@@ -83,6 +83,36 @@ var _ = Describe("Start", func() {
 		Expect(resp.Envelopes).To(HaveLen(1))
 	})
 
+	It("limits the number of allowed connections", func() {
+		doppler, dopplerLis := setupDoppler()
+		defer dopplerLis.Close()
+		doppler.ContainerMetricsOutput.Err <- nil
+		doppler.ContainerMetricsOutput.Resp <- &plumbing.ContainerMetricsResponse{
+			Payload: [][]byte{buildContainerMetric()},
+		}
+
+		egressAddr, _ := setupRLP(dopplerLis, "localhost:0")
+		createStream := func() error {
+			egressClient, _ := setupRLPClient(egressAddr)
+			ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			c, err := egressClient.Receiver(ctx, &v2.EgressRequest{})
+			if err != nil {
+				return err
+			}
+
+			_, err = c.Recv()
+
+			select {
+			case <-ctx.Done():
+				// We don't care about the timeout errors
+				return nil
+			default:
+				return err
+			}
+		}
+		Eventually(createStream).Should(HaveOccurred())
+	})
+
 	Describe("draining", func() {
 		It("Stops accepting new connections", func() {
 			doppler, dopplerLis := setupDoppler()
@@ -271,6 +301,7 @@ func setupRLP(dopplerLis net.Listener, healthAddr string) (addr string, rlp *app
 		app.WithIngressAddrs([]string{dopplerLis.Addr().String()}),
 		app.WithIngressDialOptions(grpc.WithTransportCredentials(ingressTLSCredentials)),
 		app.WithEgressServerOptions(grpc.Creds(egressTLSCredentials)),
+		app.WithMaxEgressConnections(1),
 		app.WithHealthAddr(healthAddr),
 	)
 

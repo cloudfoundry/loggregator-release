@@ -7,6 +7,8 @@ import (
 	"net"
 	"sync"
 
+	"golang.org/x/net/netutil"
+
 	"github.com/prometheus/client_golang/prometheus"
 
 	"code.cloudfoundry.org/loggregator/healthendpoint"
@@ -25,8 +27,9 @@ type RLP struct {
 	ctx       context.Context
 	ctxCancel func()
 
-	egressPort       int
-	egressServerOpts []grpc.ServerOption
+	egressPort           int
+	egressServerOpts     []grpc.ServerOption
+	maxEgressConnections int
 
 	ingressAddrs    []string
 	ingressDialOpts []grpc.DialOption
@@ -51,13 +54,14 @@ type RLP struct {
 func NewRLP(m metricemitter.MetricClient, opts ...RLPOption) *RLP {
 	ctx, cancel := context.WithCancel(context.Background())
 	rlp := &RLP{
-		ingressAddrs:     []string{"doppler.service.cf.internal"},
-		ingressDialOpts:  []grpc.DialOption{grpc.WithInsecure()},
-		egressServerOpts: []grpc.ServerOption{},
-		metricClient:     m,
-		healthAddr:       "localhost:33333",
-		ctx:              ctx,
-		ctxCancel:        cancel,
+		ingressAddrs:         []string{"doppler.service.cf.internal"},
+		ingressDialOpts:      []grpc.DialOption{grpc.WithInsecure()},
+		egressServerOpts:     []grpc.ServerOption{},
+		maxEgressConnections: 500,
+		metricClient:         m,
+		healthAddr:           "localhost:33333",
+		ctx:                  ctx,
+		ctxCancel:            cancel,
 	}
 	for _, o := range opts {
 		o(rlp)
@@ -106,6 +110,14 @@ func WithIngressDialOptions(opts ...grpc.DialOption) RLPOption {
 func WithHealthAddr(addr string) RLPOption {
 	return func(r *RLP) {
 		r.healthAddr = addr
+	}
+}
+
+// WithMaxEgressConnections specifies the number of connections the RLP will
+// accept on the egress endpoint.
+func WithMaxEgressConnections(max int) RLPOption {
+	return func(r *RLP) {
+		r.maxEgressConnections = max
 	}
 }
 
@@ -158,11 +170,11 @@ func (r *RLP) setupIngress() {
 }
 
 func (r *RLP) startEgressListener() {
-	var err error
-	r.egressListener, err = net.Listen("tcp", fmt.Sprintf(":%d", r.egressPort))
+	l, err := net.Listen("tcp", fmt.Sprintf(":%d", r.egressPort))
 	if err != nil {
 		log.Fatalf("failed to listen on port: %d: %s", r.egressPort, err)
 	}
+	r.egressListener = netutil.LimitListener(l, r.maxEgressConnections)
 	r.egressAddr = r.egressListener.Addr()
 }
 
