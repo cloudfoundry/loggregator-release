@@ -52,7 +52,10 @@ func NewGRPCListener(
 		log.Printf("Failed to start listener (port=%d) for gRPC: %s", conf.Port, err)
 		return nil, err
 	}
-	grpcServer := grpc.NewServer(grpc.Creds(transportCreds))
+	grpcServer := grpc.NewServer(
+		grpc.Creds(transportCreds),
+		grpc.MaxMsgSize(64*1024),
+	)
 
 	// v1 ingress
 	plumbingv1.RegisterDopplerIngestorServer(

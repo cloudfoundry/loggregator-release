@@ -152,7 +152,10 @@ func (t *trafficController) Start() {
 	}
 
 	f.Start()
-	pool := plumbing.NewPool(20, grpc.WithTransportCredentials(creds))
+	pool := plumbing.NewPool(20,
+		grpc.WithTransportCredentials(creds),
+		grpc.WithMaxMsgSize(64*1924),
+	)
 	grpcConnector := plumbing.NewGRPCConnector(1000, pool, f, batcher, t.metricClient)
 
 	dopplerHandler := http.Handler(
