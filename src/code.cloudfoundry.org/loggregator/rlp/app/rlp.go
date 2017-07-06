@@ -7,6 +7,8 @@ import (
 	"net"
 	"sync"
 
+	"golang.org/x/net/netutil"
+
 	"github.com/prometheus/client_golang/prometheus"
 
 	"code.cloudfoundry.org/loggregator/healthendpoint"
@@ -172,7 +174,7 @@ func (r *RLP) startEgressListener() {
 	if err != nil {
 		log.Fatalf("failed to listen on port: %d: %s", r.egressPort, err)
 	}
-	r.egressListener = egress.LimitListener(l, r.maxEgressConnections)
+	r.egressListener = netutil.LimitListener(l, r.maxEgressConnections)
 	r.egressAddr = r.egressListener.Addr()
 }
 

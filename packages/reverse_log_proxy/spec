@@ -41,6 +41,7 @@ files:
 - loggregator/src/golang.org/x/net/idna/*.go # gosub
 - loggregator/src/golang.org/x/net/internal/timeseries/*.go # gosub
 - loggregator/src/golang.org/x/net/lex/httplex/*.go # gosub
+- loggregator/src/golang.org/x/net/netutil/*.go # gosub
 - loggregator/src/golang.org/x/net/trace/*.go # gosub
 - loggregator/src/golang.org/x/text/secure/bidirule/*.go # gosub
 - loggregator/src/golang.org/x/text/transform/*.go # gosub
