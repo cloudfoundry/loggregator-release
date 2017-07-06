@@ -11,8 +11,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-const firehoseID = "firehose"
-
 type FirehoseHandler struct {
 	server   *WebSocketServer
 	grpcConn grpcConnector
@@ -63,7 +61,7 @@ func (h *FirehoseHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.server.serveWS(firehoseID, w, r, client)
+	h.server.serveWS(w, r, client)
 }
 
 func (h *FirehoseHandler) Count() int64 {

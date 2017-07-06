@@ -42,7 +42,7 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.server.serveWS("stream", w, r, client)
+	h.server.serveWS(w, r, client)
 }
 
 func (h *StreamHandler) Count() int64 {
