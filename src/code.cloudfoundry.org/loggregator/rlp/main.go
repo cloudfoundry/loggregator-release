@@ -78,7 +78,10 @@ func main() {
 		metric,
 		app.WithEgressPort(*egressPort),
 		app.WithIngressAddrs(hostPorts),
-		app.WithIngressDialOptions(grpc.WithTransportCredentials(dopplerCredentials)),
+		app.WithIngressDialOptions(
+			grpc.WithTransportCredentials(dopplerCredentials),
+			grpc.WithMaxMsgSize(64*1024),
+		),
 		app.WithEgressServerOptions(grpc.Creds(dopplerCredentials)),
 		app.WithHealthAddr(*healthAddr),
 	)

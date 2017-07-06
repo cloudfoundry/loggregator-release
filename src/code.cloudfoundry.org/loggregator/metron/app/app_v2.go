@@ -1,12 +1,13 @@
 package app
 
 import (
-	"code.cloudfoundry.org/loggregator/diodes"
-	"code.cloudfoundry.org/loggregator/metricemitter"
 	"fmt"
 	"log"
 	"math/rand"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/diodes"
+	"code.cloudfoundry.org/loggregator/metricemitter"
 
 	gendiodes "github.com/cloudfoundry/diodes"
 
@@ -75,7 +76,12 @@ func (a *AppV2) Start() {
 	metronAddress := fmt.Sprintf("127.0.0.1:%d", a.config.GRPC.Port)
 	log.Printf("metron v2 API started on addr %s", metronAddress)
 	rx := ingress.NewReceiver(envelopeBuffer, a.metricClient)
-	ingressServer := ingress.NewServer(metronAddress, rx, grpc.Creds(a.serverCreds))
+	ingressServer := ingress.NewServer(
+		metronAddress,
+		rx,
+		grpc.Creds(a.serverCreds),
+		grpc.MaxMsgSize(64*1024),
+	)
 	ingressServer.Start()
 }
 
