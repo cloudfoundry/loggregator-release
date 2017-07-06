@@ -13,13 +13,13 @@ import (
 type ContainerMetricsHandler struct {
 	grpcConn     grpcConnector
 	timeout      time.Duration
-	metricSender metricSender
+	metricSender MetricSender
 }
 
 func NewContainerMetricsHandler(
 	grpcConn grpcConnector,
 	t time.Duration,
-	m metricSender,
+	m MetricSender,
 ) *ContainerMetricsHandler {
 	return &ContainerMetricsHandler{
 		grpcConn:     grpcConn,

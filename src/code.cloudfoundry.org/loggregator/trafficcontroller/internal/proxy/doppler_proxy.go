@@ -32,7 +32,7 @@ type DopplerProxy struct {
 	numFirehoses  int64
 	numAppStreams int64
 
-	metricSender metricSender
+	metricSender MetricSender
 	health       Health
 }
 
@@ -42,7 +42,7 @@ type grpcConnector interface {
 	RecentLogs(ctx context.Context, appID string) [][]byte
 }
 
-type metricSender interface {
+type MetricSender interface {
 	SendValue(name string, value float64, unit string) error
 }
 
@@ -52,7 +52,7 @@ func NewDopplerProxy(
 	grpcConn grpcConnector,
 	cookieDomain string,
 	timeout time.Duration,
-	m metricSender,
+	m MetricSender,
 	health Health,
 ) *DopplerProxy {
 	r := mux.NewRouter()
@@ -70,9 +70,7 @@ func NewDopplerProxy(
 	recentLogsHandler := NewRecentLogsHandler(grpcConn, timeout, m)
 	r.Handle("/apps/{appID}/recentlogs", logAccessMiddleware.Wrap(recentLogsHandler))
 
-	wsServer := &WebSocketServer{
-		MetricSender: m,
-	}
+	wsServer := NewWebSocketServer(m)
 	streamHandler := NewStreamHandler(grpcConn, wsServer)
 	r.Handle("/apps/{appID}/stream", logAccessMiddleware.Wrap(streamHandler))
 

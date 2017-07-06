@@ -12,7 +12,13 @@ import (
 const websocketKeepAliveDuration = 30 * time.Second
 
 type WebSocketServer struct {
-	MetricSender metricSender
+	metricSender MetricSender
+}
+
+func NewWebSocketServer(m MetricSender) *WebSocketServer {
+	return &WebSocketServer{
+		metricSender: m,
+	}
 }
 
 func (s *WebSocketServer) serveWS(
@@ -57,7 +63,7 @@ func (s *WebSocketServer) serveWS(
 			case <-timer.C:
 				// metric-documentation-v1: (dopplerProxy.slowConsumer) A slow consumer of the
 				// websocket stream
-				s.MetricSender.SendValue("dopplerProxy.slowConsumer", 1, "consumer")
+				s.metricSender.SendValue("dopplerProxy.slowConsumer", 1, "consumer")
 				log.Print("Doppler Proxy: Slow Consumer")
 				return
 			}

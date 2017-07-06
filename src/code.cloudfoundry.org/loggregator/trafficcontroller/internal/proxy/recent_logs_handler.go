@@ -12,13 +12,13 @@ import (
 type RecentLogsHandler struct {
 	grpcConn     grpcConnector
 	timeout      time.Duration
-	metricSender metricSender
+	metricSender MetricSender
 }
 
 func NewRecentLogsHandler(
 	grpcConn grpcConnector,
 	t time.Duration,
-	m metricSender,
+	m MetricSender,
 ) *RecentLogsHandler {
 	return &RecentLogsHandler{
 		grpcConn:     grpcConn,
