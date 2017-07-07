@@ -56,37 +56,18 @@ function check_output {
     fi
 }
 
-function loggregator_package {
-    local not_loggregator_packages=( code.cloudfoundry.org github.com golang.org google.golang.org gopkg.in )
-    for p in "${not_loggregator_packages[@]}"
-    do
-        if [[ "$p" == "$1" ]]
-        then
-            return 1
-        fi
-    done
-    return 0
-}
-
 function run_cleaners {
     print_checkpoint "Running Cleaners"
 
-    src_dir="$(dirname $(dirname $0))/src"
+    src_dir="$(dirname $(dirname $0))/src/code.cloudfoundry.org/loggregator"
     for name in $(ls -1 $src_dir)
     do
         dir="$src_dir/$name"
-        if [[ ! -d $dir ]]
-        then
-            continue
-        fi
-        if loggregator_package $(basename $dir)
-        then
-            echo cleaning $dir
-            goimports -w $dir
-            gofmt -s -w $dir
-            misspell -w $dir
-            unconvert -v -apply $(basename $dir)/...
-        fi
+        echo cleaning $dir
+        goimports -w $dir
+        gofmt -s -w $dir
+        misspell -w $dir
+        unconvert -v -apply $(basename $dir)/...
     done
     return 0
 }
@@ -229,36 +210,29 @@ function run_install_tools {
 function run_linters {
     print_checkpoint "Running Linters"
 
-    src_dir="$(dirname $(dirname $0))/src"
+    src_dir="$(dirname $(dirname $0))/src/code.cloudfoundry.org/loggregator"
     for name in $(ls -1 $src_dir)
     do
         dir="$src_dir/$name"
-        if [[ ! -d $dir ]]
-        then
-            continue
-        fi
-        if loggregator_package $(basename $dir)
-        then
-            echo cleaning $dir
-            goimports -w $dir
-            gofmt -s -w $dir
-            misspell -w $dir
-            unconvert -v -apply
+        echo cleaning $dir
+        goimports -w $dir
+        gofmt -s -w $dir
+        misspell -w $dir
+        unconvert -v -apply
 
-            local pkg="$(basename $dir)/..."
-            go vet $pkg
-            deadcode $dir
-            golint $pkg
-            aligncheck $pkg
-            structcheck $pkg
-            varcheck $pkg
-            errcheck $pkg
-            ineffassign $dir
-            interfacer $pkg
-            gosimple $pkg
-            staticcheck $pkg
-            unused $pkg
-        fi
+        local pkg="$dir/..."
+        go vet $pkg
+        deadcode $dir
+        golint $pkg
+        aligncheck $pkg
+        structcheck $pkg
+        varcheck $pkg
+        errcheck $pkg
+        ineffassign $dir
+        interfacer $pkg
+        gosimple $pkg
+        staticcheck $pkg
+        unused $pkg
     done
     return 0
 }
