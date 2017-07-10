@@ -480,10 +480,10 @@ func _Counter_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 	switch x := m.Value.(type) {
 	case *Counter_Delta:
 		b.EncodeVarint(2<<3 | proto.WireVarint)
-		b.EncodeVarint(uint64(x.Delta))
+		b.EncodeVarint(x.Delta)
 	case *Counter_Total:
 		b.EncodeVarint(3<<3 | proto.WireVarint)
-		b.EncodeVarint(uint64(x.Total))
+		b.EncodeVarint(x.Total)
 	case nil:
 	default:
 		return fmt.Errorf("Counter.Value has unexpected type %T", x)
@@ -519,10 +519,10 @@ func _Counter_OneofSizer(msg proto.Message) (n int) {
 	switch x := m.Value.(type) {
 	case *Counter_Delta:
 		n += proto.SizeVarint(2<<3 | proto.WireVarint)
-		n += proto.SizeVarint(uint64(x.Delta))
+		n += proto.SizeVarint(x.Delta)
 	case *Counter_Total:
 		n += proto.SizeVarint(3<<3 | proto.WireVarint)
-		n += proto.SizeVarint(uint64(x.Total))
+		n += proto.SizeVarint(x.Total)
 	case nil:
 	default:
 		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
