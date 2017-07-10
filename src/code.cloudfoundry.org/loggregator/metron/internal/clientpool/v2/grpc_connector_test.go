@@ -6,9 +6,9 @@ import (
 	"io/ioutil"
 	"net"
 
-	"code.cloudfoundry.org/loggregator/plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing/v2"
 
-	"code.cloudfoundry.org/loggregator/metron/internal/clientpool/v1"
+	"code.cloudfoundry.org/loggregator/metron/internal/clientpool/v2"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -17,31 +17,31 @@ import (
 type SpyFetcher struct {
 	Addr   string
 	Closer io.Closer
-	Client plumbing.DopplerIngestor_PusherClient
+	Client loggregator_v2.DopplerIngress_BatchSenderClient
 }
 
-func (f *SpyFetcher) Fetch(addr string) (conn io.Closer, client plumbing.DopplerIngestor_PusherClient, err error) {
+func (f *SpyFetcher) Fetch(addr string) (conn io.Closer, client loggregator_v2.DopplerIngress_BatchSenderClient, err error) {
 	f.Addr = addr
 	return f.Closer, f.Client, nil
 }
 
 type SpyStream struct {
-	plumbing.DopplerIngestor_PusherClient
+	loggregator_v2.DopplerIngress_BatchSenderClient
 }
 
 var _ = Describe("GRPCConnector", func() {
 	Context("when first balancer returns an address", func() {
 		var (
 			fetcher   *SpyFetcher
-			connector v1.GRPCConnector
+			connector v2.GRPCConnector
 		)
 
 		BeforeEach(func() {
-			balancers := []*v1.Balancer{
-				v1.NewBalancer("z1.doppler.com:99", v1.WithLookup(func(string) ([]net.IP, error) {
+			balancers := []*v2.Balancer{
+				v2.NewBalancer("z1.doppler.com:99", v2.WithLookup(func(string) ([]net.IP, error) {
 					return []net.IP{net.ParseIP("10.10.10.1")}, nil
 				})),
-				v1.NewBalancer("doppler.com:99", v1.WithLookup(func(string) ([]net.IP, error) {
+				v2.NewBalancer("doppler.com:99", v2.WithLookup(func(string) ([]net.IP, error) {
 					return []net.IP{net.ParseIP("1.1.1.1")}, nil
 				})),
 			}
@@ -49,7 +49,7 @@ var _ = Describe("GRPCConnector", func() {
 				Closer: ioutil.NopCloser(nil),
 				Client: SpyStream{},
 			}
-			connector = v1.MakeGRPCConnector(fetcher, balancers)
+			connector = v2.MakeGRPCConnector(fetcher, balancers)
 		})
 
 		It("fetches a client with the given address", func() {
@@ -68,11 +68,11 @@ var _ = Describe("GRPCConnector", func() {
 
 	Context("when first balancer does not return an address", func() {
 		It("dials the next balancer", func() {
-			balancers := []*v1.Balancer{
-				v1.NewBalancer("z1.doppler.com:99", v1.WithLookup(func(string) ([]net.IP, error) {
+			balancers := []*v2.Balancer{
+				v2.NewBalancer("z1.doppler.com:99", v2.WithLookup(func(string) ([]net.IP, error) {
 					return nil, errors.New("Should not get here")
 				})),
-				v1.NewBalancer("doppler.com:99", v1.WithLookup(func(string) ([]net.IP, error) {
+				v2.NewBalancer("doppler.com:99", v2.WithLookup(func(string) ([]net.IP, error) {
 					return []net.IP{net.ParseIP("1.1.1.1")}, nil
 				})),
 			}
@@ -80,7 +80,7 @@ var _ = Describe("GRPCConnector", func() {
 				Closer: ioutil.NopCloser(nil),
 				Client: SpyStream{},
 			}
-			connector := v1.MakeGRPCConnector(fetcher, balancers)
+			connector := v2.MakeGRPCConnector(fetcher, balancers)
 
 			connector.Connect()
 			Expect(fetcher.Addr).To(Equal("1.1.1.1:99"))
@@ -89,11 +89,11 @@ var _ = Describe("GRPCConnector", func() {
 
 	Context("when the none balancer return anything", func() {
 		It("returns an error", func() {
-			balancers := []*v1.Balancer{
-				v1.NewBalancer("z1.doppler.com:99", v1.WithLookup(func(string) ([]net.IP, error) {
+			balancers := []*v2.Balancer{
+				v2.NewBalancer("z1.doppler.com:99", v2.WithLookup(func(string) ([]net.IP, error) {
 					return nil, errors.New("Should not get here")
 				})),
-				v1.NewBalancer("doppler.com:99", v1.WithLookup(func(string) ([]net.IP, error) {
+				v2.NewBalancer("doppler.com:99", v2.WithLookup(func(string) ([]net.IP, error) {
 					return nil, errors.New("Should not get here")
 				})),
 			}
@@ -101,7 +101,7 @@ var _ = Describe("GRPCConnector", func() {
 				Closer: ioutil.NopCloser(nil),
 				Client: SpyStream{},
 			}
-			connector := v1.MakeGRPCConnector(fetcher, balancers)
+			connector := v2.MakeGRPCConnector(fetcher, balancers)
 
 			_, _, err := connector.Connect()
 			Expect(err).To(HaveOccurred())
