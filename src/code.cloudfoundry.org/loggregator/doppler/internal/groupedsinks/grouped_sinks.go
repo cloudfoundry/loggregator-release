@@ -1,8 +1,9 @@
 package groupedsinks
 
 import (
-	"code.cloudfoundry.org/loggregator/metricemitter"
 	"sync"
+
+	"code.cloudfoundry.org/loggregator/metricemitter"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks/firehose_group"
 	"code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks/sink_wrapper"
@@ -15,11 +16,16 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
+// MetricClient creates new CounterMetrics to be emitted periodically.
+type MetricClient interface {
+	NewCounterMetric(name string, opts ...metricemitter.MetricOption) *metricemitter.CounterMetric
+}
+
 type MetricBatcher interface {
 	BatchIncrementCounter(name string)
 }
 
-func NewGroupedSinks(b MetricBatcher, mc metricemitter.MetricClient) *GroupedSinks {
+func NewGroupedSinks(b MetricBatcher, mc MetricClient) *GroupedSinks {
 	droppedMetric := mc.NewCounterMetric("sinks.dropped",
 		metricemitter.WithVersion(2, 0),
 	)

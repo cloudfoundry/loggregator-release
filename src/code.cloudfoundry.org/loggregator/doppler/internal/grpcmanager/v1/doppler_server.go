@@ -1,12 +1,13 @@
 package v1
 
 import (
-	"code.cloudfoundry.org/loggregator/diodes"
-	"code.cloudfoundry.org/loggregator/metricemitter"
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"log"
 	"sync/atomic"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/diodes"
+	"code.cloudfoundry.org/loggregator/metricemitter"
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -56,11 +57,16 @@ type sender interface {
 	Context() context.Context
 }
 
+// MetricClient creates new CounterMetrics to be emitted periodically.
+type MetricClient interface {
+	NewCounterMetric(name string, opts ...metricemitter.MetricOption) *metricemitter.CounterMetric
+}
+
 // NewDopplerServer creates a new DopplerServer.
 func NewDopplerServer(
 	registrar Registrar,
 	dumper DataDumper,
-	metricClient metricemitter.MetricClient,
+	metricClient MetricClient,
 	health HealthRegistrar,
 ) *DopplerServer {
 	egressMetric := metricClient.NewCounterMetric("egress",

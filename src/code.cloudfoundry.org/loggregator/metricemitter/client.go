@@ -8,10 +8,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-type MetricClient interface {
-	NewCounterMetric(name string, opts ...MetricOption) *CounterMetric
-}
-
 type Client struct {
 	ingressClient v2.IngressClient
 	pulseInterval time.Duration

@@ -15,6 +15,11 @@ type Writer interface {
 	Write(msgs []*plumbing.Envelope) error
 }
 
+// MetricClient creates new CounterMetrics to be emitted periodically.
+type MetricClient interface {
+	NewCounterMetric(name string, opts ...metricemitter.MetricOption) *metricemitter.CounterMetric
+}
+
 type Transponder struct {
 	nexter        Nexter
 	writer        Writer
@@ -31,7 +36,7 @@ func NewTransponder(
 	tags map[string]string,
 	batchSize int,
 	batchInterval time.Duration,
-	metricClient metricemitter.MetricClient,
+	metricClient MetricClient,
 ) *Transponder {
 	droppedMetric := metricClient.NewCounterMetric("dropped",
 		metricemitter.WithVersion(2, 0),

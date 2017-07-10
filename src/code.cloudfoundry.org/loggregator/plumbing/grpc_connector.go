@@ -54,13 +54,18 @@ type GRPCConnector struct {
 	ingressMetric  *metricemitter.CounterMetric
 }
 
+// MetricClient creates new CounterMetrics to be emitted periodically.
+type MetricClient interface {
+	NewCounterMetric(name string, opts ...metricemitter.MetricOption) *metricemitter.CounterMetric
+}
+
 // NewGRPCConnector creates a new GRPCConnector.
 func NewGRPCConnector(
 	bufferSize int,
 	pool DopplerPool,
 	f Finder,
 	batcher MetaMetricBatcher,
-	m metricemitter.MetricClient,
+	m MetricClient,
 ) *GRPCConnector {
 	ingressMetric := m.NewCounterMetric(
 		"ingress",

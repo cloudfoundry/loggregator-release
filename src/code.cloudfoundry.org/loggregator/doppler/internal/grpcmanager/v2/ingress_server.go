@@ -33,10 +33,15 @@ type IngressServer struct {
 	health         HealthRegistrar
 }
 
+// MetricClient creates new CounterMetrics to be emitted periodically.
+type MetricClient interface {
+	NewCounterMetric(name string, opts ...metricemitter.MetricOption) *metricemitter.CounterMetric
+}
+
 func NewIngressServer(
 	envelopeBuffer DataSetter,
 	batcher Batcher,
-	metricClient metricemitter.MetricClient,
+	metricClient MetricClient,
 	health HealthRegistrar,
 ) *IngressServer {
 	ingressMetric := metricClient.NewCounterMetric("ingress",

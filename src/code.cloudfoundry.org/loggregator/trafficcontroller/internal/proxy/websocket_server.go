@@ -22,10 +22,16 @@ func (s *WebSocketServer) serveWS(
 	w http.ResponseWriter,
 	r *http.Request,
 	recv func() ([]byte, error),
+	incEgressMetric func(),
 ) {
 	data := make(chan []byte)
 
-	handler := NewWebsocketHandler(data, websocketKeepAliveDuration, nil)
+	handler := NewWebsocketHandler(
+		data,
+		websocketKeepAliveDuration,
+		s.metricSender,
+		incEgressMetric,
+	)
 
 	go func() {
 		defer close(data)

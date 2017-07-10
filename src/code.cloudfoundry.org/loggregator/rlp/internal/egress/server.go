@@ -22,6 +22,11 @@ type Receiver interface {
 	Receive(ctx context.Context, req *v2.EgressRequest) (rx func() (*v2.Envelope, error), err error)
 }
 
+// MetricClient creates new CounterMetrics to be emitted periodically.
+type MetricClient interface {
+	NewCounterMetric(name string, opts ...metricemitter.MetricOption) *metricemitter.CounterMetric
+}
+
 type Server struct {
 	receiver      Receiver
 	egressMetric  *metricemitter.CounterMetric
@@ -32,7 +37,7 @@ type Server struct {
 
 func NewServer(
 	r Receiver,
-	m metricemitter.MetricClient,
+	m MetricClient,
 	h HealthRegistrar,
 	c context.Context,
 ) *Server {

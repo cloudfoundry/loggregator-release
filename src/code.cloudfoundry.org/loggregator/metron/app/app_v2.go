@@ -1,12 +1,13 @@
 package app
 
 import (
-	"code.cloudfoundry.org/loggregator/diodes"
-	"code.cloudfoundry.org/loggregator/metricemitter"
 	"fmt"
 	"log"
 	"math/rand"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/diodes"
+	"code.cloudfoundry.org/loggregator/metricemitter"
 
 	gendiodes "github.com/cloudfoundry/diodes"
 
@@ -19,12 +20,17 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
+// MetricClient creates new CounterMetrics to be emitted periodically.
+type MetricClient interface {
+	NewCounterMetric(name string, opts ...metricemitter.MetricOption) *metricemitter.CounterMetric
+}
+
 type AppV2 struct {
 	config         *Config
 	healthRegistry *health.Registry
 	clientCreds    credentials.TransportCredentials
 	serverCreds    credentials.TransportCredentials
-	metricClient   metricemitter.MetricClient
+	metricClient   MetricClient
 }
 
 func NewV2App(
@@ -32,7 +38,7 @@ func NewV2App(
 	r *health.Registry,
 	clientCreds credentials.TransportCredentials,
 	serverCreds credentials.TransportCredentials,
-	metricClient metricemitter.MetricClient,
+	metricClient MetricClient,
 ) *AppV2 {
 	return &AppV2{
 		config:         c,

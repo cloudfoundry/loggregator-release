@@ -14,12 +14,14 @@ type StreamHandler struct {
 	server   *WebSocketServer
 	grpcConn grpcConnector
 	counter  int64
+	sender   MetricSender
 }
 
-func NewStreamHandler(grpcConn grpcConnector, w *WebSocketServer) *StreamHandler {
+func NewStreamHandler(grpcConn grpcConnector, w *WebSocketServer, m MetricSender) *StreamHandler {
 	return &StreamHandler{
 		grpcConn: grpcConn,
 		server:   w,
+		sender:   m,
 	}
 }
 
@@ -42,7 +44,7 @@ func (h *StreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.server.serveWS(w, r, client)
+	h.server.serveWS(w, r, client, h.sender.IncrementEgressStream)
 }
 
 func (h *StreamHandler) Count() int64 {

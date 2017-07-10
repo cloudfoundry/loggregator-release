@@ -1,6 +1,11 @@
 package sinkmanager
 
 import (
+	"fmt"
+	"log"
+	"sync"
+	"time"
+
 	"code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/containermetric"
@@ -10,10 +15,6 @@ import (
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/blacklist"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/metrics"
 	"code.cloudfoundry.org/loggregator/metricemitter"
-	"fmt"
-	"log"
-	"sync"
-	"time"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/store"
 
@@ -30,6 +31,11 @@ type MetricBatcher interface {
 type HealthRegistrar interface {
 	Inc(name string)
 	Dec(name string)
+}
+
+// MetricClient creates new CounterMetrics to be emitted periodically.
+type MetricClient interface {
+	NewCounterMetric(name string, opts ...metricemitter.MetricOption) *metricemitter.CounterMetric
 }
 
 type SinkManager struct {
@@ -64,7 +70,7 @@ func New(
 	metricTTL,
 	dialTimeout time.Duration,
 	metricBatcher MetricBatcher,
-	metricClient metricemitter.MetricClient,
+	metricClient MetricClient,
 	health HealthRegistrar,
 ) *SinkManager {
 	return &SinkManager{

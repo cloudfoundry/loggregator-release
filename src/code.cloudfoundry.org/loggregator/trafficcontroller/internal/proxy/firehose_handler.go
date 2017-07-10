@@ -15,12 +15,14 @@ type FirehoseHandler struct {
 	server   *WebSocketServer
 	grpcConn grpcConnector
 	counter  int64
+	sender   MetricSender
 }
 
-func NewFirehoseHandler(grpcConn grpcConnector, w *WebSocketServer) *FirehoseHandler {
+func NewFirehoseHandler(grpcConn grpcConnector, w *WebSocketServer, m MetricSender) *FirehoseHandler {
 	return &FirehoseHandler{
 		grpcConn: grpcConn,
 		server:   w,
+		sender:   m,
 	}
 }
 
@@ -61,7 +63,7 @@ func (h *FirehoseHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.server.serveWS(w, r, client)
+	h.server.serveWS(w, r, client, h.sender.IncrementEgressFirehose)
 }
 
 func (h *FirehoseHandler) Count() int64 {

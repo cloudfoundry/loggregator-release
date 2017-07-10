@@ -14,13 +14,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-const (
-	FIREHOSE_ID = "firehose"
-)
-
-var (
-	MetricsInterval = 60 * time.Second
-)
+var MetricsInterval = 60 * time.Second
 
 type Health interface {
 	Set(name string, value float64)
@@ -44,6 +38,8 @@ type grpcConnector interface {
 
 type MetricSender interface {
 	SendValue(name string, value float64, unit string) error
+	IncrementEgressStream()
+	IncrementEgressFirehose()
 }
 
 func NewDopplerProxy(
@@ -71,10 +67,10 @@ func NewDopplerProxy(
 	r.Handle("/apps/{appID}/recentlogs", logAccessMiddleware.Wrap(recentLogsHandler))
 
 	wsServer := NewWebSocketServer(m)
-	streamHandler := NewStreamHandler(grpcConn, wsServer)
+	streamHandler := NewStreamHandler(grpcConn, wsServer, m)
 	r.Handle("/apps/{appID}/stream", logAccessMiddleware.Wrap(streamHandler))
 
-	firehoseHandler := NewFirehoseHandler(grpcConn, wsServer)
+	firehoseHandler := NewFirehoseHandler(grpcConn, wsServer, m)
 	r.Handle("/firehose/{subID}", adminAccessMiddleware.Wrap(firehoseHandler))
 
 	d := &DopplerProxy{

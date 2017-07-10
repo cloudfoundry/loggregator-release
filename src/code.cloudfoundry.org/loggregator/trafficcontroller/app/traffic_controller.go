@@ -36,10 +36,15 @@ import (
 	"google.golang.org/grpc"
 )
 
-type trafficController struct {
+// MetricClient creates new CounterMetrics to be emitted periodically.
+type MetricClient interface {
+	NewCounterMetric(name string, opts ...metricemitter.MetricOption) *metricemitter.CounterMetric
+}
+
+type TrafficController struct {
 	conf                 *Config
 	disableAccessControl bool
-	metricClient         metricemitter.MetricClient
+	metricClient         MetricClient
 }
 
 // finder provides service discovery of Doppler processes
@@ -51,16 +56,16 @@ type finder interface {
 func NewTrafficController(
 	c *Config,
 	disableAccessControl bool,
-	metricClient metricemitter.MetricClient,
-) *trafficController {
-	return &trafficController{
+	metricClient MetricClient,
+) *TrafficController {
+	return &TrafficController{
 		conf:                 c,
 		disableAccessControl: disableAccessControl,
 		metricClient:         metricClient,
 	}
 }
 
-func (t *trafficController) Start() {
+func (t *TrafficController) Start() {
 	tlsConf := plumbing.NewTLSConfig(
 		plumbing.WithCipherSuites(t.conf.CipherSuites),
 	)
@@ -162,7 +167,7 @@ func (t *trafficController) Start() {
 			grpcConnector,
 			"doppler."+t.conf.SystemDomain,
 			15*time.Second,
-			&metricShim{},
+			newMetricShim(t.metricClient),
 			healthRegistry,
 		),
 	)
@@ -199,7 +204,7 @@ func (t *trafficController) Start() {
 	log.Print("Shutting down")
 }
 
-func (t *trafficController) setupDefaultEmitter(origin, destination string) error {
+func (t *TrafficController) setupDefaultEmitter(origin, destination string) error {
 	if origin == "" {
 		return errors.New("Cannot initialize metrics with an empty origin")
 	}
@@ -217,7 +222,7 @@ func (t *trafficController) setupDefaultEmitter(origin, destination string) erro
 	return nil
 }
 
-func (t *trafficController) initializeMetrics(origin, destination string) (*metricbatcher.MetricBatcher, error) {
+func (t *TrafficController) initializeMetrics(origin, destination string) (*metricbatcher.MetricBatcher, error) {
 	err := t.setupDefaultEmitter(origin, destination)
 	if err != nil {
 		// Legacy holdover.  We would prefer to panic, rather than just throwing our metrics
@@ -226,8 +231,8 @@ func (t *trafficController) initializeMetrics(origin, destination string) (*metr
 		dropsonde.DefaultEmitter = &dropsonde.NullEventEmitter{}
 	}
 
-	// Copied from dropsonde.initialize(), since we stopped using dropsonde.Initialize
-	// but needed it to continue operating the same.
+	// Copied from dropsonde.initialize(), since we stopped using
+	// dropsonde.Initialize but needed it to continue operating the same.
 	sender := metric_sender.NewMetricSender(dropsonde.DefaultEmitter)
 	batcher := metricbatcher.New(sender, time.Second)
 	metrics.Initialize(sender, batcher)
@@ -238,7 +243,7 @@ func (t *trafficController) initializeMetrics(origin, destination string) (*metr
 	return batcher, err
 }
 
-func (t *trafficController) defaultStoreAdapterProvider(conf *Config) storeadapter.StoreAdapter {
+func (t *TrafficController) defaultStoreAdapterProvider(conf *Config) storeadapter.StoreAdapter {
 	workPool, err := workpool.NewWorkPool(conf.EtcdMaxConcurrentRequests)
 	if err != nil {
 		log.Panic(err)

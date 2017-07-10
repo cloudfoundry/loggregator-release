@@ -1,5 +1,3 @@
-//go:generate hel
-
 package proxy_test
 
 import (
@@ -16,8 +14,10 @@ import (
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
+	"github.com/gorilla/websocket"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
@@ -63,11 +63,12 @@ var _ = Describe("DopplerProxy", func() {
 		close(mockGrpcConnector.SubscribeOutput.Ret0)
 		close(mockGrpcConnector.SubscribeOutput.Ret1)
 
+		mockDopplerStreamClient.RecvOutput.Ret0 <- []byte("test-message")
 		close(mockDopplerStreamClient.RecvOutput.Ret0)
 		close(mockDopplerStreamClient.RecvOutput.Ret1)
 	})
 
-	Describe("health metrics", func() {
+	Describe("metrics", func() {
 		It("emits latency value metric for recentlogs request", func() {
 			mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
 			req, _ := http.NewRequest("GET", "/apps/appID123/recentlogs", nil)
@@ -107,6 +108,31 @@ var _ = Describe("DopplerProxy", func() {
 			Expect(metric.Unit).To(BeEmpty())
 			Expect(metric.Value).To(BeZero())
 		})
+
+		DescribeTable("increments a counter for every envelope that is written", func(url, endpoint string) {
+			server := httptest.NewServer(dopplerProxy)
+			defer server.CloseClientConnections()
+
+			_, _, err := websocket.DefaultDialer.Dial(
+				wsEndpoint(server, url),
+				http.Header{"Authorization": []string{"token"}},
+			)
+			Expect(err).ToNot(HaveOccurred())
+
+			var tags map[string]string
+			f := func() int {
+				var total int
+				total, tags = mockSender.getCounter("egress")
+				return total
+			}
+			Eventually(f).Should(Equal(1))
+			Expect(tags).To(Equal(map[string]string{
+				"endpoint": endpoint,
+			}))
+		},
+			Entry("stream requests", "/apps/appID123/stream", "stream"),
+			Entry("firehose requests", "/firehose/streamID", "firehose"),
+		)
 
 		It("sets the health value for firehose count", func() {
 			req, _ := http.NewRequest("GET", "/firehose/streamID", nil)

@@ -71,7 +71,7 @@ var _ = Describe("FirehoseHandler", func() {
 
 		h := proxy.NewFirehoseHandler(connector, proxy.NewWebSocketServer(
 			newMockMetricSender(),
-		))
+		), mockSender)
 		h.ServeHTTP(recorder, req)
 
 		Expect(connector.subscriptions.request.Filter).To(Equal(&plumbing.Filter{
@@ -87,7 +87,7 @@ var _ = Describe("FirehoseHandler", func() {
 
 		h := proxy.NewFirehoseHandler(connector, proxy.NewWebSocketServer(
 			newMockMetricSender(),
-		))
+		), mockSender)
 		h.ServeHTTP(recorder, req)
 
 		Expect(connector.subscriptions.request.Filter).To(Equal(&plumbing.Filter{

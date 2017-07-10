@@ -9,12 +9,24 @@ import (
 )
 
 type websocketHandler struct {
-	messages  <-chan []byte
-	keepAlive time.Duration
+	messages        <-chan []byte
+	keepAlive       time.Duration
+	metricSender    MetricSender
+	incEgressMetric func()
 }
 
-func NewWebsocketHandler(m <-chan []byte, keepAlive time.Duration) *websocketHandler {
-	return &websocketHandler{messages: m, keepAlive: keepAlive}
+func NewWebsocketHandler(
+	m <-chan []byte,
+	keepAlive time.Duration,
+	ms MetricSender,
+	incEgressMetric func(),
+) *websocketHandler {
+	return &websocketHandler{
+		messages:        m,
+		keepAlive:       keepAlive,
+		metricSender:    ms,
+		incEgressMetric: incEgressMetric,
+	}
 }
 
 func (h *websocketHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
@@ -70,6 +82,7 @@ func (h *websocketHandler) runWebsocketUntilClosed(ws *websocket.Conn) (closeCod
 			if err != nil {
 				return
 			}
+			h.incEgressMetric()
 		}
 	}
 }

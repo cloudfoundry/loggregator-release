@@ -21,6 +21,11 @@ import (
 	"google.golang.org/grpc"
 )
 
+// MetricClient creates new CounterMetrics to be emitted periodically.
+type MetricClient interface {
+	NewCounterMetric(name string, opts ...metricemitter.MetricOption) *metricemitter.CounterMetric
+}
+
 // RLP represents the reverse log proxy component. It connects to various gRPC
 // servers to ingress data and opens a gRPC server to egress data.
 type RLP struct {
@@ -45,13 +50,13 @@ type RLP struct {
 	healthAddr string
 	health     *healthendpoint.Registrar
 
-	metricClient metricemitter.MetricClient
+	metricClient MetricClient
 
 	finder *plumbing.StaticFinder
 }
 
 // NewRLP returns a new unstarted RLP.
-func NewRLP(m metricemitter.MetricClient, opts ...RLPOption) *RLP {
+func NewRLP(m MetricClient, opts ...RLPOption) *RLP {
 	ctx, cancel := context.WithCancel(context.Background())
 	rlp := &RLP{
 		ingressAddrs:         []string{"doppler.service.cf.internal"},

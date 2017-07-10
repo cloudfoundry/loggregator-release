@@ -1,6 +1,9 @@
 package app
 
-import "github.com/cloudfoundry/dropsonde/metrics"
+import (
+	"code.cloudfoundry.org/loggregator/metricemitter"
+	"github.com/cloudfoundry/dropsonde/metrics"
+)
 
 // metricShim isolates all uses of the dropsonde metrics behind a clean
 // interface. Any code which must send metrics should inject this shim.
@@ -13,8 +16,33 @@ import "github.com/cloudfoundry/dropsonde/metrics"
 // Second, the shim exists to make replacing dropsonde metrics wholesale as
 // simple as changing this file. If we know what interface we need for
 // metrics, swapping implementations is much easier.
-type metricShim struct{}
+type metricShim struct {
+	stream   *metricemitter.CounterMetric
+	firehose *metricemitter.CounterMetric
+}
+
+func newMetricShim(client MetricClient) *metricShim {
+	stream := client.NewCounterMetric("egress", metricemitter.WithTags(
+		map[string]string{"endpoint": "stream"},
+	))
+	firehose := client.NewCounterMetric("egress", metricemitter.WithTags(
+		map[string]string{"endpoint": "firehose"},
+	))
+
+	return &metricShim{
+		stream:   stream,
+		firehose: firehose,
+	}
+}
 
 func (*metricShim) SendValue(name string, value float64, unit string) error {
 	return metrics.SendValue(name, value, unit)
+}
+
+func (s *metricShim) IncrementEgressStream() {
+	s.stream.Increment(1)
+}
+
+func (s *metricShim) IncrementEgressFirehose() {
+	s.firehose.Increment(1)
 }

@@ -137,14 +137,21 @@ type valueUnit struct {
 	Unit  string
 }
 
+type counter struct {
+	total int
+	tags  map[string]string
+}
+
 type mockMetricSender struct {
-	mu      sync.Mutex
-	metrics map[string]valueUnit
+	mu           sync.Mutex
+	valueMetrics map[string]valueUnit
+	counters     map[string]counter
 }
 
 func newMockMetricSender() *mockMetricSender {
 	return &mockMetricSender{
-		metrics: make(map[string]valueUnit),
+		valueMetrics: make(map[string]valueUnit),
+		counters:     make(map[string]counter),
 	}
 }
 
@@ -152,7 +159,7 @@ func (m *mockMetricSender) SendValue(name string, value float64, unit string) er
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.metrics[name] = valueUnit{Value: value, Unit: unit}
+	m.valueMetrics[name] = valueUnit{Value: value, Unit: unit}
 
 	return nil
 }
@@ -161,10 +168,47 @@ func (m *mockMetricSender) getValue(name string) valueUnit {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	v, ok := m.metrics[name]
+	v, ok := m.valueMetrics[name]
 	if !ok {
 		return valueUnit{Value: 0.0, Unit: ""}
 	}
 
 	return v
+}
+
+func (m *mockMetricSender) SendCounterIncrement(name string, tags map[string]string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	c, ok := m.counters[name]
+	if !ok {
+		c = counter{
+			total: 1,
+			tags:  tags,
+		}
+	} else {
+		c.total++
+	}
+
+	m.counters[name] = c
+	return nil
+}
+
+func (m *mockMetricSender) IncrementEgressFirehose() {
+	m.SendCounterIncrement("egress", map[string]string{
+		"endpoint": "firehose",
+	})
+}
+
+func (m *mockMetricSender) IncrementEgressStream() {
+	m.SendCounterIncrement("egress", map[string]string{
+		"endpoint": "stream",
+	})
+}
+
+func (m *mockMetricSender) getCounter(name string) (int, map[string]string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	c := m.counters[name]
+	return c.total, c.tags
 }
