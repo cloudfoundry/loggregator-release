@@ -9,7 +9,7 @@ import (
 )
 
 type CounterMetric struct {
-	client   *client
+	client   *Client
 	name     string
 	sourceID string
 	tags     map[string]*v2.Value
