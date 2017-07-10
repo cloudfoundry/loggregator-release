@@ -24,13 +24,13 @@ type Receiver interface {
 
 // MetricClient creates new CounterMetrics to be emitted periodically.
 type MetricClient interface {
-	NewCounterMetric(name string, opts ...metricemitter.MetricOption) *metricemitter.CounterMetric
+	NewCounter(name string, opts ...metricemitter.CounterOption) *metricemitter.Counter
 }
 
 type Server struct {
 	receiver      Receiver
-	egressMetric  *metricemitter.CounterMetric
-	droppedMetric *metricemitter.CounterMetric
+	egressMetric  *metricemitter.Counter
+	droppedMetric *metricemitter.Counter
 	health        HealthRegistrar
 	ctx           context.Context
 }
@@ -41,11 +41,11 @@ func NewServer(
 	h HealthRegistrar,
 	c context.Context,
 ) *Server {
-	egressMetric := m.NewCounterMetric("egress",
+	egressMetric := m.NewCounter("egress",
 		metricemitter.WithVersion(2, 0),
 	)
 
-	droppedMetric := m.NewCounterMetric("dropped",
+	droppedMetric := m.NewCounter("dropped",
 		metricemitter.WithVersion(2, 0),
 		metricemitter.WithTags(map[string]string{
 			"direction": "egress",

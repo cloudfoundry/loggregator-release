@@ -29,13 +29,13 @@ type DataSetter interface {
 type IngressServer struct {
 	envelopeBuffer DataSetter
 	batcher        Batcher
-	ingressMetric  *metricemitter.CounterMetric
+	ingressMetric  *metricemitter.Counter
 	health         HealthRegistrar
 }
 
 // MetricClient creates new CounterMetrics to be emitted periodically.
 type MetricClient interface {
-	NewCounterMetric(name string, opts ...metricemitter.MetricOption) *metricemitter.CounterMetric
+	NewCounter(name string, opts ...metricemitter.CounterOption) *metricemitter.Counter
 }
 
 func NewIngressServer(
@@ -44,7 +44,7 @@ func NewIngressServer(
 	metricClient MetricClient,
 	health HealthRegistrar,
 ) *IngressServer {
-	ingressMetric := metricClient.NewCounterMetric("ingress",
+	ingressMetric := metricClient.NewCounter("ingress",
 		metricemitter.WithVersion(2, 0),
 	)
 

@@ -47,8 +47,8 @@ type DopplerServer struct {
 	registrar           Registrar
 	dumper              DataDumper
 	numSubscriptions    int64
-	egressMetric        *metricemitter.CounterMetric
-	egressDroppedMetric *metricemitter.CounterMetric
+	egressMetric        *metricemitter.Counter
+	egressDroppedMetric *metricemitter.Counter
 	health              HealthRegistrar
 }
 
@@ -59,7 +59,7 @@ type sender interface {
 
 // MetricClient creates new CounterMetrics to be emitted periodically.
 type MetricClient interface {
-	NewCounterMetric(name string, opts ...metricemitter.MetricOption) *metricemitter.CounterMetric
+	NewCounter(name string, opts ...metricemitter.CounterOption) *metricemitter.Counter
 }
 
 // NewDopplerServer creates a new DopplerServer.
@@ -69,11 +69,11 @@ func NewDopplerServer(
 	metricClient MetricClient,
 	health HealthRegistrar,
 ) *DopplerServer {
-	egressMetric := metricClient.NewCounterMetric("egress",
+	egressMetric := metricClient.NewCounter("egress",
 		metricemitter.WithVersion(2, 0),
 	)
 
-	egressDroppedMetric := metricClient.NewCounterMetric("dropped",
+	egressDroppedMetric := metricClient.NewCounter("dropped",
 		metricemitter.WithVersion(2, 0),
 		metricemitter.WithTags(map[string]string{"direction": "egress"}),
 	)

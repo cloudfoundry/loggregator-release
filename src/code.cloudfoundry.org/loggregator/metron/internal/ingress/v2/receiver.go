@@ -14,16 +14,16 @@ type DataSetter interface {
 
 // MetricClient creates new CounterMetrics to be emitted periodically.
 type MetricClient interface {
-	NewCounterMetric(name string, opts ...metricemitter.MetricOption) *metricemitter.CounterMetric
+	NewCounter(name string, opts ...metricemitter.CounterOption) *metricemitter.Counter
 }
 
 type Receiver struct {
 	dataSetter    DataSetter
-	ingressMetric *metricemitter.CounterMetric
+	ingressMetric *metricemitter.Counter
 }
 
 func NewReceiver(dataSetter DataSetter, metricClient MetricClient) *Receiver {
-	ingressMetric := metricClient.NewCounterMetric("ingress",
+	ingressMetric := metricClient.NewCounter("ingress",
 		metricemitter.WithVersion(2, 0),
 	)
 

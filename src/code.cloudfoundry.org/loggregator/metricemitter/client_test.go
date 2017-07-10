@@ -38,7 +38,7 @@ var _ = Describe("Emitter Client", func() {
 		)
 		Expect(err).ToNot(HaveOccurred())
 
-		client.NewCounterMetric("some-name")
+		client.NewCounter("some-name")
 		Eventually(grpcServer.senders).Should(HaveLen(1))
 		Eventually(func() int {
 			return len(grpcServer.envelopes)
@@ -68,7 +68,7 @@ var _ = Describe("Emitter Client", func() {
 		)
 		Expect(err).ToNot(HaveOccurred())
 
-		client.NewCounterMetric("some-name")
+		client.NewCounter("some-name")
 		Eventually(grpcServer.senders).Should(HaveLen(1))
 	})
 
@@ -85,7 +85,7 @@ var _ = Describe("Emitter Client", func() {
 			)
 			Expect(err).ToNot(HaveOccurred())
 
-			client.NewCounterMetric("some-name")
+			client.NewCounter("some-name")
 			Eventually(grpcServer.senders).Should(HaveLen(1))
 
 			var env *v2.Envelope
@@ -115,7 +115,7 @@ var _ = Describe("Emitter Client", func() {
 			)
 			Expect(err).ToNot(HaveOccurred())
 
-			client.NewCounterMetric("some-name",
+			client.NewCounter("some-name",
 				metricemitter.WithVersion(2, 0),
 				metricemitter.WithTags(map[string]string{
 					"unicorn": "another-unicorn",
@@ -153,7 +153,7 @@ var _ = Describe("Emitter Client", func() {
 				)
 				Expect(err).ToNot(HaveOccurred())
 
-				metric := client.NewCounterMetric("some-name")
+				metric := client.NewCounter("some-name")
 				Eventually(grpcServer.senders).Should(HaveLen(1))
 
 				metric.Increment(5)

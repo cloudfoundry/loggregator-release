@@ -22,7 +22,7 @@ import (
 
 // MetricClient creates new CounterMetrics to be emitted periodically.
 type MetricClient interface {
-	NewCounterMetric(name string, opts ...metricemitter.MetricOption) *metricemitter.CounterMetric
+	NewCounter(name string, opts ...metricemitter.CounterOption) *metricemitter.Counter
 }
 
 type AppV2 struct {
@@ -54,7 +54,7 @@ func (a *AppV2) Start() {
 		log.Panic("Failed to load TLS server config")
 	}
 
-	droppedMetric := a.metricClient.NewCounterMetric("dropped",
+	droppedMetric := a.metricClient.NewCounter("dropped",
 		metricemitter.WithVersion(2, 0),
 		metricemitter.WithTags(map[string]string{"direction": "ingress"}),
 	)

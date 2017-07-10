@@ -18,7 +18,7 @@ import (
 
 // MetricClient creates new CounterMetrics to be emitted periodically.
 type MetricClient interface {
-	NewCounterMetric(name string, opts ...metricemitter.MetricOption) *metricemitter.CounterMetric
+	NewCounter(name string, opts ...metricemitter.CounterOption) *metricemitter.Counter
 }
 
 type MetricBatcher interface {
@@ -26,10 +26,10 @@ type MetricBatcher interface {
 }
 
 func NewGroupedSinks(b MetricBatcher, mc MetricClient) *GroupedSinks {
-	droppedMetric := mc.NewCounterMetric("sinks.dropped",
+	droppedMetric := mc.NewCounter("sinks.dropped",
 		metricemitter.WithVersion(2, 0),
 	)
-	errorMetric := mc.NewCounterMetric("sinks.errors.dropped",
+	errorMetric := mc.NewCounter("sinks.errors.dropped",
 		metricemitter.WithVersion(2, 0),
 	)
 
@@ -48,8 +48,8 @@ type GroupedSinks struct {
 	apps          map[string]*AppGroup
 	firehoses     map[string]firehose_group.FirehoseGroup
 	batcher       MetricBatcher
-	droppedMetric *metricemitter.CounterMetric
-	errorMetric   *metricemitter.CounterMetric
+	droppedMetric *metricemitter.Counter
+	errorMetric   *metricemitter.Counter
 }
 
 func (group *GroupedSinks) RegisterAppSink(in chan<- *events.Envelope, sink sinks.Sink) bool {
@@ -270,14 +270,14 @@ type AppGroup struct {
 	wrappers map[string]*sink_wrapper.SinkWrapper
 
 	batcher       MetricBatcher
-	droppedMetric *metricemitter.CounterMetric
-	errorMetric   *metricemitter.CounterMetric
+	droppedMetric *metricemitter.Counter
+	errorMetric   *metricemitter.Counter
 }
 
 func NewAppGroup(
 	batcher MetricBatcher,
-	droppedMetric *metricemitter.CounterMetric,
-	errorMetric *metricemitter.CounterMetric,
+	droppedMetric *metricemitter.Counter,
+	errorMetric *metricemitter.Counter,
 ) *AppGroup {
 	return &AppGroup{
 		wrappers:      make(map[string]*sink_wrapper.SinkWrapper),

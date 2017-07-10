@@ -17,7 +17,7 @@ type Writer interface {
 
 // MetricClient creates new CounterMetrics to be emitted periodically.
 type MetricClient interface {
-	NewCounterMetric(name string, opts ...metricemitter.MetricOption) *metricemitter.CounterMetric
+	NewCounter(name string, opts ...metricemitter.CounterOption) *metricemitter.Counter
 }
 
 type Transponder struct {
@@ -26,8 +26,8 @@ type Transponder struct {
 	tags          map[string]string
 	batchSize     int
 	batchInterval time.Duration
-	droppedMetric *metricemitter.CounterMetric
-	egressMetric  *metricemitter.CounterMetric
+	droppedMetric *metricemitter.Counter
+	egressMetric  *metricemitter.Counter
 }
 
 func NewTransponder(
@@ -38,12 +38,12 @@ func NewTransponder(
 	batchInterval time.Duration,
 	metricClient MetricClient,
 ) *Transponder {
-	droppedMetric := metricClient.NewCounterMetric("dropped",
+	droppedMetric := metricClient.NewCounter("dropped",
 		metricemitter.WithVersion(2, 0),
 		metricemitter.WithTags(map[string]string{"direction": "egress"}),
 	)
 
-	egressMetric := metricClient.NewCounterMetric("egress",
+	egressMetric := metricClient.NewCounter("egress",
 		metricemitter.WithVersion(2, 0),
 	)
 

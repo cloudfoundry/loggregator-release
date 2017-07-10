@@ -52,14 +52,14 @@ type GRPCConnector struct {
 	bufferSize     int
 	batcher        MetaMetricBatcher
 
-	ingressMetric           *metricemitter.CounterMetric
-	recentLogsTimeout       *metricemitter.CounterMetric
-	containerMetricsTimeout *metricemitter.CounterMetric
+	ingressMetric           *metricemitter.Counter
+	recentLogsTimeout       *metricemitter.Counter
+	containerMetricsTimeout *metricemitter.Counter
 }
 
 // MetricClient creates new CounterMetrics to be emitted periodically.
 type MetricClient interface {
-	NewCounterMetric(name string, opts ...metricemitter.MetricOption) *metricemitter.CounterMetric
+	NewCounter(name string, opts ...metricemitter.CounterOption) *metricemitter.Counter
 }
 
 // NewGRPCConnector creates a new GRPCConnector.
@@ -70,19 +70,19 @@ func NewGRPCConnector(
 	batcher MetaMetricBatcher,
 	m MetricClient,
 ) *GRPCConnector {
-	ingressMetric := m.NewCounterMetric("ingress",
+	ingressMetric := m.NewCounter("ingress",
 		metricemitter.WithTags(map[string]string{
 			"protocol": "grpc",
 		}),
 		metricemitter.WithVersion(2, 0),
 	)
-	recentLogsTimeout := m.NewCounterMetric("query_timeout",
+	recentLogsTimeout := m.NewCounter("query_timeout",
 		metricemitter.WithTags(map[string]string{
 			"query": "recent_logs",
 		}),
 		metricemitter.WithVersion(2, 0),
 	)
-	containerMetricsTimeout := m.NewCounterMetric("query_timeout",
+	containerMetricsTimeout := m.NewCounter("query_timeout",
 		metricemitter.WithTags(map[string]string{
 			"query": "container_metrics",
 		}),

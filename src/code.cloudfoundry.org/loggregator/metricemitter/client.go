@@ -74,9 +74,9 @@ func NewClient(addr string, opts ...ClientOption) (*Client, error) {
 	return client, nil
 }
 
-func (c *Client) NewCounterMetric(name string, opts ...MetricOption) *CounterMetric {
+func (c *Client) NewCounter(name string, opts ...CounterOption) *Counter {
 	opts = append(opts, WithTags(c.tags))
-	m := NewCounterMetric(name, c.sourceID, opts...)
+	m := NewCounter(name, c.sourceID, opts...)
 	go c.pulse(m)
 
 	return m

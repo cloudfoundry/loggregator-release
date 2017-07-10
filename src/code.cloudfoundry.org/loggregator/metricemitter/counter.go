@@ -8,7 +8,7 @@ import (
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 )
 
-type CounterMetric struct {
+type Counter struct {
 	client   *Client
 	name     string
 	sourceID string
@@ -16,10 +16,10 @@ type CounterMetric struct {
 	delta    uint64
 }
 
-type MetricOption func(*CounterMetric)
+type CounterOption func(*Counter)
 
-func NewCounterMetric(name, sourceID string, opts ...MetricOption) *CounterMetric {
-	m := &CounterMetric{
+func NewCounter(name, sourceID string, opts ...CounterOption) *Counter {
+	m := &Counter{
 		name:     name,
 		sourceID: sourceID,
 		tags:     make(map[string]*v2.Value),
@@ -32,15 +32,15 @@ func NewCounterMetric(name, sourceID string, opts ...MetricOption) *CounterMetri
 	return m
 }
 
-func (m *CounterMetric) Increment(c uint64) {
+func (m *Counter) Increment(c uint64) {
 	atomic.AddUint64(&m.delta, c)
 }
 
-func (m *CounterMetric) GetDelta() uint64 {
+func (m *Counter) GetDelta() uint64 {
 	return atomic.LoadUint64(&m.delta)
 }
 
-func (m *CounterMetric) WithEnvelope(fn func(*v2.Envelope) error) error {
+func (m *Counter) WithEnvelope(fn func(*v2.Envelope) error) error {
 	d := atomic.SwapUint64(&m.delta, 0)
 
 	if err := fn(m.toEnvelope(d)); err != nil {
@@ -51,7 +51,7 @@ func (m *CounterMetric) WithEnvelope(fn func(*v2.Envelope) error) error {
 	return nil
 }
 
-func (m *CounterMetric) toEnvelope(delta uint64) *v2.Envelope {
+func (m *Counter) toEnvelope(delta uint64) *v2.Envelope {
 	return &v2.Envelope{
 		SourceId:  m.sourceID,
 		Timestamp: time.Now().UnixNano(),
@@ -67,14 +67,14 @@ func (m *CounterMetric) toEnvelope(delta uint64) *v2.Envelope {
 	}
 }
 
-func WithVersion(major, minor uint) MetricOption {
+func WithVersion(major, minor uint) CounterOption {
 	return WithTags(map[string]string{
 		"metric_version": fmt.Sprintf("%d.%d", major, minor),
 	})
 }
 
-func WithTags(tags map[string]string) MetricOption {
-	return func(m *CounterMetric) {
+func WithTags(tags map[string]string) CounterOption {
+	return func(m *Counter) {
 		for k, v := range tags {
 			m.tags[k] = &v2.Value{
 				Data: &v2.Value_Text{

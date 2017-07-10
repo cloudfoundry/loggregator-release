@@ -7,7 +7,7 @@ import (
 
 type counterMetric struct {
 	metricName string
-	metric     *metricemitter.CounterMetric
+	metric     *metricemitter.Counter
 }
 
 type SpyMetricClient struct {
@@ -18,8 +18,8 @@ func NewMetricClient() *SpyMetricClient {
 	return &SpyMetricClient{}
 }
 
-func (s *SpyMetricClient) NewCounterMetric(name string, opts ...metricemitter.MetricOption) *metricemitter.CounterMetric {
-	m := metricemitter.NewCounterMetric(name, "", opts...)
+func (s *SpyMetricClient) NewCounter(name string, opts ...metricemitter.CounterOption) *metricemitter.Counter {
+	m := metricemitter.NewCounter(name, "", opts...)
 
 	s.counterMetrics = append(s.counterMetrics, counterMetric{
 		metricName: name,

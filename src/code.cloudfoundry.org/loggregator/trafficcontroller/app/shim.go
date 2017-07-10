@@ -17,15 +17,15 @@ import (
 // simple as changing this file. If we know what interface we need for
 // metrics, swapping implementations is much easier.
 type metricShim struct {
-	stream   *metricemitter.CounterMetric
-	firehose *metricemitter.CounterMetric
+	stream   *metricemitter.Counter
+	firehose *metricemitter.Counter
 }
 
 func newMetricShim(client MetricClient) *metricShim {
-	stream := client.NewCounterMetric("egress", metricemitter.WithTags(
+	stream := client.NewCounter("egress", metricemitter.WithTags(
 		map[string]string{"endpoint": "stream"},
 	))
-	firehose := client.NewCounterMetric("egress", metricemitter.WithTags(
+	firehose := client.NewCounter("egress", metricemitter.WithTags(
 		map[string]string{"endpoint": "firehose"},
 	))
 
