@@ -97,6 +97,7 @@ function run_unit {
         ginkgo \
             -r \
             --race \
+            --tags=~deprecated \
             --randomizeAllSpecs \
             --slowSpecThreshold 20 \
             --skipPackage="$not_unit_tests" \
@@ -113,6 +114,7 @@ function run_integration {
         ginkgo \
             -r \
             --race \
+            --tags=~deprecated \
             --randomizeAllSpecs \
             --slowSpecThreshold 20 \
             $@ \
