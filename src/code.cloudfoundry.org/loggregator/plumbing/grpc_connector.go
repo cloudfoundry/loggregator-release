@@ -51,7 +51,10 @@ type GRPCConnector struct {
 	consumerStates []unsafe.Pointer
 	bufferSize     int
 	batcher        MetaMetricBatcher
-	ingressMetric  *metricemitter.CounterMetric
+
+	ingressMetric           *metricemitter.CounterMetric
+	recentLogsTimeout       *metricemitter.CounterMetric
+	containerMetricsTimeout *metricemitter.CounterMetric
 }
 
 // MetricClient creates new CounterMetrics to be emitted periodically.
@@ -67,21 +70,34 @@ func NewGRPCConnector(
 	batcher MetaMetricBatcher,
 	m MetricClient,
 ) *GRPCConnector {
-	ingressMetric := m.NewCounterMetric(
-		"ingress",
+	ingressMetric := m.NewCounterMetric("ingress",
 		metricemitter.WithTags(map[string]string{
 			"protocol": "grpc",
 		}),
 		metricemitter.WithVersion(2, 0),
 	)
+	recentLogsTimeout := m.NewCounterMetric("query_timeout",
+		metricemitter.WithTags(map[string]string{
+			"query": "recent_logs",
+		}),
+		metricemitter.WithVersion(2, 0),
+	)
+	containerMetricsTimeout := m.NewCounterMetric("query_timeout",
+		metricemitter.WithTags(map[string]string{
+			"query": "container_metrics",
+		}),
+		metricemitter.WithVersion(2, 0),
+	)
 
 	c := &GRPCConnector{
-		bufferSize:     bufferSize,
-		pool:           pool,
-		finder:         f,
-		batcher:        batcher,
-		consumerStates: make([]unsafe.Pointer, maxConnections),
-		ingressMetric:  ingressMetric,
+		bufferSize:              bufferSize,
+		pool:                    pool,
+		finder:                  f,
+		batcher:                 batcher,
+		consumerStates:          make([]unsafe.Pointer, maxConnections),
+		ingressMetric:           ingressMetric,
+		recentLogsTimeout:       recentLogsTimeout,
+		containerMetricsTimeout: containerMetricsTimeout,
 	}
 	go c.readFinder()
 	return c
@@ -99,13 +115,19 @@ func (c *GRPCConnector) ContainerMetrics(ctx context.Context, appID string) [][]
 			req := &ContainerMetricsRequest{
 				AppID: appID,
 			}
-			nextResp, err := c.pool.ContainerMetrics(client.uri, ctx, req)
+
+			resp, err := c.pool.ContainerMetrics(client.uri, ctx, req)
 			if err != nil {
+				if ctx.Err() == context.DeadlineExceeded {
+					c.containerMetricsTimeout.Increment(1)
+				}
+
 				log.Printf("error from doppler (%s) while fetching container metrics: %s", client.uri, err)
 				results <- nil
 				return
 			}
-			results <- nextResp.Payload
+
+			results <- resp.Payload
 		}(client)
 	}
 
@@ -128,13 +150,19 @@ func (c *GRPCConnector) RecentLogs(ctx context.Context, appID string) [][]byte {
 			req := &RecentLogsRequest{
 				AppID: appID,
 			}
-			nextResp, err := c.pool.RecentLogs(client.uri, ctx, req)
+
+			resp, err := c.pool.RecentLogs(client.uri, ctx, req)
 			if err != nil {
+				if ctx.Err() == context.DeadlineExceeded {
+					c.recentLogsTimeout.Increment(1)
+				}
+
 				log.Printf("error from doppler (%s) while fetching recent logs: %s", client.uri, err)
 				results <- nil
 				return
 			}
-			results <- nextResp.Payload
+
+			results <- resp.Payload
 		}(client)
 	}
 

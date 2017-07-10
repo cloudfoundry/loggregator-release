@@ -8,6 +8,7 @@ import (
 
 	"code.cloudfoundry.org/loggregator/dopplerservice"
 	"code.cloudfoundry.org/loggregator/plumbing"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	"github.com/apoydence/eachers/testhelpers"
 	"golang.org/x/net/context"
@@ -29,8 +30,9 @@ var _ = Describe("GRPCConnector", func() {
 		mockDopplerServerB *mockDopplerServer
 		mockFinder         *mockFinder
 
-		mockBatcher *mockMetaMetricBatcher
-		mockChainer *mockBatchCounterChainer
+		mockBatcher  *mockMetaMetricBatcher
+		mockChainer  *mockBatchCounterChainer
+		metricClient *testhelper.SpyMetricClient
 	)
 
 	BeforeEach(func() {
@@ -54,8 +56,8 @@ var _ = Describe("GRPCConnector", func() {
 				AppID: "test-app-id",
 			},
 		}
-
-		connector = plumbing.NewGRPCConnector(5, pool, mockFinder, mockBatcher, testhelper.NewMetricClient())
+		metricClient = testhelper.NewMetricClient()
+		connector = plumbing.NewGRPCConnector(5, pool, mockFinder, mockBatcher, metricClient)
 
 		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
 		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
@@ -480,6 +482,40 @@ var _ = Describe("GRPCConnector", func() {
 						return connector.RecentLogs(c, "test-app-id")
 					}
 					Eventually(f).Should(ConsistOf([][]byte{testRecentLogA}))
+				})
+
+				It("emits a metric when container metrics times out", func() {
+					f := func() [][]byte {
+						c, _ := context.WithTimeout(ctx, 250*time.Millisecond)
+						return connector.ContainerMetrics(c, "test-app-id")
+					}
+					Eventually(f).Should(ConsistOf([][]byte{testMetricA}))
+
+					var envelope *v2.Envelope
+					for _, e := range metricClient.GetEnvelopes("query_timeout") {
+						if e.Tags["query"].GetText() == "container_metrics" {
+							envelope = e
+						}
+					}
+					Expect(envelope).ToNot(BeNil())
+					Expect(envelope.GetCounter().GetDelta()).To(Equal(uint64(1)))
+				})
+
+				It("emits a metric when container metrics times out", func() {
+					f := func() [][]byte {
+						c, _ := context.WithTimeout(ctx, 250*time.Millisecond)
+						return connector.RecentLogs(c, "test-app-id")
+					}
+					Eventually(f).Should(ConsistOf([][]byte{testRecentLogA}))
+
+					var envelope *v2.Envelope
+					for _, e := range metricClient.GetEnvelopes("query_timeout") {
+						if e.Tags["query"].GetText() == "recent_logs" {
+							envelope = e
+						}
+					}
+					Expect(envelope).ToNot(BeNil())
+					Expect(envelope.GetCounter().GetDelta()).To(Equal(uint64(1)))
 				})
 			})
 		})

@@ -1,24 +1,58 @@
 package testhelper
 
-import "code.cloudfoundry.org/loggregator/metricemitter"
+import (
+	"code.cloudfoundry.org/loggregator/metricemitter"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
+)
+
+type counterMetric struct {
+	metricName string
+	metric     *metricemitter.CounterMetric
+}
 
 type SpyMetricClient struct {
-	counterMetrics map[string]*metricemitter.CounterMetric
+	counterMetrics []counterMetric
 }
 
 func NewMetricClient() *SpyMetricClient {
-	return &SpyMetricClient{
-		counterMetrics: make(map[string]*metricemitter.CounterMetric),
-	}
+	return &SpyMetricClient{}
 }
 
 func (s *SpyMetricClient) NewCounterMetric(name string, opts ...metricemitter.MetricOption) *metricemitter.CounterMetric {
-	m := &metricemitter.CounterMetric{}
-	s.counterMetrics[name] = m
+	m := metricemitter.NewCounterMetric(name, "", opts...)
+
+	s.counterMetrics = append(s.counterMetrics, counterMetric{
+		metricName: name,
+		metric:     m,
+	})
 
 	return m
 }
 
 func (s *SpyMetricClient) GetDelta(name string) uint64 {
-	return s.counterMetrics[name].GetDelta()
+	for _, m := range s.counterMetrics {
+		if m.metricName == name {
+			return m.metric.GetDelta()
+		}
+	}
+
+	return 0
+}
+
+func (s *SpyMetricClient) GetEnvelopes(name string) []*v2.Envelope {
+	var envs []*v2.Envelope
+
+	for _, m := range s.counterMetrics {
+		if m.metricName == name {
+			var env *v2.Envelope
+			m.metric.WithEnvelope(func(e *v2.Envelope) error {
+				env = e
+				return nil
+			})
+
+			envs = append(envs, env)
+		}
+	}
+
+	return envs
 }
