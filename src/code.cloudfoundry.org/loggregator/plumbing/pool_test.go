@@ -69,7 +69,7 @@ var _ = Describe("Pool", func() {
 				pool.Close(lis1.Addr().String())
 				lis1.Close()
 
-				Eventually(accepter1).Should(HaveLen(0))
+				Eventually(accepter1, 5).Should(HaveLen(0))
 				Consistently(accepter1).Should(HaveLen(0))
 			})
 		})
