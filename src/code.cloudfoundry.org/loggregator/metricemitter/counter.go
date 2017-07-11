@@ -10,7 +10,6 @@ import (
 
 type Counter struct {
 	Tagged
-	client   *Client
 	name     string
 	sourceID string
 	delta    uint64

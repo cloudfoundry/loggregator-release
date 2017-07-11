@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
 
 	"github.com/cloudfoundry/sonde-go/events"
@@ -32,7 +33,7 @@ var _ = Describe("DopplerProxy", func() {
 		mockDopplerStreamClient *mockReceiver
 		mockHealth              *mockHealth
 
-		mockSender *mockMetricSender
+		mockSender *testhelper.SpyMetricClient
 	)
 
 	BeforeEach(func() {
@@ -41,7 +42,7 @@ var _ = Describe("DopplerProxy", func() {
 
 		mockGrpcConnector = newMockGrpcConnector()
 		mockDopplerStreamClient = newMockReceiver()
-		mockSender = newMockMetricSender()
+		mockSender = testhelper.NewMetricClient()
 		mockHealth = newMockHealth()
 
 		mockGrpcConnector.SubscribeOutput.Ret0 <- mockDopplerStreamClient.Recv
@@ -72,16 +73,14 @@ var _ = Describe("DopplerProxy", func() {
 		It("emits latency value metric for recentlogs request", func() {
 			mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
 			req, _ := http.NewRequest("GET", "/apps/appID123/recentlogs", nil)
-			metricName := "dopplerProxy.recentlogsLatency"
+			metricName := "doppler_proxy.recent_logs_latency"
 			requestStart := time.Now()
 
 			dopplerProxy.ServeHTTP(recorder, req)
 
-			metric := mockSender.getValue(metricName)
-			Expect(metric.Unit).To(Equal("ms"))
-
+			metricValue := mockSender.GetValue(metricName)
 			elapsed := float64(time.Since(requestStart)) / float64(time.Millisecond)
-			Expect(metric.Value).To(BeNumerically("<", elapsed))
+			Expect(metricValue).To(BeNumerically("<", elapsed))
 		})
 
 		It("emits latency value metric for containermetrics request", func() {
@@ -93,20 +92,9 @@ var _ = Describe("DopplerProxy", func() {
 
 			dopplerProxy.ServeHTTP(recorder, req)
 
-			metric := mockSender.getValue(metricName)
-			Expect(metric.Unit).To(Equal("ms"))
-
+			metricValue := mockSender.GetValue(metricName)
 			elapsed := float64(time.Since(requestStart)) / float64(time.Millisecond)
-			Expect(metric.Value).To(BeNumerically("<", elapsed))
-		})
-
-		It("does not emit any latency metrics for stream request", func() {
-			req, _ := http.NewRequest("GET", "/apps/appID123/stream", nil)
-			dopplerProxy.ServeHTTP(recorder, req)
-			metric := mockSender.getValue("dopplerProxy.streamLatency")
-
-			Expect(metric.Unit).To(BeEmpty())
-			Expect(metric.Value).To(BeZero())
+			Expect(metricValue).To(BeNumerically("<", elapsed))
 		})
 
 		DescribeTable("increments a counter for every envelope that is written", func(url, endpoint string) {
@@ -119,16 +107,23 @@ var _ = Describe("DopplerProxy", func() {
 			)
 			Expect(err).ToNot(HaveOccurred())
 
-			var tags map[string]string
-			f := func() int {
-				var total int
-				total, tags = mockSender.getCounter("egress")
-				return total
+			f := func() uint64 {
+				for _, e := range mockSender.GetEnvelopes("egress") {
+					t, ok := e.Tags["endpoint"]
+					if !ok {
+						continue
+					}
+
+					if t.GetText() != endpoint {
+						continue
+					}
+
+					return e.GetCounter().GetDelta()
+				}
+
+				return 0
 			}
-			Eventually(f).Should(Equal(1))
-			Expect(tags).To(Equal(map[string]string{
-				"endpoint": endpoint,
-			}))
+			Eventually(f).Should(Equal(uint64(1)))
 		},
 			Entry("stream requests", "/apps/appID123/stream", "stream"),
 			Entry("firehose requests", "/firehose/streamID", "firehose"),

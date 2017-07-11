@@ -6,23 +6,33 @@ import (
 	"net/http"
 	"sync/atomic"
 
+	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"github.com/gorilla/mux"
 )
 
 type FirehoseHandler struct {
-	server   *WebSocketServer
-	grpcConn grpcConnector
-	counter  int64
-	sender   MetricSender
+	server               *WebSocketServer
+	grpcConn             grpcConnector
+	counter              int64
+	egressFirehoseMetric *metricemitter.Counter
 }
 
-func NewFirehoseHandler(grpcConn grpcConnector, w *WebSocketServer, m MetricSender) *FirehoseHandler {
+func NewFirehoseHandler(grpcConn grpcConnector, w *WebSocketServer, m MetricClient) *FirehoseHandler {
+	// metric-documentation-v2: (egress) Number of envelopes egressed via the
+	// firehose.
+	egressFirehoseMetric := m.NewCounter("egress",
+		metricemitter.WithVersion(2, 0),
+		metricemitter.WithTags(
+			map[string]string{"endpoint": "firehose"},
+		),
+	)
+
 	return &FirehoseHandler{
-		grpcConn: grpcConn,
-		server:   w,
-		sender:   m,
+		grpcConn:             grpcConn,
+		server:               w,
+		egressFirehoseMetric: egressFirehoseMetric,
 	}
 }
 
@@ -63,7 +73,7 @@ func (h *FirehoseHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.server.serveWS(w, r, client, h.sender.IncrementEgressFirehose)
+	h.server.serveWS(w, r, client, h.egressFirehoseMetric)
 }
 
 func (h *FirehoseHandler) Count() int64 {

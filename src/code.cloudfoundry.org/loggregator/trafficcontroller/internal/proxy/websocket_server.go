@@ -4,17 +4,25 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/metricemitter"
 )
 
 const websocketKeepAliveDuration = 30 * time.Second
 
 type WebSocketServer struct {
-	metricSender MetricSender
+	slowConsumerMetric *metricemitter.Counter
 }
 
-func NewWebSocketServer(m MetricSender) *WebSocketServer {
+func NewWebSocketServer(m MetricClient) *WebSocketServer {
+	// metric-documentation-v2: (doppler_proxy.slow_consumer) Counter
+	// indicating occurrences of slow consumers.
+	slowConsumerMetric := m.NewCounter("doppler_proxy.slow_consumer",
+		metricemitter.WithVersion(2, 0),
+	)
+
 	return &WebSocketServer{
-		metricSender: m,
+		slowConsumerMetric: slowConsumerMetric,
 	}
 }
 
@@ -22,15 +30,14 @@ func (s *WebSocketServer) serveWS(
 	w http.ResponseWriter,
 	r *http.Request,
 	recv func() ([]byte, error),
-	incEgressMetric func(),
+	egressMetric *metricemitter.Counter,
 ) {
 	data := make(chan []byte)
 
 	handler := NewWebsocketHandler(
 		data,
 		websocketKeepAliveDuration,
-		s.metricSender,
-		incEgressMetric,
+		egressMetric,
 	)
 
 	go func() {
@@ -55,9 +62,7 @@ func (s *WebSocketServer) serveWS(
 					<-timer.C
 				}
 			case <-timer.C:
-				// metric-documentation-v1: (dopplerProxy.slowConsumer) A slow
-				// consumer of the websocket stream
-				s.metricSender.SendValue("dopplerProxy.slowConsumer", 1, "consumer")
+				s.slowConsumerMetric.Increment(1)
 				log.Print("Doppler Proxy: Slow Consumer")
 				return
 			}

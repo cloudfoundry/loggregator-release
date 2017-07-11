@@ -7,6 +7,8 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"code.cloudfoundry.org/loggregator/metricemitter"
+	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
 
 	. "github.com/onsi/ginkgo"
@@ -20,18 +22,20 @@ var _ = Describe("WebsocketHandler", func() {
 		messagesChan       chan []byte
 		testServer         *httptest.Server
 		handlerDone        chan struct{}
-		mockSender         *mockMetricSender
+		mockSender         *testhelper.SpyMetricClient
+		egressMetric       *metricemitter.Counter
 	)
 
 	BeforeEach(func() {
 		fakeResponseWriter = httptest.NewRecorder()
 		messagesChan = make(chan []byte, 10)
-		mockSender = newMockMetricSender()
+		mockSender = testhelper.NewMetricClient()
+		egressMetric = mockSender.NewCounter("egress")
+
 		handler = proxy.NewWebsocketHandler(
 			messagesChan,
 			100*time.Millisecond,
-			mockSender,
-			mockSender.IncrementEgressStream,
+			egressMetric,
 		)
 		handlerDone = make(chan struct{})
 		testServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
@@ -163,17 +167,7 @@ var _ = Describe("WebsocketHandler", func() {
 		_, _, err = ws.ReadMessage()
 		Expect(err).NotTo(HaveOccurred())
 
-		var tags map[string]string
-		f := func() int {
-			var total int
-			total, tags = mockSender.getCounter("egress")
-			return total
-		}
-		Eventually(f).Should(Equal(1))
-		Expect(tags).To(Equal(map[string]string{
-			"endpoint": "stream",
-		}))
-
+		Eventually(egressMetric.GetDelta).Should(Equal(uint64(1)))
 		Eventually(handlerDone).Should(BeClosed())
 	})
 

@@ -10,7 +10,6 @@ import (
 
 type Gauge struct {
 	Tagged
-	client   *Client
 	name     string
 	unit     string
 	sourceID string

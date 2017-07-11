@@ -5,26 +5,34 @@ import (
 	"net/http"
 	"time"
 
+	"code.cloudfoundry.org/loggregator/metricemitter"
+
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/mux"
 )
 
 type ContainerMetricsHandler struct {
-	grpcConn     grpcConnector
-	timeout      time.Duration
-	metricSender MetricSender
+	grpcConn      grpcConnector
+	timeout       time.Duration
+	latencyMetric *metricemitter.Gauge
 }
 
 func NewContainerMetricsHandler(
 	grpcConn grpcConnector,
 	t time.Duration,
-	m MetricSender,
+	m MetricClient,
 ) *ContainerMetricsHandler {
+	// metric-documentation-v2: (doppler_proxy.container_metrics_latency)
+	// Measures amount of time to serve the request for container metrics
+	latencyMetric := m.NewGauge("doppler_proxy.container_metrics_latency", "ms",
+		metricemitter.WithVersion(2, 0),
+	)
+
 	return &ContainerMetricsHandler{
-		grpcConn:     grpcConn,
-		timeout:      t,
-		metricSender: m,
+		grpcConn:      grpcConn,
+		timeout:       t,
+		latencyMetric: latencyMetric,
 	}
 }
 
@@ -32,9 +40,8 @@ func (h *ContainerMetricsHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 	startTime := time.Now()
 	defer func() {
 		elapsedMillisecond := float64(time.Since(startTime)) / float64(time.Millisecond)
-		// metric-documentation-v1: (dopplerProxy.containermetricsLatency)
-		// Measures amount of time to serve the request for container metrics
-		h.metricSender.SendValue("dopplerProxy.containermetricsLatency", elapsedMillisecond, "ms")
+
+		h.latencyMetric.Set(elapsedMillisecond)
 	}()
 
 	appID := mux.Vars(r)["appID"]
