@@ -1,11 +1,12 @@
 package dopplerservice
 
 import (
-	"code.cloudfoundry.org/loggregator/doppler/app"
 	"encoding/json"
 	"fmt"
 	"log"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/doppler/app"
 
 	"github.com/cloudfoundry/storeadapter"
 )

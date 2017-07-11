@@ -1,9 +1,10 @@
 package v1
 
 import (
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"math/rand"
 	"sync"
+
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"github.com/cloudfoundry/sonde-go/events"
 )

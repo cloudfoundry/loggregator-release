@@ -1,9 +1,6 @@
 package websocketserver
 
 import (
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/websocket"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/sinkmanager"
 	"errors"
 	"fmt"
 	"log"
@@ -11,6 +8,10 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
+	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/websocket"
+	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/sinkmanager"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/sonde-go/events"

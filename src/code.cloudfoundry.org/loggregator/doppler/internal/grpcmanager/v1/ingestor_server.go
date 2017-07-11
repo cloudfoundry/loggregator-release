@@ -1,12 +1,13 @@
 package v1
 
 import (
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"context"
 	"io"
 	"log"
 	"sync/atomic"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/sonde-go/events"

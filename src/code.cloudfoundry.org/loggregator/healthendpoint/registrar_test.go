@@ -44,7 +44,7 @@ var _ = Describe("Health", func() {
 	})
 
 	Describe("Inc()", func() {
-		It("Increments the guage", func() {
+		It("Increments the gauge", func() {
 			h.Inc("count-1")
 			Expect(gaugeCount1.inc).To(Equal(1))
 
@@ -54,7 +54,7 @@ var _ = Describe("Health", func() {
 	})
 
 	Describe("Dec()", func() {
-		It("Decrements the guage", func() {
+		It("Decrements the gauge", func() {
 			h.Dec("count-1")
 			Expect(gaugeCount1.dec).To(Equal(1))
 

@@ -1,13 +1,14 @@
 package v1_test
 
 import (
-	"code.cloudfoundry.org/loggregator/diodes"
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"context"
 	"errors"
 	"io"
 	"net"
 	"sync"
+
+	"code.cloudfoundry.org/loggregator/diodes"
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1"
 

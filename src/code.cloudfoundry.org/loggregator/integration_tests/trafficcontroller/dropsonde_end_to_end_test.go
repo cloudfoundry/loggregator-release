@@ -1,13 +1,14 @@
 package trafficcontroller_test
 
 import (
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"crypto/tls"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

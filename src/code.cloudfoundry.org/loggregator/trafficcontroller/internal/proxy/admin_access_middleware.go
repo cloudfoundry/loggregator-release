@@ -1,9 +1,10 @@
 package proxy
 
 import (
-	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/auth"
 	"fmt"
 	"net/http"
+
+	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/auth"
 )
 
 type AdminAccessMiddleware struct {

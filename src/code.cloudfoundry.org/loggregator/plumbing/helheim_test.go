@@ -6,9 +6,10 @@
 package plumbing_test
 
 import (
+	"time"
+
 	"code.cloudfoundry.org/loggregator/dopplerservice"
 	"code.cloudfoundry.org/loggregator/plumbing"
-	"time"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"golang.org/x/net/context"
