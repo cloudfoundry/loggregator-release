@@ -1,0 +1,4 @@
+---
+name: syslog_daemon_config
+files:
+- loggregator/src/syslog_daemon_config/setup_syslog_forwarder.sh

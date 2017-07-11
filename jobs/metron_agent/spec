@@ -20,6 +20,7 @@ templates:
 
 packages:
 - loggregator_common
+- syslog_daemon_config
 - metron_agent
 
 properties:

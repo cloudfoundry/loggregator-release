@@ -18,6 +18,7 @@ templates:
   loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
 
 packages:
+- syslog_daemon_config
 - metron_agent_windows
 
 properties:
