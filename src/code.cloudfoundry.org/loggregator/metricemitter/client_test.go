@@ -38,7 +38,7 @@ var _ = Describe("Emitter Client", func() {
 		)
 		Expect(err).ToNot(HaveOccurred())
 
-		client.NewCounter("some-name")
+		client.NewGauge("some-name", "some-unit")
 		Eventually(grpcServer.senders).Should(HaveLen(1))
 		Eventually(func() int {
 			return len(grpcServer.envelopes)

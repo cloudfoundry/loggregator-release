@@ -74,9 +74,17 @@ func NewClient(addr string, opts ...ClientOption) (*Client, error) {
 	return client, nil
 }
 
-func (c *Client) NewCounter(name string, opts ...CounterOption) *Counter {
+func (c *Client) NewCounter(name string, opts ...MetricOption) *Counter {
 	opts = append(opts, WithTags(c.tags))
 	m := NewCounter(name, c.sourceID, opts...)
+	go c.pulse(m)
+
+	return m
+}
+
+func (c *Client) NewGauge(name, unit string, opts ...MetricOption) *Gauge {
+	opts = append(opts, WithTags(c.tags))
+	m := NewGauge(name, unit, c.sourceID, opts...)
 	go c.pulse(m)
 
 	return m

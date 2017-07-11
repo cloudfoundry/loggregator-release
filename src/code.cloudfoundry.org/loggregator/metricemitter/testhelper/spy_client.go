@@ -18,7 +18,7 @@ func NewMetricClient() *SpyMetricClient {
 	return &SpyMetricClient{}
 }
 
-func (s *SpyMetricClient) NewCounter(name string, opts ...metricemitter.CounterOption) *metricemitter.Counter {
+func (s *SpyMetricClient) NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter {
 	m := metricemitter.NewCounter(name, "", opts...)
 
 	s.counterMetrics = append(s.counterMetrics, counterMetric{

@@ -38,7 +38,8 @@ import (
 
 // MetricClient creates new CounterMetrics to be emitted periodically.
 type MetricClient interface {
-	NewCounter(name string, opts ...metricemitter.CounterOption) *metricemitter.Counter
+	NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter
+	NewGauge(name, unit string, opts ...metricemitter.MetricOption) *metricemitter.Gauge
 }
 
 type TrafficController struct {

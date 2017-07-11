@@ -9,24 +9,28 @@ import (
 )
 
 type Counter struct {
+	Tagged
 	client   *Client
 	name     string
 	sourceID string
-	tags     map[string]*v2.Value
 	delta    uint64
 }
 
-type CounterOption func(*Counter)
+type Tagged struct {
+	tags map[string]*v2.Value
+}
 
-func NewCounter(name, sourceID string, opts ...CounterOption) *Counter {
+type MetricOption func(Tagged)
+
+func NewCounter(name, sourceID string, opts ...MetricOption) *Counter {
 	m := &Counter{
 		name:     name,
 		sourceID: sourceID,
-		tags:     make(map[string]*v2.Value),
 	}
+	m.Tagged.tags = make(map[string]*v2.Value)
 
 	for _, opt := range opts {
-		opt(m)
+		opt(m.Tagged)
 	}
 
 	return m
@@ -67,14 +71,14 @@ func (m *Counter) toEnvelope(delta uint64) *v2.Envelope {
 	}
 }
 
-func WithVersion(major, minor uint) CounterOption {
+func WithVersion(major, minor uint) MetricOption {
 	return WithTags(map[string]string{
 		"metric_version": fmt.Sprintf("%d.%d", major, minor),
 	})
 }
 
-func WithTags(tags map[string]string) CounterOption {
-	return func(m *Counter) {
+func WithTags(tags map[string]string) MetricOption {
+	return func(m Tagged) {
 		for k, v := range tags {
 			m.tags[k] = &v2.Value{
 				Data: &v2.Value_Text{

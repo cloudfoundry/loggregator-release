@@ -23,7 +23,7 @@ import (
 
 // MetricClient creates new CounterMetrics to be emitted periodically.
 type MetricClient interface {
-	NewCounter(name string, opts ...metricemitter.CounterOption) *metricemitter.Counter
+	NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter
 }
 
 // RLP represents the reverse log proxy component. It connects to various gRPC

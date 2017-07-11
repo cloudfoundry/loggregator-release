@@ -17,7 +17,7 @@ type Writer interface {
 
 // MetricClient creates new CounterMetrics to be emitted periodically.
 type MetricClient interface {
-	NewCounter(name string, opts ...metricemitter.CounterOption) *metricemitter.Counter
+	NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter
 }
 
 type Transponder struct {
