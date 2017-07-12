@@ -27,7 +27,6 @@ func NewTLSConfig(
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: false,
 		MinVersion:         tls.VersionTLS12,
-		CipherSuites:       defaultCipherSuites,
 	}
 	for _, opt := range opts {
 		opt(tlsConfig)
