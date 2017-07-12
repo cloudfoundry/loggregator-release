@@ -21,39 +21,17 @@ func (e CASignatureError) Error() string {
 	return string(e)
 }
 
-func NewTLSConfig(
-	opts ...ConfigOption,
-) *tls.Config {
-	tlsConfig := &tls.Config{
+func NewTLSConfig() *tls.Config {
+	return &tls.Config{
 		InsecureSkipVerify: false,
 		MinVersion:         tls.VersionTLS12,
 		CipherSuites:       defaultCipherSuites,
 	}
-	for _, opt := range opts {
-		opt(tlsConfig)
-	}
-
-	return tlsConfig
 }
 
 var cipherMap = map[string]uint16{
-	"TLS_RSA_WITH_RC4_128_SHA":                tls.TLS_RSA_WITH_RC4_128_SHA,
-	"TLS_RSA_WITH_3DES_EDE_CBC_SHA":           tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
-	"TLS_RSA_WITH_AES_128_CBC_SHA":            tls.TLS_RSA_WITH_AES_128_CBC_SHA,
-	"TLS_RSA_WITH_AES_256_CBC_SHA":            tls.TLS_RSA_WITH_AES_256_CBC_SHA,
-	"TLS_RSA_WITH_AES_128_GCM_SHA256":         tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
-	"TLS_RSA_WITH_AES_256_GCM_SHA384":         tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
-	"TLS_ECDHE_ECDSA_WITH_RC4_128_SHA":        tls.TLS_ECDHE_ECDSA_WITH_RC4_128_SHA,
-	"TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA":    tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
-	"TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA":    tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
-	"TLS_ECDHE_RSA_WITH_RC4_128_SHA":          tls.TLS_ECDHE_RSA_WITH_RC4_128_SHA,
-	"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA":     tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
-	"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA":      tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
-	"TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA":      tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-	"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256":   tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-	"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256": tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-	"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384":   tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-	"TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384": tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+	"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256": tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+	"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384": tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 }
 
 type ConfigOption func(*tls.Config)
@@ -75,40 +53,87 @@ func WithCipherSuites(ciphers []string) ConfigOption {
 	}
 }
 
-// NewMutualTLSConfig returns a tls.Config with certs loaded from files and
+// NewClientMutualTLSConfig returns a tls.Config with certs loaded from files and
 // the ServerName set.
-func NewMutualTLSConfig(
+func NewClientMutualTLSConfig(
+	certFile string,
+	keyFile string,
+	caCertFile string,
+	serverName string,
+) (*tls.Config, error) {
+	return newMutualTLSConfig(
+		certFile,
+		keyFile,
+		caCertFile,
+		serverName,
+	)
+}
+
+// NewServerMutualTLSConfig returns a tls.Config with certs loaded from files and
+// the ServerName set. The returned tls.Config has configured list of cipher
+// suites.
+func NewServerMutualTLSConfig(
 	certFile string,
 	keyFile string,
 	caCertFile string,
 	serverName string,
 	opts ...ConfigOption,
 ) (*tls.Config, error) {
-	tlsCert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	tlsConfig, err := newMutualTLSConfig(
+		certFile,
+		keyFile,
+		caCertFile,
+		serverName,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load keypair: %s", err.Error())
+		return nil, err
 	}
 
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: false,
-		MinVersion:         tls.VersionTLS12,
-		CipherSuites:       defaultCipherSuites,
-	}
+	tlsConfig.CipherSuites = defaultCipherSuites
 	for _, opt := range opts {
 		opt(tlsConfig)
 	}
 
-	tlsConfig.Certificates = []tls.Certificate{tlsCert}
-	tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
-	tlsConfig.ServerName = serverName
+	return tlsConfig, nil
+}
 
-	if caCertFile != "" {
-		if err := addCA(tlsConfig, tlsCert, caCertFile); err != nil {
-			return nil, err
-		}
+func NewClientCredentials(
+	certFile string,
+	keyFile string,
+	caCertFile string,
+	serverName string,
+) (credentials.TransportCredentials, error) {
+	tlsConfig, err := NewClientMutualTLSConfig(
+		certFile,
+		keyFile,
+		caCertFile,
+		serverName,
+	)
+	if err != nil {
+		return nil, err
 	}
 
-	return tlsConfig, err
+	return credentials.NewTLS(tlsConfig), nil
+}
+
+func NewServerCredentials(
+	certFile string,
+	keyFile string,
+	caCertFile string,
+	serverName string,
+	opts ...ConfigOption,
+) (credentials.TransportCredentials, error) {
+	tlsConfig, err := NewServerMutualTLSConfig(
+		certFile,
+		keyFile,
+		caCertFile,
+		serverName,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return credentials.NewTLS(tlsConfig), nil
 }
 
 func addCA(tlsConfig *tls.Config, tlsCert tls.Certificate, caCertFile string) error {
@@ -142,16 +167,26 @@ func addCA(tlsConfig *tls.Config, tlsCert tls.Certificate, caCertFile string) er
 	return nil
 }
 
-func NewCredentials(certFile, keyFile, caCertFile, serverName string) (credentials.TransportCredentials, error) {
-	tlsConfig, err := NewMutualTLSConfig(
-		certFile,
-		keyFile,
-		caCertFile,
-		serverName,
-	)
+func newMutualTLSConfig(certFile, keyFile, caCertFile, serverName string) (*tls.Config, error) {
+	tlsCert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load keypair: %s", err.Error())
 	}
 
-	return credentials.NewTLS(tlsConfig), nil
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: false,
+		MinVersion:         tls.VersionTLS12,
+	}
+
+	tlsConfig.Certificates = []tls.Certificate{tlsCert}
+	tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+	tlsConfig.ServerName = serverName
+
+	if caCertFile != "" {
+		if err := addCA(tlsConfig, tlsCert, caCertFile); err != nil {
+			return nil, err
+		}
+	}
+
+	return tlsConfig, err
 }

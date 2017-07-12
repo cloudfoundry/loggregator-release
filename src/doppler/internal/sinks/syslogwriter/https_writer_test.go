@@ -58,16 +58,6 @@ var _ = Describe("HttpsWriter", func() {
 			Expect(w.TlsConfig.MinVersion).To(BeEquivalentTo(tls.VersionTLS12))
 		})
 
-		It("requires certain cipher suites", func() {
-			outputUrl, _ := url.Parse(server.URL + "/234-bxg-234/")
-			w, err := syslogwriter.NewHttpsWriter(outputUrl, "appId", "org-name.space-name.app-name.1", true, dialer, timeout)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(w.TlsConfig.CipherSuites).To(ConsistOf(
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			))
-		})
-
 		It("HTTP POSTs each log message to the HTTPS syslog endpoint", func() {
 			outputUrl, _ := url.Parse(server.URL + "/234-bxg-234/")
 

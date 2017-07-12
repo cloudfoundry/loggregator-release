@@ -63,7 +63,7 @@ func main() {
 		log.Fatal("Missing required flag 'cn'")
 	}
 
-	certs, err := plumbing.NewCredentials(*cert, *key, *ca, *cn)
+	certs, err := plumbing.NewServerCredentials(*cert, *key, *ca, *cn)
 	if err != nil {
 		log.Fatalf("Unable to setup TLS: %s", err)
 	}

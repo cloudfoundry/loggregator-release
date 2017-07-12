@@ -24,7 +24,7 @@ func main() {
 		panic(fmt.Errorf("Unable to parse config: %s", err))
 	}
 
-	credentials, err := plumbing.NewCredentials(
+	credentials, err := plumbing.NewServerCredentials(
 		conf.GRPC.CertFile,
 		conf.GRPC.KeyFile,
 		conf.GRPC.CAFile,

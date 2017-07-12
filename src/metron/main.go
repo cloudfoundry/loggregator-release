@@ -31,7 +31,7 @@ func main() {
 		log.Fatalf("Unable to parse config: %s", err)
 	}
 
-	clientCreds, err := plumbing.NewCredentials(
+	clientCreds, err := plumbing.NewClientCredentials(
 		config.GRPC.CertFile,
 		config.GRPC.KeyFile,
 		config.GRPC.CAFile,
@@ -41,7 +41,7 @@ func main() {
 		log.Fatalf("Could not use GRPC creds for client: %s", err)
 	}
 
-	serverCreds, err := plumbing.NewCredentials(
+	serverCreds, err := plumbing.NewServerCredentials(
 		config.GRPC.CertFile,
 		config.GRPC.KeyFile,
 		config.GRPC.CAFile,
@@ -51,7 +51,7 @@ func main() {
 		log.Fatalf("Could not use GRPC creds for server: %s", err)
 	}
 
-	metricsCreds, err := plumbing.NewCredentials(
+	metricsCreds, err := plumbing.NewClientCredentials(
 		config.GRPC.CertFile,
 		config.GRPC.KeyFile,
 		config.GRPC.CAFile,

@@ -34,7 +34,7 @@ func NewGRPCListener(
 	batcher *metricbatcher.MetricBatcher,
 	metricClient metricemitter.MetricClient,
 ) (*GRPCListener, error) {
-	tlsConfig, err := plumbingv1.NewMutualTLSConfig(
+	tlsConfig, err := plumbingv1.NewServerMutualTLSConfig(
 		conf.CertFile,
 		conf.KeyFile,
 		conf.CAFile,

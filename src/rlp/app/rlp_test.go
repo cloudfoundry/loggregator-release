@@ -108,7 +108,7 @@ func setupDoppler() (*mockDopplerServer, net.Listener) {
 	lis, err := net.Listen("tcp", "localhost:0")
 	Expect(err).ToNot(HaveOccurred())
 
-	tlsCredentials, err := plumbing.NewCredentials(
+	tlsCredentials, err := plumbing.NewServerCredentials(
 		testservers.Cert("doppler.crt"),
 		testservers.Cert("doppler.key"),
 		testservers.Cert("loggregator-ca.crt"),
@@ -127,7 +127,7 @@ func setupRLP(dopplerLis net.Listener) net.Listener {
 	egressLis.Close()
 	Expect(err).ToNot(HaveOccurred())
 
-	ingressTLSCredentials, err := plumbing.NewCredentials(
+	ingressTLSCredentials, err := plumbing.NewClientCredentials(
 		testservers.Cert("reverselogproxy.crt"),
 		testservers.Cert("reverselogproxy.key"),
 		testservers.Cert("loggregator-ca.crt"),
@@ -135,7 +135,7 @@ func setupRLP(dopplerLis net.Listener) net.Listener {
 	)
 	Expect(err).ToNot(HaveOccurred())
 
-	egressTLSCredentials, err := plumbing.NewCredentials(
+	egressTLSCredentials, err := plumbing.NewServerCredentials(
 		testservers.Cert("reverselogproxy.crt"),
 		testservers.Cert("reverselogproxy.key"),
 		testservers.Cert("loggregator-ca.crt"),
@@ -156,7 +156,7 @@ func setupRLP(dopplerLis net.Listener) net.Listener {
 }
 
 func setupRLPClient(egressLis net.Listener) (v2.Egress_ReceiverClient, func()) {
-	ingressTLSCredentials, err := plumbing.NewCredentials(
+	ingressTLSCredentials, err := plumbing.NewClientCredentials(
 		testservers.Cert("reverselogproxy.crt"),
 		testservers.Cert("reverselogproxy.key"),
 		testservers.Cert("loggregator-ca.crt"),
@@ -184,7 +184,7 @@ func setupRLPClient(egressLis net.Listener) (v2.Egress_ReceiverClient, func()) {
 }
 
 func setupRLPQueryClient(egressLis net.Listener) (v2.EgressQueryClient, func()) {
-	ingressTLSCredentials, err := plumbing.NewCredentials(
+	ingressTLSCredentials, err := plumbing.NewClientCredentials(
 		testservers.Cert("reverselogproxy.crt"),
 		testservers.Cert("reverselogproxy.key"),
 		testservers.Cert("loggregator-ca.crt"),

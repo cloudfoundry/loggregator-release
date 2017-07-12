@@ -31,7 +31,17 @@ func main() {
 
 	flag.Parse()
 
-	dopplerCredentials, err := plumbing.NewCredentials(
+	dopplerCredentials, err := plumbing.NewClientCredentials(
+		*certFile,
+		*keyFile,
+		*caFile,
+		"doppler",
+	)
+	if err != nil {
+		log.Fatalf("Could not use TLS config: %s", err)
+	}
+
+	rlpCredentials, err := plumbing.NewServerCredentials(
 		*certFile,
 		*keyFile,
 		*caFile,
@@ -46,7 +56,7 @@ func main() {
 		log.Fatal("no Ingress Addrs were provided")
 	}
 
-	metronCredentials, err := plumbing.NewCredentials(
+	metronCredentials, err := plumbing.NewClientCredentials(
 		*certFile,
 		*keyFile,
 		*caFile,
@@ -73,7 +83,7 @@ func main() {
 		app.WithEgressPort(*egressPort),
 		app.WithIngressAddrs(hostPorts),
 		app.WithIngressDialOptions(grpc.WithTransportCredentials(dopplerCredentials)),
-		app.WithEgressServerOptions(grpc.Creds(dopplerCredentials)),
+		app.WithEgressServerOptions(grpc.Creds(rlpCredentials)),
 	)
 	go rlp.Start()
 
