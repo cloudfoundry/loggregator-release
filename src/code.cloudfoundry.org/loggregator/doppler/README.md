@@ -6,7 +6,7 @@ Doppler scales horizontally &mdash; as load increases, more instances can be dep
 
 ## Architecture Within Loggregator
 
-![Loggregator Diagram](../../docs/doppler.png)
+![Loggregator Diagram](../../../../docs/doppler.png)
 
 Logging data passes through the system as [protocol-buffers](https://github.com/google/protobuf), using [Dropsonde](https://github.com/cloudfoundry/dropsonde).
 
