@@ -47,15 +47,11 @@ var _ = Describe("TLSWriter", func() {
 			Expect(err.Error()).To(ContainSubstring("cannot construct a writer with a nil dialer"))
 		})
 
-		It("requires TLS Version 1.2 and specific cipher suites", func() {
+		It("requires TLS Version 1.2", func() {
 			outputURL, _ := url.Parse("syslog-tls://localhost")
 			w, err := syslogwriter.NewTlsWriter(outputURL, "appId", "hostname", false, dialer, ioTimeout)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(w.TlsConfig.MinVersion).To(BeEquivalentTo(tls.VersionTLS12))
-			Expect(w.TlsConfig.CipherSuites).To(ConsistOf(
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			))
 		})
 	})
 

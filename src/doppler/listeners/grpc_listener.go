@@ -30,7 +30,7 @@ func NewGRPCListener(
 	envelopeBuffer *diodes.ManyToOneEnvelope,
 	batcher *metricbatcher.MetricBatcher,
 ) (*GRPCListener, error) {
-	tlsConfig, err := plumbingv1.NewMutualTLSConfig(
+	tlsConfig, err := plumbingv1.NewServerMutualTLSConfig(
 		conf.CertFile,
 		conf.KeyFile,
 		conf.CAFile,

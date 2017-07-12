@@ -30,13 +30,27 @@ func main() {
 		log.Fatalf("Unable to parse config: %s", err)
 	}
 
-	clientCreds := plumbing.NewCredentials(
+	clientCreds, err := plumbing.NewClientCredentials(
 		config.GRPC.CertFile,
 		config.GRPC.KeyFile,
 		config.GRPC.CAFile,
 		"doppler",
 	)
-	serverCreds := plumbing.NewCredentials(
+	if err != nil {
+		log.Fatalf("Could not use GRPC creds for client: %s", err)
+	}
+
+	serverCreds, err := plumbing.NewServerCredentials(
+		config.GRPC.CertFile,
+		config.GRPC.KeyFile,
+		config.GRPC.CAFile,
+		"metron",
+	)
+	if err != nil {
+		log.Fatalf("Could not use GRPC creds for server: %s", err)
+	}
+
+	metricsCreds, err := plumbing.NewClientCredentials(
 		config.GRPC.CertFile,
 		config.GRPC.KeyFile,
 		config.GRPC.CAFile,
@@ -51,7 +65,7 @@ func main() {
 
 	batchInterval := time.Duration(config.MetricBatchIntervalMilliseconds) * time.Millisecond
 	metric.Setup(
-		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(serverCreds)),
+		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(metricsCreds)),
 		metric.WithBatchInterval(batchInterval),
 		metric.WithPrefix("loggregator"),
 		metric.WithOrigin("metron"),

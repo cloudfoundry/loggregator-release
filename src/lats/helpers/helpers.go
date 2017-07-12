@@ -1,12 +1,18 @@
 package helpers
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
+	"plumbing"
 	"strconv"
 	"time"
+
+	v2 "plumbing/v2"
+
+	"google.golang.org/grpc"
 
 	"code.cloudfoundry.org/workpool"
 
@@ -102,6 +108,91 @@ func EmitToMetron(envelope *events.Envelope) {
 
 	_, err = metronConn.Write(b)
 	Expect(err).NotTo(HaveOccurred())
+}
+
+func EmitToMetronV2(envelope *v2.Envelope) {
+	creds, err := plumbing.NewServerCredentials(
+		config.MetronTLSClientConfig.CertFile,
+		config.MetronTLSClientConfig.KeyFile,
+		config.MetronTLSClientConfig.CAFile,
+		"metron",
+	)
+	Expect(err).NotTo(HaveOccurred())
+
+	conn, err := grpc.Dial("localhost:3458", grpc.WithTransportCredentials(creds))
+	c := v2.NewIngressClient(conn)
+
+	s, err := c.Sender(context.Background())
+	Expect(err).NotTo(HaveOccurred())
+	defer s.CloseSend()
+
+	for i := 0; i < WriteCount; i++ {
+		err = s.Send(envelope)
+		Expect(err).NotTo(HaveOccurred())
+	}
+}
+
+func ReadFromRLP(appID string) <-chan *v2.Envelope {
+	creds, err := plumbing.NewServerCredentials(
+		config.MetronTLSClientConfig.CertFile,
+		config.MetronTLSClientConfig.KeyFile,
+		config.MetronTLSClientConfig.CAFile,
+		"reverselogproxy",
+	)
+	Expect(err).NotTo(HaveOccurred())
+
+	conn, err := grpc.Dial(config.ReverseLogProxyAddr, grpc.WithTransportCredentials(creds))
+	Expect(err).NotTo(HaveOccurred())
+
+	client := v2.NewEgressClient(conn)
+	receiver, err := client.Receiver(context.Background(), &v2.EgressRequest{
+		ShardId: fmt.Sprint("shard-", time.Now().UnixNano()),
+		Filter: &v2.Filter{
+			SourceId: appID,
+			Message: &v2.Filter_Log{
+				Log: &v2.LogFilter{},
+			},
+		},
+	})
+	Expect(err).ToNot(HaveOccurred())
+
+	msgChan := make(chan *v2.Envelope, 100)
+
+	go func() {
+		defer conn.Close()
+		for {
+			e, err := receiver.Recv()
+			if err != nil {
+				break
+			}
+
+			msgChan <- e
+		}
+	}()
+
+	return msgChan
+}
+
+func ReadContainerFromRLP(appID string) []*v2.Envelope {
+	creds, err := plumbing.NewServerCredentials(
+		config.MetronTLSClientConfig.CertFile,
+		config.MetronTLSClientConfig.KeyFile,
+		config.MetronTLSClientConfig.CAFile,
+		"reverselogproxy",
+	)
+	Expect(err).NotTo(HaveOccurred())
+
+	conn, err := grpc.Dial(config.ReverseLogProxyAddr, grpc.WithTransportCredentials(creds))
+	Expect(err).NotTo(HaveOccurred())
+
+	client := v2.NewEgressQueryClient(conn)
+
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	resp, err := client.ContainerMetrics(ctx, &v2.ContainerMetricRequest{
+		SourceId: appID,
+	})
+	Expect(err).ToNot(HaveOccurred())
+	return resp.Envelopes
 }
 
 func FindMatchingEnvelope(msgChan <-chan *events.Envelope, envelope *events.Envelope) *events.Envelope {

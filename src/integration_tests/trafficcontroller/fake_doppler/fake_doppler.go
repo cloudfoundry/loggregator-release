@@ -45,7 +45,7 @@ func (fakeDoppler *FakeDoppler) Start() error {
 	if err != nil {
 		return err
 	}
-	tlsConfig, err := plumbing.NewMutualTLSConfig(
+	tlsConfig, err := plumbing.NewServerMutualTLSConfig(
 		"../fixtures/server.crt",
 		"../fixtures/server.key",
 		"../fixtures/loggregator-ca.crt",

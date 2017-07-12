@@ -24,10 +24,10 @@ type Server struct {
 }
 
 func NewServer() (*Server, error) {
-	tlsConfig, err := plumbing.NewMutualTLSConfig(
-		testservers.DopplerCertPath(),
-		testservers.DopplerKeyPath(),
-		testservers.CAFilePath(),
+	tlsConfig, err := plumbing.NewServerMutualTLSConfig(
+		testservers.Cert("doppler.crt"),
+		testservers.Cert("doppler.key"),
+		testservers.Cert("loggregator-ca.crt"),
 		"",
 	)
 	if err != nil {
