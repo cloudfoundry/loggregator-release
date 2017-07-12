@@ -1,10 +1,11 @@
 package doppler_test
 
 import (
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"context"
 	"strconv"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"google.golang.org/grpc"
 

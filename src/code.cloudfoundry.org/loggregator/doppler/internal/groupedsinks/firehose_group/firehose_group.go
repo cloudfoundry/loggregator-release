@@ -1,11 +1,12 @@
 package firehose_group
 
 import (
+	"math/rand"
+	"sync"
+
 	"code.cloudfoundry.org/loggregator/doppler/internal/groupedsinks/sink_wrapper"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
 	"code.cloudfoundry.org/loggregator/metricemitter"
-	"math/rand"
-	"sync"
 
 	"github.com/cloudfoundry/sonde-go/events"
 )
@@ -28,12 +29,12 @@ type firehoseGroup struct {
 	wrappers map[string]*sink_wrapper.SinkWrapper
 
 	batcher       MetricBatcher
-	droppedMetric *metricemitter.CounterMetric
+	droppedMetric *metricemitter.Counter
 }
 
 func NewFirehoseGroup(
 	batcher MetricBatcher,
-	droppedMetric *metricemitter.CounterMetric,
+	droppedMetric *metricemitter.Counter,
 ) *firehoseGroup {
 	return &firehoseGroup{
 		wrappers:      make(map[string]*sink_wrapper.SinkWrapper),

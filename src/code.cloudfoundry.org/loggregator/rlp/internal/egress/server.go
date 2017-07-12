@@ -8,10 +8,8 @@ import (
 
 	"code.cloudfoundry.org/loggregator/metricemitter"
 
-	"code.cloudfoundry.org/loggregator/diodes"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
-	gendiodes "github.com/cloudfoundry/diodes"
 	"golang.org/x/net/context"
 )
 
@@ -24,25 +22,30 @@ type Receiver interface {
 	Receive(ctx context.Context, req *v2.EgressRequest) (rx func() (*v2.Envelope, error), err error)
 }
 
+// MetricClient creates new CounterMetrics to be emitted periodically.
+type MetricClient interface {
+	NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter
+}
+
 type Server struct {
 	receiver      Receiver
-	egressMetric  *metricemitter.CounterMetric
-	droppedMetric *metricemitter.CounterMetric
+	egressMetric  *metricemitter.Counter
+	droppedMetric *metricemitter.Counter
 	health        HealthRegistrar
 	ctx           context.Context
 }
 
 func NewServer(
 	r Receiver,
-	m metricemitter.MetricClient,
+	m MetricClient,
 	h HealthRegistrar,
 	c context.Context,
 ) *Server {
-	egressMetric := m.NewCounterMetric("egress",
+	egressMetric := m.NewCounter("egress",
 		metricemitter.WithVersion(2, 0),
 	)
 
-	droppedMetric := m.NewCounterMetric("dropped",
+	droppedMetric := m.NewCounter("dropped",
 		metricemitter.WithVersion(2, 0),
 		metricemitter.WithTags(map[string]string{
 			"direction": "egress",
@@ -69,10 +72,17 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 	}
 
 	ctx, cancel := context.WithCancel(srv.Context())
+	defer cancel()
+
+	buffer := make(chan *v2.Envelope, 10000)
 
 	go func() {
-		<-s.ctx.Done()
-		cancel()
+		select {
+		case <-s.ctx.Done():
+			cancel()
+		case <-ctx.Done():
+			cancel()
+		}
 	}()
 
 	rx, err := s.receiver.Receive(ctx, r)
@@ -81,17 +91,9 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 		return fmt.Errorf("unable to setup subscription")
 	}
 
-	buffer := diodes.NewOneToOneEnvelopeV2(10000, s, gendiodes.WithPollingContext(ctx))
-
 	go s.consumeReceiver(buffer, rx, cancel)
 
-	for {
-		// Diodes return nil when they are empty and their context is done
-		data := buffer.Next()
-		if data == nil {
-			return nil
-		}
-
+	for data := range buffer {
 		if err := srv.Send(data); err != nil {
 			log.Printf("Send error: %s", err)
 			return io.ErrUnexpectedEOF
@@ -101,6 +103,8 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 		// envelopes sent to RLP consumers.
 		s.egressMetric.Increment(1)
 	}
+
+	return nil
 }
 
 func (s *Server) Alert(missed int) {
@@ -111,12 +115,14 @@ func (s *Server) Alert(missed int) {
 }
 
 func (s *Server) consumeReceiver(
-	buffer *diodes.OneToOneEnvelopeV2,
+	buffer chan<- *v2.Envelope,
 	rx func() (*v2.Envelope, error),
 	cancel func(),
 ) {
 
 	defer cancel()
+	defer close(buffer)
+
 	for {
 		e, err := rx()
 		if err == io.EOF {
@@ -128,6 +134,10 @@ func (s *Server) consumeReceiver(
 			break
 		}
 
-		buffer.Set(e)
+		select {
+		case buffer <- e:
+		default:
+			s.droppedMetric.Increment(1)
+		}
 	}
 }

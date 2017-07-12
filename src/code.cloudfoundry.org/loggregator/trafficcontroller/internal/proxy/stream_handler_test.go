@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"time"
 
+	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
@@ -21,7 +22,7 @@ var _ = Describe("StreamHandler", func() {
 		recorder     *httptest.ResponseRecorder
 
 		connector  *SpyGRPCConnector
-		mockSender *mockMetricSender
+		mockSender *testhelper.SpyMetricClient
 		mockHealth *mockHealth
 	)
 
@@ -30,7 +31,7 @@ var _ = Describe("StreamHandler", func() {
 		adminAuth = AdminAuthorizer{Result: AuthorizerResult{Status: http.StatusOK}}
 
 		connector = newSpyGRPCConnector(nil)
-		mockSender = newMockMetricSender()
+		mockSender = testhelper.NewMetricClient()
 		mockHealth = newMockHealth()
 
 		dopplerProxy = proxy.NewDopplerProxy(

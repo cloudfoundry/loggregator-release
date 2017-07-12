@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -42,6 +43,7 @@ import (
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/grpclog"
 )
 
 const dopplerOrigin = "DopplerServer"
@@ -51,6 +53,7 @@ func main() {
 	// MAIN
 	//------------------------------
 	rand.Seed(time.Now().UnixNano())
+	grpclog.SetLogger(log.New(ioutil.Discard, "", 0))
 
 	configFile := flag.String(
 		"config",
@@ -153,7 +156,7 @@ func main() {
 	errChan := make(chan error)
 	dropsondeUnmarshallerCollection := dropsonde_unmarshaller.NewDropsondeUnmarshallerCollection(conf.UnmarshallerCount)
 
-	droppedMetric := metricClient.NewCounterMetric("dropped",
+	droppedMetric := metricClient.NewCounter("dropped",
 		metricemitter.WithVersion(2, 0),
 		metricemitter.WithTags(map[string]string{"direction": "ingress"}),
 	)
@@ -360,7 +363,7 @@ func connectToEtcd(conf *app.Config) storeadapter.StoreAdapter {
 	return etcdStoreAdapter
 }
 
-func setupMetricsEmitter(conf *app.Config) metricemitter.MetricClient {
+func setupMetricsEmitter(conf *app.Config) *metricemitter.Client {
 	credentials, err := plumbing.NewCredentials(
 		conf.GRPC.CertFile,
 		conf.GRPC.KeyFile,

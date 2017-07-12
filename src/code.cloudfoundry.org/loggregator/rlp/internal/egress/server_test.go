@@ -5,6 +5,7 @@ import (
 	"io"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 	"code.cloudfoundry.org/loggregator/rlp/internal/egress"
@@ -84,6 +85,20 @@ var _ = Describe("Server", func() {
 			Eventually(rxCtx.Done).Should(BeClosed())
 		})
 
+		It("cancels the context when Receiver exits", func() {
+			receiverServer = &spyReceiverServer{
+				err: errors.New("Oh no!"),
+			}
+			receiver = newSpyReceiver(100000000)
+
+			server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
+			go server.Receiver(&v2.EgressRequest{}, receiverServer)
+
+			var ctx context.Context
+			Eventually(receiver.ctx).Should(Receive(&ctx))
+			Eventually(ctx.Done()).Should(BeClosed())
+		})
+
 		Describe("Metrics", func() {
 			It("emits 'egress' metric for each envelope", func() {
 				receiverServer = &spyReceiverServer{}
@@ -98,15 +113,17 @@ var _ = Describe("Server", func() {
 			})
 
 			It("emits 'dropped' metric for each envelope", func() {
-				receiverServer = &spyReceiverServer{}
+				receiverServer = &spyReceiverServer{
+					sendDelay: time.Hour,
+				}
 				receiver = newSpyReceiver(1000000)
 
 				server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
-				server.Receiver(&v2.EgressRequest{}, receiverServer)
+				go server.Receiver(&v2.EgressRequest{}, receiverServer)
 
 				Eventually(func() uint64 {
 					return metricClient.GetDelta("dropped")
-				}).Should(BeNumerically(">", 100))
+				}, 3).Should(BeNumerically(">", 100))
 			})
 		})
 
@@ -136,6 +153,7 @@ var _ = Describe("Server", func() {
 type spyReceiverServer struct {
 	err           error
 	envelopeCount int64
+	sendDelay     time.Duration
 
 	grpc.ServerStream
 }
@@ -146,6 +164,7 @@ func (*spyReceiverServer) Context() context.Context {
 
 func (s *spyReceiverServer) Send(*v2.Envelope) error {
 	atomic.AddInt64(&s.envelopeCount, 1)
+	time.Sleep(s.sendDelay)
 	return s.err
 }
 

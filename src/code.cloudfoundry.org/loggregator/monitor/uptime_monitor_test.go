@@ -1,9 +1,10 @@
 package monitor_test
 
 import (
-	"code.cloudfoundry.org/loggregator/monitor"
 	"sync"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/monitor"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

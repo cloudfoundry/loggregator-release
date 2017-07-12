@@ -1,8 +1,9 @@
 package app_test
 
 import (
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/metadata"

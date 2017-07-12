@@ -1,3 +1,5 @@
+// +build deprecated
+
 package websocket_test
 
 import (
@@ -16,7 +18,7 @@ import (
 )
 
 // WebsocketSinks are a deprecated code path
-var _ = XDescribe("WebsocketSink", func() {
+var _ = Describe("WebsocketSink", func() {
 	var (
 		websocketSink *websocket.WebsocketSink
 		fakeWebsocket *fakeMessageWriter

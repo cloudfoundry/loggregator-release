@@ -1,10 +1,10 @@
 package v2
 
 import (
+	"time"
+
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
-	"log"
-	"time"
 )
 
 type Nexter interface {
@@ -15,14 +15,19 @@ type Writer interface {
 	Write(msgs []*plumbing.Envelope) error
 }
 
+// MetricClient creates new CounterMetrics to be emitted periodically.
+type MetricClient interface {
+	NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter
+}
+
 type Transponder struct {
 	nexter        Nexter
 	writer        Writer
 	tags          map[string]string
 	batchSize     int
 	batchInterval time.Duration
-	droppedMetric *metricemitter.CounterMetric
-	egressMetric  *metricemitter.CounterMetric
+	droppedMetric *metricemitter.Counter
+	egressMetric  *metricemitter.Counter
 }
 
 func NewTransponder(
@@ -31,14 +36,14 @@ func NewTransponder(
 	tags map[string]string,
 	batchSize int,
 	batchInterval time.Duration,
-	metricClient metricemitter.MetricClient,
+	metricClient MetricClient,
 ) *Transponder {
-	droppedMetric := metricClient.NewCounterMetric("dropped",
+	droppedMetric := metricClient.NewCounter("dropped",
 		metricemitter.WithVersion(2, 0),
 		metricemitter.WithTags(map[string]string{"direction": "egress"}),
 	)
 
-	egressMetric := metricClient.NewCounterMetric("egress",
+	egressMetric := metricClient.NewCounter("egress",
 		metricemitter.WithVersion(2, 0),
 	)
 
@@ -73,22 +78,23 @@ func (t *Transponder) Start() {
 			continue
 		}
 
-		err := t.writer.Write(batch)
-		if err != nil {
-			// metric-documentation-v2: (loggregator.metron.dropped) Number of messages
-			// dropped when failing to write to Dopplers v2 API
-			t.droppedMetric.Increment(uint64(len(batch)))
-			log.Printf("v2 egress dropped: %s", err)
-			continue
-		}
-
-		// metric-documentation-v2: (loggregator.metron.egress)
-		// Number of messages written to Doppler's v2 API
-		t.egressMetric.Increment(uint64(len(batch)))
-
+		t.write(batch)
 		batch = nil
 		lastSent = time.Now()
 	}
+}
+
+func (t *Transponder) write(batch []*plumbing.Envelope) {
+	if err := t.writer.Write(batch); err != nil {
+		// metric-documentation-v2: (loggregator.metron.dropped) Number of messages
+		// dropped when failing to write to Dopplers v2 API
+		t.droppedMetric.Increment(uint64(len(batch)))
+		return
+	}
+
+	// metric-documentation-v2: (loggregator.metron.egress)
+	// Number of messages written to Doppler's v2 API
+	t.egressMetric.Increment(uint64(len(batch)))
 }
 
 func (t *Transponder) batchReady(batch []*plumbing.Envelope, lastSent time.Time) bool {

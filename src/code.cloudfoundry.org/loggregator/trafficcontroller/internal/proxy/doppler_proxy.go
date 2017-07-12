@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"time"
 
+	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/auth"
 
@@ -14,10 +15,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-const (
-	FIREHOSE_ID     = "firehose"
-	metricsInterval = time.Second
-)
+var MetricsInterval = 15 * time.Second
 
 type Health interface {
 	Set(name string, value float64)
@@ -29,8 +27,10 @@ type DopplerProxy struct {
 	numFirehoses  int64
 	numAppStreams int64
 
-	metricSender metricSender
-	health       Health
+	health Health
+
+	firehoseConnMetric  *metricemitter.Gauge
+	appStreamConnMetric *metricemitter.Gauge
 }
 
 type grpcConnector interface {
@@ -39,8 +39,9 @@ type grpcConnector interface {
 	RecentLogs(ctx context.Context, appID string) [][]byte
 }
 
-type metricSender interface {
-	SendValue(name string, value float64, unit string) error
+type MetricClient interface {
+	NewCounter(string, ...metricemitter.MetricOption) *metricemitter.Counter
+	NewGauge(string, string, ...metricemitter.MetricOption) *metricemitter.Gauge
 }
 
 func NewDopplerProxy(
@@ -49,9 +50,19 @@ func NewDopplerProxy(
 	grpcConn grpcConnector,
 	cookieDomain string,
 	timeout time.Duration,
-	m metricSender,
+	m MetricClient,
 	health Health,
 ) *DopplerProxy {
+	// metric-documentation-v2: (doppler_proxy.firehoses) Number of open firehose streams
+	firehoseConnMetric := m.NewGauge("doppler_proxy.firehoses", "connections",
+		metricemitter.WithVersion(2, 0),
+	)
+
+	// metric-documentation-v2: (doppler_proxy.app_streams) Number of open app streams
+	appStreamConnMetric := m.NewGauge("doppler_proxy.app_streams", "connections",
+		metricemitter.WithVersion(2, 0),
+	)
+
 	r := mux.NewRouter()
 
 	adminAccessMiddleware := NewAdminAccessMiddleware(adminAuthorizer)
@@ -67,19 +78,18 @@ func NewDopplerProxy(
 	recentLogsHandler := NewRecentLogsHandler(grpcConn, timeout, m)
 	r.Handle("/apps/{appID}/recentlogs", logAccessMiddleware.Wrap(recentLogsHandler))
 
-	wsServer := &WebSocketServer{
-		MetricSender: m,
-	}
-	streamHandler := NewStreamHandler(grpcConn, wsServer)
+	wsServer := NewWebSocketServer(m)
+	streamHandler := NewStreamHandler(grpcConn, wsServer, m)
 	r.Handle("/apps/{appID}/stream", logAccessMiddleware.Wrap(streamHandler))
 
-	firehoseHandler := NewFirehoseHandler(grpcConn, wsServer)
+	firehoseHandler := NewFirehoseHandler(grpcConn, wsServer, m)
 	r.Handle("/firehose/{subID}", adminAccessMiddleware.Wrap(firehoseHandler))
 
 	d := &DopplerProxy{
-		Router:       r,
-		metricSender: m,
-		health:       health,
+		Router:              r,
+		health:              health,
+		firehoseConnMetric:  firehoseConnMetric,
+		appStreamConnMetric: appStreamConnMetric,
 	}
 
 	go d.emitMetrics(firehoseHandler, streamHandler)
@@ -88,13 +98,11 @@ func NewDopplerProxy(
 }
 
 func (d *DopplerProxy) emitMetrics(firehose *FirehoseHandler, stream *StreamHandler) {
-	for range time.Tick(metricsInterval) {
-		// metric-documentation-v1: (dopplerProxy.firehoses) Number of open firehose streams
-		d.metricSender.SendValue("dopplerProxy.firehoses", float64(firehose.Count()), "connections")
+	for range time.Tick(MetricsInterval) {
+		d.firehoseConnMetric.Set(float64(firehose.Count()))
 		d.health.Set("firehoseStreamCount", float64(firehose.Count()))
 
-		// metric-documentation-v1: (dopplerProxy.appStreams) Number of open app streams
-		d.metricSender.SendValue("dopplerProxy.appStreams", float64(stream.Count()), "connections")
+		d.appStreamConnMetric.Set(float64(stream.Count()))
 		d.health.Set("appStreamCount", float64(stream.Count()))
 	}
 }

@@ -7,6 +7,8 @@ import (
 	"net"
 	"sync"
 
+	"golang.org/x/net/netutil"
+
 	"github.com/prometheus/client_golang/prometheus"
 
 	"code.cloudfoundry.org/loggregator/healthendpoint"
@@ -19,14 +21,20 @@ import (
 	"google.golang.org/grpc"
 )
 
+// MetricClient creates new CounterMetrics to be emitted periodically.
+type MetricClient interface {
+	NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter
+}
+
 // RLP represents the reverse log proxy component. It connects to various gRPC
 // servers to ingress data and opens a gRPC server to egress data.
 type RLP struct {
 	ctx       context.Context
 	ctxCancel func()
 
-	egressPort       int
-	egressServerOpts []grpc.ServerOption
+	egressPort           int
+	egressServerOpts     []grpc.ServerOption
+	maxEgressConnections int
 
 	ingressAddrs    []string
 	ingressDialOpts []grpc.DialOption
@@ -42,26 +50,30 @@ type RLP struct {
 	healthAddr string
 	health     *healthendpoint.Registrar
 
-	metricClient metricemitter.MetricClient
+	metricClient MetricClient
 
 	finder *plumbing.StaticFinder
 }
 
 // NewRLP returns a new unstarted RLP.
-func NewRLP(m metricemitter.MetricClient, opts ...RLPOption) *RLP {
+func NewRLP(m MetricClient, opts ...RLPOption) *RLP {
 	ctx, cancel := context.WithCancel(context.Background())
 	rlp := &RLP{
-		ingressAddrs:     []string{"doppler.service.cf.internal"},
-		ingressDialOpts:  []grpc.DialOption{grpc.WithInsecure()},
-		egressServerOpts: []grpc.ServerOption{},
-		metricClient:     m,
-		healthAddr:       "localhost:33333",
-		ctx:              ctx,
-		ctxCancel:        cancel,
+		ingressAddrs:         []string{"doppler.service.cf.internal"},
+		ingressDialOpts:      []grpc.DialOption{grpc.WithInsecure()},
+		egressServerOpts:     []grpc.ServerOption{},
+		maxEgressConnections: 500,
+		metricClient:         m,
+		healthAddr:           "localhost:33333",
+		ctx:                  ctx,
+		ctxCancel:            cancel,
 	}
 	for _, o := range opts {
 		o(rlp)
 	}
+
+	rlp.startEgressListener()
+
 	return rlp
 }
 
@@ -104,6 +116,19 @@ func WithHealthAddr(addr string) RLPOption {
 	return func(r *RLP) {
 		r.healthAddr = addr
 	}
+}
+
+// WithMaxEgressConnections specifies the number of connections the RLP will
+// accept on the egress endpoint.
+func WithMaxEgressConnections(max int) RLPOption {
+	return func(r *RLP) {
+		r.maxEgressConnections = max
+	}
+}
+
+// EgressAddr returns the address used for the egress server.
+func (r *RLP) EgressAddr() net.Addr {
+	return r.egressAddr
 }
 
 // Start starts a remote log proxy. This connects to various gRPC servers and
@@ -149,17 +174,21 @@ func (r *RLP) setupIngress() {
 	r.querier = ingress.NewQuerier(converter, connector)
 }
 
-func (r *RLP) setupEgress() {
-	var err error
-	r.egressListener, err = net.Listen("tcp", fmt.Sprintf(":%d", r.egressPort))
+func (r *RLP) startEgressListener() {
+	l, err := net.Listen("tcp", fmt.Sprintf(":%d", r.egressPort))
 	if err != nil {
 		log.Fatalf("failed to listen on port: %d: %s", r.egressPort, err)
 	}
+	r.egressListener = netutil.LimitListener(l, r.maxEgressConnections)
 	r.egressAddr = r.egressListener.Addr()
+}
+
+func (r *RLP) setupEgress() {
 	r.egressServer = grpc.NewServer(r.egressServerOpts...)
 	v2.RegisterEgressServer(
 		r.egressServer,
-		egress.NewServer(r.receiver, r.metricClient, r.health, r.ctx))
+		egress.NewServer(r.receiver, r.metricClient, r.health, r.ctx),
+	)
 	v2.RegisterEgressQueryServer(r.egressServer, egress.NewQueryServer(r.querier))
 }
 

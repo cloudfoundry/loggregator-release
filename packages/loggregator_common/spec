@@ -1,6 +1,6 @@
 ---
 name: loggregator_common
 files:
-- loggregator/src/code.cloudfoundry.org/loggregator/common/utils.sh
-- loggregator/src/code.cloudfoundry.org/loggregator/common/pid_utils.sh
-- loggregator/src/code.cloudfoundry.org/loggregator/common/syslog_utils.sh
+- loggregator/src/common/utils.sh
+- loggregator/src/common/pid_utils.sh
+- loggregator/src/common/syslog_utils.sh

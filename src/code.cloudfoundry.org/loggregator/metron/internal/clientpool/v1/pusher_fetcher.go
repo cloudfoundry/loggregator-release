@@ -1,12 +1,13 @@
 package v1
 
 import (
-	"code.cloudfoundry.org/loggregator/metron/internal/health"
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"context"
 	"fmt"
 	"io"
 	"log"
+
+	"code.cloudfoundry.org/loggregator/metron/internal/health"
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"google.golang.org/grpc"
 )

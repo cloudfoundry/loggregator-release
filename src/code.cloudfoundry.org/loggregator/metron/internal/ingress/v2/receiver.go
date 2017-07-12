@@ -1,8 +1,9 @@
 package v2
 
 import (
-	"code.cloudfoundry.org/loggregator/metricemitter"
 	"log"
+
+	"code.cloudfoundry.org/loggregator/metricemitter"
 
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 )
@@ -11,13 +12,18 @@ type DataSetter interface {
 	Set(e *v2.Envelope)
 }
 
-type Receiver struct {
-	dataSetter    DataSetter
-	ingressMetric *metricemitter.CounterMetric
+// MetricClient creates new CounterMetrics to be emitted periodically.
+type MetricClient interface {
+	NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter
 }
 
-func NewReceiver(dataSetter DataSetter, metricClient metricemitter.MetricClient) *Receiver {
-	ingressMetric := metricClient.NewCounterMetric("ingress",
+type Receiver struct {
+	dataSetter    DataSetter
+	ingressMetric *metricemitter.Counter
+}
+
+func NewReceiver(dataSetter DataSetter, metricClient MetricClient) *Receiver {
+	ingressMetric := metricClient.NewCounter("ingress",
 		metricemitter.WithVersion(2, 0),
 	)
 

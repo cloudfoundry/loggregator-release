@@ -1,9 +1,10 @@
 package doppler_test
 
 import (
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"net"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"code.cloudfoundry.org/loggregator/doppler/app"
 

@@ -2,19 +2,20 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"io/ioutil"
 	"log"
 
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/grpclog"
 
 	"code.cloudfoundry.org/loggregator/trafficcontroller/app"
 )
 
 func main() {
-	logFilePath := flag.String("logFile", "", "The agent log file, defaults to STDOUT")
+	grpclog.SetLogger(log.New(ioutil.Discard, "", 0))
 	disableAccessControl := flag.Bool("disableAccessControl", false, "always all access to app logs")
 	configFile := flag.String("config", "config/loggregator_trafficcontroller.json", "Location of the loggregator trafficcontroller config json file")
 
@@ -22,7 +23,7 @@ func main() {
 
 	conf, err := app.ParseConfig(*configFile)
 	if err != nil {
-		panic(fmt.Errorf("Unable to parse config: %s", err))
+		log.Panicf("Unable to parse config: %s", err)
 	}
 
 	credentials, err := plumbing.NewCredentials(
@@ -45,6 +46,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Couldn't connect to metric emitter: %s", err)
 	}
-	tc := app.NewTrafficController(conf, *logFilePath, *disableAccessControl, metricClient)
+	tc := app.NewTrafficController(conf, *disableAccessControl, metricClient)
 	tc.Start()
 }

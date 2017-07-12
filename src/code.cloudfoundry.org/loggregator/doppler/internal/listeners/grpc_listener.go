@@ -1,6 +1,10 @@
 package listeners
 
 import (
+	"fmt"
+	"log"
+	"net"
+
 	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/doppler/app"
 	"code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1"
@@ -10,15 +14,17 @@ import (
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	plumbingv1 "code.cloudfoundry.org/loggregator/plumbing"
 	plumbingv2 "code.cloudfoundry.org/loggregator/plumbing/v2"
-	"fmt"
-	"log"
-	"net"
 
 	"github.com/cloudfoundry/dropsonde/metricbatcher"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
+
+// MetricClient creates new CounterMetrics to be emitted periodically.
+type MetricClient interface {
+	NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter
+}
 
 type GRPCListener struct {
 	listener net.Listener
@@ -31,7 +37,7 @@ func NewGRPCListener(
 	conf app.GRPC,
 	envelopeBuffer *diodes.ManyToOneEnvelope,
 	batcher *metricbatcher.MetricBatcher,
-	metricClient metricemitter.MetricClient,
+	metricClient MetricClient,
 	health *healthendpoint.Registrar,
 ) (*GRPCListener, error) {
 	tlsConfig, err := plumbingv1.NewMutualTLSConfig(

@@ -1,10 +1,11 @@
 package blacklist
 
 import (
-	"code.cloudfoundry.org/loggregator/doppler/internal/iprange"
 	"errors"
 	"log"
 	"net/url"
+
+	"code.cloudfoundry.org/loggregator/doppler/internal/iprange"
 )
 
 type URLBlacklistManager struct {

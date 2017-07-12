@@ -1,8 +1,9 @@
 package metricemitter_test
 
 import (
-	"code.cloudfoundry.org/loggregator/metricemitter"
 	"errors"
+
+	"code.cloudfoundry.org/loggregator/metricemitter"
 
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
@@ -10,10 +11,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("CounterMetric", func() {
+var _ = Describe("Counter", func() {
 	Context("WithEnvelope", func() {
 		It("decrements it value on success", func() {
-			metric := metricemitter.NewCounterMetric("name", "source-id")
+			metric := metricemitter.NewCounter("name", "source-id")
 
 			metric.Increment(10)
 
@@ -26,7 +27,7 @@ var _ = Describe("CounterMetric", func() {
 		})
 
 		It("does not decrement the value on failure", func() {
-			metric := metricemitter.NewCounterMetric("name", "source-id")
+			metric := metricemitter.NewCounter("name", "source-id")
 
 			metric.Increment(10)
 

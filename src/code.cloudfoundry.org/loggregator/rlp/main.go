@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
@@ -12,6 +13,7 @@ import (
 	"code.cloudfoundry.org/loggregator/metricemitter"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/grpclog"
 
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"code.cloudfoundry.org/loggregator/profiler"
@@ -20,6 +22,8 @@ import (
 )
 
 func main() {
+	grpclog.SetLogger(log.New(ioutil.Discard, "", 0))
+
 	egressPort := flag.Int("egress-port", 0, "The port of the Egress server")
 	ingressAddrsList := flag.String("ingress-addrs", "", "The addresses of Dopplers")
 	pprofPort := flag.Int("pprof-port", 6061, "The port of pprof for health checks")

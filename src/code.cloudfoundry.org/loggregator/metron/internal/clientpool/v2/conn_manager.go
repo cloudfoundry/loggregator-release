@@ -1,13 +1,14 @@
 package v2
 
 import (
-	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
 	"errors"
 	"io"
 	"log"
 	"sync/atomic"
 	"time"
 	"unsafe"
+
+	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
 )
 
 type Connector interface {
@@ -84,7 +85,6 @@ func (m *ConnManager) maintainConn() {
 
 		closer, senderClient, err := m.connector.Connect()
 		if err != nil {
-			log.Printf("error dialing doppler: %s", err)
 			continue
 		}
 

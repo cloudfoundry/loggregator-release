@@ -3,7 +3,6 @@ name: reverse_log_proxy
 dependencies:
 - golang1.8.3
 files:
-- loggregator/src/code.cloudfoundry.org/loggregator/diodes/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/app/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/iprange/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/dopplerservice/*.go # gosub
@@ -18,7 +17,6 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/rlp/internal/egress/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/rlp/internal/ingress/*.go # gosub
 - loggregator/src/github.com/beorn7/perks/quantile/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/diodes/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metric_sender/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/metricbatcher/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/sonde-go/events/*.go # gosub
@@ -43,6 +41,7 @@ files:
 - loggregator/src/golang.org/x/net/idna/*.go # gosub
 - loggregator/src/golang.org/x/net/internal/timeseries/*.go # gosub
 - loggregator/src/golang.org/x/net/lex/httplex/*.go # gosub
+- loggregator/src/golang.org/x/net/netutil/*.go # gosub
 - loggregator/src/golang.org/x/net/trace/*.go # gosub
 - loggregator/src/golang.org/x/text/secure/bidirule/*.go # gosub
 - loggregator/src/golang.org/x/text/transform/*.go # gosub

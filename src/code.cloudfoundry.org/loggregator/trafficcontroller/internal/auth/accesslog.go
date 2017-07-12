@@ -124,6 +124,6 @@ func init() {
 	var err error
 	logTemplate, err = template.New("access_log").Parse(templateSource)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 }

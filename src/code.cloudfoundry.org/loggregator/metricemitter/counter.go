@@ -8,39 +8,42 @@ import (
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 )
 
-type CounterMetric struct {
-	client   *client
+type Counter struct {
+	Tagged
 	name     string
 	sourceID string
-	tags     map[string]*v2.Value
 	delta    uint64
 }
 
-type MetricOption func(*CounterMetric)
+type Tagged struct {
+	tags map[string]*v2.Value
+}
 
-func NewCounterMetric(name, sourceID string, opts ...MetricOption) *CounterMetric {
-	m := &CounterMetric{
+type MetricOption func(Tagged)
+
+func NewCounter(name, sourceID string, opts ...MetricOption) *Counter {
+	m := &Counter{
 		name:     name,
 		sourceID: sourceID,
-		tags:     make(map[string]*v2.Value),
 	}
+	m.Tagged.tags = make(map[string]*v2.Value)
 
 	for _, opt := range opts {
-		opt(m)
+		opt(m.Tagged)
 	}
 
 	return m
 }
 
-func (m *CounterMetric) Increment(c uint64) {
+func (m *Counter) Increment(c uint64) {
 	atomic.AddUint64(&m.delta, c)
 }
 
-func (m *CounterMetric) GetDelta() uint64 {
+func (m *Counter) GetDelta() uint64 {
 	return atomic.LoadUint64(&m.delta)
 }
 
-func (m *CounterMetric) WithEnvelope(fn func(*v2.Envelope) error) error {
+func (m *Counter) WithEnvelope(fn func(*v2.Envelope) error) error {
 	d := atomic.SwapUint64(&m.delta, 0)
 
 	if err := fn(m.toEnvelope(d)); err != nil {
@@ -51,7 +54,7 @@ func (m *CounterMetric) WithEnvelope(fn func(*v2.Envelope) error) error {
 	return nil
 }
 
-func (m *CounterMetric) toEnvelope(delta uint64) *v2.Envelope {
+func (m *Counter) toEnvelope(delta uint64) *v2.Envelope {
 	return &v2.Envelope{
 		SourceId:  m.sourceID,
 		Timestamp: time.Now().UnixNano(),
@@ -74,7 +77,7 @@ func WithVersion(major, minor uint) MetricOption {
 }
 
 func WithTags(tags map[string]string) MetricOption {
-	return func(m *CounterMetric) {
+	return func(m Tagged) {
 		for k, v := range tags {
 			m.tags[k] = &v2.Value{
 				Data: &v2.Value_Text{

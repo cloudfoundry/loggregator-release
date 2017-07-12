@@ -7,6 +7,8 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"code.cloudfoundry.org/loggregator/metricemitter"
+	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
 
 	. "github.com/onsi/ginkgo"
@@ -14,16 +16,27 @@ import (
 )
 
 var _ = Describe("WebsocketHandler", func() {
-	var handler http.Handler
-	var fakeResponseWriter *httptest.ResponseRecorder
-	var messagesChan chan []byte
-	var testServer *httptest.Server
-	var handlerDone chan struct{}
+	var (
+		handler            http.Handler
+		fakeResponseWriter *httptest.ResponseRecorder
+		messagesChan       chan []byte
+		testServer         *httptest.Server
+		handlerDone        chan struct{}
+		mockSender         *testhelper.SpyMetricClient
+		egressMetric       *metricemitter.Counter
+	)
 
 	BeforeEach(func() {
 		fakeResponseWriter = httptest.NewRecorder()
 		messagesChan = make(chan []byte, 10)
-		handler = proxy.NewWebsocketHandler(messagesChan, 100*time.Millisecond)
+		mockSender = testhelper.NewMetricClient()
+		egressMetric = mockSender.NewCounter("egress")
+
+		handler = proxy.NewWebsocketHandler(
+			messagesChan,
+			100*time.Millisecond,
+			egressMetric,
+		)
 		handlerDone = make(chan struct{})
 		testServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			handler.ServeHTTP(rw, r)
@@ -65,7 +78,6 @@ var _ = Describe("WebsocketHandler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 		Eventually(handlerDone).Should(BeClosed())
-
 	})
 
 	It("should stop when the client goes away", func() {
@@ -142,6 +154,20 @@ var _ = Describe("WebsocketHandler", func() {
 		close(messagesChan)
 		_, _, err = ws.ReadMessage()
 		Expect(err.Error()).To(ContainSubstring("websocket: close 1000"))
+		Eventually(handlerDone).Should(BeClosed())
+	})
+
+	It("increments an egress counter every time it writes an envelope", func() {
+		ws, _, err := websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
+		Expect(err).NotTo(HaveOccurred())
+
+		messagesChan <- []byte("message")
+		close(messagesChan)
+
+		_, _, err = ws.ReadMessage()
+		Expect(err).NotTo(HaveOccurred())
+
+		Eventually(egressMetric.GetDelta).Should(Equal(uint64(1)))
 		Eventually(handlerDone).Should(BeClosed())
 	})
 

@@ -1,14 +1,16 @@
 package metrics
 
 import (
+	"time"
+
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/dump"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/websocket"
-	"time"
+
+	"sync/atomic"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/containermetric"
-	"sync/atomic"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
 )

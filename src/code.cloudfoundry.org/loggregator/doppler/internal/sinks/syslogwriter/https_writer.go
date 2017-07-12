@@ -6,7 +6,6 @@
 package syslogwriter
 
 import (
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -18,6 +17,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/plumbing"
 )
 
 type httpsWriter struct {

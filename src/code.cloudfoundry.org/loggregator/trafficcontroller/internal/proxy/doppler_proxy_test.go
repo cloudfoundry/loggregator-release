@@ -1,5 +1,3 @@
-//go:generate hel
-
 package proxy_test
 
 import (
@@ -12,13 +10,15 @@ import (
 	"strings"
 	"time"
 
+	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-	"golang.org/x/net/context"
+	"github.com/gorilla/websocket"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
@@ -33,7 +33,7 @@ var _ = Describe("DopplerProxy", func() {
 		mockDopplerStreamClient *mockReceiver
 		mockHealth              *mockHealth
 
-		mockSender *mockMetricSender
+		mockSender *testhelper.SpyMetricClient
 	)
 
 	BeforeEach(func() {
@@ -42,7 +42,7 @@ var _ = Describe("DopplerProxy", func() {
 
 		mockGrpcConnector = newMockGrpcConnector()
 		mockDopplerStreamClient = newMockReceiver()
-		mockSender = newMockMetricSender()
+		mockSender = testhelper.NewMetricClient()
 		mockHealth = newMockHealth()
 
 		mockGrpcConnector.SubscribeOutput.Ret0 <- mockDopplerStreamClient.Recv
@@ -64,24 +64,23 @@ var _ = Describe("DopplerProxy", func() {
 		close(mockGrpcConnector.SubscribeOutput.Ret0)
 		close(mockGrpcConnector.SubscribeOutput.Ret1)
 
+		mockDopplerStreamClient.RecvOutput.Ret0 <- []byte("test-message")
 		close(mockDopplerStreamClient.RecvOutput.Ret0)
 		close(mockDopplerStreamClient.RecvOutput.Ret1)
 	})
 
-	Describe("health metrics", func() {
+	Describe("metrics", func() {
 		It("emits latency value metric for recentlogs request", func() {
 			mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
 			req, _ := http.NewRequest("GET", "/apps/appID123/recentlogs", nil)
-			metricName := "dopplerProxy.recentlogsLatency"
+			metricName := "doppler_proxy.recent_logs_latency"
 			requestStart := time.Now()
 
 			dopplerProxy.ServeHTTP(recorder, req)
 
-			metric := mockSender.getValue(metricName)
-			Expect(metric.Unit).To(Equal("ms"))
-
+			metricValue := mockSender.GetValue(metricName)
 			elapsed := float64(time.Since(requestStart)) / float64(time.Millisecond)
-			Expect(metric.Value).To(BeNumerically("<", elapsed))
+			Expect(metricValue).To(BeNumerically("<", elapsed))
 		})
 
 		It("emits latency value metric for containermetrics request", func() {
@@ -93,55 +92,42 @@ var _ = Describe("DopplerProxy", func() {
 
 			dopplerProxy.ServeHTTP(recorder, req)
 
-			metric := mockSender.getValue(metricName)
-			Expect(metric.Unit).To(Equal("ms"))
-
+			metricValue := mockSender.GetValue(metricName)
 			elapsed := float64(time.Since(requestStart)) / float64(time.Millisecond)
-			Expect(metric.Value).To(BeNumerically("<", elapsed))
+			Expect(metricValue).To(BeNumerically("<", elapsed))
 		})
 
-		It("does not emit any latency metrics for stream request", func() {
-			req, _ := http.NewRequest("GET", "/apps/appID123/stream", nil)
-			dopplerProxy.ServeHTTP(recorder, req)
-			metric := mockSender.getValue("dopplerProxy.streamLatency")
+		DescribeTable("increments a counter for every envelope that is written", func(url, endpoint string) {
+			server := httptest.NewServer(dopplerProxy)
+			defer server.CloseClientConnections()
 
-			Expect(metric.Unit).To(BeEmpty())
-			Expect(metric.Value).To(BeZero())
-		})
+			_, _, err := websocket.DefaultDialer.Dial(
+				wsEndpoint(server, url),
+				http.Header{"Authorization": []string{"token"}},
+			)
+			Expect(err).ToNot(HaveOccurred())
 
-		It("creates a context with a deadline for recent logs", func() {
-			go func() {
-				time.Sleep(100 * time.Millisecond)
-				mockGrpcConnector.RecentLogsOutput.Ret0 <- nil
-			}()
-			req, _ := http.NewRequest("GET", "/apps/appID123/recentlogs", nil)
-			dopplerProxy.ServeHTTP(recorder, req)
+			f := func() uint64 {
+				for _, e := range mockSender.GetEnvelopes("egress") {
+					t, ok := e.Tags["endpoint"]
+					if !ok {
+						continue
+					}
 
-			var ctx context.Context
-			Eventually(mockGrpcConnector.RecentLogsInput.Ctx).Should(Receive(&ctx))
-			_, ok := ctx.Deadline()
-			Expect(ok).To(BeTrue())
+					if t.GetText() != endpoint {
+						continue
+					}
 
-			Eventually(ctx.Err).Should(HaveOccurred())
-			Expect(recorder.Code).To(Equal(http.StatusServiceUnavailable))
-		})
+					return e.GetCounter().GetDelta()
+				}
 
-		It("creates a context with a deadline for container metrics", func() {
-			go func() {
-				time.Sleep(100 * time.Millisecond)
-				mockGrpcConnector.ContainerMetricsOutput.Ret0 <- nil
-			}()
-			req, _ := http.NewRequest("GET", "/apps/appID123/containermetrics", nil)
-			dopplerProxy.ServeHTTP(recorder, req)
-
-			var ctx context.Context
-			Eventually(mockGrpcConnector.ContainerMetricsInput.Ctx).Should(Receive(&ctx))
-			_, ok := ctx.Deadline()
-			Expect(ok).To(BeTrue())
-
-			Eventually(ctx.Err).Should(HaveOccurred())
-			Expect(recorder.Code).To(Equal(http.StatusServiceUnavailable))
-		})
+				return 0
+			}
+			Eventually(f).Should(Equal(uint64(1)))
+		},
+			Entry("stream requests", "/apps/appID123/stream", "stream"),
+			Entry("firehose requests", "/firehose/streamID", "firehose"),
+		)
 
 		It("sets the health value for firehose count", func() {
 			req, _ := http.NewRequest("GET", "/firehose/streamID", nil)
@@ -300,32 +286,6 @@ var _ = Describe("DopplerProxy", func() {
 
 			Expect(recorder.Code).To(Equal(http.StatusBadRequest))
 		})
-	})
-})
-
-var _ = Describe("DefaultHandlerProvider", func() {
-	It("returns an HTTP handler for .../recentlogs", func() {
-		httpHandler := proxy.NewHttpHandler(make(chan []byte))
-
-		target := proxy.HttpHandlerProvider(make(chan []byte))
-
-		Expect(target).To(BeAssignableToTypeOf(httpHandler))
-	})
-
-	It("returns a Websocket handler for .../stream", func() {
-		wsHandler := proxy.NewWebsocketHandler(make(chan []byte), time.Minute)
-
-		target := proxy.WebsocketHandlerProvider(make(chan []byte))
-
-		Expect(target).To(BeAssignableToTypeOf(wsHandler))
-	})
-
-	It("returns a Websocket handler for anything else", func() {
-		wsHandler := proxy.NewWebsocketHandler(make(chan []byte), time.Minute)
-
-		target := proxy.WebsocketHandlerProvider(make(chan []byte))
-
-		Expect(target).To(BeAssignableToTypeOf(wsHandler))
 	})
 })
 

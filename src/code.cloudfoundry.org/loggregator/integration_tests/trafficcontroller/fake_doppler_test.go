@@ -1,9 +1,10 @@
 package trafficcontroller_test
 
 import (
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"net"
 	"sync"
+
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"golang.org/x/net/context"
 

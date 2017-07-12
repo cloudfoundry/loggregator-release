@@ -1,15 +1,16 @@
 package syslog
 
 import (
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/retrystrategy"
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslogwriter"
-	"code.cloudfoundry.org/loggregator/doppler/internal/truncatingbuffer"
 	"fmt"
 	"log"
 	"net/url"
 	"sync"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
+	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/retrystrategy"
+	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslogwriter"
+	"code.cloudfoundry.org/loggregator/doppler/internal/truncatingbuffer"
 
 	"github.com/cloudfoundry/sonde-go/events"
 )

@@ -1,8 +1,9 @@
 package proxy
 
 import (
-	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/auth"
 	"net/http"
+
+	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/auth"
 
 	"github.com/gorilla/mux"
 )

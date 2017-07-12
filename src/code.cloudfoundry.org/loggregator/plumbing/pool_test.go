@@ -69,7 +69,7 @@ var _ = Describe("Pool", func() {
 				pool.Close(lis1.Addr().String())
 				lis1.Close()
 
-				Eventually(accepter1).Should(HaveLen(0))
+				Eventually(accepter1, 5).Should(HaveLen(0))
 				Consistently(accepter1).Should(HaveLen(0))
 			})
 		})
@@ -207,6 +207,7 @@ var _ = Describe("Pool", func() {
 					Expect(resp).To(Equal(payload))
 				})
 			})
+
 			Describe("RecentLogs()", func() {
 				var fetchResp = func(addr string, ctx context.Context, req *plumbing.RecentLogsRequest) [][]byte {
 					var resp *plumbing.RecentLogsResponse
@@ -236,7 +237,6 @@ var _ = Describe("Pool", func() {
 
 		})
 	})
-
 })
 
 func consumeReceiver(rx plumbing.Doppler_SubscribeClient, data chan []byte) {

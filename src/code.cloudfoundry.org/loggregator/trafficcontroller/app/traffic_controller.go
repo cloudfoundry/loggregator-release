@@ -1,7 +1,6 @@
 package app
 
 import (
-	"code.cloudfoundry.org/loggregator/healthendpoint"
 	"errors"
 	"fmt"
 	"log"
@@ -9,6 +8,8 @@ import (
 	"os"
 	"os/signal"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/healthendpoint"
 
 	"code.cloudfoundry.org/loggregator/dopplerservice"
 	"code.cloudfoundry.org/loggregator/metricemitter"
@@ -35,11 +36,16 @@ import (
 	"google.golang.org/grpc"
 )
 
-type trafficController struct {
+// MetricClient creates new CounterMetrics to be emitted periodically.
+type MetricClient interface {
+	NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter
+	NewGauge(name, unit string, opts ...metricemitter.MetricOption) *metricemitter.Gauge
+}
+
+type TrafficController struct {
 	conf                 *Config
-	logFilePath          string
 	disableAccessControl bool
-	metricClient         metricemitter.MetricClient
+	metricClient         MetricClient
 }
 
 // finder provides service discovery of Doppler processes
@@ -50,19 +56,17 @@ type finder interface {
 
 func NewTrafficController(
 	c *Config,
-	path string,
 	disableAccessControl bool,
-	metricClient metricemitter.MetricClient,
-) *trafficController {
-	return &trafficController{
+	metricClient MetricClient,
+) *TrafficController {
+	return &TrafficController{
 		conf:                 c,
-		logFilePath:          path,
 		disableAccessControl: disableAccessControl,
 		metricClient:         metricClient,
 	}
 }
 
-func (t *trafficController) Start() {
+func (t *TrafficController) Start() {
 	tlsConf := plumbing.NewTLSConfig(
 		plumbing.WithCipherSuites(t.conf.CipherSuites),
 	)
@@ -141,7 +145,7 @@ func (t *trafficController) Start() {
 		etcdAdapter := t.defaultStoreAdapterProvider(t.conf)
 		err = etcdAdapter.Connect()
 		if err != nil {
-			panic(fmt.Errorf("Unable to connect to ETCD: %s", err))
+			log.Panicf("Unable to connect to ETCD: %s", err)
 		}
 
 		f = dopplerservice.NewFinder(
@@ -164,7 +168,7 @@ func (t *trafficController) Start() {
 			grpcConnector,
 			"doppler."+t.conf.SystemDomain,
 			15*time.Second,
-			&metricShim{},
+			t.metricClient,
 			healthRegistry,
 		),
 	)
@@ -173,7 +177,7 @@ func (t *trafficController) Start() {
 	if t.conf.SecurityEventLog != "" {
 		accessLog, err := os.OpenFile(t.conf.SecurityEventLog, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 		if err != nil {
-			panic(fmt.Errorf("Unable to open access log: %s", err))
+			log.Panicf("Unable to open access log: %s", err)
 		}
 		defer func() {
 			accessLog.Sync()
@@ -186,7 +190,9 @@ func (t *trafficController) Start() {
 	if accessMiddleware != nil {
 		dopplerHandler = accessMiddleware(dopplerHandler)
 	}
-	go log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", t.conf.OutgoingDropsondePort), dopplerHandler))
+	go func() {
+		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", t.conf.OutgoingDropsondePort), dopplerHandler))
+	}()
 
 	// We start the profiler last so that we can definitively claim that we're ready for
 	// connections by the time we're listening on the PPROFPort.
@@ -199,7 +205,7 @@ func (t *trafficController) Start() {
 	log.Print("Shutting down")
 }
 
-func (t *trafficController) setupDefaultEmitter(origin, destination string) error {
+func (t *TrafficController) setupDefaultEmitter(origin, destination string) error {
 	if origin == "" {
 		return errors.New("Cannot initialize metrics with an empty origin")
 	}
@@ -217,7 +223,7 @@ func (t *trafficController) setupDefaultEmitter(origin, destination string) erro
 	return nil
 }
 
-func (t *trafficController) initializeMetrics(origin, destination string) (*metricbatcher.MetricBatcher, error) {
+func (t *TrafficController) initializeMetrics(origin, destination string) (*metricbatcher.MetricBatcher, error) {
 	err := t.setupDefaultEmitter(origin, destination)
 	if err != nil {
 		// Legacy holdover.  We would prefer to panic, rather than just throwing our metrics
@@ -226,8 +232,8 @@ func (t *trafficController) initializeMetrics(origin, destination string) (*metr
 		dropsonde.DefaultEmitter = &dropsonde.NullEventEmitter{}
 	}
 
-	// Copied from dropsonde.initialize(), since we stopped using dropsonde.Initialize
-	// but needed it to continue operating the same.
+	// Copied from dropsonde.initialize(), since we stopped using
+	// dropsonde.Initialize but needed it to continue operating the same.
 	sender := metric_sender.NewMetricSender(dropsonde.DefaultEmitter)
 	batcher := metricbatcher.New(sender, time.Second)
 	metrics.Initialize(sender, batcher)
@@ -238,10 +244,10 @@ func (t *trafficController) initializeMetrics(origin, destination string) (*metr
 	return batcher, err
 }
 
-func (t *trafficController) defaultStoreAdapterProvider(conf *Config) storeadapter.StoreAdapter {
+func (t *TrafficController) defaultStoreAdapterProvider(conf *Config) storeadapter.StoreAdapter {
 	workPool, err := workpool.NewWorkPool(conf.EtcdMaxConcurrentRequests)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 	options := &etcdstoreadapter.ETCDOptions{
 		ClusterUrls: conf.EtcdUrls,
@@ -254,7 +260,7 @@ func (t *trafficController) defaultStoreAdapterProvider(conf *Config) storeadapt
 	}
 	etcdStoreAdapter, err := etcdstoreadapter.New(options, workPool)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 	return etcdStoreAdapter
 }

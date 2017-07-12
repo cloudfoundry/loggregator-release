@@ -19,6 +19,7 @@ function print_usage {
 }
 
 function print_checkpoint {
+    echo
     bold_blue "==================================  $@"
 }
 
@@ -56,38 +57,32 @@ function check_output {
     fi
 }
 
-function loggregator_package {
-    local not_loggregator_packages=( code.cloudfoundry.org github.com golang.org google.golang.org gopkg.in )
-    for p in "${not_loggregator_packages[@]}"
-    do
-        if [[ "$p" == "$1" ]]
-        then
-            return 1
-        fi
-    done
-    return 0
-}
-
 function run_cleaners {
     print_checkpoint "Running Cleaners"
 
-    src_dir="$(dirname $(dirname $0))/src"
-    for name in $(ls -1 $src_dir)
-    do
-        dir="$src_dir/$name"
-        if [[ ! -d $dir ]]
-        then
-            continue
-        fi
-        if loggregator_package $(basename $dir)
-        then
-            echo cleaning $dir
-            goimports -w $dir
-            gofmt -s -w $dir
-            misspell -w $dir
-            unconvert -v -apply $(basename $dir)/...
-        fi
-    done
+    if ! which goimports > /dev/null 2>&1; then
+        echo installing goimports
+        go get golang.org/x/tools/cmd/goimports
+    fi
+    if ! which misspell > /dev/null 2>&1; then
+        echo installing misspell
+        go get github.com/client9/misspell/cmd/misspell
+    fi
+    if ! which unconvert > /dev/null 2>&1; then
+        echo installing unconvert
+        go get github.com/mdempsky/unconvert
+    fi
+
+    local loggregator_pkg="code.cloudfoundry.org/loggregator"
+    local loggregator_dir="$(dirname $(dirname $0))/src/$loggregator_pkg"
+    echo running goimports
+    goimports -w "$loggregator_dir"
+    echo running gofmt
+    gofmt -s -w "$loggregator_dir"
+    echo running misspell
+    misspell -w "$loggregator_dir"
+    echo running unconvert
+    unconvert -v -apply "$loggregator_pkg/..."
     return 0
 }
 
@@ -121,7 +116,10 @@ function run_unit {
         print_checkpoint "Running Unit Tests"
         # TODO: remove build_etcd once announcer unit tests no longer depend on it
         build_etcd
-        ginkgo -r --race \
+        ginkgo \
+            -r \
+            --race \
+            --tags=~deprecated \
             --randomizeAllSpecs \
             --slowSpecThreshold 20 \
             --skipPackage="${not_unit_tests}" $@
@@ -133,14 +131,23 @@ function run_unit {
 function run_integration {
     print_checkpoint "Running Integration Tests"
     build_etcd
-    ginkgo -r --race --randomizeAllSpecs --slowSpecThreshold 20 $@ \
-        src/code.cloudfoundry.org/loggregator/integration_tests \
-        src/code.cloudfoundry.org/loggregator/metron/component_tests \
-        src/code.cloudfoundry.org/loggregator/syslog_drain_binder/component_tests
-    return $?
+    pushd $PROJECT_DIR/src/code.cloudfoundry.org/loggregator
+        ginkgo \
+            -r \
+            --race \
+            --tags=~deprecated \
+            --randomizeAllSpecs \
+            --slowSpecThreshold 20 \
+            $@ \
+            integration_tests \
+            $(find . -name component_tests -type d)
+        exit_code=$?
+   popd
+   return $exit_code
 }
 
 function run_all {
+    check_output run_cleaners
     check_output run_build
     check_output run_multiplatform
     check_output run_unit $@
@@ -173,8 +180,7 @@ function parse_argc {
 }
 
 function build_etcd {
-    if which etcd > /dev/null 2>&1
-    then
+    if which etcd > /dev/null 2>&1; then
         return
     fi
 
@@ -202,6 +208,8 @@ function build_etcd {
 }
 
 function run_install_tools {
+    print_checkpoint "Installing Tools"
+
     # testing
     go get github.com/onsi/ginkgo/ginkgo
 
@@ -227,37 +235,34 @@ function run_install_tools {
 function run_linters {
     print_checkpoint "Running Linters"
 
-    src_dir="$(dirname $(dirname $0))/src"
-    for name in $(ls -1 $src_dir)
-    do
-        dir="$src_dir/$name"
-        if [[ ! -d $dir ]]
-        then
-            continue
-        fi
-        if loggregator_package $(basename $dir)
-        then
-            echo cleaning $dir
-            goimports -w $dir
-            gofmt -s -w $dir
-            misspell -w $dir
-            unconvert -v -apply
+    local loggregator_pkg="code.cloudfoundry.org/loggregator"
+    local loggregator_dir="$(dirname $(dirname $0))/src/$loggregator_pkg"
 
-            local pkg="$(basename $dir)/..."
-            go vet $pkg
-            deadcode $dir
-            golint $pkg
-            aligncheck $pkg
-            structcheck $pkg
-            varcheck $pkg
-            errcheck $pkg
-            ineffassign $dir
-            interfacer $pkg
-            gosimple $pkg
-            staticcheck $pkg
-            unused $pkg
-        fi
-    done
+    echo running go vet
+    go vet "$loggregator_pkg/..."
+    echo running deadcode
+    deadcode $dir
+    echo running golint
+    golint "$loggregator_pkg/..."
+    echo running aligncheck
+    aligncheck "$loggregator_pkg/..."
+    echo running structcheck
+    structcheck "$loggregator_pkg/..."
+    echo running varcheck
+    varcheck "$loggregator_pkg/..."
+    echo running errcheck
+    errcheck "$loggregator_pkg/..."
+    echo running ineffassign
+    ineffassign "$loggregator_dir"
+    echo running interfacer
+    interfacer "$loggregator_pkg/..."
+    echo running gosimple
+    gosimple "$loggregator_pkg/..."
+    echo running staticcheck
+    staticcheck "$loggregator_pkg/..."
+    echo running unused
+    unused "$loggregator_pkg/..."
+
     return 0
 }
 

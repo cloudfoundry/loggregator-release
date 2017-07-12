@@ -1,13 +1,14 @@
 package dopplerservice_test
 
 import (
-	"code.cloudfoundry.org/loggregator/dopplerservice"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"path"
 	"reflect"
 	"strings"
+
+	"code.cloudfoundry.org/loggregator/dopplerservice"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"

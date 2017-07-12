@@ -1,10 +1,11 @@
 package websocket
 
 import (
-	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
 	"log"
 	"net"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/doppler/internal/sinks"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/truncatingbuffer"
 

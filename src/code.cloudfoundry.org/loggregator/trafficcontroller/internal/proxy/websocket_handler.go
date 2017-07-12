@@ -5,16 +5,27 @@ import (
 	"net/http"
 	"time"
 
+	"code.cloudfoundry.org/loggregator/metricemitter"
+
 	"github.com/gorilla/websocket"
 )
 
 type websocketHandler struct {
-	messages  <-chan []byte
-	keepAlive time.Duration
+	messages     <-chan []byte
+	keepAlive    time.Duration
+	egressMetric *metricemitter.Counter
 }
 
-func NewWebsocketHandler(m <-chan []byte, keepAlive time.Duration) *websocketHandler {
-	return &websocketHandler{messages: m, keepAlive: keepAlive}
+func NewWebsocketHandler(
+	m <-chan []byte,
+	keepAlive time.Duration,
+	egressMetric *metricemitter.Counter,
+) *websocketHandler {
+	return &websocketHandler{
+		messages:     m,
+		keepAlive:    keepAlive,
+		egressMetric: egressMetric,
+	}
 }
 
 func (h *websocketHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
@@ -70,6 +81,7 @@ func (h *websocketHandler) runWebsocketUntilClosed(ws *websocket.Conn) (closeCod
 			if err != nil {
 				return
 			}
+			h.egressMetric.Increment(1)
 		}
 	}
 }

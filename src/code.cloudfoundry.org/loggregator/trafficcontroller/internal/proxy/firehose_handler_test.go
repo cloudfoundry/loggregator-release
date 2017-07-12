@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"code.cloudfoundry.org/loggregator/trafficcontroller/internal/proxy"
@@ -21,13 +22,11 @@ import (
 
 var _ = Describe("FirehoseHandler", func() {
 	var (
-		handler http.Handler
-
 		auth       LogAuthorizer
 		adminAuth  AdminAuthorizer
 		recorder   *httptest.ResponseRecorder
 		connector  *SpyGRPCConnector
-		mockSender *mockMetricSender
+		mockSender *testhelper.SpyMetricClient
 		mockHealth *mockHealth
 	)
 
@@ -38,10 +37,12 @@ var _ = Describe("FirehoseHandler", func() {
 		auth = LogAuthorizer{Result: AuthorizerResult{Status: http.StatusOK}}
 
 		recorder = httptest.NewRecorder()
-		mockSender = newMockMetricSender()
+		mockSender = testhelper.NewMetricClient()
 		mockHealth = newMockHealth()
+	})
 
-		handler = proxy.NewDopplerProxy(
+	It("connects to doppler servers with correct parameters", func() {
+		handler := proxy.NewDopplerProxy(
 			auth.Authorize,
 			adminAuth.Authorize,
 			connector,
@@ -50,9 +51,7 @@ var _ = Describe("FirehoseHandler", func() {
 			mockSender,
 			mockHealth,
 		)
-	})
 
-	It("connects to doppler servers with correct parameters", func() {
 		req, _ := http.NewRequest("GET", "/firehose/abc-123", nil)
 		req.Header.Add("Authorization", "token")
 
@@ -66,12 +65,22 @@ var _ = Describe("FirehoseHandler", func() {
 	})
 
 	It("accepts a query param for filtering logs", func() {
+		_ = proxy.NewDopplerProxy(
+			auth.Authorize,
+			adminAuth.Authorize,
+			connector,
+			"cookieDomain",
+			50*time.Millisecond,
+			mockSender,
+			mockHealth,
+		)
+
 		req, err := http.NewRequest("GET", "/firehose/123?filter-type=logs", nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		h := proxy.NewFirehoseHandler(connector, &proxy.WebSocketServer{
-			MetricSender: newMockMetricSender(),
-		})
+		h := proxy.NewFirehoseHandler(connector, proxy.NewWebSocketServer(
+			testhelper.NewMetricClient(),
+		), mockSender)
 		h.ServeHTTP(recorder, req)
 
 		Expect(connector.subscriptions.request.Filter).To(Equal(&plumbing.Filter{
@@ -82,12 +91,22 @@ var _ = Describe("FirehoseHandler", func() {
 	})
 
 	It("accepts a query param for filtering metrics", func() {
+		_ = proxy.NewDopplerProxy(
+			auth.Authorize,
+			adminAuth.Authorize,
+			connector,
+			"cookieDomain",
+			50*time.Millisecond,
+			mockSender,
+			mockHealth,
+		)
+
 		req, err := http.NewRequest("GET", "/firehose/123?filter-type=metrics", nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		h := proxy.NewFirehoseHandler(connector, &proxy.WebSocketServer{
-			MetricSender: newMockMetricSender(),
-		})
+		h := proxy.NewFirehoseHandler(connector, proxy.NewWebSocketServer(
+			testhelper.NewMetricClient(),
+		), mockSender)
 		h.ServeHTTP(recorder, req)
 
 		Expect(connector.subscriptions.request.Filter).To(Equal(&plumbing.Filter{
@@ -98,6 +117,16 @@ var _ = Describe("FirehoseHandler", func() {
 	})
 
 	It("returns an unauthorized status and sets the WWW-Authenticate header if authorization fails", func() {
+		handler := proxy.NewDopplerProxy(
+			auth.Authorize,
+			adminAuth.Authorize,
+			connector,
+			"cookieDomain",
+			50*time.Millisecond,
+			mockSender,
+			mockHealth,
+		)
+
 		adminAuth.Result = AuthorizerResult{Status: http.StatusUnauthorized, ErrorMessage: "Error: Invalid authorization"}
 
 		req, _ := http.NewRequest("GET", "/firehose/abc-123", nil)
@@ -113,6 +142,16 @@ var _ = Describe("FirehoseHandler", func() {
 	})
 
 	It("returns a 404 if subscription_id is not provided", func() {
+		handler := proxy.NewDopplerProxy(
+			auth.Authorize,
+			adminAuth.Authorize,
+			connector,
+			"cookieDomain",
+			50*time.Millisecond,
+			mockSender,
+			mockHealth,
+		)
+
 		req, _ := http.NewRequest("GET", "/firehose/", nil)
 		req.Header.Add("Authorization", "token")
 
@@ -166,12 +205,12 @@ var _ = Describe("FirehoseHandler", func() {
 			http.Header{"Authorization": []string{"token"}},
 		)
 		Expect(err).ToNot(HaveOccurred())
-		defer conn.Close()
 
-		f := func() valueUnit {
-			return mockSender.getValue("dopplerProxy.firehoses")
+		f := func() float64 {
+			return mockSender.GetValue("doppler_proxy.firehoses")
 		}
-		Eventually(f, 4).Should(Equal(valueUnit{Value: 1, Unit: "connections"}))
+		Eventually(f, 1, "100ms").Should(Equal(1.0))
+		conn.Close()
 	})
 })
 

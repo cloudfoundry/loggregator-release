@@ -1,11 +1,12 @@
 package plumbing_test
 
 import (
-	"code.cloudfoundry.org/loggregator/testservers"
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"os"
+
+	"code.cloudfoundry.org/loggregator/testservers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

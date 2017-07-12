@@ -1,8 +1,9 @@
 package ingress_test
 
 import (
-	"code.cloudfoundry.org/loggregator/plumbing/conversion"
 	"errors"
+
+	"code.cloudfoundry.org/loggregator/plumbing/conversion"
 
 	"code.cloudfoundry.org/loggregator/rlp/internal/ingress"
 

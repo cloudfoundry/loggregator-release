@@ -1,3 +1,3 @@
 set -e -x
 
-cp -a loggregator/src/code.cloudfoundry.org/loggregator/common/* ${BOSH_INSTALL_TARGET}
+cp -a loggregator/src/common/* ${BOSH_INSTALL_TARGET}

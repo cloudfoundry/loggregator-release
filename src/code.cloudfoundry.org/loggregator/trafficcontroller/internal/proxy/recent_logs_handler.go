@@ -2,29 +2,36 @@ package proxy
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/metricemitter"
 
 	"github.com/gorilla/mux"
 )
 
 type RecentLogsHandler struct {
-	grpcConn     grpcConnector
-	timeout      time.Duration
-	metricSender metricSender
+	grpcConn      grpcConnector
+	timeout       time.Duration
+	latencyMetric *metricemitter.Gauge
 }
 
 func NewRecentLogsHandler(
 	grpcConn grpcConnector,
 	t time.Duration,
-	m metricSender,
+	m MetricClient,
 ) *RecentLogsHandler {
+	// metric-documentation-v2: (doppler_proxy.recent_logs_latency) Measures
+	// amount of time to serve the request for recent logs
+	latencyMetric := m.NewGauge("doppler_proxy.recent_logs_latency", "ms",
+		metricemitter.WithVersion(2, 0),
+	)
+
 	return &RecentLogsHandler{
-		grpcConn:     grpcConn,
-		timeout:      t,
-		metricSender: m,
+		grpcConn:      grpcConn,
+		timeout:       t,
+		latencyMetric: latencyMetric,
 	}
 }
 
@@ -32,9 +39,7 @@ func (h *RecentLogsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
 	defer func() {
 		elapsedMillisecond := float64(time.Since(startTime)) / float64(time.Millisecond)
-		// metric-documentation-v1: (dopplerProxy.recentlogsLatency) Measures
-		// amount of time to serve the request for recent logs
-		h.metricSender.SendValue("dopplerProxy.recentlogsLatency", elapsedMillisecond, "ms")
+		h.latencyMetric.Set(elapsedMillisecond)
 	}()
 
 	appID := mux.Vars(r)["appID"]
@@ -44,12 +49,6 @@ func (h *RecentLogsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	resp := h.grpcConn.RecentLogs(ctx, appID)
-	if err := ctx.Err(); err != nil {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		log.Printf("recentlogs request encountered an error: %s", err)
-		return
-	}
-
 	limit, ok := limitFrom(r)
 	if ok && len(resp) > limit {
 		resp = resp[:limit]
