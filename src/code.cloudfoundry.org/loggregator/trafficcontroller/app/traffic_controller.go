@@ -124,7 +124,7 @@ func (t *TrafficController) Start() {
 		),
 	})
 
-	creds, err := plumbing.NewCredentials(
+	creds, err := plumbing.NewServerCredentials(
 		t.conf.GRPC.CertFile,
 		t.conf.GRPC.KeyFile,
 		t.conf.GRPC.CAFile,

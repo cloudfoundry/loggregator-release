@@ -34,7 +34,7 @@ var (
 func main() {
 	flag.Parse()
 
-	tlsConfig, err := plumbing.NewMutualTLSConfig(
+	tlsConfig, err := plumbing.NewServerMutualTLSConfig(
 		*certFile,
 		*keyFile,
 		*caFile,

@@ -40,7 +40,7 @@ func NewGRPCListener(
 	metricClient MetricClient,
 	health *healthendpoint.Registrar,
 ) (*GRPCListener, error) {
-	tlsConfig, err := plumbingv1.NewMutualTLSConfig(
+	tlsConfig, err := plumbingv1.NewServerMutualTLSConfig(
 		conf.CertFile,
 		conf.KeyFile,
 		conf.CAFile,

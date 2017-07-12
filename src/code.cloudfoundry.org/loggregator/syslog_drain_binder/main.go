@@ -41,7 +41,7 @@ func main() {
 	p := profiler.New(conf.PPROFPort)
 	go p.Start()
 
-	tlsConfig, err := plumbing.NewMutualTLSConfig(
+	tlsConfig, err := plumbing.NewServerMutualTLSConfig(
 		conf.CloudControllerTLSConfig.CertFile,
 		conf.CloudControllerTLSConfig.KeyFile,
 		conf.CloudControllerTLSConfig.CAFile,

@@ -85,7 +85,7 @@ var _ = Describe("Container Metrics", func() {
 })
 
 func dopplerIngressV1Client(addr string) (*grpc.ClientConn, plumbing.DopplerIngestor_PusherClient) {
-	creds, err := plumbing.NewCredentials(
+	creds, err := plumbing.NewServerCredentials(
 		"../fixtures/server.crt",
 		"../fixtures/server.key",
 		"../fixtures/loggregator-ca.crt",
