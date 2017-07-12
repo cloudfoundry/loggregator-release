@@ -29,10 +29,6 @@ func BuildSyslogDrainBinderConfig(etcdURL, ccAddress string, disable bool) confi
 			CAFile:   Cert("loggregator-ca.crt"),
 		},
 		SkipCertVerify: true,
-		CipherSuites: []string{
-			"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-			"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
-		},
 	}
 }
 

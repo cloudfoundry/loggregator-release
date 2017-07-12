@@ -28,7 +28,6 @@
         "EtcdUrls" => etcd_machines,
         "EtcdRequireTLS" => p("loggregator.etcd.require_ssl"),
         "MetronAddress" => "#{p("metron_endpoint.host")}:#{p("metron_endpoint.dropsonde_port")}",
-        "CipherSuites" => p("router.cipher_suites").split(":"),
         "CloudControllerAddress" => "https://#{p('cc.internal_service_hostname')}:#{p('cc.tls_port')}",
         "CloudControllerTLSConfig" => cc_tls_config,
         "PollingBatchSize" => p("syslog_drain_binder.polling_batch_size"),

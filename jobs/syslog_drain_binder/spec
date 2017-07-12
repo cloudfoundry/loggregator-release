@@ -35,12 +35,6 @@ properties:
   cc.internal_service_hostname:
     description: "Internal hostname used to resolve the address of the Cloud Controller"
     default: "cloud-controller-ng.service.cf.internal"
-  router.cipher_suites:
-    description:
-      An ordered list of golang supported standard SSL cipher suites containing golang tls constants
-      (https://github.com/golang/go/blob/release-branch.go1.7/src/crypto/tls/cipher_suites.go#L269-L285)
-      separated by colons. The cipher suite will be chosen according to this order during SSL handshake
-    default: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256:TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
 
   loggregator.disable_syslog_drains:
     description: |
