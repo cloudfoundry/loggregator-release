@@ -41,11 +41,17 @@ func main() {
 		log.Fatalf("Could not use GRPC creds for client: %s", err)
 	}
 
+	var opts []plumbing.ConfigOption
+	if len(config.GRPC.CipherSuites) > 0 {
+		opts = append(opts, plumbing.WithCipherSuites(config.GRPC.CipherSuites))
+	}
+
 	serverCreds, err := plumbing.NewServerCredentials(
 		config.GRPC.CertFile,
 		config.GRPC.KeyFile,
 		config.GRPC.CAFile,
 		"metron",
+		opts...,
 	)
 	if err != nil {
 		log.Fatalf("Could not use GRPC creds for server: %s", err)

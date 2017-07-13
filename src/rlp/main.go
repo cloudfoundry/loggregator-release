@@ -22,6 +22,7 @@ func main() {
 	caFile := flag.String("ca", "", "The file path for the CA cert")
 	certFile := flag.String("cert", "", "The file path for the client cert")
 	keyFile := flag.String("key", "", "The file path for the client key")
+	rawCipherSuites := flag.String("cipher-suites", "", "The approved cipher suites for TLS. Multiple cipher suites should be separated by a ':'")
 
 	metronAddr := flag.String("metron-addr", "localhost:3458", "The GRPC address to inject metrics to")
 	metricEmitterInterval := flag.Duration("metric-emitter-interval", time.Minute, "The interval to send batched metrics to metron")
@@ -41,11 +42,18 @@ func main() {
 		log.Fatalf("Could not use TLS config: %s", err)
 	}
 
+	cipherSuites := strings.Split(*rawCipherSuites, ":")
+
+	var opts []plumbing.ConfigOption
+	if len(cipherSuites) > 0 {
+		opts = append(opts, plumbing.WithCipherSuites(cipherSuites))
+	}
 	rlpCredentials, err := plumbing.NewServerCredentials(
 		*certFile,
 		*keyFile,
 		*caFile,
 		"doppler",
+		opts...,
 	)
 	if err != nil {
 		log.Fatalf("Could not use TLS config: %s", err)
