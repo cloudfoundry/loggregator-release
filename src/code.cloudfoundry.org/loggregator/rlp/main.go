@@ -32,17 +32,35 @@ func main() {
 	caFile := flag.String("ca", "", "The file path for the CA cert")
 	certFile := flag.String("cert", "", "The file path for the client cert")
 	keyFile := flag.String("key", "", "The file path for the client key")
+	rawCipherSuites := flag.String("cipher-suites", "", "The approved cipher suites for TLS. Multiple cipher suites should be separated by a ':'")
 
 	metronAddr := flag.String("metron-addr", "localhost:3458", "The GRPC address to inject metrics to")
 	metricEmitterInterval := flag.Duration("metric-emitter-interval", time.Minute, "The interval to send batched metrics to metron")
 
 	flag.Parse()
 
-	dopplerCredentials, err := plumbing.NewCredentials(
+	dopplerCredentials, err := plumbing.NewClientCredentials(
 		*certFile,
 		*keyFile,
 		*caFile,
 		"doppler",
+	)
+	if err != nil {
+		log.Fatalf("Could not use TLS config: %s", err)
+	}
+
+	cipherSuites := strings.Split(*rawCipherSuites, ":")
+
+	var opts []plumbing.ConfigOption
+	if len(cipherSuites) > 0 {
+		opts = append(opts, plumbing.WithCipherSuites(cipherSuites))
+	}
+	rlpCredentials, err := plumbing.NewServerCredentials(
+		*certFile,
+		*keyFile,
+		*caFile,
+		"doppler",
+		opts...,
 	)
 	if err != nil {
 		log.Fatalf("Could not use TLS config: %s", err)
@@ -53,7 +71,7 @@ func main() {
 		log.Fatal("no Ingress Addrs were provided")
 	}
 
-	metronCredentials, err := plumbing.NewCredentials(
+	metronCredentials, err := plumbing.NewClientCredentials(
 		*certFile,
 		*keyFile,
 		*caFile,
@@ -79,7 +97,7 @@ func main() {
 		app.WithEgressPort(*egressPort),
 		app.WithIngressAddrs(hostPorts),
 		app.WithIngressDialOptions(grpc.WithTransportCredentials(dopplerCredentials)),
-		app.WithEgressServerOptions(grpc.Creds(dopplerCredentials)),
+		app.WithEgressServerOptions(grpc.Creds(rlpCredentials)),
 		app.WithHealthAddr(*healthAddr),
 	)
 	go rlp.Start()

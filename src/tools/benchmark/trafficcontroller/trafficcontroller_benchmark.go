@@ -99,7 +99,7 @@ func main() {
 	}
 	defer cmd.Process.Kill()
 
-	creds, err := plumbing.NewCredentials(*cert, *key, *ca, *cn)
+	creds, err := plumbing.NewServerCredentials(*cert, *key, *ca, *cn)
 	if err != nil {
 		log.Panicf("Unable to setup TLS: %s", err)
 	}

@@ -67,12 +67,9 @@ func NewTrafficController(
 }
 
 func (t *TrafficController) Start() {
-	tlsConf := plumbing.NewTLSConfig(
-		plumbing.WithCipherSuites(t.conf.CipherSuites),
-	)
 	transport := &http.Transport{
 		TLSHandshakeTimeout: 10 * time.Second,
-		TLSClientConfig:     tlsConf,
+		TLSClientConfig:     plumbing.NewTLSConfig(),
 		DisableKeepAlives:   true,
 	}
 	http.DefaultClient.Transport = transport
@@ -127,7 +124,7 @@ func (t *TrafficController) Start() {
 		),
 	})
 
-	creds, err := plumbing.NewCredentials(
+	creds, err := plumbing.NewServerCredentials(
 		t.conf.GRPC.CertFile,
 		t.conf.GRPC.KeyFile,
 		t.conf.GRPC.CAFile,

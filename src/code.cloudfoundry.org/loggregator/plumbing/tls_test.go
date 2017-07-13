@@ -15,9 +15,9 @@ import (
 )
 
 var _ = Describe("TLS", func() {
-	Context("NewMutalTLSConfig", func() {
-		It("builds a config struct with default CIPHERs", func() {
-			conf, err := plumbing.NewMutualTLSConfig(
+	Context("NewClientMutualTLSConfig", func() {
+		It("builds a mutual auth tls config", func() {
+			conf, err := plumbing.NewClientMutualTLSConfig(
 				testservers.Cert("doppler.crt"),
 				testservers.Cert("doppler.key"),
 				testservers.Cert("loggregator-ca.crt"),
@@ -29,10 +29,7 @@ var _ = Describe("TLS", func() {
 			Expect(conf.InsecureSkipVerify).To(BeFalse())
 			Expect(conf.ClientAuth).To(Equal(tls.RequireAndVerifyClientCert))
 			Expect(conf.MinVersion).To(Equal(uint16(tls.VersionTLS12)))
-			Expect(conf.CipherSuites).To(ConsistOf(
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			))
+			Expect(conf.CipherSuites).To(BeEmpty())
 
 			Expect(string(conf.RootCAs.Subjects()[0])).To(ContainSubstring("loggregatorCA"))
 			Expect(string(conf.ClientCAs.Subjects()[0])).To(ContainSubstring("loggregatorCA"))
@@ -41,7 +38,7 @@ var _ = Describe("TLS", func() {
 		})
 
 		It("allows you to not specify a CA cert", func() {
-			conf, err := plumbing.NewMutualTLSConfig(
+			conf, err := plumbing.NewClientMutualTLSConfig(
 				testservers.Cert("doppler.crt"),
 				testservers.Cert("doppler.key"),
 				"",
@@ -54,7 +51,7 @@ var _ = Describe("TLS", func() {
 		})
 
 		It("returns an error when given invalid cert/key paths", func() {
-			_, err := plumbing.NewMutualTLSConfig(
+			_, err := plumbing.NewClientMutualTLSConfig(
 				"",
 				"",
 				testservers.Cert("loggregator-ca.crt"),
@@ -65,7 +62,7 @@ var _ = Describe("TLS", func() {
 		})
 
 		It("returns an error when given invalid ca cert path", func() {
-			_, err := plumbing.NewMutualTLSConfig(
+			_, err := plumbing.NewClientMutualTLSConfig(
 				testservers.Cert("doppler.crt"),
 				testservers.Cert("doppler.key"),
 				"/file/that/does/not/exist",
@@ -81,7 +78,7 @@ var _ = Describe("TLS", func() {
 				err := os.Remove(empty)
 				Expect(err).ToNot(HaveOccurred())
 			}()
-			_, err := plumbing.NewMutualTLSConfig(
+			_, err := plumbing.NewClientMutualTLSConfig(
 				testservers.Cert("doppler.crt"),
 				testservers.Cert("doppler.key"),
 				empty,
@@ -92,8 +89,7 @@ var _ = Describe("TLS", func() {
 		})
 
 		It("returns an error when the certificate is not signed by the CA", func() {
-
-			_, err := plumbing.NewMutualTLSConfig(
+			_, err := plumbing.NewClientMutualTLSConfig(
 				testservers.Cert("doppler.crt"),
 				testservers.Cert("doppler.key"),
 				wrongCA(),
@@ -103,9 +99,26 @@ var _ = Describe("TLS", func() {
 			_, ok := err.(plumbing.CASignatureError)
 			Expect(ok).To(BeTrue())
 		})
+	})
+
+	Context("NewServerMutalTLSConfig", func() {
+		It("builds a config struct with default CIPHERs", func() {
+			conf, err := plumbing.NewServerMutualTLSConfig(
+				testservers.Cert("doppler.crt"),
+				testservers.Cert("doppler.key"),
+				testservers.Cert("loggregator-ca.crt"),
+				"test-server-name",
+			)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(conf.CipherSuites).To(ConsistOf(
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			))
+		})
 
 		It("accepts configuration for CIPHER suites", func() {
-			conf, err := plumbing.NewMutualTLSConfig(
+			conf, err := plumbing.NewServerMutualTLSConfig(
 				testservers.Cert("doppler.crt"),
 				testservers.Cert("doppler.key"),
 				testservers.Cert("loggregator-ca.crt"),
@@ -120,7 +133,7 @@ var _ = Describe("TLS", func() {
 		})
 
 		It("ignores garbage CIPHERs in favor of valid ones", func() {
-			conf, err := plumbing.NewMutualTLSConfig(
+			conf, err := plumbing.NewServerMutualTLSConfig(
 				testservers.Cert("doppler.crt"),
 				testservers.Cert("doppler.key"),
 				testservers.Cert("loggregator-ca.crt"),
@@ -139,7 +152,7 @@ var _ = Describe("TLS", func() {
 
 		It("panics if no ciphers are provided", func() {
 			Expect(func() {
-				plumbing.NewMutualTLSConfig(
+				plumbing.NewServerMutualTLSConfig(
 					testservers.Cert("doppler.crt"),
 					testservers.Cert("doppler.key"),
 					testservers.Cert("loggregator-ca.crt"),
@@ -150,20 +163,20 @@ var _ = Describe("TLS", func() {
 		})
 
 		It("maintains the order of the ciphers provided", func() {
-			conf, err := plumbing.NewMutualTLSConfig(
+			conf, err := plumbing.NewServerMutualTLSConfig(
 				testservers.Cert("doppler.crt"),
 				testservers.Cert("doppler.key"),
 				testservers.Cert("loggregator-ca.crt"),
 				"test-server-name",
 				plumbing.WithCipherSuites([]string{
-					"TLS_RSA_WITH_RC4_128_SHA",
+					"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
 					"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
 				}),
 			)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(conf.CipherSuites).To(Equal([]uint16{
-				tls.TLS_RSA_WITH_RC4_128_SHA,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 			}))
 		})
@@ -176,62 +189,12 @@ var _ = Describe("TLS", func() {
 			Expect(tlsConf.InsecureSkipVerify).To(BeFalse())
 			Expect(tlsConf.ClientAuth).To(Equal(tls.NoClientCert))
 			Expect(tlsConf.MinVersion).To(Equal(uint16(tls.VersionTLS12)))
-			Expect(tlsConf.CipherSuites).To(Equal([]uint16{
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			}))
 		})
-
-		It("accepts configuration for CIPHER suites", func() {
-			conf := plumbing.NewTLSConfig(
-				plumbing.WithCipherSuites([]string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"}),
-			)
-
-			Expect(conf.CipherSuites).To(ConsistOf(
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			))
-		})
-
-		It("ignores garbage CIPHERs in favor of valid ones", func() {
-			conf := plumbing.NewTLSConfig(
-				plumbing.WithCipherSuites([]string{
-					"GARBAGE",
-					"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
-				}),
-			)
-
-			Expect(conf.CipherSuites).To(ConsistOf(
-				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			))
-		})
-
-		It("panics if no ciphers are provided", func() {
-			Expect(func() {
-				plumbing.NewTLSConfig(
-					plumbing.WithCipherSuites([]string{}),
-				)
-			}).Should(Panic())
-		})
-
-		It("maintains the order of the ciphers provided", func() {
-			conf := plumbing.NewTLSConfig(
-				plumbing.WithCipherSuites([]string{
-					"TLS_RSA_WITH_RC4_128_SHA",
-					"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-				}),
-			)
-
-			Expect(conf.CipherSuites).To(Equal([]uint16{
-				tls.TLS_RSA_WITH_RC4_128_SHA,
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			}))
-		})
-
 	})
 
-	Context("NewCredentials", func() {
+	Context("NewClientCredentials", func() {
 		It("returns transport credentials", func() {
-			creds, err := plumbing.NewCredentials(
+			creds, err := plumbing.NewClientCredentials(
 				testservers.Cert("doppler.crt"),
 				testservers.Cert("doppler.key"),
 				testservers.Cert("loggregator-ca.crt"),
@@ -242,7 +205,34 @@ var _ = Describe("TLS", func() {
 		})
 
 		It("returns an error with invalid certs", func() {
-			creds, err := plumbing.NewCredentials(
+			creds, err := plumbing.NewClientCredentials(
+				testservers.Cert("doppler.crt"),
+				testservers.Cert("doppler.key"),
+				testservers.Cert("doppler.key"),
+				"doppler",
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(creds).To(BeNil())
+		})
+	})
+
+	Context("NewServerCredentials", func() {
+		It("returns transport credentials", func() {
+			creds, err := plumbing.NewServerCredentials(
+				testservers.Cert("doppler.crt"),
+				testservers.Cert("doppler.key"),
+				testservers.Cert("loggregator-ca.crt"),
+				"doppler",
+				plumbing.WithCipherSuites([]string{
+					"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+				}),
+			)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(creds.Info().ServerName).To(Equal("doppler"))
+		})
+
+		It("returns an error with invalid certs", func() {
+			creds, err := plumbing.NewServerCredentials(
 				testservers.Cert("doppler.crt"),
 				testservers.Cert("doppler.key"),
 				testservers.Cert("doppler.key"),

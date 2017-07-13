@@ -39,7 +39,6 @@ type Config struct {
 	OutgoingDropsondePort  uint32
 	MetronConfig           MetronConfig
 	GRPC                   GRPC
-	CipherSuites           []string
 	SystemDomain           string
 	SkipCertVerify         bool
 	UaaHost                string
