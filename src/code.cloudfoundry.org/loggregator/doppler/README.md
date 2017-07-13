@@ -6,7 +6,7 @@ Doppler scales horizontally &mdash; as load increases, more instances can be dep
 
 ## Architecture Within Loggregator
 
-![Loggregator Diagram](../../docs/doppler.png)
+![Loggregator Diagram](../../../../docs/doppler.png)
 
 Logging data passes through the system as [protocol-buffers](https://github.com/google/protobuf), using [Dropsonde](https://github.com/cloudfoundry/dropsonde).
 
@@ -31,4 +31,4 @@ doppler [--logFile <path to log file>] [--config <path to config file>] \
 Cloud Foundry developers can easily add source clients to new CF components that emit messages to Doppler.  Currently, there are libraries for [Go](https://github.com/cloudfoundry/dropsonde/). For usage information, look at its README.
 
 ## Editing Manifest Templates
-The up-to-date Doppler configuration can be found [in the doppler spec file](../../jobs/doppler/spec). You can see a list of available configurable properties, their defaults and descriptions in that file.
+The up-to-date Doppler configuration can be found [in the doppler spec file](../../../../jobs/doppler/spec). You can see a list of available configurable properties, their defaults and descriptions in that file.
