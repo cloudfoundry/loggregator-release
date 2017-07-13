@@ -78,6 +78,11 @@ properties:
     description: "TLS certificate for metron"
   loggregator.tls.metron.key:
     description: "TLS key for metron"
+  loggregator.tls.cipher_suites:
+    description: |
+      An ordered list of supported SSL cipher suites. Allowed cipher suites are
+      TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 and TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384.
+    default: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256:TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
 
   metron_agent.zone:
     description: "Availability zone where this agent is running"

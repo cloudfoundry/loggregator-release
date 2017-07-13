@@ -34,7 +34,8 @@
         "Port" => p("doppler.grpc_port"),
         "KeyFile" => "/var/vcap/jobs/doppler/config/certs/doppler.key",
         "CertFile" => "/var/vcap/jobs/doppler/config/certs/doppler.crt",
-        "CAFile" => "/var/vcap/jobs/doppler/config/certs/loggregator_ca.crt"
+        "CAFile" => "/var/vcap/jobs/doppler/config/certs/loggregator_ca.crt",
+        "CipherSuites" => p("loggregator.tls.cipher_suites").split(":")
     }
 
     metronConfig = {

@@ -410,7 +410,7 @@ func connectToEtcd(conf *config.Config) storeadapter.StoreAdapter {
 }
 
 func setupMetricsEmitter(conf *config.Config) {
-	credentials, err := plumbing.NewServerCredentials(
+	credentials, err := plumbing.NewClientCredentials(
 		conf.GRPC.CertFile,
 		conf.GRPC.KeyFile,
 		conf.GRPC.CAFile,

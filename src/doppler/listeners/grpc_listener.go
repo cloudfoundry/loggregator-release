@@ -30,11 +30,17 @@ func NewGRPCListener(
 	envelopeBuffer *diodes.ManyToOneEnvelope,
 	batcher *metricbatcher.MetricBatcher,
 ) (*GRPCListener, error) {
+	var opts []plumbingv1.ConfigOption
+	if len(conf.CipherSuites) > 0 {
+		opts = append(opts, plumbingv1.WithCipherSuites(conf.CipherSuites))
+	}
+
 	tlsConfig, err := plumbingv1.NewServerMutualTLSConfig(
 		conf.CertFile,
 		conf.KeyFile,
 		conf.CAFile,
 		"doppler",
+		opts...,
 	)
 	if err != nil {
 		return nil, err

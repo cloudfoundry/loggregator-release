@@ -43,6 +43,11 @@ properties:
     description: "TLS certificate for doppler"
   loggregator.tls.doppler.key:
     description: "TLS key for doppler"
+  loggregator.tls.cipher_suites:
+    description: |
+      An ordered list of supported SSL cipher suites. Allowed cipher suites are
+      TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 and TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384.
+    default: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256:TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
 
   loggregator.etcd.require_ssl:
     description: "Enable ssl for all communication with etcd"
