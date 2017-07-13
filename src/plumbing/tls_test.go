@@ -27,6 +27,7 @@ var _ = Describe("TLS", func() {
 			Expect(conf.InsecureSkipVerify).To(BeFalse())
 			Expect(conf.ClientAuth).To(Equal(tls.RequireAndVerifyClientCert))
 			Expect(conf.MinVersion).To(Equal(uint16(tls.VersionTLS12)))
+			Expect(conf.CipherSuites).To(BeEmpty())
 
 			Expect(string(conf.RootCAs.Subjects()[0])).To(ContainSubstring("loggregatorCA"))
 			Expect(string(conf.ClientCAs.Subjects()[0])).To(ContainSubstring("loggregatorCA"))
