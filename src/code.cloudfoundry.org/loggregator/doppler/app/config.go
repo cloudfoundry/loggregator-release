@@ -25,10 +25,11 @@ type EtcdTLSClientConfig struct {
 }
 
 type GRPC struct {
-	Port     uint16
-	CAFile   string
-	CertFile string
-	KeyFile  string
+	Port         uint16
+	CAFile       string
+	CertFile     string
+	KeyFile      string
+	CipherSuites []string
 }
 
 type Config struct {

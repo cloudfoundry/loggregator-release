@@ -39,6 +39,11 @@ properties:
     description: "TLS certificate for the reverse log proxy"
   loggregator.tls.reverse_log_proxy.key:
     description: "TLS key for the reverse log proxy"
+  loggregator.tls.cipher_suites:
+    description: |
+      An ordered list of supported SSL cipher suites. Allowed cipher suites are
+      TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 and TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384.
+    default: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256:TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
 
   loggregator.doppler.addrs:
     description: "The addresses of Dopplers (alternative to doppler link)"
