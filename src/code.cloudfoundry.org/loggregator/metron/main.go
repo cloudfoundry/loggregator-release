@@ -8,6 +8,9 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+
+	"code.cloudfoundry.org/loggregator/healthendpoint"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 
 	"google.golang.org/grpc"
@@ -17,7 +20,6 @@ import (
 	"code.cloudfoundry.org/loggregator/profiler"
 
 	"code.cloudfoundry.org/loggregator/metron/app"
-	"code.cloudfoundry.org/loggregator/metron/internal/health"
 )
 
 func main() {
@@ -85,16 +87,54 @@ func main() {
 		log.Fatalf("Could not configure metric emitter: %s", err)
 	}
 
-	server, registry := health.New(config.HealthEndpointPort)
-	go server.Run()
+	healthRegistrar := startHealthEndpoint(fmt.Sprintf(":%d", config.HealthEndpointPort))
 
-	appV1 := app.NewV1App(config, registry, clientCreds)
+	appV1 := app.NewV1App(config, healthRegistrar, clientCreds)
 	go appV1.Start()
 
-	appV2 := app.NewV2App(config, registry, clientCreds, serverCreds, metricClient)
+	appV2 := app.NewV2App(config, healthRegistrar, clientCreds, serverCreds, metricClient)
 	go appV2.Start()
 
 	// We start the profiler last so that we can definitively say that we're
 	// all connected and ready for data by the time the profiler starts up.
 	profiler.New(config.PPROFPort).Start()
+}
+
+func startHealthEndpoint(addr string) *healthendpoint.Registrar {
+	promRegistry := prometheus.NewRegistry()
+	healthendpoint.StartServer(addr, promRegistry)
+	healthRegistrar := healthendpoint.New(promRegistry, map[string]prometheus.Gauge{
+		// metric-documentation-health: (dopplerConnections)
+		// Number of connections open to dopplers.
+		"dopplerConnections": prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Namespace: "loggregator",
+				Subsystem: "metron",
+				Name:      "dopplerConnections",
+				Help:      "Number of connections open to dopplers",
+			},
+		),
+		// metric-documentation-health: (dopplerV1Streams)
+		// Number of V1 gRPC streams to dopplers.
+		"dopplerV1Streams": prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Namespace: "loggregator",
+				Subsystem: "metron",
+				Name:      "dopplerV1Streams",
+				Help:      "Number of V1 gRPC streams to dopplers",
+			},
+		),
+		// metric-documentation-health: (dopplerV2Streams)
+		// Number of V2 gRPC streams to dopplers.
+		"dopplerV2Streams": prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Namespace: "loggregator",
+				Subsystem: "metron",
+				Name:      "dopplerV2Streams",
+				Help:      "Number of V2 gRPC streams to dopplers",
+			},
+		),
+	})
+
+	return healthRegistrar
 }

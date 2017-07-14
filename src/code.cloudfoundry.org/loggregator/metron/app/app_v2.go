@@ -7,13 +7,13 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/loggregator/diodes"
+	"code.cloudfoundry.org/loggregator/healthendpoint"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 
 	gendiodes "github.com/cloudfoundry/diodes"
 
 	clientpool "code.cloudfoundry.org/loggregator/metron/internal/clientpool/v2"
 	egress "code.cloudfoundry.org/loggregator/metron/internal/egress/v2"
-	"code.cloudfoundry.org/loggregator/metron/internal/health"
 	ingress "code.cloudfoundry.org/loggregator/metron/internal/ingress/v2"
 
 	"google.golang.org/grpc"
@@ -26,26 +26,26 @@ type MetricClient interface {
 }
 
 type AppV2 struct {
-	config         *Config
-	healthRegistry *health.Registry
-	clientCreds    credentials.TransportCredentials
-	serverCreds    credentials.TransportCredentials
-	metricClient   MetricClient
+	config          *Config
+	healthRegistrar *healthendpoint.Registrar
+	clientCreds     credentials.TransportCredentials
+	serverCreds     credentials.TransportCredentials
+	metricClient    MetricClient
 }
 
 func NewV2App(
 	c *Config,
-	r *health.Registry,
+	r *healthendpoint.Registrar,
 	clientCreds credentials.TransportCredentials,
 	serverCreds credentials.TransportCredentials,
 	metricClient MetricClient,
 ) *AppV2 {
 	return &AppV2{
-		config:         c,
-		healthRegistry: r,
-		clientCreds:    clientCreds,
-		serverCreds:    serverCreds,
-		metricClient:   metricClient,
+		config:          c,
+		healthRegistrar: r,
+		clientCreds:     clientCreds,
+		serverCreds:     serverCreds,
+		metricClient:    metricClient,
 	}
 }
 
@@ -96,7 +96,7 @@ func (a *AppV2) initializePool() *clientpool.ClientPool {
 	}
 
 	fetcher := clientpool.NewSenderFetcher(
-		a.healthRegistry,
+		a.healthRegistrar,
 		grpc.WithTransportCredentials(a.clientCreds),
 	)
 

@@ -13,20 +13,20 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"code.cloudfoundry.org/loggregator/healthendpoint"
 	clientpool "code.cloudfoundry.org/loggregator/metron/internal/clientpool/v1"
 	egress "code.cloudfoundry.org/loggregator/metron/internal/egress/v1"
-	"code.cloudfoundry.org/loggregator/metron/internal/health"
 	ingress "code.cloudfoundry.org/loggregator/metron/internal/ingress/v1"
 )
 
 type AppV1 struct {
-	config         *Config
-	creds          credentials.TransportCredentials
-	healthRegistry *health.Registry
+	config          *Config
+	creds           credentials.TransportCredentials
+	healthRegistrar *healthendpoint.Registrar
 }
 
-func NewV1App(c *Config, r *health.Registry, creds credentials.TransportCredentials) *AppV1 {
-	return &AppV1{config: c, healthRegistry: r, creds: creds}
+func NewV1App(c *Config, r *healthendpoint.Registrar, creds credentials.TransportCredentials) *AppV1 {
+	return &AppV1{config: c, healthRegistrar: r, creds: creds}
 }
 
 func (a *AppV1) Start() {
@@ -93,7 +93,7 @@ func (a *AppV1) setupGRPC() egress.BatchChainByteWriter {
 	}
 
 	fetcher := clientpool.NewPusherFetcher(
-		a.healthRegistry,
+		a.healthRegistrar,
 		grpc.WithTransportCredentials(a.creds),
 	)
 
