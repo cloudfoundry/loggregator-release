@@ -6,27 +6,25 @@ import (
 	"io"
 	"log"
 
-	"code.cloudfoundry.org/loggregator/metron/internal/health"
 	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	"google.golang.org/grpc"
 )
 
-type HealthRegistry interface {
-	RegisterValue(name string) *health.Value
+type HealthRegistrar interface {
+	Inc(name string)
+	Dec(name string)
 }
 
 type SenderFetcher struct {
-	opts        []grpc.DialOption
-	connValue   *health.Value
-	streamValue *health.Value
+	opts   []grpc.DialOption
+	health HealthRegistrar
 }
 
-func NewSenderFetcher(r HealthRegistry, opts ...grpc.DialOption) *SenderFetcher {
+func NewSenderFetcher(r HealthRegistrar, opts ...grpc.DialOption) *SenderFetcher {
 	return &SenderFetcher{
-		opts:        opts,
-		connValue:   r.RegisterValue("doppler_connections"),
-		streamValue: r.RegisterValue("doppler_v2_streams"),
+		opts:   opts,
+		health: r,
 	}
 }
 
@@ -35,7 +33,7 @@ func (p *SenderFetcher) Fetch(addr string) (io.Closer, plumbing.DopplerIngress_B
 	if err != nil {
 		return nil, nil, fmt.Errorf("error dialing ingestor stream to %s: %s", addr, err)
 	}
-	p.connValue.Increment(1)
+	p.health.Inc("dopplerConnections")
 
 	client := plumbing.NewDopplerIngressClient(conn)
 	log.Printf("successfully connected to doppler %s", addr)
@@ -45,27 +43,25 @@ func (p *SenderFetcher) Fetch(addr string) (io.Closer, plumbing.DopplerIngress_B
 		conn.Close()
 		return nil, nil, fmt.Errorf("error establishing ingestor stream to %s: %s", addr, err)
 	}
-	p.streamValue.Increment(1)
+	p.health.Inc("dopplerV2Streams")
 
 	log.Printf("successfully established a stream to doppler %s", addr)
 
 	closer := &decrementingCloser{
-		closer:      conn,
-		connValue:   p.connValue,
-		streamValue: p.streamValue,
+		closer: conn,
+		health: p.health,
 	}
 	return closer, sender, err
 }
 
 type decrementingCloser struct {
-	closer      io.Closer
-	connValue   *health.Value
-	streamValue *health.Value
+	closer io.Closer
+	health HealthRegistrar
 }
 
 func (d *decrementingCloser) Close() error {
-	d.connValue.Decrement(1)
-	d.streamValue.Decrement(1)
+	d.health.Dec("dopplerConnections")
+	d.health.Dec("dopplerV2Streams")
 
 	return d.closer.Close()
 }

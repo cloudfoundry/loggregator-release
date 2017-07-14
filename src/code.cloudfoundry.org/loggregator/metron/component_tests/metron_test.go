@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -45,19 +44,12 @@ var _ = Describe("Metron", func() {
 		metronCleanup, metronConfig, metronReady = testservers.StartMetron(
 			testservers.BuildMetronConfig("localhost", consumerServer.Port()),
 		)
-		defer metronReady()
+		metronReady()
 	})
 
 	AfterEach(func() {
 		consumerServer.Stop()
 		metronCleanup()
-	})
-
-	It("provides a health endpoint", func() {
-		resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/health", metronConfig.HealthEndpointPort))
-		Expect(err).ToNot(HaveOccurred())
-
-		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 	})
 
 	It("accepts connections on the v1 API", func() {
