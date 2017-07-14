@@ -6,7 +6,6 @@ import (
 	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"code.cloudfoundry.org/loggregator/metron/internal/clientpool/v1"
-	"code.cloudfoundry.org/loggregator/metron/internal/health"
 
 	"google.golang.org/grpc"
 
@@ -41,8 +40,8 @@ var _ = Describe("PusherFetcher", func() {
 		_, _, err := fetcher.Fetch(server.addr)
 		Expect(err).ToNot(HaveOccurred())
 
-		Expect(registry.GetValue("doppler_connections")).To(Equal(int64(1)))
-		Expect(registry.GetValue("doppler_v1_streams")).To(Equal(int64(1)))
+		Expect(registry.GetValue("dopplerConnections")).To(Equal(int64(1)))
+		Expect(registry.GetValue("dopplerV1Streams")).To(Equal(int64(1)))
 	})
 
 	It("decrements a counter when a connection is closed", func() {
@@ -57,8 +56,8 @@ var _ = Describe("PusherFetcher", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		closer.Close()
-		Expect(registry.GetValue("doppler_connections")).To(Equal(int64(0)))
-		Expect(registry.GetValue("doppler_v1_streams")).To(Equal(int64(0)))
+		Expect(registry.GetValue("dopplerConnections")).To(Equal(int64(0)))
+		Expect(registry.GetValue("dopplerV1Streams")).To(Equal(int64(0)))
 	})
 
 	It("returns an error when the server is unavailable", func() {
@@ -69,29 +68,30 @@ var _ = Describe("PusherFetcher", func() {
 })
 
 type SpyRegistry struct {
-	counters map[string]*health.Value
+	counters map[string]int64
 }
 
 func newSpyRegistry() *SpyRegistry {
 	return &SpyRegistry{
-		counters: make(map[string]*health.Value),
+		counters: make(map[string]int64),
 	}
 }
 
-func (s *SpyRegistry) RegisterValue(name string) *health.Value {
-	counter := &health.Value{}
-	s.counters[name] = counter
+func (s *SpyRegistry) Inc(name string) {
+	s.counters[name] += 1
+}
 
-	return counter
+func (s *SpyRegistry) Dec(name string) {
+	s.counters[name] -= 1
 }
 
 func (s *SpyRegistry) GetValue(name string) int64 {
 	v, ok := s.counters[name]
 	if !ok {
-		return -9876
+		return -89282828
 	}
 
-	return v.Number()
+	return v
 }
 
 type SpyIngestorServer struct {
