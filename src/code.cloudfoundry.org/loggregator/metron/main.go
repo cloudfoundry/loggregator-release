@@ -89,7 +89,7 @@ func main() {
 
 	healthRegistrar := startHealthEndpoint(fmt.Sprintf(":%d", config.HealthEndpointPort))
 
-	appV1 := app.NewV1App(config, healthRegistrar, clientCreds)
+	appV1 := app.NewV1App(config, healthRegistrar, clientCreds, metricClient)
 	go appV1.Start()
 
 	appV2 := app.NewV2App(config, healthRegistrar, clientCreds, serverCreds, metricClient)

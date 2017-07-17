@@ -14,19 +14,23 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"code.cloudfoundry.org/loggregator/healthendpoint"
-	clientpool "code.cloudfoundry.org/loggregator/metron/internal/clientpool/v1"
+	"code.cloudfoundry.org/loggregator/metricemitter"
+	"code.cloudfoundry.org/loggregator/metron/internal/clientpool"
+	clientpoolv1 "code.cloudfoundry.org/loggregator/metron/internal/clientpool/v1"
 	egress "code.cloudfoundry.org/loggregator/metron/internal/egress/v1"
 	ingress "code.cloudfoundry.org/loggregator/metron/internal/ingress/v1"
+	"code.cloudfoundry.org/loggregator/plumbing"
 )
 
 type AppV1 struct {
 	config          *Config
 	creds           credentials.TransportCredentials
 	healthRegistrar *healthendpoint.Registrar
+	metricClient    MetricClient
 }
 
-func NewV1App(c *Config, r *healthendpoint.Registrar, creds credentials.TransportCredentials) *AppV1 {
-	return &AppV1{config: c, healthRegistrar: r, creds: creds}
+func NewV1App(c *Config, r *healthendpoint.Registrar, creds credentials.TransportCredentials, m MetricClient) *AppV1 {
+	return &AppV1{config: c, healthRegistrar: r, creds: creds, metricClient: m}
 }
 
 func (a *AppV1) Start() {
@@ -87,27 +91,39 @@ func (a *AppV1) setupGRPC() egress.BatchChainByteWriter {
 		return nil
 	}
 
-	balancers := []*clientpool.Balancer{
-		clientpool.NewBalancer(fmt.Sprintf("%s.%s", a.config.Zone, a.config.DopplerAddr)),
-		clientpool.NewBalancer(a.config.DopplerAddr),
+	balancers := []*clientpoolv1.Balancer{
+		clientpoolv1.NewBalancer(fmt.Sprintf("%s.%s", a.config.Zone, a.config.DopplerAddr)),
+		clientpoolv1.NewBalancer(a.config.DopplerAddr),
 	}
 
-	fetcher := clientpool.NewPusherFetcher(
+	avgEnvelopeSize := a.metricClient.NewGauge("average_envelope", "bytes/minute",
+		metricemitter.WithVersion(2, 0),
+		metricemitter.WithTags(map[string]string{
+			"loggregator": "v1",
+		}))
+	tracker := plumbing.NewEnvelopeAverager()
+	tracker.Start(60*time.Second, func(average float64) {
+		avgEnvelopeSize.Set(average)
+	})
+	statsHandler := clientpool.NewStatsHandler(tracker)
+
+	fetcher := clientpoolv1.NewPusherFetcher(
 		a.healthRegistrar,
 		grpc.WithTransportCredentials(a.creds),
+		grpc.WithStatsHandler(statsHandler),
 	)
 
-	connector := clientpool.MakeGRPCConnector(fetcher, balancers)
+	connector := clientpoolv1.MakeGRPCConnector(fetcher, balancers)
 
-	var connManagers []clientpool.Conn
+	var connManagers []clientpoolv1.Conn
 	for i := 0; i < 5; i++ {
-		connManagers = append(connManagers, clientpool.NewConnManager(
+		connManagers = append(connManagers, clientpoolv1.NewConnManager(
 			connector,
 			100000+rand.Int63n(1000),
 			time.Second,
 		))
 	}
 
-	pool := clientpool.New(connManagers...)
+	pool := clientpoolv1.New(connManagers...)
 	return egress.NewGRPCWrapper(pool)
 }

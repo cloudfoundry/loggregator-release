@@ -9,10 +9,12 @@ import (
 	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/healthendpoint"
 	"code.cloudfoundry.org/loggregator/metricemitter"
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	gendiodes "github.com/cloudfoundry/diodes"
 
-	clientpool "code.cloudfoundry.org/loggregator/metron/internal/clientpool/v2"
+	"code.cloudfoundry.org/loggregator/metron/internal/clientpool"
+	clientpoolv2 "code.cloudfoundry.org/loggregator/metron/internal/clientpool/v2"
 	egress "code.cloudfoundry.org/loggregator/metron/internal/egress/v2"
 	ingress "code.cloudfoundry.org/loggregator/metron/internal/ingress/v2"
 
@@ -23,6 +25,7 @@ import (
 // MetricClient creates new CounterMetrics to be emitted periodically.
 type MetricClient interface {
 	NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter
+	NewGauge(name, unit string, opts ...metricemitter.MetricOption) *metricemitter.Gauge
 }
 
 type AppV2 struct {
@@ -85,31 +88,43 @@ func (a *AppV2) Start() {
 	ingressServer.Start()
 }
 
-func (a *AppV2) initializePool() *clientpool.ClientPool {
+func (a *AppV2) initializePool() *clientpoolv2.ClientPool {
 	if a.clientCreds == nil {
 		log.Panic("Failed to load TLS client config")
 	}
 
-	balancers := []*clientpool.Balancer{
-		clientpool.NewBalancer(fmt.Sprintf("%s.%s", a.config.Zone, a.config.DopplerAddr)),
-		clientpool.NewBalancer(a.config.DopplerAddr),
+	balancers := []*clientpoolv2.Balancer{
+		clientpoolv2.NewBalancer(fmt.Sprintf("%s.%s", a.config.Zone, a.config.DopplerAddr)),
+		clientpoolv2.NewBalancer(a.config.DopplerAddr),
 	}
 
-	fetcher := clientpool.NewSenderFetcher(
+	avgEnvelopeSize := a.metricClient.NewGauge("average_envelope", "bytes/minute",
+		metricemitter.WithVersion(2, 0),
+		metricemitter.WithTags(map[string]string{
+			"loggregator": "v2",
+		}))
+	tracker := plumbing.NewEnvelopeAverager()
+	tracker.Start(60*time.Second, func(average float64) {
+		avgEnvelopeSize.Set(average)
+	})
+	statsHandler := clientpool.NewStatsHandler(tracker)
+
+	fetcher := clientpoolv2.NewSenderFetcher(
 		a.healthRegistrar,
 		grpc.WithTransportCredentials(a.clientCreds),
+		grpc.WithStatsHandler(statsHandler),
 	)
 
-	connector := clientpool.MakeGRPCConnector(fetcher, balancers)
+	connector := clientpoolv2.MakeGRPCConnector(fetcher, balancers)
 
-	var connManagers []clientpool.Conn
+	var connManagers []clientpoolv2.Conn
 	for i := 0; i < 5; i++ {
-		connManagers = append(connManagers, clientpool.NewConnManager(
+		connManagers = append(connManagers, clientpoolv2.NewConnManager(
 			connector,
 			100000+rand.Int63n(1000),
 			time.Second,
 		))
 	}
 
-	return clientpool.New(connManagers...)
+	return clientpoolv2.New(connManagers...)
 }
