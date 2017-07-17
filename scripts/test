@@ -103,16 +103,8 @@ function run_build {
 }
 
 function run_unit {
-    pushd $PROJECT_DIR/src
-        local not_unit_tests="code.cloudfoundry.org/clock"
-        not_unit_tests="${not_unit_tests},code.cloudfoundry.org/workpool"
-        not_unit_tests="${not_unit_tests},github.com"
-        not_unit_tests="${not_unit_tests},golang.org"
-        not_unit_tests="${not_unit_tests},google.golang.org"
-        not_unit_tests="${not_unit_tests},gopkg.in"
-        not_unit_tests="${not_unit_tests},code.cloudfoundry.org/loggregator/integration_tests"
-        not_unit_tests="${not_unit_tests},code.cloudfoundry.org/loggregator/lats"
-        not_unit_tests="${not_unit_tests},component_tests"
+    pushd $PROJECT_DIR/src/code.cloudfoundry.org/loggregator
+        local not_unit_tests="integration_tests,component_tests,lats"
         print_checkpoint "Running Unit Tests"
         # TODO: remove build_etcd once announcer unit tests no longer depend on it
         build_etcd
@@ -122,7 +114,8 @@ function run_unit {
             --tags=~deprecated \
             --randomizeAllSpecs \
             --slowSpecThreshold 20 \
-            --skipPackage="${not_unit_tests}" $@
+            --skipPackage="$not_unit_tests" \
+            $@
         exit_code=$?
    popd
    return $exit_code
