@@ -1,0 +1,4 @@
+set -e -x
+
+mkdir -p ${BOSH_INSTALL_TARGET}/syslog_daemon_config
+cp -a $PWD/loggregator/src/syslog_daemon_config/* ${BOSH_INSTALL_TARGET}/syslog_daemon_config
