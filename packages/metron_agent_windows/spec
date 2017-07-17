@@ -13,6 +13,7 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/metricemitter/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/metron/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/metron/app/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/metron/internal/clientpool/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/metron/internal/clientpool/v1/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/metron/internal/clientpool/v2/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/metron/internal/egress/v1/*.go # gosub
