@@ -1,8 +1,6 @@
 package main
 
 import (
-	config "code.cloudfoundry.org/loggregator/doppler/app"
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"crypto/tls"
 	"flag"
 	"fmt"
@@ -13,6 +11,9 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+
+	config "code.cloudfoundry.org/loggregator/doppler/app"
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"golang.org/x/net/context"
 
@@ -168,32 +169,6 @@ func (p *producer) ContainerMetrics(context.Context, *plumbing.ContainerMetricsR
 func (p *producer) RecentLogs(context.Context, *plumbing.RecentLogsRequest) (*plumbing.RecentLogsResponse, error) {
 	return nil, nil
 }
-
-// func produceEnvelopes(iterations int, delay time.Duration, dopplerAddr string, creds credentials.TransportCredentials) {
-// 	conn, err := grpc.Dial(dopplerAddr, grpc.WithTransportCredentials(creds))
-// 	if err != nil {
-// 		log.Panicf("Failed to dial gRPC server: %s", err)
-// 	}
-// 	defer conn.Close()
-// 	client := plumbing.NewDopplerIngestorClient(conn)
-// 	ctx := context.Background()
-// 	pusher, err := client.Pusher(ctx)
-// 	if err != nil {
-// 		log.Panicf("Got error in establishing writer into doppler: %s", err)
-// 	}
-
-// 	for i := 0; i < iterations; i++ {
-// 		env := &plumbing.EnvelopeData{
-// 			Payload: createEnvelope(),
-// 		}
-// 		err := pusher.Send(env)
-// 		if err != nil {
-// 			log.Panicf("Failed to write data to doppler: %s", err)
-// 		}
-
-// 		time.Sleep(delay)
-// 	}
-// }
 
 func createEnvelope() []byte {
 	e := &events.Envelope{
