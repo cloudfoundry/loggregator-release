@@ -59,7 +59,6 @@ func main() {
 		*certFile,
 		*keyFile,
 		*caFile,
-		"doppler",
 		opts...,
 	)
 	if err != nil {
