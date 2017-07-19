@@ -1,6 +1,7 @@
 package reliability
 
 import (
+	"bytes"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -27,7 +28,7 @@ func (h *CreateTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var t *Test
+	t := &Test{}
 	if err := json.NewDecoder(r.Body).Decode(t); err != nil {
 		log.Printf("failed to decode request body: %s", err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -49,7 +50,22 @@ func (h *CreateTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type Test struct {
-	Cycles  uint64        `json:"cycles"`
-	Delay   time.Duration `json:"delay"`
-	Timeout time.Duration `json:"timeout"`
+	Cycles  uint64   `json:"cycles"`
+	Delay   Duration `json:"delay"`
+	Timeout Duration `json:"timeout"`
+}
+
+type Duration time.Duration
+
+func (d *Duration) UnmarshalJSON(b []byte) error {
+	val := bytes.Trim(b, `"`)
+	dur, err := time.ParseDuration(string(val))
+
+	if err != nil {
+		return err
+	}
+
+	*d = Duration(dur)
+
+	return nil
 }

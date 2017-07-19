@@ -56,5 +56,8 @@ func main() {
 
 	http.Handle("/tests", reliability.NewCreateTestHandler(testRunner))
 
-	log.Println(http.ListenAndServe(fmt.Sprintf(":%d", *port), nil))
+	addr := fmt.Sprintf(":%d", *port)
+	log.Printf("server started on %s", addr)
+
+	log.Println(http.ListenAndServe(addr, nil))
 }

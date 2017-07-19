@@ -70,7 +70,7 @@ type TestResult struct {
 func NewTestResult(test *Test, count uint64, t time.Time) *TestResult {
 	return &TestResult{
 		Cycles:           test.Cycles,
-		Delay:            test.Delay,
+		Delay:            time.Duration(test.Delay),
 		ReceivedLogCount: count,
 		TimeCompleted:    t,
 	}

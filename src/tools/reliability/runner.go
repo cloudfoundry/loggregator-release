@@ -66,9 +66,9 @@ func (r *LogReliabilityTestRunner) Run(t *Test) {
 	}
 
 	testLog := []byte(fmt.Sprintf("%s - TEST", r.subscriptionID))
-	go writeLogs(testLog, t.Cycles, t.Delay)
+	go writeLogs(testLog, t.Cycles, time.Duration(t.Delay))
 
-	receivedLogCount, err := receiveLogs(msgChan, errChan, testLog, t.Cycles, t.Timeout)
+	receivedLogCount, err := receiveLogs(msgChan, errChan, testLog, t.Cycles, time.Duration(t.Timeout))
 	if err != nil {
 		return
 	}
