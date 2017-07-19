@@ -1,0 +1,13 @@
+---
+applications:
+  - name: blackbox
+    command: |
+      ./nozzle \
+        -host "$HOST" \
+        -port "$PORT" \
+        -uaa-addr "$UAA_ADDR" \
+        -client-id "$CLIENT_ID" \
+        -client-secret "$CLIENT_SECRET" \
+        -datadog-key "$DATADOG_API_KEY" \
+        -logging-endpoint "$LOG_ENDPOINT"
+    buildpack: binary_buildpack

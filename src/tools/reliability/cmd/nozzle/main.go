@@ -12,16 +12,15 @@ import (
 )
 
 func main() {
-	uaaAddr := flag.String("uaa-addr", "https://uaa.run.pivotal.io", "the address of UAA")
+	host := flag.String("host", "", "the hostname of the blackbox test")
+	port := flag.Int("port", 8080, "the port of the running http server")
+
+	uaaAddr := flag.String("uaa-addr", "", "the address of UAA")
 	clientID := flag.String("client-id", "", "the UAA client ID")
 	clientSecret := flag.String("client-secret", "", "the UAA client secret")
 
-	host := flag.String("host", "blackboxtest.cfapps.com", "the hostname of the blackbox test")
-	port := flag.Int("port", 8080, "the port of the running http server")
-
 	dataDogAPIKey := flag.String("datadog-key", "", "the API key for a DataDog account")
-
-	logEndpoint := flag.String("logging-endpoint", "wss://doppler.run.pivotal.io:443", "the address of the logging endpoint")
+	logEndpoint := flag.String("logging-endpoint", "", "the address of the logging endpoint")
 
 	flag.Parse()
 
