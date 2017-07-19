@@ -50,7 +50,6 @@ func (fakeDoppler *FakeDoppler) Start() error {
 		"../fixtures/server.crt",
 		"../fixtures/server.key",
 		"../fixtures/loggregator-ca.crt",
-		"doppler",
 	)
 	if err != nil {
 		return err
