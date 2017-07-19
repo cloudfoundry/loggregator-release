@@ -142,7 +142,7 @@ func buildContainerMetric() []byte {
 }
 
 func connectToGRPC(conf *app.Config) (*grpc.ClientConn, plumbing.DopplerClient) {
-	tlsCfg, err := plumbing.NewServerMutualTLSConfig(conf.GRPC.CertFile, conf.GRPC.KeyFile, conf.GRPC.CAFile, "doppler")
+	tlsCfg, err := plumbing.NewClientMutualTLSConfig(conf.GRPC.CertFile, conf.GRPC.KeyFile, conf.GRPC.CAFile, "doppler")
 	Expect(err).ToNot(HaveOccurred())
 	creds := credentials.NewTLS(tlsCfg)
 	out, err := grpc.Dial(localIPAddress+":5678", grpc.WithTransportCredentials(creds))
@@ -289,7 +289,7 @@ func StartEncryptedTCPServer(pathToTCPEchoServer string, syslogDrainAddress stri
 }
 
 func DialTLS(address, cert, key, ca string) (*tls.Conn, error) {
-	tlsConfig, err := plumbing.NewServerMutualTLSConfig(
+	tlsConfig, err := plumbing.NewClientMutualTLSConfig(
 		"../fixtures/client.crt",
 		"../fixtures/client.key",
 		"../fixtures/loggregator-ca.crt",

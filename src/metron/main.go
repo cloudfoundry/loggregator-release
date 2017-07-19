@@ -50,7 +50,6 @@ func main() {
 		config.GRPC.CertFile,
 		config.GRPC.KeyFile,
 		config.GRPC.CAFile,
-		"metron",
 		opts...,
 	)
 	if err != nil {

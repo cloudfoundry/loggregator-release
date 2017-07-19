@@ -111,7 +111,7 @@ func EmitToMetronV1(envelope *events.Envelope) {
 }
 
 func EmitToMetronV2(envelope *v2.Envelope) {
-	creds, err := plumbing.NewServerCredentials(
+	creds, err := plumbing.NewClientCredentials(
 		config.MetronTLSClientConfig.CertFile,
 		config.MetronTLSClientConfig.KeyFile,
 		config.MetronTLSClientConfig.CAFile,
@@ -135,7 +135,7 @@ func EmitToMetronV2(envelope *v2.Envelope) {
 }
 
 func ReadFromRLP(appID string) <-chan *v2.Envelope {
-	creds, err := plumbing.NewServerCredentials(
+	creds, err := plumbing.NewClientCredentials(
 		config.MetronTLSClientConfig.CertFile,
 		config.MetronTLSClientConfig.KeyFile,
 		config.MetronTLSClientConfig.CAFile,
@@ -176,7 +176,7 @@ func ReadFromRLP(appID string) <-chan *v2.Envelope {
 }
 
 func ReadContainerFromRLP(appID string) []*v2.Envelope {
-	creds, err := plumbing.NewServerCredentials(
+	creds, err := plumbing.NewClientCredentials(
 		config.MetronTLSClientConfig.CertFile,
 		config.MetronTLSClientConfig.KeyFile,
 		config.MetronTLSClientConfig.CAFile,

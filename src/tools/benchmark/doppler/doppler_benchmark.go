@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"code.cloudfoundry.org/loggregator/plumbing"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
@@ -58,7 +60,7 @@ func main() {
 		log.Fatal("Missing required flag 'cn'")
 	}
 
-	creds, err := plumbing.NewServerCredentials(*cert, *key, *ca, *cn)
+	creds, err := plumbing.NewClientCredentials(*cert, *key, *ca, *cn)
 	if err != nil || creds == nil {
 		log.Fatalf("Unable to setup TLS")
 	}

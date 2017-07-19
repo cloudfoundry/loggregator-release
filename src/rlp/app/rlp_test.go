@@ -112,7 +112,6 @@ func setupDoppler() (*mockDopplerServer, net.Listener) {
 		testservers.Cert("doppler.crt"),
 		testservers.Cert("doppler.key"),
 		testservers.Cert("loggregator-ca.crt"),
-		"doppler",
 	)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -139,7 +138,6 @@ func setupRLP(dopplerLis net.Listener) net.Listener {
 		testservers.Cert("reverselogproxy.crt"),
 		testservers.Cert("reverselogproxy.key"),
 		testservers.Cert("loggregator-ca.crt"),
-		"reverselogproxy",
 	)
 	Expect(err).ToNot(HaveOccurred())
 

@@ -106,7 +106,7 @@ func (t *trafficController) Start() {
 		accessMiddleware = auth.Access(accessLogger, t.conf.IP, t.conf.OutgoingDropsondePort)
 	}
 
-	creds, err := plumbing.NewServerCredentials(
+	creds, err := plumbing.NewClientCredentials(
 		t.conf.GRPC.CertFile,
 		t.conf.GRPC.KeyFile,
 		t.conf.GRPC.CAFile,
