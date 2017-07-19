@@ -68,7 +68,14 @@ func (r *LogReliabilityTestRunner) Run(t *Test) {
 	testLog := []byte(fmt.Sprintf("%s - TEST", r.subscriptionID))
 	go writeLogs(testLog, t.Cycles, time.Duration(t.Delay))
 
-	receivedLogCount, err := receiveLogs(msgChan, errChan, testLog, t.Cycles, time.Duration(t.Timeout))
+	receivedLogCount, err := receiveLogs(
+		msgChan,
+		errChan,
+		testLog,
+		t.Cycles,
+		time.Duration(t.Timeout),
+		r.subscriptionID,
+	)
 	if err != nil {
 		return
 	}
@@ -95,6 +102,7 @@ func receiveLogs(
 	logMsg []byte,
 	logCycles uint64,
 	timeout time.Duration,
+	subscriptionID string,
 ) (uint64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -103,7 +111,7 @@ func receiveLogs(
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("t timedout")
+			log.Printf("test timedout - %s", subscriptionID)
 
 			return receivedLogCount, nil
 		case err := <-errChan:
@@ -134,10 +142,23 @@ func prime(
 
 	primerTimeout, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
+
+	go func() {
+		for {
+			select {
+			case <-primerTimeout.Done():
+				return
+			default:
+				log.Printf("%s", primerMsg)
+				time.Sleep(time.Second)
+			}
+		}
+	}()
+
 	for {
 		select {
 		case <-primerTimeout.Done():
-			log.Println("test timedout while priming")
+			log.Printf("test timedout while priming - %s", primerMsg)
 			return false
 		case err := <-errChan:
 			if err != nil {
@@ -151,8 +172,6 @@ func prime(
 					return true
 				}
 			}
-		case <-time.After(time.Second):
-			log.Printf("%s", primerMsg)
 		}
 	}
 }

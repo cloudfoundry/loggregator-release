@@ -1,6 +1,6 @@
 ---
 applications:
-  - name: blackbox
+  - name: firehose-reliability
     command: |
       ./nozzle \
         -host "$HOST" \

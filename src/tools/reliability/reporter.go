@@ -44,20 +44,24 @@ func (r *DataDogReporter) Report(t *TestResult) error {
 }
 
 func buildPayload(host string, t int64, msgCount, cycles uint64, delay time.Duration) string {
-	return fmt.Sprintf(`{"series":[
-	{"metric":"smoke_test.loggregator.msg_count",
-     "points":[[%d, %d]],
-     "type":"gauge",
-     "host":"%s",
-     "tags":["blackbox", "delay-%s"]},
-	 {"metric":"smoke_test.loggregator.cycles",
-     "points":[[%d, %d]],
-     "type":"gauge",
-     "host":"%s",
-     "tags":["blackbox", "delay-%s"]}]}`,
-		t, msgCount, host, delay,
-		t, cycles, host, delay,
-	)
+	return fmt.Sprintf(`{
+		"series": [
+			{
+				"metric": "smoke_test.loggregator.msg_count",
+				"points": [[%[1]d, %[4]d]],
+				"type": "gauge",
+				"host": "%[2]s",
+				"tags": ["firehose-nozzle", "delay:%[3]d"]
+			},
+			{
+				"metric": "smoke_test.loggregator.cycles",
+				"points": [[%[1]d, %[5]d]],
+				"type": "gauge",
+				"host": "%[2]s",
+				"tags": ["firehose-nozzle", "delay:%[3]d"]
+			}
+		]
+	}`, t, host, delay, msgCount, cycles)
 }
 
 type TestResult struct {
