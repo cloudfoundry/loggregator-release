@@ -114,7 +114,7 @@ func main() {
 		accessMiddleware = middleware.Access(accessLogger, ipAddress, conf.OutgoingDropsondePort)
 	}
 
-	credentials, err := plumbing.NewServerCredentials(
+	credentials, err := plumbing.NewClientCredentials(
 		conf.GRPC.CertFile,
 		conf.GRPC.KeyFile,
 		conf.GRPC.CAFile,

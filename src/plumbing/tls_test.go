@@ -25,12 +25,10 @@ var _ = Describe("TLS", func() {
 
 			Expect(conf.Certificates).To(HaveLen(1))
 			Expect(conf.InsecureSkipVerify).To(BeFalse())
-			Expect(conf.ClientAuth).To(Equal(tls.RequireAndVerifyClientCert))
 			Expect(conf.MinVersion).To(Equal(uint16(tls.VersionTLS12)))
 			Expect(conf.CipherSuites).To(BeEmpty())
 
 			Expect(string(conf.RootCAs.Subjects()[0])).To(ContainSubstring("loggregatorCA"))
-			Expect(string(conf.ClientCAs.Subjects()[0])).To(ContainSubstring("loggregatorCA"))
 
 			Expect(conf.ServerName).To(Equal("test-server-name"))
 		})
@@ -97,21 +95,34 @@ var _ = Describe("TLS", func() {
 			)
 
 			Expect(err).To(HaveOccurred())
-			_, ok := err.(plumbing.CASignatureError)
-			Expect(ok).To(BeTrue())
 		})
 	})
 
 	Context("NewServerMutalTLSConfig", func() {
+		It("builds a mutual auth tls config", func() {
+			conf, err := plumbing.NewServerMutualTLSConfig(
+				testservers.Cert("doppler.crt"),
+				testservers.Cert("doppler.key"),
+				testservers.Cert("loggregator-ca.crt"),
+			)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(conf.Certificates).To(HaveLen(1))
+			Expect(conf.InsecureSkipVerify).To(BeFalse())
+			Expect(conf.ClientAuth).To(Equal(tls.RequireAndVerifyClientCert))
+			Expect(conf.MinVersion).To(Equal(uint16(tls.VersionTLS12)))
+			Expect(string(conf.ClientCAs.Subjects()[0])).To(ContainSubstring("loggregatorCA"))
+		})
+
 		It("builds a config struct with default CIPHERs", func() {
 			conf, err := plumbing.NewServerMutualTLSConfig(
 				testservers.Cert("doppler.crt"),
 				testservers.Cert("doppler.key"),
 				testservers.Cert("loggregator-ca.crt"),
-				"test-server-name",
 			)
 			Expect(err).ToNot(HaveOccurred())
 
+			Expect(conf.CipherSuites).To(HaveLen(2))
 			Expect(conf.CipherSuites).To(ConsistOf(
 				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
@@ -123,7 +134,6 @@ var _ = Describe("TLS", func() {
 				testservers.Cert("doppler.crt"),
 				testservers.Cert("doppler.key"),
 				testservers.Cert("loggregator-ca.crt"),
-				"test-server-name",
 				plumbing.WithCipherSuites([]string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"}),
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -138,7 +148,6 @@ var _ = Describe("TLS", func() {
 				testservers.Cert("doppler.crt"),
 				testservers.Cert("doppler.key"),
 				testservers.Cert("loggregator-ca.crt"),
-				"test-server-name",
 				plumbing.WithCipherSuites([]string{
 					"GARBAGE",
 					"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
@@ -157,7 +166,6 @@ var _ = Describe("TLS", func() {
 					testservers.Cert("doppler.crt"),
 					testservers.Cert("doppler.key"),
 					testservers.Cert("loggregator-ca.crt"),
-					"test-server-name",
 					plumbing.WithCipherSuites([]string{}),
 				)
 			}).Should(Panic())
@@ -168,7 +176,6 @@ var _ = Describe("TLS", func() {
 				testservers.Cert("doppler.crt"),
 				testservers.Cert("doppler.key"),
 				testservers.Cert("loggregator-ca.crt"),
-				"test-server-name",
 				plumbing.WithCipherSuites([]string{
 					"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
 					"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
@@ -219,17 +226,15 @@ var _ = Describe("TLS", func() {
 
 	Context("NewServerCredentials", func() {
 		It("returns transport credentials", func() {
-			creds, err := plumbing.NewServerCredentials(
+			_, err := plumbing.NewServerCredentials(
 				testservers.Cert("doppler.crt"),
 				testservers.Cert("doppler.key"),
 				testservers.Cert("loggregator-ca.crt"),
-				"doppler",
 				plumbing.WithCipherSuites([]string{
 					"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
 				}),
 			)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(creds.Info().ServerName).To(Equal("doppler"))
 		})
 
 		It("returns an error with invalid certs", func() {
@@ -237,7 +242,6 @@ var _ = Describe("TLS", func() {
 				testservers.Cert("doppler.crt"),
 				testservers.Cert("doppler.key"),
 				testservers.Cert("doppler.key"),
-				"doppler",
 			)
 			Expect(err).To(HaveOccurred())
 			Expect(creds).To(BeNil())

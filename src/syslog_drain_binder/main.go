@@ -31,7 +31,7 @@ func main() {
 	flag.Parse()
 	conf, err := config.ParseConfig(*configFile)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	if conf.DisableSyslogDrains {
@@ -44,14 +44,14 @@ func main() {
 	p := profiler.New(conf.PPROFPort)
 	go p.Start()
 
-	tlsConfig, err := plumbing.NewServerMutualTLSConfig(
+	tlsConfig, err := plumbing.NewClientMutualTLSConfig(
 		conf.CloudControllerTLSConfig.CertFile,
 		conf.CloudControllerTLSConfig.KeyFile,
 		conf.CloudControllerTLSConfig.CAFile,
 		"cloud-controller-ng.service.cf.internal",
 	)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 	tlsConfig.InsecureSkipVerify = conf.SkipCertVerify
 
@@ -59,7 +59,7 @@ func main() {
 
 	workPool, err := workpool.NewWorkPool(conf.EtcdMaxConcurrentRequests)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	options := &etcdstoreadapter.ETCDOptions{
@@ -73,7 +73,7 @@ func main() {
 	}
 	adapter, err := etcdstoreadapter.New(options, workPool)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	updateInterval := time.Duration(conf.UpdateIntervalSeconds) * time.Second

@@ -39,7 +39,6 @@ func NewGRPCListener(
 		conf.CertFile,
 		conf.KeyFile,
 		conf.CAFile,
-		"doppler",
 		opts...,
 	)
 	if err != nil {
