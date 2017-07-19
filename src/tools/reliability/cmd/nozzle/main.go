@@ -2,27 +2,31 @@ package main
 
 import (
 	"crypto/tls"
-	"flag"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"tools/reliability"
 )
 
 func main() {
-	host := flag.String("host", "", "the hostname of the blackbox test")
-	port := flag.Int("port", 8080, "the port of the running http server")
+	// these are provided by cloud foundry
+	host, err := host()
+	if err != nil {
+		log.Fatal(err)
+	}
+	port := os.Getenv("PORT")
 
-	uaaAddr := flag.String("uaa-addr", "", "the address of UAA")
-	clientID := flag.String("client-id", "", "the UAA client ID")
-	clientSecret := flag.String("client-secret", "", "the UAA client secret")
-
-	dataDogAPIKey := flag.String("datadog-key", "", "the API key for a DataDog account")
-	logEndpoint := flag.String("logging-endpoint", "", "the address of the logging endpoint")
-
-	flag.Parse()
+	// these should be provided by you
+	uaaAddr := os.Getenv("UAA_ADDR")
+	clientID := os.Getenv("CLIENT_ID")
+	clientSecret := os.Getenv("CLIENT_SECRET")
+	dataDogAPIKey := os.Getenv("DATADOG_API_KEY")
+	logEndpoint := os.Getenv("LOG_ENDPOINT")
 
 	httpClient := &http.Client{
 		Timeout: 30 * time.Second,
@@ -34,20 +38,20 @@ func main() {
 	}
 
 	uaaClient := reliability.NewUAAClient(
-		*clientID,
-		*clientSecret,
-		*uaaAddr,
+		clientID,
+		clientSecret,
+		uaaAddr,
 		httpClient,
 	)
 
 	reporter := reliability.NewDataDogReporter(
-		*dataDogAPIKey,
-		*host,
+		dataDogAPIKey,
+		host,
 		httpClient,
 	)
 
 	testRunner := reliability.NewLogReliabilityTestRunner(
-		*logEndpoint,
+		logEndpoint,
 		fmt.Sprintf("blackbox-test-%d", time.Now().Unix()),
 		uaaClient,
 		reporter,
@@ -55,8 +59,25 @@ func main() {
 
 	http.Handle("/tests", reliability.NewCreateTestHandler(testRunner))
 
-	addr := fmt.Sprintf(":%d", *port)
+	addr := ":" + port
 	log.Printf("server started on %s", addr)
-
 	log.Println(http.ListenAndServe(addr, nil))
+}
+
+func host() (string, error) {
+	appJSON := []byte(os.Getenv("VCAP_APPLICATION"))
+	var appData map[string]interface{}
+	err := json.Unmarshal(appJSON, &appData)
+	if err != nil {
+		return "", err
+	}
+	log.Printf("%#v", appData)
+	uris, ok := appData["uris"].([]interface{})
+	if !ok {
+		return "", errors.New("can not type assert uris to []interface{}")
+	}
+	if len(uris) == 0 {
+		return "", errors.New("no application uri available, required for reporting to datadog")
+	}
+	return uris[0].(string), nil
 }
