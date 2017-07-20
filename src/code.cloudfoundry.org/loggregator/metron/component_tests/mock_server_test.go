@@ -29,7 +29,6 @@ func NewServer() (*Server, error) {
 		testservers.Cert("doppler.crt"),
 		testservers.Cert("doppler.key"),
 		testservers.Cert("loggregator-ca.crt"),
-		"",
 	)
 	if err != nil {
 		return nil, err
