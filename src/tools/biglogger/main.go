@@ -1,27 +1,41 @@
 package main
 
 import (
-	"crypto/rand"
 	"flag"
+	"fmt"
 	"log"
+	"net/http"
 	"time"
 )
 
 func main() {
 	size := flag.Int("size", 1, "size in MB of log message")
 	frequency := flag.Duration("frequency", 1*time.Minute, "frequency of logging")
+	port := flag.Int("port", 8080, "port of the http server")
 	flag.Parse()
 
-	for {
-		log.Println(buildMessage(*size))
+	go writeLogs(*size, *frequency)
 
-		time.Sleep(*frequency)
+	addr := fmt.Sprintf(":%d", *port)
+	http.ListenAndServe(addr, nil)
+
+}
+
+func writeLogs(mb int, f time.Duration) {
+	msg := buildMessage(mb)
+
+	for {
+		log.Println(msg)
+
+		time.Sleep(f)
 	}
 }
 
 func buildMessage(mb int) string {
-	bytes := make([]byte, mb*1000000)
-	rand.Read(bytes)
+	bytes := make([]byte, mb*1024*1024)
+	for i := 0; i < len(bytes); i++ {
+		bytes[i] = '*'
+	}
 
 	return string(bytes)
 }

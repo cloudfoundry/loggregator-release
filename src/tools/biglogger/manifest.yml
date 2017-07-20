@@ -1,0 +1,6 @@
+---
+applications:
+- name: biglogger
+  memory: 1G
+  buildpack: binary_buildpack
+  command: ./biglogger -port $PORT -size 100 -frequency 1s
