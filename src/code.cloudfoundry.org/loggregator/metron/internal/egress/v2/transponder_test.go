@@ -138,8 +138,8 @@ var _ = Describe("Transponder", func() {
 			Eventually(writer.WriteInput.Msg).Should(Receive(&output))
 
 			Expect(output).To(HaveLen(1))
-			Expect(output[0].Tags["tag-one"].GetText()).To(Equal("value-one"))
-			Expect(output[0].Tags["tag-two"].GetText()).To(Equal("value-two"))
+			Expect(output[0].DeprecatedTags["tag-one"].GetText()).To(Equal("value-one"))
+			Expect(output[0].DeprecatedTags["tag-two"].GetText()).To(Equal("value-two"))
 		})
 
 		It("does not write over tags if they already exist", func() {
@@ -148,7 +148,7 @@ var _ = Describe("Transponder", func() {
 			}
 			input := &v2.Envelope{
 				SourceId: "uuid",
-				Tags: map[string]*v2.Value{
+				DeprecatedTags: map[string]*v2.Value{
 					"existing-tag": {
 						Data: &v2.Value_Text{
 							Text: "existing-value",
@@ -172,7 +172,7 @@ var _ = Describe("Transponder", func() {
 			Eventually(writer.WriteInput.Msg).Should(Receive(&output))
 			Expect(output).To(HaveLen(1))
 
-			Expect(output[0].Tags["existing-tag"].GetText()).To(Equal("existing-value"))
+			Expect(output[0].DeprecatedTags["existing-tag"].GetText()).To(Equal("existing-value"))
 		})
 	})
 })

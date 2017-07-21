@@ -73,11 +73,11 @@ func (u countAndTotal) encodeDelta(count uint16, total uint64) countAndTotal {
 	count += currentCount
 	total += currentTotal
 
-	return countAndTotal((uint64(count) << 48) + uint64(total&0x0000FFFFFFFFFFFF))
+	return countAndTotal((uint64(count) << 48) + total&0x0000FFFFFFFFFFFF)
 }
 
 func (u countAndTotal) decode() (count uint16, total uint64) {
 	count = uint16((uint64(u) & 0xFFFF000000000000) >> 48)
-	total = uint64((uint64(u) & 0x0000FFFFFFFFFFFF))
+	total = (uint64(u) & 0x0000FFFFFFFFFFFF)
 	return count, total
 }

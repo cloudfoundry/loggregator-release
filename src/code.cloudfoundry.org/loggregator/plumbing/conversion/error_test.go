@@ -29,7 +29,7 @@ var _ = Describe("HTTP", func() {
 			}
 
 			expectedV2Envelope := &v2.Envelope{
-				Tags: map[string]*v2.Value{
+				DeprecatedTags: map[string]*v2.Value{
 					"__v1_type":  {&v2.Value_Text{"Error"}},
 					"source":     {&v2.Value_Text{"test-source"}},
 					"code":       {&v2.Value_Integer{12345}},
@@ -53,8 +53,8 @@ var _ = Describe("HTTP", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(*converted).To(MatchFields(IgnoreExtras, Fields{
-				"Tags":    Equal(expectedV2Envelope.Tags),
-				"Message": Equal(expectedV2Envelope.Message),
+				"DeprecatedTags": Equal(expectedV2Envelope.DeprecatedTags),
+				"Message":        Equal(expectedV2Envelope.Message),
 			}))
 		})
 	})

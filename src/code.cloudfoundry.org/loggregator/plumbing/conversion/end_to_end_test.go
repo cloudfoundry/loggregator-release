@@ -264,7 +264,7 @@ var _ = Describe("Envelope conversion", func() {
 						Stop:  100,
 					},
 				},
-				Tags: map[string]*v2.Value{
+				DeprecatedTags: map[string]*v2.Value{
 					"request_id":          ValueText("954f61c4-ac84-44be-9217-cdfa3117fb41"),
 					"peer_type":           ValueText("Client"),
 					"method":              ValueText("GET"),
@@ -313,7 +313,7 @@ var _ = Describe("Envelope conversion", func() {
 						Type:    v2.Log_OUT,
 					},
 				},
-				Tags: map[string]*v2.Value{
+				DeprecatedTags: map[string]*v2.Value{
 					"source_type": ValueText("some-source-type"),
 					"deployment":  ValueText("some-deployment"),
 					"ip":          ValueText("some-ip"),
@@ -354,7 +354,7 @@ var _ = Describe("Envelope conversion", func() {
 						},
 					},
 				},
-				Tags: map[string]*v2.Value{
+				DeprecatedTags: map[string]*v2.Value{
 					"deployment": ValueText("some-deployment"),
 					"ip":         ValueText("some-ip"),
 					"job":        ValueText("some-job"),
@@ -410,7 +410,7 @@ var _ = Describe("Envelope conversion", func() {
 						},
 					},
 				},
-				Tags: map[string]*v2.Value{
+				DeprecatedTags: map[string]*v2.Value{
 					"deployment": ValueText("some-deployment"),
 					"ip":         ValueText("some-ip"),
 					"job":        ValueText("some-job"),

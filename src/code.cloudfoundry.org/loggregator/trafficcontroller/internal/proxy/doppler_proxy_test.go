@@ -109,7 +109,7 @@ var _ = Describe("DopplerProxy", func() {
 
 			f := func() uint64 {
 				for _, e := range mockSender.GetEnvelopes("egress") {
-					t, ok := e.Tags["endpoint"]
+					t, ok := e.DeprecatedTags["endpoint"]
 					if !ok {
 						continue
 					}

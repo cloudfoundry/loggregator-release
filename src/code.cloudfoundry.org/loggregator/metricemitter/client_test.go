@@ -129,7 +129,7 @@ var _ = Describe("Emitter Client", func() {
 			}
 
 			Eventually(grpcServer.envelopes).Should(Receive(&env))
-			Expect(env.Tags).To(Equal(map[string]*v2.Value{
+			Expect(env.DeprecatedTags).To(Equal(map[string]*v2.Value{
 				//client tags
 				"origin":     text("a-origin"),
 				"deployment": text("a-deployment"),

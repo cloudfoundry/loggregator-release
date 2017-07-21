@@ -106,12 +106,12 @@ func (t *Transponder) batchReady(batch []*plumbing.Envelope, lastSent time.Time)
 }
 
 func (t *Transponder) addTags(e *plumbing.Envelope) {
-	if e.Tags == nil {
-		e.Tags = make(map[string]*plumbing.Value)
+	if e.DeprecatedTags == nil {
+		e.DeprecatedTags = make(map[string]*plumbing.Value)
 	}
 	for k, v := range t.tags {
-		if _, ok := e.Tags[k]; !ok {
-			e.Tags[k] = &plumbing.Value{
+		if _, ok := e.DeprecatedTags[k]; !ok {
+			e.DeprecatedTags[k] = &plumbing.Value{
 				Data: &plumbing.Value_Text{
 					Text: v,
 				},

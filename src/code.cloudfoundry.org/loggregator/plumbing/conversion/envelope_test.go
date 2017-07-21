@@ -22,7 +22,7 @@ var _ = Describe("Envelope", func() {
 		It("sets v1 specific properties", func() {
 			envelope := &v2.Envelope{
 				Timestamp: 99,
-				Tags: map[string]*v2.Value{
+				DeprecatedTags: map[string]*v2.Value{
 					"origin":         {&v2.Value_Text{"origin"}},
 					"deployment":     {&v2.Value_Text{"deployment"}},
 					"job":            {&v2.Value_Text{"job"}},
@@ -54,7 +54,7 @@ var _ = Describe("Envelope", func() {
 
 		It("rejects empty tags", func() {
 			envelope := &v2.Envelope{
-				Tags: map[string]*v2.Value{
+				DeprecatedTags: map[string]*v2.Value{
 					"foo": {&v2.Value_Text{"bar"}},
 					"baz": nil,
 				},
@@ -87,7 +87,7 @@ var _ = Describe("Envelope", func() {
 			expectedV2Envelope := &v2.Envelope{
 				Timestamp: 99,
 				SourceId:  "some-deployment/some-job",
-				Tags: map[string]*v2.Value{
+				DeprecatedTags: map[string]*v2.Value{
 					"random-tag": ValueText("random-value"),
 					"origin":     ValueText("origin-value"),
 					"deployment": ValueText("some-deployment"),
@@ -103,12 +103,12 @@ var _ = Describe("Envelope", func() {
 				"SourceId":  Equal(expectedV2Envelope.SourceId),
 				"Timestamp": Equal(expectedV2Envelope.Timestamp),
 			}))
-			Expect(converted.Tags["random-tag"]).To(Equal(expectedV2Envelope.Tags["random-tag"]))
-			Expect(converted.Tags["origin"]).To(Equal(expectedV2Envelope.Tags["origin"]))
-			Expect(converted.Tags["deployment"]).To(Equal(expectedV2Envelope.Tags["deployment"]))
-			Expect(converted.Tags["job"]).To(Equal(expectedV2Envelope.Tags["job"]))
-			Expect(converted.Tags["index"]).To(Equal(expectedV2Envelope.Tags["index"]))
-			Expect(converted.Tags["ip"]).To(Equal(expectedV2Envelope.Tags["ip"]))
+			Expect(converted.DeprecatedTags["random-tag"]).To(Equal(expectedV2Envelope.DeprecatedTags["random-tag"]))
+			Expect(converted.DeprecatedTags["origin"]).To(Equal(expectedV2Envelope.DeprecatedTags["origin"]))
+			Expect(converted.DeprecatedTags["deployment"]).To(Equal(expectedV2Envelope.DeprecatedTags["deployment"]))
+			Expect(converted.DeprecatedTags["job"]).To(Equal(expectedV2Envelope.DeprecatedTags["job"]))
+			Expect(converted.DeprecatedTags["index"]).To(Equal(expectedV2Envelope.DeprecatedTags["index"]))
+			Expect(converted.DeprecatedTags["ip"]).To(Equal(expectedV2Envelope.DeprecatedTags["ip"]))
 		})
 	})
 })

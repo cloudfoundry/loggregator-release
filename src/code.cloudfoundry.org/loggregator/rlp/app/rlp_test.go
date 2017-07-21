@@ -53,7 +53,7 @@ var _ = Describe("Start", func() {
 
 		envelope, err := egressStream.Recv()
 		Expect(err).ToNot(HaveOccurred())
-		Expect(envelope.GetTags()["origin"].GetText()).To(Equal("some-origin"))
+		Expect(envelope.GetDeprecatedTags()["origin"].GetText()).To(Equal("some-origin"))
 	})
 
 	It("receives container metrics via egress query client", func() {

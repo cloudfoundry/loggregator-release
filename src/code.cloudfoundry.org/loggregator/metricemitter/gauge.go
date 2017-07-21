@@ -62,6 +62,6 @@ func (m *Gauge) toEnvelope(value float64) *v2.Envelope {
 				},
 			},
 		},
-		Tags: m.tags,
+		DeprecatedTags: m.tags,
 	}
 }

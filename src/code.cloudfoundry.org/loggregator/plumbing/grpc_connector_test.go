@@ -493,7 +493,7 @@ var _ = Describe("GRPCConnector", func() {
 
 					var envelope *v2.Envelope
 					for _, e := range metricClient.GetEnvelopes("query_timeout") {
-						if e.Tags["query"].GetText() == "container_metrics" {
+						if e.DeprecatedTags["query"].GetText() == "container_metrics" {
 							envelope = e
 						}
 					}
@@ -510,7 +510,7 @@ var _ = Describe("GRPCConnector", func() {
 
 					var envelope *v2.Envelope
 					for _, e := range metricClient.GetEnvelopes("query_timeout") {
-						if e.Tags["query"].GetText() == "recent_logs" {
+						if e.DeprecatedTags["query"].GetText() == "recent_logs" {
 							envelope = e
 						}
 					}

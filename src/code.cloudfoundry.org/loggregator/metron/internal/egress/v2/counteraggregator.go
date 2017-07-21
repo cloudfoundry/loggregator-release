@@ -35,7 +35,7 @@ func (ca *CounterAggregator) Write(msgs []*plumbing.Envelope) error {
 
 			id := counterID{
 				name:     msgs[i].GetCounter().Name,
-				tagsHash: hashTags(msgs[i].GetTags()),
+				tagsHash: hashTags(msgs[i].GetDeprecatedTags()),
 			}
 
 			ca.counterTotals[id] = ca.counterTotals[id] + msgs[i].GetCounter().GetDelta()

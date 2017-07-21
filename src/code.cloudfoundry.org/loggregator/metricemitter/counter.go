@@ -66,7 +66,7 @@ func (m *Counter) toEnvelope(delta uint64) *v2.Envelope {
 				},
 			},
 		},
-		Tags: m.tags,
+		DeprecatedTags: m.tags,
 	}
 }
 
