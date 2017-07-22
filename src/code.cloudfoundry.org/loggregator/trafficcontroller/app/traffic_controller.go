@@ -168,7 +168,7 @@ func (t *TrafficController) Start() {
 		),
 	)
 
-	var accessMiddleware func(auth.HttpHandler) *auth.AccessHandler
+	var accessMiddleware func(http.Handler) *auth.AccessHandler
 	if t.conf.SecurityEventLog != "" {
 		accessLog, err := os.OpenFile(t.conf.SecurityEventLog, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 		if err != nil {

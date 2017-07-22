@@ -6,12 +6,6 @@ import (
 	"time"
 )
 
-//go:generate hel --type Writer --output mock_writer_test.go
-
-type Writer interface {
-	Write(message []byte) (sent int, err error)
-}
-
 type DefaultAccessLogger struct {
 	writer io.Writer
 }
