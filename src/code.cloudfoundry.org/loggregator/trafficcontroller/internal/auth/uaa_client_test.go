@@ -27,8 +27,9 @@ var _ = Describe("UaaClient", func() {
 				InsecureSkipVerify: true,
 			},
 		}
-		http.DefaultClient.Transport = transport
-		client = http.DefaultClient
+		client = &http.Client{
+			Transport: transport,
+		}
 	})
 
 	Context("when the user is an admin", func() {

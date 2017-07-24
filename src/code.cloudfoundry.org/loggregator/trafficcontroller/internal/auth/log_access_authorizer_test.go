@@ -28,8 +28,9 @@ var _ = Describe("LogAccessAuthorizer", func() {
 				InsecureSkipVerify: true,
 			},
 		}
-		http.DefaultClient.Transport = transport
-		client = http.DefaultClient
+		client = &http.Client{
+			Transport: transport,
+		}
 	})
 
 	Context("Disable Access Control", func() {
