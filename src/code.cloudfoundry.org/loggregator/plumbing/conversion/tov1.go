@@ -41,7 +41,7 @@ func createBaseV1(e *v2.Envelope) *events.Envelope {
 		Index:      proto.String(getV2Tag(e, "index")),
 		Timestamp:  proto.Int64(e.Timestamp),
 		Ip:         proto.String(getV2Tag(e, "ip")),
-		Tags:       convertTags(e.DeprecatedTags),
+		Tags:       convertTags(e),
 	}
 
 	delete(v1e.Tags, "__v1_type")
@@ -63,6 +63,10 @@ func createBaseV1(e *v2.Envelope) *events.Envelope {
 }
 
 func getV2Tag(e *v2.Envelope, key string) string {
+	if value, ok := e.GetTags()[key]; ok {
+		return value
+	}
+
 	d := e.GetDeprecatedTags()[key]
 	if d == nil {
 		return ""
@@ -238,9 +242,9 @@ func tryConvertContainerMetric(v2e *v2.Envelope) *events.Envelope {
 	return v1e
 }
 
-func convertTags(tags map[string]*v2.Value) map[string]string {
+func convertTags(e *v2.Envelope) map[string]string {
 	oldTags := make(map[string]string)
-	for key, value := range tags {
+	for key, value := range e.GetDeprecatedTags() {
 		if value == nil {
 			continue
 		}
@@ -252,6 +256,10 @@ func convertTags(tags map[string]*v2.Value) map[string]string {
 		case *v2.Value_Decimal:
 			oldTags[key] = fmt.Sprintf("%f", value.GetDecimal())
 		}
+	}
+
+	for key, value := range e.GetTags() {
+		oldTags[key] = value
 	}
 	return oldTags
 }

@@ -81,6 +81,19 @@ var _ = Describe("Envelope", func() {
 			Expect(len(envelopes)).To(Equal(1))
 			Expect(envelopes[0].GetTags()).To(HaveKeyWithValue("foo", "99"))
 		})
+
+		It("uses non-deprecated v2 tags", func() {
+			envelope := &v2.Envelope{
+				Tags: map[string]string{
+					"foo": "bar",
+				},
+				Message: &v2.Envelope_Log{Log: &v2.Log{}},
+			}
+
+			envelopes := conversion.ToV1(envelope)
+			Expect(len(envelopes)).To(Equal(1))
+			Expect(envelopes[0].GetTags()).To(HaveKeyWithValue("foo", "bar"))
+		})
 	})
 
 	Context("given a v1 envelope", func() {
@@ -110,7 +123,7 @@ var _ = Describe("Envelope", func() {
 				},
 			}
 
-			converted := conversion.ToV2(v1Envelope)
+			converted := conversion.ToV2(v1Envelope, false)
 
 			Expect(*converted).To(MatchFields(IgnoreExtras, Fields{
 				"SourceId":  Equal(expectedV2Envelope.SourceId),
@@ -122,6 +135,32 @@ var _ = Describe("Envelope", func() {
 			Expect(converted.DeprecatedTags["job"]).To(Equal(expectedV2Envelope.DeprecatedTags["job"]))
 			Expect(converted.DeprecatedTags["index"]).To(Equal(expectedV2Envelope.DeprecatedTags["index"]))
 			Expect(converted.DeprecatedTags["ip"]).To(Equal(expectedV2Envelope.DeprecatedTags["ip"]))
+		})
+
+		It("sets non-deprecated tags", func() {
+			v1 := &events.Envelope{
+				Timestamp:  proto.Int64(99),
+				Origin:     proto.String("origin-value"),
+				Deployment: proto.String("some-deployment"),
+				Job:        proto.String("some-job"),
+				Index:      proto.String("some-index"),
+				Ip:         proto.String("some-ip"),
+				Tags: map[string]string{
+					"random-tag": "random-value",
+					"origin":     "origin-value",
+					"deployment": "some-deployment",
+					"job":        "some-job",
+					"index":      "some-index",
+					"ip":         "some-ip",
+				},
+			}
+			converted := conversion.ToV2(v1, true)
+			Expect(converted.Tags["random-tag"]).To(Equal(v1.Tags["random-tag"]))
+			Expect(converted.Tags["origin"]).To(Equal(v1.Tags["origin"]))
+			Expect(converted.Tags["deployment"]).To(Equal(v1.Tags["deployment"]))
+			Expect(converted.Tags["job"]).To(Equal(v1.Tags["job"]))
+			Expect(converted.Tags["index"]).To(Equal(v1.Tags["index"]))
+			Expect(converted.Tags["ip"]).To(Equal(v1.Tags["ip"]))
 		})
 	})
 })

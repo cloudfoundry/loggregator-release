@@ -91,12 +91,25 @@ var _ = Describe("Logs", func() {
 
 	Describe("emit v1 and consume via reverse log proxy", func() {
 		It("sends log messages through rlp", func() {
-			msgChan := helpers.ReadFromRLP("rlp-stream-foo")
+			msgChan := helpers.ReadFromRLP("rlp-stream-foo", false)
 
 			env := createLogEnvelopeV1("Stream message", "rlp-stream-foo")
 			helpers.EmitToMetronV1(env)
 
-			v2Env := conversion.ToV2(env)
+			v2Env := conversion.ToV2(env, false)
+
+			var outEnv *v2.Envelope
+			Eventually(msgChan, 5).Should(Receive(&outEnv))
+			Expect(outEnv.GetLog()).To(Equal(v2Env.GetLog()))
+		})
+
+		It("sends log messages through rlp with preferred tags", func() {
+			msgChan := helpers.ReadFromRLP("rlp-stream-foo", true)
+
+			env := createLogEnvelopeV1("Stream message", "rlp-stream-foo")
+			helpers.EmitToMetronV1(env)
+
+			v2Env := conversion.ToV2(env, true)
 
 			var outEnv *v2.Envelope
 			Eventually(msgChan, 5).Should(Receive(&outEnv))
@@ -106,7 +119,7 @@ var _ = Describe("Logs", func() {
 
 	Describe("emit v2 and consume via reverse log proxy", func() {
 		It("sends log messages through rlp", func() {
-			msgChan := helpers.ReadFromRLP("rlp-stream-foo")
+			msgChan := helpers.ReadFromRLP("rlp-stream-foo", false)
 
 			env := createLogEnvelopeV2("Stream message", "rlp-stream-foo")
 			helpers.EmitToMetronV2(env)

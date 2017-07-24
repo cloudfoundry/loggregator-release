@@ -30,7 +30,17 @@ var _ = Describe("QueryServer", func() {
 			SourceId: "some-app",
 		})
 		Expect(spy.appID).To(Equal("some-app"))
+		Expect(spy.usePreferredTags).To(BeFalse())
 		Expect(spy.ctx).To(Equal(ctx))
+	})
+
+	It("requests the correct usePreferredTags", func() {
+		ctx := context.TODO()
+		server.ContainerMetrics(ctx, &v2.ContainerMetricRequest{
+			UsePreferredTags: true,
+			SourceId:         "some-app",
+		})
+		Expect(spy.usePreferredTags).To(BeTrue())
 	})
 
 	It("converts v1 container envelopes to v2 envelopes", func() {
@@ -64,18 +74,20 @@ var _ = Describe("QueryServer", func() {
 })
 
 type spyContainerMetricFetcher struct {
-	results []*v2.Envelope
-	appID   string
-	err     error
-	ctx     context.Context
+	results          []*v2.Envelope
+	appID            string
+	usePreferredTags bool
+	err              error
+	ctx              context.Context
 }
 
 func newSpyContainerMetricFetcher() *spyContainerMetricFetcher {
 	return &spyContainerMetricFetcher{}
 }
 
-func (s *spyContainerMetricFetcher) ContainerMetrics(ctx context.Context, appID string) ([]*v2.Envelope, error) {
+func (s *spyContainerMetricFetcher) ContainerMetrics(ctx context.Context, appID string, usePreferredTags bool) ([]*v2.Envelope, error) {
 	s.ctx = ctx
 	s.appID = appID
+	s.usePreferredTags = usePreferredTags
 	return s.results, s.err
 }

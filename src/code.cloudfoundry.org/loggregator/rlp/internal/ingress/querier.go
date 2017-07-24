@@ -24,12 +24,12 @@ func NewQuerier(c EnvelopeConverter, f ContainerMetricFetcher) *Querier {
 	}
 }
 
-func (q *Querier) ContainerMetrics(ctx context.Context, sourceId string) ([]*v2.Envelope, error) {
+func (q *Querier) ContainerMetrics(ctx context.Context, sourceId string, usePreferredTags bool) ([]*v2.Envelope, error) {
 	results := q.fetcher.ContainerMetrics(ctx, sourceId)
 
 	var v2Envs []*v2.Envelope
 	for _, envBytes := range results {
-		v2e, err := q.converter.Convert(envBytes)
+		v2e, err := q.converter.Convert(envBytes, usePreferredTags)
 		if err != nil {
 			log.Printf("Invalid container envelope: %s", err)
 			continue

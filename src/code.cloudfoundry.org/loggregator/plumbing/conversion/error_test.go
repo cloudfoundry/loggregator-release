@@ -46,7 +46,7 @@ var _ = Describe("HTTP", func() {
 				},
 			}
 
-			converted := conversion.ToV2(v1Envelope)
+			converted := conversion.ToV2(v1Envelope, false)
 
 			_, err := proto.Marshal(converted)
 			Expect(err).ToNot(HaveOccurred())

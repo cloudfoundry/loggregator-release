@@ -14,7 +14,7 @@ type Subscriber interface {
 }
 
 type EnvelopeConverter interface {
-	Convert(data []byte) (*v2.Envelope, error)
+	Convert(data []byte, usePreferredTags bool) (*v2.Envelope, error)
 }
 
 type RequestConverter interface {
@@ -48,7 +48,7 @@ func (r *Receiver) Receive(ctx context.Context, req *v2.EgressRequest) (rx func(
 			return nil, err
 		}
 
-		v2e, err := r.envConverter.Convert(data)
+		v2e, err := r.envConverter.Convert(data, req.UsePreferredTags)
 		if err != nil {
 			log.Printf("V1->V2 convert failed: %s", err)
 			return nil, err

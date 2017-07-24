@@ -87,7 +87,7 @@ var _ = Describe("LogMessage", func() {
 				},
 			}
 
-			v2Envelope := conversion.ToV2(v1Envelope)
+			v2Envelope := conversion.ToV2(v1Envelope, false)
 			Expect(*v2Envelope).To(MatchFields(IgnoreExtras, Fields{
 				"SourceId":       Equal(expectedV2Envelope.SourceId),
 				"DeprecatedTags": Equal(expectedV2Envelope.DeprecatedTags),
@@ -107,7 +107,7 @@ var _ = Describe("LogMessage", func() {
 				SourceId: "some-deployment/some-job",
 			}
 
-			converted := conversion.ToV2(v1Envelope)
+			converted := conversion.ToV2(v1Envelope, false)
 
 			Expect(*converted).To(MatchFields(IgnoreExtras, Fields{
 				"SourceId": Equal(expectedV2Envelope.SourceId),

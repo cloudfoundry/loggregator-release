@@ -9,7 +9,7 @@ import (
 )
 
 type ContainerMetricFetcher interface {
-	ContainerMetrics(ctx context.Context, sourceId string) ([]*v2.Envelope, error)
+	ContainerMetrics(ctx context.Context, sourceId string, usePreferredTags bool) ([]*v2.Envelope, error)
 }
 
 type QueryServer struct {
@@ -27,7 +27,7 @@ func (s *QueryServer) ContainerMetrics(ctx context.Context, req *v2.ContainerMet
 		return nil, errors.New("source_id is required")
 	}
 
-	results, err := s.fetcher.ContainerMetrics(ctx, req.SourceId)
+	results, err := s.fetcher.ContainerMetrics(ctx, req.SourceId, req.UsePreferredTags)
 	if err != nil {
 		return nil, err
 	}

@@ -26,11 +26,30 @@ var _ = Describe("Container Metrics Endpoint", func() {
 	Describe("emit v2 and consume via reverse log proxy", func() {
 		It("can receive container metrics", func() {
 			envelope := createContainerMetric("test-id")
-			v2Env := conversion.ToV2(envelope)
+			v2Env := conversion.ToV2(envelope, false)
 			helpers.EmitToMetronV2(v2Env)
 
 			f := func() []*v2.Envelope {
-				return helpers.ReadContainerFromRLP("test-id")
+				return helpers.ReadContainerFromRLP("test-id", false)
+			}
+			Eventually(f).Should(ContainElement(v2Env))
+		})
+
+		It("can receive container metrics with preferred tags", func() {
+			envelope := createContainerMetric("test-id")
+			v2Env := conversion.ToV2(envelope, false)
+			helpers.EmitToMetronV2(v2Env)
+
+			// Move tags to new field for assertion. Remove this once we
+			// can send non-deprecated tags to metron
+			v2Env.Tags = make(map[string]string)
+			for k, v := range v2Env.GetDeprecatedTags() {
+				v2Env.Tags[k] = v.GetText()
+			}
+			v2Env.DeprecatedTags = nil
+
+			f := func() []*v2.Envelope {
+				return helpers.ReadContainerFromRLP("test-id", true)
 			}
 			Eventually(f).Should(ContainElement(v2Env))
 		})

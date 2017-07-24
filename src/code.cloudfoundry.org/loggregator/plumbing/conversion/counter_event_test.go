@@ -58,7 +58,7 @@ var _ = Describe("CounterEvent", func() {
 				},
 			}
 
-			Expect(*conversion.ToV2(v1Envelope)).To(MatchFields(IgnoreExtras, Fields{
+			Expect(*conversion.ToV2(v1Envelope, false)).To(MatchFields(IgnoreExtras, Fields{
 				"Message": Equal(v2Envelope.Message),
 			}))
 		})

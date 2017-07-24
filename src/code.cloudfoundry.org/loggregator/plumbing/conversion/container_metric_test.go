@@ -134,7 +134,7 @@ var _ = Describe("ContainerMetric", func() {
 					},
 				},
 			}
-			Expect(*conversion.ToV2(v1Envelope)).To(MatchFields(IgnoreExtras, Fields{
+			Expect(*conversion.ToV2(v1Envelope, false)).To(MatchFields(IgnoreExtras, Fields{
 				"SourceId": Equal(v2Envelope.SourceId),
 				"Message":  Equal(v2Envelope.Message),
 			}))
@@ -152,7 +152,7 @@ var _ = Describe("ContainerMetric", func() {
 				SourceId: "some-deployment/some-job",
 			}
 
-			converted := conversion.ToV2(v1Envelope)
+			converted := conversion.ToV2(v1Envelope, false)
 
 			Expect(*converted).To(MatchFields(IgnoreExtras, Fields{
 				"SourceId": Equal(expectedV2Envelope.SourceId),

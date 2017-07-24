@@ -55,7 +55,7 @@ var _ = Describe("Envelope conversion", func() {
 			_, err := proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v2e := ToV2(v1e)
+			v2e := ToV2(v1e, false)
 
 			_, err = proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
@@ -94,7 +94,7 @@ var _ = Describe("Envelope conversion", func() {
 			_, err := proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v2e := ToV2(v1e)
+			v2e := ToV2(v1e, false)
 
 			_, err = proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
@@ -129,7 +129,7 @@ var _ = Describe("Envelope conversion", func() {
 			_, err := proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v2e := ToV2(v1e)
+			v2e := ToV2(v1e, false)
 
 			_, err = proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
@@ -164,7 +164,7 @@ var _ = Describe("Envelope conversion", func() {
 			_, err := proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v2e := ToV2(v1e)
+			v2e := ToV2(v1e, false)
 
 			_, err = proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
@@ -199,7 +199,7 @@ var _ = Describe("Envelope conversion", func() {
 			_, err := proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v2e := ToV2(v1e)
+			v2e := ToV2(v1e, false)
 
 			_, err = proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
@@ -238,7 +238,7 @@ var _ = Describe("Envelope conversion", func() {
 			_, err := proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v2e := ToV2(v1e)
+			v2e := ToV2(v1e, false)
 
 			_, err = proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())

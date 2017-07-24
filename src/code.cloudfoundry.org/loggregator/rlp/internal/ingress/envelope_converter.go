@@ -13,12 +13,12 @@ func NewConverter() EnvelopeConverter {
 
 type envelopeConverter struct{}
 
-func (e *envelopeConverter) Convert(payload []byte) (*v2.Envelope, error) {
+func (e *envelopeConverter) Convert(payload []byte, usePreferredTags bool) (*v2.Envelope, error) {
 	v1e := &events.Envelope{}
 	err := v1e.Unmarshal(payload)
 	if err != nil {
 		return nil, err
 	}
 
-	return conversion.ToV2(v1e), nil
+	return conversion.ToV2(v1e, usePreferredTags), nil
 }

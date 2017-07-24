@@ -185,7 +185,7 @@ var _ = Describe("Start", func() {
 
 			var e events.Envelope
 			proto.Unmarshal(expectedEnvelope, &e)
-			Expect(envelope).To(Equal(conversion.ToV2(&e)))
+			Expect(envelope).To(Equal(conversion.ToV2(&e, false)))
 
 			errs := make(chan error, 100)
 			go func() {

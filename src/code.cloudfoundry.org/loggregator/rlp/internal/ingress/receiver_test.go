@@ -68,13 +68,24 @@ var _ = Describe("Receiver", func() {
 		Expect(spySubscriber.req).To(Equal(expectedReq))
 	})
 
-	It("converts the data", func() {
-		req := &v2.EgressRequest{}
+	It("converts the data with deprecated tags", func() {
+		req := &v2.EgressRequest{UsePreferredTags: false}
 		receiver, err := receiver.Receive(context.Background(), req)
 		Expect(err).ToNot(HaveOccurred())
 		receiver()
 
 		Expect(spyConverter.data).To(Equal([]byte("something")))
+		Expect(spyConverter.usePreferredTags).To(BeFalse())
+	})
+
+	It("converts the data with preferred tags", func() {
+		req := &v2.EgressRequest{UsePreferredTags: true}
+		receiver, err := receiver.Receive(context.Background(), req)
+		Expect(err).ToNot(HaveOccurred())
+		receiver()
+
+		Expect(spyConverter.data).To(Equal([]byte("something")))
+		Expect(spyConverter.usePreferredTags).To(BeTrue())
 	})
 
 	It("returns an error if the convert fails", func() {
@@ -109,13 +120,15 @@ var _ = Describe("Receiver", func() {
 })
 
 type SpyEnvelopeConverter struct {
-	data     []byte
-	envelope *v2.Envelope
-	err      error
+	data             []byte
+	usePreferredTags bool
+	envelope         *v2.Envelope
+	err              error
 }
 
-func (s *SpyEnvelopeConverter) Convert(data []byte) (*v2.Envelope, error) {
+func (s *SpyEnvelopeConverter) Convert(data []byte, usePreferredTags bool) (*v2.Envelope, error) {
 	s.data = data
+	s.usePreferredTags = usePreferredTags
 	return s.envelope, s.err
 }
 

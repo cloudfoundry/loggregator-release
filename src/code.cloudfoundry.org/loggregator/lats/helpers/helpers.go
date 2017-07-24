@@ -135,7 +135,7 @@ func EmitToMetronV2(envelope *v2.Envelope) {
 	}
 }
 
-func ReadFromRLP(appID string) <-chan *v2.Envelope {
+func ReadFromRLP(appID string, usePreferredTags bool) <-chan *v2.Envelope {
 	creds, err := plumbing.NewClientCredentials(
 		config.MetronTLSClientConfig.CertFile,
 		config.MetronTLSClientConfig.KeyFile,
@@ -149,7 +149,8 @@ func ReadFromRLP(appID string) <-chan *v2.Envelope {
 
 	client := v2.NewEgressClient(conn)
 	receiver, err := client.Receiver(context.Background(), &v2.EgressRequest{
-		ShardId: fmt.Sprint("shard-", time.Now().UnixNano()),
+		UsePreferredTags: usePreferredTags,
+		ShardId:          fmt.Sprint("shard-", time.Now().UnixNano()),
 		Filter: &v2.Filter{
 			SourceId: appID,
 			Message: &v2.Filter_Log{
@@ -176,7 +177,7 @@ func ReadFromRLP(appID string) <-chan *v2.Envelope {
 	return msgChan
 }
 
-func ReadContainerFromRLP(appID string) []*v2.Envelope {
+func ReadContainerFromRLP(appID string, usePreferredTags bool) []*v2.Envelope {
 	creds, err := plumbing.NewClientCredentials(
 		config.MetronTLSClientConfig.CertFile,
 		config.MetronTLSClientConfig.KeyFile,
@@ -192,7 +193,8 @@ func ReadContainerFromRLP(appID string) []*v2.Envelope {
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second)
 	resp, err := client.ContainerMetrics(ctx, &v2.ContainerMetricRequest{
-		SourceId: appID,
+		UsePreferredTags: usePreferredTags,
+		SourceId:         appID,
 	})
 	Expect(err).ToNot(HaveOccurred())
 	return resp.Envelopes

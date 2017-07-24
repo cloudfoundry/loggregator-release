@@ -162,7 +162,7 @@ var _ = Describe("HTTP", func() {
 				},
 			}
 
-			converted := conversion.ToV2(v1Envelope)
+			converted := conversion.ToV2(v1Envelope, false)
 
 			_, err := proto.Marshal(converted)
 			Expect(err).ToNot(HaveOccurred())
@@ -187,7 +187,7 @@ var _ = Describe("HTTP", func() {
 				SourceId: "some-deployment/some-job",
 			}
 
-			converted := conversion.ToV2(v1Envelope)
+			converted := conversion.ToV2(v1Envelope, false)
 
 			Expect(*converted).To(MatchFields(IgnoreExtras, Fields{
 				"SourceId": Equal(expectedV2Envelope.SourceId),

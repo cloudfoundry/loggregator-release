@@ -112,7 +112,7 @@ var _ = Describe("ValueMetric", func() {
 					},
 				},
 			}
-			Expect(*conversion.ToV2(v1Envelope)).To(MatchFields(IgnoreExtras, Fields{
+			Expect(*conversion.ToV2(v1Envelope, false)).To(MatchFields(IgnoreExtras, Fields{
 				"Message": Equal(expectedV2Envelope.Message),
 			}))
 		})
