@@ -174,5 +174,34 @@ var _ = Describe("Transponder", func() {
 
 			Expect(output[0].DeprecatedTags["existing-tag"].GetText()).To(Equal("existing-value"))
 		})
+
+		// This is required for backwards compatibility purposes.
+		// It should be removed once DeprecatedTags are removed.
+		It("moves Tags to DeprecatedTags", func() {
+			input := &v2.Envelope{
+				SourceId: "uuid",
+				Tags: map[string]string{
+					"non-deprecated-tag": "some-new-value",
+				},
+			}
+			nexter := newMockNexter()
+			nexter.TryNextOutput.Ret0 <- input
+			nexter.TryNextOutput.Ret1 <- true
+			writer := newMockWriter()
+			close(writer.WriteOutput.Ret0)
+
+			tx := egress.NewTransponder(nexter, writer, nil, 1, time.Nanosecond, testhelper.NewMetricClient())
+
+			go tx.Start()
+
+			Eventually(nexter.TryNextCalled).Should(Receive())
+
+			var output []*v2.Envelope
+			Eventually(writer.WriteInput.Msg).Should(Receive(&output))
+			Expect(output).To(HaveLen(1))
+
+			Expect(output[0].DeprecatedTags["non-deprecated-tag"].GetText()).To(Equal("some-new-value"))
+
+		})
 	})
 })

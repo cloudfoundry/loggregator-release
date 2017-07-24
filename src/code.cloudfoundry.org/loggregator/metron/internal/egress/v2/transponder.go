@@ -109,6 +109,18 @@ func (t *Transponder) addTags(e *plumbing.Envelope) {
 	if e.DeprecatedTags == nil {
 		e.DeprecatedTags = make(map[string]*plumbing.Value)
 	}
+
+	// Move non-deprecated tags to deprecated tags. This is required
+	// for backwards compatibility purposes and should be removed once
+	// deprecated tags are fully removed.
+	for k, v := range e.GetTags() {
+		e.DeprecatedTags[k] = &plumbing.Value{
+			Data: &plumbing.Value_Text{
+				Text: v,
+			},
+		}
+	}
+
 	for k, v := range t.tags {
 		if _, ok := e.DeprecatedTags[k]; !ok {
 			e.DeprecatedTags[k] = &plumbing.Value{

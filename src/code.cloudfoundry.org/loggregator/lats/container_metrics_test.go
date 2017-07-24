@@ -37,16 +37,8 @@ var _ = Describe("Container Metrics Endpoint", func() {
 
 		It("can receive container metrics with preferred tags", func() {
 			envelope := createContainerMetric("test-id")
-			v2Env := conversion.ToV2(envelope, false)
+			v2Env := conversion.ToV2(envelope, true)
 			helpers.EmitToMetronV2(v2Env)
-
-			// Move tags to new field for assertion. Remove this once we
-			// can send non-deprecated tags to metron
-			v2Env.Tags = make(map[string]string)
-			for k, v := range v2Env.GetDeprecatedTags() {
-				v2Env.Tags[k] = v.GetText()
-			}
-			v2Env.DeprecatedTags = nil
 
 			f := func() []*v2.Envelope {
 				return helpers.ReadContainerFromRLP("test-id", true)
