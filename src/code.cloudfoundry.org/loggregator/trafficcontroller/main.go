@@ -56,17 +56,17 @@ func main() {
 	if err != nil {
 		log.Fatalf("Couldn't connect to metric emitter: %s", err)
 	}
+	tlsConfig := plumbing.NewTLSConfig()
+	tlsConfig.InsecureSkipVerify = conf.SkipCertVerify
 	transport := &http.Transport{
 		TLSHandshakeTimeout: 10 * time.Second,
-		TLSClientConfig:     plumbing.NewTLSConfig(),
+		TLSClientConfig:     tlsConfig,
 		DisableKeepAlives:   true,
 	}
 	httpClient := &http.Client{
 		Timeout:   20 * time.Second,
 		Transport: transport,
 	}
-
-	transport.TLSClientConfig.InsecureSkipVerify = conf.SkipCertVerify
 
 	tc := app.NewTrafficController(
 		conf,
