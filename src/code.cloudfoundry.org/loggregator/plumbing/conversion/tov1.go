@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"strings"
 
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
@@ -34,12 +35,12 @@ func ToV1(e *v2.Envelope) []*events.Envelope {
 
 func createBaseV1(e *v2.Envelope) *events.Envelope {
 	v1e := &events.Envelope{
-		Origin:     proto.String(e.DeprecatedTags["origin"].GetText()),
-		Deployment: proto.String(e.DeprecatedTags["deployment"].GetText()),
-		Job:        proto.String(e.DeprecatedTags["job"].GetText()),
-		Index:      proto.String(e.DeprecatedTags["index"].GetText()),
+		Origin:     proto.String(getV2Tag(e, "origin")),
+		Deployment: proto.String(getV2Tag(e, "deployment")),
+		Job:        proto.String(getV2Tag(e, "job")),
+		Index:      proto.String(getV2Tag(e, "index")),
 		Timestamp:  proto.Int64(e.Timestamp),
-		Ip:         proto.String(e.DeprecatedTags["ip"].GetText()),
+		Ip:         proto.String(getV2Tag(e, "ip")),
 		Tags:       convertTags(e.DeprecatedTags),
 	}
 
@@ -61,28 +62,46 @@ func createBaseV1(e *v2.Envelope) *events.Envelope {
 	return v1e
 }
 
+func getV2Tag(e *v2.Envelope, key string) string {
+	d := e.GetDeprecatedTags()[key]
+	if d == nil {
+		return ""
+	}
+
+	switch v := d.Data.(type) {
+	case *v2.Value_Text:
+		return v.Text
+	case *v2.Value_Integer:
+		return fmt.Sprintf("%d", v.Integer)
+	case *v2.Value_Decimal:
+		return fmt.Sprintf("%f", v.Decimal)
+	default:
+		return ""
+	}
+}
+
 func convertTimer(v1e *events.Envelope, v2e *v2.Envelope) {
 	timer := v2e.GetTimer()
 	v1e.EventType = events.Envelope_HttpStartStop.Enum()
 
-	method := events.Method(events.Method_value[v2e.DeprecatedTags["method"].GetText()])
-	peerType := events.PeerType(events.PeerType_value[v2e.DeprecatedTags["peer_type"].GetText()])
+	method := events.Method(events.Method_value[getV2Tag(v2e, "method")])
+	peerType := events.PeerType(events.PeerType_value[getV2Tag(v2e, "peer_type")])
 
 	v1e.HttpStartStop = &events.HttpStartStop{
 		StartTimestamp: proto.Int64(timer.Start),
 		StopTimestamp:  proto.Int64(timer.Stop),
-		RequestId:      convertUUID(parseUUID(v2e.DeprecatedTags["request_id"].GetText())),
+		RequestId:      convertUUID(parseUUID(getV2Tag(v2e, "request_id"))),
 		ApplicationId:  convertUUID(parseUUID(v2e.SourceId)),
 		PeerType:       &peerType,
 		Method:         &method,
-		Uri:            proto.String(v2e.DeprecatedTags["uri"].GetText()),
-		RemoteAddress:  proto.String(v2e.DeprecatedTags["remote_address"].GetText()),
-		UserAgent:      proto.String(v2e.DeprecatedTags["user_agent"].GetText()),
-		StatusCode:     proto.Int32(int32(v2e.DeprecatedTags["status_code"].GetInteger())),
-		ContentLength:  proto.Int64(v2e.DeprecatedTags["content_length"].GetInteger()),
-		InstanceIndex:  proto.Int32(int32(v2e.DeprecatedTags["instance_index"].GetInteger())),
-		InstanceId:     proto.String(v2e.DeprecatedTags["routing_instance_id"].GetText()),
-		Forwarded:      strings.Split(v2e.DeprecatedTags["forwarded"].GetText(), "\n"),
+		Uri:            proto.String(getV2Tag(v2e, "uri")),
+		RemoteAddress:  proto.String(getV2Tag(v2e, "remote_address")),
+		UserAgent:      proto.String(getV2Tag(v2e, "user_agent")),
+		StatusCode:     proto.Int32(int32(atoi(getV2Tag(v2e, "status_code")))),
+		ContentLength:  proto.Int64(atoi(getV2Tag(v2e, "content_length"))),
+		InstanceIndex:  proto.Int32(int32(atoi(getV2Tag(v2e, "instance_index")))),
+		InstanceId:     proto.String(getV2Tag(v2e, "routing_instance_id")),
+		Forwarded:      strings.Split(getV2Tag(v2e, "forwarded"), "\n"),
 	}
 
 	delete(v1e.Tags, "peer_type")
@@ -98,8 +117,17 @@ func convertTimer(v1e *events.Envelope, v2e *v2.Envelope) {
 	delete(v1e.Tags, "forwarded")
 }
 
+func atoi(s string) int64 {
+	i, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return 0
+	}
+
+	return i
+}
+
 func convertLog(v1e *events.Envelope, v2e *v2.Envelope) {
-	if v2e.DeprecatedTags["__v1_type"].GetText() == "Error" {
+	if getV2Tag(v2e, "__v1_type") == "Error" {
 		recoverError(v1e, v2e)
 		return
 	}
@@ -110,7 +138,7 @@ func convertLog(v1e *events.Envelope, v2e *v2.Envelope) {
 		MessageType:    messageType(logMessage),
 		Timestamp:      proto.Int64(v2e.Timestamp),
 		AppId:          proto.String(v2e.SourceId),
-		SourceType:     proto.String(v2e.DeprecatedTags["source_type"].GetText()),
+		SourceType:     proto.String(getV2Tag(v2e, "source_type")),
 		SourceInstance: proto.String(v2e.InstanceId),
 	}
 	delete(v1e.Tags, "source_type")
@@ -119,9 +147,9 @@ func convertLog(v1e *events.Envelope, v2e *v2.Envelope) {
 func recoverError(v1e *events.Envelope, v2e *v2.Envelope) {
 	logMessage := v2e.GetLog()
 	v1e.EventType = events.Envelope_Error.Enum()
-	code := int32(v2e.DeprecatedTags["code"].GetInteger())
+	code := int32(atoi(getV2Tag(v2e, "code")))
 	v1e.Error = &events.Error{
-		Source:  proto.String(v2e.DeprecatedTags["source"].GetText()),
+		Source:  proto.String(getV2Tag(v2e, "source")),
 		Code:    proto.Int32(code),
 		Message: proto.String(string(logMessage.Payload)),
 	}

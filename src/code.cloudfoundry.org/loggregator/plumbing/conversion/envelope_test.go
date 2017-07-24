@@ -68,6 +68,19 @@ var _ = Describe("Envelope", func() {
 				"foo": "bar",
 			}))
 		})
+
+		It("reads non-text v2 tags", func() {
+			envelope := &v2.Envelope{
+				DeprecatedTags: map[string]*v2.Value{
+					"foo": {&v2.Value_Integer{99}},
+				},
+				Message: &v2.Envelope_Log{Log: &v2.Log{}},
+			}
+
+			envelopes := conversion.ToV1(envelope)
+			Expect(len(envelopes)).To(Equal(1))
+			Expect(envelopes[0].GetTags()).To(HaveKeyWithValue("foo", "99"))
+		})
 	})
 
 	Context("given a v1 envelope", func() {

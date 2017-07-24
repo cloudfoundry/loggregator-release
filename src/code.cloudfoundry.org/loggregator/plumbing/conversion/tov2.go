@@ -13,24 +13,25 @@ import (
 // ToV2 converts v1 envelopes up to v2 envelopes.
 func ToV2(e *events.Envelope) *v2.Envelope {
 	v2e := &v2.Envelope{
-		Timestamp:      e.GetTimestamp(),
-		DeprecatedTags: buildTags(e.GetTags()),
+		Timestamp: e.GetTimestamp(),
 	}
-	v2e.DeprecatedTags["origin"] = valueText(e.GetOrigin())
-	v2e.DeprecatedTags["deployment"] = valueText(e.GetDeployment())
-	v2e.DeprecatedTags["job"] = valueText(e.GetJob())
-	v2e.DeprecatedTags["index"] = valueText(e.GetIndex())
-	v2e.DeprecatedTags["ip"] = valueText(e.GetIp())
-	v2e.DeprecatedTags["__v1_type"] = valueText(e.GetEventType().String())
+	initTags(v2e, e.GetTags())
 
-	delete(v2e.DeprecatedTags, "source_id")
+	setV2Tag(v2e, "origin", e.GetOrigin())
+	setV2Tag(v2e, "deployment", e.GetDeployment())
+	setV2Tag(v2e, "job", e.GetJob())
+	setV2Tag(v2e, "index", e.GetIndex())
+	setV2Tag(v2e, "ip", e.GetIp())
+	setV2Tag(v2e, "__v1_type", e.GetEventType().String())
+
+	unsetV2Tag(v2e, "source_id")
 	sourceId, ok := e.GetTags()["source_id"]
 	v2e.SourceId = sourceId
 	if !ok {
 		v2e.SourceId = e.GetDeployment() + "/" + e.GetJob()
 	}
 
-	delete(v2e.DeprecatedTags, "instance_id")
+	unsetV2Tag(v2e, "instance_id")
 	v2e.InstanceId = e.GetTags()["instance_id"]
 
 	switch e.GetEventType() {
@@ -51,18 +52,25 @@ func ToV2(e *events.Envelope) *v2.Envelope {
 	return v2e
 }
 
-func buildTags(oldTags map[string]string) map[string]*v2.Value {
-	newTags := make(map[string]*v2.Value)
+func setV2Tag(e *v2.Envelope, key string, value interface{}) {
+	e.GetDeprecatedTags()[key] = valueText(fmt.Sprintf("%v", value))
+}
+
+func unsetV2Tag(e *v2.Envelope, key string) {
+	delete(e.GetDeprecatedTags(), key)
+}
+
+func initTags(e *v2.Envelope, oldTags map[string]string) {
+	e.DeprecatedTags = make(map[string]*v2.Value)
 	for k, v := range oldTags {
-		newTags[k] = valueText(v)
+		setV2Tag(e, k, v)
 	}
-	return newTags
 }
 
 func convertError(v2e *v2.Envelope, v1e *events.Envelope) {
 	t := v1e.GetError()
-	v2e.DeprecatedTags["source"] = valueText(t.GetSource())
-	v2e.DeprecatedTags["code"] = valueInt32(t.GetCode())
+	setV2Tag(v2e, "source", t.GetSource())
+	setV2Tag(v2e, "code", t.GetCode())
 
 	v2e.Message = &v2.Envelope_Log{
 		Log: &v2.Log{
@@ -96,17 +104,17 @@ func convertHTTPStartStop(v2e *v2.Envelope, v1e *events.Envelope) {
 			Stop:  t.GetStopTimestamp(),
 		},
 	}
-	v2e.DeprecatedTags["request_id"] = valueText(uuidToString(t.GetRequestId()))
-	v2e.DeprecatedTags["peer_type"] = valueText(t.GetPeerType().String())
-	v2e.DeprecatedTags["method"] = valueText(t.GetMethod().String())
-	v2e.DeprecatedTags["uri"] = valueText(t.GetUri())
-	v2e.DeprecatedTags["remote_address"] = valueText(t.GetRemoteAddress())
-	v2e.DeprecatedTags["user_agent"] = valueText(t.GetUserAgent())
-	v2e.DeprecatedTags["status_code"] = valueInt32(t.GetStatusCode())
-	v2e.DeprecatedTags["content_length"] = valueInt64(t.GetContentLength())
-	v2e.DeprecatedTags["instance_index"] = valueInt32(t.GetInstanceIndex())
-	v2e.DeprecatedTags["routing_instance_id"] = valueText(t.GetInstanceId())
-	v2e.DeprecatedTags["forwarded"] = valueTextSlice(t.GetForwarded())
+	setV2Tag(v2e, "request_id", uuidToString(t.GetRequestId()))
+	setV2Tag(v2e, "peer_type", t.GetPeerType().String())
+	setV2Tag(v2e, "method", t.GetMethod().String())
+	setV2Tag(v2e, "uri", t.GetUri())
+	setV2Tag(v2e, "remote_address", t.GetRemoteAddress())
+	setV2Tag(v2e, "user_agent", t.GetUserAgent())
+	setV2Tag(v2e, "status_code", t.GetStatusCode())
+	setV2Tag(v2e, "content_length", t.GetContentLength())
+	setV2Tag(v2e, "instance_index", t.GetInstanceIndex())
+	setV2Tag(v2e, "routing_instance_id", t.GetInstanceId())
+	setV2Tag(v2e, "forwarded", strings.Join(t.GetForwarded(), "\n"))
 }
 
 func convertLogMessageType(t events.LogMessage_MessageType) v2.Log_Type {
@@ -116,7 +124,7 @@ func convertLogMessageType(t events.LogMessage_MessageType) v2.Log_Type {
 
 func convertLogMessage(v2e *v2.Envelope, e *events.Envelope) {
 	t := e.GetLogMessage()
-	v2e.DeprecatedTags["source_type"] = valueText(t.GetSourceType())
+	setV2Tag(v2e, "source_type", t.GetSourceType())
 	v2e.InstanceId = t.GetSourceInstance()
 	v2e.SourceId = convertAppID(t.GetAppId(), v2e.SourceId)
 
