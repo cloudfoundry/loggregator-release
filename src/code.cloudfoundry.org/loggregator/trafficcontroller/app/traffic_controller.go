@@ -46,6 +46,7 @@ type TrafficController struct {
 	conf                 *Config
 	disableAccessControl bool
 	metricClient         MetricClient
+	httpClient           *http.Client
 }
 
 // finder provides service discovery of Doppler processes
@@ -58,25 +59,17 @@ func NewTrafficController(
 	c *Config,
 	disableAccessControl bool,
 	metricClient MetricClient,
+	client *http.Client,
 ) *TrafficController {
 	return &TrafficController{
 		conf:                 c,
 		disableAccessControl: disableAccessControl,
 		metricClient:         metricClient,
+		httpClient:           client,
 	}
 }
 
 func (t *TrafficController) Start() {
-	transport := &http.Transport{
-		TLSHandshakeTimeout: 10 * time.Second,
-		TLSClientConfig:     plumbing.NewTLSConfig(),
-		DisableKeepAlives:   true,
-	}
-	http.DefaultClient.Transport = transport
-	http.DefaultClient.Timeout = 20 * time.Second
-
-	transport.TLSClientConfig.InsecureSkipVerify = t.conf.SkipCertVerify
-
 	log.Print("Startup: Setting up the loggregator traffic controller")
 
 	batcher, err := t.initializeMetrics("LoggregatorTrafficController", t.conf.MetronConfig.UDPAddress)
