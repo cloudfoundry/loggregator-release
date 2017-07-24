@@ -14,19 +14,22 @@ type UaaClient interface {
 }
 
 type uaaClient struct {
-	address string
-	id      string
-	secret  string
+	address    string
+	id         string
+	secret     string
+	httpClient *http.Client
 }
 
-func NewUaaClient(address, id, secret string) uaaClient {
+func NewUaaClient(c *http.Client, address, id, secret string) uaaClient {
 	return uaaClient{
-		address: address,
-		id:      id,
-		secret:  secret,
+		address:    address,
+		id:         id,
+		secret:     secret,
+		httpClient: c,
 	}
 }
 
+// TODO rename client receiver to c
 func (client *uaaClient) GetAuthData(token string) (*AuthData, error) {
 
 	formValues := url.Values{"token": []string{token}}
@@ -34,7 +37,7 @@ func (client *uaaClient) GetAuthData(token string) (*AuthData, error) {
 	req.SetBasicAuth(client.id, client.secret)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	response, err := http.DefaultClient.Do(req)
+	response, err := client.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

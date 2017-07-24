@@ -86,9 +86,14 @@ func (t *TrafficController) Start() {
 	go openFileMonitor.Start()
 	defer openFileMonitor.Stop()
 
-	logAuthorizer := auth.NewLogAccessAuthorizer(t.disableAccessControl, t.conf.ApiHost)
+	logAuthorizer := auth.NewLogAccessAuthorizer(t.httpClient, t.disableAccessControl, t.conf.ApiHost)
 
-	uaaClient := auth.NewUaaClient(t.conf.UaaHost, t.conf.UaaClient, t.conf.UaaClientSecret)
+	uaaClient := auth.NewUaaClient(
+		t.httpClient,
+		t.conf.UaaHost,
+		t.conf.UaaClient,
+		t.conf.UaaClientSecret,
+	)
 	adminAuthorizer := auth.NewAdminAccessAuthorizer(t.disableAccessControl, &uaaClient)
 
 	// Start the health endpoint listener

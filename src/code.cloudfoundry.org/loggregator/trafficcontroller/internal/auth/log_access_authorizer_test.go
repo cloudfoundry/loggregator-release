@@ -19,6 +19,7 @@ var _ = Describe("LogAccessAuthorizer", func() {
 	var (
 		transport *http.Transport
 		server    *httptest.Server
+		client    *http.Client
 	)
 
 	BeforeEach(func() {
@@ -28,11 +29,12 @@ var _ = Describe("LogAccessAuthorizer", func() {
 			},
 		}
 		http.DefaultClient.Transport = transport
+		client = http.DefaultClient
 	})
 
 	Context("Disable Access Control", func() {
 		It("returns http.StatusOK", func() {
-			authorizer := auth.NewLogAccessAuthorizer(true, "http://cloudcontroller.example.com")
+			authorizer := auth.NewLogAccessAuthorizer(client, true, "http://cloudcontroller.example.com")
 			Expect(authorizer("bearer anything", "myAppId")).To(Equal(http.StatusOK))
 		})
 	})
@@ -48,7 +50,7 @@ var _ = Describe("LogAccessAuthorizer", func() {
 		})
 
 		It("does not allow access for requests with empty AuthTokens", func() {
-			authorizer := auth.NewLogAccessAuthorizer(false, server.URL)
+			authorizer := auth.NewLogAccessAuthorizer(client, false, server.URL)
 
 			status, err := authorizer("", "myAppId")
 			Expect(status).To(Equal(http.StatusUnauthorized))
@@ -56,7 +58,7 @@ var _ = Describe("LogAccessAuthorizer", func() {
 		})
 
 		It("allows access when the api returns 200, and otherwise denies access", func() {
-			authorizer := auth.NewLogAccessAuthorizer(false, server.URL)
+			authorizer := auth.NewLogAccessAuthorizer(client, false, server.URL)
 
 			status, err := authorizer("bearer something", "myAppId")
 			Expect(status).To(Equal(http.StatusOK))
@@ -82,7 +84,7 @@ var _ = Describe("LogAccessAuthorizer", func() {
 		})
 
 		It("does allow access when cert verification is skipped", func() {
-			authorizer := auth.NewLogAccessAuthorizer(false, server.URL)
+			authorizer := auth.NewLogAccessAuthorizer(client, false, server.URL)
 			status, err := authorizer("bearer something", "myAppId")
 			Expect(status).To(Equal(http.StatusOK))
 			Expect(err).To(BeNil())
@@ -90,7 +92,7 @@ var _ = Describe("LogAccessAuthorizer", func() {
 
 		It("does not allow access when cert verifcation is not skipped", func() {
 			transport.TLSClientConfig.InsecureSkipVerify = false
-			authorizer := auth.NewLogAccessAuthorizer(false, server.URL)
+			authorizer := auth.NewLogAccessAuthorizer(client, false, server.URL)
 			status, err := authorizer("bearer something", "myAppId")
 			Expect(status).To(Equal(http.StatusInternalServerError))
 			Expect(err).To(BeAssignableToTypeOf(&url.Error{}))

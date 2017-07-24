@@ -18,6 +18,7 @@ var _ = Describe("UaaClient", func() {
 		fakeUaaServer = httptest.NewTLSServer(&handler)
 
 		transport *http.Transport
+		client    *http.Client
 	)
 
 	BeforeEach(func() {
@@ -27,11 +28,12 @@ var _ = Describe("UaaClient", func() {
 			},
 		}
 		http.DefaultClient.Transport = transport
+		client = http.DefaultClient
 	})
 
 	Context("when the user is an admin", func() {
 		It("Determines permissions from correct credentials", func() {
-			uaaClient := auth.NewUaaClient(fakeUaaServer.URL, "bob", "yourUncle")
+			uaaClient := auth.NewUaaClient(client, fakeUaaServer.URL, "bob", "yourUncle")
 
 			authData, err := uaaClient.GetAuthData("iAmAnAdmin")
 			Expect(err).ToNot(HaveOccurred())
@@ -44,7 +46,7 @@ var _ = Describe("UaaClient", func() {
 
 	Context("when the user is not an admin", func() {
 		It("Determines permissions from correct credentials", func() {
-			uaaClient := auth.NewUaaClient(fakeUaaServer.URL, "bob", "yourUncle")
+			uaaClient := auth.NewUaaClient(client, fakeUaaServer.URL, "bob", "yourUncle")
 
 			authData, err := uaaClient.GetAuthData("iAmNotAnAdmin")
 			Expect(err).ToNot(HaveOccurred())
@@ -56,7 +58,7 @@ var _ = Describe("UaaClient", func() {
 
 	Context("the token is expired", func() {
 		It("returns the proper error", func() {
-			uaaClient := auth.NewUaaClient(fakeUaaServer.URL, "bob", "yourUncle")
+			uaaClient := auth.NewUaaClient(client, fakeUaaServer.URL, "bob", "yourUncle")
 
 			_, err := uaaClient.GetAuthData("expiredToken")
 			Expect(err).To(HaveOccurred())
@@ -66,7 +68,7 @@ var _ = Describe("UaaClient", func() {
 
 	Context("the token is invalid", func() {
 		It("returns the proper error", func() {
-			uaaClient := auth.NewUaaClient(fakeUaaServer.URL, "bob", "yourUncle")
+			uaaClient := auth.NewUaaClient(client, fakeUaaServer.URL, "bob", "yourUncle")
 
 			_, err := uaaClient.GetAuthData("invalidToken")
 			Expect(err).To(HaveOccurred())
@@ -76,7 +78,7 @@ var _ = Describe("UaaClient", func() {
 
 	Context("the server returns a 500 ", func() {
 		It("returns the proper error", func() {
-			uaaClient := auth.NewUaaClient(fakeUaaServer.URL, "bob", "yourUncle")
+			uaaClient := auth.NewUaaClient(client, fakeUaaServer.URL, "bob", "yourUncle")
 
 			_, err := uaaClient.GetAuthData("500Please")
 			Expect(err).To(HaveOccurred())
@@ -86,7 +88,7 @@ var _ = Describe("UaaClient", func() {
 
 	Context("the un/pwd is invalid", func() {
 		It("returns the proper error", func() {
-			uaaClient := auth.NewUaaClient(fakeUaaServer.URL, "wrongUser", "yourUncle")
+			uaaClient := auth.NewUaaClient(client, fakeUaaServer.URL, "wrongUser", "yourUncle")
 
 			_, err := uaaClient.GetAuthData("iAmAnAdmin")
 			Expect(err).To(HaveOccurred())
@@ -100,7 +102,7 @@ var _ = Describe("UaaClient", func() {
 		})
 
 		It("returns an error status", func() {
-			uaaClient := auth.NewUaaClient(fakeUaaServer.URL, "bob", "yourUncle")
+			uaaClient := auth.NewUaaClient(client, fakeUaaServer.URL, "bob", "yourUncle")
 
 			_, err := uaaClient.GetAuthData("iAmAnAdmin")
 			Expect(err).To(HaveOccurred())
