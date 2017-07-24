@@ -61,8 +61,10 @@ func main() {
 		TLSClientConfig:     plumbing.NewTLSConfig(),
 		DisableKeepAlives:   true,
 	}
-	http.DefaultClient.Transport = transport
-	http.DefaultClient.Timeout = 20 * time.Second
+	httpClient := &http.Client{
+		Timeout:   20 * time.Second,
+		Transport: transport,
+	}
 
 	transport.TLSClientConfig.InsecureSkipVerify = conf.SkipCertVerify
 
@@ -70,7 +72,7 @@ func main() {
 		conf,
 		*disableAccessControl,
 		metricClient,
-		http.DefaultClient,
+		httpClient,
 	)
 	tc.Start()
 }
