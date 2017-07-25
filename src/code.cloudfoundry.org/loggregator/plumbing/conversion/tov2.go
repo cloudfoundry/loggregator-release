@@ -15,7 +15,8 @@ func ToV2(e *events.Envelope, usePreferredTags bool) *v2.Envelope {
 	v2e := &v2.Envelope{
 		Timestamp: e.GetTimestamp(),
 	}
-	initTags(v2e, e.GetTags(), usePreferredTags)
+
+	initTags(e, v2e, e.GetTags(), usePreferredTags)
 
 	setV2Tag(v2e, "origin", e.GetOrigin(), usePreferredTags)
 	setV2Tag(v2e, "deployment", e.GetDeployment(), usePreferredTags)
@@ -76,14 +77,18 @@ func unsetV2Tag(e *v2.Envelope, key string) {
 	delete(e.GetTags(), key)
 }
 
-func initTags(e *v2.Envelope, oldTags map[string]string, usePreferredTags bool) {
+func initTags(v1e *events.Envelope, v2e *v2.Envelope, oldTags map[string]string, usePreferredTags bool) {
 	if usePreferredTags {
-		e.Tags = make(map[string]string)
+		v2e.Tags = v1e.Tags
+		if v2e.Tags == nil {
+			v2e.Tags = make(map[string]string)
+		}
 	} else {
-		e.DeprecatedTags = make(map[string]*v2.Value)
-	}
-	for k, v := range oldTags {
-		setV2Tag(e, k, v, usePreferredTags)
+		v2e.DeprecatedTags = make(map[string]*v2.Value)
+
+		for k, v := range oldTags {
+			setV2Tag(v2e, k, v, usePreferredTags)
+		}
 	}
 }
 

@@ -243,7 +243,11 @@ func tryConvertContainerMetric(v2e *v2.Envelope) *events.Envelope {
 }
 
 func convertTags(e *v2.Envelope) map[string]string {
-	oldTags := make(map[string]string)
+	oldTags := e.Tags
+	if oldTags == nil {
+		oldTags = make(map[string]string)
+	}
+
 	for key, value := range e.GetDeprecatedTags() {
 		if value == nil {
 			continue
@@ -258,9 +262,6 @@ func convertTags(e *v2.Envelope) map[string]string {
 		}
 	}
 
-	for key, value := range e.GetTags() {
-		oldTags[key] = value
-	}
 	return oldTags
 }
 
