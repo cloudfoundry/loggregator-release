@@ -55,7 +55,17 @@ func ToV2(e *events.Envelope, usePreferredTags bool) *v2.Envelope {
 // TODO: Do we still need to do an interface?
 func setV2Tag(e *v2.Envelope, key string, value interface{}, usePreferredTags bool) {
 	if usePreferredTags {
-		e.GetTags()[key] = fmt.Sprintf("%v", value)
+		switch value.(type) {
+		case string:
+			e.GetTags()[key] = value.(string)
+		case int32, int64:
+			e.GetTags()[key] = fmt.Sprintf("%d")
+		case float64:
+			e.GetTags()[key] = fmt.Sprintf("%f")
+		default:
+			e.GetTags()[key] = fmt.Sprintf("%v", value)
+		}
+
 		return
 	}
 	e.GetDeprecatedTags()[key] = valueText(fmt.Sprintf("%v", value))
