@@ -12,7 +12,6 @@ templates:
   dns_health_check.erb: bin/dns_health_check
 
 packages:
-- loggregator_common
 - loggregator_trafficcontroller
 
 provides:
