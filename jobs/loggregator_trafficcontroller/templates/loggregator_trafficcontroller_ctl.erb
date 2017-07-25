@@ -17,12 +17,15 @@ mkdir -p $LOG_DIR
 touch $LOG_DIR/loggregator_trafficcontroller_security_events.log
 <% end %>
 
-source /var/vcap/packages/loggregator_common/pid_utils.sh
-
 case $1 in
 
   start)
-    pid_guard $PIDFILE "LoggregatorTrafficController"
+    set +e
+      killall -15 trafficcontroller
+      killall -9 trafficcontroller
+      killall -2 trafficcontroller
+      killall -3 trafficcontroller
+    set -e
 
     <% if p("traffic_controller.locked_memory_limit") != "kernel" %>
     ulimit -l <%= p("traffic_controller.locked_memory_limit") %>
@@ -43,7 +46,14 @@ case $1 in
     ;;
 
   stop)
-    kill_and_wait $PIDFILE 40
+    set +e
+      killall -15 trafficcontroller
+      killall -9 trafficcontroller
+      killall -2 trafficcontroller
+      killall -3 trafficcontroller
+    set -e
+
+    rm -f $PIDFILE
 
     ;;
 
