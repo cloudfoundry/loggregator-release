@@ -220,15 +220,18 @@ function run_install_tools {
     go get github.com/kisielk/errcheck
     go get github.com/gordonklaus/ineffassign
     go get github.com/mvdan/interfacer/cmd/interfacer
-    go get honnef.co/go/simple/cmd/gosimple
-    go get honnef.co/go/staticcheck/cmd/staticcheck
-    go get honnef.co/go/unused/cmd/unused
+    go get honnef.co/go/tools/cmd/megacheck
 }
 
 function run_linters {
     print_checkpoint "Running Linters"
 
-    local loggregator_pkg="code.cloudfoundry.org/loggregator"
+    local loggregator_pkg
+    if [ "$1" = "" ]; then
+        loggregator_pkg="code.cloudfoundry.org/loggregator"
+    else
+        loggregator_pkg="$1"
+    fi
     local loggregator_dir="$(dirname $(dirname $0))/src/$loggregator_pkg"
 
     echo running go vet
@@ -249,12 +252,8 @@ function run_linters {
     ineffassign "$loggregator_dir"
     echo running interfacer
     interfacer "$loggregator_pkg/..."
-    echo running gosimple
-    gosimple "$loggregator_pkg/..."
-    echo running staticcheck
-    staticcheck "$loggregator_pkg/..."
-    echo running unused
-    unused "$loggregator_pkg/..."
+    echo running megacheck
+    megacheck "$loggregator_pkg/..."
 
     return 0
 }
