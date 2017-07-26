@@ -162,7 +162,7 @@ func (t *TrafficController) Start() {
 			adminAuthorizer,
 			grpcConnector,
 			"doppler."+t.conf.SystemDomain,
-			15*time.Second,
+			5*time.Second,
 			t.metricClient,
 			healthRegistry,
 		),
