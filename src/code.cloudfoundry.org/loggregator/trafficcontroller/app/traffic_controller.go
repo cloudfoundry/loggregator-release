@@ -46,7 +46,8 @@ type TrafficController struct {
 	conf                 *Config
 	disableAccessControl bool
 	metricClient         MetricClient
-	httpClient           *http.Client
+	uaaHTTPClient        *http.Client
+	ccHTTPClient         *http.Client
 }
 
 // finder provides service discovery of Doppler processes
@@ -59,13 +60,15 @@ func NewTrafficController(
 	c *Config,
 	disableAccessControl bool,
 	metricClient MetricClient,
-	client *http.Client,
+	uaaHTTPClient *http.Client,
+	ccHTTPClient *http.Client,
 ) *TrafficController {
 	return &TrafficController{
 		conf:                 c,
 		disableAccessControl: disableAccessControl,
 		metricClient:         metricClient,
-		httpClient:           client,
+		uaaHTTPClient:        uaaHTTPClient,
+		ccHTTPClient:         ccHTTPClient,
 	}
 }
 
@@ -86,10 +89,14 @@ func (t *TrafficController) Start() {
 	go openFileMonitor.Start()
 	defer openFileMonitor.Stop()
 
-	logAuthorizer := auth.NewLogAccessAuthorizer(t.httpClient, t.disableAccessControl, t.conf.ApiHost)
+	logAuthorizer := auth.NewLogAccessAuthorizer(
+		t.ccHTTPClient,
+		t.disableAccessControl,
+		t.conf.ApiHost,
+	)
 
 	uaaClient := auth.NewUaaClient(
-		t.httpClient,
+		t.uaaHTTPClient,
 		t.conf.UaaHost,
 		t.conf.UaaClient,
 		t.conf.UaaClientSecret,

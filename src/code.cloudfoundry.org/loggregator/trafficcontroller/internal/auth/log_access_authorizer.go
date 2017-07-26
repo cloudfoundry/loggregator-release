@@ -29,7 +29,7 @@ func NewLogAccessAuthorizer(c *http.Client, disableAccessControl bool, apiHost s
 			return http.StatusUnauthorized, errors.New(NO_AUTH_TOKEN_PROVIDED_ERROR_MESSAGE)
 		}
 
-		req, _ := http.NewRequest("GET", apiHost+"/internal/log_access/"+target, nil)
+		req, _ := http.NewRequest("GET", apiHost+"/internal/v4/log_access/"+target, nil)
 		req.Header.Set("Authorization", authToken)
 		res, err := c.Do(req)
 		if err != nil {

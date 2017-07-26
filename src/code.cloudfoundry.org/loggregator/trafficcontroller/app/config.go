@@ -26,6 +26,13 @@ type GRPC struct {
 	KeyFile  string
 }
 
+type CCTLSClientConfig struct {
+	CertFile   string
+	KeyFile    string
+	CAFile     string
+	ServerName string
+}
+
 type Config struct {
 	EtcdUrls                  []string
 	EtcdMaxConcurrentRequests int
@@ -34,6 +41,7 @@ type Config struct {
 
 	IP                     string
 	ApiHost                string
+	CCTLSClientConfig      CCTLSClientConfig
 	DopplerPort            uint32
 	DopplerAddrs           []string
 	OutgoingDropsondePort  uint32

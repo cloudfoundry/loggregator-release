@@ -15,11 +15,9 @@ import (
 )
 
 var _ = Describe("LogAccessAuthorizer", func() {
-
 	var (
-		transport *http.Transport
-		server    *httptest.Server
 		client    *http.Client
+		transport *http.Transport
 	)
 
 	BeforeEach(func() {
@@ -41,6 +39,7 @@ var _ = Describe("LogAccessAuthorizer", func() {
 	})
 
 	Context("Server does not use SSL", func() {
+		var server *httptest.Server
 
 		BeforeEach(func() {
 			server = startHTTPServer()
@@ -76,6 +75,8 @@ var _ = Describe("LogAccessAuthorizer", func() {
 	})
 
 	Context("Server uses SSL without valid certificate", func() {
+		var server *httptest.Server
+
 		BeforeEach(func() {
 			server = startHTTPSServer()
 		})
@@ -101,13 +102,12 @@ var _ = Describe("LogAccessAuthorizer", func() {
 			Expect(urlErr.Err).To(MatchError("x509: certificate signed by unknown authority"))
 		})
 	})
-
 })
 
 type handler struct{}
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	re := regexp.MustCompile("^/internal/log_access/([^/?]+)$")
+	re := regexp.MustCompile("^/internal/v4/log_access/([^/?]+)$")
 	result := re.FindStringSubmatch(r.URL.Path)
 	if len(result) != 2 {
 		w.WriteHeader(500)
@@ -125,9 +125,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func startHTTPServer() *httptest.Server {
-	return httptest.NewServer(new(handler))
+	return httptest.NewServer(&handler{})
 }
 
 func startHTTPSServer() *httptest.Server {
-	return httptest.NewTLSServer(new(handler))
+	return httptest.NewTLSServer(&handler{})
 }
