@@ -89,6 +89,11 @@ var _ = Describe("ContainerMetric", func() {
 
 	Context("given a v1 envelope", func() {
 		var (
+			v1Envelope *events.Envelope
+			v2Envelope *v2.Envelope
+		)
+
+		BeforeEach(func() {
 			v1Envelope = &events.Envelope{
 				Origin:     proto.String("an-origin"),
 				Deployment: proto.String("a-deployment"),
@@ -144,7 +149,7 @@ var _ = Describe("ContainerMetric", func() {
 					},
 				},
 			}
-		)
+		})
 
 		Context("using deprecated tags", func() {
 			It("converts to a v2 envelope using DeprecatedTags", func() {
@@ -154,13 +159,13 @@ var _ = Describe("ContainerMetric", func() {
 					"Message":    Equal(v2Envelope.Message),
 					"InstanceId": Equal("instance-id"),
 					"DeprecatedTags": Equal(map[string]*v2.Value{
-						"origin":     &v2.Value{Data: &v2.Value_Text{Text: "an-origin"}},
-						"deployment": &v2.Value{Data: &v2.Value_Text{Text: "a-deployment"}},
-						"job":        &v2.Value{Data: &v2.Value_Text{Text: "a-job"}},
-						"index":      &v2.Value{Data: &v2.Value_Text{Text: "an-index"}},
-						"ip":         &v2.Value{Data: &v2.Value_Text{Text: "an-ip"}},
-						"__v1_type":  &v2.Value{Data: &v2.Value_Text{Text: "ContainerMetric"}},
-						"custom_tag": &v2.Value{Data: &v2.Value_Text{Text: "custom-value"}},
+						"origin":     {Data: &v2.Value_Text{Text: "an-origin"}},
+						"deployment": {Data: &v2.Value_Text{Text: "a-deployment"}},
+						"job":        {Data: &v2.Value_Text{Text: "a-job"}},
+						"index":      {Data: &v2.Value_Text{Text: "an-index"}},
+						"ip":         {Data: &v2.Value_Text{Text: "an-ip"}},
+						"__v1_type":  {Data: &v2.Value_Text{Text: "ContainerMetric"}},
+						"custom_tag": {Data: &v2.Value_Text{Text: "custom-value"}},
 					}),
 					"Tags": BeNil(),
 				}))
