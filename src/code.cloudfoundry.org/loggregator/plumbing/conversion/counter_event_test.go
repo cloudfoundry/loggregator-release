@@ -39,15 +39,26 @@ var _ = Describe("CounterEvent", func() {
 	})
 
 	Context("given a v1 envelope", func() {
-		It("converts to a v2 envelope", func() {
-			v1Envelope := &events.Envelope{
-				EventType: events.Envelope_CounterEvent.Enum(),
+		var (
+			v1Envelope = &events.Envelope{
+				Origin:     proto.String("an-origin"),
+				Deployment: proto.String("a-deployment"),
+				Job:        proto.String("a-job"),
+				Index:      proto.String("an-index"),
+				Ip:         proto.String("an-ip"),
+				Timestamp:  proto.Int64(1234),
+				EventType:  events.Envelope_CounterEvent.Enum(),
 				CounterEvent: &events.CounterEvent{
 					Name:  proto.String("name"),
 					Total: proto.Uint64(99),
 				},
+				Tags: map[string]string{
+					"custom_tag":  "custom-value",
+					"source_id":   "source-id",
+					"instance_id": "instance-id",
+				},
 			}
-			v2Envelope := &v2.Envelope{
+			v2Envelope = &v2.Envelope{
 				Message: &v2.Envelope_Counter{
 					Counter: &v2.Counter{
 						Name: "name",
@@ -57,10 +68,48 @@ var _ = Describe("CounterEvent", func() {
 					},
 				},
 			}
+		)
 
-			Expect(*conversion.ToV2(v1Envelope, false)).To(MatchFields(IgnoreExtras, Fields{
-				"Message": Equal(v2Envelope.Message),
-			}))
+		Context("using deprecated tags", func() {
+			It("converts to a v2 envelope with DeprecatedTags", func() {
+				Expect(*conversion.ToV2(v1Envelope, false)).To(MatchFields(0, Fields{
+					"Timestamp":  Equal(int64(1234)),
+					"SourceId":   Equal("source-id"),
+					"InstanceId": Equal("instance-id"),
+					"Message":    Equal(v2Envelope.Message),
+					"DeprecatedTags": Equal(map[string]*v2.Value{
+						"origin":     &v2.Value{Data: &v2.Value_Text{Text: "an-origin"}},
+						"deployment": &v2.Value{Data: &v2.Value_Text{Text: "a-deployment"}},
+						"job":        &v2.Value{Data: &v2.Value_Text{Text: "a-job"}},
+						"index":      &v2.Value{Data: &v2.Value_Text{Text: "an-index"}},
+						"ip":         &v2.Value{Data: &v2.Value_Text{Text: "an-ip"}},
+						"__v1_type":  &v2.Value{Data: &v2.Value_Text{Text: "CounterEvent"}},
+						"custom_tag": &v2.Value{Data: &v2.Value_Text{Text: "custom-value"}},
+					}),
+					"Tags": BeNil(),
+				}))
+			})
+		})
+
+		Context("using preferred tags", func() {
+			It("converts to a v2 envelope with Tags", func() {
+				Expect(*conversion.ToV2(v1Envelope, true)).To(MatchFields(0, Fields{
+					"Timestamp":      Equal(int64(1234)),
+					"SourceId":       Equal("source-id"),
+					"InstanceId":     Equal("instance-id"),
+					"Message":        Equal(v2Envelope.Message),
+					"DeprecatedTags": BeNil(),
+					"Tags": Equal(map[string]string{
+						"origin":     "an-origin",
+						"deployment": "a-deployment",
+						"job":        "a-job",
+						"index":      "an-index",
+						"ip":         "an-ip",
+						"__v1_type":  "CounterEvent",
+						"custom_tag": "custom-value",
+					}),
+				}))
+			})
 		})
 	})
 })

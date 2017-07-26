@@ -88,9 +88,15 @@ var _ = Describe("ContainerMetric", func() {
 	})
 
 	Context("given a v1 envelope", func() {
-		It("converts to a v2 envelope", func() {
-			v1Envelope := &events.Envelope{
-				EventType: events.Envelope_ContainerMetric.Enum(),
+		var (
+			v1Envelope = &events.Envelope{
+				Origin:     proto.String("an-origin"),
+				Deployment: proto.String("a-deployment"),
+				Job:        proto.String("a-job"),
+				Index:      proto.String("an-index"),
+				Ip:         proto.String("an-ip"),
+				Timestamp:  proto.Int64(1234),
+				EventType:  events.Envelope_ContainerMetric.Enum(),
 				ContainerMetric: &events.ContainerMetric{
 					ApplicationId:    proto.String("some-id"),
 					InstanceIndex:    proto.Int32(123),
@@ -100,8 +106,12 @@ var _ = Describe("ContainerMetric", func() {
 					MemoryBytesQuota: proto.Uint64(17),
 					DiskBytesQuota:   proto.Uint64(19),
 				},
+				Tags: map[string]string{
+					"custom_tag":  "custom-value",
+					"instance_id": "instance-id",
+				},
 			}
-			v2Envelope := &v2.Envelope{
+			v2Envelope = &v2.Envelope{
 				SourceId: "some-id",
 				Message: &v2.Envelope_Gauge{
 					Gauge: &v2.Gauge{
@@ -134,29 +144,67 @@ var _ = Describe("ContainerMetric", func() {
 					},
 				},
 			}
-			Expect(*conversion.ToV2(v1Envelope, false)).To(MatchFields(IgnoreExtras, Fields{
-				"SourceId": Equal(v2Envelope.SourceId),
-				"Message":  Equal(v2Envelope.Message),
-			}))
+		)
+
+		Context("using deprecated tags", func() {
+			It("converts to a v2 envelope using DeprecatedTags", func() {
+				Expect(*conversion.ToV2(v1Envelope, false)).To(MatchFields(0, Fields{
+					"Timestamp":  Equal(int64(1234)),
+					"SourceId":   Equal(v2Envelope.SourceId),
+					"Message":    Equal(v2Envelope.Message),
+					"InstanceId": Equal("instance-id"),
+					"DeprecatedTags": Equal(map[string]*v2.Value{
+						"origin":     &v2.Value{Data: &v2.Value_Text{Text: "an-origin"}},
+						"deployment": &v2.Value{Data: &v2.Value_Text{Text: "a-deployment"}},
+						"job":        &v2.Value{Data: &v2.Value_Text{Text: "a-job"}},
+						"index":      &v2.Value{Data: &v2.Value_Text{Text: "an-index"}},
+						"ip":         &v2.Value{Data: &v2.Value_Text{Text: "an-ip"}},
+						"__v1_type":  &v2.Value{Data: &v2.Value_Text{Text: "ContainerMetric"}},
+						"custom_tag": &v2.Value{Data: &v2.Value_Text{Text: "custom-value"}},
+					}),
+					"Tags": BeNil(),
+				}))
+			})
+
+			It("sets the source ID to deployment/job when App ID is missing", func() {
+				v1Envelope := &events.Envelope{
+					Deployment:      proto.String("some-deployment"),
+					Job:             proto.String("some-job"),
+					EventType:       events.Envelope_ContainerMetric.Enum(),
+					ContainerMetric: &events.ContainerMetric{},
+				}
+
+				expectedV2Envelope := &v2.Envelope{
+					SourceId: "some-deployment/some-job",
+				}
+
+				converted := conversion.ToV2(v1Envelope, false)
+
+				Expect(*converted).To(MatchFields(IgnoreExtras, Fields{
+					"SourceId": Equal(expectedV2Envelope.SourceId),
+				}))
+			})
 		})
 
-		It("sets the source ID to deployment/job when App ID is missing", func() {
-			v1Envelope := &events.Envelope{
-				Deployment:      proto.String("some-deployment"),
-				Job:             proto.String("some-job"),
-				EventType:       events.Envelope_ContainerMetric.Enum(),
-				ContainerMetric: &events.ContainerMetric{},
-			}
-
-			expectedV2Envelope := &v2.Envelope{
-				SourceId: "some-deployment/some-job",
-			}
-
-			converted := conversion.ToV2(v1Envelope, false)
-
-			Expect(*converted).To(MatchFields(IgnoreExtras, Fields{
-				"SourceId": Equal(expectedV2Envelope.SourceId),
-			}))
+		Context("using preferred tags", func() {
+			It("converts to a v2 envelope using Tags", func() {
+				Expect(*conversion.ToV2(v1Envelope, true)).To(MatchFields(0, Fields{
+					"Timestamp":      Equal(int64(1234)),
+					"SourceId":       Equal(v2Envelope.SourceId),
+					"Message":        Equal(v2Envelope.Message),
+					"InstanceId":     Equal("instance-id"),
+					"DeprecatedTags": BeNil(),
+					"Tags": Equal(map[string]string{
+						"origin":     "an-origin",
+						"deployment": "a-deployment",
+						"job":        "a-job",
+						"index":      "an-index",
+						"ip":         "an-ip",
+						"__v1_type":  "ContainerMetric",
+						"custom_tag": "custom-value",
+					}),
+				}))
+			})
 		})
 	})
 })
