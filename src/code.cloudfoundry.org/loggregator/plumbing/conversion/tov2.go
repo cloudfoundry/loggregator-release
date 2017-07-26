@@ -25,15 +25,15 @@ func ToV2(e *events.Envelope, usePreferredTags bool) *v2.Envelope {
 	setV2Tag(v2e, "ip", e.GetIp(), usePreferredTags)
 	setV2Tag(v2e, "__v1_type", e.GetEventType().String(), usePreferredTags)
 
-	unsetV2Tag(v2e, "source_id")
 	sourceId, ok := e.GetTags()["source_id"]
 	v2e.SourceId = sourceId
 	if !ok {
 		v2e.SourceId = e.GetDeployment() + "/" + e.GetJob()
 	}
+	unsetV2Tag(v2e, "source_id")
 
-	unsetV2Tag(v2e, "instance_id")
 	v2e.InstanceId = e.GetTags()["instance_id"]
+	unsetV2Tag(v2e, "instance_id")
 
 	switch e.GetEventType() {
 	case events.Envelope_LogMessage:
@@ -56,19 +56,15 @@ func ToV2(e *events.Envelope, usePreferredTags bool) *v2.Envelope {
 // TODO: Do we still need to do an interface?
 func setV2Tag(e *v2.Envelope, key string, value interface{}, usePreferredTags bool) {
 	if usePreferredTags {
-		switch value.(type) {
-		case string:
-			e.GetTags()[key] = value.(string)
-		case int32, int64:
-			e.GetTags()[key] = fmt.Sprintf("%d")
-		case float64:
-			e.GetTags()[key] = fmt.Sprintf("%f")
-		default:
-			e.GetTags()[key] = fmt.Sprintf("%v", value)
+		if s, ok := value.(string); ok {
+			e.GetTags()[key] = s
+			return
 		}
 
+		e.GetTags()[key] = fmt.Sprintf("%v", value)
 		return
 	}
+
 	e.GetDeprecatedTags()[key] = valueText(fmt.Sprintf("%v", value))
 }
 
@@ -83,12 +79,14 @@ func initTags(v1e *events.Envelope, v2e *v2.Envelope, oldTags map[string]string,
 		if v2e.Tags == nil {
 			v2e.Tags = make(map[string]string)
 		}
-	} else {
-		v2e.DeprecatedTags = make(map[string]*v2.Value)
 
-		for k, v := range oldTags {
-			setV2Tag(v2e, k, v, usePreferredTags)
-		}
+		return
+	}
+
+	v2e.DeprecatedTags = make(map[string]*v2.Value)
+
+	for k, v := range oldTags {
+		setV2Tag(v2e, k, v, usePreferredTags)
 	}
 }
 
