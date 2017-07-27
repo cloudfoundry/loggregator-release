@@ -13,8 +13,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"plumbing"
-	v2 "plumbing/v2"
+	"code.cloudfoundry.org/loggregator/plumbing"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 )
 
 var (
@@ -29,7 +29,7 @@ var (
 func main() {
 	flag.Parse()
 
-	tlsConfig, err := plumbing.NewMutualTLSConfig(
+	tlsConfig, err := plumbing.NewClientMutualTLSConfig(
 		*certFile,
 		*keyFile,
 		*caFile,

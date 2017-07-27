@@ -1,7 +1,6 @@
 package main
 
 import (
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"flag"
 	"fmt"
 	"log"
@@ -11,6 +10,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -28,7 +29,6 @@ func main() {
 	ca := flag.String("ca", "", "The path to the CA. (REQUIRED)")
 	cert := flag.String("cert", "", "The path to the server cert. (REQUIRED)")
 	key := flag.String("key", "", "The path to the server key. (REQUIRED)")
-	cn := flag.String("cn", "doppler", "The TLS common name.")
 
 	iterations := flag.Int("iter", 10000, "The number of envelopes to emit to metron.")
 	delay := flag.Duration("delay", 2*time.Microsecond, "The delay between envelope emission.")
@@ -59,11 +59,7 @@ func main() {
 		log.Fatal("Missing required flag 'key'")
 	}
 
-	if *cn == "" {
-		log.Fatal("Missing required flag 'cn'")
-	}
-
-	certs, err := plumbing.NewServerCredentials(*cert, *key, *ca, *cn)
+	certs, err := plumbing.NewServerCredentials(*cert, *key, *ca)
 	if err != nil {
 		log.Fatalf("Unable to setup TLS: %s", err)
 	}

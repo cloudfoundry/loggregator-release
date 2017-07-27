@@ -95,14 +95,58 @@ function run_multiplatform {
 }
 
 function run_build {
-    set -e
+    print_checkpoint "Make Sure Loggregator Packages Compile"
+    go build $(go list code.cloudfoundry.org/loggregator/... |
+        grep -v integration_test |
+        grep -v component_test |
+        grep -v lats)
+    exit_code=$?
+    if [ $exit_code -ne 0 ]; then
+        return $exit_code
+    fi
+
+    print_checkpoint "Make Sure Loggregator Test Packages Compile"
+    go test -run xxxxxxxxxxxxxxxxx code.cloudfoundry.org/loggregator/... > /dev/null
+    exit_code=$?
+    if [ $exit_code -ne 0 ]; then
+        return $exit_code
+    fi
+
+    print_checkpoint "Make Sure Tool Packages Compile"
+    go build tools/...
+    exit_code=$?
+    if [ $exit_code -ne 0 ]; then
+        return $exit_code
+    fi
+
+    print_checkpoint "Make Sure Tool Test Packages Compile"
+    go test -run xxxxxxxxxxxxxxxxx tools/... > /dev/null
+    exit_code=$?
+    if [ $exit_code -ne 0 ]; then
+        return $exit_code
+    fi
+
     print_checkpoint "Building Binaries"
     "$(dirname $0)/build"
-    set +e
     return $?
 }
 
 function run_unit {
+    pushd $PROJECT_DIR/src/tools
+        print_checkpoint "Running Tool Unit Tests"
+        ginkgo \
+            -r \
+            --race \
+            --tags=~deprecated \
+            --randomizeAllSpecs \
+            --slowSpecThreshold 20 \
+            $@
+        exit_code=$?
+    popd
+    if [ $exit_code -ne 0 ]; then
+        return $exit_code
+    fi
+
     pushd $PROJECT_DIR/src/code.cloudfoundry.org/loggregator
         local not_unit_tests="integration_tests,component_tests,lats"
         print_checkpoint "Running Unit Tests"

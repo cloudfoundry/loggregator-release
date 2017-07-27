@@ -8,7 +8,6 @@
 package main
 
 import (
-	"code.cloudfoundry.org/loggregator/plumbing"
 	"crypto/rand"
 	"flag"
 	"fmt"
@@ -16,6 +15,8 @@ import (
 	"net"
 	"sync/atomic"
 	"time"
+
+	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
@@ -38,7 +39,6 @@ func main() {
 		*certFile,
 		*keyFile,
 		*caFile,
-		"doppler",
 	)
 	if err != nil {
 		log.Fatal(err)

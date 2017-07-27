@@ -39,7 +39,6 @@ func main() {
 	ca := flag.String("ca", "", "The path to the CA. (REQUIRED)")
 	cert := flag.String("cert", "", "The path to the server cert. (REQUIRED)")
 	key := flag.String("key", "", "The path to the server key. (REQUIRED)")
-	cn := flag.String("cn", "trafficcontroller", "The TLS common name.")
 
 	iterations := flag.Int("iter", 10000, "The number of envelopes to emit to trafficcontroller.")
 	delay := flag.Duration("delay", 2*time.Microsecond, "The delay between envelope emission.")
@@ -72,10 +71,6 @@ func main() {
 		log.Fatal("Missing required flag 'key'")
 	}
 
-	if *cn == "" {
-		log.Fatal("Missing required flag 'cn'")
-	}
-
 	if *etcdURL == "" {
 		log.Fatal("Missing required flag 'etcd'")
 	}
@@ -100,7 +95,7 @@ func main() {
 	}
 	defer cmd.Process.Kill()
 
-	creds, err := plumbing.NewServerCredentials(*cert, *key, *ca, *cn)
+	creds, err := plumbing.NewServerCredentials(*cert, *key, *ca)
 	if err != nil {
 		log.Panicf("Unable to setup TLS: %s", err)
 	}
