@@ -5,9 +5,13 @@ package main
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
+	"strconv"
+	"sync/atomic"
 	"time"
 
 	"google.golang.org/grpc"
@@ -19,6 +23,7 @@ import (
 
 var (
 	target   = flag.String("target", "localhost:3457", "the host:port of the target rlp")
+	httpAddr = flag.String("http-addr", "localhost:8081", "the host:port for HTTP to listen")
 	appID    = flag.String("app-id", "", "app-id to stream data")
 	certFile = flag.String("cert", "", "cert to use to connect to rlp")
 	keyFile  = flag.String("key", "", "key to use to connect to rlp")
@@ -53,19 +58,42 @@ func main() {
 				Log: &v2.LogFilter{},
 			},
 		},
+		UsePreferredTags: true,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	for {
-		env, err := receiver.Recv()
-		if err != nil {
-			log.Fatal(err)
+	reporter := &idxReporter{}
+	go func() {
+		var lastIdx int64
+		for {
+			env, err := receiver.Recv()
+			if err != nil {
+				fmt.Printf("stopping reader, lastIdx: %d\n", lastIdx)
+				return
+			}
+			lastIdx, err = strconv.ParseInt(env.Tags["idx"], 10, 0)
+			if err != nil {
+				log.Fatal(err)
+			}
+			reporter.set(lastIdx)
+			time.Sleep(*delay)
 		}
-		fmt.Println(string(env.GetLog().GetPayload()))
-		time.Sleep(*delay)
-	}
+	}()
+	log.Fatal(http.ListenAndServe(*httpAddr, reporter))
+}
+
+type idxReporter struct {
+	lastIdx int64
+}
+
+func (r *idxReporter) ServeHTTP(rw http.ResponseWriter, _ *http.Request) {
+	json.NewEncoder(rw).Encode(atomic.LoadInt64(&r.lastIdx))
+}
+
+func (r *idxReporter) set(v int64) {
+	atomic.StoreInt64(&r.lastIdx, v)
 }
 
 func buildShardId() string {
