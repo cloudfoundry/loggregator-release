@@ -1,5 +1,5 @@
-// metrondump: a tool for receiving messages from metron via the v1 gRPC
-// protocol. It is meant to run with the udpwriter tool.
+// metronreader: a tool for receiving messages from metron via the v1 gRPC
+// protocol.
 
 // Messages that have the origin "fast" will be aggregated and a rate will
 // print every second. Messages that have the origin "slow" will be printed
