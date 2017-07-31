@@ -24,6 +24,8 @@ var _ = Describe("WebsocketHandler", func() {
 		handlerDone        chan struct{}
 		mockSender         *testhelper.SpyMetricClient
 		egressMetric       *metricemitter.Counter
+
+		keepAliveTimeout time.Duration
 	)
 
 	BeforeEach(func() {
@@ -32,9 +34,11 @@ var _ = Describe("WebsocketHandler", func() {
 		mockSender = testhelper.NewMetricClient()
 		egressMetric = mockSender.NewCounter("egress")
 
+		keepAliveTimeout = 200 * time.Millisecond
+
 		handler = proxy.NewWebsocketHandler(
 			messagesChan,
-			100*time.Millisecond,
+			keepAliveTimeout,
 			egressMetric,
 		)
 		handlerDone = make(chan struct{})
@@ -176,11 +180,35 @@ var _ = Describe("WebsocketHandler", func() {
 			ws, _, err := websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
 			Expect(err).NotTo(HaveOccurred())
 
-			time.Sleep(200 * time.Millisecond) // Longer than  the keepAlive timeout
+			time.Sleep(keepAliveTimeout + (50 * time.Millisecond))
 
 			_, _, err = ws.ReadMessage()
 			Expect(err.Error()).To(ContainSubstring("1008"))
 			Expect(err.Error()).To(ContainSubstring("Client did not respond to ping before keep-alive timeout expired."))
+			Eventually(handlerDone).Should(BeClosed())
+		})
+
+		It("stays alive if client responds to ping message in time", func() {
+			ws, _, err := websocket.DefaultDialer.Dial(httpToWs(testServer.URL), nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			ws.SetPingHandler(func(string) error {
+				time.Sleep(keepAliveTimeout / 2)
+
+				err := ws.WriteControl(websocket.PongMessage, nil, time.Now().Add(time.Second*2))
+				Expect(err).ToNot(HaveOccurred())
+
+				return nil
+			})
+
+			Consistently(func() error {
+				messagesChan <- []byte("message")
+				_, _, err = ws.ReadMessage()
+
+				return err
+			}, 1, 10*time.Millisecond).Should(Succeed())
+
+			ws.Close()
 			Eventually(handlerDone).Should(BeClosed())
 		})
 
