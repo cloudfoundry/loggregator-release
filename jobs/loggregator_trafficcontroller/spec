@@ -6,6 +6,9 @@ templates:
   trafficcontroller.crt.erb: config/certs/trafficcontroller.crt
   trafficcontroller.key.erb: config/certs/trafficcontroller.key
   loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
+  cc_trafficcontroller.crt.erb: config/certs/cc_trafficcontroller.crt
+  cc_trafficcontroller.key.erb: config/certs/cc_trafficcontroller.key
+  mutual_tls_ca.crt.erb: config/certs/mutual_tls_ca.crt
   etcd-client.crt.erb: config/certs/etcd-client.crt
   etcd-client.key.erb: config/certs/etcd-client.key
   etcd-ca.crt.erb: config/certs/etcd-ca.crt
@@ -106,8 +109,16 @@ properties:
   ssl.skip_cert_verify:
     description: "when connecting over https, ignore bad ssl certificates"
     default: false
-  cc.srv_api_uri:
-    description: "API URI of cloud controller"
+  cc.internal_service_hostname:
+    description: "Internal hostname used to resolve the address of the Cloud Controller"
+  cc.tls_port:
+    description: "Port for internal TLS communication"
+  cc.mutual_tls.ca_cert:
+    description: "PEM-encoded CA certificate for secure, mutually authenticated TLS communication"
+  loggregator.tls.cc_trafficcontroller.cert:
+    description: "TLS certificate for communication between Cloud Controller and trafficcontroller"
+  loggregator.tls.cc_trafficcontroller.key:
+    description: "TLS key for communication between Cloud Controller and trafficcontroller"
 
   loggregator.uaa_client_id:
     description: "DEPRECATED in favor of loggregator.uaa.client."
@@ -116,3 +127,6 @@ properties:
   metric_emitter.interval:
     description: "The interval that metrics are emitted to the metron."
     default: "1m"
+
+  cc.srv_api_uri:
+    description: "DEPRECATED: API URI of cloud controller. Replaced by cc.internal_service_hostname and cc.tls_port"

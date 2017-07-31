@@ -9,6 +9,12 @@
     "SkipCertVerify": true,
     "Zone": "z1",
     "ApiHost": "http://127.0.0.1:42123",
+    "CCTLSClientConfig": {
+        "CAFile": "fixtures/loggregator-ca.crt",
+        "CertFile": "fixtures/client.crt",
+        "KeyFile": "fixtures/client.key",
+        "ServerName": ""
+    },
     "SystemDomain": "vcap.me",
     "MetronPort": 37474,
     "UaaHost": "http://127.0.0.1:5678",

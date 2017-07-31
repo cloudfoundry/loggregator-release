@@ -41,6 +41,13 @@
     domain = p("system_domain")
     uaa_host = p("uaa.url", "#{scheme}://uaa.#{domain}")
 
+    cc_tls_config = {
+        "CertFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/cc_trafficcontroller.crt",
+        "KeyFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/cc_trafficcontroller.key",
+        "CAFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/mutual_tls_ca.crt",
+        "ServerName" => p('cc.internal_service_hostname'),
+    }
+
     args = {
         "IP" => spec.ip,
         "EtcdUrls" => etcd_machines,
@@ -51,7 +58,6 @@
         "OutgoingDropsondePort" => p("loggregator.outgoing_dropsonde_port"),
         "GRPC" => grpc_config,
         "SkipCertVerify" => p("ssl.skip_cert_verify"),
-        "ApiHost" => p("cc.srv_api_uri"),
         "SystemDomain" => p("system_domain"),
         "PPROFPort" => p("traffic_controller.pprof_port"),
         "HealthAddr" => p('traffic_controller.health_addr'),
@@ -60,6 +66,8 @@
         "UaaClientSecret" => p("loggregator.uaa.client_secret"),
         "MetronConfig" => metronConfig,
         "MetricEmitterInterval" => p('metric_emitter.interval'),
+        "CCTLSClientConfig" => cc_tls_config,
+        "ApiHost" => "https://#{p('cc.internal_service_hostname')}:#{p('cc.tls_port')}",
     }
 
     if etcd_require_tls

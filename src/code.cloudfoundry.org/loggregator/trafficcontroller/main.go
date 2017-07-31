@@ -56,6 +56,18 @@ func main() {
 	if err != nil {
 		log.Fatalf("Couldn't connect to metric emitter: %s", err)
 	}
+
+	tc := app.NewTrafficController(
+		conf,
+		*disableAccessControl,
+		metricClient,
+		uaaHTTPClient(conf),
+		ccHTTPClient(conf),
+	)
+	tc.Start()
+}
+
+func uaaHTTPClient(conf *app.Config) *http.Client {
 	tlsConfig := plumbing.NewTLSConfig()
 	tlsConfig.InsecureSkipVerify = conf.SkipCertVerify
 	transport := &http.Transport{
@@ -63,16 +75,30 @@ func main() {
 		TLSClientConfig:     tlsConfig,
 		DisableKeepAlives:   true,
 	}
-	httpClient := &http.Client{
+	return &http.Client{
 		Timeout:   20 * time.Second,
 		Transport: transport,
 	}
+}
 
-	tc := app.NewTrafficController(
-		conf,
-		*disableAccessControl,
-		metricClient,
-		httpClient,
+func ccHTTPClient(conf *app.Config) *http.Client {
+	tlsConfig, err := plumbing.NewClientMutualTLSConfig(
+		conf.CCTLSClientConfig.CertFile,
+		conf.CCTLSClientConfig.KeyFile,
+		conf.CCTLSClientConfig.CAFile,
+		conf.CCTLSClientConfig.ServerName,
 	)
-	tc.Start()
+	if err != nil {
+		log.Fatalf("Unable to create CC HTTP Client: %s", err)
+	}
+	tlsConfig.InsecureSkipVerify = conf.SkipCertVerify
+	transport := &http.Transport{
+		TLSHandshakeTimeout: 10 * time.Second,
+		TLSClientConfig:     tlsConfig,
+		DisableKeepAlives:   true,
+	}
+	return &http.Client{
+		Timeout:   20 * time.Second,
+		Transport: transport,
+	}
 }
