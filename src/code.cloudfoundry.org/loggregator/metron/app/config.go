@@ -50,8 +50,8 @@ func ParseConfig(configFile string) (*Config, error) {
 
 func Parse(reader io.Reader) (*Config, error) {
 	config := &Config{
-		MetricBatchIntervalMilliseconds:  5000,
-		RuntimeStatsIntervalMilliseconds: 15000,
+		MetricBatchIntervalMilliseconds:  60000,
+		RuntimeStatsIntervalMilliseconds: 60000,
 	}
 	err := json.NewDecoder(reader).Decode(config)
 	if err != nil {
