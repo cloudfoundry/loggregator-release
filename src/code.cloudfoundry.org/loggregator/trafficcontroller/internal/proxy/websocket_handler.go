@@ -38,7 +38,6 @@ func (h *websocketHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		log.Printf("websocket handler: Not a websocket handshake: %s", err)
 		return
 	}
-	ws.SetWriteDeadline(6 * time.Second)
 	defer ws.Close()
 
 	closeCode, closeMessage := h.runWebsocketUntilClosed(ws)
@@ -78,6 +77,7 @@ func (h *websocketHandler) runWebsocketUntilClosed(ws *websocket.Conn) (closeCod
 			if !ok {
 				return
 			}
+			ws.SetWriteDeadline(time.Now().Add(6 * time.Second))
 			err := ws.WriteMessage(websocket.BinaryMessage, message)
 			if err != nil {
 				return
