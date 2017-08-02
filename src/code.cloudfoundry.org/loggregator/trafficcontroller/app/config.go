@@ -52,6 +52,7 @@ type Config struct {
 	UaaHost                string
 	UaaClient              string
 	UaaClientSecret        string
+	UaaCACert              string
 	MonitorIntervalSeconds uint
 	SecurityEventLog       string
 	PPROFPort              uint32
@@ -139,6 +140,10 @@ func (c *Config) validate() error {
 
 	if c.UaaClientSecret == "" {
 		return errors.New("missing UAA client secret")
+	}
+
+	if c.UaaHost != "" && c.UaaCACert == "" {
+		return errors.New("missing UAA CA certificate")
 	}
 
 	return nil

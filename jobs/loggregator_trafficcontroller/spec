@@ -12,6 +12,7 @@ templates:
   etcd-client.crt.erb: config/certs/etcd-client.crt
   etcd-client.key.erb: config/certs/etcd-client.key
   etcd-ca.crt.erb: config/certs/etcd-ca.crt
+  uaa_ca.crt.erb: config/certs/uaa_ca.crt
   dns_health_check.erb: bin/dns_health_check
 
 packages:
@@ -47,11 +48,12 @@ properties:
     default: "doppler"
   loggregator.uaa.client_secret:
     description: "Doppler's client secret to connect to UAA"
-  uaa.url:
-    description: "URL of UAA"
-  login.protocol:
-    description: "Protocol to use to connect to UAA (used in case uaa.url is not set)"
-    default: https
+  uaa.internal_url:
+    description: "Internal URL of UAA"
+    example: "https://uaa.service.cf.internal:8443"
+  uaa.ca_cert:
+    description: "PEM encoded CA certificate for secure communication to UAA. Required if uaa.url is provided."
+    default: ""
 
   doppler.outgoing_port:
     description: "Port for outgoing doppler messages"
