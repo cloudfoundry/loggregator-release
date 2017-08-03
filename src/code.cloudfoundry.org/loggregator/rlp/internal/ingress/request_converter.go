@@ -30,7 +30,7 @@ func (r requestConverter) convertFilter(v2filter *v2.Filter) *plumbing.Filter {
 	switch v2filter.GetMessage().(type) {
 	case *v2.Filter_Log:
 		f.Message = &plumbing.Filter_Log{
-			&plumbing.LogFilter{},
+			Log: &plumbing.LogFilter{},
 		}
 	}
 

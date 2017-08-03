@@ -24,8 +24,8 @@ func NewQuerier(c EnvelopeConverter, f ContainerMetricFetcher) *Querier {
 	}
 }
 
-func (q *Querier) ContainerMetrics(ctx context.Context, sourceId string, usePreferredTags bool) ([]*v2.Envelope, error) {
-	results := q.fetcher.ContainerMetrics(ctx, sourceId)
+func (q *Querier) ContainerMetrics(ctx context.Context, sourceID string, usePreferredTags bool) ([]*v2.Envelope, error) {
+	results := q.fetcher.ContainerMetrics(ctx, sourceID)
 
 	var v2Envs []*v2.Envelope
 	for _, envBytes := range results {
