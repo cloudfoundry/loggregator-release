@@ -1,7 +1,5 @@
 package egress_test
 
-//go:generate hel
-
 import (
 	"log"
 
