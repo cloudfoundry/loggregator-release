@@ -30,7 +30,8 @@ var _ = Describe("Querier", func() {
 
 	It("requests the correct appID", func() {
 		ctx := context.TODO()
-		server.ContainerMetrics(ctx, "some-app", false)
+		_, err := server.ContainerMetrics(ctx, "some-app", false)
+		Expect(err).ToNot(HaveOccurred())
 		Expect(spyFetcher.appID).To(Equal("some-app"))
 		Expect(spyFetcher.ctx).To(Equal(ctx))
 	})
@@ -52,7 +53,8 @@ var _ = Describe("Querier", func() {
 	It("converts using preferred tags", func() {
 		spyFetcher.results = [][]byte{nil}
 
-		server.ContainerMetrics(context.TODO(), "some-app", true)
+		_, err := server.ContainerMetrics(context.TODO(), "some-app", true)
+		Expect(err).ToNot(HaveOccurred())
 		Expect(spyConverter.usePreferredTags).To(BeTrue())
 	})
 

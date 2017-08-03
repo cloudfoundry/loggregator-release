@@ -63,8 +63,8 @@ var _ = Describe("Receiver", func() {
 				},
 			},
 		}
-		receiver.Receive(context.Background(), req)
-
+		_, err := receiver.Receive(context.Background(), req)
+		Expect(err).ToNot(HaveOccurred())
 		Expect(spySubscriber.req).To(Equal(expectedReq))
 	})
 
@@ -72,7 +72,9 @@ var _ = Describe("Receiver", func() {
 		req := &v2.EgressRequest{UsePreferredTags: false}
 		receiver, err := receiver.Receive(context.Background(), req)
 		Expect(err).ToNot(HaveOccurred())
-		receiver()
+
+		_, err = receiver()
+		Expect(err).ToNot(HaveOccurred())
 
 		Expect(spyConverter.data).To(Equal([]byte("something")))
 		Expect(spyConverter.usePreferredTags).To(BeFalse())
@@ -82,7 +84,9 @@ var _ = Describe("Receiver", func() {
 		req := &v2.EgressRequest{UsePreferredTags: true}
 		receiver, err := receiver.Receive(context.Background(), req)
 		Expect(err).ToNot(HaveOccurred())
-		receiver()
+
+		_, err = receiver()
+		Expect(err).ToNot(HaveOccurred())
 
 		Expect(spyConverter.data).To(Equal([]byte("something")))
 		Expect(spyConverter.usePreferredTags).To(BeTrue())
