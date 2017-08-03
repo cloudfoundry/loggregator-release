@@ -60,6 +60,10 @@ func (m *mockDopplerServer) Subscribe(req *plumbing.SubscriptionRequest, stream 
 	m.SubscribeInput.Stream <- stream
 	return <-m.SubscribeOutput.Err
 }
+
+func (m *mockDopplerServer) BatchSubscribe(req *plumbing.SubscriptionRequest, stream plumbing.Doppler_BatchSubscribeServer) (err error) {
+	return nil
+}
 func (m *mockDopplerServer) ContainerMetrics(ctx context.Context, req *plumbing.ContainerMetricsRequest) (resp *plumbing.ContainerMetricsResponse, err error) {
 	m.ContainerMetricsCalled <- true
 	m.ContainerMetricsInput.Ctx <- ctx

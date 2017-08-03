@@ -50,6 +50,8 @@ type DopplerServer struct {
 	egressMetric        *metricemitter.Counter
 	egressDroppedMetric *metricemitter.Counter
 	health              HealthRegistrar
+	batchInterval       time.Duration
+	batchSize           uint
 }
 
 type sender interface {
@@ -68,6 +70,8 @@ func NewDopplerServer(
 	dumper DataDumper,
 	metricClient MetricClient,
 	health HealthRegistrar,
+	batchInverval time.Duration,
+	batchSize uint,
 ) *DopplerServer {
 	egressMetric := metricClient.NewCounter("egress",
 		metricemitter.WithVersion(2, 0),
@@ -84,6 +88,8 @@ func NewDopplerServer(
 		egressMetric:        egressMetric,
 		egressDroppedMetric: egressDroppedMetric,
 		health:              health,
+		batchInterval:       batchInverval,
+		batchSize:           batchSize,
 	}
 
 	go m.emitMetrics()
@@ -99,6 +105,16 @@ func (m *DopplerServer) Subscribe(req *plumbing.SubscriptionRequest, sender plum
 	defer m.health.Dec("subscriptionCount")
 
 	return m.sendData(req, sender)
+}
+
+// BatchSubscribe is called by GRPC on stream batch requests.
+func (m *DopplerServer) BatchSubscribe(req *plumbing.SubscriptionRequest, sender plumbing.Doppler_BatchSubscribeServer) error {
+	atomic.AddInt64(&m.numSubscriptions, 1)
+	defer atomic.AddInt64(&m.numSubscriptions, -1)
+	m.health.Inc("subscriptionCount")
+	defer m.health.Dec("subscriptionCount")
+
+	return m.sendBatchData(req, sender)
 }
 
 // ContainerMetrics is called by GRPC on container metrics requests.
@@ -167,6 +183,51 @@ func (m *DopplerServer) sendData(req *plumbing.SubscriptionRequest, sender sende
 	}
 
 	return sender.Context().Err()
+}
+func (m *DopplerServer) sendBatchData(req *plumbing.SubscriptionRequest, sender plumbing.Doppler_BatchSubscribeServer) error {
+	d := diodes.NewOneToOne(1000, m)
+	cleanup := m.registrar.Register(req, d)
+	defer cleanup()
+
+	batchData := make([][]byte, 0, m.batchSize)
+	timer := time.NewTimer(m.batchInterval)
+	for {
+		select {
+		case <-sender.Context().Done():
+			return sender.Context().Err()
+		case <-timer.C:
+			if len(batchData) > 0 {
+				err := sender.Send(&plumbing.BatchResponse{Payload: batchData})
+				if err != nil {
+					return err
+				}
+				batchData = batchData[:0]
+			}
+
+			timer.Reset(m.batchInterval)
+		default:
+			data, ok := d.TryNext()
+			if !ok {
+				time.Sleep(10 * time.Millisecond)
+				continue
+			}
+			batchData = append(batchData, data)
+
+			if uint(len(batchData)) >= m.batchSize {
+				err := sender.Send(&plumbing.BatchResponse{Payload: batchData})
+				if err != nil {
+					return err
+				}
+
+				batchData = batchData[:0]
+
+				if !timer.Stop() {
+					<-timer.C
+				}
+				timer.Reset(m.batchInterval)
+			}
+		}
+	}
 }
 
 // Alert logs dropped message counts to stderr.

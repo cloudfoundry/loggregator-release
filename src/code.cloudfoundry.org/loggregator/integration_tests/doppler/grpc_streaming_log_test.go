@@ -17,41 +17,6 @@ import (
 )
 
 var _ = Describe("GRPC Streaming Logs", func() {
-	var primePump = func(conn net.Conn) {
-		logMessage := buildLogMessage()
-		signedLog := signature.SignMessage(logMessage, []byte("secret"))
-
-		go func() {
-			for i := 0; i < 20; i++ {
-				if _, err := conn.Write(signedLog); err != nil {
-					return
-				}
-				time.Sleep(10 * time.Millisecond)
-			}
-		}()
-	}
-
-	var waitForPrimer = func(subscription plumbing.Doppler_SubscribeClient) {
-		_, err := subscription.Recv()
-		Expect(err).ToNot(HaveOccurred())
-	}
-
-	var connectToDoppler = func() net.Conn {
-		in, err := net.Dial("udp", localIPAddress+":8765")
-		Expect(err).ToNot(HaveOccurred())
-		return in
-	}
-
-	var connectToSubscription = func(conf *app.Config, req plumbing.SubscriptionRequest) (*grpc.ClientConn, plumbing.Doppler_SubscribeClient) {
-		conn, client := connectToGRPC(conf)
-
-		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-		subscription, err := client.Subscribe(ctx, &req)
-		Expect(err).ToNot(HaveOccurred())
-
-		return conn, subscription
-	}
-
 	Context("with a subscription established", func() {
 		var (
 			conf         *app.Config
@@ -101,3 +66,38 @@ var _ = Describe("GRPC Streaming Logs", func() {
 		})
 	})
 })
+
+func primePump(conn net.Conn) {
+	logMessage := buildLogMessage()
+	signedLog := signature.SignMessage(logMessage, []byte("secret"))
+
+	go func() {
+		for i := 0; i < 20; i++ {
+			if _, err := conn.Write(signedLog); err != nil {
+				return
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+	}()
+}
+
+func waitForPrimer(subscription plumbing.Doppler_SubscribeClient) {
+	_, err := subscription.Recv()
+	Expect(err).ToNot(HaveOccurred())
+}
+
+func connectToDoppler() net.Conn {
+	in, err := net.Dial("udp", localIPAddress+":8765")
+	Expect(err).ToNot(HaveOccurred())
+	return in
+}
+
+func connectToSubscription(conf *app.Config, req plumbing.SubscriptionRequest) (*grpc.ClientConn, plumbing.Doppler_SubscribeClient) {
+	conn, client := connectToGRPC(conf)
+
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	subscription, err := client.Subscribe(ctx, &req)
+	Expect(err).ToNot(HaveOccurred())
+
+	return conn, subscription
+}

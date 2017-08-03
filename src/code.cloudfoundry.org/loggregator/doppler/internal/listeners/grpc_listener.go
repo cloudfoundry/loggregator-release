@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"time"
 
 	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/doppler/app"
@@ -73,7 +74,7 @@ func NewGRPCListener(
 	// v1 egress
 	plumbingv1.RegisterDopplerServer(
 		grpcServer,
-		v1.NewDopplerServer(reg, sinkmanager, metricClient, health),
+		v1.NewDopplerServer(reg, sinkmanager, metricClient, health, time.Second, 100),
 	)
 
 	// v2 ingress

@@ -552,6 +552,10 @@ func (m *MockDopplerServer) Subscribe(*plumbing.SubscriptionRequest, plumbing.Do
 	return nil
 }
 
+func (m *MockDopplerServer) BatchSubscribe(*plumbing.SubscriptionRequest, plumbing.Doppler_BatchSubscribeServer) error {
+	return nil
+}
+
 func (m *MockDopplerServer) ContainerMetrics(context.Context, *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error) {
 	if m.containerMetric == nil {
 		time.Sleep(5 * time.Second)

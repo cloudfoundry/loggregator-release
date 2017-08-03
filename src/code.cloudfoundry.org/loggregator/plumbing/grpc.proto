@@ -4,6 +4,7 @@ package plumbing;
 
 service Doppler {
   rpc Subscribe(SubscriptionRequest) returns (stream Response) {}
+  rpc BatchSubscribe(SubscriptionRequest) returns (stream BatchResponse) {}
   rpc ContainerMetrics(ContainerMetricsRequest) returns (ContainerMetricsResponse) {}
   rpc RecentLogs(RecentLogsRequest) returns (RecentLogsResponse) {}
 }
@@ -43,6 +44,10 @@ message MetricFilter {
 // want to pay the cost of planning an upgrade path for this to be renamed.
 message Response {
   bytes payload = 1;
+}
+
+message BatchResponse {
+  repeated bytes payload = 1;
 }
 
 message ContainerMetricsRequest {

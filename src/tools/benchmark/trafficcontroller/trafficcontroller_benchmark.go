@@ -157,6 +157,10 @@ func (p *producer) Subscribe(r *plumbing.SubscriptionRequest, s plumbing.Doppler
 	return nil
 }
 
+func (p *producer) BatchSubscribe(r *plumbing.SubscriptionRequest, s plumbing.Doppler_BatchSubscribeServer) error {
+	return nil
+}
+
 func (p *producer) ContainerMetrics(context.Context, *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error) {
 	return nil, nil
 }

@@ -93,6 +93,10 @@ func (fakeDoppler *FakeDoppler) Subscribe(request *plumbing.SubscriptionRequest,
 	return nil
 }
 
+func (fakeDoppler *FakeDoppler) BatchSubscribe(request *plumbing.SubscriptionRequest, server plumbing.Doppler_BatchSubscribeServer) error {
+	return nil
+}
+
 func (fakeDoppler *FakeDoppler) ContainerMetrics(ctx context.Context, request *plumbing.ContainerMetricsRequest) (*plumbing.ContainerMetricsResponse, error) {
 	fakeDoppler.ContainerMetricsRequests <- request
 	resp := new(plumbing.ContainerMetricsResponse)
