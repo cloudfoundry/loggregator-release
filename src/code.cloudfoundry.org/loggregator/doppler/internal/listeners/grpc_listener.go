@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"time"
 
 	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/doppler/app"
@@ -19,6 +20,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 )
 
 // MetricClient creates new CounterMetrics to be emitted periodically.
@@ -63,7 +65,11 @@ func NewGRPCListener(
 		log.Printf("Failed to start listener (port=%d) for gRPC: %s", conf.Port, err)
 		return nil, err
 	}
-	grpcServer := grpc.NewServer(grpc.Creds(transportCreds))
+	kp := keepalive.EnforcementPolicy{
+		MinTime:             5 * time.Minute,
+		PermitWithoutStream: true,
+	}
+	grpcServer := grpc.NewServer(grpc.Creds(transportCreds), grpc.KeepaliveEnforcementPolicy(kp))
 
 	// v1 ingress
 	plumbingv1.RegisterDopplerIngestorServer(

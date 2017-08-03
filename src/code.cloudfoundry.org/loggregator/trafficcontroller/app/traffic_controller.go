@@ -34,6 +34,7 @@ import (
 	"github.com/cloudfoundry/storeadapter/etcdstoreadapter"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 )
 
 // MetricClient creates new CounterMetrics to be emitted periodically.
@@ -160,7 +161,12 @@ func (t *TrafficController) Start() {
 	}
 
 	f.Start()
-	pool := plumbing.NewPool(20, grpc.WithTransportCredentials(creds))
+	kp := keepalive.ClientParameters{
+		Time:                5 * time.Minute,
+		Timeout:             20 * time.Second,
+		PermitWithoutStream: true,
+	}
+	pool := plumbing.NewPool(20, grpc.WithTransportCredentials(creds), grpc.WithKeepaliveParams(kp))
 	grpcConnector := plumbing.NewGRPCConnector(1000, pool, f, batcher, t.metricClient)
 
 	dopplerHandler := http.Handler(
