@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/url"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslog"
@@ -252,15 +251,12 @@ var _ = Describe("SyslogSink", func() {
 	})
 
 	Describe("Exponentially backs off", func() {
-		var timestamps []time.Time
-		var errors int64
+		var timeWrapper *timestampWrapper
 
 		BeforeEach(func() {
-			errors = 0
-			timestamps = []time.Time{}
+			timeWrapper = &timestampWrapper{}
 			errorHandler = func(errorMsg, appId string) {
-				timestamps = append(timestamps, time.Now())
-				atomic.AddInt64(&errors, 1)
+				timeWrapper.append(time.Now())
 			}
 		})
 
@@ -283,21 +279,45 @@ var _ = Describe("SyslogSink", func() {
 
 			close(inputChan)
 
-			Eventually(func() int64 {
-				return atomic.LoadInt64(&errors)
-			}).Should(BeNumerically(">", 5))
+			Eventually(timeWrapper.len).Should(BeNumerically(">", 5))
 
 			// We ignore the difference in timestamps for the 0th iteration because our exponential backoff
 			// strategy starts of with a difference of 1 ms
 			var diff, prevDiff int64
 			for i := 1; i < 5; i++ {
-				delta := timestamps[i+1].Sub(timestamps[i])
+				delta := timeWrapper.get(i + 1).Sub(timeWrapper.get(i))
 				Expect(delta).To(BeNumerically(">", 2*prevDiff))
 				prevDiff = diff
 			}
 		})
 	})
 })
+
+type timestampWrapper struct {
+	mu         sync.Mutex
+	timestamps []time.Time
+}
+
+func (w *timestampWrapper) append(t time.Time) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	w.timestamps = append(w.timestamps, t)
+}
+
+func (w *timestampWrapper) get(idx int) time.Time {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	return w.timestamps[idx]
+}
+
+func (w *timestampWrapper) len() int {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	return len(w.timestamps)
+}
 
 type SyslogWriterRecorder struct {
 	receivedChannel  chan string
