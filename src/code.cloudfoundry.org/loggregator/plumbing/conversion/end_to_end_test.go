@@ -3,11 +3,12 @@ package conversion_test
 import (
 	"time"
 
-	. "code.cloudfoundry.org/loggregator/plumbing/conversion"
+	"code.cloudfoundry.org/loggregator/plumbing/conversion"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
+	"github.com/mohae/deepcopy"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -51,20 +52,21 @@ var _ = Describe("Envelope conversion", func() {
 					InstanceId:    proto.String("test-instance-id"),
 				},
 			}
+			expected := deepcopy.Copy(v1e)
 
 			_, err := proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v2e := ToV2(v1e, false)
+			v2e := conversion.ToV2(v1e, false)
 
 			_, err = proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v1Envs := ToV1(v2e)
+			v1Envs := conversion.ToV1(v2e)
 			Expect(len(v1Envs)).To(Equal(1))
 
 			newV1e := v1Envs[0]
-			Expect(newV1e).To(Equal(v1e))
+			Expect(newV1e).To(Equal(expected))
 		})
 
 		It("converts LogMessage", func() {
@@ -78,7 +80,6 @@ var _ = Describe("Envelope conversion", func() {
 				Tags: map[string]string{
 					"some-random": "tag",
 					"source_id":   "some-app-id",
-					"instance_id": "some-source-instance",
 				},
 				EventType: events.Envelope_LogMessage.Enum(),
 				LogMessage: &events.LogMessage{
@@ -90,20 +91,21 @@ var _ = Describe("Envelope conversion", func() {
 					SourceInstance: proto.String("some-source-instance"),
 				},
 			}
+			expected := deepcopy.Copy(v1e)
 
 			_, err := proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v2e := ToV2(v1e, false)
+			v2e := conversion.ToV2(v1e, false)
 
 			_, err = proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v1Envs := ToV1(v2e)
+			v1Envs := conversion.ToV1(v2e)
 			Expect(len(v1Envs)).To(Equal(1))
 
 			newV1e := v1Envs[0]
-			Expect(newV1e).To(Equal(v1e))
+			Expect(newV1e).To(Equal(expected))
 		})
 
 		It("converts ValueMetric", func() {
@@ -125,20 +127,21 @@ var _ = Describe("Envelope conversion", func() {
 					Unit:  proto.String("some-unit"),
 				},
 			}
+			expected := deepcopy.Copy(v1e)
 
 			_, err := proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v2e := ToV2(v1e, false)
+			v2e := conversion.ToV2(v1e, false)
 
 			_, err = proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v1Envs := ToV1(v2e)
+			v1Envs := conversion.ToV1(v2e)
 			Expect(len(v1Envs)).To(Equal(1))
 
 			newV1e := v1Envs[0]
-			Expect(newV1e).To(Equal(v1e))
+			Expect(newV1e).To(Equal(expected))
 		})
 
 		It("converts CounterEvent", func() {
@@ -160,20 +163,21 @@ var _ = Describe("Envelope conversion", func() {
 					Total: proto.Uint64(4356782),
 				},
 			}
+			expected := deepcopy.Copy(v1e)
 
 			_, err := proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v2e := ToV2(v1e, false)
+			v2e := conversion.ToV2(v1e, false)
 
 			_, err = proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v1Envs := ToV1(v2e)
+			v1Envs := conversion.ToV1(v2e)
 			Expect(len(v1Envs)).To(Equal(1))
 
 			newV1e := v1Envs[0]
-			Expect(newV1e).To(Equal(v1e))
+			Expect(newV1e).To(Equal(expected))
 		})
 
 		It("converts Error", func() {
@@ -195,20 +199,21 @@ var _ = Describe("Envelope conversion", func() {
 					Message: proto.String("some-message"),
 				},
 			}
+			expected := deepcopy.Copy(v1e)
 
 			_, err := proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v2e := ToV2(v1e, false)
+			v2e := conversion.ToV2(v1e, false)
 
 			_, err = proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v1Envs := ToV1(v2e)
+			v1Envs := conversion.ToV1(v2e)
 			Expect(len(v1Envs)).To(Equal(1))
 
 			newV1e := v1Envs[0]
-			Expect(newV1e).To(Equal(v1e))
+			Expect(newV1e).To(Equal(expected))
 		})
 
 		It("ContainerMetric", func() {
@@ -234,20 +239,21 @@ var _ = Describe("Envelope conversion", func() {
 					DiskBytesQuota:   proto.Uint64(458724),
 				},
 			}
+			expected := deepcopy.Copy(v1e)
 
 			_, err := proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v2e := ToV2(v1e, false)
+			v2e := conversion.ToV2(v1e, false)
 
 			_, err = proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v1Envs := ToV1(v2e)
+			v1Envs := conversion.ToV1(v2e)
 			Expect(len(v1Envs)).To(Equal(1))
 
 			newV1e := v1Envs[0]
-			Expect(newV1e).To(Equal(v1e))
+			Expect(newV1e).To(Equal(expected))
 		})
 	})
 
@@ -271,9 +277,8 @@ var _ = Describe("Envelope conversion", func() {
 					"uri":                 ValueText("/hello-world"),
 					"remote_address":      ValueText("10.1.1.0"),
 					"user_agent":          ValueText("Mozilla/5.0"),
-					"status_code":         ValueInteger(200),
-					"content_length":      ValueInteger(1000000),
-					"instance_index":      ValueInteger(10),
+					"status_code":         ValueText("200"),
+					"content_length":      ValueText("1000000"),
 					"routing_instance_id": ValueText("application-id"),
 					"forwarded":           ValueText("6.6.6.6\n8.8.8.8"),
 					"deployment":          ValueText("some-deployment"),
@@ -284,22 +289,20 @@ var _ = Describe("Envelope conversion", func() {
 					"__v1_type":           ValueText("HttpStartStop"),
 				},
 			}
+			expected := deepcopy.Copy(v2e)
 
 			_, err := proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
 
-			envelopes := ToV1(v2e)
+			envelopes := conversion.ToV1(v2e)
 			Expect(len(envelopes)).To(Equal(1))
 			v1e := envelopes[0]
 
 			_, err = proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v1Envs := ToV1(v2e)
-			Expect(len(v1Envs)).To(Equal(1))
-
-			newV1e := v1Envs[0]
-			Expect(newV1e).To(Equal(v1e))
+			newV2e := conversion.ToV2(v1e, false)
+			Expect(newV2e).To(Equal(expected))
 		})
 
 		It("converts Log", func() {
@@ -323,22 +326,20 @@ var _ = Describe("Envelope conversion", func() {
 					"__v1_type":   ValueText("LogMessage"),
 				},
 			}
+			expected := deepcopy.Copy(v2e)
 
 			_, err := proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
 
-			envelopes := ToV1(v2e)
+			envelopes := conversion.ToV1(v2e)
 			Expect(len(envelopes)).To(Equal(1))
 			v1e := envelopes[0]
 
 			_, err = proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v1Envs := ToV1(v2e)
-			Expect(len(v1Envs)).To(Equal(1))
-
-			newV1e := v1Envs[0]
-			Expect(newV1e).To(Equal(v1e))
+			newV2e := conversion.ToV2(v1e, false)
+			Expect(newV2e).To(Equal(expected))
 		})
 
 		It("converts Counter", func() {
@@ -363,22 +364,20 @@ var _ = Describe("Envelope conversion", func() {
 					"__v1_type":  ValueText("CounterEvent"),
 				},
 			}
+			expected := deepcopy.Copy(v2e)
 
 			_, err := proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
 
-			envelopes := ToV1(v2e)
+			envelopes := conversion.ToV1(v2e)
 			Expect(len(envelopes)).To(Equal(1))
 			v1e := envelopes[0]
 
 			_, err = proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v1Envs := ToV1(v2e)
-			Expect(len(v1Envs)).To(Equal(1))
-
-			newV1e := v1Envs[0]
-			Expect(newV1e).To(Equal(v1e))
+			newV2e := conversion.ToV2(v1e, false)
+			Expect(newV2e).To(Equal(expected))
 		})
 
 		It("converts Gauge", func() {
@@ -398,9 +397,6 @@ var _ = Describe("Envelope conversion", func() {
 							"disk_quota": {
 								Unit: "bytes", Value: 1.073741824e+09,
 							},
-							"instance_index": {
-								Unit: "index", Value: 0,
-							},
 							"memory": {
 								Unit: "bytes", Value: 2.5223168e+07,
 							},
@@ -419,22 +415,20 @@ var _ = Describe("Envelope conversion", func() {
 					"__v1_type":  ValueText("ContainerMetric"),
 				},
 			}
+			expected := deepcopy.Copy(v2e)
 
 			_, err := proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
 
-			envelopes := ToV1(v2e)
+			envelopes := conversion.ToV1(v2e)
 			Expect(len(envelopes)).To(Equal(1))
 			v1e := envelopes[0]
 
 			_, err = proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
 
-			v1Envs := ToV1(v2e)
-			Expect(len(v1Envs)).To(Equal(1))
-
-			newV1e := v1Envs[0]
-			Expect(newV1e).To(Equal(v1e))
+			newV2e := conversion.ToV2(v1e, false)
+			Expect(newV2e).To(Equal(expected))
 		})
 	})
 })

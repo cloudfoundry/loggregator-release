@@ -40,8 +40,8 @@ var _ = Describe("CounterEvent", func() {
 
 	Context("given a v1 envelope", func() {
 		var (
-			v1Envelope *events.Envelope
-			v2Envelope *v2.Envelope
+			v1Envelope      *events.Envelope
+			expectedMessage *v2.Envelope_Counter
 		)
 
 		BeforeEach(func() {
@@ -63,13 +63,11 @@ var _ = Describe("CounterEvent", func() {
 					"instance_id": "instance-id",
 				},
 			}
-			v2Envelope = &v2.Envelope{
-				Message: &v2.Envelope_Counter{
-					Counter: &v2.Counter{
-						Name: "name",
-						Value: &v2.Counter_Total{
-							Total: 99,
-						},
+			expectedMessage = &v2.Envelope_Counter{
+				Counter: &v2.Counter{
+					Name: "name",
+					Value: &v2.Counter_Total{
+						Total: 99,
 					},
 				},
 			}
@@ -81,7 +79,7 @@ var _ = Describe("CounterEvent", func() {
 					"Timestamp":  Equal(int64(1234)),
 					"SourceId":   Equal("source-id"),
 					"InstanceId": Equal("instance-id"),
-					"Message":    Equal(v2Envelope.Message),
+					"Message":    Equal(expectedMessage),
 					"DeprecatedTags": Equal(map[string]*v2.Value{
 						"origin":     {Data: &v2.Value_Text{Text: "an-origin"}},
 						"deployment": {Data: &v2.Value_Text{Text: "a-deployment"}},
@@ -102,7 +100,7 @@ var _ = Describe("CounterEvent", func() {
 					"Timestamp":      Equal(int64(1234)),
 					"SourceId":       Equal("source-id"),
 					"InstanceId":     Equal("instance-id"),
-					"Message":        Equal(v2Envelope.Message),
+					"Message":        Equal(expectedMessage),
 					"DeprecatedTags": BeNil(),
 					"Tags": Equal(map[string]string{
 						"origin":     "an-origin",

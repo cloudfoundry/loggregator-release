@@ -13,7 +13,10 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-// ToV1 converts v2 envelopes down to v1 envelopes.
+// ToV1 converts v2 envelopes down to v1 envelopes. e may be mutated during
+// the conversion and share pointers with the new v1 envelope for efficiency
+// in creating the v1 envelope. As a result the envelope you pass in should no
+// longer be used.
 func ToV1(e *v2.Envelope) []*events.Envelope {
 	v1e := createBaseV1(e)
 
@@ -55,10 +58,6 @@ func createBaseV1(e *v2.Envelope) *events.Envelope {
 		v1e.Tags["source_id"] = e.SourceId
 	}
 
-	if e.InstanceId != "" {
-		v1e.Tags["instance_id"] = e.InstanceId
-	}
-
 	return v1e
 }
 
@@ -87,6 +86,10 @@ func getV2Tag(e *v2.Envelope, key string) string {
 func convertTimer(v1e *events.Envelope, v2e *v2.Envelope) {
 	timer := v2e.GetTimer()
 	v1e.EventType = events.Envelope_HttpStartStop.Enum()
+	instanceIndex, err := strconv.Atoi(v2e.InstanceId)
+	if err != nil {
+		instanceIndex = 0
+	}
 
 	method := events.Method(events.Method_value[getV2Tag(v2e, "method")])
 	peerType := events.PeerType(events.PeerType_value[getV2Tag(v2e, "peer_type")])
@@ -103,7 +106,7 @@ func convertTimer(v1e *events.Envelope, v2e *v2.Envelope) {
 		UserAgent:      proto.String(getV2Tag(v2e, "user_agent")),
 		StatusCode:     proto.Int32(int32(atoi(getV2Tag(v2e, "status_code")))),
 		ContentLength:  proto.Int64(atoi(getV2Tag(v2e, "content_length"))),
-		InstanceIndex:  proto.Int32(int32(atoi(getV2Tag(v2e, "instance_index")))),
+		InstanceIndex:  proto.Int32(int32(instanceIndex)),
 		InstanceId:     proto.String(getV2Tag(v2e, "routing_instance_id")),
 		Forwarded:      strings.Split(getV2Tag(v2e, "forwarded"), "\n"),
 	}
@@ -116,7 +119,6 @@ func convertTimer(v1e *events.Envelope, v2e *v2.Envelope) {
 	delete(v1e.Tags, "user_agent")
 	delete(v1e.Tags, "status_code")
 	delete(v1e.Tags, "content_length")
-	delete(v1e.Tags, "instance_index")
 	delete(v1e.Tags, "routing_instance_id")
 	delete(v1e.Tags, "forwarded")
 }
@@ -164,6 +166,9 @@ func recoverError(v1e *events.Envelope, v2e *v2.Envelope) {
 func convertCounter(v1e *events.Envelope, v2e *v2.Envelope) {
 	counterEvent := v2e.GetCounter()
 	v1e.EventType = events.Envelope_CounterEvent.Enum()
+	if v2e.InstanceId != "" {
+		v1e.GetTags()["instance_id"] = v2e.InstanceId
+	}
 	v1e.CounterEvent = &events.CounterEvent{
 		Name:  proto.String(counterEvent.Name),
 		Delta: proto.Uint64(0),
@@ -187,6 +192,9 @@ func convertGauge(v2e *v2.Envelope) []*events.Envelope {
 			return nil
 		}
 
+		if v2e.InstanceId != "" {
+			v1e.GetTags()["instance_id"] = v2e.InstanceId
+		}
 		v1e.ValueMetric = &events.ValueMetric{
 			Name:  proto.String(key),
 			Unit:  proto.String(unit),
@@ -212,9 +220,12 @@ func tryConvertContainerMetric(v2e *v2.Envelope) *events.Envelope {
 	if len(gaugeEvent.Metrics) == 1 {
 		return nil
 	}
+	instanceIndex, err := strconv.Atoi(v2e.InstanceId)
+	if err != nil {
+		instanceIndex = 0
+	}
 
 	required := []string{
-		"instance_index",
 		"cpu",
 		"memory",
 		"disk",
@@ -231,7 +242,7 @@ func tryConvertContainerMetric(v2e *v2.Envelope) *events.Envelope {
 	v1e.EventType = events.Envelope_ContainerMetric.Enum()
 	v1e.ContainerMetric = &events.ContainerMetric{
 		ApplicationId:    proto.String(v2e.SourceId),
-		InstanceIndex:    proto.Int32(int32(gaugeEvent.Metrics["instance_index"].Value)),
+		InstanceIndex:    proto.Int32(int32(instanceIndex)),
 		CpuPercentage:    proto.Float64(gaugeEvent.Metrics["cpu"].Value),
 		MemoryBytes:      proto.Uint64(uint64(gaugeEvent.Metrics["memory"].Value)),
 		DiskBytes:        proto.Uint64(uint64(gaugeEvent.Metrics["disk"].Value)),

@@ -3,6 +3,7 @@ package conversion
 import (
 	"encoding/binary"
 	"fmt"
+	"strconv"
 	"strings"
 
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
@@ -10,7 +11,10 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
-// ToV2 converts v1 envelopes up to v2 envelopes.
+// ToV2 converts v1 envelopes up to v2 envelopes. e may be mutated during the
+// conversion and share pointers with the resulting v2 envelope for efficiency
+// in creating the v2 envelope. As a result the envelope you pass in should no
+// longer be used.
 func ToV2(e *events.Envelope, usePreferredTags bool) *v2.Envelope {
 	v2e := &v2.Envelope{
 		Timestamp: e.GetTimestamp(),
@@ -31,9 +35,6 @@ func ToV2(e *events.Envelope, usePreferredTags bool) *v2.Envelope {
 		v2e.SourceId = e.GetDeployment() + "/" + e.GetJob()
 	}
 	unsetV2Tag(v2e, "source_id")
-
-	v2e.InstanceId = e.GetTags()["instance_id"]
-	unsetV2Tag(v2e, "instance_id")
 
 	switch e.GetEventType() {
 	case events.Envelope_LogMessage:
@@ -120,6 +121,7 @@ func convertAppID(appID, sourceID string) string {
 func convertHTTPStartStop(v2e *v2.Envelope, v1e *events.Envelope, usePreferredTags bool) {
 	t := v1e.GetHttpStartStop()
 	v2e.SourceId = convertAppUUID(t.GetApplicationId(), v2e.SourceId)
+	v2e.InstanceId = strconv.Itoa(int(t.GetInstanceIndex()))
 	v2e.Message = &v2.Envelope_Timer{
 		Timer: &v2.Timer{
 			Name:  "http",
@@ -135,7 +137,6 @@ func convertHTTPStartStop(v2e *v2.Envelope, v1e *events.Envelope, usePreferredTa
 	setV2Tag(v2e, "user_agent", t.GetUserAgent(), usePreferredTags)
 	setV2Tag(v2e, "status_code", t.GetStatusCode(), usePreferredTags)
 	setV2Tag(v2e, "content_length", t.GetContentLength(), usePreferredTags)
-	setV2Tag(v2e, "instance_index", t.GetInstanceIndex(), usePreferredTags)
 	setV2Tag(v2e, "routing_instance_id", t.GetInstanceId(), usePreferredTags)
 	setV2Tag(v2e, "forwarded", strings.Join(t.GetForwarded(), "\n"), usePreferredTags)
 }
@@ -161,6 +162,7 @@ func convertLogMessage(v2e *v2.Envelope, e *events.Envelope, usePreferredTags bo
 
 func convertValueMetric(v2e *v2.Envelope, e *events.Envelope) {
 	t := e.GetValueMetric()
+	v2e.InstanceId = e.GetTags()["instance_id"]
 	v2e.Message = &v2.Envelope_Gauge{
 		Gauge: &v2.Gauge{
 			Metrics: map[string]*v2.GaugeValue{
@@ -175,6 +177,8 @@ func convertValueMetric(v2e *v2.Envelope, e *events.Envelope) {
 
 func convertCounterEvent(v2e *v2.Envelope, e *events.Envelope) {
 	t := e.GetCounterEvent()
+	v2e.InstanceId = e.GetTags()["instance_id"]
+	unsetV2Tag(v2e, "instance_id")
 	v2e.Message = &v2.Envelope_Counter{
 		Counter: &v2.Counter{
 			Name: t.GetName(),
@@ -188,13 +192,10 @@ func convertCounterEvent(v2e *v2.Envelope, e *events.Envelope) {
 func convertContainerMetric(v2e *v2.Envelope, e *events.Envelope) {
 	t := e.GetContainerMetric()
 	v2e.SourceId = convertAppID(t.GetApplicationId(), v2e.SourceId)
+	v2e.InstanceId = strconv.Itoa(int(t.GetInstanceIndex()))
 	v2e.Message = &v2.Envelope_Gauge{
 		Gauge: &v2.Gauge{
 			Metrics: map[string]*v2.GaugeValue{
-				"instance_index": {
-					Unit:  "index",
-					Value: float64(t.GetInstanceIndex()),
-				},
 				"cpu": {
 					Unit:  "percentage",
 					Value: t.GetCpuPercentage(),
