@@ -17,14 +17,11 @@ var _ = Describe("ContainerMetric", func() {
 	Context("given a v2 envelope", func() {
 		It("converts to a v1 envelope", func() {
 			envelope := &v2.Envelope{
-				SourceId: "some-id",
+				SourceId:   "some-id",
+				InstanceId: "123",
 				Message: &v2.Envelope_Gauge{
 					Gauge: &v2.Gauge{
 						Metrics: map[string]*v2.GaugeValue{
-							"instance_index": {
-								Unit:  "index",
-								Value: 123,
-							},
 							"cpu": {
 								Unit:  "percentage",
 								Value: 11,
@@ -74,12 +71,11 @@ var _ = Describe("ContainerMetric", func() {
 				Message: &v2.Envelope_Gauge{
 					Gauge: &v2.Gauge{
 						Metrics: map[string]*v2.GaugeValue{
-							"instance_index": nil,
-							"cpu":            nil,
-							"memory":         nil,
-							"disk":           nil,
-							"memory_quota":   nil,
-							"disk_quota":     nil,
+							"cpu":          nil,
+							"memory":       nil,
+							"disk":         nil,
+							"memory_quota": nil,
+							"disk_quota":   nil,
 						},
 					},
 				},
@@ -89,8 +85,8 @@ var _ = Describe("ContainerMetric", func() {
 
 	Context("given a v1 envelope", func() {
 		var (
-			v1Envelope *events.Envelope
-			v2Envelope *v2.Envelope
+			v1Envelope      *events.Envelope
+			expectedMessage *v2.Envelope_Gauge
 		)
 
 		BeforeEach(func() {
@@ -112,39 +108,31 @@ var _ = Describe("ContainerMetric", func() {
 					DiskBytesQuota:   proto.Uint64(19),
 				},
 				Tags: map[string]string{
-					"custom_tag":  "custom-value",
-					"instance_id": "instance-id",
+					"custom_tag": "custom-value",
 				},
 			}
-			v2Envelope = &v2.Envelope{
-				SourceId: "some-id",
-				Message: &v2.Envelope_Gauge{
-					Gauge: &v2.Gauge{
-						Metrics: map[string]*v2.GaugeValue{
-							"instance_index": {
-								Unit:  "index",
-								Value: 123,
-							},
-							"cpu": {
-								Unit:  "percentage",
-								Value: 11,
-							},
-							"memory": {
-								Unit:  "bytes",
-								Value: 13,
-							},
-							"disk": {
-								Unit:  "bytes",
-								Value: 15,
-							},
-							"memory_quota": {
-								Unit:  "bytes",
-								Value: 17,
-							},
-							"disk_quota": {
-								Unit:  "bytes",
-								Value: 19,
-							},
+			expectedMessage = &v2.Envelope_Gauge{
+				Gauge: &v2.Gauge{
+					Metrics: map[string]*v2.GaugeValue{
+						"cpu": {
+							Unit:  "percentage",
+							Value: 11,
+						},
+						"memory": {
+							Unit:  "bytes",
+							Value: 13,
+						},
+						"disk": {
+							Unit:  "bytes",
+							Value: 15,
+						},
+						"memory_quota": {
+							Unit:  "bytes",
+							Value: 17,
+						},
+						"disk_quota": {
+							Unit:  "bytes",
+							Value: 19,
 						},
 					},
 				},
@@ -155,9 +143,9 @@ var _ = Describe("ContainerMetric", func() {
 			It("converts to a v2 envelope using DeprecatedTags", func() {
 				Expect(*conversion.ToV2(v1Envelope, false)).To(MatchFields(0, Fields{
 					"Timestamp":  Equal(int64(1234)),
-					"SourceId":   Equal(v2Envelope.SourceId),
-					"Message":    Equal(v2Envelope.Message),
-					"InstanceId": Equal("instance-id"),
+					"SourceId":   Equal("some-id"),
+					"Message":    Equal(expectedMessage),
+					"InstanceId": Equal("123"),
 					"DeprecatedTags": Equal(map[string]*v2.Value{
 						"origin":     {Data: &v2.Value_Text{Text: "an-origin"}},
 						"deployment": {Data: &v2.Value_Text{Text: "a-deployment"}},
@@ -172,7 +160,7 @@ var _ = Describe("ContainerMetric", func() {
 			})
 
 			It("sets the source ID to deployment/job when App ID is missing", func() {
-				v1Envelope := &events.Envelope{
+				localV1Envelope := &events.Envelope{
 					Deployment:      proto.String("some-deployment"),
 					Job:             proto.String("some-job"),
 					EventType:       events.Envelope_ContainerMetric.Enum(),
@@ -183,7 +171,7 @@ var _ = Describe("ContainerMetric", func() {
 					SourceId: "some-deployment/some-job",
 				}
 
-				converted := conversion.ToV2(v1Envelope, false)
+				converted := conversion.ToV2(localV1Envelope, false)
 
 				Expect(*converted).To(MatchFields(IgnoreExtras, Fields{
 					"SourceId": Equal(expectedV2Envelope.SourceId),
@@ -195,9 +183,9 @@ var _ = Describe("ContainerMetric", func() {
 			It("converts to a v2 envelope using Tags", func() {
 				Expect(*conversion.ToV2(v1Envelope, true)).To(MatchFields(0, Fields{
 					"Timestamp":      Equal(int64(1234)),
-					"SourceId":       Equal(v2Envelope.SourceId),
-					"Message":        Equal(v2Envelope.Message),
-					"InstanceId":     Equal("instance-id"),
+					"SourceId":       Equal("some-id"),
+					"Message":        Equal(expectedMessage),
+					"InstanceId":     Equal("123"),
 					"DeprecatedTags": BeNil(),
 					"Tags": Equal(map[string]string{
 						"origin":     "an-origin",

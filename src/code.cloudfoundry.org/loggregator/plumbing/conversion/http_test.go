@@ -20,7 +20,8 @@ var _ = Describe("HTTP", func() {
 
 		BeforeEach(func() {
 			v2Envelope = &v2.Envelope{
-				SourceId: "b3015d69-09cd-476d-aace-ad2d824d5ab7",
+				SourceId:   "b3015d69-09cd-476d-aace-ad2d824d5ab7",
+				InstanceId: "10",
 				Message: &v2.Envelope_Timer{
 					Timer: &v2.Timer{
 						Name:  "http",
@@ -37,7 +38,6 @@ var _ = Describe("HTTP", func() {
 					"user_agent":          ValueText("Mozilla/5.0"),
 					"status_code":         ValueText("200"),
 					"content_length":      ValueText("1000000"),
-					"instance_index":      ValueText("10"),
 					"routing_instance_id": ValueText("application-id"),
 					"forwarded":           ValueText("6.6.6.6\n8.8.8.8"),
 				},
@@ -153,7 +153,6 @@ var _ = Describe("HTTP", func() {
 						"user_agent":          ValueText("Mozilla/5.0"),
 						"status_code":         ValueText("200"),
 						"content_length":      ValueText("1000000"),
-						"instance_index":      ValueText("10"),
 						"routing_instance_id": ValueText("application-id"),
 						"forwarded":           ValueText("6.6.6.6\n8.8.8.8"),
 						"deployment":          ValueText("some-deployment"),

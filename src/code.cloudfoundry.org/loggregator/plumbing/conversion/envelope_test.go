@@ -8,16 +8,13 @@ import (
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
+	"github.com/mohae/deepcopy"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 )
 
 var _ = Describe("Envelope", func() {
-	ValueText := func(s string) *v2.Value {
-		return &v2.Value{&v2.Value_Text{Text: s}}
-	}
-
 	Context("given a v2 envelope", func() {
 		It("sets v1 specific properties", func() {
 			envelope := &v2.Envelope{
@@ -154,13 +151,16 @@ var _ = Describe("Envelope", func() {
 					"ip":         "some-ip",
 				},
 			}
+			expected := deepcopy.Copy(v1).(*events.Envelope)
+
 			converted := conversion.ToV2(v1, true)
-			Expect(converted.Tags["random-tag"]).To(Equal(v1.Tags["random-tag"]))
-			Expect(converted.Tags["origin"]).To(Equal(v1.Tags["origin"]))
-			Expect(converted.Tags["deployment"]).To(Equal(v1.Tags["deployment"]))
-			Expect(converted.Tags["job"]).To(Equal(v1.Tags["job"]))
-			Expect(converted.Tags["index"]).To(Equal(v1.Tags["index"]))
-			Expect(converted.Tags["ip"]).To(Equal(v1.Tags["ip"]))
+
+			Expect(converted.Tags["random-tag"]).To(Equal(expected.Tags["random-tag"]))
+			Expect(converted.Tags["origin"]).To(Equal(expected.Tags["origin"]))
+			Expect(converted.Tags["deployment"]).To(Equal(expected.Tags["deployment"]))
+			Expect(converted.Tags["job"]).To(Equal(expected.Tags["job"]))
+			Expect(converted.Tags["index"]).To(Equal(expected.Tags["index"]))
+			Expect(converted.Tags["ip"]).To(Equal(expected.Tags["ip"]))
 		})
 	})
 })
