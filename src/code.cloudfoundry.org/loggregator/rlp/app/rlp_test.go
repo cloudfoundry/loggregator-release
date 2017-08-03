@@ -28,7 +28,6 @@ import (
 var _ = Describe("Start", func() {
 	It("receive messages via egress client", func() {
 		doppler, dopplerLis := setupDoppler()
-		defer dopplerLis.Close()
 
 		egressAddr, _ := setupRLP(dopplerLis, "localhost:0")
 
@@ -54,11 +53,11 @@ var _ = Describe("Start", func() {
 		envelope, err := egressStream.Recv()
 		Expect(err).ToNot(HaveOccurred())
 		Expect(envelope.GetDeprecatedTags()["origin"].GetText()).To(Equal("some-origin"))
+		Expect(dopplerLis.Close()).To(Succeed())
 	})
 
 	It("receives container metrics via egress query client", func() {
 		doppler, dopplerLis := setupDoppler()
-		defer dopplerLis.Close()
 		doppler.ContainerMetricsOutput.Err <- nil
 		doppler.ContainerMetricsOutput.Resp <- &plumbing.ContainerMetricsResponse{
 			Payload: [][]byte{buildContainerMetric()},
@@ -81,11 +80,11 @@ var _ = Describe("Start", func() {
 		Eventually(f).Should(Succeed())
 
 		Expect(resp.Envelopes).To(HaveLen(1))
+		Expect(dopplerLis.Close()).To(Succeed())
 	})
 
 	It("limits the number of allowed connections", func() {
 		doppler, dopplerLis := setupDoppler()
-		defer dopplerLis.Close()
 		doppler.ContainerMetricsOutput.Err <- nil
 		doppler.ContainerMetricsOutput.Resp <- &plumbing.ContainerMetricsResponse{
 			Payload: [][]byte{buildContainerMetric()},
@@ -111,12 +110,12 @@ var _ = Describe("Start", func() {
 			}
 		}
 		Eventually(createStream).Should(HaveOccurred())
+		Expect(dopplerLis.Close()).To(Succeed())
 	})
 
 	Describe("draining", func() {
 		It("Stops accepting new connections", func() {
 			doppler, dopplerLis := setupDoppler()
-			defer dopplerLis.Close()
 			doppler.ContainerMetricsOutput.Err <- nil
 			doppler.ContainerMetricsOutput.Resp <- &plumbing.ContainerMetricsResponse{
 				Payload: [][]byte{buildContainerMetric()},
@@ -143,12 +142,11 @@ var _ = Describe("Start", func() {
 			})
 			Expect(err).To(HaveOccurred())
 			Expect(ctx.Done()).ToNot(BeClosed())
+			Expect(dopplerLis.Close()).To(Succeed())
 		})
 
 		It("Drains the envelopes", func() {
 			doppler, dopplerLis := setupDoppler()
-			defer dopplerLis.Close()
-
 			egressAddr, rlp := setupRLP(dopplerLis, "localhost:0")
 
 			stream, cleanup := setupRLPStream(egressAddr)
@@ -184,7 +182,8 @@ var _ = Describe("Start", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			var e events.Envelope
-			proto.Unmarshal(expectedEnvelope, &e)
+			err = proto.Unmarshal(expectedEnvelope, &e)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(envelope).To(Equal(conversion.ToV2(&e, false)))
 
 			errs := make(chan error, 100)
@@ -196,6 +195,7 @@ var _ = Describe("Start", func() {
 			}()
 			Eventually(errs).Should(Receive(HaveOccurred()))
 			Eventually(done).Should(BeClosed())
+			Expect(dopplerLis.Close()).To(Succeed())
 		})
 
 	})
@@ -203,7 +203,6 @@ var _ = Describe("Start", func() {
 	Describe("health endpoint", func() {
 		It("returns health metrics", func() {
 			doppler, dopplerLis := setupDoppler()
-			defer dopplerLis.Close()
 			doppler.ContainerMetricsOutput.Err <- nil
 			doppler.ContainerMetricsOutput.Resp <- &plumbing.ContainerMetricsResponse{
 				Payload: [][]byte{buildContainerMetric()},
@@ -216,13 +215,15 @@ var _ = Describe("Start", func() {
 				resp, err = http.Get(fmt.Sprintf("http://localhost:8080/health"))
 				return err
 			}).Should(Succeed())
-
-			defer resp.Body.Close()
+			defer func() {
+				Expect(resp.Body.Close()).To(Succeed())
+			}()
 
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			body, err := ioutil.ReadAll(resp.Body)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(body).To(ContainSubstring("subscriptionCount"))
+			Expect(dopplerLis.Close()).To(Succeed())
 		})
 	})
 })
@@ -273,7 +274,9 @@ func setupDoppler() (*mockDopplerServer, net.Listener) {
 
 	grpcServer := grpc.NewServer(grpc.Creds(tlsCredentials))
 	plumbing.RegisterDopplerServer(grpcServer, doppler)
-	go grpcServer.Serve(lis)
+	go func() {
+		log.Println(grpcServer.Serve(lis))
+	}()
 	return doppler, lis
 }
 
@@ -325,7 +328,7 @@ func setupRLPClient(egressAddr string) (v2.EgressClient, func()) {
 	egressClient := v2.NewEgressClient(conn)
 
 	return egressClient, func() {
-		conn.Close()
+		Expect(conn.Close()).To(Succeed())
 	}
 }
 
@@ -360,6 +363,6 @@ func setupRLPQueryClient(egressAddr string) (v2.EgressQueryClient, func()) {
 	egressClient := v2.NewEgressQueryClient(conn)
 
 	return egressClient, func() {
-		conn.Close()
+		Expect(conn.Close()).To(Succeed())
 	}
 }
