@@ -26,20 +26,21 @@ var _ = Describe("QueryServer", func() {
 
 	It("requests the correct appID", func() {
 		ctx := context.TODO()
-		server.ContainerMetrics(ctx, &v2.ContainerMetricRequest{
+		_, err := server.ContainerMetrics(ctx, &v2.ContainerMetricRequest{
 			SourceId: "some-app",
 		})
+		Expect(err).ToNot(HaveOccurred())
 		Expect(spy.appID).To(Equal("some-app"))
 		Expect(spy.usePreferredTags).To(BeFalse())
 		Expect(spy.ctx).To(Equal(ctx))
 	})
 
 	It("requests the correct usePreferredTags", func() {
-		ctx := context.TODO()
-		server.ContainerMetrics(ctx, &v2.ContainerMetricRequest{
+		_, err := server.ContainerMetrics(context.TODO(), &v2.ContainerMetricRequest{
 			UsePreferredTags: true,
 			SourceId:         "some-app",
 		})
+		Expect(err).ToNot(HaveOccurred())
 		Expect(spy.usePreferredTags).To(BeTrue())
 	})
 

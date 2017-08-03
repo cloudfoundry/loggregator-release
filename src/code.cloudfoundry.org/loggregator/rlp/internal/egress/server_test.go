@@ -25,12 +25,10 @@ var _ = Describe("Server", func() {
 		receiver       *spyReceiver
 		receiverServer *spyReceiverServer
 		server         *egress.Server
-		ctx            context.Context
 		metricClient   *testhelper.SpyMetricClient
 	)
 
 	BeforeEach(func() {
-		ctx = context.Background()
 		metricClient = testhelper.NewMetricClient()
 	})
 
@@ -65,7 +63,8 @@ var _ = Describe("Server", func() {
 			receiver = newSpyReceiver(10)
 
 			server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
-			server.Receiver(&v2.EgressRequest{}, receiverServer)
+			err := server.Receiver(&v2.EgressRequest{}, receiverServer)
+			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(receiverServer.EnvelopeCount).Should(Equal(int64(10)))
 		})
@@ -76,7 +75,10 @@ var _ = Describe("Server", func() {
 
 			ctx, cancel := context.WithCancel(context.TODO())
 			server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), ctx)
-			go server.Receiver(&v2.EgressRequest{}, receiverServer)
+			go func() {
+				err := server.Receiver(&v2.EgressRequest{}, receiverServer)
+				Expect(err).ToNot(HaveOccurred())
+			}()
 
 			cancel()
 
@@ -105,7 +107,8 @@ var _ = Describe("Server", func() {
 				receiver = newSpyReceiver(10)
 
 				server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
-				server.Receiver(&v2.EgressRequest{}, receiverServer)
+				err := server.Receiver(&v2.EgressRequest{}, receiverServer)
+				Expect(err).ToNot(HaveOccurred())
 
 				Eventually(func() uint64 {
 					return metricClient.GetDelta("egress")
