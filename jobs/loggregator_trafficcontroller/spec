@@ -51,6 +51,7 @@ properties:
   uaa.internal_url:
     description: "Internal URL of UAA"
     example: "https://uaa.service.cf.internal:8443"
+    default: ""
   uaa.ca_cert:
     description: "PEM encoded CA certificate for secure communication to UAA. Required if uaa.url is provided."
     default: ""
