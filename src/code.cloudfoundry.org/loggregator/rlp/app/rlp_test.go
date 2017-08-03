@@ -69,8 +69,10 @@ var _ = Describe("Start", func() {
 
 		var resp *v2.QueryResponse
 		f := func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+
 			var err error
-			ctx, _ := context.WithTimeout(context.Background(), time.Second)
 			resp, err = egressClient.ContainerMetrics(ctx, &v2.ContainerMetricRequest{
 				SourceId: "some-app",
 			})
@@ -93,7 +95,9 @@ var _ = Describe("Start", func() {
 		egressAddr, _ := setupRLP(dopplerLis, "localhost:0")
 		createStream := func() error {
 			egressClient, _ := setupRLPClient(egressAddr)
-			ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			defer cancel()
+
 			c, err := egressClient.Receiver(ctx, &v2.EgressRequest{})
 			if err != nil {
 				return err
@@ -127,7 +131,9 @@ var _ = Describe("Start", func() {
 			defer cleanup()
 
 			Eventually(func() error {
-				ctx, _ := context.WithTimeout(context.Background(), 500*time.Millisecond)
+				ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+				defer cancel()
+
 				_, err := egressClient.ContainerMetrics(ctx, &v2.ContainerMetricRequest{
 					SourceId: "some-id",
 				})
@@ -136,7 +142,9 @@ var _ = Describe("Start", func() {
 
 			rlp.Stop()
 
-			ctx, _ := context.WithTimeout(context.Background(), time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+
 			_, err := egressClient.ContainerMetrics(ctx, &v2.ContainerMetricRequest{
 				SourceId: "some-id",
 			})
