@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/x509"
 	"flag"
 	"io/ioutil"
 	"log"
@@ -70,6 +71,8 @@ func main() {
 func uaaHTTPClient(conf *app.Config) *http.Client {
 	tlsConfig := plumbing.NewTLSConfig()
 	tlsConfig.InsecureSkipVerify = conf.SkipCertVerify
+	tlsConfig.RootCAs = loadUaaCA(conf)
+
 	transport := &http.Transport{
 		TLSHandshakeTimeout: 10 * time.Second,
 		TLSClientConfig:     tlsConfig,
@@ -101,4 +104,23 @@ func ccHTTPClient(conf *app.Config) *http.Client {
 		Timeout:   20 * time.Second,
 		Transport: transport,
 	}
+}
+
+func loadUaaCA(conf *app.Config) *x509.CertPool {
+	if conf.UaaHost != "" {
+		caCert, err := ioutil.ReadFile(conf.UaaCACert)
+		if err != nil {
+			log.Fatalf("Failed to read UAA CA certificate: %s", err)
+		}
+
+		certPool := x509.NewCertPool()
+		ok := certPool.AppendCertsFromPEM(caCert)
+		if !ok {
+			log.Fatal("Failed to parse UAA CA certificate.")
+		}
+
+		return certPool
+	}
+
+	return nil
 }
