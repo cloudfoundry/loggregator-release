@@ -213,8 +213,6 @@ func (s *SpyIngressServer) Sender(sender v2.Ingress_SenderServer) error {
 		}
 		s.envelopes <- e
 	}
-
-	return nil
 }
 
 func (s *SpyIngressServer) BatchSender(sender v2.Ingress_BatchSenderServer) error {
