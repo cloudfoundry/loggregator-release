@@ -20,6 +20,7 @@ func main() {
 		log.Fatal(err)
 	}
 	port := os.Getenv("PORT")
+	instanceID := os.Getenv("INSTANCE_GUID")
 
 	// these should be provided by you
 	uaaAddr := os.Getenv("UAA_ADDR")
@@ -47,6 +48,7 @@ func main() {
 	reporter := reliability.NewDataDogReporter(
 		dataDogAPIKey,
 		host,
+		instanceID,
 		httpClient,
 	)
 

@@ -21,6 +21,7 @@ var _ = Describe("DataDogReporter", func() {
 		r := reliability.NewDataDogReporter(
 			"somekey",
 			"mycoolhost.cfapps.io",
+			"sweet-instance-id",
 			spyHTTPClient,
 		)
 
@@ -44,12 +45,12 @@ var _ = Describe("DataDogReporter", func() {
 			"points": [[%d, %d]],
 			"type": "gauge",
 			"host": "mycoolhost.cfapps.io",
-			"tags": ["firehose-nozzle", "delay:%d"]},
+			"tags": ["firehose-nozzle", "delay:%d", "instance_id:sweet-instance-id"]},
 			{"metric": "smoke_test.loggregator.cycles",
 			"points": [[%d, %d]],
 			"type": "gauge",
 			"host": "mycoolhost.cfapps.io",
-			"tags": ["firehose-nozzle", "delay:%d"]}]}`,
+			"tags": ["firehose-nozzle", "delay:%d", "instance_id:sweet-instance-id"]}]}`,
 			now.Unix(), 12345, 1*time.Second,
 			now.Unix(), 54321, 1*time.Second,
 		)
@@ -63,6 +64,7 @@ var _ = Describe("DataDogReporter", func() {
 		r := reliability.NewDataDogReporter(
 			"somekey",
 			"mycoolhost.cfapps.io",
+			"sweet-instance-id",
 			spyHTTPClient,
 		)
 
@@ -78,6 +80,7 @@ var _ = Describe("DataDogReporter", func() {
 		r := reliability.NewDataDogReporter(
 			"somekey",
 			"mycoolhost.cfapps.io",
+			"sweet-instance-id",
 			spyHTTPClient,
 		)
 
