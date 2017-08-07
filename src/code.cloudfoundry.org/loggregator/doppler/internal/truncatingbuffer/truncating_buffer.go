@@ -12,8 +12,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-var lgrSource = proto.String("LGR")
-
 type TruncatingBuffer struct {
 	inputChannel               <-chan *events.Envelope
 	context                    BufferContext
@@ -157,7 +155,7 @@ func generateLogMessage(deltaDropped, totalDropped uint64, appId, source, destin
 		Message:     []byte(messageString),
 		AppId:       &appId,
 		MessageType: &messageType,
-		SourceType:  lgrSource,
+		SourceType:  proto.String("LGR"),
 		Timestamp:   proto.Int64(currentTime.UnixNano()),
 	}
 
