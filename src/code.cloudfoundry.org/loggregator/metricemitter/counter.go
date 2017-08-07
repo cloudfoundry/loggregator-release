@@ -8,6 +8,8 @@ import (
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 )
 
+// Counter stores data about a counter metric to be used by the metric emitter
+// Client.
 type Counter struct {
 	Tagged
 	name     string
@@ -15,12 +17,19 @@ type Counter struct {
 	delta    uint64
 }
 
+// Tagged is a struct that is embeded into metrics to give them common
+// functionality around tags.
 type Tagged struct {
 	tags map[string]*v2.Value
 }
 
+// MetricOption is a function that can be passed to a metric on initialization
+// that configures the metric.
 type MetricOption func(Tagged)
 
+// NewCounter initializes a new Counter metric with a given name, sourceID and
+// MetricOptions. This should be initialized through the metric emitter Client
+// but is exported for making it easier to test metric emission.
 func NewCounter(name, sourceID string, opts ...MetricOption) *Counter {
 	m := &Counter{
 		name:     name,
@@ -35,14 +44,21 @@ func NewCounter(name, sourceID string, opts ...MetricOption) *Counter {
 	return m
 }
 
+// Increment atomically adds the given value to the Counters delta.
 func (m *Counter) Increment(c uint64) {
 	atomic.AddUint64(&m.delta, c)
 }
 
+// GetDelta atomically returns the Counters current delta.
 func (m *Counter) GetDelta() uint64 {
 	return atomic.LoadUint64(&m.delta)
 }
 
+// WithEnvelope will take in a function that will receive a V2 Envelope. This
+// is used by the metric emitter Client when the Gauge metric is send to the
+// IngressClient. When WithEnvelope is called the Counters delta is reset to
+// 0, if an error is returned by the given function, the delta will be
+// atomically added back to the Counters delta.
 func (m *Counter) WithEnvelope(fn func(*v2.Envelope) error) error {
 	d := atomic.SwapUint64(&m.delta, 0)
 
@@ -70,12 +86,15 @@ func (m *Counter) toEnvelope(delta uint64) *v2.Envelope {
 	}
 }
 
+// WithVersion is a MetricOption that can be used to set the metric version.
 func WithVersion(major, minor uint) MetricOption {
 	return WithTags(map[string]string{
 		"metric_version": fmt.Sprintf("%d.%d", major, minor),
 	})
 }
 
+// WithTags is a MetricOption that is used to set tags on the metrics V2
+// Envelope when created.
 func WithTags(tags map[string]string) MetricOption {
 	return func(m Tagged) {
 		for k, v := range tags {
