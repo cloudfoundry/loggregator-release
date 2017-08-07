@@ -1,6 +1,7 @@
 package metricemitter_test
 
 import (
+	"log"
 	"net"
 	"time"
 
@@ -191,7 +192,9 @@ func newgRPCServerWithAddr(addr string) *SpyIngressServer {
 	}
 
 	v2.RegisterIngressServer(s, spyIngressServer)
-	go s.Serve(lis)
+	go func() {
+		log.Println(s.Serve(lis))
+	}()
 
 	return spyIngressServer
 }

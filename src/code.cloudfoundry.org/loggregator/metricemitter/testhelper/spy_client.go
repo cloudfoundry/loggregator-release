@@ -62,7 +62,7 @@ func (s *SpyMetricClient) GetEnvelopes(name string) []*v2.Envelope {
 	for _, m := range s.counterMetrics {
 		if m.metricName == name {
 			var env *v2.Envelope
-			m.metric.WithEnvelope(func(e *v2.Envelope) error {
+			_ = m.metric.WithEnvelope(func(e *v2.Envelope) error {
 				env = e
 				return nil
 			})
@@ -74,7 +74,7 @@ func (s *SpyMetricClient) GetEnvelopes(name string) []*v2.Envelope {
 	for _, m := range s.gaugeMetrics {
 		if m.metricName == name {
 			var env *v2.Envelope
-			m.metric.WithEnvelope(func(e *v2.Envelope) error {
+			_ = m.metric.WithEnvelope(func(e *v2.Envelope) error {
 				env = e
 				return nil
 			})
