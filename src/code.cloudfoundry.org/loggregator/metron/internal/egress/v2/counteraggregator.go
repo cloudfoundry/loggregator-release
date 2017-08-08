@@ -53,6 +53,9 @@ func (ca *CounterAggregator) resetTotals() {
 	ca.counterTotals = make(map[counterID]uint64)
 }
 
+// hashTags only uses the deprecated tags because metron only egresses
+// the deprecated tags. Therefore, when the deprecated tags are removed,
+// hashTags will have to be updated to receive the preferred tags.
 func hashTags(tags map[string]*plumbing.Value) string {
 	hash := ""
 	elements := []mapElement{}
