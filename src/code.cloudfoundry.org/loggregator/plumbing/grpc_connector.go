@@ -332,12 +332,7 @@ func (c *GRPCConnector) consumeSubscription(cs *consumerState, dopplerClient *do
 	}
 }
 
-// TODO delete this
-type plumbingReceiver interface {
-	Recv() (*BatchResponse, error)
-}
-
-func (c *GRPCConnector) readStream(s plumbingReceiver, cs *consumerState) error {
+func (c *GRPCConnector) readStream(s Doppler_BatchSubscribeClient, cs *consumerState) error {
 	for {
 		// Recv() will return an error if the context has been cancelled.
 		resp, err := s.Recv()
