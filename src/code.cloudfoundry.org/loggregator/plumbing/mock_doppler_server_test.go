@@ -16,6 +16,14 @@ type mockDopplerServer struct {
 	SubscribeOutput struct {
 		Err chan error
 	}
+	BatchSubscribeCalled chan bool
+	BatchSubscribeInput  struct {
+		Req    chan *plumbing.SubscriptionRequest
+		Stream chan plumbing.Doppler_BatchSubscribeServer
+	}
+	BatchSubscribeOutput struct {
+		Err chan error
+	}
 	ContainerMetricsCalled chan bool
 	ContainerMetricsInput  struct {
 		Ctx chan context.Context
@@ -42,6 +50,10 @@ func newMockDopplerServer() *mockDopplerServer {
 	m.SubscribeInput.Req = make(chan *plumbing.SubscriptionRequest, 100)
 	m.SubscribeInput.Stream = make(chan plumbing.Doppler_SubscribeServer, 100)
 	m.SubscribeOutput.Err = make(chan error, 100)
+	m.BatchSubscribeCalled = make(chan bool, 100)
+	m.BatchSubscribeInput.Req = make(chan *plumbing.SubscriptionRequest, 100)
+	m.BatchSubscribeInput.Stream = make(chan plumbing.Doppler_BatchSubscribeServer, 100)
+	m.BatchSubscribeOutput.Err = make(chan error, 100)
 	m.ContainerMetricsCalled = make(chan bool, 100)
 	m.ContainerMetricsInput.Ctx = make(chan context.Context, 100)
 	m.ContainerMetricsInput.Req = make(chan *plumbing.ContainerMetricsRequest, 100)
@@ -62,7 +74,10 @@ func (m *mockDopplerServer) Subscribe(req *plumbing.SubscriptionRequest, stream 
 }
 
 func (m *mockDopplerServer) BatchSubscribe(req *plumbing.SubscriptionRequest, stream plumbing.Doppler_BatchSubscribeServer) (err error) {
-	return nil
+	m.BatchSubscribeCalled <- true
+	m.BatchSubscribeInput.Req <- req
+	m.BatchSubscribeInput.Stream <- stream
+	return <-m.BatchSubscribeOutput.Err
 }
 func (m *mockDopplerServer) ContainerMetrics(ctx context.Context, req *plumbing.ContainerMetricsRequest) (resp *plumbing.ContainerMetricsResponse, err error) {
 	m.ContainerMetricsCalled <- true

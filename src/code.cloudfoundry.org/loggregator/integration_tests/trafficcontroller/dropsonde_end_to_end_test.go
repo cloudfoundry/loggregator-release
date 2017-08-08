@@ -65,7 +65,7 @@ var _ = Describe("TrafficController for dropsonde messages", func() {
 		})
 
 		It("closes the upstream websocket connection when done", func() {
-			var server plumbing.Doppler_SubscribeServer
+			var server plumbing.Doppler_BatchSubscribeServer
 			Eventually(fakeDoppler.SubscribeServers, 10).Should(Receive(&server))
 
 			client.Close()

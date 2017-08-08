@@ -23,7 +23,7 @@ const (
 // DopplerPool creates a pool of doppler gRPC connections
 type DopplerPool interface {
 	RegisterDoppler(addr string)
-	Subscribe(dopplerAddr string, ctx context.Context, req *SubscriptionRequest) (Doppler_SubscribeClient, error)
+	Subscribe(dopplerAddr string, ctx context.Context, req *SubscriptionRequest) (Doppler_BatchSubscribeClient, error)
 	ContainerMetrics(dopplerAddr string, ctx context.Context, req *ContainerMetricsRequest) (*ContainerMetricsResponse, error)
 	RecentLogs(dopplerAddr string, ctx context.Context, req *RecentLogsRequest) (*RecentLogsResponse, error)
 
@@ -332,32 +332,36 @@ func (c *GRPCConnector) consumeSubscription(cs *consumerState, dopplerClient *do
 	}
 }
 
+// TODO delete this
 type plumbingReceiver interface {
-	Recv() (*Response, error)
+	Recv() (*BatchResponse, error)
 }
 
 func (c *GRPCConnector) readStream(s plumbingReceiver, cs *consumerState) error {
 	for {
+		// Recv() will return an error if the context has been cancelled.
 		resp, err := s.Recv()
 		if err != nil {
 			return err
 		}
 
-		select {
-		case cs.data <- resp.Payload:
-		case <-cs.ctx.Done():
-			return nil
+		for _, p := range resp.Payload {
+			select {
+			case <-cs.ctx.Done():
+				return nil
+			case cs.data <- p:
+			}
 		}
 
 		// metric-documentation-v1: (listeners.receivedEnvelopes) Number of v1
 		// envelopes received over gRPC from Dopplers.
 		c.batcher.BatchCounter("listeners.receivedEnvelopes").
 			SetTag("protocol", "grpc").
-			Increment()
+			Add(uint64(len(resp.Payload)))
 
 		// metric-documentation-v2: (ingress) Number of v1 envelopes received over
 		// gRPC from Dopplers.
-		c.ingressMetric.Increment(1)
+		c.ingressMetric.Increment(uint64(len(resp.Payload)))
 	}
 }
 

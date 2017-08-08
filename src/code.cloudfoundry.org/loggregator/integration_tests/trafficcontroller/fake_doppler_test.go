@@ -19,7 +19,7 @@ type FakeDoppler struct {
 	SubscriptionRequests     chan *plumbing.SubscriptionRequest
 	ContainerMetricsRequests chan *plumbing.ContainerMetricsRequest
 	RecentLogsRequests       chan *plumbing.RecentLogsRequest
-	SubscribeServers         chan plumbing.Doppler_SubscribeServer
+	SubscribeServers         chan plumbing.Doppler_BatchSubscribeServer
 	done                     chan struct{}
 	sync.RWMutex
 }
@@ -31,7 +31,7 @@ func NewFakeDoppler() *FakeDoppler {
 		SubscriptionRequests:     make(chan *plumbing.SubscriptionRequest, 100),
 		ContainerMetricsRequests: make(chan *plumbing.ContainerMetricsRequest, 100),
 		RecentLogsRequests:       make(chan *plumbing.RecentLogsRequest, 100),
-		SubscribeServers:         make(chan plumbing.Doppler_SubscribeServer, 100),
+		SubscribeServers:         make(chan plumbing.Doppler_BatchSubscribeServer, 100),
 		done:                     make(chan struct{}),
 	}
 }
@@ -80,20 +80,20 @@ func (fakeDoppler *FakeDoppler) CloseLogMessageStream() {
 }
 
 func (fakeDoppler *FakeDoppler) Subscribe(request *plumbing.SubscriptionRequest, server plumbing.Doppler_SubscribeServer) error {
+	panic("not implemented")
+}
+
+func (fakeDoppler *FakeDoppler) BatchSubscribe(request *plumbing.SubscriptionRequest, server plumbing.Doppler_BatchSubscribeServer) error {
 	fakeDoppler.SubscriptionRequests <- request
 	fakeDoppler.SubscribeServers <- server
 	for msg := range fakeDoppler.grpcOut {
-		err := server.Send(&plumbing.Response{
-			Payload: msg,
+		err := server.Send(&plumbing.BatchResponse{
+			Payload: [][]byte{msg},
 		})
 		if err != nil {
 			return err
 		}
 	}
-	return nil
-}
-
-func (fakeDoppler *FakeDoppler) BatchSubscribe(request *plumbing.SubscriptionRequest, server plumbing.Doppler_BatchSubscribeServer) error {
 	return nil
 }
 

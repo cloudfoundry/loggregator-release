@@ -34,17 +34,17 @@ var _ = Describe("Start", func() {
 		egressStream, cleanup := setupRLPStream(egressAddr)
 		defer cleanup()
 
-		var subscriber plumbing.Doppler_SubscribeServer
-		Eventually(doppler.SubscribeInput.Stream, 5).Should(Receive(&subscriber))
+		var batchSubscriber plumbing.Doppler_BatchSubscribeServer
+		Eventually(doppler.BatchSubscribeInput.Stream, 5).Should(Receive(&batchSubscriber))
 		go func() {
-			response := &plumbing.Response{
+			response := &plumbing.BatchResponse{
 				Payload: buildLogMessage(),
 			}
 
 			for {
-				err := subscriber.Send(response)
+				err := batchSubscriber.Send(response)
 				if err != nil {
-					log.Printf("subscriber#Send failed: %s\n", err)
+					log.Printf("batchSubscriber#Send failed: %s\n", err)
 					return
 				}
 			}
@@ -160,14 +160,14 @@ var _ = Describe("Start", func() {
 			stream, cleanup := setupRLPStream(egressAddr)
 			defer cleanup()
 
-			var subscriber plumbing.Doppler_SubscribeServer
-			Eventually(doppler.SubscribeInput.Stream, 5).Should(Receive(&subscriber))
+			var batchSubscriber plumbing.Doppler_BatchSubscribeServer
+			Eventually(doppler.BatchSubscribeInput.Stream, 5).Should(Receive(&batchSubscriber))
 
 			expectedEnvelope := buildLogMessage()
-			response := &plumbing.Response{
+			response := &plumbing.BatchResponse{
 				Payload: expectedEnvelope,
 			}
-			Expect(subscriber.Send(response)).ToNot(HaveOccurred())
+			Expect(batchSubscriber.Send(response)).ToNot(HaveOccurred())
 
 			done := make(chan struct{})
 			go func() {
@@ -178,10 +178,10 @@ var _ = Describe("Start", func() {
 			}()
 
 			By("stop reading from the dopplers")
-			response2 := &plumbing.Response{
-				Payload: buildContainerMetric(),
+			response2 := &plumbing.BatchResponse{
+				Payload: [][]byte{buildContainerMetric()},
 			}
-			Eventually(func() error { return subscriber.Send(response2) }).Should(HaveOccurred())
+			Eventually(func() error { return batchSubscriber.Send(response2) }).Should(HaveOccurred())
 
 			// Currently, the call to Stop() blocks.
 			// We need to Recv the message after the call to Stop has been
@@ -190,7 +190,7 @@ var _ = Describe("Start", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			var e events.Envelope
-			err = proto.Unmarshal(expectedEnvelope, &e)
+			err = proto.Unmarshal(expectedEnvelope[0], &e)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(envelope).To(Equal(conversion.ToV2(&e, false)))
 
@@ -236,7 +236,7 @@ var _ = Describe("Start", func() {
 	})
 })
 
-func buildLogMessage() []byte {
+func buildLogMessage() [][]byte {
 	e := &events.Envelope{
 		Origin:    proto.String("some-origin"),
 		EventType: events.Envelope_LogMessage.Enum(),
@@ -248,7 +248,7 @@ func buildLogMessage() []byte {
 		},
 	}
 	b, _ := proto.Marshal(e)
-	return b
+	return [][]byte{b}
 }
 
 func buildContainerMetric() []byte {

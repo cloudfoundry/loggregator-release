@@ -105,7 +105,7 @@ var _ = Describe("Pool", func() {
 			})
 
 			It("picks a random connection to subscribe to", func() {
-				data := make(chan []byte, 100)
+				data := make(chan [][]byte, 100)
 				for i := 0; i < 10; i++ {
 					rx := fetchRx(pool, lis1.Addr().String(), ctx, req)
 
@@ -116,8 +116,8 @@ var _ = Describe("Pool", func() {
 				sender12 := captureSubscribeSender(mockDoppler1)
 
 				for i := 0; i < 10; i++ {
-					resp := &plumbing.Response{
-						Payload: []byte("some-data"),
+					resp := &plumbing.BatchResponse{
+						Payload: [][]byte{[]byte("some-data")},
 					}
 					sender11.Send(resp)
 					sender12.Send(resp)
@@ -239,7 +239,7 @@ var _ = Describe("Pool", func() {
 	})
 })
 
-func consumeReceiver(rx plumbing.Doppler_SubscribeClient, data chan []byte) {
+func consumeReceiver(rx plumbing.Doppler_BatchSubscribeClient, data chan [][]byte) {
 	for {
 		d, err := rx.Recv()
 		if err != nil {
@@ -253,9 +253,9 @@ func fetchRx(
 	pool *plumbing.Pool,
 	addr string,
 	ctx context.Context,
-	req *plumbing.SubscriptionRequest) plumbing.Doppler_SubscribeClient {
+	req *plumbing.SubscriptionRequest) plumbing.Doppler_BatchSubscribeClient {
 
-	var rx plumbing.Doppler_SubscribeClient
+	var rx plumbing.Doppler_BatchSubscribeClient
 	f := func() error {
 		var err error
 		rx, err = pool.Subscribe(addr, ctx, req)

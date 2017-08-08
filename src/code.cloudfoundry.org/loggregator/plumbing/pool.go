@@ -47,7 +47,7 @@ func (p *Pool) RegisterDoppler(addr string) {
 	}
 }
 
-func (p *Pool) Subscribe(dopplerAddr string, ctx context.Context, req *SubscriptionRequest) (Doppler_SubscribeClient, error) {
+func (p *Pool) Subscribe(dopplerAddr string, ctx context.Context, req *SubscriptionRequest) (Doppler_BatchSubscribeClient, error) {
 	p.mu.RLock()
 	clients := p.dopplers[dopplerAddr]
 	p.mu.RUnlock()
@@ -58,7 +58,7 @@ func (p *Pool) Subscribe(dopplerAddr string, ctx context.Context, req *Subscript
 		return nil, fmt.Errorf("no connections available for subscription")
 	}
 
-	return client.Subscribe(ctx, req)
+	return client.BatchSubscribe(ctx, req)
 }
 
 func (p *Pool) ContainerMetrics(dopplerAddr string, ctx context.Context, req *ContainerMetricsRequest) (*ContainerMetricsResponse, error) {

@@ -106,7 +106,7 @@ var _ = Describe("GRPCConnector", func() {
 				})
 
 				It("connects to the doppler with the correct request", func() {
-					Eventually(mockDopplerServerA.SubscribeInput).Should(
+					Eventually(mockDopplerServerA.BatchSubscribeInput).Should(
 						BeCalled(With(req, Not(BeNil()))),
 					)
 				})
@@ -115,13 +115,13 @@ var _ = Describe("GRPCConnector", func() {
 					senderA := captureSubscribeSender(mockDopplerServerA)
 					senderB := captureSubscribeSender(mockDopplerServerB)
 
-					senderA.Send(&plumbing.Response{
-						Payload: []byte("some-data-a"),
+					senderA.Send(&plumbing.BatchResponse{
+						Payload: [][]byte{[]byte("some-data-a")},
 					})
 					Eventually(data).Should(Receive(Equal([]byte("some-data-a"))))
 
-					senderB.Send(&plumbing.Response{
-						Payload: []byte("some-data-b"),
+					senderB.Send(&plumbing.BatchResponse{
+						Payload: [][]byte{[]byte("some-data-b")},
 					})
 					Eventually(data).Should(Receive(Equal([]byte("some-data-b"))))
 				})
@@ -129,24 +129,24 @@ var _ = Describe("GRPCConnector", func() {
 				It("increments a batch count", func() {
 					senderA := captureSubscribeSender(mockDopplerServerA)
 
-					senderA.Send(&plumbing.Response{
-						Payload: []byte("some-data-a"),
+					senderA.Send(&plumbing.BatchResponse{
+						Payload: [][]byte{[]byte("some-data-a")},
 					})
 
-					Eventually(mockChainer.IncrementCalled).Should(BeCalled())
+					Eventually(mockChainer.AddCalled).Should(BeCalled())
 				})
 
 				It("does not close the doppler connection when a client exits", func() {
-					Eventually(mockDopplerServerA.SubscribeInput.Stream).Should(Receive())
+					Eventually(mockDopplerServerA.BatchSubscribeInput.Stream).Should(Receive())
 					cancelCtx()
 
 					newData, _, ready := readFromSubscription(context.Background(), req, connector)
 					Eventually(ready).Should(BeClosed())
-					Eventually(mockDopplerServerA.SubscribeCalled).Should(HaveLen(2))
+					Eventually(mockDopplerServerA.BatchSubscribeCalled).Should(HaveLen(2))
 
 					senderA := captureSubscribeSender(mockDopplerServerA)
-					senderA.Send(&plumbing.Response{
-						Payload: []byte("some-data-a"),
+					senderA.Send(&plumbing.BatchResponse{
+						Payload: [][]byte{[]byte("some-data-a")},
 					})
 
 					Eventually(newData, 5).Should(Receive())
@@ -156,8 +156,8 @@ var _ = Describe("GRPCConnector", func() {
 					var secondEvent dopplerservice.Event
 
 					BeforeEach(func() {
-						Eventually(mockDopplerServerA.SubscribeCalled).Should(HaveLen(1))
-						Eventually(mockDopplerServerB.SubscribeCalled).Should(HaveLen(1))
+						Eventually(mockDopplerServerA.BatchSubscribeCalled).Should(HaveLen(1))
+						Eventually(mockDopplerServerB.BatchSubscribeCalled).Should(HaveLen(1))
 
 						mockDopplerServerC := newMockDopplerServer()
 						lisC, serverC := startGRPCServer(mockDopplerServerC, ":0")
@@ -171,8 +171,8 @@ var _ = Describe("GRPCConnector", func() {
 					})
 
 					It("does not reconnect to pre-existing dopplers", func() {
-						Consistently(mockDopplerServerA.SubscribeCalled).Should(HaveLen(1))
-						Consistently(mockDopplerServerB.SubscribeCalled).Should(HaveLen(1))
+						Consistently(mockDopplerServerA.BatchSubscribeCalled).Should(HaveLen(1))
+						Consistently(mockDopplerServerB.BatchSubscribeCalled).Should(HaveLen(1))
 					})
 				})
 
@@ -181,8 +181,8 @@ var _ = Describe("GRPCConnector", func() {
 
 					BeforeEach(func() {
 						senderA := captureSubscribeSender(mockDopplerServerA)
-						senderA.Send(&plumbing.Response{
-							Payload: []byte("some-data-a"),
+						senderA.Send(&plumbing.BatchResponse{
+							Payload: [][]byte{[]byte("some-data-a")},
 						})
 						Eventually(data).Should(Receive(Equal([]byte("some-data-a"))))
 
@@ -220,7 +220,7 @@ var _ = Describe("GRPCConnector", func() {
 				Context("when finder service falsely reports doppler going away", func() {
 					var (
 						secondEvent dopplerservice.Event
-						senderA     plumbing.Doppler_SubscribeServer
+						senderA     plumbing.Doppler_BatchSubscribeServer
 					)
 					BeforeEach(func() {
 						senderA = captureSubscribeSender(mockDopplerServerA)
@@ -233,8 +233,8 @@ var _ = Describe("GRPCConnector", func() {
 					})
 
 					It("continues reading from the doppler", func() {
-						senderA.Send(&plumbing.Response{
-							Payload: []byte("some-data-a"),
+						senderA.Send(&plumbing.BatchResponse{
+							Payload: [][]byte{[]byte("some-data-a")},
 						})
 						Eventually(data).Should(Receive(Equal([]byte("some-data-a"))))
 					})
@@ -243,8 +243,8 @@ var _ = Describe("GRPCConnector", func() {
 						data, _, ready := readFromSubscription(ctx, req, connector)
 						Eventually(ready).Should(BeClosed())
 						sender := captureSubscribeSender(mockDopplerServerA)
-						sender.Send(&plumbing.Response{
-							Payload: []byte("some-data"),
+						sender.Send(&plumbing.BatchResponse{
+							Payload: [][]byte{[]byte("some-data")},
 						})
 						Eventually(data).Should(Receive())
 					})
@@ -263,7 +263,7 @@ var _ = Describe("GRPCConnector", func() {
 						})
 
 						It("doesn't create a second connection", func() {
-							Consistently(mockDopplerServerA.SubscribeCalled, 1).Should(HaveLen(1))
+							Consistently(mockDopplerServerA.BatchSubscribeCalled, 1).Should(HaveLen(1))
 						})
 
 						Context("when the first connection is closed", func() {
@@ -290,8 +290,8 @@ var _ = Describe("GRPCConnector", func() {
 								data, _, ready := readFromSubscription(newCtx, req, connector)
 								Eventually(ready).Should(BeClosed())
 								sender := captureSubscribeSender(mockDopplerServerA)
-								sender.Send(&plumbing.Response{
-									Payload: []byte("some-data"),
+								sender.Send(&plumbing.BatchResponse{
+									Payload: [][]byte{[]byte("some-data")},
 								})
 								Eventually(data).Should(Receive())
 							})
@@ -316,7 +316,7 @@ var _ = Describe("GRPCConnector", func() {
 				})
 
 				It("connects to the doppler with the correct request", func() {
-					Eventually(mockDopplerServerA.SubscribeInput).Should(
+					Eventually(mockDopplerServerA.BatchSubscribeInput).Should(
 						BeCalled(With(req, Not(BeNil()))),
 					)
 				})
@@ -340,12 +340,12 @@ var _ = Describe("GRPCConnector", func() {
 					mockFinder.NextOutput.Ret0 <- event
 
 					data, errs, _ = readFromSubscription(ctx, req, connector)
-					Eventually(mockDopplerServerB.SubscribeCalled).ShouldNot(HaveLen(0))
+					Eventually(mockDopplerServerB.BatchSubscribeCalled).ShouldNot(HaveLen(0))
 					listeners[0], grpcServers[0] = startGRPCServer(mockDopplerServerA, listeners[0].Addr().String())
 				})
 
 				It("attempts to reconnect", func() {
-					Eventually(mockDopplerServerA.SubscribeInput.Stream, 3).Should(Receive())
+					Eventually(mockDopplerServerA.BatchSubscribeInput.Stream, 3).Should(Receive())
 				})
 			})
 
@@ -355,7 +355,7 @@ var _ = Describe("GRPCConnector", func() {
 					data    <-chan []byte
 					errs    <-chan error
 					ready   <-chan struct{}
-					senderA plumbing.Doppler_SubscribeServer
+					senderA plumbing.Doppler_BatchSubscribeServer
 				)
 
 				BeforeEach(func() {
@@ -367,12 +367,12 @@ var _ = Describe("GRPCConnector", func() {
 
 					data, errs, ready = readFromSubscription(ctx, req, connector)
 					Eventually(ready).Should(BeClosed())
-					Eventually(mockDopplerServerA.SubscribeCalled).Should(HaveLen(1))
-					Eventually(mockDopplerServerB.SubscribeCalled).Should(HaveLen(1))
+					Eventually(mockDopplerServerA.BatchSubscribeCalled).Should(HaveLen(1))
+					Eventually(mockDopplerServerB.BatchSubscribeCalled).Should(HaveLen(1))
 
 					senderA = captureSubscribeSender(mockDopplerServerA)
-					senderA.Send(&plumbing.Response{
-						Payload: []byte("test-payload-1"),
+					senderA.Send(&plumbing.BatchResponse{
+						Payload: [][]byte{[]byte("test-payload-1")},
 					})
 
 					Eventually(data).Should(Receive(Equal([]byte("test-payload-1"))))
@@ -384,8 +384,8 @@ var _ = Describe("GRPCConnector", func() {
 
 				It("attempts to reconnect", func() {
 					senderA = captureSubscribeSender(mockDopplerServerA)
-					senderA.Send(&plumbing.Response{
-						Payload: []byte("test-payload-2"),
+					senderA.Send(&plumbing.BatchResponse{
+						Payload: [][]byte{[]byte("test-payload-2")},
 					})
 
 					Eventually(data, 5).Should(Receive(Equal([]byte("test-payload-2"))))
@@ -612,8 +612,8 @@ func createGrpcURIs(listeners []net.Listener) []string {
 	return results
 }
 
-func captureSubscribeSender(doppler *mockDopplerServer) plumbing.Doppler_SubscribeServer {
-	var server plumbing.Doppler_SubscribeServer
-	EventuallyWithOffset(1, doppler.SubscribeInput.Stream, 5).Should(Receive(&server))
+func captureSubscribeSender(doppler *mockDopplerServer) plumbing.Doppler_BatchSubscribeServer {
+	var server plumbing.Doppler_BatchSubscribeServer
+	EventuallyWithOffset(1, doppler.BatchSubscribeInput.Stream, 5).Should(Receive(&server))
 	return server
 }
