@@ -1,6 +1,8 @@
 package v1_test
 
 import (
+	"time"
+
 	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1"
@@ -14,10 +16,20 @@ import (
 
 var _ = Describe("Router", func() {
 	var (
-		counterEnvelope      *events.Envelope
-		logEnvelope          *events.Envelope
-		counterEnvelopeBytes []byte
-		logEnvelopeBytes     []byte
+		counterEnvelope       *events.Envelope
+		logEnvelope1          *events.Envelope
+		logEnvelope2          *events.Envelope
+		httpStartStop1        *events.Envelope
+		httpStartStop2        *events.Envelope
+		containerMetric1      *events.Envelope
+		containerMetric2      *events.Envelope
+		counterEnvelopeBytes  []byte
+		logEnvelopeBytes1     []byte
+		logEnvelopeBytes2     []byte
+		httpStartStopBytes1   []byte
+		httpStartStopBytes2   []byte
+		containerMetricBytes1 []byte
+		containerMetricBytes2 []byte
 
 		router *v1.Router
 	)
@@ -26,17 +38,121 @@ var _ = Describe("Router", func() {
 		counterEnvelope = &events.Envelope{
 			Origin:    proto.String("some-origin"),
 			EventType: events.Envelope_CounterEvent.Enum(),
+			CounterEvent: &events.CounterEvent{
+				Name:  proto.String("some-name"),
+				Total: proto.Uint64(99),
+				Delta: proto.Uint64(101),
+			},
 		}
 
-		logEnvelope = &events.Envelope{
+		logEnvelope1 = &events.Envelope{
 			Origin:    proto.String("some-origin"),
+			Timestamp: proto.Int64(time.Now().UnixNano()),
 			EventType: events.Envelope_LogMessage.Enum(),
+			LogMessage: &events.LogMessage{
+				Timestamp:   proto.Int64(time.Now().UnixNano()),
+				Message:     []byte("some-message"),
+				MessageType: events.LogMessage_OUT.Enum(),
+				AppId:       proto.String("some-app-id"),
+			},
 		}
+
+		logEnvelope2 = &events.Envelope{
+			Origin:    proto.String("some-origin"),
+			Timestamp: proto.Int64(time.Now().UnixNano()),
+			EventType: events.Envelope_LogMessage.Enum(),
+			LogMessage: &events.LogMessage{
+				Timestamp:   proto.Int64(time.Now().UnixNano()),
+				Message:     []byte("some-message"),
+				MessageType: events.LogMessage_OUT.Enum(),
+				AppId:       proto.String("some-other-app-id"),
+			},
+		}
+
+		httpStartStop1 = &events.Envelope{
+			Origin:    proto.String("some-origin"),
+			Timestamp: proto.Int64(time.Now().UnixNano()),
+			EventType: events.Envelope_HttpStartStop.Enum(),
+			HttpStartStop: &events.HttpStartStop{
+				StartTimestamp: proto.Int64(time.Now().UnixNano()),
+				StopTimestamp:  proto.Int64(time.Now().UnixNano()),
+				RequestId:      &events.UUID{Low: proto.Uint64(0), High: proto.Uint64(0)},
+				PeerType:       events.PeerType_Client.Enum(),
+				Method:         events.Method_GET.Enum(),
+				Uri:            proto.String("some-uri"),
+				RemoteAddress:  proto.String("some-addr"),
+				UserAgent:      proto.String("some-user-agent"),
+				StatusCode:     proto.Int32(200),
+				ContentLength:  proto.Int64(100),
+				ApplicationId:  &events.UUID{Low: proto.Uint64(5), High: proto.Uint64(6)},
+			},
+		}
+
+		httpStartStop2 = &events.Envelope{
+			Origin:    proto.String("some-origin"),
+			Timestamp: proto.Int64(time.Now().UnixNano()),
+			EventType: events.Envelope_HttpStartStop.Enum(),
+			HttpStartStop: &events.HttpStartStop{
+				StartTimestamp: proto.Int64(time.Now().UnixNano()),
+				StopTimestamp:  proto.Int64(time.Now().UnixNano()),
+				RequestId:      &events.UUID{Low: proto.Uint64(0), High: proto.Uint64(0)},
+				PeerType:       events.PeerType_Client.Enum(),
+				Method:         events.Method_GET.Enum(),
+				Uri:            proto.String("some-uri"),
+				RemoteAddress:  proto.String("some-addr"),
+				UserAgent:      proto.String("some-user-agent"),
+				StatusCode:     proto.Int32(200),
+				ContentLength:  proto.Int64(100),
+				ApplicationId:  &events.UUID{Low: proto.Uint64(6), High: proto.Uint64(7)},
+			},
+		}
+
+		containerMetric1 = &events.Envelope{
+			Origin:    proto.String("some-origin"),
+			Timestamp: proto.Int64(time.Now().UnixNano()),
+			EventType: events.Envelope_ContainerMetric.Enum(),
+			ContainerMetric: &events.ContainerMetric{
+				ApplicationId: proto.String("05000000-0000-0000-0600-000000000000"),
+				InstanceIndex: proto.Int32(99),
+				CpuPercentage: proto.Float64(99),
+				MemoryBytes:   proto.Uint64(99),
+				DiskBytes:     proto.Uint64(99),
+			},
+		}
+
+		containerMetric2 = &events.Envelope{
+			Origin:    proto.String("some-origin"),
+			Timestamp: proto.Int64(time.Now().UnixNano()),
+			EventType: events.Envelope_ContainerMetric.Enum(),
+			ContainerMetric: &events.ContainerMetric{
+				ApplicationId: proto.String("06000000-0000-0000-0700-000000000000"),
+				InstanceIndex: proto.Int32(99),
+				CpuPercentage: proto.Float64(99),
+				MemoryBytes:   proto.Uint64(99),
+				DiskBytes:     proto.Uint64(99),
+			},
+		}
+
 		var err error
 		counterEnvelopeBytes, err = counterEnvelope.Marshal()
 		Expect(err).ToNot(HaveOccurred())
 
-		logEnvelopeBytes, err = logEnvelope.Marshal()
+		logEnvelopeBytes1, err = logEnvelope1.Marshal()
+		Expect(err).ToNot(HaveOccurred())
+
+		logEnvelopeBytes2, err = logEnvelope2.Marshal()
+		Expect(err).ToNot(HaveOccurred())
+
+		httpStartStopBytes1, err = httpStartStop1.Marshal()
+		Expect(err).ToNot(HaveOccurred())
+
+		httpStartStopBytes2, err = httpStartStop2.Marshal()
+		Expect(err).ToNot(HaveOccurred())
+
+		containerMetricBytes1, err = containerMetric1.Marshal()
+		Expect(err).ToNot(HaveOccurred())
+
+		containerMetricBytes2, err = containerMetric2.Marshal()
 		Expect(err).ToNot(HaveOccurred())
 
 		router = v1.NewRouter()
@@ -75,11 +191,11 @@ var _ = Describe("Router", func() {
 		})
 
 		It("receives all messages", func() {
-			router.SendTo("some-app-id", logEnvelope)
+			router.SendTo("some-app-id", logEnvelope1)
 			router.SendTo("some-app-id", counterEnvelope)
 
 			Expect(singleFirehoseSubscription.SetInput).To(
-				BeCalled(With(logEnvelopeBytes)),
+				BeCalled(With(logEnvelopeBytes1)),
 			)
 			Expect(singleFirehoseSubscription.SetInput).To(
 				BeCalled(With(counterEnvelopeBytes)),
@@ -88,7 +204,7 @@ var _ = Describe("Router", func() {
 
 		Context("when there are two subscriptions with the same ID", func() {
 			It("sends the message to one subscription", func() {
-				router.SendTo("some-app-id", logEnvelope)
+				router.SendTo("some-app-id", logEnvelope1)
 				combinedLen := len(multipleFirehoseOfSameSubscription[0].SetCalled) + len(multipleFirehoseOfSameSubscription[1].SetCalled)
 
 				Expect(combinedLen).To(Equal(1))
@@ -162,18 +278,18 @@ var _ = Describe("Router", func() {
 		})
 
 		It("sends a message to all subscriptions of the same app id", func() {
-			router.SendTo("some-app-id", counterEnvelope)
+			router.SendTo("some-app-id", logEnvelope1)
 
 			Expect(streamsForAppA[0].SetInput).To(
-				BeCalled(With(counterEnvelopeBytes)),
+				BeCalled(With(logEnvelopeBytes1)),
 			)
 			Expect(streamsForAppA[1].SetInput).To(
-				BeCalled(With(counterEnvelopeBytes)),
+				BeCalled(With(logEnvelopeBytes1)),
 			)
 		})
 
 		It("sends the envelope to a subscription only once", func() {
-			router.SendTo("some-other-app-id", counterEnvelope)
+			router.SendTo("some-other-app-id", logEnvelope2)
 
 			Expect(streamForAppB.SetCalled).To(
 				HaveLen(1),
@@ -190,7 +306,7 @@ var _ = Describe("Router", func() {
 		})
 
 		It("does not send the message to a subscription of a different app id", func() {
-			router.SendTo("some-app-id", counterEnvelope)
+			router.SendTo("some-app-id", logEnvelope1)
 
 			Expect(streamForAppB.SetInput).To(
 				Not(BeCalled()),
@@ -226,10 +342,10 @@ var _ = Describe("Router", func() {
 				Not(BeCalled()),
 			)
 
-			router.SendTo("some-app-id", logEnvelope)
+			router.SendTo("some-app-id", logEnvelope1)
 
 			Expect(streamWithLogFilter.SetInput).To(
-				BeCalled(With(logEnvelopeBytes)),
+				BeCalled(With(logEnvelopeBytes1)),
 			)
 		})
 	})
@@ -255,7 +371,7 @@ var _ = Describe("Router", func() {
 		})
 
 		It("sends only metric messages", func() {
-			router.SendTo("some-app-id", logEnvelope)
+			router.SendTo("some-app-id", logEnvelope1)
 
 			Expect(stream.SetCalled).To(
 				Not(BeCalled()),
