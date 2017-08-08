@@ -8,7 +8,7 @@ import (
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-	"github.com/mohae/deepcopy"
+	v2proto "github.com/golang/protobuf/proto"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -52,7 +52,7 @@ var _ = Describe("Envelope conversion", func() {
 					InstanceId:    proto.String("test-instance-id"),
 				},
 			}
-			expected := deepcopy.Copy(v1e)
+			expected := proto.Clone(v1e)
 
 			_, err := proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
@@ -91,7 +91,7 @@ var _ = Describe("Envelope conversion", func() {
 					SourceInstance: proto.String("some-source-instance"),
 				},
 			}
-			expected := deepcopy.Copy(v1e)
+			expected := proto.Clone(v1e)
 
 			_, err := proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
@@ -127,7 +127,7 @@ var _ = Describe("Envelope conversion", func() {
 					Unit:  proto.String("some-unit"),
 				},
 			}
-			expected := deepcopy.Copy(v1e)
+			expected := proto.Clone(v1e)
 
 			_, err := proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
@@ -163,7 +163,7 @@ var _ = Describe("Envelope conversion", func() {
 					Total: proto.Uint64(4356782),
 				},
 			}
-			expected := deepcopy.Copy(v1e)
+			expected := proto.Clone(v1e)
 
 			_, err := proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
@@ -199,7 +199,7 @@ var _ = Describe("Envelope conversion", func() {
 					Message: proto.String("some-message"),
 				},
 			}
-			expected := deepcopy.Copy(v1e)
+			expected := proto.Clone(v1e)
 
 			_, err := proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
@@ -239,7 +239,7 @@ var _ = Describe("Envelope conversion", func() {
 					DiskBytesQuota:   proto.Uint64(458724),
 				},
 			}
-			expected := deepcopy.Copy(v1e)
+			expected := proto.Clone(v1e)
 
 			_, err := proto.Marshal(v1e)
 			Expect(err).ToNot(HaveOccurred())
@@ -289,7 +289,7 @@ var _ = Describe("Envelope conversion", func() {
 					"__v1_type":           ValueText("HttpStartStop"),
 				},
 			}
-			expected := deepcopy.Copy(v2e)
+			expected := v2proto.Clone(v2e)
 
 			_, err := proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
@@ -326,7 +326,7 @@ var _ = Describe("Envelope conversion", func() {
 					"__v1_type":   ValueText("LogMessage"),
 				},
 			}
-			expected := deepcopy.Copy(v2e)
+			expected := v2proto.Clone(v2e)
 
 			_, err := proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
@@ -364,7 +364,7 @@ var _ = Describe("Envelope conversion", func() {
 					"__v1_type":  ValueText("CounterEvent"),
 				},
 			}
-			expected := deepcopy.Copy(v2e)
+			expected := v2proto.Clone(v2e)
 
 			_, err := proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())
@@ -415,7 +415,7 @@ var _ = Describe("Envelope conversion", func() {
 					"__v1_type":  ValueText("ContainerMetric"),
 				},
 			}
-			expected := deepcopy.Copy(v2e)
+			expected := v2proto.Clone(v2e)
 
 			_, err := proto.Marshal(v2e)
 			Expect(err).ToNot(HaveOccurred())

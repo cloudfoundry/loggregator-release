@@ -8,7 +8,6 @@ import (
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
-	"github.com/mohae/deepcopy"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -151,7 +150,7 @@ var _ = Describe("Envelope", func() {
 					"ip":         "some-ip",
 				},
 			}
-			expected := deepcopy.Copy(v1).(*events.Envelope)
+			expected := proto.Clone(v1).(*events.Envelope)
 
 			converted := conversion.ToV2(v1, true)
 

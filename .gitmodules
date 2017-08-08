@@ -112,6 +112,3 @@
 [submodule "src/github.com/prometheus/procfs"]
 	path = src/github.com/prometheus/procfs
 	url = https://github.com/prometheus/procfs
-[submodule "src/github.com/mohae/deepcopy"]
-	path = src/github.com/mohae/deepcopy
-	url = https://github.com/mohae/deepcopy
