@@ -1,13 +1,14 @@
 package auth
 
 import (
-	"errors"
 	"log"
 	"strings"
 )
 
-const LOGGREGATOR_ADMIN_ROLE = "doppler.firehose"
-const BEARER_PREFIX = "bearer "
+const (
+	loggregatorAdminRole = "doppler.firehose"
+	bearerPrefix         = "bearer "
+)
 
 type AdminAccessAuthorizer func(authToken string) (bool, error)
 
@@ -23,20 +24,20 @@ func NewAdminAccessAuthorizer(disableAccessControl bool, client UaaClient) Admin
 
 	isAccessAllowed := func(authToken string) (bool, error) {
 		if authToken == "" {
-			return false, errors.New(NO_AUTH_TOKEN_PROVIDED_ERROR_MESSAGE)
+			return false, ErrNoAuthTokenProvided
 		}
 
-		authData, err := client.GetAuthData(strings.TrimPrefix(authToken, BEARER_PREFIX))
+		authData, err := client.GetAuthData(strings.TrimPrefix(authToken, bearerPrefix))
 
 		if err != nil {
 			log.Printf("Error getting auth data: %s", err)
-			return false, errors.New(INVALID_AUTH_TOKEN_ERROR_MESSAGE)
+			return false, ErrInvalidAuthToken
 		}
 
-		if authData.HasPermission(LOGGREGATOR_ADMIN_ROLE) {
+		if authData.HasPermission(loggregatorAdminRole) {
 			return true, nil
 		} else {
-			return false, errors.New(INVALID_AUTH_TOKEN_ERROR_MESSAGE)
+			return false, ErrInvalidAuthToken
 		}
 	}
 

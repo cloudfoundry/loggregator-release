@@ -2,7 +2,6 @@ package auth_test
 
 import (
 	"crypto/tls"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -54,7 +53,7 @@ var _ = Describe("LogAccessAuthorizer", func() {
 
 			status, err := authorizer("", "myAppId")
 			Expect(status).To(Equal(http.StatusUnauthorized))
-			Expect(err).To(Equal(errors.New(auth.NO_AUTH_TOKEN_PROVIDED_ERROR_MESSAGE)))
+			Expect(err).To(MatchError(auth.ErrNoAuthTokenProvided))
 		})
 
 		It("allows access when the api returns 200, and otherwise denies access", func() {
