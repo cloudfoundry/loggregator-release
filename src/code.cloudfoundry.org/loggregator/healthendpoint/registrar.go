@@ -6,10 +6,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// Registrar maintains a list of metrics to be served by the health endpoint
+// server.
 type Registrar struct {
 	gauges map[string]prometheus.Gauge
 }
 
+// New returns an initialized health endpoint registrar configured with the
+// given prmetheus.Registerer and map of prometheus.Gauges.
 func New(registrar prometheus.Registerer, gauges map[string]prometheus.Gauge) *Registrar {
 	for _, c := range gauges {
 		registrar.MustRegister(c)
@@ -20,6 +24,9 @@ func New(registrar prometheus.Registerer, gauges map[string]prometheus.Gauge) *R
 	}
 }
 
+// Set will set the given value on the gauge metric with the given name. If
+// the gauge metric is not found the process will exit with a status code of
+// 1.
 func (h *Registrar) Set(name string, value float64) {
 	g, ok := h.gauges[name]
 	if !ok {
@@ -29,6 +36,8 @@ func (h *Registrar) Set(name string, value float64) {
 	g.Set(value)
 }
 
+// Inc will increment the gauge metric with the given name by 1. If the gauge
+// metric is not found the process will exit with a status code of 1.
 func (h *Registrar) Inc(name string) {
 	g, ok := h.gauges[name]
 	if !ok {
@@ -38,6 +47,8 @@ func (h *Registrar) Inc(name string) {
 	g.Inc()
 }
 
+// Dec will decrement the gauge metric with the given name by 1. If the gauge
+// metric is not found the process will exit with a status code of 1.
 func (h *Registrar) Dec(name string) {
 	g, ok := h.gauges[name]
 	if !ok {
