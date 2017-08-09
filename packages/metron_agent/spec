@@ -20,6 +20,7 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/metron/internal/ingress/v1/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/metron/internal/ingress/v2/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/plumbing/batching/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/v2/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/profiler/*.go # gosub
 - loggregator/src/github.com/beorn7/perks/quantile/*.go # gosub
