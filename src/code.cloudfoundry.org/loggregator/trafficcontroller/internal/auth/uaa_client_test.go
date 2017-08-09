@@ -123,7 +123,8 @@ func (h *FakeUaaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if r.Header.Get("Authorization") != "Basic Ym9iOnlvdXJVbmNsZQ==" {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("{\"error\":\"unauthorized\",\"error_description\":\"No client with requested id: wrongUser\"}"))
+		_, err := w.Write([]byte("{\"error\":\"unauthorized\",\"error_description\":\"No client with requested id: wrongUser\"}"))
+		Expect(err).ToNot(HaveOccurred())
 		return
 	}
 
@@ -136,8 +137,11 @@ func (h *FakeUaaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			},
 		}
 
-		marshaled, _ := json.Marshal(authData)
-		w.Write(marshaled)
+		marshaled, err := json.Marshal(authData)
+		Expect(err).ToNot(HaveOccurred())
+
+		_, err = w.Write(marshaled)
+		Expect(err).ToNot(HaveOccurred())
 	} else if token == "iAmNotAnAdmin" {
 		authData := map[string]interface{}{
 			"scope": []string{
@@ -145,16 +149,20 @@ func (h *FakeUaaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			},
 		}
 
-		marshaled, _ := json.Marshal(authData)
-		w.Write(marshaled)
+		marshaled, err := json.Marshal(authData)
+		Expect(err).ToNot(HaveOccurred())
+
+		_, err = w.Write(marshaled)
+		Expect(err).ToNot(HaveOccurred())
 	} else if token == "expiredToken" {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("{\"error\":\"invalid_token\",\"error_description\":\"Token has expired\"}"))
+		_, err := w.Write([]byte("{\"error\":\"invalid_token\",\"error_description\":\"Token has expired\"}"))
+		Expect(err).ToNot(HaveOccurred())
 	} else if token == "invalidToken" {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("{\"invalidToken\":\"invalid_token\",\"error_description\":\"Invalid token (could not decode): invalidToken\"}"))
+		_, err := w.Write([]byte("{\"invalidToken\":\"invalid_token\",\"error_description\":\"Invalid token (could not decode): invalidToken\"}"))
+		Expect(err).ToNot(HaveOccurred())
 	} else {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-
 }

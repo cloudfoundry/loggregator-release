@@ -116,7 +116,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch result[1] {
 	case "myAppId":
-		w.Write([]byte("{}"))
+		_, err := w.Write([]byte("{}"))
+		Expect(err).ToNot(HaveOccurred())
 	case "notMyAppId":
 		w.WriteHeader(403)
 	default:
