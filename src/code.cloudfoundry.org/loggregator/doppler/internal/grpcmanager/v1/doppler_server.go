@@ -8,6 +8,7 @@ import (
 	"code.cloudfoundry.org/loggregator/diodes"
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing"
+	"code.cloudfoundry.org/loggregator/plumbing/batching"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -184,48 +185,52 @@ func (m *DopplerServer) sendData(req *plumbing.SubscriptionRequest, sender sende
 
 	return sender.Context().Err()
 }
+
+type batchWriter struct {
+	sender    plumbing.Doppler_BatchSubscribeServer
+	errStream chan<- error
+}
+
+func (b *batchWriter) Write(batch []interface{}) {
+	envelopes := make([][]byte, 0, len(batch))
+	for _, b := range batch {
+		e := b.([]byte)
+		envelopes = append(envelopes, e)
+	}
+
+	err := b.sender.Send(&plumbing.BatchResponse{Payload: envelopes})
+	if err != nil {
+		b.errStream <- err
+	}
+}
+
 func (m *DopplerServer) sendBatchData(req *plumbing.SubscriptionRequest, sender plumbing.Doppler_BatchSubscribeServer) error {
 	d := diodes.NewOneToOne(1000, m)
 	cleanup := m.registrar.Register(req, d)
 	defer cleanup()
 
-	batchData := make([][]byte, 0, m.batchSize)
-	timer := time.NewTimer(m.batchInterval)
+	errStream := make(chan error, 1)
+	batcher := batching.NewBatcher(
+		int(m.batchSize),
+		m.batchInterval,
+		&batchWriter{sender: sender, errStream: errStream},
+	)
+
 	for {
 		select {
 		case <-sender.Context().Done():
 			return sender.Context().Err()
-		case <-timer.C:
-			if len(batchData) > 0 {
-				err := sender.Send(&plumbing.BatchResponse{Payload: batchData})
-				if err != nil {
-					return err
-				}
-				batchData = batchData[:0]
-			}
-
-			timer.Reset(m.batchInterval)
+		case err := <-errStream:
+			return err
 		default:
 			data, ok := d.TryNext()
 			if !ok {
+				batcher.Flush()
 				time.Sleep(10 * time.Millisecond)
 				continue
 			}
-			batchData = append(batchData, data)
 
-			if uint(len(batchData)) >= m.batchSize {
-				err := sender.Send(&plumbing.BatchResponse{Payload: batchData})
-				if err != nil {
-					return err
-				}
-
-				batchData = batchData[:0]
-
-				if !timer.Stop() {
-					<-timer.C
-				}
-				timer.Reset(m.batchInterval)
-			}
+			batcher.Write(data)
 		}
 	}
 }
