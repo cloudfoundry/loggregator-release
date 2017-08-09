@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/loggregator/metricemitter"
+	"code.cloudfoundry.org/loggregator/plumbing/batching"
 	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
 )
 
@@ -24,6 +25,7 @@ type Transponder struct {
 	nexter        Nexter
 	writer        Writer
 	tags          map[string]string
+	batcher       *batching.Batcher
 	batchSize     int
 	batchInterval time.Duration
 	droppedMetric *metricemitter.Counter
@@ -51,37 +53,40 @@ func NewTransponder(
 		nexter:        n,
 		writer:        w,
 		tags:          tags,
-		batchSize:     batchSize,
-		batchInterval: batchInterval,
 		droppedMetric: droppedMetric,
 		egressMetric:  egressMetric,
+		batchSize:     batchSize,
+		batchInterval: batchInterval,
 	}
 }
 
 func (t *Transponder) Start() {
-	var batch []*plumbing.Envelope
-	lastSent := time.Now()
+	b := batching.NewBatcher(
+		t.batchSize,
+		t.batchInterval,
+		batching.WriterFunc(t.convertAndWrite),
+	)
 
 	for {
 		envelope, ok := t.nexter.TryNext()
-		if !ok && !t.batchReady(batch, lastSent) {
+		if !ok {
+			b.Flush()
 			time.Sleep(10 * time.Millisecond)
 			continue
 		}
 
-		if ok {
-			t.addTags(envelope)
-			batch = append(batch, envelope)
-		}
-
-		if !t.batchReady(batch, lastSent) {
-			continue
-		}
-
-		t.write(batch)
-		batch = nil
-		lastSent = time.Now()
+		b.Write(envelope)
 	}
+}
+
+func (t *Transponder) convertAndWrite(batch []interface{}) {
+	envelopes := make([]*plumbing.Envelope, 0, len(batch))
+	for _, b := range batch {
+		e := b.(*plumbing.Envelope)
+		t.addTags(e)
+		envelopes = append(envelopes, e)
+	}
+	t.write(envelopes)
 }
 
 func (t *Transponder) write(batch []*plumbing.Envelope) {
@@ -95,14 +100,6 @@ func (t *Transponder) write(batch []*plumbing.Envelope) {
 	// metric-documentation-v2: (loggregator.metron.egress)
 	// Number of messages written to Doppler's v2 API
 	t.egressMetric.Increment(uint64(len(batch)))
-}
-
-func (t *Transponder) batchReady(batch []*plumbing.Envelope, lastSent time.Time) bool {
-	if len(batch) == 0 {
-		return false
-	}
-
-	return len(batch) >= t.batchSize || time.Since(lastSent) >= t.batchInterval
 }
 
 func (t *Transponder) addTags(e *plumbing.Envelope) {
