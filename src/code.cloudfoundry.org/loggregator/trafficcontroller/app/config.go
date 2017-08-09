@@ -8,17 +8,21 @@ import (
 	"time"
 )
 
+// MetronConfig holds configuration for communication to a metron agent.
 type MetronConfig struct {
 	UDPAddress  string
 	GRPCAddress string
 }
 
+// EtcdTLSClientConfig holds TLS configuration for communication to etcd.
 type EtcdTLSClientConfig struct {
 	CertFile string
 	KeyFile  string
 	CAFile   string
 }
 
+// GRPC holds TLS configuration for gRPC communcation to doppler and metron.
+// Port is the Port to dial for communcation with doppler.
 type GRPC struct {
 	Port     uint16
 	CAFile   string
@@ -26,6 +30,8 @@ type GRPC struct {
 	KeyFile  string
 }
 
+// CCTLSClientConfig holds TLS cofiguration for communication with cloud
+// controller.
 type CCTLSClientConfig struct {
 	CertFile   string
 	KeyFile    string
@@ -33,6 +39,7 @@ type CCTLSClientConfig struct {
 	ServerName string
 }
 
+// Config holds all Configuration options for trafficcontroller.
 type Config struct {
 	EtcdUrls                  []string
 	EtcdMaxConcurrentRequests int
@@ -61,6 +68,7 @@ type Config struct {
 	HealthAddr             string
 }
 
+// ParseConfig reads ands and parses the given filepath to a JSON file.
 func ParseConfig(configFile string) (*Config, error) {
 	file, err := os.Open(configFile)
 	if err != nil {
@@ -70,6 +78,9 @@ func ParseConfig(configFile string) (*Config, error) {
 	return Parse(file)
 }
 
+// Parse returns a Config struct that has been unmarshalled from the given
+// io.Reader. Before the Config struct is returned, defaults are set and
+// validation is performed.
 func Parse(r io.Reader) (*Config, error) {
 	config := &Config{}
 
