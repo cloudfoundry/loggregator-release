@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -32,6 +33,7 @@ func main() {
 		},
 	}
 
+	log.Println("Building UAA client")
 	uaaClient := reliability.NewUAAClient(
 		clientID,
 		clientSecret,
@@ -39,6 +41,7 @@ func main() {
 		httpClient,
 	)
 
+	log.Println("Building DataDog reporter")
 	reporter := reliability.NewDataDogReporter(
 		dataDogAPIKey,
 		host,
@@ -46,6 +49,7 @@ func main() {
 		httpClient,
 	)
 
+	log.Println("Building TestRunner")
 	testRunner := reliability.NewLogReliabilityTestRunner(
 		logEndpoint,
 		"blackbox-test-",
@@ -54,6 +58,5 @@ func main() {
 	)
 
 	client := reliability.NewWorkerClient(controlServerAddr, testRunner)
-
-	client.Run(context.Background())
+	log.Println(client.Run(context.Background()))
 }

@@ -2,6 +2,7 @@ package reliability
 
 import (
 	"context"
+	"log"
 
 	"github.com/gorilla/websocket"
 )
@@ -23,6 +24,7 @@ func (w *WorkerClient) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	log.Println("connected to control server")
 
 	var cancel func()
 	ctx, cancel = context.WithCancel(ctx)
@@ -35,6 +37,8 @@ func (w *WorkerClient) Run(ctx context.Context) error {
 			if err != nil {
 				break
 			}
+
+			log.Println("test received from control server")
 			go w.runner.Run(&test)
 		}
 	}()
