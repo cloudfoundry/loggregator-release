@@ -36,6 +36,8 @@ func (h *CreateTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	r.Body.Close()
 
+	t.ID = time.Now().UnixNano()
+
 	go h.runner.Run(t)
 
 	resp, err := json.Marshal(t)
@@ -50,6 +52,7 @@ func (h *CreateTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type Test struct {
+	ID      int64    `json:"id"`
 	Cycles  uint64   `json:"cycles"`
 	Delay   Duration `json:"delay"`
 	Timeout Duration `json:"timeout"`
@@ -68,4 +71,8 @@ func (d *Duration) UnmarshalJSON(b []byte) error {
 	*d = Duration(dur)
 
 	return nil
+}
+
+func (d *Duration) MarshalJSON() ([]byte, error) {
+	return []byte("\"" + (time.Duration)(*d).String() + "\""), nil
 }

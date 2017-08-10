@@ -2,12 +2,12 @@ package reliability_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync/atomic"
-	"time"
 	"tools/reliability"
 
 	. "github.com/onsi/ginkgo"
@@ -15,10 +15,15 @@ import (
 )
 
 var _ = Describe("CreateTestHandler", func() {
-	It("passes the test to a runner", func() {
-		runner := &spyRunner{}
+	var (
+		recorder *httptest.ResponseRecorder
+		runner   *spyRunner
+	)
+
+	BeforeEach(func() {
+		runner = &spyRunner{}
 		h := reliability.NewCreateTestHandler(runner)
-		recorder := httptest.NewRecorder()
+		recorder = httptest.NewRecorder()
 
 		h.ServeHTTP(recorder, &http.Request{
 			Method: "POST",
@@ -26,27 +31,27 @@ var _ = Describe("CreateTestHandler", func() {
 				Reader: strings.NewReader(`{"cycles": 1000, "delay":"1s", "timeout":"60s"}`),
 			},
 		})
+	})
 
+	It("passes the test to a runner", func() {
 		Expect(recorder.Code).To(Equal(http.StatusCreated))
 		Eventually(runner.Count).Should(Equal(int64(1)))
 	})
 
-	It("decodes JSON", func() {
-		expected := &reliability.Test{
-			Cycles:  1000,
-			Delay:   reliability.Duration(1 * time.Second),
-			Timeout: reliability.Duration(60 * time.Second),
-		}
-		b, err := json.Marshal(expected)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(b).To(MatchJSON([]byte(`{"cycles": 1000, "delay": 1000000000, "timeout": 60000000000}`)))
+	It("responds with the created test", func() {
+		body := recorder.Body.String()
 
-		t := &reliability.Test{}
-		r := strings.NewReader(`{"cycles": 1000, "delay": "1s", "timeout": "1m"}`)
-		err = json.NewDecoder(r).Decode(t)
-		Expect(err).NotTo(HaveOccurred())
+		var test reliability.Test
+		err := json.Unmarshal([]byte(body), &test)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(test.ID).ToNot(Equal(int64(0)))
 
-		Expect(t).To(Equal(expected))
+		Expect(body).To(MatchJSON(fmt.Sprintf(`{
+			"id": %d,
+			"cycles": 1000,
+			"delay": "1s",
+			"timeout": "1m0s"
+		}`, test.ID)))
 	})
 })
 
