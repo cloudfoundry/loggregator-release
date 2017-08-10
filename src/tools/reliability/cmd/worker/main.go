@@ -1,11 +1,9 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"time"
@@ -15,11 +13,6 @@ import (
 
 func main() {
 	// these are provided by cloud foundry
-	host, err := host()
-	if err != nil {
-		log.Fatal(err)
-	}
-	port := os.Getenv("PORT")
 	instanceID := os.Getenv("INSTANCE_GUID")
 
 	// these should be provided by you
@@ -28,6 +21,8 @@ func main() {
 	clientSecret := os.Getenv("CLIENT_SECRET")
 	dataDogAPIKey := os.Getenv("DATADOG_API_KEY")
 	logEndpoint := os.Getenv("LOG_ENDPOINT")
+	controlServerAddr := os.Getenv("CONTROL_SERVER_ADDR")
+	host := os.Getenv("HOSTNAME")
 
 	httpClient := &http.Client{
 		Timeout: 30 * time.Second,
@@ -59,27 +54,7 @@ func main() {
 		reporter,
 	)
 
-	http.Handle("/tests", reliability.NewCreateTestHandler(testRunner))
+	client := reliability.NewWorkerClient(controlServerAddr, testRunner)
 
-	addr := ":" + port
-	log.Printf("server started on %s", addr)
-	log.Println(http.ListenAndServe(addr, nil))
-}
-
-func host() (string, error) {
-	appJSON := []byte(os.Getenv("VCAP_APPLICATION"))
-	var appData map[string]interface{}
-	err := json.Unmarshal(appJSON, &appData)
-	if err != nil {
-		return "", err
-	}
-	log.Printf("%#v", appData)
-	uris, ok := appData["uris"].([]interface{})
-	if !ok {
-		return "", errors.New("can not type assert uris to []interface{}")
-	}
-	if len(uris) == 0 {
-		return "", errors.New("no application uri available, required for reporting to datadog")
-	}
-	return uris[0].(string), nil
+	client.Run(context.Background())
 }
