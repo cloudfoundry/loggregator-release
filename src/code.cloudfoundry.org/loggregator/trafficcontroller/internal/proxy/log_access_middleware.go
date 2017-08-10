@@ -27,7 +27,6 @@ func (m *LogAccessMiddleware) Wrap(h http.Handler) http.Handler {
 		if status != http.StatusOK {
 			switch status {
 			case http.StatusUnauthorized:
-				w.WriteHeader(status)
 				w.Header().Set("WWW-Authenticate", "Basic")
 			case http.StatusForbidden, http.StatusNotFound:
 				status = http.StatusNotFound
