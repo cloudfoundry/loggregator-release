@@ -1,3 +1,7 @@
+// Batching provides a mechanism for batching writes. Its methods should be
+// invoked from a single goroutine. It is the responsibility of the caller to
+// invoke Flush frequently to actually flush the current batch out to the
+// Writer.
 package batching
 
 import "time"
@@ -39,7 +43,9 @@ func NewBatcher(size int, interval time.Duration, writer Writer) *Batcher {
 }
 
 // Write stores data to the batch. It will not submit the batch to the writer
-// until either the batch has been filled, or the interval has lapsed.
+// until either the batch has been filled, or the interval has lapsed. NOTE:
+// Write is *not* thread safe and should be called by the same goroutine that
+// calls Flush.
 func (b *Batcher) Write(data interface{}) {
 	b.batch = append(b.batch, data)
 	if b.partialBatch() && b.partialInterval() {
@@ -50,7 +56,11 @@ func (b *Batcher) Write(data interface{}) {
 }
 
 // Flush will write a partial batch if there is data and the interval has
-// lapsed. Otherwise it is a NOP.
+// lapsed. Otherwise it is a NOP. This method should be called freqently to
+// make sure batches do not stick around for long periods of time. As a result
+// it would be a bad idea to call Flush after an operation that might block
+// for an un-specified amount of time. NOTE: Flush is *not* thread safe and
+// should be called by the same goroutine that calls Write.
 func (b *Batcher) Flush() {
 	if b.partialInterval() {
 		return
