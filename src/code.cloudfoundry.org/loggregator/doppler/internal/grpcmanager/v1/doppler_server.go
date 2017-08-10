@@ -191,14 +191,8 @@ type batchWriter struct {
 	errStream chan<- error
 }
 
-func (b *batchWriter) Write(batch []interface{}) {
-	envelopes := make([][]byte, 0, len(batch))
-	for _, b := range batch {
-		e := b.([]byte)
-		envelopes = append(envelopes, e)
-	}
-
-	err := b.sender.Send(&plumbing.BatchResponse{Payload: envelopes})
+func (b *batchWriter) Write(batch [][]byte) {
+	err := b.sender.Send(&plumbing.BatchResponse{Payload: batch})
 	if err != nil {
 		b.errStream <- err
 	}
@@ -210,7 +204,7 @@ func (m *DopplerServer) sendBatchData(req *plumbing.SubscriptionRequest, sender 
 	defer cleanup()
 
 	errStream := make(chan error, 1)
-	batcher := batching.NewBatcher(
+	batcher := batching.NewByteBatcher(
 		int(m.batchSize),
 		m.batchInterval,
 		&batchWriter{sender: sender, errStream: errStream},

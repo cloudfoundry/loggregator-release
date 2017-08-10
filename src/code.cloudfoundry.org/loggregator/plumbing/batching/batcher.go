@@ -1,7 +1,3 @@
-// Batching provides a mechanism for batching writes. Its methods should be
-// invoked from a single goroutine. It is the responsibility of the caller to
-// invoke Flush frequently to actually flush the current batch out to the
-// Writer.
 package batching
 
 import "time"
@@ -32,7 +28,8 @@ func (f WriterFunc) Write(batch []interface{}) {
 	f(batch)
 }
 
-// NewBatcher creates a new Batcher.
+// NewBatcher creates a new Batcher. It is recommenended to use a wrapper type
+// such as NewByteBatcher or NewV2EnvelopeBatcher vs using this directly.
 func NewBatcher(size int, interval time.Duration, writer Writer) *Batcher {
 	return &Batcher{
 		size:     size,

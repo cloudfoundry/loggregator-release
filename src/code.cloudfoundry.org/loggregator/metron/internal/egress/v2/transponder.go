@@ -5,15 +5,15 @@ import (
 
 	"code.cloudfoundry.org/loggregator/metricemitter"
 	"code.cloudfoundry.org/loggregator/plumbing/batching"
-	plumbing "code.cloudfoundry.org/loggregator/plumbing/v2"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 )
 
 type Nexter interface {
-	TryNext() (*plumbing.Envelope, bool)
+	TryNext() (*v2.Envelope, bool)
 }
 
 type Writer interface {
-	Write(msgs []*plumbing.Envelope) error
+	Write(msgs []*v2.Envelope) error
 }
 
 // MetricClient creates new CounterMetrics to be emitted periodically.
@@ -61,10 +61,10 @@ func NewTransponder(
 }
 
 func (t *Transponder) Start() {
-	b := batching.NewBatcher(
+	b := batching.NewV2EnvelopeBatcher(
 		t.batchSize,
 		t.batchInterval,
-		batching.WriterFunc(t.convertAndWrite),
+		batching.V2EnvelopeWriterFunc(t.write),
 	)
 
 	for {
@@ -79,17 +79,11 @@ func (t *Transponder) Start() {
 	}
 }
 
-func (t *Transponder) convertAndWrite(batch []interface{}) {
-	envelopes := make([]*plumbing.Envelope, 0, len(batch))
-	for _, b := range batch {
-		e := b.(*plumbing.Envelope)
+func (t *Transponder) write(batch []*v2.Envelope) {
+	for _, e := range batch {
 		t.addTags(e)
-		envelopes = append(envelopes, e)
 	}
-	t.write(envelopes)
-}
 
-func (t *Transponder) write(batch []*plumbing.Envelope) {
 	if err := t.writer.Write(batch); err != nil {
 		// metric-documentation-v2: (loggregator.metron.dropped) Number of messages
 		// dropped when failing to write to Dopplers v2 API
@@ -102,17 +96,17 @@ func (t *Transponder) write(batch []*plumbing.Envelope) {
 	t.egressMetric.Increment(uint64(len(batch)))
 }
 
-func (t *Transponder) addTags(e *plumbing.Envelope) {
+func (t *Transponder) addTags(e *v2.Envelope) {
 	if e.DeprecatedTags == nil {
-		e.DeprecatedTags = make(map[string]*plumbing.Value)
+		e.DeprecatedTags = make(map[string]*v2.Value)
 	}
 
 	// Move non-deprecated tags to deprecated tags. This is required
 	// for backwards compatibility purposes and should be removed once
 	// deprecated tags are fully removed.
 	for k, v := range e.GetTags() {
-		e.DeprecatedTags[k] = &plumbing.Value{
-			Data: &plumbing.Value_Text{
+		e.DeprecatedTags[k] = &v2.Value{
+			Data: &v2.Value_Text{
 				Text: v,
 			},
 		}
@@ -120,8 +114,8 @@ func (t *Transponder) addTags(e *plumbing.Envelope) {
 
 	for k, v := range t.tags {
 		if _, ok := e.DeprecatedTags[k]; !ok {
-			e.DeprecatedTags[k] = &plumbing.Value{
-				Data: &plumbing.Value_Text{
+			e.DeprecatedTags[k] = &v2.Value{
+				Data: &v2.Value_Text{
 					Text: v,
 				},
 			}
