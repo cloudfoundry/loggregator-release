@@ -12,11 +12,6 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
-type TestRunnerStore interface {
-	Find(string) (Test, error)
-	Update(*Test)
-}
-
 type Reporter interface {
 	Report(t *TestResult) error
 }
@@ -26,27 +21,29 @@ type Authenticator interface {
 }
 
 type LogReliabilityTestRunner struct {
-	loggregatorAddr string
-	subscriptionID  string
-	authenticator   Authenticator
-	reporter        Reporter
+	loggregatorAddr      string
+	subscriptionIDPrefix string
+	authenticator        Authenticator
+	reporter             Reporter
 }
 
 func NewLogReliabilityTestRunner(
 	loggregatorAddr string,
-	subscriptionID string,
+	subscriptionIDPrefix string,
 	a Authenticator,
 	r Reporter,
 ) *LogReliabilityTestRunner {
 	return &LogReliabilityTestRunner{
-		loggregatorAddr: loggregatorAddr,
-		subscriptionID:  subscriptionID,
-		authenticator:   a,
-		reporter:        r,
+		loggregatorAddr:      loggregatorAddr,
+		subscriptionIDPrefix: subscriptionIDPrefix,
+		authenticator:        a,
+		reporter:             r,
 	}
 }
 
 func (r *LogReliabilityTestRunner) Run(t *Test) {
+	subscriptionID := fmt.Sprint(r.subscriptionIDPrefix, t.ID)
+
 	authToken, err := r.authenticator.Token()
 	if err != nil {
 		log.Printf("failed to authenticate with UAA: %s", err)
@@ -59,13 +56,13 @@ func (r *LogReliabilityTestRunner) Run(t *Test) {
 			log.Printf("failed to close connection to firehose: %v", err)
 		}
 	}()
-	msgChan, errChan := cmr.FirehoseWithoutReconnect(r.subscriptionID, authToken)
+	msgChan, errChan := cmr.FirehoseWithoutReconnect(subscriptionID, authToken)
 
-	if !prime(msgChan, errChan, r.subscriptionID) {
+	if !prime(msgChan, errChan, subscriptionID) {
 		return
 	}
 
-	testLog := []byte(fmt.Sprintf("%s - TEST", r.subscriptionID))
+	testLog := []byte(fmt.Sprintf("%s - TEST", subscriptionID))
 	go writeLogs(testLog, t.Cycles, time.Duration(t.Delay))
 
 	receivedLogCount, err := receiveLogs(
@@ -74,7 +71,7 @@ func (r *LogReliabilityTestRunner) Run(t *Test) {
 		testLog,
 		t.Cycles,
 		time.Duration(t.Timeout),
-		r.subscriptionID,
+		subscriptionID,
 	)
 	if err != nil {
 		return

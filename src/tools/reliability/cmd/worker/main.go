@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -49,7 +48,7 @@ func main() {
 
 	testRunner := reliability.NewLogReliabilityTestRunner(
 		logEndpoint,
-		fmt.Sprintf("blackbox-test-%d", time.Now().Unix()),
+		"blackbox-test-",
 		uaaClient,
 		reporter,
 	)
