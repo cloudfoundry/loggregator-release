@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"time"
 	"tools/reliability"
 
@@ -27,6 +28,7 @@ var _ = Describe("CreateTestHandler", func() {
 		})
 
 		Expect(recorder.Code).To(Equal(http.StatusCreated))
+		Eventually(runner.Count).Should(Equal(int64(1)))
 	})
 
 	It("decodes JSON", func() {
@@ -50,9 +52,16 @@ var _ = Describe("CreateTestHandler", func() {
 
 type spyRunner struct {
 	reliability.Runner
+	runCallCount int64
 }
 
-func (*spyRunner) Run(*reliability.Test) {}
+func (s *spyRunner) Run(*reliability.Test) {
+	atomic.AddInt64(&s.runCallCount, 1)
+}
+
+func (s *spyRunner) Count() int64 {
+	return atomic.LoadInt64(&s.runCallCount)
+}
 
 type requestBody struct {
 	io.Reader
