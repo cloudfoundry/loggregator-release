@@ -17,7 +17,7 @@ type Counter struct {
 	delta    uint64
 }
 
-// Tagged is a struct that is embeded into metrics to give them common
+// Tagged is a struct that is embedded into metrics to give them common
 // functionality around tags.
 type Tagged struct {
 	tags map[string]*v2.Value

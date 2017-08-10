@@ -11,7 +11,7 @@ import (
 )
 
 // StartServer listens and serves the health endpoint HTTP handler on a given
-// address. If the server fails to listen or serve the proccess will exit with
+// address. If the server fails to listen or serve the process will exit with
 // a status code of 1.
 func StartServer(addr string, gatherer prometheus.Gatherer) net.Listener {
 	router := http.NewServeMux()
