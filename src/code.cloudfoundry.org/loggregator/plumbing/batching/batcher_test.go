@@ -10,16 +10,10 @@ import (
 )
 
 var _ = Describe("Batcher", func() {
-	var (
-		writer *spyWriter
-	)
-
-	BeforeEach(func() {
-		writer = &spyWriter{}
-	})
-
 	It("honors the batch size when writing", func() {
+		writer := &spyWriter{}
 		b := batching.NewBatcher(1, time.Minute, writer)
+
 		b.Write("item")
 
 		Expect(writer.batch).To(HaveLen(1))
@@ -27,7 +21,9 @@ var _ = Describe("Batcher", func() {
 	})
 
 	It("resets the internal buffer after writes", func() {
+		writer := &spyWriter{}
 		b := batching.NewBatcher(1, time.Minute, writer)
+
 		b.Write("item")
 
 		Expect(writer.batch).To(HaveLen(1))
@@ -41,14 +37,18 @@ var _ = Describe("Batcher", func() {
 	})
 
 	It("honors the time interval when writing", func() {
+		writer := &spyWriter{}
 		b := batching.NewBatcher(2, time.Minute, writer)
+
 		b.Write("item")
 
 		Expect(writer.batch).To(HaveLen(0))
 	})
 
 	It("writes a partial batch when the interval has lapsed", func() {
+		writer := &spyWriter{}
 		b := batching.NewBatcher(10, 1*time.Millisecond, writer)
+
 		b.Write("item")
 
 		// Wait for interval to lapse
@@ -59,6 +59,7 @@ var _ = Describe("Batcher", func() {
 	})
 
 	It("flushes a partial batch if the interval has lapsed", func() {
+		writer := &spyWriter{}
 		b := batching.NewBatcher(2, time.Nanosecond, writer)
 
 		// Wait for interval to lapse
@@ -76,7 +77,9 @@ var _ = Describe("Batcher", func() {
 	})
 
 	It("honors the time interval when flushing", func() {
+		writer := &spyWriter{}
 		b := batching.NewBatcher(2, time.Minute, writer)
+
 		b.Write("item")
 		b.Flush()
 
@@ -84,6 +87,7 @@ var _ = Describe("Batcher", func() {
 	})
 
 	It("avoids calling the writer with an empty batch", func() {
+		writer := &spyWriter{}
 		b := batching.NewBatcher(2, time.Nanosecond, writer)
 
 		// Wait for interval to lapse
