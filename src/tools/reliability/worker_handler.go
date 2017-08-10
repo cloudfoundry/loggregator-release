@@ -51,7 +51,7 @@ func (s *WorkerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for {
 		_, _, err := conn.ReadMessage()
 		if err != nil {
-			log.Println("read failed: %s", err)
+			log.Printf("read failed: %s", err)
 			break
 		}
 	}
