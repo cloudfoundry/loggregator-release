@@ -7,25 +7,22 @@ import (
 	"sync/atomic"
 	"time"
 
-	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
-	"code.cloudfoundry.org/loggregator/rlp/internal/egress"
-
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	"golang.org/x/net/context"
-
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
+	"code.cloudfoundry.org/loggregator/rlp/internal/egress"
 
+	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Server", func() {
 	var (
-		receiver       *spyReceiver
-		receiverServer *spyReceiverServer
-		server         *egress.Server
-		metricClient   *testhelper.SpyMetricClient
+		receiver     *spyReceiver
+		server       *egress.Server
+		metricClient *testhelper.SpyMetricClient
 	)
 
 	BeforeEach(func() {
@@ -33,6 +30,10 @@ var _ = Describe("Server", func() {
 	})
 
 	Describe("Receiver()", func() {
+		var (
+			receiverServer *spyReceiverServer
+		)
+
 		It("returns an error for a request that has type filter but not a source ID", func() {
 			req := &v2.EgressRequest{
 				Filter: &v2.Filter{
@@ -151,6 +152,131 @@ var _ = Describe("Server", func() {
 			})
 		})
 	})
+
+	Describe("BatchedReceiver()", func() {
+		var (
+			receiverServer *spyBatchedReceiverServer
+		)
+
+		It("returns an error for a request that has type filter but not a source ID", func() {
+			req := &v2.EgressBatchRequest{
+				Filter: &v2.Filter{
+					Message: &v2.Filter_Log{
+						Log: &v2.LogFilter{},
+					},
+				},
+			}
+			receiverServer = &spyBatchedReceiverServer{}
+			receiver = newSpyReceiver(0)
+			server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
+
+			err := server.BatchedReceiver(req, receiverServer)
+			Expect(err).To(MatchError("invalid request: cannot have type filter without source id"))
+		})
+
+		It("errors when the sender cannot send the envelope", func() {
+			receiverServer = &spyBatchedReceiverServer{err: errors.New("Oh No!")}
+			receiver = newSpyReceiver(1)
+
+			server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
+			err := server.BatchedReceiver(&v2.EgressBatchRequest{}, receiverServer)
+			Expect(err).To(Equal(io.ErrUnexpectedEOF))
+		})
+
+		// TODO update for batch coverage here
+		It("streams data when there are envelopes", func() {
+			receiverServer = &spyBatchedReceiverServer{}
+			receiver = newSpyReceiver(10)
+
+			server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
+			err := server.BatchedReceiver(&v2.EgressBatchRequest{}, receiverServer)
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(receiverServer.EnvelopeCount).Should(Equal(int64(10)))
+		})
+
+		It("closes the receiver when the context is canceled", func() {
+			receiverServer = &spyBatchedReceiverServer{}
+			receiver = newSpyReceiver(1000000000)
+
+			ctx, cancel := context.WithCancel(context.TODO())
+			server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), ctx)
+			go func() {
+				err := server.BatchedReceiver(&v2.EgressBatchRequest{}, receiverServer)
+				Expect(err).ToNot(HaveOccurred())
+			}()
+
+			cancel()
+
+			var rxCtx context.Context
+			Eventually(receiver.ctx).Should(Receive(&rxCtx))
+			Eventually(rxCtx.Done).Should(BeClosed())
+		})
+
+		It("cancels the context when Receiver exits", func() {
+			receiverServer = &spyBatchedReceiverServer{
+				err: errors.New("Oh no!"),
+			}
+			receiver = newSpyReceiver(100000000)
+
+			server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
+			go server.BatchedReceiver(&v2.EgressBatchRequest{}, receiverServer)
+
+			var ctx context.Context
+			Eventually(receiver.ctx).Should(Receive(&ctx))
+			Eventually(ctx.Done()).Should(BeClosed())
+		})
+
+		Describe("Metrics", func() {
+			It("emits 'egress' metric for each envelope", func() {
+				receiverServer = &spyBatchedReceiverServer{}
+				receiver = newSpyReceiver(10)
+
+				server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
+				err := server.BatchedReceiver(&v2.EgressBatchRequest{}, receiverServer)
+				Expect(err).ToNot(HaveOccurred())
+
+				Eventually(func() uint64 {
+					return metricClient.GetDelta("egress")
+				}).Should(BeNumerically("==", 10))
+			})
+
+			It("emits 'dropped' metric for each envelope", func() {
+				receiverServer = &spyBatchedReceiverServer{
+					sendDelay: time.Hour,
+				}
+				receiver = newSpyReceiver(1000000)
+
+				server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
+				go server.BatchedReceiver(&v2.EgressBatchRequest{}, receiverServer)
+
+				Eventually(func() uint64 {
+					return metricClient.GetDelta("dropped")
+				}, 3).Should(BeNumerically(">", 100))
+			})
+		})
+
+		Describe("health monitoring", func() {
+			It("increments and decrements subscription count", func() {
+				receiverServer = &spyBatchedReceiverServer{}
+				receiver = newSpyReceiver(1000000000)
+
+				health := newSpyHealthRegistrar()
+				server = egress.NewServer(receiver, metricClient, health, context.TODO())
+				go server.BatchedReceiver(&v2.EgressBatchRequest{}, receiverServer)
+
+				Eventually(func() float64 {
+					return health.Get("subscriptionCount")
+				}).Should(Equal(1.0))
+
+				receiver.stop()
+
+				Eventually(func() float64 {
+					return health.Get("subscriptionCount")
+				}).Should(Equal(0.0))
+			})
+		})
+	})
 })
 
 type spyReceiverServer struct {
@@ -172,6 +298,28 @@ func (s *spyReceiverServer) Send(*v2.Envelope) error {
 }
 
 func (s *spyReceiverServer) EnvelopeCount() int64 {
+	return atomic.LoadInt64(&s.envelopeCount)
+}
+
+type spyBatchedReceiverServer struct {
+	err           error
+	envelopeCount int64
+	sendDelay     time.Duration
+
+	grpc.ServerStream
+}
+
+func (*spyBatchedReceiverServer) Context() context.Context {
+	return context.Background()
+}
+
+func (s *spyBatchedReceiverServer) Send(*v2.EnvelopeBatch) error {
+	atomic.AddInt64(&s.envelopeCount, 1)
+	time.Sleep(s.sendDelay)
+	return s.err
+}
+
+func (s *spyBatchedReceiverServer) EnvelopeCount() int64 {
 	return atomic.LoadInt64(&s.envelopeCount)
 }
 

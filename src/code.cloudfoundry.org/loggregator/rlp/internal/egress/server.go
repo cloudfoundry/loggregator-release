@@ -107,6 +107,57 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 	return nil
 }
 
+func (s *Server) BatchedReceiver(r *v2.EgressBatchRequest, srv v2.Egress_BatchedReceiverServer) error {
+	s.health.Inc("subscriptionCount")
+	defer s.health.Dec("subscriptionCount")
+
+	if r.GetFilter() != nil &&
+		r.GetFilter().SourceId == "" &&
+		r.GetFilter().Message != nil {
+		return errors.New("invalid request: cannot have type filter without source id")
+	}
+
+	ctx, cancel := context.WithCancel(srv.Context())
+	defer cancel()
+
+	buffer := make(chan *v2.Envelope, 10000)
+
+	go func() {
+		select {
+		case <-s.ctx.Done():
+			cancel()
+		case <-ctx.Done():
+			cancel()
+		}
+	}()
+
+	rx, err := s.receiver.Receive(ctx, &v2.EgressRequest{
+		ShardId:          r.GetShardId(),
+		Filter:           r.GetFilter(),
+		UsePreferredTags: r.GetUsePreferredTags(),
+	})
+	// TODO Add coverage for this error case
+	if err != nil {
+		log.Printf("Unable to setup subscription: %s", err)
+		return fmt.Errorf("unable to setup subscription")
+	}
+
+	go s.consumeReceiver(buffer, rx, cancel)
+
+	for data := range buffer {
+		if err := srv.Send(&v2.EnvelopeBatch{Batch: []*v2.Envelope{data}}); err != nil {
+			log.Printf("Send error: %s", err)
+			return io.ErrUnexpectedEOF
+		}
+
+		// metric-documentation-v2: (loggregator.rlp.egress) Number of v2
+		// envelopes sent to RLP consumers.
+		s.egressMetric.Increment(1)
+	}
+
+	return nil
+}
+
 func (s *Server) Alert(missed int) {
 	// metric-documentation-v2: (loggregator.rlp.dropped) Number of v2
 	// envelopes dropped while egressing to a consumer.

@@ -14,11 +14,13 @@ It is generated from these files:
 It has these top-level messages:
 	SenderResponse
 	EgressRequest
+	EgressBatchRequest
 	Filter
 	LogFilter
 	ContainerMetricRequest
 	QueryResponse
 	Envelope
+	EnvelopeBatch
 	Value
 	Log
 	Counter
@@ -26,7 +28,6 @@ It has these top-level messages:
 	GaugeValue
 	Timer
 	IngressResponse
-	EnvelopeBatch
 	BatchSenderResponse
 */
 package loggregator_v2
