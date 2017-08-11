@@ -23,12 +23,13 @@ func main() {
 	logEndpoint := os.Getenv("LOG_ENDPOINT")
 	controlServerAddr := os.Getenv("CONTROL_SERVER_ADDR")
 	host := os.Getenv("HOSTNAME")
+	skipCertVerify := os.Getenv("SKIP_CERT_VERIFY") == "true"
 
 	httpClient := &http.Client{
 		Timeout: 30 * time.Second,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
+				InsecureSkipVerify: skipCertVerify,
 			},
 		},
 	}
@@ -57,6 +58,6 @@ func main() {
 		reporter,
 	)
 
-	client := reliability.NewWorkerClient(controlServerAddr, true, testRunner)
+	client := reliability.NewWorkerClient(controlServerAddr, skipCertVerify, testRunner)
 	log.Println(client.Run(context.Background()))
 }
