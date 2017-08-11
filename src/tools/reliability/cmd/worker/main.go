@@ -57,6 +57,6 @@ func main() {
 		reporter,
 	)
 
-	client := reliability.NewWorkerClient(controlServerAddr, testRunner)
+	client := reliability.NewWorkerClient(controlServerAddr, true, testRunner)
 	log.Println(client.Run(context.Background()))
 }

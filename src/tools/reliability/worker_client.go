@@ -2,25 +2,33 @@ package reliability
 
 import (
 	"context"
+	"crypto/tls"
 	"log"
 
 	"github.com/gorilla/websocket"
 )
 
 type WorkerClient struct {
-	addr   string
-	runner Runner
+	addr       string
+	skipVerify bool
+	runner     Runner
 }
 
-func NewWorkerClient(addr string, r Runner) *WorkerClient {
+func NewWorkerClient(addr string, skipVerify bool, r Runner) *WorkerClient {
 	return &WorkerClient{
-		addr:   addr,
-		runner: r,
+		addr:       addr,
+		skipVerify: skipVerify,
+		runner:     r,
 	}
 }
 
 func (w *WorkerClient) Run(ctx context.Context) error {
-	conn, _, err := websocket.DefaultDialer.Dial(w.addr, nil)
+	dialer := &websocket.Dialer{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: w.skipVerify,
+		},
+	}
+	conn, _, err := dialer.Dial(w.addr, nil)
 	if err != nil {
 		return err
 	}

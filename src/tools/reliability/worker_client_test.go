@@ -20,7 +20,7 @@ var _ = Describe("WorkerClient", func() {
 		server := newFakeWSServer()
 		runner := &spyRunner{}
 
-		client := reliability.NewWorkerClient(server.wsAddr(), runner)
+		client := reliability.NewWorkerClient(server.wsAddr(), true, runner)
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
