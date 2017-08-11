@@ -97,6 +97,25 @@ var _ = Describe("Batcher", func() {
 
 		Expect(writer.called).To(Equal(0))
 	})
+
+	It("provides a means to guarantee a flushed write", func() {
+		writer := &spyWriter{}
+		b := batching.NewBatcher(2, time.Second, writer)
+
+		b.Write("item")
+		b.ForcedFlush()
+
+		Expect(writer.called).To(Equal(1))
+	})
+
+	It("avoids writing an empty batch on forced flush", func() {
+		writer := &spyWriter{}
+		b := batching.NewBatcher(2, time.Second, writer)
+
+		b.ForcedFlush()
+
+		Expect(writer.called).To(Equal(0))
+	})
 })
 
 type spyWriter struct {

@@ -9,6 +9,7 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/healthendpoint/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/metricemitter/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/loggregator/plumbing/batching/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/conversion/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/v2/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/profiler/*.go # gosub

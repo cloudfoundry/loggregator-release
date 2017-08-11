@@ -227,7 +227,7 @@ var _ = Describe("Server", func() {
 		It("errors when the sender cannot send the envelope", func() {
 			receiverServer := &spyBatchedReceiverServer{err: errors.New("Oh No!")}
 			server := egress.NewServer(
-				newSpyReceiver(1),
+				newSpyReceiver(10000),
 				testhelper.NewMetricClient(),
 				newSpyHealthRegistrar(),
 				context.TODO(),
@@ -247,7 +247,7 @@ var _ = Describe("Server", func() {
 				testhelper.NewMetricClient(),
 				newSpyHealthRegistrar(),
 				context.TODO(),
-				1,
+				10,
 				time.Nanosecond,
 			)
 
@@ -312,8 +312,8 @@ var _ = Describe("Server", func() {
 					metricClient,
 					newSpyHealthRegistrar(),
 					context.TODO(),
-					1,
-					time.Nanosecond,
+					10,
+					time.Second,
 				)
 
 				err := server.BatchedReceiver(

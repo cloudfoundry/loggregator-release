@@ -52,6 +52,12 @@ func (b *Batcher) Write(data interface{}) {
 	b.writeBatch()
 }
 
+// ForcedFlush bypasses the batch interval and batch size checks and writes
+// immediately.
+func (b *Batcher) ForcedFlush() {
+	b.writeBatch()
+}
+
 // Flush will write a partial batch if there is data and the interval has
 // lapsed. Otherwise it is a NOP. This method should be called freqently to
 // make sure batches do not stick around for long periods of time. As a result
