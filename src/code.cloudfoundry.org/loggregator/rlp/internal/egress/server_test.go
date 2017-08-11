@@ -19,21 +19,7 @@ import (
 )
 
 var _ = Describe("Server", func() {
-	var (
-		receiver     *spyReceiver
-		server       *egress.Server
-		metricClient *testhelper.SpyMetricClient
-	)
-
-	BeforeEach(func() {
-		metricClient = testhelper.NewMetricClient()
-	})
-
 	Describe("Receiver()", func() {
-		var (
-			receiverServer *spyReceiverServer
-		)
-
 		It("returns an error for a request that has type filter but not a source ID", func() {
 			req := &v2.EgressRequest{
 				Filter: &v2.Filter{
@@ -42,40 +28,70 @@ var _ = Describe("Server", func() {
 					},
 				},
 			}
-			receiverServer = &spyReceiverServer{}
-			receiver = newSpyReceiver(0)
-			server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
+			receiverServer := &spyReceiverServer{}
+			receiver := newSpyReceiver(0)
+			server := egress.NewServer(
+				receiver,
+				testhelper.NewMetricClient(),
+				newSpyHealthRegistrar(),
+				context.TODO(),
+				1,
+				time.Nanosecond,
+			)
 
 			err := server.Receiver(req, receiverServer)
+
 			Expect(err).To(MatchError("invalid request: cannot have type filter without source id"))
 		})
 
 		It("errors when the sender cannot send the envelope", func() {
-			receiverServer = &spyReceiverServer{err: errors.New("Oh No!")}
-			receiver = newSpyReceiver(1)
+			receiverServer := &spyReceiverServer{err: errors.New("Oh No!")}
+			receiver := newSpyReceiver(1)
+			server := egress.NewServer(
+				receiver,
+				testhelper.NewMetricClient(),
+				newSpyHealthRegistrar(),
+				context.TODO(),
+				1,
+				time.Nanosecond,
+			)
 
-			server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
 			err := server.Receiver(&v2.EgressRequest{}, receiverServer)
+
 			Expect(err).To(Equal(io.ErrUnexpectedEOF))
 		})
 
 		It("streams data when there are envelopes", func() {
-			receiverServer = &spyReceiverServer{}
-			receiver = newSpyReceiver(10)
+			receiverServer := &spyReceiverServer{}
+			receiver := newSpyReceiver(10)
+			server := egress.NewServer(
+				receiver,
+				testhelper.NewMetricClient(),
+				newSpyHealthRegistrar(),
+				context.TODO(),
+				1,
+				time.Nanosecond,
+			)
 
-			server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
 			err := server.Receiver(&v2.EgressRequest{}, receiverServer)
-			Expect(err).ToNot(HaveOccurred())
 
+			Expect(err).ToNot(HaveOccurred())
 			Eventually(receiverServer.EnvelopeCount).Should(Equal(int64(10)))
 		})
 
 		It("closes the receiver when the context is canceled", func() {
-			receiverServer = &spyReceiverServer{}
-			receiver = newSpyReceiver(1000000000)
-
+			receiverServer := &spyReceiverServer{}
+			receiver := newSpyReceiver(1000000000)
 			ctx, cancel := context.WithCancel(context.TODO())
-			server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), ctx)
+			server := egress.NewServer(
+				receiver,
+				testhelper.NewMetricClient(),
+				newSpyHealthRegistrar(),
+				ctx,
+				1,
+				time.Nanosecond,
+			)
+
 			go func() {
 				err := server.Receiver(&v2.EgressRequest{}, receiverServer)
 				Expect(err).ToNot(HaveOccurred())
@@ -89,12 +105,19 @@ var _ = Describe("Server", func() {
 		})
 
 		It("cancels the context when Receiver exits", func() {
-			receiverServer = &spyReceiverServer{
+			receiverServer := &spyReceiverServer{
 				err: errors.New("Oh no!"),
 			}
-			receiver = newSpyReceiver(100000000)
+			receiver := newSpyReceiver(100000000)
+			server := egress.NewServer(
+				receiver,
+				testhelper.NewMetricClient(),
+				newSpyHealthRegistrar(),
+				context.TODO(),
+				1,
+				time.Nanosecond,
+			)
 
-			server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
 			go server.Receiver(&v2.EgressRequest{}, receiverServer)
 
 			var ctx context.Context
@@ -104,25 +127,43 @@ var _ = Describe("Server", func() {
 
 		Describe("Metrics", func() {
 			It("emits 'egress' metric for each envelope", func() {
-				receiverServer = &spyReceiverServer{}
-				receiver = newSpyReceiver(10)
+				metricClient := testhelper.NewMetricClient()
+				receiverServer := &spyReceiverServer{}
+				receiver := newSpyReceiver(10)
+				server := egress.NewServer(
+					receiver,
+					metricClient,
+					newSpyHealthRegistrar(),
+					context.TODO(),
+					1,
+					time.Nanosecond,
+				)
 
-				server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
 				err := server.Receiver(&v2.EgressRequest{}, receiverServer)
-				Expect(err).ToNot(HaveOccurred())
 
+				Expect(err).ToNot(HaveOccurred())
 				Eventually(func() uint64 {
 					return metricClient.GetDelta("egress")
 				}).Should(BeNumerically("==", 10))
 			})
 
 			It("emits 'dropped' metric for each envelope", func() {
-				receiverServer = &spyReceiverServer{
-					sendDelay: time.Hour,
+				metricClient := testhelper.NewMetricClient()
+				receiverServer := &spyReceiverServer{
+					wait: make(chan struct{}),
 				}
-				receiver = newSpyReceiver(1000000)
+				defer receiverServer.stopWait()
 
-				server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
+				receiver := newSpyReceiver(1000000)
+				server := egress.NewServer(
+					receiver,
+					metricClient,
+					newSpyHealthRegistrar(),
+					context.TODO(),
+					1,
+					time.Nanosecond,
+				)
+
 				go server.Receiver(&v2.EgressRequest{}, receiverServer)
 
 				Eventually(func() uint64 {
@@ -133,11 +174,18 @@ var _ = Describe("Server", func() {
 
 		Describe("health monitoring", func() {
 			It("increments and decrements subscription count", func() {
-				receiverServer = &spyReceiverServer{}
-				receiver = newSpyReceiver(1000000000)
+				receiverServer := &spyReceiverServer{}
+				receiver := newSpyReceiver(1000000000)
 
 				health := newSpyHealthRegistrar()
-				server = egress.NewServer(receiver, metricClient, health, context.TODO())
+				server := egress.NewServer(
+					receiver,
+					testhelper.NewMetricClient(),
+					health,
+					context.TODO(),
+					1,
+					time.Nanosecond,
+				)
 				go server.Receiver(&v2.EgressRequest{}, receiverServer)
 
 				Eventually(func() float64 {
@@ -154,10 +202,6 @@ var _ = Describe("Server", func() {
 	})
 
 	Describe("BatchedReceiver()", func() {
-		var (
-			receiverServer *spyBatchedReceiverServer
-		)
-
 		It("returns an error for a request that has type filter but not a source ID", func() {
 			req := &v2.EgressBatchRequest{
 				Filter: &v2.Filter{
@@ -166,41 +210,67 @@ var _ = Describe("Server", func() {
 					},
 				},
 			}
-			receiverServer = &spyBatchedReceiverServer{}
-			receiver = newSpyReceiver(0)
-			server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
+			server := egress.NewServer(
+				newSpyReceiver(0),
+				testhelper.NewMetricClient(),
+				newSpyHealthRegistrar(),
+				context.TODO(),
+				1,
+				time.Nanosecond,
+			)
 
-			err := server.BatchedReceiver(req, receiverServer)
+			err := server.BatchedReceiver(req, &spyBatchedReceiverServer{})
+
 			Expect(err).To(MatchError("invalid request: cannot have type filter without source id"))
 		})
 
 		It("errors when the sender cannot send the envelope", func() {
-			receiverServer = &spyBatchedReceiverServer{err: errors.New("Oh No!")}
-			receiver = newSpyReceiver(1)
+			receiverServer := &spyBatchedReceiverServer{err: errors.New("Oh No!")}
+			server := egress.NewServer(
+				newSpyReceiver(1),
+				testhelper.NewMetricClient(),
+				newSpyHealthRegistrar(),
+				context.TODO(),
+				1,
+				time.Nanosecond,
+			)
 
-			server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
 			err := server.BatchedReceiver(&v2.EgressBatchRequest{}, receiverServer)
+
 			Expect(err).To(Equal(io.ErrUnexpectedEOF))
 		})
 
-		// TODO update for batch coverage here
 		It("streams data when there are envelopes", func() {
-			receiverServer = &spyBatchedReceiverServer{}
-			receiver = newSpyReceiver(10)
+			receiverServer := &spyBatchedReceiverServer{}
+			server := egress.NewServer(
+				newSpyReceiver(10),
+				testhelper.NewMetricClient(),
+				newSpyHealthRegistrar(),
+				context.TODO(),
+				1,
+				time.Nanosecond,
+			)
 
-			server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
 			err := server.BatchedReceiver(&v2.EgressBatchRequest{}, receiverServer)
-			Expect(err).ToNot(HaveOccurred())
 
+			Expect(err).ToNot(HaveOccurred())
 			Eventually(receiverServer.EnvelopeCount).Should(Equal(int64(10)))
 		})
 
 		It("closes the receiver when the context is canceled", func() {
-			receiverServer = &spyBatchedReceiverServer{}
-			receiver = newSpyReceiver(1000000000)
+			receiverServer := &spyBatchedReceiverServer{}
+			receiver := newSpyReceiver(1000000000)
 
 			ctx, cancel := context.WithCancel(context.TODO())
-			server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), ctx)
+			server := egress.NewServer(
+				receiver,
+				testhelper.NewMetricClient(),
+				newSpyHealthRegistrar(),
+				ctx,
+				1,
+				time.Nanosecond,
+			)
+
 			go func() {
 				err := server.BatchedReceiver(&v2.EgressBatchRequest{}, receiverServer)
 				Expect(err).ToNot(HaveOccurred())
@@ -214,12 +284,18 @@ var _ = Describe("Server", func() {
 		})
 
 		It("cancels the context when Receiver exits", func() {
-			receiverServer = &spyBatchedReceiverServer{
+			receiverServer := &spyBatchedReceiverServer{
 				err: errors.New("Oh no!"),
 			}
-			receiver = newSpyReceiver(100000000)
-
-			server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
+			receiver := newSpyReceiver(100000000)
+			server := egress.NewServer(
+				receiver,
+				testhelper.NewMetricClient(),
+				newSpyHealthRegistrar(),
+				context.TODO(),
+				1,
+				time.Nanosecond,
+			)
 			go server.BatchedReceiver(&v2.EgressBatchRequest{}, receiverServer)
 
 			var ctx context.Context
@@ -229,25 +305,41 @@ var _ = Describe("Server", func() {
 
 		Describe("Metrics", func() {
 			It("emits 'egress' metric for each envelope", func() {
-				receiverServer = &spyBatchedReceiverServer{}
-				receiver = newSpyReceiver(10)
+				metricClient := testhelper.NewMetricClient()
+				receiver := newSpyReceiver(10)
+				server := egress.NewServer(
+					receiver,
+					metricClient,
+					newSpyHealthRegistrar(),
+					context.TODO(),
+					1,
+					time.Nanosecond,
+				)
 
-				server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
-				err := server.BatchedReceiver(&v2.EgressBatchRequest{}, receiverServer)
+				err := server.BatchedReceiver(
+					&v2.EgressBatchRequest{},
+					&spyBatchedReceiverServer{},
+				)
+
 				Expect(err).ToNot(HaveOccurred())
-
 				Eventually(func() uint64 {
 					return metricClient.GetDelta("egress")
 				}).Should(BeNumerically("==", 10))
 			})
 
 			It("emits 'dropped' metric for each envelope", func() {
-				receiverServer = &spyBatchedReceiverServer{
-					sendDelay: time.Hour,
-				}
-				receiver = newSpyReceiver(1000000)
+				metricClient := testhelper.NewMetricClient()
+				receiverServer := &spyBatchedReceiverServer{}
+				receiver := newSpyReceiver(1000000)
 
-				server = egress.NewServer(receiver, metricClient, newSpyHealthRegistrar(), context.TODO())
+				server := egress.NewServer(
+					receiver,
+					metricClient,
+					newSpyHealthRegistrar(),
+					context.TODO(),
+					1,
+					time.Nanosecond,
+				)
 				go server.BatchedReceiver(&v2.EgressBatchRequest{}, receiverServer)
 
 				Eventually(func() uint64 {
@@ -258,12 +350,21 @@ var _ = Describe("Server", func() {
 
 		Describe("health monitoring", func() {
 			It("increments and decrements subscription count", func() {
-				receiverServer = &spyBatchedReceiverServer{}
-				receiver = newSpyReceiver(1000000000)
-
+				receiver := newSpyReceiver(1000000000)
 				health := newSpyHealthRegistrar()
-				server = egress.NewServer(receiver, metricClient, health, context.TODO())
-				go server.BatchedReceiver(&v2.EgressBatchRequest{}, receiverServer)
+				server := egress.NewServer(
+					receiver,
+					testhelper.NewMetricClient(),
+					health,
+					context.TODO(),
+					1,
+					time.Nanosecond,
+				)
+
+				go server.BatchedReceiver(
+					&v2.EgressBatchRequest{},
+					&spyBatchedReceiverServer{},
+				)
 
 				Eventually(func() float64 {
 					return health.Get("subscriptionCount")
@@ -282,7 +383,7 @@ var _ = Describe("Server", func() {
 type spyReceiverServer struct {
 	err           error
 	envelopeCount int64
-	sendDelay     time.Duration
+	wait          chan struct{}
 
 	grpc.ServerStream
 }
@@ -292,8 +393,12 @@ func (*spyReceiverServer) Context() context.Context {
 }
 
 func (s *spyReceiverServer) Send(*v2.Envelope) error {
+	if s.wait != nil {
+		<-s.wait
+		return nil
+	}
+
 	atomic.AddInt64(&s.envelopeCount, 1)
-	time.Sleep(s.sendDelay)
 	return s.err
 }
 
@@ -301,10 +406,13 @@ func (s *spyReceiverServer) EnvelopeCount() int64 {
 	return atomic.LoadInt64(&s.envelopeCount)
 }
 
+func (s *spyReceiverServer) stopWait() {
+	close(s.wait)
+}
+
 type spyBatchedReceiverServer struct {
 	err           error
 	envelopeCount int64
-	sendDelay     time.Duration
 
 	grpc.ServerStream
 }
@@ -313,9 +421,8 @@ func (*spyBatchedReceiverServer) Context() context.Context {
 	return context.Background()
 }
 
-func (s *spyBatchedReceiverServer) Send(*v2.EnvelopeBatch) error {
-	atomic.AddInt64(&s.envelopeCount, 1)
-	time.Sleep(s.sendDelay)
+func (s *spyBatchedReceiverServer) Send(b *v2.EnvelopeBatch) error {
+	atomic.AddInt64(&s.envelopeCount, int64(len(b.Batch)))
 	return s.err
 }
 

@@ -5,12 +5,17 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"time"
 
 	"code.cloudfoundry.org/loggregator/metricemitter"
 
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	"golang.org/x/net/context"
+)
+
+const (
+	envelopeBufferSize = 10000
 )
 
 type HealthRegistrar interface {
@@ -40,6 +45,8 @@ func NewServer(
 	m MetricClient,
 	h HealthRegistrar,
 	c context.Context,
+	batchSize int,
+	batchInterval time.Duration,
 ) *Server {
 	egressMetric := m.NewCounter("egress",
 		metricemitter.WithVersion(2, 0),
@@ -74,7 +81,7 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 	ctx, cancel := context.WithCancel(srv.Context())
 	defer cancel()
 
-	buffer := make(chan *v2.Envelope, 10000)
+	buffer := make(chan *v2.Envelope, envelopeBufferSize)
 
 	go func() {
 		select {
@@ -120,7 +127,7 @@ func (s *Server) BatchedReceiver(r *v2.EgressBatchRequest, srv v2.Egress_Batched
 	ctx, cancel := context.WithCancel(srv.Context())
 	defer cancel()
 
-	buffer := make(chan *v2.Envelope, 10000)
+	buffer := make(chan *v2.Envelope, envelopeBufferSize)
 
 	go func() {
 		select {
@@ -158,13 +165,6 @@ func (s *Server) BatchedReceiver(r *v2.EgressBatchRequest, srv v2.Egress_Batched
 	return nil
 }
 
-func (s *Server) Alert(missed int) {
-	// metric-documentation-v2: (loggregator.rlp.dropped) Number of v2
-	// envelopes dropped while egressing to a consumer.
-	s.droppedMetric.Increment(uint64(missed))
-	log.Printf("Dropped (egress) %d envelopes", missed)
-}
-
 func (s *Server) consumeReceiver(
 	buffer chan<- *v2.Envelope,
 	rx func() (*v2.Envelope, error),
@@ -188,6 +188,8 @@ func (s *Server) consumeReceiver(
 		select {
 		case buffer <- e:
 		default:
+			// metric-documentation-v2: (loggregator.rlp.dropped) Number of v2
+			// envelopes dropped while egressing to a consumer.
 			s.droppedMetric.Increment(1)
 		}
 	}

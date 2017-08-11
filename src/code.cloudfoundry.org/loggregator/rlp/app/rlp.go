@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 
 	"golang.org/x/net/netutil"
 
@@ -187,7 +188,7 @@ func (r *RLP) setupEgress() {
 	r.egressServer = grpc.NewServer(r.egressServerOpts...)
 	v2.RegisterEgressServer(
 		r.egressServer,
-		egress.NewServer(r.receiver, r.metricClient, r.health, r.ctx),
+		egress.NewServer(r.receiver, r.metricClient, r.health, r.ctx, 100, time.Second),
 	)
 	v2.RegisterEgressQueryServer(r.egressServer, egress.NewQueryServer(r.querier))
 }
