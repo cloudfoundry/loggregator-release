@@ -49,6 +49,7 @@ var _ = Describe("CreateTestHandler", func() {
 		Expect(body).To(MatchJSON(fmt.Sprintf(`{
 			"id": %d,
 			"cycles": 1000,
+			"write_cycles": 0,
 			"delay": "1s",
 			"timeout": "1m0s"
 		}`, test.ID)))

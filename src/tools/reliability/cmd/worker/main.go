@@ -54,6 +54,7 @@ func main() {
 	testRunner := reliability.NewLogReliabilityTestRunner(
 		logEndpoint,
 		"blackbox-test-",
+		skipCertVerify,
 		uaaClient,
 		reporter,
 	)

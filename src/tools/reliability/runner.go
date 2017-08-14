@@ -12,35 +12,48 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
+// Reporter is used to report the test results.
 type Reporter interface {
+	// Report takes the TestResults and submits them.
 	Report(t *TestResult) error
 }
 
+// Authenticator is used to fetch a token to run the tests with.
 type Authenticator interface {
+	// Token returns a token to be used for a test.
 	Token() (string, error)
 }
 
+// LogReliabilityTestRunner runs tests. Each test can be run in parallel to
+// each other, and the test result will be submitted to the given Reporter.
+// Tokens are required for the tests, which are fetched by the Authenticator.
 type LogReliabilityTestRunner struct {
 	loggregatorAddr      string
 	subscriptionIDPrefix string
 	authenticator        Authenticator
 	reporter             Reporter
+	skipVerify           bool
 }
 
+// NewLogReliabilityTestRunner builds a new LogReliabilityTestRunner.
 func NewLogReliabilityTestRunner(
 	loggregatorAddr string,
 	subscriptionIDPrefix string,
+	skipVerify bool,
 	a Authenticator,
 	r Reporter,
 ) *LogReliabilityTestRunner {
 	return &LogReliabilityTestRunner{
 		loggregatorAddr:      loggregatorAddr,
 		subscriptionIDPrefix: subscriptionIDPrefix,
+		skipVerify:           skipVerify,
 		authenticator:        a,
 		reporter:             r,
 	}
 }
 
+// Run starts a new test. The test configuration is described by the Test
+// type. Each firehose connection has a shardID built by the test ID.
 func (r *LogReliabilityTestRunner) Run(t *Test) {
 	subscriptionID := fmt.Sprint(r.subscriptionIDPrefix, t.ID)
 
@@ -50,7 +63,7 @@ func (r *LogReliabilityTestRunner) Run(t *Test) {
 		return
 	}
 
-	cmr := consumer.New(r.loggregatorAddr, &tls.Config{InsecureSkipVerify: true}, nil)
+	cmr := consumer.New(r.loggregatorAddr, &tls.Config{InsecureSkipVerify: r.skipVerify}, nil)
 	defer func() {
 		if err := cmr.Close(); err != nil {
 			log.Printf("failed to close connection to firehose: %v", err)
@@ -63,7 +76,7 @@ func (r *LogReliabilityTestRunner) Run(t *Test) {
 	}
 
 	testLog := []byte(fmt.Sprintf("%s - TEST", subscriptionID))
-	go writeLogs(testLog, t.Cycles, time.Duration(t.Delay))
+	go writeLogs(testLog, t.WriteCycles, time.Duration(t.Delay))
 
 	receivedLogCount, err := receiveLogs(
 		msgChan,
@@ -130,6 +143,7 @@ func receiveLogs(
 		}
 	}
 }
+
 func prime(
 	msgChan <-chan *events.Envelope,
 	errChan <-chan error,

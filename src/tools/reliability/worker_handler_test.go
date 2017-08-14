@@ -37,6 +37,31 @@ var _ = Describe("WorkerServer", func() {
 		Eventually(clientB.tests).Should(HaveLen(1))
 	})
 
+	It("shards the number of cycles for each worker to write", func() {
+		handler := reliability.NewWorkerHandler()
+		server := httptest.NewServer(handler)
+
+		var clients []*fakeClient
+		for i := 0; i < 3; i++ {
+			c, err := newFakeClient(strings.Replace(server.URL, "http", "ws", 1))
+			Expect(err).ToNot(HaveOccurred())
+			clients = append(clients, c)
+		}
+
+		handler.Run(&reliability.Test{
+			Cycles: 1000,
+		})
+
+		var writeCyclesTotal uint64
+		for _, c := range clients {
+			var t reliability.Test
+			Eventually(c.tests).Should(Receive(&t))
+			writeCyclesTotal += t.WriteCycles
+		}
+
+		Expect(writeCyclesTotal).To(Equal(uint64(1000)))
+	})
+
 	It("doesn't try to write to closed clients", func() {
 		handler := reliability.NewWorkerHandler()
 		server := httptest.NewServer(handler)

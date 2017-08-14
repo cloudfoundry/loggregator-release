@@ -57,10 +57,13 @@ func (h *CreateTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Test is used to decode the body from a request.
 type Test struct {
-	ID      int64    `json:"id"`
-	Cycles  uint64   `json:"cycles"`
-	Delay   Duration `json:"delay"`
-	Timeout Duration `json:"timeout"`
+	ID     int64  `json:"id"`
+	Cycles uint64 `json:"cycles"`
+	// How many writes an individual worker does. This value changes depending
+	// on the worker.
+	WriteCycles uint64   `json:"write_cycles"`
+	Delay       Duration `json:"delay"`
+	Timeout     Duration `json:"timeout"`
 }
 
 type Duration time.Duration

@@ -29,10 +29,22 @@ func NewWorkerHandler() *WorkerHandler {
 
 // Run writes the test information to each websocket connection.
 func (s *WorkerHandler) Run(t *Test) {
+	var conns []*websocket.Conn
 	s.mu.RLock()
-	defer s.mu.RUnlock()
+	for conn := range s.conns {
+		conns = append(conns, conn)
+	}
+	s.mu.RUnlock()
 
-	for c := range s.conns {
+	// Ensure each worker only writes the number of logs to stdout that will
+	// equate to the desired count.
+	t.WriteCycles = t.Cycles / uint64(len(conns))
+	remainder := t.Cycles % uint64(len(conns))
+
+	for i, c := range conns {
+		if i == len(conns)-1 {
+			t.WriteCycles += remainder
+		}
 		err := c.WriteJSON(&t)
 		if err != nil {
 			log.Printf("Failed emit test: %s", err)
@@ -60,7 +72,7 @@ func (s *WorkerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		delete(s.conns, conn)
 		log.Println("worker has been removed")
-
+		conn.Close()
 	}()
 
 	log.Println("worker has connected")
