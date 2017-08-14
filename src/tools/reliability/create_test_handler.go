@@ -12,16 +12,20 @@ type Runner interface {
 	Run(t *Test)
 }
 
+// CreateTestHandler handles HTTP requests (POST only) to initiate tests
+// for the worker cluster. This should be called from a CI.
 type CreateTestHandler struct {
 	runner Runner
 }
 
+// NewCreateTestHandler builds a new CreateTestHandler.
 func NewCreateTestHandler(r Runner) *CreateTestHandler {
 	return &CreateTestHandler{
 		runner: r,
 	}
 }
 
+// ServeHTTP implements http.Handler.
 func (h *CreateTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -51,6 +55,7 @@ func (h *CreateTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
+// Test is used to decode the body from a request.
 type Test struct {
 	ID      int64    `json:"id"`
 	Cycles  uint64   `json:"cycles"`
