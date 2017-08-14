@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/loggregator/metricemitter"
-
 	"code.cloudfoundry.org/loggregator/plumbing/batching"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
@@ -19,11 +18,13 @@ const (
 	envelopeBufferSize = 10000
 )
 
+// HealthRegistrar provides an interface to record various counters.
 type HealthRegistrar interface {
 	Inc(name string)
 	Dec(name string)
 }
 
+// Receiver creates a function which will receive envelopes on a stream.
 type Receiver interface {
 	Receive(ctx context.Context, req *v2.EgressRequest) (rx func() (*v2.Envelope, error), err error)
 }
@@ -33,6 +34,8 @@ type MetricClient interface {
 	NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter
 }
 
+// Server represents a bridge between inbound data from the Receiver and
+// outbound data on a gRPC stream.
 type Server struct {
 	receiver      Receiver
 	egressMetric  *metricemitter.Counter
@@ -43,6 +46,7 @@ type Server struct {
 	batchInterval time.Duration
 }
 
+// NewServer is the preferred way to create a new Server.
 func NewServer(
 	r Receiver,
 	m MetricClient,
@@ -73,6 +77,8 @@ func NewServer(
 	}
 }
 
+// Receiver implements the loggregator-api V2 gRPC interface for receiving
+// envelopes from upstream connections.
 func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) error {
 	s.health.Inc("subscriptionCount")
 	defer s.health.Dec("subscriptionCount")
@@ -119,6 +125,10 @@ func (s *Server) Receiver(r *v2.EgressRequest, srv v2.Egress_ReceiverServer) err
 	return nil
 }
 
+// BatchedReceiver implements the loggregator-api V2 gRPC interface for
+// receiving batches of envelopes. Envelopes will be written to the egress
+// batched receiver server whenever the configured interval or configured
+// batch size is exceeded.
 func (s *Server) BatchedReceiver(r *v2.EgressBatchRequest, srv v2.Egress_BatchedReceiverServer) error {
 	s.health.Inc("subscriptionCount")
 	defer s.health.Dec("subscriptionCount")
