@@ -227,7 +227,7 @@ var _ = Describe("Server", func() {
 		It("errors when the sender cannot send the envelope", func() {
 			receiverServer := &spyBatchedReceiverServer{err: errors.New("Oh No!")}
 			server := egress.NewServer(
-				newSpyReceiver(10000),
+				&stubReceiver{},
 				testhelper.NewMetricClient(),
 				newSpyHealthRegistrar(),
 				context.TODO(),
@@ -463,6 +463,15 @@ func (s *spyReceiver) Receive(ctx context.Context, req *v2.EgressRequest) (func(
 
 		return nil, errors.New("Oh no!")
 	}, nil
+}
+
+type stubReceiver struct{}
+
+func (s *stubReceiver) Receive(ctx context.Context, req *v2.EgressRequest) (func() (*v2.Envelope, error), error) {
+	rx := func() (*v2.Envelope, error) {
+		return &v2.Envelope{}, nil
+	}
+	return rx, nil
 }
 
 func (s *spyReceiver) stop() {
