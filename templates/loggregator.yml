@@ -160,7 +160,6 @@ instance_groups:
     release: loggregator
     properties:
       cc:
-        srv_api_uri: ""
         internal_service_hostname: ""
         tls_port: 0
         mutual_tls:

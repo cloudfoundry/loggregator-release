@@ -129,6 +129,3 @@ properties:
   metric_emitter.interval:
     description: "The interval that metrics are emitted to the metron."
     default: "1m"
-
-  cc.srv_api_uri:
-    description: "DEPRECATED: API URI of cloud controller. Replaced by cc.internal_service_hostname and cc.tls_port"
