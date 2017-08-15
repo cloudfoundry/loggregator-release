@@ -1,4 +1,4 @@
-package reliability_test
+package client_test
 
 import (
 	"log"
@@ -9,8 +9,8 @@ import (
 	"testing"
 )
 
-func TestReliability(t *testing.T) {
+func TestClient(t *testing.T) {
 	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Reliability Suite")
+	RunSpecs(t, "Client Suite")
 }

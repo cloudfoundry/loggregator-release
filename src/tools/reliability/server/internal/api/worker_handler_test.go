@@ -1,9 +1,10 @@
-package reliability_test
+package api_test
 
 import (
 	"net/http/httptest"
 	"strings"
-	"tools/reliability"
+	sharedapi "tools/reliability/api"
+	"tools/reliability/server/internal/api"
 
 	"github.com/gorilla/websocket"
 
@@ -12,19 +13,19 @@ import (
 )
 
 var _ = Describe("WorkerServer", func() {
-	It("forwards tests a client", func() {
-		handler := reliability.NewWorkerHandler()
+	It("forwards tests to a client", func() {
+		handler := api.NewWorkerHandler()
 		server := httptest.NewServer(handler)
 
 		client, err := newFakeClient(strings.Replace(server.URL, "http", "ws", 1))
 		Expect(err).ToNot(HaveOccurred())
 
-		handler.Run(&reliability.Test{})
+		handler.Run(&sharedapi.Test{})
 		Eventually(client.tests).Should(HaveLen(1))
 	})
 
-	It("forwards tests a multiple clients", func() {
-		handler := reliability.NewWorkerHandler()
+	It("forwards tests to multiple clients", func() {
+		handler := api.NewWorkerHandler()
 		server := httptest.NewServer(handler)
 
 		clientA, err := newFakeClient(strings.Replace(server.URL, "http", "ws", 1))
@@ -32,13 +33,13 @@ var _ = Describe("WorkerServer", func() {
 		clientB, err := newFakeClient(strings.Replace(server.URL, "http", "ws", 1))
 		Expect(err).ToNot(HaveOccurred())
 
-		handler.Run(&reliability.Test{})
+		handler.Run(&sharedapi.Test{})
 		Eventually(clientA.tests).Should(HaveLen(1))
 		Eventually(clientB.tests).Should(HaveLen(1))
 	})
 
 	It("shards the number of cycles for each worker to write", func() {
-		handler := reliability.NewWorkerHandler()
+		handler := api.NewWorkerHandler()
 		server := httptest.NewServer(handler)
 
 		var clients []*fakeClient
@@ -48,13 +49,13 @@ var _ = Describe("WorkerServer", func() {
 			clients = append(clients, c)
 		}
 
-		handler.Run(&reliability.Test{
+		handler.Run(&sharedapi.Test{
 			Cycles: 1000,
 		})
 
 		var writeCyclesTotal uint64
 		for _, c := range clients {
-			var t reliability.Test
+			var t sharedapi.Test
 			Eventually(c.tests).Should(Receive(&t))
 			writeCyclesTotal += t.WriteCycles
 		}
@@ -63,7 +64,7 @@ var _ = Describe("WorkerServer", func() {
 	})
 
 	It("doesn't try to write to closed clients", func() {
-		handler := reliability.NewWorkerHandler()
+		handler := api.NewWorkerHandler()
 		server := httptest.NewServer(handler)
 
 		clientA, err := newFakeClient(strings.Replace(server.URL, "http", "ws", 1))
@@ -76,7 +77,7 @@ var _ = Describe("WorkerServer", func() {
 
 		go func() {
 			for i := 0; i < 10; i++ {
-				handler.Run(&reliability.Test{})
+				handler.Run(&sharedapi.Test{})
 			}
 		}()
 
@@ -87,13 +88,13 @@ var _ = Describe("WorkerServer", func() {
 })
 
 type fakeClient struct {
-	tests chan reliability.Test
+	tests chan sharedapi.Test
 	conn  *websocket.Conn
 }
 
 func newFakeClient(addr string) (*fakeClient, error) {
 	client := &fakeClient{
-		tests: make(chan reliability.Test, 100),
+		tests: make(chan sharedapi.Test, 100),
 	}
 
 	conn, _, err := websocket.DefaultDialer.Dial(addr, nil)
@@ -105,7 +106,7 @@ func newFakeClient(addr string) (*fakeClient, error) {
 
 	go func() {
 		for {
-			var test reliability.Test
+			var test sharedapi.Test
 			err := conn.ReadJSON(&test)
 			if err != nil {
 				break

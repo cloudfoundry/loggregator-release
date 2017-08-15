@@ -4,16 +4,15 @@ import (
 	"log"
 	"net/http"
 	"os"
-
-	"tools/reliability"
+	"tools/reliability/server/internal/api"
 )
 
 func main() {
 	port := os.Getenv("PORT")
 
-	workerHandler := reliability.NewWorkerHandler()
+	workerHandler := api.NewWorkerHandler()
 
-	http.Handle("/tests", reliability.NewCreateTestHandler(workerHandler))
+	http.Handle("/tests", api.NewCreateTestHandler(workerHandler))
 	http.Handle("/workers", workerHandler)
 
 	addr := ":" + port

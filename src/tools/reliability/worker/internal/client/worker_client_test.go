@@ -1,4 +1,4 @@
-package reliability_test
+package client_test
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 	"net"
 	"net/http"
 	"sync/atomic"
-
-	"tools/reliability"
+	sharedapi "tools/reliability/api"
+	"tools/reliability/worker/internal/client"
 
 	"github.com/gorilla/websocket"
 
@@ -20,7 +20,7 @@ var _ = Describe("WorkerClient", func() {
 		server := newFakeWSServer()
 		runner := &spyRunner{}
 
-		client := reliability.NewWorkerClient(server.wsAddr(), true, runner)
+		client := client.NewWorkerClient(server.wsAddr(), true, runner)
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -31,8 +31,8 @@ var _ = Describe("WorkerClient", func() {
 		}()
 		Eventually(server.connections).Should(Equal(int64(1)))
 
-		server.tests <- reliability.Test{}
-		server.tests <- reliability.Test{}
+		server.tests <- sharedapi.Test{}
+		server.tests <- sharedapi.Test{}
 		Eventually(runner.Count).Should(Equal(int64(2)))
 	})
 })
@@ -43,14 +43,14 @@ var upgrader = websocket.Upgrader{
 
 type fakeWSServer struct {
 	listener net.Listener
-	tests    chan reliability.Test
+	tests    chan sharedapi.Test
 
 	_connections int64
 }
 
 func newFakeWSServer() *fakeWSServer {
 	server := &fakeWSServer{
-		tests: make(chan reliability.Test, 100),
+		tests: make(chan sharedapi.Test, 100),
 	}
 	http.Handle("/", server)
 
@@ -116,4 +116,17 @@ func (f *fakeWSServer) stop() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+type spyRunner struct {
+	client.Runner
+	runCallCount int64
+}
+
+func (s *spyRunner) Run(*sharedapi.Test) {
+	atomic.AddInt64(&s.runCallCount, 1)
+}
+
+func (s *spyRunner) Count() int64 {
+	return atomic.LoadInt64(&s.runCallCount)
 }

@@ -7,8 +7,10 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"tools/reliability/worker/internal/client"
+	"tools/reliability/worker/internal/reporter"
 
-	"tools/reliability"
+	"github.com/cloudfoundry/noaa/consumer"
 )
 
 func main() {
@@ -25,6 +27,34 @@ func main() {
 	host := os.Getenv("HOSTNAME")
 	skipCertVerify := os.Getenv("SKIP_CERT_VERIFY") == "true"
 
+	if uaaAddr == "" {
+		log.Fatal("UAA_ADDR is required")
+	}
+
+	if clientID == "" {
+		log.Fatal("CLIENT_ID is required")
+	}
+
+	if clientSecret == "" {
+		log.Fatal("CLIENT_SECRET is required")
+	}
+
+	if dataDogAPIKey == "" {
+		log.Fatal("DATADOG_API_KEY is required")
+	}
+
+	if logEndpoint == "" {
+		log.Fatal("LOG_ENDPOINT is required")
+	}
+
+	if controlServerAddr == "" {
+		log.Fatal("CONTROL_SERVER_ADDR is required")
+	}
+
+	if host == "" {
+		log.Fatal("HOSTNAME is required")
+	}
+
 	httpClient := &http.Client{
 		Timeout: 30 * time.Second,
 		Transport: &http.Transport{
@@ -35,7 +65,7 @@ func main() {
 	}
 
 	log.Println("Building UAA client")
-	uaaClient := reliability.NewUAAClient(
+	uaaClient := client.NewUAAClient(
 		clientID,
 		clientSecret,
 		uaaAddr,
@@ -43,22 +73,24 @@ func main() {
 	)
 
 	log.Println("Building DataDog reporter")
-	reporter := reliability.NewDataDogReporter(
+	reporter := reporter.NewDataDogReporter(
 		dataDogAPIKey,
 		host,
 		instanceID,
 		httpClient,
 	)
 
+	consumer := consumer.New(logEndpoint, &tls.Config{InsecureSkipVerify: skipCertVerify}, nil)
+
 	log.Println("Building TestRunner")
-	testRunner := reliability.NewLogReliabilityTestRunner(
+	testRunner := client.NewLogReliabilityTestRunner(
 		logEndpoint,
 		"blackbox-test-",
-		skipCertVerify,
 		uaaClient,
 		reporter,
+		consumer,
 	)
 
-	client := reliability.NewWorkerClient(controlServerAddr, skipCertVerify, testRunner)
+	client := client.NewWorkerClient(controlServerAddr, skipCertVerify, testRunner)
 	log.Println(client.Run(context.Background()))
 }

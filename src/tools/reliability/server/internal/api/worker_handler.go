@@ -1,9 +1,11 @@
-package reliability
+package api
 
 import (
 	"log"
 	"net/http"
 	"sync"
+
+	sharedapi "tools/reliability/api"
 
 	"github.com/gorilla/websocket"
 )
@@ -28,7 +30,7 @@ func NewWorkerHandler() *WorkerHandler {
 }
 
 // Run writes the test information to each websocket connection.
-func (s *WorkerHandler) Run(t *Test) {
+func (s *WorkerHandler) Run(t *sharedapi.Test) {
 	var conns []*websocket.Conn
 	s.mu.RLock()
 	for conn := range s.conns {

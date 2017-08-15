@@ -1,11 +1,13 @@
-package reliability
+package reporter
 
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
+	sharedapi "tools/reliability/api"
 )
 
 type HTTP interface {
@@ -33,15 +35,21 @@ func (r *DataDogReporter) Report(t *TestResult) error {
 		fmt.Sprintf("https://app.datadoghq.com/api/v1/series?api_key=%s", r.apiKey),
 		"application/json;charset=utf-8",
 		strings.NewReader(
-			buildPayload(r.host, r.instanceID, t.TimeCompleted.Unix(), t.ReceivedLogCount, t.Cycles, t.Delay),
+			buildPayload(r.host, r.instanceID, t.TestStartTime, t.ReceivedLogCount, t.Cycles, t.Delay),
 		),
 	)
 	if err != nil {
 		return err
 	}
-	if resp.StatusCode != http.StatusCreated {
+	defer resp.Body.Close()
+
+	log.Printf("datadog response status code: %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusCreated &&
+		resp.StatusCode != http.StatusAccepted &&
+		resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("status code was %d", resp.StatusCode)
 	}
+
 	return nil
 }
 
@@ -68,16 +76,16 @@ func buildPayload(host, instanceID string, t int64, msgCount, cycles uint64, del
 
 type TestResult struct {
 	ReceivedLogCount uint64
-	TimeCompleted    time.Time
 	Delay            time.Duration
 	Cycles           uint64
+	TestStartTime    int64
 }
 
-func NewTestResult(test *Test, count uint64, t time.Time) *TestResult {
+func NewTestResult(test *sharedapi.Test, count uint64) *TestResult {
 	return &TestResult{
 		Cycles:           test.Cycles,
 		Delay:            time.Duration(test.Delay),
 		ReceivedLogCount: count,
-		TimeCompleted:    t,
+		TestStartTime:    test.StartTime,
 	}
 }

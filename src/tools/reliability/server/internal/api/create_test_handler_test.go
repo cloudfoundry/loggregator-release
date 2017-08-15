@@ -1,14 +1,14 @@
-package reliability_test
+package api_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync/atomic"
-	"tools/reliability"
+	sharedapi "tools/reliability/api"
+	"tools/reliability/server/internal/api"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -22,7 +22,7 @@ var _ = Describe("CreateTestHandler", func() {
 
 	BeforeEach(func() {
 		runner = &spyRunner{}
-		h := reliability.NewCreateTestHandler(runner)
+		h := api.NewCreateTestHandler(runner)
 		recorder = httptest.NewRecorder()
 
 		h.ServeHTTP(recorder, &http.Request{
@@ -41,27 +41,31 @@ var _ = Describe("CreateTestHandler", func() {
 	It("responds with the created test", func() {
 		body := recorder.Body.String()
 
-		var test reliability.Test
+		var test sharedapi.Test
 		err := json.Unmarshal([]byte(body), &test)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(test.ID).ToNot(Equal(int64(0)))
-
-		Expect(body).To(MatchJSON(fmt.Sprintf(`{
-			"id": %d,
-			"cycles": 1000,
-			"write_cycles": 0,
-			"delay": "1s",
-			"timeout": "1m0s"
-		}`, test.ID)))
+		Expect(test.Cycles).To(Equal(uint64(1000)))
+		Expect(test.Delay).To(Equal(
+			sharedapi.Duration(
+				int64(1000000000),
+			),
+		))
+		Expect(test.Timeout).To(Equal(
+			sharedapi.Duration(
+				int64(60000000000),
+			),
+		))
+		Expect(test.StartTime).ToNot(Equal(int64(0)))
 	})
 })
 
 type spyRunner struct {
-	reliability.Runner
+	api.Runner
 	runCallCount int64
 }
 
-func (s *spyRunner) Run(*reliability.Test) {
+func (s *spyRunner) Run(*sharedapi.Test) {
 	atomic.AddInt64(&s.runCallCount, 1)
 }
 

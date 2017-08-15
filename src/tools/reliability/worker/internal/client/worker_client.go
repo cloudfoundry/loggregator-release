@@ -1,12 +1,18 @@
-package reliability
+package client
 
 import (
 	"context"
 	"crypto/tls"
 	"log"
+	sharedapi "tools/reliability/api"
 
 	"github.com/gorilla/websocket"
 )
+
+// Runner runs the given tests.
+type Runner interface {
+	Run(t *sharedapi.Test)
+}
 
 // WorkerClient reaches out to the control server to enroll. When tests are
 // started, they will be sent via the websocket connection that the
@@ -48,7 +54,7 @@ func (w *WorkerClient) Run(ctx context.Context) error {
 		defer cancel()
 
 		for {
-			var test Test
+			var test sharedapi.Test
 			err := conn.ReadJSON(&test)
 			if err != nil {
 				break

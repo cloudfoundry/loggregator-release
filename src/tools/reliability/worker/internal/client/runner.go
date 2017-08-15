@@ -1,27 +1,34 @@
-package reliability
+package client
 
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"fmt"
 	"log"
 	"time"
 
-	"github.com/cloudfoundry/noaa/consumer"
+	sharedapi "tools/reliability/api"
+	"tools/reliability/worker/internal/reporter"
+
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
 // Reporter is used to report the test results.
 type Reporter interface {
 	// Report takes the TestResults and submits them.
-	Report(t *TestResult) error
+	Report(t *reporter.TestResult) error
 }
 
 // Authenticator is used to fetch a token to run the tests with.
 type Authenticator interface {
 	// Token returns a token to be used for a test.
 	Token() (string, error)
+}
+
+// Consumer is used to connect to a firehose.
+type Consumer interface {
+	// FirehoseWithoutReconnect establishes a firehose stream.
+	FirehoseWithoutReconnect(string, string) (<-chan *events.Envelope, <-chan error)
 }
 
 // LogReliabilityTestRunner runs tests. Each test can be run in parallel to
@@ -32,29 +39,29 @@ type LogReliabilityTestRunner struct {
 	subscriptionIDPrefix string
 	authenticator        Authenticator
 	reporter             Reporter
-	skipVerify           bool
+	consumer             Consumer
 }
 
 // NewLogReliabilityTestRunner builds a new LogReliabilityTestRunner.
 func NewLogReliabilityTestRunner(
 	loggregatorAddr string,
 	subscriptionIDPrefix string,
-	skipVerify bool,
 	a Authenticator,
 	r Reporter,
+	c Consumer,
 ) *LogReliabilityTestRunner {
 	return &LogReliabilityTestRunner{
 		loggregatorAddr:      loggregatorAddr,
 		subscriptionIDPrefix: subscriptionIDPrefix,
-		skipVerify:           skipVerify,
 		authenticator:        a,
 		reporter:             r,
+		consumer:             c,
 	}
 }
 
 // Run starts a new test. The test configuration is described by the Test
 // type. Each firehose connection has a shardID built by the test ID.
-func (r *LogReliabilityTestRunner) Run(t *Test) {
+func (r *LogReliabilityTestRunner) Run(t *sharedapi.Test) {
 	subscriptionID := fmt.Sprint(r.subscriptionIDPrefix, t.ID)
 
 	authToken, err := r.authenticator.Token()
@@ -63,13 +70,7 @@ func (r *LogReliabilityTestRunner) Run(t *Test) {
 		return
 	}
 
-	cmr := consumer.New(r.loggregatorAddr, &tls.Config{InsecureSkipVerify: r.skipVerify}, nil)
-	defer func() {
-		if err := cmr.Close(); err != nil {
-			log.Printf("failed to close connection to firehose: %v", err)
-		}
-	}()
-	msgChan, errChan := cmr.FirehoseWithoutReconnect(subscriptionID, authToken)
+	msgChan, errChan := r.consumer.FirehoseWithoutReconnect(subscriptionID, authToken)
 
 	if !prime(msgChan, errChan, subscriptionID) {
 		return
@@ -87,12 +88,17 @@ func (r *LogReliabilityTestRunner) Run(t *Test) {
 		subscriptionID,
 	)
 	if err != nil {
+		log.Printf("Error receiving logs: %s", err)
 		return
 	}
 
-	r.reporter.Report(
-		NewTestResult(t, receivedLogCount, time.Now()),
+	err = r.reporter.Report(
+		reporter.NewTestResult(t, receivedLogCount),
 	)
+	if err != nil {
+		log.Printf("Error reporting: %s", err)
+		return
+	}
 }
 
 func writeLogs(
