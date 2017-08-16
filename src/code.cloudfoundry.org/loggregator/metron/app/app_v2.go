@@ -20,6 +20,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 )
 
 // MetricClient creates new CounterMetrics to be emitted periodically.
@@ -109,10 +110,16 @@ func (a *AppV2) initializePool() *clientpoolv2.ClientPool {
 	})
 	statsHandler := clientpool.NewStatsHandler(tracker)
 
+	kp := keepalive.ClientParameters{
+		Time:                15 * time.Second,
+		Timeout:             15 * time.Second,
+		PermitWithoutStream: true,
+	}
 	fetcher := clientpoolv2.NewSenderFetcher(
 		a.healthRegistrar,
 		grpc.WithTransportCredentials(a.clientCreds),
 		grpc.WithStatsHandler(statsHandler),
+		grpc.WithKeepaliveParams(kp),
 	)
 
 	connector := clientpoolv2.MakeGRPCConnector(fetcher, balancers)

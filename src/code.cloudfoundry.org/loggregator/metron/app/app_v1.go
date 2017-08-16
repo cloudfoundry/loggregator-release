@@ -12,6 +12,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/runtime_stats"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 
 	"code.cloudfoundry.org/loggregator/healthendpoint"
 	"code.cloudfoundry.org/loggregator/metricemitter"
@@ -107,10 +108,16 @@ func (a *AppV1) setupGRPC() egress.BatchChainByteWriter {
 	})
 	statsHandler := clientpool.NewStatsHandler(tracker)
 
+	kp := keepalive.ClientParameters{
+		Time:                15 * time.Second,
+		Timeout:             15 * time.Second,
+		PermitWithoutStream: true,
+	}
 	fetcher := clientpoolv1.NewPusherFetcher(
 		a.healthRegistrar,
 		grpc.WithTransportCredentials(a.creds),
 		grpc.WithStatsHandler(statsHandler),
+		grpc.WithKeepaliveParams(kp),
 	)
 
 	connector := clientpoolv1.MakeGRPCConnector(fetcher, balancers)
