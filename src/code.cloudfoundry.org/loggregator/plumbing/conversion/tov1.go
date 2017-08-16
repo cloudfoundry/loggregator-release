@@ -18,22 +18,28 @@ import (
 // in creating the v1 envelope. As a result the envelope you pass in should no
 // longer be used.
 func ToV1(e *v2.Envelope) []*events.Envelope {
-	v1e := createBaseV1(e)
-
+	var envelopes []*events.Envelope
 	switch (e.Message).(type) {
 	case *v2.Envelope_Log:
-		convertLog(v1e, e)
+		envelopes = convertLog(e)
 	case *v2.Envelope_Counter:
-		convertCounter(v1e, e)
+		envelopes = convertCounter(e)
 	case *v2.Envelope_Gauge:
-		return convertGauge(e)
+		envelopes = convertGauge(e)
 	case *v2.Envelope_Timer:
-		convertTimer(v1e, e)
-	default:
-		return nil
+		envelopes = convertTimer(e)
 	}
 
-	return []*events.Envelope{v1e}
+	for _, v1e := range envelopes {
+		delete(v1e.Tags, "__v1_type")
+		delete(v1e.Tags, "origin")
+		delete(v1e.Tags, "deployment")
+		delete(v1e.Tags, "job")
+		delete(v1e.Tags, "index")
+		delete(v1e.Tags, "ip")
+	}
+
+	return envelopes
 }
 
 func createBaseV1(e *v2.Envelope) *events.Envelope {
@@ -46,13 +52,6 @@ func createBaseV1(e *v2.Envelope) *events.Envelope {
 		Ip:         proto.String(getV2Tag(e, "ip")),
 		Tags:       convertTags(e),
 	}
-
-	delete(v1e.Tags, "__v1_type")
-	delete(v1e.Tags, "origin")
-	delete(v1e.Tags, "deployment")
-	delete(v1e.Tags, "job")
-	delete(v1e.Tags, "index")
-	delete(v1e.Tags, "ip")
 
 	if e.SourceId != "" {
 		v1e.Tags["source_id"] = e.SourceId
@@ -83,7 +82,8 @@ func getV2Tag(e *v2.Envelope, key string) string {
 	}
 }
 
-func convertTimer(v1e *events.Envelope, v2e *v2.Envelope) {
+func convertTimer(v2e *v2.Envelope) []*events.Envelope {
+	v1e := createBaseV1(v2e)
 	timer := v2e.GetTimer()
 	v1e.EventType = events.Envelope_HttpStartStop.Enum()
 	instanceIndex, err := strconv.Atoi(v2e.InstanceId)
@@ -121,6 +121,8 @@ func convertTimer(v1e *events.Envelope, v2e *v2.Envelope) {
 	delete(v1e.Tags, "content_length")
 	delete(v1e.Tags, "routing_instance_id")
 	delete(v1e.Tags, "forwarded")
+
+	return []*events.Envelope{v1e}
 }
 
 func atoi(s string) int64 {
@@ -132,10 +134,11 @@ func atoi(s string) int64 {
 	return i
 }
 
-func convertLog(v1e *events.Envelope, v2e *v2.Envelope) {
+func convertLog(v2e *v2.Envelope) []*events.Envelope {
+	v1e := createBaseV1(v2e)
 	if getV2Tag(v2e, "__v1_type") == "Error" {
 		recoverError(v1e, v2e)
-		return
+		return []*events.Envelope{v1e}
 	}
 	logMessage := v2e.GetLog()
 	v1e.EventType = events.Envelope_LogMessage.Enum()
@@ -148,6 +151,8 @@ func convertLog(v1e *events.Envelope, v2e *v2.Envelope) {
 		SourceInstance: proto.String(v2e.InstanceId),
 	}
 	delete(v1e.Tags, "source_type")
+
+	return []*events.Envelope{v1e}
 }
 
 func recoverError(v1e *events.Envelope, v2e *v2.Envelope) {
@@ -163,7 +168,8 @@ func recoverError(v1e *events.Envelope, v2e *v2.Envelope) {
 	delete(v1e.Tags, "code")
 }
 
-func convertCounter(v1e *events.Envelope, v2e *v2.Envelope) {
+func convertCounter(v2e *v2.Envelope) []*events.Envelope {
+	v1e := createBaseV1(v2e)
 	counterEvent := v2e.GetCounter()
 	v1e.EventType = events.Envelope_CounterEvent.Enum()
 	if v2e.InstanceId != "" {
@@ -174,6 +180,8 @@ func convertCounter(v1e *events.Envelope, v2e *v2.Envelope) {
 		Delta: proto.Uint64(0),
 		Total: proto.Uint64(counterEvent.GetTotal()),
 	}
+
+	return []*events.Envelope{v1e}
 }
 
 func convertGauge(v2e *v2.Envelope) []*events.Envelope {

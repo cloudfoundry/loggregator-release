@@ -57,10 +57,25 @@ var _ = Describe("ValueMetric", func() {
 						},
 					},
 				},
+				Tags: map[string]string{
+					"origin":     "my-origin",
+					"deployment": "my-deployment",
+					"job":        "my-job",
+					"index":      "my-index",
+					"ip":         "my-ip",
+				},
 			}
 
 			envelopes := conversion.ToV1(envelope)
 			Expect(len(envelopes)).To(Equal(2))
+
+			for _, e := range envelopes {
+				Expect(e.GetOrigin()).To(Equal("my-origin"))
+				Expect(e.GetDeployment()).To(Equal("my-deployment"))
+				Expect(e.GetJob()).To(Equal("my-job"))
+				Expect(e.GetIndex()).To(Equal("my-index"))
+				Expect(e.GetIp()).To(Equal("my-ip"))
+			}
 
 			Expect(envelopes[0].GetValueMetric().GetName()).To(Or(
 				Equal("name"),
