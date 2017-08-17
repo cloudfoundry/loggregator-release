@@ -66,6 +66,9 @@ properties:
   loggregator.tls.trafficcontroller.key:
     description: "TLS key for trafficcontroller"
 
+  loggregator.doppler.addrs:
+    description: "The addresses of Dopplers (alternative to doppler link)"
+    default: []
   doppler.grpc_port:
     description: Port for outgoing log messages via GRPC
     default: 8082

@@ -8,14 +8,19 @@
     if_link("doppler") do |ds|
         doppler_addrs = ds.instances.map{|i| "#{i.address}:#{ds.p('doppler.grpc_port')}"}
     end.else do
-        etcd_machines = p("loggregator.etcd.machines").map{|addr| "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"}
+        paddrs = p("loggregator.doppler.addrs")
+        if paddrs && paddrs.size > 0
+            doppler_addrs = addrs.map{|addr| "#{addr}:#{p('doppler.grpc_port')}"}
+        else
+            etcd_machines = p("loggregator.etcd.machines").map{|addr| "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"}
             etcd_tls_client_config = {
-            "KeyFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-client.key",
-            "CertFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-client.crt",
-            "CAFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-ca.crt"
-        }
-        etcd_max_concurrent_requests = p("loggregator.etcd.maxconcurrentrequests")
-        etcd_require_tls = p("loggregator.etcd.require_ssl")
+                "KeyFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-client.key",
+                "CertFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-client.crt",
+                "CAFile" => "/var/vcap/jobs/loggregator_trafficcontroller/config/certs/etcd-ca.crt"
+            }
+            etcd_max_concurrent_requests = p("loggregator.etcd.maxconcurrentrequests")
+            etcd_require_tls = p("loggregator.etcd.require_ssl")
+        end
     end
 
     # Handle renamed properties
