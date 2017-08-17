@@ -85,6 +85,7 @@ func (m *ConnManager) maintainConn() {
 
 		closer, senderClient, err := m.connector.Connect()
 		if err != nil {
+			log.Printf("failed to connect: %s", err)
 			continue
 		}
 

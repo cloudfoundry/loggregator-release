@@ -36,13 +36,12 @@ func (p *SenderFetcher) Fetch(addr string) (io.Closer, plumbing.DopplerIngress_B
 	p.health.Inc("dopplerConnections")
 
 	client := plumbing.NewDopplerIngressClient(conn)
-	log.Printf("successfully connected to doppler %s", addr)
-
 	sender, err := client.BatchSender(context.Background())
 	if err != nil {
 		conn.Close()
 		return nil, nil, fmt.Errorf("error establishing ingestor stream to %s: %s", addr, err)
 	}
+
 	p.health.Inc("dopplerV2Streams")
 
 	log.Printf("successfully established a stream to doppler %s", addr)
