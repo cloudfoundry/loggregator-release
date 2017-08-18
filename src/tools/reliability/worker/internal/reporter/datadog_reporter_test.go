@@ -28,7 +28,7 @@ var _ = Describe("DataDogReporter", func() {
 			spyHTTPClient,
 		)
 
-		now := int64(7890)
+		now := int64(20000000000)
 		r.Report(&reporter.TestResult{
 			Delay:            1 * time.Second,
 			Cycles:           54321,
@@ -43,19 +43,27 @@ var _ = Describe("DataDogReporter", func() {
 		Expect(spyHTTPClient.contentType).To(Equal("application/json;charset=utf-8"))
 
 		actualPayload, _ := ioutil.ReadAll(spyHTTPClient.body)
-		expectedPayload := fmt.Sprintf(`{"series":[
-			{"metric": "smoke_test.loggregator.msg_count",
-			"points": [[%d, %d]],
-			"type": "gauge",
-			"host": "mycoolhost.cfapps.io",
-			"tags": ["firehose-nozzle", "delay:%d", "instance_id:sweet-instance-id"]},
-			{"metric": "smoke_test.loggregator.cycles",
-			"points": [[%d, %d]],
-			"type": "gauge",
-			"host": "mycoolhost.cfapps.io",
-			"tags": ["firehose-nozzle", "delay:%d", "instance_id:sweet-instance-id"]}]}`,
-			now, 12345, 1*time.Second,
-			now, 54321, 1*time.Second,
+		expectedPayload := fmt.Sprintf(`
+			{
+				"series":[
+					{
+						"metric": "smoke_test.loggregator.msg_count",
+						"points": [[%d, %d]],
+						"type": "gauge",
+						"host": "mycoolhost.cfapps.io",
+						"tags": ["firehose-nozzle", "delay:%d", "instance_id:sweet-instance-id"]},
+					{
+						"metric": "smoke_test.loggregator.cycles",
+						"points": [[%d, %d]],
+						"type": "gauge",
+						"host": "mycoolhost.cfapps.io",
+						"tags": ["firehose-nozzle", "delay:%d", "instance_id:sweet-instance-id"]
+					}
+				]
+			}
+			`,
+			20, 12345, 1*time.Second,
+			20, 54321, 1*time.Second,
 		)
 		Expect(string(actualPayload)).To(MatchJSON(expectedPayload))
 	})

@@ -71,7 +71,7 @@ func buildPayload(host, instanceID string, t int64, msgCount, cycles uint64, del
 				"tags": ["firehose-nozzle", "delay:%[3]d", "instance_id:%[6]s"]
 			}
 		]
-	}`, t, host, delay, msgCount, cycles, instanceID)
+	}`, time.Unix(0, t).Unix(), host, delay, msgCount, cycles, instanceID)
 }
 
 type TestResult struct {
