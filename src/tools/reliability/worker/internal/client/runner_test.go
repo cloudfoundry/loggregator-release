@@ -8,6 +8,7 @@ import (
 	sharedapi "tools/reliability/api"
 
 	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/golang/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -23,16 +24,15 @@ var _ = Describe("Run()", func() {
 			spyRep,
 			spyConsumer,
 		)
-		startTime := time.Now().Unix()
-		origin := "origin"
+		startTime := time.Now()
 
 		primerLog := events.Envelope{
-			Origin:    &origin,
+			Origin:    proto.String("origin"),
 			EventType: events.Envelope_LogMessage.Enum(),
 			LogMessage: &events.LogMessage{
 				Message:     []byte("subscriptionID0 - PRIMER"),
 				MessageType: events.LogMessage_OUT.Enum(),
-				Timestamp:   &startTime,
+				Timestamp:   proto.Int64(startTime.UnixNano()),
 			},
 		}
 

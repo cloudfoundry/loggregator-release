@@ -28,7 +28,7 @@ var _ = Describe("DataDogReporter", func() {
 			spyHTTPClient,
 		)
 
-		now := int64(20000000000)
+		now := time.Unix(0, 20000000000)
 		r.Report(&reporter.TestResult{
 			Delay:            1 * time.Second,
 			Cycles:           54321,

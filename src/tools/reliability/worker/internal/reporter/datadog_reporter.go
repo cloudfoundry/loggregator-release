@@ -53,7 +53,7 @@ func (r *DataDogReporter) Report(t *TestResult) error {
 	return nil
 }
 
-func buildPayload(host, instanceID string, t int64, msgCount, cycles uint64, delay time.Duration) string {
+func buildPayload(host, instanceID string, t time.Time, msgCount, cycles uint64, delay time.Duration) string {
 	return fmt.Sprintf(`{
 		"series": [
 			{
@@ -71,14 +71,14 @@ func buildPayload(host, instanceID string, t int64, msgCount, cycles uint64, del
 				"tags": ["firehose-nozzle", "delay:%[3]d", "instance_id:%[6]s"]
 			}
 		]
-	}`, time.Unix(0, t).Unix(), host, delay, msgCount, cycles, instanceID)
+	}`, t.Unix(), host, delay, msgCount, cycles, instanceID)
 }
 
 type TestResult struct {
 	ReceivedLogCount uint64
 	Delay            time.Duration
 	Cycles           uint64
-	TestStartTime    int64
+	TestStartTime    time.Time
 }
 
 func NewTestResult(test *sharedapi.Test, count uint64) *TestResult {

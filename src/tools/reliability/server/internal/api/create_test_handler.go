@@ -44,7 +44,7 @@ func (h *CreateTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	t.ID = time.Now().UnixNano()
 
 	//Ensure the test is sent to Workers with a start time
-	t.StartTime = time.Now().UnixNano()
+	t.StartTime = time.Now()
 
 	go h.runner.Run(t)
 

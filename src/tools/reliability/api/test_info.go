@@ -11,10 +11,10 @@ type Test struct {
 	Cycles uint64 `json:"cycles"`
 	// How many writes an individual worker does. This value changes depending
 	// on the worker.
-	WriteCycles uint64   `json:"write_cycles"`
-	Delay       Duration `json:"delay"`
-	Timeout     Duration `json:"timeout"`
-	StartTime   int64    `json:"start_time"`
+	WriteCycles uint64    `json:"write_cycles"`
+	Delay       Duration  `json:"delay"`
+	Timeout     Duration  `json:"timeout"`
+	StartTime   time.Time `json:"start_time"`
 }
 
 // Duration is a time.Duration that implements json.Unmarshal and
