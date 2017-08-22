@@ -15,18 +15,18 @@ type HTTP interface {
 }
 
 type DataDogReporter struct {
-	apiKey     string
-	host       string
-	instanceID string
-	client     HTTP
+	apiKey        string
+	host          string
+	instanceIndex string
+	client        HTTP
 }
 
-func NewDataDogReporter(key, host, instanceID string, h HTTP) *DataDogReporter {
+func NewDataDogReporter(key, host, instanceIndex string, h HTTP) *DataDogReporter {
 	return &DataDogReporter{
-		apiKey:     key,
-		host:       host,
-		instanceID: instanceID,
-		client:     h,
+		apiKey:        key,
+		host:          host,
+		instanceIndex: instanceIndex,
+		client:        h,
 	}
 }
 
@@ -35,7 +35,7 @@ func (r *DataDogReporter) Report(t *TestResult) error {
 		fmt.Sprintf("https://app.datadoghq.com/api/v1/series?api_key=%s", r.apiKey),
 		"application/json;charset=utf-8",
 		strings.NewReader(
-			buildPayload(r.host, r.instanceID, t.TestStartTime, t.ReceivedLogCount, t.Cycles, t.Delay),
+			buildPayload(r.host, r.instanceIndex, t.TestStartTime, t.ReceivedLogCount, t.Cycles, t.Delay),
 		),
 	)
 	if err != nil {
@@ -53,7 +53,7 @@ func (r *DataDogReporter) Report(t *TestResult) error {
 	return nil
 }
 
-func buildPayload(host, instanceID string, t time.Time, msgCount, cycles uint64, delay time.Duration) string {
+func buildPayload(host, instanceIndex string, t time.Time, msgCount, cycles uint64, delay time.Duration) string {
 	return fmt.Sprintf(`{
 		"series": [
 			{
@@ -71,7 +71,7 @@ func buildPayload(host, instanceID string, t time.Time, msgCount, cycles uint64,
 				"tags": ["firehose-nozzle", "delay:%[3]d", "instance_id:%[6]s"]
 			}
 		]
-	}`, t.Unix(), host, delay, msgCount, cycles, instanceID)
+	}`, t.Unix(), host, delay, msgCount, cycles, instanceIndex)
 }
 
 type TestResult struct {

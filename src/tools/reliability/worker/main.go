@@ -15,7 +15,7 @@ import (
 
 func main() {
 	// these are provided by cloud foundry
-	instanceID := os.Getenv("INSTANCE_GUID")
+	instanceIndex := os.Getenv("CF_INSTANCE_INDEX")
 
 	// these should be provided by you
 	uaaAddr := os.Getenv("UAA_ADDR")
@@ -76,7 +76,7 @@ func main() {
 	reporter := reporter.NewDataDogReporter(
 		dataDogAPIKey,
 		host,
-		instanceID,
+		instanceIndex,
 		httpClient,
 	)
 
