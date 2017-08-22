@@ -51,13 +51,13 @@ var _ = Describe("DataDogReporter", func() {
 						"points": [[%d, %d]],
 						"type": "gauge",
 						"host": "mycoolhost.cfapps.io",
-						"tags": ["firehose-nozzle", "delay:%d", "instance_id:sweet-instance-id"]},
+						"tags": ["firehose-nozzle", "delay:%d", "instance_index:sweet-instance-id"]},
 					{
 						"metric": "smoke_test.loggregator.cycles",
 						"points": [[%d, %d]],
 						"type": "gauge",
 						"host": "mycoolhost.cfapps.io",
-						"tags": ["firehose-nozzle", "delay:%d", "instance_id:sweet-instance-id"]
+						"tags": ["firehose-nozzle", "delay:%d", "instance_index:sweet-instance-id"]
 					}
 				]
 			}

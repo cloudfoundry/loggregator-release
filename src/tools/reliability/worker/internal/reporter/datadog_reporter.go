@@ -61,14 +61,14 @@ func buildPayload(host, instanceIndex string, t time.Time, msgCount, cycles uint
 				"points": [[%[1]d, %[4]d]],
 				"type": "gauge",
 				"host": "%[2]s",
-				"tags": ["firehose-nozzle", "delay:%[3]d", "instance_id:%[6]s"]
+				"tags": ["firehose-nozzle", "delay:%[3]d", "instance_index:%[6]s"]
 			},
 			{
 				"metric": "smoke_test.loggregator.cycles",
 				"points": [[%[1]d, %[5]d]],
 				"type": "gauge",
 				"host": "%[2]s",
-				"tags": ["firehose-nozzle", "delay:%[3]d", "instance_id:%[6]s"]
+				"tags": ["firehose-nozzle", "delay:%[3]d", "instance_index:%[6]s"]
 			}
 		]
 	}`, t.Unix(), host, delay, msgCount, cycles, instanceIndex)
