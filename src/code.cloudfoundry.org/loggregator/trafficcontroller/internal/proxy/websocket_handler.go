@@ -77,6 +77,7 @@ func (h *websocketHandler) runWebsocketUntilClosed(ws *websocket.Conn) (closeCod
 			if !ok {
 				return
 			}
+			ws.SetWriteDeadline(time.Now().Add(6 * time.Second))
 			err := ws.WriteMessage(websocket.BinaryMessage, message)
 			if err != nil {
 				return
