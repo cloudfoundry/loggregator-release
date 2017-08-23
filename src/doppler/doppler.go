@@ -80,7 +80,7 @@ func New(
 	keepAliveInterval := 30 * time.Second
 
 	appStoreCache := cache.NewAppServiceCache()
-	doppler.appStoreWatcher, doppler.newAppServiceChan, doppler.deletedAppServiceChan = store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache, logger)
+	doppler.appStoreWatcher, doppler.newAppServiceChan, doppler.deletedAppServiceChan = store.NewAppServiceStoreWatcher(storeAdapter, appStoreCache)
 
 	doppler.batcher = initializeMetrics(config.MetricBatchIntervalMilliseconds)
 

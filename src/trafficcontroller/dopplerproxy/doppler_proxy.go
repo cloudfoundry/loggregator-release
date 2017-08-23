@@ -174,7 +174,7 @@ func (proxy *Proxy) serveWithDoppler(writer http.ResponseWriter, request *http.R
 
 	go proxy.connector.Connect(dopplerEndpoint, messagesChan, stopChan)
 
-	handler := dopplerEndpoint.HProvider(messagesChan, proxy.logger)
+	handler := dopplerEndpoint.HProvider(messagesChan)
 	handler.ServeHTTP(writer, request)
 }
 
