@@ -52,7 +52,7 @@ properties:
     example: "https://uaa.service.cf.internal:8443"
     default: ""
   uaa.ca_cert:
-    description: "PEM encoded CA certificate for secure communication to UAA. Required if uaa.url is provided."
+    description: "PEM encoded CA certificate for secure communication to UAA. Required if uaa.internal_url is provided."
     default: ""
 
   doppler.outgoing_port:
