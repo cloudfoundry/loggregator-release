@@ -1,5 +1,3 @@
-//go:generate hel
-
 package v1_test
 
 import (

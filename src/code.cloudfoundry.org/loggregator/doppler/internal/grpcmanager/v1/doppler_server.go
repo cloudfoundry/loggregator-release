@@ -32,9 +32,7 @@ type Registrar interface {
 }
 
 // DataSetter accepts writes of marshalled data.
-type DataSetter interface {
-	Set(data []byte)
-}
+type DataSetter func(data []byte)
 
 // DataDumper dumps Envelopes for container metrics and recent logs requests.
 type DataDumper interface {
@@ -156,7 +154,7 @@ func marshalEnvelopes(envelopes []*events.Envelope) [][]byte {
 
 func (m *DopplerServer) sendData(req *plumbing.SubscriptionRequest, sender sender) error {
 	d := diodes.NewOneToOne(1000, m)
-	cleanup := m.registrar.Register(req, d)
+	cleanup := m.registrar.Register(req, d.Set)
 	defer cleanup()
 
 	var done int64
@@ -200,7 +198,7 @@ func (b *batchWriter) Write(batch [][]byte) {
 
 func (m *DopplerServer) sendBatchData(req *plumbing.SubscriptionRequest, sender plumbing.Doppler_BatchSubscribeServer) error {
 	d := diodes.NewOneToOne(1000, m)
-	cleanup := m.registrar.Register(req, d)
+	cleanup := m.registrar.Register(req, d.Set)
 	defer cleanup()
 
 	errStream := make(chan error, 1)

@@ -112,3 +112,6 @@
 [submodule "src/github.com/prometheus/procfs"]
 	path = src/github.com/prometheus/procfs
 	url = https://github.com/prometheus/procfs
+[submodule "src/github.com/apoydence/pubsub"]
+	path = src/github.com/apoydence/pubsub
+	url = https://github.com/apoydence/pubsub

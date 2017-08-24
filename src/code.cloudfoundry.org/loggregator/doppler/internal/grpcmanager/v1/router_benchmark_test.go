@@ -1,10 +1,11 @@
 package v1_test
 
 import (
-	"crypto/rand"
 	"fmt"
+	"math/rand"
 	"os"
 	"testing"
+	"time"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1"
 	"code.cloudfoundry.org/loggregator/plumbing"
@@ -29,7 +30,7 @@ func TestMain(m *testing.M) {
 		r.Register(&plumbing.SubscriptionRequest{Filter: &plumbing.Filter{
 			AppID:   fmt.Sprintf("%d", i%20000),
 			Message: &plumbing.Filter_Log{&plumbing.LogFilter{}},
-		}}, setter)
+		}}, setter.Set)
 	}
 
 	os.Exit(m.Run())
@@ -71,10 +72,11 @@ func buildLog(appID string, payload []byte) *events.Envelope {
 		Job:        proto.String("some-job"),
 		Index:      proto.String("some-index"),
 		Ip:         proto.String("some-ip"),
+		Timestamp:  proto.Int64(time.Now().UnixNano()),
 		LogMessage: &events.LogMessage{
 			Message:        payload,
 			MessageType:    events.LogMessage_OUT.Enum(),
-			Timestamp:      proto.Int64(99),
+			Timestamp:      proto.Int64(time.Now().UnixNano()),
 			AppId:          proto.String(appID),
 			SourceType:     proto.String("test-source-type"),
 			SourceInstance: proto.String("test-source-instance"),
