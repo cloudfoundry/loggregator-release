@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const REQUEST_ID_HEADER = "X-Vcap-Request-ID"
+const requestIDHeader = "X-Vcap-Request-ID"
 
 var logTemplate *template.Template
 
@@ -44,7 +44,7 @@ func NewAccessLog(req *http.Request, ts time.Time, host string, port uint32) *Ac
 }
 
 func (al *AccessLog) String() string {
-	vcapRequestId := al.request.Header.Get(REQUEST_ID_HEADER)
+	vcapRequestId := al.request.Header.Get(requestIDHeader)
 	path := al.request.URL.Path
 	if al.request.URL.RawQuery != "" {
 		path = fmt.Sprintf("%s?%s", al.request.URL.Path, al.request.URL.RawQuery)

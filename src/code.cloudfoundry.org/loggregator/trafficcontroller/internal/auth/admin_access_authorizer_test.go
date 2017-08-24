@@ -58,7 +58,7 @@ var _ = Describe("AdminAccessAuthorizer", func() {
 			authorized, err := authorizer("")
 
 			Expect(authorized).To(BeFalse())
-			Expect(err).To(Equal(errors.New(auth.NO_AUTH_TOKEN_PROVIDED_ERROR_MESSAGE)))
+			Expect(err).To(MatchError(auth.ErrNoAuthTokenProvided))
 		})
 	})
 
@@ -83,7 +83,7 @@ var _ = Describe("AdminAccessAuthorizer", func() {
 
 			authorized, err := authorizer(authToken)
 			Expect(authorized).To(BeFalse())
-			Expect(err).To(Equal(errors.New(auth.INVALID_AUTH_TOKEN_ERROR_MESSAGE)))
+			Expect(err).To(MatchError(auth.ErrInvalidAuthToken))
 
 			Expect(client.UsedToken).To(Equal("my-token"))
 		})
@@ -96,7 +96,7 @@ var _ = Describe("AdminAccessAuthorizer", func() {
 
 			authorized, err := authorizer(authToken)
 			Expect(authorized).To(BeFalse())
-			Expect(err).To(Equal(errors.New(auth.INVALID_AUTH_TOKEN_ERROR_MESSAGE)))
+			Expect(err).To(MatchError(auth.ErrInvalidAuthToken))
 
 			Expect(client.UsedToken).To(Equal("my-token"))
 		})

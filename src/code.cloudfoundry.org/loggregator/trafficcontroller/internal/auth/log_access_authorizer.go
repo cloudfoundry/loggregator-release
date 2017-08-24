@@ -6,9 +6,9 @@ import (
 	"net/http"
 )
 
-const (
-	NO_AUTH_TOKEN_PROVIDED_ERROR_MESSAGE = "Error: Authorization not provided"
-	INVALID_AUTH_TOKEN_ERROR_MESSAGE     = "Error: Invalid authorization"
+var (
+	ErrNoAuthTokenProvided = errors.New("Error: Authorization not provided")
+	ErrInvalidAuthToken    = errors.New("Error: Invalid authorization")
 )
 
 // TODO: We don't need to return an error and a status code. One will suffice.
@@ -25,8 +25,8 @@ func NewLogAccessAuthorizer(c *http.Client, disableAccessControl bool, apiHost s
 
 	return LogAccessAuthorizer(func(authToken string, target string) (int, error) {
 		if authToken == "" {
-			log.Printf(NO_AUTH_TOKEN_PROVIDED_ERROR_MESSAGE)
-			return http.StatusUnauthorized, errors.New(NO_AUTH_TOKEN_PROVIDED_ERROR_MESSAGE)
+			log.Println(ErrNoAuthTokenProvided)
+			return http.StatusUnauthorized, ErrNoAuthTokenProvided
 		}
 
 		req, _ := http.NewRequest("GET", apiHost+"/internal/v4/log_access/"+target, nil)
