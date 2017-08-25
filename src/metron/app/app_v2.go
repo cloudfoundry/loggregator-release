@@ -17,6 +17,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 )
 
 type AppV2 struct {
@@ -89,9 +90,16 @@ func (a *AppV2) initializePool() *clientpool.ClientPool {
 		clientpool.NewBalancer(a.config.DopplerAddr),
 	}
 
+	kp := keepalive.ClientParameters{
+		Time:                15 * time.Second,
+		Timeout:             15 * time.Second,
+		PermitWithoutStream: true,
+	}
+
 	fetcher := clientpool.NewSenderFetcher(
 		a.healthRegistry,
 		grpc.WithTransportCredentials(a.clientCreds),
+		grpc.WithKeepaliveParams(kp),
 	)
 
 	connector := clientpool.MakeGRPCConnector(fetcher, balancers)

@@ -12,6 +12,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/runtime_stats"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 
 	clientpool "metron/internal/clientpool/v1"
 	egress "metron/internal/egress/v1"
@@ -92,9 +93,16 @@ func (a *AppV1) setupGRPC() egress.BatchChainByteWriter {
 		clientpool.NewBalancer(a.config.DopplerAddr),
 	}
 
+	kp := keepalive.ClientParameters{
+		Time:                15 * time.Second,
+		Timeout:             15 * time.Second,
+		PermitWithoutStream: true,
+	}
+
 	fetcher := clientpool.NewPusherFetcher(
 		a.healthRegistry,
 		grpc.WithTransportCredentials(a.creds),
+		grpc.WithKeepaliveParams(kp),
 	)
 
 	connector := clientpool.MakeGRPCConnector(fetcher, balancers)
