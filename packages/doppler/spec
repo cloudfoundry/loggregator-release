@@ -37,6 +37,9 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/plumbing/v2/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/profiler/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/workpool/*.go # gosub
+- loggregator/src/github.com/apoydence/pubsub/*.go # gosub
+- loggregator/src/github.com/apoydence/pubsub/internal/node/*.go # gosub
+- loggregator/src/github.com/apoydence/pubsub/pubsub-gen/setters/*.go # gosub
 - loggregator/src/github.com/beorn7/perks/quantile/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/diodes/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub

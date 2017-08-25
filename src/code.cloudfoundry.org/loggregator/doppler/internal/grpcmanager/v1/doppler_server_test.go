@@ -137,7 +137,7 @@ var _ = Describe("v1 doppler server", func() {
 				defer close(done)
 				go func() {
 					for {
-						setter.Set([]byte("some-data"))
+						setter([]byte("some-data"))
 						select {
 						case <-done:
 							return
@@ -177,9 +177,9 @@ var _ = Describe("v1 doppler server", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				setter := fetchSetter(mockRegistrar)
-				setter.Set([]byte("some-data-0"))
-				setter.Set([]byte("some-data-1"))
-				setter.Set([]byte("some-data-2"))
+				setter([]byte("some-data-0"))
+				setter([]byte("some-data-1"))
+				setter([]byte("some-data-2"))
 
 				c := readFromReceiver(rx)
 				Eventually(c).Should(BeCalled(With(
@@ -268,7 +268,7 @@ var _ = Describe("v1 doppler server", func() {
 				defer close(done)
 				go func() {
 					for {
-						setter.Set([]byte("some-data"))
+						setter([]byte("some-data"))
 						select {
 						case <-done:
 							return
@@ -320,9 +320,9 @@ var _ = Describe("v1 doppler server", func() {
 					Expect(err).ToNot(HaveOccurred())
 
 					setter := fetchSetter(mockRegistrar)
-					setter.Set([]byte("some-data-0"))
-					setter.Set([]byte("some-data-1"))
-					setter.Set([]byte("some-data-2"))
+					setter([]byte("some-data-0"))
+					setter([]byte("some-data-1"))
+					setter([]byte("some-data-2"))
 
 					c := readBatchFromReceiver(rx)
 					Eventually(c).Should(BeCalled(With([][]byte{
@@ -352,7 +352,7 @@ var _ = Describe("v1 doppler server", func() {
 
 					setter := fetchSetter(mockRegistrar)
 					for i := uint(0); i < (2*batchSize - 1); i++ {
-						setter.Set([]byte(fmt.Sprintf("some-data-%d", i)))
+						setter([]byte(fmt.Sprintf("some-data-%d", i)))
 					}
 
 					c := readBatchFromReceiver(rx)
