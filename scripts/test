@@ -47,13 +47,16 @@ function bold_blue {
     fi
 }
 
-failure_status=0
 function check_output {
     eval "$@"
     local status=$?
-    if [[ $status -ne 0 ]]
-    then
-       failure_status=$status
+    exit_on_failure $status
+}
+
+function exit_on_failure {
+    if [[ $1 -ne 0 ]]; then
+        red "SUITE FAILURE"
+        exit $1
     fi
 }
 
@@ -190,13 +193,11 @@ function run_all {
     check_output run_multiplatform
     check_output run_unit $@
     check_output run_integration $@
-    return $failure_status
 }
 
 function parse_argc {
     command=run_all
-    if [[ $# -eq 0 ]]
-    then
+    if [[ $# -eq 0 ]]; then
         return
     fi
 
@@ -314,13 +315,8 @@ function main {
     shift
     "$command" $@
     result=$?
-    if [[ $result -eq 0 ]]
-    then
-        green "SWEET SUITE SUCCESS"
-    else
-        red "SUITE FAILURE"
-    fi
-    exit $result
+    exit_on_failure $result
+    green "SWEET SUITE SUCCESS"
 }
 
 main $@
