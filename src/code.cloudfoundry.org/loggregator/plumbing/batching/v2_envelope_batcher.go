@@ -3,12 +3,13 @@ package batching
 import (
 	"time"
 
+	"code.cloudfoundry.org/batching"
 	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 )
 
 // V2EnvelopeBatcher batches slices of bytes.
 type V2EnvelopeBatcher struct {
-	*Batcher
+	*batching.Batcher
 }
 
 // V2EnvelopeWriter is used to submit the completed batch of v2 envelopes. The
@@ -29,7 +30,7 @@ func (f V2EnvelopeWriterFunc) Write(batch []*v2.Envelope) {
 
 // NewV2EnvelopeBatcher creates a new ByteBatcher.
 func NewV2EnvelopeBatcher(size int, interval time.Duration, writer V2EnvelopeWriter) *V2EnvelopeBatcher {
-	genWriter := WriterFunc(func(batch []interface{}) {
+	genWriter := batching.WriterFunc(func(batch []interface{}) {
 		envBatch := make([]*v2.Envelope, 0, len(batch))
 		for _, element := range batch {
 			envBatch = append(envBatch, element.(*v2.Envelope))
@@ -37,7 +38,7 @@ func NewV2EnvelopeBatcher(size int, interval time.Duration, writer V2EnvelopeWri
 		writer.Write(envBatch)
 	})
 	return &V2EnvelopeBatcher{
-		Batcher: NewBatcher(size, interval, genWriter),
+		Batcher: batching.NewBatcher(size, interval, genWriter),
 	}
 }
 

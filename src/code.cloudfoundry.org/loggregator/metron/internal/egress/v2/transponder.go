@@ -25,7 +25,7 @@ type Transponder struct {
 	nexter        Nexter
 	writer        Writer
 	tags          map[string]string
-	batcher       *batching.Batcher
+	batcher       *batching.V2EnvelopeBatcher
 	batchSize     int
 	batchInterval time.Duration
 	droppedMetric *metricemitter.Counter
