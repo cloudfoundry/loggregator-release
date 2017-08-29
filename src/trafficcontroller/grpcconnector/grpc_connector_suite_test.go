@@ -37,7 +37,7 @@ func startListener(addr string) net.Listener {
 
 func startGRPCServer(ds plumbing.DopplerServer, addr string) (net.Listener, *grpc.Server) {
 	lis := startListener(addr)
-	tlsConfig, err := plumbing.NewMutualTLSConfig(
+	tlsConfig, err := plumbing.NewClientMutualTLSConfig(
 		"./fixtures/server.crt",
 		"./fixtures/server.key",
 		"./fixtures/loggregator-ca.crt",

@@ -124,7 +124,7 @@ func setupDopplerEnv(metronGRPCPort int) (string, func()) {
 }
 
 func setupV1Ingestor(hostPort string) plumbing.DopplerIngestor_PusherClient {
-	tlsConfig, err := plumbing.NewMutualTLSConfig(
+	tlsConfig, err := plumbing.NewClientMutualTLSConfig(
 		testservers.MetronCertPath(),
 		testservers.MetronKeyPath(),
 		testservers.CAFilePath(),
@@ -144,7 +144,7 @@ func setupV1Ingestor(hostPort string) plumbing.DopplerIngestor_PusherClient {
 }
 
 func setupV2Ingestor(hostPort string) v2.DopplerIngress_SenderClient {
-	tlsConfig, err := plumbing.NewMutualTLSConfig(
+	tlsConfig, err := plumbing.NewClientMutualTLSConfig(
 		testservers.MetronCertPath(),
 		testservers.MetronKeyPath(),
 		testservers.CAFilePath(),
@@ -164,7 +164,7 @@ func setupV2Ingestor(hostPort string) v2.DopplerIngress_SenderClient {
 }
 
 func setupSubscriber(hostPort string) plumbing.Doppler_SubscribeClient {
-	tlsConfig, err := plumbing.NewMutualTLSConfig(
+	tlsConfig, err := plumbing.NewClientMutualTLSConfig(
 		testservers.TrafficControllerCertPath(),
 		testservers.TrafficControllerKeyPath(),
 		testservers.CAFilePath(),
@@ -242,7 +242,7 @@ func startMetronServer() (int, *mockMetronIngressServer) {
 		panic(err)
 	}
 
-	tlsConfig, err := plumbing.NewMutualTLSConfig(
+	tlsConfig, err := plumbing.NewClientMutualTLSConfig(
 		testservers.MetronCertPath(),
 		testservers.MetronKeyPath(),
 		testservers.CAFilePath(),

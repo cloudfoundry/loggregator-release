@@ -22,7 +22,7 @@ var _ = Describe("Pool", func() {
 	)
 
 	BeforeEach(func() {
-		tlsConfig, err := plumbing.NewMutualTLSConfig(
+		tlsConfig, err := plumbing.NewClientMutualTLSConfig(
 			"./fixtures/client.crt",
 			"./fixtures/client.key",
 			"./fixtures/loggregator-ca.crt",

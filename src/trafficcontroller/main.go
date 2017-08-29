@@ -60,7 +60,7 @@ func main() {
 		panic(fmt.Errorf("Unable to parse config: %s", err))
 	}
 
-	httpsetup.Setup(conf.CipherSuites)
+	httpsetup.Setup()
 	httpsetup.SetInsecureSkipVerify(conf.SkipCertVerify)
 
 	ipAddress, err := localip.LocalIP()
@@ -114,7 +114,7 @@ func main() {
 		accessMiddleware = middleware.Access(accessLogger, ipAddress, conf.OutgoingDropsondePort)
 	}
 
-	credentials, err := plumbing.NewClientCredentials(
+	credentials, err := plumbing.NewClientMutualTLSConfig(
 		conf.GRPC.CertFile,
 		conf.GRPC.KeyFile,
 		conf.GRPC.CAFile,
@@ -123,7 +123,7 @@ func main() {
 	if err != nil {
 		panic(fmt.Errorf("Unable to create gRPC TLS config: %s", err))
 	}
-	pool := grpcconnector.NewPool(20, tlsConf)
+	pool := grpcconnector.NewPool(20, credentials)
 	grpcConnector := grpcconnector.New(1000, pool, finder, batcher)
 
 	dopplerHandler := http.Handler(dopplerproxy.NewDopplerProxy(logAuthorizer, adminAuthorizer, grpcConnector, "doppler."+conf.SystemDomain, 15*time.Second))

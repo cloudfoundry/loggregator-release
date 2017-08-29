@@ -10,10 +10,8 @@ var (
 	transport *http.Transport
 )
 
-func Setup(cipherSuites []string) {
-	tlsConf := plumbing.NewTLSConfig(
-		plumbing.WithCipherSuites(cipherSuites),
-	)
+func Setup() {
+	tlsConf := plumbing.NewTLSConfig()
 	transport = &http.Transport{
 		TLSHandshakeTimeout: 10 * time.Second,
 		TLSClientConfig:     tlsConf,

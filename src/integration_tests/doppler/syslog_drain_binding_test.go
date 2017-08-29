@@ -6,8 +6,6 @@ import (
 
 	"github.com/nu7hatch/gouuid"
 
-	. "integration_tests/doppler/helpers"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"

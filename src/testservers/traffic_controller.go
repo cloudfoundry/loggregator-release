@@ -40,10 +40,6 @@ func BuildTrafficControllerConf(etcdClientURL string, dopplerWSPort, dopplerGRPC
 		UaaHost:         "http://127.0.0.1:65531",
 		UaaClient:       "bob",
 		UaaClientSecret: "yourUncle",
-		CipherSuites: []string{
-			"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-			"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
-		},
 	}
 }
 

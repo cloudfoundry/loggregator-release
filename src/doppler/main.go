@@ -422,7 +422,7 @@ func setupMetricsEmitter(conf *config.Config) {
 
 	batchInterval := time.Duration(conf.MetricBatchIntervalMilliseconds) * time.Millisecond
 	metric.Setup(
-		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(serverCreds)),
+		metric.WithGrpcDialOpts(grpc.WithTransportCredentials(credentials)),
 		metric.WithBatchInterval(batchInterval),
 		metric.WithPrefix("loggregator"),
 		metric.WithOrigin("doppler"),

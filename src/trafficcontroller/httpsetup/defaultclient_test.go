@@ -13,10 +13,7 @@ import (
 
 var _ = Describe("DefaultClient", func() {
 	BeforeEach(func() {
-		httpsetup.Setup([]string{
-			"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-			"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
-		})
+		httpsetup.Setup()
 	})
 
 	It("has a 20 second timeout", func() {
@@ -42,11 +39,6 @@ var _ = Describe("DefaultClient", func() {
 
 		It("requires TLS Version 1.2", func() {
 			Expect(transport.TLSClientConfig.MinVersion).To(BeEquivalentTo(tls.VersionTLS12))
-		})
-
-		It("requires certain cipher suites", func() {
-			Expect(transport.TLSClientConfig.CipherSuites).To(ContainElement(tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256))
-			Expect(transport.TLSClientConfig.CipherSuites).To(ContainElement(tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384))
 		})
 
 		Describe("SetInsecureSkipVerify", func() {

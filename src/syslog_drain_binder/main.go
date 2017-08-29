@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"plumbing"
-	"profiler"
 	"syscall"
 	"syslog_drain_binder/config"
 	"time"
@@ -33,16 +32,6 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
-
-	if conf.DisableSyslogDrains {
-		for {
-			time.Sleep(10 * time.Millisecond)
-		}
-		return
-	}
-
-	p := profiler.New(conf.PPROFPort)
-	go p.Start()
 
 	tlsConfig, err := plumbing.NewClientMutualTLSConfig(
 		conf.CloudControllerTLSConfig.CertFile,

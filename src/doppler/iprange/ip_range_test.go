@@ -64,18 +64,6 @@ var _ = Describe("IPRange", func() {
 			}
 		})
 
-		It("returns error on malformatted URL", func() {
-			ranges := []iprange.IPRange{{Start: "127.0.2.2", End: "127.0.2.4"}}
-
-			for _, testUrl := range malformattedURLs {
-				parsedURL, _ := url.Parse(testUrl.url)
-				_, err := iprange.IpOutsideOfRanges(*parsedURL, ranges)
-				if err == nil {
-					GinkgoT().Fatal(fmt.Sprintf("There should be an error about malformatted URL for %s", testUrl))
-				}
-			}
-		})
-
 		It("always returns true when ip ranges is nil or empty", func() {
 			ranges := []iprange.IPRange{}
 

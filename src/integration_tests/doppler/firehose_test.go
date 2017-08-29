@@ -9,8 +9,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/nu7hatch/gouuid"
 
-	. "integration_tests/doppler/helpers"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
