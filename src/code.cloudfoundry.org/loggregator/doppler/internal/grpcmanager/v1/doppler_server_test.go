@@ -125,36 +125,6 @@ var _ = Describe("v1 doppler server", func() {
 				Eventually(fakeEmitter.GetMessages, 2).Should(ContainElement(expected))
 			})
 
-			It("emits a metric for dropped egress messages", func() {
-				// when you open a subscription connection, it immediately
-				// starts reading from the diode
-				subscription, err := dopplerClient.Subscribe(context.TODO(), subscribeRequest)
-				Expect(err).ToNot(HaveOccurred())
-
-				setter := fetchSetter(mockRegistrar)
-
-				done := make(chan struct{})
-				defer close(done)
-				go func() {
-					for {
-						setter.Set([]byte("some-data"))
-						select {
-						case <-done:
-							return
-						default:
-						}
-					}
-				}()
-
-				_, err = subscription.Recv()
-				Expect(err).ToNot(HaveOccurred())
-
-				f := func() uint64 {
-					return metricClient.GetDelta("dropped")
-				}
-				Eventually(f, 5).Should(BeNumerically(">=", 1000))
-			})
-
 			It("increments and decrements the subscription count", func() {
 				_, err := dopplerClient.Subscribe(context.TODO(), subscribeRequest)
 				Expect(err).ToNot(HaveOccurred())
@@ -257,33 +227,6 @@ var _ = Describe("v1 doppler server", func() {
 				}
 
 				Eventually(fakeEmitter.GetMessages, 2).Should(ContainElement(expected))
-			})
-
-			It("emits a metric for dropped egress messages", func() {
-				subscription, err := dopplerClient.BatchSubscribe(context.TODO(), subscribeRequest)
-				Expect(err).ToNot(HaveOccurred())
-
-				setter := fetchSetter(mockRegistrar)
-				done := make(chan struct{})
-				defer close(done)
-				go func() {
-					for {
-						setter.Set([]byte("some-data"))
-						select {
-						case <-done:
-							return
-						default:
-						}
-					}
-				}()
-
-				_, err = subscription.Recv()
-				Expect(err).ToNot(HaveOccurred())
-
-				f := func() uint64 {
-					return metricClient.GetDelta("dropped")
-				}
-				Eventually(f, 5).Should(BeNumerically(">=", 1000))
 			})
 
 			It("increments and decrements the subscription count", func() {
