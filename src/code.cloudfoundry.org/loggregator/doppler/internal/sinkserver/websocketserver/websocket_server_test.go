@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/blacklist"
@@ -13,14 +14,13 @@ import (
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/websocketserver"
 	"code.cloudfoundry.org/loggregator/metricemitter/testhelper"
 
-	. "github.com/apoydence/eachers"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 
-	"github.com/apoydence/eachers/testhelpers"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/factories"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gorilla/websocket"
 )
@@ -35,15 +35,13 @@ var _ = XDescribe("WebsocketServer", func() {
 		appId          = "my-app"
 		wsReceivedChan chan []byte
 		apiEndpoint    string
-		mockBatcher    *mockBatcher
-		mockChainer    *mockBatchCounterChainer
+		mockBatcher    *spyBatcher
+		mockChainer    *stubBatchCounterChainer
 	)
 
 	BeforeEach(func() {
-		mockBatcher = newMockBatcher()
-		mockChainer = newMockBatchCounterChainer()
-		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
-		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
+		mockBatcher = &spyBatcher{}
+		mockChainer = &stubBatchCounterChainer{}
 
 		wsReceivedChan = make(chan []byte, 100)
 
@@ -97,15 +95,13 @@ var _ = XDescribe("WebsocketServer", func() {
 		_, _, cleanup := addWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/recentlogs", apiEndpoint, appId))
 		defer cleanup()
 
-		Eventually(mockBatcher.BatchCounterInput).Should(BeCalled(
-			With("sentEnvelopes"),
-		))
-		Eventually(mockChainer.SetTagInput).Should(BeCalled(
-			With("protocol", "ws"),
-			With("event_type", "LogMessage"),
-			With("endpoint", "recentlogs"),
-		))
-		Eventually(mockChainer.IncrementCalled).Should(BeCalled())
+		Eventually(mockBatcher.batchCounterInput).Should(Equal("sentEnvelopes"))
+		Eventually(mockChainer.setTagInput).Should(Equal(map[string]string{
+			"protocol":   "ws",
+			"event_type": "LogMessage",
+			"endpoint":   "recentlogs",
+		}))
+		Eventually(mockChainer.incrementCalled).Should(BeTrue())
 	})
 
 	It("dumps container metric data to the websocket client with /containermetrics", func() {
@@ -129,15 +125,13 @@ var _ = XDescribe("WebsocketServer", func() {
 		_, _, cleanup := addWSSink(wsReceivedChan, fmt.Sprintf("ws://%s/apps/%s/containermetrics", apiEndpoint, appId))
 		defer cleanup()
 
-		Eventually(mockBatcher.BatchCounterInput).Should(BeCalled(
-			With("sentEnvelopes"),
-		))
-		Eventually(mockChainer.SetTagInput).Should(BeCalled(
-			With("protocol", "ws"),
-			With("event_type", "ContainerMetric"),
-			With("endpoint", "containermetrics"),
-		))
-		Eventually(mockChainer.IncrementCalled).Should(BeCalled())
+		Eventually(mockBatcher.batchCounterInput).Should(Equal("sentEnvelopes"))
+		Eventually(mockChainer.setTagInput).Should(Equal(map[string]string{
+			"protocol":   "ws",
+			"event_type": "ContainerMetric",
+			"endpoint":   "containermetrics",
+		}))
+		Eventually(mockChainer.incrementCalled).Should(BeTrue())
 	})
 
 	It("skips sending data to the websocket client with a marshal error", func() {
@@ -199,26 +193,21 @@ var _ = XDescribe("WebsocketServer", func() {
 			})
 
 			It("emits counter metric sentMessagesFirehose", func() {
-				Eventually(mockBatcher.BatchCounterInput).Should(BeCalled(
-					With("sentMessagesFirehose"),
-				))
-
-				Eventually(mockChainer.SetTagInput).Should(BeCalled(
-					With("subscription_id", subscriptionID),
-				))
+				Eventually(mockBatcher.batchCounterInput).Should(Equal("sentMessagesFirehose"))
+				Eventually(mockChainer.setTagInput).Should(Equal(map[string]string{
+					"subscription_id": subscriptionID,
+				}))
 			})
 
 			It("emits counter metric sentEnvelopes", func() {
-				Eventually(mockBatcher.BatchCounterInput).Should(BeCalled(
-					With("sentEnvelopes"),
-				))
+				Eventually(mockBatcher.batchCounterInput).Should(Equal("sentEnvelopes"))
 
-				Eventually(mockChainer.SetTagInput).Should(BeCalled(
-					With("protocol", "ws"), // TODO: consider adding wss?
-					With("event_type", "LogMessage"),
-					With("endpoint", "firehose"),
-				))
-				Eventually(mockChainer.IncrementCalled).Should(BeCalled())
+				Eventually(mockChainer.setTagInput).Should(Equal(map[string]string{
+					"protocol":   "ws",
+					"event_type": "LogMessage",
+					"endpoint":   "firehose",
+				}))
+				Eventually(mockChainer.incrementCalled).Should(BeTrue())
 			})
 		})
 	})
@@ -310,4 +299,62 @@ func randString() string {
 		log.Panicf("unable to read randomness %s:", err)
 	}
 	return fmt.Sprintf("%x", b)
+}
+
+type spyBatcher struct {
+	mu                 sync.Mutex
+	batchCounterInput_ string
+}
+
+func (s *spyBatcher) BatchIncrementCounter(name string) {
+}
+
+func (s *spyBatcher) BatchCounter(name string) metricbatcher.BatchCounterChainer {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.batchCounterInput_ = name
+	return &stubBatchCounterChainer{}
+}
+
+func (s *spyBatcher) batchCounterInput() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.batchCounterInput_
+}
+
+type stubBatchCounterChainer struct {
+	mu               sync.Mutex
+	setTagInput_     map[string]string
+	incrementCalled_ bool
+}
+
+func (s *stubBatchCounterChainer) SetTag(key, value string) metricbatcher.BatchCounterChainer {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.setTagInput_ == nil {
+		s.setTagInput_ = make(map[string]string)
+	}
+	s.setTagInput_[key] = value
+	return s
+}
+
+func (s *stubBatchCounterChainer) setTagInput() map[string]string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.setTagInput_
+}
+
+func (s *stubBatchCounterChainer) Increment() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.incrementCalled_ = true
+}
+
+func (s *stubBatchCounterChainer) incrementCalled() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.incrementCalled_
+}
+
+func (s *stubBatchCounterChainer) Add(value uint64) {
 }
