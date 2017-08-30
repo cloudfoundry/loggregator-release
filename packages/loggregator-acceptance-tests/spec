@@ -4,6 +4,21 @@ dependencies:
   - golang1.8.3
 files:
 - loggregator/src/github.com/onsi/ginkgo/ginkgo/**/*.go
+<<<<<<< HEAD
+=======
+>>>>>>> Add loggregator-acceptance-tests to sync package specs script
+<<<<<<< HEAD
+=======
+>>>>>>> Add loggregator-acceptance-tests to sync package specs script
+<<<<<<< HEAD
+=======
+>>>>>>> Add loggregator-acceptance-tests to sync package specs script
+<<<<<<< HEAD
+=======
+>>>>>>> Add loggregator-acceptance-tests to sync package specs script
+<<<<<<< HEAD
+=======
+>>>>>>> Add loggregator-acceptance-tests to sync package specs script
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/app/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/internal/iprange/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/dopplerservice/*.go # gosub
