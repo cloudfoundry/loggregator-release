@@ -10,7 +10,7 @@ import (
 )
 
 func TestApi(t *testing.T) {
+	log.SetOutput(GinkgoWriter)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Server Api Suite")
-	log.SetOutput(GinkgoWriter)
 }
