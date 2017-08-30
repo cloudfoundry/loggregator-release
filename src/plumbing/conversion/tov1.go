@@ -133,7 +133,7 @@ func convertCounter(v1e *events.Envelope, v2e *v2.Envelope) {
 	v1e.EventType = events.Envelope_CounterEvent.Enum()
 	v1e.CounterEvent = &events.CounterEvent{
 		Name:  proto.String(counterEvent.Name),
-		Delta: proto.Uint64(0),
+		Delta: proto.Uint64(counterEvent.GetDelta()),
 		Total: proto.Uint64(counterEvent.GetTotal()),
 	}
 }
