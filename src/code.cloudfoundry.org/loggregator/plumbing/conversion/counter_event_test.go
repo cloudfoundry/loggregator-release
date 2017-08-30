@@ -13,28 +13,56 @@ import (
 
 var _ = Describe("CounterEvent", func() {
 	Context("given a v2 envelope", func() {
-		It("converts to a v1 envelope", func() {
-			envelope := &v2.Envelope{
-				Message: &v2.Envelope_Counter{
-					Counter: &v2.Counter{
-						Name: "name",
-						Value: &v2.Counter_Total{
-							Total: 99,
+		Context("with a total", func() {
+			It("converts to a v1 envelope", func() {
+				envelope := &v2.Envelope{
+					Message: &v2.Envelope_Counter{
+						Counter: &v2.Counter{
+							Name: "name",
+							Value: &v2.Counter_Total{
+								Total: 99,
+							},
 						},
 					},
-				},
-			}
+				}
 
-			envelopes := conversion.ToV1(envelope)
-			Expect(len(envelopes)).To(Equal(1))
-			Expect(*envelopes[0]).To(MatchFields(IgnoreExtras, Fields{
-				"EventType": Equal(events.Envelope_CounterEvent.Enum()),
-				"CounterEvent": Equal(&events.CounterEvent{
-					Name:  proto.String("name"),
-					Total: proto.Uint64(99),
-					Delta: proto.Uint64(0),
-				}),
-			}))
+				envelopes := conversion.ToV1(envelope)
+				Expect(len(envelopes)).To(Equal(1))
+				Expect(*envelopes[0]).To(MatchFields(IgnoreExtras, Fields{
+					"EventType": Equal(events.Envelope_CounterEvent.Enum()),
+					"CounterEvent": Equal(&events.CounterEvent{
+						Name:  proto.String("name"),
+						Total: proto.Uint64(99),
+						Delta: proto.Uint64(0),
+					}),
+				}))
+			})
+		})
+
+		Context("with a delta", func() {
+			It("converts to a v1 envelope", func() {
+				envelope := &v2.Envelope{
+					Message: &v2.Envelope_Counter{
+						Counter: &v2.Counter{
+							Name: "name",
+							Value: &v2.Counter_Delta{
+								Delta: 99,
+							},
+						},
+					},
+				}
+
+				envelopes := conversion.ToV1(envelope)
+				Expect(len(envelopes)).To(Equal(1))
+				Expect(*envelopes[0]).To(MatchFields(IgnoreExtras, Fields{
+					"EventType": Equal(events.Envelope_CounterEvent.Enum()),
+					"CounterEvent": Equal(&events.CounterEvent{
+						Name:  proto.String("name"),
+						Total: proto.Uint64(0),
+						Delta: proto.Uint64(99),
+					}),
+				}))
+			})
 		})
 	})
 
@@ -56,6 +84,7 @@ var _ = Describe("CounterEvent", func() {
 				CounterEvent: &events.CounterEvent{
 					Name:  proto.String("name"),
 					Total: proto.Uint64(99),
+					Delta: proto.Uint64(2),
 				},
 				Tags: map[string]string{
 					"custom_tag":  "custom-value",
