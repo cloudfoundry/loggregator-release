@@ -39,10 +39,8 @@ func main() {
 	env := &loggregator_v2.Envelope{
 		Message: &loggregator_v2.Envelope_Counter{
 			Counter: &loggregator_v2.Counter{
-				Name: "some-counter",
-				Value: &loggregator_v2.Counter_Delta{
-					Delta: 5,
-				},
+				Name:  "some-counter",
+				Delta: 5,
 			},
 		},
 	}

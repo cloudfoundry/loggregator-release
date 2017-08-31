@@ -349,10 +349,8 @@ var _ = Describe("Envelope conversion", func() {
 				InstanceId: "99",
 				Message: &v2.Envelope_Counter{
 					Counter: &v2.Counter{
-						Name: "some-name",
-						Value: &v2.Counter_Total{
-							Total: 99,
-						},
+						Name:  "some-name",
+						Total: 99,
 					},
 				},
 				DeprecatedTags: map[string]*v2.Value{

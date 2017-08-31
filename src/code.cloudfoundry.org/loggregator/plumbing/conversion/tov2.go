@@ -181,10 +181,9 @@ func convertCounterEvent(v2e *v2.Envelope, e *events.Envelope) {
 	unsetV2Tag(v2e, "instance_id")
 	v2e.Message = &v2.Envelope_Counter{
 		Counter: &v2.Counter{
-			Name: t.GetName(),
-			Value: &v2.Counter_Total{
-				Total: t.GetTotal(),
-			},
+			Name:  t.GetName(),
+			Delta: t.GetDelta(),
+			Total: t.GetTotal(),
 		},
 	}
 }

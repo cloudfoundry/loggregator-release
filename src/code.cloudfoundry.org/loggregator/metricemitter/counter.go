@@ -76,10 +76,8 @@ func (m *Counter) toEnvelope(delta uint64) *v2.Envelope {
 		Timestamp: time.Now().UnixNano(),
 		Message: &v2.Envelope_Counter{
 			Counter: &v2.Counter{
-				Name: m.name,
-				Value: &v2.Counter_Delta{
-					Delta: delta,
-				},
+				Name:  m.name,
+				Delta: delta,
 			},
 		},
 		DeprecatedTags: m.tags,
