@@ -79,7 +79,7 @@ properties:
   loggregator.disable_syslog_drains:
     description: |
       Disable syslog drain capability in Loggregator. This is meant to be used
-      when migrating to scalable-syslog-release.
+      when migrating to cf-syslog-drain-release.
     default: false
   doppler.syslog_skip_cert_verify:
     description: "When connecting over TLS, don't verify certificates for syslog sink"
