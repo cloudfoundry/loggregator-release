@@ -85,9 +85,6 @@
 [submodule "src/github.com/cloudfoundry/loggregator-api"]
 	path = src/github.com/cloudfoundry/loggregator-api
 	url = https://github.com/cloudfoundry/loggregator-api
-[submodule "src/github.com/cloudfoundry/diodes"]
-	path = src/github.com/cloudfoundry/diodes
-	url = https://github.com/cloudfoundry/diodes
 [submodule "src/google.golang.org/genproto"]
 	path = src/google.golang.org/genproto
 	url = https://github.com/google/go-genproto
@@ -115,3 +112,6 @@
 [submodule "src/code.cloudfoundry.org/batching"]
 	path = src/code.cloudfoundry.org/batching
 	url = https://github.com/cloudfoundry/batching
+[submodule "src/code.cloudfoundry.org/diodes"]
+	path = src/code.cloudfoundry.org/diodes
+	url = https://github.com/cloudfoundry/diodes

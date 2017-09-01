@@ -4,6 +4,7 @@ dependencies:
 - golang1.8.3
 files:
 - loggregator/src/code.cloudfoundry.org/batching/*.go # gosub
+- loggregator/src/code.cloudfoundry.org/diodes/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/diodes/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/loggregator/doppler/app/*.go # gosub
@@ -38,7 +39,6 @@ files:
 - loggregator/src/code.cloudfoundry.org/loggregator/profiler/*.go # gosub
 - loggregator/src/code.cloudfoundry.org/workpool/*.go # gosub
 - loggregator/src/github.com/beorn7/perks/quantile/*.go # gosub
-- loggregator/src/github.com/cloudfoundry/diodes/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller/*.go # gosub
 - loggregator/src/github.com/cloudfoundry/dropsonde/emitter/*.go # gosub

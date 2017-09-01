@@ -6,7 +6,7 @@ import (
 
 	"code.cloudfoundry.org/loggregator/diodes"
 
-	gendiodes "github.com/cloudfoundry/diodes"
+	gendiodes "code.cloudfoundry.org/diodes"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
 )

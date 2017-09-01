@@ -30,8 +30,8 @@ import (
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/websocketserver"
 	"code.cloudfoundry.org/loggregator/doppler/internal/store"
 
+	gendiodes "code.cloudfoundry.org/diodes"
 	"code.cloudfoundry.org/workpool"
-	gendiodes "github.com/cloudfoundry/diodes"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/dropsonde/dropsonde_unmarshaller"
 	"github.com/cloudfoundry/dropsonde/metric_sender"

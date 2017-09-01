@@ -1,6 +1,6 @@
 package diodes
 
-import gendiodes "github.com/cloudfoundry/diodes"
+import gendiodes "code.cloudfoundry.org/diodes"
 
 // ManyToOne diode is optimal for many writers and a single reader for slices
 // of bytes.

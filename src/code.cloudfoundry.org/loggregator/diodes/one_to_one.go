@@ -1,6 +1,6 @@
 package diodes
 
-import gendiodes "github.com/cloudfoundry/diodes"
+import gendiodes "code.cloudfoundry.org/diodes"
 
 // OneToOne diode is optimized for a single writer and a single reader for
 // byte slices.
