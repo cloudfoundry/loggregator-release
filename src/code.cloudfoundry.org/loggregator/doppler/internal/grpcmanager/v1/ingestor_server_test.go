@@ -1,20 +1,19 @@
 package v1_test
 
 import (
-	"context"
 	"errors"
 	"io"
 	"net"
 	"sync"
 
-	"code.cloudfoundry.org/loggregator/diodes"
-	"code.cloudfoundry.org/loggregator/plumbing"
-
-	"code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1"
-
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	"github.com/apoydence/eachers/testhelpers"
+	"code.cloudfoundry.org/loggregator/diodes"
+	"code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1"
+	"code.cloudfoundry.org/loggregator/plumbing"
+	"github.com/cloudfoundry/dropsonde/metricbatcher"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -50,10 +49,10 @@ var _ = Describe("IngestorManager", func() {
 	BeforeEach(func() {
 		var grpcAddr string
 		outgoingMsgs = diodes.NewManyToOneEnvelope(5, nil)
-		mockBatcher := newMockBatcher()
-		mockChainer := newMockBatchCounterChainer()
-		testhelpers.AlwaysReturn(mockBatcher.BatchCounterOutput, mockChainer)
-		testhelpers.AlwaysReturn(mockChainer.SetTagOutput, mockChainer)
+		mockBatcher := newSpyBatcher()
+		mockChainer := newSpyBatchCounterChainer()
+		mockBatcher.batchCounter = mockChainer
+		mockChainer.setTag = mockChainer
 		healthRegistrar = newSpyHealthRegistrar()
 
 		manager = v1.NewIngestorServer(outgoingMsgs, mockBatcher, healthRegistrar)
@@ -119,10 +118,8 @@ var _ = Describe("IngestorManager", func() {
 
 	Context("When the Recv returns an EOF error", func() {
 		It("exits the function gracefully", func() {
-			fakeStream := newMockIngestorGRPCServer()
-			fakeStream.RecvOutput.Ret0 <- nil
-			fakeStream.RecvOutput.Ret1 <- io.EOF
-			fakeStream.ContextOutput.Ret0 <- context.TODO()
+			fakeStream := newSpyIngestorGRPCServer()
+			fakeStream.recvError = io.EOF
 
 			Eventually(func() error {
 				return manager.Pusher(fakeStream)
@@ -136,10 +133,8 @@ var _ = Describe("IngestorManager", func() {
 
 	Context("When the Recv returns an error", func() {
 		It("does not forward the message to the sender", func() {
-			fakeStream := newMockIngestorGRPCServer()
-			fakeStream.RecvOutput.Ret0 <- nil
-			fakeStream.RecvOutput.Ret1 <- errors.New("fake error")
-			fakeStream.ContextOutput.Ret0 <- context.TODO()
+			fakeStream := newSpyIngestorGRPCServer()
+			fakeStream.recvError = errors.New("fake error")
 
 			go manager.Pusher(fakeStream)
 			Consistently(func() bool {
@@ -151,15 +146,14 @@ var _ = Describe("IngestorManager", func() {
 
 	Context("When the pusher context finishes", func() {
 		It("returns the error from the context", func() {
-			fakeStream := newMockIngestorGRPCServer()
+			fakeStream := newSpyIngestorGRPCServer()
 
 			for i := 0; i < 100; i++ {
-				fakeStream.RecvOutput.Ret0 <- nil
-				fakeStream.RecvOutput.Ret1 <- errors.New("fake error")
+				fakeStream.recvError = errors.New("fake error")
 			}
 
 			context, cancelCtx := context.WithCancel(context.Background())
-			fakeStream.ContextOutput.Ret0 <- context
+			fakeStream.context = context
 			cancelCtx()
 
 			err := manager.Pusher(fakeStream)
@@ -196,4 +190,60 @@ func (s *SpyHealthRegistrar) Get(name string) float64 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.values[name]
+}
+
+func newSpyBatcher() *spyBatcher {
+	return &spyBatcher{}
+}
+
+type spyBatcher struct {
+	batchCounter interface{} // FIXME
+}
+
+func (s *spyBatcher) BatchCounter(name string) metricbatcher.BatchCounterChainer {
+	return &spyBatchCounterChainer{}
+}
+
+func newSpyBatchCounterChainer() *spyBatchCounterChainer {
+	return &spyBatchCounterChainer{}
+}
+
+type spyBatchCounterChainer struct {
+	setTag interface{} // FIXME
+}
+
+func (s *spyBatchCounterChainer) Add(value uint64) {
+}
+
+func (s *spyBatchCounterChainer) Increment() {
+}
+
+func (s *spyBatchCounterChainer) SetTag(key, value string) metricbatcher.BatchCounterChainer {
+	return s
+}
+
+func newSpyIngestorGRPCServer() *spyIngestorGRPCServer {
+	return &spyIngestorGRPCServer{}
+}
+
+type spyIngestorGRPCServer struct {
+	context          context.Context
+	recvEnvelopeData *plumbing.EnvelopeData
+	recvError        error
+	grpc.ServerStream
+}
+
+func (s *spyIngestorGRPCServer) Context() context.Context {
+	if s.context == nil {
+		return context.TODO()
+	}
+	return s.context
+}
+
+func (s *spyIngestorGRPCServer) SendAndClose(r *plumbing.PushResponse) error {
+	return nil
+}
+
+func (s *spyIngestorGRPCServer) Recv() (*plumbing.EnvelopeData, error) {
+	return s.recvEnvelopeData, s.recvError
 }

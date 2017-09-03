@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
 	"time"
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1"
@@ -19,17 +20,16 @@ import (
 	"github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/cloudfoundry/sonde-go/events"
 
-	. "github.com/apoydence/eachers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("v1 doppler server", func() {
 	var (
-		mockRegistrar   *mockRegistrar
+		mockRegistrar   *spyRegistrar
 		mockCleanup     func()
 		cleanupCalled   chan struct{}
-		mockDataDumper  *mockDataDumper
+		mockDataDumper  *spyDataDumper
 		metricClient    *testhelper.SpyMetricClient
 		healthRegistrar *SpyHealthRegistrar
 
@@ -53,11 +53,11 @@ var _ = Describe("v1 doppler server", func() {
 	})
 
 	BeforeEach(func() {
-		mockRegistrar = newMockRegistrar()
+		mockRegistrar = newSpyRegistrar()
 		cleanupCalled = make(chan struct{})
 		mockCleanup = buildCleanup(cleanupCalled)
-		mockRegistrar.RegisterOutput.Ret0 <- mockCleanup
-		mockDataDumper = newMockDataDumper()
+		mockRegistrar.cleanup = mockCleanup
+		mockDataDumper = newSpyDataDumper()
 		metricClient = testhelper.NewMetricClient()
 		healthRegistrar = newSpyHealthRegistrar()
 		batchInterval = 50 * time.Millisecond
@@ -85,15 +85,13 @@ var _ = Describe("v1 doppler server", func() {
 				_, err := dopplerClient.Subscribe(context.TODO(), subscribeRequest)
 				Expect(err).ToNot(HaveOccurred())
 
-				Eventually(mockRegistrar.RegisterInput).Should(
-					BeCalled(With(subscribeRequest, Not(BeNil()))),
-				)
+				Eventually(mockRegistrar.registerRequest).Should(Equal(subscribeRequest))
 			})
 
 			Context("when the client does not close the connection", func() {
 				It("does not unregister itself", func() {
 					dopplerClient.Subscribe(context.TODO(), subscribeRequest)
-					fetchSetter(mockRegistrar)
+					Eventually(mockRegistrar.registerSetter).ShouldNot(BeNil())
 
 					Consistently(cleanupCalled).ShouldNot(BeClosed())
 				})
@@ -102,7 +100,7 @@ var _ = Describe("v1 doppler server", func() {
 			Context("when the client closes connection", func() {
 				It("unregisters subscription", func() {
 					dopplerClient.Subscribe(context.TODO(), subscribeRequest)
-					fetchSetter(mockRegistrar)
+					Eventually(mockRegistrar.registerSetter).ShouldNot(BeNil())
 					connCloser.Close()
 
 					Eventually(cleanupCalled).Should(BeClosed())
@@ -146,17 +144,14 @@ var _ = Describe("v1 doppler server", func() {
 				rx, err := dopplerClient.Subscribe(context.TODO(), subscribeRequest)
 				Expect(err).ToNot(HaveOccurred())
 
-				setter := fetchSetter(mockRegistrar)
+				Eventually(mockRegistrar.registerSetter).ShouldNot(BeNil())
+				setter := mockRegistrar.registerSetter()
 				setter.Set([]byte("some-data-0"))
-				setter.Set([]byte("some-data-1"))
-				setter.Set([]byte("some-data-2"))
 
 				c := readFromReceiver(rx)
-				Eventually(c).Should(BeCalled(With(
-					[]byte("some-data-0"),
-					[]byte("some-data-1"),
-					[]byte("some-data-2"),
-				)))
+				var data []byte
+				Eventually(c).Should(Receive(&data))
+				Expect(data).To(Equal([]byte("some-data-0")))
 			})
 		})
 	})
@@ -178,15 +173,13 @@ var _ = Describe("v1 doppler server", func() {
 				_, err := dopplerClient.BatchSubscribe(context.TODO(), subscribeRequest)
 				Expect(err).ToNot(HaveOccurred())
 
-				Eventually(mockRegistrar.RegisterInput).Should(
-					BeCalled(With(subscribeRequest, Not(BeNil()))),
-				)
+				Eventually(mockRegistrar.registerRequest).Should(Equal(subscribeRequest))
 			})
 
 			Context("when the client does not close the connection", func() {
 				It("does not unregister itself", func() {
 					dopplerClient.BatchSubscribe(context.TODO(), subscribeRequest)
-					fetchSetter(mockRegistrar)
+					Eventually(mockRegistrar.registerSetter).ShouldNot(BeNil())
 
 					Consistently(cleanupCalled).ShouldNot(BeClosed())
 				})
@@ -195,7 +188,7 @@ var _ = Describe("v1 doppler server", func() {
 			Context("when the client closes connection", func() {
 				It("unregisters subscription", func() {
 					dopplerClient.BatchSubscribe(context.TODO(), subscribeRequest)
-					fetchSetter(mockRegistrar)
+					Eventually(mockRegistrar.registerSetter).ShouldNot(BeNil())
 					connCloser.Close()
 
 					Eventually(cleanupCalled).Should(BeClosed())
@@ -262,17 +255,15 @@ var _ = Describe("v1 doppler server", func() {
 					rx, err := dopplerClient.BatchSubscribe(context.TODO(), subscribeRequest)
 					Expect(err).ToNot(HaveOccurred())
 
-					setter := fetchSetter(mockRegistrar)
+					Eventually(mockRegistrar.registerSetter).ShouldNot(BeNil())
+					setter := mockRegistrar.registerSetter()
 					setter.Set([]byte("some-data-0"))
-					setter.Set([]byte("some-data-1"))
-					setter.Set([]byte("some-data-2"))
 
 					c := readBatchFromReceiver(rx)
-					Eventually(c).Should(BeCalled(With([][]byte{
-						[]byte("some-data-0"),
-						[]byte("some-data-1"),
-						[]byte("some-data-2"),
-					})))
+					var data [][]byte
+					Eventually(c).Should(Receive(&data))
+					Expect(data).To(HaveLen(int(1)))
+					Expect(data[0]).To(Equal([]byte("some-data-0")))
 					Consistently(c, 500*time.Millisecond).ShouldNot(Receive())
 				})
 			})
@@ -293,7 +284,8 @@ var _ = Describe("v1 doppler server", func() {
 					rx, err := dopplerClient.BatchSubscribe(context.TODO(), subscribeRequest)
 					Expect(err).ToNot(HaveOccurred())
 
-					setter := fetchSetter(mockRegistrar)
+					Eventually(mockRegistrar.registerSetter).ShouldNot(BeNil())
+					setter := mockRegistrar.registerSetter()
 					for i := uint(0); i < (2*batchSize - 1); i++ {
 						setter.Set([]byte(fmt.Sprintf("some-data-%d", i)))
 					}
@@ -323,7 +315,7 @@ var _ = Describe("v1 doppler server", func() {
 
 		It("returns container metrics from its data dumper", func() {
 			envelope, data := buildContainerMetric()
-			mockDataDumper.LatestContainerMetricsOutput.Ret0 <- []*events.Envelope{
+			mockDataDumper.latestContainerMetricsEnvelopes = []*events.Envelope{
 				envelope,
 			}
 
@@ -334,14 +326,12 @@ var _ = Describe("v1 doppler server", func() {
 			Expect(resp.Payload).To(ContainElement(
 				data,
 			))
-			Expect(mockDataDumper.LatestContainerMetricsInput).To(BeCalled(
-				With("some-app"),
-			))
+			Expect(mockDataDumper.latestContainerMetricsAppID).To(Equal("some-app"))
 		})
 
 		It("throw away invalid envelopes from its data dumper", func() {
 			envelope, _ := buildContainerMetric()
-			mockDataDumper.LatestContainerMetricsOutput.Ret0 <- []*events.Envelope{
+			mockDataDumper.latestContainerMetricsEnvelopes = []*events.Envelope{
 				{},
 				envelope,
 			}
@@ -368,7 +358,7 @@ var _ = Describe("v1 doppler server", func() {
 
 		It("returns recent logs from its data dumper", func() {
 			envelope, data := buildLogMessage()
-			mockDataDumper.RecentLogsForOutput.Ret0 <- []*events.Envelope{
+			mockDataDumper.recentLogsForEnvelopes = []*events.Envelope{
 				envelope,
 			}
 			resp, err := dopplerClient.RecentLogs(context.TODO(),
@@ -377,14 +367,12 @@ var _ = Describe("v1 doppler server", func() {
 			Expect(resp.Payload).To(ContainElement(
 				data,
 			))
-			Expect(mockDataDumper.RecentLogsForInput).To(BeCalled(
-				With("some-app"),
-			))
+			Expect(mockDataDumper.recentLogsForAppID).To(Equal("some-app"))
 		})
 
 		It("throw away invalid envelopes from its data dumper", func() {
 			envelope, _ := buildLogMessage()
-			mockDataDumper.RecentLogsForOutput.Ret0 <- []*events.Envelope{
+			mockDataDumper.recentLogsForEnvelopes = []*events.Envelope{
 				{},
 				envelope,
 			}
@@ -399,8 +387,8 @@ var _ = Describe("v1 doppler server", func() {
 })
 
 func dopplerSetup(
-	mockRegistrar *mockRegistrar,
-	mockDataDumper *mockDataDumper,
+	mockRegistrar *spyRegistrar,
+	mockDataDumper *spyDataDumper,
 	batchInterval time.Duration,
 	fakeEmitter *fake.FakeEventEmitter,
 	healthRegistrar *SpyHealthRegistrar,
@@ -483,14 +471,6 @@ func establishClient(dopplerAddr string) (plumbing.DopplerClient, io.Closer) {
 	return c, conn
 }
 
-func fetchSetter(mockRegistrar *mockRegistrar) v1.DataSetter {
-	var s v1.DataSetter
-	Eventually(mockRegistrar.RegisterInput.Setter).Should(
-		Receive(&s),
-	)
-	return s
-}
-
 func buildCleanup(c chan struct{}) func() {
 	return func() {
 		close(c)
@@ -529,4 +509,61 @@ func readBatchFromReceiver(r plumbing.Doppler_BatchSubscribeClient) <-chan [][]b
 	}()
 
 	return c
+}
+
+func newSpyRegistrar() *spyRegistrar {
+	return &spyRegistrar{}
+}
+
+type spyRegistrar struct {
+	mu               sync.Mutex
+	registerRequest_ *plumbing.SubscriptionRequest
+	registerSetter_  v1.DataSetter
+	cleanup          func()
+}
+
+func (s *spyRegistrar) Register(req *plumbing.SubscriptionRequest, setter v1.DataSetter) func() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.registerRequest_ = req
+	s.registerSetter_ = setter
+	return s.cleanup
+}
+
+func (s *spyRegistrar) registerRequest() *plumbing.SubscriptionRequest {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.registerRequest_
+}
+
+func (s *spyRegistrar) registerSetter() v1.DataSetter {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.registerSetter_
+}
+
+func newSpyDataDumper() *spyDataDumper {
+	return &spyDataDumper{}
+}
+
+type spyDataDumper struct {
+	latestContainerMetricsAppID     string
+	latestContainerMetricsEnvelopes []*events.Envelope
+
+	recentLogsForAppID     string
+	recentLogsForEnvelopes []*events.Envelope
+}
+
+func (s *spyDataDumper) LatestContainerMetrics(appID string) []*events.Envelope {
+	s.latestContainerMetricsAppID = appID
+
+	return s.latestContainerMetricsEnvelopes
+}
+
+func (s *spyDataDumper) RecentLogsFor(appID string) []*events.Envelope {
+	s.recentLogsForAppID = appID
+
+	return s.recentLogsForEnvelopes
 }

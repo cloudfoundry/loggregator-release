@@ -5,7 +5,6 @@ import (
 
 	"code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1"
 
-	. "github.com/apoydence/eachers"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gogo/protobuf/proto"
 	. "github.com/onsi/ginkgo"
@@ -45,8 +44,8 @@ var _ = Describe("Router", func() {
 	Context("with firehose subscriptions", func() {
 		var (
 			// Firehoses
-			multipleFirehoseOfSameSubscription []*mockDataSetter
-			singleFirehoseSubscription         *mockDataSetter
+			multipleFirehoseOfSameSubscription []*spyDataSetter
+			singleFirehoseSubscription         *spyDataSetter
 
 			requestForMultipleSubscriptions *plumbing.SubscriptionRequest
 			requestForSingleSubscription    *plumbing.SubscriptionRequest
@@ -55,11 +54,11 @@ var _ = Describe("Router", func() {
 		)
 
 		BeforeEach(func() {
-			multipleFirehoseOfSameSubscription = []*mockDataSetter{
-				newMockDataSetter(),
-				newMockDataSetter(),
+			multipleFirehoseOfSameSubscription = []*spyDataSetter{
+				newSpyDataSetter(),
+				newSpyDataSetter(),
 			}
-			singleFirehoseSubscription = newMockDataSetter()
+			singleFirehoseSubscription = newSpyDataSetter()
 
 			requestForMultipleSubscriptions = &plumbing.SubscriptionRequest{
 				ShardID: "some-sub-id",
@@ -76,20 +75,15 @@ var _ = Describe("Router", func() {
 
 		It("receives all messages", func() {
 			router.SendTo("some-app-id", logEnvelope)
-			router.SendTo("some-app-id", counterEnvelope)
 
-			Expect(singleFirehoseSubscription.SetInput).To(
-				BeCalled(With(logEnvelopeBytes)),
-			)
-			Expect(singleFirehoseSubscription.SetInput).To(
-				BeCalled(With(counterEnvelopeBytes)),
-			)
+			Expect(singleFirehoseSubscription.setInput).To(Equal(logEnvelopeBytes))
 		})
 
 		Context("when there are two subscriptions with the same ID", func() {
 			It("sends the message to one subscription", func() {
 				router.SendTo("some-app-id", logEnvelope)
-				combinedLen := len(multipleFirehoseOfSameSubscription[0].SetCalled) + len(multipleFirehoseOfSameSubscription[1].SetCalled)
+				combinedLen := multipleFirehoseOfSameSubscription[0].setCalls +
+					multipleFirehoseOfSameSubscription[1].setCalls
 
 				Expect(combinedLen).To(Equal(1))
 			})
@@ -99,24 +93,20 @@ var _ = Describe("Router", func() {
 			cleanupSingleFirehose()
 			router.SendTo("some-app-id", counterEnvelope)
 
-			Expect(singleFirehoseSubscription.SetInput).To(
-				Not(BeCalled()),
-			)
+			Expect(singleFirehoseSubscription.setCalled).To(Equal(false))
 		})
 
 		It("ignores invalid envelopes", func() {
 			router.SendTo("some-app-id", new(events.Envelope))
 
-			Expect(singleFirehoseSubscription.SetCalled).To(
-				Not(BeCalled()),
-			)
+			Expect(singleFirehoseSubscription.setCalled).To(Equal(false))
 		})
 	})
 
 	Context("with app ID subscriptions", func() {
 		var (
-			streamsForAppA             []*mockDataSetter
-			streamForAppB              *mockDataSetter
+			streamsForAppA             []*spyDataSetter
+			streamForAppB              *spyDataSetter
 			subscriptionRequestForAppA *plumbing.SubscriptionRequest
 			subscriptionRequestForAppB *plumbing.SubscriptionRequest
 
@@ -125,12 +115,12 @@ var _ = Describe("Router", func() {
 		)
 
 		BeforeEach(func() {
-			streamsForAppA = []*mockDataSetter{
-				newMockDataSetter(),
-				newMockDataSetter(),
+			streamsForAppA = []*spyDataSetter{
+				newSpyDataSetter(),
+				newSpyDataSetter(),
 			}
 
-			streamForAppB = newMockDataSetter()
+			streamForAppB = newSpyDataSetter()
 
 			subscriptionRequestForAppA = &plumbing.SubscriptionRequest{
 				Filter: &plumbing.Filter{
@@ -164,48 +154,38 @@ var _ = Describe("Router", func() {
 		It("sends a message to all subscriptions of the same app id", func() {
 			router.SendTo("some-app-id", counterEnvelope)
 
-			Expect(streamsForAppA[0].SetInput).To(
-				BeCalled(With(counterEnvelopeBytes)),
-			)
-			Expect(streamsForAppA[1].SetInput).To(
-				BeCalled(With(counterEnvelopeBytes)),
-			)
+			Expect(streamsForAppA[0].setInput).To(Equal(counterEnvelopeBytes))
+			Expect(streamsForAppA[1].setInput).To(Equal(counterEnvelopeBytes))
 		})
 
 		It("sends the envelope to a subscription only once", func() {
 			router.SendTo("some-other-app-id", counterEnvelope)
 
-			Expect(streamForAppB.SetCalled).To(
-				HaveLen(1),
-			)
+			Expect(streamForAppB.setCalls).To(Equal(1))
 		})
 
 		It("does not send data to that setter", func() {
 			cleanupForAppB()
 			router.SendTo("some-app-id", counterEnvelope)
 
-			Expect(streamForAppB.SetCalled).To(
-				Not(BeCalled()),
-			)
+			Expect(streamForAppB.setCalled).To(Equal(false))
 		})
 
 		It("does not send the message to a subscription of a different app id", func() {
 			router.SendTo("some-app-id", counterEnvelope)
 
-			Expect(streamForAppB.SetInput).To(
-				Not(BeCalled()),
-			)
+			Expect(streamForAppB.setCalled).To(Equal(false))
 		})
 	})
 
 	Context("with log filter subscriptions", func() {
 		var (
-			streamWithLogFilter *mockDataSetter
+			streamWithLogFilter *spyDataSetter
 			subscriptionRequest *plumbing.SubscriptionRequest
 		)
 
 		BeforeEach(func() {
-			streamWithLogFilter = newMockDataSetter()
+			streamWithLogFilter = newSpyDataSetter()
 
 			subscriptionRequest = &plumbing.SubscriptionRequest{
 				Filter: &plumbing.Filter{
@@ -222,26 +202,22 @@ var _ = Describe("Router", func() {
 		It("sends only log messages", func() {
 			router.SendTo("some-app-id", counterEnvelope)
 
-			Expect(streamWithLogFilter.SetCalled).To(
-				Not(BeCalled()),
-			)
+			Expect(streamWithLogFilter.setCalled).To(Equal(false))
 
 			router.SendTo("some-app-id", logEnvelope)
 
-			Expect(streamWithLogFilter.SetInput).To(
-				BeCalled(With(logEnvelopeBytes)),
-			)
+			Expect(streamWithLogFilter.setInput).To(Equal(logEnvelopeBytes))
 		})
 	})
 
 	Context("with metric filter subscriptions", func() {
 		var (
-			stream              *mockDataSetter
+			stream              *spyDataSetter
 			subscriptionRequest *plumbing.SubscriptionRequest
 		)
 
 		BeforeEach(func() {
-			stream = newMockDataSetter()
+			stream = newSpyDataSetter()
 
 			subscriptionRequest = &plumbing.SubscriptionRequest{
 				Filter: &plumbing.Filter{
@@ -257,15 +233,27 @@ var _ = Describe("Router", func() {
 		It("sends only metric messages", func() {
 			router.SendTo("some-app-id", logEnvelope)
 
-			Expect(stream.SetCalled).To(
-				Not(BeCalled()),
-			)
+			Expect(stream.setCalled).To(Equal(false))
 
 			router.SendTo("some-app-id", counterEnvelope)
 
-			Expect(stream.SetInput).To(
-				BeCalled(With(counterEnvelopeBytes)),
-			)
+			Expect(stream.setInput).To(Equal(counterEnvelopeBytes))
 		})
 	})
 })
+
+func newSpyDataSetter() *spyDataSetter {
+	return &spyDataSetter{}
+}
+
+type spyDataSetter struct {
+	setCalled bool
+	setCalls  int
+	setInput  []byte
+}
+
+func (s *spyDataSetter) Set(data []byte) {
+	s.setCalled = true
+	s.setCalls++
+	s.setInput = data
+}
