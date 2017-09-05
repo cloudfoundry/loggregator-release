@@ -55,8 +55,8 @@ var _ = Describe("Pool", func() {
 				pool.RegisterDoppler(lis1.Addr().String())
 				pool.RegisterDoppler(lis2.Addr().String())
 
-				Eventually(accepter1).Should(HaveLen(2))
-				Eventually(accepter2).Should(HaveLen(2))
+				Eventually(accepter1).Should(HaveLen(1))
+				Eventually(accepter2).Should(HaveLen(1))
 			})
 		})
 
@@ -181,7 +181,6 @@ var _ = Describe("Pool", func() {
 			})
 
 			Describe("ContainerMetrics()", func() {
-
 				var fetchResp = func(addr string, ctx context.Context, req *plumbing.ContainerMetricsRequest) [][]byte {
 					var resp *plumbing.ContainerMetricsResponse
 					f := func() error {
