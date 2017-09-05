@@ -1,15 +1,19 @@
 package doppler_test
 
 import (
+	"context"
 	"net"
 	"time"
 
+	"code.cloudfoundry.org/loggregator/plumbing"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 	"github.com/cloudfoundry/dropsonde/factories"
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/gorilla/websocket"
 	uuid "github.com/nu7hatch/gouuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"google.golang.org/grpc"
 )
 
 var _ = Describe("Firehose test", func() {
@@ -79,6 +83,120 @@ var _ = Describe("Firehose test", func() {
 			Eventually(receiveChan).Should(Receive(&receivedMessageBytes))
 			close(done)
 			Expect(DecodeProtoBufEnvelope(receivedMessageBytes).GetEventType()).To(Equal(events.Envelope_ContainerMetric))
+		})
+	})
+
+	Context("gRPC ingress/egress", func() {
+		var (
+			appID                   string
+			ingressConn, egressConn *grpc.ClientConn
+			ingressClient           v2.DopplerIngress_SenderClient
+			egressClient            plumbing.DopplerClient
+		)
+
+		JustBeforeEach(func() {
+			ingressConn, ingressClient = dopplerIngressV2Client("localhost:5678")
+			guid, _ := uuid.NewV4()
+			appID = guid.String()
+
+			conf := fetchDopplerConfig(pathToConfigFile)
+			egressConn, egressClient = connectToGRPC(conf)
+		})
+
+		AfterEach(func() {
+			ingressConn.Close()
+			egressConn.Close()
+		})
+
+		It("does not receive duplicate logs for missing app ID", func() {
+			subscription, err := egressClient.Subscribe(
+				context.Background(),
+				&plumbing.SubscriptionRequest{
+					ShardID: "shard-id",
+				})
+			Expect(err).ToNot(HaveOccurred())
+
+			ingressClient.Send(&v2.Envelope{
+				Timestamp: time.Now().UnixNano(),
+				Message: &v2.Envelope_Log{
+					Log: &v2.Log{
+						Payload: []byte("hello world"),
+					},
+				},
+			})
+
+			envs := make(chan *events.Envelope, 100)
+			stop := make(chan struct{})
+			go func() {
+				for {
+					defer GinkgoRecover()
+					msg, err := subscription.Recv()
+					if err != nil {
+						return
+					}
+
+					e := UnmarshalMessage(msg.Payload)
+
+					select {
+					case <-stop:
+						return
+					case envs <- &e:
+						// Do Nothing
+					}
+				}
+			}()
+
+			Eventually(envs, 2).Should(HaveLen(1))
+			Consistently(envs).Should(HaveLen(1))
+			close(stop)
+		})
+
+		It("does not receive duplicate logs for missing app ID with a filter", func() {
+			subscription, err := egressClient.Subscribe(
+				context.Background(),
+				&plumbing.SubscriptionRequest{
+					ShardID: "shard-id",
+					Filter: &plumbing.Filter{
+						Message: &plumbing.Filter_Log{
+							Log: &plumbing.LogFilter{},
+						},
+					},
+				})
+			Expect(err).ToNot(HaveOccurred())
+
+			ingressClient.Send(&v2.Envelope{
+				Timestamp: time.Now().UnixNano(),
+				Message: &v2.Envelope_Log{
+					Log: &v2.Log{
+						Payload: []byte("hello world"),
+					},
+				},
+			})
+
+			envs := make(chan *events.Envelope, 100)
+			stop := make(chan struct{})
+			go func() {
+				for {
+					defer GinkgoRecover()
+					msg, err := subscription.Recv()
+					if err != nil {
+						return
+					}
+
+					e := UnmarshalMessage(msg.Payload)
+
+					select {
+					case <-stop:
+						return
+					case envs <- &e:
+						// Do Nothing
+					}
+				}
+			}()
+
+			Eventually(envs, 2).Should(HaveLen(1))
+			Consistently(envs).Should(HaveLen(1))
+			close(stop)
 		})
 	})
 

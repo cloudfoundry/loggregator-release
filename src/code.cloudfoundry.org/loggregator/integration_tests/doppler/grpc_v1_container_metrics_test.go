@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/loggregator/plumbing"
+	v2 "code.cloudfoundry.org/loggregator/plumbing/v2"
 
 	"google.golang.org/grpc"
 
@@ -107,6 +108,31 @@ func dopplerIngressV1Client(addr string) (*grpc.ClientConn, plumbing.DopplerInge
 	Eventually(f).ShouldNot(HaveOccurred())
 
 	return conn, pusherClient
+}
+
+func dopplerIngressV2Client(addr string) (*grpc.ClientConn, v2.DopplerIngress_SenderClient) {
+	creds, err := plumbing.NewClientCredentials(
+		"../fixtures/server.crt",
+		"../fixtures/server.key",
+		"../fixtures/loggregator-ca.crt",
+		"doppler",
+	)
+	Expect(err).ToNot(HaveOccurred())
+
+	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(creds))
+	Expect(err).ToNot(HaveOccurred())
+	client := v2.NewDopplerIngressClient(conn)
+
+	var senderClient v2.DopplerIngress_SenderClient
+	f := func() error {
+		var err error
+		ctx, _ := context.WithTimeout(context.TODO(), 10*time.Second)
+		senderClient, err = client.Sender(ctx)
+		return err
+	}
+	Eventually(f).ShouldNot(HaveOccurred())
+
+	return conn, senderClient
 }
 
 func marshalContainerMetric(metric *events.ContainerMetric) *plumbing.EnvelopeData {

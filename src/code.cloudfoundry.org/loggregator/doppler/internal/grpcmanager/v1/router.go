@@ -74,12 +74,16 @@ func (r *Router) writeToShard(id shardID, setters []DataSetter, data []byte) {
 }
 
 func (r *Router) createTypedFilters(appID string, envelope *events.Envelope) []filter {
-	return []filter{
-		{appID: appID, envelopeType: noType},
-		{appID: appID, envelopeType: r.filterTypeFromEnvelope(envelope)},
-		{appID: "", envelopeType: r.filterTypeFromEnvelope(envelope)},
-		{},
+	filters := make([]filter, 2, 4)
+	filters[0] = filter{appID: "", envelopeType: r.filterTypeFromEnvelope(envelope)}
+	filters[1] = filter{}
+
+	if appID != "" {
+		filters = append(filters, filter{appID: appID, envelopeType: noType})
+		filters = append(filters, filter{appID: appID, envelopeType: r.filterTypeFromEnvelope(envelope)})
 	}
+
+	return filters
 }
 
 func (r *Router) registerSetter(req *plumbing.SubscriptionRequest, dataSetter DataSetter) {
