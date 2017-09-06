@@ -15,7 +15,6 @@
     }
 
     args = {
-        "DisableSyslogDrains" => p("loggregator.disable_syslog_drains"),
         "InstanceName" => "#{name}.#{spec.index}",
         "DrainUrlTtlSeconds" => p("syslog_drain_binder.drain_url_ttl_seconds"),
         "UpdateIntervalSeconds" => p("syslog_drain_binder.update_interval_seconds"),
