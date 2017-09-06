@@ -12,8 +12,6 @@ templates:
   metron_agent_ctl.erb: bin/metron_agent_ctl
   metron_agent.json.erb: config/metron_agent.json
   syslog_forwarder.conf.erb: config/syslog_forwarder.conf
-  metron_agent_logrotate.cron.erb: config/metron_agent_logrotate.cron
-  logrotate.conf.erb: config/logrotate.conf
   metron_agent.crt.erb: config/certs/metron_agent.crt
   metron_agent.key.erb: config/certs/metron_agent.key
   loggregator_ca.crt.erb: config/certs/loggregator_ca.crt
@@ -92,16 +90,6 @@ properties:
     description: "Collection of tags to add on all outgoing v2 envelopes. Bosh deployment, job, index and IP will be merged with this property if they are not provided"
     default: {}
     example: {"deployment": "cf"}
-
-  metron_agent.logrotate.freq_min:
-    description: "The frequency in minutes which logrotate will rotate VM logs"
-    default: 5
-  metron_agent.logrotate.rotate:
-    description: "The number of files that logrotate will keep around on the VM"
-    default: 7
-  metron_agent.logrotate.size:
-    description: "The size at which logrotate will decide to rotate the log file"
-    default: 50M
 
   metron_agent.pprof_port:
     description: "The pprof port for runtime profiling data"

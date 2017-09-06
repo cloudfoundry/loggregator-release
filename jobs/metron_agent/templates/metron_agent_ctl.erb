@@ -19,8 +19,6 @@ case $1 in
       killall -3 metron
     set -e
 
-    (crontab -l | sed /metron_agent.*logrotate/d; cat /var/vcap/jobs/metron_agent/config/metron_agent_logrotate.cron) | sed /^$/d | crontab
-
     <% if p("syslog_daemon_config.enable") %>
     /var/vcap/packages/metron_agent/syslog_daemon_config/setup_syslog_forwarder.sh /var/vcap/jobs/metron_agent/config
     <% end %>
