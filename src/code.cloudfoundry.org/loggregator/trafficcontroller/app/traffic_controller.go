@@ -162,7 +162,7 @@ func (t *TrafficController) Start() {
 
 	f.Start()
 	kp := keepalive.ClientParameters{
-		Time:                5 * time.Minute,
+		Time:                15 * time.Second,
 		Timeout:             20 * time.Second,
 		PermitWithoutStream: true,
 	}

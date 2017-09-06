@@ -85,7 +85,14 @@ func (a *AppV2) Start() {
 	metronAddress := fmt.Sprintf("127.0.0.1:%d", a.config.GRPC.Port)
 	log.Printf("metron v2 API started on addr %s", metronAddress)
 	rx := ingress.NewReceiver(envelopeBuffer, a.metricClient)
-	ingressServer := ingress.NewServer(metronAddress, rx, grpc.Creds(a.serverCreds))
+
+	kp := keepalive.EnforcementPolicy{
+		MinTime:             10 * time.Second,
+		PermitWithoutStream: true,
+	}
+	ingressServer := ingress.NewServer(metronAddress, rx,
+		grpc.Creds(a.serverCreds),
+		grpc.KeepaliveEnforcementPolicy(kp))
 	ingressServer.Start()
 }
 

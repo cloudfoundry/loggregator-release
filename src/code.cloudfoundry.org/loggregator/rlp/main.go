@@ -14,6 +14,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
+	"google.golang.org/grpc/keepalive"
 
 	"code.cloudfoundry.org/loggregator/plumbing"
 	"code.cloudfoundry.org/loggregator/profiler"
@@ -91,12 +92,27 @@ func main() {
 		log.Fatalf("Couldn't connect to metric emitter: %s", err)
 	}
 
+	ingressKP := keepalive.ClientParameters{
+		Time:                15 * time.Second,
+		Timeout:             20 * time.Second,
+		PermitWithoutStream: true,
+	}
+	egressKP := keepalive.EnforcementPolicy{
+		MinTime:             10 * time.Second,
+		PermitWithoutStream: true,
+	}
 	rlp := app.NewRLP(
 		metric,
 		app.WithEgressPort(*egressPort),
 		app.WithIngressAddrs(hostPorts),
-		app.WithIngressDialOptions(grpc.WithTransportCredentials(dopplerCredentials)),
-		app.WithEgressServerOptions(grpc.Creds(rlpCredentials)),
+		app.WithIngressDialOptions(
+			grpc.WithTransportCredentials(dopplerCredentials),
+			grpc.WithKeepaliveParams(ingressKP),
+		),
+		app.WithEgressServerOptions(
+			grpc.Creds(rlpCredentials),
+			grpc.KeepaliveEnforcementPolicy(egressKP),
+		),
 		app.WithHealthAddr(*healthAddr),
 	)
 	go rlp.Start()
