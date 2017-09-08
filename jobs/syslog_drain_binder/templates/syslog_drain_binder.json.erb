@@ -1,14 +1,14 @@
 <%
-    etcdMachines = p("loggregator.etcd.machines").map do |addr|
+    etcd_machines = p("loggregator.etcd.machines").map do |addr|
         "#{p('loggregator.etcd.require_ssl') ? 'https' : 'http'}://#{addr}:4001"
     end
 
-    etcdTLSClientConfig = {
+    etcd_tls_client_config = {
         "KeyFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-client.key",
         "CertFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-client.crt",
         "CAFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/etcd-ca.crt"
     }
-    ccTLSConfig = {
+    cc_tls_config = {
         "KeyFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/syslogdrainbinder.key",
         "CertFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/syslogdrainbinder.crt",
         "CAFile" => "/var/vcap/jobs/syslog_drain_binder/config/certs/mutual_tls_ca.crt"
