@@ -222,15 +222,24 @@ func extractGaugeValues(metric *v2.GaugeValue) (string, float64, bool) {
 	return metric.Unit, metric.Value, true
 }
 
+func instanceIndex(v2e *v2.Envelope) int32 {
+	defaultIndex, err := strconv.Atoi(v2e.InstanceId)
+	if err != nil {
+		defaultIndex = 0
+	}
+
+	id := v2e.GetGauge().GetMetrics()["instance_index"]
+	if id == nil {
+		return int32(defaultIndex)
+	}
+	return int32(id.Value)
+}
+
 func tryConvertContainerMetric(v2e *v2.Envelope) *events.Envelope {
 	v1e := createBaseV1(v2e)
 	gaugeEvent := v2e.GetGauge()
 	if len(gaugeEvent.Metrics) == 1 {
 		return nil
-	}
-	instanceIndex, err := strconv.Atoi(v2e.InstanceId)
-	if err != nil {
-		instanceIndex = 0
 	}
 
 	required := []string{
@@ -250,7 +259,7 @@ func tryConvertContainerMetric(v2e *v2.Envelope) *events.Envelope {
 	v1e.EventType = events.Envelope_ContainerMetric.Enum()
 	v1e.ContainerMetric = &events.ContainerMetric{
 		ApplicationId:    proto.String(v2e.SourceId),
-		InstanceIndex:    proto.Int32(int32(instanceIndex)),
+		InstanceIndex:    proto.Int32(instanceIndex(v2e)),
 		CpuPercentage:    proto.Float64(gaugeEvent.Metrics["cpu"].Value),
 		MemoryBytes:      proto.Uint64(uint64(gaugeEvent.Metrics["memory"].Value)),
 		DiskBytes:        proto.Uint64(uint64(gaugeEvent.Metrics["disk"].Value)),

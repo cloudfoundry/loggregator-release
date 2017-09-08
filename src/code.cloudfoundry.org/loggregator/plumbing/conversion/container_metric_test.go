@@ -63,6 +63,42 @@ var _ = Describe("ContainerMetric", func() {
 			}))
 		})
 
+		It("sets InstanceIndex from GaugeValue if present", func() {
+			envelope := &v2.Envelope{
+				InstanceId: "123",
+				Message: &v2.Envelope_Gauge{
+					Gauge: &v2.Gauge{
+						Metrics: map[string]*v2.GaugeValue{
+							"instance_index": {
+								Unit:  "",
+								Value: 19,
+							},
+							"cpu":          {},
+							"memory":       {},
+							"disk":         {},
+							"memory_quota": {},
+							"disk_quota":   {},
+						},
+					},
+				},
+			}
+
+			envelopes := conversion.ToV1(envelope)
+			Expect(len(envelopes)).To(Equal(1))
+			Expect(*envelopes[0]).To(MatchFields(IgnoreExtras, Fields{
+				"EventType": Equal(events.Envelope_ContainerMetric.Enum()),
+				"ContainerMetric": Equal(&events.ContainerMetric{
+					ApplicationId:    proto.String(""),
+					InstanceIndex:    proto.Int32(19),
+					CpuPercentage:    proto.Float64(0),
+					MemoryBytes:      proto.Uint64(0),
+					DiskBytes:        proto.Uint64(0),
+					MemoryBytesQuota: proto.Uint64(0),
+					DiskBytesQuota:   proto.Uint64(0),
+				}),
+			}))
+		})
+
 		DescribeTable("it is resilient to malformed envelopes", func(v2e *v2.Envelope) {
 			Expect(conversion.ToV1(v2e)).To(BeNil())
 		},
