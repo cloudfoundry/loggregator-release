@@ -99,17 +99,6 @@ function run_multiplatform {
 
 function run_build {
     print_checkpoint "Make Sure Loggregator Packages Compile"
-    go build $(go list code.cloudfoundry.org/loggregator/... |
-        grep -v integration_test |
-        grep -v component_test |
-        grep -v lats |
-        grep -v "conversion/benchmark")
-    exit_code=$?
-    if [ $exit_code -ne 0 ]; then
-        return $exit_code
-    fi
-
-    print_checkpoint "Make Sure Loggregator Test Packages Compile"
     go test -run xxxxxxxxxxxxxxxxx code.cloudfoundry.org/loggregator/... > /dev/null
     exit_code=$?
     if [ $exit_code -ne 0 ]; then
@@ -117,13 +106,6 @@ function run_build {
     fi
 
     print_checkpoint "Make Sure Tool Packages Compile"
-    go build tools/...
-    exit_code=$?
-    if [ $exit_code -ne 0 ]; then
-        return $exit_code
-    fi
-
-    print_checkpoint "Make Sure Tool Test Packages Compile"
     go test -run xxxxxxxxxxxxxxxxx tools/... > /dev/null
     exit_code=$?
     if [ $exit_code -ne 0 ]; then
