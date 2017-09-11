@@ -17,7 +17,7 @@ instance_groups:
   - z1
   instances: 1
   persistent_disk_type: 1GB
-  vm_type: default
+  vm_type: minimal
   stemcell: default
   networks:
   - name: default
@@ -68,7 +68,7 @@ instance_groups:
   azs:
   - z1
   instances: 1
-  vm_type: default
+  vm_type: minimal
   stemcell: default
   lifecycle: errand
   networks:
@@ -97,7 +97,7 @@ instance_groups:
   - z1
   instances: 1
   persistent_disk_type: 5GB
-  vm_type: default
+  vm_type: minimal
   stemcell: default
   networks:
   - name: default
@@ -139,7 +139,7 @@ instance_groups:
   - z1
   instances: 1
   persistent_disk_type: 5GB
-  vm_type: default
+  vm_type: minimal
   stemcell: default
   networks:
   - name: default
@@ -194,7 +194,7 @@ instance_groups:
   - z1
   instances: 1
   persistent_disk_type: 5GB
-  vm_type: default
+  vm_type: minimal
   stemcell: default
   networks:
   - name: default
