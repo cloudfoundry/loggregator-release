@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	config "code.cloudfoundry.org/loggregator/doppler/app"
+	"code.cloudfoundry.org/loggregator/doppler/app/config"
 	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"golang.org/x/net/context"

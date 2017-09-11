@@ -13,7 +13,7 @@ import (
 
 	"time"
 
-	"code.cloudfoundry.org/loggregator/doppler/app"
+	"code.cloudfoundry.org/loggregator/doppler/app/config"
 	"code.cloudfoundry.org/loggregator/plumbing"
 
 	"github.com/cloudfoundry/dropsonde/emitter"
@@ -91,7 +91,7 @@ var _ = JustBeforeEach(func() {
 	Eventually(func() error {
 		_, err := etcdAdapter.Get("healthstatus/doppler/z1/doppler_z1/0")
 		return err
-	}, time.Second+app.HeartbeatInterval).ShouldNot(HaveOccurred())
+	}, time.Second+config.HeartbeatInterval).ShouldNot(HaveOccurred())
 })
 
 var _ = AfterEach(func() {
@@ -142,7 +142,7 @@ func buildContainerMetric() []byte {
 	return b
 }
 
-func connectToGRPC(conf *app.Config) (*grpc.ClientConn, plumbing.DopplerClient) {
+func connectToGRPC(conf *config.Config) (*grpc.ClientConn, plumbing.DopplerClient) {
 	tlsCfg, err := plumbing.NewClientMutualTLSConfig(conf.GRPC.CertFile, conf.GRPC.KeyFile, conf.GRPC.CAFile, "doppler")
 	Expect(err).ToNot(HaveOccurred())
 	creds := credentials.NewTLS(tlsCfg)
@@ -151,8 +151,8 @@ func connectToGRPC(conf *app.Config) (*grpc.ClientConn, plumbing.DopplerClient) 
 	return out, plumbing.NewDopplerClient(out)
 }
 
-func fetchDopplerConfig(path string) *app.Config {
-	conf, err := app.ParseConfig(path)
+func fetchDopplerConfig(path string) *config.Config {
+	conf, err := config.ParseConfig(path)
 	Expect(err).ToNot(HaveOccurred())
 	return conf
 }

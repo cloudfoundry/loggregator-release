@@ -6,20 +6,20 @@ import (
 	"os"
 	"os/exec"
 
-	dopplerConf "code.cloudfoundry.org/loggregator/doppler/app"
+	"code.cloudfoundry.org/loggregator/doppler/app/config"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 )
 
-func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int) dopplerConf.Config {
+func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int) config.Config {
 	dopplerUDPPort := getUDPPort()
 	dopplerWSPort := getTCPPort()
 	dopplerGRPCPort := getTCPPort()
 	pprofPort := getTCPPort()
 
-	return dopplerConf.Config{
+	return config.Config{
 		Index:        "42",
 		JobName:      "test-job-name",
 		Zone:         "test-availability-zone",
@@ -28,7 +28,7 @@ func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int)
 
 		IncomingUDPPort: uint32(dopplerUDPPort),
 		OutgoingPort:    uint32(dopplerWSPort),
-		GRPC: dopplerConf.GRPC{
+		GRPC: config.GRPC{
 			Port:     uint16(dopplerGRPCPort),
 			CertFile: Cert("doppler.crt"),
 			KeyFile:  Cert("doppler.key"),
@@ -39,7 +39,7 @@ func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int)
 		EtcdUrls:                  []string{etcdClientURL},
 		EtcdMaxConcurrentRequests: 10,
 
-		MetronConfig: dopplerConf.MetronConfig{
+		MetronConfig: config.MetronConfig{
 			UDPAddress:  fmt.Sprintf("127.0.0.1:%d", metronUDPPort),
 			GRPCAddress: fmt.Sprintf("127.0.0.1:%d", metronGRPCPort),
 		},
@@ -56,7 +56,7 @@ func BuildDopplerConfig(etcdClientURL string, metronUDPPort, metronGRPCPort int)
 	}
 }
 
-func StartDoppler(conf dopplerConf.Config) (cleanup func(), wsPort, grpcPort int) {
+func StartDoppler(conf config.Config) (cleanup func(), wsPort, grpcPort int) {
 	By("making sure doppler was built")
 	dopplerPath := os.Getenv("DOPPLER_BUILD_PATH")
 	Expect(dopplerPath).ToNot(BeEmpty())

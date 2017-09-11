@@ -4,9 +4,8 @@ import (
 	"net"
 	"time"
 
+	"code.cloudfoundry.org/loggregator/doppler/app/config"
 	"code.cloudfoundry.org/loggregator/plumbing"
-
-	"code.cloudfoundry.org/loggregator/doppler/app"
 
 	"github.com/cloudfoundry/dropsonde/signature"
 	. "github.com/onsi/ginkgo"
@@ -19,7 +18,7 @@ import (
 var _ = Describe("GRPC Streaming Logs", func() {
 	Context("with a subscription established", func() {
 		var (
-			conf         *app.Config
+			conf         *config.Config
 			in           net.Conn
 			out          *grpc.ClientConn
 			subscription plumbing.Doppler_SubscribeClient
@@ -92,7 +91,7 @@ func connectToDoppler() net.Conn {
 	return in
 }
 
-func connectToSubscription(conf *app.Config, req plumbing.SubscriptionRequest) (*grpc.ClientConn, plumbing.Doppler_SubscribeClient) {
+func connectToSubscription(conf *config.Config, req plumbing.SubscriptionRequest) (*grpc.ClientConn, plumbing.Doppler_SubscribeClient) {
 	conn, client := connectToGRPC(conf)
 
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)

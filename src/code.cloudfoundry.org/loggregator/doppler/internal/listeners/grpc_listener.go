@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/loggregator/diodes"
-	"code.cloudfoundry.org/loggregator/doppler/app"
+	"code.cloudfoundry.org/loggregator/doppler/app/config"
 	"code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v1"
 	"code.cloudfoundry.org/loggregator/doppler/internal/grpcmanager/v2"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/sinkmanager"
@@ -36,7 +36,7 @@ type GRPCListener struct {
 func NewGRPCListener(
 	reg v1.Registrar,
 	sinkmanager *sinkmanager.SinkManager,
-	conf app.GRPC,
+	conf config.GRPC,
 	envelopeBuffer *diodes.ManyToOneEnvelope,
 	batcher *metricbatcher.MetricBatcher,
 	metricClient MetricClient,

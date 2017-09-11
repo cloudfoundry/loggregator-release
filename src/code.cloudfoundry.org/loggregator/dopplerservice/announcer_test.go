@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"code.cloudfoundry.org/loggregator/doppler/app"
+	"code.cloudfoundry.org/loggregator/doppler/app/config"
 	"code.cloudfoundry.org/loggregator/dopplerservice"
 	"code.cloudfoundry.org/loggregator/dopplerservice/fakes"
 
@@ -21,7 +21,7 @@ import (
 var _ = XDescribe("Announcer", func() {
 	var (
 		ip          string
-		conf        app.Config
+		conf        config.Config
 		etcdRunner  *etcdstorerunner.ETCDClusterRunner
 		etcdAdapter storeadapter.StoreAdapter
 	)
@@ -35,7 +35,7 @@ var _ = XDescribe("Announcer", func() {
 
 		etcdAdapter = etcdRunner.Adapter(nil)
 
-		conf = app.Config{
+		conf = config.Config{
 			JobName: "doppler_z1",
 			Index:   "0",
 			EtcdMaxConcurrentRequests: 10,
