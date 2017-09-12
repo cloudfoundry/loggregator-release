@@ -127,12 +127,6 @@ performance and efficacy of your loggregator installation. These tools emit
 logs and metrics in a controlled fashion. For more information see the
 [Loggregator tools README](docs/loggregator-tools.md).
 
-### Health Nozzle
-
-The Loggregator Team is currently proposing supporting a nozzle which
-aggregates health metrics across various Loggregator releases to monitor
-ingress, egress, and loss within the Loggregator system. See the
-[Health Nozzle Feature Proposal][health-nozzle-proposal] for more detials.
 
 ## More Resources and Documentation
 
