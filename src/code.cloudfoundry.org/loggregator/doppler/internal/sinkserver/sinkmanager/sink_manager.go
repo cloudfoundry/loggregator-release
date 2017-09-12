@@ -23,20 +23,23 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
+// MetricBatcher provides a means for emitting metrics.
 type MetricBatcher interface {
 	BatchIncrementCounter(name string)
 }
 
+// HealthRegistrar provides a means for tracking named counters.
 type HealthRegistrar interface {
 	Inc(name string)
 	Dec(name string)
 }
 
-// MetricClient creates new CounterMetrics to be emitted periodically.
+// MetricClient creates counter metrics.
 type MetricClient interface {
 	NewCounter(name string, opts ...metricemitter.MetricOption) *metricemitter.Counter
 }
 
+// SinkManager manages the lifecycle of a syslog sink.
 type SinkManager struct {
 	messageDrainBufferSize uint
 	dropsondeOrigin        string
@@ -58,6 +61,7 @@ type SinkManager struct {
 	stopOnce sync.Once
 }
 
+// New creates a SinkManager.
 func New(
 	maxRetainedLogMessages uint32,
 	skipCertVerify bool,
@@ -90,6 +94,7 @@ func New(
 	}
 }
 
+// Start will being monitoring both channels for created or deleted sinks.
 func (sm *SinkManager) Start(newAppServiceChan, deletedAppServiceChan <-chan store.AppService) {
 	go sm.listenForNewAppServices(newAppServiceChan)
 	go sm.listenForDeletedAppServices(deletedAppServiceChan)
@@ -97,6 +102,7 @@ func (sm *SinkManager) Start(newAppServiceChan, deletedAppServiceChan <-chan sto
 	sm.listenForErrorMessages()
 }
 
+// Stop terminates the sink manager.
 func (sm *SinkManager) Stop() {
 	sm.stopOnce.Do(func() {
 		close(sm.doneChannel)
@@ -105,12 +111,15 @@ func (sm *SinkManager) Stop() {
 	})
 }
 
+// SendTo sends an envelope to the registered sinks for a specified
+// application ID.
 func (sm *SinkManager) SendTo(appID string, msg *events.Envelope) {
 	sm.ensureRecentLogsSinkFor(appID)
 	sm.ensureContainerMetricsSinkFor(appID)
 	sm.sinks.Broadcast(appID, msg)
 }
 
+// RegisterSink sink adds a new sink for the sink manager to manage.
 func (sm *SinkManager) RegisterSink(sink sinks.Sink) bool {
 	inputChan := make(chan *events.Envelope, 128)
 	ok := sm.sinks.RegisterAppSink(inputChan, sink)
@@ -129,6 +138,7 @@ func (sm *SinkManager) RegisterSink(sink sinks.Sink) bool {
 	return true
 }
 
+// UnregisterSink removes a particular sink from the sink manager.
 func (sm *SinkManager) UnregisterSink(sink sinks.Sink) {
 
 	ok := sm.sinks.CloseAndDelete(sink)
@@ -142,10 +152,14 @@ func (sm *SinkManager) UnregisterSink(sink sinks.Sink) {
 	}
 }
 
+// IsFirehoseRegistered reports if a sink has been registered with the
+// firehose.
 func (sm *SinkManager) IsFirehoseRegistered(sink sinks.Sink) bool {
 	return sm.sinks.IsFirehoseRegistered(sink)
 }
 
+// RegisterFirehoseSink adds a sink as a recipient of all data within the
+// firehose.
 func (sm *SinkManager) RegisterFirehoseSink(sink sinks.Sink) bool {
 	inputChan := make(chan *events.Envelope, 128)
 	ok := sm.sinks.RegisterFirehoseSink(inputChan, sink)
@@ -163,6 +177,7 @@ func (sm *SinkManager) RegisterFirehoseSink(sink sinks.Sink) bool {
 	return true
 }
 
+// UnregisterFirehoseSink removes the sink as a recipient of firehose data.
 func (sm *SinkManager) UnregisterFirehoseSink(sink sinks.Sink) {
 	ok := sm.sinks.CloseAndDeleteFirehose(sink)
 	if !ok {
@@ -172,26 +187,29 @@ func (sm *SinkManager) UnregisterFirehoseSink(sink sinks.Sink) {
 	sm.metrics.DecFirehose()
 }
 
-func (sm *SinkManager) RecentLogsFor(appId string) []*events.Envelope {
-	if sink := sm.sinks.DumpFor(appId); sink != nil {
+// RecentLogsFor provides a fixed number of logs for an application ID.
+func (sm *SinkManager) RecentLogsFor(appID string) []*events.Envelope {
+	if sink := sm.sinks.DumpFor(appID); sink != nil {
 		return sink.Dump()
 	}
 
 	return nil
 }
 
-func (sm *SinkManager) LatestContainerMetrics(appId string) []*events.Envelope {
-	if sink := sm.sinks.ContainerMetricsFor(appId); sink != nil {
+// LatestContainerMetrics returns the most recent container metrics for an
+// application ID.
+func (sm *SinkManager) LatestContainerMetrics(appID string) []*events.Envelope {
+	if sink := sm.sinks.ContainerMetricsFor(appID); sink != nil {
 		return sink.GetLatest()
-	} else {
-		return []*events.Envelope{}
 	}
+	return []*events.Envelope{}
 }
 
-func (sm *SinkManager) SendSyslogErrorToLoggregator(errorMsg string, appId string) {
+// SendSyslogErrorToLoggregator reports a given error for an application ID.
+func (sm *SinkManager) SendSyslogErrorToLoggregator(errorMsg string, appID string) {
 	log.Printf("SendSyslogError: %s", errorMsg)
 
-	logMessage := factories.NewLogMessage(events.LogMessage_ERR, errorMsg, appId, "LGR")
+	logMessage := factories.NewLogMessage(events.LogMessage_ERR, errorMsg, appID, "LGR")
 	envelope, err := emitter.Wrap(logMessage, sm.dropsondeOrigin)
 	if err != nil {
 		log.Printf("Error marshalling message: %v", err)
@@ -259,16 +277,16 @@ func (sm *SinkManager) listenForErrorMessages() {
 			if !ok {
 				return
 			}
-			appId := envelope_extensions.GetAppId(errorMessage)
-			sm.sinks.BroadcastError(appId, errorMessage)
+			appID := envelope_extensions.GetAppId(errorMessage)
+			sm.sinks.BroadcastError(appID, errorMessage)
 		}
 	}
 }
 
-func (sm *SinkManager) registerNewSyslogSink(appId string, syslogSinkURL *url.URL, hostname string) {
+func (sm *SinkManager) registerNewSyslogSink(appID string, syslogSinkURL *url.URL, hostname string) {
 	syslogWriter, err := syslogwriter.NewWriter(
 		syslogSinkURL,
-		appId,
+		appID,
 		hostname,
 		sm.skipCertVerify,
 		sm.dialTimeout,
@@ -276,12 +294,12 @@ func (sm *SinkManager) registerNewSyslogSink(appId string, syslogSinkURL *url.UR
 	)
 	if err != nil {
 		logURL := fmt.Sprintf("%s://%s%s", syslogSinkURL.Scheme, syslogSinkURL.Host, syslogSinkURL.Path)
-		sm.SendSyslogErrorToLoggregator(invalidSyslogURLErrorMsg(appId, logURL, err), appId)
+		sm.SendSyslogErrorToLoggregator(invalidSyslogURLErrorMsg(appID, logURL, err), appID)
 		return
 	}
 
 	syslogSink := syslog.NewSyslogSink(
-		appId,
+		appID,
 		syslogSinkURL,
 		sm.messageDrainBufferSize,
 		syslogWriter,
@@ -292,17 +310,17 @@ func (sm *SinkManager) registerNewSyslogSink(appId string, syslogSinkURL *url.UR
 	sm.RegisterSink(syslogSink)
 }
 
-func invalidSyslogURLErrorMsg(appId string, syslogSinkURL string, err error) string {
-	return fmt.Sprintf("SinkManager: Invalid syslog drain URL (%s) for application %s. Err: %v", syslogSinkURL, appId, err)
+func invalidSyslogURLErrorMsg(appID string, syslogSinkURL string, err error) string {
+	return fmt.Sprintf("SinkManager: Invalid syslog drain URL (%s) for application %s. Err: %v", syslogSinkURL, appID, err)
 }
 
-func (sm *SinkManager) ensureRecentLogsSinkFor(appId string) {
-	if sm.sinks.DumpFor(appId) != nil {
+func (sm *SinkManager) ensureRecentLogsSinkFor(appID string) {
+	if sm.sinks.DumpFor(appID) != nil {
 		return
 	}
 
 	sink := dump.NewDumpSink(
-		appId,
+		appID,
 		sm.recentLogCount,
 		sm.sinkTimeout,
 		sm.health,
@@ -311,13 +329,13 @@ func (sm *SinkManager) ensureRecentLogsSinkFor(appId string) {
 	sm.RegisterSink(sink)
 }
 
-func (sm *SinkManager) ensureContainerMetricsSinkFor(appId string) {
-	if sm.sinks.ContainerMetricsFor(appId) != nil {
+func (sm *SinkManager) ensureContainerMetricsSinkFor(appID string) {
+	if sm.sinks.ContainerMetricsFor(appID) != nil {
 		return
 	}
 
 	sink := containermetric.NewContainerMetricSink(
-		appId,
+		appID,
 		sm.metricTTL,
 		sm.sinkTimeout,
 		sm.health,
