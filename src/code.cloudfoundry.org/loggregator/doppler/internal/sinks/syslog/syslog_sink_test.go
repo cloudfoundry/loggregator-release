@@ -58,15 +58,40 @@ var _ = Describe("SyslogSink", func() {
 		syslogSink = syslog.NewSyslogSink("appId", drainURL, bufferSize, sysLogger, errorHandler, "dropsonde-origin")
 	})
 
-	Describe("Identifier", func() {
-		Context("with an empty drain URL", func() {
-			BeforeEach(func() {
-				drainURL = ""
-			})
+	It("returns an identifier for a URL", func() {
+		u, _ := url.Parse("syslog://example.com/some-path?foo=bar")
+		identifier := syslog.IdentifierFromURL(u)
 
-			It("returns an empty string", func() {
-				Expect(syslogSink.Identifier()).To(BeEmpty())
-			})
+		Expect(identifier).To(Equal("syslog://example.com/some-path"))
+	})
+
+	Describe("Identifier", func() {
+		It("returns scheme://host/path with a valid URL", func() {
+			u, _ := url.Parse("syslog://example.com/some-path?foo=bar")
+			sink := syslog.NewSyslogSink(
+				"appId",
+				u,
+				bufferSize,
+				sysLogger,
+				errorHandler,
+				"dropsonde-origin",
+			)
+
+			Expect(sink.Identifier()).To(Equal("syslog://example.com/some-path"))
+		})
+
+		It("returns an empty string for an empty URL", func() {
+			u, _ := url.Parse("")
+			sink := syslog.NewSyslogSink(
+				"appId",
+				u,
+				bufferSize,
+				sysLogger,
+				errorHandler,
+				"dropsonde-origin",
+			)
+
+			Expect(sink.Identifier()).To(BeEmpty())
 		})
 	})
 
