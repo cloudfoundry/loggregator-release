@@ -112,11 +112,15 @@ func (s *SyslogSink) Disconnect() {
 	s.disconnectOnce.Do(func() { close(s.disconnectChannel) })
 }
 
-func (s *SyslogSink) Identifier() string {
-	if s.drainURL.Host == "" {
+func IdentifierFromURL(u *url.URL) string {
+	if u.Host == "" {
 		return ""
 	}
-	return fmt.Sprintf("%s://%s%s", s.drainURL.Scheme, s.drainURL.Host, s.drainURL.Path)
+	return fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, u.Path)
+}
+
+func (s *SyslogSink) Identifier() string {
+	return IdentifierFromURL(s.drainURL)
 }
 
 func (s *SyslogSink) AppID() string {

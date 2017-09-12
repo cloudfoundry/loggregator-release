@@ -3,6 +3,7 @@ package sinkmanager
 import (
 	"fmt"
 	"log"
+	"net/url"
 	"sync"
 	"time"
 
@@ -14,10 +15,8 @@ import (
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinks/syslogwriter"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/blacklist"
 	"code.cloudfoundry.org/loggregator/doppler/internal/sinkserver/metrics"
-	"code.cloudfoundry.org/loggregator/metricemitter"
-
 	"code.cloudfoundry.org/loggregator/doppler/internal/store"
-
+	"code.cloudfoundry.org/loggregator/metricemitter"
 	"github.com/cloudfoundry/dropsonde/emitter"
 	"github.com/cloudfoundry/dropsonde/envelope_extensions"
 	"github.com/cloudfoundry/dropsonde/factories"
@@ -65,9 +64,9 @@ func New(
 	blackListManager *blacklist.URLBlacklistManager,
 	messageDrainBufferSize uint,
 	dropsondeOrigin string,
-	sinkTimeout,
-	sinkIOTimeout,
-	metricTTL,
+	sinkTimeout time.Duration,
+	sinkIOTimeout time.Duration,
+	metricTTL time.Duration,
 	dialTimeout time.Duration,
 	metricBatcher MetricBatcher,
 	metricClient MetricClient,
@@ -202,24 +201,48 @@ func (sm *SinkManager) SendSyslogErrorToLoggregator(errorMsg string, appId strin
 	sm.errorChannel <- envelope
 }
 
-func (sm *SinkManager) listenForNewAppServices(newAppServiceChan <-chan store.AppService) {
+func (sm *SinkManager) listenForNewAppServices(createStream <-chan store.AppService) {
 	for {
 		select {
 		case <-sm.doneChannel:
 			return
-		case appService := <-newAppServiceChan:
-			sm.registerNewSyslogSink(appService.AppId(), appService.Url(), appService.Hostname())
+		case appService := <-createStream:
+			u, err := sm.urlBlacklistManager.CheckUrl(appService.Url())
+			if err != nil {
+				errMsg := invalidSyslogURLErrorMsg(
+					appService.AppId(),
+					appService.Url(),
+					err,
+				)
+				sm.SendSyslogErrorToLoggregator(errMsg, appService.AppId())
+				continue
+			}
+
+			sm.registerNewSyslogSink(
+				appService.AppId(),
+				u,
+				appService.Hostname(),
+			)
 		}
 	}
 }
 
-func (sm *SinkManager) listenForDeletedAppServices(deletedAppServiceChan <-chan store.AppService) {
+func (sm *SinkManager) listenForDeletedAppServices(deleteStream <-chan store.AppService) {
 	for {
 		select {
 		case <-sm.doneChannel:
 			return
-		case appService := <-deletedAppServiceChan:
-			syslogSink := sm.sinks.DrainFor(appService.AppId(), appService.Url())
+		case appService := <-deleteStream:
+			u, err := url.Parse(appService.Url())
+			if err != nil {
+				// If the app service URL is invalid, it will not have been
+				// registered above. There is no need for any further work and
+				// the parse error may be ignored.
+				continue
+			}
+			key := syslog.IdentifierFromURL(u)
+			syslogSink := sm.sinks.DrainFor(appService.AppId(), key)
+
 			if syslogSink != nil {
 				sm.UnregisterSink(syslogSink)
 			}
@@ -242,15 +265,9 @@ func (sm *SinkManager) listenForErrorMessages() {
 	}
 }
 
-func (sm *SinkManager) registerNewSyslogSink(appId, syslogSinkURL, hostname string) {
-	parsedSyslogDrainURL, err := sm.urlBlacklistManager.CheckUrl(syslogSinkURL)
-	if err != nil {
-		sm.SendSyslogErrorToLoggregator(invalidSyslogURLErrorMsg(appId, syslogSinkURL, err), appId)
-		return
-	}
-
+func (sm *SinkManager) registerNewSyslogSink(appId string, syslogSinkURL *url.URL, hostname string) {
 	syslogWriter, err := syslogwriter.NewWriter(
-		parsedSyslogDrainURL,
+		syslogSinkURL,
 		appId,
 		hostname,
 		sm.skipCertVerify,
@@ -258,14 +275,14 @@ func (sm *SinkManager) registerNewSyslogSink(appId, syslogSinkURL, hostname stri
 		sm.sinkIOTimeout,
 	)
 	if err != nil {
-		logURL := fmt.Sprintf("%s://%s%s", parsedSyslogDrainURL.Scheme, parsedSyslogDrainURL.Host, parsedSyslogDrainURL.Path)
+		logURL := fmt.Sprintf("%s://%s%s", syslogSinkURL.Scheme, syslogSinkURL.Host, syslogSinkURL.Path)
 		sm.SendSyslogErrorToLoggregator(invalidSyslogURLErrorMsg(appId, logURL, err), appId)
 		return
 	}
 
 	syslogSink := syslog.NewSyslogSink(
 		appId,
-		parsedSyslogDrainURL,
+		syslogSinkURL,
 		sm.messageDrainBufferSize,
 		syslogWriter,
 		sm.SendSyslogErrorToLoggregator,

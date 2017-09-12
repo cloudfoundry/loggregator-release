@@ -138,7 +138,7 @@ var _ = Describe("SinkManager", func() {
 			Eventually(sink1.Received).Should(ContainElement(expectedMessage))
 		})
 
-		It("sends single message to app sink registered after the message was sent", func() {
+		It("sends a message to app sink registered after a message was sent", func() {
 			sink1 := &channelSink{appId: "myApp",
 				identifier: "myAppChan1",
 				done:       make(chan struct{}),
@@ -162,12 +162,17 @@ var _ = Describe("SinkManager", func() {
 			Expect(sink1.Received()[0]).To(Equal(expectedMessage))
 		})
 
-		It("sends single message to firehose sink registered after the message was sent", func() {
+		It("sends a message to firehose sink registered after the message was sent", func() {
 			sink1 := &channelSink{done: make(chan struct{}), appId: "firehose-a"}
 
 			expectedMessageString := "Some Data"
 			expectedMessage, _ := emitter.Wrap(
-				factories.NewLogMessage(events.LogMessage_OUT, expectedMessageString, "myApp", "App"),
+				factories.NewLogMessage(
+					events.LogMessage_OUT,
+					expectedMessageString,
+					"myApp",
+					"App",
+				),
 				"origin",
 			)
 			go sinkManager.SendTo("myApp1", expectedMessage)
@@ -356,6 +361,32 @@ var _ = Describe("SinkManager", func() {
 						"messageRouter.numberOfSyslogSinks",
 					).Value
 				}
+				Eventually(f, 2).Should(Equal(initialNumSinks))
+			})
+
+			It("deletes a sink based on its identifier", func() {
+				initialNumSinks := fakeMetricSender.GetValue(
+					"messageRouter.numberOfSyslogSinks",
+				).Value
+				newAppServiceChan <- store.NewServiceInfo(
+					"aptastic",
+					"https://acme.org/foo%3Dbar",
+					"org.space.app.1",
+				)
+
+				f := func() float64 {
+					return fakeMetricSender.GetValue(
+						"messageRouter.numberOfSyslogSinks",
+					).Value
+				}
+				Eventually(f, 2).Should(Equal(initialNumSinks + 1))
+
+				deletedAppServiceChan <- store.NewServiceInfo(
+					"aptastic",
+					"https://acme.org/foo%3Dbar",
+					"org.space.app.1",
+				)
+
 				Eventually(f, 2).Should(Equal(initialNumSinks))
 			})
 		})
