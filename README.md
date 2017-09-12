@@ -26,7 +26,6 @@ overview of Loggregator components and architecture.
   * [Bosh HM forwarder](#bosh-hm-forwarder)
 * [Tools for Testing and Monitoring Loggregator](#tools-for-testing-and-monitoring-loggregator)
   * [Tools](#tools)
-  * [Health Nozzle](#health-nozzle)
 * [More Resources and Documentation](#more-resources-and-documentation)
 
 ## Generating TLS Certificates
